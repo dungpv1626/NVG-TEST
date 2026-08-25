@@ -13,7 +13,7 @@
  * là biết ngay hồ sơ thuộc công ty nào mà không cần mở hồ sơ.
  */
 
-import type { CompanyCode } from './modules.js';
+import type { CompanyCode } from './modules';
 
 /** Loại hồ sơ có mã riêng. Mỗi loại một tiền tố ngắn, không trùng nhau. */
 export const RECORD_TYPES = {

@@ -8,7 +8,7 @@ import {
   formatNumber,
   formatPercent,
   formatPhone,
-} from '../format.js';
+} from '../format';
 
 // Định dạng chuẩn: Content Guidelines Mục 4.3.
 

@@ -9,7 +9,7 @@
  *  - Lỗi: [việc gì không thực hiện được] + [vì sao / cần làm gì]. KHÔNG lộ mã kỹ thuật.
  */
 
-import { TERMS } from './terminology.js';
+import { TERMS } from './terminology';
 
 /** Nhãn nút chuẩn — Content Guidelines 5.2. Động từ mệnh lệnh, không dùng danh từ. */
 export const BUTTONS = {

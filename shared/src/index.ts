@@ -8,10 +8,10 @@
  * hoặc bất cứ thứ gì phụ thuộc môi trường chạy (DOM, Node API, binding Cloudflare).
  */
 
-export * from './status.js';
-export * from './modules.js';
-export * from './format.js';
-export * from './terminology.js';
-export * from './content.js';
-export * from './codes.js';
-export * from './roles.js';
+export * from './status';
+export * from './modules';
+export * from './format';
+export * from './terminology';
+export * from './content';
+export * from './codes';
+export * from './roles';
