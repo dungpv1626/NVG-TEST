@@ -8,6 +8,7 @@
 
 import { BUTTONS, EMPTY_STATES, formatPhone } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
+import { CrmNav } from './crm-nav';
 import { CreateButton, EntityTable, type EntityRow } from '@/components/entity/entity-table';
 import { useEntityList } from '@/hooks/use-entity';
 import { useCan } from '@/lib/auth';
@@ -63,6 +64,7 @@ export function CustomerListPage() {
 
   return (
     <>
+      <CrmNav />
       <PageHeader
         title="Khách hàng"
         breadcrumbs={[{ label: 'Khách hàng & Cơ hội' }, { label: 'Khách hàng' }]}

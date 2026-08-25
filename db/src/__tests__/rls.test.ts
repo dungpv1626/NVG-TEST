@@ -11,19 +11,29 @@
  * Test chạy trên cơ sở dữ liệu DEV thật và cần đã chạy `npm run db:seed`.
  */
 
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   ACCOUNTS,
   anonClient,
+  cleanupTestData,
   hasCredentials,
   PG_INSUFFICIENT_PRIVILEGE,
   PROTECTED_TABLES,
   signInAs,
+  TEST_PREFIX,
 } from './helpers';
 
 // Không có thông tin kết nối thì bỏ qua thay vì làm hỏng cả bộ test (ví dụ trên CI chưa cấu hình).
 const describeDb = hasCredentials ? describe : describe.skip;
+
+// Dọn sạch mọi bản ghi do test tạo ra, kể cả những bản không xóa được qua RLS
+// (ví dụ cơ hội đã bàn giao). Không dọn thì dữ liệu test tích tụ trong CSDL phát triển.
+if (hasCredentials) {
+  afterAll(async () => {
+    await cleanupTestData();
+  });
+}
 
 describeDb('RLS — vai trò anon (chưa đăng nhập)', () => {
   it.each(PROTECTED_TABLES)('không đọc được bảng %s', async (table) => {
@@ -313,7 +323,7 @@ describeDb('Hạ tầng xuyên suốt — phiên bản tài liệu (NEN-05)', ()
       .from('documents')
       .insert({
         company_id: company!.id,
-        title: `Tài liệu kiểm thử ${Date.now()}`,
+        title: `${TEST_PREFIX} Tài liệu ${Date.now()}`,
         category: 'ban_ve',
       })
       .select('id')
@@ -350,6 +360,141 @@ describeDb('Hạ tầng xuyên suốt — phiên bản tài liệu (NEN-05)', ()
     // Bản đang hiệu lực phải là bản mới nhất.
     expect(versions!.at(-1)!.is_current_version).toBe(true);
 
-    await admin.from('documents').delete().eq('id', doc!.id);
+  });
+});
+
+describeDb('CRM — pipeline cơ hội kinh doanh', () => {
+  /** Tạo một cơ hội để thử, trả về id và hàm dọn dẹp. */
+  async function createOpportunity(client: SupabaseClient) {
+    const { data: company } = await client
+      .from('companies')
+      .select('id, code')
+      .eq('code', 'NVC')
+      .single();
+
+    const { data: customer } = await client.from('customers').select('id').limit(1).maybeSingle();
+    if (!customer) throw new Error('Cần ít nhất một khách hàng để chạy test này.');
+
+    const { data: me } = await client.rpc('auth_user_id');
+    const { data: code } = await client.rpc('next_record_code', {
+      p_company_code: 'NVC',
+      p_record_type: 'CH',
+    });
+
+    const { data, error } = await client
+      .from('opportunities')
+      .insert({
+        code,
+        company_id: company!.id,
+        customer_id: customer.id,
+        name: `${TEST_PREFIX} Cơ hội ${Date.now()}`,
+        owner_id: me,
+        stage: 'tiep_nhan',
+      })
+      .select('id')
+      .single();
+    if (error) throw new Error(error.message);
+    return data!.id as string;
+  }
+
+  it('ghi lịch sử ngay khi khởi tạo — phễu bán hàng cần đủ mốc thời gian (CRM-09)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const id = await createOpportunity(kd);
+
+    const { data } = await kd
+      .from('opportunity_stage_history')
+      .select('from_stage, to_stage')
+      .eq('opportunity_id', id);
+
+    expect(data).toHaveLength(1);
+    expect(data![0]!.from_stage).toBeNull();
+    expect(data![0]!.to_stage).toBe('tiep_nhan');
+
+  });
+
+  it('chuyển giai đoạn luôn ghi vết, không có đường nào lách được (NEN-03)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const id = await createOpportunity(kd);
+
+    const { error } = await kd.rpc('move_opportunity_stage', {
+      p_opportunity_id: id,
+      p_to_stage: 'khao_sat',
+      p_note: 'Khách đồng ý cho khảo sát',
+      p_lost_reason: null,
+    });
+    expect(error).toBeNull();
+
+    const { data } = await kd
+      .from('opportunity_stage_history')
+      .select('from_stage, to_stage, note')
+      .eq('opportunity_id', id)
+      .order('changed_at');
+
+    expect(data).toHaveLength(2);
+    expect(data![1]).toMatchObject({
+      from_stage: 'tiep_nhan',
+      to_stage: 'khao_sat',
+      note: 'Khách đồng ý cho khảo sát',
+    });
+
+  });
+
+  it('không ghi được lịch sử giả từ trình duyệt', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const id = await createOpportunity(kd);
+
+    const { error } = await kd.from('opportunity_stage_history').insert({
+      opportunity_id: id,
+      to_stage: 'ky_hop_dong',
+      note: 'Lịch sử giả mạo',
+    });
+    expect(error).toBeTruthy();
+
+  });
+
+  it('mất cơ hội bắt buộc nêu nguyên nhân (CRM-09)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const id = await createOpportunity(kd);
+
+    const { error: noReason } = await kd.rpc('move_opportunity_stage', {
+      p_opportunity_id: id,
+      p_to_stage: 'mat_co_hoi',
+      p_note: null,
+      p_lost_reason: null,
+    });
+    expect(noReason, 'thiếu nguyên nhân phải bị từ chối').toBeTruthy();
+
+    const { error: withReason } = await kd.rpc('move_opportunity_stage', {
+      p_opportunity_id: id,
+      p_to_stage: 'mat_co_hoi',
+      p_note: null,
+      p_lost_reason: 'Khách chọn nhà thầu khác vì giá thấp hơn',
+    });
+    expect(withReason).toBeNull();
+
+  });
+
+  it('cơ hội đã bàn giao chuyển chế độ chỉ xem (CRM-06)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const admin = await signInAs(ACCOUNTS.admin);
+    const id = await createOpportunity(kd);
+
+    // Quản trị hệ thống đánh dấu đã bàn giao (thao tác thật sẽ do endpoint bàn giao thực hiện).
+    const { error: handover } = await admin
+      .from('opportunities')
+      .update({ handed_over_at: new Date().toISOString() })
+      .eq('id', id);
+    expect(handover).toBeNull();
+
+    // Sau khi bàn giao, chính người phụ trách cũng không đổi được giai đoạn nữa —
+    // nếu còn sửa được thì bên nhận không thể tin dữ liệu vừa nhận.
+    const { error: move } = await kd.rpc('move_opportunity_stage', {
+      p_opportunity_id: id,
+      p_to_stage: 'khao_sat',
+      p_note: null,
+      p_lost_reason: null,
+    });
+    expect(move).toBeTruthy();
+
   });
 });

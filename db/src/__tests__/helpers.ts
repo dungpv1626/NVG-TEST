@@ -55,3 +55,25 @@ export const PROTECTED_TABLES = [
 
 /** Mã lỗi Postgres cho "insufficient_privilege" — RLS chặn thành công. */
 export const PG_INSUFFICIENT_PRIVILEGE = '42501';
+
+/** Tiền tố đặt cho mọi bản ghi do test tạo ra, để dọn sạch được sau khi chạy. */
+export const TEST_PREFIX = '[TEST]';
+
+/**
+ * Xóa CỨNG các bản ghi do test tạo ra, qua kết nối trực tiếp (bỏ qua RLS).
+ *
+ * Cần thiết vì bản thân RLS chặn xóa cứng từ trình duyệt, và một số bản ghi sau khi
+ * bàn giao thì chính người tạo cũng không sửa được nữa — nếu chỉ xóa mềm bằng tài khoản
+ * thường thì dữ liệu test sẽ tích tụ trong cơ sở dữ liệu phát triển.
+ */
+export async function cleanupTestData(): Promise<void> {
+  const { createConnection } = await import('../client');
+  const { sql } = createConnection();
+  try {
+    await sql`DELETE FROM opportunities WHERE name LIKE ${TEST_PREFIX + '%'}`;
+    await sql`DELETE FROM documents WHERE title LIKE ${TEST_PREFIX + '%'}`;
+    await sql`DELETE FROM customers WHERE name LIKE ${TEST_PREFIX + '%'}`;
+  } finally {
+    await sql.end();
+  }
+}

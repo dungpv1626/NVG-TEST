@@ -14,6 +14,9 @@ import { AuthProvider } from '@/lib/auth';
 import { CustomerCreatePage } from '@/pages/crm/customer-create';
 import { CustomerDetailPage } from '@/pages/crm/customer-detail';
 import { CustomerListPage } from '@/pages/crm/customer-list';
+import { OpportunityCreatePage } from '@/pages/crm/opportunity-create';
+import { OpportunityDetailPage } from '@/pages/crm/opportunity-detail';
+import { OpportunityPipelinePage } from '@/pages/crm/opportunity-pipeline';
 import { DashboardPage } from '@/pages/dashboard';
 import { LoginPage } from '@/pages/login';
 import { PlaceholderPage } from '@/pages/placeholder';
@@ -30,8 +33,7 @@ const queryClient = new QueryClient({
 });
 
 /** Đường dẫn của từng module — khớp `MODULE_ROUTES` trong sidebar. */
-const MODULE_PATHS: Record<Exclude<ModuleCode, 'BC'>, string> = {
-  CRM: 'crm/co-hoi', // trang tạm cho pipeline cơ hội, dựng ở Phase 2A
+const MODULE_PATHS: Record<Exclude<ModuleCode, 'BC' | 'CRM'>, string> = {
   DA: 'da/goi-thau',
   TK: 'tk/du-an',
   HD: 'hd/hop-dong',
@@ -66,7 +68,15 @@ export default function App() {
               <Route path="crm/khach-hang" element={<CustomerListPage />} />
               <Route path="crm/khach-hang/tao-moi" element={<CustomerCreatePage />} />
               <Route path="crm/khach-hang/:id" element={<CustomerDetailPage />} />
-              {MODULE_CODES.filter((c): c is Exclude<ModuleCode, 'BC'> => c !== 'BC').map(
+
+              {/* CRM — Cơ hội kinh doanh (CRM-02). Cùng dữ liệu, hai chế độ xem
+                  Kanban/Danh sách đổi qua tham số `?che-do=`. */}
+              <Route path="crm/co-hoi" element={<OpportunityPipelinePage />} />
+              <Route path="crm/co-hoi/tao-moi" element={<OpportunityCreatePage />} />
+              <Route path="crm/co-hoi/:id" element={<OpportunityDetailPage />} />
+              {MODULE_CODES.filter(
+                (c): c is Exclude<ModuleCode, 'BC' | 'CRM'> => c !== 'BC' && c !== 'CRM',
+              ).map(
                 (code) => (
                   <Route
                     key={code}

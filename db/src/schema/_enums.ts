@@ -23,3 +23,33 @@ export const approvalSubjectEnum = pgEnum('approval_subject', APPROVAL_SUBJECTS)
 
 /** Quyết định của một lượt phê duyệt. */
 export const approvalDecisionEnum = pgEnum('approval_decision', ['approved', 'rejected']);
+
+/**
+ * Giai đoạn pipeline cơ hội kinh doanh — PRD CRM-02 (nguyên văn):
+ * "Tiếp nhận → Xác minh/Phân loại → Khảo sát → Báo giá → Đàm phán → Ký hợp đồng hoặc Mất cơ hội".
+ *
+ * Thứ tự khai báo chính là thứ tự cột trên bảng Kanban (Webapp Flow 4.5).
+ */
+export const opportunityStageEnum = pgEnum('opportunity_stage', [
+  'tiep_nhan',
+  'xac_minh',
+  'khao_sat',
+  'bao_gia',
+  'dam_phan',
+  'ky_hop_dong',
+  'mat_co_hoi',
+]);
+
+/**
+ * Phân loại ở bước Xác minh — PRD CRM-02:
+ * M1 Lưu trữ · M2 Có nhu cầu thực · M3 Cần báo giá · M4 Chốt–Đàm phán.
+ */
+export const opportunityClassificationEnum = pgEnum('opportunity_classification', [
+  'M1',
+  'M2',
+  'M3',
+  'M4',
+]);
+
+/** Mức độ nghiêm trọng của khiếu nại — PRD CRM-08. */
+export const complaintSeverityEnum = pgEnum('complaint_severity', ['thap', 'trung_binh', 'cao']);
