@@ -1,0 +1,111 @@
+@import 'tailwindcss';
+
+/**
+ * Token thiết kế — Content Guidelines Mục 6.3 đến 6.5.
+ *
+ * Triết lý (6.2, lấy cảm hứng Atlassian Design System): "nền chủ đạo gần như trắng/trung
+ * tính, CHỈ MỘT màu thương hiệu được dành riêng cho hành động chính trên mỗi màn hình —
+ * không rải màu thương hiệu khắp nơi".
+ *
+ * Content Guidelines 6.7: chế độ tối KHÔNG bắt buộc cho bản demo. Cấu trúc biến CSS ở đây
+ * cho phép bổ sung sau mà không phải thiết kế lại.
+ */
+
+@theme {
+  /* --- Màu thương hiệu (6.3) ------------------------------------------------
+     DUY NHẤT một hành động chính trên mỗi màn hình, liên kết, trạng thái focus.
+     KHÔNG dùng cho trang trí hoặc nền lớn. */
+  --color-brand: #0c66e4;
+  --color-brand-hover: #0b5ed7;
+  --color-brand-subtle: #e9f2fe;
+
+  /* --- Nền, bề mặt, viền (6.3) --------------------------------------------- */
+  --color-surface: #ffffff;        /* nền chính — vùng nội dung */
+  --color-surface-sunken: #f7f8f9; /* nền phụ — vùng trũng: nền trang, panel bên */
+  --color-surface-hover: #f1f2f4;
+  --color-border: #dcdfe4;
+
+  /* --- Chữ (6.3) ------------------------------------------------------------
+     KHÔNG dùng đen tuyệt đối #000000 — gắt hơn mức cần thiết. */
+  --color-fg: #172b4d;       /* chữ chính — tiêu đề, nội dung quan trọng */
+  --color-fg-subtle: #44546f; /* chữ phụ — mô tả, ghi chú, thời gian */
+  --color-fg-inverse: #ffffff;
+
+  /* --- 5 màu trạng thái (6.3, ánh xạ đúng Content Guidelines 5.1) -----------
+     Dùng cho nhãn trạng thái dạng Lozenge. KHÔNG dùng làm nền lớn của khối giao diện.
+     KHÔNG tạo màu trạng thái thứ 6. */
+  --color-status-draft: #6b778c;            /* Nháp */
+  --color-status-pending: #b38600;          /* Chờ duyệt */
+  --color-status-progress: #0c66e4;         /* Đang xử lý */
+  --color-status-completed: #22a06b;        /* Hoàn thành */
+  --color-status-overdue: #ca3521;          /* Quá hạn */
+
+  /* Nền nhạt tương ứng cho Lozenge — chữ đậm trên nền nhạt cùng tông (6.2). */
+  --color-status-draft-bg: #ebecf0;
+  --color-status-pending-bg: #fff7d6;
+  --color-status-progress-bg: #e9f2fe;
+  --color-status-completed-bg: #dcfff1;
+  --color-status-overdue-bg: #ffeceb;
+
+  /* --- Kiểu chữ (6.4) -------------------------------------------------------
+     Inter — thay thế mã nguồn mở cho phông chữ độc quyền của Atlassian.
+     Cỡ chữ nội dung chính 14px: đúng "mật độ thông tin có chủ đích" (6.1) —
+     đây là phần mềm quản trị, không phải ứng dụng tiêu dùng. */
+  --font-sans:
+    'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+    sans-serif;
+  --text-base: 0.875rem; /* 14px */
+  --text-base--line-height: 1.4285714;
+
+  /* --- Bo góc (6.5) ---------------------------------------------------------
+     4-8px cho thẻ, bảng, ô nhập liệu, nút. NGOẠI LỆ DUY NHẤT: nhãn trạng thái
+     (Lozenge) bo tròn hoàn toàn, để luôn dễ nhận ra giữa các thành phần khác. */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  /* --- Độ nổi (6.5) ---------------------------------------------------------
+     Bóng đổ RẤT NHẸ, 4 mức. KHÔNG dùng bóng đậm hoặc kiểu 3D. */
+  --shadow-card: 0 1px 1px rgb(9 30 66 / 0.13), 0 0 1px rgb(9 30 66 / 0.16);
+  --shadow-overlay: 0 4px 8px -2px rgb(9 30 66 / 0.16), 0 0 1px rgb(9 30 66 / 0.16);
+}
+
+/* Lưới khoảng cách bội số 8px (6.5) khớp thang mặc định của Tailwind
+   (spacing-2 = 8px, spacing-4 = 16px, spacing-6 = 24px, spacing-8 = 32px)
+   nên không cần khai báo lại. */
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    /* Toàn bộ giao diện là tiếng Việt có dấu (PRD Mục 6, Content Guidelines 4.1). */
+    font-feature-settings: 'cv11', 'ss01';
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    background-color: var(--color-surface-sunken);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+  }
+
+  /* Trạng thái focus dùng màu thương hiệu (6.3) — bắt buộc cho khả năng tiếp cận (6.8). */
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+
+  /* Vùng bấm tối thiểu 40x40px trên di động (6.8) — quan trọng cho Kho/công trường. */
+  @media (pointer: coarse) {
+    button,
+    [role='button'],
+    a[href] {
+      min-height: 40px;
+      min-width: 40px;
+    }
+  }
+}
