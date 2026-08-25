@@ -1,5 +1,8 @@
-import 'dotenv/config';
+import { config } from 'dotenv';
 import { defineConfig } from 'drizzle-kit';
+
+// `.env` nằm ở gốc repo, không phải trong db/ — npm workspaces chạy script từ db/.
+config({ path: new URL('../.env', import.meta.url).pathname });
 
 /**
  * Cấu hình Drizzle Kit.

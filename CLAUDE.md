@@ -137,6 +137,13 @@ Mỗi bảng áp dụng **đúng một trong 4 mẫu chuẩn** (BSD 3.3 ghi sẵ
 
 Mọi lượt xem/sửa dữ liệu **Mẫu D** phải ghi vào `sensitive_access_logs` (BSD 3.4, PRD NEN-07).
 
+> **Lưới an toàn có sẵn của Supabase**: dự án này có event trigger `ensure_rls` (hàm
+> `public.rls_auto_enable`) TỰ ĐỘNG bật RLS cho mọi bảng mới tạo trong schema `public`.
+> Nó chỉ BẬT RLS, không tạo policy — nên bảng mới mà quên viết policy sẽ **chặn hết**
+> (fail-safe), không phải lộ hết. Vẫn phải viết policy cho từng bảng; lệnh
+> `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` trong migration là dư nhưng giữ lại để
+> migration tự mô tả đầy đủ, không phụ thuộc hành vi ngầm của nền tảng.
+
 > **Lưu ý — BSD tự mâu thuẫn ở 2 bảng**: `employees` ghi Mẫu **D** ở BSD 3.3 nhưng Mẫu **B** ở BSD 4.10;
 > `quotes` ngụ ý Mẫu **B** ở BSD 3.3 nhưng ghi Mẫu **C** ở BSD 4.2. Khi BSD 3.3 và BSD 4.x lệch nhau cho
 > cùng một bảng: **ưu tiên BSD 4.x** (cụ thể theo module) và **báo lại Haan** để sửa tài liệu.
