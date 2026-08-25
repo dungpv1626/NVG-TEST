@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+.wrangler/
+.open-next/
+*.tsbuildinfo
+
+# Môi trường — KHÔNG BAO GIỜ commit secret (TSD 5.6)
+.env
+.env.local
+.env.*.local
+.dev.vars
+
+# Logs & cache
+*.log
+npm-debug.log*
+.npm/
+.cache/
+.vite/
+
+# Test output
+coverage/
+playwright-report/
+test-results/
+
+# Editor / OS
+.DS_Store
+.idea/
+*.swp
+
+# Tài liệu trích xuất tạm (bản gốc .docx vẫn được commit)
+doc/*.md
+
+# File lock tạm của LibreOffice/Word
+.~lock.*#
+~$*

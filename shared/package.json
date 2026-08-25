@@ -1,0 +1,24 @@
+{
+  "name": "@nvg/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./status": "./src/status.ts",
+    "./modules": "./src/modules.ts",
+    "./format": "./src/format.ts",
+    "./terminology": "./src/terminology.ts",
+    "./content": "./src/content.ts",
+    "./codes": "./src/codes.ts"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -b --pretty"
+  },
+  "dependencies": {
+    "zod": "^3.24.1"
+  }
+}

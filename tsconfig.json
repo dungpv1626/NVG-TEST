@@ -1,0 +1,9 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./shared" },
+    { "path": "./db" },
+    { "path": "./workers" },
+    { "path": "./web" }
+  ]
+}

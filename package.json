@@ -1,0 +1,29 @@
+{
+  "name": "nvg",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Hệ thống Phần mềm Quản trị Nhà Việt Group (NVG)",
+  "type": "module",
+  "workspaces": ["shared", "db", "workers", "web"],
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "dev": "npm run dev --workspace=web",
+    "dev:workers": "npm run dev --workspace=workers",
+    "build": "npm run build --workspace=shared && npm run build --workspace=db && npm run build --workspace=web",
+    "typecheck": "tsc -b --pretty",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "db:generate": "npm run generate --workspace=db",
+    "db:migrate": "npm run migrate --workspace=db",
+    "db:push": "npm run push --workspace=db",
+    "db:seed": "npm run seed --workspace=db",
+    "db:studio": "npm run studio --workspace=db"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "prettier": "^3.4.2",
+    "vitest": "^3.0.5",
+    "@types/node": "^22.13.1"
+  }
+}
