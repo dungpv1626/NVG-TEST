@@ -12,6 +12,7 @@
  * được là cách duy nhất để thực hiện một thao tác).
  */
 import { type ReactNode } from 'react';
+import { type MoneyValue } from '@nvg/shared';
 export interface KanbanColumn {
     id: string;
     label: string;
@@ -27,7 +28,7 @@ export interface KanbanCard {
     /** Người chịu trách nhiệm — một trong ba thông tin luôn hiển thị (Webapp Flow 1.3). */
     responsiblePerson: string | null;
     deadline: string | null;
-    amount: bigint | string | null;
+    amount: MoneyValue | null;
     detailPath: string;
     /** Nhãn phụ, ví dụ phân loại M1–M4 hoặc tên khách hàng. */
     subtitle?: string | null;

@@ -32,6 +32,7 @@ import {
   useOpportunityStageHistory,
 } from '@/hooks/use-opportunities';
 import { useCan } from '@/lib/auth';
+import { QuotePanel } from './quote-panel';
 import { cn } from '@/lib/utils';
 
 const EM_DASH = '—';
@@ -187,7 +188,11 @@ export function OpportunityDetailPage() {
             id: 'bao-gia',
             label: 'Báo giá',
             content: (
-              <EmptyState message="Chưa có báo giá nào. Báo giá phải được phê duyệt nội bộ trước khi gửi khách hàng." />
+              <QuotePanel
+                opportunityId={data.id}
+                canEdit={canEdit}
+                isHandedOver={isHandedOver}
+              />
             ),
           },
         ]}

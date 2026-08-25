@@ -37,8 +37,9 @@ export const ERRORS = {
   invalidFormat: (field: string, expected: string) => `${field} chưa đúng định dạng (${expected}).`,
   /** Nêu rõ AI xử lý được, không chỉ nói "Không đủ quyền" (Content Guidelines 4.6). */
   exceedsApprovalLimit: (authorityRole: string) =>
-    `Vượt hạn mức phê duyệt của bạn. Chuyển cho ${authorityRole}.`,
-  noPermission: 'Bạn chưa có quyền xem hồ sơ này. Liên hệ quản lý trực tiếp nếu cần hỗ trợ.',
+    `Hồ sơ vượt hạn mức phê duyệt của vai trò hiện tại. Chuyển cho ${authorityRole}.`,
+  noPermission:
+    'Vai trò hiện tại chưa có quyền xem hồ sơ này. Liên hệ quản lý trực tiếp nếu cần hỗ trợ.',
   offline: 'Không thể lưu do mất kết nối mạng. Dữ liệu đã nhập vẫn được giữ — thử lại khi có mạng.',
   conflict: (otherUser: string) =>
     `${otherUser} vừa cập nhật hồ sơ này. Tải lại để xem bản mới nhất trước khi tiếp tục.`,

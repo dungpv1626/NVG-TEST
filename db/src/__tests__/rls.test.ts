@@ -498,3 +498,392 @@ describeDb('CRM — pipeline cơ hội kinh doanh', () => {
 
   });
 });
+
+/**
+ * Luồng báo giá và phê duyệt (CRM-04, CRM-05).
+ *
+ * Ba thứ phải chắc chắn đúng, vì sai thì KHÔNG có triệu chứng nào nhìn thấy được:
+ *   1. Báo giá chưa duyệt mà vẫn gửi được cho khách → chữ ký phê duyệt vô nghĩa.
+ *   2. Người không đủ hạn mức vẫn duyệt được → Mẫu C hỏng, mà không ai biết.
+ *   3. Giảm giá đi nhầm sang luồng duyệt thường → né được Tổng Giám đốc (CRM-05).
+ */
+describeDb('CRM — báo giá và phê duyệt giá', () => {
+  /** Cơ hội + báo giá nháp để thử. Trả về id cả hai. */
+  async function createQuote(
+    client: SupabaseClient,
+    { totalValue, discountAmount }: { totalValue: string; discountAmount?: string },
+  ) {
+    const { data: company } = await client
+      .from('companies')
+      .select('id')
+      .eq('code', 'NVC')
+      .single();
+    const { data: customer } = await client.from('customers').select('id').limit(1).maybeSingle();
+    if (!customer) throw new Error('Cần ít nhất một khách hàng để chạy test này.');
+
+    const { data: me } = await client.rpc('auth_user_id');
+    const { data: code } = await client.rpc('next_record_code', {
+      p_company_code: 'NVC',
+      p_record_type: 'CH',
+    });
+
+    const { data: opportunity, error: oppError } = await client
+      .from('opportunities')
+      .insert({
+        code,
+        company_id: company!.id,
+        customer_id: customer.id,
+        name: `${TEST_PREFIX} Báo giá ${Date.now()}`,
+        owner_id: me,
+        stage: 'bao_gia',
+      })
+      .select('id')
+      .single();
+    if (oppError) throw new Error(oppError.message);
+
+    // Không truyền code/version/is_current_version — trigger cấp.
+    const { data: quote, error: quoteError } = await client
+      .from('quotes')
+      .insert({
+        company_id: company!.id,
+        opportunity_id: opportunity!.id,
+        total_value: totalValue,
+        discount_amount: discountAmount ?? null,
+        discount_reason: discountAmount ? 'Khách hàng cũ, khối lượng lớn' : null,
+      })
+      .select('id, code, version, is_current_version, status')
+      .single();
+    if (quoteError) throw new Error(quoteError.message);
+
+    return { opportunityId: opportunity!.id as string, quote: quote! };
+  }
+
+  it('CSDL cấp mã và số phiên bản, không phải trình duyệt (NEN-05)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const { opportunityId, quote } = await createQuote(kd, { totalValue: '800000000' });
+
+    expect(quote.version).toBe(1);
+    expect(quote.is_current_version).toBe(true);
+    expect(quote.code).toMatch(/^NVC-BG-\d{4}-\d{4}$/);
+    expect(quote.status).toBe('draft');
+
+    // Phiên bản 2 giữ nguyên mã gốc kèm hậu tố, để nhìn mã là biết cùng một chuỗi báo giá.
+    const { data: company } = await kd.from('companies').select('id').eq('code', 'NVC').single();
+    const { data: v2, error } = await kd
+      .from('quotes')
+      .insert({
+        company_id: company!.id,
+        opportunity_id: opportunityId,
+        total_value: '750000000',
+      })
+      .select('code, version, is_current_version')
+      .single();
+    expect(error).toBeNull();
+    expect(v2!.version).toBe(2);
+    expect(v2!.code).toBe(`${quote.code}-V2`);
+
+    // Và chỉ còn ĐÚNG MỘT bản đang hiệu lực — điều kiện để NEN-05 có ý nghĩa.
+    const { data: current } = await kd
+      .from('quotes')
+      .select('id, version')
+      .eq('opportunity_id', opportunityId)
+      .eq('is_current_version', true);
+    expect(current).toHaveLength(1);
+    expect(current![0]!.version).toBe(2);
+  });
+
+  it('không gửi được báo giá chưa qua phê duyệt nội bộ (CRM-04)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const { quote } = await createQuote(kd, { totalValue: '900000000' });
+
+    const { error } = await kd.rpc('send_quote_to_customer', { p_quote_id: quote.id });
+    expect(error).toBeTruthy();
+    expect(error!.message).toContain('chưa được phê duyệt nội bộ');
+  });
+
+  it('gửi phê duyệt là tự xuất hiện trong Hộp thư của đúng người (CRM-04)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const tgd = await signInAs(ACCOUNTS.tgd);
+    // Trên hạn mức 500 triệu của Kinh doanh → phải lên tới Tổng Giám đốc.
+    const { quote } = await createQuote(kd, { totalValue: '8000000000' });
+
+    const { error } = await kd.rpc('request_quote_approval', { p_quote_id: quote.id });
+    expect(error).toBeNull();
+
+    const { data: forTgd } = await tgd
+      .from('approvals')
+      .select('id, subject, amount, status')
+      .eq('entity_id', quote.id);
+    expect(forTgd).toHaveLength(1);
+    expect(forTgd![0]!.subject).toBe('quote_price');
+    expect(forTgd![0]!.status).toBe('pending_approval');
+  });
+
+  it('vượt hạn mức thì KHÔNG duyệt được, dù nhìn thấy hồ sơ mình gửi (Mẫu C, NEN-02)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const { quote } = await createQuote(kd, { totalValue: '8000000000' });
+    await kd.rpc('request_quote_approval', { p_quote_id: quote.id });
+
+    // Người gửi vẫn thấy hồ sơ của mình để theo dõi đang nằm ở ai...
+    const { data: mine } = await kd.from('approvals').select('id').eq('entity_id', quote.id);
+    expect(mine).toHaveLength(1);
+
+    // ...nhưng 8 tỷ vượt hạn mức 500 triệu của Kinh doanh nên không tự duyệt được.
+    const { error } = await kd.rpc('decide_approval', {
+      p_approval_id: mine![0]!.id,
+      p_decision: 'approved',
+      p_note: 'Tự duyệt',
+    });
+    expect(error).toBeTruthy();
+    expect(error!.message).toContain('hạn mức');
+
+    // Báo giá phải vẫn đang chờ duyệt, không bị đổi trạng thái nửa vời.
+    const { data: after } = await kd
+      .from('quotes')
+      .select('status')
+      .eq('id', quote.id)
+      .single();
+    expect(after!.status).toBe('pending_approval');
+  });
+
+  it('duyệt xong mới gửi được khách hàng, và lịch sử ghi lại căn cứ (CRM-04, NEN-03)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const tgd = await signInAs(ACCOUNTS.tgd);
+    const { quote } = await createQuote(kd, { totalValue: '8000000000' });
+    await kd.rpc('request_quote_approval', { p_quote_id: quote.id });
+
+    const { data: pending } = await tgd.from('approvals').select('id').eq('entity_id', quote.id);
+    const { error: decide } = await tgd.rpc('decide_approval', {
+      p_approval_id: pending![0]!.id,
+      p_decision: 'approved',
+      p_note: 'Giá phù hợp mặt bằng thị trường',
+    });
+    expect(decide).toBeNull();
+
+    const { data: history } = await tgd
+      .from('approval_decisions')
+      .select('decision, note, approver_unlimited')
+      .eq('approval_id', pending![0]!.id);
+    expect(history).toHaveLength(1);
+    expect(history![0]!.decision).toBe('approved');
+    expect(history![0]!.note).toBe('Giá phù hợp mặt bằng thị trường');
+    // Hạn mức tại thời điểm duyệt được ghi lại — quy chế đổi về sau, nhật ký vẫn đọc đúng.
+    expect(history![0]!.approver_unlimited).toBe(true);
+
+    const { error: send } = await kd.rpc('send_quote_to_customer', { p_quote_id: quote.id });
+    expect(send).toBeNull();
+  });
+
+  it('báo giá đã duyệt KHÔNG sửa được giá nữa — nếu không, chữ ký duyệt vô nghĩa', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const tgd = await signInAs(ACCOUNTS.tgd);
+    const { quote } = await createQuote(kd, { totalValue: '8000000000' });
+    await kd.rpc('request_quote_approval', { p_quote_id: quote.id });
+
+    const { data: pending } = await tgd.from('approvals').select('id').eq('entity_id', quote.id);
+    await tgd.rpc('decide_approval', {
+      p_approval_id: pending![0]!.id,
+      p_decision: 'approved',
+      p_note: 'Đồng ý',
+    });
+
+    // Policy chỉ cho sửa báo giá còn NHÁP: lệnh dưới đây không chạm được dòng nào.
+    const { data: changed } = await kd
+      .from('quotes')
+      .update({ total_value: '1000' })
+      .eq('id', quote.id)
+      .select('id');
+    expect(changed ?? []).toHaveLength(0);
+
+    const { data: after } = await kd
+      .from('quotes')
+      .select('total_value')
+      .eq('id', quote.id)
+      .single();
+    expect(Number(after!.total_value)).toBe(8_000_000_000);
+  });
+
+  it('có giảm giá thì bắt buộc đi luồng Tổng Giám đốc, không né được (CRM-05)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const tgd = await signInAs(ACCOUNTS.tgd);
+
+    // Tổng giá trị 100 triệu — NẰM TRONG hạn mức 500 triệu của Kinh doanh. Nếu chọn loại
+    // nghiệp vụ theo tổng giá trị thì nhân viên tự duyệt được luôn khoản giảm giá của mình.
+    const { quote } = await createQuote(kd, {
+      totalValue: '100000000',
+      discountAmount: '15000000',
+    });
+    await kd.rpc('request_quote_approval', { p_quote_id: quote.id });
+
+    const { data: mine } = await kd
+      .from('approvals')
+      .select('id, subject, amount')
+      .eq('entity_id', quote.id);
+    expect(mine![0]!.subject).toBe('special_discount');
+    // Đối chiếu hạn mức theo MỨC GIẢM, không theo tổng giá trị.
+    // PostgREST trả cột `bigint` dưới dạng SỐ JSON, không phải chuỗi.
+    expect(Number(mine![0]!.amount)).toBe(15_000_000);
+
+    // Kinh doanh không có hạn mức cho giảm giá đặc biệt → chặn.
+    const { error: selfApprove } = await kd.rpc('decide_approval', {
+      p_approval_id: mine![0]!.id,
+      p_decision: 'approved',
+      p_note: 'Tự duyệt giảm giá',
+    });
+    expect(selfApprove).toBeTruthy();
+
+    // Tổng Giám đốc thì duyệt được (CRM-05: "mặc định theo khảo sát: Tổng Giám đốc").
+    const { error: tgdApprove } = await tgd.rpc('decide_approval', {
+      p_approval_id: mine![0]!.id,
+      p_decision: 'approved',
+      p_note: 'Chấp thuận mức giảm để giữ khách hàng cũ',
+    });
+    expect(tgdApprove).toBeNull();
+  });
+
+  it('người ngoài không thấy lý do giảm giá và ý kiến phê duyệt', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const kho = await signInAs(ACCOUNTS.kho);
+    const { quote } = await createQuote(kd, {
+      totalValue: '100000000',
+      discountAmount: '15000000',
+    });
+    await kd.rpc('request_quote_approval', { p_quote_id: quote.id });
+
+    // Nhân viên Kho không đề nghị, cũng không có hạn mức cho giảm giá đặc biệt.
+    // PRD Module CRM: nội dung thương thảo "phải phân quyền chặt, không hiển thị đại trà".
+    const { data } = await kho.from('approvals').select('id, reason').eq('entity_id', quote.id);
+    expect(data ?? []).toHaveLength(0);
+  });
+
+  it('từ chối bắt buộc nêu lý do, và trả báo giá về nháp để sửa', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const tgd = await signInAs(ACCOUNTS.tgd);
+    const { quote } = await createQuote(kd, { totalValue: '8000000000' });
+    await kd.rpc('request_quote_approval', { p_quote_id: quote.id });
+
+    const { data: pending } = await tgd.from('approvals').select('id').eq('entity_id', quote.id);
+
+    const { error: noReason } = await tgd.rpc('decide_approval', {
+      p_approval_id: pending![0]!.id,
+      p_decision: 'rejected',
+      p_note: null,
+    });
+    expect(noReason).toBeTruthy();
+    expect(noReason!.message).toContain('lý do từ chối');
+
+    const { error: rejected } = await tgd.rpc('decide_approval', {
+      p_approval_id: pending![0]!.id,
+      p_decision: 'rejected',
+      p_note: 'Biên lợi nhuận quá thấp, soạn lại phương án',
+    });
+    expect(rejected).toBeNull();
+
+    // Về nháp để người phụ trách sửa và gửi lại — không kẹt ở trạng thái chờ mãi.
+    const { data: after } = await kd
+      .from('quotes')
+      .select('status')
+      .eq('id', quote.id)
+      .single();
+    expect(after!.status).toBe('draft');
+  });
+
+  it('không tạo được đề nghị phê duyệt giả từ trình duyệt', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const { data: company } = await kd.from('companies').select('id').eq('code', 'NVC').single();
+
+    const { error } = await kd.from('approvals').insert({
+      company_id: company!.id,
+      subject: 'special_discount',
+      entity_type: 'quotes',
+      entity_id: crypto.randomUUID(),
+      title: `${TEST_PREFIX} Đề nghị giả`,
+      amount: '1000000',
+    });
+    expect(error).toBeTruthy();
+    expect(error!.code).toBe(PG_INSUFFICIENT_PRIVILEGE);
+  });
+
+  it('không tự ghi được quyết định phê duyệt vào lịch sử', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const { quote } = await createQuote(kd, { totalValue: '8000000000' });
+    await kd.rpc('request_quote_approval', { p_quote_id: quote.id });
+
+    const { data: mine } = await kd.from('approvals').select('id').eq('entity_id', quote.id);
+
+    const { error } = await kd.from('approval_decisions').insert({
+      approval_id: mine![0]!.id,
+      decision: 'approved',
+      note: 'Tự ghi là đã duyệt',
+    });
+    expect(error).toBeTruthy();
+    expect(error!.code).toBe(PG_INSUFFICIENT_PRIVILEGE);
+  });
+});
+
+/**
+ * Hộp thư Phê duyệt chỉ chứa việc XỬ LÝ ĐƯỢC.
+ *
+ * Tách riêng khỏi nhóm test trên vì đây là hai câu hỏi khác nhau — "được xem" và "phải xử
+ * lý" — và chính chỗ lẫn hai câu hỏi đó đã làm huy hiệu "Việc cần làm" đếm nhầm.
+ */
+describeDb('Hộp thư Phê duyệt', () => {
+  it('người gửi KHÔNG thấy hồ sơ của mình trong hộp thư, dù xem được nó', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const tgd = await signInAs(ACCOUNTS.tgd);
+
+    const { data: company } = await kd.from('companies').select('id').eq('code', 'NVC').single();
+    const { data: customer } = await kd.from('customers').select('id').limit(1).maybeSingle();
+    const { data: me } = await kd.rpc('auth_user_id');
+    const { data: code } = await kd.rpc('next_record_code', {
+      p_company_code: 'NVC',
+      p_record_type: 'CH',
+    });
+
+    const { data: opportunity } = await kd
+      .from('opportunities')
+      .insert({
+        code,
+        company_id: company!.id,
+        customer_id: customer!.id,
+        name: `${TEST_PREFIX} Hộp thư ${Date.now()}`,
+        owner_id: me,
+        stage: 'bao_gia',
+      })
+      .select('id')
+      .single();
+
+    const { data: quote } = await kd
+      .from('quotes')
+      .insert({
+        company_id: company!.id,
+        opportunity_id: opportunity!.id,
+        total_value: '9000000000',
+      })
+      .select('id')
+      .single();
+
+    await kd.rpc('request_quote_approval', { p_quote_id: quote!.id });
+
+    // Người gửi XEM được hồ sơ (theo dõi đang nằm ở ai)...
+    const { data: visible } = await kd.from('approvals').select('id').eq('entity_id', quote!.id);
+    expect(visible).toHaveLength(1);
+
+    // ...nhưng nó KHÔNG nằm trong hộp thư của họ, vì họ không duyệt được.
+    const { data: kdInbox } = await kd.rpc('my_pending_approvals');
+    expect((kdInbox ?? []).some((r: { entity_id: string }) => r.entity_id === quote!.id)).toBe(
+      false,
+    );
+
+    // Trong khi hộp thư của Tổng Giám đốc thì có, kèm đủ dữ liệu để quyết định tại chỗ.
+    const { data: tgdInbox } = await tgd.rpc('my_pending_approvals');
+    const item = (tgdInbox ?? []).find(
+      (r: { entity_id: string }) => r.entity_id === quote!.id,
+    ) as { requested_by_name: string; company_code: string; parent_id: string } | undefined;
+    expect(item).toBeTruthy();
+    expect(item!.requested_by_name).toBeTruthy();
+    expect(item!.company_code).toBe('NVC');
+    // Có sẵn đường về hồ sơ đầy đủ mà không phải gọi thêm lượt nào.
+    expect(item!.parent_id).toBe(opportunity!.id);
+  });
+});

@@ -16,6 +16,7 @@ import {
   OPPORTUNITY_STAGES,
   OPPORTUNITY_STAGE_META,
   formatCurrency,
+  type MoneyValue,
   type OpportunityClassification,
   type OpportunityStage,
 } from '@nvg/shared';
@@ -32,7 +33,7 @@ import { cn } from '@/lib/utils';
 interface OpportunityRow extends EntityRow {
   customerName: string;
   stage: OpportunityStage;
-  estimatedValue: string | null;
+  estimatedValue: MoneyValue | null;
 }
 
 export function OpportunityPipelinePage() {

@@ -69,11 +69,22 @@ export function formatNumber(
 }
 
 /**
+ * Hình dạng một giá trị tiền khi đi qua các tầng.
+ *
+ * Cùng một cột `bigint` về tới nơi sử dụng dưới ba dạng khác nhau: Drizzle trả `bigint`,
+ * PostgREST trả SỐ JSON, biểu mẫu giữ chuỗi người dùng gõ. Khai báo một kiểu duy nhất ở đây
+ * để mỗi hook không tự đoán một kiểu rồi lệch nhau — đúng thứ đã làm hỏng lượt build đầu.
+ *
+ * Giá trị tiền của NVG (đơn vị đồng, lớn nhất cỡ trăm tỷ) còn rất xa `Number.MAX_SAFE_INTEGER`
+ * nên dạng số không mất chính xác.
+ */
+export type MoneyValue = bigint | string | number;
+
+/**
  * Tiền tệ VNĐ — Content Guidelines 4.3 + Backend Schema 1.4.
  *
  * Giá trị lưu trong CSDL là `bigint`, đơn vị ĐỒNG, KHÔNG có phần thập phân
- * (VNĐ không có đơn vị nhỏ hơn đồng trong thực tế). Drizzle trả `bigint` về dạng
- * chuỗi nên hàm này nhận cả `string`.
+ * (VNĐ không có đơn vị nhỏ hơn đồng trong thực tế). Nhận mọi dạng của `MoneyValue`.
  *
  * @example formatCurrency(125_000_000n) // "125.000.000 đồng"
  * @example formatCurrency(125_000_000n, { symbol: true }) // "125.000.000 ₫"
@@ -132,6 +143,23 @@ export function daysUntil(deadline: DateInput, now: DateInput = new Date()): num
   const endUtc = Date.parse(`${dayKey(end)}T00:00:00Z`);
   const startUtc = Date.parse(`${dayKey(start)}T00:00:00Z`);
   return Math.round((endUtc - startUtc) / 86_400_000);
+}
+
+/**
+ * Diễn đạt THỜI GIAN ĐÃ CHỜ kể từ một mốc trong quá khứ.
+ *
+ * Khác hẳn `formatDeadline`, vốn nói về một mốc TƯƠNG LAI. Dùng nhầm hàm kia cho thời điểm
+ * gửi phê duyệt sẽ đọc ra "Đến hạn hôm nay" cho một hồ sơ vừa gửi xong — sai nghĩa hoàn
+ * toàn. Hộp thư Phê duyệt xếp theo thời gian chờ (Webapp Flow 4.6) nên cần đúng hàm này.
+ */
+export function formatWaiting(since: DateInput | null | undefined, now: DateInput = new Date()): string {
+  if (!since) return '';
+  const days = daysUntil(since, now);
+  if (days === null) return '';
+  const waited = -days;
+  if (waited <= 0) return 'Gửi hôm nay';
+  if (waited === 1) return 'Chờ 1 ngày';
+  return `Chờ ${waited} ngày`;
 }
 
 /**

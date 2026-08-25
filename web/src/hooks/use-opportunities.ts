@@ -7,17 +7,18 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { OpportunityStage } from '@nvg/shared';
+import type { MoneyValue, OpportunityStage } from '@nvg/shared';
 import { useCompanyStore } from '@/lib/company-store';
 import { supabase } from '@/lib/supabase';
 
 export interface OpportunityRecord {
   id: string;
   code: string;
+  company_id: string;
   name: string;
   stage: OpportunityStage;
   classification: string | null;
-  estimated_value: string | null;
+  estimated_value: MoneyValue | null;
   project_type: string | null;
   due_date: string | null;
   handed_over_at: string | null;
@@ -27,7 +28,7 @@ export interface OpportunityRecord {
 }
 
 const OPPORTUNITY_SELECT =
-  'id, code, name, stage, classification, estimated_value, project_type, due_date, ' +
+  'id, code, company_id, name, stage, classification, estimated_value, project_type, due_date, ' +
   'handed_over_at, created_at, ' +
   'customer:customers!opportunities_customer_id_customers_id_fk(id, name), ' +
   'owner:users!opportunities_owner_id_users_id_fk(full_name)';

@@ -8,9 +8,11 @@
  * đúng điều kiện của thẻ — không phải màn hình chỉ để xem.
  */
 
+import { Link } from 'react-router-dom';
 import { MODULES, dashboardGreeting, type ModuleCode } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
+import { usePendingApprovals } from '@/hooks/use-approvals';
 import { useAuth } from '@/lib/auth';
 import { useCompanyStore } from '@/lib/company-store';
 import { cn } from '@/lib/utils';
@@ -25,6 +27,11 @@ export function DashboardPage() {
 
   const visibleModules = profile?.permissions.filter((p) => p.canView) ?? [];
   const approvableModules = profile?.permissions.filter((p) => p.canApprove) ?? [];
+
+  // Cùng nguồn dữ liệu với Hộp thư Phê duyệt và huy hiệu trên thanh trên cùng — ba chỗ hiển
+  // thị cùng một con số thì phải đọc từ cùng một truy vấn, nếu không sẽ có lúc lệch nhau.
+  const { data: pendingApprovals } = usePendingApprovals();
+  const pendingCount = pendingApprovals?.length ?? 0;
 
   // Lời chào cá nhân hoá bằng TÊN là NGOẠI LỆ DUY NHẤT của quy tắc không dùng đại từ
   // nhân xưng (Content Guidelines 4.2) — dùng tên, không dùng anh/chị.
@@ -42,15 +49,22 @@ export function DashboardPage() {
       />
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Card title="Việc cần xử lý" hint="Hồ sơ đang chờ thao tác của bạn">
+        <Card title="Việc cần xử lý" hint="Hồ sơ đang chờ thao tác của vai trò hiện tại">
           <EmptyMetric label="Không có việc nào cần xử lý. Mọi thứ đã được cập nhật." />
         </Card>
 
-        <Card title="Chờ phê duyệt" hint="Hồ sơ nằm trong hạn mức phê duyệt của bạn">
-          {approvableModules.length > 0 ? (
+        {/* Mẫu Dashboard (Webapp Flow 4.1): thẻ có số liệu PHẢI bấm được, dẫn thẳng tới
+            danh sách đã lọc sẵn — không phải con số chỉ để ngắm. */}
+        <Card title="Chờ phê duyệt" hint="Hồ sơ nằm trong hạn mức phê duyệt của vai trò hiện tại">
+          {approvableModules.length === 0 ? (
+            <EmptyMetric label="Vai trò hiện tại không có quyền phê duyệt." />
+          ) : pendingCount === 0 ? (
             <EmptyMetric label="Không có hồ sơ nào đang chờ phê duyệt." />
           ) : (
-            <EmptyMetric label="Vai trò hiện tại không có quyền phê duyệt." />
+            <Link to="/viec-can-lam" className="flex items-center gap-2 hover:underline">
+              <span className="text-2xl font-semibold">{pendingCount}</span>
+              <StatusLozenge status="pending_approval" />
+            </Link>
           )}
         </Card>
 

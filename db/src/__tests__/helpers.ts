@@ -19,16 +19,36 @@ export function anonClient(): SupabaseClient {
   return createClient(url!, anonKey!, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
+/**
+ * Client đã đăng nhập, dùng lại theo email.
+ *
+ * Supabase Auth giới hạn số lần đăng nhập trong một khoảng thời gian ngắn. Mỗi test gọi
+ * `signInAs` một lần mới là chạm trần rất nhanh ("Request rate limit reached") và cả bộ test
+ * đỏ vì lý do không liên quan gì tới phân quyền. Phiên đăng nhập không mang trạng thái riêng
+ * của từng test nên dùng chung an toàn.
+ */
+const sessions = new Map<string, Promise<SupabaseClient>>();
+
 /** Đăng nhập bằng tài khoản seed và trả về client đã xác thực. */
-export async function signInAs(email: string): Promise<SupabaseClient> {
-  const client = anonClient();
-  const { error } = await client.auth.signInWithPassword({ email, password: SEED_PASSWORD });
-  if (error) {
-    throw new Error(
-      `Không đăng nhập được ${email}: ${error.message}. Đã chạy "npm run db:seed" chưa?`,
-    );
-  }
-  return client;
+export function signInAs(email: string): Promise<SupabaseClient> {
+  const existing = sessions.get(email);
+  if (existing) return existing;
+
+  const session = (async () => {
+    const client = anonClient();
+    const { error } = await client.auth.signInWithPassword({ email, password: SEED_PASSWORD });
+    if (error) {
+      // Xóa khỏi bộ nhớ đệm để lần gọi sau thử lại được, thay vì hỏng vĩnh viễn.
+      sessions.delete(email);
+      throw new Error(
+        `Không đăng nhập được ${email}: ${error.message}. Đã chạy "npm run db:seed" chưa?`,
+      );
+    }
+    return client;
+  })();
+
+  sessions.set(email, session);
+  return session;
 }
 
 /** Email tài khoản seed, gom lại để test không rải chuỗi khắp nơi. */
@@ -70,6 +90,10 @@ export async function cleanupTestData(): Promise<void> {
   const { createConnection } = await import('../client');
   const { sql } = createConnection();
   try {
+    // `approvals` cố ý không có khóa ngoại tới hồ sơ nguồn (một bảng phục vụ nhiều module),
+    // nên xóa cơ hội KHÔNG tự dọn được các dòng phê duyệt — phải xóa tường minh.
+    // Tiêu đề được sinh từ tên cơ hội nên vẫn mang tiền tố test.
+    await sql`DELETE FROM approvals WHERE title LIKE ${TEST_PREFIX + '%'}`;
     await sql`DELETE FROM opportunities WHERE name LIKE ${TEST_PREFIX + '%'}`;
     await sql`DELETE FROM documents WHERE title LIKE ${TEST_PREFIX + '%'}`;
     await sql`DELETE FROM customers WHERE name LIKE ${TEST_PREFIX + '%'}`;

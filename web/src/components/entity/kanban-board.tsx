@@ -14,7 +14,7 @@
 
 import { useState, type DragEvent, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { formatCurrency, formatDeadline } from '@nvg/shared';
+import { formatCurrency, formatDeadline, type MoneyValue } from '@nvg/shared';
 import { EmptyState, ErrorState, Skeleton } from '@/components/ui/states';
 import { cn } from '@/lib/utils';
 
@@ -34,7 +34,7 @@ export interface KanbanCard {
   /** Người chịu trách nhiệm — một trong ba thông tin luôn hiển thị (Webapp Flow 1.3). */
   responsiblePerson: string | null;
   deadline: string | null;
-  amount: bigint | string | null;
+  amount: MoneyValue | null;
   detailPath: string;
   /** Nhãn phụ, ví dụ phân loại M1–M4 hoặc tên khách hàng. */
   subtitle?: string | null;

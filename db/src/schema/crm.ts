@@ -6,7 +6,8 @@
  * `opportunities` và các bảng còn lại thuộc Phase 2A.
  */
 
-import { date, index, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
+import { date, index, pgTable, text, timestamp, uniqueIndex, uuid, varchar } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { auditColumns } from './_audit';
 import {
   complaintSeverityEnum,
@@ -236,6 +237,16 @@ export const quotes = pgTable(
   (t) => [
     index('quotes_opportunity_idx').on(t.opportunityId),
     index('quotes_status_idx').on(t.companyId, t.status),
+    /**
+     * NEN-05: "tại mọi thời điểm phải xác định rõ bản ĐANG CÓ HIỆU LỰC".
+     *
+     * Ràng buộc ở tầng CSDL chứ không ở tầng ứng dụng: hai phiên bản cùng được đánh dấu
+     * đang hiệu lực sẽ khiến người bán và khách hàng nói về hai mức giá khác nhau mà
+     * không ai phát hiện. Trigger `quotes_assign_version` giữ cho ràng buộc này luôn đúng.
+     */
+    uniqueIndex('quotes_one_current_version')
+      .on(t.opportunityId)
+      .where(sql`${t.isCurrentVersion} AND ${t.deletedAt} IS NULL`),
   ],
 );
 

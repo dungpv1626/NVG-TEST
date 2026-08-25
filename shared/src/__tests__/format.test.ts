@@ -5,6 +5,7 @@ import {
   formatDate,
   formatDateTime,
   formatDeadline,
+  formatWaiting,
   formatNumber,
   formatPercent,
   formatPhone,
@@ -110,5 +111,26 @@ describe('daysUntil / formatDeadline', () => {
     expect(formatDeadline('2026-08-28T03:00:00Z', now)).toBe('Còn 3 ngày');
     expect(formatDeadline('2026-08-24T03:00:00Z', now)).toBe('Quá hạn 1 ngày');
     expect(formatDeadline('2026-08-20T03:00:00Z', now)).toBe('Quá hạn 5 ngày');
+  });
+});
+
+describe('formatWaiting', () => {
+  const now = new Date('2026-08-25T03:00:00Z'); // 10:00 giờ Việt Nam
+
+  it('nói về thời gian ĐÃ CHỜ, không phải thời hạn sắp tới', () => {
+    expect(formatWaiting('2026-08-25T02:00:00Z', now)).toBe('Gửi hôm nay');
+    expect(formatWaiting('2026-08-24T03:00:00Z', now)).toBe('Chờ 1 ngày');
+    expect(formatWaiting('2026-08-20T03:00:00Z', now)).toBe('Chờ 5 ngày');
+  });
+
+  it('không đọc ra "Đến hạn hôm nay" cho hồ sơ vừa gửi', () => {
+    // Chính lỗi đã gặp khi dùng nhầm formatDeadline cho thời điểm gửi phê duyệt.
+    expect(formatDeadline('2026-08-25T02:00:00Z', now)).toBe('Đến hạn hôm nay');
+    expect(formatWaiting('2026-08-25T02:00:00Z', now)).toBe('Gửi hôm nay');
+  });
+
+  it('trả chuỗi rỗng khi chưa có mốc thời gian', () => {
+    expect(formatWaiting(null)).toBe('');
+    expect(formatWaiting(undefined)).toBe('');
   });
 });

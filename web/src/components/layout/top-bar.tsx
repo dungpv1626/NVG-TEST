@@ -10,28 +10,30 @@
 
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Bell, CheckSquare, LogOut, Search, User } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { usePendingApprovals } from '@/hooks/use-approvals';
 import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 
 function IconButton({
   label,
   count,
+  to,
   children,
 }: {
   label: string;
   count?: number;
+  /** Có đích đến thì dựng thành liên kết, để mở tab mới và điều hướng bàn phím hoạt động đúng. */
+  to?: string;
   children: React.ReactNode;
 }) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      className={cn(
-        'relative flex size-8 items-center justify-center rounded-sm',
-        'text-fg-subtle hover:bg-surface-hover hover:text-fg',
-      )}
-    >
+  const className = cn(
+    'relative flex size-8 items-center justify-center rounded-sm',
+    'text-fg-subtle hover:bg-surface-hover hover:text-fg',
+  );
+
+  const badge = (
+    <>
       {children}
       {count !== undefined && count > 0 && (
         <span
@@ -44,12 +46,30 @@ function IconButton({
           {count > 99 ? '99+' : count}
         </span>
       )}
+    </>
+  );
+
+  if (to) {
+    return (
+      <Link to={to} aria-label={label} title={label} className={className}>
+        {badge}
+      </Link>
+    );
+  }
+
+  return (
+    <button type="button" aria-label={label} title={label} className={className}>
+      {badge}
     </button>
   );
 }
 
 export function TopBar() {
   const { profile, signOut } = useAuth();
+  // Dùng CHUNG truy vấn với Hộp thư Phê duyệt: nếu đếm bằng một truy vấn riêng,
+  // hai con số sẽ lệch nhau ngay khi điều kiện lọc đổi ở một bên.
+  const { data: pending } = usePendingApprovals();
+  const pendingCount = pending?.length ?? 0;
 
   return (
     <header
@@ -76,7 +96,13 @@ export function TopBar() {
       <div className="ml-auto flex items-center gap-1">
         {/* Thông báo và Việc cần làm tách thành hai danh sách riêng (Webapp Flow 5.4),
             tránh nhầm giữa "biết để đó" và "phải xử lý". */}
-        <IconButton label="Việc cần làm">
+        <IconButton
+          label={
+            pendingCount ? `Việc cần làm — ${pendingCount} hồ sơ chờ xử lý` : 'Việc cần làm'
+          }
+          count={pendingCount}
+          to="/viec-can-lam"
+        >
           <CheckSquare className="size-4" />
         </IconButton>
         <IconButton label="Thông báo">

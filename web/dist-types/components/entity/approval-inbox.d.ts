@@ -17,7 +17,7 @@
  *    component này không tự suy diễn quyền.
  */
 import { type ReactNode } from 'react';
-import { type ApprovalSubject } from '@nvg/shared';
+import { type ApprovalSubject, type MoneyValue } from '@nvg/shared';
 export interface ApprovalItem {
     id: string;
     /** Loại nghiệp vụ — quyết định hạn mức áp dụng (PRD NEN-02). */
@@ -28,7 +28,7 @@ export interface ApprovalItem {
     requestedBy: string;
     requestedAt: string;
     /** Giá trị hồ sơ, đơn vị đồng. `null` với nghiệp vụ không gắn tiền (nghỉ phép). */
-    amount: bigint | string | null;
+    amount: MoneyValue | null;
     /** Đường dẫn tới hồ sơ đầy đủ ở module tương ứng. */
     fullRecordPath: string;
     /** Nội dung xem nhanh — đủ để quyết định mà không rời Hộp thư. */

@@ -123,6 +123,9 @@ export const APPROVAL_SUBJECTS = [
   'special_discount',
   'stocktake_adjustment',
   'leave_request',
+  // Thêm sau, nên nằm CUỐI danh sách: giá trị enum trong Postgres chỉ thêm được vào cuối
+  // bằng `ALTER TYPE ... ADD VALUE`, chèn giữa sẽ làm lệch thứ tự giữa các môi trường.
+  'quote_price',
 ] as const;
 
 export type ApprovalSubject = (typeof APPROVAL_SUBJECTS)[number];
@@ -137,6 +140,7 @@ export const APPROVAL_SUBJECT_LABELS: Readonly<Record<ApprovalSubject, string>> 
   special_discount: 'Giảm giá đặc biệt',
   stocktake_adjustment: 'Điều chỉnh chênh lệch kiểm kê',
   leave_request: 'Nghỉ phép',
+  quote_price: 'Báo giá gửi khách hàng',
 };
 
 export interface ApprovalLimitSeed {
@@ -186,6 +190,15 @@ export const DEFAULT_APPROVAL_LIMITS: readonly ApprovalLimitSeed[] = [
   // Phát sinh ngoài hợp đồng (HD-04)
   { role: 'TC', subject: 'contract_amendment', maxAmount: 50n * TRIEU, step: 1 },
   { role: 'TGD', subject: 'contract_amendment', maxAmount: null, step: 2 },
+
+  // Báo giá gửi khách hàng (CRM-04) — "báo giá phải qua phê duyệt nội bộ trước khi gửi".
+  //
+  // ⚠️ GIẢ ĐỊNH CẦN NVG XÁC NHẬN: tài liệu KHÔNG nói ai duyệt báo giá thường (không giảm
+  // giá). Tạm đặt Kinh doanh duyệt tới 500 triệu, trên mức đó chuyển Tổng Giám đốc — suy
+  // ra từ DA-07 (Trưởng nhóm kiểm tra → Trưởng phòng/TGĐ duyệt giá cuối cùng). Khi NVG ban
+  // hành quy chế, sửa trong Quản trị hệ thống, KHÔNG sửa file này.
+  { role: 'KD', subject: 'quote_price', maxAmount: 500n * TRIEU, step: 1 },
+  { role: 'TGD', subject: 'quote_price', maxAmount: null, step: 2 },
 
   // Giảm giá đặc biệt — chỉ Tổng Giám đốc (CRM-05)
   { role: 'TGD', subject: 'special_discount', maxAmount: null, step: 1 },

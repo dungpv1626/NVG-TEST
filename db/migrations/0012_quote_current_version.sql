@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "quotes_one_current_version" ON "quotes" USING btree ("opportunity_id") WHERE "quotes"."is_current_version" AND "quotes"."deleted_at" IS NULL;

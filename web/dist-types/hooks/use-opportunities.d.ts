@@ -5,14 +5,15 @@
  * hàm đó ghi lịch sử trong CÙNG giao dịch, nên không thể có cơ hội đổi giai đoạn mà
  * thiếu vết (NEN-03).
  */
-import type { OpportunityStage } from '@nvg/shared';
+import type { MoneyValue, OpportunityStage } from '@nvg/shared';
 export interface OpportunityRecord {
     id: string;
     code: string;
+    company_id: string;
     name: string;
     stage: OpportunityStage;
     classification: string | null;
-    estimated_value: string | null;
+    estimated_value: MoneyValue | null;
     project_type: string | null;
     due_date: string | null;
     handed_over_at: string | null;

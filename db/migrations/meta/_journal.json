@@ -78,6 +78,41 @@
       "when": 1787665214255,
       "tag": "0010_stage_history_via_trigger",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1787666397734,
+      "tag": "0011_approvals",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1787666510402,
+      "tag": "0012_quote_current_version",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1787666511402,
+      "tag": "0013_quote_approval_flow",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1787666512402,
+      "tag": "0014_fix_decide_approval_cast",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1787666513402,
+      "tag": "0015_my_pending_approvals",
+      "breakpoints": true
     }
   ]
 }

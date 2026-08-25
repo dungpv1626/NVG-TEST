@@ -17,9 +17,11 @@ import { CustomerListPage } from '@/pages/crm/customer-list';
 import { OpportunityCreatePage } from '@/pages/crm/opportunity-create';
 import { OpportunityDetailPage } from '@/pages/crm/opportunity-detail';
 import { OpportunityPipelinePage } from '@/pages/crm/opportunity-pipeline';
+import { QuoteCreatePage } from '@/pages/crm/quote-create';
 import { DashboardPage } from '@/pages/dashboard';
 import { LoginPage } from '@/pages/login';
 import { PlaceholderPage } from '@/pages/placeholder';
+import { ApprovalInboxPage } from '@/pages/phe-duyet/approval-inbox-page';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -74,6 +76,11 @@ export default function App() {
               <Route path="crm/co-hoi" element={<OpportunityPipelinePage />} />
               <Route path="crm/co-hoi/tao-moi" element={<OpportunityCreatePage />} />
               <Route path="crm/co-hoi/:id" element={<OpportunityDetailPage />} />
+              <Route path="crm/co-hoi/:id/bao-gia/lap-moi" element={<QuoteCreatePage />} />
+
+              {/* Hộp thư Phê duyệt — MỘT màn hình cho mọi module (Webapp Flow 4.6),
+                  nên nằm ở gốc chứ không thuộc đường dẫn của module nào. */}
+              <Route path="viec-can-lam" element={<ApprovalInboxPage />} />
               {MODULE_CODES.filter(
                 (c): c is Exclude<ModuleCode, 'BC' | 'CRM'> => c !== 'BC' && c !== 'CRM',
               ).map(

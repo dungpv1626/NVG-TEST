@@ -19,7 +19,13 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { BUTTONS, formatCurrency, formatDeadline, type ApprovalSubject } from '@nvg/shared';
+import {
+  BUTTONS,
+  formatCurrency,
+  formatWaiting,
+  type ApprovalSubject,
+  type MoneyValue,
+} from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
@@ -35,7 +41,7 @@ export interface ApprovalItem {
   requestedBy: string;
   requestedAt: string;
   /** Giá trị hồ sơ, đơn vị đồng. `null` với nghiệp vụ không gắn tiền (nghỉ phép). */
-  amount: bigint | string | null;
+  amount: MoneyValue | null;
   /** Đường dẫn tới hồ sơ đầy đủ ở module tương ứng. */
   fullRecordPath: string;
   /** Nội dung xem nhanh — đủ để quyết định mà không rời Hộp thư. */
@@ -141,7 +147,7 @@ export function ApprovalInbox({
                 <div className="mt-1 font-mono text-xs text-fg-subtle">{item.code}</div>
                 <div className="mt-1 flex items-center justify-between gap-2 text-xs text-fg-subtle">
                   <span className="truncate">{item.requestedBy}</span>
-                  <span>{formatDeadline(item.requestedAt)}</span>
+                  <span>{formatWaiting(item.requestedAt)}</span>
                 </div>
                 {item.amount !== null && (
                   <div className="mt-1 font-medium tabular-nums">
