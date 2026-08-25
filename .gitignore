@@ -4,6 +4,9 @@ node_modules/
 
 # Build output
 dist/
+# `web/` khai báo outDir riêng là dist-types/ (chỉ chứa .d.ts do tsc sinh ra),
+# nên mẫu dist/ ở trên không bắt được — kết quả là mỗi commit lẫn ~78 file sinh tự động.
+dist-types/
 build/
 .wrangler/
 .open-next/
