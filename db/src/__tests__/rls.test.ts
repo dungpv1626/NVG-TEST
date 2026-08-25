@@ -216,3 +216,140 @@ describeDb('RLS — chặn ghi trái phép', () => {
     expect(error).toBeTruthy();
   });
 });
+
+describeDb('Hạ tầng xuyên suốt — nhật ký chỉ đọc', () => {
+  it('người dùng thường KHÔNG đọc được nhật ký thao tác (PRD NEN-07)', async () => {
+    const kinhDoanh = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const { data } = await kinhDoanh.from('audit_logs').select('*').limit(1);
+    expect(data).toEqual([]);
+  });
+
+  it('vai trò giám sát đọc được nhật ký', async () => {
+    const tgd = await signInAs(ACCOUNTS.tgd);
+    const { error } = await tgd.from('audit_logs').select('*').limit(1);
+    expect(error).toBeNull();
+  });
+
+  it('KHÔNG AI ghi được nhật ký từ trình duyệt — kể cả Quản trị hệ thống', async () => {
+    const admin = await signInAs(ACCOUNTS.admin);
+    const { data: me } = await admin.rpc('auth_user_id');
+    const { error } = await admin.from('audit_logs').insert({
+      user_id: me,
+      action: 'gia_mao',
+      entity_type: 'users',
+    });
+    expect(error).toBeTruthy();
+  });
+
+  it('nhật ký truy cập nhạy cảm chỉ ghi được qua hàm có kiểm soát', async () => {
+    const tgd = await signInAs(ACCOUNTS.tgd);
+
+    const { error: directWrite } = await tgd.from('sensitive_access_logs').insert({
+      user_id: (await tgd.rpc('auth_user_id')).data,
+      sensitive_kind: 'salary',
+      entity_type: 'employees',
+      action: 'view',
+    });
+    expect(directWrite, 'ghi trực tiếp phải bị chặn').toBeTruthy();
+
+    const { error: viaFunction } = await tgd.rpc('log_sensitive_access', {
+      p_kind: 'salary',
+      p_entity_type: 'employees',
+      p_entity_id: null,
+      p_action: 'view',
+    });
+    expect(viaFunction, 'ghi qua hàm phải thành công').toBeNull();
+  });
+
+  it('hàm ghi nhật ký từ chối loại dữ liệu nhạy cảm không hợp lệ', async () => {
+    const tgd = await signInAs(ACCOUNTS.tgd);
+    const { error } = await tgd.rpc('log_sensitive_access', {
+      p_kind: 'bia_dat',
+      p_entity_type: 'employees',
+      p_entity_id: null,
+    });
+    expect(error).toBeTruthy();
+  });
+});
+
+describeDb('Hạ tầng xuyên suốt — thông báo và việc cần làm', () => {
+  it('người dùng chỉ thấy thông báo của chính mình, kể cả Ban Giám đốc', async () => {
+    const tgd = await signInAs(ACCOUNTS.tgd);
+    const { data: me } = await tgd.rpc('auth_user_id');
+    const { data } = await tgd.from('notifications').select('user_id');
+    // Hộp thư của người khác không phải dữ liệu nghiệp vụ để giám sát.
+    for (const row of data ?? []) expect(row.user_id).toBe(me);
+  });
+
+  it('không tự tạo được việc cần làm cho người khác', async () => {
+    const kinhDoanh = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const { data: otherUser } = await kinhDoanh
+      .from('users')
+      .select('id')
+      .eq('email', ACCOUNTS.tgd)
+      .maybeSingle();
+
+    if (!otherUser) return; // không thấy người đó thì đã bị chặn ở tầng trên
+
+    const { error } = await kinhDoanh.from('tasks').insert({
+      user_id: otherUser.id,
+      title: 'Việc giả mạo',
+      action_url: '/dashboard',
+    });
+    expect(error).toBeTruthy();
+  });
+});
+
+describeDb('Hạ tầng xuyên suốt — phiên bản tài liệu (NEN-05)', () => {
+  it('chỉ MỘT phiên bản đang hiệu lực tại một thời điểm', async () => {
+    const admin = await signInAs(ACCOUNTS.admin);
+    const { data: company } = await admin
+      .from('companies')
+      .select('id')
+      .eq('code', 'NVC')
+      .single();
+
+    const { data: doc, error: docError } = await admin
+      .from('documents')
+      .insert({
+        company_id: company!.id,
+        title: `Tài liệu kiểm thử ${Date.now()}`,
+        category: 'ban_ve',
+      })
+      .select('id')
+      .single();
+    expect(docError).toBeNull();
+
+    const publish = (reason: string | null) =>
+      admin.rpc('publish_document_version', {
+        p_document_id: doc!.id,
+        p_file_url: 'test/duong-dan.pdf',
+        p_file_name: 'ban-ve.pdf',
+        p_change_reason: reason,
+      });
+
+    // Bản đầu tiên không cần nguyên nhân thay đổi.
+    const { error: first } = await publish(null);
+    expect(first).toBeNull();
+
+    // Bản điều chỉnh BẮT BUỘC nêu nguyên nhân (NEN-05).
+    const { error: noReason } = await publish(null);
+    expect(noReason, 'bản điều chỉnh thiếu nguyên nhân phải bị từ chối').toBeTruthy();
+
+    const { error: second } = await publish('Điều chỉnh cao độ nền theo góp ý');
+    expect(second).toBeNull();
+
+    const { data: versions } = await admin
+      .from('document_versions')
+      .select('version, is_current_version')
+      .eq('document_id', doc!.id)
+      .order('version');
+
+    expect(versions).toHaveLength(2);
+    expect(versions!.filter((v) => v.is_current_version)).toHaveLength(1);
+    // Bản đang hiệu lực phải là bản mới nhất.
+    expect(versions!.at(-1)!.is_current_version).toBe(true);
+
+    await admin.from('documents').delete().eq('id', doc!.id);
+  });
+});

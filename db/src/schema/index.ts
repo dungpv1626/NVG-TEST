@@ -14,3 +14,8 @@ export * from './_scoped';
 export * from './companies';
 export * from './users';
 export * from './roles';
+
+// --- Hạ tầng xuyên suốt (Backend Schema 4.1) ---
+export * from './documents';
+export * from './notifications';
+export * from './audit';

@@ -144,10 +144,17 @@ Mọi lượt xem/sửa dữ liệu **Mẫu D** phải ghi vào `sensitive_acces
 > `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` trong migration là dư nhưng giữ lại để
 > migration tự mô tả đầy đủ, không phụ thuộc hành vi ngầm của nền tảng.
 
-> **Lưu ý — BSD tự mâu thuẫn ở 2 bảng**: `employees` ghi Mẫu **D** ở BSD 3.3 nhưng Mẫu **B** ở BSD 4.10;
-> `quotes` ngụ ý Mẫu **B** ở BSD 3.3 nhưng ghi Mẫu **C** ở BSD 4.2. Khi BSD 3.3 và BSD 4.x lệch nhau cho
-> cùng một bảng: **ưu tiên BSD 4.x** (cụ thể theo module) và **báo lại Haan** để sửa tài liệu.
-> Riêng `employees`: cột lương vẫn phải áp dụng hạn chế theo cột như Mẫu D, bất kể chọn mẫu nào cho dòng.
+> **Lưu ý — BSD tự mâu thuẫn ở 3 chỗ**:
+> - `employees` ghi Mẫu **D** ở BSD 3.3 nhưng Mẫu **B** ở BSD 4.10.
+> - `quotes` ngụ ý Mẫu **B** ở BSD 3.3 nhưng ghi Mẫu **C** ở BSD 4.2.
+> - `audit_logs` ghi Mẫu **C** ở BSD 4.1 — nhưng Mẫu C nói về hạn mức tiền của hồ sơ chờ duyệt,
+>   không áp dụng được cho nhật ký. **Đã triển khai theo đúng mục đích NEN-07**: chỉ
+>   TGĐ/CFO/BGĐ/ADMIN đọc được, KHÔNG AI ghi/sửa/xóa được từ trình duyệt (chỉ ghi qua hàm
+>   `SECURITY DEFINER` hoặc Workers). Áp dụng tương tự cho `sensitive_access_logs`.
+>
+> Khi BSD 3.3 và BSD 4.x lệch nhau cho cùng một bảng: **ưu tiên BSD 4.x** (cụ thể theo module)
+> và **báo lại Haan** để sửa tài liệu. Riêng `employees`: cột lương vẫn phải áp dụng hạn chế
+> theo cột như Mẫu D, bất kể chọn mẫu nào cho dòng.
 
 ### 3.5 Đa pháp nhân (PRD NEN-01, BSD 2.2)
 

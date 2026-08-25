@@ -29,6 +29,20 @@
       "when": 1787653907630,
       "tag": "0003_group_level_roles_approve_across_companies",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1787655831842,
+      "tag": "0004_nen_infrastructure",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1787655886208,
+      "tag": "0005_nen_infrastructure_rls",
+      "breakpoints": true
     }
   ]
 }
