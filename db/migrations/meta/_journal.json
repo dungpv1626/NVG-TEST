@@ -43,6 +43,20 @@
       "when": 1787655886208,
       "tag": "0005_nen_infrastructure_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1787656253672,
+      "tag": "0006_crm_customers",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1787656290193,
+      "tag": "0007_crm_customers_rls",
+      "breakpoints": true
     }
   ]
 }

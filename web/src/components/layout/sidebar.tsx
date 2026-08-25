@@ -37,7 +37,7 @@ const MODULE_ICONS: Record<ModuleCode, LucideIcon> = {
 
 const MODULE_ROUTES: Record<ModuleCode, string> = {
   BC: '/dashboard',
-  CRM: '/crm/co-hoi',
+  CRM: '/crm/khach-hang',
   DA: '/da/goi-thau',
   TK: '/tk/du-an',
   HD: '/hd/hop-dong',
