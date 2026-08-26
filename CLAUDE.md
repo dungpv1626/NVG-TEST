@@ -103,7 +103,7 @@ endpoint mới khi BSD đã có sẵn cái tương đương.
 | Auth | **Supabase Auth** (email/mật khẩu; email giao dịch qua Resend/SendGrid) |
 | Lưu tệp / Realtime | **Supabase Storage** / **Supabase Realtime** |
 | Tác vụ nền | **Cloudflare Cron Triggers** (cảnh báo định kỳ NEN-04) + **Cloudflare Queues** |
-| Hosting | **Cloudflare Pages** (frontend) + **Cloudflare Workers** (backend) + **Supabase Cloud** |
+| Hosting | **Cloudflare Workers** — frontend chạy dạng Static Assets, backend là Worker riêng (xem 6.5 mục 8) + **Supabase Cloud** |
 | Kiểm thử | **Vitest** + **React Testing Library** + **Playwright** (E2E) |
 
 ### 3.3 Cấu trúc thư mục (TSD 5.2 — monorepo, một repo GitHub duy nhất)
@@ -346,7 +346,7 @@ Hệ thống chỉ **tích hợp hoặc liên kết dữ liệu**, không thay t
 
 | Hạng mục | Đã chọn | Đã loại | Vì sao loại |
 |---|---|---|---|
-| Kiến trúc trang | **SPA + Vite** | Next.js / SSR | App quản trị nội bộ, không cần SEO; triển khai Cloudflare Pages đơn giản hơn |
+| Kiến trúc trang | **SPA + Vite** | Next.js / SSR | App quản trị nội bộ, không cần SEO; triển khai lên Cloudflare đơn giản hơn |
 | Framework | **React 18** | Vue, Angular | Hệ sinh thái lớn nhất, công cụ AI hỗ trợ tốt nhất → giảm rủi ro tiến độ 6 tuần |
 | CSDL | **PostgreSQL** | MongoDB / NoSQL | Dữ liệu quan hệ chặt (Hồ sơ 360°), cần toàn vẹn giao dịch tài chính |
 | Nhà cung cấp CSDL | **Supabase** | Neon, PlanetScale, tự dựng VPS | Có sẵn Auth + Storage + Realtime trong cùng nền tảng; không có nhân sự DevOps |
@@ -425,6 +425,23 @@ luôn là người quyết định cuối cùng" (PRD 2.3).
      người, để lại bản sao trong máy là đọc được sau khi đăng xuất (PRD 5.2, NEN-07).
      Offline thật cho Kho vẫn là quyết định còn treo (KHO-09, xem 6.6).
 
+
+8. **Frontend chạy trên Cloudflare Workers (Static Assets), KHÔNG phải Cloudflare Pages.**
+   → Điều này **thay thế** dòng Hosting ở TSD 1.4 và mục 3.2 ("Cloudflare Pages cho frontend").
+   → Lý do: Cloudflare hiện hướng dự án mới sang Workers thay cho Pages, và Haan đã tạo sẵn
+     service `nvg` trên Workers. `_headers` và `_redirects` được hỗ trợ y như Pages nên không
+     mất gì khi đổi.
+   → Cấu hình: `web/wrangler.jsonc`. Deploy: `npm run deploy:web`.
+   → ⚠️ **Deploy KHÔNG bao giờ kèm `--env production`.** Mỗi wrangler environment tạo ra một
+     Worker RIÊNG tên `{name}-{env}`, nên lệnh đó sinh ra `nvg-production` là một Worker thứ
+     hai, còn `nvg` thật vẫn giữ bản cũ. Chữ "production" trên URL bảng điều khiển chỉ là nhãn
+     mặc định của môi trường gốc.
+   → ⚠️ Ứng dụng một trang phải khai `assets.not_found_handling: "single-page-application"`.
+     Workers KHÔNG tự đoán kiểu dự án như Pages; thiếu dòng đó thì mở thẳng một đường dẫn sâu
+     (`/hd/hop-dong/<id>`) sẽ ra 404.
+   → `wrangler deploy` KHÔNG tự nạp `.env` lên Cloudflare — tệp đó chỉ dùng khi chạy ở máy.
+     Secret chỉ lên khi truyền tường minh `--secrets-file`, nên đừng dùng cờ đó với `.env` gốc
+     repo (trong đó có `service_role` và mật khẩu CSDL).
 ### 6.6 Vấn đề còn mở — cần NVG xác nhận, KHÔNG tự quyết
 
 Gộp từ PRD 10, TSD 7, CGD 7, BSD 5, IPD 7:

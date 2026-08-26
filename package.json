@@ -19,8 +19,7 @@
     "db:push": "npm run push --workspace=db",
     "db:seed": "npm run seed --workspace=db",
     "db:studio": "npm run studio --workspace=db",
-    "deploy:web": "npm run build && wrangler pages deploy web/dist --project-name=nvg --branch=main",
-    "deploy:web:preview": "npm run build && wrangler pages deploy web/dist --project-name=nvg --branch=preview"
+    "deploy:web": "npm run build && wrangler deploy --config web/wrangler.jsonc"
   },
   "devDependencies": {
     "typescript": "^5.7.3",

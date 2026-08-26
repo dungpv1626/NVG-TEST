@@ -1,0 +1,49 @@
+/**
+ * Cấu hình triển khai giao diện lên Cloudflare Workers (Static Assets).
+ *
+ * ⚠️ KHÔNG thêm `--env production` khi deploy. Mỗi wrangler environment tạo ra một Worker
+ * RIÊNG tên `{name}-{env}` — chạy `wrangler deploy --env production` sẽ sinh ra một Worker
+ * thứ hai tên `nvg-production`, còn `nvg` thật vẫn nguyên bản cũ. Chữ "production" trên URL
+ * bảng điều khiển chỉ là nhãn mặc định của môi trường gốc, không phải tên environment.
+ *
+ * Đặt tệp này trong `web/` chứ không ở gốc repo: cấu hình nằm cùng thứ nó triển khai, và
+ * chừa chỗ cho Worker API sẽ dựng trong `workers/` ở giai đoạn sau (CLAUDE.md 3.3).
+ * `assets.directory` tính theo vị trí tệp cấu hình, nên `./dist` chính là `web/dist`.
+ */
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "nvg",
+  "compatibility_date": "2026-08-26",
+
+  "assets": {
+    "directory": "./dist",
+
+    /**
+     * Bắt buộc với ứng dụng một trang. Khác với Pages, Workers KHÔNG tự đoán kiểu dự án —
+     * thiếu dòng này thì mở thẳng /hd/hop-dong/<id> từ email hay tab đã ghim sẽ ra 404.
+     *
+     * ĐÃ ĐO trên bản triển khai thật: cơ chế này trả index.html kèm mã 200 cho MỌI đường dẫn
+     * không khớp tài sản nào, không riêng request điều hướng. Nghĩa là một tệp .js thiếu do
+     * lỗi build cũng ra 200 kèm HTML chứ không ra 404 — cùng nhược điểm với quy tắc `/*` của
+     * `_redirects` bên Pages. Đừng dựa vào mã trạng thái để phát hiện thiếu tài sản; kiểm bằng
+     * `ls web/dist/assets` sau khi build.
+     */
+    "not_found_handling": "single-page-application"
+  },
+
+  /**
+   * Khai tường minh dù đây cũng là mặc định: wrangler cảnh báo khi thiếu, và quan trọng hơn,
+   * đây là dòng duy nhất trong repo cho biết ứng dụng ĐANG mở công khai ở địa chỉ workers.dev.
+   * Khi có tên miền chính thức (CLAUDE.md 6.6) thì cân nhắc đổi thành `false` và dùng route.
+   */
+  "workers_dev": true,
+
+  /**
+   * Không tạo địa chỉ xem thử công khai cho từng phiên bản. Đây là hệ thống quản trị nội bộ:
+   * mỗi preview URL là thêm một địa chỉ vào được từ ngoài, và các bản cũ vẫn sống mãi.
+   */
+  "preview_urls": false,
+
+  /** Nhật ký Workers — cần để đọc lỗi thật khi có người báo sự cố. */
+  "observability": { "enabled": true }
+}

@@ -1,8 +1,0 @@
-# SPA fallback — Webapp Flow 5.2 (đường dẫn phản ánh vị trí trong hệ thống).
-#
-# Bắt buộc với mọi ứng dụng một trang: người dùng mở thẳng /hd/hop-dong/<id> từ email hoặc
-# từ tab đã ghim thì CDN đi tìm một tệp tên như vậy và trả 404, dù ứng dụng có tuyến đó.
-# Trả index.html kèm mã 200 (KHÔNG phải 301/302) để React Router tự đọc đường dẫn.
-#
-# Đặt cuối tệp: Pages ưu tiên tệp tĩnh có thật, nên quy tắc này không nuốt mất /assets/*.
-/*    /index.html   200
