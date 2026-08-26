@@ -92,18 +92,18 @@
 <section class="card">
   <h3>Toàn hệ thống</h3>
   <p class="xs muted">Ước lượng theo khối lượng nghiệp vụ đã chạy được đầu-cuối, không theo số dòng mã.</p>
-  <div class="bar"><span style="width: 55%"></span></div>
-  <p class="xs muted" style="margin-top:6px">Khoảng 55% chặng đường tới bản demo ~95%. <strong>Giai đoạn 1 đã hoàn thành và được nghiệm thu bằng hai luồng nghiệp vụ chạy trọn trên dữ liệu thật.</strong></p>
+  <div class="bar"><span style="width: 60%"></span></div>
+  <p class="xs muted" style="margin-top:6px">Khoảng 60% chặng đường tới bản demo ~95%. <strong>Giai đoạn 1 đã hoàn thành và được nghiệm thu bằng hai luồng nghiệp vụ chạy trọn trên dữ liệu thật.</strong> Bản chạy thử đã lên mạng, giao diện đã qua đợt nâng cấp toàn diện.</p>
 
   <div class="stats">
     <div class="stat"><b>6 / 12</b><span class="xs muted">module đã dựng (Nền tảng, CRM, Đấu thầu, Thiết kế, Hợp đồng, Báo cáo)</span></div>
     <div class="stat"><b>37 / ~65</b><span class="xs muted">bảng cơ sở dữ liệu</span></div>
-    <div class="stat"><b>32</b><span class="xs muted">migration đã chạy</span></div>
-    <div class="stat"><b>180</b><span class="xs muted">kiểm thử tự động, tất cả đang xanh</span></div>
+    <div class="stat"><b>34</b><span class="xs muted">migration đã chạy</span></div>
+    <div class="stat"><b>244</b><span class="xs muted">kiểm thử tự động, tất cả đang xanh</span></div>
   </div>
 </section>
 
-<h2>Năm câu hỏi thường gặp</h2>
+<h2>Tình hình theo từng mảng</h2>
 
 <div class="grid grid-2">
 
@@ -135,7 +135,51 @@
           Giám đốc Tài chính và Quản trị viên mở màn hình nào cũng trắng, vì hai vai trò này chỉ
           được gán vào mã tổng hợp NVG mà mã đó không phát sinh giao dịch. Phân quyền vốn đã đúng;
           chỗ sai nằm ở câu lọc dữ liệu.</li>
-      <li><strong>Bịt một lỗ hổng phân quyền có ở cả bốn module</strong> — xem phần bên dưới.</li>
+      <li><strong>Bản chạy thử đã lên mạng</strong> — mở được từ máy tính và điện thoại, cài được
+          lên màn hình chính như một ứng dụng. Vẫn đang dùng cơ sở dữ liệu thử nghiệm, chưa phải
+          nơi nhập dữ liệu thật.</li>
+      <li><strong>Giao diện qua đợt nâng cấp toàn diện</strong> — xem phần bên dưới.</li>
+      <li><strong>Bịt hai lỗ hổng phân quyền</strong> — xem phần bên dưới.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="pill s-done">Giao diện đã nâng cấp</span></h3>
+    <p class="xs muted">Theo hướng "một công ty xây dựng", không phải phần mềm quản trị chung chung.</p>
+    <ul>
+      <li><strong>Bản sắc lấy từ chính công trường</strong> — dải màu xám bê tông thay xám xanh
+          kiểu phần mềm văn phòng, cùng sắc cam an toàn của áo phản quang và biển báo làm màu nhận
+          diện. Cam có ranh giới nghiêm ngặt: chỉ dùng cho thanh chỉ mục và vạch nhấn, <strong>cấm
+          đặt cạnh nhãn trạng thái</strong> — nó nằm giữa vàng "Chờ duyệt" và đỏ "Quá hạn", để lẫn
+          vào đó là buộc người dùng phân biệt ba màu ấm gần nhau khi quét một bảng 50 dòng.</li>
+      <li><strong>Phông chữ thiết kế riêng cho tiếng Việt</strong> — dấu đặt cân, không chồng lấn ở
+          cỡ chữ nhỏ. Phông nay nằm trong chính ứng dụng thay vì tải từ máy chủ Google mỗi lần mở:
+          nhanh hơn với mạng yếu ngoài công trường, và không gửi thông tin người dùng ra ngoài.</li>
+      <li><strong>Ba màu nhãn trạng thái không đủ tương phản đã được sửa</strong> — "Nháp",
+          "Chờ duyệt" và "Hoàn thành" trong bộ màu gốc quá nhạt so với nền của chính nó, người mắt
+          kém đọc không rõ. Đã làm đậm vừa đủ đạt chuẩn quốc tế, giữ nguyên sắc màu để không ai
+          phải học lại màu nào là trạng thái nào.</li>
+      <li><strong>Dùng được hoàn toàn bằng bàn phím</strong> — thanh tab chuyển bằng phím mũi tên,
+          menu luôn cho thấy đang ở mục nào. Trước đây menu tài khoản và bộ chọn pháp nhân không
+          hiện dấu hiệu nào khi đi bằng bàn phím.</li>
+      <li><strong>Có trang xem toàn bộ thành phần giao diện</strong> — mọi nút, bảng, biểu mẫu ở
+          mọi trạng thái nằm trên một trang, để soát nhanh sau mỗi lần sửa thay vì phải đi qua 20
+          màn hình nghiệp vụ.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="pill s-done">Đã có lưới an toàn cho giao diện</span></h3>
+    <p class="xs muted">Trước đợt nâng cấp, toàn bộ phần giao diện chưa có một kiểm thử tự động nào.</p>
+    <ul>
+      <li><strong>Thêm 59 kiểm thử riêng cho giao diện</strong>, nâng tổng số toàn hệ thống lên 244. Chúng canh
+          những thứ mắt thường khó thấy: thẻ trên Dashboard có dẫn đúng danh sách không, nhãn trạng
+          thái có luôn kèm chữ không, thông báo lỗi có vô tình lộ chi tiết kỹ thuật ra màn hình không.</li>
+      <li><strong>Đã kiểm chứng là các kiểm thử này bắt được lỗi thật</strong> — bằng cách cố tình
+          làm hỏng từng quy tắc rồi xem chúng có báo đỏ không. Một bộ kiểm thử luôn xanh mà không
+          bao giờ bắt được gì còn tệ hơn không có: nó làm mình yên tâm sai chỗ.</li>
+      <li><strong>Phần giao diện kiểm xong trong 2 giây</strong> thay vì 90 giây như trước, vì nó
+          không cần chạm tới cơ sở dữ liệu. Sửa một dòng là biết ngay đúng sai.</li>
     </ul>
   </div>
 
@@ -153,6 +197,11 @@
       <li><strong>Đã bịt</strong> bằng một lớp canh chung: mọi thay đổi trạng thái phải đi qua
           đúng nút thao tác trên màn hình; lệnh gửi thẳng bị cơ sở dữ liệu từ chối. Có kiểm thử
           tự động canh riêng phần này cho từng module.</li>
+      <li><strong>Lần rà soát sau phát hiện còn sót đúng bảng Cơ hội kinh doanh.</strong> Hệ quả
+          nhẹ hơn — không có tiền nào đi qua — nhưng vẫn đủ để đánh dấu một cơ hội là <em>mất</em>
+          mà bỏ trống ô nguyên nhân, và nhảy thẳng từ "Tiếp nhận" sang "Ký hợp đồng". Báo cáo
+          nguyên nhân mất cơ hội là thứ Ban Giám đốc hỏi đầu tiên, và nó chỉ có nghĩa khi không có
+          đường nào bỏ trống ô đó. Đã bịt và có kiểm thử canh.</li>
     </ul>
   </div>
 
@@ -186,6 +235,9 @@
           "đã thu / còn phải thu" hiện đang là khung trống trong màn hình Hợp đồng.</li>
       <li><strong>Tìm kiếm toàn hệ thống</strong> và <strong>Trung tâm Thông báo</strong> — bảng
           dữ liệu đã có, phần hiển thị chưa nối. Làm xen kẽ, không chặn Giai đoạn 2.</li>
+      <li><strong>Cần Haan xem giao diện trên máy thật</strong> — ba thứ không kiểm bằng máy được:
+          bố cục ở các bề ngang màn hình khác nhau, dấu tiếng Việt hiển thị ở cỡ chữ nhỏ, và cảm
+          giác của các hiệu ứng chuyển động. Mở trang "Thành phần giao diện" là soát được một lượt.</li>
     </ul>
   </div>
 
@@ -220,7 +272,7 @@
       <td><strong>P1</strong> Bộ công cụ dùng chung</td>
       <td>Bảng danh sách, hồ sơ 360°, hộp thư phê duyệt, Kanban, nhãn trạng thái, kho hồ sơ có phiên bản, thông báo, nhật ký</td>
       <td><span class="pill s-progress">Đang làm</span></td>
-      <td>Còn: tìm kiếm toàn hệ thống, trung tâm thông báo, trang trưng bày thành phần giao diện</td>
+      <td>Trang trưng bày thành phần giao diện đã xong. Còn: tìm kiếm toàn hệ thống, trung tâm thông báo</td>
     </tr>
     <tr>
       <td><strong>P1.0</strong> PWA và di động</td>
@@ -350,6 +402,7 @@
       <tr><td>Đầu bài thiết kế và bản vẽ lưu theo phiên bản trong kho hồ sơ chung</td><td>Tài liệu mô tả đầu bài là một ô văn bản và bản vẽ giữ đường dẫn riêng. Đang làm cả hai theo phiên bản, để trả lời được "khách đổi yêu cầu lúc nào" và "công trường đang cầm bản nào".</td><td><span class="pill s-pending">Cần trong Giai đoạn 1</span></td></tr>
       <tr><td>Bộ mã dự án, công trình, vật tư, hợp đồng</td><td>Mã hồ sơ của các module tiếp theo</td><td><span class="pill s-overdue">Cần sớm</span></td></tr>
       <tr><td>Hạn mức phê duyệt chính thức theo vai trò và loại nghiệp vụ</td><td>Đang chạy bằng mức tạm; đổi được bằng cấu hình, không phải sửa mã</td><td><span class="pill s-pending">Cần trong Giai đoạn 1</span></td></tr>
+      <tr><td>Tạo cơ sở dữ liệu riêng cho bản chạy thật</td><td>Bản đang chạy trên mạng vẫn dùng cơ sở dữ liệu thử nghiệm — cùng nơi bộ kiểm thử ghi vào và dọn ra. Phải tách trước khi Nhà Việt Group nhập dữ liệu thật.</td><td><span class="pill s-overdue">Cần sớm</span></td></tr>
       <tr><td>Phần mềm kế toán chính thức để kết nối</td><td>Xuất dữ liệu sang kế toán (KT-08)</td><td><span class="pill s-draft">Giai đoạn 2</span></td></tr>
       <tr><td>Kho làm ngoại tuyến thật, hay chỉ chống trùng khi mạng chập chờn</td><td>Module Kho</td><td><span class="pill s-draft">Giai đoạn 2</span></td></tr>
       <tr><td>Quy chế lương thưởng</td><td>Tính lương trong Nhân sự</td><td><span class="pill s-draft">Giai đoạn 2</span></td></tr>
@@ -362,11 +415,13 @@
 <h2>Ranh giới đã đặt ra và đang giữ</h2>
 <div class="card">
   <ul>
-    <li><strong>Phân quyền nằm trong cơ sở dữ liệu</strong>, không nằm ở giao diện — đi đường nào cũng bị kiểm tại một chỗ. Có 119 kiểm thử tự động canh phần này.</li>
+    <li><strong>Phân quyền nằm trong cơ sở dữ liệu</strong>, không nằm ở giao diện — đi đường nào cũng bị kiểm tại một chỗ. Có 123 kiểm thử tự động canh phần này.</li>
     <li><strong>Không cache dữ liệu nghiệp vụ trên điện thoại.</strong> Ứng dụng cài được và mở nhanh, nhưng dữ liệu vẫn lấy trực tiếp mỗi lần — để hồ sơ không đọc được sau khi đăng xuất trên máy dùng chung.</li>
     <li><strong>Mã hồ sơ do hệ thống cấp và không sửa được</strong>, pháp nhân của hồ sơ không đổi được sau khi tạo — giữ đúng ranh giới lãi/lỗ giữa ba pháp nhân.</li>
     <li><strong>Không xoá hẳn hồ sơ nghiệp vụ</strong>, chỉ đánh dấu đã xoá; mọi thay đổi trạng thái quan trọng đều ghi lịch sử riêng.</li>
     <li><strong>Trạng thái hồ sơ chỉ đổi qua đúng nút thao tác</strong>, không đổi thẳng được từ bên ngoài — nhờ vậy hạn mức phê duyệt, kiểm tra đồng bộ hồ sơ và điều kiện nộp thầu không có đường vòng nào.</li>
+    <li><strong>Màu không bao giờ là cách duy nhất truyền đạt thông tin</strong> — trạng thái luôn kèm chữ, và mọi cặp chữ–nền đều đạt chuẩn tương phản quốc tế, có kiểm thử tự động đo lại sau mỗi lần đổi màu.</li>
+    <li><strong>Không dùng được chuột vẫn dùng được hệ thống</strong> — mọi thao tác đi được bằng bàn phím, và luôn nhìn thấy con trỏ đang ở đâu.</li>
     <li><strong>Mọi kết quả do AI sinh ra đều ở dạng nháp</strong> cho tới khi người có thẩm quyền xác nhận.</li>
   </ul>
 </div>
