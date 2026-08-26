@@ -153,10 +153,12 @@ export function ApprovalInbox({
                 }}
                 aria-current={isActive ? 'true' : undefined}
                 className={cn(
-                  'w-full rounded-lg border p-3 text-left',
+                  'w-full cursor-pointer rounded-lg border p-3 text-left',
+                  'transition-[background-color,border-color,box-shadow]',
+                  'duration-(--motion-fast) ease-(--ease-out)',
                   isActive
-                    ? 'border-brand bg-brand-subtle'
-                    : 'border-border bg-surface hover:bg-surface-hover',
+                    ? 'border-brand bg-brand-subtle shadow-raised'
+                    : 'border-border bg-surface shadow-raised hover:bg-surface-hover',
                 )}
               >
                 <div className="flex items-start justify-between gap-2">
@@ -184,13 +186,14 @@ export function ApprovalInbox({
         <div
           className={cn(
             'min-w-0 flex-1 rounded-lg border border-border bg-surface p-4 shadow-card',
+            'transition-shadow duration-(--motion-base) ease-(--ease-out)',
             !openedOnMobile && 'hidden lg:block',
           )}
         >
           <button
             type="button"
             onClick={() => setOpenedOnMobile(false)}
-            className="mb-3 flex items-center gap-1.5 text-brand hover:underline lg:hidden"
+            className="mb-3 flex cursor-pointer items-center gap-1.5 text-brand hover:underline lg:hidden"
           >
             <ChevronLeft className="size-4" />
             Quay lại danh sách
@@ -216,7 +219,12 @@ export function ApprovalInbox({
                 onChange={(e) => setNote(e.target.value)}
                 rows={2}
                 placeholder="Nêu căn cứ phê duyệt hoặc lý do từ chối"
-                className="w-full rounded-sm border border-border bg-surface px-3 py-2 placeholder:text-fg-subtle"
+                className={cn(
+                  'w-full rounded-sm border border-border-strong bg-surface px-3 py-2',
+                  'placeholder:text-fg-subtle',
+                  'transition-[border-color] duration-(--motion-fast) ease-(--ease-out)',
+                  'hover:border-fg-subtle',
+                )}
               />
             </label>
 

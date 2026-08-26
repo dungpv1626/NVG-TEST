@@ -14,8 +14,11 @@ import { cn } from '@/lib/utils';
 
 function ShellSkeleton() {
   return (
-    <div className="flex h-screen animate-pulse bg-surface-sunken">
-      <div className="w-60 border-r border-border bg-surface p-2">
+    <div className="flex h-[100dvh] animate-pulse bg-surface-sunken">
+      {/* Ẩn dưới khổ `lg` cho khớp App Shell thật: khung chờ có sidebar mà màn hình tải xong lại
+          không có thì bố cục nhảy một nhịp ngay trước mắt người dùng trên điện thoại.
+          Dùng `100dvh` chứ không `h-screen` — cùng lý do đã ghi ở app-shell.tsx. */}
+      <div className="hidden w-60 border-r border-border bg-surface p-2 lg:block">
         <div className="mb-4 h-12 rounded-sm bg-surface-hover" />
         {Array.from({ length: 8 }).map((_, i) => (
           <div key={i} className="mb-1 h-9 rounded-sm bg-surface-hover" />

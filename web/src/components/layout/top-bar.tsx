@@ -157,7 +157,17 @@ export function TopBar() {
               <DropdownMenu.Item
                 className={cn(
                   'flex cursor-pointer items-center gap-2 rounded-sm px-2 py-2',
-                  'outline-none focus:bg-surface-hover',
+                  'transition-colors duration-(--motion-fast) ease-(--ease-out)',
+                  // Kiểu rê chuột khai TƯỜNG MINH, không dựa vào việc Radix có đặt
+                  // `data-highlighted` khi con trỏ đi qua hay không — hành vi đó nằm trong thư
+                  // viện và có thể đổi giữa hai phiên bản mà không ai để ý.
+                  'hover:bg-surface-hover',
+                  // Radix dời con trỏ bàn phím bằng `data-highlighted`, không phải `:focus-visible`,
+                  // nên vòng focus chung ở index.css không bắt được. Trước đây chỉ đổi nền sang
+                  // `surface-hover` — chênh lệch với nền trắng chỉ 1.09:1, tức là người dùng bàn
+                  // phím không nhìn thấy mình đang ở mục nào (WCAG 2.4.11 cần ≥3:1).
+                  'data-highlighted:bg-brand-subtle data-highlighted:text-brand',
+                  'data-highlighted:outline data-highlighted:outline-2 data-highlighted:outline-brand',
                 )}
               >
                 <User className="size-4" />
@@ -167,7 +177,17 @@ export function TopBar() {
                 onSelect={() => void signOut()}
                 className={cn(
                   'flex cursor-pointer items-center gap-2 rounded-sm px-2 py-2',
-                  'outline-none focus:bg-surface-hover',
+                  'transition-colors duration-(--motion-fast) ease-(--ease-out)',
+                  // Kiểu rê chuột khai TƯỜNG MINH, không dựa vào việc Radix có đặt
+                  // `data-highlighted` khi con trỏ đi qua hay không — hành vi đó nằm trong thư
+                  // viện và có thể đổi giữa hai phiên bản mà không ai để ý.
+                  'hover:bg-surface-hover',
+                  // Radix dời con trỏ bàn phím bằng `data-highlighted`, không phải `:focus-visible`,
+                  // nên vòng focus chung ở index.css không bắt được. Trước đây chỉ đổi nền sang
+                  // `surface-hover` — chênh lệch với nền trắng chỉ 1.09:1, tức là người dùng bàn
+                  // phím không nhìn thấy mình đang ở mục nào (WCAG 2.4.11 cần ≥3:1).
+                  'data-highlighted:bg-brand-subtle data-highlighted:text-brand',
+                  'data-highlighted:outline data-highlighted:outline-2 data-highlighted:outline-brand',
                 )}
               >
                 <LogOut className="size-4" />

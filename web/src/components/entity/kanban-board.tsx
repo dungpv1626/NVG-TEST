@@ -140,14 +140,15 @@ export function KanbanBoard({
             onDrop={(e) => void handleDrop(e, column.id)}
             className={cn(
               'w-64 shrink-0 rounded-lg border p-2',
+              'transition-colors duration-(--motion-fast) ease-(--ease-out)',
               dropTarget === column.id
-                ? 'border-brand bg-brand-subtle'
+                ? 'border-brand border-dashed bg-brand-subtle'
                 : 'border-border bg-surface-sunken',
             )}
           >
             <div className="mb-2 px-1">
               <div className="flex items-center justify-between gap-2">
-                <h2 className="truncate font-semibold" title={column.description}>
+                <h2 className="truncate text-md font-semibold" title={column.description}>
                   {column.label}
                 </h2>
                 <span className="shrink-0 rounded-full bg-surface px-1.5 text-xs text-fg-subtle">
@@ -171,13 +172,16 @@ export function KanbanBoard({
                     }}
                     onDragEnd={() => setDraggingId(null)}
                     className={cn(
-                      'rounded-lg border border-border bg-surface p-2.5 shadow-card',
+                      'rounded-lg border border-border bg-surface p-2.5 shadow-raised',
+                      'transition-[box-shadow,opacity] duration-(--motion-fast) ease-(--ease-out)',
+                      'hover:shadow-card',
                       canMove && !column.isTerminal && 'cursor-grab active:cursor-grabbing',
+                      // Thẻ đang kéo mờ đi để thấy rõ cột nào là đích thả bên dưới.
                       draggingId === card.id && 'opacity-50',
                     )}
                   >
                     <Link to={card.detailPath} className="block">
-                      <span className="line-clamp-2 font-medium text-brand hover:underline">
+                      <span className="line-clamp-2 font-medium text-fg underline-offset-2 hover:text-brand hover:underline">
                         {card.title}
                       </span>
                     </Link>
