@@ -253,6 +253,20 @@
       "when": 1787726152625,
       "tag": "0035_tc_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1787731855314,
+      "tag": "0036_mh_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1787731856314,
+      "tag": "0037_mh_rls",
+      "breakpoints": true
     }
   ]
 }

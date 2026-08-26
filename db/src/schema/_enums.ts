@@ -9,6 +9,12 @@
 import { pgEnum } from 'drizzle-orm/pg-core';
 import {
   AMENDMENT_STAGES,
+  DELIVERY_ISSUE_TYPES,
+  PURCHASE_ORDER_STAGES,
+  PURCHASE_REQUEST_STAGES,
+  PURCHASE_URGENCIES,
+  QUOTATION_STATUSES,
+  SUPPLIER_CLASSES,
   APPROVAL_SUBJECTS,
   BIDDING_STAGES,
   BID_DOCUMENT_CATEGORIES,
@@ -164,3 +170,29 @@ export const warrantyStatusEnum = pgEnum('warranty_status', WARRANTY_STATUSES);
 
 /** Trạng thái xử lý một phản ánh bảo hành — PRD TC-07. */
 export const warrantyClaimStatusEnum = pgEnum('warranty_claim_status', WARRANTY_CLAIM_STATUSES);
+
+
+/**
+ * Module MH — Mua hàng và Vật tư (Backend Schema 4.7).
+ *
+ * Khác TC, module này CÓ khảo sát trực tiếp từ Phòng Mua hàng – Vật tư (PRD Mục 3), nên
+ * các danh sách dưới đây bám câu chữ PRD. Lý do từng giá trị xem `@nvg/shared/mh`.
+ */
+
+/** Phân loại nhà cung cấp — PRD MH-03. */
+export const supplierClassEnum = pgEnum('supplier_class', SUPPLIER_CLASSES);
+
+/** Vòng đời một đề nghị mua — PRD MH-01 → MH-06. */
+export const purchaseRequestStageEnum = pgEnum('purchase_request_stage', PURCHASE_REQUEST_STAGES);
+
+/** Mức cấp bách của đề nghị mua — cách đọc nhanh cột "thời điểm cần" của MH-01. */
+export const purchaseUrgencyEnum = pgEnum('purchase_urgency', PURCHASE_URGENCIES);
+
+/** Trạng thái một báo giá trong bảng so sánh — PRD MH-04. */
+export const quotationStatusEnum = pgEnum('quotation_status', QUOTATION_STATUSES);
+
+/** Vòng đời một đơn đặt hàng — PRD MH-06. */
+export const purchaseOrderStageEnum = pgEnum('purchase_order_stage', PURCHASE_ORDER_STAGES);
+
+/** Ba trường hợp hàng không đạt khi giao nhận — PRD MH-07. */
+export const deliveryIssueTypeEnum = pgEnum('delivery_issue_type', DELIVERY_ISSUE_TYPES);

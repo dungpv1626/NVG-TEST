@@ -92,14 +92,14 @@
 <section class="card">
   <h3>Toàn hệ thống</h3>
   <p class="xs muted">Ước lượng theo khối lượng nghiệp vụ đã chạy được đầu-cuối, không theo số dòng mã.</p>
-  <div class="bar"><span style="width: 65%"></span></div>
-  <p class="xs muted" style="margin-top:6px">Khoảng 65% chặng đường tới bản demo ~95%. <strong>Giai đoạn 1 đã nghiệm thu; Giai đoạn 2 đã bắt đầu bằng Module Thi công.</strong> Một hợp đồng đã ký nay mở thẳng ra công trình, mang theo đúng bộ ngân sách đã duyệt.</p>
+  <div class="bar"><span style="width: 71%"></span></div>
+  <p class="xs muted" style="margin-top:6px">Khoảng 71% chặng đường tới bản demo ~95%. <strong>Giai đoạn 1 đã nghiệm thu; Giai đoạn 2 đang chạy — Thi công và Mua hàng đã xong.</strong> Một hợp đồng đã ký nay mở ra công trình, công trường đề nghị mua vật tư, và tiền mua hàng tự chảy về đúng mã chi phí của công trình đó.</p>
 
   <div class="stats">
-    <div class="stat"><b>7 / 12</b><span class="xs muted">module đã dựng (Nền tảng, CRM, Đấu thầu, Thiết kế, Hợp đồng, Báo cáo, Thi công)</span></div>
-    <div class="stat"><b>43 / ~65</b><span class="xs muted">bảng cơ sở dữ liệu</span></div>
-    <div class="stat"><b>36</b><span class="xs muted">migration đã chạy</span></div>
-    <div class="stat"><b>286</b><span class="xs muted">kiểm thử tự động, tất cả đang xanh</span></div>
+    <div class="stat"><b>8 / 12</b><span class="xs muted">module đã dựng (Nền tảng, CRM, Đấu thầu, Thiết kế, Hợp đồng, Báo cáo, Thi công, Mua hàng)</span></div>
+    <div class="stat"><b>52 / ~65</b><span class="xs muted">bảng cơ sở dữ liệu</span></div>
+    <div class="stat"><b>38</b><span class="xs muted">migration đã chạy</span></div>
+    <div class="stat"><b>343</b><span class="xs muted">kiểm thử tự động, tất cả đang xanh</span></div>
   </div>
 </section>
 
@@ -224,6 +224,36 @@
   </div>
 
   <div class="card">
+    <h3><span class="pill s-progress">Vừa xong — Module Mua hàng</span></h3>
+    <p class="xs muted">Nửa còn lại của Giai đoạn 2: chi phí thật của công trình nay tự chảy về từ chứng từ mua hàng.</p>
+    <ul>
+      <li><strong>Không đặt hàng trước rồi trình duyệt sau.</strong> Đơn đặt hàng không nhập tay
+          được — nó chỉ sinh ra từ một đề nghị đã duyệt đúng hạn mức và một báo giá đã chọn. Đây
+          là chốt chặn quan trọng nhất của phân hệ; thiếu nó thì màn hình phê duyệt chỉ để cho đẹp.</li>
+      <li><strong>So sánh nhà cung cấp trên cùng một mặt bằng.</strong> Đơn giá, hao hụt, thuế và
+          vận chuyển được quy về một con số tổng. Còn thời hạn giao, điều kiện thanh toán và bảo
+          hành thì để nguyên, cố ý không quy thành tiền — quy đổi được thì phần mềm đã ngầm chọn
+          hộ, mà chọn nhà cung cấp là quyết định của con người.</li>
+      <li><strong>Chọn nhà đắt hơn là hợp lệ, không giải trình mới là không hợp lệ.</strong> Chọn
+          báo giá không rẻ nhất thì hệ thống hỏi căn cứ và lưu lại kèm hồ sơ. Đúng tinh thần
+          "không chỉ so sánh giá thấp nhất" của tài liệu yêu cầu.</li>
+      <li><strong>Tiền vào ngân sách công trình đúng lúc.</strong> Ký đơn hàng là cộng ngay vào
+          phần "đã cam kết"; hàng về đến đâu chuyển sang "đã phát sinh" đến đó; hủy đơn thì hoàn
+          lại đúng phần chưa dùng. Hai cột từng hiển thị bằng 0 ở màn hình Ngân sách công trình
+          nay có số thật.</li>
+      <li><strong>Không nhận nhiều hơn số đã đặt</strong>, và hàng thiếu, sai quy cách hay hư hỏng
+          ghi riêng khỏi hàng đạt. Chỉ phần đạt mới tính là đã mua được — gộp lại thì ngân sách sẽ
+          ghi một khoản chi cho số hàng chưa hề dùng được.</li>
+      <li><strong>Báo giá của nhà cung cấp không được chọn là nội dung thương thảo</strong>, chỉ
+          Ban Giám đốc, Tài chính, Đấu thầu, Thiết kế và Mua hàng đọc được. Báo giá đã chọn thì ai
+          xem được phân hệ cũng thấy, vì nó là một phần bộ chứng từ chuyển sang Kế toán.</li>
+      <li class="muted"><strong>Cố ý chưa làm:</strong> bảng giá khung theo tháng/quý (chờ NVG chốt
+          cơ chế điều chỉnh giá), quy cách nguyên liệu thép của xưởng giàn giáo (chờ khảo sát), và
+          nhập kho tự động khi hàng về (chờ Module Kho).</li>
+    </ul>
+  </div>
+
+  <div class="card">
     <h3><span class="pill s-progress">Vừa xong — Module Thi công</span></h3>
     <p class="xs muted">Cửa ngõ của Giai đoạn 2: từ đây mọi chi phí thật đều gắn vào một mã công trình.</p>
     <ul>
@@ -253,9 +283,9 @@
     <h3><span class="pill s-pending">Chuẩn bị làm</span></h3>
     <p class="xs muted">Giai đoạn 2 — Vận hành, hậu cần, tài chính.</p>
     <ul>
-      <li><strong>Mua hàng và Kho</strong> — đề nghị mua từ công trường, so sánh nhà cung cấp,
-          nhập xuất tồn. Đây cũng là phân hệ điền hai cột "đã phát sinh" và "đã cam kết" mà
-          màn hình Ngân sách công trình đang hiển thị bằng 0.</li>
+      <li><strong>Kho</strong> — nhập, xuất, điều chuyển, kiểm kê, và vòng đời riêng của giàn
+          giáo. Đây là chỗ hàng đã nhận ở Mua hàng thật sự vào tồn, và là phân hệ dùng nhiều nhất
+          trên điện thoại tại công trường.</li>
       <li><strong>Kế toán</strong> — đề nghị thanh toán, thu tiền theo tiến độ hợp đồng, và phần
           "đã thu / còn phải thu" hiện đang là khung trống trong màn hình Hợp đồng.</li>
       <li><strong>Tìm kiếm toàn hệ thống</strong> và <strong>Trung tâm Thông báo</strong> — bảng
@@ -353,8 +383,9 @@
     <tr><td><code>BC</code></td><td>Báo cáo &amp; Dashboard</td><td><span class="pill s-progress">Đang làm</span></td>
         <td>Dashboard chỉ số thật cho Cơ hội, Gói thầu, Thiết kế, Hợp đồng: số hồ sơ theo từng trạng thái, giá trị đang theo đuổi, tỷ lệ chốt hợp đồng, giá trị đã ký, việc chờ duyệt và việc quá hạn. Lọc theo kỳ và theo pháp nhân; mỗi con số bấm được. Báo cáo lãi/lỗ và dòng tiền chờ dữ liệu Giai đoạn 2.</td></tr>
         <tr><td><code>TC</code></td><td>Thi công &amp; Ngân sách</td><td><span class="pill s-progress">Đang làm</span></td>
-        <td>Công trình mở từ hợp đồng đã ký, hoặc tự mở khi Thiết kế bàn giao hồ sơ — mang theo đúng bộ ngân sách đã duyệt, không lập lại. Nhật ký công trường theo ngày kèm quân số. Nghiệm thu ba loại, và chỉ nghiệm thu với chủ đầu tư mới báo Kế toán thu tiền. Ngân sách so chi phí theo từng mã, cảnh báo trước khi vượt. Tổ đội và bảo hành theo từng hạng mục. Còn đề nghị mua vật tư từ công trường (chờ Mua hàng); yêu cầu vẫn ở mức định hướng vì chưa khảo sát chỉ huy công trường.</td></tr>
-    <tr><td><code>MH</code></td><td>Mua hàng – Vật tư</td><td><span class="pill s-draft">Chưa bắt đầu</span></td><td>Giai đoạn 2</td></tr>
+        <td>Công trình mở từ hợp đồng đã ký, hoặc tự mở khi Thiết kế bàn giao hồ sơ — mang theo đúng bộ ngân sách đã duyệt, không lập lại. Nhật ký công trường theo ngày kèm quân số. Nghiệm thu ba loại, và chỉ nghiệm thu với chủ đầu tư mới báo Kế toán thu tiền. Ngân sách so chi phí theo từng mã, cảnh báo trước khi vượt. Tổ đội và bảo hành theo từng hạng mục. Công trường đề nghị mua vật tư ngay tại hồ sơ công trình. Yêu cầu vẫn ở mức định hướng vì chưa khảo sát chỉ huy công trường.</td></tr>
+    <tr><td><code>MH</code></td><td>Mua hàng – Vật tư</td><td><span class="pill s-progress">Đang làm</span></td>
+        <td>Đề nghị mua từ công trường hoặc gói thầu, duyệt theo hạn mức trong cùng Hộp thư Phê duyệt. Danh mục nhà cung cấp dùng chung ba pháp nhân, chấm tám tiêu chí. Bảng so sánh báo giá quy về một mặt bằng gồm hao hụt, thuế, vận chuyển — chọn nhà cung cấp không rẻ nhất thì bắt buộc nêu căn cứ. Đơn hàng chỉ lập được sau khi đề nghị đã duyệt. Giao nhận kiểm đếm theo từng dòng, không nhận vượt số đã đặt, hàng không đạt ghi riêng. Tiền đặt hàng vào ngay phần "đã cam kết" của ngân sách công trình, hàng về đến đâu chuyển sang "đã phát sinh" đến đó. Còn bảng giá khung và nhập kho tự động (chờ Module Kho).</td></tr>
     <tr><td><code>KHO</code></td><td>Kho</td><td><span class="pill s-draft">Chưa bắt đầu</span></td><td>Giai đoạn 2 · cách làm ngoại tuyến còn chờ quyết định</td></tr>
     <tr><td><code>KT</code></td><td>Kế toán – Tài chính</td><td><span class="pill s-draft">Chưa bắt đầu</span></td><td>Giai đoạn 2 · kết nối phần mềm kế toán còn chờ quyết định</td></tr>
     <tr><td><code>NS</code></td><td>Nhân sự – Hành chính</td><td><span class="pill s-draft">Chưa bắt đầu</span></td><td>Giai đoạn 2 · độc lập, chen vào lúc nào cũng được</td></tr>
@@ -435,6 +466,9 @@
       <tr><td>Công trường đo tiến độ theo cách nào: theo khối lượng, theo đầu việc, hay theo mũi thi công</td><td>Hiện tiến độ là con số chỉ huy trưởng tự đánh giá và ghi lại, hệ thống không tự suy ra. Chốt xong mới làm được kế hoạch tiến độ chi tiết.</td><td><span class="pill s-overdue">Cần sớm</span></td></tr>
       <tr><td>Ba con số đang tạm đặt ở Thi công: sửa nhật ký trong 24 giờ · cảnh báo ngân sách ở 90% · thang đánh giá tổ đội 1–5</td><td>Đang chạy theo các mức trên; đổi được bằng cấu hình, mỗi con số sửa ở đúng một chỗ</td><td><span class="pill s-pending">Cần trong Giai đoạn 2</span></td></tr>
       <tr><td>Một hợp đồng có mở nhiều công trình không (nhiều hạng mục, nhiều địa điểm)</td><td>Hiện chặn ở một công trình mỗi hợp đồng, để bấm nhầm hai lần không tạo ra hai công trình chia nhau một bộ ngân sách</td><td><span class="pill s-pending">Cần trong Giai đoạn 2</span></td></tr>
+      <tr><td>Một đề nghị mua có được đặt hàng nhiều nhà cung cấp không</td><td>Hiện một đề nghị ra một đơn hàng. Đề nghị 20 mặt hàng mà mỗi nhóm hàng một nhà cung cấp thì phải tách thành nhiều đề nghị — mở rộng được, nhưng cần biết thực tế NVG mua thế nào</td><td><span class="pill s-pending">Cần trong Giai đoạn 2</span></td></tr>
+      <tr><td>Ai ký nhận hàng tại công trường: Kho, chỉ huy trưởng, hay cả hai</td><td>Hiện mở cho Mua hàng và Kho ghi biên bản giao nhận. Chỉ huy trưởng hiện chỉ xem được</td><td><span class="pill s-pending">Cần trong Giai đoạn 2</span></td></tr>
+      <tr><td>Bảng giá khung cho vật tư mua lặp lại: theo tháng hay quý, điều chỉnh giá báo trước bao lâu</td><td>Chưa làm phần này, chờ chốt cơ chế</td><td><span class="pill s-draft">Giai đoạn 2</span></td></tr>
       <tr><td>Đầu mối hỗ trợ kỹ thuật để điền vào thông báo lỗi</td><td>Rà soát nội dung cuối cùng</td><td><span class="pill s-draft">Giai đoạn 3</span></td></tr>
     </tbody>
   </table>
@@ -444,7 +478,7 @@
 <h2>Ranh giới đã đặt ra và đang giữ</h2>
 <div class="card">
   <ul>
-    <li><strong>Phân quyền nằm trong cơ sở dữ liệu</strong>, không nằm ở giao diện — đi đường nào cũng bị kiểm tại một chỗ. Có 147 kiểm thử tự động canh phần này.</li>
+    <li><strong>Phân quyền nằm trong cơ sở dữ liệu</strong>, không nằm ở giao diện — đi đường nào cũng bị kiểm tại một chỗ. Có 185 kiểm thử tự động canh phần này.</li>
     <li><strong>Không cache dữ liệu nghiệp vụ trên điện thoại.</strong> Ứng dụng cài được và mở nhanh, nhưng dữ liệu vẫn lấy trực tiếp mỗi lần — để hồ sơ không đọc được sau khi đăng xuất trên máy dùng chung.</li>
     <li><strong>Mã hồ sơ do hệ thống cấp và không sửa được</strong>, pháp nhân của hồ sơ không đổi được sau khi tạo — giữ đúng ranh giới lãi/lỗ giữa ba pháp nhân.</li>
     <li><strong>Không xoá hẳn hồ sơ nghiệp vụ</strong>, chỉ đánh dấu đã xoá; mọi thay đổi trạng thái quan trọng đều ghi lịch sử riêng.</li>

@@ -34,6 +34,7 @@ import { useCan } from '@/lib/auth';
 import { AcceptancePanel } from './acceptance-panel';
 import { BudgetPanel } from './budget-panel';
 import { SiteLogPanel } from './site-log-panel';
+import { SitePurchaseRequestPanel } from './purchase-request-panel';
 import { SubcontractorPanel } from './subcontractor-panel';
 import { WarrantyPanel } from './warranty-panel';
 
@@ -155,6 +156,11 @@ export function SiteDetailPage() {
             id: 'ngan-sach',
             label: 'Ngân sách',
             content: <BudgetPanel siteId={site.id} />,
+          },
+          {
+            id: 'de-nghi-mua',
+            label: 'Đề nghị mua',
+            content: <SitePurchaseRequestPanel siteId={site.id} readOnly={isClosed} />,
           },
           {
             id: 'nghiem-thu',

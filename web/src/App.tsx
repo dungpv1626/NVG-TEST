@@ -101,6 +101,27 @@ const SiteListPage = lazy(() =>
 const SiteDetailPage = lazy(() =>
   import('@/pages/tc/site-detail').then((m) => ({ default: m.SiteDetailPage })),
 );
+const PurchaseRequestListPage = lazy(() =>
+  import('@/pages/mh/request-list').then((m) => ({ default: m.PurchaseRequestListPage })),
+);
+const PurchaseRequestCreatePage = lazy(() =>
+  import('@/pages/mh/request-create').then((m) => ({ default: m.PurchaseRequestCreatePage })),
+);
+const PurchaseRequestDetailPage = lazy(() =>
+  import('@/pages/mh/request-detail').then((m) => ({ default: m.PurchaseRequestDetailPage })),
+);
+const PurchaseOrderListPage = lazy(() =>
+  import('@/pages/mh/order-list').then((m) => ({ default: m.PurchaseOrderListPage })),
+);
+const PurchaseOrderDetailPage = lazy(() =>
+  import('@/pages/mh/order-detail').then((m) => ({ default: m.PurchaseOrderDetailPage })),
+);
+const SupplierListPage = lazy(() =>
+  import('@/pages/mh/supplier-list').then((m) => ({ default: m.SupplierListPage })),
+);
+const SupplierDetailPage = lazy(() =>
+  import('@/pages/mh/supplier-detail').then((m) => ({ default: m.SupplierDetailPage })),
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -184,6 +205,17 @@ export default function App() {
               <Route path="tc/cong-trinh" element={<SiteListPage />} />
               <Route path="tc/cong-trinh/:id" element={<SiteDetailPage />} />
 
+              {/* MH — Mua hàng và vật tư (MH-01 → MH-08). Không có màn hình "tạo đơn hàng":
+                  đơn hàng lập từ đề nghị đã duyệt và báo giá đã chọn, không đặt trước rồi
+                  trình duyệt sau (MH-02, MH-04). */}
+              <Route path="mh/de-nghi-mua" element={<PurchaseRequestListPage />} />
+              <Route path="mh/de-nghi-mua/tao-moi" element={<PurchaseRequestCreatePage />} />
+              <Route path="mh/de-nghi-mua/:id" element={<PurchaseRequestDetailPage />} />
+              <Route path="mh/don-hang" element={<PurchaseOrderListPage />} />
+              <Route path="mh/don-hang/:id" element={<PurchaseOrderDetailPage />} />
+              <Route path="mh/nha-cung-cap" element={<SupplierListPage />} />
+              <Route path="mh/nha-cung-cap/:id" element={<SupplierDetailPage />} />
+
               {/* Hộp thư Phê duyệt — MỘT màn hình cho mọi module (Webapp Flow 4.6),
                   nên nằm ở gốc chứ không thuộc đường dẫn của module nào. */}
               <Route path="viec-can-lam" element={<ApprovalInboxPage />} />
@@ -193,13 +225,14 @@ export default function App() {
                   hàng rào thật vẫn là RLS, đây chỉ là điều hướng (Webapp Flow 6.5). */}
               <Route path="nen/giao-dien" element={<DesignShowcasePage />} />
               {MODULE_CODES.filter(
-                (c): c is Exclude<ModuleCode, 'BC' | 'CRM' | 'DA' | 'TK' | 'HD' | 'TC'> =>
+                (c): c is Exclude<ModuleCode, 'BC' | 'CRM' | 'DA' | 'TK' | 'HD' | 'TC' | 'MH'> =>
                   c !== 'BC' &&
                   c !== 'CRM' &&
                   c !== 'DA' &&
                   c !== 'TK' &&
                   c !== 'HD' &&
-                  c !== 'TC',
+                  c !== 'TC' &&
+                  c !== 'MH',
               ).map(
                 (code) => (
                   <Route

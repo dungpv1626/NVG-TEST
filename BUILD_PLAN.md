@@ -346,7 +346,8 @@ không thuộc về hạng mục)
 - ✅ `project_budgets` mở rộng cho NVO: `design_project_id` + CHECK "đúng một hồ sơ cha", theo
   đúng cách `estimates` đã dùng chung ở migration 0024. NVO làm trọn gói nên không đi qua gói
   thầu nhưng vẫn cần TC-05.
-- ⏳ Còn lại: TC-03 (đề nghị mua vật tư từ công trường) — chờ Module MH ở 3B.
+- ✅ TC-03 (đề nghị mua vật tư từ công trường) — xong ở 3B: tab **Đề nghị mua** ở Chi tiết
+  Công trình mở thẳng biểu mẫu của Module MH đã gắn sẵn công trình.
 - ⚠️ Module **ĐỊNH HƯỚNG** — chưa có khảo sát Chỉ huy công trường (PRD 10). **Đã CỐ Ý chưa
   làm**, chờ khảo sát chứ không phải quên:
   - Kế hoạch tiến độ chi tiết theo đầu việc và kế hoạch nhân sự/vật tư theo thời gian (phần
@@ -358,15 +359,72 @@ không thuộc về hạng mục)
   - Ba con số suy luận cần xác nhận: cửa sổ sửa nhật ký **24 giờ**, ngưỡng cảnh báo ngân sách
     **90%**, thang đánh giá tổ đội **1–5**.
 
-### 3B. Module MH (BSD 4.7)
-`purchase_requests` · `suppliers` · `quotations` · `purchase_orders` · `deliveries`
+### 3B. Module MH (BSD 4.7) ✅ xong
+`purchase_requests` + `purchase_request_items` · `suppliers` · `quotations` + `quotation_items` ·
+`purchase_orders` + `purchase_order_items` · `deliveries` + `delivery_items`
 
-- Đề nghị mua từ Công trình (TC-03) hoặc Gói thầu; duyệt theo hạn mức (MH-02)
-- `POST /api/purchase-requests/:id/compare-quotations` — bảng so sánh **chuẩn hoá**: đơn giá, thuế,
-  vận chuyển, hao hụt, thời hạn giao, điều kiện thanh toán, bảo hành. **Không chỉ so giá thấp nhất** (MH-04)
-- Lịch sử giá theo mã vật tư–NCC–ngày–dự án → **gợi ý ngược cho `unit_prices`** (MH-05 ↔ DA-05)
-- `POST /api/deliveries` — ghi giao nhận, **tự cập nhật tồn kho** (MH-07 → KHO)
-- Bộ chứng từ chuyển thẳng Kế toán, **không nhập lại** (MH-08 → KT)
+BSD 4.7 liệt kê 5 bảng, ở đây có 9. Bốn bảng thêm đều là bảng DÒNG của một bảng đã có tên trong
+tài liệu, không phải khái niệm mới: gộp chúng vào bảng cha thì một đề nghị mua chỉ mua được đúng
+một mặt hàng, trong khi phiếu đề nghị vật tư thật của một công trình luôn là một danh sách.
+
+- ✅ Đề nghị mua từ Công trình (TC-03) hoặc Gói thầu, hoặc không gắn hồ sơ nào (mua cho văn
+  phòng). `submit_purchase_request_approval` chốt giá trị rồi gửi qua **đúng bảng `approvals`
+  và hàm `decide_approval` đã có** — Hộp thư Phê duyệt vẫn là một màn hình duy nhất (MH-02).
+- ✅ **Không đặt hàng trước rồi trình duyệt sau**: `purchase_orders` bị REVOKE INSERT, đơn hàng
+  chỉ sinh từ `create_purchase_order` và hàm đó từ chối mọi đề nghị chưa ở bước "đã duyệt".
+- ✅ `compare_quotations` — bảng so sánh **chuẩn hoá**: tiền hàng, hao hụt, thuế, vận chuyển quy
+  về một tổng; thời hạn giao, điều kiện thanh toán, bảo hành để NGUYÊN, không quy thành tiền.
+  Quy đổi được thì phần mềm đã ngầm chọn hộ nhà cung cấp — đúng thứ "Ranh giới KHÔNG làm" cấm.
+  `select_quotation` bắt buộc nêu **căn cứ chọn** nếu báo giá được chọn không phải rẻ nhất (MH-04).
+  → Chọn hàm CSDL thay vì endpoint Workers như BSD đặc tả: phép tính chỉ đọc dữ liệu sẵn có,
+    nhưng phải chạy sau khi kiểm quyền xem giá vốn và ghi nhật ký truy cập (CLAUDE.md 3.1(c)).
+- ✅ Công thức chuẩn hoá viết **hai lần** — `standardizeQuotationCost` (màn hình tính lại khi gõ)
+  và SQL (con số đem lưu vào đơn hàng). Có test đối chiếu hai bản **khớp từng đồng**. Tỷ lệ lưu
+  bằng **điểm cơ bản** (10% = 1000) để mọi phép nhân giữ nguyên `bigint`.
+- ✅ **Chi phí gắn vào công trình ngay khi phát sinh** (KT-05, TC-05): lập đơn hàng cộng vào
+  `project_budgets.committed_amount`; hàng về đến đâu `record_delivery` chuyển sang
+  `actual_amount` đến đó theo tỷ lệ TIỀN HÀNG; hủy đơn hoàn lại đúng phần còn treo. Đây là thứ
+  làm cột "đã cam kết" của màn hình Ngân sách công trình thôi bằng 0.
+- ✅ `record_delivery` — kiểm đếm theo dòng, **không nhận vượt số đã đặt**, tách `quantity_ok` /
+  `quantity_issue` (chỉ phần ĐẠT vào chi phí thực tế), hàng không đạt bắt buộc nói rõ kiểu gì
+  (MH-07). Kho cũng ghi được, không riêng Mua hàng.
+- ✅ `purchase_price_history` — lịch sử giá theo mã vật tư – NCC – ngày – hồ sơ áp dụng
+  (MH-05 ↔ DA-05). CỐ Ý **chỉ đọc**, không tự ghi vào `unit_prices`: đơn giá dự toán tự đổi theo
+  lần mua gần nhất là phần mềm tự quyết giá, thứ PRD 2.3 cấm.
+- ✅ Bộ chứng từ chuyển thẳng Kế toán (MH-08): nhận đủ hàng thì KT/CFO nhận thông báo dẫn tới
+  tab **Chứng từ** của đơn hàng. Đề nghị thanh toán sinh ra từ đó thuộc KT-01, làm ở 3D.
+- ✅ **Nội dung thương thảo không hiển thị đại trà** (NEN-07): các báo giá KHÔNG được chọn chỉ mở
+  cho vai trò xem được giá vốn; báo giá ĐÃ chọn thì mọi người có quyền xem MH đều thấy vì nó là
+  một phần bộ chứng từ. `suppliers` là bảng DÙNG CHUNG, không có `company_id` — BSD 4.7 ghi RLS
+  "A" nhưng chính dòng đó gọi nó là "danh mục dùng chung", **hai vế không thể cùng đúng**; theo
+  BSD 2.2 và cách `customers` đã làm. → cần cập nhật tài liệu.
+- ✅ Khoá ngoại còn nợ từ 0020 đã nối: `unit_prices.supplier_id` → `suppliers`.
+- 🔒 Bốn chỗ do đợt rà soát trước khi commit tìm ra và đã bịt:
+  - **Ranh giới pháp nhân**: policy INSERT cũ không kiểm hồ sơ nguồn, nên biết `uuid` một công
+    trình NVO là gán được vào đề nghị NVC — và tiền đơn hàng sẽ cộng vào ngân sách pháp nhân
+    khác. Nay đi qua `rls_purchase_source_matches_company`, kèm lưới an toàn thứ hai ở
+    `purchase_request_budget_line` (`pb.company_id = pr.company_id`). Có test.
+  - **Chạy đua giữa hai đợt giao**: `record_delivery` đọc `committed_to_budget` rồi tính phần
+    chuyển sang chi phí thực tế dựa trên chính con số vừa đọc — thêm `FOR UPDATE` như
+    `decide_approval` đã làm.
+  - **Hủy đề nghị đang chờ duyệt** đóng hồ sơ phê duyệt bằng một câu UPDATE trần, để lại một
+    đề nghị "bị từ chối" không ai đứng tên. Nay ghi kèm một dòng `approval_decisions`.
+  - **Tiến độ giao hàng cộng số lượng khác đơn vị**: nhận đủ 5.000 con bulông trong khi 20 tấn
+    thép chưa về hiện thành "99,6%". `deliveryProgress` nay đếm theo SỐ MẶT HÀNG đã nhận đủ.
+- ⚠️ **Giả định chờ Haan xác nhận**: vai trò Mua hàng được mở **quyền đọc tối thiểu** phía Thi
+  công — phần đầu hồ sơ công trình (mã, tên, địa chỉ) và danh sách mã chi phí (`site_cost_codes`,
+  KHÔNG kèm số tiền). Không có nó thì màn hình của chính Phòng Mua hàng không gọi được tên công
+  trình mà MH-01 bắt buộc ghi. Nhật ký, nghiệm thu, tổ đội, bảo hành và số liệu ngân sách vẫn
+  đóng — chúng đi qua `rls_site_readable`, hàm này không đổi.
+- ⏳ **CỐ Ý chưa làm**, không phải quên:
+  - **MH-09** bảng giá khung / thoả thuận nguyên tắc — cần biết NVG thoả thuận theo tháng hay
+    quý và cơ chế điều chỉnh giá; chưa có dữ liệu.
+  - **MH-10** quy cách kỹ thuật nguyên liệu NVS (mác thép, dung sai, quy đổi kg/mét/tấm) —
+    thuộc Module SX, mà Xưởng giàn giáo chưa có khảo sát trực tiếp (PRD 10).
+  - **Tồn kho**: `record_delivery` mới dừng ở ghi nhận giao nhận + báo Kho. Việc cộng vào tồn
+    chờ `inventory_items` ở 3C — chưa có bảng tồn để cập nhật.
+  - Đính kèm tệp chứng từ (ảnh biên bản, bản chụp hoá đơn) — dùng lại bộ `documents` của NEN-05
+    ở một lượt riêng, không dựng cơ chế thứ hai.
 
 ### 3C. Module KHO (BSD 4.8)
 `warehouses` · `inventory_items` · `stock_movements` · `stocktakes` · `scaffolding_assets`
@@ -549,3 +607,6 @@ theo hạn mức · truy vết ngược tới chứng từ gốc.
 | 8 | **Một hợp đồng mở được nhiều công trình không?** Hiện chặn ở một, để tránh bấm hai lần thành hai công trình chia nhau một bộ ngân sách | Phase 3A (đã làm, đổi được bằng một tham số) |
 | 9 | **Ba con số suy luận của TC**: cửa sổ sửa nhật ký 24 giờ · ngưỡng cảnh báo ngân sách 90% · thang đánh giá tổ đội 1–5 | Phase 3A (đã làm, sửa ở một chỗ) |
 | 10 | **Công trường đo tiến độ thế nào** (theo khối lượng, theo đầu việc, theo mũi thi công?) — quyết định luôn cả kế hoạch tiến độ chi tiết của TC-01 | Phase 3A phần còn lại |
+| 11 | **Một đề nghị mua có được đặt hàng nhiều nhà cung cấp không?** Hiện một đề nghị → một đơn hàng. Đề nghị 20 mặt hàng mà mỗi nhóm hàng một nhà cung cấp thì phải tách thành nhiều đề nghị | Phase 3B (đã làm, mở rộng được) |
+| 12 | **Ai ký nhận hàng tại công trường** — Kho, chỉ huy trưởng, hay cả hai? Hiện mở cho Mua hàng và Kho | Phase 3B (đã làm, sửa ở một hàm) |
+| 13 | **Bảng giá khung MH-09** — NVG thoả thuận theo tháng hay quý, điều chỉnh giá báo trước bao lâu? | Chặn MH-09 |

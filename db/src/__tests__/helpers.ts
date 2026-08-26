@@ -62,6 +62,7 @@ export const ACCOUNTS = {
   congTruongNvc: 'congtruong.nvc@nhavietgroup.test',
   thietKeNvo: 'thietke.nvo@nhavietgroup.test',
   ketCauNvo: 'ketcau.nvo@nhavietgroup.test',
+  muaHang: 'muahang@nhavietgroup.test',
   kho: 'kho@nhavietgroup.test',
   ketoan: 'ketoan@nhavietgroup.test',
 } as const;
@@ -100,6 +101,15 @@ export async function cleanupTestData(): Promise<void> {
     // dạng "Giá dự thầu NVC-DA-… — [TEST] …", tiền tố test nằm ở GIỮA chuỗi.
     await sql`DELETE FROM approvals WHERE title LIKE ${'%' + TEST_PREFIX + '%'}`;
     await sql`DELETE FROM complaints WHERE title LIKE ${TEST_PREFIX + '%'}`;
+    // Đơn đặt hàng phải xoá TRƯỚC đề nghị mua: khoá ngoại giữa hai bảng là ON DELETE
+    // RESTRICT, cố ý — một đơn hàng không được mồ côi khỏi đề nghị đã duyệt sinh ra nó.
+    // Xoá đơn hàng kéo theo dòng đơn hàng, phiếu giao nhận và dòng kiểm đếm (CASCADE).
+    await sql`DELETE FROM purchase_orders WHERE purchase_request_id IN (
+      SELECT id FROM purchase_requests WHERE title LIKE ${TEST_PREFIX + '%'}
+    )`;
+    // Xoá đề nghị mua kéo theo dòng đề nghị, báo giá và dòng báo giá (CASCADE).
+    await sql`DELETE FROM purchase_requests WHERE title LIKE ${TEST_PREFIX + '%'}`;
+    await sql`DELETE FROM suppliers WHERE name LIKE ${TEST_PREFIX + '%'}`;
     // Xoá công trình kéo theo nhật ký, nghiệm thu, tổ đội, bảo hành và phản ánh bảo hành
     // (khoá ngoại CASCADE). Phải đứng TRƯỚC hợp đồng và gói thầu: khoá ngoại của công
     // trình tới hai hồ sơ đó là `ON DELETE SET NULL`, mà cột nguồn của công trình bị guard

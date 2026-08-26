@@ -50,7 +50,7 @@ function check(step: string, error: { message: string } | null): void {
   if (error) throw new Error(`${step}: ${error.message}`);
 }
 
-describeDb('Golden Path 1 — NVC: Cơ hội → Gói thầu → Dự toán → Hợp đồng → Ngân sách', () => {
+describeDb('Golden Path 1 — NVC: Cơ hội → Gói thầu → Dự toán → Hợp đồng → Công trình → Mua hàng', () => {
   it('chạy trọn luồng và truy ngược được từ hợp đồng về tận cơ hội gốc', async () => {
     const kinhDoanh = await signInAs(ACCOUNTS.kinhDoanhNvc);
     const dauThau = await signInAs(ACCOUNTS.dauThauNvc);
@@ -312,7 +312,7 @@ describeDb('Golden Path 1 — NVC: Cơ hội → Gói thầu → Dự toán → 
     // (vướng mắc khảo sát #7 — "số liệu giữa các bộ phận không khớp nhau").
     const { data: budgetLines } = await tgd
       .from('project_budgets')
-      .select('id, construction_site_id')
+      .select('id, construction_site_id, cost_code, cost_group')
       .eq('bidding_project_id', projectId);
     expect(budgetLines!.length).toBeGreaterThan(0);
     expect(
@@ -379,6 +379,183 @@ describeDb('Golden Path 1 — NVC: Cơ hội → Gói thầu → Dự toán → 
       .eq('type', 'acceptance_billing')
       .eq('related_entity_id', acceptanceId as string);
     expect(billingNotice!.length).toBe(1);
+
+    // --- Bước 13. Công trường đề nghị mua vật tư → giao nhận (MH-01 → MH-07) ------------
+    // Đây là nửa còn lại của tiêu chí Giai đoạn 2: chi phí thực tế của công trình phải tự
+    // chảy về từ chứng từ mua hàng, không ai gõ lại vào một bảng riêng (PRD Mục 7, KT-05).
+    const vatTuLine = budgetLines!.find((b) => b.cost_group === 'vat_tu')!;
+    const budgetBefore = budgetLines!.find((b) => b.id === vatTuLine.id)!;
+    expect(budgetBefore).toBeTruthy();
+
+    const { data: requestRow, error: prCreateError } = await chiHuy
+      .from('purchase_requests')
+      .insert({
+        company_id: nvc,
+        title: `${TEST_PREFIX} Thép hình cho phần khung ${stamp}`,
+        construction_site_id: siteId as string,
+        cost_code: vatTuLine.cost_code,
+        needed_date: new Date(Date.now() + 21 * 86_400_000).toISOString().slice(0, 10),
+        delivery_location: 'KCN Long Hậu, Long An',
+      })
+      .select('id, requested_by')
+      .single();
+    check('công trường gửi đề nghị mua', prCreateError);
+    const purchaseRequestId = (requestRow as { id: string }).id;
+
+    const { error: prItemError } = await chiHuy.from('purchase_request_items').insert({
+      purchase_request_id: purchaseRequestId,
+      position: 1,
+      item_code: 'THEP-H200',
+      name: 'Thép hình H200',
+      unit: 'kg',
+      quantity: 5000,
+      estimated_unit_price: 21_000,
+    });
+    check('thêm dòng đề nghị mua', prItemError);
+
+    const { data: prApprovalId, error: prSubmitError } = await chiHuy.rpc(
+      'submit_purchase_request_approval',
+      { p_request_id: purchaseRequestId },
+    );
+    check('gửi phê duyệt đề nghị mua', prSubmitError);
+
+    const { error: prDecideError } = await tgd.rpc('decide_approval', {
+      p_approval_id: prApprovalId as string,
+      p_decision: 'approved',
+      p_note: 'Đồng ý mua theo tiến độ dựng khung.',
+    });
+    check('phê duyệt đề nghị mua', prDecideError);
+
+    const muaHang = await signInAs(ACCOUNTS.muaHang);
+
+    // Hai nhà cung cấp, và nhà cung cấp được chọn KHÔNG phải nhà rẻ nhất — đúng tình huống
+    // MH-04 mô tả. Điều bắt buộc là nêu được căn cứ.
+    const supplierIds: string[] = [];
+    for (const [index, supplier] of [
+      { name: 'Thép Nam Việt', unitPrice: 20_500 },
+      { name: 'Thép Đại Phát', unitPrice: 21_500, deliveryDays: 3 },
+    ].entries()) {
+      const { data: supplierRow, error: supplierError } = await muaHang
+        .from('suppliers')
+        .insert({
+          code: `NCC-GP1-${stamp}-${index}`,
+          name: `${TEST_PREFIX} ${supplier.name} ${stamp}`,
+          category: 'Thép xây dựng',
+          supplier_class: 'chinh',
+        })
+        .select('id')
+        .single();
+      check('lập nhà cung cấp', supplierError);
+      supplierIds.push((supplierRow as { id: string }).id);
+
+      const { data: quoteRow, error: quoteError } = await muaHang
+        .from('quotations')
+        .insert({
+          company_id: nvc,
+          purchase_request_id: purchaseRequestId,
+          supplier_id: (supplierRow as { id: string }).id,
+          status: 'da_nhan',
+          quoted_date: new Date().toISOString().slice(0, 10),
+          tax_rate_bp: 1000,
+          delivery_days: supplier.deliveryDays ?? 14,
+          warranty_months: 12,
+        })
+        .select('id')
+        .single();
+      check('nhập báo giá', quoteError);
+
+      const { error: quoteItemError } = await muaHang.from('quotation_items').insert({
+        quotation_id: (quoteRow as { id: string }).id,
+        item_code: 'THEP-H200',
+        name: 'Thép hình H200',
+        unit: 'kg',
+        quantity: 5000,
+        unit_price: supplier.unitPrice,
+      });
+      check('nhập dòng báo giá', quoteItemError);
+    }
+
+    const { data: comparison, error: compareError } = await muaHang.rpc('compare_quotations', {
+      p_request_id: purchaseRequestId,
+    });
+    check('so sánh báo giá', compareError);
+    const compareRows = comparison as {
+      quotation_id: string;
+      supplier_id: string;
+      landed_total: string;
+      cost_rank: number;
+    }[];
+    expect(compareRows).toHaveLength(2);
+    expect(compareRows[0]!.cost_rank).toBe(1);
+
+    const pricier = compareRows.find((r) => r.cost_rank === 2)!;
+    const { error: noReasonError } = await muaHang.rpc('select_quotation', {
+      p_quotation_id: pricier.quotation_id,
+    });
+    expect(
+      noReasonError,
+      'chọn nhà cung cấp đắt hơn mà không nêu căn cứ phải bị chặn (MH-04)',
+    ).toBeTruthy();
+
+    const { error: selectError } = await muaHang.rpc('select_quotation', {
+      p_quotation_id: pricier.quotation_id,
+      p_reason: 'Giao trong 3 ngày, kịp mốc dựng khung; hai lần trước giao đúng quy cách.',
+    });
+    check('chọn nhà cung cấp', selectError);
+
+    const { data: orderId, error: orderError } = await muaHang.rpc('create_purchase_order', {
+      p_quotation_id: pricier.quotation_id,
+    });
+    check('lập đơn đặt hàng', orderError);
+
+    // Tiền vừa được hứa chi đã nằm ở phần ĐÃ CAM KẾT — TC-05 cảnh báo được trước khi hoá
+    // đơn về, chứ không phải sau.
+    const { data: committedView } = await chiHuy.rpc('construction_budget_status', {
+      p_site_id: siteId as string,
+    });
+    const committedRow = (committedView as { cost_code: string; committed_amount: string }[]).find(
+      (r) => r.cost_code === vatTuLine.cost_code,
+    )!;
+    expect(BigInt(committedRow.committed_amount)).toBe(BigInt(pricier.landed_total));
+
+    const { data: orderItem } = await muaHang
+      .from('purchase_order_items')
+      .select('id, quantity')
+      .eq('purchase_order_id', orderId as string)
+      .single();
+
+    const { error: deliveryError } = await muaHang.rpc('record_delivery', {
+      p_purchase_order_id: orderId as string,
+      p_delivered_date: new Date().toISOString().slice(0, 10),
+      p_items: [
+        {
+          purchase_order_item_id: (orderItem as { id: string }).id,
+          quantity_ok: Number((orderItem as { quantity: string }).quantity),
+        },
+      ],
+      p_delivery_note_number: `PGH-${stamp}`,
+      p_invoice_number: `HĐ-${stamp}`,
+      p_has_quality_certificate: true,
+    });
+    check('ghi nhận giao nhận', deliveryError);
+
+    // Hàng về đủ: cam kết chuyển hết sang chi phí thực tế của đúng mã chi phí đó.
+    const { data: actualView } = await chiHuy.rpc('construction_budget_status', {
+      p_site_id: siteId as string,
+    });
+    const actualRow = (
+      actualView as { cost_code: string; actual_amount: string; committed_amount: string }[]
+    ).find((r) => r.cost_code === vatTuLine.cost_code)!;
+    expect(BigInt(actualRow.committed_amount)).toBe(0n);
+    expect(BigInt(actualRow.actual_amount)).toBe(BigInt(pricier.landed_total));
+
+    // MH-08: bộ chứng từ tới Kế toán bằng thông báo dẫn thẳng tới đơn hàng, không nhập lại.
+    const { data: docNotice } = await ketoan
+      .from('notifications')
+      .select('id')
+      .eq('type', 'purchase_order_delivered')
+      .eq('related_entity_id', orderId as string);
+    expect(docNotice!.length).toBe(1);
 
     // --- Nghiệm thu: TRUY NGƯỢC từ hợp đồng về tận đầu nguồn ----------------------------
     // Đây là tiêu chí số 3 của Definition of Done: đứng ở hợp đồng phải trả lời được nó ra

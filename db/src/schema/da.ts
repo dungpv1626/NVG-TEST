@@ -194,8 +194,12 @@ export const unitPrices = pgTable(
     source: unitPriceSourceEnum('source').notNull(),
 
     /**
-     * Nhà cung cấp — CHƯA có khoá ngoại vì bảng `suppliers` thuộc Module MH (Giai đoạn 2).
-     * Khi MH có mặt sẽ bổ sung ràng buộc trong migration riêng.
+     * Nhà cung cấp.
+     *
+     * Khoá ngoại tới `suppliers` ĐÃ có ở tầng CSDL (thêm bằng `ALTER TABLE` trong migration
+     * của Module MH), nhưng KHÔNG khai ở tầng Drizzle: `mh.ts` đã import từ file này, khai
+     * hai chiều sẽ tạo vòng import và TypeScript mất kiểu. Cùng cách
+     * `project_budgets.construction_site_id` đã làm với `construction_sites`.
      */
     supplierId: uuid('supplier_id'),
     supplierName: varchar('supplier_name', { length: 255 }),
