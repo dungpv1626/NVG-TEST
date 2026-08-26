@@ -6,22 +6,77 @@
  */
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { lazy } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { MODULE_CODES, type ModuleCode } from '@nvg/shared';
 import { AppShell } from '@/components/layout/app-shell';
 import { ProtectedRoute } from '@/components/layout/protected-route';
 import { AuthProvider } from '@/lib/auth';
-import { CustomerCreatePage } from '@/pages/crm/customer-create';
-import { CustomerDetailPage } from '@/pages/crm/customer-detail';
-import { CustomerListPage } from '@/pages/crm/customer-list';
-import { OpportunityCreatePage } from '@/pages/crm/opportunity-create';
-import { OpportunityDetailPage } from '@/pages/crm/opportunity-detail';
-import { OpportunityPipelinePage } from '@/pages/crm/opportunity-pipeline';
-import { QuoteCreatePage } from '@/pages/crm/quote-create';
-import { DashboardPage } from '@/pages/dashboard';
 import { LoginPage } from '@/pages/login';
-import { PlaceholderPage } from '@/pages/placeholder';
-import { ApprovalInboxPage } from '@/pages/phe-duyet/approval-inbox-page';
+
+/**
+ * Mỗi màn hình là một gói tải riêng.
+ *
+ * Quan trọng với người dùng điện thoại: mạng 3G/4G ở công trường tải một gói duy nhất chứa
+ * cả 12 module là chờ rất lâu trước khi thấy gì. Tách theo màn hình thì lần mở đầu chỉ tải
+ * đúng phần đang cần, phần còn lại tải dần khi bấm sang.
+ *
+ * Đăng nhập KHÔNG tách: đó luôn là màn hình đầu tiên, tách ra chỉ thêm một vòng chờ mạng.
+ */
+const DashboardPage = lazy(() =>
+  import('@/pages/dashboard').then((m) => ({ default: m.DashboardPage })),
+);
+const PlaceholderPage = lazy(() =>
+  import('@/pages/placeholder').then((m) => ({ default: m.PlaceholderPage })),
+);
+const ApprovalInboxPage = lazy(() =>
+  import('@/pages/phe-duyet/approval-inbox-page').then((m) => ({ default: m.ApprovalInboxPage })),
+);
+const CustomerListPage = lazy(() =>
+  import('@/pages/crm/customer-list').then((m) => ({ default: m.CustomerListPage })),
+);
+const CustomerCreatePage = lazy(() =>
+  import('@/pages/crm/customer-create').then((m) => ({ default: m.CustomerCreatePage })),
+);
+const CustomerDetailPage = lazy(() =>
+  import('@/pages/crm/customer-detail').then((m) => ({ default: m.CustomerDetailPage })),
+);
+const CustomerEditPage = lazy(() =>
+  import('@/pages/crm/customer-edit').then((m) => ({ default: m.CustomerEditPage })),
+);
+const OpportunityPipelinePage = lazy(() =>
+  import('@/pages/crm/opportunity-pipeline').then((m) => ({ default: m.OpportunityPipelinePage })),
+);
+const OpportunityCreatePage = lazy(() =>
+  import('@/pages/crm/opportunity-create').then((m) => ({ default: m.OpportunityCreatePage })),
+);
+const OpportunityDetailPage = lazy(() =>
+  import('@/pages/crm/opportunity-detail').then((m) => ({ default: m.OpportunityDetailPage })),
+);
+const QuoteCreatePage = lazy(() =>
+  import('@/pages/crm/quote-create').then((m) => ({ default: m.QuoteCreatePage })),
+);
+const ComplaintListPage = lazy(() =>
+  import('@/pages/crm/complaint-list').then((m) => ({ default: m.ComplaintListPage })),
+);
+const ComplaintCreatePage = lazy(() =>
+  import('@/pages/crm/complaint-create').then((m) => ({ default: m.ComplaintCreatePage })),
+);
+const ComplaintDetailPage = lazy(() =>
+  import('@/pages/crm/complaint-detail').then((m) => ({ default: m.ComplaintDetailPage })),
+);
+const BiddingListPage = lazy(() =>
+  import('@/pages/da/bidding-list').then((m) => ({ default: m.BiddingListPage })),
+);
+const BiddingCreatePage = lazy(() =>
+  import('@/pages/da/bidding-create').then((m) => ({ default: m.BiddingCreatePage })),
+);
+const BiddingDetailPage = lazy(() =>
+  import('@/pages/da/bidding-detail').then((m) => ({ default: m.BiddingDetailPage })),
+);
+const UnitPriceListPage = lazy(() =>
+  import('@/pages/da/unit-price-list').then((m) => ({ default: m.UnitPriceListPage })),
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -35,8 +90,7 @@ const queryClient = new QueryClient({
 });
 
 /** Đường dẫn của từng module — khớp `MODULE_ROUTES` trong sidebar. */
-const MODULE_PATHS: Record<Exclude<ModuleCode, 'BC' | 'CRM'>, string> = {
-  DA: 'da/goi-thau',
+const MODULE_PATHS: Record<Exclude<ModuleCode, 'BC' | 'CRM' | 'DA'>, string> = {
   TK: 'tk/du-an',
   HD: 'hd/hop-dong',
   TC: 'tc/cong-trinh',
@@ -70,6 +124,7 @@ export default function App() {
               <Route path="crm/khach-hang" element={<CustomerListPage />} />
               <Route path="crm/khach-hang/tao-moi" element={<CustomerCreatePage />} />
               <Route path="crm/khach-hang/:id" element={<CustomerDetailPage />} />
+              <Route path="crm/khach-hang/:id/chinh-sua" element={<CustomerEditPage />} />
 
               {/* CRM — Cơ hội kinh doanh (CRM-02). Cùng dữ liệu, hai chế độ xem
                   Kanban/Danh sách đổi qua tham số `?che-do=`. */}
@@ -78,11 +133,23 @@ export default function App() {
               <Route path="crm/co-hoi/:id" element={<OpportunityDetailPage />} />
               <Route path="crm/co-hoi/:id/bao-gia/lap-moi" element={<QuoteCreatePage />} />
 
+              {/* CRM — Khiếu nại khách hàng (CRM-08). */}
+              <Route path="crm/khieu-nai" element={<ComplaintListPage />} />
+              <Route path="crm/khieu-nai/tao-moi" element={<ComplaintCreatePage />} />
+              <Route path="crm/khieu-nai/:id" element={<ComplaintDetailPage />} />
+
+              {/* DA — Gói thầu và đơn giá (DA-01 → DA-09). */}
+              <Route path="da/goi-thau" element={<BiddingListPage />} />
+              <Route path="da/goi-thau/tao-moi" element={<BiddingCreatePage />} />
+              <Route path="da/goi-thau/:id" element={<BiddingDetailPage />} />
+              <Route path="da/don-gia" element={<UnitPriceListPage />} />
+
               {/* Hộp thư Phê duyệt — MỘT màn hình cho mọi module (Webapp Flow 4.6),
                   nên nằm ở gốc chứ không thuộc đường dẫn của module nào. */}
               <Route path="viec-can-lam" element={<ApprovalInboxPage />} />
               {MODULE_CODES.filter(
-                (c): c is Exclude<ModuleCode, 'BC' | 'CRM'> => c !== 'BC' && c !== 'CRM',
+                (c): c is Exclude<ModuleCode, 'BC' | 'CRM' | 'DA'> =>
+                  c !== 'BC' && c !== 'CRM' && c !== 'DA',
               ).map(
                 (code) => (
                   <Route

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Bản maskable: hệ điều hành cắt biểu tượng theo hình dạng riêng của nó (tròn, vuông bo,
+  giọt nước). Nền tràn viền và chữ thu nhỏ nằm gọn trong vùng an toàn 80% ở giữa, để không
+  kích thước cắt nào làm mất chữ.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#0C66E4"/>
+  <text x="256" y="256" fill="#FFFFFF"
+        font-family="DejaVu Sans" font-weight="bold" font-size="116"
+        letter-spacing="3" text-anchor="middle" dominant-baseline="central">NVG</text>
+</svg>

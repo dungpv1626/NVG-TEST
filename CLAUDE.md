@@ -96,7 +96,7 @@ endpoint mới khi BSD đã có sẵn cái tương đương.
 | Giao diện | **Tailwind CSS** + **shadcn/ui** (Radix) + **Lucide React** (icon) + **Recharts** (biểu đồ) |
 | Dữ liệu & trạng thái | **TanStack Query** (dữ liệu máy chủ) + **Zustand** (trạng thái UI thuần) + `@supabase/supabase-js` |
 | Biểu mẫu | **React Hook Form** + **Zod** (Zod dùng chung cả 2 lớp) |
-| Di động / offline | **PWA**: `vite-plugin-pwa` + Workbox + **Dexie.js** (IndexedDB) — CHỈ cho Kho/công trường |
+| Di động / offline | **PWA**: `vite-plugin-pwa` + Workbox cho **TOÀN BỘ** ứng dụng (xem 6.5 mục 7) · **Dexie.js** (IndexedDB) chỉ cho Kho/công trường khi làm offline thật |
 | Backend tùy chỉnh | **Cloudflare Workers** + **Hono**, API kiểu **REST/JSON** |
 | CSDL | **PostgreSQL** trên **Supabase** (managed) |
 | Schema/migration | **Drizzle ORM** + `drizzle-kit` |
@@ -405,6 +405,15 @@ luôn là người quyết định cuối cùng" (PRD 2.3).
 5. **CLAUDE.md không ghi ngày/mốc cụ thể** (tránh lỗi thời) — tra IPD 2 khi cần ngày.
 6. **Thêm thư mục `shared/`** song song `web/ workers/ db/` cho Zod schema, type và hằng số dùng chung.
    → TSD 5.2 chỉ khai báo 3 thư mục nhưng TSD 1.3 yêu cầu dùng chung type/Zod; `shared/` lấp khoảng trống này.
+7. **PWA áp dụng cho TOÀN BỘ ứng dụng, không chỉ Kho/công trường.** Nhân sự phải cài được lên
+   màn hình chính điện thoại và dùng thoải mái ở mọi module.
+   → Điều này **mở rộng** TSD 3.2 và TSD 1.4 (ghi "PWA — chỉ cho Kho/công trường").
+   → Kéo theo: mọi màn hình phải có bố cục di động thật (thanh điều hướng dưới theo AFD 4.7),
+     KHÔNG thu nhỏ bố cục máy tính.
+   → **KHÔNG kéo theo offline-first.** Service worker chỉ cache khung ứng dụng (mã, phông,
+     biểu tượng); phản hồi Supabase **cố ý không cache** vì dữ liệu được RLS bảo vệ theo từng
+     người, để lại bản sao trong máy là đọc được sau khi đăng xuất (PRD 5.2, NEN-07).
+     Offline thật cho Kho vẫn là quyết định còn treo (KHO-09, xem 6.6).
 
 ### 6.6 Vấn đề còn mở — cần NVG xác nhận, KHÔNG tự quyết
 
@@ -416,7 +425,8 @@ Gộp từ PRD 10, TSD 7, CGD 7, BSD 5, IPD 7:
 | **Hạn mức phê duyệt chính thức** theo cấp/loại nghiệp vụ | Đang dùng mức tạm; dữ liệu `approval_limits` phải cấu hình được |
 | **Bộ mã vật tư / công trình / nhà cung cấp** thống nhất | NVG chưa có; sẽ tự tạo mẫu trước go-live từng giai đoạn |
 | **Khảo sát Xưởng giàn giáo (NVS) + Chỉ huy công trường** | Module TC/SX có thể phải sửa lại một phần |
-| **`unit_prices` dùng chung DA/TK/MH?** | Cần xác nhận NVO có cần bảng đơn giá riêng không (BSD 5) |
+| **`unit_prices` dùng chung DA/TK/MH?** | Cần xác nhận NVO có cần bảng đơn giá riêng không (BSD 5). Đang triển khai DÙNG CHUNG, tách sẵn theo `company_id` |
+| **Ai được xem GIÁ VỐN** | Đang mở cho TGĐ/CFO/BGĐ/Admin + **DA_DT, TKE, MH** (suy từ TK-07 và MH-04/05). Lợi nhuận vẫn chỉ TGĐ/CFO/BGĐ/Admin. Sửa ở hàm `rls_sees_sensitive` |
 | **Cơ chế lương/thưởng chi tiết** từng công ty/nhóm nhân sự | Chưa cấu hình được NS-06 |
 | **Tên miền chính thức** · **đầu mối hỗ trợ kỹ thuật** (điền vào mẫu lỗi CGD 5.5) · **SSO** (chờ NVG có email công ty) | Chưa chặn phát triển |
 | **Hạn mức + điều khoản bảo mật gói miễn phí Gemini** | Cần kiểm tra lại tại thời điểm triển khai; cân nhắc gói trả phí khi dùng dữ liệu thật |

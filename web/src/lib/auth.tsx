@@ -13,6 +13,7 @@
 import type { Session } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { CompanyCode, ModuleCode, RoleCode } from '@nvg/shared';
+import { useCompanyStore } from './company-store';
 import { supabase } from './supabase';
 
 export interface CompanyAssignment {
@@ -179,6 +180,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  /**
+   * Chốt pháp nhân đang làm việc ngay khi có hồ sơ người dùng.
+   *
+   * Không làm bước này thì `selectedCompanyId` chỉ được đặt lúc người dùng TỰ BẤM vào bộ
+   * chọn pháp nhân — mà người chỉ thuộc một pháp nhân thì không bao giờ bấm. Hệ quả: mọi
+   * truy vấn lọc theo pháp nhân bị tắt và mọi biểu mẫu cần `company_id` báo "chưa chọn pháp
+   * nhân", trong khi màn hình vẫn hiển thị đúng tên công ty ở thanh bên — sai mà nhìn như đúng.
+   *
+   * Cũng xử lý trường hợp id đã lưu không còn hợp lệ (quản trị viên đổi phân quyền): rơi về
+   * pháp nhân đầu tiên thay vì kẹt ở một id không còn thuộc về người này.
+   */
+  useEffect(() => {
+    const { selectedCompanyId, setSelectedCompany, reset } = useCompanyStore.getState();
+
+    if (!profile || profile.assignments.length === 0) {
+      if (selectedCompanyId !== null) reset();
+      return;
+    }
+
+    const stillValid = profile.assignments.some((a) => a.companyId === selectedCompanyId);
+    if (!stillValid) setSelectedCompany(profile.assignments[0]!.companyId);
+  }, [profile]);
+
   const value = useMemo<AuthState>(
     () => ({
       session,
@@ -230,4 +254,22 @@ export function useCan(
     case 'approve':
       return p.canApprove;
   }
+}
+
+/**
+ * Người dùng hiện tại có phải người chịu trách nhiệm hồ sơ này không — mẫu RLS B.
+ *
+ * `useCan(module, 'edit')` chỉ trả lời "vai trò này được sửa hồ sơ CRM nói chung không";
+ * nó KHÔNG biết ai phụ trách hồ sơ cụ thể. Dùng một mình nó để hiện nút là tái tạo đúng
+ * tình huống Webapp Flow 6.5 cấm: đồng nghiệp cùng phòng thấy nút "Ghi biên bản" trên cơ hội
+ * của người khác, bấm vào thì RLS chặn.
+ *
+ * Nhận nhiều id để dùng được cho cả người phối hợp (`collaborator_ids` của khiếu nại).
+ */
+export function useIsResponsible(...responsibleUserIds: (string | null | undefined)[]): boolean {
+  const { profile } = useAuth();
+  if (!profile) return false;
+  // Vai trò cấp tập đoàn quản lý mọi hồ sơ — khớp đúng `rls_owner_can_write` trong CSDL.
+  if (profile.seesAllCompanies) return true;
+  return responsibleUserIds.some((id) => id != null && id === profile.id);
 }

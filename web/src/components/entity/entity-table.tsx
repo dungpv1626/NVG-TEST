@@ -11,6 +11,11 @@
  *    cả khi mở tab mới hoặc chia sẻ đường dẫn.
  *  - Hành động hàng loạt khi chọn nhiều dòng.
  *  - Trạng thái rỗng LUÔN kèm nút hành động gợi ý, không để trang trắng.
+ *
+ * Trên điện thoại, cùng dữ liệu đó hiển thị dạng THẺ thay vì bảng (Webapp Flow 4.7: không
+ * thu nhỏ bố cục máy tính). Bảng 6–8 cột trên màn hình 390px chỉ còn cách cuộn ngang, mà
+ * cuộn ngang thì ba cột cố định — người chịu trách nhiệm, trạng thái, thời hạn — nằm ngoài
+ * màn hình đúng lúc cần nhìn nhất.
  */
 
 import { Search } from 'lucide-react';
@@ -130,7 +135,7 @@ export function EntityTable<T extends EntityRow>({
           onChange={(e) => setQuery(e.target.value)}
           placeholder={searchPlaceholder}
           className={cn(
-            'h-8 w-full rounded-sm border border-border bg-surface pl-8 pr-3',
+            'h-10 w-full rounded-sm border border-border bg-surface pl-8 pr-3 sm:h-8',
             'placeholder:text-fg-subtle',
           )}
         />
@@ -188,7 +193,83 @@ export function EntityTable<T extends EntityRow>({
   return (
     <>
       {toolbar}
-      <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+
+      {/* Khổ điện thoại — mỗi hồ sơ một thẻ. */}
+      <ul className="space-y-2 sm:hidden">
+        {filtered.map((row) => {
+          const isSelected = selection?.selectedIds.includes(row.id) ?? false;
+          return (
+            <li
+              key={row.id}
+              className={cn(
+                'rounded-lg border border-border bg-surface p-3',
+                isSelected && 'border-brand bg-brand-subtle',
+              )}
+            >
+              <div className="flex items-start gap-3">
+                {selection && (
+                  <input
+                    type="checkbox"
+                    aria-label={`Chọn ${row.code}`}
+                    checked={isSelected}
+                    onChange={(e) =>
+                      selection.onChange(
+                        e.target.checked
+                          ? [...selection.selectedIds, row.id]
+                          : selection.selectedIds.filter((id) => id !== row.id),
+                      )
+                    }
+                    className="mt-0.5 size-5 shrink-0"
+                  />
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <Link
+                      to={detailPath(row)}
+                      className="min-w-0 font-medium text-brand hover:underline"
+                    >
+                      {row.title}
+                    </Link>
+                    {/* Trạng thái luôn kèm chữ, không chỉ dựa vào màu (Content Guidelines 6.8). */}
+                    <StatusLozenge status={row.status} />
+                  </div>
+                  <div className="mt-0.5 font-mono text-xs text-fg-subtle">{row.code}</div>
+
+                  {columns.length > 0 && (
+                    <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+                      {columns.map((c) => (
+                        <div key={c.key} className="min-w-0">
+                          <dt className="text-fg-subtle">{c.header}</dt>
+                          <dd className={cn('truncate', c.numeric && 'tabular-nums')}>
+                            {c.render(row)}
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                  )}
+
+                  {/* Hai cột cố định còn lại đi cùng nhau ở chân thẻ. */}
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-fg-subtle">
+                    <span>{row.responsiblePerson ?? 'Chưa phân công'}</span>
+                    {row.deadline && (
+                      <span
+                        className={cn(
+                          row.status === 'overdue' && 'font-medium text-status-overdue',
+                        )}
+                      >
+                        {formatDeadline(row.deadline)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      {/* Khổ máy tính bảng trở lên — bảng đầy đủ cột. */}
+      <div className="hidden overflow-x-auto rounded-lg border border-border bg-surface sm:block">
         <table className="w-full min-w-[720px] border-collapse text-left">
           <thead>
             <tr className="border-b border-border text-fg-subtle">
@@ -294,10 +375,24 @@ export function EntityTable<T extends EntityRow>({
   );
 }
 
-/** Nút tạo mới — đặt ở `emptyAction` và ở header trang. */
-export function CreateButton({ label, to }: { label: string; to: string }) {
+/**
+ * Nút tạo mới — dùng ở header trang và trong trạng thái rỗng.
+ *
+ * Ở trạng thái rỗng phải đặt `variant="secondary"`: hai nút cùng dẫn tới một hành động mà
+ * cùng tô màu thương hiệu là vi phạm "DUY NHẤT một hành động chính mỗi màn hình"
+ * (Content Guidelines 6.3). Nút ở header giữ vai trò hành động chính.
+ */
+export function CreateButton({
+  label,
+  to,
+  variant = 'primary',
+}: {
+  label: string;
+  to: string;
+  variant?: 'primary' | 'secondary';
+}) {
   return (
-    <Button variant="primary" asChild>
+    <Button variant={variant} asChild>
       <Link to={to}>{label}</Link>
     </Button>
   );

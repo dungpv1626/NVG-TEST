@@ -5,6 +5,10 @@
  * Back Office (vai trò có `sees_all_companies`).
  *
  * Chuyển pháp nhân KHÔNG tải lại trang — chỉ đổi state, giữ nguyên module đang xem.
+ *
+ * Trên điện thoại, sidebar không hiển thị nên bộ chọn chuyển lên thanh trên ở dạng `compact`
+ * (chỉ mã pháp nhân). Vẫn phải LUÔN nhìn thấy được: người dùng thuộc nhiều pháp nhân mà
+ * không biết mình đang ở pháp nhân nào thì nhập nhầm dữ liệu sang P&L công ty khác (NEN-01).
  */
 
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
@@ -14,7 +18,7 @@ import { useAuth } from '@/lib/auth';
 import { useCompanyStore } from '@/lib/company-store';
 import { cn } from '@/lib/utils';
 
-export function CompanySwitcher() {
+export function CompanySwitcher({ compact = false }: { compact?: boolean } = {}) {
   const { profile } = useAuth();
   const { selectedCompanyId, setSelectedCompany } = useCompanyStore();
 
@@ -44,6 +48,17 @@ export function CompanySwitcher() {
   // Một pháp nhân duy nhất thì không cần bộ chọn — vẫn hiển thị tên cố định
   // để tránh nhầm dữ liệu giữa các công ty (Webapp Flow 6.2).
   if (options.length === 1) {
+    if (compact) {
+      return (
+        <span
+          className="flex items-center gap-1.5 px-1 font-semibold"
+          title={`${selected.name} — ${selected.roles.join(' · ')}`}
+        >
+          <Building2 className="size-4 shrink-0 text-fg-subtle" />
+          {selected.code}
+        </span>
+      );
+    }
     return (
       <div className="flex items-center gap-2 rounded-sm px-2 py-2">
         <Building2 className="text-fg-subtle" />
@@ -61,19 +76,24 @@ export function CompanySwitcher() {
     <DropdownMenu.Root>
       <DropdownMenu.Trigger
         className={cn(
-          'flex w-full items-center gap-2 rounded-sm px-2 py-2 text-left',
-          'hover:bg-surface-hover',
+          'flex items-center gap-2 rounded-sm text-left hover:bg-surface-hover',
+          compact ? 'px-2 py-1 font-semibold' : 'w-full px-2 py-2',
         )}
-        aria-label="Chọn pháp nhân"
+        aria-label={compact ? `Pháp nhân ${selected.code} — chọn pháp nhân khác` : 'Chọn pháp nhân'}
+        title={compact ? `${selected.name} — ${selected.roles.join(' · ')}` : undefined}
       >
-        <Building2 className="shrink-0 text-fg-subtle" />
-        <div className="min-w-0 flex-1">
-          <div className="truncate font-semibold">{selected.name}</div>
-          <div className="truncate text-xs text-fg-subtle">
-            {selected.roles.join(' · ')}
+        <Building2 className="size-4 shrink-0 text-fg-subtle" />
+        {compact ? (
+          selected.code
+        ) : (
+          <div className="min-w-0 flex-1">
+            <div className="truncate font-semibold">{selected.name}</div>
+            <div className="truncate text-xs text-fg-subtle">
+              {selected.roles.join(' · ')}
+            </div>
           </div>
-        </div>
-        <ChevronsUpDown className="shrink-0 text-fg-subtle" />
+        )}
+        <ChevronsUpDown className="size-4 shrink-0 text-fg-subtle" />
       </DropdownMenu.Trigger>
 
       <DropdownMenu.Portal>

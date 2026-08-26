@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Biểu tượng ứng dụng — nguồn duy nhất để kết xuất mọi kích thước PNG.
+  Màu nền là Brand Blue #0C66E4 (Content Guidelines 6.3); chữ trắng, không đổ bóng,
+  không gradient (Content Guidelines 6.5).
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" ry="112" fill="#0C66E4"/>
+  <text x="256" y="256" fill="#FFFFFF"
+        font-family="DejaVu Sans" font-weight="bold" font-size="150"
+        letter-spacing="4" text-anchor="middle" dominant-baseline="central">NVG</text>
+</svg>

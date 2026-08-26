@@ -103,6 +103,20 @@ của người khác (PRD NEN-07).
 
 **Phụ thuộc:** P0. **Chặn:** P2, P3 (làm tắt phase này = trả giá gấp 10 ở P2–P3).
 
+### 1.0 Chuẩn PWA và bố cục di động ✅ (đã làm)
+
+Áp cho **toàn bộ** ứng dụng theo quyết định của Haan — xem CLAUDE.md 6.5 mục 7.
+
+- `vite-plugin-pwa` + Workbox: manifest đầy đủ (biểu tượng 192/512 + maskable, shortcuts,
+  `display: standalone`), service worker precache khung ứng dụng, `navigateFallback` cho SPA
+- Cập nhật kiểu **hỏi trước** (`registerType: 'prompt'`) — không tự nạp lại giữa lúc nhập liệu
+- Dải báo mất kết nối + lời mời cài lên màn hình chính (kèm hướng dẫn riêng cho iOS)
+- Bố cục di động: sidebar ẩn, **thanh điều hướng dưới 4–5 mục** (AFD 4.7), danh sách chuyển
+  sang dạng thẻ, Hộp thư Phê duyệt xếp dọc, vùng bấm ≥40px, chừa `safe-area` của iPhone
+- Tách gói theo màn hình (`React.lazy`) — gói khởi động giảm từ 670KB xuống 253KB
+- 🚫 KHÔNG cache dữ liệu Supabase trong service worker (RLS + PRD 5.2). Offline thật = KHO-09,
+  vẫn chờ quyết định
+
 ### 1.1 Component primitives (AFD 4 — 7 mẫu bố cục)
 
 | Primitive | Thay thế |
@@ -171,7 +185,21 @@ có lịch sử phiên bản dự toán và người phê duyệt truy vết đ�
 - `POST /api/quotes/:id/request-special-approval` — giảm giá đặc biệt, mặc định TGĐ duyệt (CRM-05)
 - ⚠️ RLS: `opportunities` dùng **B khi nháp**, chuyển **A sau khi bàn giao** (BSD 4.2 ghi chú)
 
-### 2B. Module DA (BSD 4.3) — module nặng nhất Phase 2
+### 2B. Module DA (BSD 4.3) — module nặng nhất Phase 2 ✅ phần lõi đã xong
+
+Đã dựng: 7 bảng + RLS + 10 test · gói thầu (5 tab) · bóc tách khối lượng gắn phiên bản bản vẽ ·
+đơn giá dùng chung · dự toán có phiên bản · duyệt giá qua Hộp thư chung · nộp thầu có checklist ·
+ngân sách thi công + thông báo bàn giao.
+
+**Mẫu D triển khai lần đầu ở đây** — cách làm dùng lại cho `employees` (NS) và mọi bảng nhạy cảm sau:
+quyền đọc cột nhạy cảm bị THU HỒI ở tầng CSDL (`REVOKE ... (cột)`), dữ liệu chỉ ra qua hàm
+`SECURITY DEFINER` có gọi `log_sensitive_access` — vì một câu SELECT không ghi được nhật ký mà
+NEN-07 thì bắt buộc ghi. Bảng nào toàn bộ là dữ liệu nhạy cảm (`unit_prices`, `estimate_items`)
+thì chặn ở mức DÒNG cho gọn.
+
+⏳ Còn lại: DA-10 (đối chiếu dự toán với chi phí thực tế) — cần dữ liệu chi phí của Giai đoạn 2.
+
+
 `bidding_projects` · `boq_items` · `unit_prices` · `estimates` · `price_approvals` · `bid_documents` · `project_budgets`
 
 - Bóc tách khối lượng gắn **mã bản vẽ + phiên bản đang hiệu lực**; cảnh báo khi bản vẽ nguồn đổi (DA-04)

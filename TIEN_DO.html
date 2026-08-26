@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tiến độ phát triển — Hệ thống Quản trị NVG</title>
+<style>
+  :root {
+    --brand: #0C66E4; --brand-subtle: #E9F2FE;
+    --surface: #FFFFFF; --sunken: #F7F8F9; --border: #DCDFE4;
+    --fg: #172B4D; --fg-subtle: #44546F;
+    --draft: #6B778C;    --draft-bg: #EBECF0;
+    --pending: #B38600;  --pending-bg: #FFF7D6;
+    --progress: #0C66E4; --progress-bg: #E9F2FE;
+    --done: #22A06B;     --done-bg: #DCFFF1;
+    --overdue: #CA3521;  --overdue-bg: #FFECEB;
+    --radius: 8px;
+    --shadow: 0 1px 1px rgb(9 30 66 / .13), 0 0 1px rgb(9 30 66 / .16);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px 16px 64px;
+    background: var(--sunken); color: var(--fg);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px; line-height: 1.45;
+  }
+  .wrap { max-width: 1000px; margin: 0 auto; }
+  header { margin-bottom: 24px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 32px 0 12px; }
+  h3 { font-size: 14px; margin: 0 0 8px; }
+  p  { margin: 0 0 8px; }
+  .muted { color: var(--fg-subtle); }
+  .xs { font-size: 12px; }
+
+  .card { background: var(--surface); border: 1px solid var(--border);
+          border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; }
+  .grid { display: grid; gap: 12px; }
+  @media (min-width: 720px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
+
+  .pill { display: inline-block; border-radius: 999px; padding: 1px 8px;
+          font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .s-draft    { color: var(--draft);    background: var(--draft-bg); }
+  .s-pending  { color: var(--pending);  background: var(--pending-bg); }
+  .s-progress { color: var(--progress); background: var(--progress-bg); }
+  .s-done     { color: var(--done);     background: var(--done-bg); }
+  .s-overdue  { color: var(--overdue);  background: var(--overdue-bg); }
+
+  .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 16px 0 0; }
+  @media (min-width: 720px) { .stats { grid-template-columns: repeat(4, 1fr); } }
+  .stat b { display: block; font-size: 22px; line-height: 1.2; }
+
+  .bar { height: 8px; border-radius: 999px; background: var(--draft-bg); overflow: hidden; margin-top: 8px; }
+  .bar > span { display: block; height: 100%; background: var(--brand); }
+
+  ul { margin: 0; padding-left: 18px; }
+  li { margin-bottom: 4px; }
+  li:last-child { margin-bottom: 0; }
+
+  .tablewrap { overflow-x: auto; border: 1px solid var(--border);
+               border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
+  table { border-collapse: collapse; width: 100%; min-width: 640px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--fg-subtle); font-weight: 500; white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--border); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Tiến độ phát triển — Hệ thống Quản trị Nhà Việt Group</h1>
+  <p class="muted">Bản tóm tắt để theo dõi: đã xong gì, đang làm gì, sắp làm gì, còn lại gì.</p>
+  <p class="xs muted">
+    Cập nhật: <strong>25/08/2026</strong> ·
+    Nguồn chi tiết: <code>BUILD_PLAN.md</code> (kế hoạch) và <code>CLAUDE.md</code> (ràng buộc) ·
+    Tài liệu gốc nằm trong <code>doc/</code>
+  </p>
+  <div class="legend">
+    <span class="pill s-done">Hoàn thành</span>
+    <span class="pill s-progress">Đang làm</span>
+    <span class="pill s-pending">Sắp làm</span>
+    <span class="pill s-draft">Chưa bắt đầu</span>
+    <span class="pill s-overdue">Đang bị chặn</span>
+  </div>
+</header>
+
+<section class="card">
+  <h3>Toàn hệ thống</h3>
+  <p class="xs muted">Ước lượng theo khối lượng nghiệp vụ đã chạy được đầu-cuối, không theo số dòng mã.</p>
+  <div class="bar"><span style="width: 30%"></span></div>
+  <p class="xs muted" style="margin-top:6px">Khoảng 30% chặng đường tới bản demo ~95%.</p>
+
+  <div class="stats">
+    <div class="stat"><b>3 / 12</b><span class="xs muted">module đã dựng (Nền tảng, CRM, Đấu thầu)</span></div>
+    <div class="stat"><b>28 / ~65</b><span class="xs muted">bảng cơ sở dữ liệu</span></div>
+    <div class="stat"><b>23</b><span class="xs muted">migration đã chạy</span></div>
+    <div class="stat"><b>108</b><span class="xs muted">kiểm thử tự động, tất cả đang xanh</span></div>
+  </div>
+</section>
+
+<h2>Bốn câu hỏi thường gặp</h2>
+
+<div class="grid grid-2">
+
+  <div class="card">
+    <h3><span class="pill s-done">Vừa xong</span></h3>
+    <ul>
+      <li><strong>Module Dự án – Đấu thầu (DA)</strong> — 7 bảng dữ liệu, màn hình gói thầu với
+          5 tab (khảo sát · khối lượng · dự toán · hồ sơ thầu · ngân sách), bảng đơn giá dùng chung.</li>
+      <li><strong>Luồng duyệt giá dự thầu</strong> — trình duyệt, duyệt theo hạn mức, giữ đủ các
+          phiên bản dự toán; giá chưa duyệt thì hệ thống không cho nộp thầu.</li>
+      <li><strong>Ngân sách thi công</strong> — chuyển dự toán đã duyệt thành ngân sách theo nhóm
+          chi phí và tự thông báo các bên. Đây là mắt xích nối sang Giai đoạn 2.</li>
+      <li><strong>Bảo vệ giá vốn và lợi nhuận</strong> — quyền đọc bị thu hồi ngay ở cơ sở dữ liệu;
+          muốn xem phải đi qua một cửa duy nhất và mỗi lượt xem đều được ghi nhật ký.</li>
+      <li><strong>Sửa một lỗi âm thầm nghiêm trọng</strong>: pháp nhân đang làm việc chỉ được chốt
+          khi người dùng TỰ BẤM vào bộ chọn — người chỉ thuộc một công ty thì không bao giờ bấm,
+          nên mọi danh sách lọc theo pháp nhân đều rỗng dù dữ liệu vẫn nằm đó.</li>
+      <li><strong>Chuẩn PWA và bố cục điện thoại</strong> cho toàn bộ ứng dụng.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="pill s-progress">Đang làm</span></h3>
+    <p class="xs muted">Giai đoạn 1 — Xương sống thương mại.</p>
+    <ul>
+      <li><strong>Module Thiết kế (TK)</strong> — làm song song được với Đấu thầu, dùng chung
+          cơ chế bóc tách và dự toán.</li>
+      <li><strong>Bàn giao cơ hội sang Đấu thầu / Thiết kế</strong> (CRM-06) — nay đã có đích để
+          bàn giao tới.</li>
+      <li><strong>Tìm kiếm toàn hệ thống</strong> và <strong>Trung tâm Thông báo</strong> —
+          bảng dữ liệu đã có, phần hiển thị chưa nối.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="pill s-pending">Chuẩn bị làm</span></h3>
+    <ul>
+      <li><strong>Module Hợp đồng (HD)</strong> — soạn hợp đồng từ cơ hội hoặc gói thầu đã trúng,
+          không nhập lại; theo dõi điều khoản và phát sinh.</li>
+      <li><strong>Dashboard cơ bản (BC)</strong> — các thẻ chỉ số bấm được dẫn tới danh sách đã lọc.</li>
+      <li><strong>Chạy thử đầu-cuối Giai đoạn 1</strong>: một cơ hội đi trọn từ Kinh doanh tới
+          hợp đồng và ngân sách thi công, truy ngược được về đúng phiên bản dự toán đã duyệt.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="pill s-draft">Còn lại</span></h3>
+    <ul>
+      <li><strong>Giai đoạn 2</strong> — Thi công, Mua hàng, Kho, Kế toán, Nhân sự, Sản xuất,
+          Báo cáo đầy đủ. Mục tiêu: một công trình chạy trọn từ hợp đồng tới lãi/lỗ.</li>
+      <li><strong>Giai đoạn 3</strong> — liên kết chéo 12 module, rà soát phân quyền toàn hệ thống,
+          tác vụ nền cảnh báo, kiểm thử đầu-cuối, dữ liệu demo cho cả ba pháp nhân.</li>
+      <li><strong>AI Preliminary Design Engine</strong> (TK-10 → TK-17) — làm sau khi phần lõi đạt ~90%.</li>
+    </ul>
+  </div>
+
+</div>
+
+<h2>Tiến độ theo giai đoạn kỹ thuật</h2>
+<div class="tablewrap">
+<table>
+  <thead>
+    <tr><th>Giai đoạn</th><th>Nội dung</th><th>Trạng thái</th><th>Ghi chú</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>P0</strong> Nền móng</td>
+      <td>Monorepo, đăng nhập, phân quyền RLS, bộ test phân quyền, bộ màu và khung giao diện</td>
+      <td><span class="pill s-done">Hoàn thành</span></td>
+      <td>Ba vai trò đăng nhập thấy menu khác nhau; chuyển pháp nhân không tải lại trang</td>
+    </tr>
+    <tr>
+      <td><strong>P1</strong> Bộ công cụ dùng chung</td>
+      <td>Bảng danh sách, hồ sơ 360°, hộp thư phê duyệt, Kanban, nhãn trạng thái, kho hồ sơ có phiên bản, thông báo, nhật ký</td>
+      <td><span class="pill s-progress">Đang làm</span></td>
+      <td>Còn: tìm kiếm toàn hệ thống, trung tâm thông báo, trang trưng bày thành phần giao diện</td>
+    </tr>
+    <tr>
+      <td><strong>P1.0</strong> PWA và di động</td>
+      <td>Cài lên màn hình chính, chạy toàn màn hình, thanh điều hướng dưới, tách gói theo màn hình</td>
+      <td><span class="pill s-done">Hoàn thành</span></td>
+      <td>Không cache dữ liệu nghiệp vụ trong máy — xem phần Ranh giới bên dưới</td>
+    </tr>
+    <tr>
+      <td><strong>P2</strong> Xương sống thương mại<br><span class="xs muted">Giai đoạn 1 của PRD</span></td>
+      <td>CRM · Dự án–Đấu thầu · Thiết kế · Hợp đồng · Báo cáo cơ bản</td>
+      <td><span class="pill s-progress">Đang làm</span></td>
+      <td>CRM và Đấu thầu đã dựng xong phần lõi; còn Thiết kế, Hợp đồng và Dashboard</td>
+    </tr>
+    <tr>
+      <td><strong>P3</strong> Vận hành và tài chính<br><span class="xs muted">Giai đoạn 2 của PRD</span></td>
+      <td>Thi công · Mua hàng · Kho · Kế toán · Nhân sự · Sản xuất · Báo cáo đầy đủ</td>
+      <td><span class="pill s-draft">Chưa bắt đầu</span></td>
+      <td>Phụ thuộc hợp đồng và ngân sách thi công từ P2</td>
+    </tr>
+    <tr>
+      <td><strong>P4</strong> Liên kết chéo và bàn giao<br><span class="xs muted">Giai đoạn 3 của PRD</span></td>
+      <td>Hồ sơ 360° đầy đủ, rà soát phân quyền, tác vụ nền, kiểm thử đầu-cuối, dữ liệu demo</td>
+      <td><span class="pill s-draft">Chưa bắt đầu</span></td>
+      <td>Mục tiêu bản demo ~95%</td>
+    </tr>
+    <tr>
+      <td><strong>P5</strong> AI thiết kế sơ bộ</td>
+      <td>TK-10 → TK-17: đầu bài, chương trình công năng, mặt bằng, mô hình 3D, ảnh diễn hoạ</td>
+      <td><span class="pill s-overdue">Đang bị chặn</span></td>
+      <td>Chờ tài liệu đặc tả AI phiên bản 02 được bổ sung vào <code>doc/</code></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h2>Trạng thái 12 module</h2>
+<div class="tablewrap">
+<table>
+  <thead>
+    <tr><th>Mã</th><th>Module</th><th>Trạng thái</th><th>Đã có gì</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>NEN</code></td><td>Nền tảng hệ thống</td><td><span class="pill s-progress">Đang làm</span></td>
+        <td>Phân quyền, hạn mức phê duyệt, kho hồ sơ có phiên bản, nhật ký, thông báo. Còn màn hình quản trị và tìm kiếm.</td></tr>
+    <tr><td><code>CRM</code></td><td>Khách hàng &amp; Cơ hội</td><td><span class="pill s-progress">Đang làm</span></td>
+        <td>Khách hàng (tạo/xem/sửa), pipeline Kanban 6 giai đoạn có lịch sử, biên bản khảo sát, báo giá có phiên bản và phê duyệt, giảm giá đặc biệt qua Tổng Giám đốc, khiếu nại. Còn bàn giao sang DA/TK.</td></tr>
+    <tr><td><code>DA</code></td><td>Dự án – Đấu thầu</td><td><span class="pill s-progress">Đang làm</span></td>
+        <td>Gói thầu, bóc tách khối lượng gắn phiên bản bản vẽ, đơn giá dùng chung, dự toán có phiên bản, duyệt giá theo hạn mức, hồ sơ thầu, ngân sách thi công. Còn đối chiếu dự toán với chi phí thực tế (DA-10, cần dữ liệu Giai đoạn 2).</td></tr>
+    <tr><td><code>TK</code></td><td>Thiết kế</td><td><span class="pill s-pending">Sắp làm</span></td><td>Là việc kế tiếp — dùng chung cơ chế dự toán với DA</td></tr>
+    <tr><td><code>HD</code></td><td>Hợp đồng</td><td><span class="pill s-pending">Sắp làm</span></td><td>Sau TK</td></tr>
+    <tr><td><code>BC</code></td><td>Báo cáo &amp; Dashboard</td><td><span class="pill s-progress">Đang làm</span></td>
+        <td>Có khung dashboard với thẻ việc cần làm, chờ phê duyệt, quá hạn. Chỉ số đầy đủ chờ dữ liệu các module sau.</td></tr>
+    <tr><td><code>TC</code></td><td>Thi công &amp; Ngân sách</td><td><span class="pill s-draft">Chưa bắt đầu</span></td><td>Giai đoạn 2 · yêu cầu mới ở mức định hướng, chưa khảo sát chỉ huy công trường</td></tr>
+    <tr><td><code>MH</code></td><td>Mua hàng – Vật tư</td><td><span class="pill s-draft">Chưa bắt đầu</span></td><td>Giai đoạn 2</td></tr>
+    <tr><td><code>KHO</code></td><td>Kho</td><td><span class="pill s-draft">Chưa bắt đầu</span></td><td>Giai đoạn 2 · cách làm ngoại tuyến còn chờ quyết định</td></tr>
+    <tr><td><code>KT</code></td><td>Kế toán – Tài chính</td><td><span class="pill s-draft">Chưa bắt đầu</span></td><td>Giai đoạn 2 · kết nối phần mềm kế toán còn chờ quyết định</td></tr>
+    <tr><td><code>NS</code></td><td>Nhân sự – Hành chính</td><td><span class="pill s-draft">Chưa bắt đầu</span></td><td>Giai đoạn 2 · độc lập, chen vào lúc nào cũng được</td></tr>
+    <tr><td><code>SX</code></td><td>Sản xuất &amp; Cho thuê</td><td><span class="pill s-draft">Chưa bắt đầu</span></td><td>Giai đoạn 2 · yêu cầu mới ở mức định hướng, chưa khảo sát xưởng giàn giáo</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>Việc đang chờ quyết định</h2>
+<div class="card">
+  <p class="xs muted">Những điểm này không tự quyết được — cần Nhà Việt Group xác nhận, và mỗi điểm chặn một phần công việc cụ thể.</p>
+  <div class="tablewrap" style="box-shadow:none;border:0">
+  <table>
+    <thead><tr><th>Cần chốt</th><th>Chặn việc gì</th><th>Mức độ</th></tr></thead>
+    <tbody>
+      <tr><td>Đơn giá dùng chung cho Đấu thầu / Thiết kế / Mua hàng, hay Nhà Việt One cần bảng riêng</td><td>Đang làm dùng chung và tách sẵn theo pháp nhân — đổi sau vẫn được, nhưng cần chốt trước khi nhập dữ liệu thật</td><td><span class="pill s-pending">Cần trong Giai đoạn 1</span></td></tr>
+      <tr><td>Ai được xem giá vốn: hiện mở cho Ban Giám đốc, Tài chính, Đấu thầu, Thiết kế và Cung ứng</td><td>Đang chạy theo giả định trên; lợi nhuận vẫn chỉ Ban Giám đốc thấy</td><td><span class="pill s-overdue">Cần sớm</span></td></tr>
+      <tr><td>Bộ mã dự án, công trình, vật tư, hợp đồng</td><td>Mã hồ sơ của các module tiếp theo</td><td><span class="pill s-overdue">Cần sớm</span></td></tr>
+      <tr><td>Hạn mức phê duyệt chính thức theo vai trò và loại nghiệp vụ</td><td>Đang chạy bằng mức tạm; đổi được bằng cấu hình, không phải sửa mã</td><td><span class="pill s-pending">Cần trong Giai đoạn 1</span></td></tr>
+      <tr><td>Phần mềm kế toán chính thức để kết nối</td><td>Xuất dữ liệu sang kế toán (KT-08)</td><td><span class="pill s-draft">Giai đoạn 2</span></td></tr>
+      <tr><td>Kho làm ngoại tuyến thật, hay chỉ chống trùng khi mạng chập chờn</td><td>Module Kho</td><td><span class="pill s-draft">Giai đoạn 2</span></td></tr>
+      <tr><td>Quy chế lương thưởng</td><td>Tính lương trong Nhân sự</td><td><span class="pill s-draft">Giai đoạn 2</span></td></tr>
+      <tr><td>Đầu mối hỗ trợ kỹ thuật để điền vào thông báo lỗi</td><td>Rà soát nội dung cuối cùng</td><td><span class="pill s-draft">Giai đoạn 3</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<h2>Ranh giới đã đặt ra và đang giữ</h2>
+<div class="card">
+  <ul>
+    <li><strong>Phân quyền nằm trong cơ sở dữ liệu</strong>, không nằm ở giao diện — đi đường nào cũng bị kiểm tại một chỗ. Có 98 kiểm thử tự động canh phần này.</li>
+    <li><strong>Không cache dữ liệu nghiệp vụ trên điện thoại.</strong> Ứng dụng cài được và mở nhanh, nhưng dữ liệu vẫn lấy trực tiếp mỗi lần — để hồ sơ không đọc được sau khi đăng xuất trên máy dùng chung.</li>
+    <li><strong>Mã hồ sơ do hệ thống cấp và không sửa được</strong>, pháp nhân của hồ sơ không đổi được sau khi tạo — giữ đúng ranh giới lãi/lỗ giữa ba pháp nhân.</li>
+    <li><strong>Không xoá hẳn hồ sơ nghiệp vụ</strong>, chỉ đánh dấu đã xoá; mọi thay đổi trạng thái quan trọng đều ghi lịch sử riêng.</li>
+    <li><strong>Mọi kết quả do AI sinh ra đều ở dạng nháp</strong> cho tới khi người có thẩm quyền xác nhận.</li>
+  </ul>
+</div>
+
+<footer>
+  <p class="xs muted">
+    Trang này là ảnh chụp trạng thái, cập nhật thủ công cùng nhịp với <code>BUILD_PLAN.md</code>.
+    Con số phần trăm là ước lượng theo luồng nghiệp vụ chạy được đầu-cuối, không phải theo số tính năng đã lập trình.
+  </p>
+</footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,1 @@
+ALTER TABLE "complaints" ADD COLUMN "collaborator_ids" uuid[] DEFAULT '{}'::uuid[] NOT NULL;

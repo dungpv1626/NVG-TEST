@@ -68,11 +68,22 @@ export const MODULE_EMPTY_STATES: Readonly<Record<string, string>> = {
   DA: "Chưa có gói thầu/dự án nào. Bấm 'Tạo dự án mới' để bắt đầu.",
   TK: "Chưa có dự án thiết kế nào. Bấm 'Tạo dự án thiết kế mới' để bắt đầu.",
   HD: 'Chưa có hợp đồng nào. Hợp đồng được tạo từ một Cơ hội kinh doanh hoặc Dự án đã chốt.',
-  TC: 'Chưa có công trình nào được bàn giao cho bạn.',
+  TC: 'Chưa có công trình nào được bàn giao.',
   MH: 'Chưa có đề nghị mua nào. Đề nghị mua được tạo từ Dự án hoặc Công trình cần vật tư.',
   KHO: 'Chưa có phiếu nhập/xuất nào trong hôm nay.',
   KT: 'Không có đề nghị thanh toán nào đang chờ xử lý.',
   NS: "Chưa có hồ sơ nhân sự nào. Bấm 'Thêm nhân sự' để bắt đầu.",
+} as const;
+
+/**
+ * Trạng thái rỗng của các màn hình phụ trong một module.
+ *
+ * Tách khỏi `MODULE_EMPTY_STATES` vì một module có nhiều màn hình Danh sách, mà bảng trên
+ * chỉ có đúng một dòng cho mỗi mã module.
+ */
+export const SCREEN_EMPTY_STATES = {
+  /** CRM-08 — trạng thái rỗng ở đây là tin TỐT, nên nói theo hướng tích cực. */
+  complaints: 'Chưa ghi nhận khiếu nại nào. Ghi nhận ngay khi khách phản ánh để không bỏ sót hạn xử lý.',
 } as const;
 
 /** Mẫu thông báo hệ thống — Content Guidelines 5.3. Nêu sự việc trước, mức độ khẩn sau. */

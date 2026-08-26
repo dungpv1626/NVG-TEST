@@ -14,6 +14,7 @@ import { Link } from 'react-router-dom';
 import { usePendingApprovals } from '@/hooks/use-approvals';
 import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
+import { CompanySwitcher } from './company-switcher';
 
 function IconButton({
   label,
@@ -27,8 +28,10 @@ function IconButton({
   to?: string;
   children: React.ReactNode;
 }) {
+  // 40px trên màn hình cảm ứng (Content Guidelines 6.8), 32px trên máy tính có chuột —
+  // chuột trỏ chính xác nên không cần vùng bấm lớn, còn ngón tay thì cần.
   const className = cn(
-    'relative flex size-8 items-center justify-center rounded-sm',
+    'relative flex size-10 items-center justify-center rounded-sm sm:size-8',
     'text-fg-subtle hover:bg-surface-hover hover:text-fg',
   );
 
@@ -78,15 +81,22 @@ export function TopBar() {
         'bg-surface px-4',
       )}
     >
+      {/* Pháp nhân đang chọn — trên máy tính nằm ở sidebar, ở điện thoại sidebar ẩn nên
+          phải có mặt tại đây. Không nhìn thấy pháp nhân đang làm việc là nguồn gốc của
+          việc nhập nhầm dữ liệu sang công ty khác (NEN-01). */}
+      <div className="shrink-0 lg:hidden">
+        <CompanySwitcher compact />
+      </div>
+
       {/* Tìm kiếm toàn hệ thống — Webapp Flow 5.3.
           Tìm trên TẤT CẢ module người dùng có quyền xem, không phải tìm riêng từng module. */}
-      <div className="relative max-w-md flex-1">
+      <div className="relative min-w-0 max-w-md flex-1">
         <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-fg-subtle" />
         <input
           type="search"
-          placeholder="Tìm khách hàng, dự án, hợp đồng, vật tư…"
+          placeholder="Tìm hồ sơ, khách hàng, vật tư…"
           className={cn(
-            'h-8 w-full rounded-sm border border-border',
+            'h-10 w-full rounded-sm border border-border sm:h-8',
             'bg-surface-sunken pl-8 pr-3',
             'placeholder:text-fg-subtle',
           )}

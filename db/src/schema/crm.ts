@@ -275,6 +275,19 @@ export const complaints = pgTable(
     /** Người chủ trì xử lý (CRM-08). */
     assigneeId: uuid('assignee_id').references(() => users.id, { onDelete: 'set null' }),
 
+    /**
+     * Người phối hợp xử lý (CRM-08) — cùng quyền ghi với người chủ trì.
+     *
+     * Mảng id thay vì bảng nối: quan hệ này không mang thuộc tính riêng nào (không vai trò,
+     * không thời điểm tham gia), và mẫu RLS B đã nhận sẵn tham số `collaborator_ids`
+     * (Backend Schema 3.3). Thêm một bảng nối chỉ để chứa hai cột khoá ngoại sẽ khiến mọi
+     * policy phải thêm một truy vấn con.
+     *
+     * KHÔNG đặt khoá ngoại được trên phần tử mảng — người dùng bị xoá sẽ để lại id mồ côi;
+     * giao diện hiển thị "Không rõ" thay vì vỡ.
+     */
+    collaboratorIds: uuid('collaborator_ids').array().notNull().default(sql`'{}'::uuid[]`),
+
     /** Hạn phản hồi (CRM-08). */
     responseDueDate: date('response_due_date'),
 

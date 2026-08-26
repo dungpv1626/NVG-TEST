@@ -497,6 +497,22 @@ describeDb('CRM — pipeline cơ hội kinh doanh', () => {
     expect(move).toBeTruthy();
 
   });
+
+  it('không chuyển được cơ hội sang pháp nhân khác (NEN-01)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const admin = await signInAs(ACCOUNTS.admin);
+    const id = await createOpportunity(kd);
+
+    const { data: nvo } = await admin.from('companies').select('id').eq('code', 'NVO').single();
+
+    // Thử bằng Quản trị hệ thống — vai trò nhìn thấy mọi pháp nhân nên qua được policy.
+    // Chặn phải nằm ở trigger: `WITH CHECK` không tham chiếu được giá trị CŨ của dòng, nên
+    // đổi pháp nhân là lệnh hợp lệ ở cả hai đầu, và toàn bộ giá trị cơ hội nhảy sang P&L
+    // của công ty kia mà không để lại vết gì.
+    const { error } = await admin.from('opportunities').update({ company_id: nvo!.id }).eq('id', id);
+    expect(error).toBeTruthy();
+    expect(error!.message).toContain('pháp nhân');
+  });
 });
 
 /**
@@ -885,5 +901,909 @@ describeDb('Hộp thư Phê duyệt', () => {
     expect(item!.company_code).toBe('NVC');
     // Có sẵn đường về hồ sơ đầy đủ mà không phải gọi thêm lượt nào.
     expect(item!.parent_id).toBe(opportunity!.id);
+  });
+});
+
+/**
+ * Biên bản khảo sát (CRM-03).
+ *
+ * Biên bản khảo sát chứa ngân sách khách nêu và điều kiện thương mại — PRD Module CRM xếp
+ * đây vào nhóm "nội dung đàm phán... phải phân quyền chặt". Quyền ghi thừa hưởng từ cơ hội
+ * mẹ, nên phải khẳng định rõ ràng thay vì tin là nó "chắc đúng vì dùng chung hàm".
+ */
+describeDb('CRM — biên bản khảo sát', () => {
+  async function createOpportunityFor(client: SupabaseClient) {
+    const { data: company } = await client
+      .from('companies')
+      .select('id')
+      .eq('code', 'NVC')
+      .single();
+    const { data: customer } = await client.from('customers').select('id').limit(1).maybeSingle();
+    if (!customer) throw new Error('Cần ít nhất một khách hàng để chạy test này.');
+
+    const { data: me } = await client.rpc('auth_user_id');
+    const { data: code } = await client.rpc('next_record_code', {
+      p_company_code: 'NVC',
+      p_record_type: 'CH',
+    });
+
+    const { data, error } = await client
+      .from('opportunities')
+      .insert({
+        code,
+        company_id: company!.id,
+        customer_id: customer.id,
+        name: `${TEST_PREFIX} Khảo sát ${Date.now()}`,
+        owner_id: me,
+        stage: 'khao_sat',
+      })
+      .select('id')
+      .single();
+    if (error) throw new Error(error.message);
+    return data!.id as string;
+  }
+
+  it('người chịu trách nhiệm đặt lịch và ghi được biên bản', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const opportunityId = await createOpportunityFor(kd);
+
+    const { data: created, error } = await kd
+      .from('site_surveys')
+      .insert({
+        opportunity_id: opportunityId,
+        scheduled_at: new Date().toISOString(),
+        needs: 'Nhà xưởng 2.000 m2, cầu trục 5 tấn',
+        decision_maker: 'Ông Nam — Giám đốc nhà máy',
+        budget_note: 'Khoảng 6 tỷ',
+      })
+      .select('id, surveyed_at')
+      .single();
+    expect(error).toBeNull();
+    // Mới đặt lịch thì chưa có thời điểm khảo sát thật — hai thứ khác nhau (CRM-03).
+    expect(created!.surveyed_at).toBeNull();
+
+    const { error: updateError } = await kd
+      .from('site_surveys')
+      .update({ surveyed_at: new Date().toISOString(), commercial_terms: 'Thanh toán 3 đợt' })
+      .eq('id', created!.id);
+    expect(updateError).toBeNull();
+  });
+
+  it('đồng nghiệp cùng pháp nhân XEM được nhưng KHÔNG sửa được biên bản của người khác', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const daDt = await signInAs(ACCOUNTS.dauThauNvc);
+    const opportunityId = await createOpportunityFor(kd);
+
+    const { data: survey } = await kd
+      .from('site_surveys')
+      .insert({ opportunity_id: opportunityId, scheduled_at: new Date().toISOString() })
+      .select('id')
+      .single();
+
+    // Xem được: Phòng Dự án cần đúng dữ liệu này để bóc tách và dự toán (Mẫu A).
+    const { data: visible } = await daDt.from('site_surveys').select('id').eq('id', survey!.id);
+    expect(visible).toHaveLength(1);
+
+    // Nhưng không sửa được biên bản của người khác (Mẫu B) — lệnh không chạm dòng nào.
+    const { data: changed } = await daDt
+      .from('site_surveys')
+      .update({ needs: 'Sửa trộm' })
+      .eq('id', survey!.id)
+      .select('id');
+    expect(changed ?? []).toHaveLength(0);
+  });
+
+  it('không xóa hẳn được biên bản khảo sát, kể cả người tạo (Backend Schema 1.4)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const opportunityId = await createOpportunityFor(kd);
+
+    const { data: survey } = await kd
+      .from('site_surveys')
+      .insert({ opportunity_id: opportunityId, scheduled_at: new Date().toISOString() })
+      .select('id')
+      .single();
+
+    // Không có policy DELETE: lệnh chạy nhưng không xóa được dòng nào.
+    await kd.from('site_surveys').delete().eq('id', survey!.id);
+    const { data: still } = await kd.from('site_surveys').select('id').eq('id', survey!.id);
+    expect(still).toHaveLength(1);
+  });
+
+  it('cơ hội đã bàn giao thì biên bản khảo sát chuyển chế độ chỉ xem (CRM-06)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const admin = await signInAs(ACCOUNTS.admin);
+    const opportunityId = await createOpportunityFor(kd);
+
+    const { data: survey } = await kd
+      .from('site_surveys')
+      .insert({ opportunity_id: opportunityId, scheduled_at: new Date().toISOString() })
+      .select('id')
+      .single();
+
+    await admin
+      .from('opportunities')
+      .update({ handed_over_at: new Date().toISOString() })
+      .eq('id', opportunityId);
+
+    const { data: changed } = await kd
+      .from('site_surveys')
+      .update({ needs: 'Sửa sau khi đã bàn giao' })
+      .eq('id', survey!.id)
+      .select('id');
+    expect(changed ?? []).toHaveLength(0);
+  });
+});
+
+/**
+ * Khiếu nại khách hàng (CRM-08).
+ *
+ * Điểm dễ sai nhất: CRM-08 nói "ghi nhận VÀ PHÂN LUỒNG" — người tiếp nhận thường KHÁC người
+ * xử lý. Nếu quyền tạo bị buộc phải tự nhận mình làm chủ trì thì người nhận điện thoại của
+ * khách sẽ không ghi nhận được gì, và khiếu nại lại quay về Zalo như hiện trạng.
+ */
+describeDb('CRM — khiếu nại khách hàng', () => {
+  async function createComplaint(
+    client: SupabaseClient,
+    overrides: Record<string, unknown> = {},
+  ) {
+    const { data: company } = await client
+      .from('companies')
+      .select('id')
+      .eq('code', 'NVC')
+      .single();
+    const { data: customer } = await client.from('customers').select('id').limit(1).maybeSingle();
+    if (!customer) throw new Error('Cần ít nhất một khách hàng để chạy test này.');
+
+    const { data: code } = await client.rpc('next_record_code', {
+      p_company_code: 'NVC',
+      p_record_type: 'KN',
+    });
+
+    return client
+      .from('complaints')
+      .insert({
+        code,
+        company_id: company!.id,
+        customer_id: customer.id,
+        title: `${TEST_PREFIX} Khiếu nại ${Date.now()}`,
+        content: 'Khách phản ánh thấm trần tầng 2 sau mưa lớn.',
+        severity: 'cao',
+        status: 'in_progress',
+        ...overrides,
+      })
+      .select('id, status, assignee_id, collaborator_ids')
+      .single();
+  }
+
+  it('ghi nhận được khiếu nại rồi giao cho NGƯỜI KHÁC xử lý (CRM-08)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const { data: congTruong } = await kd
+      .from('users')
+      .select('id')
+      .eq('email', ACCOUNTS.congTruongNvc)
+      .single();
+
+    // Người tiếp nhận KHÔNG tự nhận mình là chủ trì — đúng tình huống thực tế.
+    const { data, error } = await createComplaint(kd, { assignee_id: congTruong!.id });
+    expect(error).toBeNull();
+    expect(data!.assignee_id).toBe(congTruong!.id);
+  });
+
+  it('người tiếp nhận KHÔNG sửa được diễn biến xử lý của người khác (Mẫu B)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const { data: congTruong } = await kd
+      .from('users')
+      .select('id')
+      .eq('email', ACCOUNTS.congTruongNvc)
+      .single();
+
+    const { data: complaint } = await createComplaint(kd, { assignee_id: congTruong!.id });
+
+    // Ghi nhận xong là hết vai trò: người tiếp nhận không phải chủ trì cũng không phối hợp.
+    const { data: changed } = await kd
+      .from('complaints')
+      .update({ resolution: 'Tự ghi là đã xử lý xong' })
+      .eq('id', complaint!.id)
+      .select('id');
+    expect(changed ?? []).toHaveLength(0);
+  });
+
+  it('NGƯỜI PHỐI HỢP sửa được diễn biến xử lý (CRM-08)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const congTruong = await signInAs(ACCOUNTS.congTruongNvc);
+
+    const { data: me } = await kd.rpc('auth_user_id');
+    const { data: assignee } = await congTruong.rpc('auth_user_id');
+
+    // Chủ trì là người khác, nhưng người ghi nhận được đưa vào danh sách phối hợp.
+    const { data: complaint } = await createComplaint(kd, {
+      assignee_id: assignee,
+      collaborator_ids: [me],
+    });
+
+    const { data: changed } = await kd
+      .from('complaints')
+      .update({ resolution: 'Đã cử tổ chống thấm xử lý ngày 26/08.' })
+      .eq('id', complaint!.id)
+      .select('id');
+    expect(changed).toHaveLength(1);
+  });
+
+  it('người chủ trì đóng hồ sơ và ghi nhận khách hàng xác nhận', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const congTruong = await signInAs(ACCOUNTS.congTruongNvc);
+    const { data: assignee } = await congTruong.rpc('auth_user_id');
+
+    // Ban công trường KHÔNG tự tạo được khiếu nại: vai trò Thi công không có quyền xem
+    // danh mục khách hàng, nên cũng không có quyền tạo hồ sơ CRM. Đúng luồng thực tế —
+    // kinh doanh tiếp nhận rồi giao xuống công trường xử lý.
+    const { data: complaint } = await createComplaint(kd, { assignee_id: assignee });
+
+    const { data: closed } = await congTruong
+      .from('complaints')
+      .update({
+        status: 'completed',
+        resolution: 'Đã chống thấm lại toàn bộ mái, bảo hành 12 tháng.',
+        customer_confirmed_at: new Date().toISOString(),
+      })
+      .eq('id', complaint!.id)
+      .select('status, customer_confirmed_at')
+      .single();
+
+    expect(closed!.status).toBe('completed');
+    expect(closed!.customer_confirmed_at).toBeTruthy();
+  });
+
+  it('pháp nhân khác KHÔNG thấy khiếu nại (Mẫu A)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const kdNvo = await signInAs(ACCOUNTS.kinhDoanhNvo);
+    const { data: complaint } = await createComplaint(kd);
+
+    const { data } = await kdNvo.from('complaints').select('id').eq('id', complaint!.id);
+    expect(data ?? []).toHaveLength(0);
+  });
+
+  it('khiếu nại CHƯA PHÂN CÔNG vẫn phân luồng được — không bị đóng băng', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const congTruong = await signInAs(ACCOUNTS.congTruongNvc);
+
+    // Người tiếp nhận chưa biết giao cho ai — ô "Chưa phân công" trên biểu mẫu.
+    const { data: complaint } = await createComplaint(kd, { assignee_id: null });
+    expect(complaint!.assignee_id).toBeNull();
+
+    // Mẫu B thuần cho ra `NULL OR false` = NULL và policy sẽ từ chối, khiến hồ sơ vô chủ
+    // trở thành hồ sơ không ai đụng được. Nghịch lý: bỏ trống lại khoá chặt hơn điền tên.
+    const { data: assignee } = await congTruong.rpc('auth_user_id');
+    const { data: assigned } = await kd
+      .from('complaints')
+      .update({ assignee_id: assignee })
+      .eq('id', complaint!.id)
+      .select('assignee_id');
+    expect(assigned).toHaveLength(1);
+    expect(assigned![0]!.assignee_id).toBe(assignee);
+  });
+
+  it('không chuyển được khiếu nại sang pháp nhân khác (NEN-01)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const admin = await signInAs(ACCOUNTS.admin);
+    const { data: me } = await kd.rpc('auth_user_id');
+    const { data: complaint } = await createComplaint(kd, { assignee_id: me });
+
+    const { data: nvo } = await admin.from('companies').select('id').eq('code', 'NVO').single();
+
+    // Quản trị hệ thống thấy mọi pháp nhân nên qua được policy — chặn phải nằm ở trigger,
+    // vì WITH CHECK không tham chiếu được giá trị CŨ của dòng.
+    const { error } = await admin
+      .from('complaints')
+      .update({ company_id: nvo!.id })
+      .eq('id', complaint!.id);
+    expect(error).toBeTruthy();
+    expect(error!.message).toContain('pháp nhân');
+  });
+
+  it('không xóa hẳn được khiếu nại (Backend Schema 1.4)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const { data: me } = await kd.rpc('auth_user_id');
+    const { data: complaint } = await createComplaint(kd, { assignee_id: me });
+
+    await kd.from('complaints').delete().eq('id', complaint!.id);
+    const { data: still } = await kd.from('complaints').select('id').eq('id', complaint!.id);
+    expect(still).toHaveLength(1);
+  });
+});
+
+/**
+ * Hồ sơ khách hàng (CRM-01) — Mẫu B, và bốn cột kiểm toán.
+ *
+ * Hai nhóm khẳng định ở đây đều thuộc loại "sai mà không có triệu chứng":
+ *  - Quyền sửa quá rộng: đồng nghiệp sửa hồ sơ của nhau, không lỗi, không ai biết.
+ *  - Cột kiểm toán không được ghi: mọi màn hình vẫn chạy đúng, chỉ có câu hỏi "ai sửa gần
+ *    nhất, lúc nào" là mãi mãi không trả lời được — mà đó là thứ Backend Schema 1.4 bắt buộc.
+ */
+describeDb('CRM — hồ sơ khách hàng', () => {
+  /** Tạo một khách hàng để thử. `responsibleUserId` không truyền = hồ sơ chưa phân công. */
+  async function createCustomer(
+    client: SupabaseClient,
+    extra: Record<string, unknown> = {},
+  ): Promise<{ id: string; code: string }> {
+    const { data: code } = await client.rpc('next_record_code', {
+      p_company_code: 'NVC',
+      p_record_type: 'KH',
+    });
+    const { data, error } = await client
+      .from('customers')
+      .insert({ code, name: `${TEST_PREFIX} Khách hàng ${Date.now()}`, ...extra })
+      .select('id, code')
+      .single();
+    if (error) throw new Error(error.message);
+    return data as { id: string; code: string };
+  }
+
+  it('CSDL tự ghi 4 cột kiểm toán — trình duyệt không khai hộ được (Backend Schema 1.4)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const tgd = await signInAs(ACCOUNTS.tgd);
+    const { data: me } = await kd.rpc('auth_user_id');
+    const { data: someoneElse } = await tgd.rpc('auth_user_id');
+
+    // Cố tình khai người tạo là NGƯỜI KHÁC. Nếu hệ thống tin lời khai này thì cột "người
+    // tạo" trở thành thứ giả được, và nhật ký truy vết mất giá trị.
+    const created = await createCustomer(kd, { created_by: someoneElse, responsible_user_id: me });
+
+    const { data: after } = await kd
+      .from('customers')
+      .select('created_at, created_by, updated_at, updated_by')
+      .eq('id', created.id)
+      .single();
+    expect(after!.created_by, 'người tạo phải là người đang đăng nhập, không phải lời khai').toBe(
+      me,
+    );
+    expect(after!.updated_by).toBe(me);
+
+    const { error: updateError } = await kd
+      .from('customers')
+      .update({ contact_person: 'Người liên hệ mới' })
+      .eq('id', created.id);
+    expect(updateError).toBeNull();
+
+    const { data: touched } = await kd
+      .from('customers')
+      .select('created_at, created_by, updated_at, updated_by')
+      .eq('id', created.id)
+      .single();
+
+    // "Cập nhật gần nhất" trên màn hình Chi tiết đọc đúng cột này — không nhích lên nghĩa là
+    // màn hình đang hiển thị một con số sai.
+    expect(new Date(touched!.updated_at).getTime()).toBeGreaterThan(
+      new Date(after!.updated_at).getTime(),
+    );
+    // Nguồn gốc hồ sơ là bất biến: sửa nội dung không được viết lại người/lúc tạo.
+    expect(touched!.created_at).toBe(after!.created_at);
+    expect(touched!.created_by).toBe(after!.created_by);
+  });
+
+  it('không đổi được mã hồ sơ khách hàng — mã là căn cứ truy ngược', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const { data: me } = await kd.rpc('auth_user_id');
+    const created = await createCustomer(kd, { responsible_user_id: me });
+
+    const { error } = await kd
+      .from('customers')
+      .update({ code: `${created.code}-SUA` })
+      .eq('id', created.id);
+    expect(error, 'sửa mã hồ sơ phải bị chặn').toBeTruthy();
+    expect(error!.message).toContain('mã hồ sơ');
+  });
+
+  it('đồng nghiệp XEM được nhưng KHÔNG sửa được hồ sơ của người khác (Mẫu B)', async () => {
+    const kdNvc = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const kdNvo = await signInAs(ACCOUNTS.kinhDoanhNvo);
+    const { data: me } = await kdNvc.rpc('auth_user_id');
+    const created = await createCustomer(kdNvc, { responsible_user_id: me });
+
+    // Khách hàng là bảng DÙNG CHUNG (Backend Schema 2.2) — nhìn thấy là đúng.
+    const { data: seen } = await kdNvo.from('customers').select('id').eq('id', created.id);
+    expect(seen).toHaveLength(1);
+
+    // Nhưng sửa thì không. PostgREST không báo 42501 cho trường hợp này — nó cập nhật
+    // 0 dòng và trả về error null, nên phải khẳng định bằng dữ liệu chứ không bằng mã lỗi.
+    await kdNvo.from('customers').update({ name: `${TEST_PREFIX} Bị sửa trộm` }).eq('id', created.id);
+    const { data: unchanged } = await kdNvc
+      .from('customers')
+      .select('name')
+      .eq('id', created.id)
+      .single();
+    expect(unchanged!.name).not.toContain('Bị sửa trộm');
+  });
+
+  it('hồ sơ CHƯA PHÂN CÔNG thì người khác nhận được — không bị đóng băng', async () => {
+    const kdNvc = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const kdNvo = await signInAs(ACCOUNTS.kinhDoanhNvo);
+    const created = await createCustomer(kdNvc, { responsible_user_id: null });
+    const { data: nvoUser } = await kdNvo.rpc('auth_user_id');
+
+    const { error } = await kdNvo
+      .from('customers')
+      .update({ responsible_user_id: nvoUser })
+      .eq('id', created.id)
+      .select('id')
+      .single();
+    expect(error, 'hồ sơ vô chủ phải nhận được, không được khoá chặt hơn hồ sơ có chủ').toBeNull();
+  });
+
+  it('chuyển người chịu trách nhiệm xong thì người cũ hết sửa được', async () => {
+    const kdNvc = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const kdNvo = await signInAs(ACCOUNTS.kinhDoanhNvo);
+    const { data: me } = await kdNvc.rpc('auth_user_id');
+    const { data: nvoUser } = await kdNvo.rpc('auth_user_id');
+    const created = await createCustomer(kdNvc, { responsible_user_id: me });
+
+    const { error: handover } = await kdNvc
+      .from('customers')
+      .update({ responsible_user_id: nvoUser })
+      .eq('id', created.id)
+      .select('id')
+      .single();
+    expect(handover).toBeNull();
+
+    await kdNvc.from('customers').update({ notes: `${TEST_PREFIX} sau khi chuyển` }).eq('id', created.id);
+    const { data: after } = await kdNvo
+      .from('customers')
+      .select('notes')
+      .eq('id', created.id)
+      .single();
+    expect(after!.notes, 'người đã chuyển giao không còn quyền sửa').toBeNull();
+  });
+});
+
+/**
+ * Module DA — Dự án và Đấu thầu.
+ *
+ * Ba nhóm khẳng định, đều thuộc loại "sai mà không có triệu chứng":
+ *  1. **Mẫu D** — giá vốn và lợi nhuận. Sai ở đây nghĩa là người không được phép đọc được
+ *     giá vốn của công ty, và không ai biết vì việc đọc không để lại dấu vết (PRD NEN-07).
+ *  2. **Luồng duyệt giá** (DA-07). Nộp thầu bằng giá chưa duyệt thì chữ ký phê duyệt vô nghĩa.
+ *  3. **Ngân sách thi công** (DA-09) — mắt xích nối Giai đoạn 1 sang Giai đoạn 2. Sai ở đây
+ *     thì Thi công điều hành công trình bằng một bộ số không khớp dự toán đã duyệt.
+ */
+describeDb('DA — gói thầu, dự toán và ngân sách', () => {
+  /** Gói thầu để thử. Trả về id và mã. */
+  async function createBiddingProject(
+    client: SupabaseClient,
+    extra: Record<string, unknown> = {},
+  ): Promise<{ id: string; code: string; companyId: string }> {
+    const { data: company } = await client
+      .from('companies')
+      .select('id')
+      .eq('code', 'NVC')
+      .single();
+    const { data: me } = await client.rpc('auth_user_id');
+    const { data: code } = await client.rpc('next_record_code', {
+      p_company_code: 'NVC',
+      p_record_type: 'DA',
+    });
+
+    const { data, error } = await client
+      .from('bidding_projects')
+      .insert({
+        code,
+        company_id: company!.id,
+        name: `${TEST_PREFIX} Nhà xưởng ${Date.now()}`,
+        responsible_user_id: me,
+        ...extra,
+      })
+      .select('id, code')
+      .single();
+    if (error) throw new Error(error.message);
+    return { ...(data as { id: string; code: string }), companyId: company!.id };
+  }
+
+  /** Dự toán nháp kèm dòng chi tiết. */
+  async function createEstimate(
+    client: SupabaseClient,
+    project: { id: string; code: string; companyId: string },
+    bidPrice: number,
+  ): Promise<string> {
+    const { data: me } = await client.rpc('auth_user_id');
+    const { data: estimateCode } = await client.rpc('next_record_code', {
+      p_company_code: 'NVC',
+      p_record_type: 'DT',
+    });
+
+    const { data, error } = await client
+      .from('estimates')
+      .insert({
+        code: estimateCode,
+        company_id: project.companyId,
+        bidding_project_id: project.id,
+        bid_price: bidPrice,
+        basis_notes: `${TEST_PREFIX} căn cứ lập giá`,
+        prepared_by: me,
+      })
+      .select('id')
+      .single();
+    if (error) throw new Error(error.message);
+    return (data as { id: string }).id;
+  }
+
+  it('cột giá vốn KHÔNG đọc thẳng được, kể cả Tổng Giám đốc (Mẫu D, NEN-07)', async () => {
+    const dt = await signInAs(ACCOUNTS.dauThauNvc);
+    const tgd = await signInAs(ACCOUNTS.tgd);
+    const project = await createBiddingProject(dt);
+    const estimateId = await createEstimate(dt, project, 800_000_000);
+
+    // Không phải "không thấy dòng" mà là "không đọc được cột": quyền bị thu hồi ở tầng CSDL,
+    // nên đường vòng qua PostgREST cũng không lấy được.
+    for (const [who, client] of [
+      ['Dự án – Đấu thầu', dt],
+      ['Tổng Giám đốc', tgd],
+    ] as const) {
+      const { error } = await client
+        .from('estimates')
+        .select('id, direct_cost, profit_amount')
+        .eq('id', estimateId);
+      expect(error, `${who} vẫn đọc được cột giá vốn bằng SELECT thẳng`).toBeTruthy();
+      expect(error!.code).toBe(PG_INSUFFICIENT_PRIVILEGE);
+    }
+
+    // Còn giá dự thầu thì phải đọc được — đó là con số gửi ra ngoài.
+    const { data, error: priceError } = await dt
+      .from('estimates')
+      .select('id, code, version, status, bid_price')
+      .eq('id', estimateId)
+      .single();
+    expect(priceError).toBeNull();
+    expect(Number(data!.bid_price)).toBe(800_000_000);
+  });
+
+  it('xem giá vốn qua hàm thì được, và lượt xem ĐƯỢC GHI NHẬT KÝ (NEN-07)', async () => {
+    const dt = await signInAs(ACCOUNTS.dauThauNvc);
+    const tgd = await signInAs(ACCOUNTS.tgd);
+    const project = await createBiddingProject(dt);
+    const estimateId = await createEstimate(dt, project, 500_000_000);
+
+    const { error: saveError } = await dt.rpc('save_estimate_costs', {
+      p_estimate_id: estimateId,
+      p_direct_cost: 300_000_000,
+      p_overhead_cost: 40_000_000,
+      p_contingency_cost: 20_000_000,
+      p_finance_cost: 10_000_000,
+      p_tax_amount: 50_000_000,
+      p_profit_amount: 80_000_000,
+      p_profit_margin_percent: 16,
+    });
+    expect(saveError).toBeNull();
+
+    const { data: breakdown, error } = await dt.rpc('estimate_cost_breakdown', {
+      p_estimate_id: estimateId,
+    });
+    expect(error).toBeNull();
+    expect(Number(breakdown![0].direct_cost)).toBe(300_000_000);
+    expect(Number(breakdown![0].profit_amount)).toBe(80_000_000);
+
+    // Nhật ký chỉ vai trò giám sát đọc được — dùng Tổng Giám đốc để kiểm chứng.
+    const { data: logs } = await tgd
+      .from('sensitive_access_logs')
+      .select('sensitive_kind, action, entity_type')
+      .eq('entity_id', estimateId)
+      .order('created_at');
+    expect(logs!.length, 'phải có ít nhất một lượt ghi (edit) và một lượt xem (view)').toBeGreaterThanOrEqual(2);
+    expect(logs!.every((l) => l.sensitive_kind === 'cost')).toBe(true);
+    expect(logs!.map((l) => l.action)).toContain('view');
+    expect(logs!.map((l) => l.action)).toContain('edit');
+  });
+
+  it('đơn giá là giá vốn — vai trò ngoài danh sách không thấy dòng nào (DA-05)', async () => {
+    const dt = await signInAs(ACCOUNTS.dauThauNvc);
+    const kt = await signInAs(ACCOUNTS.ketoan);
+    const { data: company } = await dt.from('companies').select('id').eq('code', 'NVC').single();
+
+    const { error } = await dt.from('unit_prices').insert({
+      company_id: company!.id,
+      item_code: `TEST-${Date.now()}`,
+      name: `${TEST_PREFIX} Thép hộp 50x50`,
+      unit: 'kg',
+      cost_group: 'vat_tu',
+      price: 21_500,
+      source: 'bao_gia_ncc',
+      effective_date: new Date().toISOString().slice(0, 10),
+    });
+    expect(error).toBeNull();
+
+    const { data: seenByDt } = await dt.from('unit_prices').select('id').limit(5);
+    expect(seenByDt!.length).toBeGreaterThan(0);
+
+    const { data: seenByKt } = await kt.from('unit_prices').select('id').limit(5);
+    expect(seenByKt, 'Kế toán không nằm trong danh sách vai trò xem giá vốn').toEqual([]);
+  });
+
+  it('thành tiền do CSDL tính, không tin con số trình duyệt gửi lên (DA-06)', async () => {
+    const dt = await signInAs(ACCOUNTS.dauThauNvc);
+    const project = await createBiddingProject(dt);
+    const estimateId = await createEstimate(dt, project, 400_000_000);
+
+    const { data: count, error } = await dt.rpc('save_estimate_items', {
+      p_estimate_id: estimateId,
+      p_items: [
+        {
+          cost_group: 'vat_tu',
+          description: 'Thép hình',
+          unit: 'kg',
+          quantity: 1000,
+          unit_price: 21_500,
+          // Con số sai cố ý: nếu hệ thống tin nó thì bảng dự toán cộng ra số khác.
+          amount: 1,
+        },
+        {
+          cost_group: 'nhan_cong',
+          description: 'Nhân công lắp dựng',
+          unit: 'công',
+          quantity: 200,
+          unit_price: 350_000,
+          amount: 1,
+        },
+      ],
+    });
+    expect(error).toBeNull();
+    expect(count).toBe(2);
+
+    const { data: items } = await dt
+      .from('estimate_items')
+      .select('description, amount')
+      .eq('estimate_id', estimateId)
+      .order('description');
+    expect(items!.map((i) => Number(i.amount))).toEqual([70_000_000, 21_500_000]);
+
+    // Tổng chi phí trực tiếp phải khớp các dòng vừa ghi.
+    const { data: breakdown } = await dt.rpc('estimate_cost_breakdown', {
+      p_estimate_id: estimateId,
+    });
+    expect(Number(breakdown![0].direct_cost)).toBe(91_500_000);
+  });
+
+  it('CSDL cấp số phiên bản dự toán, chỉ MỘT bản đang hiệu lực (DA-07, NEN-05)', async () => {
+    const dt = await signInAs(ACCOUNTS.dauThauNvc);
+    const project = await createBiddingProject(dt);
+    await createEstimate(dt, project, 400_000_000);
+    await createEstimate(dt, project, 420_000_000);
+
+    const { data: versions } = await dt
+      .from('estimates')
+      .select('code, version, is_current_version')
+      .eq('bidding_project_id', project.id)
+      .order('version');
+
+    expect(versions!.map((v) => v.version)).toEqual([1, 2]);
+    // Cùng một mã hồ sơ qua các phiên bản — nhìn mã là biết cùng một bộ dự toán.
+    expect(new Set(versions!.map((v) => v.code)).size).toBe(1);
+    expect(versions!.filter((v) => v.is_current_version)).toHaveLength(1);
+    expect(versions!.at(-1)!.is_current_version).toBe(true);
+  });
+
+  it('vượt hạn mức thì người lập giá KHÔNG tự duyệt được, Tổng Giám đốc thì được (DA-07)', async () => {
+    const dt = await signInAs(ACCOUNTS.dauThauNvc);
+    const tgd = await signInAs(ACCOUNTS.tgd);
+    // 800 triệu > hạn mức 500 triệu của vai trò Dự án – Đấu thầu.
+    const project = await createBiddingProject(dt);
+    const estimateId = await createEstimate(dt, project, 800_000_000);
+
+    const { data: approvalId, error: requestError } = await dt.rpc('request_estimate_approval', {
+      p_estimate_id: estimateId,
+    });
+    expect(requestError).toBeNull();
+
+    const { data: staged } = await dt
+      .from('bidding_projects')
+      .select('stage')
+      .eq('id', project.id)
+      .single();
+    expect(staged!.stage).toBe('cho_duyet_gia');
+
+    const { error: selfApprove } = await dt.rpc('decide_approval', {
+      p_approval_id: approvalId,
+      p_decision: 'approved',
+      p_note: null,
+    });
+    expect(selfApprove, 'vượt hạn mức mà vẫn duyệt được là hỏng Mẫu C').toBeTruthy();
+
+    const { error: bossApprove } = await tgd.rpc('decide_approval', {
+      p_approval_id: approvalId,
+      p_decision: 'approved',
+      p_note: 'Giá hợp lý so với mặt bằng thị trường.',
+    });
+    expect(bossApprove).toBeNull();
+
+    const { data: after } = await dt
+      .from('estimates')
+      .select('status, approved_at')
+      .eq('id', estimateId)
+      .single();
+    expect(after!.status).toBe('completed');
+    expect(after!.approved_at).not.toBeNull();
+
+    const { data: project2 } = await dt
+      .from('bidding_projects')
+      .select('stage')
+      .eq('id', project.id)
+      .single();
+    expect(project2!.stage).toBe('da_duyet_gia');
+
+    // Đã duyệt thì không sửa giá được nữa — nếu sửa được, chữ ký duyệt vô nghĩa.
+    await dt.from('estimates').update({ bid_price: 100 }).eq('id', estimateId);
+    const { data: unchanged } = await dt
+      .from('estimates')
+      .select('bid_price')
+      .eq('id', estimateId)
+      .single();
+    expect(Number(unchanged!.bid_price)).toBe(800_000_000);
+  });
+
+  it('không nộp thầu được khi giá chưa duyệt hoặc hồ sơ bắt buộc còn thiếu (DA-08)', async () => {
+    const dt = await signInAs(ACCOUNTS.dauThauNvc);
+    const tgd = await signInAs(ACCOUNTS.tgd);
+    const project = await createBiddingProject(dt);
+
+    const { error: noPrice } = await dt.rpc('submit_bid', { p_bidding_project_id: project.id });
+    expect(noPrice).toBeTruthy();
+    expect(noPrice!.message).toContain('phê duyệt');
+
+    const estimateId = await createEstimate(dt, project, 200_000_000);
+    const { data: approvalId } = await dt.rpc('request_estimate_approval', {
+      p_estimate_id: estimateId,
+    });
+    await tgd.rpc('decide_approval', {
+      p_approval_id: approvalId,
+      p_decision: 'approved',
+      p_note: 'Duyệt.',
+    });
+
+    await dt.from('bid_documents').insert({
+      company_id: project.companyId,
+      bidding_project_id: project.id,
+      category: 'phap_ly',
+      name: 'Giấy đăng ký kinh doanh',
+      is_required: true,
+    });
+
+    const { error: missingDocs } = await dt.rpc('submit_bid', {
+      p_bidding_project_id: project.id,
+    });
+    expect(missingDocs, 'thiếu hồ sơ bắt buộc mà vẫn nộp được là phát hiện quá muộn').toBeTruthy();
+
+    await dt
+      .from('bid_documents')
+      .update({ submitted_at: new Date().toISOString() })
+      .eq('bidding_project_id', project.id);
+
+    const { error: submitted } = await dt.rpc('submit_bid', {
+      p_bidding_project_id: project.id,
+    });
+    expect(submitted).toBeNull();
+
+    // Nộp rồi thì hồ sơ đóng băng: bộ trên hệ thống phải khớp bộ đã gửi chủ đầu tư.
+    await dt.from('bid_documents').update({ notes: 'sửa sau khi nộp' }).eq('bidding_project_id', project.id);
+    const { data: docs } = await dt
+      .from('bid_documents')
+      .select('notes')
+      .eq('bidding_project_id', project.id);
+    expect(docs![0]!.notes).toBeNull();
+  });
+
+  it('trượt thầu bắt buộc nêu nguyên nhân (DA-08)', async () => {
+    const dt = await signInAs(ACCOUNTS.dauThauNvc);
+    const tgd = await signInAs(ACCOUNTS.tgd);
+    const project = await createBiddingProject(dt);
+    const estimateId = await createEstimate(dt, project, 150_000_000);
+    const { data: approvalId } = await dt.rpc('request_estimate_approval', {
+      p_estimate_id: estimateId,
+    });
+    await tgd.rpc('decide_approval', {
+      p_approval_id: approvalId,
+      p_decision: 'approved',
+      p_note: 'Duyệt.',
+    });
+    await dt.rpc('submit_bid', { p_bidding_project_id: project.id });
+
+    const { error: noReason } = await dt.rpc('record_bid_result', {
+      p_bidding_project_id: project.id,
+      p_won: false,
+      p_reason: '   ',
+    });
+    expect(noReason, 'trượt thầu không nêu nguyên nhân thì gói sau lặp lại sai lầm').toBeTruthy();
+
+    const { error: ok } = await dt.rpc('record_bid_result', {
+      p_bidding_project_id: project.id,
+      p_won: false,
+      p_reason: 'Giá cao hơn đối thủ khoảng 7%.',
+    });
+    expect(ok).toBeNull();
+  });
+
+  it('ngân sách thi công sinh từ dự toán ĐÃ DUYỆT, dòng lợi nhuận chỉ Ban Giám đốc thấy (DA-09)', async () => {
+    const dt = await signInAs(ACCOUNTS.dauThauNvc);
+    const tgd = await signInAs(ACCOUNTS.tgd);
+    const project = await createBiddingProject(dt);
+    const estimateId = await createEstimate(dt, project, 500_000_000);
+
+    await dt.rpc('save_estimate_items', {
+      p_estimate_id: estimateId,
+      p_items: [
+        { cost_group: 'vat_tu', description: 'Thép', unit: 'kg', quantity: 1000, unit_price: 21_500 },
+        { cost_group: 'nhan_cong', description: 'Nhân công', unit: 'công', quantity: 100, unit_price: 350_000 },
+      ],
+    });
+    await dt.rpc('save_estimate_costs', {
+      p_estimate_id: estimateId,
+      p_direct_cost: 56_500_000,
+      p_overhead_cost: 20_000_000,
+      p_contingency_cost: 10_000_000,
+      p_finance_cost: 0,
+      p_tax_amount: 0,
+      p_profit_amount: 60_000_000,
+      p_profit_margin_percent: 12,
+    });
+
+    // Chưa trúng thầu thì chưa lập ngân sách.
+    const { error: tooEarly } = await dt.rpc('generate_project_budget', {
+      p_bidding_project_id: project.id,
+    });
+    expect(tooEarly).toBeTruthy();
+
+    const { data: approvalId } = await dt.rpc('request_estimate_approval', {
+      p_estimate_id: estimateId,
+    });
+    await tgd.rpc('decide_approval', {
+      p_approval_id: approvalId,
+      p_decision: 'approved',
+      p_note: 'Duyệt.',
+    });
+    await dt.from('bid_documents').insert({
+      company_id: project.companyId,
+      bidding_project_id: project.id,
+      category: 'bang_gia',
+      name: 'Bảng giá dự thầu',
+      is_required: false,
+    });
+    await dt.rpc('submit_bid', { p_bidding_project_id: project.id });
+    await dt.rpc('record_bid_result', { p_bidding_project_id: project.id, p_won: true });
+
+    const { data: rows, error } = await dt.rpc('generate_project_budget', {
+      p_bidding_project_id: project.id,
+    });
+    expect(error).toBeNull();
+    expect(rows).toBe(2);
+
+    // Lập hai lần là có hai bộ số cho cùng một công trình — đúng thứ PRD Mục 2.3 cấm.
+    const { error: twice } = await dt.rpc('generate_project_budget', {
+      p_bidding_project_id: project.id,
+    });
+    expect(twice).toBeTruthy();
+
+    const { data: seenByDt } = await dt
+      .from('project_budgets')
+      .select('cost_group, budgeted_amount')
+      .eq('bidding_project_id', project.id);
+    const { data: seenByTgd } = await tgd
+      .from('project_budgets')
+      .select('cost_group, budgeted_amount')
+      .eq('bidding_project_id', project.id);
+
+    expect(seenByDt!.map((b) => b.cost_group)).not.toContain('loi_nhuan');
+    expect(seenByTgd!.map((b) => b.cost_group)).toContain('loi_nhuan');
+    // Ngân sách vật tư/nhân công thì cả hai đều thấy — Thi công phải điều hành được.
+    expect(seenByDt!.map((b) => b.cost_group).sort()).toEqual(
+      ['chi_phi_chung', 'du_phong', 'nhan_cong', 'vat_tu'].sort(),
+    );
+  });
+
+  it('pháp nhân khác KHÔNG thấy gói thầu (Mẫu A, NEN-01)', async () => {
+    const dt = await signInAs(ACCOUNTS.dauThauNvc);
+    const kdNvo = await signInAs(ACCOUNTS.kinhDoanhNvo);
+    const project = await createBiddingProject(dt);
+
+    const { data: seen } = await kdNvo
+      .from('bidding_projects')
+      .select('id')
+      .eq('id', project.id);
+    expect(seen).toEqual([]);
   });
 });

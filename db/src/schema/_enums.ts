@@ -7,7 +7,15 @@
  */
 
 import { pgEnum } from 'drizzle-orm/pg-core';
-import { APPROVAL_SUBJECTS, ROLE_CODES, STATUS_GROUPS } from '@nvg/shared';
+import {
+  APPROVAL_SUBJECTS,
+  BIDDING_STAGES,
+  BID_DOCUMENT_CATEGORIES,
+  COST_GROUPS,
+  ROLE_CODES,
+  STATUS_GROUPS,
+  UNIT_PRICE_SOURCES,
+} from '@nvg/shared';
 
 /**
  * 5 nhóm trạng thái chuẩn — Content Guidelines 5.1, Webapp Flow 5.5, Backend Schema 1.4.
@@ -53,3 +61,18 @@ export const opportunityClassificationEnum = pgEnum('opportunity_classification'
 
 /** Mức độ nghiêm trọng của khiếu nại — PRD CRM-08. */
 export const complaintSeverityEnum = pgEnum('complaint_severity', ['thap', 'trung_binh', 'cao']);
+
+/** Bước của một gói thầu — PRD DA-01, Webapp Flow 3.2. */
+export const biddingStageEnum = pgEnum('bidding_stage', BIDDING_STAGES);
+
+/**
+ * Nhóm chi phí — PRD DA-09. Dùng CHUNG cho dòng dự toán và dòng ngân sách thi công,
+ * nhờ vậy DA-09 chỉ là ánh xạ một-một chứ không phải quy đổi thủ công.
+ */
+export const costGroupEnum = pgEnum('cost_group', COST_GROUPS);
+
+/** Nguồn của một dòng đơn giá — PRD DA-05. */
+export const unitPriceSourceEnum = pgEnum('unit_price_source', UNIT_PRICE_SOURCES);
+
+/** Chín nhóm hồ sơ dự thầu — PRD DA-08. */
+export const bidDocumentCategoryEnum = pgEnum('bid_document_category', BID_DOCUMENT_CATEGORIES);

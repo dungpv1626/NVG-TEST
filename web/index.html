@@ -2,9 +2,31 @@
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover: dùng hết màn hình máy có "tai thỏ"; phần chừa lại xử lý bằng
+         env(safe-area-inset-*) trong CSS. KHÔNG đặt maximum-scale/user-scalable=no —
+         chặn phóng to là chặn luôn người dùng cần chữ lớn hơn (Content Guidelines 6.8). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="light" />
+    <meta
+      name="description"
+      content="Hệ thống quản trị nội bộ Nhà Việt Group: khách hàng, dự án, thi công, kho, kế toán, nhân sự."
+    />
+
+    <!-- Màu thanh trạng thái khi chạy dạng ứng dụng — Brand Blue (Content Guidelines 6.3). -->
+    <meta name="theme-color" content="#0C66E4" />
+
+    <!-- iOS chưa đọc web app manifest đầy đủ; ba thẻ dưới đây là cách duy nhất để
+         "Thêm vào màn hình chính" trên iPhone chạy toàn màn hình đúng cách. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Quản trị NVG" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon-180.png" />
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
+
     <title>Hệ thống Quản trị NVG</title>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

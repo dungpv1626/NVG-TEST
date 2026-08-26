@@ -66,6 +66,33 @@ export function ErrorState({
   );
 }
 
+/**
+ * Khối thông báo chặn thao tác — dùng khi người dùng mở được màn hình nhưng KHÔNG thực hiện
+ * được việc ở đó (thiếu quyền, thiếu dữ liệu tiền đề).
+ *
+ * Điều hướng đã ẩn lối vào theo quyền (Webapp Flow 6.5), nhưng đường dẫn vẫn gõ tay được và
+ * vẫn được chia sẻ qua Zalo — nên màn hình phải tự giải thích thay vì để người dùng điền xong
+ * mới báo lỗi. Lỗi vượt quyền phải nói rõ AI xử lý được, không dừng ở "không đủ quyền"
+ * (Content Guidelines 4.6).
+ */
+export function BlockedNotice({
+  title,
+  detail,
+  action,
+}: {
+  title: string;
+  detail: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="max-w-2xl rounded-lg border border-border bg-surface p-6 shadow-card">
+      <p className="font-medium">{title}</p>
+      <p className="mt-1 text-fg-subtle">{detail}</p>
+      {action && <div className="mt-4">{action}</div>}
+    </div>
+  );
+}
+
 /** Khối xám cơ bản. Không dùng trực tiếp — dùng các skeleton có hình dạng bên dưới. */
 export function Skeleton({ className }: { className?: string }) {
   return <div className={cn('animate-pulse rounded-sm bg-surface-hover', className)} />;

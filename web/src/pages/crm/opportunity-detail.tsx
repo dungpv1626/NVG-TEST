@@ -31,8 +31,9 @@ import {
   useOpportunity,
   useOpportunityStageHistory,
 } from '@/hooks/use-opportunities';
-import { useCan } from '@/lib/auth';
+import { useCan, useIsResponsible } from '@/lib/auth';
 import { QuotePanel } from './quote-panel';
+import { EMPTY_SURVEY_DRAFT, SurveyPanel, type SurveyDraft } from './survey-panel';
 import { cn } from '@/lib/utils';
 
 const EM_DASH = '—';
@@ -47,20 +48,30 @@ interface CustomerFull {
 
 export function OpportunityDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const canEdit = useCan('CRM', 'edit');
+  const canEditModule = useCan('CRM', 'edit');
 
   const { data, isLoading, error } = useOpportunity(id);
   const { data: history } = useOpportunityStageHistory(id);
   const moveStage = useMoveStage();
+  const isResponsible = useIsResponsible(data?.owner_id);
   const [moveError, setMoveError] = useState<string | null>(null);
+
+  // Bản nháp biên bản khảo sát giữ Ở ĐÂY, không giữ trong tab: `EntityDetail` chỉ dựng nội
+  // dung của tab đang mở, nên chuyển sang tab Báo giá rồi quay lại sẽ mất sạch phần đang gõ
+  // nếu state nằm trong chính tab đó (Webapp Flow 6.3).
+  const [surveyDraft, setSurveyDraft] = useState<SurveyDraft>(EMPTY_SURVEY_DRAFT);
 
   if (isLoading) return <CardGridSkeleton count={3} />;
   if (error) return <ErrorState message={toUserMessage(error)} />;
   if (!data) {
     return (
-      <EmptyState message="Không tìm thấy cơ hội kinh doanh này. Có thể hồ sơ đã được xóa hoặc bạn chưa có quyền xem." />
+      <EmptyState message="Không tìm thấy cơ hội kinh doanh này. Có thể hồ sơ đã được xóa hoặc vai trò hiện tại chưa được cấp quyền xem." />
     );
   }
+
+  // Hai điều kiện khác nhau: vai trò được sửa hồ sơ CRM, VÀ chính người này phụ trách cơ hội.
+  // Thiếu vế thứ hai là hiện nút cho người mà RLS sẽ chặn (Webapp Flow 6.5).
+  const canEdit = canEditModule && isResponsible;
 
   const stageMeta = OPPORTUNITY_STAGE_META[data.stage];
   const customer = (data as unknown as { customer_full: CustomerFull | null }).customer_full;
@@ -181,7 +192,13 @@ export function OpportunityDetailPage() {
             id: 'khao-sat',
             label: 'Khảo sát',
             content: (
-              <EmptyState message="Chưa có biên bản khảo sát. Đặt lịch khảo sát để ghi nhận nhu cầu, người quyết định, ngân sách và tiến độ." />
+              <SurveyPanel
+                opportunityId={data.id}
+                canEdit={canEdit}
+                isHandedOver={isHandedOver}
+                draft={surveyDraft}
+                onDraftChange={setSurveyDraft}
+              />
             ),
           },
           {

@@ -1,64 +1,25 @@
 /**
  * Sidebar — vùng 1 của App Shell (Webapp Flow Mục 2.1).
  *
- * Danh sách module theo THỨ TỰ ƯU TIÊN NGHIỆP VỤ, không xếp theo alphabet
- * (thứ tự lấy từ `MODULE_CODES` trong `@nvg/shared`).
+ * CHỈ hiện từ khổ máy tính bảng ngang trở lên. Trên điện thoại, điều hướng chuyển sang
+ * thanh dưới (`bottom-nav.tsx`) — Webapp Flow 4.7 cấm thu nhỏ bố cục máy tính rồi bắt
+ * người dùng bấm vào các mục li ti.
  *
- * Menu lọc theo vai trò (Webapp Flow 2.3) — module không có quyền xem thì KHÔNG hiển thị,
- * không phải hiện rồi báo lỗi khi bấm (Webapp Flow 6.5).
+ * Danh sách module và thứ tự lấy từ `module-nav.ts`, dùng chung với thanh dưới.
  */
 
-import {
-  BarChart3, Boxes, Building, ClipboardList, FileSignature, HardHat,
-  LayoutDashboard, PencilRuler, Settings, ShoppingCart, Users, Wallet, Warehouse,
-} from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
-import { MODULE_CODES, MODULES, type ModuleCode } from '@nvg/shared';
-import { useAuth } from '@/lib/auth';
+import { MODULES } from '@nvg/shared';
 import { cn } from '@/lib/utils';
 import { CompanySwitcher } from './company-switcher';
-
-/** Một khái niệm luôn dùng đúng một icon xuyên suốt hệ thống (Content Guidelines 6.6). */
-const MODULE_ICONS: Record<ModuleCode, LucideIcon> = {
-  BC: LayoutDashboard,
-  CRM: Users,
-  DA: ClipboardList,
-  TK: PencilRuler,
-  HD: FileSignature,
-  TC: HardHat,
-  MH: ShoppingCart,
-  KHO: Warehouse,
-  KT: Wallet,
-  NS: Building,
-  SX: Boxes,
-  NEN: Settings,
-};
-
-const MODULE_ROUTES: Record<ModuleCode, string> = {
-  BC: '/dashboard',
-  CRM: '/crm/co-hoi',
-  DA: '/da/goi-thau',
-  TK: '/tk/du-an',
-  HD: '/hd/hop-dong',
-  TC: '/tc/cong-trinh',
-  MH: '/mh/de-nghi-mua',
-  KHO: '/kho/ton-kho',
-  KT: '/kt/de-nghi-thanh-toan',
-  NS: '/ns/nhan-su',
-  SX: '/sx/tai-san-cho-thue',
-  NEN: '/nen/quan-tri',
-};
+import { MODULE_ICONS, MODULE_ROUTES, useActiveModule, useVisibleModules } from './module-nav';
 
 export function Sidebar() {
-  const { profile } = useAuth();
-
-  const visible = MODULE_CODES.filter((code) =>
-    profile?.permissions.some((p) => p.moduleCode === code && p.canView),
-  );
+  const visible = useVisibleModules();
+  const activeModule = useActiveModule();
 
   return (
-    <aside className="flex h-full w-60 shrink-0 flex-col border-r border-border bg-surface">
+    <aside className="hidden h-full w-60 shrink-0 flex-col border-r border-border bg-surface lg:flex">
       <div className="border-b border-border p-2">
         <CompanySwitcher />
       </div>
@@ -72,16 +33,17 @@ export function Sidebar() {
               <li key={code}>
                 <NavLink
                   to={MODULE_ROUTES[code]}
-                  className={({ isActive }) =>
-                    cn(
-                      'flex items-center gap-2 rounded-sm px-2 py-2',
-                      'hover:bg-surface-hover',
-                      // Mục đang hoạt động tô đậm (Webapp Flow 2.1) — một trong ba lớp
-                      // định vị "luôn biết mình đang ở đâu" (Webapp Flow 6.2).
-                      isActive &&
-                        'bg-brand-subtle font-semibold text-brand hover:bg-brand-subtle',
-                    )
-                  }
+                  aria-current={activeModule === code ? 'page' : undefined}
+                  className={cn(
+                    'flex items-center gap-2 rounded-sm px-2 py-2',
+                    'hover:bg-surface-hover',
+                    // Mục đang hoạt động tô đậm (Webapp Flow 2.1) — một trong ba lớp
+                    // định vị "luôn biết mình đang ở đâu" (Webapp Flow 6.2). Sáng theo
+                    // MODULE, không theo đúng một đường dẫn: mọi màn hình trong CRM đều
+                    // phải làm mục "Khách hàng & Cơ hội" sáng lên.
+                    activeModule === code &&
+                      'bg-brand-subtle font-semibold text-brand hover:bg-brand-subtle',
+                  )}
                   title={meta.description}
                 >
                   <Icon className="shrink-0" />

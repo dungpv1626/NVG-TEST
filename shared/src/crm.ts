@@ -6,6 +6,7 @@
  * đây sẽ buộc phải sinh migration cho enum tương ứng trong CSDL.
  */
 
+import { daysUntil } from './format';
 import type { StatusGroup } from './status';
 
 /**
@@ -113,3 +114,29 @@ export const COMPLAINT_SEVERITY_LABELS: Readonly<Record<ComplaintSeverity, strin
   trung_binh: 'Trung bình',
   cao: 'Cao',
 };
+
+/**
+ * Trạng thái HIỂN THỊ của một khiếu nại, có tính tới hạn phản hồi (PRD CRM-08).
+ *
+ * Vì sao tính lúc hiển thị thay vì lưu sẵn `overdue` vào cột `status`:
+ * "quá hạn" không phải một hành động của ai cả — nó xảy ra do thời gian trôi qua. Muốn cột
+ * `status` tự chuyển sang `overdue` thì phải có tác vụ nền quét định kỳ; tác vụ đó chết
+ * hoặc chạy trễ là số liệu sai âm thầm. Suy từ `response_due_date` thì luôn đúng ở mọi thời
+ * điểm xem, không phụ thuộc thứ gì chạy nền.
+ *
+ * Vẫn quy về đúng 5 nhóm trạng thái chuẩn — không tạo màu mới (Content Guidelines 6.4).
+ *
+ * @see NEN-04 — cảnh báo quá hạn dùng chung một định nghĩa với chỗ này.
+ */
+export function complaintDisplayStatus(
+  status: StatusGroup,
+  responseDueDate: string | null | undefined,
+  now: Date = new Date(),
+): StatusGroup {
+  // Đã xử lý xong thì hạn phản hồi không còn ý nghĩa — hồ sơ đóng lúc nào cũng là đóng.
+  if (status === 'completed') return 'completed';
+  if (!responseDueDate) return status;
+
+  const remaining = daysUntil(responseDueDate, now);
+  return remaining !== null && remaining < 0 ? 'overdue' : status;
+}

@@ -17,6 +17,7 @@
  *    component này không tự suy diễn quyền.
  */
 
+import { ChevronLeft } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -64,6 +65,12 @@ export function ApprovalInbox({
   onDecision,
 }: ApprovalInboxProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  /**
+   * Trên điện thoại KHÔNG đủ chỗ cho hai cột. Danh sách và ô xem nhanh thay phiên nhau
+   * chiếm cả màn hình; cờ này nhớ đang xem cái nào. Trên máy tính cả hai luôn hiển thị nên
+   * cờ này không có tác dụng gì.
+   */
+  const [openedOnMobile, setOpenedOnMobile] = useState(false);
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -93,6 +100,9 @@ export function ApprovalInbox({
       await onDecision(selected, decision, note.trim());
       setNote('');
       setSelectedId(next?.id ?? null);
+      // Hết hồ sơ thì quay về danh sách (lúc này là trạng thái rỗng "đã xử lý xong"),
+      // còn hồ sơ thì ở lại để duyệt tiếp — không bắt quay lại rồi bấm vào (Webapp Flow 4.6).
+      if (!next) setOpenedOnMobile(false);
     } catch (e) {
       setActionError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -122,16 +132,25 @@ export function ApprovalInbox({
   }
 
   return (
-    <div className="flex gap-4">
+    <div className="flex flex-col gap-4 lg:flex-row">
       {/* Danh sách bên trái — đã sắp theo mức độ khẩn ở tầng truy vấn. */}
-      <ul className="w-80 shrink-0 space-y-1 overflow-y-auto" aria-label="Hồ sơ chờ phê duyệt">
+      <ul
+        className={cn(
+          'w-full space-y-1 overflow-y-auto lg:w-80 lg:shrink-0',
+          openedOnMobile && 'hidden lg:block',
+        )}
+        aria-label="Hồ sơ chờ phê duyệt"
+      >
         {list.map((item) => {
           const isActive = item.id === selected?.id;
           return (
             <li key={item.id}>
               <button
                 type="button"
-                onClick={() => setSelectedId(item.id)}
+                onClick={() => {
+                  setSelectedId(item.id);
+                  setOpenedOnMobile(true);
+                }}
                 aria-current={isActive ? 'true' : undefined}
                 className={cn(
                   'w-full rounded-lg border p-3 text-left',
@@ -162,7 +181,21 @@ export function ApprovalInbox({
 
       {/* Xem nhanh bên phải — đủ để quyết định mà KHÔNG cần rời Hộp thư. */}
       {selected && (
-        <div className="min-w-0 flex-1 rounded-lg border border-border bg-surface p-4 shadow-card">
+        <div
+          className={cn(
+            'min-w-0 flex-1 rounded-lg border border-border bg-surface p-4 shadow-card',
+            !openedOnMobile && 'hidden lg:block',
+          )}
+        >
+          <button
+            type="button"
+            onClick={() => setOpenedOnMobile(false)}
+            className="mb-3 flex items-center gap-1.5 text-brand hover:underline lg:hidden"
+          >
+            <ChevronLeft className="size-4" />
+            Quay lại danh sách
+          </button>
+
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
               <h2 className="truncate font-semibold">{selected.title}</h2>

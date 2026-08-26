@@ -29,6 +29,9 @@ function fullRecordPath(item: PendingApproval): string {
       // Báo giá không có trang riêng — nó là một tab của Chi tiết Cơ hội (Webapp Flow 4.3:
       // "mỗi tab là một khía cạnh của CÙNG MỘT hồ sơ, không phải các trang riêng biệt").
       return item.parent_id ? `/crm/co-hoi/${item.parent_id}?tab=bao-gia` : '/crm/co-hoi';
+    case 'estimates':
+      // Dự toán cũng vậy: nó là tab Dự toán của Chi tiết Gói thầu (DA-07).
+      return item.parent_id ? `/da/goi-thau/${item.parent_id}?tab=du-toan` : '/da/goi-thau';
     default:
       return '/dashboard';
   }

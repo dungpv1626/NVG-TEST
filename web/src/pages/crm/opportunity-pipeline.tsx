@@ -51,6 +51,9 @@ export function OpportunityPipelinePage() {
   const createButton = canCreate ? (
     <CreateButton label={createLabel} to="/crm/co-hoi/tao-moi" />
   ) : undefined;
+  const emptyStateButton = canCreate ? (
+    <CreateButton label={createLabel} to="/crm/co-hoi/tao-moi" variant="secondary" />
+  ) : undefined;
 
   function setView(next: 'kanban' | 'danh-sach') {
     const params = new URLSearchParams(searchParams);
@@ -164,7 +167,7 @@ export function OpportunityPipelinePage() {
               ? EMPTY_STATES.list('cơ hội kinh doanh', createLabel)
               : 'Chưa có cơ hội kinh doanh nào.'
           }
-          emptyAction={createButton}
+          emptyAction={emptyStateButton}
         />
       ) : (
         <EntityTable<OpportunityRow>
@@ -179,7 +182,7 @@ export function OpportunityPipelinePage() {
               ? EMPTY_STATES.list('cơ hội kinh doanh', createLabel)
               : 'Chưa có cơ hội kinh doanh nào.'
           }
-          emptyAction={createButton}
+          emptyAction={emptyStateButton}
           columns={[
             { key: 'customer', header: 'Khách hàng', render: (r) => r.customerName },
             {

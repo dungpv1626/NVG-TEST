@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 const ITEMS = [
   { to: '/crm/co-hoi', label: 'Cơ hội kinh doanh' },
   { to: '/crm/khach-hang', label: 'Khách hàng' },
+  { to: '/crm/khieu-nai', label: 'Khiếu nại' },
 ];
 
 export function CrmNav() {

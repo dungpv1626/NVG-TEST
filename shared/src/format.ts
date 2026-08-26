@@ -179,3 +179,80 @@ export function formatDeadline(
   if (days === -1) return 'Quá hạn 1 ngày';
   return `Quá hạn ${Math.abs(days)} ngày`;
 }
+
+/**
+ * Ngày cho ô `<input type="date">` (`yyyy-MM-dd`), quy về MÚI GIỜ NGHIỆP VỤ.
+ *
+ * Không dùng `toISOString().slice(0, 10)`: hàm đó cho ra ngày theo UTC, nên mọi thời điểm
+ * trước 07:00 giờ Việt Nam sẽ hiện lùi một ngày.
+ */
+export function toNvgDateInput(value: DateInput): string {
+  const d = toDate(value);
+  if (!d) return '';
+  // `en-CA` cho ra đúng dạng `yyyy-MM-dd` mà thẻ input yêu cầu.
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: NVG_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d);
+}
+
+/** Giờ cho ô `<input type="time">` / phần giờ của `datetime-local` (`HH:mm`), giờ Việt Nam. */
+export function toNvgTimeInput(value: DateInput): string {
+  const d = toDate(value);
+  if (!d) return '';
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: NVG_TIME_ZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(d);
+}
+
+/**
+ * Chiều ngược lại: chuỗi `datetime-local` (`yyyy-MM-ddTHH:mm`) người dùng nhập → ISO.
+ *
+ * `new Date('2026-08-25T14:30')` diễn giải theo múi giờ CỦA MÁY, không phải giờ Việt Nam.
+ * Trên máy đặt múi giờ khác, lịch hẹn lưu xuống sẽ lệch đúng bằng chênh lệch múi giờ — sai
+ * âm thầm, chỉ lộ ra khi người khác mở lên xem.
+ *
+ * Cách tính: dựng mốc thời gian giả định là UTC, rồi trừ đi độ lệch thật của múi giờ nghiệp
+ * vụ TẠI CHÍNH thời điểm đó (không hằng số hoá +07:00 — cách này vẫn đúng nếu quy định múi
+ * giờ thay đổi).
+ */
+export function fromNvgInput(localValue: string | null | undefined): string | null {
+  if (!localValue) return null;
+
+  // Kiểm tra dạng TRƯỚC khi dựng Date: bộ phân tích của JavaScript rất dễ dãi và trả về
+  // một mốc thời gian có thật cho chuỗi rác (`new Date('rác:00Z')` ra 31/12/1999), thay vì
+  // Invalid Date — nghĩa là dữ liệu hỏng vẫn lưu xuống được mà không ai biết.
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(localValue)) return null;
+
+  const asUtc = new Date(`${localValue}:00Z`);
+  if (Number.isNaN(asUtc.getTime())) return null;
+
+  const offsetMs = asUtc.getTime() - Date.parse(`${nvgWallClock(asUtc)}Z`);
+  return new Date(asUtc.getTime() + offsetMs).toISOString();
+}
+
+/** Giờ treo tường ở múi giờ nghiệp vụ, dạng `yyyy-MM-ddTHH:mm:ss` — dùng để đo độ lệch. */
+function nvgWallClock(value: Date): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: NVG_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(value);
+
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? '00';
+
+  // `hour` có thể ra "24" ở đúng nửa đêm với hourCycle mặc định của một số môi trường.
+  const hour = get('hour') === '24' ? '00' : get('hour');
+  return `${get('year')}-${get('month')}-${get('day')}T${hour}:${get('minute')}:${get('second')}`;
+}

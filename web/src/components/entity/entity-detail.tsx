@@ -106,7 +106,15 @@ export function EntityDetail({
     <div className="flex gap-6">
       <div className="min-w-0 flex-1">
         {/* Header cố định khi cuộn (Webapp Flow 4.3). */}
-        <div className="sticky top-0 z-10 -mx-6 -mt-6 mb-6 bg-surface px-6 pt-6">
+        {/* Margin âm phải khớp ĐÚNG padding của <main> (p-4, lg:p-6): lệch một nấc là
+            header thò ra ngoài mép và cả trang cuộn ngang được. */}
+        <div
+          className={cn(
+            'sticky top-0 z-10 mb-4 bg-surface',
+            '-mx-4 -mt-4 px-4 pt-4',
+            'lg:-mx-6 lg:-mt-6 lg:mb-6 lg:px-6 lg:pt-6',
+          )}
+        >
           <Breadcrumb items={breadcrumbs} />
           <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
@@ -165,47 +173,68 @@ export function EntityDetail({
         </div>
 
         <div>{active?.content}</div>
+
+        {related.length > 0 && (
+          <section className="mt-6 space-y-4 xl:hidden" aria-label="Hồ sơ liên quan">
+            <RelatedGroups related={related} />
+          </section>
+        )}
       </div>
 
       {related.length > 0 && (
         <aside className="hidden w-72 shrink-0 xl:block" aria-label="Hồ sơ liên quan">
           <div className="sticky top-24 space-y-4">
-            {related.map((group) => (
-              <div
-                key={group.title}
-                className="rounded-lg border border-border bg-surface p-3 shadow-card"
-              >
-                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-subtle">
-                  {group.title}
-                </h2>
-                <dl className="space-y-2">
-                  {group.records.map((r) => (
-                    <div key={r.label}>
-                      <dt className="text-xs text-fg-subtle">{r.label}</dt>
-                      <dd className="flex items-center gap-2">
-                        {/* Mọi tham chiếu tới hồ sơ khác là liên kết bấm được,
-                            không phải chữ tĩnh (Webapp Flow 5.2). */}
-                        {r.to ? (
-                          <Link to={r.to} className="truncate text-brand hover:underline">
-                            {r.value}
-                          </Link>
-                        ) : (
-                          <span className="truncate">{r.value}</span>
-                        )}
-                        {r.status && <StatusLozenge status={r.status} />}
-                      </dd>
-                    </div>
-                  ))}
-                  {group.records.length === 0 && (
-                    <p className="text-xs text-fg-subtle">Chưa có hồ sơ liên quan.</p>
-                  )}
-                </dl>
-              </div>
-            ))}
+            <RelatedGroups related={related} />
           </div>
         </aside>
       )}
     </div>
+  );
+}
+
+/**
+ * Danh sách hồ sơ liên quan ở module khác (Webapp Flow 5.1).
+ *
+ * Dùng ở hai chỗ với cùng một nội dung: panel bên phải trên màn hình rộng, và khối cuối
+ * trang trên màn hình hẹp. Màn hình hẹp mà ẩn hẳn là mất luôn đường đi sang module khác —
+ * mà "không quá 3 cú nhấp tới một hồ sơ" (Webapp Flow 1.3) tính cả trên điện thoại.
+ */
+function RelatedGroups({ related }: { related: RelatedGroup[] }) {
+  return (
+    <>
+      {related.map((group) => (
+        <div
+          key={group.title}
+          className="rounded-lg border border-border bg-surface p-3 shadow-card"
+        >
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-subtle">
+            {group.title}
+          </h2>
+          <dl className="space-y-2">
+            {group.records.map((r) => (
+              <div key={r.label}>
+                <dt className="text-xs text-fg-subtle">{r.label}</dt>
+                <dd className="flex items-center gap-2">
+                  {/* Mọi tham chiếu tới hồ sơ khác là liên kết bấm được,
+                      không phải chữ tĩnh (Webapp Flow 5.2). */}
+                  {r.to ? (
+                    <Link to={r.to} className="truncate text-brand hover:underline">
+                      {r.value}
+                    </Link>
+                  ) : (
+                    <span className="truncate">{r.value}</span>
+                  )}
+                  {r.status && <StatusLozenge status={r.status} />}
+                </dd>
+              </div>
+            ))}
+            {group.records.length === 0 && (
+              <p className="text-xs text-fg-subtle">Chưa có hồ sơ liên quan.</p>
+            )}
+          </dl>
+        </div>
+      ))}
+    </>
   );
 }
 

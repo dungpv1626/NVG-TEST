@@ -22,6 +22,7 @@ export interface OpportunityRecord {
   project_type: string | null;
   due_date: string | null;
   handed_over_at: string | null;
+  owner_id: string | null;
   created_at: string;
   customer: { id: string; name: string } | null;
   owner: { full_name: string } | null;
@@ -29,7 +30,7 @@ export interface OpportunityRecord {
 
 const OPPORTUNITY_SELECT =
   'id, code, company_id, name, stage, classification, estimated_value, project_type, due_date, ' +
-  'handed_over_at, created_at, ' +
+  'handed_over_at, owner_id, created_at, ' +
   'customer:customers!opportunities_customer_id_customers_id_fk(id, name), ' +
   'owner:users!opportunities_owner_id_users_id_fk(full_name)';
 

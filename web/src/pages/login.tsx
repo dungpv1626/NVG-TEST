@@ -11,6 +11,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
+import { OfflineBar } from '@/components/layout/pwa-status';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/lib/auth';
@@ -53,7 +54,12 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-surface-sunken p-4">
+    // `100dvh` để trên điện thoại thanh địa chỉ tự ẩn không làm khung đăng nhập nhảy.
+    <div className="flex min-h-[100dvh] flex-col bg-surface-sunken">
+      {/* Mất mạng ở màn hình này là nguyên nhân thường gặp nhất của "đăng nhập mãi không
+          được" — nói thẳng thay vì để người dùng nghi ngờ mật khẩu của mình. */}
+      <OfflineBar />
+      <div className="flex flex-1 items-center justify-center p-4">
       <div
         className={cn(
           'w-full max-w-sm rounded-lg border border-border',
@@ -139,6 +145,7 @@ export function LoginPage() {
         <p className="mt-6 text-center text-xs text-fg-subtle">
           Tài khoản do quản trị hệ thống cấp. Liên hệ quản trị hệ thống nếu chưa có tài khoản.
         </p>
+        </div>
       </div>
     </div>
   );

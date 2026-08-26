@@ -6,6 +6,9 @@ import {
   formatDateTime,
   formatDeadline,
   formatWaiting,
+  fromNvgInput,
+  toNvgDateInput,
+  toNvgTimeInput,
   formatNumber,
   formatPercent,
   formatPhone,
@@ -132,5 +135,48 @@ describe('formatWaiting', () => {
   it('trả chuỗi rỗng khi chưa có mốc thời gian', () => {
     expect(formatWaiting(null)).toBe('');
     expect(formatWaiting(undefined)).toBe('');
+  });
+});
+
+describe('ô nhập ngày giờ theo múi giờ nghiệp vụ', () => {
+  it('quy về giờ Việt Nam, không phải giờ UTC hay giờ máy', () => {
+    // 25/08/2026 21:30 giờ Việt Nam = 14:30Z cùng ngày.
+    const iso = '2026-08-25T14:30:00Z';
+    expect(toNvgDateInput(iso)).toBe('2026-08-25');
+    expect(toNvgTimeInput(iso)).toBe('21:30');
+  });
+
+  it('thời điểm sau 17:00Z vẫn thuộc NGÀY HÔM SAU ở Việt Nam', () => {
+    // Chính chỗ `toISOString().slice(0, 10)` sai: UTC vẫn là ngày 25, Việt Nam đã sang 26.
+    const iso = '2026-08-25T18:00:00Z';
+    expect(iso.slice(0, 10)).toBe('2026-08-25');
+    expect(toNvgDateInput(iso)).toBe('2026-08-26');
+    expect(toNvgTimeInput(iso)).toBe('01:00');
+  });
+
+  it('fromNvgInput hiểu chuỗi người dùng nhập là GIỜ VIỆT NAM', () => {
+    // 21:30 giờ Việt Nam phải lưu xuống thành 14:30Z, bất kể máy đặt múi giờ nào.
+    expect(fromNvgInput('2026-08-25T21:30')).toBe('2026-08-25T14:30:00.000Z');
+  });
+
+  it('đi và về không làm lệch thời điểm', () => {
+    const iso = '2026-08-25T14:30:00.000Z';
+    const roundTrip = fromNvgInput(`${toNvgDateInput(iso)}T${toNvgTimeInput(iso)}`);
+    expect(roundTrip).toBe(iso);
+  });
+
+  it('nửa đêm giờ Việt Nam không bị đẩy sang 24:00 hay lệch ngày', () => {
+    const iso = '2026-08-25T17:00:00Z'; // đúng 00:00 ngày 26 giờ Việt Nam
+    expect(toNvgDateInput(iso)).toBe('2026-08-26');
+    expect(toNvgTimeInput(iso)).toBe('00:00');
+    expect(fromNvgInput('2026-08-26T00:00')).toBe('2026-08-25T17:00:00.000Z');
+  });
+
+  it('giá trị rỗng cho ra rỗng, không cho ra "Invalid Date"', () => {
+    expect(toNvgDateInput('')).toBe('');
+    expect(toNvgTimeInput('không phải ngày')).toBe('');
+    expect(fromNvgInput('')).toBeNull();
+    expect(fromNvgInput(null)).toBeNull();
+    expect(fromNvgInput('rác')).toBeNull();
   });
 });

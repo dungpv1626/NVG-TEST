@@ -113,6 +113,55 @@
       "when": 1787666513402,
       "tag": "0015_my_pending_approvals",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1787669026232,
+      "tag": "0016_complaint_collaborators",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1787669027232,
+      "tag": "0017_crm_survey_complaint_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1787669028232,
+      "tag": "0018_fix_crm_write_rules",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1787669029232,
+      "tag": "0019_audit_touch_and_identity_freeze",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1787674929880,
+      "tag": "0020_da_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1787674930880,
+      "tag": "0021_da_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1787674931880,
+      "tag": "0022_da_approval_inbox",
+      "breakpoints": true
     }
   ]
 }

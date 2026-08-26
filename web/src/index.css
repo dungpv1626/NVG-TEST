@@ -107,5 +107,24 @@
       min-height: 40px;
       min-width: 40px;
     }
+
+    /* Ô nhập cũng là vùng bấm: cao 36px trên máy tính là vừa với con trỏ chuột, nhưng trên
+       màn hình cảm ứng thì bấm trượt sang ô bên cạnh. Đặt ở đây thay vì sửa từng ô của từng
+       biểu mẫu — sửa lẻ thì biểu mẫu viết sau lại quên. */
+    input,
+    select,
+    textarea {
+      min-height: 40px;
+    }
+  }
+
+  /* Ngăn iOS Safari tự phóng to trang khi chạm vào ô nhập có cỡ chữ dưới 16px — nó phóng
+     rồi KHÔNG thu lại, người dùng phải tự vuốt để thấy lại phần còn lại của biểu mẫu. */
+  @supports (-webkit-touch-callout: none) {
+    input,
+    select,
+    textarea {
+      font-size: 16px;
+    }
   }
 }

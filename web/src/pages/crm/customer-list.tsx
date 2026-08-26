@@ -60,6 +60,9 @@ export function CustomerListPage() {
   const createButton = canCreate ? (
     <CreateButton label={createLabel} to="/crm/khach-hang/tao-moi" />
   ) : undefined;
+  const emptyStateButton = canCreate ? (
+    <CreateButton label={createLabel} to="/crm/khach-hang/tao-moi" variant="secondary" />
+  ) : undefined;
   const isEmpty = !isLoading && !error && rows.length === 0;
 
   return (
@@ -85,7 +88,7 @@ export function CustomerListPage() {
             ? EMPTY_STATES.list('khách hàng', createLabel)
             : 'Chưa có khách hàng nào. Vai trò hiện tại không có quyền tạo hồ sơ khách hàng.'
         }
-        emptyAction={createButton}
+        emptyAction={emptyStateButton}
         columns={[
           {
             key: 'contact',

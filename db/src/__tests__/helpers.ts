@@ -58,6 +58,8 @@ export const ACCOUNTS = {
   admin: 'admin@nhavietgroup.test',
   kinhDoanhNvc: 'kinhdoanh.nvc@nhavietgroup.test',
   kinhDoanhNvo: 'kinhdoanh.nvo@nhavietgroup.test',
+  dauThauNvc: 'dauthau.nvc@nhavietgroup.test',
+  congTruongNvc: 'congtruong.nvc@nhavietgroup.test',
   thietKeNvo: 'thietke.nvo@nhavietgroup.test',
   kho: 'kho@nhavietgroup.test',
   ketoan: 'ketoan@nhavietgroup.test',
@@ -93,7 +95,13 @@ export async function cleanupTestData(): Promise<void> {
     // `approvals` cố ý không có khóa ngoại tới hồ sơ nguồn (một bảng phục vụ nhiều module),
     // nên xóa cơ hội KHÔNG tự dọn được các dòng phê duyệt — phải xóa tường minh.
     // Tiêu đề được sinh từ tên cơ hội nên vẫn mang tiền tố test.
-    await sql`DELETE FROM approvals WHERE title LIKE ${TEST_PREFIX + '%'}`;
+    // Dùng LIKE '%…%' chứ không phải tiền tố: tiêu đề hồ sơ phê duyệt do CSDL sinh ra có
+    // dạng "Giá dự thầu NVC-DA-… — [TEST] …", tiền tố test nằm ở GIỮA chuỗi.
+    await sql`DELETE FROM approvals WHERE title LIKE ${'%' + TEST_PREFIX + '%'}`;
+    await sql`DELETE FROM complaints WHERE title LIKE ${TEST_PREFIX + '%'}`;
+    // Xoá gói thầu kéo theo khối lượng, dự toán, hồ sơ thầu và ngân sách (khoá ngoại CASCADE).
+    await sql`DELETE FROM bidding_projects WHERE name LIKE ${TEST_PREFIX + '%'}`;
+    await sql`DELETE FROM unit_prices WHERE name LIKE ${TEST_PREFIX + '%'}`;
     await sql`DELETE FROM opportunities WHERE name LIKE ${TEST_PREFIX + '%'}`;
     await sql`DELETE FROM documents WHERE title LIKE ${TEST_PREFIX + '%'}`;
     await sql`DELETE FROM customers WHERE name LIKE ${TEST_PREFIX + '%'}`;

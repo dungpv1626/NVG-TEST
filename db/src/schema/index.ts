@@ -23,3 +23,6 @@ export * from './approvals';
 
 // --- Module CRM (Backend Schema 4.2) ---
 export * from './crm';
+
+// --- Module DA — Dự án và Đấu thầu (Backend Schema 4.3) ---
+export * from './da';

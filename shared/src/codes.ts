@@ -20,6 +20,7 @@ export const RECORD_TYPES = {
   KH: 'Khách hàng',
   CH: 'Cơ hội kinh doanh',
   BG: 'Báo giá',
+  KN: 'Khiếu nại',
   DA: 'Gói thầu / Dự án',
   DT: 'Dự toán',
   TK: 'Dự án thiết kế',

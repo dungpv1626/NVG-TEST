@@ -73,6 +73,8 @@ export function useDecideApproval() {
       void queryClient.invalidateQueries({ queryKey: ['approvals'] });
       // Hồ sơ nguồn đổi trạng thái theo quyết định vừa ghi.
       void queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      void queryClient.invalidateQueries({ queryKey: ['estimates'] });
+      void queryClient.invalidateQueries({ queryKey: ['bidding_projects'] });
     },
   });
 }
