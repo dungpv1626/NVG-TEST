@@ -16,6 +16,7 @@ import {
   CONTRACT_SOURCE_ROUTES,
   CONTRACT_STAGE_META,
   CONTRACT_TYPE_LABELS,
+  SITE_STAGE_META,
   contractDisplayStatus,
   formatCurrency,
   formatDate,
@@ -33,6 +34,10 @@ import {
   useSubmitContractApproval,
   useUpdateContract,
 } from '@/hooks/use-contracts';
+import {
+  useOpenSiteFromContract,
+  useSitesOfContract,
+} from '@/hooks/use-construction-sites';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useCan } from '@/lib/auth';
 import { AmendmentPanel } from './amendment-panel';
@@ -46,6 +51,8 @@ export function ContractDetailPage() {
 
   const { data, isLoading, error } = useContract(id);
   const { data: amendments } = useContractAmendments(id);
+  const { data: sites } = useSitesOfContract(id);
+  const openSite = useOpenSiteFromContract();
   const updateContract = useUpdateContract();
   const submitApproval = useSubmitContractApproval();
   const signContract = useSignContract();
@@ -64,6 +71,15 @@ export function ContractDetailPage() {
   const isDraft = contract.stage === 'nhap';
   const isClosed = contract.stage === 'hoan_thanh' || contract.stage === 'huy';
   const readOnly = !canEdit || isClosed;
+
+  /**
+   * Mở công trình sau khi ký (TC-01).
+   *
+   * KHÔNG áp dụng cho hợp đồng khoán tổ đội: đó là hợp đồng NVG đi THUÊ, nằm bên trong một
+   * công trình đã có chứ không sinh ra công trình mới — CSDL cũng từ chối nếu vẫn gọi.
+   */
+  const canOpenSite =
+    contract.stage === 'da_ky' && contract.type !== 'khoan_thau_phu' && (sites ?? []).length === 0;
 
   // Chỉ cộng phát sinh ĐÃ PHÊ DUYỆT vào giá trị hiện hành: phát sinh đang đề xuất chưa phải
   // là cam kết, cộng sớm thì báo cáo doanh thu chạy trước thực tế (HD-03).
@@ -124,9 +140,20 @@ export function ContractDetailPage() {
           Ghi nhận đã ký
         </Button>
       )}
-      {contract.stage === 'da_ky' && (
+      {canOpenSite && (
         <Button
           variant="primary"
+          disabled={openSite.isPending}
+          onClick={() => void run(() => openSite.mutateAsync({ contractId: contract.id }))}
+        >
+          Mở công trình
+        </Button>
+      )}
+      {contract.stage === 'da_ky' && (
+        // Chỉ MỘT nút chính mỗi màn hình (Content Guidelines 6.3): còn phải mở công trình
+        // thì đó mới là việc tiếp theo, quyết toán lùi xuống nút phụ.
+        <Button
+          variant={canOpenSite ? 'secondary' : 'primary'}
           onClick={() =>
             void run(() =>
               closeContract.mutateAsync({ contractId: contract.id, stage: 'hoan_thanh' }),
@@ -318,6 +345,18 @@ export function ContractDetailPage() {
                 : []),
             ],
           },
+          ...((sites ?? []).length > 0
+            ? [
+                {
+                  title: 'Thi công',
+                  records: (sites ?? []).map((s) => ({
+                    label: SITE_STAGE_META[s.stage].label,
+                    value: `${s.code} — ${s.name}`,
+                    to: `/tc/cong-trinh/${s.id}`,
+                  })),
+                },
+              ]
+            : []),
         ]}
       />
     </>

@@ -20,3 +20,4 @@ export * from './da';
 export * from './tk';
 export * from './hd';
 export * from './bc';
+export * from './tc';

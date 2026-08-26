@@ -380,12 +380,34 @@ export const projectBudgets = pgTable(
     id: primaryId(),
     ...companyScoped(),
 
-    biddingProjectId: uuid('bidding_project_id')
-      .notNull()
-      .references(() => biddingProjects.id, { onDelete: 'cascade' }),
+    /**
+     * ĐÚNG MỘT trong hai cột cha có giá trị — cùng cách `estimates` và `boq_items` đã làm
+     * khi bộ máy dự toán được dùng chung cho NVO (TK-07). Ngân sách phải theo được: NVO
+     * làm trọn gói thiết kế + thi công, không đi qua gói thầu, nhưng vẫn cần TC-05 so chi
+     * phí với ngân sách. Ràng buộc CHECK ở migration giữ "đúng một".
+     */
+    biddingProjectId: uuid('bidding_project_id').references(() => biddingProjects.id, {
+      onDelete: 'cascade',
+    }),
+    designProjectId: uuid('design_project_id').references(() => designProjects.id, {
+      onDelete: 'cascade',
+    }),
 
     /** Bản dự toán đã duyệt sinh ra ngân sách này — đường truy ngược bắt buộc (PRD Mục 7). */
     estimateId: uuid('estimate_id').references(() => estimates.id, { onDelete: 'set null' }),
+
+    /**
+     * Công trình tiêu ngân sách này (TC-01, TC-05).
+     *
+     * CHƯA có khoá ngoại ở tầng Drizzle: `construction_sites` nằm ở `tc.ts`, mà `tc.ts` đã
+     * import từ file này — khai khoá ngoại hai chiều sẽ tạo vòng import và TypeScript mất
+     * kiểu. Ràng buộc thật được thêm bằng `ALTER TABLE` trong migration của TC, giống cách
+     * `design_projects.construction_site_id` đã làm.
+     *
+     * Rỗng nghĩa là ngân sách đã lập nhưng chưa mở công trình — trạng thái bình thường giữa
+     * lúc trúng thầu (DA-09) và lúc ký hợp đồng.
+     */
+    constructionSiteId: uuid('construction_site_id'),
 
     /** Mã chi phí (DA-09) — nhóm chi phí + mã công việc. */
     costGroup: costGroupEnum('cost_group').notNull(),
@@ -409,8 +431,18 @@ export const projectBudgets = pgTable(
   },
   (t) => [
     index('project_budgets_project_idx').on(t.biddingProjectId, t.costGroup),
+    index('project_budgets_design_project_idx').on(t.designProjectId, t.costGroup),
+    index('project_budgets_site_idx').on(t.constructionSiteId),
+    /**
+     * Mã chi phí không trùng trong cùng một hồ sơ cha. Hai index riêng vì Postgres coi NULL
+     * là khác nhau: gộp cả hai cột vào một index thì mọi dòng của NVO (`bidding_project_id`
+     * rỗng) đều "khác nhau" và ràng buộc mất tác dụng — đúng cái bẫy `estimates` đã tránh.
+     */
     uniqueIndex('project_budgets_cost_code')
       .on(t.biddingProjectId, t.costCode)
+      .where(sql`${t.deletedAt} IS NULL`),
+    uniqueIndex('project_budgets_design_cost_code')
+      .on(t.designProjectId, t.costCode)
       .where(sql`${t.deletedAt} IS NULL`),
   ],
 );

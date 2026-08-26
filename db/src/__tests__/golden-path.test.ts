@@ -298,6 +298,88 @@ describeDb('Golden Path 1 — NVC: Cơ hội → Gói thầu → Dự toán → 
     check('lập ngân sách thi công', budgetError);
     expect(budgetRows).toBeGreaterThan(0);
 
+    // --- Bước 10. Mở công trình từ hợp đồng đã ký (TC-01) -------------------------------
+    // Đây là mắt xích nối Giai đoạn 1 sang Giai đoạn 2: từ đây trở đi mọi chi phí thực tế
+    // đều gắn vào mã công trình, không hạch toán lại thủ công (KT-05).
+    const { data: siteId, error: siteError } = await dauThau.rpc('open_site_from_contract', {
+      p_contract_id: contractId,
+      p_site_address: 'KCN Long Hậu, Long An',
+    });
+    check('mở công trình', siteError);
+    expect(siteId).toBeTruthy();
+
+    // Ngân sách đã duyệt đi theo công trình, không phải lập lại một bảng Excel ở công trường
+    // (vướng mắc khảo sát #7 — "số liệu giữa các bộ phận không khớp nhau").
+    const { data: budgetLines } = await tgd
+      .from('project_budgets')
+      .select('id, construction_site_id')
+      .eq('bidding_project_id', projectId);
+    expect(budgetLines!.length).toBeGreaterThan(0);
+    expect(
+      budgetLines!.every((b) => b.construction_site_id === siteId),
+      'còn dòng ngân sách chưa gắn vào công trình thì TC-05 so thiếu chi phí',
+    ).toBe(true);
+
+    // --- Bước 11. Ban công trường nhận việc (TC-02) -------------------------------------
+    const chiHuy = await signInAs(ACCOUNTS.congTruongNvc);
+
+    const { error: logError } = await chiHuy.from('site_logs').insert({
+      company_id: nvc,
+      construction_site_id: siteId as string,
+      log_date: new Date().toISOString().slice(0, 10),
+      log_type: 'tien_do',
+      content: `${TEST_PREFIX} Nhận mặt bằng, dựng lán trại, tập kết thép hình.`,
+      workforce_count: 18,
+      logged_by: await currentUser(chiHuy),
+    });
+    check('ghi nhật ký công trường', logError);
+
+    // TC-05: chỉ huy trưởng theo được ngân sách của công trình mình — nhưng KHÔNG thấy dòng
+    // lợi nhuận mục tiêu. Đó là ranh giới Mẫu D, và nó phải đứng vững cả ở đường vòng này.
+    const { data: budgetStatus, error: statusError } = await chiHuy.rpc(
+      'construction_budget_status',
+      { p_site_id: siteId as string },
+    );
+    check('xem ngân sách công trình', statusError);
+    expect((budgetStatus as { cost_group: string }[]).length).toBeGreaterThan(0);
+    expect(
+      (budgetStatus as { cost_group: string }[]).some((r) => r.cost_group === 'loi_nhuan'),
+      'chỉ huy trưởng không được thấy lợi nhuận mục tiêu của công trình',
+    ).toBe(false);
+
+    const { data: bossView } = await tgd.rpc('construction_budget_status', {
+      p_site_id: siteId as string,
+    });
+    expect(
+      (bossView as { cost_group: string }[]).some((r) => r.cost_group === 'loi_nhuan'),
+    ).toBe(true);
+
+    // --- Bước 12. Nghiệm thu đợt 1 với chủ đầu tư (TC-04) -------------------------------
+    const { error: stageError } = await chiHuy.rpc('move_site_stage', {
+      p_site_id: siteId as string,
+      p_stage: 'dang_thi_cong',
+    });
+    check('chuyển công trình sang Đang thi công', stageError);
+
+    const { data: acceptanceId, error: acceptanceError } = await chiHuy.rpc('record_acceptance', {
+      p_site_id: siteId as string,
+      p_acceptance_type: 'khach_hang',
+      p_stage_name: 'Đợt 1 — phần móng',
+      p_value: 1_200_000_000,
+      p_counterpart_signed_by: 'Đại diện chủ đầu tư',
+    });
+    check('lập biên bản nghiệm thu', acceptanceError);
+
+    // Biên bản nghiệm thu chủ đầu tư là căn cứ thu tiền — Kế toán phải BIẾT mà không cần ai
+    // nhắn Zalo (TC-04, PRD Mục 7 tiêu chí 4).
+    const ketoan = await signInAs(ACCOUNTS.ketoan);
+    const { data: billingNotice } = await ketoan
+      .from('notifications')
+      .select('id, related_entity_id')
+      .eq('type', 'acceptance_billing')
+      .eq('related_entity_id', acceptanceId as string);
+    expect(billingNotice!.length).toBe(1);
+
     // --- Nghiệm thu: TRUY NGƯỢC từ hợp đồng về tận đầu nguồn ----------------------------
     // Đây là tiêu chí số 3 của Definition of Done: đứng ở hợp đồng phải trả lời được nó ra
     // đời từ cơ hội nào, theo bản dự toán nào, ai duyệt và duyệt lúc nào — không cần hỏi ai.

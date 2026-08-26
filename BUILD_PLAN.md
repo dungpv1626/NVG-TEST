@@ -327,16 +327,36 @@ vai trò làm việc đó ngoài đời, gọi đúng hàm mà giao diện gọi
 **Thứ tự bắt buộc bên trong:** `TC → MH → KHO → KT`. `NS` độc lập (chen vào bất cứ lúc nào).
 `SX` sau `KHO`.
 
-### 3A. Module TC (BSD 4.6) — cửa ngõ của Phase 3
-`construction_sites` · `site_logs` · `acceptance_records` · `subcontractors` · `warranties`
+### 3A. Module TC (BSD 4.6) — cửa ngõ của Phase 3 ✅ phần lõi đã xong
+`construction_sites` · `site_logs` · `acceptance_records` · `subcontractors` · `warranties` ·
+`warranty_claims` (thêm — TC-07 đòi ghi nguyên nhân/chi phí/kết quả của TỪNG lần phản ánh,
+không thuộc về hạng mục)
 
-- Nhận ngân sách từ DA-09/TK → lập kế hoạch nhân sự/vật tư/tiến độ (TC-01)
-- Nhật ký công trường có ảnh, theo ngày/tuần (TC-02) — **giao diện di động** (AFD 4.7)
-- `POST /api/construction-sites/:id/acceptance` — nghiệm thu, **tự thông báo Kế toán thu tiền** (TC-04)
-- `GET /api/construction-sites/:id/budget-status` — so ngân sách vs đã phát sinh / đã cam kết /
-  dự kiến còn phải chi, **cảnh báo sớm vượt** (TC-05)
-- ⚠️ Module **ĐỊNH HƯỚNG** — chưa có khảo sát Chỉ huy công trường (PRD 10). Schema để linh hoạt
-  (nullable/JSONB cho phần chưa chắc), **không xây UI sâu**, đánh dấu rõ phần suy luận gián tiếp.
+- ✅ Công trình mở từ hợp đồng đã ký (`open_site_from_contract`) hoặc tự mở khi bàn giao hồ sơ
+  thiết kế (`handover_design_to_construction` — chỗ migration 0025 đã để sẵn). Ngân sách đã
+  duyệt được GẮN vào công trình, không lập lại (TC-01).
+- ✅ Nhật ký công trường theo ngày, kèm quân số (dùng lại cho NS-04) và thời tiết. Chỉ người
+  ghi sửa được, trong 24 giờ — nhật ký sửa được bất cứ lúc nào thì không truy vết được (TC-08).
+- ✅ `record_acceptance` — nghiệm thu, và **chỉ nghiệm thu với CHỦ ĐẦU TƯ mới báo Kế toán thu
+  tiền** (TC-04). Nghiệm thu nội bộ / với tổ đội là việc khác hẳn.
+- ✅ `construction_budget_status` — so ngân sách vs đã phát sinh / đã cam kết / còn được chi
+  theo từng mã chi phí; dòng lợi nhuận bị lọc theo Mẫu D. Cảnh báo sớm ở ngưỡng 90% qua
+  trigger trên `project_budgets` (TC-05).
+- ✅ Tổ đội (TC-06) và bảo hành theo từng hạng mục kèm phản ánh (TC-07).
+- ✅ `project_budgets` mở rộng cho NVO: `design_project_id` + CHECK "đúng một hồ sơ cha", theo
+  đúng cách `estimates` đã dùng chung ở migration 0024. NVO làm trọn gói nên không đi qua gói
+  thầu nhưng vẫn cần TC-05.
+- ⏳ Còn lại: TC-03 (đề nghị mua vật tư từ công trường) — chờ Module MH ở 3B.
+- ⚠️ Module **ĐỊNH HƯỚNG** — chưa có khảo sát Chỉ huy công trường (PRD 10). **Đã CỐ Ý chưa
+  làm**, chờ khảo sát chứ không phải quên:
+  - Kế hoạch tiến độ chi tiết theo đầu việc và kế hoạch nhân sự/vật tư theo thời gian (phần
+    còn lại của TC-01) — chưa biết công trường lập tiến độ theo hạng mục, theo tuần hay theo
+    mũi thi công.
+  - Lịch sử đánh giá tổ đội theo từng đợt (TC-06) — hiện giữ đánh giá gần nhất, các lần trước
+    vẫn truy được qua `audit_logs`.
+  - Ảnh hiện trường mới là cột `photo_urls`, chưa có màn hình tải ảnh.
+  - Ba con số suy luận cần xác nhận: cửa sổ sửa nhật ký **24 giờ**, ngưỡng cảnh báo ngân sách
+    **90%**, thang đánh giá tổ đội **1–5**.
 
 ### 3B. Module MH (BSD 4.7)
 `purchase_requests` · `suppliers` · `quotations` · `purchase_orders` · `deliveries`
@@ -526,3 +546,6 @@ theo hạn mức · truy vết ngược tới chứng từ gốc.
 | 5 | **Hạn mức phê duyệt** tạm thời cụ thể theo vai trò × loại nghiệp vụ | Phase 0.2 (seed) |
 | 6 | **Công thức lương** NS-06 | Phase 3E |
 | 7 | **Đầu mối hỗ trợ kỹ thuật** (điền vào mẫu lỗi CGD 5.5) | Phase 4C |
+| 8 | **Một hợp đồng mở được nhiều công trình không?** Hiện chặn ở một, để tránh bấm hai lần thành hai công trình chia nhau một bộ ngân sách | Phase 3A (đã làm, đổi được bằng một tham số) |
+| 9 | **Ba con số suy luận của TC**: cửa sổ sửa nhật ký 24 giờ · ngưỡng cảnh báo ngân sách 90% · thang đánh giá tổ đội 1–5 | Phase 3A (đã làm, sửa ở một chỗ) |
+| 10 | **Công trường đo tiến độ thế nào** (theo khối lượng, theo đầu việc, theo mũi thi công?) — quyết định luôn cả kế hoạch tiến độ chi tiết của TC-01 | Phase 3A phần còn lại |

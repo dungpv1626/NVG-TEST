@@ -239,6 +239,20 @@
       "when": 1787710037686,
       "tag": "0033_fix_opportunity_stage_function",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1787726151625,
+      "tag": "0034_tc_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1787726152625,
+      "tag": "0035_tc_rls",
+      "breakpoints": true
     }
   ]
 }

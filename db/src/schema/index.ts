@@ -32,3 +32,6 @@ export * from './tk';
 
 // --- Module HD — Hợp đồng (Backend Schema 4.5) ---
 export * from './hd';
+
+// --- Module TC — Thi công và Ngân sách công trình (Backend Schema 4.6) ---
+export * from './tc';

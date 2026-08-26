@@ -27,6 +27,14 @@ import {
   ROLE_CODES,
   STATUS_GROUPS,
   UNIT_PRICE_SOURCES,
+  ACCEPTANCE_STATUSES,
+  ACCEPTANCE_TYPES,
+  SITE_LOG_TYPES,
+  SITE_STAGES,
+  SUBCONTRACTOR_STATUSES,
+  SUBCONTRACT_FORMS,
+  WARRANTY_CLAIM_STATUSES,
+  WARRANTY_STATUSES,
 } from '@nvg/shared';
 
 /**
@@ -124,3 +132,35 @@ export const contractTermTypeEnum = pgEnum('contract_term_type', CONTRACT_TERM_T
 
 /** Trạng thái xử lý một phát sinh ngoài hợp đồng — PRD HD-04. */
 export const amendmentStageEnum = pgEnum('amendment_stage', AMENDMENT_STAGES);
+
+/**
+ * Module TC — Thi công và Ngân sách công trình.
+ *
+ * ⚠️ Toàn bộ enum dưới đây thuộc module ĐỊNH HƯỚNG (PRD Mục 10): Chỉ huy – Giám sát công
+ * trường chưa có khảo sát trực tiếp. Giá trị là đề xuất của đội triển khai, xem lý do từng
+ * danh sách ở `@nvg/shared/tc`.
+ */
+
+/** Vòng đời một công trình — SUY LUẬN từ trình tự TC-01 → TC-07. */
+export const siteStageEnum = pgEnum('site_stage', SITE_STAGES);
+
+/** Loại mục nhật ký công trường — PRD TC-02, TC-08. */
+export const siteLogTypeEnum = pgEnum('site_log_type', SITE_LOG_TYPES);
+
+/** Ba loại nghiệm thu — PRD TC-04. Chỉ `khach_hang` mới là căn cứ thu tiền. */
+export const acceptanceTypeEnum = pgEnum('acceptance_type', ACCEPTANCE_TYPES);
+
+/** Trạng thái một biên bản nghiệm thu. */
+export const acceptanceStatusEnum = pgEnum('acceptance_status', ACCEPTANCE_STATUSES);
+
+/** Hình thức giao khoán tổ đội — PRD TC-06 ("hợp đồng hoặc đơn giá khoán"). */
+export const subcontractFormEnum = pgEnum('subcontract_form', SUBCONTRACT_FORMS);
+
+/** Trạng thái làm việc của tổ đội tại công trình — PRD TC-06. */
+export const subcontractorStatusEnum = pgEnum('subcontractor_status', SUBCONTRACTOR_STATUSES);
+
+/** Trạng thái bảo hành của một hạng mục — PRD TC-07. */
+export const warrantyStatusEnum = pgEnum('warranty_status', WARRANTY_STATUSES);
+
+/** Trạng thái xử lý một phản ánh bảo hành — PRD TC-07. */
+export const warrantyClaimStatusEnum = pgEnum('warranty_claim_status', WARRANTY_CLAIM_STATUSES);

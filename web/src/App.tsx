@@ -95,6 +95,12 @@ const ContractListPage = lazy(() =>
 const ContractDetailPage = lazy(() =>
   import('@/pages/hd/contract-detail').then((m) => ({ default: m.ContractDetailPage })),
 );
+const SiteListPage = lazy(() =>
+  import('@/pages/tc/site-list').then((m) => ({ default: m.SiteListPage })),
+);
+const SiteDetailPage = lazy(() =>
+  import('@/pages/tc/site-detail').then((m) => ({ default: m.SiteDetailPage })),
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -172,6 +178,12 @@ export default function App() {
               <Route path="hd/hop-dong" element={<ContractListPage />} />
               <Route path="hd/hop-dong/:id" element={<ContractDetailPage />} />
 
+              {/* TC — Thi công và ngân sách công trình (TC-01 → TC-08). Không có màn hình
+                  "tạo mới": công trình mở từ hợp đồng đã ký, hoặc tự mở khi hồ sơ thiết kế
+                  được bàn giao cho Ban công trường (TK-08). */}
+              <Route path="tc/cong-trinh" element={<SiteListPage />} />
+              <Route path="tc/cong-trinh/:id" element={<SiteDetailPage />} />
+
               {/* Hộp thư Phê duyệt — MỘT màn hình cho mọi module (Webapp Flow 4.6),
                   nên nằm ở gốc chứ không thuộc đường dẫn của module nào. */}
               <Route path="viec-can-lam" element={<ApprovalInboxPage />} />
@@ -181,8 +193,13 @@ export default function App() {
                   hàng rào thật vẫn là RLS, đây chỉ là điều hướng (Webapp Flow 6.5). */}
               <Route path="nen/giao-dien" element={<DesignShowcasePage />} />
               {MODULE_CODES.filter(
-                (c): c is Exclude<ModuleCode, 'BC' | 'CRM' | 'DA' | 'TK' | 'HD'> =>
-                  c !== 'BC' && c !== 'CRM' && c !== 'DA' && c !== 'TK' && c !== 'HD',
+                (c): c is Exclude<ModuleCode, 'BC' | 'CRM' | 'DA' | 'TK' | 'HD' | 'TC'> =>
+                  c !== 'BC' &&
+                  c !== 'CRM' &&
+                  c !== 'DA' &&
+                  c !== 'TK' &&
+                  c !== 'HD' &&
+                  c !== 'TC',
               ).map(
                 (code) => (
                   <Route

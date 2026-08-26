@@ -100,6 +100,11 @@ export async function cleanupTestData(): Promise<void> {
     // dạng "Giá dự thầu NVC-DA-… — [TEST] …", tiền tố test nằm ở GIỮA chuỗi.
     await sql`DELETE FROM approvals WHERE title LIKE ${'%' + TEST_PREFIX + '%'}`;
     await sql`DELETE FROM complaints WHERE title LIKE ${TEST_PREFIX + '%'}`;
+    // Xoá công trình kéo theo nhật ký, nghiệm thu, tổ đội, bảo hành và phản ánh bảo hành
+    // (khoá ngoại CASCADE). Phải đứng TRƯỚC hợp đồng và gói thầu: khoá ngoại của công
+    // trình tới hai hồ sơ đó là `ON DELETE SET NULL`, mà cột nguồn của công trình bị guard
+    // chặn sửa — xoá công trình trước thì không còn dây nào để CSDL phải dọn.
+    await sql`DELETE FROM construction_sites WHERE name LIKE ${'%' + TEST_PREFIX + '%'}`;
     // Xoá hợp đồng kéo theo điều khoản và phát sinh (khoá ngoại CASCADE).
     await sql`DELETE FROM contracts WHERE title LIKE ${TEST_PREFIX + '%'}`;
     // Xoá gói thầu kéo theo khối lượng, dự toán, hồ sơ thầu và ngân sách (khoá ngoại CASCADE).
