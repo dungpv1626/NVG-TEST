@@ -290,15 +290,30 @@ từ hồ sơ đó; Kế toán giữ nguyên chỉ xem. Hạn mức phê duyệt
 - `POST /api/contracts/:id/submit-approval` — duyệt theo hạn mức (HD-05)
 - RLS Mẫu **C**
 
-### 2E. Module BC — mức cơ bản
-Dashboard shell + các chỉ số đã có dữ liệu (số cơ hội, giá trị pipeline, hợp đồng chờ duyệt).
-Mỗi thẻ **bấm được, dẫn tới danh sách đã lọc sẵn** (AFD 4.1) — không phải thẻ chỉ để nhìn.
+### 2E. Module BC — mức cơ bản ✅ đã xong
 
-### ✅ Definition of Done — Phase 2
-1. **Golden Path 2 (NVO) chạy trọn**: Cơ hội → Dự án thiết kế → Phương án → Phiên bản bản vẽ → Dự toán → Hợp đồng
-2. **Golden Path 1 (NVC) chạy tới hợp đồng**: Cơ hội → Gói thầu → BOQ → Dự toán → Duyệt giá → Hợp đồng → Ngân sách
-3. Từ một hợp đồng, truy ngược được về đúng cơ hội gốc + đúng phiên bản dự toán đã duyệt + ai duyệt, khi nào
-4. Sửa bản vẽ nguồn → hệ thống cảnh báo BOQ đang bóc theo bản cũ
+Dashboard chỉ số thật, mỗi con số là một liên kết tới danh sách đã lọc sẵn (AFD 4.1) — đếm bằng
+đúng hàm mà danh sách dùng để hiện trạng thái, nên thẻ và danh sách không nói hai điều khác nhau.
+Bộ lọc kỳ báo cáo giữ trên thanh địa chỉ; nút truy cập nhanh theo AFD 6.1; phần BC-01 chưa có dữ
+liệu được nói thẳng thay vì dựng thẻ rỗng (BC-06).
+
+Kèm theo: sửa lỗi **"Toàn NVG" cho ra màn hình trắng** — NVG là mã tổng hợp nên không bảng giao
+dịch nào mang `company_id` đó; chọn nó nay bỏ điều kiện lọc và để RLS quyết định phạm vi
+(`useCompanyScope` / `withCompanyScope`). `EntityTable` nhận thêm bộ lọc trạng thái trên thanh
+địa chỉ (`?trang-thai=`) dùng chung cho mọi danh sách, và cột "Pháp nhân" khi đang gộp.
+
+### ✅ Definition of Done — Phase 2 — ✅ ĐẠT
+
+Kiểm chứng bằng `db/src/__tests__/golden-path.test.ts` — chạy trên CSDL thật, đăng nhập bằng đúng
+vai trò làm việc đó ngoài đời, gọi đúng hàm mà giao diện gọi (không dùng `service_role`).
+
+1. ✅ **Golden Path 2 (NVO) chạy trọn**: Cơ hội → Dự án thiết kế → Phương án → Phiên bản bản vẽ → Dự toán → Hợp đồng
+2. ✅ **Golden Path 1 (NVC) chạy tới hợp đồng**: Cơ hội → Gói thầu → BOQ → Dự toán → Duyệt giá → Hợp đồng → Ngân sách
+3. ✅ Từ một hợp đồng, truy ngược được về đúng cơ hội gốc + đúng phiên bản dự toán đã duyệt + ai duyệt, khi nào
+4. ✅ Sửa bản vẽ nguồn → dòng khối lượng bóc theo bản cũ tự lộ ra (`is_current_version = false`)
+
+> Còn nợ sang P4: bản E2E Playwright của hai Golden Path (mục 4E). Bản hiện tại chạy ở tầng dữ
+> liệu — chứng minh nghiệp vụ thông suốt, chưa chứng minh phần nối dây trên giao diện.
 
 ### 🔓 Mở khoá: P3 (TC cần `contracts` + `project_budgets`)
 

@@ -92,14 +92,14 @@
 <section class="card">
   <h3>Toàn hệ thống</h3>
   <p class="xs muted">Ước lượng theo khối lượng nghiệp vụ đã chạy được đầu-cuối, không theo số dòng mã.</p>
-  <div class="bar"><span style="width: 45%"></span></div>
-  <p class="xs muted" style="margin-top:6px">Khoảng 45% chặng đường tới bản demo ~95%. Giai đoạn 1 chỉ còn Dashboard cơ bản và buổi chạy thử đầu-cuối.</p>
+  <div class="bar"><span style="width: 55%"></span></div>
+  <p class="xs muted" style="margin-top:6px">Khoảng 55% chặng đường tới bản demo ~95%. <strong>Giai đoạn 1 đã hoàn thành và được nghiệm thu bằng hai luồng nghiệp vụ chạy trọn trên dữ liệu thật.</strong></p>
 
   <div class="stats">
-    <div class="stat"><b>5 / 12</b><span class="xs muted">module đã dựng (Nền tảng, CRM, Đấu thầu, Thiết kế, Hợp đồng)</span></div>
+    <div class="stat"><b>6 / 12</b><span class="xs muted">module đã dựng (Nền tảng, CRM, Đấu thầu, Thiết kế, Hợp đồng, Báo cáo)</span></div>
     <div class="stat"><b>37 / ~65</b><span class="xs muted">bảng cơ sở dữ liệu</span></div>
     <div class="stat"><b>32</b><span class="xs muted">migration đã chạy</span></div>
-    <div class="stat"><b>159</b><span class="xs muted">kiểm thử tự động, tất cả đang xanh</span></div>
+    <div class="stat"><b>180</b><span class="xs muted">kiểm thử tự động, tất cả đang xanh</span></div>
   </div>
 </section>
 
@@ -126,6 +126,15 @@
           chấp với khách nhất, nên quy tắc nằm trong cơ sở dữ liệu chứ không ở màn hình.</li>
       <li><strong>Dự toán dùng chung một bộ máy cho cả Đấu thầu và Thiết kế</strong> — không có
           bản sao thứ hai, nên công thức tính tiền chỉ có một chỗ để sửa.</li>
+      <li><strong>Dashboard điều hành (BC)</strong> — mỗi con số trên thẻ là một liên kết dẫn thẳng
+          tới danh sách đã lọc sẵn đúng theo điều kiện của thẻ, và được đếm bằng đúng phép tính mà
+          danh sách dùng, nên thẻ và danh sách không thể nói hai điều khác nhau. Phần chỉ số chưa
+          có dữ liệu được nói thẳng ở cuối trang thay vì hiện số 0 — trên màn hình điều hành, "0"
+          và "chưa đo được" nhìn giống nhau nhưng dẫn tới hai quyết định trái ngược.</li>
+      <li><strong>Chọn "Toàn NVG" nay xem được số liệu gộp cả ba pháp nhân</strong> — trước đó
+          Giám đốc Tài chính và Quản trị viên mở màn hình nào cũng trắng, vì hai vai trò này chỉ
+          được gán vào mã tổng hợp NVG mà mã đó không phát sinh giao dịch. Phân quyền vốn đã đúng;
+          chỗ sai nằm ở câu lọc dữ liệu.</li>
       <li><strong>Bịt một lỗ hổng phân quyền có ở cả bốn module</strong> — xem phần bên dưới.</li>
     </ul>
   </div>
@@ -148,16 +157,20 @@
   </div>
 
   <div class="card">
-    <h3><span class="pill s-progress">Đang làm</span></h3>
-    <p class="xs muted">Giai đoạn 1 — Xương sống thương mại. Chỉ còn hai việc.</p>
+    <h3><span class="pill s-done">Giai đoạn 1 — đã nghiệm thu</span></h3>
+    <p class="xs muted">Nghiệm thu không đo bằng số tính năng, mà bằng việc nghiệp vụ chạy trọn được.</p>
     <ul>
-      <li><strong>Dashboard cơ bản (BC)</strong> — các thẻ chỉ số bấm được, dẫn thẳng tới danh
-          sách đã lọc sẵn. Dữ liệu để hiển thị nay đã có đủ.</li>
-      <li><strong>Chạy thử đầu-cuối Giai đoạn 1</strong> trên dữ liệu thật: một cơ hội đi trọn
-          từ Kinh doanh tới hợp đồng đã ký, truy ngược được về đúng phiên bản dự toán đã duyệt,
-          ai duyệt và khi nào.</li>
-      <li><strong>Tìm kiếm toàn hệ thống</strong> và <strong>Trung tâm Thông báo</strong> —
-          bảng dữ liệu đã có, phần hiển thị chưa nối.</li>
+      <li><strong>Nhà Việt Cons</strong>: một cơ hội đi trọn Cơ hội → Gói thầu → Bóc khối lượng →
+          Dự toán → Duyệt giá → Nộp thầu → Trúng thầu → Hợp đồng đã ký → Ngân sách thi công.</li>
+      <li><strong>Nhà Việt One</strong>: Cơ hội → Dự án thiết kế → Phương án khách duyệt →
+          Bản vẽ ba bộ môn → Dự toán → Hợp đồng.</li>
+      <li><strong>Truy ngược được</strong>: đứng ở một hợp đồng đã ký, trả lời được nó ra đời từ
+          cơ hội nào, theo bản dự toán phiên bản mấy, ai duyệt, duyệt lúc nào và với căn cứ gì —
+          không cần hỏi ai.</li>
+      <li><strong>Bản vẽ đổi thì khối lượng bóc theo bản cũ tự lộ ra</strong> — giải đúng vướng
+          mắc được nhắc nhiều nhất trong khảo sát.</li>
+      <li>Cả bốn điểm trên chạy như kiểm thử tự động, đăng nhập bằng đúng tài khoản của người làm
+          việc đó ngoài đời, nên chúng được chạy lại mỗi lần sửa mã chứ không phải một lần rồi thôi.</li>
     </ul>
   </div>
 
@@ -171,6 +184,8 @@
           nhập xuất tồn.</li>
       <li><strong>Kế toán</strong> — đề nghị thanh toán, thu tiền theo tiến độ hợp đồng, và phần
           "đã thu / còn phải thu" hiện đang là khung trống trong màn hình Hợp đồng.</li>
+      <li><strong>Tìm kiếm toàn hệ thống</strong> và <strong>Trung tâm Thông báo</strong> — bảng
+          dữ liệu đã có, phần hiển thị chưa nối. Làm xen kẽ, không chặn Giai đoạn 2.</li>
     </ul>
   </div>
 
@@ -216,13 +231,13 @@
     <tr>
       <td><strong>P2</strong> Xương sống thương mại<br><span class="xs muted">Giai đoạn 1 của PRD</span></td>
       <td>CRM · Dự án–Đấu thầu · Thiết kế · Hợp đồng · Báo cáo cơ bản</td>
-      <td><span class="pill s-progress">Đang làm</span></td>
-      <td>CRM, Đấu thầu, Thiết kế và Hợp đồng đã xong phần lõi; còn Dashboard cơ bản và buổi chạy thử đầu-cuối</td>
+      <td><span class="pill s-done">Hoàn thành</span></td>
+      <td>Cả bốn tiêu chí nghiệm thu đều đạt và được canh bằng kiểm thử tự động. Còn nợ sang Giai đoạn 3: bản kiểm thử chạy trên trình duyệt thật cho hai luồng này</td>
     </tr>
     <tr>
       <td><strong>P3</strong> Vận hành và tài chính<br><span class="xs muted">Giai đoạn 2 của PRD</span></td>
       <td>Thi công · Mua hàng · Kho · Kế toán · Nhân sự · Sản xuất · Báo cáo đầy đủ</td>
-      <td><span class="pill s-pending">Sắp làm</span></td>
+      <td><span class="pill s-progress">Bắt đầu ngay</span></td>
       <td>Điều kiện phụ thuộc đã đủ: hợp đồng và ngân sách thi công từ P2 nay đã có</td>
     </tr>
     <tr>
@@ -259,8 +274,8 @@
     <tr><td><code>HD</code></td><td>Hợp đồng</td><td><span class="pill s-progress">Đang làm</span></td>
         <td>Soạn hợp đồng từ hồ sơ nguồn không nhập lại, checklist 8 nhóm điều khoản, trình ký theo hạn mức, ghi nhận đã ký và báo cho Thi công/Kế toán, phát sinh ngoài hợp đồng đủ luồng, quyết toán và hủy. Còn phần "đã thu / còn phải thu" — chờ số liệu thật từ Kế toán (Giai đoạn 2).</td></tr>
     <tr><td><code>BC</code></td><td>Báo cáo &amp; Dashboard</td><td><span class="pill s-progress">Đang làm</span></td>
-        <td>Có khung dashboard với thẻ việc cần làm, chờ phê duyệt, quá hạn. Chỉ số đầy đủ chờ dữ liệu các module sau.</td></tr>
-    <tr><td><code>TC</code></td><td>Thi công &amp; Ngân sách</td><td><span class="pill s-pending">Sắp làm</span></td><td>Giai đoạn 2 · là module kế tiếp · yêu cầu mới ở mức định hướng, chưa khảo sát chỉ huy công trường</td></tr>
+        <td>Dashboard chỉ số thật cho Cơ hội, Gói thầu, Thiết kế, Hợp đồng: số hồ sơ theo từng trạng thái, giá trị đang theo đuổi, tỷ lệ chốt hợp đồng, giá trị đã ký, việc chờ duyệt và việc quá hạn. Lọc theo kỳ và theo pháp nhân; mỗi con số bấm được. Báo cáo lãi/lỗ và dòng tiền chờ dữ liệu Giai đoạn 2.</td></tr>
+    <tr><td><code>TC</code></td><td>Thi công &amp; Ngân sách</td><td><span class="pill s-pending">Sắp làm</span></td><td>Giai đoạn 2 · <strong>là module bắt đầu ngay</strong> · yêu cầu mới ở mức định hướng, chưa khảo sát chỉ huy công trường</td></tr>
     <tr><td><code>MH</code></td><td>Mua hàng – Vật tư</td><td><span class="pill s-draft">Chưa bắt đầu</span></td><td>Giai đoạn 2</td></tr>
     <tr><td><code>KHO</code></td><td>Kho</td><td><span class="pill s-draft">Chưa bắt đầu</span></td><td>Giai đoạn 2 · cách làm ngoại tuyến còn chờ quyết định</td></tr>
     <tr><td><code>KT</code></td><td>Kế toán – Tài chính</td><td><span class="pill s-draft">Chưa bắt đầu</span></td><td>Giai đoạn 2 · kết nối phần mềm kế toán còn chờ quyết định</td></tr>
@@ -295,7 +310,7 @@
 <h2>Ranh giới đã đặt ra và đang giữ</h2>
 <div class="card">
   <ul>
-    <li><strong>Phân quyền nằm trong cơ sở dữ liệu</strong>, không nằm ở giao diện — đi đường nào cũng bị kiểm tại một chỗ. Có 115 kiểm thử tự động canh phần này.</li>
+    <li><strong>Phân quyền nằm trong cơ sở dữ liệu</strong>, không nằm ở giao diện — đi đường nào cũng bị kiểm tại một chỗ. Có 119 kiểm thử tự động canh phần này.</li>
     <li><strong>Không cache dữ liệu nghiệp vụ trên điện thoại.</strong> Ứng dụng cài được và mở nhanh, nhưng dữ liệu vẫn lấy trực tiếp mỗi lần — để hồ sơ không đọc được sau khi đăng xuất trên máy dùng chung.</li>
     <li><strong>Mã hồ sơ do hệ thống cấp và không sửa được</strong>, pháp nhân của hồ sơ không đổi được sau khi tạo — giữ đúng ranh giới lãi/lỗ giữa ba pháp nhân.</li>
     <li><strong>Không xoá hẳn hồ sơ nghiệp vụ</strong>, chỉ đánh dấu đã xoá; mọi thay đổi trạng thái quan trọng đều ghi lịch sử riêng.</li>

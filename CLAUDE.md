@@ -165,6 +165,16 @@ Mọi lượt xem/sửa dữ liệu **Mẫu D** phải ghi vào `sensitive_acces
 - Bảng **DÙNG CHUNG** (`customers`, `suppliers`, `users`) **KHÔNG có `company_id`** — liên hệ với pháp nhân
   qua bảng giao dịch (một khách hàng có thể xuất hiện ở cơ hội của nhiều pháp nhân).
 
+> **KHÔNG lọc `company_id = <id của NVG>`.** Vì NVG không phải pháp nhân giao dịch, không dòng nào
+> trong bảng giao dịch mang mã đó — lọc như vậy cho ra danh sách RỖNG ở mọi màn hình. Lỗi này đã
+> xảy ra thật: Giám đốc Tài chính và Quản trị viên chỉ được gán vào NVG nên mở màn hình nào cũng
+> trắng, trong khi phân quyền hoàn toàn đúng.
+>
+> Chọn "Toàn NVG" (AFD 2.2) thì **bỏ hẳn điều kiện lọc** và để RLS quyết định phạm vi — dùng
+> `useCompanyScope()` + `withCompanyScope()` (`web/src/lib/company-scope.ts`), đừng viết lại điều
+> kiện ở từng hook. Bỏ lọc KHÔNG mở thêm quyền cho ai (có test khẳng định điều đó); màn hình gộp
+> phải hiện thêm cột **Pháp nhân** để không đọc nhầm số của công ty khác.
+
 ### 3.6 Thực thể trung tâm — "Hồ sơ 360°" (BSD 2.1, AFD 5.1)
 
 ~65 bảng trên 12 module. Các thực thể được tham chiếu xuyên module nhiều nhất — **liên kết đến, KHÔNG sao

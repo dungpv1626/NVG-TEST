@@ -11,12 +11,11 @@
  * Test chạy trên cơ sở dữ liệu DEV thật và cần đã chạy `npm run db:seed`.
  */
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   ACCOUNTS,
   anonClient,
-  cleanupTestData,
   hasCredentials,
   PG_INSUFFICIENT_PRIVILEGE,
   PROTECTED_TABLES,
@@ -26,14 +25,6 @@ import {
 
 // Không có thông tin kết nối thì bỏ qua thay vì làm hỏng cả bộ test (ví dụ trên CI chưa cấu hình).
 const describeDb = hasCredentials ? describe : describe.skip;
-
-// Dọn sạch mọi bản ghi do test tạo ra, kể cả những bản không xóa được qua RLS
-// (ví dụ cơ hội đã bàn giao). Không dọn thì dữ liệu test tích tụ trong CSDL phát triển.
-if (hasCredentials) {
-  afterAll(async () => {
-    await cleanupTestData();
-  });
-}
 
 describeDb('RLS — vai trò anon (chưa đăng nhập)', () => {
   it.each(PROTECTED_TABLES)('không đọc được bảng %s', async (table) => {
