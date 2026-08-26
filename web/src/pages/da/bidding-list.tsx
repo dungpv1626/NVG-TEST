@@ -12,7 +12,7 @@ import {
   type MoneyValue,
 } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
-import { CreateButton, EntityTable, type EntityRow } from '@/components/entity/entity-table';
+import { EntityTable, useCreateActions, type EntityRow } from '@/components/entity/entity-table';
 import { useBiddingProjects } from '@/hooks/use-bidding-projects';
 import { useCan } from '@/lib/auth';
 import { DaNav } from './da-nav';
@@ -42,10 +42,12 @@ export function BiddingListPage() {
   }));
 
   const createLabel = BUTTONS.create('gói thầu');
-  const createButton = canCreate ? (
-    <CreateButton label={createLabel} to="/da/goi-thau/tao-moi" />
-  ) : undefined;
-  const isEmpty = !isLoading && !error && rows.length === 0;
+  const { headerAction, emptyAction } = useCreateActions({
+    canCreate,
+    label: createLabel,
+    to: '/da/goi-thau/tao-moi',
+    isEmpty: !isLoading && !error && rows.length === 0,
+  });
 
   return (
     <>
@@ -53,7 +55,7 @@ export function BiddingListPage() {
       <PageHeader
         title="Gói thầu"
         breadcrumbs={[{ label: 'Dự án – Đấu thầu' }, { label: 'Gói thầu' }]}
-        actions={isEmpty ? undefined : createButton}
+        actions={headerAction}
       />
 
       <EntityTable<BiddingRow>
@@ -68,11 +70,7 @@ export function BiddingListPage() {
             ? 'Chưa có gói thầu nào. Tạo hồ sơ gói thầu khi nhận được thư mời thầu hoặc cơ hội đã chốt từ Kinh doanh.'
             : 'Chưa có gói thầu nào. Vai trò hiện tại không có quyền tạo hồ sơ gói thầu.'
         }
-        emptyAction={
-          canCreate ? (
-            <CreateButton label={createLabel} to="/da/goi-thau/tao-moi" variant="secondary" />
-          ) : undefined
-        }
+        emptyAction={emptyAction}
         columns={[
           { key: 'stage', header: 'Bước', render: (r) => r.stageLabel },
           {

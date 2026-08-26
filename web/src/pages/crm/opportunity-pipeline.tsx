@@ -22,7 +22,7 @@ import {
 } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { CrmNav } from './crm-nav';
-import { CreateButton, EntityTable, type EntityRow } from '@/components/entity/entity-table';
+import { EntityTable, useCreateActions, type EntityRow } from '@/components/entity/entity-table';
 import { KanbanBoard, type KanbanCard } from '@/components/entity/kanban-board';
 import { Button } from '@/components/ui/button';
 import { useMoveStage, useOpportunities, type OpportunityRecord } from '@/hooks/use-opportunities';
@@ -48,12 +48,12 @@ export function OpportunityPipelinePage() {
   const [moveError, setMoveError] = useState<string | null>(null);
 
   const createLabel = BUTTONS.create('cơ hội');
-  const createButton = canCreate ? (
-    <CreateButton label={createLabel} to="/crm/co-hoi/tao-moi" />
-  ) : undefined;
-  const emptyStateButton = canCreate ? (
-    <CreateButton label={createLabel} to="/crm/co-hoi/tao-moi" variant="secondary" />
-  ) : undefined;
+  const { headerAction, emptyAction } = useCreateActions({
+    canCreate,
+    label: createLabel,
+    to: '/crm/co-hoi/tao-moi',
+    isEmpty: !isLoading && !error && (data ?? []).length === 0,
+  });
 
   function setView(next: 'kanban' | 'danh-sach') {
     const params = new URLSearchParams(searchParams);
@@ -123,7 +123,11 @@ export function OpportunityPipelinePage() {
         breadcrumbs={[{ label: 'Khách hàng & Cơ hội' }, { label: 'Cơ hội kinh doanh' }]}
         actions={
           <div className="flex items-center gap-2">
-            <div className="flex rounded-sm border border-border" role="group" aria-label="Chế độ xem">
+            <div
+              className="flex rounded-sm border border-border"
+              role="group"
+              aria-label="Chế độ xem"
+            >
               <ViewButton
                 active={view === 'kanban'}
                 onClick={() => setView('kanban')}
@@ -139,13 +143,16 @@ export function OpportunityPipelinePage() {
                 <List className="size-4" />
               </ViewButton>
             </div>
-            {createButton}
+            {headerAction}
           </div>
         }
       />
 
       {moveError && (
-        <p role="alert" className="mb-3 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
+        <p
+          role="alert"
+          className="mb-3 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
+        >
           {moveError}
         </p>
       )}
@@ -169,7 +176,7 @@ export function OpportunityPipelinePage() {
               ? EMPTY_STATES.list('cơ hội kinh doanh', createLabel)
               : 'Chưa có cơ hội kinh doanh nào.'
           }
-          emptyAction={emptyStateButton}
+          emptyAction={emptyAction}
         />
       ) : (
         <EntityTable<OpportunityRow>
@@ -184,7 +191,7 @@ export function OpportunityPipelinePage() {
               ? EMPTY_STATES.list('cơ hội kinh doanh', createLabel)
               : 'Chưa có cơ hội kinh doanh nào.'
           }
-          emptyAction={emptyStateButton}
+          emptyAction={emptyAction}
           columns={[
             { key: 'customer', header: 'Khách hàng', render: (r) => r.customerName },
             {
@@ -229,7 +236,10 @@ function ViewButton({
       onClick={onClick}
       aria-pressed={active}
       title={label}
-      className={cn('rounded-none first:rounded-l-sm last:rounded-r-sm', active && 'bg-brand-subtle text-brand')}
+      className={cn(
+        'rounded-none first:rounded-l-sm last:rounded-r-sm',
+        active && 'bg-brand-subtle text-brand',
+      )}
     >
       {children}
       <span className="hidden sm:inline">{label}</span>

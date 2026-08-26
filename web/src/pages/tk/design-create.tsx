@@ -12,9 +12,10 @@
 
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BUTTONS, CONFIRMS, ERRORS } from '@nvg/shared';
+import { BUTTONS, ERRORS } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
+import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { BlockedNotice } from '@/components/ui/states';
@@ -23,6 +24,7 @@ import { useCreateDesignProject } from '@/hooks/use-design-projects';
 import { useEntityList } from '@/hooks/use-entity';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useOpportunities } from '@/hooks/use-opportunities';
+import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard';
 import { useAuth, useCan } from '@/lib/auth';
 import { useCompanyStore } from '@/lib/company-store';
 import { supabase } from '@/lib/supabase';
@@ -65,6 +67,9 @@ export function DesignCreatePage() {
   });
   const [error, setError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  // Hàng rào chống mất dữ liệu áp cho MỌI lối ra khỏi trang, không riêng nút Hủy
+  // (Webapp Flow 6.3).
+  const releaseUnsavedGuard = useUnsavedChangesGuard(dirty);
 
   function update(field: keyof typeof form, value: string) {
     setForm((f) => {
@@ -117,6 +122,7 @@ export function DesignCreatePage() {
       });
 
       setDirty(false);
+      releaseUnsavedGuard();
       navigate(`/tk/du-an/${created.id}`, { replace: true });
     } catch (e) {
       setError(toUserMessage(e, 'create'));
@@ -124,7 +130,8 @@ export function DesignCreatePage() {
   }
 
   function handleCancel() {
-    if (dirty && !window.confirm(CONFIRMS.unsavedChanges)) return;
+    // KHÔNG hỏi ở đây: `useUnsavedChangesGuard` đã chặn mọi lần chuyển trang, kể cả
+    // lần này. Hỏi thêm một lần nữa là bắt người dùng xác nhận hai lần cho một việc.
     navigate('/tk/du-an');
   }
 
@@ -212,10 +219,9 @@ export function DesignCreatePage() {
             label="Hạn bàn giao hồ sơ thi công"
             hint="Mốc để tính quá hạn trên danh sách và Dashboard."
           >
-            <Input
-              type="date"
+            <DateInput
               value={form.handoverDeadline}
-              onChange={(e) => update('handoverDeadline', e.target.value)}
+              onChange={(v) => update('handoverDeadline', v)}
             />
           </Field>
 

@@ -11,15 +11,16 @@
 
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { PURCHASE_ORDER_STAGE_META, formatCurrency, formatDate, formatDateTime } from '@nvg/shared';
 import {
-  PURCHASE_ORDER_STAGE_META,
-  formatCurrency,
-  formatDate,
-  formatDateTime,
-} from '@nvg/shared';
-import { DetailFields, EntityDetail, type RelatedGroup } from '@/components/entity/entity-detail';
+  DetailFields,
+  EntityDetail,
+  type RelatedGroup,
+  RecordNotFound,
+} from '@/components/entity/entity-detail';
 import { Button } from '@/components/ui/button';
-import { CardGridSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
+import { DateInput } from '@/components/ui/date-input';
+import { CardGridSkeleton, ErrorState } from '@/components/ui/states';
 import {
   useCancelPurchaseOrder,
   useDeliveries,
@@ -49,7 +50,11 @@ export function PurchaseOrderDetailPage() {
   if (error) return <ErrorState message={toUserMessage(error)} />;
   if (!data) {
     return (
-      <EmptyState message="Không tìm thấy đơn đặt hàng này. Có thể hồ sơ đã được xóa hoặc vai trò hiện tại chưa được cấp quyền xem." />
+      <RecordNotFound
+        entity="đơn đặt hàng"
+        listPath="/mh/don-hang"
+        listLabel="Quay lại danh sách đơn đặt hàng"
+      />
     );
   }
 
@@ -112,13 +117,17 @@ export function PurchaseOrderDetailPage() {
   return (
     <>
       {actionError && (
-        <p role="alert" className="mb-3 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
+        <p
+          role="alert"
+          className="mb-3 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
+        >
           {actionError}
         </p>
       )}
 
       <EntityDetail
         breadcrumbs={[
+          { label: 'Mua hàng – Vật tư' },
           { label: 'Đơn đặt hàng', to: '/mh/don-hang' },
           { label: order.code ?? 'Đơn đặt hàng' },
         ]}
@@ -163,7 +172,10 @@ export function PurchaseOrderDetailPage() {
                     <p className="font-medium">Báo giá đã chọn</p>
                     <p className="text-fg-muted">
                       {order.quotation_id ? (
-                        <Link className="text-brand underline-offset-4 hover:underline" to={`/mh/de-nghi-mua/${order.purchase_request_id}?tab=bao-gia`}>
+                        <Link
+                          className="text-brand underline-offset-4 hover:underline"
+                          to={`/mh/de-nghi-mua/${order.purchase_request_id}?tab=bao-gia`}
+                        >
                           Mở bảng so sánh báo giá của đề nghị mua
                         </Link>
                       ) : (
@@ -172,7 +184,10 @@ export function PurchaseOrderDetailPage() {
                     </p>
                   </li>
                   {(deliveries ?? []).map((delivery) => (
-                    <li key={delivery.id} className="rounded-lg border border-border bg-surface px-4 py-3">
+                    <li
+                      key={delivery.id}
+                      className="rounded-lg border border-border bg-surface px-4 py-3"
+                    >
                       <p className="font-medium">
                         Phiếu giao nhận {delivery.code ?? EM_DASH} ·{' '}
                         {formatDate(delivery.delivered_date)}
@@ -230,22 +245,21 @@ export function PurchaseOrderDetailPage() {
                   <div className="mt-4 grid gap-4 sm:grid-cols-2">
                     <label className="block">
                       <span className="block font-medium">Ngày giao cam kết</span>
-                      <input
-                        type="date"
+                      <DateInput
                         defaultValue={order.promised_date ?? ''}
-                        className="mt-1 h-9 w-full rounded-sm border border-border-strong bg-surface px-3"
-                        onBlur={(e) =>
+                        className="mt-1"
+                        onBlur={(iso) =>
                           void run(() =>
                             update.mutateAsync({
                               id: order.id,
-                              changes: { promised_date: e.target.value || null },
+                              changes: { promised_date: iso || null },
                             }),
                           )
                         }
                       />
                       <span className="mt-1 block text-xs text-fg-subtle">
-                        Nhà cung cấp dời ngày giao thì sửa ở đây — cột thời hạn ở danh sách đọc
-                        đúng con số này.
+                        Nhà cung cấp dời ngày giao thì sửa ở đây — cột thời hạn ở danh sách đọc đúng
+                        con số này.
                       </span>
                     </label>
 

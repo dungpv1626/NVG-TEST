@@ -22,8 +22,10 @@ import {
 } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
+import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { MoneyInput } from '@/components/ui/money-input';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
 import {
   useRecordScaffoldingEvent,
@@ -121,7 +123,10 @@ export function ScaffoldingPage() {
       />
 
       {pageError && (
-        <p role="alert" className="mb-3 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
+        <p
+          role="alert"
+          className="mb-3 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
+        >
           {pageError}
         </p>
       )}
@@ -184,9 +189,7 @@ export function ScaffoldingPage() {
                     {canEdit && (
                       <Button
                         variant="subtle"
-                        onClick={() =>
-                          setFormAssetId(formAssetId === asset.id ? null : asset.id)
-                        }
+                        onClick={() => setFormAssetId(formAssetId === asset.id ? null : asset.id)}
                       >
                         Lập biên bản
                       </Button>
@@ -217,7 +220,10 @@ export function ScaffoldingPage() {
                           <option value="thanh_ly">{SCAFFOLDING_EVENT_LABELS.thanh_ly}</option>
                         </select>
                       </Field>
-                      <Field label={`Số lượng (còn ${formatNumber(Number(asset.quantity))})`} required>
+                      <Field
+                        label={`Số lượng (còn ${formatNumber(Number(asset.quantity))})`}
+                        required
+                      >
                         <Input
                           name="quantity"
                           type="number"
@@ -228,9 +234,8 @@ export function ScaffoldingPage() {
                         />
                       </Field>
                       <Field label="Ngày lập">
-                        <Input
+                        <DateInput
                           name="event_date"
-                          type="date"
                           defaultValue={new Date().toISOString().slice(0, 10)}
                         />
                       </Field>
@@ -254,7 +259,7 @@ export function ScaffoldingPage() {
                         </Field>
                       )}
                       <Field label="Chi phí hoặc bồi thường (đồng)">
-                        <Input name="amount" type="number" min="0" step="1" defaultValue={0} />
+                        <MoneyInput name="amount" defaultValue="0" />
                       </Field>
                       <Field label="Bên chịu trách nhiệm">
                         <Input name="responsible_party" maxLength={255} />

@@ -14,13 +14,14 @@
 
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { BUTTONS, CONFIRMS, ERRORS } from '@nvg/shared';
+import { BUTTONS, ERRORS } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { BlockedNotice, CardGridSkeleton, ErrorState } from '@/components/ui/states';
 import { useActiveUsers } from '@/hooks/use-active-users';
 import { useEntityDetail, useUpdateEntity } from '@/hooks/use-entity';
 import { toUserMessage } from '@/hooks/use-error-message';
+import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard';
 import { useAuth, useCan, useIsResponsible } from '@/lib/auth';
 import { CustomerFields, customerPayload, type CustomerFormValues } from './customer-form';
 
@@ -64,6 +65,9 @@ export function CustomerEditPage() {
   const [loadedId, setLoadedId] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  // Hàng rào chống mất dữ liệu áp cho MỌI lối ra khỏi trang, không riêng nút Hủy
+  // (Webapp Flow 6.3).
+  const releaseUnsavedGuard = useUnsavedChangesGuard(dirty);
 
   // Nạp dữ liệu vào biểu mẫu MỘT lần cho mỗi hồ sơ. Không đồng bộ lại ở các lần render sau:
   // nếu `data` đổi trong lúc người dùng đang gõ (TanStack Query tải lại nền), ghi đè state
@@ -115,6 +119,7 @@ export function CustomerEditPage() {
     try {
       await updateCustomer.mutateAsync({ id, changes: customerPayload(form) });
       setDirty(false);
+      releaseUnsavedGuard();
       navigate(detailPath, { replace: true });
     } catch (e) {
       setSaveError(toUserMessage(e, 'edit'));
@@ -122,7 +127,8 @@ export function CustomerEditPage() {
   }
 
   function handleCancel() {
-    if (dirty && !window.confirm(CONFIRMS.unsavedChanges)) return;
+    // KHÔNG hỏi ở đây: `useUnsavedChangesGuard` đã chặn mọi lần chuyển trang, kể cả
+    // lần này. Hỏi thêm một lần nữa là bắt người dùng xác nhận hai lần cho một việc.
     navigate(detailPath);
   }
 
@@ -185,8 +191,8 @@ export function CustomerEditPage() {
         {/* Mã hồ sơ hiển thị để đối chiếu, KHÔNG cho sửa — nó là căn cứ truy ngược của mọi
             hồ sơ liên quan (Backend Schema 2.3). */}
         <p className="mb-4 text-fg-subtle">
-          Mã hồ sơ <span className="font-mono text-fg">{data.code}</span> — do hệ thống cấp,
-          không thay đổi được.
+          Mã hồ sơ <span className="font-mono text-fg">{data.code}</span> — do hệ thống cấp, không
+          thay đổi được.
         </p>
 
         <CustomerFields
@@ -201,7 +207,10 @@ export function CustomerEditPage() {
         />
 
         {saveError && (
-          <p role="alert" className="mt-4 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
+          <p
+            role="alert"
+            className="mt-4 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
+          >
             {saveError}
           </p>
         )}

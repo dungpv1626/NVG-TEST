@@ -92,7 +92,13 @@ export const STOCK_ISSUE_REASON_LABELS: Readonly<Record<StockIssueReason, string
  * với sổ kho; xác định nguyên nhân chênh lệch; lập biên bản và TRÌNH PHÊ DUYỆT TRƯỚC KHI
  * điều chỉnh số liệu".
  */
-export const STOCKTAKE_STATUSES = ['dang_kiem', 'cho_duyet', 'da_dieu_chinh', 'huy'] as const;
+export const STOCKTAKE_STATUSES = [
+  'dang_kiem',
+  'cho_duyet',
+  'khop_so',
+  'da_dieu_chinh',
+  'huy',
+] as const;
 export type StocktakeStatus = (typeof STOCKTAKE_STATUSES)[number];
 
 export const STOCKTAKE_STATUS_META: Readonly<
@@ -108,6 +114,17 @@ export const STOCKTAKE_STATUS_META: Readonly<
     statusGroup: 'pending_approval',
     description: 'Đã có biên bản chênh lệch, chờ người có thẩm quyền duyệt.',
   },
+  /*
+   * Đếm xong và khớp sổ — kết quả TỐT NHẤT của một đợt kiểm kê, nên phải có trạng thái riêng.
+   *
+   * Gộp vào `da_dieu_chinh` thì lịch sử kiểm kê đọc ra như thể sổ kho đã bị sửa, còn gộp vào
+   * `huy` thì một lần kiểm đúng bị ghi thành đã hủy và lần kiểm sau mất căn cứ đối chiếu.
+   */
+  khop_so: {
+    label: 'Đã đóng — khớp sổ',
+    statusGroup: 'completed',
+    description: 'Số đếm bằng số sổ ở mọi vật tư; sổ kho giữ nguyên và kho mở lại nhập xuất.',
+  },
   da_dieu_chinh: {
     label: 'Đã điều chỉnh',
     statusGroup: 'completed',
@@ -119,6 +136,31 @@ export const STOCKTAKE_STATUS_META: Readonly<
     description: 'Đợt kiểm kê bị hủy, sổ kho giữ nguyên.',
   },
 };
+
+/**
+ * Nhãn của một trạng thái kiểm kê, chịu được giá trị giao diện CHƯA BIẾT.
+ *
+ * `STOCKTAKE_STATUS_META[status]` tra thẳng sẽ trả `undefined` khi cơ sở dữ liệu có thêm một
+ * giá trị enum mà bản giao diện đang chạy chưa biết — và vì mọi nơi dùng đều đọc tiếp
+ * `.statusGroup`, cả trang vỡ thành màn hình trắng kèm stack trace. Đó là tình huống có thật
+ * chứ không phải giả định: CSDL và giao diện deploy riêng, nên luôn có quãng một bên mới hơn.
+ *
+ * Trạng thái lạ quy về nhóm "Đang xử lý" và hiện chính mã đó: đọc hơi thô nhưng vẫn dùng được
+ * màn hình, và không lộ chi tiết kỹ thuật ra cho người dùng (Content Guidelines 5.5).
+ */
+export function stocktakeStatusMeta(status: string): {
+  label: string;
+  statusGroup: StatusGroup;
+  description: string;
+} {
+  return (
+    STOCKTAKE_STATUS_META[status as StocktakeStatus] ?? {
+      label: status,
+      statusGroup: 'in_progress',
+      description: '',
+    }
+  );
+}
 
 /* ========================================================================== *
  * Giàn giáo — KHO-06
@@ -216,9 +258,8 @@ export interface StockLevelInput {
 export function stockAlerts(item: StockLevelInput, today: Date = new Date()): StockAlert[] {
   const alerts: StockAlert[] = [];
   const onHand = Number(item.quantityOnHand ?? 0);
-  const min = item.minQuantity === null || item.minQuantity === undefined
-    ? null
-    : Number(item.minQuantity);
+  const min =
+    item.minQuantity === null || item.minQuantity === undefined ? null : Number(item.minQuantity);
 
   if (onHand <= 0) {
     alerts.push('het_hang');

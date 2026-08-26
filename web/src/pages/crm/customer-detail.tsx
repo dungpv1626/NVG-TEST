@@ -20,7 +20,7 @@ import {
   formatDateTime,
   formatPhone,
 } from '@nvg/shared';
-import { DetailFields, EntityDetail } from '@/components/entity/entity-detail';
+import { DetailFields, EntityDetail, RecordNotFound } from '@/components/entity/entity-detail';
 import { Button } from '@/components/ui/button';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
 import { EmptyState, ErrorState, CardGridSkeleton } from '@/components/ui/states';
@@ -75,7 +75,11 @@ export function CustomerDetailPage() {
   if (error) return <ErrorState message={toUserMessage(error)} />;
   if (!data) {
     return (
-      <EmptyState message="Không tìm thấy hồ sơ khách hàng này. Có thể hồ sơ đã được xóa hoặc vai trò hiện tại chưa được cấp quyền xem." />
+      <RecordNotFound
+        entity="hồ sơ khách hàng"
+        listPath="/crm/khach-hang"
+        listLabel="Quay lại danh sách khách hàng"
+      />
     );
   }
 
@@ -133,7 +137,10 @@ export function CustomerDetailPage() {
                   return (
                     <li key={o.id} className="rounded-lg border border-border bg-surface p-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <Link to={`/crm/co-hoi/${o.id}`} className="font-medium text-brand hover:underline">
+                        <Link
+                          to={`/crm/co-hoi/${o.id}`}
+                          className="font-medium text-brand hover:underline"
+                        >
                           {o.name}
                         </Link>
                         <div className="flex items-center gap-2">
@@ -143,7 +150,9 @@ export function CustomerDetailPage() {
                       </div>
                       <div className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-fg-subtle">
                         <span className="font-mono">{o.code}</span>
-                        {o.estimated_value != null && <span>{formatCurrency(o.estimated_value)}</span>}
+                        {o.estimated_value != null && (
+                          <span>{formatCurrency(o.estimated_value)}</span>
+                        )}
                         {o.owner?.full_name && <span>{o.owner.full_name}</span>}
                       </div>
                     </li>
@@ -162,7 +171,9 @@ export function CustomerDetailPage() {
                 message="Chưa ghi nhận khiếu nại nào từ khách hàng này."
                 action={
                   <Button variant="secondary" asChild>
-                    <Link to={`/crm/khieu-nai/tao-moi?khach-hang=${data.id}`}>Ghi nhận khiếu nại</Link>
+                    <Link to={`/crm/khieu-nai/tao-moi?khach-hang=${data.id}`}>
+                      Ghi nhận khiếu nại
+                    </Link>
                   </Button>
                 }
               />
@@ -171,7 +182,10 @@ export function CustomerDetailPage() {
                 {(complaints ?? []).map((c) => (
                   <li key={c.id} className="rounded-lg border border-border bg-surface p-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <Link to={`/crm/khieu-nai/${c.id}`} className="font-medium text-brand hover:underline">
+                      <Link
+                        to={`/crm/khieu-nai/${c.id}`}
+                        className="font-medium text-brand hover:underline"
+                      >
                         {c.title}
                       </Link>
                       <StatusLozenge

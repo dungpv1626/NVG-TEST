@@ -10,12 +10,13 @@
 
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BUTTONS, CONFIRMS, ERRORS } from '@nvg/shared';
+import { BUTTONS, ERRORS } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { BlockedNotice } from '@/components/ui/states';
 import { useCreateEntity } from '@/hooks/use-entity';
 import { toUserMessage } from '@/hooks/use-error-message';
+import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard';
 import { useAuth, useCan } from '@/lib/auth';
 import { useCompanyStore } from '@/lib/company-store';
 import { supabase } from '@/lib/supabase';
@@ -43,6 +44,9 @@ export function CustomerCreatePage() {
   const [form, setForm] = useState<CustomerFormValues>(EMPTY_CUSTOMER_FORM);
   const [error, setError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  // Hàng rào chống mất dữ liệu áp cho MỌI lối ra khỏi trang, không riêng nút Hủy
+  // (Webapp Flow 6.3).
+  const releaseUnsavedGuard = useUnsavedChangesGuard(dirty);
 
   const createCustomer = useCreateEntity<Record<string, unknown>, { id: string }>({
     table: 'customers',
@@ -86,6 +90,7 @@ export function CustomerCreatePage() {
       });
 
       setDirty(false);
+      releaseUnsavedGuard();
       navigate(`/crm/khach-hang/${created.id}`, { replace: true });
     } catch (e) {
       setError(toUserMessage(e, 'create'));
@@ -93,8 +98,8 @@ export function CustomerCreatePage() {
   }
 
   function handleCancel() {
-    // Không bao giờ để mất dữ liệu đang nhập mà không hỏi (Webapp Flow 6.3).
-    if (dirty && !window.confirm(CONFIRMS.unsavedChanges)) return;
+    // KHÔNG hỏi ở đây: `useUnsavedChangesGuard` đã chặn mọi lần chuyển trang, kể cả
+    // lần này. Hỏi thêm một lần nữa là bắt người dùng xác nhận hai lần cho một việc.
     navigate('/crm/khach-hang');
   }
 
@@ -127,7 +132,10 @@ export function CustomerCreatePage() {
         <CustomerFields value={form} onChange={update} />
 
         {error && (
-          <p role="alert" className="mt-4 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
+          <p
+            role="alert"
+            className="mt-4 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
+          >
             {error}
           </p>
         )}

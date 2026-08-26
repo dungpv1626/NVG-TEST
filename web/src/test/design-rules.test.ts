@@ -8,7 +8,7 @@
  * Xem `DESIGN_SYSTEM.md` mục 2.
  */
 
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -117,5 +117,67 @@ describe('Tương phản màu đạt WCAG AA', () => {
    */
   it('viền ô nhập đạt ≥ 3:1 trên nền trắng', () => {
     expect(contrast(token('border-strong'), token('surface'))).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe('Vùng bấm cho ngón tay', () => {
+  /**
+   * Tối thiểu ~40×40px (Content Guidelines 6.8). Đây là loại quy tắc mòn dần điển hình: nút
+   * lịch trong ô nhập ngày lúc đầu được đặt bằng `p-1.5` quanh một biểu tượng 16px — ra đúng
+   * 28×28, nhìn trên máy tính thì gọn gàng, còn ngón tay ở công trường thì bấm trượt.
+   *
+   * Ô nhập chỉ cao 36px nên vùng bấm phải nhô ra khỏi ô; nó nằm ở lớp tuyệt đối nên không đẩy
+   * bố cục, và phần nhô ra là vùng bấm trong suốt chứ không phải hình vẽ.
+   */
+  it('nút mở lịch có vùng bấm 40×40, không co theo kích thước biểu tượng', () => {
+    const code = source('components/ui/date-input.tsx');
+    const button = code.slice(code.indexOf('aria-label="Chọn ngày trên lịch"'));
+    expect(button).toContain('size-10');
+  });
+});
+
+describe('Không để trình duyệt tự sinh chữ tiếng Anh', () => {
+  /**
+   * Ba điều khiển gốc của trình duyệt tự sinh chữ theo NGÔN NGỮ CỦA TRÌNH DUYỆT, không theo
+   * `lang` của trang, và không thuộc tính HTML nào ép được:
+   *
+   *  - `<input type="date">` — ô hiện `mm/dd/yyyy`, bảng lịch hiện "September", "Su Mo Tu".
+   *    KHÔNG ép được bằng cách nào, nên phải thay hẳn bằng `DateInput`.
+   *  - Ràng buộc biểu mẫu (`required`, `min`, `pattern`…) — "Please fill out this field."
+   *    Ép được bằng `setCustomValidity`, nên chỉ cần chốt ở `main.tsx` là phủ hết, kể cả
+   *    `<input type="number">`.
+   *
+   * Chữ này không nằm trong mã nguồn nên đọc code không thấy, và trên máy người lập trình nó
+   * trông vẫn bình thường. Chỉ có test đọc thẳng mã nguồn mới giữ được ranh giới.
+   */
+  const PAGES = 'web/src/pages';
+
+  function allPageSources(): { file: string; code: string }[] {
+    const out: { file: string; code: string }[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(resolve(process.cwd(), dir), { withFileTypes: true })) {
+        const path = `${dir}/${entry.name}`;
+        if (entry.isDirectory()) {
+          if (entry.name !== '__tests__') walk(path);
+        } else if (entry.name.endsWith('.tsx')) {
+          out.push({ file: path, code: readFileSync(resolve(process.cwd(), path), 'utf8') });
+        }
+      }
+    };
+    walk(dir(PAGES));
+    return out;
+  }
+  const dir = (d: string) => d;
+
+  it('không màn hình nào dùng `<input type="date">` — phải dùng `DateInput`', () => {
+    const offenders = allPageSources()
+      .filter(({ code }) => /type="date"/.test(code))
+      .map(({ file }) => file);
+    expect(offenders).toEqual([]);
+  });
+
+  it('chốt dịch lời thoại ràng buộc được gắn ngay khi ứng dụng khởi động', () => {
+    // Thiếu dòng này thì mọi ô `required` ngoài `Input` lại báo tiếng Anh.
+    expect(source('main.tsx')).toContain('installVietnameseValidation()');
   });
 });

@@ -14,6 +14,7 @@ import { formatCurrency, formatNumber } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { MoneyInput } from '@/components/ui/money-input';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
 import {
   useDeletePurchaseRequestItem,
@@ -42,7 +43,8 @@ export function RequestItemPanel({
 
   const items = data ?? [];
   const total = items.reduce(
-    (sum, item) => sum + BigInt(Math.round(Number(item.quantity) * Number(item.estimated_unit_price))),
+    (sum, item) =>
+      sum + BigInt(Math.round(Number(item.quantity) * Number(item.estimated_unit_price))),
     0n,
   );
 
@@ -94,14 +96,32 @@ export function RequestItemPanel({
           <table className="w-full min-w-[48rem] text-left">
             <thead className="border-b border-border text-fg-muted">
               <tr>
-                <th scope="col" className="py-2 pr-4 font-medium">Mã vật tư</th>
-                <th scope="col" className="py-2 pr-4 font-medium">Tên hàng</th>
-                <th scope="col" className="py-2 pr-4 font-medium">Quy cách</th>
-                <th scope="col" className="py-2 pr-4 text-right font-medium">Số lượng</th>
-                <th scope="col" className="py-2 pr-4 font-medium">Đơn vị</th>
-                <th scope="col" className="py-2 pr-4 text-right font-medium">Đơn giá ước tính</th>
-                <th scope="col" className="py-2 text-right font-medium">Thành tiền</th>
-                {!readOnly && <th scope="col" className="py-2 pl-4 font-medium">Thao tác</th>}
+                <th scope="col" className="py-2 pr-4 font-medium">
+                  Mã vật tư
+                </th>
+                <th scope="col" className="py-2 pr-4 font-medium">
+                  Tên hàng
+                </th>
+                <th scope="col" className="py-2 pr-4 font-medium">
+                  Quy cách
+                </th>
+                <th scope="col" className="py-2 pr-4 text-right font-medium">
+                  Số lượng
+                </th>
+                <th scope="col" className="py-2 pr-4 font-medium">
+                  Đơn vị
+                </th>
+                <th scope="col" className="py-2 pr-4 text-right font-medium">
+                  Đơn giá ước tính
+                </th>
+                <th scope="col" className="py-2 text-right font-medium">
+                  Thành tiền
+                </th>
+                {!readOnly && (
+                  <th scope="col" className="py-2 pl-4 font-medium">
+                    Thao tác
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -177,7 +197,7 @@ export function RequestItemPanel({
                   <Input name="unit" required maxLength={32} placeholder="kg, m, cái…" />
                 </Field>
                 <Field label="Đơn giá ước tính (đồng)" required>
-                  <Input name="estimated_unit_price" type="number" min="0" step="1" required />
+                  <MoneyInput name="estimated_unit_price" required />
                 </Field>
               </div>
               <Button type="submit" variant="primary" disabled={saveItem.isPending}>

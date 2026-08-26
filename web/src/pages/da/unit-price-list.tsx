@@ -21,8 +21,10 @@ import {
 import { PageHeader } from '@/components/layout/app-shell';
 import { EntityTable, type EntityRow } from '@/components/entity/entity-table';
 import { Button } from '@/components/ui/button';
+import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { MoneyInput } from '@/components/ui/money-input';
 import { toUserMessage } from '@/hooks/use-error-message';
 import {
   useCreateUnitPrice,
@@ -111,7 +113,10 @@ export function UnitPriceListPage() {
         breadcrumbs={[{ label: 'Dự án – Đấu thầu' }, { label: 'Đơn giá & định mức' }]}
         actions={
           canCreate ? (
-            <Button variant={showForm ? 'subtle' : 'primary'} onClick={() => setShowForm(!showForm)}>
+            <Button
+              variant={showForm ? 'subtle' : 'primary'}
+              onClick={() => setShowForm(!showForm)}
+            >
               {showForm ? BUTTONS.cancel : 'Thêm đơn giá'}
             </Button>
           ) : undefined
@@ -131,10 +136,16 @@ export function UnitPriceListPage() {
               />
             </Field>
             <Field label="Tên" required className="sm:col-span-2">
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              <Input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+              />
             </Field>
             <Field label="Đơn vị" required>
-              <Input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} />
+              <Input
+                value={form.unit}
+                onChange={(e) => setForm({ ...form, unit: e.target.value })}
+              />
             </Field>
             <Field label="Nhóm chi phí">
               <select
@@ -150,10 +161,10 @@ export function UnitPriceListPage() {
               </select>
             </Field>
             <Field label="Đơn giá" required hint="Đơn vị đồng.">
-              <Input
+              <MoneyInput
                 value={form.price}
-                inputMode="numeric"
-                onChange={(e) => setForm({ ...form, price: e.target.value.replace(/[^\d]/g, '') })}
+                required
+                onChange={(v) => setForm({ ...form, price: v })}
               />
             </Field>
             <Field label="Nguồn">
@@ -170,10 +181,9 @@ export function UnitPriceListPage() {
               </select>
             </Field>
             <Field label="Ngày hiệu lực">
-              <Input
-                type="date"
+              <DateInput
                 value={form.effectiveDate}
-                onChange={(e) => setForm({ ...form, effectiveDate: e.target.value })}
+                onChange={(v) => setForm({ ...form, effectiveDate: v })}
               />
             </Field>
             <Field label="Nhà cung cấp" className="sm:col-span-2">
@@ -185,7 +195,10 @@ export function UnitPriceListPage() {
           </div>
 
           {formError && (
-            <p role="alert" className="mt-3 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
+            <p
+              role="alert"
+              className="mt-3 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
+            >
               {formError}
             </p>
           )}

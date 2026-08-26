@@ -33,6 +33,7 @@ interface Fixture {
   nvoSiteId: string;
   warehouseA: string;
   warehouseB: string;
+  warehouseC: string;
   warehouseNvo: string;
   materialThep: string;
   materialBulong: string;
@@ -77,6 +78,8 @@ async function seedFixture(): Promise<Fixture> {
          ${TEST_PREFIX + ' Kho vật tư A ' + stamp}, 'vat_tu_xay_dung'),
         (${nvc.company_id}, ${'KHO-B-' + stamp},
          ${TEST_PREFIX + ' Kho vật tư B ' + stamp}, 'cong_cu_dung_cu'),
+        (${nvc.company_id}, ${'KHO-C-' + stamp},
+         ${TEST_PREFIX + ' Kho vật tư C ' + stamp}, 'vat_tu_xay_dung'),
         (${nvo.company_id}, ${'KHO-NVO-' + stamp},
          ${TEST_PREFIX + ' Kho NVO ' + stamp}, 'vat_tu_xay_dung')
       RETURNING id, code
@@ -97,7 +100,9 @@ async function seedFixture(): Promise<Fixture> {
       nvoSiteId: nvo.id,
       warehouseA: warehouses[0]!.id,
       warehouseB: warehouses[1]!.id,
-      warehouseNvo: warehouses[2]!.id,
+      // Kho C để riêng cho phép thử giá vốn: nó phải sạch, không dính tồn của phép thử khác.
+      warehouseC: warehouses[2]!.id,
+      warehouseNvo: warehouses[3]!.id,
       materialThep: materials[0]!.id,
       materialBulong: materials[1]!.id,
       materialGiao: materials[2]!.id,
@@ -687,5 +692,177 @@ describeDb('KHO — vòng đời giàn giáo (KHO-06)', () => {
     expect(rows.length).toBe(1);
     expect(rows[0]!.responsible_party).toMatch(/Tổ đội/);
     expect(BigInt(rows[0]!.amount)).toBe(6_000_000n);
+  });
+});
+
+/**
+ * Ba lỗi phát hiện khi rà soát `0039`, vá ở `0040`/`0041`. Cả ba đều không có triệu chứng cho
+ * tới lúc kho thật sự dùng: một cái khoá cứng kho, một cái làm cảnh báo tồn không cấu hình
+ * được, một cái bào mòn giá vốn và kéo theo sai cả cấp phê duyệt.
+ */
+describe('KHO — vá lỗi sau rà soát (0040, 0041)', () => {
+  let fixture: Awaited<ReturnType<typeof seedFixture>>;
+  let kho: SupabaseClient;
+  let cfo: SupabaseClient;
+
+  beforeAll(async () => {
+    fixture = await seedFixture();
+    kho = await signInAs(ACCOUNTS.kho);
+    cfo = await signInAs(ACCOUNTS.cfo);
+  });
+
+  it('đếm KHỚP SỔ thì đóng được đợt, và kho mở lại nhập xuất', async () => {
+    await kho.rpc('receive_stock', {
+      p_warehouse_id: fixture.warehouseB,
+      p_items: [{ material_id: fixture.materialThep, quantity: 500, unit_cost: 20_000 }],
+    });
+    const { data: id } = await kho.rpc('start_stocktake', { p_warehouse_id: fixture.warehouseB });
+
+    // Đếm đúng bằng sổ — kết quả tốt nhất của một đợt kiểm kê.
+    await kho.rpc('save_stocktake_count', {
+      p_stocktake_id: id as string,
+      p_items: [{ material_id: fixture.materialThep, counted_quantity: 500 }],
+    });
+
+    // Trước bản vá đây là ngõ cụt: đường phê duyệt từ chối chênh lệch 0, mà không có hàm nào
+    // đưa đợt kiểm ra khỏi `dang_kiem` — kho bị khoá nhập xuất vĩnh viễn.
+    const { error } = await kho.rpc('close_stocktake', { p_stocktake_id: id as string });
+    expect(error).toBeNull();
+
+    const { data: st } = await kho
+      .from('stocktakes')
+      .select('status')
+      .eq('id', id as string)
+      .single();
+    expect((st as { status: string }).status).toBe('khop_so');
+
+    // Kho đã mở lại: đây là điều kiện thật sự quan trọng, không phải cái nhãn trạng thái.
+    const { error: moveError } = await kho.rpc('receive_stock', {
+      p_warehouse_id: fixture.warehouseB,
+      p_items: [{ material_id: fixture.materialThep, quantity: 10, unit_cost: 20_000 }],
+    });
+    expect(moveError).toBeNull();
+  });
+
+  it('có chênh lệch thì KHÔNG đóng thẳng được — phải đi đường phê duyệt (KHO-07)', async () => {
+    await kho.rpc('receive_stock', {
+      p_warehouse_id: fixture.warehouseA,
+      p_items: [{ material_id: fixture.materialThep, quantity: 100, unit_cost: 20_000 }],
+    });
+    const { data: id } = await kho.rpc('start_stocktake', { p_warehouse_id: fixture.warehouseA });
+    await kho.rpc('save_stocktake_count', {
+      p_stocktake_id: id as string,
+      p_items: [{ material_id: fixture.materialThep, counted_quantity: 60 }],
+    });
+
+    // Thiếu chốt này thì "Đóng đợt" thành đường tắt bỏ qua toàn bộ KHO-07: mất 40 tấn thép mà
+    // không biên bản, không ai duyệt, sổ kho giữ nguyên số cũ.
+    const { error } = await kho.rpc('close_stocktake', { p_stocktake_id: id as string });
+    expect(error?.message).toMatch(/lệch|phê duyệt/i);
+
+    await kho.rpc('cancel_stocktake', {
+      p_stocktake_id: id as string,
+      p_reason: 'Dọn dẹp sau kiểm thử.',
+    });
+  });
+
+  it('mức tồn tối thiểu sửa được từ màn hình — cảnh báo sắp hết mới cấu hình được (KHO-08)', async () => {
+    await kho.rpc('receive_stock', {
+      p_warehouse_id: fixture.warehouseA,
+      p_items: [{ material_id: fixture.materialBulong, quantity: 50, unit_cost: 12_000 }],
+    });
+    const { data: row } = await kho
+      .from('inventory_items')
+      .select('id')
+      .eq('warehouse_id', fixture.warehouseA)
+      .eq('material_id', fixture.materialBulong)
+      .single();
+
+    const { error } = await kho
+      .from('inventory_items')
+      .update({ min_quantity: 20, location: 'Kệ A3' })
+      .eq('id', (row as { id: string }).id)
+      .select('id')
+      .single();
+    expect(error).toBeNull();
+  });
+
+  it('nhưng số tồn và giá vốn vẫn KHÔNG sửa thẳng được — sổ kho chỉ đổi qua phiếu', async () => {
+    const { data: row } = await kho
+      .from('inventory_items')
+      .select('id')
+      .eq('warehouse_id', fixture.warehouseA)
+      .eq('material_id', fixture.materialBulong)
+      .single();
+
+    const { error } = await kho
+      .from('inventory_items')
+      .update({ quantity_on_hand: 9999 })
+      .eq('id', (row as { id: string }).id)
+      .select('id')
+      .single();
+    expect(error).not.toBeNull();
+  });
+
+  it('điều chuyển giữ NGUYÊN giá vốn ở kho nhận — giá vốn đi theo hàng', async () => {
+    // Bu lông chưa từng vào kho B, nên giá vốn ở đó do đúng phiếu điều chuyển này quyết định.
+    // Dùng vật tư sạch là điểm mấu chốt: nếu kho nhận đã có tồn sẵn thì bình quân bị pha
+    // loãng và phép thử "khác 0" vẫn đúng ngay cả khi bản vá bị gỡ.
+    await kho.rpc('receive_stock', {
+      p_warehouse_id: fixture.warehouseA,
+      p_items: [{ material_id: fixture.materialBulong, quantity: 100, unit_cost: 12_000 }],
+    });
+
+    const { error } = await kho.rpc('transfer_stock', {
+      p_from_warehouse_id: fixture.warehouseA,
+      p_to_warehouse_id: fixture.warehouseB,
+      p_items: [{ material_id: fixture.materialBulong, quantity: 10 }],
+    });
+    expect(error).toBeNull();
+
+    const { data: dest } = await kho
+      .from('inventory_items')
+      .select('average_cost')
+      .eq('warehouse_id', fixture.warehouseB)
+      .eq('material_id', fixture.materialBulong)
+      .single();
+
+    // Màn hình Phiếu kho chỉ hiện ô đơn giá cho phiếu NHẬP, nên phiếu điều chuyển luôn gửi lên
+    // 0 — trước bản vá, chuyển hàng sang kho khác làm hàng mất sạch giá trị trong sổ.
+    expect(BigInt((dest as { average_cost: string }).average_cost)).toBe(12_000n);
+  });
+
+  it('điều chỉnh kiểm kê tăng KHÔNG kéo giá vốn xuống — con số đó quyết định cấp phê duyệt', async () => {
+    await kho.rpc('receive_stock', {
+      p_warehouse_id: fixture.warehouseC,
+      p_items: [{ material_id: fixture.materialThep, quantity: 100, unit_cost: 200_000 }],
+    });
+    const { data: id } = await kho.rpc('start_stocktake', { p_warehouse_id: fixture.warehouseC });
+    await kho.rpc('save_stocktake_count', {
+      p_stocktake_id: id as string,
+      p_items: [{ material_id: fixture.materialThep, counted_quantity: 110 }],
+    });
+    const { data: approvalId } = await kho.rpc('submit_stocktake_approval', {
+      p_stocktake_id: id as string,
+      p_variance_reason: 'Đếm sót ở lần kiểm trước.',
+    });
+    await cfo.rpc('decide_approval', {
+      p_approval_id: approvalId as string,
+      p_decision: 'approved',
+      p_note: 'Đồng ý điều chỉnh.',
+    });
+
+    const { data: inv } = await kho
+      .from('inventory_items')
+      .select('quantity_on_hand, average_cost')
+      .eq('warehouse_id', fixture.warehouseC)
+      .eq('material_id', fixture.materialThep)
+      .single();
+    const row = inv as { quantity_on_hand: string; average_cost: string };
+
+    expect(Number(row.quantity_on_hand)).toBe(110);
+    // Trước bản vá: (100×200.000 + 10×0) / 110 ≈ 181.818 đ, và mỗi lần kiểm kê lại tụt thêm.
+    // Giá vốn thổi thấp đưa chênh lệch lớn lọt xuống dưới hạn mức phê duyệt của Kho.
+    expect(BigInt(row.average_cost)).toBe(200_000n);
   });
 });

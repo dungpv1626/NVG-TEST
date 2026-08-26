@@ -298,7 +298,12 @@ export function useStockMovements(filter: { warehouseId?: string; type?: StockMo
   const scope = useCompanyScope();
 
   return useQuery<StockMovementRecord[], Error>({
-    queryKey: ['stock-movements', scope.companyId, filter.warehouseId ?? 'all', filter.type ?? 'all'],
+    queryKey: [
+      'stock-movements',
+      scope.companyId,
+      filter.warehouseId ?? 'all',
+      filter.type ?? 'all',
+    ],
     queryFn: async () => {
       let query = withCompanyScope(
         supabase.from('stock_movements').select(MOVEMENT_SELECT),
@@ -567,7 +572,9 @@ export function useSaveStocktakeCount() {
       if (error) throw error;
     },
     onSuccess: (_data, variables) => {
-      void queryClient.invalidateQueries({ queryKey: ['stocktakes', 'items', variables.stocktakeId] });
+      void queryClient.invalidateQueries({
+        queryKey: ['stocktakes', 'items', variables.stocktakeId],
+      });
       void queryClient.invalidateQueries({ queryKey: ['stocktakes'] });
     },
   });
@@ -588,6 +595,31 @@ export function useSubmitStocktake() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['stocktakes'] });
       void queryClient.invalidateQueries({ queryKey: ['approvals'] });
+    },
+  });
+}
+
+/**
+ * Đóng đợt kiểm kê khi số đếm khớp sổ ở mọi vật tư.
+ *
+ * Sổ kho không đổi — không có gì để điều chỉnh. Cần một đường riêng vì đường phê duyệt từ
+ * chối chênh lệch bằng 0, mà kho thì bị tạm dừng nhập xuất suốt thời gian đợt kiểm còn mở:
+ * thiếu hàm này, một lần kiểm đúng lại khoá cứng kho (KHO-07).
+ */
+export function useCloseStocktake() {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, { stocktakeId: string }>({
+    mutationFn: async ({ stocktakeId }) => {
+      const { error } = await supabase.rpc('close_stocktake', {
+        p_stocktake_id: stocktakeId,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['stocktakes'] });
+      // Kho vừa được mở lại nhập xuất — danh sách tồn và phiếu phải đọc lại.
+      void queryClient.invalidateQueries({ queryKey: ['inventory'] });
     },
   });
 }

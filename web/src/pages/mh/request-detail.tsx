@@ -20,7 +20,12 @@ import {
   formatDateTime,
   purchaseRequestDisplayStatus,
 } from '@nvg/shared';
-import { DetailFields, EntityDetail, type RelatedGroup } from '@/components/entity/entity-detail';
+import {
+  DetailFields,
+  EntityDetail,
+  type RelatedGroup,
+  RecordNotFound,
+} from '@/components/entity/entity-detail';
 import { Button } from '@/components/ui/button';
 import { CardGridSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
 import {
@@ -58,7 +63,11 @@ export function PurchaseRequestDetailPage() {
   if (error) return <ErrorState message={toUserMessage(error)} />;
   if (!data) {
     return (
-      <EmptyState message="Không tìm thấy đề nghị mua này. Có thể hồ sơ đã được xóa hoặc vai trò hiện tại chưa được cấp quyền xem." />
+      <RecordNotFound
+        entity="đề nghị mua"
+        listPath="/mh/de-nghi-mua"
+        listLabel="Quay lại danh sách đề nghị mua"
+      />
     );
   }
 
@@ -146,7 +155,10 @@ export function PurchaseRequestDetailPage() {
   return (
     <>
       {actionError && (
-        <p role="alert" className="mb-3 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
+        <p
+          role="alert"
+          className="mb-3 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
+        >
           {actionError}
         </p>
       )}
@@ -158,7 +170,11 @@ export function PurchaseRequestDetailPage() {
       )}
 
       <EntityDetail
-        breadcrumbs={[{ label: 'Đề nghị mua', to: '/mh/de-nghi-mua' }, { label: request.title }]}
+        breadcrumbs={[
+          { label: 'Mua hàng – Vật tư' },
+          { label: 'Đề nghị mua', to: '/mh/de-nghi-mua' },
+          { label: request.title },
+        ]}
         title={request.title}
         code={request.code ?? EM_DASH}
         status={purchaseRequestDisplayStatus(request.stage, request.needed_date)}
@@ -203,8 +219,7 @@ export function PurchaseRequestDetailPage() {
                       <div>
                         <p className="font-medium">{o.code ?? 'Đơn đặt hàng'}</p>
                         <p className="text-fg-muted">
-                          {o.supplier?.name ?? EM_DASH} ·{' '}
-                          {PURCHASE_ORDER_STAGE_META[o.stage].label}
+                          {o.supplier?.name ?? EM_DASH} · {PURCHASE_ORDER_STAGE_META[o.stage].label}
                           {o.promised_date ? ` · Hẹn giao ${formatDate(o.promised_date)}` : ''}
                         </p>
                       </div>
@@ -225,7 +240,10 @@ export function PurchaseRequestDetailPage() {
             content: (
               <DetailFields
                 fields={[
-                  { label: 'Bước hiện tại', value: PURCHASE_REQUEST_STAGE_META[request.stage].label },
+                  {
+                    label: 'Bước hiện tại',
+                    value: PURCHASE_REQUEST_STAGE_META[request.stage].label,
+                  },
                   { label: 'Mức cần', value: PURCHASE_URGENCY_LABELS[request.urgency] },
                   {
                     label: 'Thời điểm cần hàng',
@@ -234,7 +252,9 @@ export function PurchaseRequestDetailPage() {
                   { label: 'Địa điểm giao', value: request.delivery_location ?? EM_DASH },
                   {
                     label: 'Công trình',
-                    value: request.site ? `${request.site.code} — ${request.site.name}` : 'Không gắn công trình',
+                    value: request.site
+                      ? `${request.site.code} — ${request.site.name}`
+                      : 'Không gắn công trình',
                   },
                   { label: 'Mã chi phí', value: request.cost_code ?? EM_DASH },
                   {

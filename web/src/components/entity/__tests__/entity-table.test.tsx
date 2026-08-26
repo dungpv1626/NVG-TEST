@@ -14,7 +14,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { EntityTable, listPathFiltered, type EntityRow } from '../entity-table';
+import { EntityTable, listPathFiltered, useCreateActions, type EntityRow } from '../entity-table';
 import { renderWithApp } from '@/test/render';
 
 // Phạm vi pháp nhân là thứ EntityTable đọc để quyết định có hiện cột "Pháp nhân" hay không.
@@ -99,7 +99,11 @@ describe('EntityTable — bộ lọc trên thanh địa chỉ', () => {
     // bộ lọc THẬT SỰ loại hồ sơ ngoài kỳ, chứ không phải chỉ chạy qua mà không làm gì.
     const rows: EntityRow[] = [
       { ...ROWS[0]!, createdAt: '2000-01-15', title: 'Hợp đồng rất cũ' },
-      { ...ROWS[1]!, createdAt: new Date().toISOString().slice(0, 10), title: 'Hợp đồng tháng này' },
+      {
+        ...ROWS[1]!,
+        createdAt: new Date().toISOString().slice(0, 10),
+        title: 'Hợp đồng tháng này',
+      },
     ];
     renderWithApp(table({ rows }), { route: '/hd/hop-dong?ky=thang-nay' });
 
@@ -151,9 +155,7 @@ describe('EntityTable — bộ lọc trên thanh địa chỉ', () => {
 
 describe('EntityTable — trạng thái màn hình', () => {
   it('chưa có dữ liệu thì hiện lời gợi ý bước tiếp theo kèm nút', () => {
-    renderWithApp(
-      table({ rows: [], emptyAction: <button type="button">Soạn hợp đồng</button> }),
-    );
+    renderWithApp(table({ rows: [], emptyAction: <button type="button">Soạn hợp đồng</button> }));
     expect(screen.getByText('Chưa có hợp đồng nào.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Soạn hợp đồng' })).toBeInTheDocument();
   });
@@ -182,6 +184,65 @@ describe('EntityTable — cột Pháp nhân khi gộp "Toàn NVG"', () => {
     expect(screen.getByRole('columnheader', { name: 'Pháp nhân' })).toBeInTheDocument();
     const rows = inTable().getAllByRole('row');
     expect(within(rows[1]!).getByText('NVC')).toBeInTheDocument();
+  });
+
+  it('bảng DÙNG CHUNG giữa các pháp nhân thì KHÔNG chèn cột rỗng', () => {
+    // `customers`/`suppliers` cố ý không có `company_id` (Backend Schema 2.2). Chèn cột thì mọi
+    // dòng hiện dấu gạch, đọc ra thành "hồ sơ chưa được gán pháp nhân" — một việc còn thiếu cần
+    // đi sửa, trong khi sự thật là pháp nhân không áp dụng ở đây.
+    setScope(true);
+    renderWithApp(table({ sharedAcrossCompanies: true }));
+    expect(screen.queryByRole('columnheader', { name: 'Pháp nhân' })).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Mỗi màn hình chỉ được có ĐÚNG MỘT hành động chính (Content Guidelines 6.3).
+ *
+ * Lỗi đã có thật: khi danh sách rỗng, nút "Tạo … mới" hiện đồng thời ở header và trong trạng
+ * thái rỗng — cùng một việc, hai nút, hai kiểu dáng khác nhau trên cùng một màn hình.
+ */
+describe('useCreateActions', () => {
+  function actionsFor(args: Parameters<typeof useCreateActions>[0]) {
+    let result: ReturnType<typeof useCreateActions> | undefined;
+    function Probe() {
+      result = useCreateActions(args);
+      return null;
+    }
+    renderWithApp(<Probe />);
+    return result!;
+  }
+
+  it('danh sách rỗng thì chỉ trạng thái rỗng mời tạo mới, header nhường chỗ', () => {
+    const { headerAction, emptyAction } = actionsFor({
+      canCreate: true,
+      label: 'Tạo cơ hội mới',
+      to: '/crm/co-hoi/tao-moi',
+      isEmpty: true,
+    });
+    expect(headerAction).toBeUndefined();
+    expect(emptyAction).toBeDefined();
+  });
+
+  it('danh sách có dữ liệu thì nút nằm ở header', () => {
+    const { headerAction } = actionsFor({
+      canCreate: true,
+      label: 'Tạo cơ hội mới',
+      to: '/crm/co-hoi/tao-moi',
+      isEmpty: false,
+    });
+    expect(headerAction).toBeDefined();
+  });
+
+  it('không có quyền tạo thì ẩn cả hai, không hiện rồi mới báo lỗi', () => {
+    const { headerAction, emptyAction } = actionsFor({
+      canCreate: false,
+      label: 'Tạo cơ hội mới',
+      to: '/crm/co-hoi/tao-moi',
+      isEmpty: true,
+    });
+    expect(headerAction).toBeUndefined();
+    expect(emptyAction).toBeUndefined();
   });
 });
 

@@ -40,6 +40,15 @@ export const ERRORS = {
     `Hồ sơ vượt hạn mức phê duyệt của vai trò hiện tại. Chuyển cho ${authorityRole}.`,
   noPermission:
     'Vai trò hiện tại chưa có quyền xem hồ sơ này. Liên hệ quản lý trực tiếp nếu cần hỗ trợ.',
+  /**
+   * Vượt quyền ở mức PHÂN HỆ — khác `noPermission` (mức một hồ sơ).
+   *
+   * Phải nói đúng lý do là THIẾU QUYỀN, không được để màn hình rơi vào trạng thái rỗng
+   * "chưa có dữ liệu": kho trống và kho không được xem trông giống hệt nhau trên màn hình
+   * nhưng dẫn tới hai quyết định trái ngược (Content Guidelines 4.6, 4.7).
+   */
+  noModuleAccess: (moduleLabel: string) =>
+    `Vai trò hiện tại chưa có quyền xem phân hệ ${moduleLabel}. Liên hệ quản trị hệ thống nếu công việc cần tới phân hệ này.`,
   offline: 'Không thể lưu do mất kết nối mạng. Dữ liệu đã nhập vẫn được giữ — thử lại khi có mạng.',
   conflict: (otherUser: string) =>
     `${otherUser} vừa cập nhật hồ sơ này. Tải lại để xem bản mới nhất trước khi tiếp tục.`,
@@ -59,7 +68,8 @@ export const EMPTY_STATES = {
     `Chưa có ${entity} nào. Bấm '${createLabel}' để bắt đầu.`,
   filtered: 'Không tìm thấy kết quả phù hợp. Thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm.',
   inbox: 'Không có việc nào cần xử lý. Mọi thứ đã được cập nhật.',
-  noAccess: 'Bạn chưa được gán vào hồ sơ nào ở mục này. Liên hệ quản lý trực tiếp nếu cần quyền truy cập.',
+  noAccess:
+    'Bạn chưa được gán vào hồ sơ nào ở mục này. Liên hệ quản lý trực tiếp nếu cần quyền truy cập.',
 } as const;
 
 /** Trạng thái rỗng riêng theo module — Content Guidelines 5.6 (nguyên văn). */
@@ -83,7 +93,8 @@ export const MODULE_EMPTY_STATES: Readonly<Record<string, string>> = {
  */
 export const SCREEN_EMPTY_STATES = {
   /** CRM-08 — trạng thái rỗng ở đây là tin TỐT, nên nói theo hướng tích cực. */
-  complaints: 'Chưa ghi nhận khiếu nại nào. Ghi nhận ngay khi khách phản ánh để không bỏ sót hạn xử lý.',
+  complaints:
+    'Chưa ghi nhận khiếu nại nào. Ghi nhận ngay khi khách phản ánh để không bỏ sót hạn xử lý.',
 } as const;
 
 /** Mẫu thông báo hệ thống — Content Guidelines 5.3. Nêu sự việc trước, mức độ khẩn sau. */
@@ -114,4 +125,21 @@ export const CONFIRMS = {
  */
 export function dashboardGreeting(name: string): string {
   return `Chào ${name}, đây là việc cần làm hôm nay`;
+}
+
+/**
+ * Rút TÊN GỌI từ họ tên đầy đủ — tiếng Việt gọi nhau bằng TỪ CUỐI.
+ *
+ * "Bùi Thị Hà" phải ra "Hà", không phải "Thị Hà": "Thị" và "Văn" là chữ đệm, không ai dùng để
+ * xưng hô, và ghép vào lời chào thì nghe như đọc hồ sơ hộ khẩu chứ không phải chào một người.
+ * Lời chào Dashboard là ngoại lệ cá nhân hoá duy nhất của hệ thống (Content Guidelines 4.2),
+ * nên nó phải đúng.
+ *
+ * Tên kép ("Ngọc Anh", "Minh Châu") sẽ bị rút còn từ cuối. Chấp nhận: không có cách nào phân
+ * biệt tên kép với chữ đệm từ chuỗi họ tên, và gọi thiếu một chữ vẫn tự nhiên hơn nhiều so
+ * với gọi kèm chữ đệm.
+ */
+export function shortNameFromFullName(fullName: string | null | undefined): string {
+  const parts = (fullName ?? '').trim().split(/\s+/).filter(Boolean);
+  return parts.at(-1) ?? '';
 }

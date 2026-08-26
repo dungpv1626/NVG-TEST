@@ -23,9 +23,9 @@ import {
   formatDateTime,
   summarizeContractValue,
 } from '@nvg/shared';
-import { DetailFields, EntityDetail } from '@/components/entity/entity-detail';
+import { DetailFields, EntityDetail, RecordNotFound } from '@/components/entity/entity-detail';
 import { Button } from '@/components/ui/button';
-import { CardGridSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
+import { CardGridSkeleton, ErrorState } from '@/components/ui/states';
 import {
   useCloseContract,
   useContract,
@@ -34,10 +34,7 @@ import {
   useSubmitContractApproval,
   useUpdateContract,
 } from '@/hooks/use-contracts';
-import {
-  useOpenSiteFromContract,
-  useSitesOfContract,
-} from '@/hooks/use-construction-sites';
+import { useOpenSiteFromContract, useSitesOfContract } from '@/hooks/use-construction-sites';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useCan } from '@/lib/auth';
 import { AmendmentPanel } from './amendment-panel';
@@ -63,7 +60,11 @@ export function ContractDetailPage() {
   if (error) return <ErrorState message={toUserMessage(error)} />;
   if (!data) {
     return (
-      <EmptyState message="Không tìm thấy hợp đồng này. Có thể hồ sơ đã được xóa hoặc vai trò hiện tại chưa được cấp quyền xem." />
+      <RecordNotFound
+        entity="hợp đồng"
+        listPath="/hd/hop-dong"
+        listLabel="Quay lại danh sách hợp đồng"
+      />
     );
   }
 
@@ -105,7 +106,10 @@ export function ContractDetailPage() {
   function sign() {
     const number = window.prompt('Số hợp đồng theo văn bản đã ký:');
     if (number === null) return;
-    const signedDate = window.prompt('Ngày ký (dạng yyyy-mm-dd):', new Date().toISOString().slice(0, 10));
+    const signedDate = window.prompt(
+      'Ngày ký (dạng yyyy-mm-dd):',
+      new Date().toISOString().slice(0, 10),
+    );
     if (signedDate === null) return;
     void run(() =>
       signContract.mutateAsync({
@@ -250,8 +254,8 @@ export function ContractDetailPage() {
                     </div>
                   </dl>
                   <p className="mt-3 text-xs text-fg-subtle">
-                    Đã thu {formatCurrency(money.collected)}. Số liệu thu tiền do Module Kế toán
-                    cập nhật khi có chứng từ.
+                    Đã thu {formatCurrency(money.collected)}. Số liệu thu tiền do Module Kế toán cập
+                    nhật khi có chứng từ.
                   </p>
                 </section>
 

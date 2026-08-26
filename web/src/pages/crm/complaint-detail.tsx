@@ -18,9 +18,9 @@ import {
   formatDateTime,
   type ComplaintSeverity,
 } from '@nvg/shared';
-import { DetailFields, EntityDetail } from '@/components/entity/entity-detail';
+import { DetailFields, EntityDetail, RecordNotFound } from '@/components/entity/entity-detail';
 import { Button } from '@/components/ui/button';
-import { CardGridSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
+import { CardGridSkeleton, ErrorState } from '@/components/ui/states';
 import { useActiveUsers, type ActiveUser } from '@/hooks/use-active-users';
 import { useComplaint, useUpdateComplaint } from '@/hooks/use-complaints';
 import { toUserMessage } from '@/hooks/use-error-message';
@@ -48,7 +48,11 @@ export function ComplaintDetailPage() {
   if (error) return <ErrorState message={toUserMessage(error)} />;
   if (!data) {
     return (
-      <EmptyState message="Không tìm thấy khiếu nại này. Có thể hồ sơ đã được xóa hoặc vai trò hiện tại chưa được cấp quyền xem." />
+      <RecordNotFound
+        entity="khiếu nại"
+        listPath="/crm/khieu-nai"
+        listLabel="Quay lại danh sách khiếu nại"
+      />
     );
   }
 
@@ -75,7 +79,10 @@ export function ComplaintDetailPage() {
   return (
     <>
       {actionError && (
-        <p role="alert" className="mb-3 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
+        <p
+          role="alert"
+          className="mb-3 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
+        >
           {actionError}
         </p>
       )}
@@ -119,9 +126,7 @@ export function ComplaintDetailPage() {
                   <Button
                     variant="primary"
                     disabled={update.isPending}
-                    onClick={() =>
-                      void run({ customer_confirmed_at: new Date().toISOString() })
-                    }
+                    onClick={() => void run({ customer_confirmed_at: new Date().toISOString() })}
                   >
                     Ghi nhận khách hàng xác nhận
                   </Button>
@@ -153,9 +158,15 @@ export function ComplaintDetailPage() {
                       label: 'Mức độ nghiêm trọng',
                       value: COMPLAINT_SEVERITY_LABELS[complaint.severity],
                     },
-                    { label: 'Người chủ trì', value: complaint.assignee?.full_name ?? 'Chưa phân công' },
+                    {
+                      label: 'Người chủ trì',
+                      value: complaint.assignee?.full_name ?? 'Chưa phân công',
+                    },
                     { label: 'Người phối hợp', value: collaboratorNames || EM_DASH },
-                    { label: 'Hạn phản hồi', value: formatDate(complaint.response_due_date) || EM_DASH },
+                    {
+                      label: 'Hạn phản hồi',
+                      value: formatDate(complaint.response_due_date) || EM_DASH,
+                    },
                     {
                       label: 'Khách hàng xác nhận',
                       value: complaint.customer_confirmed_at

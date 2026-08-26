@@ -5,14 +5,9 @@
  * định công trường có khởi công đúng kế hoạch hay không.
  */
 
-import {
-  BUTTONS,
-  DESIGN_STAGE_META,
-  designDisplayStatus,
-  formatDate,
-} from '@nvg/shared';
+import { BUTTONS, DESIGN_STAGE_META, designDisplayStatus, formatDate } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
-import { CreateButton, EntityTable, type EntityRow } from '@/components/entity/entity-table';
+import { EntityTable, useCreateActions, type EntityRow } from '@/components/entity/entity-table';
 import { useDesignProjects } from '@/hooks/use-design-projects';
 import { useCan } from '@/lib/auth';
 import { TkNav } from './tk-nav';
@@ -42,10 +37,12 @@ export function DesignListPage() {
   }));
 
   const createLabel = BUTTONS.create('dự án thiết kế');
-  const createButton = canCreate ? (
-    <CreateButton label={createLabel} to="/tk/du-an/tao-moi" />
-  ) : undefined;
-  const isEmpty = !isLoading && !error && rows.length === 0;
+  const { headerAction, emptyAction } = useCreateActions({
+    canCreate,
+    label: createLabel,
+    to: '/tk/du-an/tao-moi',
+    isEmpty: !isLoading && !error && rows.length === 0,
+  });
 
   return (
     <>
@@ -53,7 +50,7 @@ export function DesignListPage() {
       <PageHeader
         title="Dự án thiết kế"
         breadcrumbs={[{ label: 'Thiết kế' }, { label: 'Dự án thiết kế' }]}
-        actions={isEmpty ? undefined : createButton}
+        actions={headerAction}
       />
 
       <EntityTable<DesignRow>
@@ -68,11 +65,7 @@ export function DesignListPage() {
             ? 'Chưa có dự án thiết kế nào. Tạo hồ sơ khi nhận đầu bài từ Kinh doanh hoặc trực tiếp từ khách hàng.'
             : 'Chưa có dự án thiết kế nào. Vai trò hiện tại không có quyền tạo hồ sơ thiết kế.'
         }
-        emptyAction={
-          canCreate ? (
-            <CreateButton label={createLabel} to="/tk/du-an/tao-moi" variant="secondary" />
-          ) : undefined
-        }
+        emptyAction={emptyAction}
         columns={[
           { key: 'stage', header: 'Bước', render: (r) => r.stageLabel },
           {

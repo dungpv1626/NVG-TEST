@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
   daysUntil,
+  displayDateToIso,
   formatCurrency,
   formatDate,
   formatDateTime,
   formatDeadline,
   formatWaiting,
   fromNvgInput,
+  groupThousands,
+  isoDateToDisplay,
   toNvgDateInput,
   toNvgTimeInput,
   formatNumber,
@@ -178,5 +181,74 @@ describe('ô nhập ngày giờ theo múi giờ nghiệp vụ', () => {
     expect(fromNvgInput('')).toBeNull();
     expect(fromNvgInput(null)).toBeNull();
     expect(fromNvgInput('rác')).toBeNull();
+  });
+});
+
+/**
+ * Đổi qua lại giữa ngày lưu trong CSDL và ngày người dùng gõ.
+ *
+ * Đây là chỗ đã sai thật một lần: ô nhập ngày dùng `<input type="date">`, mà trình duyệt hiện
+ * ô đó theo ngôn ngữ của CHÍNH trình duyệt — Chrome cài tiếng Anh hiện `mm/dd/yyyy`. Gõ hạn
+ * nộp thầu 03/04 ra ngày 4 tháng 3, lệch một tháng, không có gì trên màn hình báo là đã sai.
+ */
+describe('isoDateToDisplay / displayDateToIso', () => {
+  it('đổi xuôi rồi đổi ngược ra đúng giá trị ban đầu', () => {
+    expect(isoDateToDisplay('2026-08-26')).toBe('26/08/2026');
+    expect(displayDateToIso('26/08/2026')).toBe('2026-08-26');
+  });
+
+  it('đọc ngày theo thứ tự NGÀY trước THÁNG sau, không phải kiểu Mỹ', () => {
+    // 03/04 phải là mùng 3 tháng 4, không phải mùng 4 tháng 3.
+    expect(displayDateToIso('03/04/2026')).toBe('2026-04-03');
+  });
+
+  it('không đi qua múi giờ nên ngày không bị lùi một hôm', () => {
+    // `new Date('2026-01-01')` là nửa đêm UTC; ở múi giờ âm nó lùi về 31/12.
+    expect(isoDateToDisplay('2026-01-01')).toBe('01/01/2026');
+  });
+
+  it('từ chối ngày không có thật thay vì đẩy xuống cho CSDL báo lỗi', () => {
+    expect(displayDateToIso('31/02/2026')).toBeNull();
+    expect(displayDateToIso('31/04/2026')).toBeNull();
+    expect(displayDateToIso('00/01/2026')).toBeNull();
+    expect(displayDateToIso('01/13/2026')).toBeNull();
+  });
+
+  it('nhận đúng ngày 29/02 của năm nhuận', () => {
+    expect(displayDateToIso('29/02/2024')).toBe('2024-02-29');
+    expect(displayDateToIso('29/02/2026')).toBeNull();
+  });
+
+  it('chuỗi gõ dở hoặc rỗng trả về rỗng/null, không ném lỗi', () => {
+    expect(displayDateToIso('')).toBeNull();
+    expect(displayDateToIso('26/08')).toBeNull();
+    expect(isoDateToDisplay('')).toBe('');
+    expect(isoDateToDisplay('26/08/2026')).toBe('');
+  });
+});
+
+describe('groupThousands — nhóm hàng nghìn lúc đang gõ', () => {
+  it('chèn dấu chấm mỗi ba chữ số từ phải sang', () => {
+    expect(groupThousands('1000000')).toBe('1.000.000');
+    expect(groupThousands('8500000000')).toBe('8.500.000.000');
+    expect(groupThousands('500')).toBe('500');
+    expect(groupThousands('1000')).toBe('1.000');
+  });
+
+  it('giữ dấu trừ đứng đầu', () => {
+    expect(groupThousands('-500000')).toBe('-500.000');
+  });
+
+  it('chuỗi dở dang trả về nguyên trạng, không thành NaN và không ném lỗi', () => {
+    // Hàm này chạy trên TỪNG PHÍM GÕ nên phải chịu được mọi trạng thái nửa vời.
+    expect(groupThousands('')).toBe('');
+    expect(groupThousands('-')).toBe('-');
+    expect(groupThousands('abc')).toBe('');
+  });
+
+  it('không đi qua Number nên số hàng trăm nghìn tỷ vẫn đúng từng chữ số', () => {
+    // `Number('123456789012345678')` mất chính xác; tiền của NVG chưa tới mức đó nhưng hàm
+    // không được có ngưỡng âm thầm.
+    expect(groupThousands('123456789012345678')).toBe('123.456.789.012.345.678');
   });
 });

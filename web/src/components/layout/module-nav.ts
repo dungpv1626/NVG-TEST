@@ -8,8 +8,18 @@
  */
 
 import {
-  Boxes, Building, ClipboardList, FileSignature, HardHat,
-  LayoutDashboard, PencilRuler, Settings, ShoppingCart, Users, Wallet, Warehouse,
+  Boxes,
+  Building,
+  ClipboardList,
+  FileSignature,
+  HardHat,
+  LayoutDashboard,
+  PencilRuler,
+  Settings,
+  ShoppingCart,
+  Users,
+  Wallet,
+  Warehouse,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
@@ -61,6 +71,19 @@ export function useVisibleModules(): ModuleCode[] {
 }
 
 /**
+ * Vai trò hiện tại có được xem một phân hệ hay không.
+ *
+ * Cùng một nguồn với `useVisibleModules` — quyền quyết định menu và quyền quyết định vào được
+ * màn hình phải là MỘT phép tính. Trước đây chỉ menu dùng tới nó, nên gõ thẳng đường dẫn là
+ * vào được phân hệ đã bị ẩn: dữ liệu vẫn an toàn nhờ RLS, nhưng màn hình hiện ra trạng thái
+ * rỗng như thể phân hệ đó không có dữ liệu (Webapp Flow 6.5).
+ */
+export function useCanViewModule(code: ModuleCode): boolean {
+  const { profile } = useAuth();
+  return profile?.permissions.some((p) => p.moduleCode === code && p.canView) ?? false;
+}
+
+/**
  * Module ứng với màn hình đang mở, nhận biết theo ĐOẠN ĐẦU của đường dẫn.
  *
  * Không dùng trạng thái `isActive` sẵn có của `NavLink`: nó so khớp với đúng đường dẫn đích
@@ -75,8 +98,7 @@ export function useActiveModule(): ModuleCode | null {
   const segment = `/${pathname.split('/')[1] ?? ''}`;
   return (
     MODULE_CODES.find(
-      (code) =>
-        MODULE_ROUTES[code] === segment || MODULE_ROUTES[code].startsWith(`${segment}/`),
+      (code) => MODULE_ROUTES[code] === segment || MODULE_ROUTES[code].startsWith(`${segment}/`),
     ) ?? null
   );
 }

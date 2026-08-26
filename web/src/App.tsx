@@ -7,9 +7,16 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { lazy } from 'react';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import {
+  createBrowserRouter,
+  createRoutesFromElements,
+  Navigate,
+  Route,
+  RouterProvider,
+} from 'react-router-dom';
 import { MODULE_CODES, type ModuleCode } from '@nvg/shared';
 import { AppShell } from '@/components/layout/app-shell';
+import { ModuleGuard } from '@/components/layout/module-guard';
 import { ProtectedRoute } from '@/components/layout/protected-route';
 import { AuthProvider } from '@/lib/auth';
 import { LoginPage } from '@/pages/login';
@@ -168,125 +175,151 @@ const MODULE_PATHS: Record<Exclude<ModuleCode, 'BC' | 'CRM' | 'DA'>, string> = {
   NEN: 'nen/quan-tri',
 };
 
+/**
+ * Dùng ROUTER DỮ LIỆU (`createBrowserRouter`), không phải `<BrowserRouter>`.
+ *
+ * Lý do duy nhất: `useBlocker` — thứ cho phép chặn một lần điều hướng lại để hỏi trước khi
+ * bỏ dữ liệu đang nhập (Webapp Flow 6.3) — chỉ chạy trong router dữ liệu. Với
+ * `<BrowserRouter>`, bấm breadcrumb hay mục menu giữa chừng một biểu mẫu là mất trắng những
+ * gì đã gõ, không một lời hỏi. Xem `useUnsavedChangesGuard`.
+ */
+const router = createBrowserRouter(
+  createRoutesFromElements(
+    <Route>
+      <Route path="/dang-nhap" element={<LoginPage />} />
+
+      <Route
+        element={
+          <ProtectedRoute>
+            <AppShell />
+          </ProtectedRoute>
+        }
+      >
+        {/* Dashboard KHÔNG bọc `ModuleGuard`: đây là nơi màn hình bị chặn đưa người
+                  dùng quay về, nên nó phải là điểm đến chắc chắn vào được của mọi vai trò. */}
+        <Route path="/dashboard" element={<DashboardPage />} />
+
+        {/* Mỗi phân hệ bọc trong `ModuleGuard`: ẩn khỏi menu là chưa đủ, vì đường dẫn
+                  vẫn gõ tay và dán qua Zalo được (Webapp Flow 6.5). Bọc ở tầng route thay vì
+                  ở từng trang để màn hình mới thêm sau này không thể quên. */}
+        <Route element={<ModuleGuard module="CRM" />}>
+          {/* CRM — Khách hàng (CRM-01). Thứ tự quan trọng: `tao-moi` phải đứng
+                    TRƯỚC `:id`, nếu không nó sẽ bị khớp như một id. */}
+          <Route path="crm/khach-hang" element={<CustomerListPage />} />
+          <Route path="crm/khach-hang/tao-moi" element={<CustomerCreatePage />} />
+          <Route path="crm/khach-hang/:id" element={<CustomerDetailPage />} />
+          <Route path="crm/khach-hang/:id/chinh-sua" element={<CustomerEditPage />} />
+
+          {/* CRM — Cơ hội kinh doanh (CRM-02). Cùng dữ liệu, hai chế độ xem
+                    Kanban/Danh sách đổi qua tham số `?che-do=`. */}
+          <Route path="crm/co-hoi" element={<OpportunityPipelinePage />} />
+          <Route path="crm/co-hoi/tao-moi" element={<OpportunityCreatePage />} />
+          <Route path="crm/co-hoi/:id" element={<OpportunityDetailPage />} />
+          <Route path="crm/co-hoi/:id/bao-gia/lap-moi" element={<QuoteCreatePage />} />
+
+          {/* CRM — Khiếu nại khách hàng (CRM-08). */}
+          <Route path="crm/khieu-nai" element={<ComplaintListPage />} />
+          <Route path="crm/khieu-nai/tao-moi" element={<ComplaintCreatePage />} />
+          <Route path="crm/khieu-nai/:id" element={<ComplaintDetailPage />} />
+        </Route>
+
+        {/* DA — Gói thầu và đơn giá (DA-01 → DA-09). */}
+        <Route element={<ModuleGuard module="DA" />}>
+          <Route path="da/goi-thau" element={<BiddingListPage />} />
+          <Route path="da/goi-thau/tao-moi" element={<BiddingCreatePage />} />
+          <Route path="da/goi-thau/:id" element={<BiddingDetailPage />} />
+          <Route path="da/don-gia" element={<UnitPriceListPage />} />
+        </Route>
+
+        {/* TK — Thiết kế đa bộ môn (TK-01 → TK-08). TK-10 → TK-17 chưa làm. */}
+        <Route element={<ModuleGuard module="TK" />}>
+          <Route path="tk/du-an" element={<DesignListPage />} />
+          <Route path="tk/du-an/tao-moi" element={<DesignCreatePage />} />
+          <Route path="tk/du-an/:id" element={<DesignDetailPage />} />
+        </Route>
+
+        {/* HD — Hợp đồng (HD-01 → HD-05). Không có màn hình "tạo mới": hợp đồng soạn
+                  từ hồ sơ nguồn ở CRM/DA/TK, không nhập lại dữ liệu đã có (PRD 2.3). */}
+        <Route element={<ModuleGuard module="HD" />}>
+          <Route path="hd/hop-dong" element={<ContractListPage />} />
+          <Route path="hd/hop-dong/:id" element={<ContractDetailPage />} />
+        </Route>
+
+        {/* TC — Thi công và ngân sách công trình (TC-01 → TC-08). Không có màn hình
+                  "tạo mới": công trình mở từ hợp đồng đã ký, hoặc tự mở khi hồ sơ thiết kế
+                  được bàn giao cho Ban công trường (TK-08). */}
+        <Route element={<ModuleGuard module="TC" />}>
+          <Route path="tc/cong-trinh" element={<SiteListPage />} />
+          <Route path="tc/cong-trinh/:id" element={<SiteDetailPage />} />
+        </Route>
+
+        {/* MH — Mua hàng và vật tư (MH-01 → MH-08). Không có màn hình "tạo đơn hàng":
+                  đơn hàng lập từ đề nghị đã duyệt và báo giá đã chọn, không đặt trước rồi
+                  trình duyệt sau (MH-02, MH-04). */}
+        <Route element={<ModuleGuard module="MH" />}>
+          <Route path="mh/de-nghi-mua" element={<PurchaseRequestListPage />} />
+          <Route path="mh/de-nghi-mua/tao-moi" element={<PurchaseRequestCreatePage />} />
+          <Route path="mh/de-nghi-mua/:id" element={<PurchaseRequestDetailPage />} />
+          <Route path="mh/don-hang" element={<PurchaseOrderListPage />} />
+          <Route path="mh/don-hang/:id" element={<PurchaseOrderDetailPage />} />
+          <Route path="mh/nha-cung-cap" element={<SupplierListPage />} />
+          <Route path="mh/nha-cung-cap/:id" element={<SupplierDetailPage />} />
+        </Route>
+
+        {/* KHO — nhập, xuất, điều chuyển, kiểm kê (KHO-01 → KHO-09). Không có màn hình
+                  sửa tồn: sổ kho chỉ đổi qua phiếu, và phiếu điều chỉnh kiểm kê chỉ sinh ra
+                  sau khi biên bản được phê duyệt (KHO-07). */}
+        <Route element={<ModuleGuard module="KHO" />}>
+          <Route path="kho/quet-ma" element={<StockScanPage />} />
+          <Route path="kho/ton-kho" element={<InventoryListPage />} />
+          <Route path="kho/phieu" element={<StockMovementPage />} />
+          <Route path="kho/kiem-ke" element={<StocktakePage />} />
+          <Route path="kho/gian-giao" element={<ScaffoldingPage />} />
+          <Route path="kho/vat-tu" element={<MaterialListPage />} />
+          <Route path="kho/danh-muc-kho" element={<WarehouseListPage />} />
+        </Route>
+
+        {/* Hộp thư Phê duyệt — MỘT màn hình cho mọi module (Webapp Flow 4.6),
+                  nên nằm ở gốc chứ không thuộc đường dẫn của module nào. KHÔNG bọc
+                  `ModuleGuard`: nó gom hồ sơ từ mọi phân hệ, và mỗi dòng đã tự lọc theo
+                  hạn mức phê duyệt của vai trò (Mẫu RLS C). */}
+        <Route path="viec-can-lam" element={<ApprovalInboxPage />} />
+
+        {/* Trang trưng bày thành phần giao diện — công cụ nội bộ của đội triển khai. */}
+        <Route element={<ModuleGuard module="NEN" />}>
+          <Route path="nen/giao-dien" element={<DesignShowcasePage />} />
+        </Route>
+        {MODULE_CODES.filter(
+          (c): c is Exclude<ModuleCode, 'BC' | 'CRM' | 'DA' | 'TK' | 'HD' | 'TC' | 'MH' | 'KHO'> =>
+            c !== 'BC' &&
+            c !== 'CRM' &&
+            c !== 'DA' &&
+            c !== 'TK' &&
+            c !== 'HD' &&
+            c !== 'TC' &&
+            c !== 'MH' &&
+            c !== 'KHO',
+        ).map((code) => (
+          <Route key={code} element={<ModuleGuard module={code} />}>
+            <Route path={MODULE_PATHS[code]} element={<PlaceholderPage moduleCode={code} />} />
+          </Route>
+        ))}
+      </Route>
+
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Route>,
+  ),
+);
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/dang-nhap" element={<LoginPage />} />
-
-            <Route
-              element={
-                <ProtectedRoute>
-                  <AppShell />
-                </ProtectedRoute>
-              }
-            >
-              <Route path="/dashboard" element={<DashboardPage />} />
-
-              {/* CRM — Khách hàng (CRM-01). Thứ tự quan trọng: `tao-moi` phải đứng
-                  TRƯỚC `:id`, nếu không nó sẽ bị khớp như một id. */}
-              <Route path="crm/khach-hang" element={<CustomerListPage />} />
-              <Route path="crm/khach-hang/tao-moi" element={<CustomerCreatePage />} />
-              <Route path="crm/khach-hang/:id" element={<CustomerDetailPage />} />
-              <Route path="crm/khach-hang/:id/chinh-sua" element={<CustomerEditPage />} />
-
-              {/* CRM — Cơ hội kinh doanh (CRM-02). Cùng dữ liệu, hai chế độ xem
-                  Kanban/Danh sách đổi qua tham số `?che-do=`. */}
-              <Route path="crm/co-hoi" element={<OpportunityPipelinePage />} />
-              <Route path="crm/co-hoi/tao-moi" element={<OpportunityCreatePage />} />
-              <Route path="crm/co-hoi/:id" element={<OpportunityDetailPage />} />
-              <Route path="crm/co-hoi/:id/bao-gia/lap-moi" element={<QuoteCreatePage />} />
-
-              {/* CRM — Khiếu nại khách hàng (CRM-08). */}
-              <Route path="crm/khieu-nai" element={<ComplaintListPage />} />
-              <Route path="crm/khieu-nai/tao-moi" element={<ComplaintCreatePage />} />
-              <Route path="crm/khieu-nai/:id" element={<ComplaintDetailPage />} />
-
-              {/* DA — Gói thầu và đơn giá (DA-01 → DA-09). */}
-              <Route path="da/goi-thau" element={<BiddingListPage />} />
-              <Route path="da/goi-thau/tao-moi" element={<BiddingCreatePage />} />
-              <Route path="da/goi-thau/:id" element={<BiddingDetailPage />} />
-              <Route path="da/don-gia" element={<UnitPriceListPage />} />
-
-              {/* TK — Thiết kế đa bộ môn (TK-01 → TK-08). TK-10 → TK-17 chưa làm. */}
-              <Route path="tk/du-an" element={<DesignListPage />} />
-              <Route path="tk/du-an/tao-moi" element={<DesignCreatePage />} />
-              <Route path="tk/du-an/:id" element={<DesignDetailPage />} />
-
-              {/* HD — Hợp đồng (HD-01 → HD-05). Không có màn hình "tạo mới": hợp đồng soạn
-                  từ hồ sơ nguồn ở CRM/DA/TK, không nhập lại dữ liệu đã có (PRD 2.3). */}
-              <Route path="hd/hop-dong" element={<ContractListPage />} />
-              <Route path="hd/hop-dong/:id" element={<ContractDetailPage />} />
-
-              {/* TC — Thi công và ngân sách công trình (TC-01 → TC-08). Không có màn hình
-                  "tạo mới": công trình mở từ hợp đồng đã ký, hoặc tự mở khi hồ sơ thiết kế
-                  được bàn giao cho Ban công trường (TK-08). */}
-              <Route path="tc/cong-trinh" element={<SiteListPage />} />
-              <Route path="tc/cong-trinh/:id" element={<SiteDetailPage />} />
-
-              {/* MH — Mua hàng và vật tư (MH-01 → MH-08). Không có màn hình "tạo đơn hàng":
-                  đơn hàng lập từ đề nghị đã duyệt và báo giá đã chọn, không đặt trước rồi
-                  trình duyệt sau (MH-02, MH-04). */}
-              <Route path="mh/de-nghi-mua" element={<PurchaseRequestListPage />} />
-              <Route path="mh/de-nghi-mua/tao-moi" element={<PurchaseRequestCreatePage />} />
-              <Route path="mh/de-nghi-mua/:id" element={<PurchaseRequestDetailPage />} />
-              <Route path="mh/don-hang" element={<PurchaseOrderListPage />} />
-              <Route path="mh/don-hang/:id" element={<PurchaseOrderDetailPage />} />
-              <Route path="mh/nha-cung-cap" element={<SupplierListPage />} />
-              <Route path="mh/nha-cung-cap/:id" element={<SupplierDetailPage />} />
-
-              {/* KHO — nhập, xuất, điều chuyển, kiểm kê (KHO-01 → KHO-09). Không có màn hình
-                  sửa tồn: sổ kho chỉ đổi qua phiếu, và phiếu điều chỉnh kiểm kê chỉ sinh ra
-                  sau khi biên bản được phê duyệt (KHO-07). */}
-              <Route path="kho/quet-ma" element={<StockScanPage />} />
-              <Route path="kho/ton-kho" element={<InventoryListPage />} />
-              <Route path="kho/phieu" element={<StockMovementPage />} />
-              <Route path="kho/kiem-ke" element={<StocktakePage />} />
-              <Route path="kho/gian-giao" element={<ScaffoldingPage />} />
-              <Route path="kho/vat-tu" element={<MaterialListPage />} />
-              <Route path="kho/danh-muc-kho" element={<WarehouseListPage />} />
-
-              {/* Hộp thư Phê duyệt — MỘT màn hình cho mọi module (Webapp Flow 4.6),
-                  nên nằm ở gốc chứ không thuộc đường dẫn của module nào. */}
-              <Route path="viec-can-lam" element={<ApprovalInboxPage />} />
-
-              {/* Trang trưng bày thành phần giao diện — công cụ nội bộ của đội triển khai.
-                  Đặt trong nhánh `nen/` nên chỉ vai trò xem được phân hệ Nền tảng mới tới được;
-                  hàng rào thật vẫn là RLS, đây chỉ là điều hướng (Webapp Flow 6.5). */}
-              <Route path="nen/giao-dien" element={<DesignShowcasePage />} />
-              {MODULE_CODES.filter(
-                (
-                  c,
-                ): c is Exclude<
-                  ModuleCode,
-                  'BC' | 'CRM' | 'DA' | 'TK' | 'HD' | 'TC' | 'MH' | 'KHO'
-                > =>
-                  c !== 'BC' &&
-                  c !== 'CRM' &&
-                  c !== 'DA' &&
-                  c !== 'TK' &&
-                  c !== 'HD' &&
-                  c !== 'TC' &&
-                  c !== 'MH' &&
-                  c !== 'KHO',
-              ).map(
-                (code) => (
-                  <Route
-                    key={code}
-                    path={MODULE_PATHS[code]}
-                    element={<PlaceholderPage moduleCode={code} />}
-                  />
-                ),
-              )}
-            </Route>
-
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
+      {/* `AuthProvider` nằm NGOÀI router: nó không dùng hook điều hướng nào, và để ngoài thì
+          phiên đăng nhập không bị dựng lại mỗi lần router đổi trang. */}
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

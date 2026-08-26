@@ -8,17 +8,20 @@
 
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BUTTONS, CONFIRMS, ERRORS } from '@nvg/shared';
+import { BUTTONS, ERRORS } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
+import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { MoneyInput } from '@/components/ui/money-input';
 import { BlockedNotice } from '@/components/ui/states';
 import { useActiveUsers } from '@/hooks/use-active-users';
 import { useCreateBiddingProject } from '@/hooks/use-bidding-projects';
 import { useEntityList } from '@/hooks/use-entity';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useOpportunities } from '@/hooks/use-opportunities';
+import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard';
 import { useAuth, useCan } from '@/lib/auth';
 import { useCompanyStore } from '@/lib/company-store';
 import { supabase } from '@/lib/supabase';
@@ -62,6 +65,9 @@ export function BiddingCreatePage() {
   });
   const [error, setError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  // Hàng rào chống mất dữ liệu áp cho MỌI lối ra khỏi trang, không riêng nút Hủy
+  // (Webapp Flow 6.3).
+  const releaseUnsavedGuard = useUnsavedChangesGuard(dirty);
 
   function update(field: keyof typeof form, value: string) {
     setForm((f) => {
@@ -117,6 +123,7 @@ export function BiddingCreatePage() {
       });
 
       setDirty(false);
+      releaseUnsavedGuard();
       navigate(`/da/goi-thau/${created.id}`, { replace: true });
     } catch (e) {
       setError(toUserMessage(e, 'create'));
@@ -124,7 +131,8 @@ export function BiddingCreatePage() {
   }
 
   function handleCancel() {
-    if (dirty && !window.confirm(CONFIRMS.unsavedChanges)) return;
+    // KHÔNG hỏi ở đây: `useUnsavedChangesGuard` đã chặn mọi lần chuyển trang, kể cả
+    // lần này. Hỏi thêm một lần nữa là bắt người dùng xác nhận hai lần cho một việc.
     navigate('/da/goi-thau');
   }
 
@@ -208,19 +216,14 @@ export function BiddingCreatePage() {
             </select>
           </Field>
 
-          <Field label="Giá trị dự kiến" hint="Đơn vị đồng, không nhập dấu phân cách.">
-            <Input
-              value={form.estimatedValue}
-              onChange={(e) => update('estimatedValue', e.target.value.replace(/[^\d]/g, ''))}
-              inputMode="numeric"
-            />
+          <Field label="Giá trị dự kiến" hint="Đơn vị đồng.">
+            <MoneyInput value={form.estimatedValue} onChange={(v) => update('estimatedValue', v)} />
           </Field>
 
           <Field label="Hạn nộp thầu">
-            <Input
-              type="date"
+            <DateInput
               value={form.submissionDeadline}
-              onChange={(e) => update('submissionDeadline', e.target.value)}
+              onChange={(v) => update('submissionDeadline', v)}
             />
           </Field>
 
@@ -246,7 +249,10 @@ export function BiddingCreatePage() {
         </div>
 
         {error && (
-          <p role="alert" className="mt-4 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
+          <p
+            role="alert"
+            className="mt-4 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
+          >
             {error}
           </p>
         )}

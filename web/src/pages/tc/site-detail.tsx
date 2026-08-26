@@ -19,9 +19,9 @@ import {
   siteDisplayStatus,
   type SiteStage,
 } from '@nvg/shared';
-import { DetailFields, EntityDetail } from '@/components/entity/entity-detail';
+import { DetailFields, EntityDetail, RecordNotFound } from '@/components/entity/entity-detail';
 import { Button } from '@/components/ui/button';
-import { CardGridSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
+import { CardGridSkeleton, ErrorState } from '@/components/ui/states';
 import {
   useAcceptanceRecords,
   useConstructionSite,
@@ -63,7 +63,11 @@ export function SiteDetailPage() {
   if (error) return <ErrorState message={toUserMessage(error)} />;
   if (!data) {
     return (
-      <EmptyState message="Không tìm thấy công trình này. Có thể hồ sơ đã được xóa hoặc vai trò hiện tại chưa được cấp quyền xem." />
+      <RecordNotFound
+        entity="công trình"
+        listPath="/tc/cong-trinh"
+        listLabel="Quay lại danh sách công trình"
+      />
     );
   }
 
@@ -96,7 +100,9 @@ export function SiteDetailPage() {
         <Button
           variant="primary"
           disabled={moveStage.isPending}
-          onClick={() => void run(() => moveStage.mutateAsync({ siteId: site.id, stage: next.stage }))}
+          onClick={() =>
+            void run(() => moveStage.mutateAsync({ siteId: site.id, stage: next.stage }))
+          }
         >
           {next.label}
         </Button>
@@ -132,7 +138,11 @@ export function SiteDetailPage() {
       )}
 
       <EntityDetail
-        breadcrumbs={[{ label: 'Công trình', to: '/tc/cong-trinh' }, { label: site.name }]}
+        breadcrumbs={[
+          { label: 'Thi công & Ngân sách' },
+          { label: 'Công trình', to: '/tc/cong-trinh' },
+          { label: site.name },
+        ]}
         title={site.name}
         code={site.code}
         status={siteDisplayStatus(site.stage, site.planned_end_date)}
@@ -145,11 +155,7 @@ export function SiteDetailPage() {
             label: 'Nhật ký',
             badge: logs?.length || undefined,
             content: (
-              <SiteLogPanel
-                siteId={site.id}
-                companyId={site.company_id}
-                readOnly={readOnly}
-              />
+              <SiteLogPanel siteId={site.id} companyId={site.company_id} readOnly={readOnly} />
             ),
           },
           {
@@ -250,8 +256,8 @@ export function SiteDetailPage() {
                         }
                       />
                       <span className="mt-1 block text-xs text-fg-subtle">
-                        Do chỉ huy trưởng tự đánh giá và ghi lại — hệ thống không tự suy ra từ
-                        nhật ký khi chưa có quy ước đo tiến độ của công trường.
+                        Do chỉ huy trưởng tự đánh giá và ghi lại — hệ thống không tự suy ra từ nhật
+                        ký khi chưa có quy ước đo tiến độ của công trường.
                       </span>
                     </label>
 

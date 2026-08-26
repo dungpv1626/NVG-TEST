@@ -16,7 +16,7 @@ import {
   type ComplaintSeverity,
 } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
-import { CreateButton, EntityTable, type EntityRow } from '@/components/entity/entity-table';
+import { EntityTable, useCreateActions, type EntityRow } from '@/components/entity/entity-table';
 import { useComplaints } from '@/hooks/use-complaints';
 import { useCan } from '@/lib/auth';
 import { CrmNav } from './crm-nav';
@@ -56,21 +56,19 @@ export function ComplaintListPage() {
       customerName: c.customer?.name ?? '—',
     }));
 
-  const createLabel = BUTTONS.create('khiếu nại');
-  const createButton = canCreate ? (
-    <CreateButton to="/crm/khieu-nai/tao-moi" label={createLabel} />
-  ) : undefined;
-  // Trạng thái rỗng dùng bản `secondary` — nút ở header đã là hành động chính (CGD 6.3).
-  const emptyStateButton = canCreate ? (
-    <CreateButton to="/crm/khieu-nai/tao-moi" label={createLabel} variant="secondary" />
-  ) : undefined;
+  const { headerAction, emptyAction } = useCreateActions({
+    canCreate,
+    label: BUTTONS.create('khiếu nại'),
+    to: '/crm/khieu-nai/tao-moi',
+    isEmpty: !isLoading && !error && rows.length === 0,
+  });
 
   return (
     <>
       <PageHeader
         title="Khiếu nại khách hàng"
         breadcrumbs={[{ label: 'Khách hàng & Cơ hội' }, { label: 'Khiếu nại' }]}
-        actions={createButton}
+        actions={headerAction}
       />
       <CrmNav />
 
@@ -82,7 +80,7 @@ export function ComplaintListPage() {
         detailPath={(row) => `/crm/khieu-nai/${row.id}`}
         searchPlaceholder="Tìm theo mã, tiêu đề hoặc người chủ trì…"
         emptyMessage={SCREEN_EMPTY_STATES.complaints}
-        emptyAction={emptyStateButton}
+        emptyAction={emptyAction}
         filters={
           <label className="flex items-center gap-2">
             <span className="text-fg-subtle">Mức độ</span>

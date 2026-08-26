@@ -11,12 +11,15 @@
 
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { BUTTONS, CONFIRMS, ERRORS, formatCurrency } from '@nvg/shared';
+import { BUTTONS, ERRORS, formatCurrency } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
+import { DateInput } from '@/components/ui/date-input';
 import { Input } from '@/components/ui/input';
+import { MoneyInput } from '@/components/ui/money-input';
 import { useCreateEntity, useEntityList } from '@/hooks/use-entity';
 import { toUserMessage } from '@/hooks/use-error-message';
+import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard';
 import { useAuth, useCan } from '@/lib/auth';
 import { useCompanyStore } from '@/lib/company-store';
 import { supabase } from '@/lib/supabase';
@@ -67,6 +70,9 @@ export function OpportunityCreatePage() {
   });
   const [error, setError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  // Hàng rào chống mất dữ liệu áp cho MỌI lối ra khỏi trang, không riêng nút Hủy
+  // (Webapp Flow 6.3).
+  const releaseUnsavedGuard = useUnsavedChangesGuard(dirty);
 
   const createOpportunity = useCreateEntity<Record<string, unknown>, { id: string }>({
     table: 'opportunities',
@@ -113,6 +119,7 @@ export function OpportunityCreatePage() {
       });
 
       setDirty(false);
+      releaseUnsavedGuard();
       navigate(`/crm/co-hoi/${created.id}`, { replace: true });
     } catch (e) {
       setError(toUserMessage(e, 'create'));
@@ -120,7 +127,8 @@ export function OpportunityCreatePage() {
   }
 
   function handleCancel() {
-    if (dirty && !window.confirm(CONFIRMS.unsavedChanges)) return;
+    // KHÔNG hỏi ở đây: `useUnsavedChangesGuard` đã chặn mọi lần chuyển trang, kể cả
+    // lần này. Hỏi thêm một lần nữa là bắt người dùng xác nhận hai lần cho một việc.
     navigate('/crm/co-hoi');
   }
 
@@ -162,8 +170,8 @@ export function OpportunityCreatePage() {
         <div className="max-w-2xl rounded-lg border border-border bg-surface p-6 shadow-card">
           <p className="font-medium">Chưa có khách hàng nào trong hệ thống.</p>
           <p className="mt-1 text-fg-subtle">
-            Cơ hội kinh doanh luôn gắn với một khách hàng. Tạo hồ sơ khách hàng trước để không
-            phải nhập lại thông tin ở nhiều nơi.
+            Cơ hội kinh doanh luôn gắn với một khách hàng. Tạo hồ sơ khách hàng trước để không phải
+            nhập lại thông tin ở nhiều nơi.
           </p>
           <Button variant="primary" className="mt-4" asChild>
             <Link to="/crm/khach-hang/tao-moi">{BUTTONS.create('khách hàng')}</Link>
@@ -215,10 +223,9 @@ export function OpportunityCreatePage() {
             </Field>
 
             <Field label="Giá trị dự kiến">
-              <Input
+              <MoneyInput
                 value={form.estimatedValue}
-                onChange={(e) => update('estimatedValue', e.target.value)}
-                inputMode="numeric"
+                onChange={(v) => update('estimatedValue', v)}
                 placeholder="Đơn vị: đồng"
               />
               {parsedValue && (
@@ -227,19 +234,14 @@ export function OpportunityCreatePage() {
             </Field>
 
             <Field label="Tiến độ mong muốn">
-              <Input
-                type="date"
+              <DateInput
                 value={form.expectedStartDate}
-                onChange={(e) => update('expectedStartDate', e.target.value)}
+                onChange={(v) => update('expectedStartDate', v)}
               />
             </Field>
 
             <Field label="Thời hạn xử lý">
-              <Input
-                type="date"
-                value={form.dueDate}
-                onChange={(e) => update('dueDate', e.target.value)}
-              />
+              <DateInput value={form.dueDate} onChange={(v) => update('dueDate', v)} />
             </Field>
 
             <Field label="Ghi chú" className="sm:col-span-2">
@@ -253,7 +255,10 @@ export function OpportunityCreatePage() {
           </div>
 
           {error && (
-            <p role="alert" className="mt-4 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
+            <p
+              role="alert"
+              className="mt-4 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
+            >
               {error}
             </p>
           )}

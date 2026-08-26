@@ -20,6 +20,8 @@ import { useMemo, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } fro
 import { Link, useSearchParams } from 'react-router-dom';
 import { formatDeadline, type StatusGroup } from '@nvg/shared';
 import { Breadcrumb, type Crumb } from '@/components/layout/breadcrumb';
+import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/states';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
 import { cn } from '@/lib/utils';
 
@@ -163,9 +165,7 @@ export function EntityDetail({
                   <span className="text-fg">{responsiblePerson ?? 'Chưa phân công'}</span>
                 </span>
                 {deadline && (
-                  <span
-                    className={cn(status === 'overdue' && 'font-medium text-status-overdue')}
-                  >
+                  <span className={cn(status === 'overdue' && 'font-medium text-status-overdue')}>
                     {formatDeadline(deadline)}
                   </span>
                 )}
@@ -220,7 +220,11 @@ export function EntityDetail({
           </nav>
         </div>
 
-        <div role="tabpanel" id={`panel-${active?.id ?? ''}`} aria-labelledby={`tab-${active?.id ?? ''}`}>
+        <div
+          role="tabpanel"
+          id={`panel-${active?.id ?? ''}`}
+          aria-labelledby={`tab-${active?.id ?? ''}`}
+        >
           {active?.content}
         </div>
 
@@ -292,11 +296,7 @@ function RelatedGroups({ related }: { related: RelatedGroup[] }) {
  * Bảng thông tin dạng nhãn – giá trị, dùng trong tab Tổng quan.
  * Nhãn KHÔNG có dấu hai chấm ở cuối (Content Guidelines 4.9).
  */
-export function DetailFields({
-  fields,
-}: {
-  fields: { label: string; value: ReactNode }[];
-}) {
+export function DetailFields({ fields }: { fields: { label: string; value: ReactNode }[] }) {
   return (
     <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
       {fields.map((f) => (
@@ -306,5 +306,39 @@ export function DetailFields({
         </div>
       ))}
     </dl>
+  );
+}
+
+/**
+ * Màn hình Chi tiết mở một hồ sơ không đọc được — đã xóa, hoặc ngoài phạm vi RLS của vai trò.
+ *
+ * Luôn kèm đường quay lại danh sách. Trạng thái rỗng phải có hành động gợi ý chứ không để
+ * người dùng mắc kẹt (Content Guidelines 4.7); ở đây điều đó đặc biệt quan trọng vì màn hình
+ * này thường tới từ một đường dẫn dán qua Zalo — người mở nó không có sẵn ngữ cảnh nào để tự
+ * tìm đường ra, và không có thanh bên nào đang sáng để bấm.
+ *
+ * Nội dung thông điệp cố ý nêu CẢ HAI khả năng và không nói rõ là khả năng nào: khẳng định
+ * "hồ sơ này tồn tại nhưng bạn không được xem" là đã tiết lộ sự tồn tại của hồ sơ cho người
+ * không có quyền biết.
+ */
+export function RecordNotFound({
+  entity,
+  listPath,
+  listLabel,
+}: {
+  /** Tên loại hồ sơ trong câu — ví dụ `'gói thầu'`, `'cơ hội kinh doanh'`. */
+  entity: string;
+  listPath: string;
+  listLabel: string;
+}) {
+  return (
+    <EmptyState
+      message={`Không tìm thấy ${entity} này. Có thể hồ sơ đã được xóa hoặc vai trò hiện tại chưa được cấp quyền xem.`}
+      action={
+        <Button variant="secondary" asChild>
+          <Link to={listPath}>{listLabel}</Link>
+        </Button>
+      }
+    />
   );
 }

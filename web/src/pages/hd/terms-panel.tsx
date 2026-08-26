@@ -20,8 +20,10 @@ import {
   type ContractTermType,
 } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
+import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { MoneyInput } from '@/components/ui/money-input';
 import {
   useContractTerms,
   useSaveContractTerm,
@@ -121,7 +123,10 @@ export function TermsPanel({
         const isMissingRequired = REQUIRED_TYPES.includes(type) && rows.length === 0;
 
         return (
-          <section key={type} className="rounded-lg border border-border bg-surface p-4 shadow-card">
+          <section
+            key={type}
+            className="rounded-lg border border-border bg-surface p-4 shadow-card"
+          >
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <p className="font-medium">{CONTRACT_TERM_TYPE_LABELS[type]}</p>
               {isMissingRequired && (
@@ -194,13 +199,10 @@ export function TermsPanel({
                     />
                   </Field>
 
-                  <Field label="Giá trị" hint="Đơn vị đồng, không nhập dấu phân cách.">
-                    <Input
+                  <Field label="Giá trị" hint="Đơn vị đồng.">
+                    <MoneyInput
                       value={form.amount}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, amount: e.target.value.replace(/[^\d]/g, '') }))
-                      }
-                      inputMode="numeric"
+                      onChange={(v) => setForm((f) => ({ ...f, amount: v }))}
                     />
                   </Field>
 
@@ -218,10 +220,9 @@ export function TermsPanel({
                   </Field>
 
                   <Field label="Ngày đến hạn" hint="Nguồn của cảnh báo khoản sắp đến hạn (HD-03).">
-                    <Input
-                      type="date"
+                    <DateInput
                       value={form.dueDate}
-                      onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))}
+                      onChange={(v) => setForm((f) => ({ ...f, dueDate: v }))}
                     />
                   </Field>
 

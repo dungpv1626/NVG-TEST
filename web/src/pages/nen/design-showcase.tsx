@@ -12,13 +12,15 @@
  * Chỉ Quản trị hệ thống thấy — công cụ nội bộ của đội triển khai, không phải màn hình nghiệp vụ.
  */
 
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { STATUS_GROUPS, STATUS_META, type StatusGroup } from '@nvg/shared';
 import { EntityTable, type EntityRow } from '@/components/entity/entity-table';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
+import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { MoneyInput } from '@/components/ui/money-input';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
 
@@ -65,6 +67,9 @@ const STATUS_DOT: Readonly<Record<StatusGroup, string>> = {
 };
 
 export function DesignShowcasePage() {
+  // Ô tiền phải điều khiển được thì mới trưng ra hành vi tự chèn dấu chấm khi gõ.
+  const [showcaseAmount, setShowcaseAmount] = useState('4500000000');
+
   return (
     <>
       <PageHeader
@@ -113,14 +118,18 @@ export function DesignShowcasePage() {
           <Field label="Tên gói thầu" required>
             <Input placeholder="Ví dụ: Nhà xưởng Long An giai đoạn 2" />
           </Field>
-          <Field label="Giá trị ước tính" hint="Đơn vị đồng, không nhập dấu chấm phân cách.">
-            <Input inputMode="numeric" placeholder="4500000000" />
+          <Field label="Giá trị ước tính" hint="Đơn vị đồng. Dấu chấm phân cách tự chèn khi gõ.">
+            <MoneyInput value={showcaseAmount} onChange={setShowcaseAmount} />
           </Field>
           <Field label="Mã hồ sơ">
             <Input defaultValue="NVC-DA-2026-0031" disabled />
           </Field>
-          <Field label="Ngày nộp thầu" required hint="Thiếu ngày này thì hệ thống không nhắc hạn được.">
-            <Input aria-invalid type="date" />
+          <Field
+            label="Ngày nộp thầu"
+            required
+            hint="Thiếu ngày này thì hệ thống không nhắc hạn được."
+          >
+            <DateInput aria-invalid />
           </Field>
         </div>
       </Section>
@@ -145,7 +154,10 @@ export function DesignShowcasePage() {
         <TableSkeleton rows={3} columns={5} />
       </Section>
 
-      <Section title="Trạng thái rỗng" note="Tình trạng + gợi ý bước tiếp theo. Không để trang trắng.">
+      <Section
+        title="Trạng thái rỗng"
+        note="Tình trạng + gợi ý bước tiếp theo. Không để trang trắng."
+      >
         <div className="rounded-lg border border-border bg-surface shadow-raised">
           <EmptyState
             message="Chưa có gói thầu nào. Gói thầu được lập từ một cơ hội đã qua bước Khảo sát."

@@ -17,6 +17,7 @@ import { useState } from 'react';
 import { DELIVERY_ISSUE_LABELS, deliveryProgress, formatDate, formatNumber } from '@nvg/shared';
 import type { DeliveryIssueType } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
+import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
@@ -74,9 +75,8 @@ export function DeliveryPanel({
         purchase_order_item_id: line.id,
         quantity_ok: Number(values.get(`ok_${line.id}`) ?? 0),
         quantity_issue: Number(values.get(`issue_${line.id}`) ?? 0),
-        issue_type: (String(values.get(`issue_type_${line.id}`) ?? '') || null) as
-          | DeliveryIssueType
-          | null,
+        issue_type: (String(values.get(`issue_type_${line.id}`) ?? '') ||
+          null) as DeliveryIssueType | null,
         issue_note: String(values.get(`issue_note_${line.id}`) ?? '').trim() || null,
       }))
       .filter((line) => line.quantity_ok > 0 || line.quantity_issue > 0);
@@ -136,10 +136,10 @@ export function DeliveryPanel({
           Đã nhận đủ {progress.completeLines} / {progress.lines} mặt hàng
         </p>
         <p className="mt-1 text-fg-muted">
-          Đếm theo mặt hàng chứ không cộng số lượng lại: một đơn có cả thép tính bằng kg lẫn
-          bulông tính bằng cái thì phép cộng đó không có nghĩa. Số lượng còn thiếu của từng mặt
-          hàng xem ở cột "Còn lại". Chỉ phần ĐẠT được tính vào chi phí thực tế của công trình —
-          hàng thiếu, sai quy cách hoặc hư hỏng ghi riêng để làm việc với nhà cung cấp.
+          Đếm theo mặt hàng chứ không cộng số lượng lại: một đơn có cả thép tính bằng kg lẫn bulông
+          tính bằng cái thì phép cộng đó không có nghĩa. Số lượng còn thiếu của từng mặt hàng xem ở
+          cột "Còn lại". Chỉ phần ĐẠT được tính vào chi phí thực tế của công trình — hàng thiếu, sai
+          quy cách hoặc hư hỏng ghi riêng để làm việc với nhà cung cấp.
         </p>
       </section>
 
@@ -147,11 +147,21 @@ export function DeliveryPanel({
         <table className="w-full min-w-[44rem] text-left">
           <thead className="border-b border-border text-fg-muted">
             <tr>
-              <th scope="col" className="py-2 pr-4 font-medium">Mặt hàng</th>
-              <th scope="col" className="py-2 pr-4 font-medium">Đơn vị</th>
-              <th scope="col" className="py-2 pr-4 text-right font-medium">Đã đặt</th>
-              <th scope="col" className="py-2 pr-4 text-right font-medium">Đã nhận</th>
-              <th scope="col" className="py-2 text-right font-medium">Còn lại</th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                Mặt hàng
+              </th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                Đơn vị
+              </th>
+              <th scope="col" className="py-2 pr-4 text-right font-medium">
+                Đã đặt
+              </th>
+              <th scope="col" className="py-2 pr-4 text-right font-medium">
+                Đã nhận
+              </th>
+              <th scope="col" className="py-2 text-right font-medium">
+                Còn lại
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -190,7 +200,10 @@ export function DeliveryPanel({
                 0,
               );
               return (
-                <li key={delivery.id} className="rounded-lg border border-border bg-surface px-4 py-3">
+                <li
+                  key={delivery.id}
+                  className="rounded-lg border border-border bg-surface px-4 py-3"
+                >
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <p className="font-medium">
                       {delivery.code ?? 'Phiếu giao nhận'} · {formatDate(delivery.delivered_date)}
@@ -202,8 +215,12 @@ export function DeliveryPanel({
                   </div>
                   <p className="mt-1 text-fg-muted">
                     Người nhận: {delivery.receiver?.full_name ?? EM_DASH}
-                    {delivery.delivered_by_name ? ` · Người giao: ${delivery.delivered_by_name}` : ''}
-                    {delivery.delivery_note_number ? ` · Phiếu giao ${delivery.delivery_note_number}` : ''}
+                    {delivery.delivered_by_name
+                      ? ` · Người giao: ${delivery.delivered_by_name}`
+                      : ''}
+                    {delivery.delivery_note_number
+                      ? ` · Phiếu giao ${delivery.delivery_note_number}`
+                      : ''}
                     {delivery.invoice_number ? ` · Hóa đơn ${delivery.invoice_number}` : ''}
                     {delivery.has_quality_certificate ? ' · Có CO/CQ' : ''}
                   </p>
@@ -261,9 +278,8 @@ export function DeliveryPanel({
             >
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <Field label="Ngày nhận" required>
-                  <Input
+                  <DateInput
                     name="delivered_date"
-                    type="date"
                     required
                     defaultValue={new Date().toISOString().slice(0, 10)}
                   />

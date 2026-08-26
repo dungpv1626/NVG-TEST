@@ -23,6 +23,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { MoneyInput } from '@/components/ui/money-input';
 import { EmptyState } from '@/components/ui/states';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
 import { useChangeRequests, useSaveChangeRequest } from '@/hooks/use-design-projects';
@@ -216,13 +217,11 @@ export function ChangeRequestPanel({
                 />
               </Field>
 
-              <Field label="Ảnh hưởng chi phí" hint="Đơn vị đồng, không nhập dấu phân cách.">
-                <Input
+              <Field label="Ảnh hưởng chi phí" hint="Đơn vị đồng. Số âm nghĩa là giảm chi phí.">
+                <MoneyInput
                   value={form.costImpact}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, costImpact: e.target.value.replace(/[^\d-]/g, '') }))
-                  }
-                  inputMode="numeric"
+                  allowNegative
+                  onChange={(v) => setForm((f) => ({ ...f, costImpact: v }))}
                 />
               </Field>
 
@@ -293,7 +292,9 @@ export function ChangeRequestPanel({
               <dl className="mt-2 grid gap-x-6 gap-y-1 sm:grid-cols-3">
                 <div>
                   <dt className="text-fg-subtle">Ảnh hưởng tiến độ</dt>
-                  <dd>{r.schedule_impact_days != null ? `${r.schedule_impact_days} ngày` : EM_DASH}</dd>
+                  <dd>
+                    {r.schedule_impact_days != null ? `${r.schedule_impact_days} ngày` : EM_DASH}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-fg-subtle">Ảnh hưởng chi phí</dt>
@@ -314,7 +315,9 @@ export function ChangeRequestPanel({
                   <Field label="Chuyển trạng thái">
                     <select
                       value={r.status}
-                      onChange={(e) => void changeStatus(r.id, e.target.value as ChangeRequestStatus)}
+                      onChange={(e) =>
+                        void changeStatus(r.id, e.target.value as ChangeRequestStatus)
+                      }
                       className="h-10 rounded-sm border border-border bg-surface px-3 sm:h-9"
                     >
                       {CHANGE_REQUEST_STATUSES.map((s) => (

@@ -13,6 +13,7 @@ import { BUTTONS, formatCurrency, formatDateTime } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { MoneyInput } from '@/components/ui/money-input';
 import { EmptyState } from '@/components/ui/states';
 import {
   useConfirmDesignBrief,
@@ -145,12 +146,8 @@ export function BriefPanel({
             />
           </Field>
 
-          <Field label="Ngân sách dự kiến" hint="Đơn vị đồng, không nhập dấu phân cách.">
-            <Input
-              value={form.budgetAmount}
-              onChange={(e) => set('budgetAmount')(e.target.value.replace(/[^\d]/g, ''))}
-              inputMode="numeric"
-            />
+          <Field label="Ngân sách dự kiến" hint="Đơn vị đồng.">
+            <MoneyInput value={form.budgetAmount} onChange={set('budgetAmount')} />
           </Field>
 
           <Field label="Ghi chú về ngân sách">

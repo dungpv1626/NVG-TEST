@@ -24,6 +24,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { MoneyInput } from '@/components/ui/money-input';
 import { EmptyState } from '@/components/ui/states';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
 import {
@@ -173,9 +174,9 @@ export function EstimatePanel({
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <Field label="Giá dự thầu" hint="Con số gửi cho chủ đầu tư. Đơn vị đồng.">
             {editable ? (
-              <Input
+              <MoneyInput
                 value={bidPrice ?? (current.bid_price != null ? String(current.bid_price) : '')}
-                onChange={(e) => setBidPrice(e.target.value.replace(/[^\d]/g, ''))}
+                onChange={setBidPrice}
                 onBlur={() =>
                   bidPrice !== null &&
                   void run(() =>
@@ -185,7 +186,6 @@ export function EstimatePanel({
                     }),
                   )
                 }
-                inputMode="numeric"
               />
             ) : (
               <p className="font-semibold tabular-nums">
@@ -420,12 +420,10 @@ function ItemRow({
         />
       </td>
       <td className="px-3 py-2">
-        <Input
+        <MoneyInput
           value={String(row.unit_price)}
           aria-label="Đơn giá"
-          inputMode="numeric"
-          className="text-right"
-          onChange={(e) => onChange({ ...row, unit_price: Number(e.target.value) || 0 })}
+          onChange={(v) => onChange({ ...row, unit_price: Number(v) || 0 })}
         />
       </td>
       <td className="px-3 py-2 text-right">
@@ -457,8 +455,7 @@ function CostForm({
     profitMarginPercent: string;
   }) => void;
 }) {
-  const asText = (key: keyof CostBreakdown) =>
-    initial?.[key] != null ? String(initial[key]) : '';
+  const asText = (key: keyof CostBreakdown) => (initial?.[key] != null ? String(initial[key]) : '');
   const [values, setValues] = useState({
     directCost: asText('direct_cost'),
     overheadCost: asText('overhead_cost'),
@@ -469,13 +466,15 @@ function CostForm({
     profitMarginPercent: asText('profit_margin_percent'),
   });
 
-  const FIELDS: { key: keyof typeof values; label: string }[] = [
-    { key: 'overheadCost', label: 'Chi phí chung' },
-    { key: 'contingencyCost', label: 'Dự phòng rủi ro' },
-    { key: 'financeCost', label: 'Chi phí tài chính' },
-    { key: 'taxAmount', label: 'Thuế' },
-    { key: 'profitAmount', label: 'Lợi nhuận dự kiến' },
-    { key: 'profitMarginPercent', label: 'Tỷ lệ lợi nhuận (%)' },
+  // `money` phân biệt ô TIỀN với ô PHẦN TRĂM: chỉ ô tiền mới nhóm dấu chấm hàng nghìn. Gắn
+  // nhầm vào tỷ lệ thì `12.5` thành `125` — sai mười lần biên lợi nhuận.
+  const FIELDS: { key: keyof typeof values; label: string; money: boolean }[] = [
+    { key: 'overheadCost', label: 'Chi phí chung', money: true },
+    { key: 'contingencyCost', label: 'Dự phòng rủi ro', money: true },
+    { key: 'financeCost', label: 'Chi phí tài chính', money: true },
+    { key: 'taxAmount', label: 'Thuế', money: true },
+    { key: 'profitAmount', label: 'Lợi nhuận dự kiến', money: true },
+    { key: 'profitMarginPercent', label: 'Tỷ lệ lợi nhuận (%)', money: false },
   ];
 
   return (
@@ -487,11 +486,18 @@ function CostForm({
       <div className="grid gap-3 sm:grid-cols-3">
         {FIELDS.map((f) => (
           <Field key={f.key} label={f.label}>
-            <Input
-              value={values[f.key]}
-              inputMode="numeric"
-              onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
-            />
+            {f.money ? (
+              <MoneyInput
+                value={values[f.key]}
+                onChange={(v) => setValues({ ...values, [f.key]: v })}
+              />
+            ) : (
+              <Input
+                value={values[f.key]}
+                inputMode="decimal"
+                onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
+              />
+            )}
           </Field>
         ))}
       </div>

@@ -134,6 +134,17 @@ export interface EntityTableProps<T extends EntityRow> {
    */
   showStatusFilter?: boolean;
 
+  /**
+   * Đặt `true` cho danh sách của bảng DÙNG CHUNG giữa các pháp nhân (`customers`, `suppliers`)
+   * để KHÔNG chèn cột "Pháp nhân" khi đang gộp "Toàn NVG".
+   *
+   * Những bảng đó cố ý không có `company_id` (Backend Schema 2.2): một khách hàng xuất hiện ở
+   * cơ hội của nhiều pháp nhân, gắn nó vào một pháp nhân là sai nghiệp vụ. Nhưng cột vẫn được
+   * chèn thì mọi dòng hiện dấu gạch — đọc ra thành "hồ sơ này chưa được gán pháp nhân", một
+   * việc còn thiếu cần đi sửa, trong khi sự thật là "pháp nhân không áp dụng ở đây".
+   */
+  sharedAcrossCompanies?: boolean;
+
   /** Bật chọn nhiều dòng để thao tác hàng loạt (Webapp Flow 4.2). */
   selection?: {
     selectedIds: string[];
@@ -171,6 +182,7 @@ export function EntityTable<T extends EntityRow>({
   searchPlaceholder = 'Tìm trong danh sách…',
   filters,
   showStatusFilter = true,
+  sharedAcrossCompanies = false,
   selection,
 }: EntityTableProps<T>) {
   // Bộ lọc lưu trong query string: quay lại từ Chi tiết vẫn giữ nguyên, và đường dẫn
@@ -187,7 +199,8 @@ export function EntityTable<T extends EntityRow>({
   const periodFilter: DashboardPeriod | null = isDashboardPeriod(periodParam) ? periodParam : null;
 
   const scope = useCompanyScope();
-  const companyOf = useCompanyLookup(scope.isAggregate);
+  const showCompanyColumn = scope.isAggregate && !sharedAcrossCompanies;
+  const companyOf = useCompanyLookup(showCompanyColumn);
 
   const filtered = useMemo(
     () =>
@@ -217,7 +230,7 @@ export function EntityTable<T extends EntityRow>({
   // KHÔNG ghi nhớ bằng `useMemo`: hàm tra cứu đọc danh mục pháp nhân tải bất đồng bộ, nên bản
   // ghi nhớ dựng ở lượt vẽ đầu sẽ giữ mãi danh mục rỗng và cả cột chỉ hiện dấu gạch. Ghép hai
   // mảng ngắn mỗi lượt vẽ rẻ hơn nhiều so với một cột hỏng im lặng.
-  const displayColumns = scope.isAggregate ? [companyColumn, ...columns] : columns;
+  const displayColumns = showCompanyColumn ? [companyColumn, ...columns] : columns;
 
   const allSelected =
     selection !== undefined &&
@@ -251,25 +264,25 @@ export function EntityTable<T extends EntityRow>({
       {/* Lọc theo trạng thái nằm ở component dùng chung vì MỌI danh sách đều có cột trạng
           thái, và vì các thẻ trên Dashboard dẫn thẳng tới đây bằng tham số này. */}
       {showStatusFilter && (
-      <label className="flex items-center gap-2">
-        <span className="text-fg-subtle">Trạng thái</span>
-        <select
-          value={statusFilter ?? ''}
-          onChange={(e) => setParam(STATUS_FILTER_PARAM, e.target.value)}
-          className={cn(
-            'h-10 cursor-pointer rounded-sm border border-border-strong bg-surface px-2 sm:h-8',
-            'transition-[border-color] duration-(--motion-fast) ease-(--ease-out)',
-            'hover:border-fg-subtle',
-          )}
-        >
-          <option value="">Tất cả</option>
-          {STATUS_GROUPS.map((s) => (
-            <option key={s} value={s}>
-              {statusLabel(s)}
-            </option>
-          ))}
-        </select>
-      </label>
+        <label className="flex items-center gap-2">
+          <span className="text-fg-subtle">Trạng thái</span>
+          <select
+            value={statusFilter ?? ''}
+            onChange={(e) => setParam(STATUS_FILTER_PARAM, e.target.value)}
+            className={cn(
+              'h-10 cursor-pointer rounded-sm border border-border-strong bg-surface px-2 sm:h-8',
+              'transition-[border-color] duration-(--motion-fast) ease-(--ease-out)',
+              'hover:border-fg-subtle',
+            )}
+          >
+            <option value="">Tất cả</option>
+            {STATUS_GROUPS.map((s) => (
+              <option key={s} value={s}>
+                {statusLabel(s)}
+              </option>
+            ))}
+          </select>
+        </label>
       )}
       {periodFilter && (
         <button
@@ -510,7 +523,9 @@ export function EntityTable<T extends EntityRow>({
                   <td className="px-4 py-3">
                     {row.deadline ? (
                       <span
-                        className={cn(row.status === 'overdue' && 'font-medium text-status-overdue')}
+                        className={cn(
+                          row.status === 'overdue' && 'font-medium text-status-overdue',
+                        )}
                       >
                         {formatDeadline(row.deadline)}
                       </span>
@@ -554,4 +569,34 @@ export function CreateButton({
       <Link to={to}>{label}</Link>
     </Button>
   );
+}
+
+/**
+ * Cặp nút "Tạo … mới" cho một màn hình Danh sách: một ở header, một trong trạng thái rỗng.
+ *
+ * Gom về đây vì luật đi kèm chúng dễ quên khi chép tay: mỗi màn hình chỉ được có ĐÚNG MỘT
+ * hành động chính (Content Guidelines 6.3), nên khi danh sách rỗng — lúc trạng thái rỗng đã
+ * mời tạo mới — nút ở header phải biến mất, nếu không cùng một việc hiện hai lần trên cùng
+ * một màn hình và người dùng phải chọn giữa hai thứ y hệt nhau.
+ *
+ * Trả `undefined` cho cả hai khi vai trò không có quyền tạo: điều hướng phản ánh phân quyền,
+ * ẩn hẳn chứ không hiện rồi báo lỗi khi bấm (Webapp Flow 6.5).
+ */
+export function useCreateActions({
+  canCreate,
+  label,
+  to,
+  isEmpty,
+}: {
+  canCreate: boolean;
+  label: string;
+  to: string;
+  /** Danh sách đã tải xong và không có dòng nào. Đang tải hay lỗi thì KHÔNG tính là rỗng. */
+  isEmpty: boolean;
+}): { headerAction: ReactNode; emptyAction: ReactNode } {
+  if (!canCreate) return { headerAction: undefined, emptyAction: undefined };
+  return {
+    headerAction: isEmpty ? undefined : <CreateButton label={label} to={to} />,
+    emptyAction: <CreateButton label={label} to={to} variant="secondary" />,
+  };
 }

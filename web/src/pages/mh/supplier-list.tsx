@@ -35,9 +35,7 @@ interface SupplierRow extends EntityRow {
 }
 
 function ratedCount(supplier: SupplierRecord): number {
-  return SUPPLIER_CRITERIA.filter(
-    (c) => supplier[c.column as keyof SupplierRecord] != null,
-  ).length;
+  return SUPPLIER_CRITERIA.filter((c) => supplier[c.column as keyof SupplierRecord] != null).length;
 }
 
 export function SupplierListPage() {
@@ -89,7 +87,7 @@ export function SupplierListPage() {
       <MhNav />
       <PageHeader
         title="Nhà cung cấp"
-        breadcrumbs={[{ label: 'Nhà cung cấp' }]}
+        breadcrumbs={[{ label: 'Mua hàng – Vật tư' }, { label: 'Nhà cung cấp' }]}
         description="Danh mục dùng chung cho cả ba pháp nhân — một nhà cung cấp chỉ có một mã."
         actions={
           canEdit ? (
@@ -106,7 +104,10 @@ export function SupplierListPage() {
           className="mb-4 space-y-4 rounded-lg border border-border bg-surface p-4"
         >
           {formError && (
-            <p role="alert" className="rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
+            <p
+              role="alert"
+              className="rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
+            >
               {formError}
             </p>
           )}
@@ -152,8 +153,8 @@ export function SupplierListPage() {
             </Button>
           </div>
           <p className="text-xs text-fg-subtle">
-            Ngừng giao dịch với một nhà cung cấp phải nêu lý do — sửa ở hồ sơ nhà cung cấp sau
-            khi đã tạo.
+            Ngừng giao dịch với một nhà cung cấp phải nêu lý do — sửa ở hồ sơ nhà cung cấp sau khi
+            đã tạo.
           </p>
         </form>
       )}
@@ -165,6 +166,9 @@ export function SupplierListPage() {
         onRetry={() => void refetch()}
         detailPath={(row) => `/mh/nha-cung-cap/${row.id}`}
         showStatusFilter={false}
+        // Bảng dùng chung giữa các pháp nhân — không có `company_id`, nên cột
+        // "Pháp nhân" sẽ rỗng ở mọi dòng nếu để nó được chèn (Backend Schema 2.2).
+        sharedAcrossCompanies
         searchPlaceholder="Tìm theo mã, tên nhà cung cấp hoặc người liên hệ…"
         emptyMessage="Chưa có nhà cung cấp nào trong danh mục. Thêm nhà cung cấp để bắt đầu hỏi báo giá và theo dõi lịch sử giao dịch."
         columns={[

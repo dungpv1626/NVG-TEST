@@ -16,9 +16,9 @@ import {
   formatDate,
   formatDateTime,
 } from '@nvg/shared';
-import { DetailFields, EntityDetail } from '@/components/entity/entity-detail';
+import { DetailFields, EntityDetail, RecordNotFound } from '@/components/entity/entity-detail';
 import { Button } from '@/components/ui/button';
-import { CardGridSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
+import { CardGridSkeleton, ErrorState } from '@/components/ui/states';
 import {
   useBiddingProject,
   useGenerateBudget,
@@ -33,7 +33,6 @@ import { toUserMessage } from '@/hooks/use-error-message';
 import { useAuth, useCan } from '@/lib/auth';
 import { BidDocumentsPanel } from './bid-documents-panel';
 import { BudgetPanel } from './budget-panel';
-
 
 const EM_DASH = '—';
 
@@ -53,7 +52,11 @@ export function BiddingDetailPage() {
   if (error) return <ErrorState message={toUserMessage(error)} />;
   if (!data) {
     return (
-      <EmptyState message="Không tìm thấy gói thầu này. Có thể hồ sơ đã được xóa hoặc vai trò hiện tại chưa được cấp quyền xem." />
+      <RecordNotFound
+        entity="gói thầu"
+        listPath="/da/goi-thau"
+        listLabel="Quay lại danh sách gói thầu"
+      />
     );
   }
 
@@ -112,7 +115,10 @@ export function BiddingDetailPage() {
   return (
     <>
       {actionError && (
-        <p role="alert" className="mb-3 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
+        <p
+          role="alert"
+          className="mb-3 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
+        >
           {actionError}
         </p>
       )}

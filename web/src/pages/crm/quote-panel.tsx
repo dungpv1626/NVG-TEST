@@ -12,12 +12,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle2, XCircle } from 'lucide-react';
-import {
-  APPROVAL_SUBJECT_LABELS,
-  formatCurrency,
-  formatDate,
-  formatDateTime,
-} from '@nvg/shared';
+import { APPROVAL_SUBJECT_LABELS, formatCurrency, formatDate, formatDateTime } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
@@ -44,7 +39,10 @@ export function QuotePanel({
   isHandedOver: boolean;
 }) {
   const { data: quotes, isLoading, error, refetch } = useQuotes(opportunityId);
-  const approvals = useApprovalHistory('quotes', (quotes ?? []).map((q) => q.id));
+  const approvals = useApprovalHistory(
+    'quotes',
+    (quotes ?? []).map((q) => q.id),
+  );
 
   const requestApproval = useRequestQuoteApproval();
   const sendQuote = useSendQuote();
@@ -78,6 +76,7 @@ export function QuotePanel({
   if (isLoading) return <TableSkeleton rows={3} columns={4} />;
 
   const list = quotes ?? [];
+  const effectiveQuoteId = findEffectiveQuoteId(list);
 
   return (
     <div className="space-y-4">
@@ -105,6 +104,7 @@ export function QuotePanel({
             <QuoteVersionCard
               key={quote.id}
               quote={quote}
+              isEffective={quote.id === effectiveQuoteId}
               approvals={approvals.data?.get(quote.id) ?? []}
               editable={editable}
               busy={requestApproval.isPending || sendQuote.isPending || recordResponse.isPending}
@@ -133,8 +133,30 @@ export function QuotePanel({
   );
 }
 
+/**
+ * Báo giá ĐANG HIỆU LỰC là bản mới nhất ĐÃ GỬI KHÁCH — không phải bản mới nhất trong hệ thống.
+ *
+ * Hai thứ đó khác nhau đúng vào lúc quan trọng nhất: khi đang soạn phiên bản kế tiếp. Lúc ấy
+ * bản mới nhất là một tờ nháp chưa ai ngoài công ty nhìn thấy, còn con số khách hàng đang cầm
+ * vẫn là bản gửi trước đó. Gắn nhãn "Đang hiệu lực" cho tờ nháp là nói sai giá đang cam kết
+ * với khách — và Content Guidelines 4.4 ghi thẳng rằng "Đang hiệu lực" KHÔNG được dùng theo
+ * nghĩa "Mới nhất".
+ *
+ * Trả `null` khi chưa có bản nào được gửi: khi đó chưa có giá nào có hiệu lực với khách, và
+ * không thẻ nào được mang nhãn.
+ */
+export function findEffectiveQuoteId(
+  quotes: readonly Pick<QuoteRecord, 'id' | 'version' | 'sent_to_customer_at'>[],
+): string | null {
+  const sent = quotes.filter((q) => q.sent_to_customer_at !== null);
+  if (sent.length === 0) return null;
+  return sent.reduce((newest, q) => (q.version > newest.version ? q : newest)).id;
+}
+
 interface QuoteVersionCardProps {
   quote: QuoteRecord;
+  /** Bản đang có hiệu lực với KHÁCH HÀNG — xem `findEffectiveQuoteId`. */
+  isEffective: boolean;
   approvals: ApprovalHistoryEntry[];
   editable: boolean;
   busy: boolean;
@@ -150,6 +172,7 @@ interface QuoteVersionCardProps {
 
 function QuoteVersionCard({
   quote,
+  isEffective,
   approvals,
   editable,
   busy,
@@ -191,7 +214,7 @@ function QuoteVersionCard({
       className={cn(
         'rounded-lg border bg-surface p-4',
         // Bản đang hiệu lực nổi lên so với các bản cũ (NEN-05: "xác định rõ bản đang có hiệu lực").
-        quote.is_current_version ? 'border-brand shadow-card' : 'border-border',
+        isEffective ? 'border-brand shadow-card' : 'border-border',
       )}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -199,9 +222,17 @@ function QuoteVersionCard({
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-semibold">Phiên bản {quote.version}</span>
             <StatusLozenge status={quote.status} />
-            {quote.is_current_version && (
+            {isEffective && (
               <span className="rounded-sm bg-brand-subtle px-1.5 py-0.5 text-xs font-medium text-brand">
                 Đang hiệu lực
+              </span>
+            )}
+            {/* Bản mới nhất mà CHƯA gửi khách: nói rõ đây là bản đang soạn, để không ai đọc
+                nhầm thành giá đang cam kết. Dùng màu trung tính — nhãn này không phải trạng
+                thái hồ sơ, và bảng màu trạng thái chỉ có đúng 5 màu (Content Guidelines 6.3). */}
+            {quote.is_current_version && !isEffective && (
+              <span className="rounded-sm bg-surface-sunken px-1.5 py-0.5 text-xs font-medium text-fg-subtle">
+                Bản đang soạn
               </span>
             )}
             {sent && (
@@ -221,7 +252,11 @@ function QuoteVersionCard({
       </div>
 
       <dl className="mt-3 grid gap-x-6 gap-y-2 sm:grid-cols-3">
-        <Cell label="Giá trị báo giá" value={quote.total_value ? formatCurrency(quote.total_value) : EM_DASH} strong />
+        <Cell
+          label="Giá trị báo giá"
+          value={quote.total_value ? formatCurrency(quote.total_value) : EM_DASH}
+          strong
+        />
         <Cell
           label="Mức giảm giá"
           value={hasDiscount ? formatCurrency(quote.discount_amount!) : 'Không giảm giá'}

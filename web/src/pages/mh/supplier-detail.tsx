@@ -21,7 +21,7 @@ import {
   formatDate,
   formatDateTime,
 } from '@nvg/shared';
-import { DetailFields, EntityDetail } from '@/components/entity/entity-detail';
+import { DetailFields, EntityDetail, RecordNotFound } from '@/components/entity/entity-detail';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -49,7 +49,11 @@ export function SupplierDetailPage() {
   if (error) return <ErrorState message={toUserMessage(error)} />;
   if (!data) {
     return (
-      <EmptyState message="Không tìm thấy nhà cung cấp này. Có thể hồ sơ đã được xóa hoặc vai trò hiện tại chưa được cấp quyền xem phân hệ Mua hàng." />
+      <RecordNotFound
+        entity="nhà cung cấp"
+        listPath="/mh/nha-cung-cap"
+        listLabel="Quay lại danh mục nhà cung cấp"
+      />
     );
   }
 
@@ -116,13 +120,20 @@ export function SupplierDetailPage() {
   return (
     <>
       {actionError && (
-        <p role="alert" className="mb-3 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
+        <p
+          role="alert"
+          className="mb-3 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
+        >
           {actionError}
         </p>
       )}
 
       <EntityDetail
-        breadcrumbs={[{ label: 'Nhà cung cấp', to: '/mh/nha-cung-cap' }, { label: supplier.name }]}
+        breadcrumbs={[
+          { label: 'Mua hàng – Vật tư' },
+          { label: 'Nhà cung cấp', to: '/mh/nha-cung-cap' },
+          { label: supplier.name },
+        ]}
         title={supplier.name}
         code={supplier.code}
         status={isStopped ? 'completed' : 'in_progress'}
@@ -146,7 +157,8 @@ export function SupplierDetailPage() {
                         min={SUPPLIER_RATING_SCALE.min}
                         max={SUPPLIER_RATING_SCALE.max}
                         defaultValue={
-                          (supplier[criterion.column as keyof SupplierRecord] as number | null) ?? ''
+                          (supplier[criterion.column as keyof SupplierRecord] as number | null) ??
+                          ''
                         }
                         disabled={!canEdit}
                       />
@@ -185,11 +197,21 @@ export function SupplierDetailPage() {
                   <table className="w-full min-w-[42rem] text-left">
                     <thead className="border-b border-border text-fg-muted">
                       <tr>
-                        <th scope="col" className="py-2 pr-4 font-medium">Mã đơn hàng</th>
-                        <th scope="col" className="py-2 pr-4 font-medium">Nội dung</th>
-                        <th scope="col" className="py-2 pr-4 font-medium">Ngày đặt</th>
-                        <th scope="col" className="py-2 pr-4 font-medium">Bước</th>
-                        <th scope="col" className="py-2 text-right font-medium">Giá trị</th>
+                        <th scope="col" className="py-2 pr-4 font-medium">
+                          Mã đơn hàng
+                        </th>
+                        <th scope="col" className="py-2 pr-4 font-medium">
+                          Nội dung
+                        </th>
+                        <th scope="col" className="py-2 pr-4 font-medium">
+                          Ngày đặt
+                        </th>
+                        <th scope="col" className="py-2 pr-4 font-medium">
+                          Bước
+                        </th>
+                        <th scope="col" className="py-2 text-right font-medium">
+                          Giá trị
+                        </th>
                       </tr>
                     </thead>
                     <tbody>

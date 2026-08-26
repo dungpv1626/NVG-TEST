@@ -20,6 +20,7 @@ import {
   type SiteLogType,
 } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
+import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/states';
@@ -108,20 +109,17 @@ export function SiteLogPanel({
             </Field>
 
             <Field label="Ngày xảy ra" hint="Ngày việc thật sự xảy ra, không phải ngày nhập.">
-              <Input
-                type="date"
+              <DateInput
                 value={form.logDate}
                 max={TODAY()}
-                onChange={(e) => setForm((f) => ({ ...f, logDate: e.target.value }))}
+                onChange={(v) => setForm((f) => ({ ...f, logDate: v }))}
               />
             </Field>
 
             <Field label="Loại mục">
               <select
                 value={form.logType}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, logType: e.target.value as SiteLogType }))
-                }
+                onChange={(e) => setForm((f) => ({ ...f, logType: e.target.value as SiteLogType }))}
                 className="h-10 w-full rounded-sm border border-border bg-surface px-3"
               >
                 {SITE_LOG_TYPES.map((t) => (
@@ -155,8 +153,8 @@ export function SiteLogPanel({
           </div>
 
           <p className="mt-3 text-xs text-fg-subtle">
-            Nhật ký đã ghi chỉ sửa được trong 24 giờ và chỉ bởi người đã ghi. Cần đính chính
-            sau đó thì ghi thêm một mục mới.
+            Nhật ký đã ghi chỉ sửa được trong 24 giờ và chỉ bởi người đã ghi. Cần đính chính sau đó
+            thì ghi thêm một mục mới.
           </p>
 
           <div className="mt-3">

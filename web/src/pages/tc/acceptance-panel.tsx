@@ -23,8 +23,10 @@ import {
   type AcceptanceType,
 } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
+import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { MoneyInput } from '@/components/ui/money-input';
 import { EmptyState } from '@/components/ui/states';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
 import {
@@ -173,25 +175,18 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
               />
             </Field>
 
-            <Field
-              label="Giá trị"
-              required={needsBilling}
-              hint="Đơn vị đồng, không nhập dấu phân cách."
-            >
-              <Input
+            <Field label="Giá trị" required={needsBilling} hint="Đơn vị đồng.">
+              <MoneyInput
                 value={form.value}
-                inputMode="numeric"
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, value: e.target.value.replace(/[^\d]/g, '') }))
-                }
+                required={needsBilling}
+                onChange={(v) => setForm((f) => ({ ...f, value: v }))}
               />
             </Field>
 
             <Field label="Ngày nghiệm thu">
-              <Input
-                type="date"
+              <DateInput
                 value={form.acceptedDate}
-                onChange={(e) => setForm((f) => ({ ...f, acceptedDate: e.target.value }))}
+                onChange={(v) => setForm((f) => ({ ...f, acceptedDate: v }))}
               />
             </Field>
 

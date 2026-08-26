@@ -24,8 +24,10 @@ import {
   type SubcontractorStatus,
 } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
+import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { MoneyInput } from '@/components/ui/money-input';
 import { EmptyState } from '@/components/ui/states';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
 import { useActiveUsers } from '@/hooks/use-active-users';
@@ -171,13 +173,10 @@ export function SubcontractorPanel({
               />
             </Field>
 
-            <Field label="Giá trị giao khoán" hint="Đơn vị đồng, không nhập dấu phân cách.">
-              <Input
+            <Field label="Giá trị giao khoán" hint="Đơn vị đồng.">
+              <MoneyInput
                 value={form.contractValue}
-                inputMode="numeric"
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, contractValue: e.target.value.replace(/[^\d]/g, '') }))
-                }
+                onChange={(v) => setForm((f) => ({ ...f, contractValue: v }))}
               />
             </Field>
 
@@ -200,18 +199,16 @@ export function SubcontractorPanel({
             </Field>
 
             <Field label="Bắt đầu">
-              <Input
-                type="date"
+              <DateInput
                 value={form.startDate}
-                onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
+                onChange={(v) => setForm((f) => ({ ...f, startDate: v }))}
               />
             </Field>
 
             <Field label="Kết thúc">
-              <Input
-                type="date"
+              <DateInput
                 value={form.endDate}
-                onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
+                onChange={(v) => setForm((f) => ({ ...f, endDate: v }))}
               />
             </Field>
           </div>

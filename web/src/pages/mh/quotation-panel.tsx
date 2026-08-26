@@ -26,8 +26,10 @@ import {
   formatDate,
 } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
+import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { MoneyInput } from '@/components/ui/money-input';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
 import {
   usePurchaseRequestItems,
@@ -165,9 +167,9 @@ export function QuotationPanel({
         <div className="rounded-lg border border-border bg-surface-sunken p-4">
           <p className="font-medium">Bảng so sánh báo giá không mở cho vai trò hiện tại</p>
           <p className="mt-1 text-fg-muted">
-            Báo giá của các nhà cung cấp không được chọn là nội dung thương thảo, chỉ Ban Giám
-            đốc, Tài chính, Dự án – Đấu thầu, Thiết kế và Mua hàng đọc được. Báo giá đã chọn
-            vẫn hiển thị trong tab Đơn hàng.
+            Báo giá của các nhà cung cấp không được chọn là nội dung thương thảo, chỉ Ban Giám đốc,
+            Tài chính, Dự án – Đấu thầu, Thiết kế và Mua hàng đọc được. Báo giá đã chọn vẫn hiển thị
+            trong tab Đơn hàng.
           </p>
         </div>
       ) : comparison.isLoading ? (
@@ -180,18 +182,44 @@ export function QuotationPanel({
             </caption>
             <thead className="border-b border-border text-fg-muted">
               <tr>
-                <th scope="col" className="py-2 pr-4 font-medium">Nhà cung cấp</th>
-                <th scope="col" className="py-2 pr-4 text-right font-medium">Tiền hàng</th>
-                <th scope="col" className="py-2 pr-4 text-right font-medium">Hao hụt</th>
-                <th scope="col" className="py-2 pr-4 text-right font-medium">Thuế</th>
-                <th scope="col" className="py-2 pr-4 text-right font-medium">Vận chuyển</th>
-                <th scope="col" className="py-2 pr-4 text-right font-medium">Tổng chi phí</th>
-                <th scope="col" className="py-2 pr-4 text-right font-medium">Chênh lệch</th>
-                <th scope="col" className="py-2 pr-4 font-medium">Giao</th>
-                <th scope="col" className="py-2 pr-4 font-medium">Thanh toán</th>
-                <th scope="col" className="py-2 pr-4 font-medium">Bảo hành</th>
-                <th scope="col" className="py-2 font-medium">Trạng thái</th>
-                {canWork && <th scope="col" className="py-2 pl-4 font-medium">Thao tác</th>}
+                <th scope="col" className="py-2 pr-4 font-medium">
+                  Nhà cung cấp
+                </th>
+                <th scope="col" className="py-2 pr-4 text-right font-medium">
+                  Tiền hàng
+                </th>
+                <th scope="col" className="py-2 pr-4 text-right font-medium">
+                  Hao hụt
+                </th>
+                <th scope="col" className="py-2 pr-4 text-right font-medium">
+                  Thuế
+                </th>
+                <th scope="col" className="py-2 pr-4 text-right font-medium">
+                  Vận chuyển
+                </th>
+                <th scope="col" className="py-2 pr-4 text-right font-medium">
+                  Tổng chi phí
+                </th>
+                <th scope="col" className="py-2 pr-4 text-right font-medium">
+                  Chênh lệch
+                </th>
+                <th scope="col" className="py-2 pr-4 font-medium">
+                  Giao
+                </th>
+                <th scope="col" className="py-2 pr-4 font-medium">
+                  Thanh toán
+                </th>
+                <th scope="col" className="py-2 pr-4 font-medium">
+                  Bảo hành
+                </th>
+                <th scope="col" className="py-2 font-medium">
+                  Trạng thái
+                </th>
+                {canWork && (
+                  <th scope="col" className="py-2 pl-4 font-medium">
+                    Thao tác
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -263,9 +291,7 @@ export function QuotationPanel({
                           {QUOTATION_STATUS_LABELS.duoc_chon}
                         </span>
                       ) : (
-                        <span className="text-fg-muted">
-                          {QUOTATION_STATUS_LABELS[row.status]}
-                        </span>
+                        <span className="text-fg-muted">{QUOTATION_STATUS_LABELS[row.status]}</span>
                       )}
                     </td>
                     {canWork && (
@@ -325,19 +351,33 @@ export function QuotationPanel({
                   </select>
                 </Field>
                 <Field label="Ngày báo giá">
-                  <Input name="quoted_date" type="date" />
+                  <DateInput name="quoted_date" />
                 </Field>
                 <Field label="Hiệu lực đến">
-                  <Input name="valid_until" type="date" />
+                  <DateInput name="valid_until" />
                 </Field>
                 <Field label="Thuế suất (%)">
-                  <Input name="tax_rate" type="number" min="0" max="100" step="0.01" defaultValue={10} />
+                  <Input
+                    name="tax_rate"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    defaultValue={10}
+                  />
                 </Field>
                 <Field label="Hao hụt dự kiến (%)" hint="Phần phải mua bù, tính vào tổng chi phí.">
-                  <Input name="wastage_rate" type="number" min="0" max="100" step="0.01" defaultValue={0} />
+                  <Input
+                    name="wastage_rate"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    defaultValue={0}
+                  />
                 </Field>
                 <Field label="Phí vận chuyển (đồng)">
-                  <Input name="shipping_fee" type="number" min="0" step="1" defaultValue={0} />
+                  <MoneyInput name="shipping_fee" defaultValue="0" />
                 </Field>
                 <Field label="Thời hạn giao (ngày)">
                   <Input name="delivery_days" type="number" min="0" step="1" />
@@ -359,11 +399,8 @@ export function QuotationPanel({
                       label={`${item.name}${item.specification ? ` — ${item.specification}` : ''}`}
                       hint={`Số lượng cần: ${Number(item.quantity)} ${item.unit}`}
                     >
-                      <Input
+                      <MoneyInput
                         name={`price_${item.id}`}
-                        type="number"
-                        min="0"
-                        step="1"
                         placeholder="Đơn giá nhà cung cấp báo (đồng)"
                       />
                     </Field>

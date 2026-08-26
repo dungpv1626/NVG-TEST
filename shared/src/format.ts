@@ -35,6 +35,38 @@ export function formatDate(value: DateInput | null | undefined): string {
 }
 
 /**
+ * Ngày lưu trong CSDL (`yyyy-mm-dd`) → ngày người dùng gõ và đọc (`dd/mm/yyyy`).
+ *
+ * Cố ý KHÔNG đi qua `Date`: `new Date('2026-08-26')` hiểu chuỗi đó là nửa đêm giờ UTC, nên ở
+ * múi giờ +07 nó vẫn là ngày 26 nhưng ở múi giờ âm lại lùi thành ngày 25. Với một cột chỉ có
+ * ngày, không có giờ, phép đổi đúng là tách chuỗi — không phải quy đổi múi giờ.
+ */
+export function isoDateToDisplay(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim());
+  if (!m) return '';
+  return `${m[3]}/${m[2]}/${m[1]}`;
+}
+
+/**
+ * Ngày người dùng gõ (`dd/mm/yyyy`) → ngày lưu trong CSDL (`yyyy-mm-dd`).
+ *
+ * Trả `null` khi chuỗi chưa đủ hoặc không phải ngày có thật (31/02, 30/02...). Kiểm tra ngày
+ * có thật chứ không chỉ kiểm phạm vi số: `2026-02-31` lọt qua mọi phép so sánh biên nhưng
+ * Postgres từ chối, và người dùng nhận về một lỗi kỹ thuật cho một việc họ gõ nhầm.
+ */
+export function displayDateToIso(display: string): string | null {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(display.trim());
+  if (!m) return null;
+  const [day, month, year] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  if (month < 1 || month > 12 || day < 1) return null;
+  // `Date.UTC` để phép kiểm không phụ thuộc múi giờ của máy đang chạy.
+  const probe = new Date(Date.UTC(year, month - 1, day));
+  if (probe.getUTCFullYear() !== year || probe.getUTCMonth() !== month - 1) return null;
+  if (probe.getUTCDate() !== day) return null;
+  return `${m[3]}-${m[2]}-${m[1]}`;
+}
+
+/**
  * Ngày kèm giờ: `dd/mm/yyyy — hh:mm` (24 giờ) — ví dụ `23/08/2026 — 14:30`.
  * Dấu phân cách là gạch ngang dài (—) đúng theo Content Guidelines 4.3.
  */
@@ -49,6 +81,24 @@ export function formatDateTime(value: DateInput | null | undefined): string {
     hour12: false,
   }).format(d);
   return `${formatDate(d)} — ${time}`;
+}
+
+/**
+ * Nhóm hàng nghìn cho chuỗi chữ số NGƯỜI DÙNG ĐANG GÕ: `1000000` → `1.000.000`.
+ *
+ * Tách khỏi `formatNumber` vì hai việc khác nhau: `formatNumber` định dạng một con số đã có để
+ * hiển thị, còn hàm này chạy trên từng phím gõ của một chuỗi có thể còn dở dang. Nó không đi
+ * qua `Number` hay `BigInt` — chuỗi dở như `''` hoặc `'-'` phải trả về nguyên trạng chứ không
+ * thành `NaN` hay ném lỗi, và giá trị tiền của NVG dài tới hàng trăm tỷ.
+ *
+ * Không nhóm dấu phân cách thì `1000000` và `10000000` nhìn gần như nhau, mà lệch một chữ số ở
+ * đây là lệch mười lần số tiền (Content Guidelines 4.3).
+ */
+export function groupThousands(digits: string): string {
+  const negative = digits.startsWith('-');
+  const body = digits.replace(/\D/g, '');
+  if (body === '') return negative ? '-' : '';
+  return (negative ? '-' : '') + body.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
 /**
@@ -123,10 +173,7 @@ export function formatCurrency(
 }
 
 /** Phần trăm: số + `%`, KHÔNG khoảng trắng trước `%`. Ví dụ `8%`. */
-export function formatPercent(
-  value: number | null | undefined,
-  maximumFractionDigits = 1,
-): string {
+export function formatPercent(value: number | null | undefined, maximumFractionDigits = 1): string {
   if (value === null || value === undefined || !Number.isFinite(value)) return '';
   return `${formatNumber(value, maximumFractionDigits)}%`;
 }
@@ -174,7 +221,10 @@ export function daysUntil(deadline: DateInput, now: DateInput = new Date()): num
  * gửi phê duyệt sẽ đọc ra "Đến hạn hôm nay" cho một hồ sơ vừa gửi xong — sai nghĩa hoàn
  * toàn. Hộp thư Phê duyệt xếp theo thời gian chờ (Webapp Flow 4.6) nên cần đúng hàm này.
  */
-export function formatWaiting(since: DateInput | null | undefined, now: DateInput = new Date()): string {
+export function formatWaiting(
+  since: DateInput | null | undefined,
+  now: DateInput = new Date(),
+): string {
   if (!since) return '';
   const days = daysUntil(since, now);
   if (days === null) return '';

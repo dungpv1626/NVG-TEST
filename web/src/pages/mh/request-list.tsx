@@ -15,7 +15,7 @@ import {
   purchaseRequestDisplayStatus,
 } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
-import { CreateButton, EntityTable, type EntityRow } from '@/components/entity/entity-table';
+import { EntityTable, useCreateActions, type EntityRow } from '@/components/entity/entity-table';
 import { usePurchaseRequests } from '@/hooks/use-purchasing';
 import { useCan } from '@/lib/auth';
 import { MhNav } from './mh-nav';
@@ -46,15 +46,20 @@ export function PurchaseRequestListPage() {
     estimatedValue: r.estimated_value,
   }));
 
+  const { headerAction, emptyAction } = useCreateActions({
+    canCreate,
+    label: 'Lập đề nghị mua',
+    to: '/mh/de-nghi-mua/tao-moi',
+    isEmpty: !isLoading && !error && rows.length === 0,
+  });
+
   return (
     <>
       <MhNav />
       <PageHeader
         title="Đề nghị mua"
-        breadcrumbs={[{ label: 'Đề nghị mua' }]}
-        actions={
-          canCreate ? <CreateButton label="Lập đề nghị mua" to="/mh/de-nghi-mua/tao-moi" /> : undefined
-        }
+        breadcrumbs={[{ label: 'Mua hàng – Vật tư' }, { label: 'Đề nghị mua' }]}
+        actions={headerAction}
       />
 
       <EntityTable<RequestRow>
@@ -65,11 +70,7 @@ export function PurchaseRequestListPage() {
         detailPath={(row) => `/mh/de-nghi-mua/${row.id}`}
         searchPlaceholder="Tìm theo mã, tên hàng hoặc người đề nghị…"
         emptyMessage={`${MODULE_EMPTY_STATES.MH} Đề nghị mua được lập từ công trường, từ gói thầu đang chuẩn bị, hoặc cho nhu cầu văn phòng.`}
-        emptyAction={
-          canCreate ? (
-            <CreateButton label="Lập đề nghị mua" to="/mh/de-nghi-mua/tao-moi" variant="secondary" />
-          ) : undefined
-        }
+        emptyAction={emptyAction}
         columns={[
           { key: 'stage', header: 'Bước', render: (r) => r.stageLabel },
           {

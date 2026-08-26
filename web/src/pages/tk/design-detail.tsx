@@ -20,9 +20,9 @@ import {
 import { DraftContractButton } from '@/components/contract/draft-contract-button';
 import { BoqPanel } from '@/components/estimate/boq-panel';
 import { EstimatePanel } from '@/components/estimate/estimate-panel';
-import { DetailFields, EntityDetail } from '@/components/entity/entity-detail';
+import { DetailFields, EntityDetail, RecordNotFound } from '@/components/entity/entity-detail';
 import { Button } from '@/components/ui/button';
-import { CardGridSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
+import { CardGridSkeleton, ErrorState } from '@/components/ui/states';
 import { useContractForSource } from '@/hooks/use-contracts';
 import {
   useDesignProject,
@@ -60,7 +60,11 @@ export function DesignDetailPage() {
   if (error) return <ErrorState message={toUserMessage(error)} />;
   if (!data) {
     return (
-      <EmptyState message="Không tìm thấy dự án thiết kế này. Có thể hồ sơ đã được xóa hoặc vai trò hiện tại chưa được cấp quyền xem." />
+      <RecordNotFound
+        entity="dự án thiết kế"
+        listPath="/tk/du-an"
+        listLabel="Quay lại danh sách dự án thiết kế"
+      />
     );
   }
 
@@ -194,20 +198,23 @@ export function DesignDetailPage() {
             label: 'Tổng quan',
             content: (
               <>
-              <DetailFields
-                fields={[
-                  { label: 'Bước hiện tại', value: DESIGN_STAGE_META[project.stage].label },
-                  { label: 'Khách hàng', value: project.customer?.name ?? EM_DASH },
-                  {
-                    label: 'Hạn bàn giao hồ sơ',
-                    value: project.handover_deadline
-                      ? formatDate(project.handover_deadline)
-                      : EM_DASH,
-                  },
-                  { label: 'Địa điểm khu đất', value: project.site_address ?? EM_DASH },
-                  { label: 'Nguyên nhân dừng thiết kế', value: project.stopped_reason ?? EM_DASH },
-                ]}
-              />
+                <DetailFields
+                  fields={[
+                    { label: 'Bước hiện tại', value: DESIGN_STAGE_META[project.stage].label },
+                    { label: 'Khách hàng', value: project.customer?.name ?? EM_DASH },
+                    {
+                      label: 'Hạn bàn giao hồ sơ',
+                      value: project.handover_deadline
+                        ? formatDate(project.handover_deadline)
+                        : EM_DASH,
+                    },
+                    { label: 'Địa điểm khu đất', value: project.site_address ?? EM_DASH },
+                    {
+                      label: 'Nguyên nhân dừng thiết kế',
+                      value: project.stopped_reason ?? EM_DASH,
+                    },
+                  ]}
+                />
                 <label className="mt-4 block">
                   <span className="block font-medium">Ghi chú</span>
                   {readOnly ? (

@@ -17,6 +17,7 @@ import { PURCHASE_URGENCY_LABELS } from '@nvg/shared';
 import type { PurchaseUrgency } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
+import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { BlockedNotice } from '@/components/ui/states';
@@ -88,6 +89,7 @@ export function PurchaseRequestCreatePage() {
       <PageHeader
         title="Lập đề nghị mua"
         breadcrumbs={[
+          { label: 'Mua hàng – Vật tư' },
           { label: 'Đề nghị mua', to: '/mh/de-nghi-mua' },
           { label: 'Lập đề nghị mua' },
         ]}
@@ -151,7 +153,7 @@ export function PurchaseRequestCreatePage() {
           </Field>
 
           <Field label="Thời điểm cần hàng" required>
-            <Input name="needed_date" type="date" required />
+            <DateInput name="needed_date" required />
           </Field>
 
           <Field label="Mức cần">
@@ -182,7 +184,11 @@ export function PurchaseRequestCreatePage() {
           <Button type="submit" variant="primary" disabled={create.isPending}>
             Lưu và nhập mặt hàng
           </Button>
-          <Button type="button" variant="secondary" onClick={() => void navigate('/mh/de-nghi-mua')}>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => void navigate('/mh/de-nghi-mua')}
+          >
             Hủy
           </Button>
         </div>

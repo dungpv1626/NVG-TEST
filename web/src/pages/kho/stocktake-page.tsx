@@ -11,12 +11,7 @@
 
 import { useMemo, useState } from 'react';
 import type { StocktakeStatus } from '@nvg/shared';
-import {
-  STOCKTAKE_STATUS_META,
-  formatDateTime,
-  formatNumber,
-  summarizeStocktake,
-} from '@nvg/shared';
+import { formatDateTime, formatNumber, stocktakeStatusMeta, summarizeStocktake } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
 import { Button } from '@/components/ui/button';
@@ -24,6 +19,7 @@ import { Field } from '@/components/ui/field';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
 import {
   useCancelStocktake,
+  useCloseStocktake,
   useSaveStocktakeCount,
   useStartStocktake,
   useStocktakeItems,
@@ -50,6 +46,7 @@ function StocktakeDetail({
   const { data, isLoading } = useStocktakeItems(stocktakeId);
   const saveCount = useSaveStocktakeCount();
   const submit = useSubmitStocktake();
+  const close = useCloseStocktake();
   const [counts, setCounts] = useState<Record<string, string>>({});
 
   const items = data ?? [];
@@ -94,6 +91,28 @@ function StocktakeDetail({
     }
   }
 
+  /**
+   * Đóng đợt khi số đếm khớp sổ.
+   *
+   * Lưu số đếm trước rồi mới đóng: nếu không, những ô vừa gõ mà chưa lưu sẽ mất, và biên bản
+   * kiểm kê ghi lại một đợt "khớp sổ" mà không có số đếm nào làm bằng chứng.
+   */
+  async function closeMatching() {
+    onError(null);
+    try {
+      await saveCount.mutateAsync({
+        stocktakeId,
+        items: merged.map((m) => ({
+          material_id: m.item.material_id,
+          counted_quantity: m.counted,
+        })),
+      });
+      await close.mutateAsync({ stocktakeId });
+    } catch (e) {
+      onError(toUserMessage(e, 'edit'));
+    }
+  }
+
   async function requestApproval() {
     const reason = window.prompt(
       'Nguyên nhân chênh lệch (hao hụt bốc xếp, thất thoát, đếm sót lần trước…):',
@@ -125,10 +144,18 @@ function StocktakeDetail({
         <table className="w-full min-w-[40rem] text-left">
           <thead className="border-b border-border text-fg-muted">
             <tr>
-              <th scope="col" className="py-2 pr-4 font-medium">Vật tư</th>
-              <th scope="col" className="py-2 pr-4 text-right font-medium">Sổ kho</th>
-              <th scope="col" className="py-2 pr-4 text-right font-medium">Đếm thực tế</th>
-              <th scope="col" className="py-2 text-right font-medium">Chênh lệch</th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                Vật tư
+              </th>
+              <th scope="col" className="py-2 pr-4 text-right font-medium">
+                Sổ kho
+              </th>
+              <th scope="col" className="py-2 pr-4 text-right font-medium">
+                Đếm thực tế
+              </th>
+              <th scope="col" className="py-2 text-right font-medium">
+                Chênh lệch
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -187,26 +214,46 @@ function StocktakeDetail({
           <Button variant="secondary" disabled={saveCount.isPending} onClick={() => void save()}>
             Lưu số đếm
           </Button>
-          <Button
-            variant="primary"
-            disabled={submit.isPending || !summary.isComplete || summary.varianceLines === 0}
-            onClick={() => void requestApproval()}
-          >
-            Lập biên bản và gửi phê duyệt
-          </Button>
+          {/* Hai lối ra loại trừ nhau, và điều kiện nằm ở chính số liệu: có lệch thì phải qua
+              phê duyệt, khớp sổ thì đóng thẳng. Hiện đúng một nút để không ai phải chọn. */}
+          {summary.varianceLines > 0 ? (
+            <Button
+              variant="primary"
+              disabled={submit.isPending || !summary.isComplete}
+              onClick={() => void requestApproval()}
+            >
+              Lập biên bản và gửi phê duyệt
+            </Button>
+          ) : (
+            <Button
+              variant="primary"
+              disabled={close.isPending || saveCount.isPending || !summary.isComplete}
+              onClick={() => void closeMatching()}
+            >
+              Đóng đợt kiểm kê
+            </Button>
+          )}
         </div>
       )}
 
       {isCounting && summary.isComplete && summary.varianceLines === 0 && (
         <p className="text-fg-muted">
-          Đếm khớp sổ kho ở mọi vật tư — không có gì để điều chỉnh. Đóng đợt kiểm kê là xong.
+          Đếm khớp sổ kho ở mọi vật tư — không có gì để điều chỉnh. Đóng đợt kiểm kê để mở lại nhập
+          xuất; sổ kho giữ nguyên.
+        </p>
+      )}
+
+      {status === 'khop_so' && (
+        <p className="rounded-lg border border-border bg-surface-sunken px-4 py-3">
+          Đợt kiểm kê đã đóng, số đếm khớp sổ ở mọi vật tư. <strong>Sổ kho giữ nguyên</strong> và
+          kho đã mở lại nhập xuất.
         </p>
       )}
 
       {status === 'cho_duyet' && (
         <p className="rounded-lg border border-border bg-surface-sunken px-4 py-3">
-          Biên bản đang chờ phê duyệt. <strong>Sổ kho chưa đổi</strong> — con số chính thức vẫn
-          là số ở cột "Sổ kho" cho tới khi biên bản được duyệt.
+          Biên bản đang chờ phê duyệt. <strong>Sổ kho chưa đổi</strong> — con số chính thức vẫn là
+          số ở cột "Sổ kho" cho tới khi biên bản được duyệt.
         </p>
       )}
     </div>
@@ -259,7 +306,10 @@ export function StocktakePage() {
       />
 
       {pageError && (
-        <p role="alert" className="mb-3 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
+        <p
+          role="alert"
+          className="mb-3 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
+        >
           {pageError}
         </p>
       )}
@@ -280,7 +330,11 @@ export function StocktakePage() {
               ))}
             </select>
           </Field>
-          <Button variant="primary" disabled={start.isPending} onClick={() => void startStocktake()}>
+          <Button
+            variant="primary"
+            disabled={start.isPending}
+            onClick={() => void startStocktake()}
+          >
             Mở đợt kiểm kê
           </Button>
         </div>
@@ -295,7 +349,7 @@ export function StocktakePage() {
       ) : (
         <ul className="space-y-2">
           {(data ?? []).map((st) => {
-            const meta = STOCKTAKE_STATUS_META[st.status];
+            const meta = stocktakeStatusMeta(st.status);
             const isOpen = openId === st.id;
             return (
               <li key={st.id} className="rounded-lg border border-border bg-surface px-4 py-3">

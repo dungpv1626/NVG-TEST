@@ -22,7 +22,7 @@ import {
   type OpportunityStage,
 } from '@nvg/shared';
 import { DraftContractButton } from '@/components/contract/draft-contract-button';
-import { DetailFields, EntityDetail } from '@/components/entity/entity-detail';
+import { DetailFields, EntityDetail, RecordNotFound } from '@/components/entity/entity-detail';
 import { Button } from '@/components/ui/button';
 import { CardGridSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
@@ -69,7 +69,11 @@ export function OpportunityDetailPage() {
   if (error) return <ErrorState message={toUserMessage(error)} />;
   if (!data) {
     return (
-      <EmptyState message="Không tìm thấy cơ hội kinh doanh này. Có thể hồ sơ đã được xóa hoặc vai trò hiện tại chưa được cấp quyền xem." />
+      <RecordNotFound
+        entity="cơ hội kinh doanh"
+        listPath="/crm/co-hoi"
+        listLabel="Quay lại danh sách cơ hội"
+      />
     );
   }
 
@@ -99,12 +103,17 @@ export function OpportunityDetailPage() {
   /** Giai đoạn kế tiếp theo đúng thứ tự pipeline (CRM-02). */
   const currentIndex = OPPORTUNITY_STAGES.indexOf(data.stage);
   const nextStage =
-    stageMeta.isTerminal || currentIndex < 0 ? null : OPPORTUNITY_STAGES[currentIndex + 1] ?? null;
+    stageMeta.isTerminal || currentIndex < 0
+      ? null
+      : (OPPORTUNITY_STAGES[currentIndex + 1] ?? null);
 
   return (
     <>
       {moveError && (
-        <p role="alert" className="mb-3 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
+        <p
+          role="alert"
+          className="mb-3 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
+        >
           {moveError}
         </p>
       )}
@@ -219,11 +228,7 @@ export function OpportunityDetailPage() {
             id: 'bao-gia',
             label: 'Báo giá',
             content: (
-              <QuotePanel
-                opportunityId={data.id}
-                canEdit={canEdit}
-                isHandedOver={isHandedOver}
-              />
+              <QuotePanel opportunityId={data.id} canEdit={canEdit} isHandedOver={isHandedOver} />
             ),
           },
         ]}
@@ -273,7 +278,13 @@ export function OpportunityDetailPage() {
           {
             title: 'Hồ sơ liên quan',
             records: customer
-              ? [{ label: 'Khách hàng', value: customer.name, to: `/crm/khach-hang/${customer.id}` }]
+              ? [
+                  {
+                    label: 'Khách hàng',
+                    value: customer.name,
+                    to: `/crm/khach-hang/${customer.id}`,
+                  },
+                ]
               : [],
           },
         ]}

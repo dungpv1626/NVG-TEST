@@ -9,15 +9,13 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, type RenderResult } from '@testing-library/react';
-import type { ReactElement, ReactNode } from 'react';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import { useState, type ReactElement, type ReactNode } from 'react';
+import { createMemoryRouter, RouterProvider, useLocation } from 'react-router-dom';
 
 /** Hiện đường dẫn hiện tại ra DOM để test đọc được — dùng kiểm điều hướng sau khi bấm. */
 function LocationProbe() {
   const location = useLocation();
-  return (
-    <div data-testid="duong-dan-hien-tai">{`${location.pathname}${location.search}`}</div>
-  );
+  return <div data-testid="duong-dan-hien-tai">{`${location.pathname}${location.search}`}</div>;
 }
 
 export interface RenderOptions {
@@ -31,13 +29,36 @@ export function renderWithApp(ui: ReactElement, { route = '/' }: RenderOptions =
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
 
+  /**
+   * Dùng ROUTER DỮ LIỆU cho khớp `App.tsx` thật.
+   *
+   * `<MemoryRouter>` không phải router dữ liệu, nên `useBlocker` — thứ `useUnsavedChangesGuard`
+   * dựa vào — sẽ ném lỗi. Với `MemoryRouter`, mọi màn hình biểu mẫu (Tạo khách hàng, Tạo cơ
+   * hội, Lập báo giá…) không dựng được trong test, và bộ kiểm thử xanh chỉ vì chưa ai thử.
+   */
   function Wrapper({ children }: { children: ReactNode }) {
+    // Dựng MỘT lần: `RouterProvider` nhận một router khác là gắn lại toàn bộ cây con và đưa
+    // đường dẫn về `initialEntries`. Dựng lại mỗi lượt vẽ thì `rerender()` trong test sẽ xoá
+    // sạch state của component và cả những lần điều hướng đã xảy ra.
+    const [router] = useState(() =>
+      createMemoryRouter(
+        [
+          {
+            path: '*',
+            element: (
+              <>
+                {children}
+                <LocationProbe />
+              </>
+            ),
+          },
+        ],
+        { initialEntries: [route] },
+      ),
+    );
     return (
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={[route]}>
-          {children}
-          <LocationProbe />
-        </MemoryRouter>
+        <RouterProvider router={router} />
       </QueryClientProvider>
     );
   }

@@ -22,6 +22,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { MoneyInput } from '@/components/ui/money-input';
 import { EmptyState } from '@/components/ui/states';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
 import { useActiveUsers } from '@/hooks/use-active-users';
@@ -157,12 +158,10 @@ export function AmendmentPanel({
                 label="Thay đổi giá trị hợp đồng"
                 hint="Đơn vị đồng. Số âm nghĩa là giảm trừ khối lượng."
               >
-                <Input
+                <MoneyInput
                   value={form.valueChange}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, valueChange: e.target.value.replace(/[^\d-]/g, '') }))
-                  }
-                  inputMode="numeric"
+                  allowNegative
+                  onChange={(v) => setForm((f) => ({ ...f, valueChange: v }))}
                 />
               </Field>
 
@@ -189,9 +188,9 @@ export function AmendmentPanel({
                 <span>
                   <span className="block font-medium">Trường hợp khẩn cấp</span>
                   <span className="block text-xs text-fg-subtle">
-                    Chỉ dùng khi phải làm ngay để bảo đảm an toàn hoặc tránh thiệt hại lớn hơn.
-                    Bỏ qua bước xác nhận của khách hàng, nhưng phải ghi rõ người có thẩm quyền
-                    đã cho phép (HD-04).
+                    Chỉ dùng khi phải làm ngay để bảo đảm an toàn hoặc tránh thiệt hại lớn hơn. Bỏ
+                    qua bước xác nhận của khách hàng, nhưng phải ghi rõ người có thẩm quyền đã cho
+                    phép (HD-04).
                   </span>
                 </span>
               </label>
@@ -218,9 +217,7 @@ export function AmendmentPanel({
                   <Field label="Lý do khẩn cấp">
                     <Input
                       value={form.emergencyReason}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, emergencyReason: e.target.value }))
-                      }
+                      onChange={(e) => setForm((f) => ({ ...f, emergencyReason: e.target.value }))}
                       placeholder="Nguy cơ sạt lở, đã báo và được đồng ý qua điện thoại"
                     />
                   </Field>
@@ -256,13 +253,7 @@ export function AmendmentPanel({
   );
 }
 
-function AmendmentCard({
-  amendment,
-  readOnly,
-}: {
-  amendment: AmendmentRecord;
-  readOnly: boolean;
-}) {
+function AmendmentCard({ amendment, readOnly }: { amendment: AmendmentRecord; readOnly: boolean }) {
   const markQuoteSent = useMarkAmendmentQuoteSent();
   const submitApproval = useSubmitAmendmentApproval();
   const confirmByCustomer = useConfirmAmendmentByCustomer();
@@ -299,7 +290,10 @@ function AmendmentCard({
 
     if (amendment.is_emergency) {
       return (
-        <Button variant="primary" onClick={() => void run(() => execute.mutateAsync({ amendmentId: amendment.id }))}>
+        <Button
+          variant="primary"
+          onClick={() => void run(() => execute.mutateAsync({ amendmentId: amendment.id }))}
+        >
           Ghi nhận đã thực hiện
         </Button>
       );

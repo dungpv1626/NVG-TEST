@@ -33,3 +33,16 @@ Object.defineProperty(window, 'matchMedia', {
     dispatchEvent: vi.fn(),
   }),
 });
+
+/**
+ * jsdom chưa có `HTMLInputElement.showPicker` (Chrome 99+, Safari 16+, Firefox 101+).
+ *
+ * Không bổ sung thì mọi test giao diện chạy trong một trình duyệt giả cũ hơn mọi máy thật, và
+ * nhánh có bảng lịch của `DateInput` không bao giờ được kiểm. Đây là lỗ hổng của jsdom, không
+ * phải hành vi sản phẩm — nên vá ở đây thay vì hạ yêu cầu của component.
+ */
+if (typeof HTMLInputElement !== 'undefined' && !HTMLInputElement.prototype.showPicker) {
+  HTMLInputElement.prototype.showPicker = function showPicker() {
+    /* jsdom không vẽ được bảng lịch thật; test chỉ cần lệnh này tồn tại và không ném lỗi. */
+  };
+}

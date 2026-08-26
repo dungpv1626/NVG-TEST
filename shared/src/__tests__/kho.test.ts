@@ -13,6 +13,7 @@ import {
   isUsableScaffolding,
   stockAlerts,
   summarizeStocktake,
+  stocktakeStatusMeta,
 } from '../kho';
 
 describe('buildMaterialCode — KHO-02', () => {
@@ -72,9 +73,9 @@ describe('stockAlerts — KHO-08', () => {
 
   it(`đúng ${SLOW_MOVING_DAYS} ngày không phát sinh thì bắt đầu báo tồn lâu`, () => {
     const boundary = new Date(today.getTime() - SLOW_MOVING_DAYS * 86_400_000);
-    expect(stockAlerts({ quantityOnHand: 10, lastMovementAt: boundary.toISOString() }, today)).toEqual(
-      ['ton_lau'],
-    );
+    expect(
+      stockAlerts({ quantityOnHand: 10, lastMovementAt: boundary.toISOString() }, today),
+    ).toEqual(['ton_lau']);
 
     const oneDayShort = new Date(today.getTime() - (SLOW_MOVING_DAYS - 1) * 86_400_000);
     expect(
@@ -138,5 +139,26 @@ describe('inventoryValue', () => {
 
   it('danh sách rỗng là 0 đồng', () => {
     expect(inventoryValue([])).toBe(0n);
+  });
+});
+
+/**
+ * Tra nhãn trạng thái kiểm kê phải chịu được giá trị giao diện CHƯA BIẾT.
+ *
+ * Đây là lỗi có thật, gặp ngay khi thêm `khop_so` vào cơ sở dữ liệu: bản giao diện đang chạy
+ * tra `STOCKTAKE_STATUS_META[status]` ra `undefined`, đọc tiếp `.statusGroup` và cả trang vỡ
+ * thành màn hình trắng kèm stack trace. CSDL và giao diện deploy riêng nên luôn có quãng một
+ * bên mới hơn — không thể coi là chuyện hiếm.
+ */
+describe('stocktakeStatusMeta', () => {
+  it('trả đúng nhãn cho trạng thái đã biết', () => {
+    expect(stocktakeStatusMeta('dang_kiem').label).toBe('Đang kiểm đếm');
+    expect(stocktakeStatusMeta('khop_so').statusGroup).toBe('completed');
+  });
+
+  it('trạng thái lạ KHÔNG làm vỡ trang — vẫn có nhóm màu và nhãn để hiện', () => {
+    const meta = stocktakeStatusMeta('trang_thai_chua_co_trong_ban_nay');
+    expect(meta.statusGroup).toBe('in_progress');
+    expect(meta.label).toBe('trang_thai_chua_co_trong_ban_nay');
   });
 });

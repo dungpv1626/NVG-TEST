@@ -9,11 +9,7 @@
  */
 
 import type { StatusGroup } from '@nvg/shared';
-import {
-  MODULE_EMPTY_STATES,
-  PURCHASE_ORDER_STAGE_META,
-  formatCurrency,
-} from '@nvg/shared';
+import { MODULE_EMPTY_STATES, PURCHASE_ORDER_STAGE_META, formatCurrency } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { EntityTable, type EntityRow } from '@/components/entity/entity-table';
 import { usePurchaseOrders } from '@/hooks/use-purchasing';
@@ -64,7 +60,7 @@ export function PurchaseOrderListPage() {
       <MhNav />
       <PageHeader
         title="Đơn đặt hàng"
-        breadcrumbs={[{ label: 'Đơn đặt hàng' }]}
+        breadcrumbs={[{ label: 'Mua hàng – Vật tư' }, { label: 'Đơn đặt hàng' }]}
         description="Đơn hàng được lập từ đề nghị mua đã duyệt và báo giá đã chọn — không lập trực tiếp ở đây."
       />
 

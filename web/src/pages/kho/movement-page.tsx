@@ -23,6 +23,7 @@ import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { MoneyInput } from '@/components/ui/money-input';
 import { BlockedNotice, EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
 import { useConstructionSites } from '@/hooks/use-construction-sites';
 import {
@@ -81,10 +82,7 @@ export function StockMovementPage() {
   const transfer = useTransferStock();
   const isPending = receive.isPending || issue.isPending || transfer.isPending;
 
-  const materialById = useMemo(
-    () => new Map((materials ?? []).map((m) => [m.id, m])),
-    [materials],
-  );
+  const materialById = useMemo(() => new Map((materials ?? []).map((m) => [m.id, m])), [materials]);
 
   function resetForm() {
     setLines([emptyLine(Date.now())]);
@@ -165,7 +163,10 @@ export function StockMovementPage() {
           className="mb-4 space-y-4 rounded-lg border border-border bg-surface p-4"
         >
           {formError && (
-            <p role="alert" className="rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
+            <p
+              role="alert"
+              className="rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
+            >
               {formError}
             </p>
           )}
@@ -300,16 +301,11 @@ export function StockMovementPage() {
                 </Field>
                 {type === 'nhap' ? (
                   <Field label="Đơn giá nhập (đồng)">
-                    <Input
-                      type="number"
-                      min="0"
-                      step="1"
+                    <MoneyInput
                       value={line.unitCost}
-                      onChange={(e) =>
+                      onChange={(v) =>
                         setLines((prev) =>
-                          prev.map((l) =>
-                            l.key === line.key ? { ...l, unitCost: e.target.value } : l,
-                          ),
+                          prev.map((l) => (l.key === line.key ? { ...l, unitCost: v } : l)),
                         )
                       }
                     />
@@ -320,7 +316,9 @@ export function StockMovementPage() {
                       value={line.note}
                       onChange={(e) =>
                         setLines((prev) =>
-                          prev.map((l) => (l.key === line.key ? { ...l, note: e.target.value } : l)),
+                          prev.map((l) =>
+                            l.key === line.key ? { ...l, note: e.target.value } : l,
+                          ),
                         )
                       }
                     />

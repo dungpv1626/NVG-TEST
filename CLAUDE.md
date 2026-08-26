@@ -191,6 +191,32 @@ chép dữ liệu**: `companies`, `users`, `customers`, `opportunities`, `biddin
 - **Giao diện + nội dung hệ thống: tiếng Việt có dấu 100%** (PRD 6, CGD 4.1) — kể cả khi chật chỗ.
 - **Code, tên bảng, tên cột, tên biến: tiếng Anh.**
 
+#### "100% tiếng Việt" bao gồm cả chữ do TRÌNH DUYỆT tự sinh
+
+Đây là chỗ đã lọt lưới thật, nhiều lần. Nhân sự NVG có người không đọc được tiếng Anh, nên một
+câu tiếng Anh hiện lên đúng lúc họ đang bị chặn thao tác là bế tắc hoàn toàn — họ không biết
+mình sai gì và cũng không đọc được hướng dẫn sửa.
+
+Nguy hiểm ở chỗ **những chữ này không nằm trong mã nguồn**, nên đọc code không thấy, `grep`
+không ra, và trên máy của người lập trình (thường để tiếng Việt hoặc quen tiếng Anh) chúng
+trông vẫn bình thường. Chúng theo **ngôn ngữ của TRÌNH DUYỆT**, không theo `lang` của trang, và
+không có thuộc tính HTML nào ép được.
+
+Bốn nguồn đã gặp:
+
+| Nguồn | Biểu hiện trên Chrome tiếng Anh | Cách xử lý |
+|---|---|---|
+| Ràng buộc biểu mẫu (`required`, `min`, `pattern`…) | "Please fill out this field." | `setCustomValidity` bằng câu tiếng Việt — đã gom vào `Input`, xem `web/src/lib/validation-message.ts` |
+| `<input type="date">` | Ô hiện `mm/dd/yyyy`; bảng lịch hiện "September", "Su Mo Tu" | Dùng `DateInput` — ô chữ `dd/mm/yyyy` + bảng lịch tự dựng bằng tiếng Việt |
+| `<input type="number">` | Nút tăng/giảm, thông báo `step`/`min` tiếng Anh | Dùng `MoneyInput` cho tiền; ô số khác dùng `inputMode` |
+| `window.confirm` / `alert` | Nút "OK" / "Cancel" tiếng Anh | Không ép được — hạn chế dùng; việc quan trọng thì dựng hộp thoại riêng |
+
+**Quy tắc:** trước khi dùng bất kỳ điều khiển gốc nào của trình duyệt, hỏi "cái này có tự sinh
+chữ không?". Có thì phải kiểm bằng cách **đặt Chrome sang tiếng Anh rồi mở màn hình đó** —
+không phải bằng cách đọc lại code.
+
+Có test canh sẵn trong `web/src/test/design-rules.test.ts`.
+
 ### 4.2 Cơ sở dữ liệu (BSD 1.4) — áp dụng thống nhất cho MỌI bảng
 
 | Quy ước | Chuẩn |
@@ -272,6 +298,23 @@ Khai báo thẳng làm CSS variable của shadcn/ui + token Tailwind, **không d
 - Vitest cho logic xử lý dữ liệu và hàm nghiệp vụ trong Workers.
 - **Bắt buộc kiểm thử chính sách RLS** bằng kịch bản SQL/Supabase CLI — xác nhận vai trò không xem/sửa được
   dữ liệu ngoài phạm vi, đặc biệt dữ liệu nhạy cảm (giá vốn, lương, lợi nhuận).
+
+#### Chạy test: CHỈ phần liên quan tới thay đổi, không chạy toàn bộ
+
+Bộ test đầy đủ mất ~95 giây vì phần trong `db/` gọi Supabase từ xa, và chúng chập chờn theo mạng
+lẫn rate limit của Supabase Auth: mỗi lượt chạy đầy đủ lại đỏ vài test **khác nhau**, không liên
+quan đợt sửa. Chạy đầy đủ theo phản xạ vừa chậm vừa tạo báo động giả, và tốn thêm một lượt chạy
+lại mới biết là giả.
+
+| Đổi ở đâu | Chạy gì | Thời gian |
+|---|---|---|
+| `web/`, `shared/` (phần giao diện dùng) | `npx vitest run --project web` | ~4 giây, không chạm CSDL |
+| Logic thuần trong `shared/` | `npx vitest run --project logic shared/src/__tests__/<tệp>.test.ts` | vài giây |
+| Migration / RLS trong `db/` | `npx vitest run --project logic db/src/__tests__/<module>.test.ts` | tuỳ module |
+
+Luôn kèm `npx tsc -b` và `npx prettier --check <tệp đã đổi>` — nhanh, và bắt được thứ test không bắt.
+
+Chạy `npm test` đầy đủ CHỈ khi Haan yêu cầu, hoặc ngay trước khi commit một đợt lớn.
 
 ---
 

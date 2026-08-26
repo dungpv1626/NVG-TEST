@@ -21,6 +21,7 @@ import {
   type WarrantyClaimStatus,
 } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
+import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/states';
@@ -130,8 +131,8 @@ export function WarrantyPanel({
 
       {!handedOverAt && (
         <p className="rounded-sm bg-surface-sunken px-3 py-2 text-fg-subtle">
-          Công trình chưa bàn giao cho chủ đầu tư. Hạng mục khai ở đây sẽ tính hạn bảo hành từ
-          ngày bàn giao, trừ khi nhập ngày bắt đầu riêng theo thỏa thuận.
+          Công trình chưa bàn giao cho chủ đầu tư. Hạng mục khai ở đây sẽ tính hạn bảo hành từ ngày
+          bàn giao, trừ khi nhập ngày bắt đầu riêng theo thỏa thuận.
         </p>
       )}
 
@@ -171,10 +172,9 @@ export function WarrantyPanel({
             </Field>
 
             <Field label="Bắt đầu" hint="Để trống thì tính từ ngày bàn giao công trình.">
-              <Input
-                type="date"
+              <DateInput
                 value={itemForm.startDate}
-                onChange={(e) => setItemForm((f) => ({ ...f, startDate: e.target.value }))}
+                onChange={(v) => setItemForm((f) => ({ ...f, startDate: v }))}
               />
             </Field>
           </div>
@@ -276,7 +276,11 @@ export function WarrantyPanel({
 
                 {!readOnly &&
                   (claimFor === w.id ? (
-                    <form onSubmit={addClaim} noValidate className="mt-3 border-t border-border pt-3">
+                    <form
+                      onSubmit={addClaim}
+                      noValidate
+                      className="mt-3 border-t border-border pt-3"
+                    >
                       <div className="grid gap-3 sm:grid-cols-2">
                         <Field label="Khách hàng phản ánh" required className="sm:col-span-2">
                           <textarea
@@ -291,12 +295,9 @@ export function WarrantyPanel({
                         </Field>
 
                         <Field label="Ngày tiếp nhận">
-                          <Input
-                            type="date"
+                          <DateInput
                             value={claimForm.reportedDate}
-                            onChange={(e) =>
-                              setClaimForm((f) => ({ ...f, reportedDate: e.target.value }))
-                            }
+                            onChange={(v) => setClaimForm((f) => ({ ...f, reportedDate: v }))}
                           />
                         </Field>
 
@@ -314,11 +315,7 @@ export function WarrantyPanel({
                         <Button type="submit" variant="primary" disabled={saveClaim.isPending}>
                           Ghi nhận phản ánh
                         </Button>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          onClick={() => setClaimFor(null)}
-                        >
+                        <Button type="button" variant="secondary" onClick={() => setClaimFor(null)}>
                           {BUTTONS.cancel}
                         </Button>
                       </div>

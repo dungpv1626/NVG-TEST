@@ -22,6 +22,7 @@ import {
   type DisciplineTaskStatus,
 } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
+import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
@@ -107,8 +108,8 @@ export function DisciplinePanel({
 
         {blocking.length > 0 && (
           <p className="mt-3 text-fg-subtle">
-            Còn {blocking.length} hạng mục phải xử lý trước khi bàn giao. Các mục màu vàng là
-            cảnh báo, không chặn.
+            Còn {blocking.length} hạng mục phải xử lý trước khi bàn giao. Các mục màu vàng là cảnh
+            báo, không chặn.
           </p>
         )}
       </section>
@@ -159,7 +160,8 @@ export function DisciplinePanel({
                       void save(discipline, task, {
                         status,
                         completed_at: status === 'hoan_thanh' ? new Date().toISOString() : null,
-                        progress_percent: status === 'hoan_thanh' ? 100 : (task?.progress_percent ?? 0),
+                        progress_percent:
+                          status === 'hoan_thanh' ? 100 : (task?.progress_percent ?? 0),
                       });
                     }}
                     className="h-10 w-full rounded-sm border border-border bg-surface px-3 sm:h-9"
@@ -173,11 +175,10 @@ export function DisciplinePanel({
                 </Field>
 
                 <Field label="Hạn hoàn thành">
-                  <Input
-                    type="date"
+                  <DateInput
                     defaultValue={task?.due_date ?? ''}
                     disabled={readOnly}
-                    onBlur={(e) => void save(discipline, task, { due_date: e.target.value || null })}
+                    onBlur={(v) => void save(discipline, task, { due_date: v || null })}
                   />
                 </Field>
 

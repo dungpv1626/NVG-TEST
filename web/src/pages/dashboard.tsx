@@ -40,6 +40,7 @@ import {
   formatPercent,
   isDashboardPeriod,
   isWithinPeriod,
+  shortNameFromFullName,
   statusLabel,
   sumMoney,
   type DashboardPeriod,
@@ -142,7 +143,9 @@ export function DashboardPage() {
   // báo cáo một con số không còn thật (PRD CRM-02).
   const pipelineValue = sumMoney(
     (opportunities.data ?? [])
-      .filter((o) => !OPPORTUNITY_STAGE_META[o.stage].isTerminal && isWithinPeriod(o.created_at, period))
+      .filter(
+        (o) => !OPPORTUNITY_STAGE_META[o.stage].isTerminal && isWithinPeriod(o.created_at, period),
+      )
       .map((o) => o.estimated_value),
   );
 
@@ -211,9 +214,7 @@ export function DashboardPage() {
 
   // Lời chào cá nhân hoá bằng TÊN là NGOẠI LỆ DUY NHẤT của quy tắc không dùng đại từ
   // nhân xưng (Content Guidelines 4.2) — dùng tên, không dùng anh/chị.
-  const greeting = dashboardGreeting(
-    profile?.fullName?.trim().split(/\s+/).slice(-2).join(' ') ?? '',
-  );
+  const greeting = dashboardGreeting(shortNameFromFullName(profile?.fullName));
 
   return (
     <>
@@ -434,10 +435,10 @@ function DataCompletenessNote() {
     >
       <h2 className="text-md font-semibold">Phần chưa có trên Dashboard</h2>
       <p className="mt-1 text-fg-subtle">
-        Dòng tiền vào – ra, công nợ phải thu, tiến độ và chi phí từng công trình, tồn kho và
-        giàn giáo đang cho thuê, nhân sự – chấm công sẽ xuất hiện khi các phân hệ Thi công,
-        Mua hàng, Kho, Kế toán và Nhân sự đi vào vận hành. Các chỉ số đang hiển thị lấy trực
-        tiếp từ hồ sơ nghiệp vụ, không phải số liệu mẫu.
+        Dòng tiền vào – ra, công nợ phải thu, tiến độ và chi phí từng công trình, tồn kho và giàn
+        giáo đang cho thuê, nhân sự – chấm công sẽ xuất hiện khi các phân hệ Thi công, Mua hàng,
+        Kho, Kế toán và Nhân sự đi vào vận hành. Các chỉ số đang hiển thị lấy trực tiếp từ hồ sơ
+        nghiệp vụ, không phải số liệu mẫu.
       </p>
     </section>
   );

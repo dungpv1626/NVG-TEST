@@ -5,3 +5,7 @@ build
 coverage
 doc
 *.docx
+
+# Tệp do drizzle-kit sinh ra, không viết tay. Định dạng lại chúng làm mọi lần
+# `drizzle-kit generate` sau đó sinh ra một diff khổng lồ không liên quan nghiệp vụ.
+db/migrations

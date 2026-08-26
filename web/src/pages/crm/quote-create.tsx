@@ -10,15 +10,18 @@
 
 import { useMemo, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { BUTTONS, CONFIRMS, ERRORS, formatCurrency } from '@nvg/shared';
+import { BUTTONS, ERRORS, formatCurrency } from '@nvg/shared';
+import { RecordNotFound } from '@/components/entity/entity-detail';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
+import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
-import { CardGridSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
+import { MoneyInput } from '@/components/ui/money-input';
+import { CardGridSkeleton, ErrorState } from '@/components/ui/states';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useOpportunity } from '@/hooks/use-opportunities';
 import { useCreateQuoteVersion, useQuotes } from '@/hooks/use-quotes';
+import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard';
 import { useCan } from '@/lib/auth';
 
 /** Bỏ mọi ký tự không phải số — người dùng gõ "1.500.000.000" vẫn nhận đúng. */
@@ -44,6 +47,9 @@ export function QuoteCreatePage() {
   });
   const [formError, setFormError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  // Hàng rào chống mất dữ liệu áp cho MỌI lối ra khỏi trang, không riêng nút Hủy
+  // (Webapp Flow 6.3).
+  const releaseUnsavedGuard = useUnsavedChangesGuard(dirty);
 
   const totalValue = digitsOnly(form.totalValue);
   const discountAmount = digitsOnly(form.discountAmount);
@@ -88,6 +94,7 @@ export function QuoteCreatePage() {
         notes: form.notes.trim() || null,
       });
       setDirty(false);
+      releaseUnsavedGuard();
       navigate(backToQuotes, { replace: true });
     } catch (err) {
       setFormError(toUserMessage(err, 'create'));
@@ -95,7 +102,8 @@ export function QuoteCreatePage() {
   }
 
   function handleCancel() {
-    if (dirty && !window.confirm(CONFIRMS.unsavedChanges)) return;
+    // KHÔNG hỏi ở đây: `useUnsavedChangesGuard` đã chặn mọi lần chuyển trang, kể cả
+    // lần này. Hỏi thêm một lần nữa là bắt người dùng xác nhận hai lần cho một việc.
     navigate(backToQuotes);
   }
 
@@ -109,7 +117,13 @@ export function QuoteCreatePage() {
   if (isLoading) return <CardGridSkeleton count={2} />;
   if (error) return <ErrorState message={toUserMessage(error)} />;
   if (!opportunity) {
-    return <EmptyState message="Không tìm thấy cơ hội kinh doanh này. Có thể hồ sơ đã được xóa hoặc chưa được cấp quyền xem." />;
+    return (
+      <RecordNotFound
+        entity="cơ hội kinh doanh"
+        listPath="/crm/co-hoi"
+        listLabel="Quay lại danh sách cơ hội"
+      />
+    );
   }
 
   // Điều hướng phản ánh phân quyền (Webapp Flow 6.5) — nhưng vẫn chặn ở đây, vì người dùng
@@ -126,7 +140,9 @@ export function QuoteCreatePage() {
         <PageHeader title="Lập báo giá" breadcrumbs={breadcrumbs} />
         <div className="max-w-2xl rounded-lg border border-border bg-surface p-6 shadow-card">
           <p className="font-medium">{blockedReason}</p>
-          <p className="mt-1 text-fg-subtle">Liên hệ người chịu trách nhiệm cơ hội nếu cần bổ sung báo giá.</p>
+          <p className="mt-1 text-fg-subtle">
+            Liên hệ người chịu trách nhiệm cơ hội nếu cần bổ sung báo giá.
+          </p>
         </div>
       </>
     );
@@ -153,24 +169,25 @@ export function QuoteCreatePage() {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Giá trị báo giá" required>
-            <Input
+            <MoneyInput
               value={form.totalValue}
-              onChange={(e) => update('totalValue', e.target.value)}
-              inputMode="numeric"
+              onChange={(v) => update('totalValue', v)}
               placeholder="Đơn vị: đồng"
+              required
               autoFocus
             />
-            {totalValue && <span className="block text-xs text-fg-subtle">{formatCurrency(totalValue)}</span>}
+            {totalValue && (
+              <span className="block text-xs text-fg-subtle">{formatCurrency(totalValue)}</span>
+            )}
           </Field>
 
           <Field
             label="Mức giảm giá"
             hint="Khác 0 thì báo giá phải qua phê duyệt của Tổng Giám đốc (CRM-05)."
           >
-            <Input
+            <MoneyInput
               value={form.discountAmount}
-              onChange={(e) => update('discountAmount', e.target.value)}
-              inputMode="numeric"
+              onChange={(v) => update('discountAmount', v)}
               placeholder="Không giảm giá"
             />
             {hasDiscount && (
@@ -191,11 +208,7 @@ export function QuoteCreatePage() {
           )}
 
           <Field label="Hiệu lực đến">
-            <Input
-              type="date"
-              value={form.validUntil}
-              onChange={(e) => update('validUntil', e.target.value)}
-            />
+            <DateInput value={form.validUntil} onChange={(v) => update('validUntil', v)} />
           </Field>
 
           <Field label="Ghi chú" className="sm:col-span-2">
@@ -210,7 +223,10 @@ export function QuoteCreatePage() {
         </div>
 
         {formError && (
-          <p role="alert" className="mt-4 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
+          <p
+            role="alert"
+            className="mt-4 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
+          >
             {formError}
           </p>
         )}

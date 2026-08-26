@@ -9,7 +9,7 @@
 import { BUTTONS, EMPTY_STATES, formatPhone } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { CrmNav } from './crm-nav';
-import { CreateButton, EntityTable, type EntityRow } from '@/components/entity/entity-table';
+import { EntityTable, useCreateActions, type EntityRow } from '@/components/entity/entity-table';
 import { useEntityList } from '@/hooks/use-entity';
 import { useCan } from '@/lib/auth';
 
@@ -39,7 +39,8 @@ export function CustomerListPage() {
     table: 'customers',
     // Bảng DÙNG CHUNG giữa các pháp nhân — không lọc theo company_id (Backend Schema 2.2).
     scopedByCompany: false,
-    select: 'id, code, name, source, phone, contact_person, created_at, responsible:users!customers_responsible_user_id_users_id_fk(full_name)',
+    select:
+      'id, code, name, source, phone, contact_person, created_at, responsible:users!customers_responsible_user_id_users_id_fk(full_name)',
     orderBy: { column: 'created_at', ascending: false },
   });
 
@@ -57,13 +58,12 @@ export function CustomerListPage() {
   }));
 
   const createLabel = BUTTONS.create('khách hàng');
-  const createButton = canCreate ? (
-    <CreateButton label={createLabel} to="/crm/khach-hang/tao-moi" />
-  ) : undefined;
-  const emptyStateButton = canCreate ? (
-    <CreateButton label={createLabel} to="/crm/khach-hang/tao-moi" variant="secondary" />
-  ) : undefined;
-  const isEmpty = !isLoading && !error && rows.length === 0;
+  const { headerAction, emptyAction } = useCreateActions({
+    canCreate,
+    label: createLabel,
+    to: '/crm/khach-hang/tao-moi',
+    isEmpty: !isLoading && !error && rows.length === 0,
+  });
 
   return (
     <>
@@ -73,7 +73,7 @@ export function CustomerListPage() {
         breadcrumbs={[{ label: 'Khách hàng & Cơ hội' }, { label: 'Khách hàng' }]}
         // Trạng thái rỗng đã có nút tạo mới; không lặp lại ở header để giữ đúng
         // "DUY NHẤT một hành động chính trên mỗi màn hình" (Content Guidelines 6.3).
-        actions={isEmpty ? undefined : createButton}
+        actions={headerAction}
       />
 
       <EntityTable<CustomerRow>
@@ -82,6 +82,9 @@ export function CustomerListPage() {
         error={error}
         onRetry={() => void refetch()}
         detailPath={(row) => `/crm/khach-hang/${row.id}`}
+        // Bảng dùng chung giữa các pháp nhân — không có `company_id`, nên cột
+        // "Pháp nhân" sẽ rỗng ở mọi dòng nếu để nó được chèn (Backend Schema 2.2).
+        sharedAcrossCompanies
         searchPlaceholder="Tìm theo tên, mã hoặc người chịu trách nhiệm…"
         showStatusFilter={false}
         emptyMessage={
@@ -89,7 +92,7 @@ export function CustomerListPage() {
             ? EMPTY_STATES.list('khách hàng', createLabel)
             : 'Chưa có khách hàng nào. Vai trò hiện tại không có quyền tạo hồ sơ khách hàng.'
         }
-        emptyAction={emptyStateButton}
+        emptyAction={emptyAction}
         columns={[
           {
             key: 'contact',

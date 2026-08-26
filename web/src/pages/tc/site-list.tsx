@@ -39,7 +39,10 @@ export function SiteListPage() {
 
   return (
     <>
-      <PageHeader title="Công trình" breadcrumbs={[{ label: 'Công trình' }]} />
+      <PageHeader
+        title="Công trình"
+        breadcrumbs={[{ label: 'Thi công & Ngân sách' }, { label: 'Công trình' }]}
+      />
 
       <EntityTable<SiteRow>
         rows={rows}
