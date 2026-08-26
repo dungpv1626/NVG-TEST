@@ -76,7 +76,7 @@
   <h1>Tiến độ phát triển — Hệ thống Quản trị Nhà Việt Group</h1>
   <p class="muted">Bản tóm tắt để theo dõi: đã xong gì, đang làm gì, sắp làm gì, còn lại gì.</p>
   <p class="xs muted">
-    Cập nhật: <strong>25/08/2026</strong> ·
+    Cập nhật: <strong>26/08/2026</strong> ·
     Nguồn chi tiết: <code>BUILD_PLAN.md</code> (kế hoạch) và <code>CLAUDE.md</code> (ràng buộc) ·
     Tài liệu gốc nằm trong <code>doc/</code>
   </p>
@@ -92,47 +92,70 @@
 <section class="card">
   <h3>Toàn hệ thống</h3>
   <p class="xs muted">Ước lượng theo khối lượng nghiệp vụ đã chạy được đầu-cuối, không theo số dòng mã.</p>
-  <div class="bar"><span style="width: 30%"></span></div>
-  <p class="xs muted" style="margin-top:6px">Khoảng 30% chặng đường tới bản demo ~95%.</p>
+  <div class="bar"><span style="width: 45%"></span></div>
+  <p class="xs muted" style="margin-top:6px">Khoảng 45% chặng đường tới bản demo ~95%. Giai đoạn 1 chỉ còn Dashboard cơ bản và buổi chạy thử đầu-cuối.</p>
 
   <div class="stats">
-    <div class="stat"><b>3 / 12</b><span class="xs muted">module đã dựng (Nền tảng, CRM, Đấu thầu)</span></div>
-    <div class="stat"><b>28 / ~65</b><span class="xs muted">bảng cơ sở dữ liệu</span></div>
-    <div class="stat"><b>23</b><span class="xs muted">migration đã chạy</span></div>
-    <div class="stat"><b>108</b><span class="xs muted">kiểm thử tự động, tất cả đang xanh</span></div>
+    <div class="stat"><b>5 / 12</b><span class="xs muted">module đã dựng (Nền tảng, CRM, Đấu thầu, Thiết kế, Hợp đồng)</span></div>
+    <div class="stat"><b>37 / ~65</b><span class="xs muted">bảng cơ sở dữ liệu</span></div>
+    <div class="stat"><b>32</b><span class="xs muted">migration đã chạy</span></div>
+    <div class="stat"><b>159</b><span class="xs muted">kiểm thử tự động, tất cả đang xanh</span></div>
   </div>
 </section>
 
-<h2>Bốn câu hỏi thường gặp</h2>
+<h2>Năm câu hỏi thường gặp</h2>
 
 <div class="grid grid-2">
 
   <div class="card">
     <h3><span class="pill s-done">Vừa xong</span></h3>
     <ul>
-      <li><strong>Module Dự án – Đấu thầu (DA)</strong> — 7 bảng dữ liệu, màn hình gói thầu với
-          5 tab (khảo sát · khối lượng · dự toán · hồ sơ thầu · ngân sách), bảng đơn giá dùng chung.</li>
-      <li><strong>Luồng duyệt giá dự thầu</strong> — trình duyệt, duyệt theo hạn mức, giữ đủ các
-          phiên bản dự toán; giá chưa duyệt thì hệ thống không cho nộp thầu.</li>
-      <li><strong>Ngân sách thi công</strong> — chuyển dự toán đã duyệt thành ngân sách theo nhóm
-          chi phí và tự thông báo các bên. Đây là mắt xích nối sang Giai đoạn 2.</li>
-      <li><strong>Bảo vệ giá vốn và lợi nhuận</strong> — quyền đọc bị thu hồi ngay ở cơ sở dữ liệu;
-          muốn xem phải đi qua một cửa duy nhất và mỗi lượt xem đều được ghi nhật ký.</li>
-      <li><strong>Sửa một lỗi âm thầm nghiêm trọng</strong>: pháp nhân đang làm việc chỉ được chốt
-          khi người dùng TỰ BẤM vào bộ chọn — người chỉ thuộc một công ty thì không bao giờ bấm,
-          nên mọi danh sách lọc theo pháp nhân đều rỗng dù dữ liệu vẫn nằm đó.</li>
-      <li><strong>Chuẩn PWA và bố cục điện thoại</strong> cho toàn bộ ứng dụng.</li>
+      <li><strong>Module Thiết kế (TK)</strong> — 7 bảng, dự án thiết kế với đầy đủ các bước:
+          đầu bài có phiên bản · khảo sát hiện trạng · phương án kiến trúc kèm vòng góp ý của
+          khách · hồ sơ kỹ thuật ba bộ môn · phiên bản bản vẽ · dự toán · yêu cầu thay đổi.</li>
+      <li><strong>Một bản vẽ hiệu lực duy nhất</strong> — giải đúng vướng mắc "không chắc file
+          đang dùng có phải bản mới nhất". Phát hành bản mới là hạ bản cũ và báo đồng thời cho
+          kiến trúc, kết cấu, điện nước, dự toán, Kinh doanh và công trường trong cùng một lần.</li>
+      <li><strong>Kiểm tra đồng bộ trước khi bàn giao thi công</strong> — thiếu bản vẽ bộ môn nào,
+          còn xung đột nào chưa xử lý, còn thay đổi nào đã duyệt mà chưa làm, thì hệ thống chặn.</li>
+      <li><strong>Module Hợp đồng (HD)</strong> — soạn hợp đồng thẳng từ cơ hội / gói thầu / dự án
+          thiết kế, lấy sẵn khách hàng và giá đã duyệt; checklist 8 nhóm điều khoản; trình ký theo
+          hạn mức; theo dõi phát sinh ngoài hợp đồng.</li>
+      <li><strong>Phát sinh phải có báo giá và xác nhận của khách trước khi làm</strong> — trừ
+          trường hợp khẩn cấp, và khi đó bắt buộc ghi rõ ai đã cho phép. Đây là chỗ hay gây tranh
+          chấp với khách nhất, nên quy tắc nằm trong cơ sở dữ liệu chứ không ở màn hình.</li>
+      <li><strong>Dự toán dùng chung một bộ máy cho cả Đấu thầu và Thiết kế</strong> — không có
+          bản sao thứ hai, nên công thức tính tiền chỉ có một chỗ để sửa.</li>
+      <li><strong>Bịt một lỗ hổng phân quyền có ở cả bốn module</strong> — xem phần bên dưới.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="pill s-overdue">Đã phát hiện và xử lý</span></h3>
+    <p class="xs muted">Ghi lại vì đây là loại lỗi không có triệu chứng cho tới khi có người lợi dụng.</p>
+    <ul>
+      <li><strong>Trạng thái hồ sơ có thể bị đặt thẳng, bỏ qua mọi bước phê duyệt.</strong>
+          Quy tắc phân quyền kiểm được "ai được đụng vào hồ sơ đang ở bước nào", nhưng không kiểm
+          "sau khi sửa thì hồ sơ thành cái gì". Hệ quả: một lệnh gửi thẳng tới máy chủ là đủ để
+          một hợp đồng 900 triệu chuyển sang trạng thái <em>đã ký</em> mà không đi qua hạn mức
+          phê duyệt nào, và không để lại dòng nào trong Hộp thư Phê duyệt.</li>
+      <li>Cùng lỗi đó cho phép: nộp thầu khi giá chưa duyệt, đánh dấu bàn giao hồ sơ thiết kế khi
+          các bộ môn chưa đồng bộ, và gửi báo giá cho khách khi chưa qua duyệt nội bộ.</li>
+      <li><strong>Đã bịt</strong> bằng một lớp canh chung: mọi thay đổi trạng thái phải đi qua
+          đúng nút thao tác trên màn hình; lệnh gửi thẳng bị cơ sở dữ liệu từ chối. Có kiểm thử
+          tự động canh riêng phần này cho từng module.</li>
     </ul>
   </div>
 
   <div class="card">
     <h3><span class="pill s-progress">Đang làm</span></h3>
-    <p class="xs muted">Giai đoạn 1 — Xương sống thương mại.</p>
+    <p class="xs muted">Giai đoạn 1 — Xương sống thương mại. Chỉ còn hai việc.</p>
     <ul>
-      <li><strong>Module Thiết kế (TK)</strong> — làm song song được với Đấu thầu, dùng chung
-          cơ chế bóc tách và dự toán.</li>
-      <li><strong>Bàn giao cơ hội sang Đấu thầu / Thiết kế</strong> (CRM-06) — nay đã có đích để
-          bàn giao tới.</li>
+      <li><strong>Dashboard cơ bản (BC)</strong> — các thẻ chỉ số bấm được, dẫn thẳng tới danh
+          sách đã lọc sẵn. Dữ liệu để hiển thị nay đã có đủ.</li>
+      <li><strong>Chạy thử đầu-cuối Giai đoạn 1</strong> trên dữ liệu thật: một cơ hội đi trọn
+          từ Kinh doanh tới hợp đồng đã ký, truy ngược được về đúng phiên bản dự toán đã duyệt,
+          ai duyệt và khi nào.</li>
       <li><strong>Tìm kiếm toàn hệ thống</strong> và <strong>Trung tâm Thông báo</strong> —
           bảng dữ liệu đã có, phần hiển thị chưa nối.</li>
     </ul>
@@ -140,23 +163,26 @@
 
   <div class="card">
     <h3><span class="pill s-pending">Chuẩn bị làm</span></h3>
+    <p class="xs muted">Giai đoạn 2 — Vận hành, hậu cần, tài chính.</p>
     <ul>
-      <li><strong>Module Hợp đồng (HD)</strong> — soạn hợp đồng từ cơ hội hoặc gói thầu đã trúng,
-          không nhập lại; theo dõi điều khoản và phát sinh.</li>
-      <li><strong>Dashboard cơ bản (BC)</strong> — các thẻ chỉ số bấm được dẫn tới danh sách đã lọc.</li>
-      <li><strong>Chạy thử đầu-cuối Giai đoạn 1</strong>: một cơ hội đi trọn từ Kinh doanh tới
-          hợp đồng và ngân sách thi công, truy ngược được về đúng phiên bản dự toán đã duyệt.</li>
+      <li><strong>Module Thi công (TC)</strong> — nhận ngân sách và hồ sơ thi công đã bàn giao từ
+          Đấu thầu và Thiết kế; nhật ký công trường, nghiệm thu, bảo hành.</li>
+      <li><strong>Mua hàng và Kho</strong> — đề nghị mua từ công trường, so sánh nhà cung cấp,
+          nhập xuất tồn.</li>
+      <li><strong>Kế toán</strong> — đề nghị thanh toán, thu tiền theo tiến độ hợp đồng, và phần
+          "đã thu / còn phải thu" hiện đang là khung trống trong màn hình Hợp đồng.</li>
     </ul>
   </div>
 
   <div class="card">
     <h3><span class="pill s-draft">Còn lại</span></h3>
     <ul>
-      <li><strong>Giai đoạn 2</strong> — Thi công, Mua hàng, Kho, Kế toán, Nhân sự, Sản xuất,
-          Báo cáo đầy đủ. Mục tiêu: một công trình chạy trọn từ hợp đồng tới lãi/lỗ.</li>
+      <li><strong>Phần còn lại của Giai đoạn 2</strong> — Nhân sự, Sản xuất giàn giáo, Báo cáo
+          đầy đủ. Mục tiêu của cả giai đoạn: một công trình chạy trọn từ hợp đồng tới lãi/lỗ.</li>
       <li><strong>Giai đoạn 3</strong> — liên kết chéo 12 module, rà soát phân quyền toàn hệ thống,
           tác vụ nền cảnh báo, kiểm thử đầu-cuối, dữ liệu demo cho cả ba pháp nhân.</li>
-      <li><strong>AI Preliminary Design Engine</strong> (TK-10 → TK-17) — làm sau khi phần lõi đạt ~90%.</li>
+      <li><strong>AI Preliminary Design Engine</strong> (TK-10 → TK-17) — làm sau khi phần lõi đạt
+          ~90%. Hiện đang chờ tài liệu đặc tả phiên bản 02.</li>
     </ul>
   </div>
 
@@ -191,13 +217,13 @@
       <td><strong>P2</strong> Xương sống thương mại<br><span class="xs muted">Giai đoạn 1 của PRD</span></td>
       <td>CRM · Dự án–Đấu thầu · Thiết kế · Hợp đồng · Báo cáo cơ bản</td>
       <td><span class="pill s-progress">Đang làm</span></td>
-      <td>CRM và Đấu thầu đã dựng xong phần lõi; còn Thiết kế, Hợp đồng và Dashboard</td>
+      <td>CRM, Đấu thầu, Thiết kế và Hợp đồng đã xong phần lõi; còn Dashboard cơ bản và buổi chạy thử đầu-cuối</td>
     </tr>
     <tr>
       <td><strong>P3</strong> Vận hành và tài chính<br><span class="xs muted">Giai đoạn 2 của PRD</span></td>
       <td>Thi công · Mua hàng · Kho · Kế toán · Nhân sự · Sản xuất · Báo cáo đầy đủ</td>
-      <td><span class="pill s-draft">Chưa bắt đầu</span></td>
-      <td>Phụ thuộc hợp đồng và ngân sách thi công từ P2</td>
+      <td><span class="pill s-pending">Sắp làm</span></td>
+      <td>Điều kiện phụ thuộc đã đủ: hợp đồng và ngân sách thi công từ P2 nay đã có</td>
     </tr>
     <tr>
       <td><strong>P4</strong> Liên kết chéo và bàn giao<br><span class="xs muted">Giai đoạn 3 của PRD</span></td>
@@ -225,14 +251,16 @@
     <tr><td><code>NEN</code></td><td>Nền tảng hệ thống</td><td><span class="pill s-progress">Đang làm</span></td>
         <td>Phân quyền, hạn mức phê duyệt, kho hồ sơ có phiên bản, nhật ký, thông báo. Còn màn hình quản trị và tìm kiếm.</td></tr>
     <tr><td><code>CRM</code></td><td>Khách hàng &amp; Cơ hội</td><td><span class="pill s-progress">Đang làm</span></td>
-        <td>Khách hàng (tạo/xem/sửa), pipeline Kanban 6 giai đoạn có lịch sử, biên bản khảo sát, báo giá có phiên bản và phê duyệt, giảm giá đặc biệt qua Tổng Giám đốc, khiếu nại. Còn bàn giao sang DA/TK.</td></tr>
+        <td>Khách hàng (tạo/xem/sửa), pipeline Kanban 6 giai đoạn có lịch sử, biên bản khảo sát, báo giá có phiên bản và phê duyệt, giảm giá đặc biệt qua Tổng Giám đốc, khiếu nại, soạn hợp đồng thẳng từ cơ hội ở bước Đàm phán. Còn bàn giao sang DA/TK.</td></tr>
     <tr><td><code>DA</code></td><td>Dự án – Đấu thầu</td><td><span class="pill s-progress">Đang làm</span></td>
         <td>Gói thầu, bóc tách khối lượng gắn phiên bản bản vẽ, đơn giá dùng chung, dự toán có phiên bản, duyệt giá theo hạn mức, hồ sơ thầu, ngân sách thi công. Còn đối chiếu dự toán với chi phí thực tế (DA-10, cần dữ liệu Giai đoạn 2).</td></tr>
-    <tr><td><code>TK</code></td><td>Thiết kế</td><td><span class="pill s-pending">Sắp làm</span></td><td>Là việc kế tiếp — dùng chung cơ chế dự toán với DA</td></tr>
-    <tr><td><code>HD</code></td><td>Hợp đồng</td><td><span class="pill s-pending">Sắp làm</span></td><td>Sau TK</td></tr>
+    <tr><td><code>TK</code></td><td>Thiết kế</td><td><span class="pill s-progress">Đang làm</span></td>
+        <td>Dự án thiết kế, đầu bài có phiên bản, khảo sát hiện trạng, phương án kiến trúc kèm vòng góp ý và xác nhận của khách, tiến độ ba bộ môn, phiên bản bản vẽ có phát hành và thông báo, yêu cầu thay đổi, bàn giao thi công có kiểm tra đồng bộ. Dự toán dùng chung bộ máy với DA. Còn thư viện thiết kế (TK-09, lùi được).</td></tr>
+    <tr><td><code>HD</code></td><td>Hợp đồng</td><td><span class="pill s-progress">Đang làm</span></td>
+        <td>Soạn hợp đồng từ hồ sơ nguồn không nhập lại, checklist 8 nhóm điều khoản, trình ký theo hạn mức, ghi nhận đã ký và báo cho Thi công/Kế toán, phát sinh ngoài hợp đồng đủ luồng, quyết toán và hủy. Còn phần "đã thu / còn phải thu" — chờ số liệu thật từ Kế toán (Giai đoạn 2).</td></tr>
     <tr><td><code>BC</code></td><td>Báo cáo &amp; Dashboard</td><td><span class="pill s-progress">Đang làm</span></td>
         <td>Có khung dashboard với thẻ việc cần làm, chờ phê duyệt, quá hạn. Chỉ số đầy đủ chờ dữ liệu các module sau.</td></tr>
-    <tr><td><code>TC</code></td><td>Thi công &amp; Ngân sách</td><td><span class="pill s-draft">Chưa bắt đầu</span></td><td>Giai đoạn 2 · yêu cầu mới ở mức định hướng, chưa khảo sát chỉ huy công trường</td></tr>
+    <tr><td><code>TC</code></td><td>Thi công &amp; Ngân sách</td><td><span class="pill s-pending">Sắp làm</span></td><td>Giai đoạn 2 · là module kế tiếp · yêu cầu mới ở mức định hướng, chưa khảo sát chỉ huy công trường</td></tr>
     <tr><td><code>MH</code></td><td>Mua hàng – Vật tư</td><td><span class="pill s-draft">Chưa bắt đầu</span></td><td>Giai đoạn 2</td></tr>
     <tr><td><code>KHO</code></td><td>Kho</td><td><span class="pill s-draft">Chưa bắt đầu</span></td><td>Giai đoạn 2 · cách làm ngoại tuyến còn chờ quyết định</td></tr>
     <tr><td><code>KT</code></td><td>Kế toán – Tài chính</td><td><span class="pill s-draft">Chưa bắt đầu</span></td><td>Giai đoạn 2 · kết nối phần mềm kế toán còn chờ quyết định</td></tr>
@@ -251,6 +279,8 @@
     <tbody>
       <tr><td>Đơn giá dùng chung cho Đấu thầu / Thiết kế / Mua hàng, hay Nhà Việt One cần bảng riêng</td><td>Đang làm dùng chung và tách sẵn theo pháp nhân — đổi sau vẫn được, nhưng cần chốt trước khi nhập dữ liệu thật</td><td><span class="pill s-pending">Cần trong Giai đoạn 1</span></td></tr>
       <tr><td>Ai được xem giá vốn: hiện mở cho Ban Giám đốc, Tài chính, Đấu thầu, Thiết kế và Cung ứng</td><td>Đang chạy theo giả định trên; lợi nhuận vẫn chỉ Ban Giám đốc thấy</td><td><span class="pill s-overdue">Cần sớm</span></td></tr>
+      <tr><td>Ai được soạn hợp đồng: Kinh doanh, Đấu thầu và Thiết kế soạn từ hồ sơ của mình, hay chỉ Quản trị hệ thống</td><td>Tài liệu nói cả hai kiểu ở hai chỗ khác nhau. Đang cho ai sở hữu hồ sơ nguồn thì soạn được hợp đồng từ hồ sơ đó; Kế toán chỉ xem. Hạn mức phê duyệt không đổi.</td><td><span class="pill s-overdue">Cần sớm</span></td></tr>
+      <tr><td>Đầu bài thiết kế và bản vẽ lưu theo phiên bản trong kho hồ sơ chung</td><td>Tài liệu mô tả đầu bài là một ô văn bản và bản vẽ giữ đường dẫn riêng. Đang làm cả hai theo phiên bản, để trả lời được "khách đổi yêu cầu lúc nào" và "công trường đang cầm bản nào".</td><td><span class="pill s-pending">Cần trong Giai đoạn 1</span></td></tr>
       <tr><td>Bộ mã dự án, công trình, vật tư, hợp đồng</td><td>Mã hồ sơ của các module tiếp theo</td><td><span class="pill s-overdue">Cần sớm</span></td></tr>
       <tr><td>Hạn mức phê duyệt chính thức theo vai trò và loại nghiệp vụ</td><td>Đang chạy bằng mức tạm; đổi được bằng cấu hình, không phải sửa mã</td><td><span class="pill s-pending">Cần trong Giai đoạn 1</span></td></tr>
       <tr><td>Phần mềm kế toán chính thức để kết nối</td><td>Xuất dữ liệu sang kế toán (KT-08)</td><td><span class="pill s-draft">Giai đoạn 2</span></td></tr>
@@ -265,10 +295,11 @@
 <h2>Ranh giới đã đặt ra và đang giữ</h2>
 <div class="card">
   <ul>
-    <li><strong>Phân quyền nằm trong cơ sở dữ liệu</strong>, không nằm ở giao diện — đi đường nào cũng bị kiểm tại một chỗ. Có 98 kiểm thử tự động canh phần này.</li>
+    <li><strong>Phân quyền nằm trong cơ sở dữ liệu</strong>, không nằm ở giao diện — đi đường nào cũng bị kiểm tại một chỗ. Có 115 kiểm thử tự động canh phần này.</li>
     <li><strong>Không cache dữ liệu nghiệp vụ trên điện thoại.</strong> Ứng dụng cài được và mở nhanh, nhưng dữ liệu vẫn lấy trực tiếp mỗi lần — để hồ sơ không đọc được sau khi đăng xuất trên máy dùng chung.</li>
     <li><strong>Mã hồ sơ do hệ thống cấp và không sửa được</strong>, pháp nhân của hồ sơ không đổi được sau khi tạo — giữ đúng ranh giới lãi/lỗ giữa ba pháp nhân.</li>
     <li><strong>Không xoá hẳn hồ sơ nghiệp vụ</strong>, chỉ đánh dấu đã xoá; mọi thay đổi trạng thái quan trọng đều ghi lịch sử riêng.</li>
+    <li><strong>Trạng thái hồ sơ chỉ đổi qua đúng nút thao tác</strong>, không đổi thẳng được từ bên ngoài — nhờ vậy hạn mức phê duyệt, kiểm tra đồng bộ hồ sơ và điều kiện nộp thầu không có đường vòng nào.</li>
     <li><strong>Mọi kết quả do AI sinh ra đều ở dạng nháp</strong> cho tới khi người có thẩm quyền xác nhận.</li>
   </ul>
 </div>
