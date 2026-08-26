@@ -50,7 +50,7 @@ function check(step: string, error: { message: string } | null): void {
   if (error) throw new Error(`${step}: ${error.message}`);
 }
 
-describeDb('Golden Path 1 — NVC: Cơ hội → Gói thầu → Dự toán → Hợp đồng → Công trình → Mua hàng', () => {
+describeDb('Golden Path 1 — NVC: Cơ hội → Gói thầu → Dự toán → Hợp đồng → Công trình → Mua hàng → Kho', () => {
   it('chạy trọn luồng và truy ngược được từ hợp đồng về tận cơ hội gốc', async () => {
     const kinhDoanh = await signInAs(ACCOUNTS.kinhDoanhNvc);
     const dauThau = await signInAs(ACCOUNTS.dauThauNvc);
@@ -556,6 +556,101 @@ describeDb('Golden Path 1 — NVC: Cơ hội → Gói thầu → Dự toán → 
       .eq('type', 'purchase_order_delivered')
       .eq('related_entity_id', orderId as string);
     expect(docNotice!.length).toBe(1);
+
+    // --- Bước 14. Hàng về kho, không nhập lại số liệu (MH-07 → KHO-03) ------------------
+    // Đây là mắt xích cuối của chuỗi: số lượng, đơn giá và chứng từ đã có ở phiếu giao nhận,
+    // Kho chỉ chọn kho nhận. Nhập lại bằng tay là đúng vướng mắc khảo sát #4.
+    const khoNhanVien = await signInAs(ACCOUNTS.kho);
+
+    const { data: warehouseRow, error: warehouseError } = await khoNhanVien
+      .from('warehouses')
+      .insert({
+        company_id: nvc,
+        code: `KHO-GP1-${stamp}`,
+        name: `${TEST_PREFIX} Kho vật tư Golden Path ${stamp}`,
+        warehouse_type: 'vat_tu_xay_dung',
+      })
+      .select('id')
+      .single();
+    check('lập kho', warehouseError);
+    const warehouseId = (warehouseRow as { id: string }).id;
+
+    // Mã vật tư trên đơn hàng phải có trong danh mục kho — KHO-02 sống hay chết ở chỗ này.
+    const { data: materialRow, error: materialError } = await khoNhanVien
+      .from('materials')
+      .insert({
+        code: 'THEP-H200',
+        group_code: 'THEP',
+        name: `${TEST_PREFIX} Thép hình H200`,
+        unit: 'kg',
+      })
+      .select('id')
+      .single();
+    // Mã này có thể đã tồn tại từ lần chạy trước; chỉ dừng lại nếu lỗi vì lý do khác.
+    const materialId =
+      materialError === null
+        ? (materialRow as { id: string }).id
+        : ((
+            await khoNhanVien.from('materials').select('id').eq('code', 'THEP-H200').single()
+          ).data as { id: string }).id;
+    expect(materialId).toBeTruthy();
+
+    const { data: deliveryRow } = await muaHang
+      .from('deliveries')
+      .select('id')
+      .eq('purchase_order_id', orderId as string)
+      .single();
+
+    const { data: receiptId, error: receiptError } = await khoNhanVien.rpc(
+      'receive_from_delivery',
+      {
+        p_delivery_id: (deliveryRow as { id: string }).id,
+        p_warehouse_id: warehouseId,
+      },
+    );
+    check('nhập kho từ phiếu giao nhận', receiptError);
+
+    // Tồn kho bằng đúng số lượng ĐẠT của phiếu giao nhận — không phải số đặt hàng.
+    const { data: stock } = await khoNhanVien
+      .from('inventory_items')
+      .select('quantity_on_hand, average_cost')
+      .eq('warehouse_id', warehouseId)
+      .eq('material_id', materialId)
+      .single();
+    expect(Number((stock as { quantity_on_hand: string }).quantity_on_hand)).toBe(5000);
+
+    // Phiếu nhập truy ngược được về phiếu giao nhận và đơn hàng sinh ra nó (PRD Mục 7).
+    const { data: receipt } = await khoNhanVien
+      .from('stock_movements')
+      .select('code, movement_type, delivery_id, purchase_order_id')
+      .eq('id', receiptId as string)
+      .single();
+    expect((receipt as { movement_type: string }).movement_type).toBe('nhap');
+    expect((receipt as { purchase_order_id: string }).purchase_order_id).toBe(orderId as string);
+
+    // Gọi lại lần nữa (bấm hai lần, hoặc mất sóng rồi gửi lại) KHÔNG cộng tồn lần thứ hai.
+    const { error: duplicateError } = await khoNhanVien.rpc('receive_from_delivery', {
+      p_delivery_id: (deliveryRow as { id: string }).id,
+      p_warehouse_id: warehouseId,
+    });
+    expect(duplicateError, 'nhập kho hai lần cùng một phiếu giao nhận phải bị chặn').toBeTruthy();
+
+    // Xuất thẳng cho công trình — chi phí gắn mã công trình ngay khi phát sinh (KT-05).
+    const { error: issueError } = await khoNhanVien.rpc('issue_stock', {
+      p_warehouse_id: warehouseId,
+      p_items: [{ material_id: materialId, quantity: 2000 }],
+      p_issue_reason: 'cong_trinh',
+      p_construction_site_id: siteId as string,
+    });
+    check('xuất vật tư cho công trình', issueError);
+
+    const { data: stockAfter } = await khoNhanVien
+      .from('inventory_items')
+      .select('quantity_on_hand')
+      .eq('warehouse_id', warehouseId)
+      .eq('material_id', materialId)
+      .single();
+    expect(Number((stockAfter as { quantity_on_hand: string }).quantity_on_hand)).toBe(3000);
 
     // --- Nghiệm thu: TRUY NGƯỢC từ hợp đồng về tận đầu nguồn ----------------------------
     // Đây là tiêu chí số 3 của Definition of Done: đứng ở hợp đồng phải trả lời được nó ra

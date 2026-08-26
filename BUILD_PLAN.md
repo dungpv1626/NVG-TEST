@@ -426,15 +426,49 @@ một mặt hàng, trong khi phiếu đề nghị vật tư thật của một c
   - Đính kèm tệp chứng từ (ảnh biên bản, bản chụp hoá đơn) — dùng lại bộ `documents` của NEN-05
     ở một lượt riêng, không dựng cơ chế thứ hai.
 
-### 3C. Module KHO (BSD 4.8)
-`warehouses` · `inventory_items` · `stock_movements` · `stocktakes` · `scaffolding_assets`
+### 3C. Module KHO (BSD 4.8) ✅ xong
+`materials` · `warehouses` · `inventory_items` · `stock_movements` + `stock_movement_items` ·
+`stocktakes` + `stocktake_items` · `scaffolding_assets` + `scaffolding_events`
 
-- Mã hoá vật tư thống nhất: nhóm – viết tắt – quy cách; **một vật tư một mã duy nhất** (KHO-02)
-- Nhập / Xuất / Điều chuyển / Kiểm kê (KHO-03→07)
-- `scaffolding_assets` — vòng đời riêng: mới / còn dùng được / hỏng chờ sửa / chờ thanh lý (KHO-06)
-- `POST /api/stock-movements` với `client_generated_id` **chống trùng khi đồng bộ lại**
-- Giao diện di động + quét mã vạch/QR (AFD 4.7)
-- ⚠️ **KHO-09 offline-first**: xem "Quyết định cần chốt" ở cuối tài liệu
+BSD 4.8 liệt kê 5 bảng, ở đây có 9. `materials` là bảng danh mục mà KHO-02 bắt buộc phải có
+("một vật tư chỉ dùng MỘT MÃ DUY NHẤT") — để tên và quy cách nằm trong từng dòng tồn của từng
+kho thì cùng một cây thép được mô tả lại ở mỗi kho, và đúng cái KHO-02 chặn xảy ra ngay. Ba
+bảng còn lại là bảng dòng.
+
+- ✅ **Sổ kho chỉ đổi qua phiếu.** `inventory_items` bị REVOKE INSERT/UPDATE/DELETE; mọi thay
+  đổi tồn đi qua `write_stock_movement` (hàm nội bộ) và để lại một phiếu. Không có ràng buộc
+  đó thì kiểm kê KHO-07 mất luôn cái để đối chiếu.
+- ✅ **Không xuất quá tồn**, khoá dòng tồn bằng `FOR UPDATE` — hai người soạn hàng cùng lúc
+  không cùng đọc một số tồn rồi cùng trừ.
+- ✅ **Điều chuyển là MỘT việc** (KHO-05): giảm kho xuất và tăng kho nhận trong cùng giao dịch.
+  Có test khẳng định điều chuyển vượt tồn không làm tăng kho nhận.
+- ✅ **Kiểm kê khoá kho, điều chỉnh phải được duyệt trước** (KHO-07): mở đợt kiểm là chụp số
+  sổ kho và tạm dừng nhập xuất; sổ chỉ đổi sau khi biên bản qua `approvals` +
+  `decide_approval` (subject `stocktake_adjustment`, hạn mức Kho 10 triệu / CFO không giới
+  hạn); và nó đổi bằng một PHIẾU điều chỉnh, không phải một câu UPDATE lặng lẽ.
+- ✅ **Giàn giáo có vòng đời riêng** (KHO-06): tình trạng chỉ đổi qua `record_scaffolding_event`,
+  mỗi lần đổi để lại một biên bản có số lượng, nguyên nhân và bên chịu trách nhiệm. Giàn giáo
+  CỐ Ý không đi qua sổ tồn kho — cùng một đống giáo nêm nằm ở hai sổ là hai con số chắc chắn
+  lệch nhau ngay lần đầu có hàng hỏng.
+- ✅ **KHO-03 ↔ MH-07 đã nối**: `receive_from_delivery` nhập kho thẳng từ phiếu giao nhận, lấy
+  đúng phần ĐẠT, không nhập lại số liệu. Một phiếu giao nhận chỉ nhập kho một lần.
+- ✅ **KHO-09 phần chống ghi trùng**: `client_generated_id` duy nhất; gửi lại cùng một phiếu
+  trả về đúng phiếu cũ thay vì báo lỗi (với người đứng ở kho, một thông báo đỏ sẽ khiến họ
+  tưởng hàng chưa ghi và nhập tay lần nữa).
+- ✅ Cảnh báo chủ động KHO-08: hết hàng · sắp hết (theo mức tối thiểu đặt được ngay trên dòng)
+  · tồn lâu quá **90 ngày** (con số suy luận, cần chốt). Dòng có cảnh báo đẩy lên đầu danh sách.
+- ✅ Màn hình quét mã ưu tiên di động (AFD 4.7) — máy quét cầm tay dùng được ngay.
+- ⏳ **CỐ Ý chưa làm**, không phải quên:
+  - **KHO-09 ngoại tuyến thật** (ghi được khi mất mạng, đồng bộ lại sau) — quyết định còn treo.
+  - **Camera quét mã QR** — cần thư viện giải mã và quyền camera, mà cách hoạt động khi mất
+    mạng phụ thuộc chính quyết định trên.
+  - **KHO-10** lệnh sản xuất và hàng cho thuê — thuộc Module SX (3E), chưa khảo sát xưởng.
+  - **Mua giàn giáo về ghi vào sổ tài sản** — hiện phải tạo lô tay ở màn hình Giàn giáo;
+    nối tự động chờ khảo sát xưởng cùng KHO-10.
+  - **Kiểm kê phát hiện hàng CHƯA có trong sổ** — hiện chỉ đối chiếu các dòng đã có tồn. Ghi
+    nhận hàng lạ tìm thấy trong kho cần biết định giá nó thế nào, tức là chờ quyết định kế toán.
+  - **Giá vốn xuất kho chính thức** (bình quân gia quyền, nhập trước xuất trước…) — phải khớp
+    phần mềm kế toán, mà phần mềm đó chưa chốt. Hiện chỉ có `average_cost` tham khảo.
 
 ### 3D. Module KT (BSD 4.9)
 `payment_requests` · `advances` · `receivables_payables` · `cash_flow_plans` · `accounting_periods`
@@ -610,3 +644,6 @@ theo hạn mức · truy vết ngược tới chứng từ gốc.
 | 11 | **Một đề nghị mua có được đặt hàng nhiều nhà cung cấp không?** Hiện một đề nghị → một đơn hàng. Đề nghị 20 mặt hàng mà mỗi nhóm hàng một nhà cung cấp thì phải tách thành nhiều đề nghị | Phase 3B (đã làm, mở rộng được) |
 | 12 | **Ai ký nhận hàng tại công trường** — Kho, chỉ huy trưởng, hay cả hai? Hiện mở cho Mua hàng và Kho | Phase 3B (đã làm, sửa ở một hàm) |
 | 13 | **Bảng giá khung MH-09** — NVG thoả thuận theo tháng hay quý, điều chỉnh giá báo trước bao lâu? | Chặn MH-09 |
+| 14 | **Vật tư mua sẵn về kho chung rồi mới xuất cho công trình thì ghi chi phí lúc nào?** Mua theo đề nghị gắn công trình đã ghi khi hàng về (MH-07); còn hàng từ kho chung hiện KHÔNG về được ngân sách công trình nào. Đây là quyết định kế toán, không phải lựa chọn kỹ thuật | Phase 3C (khoảng trống thật, chưa lấp) |
+| 15 | **Ngưỡng "tồn lâu, chậm luân chuyển" 90 ngày** — đang lấy bằng một quý cho khớp chu kỳ kiểm kê | Phase 3C (đã làm, sửa ở một chỗ) |
+| 16 | **Kho tự duyệt được chênh lệch kiểm kê tới 10 triệu** — theo hạn mức mặc định. Kho vừa đếm vừa duyệt là một chốt kiểm soát yếu, cần xác nhận NVG muốn vậy | Phase 3C (đổi bằng cấu hình `approval_limits`) |

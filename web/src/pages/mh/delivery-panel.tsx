@@ -26,7 +26,9 @@ import {
   useRecordDelivery,
   type PurchaseOrderItemRecord,
 } from '@/hooks/use-purchasing';
+import { useReceiveFromDelivery, useWarehouses } from '@/hooks/use-warehouse';
 import { toUserMessage } from '@/hooks/use-error-message';
+import { useCan } from '@/lib/auth';
 
 const EM_DASH = '—';
 
@@ -43,11 +45,15 @@ export function DeliveryPanel({
   canRecord: boolean;
   isOpenForDelivery: boolean;
 }) {
+  const canStock = useCan('KHO', 'edit');
   const { data: items, isLoading, error } = usePurchaseOrderItems(orderId);
   const { data: deliveries } = useDeliveries(orderId);
+  const { data: warehouses } = useWarehouses({ enabled: canStock });
   const record = useRecordDelivery();
+  const receiveToStock = useReceiveFromDelivery();
   const [isFormOpen, setFormOpen] = useState(false);
   const [panelError, setPanelError] = useState<string | null>(null);
+  const [stockWarehouseId, setStockWarehouseId] = useState('');
 
   if (isLoading) return <TableSkeleton rows={3} columns={6} />;
   if (error) return <ErrorState message={toUserMessage(error)} />;
@@ -93,6 +99,25 @@ export function DeliveryPanel({
       });
       form.reset();
       setFormOpen(false);
+    } catch (e) {
+      setPanelError(toUserMessage(e, 'create'));
+    }
+  }
+
+  /**
+   * Nhập kho thẳng từ phiếu giao nhận — KHO-03 ↔ MH-07.
+   *
+   * Số lượng, đơn giá và chứng từ đã có ở phiếu này; Kho chỉ chọn kho nhận. Bắt nhập lại
+   * bằng tay chính là vướng mắc "phải nhập cùng một dữ liệu ở nhiều chỗ" trong khảo sát.
+   */
+  async function receiveToWarehouse(deliveryId: string) {
+    if (!stockWarehouseId) {
+      setPanelError('Chọn kho nhận trước khi nhập kho.');
+      return;
+    }
+    setPanelError(null);
+    try {
+      await receiveToStock.mutateAsync({ deliveryId, warehouseId: stockWarehouseId });
     } catch (e) {
       setPanelError(toUserMessage(e, 'create'));
     }
@@ -182,6 +207,31 @@ export function DeliveryPanel({
                     {delivery.invoice_number ? ` · Hóa đơn ${delivery.invoice_number}` : ''}
                     {delivery.has_quality_certificate ? ' · Có CO/CQ' : ''}
                   </p>
+                  {canStock && (
+                    <div className="mt-2 flex flex-wrap items-end gap-2">
+                      <Field label="Kho nhận" className="min-w-56">
+                        <select
+                          value={stockWarehouseId}
+                          onChange={(e) => setStockWarehouseId(e.target.value)}
+                          className="h-9 w-full rounded-sm border border-border-strong bg-surface px-3"
+                        >
+                          <option value="">Chọn kho</option>
+                          {(warehouses ?? []).map((w) => (
+                            <option key={w.id} value={w.id}>
+                              {w.name}
+                            </option>
+                          ))}
+                        </select>
+                      </Field>
+                      <Button
+                        variant="secondary"
+                        disabled={receiveToStock.isPending}
+                        onClick={() => void receiveToWarehouse(delivery.id)}
+                      >
+                        Nhập kho theo phiếu này
+                      </Button>
+                    </div>
+                  )}
                   {delivery.items
                     .filter((i) => Number(i.quantity_issue) > 0)
                     .map((i) => (

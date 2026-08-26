@@ -101,6 +101,19 @@ export async function cleanupTestData(): Promise<void> {
     // dạng "Giá dự thầu NVC-DA-… — [TEST] …", tiền tố test nằm ở GIỮA chuỗi.
     await sql`DELETE FROM approvals WHERE title LIKE ${'%' + TEST_PREFIX + '%'}`;
     await sql`DELETE FROM complaints WHERE title LIKE ${TEST_PREFIX + '%'}`;
+    // Kho: phiếu và đợt kiểm kê phải xoá TRƯỚC kho (khoá ngoại tới kho là ON DELETE
+    // RESTRICT — một phiếu nhập không được mồ côi khỏi cái kho nó ghi vào).
+    await sql`DELETE FROM stock_movements WHERE warehouse_id IN (
+      SELECT id FROM warehouses WHERE name LIKE ${'%' + TEST_PREFIX + '%'}
+    )`;
+    await sql`DELETE FROM stocktakes WHERE warehouse_id IN (
+      SELECT id FROM warehouses WHERE name LIKE ${'%' + TEST_PREFIX + '%'}
+    )`;
+    await sql`DELETE FROM scaffolding_assets WHERE asset_code LIKE ${'TEST-%'}`;
+    // Xoá kho kéo theo dòng tồn (CASCADE); xoá vật tư phải sau cùng vì cả hai bảng trên
+    // đều tham chiếu nó với ON DELETE RESTRICT.
+    await sql`DELETE FROM warehouses WHERE name LIKE ${'%' + TEST_PREFIX + '%'}`;
+    await sql`DELETE FROM materials WHERE name LIKE ${'%' + TEST_PREFIX + '%'}`;
     // Đơn đặt hàng phải xoá TRƯỚC đề nghị mua: khoá ngoại giữa hai bảng là ON DELETE
     // RESTRICT, cố ý — một đơn hàng không được mồ côi khỏi đề nghị đã duyệt sinh ra nó.
     // Xoá đơn hàng kéo theo dòng đơn hàng, phiếu giao nhận và dòng kiểm đếm (CASCADE).

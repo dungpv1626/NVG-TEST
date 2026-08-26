@@ -95,7 +95,18 @@ export function parseRecordCode(code: string): ParsedRecordCode | null {
  */
 export function buildMaterialCode(group: string, abbreviation: string, spec: string): string {
   return [group, abbreviation, spec]
-    .map((part) => part.trim().toUpperCase().replace(/\s+/g, ''))
+    .map((part) =>
+      part
+        .normalize('NFD')
+        // Bỏ dấu thanh và dấu phụ. Mã vật tư được in ra tem, đọc bằng máy quét và gõ tay ở
+        // công trường — để "Thép Hộp" và "THEP HOP" thành hai mã khác nhau là đúng thứ
+        // KHO-02 sinh ra để chặn.
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[đĐ]/g, (c) => (c === 'đ' ? 'd' : 'D'))
+        .trim()
+        .toUpperCase()
+        .replace(/\s+/g, ''),
+    )
     .filter(Boolean)
     .join('-');
 }

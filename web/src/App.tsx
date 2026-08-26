@@ -122,6 +122,27 @@ const SupplierListPage = lazy(() =>
 const SupplierDetailPage = lazy(() =>
   import('@/pages/mh/supplier-detail').then((m) => ({ default: m.SupplierDetailPage })),
 );
+const StockScanPage = lazy(() =>
+  import('@/pages/kho/scan-page').then((m) => ({ default: m.StockScanPage })),
+);
+const InventoryListPage = lazy(() =>
+  import('@/pages/kho/inventory-list').then((m) => ({ default: m.InventoryListPage })),
+);
+const StockMovementPage = lazy(() =>
+  import('@/pages/kho/movement-page').then((m) => ({ default: m.StockMovementPage })),
+);
+const StocktakePage = lazy(() =>
+  import('@/pages/kho/stocktake-page').then((m) => ({ default: m.StocktakePage })),
+);
+const ScaffoldingPage = lazy(() =>
+  import('@/pages/kho/scaffolding-page').then((m) => ({ default: m.ScaffoldingPage })),
+);
+const MaterialListPage = lazy(() =>
+  import('@/pages/kho/catalog-pages').then((m) => ({ default: m.MaterialListPage })),
+);
+const WarehouseListPage = lazy(() =>
+  import('@/pages/kho/catalog-pages').then((m) => ({ default: m.WarehouseListPage })),
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -216,6 +237,17 @@ export default function App() {
               <Route path="mh/nha-cung-cap" element={<SupplierListPage />} />
               <Route path="mh/nha-cung-cap/:id" element={<SupplierDetailPage />} />
 
+              {/* KHO — nhập, xuất, điều chuyển, kiểm kê (KHO-01 → KHO-09). Không có màn hình
+                  sửa tồn: sổ kho chỉ đổi qua phiếu, và phiếu điều chỉnh kiểm kê chỉ sinh ra
+                  sau khi biên bản được phê duyệt (KHO-07). */}
+              <Route path="kho/quet-ma" element={<StockScanPage />} />
+              <Route path="kho/ton-kho" element={<InventoryListPage />} />
+              <Route path="kho/phieu" element={<StockMovementPage />} />
+              <Route path="kho/kiem-ke" element={<StocktakePage />} />
+              <Route path="kho/gian-giao" element={<ScaffoldingPage />} />
+              <Route path="kho/vat-tu" element={<MaterialListPage />} />
+              <Route path="kho/danh-muc-kho" element={<WarehouseListPage />} />
+
               {/* Hộp thư Phê duyệt — MỘT màn hình cho mọi module (Webapp Flow 4.6),
                   nên nằm ở gốc chứ không thuộc đường dẫn của module nào. */}
               <Route path="viec-can-lam" element={<ApprovalInboxPage />} />
@@ -225,14 +257,20 @@ export default function App() {
                   hàng rào thật vẫn là RLS, đây chỉ là điều hướng (Webapp Flow 6.5). */}
               <Route path="nen/giao-dien" element={<DesignShowcasePage />} />
               {MODULE_CODES.filter(
-                (c): c is Exclude<ModuleCode, 'BC' | 'CRM' | 'DA' | 'TK' | 'HD' | 'TC' | 'MH'> =>
+                (
+                  c,
+                ): c is Exclude<
+                  ModuleCode,
+                  'BC' | 'CRM' | 'DA' | 'TK' | 'HD' | 'TC' | 'MH' | 'KHO'
+                > =>
                   c !== 'BC' &&
                   c !== 'CRM' &&
                   c !== 'DA' &&
                   c !== 'TK' &&
                   c !== 'HD' &&
                   c !== 'TC' &&
-                  c !== 'MH',
+                  c !== 'MH' &&
+                  c !== 'KHO',
               ).map(
                 (code) => (
                   <Route

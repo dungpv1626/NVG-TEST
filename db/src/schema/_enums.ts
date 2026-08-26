@@ -9,6 +9,13 @@
 import { pgEnum } from 'drizzle-orm/pg-core';
 import {
   AMENDMENT_STAGES,
+  ASSET_LOCATION_TYPES,
+  SCAFFOLDING_CONDITIONS,
+  SCAFFOLDING_EVENT_TYPES,
+  STOCKTAKE_STATUSES,
+  STOCK_ISSUE_REASONS,
+  STOCK_MOVEMENT_TYPES,
+  WAREHOUSE_TYPES,
   DELIVERY_ISSUE_TYPES,
   PURCHASE_ORDER_STAGES,
   PURCHASE_REQUEST_STAGES,
@@ -196,3 +203,32 @@ export const purchaseOrderStageEnum = pgEnum('purchase_order_stage', PURCHASE_OR
 
 /** Ba trường hợp hàng không đạt khi giao nhận — PRD MH-07. */
 export const deliveryIssueTypeEnum = pgEnum('delivery_issue_type', DELIVERY_ISSUE_TYPES);
+
+
+/**
+ * Module KHO — Quản lý Kho (Backend Schema 4.8).
+ *
+ * Bộ phận Kho CÓ khảo sát trực tiếp (PRD Mục 3) nên các danh sách này bám câu chữ PRD.
+ * Lý do từng giá trị xem `@nvg/shared/kho`.
+ */
+
+/** Năm loại kho — PRD KHO-01. */
+export const warehouseTypeEnum = pgEnum('warehouse_type', WAREHOUSE_TYPES);
+
+/** Bốn loại phiếu kho — PRD KHO-03 → KHO-07. */
+export const stockMovementTypeEnum = pgEnum('stock_movement_type', STOCK_MOVEMENT_TYPES);
+
+/** Lý do xuất kho — SUY LUẬN từ ba nơi tiêu vật tư mà tài liệu có nhắc. */
+export const stockIssueReasonEnum = pgEnum('stock_issue_reason', STOCK_ISSUE_REASONS);
+
+/** Trạng thái một đợt kiểm kê — PRD KHO-07. */
+export const stocktakeStatusEnum = pgEnum('stocktake_status', STOCKTAKE_STATUSES);
+
+/** Bốn tình trạng giàn giáo — PRD KHO-06. */
+export const scaffoldingConditionEnum = pgEnum('scaffolding_condition', SCAFFOLDING_CONDITIONS);
+
+/** Ba loại biên bản riêng của giàn giáo — PRD KHO-06. */
+export const scaffoldingEventTypeEnum = pgEnum('scaffolding_event_type', SCAFFOLDING_EVENT_TYPES);
+
+/** Nơi một lô giàn giáo đang nằm — PRD KHO-06. */
+export const assetLocationTypeEnum = pgEnum('asset_location_type', ASSET_LOCATION_TYPES);

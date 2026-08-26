@@ -36,3 +36,4 @@ export * from './hd';
 // --- Module TC — Thi công và Ngân sách công trình (Backend Schema 4.6) ---
 export * from './tc';
 export * from './mh';
+export * from './kho';
