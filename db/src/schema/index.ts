@@ -26,3 +26,6 @@ export * from './crm';
 
 // --- Module DA — Dự án và Đấu thầu (Backend Schema 4.3) ---
 export * from './da';
+
+// --- Module TK — Thiết kế (Backend Schema 4.4) ---
+export * from './tk';

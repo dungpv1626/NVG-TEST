@@ -61,6 +61,7 @@ export const ACCOUNTS = {
   dauThauNvc: 'dauthau.nvc@nhavietgroup.test',
   congTruongNvc: 'congtruong.nvc@nhavietgroup.test',
   thietKeNvo: 'thietke.nvo@nhavietgroup.test',
+  ketCauNvo: 'ketcau.nvo@nhavietgroup.test',
   kho: 'kho@nhavietgroup.test',
   ketoan: 'ketoan@nhavietgroup.test',
 } as const;
@@ -101,6 +102,9 @@ export async function cleanupTestData(): Promise<void> {
     await sql`DELETE FROM complaints WHERE title LIKE ${TEST_PREFIX + '%'}`;
     // Xoá gói thầu kéo theo khối lượng, dự toán, hồ sơ thầu và ngân sách (khoá ngoại CASCADE).
     await sql`DELETE FROM bidding_projects WHERE name LIKE ${TEST_PREFIX + '%'}`;
+    // Xoá dự án thiết kế kéo theo đầu bài, phiên bản, tiến độ bộ môn, yêu cầu thay đổi
+    // và cả dự toán NVO (khoá ngoại CASCADE).
+    await sql`DELETE FROM design_projects WHERE name LIKE ${TEST_PREFIX + '%'}`;
     await sql`DELETE FROM unit_prices WHERE name LIKE ${TEST_PREFIX + '%'}`;
     await sql`DELETE FROM opportunities WHERE name LIKE ${TEST_PREFIX + '%'}`;
     await sql`DELETE FROM documents WHERE title LIKE ${TEST_PREFIX + '%'}`;

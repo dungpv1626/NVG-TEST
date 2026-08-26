@@ -212,8 +212,36 @@ thì chặn ở mức DÒNG cho gọn.
   theo mã chi phí** (DA-09) ← đây là mắt xích quan trọng nhất nối GĐ1 sang GĐ2
 - ⏸ DA-11 (Gemini đọc bản vẽ) — **tính năng phụ, lùi được**, làm ở P4 nếu còn thời gian
 
-### 2C. Module TK (BSD 4.4) — song song được với 2B
-`design_projects` · `design_versions` · `design_discipline_tasks` · `change_requests` · `design_library`
+### 2C. Module TK (BSD 4.4) — song song được với 2B ✅ phần lõi đã xong
+
+Đã dựng: 7 bảng + RLS + 22 test · đầu bài có phiên bản · khảo sát hiện trạng kỹ thuật ·
+phương án kiến trúc kèm vòng góp ý của khách · phiên bản bản vẽ theo bộ môn có phát hành +
+thông báo · tiến độ 3 bộ môn + kiểm tra đồng bộ · yêu cầu thay đổi · bàn giao thi công.
+
+**TK-07 làm bằng cách MỞ RỘNG Module DA, không sao chép.** `estimates` và `boq_items` nhận
+hai loại hồ sơ cha (`bidding_project_id` hoặc `design_project_id`, ràng buộc CHECK đúng một
+cột), và màn hình dự toán chuyển từ `pages/da/` sang `components/estimate/` dùng chung. Nhờ
+vậy công thức tính thành tiền, cơ chế phiên bản và luồng duyệt giá chỉ có một bản.
+
+⏳ Còn lại: TK-09 (thư viện thiết kế) — đã đánh dấu "lùi được", làm ở P4.
+⏳ `handover_design_to_construction` chưa tạo `construction_sites` (bảng của Module TC,
+Giai đoạn 2). Cột `design_projects.construction_site_id` đã khai sẵn, migration TC chỉ cần
+thêm khoá ngoại và một dòng INSERT.
+
+⚠️ **Hai chỗ cố ý lệch BSD 4.4 — cần Haan xác nhận để cập nhật tài liệu:**
+1. BSD ghi `design_projects.brief` là một trường; ở đây tách thành bảng `design_briefs` có
+   phiên bản, vì TK-01 yêu cầu "đầu bài ĐANG HIỆU LỰC duy nhất" — chữ "đang hiệu lực" chỉ có
+   nghĩa khi tồn tại bản không còn hiệu lực.
+2. BSD ghi `design_versions.file_url`; ở đây trỏ sang `documents`/`document_versions` như
+   `bid_documents` của DA đã làm, để bản vẽ không có hai nơi quản lý phiên bản (PRD 2.3).
+
+Ngoài ra `design_surveys` (TK-02) và `design_reviews` (TK-03) là hai bảng BSD 4.4 không liệt
+kê nhưng PRD yêu cầu — khảo sát kỹ thuật khác khảo sát thương mại của CRM-03, và "vòng góp ý
+của khách" là căn cứ chuyển bước nên phải là dữ liệu, không phải ghi chú.
+
+
+`design_projects` · `design_briefs` · `design_surveys` · `design_versions` · `design_reviews` ·
+`design_discipline_tasks` · `change_requests` · `design_library`
 
 - Một "đầu bài" **đang hiệu lực duy nhất** (TK-01)
 - Phiên bản bản vẽ theo bộ môn (kiến trúc / kết cấu / điện nước), **chỉ 1 bản hiệu lực tại 1 thời điểm** (TK-05)

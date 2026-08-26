@@ -25,12 +25,13 @@ import {
   useRecordBidResult,
   useUpdateBiddingProject,
 } from '@/hooks/use-bidding-projects';
+import { BoqPanel } from '@/components/estimate/boq-panel';
+import { EstimatePanel } from '@/components/estimate/estimate-panel';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useAuth, useCan } from '@/lib/auth';
 import { BidDocumentsPanel } from './bid-documents-panel';
-import { BoqPanel } from './boq-panel';
 import { BudgetPanel } from './budget-panel';
-import { EstimatePanel } from './estimate-panel';
+
 
 const EM_DASH = '—';
 
@@ -184,7 +185,7 @@ export function BiddingDetailPage() {
             label: 'Khối lượng',
             content: (
               <BoqPanel
-                projectId={project.id}
+                parent={{ kind: 'bidding', id: project.id }}
                 companyId={project.company_id}
                 readOnly={readOnly}
               />
@@ -195,7 +196,7 @@ export function BiddingDetailPage() {
             label: 'Dự toán',
             content: (
               <EstimatePanel
-                projectId={project.id}
+                parent={{ kind: 'bidding', id: project.id }}
                 companyId={project.company_id}
                 companyCode={companyCode}
                 readOnly={readOnly}

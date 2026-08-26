@@ -298,6 +298,18 @@ export const USER_SEED: UserSeed[] = [
     assignments: [{ company: 'NVO', role: 'TKE', isPrimary: true }],
   },
   {
+    // Bộ môn thứ hai của Phòng Thiết kế. PRD TK-04 nói rõ hồ sơ triển khai SONG SONG bởi
+    // kiến trúc, kết cấu và điện nước — một tài khoản Thiết kế duy nhất thì không dựng được
+    // tình huống thật, và cũng không kiểm chứng được Mẫu B (đồng nghiệp xem được, không sửa
+    // được phần của nhau).
+    email: 'ketcau.nvo@nhavietgroup.test',
+    fullName: 'Đỗ Văn K',
+    jobTitle: 'Kỹ sư Kết cấu',
+    department: 'NVO — Phòng Thiết kế – Đấu thầu',
+    fromDocs: false,
+    assignments: [{ company: 'NVO', role: 'TKE', isPrimary: true }],
+  },
+  {
     email: 'congtruong.nvc@nhavietgroup.test',
     fullName: 'Hoàng Văn E',
     jobTitle: 'Chỉ huy trưởng',

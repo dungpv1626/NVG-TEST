@@ -1807,3 +1807,755 @@ describeDb('DA — gói thầu, dự toán và ngân sách', () => {
     expect(seen).toEqual([]);
   });
 });
+
+/**
+ * Module TK — Thiết kế (PRD TK-01 → TK-08, Backend Schema 4.4).
+ *
+ * Trọng tâm: cơ chế MỘT bản đang hiệu lực. Vướng mắc khảo sát #9 ("không chắc file đang dùng
+ * có phải bản mới nhất") chỉ được giải quyết nếu ràng buộc nằm trong CSDL — nên phần lớn
+ * test ở đây cố tình đi vòng qua giao diện để chứng minh CSDL vẫn chặn.
+ */
+describeDb('TK — dự án thiết kế, phiên bản bản vẽ và bàn giao', () => {
+  /** Dự án thiết kế nháp của NVO, người chịu trách nhiệm là người tạo. */
+  async function createDesignProject(
+    client: SupabaseClient,
+    extra: Record<string, unknown> = {},
+  ): Promise<{ id: string; code: string; companyId: string }> {
+    const { data: company } = await client.from('companies').select('id').eq('code', 'NVO').single();
+    const { data: me } = await client.rpc('auth_user_id');
+    const { data: code } = await client.rpc('next_record_code', {
+      p_company_code: 'NVO',
+      p_record_type: 'TK',
+    });
+
+    const { data, error } = await client
+      .from('design_projects')
+      .insert({
+        code,
+        company_id: company!.id,
+        name: `${TEST_PREFIX} Nhà phố ${Date.now()}`,
+        responsible_user_id: me,
+        ...extra,
+      })
+      .select('id, code')
+      .single();
+    if (error) throw new Error(error.message);
+    return { ...(data as { id: string; code: string }), companyId: company!.id };
+  }
+
+  /**
+   * Một phiên bản kèm tệp trong kho hồ sơ dùng chung — phát hành yêu cầu có tệp, nên mọi
+   * test về phát hành đều cần bước này.
+   */
+  async function createVersion(
+    client: SupabaseClient,
+    project: { id: string; companyId: string },
+    discipline: string,
+    extra: Record<string, unknown> = {},
+  ): Promise<string> {
+    const { data: doc, error: docError } = await client
+      .from('documents')
+      .insert({
+        company_id: project.companyId,
+        title: `${TEST_PREFIX} Bản vẽ ${discipline} ${Date.now()}`,
+        category: 'ban_ve',
+        related_entity_type: 'design_projects',
+        related_entity_id: project.id,
+      })
+      .select('id')
+      .single();
+    if (docError) throw new Error(docError.message);
+
+    const { data: version, error: versionError } = await client.rpc('publish_document_version', {
+      p_document_id: (doc as { id: string }).id,
+      p_file_url: `test/${Date.now()}.pdf`,
+      p_file_name: 'ban-ve.pdf',
+      p_change_reason: 'Bản đầu tiên',
+    });
+    if (versionError) throw new Error(versionError.message);
+
+    const { data, error } = await client
+      .from('design_versions')
+      .insert({
+        company_id: project.companyId,
+        design_project_id: project.id,
+        discipline,
+        title: `${TEST_PREFIX} ${discipline}`,
+        document_id: (doc as { id: string }).id,
+        document_version_id: version as string,
+        change_reason: 'Điều chỉnh theo góp ý',
+        ...extra,
+      })
+      .select('id')
+      .single();
+    if (error) throw new Error(error.message);
+    return (data as { id: string }).id;
+  }
+
+  /** Đưa dự án tới trạng thái đủ điều kiện bàn giao: 3 bộ môn xong, phương án khách đã duyệt. */
+  async function makeReadyForHandover(
+    client: SupabaseClient,
+    project: { id: string; companyId: string },
+  ): Promise<void> {
+    const concept = await createVersion(client, project, 'phuong_an');
+    await client.rpc('publish_design_version', { p_version_id: concept });
+    await client.rpc('record_design_review', {
+      p_version_id: concept,
+      p_reviewer_type: 'khach_hang',
+      p_decision: 'duyet',
+      p_comments: 'Đồng ý phương án mặt bằng.',
+      p_reviewer_name: 'Chủ nhà Nguyễn Văn A',
+    });
+
+    const { data: me } = await client.rpc('auth_user_id');
+    for (const discipline of ['kien_truc', 'ket_cau', 'dien_nuoc']) {
+      const versionId = await createVersion(client, project, discipline);
+      await client.rpc('publish_design_version', { p_version_id: versionId });
+      await client.from('design_discipline_tasks').insert({
+        company_id: project.companyId,
+        design_project_id: project.id,
+        discipline,
+        assignee_id: me,
+        status: 'hoan_thanh',
+        progress_percent: 100,
+      });
+    }
+  }
+
+  it('CSDL cấp số phiên bản theo TỪNG bộ môn, không đánh số chung cả dự án (TK-05)', async () => {
+    const tk = await signInAs(ACCOUNTS.thietKeNvo);
+    const project = await createDesignProject(tk);
+
+    await createVersion(tk, project, 'kien_truc');
+    await createVersion(tk, project, 'kien_truc');
+    const ketCauId = await createVersion(tk, project, 'ket_cau');
+
+    const { data } = await tk
+      .from('design_versions')
+      .select('discipline, version')
+      .eq('design_project_id', project.id)
+      .order('version');
+
+    // "Kết cấu bản 2" phải nghĩa là lần thứ hai kết cấu ra bản vẽ — không phải bản thứ ba
+    // của cả dự án. Người ngoài công trường không đọc được con số đánh chung.
+    expect(data!.filter((v) => v.discipline === 'kien_truc').map((v) => v.version)).toEqual([1, 2]);
+    expect(data!.filter((v) => v.discipline === 'ket_cau').map((v) => v.version)).toEqual([1]);
+
+    // Trình duyệt không tự đặt được số phiên bản.
+    const { error } = await tk
+      .from('design_versions')
+      .update({ version: 99 })
+      .eq('id', ketCauId);
+    expect(error, 'số phiên bản là căn cứ truy ngược, không được sửa').toBeTruthy();
+  });
+
+  it('bản mới là NHÁP — chỉ phát hành mới đổi bản đang hiệu lực (TK-05)', async () => {
+    const tk = await signInAs(ACCOUNTS.thietKeNvo);
+    const project = await createDesignProject(tk);
+
+    const first = await createVersion(tk, project, 'kien_truc');
+    const { error: publishError } = await tk.rpc('publish_design_version', {
+      p_version_id: first,
+    });
+    expect(publishError).toBeNull();
+
+    // Bản thứ hai đang soạn KHÔNG được hạ bản công trường đang dùng xuống.
+    const second = await createVersion(tk, project, 'kien_truc');
+    const { data: afterDraft } = await tk
+      .from('design_versions')
+      .select('id, version, is_current_version, published_at')
+      .eq('design_project_id', project.id)
+      .eq('discipline', 'kien_truc')
+      .order('version');
+
+    expect(afterDraft!.find((v) => v.id === first)!.is_current_version).toBe(true);
+    expect(afterDraft!.find((v) => v.id === second)!.is_current_version).toBe(false);
+    expect(afterDraft!.find((v) => v.id === second)!.published_at).toBeNull();
+
+    await tk.rpc('publish_design_version', { p_version_id: second });
+
+    const { data: afterPublish } = await tk
+      .from('design_versions')
+      .select('id, is_current_version')
+      .eq('design_project_id', project.id)
+      .eq('discipline', 'kien_truc');
+
+    // Đúng MỘT bản đang hiệu lực sau khi phát hành — đây là điều vướng mắc #9 cần.
+    expect(afterPublish!.filter((v) => v.is_current_version).map((v) => v.id)).toEqual([second]);
+  });
+
+  it('bản đã phát hành KHÔNG sửa lặng lẽ được, kể cả người phát hành (TK-05)', async () => {
+    const tk = await signInAs(ACCOUNTS.thietKeNvo);
+    const project = await createDesignProject(tk);
+    const versionId = await createVersion(tk, project, 'ket_cau');
+    await tk.rpc('publish_design_version', { p_version_id: versionId });
+
+    // Phát hành là một cam kết đã gửi thông báo cho 5 bộ phận. Sửa sau đó mà không ai biết
+    // là đúng cái sai mà cơ chế phiên bản sinh ra để chặn.
+    const { data, error } = await tk
+      .from('design_versions')
+      .update({ title: 'Sửa lén sau khi phát hành' })
+      .eq('id', versionId)
+      .select('id');
+    expect(error === null && data!.length === 0, 'policy phải lọc bản đã phát hành').toBe(true);
+
+    // Phát hành lại lần nữa cũng bị chặn — nếu không thì thông báo bắn hai lần cho cùng một bản.
+    const { error: rePublish } = await tk.rpc('publish_design_version', {
+      p_version_id: versionId,
+    });
+    expect(rePublish!.message).toContain('đã phát hành');
+  });
+
+  it('phát hành có gửi thông báo cho các bộ phận PRD TK-05 liệt kê', async () => {
+    const tk = await signInAs(ACCOUNTS.thietKeNvo);
+    const project = await createDesignProject(tk);
+    const versionId = await createVersion(tk, project, 'kien_truc');
+
+    const { data: notified, error } = await tk.rpc('publish_design_version', {
+      p_version_id: versionId,
+    });
+    expect(error).toBeNull();
+    // Ít nhất một người khác phải nhận được — phát hành mà không ai biết thì bằng không
+    // phát hành (NEN-03). Người vừa bấm cố ý KHÔNG tự nhận thông báo của chính mình.
+    expect(notified).toBeGreaterThan(0);
+  });
+
+  it('chưa đính kèm tệp thì không phát hành được — bản vẽ rỗng không dùng để thi công', async () => {
+    const tk = await signInAs(ACCOUNTS.thietKeNvo);
+    const project = await createDesignProject(tk);
+
+    const { data: empty } = await tk
+      .from('design_versions')
+      .insert({
+        company_id: project.companyId,
+        design_project_id: project.id,
+        discipline: 'dien_nuoc',
+        title: `${TEST_PREFIX} chưa có tệp`,
+      })
+      .select('id')
+      .single();
+
+    const { error } = await tk.rpc('publish_design_version', {
+      p_version_id: (empty as { id: string }).id,
+    });
+    expect(error!.message).toContain('Chưa đính kèm tệp');
+  });
+
+  it('bản điều chỉnh bắt buộc nêu nguyên nhân, bản đầu tiên thì không (NEN-05)', async () => {
+    const tk = await signInAs(ACCOUNTS.thietKeNvo);
+    const project = await createDesignProject(tk);
+
+    const { error: firstError } = await tk.from('design_versions').insert({
+      company_id: project.companyId,
+      design_project_id: project.id,
+      discipline: 'kien_truc',
+      title: `${TEST_PREFIX} bản đầu`,
+    });
+    expect(firstError, 'bản đầu tiên không có gì để nêu nguyên nhân').toBeNull();
+
+    const { error: secondError } = await tk.from('design_versions').insert({
+      company_id: project.companyId,
+      design_project_id: project.id,
+      discipline: 'kien_truc',
+      title: `${TEST_PREFIX} bản hai`,
+    });
+    expect(secondError!.message).toContain('nguyên nhân');
+  });
+
+  it('một dự án chỉ MỘT đầu bài đang hiệu lực, bản cũ khoá lại (TK-01)', async () => {
+    const tk = await signInAs(ACCOUNTS.thietKeNvo);
+    const project = await createDesignProject(tk);
+
+    const insertBrief = (extra: Record<string, unknown>) =>
+      tk
+        .from('design_briefs')
+        .insert({
+          company_id: project.companyId,
+          design_project_id: project.id,
+          ...extra,
+        })
+        .select('id, version')
+        .single();
+
+    const { data: v1, error: e1 } = await insertBrief({ design_task: 'Thiết kế nhà 3 tầng' });
+    expect(e1).toBeNull();
+
+    const { error: noReason } = await insertBrief({ design_task: 'Đổi thành 4 tầng' });
+    expect(noReason!.message).toContain('nguyên nhân');
+
+    const { data: v2 } = await insertBrief({
+      design_task: 'Đổi thành 4 tầng',
+      change_reason: 'Khách bổ sung phòng thờ ở tầng trên cùng',
+    });
+    expect((v2 as { version: number }).version).toBe(2);
+
+    const { data: briefs } = await tk
+      .from('design_briefs')
+      .select('id, version, is_current_version')
+      .eq('design_project_id', project.id)
+      .order('version');
+    expect(briefs!.filter((b) => b.is_current_version).map((b) => b.version)).toEqual([2]);
+
+    // Bản đã hết hiệu lực không sửa được: sửa lịch sử thì không còn là lịch sử.
+    const { data: edited } = await tk
+      .from('design_briefs')
+      .update({ design_task: 'sửa bản cũ' })
+      .eq('id', (v1 as { id: string }).id)
+      .select('id');
+    expect(edited).toEqual([]);
+  });
+
+  it('khách duyệt phương án thì tự mở khoá bước hồ sơ kỹ thuật (TK-03)', async () => {
+    const tk = await signInAs(ACCOUNTS.thietKeNvo);
+    const project = await createDesignProject(tk);
+
+    // Chưa phát hành phương án thì chưa gửi khách xem được.
+    const { error: tooEarly } = await tk.rpc('move_design_stage', {
+      p_design_project_id: project.id,
+      p_stage: 'cho_khach_duyet',
+    });
+    expect(tooEarly!.message).toContain('Chưa phát hành phương án');
+
+    const concept = await createVersion(tk, project, 'phuong_an');
+    await tk.rpc('publish_design_version', { p_version_id: concept });
+    await tk.rpc('move_design_stage', {
+      p_design_project_id: project.id,
+      p_stage: 'cho_khach_duyet',
+    });
+
+    // Ghi nhận khách hàng thì bắt buộc có tên người góp ý — "khách hàng" chung chung thì
+    // sau này không đối chiếu được với ai.
+    const { error: noName } = await tk.rpc('record_design_review', {
+      p_version_id: concept,
+      p_reviewer_type: 'khach_hang',
+      p_decision: 'duyet',
+      p_comments: 'Đồng ý.',
+    });
+    expect(noName!.message).toContain('tên người góp ý');
+
+    const { error } = await tk.rpc('record_design_review', {
+      p_version_id: concept,
+      p_reviewer_type: 'khach_hang',
+      p_decision: 'duyet',
+      p_comments: 'Đồng ý phương án mặt bằng tầng 1.',
+      p_reviewer_name: 'Chủ nhà Nguyễn Văn A',
+    });
+    expect(error).toBeNull();
+
+    const { data: after } = await tk
+      .from('design_projects')
+      .select('stage')
+      .eq('id', project.id)
+      .single();
+    expect(after!.stage, 'xác nhận của khách là căn cứ chuyển bước (TK-03)').toBe('ho_so_ky_thuat');
+
+    const { data: version } = await tk
+      .from('design_versions')
+      .select('customer_approved_at')
+      .eq('id', concept)
+      .single();
+    expect(version!.customer_approved_at).not.toBeNull();
+  });
+
+  it('lịch sử góp ý chỉ ghi thêm — không sửa, không xoá, không ghi thẳng (TK-03)', async () => {
+    const tk = await signInAs(ACCOUNTS.thietKeNvo);
+    const project = await createDesignProject(tk);
+    const concept = await createVersion(tk, project, 'phuong_an');
+    await tk.rpc('publish_design_version', { p_version_id: concept });
+    await tk.rpc('record_design_review', {
+      p_version_id: concept,
+      p_reviewer_type: 'noi_bo',
+      p_decision: 'gop_y',
+      p_comments: 'Cân nhắc lại vị trí cầu thang.',
+    });
+
+    const { data: reviews } = await tk
+      .from('design_reviews')
+      .select('id, decision')
+      .eq('design_version_id', concept);
+    expect(reviews!.length).toBe(1);
+
+    // Ghi thẳng vào bảng lịch sử là tự khai "khách đã duyệt" mà không đi qua kiểm tra nào.
+    const { error: insertError } = await tk.from('design_reviews').insert({
+      company_id: project.companyId,
+      design_version_id: concept,
+      reviewer_type: 'khach_hang',
+      decision: 'duyet',
+      comments: 'Tự khai',
+    });
+    expect(insertError).toBeTruthy();
+
+    const { error: updateError } = await tk
+      .from('design_reviews')
+      .update({ comments: 'Sửa lại lời khách' })
+      .eq('id', reviews![0]!.id);
+    expect(updateError).toBeTruthy();
+
+    const { error: deleteError } = await tk
+      .from('design_reviews')
+      .delete()
+      .eq('id', reviews![0]!.id);
+    expect(deleteError).toBeTruthy();
+  });
+
+  it('không bàn giao được khi hồ sơ chưa đồng bộ giữa các bộ môn (TK-04, TK-08)', async () => {
+    const tk = await signInAs(ACCOUNTS.thietKeNvo);
+    const project = await createDesignProject(tk);
+
+    const { data: findings, error } = await tk.rpc('check_design_sync', {
+      p_design_project_id: project.id,
+    });
+    expect(error).toBeNull();
+    const codes = (findings as { code: string; blocking: boolean }[]).map((f) => f.code);
+    // Dự án rỗng: thiếu cả ba bộ môn và phương án chưa được khách duyệt.
+    expect(codes).toContain('thieu_ban_ve');
+    expect(codes).toContain('phuong_an_chua_duyet');
+
+    const { error: blocked } = await tk.rpc('handover_design_to_construction', {
+      p_design_project_id: project.id,
+    });
+    expect(blocked!.message).toContain('chưa đồng bộ');
+
+    // Không đặt tay bước bàn giao để đi vòng qua kiểm tra được.
+    const { error: bypass } = await tk.rpc('move_design_stage', {
+      p_design_project_id: project.id,
+      p_stage: 'ban_giao',
+    });
+    expect(bypass!.message).toContain('kiểm tra đồng bộ');
+  });
+
+  it('còn xung đột bộ môn chưa xử lý thì vẫn chặn bàn giao (TK-04)', async () => {
+    const tk = await signInAs(ACCOUNTS.thietKeNvo);
+    const project = await createDesignProject(tk);
+    await makeReadyForHandover(tk, project);
+
+    // Đủ hồ sơ rồi thì mới có nghĩa để thử riêng điều kiện xung đột.
+    const { data: readyFindings } = await tk.rpc('check_design_sync', {
+      p_design_project_id: project.id,
+    });
+    expect(
+      (readyFindings as { blocking: boolean }[]).filter((f) => f.blocking),
+      'đủ ba bộ môn và khách đã duyệt thì không còn hạng mục chặn',
+    ).toEqual([]);
+
+    await tk
+      .from('design_discipline_tasks')
+      .update({ conflict_notes: 'Dầm D3 chắn ngang cửa sổ trục B tầng 2.' })
+      .eq('design_project_id', project.id)
+      .eq('discipline', 'ket_cau');
+
+    const { data: findings } = await tk.rpc('check_design_sync', {
+      p_design_project_id: project.id,
+    });
+    expect((findings as { code: string }[]).map((f) => f.code)).toContain('con_xung_dot');
+
+    const { error } = await tk.rpc('handover_design_to_construction', {
+      p_design_project_id: project.id,
+    });
+    expect(error!.message).toContain('chưa đồng bộ');
+  });
+
+  it('yêu cầu thay đổi đã chấp thuận nhưng chưa làm thì chặn bàn giao (TK-06)', async () => {
+    const tk = await signInAs(ACCOUNTS.thietKeNvo);
+    const project = await createDesignProject(tk);
+    await makeReadyForHandover(tk, project);
+
+    const { data: cr } = await tk
+      .from('change_requests')
+      .insert({
+        company_id: project.companyId,
+        design_project_id: project.id,
+        title: `${TEST_PREFIX} Dời vị trí bếp`,
+        origin: 'khach_hang',
+        requester_name: 'Chủ nhà Nguyễn Văn A',
+        content: 'Dời bếp sang phía sau nhà.',
+        reason: 'Khách muốn mở rộng phòng khách.',
+        status: 'chap_thuan',
+        schedule_impact_days: 5,
+        cost_impact: 12_000_000,
+        affected_drawing_count: 4,
+      })
+      .select('id')
+      .single();
+
+    const { error: blocked } = await tk.rpc('handover_design_to_construction', {
+      p_design_project_id: project.id,
+    });
+    expect(
+      blocked!.message,
+      'bàn giao bộ hồ sơ mà chính mình biết là phải sửa thì công trường thi công sai',
+    ).toContain('chưa đồng bộ');
+
+    await tk
+      .from('change_requests')
+      .update({ status: 'da_thuc_hien' })
+      .eq('id', (cr as { id: string }).id);
+
+    const { data: notified, error } = await tk.rpc('handover_design_to_construction', {
+      p_design_project_id: project.id,
+    });
+    expect(error).toBeNull();
+    expect(notified).toBeGreaterThan(0);
+  });
+
+  it('bàn giao xong thì hồ sơ đóng băng, nhưng vẫn ghi được yêu cầu thay đổi (TK-08)', async () => {
+    const tk = await signInAs(ACCOUNTS.thietKeNvo);
+    const project = await createDesignProject(tk);
+    await makeReadyForHandover(tk, project);
+    await tk.rpc('handover_design_to_construction', { p_design_project_id: project.id });
+
+    const { data: after } = await tk
+      .from('design_projects')
+      .select('stage, handed_over_at')
+      .eq('id', project.id)
+      .single();
+    expect(after!.stage).toBe('ban_giao');
+    expect(after!.handed_over_at).not.toBeNull();
+
+    // Thêm bản vẽ sau khi công trường đã nhận = hai bộ hồ sơ khác nhau cùng tồn tại, và
+    // không ai biết bộ nào đang thi công. Phải đi đường yêu cầu thay đổi (TK-06).
+    //
+    // Phần header (tên, người chịu trách nhiệm, ghi chú) CỐ Ý vẫn sửa được — đổi người phụ
+    // trách sau bàn giao là việc hành chính bình thường; `code` và `company_id` đã bị trigger
+    // định danh khoá riêng.
+    const { error: frozenError } = await tk.from('design_versions').insert({
+      company_id: project.companyId,
+      design_project_id: project.id,
+      discipline: 'kien_truc',
+      title: `${TEST_PREFIX} bản thêm sau bàn giao`,
+      change_reason: 'Sửa lén sau bàn giao',
+    });
+    expect(frozenError, 'hồ sơ đã bàn giao phải đóng băng').toBeTruthy();
+
+    const { data: brief } = await tk
+      .from('design_briefs')
+      .insert({
+        company_id: project.companyId,
+        design_project_id: project.id,
+        design_task: 'Đổi đầu bài sau bàn giao',
+        change_reason: 'thử',
+      })
+      .select('id');
+    expect(brief ?? [], 'đầu bài cũng đóng băng sau bàn giao').toEqual([]);
+
+    const { error: rehandover } = await tk.rpc('handover_design_to_construction', {
+      p_design_project_id: project.id,
+    });
+    expect(rehandover!.message).toContain('đã bàn giao');
+
+    // Nhưng TK-08 yêu cầu "xử lý sai khác/thay đổi tại hiện trường" — công trường phải ghi
+    // được yêu cầu thay đổi sau bàn giao, nếu không họ quay lại gọi điện và Zalo như cũ.
+    const { error: crError } = await tk.from('change_requests').insert({
+      company_id: project.companyId,
+      design_project_id: project.id,
+      title: `${TEST_PREFIX} Sai khác hiện trường`,
+      origin: 'cong_truong',
+      content: 'Cốt nền thực tế thấp hơn bản vẽ 15cm.',
+      reason: 'Sai khác giữa bản vẽ và hiện trạng.',
+    });
+    expect(crError, 'yêu cầu thay đổi sau bàn giao phải ghi được').toBeNull();
+  });
+
+  it('dừng thiết kế bắt buộc nêu nguyên nhân', async () => {
+    const tk = await signInAs(ACCOUNTS.thietKeNvo);
+    const project = await createDesignProject(tk);
+
+    const { error: noReason } = await tk.rpc('move_design_stage', {
+      p_design_project_id: project.id,
+      p_stage: 'dung_thiet_ke',
+    });
+    expect(noReason!.message).toContain('nguyên nhân');
+
+    const { error } = await tk.rpc('move_design_stage', {
+      p_design_project_id: project.id,
+      p_stage: 'dung_thiet_ke',
+      p_reason: 'Khách hàng chuyển sang phương án mua nhà xây sẵn.',
+    });
+    expect(error).toBeNull();
+  });
+
+  it('dự toán NVO dùng CHUNG bảng của Module DA, không có bảng sao chép (TK-07)', async () => {
+    const tk = await signInAs(ACCOUNTS.thietKeNvo);
+    const project = await createDesignProject(tk);
+    const { data: me } = await tk.rpc('auth_user_id');
+    const { data: code } = await tk.rpc('next_record_code', {
+      p_company_code: 'NVO',
+      p_record_type: 'DT',
+    });
+
+    const { data: estimate, error } = await tk
+      .from('estimates')
+      .insert({
+        code,
+        company_id: project.companyId,
+        design_project_id: project.id,
+        bid_price: 1_200_000_000,
+        basis_notes: `${TEST_PREFIX} căn cứ lập giá NVO`,
+        prepared_by: me,
+      })
+      .select('id, version')
+      .single();
+    expect(error, 'kiến trúc sư NVO phải lập được dự toán cho dự án của mình').toBeNull();
+
+    const estimateId = (estimate as { id: string }).id;
+
+    // Cùng cơ chế tính thành tiền của DA-06 — không phải công thức viết lại lần hai.
+    const { data: count, error: itemsError } = await tk.rpc('save_estimate_items', {
+      p_estimate_id: estimateId,
+      p_items: [
+        {
+          cost_group: 'vat_tu',
+          description: 'Gạch ốp lát',
+          unit: 'm2',
+          quantity: 300,
+          unit_price: 250_000,
+          amount: 1,
+        },
+      ],
+    });
+    expect(itemsError).toBeNull();
+    expect(count).toBe(1);
+
+    const { data: breakdown } = await tk.rpc('estimate_cost_breakdown', {
+      p_estimate_id: estimateId,
+    });
+    expect(Number(breakdown![0].direct_cost)).toBe(75_000_000);
+
+    // Và cùng luồng phê duyệt giá qua Hộp thư chung.
+    const { data: approvalId, error: approvalError } = await tk.rpc('request_estimate_approval', {
+      p_estimate_id: estimateId,
+    });
+    expect(approvalError).toBeNull();
+    expect(approvalId).toBeTruthy();
+  });
+
+  it('một dòng dự toán không thuộc cả gói thầu lẫn dự án thiết kế cùng lúc (TK-07)', async () => {
+    const tk = await signInAs(ACCOUNTS.thietKeNvo);
+    const project = await createDesignProject(tk);
+
+    const { error: bothNull } = await tk.from('boq_items').insert({
+      company_id: project.companyId,
+      name: `${TEST_PREFIX} không có hồ sơ cha`,
+      unit: 'm2',
+      quantity: 10,
+    });
+    // Không có cha thì tổng của cả hai bên đều thiếu dòng này mà không ai thấy.
+    expect(bothNull).toBeTruthy();
+  });
+
+  it('pháp nhân khác KHÔNG thấy dự án thiết kế (Mẫu A, NEN-01)', async () => {
+    const tk = await signInAs(ACCOUNTS.thietKeNvo);
+    const dtNvc = await signInAs(ACCOUNTS.dauThauNvc);
+    const project = await createDesignProject(tk);
+
+    const { data: seen } = await dtNvc.from('design_projects').select('id').eq('id', project.id);
+    expect(seen).toEqual([]);
+  });
+
+  it('đồng nghiệp cùng phòng XEM được nhưng KHÔNG sửa tiến độ bộ môn của người khác (Mẫu B)', async () => {
+    // Người tạo dự án là KIẾN TRÚC SƯ; bộ môn kết cấu giao cho KỸ SƯ KẾT CẤU. Đồng nghiệp
+    // thứ ba trong ví dụ này chính là kiến trúc sư — không phải người được giao bộ môn đó.
+    const ketCau = await signInAs(ACCOUNTS.ketCauNvo);
+    const kienTruc = await signInAs(ACCOUNTS.thietKeNvo);
+    const project = await createDesignProject(ketCau);
+    const { data: ketCauUser } = await ketCau.rpc('auth_user_id');
+
+    const { data: task } = await ketCau
+      .from('design_discipline_tasks')
+      .insert({
+        company_id: project.companyId,
+        design_project_id: project.id,
+        discipline: 'ket_cau',
+        assignee_id: ketCauUser,
+        status: 'dang_lam',
+        progress_percent: 40,
+      })
+      .select('id')
+      .single();
+
+    const taskId = (task as { id: string }).id;
+
+    const { data: seen } = await kienTruc
+      .from('design_discipline_tasks')
+      .select('id, status')
+      .eq('id', taskId);
+    expect(seen!.length, 'đồng nghiệp cùng phòng phải theo dõi được tiến độ').toBe(1);
+
+    // PostgREST không báo 42501 cho trường hợp này — nó cập nhật 0 dòng và trả về error
+    // null, nên khẳng định bằng dữ liệu chứ không bằng mã lỗi.
+    await kienTruc
+      .from('design_discipline_tasks')
+      .update({ status: 'hoan_thanh', progress_percent: 100 })
+      .eq('id', taskId);
+
+    const { data: unchanged } = await ketCau
+      .from('design_discipline_tasks')
+      .select('status')
+      .eq('id', taskId)
+      .single();
+    expect(unchanged!.status, 'người khác không báo hộ hoàn thành bộ môn được').toBe('dang_lam');
+  });
+
+  it('bộ môn CHƯA GIAO cho ai vẫn nhận được — không bị đóng băng', async () => {
+    const tk = await signInAs(ACCOUNTS.thietKeNvo);
+    const project = await createDesignProject(tk);
+
+    const { data: task } = await tk
+      .from('design_discipline_tasks')
+      .insert({
+        company_id: project.companyId,
+        design_project_id: project.id,
+        discipline: 'dien_nuoc',
+        status: 'chua_bat_dau',
+      })
+      .select('id')
+      .single();
+
+    const { data: me } = await tk.rpc('auth_user_id');
+    const { data: assigned } = await tk
+      .from('design_discipline_tasks')
+      .update({ assignee_id: me, status: 'dang_lam' })
+      .eq('id', (task as { id: string }).id)
+      .select('id');
+    // Bỏ trống người phụ trách không được phép làm hồ sơ khoá chặt hơn là điền tên ai đó.
+    expect(assigned!.length).toBe(1);
+  });
+
+  it('không chuyển được dự án thiết kế sang pháp nhân khác (NEN-01)', async () => {
+    const tk = await signInAs(ACCOUNTS.thietKeNvo);
+    const project = await createDesignProject(tk);
+    const { data: nvc } = await tk.from('companies').select('id').eq('code', 'NVC').single();
+
+    const { error } = await tk
+      .from('design_projects')
+      .update({ company_id: (nvc as { id: string } | null)?.id })
+      .eq('id', project.id);
+    expect(error, 'đổi pháp nhân là chuyển doanh thu/chi phí sang P&L khác').toBeTruthy();
+  });
+
+  it('người chưa đăng nhập KHÔNG gọi được hàm nghiệp vụ TK', async () => {
+    // Mọi hàm SECURITY DEFINER đều lộ ra qua PostgREST cho vai trò `anon` — đó là mặc định
+    // của nền tảng, không tắt được. Nên mỗi hàm phải TỰ chặn, và đây là chỗ khẳng định điều đó.
+    const anon = anonClient();
+    const tk = await signInAs(ACCOUNTS.thietKeNvo);
+    const project = await createDesignProject(tk);
+
+    for (const [fn, params] of [
+      ['check_design_sync', { p_design_project_id: project.id }],
+      ['handover_design_to_construction', { p_design_project_id: project.id }],
+      ['move_design_stage', { p_design_project_id: project.id, p_stage: 'phuong_an' }],
+    ] as const) {
+      const { error } = await anon.rpc(fn, params);
+      expect(error, `${fn} phải từ chối người chưa đăng nhập`).toBeTruthy();
+    }
+  });
+
+  it('không xóa hẳn được dự án thiết kế (Backend Schema 1.4)', async () => {
+    const tk = await signInAs(ACCOUNTS.thietKeNvo);
+    const project = await createDesignProject(tk);
+
+    await tk.from('design_projects').delete().eq('id', project.id);
+    const { data: still } = await tk.from('design_projects').select('id').eq('id', project.id);
+    expect(still, 'không có policy DELETE ⇒ xoá 0 dòng, hồ sơ vẫn còn').toHaveLength(1);
+  });
+});

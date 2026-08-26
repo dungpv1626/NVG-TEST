@@ -14,6 +14,23 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { CostGroup, MoneyValue, StatusGroup } from '@nvg/shared';
 import { supabase } from '@/lib/supabase';
 
+/**
+ * Hồ sơ cha của một bản dự toán.
+ *
+ * PRD TK-07 nói rõ Thiết kế (NVO) "sử dụng CHUNG cơ chế với Module DA (DA-04 đến DA-06)" —
+ * nên toàn bộ hook và màn hình dự toán nhận tham số này thay vì Module TK có một bản sao
+ * riêng. Một bản sao nghĩa là hai công thức tính thành tiền, và tới lúc sửa quy tắc làm tròn
+ * thì chỉ một bên được sửa.
+ */
+export type EstimateParent =
+  | { kind: 'bidding'; id: string }
+  | { kind: 'design'; id: string };
+
+/** Tên cột khoá ngoại tương ứng — dùng cho cả truy vấn lẫn khi ghi. */
+function parentColumn(parent: EstimateParent): 'bidding_project_id' | 'design_project_id' {
+  return parent.kind === 'bidding' ? 'bidding_project_id' : 'design_project_id';
+}
+
 export interface EstimateRecord {
   id: string;
   code: string;
@@ -32,20 +49,20 @@ const ESTIMATE_SELECT =
   'created_at, prepared:users!estimates_prepared_by_users_id_fk(full_name)';
 
 /** Toàn bộ phiên bản dự toán của một gói thầu, mới nhất lên đầu (DA-07). */
-export function useEstimates(projectId: string | undefined) {
+export function useEstimates(parent: EstimateParent | undefined) {
   return useQuery<EstimateRecord[], Error>({
-    queryKey: ['estimates', projectId],
+    queryKey: ['estimates', parent?.kind, parent?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('estimates')
         .select(ESTIMATE_SELECT)
-        .eq('bidding_project_id', projectId!)
+        .eq(parentColumn(parent!), parent!.id)
         .is('deleted_at', null)
         .order('version', { ascending: false });
       if (error) throw new Error(error.message);
       return (data ?? []) as unknown as EstimateRecord[];
     },
-    enabled: Boolean(projectId),
+    enabled: Boolean(parent),
   });
 }
 
@@ -119,15 +136,15 @@ export function useCreateEstimate() {
   return useMutation<
     { id: string },
     Error,
-    { projectId: string; companyId: string; code: string; preparedBy: string | null }
+    { parent: EstimateParent; companyId: string; code: string; preparedBy: string | null }
   >({
-    mutationFn: async ({ projectId, companyId, code, preparedBy }) => {
+    mutationFn: async ({ parent, companyId, code, preparedBy }) => {
       const { data, error } = await supabase
         .from('estimates')
         .insert({
           code,
           company_id: companyId,
-          bidding_project_id: projectId,
+          [parentColumn(parent)]: parent.id,
           prepared_by: preparedBy,
         })
         .select('id')
@@ -249,6 +266,7 @@ export function useRequestEstimateApproval() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['estimates'] });
       void queryClient.invalidateQueries({ queryKey: ['bidding_projects'] });
+      void queryClient.invalidateQueries({ queryKey: ['design_projects'] });
       void queryClient.invalidateQueries({ queryKey: ['approvals'] });
     },
   });
@@ -271,9 +289,9 @@ export interface BoqItemRecord {
   drawing_version: { version: number; is_current_version: boolean } | null;
 }
 
-export function useBoqItems(projectId: string | undefined) {
+export function useBoqItems(parent: EstimateParent | undefined) {
   return useQuery<BoqItemRecord[], Error>({
-    queryKey: ['boq_items', projectId],
+    queryKey: ['boq_items', parent?.kind, parent?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('boq_items')
@@ -281,13 +299,13 @@ export function useBoqItems(projectId: string | undefined) {
           'id, position, item_code, name, unit, quantity, drawing_ref, drawing_version_id, notes, ' +
             'drawing_version:document_versions!boq_items_drawing_version_id_document_versions_id_fk(version, is_current_version)',
         )
-        .eq('bidding_project_id', projectId!)
+        .eq(parentColumn(parent!), parent!.id)
         .is('deleted_at', null)
         .order('position');
       if (error) throw new Error(error.message);
       return (data ?? []) as unknown as BoqItemRecord[];
     },
-    enabled: Boolean(projectId),
+    enabled: Boolean(parent),
   });
 }
 
@@ -298,7 +316,7 @@ export function useCreateBoqItem() {
     void,
     Error,
     {
-      projectId: string;
+      parent: EstimateParent;
       companyId: string;
       item: {
         item_code: string | null;
@@ -310,10 +328,10 @@ export function useCreateBoqItem() {
       };
     }
   >({
-    mutationFn: async ({ projectId, companyId, item }) => {
+    mutationFn: async ({ parent, companyId, item }) => {
       const { error } = await supabase
         .from('boq_items')
-        .insert({ ...item, bidding_project_id: projectId, company_id: companyId })
+        .insert({ ...item, [parentColumn(parent)]: parent.id, company_id: companyId })
         .select('id')
         .single();
       if (error) throw error;

@@ -39,6 +39,7 @@ import { money, primaryId, recordCode, softDelete, versionColumns } from './_hel
 import { companyScoped } from './_scoped';
 import { customers, opportunities } from './crm';
 import { documents, documentVersions } from './documents';
+import { designProjects } from './tk';
 import { users } from './users';
 
 /**
@@ -120,9 +121,20 @@ export const boqItems = pgTable(
     id: primaryId(),
     ...companyScoped(),
 
-    biddingProjectId: uuid('bidding_project_id')
-      .notNull()
-      .references(() => biddingProjects.id, { onDelete: 'cascade' }),
+    /**
+     * ĐÚNG MỘT trong hai cột cha có giá trị — ràng buộc CHECK ở migration giữ điều đó.
+     *
+     * PRD TK-07 nói rõ Thiết kế (NVO) "sử dụng CHUNG cơ chế với Module DA (DA-04 đến DA-06)".
+     * Nên bảng khối lượng và bảng dự toán nhận cả hai loại hồ sơ cha thay vì NVO có một bộ
+     * bảng sao chép: hai bộ bảng nghĩa là hai công thức tính thành tiền, và tới lúc sửa quy
+     * tắc làm tròn thì chỉ một bên được sửa.
+     */
+    biddingProjectId: uuid('bidding_project_id').references(() => biddingProjects.id, {
+      onDelete: 'cascade',
+    }),
+    designProjectId: uuid('design_project_id').references(() => designProjects.id, {
+      onDelete: 'cascade',
+    }),
 
     /** Số thứ tự hiển thị trong bảng — người dùng tự sắp theo hạng mục. */
     position: numeric('position', { precision: 10, scale: 2 }).notNull().default('0'),
@@ -151,6 +163,7 @@ export const boqItems = pgTable(
   },
   (t) => [
     index('boq_items_project_idx').on(t.biddingProjectId, t.position),
+    index('boq_items_design_project_idx').on(t.designProjectId, t.position),
     index('boq_items_drawing_idx').on(t.drawingVersionId),
   ],
 );
@@ -220,9 +233,13 @@ export const estimates = pgTable(
     id: primaryId(),
     ...companyScoped(),
 
-    biddingProjectId: uuid('bidding_project_id')
-      .notNull()
-      .references(() => biddingProjects.id, { onDelete: 'cascade' }),
+    /** ĐÚNG MỘT trong hai cột cha có giá trị — xem ghi chú ở `boqItems` và TK-07. */
+    biddingProjectId: uuid('bidding_project_id').references(() => biddingProjects.id, {
+      onDelete: 'cascade',
+    }),
+    designProjectId: uuid('design_project_id').references(() => designProjects.id, {
+      onDelete: 'cascade',
+    }),
 
     code: recordCode().notNull(),
     ...versionColumns(),
@@ -254,9 +271,18 @@ export const estimates = pgTable(
   },
   (t) => [
     index('estimates_project_idx').on(t.biddingProjectId, t.version),
-    /** Mỗi gói thầu chỉ MỘT bản dự toán đang hiệu lực tại một thời điểm (NEN-05). */
+    index('estimates_design_project_idx').on(t.designProjectId, t.version),
+    /**
+     * Mỗi hồ sơ cha chỉ MỘT bản dự toán đang hiệu lực tại một thời điểm (NEN-05).
+     * Hai unique index riêng vì Postgres coi NULL là khác nhau: gộp một index trên cả hai
+     * cột thì mọi dòng của NVO (bidding_project_id rỗng) đều "khác nhau" và ràng buộc mất
+     * tác dụng — đúng cái bẫy mà NEN-05 phải tránh.
+     */
     uniqueIndex('estimates_one_current_per_project')
       .on(t.biddingProjectId)
+      .where(sql`${t.isCurrentVersion} AND ${t.deletedAt} IS NULL`),
+    uniqueIndex('estimates_one_current_per_design_project')
+      .on(t.designProjectId)
       .where(sql`${t.isCurrentVersion} AND ${t.deletedAt} IS NULL`),
     uniqueIndex('estimates_code_version').on(t.code, t.version),
   ],

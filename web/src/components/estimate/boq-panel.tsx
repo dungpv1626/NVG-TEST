@@ -1,9 +1,12 @@
 /**
- * Tab Khối lượng của Chi tiết Gói thầu (DA-04).
+ * Tab Khối lượng — dùng CHUNG cho gói thầu (DA-04) và dự án thiết kế NVO (TK-07).
  *
  * Điểm mấu chốt của DA-04 không phải là nhập được bảng khối lượng — mà là biết bảng đó bóc
  * theo BẢN VẼ NÀO. Vì vậy mỗi dòng gắn với một phiên bản bản vẽ cụ thể, và khi bản vẽ nguồn
  * có phiên bản mới hơn thì dòng đó hiện cảnh báo ngay tại chỗ, không đợi ai nhớ ra.
+ *
+ * PRD TK-07 yêu cầu Thiết kế dùng chung cơ chế này, nên màn hình nhận `parent` thay vì gắn
+ * cứng vào gói thầu — không có bản sao thứ hai cho NVO.
  */
 
 import { useState, type FormEvent } from 'react';
@@ -13,19 +16,19 @@ import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/states';
-import { useBoqItems, useCreateBoqItem } from '@/hooks/use-estimates';
+import { useBoqItems, useCreateBoqItem, type EstimateParent } from '@/hooks/use-estimates';
 import { toUserMessage } from '@/hooks/use-error-message';
 
 export function BoqPanel({
-  projectId,
+  parent,
   companyId,
   readOnly,
 }: {
-  projectId: string;
+  parent: EstimateParent;
   companyId: string;
   readOnly: boolean;
 }) {
-  const { data: items } = useBoqItems(projectId);
+  const { data: items } = useBoqItems(parent);
   const createItem = useCreateBoqItem();
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ itemCode: '', name: '', unit: '', quantity: '', drawingRef: '' });
@@ -43,7 +46,7 @@ export function BoqPanel({
     }
     try {
       await createItem.mutateAsync({
-        projectId,
+        parent,
         companyId,
         item: {
           item_code: form.itemCode.trim() || null,

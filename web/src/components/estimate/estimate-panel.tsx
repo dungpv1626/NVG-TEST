@@ -1,5 +1,5 @@
 /**
- * Tab Dự toán của Chi tiết Gói thầu (DA-05, DA-06, DA-07).
+ * Tab Dự toán — dùng CHUNG cho gói thầu (DA-05 → DA-07) và dự án thiết kế NVO (TK-07).
  *
  * Hai điều chi phối toàn bộ màn hình này:
  *
@@ -37,6 +37,7 @@ import {
   useUpdateEstimate,
   type CostBreakdown,
   type EstimateItemInput,
+  type EstimateParent,
 } from '@/hooks/use-estimates';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useAuth } from '@/lib/auth';
@@ -51,18 +52,18 @@ const EMPTY_ROW: EstimateItemInput = {
 };
 
 export function EstimatePanel({
-  projectId,
+  parent,
   companyId,
   companyCode,
   readOnly,
 }: {
-  projectId: string;
+  parent: EstimateParent;
   companyId: string;
   companyCode: string;
   readOnly: boolean;
 }) {
   const { profile } = useAuth();
-  const { data: estimates } = useEstimates(projectId);
+  const { data: estimates } = useEstimates(parent);
   const createEstimate = useCreateEstimate();
   const updateEstimate = useUpdateEstimate();
   const saveCosts = useSaveCosts();
@@ -100,7 +101,7 @@ export function EstimatePanel({
       });
       if (codeError) throw codeError;
       await createEstimate.mutateAsync({
-        projectId,
+        parent,
         companyId,
         code,
         preparedBy: profile?.id ?? null,

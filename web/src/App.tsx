@@ -77,6 +77,15 @@ const BiddingDetailPage = lazy(() =>
 const UnitPriceListPage = lazy(() =>
   import('@/pages/da/unit-price-list').then((m) => ({ default: m.UnitPriceListPage })),
 );
+const DesignListPage = lazy(() =>
+  import('@/pages/tk/design-list').then((m) => ({ default: m.DesignListPage })),
+);
+const DesignCreatePage = lazy(() =>
+  import('@/pages/tk/design-create').then((m) => ({ default: m.DesignCreatePage })),
+);
+const DesignDetailPage = lazy(() =>
+  import('@/pages/tk/design-detail').then((m) => ({ default: m.DesignDetailPage })),
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -144,12 +153,17 @@ export default function App() {
               <Route path="da/goi-thau/:id" element={<BiddingDetailPage />} />
               <Route path="da/don-gia" element={<UnitPriceListPage />} />
 
+              {/* TK — Thiết kế đa bộ môn (TK-01 → TK-08). TK-10 → TK-17 chưa làm. */}
+              <Route path="tk/du-an" element={<DesignListPage />} />
+              <Route path="tk/du-an/tao-moi" element={<DesignCreatePage />} />
+              <Route path="tk/du-an/:id" element={<DesignDetailPage />} />
+
               {/* Hộp thư Phê duyệt — MỘT màn hình cho mọi module (Webapp Flow 4.6),
                   nên nằm ở gốc chứ không thuộc đường dẫn của module nào. */}
               <Route path="viec-can-lam" element={<ApprovalInboxPage />} />
               {MODULE_CODES.filter(
-                (c): c is Exclude<ModuleCode, 'BC' | 'CRM' | 'DA'> =>
-                  c !== 'BC' && c !== 'CRM' && c !== 'DA',
+                (c): c is Exclude<ModuleCode, 'BC' | 'CRM' | 'DA' | 'TK'> =>
+                  c !== 'BC' && c !== 'CRM' && c !== 'DA' && c !== 'TK',
               ).map(
                 (code) => (
                   <Route

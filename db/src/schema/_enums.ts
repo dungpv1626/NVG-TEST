@@ -11,7 +11,14 @@ import {
   APPROVAL_SUBJECTS,
   BIDDING_STAGES,
   BID_DOCUMENT_CATEGORIES,
+  CHANGE_REQUEST_ORIGINS,
+  CHANGE_REQUEST_STATUSES,
   COST_GROUPS,
+  DESIGN_DISCIPLINES,
+  DESIGN_REVIEWER_TYPES,
+  DESIGN_REVIEW_DECISIONS,
+  DESIGN_STAGES,
+  DISCIPLINE_TASK_STATUSES,
   ROLE_CODES,
   STATUS_GROUPS,
   UNIT_PRICE_SOURCES,
@@ -76,3 +83,24 @@ export const unitPriceSourceEnum = pgEnum('unit_price_source', UNIT_PRICE_SOURCE
 
 /** Chín nhóm hồ sơ dự thầu — PRD DA-08. */
 export const bidDocumentCategoryEnum = pgEnum('bid_document_category', BID_DOCUMENT_CATEGORIES);
+
+/** Bộ môn thiết kế + bước phương án kiến trúc — PRD TK-03, TK-04, TK-05. */
+export const designDisciplineEnum = pgEnum('design_discipline', DESIGN_DISCIPLINES);
+
+/** Bước của một dự án thiết kế — Webapp Flow 3.3. */
+export const designStageEnum = pgEnum('design_stage', DESIGN_STAGES);
+
+/** Tiến độ từng bộ môn — PRD TK-04. */
+export const disciplineTaskStatusEnum = pgEnum('discipline_task_status', DISCIPLINE_TASK_STATUSES);
+
+/** Kết luận của một vòng góp ý trên phiên bản thiết kế — PRD TK-03. */
+export const designReviewDecisionEnum = pgEnum('design_review_decision', DESIGN_REVIEW_DECISIONS);
+
+/** Người góp ý là khách hàng hay nội bộ — PRD TK-03. */
+export const designReviewerTypeEnum = pgEnum('design_reviewer_type', DESIGN_REVIEWER_TYPES);
+
+/** Trạng thái xử lý một yêu cầu thay đổi thiết kế — PRD TK-06. */
+export const changeRequestStatusEnum = pgEnum('change_request_status', CHANGE_REQUEST_STATUSES);
+
+/** Nguồn phát sinh yêu cầu thay đổi — PRD TK-06. */
+export const changeRequestOriginEnum = pgEnum('change_request_origin', CHANGE_REQUEST_ORIGINS);
