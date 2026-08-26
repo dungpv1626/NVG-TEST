@@ -285,6 +285,58 @@
 </table>
 </div>
 
+<h2>Tài khoản để chạy thử</h2>
+<div class="card">
+  <p>Mật khẩu chung cho tất cả tài khoản dưới đây: <code>NhaViet2026</code></p>
+  <p class="xs muted">
+    Đây là tài khoản của <strong>môi trường phát triển</strong>, tạo tự động bằng lệnh
+    <code>npm run db:seed</code> và chỉ tồn tại trên cơ sở dữ liệu thử nghiệm. Khi lên bản chạy
+    thật, tài khoản do quản trị viên cấp riêng cho từng người và mật khẩu này không dùng được.
+  </p>
+  <p class="xs muted">
+    Mỗi tài khoản mở ra một góc nhìn khác nhau — đó chính là điểm cần thử. Đăng nhập bằng
+    <code>kinhdoanh.nvc</code> rồi bằng <code>kinhdoanh.nvo</code> sẽ thấy hai bộ dữ liệu tách
+    hẳn nhau; đăng nhập bằng <code>ketoan</code> sẽ thấy hợp đồng nhưng không có nút soạn.
+    Vai trò nào không có quyền vào một phân hệ thì phân hệ đó <strong>không hiện trên thanh
+    bên</strong>, chứ không phải hiện rồi báo lỗi khi bấm.
+  </p>
+  <div class="tablewrap" style="box-shadow:none;border:0">
+  <table>
+    <thead><tr><th>Tài khoản</th><th>Họ tên</th><th>Chức danh</th><th>Pháp nhân</th><th>Làm được gì</th><th>Vào thẳng màn hình</th></tr></thead>
+    <tbody>
+    <tr><td><code>tgd@nhavietgroup.test</code></td><td>Bùi Văn Thi</td><td>Tổng Giám đốc</td><td>Toàn NVG + cả ba pháp nhân</td><td>Xem mọi thứ, phê duyệt không giới hạn hạn mức</td><td class="xs muted">Dashboard</td></tr>
+    <tr><td><code>cfo@nhavietgroup.test</code></td><td>Lương Thị Vân</td><td>Giám đốc Tài chính</td><td>Toàn NVG</td><td>Xem mọi pháp nhân, phê duyệt, sở hữu Kế toán</td><td class="xs muted">Dashboard</td></tr>
+    <tr><td><code>pgd.nvs@nhavietgroup.test</code></td><td>Phượng</td><td>Phó Giám đốc điều hành NVS</td><td>Nhà Việt Steel</td><td>Xem và phê duyệt trong NVS</td><td class="xs muted">Dashboard</td></tr>
+    <tr><td><code>admin@nhavietgroup.test</code></td><td>Quản trị hệ thống</td><td>Quản trị viên</td><td>Toàn NVG</td><td>Quản trị danh mục và phân quyền</td><td class="xs muted">Quản trị hệ thống</td></tr>
+    <tr><td><code>kinhdoanh.nvc@nhavietgroup.test</code></td><td>Nguyễn Văn A</td><td>Nhân viên Kinh doanh</td><td>Nhà Việt Cons</td><td>Khách hàng, cơ hội, báo giá, khiếu nại; soạn hợp đồng từ cơ hội của mình</td><td class="xs muted">Cơ hội kinh doanh</td></tr>
+    <tr><td><code>kinhdoanh.nvo@nhavietgroup.test</code></td><td>Trần Thị B</td><td>Nhân viên Kinh doanh</td><td>Nhà Việt One</td><td>Như trên, nhưng chỉ thấy dữ liệu NVO</td><td class="xs muted">Cơ hội kinh doanh</td></tr>
+    <tr><td><code>dauthau.nvc@nhavietgroup.test</code></td><td>Lê Văn C</td><td>Trưởng nhóm Dự toán</td><td>Nhà Việt Cons</td><td>Gói thầu, bóc khối lượng, dự toán, giá vốn, ngân sách</td><td class="xs muted">Gói thầu</td></tr>
+    <tr><td><code>thietke.nvo@nhavietgroup.test</code></td><td>Phạm Thị D</td><td>Kiến trúc sư</td><td>Nhà Việt One</td><td>Dự án thiết kế, phương án, bản vẽ, dự toán NVO</td><td class="xs muted">Dự án thiết kế</td></tr>
+    <tr><td><code>ketcau.nvo@nhavietgroup.test</code></td><td>Đỗ Văn K</td><td>Kỹ sư Kết cấu</td><td>Nhà Việt One</td><td>Cùng quyền với kiến trúc sư — dùng để thử "đồng nghiệp xem được nhưng không sửa được hồ sơ của người khác"</td><td class="xs muted">Dự án thiết kế</td></tr>
+    <tr><td><code>congtruong.nvc@nhavietgroup.test</code></td><td>Hoàng Văn E</td><td>Chỉ huy trưởng</td><td>Nhà Việt Cons</td><td>Thi công, đề nghị mua hàng</td><td class="xs muted">Công trình</td></tr>
+    <tr><td><code>sanxuat.nvs@nhavietgroup.test</code></td><td>Toản</td><td>Trưởng sản xuất</td><td>Nhà Việt Steel</td><td>Sản xuất giàn giáo</td><td class="xs muted">Công trình</td></tr>
+    <tr><td><code>muahang@nhavietgroup.test</code></td><td>Vũ Thị F</td><td>Trưởng phòng Mua hàng – Vật tư</td><td>Cả ba pháp nhân</td><td>Mua hàng, vật tư, xem tồn kho</td><td class="xs muted">Đề nghị mua</td></tr>
+    <tr><td><code>kho@nhavietgroup.test</code></td><td>Đặng Văn G</td><td>Thủ kho</td><td>NVC và NVS</td><td>Nhập xuất tồn kho</td><td class="xs muted">Quét mã kho</td></tr>
+    <tr><td><code>ketoan@nhavietgroup.test</code></td><td>Bùi Thị H</td><td>Kế toán nội bộ</td><td>Cả ba pháp nhân</td><td>Kế toán, công nợ; hợp đồng chỉ XEM</td><td class="xs muted">Đề nghị thanh toán</td></tr>
+    <tr><td><code>nhansu@nhavietgroup.test</code></td><td>Ngô Thị I</td><td>Trưởng phòng Hành chính – Nhân sự</td><td>Cả ba pháp nhân</td><td>Nhân sự, chấm công</td><td class="xs muted">Việc cần xử lý</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="xs muted" style="margin-top:10px">
+    Sáu tài khoản cuối bảng (Thi công, Sản xuất, Mua hàng, Kho, Kế toán, Nhân sự) đăng nhập được
+    và thấy đúng menu của mình, nhưng phân hệ chính của họ thuộc Giai đoạn 2 nên màn hình còn là
+    khung trống — đây là tình trạng đúng của bản hiện tại, không phải lỗi. Riêng tài khoản Kế toán
+    vẫn mở được danh sách Hợp đồng ở chế độ chỉ xem, dùng để kiểm chứng ranh giới "xem được nhưng
+    không soạn được".
+  </p>
+  <p class="xs muted">
+    <strong>Hai tài khoản nên thử trước:</strong> <code>tgd</code> để xem Dashboard điều hành và
+    Hộp thư Phê duyệt gom việc từ mọi phân hệ; <code>dauthau.nvc</code> để đi trọn một gói thầu
+    từ bóc khối lượng tới hợp đồng. Với <code>tgd</code>, bộ chọn pháp nhân ở góc trên bên trái
+    đổi được giữa "Toàn NVG" (gộp số liệu ba công ty) và từng pháp nhân riêng.
+  </p>
+</div>
+
 <h2>Việc đang chờ quyết định</h2>
 <div class="card">
   <p class="xs muted">Những điểm này không tự quyết được — cần Nhà Việt Group xác nhận, và mỗi điểm chặn một phần công việc cụ thể.</p>

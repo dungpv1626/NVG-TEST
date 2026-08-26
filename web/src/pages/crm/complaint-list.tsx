@@ -51,6 +51,7 @@ export function ComplaintListPage() {
       // "Hoàn thành" đọc ra như hồ sơ vẫn đang trễ hạn.
       deadline: c.status === 'completed' ? null : c.response_due_date,
       companyId: c.company_id,
+      createdAt: c.created_at,
       severity: c.severity,
       customerName: c.customer?.name ?? '—',
     }));

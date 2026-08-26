@@ -204,6 +204,7 @@ export function UnitPriceListPage() {
         // Đơn giá không có màn hình Chi tiết riêng — giữ người dùng ở lại danh sách.
         detailPath={() => '/da/don-gia'}
         searchPlaceholder="Tìm theo mã, tên hoặc nhà cung cấp…"
+        showStatusFilter={false}
         emptyMessage="Chưa có đơn giá nào hiển thị. Đây là dữ liệu giá vốn: nếu vai trò hiện tại không được xem giá vốn thì danh sách luôn rỗng — liên hệ Phòng Dự án – Đấu thầu khi cần số liệu."
         columns={[
           {

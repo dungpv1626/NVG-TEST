@@ -109,6 +109,7 @@ export function OpportunityPipelinePage() {
     status: OPPORTUNITY_STAGE_META[o.stage].statusGroup,
     deadline: o.due_date,
     companyId: o.company_id,
+    createdAt: o.created_at,
     customerName: o.customer?.name ?? '—',
     stage: o.stage,
     estimatedValue: o.estimated_value,

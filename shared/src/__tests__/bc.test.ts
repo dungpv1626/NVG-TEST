@@ -11,6 +11,7 @@ import {
   conversionRate,
   countByStatus,
   isWithinPeriod,
+  matchesPeriodFilter,
   periodStartDate,
 } from '../bc';
 import { sumMoney, toMoney } from '../format';
@@ -60,6 +61,30 @@ describe('isWithinPeriod', () => {
     expect(isWithinPeriod(null, 'thang-nay', now)).toBe(false);
     expect(isWithinPeriod('', 'nam-nay', now)).toBe(false);
     expect(isWithinPeriod(null, 'tat-ca', now)).toBe(true);
+  });
+});
+
+describe('matchesPeriodFilter', () => {
+  it('không lọc gì khi đường dẫn không mang theo kỳ', () => {
+    expect(matchesPeriodFilter('2020-01-01', null, now)).toBe(true);
+    expect(matchesPeriodFilter(undefined, null, now)).toBe(true);
+  });
+
+  // Đây là chỗ dễ sai nhất: danh sách KHÔNG khai báo ngày lập (`undefined`) phải giữ nguyên
+  // mọi dòng. Đối xử với nó như "hồ sơ không có ngày" sẽ làm cả danh sách rỗng trắng khi có
+  // ai đó bấm vào từ Dashboard, mà không có gì trên màn hình giải thích vì sao.
+  it('danh sách không theo dõi ngày lập thì bộ lọc kỳ không áp dụng', () => {
+    expect(matchesPeriodFilter(undefined, 'thang-nay', now)).toBe(true);
+  });
+
+  it('hồ sơ có trường ngày nhưng để trống thì không thuộc kỳ nào', () => {
+    expect(matchesPeriodFilter(null, 'thang-nay', now)).toBe(false);
+    expect(matchesPeriodFilter('', 'thang-nay', now)).toBe(false);
+  });
+
+  it('còn lại thì so với mốc đầu kỳ như thường', () => {
+    expect(matchesPeriodFilter('2026-08-20', 'thang-nay', now)).toBe(true);
+    expect(matchesPeriodFilter('2026-07-20', 'thang-nay', now)).toBe(false);
   });
 });
 

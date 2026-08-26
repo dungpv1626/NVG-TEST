@@ -22,10 +22,14 @@ import { Search } from 'lucide-react';
 import { useMemo, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
+  DASHBOARD_PERIOD_LABELS,
   STATUS_GROUPS,
   formatDeadline,
+  isDashboardPeriod,
   isStatusGroup,
+  matchesPeriodFilter,
   statusLabel,
+  type DashboardPeriod,
   type StatusGroup,
 } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
@@ -45,9 +49,25 @@ import { cn } from '@/lib/utils';
  */
 export const STATUS_FILTER_PARAM = 'trang-thai';
 
-/** Đường dẫn tới một danh sách đã lọc sẵn theo trạng thái — dùng cho thẻ trên Dashboard. */
-export function listPathByStatus(basePath: string, status: StatusGroup): string {
-  return `${basePath}?${STATUS_FILTER_PARAM}=${status}`;
+/**
+ * Tham số kỳ báo cáo — CÙNG tên với bộ lọc trên Dashboard, và đó là điểm mấu chốt.
+ *
+ * Thẻ trên Dashboard đếm hồ sơ trong kỳ đang chọn. Nếu đường dẫn nó dẫn tới không mang theo
+ * kỳ đó, danh sách sẽ hiện mọi hồ sơ từ trước tới nay và ra một con số khác hẳn con số vừa
+ * bấm vào — đúng thứ mẫu bố cục Dashboard cấm (Webapp Flow 4.1).
+ */
+export const PERIOD_FILTER_PARAM = 'ky';
+
+/** Đường dẫn tới một danh sách đã lọc sẵn — dùng cho thẻ chỉ số trên Dashboard. */
+export function listPathFiltered(
+  basePath: string,
+  filters: { status?: StatusGroup; period?: DashboardPeriod },
+): string {
+  const params = new URLSearchParams();
+  if (filters.status) params.set(STATUS_FILTER_PARAM, filters.status);
+  if (filters.period) params.set(PERIOD_FILTER_PARAM, filters.period);
+  const query = params.toString();
+  return query ? `${basePath}?${query}` : basePath;
 }
 
 /** Bản ghi tối thiểu mà mọi danh sách phải cung cấp. */
@@ -60,6 +80,16 @@ export interface EntityRow {
   responsiblePerson: string | null;
   status: StatusGroup;
   deadline: string | null;
+  /**
+   * Ngày lập hồ sơ — chỉ cần khi danh sách này là ĐÍCH ĐẾN của một thẻ chỉ số trên Dashboard,
+   * vì thẻ đếm theo kỳ báo cáo nên danh sách phải lọc được theo đúng kỳ đó.
+   *
+   * Bỏ trống (`undefined`) nghĩa là danh sách KHÔNG theo dõi ngày lập, và khi đó bộ lọc kỳ
+   * không áp dụng — khác hẳn với `null` (hồ sơ có trường ngày nhưng đang để rỗng, và hồ sơ
+   * như vậy thì không thuộc kỳ nào). Phân biệt hai thứ này để một danh sách quên khai báo
+   * ngày lập không âm thầm biến thành danh sách rỗng.
+   */
+  createdAt?: string | null;
   /**
    * Pháp nhân của hồ sơ. Chỉ dùng khi màn hình đang GỘP nhiều pháp nhân ("Toàn NVG"):
    * lúc đó thanh bên không còn cho biết dòng này thuộc công ty nào, mà nhầm công ty là nhầm
@@ -97,6 +127,13 @@ export interface EntityTableProps<T extends EntityRow> {
   /** Bộ lọc bổ sung hiển thị cạnh ô tìm kiếm. */
   filters?: ReactNode;
 
+  /**
+   * Hiện ô lọc theo trạng thái. Đặt `false` cho danh mục không có vòng đời trạng thái thật
+   * (khách hàng, đơn giá — mọi dòng đều mang cùng một trạng thái quy ước): ở đó ô lọc chỉ có
+   * thể cho ra danh sách rỗng, tức là mời người dùng bấm vào một ngõ cụt.
+   */
+  showStatusFilter?: boolean;
+
   /** Bật chọn nhiều dòng để thao tác hàng loạt (Webapp Flow 4.2). */
   selection?: {
     selectedIds: string[];
@@ -133,6 +170,7 @@ export function EntityTable<T extends EntityRow>({
   emptyAction,
   searchPlaceholder = 'Tìm trong danh sách…',
   filters,
+  showStatusFilter = true,
   selection,
 }: EntityTableProps<T>) {
   // Bộ lọc lưu trong query string: quay lại từ Chi tiết vẫn giữ nguyên, và đường dẫn
@@ -145,18 +183,24 @@ export function EntityTable<T extends EntityRow>({
   // đường dẫn cũ hoặc gõ tay sai không được biến thành màn hình trắng không giải thích được.
   const statusFilter = isStatusGroup(statusParam ?? '') ? (statusParam as StatusGroup) : null;
 
+  const periodParam = searchParams.get(PERIOD_FILTER_PARAM);
+  const periodFilter: DashboardPeriod | null = isDashboardPeriod(periodParam) ? periodParam : null;
+
   const scope = useCompanyScope();
   const companyOf = useCompanyLookup(scope.isAggregate);
 
   const filtered = useMemo(
     () =>
       (rows ?? []).filter(
-        (r) => matchesQuery(r, query) && (statusFilter === null || r.status === statusFilter),
+        (r) =>
+          matchesQuery(r, query) &&
+          (statusFilter === null || r.status === statusFilter) &&
+          matchesPeriodFilter(r.createdAt, periodFilter),
       ),
-    [rows, query, statusFilter],
+    [rows, query, statusFilter, periodFilter],
   );
 
-  const isFiltering = query !== '' || statusFilter !== null;
+  const isFiltering = query !== '' || statusFilter !== null || periodFilter !== null;
 
   /**
    * Khi gộp "Toàn NVG", mỗi dòng phải tự nói nó thuộc pháp nhân nào.
@@ -204,6 +248,7 @@ export function EntityTable<T extends EntityRow>({
       </div>
       {/* Lọc theo trạng thái nằm ở component dùng chung vì MỌI danh sách đều có cột trạng
           thái, và vì các thẻ trên Dashboard dẫn thẳng tới đây bằng tham số này. */}
+      {showStatusFilter && (
       <label className="flex items-center gap-2">
         <span className="text-fg-subtle">Trạng thái</span>
         <select
@@ -219,6 +264,16 @@ export function EntityTable<T extends EntityRow>({
           ))}
         </select>
       </label>
+      )}
+      {periodFilter && (
+        <button
+          type="button"
+          onClick={() => setParam(PERIOD_FILTER_PARAM, '')}
+          className="h-10 rounded-sm border border-brand bg-brand-subtle px-3 text-brand sm:h-8"
+        >
+          {DASHBOARD_PERIOD_LABELS[periodFilter]} — bỏ lọc kỳ
+        </button>
+      )}
       {filters}
       {selection && selection.selectedIds.length > 0 && (
         <div className="flex items-center gap-2 text-fg-subtle">

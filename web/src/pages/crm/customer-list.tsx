@@ -83,6 +83,7 @@ export function CustomerListPage() {
         onRetry={() => void refetch()}
         detailPath={(row) => `/crm/khach-hang/${row.id}`}
         searchPlaceholder="Tìm theo tên, mã hoặc người chịu trách nhiệm…"
+        showStatusFilter={false}
         emptyMessage={
           canCreate
             ? EMPTY_STATES.list('khách hàng', createLabel)

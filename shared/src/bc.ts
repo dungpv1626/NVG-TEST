@@ -96,6 +96,26 @@ export function isWithinPeriod(
   return at !== '' && at >= start;
 }
 
+/**
+ * Một dòng danh sách có lọt qua bộ lọc kỳ báo cáo không.
+ *
+ * Ba trạng thái đầu vào, ba nghĩa khác nhau — và nhầm lẫn giữa hai cái đầu là cách một danh
+ * sách biến thành rỗng mà không ai hiểu vì sao:
+ *
+ *  - `undefined` — danh sách này KHÔNG theo dõi ngày lập. Bộ lọc kỳ không áp dụng, giữ dòng.
+ *  - `null` / rỗng — hồ sơ CÓ trường ngày nhưng đang để trống, nên không thuộc kỳ nào.
+ *  - có giá trị — so với mốc đầu kỳ như thường.
+ */
+export function matchesPeriodFilter(
+  createdAt: DateInput | null | undefined,
+  period: DashboardPeriod | null,
+  now: DateInput = new Date(),
+): boolean {
+  if (period === null) return true;
+  if (createdAt === undefined) return true;
+  return isWithinPeriod(createdAt, period, now);
+}
+
 /** Đếm hồ sơ theo 5 nhóm trạng thái chuẩn. Nhóm không có hồ sơ nào vẫn có mặt với số 0. */
 export function countByStatus(
   rows: readonly { readonly status: StatusGroup }[],

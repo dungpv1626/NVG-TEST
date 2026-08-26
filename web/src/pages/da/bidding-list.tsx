@@ -35,6 +35,7 @@ export function BiddingListPage() {
     status: biddingDisplayStatus(p.stage, p.submission_deadline),
     deadline: p.submission_deadline,
     companyId: p.company_id,
+    createdAt: p.created_at,
     stageLabel: BIDDING_STAGE_META[p.stage].label,
     customerName: p.customer?.name ?? null,
     estimatedValue: p.estimated_value,

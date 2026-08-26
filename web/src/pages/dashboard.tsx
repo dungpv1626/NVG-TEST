@@ -8,7 +8,9 @@
  *     danh sách kèm tham số `trang-thai`, và con số đó ĐƯỢC ĐẾM THEO ĐÚNG hàm mà danh sách
  *     dùng để hiển thị trạng thái (`contractDisplayStatus`, `biddingDisplayStatus`…). Đây là
  *     lý do màn hình dùng lại đúng các hook của danh sách thay vì tự viết truy vấn đếm: hai
- *     truy vấn khác nhau sẽ lệch nhau vào đúng ngày một hồ sơ quá hạn.
+ *     truy vấn khác nhau sẽ lệch nhau vào đúng ngày một hồ sơ quá hạn. Cùng lý do đó, đường
+ *     dẫn PHẢI mang theo cả kỳ báo cáo đang chọn — thẻ đếm trong kỳ mà danh sách hiện mọi hồ
+ *     sơ từ trước tới nay thì hai con số khác nhau ngay ở trạng thái mặc định.
  *  2. "Vùng trên cùng luôn có bộ lọc nhanh theo pháp nhân/khoảng thời gian, giữ trạng thái
  *     khi quay lại." Pháp nhân là bộ chọn ở thanh bên (Webapp Flow 2.2); khoảng thời gian là
  *     bộ lọc ở đây, lưu trên thanh địa chỉ nên quay lại không mất.
@@ -45,7 +47,7 @@ import {
   type StatusGroup,
 } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
-import { listPathByStatus } from '@/components/entity/entity-table';
+import { PERIOD_FILTER_PARAM, listPathFiltered } from '@/components/entity/entity-table';
 import { Button } from '@/components/ui/button';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
 import { usePendingApprovals } from '@/hooks/use-approvals';
@@ -64,22 +66,20 @@ interface MetricRecord {
   createdAt: string;
 }
 
-const PERIOD_PARAM = 'ky';
-
 export function DashboardPage() {
   const { profile } = useAuth();
   const scope = useCompanyScope();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const periodParam = searchParams.get(PERIOD_PARAM);
+  const periodParam = searchParams.get(PERIOD_FILTER_PARAM);
   const period: DashboardPeriod = isDashboardPeriod(periodParam)
     ? periodParam
     : DEFAULT_DASHBOARD_PERIOD;
 
   function setPeriod(value: DashboardPeriod) {
     const next = new URLSearchParams(searchParams);
-    if (value === DEFAULT_DASHBOARD_PERIOD) next.delete(PERIOD_PARAM);
-    else next.set(PERIOD_PARAM, value);
+    if (value === DEFAULT_DASHBOARD_PERIOD) next.delete(PERIOD_FILTER_PARAM);
+    else next.set(PERIOD_FILTER_PARAM, value);
     setSearchParams(next, { replace: true });
   }
 
@@ -287,7 +287,7 @@ export function DashboardPage() {
                 {overdueByModule.map((m) => (
                   <li key={m.key}>
                     <Link
-                      to={listPathByStatus(m.basePath, 'overdue')}
+                      to={listPathFiltered(m.basePath, { status: 'overdue', period })}
                       className="text-brand hover:underline"
                     >
                       {m.title}: {m.count}
@@ -300,7 +300,7 @@ export function DashboardPage() {
         </Card>
 
         {modules.map((m) => (
-          <ModuleCard key={m.key} metric={m} />
+          <ModuleCard key={m.key} metric={m} period={period} />
         ))}
       </section>
 
@@ -328,7 +328,7 @@ interface ModuleMetric {
  * số phải tương ứng với đúng MỘT bộ lọc trên danh sách đích, nếu không thì bấm vào thẻ sẽ ra
  * số khác với số trên thẻ — đúng cái mà Webapp Flow 4.1 cấm.
  */
-function ModuleCard({ metric }: { metric: ModuleMetric }) {
+function ModuleCard({ metric, period }: { metric: ModuleMetric; period: DashboardPeriod }) {
   const counts = countByStatus(metric.records);
   const present = STATUS_GROUPS.filter((s) => counts[s] > 0);
 
@@ -340,7 +340,10 @@ function ModuleCard({ metric }: { metric: ModuleMetric }) {
         <EmptyMetric label="Chưa có hồ sơ nào trong kỳ này." />
       ) : (
         <>
-          <Link to={metric.basePath} className="flex items-baseline gap-2 hover:underline">
+          <Link
+            to={listPathFiltered(metric.basePath, { period })}
+            className="flex items-baseline gap-2 hover:underline"
+          >
             <span className="text-2xl font-semibold">{metric.records.length}</span>
             <span className="text-fg-subtle">hồ sơ</span>
           </Link>
@@ -349,7 +352,7 @@ function ModuleCard({ metric }: { metric: ModuleMetric }) {
             {present.map((s) => (
               <li key={s}>
                 <Link
-                  to={listPathByStatus(metric.basePath, s)}
+                  to={listPathFiltered(metric.basePath, { status: s, period })}
                   className="text-brand hover:underline"
                 >
                   {statusLabel(s)}: {counts[s]}
