@@ -14,6 +14,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
+    "test:web": "vitest run --project web",
+    "test:watch": "vitest --project web",
     "db:generate": "npm run generate --workspace=db",
     "db:migrate": "npm run migrate --workspace=db",
     "db:push": "npm run push --workspace=db",

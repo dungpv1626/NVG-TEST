@@ -16,7 +16,7 @@
  */
 
 import { History } from 'lucide-react';
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { formatDeadline, type StatusGroup } from '@nvg/shared';
 import { Breadcrumb, type Crumb } from '@/components/layout/breadcrumb';
@@ -94,6 +94,42 @@ export function EntityDetail({
   const activeId = searchParams.get('tab') ?? allTabs[0]?.id ?? '';
   const active = allTabs.find((t) => t.id === activeId) ?? allTabs[0];
 
+  /**
+   * Điều hướng bằng phím mũi tên giữa các tab — bắt buộc của mẫu ARIA tablist.
+   *
+   * Gán `role="tab"` là nói với trình đọc màn hình "đây là bộ tab", và người dùng bàn phím sẽ
+   * lập tức thử phím mũi tên. Khai vai trò mà không cài hành vi thì tệ hơn không khai: người
+   * dùng bấm mũi tên, không có gì xảy ra, và họ không biết mình làm sai hay màn hình hỏng.
+   *
+   * Chọn kiểu KÍCH HOẠT TỰ ĐỘNG (mũi tên là đổi tab luôn) vì `selectTab` dùng `replace` nên
+   * không đẩy thêm mục vào lịch sử trình duyệt — người dùng lướt qua các tab bằng mũi tên xong
+   * bấm Back vẫn về thẳng màn hình Danh sách.
+   */
+  function onTabKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>) {
+    const index = allTabs.findIndex((t) => t.id === active?.id);
+    if (index < 0) return;
+
+    const target =
+      event.key === 'ArrowRight'
+        ? (index + 1) % allTabs.length
+        : event.key === 'ArrowLeft'
+          ? (index - 1 + allTabs.length) % allTabs.length
+          : event.key === 'Home'
+            ? 0
+            : event.key === 'End'
+              ? allTabs.length - 1
+              : -1;
+
+    if (target < 0) return;
+    event.preventDefault();
+    const next = allTabs[target];
+    if (!next) return;
+    selectTab(next.id);
+    // Con trỏ bàn phím phải đi theo tab vừa chọn, nếu không lần bấm mũi tên kế tiếp
+    // lại tính từ tab cũ.
+    document.getElementById(`tab-${next.id}`)?.focus();
+  }
+
   function selectTab(id: string) {
     const next = new URLSearchParams(searchParams);
     next.set('tab', id);
@@ -140,7 +176,12 @@ export function EntityDetail({
 
           {/* Viền dưới đặt trên chính thanh tab để gạch chân tab đang chọn khớp đúng
               đường viền — không dùng margin âm, vì nó tràn xuống che nội dung bên dưới. */}
+          {/* Dùng đúng mẫu ARIA cho bộ tab: `tablist` / `tab` / `tabpanel`.
+              Trước đây đây chỉ là một dãy nút, nên trình đọc màn hình đọc ra "nút Điều khoản"
+              mà không cho biết đang có mấy tab, đang ở tab thứ mấy — người dùng bàn phím không
+              có cách nào nắm được cấu trúc màn hình (Content Guidelines 6.8). */}
           <nav
+            role="tablist"
             className="mt-3 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-border"
             aria-label="Nội dung hồ sơ"
           >
@@ -150,8 +191,15 @@ export function EntityDetail({
                 <button
                   key={tab.id}
                   type="button"
+                  role="tab"
+                  id={`tab-${tab.id}`}
+                  aria-selected={isActive}
+                  aria-controls={`panel-${tab.id}`}
+                  // Roving tabindex: cả bộ tab chỉ chiếm MỘT chặng Tab, đúng mẫu ARIA. Không có
+                  // nó thì màn hình 6 tab bắt người dùng bàn phím bấm Tab sáu lần mới tới nội dung.
+                  tabIndex={isActive ? 0 : -1}
+                  onKeyDown={onTabKeyDown}
                   onClick={() => selectTab(tab.id)}
-                  aria-current={isActive ? 'page' : undefined}
                   className={cn(
                     'flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2 -mb-px',
                     isActive
@@ -172,7 +220,9 @@ export function EntityDetail({
           </nav>
         </div>
 
-        <div>{active?.content}</div>
+        <div role="tabpanel" id={`panel-${active?.id ?? ''}`} aria-labelledby={`tab-${active?.id ?? ''}`}>
+          {active?.content}
+        </div>
 
         {related.length > 0 && (
           <section className="mt-6 space-y-4 xl:hidden" aria-label="Hồ sơ liên quan">
