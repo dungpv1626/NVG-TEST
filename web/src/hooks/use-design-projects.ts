@@ -17,7 +17,7 @@ import type {
   DisciplineTaskStatus,
   MoneyValue,
 } from '@nvg/shared';
-import { useCompanyStore } from '@/lib/company-store';
+import { useCompanyScope, withCompanyScope } from '@/lib/company-scope';
 import { supabase } from '@/lib/supabase';
 
 export interface DesignProjectRecord {
@@ -40,22 +40,27 @@ const PROJECT_SELECT =
   'customer:customers!design_projects_customer_id_customers_id_fk(id, name), ' +
   'responsible:users!design_projects_responsible_user_id_users_id_fk(full_name)';
 
-export function useDesignProjects() {
-  const companyId = useCompanyStore((s) => s.selectedCompanyId);
+/**
+ * `enabled` để Dashboard tắt hẳn truy vấn của module người dùng không có quyền xem: RLS vẫn
+ * trả về rỗng nên không lộ gì, nhưng gọi một truy vấn chắc chắn rỗng ở mọi lần mở màn hình
+ * chủ là lãng phí thật (Webapp Flow 6.5 — không hiển thị thứ người dùng không có quyền).
+ */
+export function useDesignProjects(options: { enabled?: boolean } = {}) {
+  const scope = useCompanyScope();
 
   return useQuery<DesignProjectRecord[], Error>({
-    queryKey: ['design_projects', companyId],
+    queryKey: ['design_projects', scope.companyId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('design_projects')
-        .select(PROJECT_SELECT)
-        .eq('company_id', companyId!)
+      const { data, error } = await withCompanyScope(
+        supabase.from('design_projects').select(PROJECT_SELECT),
+        scope,
+      )
         .is('deleted_at', null)
         .order('created_at', { ascending: false });
       if (error) throw new Error(error.message);
       return (data ?? []) as unknown as DesignProjectRecord[];
     },
-    enabled: companyId !== null,
+    enabled: scope.isReady && (options.enabled ?? true),
   });
 }
 

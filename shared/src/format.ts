@@ -81,6 +81,28 @@ export function formatNumber(
 export type MoneyValue = bigint | string | number;
 
 /**
+ * Đưa mọi dạng `MoneyValue` về `bigint` đồng để CỘNG TRỪ được.
+ *
+ * Tồn tại vì tiền đến từ ba nguồn có ba kiểu khác nhau (xem `MoneyValue`), mà cộng một chuỗi
+ * với một số trong JavaScript thì ra chuỗi nối chứ không ra tổng — sai lặng lẽ, không báo lỗi.
+ * Mọi phép cộng tiền trong hệ thống phải đi qua đây, không tự `Number(...)` tại chỗ.
+ *
+ * `null`/rỗng quy về `0n`: hồ sơ chưa điền giá trị thì đóng góp 0 vào tổng, không phải lỗi.
+ */
+export function toMoney(value: MoneyValue | null | undefined): bigint {
+  if (value === null || value === undefined || value === '') return 0n;
+  if (typeof value === 'bigint') return value;
+  // Chuỗi từ PostgREST và số từ biểu mẫu đều có thể tới đây; `BigInt()` từ chối số thập
+  // phân, mà tiền VNĐ thì không có số thập phân nên cắt phần đó là đúng chứ không mất mát.
+  return BigInt(String(value).split('.')[0] || '0');
+}
+
+/** Tổng một dãy giá trị tiền, bỏ qua ô trống. */
+export function sumMoney(values: readonly (MoneyValue | null | undefined)[]): bigint {
+  return values.reduce<bigint>((total, v) => total + toMoney(v), 0n);
+}
+
+/**
  * Tiền tệ VNĐ — Content Guidelines 4.3 + Backend Schema 1.4.
  *
  * Giá trị lưu trong CSDL là `bigint`, đơn vị ĐỒNG, KHÔNG có phần thập phân

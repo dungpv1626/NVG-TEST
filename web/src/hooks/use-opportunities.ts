@@ -8,7 +8,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { MoneyValue, OpportunityStage } from '@nvg/shared';
-import { useCompanyStore } from '@/lib/company-store';
+import { useCompanyScope, withCompanyScope } from '@/lib/company-scope';
 import { supabase } from '@/lib/supabase';
 
 export interface OpportunityRecord {
@@ -34,22 +34,27 @@ const OPPORTUNITY_SELECT =
   'customer:customers!opportunities_customer_id_customers_id_fk(id, name), ' +
   'owner:users!opportunities_owner_id_users_id_fk(full_name)';
 
-export function useOpportunities() {
-  const companyId = useCompanyStore((s) => s.selectedCompanyId);
+/**
+ * `enabled` để Dashboard tắt hẳn truy vấn của module người dùng không có quyền xem: RLS vẫn
+ * trả về rỗng nên không lộ gì, nhưng gọi một truy vấn chắc chắn rỗng ở mọi lần mở màn hình
+ * chủ là lãng phí thật (Webapp Flow 6.5 — không hiển thị thứ người dùng không có quyền).
+ */
+export function useOpportunities(options: { enabled?: boolean } = {}) {
+  const scope = useCompanyScope();
 
   return useQuery<OpportunityRecord[], Error>({
-    queryKey: ['opportunities', companyId],
+    queryKey: ['opportunities', scope.companyId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('opportunities')
-        .select(OPPORTUNITY_SELECT)
-        .eq('company_id', companyId!)
+      const { data, error } = await withCompanyScope(
+        supabase.from('opportunities').select(OPPORTUNITY_SELECT),
+        scope,
+      )
         .is('deleted_at', null)
         .order('created_at', { ascending: false });
       if (error) throw new Error(error.message);
       return (data ?? []) as unknown as OpportunityRecord[];
     },
-    enabled: companyId !== null,
+    enabled: scope.isReady && (options.enabled ?? true),
   });
 }
 

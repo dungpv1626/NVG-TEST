@@ -50,6 +50,7 @@ export function ComplaintListPage() {
       // Đã xử lý xong thì thôi đếm ngược: cột Thời hạn ghi "Quá hạn 1 ngày" cạnh nhãn
       // "Hoàn thành" đọc ra như hồ sơ vẫn đang trễ hạn.
       deadline: c.status === 'completed' ? null : c.response_due_date,
+      companyId: c.company_id,
       severity: c.severity,
       customerName: c.customer?.name ?? '—',
     }));

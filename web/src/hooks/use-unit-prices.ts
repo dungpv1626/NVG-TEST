@@ -12,11 +12,13 @@
 import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { CostGroup, MoneyValue, UnitPriceSource } from '@nvg/shared';
+import { useCompanyScope, withCompanyScope } from '@/lib/company-scope';
 import { useCompanyStore } from '@/lib/company-store';
 import { supabase } from '@/lib/supabase';
 
 export interface UnitPriceRecord {
   id: string;
+  company_id: string;
   item_code: string;
   name: string;
   unit: string;
@@ -30,24 +32,24 @@ export interface UnitPriceRecord {
 }
 
 export function useUnitPrices() {
-  const companyId = useCompanyStore((s) => s.selectedCompanyId);
+  const scope = useCompanyScope();
 
   return useQuery<UnitPriceRecord[], Error>({
-    queryKey: ['unit_prices', companyId],
+    queryKey: ['unit_prices', scope.companyId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('unit_prices')
-        .select(
-          'id, item_code, name, unit, cost_group, price, source, supplier_name, ' +
+      const { data, error } = await withCompanyScope(
+        supabase.from('unit_prices').select(
+          'id, company_id, item_code, name, unit, cost_group, price, source, supplier_name, ' +
             'effective_date, applied_project_ref, notes',
-        )
-        .eq('company_id', companyId!)
+        ),
+        scope,
+      )
         .is('deleted_at', null)
         .order('effective_date', { ascending: false });
       if (error) throw new Error(error.message);
       return (data ?? []) as unknown as UnitPriceRecord[];
     },
-    enabled: companyId !== null,
+    enabled: scope.isReady,
   });
 }
 

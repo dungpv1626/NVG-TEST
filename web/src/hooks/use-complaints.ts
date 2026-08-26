@@ -7,11 +7,12 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ComplaintSeverity, StatusGroup } from '@nvg/shared';
-import { useCompanyStore } from '@/lib/company-store';
+import { useCompanyScope, withCompanyScope } from '@/lib/company-scope';
 import { supabase } from '@/lib/supabase';
 
 export interface ComplaintRecord {
   id: string;
+  company_id: string;
   code: string;
   title: string;
   content: string;
@@ -29,7 +30,7 @@ export interface ComplaintRecord {
 }
 
 const COMPLAINT_SELECT =
-  'id, code, title, content, severity, status, response_due_date, assignee_id, ' +
+  'id, company_id, code, title, content, severity, status, response_due_date, assignee_id, ' +
   'collaborator_ids, resolution, customer_confirmed_at, created_at, updated_at, ' +
   'customer:customers!complaints_customer_id_customers_id_fk(id, name), ' +
   'assignee:users!complaints_assignee_id_users_id_fk(full_name)';
@@ -41,16 +42,15 @@ const COMPLAINT_SELECT =
  * làm trước (CRM-08 "hạn phản hồi"). Hồ sơ chưa đặt hạn đẩy xuống cuối.
  */
 export function useComplaints(options: { customerId?: string } = {}) {
-  const companyId = useCompanyStore((s) => s.selectedCompanyId);
+  const scope = useCompanyScope();
 
   return useQuery<ComplaintRecord[], Error>({
-    queryKey: ['complaints', companyId, options.customerId ?? null],
+    queryKey: ['complaints', scope.companyId, options.customerId ?? null],
     queryFn: async () => {
-      let q = supabase
-        .from('complaints')
-        .select(COMPLAINT_SELECT)
-        .eq('company_id', companyId!)
-        .is('deleted_at', null);
+      let q = withCompanyScope(
+        supabase.from('complaints').select(COMPLAINT_SELECT),
+        scope,
+      ).is('deleted_at', null);
 
       if (options.customerId) q = q.eq('customer_id', options.customerId);
 
@@ -60,7 +60,7 @@ export function useComplaints(options: { customerId?: string } = {}) {
       if (error) throw new Error(error.message);
       return (data ?? []) as unknown as ComplaintRecord[];
     },
-    enabled: companyId !== null,
+    enabled: scope.isReady,
   });
 }
 

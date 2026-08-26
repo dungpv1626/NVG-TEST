@@ -21,11 +21,34 @@
 import { Search } from 'lucide-react';
 import { useMemo, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { formatDeadline, type StatusGroup } from '@nvg/shared';
+import {
+  STATUS_GROUPS,
+  formatDeadline,
+  isStatusGroup,
+  statusLabel,
+  type StatusGroup,
+} from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
+import { useCompanyLookup } from '@/hooks/use-companies';
+import { useCompanyScope } from '@/lib/company-scope';
 import { cn } from '@/lib/utils';
+
+/**
+ * Tham số lọc theo trạng thái trên thanh địa chỉ.
+ *
+ * Đặt ở đây chứ không ở từng màn hình vì đây cũng là thứ các thẻ chỉ số trên Dashboard trỏ
+ * tới: mẫu bố cục Dashboard yêu cầu mỗi thẻ dẫn thẳng tới DANH SÁCH ĐÃ LỌC SẴN theo đúng
+ * điều kiện của thẻ (Webapp Flow 4.1). Một tên tham số dùng chung cho mọi danh sách nghĩa là
+ * thêm một thẻ mới không phải sửa màn hình đích.
+ */
+export const STATUS_FILTER_PARAM = 'trang-thai';
+
+/** Đường dẫn tới một danh sách đã lọc sẵn theo trạng thái — dùng cho thẻ trên Dashboard. */
+export function listPathByStatus(basePath: string, status: StatusGroup): string {
+  return `${basePath}?${STATUS_FILTER_PARAM}=${status}`;
+}
 
 /** Bản ghi tối thiểu mà mọi danh sách phải cung cấp. */
 export interface EntityRow {
@@ -37,6 +60,12 @@ export interface EntityRow {
   responsiblePerson: string | null;
   status: StatusGroup;
   deadline: string | null;
+  /**
+   * Pháp nhân của hồ sơ. Chỉ dùng khi màn hình đang GỘP nhiều pháp nhân ("Toàn NVG"):
+   * lúc đó thanh bên không còn cho biết dòng này thuộc công ty nào, mà nhầm công ty là nhầm
+   * P&L (PRD NEN-01).
+   */
+  companyId?: string | null;
 }
 
 export interface EntityColumn<T extends EntityRow> {
@@ -111,17 +140,50 @@ export function EntityTable<T extends EntityRow>({
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get('q') ?? '';
 
-  const filtered = useMemo(() => (rows ?? []).filter((r) => matchesQuery(r, query)), [rows, query]);
+  const statusParam = searchParams.get(STATUS_FILTER_PARAM);
+  // Giá trị lạ trên thanh địa chỉ thì coi như KHÔNG lọc, chứ không phải danh sách rỗng —
+  // đường dẫn cũ hoặc gõ tay sai không được biến thành màn hình trắng không giải thích được.
+  const statusFilter = isStatusGroup(statusParam ?? '') ? (statusParam as StatusGroup) : null;
+
+  const scope = useCompanyScope();
+  const companyOf = useCompanyLookup(scope.isAggregate);
+
+  const filtered = useMemo(
+    () =>
+      (rows ?? []).filter(
+        (r) => matchesQuery(r, query) && (statusFilter === null || r.status === statusFilter),
+      ),
+    [rows, query, statusFilter],
+  );
+
+  const isFiltering = query !== '' || statusFilter !== null;
+
+  /**
+   * Khi gộp "Toàn NVG", mỗi dòng phải tự nói nó thuộc pháp nhân nào.
+   *
+   * Không phải cột trang trí: ba pháp nhân có bộ mã hồ sơ riêng và P&L riêng, nhìn nhầm công
+   * ty là đọc nhầm số (Webapp Flow 6.2, PRD NEN-01). Chèn ngay sau cột Mã/Tên chứ không đẩy
+   * xuống cuối để nó nằm trong tầm mắt cùng lúc với tên hồ sơ.
+   */
+  const companyColumn: EntityColumn<T> = {
+    key: '__company',
+    header: 'Pháp nhân',
+    render: (row) => companyOf(row.companyId)?.code ?? <span className="text-fg-subtle">—</span>,
+  };
+  // KHÔNG ghi nhớ bằng `useMemo`: hàm tra cứu đọc danh mục pháp nhân tải bất đồng bộ, nên bản
+  // ghi nhớ dựng ở lượt vẽ đầu sẽ giữ mãi danh mục rỗng và cả cột chỉ hiện dấu gạch. Ghép hai
+  // mảng ngắn mỗi lượt vẽ rẻ hơn nhiều so với một cột hỏng im lặng.
+  const displayColumns = scope.isAggregate ? [companyColumn, ...columns] : columns;
 
   const allSelected =
     selection !== undefined &&
     filtered.length > 0 &&
     selection.selectedIds.length === filtered.length;
 
-  function setQuery(value: string) {
+  function setParam(key: string, value: string) {
     const next = new URLSearchParams(searchParams);
-    if (value) next.set('q', value);
-    else next.delete('q');
+    if (value) next.set(key, value);
+    else next.delete(key);
     setSearchParams(next, { replace: true });
   }
 
@@ -132,7 +194,7 @@ export function EntityTable<T extends EntityRow>({
         <input
           type="search"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => setParam('q', e.target.value)}
           placeholder={searchPlaceholder}
           className={cn(
             'h-10 w-full rounded-sm border border-border bg-surface pl-8 pr-3 sm:h-8',
@@ -140,6 +202,23 @@ export function EntityTable<T extends EntityRow>({
           )}
         />
       </div>
+      {/* Lọc theo trạng thái nằm ở component dùng chung vì MỌI danh sách đều có cột trạng
+          thái, và vì các thẻ trên Dashboard dẫn thẳng tới đây bằng tham số này. */}
+      <label className="flex items-center gap-2">
+        <span className="text-fg-subtle">Trạng thái</span>
+        <select
+          value={statusFilter ?? ''}
+          onChange={(e) => setParam(STATUS_FILTER_PARAM, e.target.value)}
+          className="h-10 rounded-sm border border-border bg-surface px-2 sm:h-8"
+        >
+          <option value="">Tất cả</option>
+          {STATUS_GROUPS.map((s) => (
+            <option key={s} value={s}>
+              {statusLabel(s)}
+            </option>
+          ))}
+        </select>
+      </label>
       {filters}
       {selection && selection.selectedIds.length > 0 && (
         <div className="flex items-center gap-2 text-fg-subtle">
@@ -167,7 +246,7 @@ export function EntityTable<T extends EntityRow>({
     return (
       <>
         {toolbar}
-        <TableSkeleton columns={4 + columns.length} />
+        <TableSkeleton columns={4 + displayColumns.length} />
       </>
     );
   }
@@ -179,11 +258,11 @@ export function EntityTable<T extends EntityRow>({
         <div className="rounded-lg border border-border bg-surface">
           <EmptyState
             message={
-              query
+              isFiltering
                 ? 'Không tìm thấy kết quả phù hợp. Thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm.'
                 : emptyMessage
             }
-            action={query ? undefined : emptyAction}
+            action={isFiltering ? undefined : emptyAction}
           />
         </div>
       </>
@@ -235,9 +314,9 @@ export function EntityTable<T extends EntityRow>({
                   </div>
                   <div className="mt-0.5 font-mono text-xs text-fg-subtle">{row.code}</div>
 
-                  {columns.length > 0 && (
+                  {displayColumns.length > 0 && (
                     <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
-                      {columns.map((c) => (
+                      {displayColumns.map((c) => (
                         <div key={c.key} className="min-w-0">
                           <dt className="text-fg-subtle">{c.header}</dt>
                           <dd className={cn('truncate', c.numeric && 'tabular-nums')}>
@@ -286,7 +365,7 @@ export function EntityTable<T extends EntityRow>({
                 </th>
               )}
               <th className="px-4 py-2.5 font-medium">Mã / Tên</th>
-              {columns.map((c) => (
+              {displayColumns.map((c) => (
                 <th
                   key={c.key}
                   className={cn('px-4 py-2.5 font-medium', c.numeric && 'text-right')}
@@ -333,7 +412,7 @@ export function EntityTable<T extends EntityRow>({
                     </Link>
                     <div className="text-xs text-fg-subtle">{row.code}</div>
                   </td>
-                  {columns.map((c) => (
+                  {displayColumns.map((c) => (
                     <td
                       key={c.key}
                       className={cn('px-4 py-3', c.numeric && 'text-right tabular-nums')}
@@ -367,7 +446,7 @@ export function EntityTable<T extends EntityRow>({
         </table>
       </div>
       <p className="mt-2 text-xs text-fg-subtle">
-        {query
+        {isFiltering
           ? `${filtered.length} kết quả phù hợp trong ${rows?.length ?? 0} hồ sơ`
           : `${filtered.length} hồ sơ`}
       </p>

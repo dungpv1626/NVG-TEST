@@ -34,6 +34,7 @@ export function DesignListPage() {
     responsiblePerson: p.responsible?.full_name ?? null,
     status: designDisplayStatus(p.stage, p.handover_deadline),
     deadline: p.handover_deadline,
+    companyId: p.company_id,
     stageLabel: DESIGN_STAGE_META[p.stage].label,
     customerName: p.customer?.name ?? null,
     handedOverAt: p.handed_over_at,

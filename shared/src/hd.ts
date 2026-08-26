@@ -8,6 +8,7 @@
  * khi nào (PRD Mục 7, tiêu chí nghiệm thu Giai đoạn 1).
  */
 
+import { toMoney } from './format';
 import type { StatusGroup } from './status';
 
 /**
@@ -204,9 +205,9 @@ export function summarizeContractValue(
   approvedAmendments: bigint | number | string | null,
   collected: bigint | number | string | null,
 ): ContractValueSummary {
-  const base = toBigInt(baseValue);
-  const amendments = toBigInt(approvedAmendments);
-  const paid = toBigInt(collected);
+  const base = toMoney(baseValue);
+  const amendments = toMoney(approvedAmendments);
+  const paid = toMoney(collected);
   const current = base + amendments;
   const outstanding = current - paid;
 
@@ -217,14 +218,6 @@ export function summarizeContractValue(
     collected: paid,
     outstanding: outstanding > 0n ? outstanding : 0n,
   };
-}
-
-function toBigInt(value: bigint | number | string | null): bigint {
-  if (value === null || value === undefined || value === '') return 0n;
-  if (typeof value === 'bigint') return value;
-  // Chuỗi từ PostgREST và số từ biểu mẫu đều có thể tới đây; `BigInt()` từ chối số thập
-  // phân, mà tiền VNĐ thì không có số thập phân nên cắt phần đó là đúng chứ không mất mát.
-  return BigInt(String(value).split('.')[0] || '0');
 }
 
 /**

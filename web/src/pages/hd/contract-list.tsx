@@ -38,6 +38,7 @@ export function ContractListPage() {
     responsiblePerson: c.responsible?.full_name ?? null,
     status: contractDisplayStatus(c.stage, c.end_date),
     deadline: c.end_date,
+    companyId: c.company_id,
     stageLabel: CONTRACT_STAGE_META[c.stage].label,
     typeLabel: CONTRACT_TYPE_LABELS[c.type],
     partnerName: c.customer?.name ?? null,

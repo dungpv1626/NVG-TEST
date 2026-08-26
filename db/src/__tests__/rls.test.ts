@@ -3203,3 +3203,108 @@ describeDb('HD — hợp đồng, điều khoản và phát sinh', () => {
     expect(still).toHaveLength(1);
   });
 });
+
+describeDb('BC — Dashboard điều hành và phạm vi "Toàn NVG"', () => {
+  /**
+   * Tạo một cơ hội ở pháp nhân chỉ định, để có dữ liệu ở HAI pháp nhân khác nhau.
+   *
+   * Mỗi pháp nhân dùng đúng nhân viên kinh doanh của mình: Ban Giám đốc XEM được mọi pháp
+   * nhân nhưng KHÔNG có quyền tạo hồ sơ CRM (Webapp Flow 2.3 — "tất cả module ở chế độ chỉ
+   * xem + phê duyệt"), nên không thể mượn tài khoản đó để dựng dữ liệu cho cả hai bên.
+   */
+  async function createOpportunityIn(companyCode: 'NVC' | 'NVO'): Promise<string> {
+    const client = await signInAs(
+      companyCode === 'NVC' ? ACCOUNTS.kinhDoanhNvc : ACCOUNTS.kinhDoanhNvo,
+    );
+    const { data: company } = await client
+      .from('companies')
+      .select('id')
+      .eq('code', companyCode)
+      .single();
+    const { data: customer } = await client.from('customers').select('id').limit(1).maybeSingle();
+    if (!customer) throw new Error('Cần ít nhất một khách hàng để chạy test này.');
+    const { data: me } = await client.rpc('auth_user_id');
+    const { data: code } = await client.rpc('next_record_code', {
+      p_company_code: companyCode,
+      p_record_type: 'CH',
+    });
+
+    const { data, error } = await client
+      .from('opportunities')
+      .insert({
+        code,
+        company_id: company!.id,
+        customer_id: customer.id,
+        name: `${TEST_PREFIX} Cơ hội ${companyCode} cho Dashboard`,
+        owner_id: me,
+        estimated_value: 500_000_000,
+      })
+      .select('id')
+      .single();
+    if (error) throw new Error(error.message);
+    return (data as { id: string }).id;
+  }
+
+  /**
+   * "NVG" là mã TỔNG HỢP, không phải pháp nhân giao dịch (Backend Schema 2.2).
+   *
+   * Đây là lý do màn hình gộp KHÔNG được lọc theo `company_id` của NVG: bảng giao dịch không
+   * bao giờ có dòng nào mang mã đó. Giám đốc Tài chính chỉ được gán vào NVG, nên lọc như vậy
+   * cho ra màn hình trắng trong khi phân quyền hoàn toàn đúng — hỏng mà nhìn như chưa có dữ liệu.
+   */
+  it('không hồ sơ giao dịch nào mang pháp nhân tổng hợp NVG', async () => {
+    const tgd = await signInAs(ACCOUNTS.tgd);
+    const { data: nvg } = await tgd.from('companies').select('id').eq('code', 'NVG').single();
+
+    for (const table of ['opportunities', 'bidding_projects', 'design_projects', 'contracts']) {
+      const { data } = await tgd.from(table).select('id').eq('company_id', nvg!.id).limit(1);
+      expect(data ?? []).toHaveLength(0);
+    }
+  });
+
+  it('vai trò cấp tập đoàn gộp được số liệu nhiều pháp nhân trong một truy vấn', async () => {
+    await createOpportunityIn('NVC');
+    await createOpportunityIn('NVO');
+
+    // Truy vấn KHÔNG có điều kiện pháp nhân — đúng cách Dashboard chạy ở chế độ "Toàn NVG".
+    const cfo = await signInAs(ACCOUNTS.cfo);
+    const { data } = await cfo.from('opportunities').select('company_id').is('deleted_at', null);
+
+    const companies = new Set((data ?? []).map((o) => o.company_id));
+    expect(companies.size).toBeGreaterThan(1);
+  });
+
+  /**
+   * Bỏ điều kiện lọc pháp nhân ở trình duyệt KHÔNG mở thêm quyền cho ai.
+   *
+   * Đây là phần phải khẳng định tường minh: nếu hàng rào nằm ở câu truy vấn của trình duyệt
+   * thì bỏ nó đi là lộ dữ liệu ba pháp nhân cho mọi người. Hàng rào thật nằm trong RLS, nên
+   * cùng một câu truy vấn "không lọc" vẫn chỉ trả về phần của người gọi.
+   */
+  it('bỏ điều kiện lọc pháp nhân KHÔNG làm lộ dữ liệu pháp nhân khác', async () => {
+    await createOpportunityIn('NVC');
+    await createOpportunityIn('NVO');
+
+    const tgd = await signInAs(ACCOUNTS.tgd);
+    const { data: nvo } = await tgd.from('companies').select('id').eq('code', 'NVO').single();
+
+    const kinhDoanhNvc = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const { data } = await kinhDoanhNvc
+      .from('opportunities')
+      .select('company_id')
+      .is('deleted_at', null);
+
+    expect((data ?? []).length).toBeGreaterThan(0);
+    expect((data ?? []).some((o) => o.company_id === nvo!.id)).toBe(false);
+  });
+
+  /** Danh mục pháp nhân phải đọc được để cột "Pháp nhân" của màn hình gộp có tên hiển thị. */
+  it('mọi người đăng nhập đều đọc được danh mục pháp nhân', async () => {
+    const kinhDoanhNvc = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const { data } = await kinhDoanhNvc.from('companies').select('code, is_transactional');
+
+    const codes = (data ?? []).map((c) => c.code);
+    expect(codes).toEqual(expect.arrayContaining(['NVC', 'NVS', 'NVO', 'NVG']));
+    expect((data ?? []).find((c) => c.code === 'NVG')?.is_transactional).toBe(false);
+  });
+});

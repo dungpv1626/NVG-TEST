@@ -67,6 +67,7 @@ export function UnitPriceListPage() {
     responsiblePerson: p.supplier_name,
     status: 'in_progress',
     deadline: null,
+    companyId: p.company_id,
     record: p,
   }));
 

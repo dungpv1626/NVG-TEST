@@ -16,7 +16,7 @@ import type {
   ContractType,
   MoneyValue,
 } from '@nvg/shared';
-import { useCompanyStore } from '@/lib/company-store';
+import { useCompanyScope, withCompanyScope } from '@/lib/company-scope';
 import { supabase } from '@/lib/supabase';
 
 export interface ContractRecord {
@@ -43,22 +43,27 @@ const CONTRACT_SELECT =
   'customer:customers!contracts_customer_id_customers_id_fk(id, name), ' +
   'responsible:users!contracts_responsible_user_id_users_id_fk(full_name)';
 
-export function useContracts() {
-  const companyId = useCompanyStore((s) => s.selectedCompanyId);
+/**
+ * `enabled` để Dashboard tắt hẳn truy vấn của module người dùng không có quyền xem: RLS vẫn
+ * trả về rỗng nên không lộ gì, nhưng gọi một truy vấn chắc chắn rỗng ở mọi lần mở màn hình
+ * chủ là lãng phí thật (Webapp Flow 6.5 — không hiển thị thứ người dùng không có quyền).
+ */
+export function useContracts(options: { enabled?: boolean } = {}) {
+  const scope = useCompanyScope();
 
   return useQuery<ContractRecord[], Error>({
-    queryKey: ['contracts', companyId],
+    queryKey: ['contracts', scope.companyId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('contracts')
-        .select(CONTRACT_SELECT)
-        .eq('company_id', companyId!)
+      const { data, error } = await withCompanyScope(
+        supabase.from('contracts').select(CONTRACT_SELECT),
+        scope,
+      )
         .is('deleted_at', null)
         .order('created_at', { ascending: false });
       if (error) throw new Error(error.message);
       return (data ?? []) as unknown as ContractRecord[];
     },
-    enabled: companyId !== null,
+    enabled: scope.isReady && (options.enabled ?? true),
   });
 }
 
