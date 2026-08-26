@@ -820,6 +820,35 @@ describeDb('CRM — báo giá và phê duyệt giá', () => {
     expect(error!.code).toBe(PG_INSUFFICIENT_PRIVILEGE);
   });
 
+  it('không tự đặt báo giá sang Đã duyệt bằng một câu UPDATE (CRM-04)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const { quote } = await createQuote(kd, { totalValue: '800000000' });
+
+    // Cùng lỗ hổng đã bịt ở Module HD: `USING` kiểm dòng ĐANG ở trạng thái nào, `WITH CHECK`
+    // không kiểm trạng thái SẼ thành gì. Đặt thẳng `completed` là tự cấp cho mình chữ ký
+    // phê duyệt nội bộ mà CRM-04 bắt buộc phải có trước khi gửi khách.
+    const { error: fakeApproved } = await kd
+      .from('quotes')
+      .update({ status: 'completed' })
+      .eq('id', quote.id);
+    expect(fakeApproved!.message).toContain('Không đổi trực tiếp được trạng thái');
+
+    const { error: fakeSent } = await kd
+      .from('quotes')
+      .update({ sent_to_customer_at: new Date().toISOString() })
+      .eq('id', quote.id);
+    expect(fakeSent!.message).toContain('Không đổi trực tiếp được trạng thái');
+
+    // Sửa giá ở bản nháp vẫn phải làm được — nếu không thì soạn báo giá bằng gì.
+    const { error: editValue } = await kd
+      .from('quotes')
+      .update({ total_value: '820000000' })
+      .eq('id', quote.id)
+      .select('id')
+      .single();
+    expect(editValue).toBeNull();
+  });
+
   it('không tự ghi được quyết định phê duyệt vào lịch sử', async () => {
     const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
     const { quote } = await createQuote(kd, { totalValue: '8000000000' });
@@ -2557,5 +2586,620 @@ describeDb('TK — dự án thiết kế, phiên bản bản vẽ và bàn giao'
     await tk.from('design_projects').delete().eq('id', project.id);
     const { data: still } = await tk.from('design_projects').select('id').eq('id', project.id);
     expect(still, 'không có policy DELETE ⇒ xoá 0 dòng, hồ sơ vẫn còn').toHaveLength(1);
+  });
+});
+
+/**
+ * Module HD — Hợp đồng (PRD HD-01 → HD-05, Backend Schema 4.5).
+ *
+ * Đây là module KHÉP LẠI Giai đoạn 1, nên trọng tâm test là hai thứ mà tiêu chí nghiệm thu
+ * (PRD Mục 7) đòi hỏi: đường truy ngược không đứt, và chữ ký phê duyệt theo hạn mức có
+ * nghĩa thật — không sửa được giá trị sau khi đã duyệt.
+ */
+describeDb('HD — hợp đồng, điều khoản và phát sinh', () => {
+  /** Cơ hội đã có báo giá được duyệt — nguồn hợp lệ để soạn hợp đồng theo HD-01. */
+  async function createSourceOpportunity(
+    client: SupabaseClient,
+  ): Promise<{ id: string; companyId: string }> {
+    const { data: company } = await client.from('companies').select('id').eq('code', 'NVC').single();
+    const { data: customer } = await client.from('customers').select('id').limit(1).maybeSingle();
+    if (!customer) throw new Error('Cần ít nhất một khách hàng để chạy test này.');
+    const { data: me } = await client.rpc('auth_user_id');
+    const { data: code } = await client.rpc('next_record_code', {
+      p_company_code: 'NVC',
+      p_record_type: 'CH',
+    });
+
+    const { data, error } = await client
+      .from('opportunities')
+      .insert({
+        code,
+        company_id: company!.id,
+        customer_id: customer.id,
+        name: `${TEST_PREFIX} Nhà xưởng HD ${Date.now()}`,
+        owner_id: me,
+        estimated_value: 900_000_000,
+      })
+      .select('id')
+      .single();
+    if (error) throw new Error(error.message);
+    return { id: (data as { id: string }).id, companyId: company!.id };
+  }
+
+  async function createContract(
+    client: SupabaseClient,
+    source?: { id: string; companyId: string },
+  ): Promise<{ id: string; companyId: string; sourceId: string }> {
+    const src = source ?? (await createSourceOpportunity(client));
+    const { data, error } = await client.rpc('create_contract_from_source', {
+      p_source_type: 'opportunities',
+      p_source_id: src.id,
+      p_type: 'thi_cong',
+      p_title: `${TEST_PREFIX} Hợp đồng thi công`,
+    });
+    if (error) throw new Error(error.message);
+    return { id: data as string, companyId: src.companyId, sourceId: src.id };
+  }
+
+  /** Ba nhóm điều khoản bắt buộc + giá trị — đủ điều kiện trình ký theo HD-02/HD-05. */
+  async function makeReadyToSubmit(
+    client: SupabaseClient,
+    contract: { id: string; companyId: string },
+    value = 900_000_000,
+  ): Promise<void> {
+    await client.from('contracts').update({ value, start_date: '2026-09-01' }).eq('id', contract.id);
+    for (const termType of ['pham_vi', 'gia_tri', 'tien_do_thanh_toan']) {
+      await client.from('contract_terms').insert({
+        company_id: contract.companyId,
+        contract_id: contract.id,
+        term_type: termType,
+        description: `${TEST_PREFIX} điều khoản ${termType}`,
+      });
+    }
+  }
+
+  async function createAmendment(
+    client: SupabaseClient,
+    contract: { id: string; companyId: string },
+    extra: Record<string, unknown> = {},
+  ): Promise<string> {
+    const { data: me } = await client.rpc('auth_user_id');
+    const { data, error } = await client
+      .from('contract_amendments')
+      .insert({
+        company_id: contract.companyId,
+        contract_id: contract.id,
+        title: `${TEST_PREFIX} Phát sinh móng`,
+        content: 'Gia cố nền đất yếu phát hiện khi đào móng.',
+        reason: 'Địa chất thực tế khác báo cáo khảo sát.',
+        value_change: 40_000_000,
+        requested_by: me,
+        ...extra,
+      })
+      .select('id')
+      .single();
+    if (error) throw new Error(error.message);
+    return (data as { id: string }).id;
+  }
+
+  it('soạn hợp đồng lấy sẵn khách hàng và tên từ hồ sơ nguồn — không nhập lại (HD-01)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const source = await createSourceOpportunity(kd);
+    const contract = await createContract(kd, source);
+
+    const { data } = await kd
+      .from('contracts')
+      .select('code, title, source_type, source_id, company_id, stage, responsible_user_id')
+      .eq('id', contract.id)
+      .single();
+
+    expect(data!.source_type).toBe('opportunities');
+    expect(data!.source_id, 'đường truy ngược về cơ hội gốc (PRD Mục 7)').toBe(source.id);
+    expect(data!.company_id).toBe(source.companyId);
+    expect(data!.stage).toBe('nhap');
+    expect(data!.code).toMatch(/^NVC-HD-\d{4}-\d{4}$/);
+  });
+
+  it('một hồ sơ nguồn chỉ sinh MỘT hợp đồng — hai bản là đếm doanh thu hai lần', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const source = await createSourceOpportunity(kd);
+    await createContract(kd, source);
+
+    const { error } = await kd.rpc('create_contract_from_source', {
+      p_source_type: 'opportunities',
+      p_source_id: source.id,
+      p_type: 'thi_cong',
+      p_title: `${TEST_PREFIX} Bản thứ hai`,
+    });
+    expect(error!.message).toContain('đã có hợp đồng');
+  });
+
+  it('không đổi được hồ sơ nguồn sau khi tạo — đứt đường truy ngược (PRD Mục 7)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const contract = await createContract(kd);
+    const other = await createSourceOpportunity(kd);
+
+    const { error } = await kd
+      .from('contracts')
+      .update({ source_id: other.id })
+      .eq('id', contract.id);
+    expect(error, 'source_id nằm trong danh sách cột định danh bị khoá').toBeTruthy();
+  });
+
+  it('hợp đồng không nhận hồ sơ nguồn của pháp nhân khác (NEN-01)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const kdNvo = await signInAs(ACCOUNTS.kinhDoanhNvo);
+    const { data: nvc } = await kd.from('companies').select('id').eq('code', 'NVC').single();
+    const nvoSource = await (async () => {
+      const { data: company } = await kdNvo.from('companies').select('id').eq('code', 'NVO').single();
+      const { data: customer } = await kdNvo.from('customers').select('id').limit(1).maybeSingle();
+      const { data: me } = await kdNvo.rpc('auth_user_id');
+      const { data: code } = await kdNvo.rpc('next_record_code', {
+        p_company_code: 'NVO',
+        p_record_type: 'CH',
+      });
+      const { data } = await kdNvo
+        .from('opportunities')
+        .insert({
+          code,
+          company_id: company!.id,
+          customer_id: customer!.id,
+          name: `${TEST_PREFIX} Cơ hội NVO ${Date.now()}`,
+          owner_id: me,
+        })
+        .select('id')
+        .single();
+      return (data as { id: string }).id;
+    })();
+
+    const { data: code } = await kd.rpc('next_record_code', {
+      p_company_code: 'NVC',
+      p_record_type: 'HD',
+    });
+    const { error } = await kd.from('contracts').insert({
+      code,
+      company_id: (nvc as { id: string }).id,
+      title: `${TEST_PREFIX} Hợp đồng lệch pháp nhân`,
+      type: 'thi_cong',
+      source_type: 'opportunities',
+      source_id: nvoSource,
+    });
+    // Trigger phải chặn: khoá ngoại không kiểm hộ được tham chiếu đa hình.
+    expect(error).toBeTruthy();
+  });
+
+  it('thiếu điều khoản bắt buộc thì không trình ký được (HD-02, HD-05)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const contract = await createContract(kd);
+
+    // Chưa có giá trị.
+    const { error: noValue } = await kd.rpc('submit_contract_approval', {
+      p_contract_id: contract.id,
+    });
+    expect(noValue!.message).toContain('giá trị hợp đồng');
+
+    await kd.from('contracts').update({ value: 900_000_000 }).eq('id', contract.id);
+
+    const { error: noTerms } = await kd.rpc('submit_contract_approval', {
+      p_contract_id: contract.id,
+    });
+    expect(noTerms!.message).toContain('điều khoản bắt buộc');
+
+    await makeReadyToSubmit(kd, contract);
+    const { error } = await kd.rpc('submit_contract_approval', { p_contract_id: contract.id });
+    expect(error).toBeNull();
+  });
+
+  it('vượt hạn mức thì người soạn KHÔNG tự duyệt được, Tổng Giám đốc thì được (HD-05)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const dt = await signInAs(ACCOUNTS.dauThauNvc);
+    const tgd = await signInAs(ACCOUNTS.tgd);
+    const contract = await createContract(kd);
+
+    // 900 triệu vượt hạn mức 200 triệu của Dự án – Đấu thầu (DEFAULT_APPROVAL_LIMITS).
+    await makeReadyToSubmit(kd, contract, 900_000_000);
+    const { data: approvalId } = await kd.rpc('submit_contract_approval', {
+      p_contract_id: contract.id,
+    });
+
+    const { error: overLimit } = await dt.rpc('decide_approval', {
+      p_approval_id: approvalId,
+      p_decision: 'approved',
+    });
+    expect(overLimit!.message).toContain('hạn mức');
+
+    const { error } = await tgd.rpc('decide_approval', {
+      p_approval_id: approvalId,
+      p_decision: 'approved',
+    });
+    expect(error).toBeNull();
+
+    const { data: after } = await kd
+      .from('contracts')
+      .select('stage, approved_at')
+      .eq('id', contract.id)
+      .single();
+    expect(after!.stage).toBe('da_duyet');
+    expect(after!.approved_at).not.toBeNull();
+  });
+
+  it('hợp đồng đã trình ký KHÔNG sửa được giá trị — nếu không chữ ký duyệt vô nghĩa', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const contract = await createContract(kd);
+    await makeReadyToSubmit(kd, contract, 900_000_000);
+    await kd.rpc('submit_contract_approval', { p_contract_id: contract.id });
+
+    const { data: edited } = await kd
+      .from('contracts')
+      .update({ value: 100_000_000 })
+      .eq('id', contract.id)
+      .select('id');
+    expect(edited, 'policy chỉ cho sửa hợp đồng còn ở bước Nháp').toEqual([]);
+
+    const { data: unchanged } = await kd
+      .from('contracts')
+      .select('value')
+      .eq('id', contract.id)
+      .single();
+    expect(Number(unchanged!.value)).toBe(900_000_000);
+  });
+
+  it('từ chối bắt buộc nêu lý do, và trả hợp đồng về Nháp để sửa (HD-05)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const tgd = await signInAs(ACCOUNTS.tgd);
+    const contract = await createContract(kd);
+    await makeReadyToSubmit(kd, contract);
+    const { data: approvalId } = await kd.rpc('submit_contract_approval', {
+      p_contract_id: contract.id,
+    });
+
+    const { error: noReason } = await tgd.rpc('decide_approval', {
+      p_approval_id: approvalId,
+      p_decision: 'rejected',
+    });
+    expect(noReason!.message).toContain('lý do');
+
+    await tgd.rpc('decide_approval', {
+      p_approval_id: approvalId,
+      p_decision: 'rejected',
+      p_note: 'Tiến độ thanh toán bất lợi, đàm phán lại đợt cuối.',
+    });
+
+    const { data: after } = await kd
+      .from('contracts')
+      .select('stage')
+      .eq('id', contract.id)
+      .single();
+    // Không nằm mãi ở "chờ phê duyệt": người soạn phải sửa được để trình lại.
+    expect(after!.stage).toBe('nhap');
+  });
+
+  it('chưa phê duyệt nội bộ thì không ghi nhận đã ký được (HD-05)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const tgd = await signInAs(ACCOUNTS.tgd);
+    const contract = await createContract(kd);
+    await makeReadyToSubmit(kd, contract);
+
+    const { error: tooEarly } = await kd.rpc('sign_contract', {
+      p_contract_id: contract.id,
+      p_contract_number: 'HD-01/2026',
+      p_signed_date: '2026-09-01',
+    });
+    expect(tooEarly!.message).toContain('phê duyệt nội bộ');
+
+    const { data: approvalId } = await kd.rpc('submit_contract_approval', {
+      p_contract_id: contract.id,
+    });
+    await tgd.rpc('decide_approval', { p_approval_id: approvalId, p_decision: 'approved' });
+
+    const { error: noNumber } = await kd.rpc('sign_contract', {
+      p_contract_id: contract.id,
+      p_contract_number: '  ',
+      p_signed_date: '2026-09-01',
+    });
+    expect(noNumber!.message).toContain('số hợp đồng');
+
+    const { error } = await kd.rpc('sign_contract', {
+      p_contract_id: contract.id,
+      p_contract_number: 'HD-01/2026',
+      p_signed_date: '2026-09-01',
+    });
+    expect(error).toBeNull();
+
+    const { data: after } = await kd
+      .from('contracts')
+      .select('stage, contract_number, signed_at')
+      .eq('id', contract.id)
+      .single();
+    expect(after!.stage).toBe('da_ky');
+    expect(after!.contract_number).toBe('HD-01/2026');
+    expect(after!.signed_at).not.toBeNull();
+  });
+
+  it('phát sinh KHÔNG thực hiện được khi khách chưa xác nhận (HD-04)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const tgd = await signInAs(ACCOUNTS.tgd);
+    const contract = await createContract(kd);
+    const amendmentId = await createAmendment(kd, contract);
+
+    // Đây là điều khoản khó nhất của module: "làm trước, hợp thức hóa sau" chính là chỗ gây
+    // tranh chấp với khách hàng, nên chặn ở CSDL chứ không ở giao diện.
+    const { error: notApproved } = await kd.rpc('execute_amendment', {
+      p_amendment_id: amendmentId,
+    });
+    expect(notApproved!.message).toContain('chưa được phê duyệt');
+
+    // Chưa gửi báo giá thì không trình duyệt được.
+    const { error: noQuote } = await kd.rpc('submit_amendment_approval', {
+      p_amendment_id: amendmentId,
+    });
+    expect(noQuote!.message).toContain('báo giá');
+
+    await kd
+      .from('contract_amendments')
+      .update({ quote_sent_at: new Date().toISOString() })
+      .eq('id', amendmentId);
+
+    const { data: approvalId, error } = await kd.rpc('submit_amendment_approval', {
+      p_amendment_id: amendmentId,
+    });
+    expect(error).toBeNull();
+    await tgd.rpc('decide_approval', { p_approval_id: approvalId, p_decision: 'approved' });
+
+    // Đã duyệt nội bộ nhưng khách chưa xác nhận ⇒ vẫn chặn.
+    const { error: noCustomer } = await kd.rpc('execute_amendment', {
+      p_amendment_id: amendmentId,
+    });
+    expect(noCustomer!.message).toContain('xác nhận của khách hàng');
+
+    const { error: noName } = await kd.rpc('confirm_amendment_by_customer', {
+      p_amendment_id: amendmentId,
+      p_confirmed_by: '   ',
+    });
+    expect(noName!.message).toContain('tên người xác nhận');
+
+    await kd.rpc('confirm_amendment_by_customer', {
+      p_amendment_id: amendmentId,
+      p_confirmed_by: 'Chủ đầu tư Trần Văn B',
+    });
+
+    const { error: done } = await kd.rpc('execute_amendment', { p_amendment_id: amendmentId });
+    expect(done).toBeNull();
+  });
+
+  it('trường hợp khẩn cấp bỏ qua xác nhận khách, nhưng PHẢI ghi rõ người cho phép (HD-04)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const contract = await createContract(kd);
+
+    // Đánh dấu khẩn cấp mà không chỉ ra ai cho phép chính là lỗ hổng HD-04 viết ra để bịt.
+    const { error: noAuthorizer } = await kd.from('contract_amendments').insert({
+      company_id: contract.companyId,
+      contract_id: contract.id,
+      title: `${TEST_PREFIX} Chống sạt lở khẩn cấp`,
+      content: 'Chống sạt lở taluy sau mưa lớn.',
+      reason: 'Nguy cơ mất an toàn ngay trong đêm.',
+      value_change: 25_000_000,
+      is_emergency: true,
+    });
+    expect(noAuthorizer, 'ràng buộc CHECK bắt cặp is_emergency + người cho phép').toBeTruthy();
+
+    const { data: tgdUser } = await (await signInAs(ACCOUNTS.tgd)).rpc('auth_user_id');
+    const amendmentId = await createAmendment(kd, contract, {
+      title: `${TEST_PREFIX} Chống sạt lở khẩn cấp`,
+      is_emergency: true,
+      emergency_authorized_by: tgdUser,
+      emergency_reason: 'Nguy cơ mất an toàn ngay trong đêm, Tổng Giám đốc đồng ý qua điện thoại.',
+    });
+
+    const { error } = await kd.rpc('execute_amendment', { p_amendment_id: amendmentId });
+    expect(error, 'khẩn cấp có người cho phép thì thực hiện được ngay').toBeNull();
+
+    const { data: after } = await kd
+      .from('contract_amendments')
+      .select('stage, executed_at, emergency_authorized_by')
+      .eq('id', amendmentId)
+      .single();
+    expect(after!.stage).toBe('da_thuc_hien');
+    expect(after!.emergency_authorized_by, 'danh tính người cho phép là thứ HD-04 bắt ghi rõ').toBe(
+      tgdUser,
+    );
+  });
+
+  it('phát sinh không tự khai là đã duyệt hoặc đã thực hiện được (HD-04)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const contract = await createContract(kd);
+
+    const { error: selfApproved } = await kd.from('contract_amendments').insert({
+      company_id: contract.companyId,
+      contract_id: contract.id,
+      title: `${TEST_PREFIX} Tự duyệt`,
+      content: 'Nội dung',
+      reason: 'Lý do',
+      value_change: 10_000_000,
+      stage: 'da_duyet',
+    });
+    expect(selfApproved, 'policy INSERT ép mọi phát sinh bắt đầu ở bước Đề xuất').toBeTruthy();
+
+    const amendmentId = await createAmendment(kd, contract);
+
+    // Sửa NỘI DUNG ở bước Đề xuất là đúng và phải làm được.
+    const { error: editContent } = await kd
+      .from('contract_amendments')
+      .update({ content: 'Bổ sung mô tả phạm vi gia cố.' })
+      .eq('id', amendmentId)
+      .select('id')
+      .single();
+    expect(editContent).toBeNull();
+
+    // Nhưng BƯỚC thì không: đặt thẳng `da_thuc_hien` là bỏ qua toàn bộ kiểm tra của HD-04.
+    const { error: jumpStage } = await kd
+      .from('contract_amendments')
+      .update({ stage: 'da_thuc_hien' })
+      .eq('id', amendmentId);
+    expect(jumpStage!.message).toContain('Không đổi trực tiếp được trạng thái');
+
+    // Và xác nhận của khách cũng không tự khai được — đó chính là thứ HD-04 dựng lên để
+    // chặn "làm trước, hợp thức hóa sau".
+    const { error: fakeCustomer } = await kd
+      .from('contract_amendments')
+      .update({ customer_confirmed_at: new Date().toISOString(), customer_confirmed_by: 'Ai đó' })
+      .eq('id', amendmentId);
+    expect(fakeCustomer!.message).toContain('Không đổi trực tiếp được trạng thái');
+  });
+
+  it('không tự đặt hợp đồng sang Đã ký bằng một câu UPDATE — bỏ qua cả hạn mức (HD-05)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const contract = await createContract(kd);
+    await makeReadyToSubmit(kd, contract, 900_000_000);
+
+    // Đây là lỗ hổng phát hiện khi viết bộ test này: `USING` chỉ kiểm dòng ĐANG ở bước nào,
+    // `WITH CHECK` không kiểm bước SẼ thành gì. Một câu PATCH của PostgREST là đủ để hợp
+    // đồng 900 triệu thành "đã ký" mà không có dòng nào trong `approvals`.
+    const { error: fakeSigned } = await kd
+      .from('contracts')
+      .update({ stage: 'da_ky', signed_at: new Date().toISOString() })
+      .eq('id', contract.id);
+    expect(fakeSigned!.message).toContain('Không đổi trực tiếp được trạng thái');
+
+    const { error: fakeApproved } = await kd
+      .from('contracts')
+      .update({ approved_at: new Date().toISOString() })
+      .eq('id', contract.id);
+    expect(fakeApproved!.message).toContain('Không đổi trực tiếp được trạng thái');
+
+    // Sửa nội dung thường ở bước Nháp vẫn phải làm được, nếu không thì soạn hợp đồng bằng gì.
+    const { error: editTitle } = await kd
+      .from('contracts')
+      .update({ notes: 'Ghi chú đàm phán.' })
+      .eq('id', contract.id)
+      .select('id')
+      .single();
+    expect(editTitle).toBeNull();
+
+    const { data: after } = await kd
+      .from('contracts')
+      .select('stage')
+      .eq('id', contract.id)
+      .single();
+    expect(after!.stage).toBe('nhap');
+  });
+
+  it('còn phát sinh chưa xử lý xong thì chưa quyết toán được (HD-03, HD-04)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const tgd = await signInAs(ACCOUNTS.tgd);
+    const contract = await createContract(kd);
+    await makeReadyToSubmit(kd, contract);
+    const { data: approvalId } = await kd.rpc('submit_contract_approval', {
+      p_contract_id: contract.id,
+    });
+    await tgd.rpc('decide_approval', { p_approval_id: approvalId, p_decision: 'approved' });
+    await kd.rpc('sign_contract', {
+      p_contract_id: contract.id,
+      p_contract_number: 'HD-02/2026',
+      p_signed_date: '2026-09-01',
+    });
+
+    const amendmentId = await createAmendment(kd, contract);
+
+    const { error: blocked } = await kd.rpc('close_contract', {
+      p_contract_id: contract.id,
+      p_stage: 'hoan_thanh',
+    });
+    expect(blocked!.message).toContain('phát sinh chưa xử lý');
+
+    await kd
+      .from('contract_amendments')
+      .update({ quote_sent_at: new Date().toISOString() })
+      .eq('id', amendmentId);
+    const { data: amendApproval } = await kd.rpc('submit_amendment_approval', {
+      p_amendment_id: amendmentId,
+    });
+    await tgd.rpc('decide_approval', {
+      p_approval_id: amendApproval,
+      p_decision: 'rejected',
+      p_note: 'Khách không đồng ý phạm vi phát sinh.',
+    });
+
+    const { error } = await kd.rpc('close_contract', {
+      p_contract_id: contract.id,
+      p_stage: 'hoan_thanh',
+    });
+    expect(error).toBeNull();
+
+    const { data: after } = await kd
+      .from('contracts')
+      .select('stage, settled_at')
+      .eq('id', contract.id)
+      .single();
+    expect(after!.stage).toBe('hoan_thanh');
+    expect(after!.settled_at).not.toBeNull();
+  });
+
+  it('hủy hợp đồng bắt buộc nêu nguyên nhân, và hồ sơ đã kết thúc thì đóng lại', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const contract = await createContract(kd);
+
+    const { error: noReason } = await kd.rpc('close_contract', {
+      p_contract_id: contract.id,
+      p_stage: 'huy',
+    });
+    expect(noReason!.message).toContain('nguyên nhân');
+
+    await kd.rpc('close_contract', {
+      p_contract_id: contract.id,
+      p_stage: 'huy',
+      p_reason: 'Khách hàng dừng đầu tư.',
+    });
+
+    // Điều khoản của hợp đồng đã đóng không thêm được nữa.
+    const { error: addTerm } = await kd.from('contract_terms').insert({
+      company_id: contract.companyId,
+      contract_id: contract.id,
+      term_type: 'phat',
+      description: `${TEST_PREFIX} thêm sau khi hủy`,
+    });
+    expect(addTerm).toBeTruthy();
+
+    const { error: reclose } = await kd.rpc('close_contract', {
+      p_contract_id: contract.id,
+      p_stage: 'hoan_thanh',
+    });
+    expect(reclose!.message).toContain('đã kết thúc');
+  });
+
+  it('pháp nhân khác KHÔNG thấy hợp đồng (Mẫu A, NEN-01)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const kdNvo = await signInAs(ACCOUNTS.kinhDoanhNvo);
+    const contract = await createContract(kd);
+
+    const { data: seen } = await kdNvo.from('contracts').select('id').eq('id', contract.id);
+    expect(seen).toEqual([]);
+  });
+
+  it('Kế toán XEM được hợp đồng nhưng KHÔNG soạn được (Webapp Flow 2.3)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const kt = await signInAs(ACCOUNTS.ketoan);
+    const contract = await createContract(kd);
+
+    const { data: seen } = await kt.from('contracts').select('id').eq('id', contract.id);
+    expect(seen!.length, 'Kế toán theo dõi công nợ nên phải xem được hợp đồng').toBe(1);
+
+    const source = await createSourceOpportunity(kd);
+    const { error } = await kt.rpc('create_contract_from_source', {
+      p_source_type: 'opportunities',
+      p_source_id: source.id,
+      p_type: 'thi_cong',
+      p_title: `${TEST_PREFIX} Kế toán soạn`,
+    });
+    expect(error!.message).toContain('không được soạn hợp đồng');
+  });
+
+  it('không xóa hẳn được hợp đồng (Backend Schema 1.4)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const contract = await createContract(kd);
+
+    await kd.from('contracts').delete().eq('id', contract.id);
+    const { data: still } = await kd.from('contracts').select('id').eq('id', contract.id);
+    expect(still).toHaveLength(1);
   });
 });

@@ -251,7 +251,37 @@ của khách" là căn cứ chuyển bước nên phải là dữ liệu, không
 - ⏸ TK-09 (thư viện thiết kế) — **lùi được**
 - 🚫 TK-10→TK-17 — **KHÔNG làm ở đây.** Xem Phase 5.
 
-### 2D. Module HD (BSD 4.5)
+### 2D. Module HD (BSD 4.5) ✅ đã xong
+
+Đã dựng: 3 bảng + RLS + 18 test · soạn hợp đồng từ hồ sơ nguồn · checklist 8 nhóm điều
+khoản · trình ký theo hạn mức qua Hộp thư chung · ghi nhận đã ký + thông báo Thi công/Kế
+toán · phát sinh ngoài hợp đồng đủ luồng HD-04 · quyết toán và hủy.
+
+**Không có màn hình "Tạo hợp đồng".** Nút Soạn hợp đồng nằm trên Chi tiết của hồ sơ NGUỒN
+(cơ hội ở bước Đàm phán, gói thầu đã trúng thầu, dự án thiết kế ở bước Dự toán) — đúng
+AFD 3.1 bước 5 và 3.2, và đúng PRD 2.3: không nhập lại dữ liệu đã có.
+
+**★ LỖ HỔNG PHÁT HIỆN KHI VIẾT TEST — đã bịt ở migration 0028, ảnh hưởng CẢ CRM/DA/TK/HD.**
+Mẫu policy dùng khắp nơi có `USING (... AND stage = 'nhap')` nhưng `WITH CHECK` chỉ kiểm
+pháp nhân. `USING` nói "được đụng vào dòng ĐANG ở bước nào", `WITH CHECK` mới nói "dòng SẼ
+thành cái gì" — nên một câu `PATCH /contracts {"stage":"da_ky"}` đủ để bỏ qua toàn bộ hạn
+mức HD-05, không để lại dòng nào trong `approvals`. Tương tự với `bidding_projects.stage`
+(bỏ qua DA-08), `design_projects.stage` (bỏ qua kiểm tra đồng bộ TK-08) và `quotes.status`
+(bỏ qua duyệt nội bộ CRM-04).
+Cách bịt: trigger chung `stage_changes_via_functions_only`, chặn khi `current_user =
+'authenticated'` và cho qua khi hàm `SECURITY DEFINER` gọi. Kéo theo 0029/0030/0031 để đưa
+ba trigger cấp phiên bản và `request_quote_approval` về đúng nhóm "logic hệ thống".
+
+⏳ Còn lại: HD-03 phần "đã thu / còn phải thu" mới có khung tính (`collected_amount` luôn
+bằng 0) — số liệu thật do Module KT cập nhật ở Giai đoạn 2.
+
+⚠️ **Một chỗ cố ý lệch Webapp Flow 2.3 — cần Haan xác nhận:** bảng menu ở 2.3 ghi Kinh
+doanh / Dự án – Đấu thầu / Thiết kế chỉ có "Hợp đồng (xem)", nhưng 3.1 bước 5 và 3.2 lại
+cho chính họ SOẠN hợp đồng. Theo 2.3 thì chỉ Quản trị hệ thống soạn được, và luồng trọng
+yếu Giai đoạn 1 không ai chạy được. Đã chọn: ai sở hữu hồ sơ nguồn thì soạn được hợp đồng
+từ hồ sơ đó; Kế toán giữ nguyên chỉ xem. Hạn mức phê duyệt HD-05 không đổi.
+
+
 `contracts` · `contract_terms` · `contract_amendments`
 
 - `POST /api/contracts/from-opportunity` — soạn từ dữ liệu cơ hội/gói thầu/dự án TK, **không nhập lại** (HD-01)

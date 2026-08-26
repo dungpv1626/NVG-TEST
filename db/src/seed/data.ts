@@ -89,6 +89,26 @@ const VIEW_APPROVE: Perm[] = ['view', 'approve'];
 const WORK: Perm[] = ['view', 'create', 'edit'];
 
 /**
+ * ⚠️ GIẢ ĐỊNH CHỜ HAAN XÁC NHẬN — Webapp Flow tự mâu thuẫn về quyền soạn hợp đồng:
+ *
+ *   - Mục 2.3 (bảng menu theo vai trò) ghi Kinh doanh, Dự án – Đấu thầu, Thiết kế và Kế
+ *     toán đều chỉ có "Hợp đồng (XEM)".
+ *   - Nhưng Mục 3.1 bước 5 lại cho Kinh doanh vào "Màn hình SOẠN hợp đồng (Module HD)",
+ *     và Mục 3.2 ghi "khi trúng thầu → TẠO Hợp đồng".
+ *
+ * Nếu theo 2.3 thì chỉ Quản trị hệ thống soạn được hợp đồng, và luồng nghiệp vụ trọng yếu
+ * của Giai đoạn 1 (Cơ hội → … → Hợp đồng, PRD Mục 7) không ai chạy được — nên đọc "xem" ở
+ * 2.3 là "không sở hữu module", chứ không phải "không tạo được hồ sơ của mình".
+ *
+ * Cách chọn: AI SỞ HỮU HỒ SƠ NGUỒN THÌ SOẠN ĐƯỢC HỢP ĐỒNG TỪ HỒ SƠ ĐÓ. Kinh doanh soạn từ
+ * cơ hội, Dự án – Đấu thầu từ gói thầu, Thiết kế từ dự án thiết kế. Kế toán giữ nguyên chỉ
+ * xem — họ theo dõi công nợ, không soạn hợp đồng.
+ *
+ * Hạn mức phê duyệt (HD-05) KHÔNG đổi: soạn được không có nghĩa là duyệt được.
+ */
+const DRAFT_CONTRACT: Perm[] = ['view', 'create', 'edit'];
+
+/**
  * Ban Giám đốc: "tất cả module ở chế độ chỉ xem + phê duyệt" (Webapp Flow 2.3).
  * Cố tình KHÔNG cấp quyền tạo/sửa — PRD 2.3 phân tách rõ người thực hiện và người phê duyệt.
  */
@@ -137,7 +157,7 @@ export const ROLE_SEED: RoleSeed[] = [
     description: 'Tìm kiếm, chăm sóc khách hàng, báo giá, bàn giao cơ hội đã chốt.',
     seesAllCompanies: false,
     defaultRoute: '/crm/co-hoi',
-    permissions: { BC: VIEW, CRM: WORK, HD: VIEW },
+    permissions: { BC: VIEW, CRM: WORK, HD: DRAFT_CONTRACT },
   },
   {
     code: 'DA_DT',
@@ -145,7 +165,7 @@ export const ROLE_SEED: RoleSeed[] = [
     description: 'Khảo sát, bóc tách khối lượng, dự toán, hồ sơ thầu, ngân sách thi công.',
     seesAllCompanies: false,
     defaultRoute: '/da/goi-thau',
-    permissions: { BC: VIEW, DA: WORK, CRM: VIEW, HD: VIEW },
+    permissions: { BC: VIEW, DA: WORK, CRM: VIEW, HD: DRAFT_CONTRACT },
   },
   {
     code: 'TKE',
@@ -153,7 +173,7 @@ export const ROLE_SEED: RoleSeed[] = [
     description: 'Thiết kế kiến trúc – kết cấu – điện nước, phiên bản bản vẽ, dự toán NVO.',
     seesAllCompanies: false,
     defaultRoute: '/tk/du-an',
-    permissions: { BC: VIEW, TK: WORK, CRM: VIEW, HD: VIEW },
+    permissions: { BC: VIEW, TK: WORK, CRM: VIEW, HD: DRAFT_CONTRACT },
   },
   {
     code: 'TC',

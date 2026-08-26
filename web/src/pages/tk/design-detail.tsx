@@ -17,11 +17,13 @@ import {
   formatDate,
   formatDateTime,
 } from '@nvg/shared';
+import { DraftContractButton } from '@/components/contract/draft-contract-button';
 import { BoqPanel } from '@/components/estimate/boq-panel';
 import { EstimatePanel } from '@/components/estimate/estimate-panel';
 import { DetailFields, EntityDetail } from '@/components/entity/entity-detail';
 import { Button } from '@/components/ui/button';
 import { CardGridSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
+import { useContractForSource } from '@/hooks/use-contracts';
 import {
   useDesignProject,
   useDesignSync,
@@ -47,6 +49,7 @@ export function DesignDetailPage() {
 
   const { data, isLoading, error } = useDesignProject(id);
   const { data: findings } = useDesignSync(id);
+  const { data: contractId } = useContractForSource('design_projects', id);
   const updateProject = useUpdateDesignProject();
   const moveStage = useMoveDesignStage();
   const handover = useHandoverToConstruction();
@@ -123,6 +126,15 @@ export function DesignDetailPage() {
           >
             Chuyển sang lập dự toán
           </Button>
+        )}
+        {/* Webapp Flow 3.3 bước 5: dự toán xong thì gửi Kinh doanh chốt với khách và ký. */}
+        {project.stage === 'du_toan' && (
+          <DraftContractButton
+            sourceType="design_projects"
+            sourceId={project.id}
+            defaultType="thiet_ke"
+            existingContractId={contractId}
+          />
         )}
         <Button
           variant="primary"

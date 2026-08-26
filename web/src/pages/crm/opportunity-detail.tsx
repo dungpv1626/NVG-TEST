@@ -21,10 +21,12 @@ import {
   type OpportunityClassification,
   type OpportunityStage,
 } from '@nvg/shared';
+import { DraftContractButton } from '@/components/contract/draft-contract-button';
 import { DetailFields, EntityDetail } from '@/components/entity/entity-detail';
 import { Button } from '@/components/ui/button';
 import { CardGridSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
+import { useContractForSource } from '@/hooks/use-contracts';
 import { toUserMessage } from '@/hooks/use-error-message';
 import {
   useMoveStage,
@@ -51,6 +53,8 @@ export function OpportunityDetailPage() {
   const canEditModule = useCan('CRM', 'edit');
 
   const { data, isLoading, error } = useOpportunity(id);
+
+  const { data: contractId } = useContractForSource('opportunities', id);
   const { data: history } = useOpportunityStageHistory(id);
   const moveStage = useMoveStage();
   const isResponsible = useIsResponsible(data?.owner_id);
@@ -136,6 +140,16 @@ export function OpportunityDetailPage() {
                 >
                   Đánh dấu mất cơ hội
                 </Button>
+              )}
+              {/* Webapp Flow 3.1 bước 5: khách đồng ý ở bước Đàm phán thì soạn hợp đồng
+                  ngay tại chỗ, lấy sẵn khách hàng và giá đã duyệt (HD-01). */}
+              {(data.stage === 'dam_phan' || data.stage === 'ky_hop_dong') && (
+                <DraftContractButton
+                  sourceType="opportunities"
+                  sourceId={data.id}
+                  defaultType="thi_cong"
+                  existingContractId={contractId}
+                />
               )}
             </div>
           ) : isHandedOver ? (

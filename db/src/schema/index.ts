@@ -29,3 +29,6 @@ export * from './da';
 
 // --- Module TK — Thiết kế (Backend Schema 4.4) ---
 export * from './tk';
+
+// --- Module HD — Hợp đồng (Backend Schema 4.5) ---
+export * from './hd';

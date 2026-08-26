@@ -25,6 +25,8 @@ import {
   useRecordBidResult,
   useUpdateBiddingProject,
 } from '@/hooks/use-bidding-projects';
+import { useContractForSource } from '@/hooks/use-contracts';
+import { DraftContractButton } from '@/components/contract/draft-contract-button';
 import { BoqPanel } from '@/components/estimate/boq-panel';
 import { EstimatePanel } from '@/components/estimate/estimate-panel';
 import { toUserMessage } from '@/hooks/use-error-message';
@@ -41,6 +43,7 @@ export function BiddingDetailPage() {
   const canEdit = useCan('DA', 'edit');
 
   const { data, isLoading, error } = useBiddingProject(id);
+  const { data: contractId } = useContractForSource('bidding_projects', id);
   const updateProject = useUpdateBiddingProject();
   const recordResult = useRecordBidResult();
   const generateBudget = useGenerateBudget();
@@ -93,6 +96,15 @@ export function BiddingDetailPage() {
             Ghi nhận trượt thầu
           </Button>
         </>
+      )}
+      {/* Webapp Flow 3.2: "khi trúng thầu → tạo Hợp đồng" — ngay tại chỗ, không sang module khác. */}
+      {project.stage === 'trung_thau' && (
+        <DraftContractButton
+          sourceType="bidding_projects"
+          sourceId={project.id}
+          defaultType="thi_cong"
+          existingContractId={contractId}
+        />
       )}
     </>
   ) : undefined;

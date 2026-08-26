@@ -8,11 +8,16 @@
 
 import { pgEnum } from 'drizzle-orm/pg-core';
 import {
+  AMENDMENT_STAGES,
   APPROVAL_SUBJECTS,
   BIDDING_STAGES,
   BID_DOCUMENT_CATEGORIES,
   CHANGE_REQUEST_ORIGINS,
   CHANGE_REQUEST_STATUSES,
+  CONTRACT_SOURCE_TYPES,
+  CONTRACT_STAGES,
+  CONTRACT_TERM_TYPES,
+  CONTRACT_TYPES,
   COST_GROUPS,
   DESIGN_DISCIPLINES,
   DESIGN_REVIEWER_TYPES,
@@ -104,3 +109,18 @@ export const changeRequestStatusEnum = pgEnum('change_request_status', CHANGE_RE
 
 /** Nguồn phát sinh yêu cầu thay đổi — PRD TK-06. */
 export const changeRequestOriginEnum = pgEnum('change_request_origin', CHANGE_REQUEST_ORIGINS);
+
+/** Bốn loại hợp đồng — PRD HD-01. */
+export const contractTypeEnum = pgEnum('contract_type', CONTRACT_TYPES);
+
+/** Vòng đời hợp đồng — PRD HD-01, HD-05. */
+export const contractStageEnum = pgEnum('contract_stage', CONTRACT_STAGES);
+
+/** Hồ sơ nguồn sinh ra hợp đồng — Backend Schema 4.5 (`source_type`). */
+export const contractSourceTypeEnum = pgEnum('contract_source_type', CONTRACT_SOURCE_TYPES);
+
+/** Tám nhóm điều khoản phải theo dõi — PRD HD-02. */
+export const contractTermTypeEnum = pgEnum('contract_term_type', CONTRACT_TERM_TYPES);
+
+/** Trạng thái xử lý một phát sinh ngoài hợp đồng — PRD HD-04. */
+export const amendmentStageEnum = pgEnum('amendment_stage', AMENDMENT_STAGES);

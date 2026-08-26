@@ -86,6 +86,12 @@ const DesignCreatePage = lazy(() =>
 const DesignDetailPage = lazy(() =>
   import('@/pages/tk/design-detail').then((m) => ({ default: m.DesignDetailPage })),
 );
+const ContractListPage = lazy(() =>
+  import('@/pages/hd/contract-list').then((m) => ({ default: m.ContractListPage })),
+);
+const ContractDetailPage = lazy(() =>
+  import('@/pages/hd/contract-detail').then((m) => ({ default: m.ContractDetailPage })),
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -158,12 +164,17 @@ export default function App() {
               <Route path="tk/du-an/tao-moi" element={<DesignCreatePage />} />
               <Route path="tk/du-an/:id" element={<DesignDetailPage />} />
 
+              {/* HD — Hợp đồng (HD-01 → HD-05). Không có màn hình "tạo mới": hợp đồng soạn
+                  từ hồ sơ nguồn ở CRM/DA/TK, không nhập lại dữ liệu đã có (PRD 2.3). */}
+              <Route path="hd/hop-dong" element={<ContractListPage />} />
+              <Route path="hd/hop-dong/:id" element={<ContractDetailPage />} />
+
               {/* Hộp thư Phê duyệt — MỘT màn hình cho mọi module (Webapp Flow 4.6),
                   nên nằm ở gốc chứ không thuộc đường dẫn của module nào. */}
               <Route path="viec-can-lam" element={<ApprovalInboxPage />} />
               {MODULE_CODES.filter(
-                (c): c is Exclude<ModuleCode, 'BC' | 'CRM' | 'DA' | 'TK'> =>
-                  c !== 'BC' && c !== 'CRM' && c !== 'DA' && c !== 'TK',
+                (c): c is Exclude<ModuleCode, 'BC' | 'CRM' | 'DA' | 'TK' | 'HD'> =>
+                  c !== 'BC' && c !== 'CRM' && c !== 'DA' && c !== 'TK' && c !== 'HD',
               ).map(
                 (code) => (
                   <Route
