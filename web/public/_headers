@@ -1,0 +1,18 @@
+# Tiêu đề HTTP cho Cloudflare Pages.
+
+/*
+  # Hệ thống quản trị nội bộ — không có lý do gì để nhúng trong khung của trang khác.
+  X-Frame-Options: DENY
+  # Trình duyệt không được tự đoán kiểu tệp khác với Content-Type đã khai báo.
+  X-Content-Type-Options: nosniff
+  # Không rò đường dẫn hồ sơ nội bộ sang trang ngoài qua Referer.
+  Referrer-Policy: strict-origin-when-cross-origin
+  # Ứng dụng không dùng camera/mic/định vị.
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+# Service worker phải luôn lấy bản mới: nếu bị cache, người dùng kẹt ở phiên bản cũ và
+# không bao giờ nhận được lời mời cập nhật (registerType: 'prompt' ở vite.config.ts).
+/sw.js
+  Cache-Control: no-cache
+/index.html
+  Cache-Control: no-cache

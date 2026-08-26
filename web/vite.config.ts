@@ -142,6 +142,19 @@ export default defineConfig(({ mode }) => {
       'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(env.VITE_SUPABASE_ANON_KEY ?? ''),
     },
     server: { port: 5173 },
-    build: { outDir: 'dist', sourcemap: true },
+    build: {
+      outDir: 'dist',
+      /**
+       * Sourcemap CHỈ ở chế độ phát triển.
+       *
+       * Bản build đưa lên Cloudflare Pages nằm ở URL công khai. Sourcemap phát kèm nguyên văn
+       * mã nguồn frontend: tên bảng, tên cột, câu truy vấn PostgREST và cả ghi chú nghiệp vụ.
+       * Hàng rào thật vẫn là RLS trong CSDL (Tech Stack 3.3) nên đây không phải lỗ hổng, nhưng
+       * đưa sẵn bản đồ cho người muốn dò thì không có lợi ích gì bù lại.
+       *
+       * Cần gỡ lỗi trên bản đã triển khai thì dựng lại bằng `vite build --mode development`.
+       */
+      sourcemap: mode === 'development',
+    },
   };
 });
