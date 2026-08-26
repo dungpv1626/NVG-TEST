@@ -225,6 +225,20 @@
       "when": 1787710035686,
       "tag": "0031_quote_approval_via_definer",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1787710036686,
+      "tag": "0032_opportunity_stage_via_function",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1787710037686,
+      "tag": "0033_fix_opportunity_stage_function",
+      "breakpoints": true
     }
   ]
 }

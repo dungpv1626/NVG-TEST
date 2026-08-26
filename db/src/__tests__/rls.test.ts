@@ -443,6 +443,63 @@ describeDb('CRM — pipeline cơ hội kinh doanh', () => {
 
   });
 
+  /**
+   * Ràng buộc "phải nêu nguyên nhân" chỉ có nghĩa khi KHÔNG có đường nào đi vòng.
+   *
+   * Trước migration 0032, một câu PATCH của PostgREST đủ để đưa cơ hội sang "Mất cơ hội" với
+   * ô nguyên nhân rỗng — và báo cáo nguyên nhân mất cơ hội (CRM-09) là một trong những thứ
+   * Ban Giám đốc hỏi đầu tiên. Cùng câu đó còn nhảy thẳng được từ "Tiếp nhận" sang "Ký hợp
+   * đồng", làm tỷ lệ chuyển đổi theo từng bước của phễu mất ý nghĩa.
+   */
+  it('không đổi thẳng được giai đoạn bằng một câu UPDATE — kể cả người chịu trách nhiệm', async () => {
+    const kinhDoanh = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const opportunityId = await createOpportunity(kinhDoanh);
+
+    const { error: skipFunnel } = await kinhDoanh
+      .from('opportunities')
+      .update({ stage: 'ky_hop_dong' })
+      .eq('id', opportunityId);
+    expect(skipFunnel, 'nhảy thẳng tới Ký hợp đồng thì phễu bán hàng không còn đo được gì').toBeTruthy();
+
+    const { error: noReason } = await kinhDoanh
+      .from('opportunities')
+      .update({ stage: 'mat_co_hoi' })
+      .eq('id', opportunityId);
+    expect(noReason, 'đây chính là đường vòng bỏ trống ô nguyên nhân mất cơ hội').toBeTruthy();
+
+    // Điền bù nguyên nhân sau cũng không được: nguyên nhân phải nêu ĐÚNG LÚC đánh dấu mất,
+    // nếu không thì chỉ là cùng một đường vòng đi thêm một bước.
+    const { error: fillLater } = await kinhDoanh
+      .from('opportunities')
+      .update({ lost_reason: 'điền bù sau' })
+      .eq('id', opportunityId);
+    expect(fillLater).toBeTruthy();
+
+    const { data: unchanged } = await kinhDoanh
+      .from('opportunities')
+      .select('stage, lost_reason')
+      .eq('id', opportunityId)
+      .single();
+    expect(unchanged!.stage).toBe('tiep_nhan');
+    expect(unchanged!.lost_reason).toBeNull();
+
+    // Đi đúng cửa thì vẫn chạy — vá lỗ hổng không được chặn luôn nghiệp vụ thật.
+    const { error: proper } = await kinhDoanh.rpc('move_opportunity_stage', {
+      p_opportunity_id: opportunityId,
+      p_to_stage: 'mat_co_hoi',
+      p_lost_reason: 'Khách chọn nhà thầu có giá thấp hơn 8%.',
+    });
+    expect(proper).toBeNull();
+
+    const { data: after } = await kinhDoanh
+      .from('opportunities')
+      .select('stage, lost_reason')
+      .eq('id', opportunityId)
+      .single();
+    expect(after!.stage).toBe('mat_co_hoi');
+    expect(after!.lost_reason).toContain('giá thấp hơn');
+  });
+
   it('mất cơ hội bắt buộc nêu nguyên nhân (CRM-09)', async () => {
     const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
     const id = await createOpportunity(kd);
