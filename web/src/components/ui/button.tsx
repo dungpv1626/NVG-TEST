@@ -13,21 +13,26 @@ import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 rounded-sm font-medium ' +
-    'transition-colors disabled:pointer-events-none disabled:opacity-50 ' +
-    'whitespace-nowrap [&_svg]:size-4 [&_svg]:shrink-0',
+  // `cursor-pointer` và `active:scale` là hai thứ nhỏ nhưng quyết định cảm giác "bấm được".
+  // Thu nhẹ khi nhấn cho phản hồi tức thì — quan trọng trên màn hình cảm ứng ngoài công trường,
+  // nơi không có con trỏ chuột báo trước là ngón tay đang ở trên nút nào.
+  'inline-flex cursor-pointer select-none items-center justify-center gap-2 rounded-sm ' +
+    'font-medium whitespace-nowrap [&_svg]:size-4 [&_svg]:shrink-0 ' +
+    'transition-[background-color,border-color,color,box-shadow,transform] ' +
+    'duration-(--motion-fast) ease-(--ease-out) active:scale-[0.98] ' +
+    'disabled:pointer-events-none disabled:opacity-50 disabled:active:scale-100',
   {
     variants: {
       variant: {
         /** Hành động chính — chỉ MỘT trên mỗi màn hình. */
-        primary: 'bg-brand text-fg-inverse hover:bg-brand-hover',
+        primary: 'bg-brand text-fg-inverse shadow-raised hover:bg-brand-hover',
         secondary:
-          'border border-border bg-surface text-fg ' +
+          'border border-border-strong bg-surface text-fg shadow-raised ' +
           'hover:bg-surface-hover',
-        subtle: 'text-fg hover:bg-surface-hover',
+        subtle: 'text-fg-subtle hover:bg-surface-hover hover:text-fg',
         /** Hành động không thể hoàn tác — luôn kèm hộp thoại xác nhận (Content Guidelines 4.5). */
         danger:
-          'bg-status-overdue text-fg-inverse hover:brightness-95',
+          'bg-status-overdue text-fg-inverse shadow-raised hover:brightness-95',
         link: 'text-brand underline-offset-4 hover:underline',
       },
       size: {

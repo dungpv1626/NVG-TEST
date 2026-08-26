@@ -27,12 +27,9 @@
 
     <title>Hệ thống Quản trị NVG</title>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
+    <!-- Phông tự lưu trong dự án (@fontsource, nạp ở src/index.css) thay vì gọi Google Fonts:
+         bớt một request tới bên thứ ba ở mọi lần tải, phông vào luôn precache của service worker,
+         và không gửi địa chỉ IP người dùng sang máy chủ Google. Xem DESIGN_SYSTEM.md Mục 3. -->
   </head>
   <body>
     <div id="root"></div>

@@ -29,6 +29,9 @@ const DashboardPage = lazy(() =>
 const PlaceholderPage = lazy(() =>
   import('@/pages/placeholder').then((m) => ({ default: m.PlaceholderPage })),
 );
+const DesignShowcasePage = lazy(() =>
+  import('@/pages/nen/design-showcase').then((m) => ({ default: m.DesignShowcasePage })),
+);
 const ApprovalInboxPage = lazy(() =>
   import('@/pages/phe-duyet/approval-inbox-page').then((m) => ({ default: m.ApprovalInboxPage })),
 );
@@ -172,6 +175,11 @@ export default function App() {
               {/* Hộp thư Phê duyệt — MỘT màn hình cho mọi module (Webapp Flow 4.6),
                   nên nằm ở gốc chứ không thuộc đường dẫn của module nào. */}
               <Route path="viec-can-lam" element={<ApprovalInboxPage />} />
+
+              {/* Trang trưng bày thành phần giao diện — công cụ nội bộ của đội triển khai.
+                  Đặt trong nhánh `nen/` nên chỉ vai trò xem được phân hệ Nền tảng mới tới được;
+                  hàng rào thật vẫn là RLS, đây chỉ là điều hướng (Webapp Flow 6.5). */}
+              <Route path="nen/giao-dien" element={<DesignShowcasePage />} />
               {MODULE_CODES.filter(
                 (c): c is Exclude<ModuleCode, 'BC' | 'CRM' | 'DA' | 'TK' | 'HD'> =>
                   c !== 'BC' && c !== 'CRM' && c !== 'DA' && c !== 'TK' && c !== 'HD',

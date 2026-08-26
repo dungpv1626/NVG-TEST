@@ -1,6 +1,27 @@
 @import 'tailwindcss';
 
 /**
+ * Phông tự lưu trong dự án thay vì gọi Google Fonts — xem DESIGN_SYSTEM.md Mục 3.
+ *
+ * ⚠️ PHẢI nạp tệp theo NÉT (`400.css`), KHÔNG nạp theo bộ ký tự (`vietnamese-400.css`).
+ *
+ * Tệp theo bộ ký tự của fontsource KHÔNG có `unicode-range`. Nạp cả `vietnamese-400.css` lẫn
+ * `latin-400.css` là khai hai `@font-face` cùng family, cùng nét, cùng kiểu, không phân định
+ * phạm vi ký tự — theo quy tắc CSS thì khai báo SAU đè khai báo trước. Hệ quả: `latin` thắng,
+ * còn toàn bộ chữ có dấu (ă â đ ê ô ơ ư và mọi dấu thanh) rơi về phông hệ thống. Chữ Việt hiện
+ * ra lẫn hai phông khác nhau ngay giữa một từ.
+ *
+ * Tệp theo nét khai đủ các bộ ký tự KÈM `unicode-range`, nên trình duyệt tự tải đúng phần văn
+ * bản cần: trang tiếng Việt lấy bộ `vietnamese` + `latin`, không đụng tới Cyrillic hay Hy Lạp.
+ *
+ * Ba nét 400/500/600 là đủ: mã nguồn không dùng `font-bold` ở chỗ nào (đã kiểm), nên nạp thêm
+ * nét 700 chỉ là bắt mọi người tải về tệp không bao giờ hiển thị.
+ */
+@import '@fontsource/be-vietnam-pro/400.css';
+@import '@fontsource/be-vietnam-pro/500.css';
+@import '@fontsource/be-vietnam-pro/600.css';
+
+/**
  * Token thiết kế — Content Guidelines Mục 6.3 đến 6.5.
  *
  * Triết lý (6.2, lấy cảm hứng Atlassian Design System): "nền chủ đạo gần như trắng/trung
@@ -19,28 +40,53 @@
   --color-brand-hover: #0b5ed7;
   --color-brand-subtle: #e9f2fe;
 
-  /* --- Nền, bề mặt, viền (6.3) --------------------------------------------- */
+  /* --- Màu NHẬN DIỆN — cam an toàn (DESIGN_SYSTEM.md 2.3) --------------------
+     Lấy từ chính hiện trường: áo phản quang, biển báo công trường.
+
+     ⚠️ KHÔNG phải màu hành động, KHÔNG phải màu trạng thái. Chỉ dùng ở: dấu thương hiệu và
+     thanh chỉ mục sidebar, vạch nhấn trên Dashboard, chuỗi biểu đồ, hình minh hoạ trạng thái
+     rỗng, dấu hiệu chế độ gộp "Toàn NVG".
+
+     CẤM ở nhãn trạng thái, nền dòng bảng, nút bấm. Cam nằm giữa vàng "Chờ duyệt" và đỏ "Quá
+     hạn" — đặt nó vào vùng trạng thái là phá hệ thống trạng thái. */
+  --color-accent: #ea580c;
+  --color-accent-subtle: #fff1e8;
+
+  /* --- Nền, bề mặt, viền (thay CGD 6.3) -------------------------------------
+     Dải trung tính ÁM SẮC ẤM thay cho xám ám xanh lam: cảm giác bê tông và thép thay vì cảm
+     giác phần mềm văn phòng. Chênh lệch nhỏ trên từng ô màu, nhưng phủ toàn màn hình thì đổi
+     hẳn không khí. */
   --color-surface: #ffffff;        /* nền chính — vùng nội dung */
-  --color-surface-sunken: #f7f8f9; /* nền phụ — vùng trũng: nền trang, panel bên */
-  --color-surface-hover: #f1f2f4;
-  --color-border: #dcdfe4;
+  --color-surface-sunken: #f6f6f4; /* nền phụ — vùng trũng: nền trang, panel bên */
+  --color-surface-hover: #efefec;
+  --color-border: #dedcd6;
+  /* Viền cần thấy rõ: đầu bảng, ô nhập liệu. Viền mảnh quá thì ô nhập trông như chữ thường. */
+  /* ≥3:1 trên nền trắng theo WCAG 1.4.11: viền là thứ DUY NHẤT cho biết đâu là ô nhập liệu,
+     nên nó phải nhìn thấy được, không chỉ là gợi ý thẩm mỹ. */
+  --color-border-strong: #9a9485;
 
   /* --- Chữ (6.3) ------------------------------------------------------------
      KHÔNG dùng đen tuyệt đối #000000 — gắt hơn mức cần thiết. */
-  --color-fg: #172b4d;       /* chữ chính — tiêu đề, nội dung quan trọng */
-  --color-fg-subtle: #44546f; /* chữ phụ — mô tả, ghi chú, thời gian */
+  --color-fg: #1c1c1a;       /* chữ chính — tương phản 16.9:1 trên nền trắng */
+  --color-fg-subtle: #5a574f; /* chữ phụ — 7.0:1 trên trắng, 6.6:1 trên nền trũng */
   --color-fg-inverse: #ffffff;
 
   /* --- 5 màu trạng thái (6.3, ánh xạ đúng Content Guidelines 5.1) -----------
      Dùng cho nhãn trạng thái dạng Lozenge. KHÔNG dùng làm nền lớn của khối giao diện.
      KHÔNG tạo màu trạng thái thứ 6. */
-  --color-status-draft: #6b778c;            /* Nháp */
-  --color-status-pending: #b38600;          /* Chờ duyệt */
+  --color-status-draft: #616b7e;            /* Nháp */
+  --color-status-pending: #906c00;          /* Chờ duyệt */
   --color-status-progress: #0c66e4;         /* Đang xử lý */
-  --color-status-completed: #22a06b;        /* Hoàn thành */
+  --color-status-completed: #1c8157;        /* Hoàn thành */
   --color-status-overdue: #ca3521;          /* Quá hạn */
 
-  /* Nền nhạt tương ứng cho Lozenge — chữ đậm trên nền nhạt cùng tông (6.2). */
+  /* Nền nhạt tương ứng cho Lozenge — chữ đậm trên nền nhạt cùng tông (6.2).
+
+     ⚠️ Ba giá trị CHỮ ở trên đã được làm đậm so với CGD 6.3 (`#6B778C` `#B38600` `#22A06B`).
+     Bản gốc không đạt tương phản 4.5:1 trên chính nền nhạt của nó: Nháp 3.83, Chờ duyệt 3.09,
+     Hoàn thành 3.11. Nhãn trạng thái là chữ 12px nên KHÔNG được tính là "chữ lớn" của WCAG,
+     tức là vẫn phải đạt 4.5:1. Đã làm đậm vừa đủ chạm ngưỡng, giữ nguyên sắc màu và nền để
+     người dùng cũ không phải học lại màu nào là trạng thái nào. Đo lại: 4.55 · 4.51 · 4.53. */
   --color-status-draft-bg: #ebecf0;
   --color-status-pending-bg: #fff7d6;
   --color-status-progress-bg: #e9f2fe;
@@ -48,14 +94,32 @@
   --color-status-overdue-bg: #ffeceb;
 
   /* --- Kiểu chữ (6.4) -------------------------------------------------------
-     Inter — thay thế mã nguồn mở cho phông chữ độc quyền của Atlassian.
-     Cỡ chữ nội dung chính 14px: đúng "mật độ thông tin có chủ đích" (6.1) —
+     Be Vietnam Pro — phông được thiết kế cho tiếng Việt, thay Inter (DESIGN_SYSTEM.md 3).
+     Toàn bộ giao diện là tiếng Việt có dấu ở cỡ 14px; phông thiết kế sẵn cho tiếng Việt đặt
+     dấu cân và không chồng lấn ở cỡ nhỏ, thay vì phải chế thêm dấu lên phông phương Tây.
+
+     Cỡ chữ nội dung chính giữ 14px: đúng "mật độ thông tin có chủ đích" (6.1) —
      đây là phần mềm quản trị, không phải ứng dụng tiêu dùng. */
   --font-sans:
-    'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
-    sans-serif;
-  --text-base: 0.875rem; /* 14px */
+    'Be Vietnam Pro', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', sans-serif;
+
+  /* Thang chữ khai TƯỜNG MINH (DESIGN_SYSTEM.md 3). Đặt cỡ tuỳ chỗ thì sau vài module sẽ có
+     bảy cỡ chữ gần giống nhau, và không ai dám sửa cỡ nào vì không biết chỗ khác đang dựa vào. */
+  --text-xs: 0.75rem;   /* 12px — nhãn phụ, chú thích, nhãn trạng thái */
+  --text-xs--line-height: 1.3333333;
+  --text-base: 0.875rem; /* 14px — nội dung chính, bảng, biểu mẫu */
   --text-base--line-height: 1.4285714;
+  --text-md: 1rem;      /* 16px — tiêu đề thẻ */
+  --text-md--line-height: 1.5;
+  --text-lg: 1.125rem;  /* 18px — tiêu đề mục */
+  --text-lg--line-height: 1.4444444;
+  --text-xl: 1.25rem;   /* 20px — tiêu đề trang */
+  --text-xl--line-height: 1.4;
+  --text-2xl: 1.5rem;   /* 24px — số liệu lớn trên Dashboard */
+  --text-2xl--line-height: 1.3333333;
+  --text-3xl: 1.875rem; /* 30px — số liệu nổi bật */
+  --text-3xl--line-height: 1.2;
 
   /* --- Bo góc (6.5) ---------------------------------------------------------
      4-8px cho thẻ, bảng, ô nhập liệu, nút. NGOẠI LỆ DUY NHẤT: nhãn trạng thái
@@ -66,8 +130,20 @@
 
   /* --- Độ nổi (6.5) ---------------------------------------------------------
      Bóng đổ RẤT NHẸ, 4 mức. KHÔNG dùng bóng đậm hoặc kiểu 3D. */
-  --shadow-card: 0 1px 1px rgb(9 30 66 / 0.13), 0 0 1px rgb(9 30 66 / 0.16);
-  --shadow-overlay: 0 4px 8px -2px rgb(9 30 66 / 0.16), 0 0 1px rgb(9 30 66 / 0.16);
+  --shadow-raised: 0 1px 2px rgb(28 28 26 / 0.06), 0 0 0 1px rgb(28 28 26 / 0.04);
+  --shadow-card: 0 1px 3px rgb(28 28 26 / 0.08), 0 0 0 1px rgb(28 28 26 / 0.05);
+  --shadow-overlay: 0 8px 24px -4px rgb(28 28 26 / 0.14), 0 0 0 1px rgb(28 28 26 / 0.06);
+  /* Đầu bảng và header dính khi cuộn: bóng chỉ đổ XUỐNG, để lúc chưa cuộn thì không thấy gì. */
+  --shadow-sticky: 0 4px 8px -4px rgb(28 28 26 / 0.10);
+
+  /* --- Chuyển động (DESIGN_SYSTEM.md 5) --------------------------------------
+     Chuyển động ở đây để GIẢI THÍCH thứ vừa đổi, không để gây chú ý. Đây là công cụ nhập liệu:
+     người dùng lặp cùng một thao tác vài chục lần một ngày, hiệu ứng dài 400ms nhân lên thành
+     thời gian chờ thật. Toàn bộ tắt dưới `prefers-reduced-motion` — xem @layer base. */
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --motion-fast: 120ms;  /* trỏ chuột, nhấn nút */
+  --motion-base: 180ms;  /* đổi tab, mở panel */
+  --motion-slow: 240ms;  /* lớp phủ, hộp thoại */
 }
 
 /* Lưới khoảng cách bội số 8px (6.5) khớp thang mặc định của Tailwind
@@ -91,6 +167,30 @@
     font-family: var(--font-sans);
     font-size: var(--text-base);
     line-height: var(--text-base--line-height);
+  }
+
+  /**
+   * Người dùng đã báo hệ điều hành là không muốn chuyển động thì tắt hết, không thương lượng.
+   *
+   * Không chỉ là sở thích: với người mắc rối loạn tiền đình, chuyển động trên màn hình gây chóng
+   * mặt và buồn nôn thật. Đặt ở @layer base một lần để không component nào phải tự nhớ.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* Số liệu tiền và khối lượng phải căn thẳng cột. Phông chữ tỷ lệ làm chữ số 1 hẹp hơn chữ số 0,
+     nên cột "125.000.000" và "99.000.000" lệch nhau — mắt không so được độ lớn theo chiều dài. */
+  .tabular-nums,
+  table {
+    font-variant-numeric: tabular-nums;
   }
 
   /* Trạng thái focus dùng màu thương hiệu (6.3) — bắt buộc cho khả năng tiếp cận (6.8). */

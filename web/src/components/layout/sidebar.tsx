@@ -35,14 +35,23 @@ export function Sidebar() {
                   to={MODULE_ROUTES[code]}
                   aria-current={activeModule === code ? 'page' : undefined}
                   className={cn(
-                    'flex items-center gap-2 rounded-sm px-2 py-2',
+                    'relative flex items-center gap-2 rounded-sm py-2 pl-4 pr-2',
+                    'transition-colors duration-(--motion-fast) ease-(--ease-out)',
                     'hover:bg-surface-hover',
                     // Mục đang hoạt động tô đậm (Webapp Flow 2.1) — một trong ba lớp
                     // định vị "luôn biết mình đang ở đâu" (Webapp Flow 6.2). Sáng theo
                     // MODULE, không theo đúng một đường dẫn: mọi màn hình trong CRM đều
                     // phải làm mục "Khách hàng & Cơ hội" sáng lên.
+                    //
+                    // Thanh chỉ mục bên trái dùng màu NHẬN DIỆN (cam an toàn). Đây là một trong
+                    // số ít chỗ được phép dùng nó: thanh điều hướng không phải vùng trạng thái
+                    // nên không có nguy cơ đọc nhầm thành "Chờ duyệt" hay "Quá hạn"
+                    // (DESIGN_SYSTEM.md 2.3).
+                    'before:absolute before:left-0 before:top-1/2 before:h-0 before:w-[3px]',
+                    'before:-translate-y-1/2 before:rounded-r-full before:bg-accent',
+                    'before:transition-[height] before:duration-(--motion-base) before:ease-(--ease-out)',
                     activeModule === code &&
-                      'bg-brand-subtle font-semibold text-brand hover:bg-brand-subtle',
+                      'bg-surface-hover font-semibold text-fg before:h-5 hover:bg-surface-hover',
                   )}
                   title={meta.description}
                 >
@@ -55,7 +64,9 @@ export function Sidebar() {
         </ul>
       </nav>
 
-      <div className="border-t border-border px-3 py-2 text-xs text-fg-subtle">
+      <div className="flex items-center gap-2 border-t border-border px-3 py-2.5 text-xs text-fg-subtle">
+        {/* Dấu thương hiệu — chỗ thứ hai được dùng màu nhận diện. */}
+        <span aria-hidden className="size-2 shrink-0 rounded-[2px] bg-accent" />
         Hệ thống Quản trị NVG
       </div>
     </aside>

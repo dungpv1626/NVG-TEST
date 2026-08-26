@@ -6,9 +6,13 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
     <input
       ref={ref}
       className={cn(
-        'h-9 w-full rounded-sm border border-border bg-surface',
+        // Viền dùng `border-strong`: viền mảnh quá thì ô nhập trông như một dòng chữ thường,
+        // người dùng không nhận ra là chỗ gõ được cho tới khi thử bấm vào.
+        'h-9 w-full rounded-sm border border-border-strong bg-surface',
         'px-3 text-fg placeholder:text-fg-subtle',
-        'disabled:cursor-not-allowed disabled:opacity-60',
+        'transition-[border-color,box-shadow] duration-(--motion-fast) ease-(--ease-out)',
+        'hover:border-fg-subtle',
+        'disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:opacity-60',
         // Viền lỗi dùng màu "Quá hạn" — cùng hệ 5 màu trạng thái, không tạo màu mới.
         'aria-[invalid=true]:border-status-overdue',
         className,

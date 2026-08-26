@@ -237,17 +237,21 @@ export function DashboardPage() {
             onClick={() => setPeriod(p)}
             aria-pressed={p === period}
             className={cn(
-              'h-10 rounded-sm border px-3 sm:h-8',
+              'h-10 cursor-pointer rounded-sm border px-3 sm:h-8',
+              'transition-colors duration-(--motion-fast) ease-(--ease-out)',
               p === period
                 ? 'border-brand bg-brand-subtle font-medium text-brand'
-                : 'border-border bg-surface hover:bg-surface-hover',
+                : 'border-border-strong bg-surface hover:bg-surface-hover',
             )}
           >
             {DASHBOARD_PERIOD_LABELS[p]}
           </button>
         ))}
         {scope.isAggregate && (
-          <span className="text-xs text-fg-subtle">
+          // Dấu hiệu chế độ gộp dùng màu NHẬN DIỆN, không dùng màu trạng thái: đây là thông tin
+          // về PHẠM VI đang xem, không phải tình trạng của hồ sơ nào (DESIGN_SYSTEM.md 2.3).
+          <span className="flex items-center gap-1.5 rounded-sm bg-accent-subtle px-2 py-1 text-xs text-fg-subtle">
+            <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-accent" />
             Đang gộp số liệu mọi pháp nhân. Chọn một pháp nhân ở thanh bên để xem riêng.
           </span>
         )}
@@ -262,7 +266,7 @@ export function DashboardPage() {
           ) : (
             <Link to="/viec-can-lam" className="block hover:underline">
               <span className="flex items-center gap-2">
-                <span className="text-2xl font-semibold">{pendingCount}</span>
+                <span className="text-2xl font-semibold tabular-nums">{pendingCount}</span>
                 <StatusLozenge status="pending_approval" />
               </span>
               {pendingValue > 0n && (
@@ -280,7 +284,9 @@ export function DashboardPage() {
           ) : (
             <>
               <div className="flex items-center gap-2">
-                <span className="text-2xl font-semibold text-status-overdue">{overdueTotal}</span>
+                <span className="text-2xl font-semibold tabular-nums text-status-overdue">
+                  {overdueTotal}
+                </span>
                 <StatusLozenge status="overdue" />
               </div>
               <ul className="mt-2 space-y-1 text-xs">
@@ -344,7 +350,7 @@ function ModuleCard({ metric, period }: { metric: ModuleMetric; period: Dashboar
             to={listPathFiltered(metric.basePath, { period })}
             className="flex items-baseline gap-2 hover:underline"
           >
-            <span className="text-2xl font-semibold">{metric.records.length}</span>
+            <span className="text-2xl font-semibold tabular-nums">{metric.records.length}</span>
             <span className="text-fg-subtle">hồ sơ</span>
           </Link>
 
@@ -418,8 +424,15 @@ function QuickActions() {
  */
 function DataCompletenessNote() {
   return (
-    <section className="mt-6 rounded-lg border border-border bg-surface-sunken p-4">
-      <h2 className="font-semibold">Phần chưa có trên Dashboard</h2>
+    <section
+      className={cn(
+        'mt-6 rounded-lg border border-border bg-surface p-4',
+        // Vạch nhấn bên trái dùng màu nhận diện — đây là ghi chú về phạm vi dữ liệu, không phải
+        // cảnh báo, nên KHÔNG được dùng màu "Quá hạn" (DESIGN_SYSTEM.md 2.3).
+        'border-l-[3px] border-l-accent',
+      )}
+    >
+      <h2 className="text-md font-semibold">Phần chưa có trên Dashboard</h2>
       <p className="mt-1 text-fg-subtle">
         Dòng tiền vào – ra, công nợ phải thu, tiến độ và chi phí từng công trình, tồn kho và
         giàn giáo đang cho thuê, nhân sự – chấm công sẽ xuất hiện khi các phân hệ Thi công,
@@ -440,10 +453,15 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className={cn('rounded-lg border border-border', 'bg-surface p-4 shadow-card')}>
+    <div
+      className={cn(
+        'rounded-lg border border-border bg-surface p-4 shadow-raised',
+        'transition-shadow duration-(--motion-base) ease-(--ease-out) hover:shadow-card',
+      )}
+    >
       <div className="mb-3">
-        <h3 className="font-semibold">{title}</h3>
-        <p className="text-xs text-fg-subtle">{hint}</p>
+        <h3 className="text-md font-semibold">{title}</h3>
+        <p className="mt-0.5 text-xs text-fg-subtle">{hint}</p>
       </div>
       {children}
     </div>

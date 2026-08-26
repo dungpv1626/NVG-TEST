@@ -241,8 +241,10 @@ export function EntityTable<T extends EntityRow>({
           onChange={(e) => setParam('q', e.target.value)}
           placeholder={searchPlaceholder}
           className={cn(
-            'h-10 w-full rounded-sm border border-border bg-surface pl-8 pr-3 sm:h-8',
+            'h-10 w-full rounded-sm border border-border-strong bg-surface pl-8 pr-3 sm:h-8',
             'placeholder:text-fg-subtle',
+            'transition-[border-color] duration-(--motion-fast) ease-(--ease-out)',
+            'hover:border-fg-subtle',
           )}
         />
       </div>
@@ -254,7 +256,11 @@ export function EntityTable<T extends EntityRow>({
         <select
           value={statusFilter ?? ''}
           onChange={(e) => setParam(STATUS_FILTER_PARAM, e.target.value)}
-          className="h-10 rounded-sm border border-border bg-surface px-2 sm:h-8"
+          className={cn(
+            'h-10 cursor-pointer rounded-sm border border-border-strong bg-surface px-2 sm:h-8',
+            'transition-[border-color] duration-(--motion-fast) ease-(--ease-out)',
+            'hover:border-fg-subtle',
+          )}
         >
           <option value="">Tất cả</option>
           {STATUS_GROUPS.map((s) => (
@@ -269,7 +275,11 @@ export function EntityTable<T extends EntityRow>({
         <button
           type="button"
           onClick={() => setParam(PERIOD_FILTER_PARAM, '')}
-          className="h-10 rounded-sm border border-brand bg-brand-subtle px-3 text-brand sm:h-8"
+          className={cn(
+            'h-10 cursor-pointer rounded-sm border border-brand bg-brand-subtle px-3',
+            'font-medium text-brand sm:h-8',
+            'transition-colors duration-(--motion-fast) ease-(--ease-out) hover:bg-brand/10',
+          )}
         >
           {DASHBOARD_PERIOD_LABELS[periodFilter]} — bỏ lọc kỳ
         </button>
@@ -336,7 +346,9 @@ export function EntityTable<T extends EntityRow>({
             <li
               key={row.id}
               className={cn(
-                'rounded-lg border border-border bg-surface p-3',
+                'rounded-lg border border-border bg-surface p-3 shadow-raised',
+                'transition-[border-color,box-shadow] duration-(--motion-fast) ease-(--ease-out)',
+                'active:bg-surface-hover',
                 isSelected && 'border-brand bg-brand-subtle',
               )}
             >
@@ -403,10 +415,17 @@ export function EntityTable<T extends EntityRow>({
       </ul>
 
       {/* Khổ máy tính bảng trở lên — bảng đầy đủ cột. */}
-      <div className="hidden overflow-x-auto rounded-lg border border-border bg-surface sm:block">
+      {/* `max-h` + `sticky` để đầu bảng ở lại khi cuộn danh sách dài: cuộn tới dòng thứ 40 mà
+          không còn tên cột thì người dùng phải cuộn ngược lên để biết cột nào là gì. */}
+      <div
+        className={cn(
+          'hidden max-h-[calc(100dvh-16rem)] overflow-auto rounded-lg',
+          'border border-border bg-surface shadow-raised sm:block',
+        )}
+      >
         <table className="w-full min-w-[720px] border-collapse text-left">
-          <thead>
-            <tr className="border-b border-border text-fg-subtle">
+          <thead className="sticky top-0 z-10 bg-surface shadow-sticky">
+            <tr className="border-b border-border-strong text-xs uppercase tracking-wide text-fg-subtle">
               {selection && (
                 <th className="w-10 px-4 py-2.5">
                   <input
@@ -441,7 +460,9 @@ export function EntityTable<T extends EntityRow>({
                 <tr
                   key={row.id}
                   className={cn(
-                    'border-b border-border last:border-b-0 hover:bg-surface-hover',
+                    'border-b border-border last:border-b-0',
+                    'transition-colors duration-(--motion-fast) ease-(--ease-out)',
+                    'hover:bg-surface-hover',
                     isSelected && 'bg-brand-subtle',
                   )}
                 >
@@ -462,8 +483,11 @@ export function EntityTable<T extends EntityRow>({
                     </td>
                   )}
                   <td className="px-4 py-3">
-                    <Link to={detailPath(row)} className="text-brand hover:underline">
-                      <span className="font-medium">{row.title}</span>
+                    <Link
+                      to={detailPath(row)}
+                      className="font-medium text-fg underline-offset-2 hover:text-brand hover:underline"
+                    >
+                      {row.title}
                     </Link>
                     <div className="text-xs text-fg-subtle">{row.code}</div>
                   </td>

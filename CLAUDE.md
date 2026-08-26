@@ -442,6 +442,18 @@ luôn là người quyết định cuối cùng" (PRD 2.3).
    → `wrangler deploy` KHÔNG tự nạp `.env` lên Cloudflare — tệp đó chỉ dùng khi chạy ở máy.
      Secret chỉ lên khi truyền tường minh `--secrets-file`, nên đừng dùng cờ đó với `.env` gốc
      repo (trong đó có `service_role` và mật khẩu CSDL).
+9. **Ngôn ngữ thị giác đã nâng cấp — xem `DESIGN_SYSTEM.md` ở gốc repo.**
+   → File đó MỞ RỘNG và ở vài chỗ THAY THẾ **CGD Mục 6**. Haan dùng nó để cập nhật CGD lên v1.2.
+   → Điểm chính: dải trung tính ám sắc ấm (bê tông) thay xám ám xanh · thêm **cam an toàn
+     `#EA580C`** làm màu NHẬN DIỆN · phông **Be Vietnam Pro** tự lưu thay Inter qua Google Fonts ·
+     thang chữ và thang chuyển động khai tường minh.
+   → ⚠️ **Cam KHÔNG được dùng ở nhãn trạng thái, nền dòng bảng hay nút.** Nó nằm giữa vàng "Chờ
+     duyệt" và đỏ "Quá hạn"; đặt vào vùng trạng thái là phá hệ thống 5 màu. Chỉ dùng cho: thanh
+     chỉ mục sidebar, vạch nhấn, chuỗi biểu đồ, hình trạng thái rỗng, dấu hiệu gộp "Toàn NVG".
+   → **Ba màu chữ nhãn trạng thái của CGD 6.3 đã được làm đậm** vì bản gốc không đạt tương phản
+     4.5:1 (Nháp 3.83 · Chờ duyệt 3.09 · Hoàn thành 3.11). Sắc màu và nền giữ nguyên.
+   → Trang trưng bày mọi thành phần ở mọi trạng thái: **`/nen/giao-dien`**. Sửa token màu xong thì
+     mở trang đó để soát, đừng đi qua 20 màn hình nghiệp vụ.
 ### 6.6 Vấn đề còn mở — cần NVG xác nhận, KHÔNG tự quyết
 
 Gộp từ PRD 10, TSD 7, CGD 7, BSD 5, IPD 7:
