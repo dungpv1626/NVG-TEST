@@ -25,6 +25,21 @@ export default defineConfig({
           name: 'logic',
           include: ['shared/**/*.test.ts', 'db/**/*.test.ts'],
           environment: 'node',
+          /*
+           * Hạn 5 giây mặc định của Vitest quá ngắn cho nhóm này.
+           *
+           * Một phép thử ở đây thường gọi 5–10 lượt RPC NỐI TIẾP nhau tới Supabase ở xa (lập
+           * hồ sơ → ba bước kiểm → phê duyệt → ghi nhận chi), mỗi lượt vài trăm mili giây.
+           * Mạng chậm hơn thường lệ một chút là vượt 5 giây và test đỏ — đỏ vì HẾT GIỜ, không
+           * phải vì phân quyền hay nghiệp vụ sai.
+           *
+           * Loại đỏ đó tệ hơn không có test: nó tốn một lượt chạy lại mới biết là báo động
+           * giả, và làm người đọc quen với việc "vài test đỏ là chuyện thường" — đúng lúc có
+           * lỗi thật thì không ai để ý. Đã xác minh: cùng bộ test, cùng thời điểm, đỏ 6 chỗ
+           * với hạn 5 giây và xanh toàn bộ với hạn 30 giây.
+           */
+          testTimeout: 30_000,
+          hookTimeout: 30_000,
         },
       },
       {

@@ -233,7 +233,13 @@ export const ROLE_SEED: RoleSeed[] = [
     description: 'Tuyển dụng, hồ sơ nhân sự, chấm công 3 khối, tài sản cấp phát.',
     seesAllCompanies: false,
     defaultRoute: '/ns/viec-can-xu-ly',
-    permissions: { NS: WORK },
+    /*
+     * `approve` trên chính phân hệ NS — cùng lý do đã ghi ở `WORK_APPROVE`: đó là quyền ký
+     * xác nhận trong phân hệ, không phải hạn mức tiền. HCNS cần nó để xác nhận bảng chấm
+     * công khối văn phòng và xưởng (NS-04) và để phê duyệt điều chỉnh sau khi chốt. Khối
+     * công trường vẫn do Ban chỉ huy xác nhận bằng quyền `approve` trên phân hệ TC.
+     */
+    permissions: { NS: WORK_APPROVE, TC: VIEW },
   },
   {
     code: 'ADMIN',

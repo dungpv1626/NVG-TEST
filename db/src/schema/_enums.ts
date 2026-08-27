@@ -9,6 +9,25 @@
 import { pgEnum } from 'drizzle-orm/pg-core';
 import {
   ACCOUNTING_PERIOD_STATUSES,
+  ASSET_CONDITIONS,
+  ASSET_EVENT_TYPES,
+  ATTENDANCE_KINDS,
+  CANDIDATE_STAGES,
+  CHECKLIST_ITEM_GROUPS,
+  CHECKLIST_KINDS,
+  EMPLOYEE_STATUSES,
+  EMPLOYMENT_CONTRACT_STATUSES,
+  EMPLOYMENT_CONTRACT_TYPES,
+  HR_DOCUMENT_TYPES,
+  INSURANCE_STATUSES,
+  LABOR_WORKER_STATUSES,
+  LEAVE_REQUEST_STATUSES,
+  LEAVE_TYPES,
+  PAYROLL_ADJUSTMENT_KINDS,
+  RECRUITMENT_POSITION_STATUSES,
+  SALARY_TYPES,
+  TIMESHEET_PERIOD_STATUSES,
+  WORK_BLOCKS,
   ADVANCE_STATUSES,
   CASH_FLOW_PERIOD_TYPES,
   PARTY_TYPES,
@@ -277,3 +296,82 @@ export const accountingPeriodStatusEnum = pgEnum(
   'accounting_period_status',
   ACCOUNTING_PERIOD_STATUSES,
 );
+
+/**
+ * Module NS — Hành chính và Nhân sự (Backend Schema 4.10).
+ *
+ * Phòng Hành chính – Nhân sự CÓ khảo sát trực tiếp (PRD Mục 3) nên các danh sách này bám
+ * câu chữ PRD NS-01 → NS-11. Lý do từng giá trị xem `@nvg/shared/ns`.
+ */
+
+/** Ba khối lao động, khác nhau ở CÁCH chấm công — PRD NS-04. */
+export const workBlockEnum = pgEnum('work_block', WORK_BLOCKS);
+
+/** Tình trạng làm việc của một nhân sự — PRD NS-01, NS-03. */
+export const employeeStatusEnum = pgEnum('employee_status', EMPLOYEE_STATUSES);
+
+/** Bốn hình thức trả lương — PRD NS-06. Chỉ phân loại, KHÔNG kèm công thức. */
+export const salaryTypeEnum = pgEnum('salary_type', SALARY_TYPES);
+
+/** Loại hợp đồng lao động — PRD NS-07. */
+export const employmentContractTypeEnum = pgEnum(
+  'employment_contract_type',
+  EMPLOYMENT_CONTRACT_TYPES,
+);
+
+/** Trạng thái một hợp đồng lao động — PRD NS-07. */
+export const employmentContractStatusEnum = pgEnum(
+  'employment_contract_status',
+  EMPLOYMENT_CONTRACT_STATUSES,
+);
+
+/** Tình trạng tham gia bảo hiểm bắt buộc — PRD NS-07 "theo dõi tăng – giảm". */
+export const insuranceStatusEnum = pgEnum('insurance_status', INSURANCE_STATUSES);
+
+/** Loại giấy tờ có thời hạn — PRD NS-10, dùng chung cho nhân sự và lao động thời vụ NS-09. */
+export const hrDocumentTypeEnum = pgEnum('hr_document_type', HR_DOCUMENT_TYPES);
+
+/** Vòng đời một kỳ chấm công — PRD NS-04. */
+export const timesheetPeriodStatusEnum = pgEnum(
+  'timesheet_period_status',
+  TIMESHEET_PERIOD_STATUSES,
+);
+
+/** Loại công của một ngày — PRD NS-04, NS-05. */
+export const attendanceKindEnum = pgEnum('attendance_kind', ATTENDANCE_KINDS);
+
+/** Loại nghỉ phép — PRD NS-05. */
+export const leaveTypeEnum = pgEnum('leave_type', LEAVE_TYPES);
+
+/** Trạng thái một đơn nghỉ phép — PRD NS-05. */
+export const leaveRequestStatusEnum = pgEnum('leave_request_status', LEAVE_REQUEST_STATUSES);
+
+/** Thưởng hay phạt — PRD NS-05. */
+export const payrollAdjustmentKindEnum = pgEnum(
+  'payroll_adjustment_kind',
+  PAYROLL_ADJUSTMENT_KINDS,
+);
+
+/** Vòng đời một yêu cầu tuyển dụng — PRD NS-02. */
+export const recruitmentPositionStatusEnum = pgEnum(
+  'recruitment_position_status',
+  RECRUITMENT_POSITION_STATUSES,
+);
+
+/** Cột Kanban của màn hình Tuyển dụng — PRD NS-02, Webapp Flow Mục 7. */
+export const candidateStageEnum = pgEnum('candidate_stage', CANDIDATE_STAGES);
+
+/** Tình trạng một tài sản, công cụ dụng cụ — PRD NS-08. */
+export const assetConditionEnum = pgEnum('asset_condition', ASSET_CONDITIONS);
+
+/** Năm loại biên bản tài sản — PRD NS-08. */
+export const assetEventTypeEnum = pgEnum('asset_event_type', ASSET_EVENT_TYPES);
+
+/** Hai chiều của checklist: tiếp nhận (NS-03) và bàn giao nghỉ việc (NS-11). */
+export const checklistKindEnum = pgEnum('checklist_kind', CHECKLIST_KINDS);
+
+/** Bốn nhóm việc trong một checklist — PRD NS-03, NS-11. */
+export const checklistItemGroupEnum = pgEnum('checklist_item_group', CHECKLIST_ITEM_GROUPS);
+
+/** Tình trạng một lao động thời vụ tại công trường — PRD NS-09. */
+export const laborWorkerStatusEnum = pgEnum('labor_worker_status', LABOR_WORKER_STATUSES);

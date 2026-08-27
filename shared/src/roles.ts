@@ -126,6 +126,7 @@ export const APPROVAL_SUBJECTS = [
   // Thêm sau, nên nằm CUỐI danh sách: giá trị enum trong Postgres chỉ thêm được vào cuối
   // bằng `ALTER TYPE ... ADD VALUE`, chèn giữa sẽ làm lệch thứ tự giữa các môi trường.
   'quote_price',
+  'recruitment_position',
 ] as const;
 
 export type ApprovalSubject = (typeof APPROVAL_SUBJECTS)[number];
@@ -141,6 +142,7 @@ export const APPROVAL_SUBJECT_LABELS: Readonly<Record<ApprovalSubject, string>> 
   stocktake_adjustment: 'Điều chỉnh chênh lệch kiểm kê',
   leave_request: 'Nghỉ phép',
   quote_price: 'Báo giá gửi khách hàng',
+  recruitment_position: 'Yêu cầu tuyển dụng',
 };
 
 export interface ApprovalLimitSeed {
@@ -209,4 +211,12 @@ export const DEFAULT_APPROVAL_LIMITS: readonly ApprovalLimitSeed[] = [
 
   // Nghỉ phép (NS-05) — không gắn giá trị tiền
   { role: 'NS', subject: 'leave_request', maxAmount: null, step: 1 },
+
+  // Yêu cầu tuyển dụng (NS-02) — không gắn giá trị tiền.
+  //
+  // ⚠️ GIẢ ĐỊNH CẦN NVG XÁC NHẬN: NS-02 chỉ ghi "trưởng đơn vị gửi yêu cầu → phê duyệt" mà
+  // không nói ai duyệt. Tạm đặt Tổng Giám đốc, vì tăng biên chế là quyết định ngân sách của
+  // cả công ty chứ không phải của một phòng. Khi NVG ban hành quy chế, sửa trong Quản trị
+  // hệ thống — KHÔNG sửa file này.
+  { role: 'TGD', subject: 'recruitment_position', maxAmount: null, step: 1 },
 ] as const;

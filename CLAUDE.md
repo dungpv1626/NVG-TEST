@@ -301,10 +301,15 @@ Khai báo thẳng làm CSS variable của shadcn/ui + token Tailwind, **không d
 
 #### Chạy test: CHỈ phần liên quan tới thay đổi, không chạy toàn bộ
 
-Bộ test đầy đủ mất ~95 giây vì phần trong `db/` gọi Supabase từ xa, và chúng chập chờn theo mạng
-lẫn rate limit của Supabase Auth: mỗi lượt chạy đầy đủ lại đỏ vài test **khác nhau**, không liên
-quan đợt sửa. Chạy đầy đủ theo phản xạ vừa chậm vừa tạo báo động giả, và tốn thêm một lượt chạy
-lại mới biết là giả.
+Bộ test đầy đủ mất ~100 giây vì phần trong `db/` gọi Supabase từ xa. Chạy đầy đủ theo phản xạ
+vừa chậm vừa dễ tạo báo động giả, và tốn thêm một lượt chạy lại mới biết là giả.
+
+> Một nguồn báo động giả đã được sửa tận gốc (27/08/2026): hạn 5 giây mặc định của Vitest quá
+> ngắn cho test gọi 5–10 lượt RPC nối tiếp, nên mạng chậm hơn thường lệ là đỏ vì HẾT GIỜ chứ
+> không phải vì nghiệp vụ sai. Nhóm `logic` nay đặt `testTimeout: 30s` trong `vitest.config.ts`.
+> Vẫn còn nguồn thứ hai chưa sửa được: **rate limit của Supabase Auth** khi đăng nhập nhiều
+> tài khoản liên tiếp. Gặp test đỏ ở `db/`, hãy chạy lại đúng tệp đó TRƯỚC khi kết luận là lỗi
+> thật — nhưng nếu vẫn đỏ ở cùng chỗ thì đó là lỗi thật, đừng đổ cho mạng.
 
 | Đổi ở đâu | Chạy gì | Thời gian |
 |---|---|---|
@@ -508,8 +513,11 @@ Gộp từ PRD 10, TSD 7, CGD 7, BSD 5, IPD 7:
 | **Bộ mã vật tư / công trình / nhà cung cấp** thống nhất | NVG chưa có; sẽ tự tạo mẫu trước go-live từng giai đoạn |
 | **Khảo sát Xưởng giàn giáo (NVS) + Chỉ huy công trường** | Module TC/SX có thể phải sửa lại một phần |
 | **`unit_prices` dùng chung DA/TK/MH?** | Cần xác nhận NVO có cần bảng đơn giá riêng không (BSD 5). Đang triển khai DÙNG CHUNG, tách sẵn theo `company_id` |
-| **Ai được xem GIÁ VỐN** | Đang mở cho TGĐ/CFO/BGĐ/Admin + **DA_DT, TKE, MH** (suy từ TK-07 và MH-04/05). Lợi nhuận vẫn chỉ TGĐ/CFO/BGĐ/Admin. Sửa ở hàm `rls_sees_sensitive` |
-| **Cơ chế lương/thưởng chi tiết** từng công ty/nhóm nhân sự | Chưa cấu hình được NS-06 |
+| **Ai được xem GIÁ VỐN** | Đang mở cho TGĐ/CFO/BGĐ/Admin + **DA_DT, TKE, MH** (suy từ TK-07 và MH-04/05). Lợi nhuận vẫn chỉ TGĐ/CFO/BGĐ/Admin. Lương thêm NS và KT; **căn cước/sức khỏe/kỷ luật (`personal`) hẹp hơn lương — không có KT**. Cả bốn nhóm sửa ở cùng hàm `rls_sees_sensitive` |
+| **Cơ chế lương/thưởng chi tiết** từng công ty/nhóm nhân sự | Chưa cấu hình được NS-06. Đã có sẵn HÌNH THỨC trả lương và số công đã chốt; thiếu đúng phần công thức |
+| **Ai xác nhận bảng chấm công từng khối** (NS-04) | Đang SUY LUẬN: người có quyền `approve` trên phân hệ phụ trách khối — công trường → TC, văn phòng và xưởng → NS. Cùng gốc với "trưởng đơn vị" của KT-01, sẽ giải cùng lúc khi Module NS có cây tổ chức. Sửa trong `confirm_timesheet_period` |
+| **Một ngày công bằng mấy giờ** (NS-04) | Đang lấy **8 giờ** (Bộ luật Lao động 2019 Điều 105). Xưởng có thể chạy ca 12 giờ; nếu vậy ngày công quy đổi của khối xưởng đang sai. Sửa ở `HOURS_PER_WORKDAY` (`@nvg/shared/ns`) **và** hàm `consolidate_timesheets` — có test đối chiếu hai bản |
+| **Ai duyệt yêu cầu tuyển dụng** (NS-02) | Đang đặt Tổng Giám đốc, vì tăng biên chế là quyết định ngân sách của cả công ty. Đổi bằng cấu hình `approval_limits`, không sửa mã |
 | **"Trưởng đơn vị" ở bước 1 của luồng duyệt chi (KT-01) là AI** — Haan xác nhận 27/08/2026: chưa có thông tin, chờ khảo sát đầy đủ | Đang SUY LUẬN: người có quyền `approve` trên module phát sinh khoản chi (`payment_requests.origin_module`). Kéo theo: vai trò TC/MH/KHO được cấp `approve` trên chính phân hệ của mình. Khi Module NS có cây tổ chức, thay điều kiện trong hàm `rls_payment_step_actor` — không phải sửa chỗ nào khác |
 | **Mốc chia nhóm công nợ quá hạn** (KT-04) — Haan xác nhận 27/08/2026: chưa có mốc, giữ giả định nhưng Quản trị hệ thống phải sửa lại được | Đã chuyển thành DỮ LIỆU trong bảng `aging_buckets`, seed 30/60/90 ngày từ `DEFAULT_AGING_BUCKETS`. KHÔNG hard-code ở bất kỳ đâu — cùng quy tắc với `approval_limits` (5.2). Mốc riêng của pháp nhân THAY THẾ mốc chung, không trộn |
 | **Tên miền chính thức** · **đầu mối hỗ trợ kỹ thuật** (điền vào mẫu lỗi CGD 5.5) · **SSO** (chờ NVG có email công ty) | Chưa chặn phát triển |

@@ -92,14 +92,14 @@
 <section class="card">
   <h3>Toàn hệ thống</h3>
   <p class="xs muted">Ước lượng theo khối lượng nghiệp vụ đã chạy được đầu-cuối, không theo số dòng mã.</p>
-  <div class="bar"><span style="width: 83%"></span></div>
-  <p class="xs muted" style="margin-top:6px">Khoảng 83% chặng đường tới bản demo ~95%. <strong>Giai đoạn 1 đã nghiệm thu; Giai đoạn 2 đang chạy — Thi công, Mua hàng, Kho và nay là Kế toán – Tài chính đã xong.</strong> Vòng tiền của một công trình nay khép kín: mở công trình → công trường đề nghị mua → so sánh nhà cung cấp → đặt hàng → hàng về nhập kho → xuất cho công trình → đề nghị thanh toán đi qua bốn cấp → chi tiền → chi phí vào đúng mã công trình, và tiền khách trả về ghi thẳng vào phần &quot;đã thu&quot; của hợp đồng.</p>
+  <div class="bar"><span style="width: 88%"></span></div>
+  <p class="xs muted" style="margin-top:6px">Khoảng 88% chặng đường tới bản demo ~95%. <strong>Giai đoạn 1 đã nghiệm thu; Giai đoạn 2 đang chạy — Thi công, Mua hàng, Kho, Kế toán – Tài chính và nay là Hành chính – Nhân sự đã xong.</strong> Vòng tiền của một công trình nay khép kín: mở công trình → công trường đề nghị mua → so sánh nhà cung cấp → đặt hàng → hàng về nhập kho → xuất cho công trình → đề nghị thanh toán đi qua bốn cấp → chi tiền → chi phí vào đúng mã công trình, và tiền khách trả về ghi thẳng vào phần &quot;đã thu&quot; của hợp đồng.</p>
 
   <div class="stats">
-    <div class="stat"><b>10 / 12</b><span class="xs muted">module đã dựng (Nền tảng, CRM, Đấu thầu, Thiết kế, Hợp đồng, Báo cáo, Thi công, Mua hàng, Kho, Kế toán)</span></div>
-    <div class="stat"><b>71</b><span class="xs muted">bảng cơ sở dữ liệu</span></div>
-    <div class="stat"><b>47</b><span class="xs muted">migration đã chạy</span></div>
-    <div class="stat"><b>556</b><span class="xs muted">kiểm thử tự động, tất cả đang xanh</span></div>
+    <div class="stat"><b>11 / 12</b><span class="xs muted">module đã dựng (Nền tảng, CRM, Đấu thầu, Thiết kế, Hợp đồng, Báo cáo, Thi công, Mua hàng, Kho, Kế toán, Nhân sự)</span></div>
+    <div class="stat"><b>87</b><span class="xs muted">bảng cơ sở dữ liệu</span></div>
+    <div class="stat"><b>52</b><span class="xs muted">migration đã chạy</span></div>
+    <div class="stat"><b>617</b><span class="xs muted">kiểm thử tự động, tất cả đang xanh</span></div>
   </div>
 </section>
 
@@ -145,6 +145,9 @@
           phần bên dưới.</li>
       <li><strong>Module Kế toán – Tài chính</strong> — luồng duyệt chi bốn cấp, tạm ứng, công nợ,
           dòng tiền và chốt sổ theo kỳ. Xem phần bên dưới.</li>
+      <li><strong>Module Hành chính – Nhân sự</strong> — hồ sơ nhân sự, chấm công ba khối, nghỉ
+          phép, tài sản cấp phát, nhắc hạn giấy tờ, tuyển dụng và bàn giao nghỉ việc. Xem phần
+          bên dưới.</li>
     </ul>
   </div>
 
@@ -194,6 +197,55 @@
           thức — khung đã có (mỗi khoản đánh dấu được &quot;đã chuyển&quot; kèm số chứng từ bên
           đó), nhưng định dạng xuất phải chờ NVG chốt dùng MISA, AMIS hay Fast. Báo cáo lãi/lỗ
           theo công trình thuộc đợt Báo cáo đầy đủ ngay sau đây.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="pill s-done">Vừa xong — Module Hành chính – Nhân sự</span></h3>
+    <p class="xs muted">Phân hệ trả lời hai câu hỏi hằng tháng: tháng này ai làm bao nhiêu công, và người này đang giữ những gì của công ty.</p>
+    <ul>
+      <li><strong>Lương và căn cước bị khóa ở tầng cơ sở dữ liệu, không phải ẩn ở màn hình.</strong>
+          Đây là khác biệt quan trọng: ẩn ở màn hình thì người biết cách gọi thẳng dữ liệu vẫn đọc
+          được. Ở đây các cột lương, căn cước, ghi chú sức khỏe và kỷ luật bị thu hồi quyền đọc
+          hẳn — muốn xem phải bấm nút riêng, và mỗi lượt xem ghi lại ai xem, xem hồ sơ nào, lúc
+          nào. Sửa cũng ghi. Kế toán xem được lương để tính lương, nhưng không xem được căn cước
+          và hồ sơ sức khỏe.</li>
+      <li><strong>Chấm công ba khối, mỗi khối do đúng người phụ trách xác nhận.</strong> Văn phòng
+          theo máy chấm công, công trường do chỉ huy trưởng ghi quân số, xưởng ghi ca kèm sản
+          lượng. Ba khối ghi riêng để khối xong sớm không phải chờ khối xong muộn — nhưng
+          <em>chốt</em> thì chốt một lần cho cả ba, và hệ thống từ chối chốt khi còn khối chưa
+          xác nhận. Hành chính – Nhân sự là đầu mối tổng hợp, không phải người ký thay ba trưởng
+          đơn vị.</li>
+      <li><strong>Sửa số công sau khi chốt bắt buộc nêu lý do và ghi tên người phê duyệt.</strong>
+          Số cũ không biến mất: mỗi lần sửa để lại một dòng lịch sử có giá trị trước, giá trị sau
+          và lý do. Đây là câu chữ nguyên văn của yêu cầu NS-04, và cũng là chỗ dễ mất dấu nhất
+          khi làm trên Excel.</li>
+      <li><strong>"Nghỉ có phép" phải có đơn đã duyệt phủ đúng ngày đó.</strong> Không có đơn thì
+          hệ thống không cho ghi, và người chấm công phải ghi là nghỉ không phép. Đây chính là
+          cách một ngày nghỉ không phép lặng lẽ thành có phép lúc tính lương.</li>
+      <li><strong>Số công đã chốt chuyển thẳng sang Kế toán, không nhập lại.</strong> Kế toán bấm
+          xác nhận đã nhận; từ đó số công là số dùng để tính lương, không có bản thứ hai.</li>
+      <li><strong>Nghỉ việc tự dựng danh sách bàn giao gồm đúng những món người đó đang giữ.</strong>
+          Không phải một dòng "thu hồi tài sản" chung chung — mỗi laptop, mỗi chìa khóa là một
+          dòng riêng bấm xong được. Thứ không nằm trước mắt là thứ bị bỏ sót.</li>
+      <li><strong>Tài sản đổi tay chỉ qua biên bản.</strong> Cấp phát, điều chuyển, sửa chữa, thu
+          hồi, thanh lý — mỗi lần là một biên bản, nên trả lời được "cái máy này đã qua tay ai".
+          Không có ô sửa nhanh người giữ, và cơ sở dữ liệu cũng từ chối nếu ai đó thử.</li>
+      <li><strong>Nhắc hạn giấy tờ trước 90, 60, 30 và 7 ngày.</strong> Chứng chỉ an toàn, giấy
+          phép lái xe, bảo hiểm, khám sức khỏe. Mỗi mốc nhắc một lần, không nhắc lại cùng một mốc
+          — cảnh báo lặp là cách nhanh nhất để người ta bỏ qua cả cảnh báo thật.</li>
+      <li><strong>Tuyển dụng đi qua đúng Hộp thư Phê duyệt chung.</strong> Yêu cầu tuyển được
+          duyệt trước khi đăng tuyển; ứng viên đi qua bảng Kanban sàng lọc → phỏng vấn → đánh giá
+          → thư mời. Nhận việc thì hồ sơ nhân sự và checklist tiếp nhận tự sinh, tên và số điện
+          thoại chuyển sang, không gõ lại.</li>
+      <li><strong>Phần mềm không quyết định thay người.</strong> Không chấm điểm ứng viên, không
+          xếp hạng, không gợi ý chọn ai, không tự đánh giá thử việc, không tự kỷ luật. Hệ thống
+          tổng hợp số liệu và nhắc hạn; quyết định vẫn do người quản lý bấm và chịu trách nhiệm.</li>
+      <li class="muted"><strong>Cố ý chưa làm:</strong> công thức tính lương — chờ Nhà Việt Group
+          ban hành quy chế lương cho từng công ty và từng nhóm nhân sự. Bốn hình thức trả lương
+          (tháng, ngày công, khoán sản phẩm, khoán khối lượng) đã khai sẵn, số công đã chốt cũng
+          có; chỉ thiếu đúng phần công thức. Nhập khẩu tệp từ máy chấm công cũng chưa làm — hệ
+          thống không thay thế máy chấm công, chỉ nhận dữ liệu từ nó.</li>
     </ul>
   </div>
 
@@ -418,8 +470,8 @@
   <div class="card">
     <h3><span class="pill s-draft">Còn lại</span></h3>
     <ul>
-      <li><strong>Phần còn lại của Giai đoạn 2</strong> — Nhân sự, Sản xuất giàn giáo, Báo cáo
-          đầy đủ. Mục tiêu của cả giai đoạn: một công trình chạy trọn từ hợp đồng tới lãi/lỗ.</li>
+      <li><strong>Phần còn lại của Giai đoạn 2</strong> — Sản xuất giàn giáo và Báo cáo đầy đủ.
+          Mục tiêu của cả giai đoạn: một công trình chạy trọn từ hợp đồng tới lãi/lỗ.</li>
       <li><strong>Giai đoạn 3</strong> — liên kết chéo 12 module, rà soát phân quyền toàn hệ thống,
           tác vụ nền cảnh báo, kiểm thử đầu-cuối, dữ liệu demo cho cả ba pháp nhân.</li>
       <li><strong>AI Preliminary Design Engine</strong> (TK-10 → TK-17) — làm sau khi phần lõi đạt
@@ -464,7 +516,7 @@
       <td><strong>P3</strong> Vận hành và tài chính<br><span class="xs muted">Giai đoạn 2 của PRD</span></td>
       <td>Thi công · Mua hàng · Kho · Kế toán · Nhân sự · Sản xuất · Báo cáo đầy đủ</td>
       <td><span class="pill s-progress">Đang làm</span></td>
-      <td>Thi công, Mua hàng, Kho và Kế toán đã xong và nối liền nhau. Còn Nhân sự, Sản xuất và Báo cáo đầy đủ</td>
+      <td>Thi công, Mua hàng, Kho, Kế toán và Nhân sự đã xong và nối liền nhau. Còn Sản xuất và Báo cáo đầy đủ</td>
     </tr>
     <tr>
       <td><strong>P4</strong> Liên kết chéo và bàn giao<br><span class="xs muted">Giai đoạn 3 của PRD</span></td>
@@ -509,7 +561,8 @@
         <td>Danh mục vật tư một mã duy nhất, danh mục kho năm loại. Nhập, xuất, điều chuyển, kiểm kê. Sổ kho chỉ đổi qua phiếu — không sửa tồn bằng tay được. Không xuất quá tồn. Hàng về từ đơn mua nhập thẳng vào kho, không gõ lại. Kiểm kê tạm dừng nhập xuất của kho và chỉ điều chỉnh sổ sau khi biên bản chênh lệch được duyệt. Giàn giáo theo lô và theo tình trạng, đổi tình trạng phải có biên bản. Cảnh báo hết hàng, sắp hết, tồn lâu. Màn hình quét mã dùng được máy quét cầm tay. Còn làm việc ngoại tuyến thật và quét bằng camera.</td></tr>
     <tr><td><code>KT</code></td><td>Kế toán – Tài chính</td><td><span class="pill s-progress">Đang làm</span></td>
         <td>Đề nghị thanh toán – tạm ứng – hoàn ứng đi chung một luồng duyệt bốn cấp. Chi phí gắn vào mã công trình ngay khi phát sinh và không bị đếm hai lần với hàng mua qua Mua hàng. Tạm ứng quá hạn chặn ứng tiếp trừ khi nêu lý do. Công nợ hai chiều kèm bảng tuổi nợ; số &quot;đã thu&quot; của hợp đồng chỉ đổi qua chứng từ thu. Dòng tiền gộp cả khoản đã duyệt chưa chi. Chốt sổ theo kỳ là ràng buộc thật ở cơ sở dữ liệu. Còn phần xuất sang phần mềm kế toán chính thức — chờ NVG chốt phần mềm.</td></tr>
-    <tr><td><code>NS</code></td><td>Hành chính – Nhân sự</td><td><span class="pill s-draft">Chưa bắt đầu</span></td><td>Giai đoạn 2 · độc lập, chen vào lúc nào cũng được</td></tr>
+    <tr><td><code>NS</code></td><td>Hành chính – Nhân sự</td><td><span class="pill s-progress">Đang làm</span></td>
+        <td>Một hồ sơ duy nhất cho mỗi người, từ ứng viên tới lúc bàn giao nghỉ việc. Lương, căn cước, ghi chú sức khỏe và kỷ luật bị khóa ở tầng cơ sở dữ liệu — xem phải bấm nút riêng và mỗi lượt xem đều để lại dấu vết. Chấm công ba khối, mỗi khối do đúng người phụ trách xác nhận; chỉ chốt được khi cả ba khối đã xác nhận, và sửa sau khi chốt bắt buộc nêu lý do kèm người phê duyệt. Nghỉ phép đi qua Hộp thư Phê duyệt chung và phải được duyệt trước khi vào bảng công. Tài sản đổi tay chỉ qua biên bản; nghỉ việc tự dựng danh sách bàn giao gồm đúng những món người đó đang giữ. Nhắc hạn giấy tờ trước 90, 60, 30 và 7 ngày. Còn phần công thức lương — chờ quy chế lương của NVG.</td></tr>
     <tr><td><code>SX</code></td><td>Sản xuất &amp; Cho thuê</td><td><span class="pill s-draft">Chưa bắt đầu</span></td><td>Giai đoạn 2 · yêu cầu mới ở mức định hướng, chưa khảo sát xưởng giàn giáo</td></tr>
   </tbody>
 </table>

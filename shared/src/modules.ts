@@ -112,7 +112,7 @@ export const MODULES: Readonly<Record<ModuleCode, ModuleMeta>> = {
   },
   NS: {
     code: 'NS',
-    label: 'Nhân sự – Hành chính',
+    label: 'Hành chính – Nhân sự',
     shortLabel: 'Nhân sự',
     description: 'Hồ sơ nhân sự, tuyển dụng, chấm công 3 khối, hợp đồng lao động, tài sản cấp phát.',
     phase: 2,

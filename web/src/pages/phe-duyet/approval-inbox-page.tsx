@@ -3,7 +3,7 @@
  *
  * Một màn hình duy nhất cho MỌI loại phê duyệt ở MỌI module: báo giá (CRM-04, CRM-05), dự
  * toán (DA-07), hợp đồng và phát sinh (HD-05, HD-04), đề nghị mua (MH-02), điều chỉnh kiểm kê
- * (KHO-07), đề nghị chi và tạm ứng (KT-01, KT-03). Module mới KHÔNG phải sửa màn hình này —
+ * (KHO-07), đề nghị chi và tạm ứng (KT-01, KT-03), nghỉ phép và yêu cầu tuyển dụng (NS-05, NS-02). Module mới KHÔNG phải sửa màn hình này —
  * chỉ ghi thêm dòng vào bảng `approvals` với `subject` tương ứng, và thêm một dòng vào bảng
  * đường dẫn bên dưới nếu hồ sơ có trang riêng.
  *
@@ -42,6 +42,11 @@ function fullRecordPath(item: PendingApproval): string {
       return `/mh/de-nghi-mua/${item.entity_id}`;
     case 'payment_requests':
       return `/kt/de-nghi-thanh-toan/${item.entity_id}`;
+    case 'leave_requests':
+      // Đơn nghỉ phép không có trang theo id — màn hình Nghỉ phép liệt kê đơn kèm trạng thái.
+      return '/ns/nghi-phep';
+    case 'recruitment_positions':
+      return '/ns/tuyen-dung';
     case 'stocktakes':
       // Kiểm kê không có trang theo id — màn hình Kiểm kê liệt kê các đợt đang mở.
       return '/kho/kiem-ke';

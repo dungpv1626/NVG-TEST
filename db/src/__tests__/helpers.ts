@@ -65,7 +65,18 @@ export const ACCOUNTS = {
   muaHang: 'muahang@nhavietgroup.test',
   kho: 'kho@nhavietgroup.test',
   ketoan: 'ketoan@nhavietgroup.test',
+  nhanSu: 'nhansu@nhavietgroup.test',
 } as const;
+
+/**
+ * Năm dùng cho mọi kỳ chấm công trong test — NS-04.
+ *
+ * Kỳ chấm công là duy nhất theo (pháp nhân, năm, tháng, khối) nên test KHÔNG được dùng năm
+ * thật: chạy hai lần là đụng kỳ của lần trước, và tệ hơn là đụng kỳ do người dùng tạo trên
+ * cơ sở dữ liệu phát triển. Một năm ở xa tương lai vừa tránh va chạm vừa cho phép dọn dẹp
+ * bằng đúng một điều kiện `year >= TEST_YEAR`.
+ */
+export const TEST_TIMESHEET_YEAR = 2090;
 
 /** Bảng nghiệp vụ mà vai trò `anon` KHÔNG BAO GIỜ được đọc. */
 export const PROTECTED_TABLES = [
@@ -118,6 +129,25 @@ export async function cleanupTestData(): Promise<void> {
     await sql`DELETE FROM cash_flow_plans WHERE notes LIKE ${'%' + TEST_PREFIX + '%'}`;
     await sql`DELETE FROM accounting_periods WHERE notes LIKE ${'%' + TEST_PREFIX + '%'}`;
     await sql`DELETE FROM aging_buckets WHERE label LIKE ${'%' + TEST_PREFIX + '%'}`;
+    /*
+     * Nhân sự: xoá theo đúng chiều phụ thuộc.
+     *   `timesheets` tham chiếu kỳ chấm công và hồ sơ nhân sự với ON DELETE RESTRICT (cố ý —
+     *   một bảng công đã chốt không được mồ côi khỏi kỳ sinh ra nó), nên xoá trước cả hai.
+     *   Xoá kỳ kéo theo ngày công, xoá nhân sự kéo theo hợp đồng lao động, giấy tờ, đơn nghỉ,
+     *   thưởng – phạt và checklist (CASCADE).
+     *   `assets` phải đứng trước nhân sự: dòng checklist trỏ tới tài sản, và biên bản tài sản
+     *   trỏ tới người giữ.
+     */
+    await sql`DELETE FROM timesheets WHERE year >= 2090`;
+    await sql`DELETE FROM timesheet_periods WHERE year >= 2090`;
+    await sql`DELETE FROM asset_events WHERE asset_id IN (
+      SELECT id FROM assets WHERE name LIKE ${TEST_PREFIX + '%'}
+    )`;
+    await sql`DELETE FROM assets WHERE name LIKE ${TEST_PREFIX + '%'}`;
+    await sql`DELETE FROM recruitment_candidates WHERE full_name LIKE ${TEST_PREFIX + '%'}`;
+    await sql`DELETE FROM recruitment_positions WHERE title LIKE ${TEST_PREFIX + '%'}`;
+    await sql`DELETE FROM labor_workers WHERE full_name LIKE ${TEST_PREFIX + '%'}`;
+    await sql`DELETE FROM employees WHERE full_name LIKE ${TEST_PREFIX + '%'}`;
     // Kho: phiếu và đợt kiểm kê phải xoá TRƯỚC kho (khoá ngoại tới kho là ON DELETE
     // RESTRICT — một phiếu nhập không được mồ côi khỏi cái kho nó ghi vào).
     await sql`DELETE FROM stock_movements WHERE warehouse_id IN (

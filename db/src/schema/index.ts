@@ -40,3 +40,6 @@ export * from './kho';
 
 // --- Module KT — Kế toán và Tài chính (Backend Schema 4.9) ---
 export * from './kt';
+
+// --- Module NS — Hành chính và Nhân sự (Backend Schema 4.10) ---
+export * from './ns';

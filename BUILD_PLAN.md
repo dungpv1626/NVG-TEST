@@ -507,16 +507,60 @@ chưa có cây tổ chức (thuộc Module NS, chưa dựng). Tạm hiểu "trư
 duyệt trong module phát sinh khoản chi (`payment_requests.origin_module`). Khi NS có quan hệ quản
 lý trực tiếp, thay điều kiện trong `rls_payment_step_actor` và không phải sửa chỗ nào khác.
 
-### 3E. Module NS (BSD 4.10) — độc lập, chen vào bất cứ lúc nào
-`employees` · `employment_contracts` · `timesheets` · `leave_requests` · `recruitment_positions` · `assets_assigned`
+### 3E. Module NS (BSD 4.10) ✅ xong
+`employees` · `employment_contracts` · `hr_documents` · `timesheet_periods` +
+`timesheet_entries` + `timesheets` + `timesheet_adjustments` · `leave_requests` ·
+`payroll_adjustments` · `recruitment_positions` + `recruitment_candidates` ·
+`assets` + `asset_events` · `hr_checklists` + `hr_checklist_items` · `labor_workers`
 
-- Chấm công **3 khối**: văn phòng (máy chấm công) / công trường (chỉ huy ghi quân số) / xưởng (ca + sản lượng) (NS-04)
-- `POST /api/timesheets/consolidate` → chuyển KT tính lương, **không nhập lại**
-- `POST /api/employees/:id/offboard` → checklist thu hồi tài sản + quyền truy cập (NS-11, NEN-10)
-- Nhắc hạn giấy tờ trước 90/60/30/7 ngày (NS-10 → NEN-04)
-- ⏸ NS-06 công thức lương — **chặn bởi quy chế lương**; làm khung cấu hình được
-- ⚠️ `employees`: BSD 3.3 ghi Mẫu D, BSD 4.10 ghi Mẫu B → theo 4.10 (**B**), nhưng **cột lương vẫn
-  hạn chế theo cột như D**
+BSD 4.10 liệt kê 6 bảng, ở đây có 16. Không bảng nào là khái niệm mới — tất cả đều là bảng
+dòng, bảng lịch sử hoặc bảng hồ sơ mà chính PRD NS-01 → NS-11 đòi: giấy tờ có hạn để nhắc
+(NS-10), kỳ + ngày công + bảng tổng hợp + điều chỉnh sau chốt (NS-04 tách rõ bốn thứ này),
+biên bản tài sản (NS-08 liệt kê năm loại), checklist tiếp nhận và bàn giao (NS-03, NS-11 —
+BSD đã đặc tả endpoint trả về checklist nên phải có chỗ lưu), ứng viên (NS-02 Kanban), và
+danh sách lao động thời vụ (NS-09 — `subcontractors` của TC-06 là hồ sơ khoán việc, không
+phải danh sách con người).
+
+- ✅ **Lương, căn cước, sức khỏe, kỷ luật thu hồi quyền đọc ở tầng CỘT** (PRD NS ranh giới,
+  NEN-07): `select=*` trên `employees` bị CSDL từ chối; đọc qua `employee_salary` /
+  `employee_personal_details`, mỗi lượt ghi `sensitive_access_logs`. Sửa cũng ghi, bằng
+  trigger — chờ ứng dụng gọi hàm ghi nhật ký thì chỉ cần một màn hình quên gọi là mất dấu.
+  Hai nhóm quyền TÁCH nhau: `salary` (có Kế toán) và `personal` (không có Kế toán).
+- ✅ Chấm công **3 khối** (NS-04): mỗi khối một kỳ riêng vì ba người xác nhận khác nhau;
+  chốt kỳ chỉ chạy khi **cả ba khối** đã được trưởng đơn vị xác nhận — HCNS là đầu mối tổng
+  hợp, không phải người ký thay.
+- ✅ `consolidate_timesheets()` = `POST /api/timesheets/consolidate` (BSD 4.10), làm bằng hàm
+  CSDL theo quy tắc chọn lớp ở CLAUDE.md 3.1. Chốt xong Kế toán nhận số liệu, **không nhập lại**.
+- ✅ **Điều chỉnh sau khi chốt bắt buộc nêu lý do và ghi tên người phê duyệt** (`adjust_timesheet`,
+  bảng `timesheet_adjustments`) — nguyên văn NS-04. Số cũ không biến mất khỏi hệ thống.
+- ✅ "Nghỉ có phép" phải có **đơn nghỉ đã duyệt phủ đúng ngày đó** (NS-05). Không có đơn thì
+  CSDL từ chối — đó là cách một ngày nghỉ không phép lặng lẽ thành có phép lúc tính lương.
+- ✅ `offboard_employee()` = `POST /api/employees/:id/offboard`: checklist bàn giao gồm **đúng
+  những tài sản người đó đang giữ** (NS-08), không phải một dòng "thu hồi tài sản" chung chung.
+- ✅ Tài sản đổi người giữ/tình trạng **chỉ qua biên bản** `record_asset_event` — năm loại của NS-08.
+- ✅ Nhắc hạn giấy tờ 90/60/30/7 ngày (`scan_hr_document_reminders`, NS-10 → NEN-04), không
+  nhắc lại cùng một mốc (CGD 3.4). Hàm dành cho tác vụ nền, thu hồi quyền gọi từ trình duyệt.
+- ✅ Tuyển dụng (NS-02): yêu cầu tuyển đi qua **Hộp thư Phê duyệt dùng chung**
+  (`approval_subject = 'recruitment_position'`), ứng viên đi qua Kanban, nhận việc thì sinh
+  hồ sơ nhân sự + checklist tiếp nhận mà không gõ lại tên.
+- ⏸ NS-06 công thức lương — **chặn bởi quy chế lương** (PRD Mục 10). Ở đây chỉ có HÌNH THỨC
+  trả lương và số công đã chốt; không có bảng lương, không có công thức, không có số tiền
+  lương tính ra.
+- ⏸ Nhập khẩu tệp máy chấm công — `timesheet_entries.source` đã đánh dấu dòng nào từ máy,
+  dòng nào nhập tay; đọc tệp là việc của giao diện, không sinh bảng mới. PRD Mục 9 ghi rõ hệ
+  thống KHÔNG thay thế máy/phần mềm chấm công.
+
+⚠️ **Điểm SUY LUẬN cần Haan xác nhận với NVG** (đã ghi vào CLAUDE.md 6.6):
+- Ai là "trưởng đơn vị" xác nhận bảng công của từng khối — tạm lấy người có quyền `approve`
+  trên phân hệ phụ trách khối (công trường → TC, hai khối còn lại → NS). Cùng vướng mắc với
+  bước 1 của luồng duyệt chi KT-01, và sẽ được giải cùng lúc khi có cây tổ chức.
+- **8 giờ = một ngày công** (Bộ luật Lao động 2019 Điều 105) — xưởng có thể tính ca 12 giờ.
+- Ai duyệt **yêu cầu tuyển dụng** — tạm đặt Tổng Giám đốc vì tăng biên chế là quyết định
+  ngân sách của cả công ty.
+
+⚠️ `employees`: BSD 3.3 ghi Mẫu D, BSD 4.10 ghi Mẫu B → theo 4.10 (**B**), và **cột lương vẫn
+hạn chế theo cột như D**. Kế toán đọc được DÒNG hồ sơ (tên, khối) vì họ phải đối chiếu bảng
+công đã chốt — nhưng không đọc được căn cước, sức khỏe, kỷ luật.
 
 ### 3F. Module SX (BSD 4.12) — mức cơ bản
 `production_orders` · `material_consumption` · `rental_agreements`
@@ -671,3 +715,7 @@ theo hạn mức · truy vết ngược tới chứng từ gốc.
 | 14 | **Vật tư mua sẵn về kho chung rồi mới xuất cho công trình thì ghi chi phí lúc nào?** Mua theo đề nghị gắn công trình đã ghi khi hàng về (MH-07); còn hàng từ kho chung hiện KHÔNG về được ngân sách công trình nào. Đây là quyết định kế toán, không phải lựa chọn kỹ thuật | Phase 3C (khoảng trống thật, chưa lấp) |
 | 15 | **Ngưỡng "tồn lâu, chậm luân chuyển" 90 ngày** — đang lấy bằng một quý cho khớp chu kỳ kiểm kê | Phase 3C (đã làm, sửa ở một chỗ) |
 | 16 | **Kho tự duyệt được chênh lệch kiểm kê tới 10 triệu** — theo hạn mức mặc định. Kho vừa đếm vừa duyệt là một chốt kiểm soát yếu, cần xác nhận NVG muốn vậy | Phase 3C (đổi bằng cấu hình `approval_limits`) |
+| 17 | **Ai là "trưởng đơn vị" xác nhận bảng chấm công từng khối?** Hiện lấy người có quyền `approve` trên phân hệ phụ trách khối (công trường → TC, văn phòng và xưởng → NS). Cùng gốc với vướng mắc #6 của KT-01 | Phase 3E (đã làm, sửa ở `confirm_timesheet_period`) |
+| 18 | **Một ngày công bằng bao nhiêu giờ?** Đang lấy 8 giờ (Bộ luật Lao động 2019 Điều 105). Xưởng sản xuất có thể chạy ca 12 giờ — nếu vậy số ngày công quy đổi của khối xưởng đang sai | Phase 3E (đã làm, một hằng số ở `@nvg/shared/ns` và một chỗ trong SQL, có test đối chiếu) |
+| 19 | **Ai duyệt yêu cầu tuyển dụng?** NS-02 chỉ ghi "trưởng đơn vị gửi yêu cầu → phê duyệt". Hiện đặt Tổng Giám đốc | Phase 3E (đã làm, đổi bằng cấu hình `approval_limits`) |
+| 20 | **Kế toán được đọc hồ sơ nhân sự tới đâu?** Hiện đọc được TÊN và KHỐI của người trong pháp nhân mình (để đối chiếu bảng công), KHÔNG đọc được căn cước, sức khỏe, kỷ luật; lương vẫn phải qua hàm có ghi nhật ký | Phase 3E (đã làm, sửa ở `rls_employee_readable`) |

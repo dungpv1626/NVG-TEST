@@ -171,6 +171,34 @@ const AccountingPeriodPage = lazy(() =>
 const WarehouseListPage = lazy(() =>
   import('@/pages/kho/catalog-pages').then((m) => ({ default: m.WarehouseListPage })),
 );
+const HrDashboardPage = lazy(() =>
+  import('@/pages/ns/hr-dashboard').then((m) => ({ default: m.HrDashboardPage })),
+);
+const EmployeeListPage = lazy(() =>
+  import('@/pages/ns/employee-list').then((m) => ({ default: m.EmployeeListPage })),
+);
+const EmployeeCreatePage = lazy(() =>
+  import('@/pages/ns/employee-create').then((m) => ({ default: m.EmployeeCreatePage })),
+);
+const EmployeeDetailPage = lazy(() =>
+  import('@/pages/ns/employee-detail').then((m) => ({ default: m.EmployeeDetailPage })),
+);
+const TimesheetPage = lazy(() =>
+  import('@/pages/ns/timesheet-page').then((m) => ({ default: m.TimesheetPage })),
+);
+const LeavePage = lazy(() =>
+  import('@/pages/ns/leave-page').then((m) => ({ default: m.LeavePage })),
+);
+const AssetPage = lazy(() =>
+  import('@/pages/ns/asset-page').then((m) => ({ default: m.AssetPage })),
+);
+const HrDocumentPage = lazy(() =>
+  import('@/pages/ns/document-page').then((m) => ({ default: m.HrDocumentPage })),
+);
+const RecruitmentPage = lazy(() =>
+  import('@/pages/ns/recruitment-page').then((m) => ({ default: m.RecruitmentPage })),
+);
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -312,6 +340,21 @@ const router = createBrowserRouter(
           <Route path="kt/ky-ke-toan" element={<AccountingPeriodPage />} />
         </Route>
 
+        {/* NS — hành chính và nhân sự (NS-01 → NS-11). Chấm công ba khối là màn hình nặng
+                  nhất: nó gom việc của ba người khác nhau, nên trạng thái từng khối phải đọc
+                  được ngay chứ không nằm trong một danh sách phẳng. */}
+        <Route element={<ModuleGuard module="NS" />}>
+          <Route path="ns/viec-can-xu-ly" element={<HrDashboardPage />} />
+          <Route path="ns/nhan-su" element={<EmployeeListPage />} />
+          <Route path="ns/nhan-su/tao-moi" element={<EmployeeCreatePage />} />
+          <Route path="ns/nhan-su/:id" element={<EmployeeDetailPage />} />
+          <Route path="ns/cham-cong" element={<TimesheetPage />} />
+          <Route path="ns/giay-to" element={<HrDocumentPage />} />
+          <Route path="ns/tai-san" element={<AssetPage />} />
+          <Route path="ns/nghi-phep" element={<LeavePage />} />
+          <Route path="ns/tuyen-dung" element={<RecruitmentPage />} />
+        </Route>
+
         {/* Hộp thư Phê duyệt — MỘT màn hình cho mọi module (Webapp Flow 4.6),
                   nên nằm ở gốc chứ không thuộc đường dẫn của module nào. KHÔNG bọc
                   `ModuleGuard`: nó gom hồ sơ từ mọi phân hệ, và mỗi dòng đã tự lọc theo
@@ -327,7 +370,7 @@ const router = createBrowserRouter(
             c,
           ): c is Exclude<
             ModuleCode,
-            'BC' | 'CRM' | 'DA' | 'TK' | 'HD' | 'TC' | 'MH' | 'KHO' | 'KT'
+            'BC' | 'CRM' | 'DA' | 'TK' | 'HD' | 'TC' | 'MH' | 'KHO' | 'KT' | 'NS'
           > =>
             c !== 'BC' &&
             c !== 'CRM' &&
@@ -337,7 +380,8 @@ const router = createBrowserRouter(
             c !== 'TC' &&
             c !== 'MH' &&
             c !== 'KHO' &&
-            c !== 'KT',
+            c !== 'KT' &&
+            c !== 'NS',
         ).map((code) => (
           <Route key={code} element={<ModuleGuard module={code} />}>
             <Route path={MODULE_PATHS[code]} element={<PlaceholderPage moduleCode={code} />} />
