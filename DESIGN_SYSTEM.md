@@ -18,7 +18,27 @@ cho enterprise app), và bảng màu doanh nghiệp sáng mà nó đề xuất g
 
 Chỗ CGD còn thiếu là **bản sắc ngành**: giao diện hiện tại có thể là phần mềm quản trị của bất kỳ
 công ty nào. Nhà Việt Group là nhà thầu xây dựng — nhà xưởng công nghiệp, nhà ở dân dụng, giàn giáo
-kết cấu thép. Bản sắc đó lấy từ chính hiện trường: **xám bê tông** và **cam an toàn**.
+kết cấu thép. **(Lịch sử — xem 1.1)** Bản sắc đó từng lấy từ chính hiện trường: xám bê tông và cam
+an toàn; nay đã đổi sang rừng/bạc hà, xem 1.1 và Mục 2.
+
+### 1.1 Cập nhật — đổi bản sắc thị giác sang "rừng & bạc hà"
+
+Xác nhận với Haan: thay Brand Blue `#0C66E4` + cam an toàn `#EA580C` bằng cặp thương hiệu mới
+**rừng (forest) + bạc hà (mint)**, theo phong cách một bản demo tham chiếu ("dashboard soft light
+style"). Đây là một quyết định đổi bản sắc có chủ đích, không phải sơ suất — xác nhận riêng từng
+điểm:
+
+- **5 màu trạng thái (Nháp/Chờ duyệt/Đang xử lý/Hoàn thành/Quá hạn) GIỮ NGUYÊN Y HỆT**, không đổi
+  hex, không đổi `StatusLozenge`. Đây vẫn là hàng rào cứng nhất của hệ thống màu — test canh tại
+  `web/src/test/design-rules.test.ts` ("Ranh giới màu thương hiệu (rừng & bạc hà) với màu trạng
+  thái"): `status-lozenge.tsx` không được dùng token `brand`/`mint`/`forest`.
+- **Font GIỮ NGUYÊN Be Vietnam Pro** — bản demo tham chiếu dùng Plus Jakarta Sans nhưng Haan chọn
+  không đổi font, vì Be Vietnam Pro đã được chọn riêng cho tiếng Việt (xem Mục 3, không đổi).
+- Bo góc chuyển sang lớn/mềm hơn (9/10/14/16px, thay 4/6/8px) và độ nổi chuyển sang **phẳng +
+  hairline** (bỏ bóng ở thẻ/nút, chỉ giữ cho lớp phủ nổi thật sự) — xem Mục 2.2 và Mục 4.
+- Phạm vi áp dụng: token đổi ngay cho toàn hệ thống (mọi màn hình đọc chung `web/src/index.css`);
+  bố cục/markup khớp pixel với bản demo chỉ làm ngay cho khung sườn (Sidebar/TopBar/AppShell) +
+  Dashboard — các module khác polish dần sau.
 
 ---
 
@@ -26,29 +46,42 @@ kết cấu thép. Bản sắc đó lấy từ chính hiện trường: **xám b
 
 ### 2.1 Giữ nguyên — không đụng tới
 
-| Vai trò | Mã | Ghi chú |
-|---|---|---|
-| Hành động chính | `#0C66E4` | **DUY NHẤT một hành động chính mỗi màn hình.** Không đổi, không thêm màu thứ hai cho nút. |
-| Nháp · Chờ duyệt · Đang xử lý · Hoàn thành · Quá hạn | `#6B778C` · `#B38600` · `#0C66E4` · `#22A06B` · `#CA3521` | 5 màu trạng thái. **Không tạo màu thứ 6.** |
+| Vai trò                                              | Mã                                                        | Ghi chú                                                                                                                                                                                                                                    |
+| ---------------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Nháp · Chờ duyệt · Đang xử lý · Hoàn thành · Quá hạn | `#6B778C` · `#B38600` · `#0C66E4` · `#22A06B` · `#CA3521` | 5 màu trạng thái. **Không tạo màu thứ 6.** Riêng "Đang xử lý" trùng hex với Brand Blue cũ — đó là hai token ĐỘC LẬP (`--color-status-progress` và `--color-brand`), trùng ngẫu nhiên; đổi `--color-brand` KHÔNG kéo theo đổi "Đang xử lý". |
 
-### 2.2 Thay thế CGD 6.3 — dải trung tính ám sắc ấm
+> Brand Blue `#0C66E4` làm "hành động chính" — hàng rào đã bị dỡ bỏ có chủ đích, xem 1.1 và 2.4.
 
-Xám cũ ám xanh lam (`#F7F8F9`, `#DCDFE4`, `#172B4D`). Thay bằng dải ám sắc **ấm** — cảm giác bê
-tông và thép thay vì cảm giác phần mềm văn phòng. Chênh lệch rất nhỏ trên từng ô màu, nhưng phủ
-toàn màn hình thì đổi hẳn không khí.
+### 2.2 Thay thế CGD 6.3 — dải trung tính ám sắc XANH LÁ nhạt
 
-| Token | Cũ (CGD 6.3) | Mới | Dùng cho |
-|---|---|---|---|
-| `--color-surface` | `#FFFFFF` | `#FFFFFF` | nền thẻ, nền bảng |
-| `--color-surface-sunken` | `#F7F8F9` | `#F6F6F4` | nền trang, vùng trũng |
-| `--color-surface-hover` | `#F1F2F4` | `#EFEFEC` | dòng đang trỏ tới |
-| `--color-border` | `#DCDFE4` | `#DEDCD6` | viền mảnh |
-| `--color-border-strong` | *(chưa có)* | `#C4C1B8` | viền cần thấy rõ: đầu bảng, ô nhập |
-| `--color-fg` | `#172B4D` | `#1C1C1A` | chữ chính |
-| `--color-fg-subtle` | `#44546F` | `#5A574F` | chữ phụ |
+Cập nhật 1.1: dải ấm (bê tông/thép) trước đó đổi tiếp sang dải ám sắc **xanh lá nhạt**, khớp nền
+của bản demo tham chiếu.
 
-Tương phản đã kiểm: `#1C1C1A` trên `#FFFFFF` ≈ 16.9:1 · `#5A574F` trên `#FFFFFF` ≈ 7.0:1 ·
-`#5A574F` trên `#F6F6F4` ≈ 6.6:1. Đều vượt mức AA 4.5:1.
+| Token                    | Trước 1.1 | Hiện tại               | Dùng cho                           |
+| ------------------------ | --------- | ---------------------- | ---------------------------------- |
+| `--color-surface`        | `#FFFFFF` | `#FFFFFF`              | nền thẻ, nền bảng                  |
+| `--color-surface-sunken` | `#F6F6F4` | `#F2F7F2`              | nền trang, vùng trũng              |
+| `--color-surface-hover`  | `#EFEFEC` | `#F4F8F4`              | dòng đang trỏ tới                  |
+| `--color-border`         | `#DEDCD6` | `#E7EDE7`              | viền mảnh                          |
+| `--color-border-strong`  | `#9A9485` | `#9A9485` (giữ nguyên) | viền cần thấy rõ: đầu bảng, ô nhập |
+| `--color-fg`             | `#1C1C1A` | `#1C1C1A` (giữ nguyên) | chữ chính                          |
+| `--color-fg-subtle`      | `#5A574F` | `#5A574F` (giữ nguyên) | chữ phụ                            |
+
+`fg`/`fg-subtle`/`border-strong` KHÔNG đổi theo bản demo dù nó có giá trị tương ứng riêng
+(`#14231C`/`#7E8E85`/`#C6D8C9`) — đã tự kiểm và cả ba đều **không đạt** ngưỡng bắt buộc: chữ phụ
+`#7E8E85` chỉ 3.45:1 trên nền trắng (cần ≥4.5:1), viền `#C6D8C9` chỉ 1.49:1 trên nền trắng (cần
+≥3:1). Giữ nguyên giá trị cũ đã kiểm thay vì chép nguyên bản demo.
+
+Tương phản đã kiểm lại với nền mới: `#1C1C1A` trên `#F2F7F2` ≈ 15.74:1 · `#5A574F` trên `#F2F7F2` ≈
+6.65:1. Đều vượt mức AA 4.5:1.
+
+Token hẹp, dùng cục bộ, mới thêm theo bản demo (không thay thế 4 token nền/viền ở trên):
+`--color-surface-muted` `#F5F8F5` (search box, nút icon topbar) · `--color-surface-subtle`
+`#F3F7F3` (ô icon trung tính) · `--color-surface-empty` `#F7FAF7` (nền khối rỗng) ·
+`--color-border-dashed` `#DEE8DF` (viền khối rỗng) · `--color-chart-neutral` `#9BAAA1` và
+`--color-chart-positive` `#3E8B5E` (dot của PillBadge trên Dashboard — cố tình lệch hex với
+status-draft/status-completed, hai hệ màu độc lập) · `--color-tint-amber(-bg)`/`--color-tint-teal
+(-bg)`/`--color-tint-forest-bg` (ô icon từng loại thẻ KPI trên Dashboard).
 
 ### 2.3 Sửa lỗi trợ năng trong bảng màu trạng thái CGD 6.3
 
@@ -57,10 +90,10 @@ nó. Nhãn trạng thái là chữ 12px nên không được tính là "chữ l�
 4.5:1. Đã làm đậm vừa đủ chạm ngưỡng, **giữ nguyên sắc màu và nền** để không ai phải học lại màu
 nào ứng với trạng thái nào.
 
-| Trạng thái | CGD 6.3 | Mới | Tương phản |
-|---|---|---|---|
-| Nháp | `#6B778C` | `#616B7E` | 3.83 → **4.55** |
-| Chờ duyệt | `#B38600` | `#906C00` | 3.09 → **4.51** |
+| Trạng thái | CGD 6.3   | Mới       | Tương phản      |
+| ---------- | --------- | --------- | --------------- |
+| Nháp       | `#6B778C` | `#616B7E` | 3.83 → **4.55** |
+| Chờ duyệt  | `#B38600` | `#906C00` | 3.09 → **4.51** |
 | Hoàn thành | `#22A06B` | `#1C8157` | 3.11 → **4.53** |
 
 "Đang xử lý" (4.61) và "Quá hạn" (4.56) vốn đã đạt — giữ nguyên.
@@ -69,22 +102,31 @@ Cùng lý do, `--color-border-strong` đặt ở `#9A9485` để đạt ≥3:1 t
 viền là thứ DUY NHẤT cho biết đâu là ô nhập liệu, nên nó phải nhìn thấy được chứ không chỉ là
 gợi ý thẩm mỹ.
 
-### 2.4 Bổ sung CGD 6.3 — cam an toàn `#EA580C`
+### 2.4 Rừng & bạc hà — màu thương hiệu (thay cam an toàn `#EA580C`, cập nhật 1.1)
 
-Màu **nhận diện**, không phải màu hành động và không phải màu trạng thái.
+Cam an toàn từng là màu **nhận diện tách biệt** khỏi hành động (Brand Blue). Từ 1.1, hai vai trò
+đó **gộp làm một**: rừng/bạc hà vừa là màu hành động chính, vừa là màu nhận diện thương hiệu — bản
+demo tham chiếu tự nó dùng đúng một cặp màu cho cả logo lẫn nút/pill nhấn, nên tách hai token riêng
+như trước không còn cần thiết.
 
-**CHỈ được dùng ở:**
-- dấu thương hiệu và thanh chỉ mục đang chọn trên sidebar
-- đường phân mục / vạch nhấn trên Dashboard
-- chuỗi dữ liệu biểu đồ khi cần màu thứ hai
-- hình minh hoạ trạng thái rỗng
-- dấu hiệu đang ở chế độ gộp "Toàn NVG"
+| Token                    | Mã                     | Vai trò                                                                                                        |
+| ------------------------ | ---------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `--color-brand`          | `#2C6E4B` (forest-600) | Hành động chính, liên kết, focus ring — **vẫn DUY NHẤT một hành động chính mỗi màn hình**, không rải khắp nơi. |
+| `--color-brand-hover`    | `#1B5138` (forest-700) | Hover/active của hành động chính.                                                                              |
+| `--color-brand-subtle`   | `#D9F2D4` (mint-100)   | Nền nhạt: badge, hover menu, ô chọn, nav active.                                                               |
+| `--color-brand-forest`   | `#17352A`              | Khối logo, nền avatar, chữ nav active.                                                                         |
+| `--color-brand-mint`     | `#A8E6A1`              | Nền pill kỳ báo cáo đang chọn (segmented control).                                                             |
+| `--color-brand-mint-ink` | `#123024`              | Chữ trên nền mint.                                                                                             |
 
-**CẤM tuyệt đối:** nhãn trạng thái (Lozenge) · nền dòng bảng · nút bấm · biểu tượng cảnh báo.
+`--color-brand` chọn forest-600 chứ không phải forest đậm hay mint: chữ trắng trên `#2C6E4B` đạt
+6.11:1 (≥4.5:1) — đủ sáng để đọc là "màu hành động", đủ tối để giữ chữ trắng. Chữ trắng trên mint
+`#A8E6A1` chỉ 1.45:1 — không dùng làm nền nút.
 
-> Lý do cấm không phải thẩm mỹ. Cam nằm giữa vàng "Chờ duyệt" `#B38600` và đỏ "Quá hạn" `#CA3521`.
-> Một chấm cam cạnh một nhãn vàng là hai tín hiệu người dùng phải phân biệt trong nửa giây khi quét
-> bảng 50 dòng. Đặt cam vào vùng trạng thái là phá chính hệ thống trạng thái mà CGD sinh ra để bảo vệ.
+**CẤM tuyệt đối (không đổi so với trước 1.1):** nhãn trạng thái (Lozenge) không được dùng bất kỳ
+token `brand`/`mint`/`forest` nào — canh bằng test ở `web/src/test/design-rules.test.ts`. Lý do
+giữ nguyên tinh thần cấm cam trước đây: rừng/mint và xanh lá "Hoàn thành" (`#1C8157`) là hai sắc
+xanh gần nhau, để chúng lẫn vào cùng một nhãn là buộc người dùng phân biệt hai tín hiệu xanh trong
+nửa giây khi quét bảng — đúng vấn đề mà quy tắc cam an toàn từng ngăn.
 
 ---
 
@@ -113,15 +155,21 @@ precache của service worker, và không gửi địa chỉ IP người dùng s
 
 **Thang chữ** — khai tường minh, không đặt cỡ tuỳ chỗ:
 
-| Token | Cỡ | Dùng cho |
-|---|---|---|
-| `--text-xs` | 12px | nhãn phụ, chú thích, nhãn trạng thái |
-| `--text-base` | **14px** | nội dung chính, bảng, biểu mẫu |
-| `--text-md` | 16px | tiêu đề thẻ |
-| `--text-lg` | 18px | tiêu đề mục |
-| `--text-xl` | 20px | tiêu đề trang |
-| `--text-2xl` | 24px | số liệu lớn trên Dashboard |
-| `--text-3xl` | 30px | số liệu nổi bật |
+| Token               | Cỡ       | Dùng cho                                                                                                    |
+| ------------------- | -------- | ----------------------------------------------------------------------------------------------------------- |
+| `--text-xs`         | 12px     | nhãn phụ, chú thích, nhãn trạng thái                                                                        |
+| `--text-base`       | **14px** | nội dung chính, bảng, biểu mẫu                                                                              |
+| `--text-md`         | 16px     | tiêu đề thẻ                                                                                                 |
+| `--text-lg`         | 18px     | tiêu đề mục                                                                                                 |
+| `--text-xl`         | 20px     | tiêu đề trang                                                                                               |
+| `--text-2xl`        | 24px     | số liệu lớn trên Dashboard                                                                                  |
+| `--text-3xl`        | 30px     | số liệu nổi bật                                                                                             |
+| `--text-page-title` | 26px     | tiêu đề trang Dashboard (`PageHeader size="hero"`, cập nhật 1.1 — mọi trang khác vẫn dùng `--text-xl` 20px) |
+| `--text-hero`       | 34px     | số liệu hero trên thẻ KPI nổi bật nhất của Dashboard (cập nhật 1.1)                                         |
+
+Cập nhật 1.1: thêm nét 700/800 (`@fontsource/be-vietnam-pro/700.css`, `800.css`) để phục vụ hai
+cỡ chữ đậm ở trên — dùng qua `font-bold`/`font-extrabold`, không cần token trọng lượng riêng vì
+chỉ 2 chỗ dùng.
 
 **Chữ nội dung vẫn 14px.** Mật độ thông tin là yêu cầu nghiệp vụ (CGD 6.1), không phải thứ đem ra
 đánh đổi cho "thoáng đẹp".
@@ -131,16 +179,22 @@ hàng thì bảng dự toán mất tác dụng.
 
 ---
 
-## 4. Độ nổi — tinh chỉnh CGD 6.5
+## 4. Độ nổi — PHẲNG + HAIRLINE (cập nhật 1.1, thay bản "bóng rất nhẹ" trước đó)
 
-Giữ 4 mức, không đổi triết lý "bóng rất nhẹ". Tinh lại để thẻ tách khỏi nền mà không nặng:
+Bản demo tham chiếu không dùng box-shadow ở bất kỳ đâu trên thẻ/nút/khung sườn — chiều sâu đến
+từ viền 1px trên nền có sắc (`--color-surface` trên `--color-surface-sunken`). Đã áp dụng cho
+Button, các thẻ trong phạm vi restyle (Dashboard, KpiCard), và `BlockedNotice`/`EmptyState`/
+`ErrorState` ở trang trưng bày.
 
-| Token | Dùng cho |
-|---|---|
-| `--shadow-raised` | thẻ trên nền trũng |
-| `--shadow-card` | thẻ cần tách rõ hơn |
-| `--shadow-overlay` | menu thả xuống, hộp thoại |
-| `--shadow-sticky` | đầu bảng và header dính khi cuộn |
+| Token                              | Còn dùng ở đâu                                                                                                                                                                  |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--shadow-overlay`                 | **Duy nhất** cho lớp phủ NỔI THẬT SỰ (menu thả xuống Radix, hộp thoại) — nó portal ra ngoài luồng tài liệu, viền mảnh không đủ tách nó khỏi nội dung phía sau.                  |
+| `--shadow-sticky`                  | Đầu bảng/header dính khi cuộn ở các trang chưa restyle đợt này.                                                                                                                 |
+| `--shadow-raised`, `--shadow-card` | Giữ định nghĩa (chưa xoá) vì nhiều trang ngoài phạm vi Dashboard/khung sườn còn tham chiếu — ngưng dùng ở component mới, dọn hẳn khi mọi trang đã chuyển sang phẳng + hairline. |
+
+Bo góc cũng đổi theo bản demo: `--radius-sm/md/lg` từ 4/6/8px lên **9/10/14px**, thêm
+`--radius-xl` 16px cho panel sidebar. `rounded-full` (Lozenge, pill) không đổi — utility có sẵn
+của Tailwind, không phải token.
 
 ---
 
@@ -148,11 +202,11 @@ Giữ 4 mức, không đổi triết lý "bóng rất nhẹ". Tinh lại để t
 
 CGD 6.1 cấm "hoạt ảnh phô trương" nhưng không nói gì về chuyển động chức năng. Bổ sung:
 
-| Token | Thời lượng | Dùng cho |
-|---|---|---|
-| `--motion-fast` | 120ms | trỏ chuột, nhấn nút |
-| `--motion-base` | 180ms | đổi tab, mở panel |
-| `--motion-slow` | 240ms | lớp phủ, hộp thoại |
+| Token           | Thời lượng | Dùng cho            |
+| --------------- | ---------- | ------------------- |
+| `--motion-fast` | 120ms      | trỏ chuột, nhấn nút |
+| `--motion-base` | 180ms      | đổi tab, mở panel   |
+| `--motion-slow` | 240ms      | lớp phủ, hộp thoại  |
 
 Easing chung `cubic-bezier(0.2, 0, 0, 1)` — nhanh lúc đầu, êm lúc dừng.
 
@@ -165,7 +219,7 @@ chú ý.
 ## 6. Những gì KHÔNG đổi
 
 - Chế độ tối: chưa làm (CGD 6.7). Token khai theo kiểu đổi được để sau này rẻ.
-- Bo góc 4–8px, Lozenge bo tròn hoàn toàn (CGD 6.5).
+- Lozenge bo tròn hoàn toàn (CGD 6.5) — riêng bo góc thẻ/nút/input đã đổi ở cập nhật 1.1, xem Mục 4.
 - Lưới bội số 8px (CGD 6.5).
 - Biểu tượng dạng đường nét, một màu (CGD 6.2) — Lucide React.
 - Vùng bấm ≥ 40×40px trên di động (CGD 6.8).

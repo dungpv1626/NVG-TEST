@@ -14,12 +14,14 @@
  * Tệp theo nét khai đủ các bộ ký tự KÈM `unicode-range`, nên trình duyệt tự tải đúng phần văn
  * bản cần: trang tiếng Việt lấy bộ `vietnamese` + `latin`, không đụng tới Cyrillic hay Hy Lạp.
  *
- * Ba nét 400/500/600 là đủ: mã nguồn không dùng `font-bold` ở chỗ nào (đã kiểm), nên nạp thêm
- * nét 700 chỉ là bắt mọi người tải về tệp không bao giờ hiển thị.
+ * Năm nét 400/500/600/700/800: hai nét đậm nhất phục vụ tiêu đề trang và số liệu nổi bật trên
+ * Dashboard (26px/800, 34px/800) — xem DESIGN_SYSTEM.md Mục 3.
  */
 @import '@fontsource/be-vietnam-pro/400.css';
 @import '@fontsource/be-vietnam-pro/500.css';
 @import '@fontsource/be-vietnam-pro/600.css';
+@import '@fontsource/be-vietnam-pro/700.css';
+@import '@fontsource/be-vietnam-pro/800.css';
 
 /**
  * Token thiết kế — Content Guidelines Mục 6.3 đến 6.5.
@@ -33,52 +35,66 @@
  */
 
 @theme {
-  /* --- Màu thương hiệu (6.3) ------------------------------------------------
-     DUY NHẤT một hành động chính trên mỗi màn hình, liên kết, trạng thái focus.
-     KHÔNG dùng cho trang trí hoặc nền lớn. */
-  --color-brand: #0c66e4;
-  --color-brand-hover: #0b5ed7;
-  --color-brand-subtle: #e9f2fe;
+  /* --- Màu thương hiệu — rừng & bạc hà (thay Brand Blue + cam an toàn, DESIGN_SYSTEM.md 2.4) --
+     Bản sắc mới lấy từ bản demo "dashboard soft light style" (xác nhận với Haan, xem
+     DESIGN_SYSTEM.md). `brand` dùng cho hành động chính, liên kết, focus ring — vẫn DUY NHẤT
+     một hành động chính trên mỗi màn hình, không rải khắp nơi.
+     `brand-forest`/`brand-mint`/`brand-mint-ink` là các vai trò riêng bản demo cần (khối logo
+     tối, nền pill nhấn, chữ trên nền mint) — không lấn vào 5 màu trạng thái bên dưới (xem test
+     "Ranh giới màu thương hiệu" trong design-rules.test.ts). */
+  --color-brand: #2c6e4b; /* forest-600 — hành động chính, link, focus ring */
+  --color-brand-hover: #1b5138; /* forest-700 */
+  --color-brand-subtle: #d9f2d4; /* mint-100 — nền nhạt: badge, hover menu, ô chọn */
+  --color-brand-forest: #17352a; /* forest đậm — logo, avatar nền, chữ nav active */
+  --color-brand-mint: #a8e6a1; /* mint — nền pill kỳ báo cáo đang chọn */
+  --color-brand-mint-ink: #123024; /* chữ trên nền mint (segmented control active) */
 
-  /* --- Màu NHẬN DIỆN — cam an toàn (DESIGN_SYSTEM.md 2.3) --------------------
-     Lấy từ chính hiện trường: áo phản quang, biển báo công trường.
-
-     ⚠️ KHÔNG phải màu hành động, KHÔNG phải màu trạng thái. Chỉ dùng ở: dấu thương hiệu và
-     thanh chỉ mục sidebar, vạch nhấn trên Dashboard, chuỗi biểu đồ, hình minh hoạ trạng thái
-     rỗng, dấu hiệu chế độ gộp "Toàn NVG".
-
-     CẤM ở nhãn trạng thái, nền dòng bảng, nút bấm. Cam nằm giữa vàng "Chờ duyệt" và đỏ "Quá
-     hạn" — đặt nó vào vùng trạng thái là phá hệ thống trạng thái. */
-  --color-accent: #ea580c;
-  --color-accent-subtle: #fff1e8;
-
-  /* --- Nền, bề mặt, viền (thay CGD 6.3) -------------------------------------
-     Dải trung tính ÁM SẮC ẤM thay cho xám ám xanh lam: cảm giác bê tông và thép thay vì cảm
-     giác phần mềm văn phòng. Chênh lệch nhỏ trên từng ô màu, nhưng phủ toàn màn hình thì đổi
-     hẳn không khí. */
-  --color-surface: #ffffff;        /* nền chính — vùng nội dung */
-  --color-surface-sunken: #f6f6f4; /* nền phụ — vùng trũng: nền trang, panel bên */
-  --color-surface-hover: #efefec;
-  --color-border: #dedcd6;
+  /* --- Nền, bề mặt, viền (thay CGD 6.3, cập nhật theo bản demo) --------------
+     Dải trung tính ám sắc XANH LÁ nhạt thay cho ám sắc ấm trước đó — cùng tinh thần "phẳng,
+     hairline" của bản demo. */
+  --color-surface: #ffffff; /* nền chính — vùng nội dung */
+  --color-surface-sunken: #f2f7f2; /* nền phụ — vùng trũng: nền trang, panel bên */
+  --color-surface-hover: #f4f8f4;
+  --color-border: #e7ede7;
   /* Viền cần thấy rõ: đầu bảng, ô nhập liệu. Viền mảnh quá thì ô nhập trông như chữ thường. */
   /* ≥3:1 trên nền trắng theo WCAG 1.4.11: viền là thứ DUY NHẤT cho biết đâu là ô nhập liệu,
-     nên nó phải nhìn thấy được, không chỉ là gợi ý thẩm mỹ. */
+     nên nó phải nhìn thấy được, không chỉ là gợi ý thẩm mỹ.
+     Giữ nguyên hex cũ: ứng viên tương ứng của bản demo (`#C6D8C9`) chỉ đạt 1.49:1 trên nền
+     trắng — không đạt yêu cầu. */
   --color-border-strong: #9a9485;
+  /* Token hẹp, dùng cục bộ (search box, ô icon topbar, khối rỗng...) — không phải một dải nền
+     mới thay thế surface-sunken/hover ở trên. */
+  --color-surface-muted: #f5f8f5; /* search box, nút icon topbar, chip user */
+  --color-surface-subtle: #f3f7f3; /* ô icon trung tính, nền pill trung tính */
+  --color-surface-empty: #f7faf7; /* nền khối empty-state dạng dashed */
+  --color-border-dashed: #dee8df; /* viền dashed khối empty-state */
+  /* Dot của PillBadge (breakdown trạng thái trên thẻ KPI) — CỐ TÌNH lệch hex với
+     status-draft/status-completed bên dưới: hai hệ màu độc lập, tránh học nhầm. */
+  --color-chart-neutral: #9baaa1;
+  --color-chart-positive: #3e8b5e;
+  /* Màu tint cho ô icon của từng loại thẻ KPI trên Dashboard (KpiCard) — trang trí, không phải
+     màu trạng thái hay thương hiệu. "Hoàn thành"/"Cơ hội" tái dùng brand/brand-subtle vì cùng
+     tông rừng/mint đã có; chỉ hai cặp amber/teal dưới đây là mới. */
+  --color-tint-amber-bg: #fbf3e6; /* ô icon thẻ "Gói thầu" */
+  --color-tint-amber: #b5822f;
+  --color-tint-teal-bg: #e2f0ee; /* ô icon thẻ "Dự án thiết kế" */
+  --color-tint-teal: #2e7c72;
+  --color-tint-forest-bg: #e6efe9; /* ô icon thẻ "Hợp đồng" (stroke dùng lại --color-brand) */
 
   /* --- Chữ (6.3) ------------------------------------------------------------
      KHÔNG dùng đen tuyệt đối #000000 — gắt hơn mức cần thiết. */
-  --color-fg: #1c1c1a;       /* chữ chính — tương phản 16.9:1 trên nền trắng */
+  --color-fg: #1c1c1a; /* chữ chính — tương phản 16.9:1 trên nền trắng */
   --color-fg-subtle: #5a574f; /* chữ phụ — 7.0:1 trên trắng, 6.6:1 trên nền trũng */
   --color-fg-inverse: #ffffff;
 
   /* --- 5 màu trạng thái (6.3, ánh xạ đúng Content Guidelines 5.1) -----------
      Dùng cho nhãn trạng thái dạng Lozenge. KHÔNG dùng làm nền lớn của khối giao diện.
      KHÔNG tạo màu trạng thái thứ 6. */
-  --color-status-draft: #616b7e;            /* Nháp */
-  --color-status-pending: #906c00;          /* Chờ duyệt */
-  --color-status-progress: #0c66e4;         /* Đang xử lý */
-  --color-status-completed: #1c8157;        /* Hoàn thành */
-  --color-status-overdue: #ca3521;          /* Quá hạn */
+  --color-status-draft: #616b7e; /* Nháp */
+  --color-status-pending: #906c00; /* Chờ duyệt */
+  --color-status-progress: #0c66e4; /* Đang xử lý */
+  --color-status-completed: #1c8157; /* Hoàn thành */
+  --color-status-overdue: #ca3521; /* Quá hạn */
 
   /* Nền nhạt tương ứng cho Lozenge — chữ đậm trên nền nhạt cùng tông (6.2).
 
@@ -101,49 +117,56 @@
      Cỡ chữ nội dung chính giữ 14px: đúng "mật độ thông tin có chủ đích" (6.1) —
      đây là phần mềm quản trị, không phải ứng dụng tiêu dùng. */
   --font-sans:
-    'Be Vietnam Pro', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
-    'Helvetica Neue', sans-serif;
+    'Be Vietnam Pro', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+    sans-serif;
 
   /* Thang chữ khai TƯỜNG MINH (DESIGN_SYSTEM.md 3). Đặt cỡ tuỳ chỗ thì sau vài module sẽ có
      bảy cỡ chữ gần giống nhau, và không ai dám sửa cỡ nào vì không biết chỗ khác đang dựa vào. */
-  --text-xs: 0.75rem;   /* 12px — nhãn phụ, chú thích, nhãn trạng thái */
+  --text-xs: 0.75rem; /* 12px — nhãn phụ, chú thích, nhãn trạng thái */
   --text-xs--line-height: 1.3333333;
   --text-base: 0.875rem; /* 14px — nội dung chính, bảng, biểu mẫu */
   --text-base--line-height: 1.4285714;
-  --text-md: 1rem;      /* 16px — tiêu đề thẻ */
+  --text-md: 1rem; /* 16px — tiêu đề thẻ */
   --text-md--line-height: 1.5;
-  --text-lg: 1.125rem;  /* 18px — tiêu đề mục */
+  --text-lg: 1.125rem; /* 18px — tiêu đề mục */
   --text-lg--line-height: 1.4444444;
-  --text-xl: 1.25rem;   /* 20px — tiêu đề trang */
+  --text-xl: 1.25rem; /* 20px — tiêu đề trang */
   --text-xl--line-height: 1.4;
-  --text-2xl: 1.5rem;   /* 24px — số liệu lớn trên Dashboard */
+  --text-2xl: 1.5rem; /* 24px — số liệu lớn trên Dashboard */
   --text-2xl--line-height: 1.3333333;
   --text-3xl: 1.875rem; /* 30px — số liệu nổi bật */
   --text-3xl--line-height: 1.2;
+  --text-page-title: 1.625rem; /* 26px — tiêu đề trang Dashboard (bản demo) */
+  --text-page-title--line-height: 1.15;
+  --text-hero: 2.125rem; /* 34px — số liệu hero trên thẻ KPI nổi bật nhất */
+  --text-hero--line-height: 1;
 
-  /* --- Bo góc (6.5) ---------------------------------------------------------
-     4-8px cho thẻ, bảng, ô nhập liệu, nút. NGOẠI LỆ DUY NHẤT: nhãn trạng thái
-     (Lozenge) bo tròn hoàn toàn, để luôn dễ nhận ra giữa các thành phần khác. */
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
+  /* --- Bo góc — cập nhật theo bản demo (thay 4-8px) --------------------------
+     Bo lớn và mềm hơn: 9/10/14px cho ô icon/nút/thẻ, 16px cho panel sidebar. NGOẠI LỆ DUY NHẤT
+     vẫn là nhãn trạng thái (Lozenge) bo tròn hoàn toàn (`rounded-full`, không phải token). */
+  --radius-sm: 9px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 16px;
 
-  /* --- Độ nổi (6.5) ---------------------------------------------------------
-     Bóng đổ RẤT NHẸ, 4 mức. KHÔNG dùng bóng đậm hoặc kiểu 3D. */
+  /* --- Độ nổi — chuyển sang PHẲNG + HAIRLINE theo bản demo -------------------
+     Không dùng bóng ở thẻ/nút/khung sườn — chiều sâu đến từ viền 1px trên nền có sắc. Chỉ giữ
+     bóng cho lớp phủ NỔI THẬT SỰ (menu thả xuống, hộp thoại) vì nó portal ra ngoài luồng tài
+     liệu, viền mảnh không đủ tách nó khỏi nội dung phía sau. */
   --shadow-raised: 0 1px 2px rgb(28 28 26 / 0.06), 0 0 0 1px rgb(28 28 26 / 0.04);
   --shadow-card: 0 1px 3px rgb(28 28 26 / 0.08), 0 0 0 1px rgb(28 28 26 / 0.05);
   --shadow-overlay: 0 8px 24px -4px rgb(28 28 26 / 0.14), 0 0 0 1px rgb(28 28 26 / 0.06);
   /* Đầu bảng và header dính khi cuộn: bóng chỉ đổ XUỐNG, để lúc chưa cuộn thì không thấy gì. */
-  --shadow-sticky: 0 4px 8px -4px rgb(28 28 26 / 0.10);
+  --shadow-sticky: 0 4px 8px -4px rgb(28 28 26 / 0.1);
 
   /* --- Chuyển động (DESIGN_SYSTEM.md 5) --------------------------------------
      Chuyển động ở đây để GIẢI THÍCH thứ vừa đổi, không để gây chú ý. Đây là công cụ nhập liệu:
      người dùng lặp cùng một thao tác vài chục lần một ngày, hiệu ứng dài 400ms nhân lên thành
      thời gian chờ thật. Toàn bộ tắt dưới `prefers-reduced-motion` — xem @layer base. */
   --ease-out: cubic-bezier(0.2, 0, 0, 1);
-  --motion-fast: 120ms;  /* trỏ chuột, nhấn nút */
-  --motion-base: 180ms;  /* đổi tab, mở panel */
-  --motion-slow: 240ms;  /* lớp phủ, hộp thoại */
+  --motion-fast: 120ms; /* trỏ chuột, nhấn nút */
+  --motion-base: 180ms; /* đổi tab, mở panel */
+  --motion-slow: 240ms; /* lớp phủ, hộp thoại */
 }
 
 /* Lưới khoảng cách bội số 8px (6.5) khớp thang mặc định của Tailwind

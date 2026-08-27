@@ -19,6 +19,7 @@
 import { Suspense, type ReactNode } from 'react';
 import { Outlet } from 'react-router-dom';
 import { CardGridSkeleton } from '@/components/ui/states';
+import { cn } from '@/lib/utils';
 import { Breadcrumb, type Crumb } from './breadcrumb';
 import { BottomNav } from './bottom-nav';
 import { OfflineBar, PwaPrompts } from './pwa-status';
@@ -30,13 +31,25 @@ export interface PageHeaderProps {
   description?: string;
   breadcrumbs?: Crumb[];
   actions?: ReactNode;
+  /**
+   * `'hero'` dùng cỡ chữ lớn hơn của bản demo "dashboard soft light style" (26px/800) — CHỈ
+   * Dashboard dùng, mọi trang khác giữ nguyên `'default'` (20px/600) để không đổi bố cục hàng
+   * loạt trang chưa nằm trong phạm vi restyle đợt này.
+   */
+  size?: 'default' | 'hero';
 }
 
 /**
  * Tiêu đề trang — lớp định vị thứ ba cùng với menu tô đậm và breadcrumb (Webapp Flow 6.2).
  * Quy tắc đặt tiêu đề: Content Guidelines 4.8.
  */
-export function PageHeader({ title, description, breadcrumbs = [], actions }: PageHeaderProps) {
+export function PageHeader({
+  title,
+  description,
+  breadcrumbs = [],
+  actions,
+  size = 'default',
+}: PageHeaderProps) {
   return (
     <div className="mb-4 space-y-2 lg:mb-6">
       {breadcrumbs.length > 0 && <Breadcrumb items={breadcrumbs} />}
@@ -44,7 +57,16 @@ export function PageHeader({ title, description, breadcrumbs = [], actions }: Pa
           chen ngang thì tiêu đề bị bóp còn hai chữ. */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0">
-          <h1 className="text-xl font-semibold">{title}</h1>
+          <h1
+            className={cn(
+              'text-pretty',
+              size === 'hero'
+                ? 'text-(length:--text-page-title) leading-(--text-page-title--line-height) font-extrabold tracking-tight'
+                : 'text-xl font-semibold',
+            )}
+          >
+            {title}
+          </h1>
           {description && <p className="mt-1 text-fg-subtle">{description}</p>}
         </div>
         {actions && <div className="flex flex-wrap items-center gap-2 sm:shrink-0">{actions}</div>}
@@ -58,9 +80,9 @@ export function AppShell() {
     // `100dvh` chứ không `100vh`: trên trình duyệt di động, `100vh` tính cả phần thanh địa
     // chỉ tự ẩn/hiện, nên đáy màn hình bị đẩy xuống dưới vùng nhìn thấy và thanh điều hướng
     // dưới nằm ngoài màn hình.
-    <div className="flex h-[100dvh] overflow-hidden bg-surface-sunken">
+    <div className="flex h-[100dvh] overflow-hidden bg-surface-sunken lg:gap-3 lg:p-3">
       <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden lg:gap-3">
         <TopBar />
         <OfflineBar />
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">

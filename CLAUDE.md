@@ -9,12 +9,12 @@
 
 Hệ thống quản trị nội bộ (web) cho **Nhà Việt Group** — tập đoàn 3 pháp nhân + Back Office dùng chung:
 
-| Pháp nhân | Mảng | Quy mô |
-|---|---|---|
-| **NVC** — Nhà Việt Cons | Nhà xưởng công nghiệp, tổng thầu | ~30 dự án/năm |
-| **NVO** — Nhà Việt One | Thiết kế + thi công trọn gói nhà ở dân dụng | ~70 dự án/năm |
-| **NVS** — Nhà Việt Steel | Sản xuất, thương mại, cho thuê giàn giáo/kết cấu thép | ~700 đơn hàng/năm |
-| **Back Office** | Hành chính–Nhân sự, Cung ứng–Vật tư, Kế toán, Tài chính | dùng chung toàn hệ thống |
+| Pháp nhân                | Mảng                                                    | Quy mô                   |
+| ------------------------ | ------------------------------------------------------- | ------------------------ |
+| **NVC** — Nhà Việt Cons  | Nhà xưởng công nghiệp, tổng thầu                        | ~30 dự án/năm            |
+| **NVO** — Nhà Việt One   | Thiết kế + thi công trọn gói nhà ở dân dụng             | ~70 dự án/năm            |
+| **NVS** — Nhà Việt Steel | Sản xuất, thương mại, cho thuê giàn giáo/kết cấu thép   | ~700 đơn hàng/năm        |
+| **Back Office**          | Hành chính–Nhân sự, Cung ứng–Vật tư, Kế toán, Tài chính | dùng chung toàn hệ thống |
 
 ~40 nhân sự văn phòng/ban công trường + 50–200 lao động thời vụ. Hiện trạng: toàn bộ vận hành thủ công
 trên Excel / Word / Zalo / Google Drive / email — không có nguồn dữ liệu chung (PRD 1.2).
@@ -31,14 +31,14 @@ Mục tiêu: bản **demo ~95% hoàn chỉnh trong 6 tuần**, chia 3 giai đo�
 
 Toàn bộ tài liệu nguồn nằm trong `doc/` dưới dạng `.docx`.
 
-| Mã | File | Trả lời câu hỏi | Đọc khi |
-|---|---|---|---|
-| **PRD** | `PRD_He_thong_Quan_tri_NVG_v1.3.docx` | Hệ thống làm được **GÌ**? | Cần yêu cầu chức năng, business rule, ranh giới KHÔNG làm |
-| **AFD** | `Webapp_Flow_Document_NVG_v1.0.docx` | Người dùng đi **ĐẾN ĐÂU**, như thế nào? | Dựng màn hình, điều hướng, hành trình người dùng |
-| **TSD** | `TechStack_Document_NVG_v1.1.docx` | Xây **BẰNG GÌ**, ở **ĐÂU**? | Chọn thư viện, hạ tầng, CI/CD, môi trường |
-| **CGD** | `ContentGuidelines_Document_NVG_v1.1.docx` | Hệ thống **NÓI/HIỂN THỊ** thế nào? | Viết microcopy, đặt tên nút, màu, font, khoảng cách |
-| **BSD** | `BackendSchema_Document_NVG_v1.0.docx` | Dữ liệu **TỔ CHỨC** ra sao? | Thiết kế bảng, quan hệ, RLS, API tùy chỉnh |
-| **IPD** | `ImplementationPlan_Document_NVG_v1.0.docx` | **LÀM GÌ, KHI NÀO, AI LÀM**? | Xem mốc, lịch tuần, quy trình deploy |
+| Mã      | File                                        | Trả lời câu hỏi                         | Đọc khi                                                   |
+| ------- | ------------------------------------------- | --------------------------------------- | --------------------------------------------------------- |
+| **PRD** | `PRD_He_thong_Quan_tri_NVG_v1.3.docx`       | Hệ thống làm được **GÌ**?               | Cần yêu cầu chức năng, business rule, ranh giới KHÔNG làm |
+| **AFD** | `Webapp_Flow_Document_NVG_v1.0.docx`        | Người dùng đi **ĐẾN ĐÂU**, như thế nào? | Dựng màn hình, điều hướng, hành trình người dùng          |
+| **TSD** | `TechStack_Document_NVG_v1.1.docx`          | Xây **BẰNG GÌ**, ở **ĐÂU**?             | Chọn thư viện, hạ tầng, CI/CD, môi trường                 |
+| **CGD** | `ContentGuidelines_Document_NVG_v1.1.docx`  | Hệ thống **NÓI/HIỂN THỊ** thế nào?      | Viết microcopy, đặt tên nút, màu, font, khoảng cách       |
+| **BSD** | `BackendSchema_Document_NVG_v1.0.docx`      | Dữ liệu **TỔ CHỨC** ra sao?             | Thiết kế bảng, quan hệ, RLS, API tùy chỉnh                |
+| **IPD** | `ImplementationPlan_Document_NVG_v1.0.docx` | **LÀM GÌ, KHI NÀO, AI LÀM**?            | Xem mốc, lịch tuần, quy trình deploy                      |
 
 **Cách đọc `.docx`** (chúng là file nén, không đọc trực tiếp được):
 
@@ -72,10 +72,10 @@ có mâu thuẫn kỹ thuật về TK-10→TK-17, tài liệu riêng đó là ng
 
 Đây là quyết định then chốt để làm xong 12 module trong 6 tuần. **Đọc kỹ trước khi viết bất kỳ endpoint nào.**
 
-| Lớp | Công nghệ | Dùng cho |
-|---|---|---|
-| **Nền tảng dữ liệu** | Supabase — REST tự sinh (PostgREST) + RLS | Toàn bộ CRUD thường: danh sách, chi tiết, tạo/sửa, lọc, tìm kiếm cơ bản |
-| **Logic nghiệp vụ tùy chỉnh** | Cloudflare Workers + Hono | Nghiệp vụ nhiều bước không diễn đạt được bằng CRUD |
+| Lớp                           | Công nghệ                                 | Dùng cho                                                                |
+| ----------------------------- | ----------------------------------------- | ----------------------------------------------------------------------- |
+| **Nền tảng dữ liệu**          | Supabase — REST tự sinh (PostgREST) + RLS | Toàn bộ CRUD thường: danh sách, chi tiết, tạo/sửa, lọc, tìm kiếm cơ bản |
+| **Logic nghiệp vụ tùy chỉnh** | Cloudflare Workers + Hono                 | Nghiệp vụ nhiều bước không diễn đạt được bằng CRUD                      |
 
 **Quy tắc chọn lớp** — mỗi lần định thêm một endpoint, tự hỏi:
 
@@ -90,21 +90,21 @@ endpoint mới khi BSD đã có sẵn cái tương đương.
 
 ### 3.2 Stack (TSD 1.4)
 
-| Lớp | Lựa chọn |
-|---|---|
-| Framework | **React 18 + TypeScript**, build bằng **Vite**, kiến trúc **SPA** (KHÔNG Next.js, KHÔNG SSR) |
-| Giao diện | **Tailwind CSS** + **shadcn/ui** (Radix) + **Lucide React** (icon) + **Recharts** (biểu đồ) |
-| Dữ liệu & trạng thái | **TanStack Query** (dữ liệu máy chủ) + **Zustand** (trạng thái UI thuần) + `@supabase/supabase-js` |
-| Biểu mẫu | **React Hook Form** + **Zod** (Zod dùng chung cả 2 lớp) |
-| Di động / offline | **PWA**: `vite-plugin-pwa` + Workbox cho **TOÀN BỘ** ứng dụng (xem 6.5 mục 7) · **Dexie.js** (IndexedDB) chỉ cho Kho/công trường khi làm offline thật |
-| Backend tùy chỉnh | **Cloudflare Workers** + **Hono**, API kiểu **REST/JSON** |
-| CSDL | **PostgreSQL** trên **Supabase** (managed) |
-| Schema/migration | **Drizzle ORM** + `drizzle-kit` |
-| Auth | **Supabase Auth** (email/mật khẩu; email giao dịch qua Resend/SendGrid) |
-| Lưu tệp / Realtime | **Supabase Storage** / **Supabase Realtime** |
-| Tác vụ nền | **Cloudflare Cron Triggers** (cảnh báo định kỳ NEN-04) + **Cloudflare Queues** |
-| Hosting | **Cloudflare Workers** — frontend chạy dạng Static Assets, backend là Worker riêng (xem 6.5 mục 8) + **Supabase Cloud** |
-| Kiểm thử | **Vitest** + **React Testing Library** + **Playwright** (E2E) |
+| Lớp                  | Lựa chọn                                                                                                                                              |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Framework            | **React 18 + TypeScript**, build bằng **Vite**, kiến trúc **SPA** (KHÔNG Next.js, KHÔNG SSR)                                                          |
+| Giao diện            | **Tailwind CSS** + **shadcn/ui** (Radix) + **Lucide React** (icon) + **Recharts** (biểu đồ)                                                           |
+| Dữ liệu & trạng thái | **TanStack Query** (dữ liệu máy chủ) + **Zustand** (trạng thái UI thuần) + `@supabase/supabase-js`                                                    |
+| Biểu mẫu             | **React Hook Form** + **Zod** (Zod dùng chung cả 2 lớp)                                                                                               |
+| Di động / offline    | **PWA**: `vite-plugin-pwa` + Workbox cho **TOÀN BỘ** ứng dụng (xem 6.5 mục 7) · **Dexie.js** (IndexedDB) chỉ cho Kho/công trường khi làm offline thật |
+| Backend tùy chỉnh    | **Cloudflare Workers** + **Hono**, API kiểu **REST/JSON**                                                                                             |
+| CSDL                 | **PostgreSQL** trên **Supabase** (managed)                                                                                                            |
+| Schema/migration     | **Drizzle ORM** + `drizzle-kit`                                                                                                                       |
+| Auth                 | **Supabase Auth** (email/mật khẩu; email giao dịch qua Resend/SendGrid)                                                                               |
+| Lưu tệp / Realtime   | **Supabase Storage** / **Supabase Realtime**                                                                                                          |
+| Tác vụ nền           | **Cloudflare Cron Triggers** (cảnh báo định kỳ NEN-04) + **Cloudflare Queues**                                                                        |
+| Hosting              | **Cloudflare Workers** — frontend chạy dạng Static Assets, backend là Worker riêng (xem 6.5 mục 8) + **Supabase Cloud**                               |
+| Kiểm thử             | **Vitest** + **React Testing Library** + **Playwright** (E2E)                                                                                         |
 
 ### 3.3 Cấu trúc thư mục (TSD 5.2 — monorepo, một repo GitHub duy nhất)
 
@@ -128,12 +128,12 @@ dù gọi thẳng Supabase hay qua Workers, quyền luôn được kiểm ở đ
 
 Mỗi bảng áp dụng **đúng một trong 4 mẫu chuẩn** (BSD 3.3 ghi sẵn mẫu nào cho bảng nào):
 
-| Mẫu | Logic | Áp dụng cho |
-|---|---|---|
-| **A** — theo pháp nhân | Chỉ thấy dòng có `company_id` thuộc pháp nhân người dùng (`user_companies`); BGĐ/Admin thấy mọi pháp nhân | Đa số bảng giao dịch |
-| **B** — theo người chịu trách nhiệm | Điều kiện A + chỉ người chịu trách nhiệm/phối hợp/quản lý trực tiếp mới sửa; người khác chỉ xem | Nháp báo giá, dự toán đang soạn, hồ sơ nhân sự |
-| **C** — theo hạn mức phê duyệt | Chỉ hiện trong Hộp thư Phê duyệt và cho phép duyệt nếu giá trị nằm trong hạn mức vai trò (`approval_limits`) | `price_approvals`, `payment_requests`, `contracts` |
-| **D** — hạn chế theo CỘT | Xem được dòng theo A, nhưng cột nhạy cảm (giá vốn, lợi nhuận, lương) chỉ trả giá trị thật cho vai trò được phép — vai trò khác nhận rỗng qua view riêng | `estimates`, `project_budgets`, `employees` |
+| Mẫu                                 | Logic                                                                                                                                                   | Áp dụng cho                                        |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| **A** — theo pháp nhân              | Chỉ thấy dòng có `company_id` thuộc pháp nhân người dùng (`user_companies`); BGĐ/Admin thấy mọi pháp nhân                                               | Đa số bảng giao dịch                               |
+| **B** — theo người chịu trách nhiệm | Điều kiện A + chỉ người chịu trách nhiệm/phối hợp/quản lý trực tiếp mới sửa; người khác chỉ xem                                                         | Nháp báo giá, dự toán đang soạn, hồ sơ nhân sự     |
+| **C** — theo hạn mức phê duyệt      | Chỉ hiện trong Hộp thư Phê duyệt và cho phép duyệt nếu giá trị nằm trong hạn mức vai trò (`approval_limits`)                                            | `price_approvals`, `payment_requests`, `contracts` |
+| **D** — hạn chế theo CỘT            | Xem được dòng theo A, nhưng cột nhạy cảm (giá vốn, lợi nhuận, lương) chỉ trả giá trị thật cho vai trò được phép — vai trò khác nhận rỗng qua view riêng | `estimates`, `project_budgets`, `employees`        |
 
 Mọi lượt xem/sửa dữ liệu **Mẫu D** phải ghi vào `sensitive_access_logs` (BSD 3.4, PRD NEN-07).
 
@@ -145,6 +145,7 @@ Mọi lượt xem/sửa dữ liệu **Mẫu D** phải ghi vào `sensitive_acces
 > migration tự mô tả đầy đủ, không phụ thuộc hành vi ngầm của nền tảng.
 
 > **Lưu ý — BSD tự mâu thuẫn ở 3 chỗ**:
+>
 > - `employees` ghi Mẫu **D** ở BSD 3.3 nhưng Mẫu **B** ở BSD 4.10.
 > - `quotes` ngụ ý Mẫu **B** ở BSD 3.3 nhưng ghi Mẫu **C** ở BSD 4.2.
 > - `audit_logs` ghi Mẫu **C** ở BSD 4.1 — nhưng Mẫu C nói về hạn mức tiền của hồ sơ chờ duyệt,
@@ -204,12 +205,12 @@ không có thuộc tính HTML nào ép được.
 
 Bốn nguồn đã gặp:
 
-| Nguồn | Biểu hiện trên Chrome tiếng Anh | Cách xử lý |
-|---|---|---|
-| Ràng buộc biểu mẫu (`required`, `min`, `pattern`…) | "Please fill out this field." | `setCustomValidity` bằng câu tiếng Việt — đã gom vào `Input`, xem `web/src/lib/validation-message.ts` |
-| `<input type="date">` | Ô hiện `mm/dd/yyyy`; bảng lịch hiện "September", "Su Mo Tu" | Dùng `DateInput` — ô chữ `dd/mm/yyyy` + bảng lịch tự dựng bằng tiếng Việt |
-| `<input type="number">` | Nút tăng/giảm, thông báo `step`/`min` tiếng Anh | Dùng `MoneyInput` cho tiền; ô số khác dùng `inputMode` |
-| `window.confirm` / `alert` | Nút "OK" / "Cancel" tiếng Anh | Không ép được — hạn chế dùng; việc quan trọng thì dựng hộp thoại riêng |
+| Nguồn                                              | Biểu hiện trên Chrome tiếng Anh                             | Cách xử lý                                                                                            |
+| -------------------------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Ràng buộc biểu mẫu (`required`, `min`, `pattern`…) | "Please fill out this field."                               | `setCustomValidity` bằng câu tiếng Việt — đã gom vào `Input`, xem `web/src/lib/validation-message.ts` |
+| `<input type="date">`                              | Ô hiện `mm/dd/yyyy`; bảng lịch hiện "September", "Su Mo Tu" | Dùng `DateInput` — ô chữ `dd/mm/yyyy` + bảng lịch tự dựng bằng tiếng Việt                             |
+| `<input type="number">`                            | Nút tăng/giảm, thông báo `step`/`min` tiếng Anh             | Dùng `MoneyInput` cho tiền; ô số khác dùng `inputMode`                                                |
+| `window.confirm` / `alert`                         | Nút "OK" / "Cancel" tiếng Anh                               | Không ép được — hạn chế dùng; việc quan trọng thì dựng hộp thoại riêng                                |
 
 **Quy tắc:** trước khi dùng bất kỳ điều khiển gốc nào của trình duyệt, hỏi "cái này có tự sinh
 chữ không?". Có thì phải kiểm bằng cách **đặt Chrome sang tiếng Anh rồi mở màn hình đó** —
@@ -219,29 +220,29 @@ Có test canh sẵn trong `web/src/test/design-rules.test.ts`.
 
 ### 4.2 Cơ sở dữ liệu (BSD 1.4) — áp dụng thống nhất cho MỌI bảng
 
-| Quy ước | Chuẩn |
-|---|---|
-| Tên bảng / cột | `snake_case`, tiếng Anh, **tên bảng số nhiều** (`customers`, không `customer`) |
-| Khóa chính | Cột `id`, kiểu **UUID** sinh tự động — KHÔNG số nguyên tự tăng |
-| Khóa ngoại | `<tên_bảng_số_ít>_id` (ví dụ `customer_id` → `customers`) |
-| Đa pháp nhân | `company_id` trên mọi bảng nghiệp vụ (trừ bảng dùng chung — xem 3.5) |
-| Audit columns | Mọi bảng có `created_at`, `updated_at`, `created_by`, `updated_by` |
-| Xóa mềm | Bảng nghiệp vụ quan trọng dùng `deleted_at` (rỗng = chưa xóa), KHÔNG xóa hẳn |
-| Phiên bản tài liệu | Bảng cần theo dõi phiên bản có `version` (int tăng dần) + `is_current_version` (bool) |
-| Trạng thái | Cột `status` enum, luôn quy về **5 nhóm chuẩn**: `draft` / `pending_approval` / `in_progress` / `completed` / `overdue` |
-| Tiền tệ | **`bigint`, đơn vị đồng (VNĐ), KHÔNG số thập phân** |
-| Lịch sử | Thay đổi trạng thái/giá trị quan trọng ghi vào **bảng lịch sử riêng**, không ghi đè (BSD 2.3) |
+| Quy ước            | Chuẩn                                                                                                                   |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| Tên bảng / cột     | `snake_case`, tiếng Anh, **tên bảng số nhiều** (`customers`, không `customer`)                                          |
+| Khóa chính         | Cột `id`, kiểu **UUID** sinh tự động — KHÔNG số nguyên tự tăng                                                          |
+| Khóa ngoại         | `<tên_bảng_số_ít>_id` (ví dụ `customer_id` → `customers`)                                                               |
+| Đa pháp nhân       | `company_id` trên mọi bảng nghiệp vụ (trừ bảng dùng chung — xem 3.5)                                                    |
+| Audit columns      | Mọi bảng có `created_at`, `updated_at`, `created_by`, `updated_by`                                                      |
+| Xóa mềm            | Bảng nghiệp vụ quan trọng dùng `deleted_at` (rỗng = chưa xóa), KHÔNG xóa hẳn                                            |
+| Phiên bản tài liệu | Bảng cần theo dõi phiên bản có `version` (int tăng dần) + `is_current_version` (bool)                                   |
+| Trạng thái         | Cột `status` enum, luôn quy về **5 nhóm chuẩn**: `draft` / `pending_approval` / `in_progress` / `completed` / `overdue` |
+| Tiền tệ            | **`bigint`, đơn vị đồng (VNĐ), KHÔNG số thập phân**                                                                     |
+| Lịch sử            | Thay đổi trạng thái/giá trị quan trọng ghi vào **bảng lịch sử riêng**, không ghi đè (BSD 2.3)                           |
 
 ### 4.3 UI tokens (CGD 6.3 – 6.5)
 
 Khai báo thẳng làm CSS variable của shadcn/ui + token Tailwind, **không dùng thư viện màu bên thứ ba**.
 
-| Vai trò | Mã màu |
-|---|---|
-| Brand Blue — **DUY NHẤT một hành động chính mỗi màn hình**, liên kết, focus | `#0C66E4` |
-| Nền chính / nền phụ (vùng trũng) / viền | `#FFFFFF` / `#F7F8F9` / `#DCDFE4` |
-| Chữ chính / chữ phụ (KHÔNG dùng đen `#000000`) | `#172B4D` / `#44546F` |
-| Nháp · Chờ duyệt · Đang xử lý · Hoàn thành · Quá hạn | `#6B778C` · `#B38600` · `#0C66E4` · `#22A06B` · `#CA3521` |
+| Vai trò                                                                     | Mã màu                                                    |
+| --------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Brand Blue — **DUY NHẤT một hành động chính mỗi màn hình**, liên kết, focus | `#0C66E4`                                                 |
+| Nền chính / nền phụ (vùng trũng) / viền                                     | `#FFFFFF` / `#F7F8F9` / `#DCDFE4`                         |
+| Chữ chính / chữ phụ (KHÔNG dùng đen `#000000`)                              | `#172B4D` / `#44546F`                                     |
+| Nháp · Chờ duyệt · Đang xử lý · Hoàn thành · Quá hạn                        | `#6B778C` · `#B38600` · `#0C66E4` · `#22A06B` · `#CA3521` |
 
 - Font: **Inter**; body **~14px** (mật độ thông tin có chủ đích — đây là phần mềm quản trị, không phải app tiêu dùng).
 - Khoảng cách: **lưới bội số 8px**. Bo góc **4–8px**; **ngoại lệ duy nhất**: nhãn trạng thái (Lozenge) bo tròn hoàn toàn.
@@ -266,15 +267,15 @@ Khai báo thẳng làm CSS variable của shadcn/ui + token Tailwind, **không d
 
 ### 4.5 Thuật ngữ chuẩn hóa (CGD 4.4) — mỗi khái niệm đúng MỘT từ
 
-| Khái niệm | Dùng | KHÔNG dùng |
-|---|---|---|
-| Người phụ trách chính một hồ sơ | **Người chịu trách nhiệm** | Người sở hữu, Chủ hồ sơ, Owner |
-| Đưa hồ sơ cho người có thẩm quyền | **Gửi phê duyệt** / Trình duyệt | Submit, Gửi duyệt, Gửi xin ý kiến |
-| Đồng ý một đề xuất | **Phê duyệt** (rút gọn "Duyệt" CHỈ trên nút) | Approve, Chấp thuận |
-| Đưa hồ sơ cho bộ phận tiếp theo | **Bàn giao** | Chuyển giao, Handover, Chuyển tiếp |
-| Tài liệu đang có hiệu lực | **Đang hiệu lực** | Mới nhất, Hiện hành, Active |
-| Công ty thành viên | **Pháp nhân** / gọi thẳng tên | Công ty con, Chi nhánh, Entity |
-| Quá thời hạn xử lý | **Quá hạn** | Trễ hạn, Chậm, Overdue |
+| Khái niệm                         | Dùng                                         | KHÔNG dùng                         |
+| --------------------------------- | -------------------------------------------- | ---------------------------------- |
+| Người phụ trách chính một hồ sơ   | **Người chịu trách nhiệm**                   | Người sở hữu, Chủ hồ sơ, Owner     |
+| Đưa hồ sơ cho người có thẩm quyền | **Gửi phê duyệt** / Trình duyệt              | Submit, Gửi duyệt, Gửi xin ý kiến  |
+| Đồng ý một đề xuất                | **Phê duyệt** (rút gọn "Duyệt" CHỈ trên nút) | Approve, Chấp thuận                |
+| Đưa hồ sơ cho bộ phận tiếp theo   | **Bàn giao**                                 | Chuyển giao, Handover, Chuyển tiếp |
+| Tài liệu đang có hiệu lực         | **Đang hiệu lực**                            | Mới nhất, Hiện hành, Active        |
+| Công ty thành viên                | **Pháp nhân** / gọi thẳng tên                | Công ty con, Chi nhánh, Entity     |
+| Quá thời hạn xử lý                | **Quá hạn**                                  | Trễ hạn, Chậm, Overdue             |
 
 ### 4.6 7 mẫu bố cục màn hình (AFD 4) — mọi màn hình phải thuộc một trong 7
 
@@ -311,11 +312,11 @@ vừa chậm vừa dễ tạo báo động giả, và tốn thêm một lượt 
 > tài khoản liên tiếp. Gặp test đỏ ở `db/`, hãy chạy lại đúng tệp đó TRƯỚC khi kết luận là lỗi
 > thật — nhưng nếu vẫn đỏ ở cùng chỗ thì đó là lỗi thật, đừng đổ cho mạng.
 
-| Đổi ở đâu | Chạy gì | Thời gian |
-|---|---|---|
-| `web/`, `shared/` (phần giao diện dùng) | `npx vitest run --project web` | ~4 giây, không chạm CSDL |
-| Logic thuần trong `shared/` | `npx vitest run --project logic shared/src/__tests__/<tệp>.test.ts` | vài giây |
-| Migration / RLS trong `db/` | `npx vitest run --project logic db/src/__tests__/<module>.test.ts` | tuỳ module |
+| Đổi ở đâu                               | Chạy gì                                                             | Thời gian                |
+| --------------------------------------- | ------------------------------------------------------------------- | ------------------------ |
+| `web/`, `shared/` (phần giao diện dùng) | `npx vitest run --project web`                                      | ~4 giây, không chạm CSDL |
+| Logic thuần trong `shared/`             | `npx vitest run --project logic shared/src/__tests__/<tệp>.test.ts` | vài giây                 |
+| Migration / RLS trong `db/`             | `npx vitest run --project logic db/src/__tests__/<module>.test.ts`  | tuỳ module               |
 
 Luôn kèm `npx tsc -b` và `npx prettier --check <tệp đã đổi>` — nhanh, và bắt được thứ test không bắt.
 
@@ -392,29 +393,29 @@ Hệ thống chỉ **tích hợp hoặc liên kết dữ liệu**, không thay t
 
 ### 6.1 Quyết định công nghệ đã chốt — KHÔNG mở lại trừ khi điều kiện đổi (TSD 6)
 
-| Hạng mục | Đã chọn | Đã loại | Vì sao loại |
-|---|---|---|---|
-| Kiến trúc trang | **SPA + Vite** | Next.js / SSR | App quản trị nội bộ, không cần SEO; triển khai lên Cloudflare đơn giản hơn |
-| Framework | **React 18** | Vue, Angular | Hệ sinh thái lớn nhất, công cụ AI hỗ trợ tốt nhất → giảm rủi ro tiến độ 6 tuần |
-| CSDL | **PostgreSQL** | MongoDB / NoSQL | Dữ liệu quan hệ chặt (Hồ sơ 360°), cần toàn vẹn giao dịch tài chính |
-| Nhà cung cấp CSDL | **Supabase** | Neon, PlanetScale, tự dựng VPS | Có sẵn Auth + Storage + Realtime trong cùng nền tảng; không có nhân sự DevOps |
-| Backend tùy chỉnh | **Cloudflare Workers** | Supabase Edge Functions | Gộp frontend + backend trên cùng hạ tầng Cloudflare, hiệu năng biên mạng |
-| Kiểu API | **REST** | GraphQL | Đơn giản hơn để triển khai/gỡ lỗi trong thời gian ngắn |
-| Xác thực | **Supabase Auth** | Auth0, Clerk | Đủ tính năng, không phát sinh nhà cung cấp/chi phí thêm |
-| Lưu tệp | **Supabase Storage** | Cloudflare R2 | Dùng lại đúng cơ chế RLS, không phải đồng bộ quyền ở hai nơi |
-| Di động | **PWA** | React Native | Đủ cho offline cơ bản (KHO-09), không tốn thời gian phát triển/duyệt app |
-| AI/OCR | **Google Gemini (Flash, gói miễn phí)** | Claude API, OpenAI API | Không phát sinh chi phí giai đoạn demo |
+| Hạng mục          | Đã chọn                                 | Đã loại                        | Vì sao loại                                                                    |
+| ----------------- | --------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------ |
+| Kiến trúc trang   | **SPA + Vite**                          | Next.js / SSR                  | App quản trị nội bộ, không cần SEO; triển khai lên Cloudflare đơn giản hơn     |
+| Framework         | **React 18**                            | Vue, Angular                   | Hệ sinh thái lớn nhất, công cụ AI hỗ trợ tốt nhất → giảm rủi ro tiến độ 6 tuần |
+| CSDL              | **PostgreSQL**                          | MongoDB / NoSQL                | Dữ liệu quan hệ chặt (Hồ sơ 360°), cần toàn vẹn giao dịch tài chính            |
+| Nhà cung cấp CSDL | **Supabase**                            | Neon, PlanetScale, tự dựng VPS | Có sẵn Auth + Storage + Realtime trong cùng nền tảng; không có nhân sự DevOps  |
+| Backend tùy chỉnh | **Cloudflare Workers**                  | Supabase Edge Functions        | Gộp frontend + backend trên cùng hạ tầng Cloudflare, hiệu năng biên mạng       |
+| Kiểu API          | **REST**                                | GraphQL                        | Đơn giản hơn để triển khai/gỡ lỗi trong thời gian ngắn                         |
+| Xác thực          | **Supabase Auth**                       | Auth0, Clerk                   | Đủ tính năng, không phát sinh nhà cung cấp/chi phí thêm                        |
+| Lưu tệp           | **Supabase Storage**                    | Cloudflare R2                  | Dùng lại đúng cơ chế RLS, không phải đồng bộ quyền ở hai nơi                   |
+| Di động           | **PWA**                                 | React Native                   | Đủ cho offline cơ bản (KHO-09), không tốn thời gian phát triển/duyệt app       |
+| AI/OCR            | **Google Gemini (Flash, gói miễn phí)** | Claude API, OpenAI API         | Không phát sinh chi phí giai đoạn demo                                         |
 
 Ghi chú: TSD 5.6 có nhắc "khóa Claude API" trong danh sách secret — đây là dấu vết còn sót; nhà cung cấp AI
 đã chốt là **Gemini** (TSD 3.5, 6).
 
 ### 6.2 Lộ trình 3 giai đoạn (PRD 4) — ngày cụ thể tra IPD 2, KHÔNG chép vào đây
 
-| Giai đoạn | Module | Tiêu chí hoàn thành (PRD 7) |
-|---|---|---|
-| **GĐ 1** | NEN, CRM, DA, TK (trừ AI), HD, BC cơ bản | Một cơ hội chạy trọn **CRM → DA/TK → HD** trên dữ liệu thật, có lịch sử phiên bản dự toán + người phê duyệt truy vết được |
-| **GĐ 2** | TC, MH, KHO, KT, NS, SX (cơ bản), BC đầy đủ | Một công trình chạy trọn **Hợp đồng → Ngân sách → Mua hàng/Kho → Nghiệm thu → Đề nghị thanh toán → Thu tiền → Lãi/lỗ**; BGĐ xem được dashboard gần thực; chấm công 3 khối chạy |
-| **GĐ 3** | Hoàn thiện liên kết chéo → **~95%** + AI Design Engine | 12 module liên kết thông suốt, không lỗi chặn luồng chính; kịch bản demo đầu-cuối cho cả NVC/NVO/NVS + Back Office |
+| Giai đoạn | Module                                                 | Tiêu chí hoàn thành (PRD 7)                                                                                                                                                    |
+| --------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **GĐ 1**  | NEN, CRM, DA, TK (trừ AI), HD, BC cơ bản               | Một cơ hội chạy trọn **CRM → DA/TK → HD** trên dữ liệu thật, có lịch sử phiên bản dự toán + người phê duyệt truy vết được                                                      |
+| **GĐ 2**  | TC, MH, KHO, KT, NS, SX (cơ bản), BC đầy đủ            | Một công trình chạy trọn **Hợp đồng → Ngân sách → Mua hàng/Kho → Nghiệm thu → Đề nghị thanh toán → Thu tiền → Lãi/lỗ**; BGĐ xem được dashboard gần thực; chấm công 3 khối chạy |
+| **GĐ 3**  | Hoàn thiện liên kết chéo → **~95%** + AI Design Engine | 12 module liên kết thông suốt, không lỗi chặn luồng chính; kịch bản demo đầu-cuối cho cả NVC/NVO/NVS + Back Office                                                             |
 
 **Nguyên tắc nghiệm thu (PRD 7, 4)**: không đo bằng số tính năng đã lập trình xong, mà bằng **nhân sự thực sự
 dùng, dữ liệu đúng, báo cáo đối soát được, quy trình trọng yếu chạy xuyên suốt**.
@@ -430,6 +431,7 @@ dùng, dữ liệu đúng, báo cáo đối soát được, quy trình trọng y
 > (`nvg.tests99.workers.dev`) dùng chung một cơ sở dữ liệu.**
 >
 > Bốn hệ quả phải nhớ chừng nào còn như vậy:
+>
 > 1. Chạy `npm run db:migrate` ở máy là **đổi luôn CSDL của bản đang chạy** — không có bước
 >    nghiệm thu ở giữa. Migration sai thì bản công khai sai ngay.
 > 2. Bộ test trong `db/` chạy trên **chính CSDL đó**, và `cleanupTestData` **XOÁ CỨNG**. Hiện
@@ -452,12 +454,12 @@ dùng, dữ liệu đúng, báo cáo đối soát được, quy trình trọng y
 
 ### 6.4 Phân vai Claude Code ↔ Haan (IPD 4)
 
-| Việc | Chính | Còn lại |
-|---|---|---|
-| Schema, migration, code frontend/backend, kiểm thử, áp dụng UI | **Claude Code** | Haan chạy thử, phản hồi |
-| **Xác nhận đúng nghiệp vụ thực tế NVG** | **Haan — không ủy quyền cho AI** | Claude Code liệt kê câu hỏi khi phát hiện mơ hồ |
-| Trao đổi với Ban Giám đốc NVG | **Haan** | — |
-| Triển khai production | Claude Code thực hiện bước kỹ thuật | **Haan xác nhận trước** |
+| Việc                                                           | Chính                               | Còn lại                                         |
+| -------------------------------------------------------------- | ----------------------------------- | ----------------------------------------------- |
+| Schema, migration, code frontend/backend, kiểm thử, áp dụng UI | **Claude Code**                     | Haan chạy thử, phản hồi                         |
+| **Xác nhận đúng nghiệp vụ thực tế NVG**                        | **Haan — không ủy quyền cho AI**    | Claude Code liệt kê câu hỏi khi phát hiện mơ hồ |
+| Trao đổi với Ban Giám đốc NVG                                  | **Haan**                            | —                                               |
+| Triển khai production                                          | Claude Code thực hiện bước kỹ thuật | **Haan xác nhận trước**                         |
 
 **Quy tắc làm việc**: chu trình lặp NGẮN — giao một module/một luồng, chạy thử ngay khi có kết quả, phản hồi
 cụ thể; không gộp nhiều việc rồi mới kiểm tra một lần (IPD 4.3).
@@ -486,61 +488,65 @@ luôn là người quyết định cuối cùng" (PRD 2.3).
    màn hình chính điện thoại và dùng thoải mái ở mọi module.
    → Điều này **mở rộng** TSD 3.2 và TSD 1.4 (ghi "PWA — chỉ cho Kho/công trường").
    → Kéo theo: mọi màn hình phải có bố cục di động thật (thanh điều hướng dưới theo AFD 4.7),
-     KHÔNG thu nhỏ bố cục máy tính.
+   KHÔNG thu nhỏ bố cục máy tính.
    → **KHÔNG kéo theo offline-first.** Service worker chỉ cache khung ứng dụng (mã, phông,
-     biểu tượng); phản hồi Supabase **cố ý không cache** vì dữ liệu được RLS bảo vệ theo từng
-     người, để lại bản sao trong máy là đọc được sau khi đăng xuất (PRD 5.2, NEN-07).
-     Offline thật cho Kho vẫn là quyết định còn treo (KHO-09, xem 6.6).
-
+   biểu tượng); phản hồi Supabase **cố ý không cache** vì dữ liệu được RLS bảo vệ theo từng
+   người, để lại bản sao trong máy là đọc được sau khi đăng xuất (PRD 5.2, NEN-07).
+   Offline thật cho Kho vẫn là quyết định còn treo (KHO-09, xem 6.6).
 
 8. **Frontend chạy trên Cloudflare Workers (Static Assets), KHÔNG phải Cloudflare Pages.**
    → Điều này **thay thế** dòng Hosting ở TSD 1.4 và mục 3.2 ("Cloudflare Pages cho frontend").
    → Lý do: Cloudflare hiện hướng dự án mới sang Workers thay cho Pages, và Haan đã tạo sẵn
-     service `nvg` trên Workers. `_headers` và `_redirects` được hỗ trợ y như Pages nên không
-     mất gì khi đổi.
+   service `nvg` trên Workers. `_headers` và `_redirects` được hỗ trợ y như Pages nên không
+   mất gì khi đổi.
    → Cấu hình: `web/wrangler.jsonc`. Deploy: `npm run deploy:web`.
    → ⚠️ **Deploy KHÔNG bao giờ kèm `--env production`.** Mỗi wrangler environment tạo ra một
-     Worker RIÊNG tên `{name}-{env}`, nên lệnh đó sinh ra `nvg-production` là một Worker thứ
-     hai, còn `nvg` thật vẫn giữ bản cũ. Chữ "production" trên URL bảng điều khiển chỉ là nhãn
-     mặc định của môi trường gốc.
+   Worker RIÊNG tên `{name}-{env}`, nên lệnh đó sinh ra `nvg-production` là một Worker thứ
+   hai, còn `nvg` thật vẫn giữ bản cũ. Chữ "production" trên URL bảng điều khiển chỉ là nhãn
+   mặc định của môi trường gốc.
    → ⚠️ Ứng dụng một trang phải khai `assets.not_found_handling: "single-page-application"`.
-     Workers KHÔNG tự đoán kiểu dự án như Pages; thiếu dòng đó thì mở thẳng một đường dẫn sâu
-     (`/hd/hop-dong/<id>`) sẽ ra 404.
+   Workers KHÔNG tự đoán kiểu dự án như Pages; thiếu dòng đó thì mở thẳng một đường dẫn sâu
+   (`/hd/hop-dong/<id>`) sẽ ra 404.
    → `wrangler deploy` KHÔNG tự nạp `.env` lên Cloudflare — tệp đó chỉ dùng khi chạy ở máy.
-     Secret chỉ lên khi truyền tường minh `--secrets-file`, nên đừng dùng cờ đó với `.env` gốc
-     repo (trong đó có `service_role` và mật khẩu CSDL).
+   Secret chỉ lên khi truyền tường minh `--secrets-file`, nên đừng dùng cờ đó với `.env` gốc
+   repo (trong đó có `service_role` và mật khẩu CSDL).
 9. **Ngôn ngữ thị giác đã nâng cấp — xem `DESIGN_SYSTEM.md` ở gốc repo.**
    → File đó MỞ RỘNG và ở vài chỗ THAY THẾ **CGD Mục 6**. Haan dùng nó để cập nhật CGD lên v1.2.
    → Điểm chính: dải trung tính ám sắc ấm (bê tông) thay xám ám xanh · thêm **cam an toàn
-     `#EA580C`** làm màu NHẬN DIỆN · phông **Be Vietnam Pro** tự lưu thay Inter qua Google Fonts ·
-     thang chữ và thang chuyển động khai tường minh.
+   `#EA580C`** làm màu NHẬN DIỆN · phông **Be Vietnam Pro** tự lưu thay Inter qua Google Fonts ·
+   thang chữ và thang chuyển động khai tường minh.
    → ⚠️ **Cam KHÔNG được dùng ở nhãn trạng thái, nền dòng bảng hay nút.** Nó nằm giữa vàng "Chờ
-     duyệt" và đỏ "Quá hạn"; đặt vào vùng trạng thái là phá hệ thống 5 màu. Chỉ dùng cho: thanh
-     chỉ mục sidebar, vạch nhấn, chuỗi biểu đồ, hình trạng thái rỗng, dấu hiệu gộp "Toàn NVG".
+   duyệt" và đỏ "Quá hạn"; đặt vào vùng trạng thái là phá hệ thống 5 màu. Chỉ dùng cho: thanh
+   chỉ mục sidebar, vạch nhấn, chuỗi biểu đồ, hình trạng thái rỗng, dấu hiệu gộp "Toàn NVG".
    → **Ba màu chữ nhãn trạng thái của CGD 6.3 đã được làm đậm** vì bản gốc không đạt tương phản
-     4.5:1 (Nháp 3.83 · Chờ duyệt 3.09 · Hoàn thành 3.11). Sắc màu và nền giữ nguyên.
+   4.5:1 (Nháp 3.83 · Chờ duyệt 3.09 · Hoàn thành 3.11). Sắc màu và nền giữ nguyên.
    → Trang trưng bày mọi thành phần ở mọi trạng thái: **`/nen/giao-dien`**. Sửa token màu xong thì
-     mở trang đó để soát, đừng đi qua 20 màn hình nghiệp vụ.
+   mở trang đó để soát, đừng đi qua 20 màn hình nghiệp vụ.
+   → ⚠️ **Cập nhật mới hơn điểm này**: cam an toàn `#EA580C` và Brand Blue `#0C66E4` (làm hành
+   động chính) đã được thay bằng cặp **rừng (forest) & bạc hà (mint)** — xem `DESIGN_SYSTEM.md`
+   Mục 1.1/2.4 bản mới nhất. **5 màu trạng thái ở điểm này vẫn giữ nguyên không đổi.** Font vẫn
+   là Be Vietnam Pro (không đổi sang font của bản demo tham chiếu).
+
 ### 6.6 Vấn đề còn mở — cần NVG xác nhận, KHÔNG tự quyết
 
 Gộp từ PRD 10, TSD 7, CGD 7, BSD 5, IPD 7:
 
-| Vấn đề | Ảnh hưởng |
-|---|---|
-| **Phần mềm kế toán chính thức** để tích hợp (MISA SME / AMIS / Fast?) | Chưa thiết kế được payload endpoint `/api/export/accounting-software` (KT-08) |
-| **Hạn mức phê duyệt chính thức** theo cấp/loại nghiệp vụ | Đang dùng mức tạm; dữ liệu `approval_limits` phải cấu hình được |
-| **Bộ mã vật tư / công trình / nhà cung cấp** thống nhất | NVG chưa có; sẽ tự tạo mẫu trước go-live từng giai đoạn |
-| **Khảo sát Xưởng giàn giáo (NVS) + Chỉ huy công trường** | Module TC/SX có thể phải sửa lại một phần |
-| **`unit_prices` dùng chung DA/TK/MH?** | Cần xác nhận NVO có cần bảng đơn giá riêng không (BSD 5). Đang triển khai DÙNG CHUNG, tách sẵn theo `company_id` |
-| **Ai được xem GIÁ VỐN** | Đang mở cho TGĐ/CFO/BGĐ/Admin + **DA_DT, TKE, MH** (suy từ TK-07 và MH-04/05). Lợi nhuận vẫn chỉ TGĐ/CFO/BGĐ/Admin. Lương thêm NS và KT; **căn cước/sức khỏe/kỷ luật (`personal`) hẹp hơn lương — không có KT**. Cả bốn nhóm sửa ở cùng hàm `rls_sees_sensitive` |
-| **Cơ chế lương/thưởng chi tiết** từng công ty/nhóm nhân sự | Chưa cấu hình được NS-06. Đã có sẵn HÌNH THỨC trả lương và số công đã chốt; thiếu đúng phần công thức |
-| **Ai xác nhận bảng chấm công từng khối** (NS-04) | Đang SUY LUẬN: người có quyền `approve` trên phân hệ phụ trách khối — công trường → TC, văn phòng và xưởng → NS. Cùng gốc với "trưởng đơn vị" của KT-01, sẽ giải cùng lúc khi Module NS có cây tổ chức. Sửa trong `confirm_timesheet_period` |
-| **Một ngày công bằng mấy giờ** (NS-04) | Đang lấy **8 giờ** (Bộ luật Lao động 2019 Điều 105). Xưởng có thể chạy ca 12 giờ; nếu vậy ngày công quy đổi của khối xưởng đang sai. Sửa ở `HOURS_PER_WORKDAY` (`@nvg/shared/ns`) **và** hàm `consolidate_timesheets` — có test đối chiếu hai bản |
-| **Ai duyệt yêu cầu tuyển dụng** (NS-02) | Đang đặt Tổng Giám đốc, vì tăng biên chế là quyết định ngân sách của cả công ty. Đổi bằng cấu hình `approval_limits`, không sửa mã |
-| **"Trưởng đơn vị" ở bước 1 của luồng duyệt chi (KT-01) là AI** — Haan xác nhận 27/08/2026: chưa có thông tin, chờ khảo sát đầy đủ | Đang SUY LUẬN: người có quyền `approve` trên module phát sinh khoản chi (`payment_requests.origin_module`). Kéo theo: vai trò TC/MH/KHO được cấp `approve` trên chính phân hệ của mình. Khi Module NS có cây tổ chức, thay điều kiện trong hàm `rls_payment_step_actor` — không phải sửa chỗ nào khác |
-| **Mốc chia nhóm công nợ quá hạn** (KT-04) — Haan xác nhận 27/08/2026: chưa có mốc, giữ giả định nhưng Quản trị hệ thống phải sửa lại được | Đã chuyển thành DỮ LIỆU trong bảng `aging_buckets`, seed 30/60/90 ngày từ `DEFAULT_AGING_BUCKETS`. KHÔNG hard-code ở bất kỳ đâu — cùng quy tắc với `approval_limits` (5.2). Mốc riêng của pháp nhân THAY THẾ mốc chung, không trộn |
-| **Tên miền chính thức** · **đầu mối hỗ trợ kỹ thuật** (điền vào mẫu lỗi CGD 5.5) · **SSO** (chờ NVG có email công ty) | Chưa chặn phát triển |
-| **Hạn mức + điều khoản bảo mật gói miễn phí Gemini** | Cần kiểm tra lại tại thời điểm triển khai; cân nhắc gói trả phí khi dùng dữ liệu thật |
+| Vấn đề                                                                                                                                    | Ảnh hưởng                                                                                                                                                                                                                                                                                             |
+| ----------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Phần mềm kế toán chính thức** để tích hợp (MISA SME / AMIS / Fast?)                                                                     | Chưa thiết kế được payload endpoint `/api/export/accounting-software` (KT-08)                                                                                                                                                                                                                         |
+| **Hạn mức phê duyệt chính thức** theo cấp/loại nghiệp vụ                                                                                  | Đang dùng mức tạm; dữ liệu `approval_limits` phải cấu hình được                                                                                                                                                                                                                                       |
+| **Bộ mã vật tư / công trình / nhà cung cấp** thống nhất                                                                                   | NVG chưa có; sẽ tự tạo mẫu trước go-live từng giai đoạn                                                                                                                                                                                                                                               |
+| **Khảo sát Xưởng giàn giáo (NVS) + Chỉ huy công trường**                                                                                  | Module TC/SX có thể phải sửa lại một phần                                                                                                                                                                                                                                                             |
+| **`unit_prices` dùng chung DA/TK/MH?**                                                                                                    | Cần xác nhận NVO có cần bảng đơn giá riêng không (BSD 5). Đang triển khai DÙNG CHUNG, tách sẵn theo `company_id`                                                                                                                                                                                      |
+| **Ai được xem GIÁ VỐN**                                                                                                                   | Đang mở cho TGĐ/CFO/BGĐ/Admin + **DA_DT, TKE, MH** (suy từ TK-07 và MH-04/05). Lợi nhuận vẫn chỉ TGĐ/CFO/BGĐ/Admin. Lương thêm NS và KT; **căn cước/sức khỏe/kỷ luật (`personal`) hẹp hơn lương — không có KT**. Cả bốn nhóm sửa ở cùng hàm `rls_sees_sensitive`                                      |
+| **Cơ chế lương/thưởng chi tiết** từng công ty/nhóm nhân sự                                                                                | Chưa cấu hình được NS-06. Đã có sẵn HÌNH THỨC trả lương và số công đã chốt; thiếu đúng phần công thức                                                                                                                                                                                                 |
+| **Ai xác nhận bảng chấm công từng khối** (NS-04)                                                                                          | Đang SUY LUẬN: người có quyền `approve` trên phân hệ phụ trách khối — công trường → TC, văn phòng và xưởng → NS. Cùng gốc với "trưởng đơn vị" của KT-01, sẽ giải cùng lúc khi Module NS có cây tổ chức. Sửa trong `confirm_timesheet_period`                                                          |
+| **Một ngày công bằng mấy giờ** (NS-04)                                                                                                    | Đang lấy **8 giờ** (Bộ luật Lao động 2019 Điều 105). Xưởng có thể chạy ca 12 giờ; nếu vậy ngày công quy đổi của khối xưởng đang sai. Sửa ở `HOURS_PER_WORKDAY` (`@nvg/shared/ns`) **và** hàm `consolidate_timesheets` — có test đối chiếu hai bản                                                     |
+| **Ai duyệt yêu cầu tuyển dụng** (NS-02)                                                                                                   | Đang đặt Tổng Giám đốc, vì tăng biên chế là quyết định ngân sách của cả công ty. Đổi bằng cấu hình `approval_limits`, không sửa mã                                                                                                                                                                    |
+| **"Trưởng đơn vị" ở bước 1 của luồng duyệt chi (KT-01) là AI** — Haan xác nhận 27/08/2026: chưa có thông tin, chờ khảo sát đầy đủ         | Đang SUY LUẬN: người có quyền `approve` trên module phát sinh khoản chi (`payment_requests.origin_module`). Kéo theo: vai trò TC/MH/KHO được cấp `approve` trên chính phân hệ của mình. Khi Module NS có cây tổ chức, thay điều kiện trong hàm `rls_payment_step_actor` — không phải sửa chỗ nào khác |
+| **Mốc chia nhóm công nợ quá hạn** (KT-04) — Haan xác nhận 27/08/2026: chưa có mốc, giữ giả định nhưng Quản trị hệ thống phải sửa lại được | Đã chuyển thành DỮ LIỆU trong bảng `aging_buckets`, seed 30/60/90 ngày từ `DEFAULT_AGING_BUCKETS`. KHÔNG hard-code ở bất kỳ đâu — cùng quy tắc với `approval_limits` (5.2). Mốc riêng của pháp nhân THAY THẾ mốc chung, không trộn                                                                    |
+| **Tên miền chính thức** · **đầu mối hỗ trợ kỹ thuật** (điền vào mẫu lỗi CGD 5.5) · **SSO** (chờ NVG có email công ty)                     | Chưa chặn phát triển                                                                                                                                                                                                                                                                                  |
+| **Hạn mức + điều khoản bảo mật gói miễn phí Gemini**                                                                                      | Cần kiểm tra lại tại thời điểm triển khai; cân nhắc gói trả phí khi dùng dữ liệu thật                                                                                                                                                                                                                 |
 
 ---
 

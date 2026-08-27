@@ -20,24 +20,20 @@ function source(relative: string): string {
   return readFileSync(resolve(process.cwd(), 'web/src', relative), 'utf8');
 }
 
-describe('Ranh giới màu nhận diện (cam an toàn)', () => {
+describe('Ranh giới màu thương hiệu (rừng & bạc hà) với màu trạng thái', () => {
   /**
-   * Cam `#EA580C` nằm giữa vàng "Chờ duyệt" `#906C00` và đỏ "Quá hạn" `#CA3521`.
+   * Trước đây "cam an toàn" là một màu nhận diện tách biệt khỏi hành động (test canh việc nó
+   * không lấn vào nhãn trạng thái/nút). Từ khi đổi sang rừng/bạc hà (DESIGN_SYSTEM.md, xác nhận
+   * với Haan), màu thương hiệu và màu hành động đã GỘP LÀM MỘT — không còn "accent" riêng để
+   * canh theo tên cũ.
    *
-   * Người dùng quét một bảng 50 dòng phải phân biệt trạng thái trong nửa giây. Thêm một sắc cam
-   * vào đúng vùng đó là buộc họ phân biệt ba màu ấm gần nhau thay vì hai — và hệ thống 5 màu
-   * trạng thái mất tác dụng mà không có triệu chứng nào báo trước.
+   * Rủi ro còn lại đổi hướng: mint/forest của thương hiệu và xanh lá của trạng thái "Hoàn
+   * thành" là hai sắc xanh gần nhau. Nhãn trạng thái phải tiếp tục là một hệ màu ĐÓNG, độc lập
+   * với thương hiệu — nếu không, một pill mint cạnh một nhãn "Hoàn thành" xanh là hai tín hiệu
+   * người dùng phải phân biệt trong nửa giây, đúng vấn đề mà cam an toàn từng gây ra.
    */
-  it.each([
-    ['components/ui/status-lozenge.tsx', 'nhãn trạng thái'],
-    ['components/ui/button.tsx', 'nút bấm'],
-  ])('%s KHÔNG dùng màu nhận diện (%s)', (file) => {
-    expect(source(file)).not.toMatch(/\baccent\b/);
-  });
-
-  it('dòng dữ liệu của bảng KHÔNG tô nền bằng màu nhận diện', () => {
-    const table = source('components/entity/entity-table.tsx');
-    expect(table).not.toMatch(/bg-accent/);
+  it('status-lozenge.tsx KHÔNG dùng token thương hiệu (brand/mint/forest)', () => {
+    expect(source('components/ui/status-lozenge.tsx')).not.toMatch(/\b(brand|mint|forest)\b/);
   });
 });
 

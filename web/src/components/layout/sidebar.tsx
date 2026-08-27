@@ -19,7 +19,13 @@ export function Sidebar() {
   const activeModule = useActiveModule();
 
   return (
-    <aside className="hidden h-full w-60 shrink-0 flex-col border-r border-border bg-surface lg:flex">
+    <aside
+      className={cn(
+        'hidden w-60 shrink-0 flex-col self-start overflow-hidden rounded-xl border border-border bg-surface',
+        // Panel nổi trên nền trũng (thay thanh full-bleed cũ) — DESIGN_SYSTEM.md.
+        'lg:sticky lg:top-3 lg:flex lg:max-h-[calc(100dvh-1.5rem)]',
+      )}
+    >
       <div className="border-b border-border p-2">
         <CompanySwitcher />
       </div>
@@ -35,23 +41,18 @@ export function Sidebar() {
                   to={MODULE_ROUTES[code]}
                   aria-current={activeModule === code ? 'page' : undefined}
                   className={cn(
-                    'relative flex items-center gap-2 rounded-sm py-2 pl-4 pr-2',
+                    'flex items-center gap-2 rounded-md py-2 pl-3 pr-2 text-fg-subtle',
                     'transition-colors duration-(--motion-fast) ease-(--ease-out)',
-                    'hover:bg-surface-hover',
+                    'hover:bg-surface-hover hover:text-brand-forest',
                     // Mục đang hoạt động tô đậm (Webapp Flow 2.1) — một trong ba lớp
                     // định vị "luôn biết mình đang ở đâu" (Webapp Flow 6.2). Sáng theo
                     // MODULE, không theo đúng một đường dẫn: mọi màn hình trong CRM đều
                     // phải làm mục "Khách hàng & Cơ hội" sáng lên.
                     //
-                    // Thanh chỉ mục bên trái dùng màu NHẬN DIỆN (cam an toàn). Đây là một trong
-                    // số ít chỗ được phép dùng nó: thanh điều hướng không phải vùng trạng thái
-                    // nên không có nguy cơ đọc nhầm thành "Chờ duyệt" hay "Quá hạn"
-                    // (DESIGN_SYSTEM.md 2.3).
-                    'before:absolute before:left-0 before:top-1/2 before:h-0 before:w-[3px]',
-                    'before:-translate-y-1/2 before:rounded-r-full before:bg-accent',
-                    'before:transition-[height] before:duration-(--motion-base) before:ease-(--ease-out)',
+                    // Pill nền mint khi active (thay thanh chỉ mục cam an toàn cũ) — theo
+                    // bản demo "dashboard soft light style" (DESIGN_SYSTEM.md).
                     activeModule === code &&
-                      'bg-surface-hover font-semibold text-fg before:h-5 hover:bg-surface-hover',
+                      'bg-brand-subtle font-bold text-brand-forest hover:bg-brand-subtle',
                   )}
                   title={meta.description}
                 >
@@ -64,9 +65,7 @@ export function Sidebar() {
         </ul>
       </nav>
 
-      <div className="flex items-center gap-2 border-t border-border px-3 py-2.5 text-xs text-fg-subtle">
-        {/* Dấu thương hiệu — chỗ thứ hai được dùng màu nhận diện. */}
-        <span aria-hidden className="size-2 shrink-0 rounded-[2px] bg-accent" />
+      <div className="border-t border-border px-3 py-2.5 text-xs text-fg-subtle">
         Hệ thống Quản trị NVG
       </div>
     </aside>

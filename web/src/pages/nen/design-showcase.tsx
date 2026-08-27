@@ -158,7 +158,7 @@ export function DesignShowcasePage() {
         title="Trạng thái rỗng"
         note="Tình trạng + gợi ý bước tiếp theo. Không để trang trắng."
       >
-        <div className="rounded-lg border border-border bg-surface shadow-raised">
+        <div className="rounded-lg border border-border bg-surface">
           <EmptyState
             message="Chưa có gói thầu nào. Gói thầu được lập từ một cơ hội đã qua bước Khảo sát."
             action={<Button variant="secondary">Tạo gói thầu</Button>}
@@ -170,7 +170,7 @@ export function DesignShowcasePage() {
         title="Trạng thái lỗi"
         note="Nói bằng ngôn ngữ nghiệp vụ và nêu việc cần làm. Chi tiết kỹ thuật chỉ ghi log, không đưa ra màn hình."
       >
-        <div className="rounded-lg border border-border bg-surface shadow-raised">
+        <div className="rounded-lg border border-border bg-surface">
           <ErrorState
             message="Không tải được danh sách. Kiểm tra kết nối mạng rồi thử lại."
             onRetry={() => {}}
@@ -198,11 +198,12 @@ export function DesignShowcasePage() {
 
       <Section
         title="Màu"
-        note="Cam an toàn CHỈ dùng cho nhận diện: thanh chỉ mục, vạch nhấn, biểu đồ. CẤM ở nhãn trạng thái, nền dòng và nút — nó nằm giữa vàng Chờ duyệt và đỏ Quá hạn, đặt nhầm chỗ là phá hệ thống trạng thái."
+        note="Rừng/bạc hà là thương hiệu — dùng cho hành động chính, liên kết, logo, nav active. Nhãn trạng thái là một hệ màu ĐÓNG, độc lập với thương hiệu (không dùng brand/mint/forest) — xem design-rules.test.ts."
       >
         <div className="flex flex-wrap items-center gap-4">
           <Swatch name="Hành động chính" className="bg-brand" />
-          <Swatch name="Nhận diện" className="bg-accent" />
+          <Swatch name="Rừng — logo/nav active" className="bg-brand-forest" />
+          <Swatch name="Bạc hà — pill nhấn" className="bg-brand-mint" />
           <Swatch name="Nền trang" className="border border-border bg-surface-sunken" />
           <Swatch name="Viền" className="bg-border-strong" />
           <Swatch name="Chữ chính" className="bg-fg" />

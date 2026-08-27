@@ -20,8 +20,21 @@
  * lỗi), và chỉ của phần nghiệp vụ đã có dữ liệu thật. Phần BC-01 còn thiếu được nói thẳng ở
  * cuối trang thay vì dựng thẻ rỗng: trên màn hình điều hành, số 0 và "chưa có dữ liệu" nhìn
  * giống hệt nhau nhưng dẫn tới hai quyết định trái ngược (PRD BC-06).
+ *
+ * Lớp vỏ thị giác theo "dashboard soft light style" (DESIGN_SYSTEM.md) — KpiCard/PillBadge/
+ * SegmentedControl là component dùng chung, sẽ tái dùng dần ở các module khác.
  */
 
+import {
+  AlertTriangle,
+  Clock,
+  Compass,
+  FileSignature,
+  FileText,
+  Info,
+  TrendingUp,
+  type LucideIcon,
+} from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   BUTTONS,
@@ -50,6 +63,8 @@ import {
 import { PageHeader } from '@/components/layout/app-shell';
 import { PERIOD_FILTER_PARAM, listPathFiltered } from '@/components/entity/entity-table';
 import { Button } from '@/components/ui/button';
+import { KpiCard, KpiEmptyBlock, PillBadge } from '@/components/ui/kpi-card';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
 import { usePendingApprovals } from '@/hooks/use-approvals';
 import { useBiddingProjects } from '@/hooks/use-bidding-projects';
@@ -66,6 +81,19 @@ interface MetricRecord {
   value: MoneyValue | null;
   createdAt: string;
 }
+
+/**
+ * Icon + màu tint riêng cho ô icon của từng thẻ module trên Dashboard — trang trí, KHÔNG phải
+ * icon nhận diện module ở sidebar (`module-nav.ts`: MODULE_ICONS phục vụ mục đích khác, một
+ * khái niệm luôn một icon xuyên suốt điều hướng — Content Guidelines 6.6). Bốn tint lấy từ bản
+ * demo: mint (CRM), amber (DA), teal (TK), forest-tint (HD).
+ */
+const MODULE_KPI_ICON: Record<string, { icon: LucideIcon; well: string }> = {
+  CRM: { icon: TrendingUp, well: 'bg-brand-subtle text-brand-hover' },
+  DA: { icon: FileText, well: 'bg-tint-amber-bg text-tint-amber' },
+  TK: { icon: Compass, well: 'bg-tint-teal-bg text-tint-teal' },
+  HD: { icon: FileSignature, well: 'bg-tint-forest-bg text-brand' },
+};
 
 export function DashboardPage() {
   const { profile } = useAuth();
@@ -163,6 +191,9 @@ export function DashboardPage() {
       basePath: '/crm/co-hoi',
       records: opportunityRecords,
       isLoading: opportunities.isLoading,
+      // Thẻ có nhiều chỉ số phụ nhất — số liệu chính dùng cỡ hero (34px/800) để nổi bật, giống
+      // đúng vai trò "thẻ chi tiết nhất" của nó trong bản demo tham chiếu.
+      hero: true,
       highlights: [
         { label: 'Giá trị đang theo đuổi', text: formatCurrency(pipelineValue) },
         {
@@ -220,6 +251,7 @@ export function DashboardPage() {
     <>
       <PageHeader
         title={greeting}
+        size="hero"
         description={
           currentCompany
             ? `${currentCompany.companyShortName} · ${currentCompany.roleLabel}`
@@ -229,45 +261,45 @@ export function DashboardPage() {
       />
 
       {/* Bộ lọc nhanh theo khoảng thời gian — Webapp Flow 4.1. */}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <span className="text-fg-subtle">Kỳ báo cáo</span>
-        {DASHBOARD_PERIODS.map((p) => (
-          <button
-            key={p}
-            type="button"
-            onClick={() => setPeriod(p)}
-            aria-pressed={p === period}
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <span className="text-xs font-bold tracking-wide text-fg-subtle">KỲ BÁO CÁO</span>
+        <SegmentedControl
+          options={DASHBOARD_PERIODS}
+          value={period}
+          onChange={setPeriod}
+          getLabel={(p) => DASHBOARD_PERIOD_LABELS[p]}
+        />
+        {scope.isAggregate && (
+          // Dấu hiệu chế độ gộp — thông tin về PHẠM VI đang xem, không phải tình trạng của hồ
+          // sơ nào, nên tái dùng tông "Chờ duyệt" (chú ý, chưa khẩn cấp) thay vì màu thương hiệu.
+          <span
             className={cn(
-              'h-10 cursor-pointer rounded-sm border px-3 sm:h-8',
-              'transition-colors duration-(--motion-fast) ease-(--ease-out)',
-              p === period
-                ? 'border-brand bg-brand-subtle font-medium text-brand'
-                : 'border-border-strong bg-surface hover:bg-surface-hover',
+              'flex items-center gap-1.5 rounded-md border border-status-pending-bg',
+              'bg-status-pending-bg px-3 py-1.5 text-xs font-medium text-status-pending',
             )}
           >
-            {DASHBOARD_PERIOD_LABELS[p]}
-          </button>
-        ))}
-        {scope.isAggregate && (
-          // Dấu hiệu chế độ gộp dùng màu NHẬN DIỆN, không dùng màu trạng thái: đây là thông tin
-          // về PHẠM VI đang xem, không phải tình trạng của hồ sơ nào (DESIGN_SYSTEM.md 2.3).
-          <span className="flex items-center gap-1.5 rounded-sm bg-accent-subtle px-2 py-1 text-xs text-fg-subtle">
-            <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-accent" />
+            <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-status-pending" />
             Đang gộp số liệu mọi pháp nhân. Chọn một pháp nhân ở thanh bên để xem riêng.
           </span>
         )}
       </div>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Card title="Chờ phê duyệt" hint="Hồ sơ nằm trong hạn mức phê duyệt của vai trò hiện tại">
+        <KpiCard
+          title="Chờ phê duyệt"
+          hint="Hồ sơ nằm trong hạn mức phê duyệt của vai trò hiện tại"
+          icon={Clock}
+        >
           {!canApproveAnything ? (
-            <EmptyMetric label="Vai trò hiện tại không có quyền phê duyệt." />
+            <KpiEmptyBlock label="Vai trò hiện tại không có quyền phê duyệt." />
           ) : pendingCount === 0 ? (
-            <EmptyMetric label="Không có hồ sơ nào đang chờ phê duyệt." />
+            <KpiEmptyBlock label="Không có hồ sơ nào đang chờ phê duyệt." />
           ) : (
-            <Link to="/viec-can-lam" className="block hover:underline">
-              <span className="flex items-center gap-2">
-                <span className="text-2xl font-semibold tabular-nums">{pendingCount}</span>
+            <Link to="/viec-can-lam" className="mt-auto block hover:underline">
+              <span className="flex items-baseline gap-2">
+                <span className="text-3xl font-extrabold tracking-tight tabular-nums">
+                  {pendingCount}
+                </span>
                 <StatusLozenge status="pending_approval" />
               </span>
               {pendingValue > 0n && (
@@ -277,15 +309,20 @@ export function DashboardPage() {
               )}
             </Link>
           )}
-        </Card>
+        </KpiCard>
 
-        <Card title="Quá hạn" hint="Hồ sơ đã vượt thời hạn xử lý, theo từng phân hệ">
+        <KpiCard
+          title="Quá hạn"
+          hint="Hồ sơ đã vượt thời hạn xử lý, theo từng phân hệ"
+          icon={AlertTriangle}
+          iconWellClassName="bg-status-overdue-bg text-status-overdue"
+        >
           {overdueTotal === 0 ? (
-            <EmptyMetric label="Không có hồ sơ nào quá hạn trong kỳ này." />
+            <KpiEmptyBlock label="Không có hồ sơ nào quá hạn trong kỳ này." />
           ) : (
-            <>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl font-semibold tabular-nums text-status-overdue">
+            <div className="mt-auto">
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-extrabold tracking-tight tabular-nums text-status-overdue">
                   {overdueTotal}
                 </span>
                 <StatusLozenge status="overdue" />
@@ -295,16 +332,16 @@ export function DashboardPage() {
                   <li key={m.key}>
                     <Link
                       to={listPathFiltered(m.basePath, { status: 'overdue', period })}
-                      className="text-brand hover:underline"
+                      className="font-medium text-brand hover:underline"
                     >
                       {m.title}: {m.count}
                     </Link>
                   </li>
                 ))}
               </ul>
-            </>
+            </div>
           )}
-        </Card>
+        </KpiCard>
 
         {modules.map((m) => (
           <ModuleCard key={m.key} metric={m} period={period} />
@@ -326,6 +363,8 @@ interface ModuleMetric {
   isLoading: boolean;
   /** Chỉ số riêng của module, đặt dưới phần đếm theo trạng thái. */
   highlights: { label: string; text: string }[];
+  /** Thẻ nhiều chỉ số phụ nhất — số liệu chính dùng cỡ hero (34px/800). */
+  hero?: boolean;
 }
 
 /**
@@ -338,49 +377,61 @@ interface ModuleMetric {
 function ModuleCard({ metric, period }: { metric: ModuleMetric; period: DashboardPeriod }) {
   const counts = countByStatus(metric.records);
   const present = STATUS_GROUPS.filter((s) => counts[s] > 0);
+  const iconMeta = MODULE_KPI_ICON[metric.key];
 
   return (
-    <Card title={metric.title} hint={metric.hint}>
+    <KpiCard
+      title={metric.title}
+      hint={metric.hint}
+      icon={iconMeta?.icon ?? FileText}
+      iconWellClassName={iconMeta?.well}
+    >
       {metric.isLoading ? (
-        <div className="h-6 w-24 animate-pulse rounded-sm bg-surface-sunken" />
+        <div className="h-8 w-24 animate-pulse rounded-sm bg-surface-hover" />
       ) : metric.records.length === 0 ? (
-        <EmptyMetric label="Chưa có hồ sơ nào trong kỳ này." />
+        <KpiEmptyBlock label="Chưa có hồ sơ nào trong kỳ này." />
       ) : (
-        <>
+        <div className="mt-auto flex flex-col gap-2.5">
           <Link
             to={listPathFiltered(metric.basePath, { period })}
             className="flex items-baseline gap-2 hover:underline"
           >
-            <span className="text-2xl font-semibold tabular-nums">{metric.records.length}</span>
-            <span className="text-fg-subtle">hồ sơ</span>
+            <span
+              className={cn(
+                'font-extrabold tracking-tight tabular-nums',
+                metric.hero
+                  ? 'text-(length:--text-hero) leading-(--text-hero--line-height)'
+                  : 'text-3xl',
+              )}
+            >
+              {metric.records.length}
+            </span>
+            <span className="text-xs font-medium text-fg-subtle">hồ sơ</span>
           </Link>
 
-          <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+          <div className="flex flex-wrap gap-1.5">
             {present.map((s) => (
-              <li key={s}>
-                <Link
-                  to={listPathFiltered(metric.basePath, { status: s, period })}
-                  className="text-brand hover:underline"
-                >
+              <Link key={s} to={listPathFiltered(metric.basePath, { status: s, period })}>
+                <PillBadge tone={s === 'completed' ? 'positive' : 'neutral'}>
                   {statusLabel(s)}: {counts[s]}
-                </Link>
-              </li>
+                </PillBadge>
+              </Link>
             ))}
-          </ul>
+          </div>
 
           {metric.highlights.length > 0 && (
-            <dl className="mt-3 space-y-1 border-t border-border pt-2 text-xs">
+            <dl className="flex flex-col gap-1.5 border-t border-border pt-2.5 text-xs">
               {metric.highlights.map((h) => (
-                <div key={h.label} className="flex justify-between gap-2">
+                <div key={h.label} className="flex items-baseline justify-between gap-2">
                   <dt className="text-fg-subtle">{h.label}</dt>
-                  <dd className="tabular-nums">{h.text}</dd>
+                  <dd className="font-bold tabular-nums">{h.text}</dd>
                 </div>
               ))}
             </dl>
           )}
-        </>
+        </div>
       )}
-    </Card>
+    </KpiCard>
   );
 }
 
@@ -425,51 +476,19 @@ function QuickActions() {
  */
 function DataCompletenessNote() {
   return (
-    <section
-      className={cn(
-        'mt-6 rounded-lg border border-border bg-surface p-4',
-        // Vạch nhấn bên trái dùng màu nhận diện — đây là ghi chú về phạm vi dữ liệu, không phải
-        // cảnh báo, nên KHÔNG được dùng màu "Quá hạn" (DESIGN_SYSTEM.md 2.3).
-        'border-l-[3px] border-l-accent',
-      )}
-    >
-      <h2 className="text-md font-semibold">Phần chưa có trên Dashboard</h2>
-      <p className="mt-1 text-fg-subtle">
-        Dòng tiền vào – ra, công nợ phải thu, tiến độ và chi phí từng công trình, tồn kho và giàn
-        giáo đang cho thuê, nhân sự – chấm công sẽ xuất hiện khi các phân hệ Thi công, Mua hàng,
-        Kho, Kế toán và Nhân sự đi vào vận hành. Các chỉ số đang hiển thị lấy trực tiếp từ hồ sơ
-        nghiệp vụ, không phải số liệu mẫu.
-      </p>
+    <section className="mt-6 flex items-start gap-3.5 rounded-lg border border-border bg-surface p-4">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-sm bg-brand-subtle text-brand-forest">
+        <Info className="size-4" aria-hidden />
+      </span>
+      <div className="min-w-0">
+        <h2 className="text-md font-bold tracking-tight">Phần chưa có trên Dashboard</h2>
+        <p className="mt-1 max-w-3xl text-xs leading-relaxed text-fg-subtle">
+          Dòng tiền vào – ra, công nợ phải thu, tiến độ và chi phí từng công trình, tồn kho và giàn
+          giáo đang cho thuê, nhân sự – chấm công sẽ xuất hiện khi các phân hệ Thi công, Mua hàng,
+          Kho, Kế toán và Nhân sự đi vào vận hành. Các chỉ số đang hiển thị lấy trực tiếp từ hồ sơ
+          nghiệp vụ, không phải số liệu mẫu.
+        </p>
+      </div>
     </section>
   );
-}
-
-function Card({
-  title,
-  hint,
-  children,
-}: {
-  title: string;
-  hint: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div
-      className={cn(
-        'rounded-lg border border-border bg-surface p-4 shadow-raised',
-        'transition-shadow duration-(--motion-base) ease-(--ease-out) hover:shadow-card',
-      )}
-    >
-      <div className="mb-3">
-        <h3 className="text-md font-semibold">{title}</h3>
-        <p className="mt-0.5 text-xs text-fg-subtle">{hint}</p>
-      </div>
-      {children}
-    </div>
-  );
-}
-
-/** Trạng thái rỗng: tình trạng + gợi ý, không để trống trơn (Content Guidelines 4.7). */
-function EmptyMetric({ label }: { label: string }) {
-  return <p className="text-fg-subtle">{label}</p>;
 }

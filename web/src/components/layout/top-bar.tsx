@@ -31,8 +31,8 @@ function IconButton({
   // 40px trên màn hình cảm ứng (Content Guidelines 6.8), 32px trên máy tính có chuột —
   // chuột trỏ chính xác nên không cần vùng bấm lớn, còn ngón tay thì cần.
   const className = cn(
-    'relative flex size-10 items-center justify-center rounded-sm sm:size-8',
-    'text-fg-subtle hover:bg-surface-hover hover:text-fg',
+    'relative flex size-10 items-center justify-center rounded-md sm:size-8',
+    'text-fg-subtle hover:bg-surface-muted hover:text-fg',
   );
 
   const badge = (
@@ -77,8 +77,10 @@ export function TopBar() {
   return (
     <header
       className={cn(
-        'flex h-12 shrink-0 items-center gap-3 border-b border-border',
-        'bg-surface px-4',
+        'flex h-12 shrink-0 items-center gap-3 border-b border-border bg-surface px-4',
+        // Panel nổi bo góc từ lg: trở lên (thay thanh full-bleed) — DESIGN_SYSTEM.md.
+        // Dưới lg: giữ nguyên thanh full-bleed cũ, vì bản demo chỉ thiết kế cho desktop.
+        'lg:rounded-lg lg:border',
       )}
     >
       {/* Pháp nhân đang chọn — trên máy tính nằm ở sidebar, ở điện thoại sidebar ẩn nên
@@ -96,8 +98,8 @@ export function TopBar() {
           type="search"
           placeholder="Tìm hồ sơ, khách hàng, vật tư…"
           className={cn(
-            'h-10 w-full rounded-sm border border-border sm:h-8',
-            'bg-surface-sunken pl-8 pr-3',
+            'h-10 w-full rounded-md border border-border sm:h-8',
+            'bg-surface-muted pl-8 pr-3',
             'placeholder:text-fg-subtle',
           )}
         />
@@ -107,9 +109,7 @@ export function TopBar() {
         {/* Thông báo và Việc cần làm tách thành hai danh sách riêng (Webapp Flow 5.4),
             tránh nhầm giữa "biết để đó" và "phải xử lý". */}
         <IconButton
-          label={
-            pendingCount ? `Việc cần làm — ${pendingCount} hồ sơ chờ xử lý` : 'Việc cần làm'
-          }
+          label={pendingCount ? `Việc cần làm — ${pendingCount} hồ sơ chờ xử lý` : 'Việc cần làm'}
           count={pendingCount}
           to="/viec-can-lam"
         >
@@ -130,7 +130,7 @@ export function TopBar() {
             <span
               className={cn(
                 'flex size-6 items-center justify-center rounded-full',
-                'bg-brand-subtle text-xs font-semibold text-brand',
+                'bg-brand-forest text-xs font-semibold text-brand-mint',
               )}
             >
               {profile?.fullName?.trim().split(/\s+/).at(-1)?.[0] ?? '?'}

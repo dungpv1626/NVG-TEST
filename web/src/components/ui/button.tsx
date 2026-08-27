@@ -25,14 +25,13 @@ const buttonVariants = cva(
     variants: {
       variant: {
         /** Hành động chính — chỉ MỘT trên mỗi màn hình. */
-        primary: 'bg-brand text-fg-inverse shadow-raised hover:bg-brand-hover',
+        primary: 'bg-brand text-fg-inverse hover:bg-brand-hover',
         secondary:
-          'border border-border-strong bg-surface text-fg shadow-raised ' +
-          'hover:bg-surface-hover',
+          'border border-border-strong bg-surface text-fg ' +
+          'hover:border-brand-hover hover:bg-surface-hover',
         subtle: 'text-fg-subtle hover:bg-surface-hover hover:text-fg',
         /** Hành động không thể hoàn tác — luôn kèm hộp thoại xác nhận (Content Guidelines 4.5). */
-        danger:
-          'bg-status-overdue text-fg-inverse shadow-raised hover:brightness-95',
+        danger: 'bg-status-overdue text-fg-inverse hover:brightness-95',
         link: 'text-brand underline-offset-4 hover:underline',
       },
       size: {
@@ -46,15 +45,16 @@ const buttonVariants = cva(
 );
 
 export interface ButtonProps
-  extends ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+  extends ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
   asChild?: boolean;
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : 'button';
-    return <Comp ref={ref} className={cn(buttonVariants({ variant, size }), className)} {...props} />;
+    return (
+      <Comp ref={ref} className={cn(buttonVariants({ variant, size }), className)} {...props} />
+    );
   },
 );
 Button.displayName = 'Button';

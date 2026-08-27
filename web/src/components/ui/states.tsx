@@ -85,7 +85,7 @@ export function BlockedNotice({
   action?: ReactNode;
 }) {
   return (
-    <div className="max-w-2xl rounded-lg border border-border bg-surface p-6 shadow-card">
+    <div className="max-w-2xl rounded-lg border border-border bg-surface p-6">
       <p className="font-medium">{title}</p>
       <p className="mt-1 text-fg-subtle">{detail}</p>
       {action && <div className="mt-4">{action}</div>}
@@ -118,12 +118,17 @@ export function TableSkeleton({ rows = 8, columns = 5 }: { rows?: number; column
   );
 }
 
-/** Skeleton hình dạng LƯỚI THẺ — dùng cho màn hình Dashboard. */
+/**
+ * Skeleton hình dạng LƯỚI THẺ — dùng cho màn hình Dashboard.
+ *
+ * `min-h-40` khớp đúng chiều cao tối thiểu của `KpiCard` (`components/ui/kpi-card.tsx`) —
+ * lệch nhau thì nội dung thật "nhảy" cao hơn/thấp hơn khung xám ngay khi tải xong.
+ */
 export function CardGridSkeleton({ count = 6 }: { count?: number }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: count }).map((_, i) => (
-        <Skeleton key={i} className="h-28 rounded-lg" />
+        <Skeleton key={i} className="min-h-40 rounded-lg" />
       ))}
     </div>
   );
