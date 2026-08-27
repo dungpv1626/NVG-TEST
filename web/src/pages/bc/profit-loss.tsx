@@ -15,7 +15,7 @@
  * (không có nút "Thử lại": thử lại không đổi được kết quả).
  */
 
-import { Download } from 'lucide-react';
+import { Download, Printer } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { BUTTONS, formatCurrency } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
@@ -25,6 +25,7 @@ import { useCompanyLookup } from '@/hooks/use-companies';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useProfitLossReport, type ProfitLossRow } from '@/hooks/use-reports';
 import { useCompanyScope } from '@/lib/company-scope';
+import { escapeHtml, openPrintReport } from '@/lib/print-report';
 import { cn } from '@/lib/utils';
 import { BcNav } from './bc-nav';
 
@@ -86,6 +87,64 @@ function exportCsv(rows: ProfitLossRow[], companyOf: ReturnType<typeof useCompan
   URL.revokeObjectURL(url);
 }
 
+/** `Lãi`/`Lỗ` bằng chữ trong HTML in — cùng công thức `ProfitAmount` hiện trên màn hình. */
+function profitHtml(value: bigint | string | number | null): string {
+  if (value === null || value === undefined) {
+    return '<span class="muted">Chưa gắn hợp đồng</span>';
+  }
+  const n = typeof value === 'bigint' ? value : BigInt(value);
+  const isLoss = n < 0n;
+  const cls = isLoss ? 'loss' : 'profit';
+  return `<span class="${cls}">${isLoss ? 'Lỗ ' : 'Lãi '}${escapeHtml(formatCurrency(isLoss ? -n : n))}</span>`;
+}
+
+/** Xuất PDF (BC-06) — mở cửa sổ in với cùng số liệu đang hiện trên màn hình. */
+function printPdf(
+  rows: ProfitLossRow[],
+  companyOf: ReturnType<typeof useCompanyLookup>,
+  showCompany: boolean,
+) {
+  const summary = `<dl>
+    <div><dt>Số công trình</dt><dd>${rows.length}</dd></div>
+    <div><dt>Doanh thu hợp đồng</dt><dd>${escapeHtml(formatCurrency(sum(rows, 'contract_value')))}</dd></div>
+    <div><dt>Giá vốn thực tế</dt><dd>${escapeHtml(formatCurrency(sum(rows, 'actual_cost')))}</dd></div>
+    <div><dt>Lãi/lỗ dự kiến</dt><dd>${profitHtml(sum(rows, 'target_profit'))}</dd></div>
+  </dl>`;
+
+  const bodyRows = rows
+    .map((r) => {
+      const revenue =
+        r.contract_value === null
+          ? '<span class="muted">Chưa gắn hợp đồng</span>'
+          : escapeHtml(formatCurrency(r.contract_value));
+      return `<tr>
+        <td>${escapeHtml(r.site_name)}<br /><span class="muted">${escapeHtml(r.site_code)}</span></td>
+        ${showCompany ? `<td>${escapeHtml(companyOf(r.company_id)?.code ?? '—')}</td>` : ''}
+        <td class="num">${revenue}</td>
+        <td class="num">${escapeHtml(formatCurrency(r.actual_cost))}</td>
+        <td class="num">${escapeHtml(formatCurrency(r.committed_cost))}</td>
+        <td class="num">${profitHtml(r.target_profit)}</td>
+        <td class="num">${profitHtml(r.profit_actual)}</td>
+      </tr>`;
+    })
+    .join('');
+
+  const table = `<table>
+    <thead><tr>
+      <th>Công trình</th>
+      ${showCompany ? '<th>Pháp nhân</th>' : ''}
+      <th class="num">Doanh thu</th>
+      <th class="num">Giá vốn thực tế</th>
+      <th class="num">Đã cam kết</th>
+      <th class="num">Lãi/lỗ dự kiến</th>
+      <th class="num">Lãi/lỗ thực tế</th>
+    </tr></thead>
+    <tbody>${bodyRows}</tbody>
+  </table>`;
+
+  openPrintReport('Báo cáo lãi/lỗ theo công trình', summary + table);
+}
+
 export function ProfitLossReportPage() {
   const scope = useCompanyScope();
   const { data, isLoading, error } = useProfitLossReport();
@@ -103,10 +162,19 @@ export function ProfitLossReportPage() {
         actions={
           data &&
           data.length > 0 && (
-            <Button variant="secondary" onClick={() => exportCsv(data, companyOf)}>
-              <Download className="size-4" aria-hidden />
-              {BUTTONS.exportExcel}
-            </Button>
+            <>
+              <Button variant="secondary" onClick={() => exportCsv(data, companyOf)}>
+                <Download className="size-4" aria-hidden />
+                {BUTTONS.exportExcel}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => printPdf(data, companyOf, scope.isAggregate)}
+              >
+                <Printer className="size-4" aria-hidden />
+                {BUTTONS.exportPdf}
+              </Button>
+            </>
           )
         }
       />

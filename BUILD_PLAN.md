@@ -636,7 +636,7 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
   sẵn nhưng chưa có hàm/nút) — BSD chỉ đặc tả đúng một endpoint thu hồi, chưa rõ nghiệp vụ hủy
   thật sự cần gì.
 
-### 3G. Module BC — đầy đủ — ⏳ BC-01/BC-02/BC-03 (một phần)/BC-05 xong, BC-04/BC-06/BC-07 chưa làm
+### 3G. Module BC — đầy đủ — ⏳ BC-01/BC-02/BC-03 (một phần)/BC-05/BC-06 (xuất PDF) xong, BC-04/BC-07 chưa làm
 
 - ✅ **BC-02 — Báo cáo lãi/lỗ theo công trình** (`/bc/lai-lo`, hàm `project_profit_loss` —
   `db/migrations/0056_bc_profit_loss.sql`). KHÔNG sinh bảng mới: đọc trực tiếp
@@ -695,8 +695,19 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
 - ⏳ **CHƯA LÀM**: BC-04 (tồn kho/hao hụt/giá thành SX — mục này đã nằm trong danh sách CÓ THỂ
   CẮT, xem "Thứ tự cắt giảm"), BC-07 (báo cáo tổng hợp toàn NVG truy ngược xuống pháp nhân/phòng
   ban — một phần đã có qua "Toàn NVG" + cột Pháp nhân).
-- ⏳ **CHƯA LÀM**: xuất PDF (mọi báo cáo) và "hiện mức độ đầy đủ dữ liệu" (BC-06) ngoài phần
-  Dashboard đã có sẵn từ Phase 2E.
+- ✅ **BC-06 phần xuất PDF** — nút "Xuất PDF" trên cả hai báo cáo (BC-02, BC-03), mở CỬA SỔ IN
+  riêng (`web/src/lib/print-report.ts`) rồi gọi `window.print()` — người dùng chọn đích "Lưu
+  dưới dạng PDF" ở hộp thoại in, không phải file `.pdf` tự tải xuống. CỐ Ý không dùng thư viện
+  dựng PDF (jsPDF…): font mặc định của các thư viện đó thiếu glyph tiếng Việt có dấu, phải tự
+  nhúng font base64 mới đúng — đúng loại rủi ro CLAUDE.md 4.1 đã cảnh báo (chữ do một tầng khác
+  sinh ra, không kiểm được bằng cách đọc mã nguồn). Cửa sổ in dùng font hệ thống nên không có
+  khâu nhúng font nào có thể sai. Cũng CỐ Ý không phủ `@media print` lên App Shell — tránh phải
+  làm print-safe cho sidebar/top bar dùng chung mọi màn hình chỉ để phục vụ hai trang báo cáo.
+  Test: `web/src/lib/__tests__/print-report.test.ts` (mock `window.open`, không gọi `print()`
+  thật trong môi trường test/tự động — hộp thoại in là dialog có thể chặn thao tác tiếp theo,
+  giống `window.confirm`, nên không kiểm bằng browser tự động, chỉ kiểm nút hiện đúng chỗ).
+- ⏳ **CHƯA LÀM**: "hiện mức độ đầy đủ dữ liệu" (BC-06 phần còn lại) cho riêng hai báo cáo BC-02/
+  BC-03 — Dashboard đã có sẵn từ Phase 2E, hai trang báo cáo thì chưa.
 - `report_snapshots` — chỉ thêm nếu dashboard chậm thật, không tối ưu sớm
 
 ### ✅ Definition of Done — Phase 3

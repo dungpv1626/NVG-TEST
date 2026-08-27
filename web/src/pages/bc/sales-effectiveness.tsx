@@ -21,7 +21,7 @@
  * cùng một khoảng thời gian, không phải ba báo cáo độc lập.
  */
 
-import { Download } from 'lucide-react';
+import { Download, Printer } from 'lucide-react';
 import {
   BUTTONS,
   OPPORTUNITY_STAGE_META,
@@ -39,6 +39,7 @@ import { Button } from '@/components/ui/button';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useBiddingOutcomes, useOpportunityFunnelBySource } from '@/hooks/use-reports';
+import { escapeHtml, openPrintReport } from '@/lib/print-report';
 import { BcNav } from './bc-nav';
 
 function csvLine(values: readonly (string | number | null)[]): string {
@@ -92,6 +93,85 @@ function exportCsv(
   a.download = `bao-cao-hieu-qua-kinh-doanh-${new Date().toISOString().slice(0, 10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+/** Xuất PDF (BC-06) — mở cửa sổ in, cùng ba lát cắt với "Xuất Excel", trình bày dạng bảng. */
+function printPdf(
+  sources: SourceSummary[],
+  funnel: FunnelStageSummary[],
+  bidding: BiddingOutcomeSummary,
+) {
+  const rateOrMuted = (value: number | null) =>
+    value === null
+      ? '<span class="muted">Chưa có dữ liệu</span>'
+      : escapeHtml(formatPercent(value));
+
+  const sourceTable =
+    sources.length === 0
+      ? '<p>Chưa có cơ hội nào để gộp theo nguồn khách.</p>'
+      : `<table>
+          <thead><tr>
+            <th>Nguồn khách</th>
+            <th class="num">Tổng số cơ hội</th>
+            <th class="num">Đã ký hợp đồng</th>
+            <th class="num">Tỷ lệ chuyển đổi</th>
+            <th class="num">Giá trị ước tính</th>
+          </tr></thead>
+          <tbody>${sources
+            .map(
+              (r) => `<tr>
+                <td>${escapeHtml(r.source)}</td>
+                <td class="num">${r.total}</td>
+                <td class="num">${r.won}</td>
+                <td class="num">${rateOrMuted(r.winRate)}</td>
+                <td class="num">${escapeHtml(formatCurrency(r.value))}</td>
+              </tr>`,
+            )
+            .join('')}</tbody>
+        </table>`;
+
+  const funnelTable = `<table>
+    <thead><tr><th>Giai đoạn</th><th class="num">Số cơ hội</th></tr></thead>
+    <tbody>${funnel
+      .map(
+        (r) =>
+          `<tr><td>${escapeHtml(OPPORTUNITY_STAGE_META[r.stage].label)}</td><td class="num">${r.count}</td></tr>`,
+      )
+      .join('')}</tbody>
+  </table>`;
+
+  const decided = bidding.won + bidding.lost;
+  const biddingHtml =
+    decided === 0
+      ? '<p>Chưa có gói thầu nào có kết quả (trúng hoặc trượt).</p>'
+      : `<dl>
+          <div><dt>Đã có kết quả</dt><dd>${decided} gói thầu</dd></div>
+          <div><dt>Trúng thầu</dt><dd>${bidding.won}</dd></div>
+          <div><dt>Tỷ lệ trúng thầu</dt><dd>${rateOrMuted(bidding.winRate)}</dd></div>
+        </dl>
+        ${
+          bidding.lossReasons.length === 0
+            ? '<p>Chưa trượt gói thầu nào trong dữ liệu hiện có.</p>'
+            : `<table>
+                <thead><tr><th>Nguyên nhân trượt thầu</th><th class="num">Số lần</th></tr></thead>
+                <tbody>${bidding.lossReasons
+                  .map(
+                    (r) =>
+                      `<tr><td>${escapeHtml(r.reason)}</td><td class="num">${r.count}</td></tr>`,
+                  )
+                  .join('')}</tbody>
+              </table>`
+        }`;
+
+  const body = `
+    <h2>Nguồn khách</h2>
+    ${sourceTable}
+    <h2>Phễu bán hàng — theo giai đoạn hiện tại</h2>
+    ${funnelTable}
+    <h2>Tỷ lệ trúng thầu và nguyên nhân trượt thầu</h2>
+    ${biddingHtml}`;
+
+  openPrintReport('Báo cáo hiệu quả kinh doanh', body);
 }
 
 /** "Chưa có dữ liệu" khác hẳn "0%" — cùng nguyên tắc BC-06 đã áp dụng cho conversionRate. */
@@ -240,19 +320,34 @@ export function SalesEffectivenessPage() {
         breadcrumbs={[{ label: 'Dashboard', to: '/dashboard' }, { label: 'Hiệu quả kinh doanh' }]}
         actions={
           hasAnyData && (
-            <Button
-              variant="secondary"
-              onClick={() =>
-                exportCsv(
-                  summarizeOpportunitiesBySource(funnel.data ?? []),
-                  summarizeOpportunityFunnel(funnel.data ?? []),
-                  summarizeBiddingOutcomes(outcomes.data ?? []),
-                )
-              }
-            >
-              <Download className="size-4" aria-hidden />
-              {BUTTONS.exportExcel}
-            </Button>
+            <>
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  exportCsv(
+                    summarizeOpportunitiesBySource(funnel.data ?? []),
+                    summarizeOpportunityFunnel(funnel.data ?? []),
+                    summarizeBiddingOutcomes(outcomes.data ?? []),
+                  )
+                }
+              >
+                <Download className="size-4" aria-hidden />
+                {BUTTONS.exportExcel}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  printPdf(
+                    summarizeOpportunitiesBySource(funnel.data ?? []),
+                    summarizeOpportunityFunnel(funnel.data ?? []),
+                    summarizeBiddingOutcomes(outcomes.data ?? []),
+                  )
+                }
+              >
+                <Printer className="size-4" aria-hidden />
+                {BUTTONS.exportPdf}
+              </Button>
+            </>
           )
         }
       />
