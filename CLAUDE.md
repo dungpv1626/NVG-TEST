@@ -510,6 +510,8 @@ Gộp từ PRD 10, TSD 7, CGD 7, BSD 5, IPD 7:
 | **`unit_prices` dùng chung DA/TK/MH?** | Cần xác nhận NVO có cần bảng đơn giá riêng không (BSD 5). Đang triển khai DÙNG CHUNG, tách sẵn theo `company_id` |
 | **Ai được xem GIÁ VỐN** | Đang mở cho TGĐ/CFO/BGĐ/Admin + **DA_DT, TKE, MH** (suy từ TK-07 và MH-04/05). Lợi nhuận vẫn chỉ TGĐ/CFO/BGĐ/Admin. Sửa ở hàm `rls_sees_sensitive` |
 | **Cơ chế lương/thưởng chi tiết** từng công ty/nhóm nhân sự | Chưa cấu hình được NS-06 |
+| **"Trưởng đơn vị" ở bước 1 của luồng duyệt chi (KT-01) là AI** — Haan xác nhận 27/08/2026: chưa có thông tin, chờ khảo sát đầy đủ | Đang SUY LUẬN: người có quyền `approve` trên module phát sinh khoản chi (`payment_requests.origin_module`). Kéo theo: vai trò TC/MH/KHO được cấp `approve` trên chính phân hệ của mình. Khi Module NS có cây tổ chức, thay điều kiện trong hàm `rls_payment_step_actor` — không phải sửa chỗ nào khác |
+| **Mốc chia nhóm công nợ quá hạn** (KT-04) — Haan xác nhận 27/08/2026: chưa có mốc, giữ giả định nhưng Quản trị hệ thống phải sửa lại được | Đã chuyển thành DỮ LIỆU trong bảng `aging_buckets`, seed 30/60/90 ngày từ `DEFAULT_AGING_BUCKETS`. KHÔNG hard-code ở bất kỳ đâu — cùng quy tắc với `approval_limits` (5.2). Mốc riêng của pháp nhân THAY THẾ mốc chung, không trộn |
 | **Tên miền chính thức** · **đầu mối hỗ trợ kỹ thuật** (điền vào mẫu lỗi CGD 5.5) · **SSO** (chờ NVG có email công ty) | Chưa chặn phát triển |
 | **Hạn mức + điều khoản bảo mật gói miễn phí Gemini** | Cần kiểm tra lại tại thời điểm triển khai; cân nhắc gói trả phí khi dùng dữ liệu thật |
 

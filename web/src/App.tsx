@@ -147,10 +147,30 @@ const ScaffoldingPage = lazy(() =>
 const MaterialListPage = lazy(() =>
   import('@/pages/kho/catalog-pages').then((m) => ({ default: m.MaterialListPage })),
 );
+const PaymentRequestListPage = lazy(() =>
+  import('@/pages/kt/payment-list').then((m) => ({ default: m.PaymentRequestListPage })),
+);
+const PaymentRequestCreatePage = lazy(() =>
+  import('@/pages/kt/payment-create').then((m) => ({ default: m.PaymentRequestCreatePage })),
+);
+const PaymentRequestDetailPage = lazy(() =>
+  import('@/pages/kt/payment-detail').then((m) => ({ default: m.PaymentRequestDetailPage })),
+);
+const AdvanceListPage = lazy(() =>
+  import('@/pages/kt/advance-page').then((m) => ({ default: m.AdvanceListPage })),
+);
+const ReceivablePage = lazy(() =>
+  import('@/pages/kt/receivable-page').then((m) => ({ default: m.ReceivablePage })),
+);
+const CashFlowPage = lazy(() =>
+  import('@/pages/kt/cash-flow-page').then((m) => ({ default: m.CashFlowPage })),
+);
+const AccountingPeriodPage = lazy(() =>
+  import('@/pages/kt/period-page').then((m) => ({ default: m.AccountingPeriodPage })),
+);
 const WarehouseListPage = lazy(() =>
   import('@/pages/kho/catalog-pages').then((m) => ({ default: m.WarehouseListPage })),
 );
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -279,6 +299,19 @@ const router = createBrowserRouter(
           <Route path="kho/danh-muc-kho" element={<WarehouseListPage />} />
         </Route>
 
+        {/* KT — kế toán và tài chính (KT-01 → KT-09). Không có màn hình "sửa số đã chi":
+                  tiền chỉ ghi nhận trên một đề nghị đã đi hết bốn bước, và kỳ đã khóa thì
+                  chính cơ sở dữ liệu từ chối mọi thay đổi mang ngày trong kỳ. */}
+        <Route element={<ModuleGuard module="KT" />}>
+          <Route path="kt/de-nghi-thanh-toan" element={<PaymentRequestListPage />} />
+          <Route path="kt/de-nghi-thanh-toan/tao-moi" element={<PaymentRequestCreatePage />} />
+          <Route path="kt/de-nghi-thanh-toan/:id" element={<PaymentRequestDetailPage />} />
+          <Route path="kt/tam-ung" element={<AdvanceListPage />} />
+          <Route path="kt/cong-no" element={<ReceivablePage />} />
+          <Route path="kt/dong-tien" element={<CashFlowPage />} />
+          <Route path="kt/ky-ke-toan" element={<AccountingPeriodPage />} />
+        </Route>
+
         {/* Hộp thư Phê duyệt — MỘT màn hình cho mọi module (Webapp Flow 4.6),
                   nên nằm ở gốc chứ không thuộc đường dẫn của module nào. KHÔNG bọc
                   `ModuleGuard`: nó gom hồ sơ từ mọi phân hệ, và mỗi dòng đã tự lọc theo
@@ -290,7 +323,12 @@ const router = createBrowserRouter(
           <Route path="nen/giao-dien" element={<DesignShowcasePage />} />
         </Route>
         {MODULE_CODES.filter(
-          (c): c is Exclude<ModuleCode, 'BC' | 'CRM' | 'DA' | 'TK' | 'HD' | 'TC' | 'MH' | 'KHO'> =>
+          (
+            c,
+          ): c is Exclude<
+            ModuleCode,
+            'BC' | 'CRM' | 'DA' | 'TK' | 'HD' | 'TC' | 'MH' | 'KHO' | 'KT'
+          > =>
             c !== 'BC' &&
             c !== 'CRM' &&
             c !== 'DA' &&
@@ -298,7 +336,8 @@ const router = createBrowserRouter(
             c !== 'HD' &&
             c !== 'TC' &&
             c !== 'MH' &&
-            c !== 'KHO',
+            c !== 'KHO' &&
+            c !== 'KT',
         ).map((code) => (
           <Route key={code} element={<ModuleGuard module={code} />}>
             <Route path={MODULE_PATHS[code]} element={<PlaceholderPage moduleCode={code} />} />

@@ -295,6 +295,41 @@
       "when": 1787830100000,
       "tag": "0041_kho_close_stocktake_and_cost",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1787830200000,
+      "tag": "0042_kt_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1787830300000,
+      "tag": "0043_kt_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1787830400000,
+      "tag": "0044_approval_inbox_parents",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1787830500000,
+      "tag": "0045_kt_aging_buckets",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1787830600000,
+      "tag": "0046_aging_buckets_rls",
+      "breakpoints": true
     }
   ]
 }

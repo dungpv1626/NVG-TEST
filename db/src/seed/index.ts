@@ -13,9 +13,17 @@
 import '../env';
 import { createClient } from '@supabase/supabase-js';
 import { eq, sql as sqlOp } from 'drizzle-orm';
-import { DEFAULT_APPROVAL_LIMITS } from '@nvg/shared';
+import { DEFAULT_AGING_BUCKETS, DEFAULT_APPROVAL_LIMITS } from '@nvg/shared';
 import { createConnection } from '../client';
-import { approvalLimits, companies, permissions, roles, userCompanies, users } from '../schema/index';
+import {
+  agingBuckets,
+  approvalLimits,
+  companies,
+  permissions,
+  roles,
+  userCompanies,
+  users,
+} from '../schema/index';
 import { COMPANY_SEED, ROLE_SEED, SEED_PASSWORD, USER_SEED } from './data';
 
 function requireEnv(name: string): string {
@@ -137,6 +145,24 @@ async function main() {
         .onConflictDoNothing();
     }
     console.log(`Hạn mức phê duyệt: ${DEFAULT_APPROVAL_LIMITS.length}`);
+
+    // --- Khung tuổi nợ (KT-04) --------------------------------------------
+    // Cùng tinh thần với hạn mức phê duyệt: đây là GIÁ TRỊ KHỞI TẠO, NVG sửa lại trong Quản
+    // trị hệ thống khi ban hành mốc chính thức. `company_id` rỗng = áp dụng cho mọi pháp nhân.
+    for (const [index, bucket] of DEFAULT_AGING_BUCKETS.entries()) {
+      await db
+        .insert(agingBuckets)
+        .values({
+          companyId: null,
+          code: bucket.code,
+          label: bucket.label,
+          position: index + 1,
+          fromDays: bucket.fromDays,
+          toDays: bucket.toDays,
+        })
+        .onConflictDoNothing();
+    }
+    console.log(`Khung tuổi nợ: ${DEFAULT_AGING_BUCKETS.length}`);
 
     // --- Người dùng + tài khoản đăng nhập ----------------------------------
     let created = 0;

@@ -37,3 +37,6 @@ export * from './hd';
 export * from './tc';
 export * from './mh';
 export * from './kho';
+
+// --- Module KT — Kế toán và Tài chính (Backend Schema 4.9) ---
+export * from './kt';

@@ -470,18 +470,42 @@ bảng còn lại là bảng dòng.
   - **Giá vốn xuất kho chính thức** (bình quân gia quyền, nhập trước xuất trước…) — phải khớp
     phần mềm kế toán, mà phần mềm đó chưa chốt. Hiện chỉ có `average_cost` tham khảo.
 
-### 3D. Module KT (BSD 4.9)
-`payment_requests` · `advances` · `receivables_payables` · `cash_flow_plans` · `accounting_periods`
+### 3D. Module KT (BSD 4.9) ✅ xong
+`payment_requests` + `payment_request_allocations` + `payment_request_steps` · `advances` ·
+`receivables_payables` + `receivable_settlements` · `cash_flow_plans` · `accounting_periods`
 
-- Luồng duyệt chi **nhiều cấp** (KT-01): đề nghị → trưởng đơn vị → Kế toán kiểm tra → Trưởng Tài chính
-  kiểm tra dòng tiền → duyệt theo hạn mức → phiếu chi → hạch toán
-  - `POST /api/payment-requests/:id/approve-step` — xử lý từng bước
-- Mọi khoản gắn mã công ty/công trình/hạng mục/bộ phận + **hiển thị đang ở bước nào, chờ ai, quá hạn
-  bao lâu** (KT-02) ← giải trực tiếp vướng mắc #6
-- Gắn chi phí vào mã công trình **ngay từ khi phát sinh**, không hạch toán lại thủ công (KT-05)
-- `POST /api/accounting-periods/:id/close` — khoá kỳ, chặn sửa (KT-09)
-- ⏸ `POST /api/export/accounting-software` (KT-08) — **chặn bởi quyết định phần mềm kế toán**;
-  làm khung trước, hoàn thiện định dạng sau
+BSD 4.9 liệt kê 5 bảng, ở đây có 8. Ba bảng thêm đều là bảng dòng hoặc bảng lịch sử của một
+bảng đã có tên: phân bổ chi phí (KT-05 đòi phân bổ chi phí dùng chung, một cột `cost_code` không
+làm được), lịch sử từng bước (KT-02 đòi biết "chờ ai, quá hạn bao lâu"; BSD 2.3 cấm ghi đè), và
+chứng từ thu/trả (KT-04 + HD-03 đòi truy ngược "đã thu" tới từng lần thu).
+
+- ✅ Luồng duyệt chi **nhiều cấp** (KT-01): đề nghị → trưởng đơn vị → Kế toán kiểm tra → Trưởng Tài
+  chính kiểm tra dòng tiền → duyệt theo hạn mức → phiếu chi → thực hiện chi → hạch toán.
+  `advance_payment_step()` xử lý ba bước KIỂM TRA (không cần hạn mức); bước thứ tư đi qua Hộp thư
+  Phê duyệt dùng chung và `decide_approval()` như mọi module khác.
+- ✅ Mọi khoản gắn mã công ty/công trình/hạng mục/bộ phận + màn hình nói rõ **đang ở bước nào, chờ
+  ai** (KT-02) ← giải trực tiếp vướng mắc #6.
+- ✅ Gắn chi phí vào mã công trình **ngay khi phát sinh** (KT-05) — và **KHÔNG đếm hai lần**: hàng
+  mua qua MH đã được `record_delivery` ghi vào ngân sách lúc hàng về, nên khoản chi cho chính đơn
+  hàng đó chỉ là dòng tiền. Tạm ứng cũng chưa phải chi phí; chi phí hình thành lúc hoàn ứng.
+- ✅ Tạm ứng (KT-03): khoản nợ sinh ra đúng lúc tiền ra, quá hạn chưa hoàn thì lần ứng sau bắt
+  buộc nêu lý do và lý do đó hiện trước mắt người duyệt.
+- ✅ Công nợ hai chiều + bảng tuổi nợ CẤU HÌNH ĐƯỢC (bảng `aging_buckets`, seed 30/60/90 — cùng
+  quy tắc "không hard-code" của `approval_limits`, NEN-02). `contracts.collected_amount` chỉ đổi qua
+  `record_receivable_settlement()` → phần "đã thu / còn phải thu" của HD-03 nay có số thật.
+- ✅ `cash_flow_current()` (KT-06) — SECURITY INVOKER, RLS lọc trước khi cộng.
+- ✅ `close_accounting_period()` / `reopen_accounting_period()` (KT-09): khóa kỳ là ràng buộc THẬT
+  ở tầng CSDL, mở lại bắt buộc nêu nguyên nhân kèm người mở.
+- ⏸ `POST /api/export/accounting-software` (KT-08) — **chặn bởi quyết định phần mềm kế toán**. Cột
+  `posted_at`/`posted_reference` đã có để đánh dấu "đã chuyển"; định dạng xuất chờ NVG chốt MISA /
+  AMIS / Fast.
+- ⏸ KT-07 lãi/lỗ theo công trình — thuộc 3G (BC đầy đủ), đọc từ `project_budgets` + các bảng ở đây,
+  không sinh thêm bảng.
+
+⚠️ **Điểm SUY LUẬN cần Haan xác nhận với NVG**: KT-01 nói "xác nhận TRƯỞNG ĐƠN VỊ" nhưng hệ thống
+chưa có cây tổ chức (thuộc Module NS, chưa dựng). Tạm hiểu "trưởng đơn vị" = người có quyền phê
+duyệt trong module phát sinh khoản chi (`payment_requests.origin_module`). Khi NS có quan hệ quản
+lý trực tiếp, thay điều kiện trong `rls_payment_step_actor` và không phải sửa chỗ nào khác.
 
 ### 3E. Module NS (BSD 4.10) — độc lập, chen vào bất cứ lúc nào
 `employees` · `employment_contracts` · `timesheets` · `leave_requests` · `recruitment_positions` · `assets_assigned`

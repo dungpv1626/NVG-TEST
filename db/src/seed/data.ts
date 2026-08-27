@@ -89,6 +89,26 @@ const VIEW_APPROVE: Perm[] = ['view', 'approve'];
 const WORK: Perm[] = ['view', 'create', 'edit'];
 
 /**
+ * Trưởng bộ phận: làm việc trên module của mình VÀ xác nhận hồ sơ của bộ phận mình.
+ *
+ * `approve` ở đây KHÔNG phải hạn mức tiền (hạn mức nằm ở `approval_limits`, NEN-02) mà là
+ * quyền ký xác nhận trong phân hệ. Nó là thứ hàm `rls_payment_step_actor` đọc để biết ai là
+ * "trưởng đơn vị" ở bước đầu của luồng duyệt chi KT-01 — khoản chi phát sinh ở công trường
+ * thì Ban chỉ huy xác nhận, khoản mua hàng thì Phòng Mua hàng xác nhận.
+ */
+const WORK_APPROVE: Perm[] = ['view', 'create', 'edit', 'approve'];
+
+/**
+ * Gửi được đề nghị chi, nhưng KHÔNG xử lý phân hệ Kế toán.
+ *
+ * Công trường và Mua hàng là nơi khoản chi phát sinh (TC-03, MH-08), nên họ phải lập được
+ * đề nghị. Nhưng `view` ở đây KHÔNG mở toàn bộ khoản chi của công ty cho họ: chính sách RLS
+ * của `payment_requests` chỉ trả về hồ sơ của chính họ và hồ sơ đang chờ chính họ ký — lương,
+ * thuế và các khoản chi của bộ phận khác vẫn khuất (KT-10). Xem migration 0043.
+ */
+const RAISE_ONLY: Perm[] = ['view', 'create'];
+
+/**
  * ⚠️ GIẢ ĐỊNH CHỜ HAAN XÁC NHẬN — Webapp Flow tự mâu thuẫn về quyền soạn hợp đồng:
  *
  *   - Mục 2.3 (bảng menu theo vai trò) ghi Kinh doanh, Dự án – Đấu thầu, Thiết kế và Kế
@@ -181,7 +201,7 @@ export const ROLE_SEED: RoleSeed[] = [
     description: 'Tiến độ, nhật ký công trường, nghiệm thu, đề nghị vật tư.',
     seesAllCompanies: false,
     defaultRoute: '/tc/cong-trinh',
-    permissions: { BC: VIEW, TC: WORK, MH: ['view', 'create'], KHO: VIEW },
+    permissions: { BC: VIEW, TC: WORK_APPROVE, MH: ['view', 'create'], KHO: VIEW, KT: RAISE_ONLY },
   },
   {
     code: 'MH',
@@ -189,7 +209,7 @@ export const ROLE_SEED: RoleSeed[] = [
     description: 'Xử lý đề nghị mua, so sánh nhà cung cấp, đơn hàng, giao nhận.',
     seesAllCompanies: false,
     defaultRoute: '/mh/de-nghi-mua',
-    permissions: { BC: VIEW, MH: WORK, KHO: VIEW },
+    permissions: { BC: VIEW, MH: WORK_APPROVE, KHO: VIEW, KT: RAISE_ONLY },
   },
   {
     code: 'KHO',
@@ -197,7 +217,7 @@ export const ROLE_SEED: RoleSeed[] = [
     description: 'Nhập – xuất – điều chuyển – kiểm kê vật tư và giàn giáo.',
     seesAllCompanies: false,
     defaultRoute: '/kho/quet-ma',
-    permissions: { KHO: WORK, MH: VIEW },
+    permissions: { KHO: WORK_APPROVE, MH: VIEW },
   },
   {
     code: 'KT',
@@ -222,8 +242,18 @@ export const ROLE_SEED: RoleSeed[] = [
     seesAllCompanies: true,
     defaultRoute: '/nen/quan-tri',
     permissions: {
-      NEN: ALL, BC: ALL, CRM: ALL, DA: ALL, TK: ALL, HD: ALL,
-      TC: ALL, MH: ALL, KHO: ALL, KT: ALL, NS: ALL, SX: ALL,
+      NEN: ALL,
+      BC: ALL,
+      CRM: ALL,
+      DA: ALL,
+      TK: ALL,
+      HD: ALL,
+      TC: ALL,
+      MH: ALL,
+      KHO: ALL,
+      KT: ALL,
+      NS: ALL,
+      SX: ALL,
     },
   },
 ];

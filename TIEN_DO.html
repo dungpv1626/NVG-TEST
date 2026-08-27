@@ -76,7 +76,7 @@
   <h1>Tiến độ phát triển — Hệ thống Quản trị Nhà Việt Group</h1>
   <p class="muted">Bản tóm tắt để theo dõi: đã xong gì, đang làm gì, sắp làm gì, còn lại gì.</p>
   <p class="xs muted">
-    Cập nhật: <strong>26/08/2026</strong> ·
+    Cập nhật: <strong>27/08/2026</strong> ·
     Nguồn chi tiết: <code>BUILD_PLAN.md</code> (kế hoạch) và <code>CLAUDE.md</code> (ràng buộc) ·
     Tài liệu gốc nằm trong <code>doc/</code>
   </p>
@@ -92,14 +92,14 @@
 <section class="card">
   <h3>Toàn hệ thống</h3>
   <p class="xs muted">Ước lượng theo khối lượng nghiệp vụ đã chạy được đầu-cuối, không theo số dòng mã.</p>
-  <div class="bar"><span style="width: 76%"></span></div>
-  <p class="xs muted" style="margin-top:6px">Khoảng 76% chặng đường tới bản demo ~95%. <strong>Giai đoạn 1 đã nghiệm thu; Giai đoạn 2 đang chạy — Thi công, Mua hàng và Kho đã xong.</strong> Một hợp đồng đã ký nay chạy thẳng tới cuối: mở công trình → công trường đề nghị mua → so sánh nhà cung cấp → đặt hàng → hàng về nhập kho → xuất cho công trình, và tiền về đúng mã chi phí ở từng bước.</p>
+  <div class="bar"><span style="width: 83%"></span></div>
+  <p class="xs muted" style="margin-top:6px">Khoảng 83% chặng đường tới bản demo ~95%. <strong>Giai đoạn 1 đã nghiệm thu; Giai đoạn 2 đang chạy — Thi công, Mua hàng, Kho và nay là Kế toán – Tài chính đã xong.</strong> Vòng tiền của một công trình nay khép kín: mở công trình → công trường đề nghị mua → so sánh nhà cung cấp → đặt hàng → hàng về nhập kho → xuất cho công trình → đề nghị thanh toán đi qua bốn cấp → chi tiền → chi phí vào đúng mã công trình, và tiền khách trả về ghi thẳng vào phần &quot;đã thu&quot; của hợp đồng.</p>
 
   <div class="stats">
-    <div class="stat"><b>9 / 12</b><span class="xs muted">module đã dựng (Nền tảng, CRM, Đấu thầu, Thiết kế, Hợp đồng, Báo cáo, Thi công, Mua hàng, Kho)</span></div>
-    <div class="stat"><b>61 / ~65</b><span class="xs muted">bảng cơ sở dữ liệu</span></div>
-    <div class="stat"><b>40</b><span class="xs muted">migration đã chạy</span></div>
-    <div class="stat"><b>393</b><span class="xs muted">kiểm thử tự động, tất cả đang xanh</span></div>
+    <div class="stat"><b>10 / 12</b><span class="xs muted">module đã dựng (Nền tảng, CRM, Đấu thầu, Thiết kế, Hợp đồng, Báo cáo, Thi công, Mua hàng, Kho, Kế toán)</span></div>
+    <div class="stat"><b>71</b><span class="xs muted">bảng cơ sở dữ liệu</span></div>
+    <div class="stat"><b>47</b><span class="xs muted">migration đã chạy</span></div>
+    <div class="stat"><b>556</b><span class="xs muted">kiểm thử tự động, tất cả đang xanh</span></div>
   </div>
 </section>
 
@@ -140,6 +140,90 @@
           nơi nhập dữ liệu thật.</li>
       <li><strong>Giao diện qua đợt nâng cấp toàn diện</strong> — xem phần bên dưới.</li>
       <li><strong>Bịt hai lỗ hổng phân quyền</strong> — xem phần bên dưới.</li>
+      <li><strong>Ba chỗ không nhìn thấy trong mã nguồn</strong> — chữ tiếng Anh do trình duyệt tự
+          sinh, mất dữ liệu đang nhập, và gõ tay đường dẫn vào được phân hệ không có quyền. Xem
+          phần bên dưới.</li>
+      <li><strong>Module Kế toán – Tài chính</strong> — luồng duyệt chi bốn cấp, tạm ứng, công nợ,
+          dòng tiền và chốt sổ theo kỳ. Xem phần bên dưới.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="pill s-done">Vừa xong — Module Kế toán – Tài chính</span></h3>
+    <p class="xs muted">Phân hệ khép lại vòng &quot;Hợp đồng → Chi phí → Thu tiền → Lãi/lỗ&quot; mà Ban Giám đốc đang chờ.</p>
+    <ul>
+      <li><strong>Hết cảnh không biết hồ sơ đang nằm ở đâu.</strong> Đây là vướng mắc được nhắc
+          nhiều thứ hai trong khảo sát. Một đề nghị chi đi qua bốn bước có tên rõ ràng — trưởng
+          đơn vị xác nhận, Kế toán kiểm chứng từ, Trưởng Tài chính kiểm dòng tiền, rồi mới phê
+          duyệt theo hạn mức. Màn hình luôn nói bước hiện tại là bước nào và <em>ai</em> đang giữ,
+          chứ không gộp thành một chữ &quot;đang chờ duyệt&quot;.</li>
+      <li><strong>Không chi trước rồi hợp thức sau.</strong> Tiền chỉ ghi nhận là đã chi trên một
+          hồ sơ đã đi hết cả bốn bước, và đúng bằng số đã được duyệt — không hơn một đồng. Chi
+          một phần thì tách thành hai đề nghị, mỗi phần qua đúng hạn mức của phần đó.</li>
+      <li><strong>Chi phí không bị đếm hai lần.</strong> Đây là chỗ dễ sai nhất và cũng nguy hiểm
+          nhất: hàng mua qua Mua hàng đã được ghi vào chi phí công trình ngay lúc hàng về, nên khi
+          trả tiền cho chính đơn hàng đó, hệ thống cố ý KHÔNG cộng thêm lần nữa. Cộng hai lần thì
+          mọi báo cáo lãi/lỗ báo chi phí vật tư gấp đôi, mà không có dấu hiệu nào để nhận ra.</li>
+      <li><strong>Tạm ứng không phải chi phí.</strong> Tiền ứng ra là một khoản nợ của người nhận,
+          chỉ thành chi phí khi hoàn ứng kèm chứng từ. Còn khoản cũ quá hạn chưa hoàn thì lần ứng
+          sau bắt buộc nêu lý do, và lý do đó hiện ngay trước mắt người duyệt — không chặn cứng,
+          vì chặn cứng sẽ làm bế tắc công trường đúng lúc cần tiền gấp.</li>
+      <li><strong>Số &quot;đã thu&quot; của hợp đồng nay có nguồn gốc.</strong> Nó không sửa tay
+          được: mỗi lần thu là một chứng từ có ngày, số tiền và số giao dịch, và con số trên màn
+          hình Hợp đồng luôn bằng đúng tổng các chứng từ đó. Khung trống ở màn hình Hợp đồng nay
+          đã có số thật.</li>
+      <li><strong>Bảng tuổi nợ cộng phần CÒN LẠI, không cộng giá trị gốc.</strong> Một hóa đơn 500
+          triệu đã thu 480 triệu mà vẫn nằm nguyên trong cột &quot;quá hạn trên 90 ngày&quot; sẽ
+          làm Ban Giám đốc đọc ra một khoản nợ xấu không tồn tại.</li>
+      <li><strong>Mốc chia nhóm nợ quá hạn là thứ sửa được, không nằm trong mã.</strong> Hiện đang
+          để tạm 30 / 60 / 90 ngày vì Nhà Việt Group chưa ban hành quy chế công nợ. Khi có, Quản
+          trị viên sửa thẳng trong hệ thống — kể cả đổi số nhóm, đổi tên nhóm, hay đặt mốc riêng
+          cho từng pháp nhân — không cần đội phát triển can thiệp.</li>
+      <li><strong>Bảng dòng tiền cộng cả khoản đã duyệt chưa chi.</strong> Đây là vế hay bị bỏ sót
+          nhất khi lập bằng tay, và cũng là vế làm bảng dòng tiền tự lập luôn đẹp hơn thực tế. Số
+          dư đầu kỳ vẫn do người nhập — hệ thống không nối ngân hàng điện tử, nên một con số tự
+          sinh ở đó sẽ là con số bịa.</li>
+      <li><strong>Chốt sổ là khóa thật, không phải một cái nhãn.</strong> Kỳ đã khóa thì cơ sở dữ
+          liệu từ chối mọi khoản chi mang ngày trong kỳ. Muốn điều chỉnh thì mở lại kỳ, và mở lại
+          bắt buộc nêu nguyên nhân kèm tên người mở. Cũng không khóa được khi trong kỳ còn khoản
+          đã chi chưa hạch toán — khóa lúc đó là chốt sổ trên một kỳ còn dở.</li>
+      <li><strong>Công nợ và dòng tiền không hiển thị đại trà.</strong> Ban công trường và Mua hàng
+          gửi được đề nghị chi và theo dõi hồ sơ của mình, nhưng không đọc được lương, thuế hay
+          khoản chi của bộ phận khác.</li>
+      <li class="muted"><strong>Cố ý chưa làm:</strong> xuất dữ liệu sang phần mềm kế toán chính
+          thức — khung đã có (mỗi khoản đánh dấu được &quot;đã chuyển&quot; kèm số chứng từ bên
+          đó), nhưng định dạng xuất phải chờ NVG chốt dùng MISA, AMIS hay Fast. Báo cáo lãi/lỗ
+          theo công trình thuộc đợt Báo cáo đầy đủ ngay sau đây.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="pill s-done">Vừa xong — Ba chỗ không nhìn thấy trong mã nguồn</span></h3>
+    <p class="xs muted">Cùng một gốc: chúng không nằm trong mã nguồn nên đọc lại mã không thấy, và trên máy người lập trình chúng trông vẫn bình thường.</p>
+    <ul>
+      <li><strong>Chữ do trình duyệt tự sinh vẫn là tiếng Anh.</strong> "Please fill out this
+          field." hiện lên giữa một màn hình tiếng Việt, đúng lúc người dùng đang bị chặn thao
+          tác. Nhân sự Nhà Việt Group có người không đọc được tiếng Anh — họ không biết mình sai
+          gì và cũng không đọc được hướng dẫn sửa. Những câu này theo ngôn ngữ của trình duyệt,
+          không theo ngôn ngữ của trang, nên không có cách nào ép bằng cấu hình.</li>
+      <li><strong>Ô ngày không chỉ là lỗi chữ, mà là lỗi số liệu.</strong> Trên Chrome tiếng Anh,
+          ô ngày hiện <code>mm/dd/yyyy</code>: gõ hạn nộp thầu 03/04 ra ngày 4 tháng 3 — lệch một
+          tháng mà màn hình không báo gì. Nay ô ngày và bảng lịch do hệ thống tự dựng, luôn là
+          <code>dd/mm/yyyy</code> và tiếng Việt, bất kể máy người dùng đặt ngôn ngữ nào.</li>
+      <li><strong>Ô tiền tự nhóm hàng nghìn ngay khi gõ</strong> — 125.000.000 đọc được ngay,
+          không phải đếm số 0. Giá trị lưu xuống vẫn là con số thô nên phần dữ liệu không đổi.</li>
+      <li><strong>Không còn mất dữ liệu đang nhập.</strong> Rời trang giữa chừng, hay đóng tab và
+          tải lại, đều được hỏi lại trước. Trước đó một cú bấm nhầm là mất cả biểu mẫu dài.</li>
+      <li><strong>Ẩn menu không phải là chặn.</strong> Vai trò không có quyền vào một phân hệ thì
+          không thấy phân hệ đó trên thanh bên, nhưng gõ tay đường dẫn vẫn mở được màn hình. Dữ
+          liệu không hề rò — cơ sở dữ liệu vẫn chặn — nhưng danh sách rỗng lại hiện "chưa có dữ
+          liệu", nên <em>kho trống</em> và <em>kho không được phép xem</em> trông giống hệt nhau.
+          Nay chặn ngay ở tầng đường dẫn và nói rõ ai xử lý được.</li>
+      <li><strong>Hai bản vá Kho sau rà soát.</strong> Đợt kiểm kê đếm khớp sổ trước đây là ngõ
+          cụt: không có chênh lệch nên không trình duyệt được, mà kho thì vẫn bị khoá nhập xuất —
+          nay có trạng thái "khớp sổ" riêng. Và giá vốn bình quân không còn bị kéo về 0 ở đường
+          điều chỉnh kiểm kê và đường điều chuyển; con số đó quyết định hồ sơ phải trình lên cấp
+          nào.</li>
     </ul>
   </div>
 
@@ -313,16 +397,21 @@
     <h3><span class="pill s-pending">Chuẩn bị làm</span></h3>
     <p class="xs muted">Giai đoạn 2 — Vận hành, hậu cần, tài chính.</p>
     <ul>
-      <li><strong>Kế toán – Tài chính</strong> — đề nghị thanh toán nhiều cấp, tạm ứng, công
-          nợ, thu tiền theo tiến độ hợp đồng. Đây là phân hệ khép lại vòng "Hợp đồng → Chi phí →
-          Thu tiền → Lãi/lỗ" mà Ban Giám đốc đang chờ.</li>
-      <li><strong>Kế toán</strong> — đề nghị thanh toán, thu tiền theo tiến độ hợp đồng, và phần
-          "đã thu / còn phải thu" hiện đang là khung trống trong màn hình Hợp đồng.</li>
+      <li><strong>Hành chính – Nhân sự</strong> — hồ sơ nhân sự, hợp đồng lao động, và chấm công
+          ba khối (văn phòng, công trường, xưởng). Phân hệ độc lập, không chờ phân hệ nào.</li>
+      <li><strong>Báo cáo đầy đủ</strong> — lãi/lỗ theo từng công trình và từng pháp nhân, truy
+          ngược được tới chứng từ gốc. Dữ liệu nay đã đủ: chi phí thật đến từ Mua hàng và Kế toán,
+          doanh thu thật đến từ chứng từ thu tiền.</li>
+      <li><strong>Sản xuất và cho thuê giàn giáo</strong> — mức cơ bản. Vẫn đang chờ khảo sát trực
+          tiếp Xưởng giàn giáo, nên phần cho thuê (đã đủ thông tin) làm trước.</li>
       <li><strong>Tìm kiếm toàn hệ thống</strong> và <strong>Trung tâm Thông báo</strong> — bảng
           dữ liệu đã có, phần hiển thị chưa nối. Làm xen kẽ, không chặn Giai đoạn 2.</li>
       <li><strong>Cần Haan xem giao diện trên máy thật</strong> — ba thứ không kiểm bằng máy được:
           bố cục ở các bề ngang màn hình khác nhau, dấu tiếng Việt hiển thị ở cỡ chữ nhỏ, và cảm
           giác của các hiệu ứng chuyển động. Mở trang "Thành phần giao diện" là soát được một lượt.</li>
+      <li><strong>Và một lượt riêng với Chrome đặt sang tiếng Anh</strong> — mở vài màn hình có ô
+          ngày, ô tiền và biểu mẫu bắt buộc. Đây là cách duy nhất kiểm được nhóm chữ do trình
+          duyệt sinh: chúng không có trong mã nguồn, nên tìm trong mã không ra.</li>
     </ul>
   </div>
 
@@ -374,8 +463,8 @@
     <tr>
       <td><strong>P3</strong> Vận hành và tài chính<br><span class="xs muted">Giai đoạn 2 của PRD</span></td>
       <td>Thi công · Mua hàng · Kho · Kế toán · Nhân sự · Sản xuất · Báo cáo đầy đủ</td>
-      <td><span class="pill s-progress">Bắt đầu ngay</span></td>
-      <td>Điều kiện phụ thuộc đã đủ: hợp đồng và ngân sách thi công từ P2 nay đã có</td>
+      <td><span class="pill s-progress">Đang làm</span></td>
+      <td>Thi công, Mua hàng, Kho và Kế toán đã xong và nối liền nhau. Còn Nhân sự, Sản xuất và Báo cáo đầy đủ</td>
     </tr>
     <tr>
       <td><strong>P4</strong> Liên kết chéo và bàn giao<br><span class="xs muted">Giai đoạn 3 của PRD</span></td>
@@ -418,8 +507,9 @@
         <td>Đề nghị mua từ công trường hoặc gói thầu, duyệt theo hạn mức trong cùng Hộp thư Phê duyệt. Danh mục nhà cung cấp dùng chung ba pháp nhân, chấm tám tiêu chí. Bảng so sánh báo giá quy về một mặt bằng gồm hao hụt, thuế, vận chuyển — chọn nhà cung cấp không rẻ nhất thì bắt buộc nêu căn cứ. Đơn hàng chỉ lập được sau khi đề nghị đã duyệt. Giao nhận kiểm đếm theo từng dòng, không nhận vượt số đã đặt, hàng không đạt ghi riêng. Tiền đặt hàng vào ngay phần "đã cam kết" của ngân sách công trình, hàng về đến đâu chuyển sang "đã phát sinh" đến đó. Còn bảng giá khung và nhập kho tự động (chờ Module Kho).</td></tr>
     <tr><td><code>KHO</code></td><td>Kho</td><td><span class="pill s-progress">Đang làm</span></td>
         <td>Danh mục vật tư một mã duy nhất, danh mục kho năm loại. Nhập, xuất, điều chuyển, kiểm kê. Sổ kho chỉ đổi qua phiếu — không sửa tồn bằng tay được. Không xuất quá tồn. Hàng về từ đơn mua nhập thẳng vào kho, không gõ lại. Kiểm kê tạm dừng nhập xuất của kho và chỉ điều chỉnh sổ sau khi biên bản chênh lệch được duyệt. Giàn giáo theo lô và theo tình trạng, đổi tình trạng phải có biên bản. Cảnh báo hết hàng, sắp hết, tồn lâu. Màn hình quét mã dùng được máy quét cầm tay. Còn làm việc ngoại tuyến thật và quét bằng camera.</td></tr>
-    <tr><td><code>KT</code></td><td>Kế toán – Tài chính</td><td><span class="pill s-draft">Chưa bắt đầu</span></td><td>Giai đoạn 2 · kết nối phần mềm kế toán còn chờ quyết định</td></tr>
-    <tr><td><code>NS</code></td><td>Nhân sự – Hành chính</td><td><span class="pill s-draft">Chưa bắt đầu</span></td><td>Giai đoạn 2 · độc lập, chen vào lúc nào cũng được</td></tr>
+    <tr><td><code>KT</code></td><td>Kế toán – Tài chính</td><td><span class="pill s-progress">Đang làm</span></td>
+        <td>Đề nghị thanh toán – tạm ứng – hoàn ứng đi chung một luồng duyệt bốn cấp. Chi phí gắn vào mã công trình ngay khi phát sinh và không bị đếm hai lần với hàng mua qua Mua hàng. Tạm ứng quá hạn chặn ứng tiếp trừ khi nêu lý do. Công nợ hai chiều kèm bảng tuổi nợ; số &quot;đã thu&quot; của hợp đồng chỉ đổi qua chứng từ thu. Dòng tiền gộp cả khoản đã duyệt chưa chi. Chốt sổ theo kỳ là ràng buộc thật ở cơ sở dữ liệu. Còn phần xuất sang phần mềm kế toán chính thức — chờ NVG chốt phần mềm.</td></tr>
+    <tr><td><code>NS</code></td><td>Hành chính – Nhân sự</td><td><span class="pill s-draft">Chưa bắt đầu</span></td><td>Giai đoạn 2 · độc lập, chen vào lúc nào cũng được</td></tr>
     <tr><td><code>SX</code></td><td>Sản xuất &amp; Cho thuê</td><td><span class="pill s-draft">Chưa bắt đầu</span></td><td>Giai đoạn 2 · yêu cầu mới ở mức định hướng, chưa khảo sát xưởng giàn giáo</td></tr>
   </tbody>
 </table>
@@ -438,7 +528,8 @@
     <code>kinhdoanh.nvc</code> rồi bằng <code>kinhdoanh.nvo</code> sẽ thấy hai bộ dữ liệu tách
     hẳn nhau; đăng nhập bằng <code>ketoan</code> sẽ thấy hợp đồng nhưng không có nút soạn.
     Vai trò nào không có quyền vào một phân hệ thì phân hệ đó <strong>không hiện trên thanh
-    bên</strong>, chứ không phải hiện rồi báo lỗi khi bấm.
+    bên</strong>, chứ không phải hiện rồi báo lỗi khi bấm — và gõ thẳng đường dẫn cũng bị chặn,
+    kèm câu nói rõ ai xử lý được.
   </p>
   <div class="tablewrap" style="box-shadow:none;border:0">
   <table>
@@ -463,11 +554,18 @@
   </table>
   </div>
   <p class="xs muted" style="margin-top:10px">
-    Sáu tài khoản cuối bảng (Thi công, Sản xuất, Mua hàng, Kho, Kế toán, Nhân sự) đăng nhập được
-    và thấy đúng menu của mình, nhưng phân hệ chính của họ thuộc Giai đoạn 2 nên màn hình còn là
-    khung trống — đây là tình trạng đúng của bản hiện tại, không phải lỗi. Riêng tài khoản Kế toán
-    vẫn mở được danh sách Hợp đồng ở chế độ chỉ xem, dùng để kiểm chứng ranh giới "xem được nhưng
-    không soạn được".
+    Bốn tài khoản <code>congtruong.nvc</code>, <code>muahang</code>, <code>kho</code> và
+    <code>ketoan</code> nay đã có màn hình thật: công trình và nhật ký, đề nghị mua và so sánh báo
+    giá, nhập xuất tồn kho, và toàn bộ phân hệ Kế toán – Tài chính. Hai tài khoản còn lại (Sản
+    xuất, Nhân sự) đăng nhập được và thấy đúng menu của mình, nhưng phân hệ chính của họ chưa dựng
+    nên màn hình còn là khung trống — đây là tình trạng đúng của bản hiện tại, không phải lỗi.
+    Riêng tài khoản Kế toán vẫn mở được danh sách Hợp đồng ở chế độ chỉ xem, dùng để kiểm chứng
+    ranh giới "xem được nhưng không soạn được".</p>
+  <p class="xs muted">
+    <strong>Luồng duyệt chi cần ba người để chạy hết:</strong> <code>congtruong.nvc</code> lập đề
+    nghị và xác nhận ở bước đơn vị, <code>ketoan</code> kiểm chứng từ, <code>cfo</code> kiểm dòng
+    tiền rồi phê duyệt theo hạn mức và ghi nhận đã chi. Đăng nhập bằng một tài khoản duy nhất sẽ
+    dừng ở bước thứ hai — đó là hành vi đúng, không phải lỗi.
   </p>
   <p class="xs muted">
     <strong>Hai tài khoản nên thử trước:</strong> <code>tgd</code> để xem Dashboard điều hành và
@@ -605,13 +703,17 @@
 <h2>Ranh giới đã đặt ra và đang giữ</h2>
 <div class="card">
   <ul>
-    <li><strong>Phân quyền nằm trong cơ sở dữ liệu</strong>, không nằm ở giao diện — đi đường nào cũng bị kiểm tại một chỗ. Có 218 kiểm thử tự động canh phần này.</li>
+    <li><strong>Phân quyền nằm trong cơ sở dữ liệu</strong>, không nằm ở giao diện — đi đường nào cũng bị kiểm tại một chỗ. Có 260 kiểm thử tự động canh phần này, chạy trên cơ sở dữ liệu thật bằng đúng tài khoản của người làm việc đó ngoài đời.</li>
     <li><strong>Không cache dữ liệu nghiệp vụ trên điện thoại.</strong> Ứng dụng cài được và mở nhanh, nhưng dữ liệu vẫn lấy trực tiếp mỗi lần — để hồ sơ không đọc được sau khi đăng xuất trên máy dùng chung.</li>
     <li><strong>Mã hồ sơ do hệ thống cấp và không sửa được</strong>, pháp nhân của hồ sơ không đổi được sau khi tạo — giữ đúng ranh giới lãi/lỗ giữa ba pháp nhân.</li>
     <li><strong>Không xoá hẳn hồ sơ nghiệp vụ</strong>, chỉ đánh dấu đã xoá; mọi thay đổi trạng thái quan trọng đều ghi lịch sử riêng.</li>
     <li><strong>Trạng thái hồ sơ chỉ đổi qua đúng nút thao tác</strong>, không đổi thẳng được từ bên ngoài — nhờ vậy hạn mức phê duyệt, kiểm tra đồng bộ hồ sơ và điều kiện nộp thầu không có đường vòng nào.</li>
     <li><strong>Màu không bao giờ là cách duy nhất truyền đạt thông tin</strong> — trạng thái luôn kèm chữ, và mọi cặp chữ–nền đều đạt chuẩn tương phản quốc tế, có kiểm thử tự động đo lại sau mỗi lần đổi màu.</li>
     <li><strong>Không dùng được chuột vẫn dùng được hệ thống</strong> — mọi thao tác đi được bằng bàn phím, và luôn nhìn thấy con trỏ đang ở đâu.</li>
+    <li><strong>Mọi chữ hiện ra đều là tiếng Việt</strong>, kể cả chữ do trình duyệt tự sinh và không nằm trong mã nguồn: thông báo biểu mẫu, ô ngày, bảng lịch, ô số.</li>
+    <li><strong>Không để mất dữ liệu đang nhập</strong> — rời trang hay đóng tab giữa chừng đều được hỏi lại trước.</li>
+    <li><strong>Một khoản chi chỉ được ghi vào chi phí công trình đúng MỘT lần</strong>, dù nó đi qua cả Mua hàng lẫn Kế toán — đây là chỗ dễ làm sai báo cáo lãi/lỗ nhất mà không có triệu chứng nào.</li>
+    <li><strong>Kỳ kế toán đã chốt thì khóa thật</strong> — cơ sở dữ liệu từ chối mọi khoản chi mang ngày trong kỳ; mở lại phải nêu nguyên nhân và ghi tên người mở.</li>
     <li><strong>Mọi kết quả do AI sinh ra đều ở dạng nháp</strong> cho tới khi người có thẩm quyền xác nhận.</li>
   </ul>
 </div>

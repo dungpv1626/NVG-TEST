@@ -8,6 +8,15 @@
 
 import { pgEnum } from 'drizzle-orm/pg-core';
 import {
+  ACCOUNTING_PERIOD_STATUSES,
+  ADVANCE_STATUSES,
+  CASH_FLOW_PERIOD_TYPES,
+  PARTY_TYPES,
+  PAYMENT_CHECK_STEPS,
+  PAYMENT_METHODS,
+  PAYMENT_REQUEST_STAGES,
+  PAYMENT_REQUEST_TYPES,
+  RECEIVABLE_DIRECTIONS,
   AMENDMENT_STAGES,
   ASSET_LOCATION_TYPES,
   SCAFFOLDING_CONDITIONS,
@@ -178,7 +187,6 @@ export const warrantyStatusEnum = pgEnum('warranty_status', WARRANTY_STATUSES);
 /** Trạng thái xử lý một phản ánh bảo hành — PRD TC-07. */
 export const warrantyClaimStatusEnum = pgEnum('warranty_claim_status', WARRANTY_CLAIM_STATUSES);
 
-
 /**
  * Module MH — Mua hàng và Vật tư (Backend Schema 4.7).
  *
@@ -203,7 +211,6 @@ export const purchaseOrderStageEnum = pgEnum('purchase_order_stage', PURCHASE_OR
 
 /** Ba trường hợp hàng không đạt khi giao nhận — PRD MH-07. */
 export const deliveryIssueTypeEnum = pgEnum('delivery_issue_type', DELIVERY_ISSUE_TYPES);
-
 
 /**
  * Module KHO — Quản lý Kho (Backend Schema 4.8).
@@ -232,3 +239,41 @@ export const scaffoldingEventTypeEnum = pgEnum('scaffolding_event_type', SCAFFOL
 
 /** Nơi một lô giàn giáo đang nằm — PRD KHO-06. */
 export const assetLocationTypeEnum = pgEnum('asset_location_type', ASSET_LOCATION_TYPES);
+
+/**
+ * Module KT — Kế toán và Tài chính (Backend Schema 4.9).
+ *
+ * Bộ phận Kế toán – Tài chính CÓ khảo sát trực tiếp (PRD Mục 3: Trưởng Tài chính, phụ trách
+ * Kế toán, Kế toán nội bộ) nên các danh sách này bám câu chữ PRD. Lý do từng giá trị xem
+ * `@nvg/shared/kt`.
+ */
+
+/** Ba loại đề nghị chi tiền — PRD KT-01 "thanh toán/tạm ứng – hoàn ứng". */
+export const paymentRequestTypeEnum = pgEnum('payment_request_type', PAYMENT_REQUEST_TYPES);
+
+/** Tám bước xử lý của một đề nghị chi, cộng hai kết cục đóng hồ sơ — PRD KT-01. */
+export const paymentRequestStageEnum = pgEnum('payment_request_stage', PAYMENT_REQUEST_STAGES);
+
+/** Ba bước KIỂM TRA tuần tự trước khi vào Hộp thư Phê duyệt — PRD KT-01. */
+export const paymentCheckStepEnum = pgEnum('payment_check_step', PAYMENT_CHECK_STEPS);
+
+/** Hình thức chi — PRD KT-01 "lập phiếu chi/ủy nhiệm chi". */
+export const paymentMethodEnum = pgEnum('payment_method', PAYMENT_METHODS);
+
+/** Trạng thái một khoản đã ứng — PRD KT-03. Quá hạn là trạng thái SUY RA, không lưu. */
+export const advanceStatusEnum = pgEnum('advance_status', ADVANCE_STATUSES);
+
+/** Hai chiều công nợ — PRD KT-04. */
+export const receivableDirectionEnum = pgEnum('receivable_direction', RECEIVABLE_DIRECTIONS);
+
+/** Đối tượng công nợ — PRD KT-04 "theo khách hàng/nhà cung cấp". */
+export const partyTypeEnum = pgEnum('party_type', PARTY_TYPES);
+
+/** Kỳ kế hoạch dòng tiền — PRD KT-06 "theo tuần/tháng". */
+export const cashFlowPeriodTypeEnum = pgEnum('cash_flow_period_type', CASH_FLOW_PERIOD_TYPES);
+
+/** Trạng thái khóa kỳ kế toán — PRD KT-09. */
+export const accountingPeriodStatusEnum = pgEnum(
+  'accounting_period_status',
+  ACCOUNTING_PERIOD_STATUSES,
+);

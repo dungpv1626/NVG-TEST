@@ -1,10 +1,11 @@
 /**
  * Hộp thư Phê duyệt — mẫu bố cục 6 (Webapp Flow 4.6).
  *
- * Một màn hình duy nhất cho MỌI loại phê duyệt ở MỌI module. Hôm nay chỉ có báo giá (CRM-04,
- * CRM-05) vì các module còn lại chưa dựng; khi thêm dự toán (DA-07), hợp đồng (HD-05) hay đề
- * nghị thanh toán (KT-01), màn hình này KHÔNG phải sửa — chúng chỉ cần ghi thêm dòng vào bảng
- * `approvals` với `subject` tương ứng.
+ * Một màn hình duy nhất cho MỌI loại phê duyệt ở MỌI module: báo giá (CRM-04, CRM-05), dự
+ * toán (DA-07), hợp đồng và phát sinh (HD-05, HD-04), đề nghị mua (MH-02), điều chỉnh kiểm kê
+ * (KHO-07), đề nghị chi và tạm ứng (KT-01, KT-03). Module mới KHÔNG phải sửa màn hình này —
+ * chỉ ghi thêm dòng vào bảng `approvals` với `subject` tương ứng, và thêm một dòng vào bảng
+ * đường dẫn bên dưới nếu hồ sơ có trang riêng.
  *
  * Danh sách hiển thị đã được RLS Mẫu C lọc theo hạn mức, không lọc lại ở đây.
  */
@@ -32,6 +33,18 @@ function fullRecordPath(item: PendingApproval): string {
     case 'estimates':
       // Dự toán cũng vậy: nó là tab Dự toán của Chi tiết Gói thầu (DA-07).
       return item.parent_id ? `/da/goi-thau/${item.parent_id}?tab=du-toan` : '/da/goi-thau';
+    case 'contracts':
+      return `/hd/hop-dong/${item.entity_id}`;
+    case 'contract_amendments':
+      // Phát sinh không có trang riêng: nó là một tab của Chi tiết Hợp đồng (HD-04).
+      return item.parent_id ? `/hd/hop-dong/${item.parent_id}?tab=phat-sinh` : '/hd/hop-dong';
+    case 'purchase_requests':
+      return `/mh/de-nghi-mua/${item.entity_id}`;
+    case 'payment_requests':
+      return `/kt/de-nghi-thanh-toan/${item.entity_id}`;
+    case 'stocktakes':
+      // Kiểm kê không có trang theo id — màn hình Kiểm kê liệt kê các đợt đang mở.
+      return '/kho/kiem-ke';
     default:
       return '/dashboard';
   }

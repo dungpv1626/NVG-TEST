@@ -101,6 +101,23 @@ export async function cleanupTestData(): Promise<void> {
     // dạng "Giá dự thầu NVC-DA-… — [TEST] …", tiền tố test nằm ở GIỮA chuỗi.
     await sql`DELETE FROM approvals WHERE title LIKE ${'%' + TEST_PREFIX + '%'}`;
     await sql`DELETE FROM complaints WHERE title LIKE ${TEST_PREFIX + '%'}`;
+    /*
+     * Kế toán: xoá theo đúng chiều phụ thuộc.
+     *   `advances` tham chiếu `payment_requests` với ON DELETE RESTRICT (cố ý — một khoản nợ
+     *   không được mồ côi khỏi phiếu chi sinh ra nó), nên phải xoá trước.
+     *   Xoá `payment_requests` kéo theo dòng phân bổ và lịch sử bước (CASCADE); xoá công nợ
+     *   kéo theo chứng từ thu/trả.
+     *   Công nợ phải đứng TRƯỚC `customers` và `suppliers` — khoá ngoại của nó là RESTRICT.
+     */
+    await sql`DELETE FROM advances WHERE payment_request_id IN (
+      SELECT id FROM payment_requests WHERE title LIKE ${'%' + TEST_PREFIX + '%'}
+    )`;
+    await sql`DELETE FROM advances WHERE purpose LIKE ${'%' + TEST_PREFIX + '%'}`;
+    await sql`DELETE FROM payment_requests WHERE title LIKE ${'%' + TEST_PREFIX + '%'}`;
+    await sql`DELETE FROM receivables_payables WHERE description LIKE ${'%' + TEST_PREFIX + '%'}`;
+    await sql`DELETE FROM cash_flow_plans WHERE notes LIKE ${'%' + TEST_PREFIX + '%'}`;
+    await sql`DELETE FROM accounting_periods WHERE notes LIKE ${'%' + TEST_PREFIX + '%'}`;
+    await sql`DELETE FROM aging_buckets WHERE label LIKE ${'%' + TEST_PREFIX + '%'}`;
     // Kho: phiếu và đợt kiểm kê phải xoá TRƯỚC kho (khoá ngoại tới kho là ON DELETE
     // RESTRICT — một phiếu nhập không được mồ côi khỏi cái kho nó ghi vào).
     await sql`DELETE FROM stock_movements WHERE warehouse_id IN (
