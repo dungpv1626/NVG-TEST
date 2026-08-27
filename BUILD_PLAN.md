@@ -37,6 +37,7 @@ bảng chạy hết vòng đời (tạo → RLS chặn đúng → audit ghi đú
 **Không phụ thuộc gì. Chặn TẤT CẢ phase sau.**
 
 ### 0.1 Hạ tầng & repo
+
 - `git init`, monorepo `web/ workers/ db/ shared/ doc/` (TSD 5.2 + quyết định `shared/`)
 - Cấu hình workspace (pnpm/npm workspaces), TypeScript strict, ESLint/Prettier
 - `web/`: Vite + React 18 + TS + Tailwind + shadcn/ui init
@@ -45,20 +46,23 @@ bảng chạy hết vòng đời (tạo → RLS chặn đúng → audit ghi đú
 - `.env.example` + `.gitignore` — **không commit secret** (TSD 5.6)
 
 ### 0.2 Bảng nền tảng (BSD 3.2)
+
 `companies` · `users` · `roles` · `permissions` · `user_companies` · `approval_limits`
 
 - `companies` seed: NVC, NVS, NVO + NVG (mã tổng hợp, **không phải pháp nhân giao dịch**)
 - Áp `auditColumns()` + `softDelete()` ngay từ bảng đầu tiên
 
 ### 0.3 Xác thực (BSD 3.1)
+
 - Supabase Auth: email/mật khẩu, **KHÔNG có luồng tự đăng ký công khai**
 - Admin tạo tài khoản → gửi email mời → đặt mật khẩu lần đầu
 - Mật khẩu tối thiểu 8 ký tự, có chữ và số
 - Đồng bộ `auth.users` ↔ `users` (trigger hoặc hàm)
 - Quên mật khẩu / đăng xuất
-- *(Email giao dịch qua Resend/SendGrid — có thể dùng SMTP mặc định Supabase tạm thời)*
+- _(Email giao dịch qua Resend/SendGrid — có thể dùng SMTP mặc định Supabase tạm thời)_
 
 ### 0.4 RLS — hạ tầng phân quyền (BSD 3.3) ★ then chốt
+
 Viết **4 hàm SQL tái dùng**, không viết tay 65 policy:
 
 ```sql
@@ -71,23 +75,28 @@ auth_approval_limit(text) -- hạn mức theo loại nghiệp vụ
 Rồi 4 macro/helper áp policy theo mẫu **A / B / C / D**.
 
 ### 0.5 Bộ test RLS ★ không được lùi sang phase sau
+
 Harness chạy như unit test: với mỗi bảng nhạy cảm, giả lập ≥5 vai trò, khẳng định ai thấy/sửa được gì.
 Lý do bắt buộc làm sớm: **RLS quá lỏng không có triệu chứng** cho tới khi có người thấy lương/giá vốn
 của người khác (PRD NEN-07).
 
 ### 0.6 Design tokens & format (CGD 6.3–6.5, 4.3)
+
 - `tailwind.config` + CSS variables shadcn theo đúng mã màu CGD 6.3
 - Font Inter, body 14px, lưới 8px, bo góc 4–8px (Lozenge bo tròn hoàn toàn)
 - `shared/`: enum 5 trạng thái, mã 12 module, hàm format ngày `dd/mm/yyyy`, số `1.234.567,89`,
   tiền `bigint → "125.000.000 đồng"`, phần trăm
 
 ### 0.7 App Shell (AFD 2.1–2.4)
+
 5 vùng cố định: Sidebar · Topbar · Breadcrumb · Content · Panel ngữ cảnh
+
 - Bộ chọn pháp nhân (AFD 2.2) — chuyển **không tải lại trang**, giữ nguyên module đang xem
 - Menu lọc theo vai trò (AFD 2.3) — **ẩn**, không phải hiện rồi báo lỗi (AFD 6.5)
 - Topbar: ô tìm kiếm (rỗng), chuông Thông báo, Việc cần làm, menu tài khoản
 
 ### ✅ Definition of Done — Phase 0
+
 1. Đăng nhập bằng 3 vai trò khác nhau → sidebar hiển thị khác nhau
 2. Chuyển pháp nhân NVC→NVO → dữ liệu đổi, module đang xem giữ nguyên
 3. Bộ test RLS xanh trên `companies` + `users` + một bảng thử
@@ -99,7 +108,7 @@ của người khác (PRD NEN-07).
 
 # PHASE 1 — Primitives & hạ tầng xuyên suốt ★ đòn bẩy lớn nhất
 
-**Mục tiêu:** dựng xong bộ công cụ để module 3→12 trở thành *cấu hình* thay vì *viết mới*.
+**Mục tiêu:** dựng xong bộ công cụ để module 3→12 trở thành _cấu hình_ thay vì _viết mới_.
 
 **Phụ thuộc:** P0. **Chặn:** P2, P3 (làm tắt phase này = trả giá gấp 10 ở P2–P3).
 
@@ -119,17 +128,18 @@ của người khác (PRD NEN-07).
 
 ### 1.1 Component primitives (AFD 4 — 7 mẫu bố cục)
 
-| Primitive | Thay thế |
-|---|---|
-| `<EntityTable>` — cột mã · người chịu trách nhiệm · trạng thái · thời hạn; lọc + tìm kiếm đầu bảng; **giữ bộ lọc khi quay lại từ Chi tiết**; bulk action; empty state có nút | ~20 màn hình Danh sách |
-| `<EntityDetail>` — header cố định khi cuộn (tên, mã, trạng thái, người chịu trách nhiệm, nút hành động); **Tab giữ nguyên URL gốc**; panel phải liên kết chéo; **tab Lịch sử tự động** | ~12 màn hình Chi tiết |
-| `<EntityForm>` / `<WizardForm>` — <10 trường: 1 trang; dài: wizard có thanh tiến trình, lưu nháp, quay lại không mất dữ liệu; Hủy hỏi xác nhận; **lưu xong → vào thẳng Chi tiết** | ~15 biểu mẫu |
-| `<ApprovalInbox>` — MỘT component cho mọi loại duyệt; xem nhanh bên phải đủ để quyết định; duyệt xong tự sang hồ sơ tiếp theo | 6+ luồng duyệt |
-| `<StatusLozenge>` — 5 trạng thái, bo tròn hoàn toàn, **luôn kèm chữ** | Toàn hệ thống |
-| `<KanbanBoard>` — cột theo trạng thái, kéo-thả | CRM pipeline, NS tuyển dụng |
-| `<EmptyState>` `<Skeleton>` `<ErrorState>` — theo CGD 4.7 / AFD 6.7 (**skeleton, không spinner toàn màn**) | Toàn hệ thống |
+| Primitive                                                                                                                                                                              | Thay thế                    |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| `<EntityTable>` — cột mã · người chịu trách nhiệm · trạng thái · thời hạn; lọc + tìm kiếm đầu bảng; **giữ bộ lọc khi quay lại từ Chi tiết**; bulk action; empty state có nút           | ~20 màn hình Danh sách      |
+| `<EntityDetail>` — header cố định khi cuộn (tên, mã, trạng thái, người chịu trách nhiệm, nút hành động); **Tab giữ nguyên URL gốc**; panel phải liên kết chéo; **tab Lịch sử tự động** | ~12 màn hình Chi tiết       |
+| `<EntityForm>` / `<WizardForm>` — <10 trường: 1 trang; dài: wizard có thanh tiến trình, lưu nháp, quay lại không mất dữ liệu; Hủy hỏi xác nhận; **lưu xong → vào thẳng Chi tiết**      | ~15 biểu mẫu                |
+| `<ApprovalInbox>` — MỘT component cho mọi loại duyệt; xem nhanh bên phải đủ để quyết định; duyệt xong tự sang hồ sơ tiếp theo                                                          | 6+ luồng duyệt              |
+| `<StatusLozenge>` — 5 trạng thái, bo tròn hoàn toàn, **luôn kèm chữ**                                                                                                                  | Toàn hệ thống               |
+| `<KanbanBoard>` — cột theo trạng thái, kéo-thả                                                                                                                                         | CRM pipeline, NS tuyển dụng |
+| `<EmptyState>` `<Skeleton>` `<ErrorState>` — theo CGD 4.7 / AFD 6.7 (**skeleton, không spinner toàn màn**)                                                                             | Toàn hệ thống               |
 
 ### 1.2 Drizzle helpers (BSD 1.4)
+
 ```ts
 auditColumns()      // created_at, updated_at, created_by, updated_by
 softDelete()        // deleted_at
@@ -140,11 +150,13 @@ statusColumn(...)   // enum quy về 5 nhóm chuẩn
 ```
 
 ### 1.3 Hạ tầng tài liệu & phiên bản (NEN-05, NEN-06)
+
 - `documents` + `document_versions` + Supabase Storage
 - `POST /api/documents/:id/versions` — tải bản mới, tự set `is_current_version`, **thông báo các bên liên quan**
 - Quy ước đặt tên tệp: mã dự án / loại hồ sơ / số phiên bản
 
 ### 1.4 Hạ tầng thông báo & việc cần làm (NEN-03, NEN-04)
+
 - `notifications` · `tasks` · `audit_logs` · `sensitive_access_logs`
 - Helper `createNotification()` / `createTask()` để mọi module gọi
 - Trung tâm Thông báo + Việc cần làm ở topbar (AFD 5.4) — **tách 2 danh sách**, mỗi mục dẫn thẳng
@@ -152,14 +164,17 @@ statusColumn(...)   // enum quy về 5 nhóm chuẩn
 - Supabase Realtime cho cập nhật tức thời
 
 ### 1.5 Tìm kiếm toàn hệ thống (AFD 5.3)
+
 `GET /api/search` — Postgres full-text (`tsvector`), gộp kết quả theo module, tối đa 5/nhóm,
 khớp chính xác theo mã ưu tiên đầu. Đăng ký dần từng bảng qua các phase sau.
 
 ### 1.6 Seed script v1
+
 3 pháp nhân · ~15 người dùng đủ vai trò · roles + permissions + approval_limits.
 **Chạy được từ máy sạch bằng 1 lệnh.**
 
 ### ✅ Definition of Done — Phase 1
+
 1. Dùng primitive dựng CRUD hoàn chỉnh cho `customers` (list + detail + form + RLS) **trong <30 phút**
 2. Tải lên 2 phiên bản một tài liệu → chỉ 1 bản `is_current_version`, các bên nhận thông báo
 3. Tìm kiếm topbar trả về khách hàng theo tên và theo mã
@@ -177,6 +192,7 @@ có lịch sử phiên bản dự toán và người phê duyệt truy vết đ�
 **Phụ thuộc:** P1. Bên trong P2 thứ tự bắt buộc: **CRM → (DA ∥ TK) → HD → BC**
 
 ### 2A. Module CRM (BSD 4.2)
+
 `customers` · `opportunities` · `opportunity_stage_history` · `site_surveys` · `quotes` · `complaints`
 
 - Pipeline Kanban 6 giai đoạn (CRM-02): Tiếp nhận → Xác minh (M1/M2/M3/M4) → Khảo sát → Báo giá → Đàm phán → Ký/Mất
@@ -198,7 +214,6 @@ NEN-07 thì bắt buộc ghi. Bảng nào toàn bộ là dữ liệu nhạy cả
 thì chặn ở mức DÒNG cho gọn.
 
 ⏳ Còn lại: DA-10 (đối chiếu dự toán với chi phí thực tế) — cần dữ liệu chi phí của Giai đoạn 2.
-
 
 `bidding_projects` · `boq_items` · `unit_prices` · `estimates` · `price_approvals` · `bid_documents` · `project_budgets`
 
@@ -229,6 +244,7 @@ Giai đoạn 2). Cột `design_projects.construction_site_id` đã khai sẵn, m
 thêm khoá ngoại và một dòng INSERT.
 
 ⚠️ **Hai chỗ cố ý lệch BSD 4.4 — cần Haan xác nhận để cập nhật tài liệu:**
+
 1. BSD ghi `design_projects.brief` là một trường; ở đây tách thành bảng `design_briefs` có
    phiên bản, vì TK-01 yêu cầu "đầu bài ĐANG HIỆU LỰC duy nhất" — chữ "đang hiệu lực" chỉ có
    nghĩa khi tồn tại bản không còn hiệu lực.
@@ -238,7 +254,6 @@ thêm khoá ngoại và một dòng INSERT.
 Ngoài ra `design_surveys` (TK-02) và `design_reviews` (TK-03) là hai bảng BSD 4.4 không liệt
 kê nhưng PRD yêu cầu — khảo sát kỹ thuật khác khảo sát thương mại của CRM-03, và "vòng góp ý
 của khách" là căn cứ chuyển bước nên phải là dữ liệu, không phải ghi chú.
-
 
 `design_projects` · `design_briefs` · `design_surveys` · `design_versions` · `design_reviews` ·
 `design_discipline_tasks` · `change_requests` · `design_library`
@@ -280,7 +295,6 @@ doanh / Dự án – Đấu thầu / Thiết kế chỉ có "Hợp đồng (xem)
 cho chính họ SOẠN hợp đồng. Theo 2.3 thì chỉ Quản trị hệ thống soạn được, và luồng trọng
 yếu Giai đoạn 1 không ai chạy được. Đã chọn: ai sở hữu hồ sơ nguồn thì soạn được hợp đồng
 từ hồ sơ đó; Kế toán giữ nguyên chỉ xem. Hạn mức phê duyệt HD-05 không đổi.
-
 
 `contracts` · `contract_terms` · `contract_amendments`
 
@@ -328,6 +342,7 @@ vai trò làm việc đó ngoài đời, gọi đúng hàm mà giao diện gọi
 `SX` sau `KHO`.
 
 ### 3A. Module TC (BSD 4.6) — cửa ngõ của Phase 3 ✅ phần lõi đã xong
+
 `construction_sites` · `site_logs` · `acceptance_records` · `subcontractors` · `warranties` ·
 `warranty_claims` (thêm — TC-07 đòi ghi nguyên nhân/chi phí/kết quả của TỪNG lần phản ánh,
 không thuộc về hạng mục)
@@ -360,6 +375,7 @@ không thuộc về hạng mục)
     **90%**, thang đánh giá tổ đội **1–5**.
 
 ### 3B. Module MH (BSD 4.7) ✅ xong
+
 `purchase_requests` + `purchase_request_items` · `suppliers` · `quotations` + `quotation_items` ·
 `purchase_orders` + `purchase_order_items` · `deliveries` + `delivery_items`
 
@@ -377,7 +393,7 @@ một mặt hàng, trong khi phiếu đề nghị vật tư thật của một c
   Quy đổi được thì phần mềm đã ngầm chọn hộ nhà cung cấp — đúng thứ "Ranh giới KHÔNG làm" cấm.
   `select_quotation` bắt buộc nêu **căn cứ chọn** nếu báo giá được chọn không phải rẻ nhất (MH-04).
   → Chọn hàm CSDL thay vì endpoint Workers như BSD đặc tả: phép tính chỉ đọc dữ liệu sẵn có,
-    nhưng phải chạy sau khi kiểm quyền xem giá vốn và ghi nhật ký truy cập (CLAUDE.md 3.1(c)).
+  nhưng phải chạy sau khi kiểm quyền xem giá vốn và ghi nhật ký truy cập (CLAUDE.md 3.1(c)).
 - ✅ Công thức chuẩn hoá viết **hai lần** — `standardizeQuotationCost` (màn hình tính lại khi gõ)
   và SQL (con số đem lưu vào đơn hàng). Có test đối chiếu hai bản **khớp từng đồng**. Tỷ lệ lưu
   bằng **điểm cơ bản** (10% = 1000) để mọi phép nhân giữ nguyên `bigint`.
@@ -427,6 +443,7 @@ một mặt hàng, trong khi phiếu đề nghị vật tư thật của một c
     ở một lượt riêng, không dựng cơ chế thứ hai.
 
 ### 3C. Module KHO (BSD 4.8) ✅ xong
+
 `materials` · `warehouses` · `inventory_items` · `stock_movements` + `stock_movement_items` ·
 `stocktakes` + `stocktake_items` · `scaffolding_assets` + `scaffolding_events`
 
@@ -471,6 +488,7 @@ bảng còn lại là bảng dòng.
     phần mềm kế toán, mà phần mềm đó chưa chốt. Hiện chỉ có `average_cost` tham khảo.
 
 ### 3D. Module KT (BSD 4.9) ✅ xong
+
 `payment_requests` + `payment_request_allocations` + `payment_request_steps` · `advances` ·
 `receivables_payables` + `receivable_settlements` · `cash_flow_plans` · `accounting_periods`
 
@@ -508,6 +526,7 @@ duyệt trong module phát sinh khoản chi (`payment_requests.origin_module`). 
 lý trực tiếp, thay điều kiện trong `rls_payment_step_actor` và không phải sửa chỗ nào khác.
 
 ### 3E. Module NS (BSD 4.10) ✅ xong
+
 `employees` · `employment_contracts` · `hr_documents` · `timesheet_periods` +
 `timesheet_entries` + `timesheets` + `timesheet_adjustments` · `leave_requests` ·
 `payroll_adjustments` · `recruitment_positions` + `recruitment_candidates` ·
@@ -551,6 +570,7 @@ phải danh sách con người).
   thống KHÔNG thay thế máy/phần mềm chấm công.
 
 ⚠️ **Điểm SUY LUẬN cần Haan xác nhận với NVG** (đã ghi vào CLAUDE.md 6.6):
+
 - Ai là "trưởng đơn vị" xác nhận bảng công của từng khối — tạm lấy người có quyền `approve`
   trên phân hệ phụ trách khối (công trường → TC, hai khối còn lại → NS). Cùng vướng mắc với
   bước 1 của luồng duyệt chi KT-01, và sẽ được giải cùng lúc khi có cây tổ chức.
@@ -562,14 +582,39 @@ phải danh sách con người).
 hạn chế theo cột như D**. Kế toán đọc được DÒNG hồ sơ (tên, khối) vì họ phải đối chiếu bảng
 công đã chốt — nhưng không đọc được căn cước, sức khỏe, kỷ luật.
 
-### 3F. Module SX (BSD 4.12) — mức cơ bản
-`production_orders` · `material_consumption` · `rental_agreements`
+### 3F. Module SX (BSD 4.12) — mức cơ bản ✅ SX-03 xong, SX-01 chỉ khung
 
-- `POST /api/rental-agreements/:id/return` — thu hồi giàn giáo, đối soát hao hụt/hư hỏng/bồi thường
-- ⚠️ Module **ĐỊNH HƯỚNG** — chưa khảo sát Xưởng giàn giáo (PRD 10). SX-01/SX-02 đánh dấu
-  "cần xác nhận thêm". Ưu tiên **SX-03 (tài sản cho thuê)** vì đã đủ thông tin và liên kết KHO-06/KHO-10.
+`production_orders` · `material_consumption` · `rental_agreements` · `rental_agreement_items` (thêm —
+SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng thuê thường gồm nhiều mã giàn giáo).
+
+- ✅ `create_rental_agreement` — lập hợp đồng VÀ chuyển đúng lô `scaffolding_assets` sang vị trí
+  "khách đang thuê" trong CÙNG một giao dịch (không có bước "tạo hợp đồng rồi xuất kho sau").
+  Chỉ xuất từ lô tình trạng **"còn dùng được"** — lô "mới" coi như Kho chưa phân loại sẵn sàng
+  cho thuê (⚠️ giả định cần Haan xác nhận, cùng nhóm với các giả định KHO-06 khác).
+- ✅ `return_rental_agreement` = `POST /api/rental-agreements/:id/return` — thu hồi, tách phần
+  ĐẠT (gộp lại lô "còn dùng được" ở kho) / HƯ HỎNG (lô "hỏng chờ sửa" riêng + để lại biên bản
+  `scaffolding_events`, KHO-06) / MẤT (rời sổ, để lại biên bản có bên chịu trách nhiệm), tính
+  doanh thu theo SỐ NGÀY ĐÃ THUÊ THẬT và tổng bồi thường, ghi một lần khi đóng hợp đồng. Một lần
+  gọi phải khai đủ MỌI loại giàn giáo đã thuê — thiếu một dòng thì cả giao dịch rollback, không
+  đóng hợp đồng dở dang.
+- ✅ **Hai khách thuê cùng một loại giàn giáo không gộp chung lô**: thêm cột
+  `scaffolding_assets.current_rental_agreement_id` (khai kiểu `uuid` trơn ở `kho.ts`, không
+  `.references()`, để tránh vòng phụ thuộc `kho.ts ↔ sx.ts` — FK thật khai bằng SQL tay ở
+  migration RLS của SX, giống cách `design_projects.construction_site_id` từng làm trước khi
+  Module TC tồn tại). Có test khẳng định thu hồi hợp đồng A không đụng lô của hợp đồng B.
+- ✅ SX-01 (`production_orders` + `material_consumption`) — CRUD cơ bản, KHÔNG có định mức tiêu
+  hao chuẩn, kế hoạch sản xuất theo tổ hay công thức giá thành. Trạng thái đổi bằng ô chọn trực
+  tiếp, chưa có luồng chuyển bước ràng buộc — PRD ghi thẳng "cần xác nhận thêm" (SX-02 giá thành
+  CỐ Ý chưa làm gì cả, chờ khảo sát Xưởng).
+- ⚠️ **Giả định cần Haan xác nhận**: ai vận hành module — tạm cấp quyền `SX: WORK` cho vai trò
+  **Kho** (họ đã quản lý vòng đời vật lý giàn giáo qua KHO-06, xem `db/src/seed/data.ts`), chờ
+  khảo sát Xưởng giàn giáo NVS để biết vai trò thật sự đứng ra cho thuê.
+- ⏳ **CỐ Ý chưa làm**, không phải quên: luồng "hủy hợp đồng trước khi thu hồi" (enum `huy` có
+  sẵn nhưng chưa có hàm/nút) — BSD chỉ đặc tả đúng một endpoint thu hồi, chưa rõ nghiệp vụ hủy
+  thật sự cần gì.
 
 ### 3G. Module BC — đầy đủ
+
 - `GET /api/dashboard/executive` — **một lần gọi** trả toàn bộ chỉ số BC-01
 - `GET /api/reports/profit-loss` — lãi/lỗ theo công trình/công ty, **truy ngược tới chứng từ gốc** (BC-02)
 - Báo cáo hiệu quả kinh doanh (BC-03), tồn kho (BC-04), cảnh báo rủi ro tổng hợp (BC-05)
@@ -577,6 +622,7 @@ công đã chốt — nhưng không đọc được căn cước, sức khỏe, 
 - `report_snapshots` — chỉ thêm nếu dashboard chậm thật, không tối ưu sớm
 
 ### ✅ Definition of Done — Phase 3
+
 1. **Golden Path 1 (NVC) chạy TRỌN** tới lãi/lỗ
 2. **Golden Path 3 (NVS) chạy trọn**: báo giá kèm tồn → xuất cho thuê → theo dõi → thu hồi + đối soát
 3. Từ một dòng lãi/lỗ, bấm truy ngược tới đúng chứng từ gốc
@@ -590,6 +636,7 @@ công đã chốt — nhưng không đọc được căn cước, sức khỏe, 
 **Mục tiêu:** ~95% hoàn chỉnh, không còn lỗi chặn luồng nghiệp vụ chính.
 
 ### 4A. Hồ sơ 360° đầy đủ (AFD 5.1–5.2)
+
 - Panel ngữ cảnh hiển thị đủ liên kết cho 7 thực thể trung tâm (BSD 2.1)
 - **Mọi trường tham chiếu là liên kết bấm được**, không phải chữ tĩnh
 - Breadcrumb phản ánh **đường đi thực tế**, không phải cấu trúc menu cố định
@@ -597,23 +644,27 @@ công đã chốt — nhưng không đọc được căn cước, sức khỏe, 
 - Tìm kiếm toàn hệ thống phủ đủ 12 module
 
 ### 4B. Rà soát phân quyền toàn hệ thống
+
 - Đối chiếu **từng bảng trong ~65 bảng** với mẫu A/B/C/D đã ghi ở BSD 4.x
 - Kiểm tra dữ liệu nhạy cảm **không lộ qua đường vòng** (panel liên kết chéo, kết quả tìm kiếm, export)
 - `sensitive_access_logs` ghi đủ
 
 ### 4C. Áp Content Guidelines toàn diện
+
 - Rà toàn bộ microcopy theo CGD 5.1–5.6 (nhãn trạng thái, nút, thông báo, email, lỗi, trạng thái rỗng)
 - Kiểm tra thuật ngữ chuẩn hoá (CGD 4.4) — không lẫn "Duyệt/Phê duyệt/Approve"
 - Kiểm tra định dạng số/ngày/tiền nhất quán
 - Kiểm tra tương phản màu đạt WCAG AA; vùng bấm di động ≥40×40px
 
 ### 4D. Tác vụ nền (NEN-04)
+
 - Cloudflare **Cron Triggers**: quét hằng ngày → giấy tờ/hợp đồng/bảo hiểm sắp hết hạn (90/60/30/7 ngày),
   vượt ngân sách, công nợ đến hạn, việc quá hạn
 - Cloudflare **Queues**: gửi email, tổng hợp báo cáo nặng
 - ⚠️ Nguyên tắc chống "nhàm cảnh báo" (CGD 3.4): **không lặp lại thông báo đã xử lý**, chỉ gửi đúng người
 
 ### 4E. Kiểm thử & triển khai
+
 - 3 Golden Path E2E xanh ổn định
 - Bộ test RLS đầy đủ xanh
 - Dữ liệu demo thật cho cả 3 pháp nhân + Back Office
@@ -645,9 +696,11 @@ Sau khi tách xong thì mục "xác nhận sao lưu trước migration productio
 và trở lại thành điều kiện bắt buộc của mỗi lần migrate.
 
 ### 4F. Tính năng phụ (chỉ khi còn thời gian — IPD 4.3)
+
 DA-11 (Gemini đọc bản vẽ) · TK-09 (thư viện thiết kế) · NS-02 (kanban tuyển dụng) · `report_snapshots`
 
 ### ✅ Definition of Done — Phase 4
+
 1. 12 module liên kết chéo thông suốt, không lỗi chặn luồng chính
 2. Kịch bản demo đầu-cuối chạy được cho NVC + NVO + NVS + Back Office
 3. Các quy trình demo **chạy hoàn toàn trên hệ thống, không cần Excel/Zalo song song** (PRD 7)
@@ -657,12 +710,14 @@ DA-11 (Gemini đọc bản vẽ) · TK-09 (thư viện thiết kế) · NS-02 (k
 # PHASE 5 — AI Preliminary Design Engine (TK-10 → TK-17)
 
 **Điều kiện vào (bắt buộc):**
+
 1. Hệ thống lõi đạt ~90% (quyết định của Haan)
 2. **Tài liệu "AI Preliminary Design Engine v02" đã có trong `doc/` và đã đọc**
 
 🚫 **Không viết một dòng code nào của phase này trước khi thoả cả 2 điều kiện.**
 
 ### 5.0 Spike thuật toán trước ★ khuyến nghị mạnh
+
 Trong 5 lớp, **TK-12/TK-13 là phần bất định nhất**: PRD chỉ định rõ **KHÔNG dùng LLM sinh toạ độ**,
 phải tự viết thuật toán ràng buộc/phân vùng không gian bằng TypeScript. Các lớp còn lại đều là đường
 đã có sẵn (Gemini API, Three.js).
@@ -673,20 +728,22 @@ Biết sớm giới hạn của nó quan trọng hơn làm đúng thứ tự cá
 
 ### 5.1 → 5.5 Năm lớp (PRD 5, bảng công nghệ)
 
-| Lớp | Yêu cầu | Công nghệ (PRD đã chốt) |
-|---|---|---|
-| L1 Requirement Intelligence | TK-10 | Gemini Flash + bộ quy tắc kiến trúc nhà ở đã hệ thống hoá sẵn |
-| L2 Functional Programming | TK-11 | Gemini Flash + quy tắc diện tích/quan hệ phòng chuẩn |
-| L3 Floor Plan + Re-design | TK-12, TK-13 | **Thuật toán ràng buộc TỰ XÂY (TypeScript, Workers)** — Gemini chỉ diễn giải tác động bằng ngôn ngữ tự nhiên |
-| L4 Architecture Generation | TK-14 | Thư viện mẫu kiến trúc dựng sẵn + Gemini chọn/phối theo phong cách |
-| L5 Parametric 3D + Visualization | TK-15, TK-16 | **Three.js** (dựng thủ tục, không gọi AI) + Gemini 2.5 Flash Image dùng ảnh 3D làm tham chiếu |
+| Lớp                              | Yêu cầu      | Công nghệ (PRD đã chốt)                                                                                      |
+| -------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------ |
+| L1 Requirement Intelligence      | TK-10        | Gemini Flash + bộ quy tắc kiến trúc nhà ở đã hệ thống hoá sẵn                                                |
+| L2 Functional Programming        | TK-11        | Gemini Flash + quy tắc diện tích/quan hệ phòng chuẩn                                                         |
+| L3 Floor Plan + Re-design        | TK-12, TK-13 | **Thuật toán ràng buộc TỰ XÂY (TypeScript, Workers)** — Gemini chỉ diễn giải tác động bằng ngôn ngữ tự nhiên |
+| L4 Architecture Generation       | TK-14        | Thư viện mẫu kiến trúc dựng sẵn + Gemini chọn/phối theo phong cách                                           |
+| L5 Parametric 3D + Visualization | TK-15, TK-16 | **Three.js** (dựng thủ tục, không gọi AI) + Gemini 2.5 Flash Image dùng ảnh 3D làm tham chiếu                |
 
 ### 5.6 Output chuẩn (TK-17)
+
 6 loại gắn với mỗi dự án thiết kế: Design Brief · Functional Program · **Editable Floor Plan
 (dữ liệu hình học, KHÔNG phải ảnh)** · Architecture Concept · Parametric 3D Model · AI Visualization —
 mỗi loại đi qua đúng luồng review/phê duyệt TK-03.
 
 ### 🚧 Ranh giới bắt buộc
+
 - Mọi phương án AI ở trạng thái **NHÁP/ĐỀ XUẤT** cho tới khi Phòng Thiết kế xác nhận
 - **Kết cấu, MEP, an toàn, PCCC luôn do kỹ sư chuyên môn xác minh** — AI chỉ đề xuất
 - Không gửi bản vẽ nguồn / dữ liệu khách hàng lên gói miễn phí Gemini nhiều hơn mức cần thiết
@@ -695,12 +752,12 @@ mỗi loại đi qua đúng luồng review/phê duyệt TK-03.
 
 # Công việc chạy SONG SONG suốt mọi phase
 
-| Việc | Nhịp |
-|---|---|
-| **Test RLS** | Mỗi bảng mới → thêm test ngay, không để cuối |
-| **Seed data** | Mỗi module mới → bổ sung dữ liệu thật tương ứng |
-| **E2E Golden Path** | Viết trước (đỏ), làm cho xanh dần qua các phase |
-| **Cập nhật CLAUDE.md** | Khi có quyết định mới hoặc tài liệu được cập nhật |
+| Việc                          | Nhịp                                                         |
+| ----------------------------- | ------------------------------------------------------------ |
+| **Test RLS**                  | Mỗi bảng mới → thêm test ngay, không để cuối                 |
+| **Seed data**                 | Mỗi module mới → bổ sung dữ liệu thật tương ứng              |
+| **E2E Golden Path**           | Viết trước (đỏ), làm cho xanh dần qua các phase              |
+| **Cập nhật CLAUDE.md**        | Khi có quyết định mới hoặc tài liệu được cập nhật            |
 | **Ghi lại câu hỏi nghiệp vụ** | Phát hiện mơ hồ → ghi vào danh sách hỏi Haan, không tự quyết |
 
 ---
@@ -722,25 +779,27 @@ theo hạn mức · truy vết ngược tới chứng từ gốc.
 
 # Quyết định còn cần Haan chốt
 
-| # | Quyết định | Chặn |
-|---|---|---|
-| 1 | **KHO-09 offline-first** làm thật hay online-first + `client_generated_id`? | Phase 3C |
-| 2 | **Phần mềm kế toán** chính thức (KT-08) | Phase 3D (endpoint export) |
-| 3 | **`unit_prices` dùng chung** DA/TK/MH hay NVO cần bảng riêng? (BSD 5) | Phase 2B |
-| 4 | **Quy tắc mã hoá** dự án/công trình/vật tư/hợp đồng — dùng bộ nào? | Phase 2A |
-| 5 | **Hạn mức phê duyệt** tạm thời cụ thể theo vai trò × loại nghiệp vụ | Phase 0.2 (seed) |
-| 6 | **Công thức lương** NS-06 | Phase 3E |
-| 7 | **Đầu mối hỗ trợ kỹ thuật** (điền vào mẫu lỗi CGD 5.5) | Phase 4C |
-| 8 | **Một hợp đồng mở được nhiều công trình không?** Hiện chặn ở một, để tránh bấm hai lần thành hai công trình chia nhau một bộ ngân sách | Phase 3A (đã làm, đổi được bằng một tham số) |
-| 9 | **Ba con số suy luận của TC**: cửa sổ sửa nhật ký 24 giờ · ngưỡng cảnh báo ngân sách 90% · thang đánh giá tổ đội 1–5 | Phase 3A (đã làm, sửa ở một chỗ) |
-| 10 | **Công trường đo tiến độ thế nào** (theo khối lượng, theo đầu việc, theo mũi thi công?) — quyết định luôn cả kế hoạch tiến độ chi tiết của TC-01 | Phase 3A phần còn lại |
-| 11 | **Một đề nghị mua có được đặt hàng nhiều nhà cung cấp không?** Hiện một đề nghị → một đơn hàng. Đề nghị 20 mặt hàng mà mỗi nhóm hàng một nhà cung cấp thì phải tách thành nhiều đề nghị | Phase 3B (đã làm, mở rộng được) |
-| 12 | **Ai ký nhận hàng tại công trường** — Kho, chỉ huy trưởng, hay cả hai? Hiện mở cho Mua hàng và Kho | Phase 3B (đã làm, sửa ở một hàm) |
-| 13 | **Bảng giá khung MH-09** — NVG thoả thuận theo tháng hay quý, điều chỉnh giá báo trước bao lâu? | Chặn MH-09 |
-| 14 | **Vật tư mua sẵn về kho chung rồi mới xuất cho công trình thì ghi chi phí lúc nào?** Mua theo đề nghị gắn công trình đã ghi khi hàng về (MH-07); còn hàng từ kho chung hiện KHÔNG về được ngân sách công trình nào. Đây là quyết định kế toán, không phải lựa chọn kỹ thuật | Phase 3C (khoảng trống thật, chưa lấp) |
-| 15 | **Ngưỡng "tồn lâu, chậm luân chuyển" 90 ngày** — đang lấy bằng một quý cho khớp chu kỳ kiểm kê | Phase 3C (đã làm, sửa ở một chỗ) |
-| 16 | **Kho tự duyệt được chênh lệch kiểm kê tới 10 triệu** — theo hạn mức mặc định. Kho vừa đếm vừa duyệt là một chốt kiểm soát yếu, cần xác nhận NVG muốn vậy | Phase 3C (đổi bằng cấu hình `approval_limits`) |
-| 17 | **Ai là "trưởng đơn vị" xác nhận bảng chấm công từng khối?** Hiện lấy người có quyền `approve` trên phân hệ phụ trách khối (công trường → TC, văn phòng và xưởng → NS). Cùng gốc với vướng mắc #6 của KT-01 | Phase 3E (đã làm, sửa ở `confirm_timesheet_period`) |
-| 18 | **Một ngày công bằng bao nhiêu giờ?** Đang lấy 8 giờ (Bộ luật Lao động 2019 Điều 105). Xưởng sản xuất có thể chạy ca 12 giờ — nếu vậy số ngày công quy đổi của khối xưởng đang sai | Phase 3E (đã làm, một hằng số ở `@nvg/shared/ns` và một chỗ trong SQL, có test đối chiếu) |
-| 19 | **Ai duyệt yêu cầu tuyển dụng?** NS-02 chỉ ghi "trưởng đơn vị gửi yêu cầu → phê duyệt". Hiện đặt Tổng Giám đốc | Phase 3E (đã làm, đổi bằng cấu hình `approval_limits`) |
-| 20 | **Kế toán được đọc hồ sơ nhân sự tới đâu?** Hiện đọc được TÊN và KHỐI của người trong pháp nhân mình (để đối chiếu bảng công), KHÔNG đọc được căn cước, sức khỏe, kỷ luật; lương vẫn phải qua hàm có ghi nhật ký | Phase 3E (đã làm, sửa ở `rls_employee_readable`) |
+| #   | Quyết định                                                                                                                                                                                                                                                                  | Chặn                                                                                      |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 1   | **KHO-09 offline-first** làm thật hay online-first + `client_generated_id`?                                                                                                                                                                                                 | Phase 3C                                                                                  |
+| 2   | **Phần mềm kế toán** chính thức (KT-08)                                                                                                                                                                                                                                     | Phase 3D (endpoint export)                                                                |
+| 3   | **`unit_prices` dùng chung** DA/TK/MH hay NVO cần bảng riêng? (BSD 5)                                                                                                                                                                                                       | Phase 2B                                                                                  |
+| 4   | **Quy tắc mã hoá** dự án/công trình/vật tư/hợp đồng — dùng bộ nào?                                                                                                                                                                                                          | Phase 2A                                                                                  |
+| 5   | **Hạn mức phê duyệt** tạm thời cụ thể theo vai trò × loại nghiệp vụ                                                                                                                                                                                                         | Phase 0.2 (seed)                                                                          |
+| 6   | **Công thức lương** NS-06                                                                                                                                                                                                                                                   | Phase 3E                                                                                  |
+| 7   | **Đầu mối hỗ trợ kỹ thuật** (điền vào mẫu lỗi CGD 5.5)                                                                                                                                                                                                                      | Phase 4C                                                                                  |
+| 8   | **Một hợp đồng mở được nhiều công trình không?** Hiện chặn ở một, để tránh bấm hai lần thành hai công trình chia nhau một bộ ngân sách                                                                                                                                      | Phase 3A (đã làm, đổi được bằng một tham số)                                              |
+| 9   | **Ba con số suy luận của TC**: cửa sổ sửa nhật ký 24 giờ · ngưỡng cảnh báo ngân sách 90% · thang đánh giá tổ đội 1–5                                                                                                                                                        | Phase 3A (đã làm, sửa ở một chỗ)                                                          |
+| 10  | **Công trường đo tiến độ thế nào** (theo khối lượng, theo đầu việc, theo mũi thi công?) — quyết định luôn cả kế hoạch tiến độ chi tiết của TC-01                                                                                                                            | Phase 3A phần còn lại                                                                     |
+| 11  | **Một đề nghị mua có được đặt hàng nhiều nhà cung cấp không?** Hiện một đề nghị → một đơn hàng. Đề nghị 20 mặt hàng mà mỗi nhóm hàng một nhà cung cấp thì phải tách thành nhiều đề nghị                                                                                     | Phase 3B (đã làm, mở rộng được)                                                           |
+| 12  | **Ai ký nhận hàng tại công trường** — Kho, chỉ huy trưởng, hay cả hai? Hiện mở cho Mua hàng và Kho                                                                                                                                                                          | Phase 3B (đã làm, sửa ở một hàm)                                                          |
+| 13  | **Bảng giá khung MH-09** — NVG thoả thuận theo tháng hay quý, điều chỉnh giá báo trước bao lâu?                                                                                                                                                                             | Chặn MH-09                                                                                |
+| 14  | **Vật tư mua sẵn về kho chung rồi mới xuất cho công trình thì ghi chi phí lúc nào?** Mua theo đề nghị gắn công trình đã ghi khi hàng về (MH-07); còn hàng từ kho chung hiện KHÔNG về được ngân sách công trình nào. Đây là quyết định kế toán, không phải lựa chọn kỹ thuật | Phase 3C (khoảng trống thật, chưa lấp)                                                    |
+| 15  | **Ngưỡng "tồn lâu, chậm luân chuyển" 90 ngày** — đang lấy bằng một quý cho khớp chu kỳ kiểm kê                                                                                                                                                                              | Phase 3C (đã làm, sửa ở một chỗ)                                                          |
+| 16  | **Kho tự duyệt được chênh lệch kiểm kê tới 10 triệu** — theo hạn mức mặc định. Kho vừa đếm vừa duyệt là một chốt kiểm soát yếu, cần xác nhận NVG muốn vậy                                                                                                                   | Phase 3C (đổi bằng cấu hình `approval_limits`)                                            |
+| 17  | **Ai là "trưởng đơn vị" xác nhận bảng chấm công từng khối?** Hiện lấy người có quyền `approve` trên phân hệ phụ trách khối (công trường → TC, văn phòng và xưởng → NS). Cùng gốc với vướng mắc #6 của KT-01                                                                 | Phase 3E (đã làm, sửa ở `confirm_timesheet_period`)                                       |
+| 18  | **Một ngày công bằng bao nhiêu giờ?** Đang lấy 8 giờ (Bộ luật Lao động 2019 Điều 105). Xưởng sản xuất có thể chạy ca 12 giờ — nếu vậy số ngày công quy đổi của khối xưởng đang sai                                                                                          | Phase 3E (đã làm, một hằng số ở `@nvg/shared/ns` và một chỗ trong SQL, có test đối chiếu) |
+| 19  | **Ai duyệt yêu cầu tuyển dụng?** NS-02 chỉ ghi "trưởng đơn vị gửi yêu cầu → phê duyệt". Hiện đặt Tổng Giám đốc                                                                                                                                                              | Phase 3E (đã làm, đổi bằng cấu hình `approval_limits`)                                    |
+| 20  | **Kế toán được đọc hồ sơ nhân sự tới đâu?** Hiện đọc được TÊN và KHỐI của người trong pháp nhân mình (để đối chiếu bảng công), KHÔNG đọc được căn cước, sức khỏe, kỷ luật; lương vẫn phải qua hàm có ghi nhật ký                                                            | Phase 3E (đã làm, sửa ở `rls_employee_readable`)                                          |
+| 21  | **Ai vận hành Module SX** (lập/thu hồi hợp đồng thuê giàn giáo, lệnh sản xuất)? Hiện cấp quyền `SX: WORK` cho vai trò Kho vì họ đã quản lý vòng đời vật lý giàn giáo (KHO-06)                                                                                               | Phase 3F (đã làm, đổi ở `db/src/seed/data.ts`)                                            |
+| 22  | **Lô giàn giáo tình trạng "mới" có cho thuê được ngay không, hay phải qua Kho phân loại thành "còn dùng được" trước?** Hiện `create_rental_agreement` CHỈ xuất từ lô "còn dùng được"                                                                                        | Phase 3F (đã làm, sửa điều kiện `condition` trong hàm)                                    |

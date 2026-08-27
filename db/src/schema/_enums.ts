@@ -50,6 +50,8 @@ import {
   PURCHASE_URGENCIES,
   QUOTATION_STATUSES,
   SUPPLIER_CLASSES,
+  PRODUCTION_ORDER_STATUSES,
+  RENTAL_AGREEMENT_STATUSES,
   APPROVAL_SUBJECTS,
   BIDDING_STAGES,
   BID_DOCUMENT_CATEGORIES,
@@ -375,3 +377,22 @@ export const checklistItemGroupEnum = pgEnum('checklist_item_group', CHECKLIST_I
 
 /** Tình trạng một lao động thời vụ tại công trường — PRD NS-09. */
 export const laborWorkerStatusEnum = pgEnum('labor_worker_status', LABOR_WORKER_STATUSES);
+
+/**
+ * Module SX — Sản xuất và Cho thuê giàn giáo (Backend Schema 4.12).
+ *
+ * Định hướng — chưa có khảo sát trực tiếp Xưởng sản xuất giàn giáo (PRD Mục 10). Lý do từng
+ * giá trị xem `@nvg/shared/sx`.
+ */
+
+/** Vòng đời một lệnh sản xuất — PRD SX-01 (cần xác nhận thêm). */
+export const productionOrderStatusEnum = pgEnum(
+  'production_order_status',
+  PRODUCTION_ORDER_STATUSES,
+);
+
+/** Vòng đời một hợp đồng cho thuê giàn giáo — PRD SX-03. */
+export const rentalAgreementStatusEnum = pgEnum(
+  'rental_agreement_status',
+  RENTAL_AGREEMENT_STATUSES,
+);

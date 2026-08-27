@@ -104,7 +104,9 @@ export const materials = pgTable(
   },
   (t) => [
     index('materials_group_idx').on(t.groupCode, t.name),
-    uniqueIndex('materials_barcode').on(t.barcode).where(sql`${t.barcode} IS NOT NULL`),
+    uniqueIndex('materials_barcode')
+      .on(t.barcode)
+      .where(sql`${t.barcode} IS NOT NULL`),
   ],
 );
 
@@ -141,7 +143,9 @@ export const warehouses = pgTable(
   },
   (t) => [
     index('warehouses_company_idx').on(t.companyId, t.warehouseType),
-    uniqueIndex('warehouses_code').on(t.code).where(sql`${t.deletedAt} IS NULL`),
+    uniqueIndex('warehouses_code')
+      .on(t.code)
+      .where(sql`${t.deletedAt} IS NULL`),
   ],
 );
 
@@ -169,9 +173,7 @@ export const inventoryItems = pgTable(
       .notNull()
       .references(() => materials.id, { onDelete: 'restrict' }),
 
-    quantityOnHand: numeric('quantity_on_hand', { precision: 18, scale: 3 })
-      .notNull()
-      .default('0'),
+    quantityOnHand: numeric('quantity_on_hand', { precision: 18, scale: 3 }).notNull().default('0'),
 
     /** Mức tồn tối thiểu để cảnh báo "sắp hết" (KHO-08). Rỗng = không theo dõi. */
     minQuantity: numeric('min_quantity', { precision: 18, scale: 3 }),
@@ -183,7 +185,9 @@ export const inventoryItems = pgTable(
      * cách tính giá xuất phải khớp với phần mềm kế toán, mà phần mềm đó chưa được chốt
      * (PRD Mục 10, KT-08). Không dùng con số này để hạch toán.
      */
-    averageCost: money('average_cost').notNull().default(sql`0`),
+    averageCost: money('average_cost')
+      .notNull()
+      .default(sql`0`),
 
     lastMovementAt: timestamp('last_movement_at', { withTimezone: true }),
 
@@ -268,7 +272,9 @@ export const stockMovements = pgTable(
     index('stock_movements_type_idx').on(t.companyId, t.movementType, t.movementDate),
     index('stock_movements_site_idx').on(t.constructionSiteId),
     index('stock_movements_delivery_idx').on(t.deliveryId),
-    uniqueIndex('stock_movements_code').on(t.code).where(sql`${t.code} IS NOT NULL`),
+    uniqueIndex('stock_movements_code')
+      .on(t.code)
+      .where(sql`${t.code} IS NOT NULL`),
     uniqueIndex('stock_movements_client_id')
       .on(t.clientGeneratedId)
       .where(sql`${t.clientGeneratedId} IS NOT NULL`),
@@ -295,7 +301,9 @@ export const stockMovementItems = pgTable(
     quantity: numeric('quantity', { precision: 18, scale: 3 }).notNull(),
 
     /** Đơn giá tại thời điểm nhập, đồng — dùng cập nhật giá bình quân của dòng tồn. */
-    unitCost: money('unit_cost').notNull().default(sql`0`),
+    unitCost: money('unit_cost')
+      .notNull()
+      .default(sql`0`),
 
     /** Ghi nhận hàng thiếu/thừa/sai quy cách/hư hỏng khi nhập (KHO-03). */
     conditionNote: text('condition_note'),
@@ -348,7 +356,9 @@ export const stocktakes = pgTable(
   },
   (t) => [
     index('stocktakes_warehouse_idx').on(t.warehouseId, t.startedAt),
-    uniqueIndex('stocktakes_code').on(t.code).where(sql`${t.code} IS NOT NULL`),
+    uniqueIndex('stocktakes_code')
+      .on(t.code)
+      .where(sql`${t.code} IS NOT NULL`),
     /**
      * Một kho chỉ có ĐÚNG MỘT đợt kiểm kê đang mở tại một thời điểm — hai đợt cùng lúc thì
      * mỗi đợt chụp một số sổ kho khác nhau và cả hai đều sai.
@@ -423,8 +433,17 @@ export const scaffoldingAssets = pgTable(
     constructionSiteId: uuid('construction_site_id').references(() => constructionSites.id, {
       onDelete: 'set null',
     }),
-    /** Tên khách đang thuê. Hợp đồng thuê thật thuộc Module SX (KHO-10), chưa nối. */
+    /** Tên khách đang thuê — vẫn giữ để hiện nhanh không cần join, nguồn thật là hợp đồng dưới đây. */
     renterName: varchar('renter_name', { length: 255 }),
+    /**
+     * Hợp đồng thuê đang giữ lô này (Module SX, KHO-10) — CHỈ đặt khi `location_type =
+     * 'khach_thue'`. Khai kiểu `uuid` trơn, KHÔNG `.references()`: `sx.ts` đã phải import
+     * `materials` từ file này, nên tham chiếu ngược lại đây sẽ tạo vòng phụ thuộc
+     * `kho.ts ↔ sx.ts` mà `_helpers.ts` cấm. Ràng buộc FK thật khai bằng SQL tay ở migration
+     * RLS của Module SX — giống cách `design_projects.construction_site_id` từng làm trước
+     * khi Module TC tồn tại.
+     */
+    currentRentalAgreementId: uuid('current_rental_agreement_id'),
 
     purchaseDate: date('purchase_date'),
     notes: text('notes'),
@@ -435,7 +454,10 @@ export const scaffoldingAssets = pgTable(
   (t) => [
     index('scaffolding_assets_company_idx').on(t.companyId, t.condition),
     index('scaffolding_assets_material_idx').on(t.materialId),
-    uniqueIndex('scaffolding_assets_code').on(t.assetCode).where(sql`${t.deletedAt} IS NULL`),
+    index('scaffolding_assets_rental_idx').on(t.currentRentalAgreementId),
+    uniqueIndex('scaffolding_assets_code')
+      .on(t.assetCode)
+      .where(sql`${t.deletedAt} IS NULL`),
   ],
 );
 
@@ -465,7 +487,9 @@ export const scaffoldingEvents = pgTable(
     resultCondition: scaffoldingConditionEnum('result_condition'),
 
     /** Chi phí sửa chữa hoặc giá trị bồi thường, đồng. */
-    amount: money('amount').notNull().default(sql`0`),
+    amount: money('amount')
+      .notNull()
+      .default(sql`0`),
 
     /** Bên chịu trách nhiệm — công trình làm mất, đơn vị thuê làm hỏng… */
     responsibleParty: varchar('responsible_party', { length: 255 }),

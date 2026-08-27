@@ -83,6 +83,7 @@ export const MODULE_EMPTY_STATES: Readonly<Record<string, string>> = {
   KHO: 'Chưa có phiếu nhập/xuất nào trong hôm nay.',
   KT: 'Không có đề nghị thanh toán nào đang chờ xử lý.',
   NS: "Chưa có hồ sơ nhân sự nào. Bấm 'Thêm nhân sự' để bắt đầu.",
+  SX: "Chưa có hợp đồng thuê giàn giáo nào. Bấm 'Lập hợp đồng thuê' để bắt đầu.",
 } as const;
 
 /**

@@ -43,3 +43,6 @@ export * from './kt';
 
 // --- Module NS — Hành chính và Nhân sự (Backend Schema 4.10) ---
 export * from './ns';
+
+// --- Module SX — Sản xuất và Cho thuê giàn giáo (Backend Schema 4.12) ---
+export * from './sx';

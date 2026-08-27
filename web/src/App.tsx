@@ -198,6 +198,20 @@ const HrDocumentPage = lazy(() =>
 const RecruitmentPage = lazy(() =>
   import('@/pages/ns/recruitment-page').then((m) => ({ default: m.RecruitmentPage })),
 );
+const RentalAgreementListPage = lazy(() =>
+  import('@/pages/sx/rental-list').then((m) => ({ default: m.RentalAgreementListPage })),
+);
+const RentalAgreementDetailPage = lazy(() =>
+  import('@/pages/sx/rental-detail').then((m) => ({ default: m.RentalAgreementDetailPage })),
+);
+const ProductionOrderListPage = lazy(() =>
+  import('@/pages/sx/production-order-list').then((m) => ({ default: m.ProductionOrderListPage })),
+);
+const ProductionOrderDetailPage = lazy(() =>
+  import('@/pages/sx/production-order-detail').then((m) => ({
+    default: m.ProductionOrderDetailPage,
+  })),
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -355,6 +369,16 @@ const router = createBrowserRouter(
           <Route path="ns/tuyen-dung" element={<RecruitmentPage />} />
         </Route>
 
+        {/* SX — sản xuất và cho thuê giàn giáo (SX-01 → SX-03, định hướng — PRD Mục 10).
+                  Cho thuê giàn giáo (SX-03) đứng trước vì đã đủ thông tin triển khai; lệnh
+                  sản xuất (SX-01) còn "cần xác nhận thêm". */}
+        <Route element={<ModuleGuard module="SX" />}>
+          <Route path="sx/tai-san-cho-thue" element={<RentalAgreementListPage />} />
+          <Route path="sx/tai-san-cho-thue/:id" element={<RentalAgreementDetailPage />} />
+          <Route path="sx/lenh-san-xuat" element={<ProductionOrderListPage />} />
+          <Route path="sx/lenh-san-xuat/:id" element={<ProductionOrderDetailPage />} />
+        </Route>
+
         {/* Hộp thư Phê duyệt — MỘT màn hình cho mọi module (Webapp Flow 4.6),
                   nên nằm ở gốc chứ không thuộc đường dẫn của module nào. KHÔNG bọc
                   `ModuleGuard`: nó gom hồ sơ từ mọi phân hệ, và mỗi dòng đã tự lọc theo
@@ -370,7 +394,7 @@ const router = createBrowserRouter(
             c,
           ): c is Exclude<
             ModuleCode,
-            'BC' | 'CRM' | 'DA' | 'TK' | 'HD' | 'TC' | 'MH' | 'KHO' | 'KT' | 'NS'
+            'BC' | 'CRM' | 'DA' | 'TK' | 'HD' | 'TC' | 'MH' | 'KHO' | 'KT' | 'NS' | 'SX'
           > =>
             c !== 'BC' &&
             c !== 'CRM' &&
@@ -381,7 +405,8 @@ const router = createBrowserRouter(
             c !== 'MH' &&
             c !== 'KHO' &&
             c !== 'KT' &&
-            c !== 'NS',
+            c !== 'NS' &&
+            c !== 'SX',
         ).map((code) => (
           <Route key={code} element={<ModuleGuard module={code} />}>
             <Route path={MODULE_PATHS[code]} element={<PlaceholderPage moduleCode={code} />} />

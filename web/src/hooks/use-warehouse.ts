@@ -672,15 +672,16 @@ export function useScaffoldingAssets() {
     queryKey: ['scaffolding-assets', scope.companyId],
     queryFn: async () => {
       const { data, error } = await withCompanyScope(
-        supabase
-          .from('scaffolding_assets')
-          .select(
-            'id, company_id, asset_code, material_id, quantity, condition, location_type, ' +
-              'warehouse_id, construction_site_id, renter_name, purchase_date, notes, created_at, ' +
-              'material:materials!scaffolding_assets_material_id_materials_id_fk(code, name, unit), ' +
-              'warehouse:warehouses!scaffolding_assets_warehouse_id_warehouses_id_fk(name), ' +
-              'site:construction_sites!scaffolding_assets_construction_site_id_construction_sites_id_fk(code, name)',
-          ),
+        supabase.from('scaffolding_assets').select(
+          'id, company_id, asset_code, material_id, quantity, condition, location_type, ' +
+            'warehouse_id, construction_site_id, renter_name, purchase_date, notes, created_at, ' +
+            'material:materials!scaffolding_assets_material_id_materials_id_fk(code, name, unit), ' +
+            'warehouse:warehouses!scaffolding_assets_warehouse_id_warehouses_id_fk(name), ' +
+            // Tên khóa ngoại đủ dài (67 ký tự) nên Postgres tự cắt còn 63 ký tự lúc tạo bảng
+            // (giới hạn NAMEDATALEN) — PostgREST chỉ nhận diện được tên đã bị cắt, không phải
+            // tên "đúng ý" trong migration. Xác nhận tên thật bằng pg_constraint trước khi sửa.
+            'site:construction_sites!scaffolding_assets_construction_site_id_construction_sites_id_f(code, name)',
+        ),
         scope,
       )
         .is('deleted_at', null)

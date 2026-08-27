@@ -217,7 +217,13 @@ export const ROLE_SEED: RoleSeed[] = [
     description: 'Nhập – xuất – điều chuyển – kiểm kê vật tư và giàn giáo.',
     seesAllCompanies: false,
     defaultRoute: '/kho/quet-ma',
-    permissions: { KHO: WORK_APPROVE, MH: VIEW },
+    /*
+     * ⚠️ GIẢ ĐỊNH CHỜ HAAN XÁC NHẬN (CLAUDE.md 5.6): Module SX chưa có khảo sát Xưởng giàn
+     * giáo NVS, nên chưa rõ ai thật sự vận hành cho thuê giàn giáo. Tạm gán cho vai trò Kho
+     * vì họ đã quản lý vòng đời vật lý của giàn giáo (KHO-06) — SX-03 chỉ là lớp hợp đồng
+     * phủ lên đúng những lô đó. Đổi được bằng cách sửa dòng này khi có vai trò riêng.
+     */
+    permissions: { KHO: WORK_APPROVE, MH: VIEW, SX: WORK },
   },
   {
     code: 'KT',

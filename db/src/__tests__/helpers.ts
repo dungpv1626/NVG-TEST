@@ -156,6 +156,13 @@ export async function cleanupTestData(): Promise<void> {
     await sql`DELETE FROM stocktakes WHERE warehouse_id IN (
       SELECT id FROM warehouses WHERE name LIKE ${'%' + TEST_PREFIX + '%'}
     )`;
+    // SX: hợp đồng thuê kéo theo dòng thuê (CASCADE); phải xoá TRƯỚC vật tư
+    // (`rental_agreement_items.material_id` là RESTRICT) và trước khách hàng
+    // (`rental_agreements.customer_id` là RESTRICT).
+    await sql`DELETE FROM rental_agreements WHERE customer_id IN (
+      SELECT id FROM customers WHERE name LIKE ${TEST_PREFIX + '%'}
+    )`;
+    await sql`DELETE FROM production_orders WHERE product LIKE ${TEST_PREFIX + '%'}`;
     await sql`DELETE FROM scaffolding_assets WHERE asset_code LIKE ${'TEST-%'}`;
     // Xoá kho kéo theo dòng tồn (CASCADE); xoá vật tư phải sau cùng vì cả hai bảng trên
     // đều tham chiếu nó với ON DELETE RESTRICT.
