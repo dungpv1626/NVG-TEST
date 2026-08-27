@@ -424,6 +424,25 @@ dùng, dữ liệu đúng, báo cáo đối soát được, quy trình trọng y
 
 ### 6.3 Môi trường và quy trình nhánh (TSD 5.3, 5.4, IPD 5)
 
+> ⚠️ **THỰC TẾ HIỆN NAY KHÁC TÀI LIỆU: chỉ có MỘT project Supabase.** Đã kiểm ngày 27/08/2026
+> bằng cách đối chiếu chunk `auth-*.js` của bản đang chạy với `.env` ở máy — cả hai cùng trỏ
+> tới project ref `awaiwegmuykhctnysvou`. Nghĩa là **máy phát triển và bản chạy thử công khai
+> (`nvg.tests99.workers.dev`) dùng chung một cơ sở dữ liệu.**
+>
+> Bốn hệ quả phải nhớ chừng nào còn như vậy:
+> 1. Chạy `npm run db:migrate` ở máy là **đổi luôn CSDL của bản đang chạy** — không có bước
+>    nghiệm thu ở giữa. Migration sai thì bản công khai sai ngay.
+> 2. Bộ test trong `db/` chạy trên **chính CSDL đó**, và `cleanupTestData` **XOÁ CỨNG**. Hiện
+>    an toàn vì chỉ xoá theo tiền tố `[TEST]` và `year >= 2090`, nhưng đây là thứ không được
+>    phép tồn tại khi đã có dữ liệu thật.
+> 3. Dữ liệu demo nạp ở máy hiện luôn trên bản công khai.
+> 4. "Xác nhận sao lưu trước migration production" (IPD 5.4) hiện **không có ý nghĩa** — không
+>    có production tách biệt để sao lưu.
+>
+> **Hạn chót phải tách: TRƯỚC khi NVG nhập dòng dữ liệu thật đầu tiên.** Danh sách việc cụ thể
+> ở `BUILD_PLAN.md` mục 4E. Giữ một CSDL trong giai đoạn demo là chấp nhận được và đã được
+> Haan chốt (27/08/2026); đừng tự tách sớm, cũng đừng quên tách.
+
 - **3 môi trường tách biệt, mỗi môi trường một project Supabase riêng**: `dev` (cục bộ: Vite dev + Wrangler dev)
   · `staging` (preview Cloudflare) · `production`.
 - Nhánh: `main` = production · `staging` = chờ nghiệm thu · feature branch cho từng tính năng/module.

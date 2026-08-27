@@ -617,7 +617,32 @@ công đã chốt — nhưng không đọc được căn cước, sức khỏe, 
 - 3 Golden Path E2E xanh ổn định
 - Bộ test RLS đầy đủ xanh
 - Dữ liệu demo thật cho cả 3 pháp nhân + Back Office
-- staging → production; xác nhận sao lưu trước migration production (IPD 5.4)
+
+#### ⚠️ Tách môi trường — việc BẮT BUỘC trước go-live, chưa làm
+
+Hiện chỉ có **một** project Supabase (`awaiwegmuykhctnysvou`): máy phát triển và bản chạy thử
+công khai `nvg.tests99.workers.dev` dùng chung nó. Đã kiểm ngày 27/08/2026 bằng cách đối chiếu
+chunk `auth-*.js` của bản đang chạy với `.env`. Haan chốt giữ nguyên tới lúc go-live.
+
+**Hạn chót: trước khi NVG nhập dòng dữ liệu thật đầu tiên.** Chừng nào chưa tách, một lượt
+`npm test` là chạm vào CSDL của bản đang chạy — mà `cleanupTestData` xoá CỨNG.
+
+Bốn bước, theo đúng thứ tự:
+
+1. Tạo project Supabase thứ hai (production). Giữ project cũ làm `dev`.
+2. Chạy `npm run db:migrate` rồi `npm run db:seed` lên project mới — **kiểm bằng số bảng thật**
+   trong `information_schema`, đừng tin dòng "Hoàn tất" (xem bẫy `_journal.json` ở IPD/memory).
+3. Đổi `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` trong **build variables của trigger
+   production** trên Cloudflare Workers Builds. ⚠️ Phải sửa qua Builds API
+   (`PATCH /accounts/{acct}/builds/triggers/{uuid}/environment_variables`) với token
+   **user-scoped** có quyền `Workers Builds Configuration: Edit` — `wrangler` không có lệnh
+   nào làm việc này, và token account-scoped bị từ chối. Trigger preview giữ project dev.
+4. Trỏ `.env` ở máy về project **dev**, rồi xác minh bằng cách grep host Supabase trong chunk
+   `auth-*.js` của bản đã deploy — không phải `index-*.js`, và đừng dừng ở "build pass":
+   biến `VITE_` rỗng làm trắng màn hình mà build vẫn xanh.
+
+Sau khi tách xong thì mục "xác nhận sao lưu trước migration production (IPD 5.4)" mới có nghĩa
+và trở lại thành điều kiện bắt buộc của mỗi lần migrate.
 
 ### 4F. Tính năng phụ (chỉ khi còn thời gian — IPD 4.3)
 DA-11 (Gemini đọc bản vẽ) · TK-09 (thư viện thiết kế) · NS-02 (kanban tuyển dụng) · `report_snapshots`
