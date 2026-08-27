@@ -669,7 +669,9 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
     trúng thầu + nguyên nhân trượt thầu (chỉ tính gói thầu đã CÓ KẾT QUẢ). Test:
     `shared/src/__tests__/bc.test.ts`, `db/src/__tests__/bc.test.ts`. Thẻ liên kết nhanh trên
     Dashboard, cạnh thẻ Lãi/lỗ. Thêm `BcNav` (điều hướng phụ giữa hai báo cáo BC) — dùng lại cho
-    cả `/bc/lai-lo`.
+    cả `/bc/lai-lo`. **Xuất Excel** (CSV BOM UTF-8, cùng khuôn BC-02) gộp CẢ BA phần vào một tệp
+    — ba khối cách nhau một dòng trống, vì đây là một báo cáo có ba lát cắt, không phải ba báo
+    cáo độc lập cần ba nút riêng.
 - ⏳ **CỐ Ý CHƯA LÀM — BC-03 phần 4 "hiệu suất nhân sự/tổ đội/nhà cung cấp"**: PRD không nói rõ
   đo bằng gì (tổ đội thi công — TC chưa có bảng phân công; nhà cung cấp — MH chưa có sổ đánh
   giá). Làm ẩu sẽ tạo "bảng xếp hạng nhân sự" không có cơ sở, đúng thứ CLAUDE.md 5.1 cấm. Cần

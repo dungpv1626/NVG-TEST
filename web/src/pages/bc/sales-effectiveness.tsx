@@ -15,21 +15,84 @@
  * phễu theo giai đoạn, tỷ lệ trúng thầu) đều qua `summarizeOpportunitiesBySource`/
  * `summarizeOpportunityFunnel`/`summarizeBiddingOutcomes` (shared/src/bc.ts), không tính lại
  * ở đây — một công thức duy nhất, đúng nguyên tắc đã áp dụng cho `summarizeBudget()`.
+ *
+ * Xuất Excel (CSV có BOM, cùng cách BC-02 đã làm) gộp CẢ BA phần vào một tệp — ba khối cách
+ * nhau một dòng trống, mỗi khối có tiêu đề riêng, vì đây là MỘT báo cáo có ba lát cắt của
+ * cùng một khoảng thời gian, không phải ba báo cáo độc lập.
  */
 
+import { Download } from 'lucide-react';
 import {
+  BUTTONS,
   OPPORTUNITY_STAGE_META,
   formatCurrency,
   formatPercent,
   summarizeBiddingOutcomes,
   summarizeOpportunitiesBySource,
   summarizeOpportunityFunnel,
+  type BiddingOutcomeSummary,
+  type FunnelStageSummary,
+  type SourceSummary,
 } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
+import { Button } from '@/components/ui/button';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useBiddingOutcomes, useOpportunityFunnelBySource } from '@/hooks/use-reports';
 import { BcNav } from './bc-nav';
+
+function csvLine(values: readonly (string | number | null)[]): string {
+  return values.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',');
+}
+
+function exportCsv(
+  sources: SourceSummary[],
+  funnel: FunnelStageSummary[],
+  bidding: BiddingOutcomeSummary,
+) {
+  const lines: string[] = [];
+
+  lines.push('Nguồn khách');
+  lines.push(
+    csvLine([
+      'Nguồn khách',
+      'Tổng số cơ hội',
+      'Đã ký hợp đồng',
+      'Tỷ lệ chuyển đổi (%)',
+      'Giá trị ước tính',
+    ]),
+  );
+  for (const r of sources) {
+    lines.push(csvLine([r.source, r.total, r.won, r.winRate, r.value.toString()]));
+  }
+
+  lines.push('');
+  lines.push('Phễu bán hàng — theo giai đoạn hiện tại');
+  lines.push(csvLine(['Giai đoạn', 'Số cơ hội']));
+  for (const r of funnel) {
+    lines.push(csvLine([OPPORTUNITY_STAGE_META[r.stage].label, r.count]));
+  }
+
+  lines.push('');
+  lines.push('Tỷ lệ trúng thầu và nguyên nhân trượt thầu');
+  lines.push(csvLine(['Trúng thầu', bidding.won]));
+  lines.push(csvLine(['Trượt thầu', bidding.lost]));
+  lines.push(csvLine(['Tỷ lệ trúng thầu (%)', bidding.winRate]));
+  lines.push('');
+  lines.push(csvLine(['Nguyên nhân trượt thầu', 'Số lần']));
+  for (const r of bidding.lossReasons) {
+    lines.push(csvLine([r.reason, r.count]));
+  }
+
+  const csv = lines.join('\r\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `bao-cao-hieu-qua-kinh-doanh-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 /** "Chưa có dữ liệu" khác hẳn "0%" — cùng nguyên tắc BC-06 đã áp dụng cho conversionRate. */
 function RatePill({ value }: { value: number | null }) {
@@ -175,6 +238,23 @@ export function SalesEffectivenessPage() {
         title="Hiệu quả kinh doanh"
         description="Nguồn khách, phễu bán hàng, tỷ lệ trúng thầu và nguyên nhân trượt thầu — BC-03"
         breadcrumbs={[{ label: 'Dashboard', to: '/dashboard' }, { label: 'Hiệu quả kinh doanh' }]}
+        actions={
+          hasAnyData && (
+            <Button
+              variant="secondary"
+              onClick={() =>
+                exportCsv(
+                  summarizeOpportunitiesBySource(funnel.data ?? []),
+                  summarizeOpportunityFunnel(funnel.data ?? []),
+                  summarizeBiddingOutcomes(outcomes.data ?? []),
+                )
+              }
+            >
+              <Download className="size-4" aria-hidden />
+              {BUTTONS.exportExcel}
+            </Button>
+          )
+        }
       />
 
       <BcNav />
