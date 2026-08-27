@@ -215,6 +215,9 @@ const ProductionOrderDetailPage = lazy(() =>
 const ProfitLossReportPage = lazy(() =>
   import('@/pages/bc/profit-loss').then((m) => ({ default: m.ProfitLossReportPage })),
 );
+const SalesEffectivenessPage = lazy(() =>
+  import('@/pages/bc/sales-effectiveness').then((m) => ({ default: m.SalesEffectivenessPage })),
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -269,6 +272,9 @@ const router = createBrowserRouter(
                     thêm một lớp nữa bên trong hàm `project_profit_loss`; `ModuleGuard` chỉ chặn
                     việc mở màn hình cho vai trò không có `BC: view`. */}
           <Route path="bc/lai-lo" element={<ProfitLossReportPage />} />
+          {/* BC-03 — hiệu quả kinh doanh. KHÔNG phải Mẫu D: nguồn khách/giai đoạn
+                    pipeline/kết quả đấu thầu không phải giá vốn/lương/lợi nhuận. */}
+          <Route path="bc/hieu-qua-kinh-doanh" element={<SalesEffectivenessPage />} />
         </Route>
 
         {/* Mỗi phân hệ bọc trong `ModuleGuard`: ẩn khỏi menu là chưa đủ, vì đường dẫn

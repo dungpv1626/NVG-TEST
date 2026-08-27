@@ -26,6 +26,7 @@ import { toUserMessage } from '@/hooks/use-error-message';
 import { useProfitLossReport, type ProfitLossRow } from '@/hooks/use-reports';
 import { useCompanyScope } from '@/lib/company-scope';
 import { cn } from '@/lib/utils';
+import { BcNav } from './bc-nav';
 
 function sum(rows: ProfitLossRow[], key: keyof ProfitLossRow): bigint {
   return rows.reduce((total, r) => {
@@ -109,6 +110,8 @@ export function ProfitLossReportPage() {
           )
         }
       />
+
+      <BcNav />
 
       {isLoading ? (
         <TableSkeleton rows={6} columns={6} />

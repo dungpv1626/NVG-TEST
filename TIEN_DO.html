@@ -76,7 +76,7 @@
   <h1>Tiến độ phát triển — Hệ thống Quản trị Nhà Việt Group</h1>
   <p class="muted">Bản tóm tắt để theo dõi: đã xong gì, đang làm gì, sắp làm gì, còn lại gì.</p>
   <p class="xs muted">
-    Cập nhật: <strong>27/08/2026 (chiều)</strong> ·
+    Cập nhật: <strong>27/08/2026 (tối)</strong> ·
     Nguồn chi tiết: <code>BUILD_PLAN.md</code> (kế hoạch) và <code>CLAUDE.md</code> (ràng buộc) ·
     Tài liệu gốc nằm trong <code>doc/</code>
   </p>
@@ -98,8 +98,8 @@
   <div class="stats">
     <div class="stat"><b>12 / 12</b><span class="xs muted">module đã dựng (đủ cả 12, Sản xuất &amp; Cho thuê ở mức cơ bản — xem bảng bên dưới)</span></div>
     <div class="stat"><b>90</b><span class="xs muted">bảng cơ sở dữ liệu</span></div>
-    <div class="stat"><b>57</b><span class="xs muted">migration đã chạy</span></div>
-    <div class="stat"><b>632</b><span class="xs muted">kiểm thử tự động, tất cả đang xanh</span></div>
+    <div class="stat"><b>60</b><span class="xs muted">migration đã chạy</span></div>
+    <div class="stat"><b>660</b><span class="xs muted">kiểm thử tự động, tất cả đang xanh</span></div>
   </div>
 </section>
 
@@ -154,6 +154,18 @@
       <li><strong>Báo cáo lãi/lỗ theo công trình</strong> — truy ngược tới tận chứng từ gốc, cùng
           bốn thẻ mới trên Dashboard điều hành (dòng tiền, công nợ phải thu, giàn giáo đang cho
           thuê, chấm công đã chốt). Xem phần bên dưới.</li>
+      <li><strong>Tìm kiếm toàn hệ thống đã nối thật</strong> — ô tìm kiếm ở thanh trên cùng gọi
+          thẳng một hàm cơ sở dữ liệu, gộp kết quả theo module (khách hàng, cơ hội, gói thầu, dự
+          án thiết kế, hợp đồng, công trình), bấm vào là sang thẳng hồ sơ. Chỉ thấy hồ sơ đúng
+          quyền — không phải màn hình riêng tự kiểm tra quyền, mà dựa hẳn vào cùng lớp phân quyền
+          của từng bảng nguồn.</li>
+      <li><strong>Thẻ "Quá hạn" nay gộp đủ bốn nguồn rủi ro</strong> — thêm "công trình vượt ngân
+          sách" vào cạnh hồ sơ quá hạn theo module, công nợ quá hạn thu và phê duyệt để lâu. Tính
+          bằng một lượt gọi tổng hợp cả danh sách công trình, không lặp truy vấn theo từng công
+          trình. Danh sách Công trình cũng có thêm cột và bộ lọc "Ngân sách" trỏ tới đúng nguồn đó.</li>
+      <li><strong>Báo cáo hiệu quả kinh doanh (BC-03)</strong> — nguồn khách, phễu bán hàng theo
+          giai đoạn, tỷ lệ trúng thầu và nguyên nhân trượt thầu. Phần "hiệu suất nhân sự/tổ đội/
+          nhà cung cấp" của BC-03 cố ý chưa làm — chưa rõ đo bằng gì, cần Haan xác nhận trước.</li>
     </ul>
   </div>
 
@@ -290,8 +302,8 @@
   </div>
 
   <div class="card">
-    <h3><span class="pill s-progress">Vừa xong — Báo cáo lãi/lỗ và Dashboard điều hành</span></h3>
-    <p class="xs muted">Vòng "Hợp đồng → Chi phí → Thu tiền → Lãi/lỗ" nay ra được một con số, và con số đó bấm truy ngược được.</p>
+    <h3><span class="pill s-progress">Vừa xong — Báo cáo &amp; Dashboard điều hành (đầy đủ)</span></h3>
+    <p class="xs muted">Vòng "Hợp đồng → Chi phí → Thu tiền → Lãi/lỗ" nay ra được một con số bấm truy ngược được, và Dashboard đã có đủ bốn nguồn cảnh báo rủi ro cộng báo cáo hiệu quả kinh doanh.</p>
     <ul>
       <li><strong>Một dòng lãi/lỗ mỗi công trình</strong> (<code>/bc/lai-lo</code>) — ba con số:
           lãi/lỗ dự kiến từ lúc lập ngân sách, thực tế tới hiện tại (doanh thu trừ chi phí đã phát
@@ -306,17 +318,24 @@
           không tính giá trị gốc — cùng quy tắc với bảng tuổi nợ), giàn giáo đang cho thuê, và
           chấm công đã chốt trong tháng. Mỗi thẻ dùng lại đúng hook của màn hình chi tiết, nên bấm
           vào không ra một con số khác. Bốn thẻ chỉ hiện với đúng vai trò xem được module nguồn.</li>
-      <li><strong>Thẻ "Quá hạn" nay gộp ba nguồn rủi ro, không chỉ bốn module gốc</strong> — thêm
-          công nợ đã quá hạn thu và phê duyệt bị "để lâu" (quá 3 ngày kể từ lúc gửi — giả định cần
-          Haan xác nhận con số, cùng tinh thần với mốc tuổi nợ KT-04). Đây là bước đầu của cảnh báo
-          rủi ro tổng hợp (BC-05); phần "vượt ngân sách" vẫn chưa gộp vì cần một truy vấn tổng hợp
-          mới cho toàn bộ công trình cùng lúc.</li>
+      <li><strong>Thẻ "Quá hạn" nay gộp ĐỦ BỐN nguồn rủi ro (BC-05 xong)</strong> — hồ sơ quá hạn
+          theo module gốc, công nợ đã quá hạn thu, phê duyệt bị "để lâu" (quá 3 ngày kể từ lúc gửi
+          — giả định cần Haan xác nhận con số), và <strong>công trình vượt ngân sách</strong>. Phần vượt ngân
+          sách dùng một hàm tổng hợp CẢ danh sách công trình trong một lượt gọi, tránh phải hỏi
+          từng công trình một; danh sách Công trình (Thi công) cũng có thêm cột và bộ lọc "Ngân
+          sách" trỏ đúng vào nguồn đó, nên con số trên thẻ và trên danh sách không thể lệch nhau.</li>
+      <li><strong>Báo cáo hiệu quả kinh doanh (BC-03) — ba phần đầu đã xong</strong> — nguồn khách
+          (tổng số cơ hội, đã ký, tỷ lệ chuyển đổi, giá trị theo từng nguồn), phễu bán hàng (đếm
+          theo giai đoạn cơ hội đang đứng hôm nay), và tỷ lệ trúng thầu kèm nguyên nhân trượt thầu
+          xếp theo số lần gặp. Phần thứ tư "hiệu suất nhân sự/tổ đội/nhà cung cấp" cố ý chưa làm —
+          PRD không nói rõ đo bằng gì, và Thi công/Mua hàng chưa có đúng bảng nguồn (phân công tổ
+          đội, sổ đánh giá nhà cung cấp) để tính cho đàng hoàng.</li>
       <li><strong>Xuất báo cáo lãi/lỗ ra CSV có dấu tiếng Việt</strong> — Excel mở đúng ngay, nút
           vẫn ghi "Xuất Excel" vì người dùng không phân biệt được khác gì so với file thật.</li>
       <li class="muted"><strong>Cố ý chưa làm:</strong> gộp các thẻ Dashboard thành một endpoint
-          gọi một lần (hiện vẫn là các hook riêng); hiệu quả kinh doanh, hao hụt/giá thành sản
-          xuất, phần "vượt ngân sách" của cảnh báo rủi ro tổng hợp, báo cáo toàn NVG truy ngược
-          xuống pháp nhân; và xuất PDF. Xem thẻ "Chuẩn bị làm" bên dưới.</li>
+          gọi một lần (hiện vẫn là các hook riêng); hao hụt/giá thành sản xuất, báo cáo toàn NVG
+          truy ngược xuống pháp nhân, phần thứ tư của BC-03; và xuất PDF. Xem thẻ "Chuẩn bị làm"
+          bên dưới.</li>
     </ul>
   </div>
 
@@ -521,21 +540,21 @@
     <p class="xs muted">Phần còn lại của Giai đoạn 2 — nốt Báo cáo, rồi bước sang Giai đoạn 3.</p>
     <ul>
       <li><strong>Dashboard điều hành gộp về một-lần-gọi</strong> — các thẻ dòng tiền/công nợ/
-          giàn giáo cho thuê/chấm công vừa lên hình vẫn là các hook riêng như từ Giai đoạn 1, chưa
-          gộp thành một endpoint tổng hợp (BC-01). Cũng còn thiếu tiến độ/chi phí so ngân sách của
-          TỪNG công trình ngay trên Dashboard — hiện chỉ xem được từng công trình một, ở tab Ngân
-          sách của hồ sơ đó; cùng lý do này, thẻ "Quá hạn" (đã gộp công nợ quá hạn + chờ duyệt
-          lâu) vẫn CHƯA gộp thêm "vượt ngân sách".</li>
-      <li><strong>BC-03 / BC-04 / BC-07</strong> — hiệu quả kinh doanh (nguồn khách, phễu
-          bán hàng, tỷ lệ trúng thầu), hao hụt/giá thành sản xuất, báo cáo toàn NVG truy ngược
-          xuống pháp nhân/phòng ban.</li>
+          giàn giáo cho thuê/chấm công/vượt ngân sách vẫn là các hook riêng, chưa gộp thành một
+          endpoint tổng hợp (BC-01). Chấp nhận được ở quy mô demo, cân nhắc lại nếu Dashboard
+          chậm thật.</li>
+      <li><strong>BC-04 / BC-07</strong> — hao hụt/giá thành sản xuất, báo cáo toàn NVG truy
+          ngược xuống pháp nhân/phòng ban (một phần đã có qua bộ lọc "Toàn NVG" + cột Pháp nhân).
+          Phần thứ tư của BC-03 ("hiệu suất nhân sự/tổ đội/nhà cung cấp") cũng chờ ở đây — xem
+          thẻ báo cáo bên trên.</li>
       <li><strong>Xuất PDF</strong> cho mọi báo cáo — hiện báo cáo lãi/lỗ mới xuất được CSV (Excel
           mở đúng dấu, không phải file <code>.xlsx</code> thật).</li>
       <li><strong>Lệnh sản xuất (SX-01)</strong> còn ở mức CRUD trơn — đổi trạng thái bằng ô chọn
           trực tiếp, chưa có luồng chuyển bước ràng buộc, chưa có định mức tiêu hao hay giá thành
           (SX-02 cố ý chưa làm gì, chờ khảo sát Xưởng giàn giáo NVS).</li>
-      <li><strong>Tìm kiếm toàn hệ thống</strong> và <strong>Trung tâm Thông báo</strong> — bảng
-          dữ liệu đã có, phần hiển thị chưa nối. Làm xen kẽ, không chặn Giai đoạn 2.</li>
+      <li><strong>Trung tâm Thông báo</strong> — bảng dữ liệu đã có, phần hiển thị chưa nối. Tìm
+          kiếm toàn hệ thống đã nối xong (xem thẻ "Vừa xong" phía trên). Làm xen kẽ, không chặn
+          Giai đoạn 2.</li>
       <li><strong>Cần Haan xem giao diện trên máy thật</strong> — ba thứ không kiểm bằng máy được:
           bố cục ở các bề ngang màn hình khác nhau, dấu tiếng Việt hiển thị ở cỡ chữ nhỏ, và cảm
           giác của các hiệu ứng chuyển động. Mở trang "Thành phần giao diện" là soát được một lượt.</li>
@@ -578,7 +597,7 @@
       <td><strong>P1</strong> Bộ công cụ dùng chung</td>
       <td>Bảng danh sách, hồ sơ 360°, hộp thư phê duyệt, Kanban, nhãn trạng thái, kho hồ sơ có phiên bản, thông báo, nhật ký</td>
       <td><span class="pill s-progress">Đang làm</span></td>
-      <td>Trang trưng bày thành phần giao diện đã xong. Còn: tìm kiếm toàn hệ thống, trung tâm thông báo</td>
+      <td>Trang trưng bày thành phần giao diện và tìm kiếm toàn hệ thống đã xong. Còn: trung tâm thông báo</td>
     </tr>
     <tr>
       <td><strong>P1.0</strong> PWA và di động</td>
@@ -597,8 +616,9 @@
       <td>Thi công · Mua hàng · Kho · Kế toán · Nhân sự · Sản xuất · Báo cáo đầy đủ</td>
       <td><span class="pill s-progress">Đang làm</span></td>
       <td>Thi công, Mua hàng, Kho, Kế toán, Nhân sự và Sản xuất (mức cơ bản) đã xong và nối liền
-          nhau; báo cáo lãi/lỗ theo công trình đã lên hình. Còn phần đầy đủ của Báo cáo (BC-03/04/
-          05/07, xuất PDF) và làm sâu Sản xuất sau khi có khảo sát Xưởng NVS</td>
+          nhau; báo cáo lãi/lỗ, cảnh báo rủi ro tổng hợp (BC-05) và hiệu quả kinh doanh (BC-03,
+          ba phần đầu) đã lên hình. Còn BC-04/BC-07, xuất PDF, và làm sâu Sản xuất sau khi có
+          khảo sát Xưởng NVS</td>
     </tr>
     <tr>
       <td><strong>P4</strong> Liên kết chéo và bàn giao<br><span class="xs muted">Giai đoạn 3 của PRD</span></td>
@@ -634,7 +654,7 @@
     <tr><td><code>HD</code></td><td>Hợp đồng</td><td><span class="pill s-progress">Đang làm</span></td>
         <td>Soạn hợp đồng từ hồ sơ nguồn không nhập lại, checklist 8 nhóm điều khoản, trình ký theo hạn mức, ghi nhận đã ký và báo cho Thi công/Kế toán, phát sinh ngoài hợp đồng đủ luồng, quyết toán và hủy. Còn phần "đã thu / còn phải thu" — chờ số liệu thật từ Kế toán (Giai đoạn 2).</td></tr>
     <tr><td><code>BC</code></td><td>Báo cáo &amp; Dashboard</td><td><span class="pill s-progress">Đang làm</span></td>
-        <td>Dashboard chỉ số thật cho Cơ hội, Gói thầu, Thiết kế, Hợp đồng, cộng bốn thẻ mới: dòng tiền, công nợ phải thu, giàn giáo đang cho thuê, chấm công đã chốt. Mỗi con số bấm được, lọc theo kỳ và theo pháp nhân. Thẻ "Quá hạn" gộp công nợ quá hạn thu và phê duyệt để lâu, chưa gộp vượt ngân sách. Báo cáo lãi/lỗ theo công trình (BC-02) đã lên hình, xuất được CSV, truy ngược tới chứng từ gốc. Còn hiệu quả kinh doanh, hao hụt/giá thành sản xuất, phần "vượt ngân sách" của cảnh báo rủi ro tổng hợp, báo cáo toàn NVG truy ngược pháp nhân, và xuất PDF.</td></tr>
+        <td>Dashboard chỉ số thật cho Cơ hội, Gói thầu, Thiết kế, Hợp đồng, cộng bốn thẻ mới: dòng tiền, công nợ phải thu, giàn giáo đang cho thuê, chấm công đã chốt. Mỗi con số bấm được, lọc theo kỳ và theo pháp nhân. Thẻ "Quá hạn" nay gộp đủ bốn nguồn: hồ sơ quá hạn theo module, công nợ quá hạn thu, phê duyệt để lâu, và công trình vượt ngân sách. Báo cáo lãi/lỗ theo công trình (BC-02) và báo cáo hiệu quả kinh doanh — nguồn khách, phễu bán hàng, tỷ lệ trúng thầu (BC-03, ba phần đầu) đều đã lên hình, BC-02 xuất được CSV, truy ngược tới chứng từ gốc. Còn hao hụt/giá thành sản xuất (BC-04), báo cáo toàn NVG truy ngược pháp nhân (BC-07), phần thứ tư của BC-03 (hiệu suất nhân sự/tổ đội/nhà cung cấp — chờ xác nhận đo bằng gì), và xuất PDF.</td></tr>
         <tr><td><code>TC</code></td><td>Thi công &amp; Ngân sách</td><td><span class="pill s-progress">Đang làm</span></td>
         <td>Công trình mở từ hợp đồng đã ký, hoặc tự mở khi Thiết kế bàn giao hồ sơ — mang theo đúng bộ ngân sách đã duyệt, không lập lại. Nhật ký công trường theo ngày kèm quân số. Nghiệm thu ba loại, và chỉ nghiệm thu với chủ đầu tư mới báo Kế toán thu tiền. Ngân sách so chi phí theo từng mã, cảnh báo trước khi vượt. Tổ đội và bảo hành theo từng hạng mục. Công trường đề nghị mua vật tư ngay tại hồ sơ công trình. Yêu cầu vẫn ở mức định hướng vì chưa khảo sát chỉ huy công trường.</td></tr>
     <tr><td><code>MH</code></td><td>Mua hàng – Vật tư</td><td><span class="pill s-progress">Đang làm</span></td>
@@ -796,6 +816,12 @@
         <td>Kho</td>
         <td>Mạng ở kho và công trường yếu tới mức nào? Cần ghi được khi mất mạng hoàn toàn, hay chỉ cần chống ghi trùng lúc mạng chập chờn? Câu trả lời quyết định luôn cách màn hình quét mã hoạt động. <em>Phần chống ghi trùng đã làm xong.</em></td>
         <td>Bộ phận Kho + Chỉ huy công trường</td>
+      </tr>
+      <tr>
+        <td>Hiệu suất nhân sự / tổ đội / nhà cung cấp (BC-03 phần 4)</td>
+        <td>Báo cáo</td>
+        <td>PRD không nói rõ đo bằng gì. Thi công chưa có bảng phân công tổ đội; Mua hàng chưa có sổ đánh giá nhà cung cấp. Ba phần đầu của BC-03 (nguồn khách, phễu bán hàng, tỷ lệ trúng thầu) đã xong</td>
+        <td>Ban Giám đốc — cần chốt đo bằng chỉ số gì trước khi dựng</td>
       </tr>
       <tr>
         <td>Ghi chi phí vật tư xuất từ kho chung cho công trình</td>

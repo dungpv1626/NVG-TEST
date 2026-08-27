@@ -8,7 +8,14 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import type { MoneyValue, SiteStage } from '@nvg/shared';
+import type {
+  BiddingOutcomeRow,
+  BiddingStage,
+  MoneyValue,
+  OpportunityFunnelRow,
+  OpportunityStage,
+  SiteStage,
+} from '@nvg/shared';
 import { useCompanyScope } from '@/lib/company-scope';
 import { supabase } from '@/lib/supabase';
 
@@ -51,5 +58,109 @@ export function useProfitLossReport(enabled = true) {
     enabled: scope.isReady && enabled,
     staleTime: 0,
     gcTime: 0,
+  });
+}
+
+/**
+ * Module BC mức đầy đủ — BC-05 phần "vượt ngân sách" (PRD Mục 7, BC-05).
+ *
+ * Nguồn: `db/migrations/0058_bc_over_budget.sql`. Trả về TOÀN BỘ công trình pháp nhân
+ * người dùng xem được, kèm ba số gốc — dùng `summarizeBudget()` để tự tính `health`, cùng
+ * công thức với `BudgetPanel` (TC-05) thay vì tính lại. Không phải dữ liệu nhạy cảm riêng
+ * (không ghi `sensitive_access_logs`) nên dùng cache mặc định của TanStack Query, không cần
+ * `staleTime: 0` như báo cáo lãi/lỗ.
+ */
+export function useSitesBudgetStatus(enabled = true) {
+  const scope = useCompanyScope();
+
+  return useQuery<SiteBudgetStatusRow[], Error>({
+    queryKey: ['reports', 'sites-budget-status', scope.companyId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('sites_budget_status', {
+        p_company_id: scope.isAggregate ? null : (scope.companyId ?? null),
+      });
+      if (error) throw error;
+      return (data ?? []) as unknown as SiteBudgetStatusRow[];
+    },
+    enabled: scope.isReady && enabled,
+  });
+}
+
+export interface SiteBudgetStatusRow {
+  construction_site_id: string;
+  company_id: string;
+  site_code: string;
+  site_name: string;
+  stage: SiteStage;
+  budgeted_cost: MoneyValue;
+  actual_cost: MoneyValue;
+  committed_cost: MoneyValue;
+}
+
+/**
+ * Module BC mức đầy đủ — BC-03 phần "nguồn khách" + "phễu bán hàng" (PRD Mục 7, BC-03).
+ *
+ * Nguồn: `db/migrations/0059_bc_sales_effectiveness.sql`. Trả về dòng thô gộp theo (nguồn
+ * khách, giai đoạn pipeline hiện tại) — màn hình tự pivot bằng `summarizeOpportunitiesBySource`
+ * và `summarizeOpportunityFunnel` (shared/src/bc.ts), không tính hai lần ở hai nơi.
+ */
+export function useOpportunityFunnelBySource(enabled = true) {
+  const scope = useCompanyScope();
+
+  return useQuery<OpportunityFunnelRow[], Error>({
+    queryKey: ['reports', 'opportunity-funnel-by-source', scope.companyId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('opportunity_funnel_by_source', {
+        p_company_id: scope.isAggregate ? null : (scope.companyId ?? null),
+      });
+      if (error) throw error;
+      return (
+        (data ?? []) as {
+          source: string;
+          stage: OpportunityStage;
+          opportunity_count: number | string;
+          estimated_value: MoneyValue;
+        }[]
+      ).map((r) => ({
+        source: r.source,
+        stage: r.stage,
+        opportunityCount: Number(r.opportunity_count),
+        estimatedValue: r.estimated_value,
+      }));
+    },
+    enabled: scope.isReady && enabled,
+  });
+}
+
+/**
+ * Module BC mức đầy đủ — BC-03 phần "tỷ lệ trúng thầu và nguyên nhân trượt thầu" (PRD Mục 7,
+ * BC-03).
+ *
+ * Nguồn: `db/migrations/0059_bc_sales_effectiveness.sql`. Trả về dòng thô — màn hình tự tính
+ * bằng `summarizeBiddingOutcomes` (shared/src/bc.ts).
+ */
+export function useBiddingOutcomes(enabled = true) {
+  const scope = useCompanyScope();
+
+  return useQuery<BiddingOutcomeRow[], Error>({
+    queryKey: ['reports', 'bidding-outcomes', scope.companyId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('bidding_outcomes', {
+        p_company_id: scope.isAggregate ? null : (scope.companyId ?? null),
+      });
+      if (error) throw error;
+      return (
+        (data ?? []) as {
+          stage: BiddingStage;
+          lost_reason: string | null;
+          bidding_count: number | string;
+        }[]
+      ).map((r) => ({
+        stage: r.stage,
+        lostReason: r.lost_reason,
+        biddingCount: Number(r.bidding_count),
+      }));
+    },
+    enabled: scope.isReady && enabled,
   });
 }

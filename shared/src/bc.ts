@@ -14,7 +14,9 @@
  * (BC-06 yêu cầu nêu rõ mức độ hoàn thiện của dữ liệu).
  */
 
-import { toNvgDateInput, type DateInput } from './format';
+import { OPPORTUNITY_STAGES, type OpportunityStage } from './crm';
+import type { BiddingStage } from './da';
+import { sumMoney, toMoney, toNvgDateInput, type DateInput, type MoneyValue } from './format';
 import { STATUS_GROUPS, type StatusGroup } from './status';
 
 /**
@@ -171,4 +173,122 @@ export function isStalePendingApproval(
 
   const msPerDay = 24 * 60 * 60 * 1000;
   return (at.getTime() - requested.getTime()) / msPerDay > PENDING_APPROVAL_AGING_DAYS;
+}
+
+/** Một dòng gốc từ hàm CSDL `opportunity_funnel_by_source` (BC-03, 0059_bc_sales_effectiveness.sql). */
+export interface OpportunityFunnelRow {
+  readonly source: string;
+  readonly stage: OpportunityStage;
+  readonly opportunityCount: number;
+  readonly estimatedValue: MoneyValue;
+}
+
+export interface SourceSummary {
+  readonly source: string;
+  readonly total: number;
+  readonly won: number;
+  readonly value: bigint;
+  readonly winRate: number | null;
+}
+
+/**
+ * Gộp cơ hội theo NGUỒN KHÁCH (BC-03, phần 1) — cộng dồn mọi giai đoạn về một dòng mỗi nguồn.
+ *
+ * Sắp theo tổng số cơ hội giảm dần: nguồn mang lại nhiều cơ hội nhất đứng đầu, đúng thứ tự
+ * BGĐ quan tâm khi quyết định rót thêm ngân sách marketing vào đâu.
+ */
+export function summarizeOpportunitiesBySource(
+  rows: readonly OpportunityFunnelRow[],
+): SourceSummary[] {
+  const bySource = new Map<string, { total: number; won: number; value: bigint }>();
+
+  for (const row of rows) {
+    const entry = bySource.get(row.source) ?? { total: 0, won: 0, value: 0n };
+    entry.total += row.opportunityCount;
+    // 'ky_hop_dong' — giai đoạn kết thúc thắng duy nhất của pipeline (OPPORTUNITY_STAGE_META).
+    if (row.stage === 'ky_hop_dong') entry.won += row.opportunityCount;
+    entry.value = sumMoney([entry.value, toMoney(row.estimatedValue)]);
+    bySource.set(row.source, entry);
+  }
+
+  return Array.from(bySource.entries())
+    .map(([source, { total, won, value }]) => ({
+      source,
+      total,
+      won,
+      value,
+      winRate: conversionRate(won, total),
+    }))
+    .sort((a, b) => b.total - a.total);
+}
+
+export interface FunnelStageSummary {
+  readonly stage: OpportunityStage;
+  readonly count: number;
+}
+
+/**
+ * Phễu bán hàng theo GIAI ĐOẠN HIỆN TẠI (BC-03, phần 2) — snapshot, không phải chuyển đổi
+ * luỹ tiến qua lịch sử (xem ghi chú ở migration nguồn). Luôn trả đủ 7 giai đoạn theo ĐÚNG
+ * thứ tự Kanban, kể cả giai đoạn không có cơ hội nào — để biểu đồ phễu không bị lệch cột.
+ */
+export function summarizeOpportunityFunnel(
+  rows: readonly OpportunityFunnelRow[],
+): FunnelStageSummary[] {
+  const byStage = new Map<OpportunityStage, number>(OPPORTUNITY_STAGES.map((s) => [s, 0]));
+  for (const row of rows) {
+    byStage.set(row.stage, (byStage.get(row.stage) ?? 0) + row.opportunityCount);
+  }
+  return OPPORTUNITY_STAGES.map((stage) => ({ stage, count: byStage.get(stage) ?? 0 }));
+}
+
+/** Một dòng gốc từ hàm CSDL `bidding_outcomes` (BC-03, 0059_bc_sales_effectiveness.sql). */
+export interface BiddingOutcomeRow {
+  readonly stage: BiddingStage;
+  readonly lostReason: string | null;
+  readonly biddingCount: number;
+}
+
+export interface LossReasonSummary {
+  readonly reason: string;
+  readonly count: number;
+}
+
+export interface BiddingOutcomeSummary {
+  readonly won: number;
+  readonly lost: number;
+  readonly winRate: number | null;
+  /** Xếp theo số lần giảm dần — nguyên nhân trượt thầu phổ biến nhất đứng đầu. */
+  readonly lossReasons: LossReasonSummary[];
+}
+
+/**
+ * Tỷ lệ trúng thầu và nguyên nhân trượt thầu (BC-03, phần 3).
+ *
+ * Chỉ nhận dòng đã CÓ KẾT QUẢ (`bidding_outcomes` đã tự lọc `trung_thau`/`truot_thau` ở CSDL),
+ * nên mẫu số ở đây không cần lọc lại — khác với `conversionRate` dùng ở Dashboard CRM (mẫu số
+ * đó CÓ gộp cơ hội đang xử lý dở, vì đơn vị đo là "trong kỳ" chứ không phải "đã ngã ngũ").
+ */
+export function summarizeBiddingOutcomes(
+  rows: readonly BiddingOutcomeRow[],
+): BiddingOutcomeSummary {
+  let won = 0;
+  let lost = 0;
+  const byReason = new Map<string, number>();
+
+  for (const row of rows) {
+    if (row.stage === 'trung_thau') {
+      won += row.biddingCount;
+    } else {
+      lost += row.biddingCount;
+      const reason = row.lostReason?.trim() || 'Chưa ghi nhận';
+      byReason.set(reason, (byReason.get(reason) ?? 0) + row.biddingCount);
+    }
+  }
+
+  const lossReasons = Array.from(byReason.entries())
+    .map(([reason, count]) => ({ reason, count }))
+    .sort((a, b) => b.count - a.count);
+
+  return { won, lost, winRate: conversionRate(won, won + lost), lossReasons };
 }

@@ -15,6 +15,11 @@ import {
   isWithinPeriod,
   matchesPeriodFilter,
   periodStartDate,
+  summarizeBiddingOutcomes,
+  summarizeOpportunitiesBySource,
+  summarizeOpportunityFunnel,
+  type BiddingOutcomeRow,
+  type OpportunityFunnelRow,
 } from '../bc';
 import { sumMoney, toMoney } from '../format';
 
@@ -136,6 +141,105 @@ describe('isStalePendingApproval', () => {
     expect(isStalePendingApproval(null, now)).toBe(false);
     expect(isStalePendingApproval(undefined, now)).toBe(false);
     expect(isStalePendingApproval('', now)).toBe(false);
+  });
+});
+
+describe('summarizeOpportunitiesBySource (BC-03, phần nguồn khách)', () => {
+  const rows: OpportunityFunnelRow[] = [
+    {
+      source: 'Giới thiệu',
+      stage: 'ky_hop_dong',
+      opportunityCount: 2,
+      estimatedValue: '500000000',
+    },
+    { source: 'Giới thiệu', stage: 'mat_co_hoi', opportunityCount: 1, estimatedValue: '100000000' },
+    { source: 'Facebook', stage: 'bao_gia', opportunityCount: 3, estimatedValue: '300000000' },
+  ];
+
+  it('cộng dồn mọi giai đoạn về một dòng mỗi nguồn, chỉ tính "ký hợp đồng" là thắng', () => {
+    const result = summarizeOpportunitiesBySource(rows);
+    expect(result).toHaveLength(2);
+
+    const gioiThieu = result.find((r) => r.source === 'Giới thiệu');
+    expect(gioiThieu).toMatchObject({ total: 3, won: 2, value: 600_000_000n });
+    expect(gioiThieu!.winRate).toBeCloseTo(66.67, 1);
+
+    const facebook = result.find((r) => r.source === 'Facebook');
+    expect(facebook).toEqual({
+      source: 'Facebook',
+      total: 3,
+      won: 0,
+      value: 300_000_000n,
+      winRate: 0,
+    });
+  });
+
+  // Nguồn chưa từng ghi (customer.source NULL) phải tách khỏi "Khác" — hai tình huống khác
+  // nhau: một bên chưa đo, một bên đã đo và người dùng chọn "Khác".
+  it('nguồn NULL từ CSDL gộp vào "Chưa ghi nhận", không lẫn với "Khác"', () => {
+    const result = summarizeOpportunitiesBySource([
+      { source: 'Chưa ghi nhận', stage: 'tiep_nhan', opportunityCount: 1, estimatedValue: 0 },
+      { source: 'Khác', stage: 'tiep_nhan', opportunityCount: 1, estimatedValue: 0 },
+    ]);
+    expect(result.map((r) => r.source).sort()).toEqual(['Chưa ghi nhận', 'Khác']);
+  });
+});
+
+describe('summarizeOpportunityFunnel (BC-03, phần phễu bán hàng)', () => {
+  it('luôn trả đủ 7 giai đoạn theo đúng thứ tự Kanban, kể cả giai đoạn không có cơ hội nào', () => {
+    const result = summarizeOpportunityFunnel([
+      { source: 'Website', stage: 'bao_gia', opportunityCount: 4, estimatedValue: 0 },
+    ]);
+    expect(result.map((r) => r.stage)).toEqual([
+      'tiep_nhan',
+      'xac_minh',
+      'khao_sat',
+      'bao_gia',
+      'dam_phan',
+      'ky_hop_dong',
+      'mat_co_hoi',
+    ]);
+    expect(result.find((r) => r.stage === 'bao_gia')?.count).toBe(4);
+    expect(result.find((r) => r.stage === 'tiep_nhan')?.count).toBe(0);
+  });
+
+  it('cộng dồn nhiều nguồn khác nhau vào cùng một giai đoạn', () => {
+    const result = summarizeOpportunityFunnel([
+      { source: 'Website', stage: 'khao_sat', opportunityCount: 2, estimatedValue: 0 },
+      { source: 'Facebook', stage: 'khao_sat', opportunityCount: 3, estimatedValue: 0 },
+    ]);
+    expect(result.find((r) => r.stage === 'khao_sat')?.count).toBe(5);
+  });
+});
+
+describe('summarizeBiddingOutcomes (BC-03, tỷ lệ trúng thầu và nguyên nhân trượt)', () => {
+  it('tính tỷ lệ trúng thầu trên MẪU SỐ đã có kết quả, xếp nguyên nhân trượt theo số lần giảm dần', () => {
+    const rows: BiddingOutcomeRow[] = [
+      { stage: 'trung_thau', lostReason: null, biddingCount: 3 },
+      { stage: 'truot_thau', lostReason: 'Giá cao hơn đối thủ', biddingCount: 5 },
+      { stage: 'truot_thau', lostReason: 'Hồ sơ năng lực chưa đủ', biddingCount: 2 },
+    ];
+    const result = summarizeBiddingOutcomes(rows);
+
+    expect(result.won).toBe(3);
+    expect(result.lost).toBe(7);
+    expect(result.winRate).toBeCloseTo(30, 1);
+    expect(result.lossReasons).toEqual([
+      { reason: 'Giá cao hơn đối thủ', count: 5 },
+      { reason: 'Hồ sơ năng lực chưa đủ', count: 2 },
+    ]);
+  });
+
+  // "Chưa có gói thầu nào ngã ngũ" khác hẳn "trượt hết 100%" — cùng nguyên tắc `conversionRate`.
+  it('không có gói thầu nào ngã ngũ thì tỷ lệ trúng thầu là null, không phải 0%', () => {
+    expect(summarizeBiddingOutcomes([]).winRate).toBeNull();
+  });
+
+  it('trượt thầu mà không ghi nguyên nhân thì gộp vào "Chưa ghi nhận"', () => {
+    const result = summarizeBiddingOutcomes([
+      { stage: 'truot_thau', lostReason: null, biddingCount: 1 },
+    ]);
+    expect(result.lossReasons).toEqual([{ reason: 'Chưa ghi nhận', count: 1 }]);
   });
 });
 

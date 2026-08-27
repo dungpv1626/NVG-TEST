@@ -33,6 +33,7 @@ import {
   FileSignature,
   FileText,
   Info,
+  Percent,
   Receipt,
   Scale,
   TrendingUp,
@@ -64,6 +65,7 @@ import {
   shortNameFromFullName,
   statusLabel,
   sumMoney,
+  summarizeBudget,
   toMoney,
   toNvgDateInput,
   type DashboardPeriod,
@@ -83,6 +85,7 @@ import { useContracts } from '@/hooks/use-contracts';
 import { useDesignProjects } from '@/hooks/use-design-projects';
 import { useTimesheets } from '@/hooks/use-hr';
 import { useOpportunities } from '@/hooks/use-opportunities';
+import { useSitesBudgetStatus } from '@/hooks/use-reports';
 import { useRentalAgreements } from '@/hooks/use-sx';
 import { useAuth, useCan } from '@/lib/auth';
 import { useCompanyScope } from '@/lib/company-scope';
@@ -159,6 +162,10 @@ export function DashboardPage() {
   const timesheets = useTimesheets(now.getFullYear(), now.getMonth() + 1, undefined, {
     enabled: canViewNs,
   });
+
+  // Nguồn rủi ro "vượt ngân sách" của thẻ Quá hạn (BC-05) — một lượt gọi tổng hợp CẢ công
+  // trình (0058_bc_over_budget.sql), không lặp `useSiteBudgetStatus` theo từng site (N+1).
+  const sitesBudgetStatus = useSitesBudgetStatus(canViewBc);
 
   const inPeriod = (r: MetricRecord) => isWithinPeriod(r.createdAt, period);
 
@@ -290,11 +297,23 @@ export function DashboardPage() {
 
   const activeRentals = (rentalAgreements.data ?? []).filter((r) => r.status === 'dang_thue');
 
-  // Thẻ "Quá hạn" gộp mọi nguồn rủi ro thời hạn về một chỗ (BC-05) — không chỉ hồ sơ 4 module
-  // gốc, còn cả công nợ quá hạn thu và phê duyệt bị để lâu. CỐ Ý chưa gộp "vượt ngân sách":
-  // `useSiteBudgetStatus` cần biết TRƯỚC công trình nào (gọi theo từng site), Dashboard không
-  // có sẵn danh sách công trình để lặp qua — cần một RPC tổng hợp riêng, chưa làm (BUILD_PLAN
-  // 3G).
+  // Số công trình vượt ngân sách — tính health bằng đúng công thức summarizeBudget() dùng ở
+  // BudgetPanel (TC-05), không tính lại một ngưỡng khác ở đây.
+  const overBudgetSiteCount = (sitesBudgetStatus.data ?? []).filter(
+    (s) =>
+      summarizeBudget([
+        {
+          budgetedAmount: s.budgeted_cost,
+          actualAmount: s.actual_cost,
+          committedAmount: s.committed_cost,
+        },
+      ]).health === 'vuot_ngan_sach',
+  ).length;
+
+  // Thẻ "Quá hạn" gộp mọi nguồn rủi ro thời hạn về một chỗ (BC-05) — hồ sơ 4 module gốc, công
+  // nợ quá hạn thu, phê duyệt bị để lâu, và công trình vượt ngân sách. Đích của mục vượt ngân
+  // sách trỏ tới danh sách Công trình (TC-01) đã lọc `?ngan-sach=vuot` — cùng
+  // `useSitesBudgetStatus` với ở đây, nên con số trên thẻ và trên danh sách không thể lệch.
   const overdueByModule = modules
     .map((m) => ({
       key: m.key,
@@ -318,6 +337,13 @@ export function DashboardPage() {
         title: `Chờ phê duyệt quá ${PENDING_APPROVAL_AGING_DAYS} ngày`,
         count: staleApprovals.length,
         to: '/viec-can-lam',
+      },
+    canViewBc &&
+      overBudgetSiteCount > 0 && {
+        key: 'TC-over-budget',
+        title: 'Công trình vượt ngân sách',
+        count: overBudgetSiteCount,
+        to: '/tc/cong-trinh?ngan-sach=vuot',
       },
   ].filter(Boolean) as { key: string; title: string; count: number; to: string }[];
   const overdueTotal = overdueRisks.reduce((sum, m) => sum + m.count, 0);
@@ -434,6 +460,22 @@ export function DashboardPage() {
           >
             <Link to="/bc/lai-lo" className="mt-auto block font-medium text-brand hover:underline">
               Xem báo cáo lãi/lỗ →
+            </Link>
+          </KpiCard>
+        )}
+
+        {canViewBc && (
+          <KpiCard
+            title="Hiệu quả kinh doanh"
+            hint="Nguồn khách, phễu bán hàng, tỷ lệ trúng thầu và nguyên nhân trượt thầu"
+            icon={Percent}
+            iconWellClassName="bg-tint-amber-bg text-tint-amber"
+          >
+            <Link
+              to="/bc/hieu-qua-kinh-doanh"
+              className="mt-auto block font-medium text-brand hover:underline"
+            >
+              Xem báo cáo hiệu quả kinh doanh →
             </Link>
           </KpiCard>
         )}
@@ -673,8 +715,9 @@ function QuickActions() {
  * Mức độ hoàn thiện của dữ liệu — PRD BC-06.
  *
  * BC-01 liệt kê mười nhóm chỉ số cho màn hình buổi sáng của Ban Giám đốc. Dòng tiền, công nợ
- * phải thu, giàn giáo cho thuê và chấm công đã lên thẻ. Phần còn thiếu vẫn nói thẳng ra thay
- * vì dựng thẻ hiện số 0 — số 0 đọc ra là "không có việc gì", còn sự thật là "chưa đo được".
+ * phải thu, giàn giáo cho thuê, chấm công và (từ 0058_bc_over_budget.sql) công trình vượt
+ * ngân sách đã lên thẻ. Phần còn thiếu vẫn nói thẳng ra thay vì dựng thẻ hiện số 0 — số 0 đọc
+ * ra là "không có việc gì", còn sự thật là "chưa đo được".
  */
 function DataCompletenessNote() {
   return (
@@ -685,10 +728,9 @@ function DataCompletenessNote() {
       <div className="min-w-0">
         <h2 className="text-md font-bold tracking-tight">Phần chưa có trên Dashboard</h2>
         <p className="mt-1 max-w-3xl text-xs leading-relaxed text-fg-subtle">
-          Tiến độ và chi phí so với ngân sách của từng công trình, tồn kho vật tư sẽ xuất hiện khi
-          có báo cáo tổng hợp nhiều công trình cùng lúc (hiện xem được từng công trình một, ở tab
-          Ngân sách của hồ sơ đó). Các chỉ số đang hiển thị lấy trực tiếp từ hồ sơ nghiệp vụ, không
-          phải số liệu mẫu.
+          Tồn kho vật tư, hiệu quả kinh doanh (nguồn khách, phễu bán hàng, tỷ lệ trúng thầu) và báo
+          cáo tổng hợp toàn NVG truy ngược xuống từng pháp nhân/phòng ban chưa có trên Dashboard.
+          Các chỉ số đang hiển thị lấy trực tiếp từ hồ sơ nghiệp vụ, không phải số liệu mẫu.
         </p>
       </div>
     </section>

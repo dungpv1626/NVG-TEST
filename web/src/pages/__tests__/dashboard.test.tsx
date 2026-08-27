@@ -23,6 +23,7 @@ const state = vi.hoisted(() => ({
   receivables: [] as unknown[],
   rentals: [] as unknown[],
   timesheets: [] as unknown[],
+  sitesBudgetStatus: [] as unknown[],
 }));
 
 vi.mock('@/lib/auth', () => ({
@@ -74,6 +75,9 @@ vi.mock('@/hooks/use-sx', () => ({
 vi.mock('@/hooks/use-hr', () => ({
   useTimesheets: () => ({ data: state.timesheets, isLoading: false }),
 }));
+vi.mock('@/hooks/use-reports', () => ({
+  useSitesBudgetStatus: () => ({ data: state.sitesBudgetStatus, isLoading: false, error: null }),
+}));
 
 const { DashboardPage } = await import('../dashboard');
 
@@ -88,6 +92,7 @@ beforeEach(() => {
   state.receivables = [];
   state.rentals = [];
   state.timesheets = [];
+  state.sitesBudgetStatus = [];
 });
 
 function grantView(...modules: string[]) {
@@ -171,7 +176,7 @@ describe('Dashboard — nói thật về dữ liệu (PRD BC-06)', () => {
     grantView('CRM');
     renderWithApp(<DashboardPage />, { route: '/dashboard' });
     expect(screen.getByText('Phần chưa có trên Dashboard')).toBeInTheDocument();
-    expect(screen.getByText(/Tiến độ và chi phí so với ngân sách/)).toBeInTheDocument();
+    expect(screen.getByText(/Tồn kho vật tư/)).toBeInTheDocument();
   });
 
   it('tỷ lệ chốt hợp đồng: chưa có cơ hội nào KHÁC với chốt được 0%', () => {
@@ -303,5 +308,46 @@ describe('Dashboard — thẻ Quá hạn gộp cả rủi ro ngoài 4 module g�
     renderWithApp(<DashboardPage />, { route: '/dashboard' });
 
     expect(screen.queryByText(/Chờ phê duyệt quá/)).not.toBeInTheDocument();
+  });
+
+  it('công trình vượt ngân sách (đã cam kết + đã phát sinh > ngân sách) gộp vào thẻ Quá hạn, dẫn tới danh sách Công trình đã lọc', () => {
+    grantView('BC');
+    state.sitesBudgetStatus = [
+      // Vượt: đã phát sinh + đã cam kết (900tr) > ngân sách (800tr).
+      {
+        construction_site_id: 's1',
+        budgeted_cost: '800000000',
+        actual_cost: '700000000',
+        committed_cost: '200000000',
+      },
+      // Trong ngân sách: không được đếm vào rủi ro.
+      {
+        construction_site_id: 's2',
+        budgeted_cost: '800000000',
+        actual_cost: '100000000',
+        committed_cost: '0',
+      },
+    ];
+    renderWithApp(<DashboardPage />, { route: '/dashboard' });
+
+    expect(screen.getByRole('link', { name: /Công trình vượt ngân sách: 1/ })).toHaveAttribute(
+      'href',
+      '/tc/cong-trinh?ngan-sach=vuot',
+    );
+  });
+
+  it('vai trò không có quyền xem BC thì KHÔNG hiện dòng vượt ngân sách dù dữ liệu có công trình vượt', () => {
+    grantView('CRM');
+    state.sitesBudgetStatus = [
+      {
+        construction_site_id: 's1',
+        budgeted_cost: '800000000',
+        actual_cost: '900000000',
+        committed_cost: '0',
+      },
+    ];
+    renderWithApp(<DashboardPage />, { route: '/dashboard' });
+
+    expect(screen.queryByText(/vượt ngân sách/)).not.toBeInTheDocument();
   });
 });

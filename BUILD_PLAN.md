@@ -620,7 +620,7 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
   sẵn nhưng chưa có hàm/nút) — BSD chỉ đặc tả đúng một endpoint thu hồi, chưa rõ nghiệp vụ hủy
   thật sự cần gì.
 
-### 3G. Module BC — đầy đủ — ⏳ BC-02 xong, BC-01/BC-05 một phần, còn lại chưa làm
+### 3G. Module BC — đầy đủ — ⏳ BC-01/BC-02/BC-03 (một phần)/BC-05 xong, BC-04/BC-06/BC-07 chưa làm
 
 - ✅ **BC-02 — Báo cáo lãi/lỗ theo công trình** (`/bc/lai-lo`, hàm `project_profit_loss` —
   `db/migrations/0056_bc_profit_loss.sql`). KHÔNG sinh bảng mới: đọc trực tiếp
@@ -642,23 +642,41 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
   thu (`useReceivables`), Giàn giáo đang cho thuê (`useRentalAgreements`), Chấm công đã chốt
   (`useTimesheets`) — dùng thẳng hook của từng màn hình chi tiết, KHÔNG dựng endpoint tổng hợp
   riêng, để con số trên thẻ không bao giờ lệch với danh sách nó dẫn tới. Mỗi thẻ ẩn hoàn toàn
-  khi vai trò không có quyền module tương ứng (`KT`/`SX`/`NS`). Còn thiếu đúng phần "tiến
-  độ/chi phí vs ngân sách từng công trình" — cần RPC tổng hợp mới vì `useSiteBudgetStatus` đòi
-  biết trước site_id, gọi lặp theo từng công trình là N+1, chưa làm.
-- ✅ **BC-05 (một phần) — thẻ "Quá hạn" nay gộp CẢ ba nguồn rủi ro** thay vì chỉ 4 module gốc:
-  hồ sơ quá hạn theo module (CRM/DA/TK/HD), công nợ phải thu đã quá hạn thu (KT), và phê duyệt
-  bị "để lâu" — quá `PENDING_APPROVAL_AGING_DAYS` (3 ngày, ⚠️ giả định cần Haan xác nhận, xem
-  `shared/src/bc.ts`) kể từ lúc gửi. CỐ Ý CHƯA gộp "vượt ngân sách": cùng lý do N+1 ở trên, cần
-  RPC tổng hợp toàn công trình. Test: `shared/src/__tests__/bc.test.ts`,
-  `web/src/pages/__tests__/dashboard.test.tsx`.
+  khi vai trò không có quyền module tương ứng (`KT`/`SX`/`NS`).
+- ✅ **BC-05 đầy đủ — thẻ "Quá hạn" nay gộp CẢ bốn nguồn rủi ro** thay vì chỉ 4 module gốc: hồ
+  sơ quá hạn theo module (CRM/DA/TK/HD), công nợ phải thu đã quá hạn thu (KT), phê duyệt bị "để
+  lâu" — quá `PENDING_APPROVAL_AGING_DAYS` (3 ngày, ⚠️ giả định cần Haan xác nhận, xem
+  `shared/src/bc.ts`) kể từ lúc gửi, và **công trình vượt ngân sách**. Phần vượt ngân sách dùng
+  hàm CSDL mới `sites_budget_status` (`db/migrations/0058_bc_over_budget.sql`) — tổng hợp chi
+  phí CẢ danh sách công trình trong MỘT lượt gọi (cùng khuôn `costs` CTE với `project_profit_loss`,
+  loại dòng `loi_nhuan`), tránh N+1 mà `useSiteBudgetStatus` (đòi biết trước site_id) gặp phải.
+  Trình duyệt tự tính `health` bằng `summarizeBudget()` — cùng công thức/ngưỡng 90% với
+  `BudgetPanel` (TC-05), không tính lại. Thẻ dẫn tới `/tc/cong-trinh?ngan-sach=vuot` — danh sách
+  Công trình (TC-01) nay có thêm cột + bộ lọc "Ngân sách" dùng ĐÚNG hook đó, nên con số trên thẻ
+  và trên danh sách không thể lệch nhau. Test: `shared/src/__tests__/bc.test.ts`,
+  `db/src/__tests__/bc.test.ts`, `web/src/pages/__tests__/dashboard.test.tsx`.
 - ⏳ **CHƯA LÀM**: `GET /api/dashboard/executive` dạng một-lần-gọi (BC-01 hiện vẫn là nhiều hook
   riêng lẻ, không phải một endpoint tổng hợp — chấp nhận được ở quy mô demo, cân nhắc lại nếu
   Dashboard chậm thật).
-- ⏳ **CHƯA LÀM**: BC-03 (hiệu quả kinh doanh: nguồn khách, phễu bán hàng, tỷ lệ trúng thầu),
-  BC-04 (tồn kho/hao hụt/giá thành SX — mục này đã nằm trong danh sách CÓ THỂ CẮT, xem "Thứ
-  tự cắt giảm"), BC-05 phần "vượt ngân sách" (cần RPC tổng hợp toàn công trình, xem trên),
-  BC-07 (báo cáo tổng hợp toàn NVG truy ngược xuống pháp nhân/phòng ban — một phần đã có qua
-  "Toàn NVG" + cột Pháp nhân).
+- ✅ **BC-03 (ba phần đầu) — Báo cáo hiệu quả kinh doanh** (`/bc/hieu-qua-kinh-doanh`, hàm
+  `opportunity_funnel_by_source` + `bidding_outcomes` — `db/migrations/0059_bc_sales_effectiveness.sql`).
+  Không phải Mẫu D (không phải giá vốn/lương/lợi nhuận) — chặn bằng `auth_can_view_module('BC')`
+  như `sites_budget_status`, không có sensitivity gate. Hai hàm trả DÒNG THÔ đã gộp nhóm; trình
+  duyệt tự pivot bằng `summarizeOpportunitiesBySource`/`summarizeOpportunityFunnel`/
+  `summarizeBiddingOutcomes` (shared/src/bc.ts) ra ba phần: nguồn khách (tổng số cơ hội + đã ký
+  - tỷ lệ chuyển đổi + giá trị theo từng nguồn), phễu bán hàng (đếm theo GIAI ĐOẠN HIỆN TẠI —
+    đơn giản hoá có chủ ý, không phải chuyển đổi luỹ tiến qua `opportunity_stage_history`), tỷ lệ
+    trúng thầu + nguyên nhân trượt thầu (chỉ tính gói thầu đã CÓ KẾT QUẢ). Test:
+    `shared/src/__tests__/bc.test.ts`, `db/src/__tests__/bc.test.ts`. Thẻ liên kết nhanh trên
+    Dashboard, cạnh thẻ Lãi/lỗ. Thêm `BcNav` (điều hướng phụ giữa hai báo cáo BC) — dùng lại cho
+    cả `/bc/lai-lo`.
+- ⏳ **CỐ Ý CHƯA LÀM — BC-03 phần 4 "hiệu suất nhân sự/tổ đội/nhà cung cấp"**: PRD không nói rõ
+  đo bằng gì (tổ đội thi công — TC chưa có bảng phân công; nhà cung cấp — MH chưa có sổ đánh
+  giá). Làm ẩu sẽ tạo "bảng xếp hạng nhân sự" không có cơ sở, đúng thứ CLAUDE.md 5.1 cấm. Cần
+  hỏi lại Haan trước khi thêm — xem ghi chú đầu `db/migrations/0059_bc_sales_effectiveness.sql`.
+- ⏳ **CHƯA LÀM**: BC-04 (tồn kho/hao hụt/giá thành SX — mục này đã nằm trong danh sách CÓ THỂ
+  CẮT, xem "Thứ tự cắt giảm"), BC-07 (báo cáo tổng hợp toàn NVG truy ngược xuống pháp nhân/phòng
+  ban — một phần đã có qua "Toàn NVG" + cột Pháp nhân).
 - ⏳ **CHƯA LÀM**: xuất PDF (mọi báo cáo) và "hiện mức độ đầy đủ dữ liệu" (BC-06) ngoài phần
   Dashboard đã có sẵn từ Phase 2E.
 - `report_snapshots` — chỉ thêm nếu dashboard chậm thật, không tối ưu sớm

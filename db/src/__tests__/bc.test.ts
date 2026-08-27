@@ -129,3 +129,160 @@ describeDb('BC-02 — project_profit_loss (Mẫu D, quyền profit)', () => {
     expect(Number(row!.profit_forecast)).toBe(300_000_000);
   });
 });
+
+describeDb('BC-05 — sites_budget_status (tổng hợp toàn công trình, tránh N+1)', () => {
+  let fixture: Fixture;
+  let tgd: SupabaseClient;
+  let kho: SupabaseClient;
+
+  beforeAll(async () => {
+    fixture = await seedFixture();
+    [tgd, kho] = await Promise.all([signInAs(ACCOUNTS.tgd), signInAs(ACCOUNTS.kho)]);
+  });
+
+  afterAll(async () => {
+    await cleanupFixture();
+  });
+
+  it('vai trò không có quyền xem BC bị từ chối', async () => {
+    const { error } = await kho.rpc('sites_budget_status', { p_company_id: null });
+    expect(error).toBeTruthy();
+    expect(error!.message).toContain('báo cáo điều hành');
+  });
+
+  it('TGĐ đọc đúng chi phí đã cộng cho MỌI công trình trong MỘT lượt gọi, tách riêng dòng lợi nhuận', async () => {
+    const { data, error } = await tgd.rpc('sites_budget_status', { p_company_id: null });
+    expect(error).toBeNull();
+
+    const row = (data as Array<Record<string, unknown>>).find(
+      (r) => r.construction_site_id === fixture.siteId,
+    );
+    expect(row).toBeTruthy();
+
+    // Cùng số với project_profit_loss ở khối test trên: 600tr + 100tr, KHÔNG cộng dòng
+    // loi_nhuan (300tr) — hai hàm phải luôn đồng nhất vì dùng chung công thức costs CTE.
+    expect(Number(row!.budgeted_cost)).toBe(700_000_000);
+    expect(Number(row!.actual_cost)).toBe(250_000_000);
+    expect(Number(row!.committed_cost)).toBe(100_000_000);
+    expect(row).not.toHaveProperty('target_profit');
+  });
+});
+
+/**
+ * BC-03 — `opportunity_funnel_by_source` và `bidding_outcomes`.
+ *
+ * Hai hàm này gộp theo NHÓM (nguồn khách/giai đoạn, giai đoạn/nguyên nhân trượt), không phải
+ * một dòng-một-hồ-sơ như BC-02/BC-05 — CSDL dev dùng chung đã có sẵn dữ liệu demo thật từ các
+ * module khác, nên KHÔNG thể assert tổng số toàn cục (sẽ lẫn với dữ liệu có sẵn). Dùng một
+ * NGUỒN KHÁCH và một NGUYÊN NHÂN TRƯỢT THẦU duy nhất, gắn `TEST_PREFIX`, để tìm đúng dòng của
+ * riêng fixture này bằng khoá không đụng hàng — thay vì so tổng.
+ */
+interface SalesFixture {
+  testSource: string;
+  testLostReason: string;
+}
+
+async function seedSalesFixture(): Promise<SalesFixture> {
+  const { createConnection } = await import('../client');
+  const { sql } = createConnection();
+  const stamp = String(Date.now());
+  const testSource = `${TEST_PREFIX} Facebook ${stamp}`;
+  const testLostReason = `${TEST_PREFIX} Giá cao hơn đối thủ ${stamp}`;
+  try {
+    const [nvc] = await sql<{ id: string }[]>`SELECT id FROM companies WHERE code = 'NVC'`;
+
+    const [customer] = await sql<{ id: string }[]>`
+      INSERT INTO customers (code, name, source)
+      VALUES (${'BCTEST-KH-' + stamp}, ${TEST_PREFIX + ' Khách hàng hiệu quả kinh doanh ' + stamp}, ${testSource})
+      RETURNING id
+    `;
+
+    await sql`
+      INSERT INTO opportunities (company_id, customer_id, code, name, stage, estimated_value, lost_reason)
+      VALUES
+        (${nvc!.id}, ${customer!.id}, ${'BCTEST-CH-WON-' + stamp},
+         ${TEST_PREFIX + ' Cơ hội thắng ' + stamp}, 'ky_hop_dong', ${500_000_000}, NULL),
+        (${nvc!.id}, ${customer!.id}, ${'BCTEST-CH-LOST-' + stamp},
+         ${TEST_PREFIX + ' Cơ hội mất ' + stamp}, 'mat_co_hoi', ${100_000_000}, 'Khách chọn nhà thầu khác')
+    `;
+
+    await sql`
+      INSERT INTO bidding_projects (company_id, code, name, stage, lost_reason)
+      VALUES
+        (${nvc!.id}, ${'BCTEST-GT-LOST-' + stamp}, ${TEST_PREFIX + ' Gói thầu trượt ' + stamp},
+         'truot_thau', ${testLostReason})
+    `;
+
+    return { testSource, testLostReason };
+  } finally {
+    await sql.end();
+  }
+}
+
+async function cleanupSalesFixture(): Promise<void> {
+  const { createConnection } = await import('../client');
+  const { sql } = createConnection();
+  try {
+    await sql`DELETE FROM opportunities WHERE name LIKE ${TEST_PREFIX + '%'}`;
+    await sql`DELETE FROM bidding_projects WHERE name LIKE ${TEST_PREFIX + '%'}`;
+    await sql`DELETE FROM customers WHERE name LIKE ${TEST_PREFIX + '%'}`;
+  } finally {
+    await sql.end();
+  }
+}
+
+describeDb('BC-03 — opportunity_funnel_by_source / bidding_outcomes', () => {
+  let fixture: SalesFixture;
+  let tgd: SupabaseClient;
+  let kho: SupabaseClient;
+
+  beforeAll(async () => {
+    fixture = await seedSalesFixture();
+    [tgd, kho] = await Promise.all([signInAs(ACCOUNTS.tgd), signInAs(ACCOUNTS.kho)]);
+  });
+
+  afterAll(async () => {
+    await cleanupSalesFixture();
+  });
+
+  it('vai trò không có quyền xem BC bị từ chối ở cả hai hàm', async () => {
+    const [funnel, outcomes] = await Promise.all([
+      kho.rpc('opportunity_funnel_by_source', { p_company_id: null }),
+      kho.rpc('bidding_outcomes', { p_company_id: null }),
+    ]);
+    expect(funnel.error!.message).toContain('báo cáo điều hành');
+    expect(outcomes.error!.message).toContain('báo cáo điều hành');
+  });
+
+  it('opportunity_funnel_by_source gộp đúng theo (nguồn khách, giai đoạn), tách riêng thắng/mất', async () => {
+    const { data, error } = await tgd.rpc('opportunity_funnel_by_source', { p_company_id: null });
+    expect(error).toBeNull();
+
+    const rows = data as Array<Record<string, unknown>>;
+    const won = rows.find((r) => r.source === fixture.testSource && r.stage === 'ky_hop_dong');
+    const lost = rows.find((r) => r.source === fixture.testSource && r.stage === 'mat_co_hoi');
+
+    expect(won).toBeTruthy();
+    expect(Number(won!.opportunity_count)).toBe(1);
+    expect(Number(won!.estimated_value)).toBe(500_000_000);
+
+    expect(lost).toBeTruthy();
+    expect(Number(lost!.opportunity_count)).toBe(1);
+    expect(Number(lost!.estimated_value)).toBe(100_000_000);
+  });
+
+  it('bidding_outcomes gộp đúng nguyên nhân trượt thầu, KHÔNG lẫn gói thầu chưa có kết quả', async () => {
+    const { data, error } = await tgd.rpc('bidding_outcomes', { p_company_id: null });
+    expect(error).toBeNull();
+
+    const rows = data as Array<Record<string, unknown>>;
+    const lostRow = rows.find(
+      (r) => r.stage === 'truot_thau' && r.lost_reason === fixture.testLostReason,
+    );
+    expect(lostRow).toBeTruthy();
+    expect(Number(lostRow!.bidding_count)).toBe(1);
+
+    // Hàm chỉ lấy hai giai đoạn KẾT THÚC — không có dòng nào ở giai đoạn dở dang.
+    expect(rows.every((r) => r.stage === 'trung_thau' || r.stage === 'truot_thau')).toBe(true);
+  });
+});
