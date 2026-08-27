@@ -212,6 +212,9 @@ const ProductionOrderDetailPage = lazy(() =>
     default: m.ProductionOrderDetailPage,
   })),
 );
+const ProfitLossReportPage = lazy(() =>
+  import('@/pages/bc/profit-loss').then((m) => ({ default: m.ProfitLossReportPage })),
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -260,6 +263,13 @@ const router = createBrowserRouter(
         {/* Dashboard KHÔNG bọc `ModuleGuard`: đây là nơi màn hình bị chặn đưa người
                   dùng quay về, nên nó phải là điểm đến chắc chắn vào được của mọi vai trò. */}
         <Route path="/dashboard" element={<DashboardPage />} />
+
+        <Route element={<ModuleGuard module="BC" />}>
+          {/* BC-02 — báo cáo lãi/lỗ. Quyền XEM số liệu thật (Mẫu D `profit`) được CSDL chặn
+                    thêm một lớp nữa bên trong hàm `project_profit_loss`; `ModuleGuard` chỉ chặn
+                    việc mở màn hình cho vai trò không có `BC: view`. */}
+          <Route path="bc/lai-lo" element={<ProfitLossReportPage />} />
+        </Route>
 
         {/* Mỗi phân hệ bọc trong `ModuleGuard`: ẩn khỏi menu là chưa đủ, vì đường dẫn
                   vẫn gõ tay và dán qua Zalo được (Webapp Flow 6.5). Bọc ở tầng route thay vì

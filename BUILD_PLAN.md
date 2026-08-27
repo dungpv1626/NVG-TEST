@@ -613,12 +613,37 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
   sẵn nhưng chưa có hàm/nút) — BSD chỉ đặc tả đúng một endpoint thu hồi, chưa rõ nghiệp vụ hủy
   thật sự cần gì.
 
-### 3G. Module BC — đầy đủ
+### 3G. Module BC — đầy đủ — ⏳ BC-02 xong, còn lại chưa làm
 
-- `GET /api/dashboard/executive` — **một lần gọi** trả toàn bộ chỉ số BC-01
-- `GET /api/reports/profit-loss` — lãi/lỗ theo công trình/công ty, **truy ngược tới chứng từ gốc** (BC-02)
-- Báo cáo hiệu quả kinh doanh (BC-03), tồn kho (BC-04), cảnh báo rủi ro tổng hợp (BC-05)
-- Mọi báo cáo **xuất Excel/PDF** + hiện ngày cập nhật gần nhất + mức độ đầy đủ dữ liệu (BC-06)
+- ✅ **BC-02 — Báo cáo lãi/lỗ theo công trình** (`/bc/lai-lo`, hàm `project_profit_loss` —
+  `db/migrations/0056_bc_profit_loss.sql`). KHÔNG sinh bảng mới: đọc trực tiếp
+  `project_budgets` (đã có sẵn dòng `cost_group = 'loi_nhuan'` = lãi/lỗ DỰ KIẾN từ lúc lập
+  ngân sách, DA-09) + `contracts.value`/`collected_amount` (doanh thu). Ba con số: dự kiến,
+  thực tế tới hiện tại (doanh thu − đã phát sinh), dự kiến khi hoàn thành (trừ thêm phần
+  ngân sách còn lại giả định sẽ chi hết). Mẫu D — chặn CẢ HÀM bằng `rls_sees_sensitive('profit')`
+  giống `estimate_cost_breakdown`, không che từng cột. **Truy ngược chứng từ gốc**: bấm tên
+  công trình → thẳng tab Ngân sách của TC-05 (`BudgetPanel` có sẵn, không dựng lại). Test:
+  `db/src/__tests__/bc.test.ts`. Đã xác nhận qua giao diện thật (đăng nhập TGĐ thấy đủ số,
+  đăng nhập Kế toán — không có quyền `profit` — nhận đúng thông báo vượt quyền, không phải
+  bảng trống).
+- ✅ Thẻ liên kết nhanh "Lãi/lỗ theo công trình" trên Dashboard (BC-01), dẫn thẳng tới BC-02 —
+  nằm sau thẻ "Quá hạn", chỉ hiện với vai trò có `BC: view` (gần như mọi vai trò).
+- ✅ **Xuất Excel cho BC-02** — thực chất là CSV có BOM UTF-8 (Excel mở đúng tiếng Việt có
+  dấu), KHÔNG phải file `.xlsx` thật. Nút vẫn ghi "Xuất Excel" theo đúng `BUTTONS.exportExcel`
+  đã có sẵn trong `@nvg/shared/content` — người dùng không phân biệt được khác gì.
+- ⏳ **CHƯA LÀM**: `GET /api/dashboard/executive` dạng một-lần-gọi (BC-01 hiện vẫn là nhiều hook
+  riêng lẻ như từ Phase 2E, không phải một endpoint tổng hợp) — và các nhóm chỉ số BC-01 còn
+  thiếu: dòng tiền vào/ra, công nợ phải thu, tiến độ/chi phí vs ngân sách từng công trình, tồn
+  kho + giàn giáo đang cho thuê, nhân sự – chấm công. Có sẵn hook để ghép (`useCashFlow`,
+  `useReceivables`, `useSiteBudgetStatus`, `useScaffoldingAssets`, `useTimesheets`) — chưa
+  ghép vào Dashboard.
+- ⏳ **CHƯA LÀM**: BC-03 (hiệu quả kinh doanh: nguồn khách, phễu bán hàng, tỷ lệ trúng thầu),
+  BC-04 (tồn kho/hao hụt/giá thành SX — mục này đã nằm trong danh sách CÓ THỂ CẮT, xem "Thứ
+  tự cắt giảm"), BC-05 (cảnh báo rủi ro TỔNG HỢP — hiện chỉ có "Quá hạn" theo module, chưa gộp
+  công nợ quá hạn + vượt ngân sách + chờ duyệt lâu vào một chỗ), BC-07 (báo cáo tổng hợp toàn
+  NVG truy ngược xuống pháp nhân/phòng ban — một phần đã có qua "Toàn NVG" + cột Pháp nhân).
+- ⏳ **CHƯA LÀM**: xuất PDF (mọi báo cáo) và "hiện mức độ đầy đủ dữ liệu" (BC-06) ngoài phần
+  Dashboard đã có sẵn từ Phase 2E.
 - `report_snapshots` — chỉ thêm nếu dashboard chậm thật, không tối ưu sớm
 
 ### ✅ Definition of Done — Phase 3

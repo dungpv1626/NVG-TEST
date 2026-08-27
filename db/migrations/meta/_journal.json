@@ -393,6 +393,13 @@
       "when": 1787831500000,
       "tag": "0055_sx_return_compensation_fix",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1787831600000,
+      "tag": "0056_bc_profit_loss",
+      "breakpoints": true
     }
   ]
 }

@@ -32,6 +32,7 @@ import {
   FileSignature,
   FileText,
   Info,
+  Scale,
   TrendingUp,
   type LucideIcon,
 } from 'lucide-react';
@@ -116,6 +117,7 @@ export function DashboardPage() {
   const canViewDa = useCan('DA');
   const canViewTk = useCan('TK');
   const canViewHd = useCan('HD');
+  const canViewBc = useCan('BC');
 
   const opportunities = useOpportunities({ enabled: canViewCrm });
   const biddingProjects = useBiddingProjects({ enabled: canViewDa });
@@ -342,6 +344,19 @@ export function DashboardPage() {
             </div>
           )}
         </KpiCard>
+
+        {canViewBc && (
+          <KpiCard
+            title="Lãi/lỗ theo công trình"
+            hint="Doanh thu hợp đồng so với chi phí đã phát sinh, truy ngược tới chứng từ gốc"
+            icon={Scale}
+            iconWellClassName="bg-tint-teal-bg text-tint-teal"
+          >
+            <Link to="/bc/lai-lo" className="mt-auto block font-medium text-brand hover:underline">
+              Xem báo cáo lãi/lỗ →
+            </Link>
+          </KpiCard>
+        )}
 
         {modules.map((m) => (
           <ModuleCard key={m.key} metric={m} period={period} />
