@@ -87,9 +87,12 @@ export const contracts = pgTable(
 
     /**
      * Đã thu (hoặc đã trả với hợp đồng khoán), đơn vị đồng — HD-03.
-     * Module KT cập nhật khi có chứng từ thu/chi; ở Giai đoạn 1 luôn là 0.
+     * Trigger của Module KT tự cộng lại từ `receivable_settlements` mỗi khi ghi nhận thu tiền
+     * (0043_kt_rls.sql) — cột này KHÔNG còn là hằng 0 kể từ khi KT lên hình ở Giai đoạn 2.
      */
-    collectedAmount: money('collected_amount').notNull().default(sql`0`),
+    collectedAmount: money('collected_amount')
+      .notNull()
+      .default(sql`0`),
 
     signedDate: date('signed_date'),
     startDate: date('start_date'),
@@ -189,7 +192,9 @@ export const contractAmendments = pgTable(
     reason: text('reason').notNull(),
 
     /** Thay đổi giá trị hợp đồng, đơn vị đồng. Âm = giảm trừ khối lượng. */
-    valueChange: money('value_change').notNull().default(sql`0`),
+    valueChange: money('value_change')
+      .notNull()
+      .default(sql`0`),
     /** Thay đổi thời gian thực hiện, tính bằng ngày. */
     scheduleImpactDays: varchar('schedule_impact_days', { length: 8 }),
 

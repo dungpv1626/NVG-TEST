@@ -11,22 +11,19 @@
 
 ## 1. Vì sao sửa CGD
 
-CGD 6.1 đã yêu cầu "hiện đại, chuyên nghiệp… sạch, phẳng, hạn chế hiệu ứng trang trí" và lấy Jira
-làm tham chiếu. Phần lớn tinh thần đó giữ nguyên — tra cứu cơ sở dữ liệu thiết kế cho loại sản phẩm
-này trả về đúng phong cách **"Minimalism & Swiss Style"** (sạch, hình học, lưới, sans-serif, dành
-cho enterprise app), và bảng màu doanh nghiệp sáng mà nó đề xuất gần trùng khít bảng màu CGD 6.3.
+CGD 6.1 yêu cầu "hiện đại, chuyên nghiệp… sạch, phẳng, hạn chế hiệu ứng trang trí", lấy Jira
+làm tham chiếu — tinh thần đó giữ nguyên (tra cứu cơ sở dữ liệu thiết kế trả về đúng phong cách
+**"Minimalism & Swiss Style"**, và bảng màu doanh nghiệp nó đề xuất gần trùng CGD 6.3).
 
-Chỗ CGD còn thiếu là **bản sắc ngành**: giao diện hiện tại có thể là phần mềm quản trị của bất kỳ
-công ty nào. Nhà Việt Group là nhà thầu xây dựng — nhà xưởng công nghiệp, nhà ở dân dụng, giàn giáo
-kết cấu thép. **(Lịch sử — xem 1.1)** Bản sắc đó từng lấy từ chính hiện trường: xám bê tông và cam
-an toàn; nay đã đổi sang rừng/bạc hà, xem 1.1 và Mục 2.
+Chỗ CGD còn thiếu là **bản sắc ngành**: giao diện có thể là của bất kỳ công ty nào, trong khi NVG
+là nhà thầu xây dựng (nhà xưởng, nhà ở dân dụng, giàn giáo kết cấu thép). Bản sắc từng lấy từ hiện
+trường (xám bê tông + cam an toàn), nay đổi sang rừng/bạc hà — xem 1.1 và Mục 2.
 
 ### 1.1 Cập nhật — đổi bản sắc thị giác sang "rừng & bạc hà"
 
-Xác nhận với Haan: thay Brand Blue `#0C66E4` + cam an toàn `#EA580C` bằng cặp thương hiệu mới
-**rừng (forest) + bạc hà (mint)**, theo phong cách một bản demo tham chiếu ("dashboard soft light
-style"). Đây là một quyết định đổi bản sắc có chủ đích, không phải sơ suất — xác nhận riêng từng
-điểm:
+Xác nhận với Haan (chủ đích, không phải sơ suất): thay Brand Blue `#0C66E4` + cam an toàn
+`#EA580C` bằng cặp thương hiệu mới **rừng (forest) + bạc hà (mint)**, theo phong cách một bản demo
+tham chiếu ("dashboard soft light style"). Từng điểm:
 
 - **5 màu trạng thái (Nháp/Chờ duyệt/Đang xử lý/Hoàn thành/Quá hạn) GIỮ NGUYÊN Y HỆT**, không đổi
   hex, không đổi `StatusLozenge`. Đây vẫn là hàng rào cứng nhất của hệ thống màu — test canh tại

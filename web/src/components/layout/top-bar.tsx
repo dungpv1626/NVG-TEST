@@ -10,11 +10,150 @@
 
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Bell, CheckSquare, LogOut, Search, User } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { MODULES } from '@nvg/shared';
 import { usePendingApprovals } from '@/hooks/use-approvals';
+import { SEARCH_MIN_LENGTH, useGlobalSearch, type GlobalSearchResult } from '@/hooks/use-search';
 import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import { CompanySwitcher } from './company-switcher';
+
+/** Nhãn tiếng Việt trong nhóm module — bổ sung cho tên module khi một module có nhiều loại
+ * hồ sơ khác nhau (CRM gồm cả khách hàng lẫn cơ hội). */
+const ENTITY_TYPE_LABELS: Record<string, string> = {
+  customer: 'Khách hàng',
+  opportunity: 'Cơ hội',
+  bidding_project: 'Gói thầu',
+  design_project: 'Dự án thiết kế',
+  contract: 'Hợp đồng',
+  construction_site: 'Công trình',
+};
+
+/** Gộp kết quả phẳng thành từng nhóm theo module, giữ nguyên thứ tự CSDL đã xếp hạng trong nhóm. */
+function groupByModule(
+  results: GlobalSearchResult[],
+): { moduleCode: string; rows: GlobalSearchResult[] }[] {
+  const groups: { moduleCode: string; rows: GlobalSearchResult[] }[] = [];
+  for (const row of results) {
+    const group = groups.find((g) => g.moduleCode === row.module_code);
+    if (group) group.rows.push(row);
+    else groups.push({ moduleCode: row.module_code, rows: [row] });
+  }
+  return groups;
+}
+
+function GlobalSearchBox() {
+  const navigate = useNavigate();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [rawQuery, setRawQuery] = useState('');
+  const [term, setTerm] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+
+  // Gõ liên tục không bắn một lượt gọi CSDL mỗi phím — đợi người dùng ngừng gõ 300ms.
+  useEffect(() => {
+    const timer = window.setTimeout(() => setTerm(rawQuery), 300);
+    return () => window.clearTimeout(timer);
+  }, [rawQuery]);
+
+  const { data: results, isFetching } = useGlobalSearch(term);
+  const groups = groupByModule(results ?? []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  function selectResult(path: string) {
+    navigate(path);
+    setIsOpen(false);
+    setRawQuery('');
+    setTerm('');
+  }
+
+  const showPanel = isOpen && rawQuery.trim().length >= SEARCH_MIN_LENGTH;
+
+  return (
+    <div ref={containerRef} className="relative min-w-0 max-w-md flex-1">
+      <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-fg-subtle" />
+      <input
+        type="search"
+        role="combobox"
+        aria-expanded={showPanel}
+        aria-controls="global-search-results"
+        placeholder="Tìm hồ sơ, khách hàng, vật tư…"
+        value={rawQuery}
+        onChange={(e) => {
+          setRawQuery(e.target.value);
+          setIsOpen(true);
+        }}
+        onFocus={() => setIsOpen(true)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') setIsOpen(false);
+        }}
+        className={cn(
+          'h-10 w-full rounded-md border border-border sm:h-8',
+          'bg-surface-muted pl-8 pr-3',
+          'placeholder:text-fg-subtle',
+        )}
+      />
+
+      {showPanel && (
+        <div
+          id="global-search-results"
+          role="listbox"
+          className={cn(
+            'absolute left-0 right-0 top-full z-50 mt-1 max-h-96 overflow-y-auto rounded-md',
+            'border border-border bg-surface p-1 shadow-overlay',
+          )}
+        >
+          {isFetching && groups.length === 0 && (
+            <div className="px-3 py-4 text-center text-sm text-fg-subtle">Đang tìm…</div>
+          )}
+          {!isFetching && groups.length === 0 && (
+            <div className="px-3 py-4 text-center text-sm text-fg-subtle">
+              Không tìm thấy hồ sơ nào khớp với "{rawQuery.trim()}".
+            </div>
+          )}
+          {groups.map((group) => (
+            <div key={group.moduleCode} className="py-1">
+              <div className="px-3 py-1 text-xs font-bold tracking-wide text-fg-subtle">
+                {MODULES[group.moduleCode as keyof typeof MODULES]?.label ?? group.moduleCode}
+              </div>
+              {group.rows.map((row) => (
+                <button
+                  key={row.entity_id}
+                  type="button"
+                  role="option"
+                  aria-selected={false}
+                  onClick={() => selectResult(row.path)}
+                  className={cn(
+                    'flex w-full flex-col items-start gap-0.5 rounded-sm px-3 py-2 text-left',
+                    'hover:bg-surface-hover',
+                  )}
+                >
+                  <span className="flex w-full items-baseline justify-between gap-2">
+                    <span className="truncate font-medium">{row.title}</span>
+                    <span className="shrink-0 text-xs text-fg-subtle">{row.code}</span>
+                  </span>
+                  <span className="text-xs text-fg-subtle">
+                    {ENTITY_TYPE_LABELS[row.entity_type] ?? row.entity_type}
+                    {row.subtitle ? ` · ${row.subtitle}` : ''}
+                  </span>
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function IconButton({
   label,
@@ -91,19 +230,9 @@ export function TopBar() {
       </div>
 
       {/* Tìm kiếm toàn hệ thống — Webapp Flow 5.3.
-          Tìm trên TẤT CẢ module người dùng có quyền xem, không phải tìm riêng từng module. */}
-      <div className="relative min-w-0 max-w-md flex-1">
-        <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-fg-subtle" />
-        <input
-          type="search"
-          placeholder="Tìm hồ sơ, khách hàng, vật tư…"
-          className={cn(
-            'h-10 w-full rounded-md border border-border sm:h-8',
-            'bg-surface-muted pl-8 pr-3',
-            'placeholder:text-fg-subtle',
-          )}
-        />
-      </div>
+          Tìm trên TẤT CẢ module người dùng có quyền xem, không phải tìm riêng từng module —
+          RLS của từng bảng nguồn tự lọc, xem `global_search` (migration 0057). */}
+      <GlobalSearchBox />
 
       <div className="ml-auto flex items-center gap-1">
         {/* Thông báo và Việc cần làm tách thành hai danh sách riêng (Webapp Flow 5.4),
