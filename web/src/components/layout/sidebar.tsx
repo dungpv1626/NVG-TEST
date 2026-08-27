@@ -21,9 +21,9 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        'hidden w-60 shrink-0 flex-col self-start overflow-hidden rounded-xl border border-border bg-surface',
+        'hidden w-60 shrink-0 flex-col self-stretch overflow-hidden rounded-xl border border-border bg-surface',
         // Panel nổi trên nền trũng (thay thanh full-bleed cũ) — DESIGN_SYSTEM.md.
-        'lg:sticky lg:top-3 lg:flex lg:max-h-[calc(100dvh-1.5rem)]',
+        'lg:sticky lg:top-3 lg:flex lg:h-[calc(100dvh-1.5rem)]',
       )}
     >
       <div className="border-b border-border p-2">
