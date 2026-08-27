@@ -167,6 +167,11 @@
           giai đoạn, tỷ lệ trúng thầu và nguyên nhân trượt thầu, nay xuất được Excel như báo cáo
           lãi/lỗ. Phần "hiệu suất nhân sự/tổ đội/nhà cung cấp" của BC-03 cố ý chưa làm — chưa rõ
           đo bằng gì, cần Haan xác nhận trước.</li>
+      <li><strong>Trung tâm Thông báo đã nối thật</strong> — nút chuông ở thanh trên cùng, trước
+          đây bấm không có phản ứng gì, nay hiện đúng huy hiệu số thông báo chưa đọc, mở ra bảng
+          thông báo gần nhất, bấm một dòng vừa đánh dấu đã đọc vừa sang thẳng hồ sơ liên quan.
+          Có nút "Đánh dấu tất cả đã đọc". Phần ghi thông báo đã chạy ngầm từ rất sớm (8 phân hệ
+          đều gọi), chỉ riêng phần đọc lại là chưa ai nối cho tới bây giờ.</li>
     </ul>
   </div>
 
@@ -551,14 +556,16 @@
           ngược xuống pháp nhân/phòng ban (một phần đã có qua bộ lọc "Toàn NVG" + cột Pháp nhân).
           Phần thứ tư của BC-03 ("hiệu suất nhân sự/tổ đội/nhà cung cấp") cũng chờ ở đây — xem
           thẻ báo cáo bên trên.</li>
-      <li><strong>Xuất PDF</strong> cho mọi báo cáo — hiện báo cáo lãi/lỗ mới xuất được CSV (Excel
-          mở đúng dấu, không phải file <code>.xlsx</code> thật).</li>
+      <li><strong>Xuất PDF</strong> cho mọi báo cáo — cả hai báo cáo hiện có (lãi/lỗ, hiệu quả kinh
+          doanh) đã xuất được CSV (Excel mở đúng dấu, không phải file <code>.xlsx</code> thật).</li>
       <li><strong>Lệnh sản xuất (SX-01)</strong> còn ở mức CRUD trơn — đổi trạng thái bằng ô chọn
           trực tiếp, chưa có luồng chuyển bước ràng buộc, chưa có định mức tiêu hao hay giá thành
           (SX-02 cố ý chưa làm gì, chờ khảo sát Xưởng giàn giáo NVS).</li>
-      <li><strong>Trung tâm Thông báo</strong> — bảng dữ liệu đã có, phần hiển thị chưa nối. Tìm
-          kiếm toàn hệ thống đã nối xong (xem thẻ "Vừa xong" phía trên). Làm xen kẽ, không chặn
-          Giai đoạn 2.</li>
+      <li><strong>Bảng <code>tasks</code> — quyết định bỏ hay dùng thật.</strong> Trung tâm Thông
+          báo (bảng <code>notifications</code>) đã nối xong (xem thẻ "Vừa xong" phía trên), nhưng
+          "Việc cần làm" ở Top Bar vẫn chỉ là Hộp thư Phê duyệt — việc không gắn phê duyệt (vd.
+          nhắc giấy tờ sắp hết hạn) hiện chỉ SINH một thông báo một chiều, không có nơi "xử lý
+          xong thì biến mất" đúng nghĩa. Cần Haan chốt trước khi làm tiếp phần này.</li>
       <li><strong>Cần Haan xem giao diện trên máy thật</strong> — ba thứ không kiểm bằng máy được:
           bố cục ở các bề ngang màn hình khác nhau, dấu tiếng Việt hiển thị ở cỡ chữ nhỏ, và cảm
           giác của các hiệu ứng chuyển động. Mở trang "Thành phần giao diện" là soát được một lượt.</li>

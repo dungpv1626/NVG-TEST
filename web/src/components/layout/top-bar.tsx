@@ -9,7 +9,7 @@
  */
 
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { Bell, CheckSquare, LogOut, Search, User } from 'lucide-react';
+import { CheckSquare, LogOut, Search, User } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MODULES } from '@nvg/shared';
@@ -18,6 +18,7 @@ import { SEARCH_MIN_LENGTH, useGlobalSearch, type GlobalSearchResult } from '@/h
 import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import { CompanySwitcher } from './company-switcher';
+import { NotificationBell } from './notification-bell';
 
 /** Nhãn tiếng Việt trong nhóm module — bổ sung cho tên module khi một module có nhiều loại
  * hồ sơ khác nhau (CRM gồm cả khách hàng lẫn cơ hội). */
@@ -244,9 +245,7 @@ export function TopBar() {
         >
           <CheckSquare className="size-4" />
         </IconButton>
-        <IconButton label="Thông báo">
-          <Bell className="size-4" />
-        </IconButton>
+        <NotificationBell />
 
         <DropdownMenu.Root>
           <DropdownMenu.Trigger

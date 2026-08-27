@@ -155,13 +155,29 @@ statusColumn(...)   // enum quy về 5 nhóm chuẩn
 - `POST /api/documents/:id/versions` — tải bản mới, tự set `is_current_version`, **thông báo các bên liên quan**
 - Quy ước đặt tên tệp: mã dự án / loại hồ sơ / số phiên bản
 
-### 1.4 Hạ tầng thông báo & việc cần làm (NEN-03, NEN-04)
+### 1.4 Hạ tầng thông báo & việc cần làm (NEN-03, NEN-04) — ⏳ Trung tâm Thông báo xong (Phase 3G), `tasks` chưa dùng
 
-- `notifications` · `tasks` · `audit_logs` · `sensitive_access_logs`
-- Helper `createNotification()` / `createTask()` để mọi module gọi
-- Trung tâm Thông báo + Việc cần làm ở topbar (AFD 5.4) — **tách 2 danh sách**, mỗi mục dẫn thẳng
-  đến màn hình xử lý; xử lý xong biến mất ngay không cần tải lại
-- Supabase Realtime cho cập nhật tức thời
+- ✅ `notifications` · `audit_logs` · `sensitive_access_logs` — có bảng, có ghi, có đọc.
+- ✅ Helper `create_notification()` (`db/migrations/0021_da_rls.sql`, SECURITY DEFINER — bảng
+  `notifications` không cho INSERT trực tiếp từ trình duyệt, NEN-03) đã được **8 module gọi ở
+  36 chỗ** (bàn giao, cảnh báo vượt ngân sách, nhắc phê duyệt để lâu…) từ rất sớm trong dự án —
+  nhưng cho tới Phase 3G, KHÔNG có màn hình nào đọc lại bảng đó: nút chuông ở Top Bar chỉ là
+  một nút chết (không `onClick`, không đếm, không panel). Đã bịt ở Phase 3G:
+  `web/src/hooks/use-notifications.ts` (đọc/đánh dấu đã đọc, RLS Mẫu B tự lọc đúng người) +
+  `web/src/components/layout/notification-bell.tsx` (panel thả xuống, huy hiệu đếm CHƯA đọc,
+  bấm một dòng vừa đánh dấu đã đọc vừa điều hướng tới `action_url`, có "Đánh dấu tất cả đã đọc").
+  Test: `web/src/components/layout/__tests__/top-bar.test.tsx`.
+- ⏳ **CHƯA dùng Supabase Realtime** — dùng tạm `refetchInterval: 60s`. Bảng `notifications`
+  chưa được thêm vào publication `supabase_realtime`, và đây sẽ là lần đầu dùng cơ chế đó
+  trong dự án (chưa có tiền lệ để soi) — cố ý lùi lại, không phải quên.
+- 🚫 **`tasks` — bảng có sẵn từ Phase 0 nhưng CHƯA từng được ghi hay đọc ở bất kỳ đâu.** Không
+  có hàm `create_task()`, không migration nào INSERT vào bảng này, không hook/màn hình nào đọc
+  nó. "Việc cần làm" ở Top Bar hiện trỏ vào `usePendingApprovals()` (Hộp thư Phê duyệt) — đủ
+  dùng cho luồng phê duyệt, nhưng KHÔNG phải mọi việc cần làm đều là một lượt phê duyệt (ví dụ
+  "giấy tờ nhân sự sắp hết hạn" hiện chỉ SINH RA một `notification`, không sinh `task`, nên
+  không ai "xử lý xong" được nó theo đúng nghĩa AFD 5.4 — chỉ đọc rồi biết vậy). Cần quyết định:
+  bỏ hẳn bảng `tasks` (dùng notifications + entity's own trạng thái là đủ) hay thật sự dùng nó
+  cho việc không gắn với phê duyệt — hỏi Haan trước khi chọn một bên.
 
 ### 1.5 Tìm kiếm toàn hệ thống (AFD 5.3) — ✅ v1 xong (Phase 3G)
 
@@ -865,3 +881,4 @@ theo hạn mức · truy vết ngược tới chứng từ gốc.
 | 20  | **Kế toán được đọc hồ sơ nhân sự tới đâu?** — chi tiết + giả định tạm ở 3E                                                                                                                                                                                                  | Phase 3E (đã làm, sửa ở `rls_employee_readable`)                       |
 | 21  | **Ai vận hành Module SX?** — chi tiết + giả định tạm ở 3F                                                                                                                                                                                                                   | Phase 3F (đã làm, đổi ở `db/src/seed/data.ts`)                         |
 | 22  | **Lô giàn giáo "mới" cho thuê được ngay không?** — chi tiết + giả định tạm ở 3F                                                                                                                                                                                             | Phase 3F (đã làm, sửa điều kiện `condition` trong hàm)                 |
+| 23  | **Bảng `tasks` — bỏ hẳn hay dùng thật?** Có sẵn từ Phase 0, chưa từng được ghi/đọc. "Việc cần làm" ở Top Bar hiện chỉ là Hộp thư Phê duyệt (`usePendingApprovals`) — đủ cho luồng phê duyệt, nhưng việc không gắn phê duyệt (vd. nhắc giấy tờ sắp hết hạn) hiện chỉ SINH `notification`, không có nơi "xử lý xong thì biến mất" đúng nghĩa AFD 5.4 | Phase 1.4 (Trung tâm Thông báo đã xong ở Phase 3G, `tasks` vẫn để trống) |
