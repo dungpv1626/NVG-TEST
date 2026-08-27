@@ -504,7 +504,10 @@ const RECEIVABLE_SELECT =
   'customer:customers(id, name), supplier:suppliers(id, name), ' +
   'contract:contracts(id, code, title)';
 
-export function useReceivables(direction: ReceivableDirection) {
+export function useReceivables(
+  direction: ReceivableDirection,
+  options: { enabled?: boolean } = {},
+) {
   const scope = useCompanyScope();
 
   return useQuery<ReceivableRecord[], Error>({
@@ -520,7 +523,7 @@ export function useReceivables(direction: ReceivableDirection) {
       if (error) throw new Error(error.message);
       return (data ?? []) as unknown as ReceivableRecord[];
     },
-    enabled: scope.isReady,
+    enabled: scope.isReady && (options.enabled ?? true),
   });
 }
 
@@ -712,7 +715,7 @@ export interface CashFlowRow {
   closing_balance: string;
 }
 
-export function useCashFlow(from: string, to: string) {
+export function useCashFlow(from: string, to: string, options: { enabled?: boolean } = {}) {
   const scope = useCompanyScope();
 
   return useQuery<CashFlowRow[], Error>({
@@ -727,7 +730,7 @@ export function useCashFlow(from: string, to: string) {
       if (error) throw new Error(error.message);
       return (data ?? []) as unknown as CashFlowRow[];
     },
-    enabled: scope.isReady,
+    enabled: scope.isReady && (options.enabled ?? true),
   });
 }
 

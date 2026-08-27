@@ -27,13 +27,17 @@
 
 import {
   AlertTriangle,
+  Boxes,
   Clock,
   Compass,
   FileSignature,
   FileText,
   Info,
+  Receipt,
   Scale,
   TrendingUp,
+  Users,
+  Wallet,
   type LucideIcon,
 } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -43,6 +47,7 @@ import {
   DASHBOARD_PERIOD_LABELS,
   DEFAULT_DASHBOARD_PERIOD,
   OPPORTUNITY_STAGE_META,
+  PENDING_APPROVAL_AGING_DAYS,
   STATUS_GROUPS,
   biddingDisplayStatus,
   contractDisplayStatus,
@@ -53,10 +58,14 @@ import {
   formatCurrency,
   formatPercent,
   isDashboardPeriod,
+  isStalePendingApproval,
   isWithinPeriod,
+  periodStartDate,
   shortNameFromFullName,
   statusLabel,
   sumMoney,
+  toMoney,
+  toNvgDateInput,
   type DashboardPeriod,
   type MoneyValue,
   type StatusGroup,
@@ -67,14 +76,20 @@ import { Button } from '@/components/ui/button';
 import { KpiCard, KpiEmptyBlock, PillBadge } from '@/components/ui/kpi-card';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
+import { useCashFlow, useReceivables } from '@/hooks/use-accounting';
 import { usePendingApprovals } from '@/hooks/use-approvals';
 import { useBiddingProjects } from '@/hooks/use-bidding-projects';
 import { useContracts } from '@/hooks/use-contracts';
 import { useDesignProjects } from '@/hooks/use-design-projects';
+import { useTimesheets } from '@/hooks/use-hr';
 import { useOpportunities } from '@/hooks/use-opportunities';
+import { useRentalAgreements } from '@/hooks/use-sx';
 import { useAuth, useCan } from '@/lib/auth';
 import { useCompanyScope } from '@/lib/company-scope';
 import { cn } from '@/lib/utils';
+
+/** Mốc xa nhất khi kỳ đang chọn là "Tất cả" — dòng tiền cần một mốc bắt đầu thật, không phải null. */
+const CASH_FLOW_EPOCH = '2000-01-01';
 
 /** Một hồ sơ đã quy về dạng tối thiểu mà Dashboard cần: trạng thái, tiền, ngày lập. */
 interface MetricRecord {
@@ -118,6 +133,9 @@ export function DashboardPage() {
   const canViewTk = useCan('TK');
   const canViewHd = useCan('HD');
   const canViewBc = useCan('BC');
+  const canViewKt = useCan('KT');
+  const canViewSx = useCan('SX');
+  const canViewNs = useCan('NS');
 
   const opportunities = useOpportunities({ enabled: canViewCrm });
   const biddingProjects = useBiddingProjects({ enabled: canViewDa });
@@ -127,6 +145,20 @@ export function DashboardPage() {
   // Cùng nguồn dữ liệu với Hộp thư Phê duyệt và huy hiệu trên thanh trên cùng — ba chỗ hiển
   // thị cùng một con số thì phải đọc từ cùng một truy vấn, nếu không sẽ có lúc lệch nhau.
   const { data: pendingApprovals } = usePendingApprovals();
+
+  // Bốn thẻ dưới đây lấp phần BC-01 còn thiếu (dòng tiền, công nợ, giàn giáo cho thuê, chấm
+  // công) — dùng thẳng hook đã có của từng module, KHÔNG tạo endpoint tổng hợp riêng, để một
+  // con số không bao giờ nói khác với danh sách nó dẫn tới.
+  const today = toNvgDateInput(new Date());
+  const cashFlow = useCashFlow(periodStartDate(period) ?? CASH_FLOW_EPOCH, today, {
+    enabled: canViewKt,
+  });
+  const receivables = useReceivables('phai_thu', { enabled: canViewKt });
+  const rentalAgreements = useRentalAgreements({ enabled: canViewSx });
+  const now = new Date();
+  const timesheets = useTimesheets(now.getFullYear(), now.getMonth() + 1, undefined, {
+    enabled: canViewNs,
+  });
 
   const inPeriod = (r: MetricRecord) => isWithinPeriod(r.createdAt, period);
 
@@ -233,14 +265,65 @@ export function DashboardPage() {
     },
   ].filter(Boolean) as ModuleMetric[];
 
-  const overdueByModule = modules
-    .map((m) => ({ ...m, count: countByStatus(m.records).overdue }))
-    .filter((m) => m.count > 0);
-  const overdueTotal = overdueByModule.reduce((sum, m) => sum + m.count, 0);
-
   const pendingCount = pendingApprovals?.length ?? 0;
   const pendingValue = sumMoney((pendingApprovals ?? []).map((a) => a.amount));
   const canApproveAnything = (profile?.permissions ?? []).some((p) => p.canApprove);
+  const staleApprovals = (pendingApprovals ?? []).filter((a) =>
+    isStalePendingApproval(a.requested_at),
+  );
+
+  const cashFlowRows = cashFlow.data ?? [];
+  const cashFlowTotal = sumMoney(cashFlowRows.map((r) => r.closing_balance));
+  const cashFlowShortfallCount = cashFlowRows.filter((r) => toMoney(r.closing_balance) < 0n).length;
+
+  // Chỉ đếm khoản CÒN NỢ (chưa thu hết), đúng vế "phần CÒN LẠI" mà bảng tuổi nợ dùng — cộng
+  // theo giá trị gốc sẽ báo một khoản nợ xấu không tồn tại (CLAUDE.md 3.4).
+  const outstandingReceivables = (receivables.data ?? []).filter(
+    (r) => toMoney(r.amount) - toMoney(r.settled_amount) > 0n,
+  );
+  const receivableRemainingTotal = sumMoney(
+    outstandingReceivables.map((r) => toMoney(r.amount) - toMoney(r.settled_amount)),
+  );
+  const receivableOverdueCount = outstandingReceivables.filter(
+    (r) => r.due_date !== null && r.due_date < today,
+  ).length;
+
+  const activeRentals = (rentalAgreements.data ?? []).filter((r) => r.status === 'dang_thue');
+
+  // Thẻ "Quá hạn" gộp mọi nguồn rủi ro thời hạn về một chỗ (BC-05) — không chỉ hồ sơ 4 module
+  // gốc, còn cả công nợ quá hạn thu và phê duyệt bị để lâu. CỐ Ý chưa gộp "vượt ngân sách":
+  // `useSiteBudgetStatus` cần biết TRƯỚC công trình nào (gọi theo từng site), Dashboard không
+  // có sẵn danh sách công trình để lặp qua — cần một RPC tổng hợp riêng, chưa làm (BUILD_PLAN
+  // 3G).
+  const overdueByModule = modules
+    .map((m) => ({
+      key: m.key,
+      title: m.title,
+      count: countByStatus(m.records).overdue,
+      to: listPathFiltered(m.basePath, { status: 'overdue', period }),
+    }))
+    .filter((m) => m.count > 0);
+  const overdueRisks = [
+    ...overdueByModule,
+    canViewKt &&
+      receivableOverdueCount > 0 && {
+        key: 'KT-receivables',
+        title: 'Công nợ phải thu',
+        count: receivableOverdueCount,
+        to: '/kt/cong-no',
+      },
+    canApproveAnything &&
+      staleApprovals.length > 0 && {
+        key: 'approvals-stale',
+        title: `Chờ phê duyệt quá ${PENDING_APPROVAL_AGING_DAYS} ngày`,
+        count: staleApprovals.length,
+        to: '/viec-can-lam',
+      },
+  ].filter(Boolean) as { key: string; title: string; count: number; to: string }[];
+  const overdueTotal = overdueRisks.reduce((sum, m) => sum + m.count, 0);
+
+  const timesheetMonthLabel = `${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+  const closedTimesheetCount = timesheets.data?.length ?? 0;
 
   const currentCompany =
     profile?.assignments.find((a) => a.companyId === scope.companyId) ?? profile?.assignments[0];
@@ -315,12 +398,12 @@ export function DashboardPage() {
 
         <KpiCard
           title="Quá hạn"
-          hint="Hồ sơ đã vượt thời hạn xử lý, theo từng phân hệ"
+          hint="Hồ sơ vượt thời hạn xử lý, công nợ quá hạn thu và phê duyệt bị để lâu — gộp mọi phân hệ"
           icon={AlertTriangle}
           iconWellClassName="bg-status-overdue-bg text-status-overdue"
         >
           {overdueTotal === 0 ? (
-            <KpiEmptyBlock label="Không có hồ sơ nào quá hạn trong kỳ này." />
+            <KpiEmptyBlock label="Không có rủi ro nào đang quá hạn." />
           ) : (
             <div className="mt-auto">
               <div className="flex items-baseline gap-2">
@@ -330,12 +413,9 @@ export function DashboardPage() {
                 <StatusLozenge status="overdue" />
               </div>
               <ul className="mt-2 space-y-1 text-xs">
-                {overdueByModule.map((m) => (
+                {overdueRisks.map((m) => (
                   <li key={m.key}>
-                    <Link
-                      to={listPathFiltered(m.basePath, { status: 'overdue', period })}
-                      className="font-medium text-brand hover:underline"
-                    >
+                    <Link to={m.to} className="font-medium text-brand hover:underline">
                       {m.title}: {m.count}
                     </Link>
                   </li>
@@ -355,6 +435,113 @@ export function DashboardPage() {
             <Link to="/bc/lai-lo" className="mt-auto block font-medium text-brand hover:underline">
               Xem báo cáo lãi/lỗ →
             </Link>
+          </KpiCard>
+        )}
+
+        {canViewKt && (
+          <KpiCard
+            title="Dòng tiền"
+            hint="Số dư cuối kỳ dự kiến, cộng cả khoản đã duyệt chưa chi — từ đầu kỳ báo cáo tới hôm nay"
+            icon={Wallet}
+            iconWellClassName="bg-tint-amber-bg text-tint-amber"
+          >
+            {cashFlow.isLoading ? (
+              <div className="h-8 w-24 animate-pulse rounded-sm bg-surface-hover" />
+            ) : cashFlowRows.length === 0 ? (
+              <KpiEmptyBlock label="Chưa có số liệu dòng tiền." />
+            ) : (
+              <Link to="/kt/dong-tien" className="mt-auto block hover:underline">
+                <span
+                  className={cn(
+                    'text-3xl font-extrabold tracking-tight tabular-nums',
+                    cashFlowTotal < 0n && 'text-status-overdue',
+                  )}
+                >
+                  {formatCurrency(cashFlowTotal)}
+                </span>
+                {cashFlowShortfallCount > 0 && (
+                  <span className="mt-1 block text-xs text-status-overdue">
+                    {cashFlowShortfallCount} pháp nhân dự kiến thiếu hụt
+                  </span>
+                )}
+              </Link>
+            )}
+          </KpiCard>
+        )}
+
+        {canViewKt && (
+          <KpiCard
+            title="Công nợ phải thu"
+            hint="Phần CÒN LẠI của các khoản khách hàng chưa trả hết, không tính giá trị gốc"
+            icon={Receipt}
+            iconWellClassName="bg-tint-teal-bg text-tint-teal"
+          >
+            {receivables.isLoading ? (
+              <div className="h-8 w-24 animate-pulse rounded-sm bg-surface-hover" />
+            ) : outstandingReceivables.length === 0 ? (
+              <KpiEmptyBlock label="Không còn khoản nào phải thu." />
+            ) : (
+              <Link to="/kt/cong-no" className="mt-auto block hover:underline">
+                <span className="text-3xl font-extrabold tracking-tight tabular-nums">
+                  {formatCurrency(receivableRemainingTotal)}
+                </span>
+                {receivableOverdueCount > 0 && (
+                  <span className="mt-1 flex items-center gap-1.5 text-xs text-status-overdue">
+                    {receivableOverdueCount} khoản đã quá hạn
+                  </span>
+                )}
+              </Link>
+            )}
+          </KpiCard>
+        )}
+
+        {canViewSx && (
+          <KpiCard
+            title="Giàn giáo đang cho thuê"
+            hint="Hợp đồng cho thuê chưa thu hồi"
+            icon={Boxes}
+            iconWellClassName="bg-tint-forest-bg text-brand"
+          >
+            {rentalAgreements.isLoading ? (
+              <div className="h-8 w-24 animate-pulse rounded-sm bg-surface-hover" />
+            ) : activeRentals.length === 0 ? (
+              <KpiEmptyBlock label="Không có hợp đồng cho thuê nào đang mở." />
+            ) : (
+              <Link
+                to="/sx/tai-san-cho-thue"
+                className="mt-auto flex items-baseline gap-2 hover:underline"
+              >
+                <span className="text-3xl font-extrabold tracking-tight tabular-nums">
+                  {activeRentals.length}
+                </span>
+                <span className="text-xs font-medium text-fg-subtle">hợp đồng</span>
+              </Link>
+            )}
+          </KpiCard>
+        )}
+
+        {canViewNs && (
+          <KpiCard
+            title="Chấm công đã chốt"
+            hint={`Bảng công tháng ${timesheetMonthLabel} đã chuyển sang Kế toán`}
+            icon={Users}
+            iconWellClassName="bg-brand-subtle text-brand-hover"
+          >
+            {timesheets.isLoading ? (
+              <div className="h-8 w-24 animate-pulse rounded-sm bg-surface-hover" />
+            ) : closedTimesheetCount === 0 ? (
+              <KpiEmptyBlock label={`Tháng ${timesheetMonthLabel} chưa chốt bảng công nào.`} />
+            ) : (
+              <Link
+                to="/ns/cham-cong"
+                className="mt-auto flex items-baseline gap-2 hover:underline"
+              >
+                <span className="text-3xl font-extrabold tracking-tight tabular-nums">
+                  {closedTimesheetCount}
+                </span>
+                <span className="text-xs font-medium text-fg-subtle">nhân sự</span>
+              </Link>
+            )}
           </KpiCard>
         )}
 
@@ -485,9 +672,9 @@ function QuickActions() {
 /**
  * Mức độ hoàn thiện của dữ liệu — PRD BC-06.
  *
- * BC-01 liệt kê mười nhóm chỉ số cho màn hình buổi sáng của Ban Giám đốc. Bốn nhóm còn lại
- * thuộc module chưa xây, và nói thẳng ra thì tốt hơn nhiều so với dựng thẻ hiện số 0 —
- * số 0 đọc ra là "không có việc gì", còn sự thật là "chưa đo được".
+ * BC-01 liệt kê mười nhóm chỉ số cho màn hình buổi sáng của Ban Giám đốc. Dòng tiền, công nợ
+ * phải thu, giàn giáo cho thuê và chấm công đã lên thẻ. Phần còn thiếu vẫn nói thẳng ra thay
+ * vì dựng thẻ hiện số 0 — số 0 đọc ra là "không có việc gì", còn sự thật là "chưa đo được".
  */
 function DataCompletenessNote() {
   return (
@@ -498,10 +685,10 @@ function DataCompletenessNote() {
       <div className="min-w-0">
         <h2 className="text-md font-bold tracking-tight">Phần chưa có trên Dashboard</h2>
         <p className="mt-1 max-w-3xl text-xs leading-relaxed text-fg-subtle">
-          Dòng tiền vào – ra, công nợ phải thu, tiến độ và chi phí từng công trình, tồn kho và giàn
-          giáo đang cho thuê, nhân sự – chấm công sẽ xuất hiện khi các phân hệ Thi công, Mua hàng,
-          Kho, Kế toán và Nhân sự đi vào vận hành. Các chỉ số đang hiển thị lấy trực tiếp từ hồ sơ
-          nghiệp vụ, không phải số liệu mẫu.
+          Tiến độ và chi phí so với ngân sách của từng công trình, tồn kho vật tư sẽ xuất hiện khi
+          có báo cáo tổng hợp nhiều công trình cùng lúc (hiện xem được từng công trình một, ở tab
+          Ngân sách của hồ sơ đó). Các chỉ số đang hiển thị lấy trực tiếp từ hồ sơ nghiệp vụ, không
+          phải số liệu mẫu.
         </p>
       </div>
     </section>

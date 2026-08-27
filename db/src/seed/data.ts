@@ -317,7 +317,11 @@ export const USER_SEED: UserSeed[] = [
     jobTitle: 'Trưởng sản xuất',
     department: 'NVS — Phòng Sản xuất',
     fromDocs: true,
-    assignments: [{ company: 'NVS', role: 'TC', isPrimary: true }],
+    // Vai trò 'TC' là chỗ giữ chỗ từ trước khi Module SX tồn tại — không có quyền SX nào cả,
+    // nên tài khoản này KHÔNG mở được màn hình Sản xuất dù tên và chức danh nói vậy. Đổi sang
+    // 'KHO', vai trò đang tạm giữ SX:WORK theo giả định ở dòng comment của role đó (chờ Haan
+    // xác nhận ai thật sự vận hành module).
+    assignments: [{ company: 'NVS', role: 'KHO', isPrimary: true }],
   },
   {
     email: 'admin@nhavietgroup.test',

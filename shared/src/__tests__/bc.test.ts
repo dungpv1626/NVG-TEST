@@ -8,8 +8,10 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+  PENDING_APPROVAL_AGING_DAYS,
   conversionRate,
   countByStatus,
+  isStalePendingApproval,
   isWithinPeriod,
   matchesPeriodFilter,
   periodStartDate,
@@ -114,6 +116,26 @@ describe('conversionRate', () => {
   it('không có cơ hội nào thì KHÔNG phải 0%', () => {
     expect(conversionRate(0, 0)).toBeNull();
     expect(conversionRate(0, 5)).toBe(0);
+  });
+});
+
+describe('isStalePendingApproval', () => {
+  it('chưa quá ngưỡng thì chưa tính là để lâu', () => {
+    const requestedAt = new Date(now.getTime() - PENDING_APPROVAL_AGING_DAYS * 24 * 60 * 60 * 1000);
+    expect(isStalePendingApproval(requestedAt.toISOString(), now)).toBe(false);
+  });
+
+  it('vượt ngưỡng thì tính là để lâu', () => {
+    const requestedAt = new Date(
+      now.getTime() - (PENDING_APPROVAL_AGING_DAYS + 1) * 24 * 60 * 60 * 1000,
+    );
+    expect(isStalePendingApproval(requestedAt.toISOString(), now)).toBe(true);
+  });
+
+  it('không có ngày gửi hoặc ngày không hợp lệ thì KHÔNG tính là để lâu', () => {
+    expect(isStalePendingApproval(null, now)).toBe(false);
+    expect(isStalePendingApproval(undefined, now)).toBe(false);
+    expect(isStalePendingApproval('', now)).toBe(false);
   });
 });
 

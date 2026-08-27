@@ -613,7 +613,7 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
   sẵn nhưng chưa có hàm/nút) — BSD chỉ đặc tả đúng một endpoint thu hồi, chưa rõ nghiệp vụ hủy
   thật sự cần gì.
 
-### 3G. Module BC — đầy đủ — ⏳ BC-02 xong, còn lại chưa làm
+### 3G. Module BC — đầy đủ — ⏳ BC-02 xong, BC-01/BC-05 một phần, còn lại chưa làm
 
 - ✅ **BC-02 — Báo cáo lãi/lỗ theo công trình** (`/bc/lai-lo`, hàm `project_profit_loss` —
   `db/migrations/0056_bc_profit_loss.sql`). KHÔNG sinh bảng mới: đọc trực tiếp
@@ -631,17 +631,27 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
 - ✅ **Xuất Excel cho BC-02** — thực chất là CSV có BOM UTF-8 (Excel mở đúng tiếng Việt có
   dấu), KHÔNG phải file `.xlsx` thật. Nút vẫn ghi "Xuất Excel" theo đúng `BUTTONS.exportExcel`
   đã có sẵn trong `@nvg/shared/content` — người dùng không phân biệt được khác gì.
+- ✅ **Bốn thẻ BC-01 còn thiếu đã ghép vào Dashboard**: Dòng tiền (`useCashFlow`), Công nợ phải
+  thu (`useReceivables`), Giàn giáo đang cho thuê (`useRentalAgreements`), Chấm công đã chốt
+  (`useTimesheets`) — dùng thẳng hook của từng màn hình chi tiết, KHÔNG dựng endpoint tổng hợp
+  riêng, để con số trên thẻ không bao giờ lệch với danh sách nó dẫn tới. Mỗi thẻ ẩn hoàn toàn
+  khi vai trò không có quyền module tương ứng (`KT`/`SX`/`NS`). Còn thiếu đúng phần "tiến
+  độ/chi phí vs ngân sách từng công trình" — cần RPC tổng hợp mới vì `useSiteBudgetStatus` đòi
+  biết trước site_id, gọi lặp theo từng công trình là N+1, chưa làm.
+- ✅ **BC-05 (một phần) — thẻ "Quá hạn" nay gộp CẢ ba nguồn rủi ro** thay vì chỉ 4 module gốc:
+  hồ sơ quá hạn theo module (CRM/DA/TK/HD), công nợ phải thu đã quá hạn thu (KT), và phê duyệt
+  bị "để lâu" — quá `PENDING_APPROVAL_AGING_DAYS` (3 ngày, ⚠️ giả định cần Haan xác nhận, xem
+  `shared/src/bc.ts`) kể từ lúc gửi. CỐ Ý CHƯA gộp "vượt ngân sách": cùng lý do N+1 ở trên, cần
+  RPC tổng hợp toàn công trình. Test: `shared/src/__tests__/bc.test.ts`,
+  `web/src/pages/__tests__/dashboard.test.tsx`.
 - ⏳ **CHƯA LÀM**: `GET /api/dashboard/executive` dạng một-lần-gọi (BC-01 hiện vẫn là nhiều hook
-  riêng lẻ như từ Phase 2E, không phải một endpoint tổng hợp) — và các nhóm chỉ số BC-01 còn
-  thiếu: dòng tiền vào/ra, công nợ phải thu, tiến độ/chi phí vs ngân sách từng công trình, tồn
-  kho + giàn giáo đang cho thuê, nhân sự – chấm công. Có sẵn hook để ghép (`useCashFlow`,
-  `useReceivables`, `useSiteBudgetStatus`, `useScaffoldingAssets`, `useTimesheets`) — chưa
-  ghép vào Dashboard.
+  riêng lẻ, không phải một endpoint tổng hợp — chấp nhận được ở quy mô demo, cân nhắc lại nếu
+  Dashboard chậm thật).
 - ⏳ **CHƯA LÀM**: BC-03 (hiệu quả kinh doanh: nguồn khách, phễu bán hàng, tỷ lệ trúng thầu),
   BC-04 (tồn kho/hao hụt/giá thành SX — mục này đã nằm trong danh sách CÓ THỂ CẮT, xem "Thứ
-  tự cắt giảm"), BC-05 (cảnh báo rủi ro TỔNG HỢP — hiện chỉ có "Quá hạn" theo module, chưa gộp
-  công nợ quá hạn + vượt ngân sách + chờ duyệt lâu vào một chỗ), BC-07 (báo cáo tổng hợp toàn
-  NVG truy ngược xuống pháp nhân/phòng ban — một phần đã có qua "Toàn NVG" + cột Pháp nhân).
+  tự cắt giảm"), BC-05 phần "vượt ngân sách" (cần RPC tổng hợp toàn công trình, xem trên),
+  BC-07 (báo cáo tổng hợp toàn NVG truy ngược xuống pháp nhân/phòng ban — một phần đã có qua
+  "Toàn NVG" + cột Pháp nhân).
 - ⏳ **CHƯA LÀM**: xuất PDF (mọi báo cáo) và "hiện mức độ đầy đủ dữ liệu" (BC-06) ngoài phần
   Dashboard đã có sẵn từ Phase 2E.
 - `report_snapshots` — chỉ thêm nếu dashboard chậm thật, không tối ưu sớm

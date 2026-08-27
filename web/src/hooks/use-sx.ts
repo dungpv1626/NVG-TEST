@@ -48,7 +48,7 @@ const RENTAL_AGREEMENT_SELECT =
   'site:construction_sites!rental_agreements_construction_site_id_construction_sites_id_fk(code, name), ' +
   'creator:users!rental_agreements_created_by_users_id_fk(full_name)';
 
-export function useRentalAgreements() {
+export function useRentalAgreements(options: { enabled?: boolean } = {}) {
   const scope = useCompanyScope();
 
   return useQuery<RentalAgreementRecord[], Error>({
@@ -63,7 +63,7 @@ export function useRentalAgreements() {
       if (error) throw new Error(error.message);
       return (data ?? []) as unknown as RentalAgreementRecord[];
     },
-    enabled: scope.isReady,
+    enabled: scope.isReady && (options.enabled ?? true),
   });
 }
 

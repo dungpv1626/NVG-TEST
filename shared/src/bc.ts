@@ -54,7 +54,10 @@ export function isDashboardPeriod(value: string | null | undefined): value is Da
  * ISO, và so sánh hai chuỗi `yyyy-MM-dd` cho đúng kết quả mà không phải làm phép cộng trừ
  * múi giờ ở từng chỗ gọi — nơi rất dễ lệch một ngày (xem `toNvgDateInput`).
  */
-export function periodStartDate(period: DashboardPeriod, now: DateInput = new Date()): string | null {
+export function periodStartDate(
+  period: DashboardPeriod,
+  now: DateInput = new Date(),
+): string | null {
   if (period === 'tat-ca') return null;
 
   const today = toNvgDateInput(now);
@@ -138,4 +141,34 @@ export function countByStatus(
 export function conversionRate(won: number, total: number): number | null {
   if (total <= 0) return null;
   return (won / total) * 100;
+}
+
+/**
+ * Ngưỡng "chờ duyệt lâu" cho thẻ cảnh báo rủi ro tổng hợp (BC-05).
+ *
+ * ⚠️ Giả định cần Haan xác nhận — PRD không nêu con số cụ thể. Đặt tạm 3 ngày làm việc,
+ * cùng tinh thần với mốc `aging_buckets` (KT-04): một hằng số DUY NHẤT ở đây, không lặp lại
+ * ở chỗ khác, để đổi một chỗ là đổi khắp hệ thống khi có số chính thức.
+ */
+export const PENDING_APPROVAL_AGING_DAYS = 3;
+
+/**
+ * Hồ sơ chờ phê duyệt đã "để lâu" — quá `PENDING_APPROVAL_AGING_DAYS` ngày kể từ lúc gửi.
+ *
+ * Đây KHÔNG phải trạng thái "Quá hạn" chuẩn (5 nhóm) của chính hồ sơ — một báo giá đang chờ
+ * duyệt không có hạn xử lý riêng, nó chỉ đang NẰM Ở NGƯỜI DUYỆT quá lâu. Tách hàm riêng khỏi
+ * `countByStatus` để không trộn hai khái niệm khác nhau vào cùng một con số.
+ */
+export function isStalePendingApproval(
+  requestedAt: DateInput | null | undefined,
+  now: DateInput = new Date(),
+): boolean {
+  if (requestedAt === null || requestedAt === undefined || requestedAt === '') return false;
+
+  const requested = new Date(requestedAt);
+  const at = new Date(now);
+  if (Number.isNaN(requested.getTime()) || Number.isNaN(at.getTime())) return false;
+
+  const msPerDay = 24 * 60 * 60 * 1000;
+  return (at.getTime() - requested.getTime()) / msPerDay > PENDING_APPROVAL_AGING_DAYS;
 }

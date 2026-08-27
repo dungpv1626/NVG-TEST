@@ -518,7 +518,12 @@ export interface TimesheetRecord {
 }
 
 /** Bảng công ĐÃ CHỐT của một kỳ — thứ Kế toán đọc để tính lương (NS-05). */
-export function useTimesheets(year: number, month: number, employeeId?: string) {
+export function useTimesheets(
+  year: number,
+  month: number,
+  employeeId?: string,
+  options: { enabled?: boolean } = {},
+) {
   const scope = useCompanyScope();
 
   return useQuery<TimesheetRecord[], Error>({
@@ -542,7 +547,7 @@ export function useTimesheets(year: number, month: number, employeeId?: string) 
       if (error) throw new Error(error.message);
       return (data ?? []) as unknown as TimesheetRecord[];
     },
-    enabled: scope.isReady,
+    enabled: scope.isReady && (options.enabled ?? true),
   });
 }
 

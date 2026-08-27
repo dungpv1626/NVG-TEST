@@ -19,6 +19,10 @@ const state = vi.hoisted(() => ({
   opportunities: [] as unknown[],
   contracts: [] as unknown[],
   approvals: [] as unknown[],
+  cashFlow: [] as unknown[],
+  receivables: [] as unknown[],
+  rentals: [] as unknown[],
+  timesheets: [] as unknown[],
 }));
 
 vi.mock('@/lib/auth', () => ({
@@ -26,7 +30,9 @@ vi.mock('@/lib/auth', () => ({
     profile: {
       id: 'u1',
       fullName: 'Bùi Văn Thi',
-      assignments: [{ companyId: 'nvc-id', companyShortName: 'Nhà Việt Cons', roleLabel: 'Tổng Giám đốc' }],
+      assignments: [
+        { companyId: 'nvc-id', companyShortName: 'Nhà Việt Cons', roleLabel: 'Tổng Giám đốc' },
+      ],
       permissions: Object.entries(state.can).map(([moduleCode, p]) => ({ moduleCode, ...p })),
     },
   }),
@@ -43,7 +49,9 @@ vi.mock('@/lib/company-scope', () => ({
   withCompanyScope: <Q,>(q: Q) => q,
 }));
 vi.mock('@/hooks/use-companies', () => ({ useCompanyLookup: () => () => null }));
-vi.mock('@/hooks/use-approvals', () => ({ usePendingApprovals: () => ({ data: state.approvals }) }));
+vi.mock('@/hooks/use-approvals', () => ({
+  usePendingApprovals: () => ({ data: state.approvals }),
+}));
 vi.mock('@/hooks/use-opportunities', () => ({
   useOpportunities: () => ({ data: state.opportunities, isLoading: false }),
 }));
@@ -56,6 +64,16 @@ vi.mock('@/hooks/use-bidding-projects', () => ({
 vi.mock('@/hooks/use-design-projects', () => ({
   useDesignProjects: () => ({ data: [], isLoading: false }),
 }));
+vi.mock('@/hooks/use-accounting', () => ({
+  useCashFlow: () => ({ data: state.cashFlow, isLoading: false }),
+  useReceivables: () => ({ data: state.receivables, isLoading: false }),
+}));
+vi.mock('@/hooks/use-sx', () => ({
+  useRentalAgreements: () => ({ data: state.rentals, isLoading: false }),
+}));
+vi.mock('@/hooks/use-hr', () => ({
+  useTimesheets: () => ({ data: state.timesheets, isLoading: false }),
+}));
 
 const { DashboardPage } = await import('../dashboard');
 
@@ -66,6 +84,10 @@ beforeEach(() => {
   state.opportunities = [];
   state.contracts = [];
   state.approvals = [];
+  state.cashFlow = [];
+  state.receivables = [];
+  state.rentals = [];
+  state.timesheets = [];
 });
 
 function grantView(...modules: string[]) {
@@ -109,10 +131,7 @@ describe('Dashboard — mỗi con số dẫn tới danh sách đã lọc SẴN �
     renderWithApp(<DashboardPage />, { route: '/dashboard?ky=quy-nay' });
 
     const inProgress = screen.getByRole('link', { name: /Đang xử lý: 1/ });
-    expect(inProgress).toHaveAttribute(
-      'href',
-      '/crm/co-hoi?trang-thai=in_progress&ky=quy-nay',
-    );
+    expect(inProgress).toHaveAttribute('href', '/crm/co-hoi?trang-thai=in_progress&ky=quy-nay');
   });
 
   it('thẻ Quá hạn dẫn tới đúng danh sách của từng phân hệ', () => {
@@ -152,7 +171,7 @@ describe('Dashboard — nói thật về dữ liệu (PRD BC-06)', () => {
     grantView('CRM');
     renderWithApp(<DashboardPage />, { route: '/dashboard' });
     expect(screen.getByText('Phần chưa có trên Dashboard')).toBeInTheDocument();
-    expect(screen.getByText(/Dòng tiền vào – ra/)).toBeInTheDocument();
+    expect(screen.getByText(/Tiến độ và chi phí so với ngân sách/)).toBeInTheDocument();
   });
 
   it('tỷ lệ chốt hợp đồng: chưa có cơ hội nào KHÁC với chốt được 0%', () => {
@@ -185,5 +204,104 @@ describe('Dashboard — việc chờ phê duyệt', () => {
     const link = screen.getByRole('link', { name: /2/ });
     expect(link).toHaveAttribute('href', '/viec-can-lam');
     expect(within(link).getByText(/1.000.000.000 đồng/)).toBeInTheDocument();
+  });
+});
+
+describe('Dashboard — bốn thẻ KT/SX/NS lấp phần BC-01 còn thiếu', () => {
+  it('không có quyền KT/SX/NS thì không hiện thẻ tương ứng', () => {
+    grantView('CRM');
+    renderWithApp(<DashboardPage />, { route: '/dashboard' });
+    expect(screen.queryByText('Dòng tiền')).not.toBeInTheDocument();
+    expect(screen.queryByText('Công nợ phải thu')).not.toBeInTheDocument();
+    expect(screen.queryByText('Giàn giáo đang cho thuê')).not.toBeInTheDocument();
+    expect(screen.queryByText('Chấm công đã chốt')).not.toBeInTheDocument();
+  });
+
+  it('thẻ Dòng tiền cộng số dư cuối kỳ của mọi pháp nhân và nêu số pháp nhân thiếu hụt', () => {
+    grantView('KT');
+    state.cashFlow = [
+      { company_id: 'nvc-id', closing_balance: '500000000' },
+      { company_id: 'nvo-id', closing_balance: '-200000000' },
+    ];
+    renderWithApp(<DashboardPage />, { route: '/dashboard' });
+
+    expect(screen.getByText('300.000.000 đồng')).toBeInTheDocument();
+    expect(screen.getByText('1 pháp nhân dự kiến thiếu hụt')).toBeInTheDocument();
+  });
+
+  it('thẻ Công nợ phải thu chỉ cộng phần CÒN LẠI, bỏ khoản đã thu hết', () => {
+    grantView('KT');
+    const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+    state.receivables = [
+      // Còn nợ và đã quá hạn — phải cộng vào tổng và đếm là quá hạn.
+      { amount: '300000000', settled_amount: '100000000', due_date: yesterday },
+      // Đã thu đủ — KHÔNG được cộng vào tổng còn phải thu.
+      { amount: '150000000', settled_amount: '150000000', due_date: yesterday },
+    ];
+    renderWithApp(<DashboardPage />, { route: '/dashboard' });
+
+    expect(screen.getByText('200.000.000 đồng')).toBeInTheDocument();
+    expect(screen.getByText('1 khoản đã quá hạn')).toBeInTheDocument();
+  });
+
+  it('thẻ Giàn giáo đang cho thuê chỉ đếm hợp đồng còn đang thuê', () => {
+    grantView('SX');
+    state.rentals = [
+      { id: 'r1', status: 'dang_thue' },
+      { id: 'r2', status: 'da_thu_hoi' },
+      { id: 'r3', status: 'huy' },
+    ];
+    renderWithApp(<DashboardPage />, { route: '/dashboard' });
+
+    const link = screen.getByRole('link', { name: /1\s*hợp đồng/ });
+    expect(link).toHaveAttribute('href', '/sx/tai-san-cho-thue');
+  });
+
+  it('thẻ Chấm công đã chốt đếm đúng số bảng công đã tải cho tháng này', () => {
+    grantView('NS');
+    state.timesheets = [{ id: 't1' }, { id: 't2' }, { id: 't3' }];
+    renderWithApp(<DashboardPage />, { route: '/dashboard' });
+
+    const link = screen.getByRole('link', { name: /3\s*nhân sự/ });
+    expect(link).toHaveAttribute('href', '/ns/cham-cong');
+  });
+});
+
+describe('Dashboard — thẻ Quá hạn gộp cả rủi ro ngoài 4 module gốc (BC-05)', () => {
+  it('gộp công nợ quá hạn thu vào thẻ Quá hạn, không chỉ hiện riêng ở thẻ Công nợ', () => {
+    grantView('KT');
+    const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+    state.receivables = [{ amount: '300000000', settled_amount: '100000000', due_date: yesterday }];
+    renderWithApp(<DashboardPage />, { route: '/dashboard' });
+
+    expect(screen.getByRole('link', { name: /Công nợ phải thu: 1/ })).toHaveAttribute(
+      'href',
+      '/kt/cong-no',
+    );
+  });
+
+  it('phê duyệt để lâu hơn ngưỡng thì gộp vào thẻ Quá hạn', () => {
+    state.can = { CRM: { canView: true, canApprove: true } };
+    const fourDaysAgo = new Date(Date.now() - 4 * 86_400_000).toISOString();
+    const today = new Date().toISOString();
+    state.approvals = [
+      { id: 'a1', amount: '100000000', requested_at: fourDaysAgo },
+      { id: 'a2', amount: '200000000', requested_at: today },
+    ];
+    renderWithApp(<DashboardPage />, { route: '/dashboard' });
+
+    expect(screen.getByRole('link', { name: /Chờ phê duyệt quá 3 ngày: 1/ })).toHaveAttribute(
+      'href',
+      '/viec-can-lam',
+    );
+  });
+
+  it('vai trò không phê duyệt được thì KHÔNG hiện dòng phê duyệt để lâu dù có hồ sơ cũ', () => {
+    grantView('CRM');
+    const fourDaysAgo = new Date(Date.now() - 4 * 86_400_000).toISOString();
+    state.approvals = [{ id: 'a1', amount: '100000000', requested_at: fourDaysAgo }];
+    renderWithApp(<DashboardPage />, { route: '/dashboard' });
+
+    expect(screen.queryByText(/Chờ phê duyệt quá/)).not.toBeInTheDocument();
   });
 });
