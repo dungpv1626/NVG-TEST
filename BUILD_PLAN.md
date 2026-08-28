@@ -787,7 +787,7 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
   từ trước. Một chỗ sai duy nhất tìm được: nút "Mở hợp đồng" (`draft-contract-button.tsx`) dùng
   `onClick={() => navigate(...)}` — đã sửa sang `<Button asChild><Link to=…>`.
 
-### 4B. Rà soát phân quyền toàn hệ thống — ⏳ đợt 1 xong (khoá `anon` ở tầng HÀM), còn lại chưa làm
+### 4B. Rà soát phân quyền toàn hệ thống — ⏳ đợt 1+2 xong, còn export/RPC chưa soát
 
 - ✅ **Đợt 1 — khoá `EXECUTE` cho vai trò `anon` ở tầng HÀM** (`db/migrations/0062_lock_down_anon_functions.sql`).
   Chạy `mcp__supabase__get_advisors` (loại security) phát hiện 145/168 hàm — gồm cả hàm
@@ -818,9 +818,26 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
   tưởng đã khoá. Đợt 4B lần này CỐ Ý không sửa — cần xác nhận từng hàm có đúng là "chỉ gọi nội
   bộ/qua cron `service_role`" trước khi khoá tiếp, tránh khoá nhầm một RPC màn hình nào đó
   đang thật sự dùng.
-- ⏳ **Chưa làm**: đối chiếu **từng bảng trong ~65 bảng** với mẫu A/B/C/D ở BSD 4.x (đợt 1 chỉ
-  soát tầng HÀM, chưa soát RLS policy của từng bảng); kiểm dữ liệu nhạy cảm không lộ qua đường
-  vòng (panel liên kết chéo, kết quả tìm kiếm, export); xác nhận `sensitive_access_logs` ghi đủ.
+- ✅ **Đợt 2 — đối chiếu RLS policy thật với mẫu A/B/C/D của BSD 4.1→4.12**, đọc hết cả tài
+  liệu lẫn `pg_policies` của 90 bảng có RLS. Không phát hiện lỗ hổng phân quyền nào được xác
+  nhận chắc chắn — mọi bảng trung tâm đều khớp đúng mẫu, kể cả nhánh khó nhất
+  (`employees`/`estimates`/`employment_contracts` dùng **column-level GRANT/REVOKE** của
+  Postgres — cơ chế TÁCH BIỆT với RLS — để khoá cột nhạy cảm, xác nhận qua
+  `has_column_privilege`, không chỉ đọc `pg_policies`). `record_sequences` là bảng RLS-không-
+  policy duy nhất, đúng ý đồ (chỉ ghi qua hàm SECURITY DEFINER).
+  - ⚠️ **Cần Haan xác nhận**: `inventory_items.average_cost` và `stock_movement_items.unit_cost`
+    (giá vốn TỒN KHO) không bị khoá cột như `unit_prices`/`estimates`/`quotations` — bất kỳ ai
+    xem được module Kho cũng đọc được giá vốn bình quân, kể cả vai trò không nằm trong danh
+    sách được xem giá vốn (CLAUDE.md 6.6). BSD 4.8 không gắn nhãn Mẫu D cho bảng này nên có
+    thể là chủ ý (giá vốn kho là số vận hành, khác giá vốn dự toán) — chưa tự khoá, chờ quyết định.
+  - Ghi chú diễn giải (không phải lỗi): `quotes`/`contracts`/`contract_amendments` BSD gắn nhãn
+    Mẫu C nhưng bảng gốc dùng RLS kiểu A/B — phần hạn mức C nằm ở bảng `approvals` hợp nhất khi
+    hồ sơ "gửi phê duyệt". Đây là kiến trúc đúng (hồ sơ cần nhìn thấy lúc đang soạn, không chỉ
+    lúc chờ duyệt), chỉ khác cách đọc literal nhãn BSD.
+- ⏳ **Chưa làm**: kiểm dữ liệu nhạy cảm không lộ qua đường xuất Excel/CSV ở tầng frontend
+  (đợt 2 mới kiểm RLS + column-privilege ở tầng CSDL, chưa soát từng nút "Xuất Excel"); rà
+  source code của mọi RPC ghi dữ liệu (đợt 2 chỉ spot-check vài hàm tiêu biểu); xác nhận
+  `sensitive_access_logs` ghi đủ mọi lượt xem cột nhạy cảm.
 - Việc phụ phát hiện khi rà đợt 1 (KHÔNG liên quan quyền, đã sửa cùng đợt vì lộ ra lúc chạy lại
   `sx.test.ts` để xác nhận không hồi quy): `create_rental_agreement`/`return_rental_agreement`
   (SX-03) sinh `asset_code` lô mới bằng `to_char(now(), 'YYMMDDHH24MISS')` — độ phân giải MỘT
@@ -831,12 +848,34 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
   code nguồn trước khi nối hậu tố (`left(v_lot.asset_code, 44)`) vì thêm mili-giây làm vài
   code đã dài (qua nhiều vòng thuê/trả) vượt `varchar(64)`.
 
-### 4C. Áp Content Guidelines toàn diện
+### 4C. Áp Content Guidelines toàn diện — ⏳ mới rà một phần
 
-- Rà toàn bộ microcopy theo CGD 5.1–5.6 (nhãn trạng thái, nút, thông báo, email, lỗi, trạng thái rỗng)
-- Kiểm tra thuật ngữ chuẩn hoá (CGD 4.4) — không lẫn "Duyệt/Phê duyệt/Approve"
-- Kiểm tra định dạng số/ngày/tiền nhất quán
-- Kiểm tra tương phản màu đạt WCAG AA; vùng bấm di động ≥40×40px
+- ✅ **Thuật ngữ chuẩn hoá (CGD 4.4)** — grep toàn bộ `web/src` theo 7 cặp từ CGD 4.5 cấm dùng
+  (Owner/Chủ hồ sơ, Submit/Gửi duyệt, Approve/Chấp thuận, Handover/Chuyển tiếp, Active/Hiện
+  hành, Entity/Chi nhánh, Overdue/Trễ hạn): không tìm thấy vi phạm nào trong chữ hiển thị cho
+  người dùng (hai chỗ khớp đều là comment giải thích quy tắc, không phải chữ hiển thị).
+- ✅ **Định dạng ngày/giờ nhất quán** — `print-report.ts` (xuất PDF báo cáo, BC-06) dùng
+  `new Date().toLocaleString('vi-VN')` thay vì `formatDateTime` dùng chung — ra định dạng khác
+  spec CGD (không đệm 0, dấu phẩy thay vì "—", có giây). Đã đổi sang `formatDateTime`.
+- ✅ **Lỗi = [việc gì] + [vì sao/cần làm gì], không lộ kỹ thuật (CGD 5.5)** — grep 87 khối
+  `catch` trong `web/src`: 70 chỗ đã đi qua `toUserMessage` (dịch mã lỗi Postgres/mạng sang
+  tiếng Việt, giữ nguyên thông báo `RAISE EXCEPTION` đã có dấu, chặn rò rỉ mọi lỗi khác). Tìm
+  thấy 1 chỗ lách qua: `approval-inbox.tsx` (Hộp thư Phê duyệt — mẫu dùng chung MỌI loại phê
+  duyệt, AFD 4.6) tự lấy `e.message` — lỗi mạng ("Failed to fetch") hoặc mã Postgres không có
+  `RAISE EXCEPTION` tương ứng sẽ hiện tiếng Anh/kỹ thuật ngay trên màn hình quan trọng nhất.
+  Đã đổi sang `toUserMessage(e, 'approve')`.
+- ✅ **Vùng bấm di động ≥40×40px (CGD 6.8)** — quét các nút chỉ có icon (`size-6`…`size-8`)
+  ngoài cụm đã canh sẵn (`IconButton` ở Top Bar, nút lịch ở `DateInput`): tìm thấy 2 nút thật
+  sự nhỏ hơn chuẩn — nút "Menu tài khoản" ở Top Bar (`px-2 py-1` quanh avatar 24px, ra ~32px
+  cao) và nút đóng banner cài đặt/cập nhật PWA (`size-8` = 32px, đúng banner hiện chủ yếu trên
+  điện thoại). Cả hai sửa theo đúng khuôn `size-10 sm:size-8` đã dùng cho chuông thông báo/
+  "Việc cần làm" (40px cảm ứng, 32px chuột). Thêm 2 ca test canh trong `design-rules.test.ts`
+  để không mòn dần lại như đã từng xảy ra với nút lịch.
+- ⏳ **Chưa làm**: rà nhãn trạng thái/nút/thông báo/email/trạng thái rỗng theo đúng thư viện
+  CGD 5.1–5.6 (mới kiểm thuật ngữ + lỗi + định dạng, chưa đối chiếu từng chuỗi microcopy);
+  kiểm tương phản màu ngoài các token đã có test (`design-rules.test.ts` mới canh token, chưa
+  quét màu inline/tuỳ biến nếu có); quét vùng bấm nhỏ ở các trang chưa rà (mới xong Top Bar +
+  PWA banner, còn nhiều trang khác dùng icon-button riêng lẻ chưa kiểm hết).
 
 ### 4D. Tác vụ nền (NEN-04)
 

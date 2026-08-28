@@ -130,6 +130,28 @@ describe('Vùng bấm cho ngón tay', () => {
     const button = code.slice(code.indexOf('aria-label="Chọn ngày trên lịch"'));
     expect(button).toContain('size-10');
   });
+
+  /**
+   * Nút "Menu tài khoản" ở Top Bar từng chỉ có `px-2 py-1` quanh một avatar 24px — ra khoảng
+   * 32px cao, dưới mức tối thiểu dù cạnh nó (chuông thông báo, Việc cần làm) đều đã đúng quy
+   * tắc `size-10 sm:size-8`. Không cố định thành hình vuông như hai nút kia vì còn chứa chữ
+   * tên, nên canh bằng `min-h` thay vì `size`.
+   */
+  it('nút Menu tài khoản có chiều cao tối thiểu 40px trên di động', () => {
+    const code = source('components/layout/top-bar.tsx');
+    const trigger = code.slice(code.indexOf('aria-label="Menu tài khoản"') - 300);
+    expect(trigger).toContain('min-h-10');
+  });
+
+  /**
+   * Nút đóng banner cài đặt/cập nhật PWA từng chỉ `size-8` (32px) — banner này hiện chủ yếu
+   * trên điện thoại (lời mời cài PWA), đúng nơi ngón tay cần vùng bấm lớn nhất.
+   */
+  it('nút đóng banner PWA có vùng bấm 40×40 trên di động', () => {
+    const code = source('components/layout/pwa-status.tsx');
+    const button = code.slice(code.indexOf('aria-label={dismissLabel}'));
+    expect(button).toContain('size-10');
+  });
 });
 
 describe('Không để trình duyệt tự sinh chữ tiếng Anh', () => {

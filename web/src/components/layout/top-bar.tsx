@@ -255,7 +255,10 @@ export function TopBar() {
         <DropdownMenu.Root>
           <DropdownMenu.Trigger
             className={cn(
-              'ml-1 flex items-center gap-2 rounded-sm px-2 py-1',
+              // 40px trên màn hình cảm ứng, 32px trên máy tính có chuột (Content Guidelines
+              // 6.8) — cùng quy tắc với IconButton ở trên, nhưng đo bằng min-h/min-w vì nút
+              // này còn chứa chữ tên nên không cố định thành hình vuông như IconButton.
+              'ml-1 flex min-h-10 items-center gap-2 rounded-sm px-2 py-1 sm:min-h-8',
               'hover:bg-surface-hover',
             )}
             aria-label="Menu tài khoản"

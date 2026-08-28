@@ -73,7 +73,10 @@ function PromptCard({
           type="button"
           onClick={onDismiss}
           aria-label={dismissLabel}
-          className="-mr-1 -mt-1 flex size-8 shrink-0 items-center justify-center rounded-sm text-fg-subtle hover:bg-surface-hover"
+          // 40px trên màn hình cảm ứng, 32px trên máy tính có chuột (Content Guidelines 6.8) —
+          // cùng quy tắc với IconButton ở Top Bar; lề âm co giãn theo để icon vẫn nép sát góc
+          // thẻ như trước, không đội bố cục lên.
+          className="-mr-2 -mt-2 flex size-10 shrink-0 items-center justify-center rounded-sm text-fg-subtle hover:bg-surface-hover sm:-mr-1 sm:-mt-1 sm:size-8"
         >
           <X className="size-4" />
         </button>

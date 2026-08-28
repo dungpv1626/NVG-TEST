@@ -14,6 +14,8 @@
  * trang báo cáo là rủi ro không tương xứng lợi ích.
  */
 
+import { formatDateTime } from '@nvg/shared';
+
 export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
@@ -56,7 +58,7 @@ export function openPrintReport(title: string, bodyHtml: string): void {
   const win = window.open('', '_blank', 'width=960,height=720');
   if (!win) return; // popup bị chặn — không có cách ép, người dùng tự cho phép rồi bấm lại
 
-  const generatedAt = new Date().toLocaleString('vi-VN');
+  const generatedAt = formatDateTime(new Date());
   win.document.write(`<!doctype html>
 <html lang="vi">
 <head>

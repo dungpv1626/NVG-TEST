@@ -30,6 +30,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
+import { toUserMessage } from '@/hooks/use-error-message';
 import { cn } from '@/lib/utils';
 
 export interface ApprovalItem {
@@ -54,7 +55,11 @@ export interface ApprovalInboxProps {
   isLoading: boolean;
   error?: unknown;
   onRetry?: () => void;
-  onDecision: (item: ApprovalItem, decision: 'approved' | 'rejected', note: string) => Promise<void>;
+  onDecision: (
+    item: ApprovalItem,
+    decision: 'approved' | 'rejected',
+    note: string,
+  ) => Promise<void>;
 }
 
 export function ApprovalInbox({
@@ -104,7 +109,7 @@ export function ApprovalInbox({
       // còn hồ sơ thì ở lại để duyệt tiếp — không bắt quay lại rồi bấm vào (Webapp Flow 4.6).
       if (!next) setOpenedOnMobile(false);
     } catch (e) {
-      setActionError(e instanceof Error ? e.message : String(e));
+      setActionError(toUserMessage(e, 'approve'));
     } finally {
       setSubmitting(false);
     }
@@ -171,9 +176,7 @@ export function ApprovalInbox({
                   <span>{formatWaiting(item.requestedAt)}</span>
                 </div>
                 {item.amount !== null && (
-                  <div className="mt-1 font-medium tabular-nums">
-                    {formatCurrency(item.amount)}
-                  </div>
+                  <div className="mt-1 font-medium tabular-nums">{formatCurrency(item.amount)}</div>
                 )}
               </button>
             </li>
@@ -229,17 +232,28 @@ export function ApprovalInbox({
             </label>
 
             {actionError && (
-              <p role="alert" className="rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
+              <p
+                role="alert"
+                className="rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
+              >
                 {actionError}
               </p>
             )}
 
             <div className="flex items-center gap-2">
               {/* Hành động chính DUY NHẤT trên màn hình (Content Guidelines 6.3). */}
-              <Button variant="primary" disabled={submitting} onClick={() => void decide('approved')}>
+              <Button
+                variant="primary"
+                disabled={submitting}
+                onClick={() => void decide('approved')}
+              >
                 {submitting ? 'Đang xử lý…' : BUTTONS.approve}
               </Button>
-              <Button variant="secondary" disabled={submitting} onClick={() => void decide('rejected')}>
+              <Button
+                variant="secondary"
+                disabled={submitting}
+                onClick={() => void decide('rejected')}
+              >
                 {BUTTONS.reject}
               </Button>
               <span className="ml-auto text-xs text-fg-subtle">
