@@ -20,6 +20,8 @@ interface Fixture {
   customerCode: string;
   opportunityCode: string;
   opportunityId: string;
+  employeeCode: string;
+  employeeId: string;
 }
 
 async function seedFixture(): Promise<Fixture> {
@@ -28,6 +30,7 @@ async function seedFixture(): Promise<Fixture> {
   const stamp = String(Date.now());
   const customerCode = 'TESTSEARCH-KH-' + stamp;
   const opportunityCode = 'TESTSEARCH-CH-' + stamp;
+  const employeeCode = 'TESTSEARCH-NS-' + stamp;
   try {
     const [nvc] = await sql<{ id: string }[]>`SELECT id FROM companies WHERE code = 'NVC'`;
 
@@ -44,11 +47,20 @@ async function seedFixture(): Promise<Fixture> {
       RETURNING id
     `;
 
+    const [employee] = await sql<{ id: string }[]>`
+      INSERT INTO employees (company_id, code, full_name, position)
+      VALUES (${nvc!.id}, ${employeeCode}, ${TEST_PREFIX + ' Nhân sự tìm kiếm ' + stamp},
+              'Nhân viên thử nghiệm')
+      RETURNING id
+    `;
+
     return {
       stamp,
       customerCode,
       opportunityCode,
       opportunityId: opportunity!.id,
+      employeeCode,
+      employeeId: employee!.id,
     };
   } finally {
     await sql.end();
@@ -61,6 +73,7 @@ async function cleanupFixture(): Promise<void> {
   try {
     await sql`DELETE FROM opportunities WHERE name LIKE ${TEST_PREFIX + '%'}`;
     await sql`DELETE FROM customers WHERE name LIKE ${TEST_PREFIX + '%'}`;
+    await sql`DELETE FROM employees WHERE full_name LIKE ${TEST_PREFIX + '%'}`;
   } finally {
     await sql.end();
   }
@@ -70,12 +83,14 @@ describeDb('global_search — tìm kiếm toàn hệ thống (Mẫu A qua RLS c�
   let fixture: Fixture;
   let kinhDoanhNvc: SupabaseClient;
   let kinhDoanhNvo: SupabaseClient;
+  let nhanSu: SupabaseClient;
 
   beforeAll(async () => {
     fixture = await seedFixture();
-    [kinhDoanhNvc, kinhDoanhNvo] = await Promise.all([
+    [kinhDoanhNvc, kinhDoanhNvo, nhanSu] = await Promise.all([
       signInAs(ACCOUNTS.kinhDoanhNvc),
       signInAs(ACCOUNTS.kinhDoanhNvo),
+      signInAs(ACCOUNTS.nhanSu),
     ]);
   });
 
@@ -132,5 +147,31 @@ describeDb('global_search — tìm kiếm toàn hệ thống (Mẫu A qua RLS c�
     const { data, error } = await kinhDoanhNvc.rpc('global_search', { p_query: '   ' });
     expect(error).toBeNull();
     expect(data).toEqual([]);
+  });
+
+  // `employees` KHÔNG dùng Mẫu A trơn như các bảng ở trên — RLS `employees_select` (0050)
+  // gộp nhiều điều kiện (HCNS, chính mình, quản lý trực tiếp, chỉ huy công trường, KT/CFO).
+  // Đây là phép thử đúng nhánh khó nhất: HCNS thấy được nhờ `auth_can_view_module('NS')`,
+  // còn Kinh doanh (không rơi vào điều kiện nào ở trên) thì không — dù cùng pháp nhân NVC.
+  it('nhân sự chỉ hiện qua tìm kiếm với vai trò được RLS `employees_select` cho phép xem', async () => {
+    const { data: nsData, error: nsError } = await nhanSu.rpc('global_search', {
+      p_query: fixture.employeeCode,
+    });
+    expect(nsError).toBeNull();
+    const nsHit = (nsData as Array<Record<string, unknown>>).find(
+      (r) => r.entity_id === fixture.employeeId,
+    );
+    expect(nsHit).toBeTruthy();
+    expect(nsHit!.module_code).toBe('NS');
+    expect(nsHit!.entity_type).toBe('employee');
+    expect(nsHit!.path).toBe(`/ns/nhan-su/${fixture.employeeId}`);
+
+    const { data: kdData, error: kdError } = await kinhDoanhNvc.rpc('global_search', {
+      p_query: fixture.employeeCode,
+    });
+    expect(kdError).toBeNull();
+    expect(
+      (kdData as Array<Record<string, unknown>>).find((r) => r.entity_id === fixture.employeeId),
+    ).toBeUndefined();
   });
 });

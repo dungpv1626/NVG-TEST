@@ -179,7 +179,7 @@ statusColumn(...)   // enum quy về 5 nhóm chuẩn
   bỏ hẳn bảng `tasks` (dùng notifications + entity's own trạng thái là đủ) hay thật sự dùng nó
   cho việc không gắn với phê duyệt — hỏi Haan trước khi chọn một bên.
 
-### 1.5 Tìm kiếm toàn hệ thống (AFD 5.3) — ✅ v1 xong (Phase 3G)
+### 1.5 Tìm kiếm toàn hệ thống (AFD 5.3) — ✅ v1 xong (Phase 3G), ✅ mở rộng 5 bảng (Phase 4A)
 
 Hàm CSDL `global_search` (`db/migrations/0057_global_search.sql`), gọi thẳng qua PostgREST RPC
 — không qua Workers, vì đây chỉ là một truy vấn đọc trên bảng đã có RLS (CLAUDE.md 3.1). Gộp
@@ -190,9 +190,20 @@ Top Bar (`web/src/components/layout/top-bar.tsx`) nay gọi thật, có debounce
 module và bấm vào là sang thẳng chi tiết.
 
 ⚠️ **Không phải `tsvector` full-text như phác thảo gốc** — dùng ILIKE, đủ nhanh ở quy mô demo;
-nâng cấp sau nếu chậm thật (xem ghi chú đầu file migration). **Đăng ký MỚI sáu bảng trung tâm**
-(customers, opportunities, bidding_projects, design_projects, contracts, construction_sites) —
-các bảng khác (nhà cung cấp, vật tư, nhân sự…) đăng ký thêm khi có nhu cầu thật.
+nâng cấp sau nếu chậm thật (xem ghi chú đầu file migration).
+
+**Đăng ký ban đầu sáu bảng trung tâm** (customers, opportunities, bidding_projects,
+design_projects, contracts, construction_sites) — **Phase 4A mở rộng thêm năm bảng**
+(`db/migrations/0061_global_search_more_modules.sql`), đúng ghi chú "đăng ký dần" ban đầu:
+`purchase_requests`/`suppliers` (MH), `payment_requests` (KT), `employees` (NS),
+`rental_agreements` (SX) — nâng độ phủ từ 6 lên 9/12 module có "hồ sơ" tìm được (NEN là cấu
+hình hệ thống, BC là báo cáo tổng hợp, cả hai không có hồ sơ để tìm; KHO CHƯA thêm vì các màn
+hình Kho chưa có route `:id` để dẫn thẳng tới — thêm vào sẽ ra kết quả không có chỗ để bấm).
+Cột chọn cố ý tránh cột nhạy cảm: `employees` chỉ lấy `code`/`full_name`/`position`, KHÔNG đụng
+lương/căn cước/sức khỏe; `payment_requests` chỉ lấy `code`/`title`, KHÔNG lấy `amount`. Test
+thêm cho nhánh RLS khó nhất (`employees_select` gộp nhiều điều kiện, không phải Mẫu A trơn):
+HCNS thấy được, Kinh doanh cùng pháp nhân nhưng không liên quan thì không — xác nhận cả qua
+`db/src/__tests__/search.test.ts` (chạy trên CSDL thật) lẫn qua browser thật.
 
 ### 1.6 Seed script v1
 
@@ -749,7 +760,8 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
 - **Mọi trường tham chiếu là liên kết bấm được**, không phải chữ tĩnh
 - Breadcrumb phản ánh **đường đi thực tế**, không phải cấu trúc menu cố định
 - Mở tab mới bằng chuột giữa luôn hoạt động (quan trọng khi người duyệt đối chiếu nhiều hồ sơ)
-- Tìm kiếm toàn hệ thống phủ đủ 12 module
+- ✅ **Tìm kiếm toàn hệ thống phủ 9/12 module** — xem 1.5. Còn thiếu KHO (chưa có route `:id`),
+  NEN và BC (không có "hồ sơ" để tìm, hợp lý)
 
 ### 4B. Rà soát phân quyền toàn hệ thống
 

@@ -29,6 +29,11 @@ const ENTITY_TYPE_LABELS: Record<string, string> = {
   design_project: 'Dự án thiết kế',
   contract: 'Hợp đồng',
   construction_site: 'Công trình',
+  purchase_request: 'Đề nghị mua',
+  supplier: 'Nhà cung cấp',
+  payment_request: 'Đề nghị thanh toán',
+  employee: 'Nhân sự',
+  rental_agreement: 'Hợp đồng cho thuê',
 };
 
 /** Gộp kết quả phẳng thành từng nhóm theo module, giữ nguyên thứ tự CSDL đã xếp hạng trong nhóm. */
