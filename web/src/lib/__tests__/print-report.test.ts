@@ -11,9 +11,7 @@ import { escapeHtml, openPrintReport } from '../print-report';
 
 describe('escapeHtml', () => {
   it('escape các ký tự HTML đặc biệt để chữ động không lọt thẻ thô vào trang in', () => {
-    expect(escapeHtml('<script>alert(1)</script>')).toBe(
-      '&lt;script&gt;alert(1)&lt;/script&gt;',
-    );
+    expect(escapeHtml('<script>alert(1)</script>')).toBe('&lt;script&gt;alert(1)&lt;/script&gt;');
     expect(escapeHtml('Công ty "ABC" & con')).toBe('Công ty &quot;ABC&quot; &amp; con');
   });
 
@@ -35,7 +33,7 @@ describe('openPrintReport', () => {
 
     expect(openSpy).toHaveBeenCalled();
     expect(write).toHaveBeenCalledTimes(1);
-    const html = write.mock.calls[0][0] as string;
+    const html = write.mock.calls[0]?.[0] as string;
     expect(html).toContain('Báo cáo lãi/lỗ theo công trình');
     expect(html).toContain('<table><tr><td>A</td></tr></table>');
     expect(html).toContain('Nhà Việt Group');
@@ -67,7 +65,7 @@ describe('openPrintReport', () => {
 
     openPrintReport('Báo cáo <A & B>', '<p></p>');
 
-    const html = write.mock.calls[0][0] as string;
+    const html = write.mock.calls[0]?.[0] as string;
     expect(html).toContain('<title>Báo cáo &lt;A &amp; B&gt;</title>');
 
     openSpy.mockRestore();

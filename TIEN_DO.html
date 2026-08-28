@@ -347,11 +347,15 @@
           tự nhúng font mới đúng — rủi ro hiển thị sai mà đọc code không phát hiện ra được, đúng
           kiểu lỗi đã từng gặp ở ô ngày và bảng lịch (xem thẻ bên dưới). Cửa sổ in dùng font hệ
           thống, không có khâu nhúng font nào để mà sai.</li>
+      <li><strong>Cả hai báo cáo nay nói rõ dữ liệu tính đến lúc nào, và báo cáo hiệu quả kinh
+          doanh nói thẳng phần còn thiếu</strong> — dòng "Dữ liệu tính đến …" lấy đúng thời điểm
+          vừa truy vấn xong, không phải một con số bịa. Báo cáo hiệu quả kinh doanh trước đây chỉ
+          làm ba trên bốn phần PRD liệt kê nhưng không nói cho người xem biết — nay có một dòng
+          nói thẳng "chưa đo được phần hiệu suất nhân sự/tổ đội/nhà cung cấp" ngay trên màn hình,
+          không chỉ nằm trong ghi chú mã nguồn mà chỉ người viết code mới đọc được.</li>
       <li class="muted"><strong>Cố ý chưa làm:</strong> gộp các thẻ Dashboard thành một endpoint
           gọi một lần (hiện vẫn là các hook riêng); hao hụt/giá thành sản xuất, báo cáo toàn NVG
-          truy ngược xuống pháp nhân, phần thứ tư của BC-03; và "hiện mức độ đầy đủ dữ liệu" riêng
-          cho hai trang báo cáo (Dashboard đã có, hai trang báo cáo thì chưa). Xem thẻ "Chuẩn bị
-          làm" bên dưới.</li>
+          truy ngược xuống pháp nhân, phần thứ tư của BC-03. Xem thẻ "Chuẩn bị làm" bên dưới.</li>
     </ul>
   </div>
 
@@ -563,10 +567,6 @@
           ngược xuống pháp nhân/phòng ban (một phần đã có qua bộ lọc "Toàn NVG" + cột Pháp nhân).
           Phần thứ tư của BC-03 ("hiệu suất nhân sự/tổ đội/nhà cung cấp") cũng chờ ở đây — xem
           thẻ báo cáo bên trên.</li>
-      <li><strong>"Hiện mức độ đầy đủ dữ liệu"</strong> riêng cho hai trang báo cáo (BC-06 phần
-          còn lại) — Dashboard đã nói rõ chỉ số nào chưa đo được (thẻ "Vừa xong" phía trên), hai
-          trang báo cáo lãi/lỗ và hiệu quả kinh doanh thì chưa có phần này. Xuất PDF/Excel thì cả
-          hai đã xong.</li>
       <li><strong>Lệnh sản xuất (SX-01)</strong> còn ở mức CRUD trơn — đổi trạng thái bằng ô chọn
           trực tiếp, chưa có luồng chuyển bước ràng buộc, chưa có định mức tiêu hao hay giá thành
           (SX-02 cố ý chưa làm gì, chờ khảo sát Xưởng giàn giáo NVS).</li>

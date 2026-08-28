@@ -28,6 +28,7 @@ import { useCompanyScope } from '@/lib/company-scope';
 import { escapeHtml, openPrintReport } from '@/lib/print-report';
 import { cn } from '@/lib/utils';
 import { BcNav } from './bc-nav';
+import { ReportFreshness } from './report-meta';
 
 function sum(rows: ProfitLossRow[], key: keyof ProfitLossRow): bigint {
   return rows.reduce((total, r) => {
@@ -147,7 +148,7 @@ function printPdf(
 
 export function ProfitLossReportPage() {
   const scope = useCompanyScope();
-  const { data, isLoading, error } = useProfitLossReport();
+  const { data, isLoading, error, dataUpdatedAt } = useProfitLossReport();
   const companyOf = useCompanyLookup(scope.isAggregate);
 
   return (
@@ -189,6 +190,8 @@ export function ProfitLossReportPage() {
         <EmptyState message="Chưa có công trình nào có ngân sách để tính lãi/lỗ. Ngân sách được lập từ bản dự toán đã phê duyệt ở gói thầu hoặc dự án thiết kế nguồn." />
       ) : (
         <div className="space-y-4">
+          <ReportFreshness dataUpdatedAt={dataUpdatedAt} />
+
           <section className="rounded-lg border border-border bg-surface-sunken p-4">
             <p className="mb-3 font-medium">Toàn danh mục ({data.length} công trình)</p>
             <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">

@@ -41,6 +41,7 @@ import { toUserMessage } from '@/hooks/use-error-message';
 import { useBiddingOutcomes, useOpportunityFunnelBySource } from '@/hooks/use-reports';
 import { escapeHtml, openPrintReport } from '@/lib/print-report';
 import { BcNav } from './bc-nav';
+import { ReportFreshness, ReportIncompleteNote } from './report-meta';
 
 function csvLine(values: readonly (string | number | null)[]): string {
   return values.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',');
@@ -368,6 +369,17 @@ export function SalesEffectivenessPage() {
         <EmptyState message="Chưa có cơ hội hoặc gói thầu nào trong hệ thống để tính hiệu quả kinh doanh." />
       ) : (
         <div className="space-y-6">
+          <div>
+            <ReportFreshness
+              dataUpdatedAt={Math.max(funnel.dataUpdatedAt, outcomes.dataUpdatedAt)}
+            />
+            <ReportIncompleteNote>
+              Báo cáo này chưa có phần "hiệu suất nhân sự/tổ đội/nhà cung cấp" — Thi công chưa có
+              bảng phân công tổ đội, Mua hàng chưa có sổ đánh giá nhà cung cấp, nên chưa có nguồn dữ
+              liệu đáng tin để tính. Ba phần dưới đây (nguồn khách, phễu bán hàng, tỷ lệ trúng thầu)
+              đã đầy đủ.
+            </ReportIncompleteNote>
+          </div>
           <SourceSection rows={summarizeOpportunitiesBySource(funnel.data ?? [])} />
           <FunnelSection rows={summarizeOpportunityFunnel(funnel.data ?? [])} />
           <BiddingSection summary={summarizeBiddingOutcomes(outcomes.data ?? [])} />
