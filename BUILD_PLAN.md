@@ -1046,7 +1046,7 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
   code nguồn trước khi nối hậu tố (`left(v_lot.asset_code, 44)`) vì thêm mili-giây làm vài
   code đã dài (qua nhiều vòng thuê/trả) vượt `varchar(64)`.
 
-### 4C. Áp Content Guidelines toàn diện — ⏳ đối chiếu thư viện 5.1–5.6 xong, còn tương phản màu + vùng bấm ở các trang chưa quét
+### 4C. Áp Content Guidelines toàn diện — ✅ xong (thư viện 5.1–5.6, tương phản màu, vùng bấm)
 
 - ✅ **Thuật ngữ chuẩn hoá (CGD 4.4)** — grep toàn bộ `web/src` theo 7 cặp từ CGD 4.5 cấm dùng
   (Owner/Chủ hồ sơ, Submit/Gửi duyệt, Approve/Chấp thuận, Handover/Chuyển tiếp, Active/Hiện
@@ -1097,9 +1097,50 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
     đã tự đúng theo quy tắc mới từ trước.
   - Quét thêm emoji (không có trong UI, chỉ có trong comment code — không sao) và chữ IN HOA
     nhấn mạnh (không có).
-- ⏳ **Chưa làm**: kiểm tương phản màu ngoài các token đã có test (`design-rules.test.ts` mới
-  canh token, chưa quét màu inline/tuỳ biến nếu có); quét vùng bấm nhỏ ở các trang chưa rà (mới
-  xong Top Bar + PWA banner, còn nhiều trang khác dùng icon-button riêng lẻ chưa kiểm hết).
+- ✅ **Tương phản màu ngoài token** — grep toàn `web/src` tìm màu tuỳ biến bỏ qua hệ token: hex
+  trong `className`/`style` (`text-[#...]`, `style={{color:...}}`), hex literal rải rác trong
+  `.tsx`, và bảng màu Tailwind gốc (`red-500`, `green-600`…) thay vì token thiết kế — KHÔNG có
+  kết quả nào ở cả ba. Toàn bộ codebase chỉ dùng đúng bộ token (`fg`, `surface`, `brand`,
+  `status-*`…), kể cả nơi hay bị bỏ sót nhất (thanh tiến độ dùng `bg-brand` thuần, không có chữ
+  đè lên nên không phát sinh vấn đề tương phản). Không có gì để vá — `design-rules.test.ts` đã
+  canh đủ mọi cặp token/nền thật sự tồn tại trong sản phẩm.
+- ✅ **Vùng bấm nhỏ ở các trang chưa rà** — quét toàn diện icon-button ngoài phạm vi Top Bar/PWA
+  banner đã xong trước đó: liệt kê mọi `aria-label` (25 tệp), mọi lớp `size-6/7/8`, `h-6/7/8`,
+  `p-1`/`p-1.5` gắn với phần tử bấm được, và mọi `Button size="sm"` (28px) dùng cho nút chỉ có
+  icon. Tìm 3 chỗ thật:
+  - **Bộ chọn pháp nhân dạng `compact`** (`company-switcher.tsx`, chỉ hiện dưới `lg:` ở Top
+    Bar — đúng nơi ngón tay cần nhất) — `px-2 py-1` quanh icon 16px + mã pháp nhân, cùng lớp
+    lỗi đã vá cho "Menu tài khoản". Vá bằng `min-h-10 ... sm:min-h-8`, đúng khuôn cũ.
+  - **Nút chuyển tháng trong lịch chọn ngày** (`calendar-popover.tsx`, dùng chung mọi
+    `DateInput` toàn ứng dụng) — `Button size="sm"` mặc định 28px cao. Vá bằng
+    `size-10 sm:size-8`. Nhân tiện bump `h-9` (36px) lên `h-10` (40px) cho ô ngày trong lưới —
+    **không** nới rộng cả khung lịch (`w-72` → `w-80`) để "đủ 40px/cột": đã thử, xác nhận trực
+    tiếp trên trình duyệt việc đó làm nặng thêm một lỗi CÓ SẴN — popover định vị `right-0` so
+    với chính ô nhập, ô nhập càng gần sidebar thì phần mở rộng bên trái càng bị cột nội dung
+    cắt mất (đã thấy tận mắt ở ô "Từ ngày" trang `/kt/dong-tien`: 2 cột lịch đầu + nút "Tháng
+    trước" biến mất hẳn khi thử `w-80`; quay lại `w-72` chỉ còn cột T2 bị cắt — hiện trạng CÓ
+    SẴN từ trước, không phải lỗi mới). Không phải câu hỏi nghiệp vụ cần hỏi Haan — là nợ kỹ
+    thuật thuần tuý (cần sửa cách ĐỊNH VỊ popover: neo theo khung nhìn hoặc portal, không phải
+    nới bề ngang), ngoài phạm vi 4C nên chưa vá ở đây; nhắc lại khi có `DateInput` nào đặt gần
+    mép trái nội dung (sidebar/panel hẹp) gặp lại đúng triệu chứng này.
+  - **Nút chuyển "Pipeline"/"Danh sách"** (`opportunity-pipeline.tsx`) — ẩn chữ nhãn dưới `sm:`,
+    dưới ngưỡng đó chỉ còn icon và `Button size="sm"` không đủ. Vá bằng
+    `size-10 sm:h-8 sm:w-auto sm:px-3`.
+  - Đã LOẠI TRỪ có chủ đích: checkbox chọn dòng trong `entity-table.tsx` và các checkbox biểu
+    mẫu khác (9 chỗ, `size-4`/`size-5`) — control gốc trình duyệt, quy ước rộng khắp toàn cầu
+    tách biệt kích thước THỊ GIÁC khỏi vùng bấm thật (viền/label bao quanh vẫn nhận click),
+    không nằm trong phạm vi 3 ca kiểm "vùng bấm cho ngón tay" đã có từ trước — đổi kích thước
+    checkbox là quyết định ngôn ngữ thiết kế rộng hơn phạm vi một lượt quét lỗi.
+  - Đã xác nhận cả 3 chỗ bằng trình duyệt thật (Chrome, tài khoản TGD) — cửa sổ không co được
+    xuống độ rộng di động thật trong môi trường này (`resize_window` không tác dụng, đã thử
+    nhiều lần, `window.innerWidth` vẫn báo desktop), nên xác nhận được: (a) hai fix trong lịch
+    render đúng, sạch, không lệch bố cục ở cả hai trạng thái di động/máy tính; (b) bộ chọn
+    pháp nhân compact render đúng ở trạng thái `sm:` (32px); (c) không có gì vỡ bố cục ở màn
+    hình máy tính sau khi thêm class. Trạng thái 40px thật trên di động xác nhận qua đối chiếu
+    class với `design-rules.test.ts` (3 ca kiểm mới) và so khớp nguyên văn với mẫu đã áp dụng
+    trước đó (`min-h-10 ... sm:min-h-8`), không quan sát trực tiếp được do giới hạn công cụ.
+  - Test mới: `web/src/test/design-rules.test.ts` — 3 ca kiểm canh cả 3 vá (19 → 22 test, chạy
+    xanh cùng 171 test web còn lại → 174).
 
 ### 4D. Tác vụ nền (NEN-04) — ⏳ hạ tầng xong + 4/4 loại cảnh báo (phần gắn phê duyệt), còn Queues + "hồ sơ thiếu chứng từ"
 

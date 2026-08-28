@@ -152,6 +152,44 @@ describe('Vùng bấm cho ngón tay', () => {
     const button = code.slice(code.indexOf('aria-label={dismissLabel}'));
     expect(button).toContain('size-10');
   });
+
+  /**
+   * Bộ chọn pháp nhân dạng `compact` (đợt rà 4C thứ hai) — CHỈ hiện dưới `lg:` ở Top Bar
+   * (top-bar.tsx), đúng nơi ngón tay cần vùng bấm lớn nhất. Từng chỉ `px-2 py-1` quanh icon
+   * 16px + mã pháp nhân, cùng lớp lỗi đã vá cho "Menu tài khoản".
+   */
+  it('bộ chọn pháp nhân compact có chiều cao tối thiểu 40px trên di động', () => {
+    const code = source('components/layout/company-switcher.tsx');
+    const trigger = code.slice(code.indexOf('DropdownMenu.Trigger'));
+    expect(trigger).toContain('min-h-10');
+  });
+
+  /**
+   * Nút chuyển tháng trong lịch chọn ngày dùng `Button size="sm"` (28px cao) — dưới lịch tháng
+   * dùng chung ở mọi ô nhập ngày (DateInput), nên một lỗi ở đây lan ra toàn bộ ứng dụng.
+   */
+  it('nút chuyển tháng trong lịch chọn ngày có vùng bấm 40×40 trên di động', () => {
+    const code = source('components/ui/calendar-popover.tsx');
+    const prevStart = code.indexOf('aria-label="Tháng trước"') - 200;
+    const nextStart = code.indexOf('aria-label="Tháng sau"') - 200;
+    // Chặn cuối slice của nút TRƯỚC ở đầu slice của nút SAU — nếu không, slice "prev" chạy tới
+    // hết tệp và luôn chứa "size-10" của nút "Tháng sau", làm test xanh giả kể cả khi chỉ một
+    // trong hai nút thật sự có class đó.
+    const prev = code.slice(prevStart, nextStart);
+    const next = code.slice(nextStart);
+    expect(prev).toContain('size-10');
+    expect(next).toContain('size-10');
+  });
+
+  /**
+   * Nút chuyển "Pipeline"/"Danh sách" ở màn hình Cơ hội kinh doanh ẩn chữ nhãn dưới `sm:` —
+   * dưới ngưỡng đó nó chỉ còn icon, và `Button size="sm"` mặc định (28px) không đủ.
+   */
+  it('nút chuyển chế độ xem Pipeline/Danh sách có vùng bấm 40×40 khi chỉ còn icon', () => {
+    const code = source('pages/crm/opportunity-pipeline.tsx');
+    const viewButton = code.slice(code.indexOf('function ViewButton'));
+    expect(viewButton).toContain('size-10');
+  });
 });
 
 describe('Không để trình duyệt tự sinh chữ tiếng Anh', () => {

@@ -100,6 +100,13 @@ export function CalendarPopover({
       role="dialog"
       aria-label="Chọn ngày"
       className={cn(
+        // ⚠️ ĐỪNG tăng w-72 lên w-80/rộng hơn để "đủ 40px/cột": popover này định vị bằng
+        // `right-0` so với chính ô nhập, không phải so với khung nhìn — ô nhập càng gần
+        // sidebar/mép trái thì phần mở rộng bên trái của popover càng lấn vào vùng bị
+        // `overflow` của cột nội dung cắt mất (đã thử w-80 và xác nhận trực tiếp trên trình
+        // duyệt: 2 cột đầu lịch + nút "Tháng trước" biến mất hẳn ở ô "Từ ngày" trang
+        // /kt/dong-tien). Muốn ô ngày đạt đúng 40px cần sửa cách định vị popover (neo theo
+        // khung nhìn hoặc portal), không phải nới rộng bề ngang — xem BUILD_PLAN.md 4C.
         'absolute top-full right-0 z-20 mt-1 w-72 rounded-lg border border-border',
         'bg-surface p-3 shadow-overlay',
       )}
@@ -111,6 +118,9 @@ export function CalendarPopover({
           type="button"
           aria-label="Tháng trước"
           onClick={() => shiftMonth(-1)}
+          // size="sm" của Button ra 28px cao — dưới chuẩn 40px vùng bấm di động (Content
+          // Guidelines 6.8). Ghi đè bằng size-10/size-8 đúng khuôn IconButton ở Top Bar.
+          className="size-10 p-0 sm:size-8"
         >
           <ChevronLeft className="size-4" aria-hidden />
         </Button>
@@ -124,6 +134,7 @@ export function CalendarPopover({
           type="button"
           aria-label="Tháng sau"
           onClick={() => shiftMonth(1)}
+          className="size-10 p-0 sm:size-8"
         >
           <ChevronRight className="size-4" aria-hidden />
         </Button>
@@ -159,7 +170,7 @@ export function CalendarPopover({
                 onClose();
               }}
               className={cn(
-                'flex h-9 items-center justify-center rounded-sm text-sm tabular-nums',
+                'flex h-10 items-center justify-center rounded-sm text-sm tabular-nums',
                 'transition-colors duration-(--motion-fast)',
                 'hover:bg-surface-hover',
                 'focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none',

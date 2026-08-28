@@ -89,7 +89,7 @@
   <div class="stats">
     <div class="stat"><b>12/12</b><span class="xs muted">module đã dựng</span></div>
     <div class="stat"><b>85</b><span class="xs muted">migration</span></div>
-    <div class="stat"><b>697</b><span class="xs muted">kiểm thử tự động</span></div>
+    <div class="stat"><b>700</b><span class="xs muted">kiểm thử tự động</span></div>
     <div class="stat"><b>91</b><span class="xs muted">bảng CSDL</span></div>
   </div>
 </section>
@@ -117,14 +117,13 @@
       <li>Tìm kiếm toàn hệ thống — 10/10 module có hồ sơ (NEN, BC không có hồ sơ để tìm)</li>
       <li>Rà soát phân quyền — 4 đợt trọn vẹn (khoá <code>anon</code>, đối chiếu RLS, rà logic RPC theo 2 chữ ký lỗi + <code>boq_items</code>/<code>unit_prices</code>/view BC, rồi đọc tuần tự ~101 hàm ghi dữ liệu) — vá 17 lỗi thật</li>
       <li>Tác vụ nền NEN-04 — 4/4 loại cảnh báo gắn được đã chạy (giấy tờ nhân sự, công nợ quá hạn, vượt ngân sách, chờ phê duyệt để lâu)</li>
-      <li>Content Guidelines — đối chiếu trọn thư viện 5.1–5.6 (nhãn, nút, thông báo, email, trạng thái rỗng) với chữ thật trên màn hình</li>
+      <li>Content Guidelines — đối chiếu trọn thư viện 5.1–5.6, tương phản màu (không có màu tuỳ biến ngoài token), vùng bấm di động (3 chỗ vá thêm: bộ chọn pháp nhân compact, nút chuyển tháng lịch chọn ngày, nút Pipeline/Danh sách)</li>
       <li>Xuất báo cáo — xác nhận không lộ dữ liệu nhạy cảm</li>
     </ul>
   </div>
   <div class="card">
     <h3><span class="pill s-progress">Đang làm</span></h3>
     <ul>
-      <li>Content Guidelines — còn tương phản màu inline + vùng bấm nhỏ ở các trang chưa quét hết</li>
       <li>"Hồ sơ thiếu chứng từ" (NEN-04) và việc quá hạn KHÔNG gắn phê duyệt — chờ quyết định bảng <code>tasks</code></li>
     </ul>
   </div>
@@ -143,10 +142,10 @@
 <h2>Kiểm thử tự động</h2>
 <div class="card">
   <div class="stats" style="margin-top:0">
-    <div class="stat"><b>697</b><span class="xs muted">tổng số</span></div>
-    <div class="stat"><b>171</b><span class="xs muted">giao diện — chạy ~6 giây, không chạm mạng</span></div>
+    <div class="stat"><b>700</b><span class="xs muted">tổng số</span></div>
+    <div class="stat"><b>174</b><span class="xs muted">giao diện — chạy ~6 giây, không chạm mạng</span></div>
     <div class="stat"><b>526</b><span class="xs muted">nghiệp vụ &amp; phân quyền — chạm CSDL Supabase thật</span></div>
-    <div class="stat"><b style="color:var(--done)">697/697 xanh</b><span class="xs muted">xác nhận 28/08/2026, chạy từng tệp</span></div>
+    <div class="stat"><b style="color:var(--done)">700/700 xanh</b><span class="xs muted">xác nhận 28/08/2026, chạy từng tệp</span></div>
   </div>
   <p class="xs muted" style="margin-top:12px">
     <strong>Chạy dồn toàn bộ cùng lúc (<code>npm test</code>) có thể báo đỏ rải rác</strong> —

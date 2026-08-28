@@ -64,9 +64,7 @@ export function CompanySwitcher({ compact = false }: { compact?: boolean } = {})
         <Building2 className="text-fg-subtle" />
         <div className="min-w-0">
           <div className="truncate font-semibold">{selected.name}</div>
-          <div className="truncate text-xs text-fg-subtle">
-            {selected.roles.join(' · ')}
-          </div>
+          <div className="truncate text-xs text-fg-subtle">{selected.roles.join(' · ')}</div>
         </div>
       </div>
     );
@@ -77,7 +75,11 @@ export function CompanySwitcher({ compact = false }: { compact?: boolean } = {})
       <DropdownMenu.Trigger
         className={cn(
           'flex items-center gap-2 rounded-sm text-left hover:bg-surface-hover',
-          compact ? 'px-2 py-1 font-semibold' : 'w-full px-2 py-2',
+          // Vùng bấm tối thiểu 40px trên di động, 32px trên máy tính có chuột (Content
+          // Guidelines 6.8) — compact chỉ hiện dưới `lg:` (top-bar.tsx), đúng nơi ngón tay cần
+          // vùng bấm lớn nhất; trước đây `px-2 py-1` quanh icon 16px + chữ ra dưới 40px, cùng
+          // lớp lỗi đã vá cho "Menu tài khoản".
+          compact ? 'min-h-10 px-2 py-1 font-semibold sm:min-h-8' : 'w-full px-2 py-2',
         )}
         aria-label={compact ? `Pháp nhân ${selected.code} — chọn pháp nhân khác` : 'Chọn pháp nhân'}
         title={compact ? `${selected.name} — ${selected.roles.join(' · ')}` : undefined}
@@ -88,9 +90,7 @@ export function CompanySwitcher({ compact = false }: { compact?: boolean } = {})
         ) : (
           <div className="min-w-0 flex-1">
             <div className="truncate font-semibold">{selected.name}</div>
-            <div className="truncate text-xs text-fg-subtle">
-              {selected.roles.join(' · ')}
-            </div>
+            <div className="truncate text-xs text-fg-subtle">{selected.roles.join(' · ')}</div>
           </div>
         )}
         <ChevronsUpDown className="size-4 shrink-0 text-fg-subtle" />
@@ -129,9 +129,7 @@ export function CompanySwitcher({ compact = false }: { compact?: boolean } = {})
             >
               <div className="min-w-0 flex-1">
                 <div className="truncate">{o.name}</div>
-                <div className="truncate text-xs text-fg-subtle">
-                  {o.roles.join(' · ')}
-                </div>
+                <div className="truncate text-xs text-fg-subtle">{o.roles.join(' · ')}</div>
               </div>
               {o.id === selected.id && <Check className="text-brand" />}
             </DropdownMenu.Item>

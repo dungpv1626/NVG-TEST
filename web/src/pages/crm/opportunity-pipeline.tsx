@@ -238,6 +238,10 @@ function ViewButton({
       title={label}
       className={cn(
         'rounded-none first:rounded-l-sm last:rounded-r-sm',
+        // Dưới `sm:` chữ nhãn ẩn đi, nút chỉ còn icon — size="sm" của Button (28px) khi đó
+        // dưới chuẩn vùng bấm 40px di động (Content Guidelines 6.8). Ép 40×40 ở di động, trả
+        // lại kích cỡ gọn (icon + chữ) từ `sm:` trở lên.
+        'size-10 sm:h-8 sm:w-auto sm:px-3',
         active && 'bg-brand-subtle text-brand',
       )}
     >
