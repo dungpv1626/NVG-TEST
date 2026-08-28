@@ -902,11 +902,35 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
   quét màu inline/tuỳ biến nếu có); quét vùng bấm nhỏ ở các trang chưa rà (mới xong Top Bar +
   PWA banner, còn nhiều trang khác dùng icon-button riêng lẻ chưa kiểm hết).
 
-### 4D. Tác vụ nền (NEN-04)
+### 4D. Tác vụ nền (NEN-04) — ⏳ hạ tầng xong + 1/4 loại cảnh báo, còn 3 loại + Queues
 
-- Cloudflare **Cron Triggers**: quét hằng ngày → giấy tờ/hợp đồng/bảo hiểm sắp hết hạn (90/60/30/7 ngày),
-  vượt ngân sách, công nợ đến hạn, việc quá hạn
-- Cloudflare **Queues**: gửi email, tổng hợp báo cáo nặng
+- ✅ **Đã dựng `workers/`** — package thứ tư của monorepo (`shared`/`db`/`web`/`workers`), Hono +
+  Cloudflare Cron Trigger, dùng Supabase client với `service_role` (Tech Stack 5.6). Đây là
+  Worker API tùy chỉnh ĐẦU TIÊN của dự án — trước giờ mọi nghiệp vụ đều diễn đạt được bằng
+  RLS/hàm SECURITY DEFINER gọi thẳng từ Frontend (CLAUDE.md 3.1), Cron Trigger là lý do đầu
+  tiên THẬT SỰ cần lớp này vì nó chỉ gắn được vào Worker, không gắn thẳng vào Supabase.
+  Lịch chạy `0 18 * * *` (UTC) = 01:00 sáng giờ Việt Nam, sau giờ làm và trước khi Ban Giám đốc
+  mở Dashboard buổi sáng. Xác nhận chạy đúng cục bộ bằng `wrangler dev --test-scheduled` (không
+  deploy) — gọi `scan_hr_document_reminders` qua RPC thật, tạo đúng 2 `notifications` cho tài
+  khoản `nhansu@nhavietgroup.test` (đã xác nhận lại bằng SQL, không chỉ tin log "ok").
+- ✅ **1/4 loại cảnh báo NEN-04 đã có tác vụ nền thật gọi tới** — nhắc hạn giấy tờ nhân sự
+  (`scan_hr_document_reminders`, NS-10). Hàm này có từ Phase 3E nhưng CHƯA từng có gì gọi tới
+  cho đến bây giờ — chỉ gọi được tay qua SQL Editor trước đó.
+- ⏳ **Chưa làm — 3/4 loại cảnh báo NEN-04 còn lại chưa có hàm quét nào**: việc quá hạn xử lý,
+  chi phí vượt ngân sách công trình (công thức đã có sẵn ở `summarizeBudget()` —
+  `shared/src/tc.ts` — chỉ cần viết lại bằng SQL và thêm cơ chế chống nhắc lại kiểu
+  `last_reminded_stage`), công nợ đến hạn/quá hạn (mốc đã có sẵn ở bảng `aging_buckets`, KT-04).
+  Giấy tờ/hợp đồng/bảo hiểm sắp hết hạn CHỈ mới phủ nhánh nhân sự (NS-10); PRD NEN-04 còn nhắc
+  "hồ sơ thiếu chứng từ" — chưa rõ diễn giải thành điều kiện SQL cụ thể nào, cần hỏi Haan nếu
+  làm tới.
+- ⏳ **Chưa làm — Cloudflare Queues** (gửi email, tổng hợp báo cáo nặng): `RESEND_API_KEY` vẫn
+  để trống (CLAUDE.md 6.6 liệt kê là vấn đề còn mở), nên v1 chỉ dừng ở thông báo trong ứng dụng
+  (`notifications`, đã có kênh hiển thị ở chuông Top Bar từ Phase 3G) — đúng tinh thần "không
+  chặn luồng chính khi thiếu hạ tầng phụ" (CLAUDE.md 5.1). Thêm khi có tài khoản Resend thật.
+- ⏳ **Chưa làm — triển khai thật**: mọi xác nhận ở trên chạy CỤC BỘ qua `wrangler dev`, CHƯA
+  `wrangler deploy`. Deploy thật cần Haan xác nhận trước (CLAUDE.md 6.4) và cần đặt secret
+  `SUPABASE_SERVICE_ROLE_KEY` bằng `wrangler secret put ... --config workers/wrangler.jsonc`
+  — khoá đó KHÔNG được đưa vào `wrangler.jsonc` hay bất kỳ đâu commit vào Git.
 - ⚠️ Nguyên tắc chống "nhàm cảnh báo" (CGD 3.4): **không lặp lại thông báo đã xử lý**, chỉ gửi đúng người
 
 ### 4E. Kiểm thử & triển khai

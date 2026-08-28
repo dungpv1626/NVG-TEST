@@ -1,0 +1,41 @@
+/**
+ * Cấu hình Worker API tùy chỉnh (Tech Stack 3.2, CLAUDE.md 3.1) — TÁCH BIỆT với `web/wrangler.jsonc`
+ * (Worker kia chỉ phục vụ tài sản tĩnh của giao diện). Worker này là nơi đầu tiên trong dự án
+ * cần một `workers/` thật: Cloudflare Cron Trigger chỉ gắn được vào Worker, không gắn thẳng vào
+ * Supabase — nên tác vụ nền NEN-04 (quét cảnh báo định kỳ) phải đi qua đây.
+ *
+ * ⚠️ Cùng lưu ý như `web/wrangler.jsonc`: KHÔNG deploy kèm `--env production` (sinh Worker thứ
+ * hai `nvg-api-production` thay vì cập nhật bản gốc).
+ */
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "nvg-api",
+  "compatibility_date": "2026-08-26",
+  "main": "src/index.ts",
+
+  /**
+   * NEN-04 — quét cảnh báo định kỳ. `0 18 * * *` (UTC) = 01:00 sáng giờ Việt Nam (UTC+7) —
+   * chạy sau giờ làm việc, trước khi Ban Giám đốc mở Dashboard buổi sáng.
+   *
+   * ⚠️ v1 mới nối ĐÚNG MỘT trong bốn loại cảnh báo NEN-04 liệt kê (nhắc hạn giấy tờ nhân sự,
+   * `scan_hr_document_reminders` — NS-10, đã có sẵn hàm từ Phase 3E nhưng chưa từng có gì gọi
+   * tới). Ba loại còn lại (việc quá hạn xử lý, chi phí vượt ngân sách, công nợ đến hạn) CHƯA
+   * có hàm quét — xem BUILD_PLAN.md mục 4D để không tưởng lầm là đã xong hết NEN-04.
+   */
+  "triggers": {
+    "crons": ["0 18 * * *"]
+  },
+
+  "observability": { "enabled": true },
+
+  "vars": {
+    "SUPABASE_URL": "https://awaiwegmuykhctnysvou.supabase.co"
+  },
+
+  /**
+   * `SUPABASE_SERVICE_ROLE_KEY` KHÔNG khai ở đây — đây là secret, đặt bằng
+   * `wrangler secret put SUPABASE_SERVICE_ROLE_KEY --config workers/wrangler.jsonc` lúc triển
+   * khai thật. Chạy cục bộ: tạo `workers/.dev.vars` (đã có trong `.gitignore` chung của repo)
+   * với dòng `SUPABASE_SERVICE_ROLE_KEY=...` lấy từ `.env` gốc.
+   */
+}

@@ -216,6 +216,14 @@
           tình mở lại cho MỌI người đã đăng nhập gọi thẳng — không lộ dữ liệu nhạy cảm, nhưng
           gọi được là gửi lại một loạt thông báo cho cả công ty ngoài lịch, đúng điều migration
           gốc đã ngăn từ đầu. Đã khoá lại và thêm kiểm thử canh không để lặp lại.</li>
+      <li><strong>Tác vụ chạy nền đầu tiên đã thật sự chạy được</strong> — dựng gói thứ tư của hệ
+          thống chuyên lo việc này (bên cạnh giao diện, cơ sở dữ liệu và các hàm nghiệp vụ), hẹn
+          giờ chạy mỗi đêm. Việc đầu tiên nối vào: nhắc hạn giấy tờ nhân sự (chứng chỉ an toàn,
+          khám sức khỏe…) — hàm tính đã có sẵn từ trước nhưng chưa từng có gì gọi tới, giờ mỗi
+          đêm tự chạy và tạo thông báo thật cho Hành chính – Nhân sự. Đã thử chạy thật (chưa đưa
+          lên mạng) và xác nhận đúng có thông báo mới sinh ra. Ba loại cảnh báo còn lại của
+          NEN-04 (việc quá hạn, vượt ngân sách, công nợ đến hạn) và việc gửi email chưa làm —
+          hiện chỉ có thông báo trong ứng dụng.</li>
     </ul>
   </div>
 
@@ -619,6 +627,10 @@
       <li><strong>Lệnh sản xuất (SX-01)</strong> còn ở mức CRUD trơn — đổi trạng thái bằng ô chọn
           trực tiếp, chưa có luồng chuyển bước ràng buộc, chưa có định mức tiêu hao hay giá thành
           (SX-02 cố ý chưa làm gì, chờ khảo sát Xưởng giàn giáo NVS).</li>
+      <li><strong>Ba loại cảnh báo tự động còn thiếu (NEN-04)</strong> — việc quá hạn xử lý, chi
+          phí vượt ngân sách công trình, công nợ đến hạn/quá hạn. Công thức tính đã có sẵn ở nơi
+          khác (Dashboard, báo cáo lãi/lỗ), chỉ còn viết lại thành tác vụ chạy nền + tạo thông
+          báo, theo đúng khuôn vừa dựng cho nhắc hạn giấy tờ nhân sự.</li>
       <li><strong>Bảng <code>tasks</code> — quyết định bỏ hay dùng thật.</strong> Trung tâm Thông
           báo (bảng <code>notifications</code>) đã nối xong (xem thẻ "Vừa xong" phía trên), nhưng
           "Việc cần làm" ở Top Bar vẫn chỉ là Hộp thư Phê duyệt — việc không gắn phê duyệt (vd.

@@ -1,9 +1,9 @@
 {
-  // `workers/` sẽ được thêm vào danh sách này khi có endpoint tùy chỉnh đầu tiên (Phase 2B).
   "files": [],
   "references": [
     { "path": "./shared" },
     { "path": "./db" },
-    { "path": "./web" }
+    { "path": "./web" },
+    { "path": "./workers" }
   ]
 }

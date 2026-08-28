@@ -1,0 +1,20 @@
+{
+  "name": "@nvg/workers",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --config wrangler.jsonc",
+    "typecheck": "tsc -b --pretty",
+    "deploy": "wrangler deploy --config wrangler.jsonc"
+  },
+  "dependencies": {
+    "@nvg/shared": "*",
+    "@supabase/supabase-js": "^2.48.1",
+    "hono": "^4.13.5"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260828.1",
+    "wrangler": "^4.126.0"
+  }
+}
