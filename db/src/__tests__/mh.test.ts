@@ -995,6 +995,27 @@ describeDb('MH — giao nhận và bộ chứng từ sang Kế toán (MH-07, MH-
     });
     expect(error).toBeTruthy();
   });
+
+  it('đơn đã giao đủ thì không hủy được nữa (0077)', async () => {
+    // orderId ở đây đã "da_giao_du" từ bài test trước (hàng đã về đủ, tiền đã ghi actual_amount).
+    // Trước 0077: hủy vẫn cho qua, để lại đơn "huy" nhưng có phiếu nhận hàng đính kèm, và tiền
+    // đã chi không bao giờ được hoàn tác.
+    const { error } = await muaHang.rpc('cancel_purchase_order', {
+      p_order_id: orderId,
+      p_reason: 'Thử hủy sau khi đã nhận hàng.',
+    });
+    expect(error, 'đơn đã nhận hàng không hủy được nữa').toBeTruthy();
+    expect(error!.message).toContain('đã nhận hàng');
+
+    const { data: order } = await muaHang
+      .from('purchase_orders')
+      .select('stage')
+      .eq('id', orderId)
+      .single();
+    expect((order as { stage: string }).stage, 'stage không đổi sau khi hủy bị chặn').toBe(
+      'da_giao_du',
+    );
+  });
 });
 
 describeDb('MH — danh mục nhà cung cấp và lịch sử giá (MH-03, MH-05)', () => {

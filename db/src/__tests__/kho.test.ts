@@ -707,6 +707,49 @@ describeDb('KHO — vòng đời giàn giáo (KHO-06)', () => {
     expect(rows[0]!.responsible_party).toMatch(/Tổ đội/);
     expect(BigInt(rows[0]!.amount)).toBe(6_000_000n);
   });
+
+  it('mã lô mới không vượt varchar(64) dù lô nguồn đã có mã dài (0079)', async () => {
+    // Đúng khuôn 0063: một lô đã qua nhiều vòng thuê/trả/sửa có mã dài dần. Dựng thẳng một lô
+    // nguồn với mã gần chạm giới hạn 64 ký tự bằng kết nối quản trị (bỏ qua RLS).
+    const { createConnection } = await import('../client');
+    const { sql } = createConnection();
+    const longCode = 'TEST-GG-' + 'X'.repeat(52); // 60 ký tự
+    let longAssetId: string;
+    try {
+      const [row] = await sql<{ id: string }[]>`
+        INSERT INTO scaffolding_assets (company_id, asset_code, material_id, quantity, condition,
+                                        location_type, warehouse_id)
+        VALUES (${fixture.nvcCompanyId}, ${longCode}, ${fixture.materialGiao}, 50, 'moi',
+                'kho', ${fixture.warehouseA})
+        RETURNING id
+      `;
+      longAssetId = row!.id;
+    } finally {
+      await sql.end();
+    }
+
+    // 'cho_thanh_ly' chưa có lô nào ở kho A cho vật tư này — buộc phải INSERT lô mới, không
+    // merge — đúng đường đi tạo mã mới mà 0079 vá.
+    const { error } = await kho.rpc('record_scaffolding_event', {
+      p_asset_id: longAssetId,
+      p_event_type: 'sua_chua',
+      p_quantity: 10,
+      p_reason: 'Thử mã lô dài — chỉ để kiểm mã không vượt varchar(64).',
+      p_result_condition: 'cho_thanh_ly',
+    });
+    expect(error, 'trước 0079 có thể ra lỗi "value too long"').toBeNull();
+
+    const { data: newLot } = await kho
+      .from('scaffolding_assets')
+      .select('asset_code')
+      .eq('material_id', fixture.materialGiao)
+      .eq('warehouse_id', fixture.warehouseA)
+      .eq('condition', 'cho_thanh_ly')
+      .single();
+    const code = (newLot as { asset_code: string }).asset_code;
+    expect(code.length).toBeLessThanOrEqual(64);
+    expect(code).toContain('CHO');
+  });
 });
 
 /**

@@ -18,6 +18,7 @@ const describeDb = hasCredentials ? describe : describe.skip;
 interface Fixture {
   stamp: string;
   customerCode: string;
+  customerId: string;
   opportunityCode: string;
   opportunityId: string;
   employeeCode: string;
@@ -103,6 +104,7 @@ async function seedFixture(): Promise<Fixture> {
     return {
       stamp,
       customerCode,
+      customerId: customer!.id,
       opportunityCode,
       opportunityId: opportunity!.id,
       employeeCode,
@@ -125,9 +127,13 @@ async function cleanupFixture(fixture: Fixture): Promise<void> {
   const { createConnection } = await import('../client');
   const { sql } = createConnection();
   try {
-    await sql`DELETE FROM opportunities WHERE name LIKE ${TEST_PREFIX + '%'}`;
-    await sql`DELETE FROM customers WHERE name LIKE ${TEST_PREFIX + '%'}`;
-    await sql`DELETE FROM employees WHERE full_name LIKE ${TEST_PREFIX + '%'}`;
+    // Xoá theo ĐÚNG id của fixture này, không phải LIKE tiền tố test rộng — global-teardown.ts
+    // đã ghi rõ lý do: Vitest chạy nhiều tệp song song, một tệp xong trước xoá rộng theo tiền
+    // tố sẽ xoá luôn bản ghi tệp khác đang dùng dở (đã gặp thật khi chạy chung với sx.test.ts:
+    // xoá customers rộng đụng FK từ rental_agreements của fixture SX chưa kịp dọn).
+    await sql`DELETE FROM opportunities WHERE id = ${fixture.opportunityId}`;
+    await sql`DELETE FROM customers WHERE id = ${fixture.customerId}`;
+    await sql`DELETE FROM employees WHERE id = ${fixture.employeeId}`;
     await sql`DELETE FROM stocktakes WHERE id = ${fixture.stocktakeId}`;
     await sql`DELETE FROM scaffolding_assets WHERE id = ${fixture.scaffoldingAssetId}`;
     await sql`DELETE FROM warehouses WHERE id IN (${fixture.warehouseId}, ${fixture.warehouseNvoId})`;

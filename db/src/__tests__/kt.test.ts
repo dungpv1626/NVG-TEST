@@ -700,6 +700,106 @@ describeDb('KT — tạm ứng (KT-03)', () => {
     expect(advances).toHaveLength(1);
     expect((advances![0] as { status: string }).status).toBe('dang_no');
   });
+
+  it('hai đề nghị hoàn ứng gửi cùng lúc không được cùng ghi nhận đã chi vượt số còn nợ (0078)', async () => {
+    // Dựng khoản tạm ứng còn nợ 10 triệu, đúng khuôn bài test trên.
+    const advanceId = await draftRequest({
+      client: ketoan,
+      fixture,
+      amount: 10_000_000n,
+      requestType: 'tam_ung',
+      advanceUserId: fixture.congTruongUserId,
+      advanceDueDate: new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10),
+    });
+    await ketoan
+      .from('payment_requests')
+      .update({ advance_override_reason: 'Ứng trước cho vật tư gấp.' })
+      .eq('id', advanceId);
+    await ketoan.rpc('submit_payment_request', { p_request_id: advanceId });
+    await chiHuy.rpc('advance_payment_step', { p_request_id: advanceId, p_decision: 'approved' });
+    await ketoan.rpc('advance_payment_step', { p_request_id: advanceId, p_decision: 'approved' });
+    await cfo.rpc('advance_payment_step', { p_request_id: advanceId, p_decision: 'approved' });
+    const { data: advApproval } = await cfo
+      .from('approvals')
+      .select('id')
+      .eq('entity_type', 'payment_requests')
+      .eq('entity_id', advanceId)
+      .single();
+    await cfo.rpc('decide_approval', {
+      p_approval_id: (advApproval as { id: string }).id,
+      p_decision: 'approved',
+    });
+    await ketoan.rpc('record_payment', {
+      p_request_id: advanceId,
+      p_paid_date: new Date().toISOString().slice(0, 10),
+      p_method: 'tien_mat',
+    });
+    const { data: adv } = await ketoan
+      .from('advances')
+      .select('id')
+      .eq('payment_request_id', advanceId)
+      .single();
+    const settlesAdvanceId = (adv as { id: string }).id;
+
+    // Đưa cả HAI đề nghị hoàn ứng (mỗi cái 8 triệu, cùng vượt quá nửa khoản nợ 10 triệu) qua
+    // hết vòng phê duyệt TRƯỚC KHI đề nghị nào được ghi nhận đã chi — đúng kịch bản đua nhau:
+    // cả hai đều gửi lúc settled_amount vẫn là 0 nên submit_payment_request không chặn được.
+    async function approveHoanUng(amount: bigint): Promise<string> {
+      const id = await draftRequest({
+        client: ketoan,
+        fixture,
+        amount,
+        requestType: 'hoan_ung',
+        settlesAdvanceId,
+      });
+      const { error: submitError } = await ketoan.rpc('submit_payment_request', {
+        p_request_id: id,
+      });
+      expect(submitError, 'settled_amount vẫn 0 lúc gửi — cả hai đều qua được').toBeNull();
+      await chiHuy.rpc('advance_payment_step', { p_request_id: id, p_decision: 'approved' });
+      await ketoan.rpc('advance_payment_step', { p_request_id: id, p_decision: 'approved' });
+      await cfo.rpc('advance_payment_step', { p_request_id: id, p_decision: 'approved' });
+      const { data: approval } = await cfo
+        .from('approvals')
+        .select('id')
+        .eq('entity_type', 'payment_requests')
+        .eq('entity_id', id)
+        .single();
+      await cfo.rpc('decide_approval', {
+        p_approval_id: (approval as { id: string }).id,
+        p_decision: 'approved',
+      });
+      return id;
+    }
+
+    const firstId = await approveHoanUng(8_000_000n);
+    const secondId = await approveHoanUng(8_000_000n);
+
+    const { error: firstPaid } = await ketoan.rpc('record_payment', {
+      p_request_id: firstId,
+      p_paid_date: new Date().toISOString().slice(0, 10),
+      p_method: 'tien_mat',
+    });
+    expect(firstPaid).toBeNull();
+
+    // Trước 0078: hàm này vẫn cho qua, đẩy settled_amount lên 16 triệu — vượt hẳn khoản nợ
+    // 10 triệu — mà không có exception nào chặn.
+    const { error: secondPaid } = await ketoan.rpc('record_payment', {
+      p_request_id: secondId,
+      p_paid_date: new Date().toISOString().slice(0, 10),
+      p_method: 'tien_mat',
+    });
+    expect(secondPaid, 'đề nghị hoàn ứng thứ hai vượt số còn nợ phải bị chặn').toBeTruthy();
+    expect(secondPaid!.message).toContain('lớn hơn số còn nợ');
+
+    const { data: advAfter } = await ketoan
+      .from('advances')
+      .select('settled_amount, status')
+      .eq('id', settlesAdvanceId)
+      .single();
+    expect(Number((advAfter as { settled_amount: string }).settled_amount)).toBe(8_000_000);
+    expect((advAfter as { status: string }).status).toBe('dang_no');
+  });
 });
 
 describeDb('KT — công nợ và số đã thu của hợp đồng (KT-04, HD-03)', () => {

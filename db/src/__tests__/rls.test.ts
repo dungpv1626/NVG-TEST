@@ -622,6 +622,38 @@ describeDb('CRM — pipeline cơ hội kinh doanh', () => {
     expect(withReason).toBeNull();
   });
 
+  it('cơ hội ở giai đoạn kết thúc pipeline không đổi giai đoạn được nữa (0076)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const id = await createOpportunity(kd);
+
+    const { error: lost } = await kd.rpc('move_opportunity_stage', {
+      p_opportunity_id: id,
+      p_to_stage: 'mat_co_hoi',
+      p_note: null,
+      p_lost_reason: 'Khách chọn nhà thầu khác vì giá thấp hơn',
+    });
+    expect(lost).toBeNull();
+
+    // Trước 0076: đổi được sang giai đoạn khác dù đã "mất cơ hội", và lost_reason cũ còn
+    // giữ nguyên trên một cơ hội đang "hoạt động lại" — cả hai đều sai.
+    const { error: revive } = await kd.rpc('move_opportunity_stage', {
+      p_opportunity_id: id,
+      p_to_stage: 'khao_sat',
+      p_note: null,
+      p_lost_reason: null,
+    });
+    expect(revive, 'giai đoạn kết thúc không đổi tiếp được nữa').toBeTruthy();
+    expect(revive!.message).toContain('kết thúc');
+
+    const { data: unchanged } = await kd
+      .from('opportunities')
+      .select('stage, lost_reason')
+      .eq('id', id)
+      .single();
+    expect(unchanged!.stage).toBe('mat_co_hoi');
+    expect(unchanged!.lost_reason).toContain('giá thấp hơn');
+  });
+
   it('cơ hội đã bàn giao chuyển chế độ chỉ xem (CRM-06)', async () => {
     const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
     const admin = await signInAs(ACCOUNTS.admin);
@@ -1736,6 +1768,36 @@ describeDb('DA — gói thầu, dự toán và ngân sách', () => {
     expect(Number(breakdown![0].direct_cost)).toBe(91_500_000);
   });
 
+  it('khối lượng có phần lẻ tính đúng thành tiền, không bị làm tròn trước khi nhân (0075)', async () => {
+    const dt = await signInAs(ACCOUNTS.dauThauNvc);
+    const project = await createBiddingProject(dt);
+    const estimateId = await createEstimate(dt, project, 400_000_000);
+
+    // 2.5 m³ * 100.000 = 250.000. Trước 0075: quantity bị ép bigint (làm tròn) TRƯỚC khi
+    // nhân, ra 200.000 hoặc 300.000 tuỳ round-half-to-even — không bao giờ đúng 250.000.
+    const { data: count, error } = await dt.rpc('save_estimate_items', {
+      p_estimate_id: estimateId,
+      p_items: [
+        {
+          cost_group: 'vat_tu',
+          description: 'Bê tông móng',
+          unit: 'm3',
+          quantity: 2.5,
+          unit_price: 100_000,
+        },
+      ],
+    });
+    expect(error).toBeNull();
+    expect(count).toBe(1);
+
+    const { data: items } = await dt
+      .from('estimate_items')
+      .select('amount')
+      .eq('estimate_id', estimateId)
+      .single();
+    expect(Number(items!.amount)).toBe(250_000);
+  });
+
   it('CSDL cấp số phiên bản dự toán, chỉ MỘT bản đang hiệu lực (DA-07, NEN-05)', async () => {
     const dt = await signInAs(ACCOUNTS.dauThauNvc);
     const project = await createBiddingProject(dt);
@@ -1984,6 +2046,89 @@ describeDb('DA — gói thầu, dự toán và ngân sách', () => {
     expect(seenByDt!.map((b) => b.cost_group).sort()).toEqual(
       ['chi_phi_chung', 'du_phong', 'nhan_cong', 'vat_tu'].sort(),
     );
+  });
+
+  it('dòng dự toán trùng nhóm chi phí chung/dự phòng/lợi nhuận thì CỘNG DỒN vào ngân sách, không mất (0080)', async () => {
+    const dt = await signInAs(ACCOUNTS.dauThauNvc);
+    const tgd = await signInAs(ACCOUNTS.tgd);
+    const project = await createBiddingProject(dt);
+    const estimateId = await createEstimate(dt, project, 500_000_000);
+
+    // COST_GROUPS (shared/src/da.ts) cho phép dòng dự toán chi tiết dùng đúng nhóm
+    // "chi_phi_chung" — người lập dự toán có thể làm việc này thật (ví dụ khai một khoản chi
+    // phí chung cụ thể bằng dòng riêng). Trước 0080: dòng này trùng cost_code với khoản
+    // overhead_cost nhập ở save_estimate_costs, và khoản sau bị NOT EXISTS bỏ qua hoàn toàn.
+    await dt.rpc('save_estimate_items', {
+      p_estimate_id: estimateId,
+      p_items: [
+        {
+          cost_group: 'vat_tu',
+          description: 'Thép',
+          unit: 'kg',
+          quantity: 1000,
+          unit_price: 21_500,
+        },
+        {
+          cost_group: 'nhan_cong',
+          description: 'Nhân công',
+          unit: 'công',
+          quantity: 100,
+          unit_price: 350_000,
+        },
+        {
+          cost_group: 'chi_phi_chung',
+          description: 'Chi phí chung dòng riêng',
+          unit: 'khoản',
+          quantity: 1,
+          unit_price: 5_000_000,
+        },
+      ],
+    });
+    await dt.rpc('save_estimate_costs', {
+      p_estimate_id: estimateId,
+      p_direct_cost: 56_500_000,
+      p_overhead_cost: 20_000_000,
+      p_contingency_cost: 10_000_000,
+      p_finance_cost: 0,
+      p_tax_amount: 0,
+      p_profit_amount: 60_000_000,
+      p_profit_margin_percent: 12,
+    });
+
+    const { data: approvalId } = await dt.rpc('request_estimate_approval', {
+      p_estimate_id: estimateId,
+    });
+    await tgd.rpc('decide_approval', { p_approval_id: approvalId, p_decision: 'approved' });
+    await dt.from('bid_documents').insert({
+      company_id: project.companyId,
+      bidding_project_id: project.id,
+      category: 'bang_gia',
+      name: 'Bảng giá dự thầu',
+      is_required: false,
+    });
+    await dt.rpc('submit_bid', { p_bidding_project_id: project.id });
+    await dt.rpc('record_bid_result', { p_bidding_project_id: project.id, p_won: true });
+
+    const { error } = await dt.rpc('generate_project_budget', {
+      p_bidding_project_id: project.id,
+    });
+    expect(error).toBeNull();
+
+    const { data: budget } = await tgd
+      .from('project_budgets')
+      .select('cost_code, budgeted_amount')
+      .eq('bidding_project_id', project.id);
+    const byCode = Object.fromEntries(
+      (budget as { cost_code: string; budgeted_amount: string }[]).map((b) => [
+        b.cost_code,
+        Number(b.budgeted_amount),
+      ]),
+    );
+    // Trước 0080: CHI_PHI_CHUNG dừng ở 5 triệu (chỉ dòng dự toán) — 20 triệu overhead_cost mất
+    // hẳn, không báo lỗi.
+    expect(byCode.CHI_PHI_CHUNG).toBe(5_000_000 + 20_000_000);
+    expect(byCode.DU_PHONG).toBe(10_000_000);
+    expect(byCode.LOI_NHUAN).toBe(60_000_000);
   });
 
   it('pháp nhân khác KHÔNG thấy gói thầu (Mẫu A, NEN-01)', async () => {
@@ -3134,8 +3279,23 @@ describeDb('HD — hợp đồng, điều khoản và phát sinh', () => {
       p_confirmed_by: 'Chủ đầu tư Trần Văn B',
     });
 
+    const { data: before } = await kd
+      .from('contracts')
+      .select('value')
+      .eq('id', contract.id)
+      .single();
+
     const { error: done } = await kd.rpc('execute_amendment', { p_amendment_id: amendmentId });
     expect(done).toBeNull();
+
+    // 0074: giá trị hợp đồng phải cộng thêm value_change của phát sinh (40 triệu, createAmendment)
+    // ngay khi thực hiện — trước đây contracts.value đứng yên mãi mãi sau khi thực hiện phát sinh.
+    const { data: after } = await kd
+      .from('contracts')
+      .select('value')
+      .eq('id', contract.id)
+      .single();
+    expect(Number(after!.value)).toBe(Number(before!.value) + 40_000_000);
   });
 
   it('trường hợp khẩn cấp bỏ qua xác nhận khách, nhưng PHẢI ghi rõ người cho phép (HD-04)', async () => {

@@ -519,6 +519,83 @@
       "when": 1787899259651,
       "tag": "0073_fix_sites_budget_status_log_overreach",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1787905243711,
+      "tag": "0074_fix_execute_amendment_value_not_applied",
+      "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1787905065708,
+      "tag": "0075_fix_save_estimate_items_quantity_truncation",
+      "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1787905065724,
+      "tag": "0076_fix_move_opportunity_stage_terminal_lock",
+      "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1787905065740,
+      "tag": "0077_fix_cancel_purchase_order_after_delivery",
+      "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1787905065755,
+      "tag": "0078_fix_record_payment_advance_settlement_race",
+      "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1787905065772,
+      "tag": "0079_fix_record_scaffolding_event_code_collision",
+      "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1787905065788,
+      "tag": "0080_fix_build_budget_lines_overhead_silently_dropped",
+      "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1787905065804,
+      "tag": "0081_fix_log_employee_sensitive_edit_insert_branch",
+      "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1787905065820,
+      "tag": "0082_fix_hire_candidate_headcount_race",
+      "breakpoints": true
+    },
+    {
+      "idx": 83,
+      "version": "7",
+      "when": 1787905065835,
+      "tag": "0083_fix_submit_leave_request_overlap",
+      "breakpoints": true
+    },
+    {
+      "idx": 84,
+      "version": "7",
+      "when": 1787905065851,
+      "tag": "0084_fix_save_attendance_hours_bound",
+      "breakpoints": true
     }
   ]
 }

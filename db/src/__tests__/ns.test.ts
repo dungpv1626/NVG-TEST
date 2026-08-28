@@ -203,6 +203,46 @@ describeDb('NS — hồ sơ nhân sự và dữ liệu nhạy cảm (NS-01, NEN-
     expect(logged).toBeGreaterThan(0);
   });
 
+  it('tạo mới nhân viên với insurance_salary/discipline_notes cũng ghi log nhạy cảm (0081)', async () => {
+    // Trước 0081: nhánh INSERT chỉ kiểm base_salary/allowance (lương) và id_number/health_notes
+    // (cá nhân) — tạo mới một nhân viên chỉ điền insurance_salary hoặc chỉ discipline_notes
+    // (không đụng tới 4 cột kia) sẽ ÂM THẦM không ghi sensitive_access_logs.
+    const { data: created, error } = await hcns
+      .from('employees')
+      .insert({
+        company_id: fixture.nvcCompanyId,
+        code: `TEST-NS-${Date.now()}`,
+        full_name: `${TEST_PREFIX} Nhân viên thử log 0081`,
+        position: 'Nhân viên thử việc',
+        insurance_salary: '5000000',
+        discipline_notes: 'Không có vi phạm.',
+      })
+      .select('id')
+      .single();
+    expect(error).toBeNull();
+    const employeeId = (created as { id: string }).id;
+
+    const salaryLogged = await withSql(async (sql) => {
+      const rows = await sql<{ n: string }[]>`
+        SELECT count(*)::text AS n FROM sensitive_access_logs
+         WHERE entity_id = ${employeeId} AND sensitive_kind = 'salary'
+      `;
+      return Number(rows[0]?.n ?? 0);
+    });
+    expect(salaryLogged, 'insurance_salary một mình cũng phải ghi log salary').toBeGreaterThan(0);
+
+    const personalLogged = await withSql(async (sql) => {
+      const rows = await sql<{ n: string }[]>`
+        SELECT count(*)::text AS n FROM sensitive_access_logs
+         WHERE entity_id = ${employeeId} AND sensitive_kind = 'personal'
+      `;
+      return Number(rows[0]?.n ?? 0);
+    });
+    expect(personalLogged, 'discipline_notes một mình cũng phải ghi log personal').toBeGreaterThan(
+      0,
+    );
+  });
+
   it('Mua hàng không xem được lương của người khác (PRD NS ranh giới)', async () => {
     const { error } = await muaHang.rpc('employee_salary', {
       p_employee_id: fixture.officeEmployeeId,
@@ -324,6 +364,34 @@ describeDb('NS — chấm công ba khối (NS-04, NS-05)', () => {
       ],
     });
     expect(error?.message).toContain('không nằm trong kỳ');
+  });
+
+  it('chặn số giờ công âm hoặc phi thực tế ở biên RPC (0084)', async () => {
+    const period = await openPeriod(hcns, 'van_phong');
+
+    const negative = await hcns.rpc('save_attendance', {
+      p_period_id: period,
+      p_entries: [
+        { employee_id: fixture.officeEmployeeId, work_date: day(4), kind: 'lam_viec', hours: -2 },
+      ],
+    });
+    expect(negative.error, 'giờ công âm phải bị chặn').toBeTruthy();
+    expect(negative.error!.message).toContain('0–24');
+
+    const tooMany = await hcns.rpc('save_attendance', {
+      p_period_id: period,
+      p_entries: [
+        {
+          employee_id: fixture.officeEmployeeId,
+          work_date: day(4),
+          kind: 'lam_viec',
+          hours: 8,
+          overtime_hours: 30,
+        },
+      ],
+    });
+    expect(tooMany.error, 'tăng ca 30 giờ/ngày phải bị chặn').toBeTruthy();
+    expect(tooMany.error!.message).toContain('0–24');
   });
 
   it('"nghỉ có phép" phải có đơn nghỉ đã duyệt phủ đúng ngày đó (NS-05)', async () => {
@@ -613,6 +681,60 @@ describeDb('NS — nghỉ phép, tài sản, nghỉ việc (NS-05, NS-08, NS-11)
       return rows[0]?.status;
     });
     expect(status).toBe('da_duyet');
+  });
+
+  it('không gửi phê duyệt được đơn nghỉ trùng ngày với đơn khác đang chờ/đã duyệt (0083)', async () => {
+    const first = await hcns
+      .from('leave_requests')
+      .insert({
+        company_id: fixture.nvcCompanyId,
+        employee_id: fixture.officeEmployeeId,
+        type: 'phep_nam',
+        from_date: `${TEST_TIMESHEET_YEAR}-04-10`,
+        to_date: `${TEST_TIMESHEET_YEAR}-04-12`,
+        day_count: '3',
+        reason: `${TEST_PREFIX} Nghỉ phép đợt 1`,
+      })
+      .select('id')
+      .single();
+    expect(first.error).toBeNull();
+    const firstId = (first.data as { id: string }).id;
+
+    const { error: firstSubmit } = await hcns.rpc('submit_leave_request', {
+      p_leave_id: firstId,
+    });
+    expect(firstSubmit).toBeNull();
+
+    // 04-11 đến 04-13 trùng 04-11/04-12 với đơn trên, vẫn đang "cho_duyet".
+    const second = await hcns
+      .from('leave_requests')
+      .insert({
+        company_id: fixture.nvcCompanyId,
+        employee_id: fixture.officeEmployeeId,
+        type: 'phep_nam',
+        from_date: `${TEST_TIMESHEET_YEAR}-04-11`,
+        to_date: `${TEST_TIMESHEET_YEAR}-04-13`,
+        day_count: '3',
+        reason: `${TEST_PREFIX} Nghỉ phép đợt 2 trùng ngày`,
+      })
+      .select('id')
+      .single();
+    expect(second.error).toBeNull();
+    const secondId = (second.data as { id: string }).id;
+
+    const { error: secondSubmit } = await hcns.rpc('submit_leave_request', {
+      p_leave_id: secondId,
+    });
+    expect(secondSubmit, 'trùng ngày với đơn đang chờ duyệt phải bị chặn').toBeTruthy();
+    expect(secondSubmit!.message).toContain('trùng ngày');
+
+    const status = await withSql(async (sql) => {
+      const rows = await sql<{ status: string }[]>`
+        SELECT status FROM leave_requests WHERE id = ${secondId}
+      `;
+      return rows[0]?.status;
+    });
+    expect(status, 'đơn bị chặn phải vẫn ở bước nháp').toBe('nhap');
   });
 
   it('đơn đã duyệt thì ngày nghỉ ghi được vào bảng chấm công (NS-05)', async () => {

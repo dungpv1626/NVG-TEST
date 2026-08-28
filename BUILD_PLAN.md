@@ -802,7 +802,7 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
   từ trước. Một chỗ sai duy nhất tìm được: nút "Mở hợp đồng" (`draft-contract-button.tsx`) dùng
   `onClick={() => navigate(...)}` — đã sửa sang `<Button asChild><Link to=…>`.
 
-### 4B. Rà soát phân quyền toàn hệ thống — ⏳ đợt 1+2+3 xong (kể cả boq_items/unit_prices/view BC) + export sạch, còn phần business logic chưa kiểm hết
+### 4B. Rà soát phân quyền toàn hệ thống — ✅ đợt 1+2+3+4 xong (kể cả boq_items/unit_prices/view BC, export sạch, và business logic ~101 hàm ghi dữ liệu)
 
 - ✅ **Đợt 1 — khoá `EXECUTE` cho vai trò `anon` ở tầng HÀM** (`db/migrations/0062_lock_down_anon_functions.sql`).
   Chạy `mcp__supabase__get_advisors` (loại security) phát hiện 145/168 hàm — gồm cả hàm
@@ -962,8 +962,80 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
   (`v_cost_sighted`, giữ nguyên gồm cả TC) — hành vi hiển thị dữ liệu không đổi. Test:
   `db/src/__tests__/bc.test.ts` (chỉ huy trưởng thấy số tiền thật của công trình mình, không bị
   ghi log).
-- ⏳ **Chưa làm**: đọc tuần tự phần business logic bất kỳ của ~80 hàm ghi dữ liệu ngoài hai
-  chữ ký lỗi (a)/(b) đã quét — đợt 3 CHỈ quét đúng hai chữ ký đó, chưa phải rà toàn bộ nghiệp vụ.
+- ✅ **Đợt 4 — đọc tuần tự phần business logic của ~101 hàm SECURITY DEFINER ghi dữ liệu**,
+  ngoài hai chữ ký lỗi (a)/(b) đợt 3 đã quét. Chia 8 fork đọc độc lập theo module (CRM/DA, TK,
+  HD, TC, MH, KHO, KT, NS), mỗi fork chỉ đọc — không sửa; tìm được **9 lỗi thật**, tất cả đã vá
+  (migration 0074–0084) kèm test mới xác nhận từng lỗi tái hiện được và đã hết:
+  - **`execute_amendment`** (HD-04, 0074) — không bao giờ cộng `contract_amendments.value_change`
+    vào `contracts.value`. Một phát sinh chạy hết luồng duyệt vẫn để giá trị hợp đồng đứng yên
+    mãi mãi, trong khi `profit_loss_report` (BC-02) đọc thẳng cột đó — lãi/lỗ sai vĩnh viễn cho
+    công trình có phát sinh. Vá bằng `value = COALESCE(value, 0) + a.value_change` — bản đầu
+    thiếu `COALESCE` bị chính bài test mới bắt được ngay (hợp đồng còn ở bước soạn, `value`
+    chưa nhập nên là NULL, `NULL + số = NULL`, mất luôn giá trị).
+  - **`save_estimate_items`** (TK-01, 0075) — ép `quantity` sang `bigint` (làm tròn) TRƯỚC khi
+    nhân với đơn giá thay vì nhân xong mới làm tròn. Khối lượng có phần lẻ (m³, m² — ví dụ 2,5)
+    ra sai số tiền dòng chi phí, kéo theo `direct_cost`. Vá bằng nhân ở `numeric`, `ROUND` ở
+    bước cuối.
+  - **`move_opportunity_stage`** (CRM-02, 0076) — không chặn chuyển giai đoạn khi cơ hội đã ở
+    giai đoạn kết thúc (`ky_hop_dong`/`mat_co_hoi`, `isTerminal: true`) — quy tắc đó trước giờ
+    CHỈ có ở giao diện (ẩn nút), gọi thẳng RPC vẫn đổi được, và `lost_reason` cũ không bị xoá
+    khi "hồi sinh" một cơ hội đã mất. Vá bằng chặn thẳng ở hàm.
+  - **`cancel_purchase_order`** (MH-06, 0077) — chỉ chặn huỷ khi đơn đã `huy`, không chặn huỷ
+    đơn đã bắt đầu nhận hàng (`dang_giao`/`da_giao_du`) — huỷ sau khi đã nhận để lại tiền đã chi
+    không hoàn tác được và đề nghị mua có thể mở đơn thứ hai cho hàng đã nhận một lần rồi. Vá
+    bằng chặn thêm hai stage đó.
+  - **`record_payment`** (KT-03, 0078) — không kiểm lại giới hạn hoàn ứng tại thời điểm CHI, chỉ
+    dựa vào một lượt kiểm ở `submit_payment_request` (không khoá dòng). Hai đề nghị hoàn ứng gửi
+    gần như cùng lúc có thể cùng qua được kiểm tra lúc `settled_amount` còn 0, rồi cả hai đều
+    được ghi nhận đã chi — `advances.settled_amount` vượt `amount`. Vá bằng kiểm lại NGAY SAU
+    khi khoá dòng `advances FOR UPDATE` trong `record_payment`.
+  - **`record_scaffolding_event`** (KHO-06, 0079) — sinh mã lô mới bằng `now()` (độ phân giải
+    một giây) không cắt bớt code nguồn — đúng lớp lỗi 0063 đã vá cho
+    `create_rental_agreement`/`return_rental_agreement` nhưng bỏ sót hàm anh em này. Vá cùng
+    khuôn: `clock_timestamp()` + mili-giây, `left(asset_code, 44)`.
+  - **`build_budget_lines`** (DA-09, 0080) — có thể ÂM THẦM bỏ sót `overhead_cost`/
+    `contingency_cost`/`profit_amount` của dự toán: `COST_GROUPS` cho phép dòng dự toán chi
+    tiết dùng trực tiếp nhóm `chi_phi_chung`/`du_phong`/`loi_nhuan`, và khi đó mã ngân sách sinh
+    ra trùng với mã cố định INSERT thứ hai dùng cho ba khoản tổng — điều kiện `NOT EXISTS` coi
+    là "đã có" nên bỏ qua hẳn, không báo lỗi. Vá bằng CỘNG DỒN vào dòng đã có thay vì bỏ qua.
+    Không quyết định thay việc dòng dự toán chi tiết có NÊN được dùng 3 nhóm này hay không — đó
+    là câu hỏi tầng dự toán/frontend, cần hỏi Haan nếu muốn thu hẹp (xem 6.6).
+  - **`log_employee_sensitive_edit`** (NEN-07, 0081) — nhánh INSERT kiểm ít cột hơn nhánh UPDATE
+    (thiếu `insurance_salary`/`salary_type` ở nhóm lương, thiếu `discipline_notes` ở nhóm cá
+    nhân) — tạo mới nhân viên chỉ điền các cột đó sẽ không ghi `sensitive_access_logs`. Vá bằng
+    kiểm đủ cùng bộ cột cả hai nhánh.
+  - **`hire_candidate`** (NS-02, 0082) — đọc `recruitment_positions.hired_count` không khoá
+    dòng trước khi kiểm `>= headcount` — hai ứng viên cùng vị trí tuyển gần như đồng thời có thể
+    cùng qua được kiểm tra, tuyển vượt chỉ tiêu. Vá bằng `FOR UPDATE` trước khi kiểm, cùng khuôn
+    `record_payment`/`advance_payment_step`. Không viết test riêng (race hai luồng thật khó tái
+    hiện ổn định trong Vitest) — vá theo nguyên tắc phòng thủ, đã xác nhận không đổi hành vi khi
+    chạy tuần tự.
+  - **`submit_leave_request`** (NS-05, 0083) — không kiểm chồng lấn ngày nghỉ: một nhân viên gửi
+    được hai đơn có khoảng ngày chồng nhau, cả hai đều có thể duyệt độc lập. Vá bằng chặn gửi
+    nếu đã có đơn khác `cho_duyet`/`da_duyet` chồng ngày.
+  - **`save_attendance`** (NS-04, 0084) — không kiểm biên `hours`/`overtime_hours` (RPC gọi
+    thẳng từ Frontend, không qua Workers) — giờ công âm/phi thực tế lọt thẳng vào
+    `consolidate_timesheets` rồi ra lương. Vá bằng chặn ngoài khoảng 0–24 ở biên RPC.
+  - Test mới: `db/src/__tests__/{rls,mh,kt,kho,ns}.test.ts` — mỗi lỗi trên có đúng một ca kiểm
+    tái hiện được kịch bản lỗi và xác nhận đã vá; toàn bộ 8 tệp liên quan (rls 126, mh 39, kt 34,
+    kho 41, ns 36, tc 30, bc 9, golden-path 3 — chạy riêng từng tệp đúng quy ước) đều xanh sau
+    khi áp migration.
+  - Hai điểm PLAUSIBLE fork tìm được nhưng KHÔNG tự vá, cần Haan xác nhận trước khi làm tiếp
+    (ghi vào 6.6): (1) `move_site_stage` (TC) không gửi thông báo cho bất kỳ bước chuyển nào —
+    kể cả "tạm dừng thi công"/"hoàn thành" — trong khi mọi hàm ghi sự kiện lớn khác cùng migration
+    đều gọi `create_notification`; chưa rõ vai trò nào nên nhận nên chưa tự thêm. (2)
+    `cancel_acceptance` (TC) không kiểm công trình có đang dựa vào chính biên bản đó để đã
+    chuyển bước hay không — mức tin cậy thấp (quy trình thực tế thường huỷ ngay sau khi tạo,
+    trước khi kịp chuyển bước), chỉ ghi lại để lưu ý.
+  - Đã kiểm và LOẠI TRỪ một nghi vấn: `publish_design_version`/`handover_design_to_construction`
+    (TK) chọn người nhận thông báo không có `OR sees_all_companies` — nhưng đối chiếu
+    `db/src/seed/data.ts` xác nhận cả 4 vai trò trong danh sách nhận (`TKE, DA_DT, KD, TC`) đều
+    `seesAllCompanies: false`, không có vai trò kiểu CFO nào trong nhóm này — không phải bug.
+  - Phát hiện phụ (không phải nghiệp vụ, hạ tầng test): chạy thử `search.test.ts` +
+    `sx.test.ts` cùng lúc lộ `search.test.ts`'s `cleanupFixture` xoá `customers`/`opportunities`/
+    `employees` bằng `LIKE` tiền tố rộng thay vì đúng id của chính fixture đó — đúng loại rủi ro
+    `global-teardown.ts` đã ghi chú (Vitest chạy nhiều tệp song song, tệp xong trước xoá rộng
+    đụng bản ghi tệp khác đang dùng dở). Đã vá về đúng id (thêm `customerId` vào `Fixture`).
 - Việc phụ phát hiện khi rà đợt 1 (KHÔNG liên quan quyền, đã sửa cùng đợt vì lộ ra lúc chạy lại
   `sx.test.ts` để xác nhận không hồi quy): `create_rental_agreement`/`return_rental_agreement`
   (SX-03) sinh `asset_code` lô mới bằng `to_char(now(), 'YYMMDDHH24MISS')` — độ phân giải MỘT
@@ -1258,3 +1330,5 @@ theo hạn mức · truy vết ngược tới chứng từ gốc.
 | 21  | **Ai vận hành Module SX?** — chi tiết + giả định tạm ở 3F                                                                                                                                                                                                                                                                                          | Phase 3F (đã làm, đổi ở `db/src/seed/data.ts`)                           |
 | 22  | **Lô giàn giáo "mới" cho thuê được ngay không?** — chi tiết + giả định tạm ở 3F                                                                                                                                                                                                                                                                    | Phase 3F (đã làm, sửa điều kiện `condition` trong hàm)                   |
 | 23  | **Bảng `tasks` — bỏ hẳn hay dùng thật?** Có sẵn từ Phase 0, chưa từng được ghi/đọc. "Việc cần làm" ở Top Bar hiện chỉ là Hộp thư Phê duyệt (`usePendingApprovals`) — đủ cho luồng phê duyệt, nhưng việc không gắn phê duyệt (vd. nhắc giấy tờ sắp hết hạn) hiện chỉ SINH `notification`, không có nơi "xử lý xong thì biến mất" đúng nghĩa AFD 5.4 | Phase 1.4 (Trung tâm Thông báo đã xong ở Phase 3G, `tasks` vẫn để trống) |
+| 24  | **`move_site_stage` (TC) có nên gửi thông báo khi chuyển bước không, và cho ai?** Hiện KHÔNG gửi ở bất kỳ bước nào — kể cả "tạm dừng thi công"/"hoàn thành" — trong khi mọi hàm ghi sự kiện lớn khác của module (`open_construction_site`, `handover_design_to_construction`, `generate_project_budget`) đều báo. Phát hiện ở đợt rà business logic 4B (28/08/2026)                                                                          | Phase 3A (chưa vá — chờ xác nhận vai trò nhận)                          |
+| 25  | **Dòng dự toán chi tiết có nên được phép dùng nhóm `chi_phi_chung`/`du_phong`/`loi_nhuan` không?** `COST_GROUPS` hiện cho phép, và khi dùng thì trùng mã với 3 khoản tổng nhập ở `save_estimate_costs` — đã vá phần mất tiền (0080, cộng dồn thay vì bỏ qua) nhưng chưa quyết có nên GIỚI HẠN dropdown chỉ còn 4 nhóm vật tư/nhân công/máy móc/thầu phụ hay để nguyên. Phát hiện ở đợt rà business logic 4B (28/08/2026)                     | Phase 2B (đã vá phần mất tiền, còn câu hỏi UX)                          |
