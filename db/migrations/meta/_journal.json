@@ -596,6 +596,76 @@
       "when": 1787905065851,
       "tag": "0084_fix_save_attendance_hours_bound",
       "breakpoints": true
+    },
+    {
+      "idx": 85,
+      "version": "7",
+      "when": 1787929208184,
+      "tag": "0085_fix_project_budgets_cost_leak",
+      "breakpoints": true
+    },
+    {
+      "idx": 86,
+      "version": "7",
+      "when": 1787929208185,
+      "tag": "0086_fix_decide_approval_unknown_entity_type",
+      "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1787929208186,
+      "tag": "0087_fix_create_contract_from_source_value_wiped",
+      "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1787929940637,
+      "tag": "0088_fix_decide_approval_0086_transcription_errors",
+      "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1787931027528,
+      "tag": "0089_fix_budget_overrun_alert_trigger_and_formula",
+      "breakpoints": true
+    },
+    {
+      "idx": 90,
+      "version": "7",
+      "when": 1787931027529,
+      "tag": "0090_fix_execute_amendment_schedule_impact_not_applied",
+      "breakpoints": true
+    },
+    {
+      "idx": 91,
+      "version": "7",
+      "when": 1787931027530,
+      "tag": "0091_fix_log_employee_sensitive_edit_missing_id_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 92,
+      "version": "7",
+      "when": 1787931027531,
+      "tag": "0092_fix_scan_receivable_reminders_sees_all_companies",
+      "breakpoints": true
+    },
+    {
+      "idx": 93,
+      "version": "7",
+      "when": 1787931027532,
+      "tag": "0093_fix_estimates_freeze_identity_missing_design_project",
+      "breakpoints": true
+    },
+    {
+      "idx": 94,
+      "version": "7",
+      "when": 1787931027533,
+      "tag": "0094_fix_my_pending_approvals_estimate_parent_module",
+      "breakpoints": true
     }
   ]
 }

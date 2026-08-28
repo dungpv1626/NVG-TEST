@@ -31,8 +31,12 @@ function fullRecordPath(item: PendingApproval): string {
       // "mỗi tab là một khía cạnh của CÙNG MỘT hồ sơ, không phải các trang riêng biệt").
       return item.parent_id ? `/crm/co-hoi/${item.parent_id}?tab=bao-gia` : '/crm/co-hoi';
     case 'estimates':
-      // Dự toán cũng vậy: nó là tab Dự toán của Chi tiết Gói thầu (DA-07).
-      return item.parent_id ? `/da/goi-thau/${item.parent_id}?tab=du-toan` : '/da/goi-thau';
+      // Dự toán cũng vậy: nó là tab Dự toán của Chi tiết Gói thầu (DA-07) hoặc Chi tiết Dự án
+      // thiết kế (TK) — parent_module phân biệt hai nguồn vì parent_id cùng kiểu uuid (0094).
+      if (!item.parent_id) return '/da/goi-thau';
+      return item.parent_module === 'TK'
+        ? `/tk/du-an/${item.parent_id}?tab=du-toan`
+        : `/da/goi-thau/${item.parent_id}?tab=du-toan`;
     case 'contracts':
       return `/hd/hop-dong/${item.entity_id}`;
     case 'contract_amendments':

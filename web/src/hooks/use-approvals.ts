@@ -33,6 +33,11 @@ export interface PendingApproval {
    * tiết Cơ hội. Hàm CSDL giải sẵn để Hộp thư chỉ cần một lượt gọi.
    */
   parent_id: string | null;
+  /**
+   * Chỉ có giá trị khi `entity_type === 'estimates'` — 'DA' (gói thầu) hoặc 'TK' (dự án thiết
+   * kế), vì `parent_id` cùng kiểu uuid không tự phân biệt được nguồn (0094).
+   */
+  parent_module: 'DA' | 'TK' | null;
 }
 
 /**
