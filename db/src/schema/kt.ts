@@ -26,6 +26,7 @@
  */
 
 import {
+  type AnyPgColumn,
   boolean,
   date,
   index,
@@ -392,6 +393,16 @@ export const receivablesPayables = pgTable(
     /** Lần đối chiếu chính thức gần nhất — KT-04 "hằng tháng đối chiếu chính thức". */
     reconciledAt: timestamp('reconciled_at', { withTimezone: true }),
     reconciledBy: uuid('reconciled_by').references(() => users.id, { onDelete: 'set null' }),
+
+    /**
+     * Khung tuổi nợ đã nhắc gần nhất — NEN-04, cùng khuôn `hr_documents.last_reminded_stage`.
+     * Chỉ nhắc lại khi khoản nợ CHUYỂN sang khung nặng hơn, không nhắc lại mỗi đêm cho một
+     * khoản đứng yên ở cùng một khung (Content Guidelines 3.4, tránh "nhàm cảnh báo").
+     */
+    lastRemindedBucketId: uuid('last_reminded_bucket_id').references(
+      (): AnyPgColumn => agingBuckets.id,
+      { onDelete: 'set null' },
+    ),
 
     notes: text('notes'),
 

@@ -825,6 +825,53 @@ describeDb('KT — khung tuổi nợ là cấu hình, không phải hằng số 
     expect(BigInt(bucket!.total)).toBeGreaterThanOrEqual(90_000_000n);
   });
 
+  it('tác vụ nền quét công nợ tạo đúng một thông báo, không nhắc lại khi vẫn cùng khung (NEN-04)', async () => {
+    // scan_receivable_reminders() không mở EXECUTE cho authenticated/anon (0066, cùng lý do
+    // scan_hr_document_reminders — chỉ Cron Trigger gọi), nên gọi thẳng qua kết nối `postgres`
+    // như mọi tác vụ nền khác trong bộ test này, không qua client đăng nhập.
+    const { data: receivable } = await ketoan
+      .from('receivables_payables')
+      .select('id')
+      .eq('description', `${TEST_PREFIX} Khoản quá hạn 45 ngày`)
+      .single();
+    const receivableId = (receivable as { id: string }).id;
+    const { data: ketoanId } = await ketoan.rpc('auth_user_id');
+
+    const { createConnection } = await import('../client');
+    const { sql } = createConnection();
+    try {
+      const [firstRun] = await sql<{ scan_receivable_reminders: number }[]>`
+        SELECT scan_receivable_reminders()
+      `;
+      expect(Number(firstRun!.scan_receivable_reminders)).toBeGreaterThanOrEqual(1);
+
+      const notifs = await sql<{ id: string }[]>`
+        SELECT id FROM notifications
+         WHERE related_entity_type = 'receivables_payables'
+           AND related_entity_id = ${receivableId}
+           AND user_id = ${ketoanId as string}
+      `;
+      expect(notifs.length).toBe(1);
+
+      const [row] = await sql<{ last_reminded_bucket_id: string | null }[]>`
+        SELECT last_reminded_bucket_id FROM receivables_payables WHERE id = ${receivableId}
+      `;
+      expect(row!.last_reminded_bucket_id).not.toBeNull();
+
+      // Quét lại ngay: khoản nợ vẫn đứng yên ở cùng khung 31–60 — không nhắc lại (CGD 3.4).
+      await sql`SELECT scan_receivable_reminders()`;
+      const notifsAgain = await sql<{ id: string }[]>`
+        SELECT id FROM notifications
+         WHERE related_entity_type = 'receivables_payables'
+           AND related_entity_id = ${receivableId}
+           AND user_id = ${ketoanId as string}
+      `;
+      expect(notifsAgain.length).toBe(1);
+    } finally {
+      await sql.end();
+    }
+  });
+
   it('đổi mốc trong cấu hình thì khoản nợ chuyển sang khung khác — không phải sửa mã', async () => {
     // NVG ban hành mốc chặt hơn cho một pháp nhân: 20 ngày là đã đáng lo.
     const { createConnection } = await import('../client');

@@ -17,10 +17,11 @@
    * NEN-04 — quét cảnh báo định kỳ. `0 18 * * *` (UTC) = 01:00 sáng giờ Việt Nam (UTC+7) —
    * chạy sau giờ làm việc, trước khi Ban Giám đốc mở Dashboard buổi sáng.
    *
-   * ⚠️ v1 mới nối ĐÚNG MỘT trong bốn loại cảnh báo NEN-04 liệt kê (nhắc hạn giấy tờ nhân sự,
-   * `scan_hr_document_reminders` — NS-10, đã có sẵn hàm từ Phase 3E nhưng chưa từng có gì gọi
-   * tới). Ba loại còn lại (việc quá hạn xử lý, chi phí vượt ngân sách, công nợ đến hạn) CHƯA
-   * có hàm quét — xem BUILD_PLAN.md mục 4D để không tưởng lầm là đã xong hết NEN-04.
+   * ⚠️ Mới nối 2/4 loại cảnh báo NEN-04 liệt kê: nhắc hạn giấy tờ nhân sự
+   * (`scan_hr_document_reminders` — NS-10) và công nợ phải thu quá hạn
+   * (`scan_receivable_reminders` — KT-04). Hai loại còn lại (việc quá hạn xử lý, chi phí vượt
+   * ngân sách) CHƯA có hàm quét — xem BUILD_PLAN.md mục 4D để không tưởng lầm là đã xong hết
+   * NEN-04.
    */
   "triggers": {
     "crons": ["0 18 * * *"]

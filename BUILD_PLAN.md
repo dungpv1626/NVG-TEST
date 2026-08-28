@@ -902,7 +902,7 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
   quét màu inline/tuỳ biến nếu có); quét vùng bấm nhỏ ở các trang chưa rà (mới xong Top Bar +
   PWA banner, còn nhiều trang khác dùng icon-button riêng lẻ chưa kiểm hết).
 
-### 4D. Tác vụ nền (NEN-04) — ⏳ hạ tầng xong + 1/4 loại cảnh báo, còn 3 loại + Queues
+### 4D. Tác vụ nền (NEN-04) — ⏳ hạ tầng xong + 2/4 loại cảnh báo, còn 2 loại + Queues
 
 - ✅ **Đã dựng `workers/`** — package thứ tư của monorepo (`shared`/`db`/`web`/`workers`), Hono +
   Cloudflare Cron Trigger, dùng Supabase client với `service_role` (Tech Stack 5.6). Đây là
@@ -913,16 +913,30 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
   mở Dashboard buổi sáng. Xác nhận chạy đúng cục bộ bằng `wrangler dev --test-scheduled` (không
   deploy) — gọi `scan_hr_document_reminders` qua RPC thật, tạo đúng 2 `notifications` cho tài
   khoản `nhansu@nhavietgroup.test` (đã xác nhận lại bằng SQL, không chỉ tin log "ok").
-- ✅ **1/4 loại cảnh báo NEN-04 đã có tác vụ nền thật gọi tới** — nhắc hạn giấy tờ nhân sự
-  (`scan_hr_document_reminders`, NS-10). Hàm này có từ Phase 3E nhưng CHƯA từng có gì gọi tới
-  cho đến bây giờ — chỉ gọi được tay qua SQL Editor trước đó.
-- ⏳ **Chưa làm — 3/4 loại cảnh báo NEN-04 còn lại chưa có hàm quét nào**: việc quá hạn xử lý,
+- ✅ **1/4 — nhắc hạn giấy tờ nhân sự** (`scan_hr_document_reminders`, NS-10). Hàm này có từ
+  Phase 3E nhưng CHƯA từng có gì gọi tới cho đến bây giờ — chỉ gọi được tay qua SQL Editor
+  trước đó.
+- ✅ **2/4 — công nợ phải thu quá hạn** (`scan_receivable_reminders`,
+  `db/migrations/0066_scan_receivable_reminders.sql`, KT-04). Dùng LẠI đúng cấu hình
+  `aging_buckets` (KT-04, không phát minh mốc ngày mới) — mỗi đêm khớp lại khung tuổi nợ của
+  từng khoản phải thu chưa tất toán, chỉ nhắc Kế toán khi khoản đó vừa CHUYỂN sang khung nặng
+  hơn lần quét trước (cột mới `receivables_payables.last_reminded_bucket_id`, cùng khuôn
+  `hr_documents.last_reminded_stage`). CỐ Ý thu hẹp phạm vi hai chỗ so với câu PRD NEN-04
+  "công nợ đến hạn hoặc quá hạn": (a) chỉ `phai_thu`, chưa làm `phai_tra`; (b) chỉ nhắc khi ĐÃ
+  quá hạn, chưa làm nhánh "sắp đến hạn" vì PRD không nêu số ngày báo trước nào cho công nợ
+  (khác NS-10 có sẵn 90/60/30/7) — tự đặt một con số là tự quyết nghiệp vụ, cần hỏi Haan nếu
+  làm tới. Test: `db/src/__tests__/kt.test.ts` (tạo thông báo đúng 1 lần khi chuyển khung, quét
+  lại ngay không nhắc lại). Xác nhận lại qua `wrangler dev --test-scheduled` chạy cả hai hàm
+  trong cùng một lượt cron.
+- ⏳ **Chưa làm — 2/4 loại cảnh báo NEN-04 còn lại chưa có hàm quét nào**: việc quá hạn xử lý,
   chi phí vượt ngân sách công trình (công thức đã có sẵn ở `summarizeBudget()` —
   `shared/src/tc.ts` — chỉ cần viết lại bằng SQL và thêm cơ chế chống nhắc lại kiểu
-  `last_reminded_stage`), công nợ đến hạn/quá hạn (mốc đã có sẵn ở bảng `aging_buckets`, KT-04).
-  Giấy tờ/hợp đồng/bảo hiểm sắp hết hạn CHỈ mới phủ nhánh nhân sự (NS-10); PRD NEN-04 còn nhắc
-  "hồ sơ thiếu chứng từ" — chưa rõ diễn giải thành điều kiện SQL cụ thể nào, cần hỏi Haan nếu
-  làm tới.
+  `last_reminded_stage`). PRD NEN-04 còn nhắc "hồ sơ thiếu chứng từ" — chưa rõ diễn giải thành
+  điều kiện SQL cụ thể nào, cần hỏi Haan nếu làm tới.
+- Ghi chú tiện dùng lại sau: `shared/src/content.ts` có sẵn mẫu `NOTIFICATIONS.debtDue(party,
+amount, date)` cho "công nợ đến hạn" nhưng khung câu đó giả định "đến hạn vào ngày X" — không
+  khớp cách `scan_receivable_reminders` diễn đạt ("đã chuyển sang khung … "). Chưa dùng lại
+  được, không phải bỏ sót.
 - ⏳ **Chưa làm — Cloudflare Queues** (gửi email, tổng hợp báo cáo nặng): `RESEND_API_KEY` vẫn
   để trống (CLAUDE.md 6.6 liệt kê là vấn đề còn mở), nên v1 chỉ dừng ở thông báo trong ứng dụng
   (`notifications`, đã có kênh hiển thị ở chuông Top Bar từ Phase 3G) — đúng tinh thần "không

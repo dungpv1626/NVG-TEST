@@ -30,10 +30,11 @@ function serviceClient(env: Env) {
  * Chạy các hàm quét cảnh báo định kỳ (NEN-04). Mỗi hàm tự chịu trách nhiệm không nhắc lại đã
  * xử lý (CGD 3.4) — ở đây chỉ gọi và ghi log, không có logic nghiệp vụ nào lặp lại từ SQL.
  *
- * v1: đúng MỘT trong bốn loại NEN-04 liệt kê. Ba loại còn lại (việc quá hạn xử lý, chi phí vượt
- * ngân sách, công nợ đến hạn) chưa có hàm quét — thêm vào mảng này khi có (BUILD_PLAN.md 4D).
+ * 2/4 loại NEN-04 đã có hàm quét (giấy tờ nhân sự — NS-10; công nợ phải thu quá hạn — KT-04).
+ * Hai loại còn lại (việc quá hạn xử lý, chi phí vượt ngân sách) chưa có hàm quét — thêm vào
+ * mảng này khi có (BUILD_PLAN.md 4D).
  */
-const SCAN_FUNCTIONS = ['scan_hr_document_reminders'] as const;
+const SCAN_FUNCTIONS = ['scan_hr_document_reminders', 'scan_receivable_reminders'] as const;
 
 export async function runScheduledScans(env: Env): Promise<Record<string, number | string>> {
   const supabase = serviceClient(env);
