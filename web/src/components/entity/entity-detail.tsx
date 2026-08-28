@@ -13,11 +13,16 @@
  *  - Tab "Lịch sử" LUÔN có ở mọi hồ sơ, phục vụ truy vết theo NEN-03 và NEN-07.
  *  - Mọi trường tham chiếu tới hồ sơ khác là LIÊN KẾT BẤM ĐƯỢC, không phải chữ tĩnh
  *    (Webapp Flow 5.2).
+ *  - Breadcrumb phản ánh ĐƯỜNG ĐI THỰC TẾ, không phải cấu trúc menu cố định (Webapp Flow 5.2):
+ *    đến từ panel "Hồ sơ liên quan" của một hồ sơ khác thì hiện `<hồ sơ đó> › <hồ sơ này>`,
+ *    KHÔNG phải mắt xích module/danh sách mặc định mà `breadcrumbs` truyền vào khai — xem
+ *    `RelatedGroups` (đính `state.from` vào link) và biến `from` bên dưới (đọc lại state đó).
+ *    Vào thẳng bằng URL/tải lại trang thì không có `state`, breadcrumb quay về mặc định.
  */
 
 import { History } from 'lucide-react';
 import { useMemo, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { formatDeadline, type StatusGroup } from '@nvg/shared';
 import { Breadcrumb, type Crumb } from '@/components/layout/breadcrumb';
 import { Button } from '@/components/ui/button';
@@ -32,6 +37,13 @@ export interface DetailTab {
   content: ReactNode;
   /** Số hiệu hiển thị cạnh nhãn tab (ví dụ số phiên bản, số chứng từ). */
   badge?: number;
+}
+
+/** Breadcrumb mắt xích "vừa đi qua" — đính vào `state` của link khi điều hướng sang hồ sơ
+ * khác, để trang đích hiện đúng đường đi thực tế thay vì mắt xích module mặc định. */
+export interface BreadcrumbFrom {
+  label: string;
+  to: string;
 }
 
 /** Một hồ sơ liên quan ở module khác — hiển thị trong panel ngữ cảnh. */
@@ -84,6 +96,13 @@ export function EntityDetail({
   related = [],
 }: EntityDetailProps) {
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+
+  // Đường đi thực tế thắng breadcrumb mặc định khi có — xem ghi chú đầu file.
+  const from = (location.state as { from?: BreadcrumbFrom } | null)?.from ?? null;
+  const currentCrumb = breadcrumbs[breadcrumbs.length - 1];
+  const effectiveBreadcrumbs: Crumb[] = from && currentCrumb ? [from, currentCrumb] : breadcrumbs;
+  const fromForRelated: BreadcrumbFrom = { label: title, to: location.pathname };
 
   const allTabs = useMemo<DetailTab[]>(
     () =>
@@ -153,7 +172,7 @@ export function EntityDetail({
             'lg:-mx-6 lg:-mt-6 lg:mb-6 lg:px-6 lg:pt-6',
           )}
         >
-          <Breadcrumb items={breadcrumbs} />
+          <Breadcrumb items={effectiveBreadcrumbs} />
           <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
               <h1 className="truncate text-xl font-semibold">{title}</h1>
@@ -230,7 +249,7 @@ export function EntityDetail({
 
         {related.length > 0 && (
           <section className="mt-6 space-y-4 xl:hidden" aria-label="Hồ sơ liên quan">
-            <RelatedGroups related={related} />
+            <RelatedGroups related={related} from={fromForRelated} />
           </section>
         )}
       </div>
@@ -238,7 +257,7 @@ export function EntityDetail({
       {related.length > 0 && (
         <aside className="hidden w-72 shrink-0 xl:block" aria-label="Hồ sơ liên quan">
           <div className="sticky top-24 space-y-4">
-            <RelatedGroups related={related} />
+            <RelatedGroups related={related} from={fromForRelated} />
           </div>
         </aside>
       )}
@@ -253,7 +272,7 @@ export function EntityDetail({
  * trang trên màn hình hẹp. Màn hình hẹp mà ẩn hẳn là mất luôn đường đi sang module khác —
  * mà "không quá 3 cú nhấp tới một hồ sơ" (Webapp Flow 1.3) tính cả trên điện thoại.
  */
-function RelatedGroups({ related }: { related: RelatedGroup[] }) {
+function RelatedGroups({ related, from }: { related: RelatedGroup[]; from: BreadcrumbFrom }) {
   return (
     <>
       {related.map((group) => (
@@ -270,9 +289,15 @@ function RelatedGroups({ related }: { related: RelatedGroup[] }) {
                 <dt className="text-xs text-fg-subtle">{r.label}</dt>
                 <dd className="flex items-center gap-2">
                   {/* Mọi tham chiếu tới hồ sơ khác là liên kết bấm được,
-                      không phải chữ tĩnh (Webapp Flow 5.2). */}
+                      không phải chữ tĩnh (Webapp Flow 5.2). `state.from` để trang đích hiện
+                      breadcrumb đúng đường đi thực tế (đã tới từ ĐÂY), không phải mắt xích
+                      module mặc định của nó. */}
                   {r.to ? (
-                    <Link to={r.to} className="truncate text-brand hover:underline">
+                    <Link
+                      to={r.to}
+                      state={{ from }}
+                      className="truncate text-brand hover:underline"
+                    >
                       {r.value}
                     </Link>
                   ) : (

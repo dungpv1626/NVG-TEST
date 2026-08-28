@@ -10,7 +10,7 @@
  */
 
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import type { SupplierClass } from '@nvg/shared';
 import {
   PURCHASE_ORDER_STAGE_META,
@@ -217,7 +217,14 @@ export function SupplierDetailPage() {
                     <tbody>
                       {(orders ?? []).map((order) => (
                         <tr key={order.id} className="border-b border-border last:border-0">
-                          <td className="py-2 pr-4">{order.code ?? EM_DASH}</td>
+                          <td className="py-2 pr-4">
+                            <Link
+                              to={`/mh/don-hang/${order.id}`}
+                              className="font-medium text-brand hover:underline"
+                            >
+                              {order.code ?? EM_DASH}
+                            </Link>
+                          </td>
                           <td className="py-2 pr-4">{order.request?.title ?? EM_DASH}</td>
                           <td className="py-2 pr-4">
                             {order.order_date ? formatDate(order.order_date) : EM_DASH}

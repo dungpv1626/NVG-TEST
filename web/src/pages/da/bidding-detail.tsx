@@ -145,7 +145,16 @@ export function BiddingDetailPage() {
                   { label: 'Bước hiện tại', value: BIDDING_STAGE_META[project.stage].label },
                   {
                     label: 'Chủ đầu tư',
-                    value: project.customer?.name ?? EM_DASH,
+                    value: project.customer ? (
+                      <Link
+                        to={`/crm/khach-hang/${project.customer.id}`}
+                        className="font-medium text-brand hover:underline"
+                      >
+                        {project.customer.name}
+                      </Link>
+                    ) : (
+                      EM_DASH
+                    ),
                   },
                   {
                     label: 'Giá trị dự kiến',

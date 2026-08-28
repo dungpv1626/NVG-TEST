@@ -218,7 +218,19 @@ export function PurchaseOrderDetailPage() {
                 <DetailFields
                   fields={[
                     { label: 'Bước hiện tại', value: PURCHASE_ORDER_STAGE_META[order.stage].label },
-                    { label: 'Nhà cung cấp', value: order.supplier?.name ?? EM_DASH },
+                    {
+                      label: 'Nhà cung cấp',
+                      value: order.supplier ? (
+                        <Link
+                          to={`/mh/nha-cung-cap/${order.supplier_id}`}
+                          className="font-medium text-brand hover:underline"
+                        >
+                          {order.supplier.name}
+                        </Link>
+                      ) : (
+                        EM_DASH
+                      ),
+                    },
                     {
                       label: 'Ngày đặt hàng',
                       value: order.order_date ? formatDate(order.order_date) : EM_DASH,

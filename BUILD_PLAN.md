@@ -754,14 +754,38 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
 
 **Mục tiêu:** ~95% hoàn chỉnh, không còn lỗi chặn luồng nghiệp vụ chính.
 
-### 4A. Hồ sơ 360° đầy đủ (AFD 5.1–5.2)
+### 4A. Hồ sơ 360° đầy đủ (AFD 5.1–5.2) — ✅ xong (tìm kiếm còn 9/12 module, xem 1.5)
 
-- Panel ngữ cảnh hiển thị đủ liên kết cho 7 thực thể trung tâm (BSD 2.1)
-- **Mọi trường tham chiếu là liên kết bấm được**, không phải chữ tĩnh
-- Breadcrumb phản ánh **đường đi thực tế**, không phải cấu trúc menu cố định
-- Mở tab mới bằng chuột giữa luôn hoạt động (quan trọng khi người duyệt đối chiếu nhiều hồ sơ)
-- ✅ **Tìm kiếm toàn hệ thống phủ 9/12 module** — xem 1.5. Còn thiếu KHO (chưa có route `:id`),
-  NEN và BC (không có "hồ sơ" để tìm, hợp lý)
+- ✅ **Panel ngữ cảnh hiển thị đủ liên kết cho 7 thực thể trung tâm** — cả 7 (customers,
+  opportunities, bidding_projects, design_projects, contracts, construction_sites, và các hồ
+  sơ khác qua `related`) đều đã dùng `EntityDetail`/panel `related` (BSD 2.1). Hai trang KHÔNG
+  có panel (`production-order-detail.tsx`, `supplier-detail.tsx` phần tổng quan) là ĐÚNG —
+  `production_orders` không có khoá ngoại tới thực thể trung tâm nào để mà liên kết
+  (BUILD_PLAN 3F), không phải thiếu sót.
+- ✅ **Mọi trường tham chiếu là liên kết bấm được** — rà toàn bộ 14 trang "Hồ sơ 360°", sửa
+  10 trường còn hiện chữ tĩnh dù đã có sẵn `id` để liên kết: Đối tác (HD), Khách hàng (CRM cơ
+  hội/khiếu nại, TK, DA gói thầu), Khách thuê + Công trình nhận (SX cho thuê), Công trình (MH
+  đề nghị mua), Nhà cung cấp (MH đơn hàng, KT đề nghị chi), và mã đơn hàng trong tab "Lịch sử
+  giao dịch" của trang Nhà cung cấp. Hai chỗ CỐ Ý chưa sửa vì thiếu dữ liệu để liên kết tới,
+  không phải bỏ sót: "Quản lý trực tiếp" (NS, `users` không có màn hình chi tiết riêng) và "Dự
+  toán đã duyệt" trong panel liên quan của Hợp đồng (chưa có màn hình chi tiết dự toán độc
+  lập, dự toán nằm trong tab của DA/TK).
+- ✅ **Breadcrumb phản ánh đường đi thực tế** — `EntityDetail` đọc `location.state.from`
+  (`web/src/components/entity/entity-detail.tsx`): mọi link trong panel "Hồ sơ liên quan"
+  (`RelatedGroups`) đính kèm `state: { from: { label: <hồ sơ hiện tại>, to: <URL hiện tại> } }`
+  khi điều hướng; trang đích thay mắt xích module mặc định bằng đúng hồ sơ vừa đến từ. Vào
+  thẳng bằng URL hoặc tải lại trang thì không có `state`, breadcrumb quay về mặc định (bản
+  cũ, vẫn đúng — chỉ là không biết đường đi). Test:
+  `web/src/components/entity/__tests__/entity-detail.test.tsx` (ba ca: mặc định khi không có
+  state, ghi đè đúng khi có, và link thực sự đính kèm đúng state khi bấm). Xác nhận qua browser
+  thật: từ Công trình bấm sang Hợp đồng nguồn, breadcrumb hiện "Nhà xưởng Khu công nghiệp Demo
+  › Hợp đồng thi công Nhà xưởng Demo"; tải lại cùng trang thì breadcrumb quay về "Hợp đồng ›
+  …". CHỈ áp dụng cho link trong panel ngữ cảnh (nơi AFD 5.2 nêu ví dụ) — chưa mở rộng sang kết
+  quả tìm kiếm toàn hệ thống hay các link khác, có thể làm thêm sau nếu cần.
+- ✅ **Mở tab mới bằng chuột giữa luôn hoạt động** — rà soát mọi nơi điều hướng tới một hồ sơ cụ
+  thể (EntityTable, Kanban, Dashboard, panel liên quan, Hộp thư Phê duyệt) đều đã dùng `<Link>`
+  từ trước. Một chỗ sai duy nhất tìm được: nút "Mở hợp đồng" (`draft-contract-button.tsx`) dùng
+  `onClick={() => navigate(...)}` — đã sửa sang `<Button asChild><Link to=…>`.
 
 ### 4B. Rà soát phân quyền toàn hệ thống
 

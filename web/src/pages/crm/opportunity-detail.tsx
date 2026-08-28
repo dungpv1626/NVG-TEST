@@ -9,7 +9,7 @@
  */
 
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import {
   OPPORTUNITY_CLASSIFICATION_LABELS,
   OPPORTUNITY_STAGES,
@@ -176,7 +176,19 @@ export function OpportunityDetailPage() {
               <div className="space-y-6">
                 <DetailFields
                   fields={[
-                    { label: 'Khách hàng', value: customer?.name ?? EM_DASH },
+                    {
+                      label: 'Khách hàng',
+                      value: customer ? (
+                        <Link
+                          to={`/crm/khach-hang/${customer.id}`}
+                          className="font-medium text-brand hover:underline"
+                        >
+                          {customer.name}
+                        </Link>
+                      ) : (
+                        EM_DASH
+                      ),
+                    },
                     { label: 'Người liên hệ', value: customer?.contact_person ?? EM_DASH },
                     { label: 'Điện thoại', value: formatPhone(customer?.phone) || EM_DASH },
                     { label: 'Email', value: customer?.email ?? EM_DASH },

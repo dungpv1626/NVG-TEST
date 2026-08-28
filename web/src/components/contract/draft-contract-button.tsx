@@ -11,7 +11,7 @@
  */
 
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FileSignature } from 'lucide-react';
 import {
   CONTRACT_TYPES,
@@ -58,9 +58,11 @@ export function DraftContractButton({
 
   if (existingContractId) {
     return (
-      <Button variant="secondary" onClick={() => navigate(`/hd/hop-dong/${existingContractId}`)}>
-        <FileSignature className="mr-1 size-4" />
-        Mở hợp đồng
+      <Button variant="secondary" asChild>
+        <Link to={`/hd/hop-dong/${existingContractId}`}>
+          <FileSignature className="mr-1 size-4" />
+          Mở hợp đồng
+        </Link>
       </Button>
     );
   }

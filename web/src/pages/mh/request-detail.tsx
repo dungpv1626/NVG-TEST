@@ -252,9 +252,16 @@ export function PurchaseRequestDetailPage() {
                   { label: 'Địa điểm giao', value: request.delivery_location ?? EM_DASH },
                   {
                     label: 'Công trình',
-                    value: request.site
-                      ? `${request.site.code} — ${request.site.name}`
-                      : 'Không gắn công trình',
+                    value: request.site ? (
+                      <Link
+                        to={`/tc/cong-trinh/${request.site.id}`}
+                        className="font-medium text-brand hover:underline"
+                      >
+                        {request.site.code} — {request.site.name}
+                      </Link>
+                    ) : (
+                      'Không gắn công trình'
+                    ),
                   },
                   { label: 'Mã chi phí', value: request.cost_code ?? EM_DASH },
                   {

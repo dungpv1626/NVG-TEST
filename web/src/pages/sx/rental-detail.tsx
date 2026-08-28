@@ -7,7 +7,7 @@
  */
 
 import { useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import {
   formatCurrency,
   formatDate,
@@ -186,13 +186,27 @@ export function RentalAgreementDetailPage() {
                 fields={[
                   {
                     label: 'Khách thuê',
-                    value: `${agreement.customer?.code ?? ''} — ${agreement.customer?.name ?? EM_DASH}`,
+                    value: (
+                      <Link
+                        to={`/crm/khach-hang/${agreement.customer_id}`}
+                        className="font-medium text-brand hover:underline"
+                      >
+                        {agreement.customer?.code ?? ''} — {agreement.customer?.name ?? EM_DASH}
+                      </Link>
+                    ),
                   },
                   {
                     label: 'Công trình nhận',
-                    value: agreement.site
-                      ? `${agreement.site.code} — ${agreement.site.name}`
-                      : (agreement.site_address ?? EM_DASH),
+                    value: agreement.site ? (
+                      <Link
+                        to={`/tc/cong-trinh/${agreement.construction_site_id}`}
+                        className="font-medium text-brand hover:underline"
+                      >
+                        {agreement.site.code} — {agreement.site.name}
+                      </Link>
+                    ) : (
+                      (agreement.site_address ?? EM_DASH)
+                    ),
                   },
                   { label: 'Ngày bắt đầu thuê', value: formatDate(agreement.start_date) },
                   {

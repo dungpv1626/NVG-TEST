@@ -380,11 +380,16 @@ export function PaymentRequestDetailPage() {
                   { label: 'Số tiền', value: formatCurrency(request.amount) },
                   {
                     label: 'Bên nhận',
-                    value:
-                      request.supplier?.name ??
-                      request.payee_name ??
-                      request.advance_user?.full_name ??
-                      EM_DASH,
+                    value: request.supplier ? (
+                      <Link
+                        to={`/mh/nha-cung-cap/${request.supplier.id}`}
+                        className="font-medium text-brand hover:underline"
+                      >
+                        {request.supplier.name}
+                      </Link>
+                    ) : (
+                      (request.payee_name ?? request.advance_user?.full_name ?? EM_DASH)
+                    ),
                   },
                   { label: 'Bộ phận đề nghị', value: request.department ?? EM_DASH },
                   {

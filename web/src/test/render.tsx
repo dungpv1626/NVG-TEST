@@ -15,15 +15,28 @@ import { createMemoryRouter, RouterProvider, useLocation } from 'react-router-do
 /** Hiện đường dẫn hiện tại ra DOM để test đọc được — dùng kiểm điều hướng sau khi bấm. */
 function LocationProbe() {
   const location = useLocation();
-  return <div data-testid="duong-dan-hien-tai">{`${location.pathname}${location.search}`}</div>;
+  return (
+    <>
+      <div data-testid="duong-dan-hien-tai">{`${location.pathname}${location.search}`}</div>
+      {/* `state` mang theo lúc điều hướng (vd. breadcrumb "đường đi thực tế") — không hiện
+          trên màn hình, nên phải có cách riêng để test đọc lại đúng những gì `<Link state=…>`
+          đã gửi đi sau khi bấm. */}
+      <div data-testid="trang-thai-dieu-huong">{JSON.stringify(location.state ?? null)}</div>
+    </>
+  );
 }
 
 export interface RenderOptions {
   /** Đường dẫn khởi đầu, kèm tham số truy vấn. Ví dụ `/hd/hop-dong?trang-thai=overdue`. */
   route?: string;
+  /** `location.state` khởi đầu — dùng để mô phỏng đã điều hướng tới từ một `<Link state=…>`. */
+  state?: unknown;
 }
 
-export function renderWithApp(ui: ReactElement, { route = '/' }: RenderOptions = {}): RenderResult {
+export function renderWithApp(
+  ui: ReactElement,
+  { route = '/', state }: RenderOptions = {},
+): RenderResult {
   // `retry: false`: trong test, thử lại chỉ làm lỗi hiện ra chậm hơn và test khó đọc hơn.
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -53,7 +66,19 @@ export function renderWithApp(ui: ReactElement, { route = '/' }: RenderOptions =
             ),
           },
         ],
-        { initialEntries: [route] },
+        // `pathname` KHÔNG được gồm chuỗi truy vấn khi truyền state — phải tách riêng, nếu
+        // không React Router sẽ mã hoá luôn dấu `?` vào pathname.
+        {
+          initialEntries:
+            state === undefined
+              ? [route]
+              : [
+                  (() => {
+                    const [pathname, search] = route.split('?');
+                    return { pathname, search: search ? `?${search}` : '', state };
+                  })(),
+                ],
+        },
       ),
     );
     return (
@@ -69,4 +94,9 @@ export function renderWithApp(ui: ReactElement, { route = '/' }: RenderOptions =
 /** Đường dẫn hiện tại theo cây vừa dựng — đọc từ `LocationProbe`. */
 export function currentPath(result: RenderResult): string {
   return result.getByTestId('duong-dan-hien-tai').textContent ?? '';
+}
+
+/** `location.state` hiện tại — đọc từ `LocationProbe`, dùng kiểm state đã gửi kèm khi điều hướng. */
+export function currentNavigationState(result: RenderResult): unknown {
+  return JSON.parse(result.getByTestId('trang-thai-dieu-huong').textContent ?? 'null');
 }

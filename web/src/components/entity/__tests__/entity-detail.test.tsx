@@ -10,18 +10,26 @@
 import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { EntityDetail } from '../entity-detail';
-import { currentPath, renderWithApp } from '@/test/render';
+import { EntityDetail, type RelatedGroup } from '../entity-detail';
+import { currentNavigationState, currentPath, renderWithApp } from '@/test/render';
 
 vi.mock('@/lib/company-scope', () => ({
-  useCompanyScope: () => ({ companyId: 'nvc-id', companyCode: 'NVC', isAggregate: false, isReady: true }),
+  useCompanyScope: () => ({
+    companyId: 'nvc-id',
+    companyCode: 'NVC',
+    isAggregate: false,
+    isReady: true,
+  }),
   withCompanyScope: <Q,>(q: Q) => q,
 }));
 
-function detail() {
+function detail(related: RelatedGroup[] = []) {
   return (
     <EntityDetail
-      breadcrumbs={[{ label: 'Hợp đồng' }]}
+      breadcrumbs={[
+        { label: 'Hợp đồng', to: '/hd/hop-dong' },
+        { label: 'Hợp đồng nhà xưởng Long An' },
+      ]}
       title="Hợp đồng nhà xưởng Long An"
       code="NVC-HD-2026-0001"
       status="in_progress"
@@ -31,6 +39,7 @@ function detail() {
         { id: 'dieu-khoan', label: 'Điều khoản', content: <p>Nội dung điều khoản</p> },
       ]}
       historyContent={<p>Nội dung lịch sử</p>}
+      related={related}
     />
   );
 }
@@ -66,6 +75,60 @@ describe('EntityDetail', () => {
     expect(screen.getByText('NVC-HD-2026-0001')).toBeInTheDocument();
     expect(screen.getByText('Lê Văn C')).toBeInTheDocument();
     expect(screen.getByText('Đang xử lý')).toBeInTheDocument();
+  });
+});
+
+describe('EntityDetail — breadcrumb theo đường đi thực tế (Webapp Flow 5.2)', () => {
+  it('vào thẳng bằng URL (không có state) thì hiện breadcrumb mặc định của module', () => {
+    renderWithApp(detail(), { route: '/hd/hop-dong/abc' });
+
+    expect(screen.getByRole('link', { name: 'Hợp đồng' })).toBeInTheDocument();
+  });
+
+  it('đến từ panel "Hồ sơ liên quan" của hồ sơ khác thì hiện ĐÚNG hồ sơ đó, không phải mắt xích module mặc định', () => {
+    renderWithApp(detail(), {
+      route: '/hd/hop-dong/abc',
+      state: { from: { label: 'Nhà xưởng Khu công nghiệp Demo', to: '/tc/cong-trinh/site-1' } },
+    });
+
+    expect(
+      screen.getByRole('link', { name: 'Nhà xưởng Khu công nghiệp Demo' }),
+    ).toBeInTheDocument();
+    // Mắt xích module mặc định ("Hợp đồng") không còn — breadcrumb chỉ còn đúng đường đi thực
+    // tế, không cộng dồn cả hai.
+    expect(screen.queryByRole('link', { name: 'Hợp đồng' })).not.toBeInTheDocument();
+    // Hồ sơ hiện tại vẫn luôn là mắt xích cuối, dù đến từ đâu.
+    expect(screen.getAllByText('Hợp đồng nhà xưởng Long An').length).toBeGreaterThan(0);
+  });
+
+  it('bấm một hồ sơ liên quan thì mang theo state.from đúng — trang đích biết đã đến từ hồ sơ NÀY', async () => {
+    const result = renderWithApp(
+      detail([
+        {
+          title: 'Công trình',
+          records: [
+            {
+              label: 'Công trình',
+              value: 'Nhà xưởng Khu công nghiệp Demo',
+              to: '/tc/cong-trinh/site-1',
+            },
+          ],
+        },
+      ]),
+      { route: '/hd/hop-dong/abc' },
+    );
+
+    // Panel ngữ cảnh dựng SONG SONG hai bản (khối cuối trang cho màn hình hẹp, panel bên phải
+    // cho màn hình rộng — CSS quyết định bản nào hiện, cả hai đều có mặt trong DOM), nên cùng
+    // một hồ sơ liên quan khớp hai lần — bấm bản nào cũng dẫn tới đúng một nơi.
+    await userEvent.click(
+      screen.getAllByRole('link', { name: 'Nhà xưởng Khu công nghiệp Demo' })[0]!,
+    );
+
+    expect(currentPath(result)).toBe('/tc/cong-trinh/site-1');
+    expect(currentNavigationState(result)).toEqual({
+      from: { label: 'Hợp đồng nhà xưởng Long An', to: '/hd/hop-dong/abc' },
+    });
   });
 });
 

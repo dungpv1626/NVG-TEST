@@ -10,7 +10,7 @@
  */
 
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import {
   CONTRACT_SOURCE_LABELS,
   CONTRACT_SOURCE_ROUTES,
@@ -209,7 +209,16 @@ export function ContractDetailPage() {
                     },
                     {
                       label: 'Đối tác',
-                      value: contract.customer?.name ?? contract.partner_name ?? EM_DASH,
+                      value: contract.customer ? (
+                        <Link
+                          to={`/crm/khach-hang/${contract.customer.id}`}
+                          className="font-medium text-brand hover:underline"
+                        >
+                          {contract.customer.name}
+                        </Link>
+                      ) : (
+                        (contract.partner_name ?? EM_DASH)
+                      ),
                     },
                     {
                       label: 'Ngày ký',

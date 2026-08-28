@@ -8,7 +8,7 @@
  */
 
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import {
   BUTTONS,
   COMPLAINT_SEVERITIES,
@@ -153,7 +153,19 @@ export function ComplaintDetailPage() {
               <div className="space-y-6">
                 <DetailFields
                   fields={[
-                    { label: 'Khách hàng', value: complaint.customer?.name ?? EM_DASH },
+                    {
+                      label: 'Khách hàng',
+                      value: complaint.customer ? (
+                        <Link
+                          to={`/crm/khach-hang/${complaint.customer.id}`}
+                          className="font-medium text-brand hover:underline"
+                        >
+                          {complaint.customer.name}
+                        </Link>
+                      ) : (
+                        EM_DASH
+                      ),
+                    },
                     {
                       label: 'Mức độ nghiêm trọng',
                       value: COMPLAINT_SEVERITY_LABELS[complaint.severity],

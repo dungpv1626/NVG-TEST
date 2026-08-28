@@ -8,7 +8,7 @@
  */
 
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import {
   BUTTONS,
   DESIGN_STAGE_META,
@@ -201,7 +201,19 @@ export function DesignDetailPage() {
                 <DetailFields
                   fields={[
                     { label: 'Bước hiện tại', value: DESIGN_STAGE_META[project.stage].label },
-                    { label: 'Khách hàng', value: project.customer?.name ?? EM_DASH },
+                    {
+                      label: 'Khách hàng',
+                      value: project.customer ? (
+                        <Link
+                          to={`/crm/khach-hang/${project.customer.id}`}
+                          className="font-medium text-brand hover:underline"
+                        >
+                          {project.customer.name}
+                        </Link>
+                      ) : (
+                        EM_DASH
+                      ),
+                    },
                     {
                       label: 'Hạn bàn giao hồ sơ',
                       value: project.handover_deadline
