@@ -353,9 +353,15 @@
           làm ba trên bốn phần PRD liệt kê nhưng không nói cho người xem biết — nay có một dòng
           nói thẳng "chưa đo được phần hiệu suất nhân sự/tổ đội/nhà cung cấp" ngay trên màn hình,
           không chỉ nằm trong ghi chú mã nguồn mà chỉ người viết code mới đọc được.</li>
+      <li><strong>Báo cáo hiệu quả kinh doanh nay cũng truy ngược được xuống pháp nhân khi xem
+          "Toàn NVG"</strong> — báo cáo lãi/lỗ đã làm việc này từ trước (mỗi dòng vốn là một
+          công trình, chỉ cần thêm cột); báo cáo hiệu quả kinh doanh khó hơn vì số liệu đã được
+          CỘNG DỒN sẵn ở tầng dữ liệu, ba pháp nhân có thể bị trộn vào cùng một dòng nếu không
+          sửa tận gốc. Nay có thêm một bảng "Theo pháp nhân" riêng, chỉ hiện khi xem "Toàn NVG"
+          và tự ẩn khi chọn đúng một pháp nhân — có trong cả bản xem trên màn hình lẫn CSV/PDF.</li>
       <li class="muted"><strong>Cố ý chưa làm:</strong> gộp các thẻ Dashboard thành một endpoint
-          gọi một lần (hiện vẫn là các hook riêng); hao hụt/giá thành sản xuất, báo cáo toàn NVG
-          truy ngược xuống pháp nhân, phần thứ tư của BC-03. Xem thẻ "Chuẩn bị làm" bên dưới.</li>
+          gọi một lần (hiện vẫn là các hook riêng); hao hụt/giá thành sản xuất (BC-04); phần thứ
+          tư của BC-03. Xem thẻ "Chuẩn bị làm" bên dưới.</li>
     </ul>
   </div>
 
@@ -563,10 +569,9 @@
           giàn giáo cho thuê/chấm công/vượt ngân sách vẫn là các hook riêng, chưa gộp thành một
           endpoint tổng hợp (BC-01). Chấp nhận được ở quy mô demo, cân nhắc lại nếu Dashboard
           chậm thật.</li>
-      <li><strong>BC-04 / BC-07</strong> — hao hụt/giá thành sản xuất, báo cáo toàn NVG truy
-          ngược xuống pháp nhân/phòng ban (một phần đã có qua bộ lọc "Toàn NVG" + cột Pháp nhân).
-          Phần thứ tư của BC-03 ("hiệu suất nhân sự/tổ đội/nhà cung cấp") cũng chờ ở đây — xem
-          thẻ báo cáo bên trên.</li>
+      <li><strong>BC-04</strong> — tồn kho/hao hụt/giá thành sản xuất, chờ Module SX có định mức
+          tiêu hao chuẩn. Phần thứ tư của BC-03 ("hiệu suất nhân sự/tổ đội/nhà cung cấp") cũng
+          chờ ở đây — xem thẻ báo cáo bên trên. BC-07 (truy ngược xuống pháp nhân) nay đã xong.</li>
       <li><strong>Lệnh sản xuất (SX-01)</strong> còn ở mức CRUD trơn — đổi trạng thái bằng ô chọn
           trực tiếp, chưa có luồng chuyển bước ràng buộc, chưa có định mức tiêu hao hay giá thành
           (SX-02 cố ý chưa làm gì, chờ khảo sát Xưởng giàn giáo NVS).</li>
@@ -674,7 +679,7 @@
     <tr><td><code>HD</code></td><td>Hợp đồng</td><td><span class="pill s-progress">Đang làm</span></td>
         <td>Soạn hợp đồng từ hồ sơ nguồn không nhập lại, checklist 8 nhóm điều khoản, trình ký theo hạn mức, ghi nhận đã ký và báo cho Thi công/Kế toán, phát sinh ngoài hợp đồng đủ luồng, quyết toán và hủy. Còn phần "đã thu / còn phải thu" — chờ số liệu thật từ Kế toán (Giai đoạn 2).</td></tr>
     <tr><td><code>BC</code></td><td>Báo cáo &amp; Dashboard</td><td><span class="pill s-progress">Đang làm</span></td>
-        <td>Dashboard chỉ số thật cho Cơ hội, Gói thầu, Thiết kế, Hợp đồng, cộng bốn thẻ mới: dòng tiền, công nợ phải thu, giàn giáo đang cho thuê, chấm công đã chốt. Mỗi con số bấm được, lọc theo kỳ và theo pháp nhân. Thẻ "Quá hạn" nay gộp đủ bốn nguồn: hồ sơ quá hạn theo module, công nợ quá hạn thu, phê duyệt để lâu, và công trình vượt ngân sách. Báo cáo lãi/lỗ theo công trình (BC-02) và báo cáo hiệu quả kinh doanh — nguồn khách, phễu bán hàng, tỷ lệ trúng thầu (BC-03, ba phần đầu) đều đã lên hình, cả hai xuất được CSV, truy ngược tới chứng từ gốc. Còn hao hụt/giá thành sản xuất (BC-04), báo cáo toàn NVG truy ngược pháp nhân (BC-07), phần thứ tư của BC-03 (hiệu suất nhân sự/tổ đội/nhà cung cấp — chờ xác nhận đo bằng gì), và xuất PDF.</td></tr>
+        <td>Dashboard chỉ số thật cho Cơ hội, Gói thầu, Thiết kế, Hợp đồng, cộng bốn thẻ mới: dòng tiền, công nợ phải thu, giàn giáo đang cho thuê, chấm công đã chốt. Mỗi con số bấm được, lọc theo kỳ và theo pháp nhân. Thẻ "Quá hạn" nay gộp đủ bốn nguồn: hồ sơ quá hạn theo module, công nợ quá hạn thu, phê duyệt để lâu, và công trình vượt ngân sách. Báo cáo lãi/lỗ theo công trình (BC-02) và báo cáo hiệu quả kinh doanh — nguồn khách, phễu bán hàng, tỷ lệ trúng thầu (BC-03, ba phần đầu) đều đã lên hình, cả hai xuất được CSV/PDF, nói rõ dữ liệu tính đến lúc nào, và truy ngược được tới chứng từ gốc VÀ xuống từng pháp nhân khi xem "Toàn NVG" (BC-06, BC-07). Còn hao hụt/giá thành sản xuất (BC-04) và phần thứ tư của BC-03 (hiệu suất nhân sự/tổ đội/nhà cung cấp — chờ xác nhận đo bằng gì).</td></tr>
         <tr><td><code>TC</code></td><td>Thi công &amp; Ngân sách</td><td><span class="pill s-progress">Đang làm</span></td>
         <td>Công trình mở từ hợp đồng đã ký, hoặc tự mở khi Thiết kế bàn giao hồ sơ — mang theo đúng bộ ngân sách đã duyệt, không lập lại. Nhật ký công trường theo ngày kèm quân số. Nghiệm thu ba loại, và chỉ nghiệm thu với chủ đầu tư mới báo Kế toán thu tiền. Ngân sách so chi phí theo từng mã, cảnh báo trước khi vượt. Tổ đội và bảo hành theo từng hạng mục. Công trường đề nghị mua vật tư ngay tại hồ sơ công trình. Yêu cầu vẫn ở mức định hướng vì chưa khảo sát chỉ huy công trường.</td></tr>
     <tr><td><code>MH</code></td><td>Mua hàng – Vật tư</td><td><span class="pill s-progress">Đang làm</span></td>

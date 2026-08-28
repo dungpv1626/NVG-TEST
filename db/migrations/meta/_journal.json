@@ -421,6 +421,13 @@
       "when": 1787844100000,
       "tag": "0059_bc_sales_effectiveness",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1787877838000,
+      "tag": "0060_bc_sales_effectiveness_by_company",
+      "breakpoints": true
     }
   ]
 }

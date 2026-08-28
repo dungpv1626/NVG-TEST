@@ -175,8 +175,13 @@ export function isStalePendingApproval(
   return (at.getTime() - requested.getTime()) / msPerDay > PENDING_APPROVAL_AGING_DAYS;
 }
 
-/** Một dòng gốc từ hàm CSDL `opportunity_funnel_by_source` (BC-03, 0059_bc_sales_effectiveness.sql). */
+/**
+ * Một dòng gốc từ hàm CSDL `opportunity_funnel_by_source` (BC-03, 0059_bc_sales_effectiveness.sql,
+ * `companyId` thêm ở 0060_bc_sales_effectiveness_by_company.sql cho BC-07 — lọc theo pháp nhân ở
+ * trình duyệt để tách bảng "theo pháp nhân" khi xem "Toàn NVG", không phải gọi lại CSDL nhiều lần).
+ */
 export interface OpportunityFunnelRow {
+  readonly companyId: string;
   readonly source: string;
   readonly stage: OpportunityStage;
   readonly opportunityCount: number;
@@ -242,8 +247,12 @@ export function summarizeOpportunityFunnel(
   return OPPORTUNITY_STAGES.map((stage) => ({ stage, count: byStage.get(stage) ?? 0 }));
 }
 
-/** Một dòng gốc từ hàm CSDL `bidding_outcomes` (BC-03, 0059_bc_sales_effectiveness.sql). */
+/**
+ * Một dòng gốc từ hàm CSDL `bidding_outcomes` (BC-03, 0059_bc_sales_effectiveness.sql, `companyId`
+ * thêm ở 0060_bc_sales_effectiveness_by_company.sql cho BC-07 — xem ghi chú ở `OpportunityFunnelRow`).
+ */
 export interface BiddingOutcomeRow {
+  readonly companyId: string;
   readonly stage: BiddingStage;
   readonly lostReason: string | null;
   readonly biddingCount: number;

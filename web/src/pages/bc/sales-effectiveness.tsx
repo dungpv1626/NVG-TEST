@@ -19,26 +19,39 @@
  * Xuất Excel (CSV có BOM, cùng cách BC-02 đã làm) gộp CẢ BA phần vào một tệp — ba khối cách
  * nhau một dòng trống, mỗi khối có tiêu đề riêng, vì đây là MỘT báo cáo có ba lát cắt của
  * cùng một khoảng thời gian, không phải ba báo cáo độc lập.
+ *
+ * BC-07 ("Toàn NVG" vẫn truy ngược được xuống pháp nhân): hai hàm CSDL nguồn gộp theo NHÓM
+ * (nguồn khách/giai đoạn, giai đoạn/nguyên nhân trượt) ngay ở CSDL, khác BC-02 (mỗi dòng là
+ * một công trình nên chỉ cần thêm cột). Khi xem "Toàn NVG", dữ liệu ba pháp nhân bị TRỘN vào
+ * cùng một dòng nếu không tách — `company_id` được thêm vào cả hai hàm ở
+ * `0060_bc_sales_effectiveness_by_company.sql`, và `CompanyBreakdownSection` bên dưới gọi lại
+ * ĐÚNG các hàm `summarize*` đã có (lọc dòng thô theo từng pháp nhân trước khi gộp), không tính
+ * theo công thức riêng.
  */
 
 import { Download, Printer } from 'lucide-react';
 import {
   BUTTONS,
   OPPORTUNITY_STAGE_META,
+  conversionRate,
   formatCurrency,
   formatPercent,
   summarizeBiddingOutcomes,
   summarizeOpportunitiesBySource,
   summarizeOpportunityFunnel,
+  type BiddingOutcomeRow,
   type BiddingOutcomeSummary,
   type FunnelStageSummary,
+  type OpportunityFunnelRow,
   type SourceSummary,
 } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
+import { type CompanyRecord, useCompanies } from '@/hooks/use-companies';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useBiddingOutcomes, useOpportunityFunnelBySource } from '@/hooks/use-reports';
+import { useCompanyScope } from '@/lib/company-scope';
 import { escapeHtml, openPrintReport } from '@/lib/print-report';
 import { BcNav } from './bc-nav';
 import { ReportFreshness, ReportIncompleteNote } from './report-meta';
@@ -51,8 +64,26 @@ function exportCsv(
   sources: SourceSummary[],
   funnel: FunnelStageSummary[],
   bidding: BiddingOutcomeSummary,
+  byCompany: CompanyBreakdownRow[],
 ) {
   const lines: string[] = [];
+
+  if (byCompany.length > 0) {
+    lines.push('Theo pháp nhân — BC-07');
+    lines.push(
+      csvLine([
+        'Pháp nhân',
+        'Tổng số cơ hội',
+        'Đã ký hợp đồng',
+        'Tỷ lệ chuyển đổi (%)',
+        'Tỷ lệ trúng thầu (%)',
+      ]),
+    );
+    for (const r of byCompany) {
+      lines.push(csvLine([r.company.short_name, r.total, r.won, r.winRate, r.bidding.winRate]));
+    }
+    lines.push('');
+  }
 
   lines.push('Nguồn khách');
   lines.push(
@@ -101,11 +132,37 @@ function printPdf(
   sources: SourceSummary[],
   funnel: FunnelStageSummary[],
   bidding: BiddingOutcomeSummary,
+  byCompany: CompanyBreakdownRow[],
 ) {
   const rateOrMuted = (value: number | null) =>
     value === null
       ? '<span class="muted">Chưa có dữ liệu</span>'
       : escapeHtml(formatPercent(value));
+
+  const byCompanyTable =
+    byCompany.length === 0
+      ? ''
+      : `<h2>Theo pháp nhân — BC-07</h2>
+        <table>
+          <thead><tr>
+            <th>Pháp nhân</th>
+            <th class="num">Tổng số cơ hội</th>
+            <th class="num">Đã ký hợp đồng</th>
+            <th class="num">Tỷ lệ chuyển đổi</th>
+            <th class="num">Tỷ lệ trúng thầu</th>
+          </tr></thead>
+          <tbody>${byCompany
+            .map(
+              (r) => `<tr>
+                <td>${escapeHtml(r.company.short_name)}</td>
+                <td class="num">${r.total}</td>
+                <td class="num">${r.won}</td>
+                <td class="num">${rateOrMuted(r.winRate)}</td>
+                <td class="num">${rateOrMuted(r.bidding.winRate)}</td>
+              </tr>`,
+            )
+            .join('')}</tbody>
+        </table>`;
 
   const sourceTable =
     sources.length === 0
@@ -165,6 +222,7 @@ function printPdf(
         }`;
 
   const body = `
+    ${byCompanyTable}
     <h2>Nguồn khách</h2>
     ${sourceTable}
     <h2>Phễu bán hàng — theo giai đoạn hiện tại</h2>
@@ -305,13 +363,101 @@ function BiddingSection({ summary }: { summary: ReturnType<typeof summarizeBiddi
   );
 }
 
+/**
+ * BC-07 — chỉ hiện khi xem "Toàn NVG" (`scope.isAggregate`). Gọi lại ĐÚNG `summarizeOpportuni-
+ * tiesBySource`/`summarizeBiddingOutcomes` trên tập con dòng thô của từng pháp nhân, không
+ * tính tỷ lệ theo công thức riêng ở đây — một chỗ tính, khỏi lệch với ba phần bên trên.
+ */
+interface CompanyBreakdownRow {
+  readonly company: CompanyRecord;
+  readonly total: number;
+  readonly won: number;
+  readonly winRate: number | null;
+  readonly bidding: BiddingOutcomeSummary;
+}
+
+/** Dùng chung cho phần hiện trên màn hình VÀ cho xuất Excel/PDF — một công thức duy nhất. */
+function summarizeByCompany(
+  companies: readonly CompanyRecord[],
+  funnelRows: readonly OpportunityFunnelRow[],
+  biddingRows: readonly BiddingOutcomeRow[],
+): CompanyBreakdownRow[] {
+  return companies
+    .filter((c) => c.is_transactional)
+    .map((company) => {
+      const sources = summarizeOpportunitiesBySource(
+        funnelRows.filter((r) => r.companyId === company.id),
+      );
+      const total = sources.reduce((sum, s) => sum + s.total, 0);
+      const won = sources.reduce((sum, s) => sum + s.won, 0);
+      const bidding = summarizeBiddingOutcomes(
+        biddingRows.filter((r) => r.companyId === company.id),
+      );
+      return { company, total, won, winRate: conversionRate(won, total), bidding };
+    });
+}
+
+function CompanyBreakdownSection({ rows }: { rows: CompanyBreakdownRow[] }) {
+  if (rows.every((r) => r.total === 0 && r.bidding.won + r.bidding.lost === 0)) return null;
+
+  return (
+    <section className="overflow-x-auto rounded-lg border border-border bg-surface shadow-card">
+      <h2 className="border-b border-border px-3 py-2.5 font-medium">Theo pháp nhân — BC-07</h2>
+      <table className="w-full min-w-[36rem] border-collapse">
+        <caption className="sr-only">Hiệu quả kinh doanh gộp theo pháp nhân</caption>
+        <thead>
+          <tr className="border-b border-border text-left text-xs text-fg-subtle">
+            <th scope="col" className="px-3 py-2 font-medium">
+              Pháp nhân
+            </th>
+            <th scope="col" className="px-3 py-2 text-right font-medium">
+              Tổng số cơ hội
+            </th>
+            <th scope="col" className="px-3 py-2 text-right font-medium">
+              Đã ký hợp đồng
+            </th>
+            <th scope="col" className="px-3 py-2 text-right font-medium">
+              Tỷ lệ chuyển đổi
+            </th>
+            <th scope="col" className="px-3 py-2 text-right font-medium">
+              Tỷ lệ trúng thầu
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(({ company, total, won, winRate, bidding }) => (
+            <tr key={company.id} className="border-b border-border last:border-0">
+              <th scope="row" className="px-3 py-2 text-left font-normal">
+                {company.short_name}
+              </th>
+              <td className="px-3 py-2 text-right tabular-nums">{total}</td>
+              <td className="px-3 py-2 text-right tabular-nums">{won}</td>
+              <td className="px-3 py-2 text-right tabular-nums">
+                <RatePill value={winRate} />
+              </td>
+              <td className="px-3 py-2 text-right tabular-nums">
+                <RatePill value={bidding.winRate} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
 export function SalesEffectivenessPage() {
+  const scope = useCompanyScope();
   const funnel = useOpportunityFunnelBySource();
   const outcomes = useBiddingOutcomes();
+  const companies = useCompanies(scope.isAggregate);
 
   const isLoading = funnel.isLoading || outcomes.isLoading;
   const error = funnel.error ?? outcomes.error;
   const hasAnyData = (funnel.data?.length ?? 0) > 0 || (outcomes.data?.length ?? 0) > 0;
+  const byCompany = scope.isAggregate
+    ? summarizeByCompany(companies.data ?? [], funnel.data ?? [], outcomes.data ?? [])
+    : [];
 
   return (
     <>
@@ -329,6 +475,7 @@ export function SalesEffectivenessPage() {
                     summarizeOpportunitiesBySource(funnel.data ?? []),
                     summarizeOpportunityFunnel(funnel.data ?? []),
                     summarizeBiddingOutcomes(outcomes.data ?? []),
+                    byCompany,
                   )
                 }
               >
@@ -342,6 +489,7 @@ export function SalesEffectivenessPage() {
                     summarizeOpportunitiesBySource(funnel.data ?? []),
                     summarizeOpportunityFunnel(funnel.data ?? []),
                     summarizeBiddingOutcomes(outcomes.data ?? []),
+                    byCompany,
                   )
                 }
               >
@@ -380,6 +528,7 @@ export function SalesEffectivenessPage() {
               đã đầy đủ.
             </ReportIncompleteNote>
           </div>
+          {scope.isAggregate && <CompanyBreakdownSection rows={byCompany} />}
           <SourceSection rows={summarizeOpportunitiesBySource(funnel.data ?? [])} />
           <FunnelSection rows={summarizeOpportunityFunnel(funnel.data ?? [])} />
           <BiddingSection summary={summarizeBiddingOutcomes(outcomes.data ?? [])} />

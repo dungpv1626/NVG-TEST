@@ -147,13 +147,26 @@ describe('isStalePendingApproval', () => {
 describe('summarizeOpportunitiesBySource (BC-03, phần nguồn khách)', () => {
   const rows: OpportunityFunnelRow[] = [
     {
+      companyId: 'c1',
       source: 'Giới thiệu',
       stage: 'ky_hop_dong',
       opportunityCount: 2,
       estimatedValue: '500000000',
     },
-    { source: 'Giới thiệu', stage: 'mat_co_hoi', opportunityCount: 1, estimatedValue: '100000000' },
-    { source: 'Facebook', stage: 'bao_gia', opportunityCount: 3, estimatedValue: '300000000' },
+    {
+      companyId: 'c1',
+      source: 'Giới thiệu',
+      stage: 'mat_co_hoi',
+      opportunityCount: 1,
+      estimatedValue: '100000000',
+    },
+    {
+      companyId: 'c1',
+      source: 'Facebook',
+      stage: 'bao_gia',
+      opportunityCount: 3,
+      estimatedValue: '300000000',
+    },
   ];
 
   it('cộng dồn mọi giai đoạn về một dòng mỗi nguồn, chỉ tính "ký hợp đồng" là thắng', () => {
@@ -178,8 +191,20 @@ describe('summarizeOpportunitiesBySource (BC-03, phần nguồn khách)', () => 
   // nhau: một bên chưa đo, một bên đã đo và người dùng chọn "Khác".
   it('nguồn NULL từ CSDL gộp vào "Chưa ghi nhận", không lẫn với "Khác"', () => {
     const result = summarizeOpportunitiesBySource([
-      { source: 'Chưa ghi nhận', stage: 'tiep_nhan', opportunityCount: 1, estimatedValue: 0 },
-      { source: 'Khác', stage: 'tiep_nhan', opportunityCount: 1, estimatedValue: 0 },
+      {
+        companyId: 'c1',
+        source: 'Chưa ghi nhận',
+        stage: 'tiep_nhan',
+        opportunityCount: 1,
+        estimatedValue: 0,
+      },
+      {
+        companyId: 'c1',
+        source: 'Khác',
+        stage: 'tiep_nhan',
+        opportunityCount: 1,
+        estimatedValue: 0,
+      },
     ]);
     expect(result.map((r) => r.source).sort()).toEqual(['Chưa ghi nhận', 'Khác']);
   });
@@ -188,7 +213,13 @@ describe('summarizeOpportunitiesBySource (BC-03, phần nguồn khách)', () => 
 describe('summarizeOpportunityFunnel (BC-03, phần phễu bán hàng)', () => {
   it('luôn trả đủ 7 giai đoạn theo đúng thứ tự Kanban, kể cả giai đoạn không có cơ hội nào', () => {
     const result = summarizeOpportunityFunnel([
-      { source: 'Website', stage: 'bao_gia', opportunityCount: 4, estimatedValue: 0 },
+      {
+        companyId: 'c1',
+        source: 'Website',
+        stage: 'bao_gia',
+        opportunityCount: 4,
+        estimatedValue: 0,
+      },
     ]);
     expect(result.map((r) => r.stage)).toEqual([
       'tiep_nhan',
@@ -205,8 +236,20 @@ describe('summarizeOpportunityFunnel (BC-03, phần phễu bán hàng)', () => {
 
   it('cộng dồn nhiều nguồn khác nhau vào cùng một giai đoạn', () => {
     const result = summarizeOpportunityFunnel([
-      { source: 'Website', stage: 'khao_sat', opportunityCount: 2, estimatedValue: 0 },
-      { source: 'Facebook', stage: 'khao_sat', opportunityCount: 3, estimatedValue: 0 },
+      {
+        companyId: 'c1',
+        source: 'Website',
+        stage: 'khao_sat',
+        opportunityCount: 2,
+        estimatedValue: 0,
+      },
+      {
+        companyId: 'c1',
+        source: 'Facebook',
+        stage: 'khao_sat',
+        opportunityCount: 3,
+        estimatedValue: 0,
+      },
     ]);
     expect(result.find((r) => r.stage === 'khao_sat')?.count).toBe(5);
   });
@@ -215,9 +258,14 @@ describe('summarizeOpportunityFunnel (BC-03, phần phễu bán hàng)', () => {
 describe('summarizeBiddingOutcomes (BC-03, tỷ lệ trúng thầu và nguyên nhân trượt)', () => {
   it('tính tỷ lệ trúng thầu trên MẪU SỐ đã có kết quả, xếp nguyên nhân trượt theo số lần giảm dần', () => {
     const rows: BiddingOutcomeRow[] = [
-      { stage: 'trung_thau', lostReason: null, biddingCount: 3 },
-      { stage: 'truot_thau', lostReason: 'Giá cao hơn đối thủ', biddingCount: 5 },
-      { stage: 'truot_thau', lostReason: 'Hồ sơ năng lực chưa đủ', biddingCount: 2 },
+      { companyId: 'c1', stage: 'trung_thau', lostReason: null, biddingCount: 3 },
+      { companyId: 'c1', stage: 'truot_thau', lostReason: 'Giá cao hơn đối thủ', biddingCount: 5 },
+      {
+        companyId: 'c1',
+        stage: 'truot_thau',
+        lostReason: 'Hồ sơ năng lực chưa đủ',
+        biddingCount: 2,
+      },
     ];
     const result = summarizeBiddingOutcomes(rows);
 
@@ -237,7 +285,7 @@ describe('summarizeBiddingOutcomes (BC-03, tỷ lệ trúng thầu và nguyên n
 
   it('trượt thầu mà không ghi nguyên nhân thì gộp vào "Chưa ghi nhận"', () => {
     const result = summarizeBiddingOutcomes([
-      { stage: 'truot_thau', lostReason: null, biddingCount: 1 },
+      { companyId: 'c1', stage: 'truot_thau', lostReason: null, biddingCount: 1 },
     ]);
     expect(result.lossReasons).toEqual([{ reason: 'Chưa ghi nhận', count: 1 }]);
   });

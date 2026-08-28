@@ -180,6 +180,7 @@ describeDb('BC-05 — sites_budget_status (tổng hợp toàn công trình, trá
 interface SalesFixture {
   testSource: string;
   testLostReason: string;
+  companyId: string;
 }
 
 async function seedSalesFixture(): Promise<SalesFixture> {
@@ -213,7 +214,7 @@ async function seedSalesFixture(): Promise<SalesFixture> {
          'truot_thau', ${testLostReason})
     `;
 
-    return { testSource, testLostReason };
+    return { testSource, testLostReason, companyId: nvc!.id };
   } finally {
     await sql.end();
   }
@@ -265,10 +266,14 @@ describeDb('BC-03 — opportunity_funnel_by_source / bidding_outcomes', () => {
     expect(won).toBeTruthy();
     expect(Number(won!.opportunity_count)).toBe(1);
     expect(Number(won!.estimated_value)).toBe(500_000_000);
+    // BC-07: "Toàn NVG" (p_company_id: null) vẫn phải trả company_id để trình duyệt tách lại
+    // được theo pháp nhân — không trộn lẫn số liệu ba pháp nhân vào một dòng.
+    expect(won!.company_id).toBe(fixture.companyId);
 
     expect(lost).toBeTruthy();
     expect(Number(lost!.opportunity_count)).toBe(1);
     expect(Number(lost!.estimated_value)).toBe(100_000_000);
+    expect(lost!.company_id).toBe(fixture.companyId);
   });
 
   it('bidding_outcomes gộp đúng nguyên nhân trượt thầu, KHÔNG lẫn gói thầu chưa có kết quả', async () => {
@@ -281,6 +286,8 @@ describeDb('BC-03 — opportunity_funnel_by_source / bidding_outcomes', () => {
     );
     expect(lostRow).toBeTruthy();
     expect(Number(lostRow!.bidding_count)).toBe(1);
+    // BC-07: cùng lý do — "Toàn NVG" vẫn phải truy ngược được xuống pháp nhân.
+    expect(lostRow!.company_id).toBe(fixture.companyId);
 
     // Hàm chỉ lấy hai giai đoạn KẾT THÚC — không có dòng nào ở giai đoạn dở dang.
     expect(rows.every((r) => r.stage === 'trung_thau' || r.stage === 'truot_thau')).toBe(true);

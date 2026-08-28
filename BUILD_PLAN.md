@@ -636,7 +636,7 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
   sẵn nhưng chưa có hàm/nút) — BSD chỉ đặc tả đúng một endpoint thu hồi, chưa rõ nghiệp vụ hủy
   thật sự cần gì.
 
-### 3G. Module BC — đầy đủ — ✅ BC-01/BC-02/BC-03 (một phần)/BC-05/BC-06 xong, ⏳ BC-04/BC-07 chưa làm
+### 3G. Module BC — đầy đủ — ✅ BC-01/BC-02/BC-03 (một phần)/BC-05/BC-06/BC-07 xong, ⏳ BC-04 chưa làm
 
 - ✅ **BC-02 — Báo cáo lãi/lỗ theo công trình** (`/bc/lai-lo`, hàm `project_profit_loss` —
   `db/migrations/0056_bc_profit_loss.sql`). KHÔNG sinh bảng mới: đọc trực tiếp
@@ -692,9 +692,20 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
   đo bằng gì (tổ đội thi công — TC chưa có bảng phân công; nhà cung cấp — MH chưa có sổ đánh
   giá). Làm ẩu sẽ tạo "bảng xếp hạng nhân sự" không có cơ sở, đúng thứ CLAUDE.md 5.1 cấm. Cần
   hỏi lại Haan trước khi thêm — xem ghi chú đầu `db/migrations/0059_bc_sales_effectiveness.sql`.
+- ✅ **BC-07 — BC-03 nay cũng truy ngược được xuống pháp nhân khi xem "Toàn NVG"**
+  (`db/migrations/0060_bc_sales_effectiveness_by_company.sql`). BC-02 đã làm việc này từ 0056
+  (mỗi dòng vốn là một công trình, chỉ cần thêm cột); BC-03 khác — hai hàm nguồn
+  (`opportunity_funnel_by_source`, `bidding_outcomes`) GỘP theo nhóm ngay ở CSDL, nên gọi với
+  `p_company_id = NULL` sẽ trộn lẫn số liệu ba pháp nhân vào cùng một dòng nếu không có cột
+  `company_id` để tách lại — DROP + CREATE lại (không REPLACE được vì đổi tập cột trả về). Thêm
+  bảng "Theo pháp nhân — BC-07" (`CompanyBreakdownSection`, `sales-effectiveness.tsx`), CHỈ hiện
+  khi `scope.isAggregate` — gọi lại ĐÚNG `summarizeOpportunitiesBySource`/`summarizeBiddingOutcomes`
+  trên tập con dòng thô của từng pháp nhân, không tính công thức riêng. Cả CSV và PDF cũng thêm
+  đúng phần này. Test: `db/src/__tests__/bc.test.ts` (khẳng định `company_id` có trong dòng trả
+  về từ CSDL thật), `shared/src/__tests__/bc.test.ts`. Xác nhận qua browser thật: "Toàn NVG" hiện
+  bảng ba pháp nhân, chọn một pháp nhân cụ thể thì bảng tự ẩn, không lỗi console.
 - ⏳ **CHƯA LÀM**: BC-04 (tồn kho/hao hụt/giá thành SX — mục này đã nằm trong danh sách CÓ THỂ
-  CẮT, xem "Thứ tự cắt giảm"), BC-07 (báo cáo tổng hợp toàn NVG truy ngược xuống pháp nhân/phòng
-  ban — một phần đã có qua "Toàn NVG" + cột Pháp nhân).
+  CẮT, xem "Thứ tự cắt giảm").
 - ✅ **BC-06 phần xuất PDF** — nút "Xuất PDF" trên cả hai báo cáo (BC-02, BC-03), mở CỬA SỔ IN
   riêng (`web/src/lib/print-report.ts`) rồi gọi `window.print()` — người dùng chọn đích "Lưu
   dưới dạng PDF" ở hộp thoại in, không phải file `.pdf` tự tải xuống. CỐ Ý không dùng thư viện

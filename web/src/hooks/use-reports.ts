@@ -116,12 +116,14 @@ export function useOpportunityFunnelBySource(enabled = true) {
       if (error) throw error;
       return (
         (data ?? []) as {
+          company_id: string;
           source: string;
           stage: OpportunityStage;
           opportunity_count: number | string;
           estimated_value: MoneyValue;
         }[]
       ).map((r) => ({
+        companyId: r.company_id,
         source: r.source,
         stage: r.stage,
         opportunityCount: Number(r.opportunity_count),
@@ -151,11 +153,13 @@ export function useBiddingOutcomes(enabled = true) {
       if (error) throw error;
       return (
         (data ?? []) as {
+          company_id: string;
           stage: BiddingStage;
           lost_reason: string | null;
           bidding_count: number | string;
         }[]
       ).map((r) => ({
+        companyId: r.company_id,
         stage: r.stage,
         lostReason: r.lost_reason,
         biddingCount: Number(r.bidding_count),
