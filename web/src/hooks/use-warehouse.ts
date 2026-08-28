@@ -155,7 +155,13 @@ export interface InventoryRow {
   material_id: string;
   quantity_on_hand: string;
   min_quantity: string | null;
-  average_cost: string;
+  /**
+   * `null` khi vai trò hiện tại không được xem giá vốn (Mẫu D) — cột đã bị thu hồi quyền đọc
+   * ở tầng CSDL, chỉ hàm `inventory_items_cost` mở ra cho vai trò đủ quyền (BUILD_PLAN 4B).
+   * KHÔNG coi `null` là "chưa có giá vốn"; nơi hiển thị phải tự bỏ dòng đó khỏi tổng thay vì
+   * hiện `0`.
+   */
+  average_cost: string | null;
   last_movement_at: string | null;
   location: string | null;
   material: {
@@ -178,7 +184,7 @@ export function useInventory(warehouseId?: string) {
         supabase
           .from('inventory_items')
           .select(
-            'id, warehouse_id, material_id, quantity_on_hand, min_quantity, average_cost, ' +
+            'id, warehouse_id, material_id, quantity_on_hand, min_quantity, ' +
               'last_movement_at, location, ' +
               'material:materials!inventory_items_material_id_materials_id_fk(code, name, specification, unit, is_scaffolding), ' +
               'warehouse:warehouses!inventory_items_warehouse_id_warehouses_id_fk(code, name)',
@@ -189,7 +195,23 @@ export function useInventory(warehouseId?: string) {
 
       const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw new Error(error.message);
-      return (data ?? []) as unknown as InventoryRow[];
+      const rows = (data ?? []) as unknown as InventoryRow[];
+
+      // Giá vốn tách riêng lượt gọi, và KHÔNG coi lỗi thiếu quyền là lỗi tải trang — vai trò
+      // không được xem giá vốn vẫn phải thấy được toàn bộ tồn kho, chỉ riêng cột này rỗng.
+      const { data: costs } = await supabase.rpc('inventory_items_cost', {
+        p_warehouse_id: warehouseId ?? null,
+        p_company_id: scope.isAggregate ? null : scope.companyId,
+      });
+      const costById = new Map(
+        ((costs ?? []) as { inventory_item_id: string; average_cost: string }[]).map((c) => [
+          c.inventory_item_id,
+          c.average_cost,
+        ]),
+      );
+      for (const row of rows) row.average_cost = costById.get(row.id) ?? null;
+
+      return rows;
     },
     enabled: scope.isReady,
   });
@@ -278,12 +300,14 @@ export interface StockMovementRecord {
     id: string;
     material_id: string;
     quantity: string;
-    unit_cost: string;
     condition_note: string | null;
     material: { code: string; name: string; unit: string } | null;
   }[];
 }
 
+// `unit_cost` của `stock_movement_items` CỐ Ý không có trong SELECT — quyền đọc cột đã bị thu
+// hồi ở tầng CSDL (BUILD_PLAN 4B) và không màn hình nào hiển thị nó (lịch sử phiếu kho chỉ
+// hiện số lượng/vật tư/ghi chú), nên không cần thêm cửa đọc riêng như `inventory_items_cost`.
 const MOVEMENT_SELECT =
   'id, code, company_id, movement_type, warehouse_id, target_warehouse_id, movement_date, ' +
   'issue_reason, construction_site_id, delivery_id, purchase_order_id, counterpart_name, ' +
@@ -291,7 +315,7 @@ const MOVEMENT_SELECT =
   'warehouse:warehouses!stock_movements_warehouse_id_warehouses_id_fk(code, name), ' +
   'target:warehouses!stock_movements_target_warehouse_id_warehouses_id_fk(code, name), ' +
   'performer:users!stock_movements_performed_by_users_id_fk(full_name), ' +
-  'items:stock_movement_items(id, material_id, quantity, unit_cost, condition_note, ' +
+  'items:stock_movement_items(id, material_id, quantity, condition_note, ' +
   'material:materials!stock_movement_items_material_id_materials_id_fk(code, name, unit))';
 
 export function useStockMovements(filter: { warehouseId?: string; type?: StockMovementType } = {}) {

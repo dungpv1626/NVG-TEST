@@ -128,6 +128,27 @@ async function onHand(warehouseId: string, materialId: string): Promise<number> 
   }
 }
 
+/**
+ * Giá vốn bình quân của một cặp kho × vật tư, đọc trực tiếp để không phụ thuộc quyền.
+ *
+ * Từ BUILD_PLAN 4B, `average_cost` KHÔNG còn đọc thẳng được qua vai trò `kho` (Mẫu D — chỉ
+ * qua hàm `inventory_items_cost`, xem test riêng ở cuối tệp) — các ca kiểm TÍNH ĐÚNG giá bình
+ * quân sau nhập/điều chuyển/kiểm kê dùng hàm này để tách khỏi việc kiểm quyền.
+ */
+async function averageCost(warehouseId: string, materialId: string): Promise<bigint> {
+  const { createConnection } = await import('../client');
+  const { sql } = createConnection();
+  try {
+    const rows = await sql<{ average_cost: string }[]>`
+      SELECT average_cost FROM inventory_items
+       WHERE warehouse_id = ${warehouseId} AND material_id = ${materialId}
+    `;
+    return rows.length === 0 ? 0n : BigInt(rows[0]!.average_cost);
+  } finally {
+    await sql.end();
+  }
+}
+
 describeDb('KHO — danh mục vật tư và phạm vi pháp nhân (KHO-01, KHO-02)', () => {
   let fixture: Fixture;
   let kho: SupabaseClient;
@@ -240,16 +261,9 @@ describeDb('KHO — nhập, xuất, điều chuyển (KHO-03, KHO-04, KHO-05)', 
       p_items: [{ material_id: fixture.materialThep, quantity: 1000, unit_cost: 24_000 }],
     });
 
-    const { data } = await kho
-      .from('inventory_items')
-      .select('quantity_on_hand, average_cost')
-      .eq('warehouse_id', fixture.warehouseA)
-      .eq('material_id', fixture.materialThep)
-      .single();
-
-    expect(Number((data as { quantity_on_hand: string }).quantity_on_hand)).toBe(2000);
+    expect(await onHand(fixture.warehouseA, fixture.materialThep)).toBe(2000);
     // (1000×20.000 + 1000×24.000) / 2000 = 22.000
-    expect(BigInt((data as { average_cost: string }).average_cost)).toBe(22_000n);
+    expect(await averageCost(fixture.warehouseA, fixture.materialThep)).toBe(22_000n);
   });
 
   it('xuất quá tồn bị chặn, và nói rõ còn bao nhiêu', async () => {
@@ -820,16 +834,9 @@ describe('KHO — vá lỗi sau rà soát (0040, 0041)', () => {
     });
     expect(error).toBeNull();
 
-    const { data: dest } = await kho
-      .from('inventory_items')
-      .select('average_cost')
-      .eq('warehouse_id', fixture.warehouseB)
-      .eq('material_id', fixture.materialBulong)
-      .single();
-
     // Màn hình Phiếu kho chỉ hiện ô đơn giá cho phiếu NHẬP, nên phiếu điều chuyển luôn gửi lên
     // 0 — trước bản vá, chuyển hàng sang kho khác làm hàng mất sạch giá trị trong sổ.
-    expect(BigInt((dest as { average_cost: string }).average_cost)).toBe(12_000n);
+    expect(await averageCost(fixture.warehouseB, fixture.materialBulong)).toBe(12_000n);
   });
 
   it('điều chỉnh kiểm kê tăng KHÔNG kéo giá vốn xuống — con số đó quyết định cấp phê duyệt', async () => {
@@ -852,17 +859,46 @@ describe('KHO — vá lỗi sau rà soát (0040, 0041)', () => {
       p_note: 'Đồng ý điều chỉnh.',
     });
 
-    const { data: inv } = await kho
-      .from('inventory_items')
-      .select('quantity_on_hand, average_cost')
-      .eq('warehouse_id', fixture.warehouseC)
-      .eq('material_id', fixture.materialThep)
-      .single();
-    const row = inv as { quantity_on_hand: string; average_cost: string };
-
-    expect(Number(row.quantity_on_hand)).toBe(110);
+    expect(await onHand(fixture.warehouseC, fixture.materialThep)).toBe(110);
     // Trước bản vá: (100×200.000 + 10×0) / 110 ≈ 181.818 đ, và mỗi lần kiểm kê lại tụt thêm.
     // Giá vốn thổi thấp đưa chênh lệch lớn lọt xuống dưới hạn mức phê duyệt của Kho.
-    expect(BigInt(row.average_cost)).toBe(200_000n);
+    expect(await averageCost(fixture.warehouseC, fixture.materialThep)).toBe(200_000n);
+  });
+
+  /**
+   * Phát hiện ở đợt rà 4B: `average_cost` từng đọc thẳng được qua vai trò `kho`, dù Thủ kho
+   * không nằm trong danh sách được xem giá vốn (CLAUDE.md 6.6) — khoá ở `0064`, cùng chuẩn
+   * với giá vốn dự toán (`estimate_cost_breakdown`).
+   */
+  it('Thủ kho không đọc thẳng được giá vốn tồn kho, Ban Giám đốc/Tài chính đọc được qua hàm', async () => {
+    // Bu lông chưa từng vào kho C trong khối test này — như ghi chú `warehouseC` ở đầu tệp,
+    // dùng cặp kho/vật tư sạch để phép thử không lẫn với bình quân của ca khác.
+    await kho.rpc('receive_stock', {
+      p_warehouse_id: fixture.warehouseC,
+      p_items: [{ material_id: fixture.materialBulong, quantity: 5, unit_cost: 777_000 }],
+    });
+
+    const { error: selectError } = await kho
+      .from('inventory_items')
+      .select('average_cost')
+      .eq('warehouse_id', fixture.warehouseC)
+      .eq('material_id', fixture.materialBulong)
+      .single();
+    expect(selectError).toBeTruthy();
+    expect(selectError!.code).toBe(PG_INSUFFICIENT_PRIVILEGE);
+
+    const { error: rpcErrorForKho } = await kho.rpc('inventory_items_cost', {
+      p_warehouse_id: fixture.warehouseC,
+    });
+    expect(rpcErrorForKho).toBeTruthy();
+
+    const { data: rows, error: rpcErrorForCfo } = await cfo.rpc('inventory_items_cost', {
+      p_warehouse_id: fixture.warehouseC,
+    });
+    expect(rpcErrorForCfo).toBeNull();
+    const found = (rows as { inventory_item_id: string; average_cost: string }[]).some(
+      (r) => BigInt(r.average_cost) === 777_000n,
+    );
+    expect(found).toBe(true);
   });
 });

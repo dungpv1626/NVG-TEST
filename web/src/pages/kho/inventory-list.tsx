@@ -23,11 +23,7 @@ import { PageHeader } from '@/components/layout/app-shell';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
-import {
-  useInventory,
-  useUpdateInventorySettings,
-  useWarehouses,
-} from '@/hooks/use-warehouse';
+import { useInventory, useUpdateInventorySettings, useWarehouses } from '@/hooks/use-warehouse';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useCan } from '@/lib/auth';
 import { KhoNav } from './kho-nav';
@@ -73,8 +69,14 @@ export function InventoryListPage() {
     });
   }, [data, query, onlyAlerts]);
 
+  // `average_cost` là `null` cho vai trò không được xem giá vốn (Mẫu D) — phân biệt với "0
+  // đồng thật" bằng cách không hiện thẻ tổng giá trị luôn, thay vì cộng null thành 0 và hiện
+  // một con số sai (Content Guidelines: không lấy im lặng làm "0").
+  const seesInventoryValue = (data ?? []).some((r) => r.average_cost !== null);
   const totalValue = inventoryValue(
-    (data ?? []).map((r) => ({ quantityOnHand: r.quantity_on_hand, averageCost: r.average_cost })),
+    (data ?? [])
+      .filter((r) => r.average_cost !== null)
+      .map((r) => ({ quantityOnHand: r.quantity_on_hand, averageCost: r.average_cost })),
   );
   const alertCount = rows.filter((r) => r.alerts.length > 0).length;
 
@@ -100,7 +102,10 @@ export function InventoryListPage() {
       />
 
       {rowError && (
-        <p role="alert" className="mb-3 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
+        <p
+          role="alert"
+          className="mb-3 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
+        >
           {rowError}
         </p>
       )}
@@ -147,10 +152,12 @@ export function InventoryListPage() {
       ) : (
         <>
           <p className="mb-2 text-fg-muted">
-            {rows.length} dòng tồn · Giá trị ước tính {formatCurrency(totalValue)}
+            {rows.length} dòng tồn
+            {seesInventoryValue && ` · Giá trị ước tính ${formatCurrency(totalValue)}`}
             <span className="block text-xs text-fg-subtle">
-              Giá trị tính theo đơn giá bình quân khi nhập — con số tham khảo, chưa phải giá vốn
-              để hạch toán.
+              {seesInventoryValue
+                ? 'Giá trị tính theo đơn giá bình quân khi nhập — con số tham khảo, chưa phải giá vốn để hạch toán.'
+                : 'Giá vốn tồn kho chỉ hiện cho Ban Giám đốc, Tài chính, Dự án – Đấu thầu, Thiết kế và Mua hàng.'}
             </span>
           </p>
 
@@ -158,13 +165,27 @@ export function InventoryListPage() {
             <table className="w-full min-w-[52rem] text-left">
               <thead className="border-b border-border text-fg-muted">
                 <tr>
-                  <th scope="col" className="px-4 py-2 font-medium">Mã vật tư</th>
-                  <th scope="col" className="px-4 py-2 font-medium">Tên hàng</th>
-                  <th scope="col" className="px-4 py-2 font-medium">Kho</th>
-                  <th scope="col" className="px-4 py-2 text-right font-medium">Tồn</th>
-                  <th scope="col" className="px-4 py-2 text-right font-medium">Tồn tối thiểu</th>
-                  <th scope="col" className="px-4 py-2 font-medium">Phát sinh cuối</th>
-                  <th scope="col" className="px-4 py-2 font-medium">Cảnh báo</th>
+                  <th scope="col" className="px-4 py-2 font-medium">
+                    Mã vật tư
+                  </th>
+                  <th scope="col" className="px-4 py-2 font-medium">
+                    Tên hàng
+                  </th>
+                  <th scope="col" className="px-4 py-2 font-medium">
+                    Kho
+                  </th>
+                  <th scope="col" className="px-4 py-2 text-right font-medium">
+                    Tồn
+                  </th>
+                  <th scope="col" className="px-4 py-2 text-right font-medium">
+                    Tồn tối thiểu
+                  </th>
+                  <th scope="col" className="px-4 py-2 font-medium">
+                    Phát sinh cuối
+                  </th>
+                  <th scope="col" className="px-4 py-2 font-medium">
+                    Cảnh báo
+                  </th>
                 </tr>
               </thead>
               <tbody>

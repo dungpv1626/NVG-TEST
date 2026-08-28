@@ -825,11 +825,17 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
   Postgres — cơ chế TÁCH BIỆT với RLS — để khoá cột nhạy cảm, xác nhận qua
   `has_column_privilege`, không chỉ đọc `pg_policies`). `record_sequences` là bảng RLS-không-
   policy duy nhất, đúng ý đồ (chỉ ghi qua hàm SECURITY DEFINER).
-  - ⚠️ **Cần Haan xác nhận**: `inventory_items.average_cost` và `stock_movement_items.unit_cost`
-    (giá vốn TỒN KHO) không bị khoá cột như `unit_prices`/`estimates`/`quotations` — bất kỳ ai
-    xem được module Kho cũng đọc được giá vốn bình quân, kể cả vai trò không nằm trong danh
-    sách được xem giá vốn (CLAUDE.md 6.6). BSD 4.8 không gắn nhãn Mẫu D cho bảng này nên có
-    thể là chủ ý (giá vốn kho là số vận hành, khác giá vốn dự toán) — chưa tự khoá, chờ quyết định.
+  - ✅ **Đã khoá** — Haan xác nhận 28/08/2026: khoá `inventory_items.average_cost` và
+    `stock_movement_items.unit_cost` giống giá vốn dự toán
+    (`db/migrations/0064_lock_down_inventory_cost.sql`). Hai cách khác nhau vì cách dùng ở
+    Frontend khác nhau: `average_cost` CÓ hiển thị (tổng "Giá trị ước tính" ở trang Tồn kho)
+    nên có hàm riêng `inventory_items_cost` (khuôn `purchase_price_history` — trả cả danh
+    sách, ghi MỘT lượt log cho cả đợt xem, không phải một dòng mỗi mặt hàng); `unit_cost` của
+    `stock_movement_items` KHÔNG hề hiển thị ở đâu (tải về rồi bỏ không) nên chỉ cần khoá cột
+    và bỏ khỏi câu truy vấn Frontend, không cần hàm riêng. Vai trò không đủ quyền vẫn thấy
+    toàn bộ tồn kho bình thường, chỉ riêng dòng "Giá trị ước tính" đổi thành ghi chú ai xem
+    được. Test: `db/src/__tests__/kho.test.ts` (Thủ kho bị chặn cả SELECT thẳng lẫn gọi hàm,
+    Ban Giám đốc/Tài chính gọi hàm được).
   - Ghi chú diễn giải (không phải lỗi): `quotes`/`contracts`/`contract_amendments` BSD gắn nhãn
     Mẫu C nhưng bảng gốc dùng RLS kiểu A/B — phần hạn mức C nằm ở bảng `approvals` hợp nhất khi
     hồ sơ "gửi phê duyệt". Đây là kiến trúc đúng (hồ sơ cần nhìn thấy lúc đang soạn, không chỉ
