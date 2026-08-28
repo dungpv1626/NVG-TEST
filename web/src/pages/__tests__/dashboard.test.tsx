@@ -313,12 +313,14 @@ describe('Dashboard — thẻ Quá hạn gộp cả rủi ro ngoài 4 module g�
   it('công trình vượt ngân sách (đã cam kết + đã phát sinh > ngân sách) gộp vào thẻ Quá hạn, dẫn tới danh sách Công trình đã lọc', () => {
     grantView('BC');
     state.sitesBudgetStatus = [
-      // Vượt: đã phát sinh + đã cam kết (900tr) > ngân sách (800tr).
+      // Vượt: đã phát sinh + đã cam kết (900tr) > ngân sách (800tr). `health` đến từ CSDL
+      // (0071) — mock trực tiếp thay vì tự tính lại, đúng cách dashboard.tsx đọc.
       {
         construction_site_id: 's1',
         budgeted_cost: '800000000',
         actual_cost: '700000000',
         committed_cost: '200000000',
+        health: 'vuot_ngan_sach',
       },
       // Trong ngân sách: không được đếm vào rủi ro.
       {
@@ -326,6 +328,7 @@ describe('Dashboard — thẻ Quá hạn gộp cả rủi ro ngoài 4 module g�
         budgeted_cost: '800000000',
         actual_cost: '100000000',
         committed_cost: '0',
+        health: 'trong_ngan_sach',
       },
     ];
     renderWithApp(<DashboardPage />, { route: '/dashboard' });
@@ -344,6 +347,7 @@ describe('Dashboard — thẻ Quá hạn gộp cả rủi ro ngoài 4 module g�
         budgeted_cost: '800000000',
         actual_cost: '900000000',
         committed_cost: '0',
+        health: 'vuot_ngan_sach',
       },
     ];
     renderWithApp(<DashboardPage />, { route: '/dashboard' });

@@ -11,6 +11,7 @@ import { useQuery } from '@tanstack/react-query';
 import type {
   BiddingOutcomeRow,
   BiddingStage,
+  BudgetHealth,
   MoneyValue,
   OpportunityFunnelRow,
   OpportunityStage,
@@ -64,11 +65,16 @@ export function useProfitLossReport(enabled = true) {
 /**
  * Module BC mức đầy đủ — BC-05 phần "vượt ngân sách" (PRD Mục 7, BC-05).
  *
- * Nguồn: `db/migrations/0058_bc_over_budget.sql`. Trả về TOÀN BỘ công trình pháp nhân
- * người dùng xem được, kèm ba số gốc — dùng `summarizeBudget()` để tự tính `health`, cùng
- * công thức với `BudgetPanel` (TC-05) thay vì tính lại. Không phải dữ liệu nhạy cảm riêng
- * (không ghi `sensitive_access_logs`) nên dùng cache mặc định của TanStack Query, không cần
- * `staleTime: 0` như báo cáo lãi/lỗ.
+ * Nguồn: `db/migrations/0058_bc_over_budget.sql`, sửa Mẫu D ở `0071_fix_sites_budget_status_cost_leak.sql`.
+ * Trả về TOÀN BỘ công trình pháp nhân người dùng xem được, kèm `health` đã tính sẵn ở CSDL
+ * (đúng công thức `summarizeBudget()`, `shared/src/tc.ts`) — dùng thẳng cột này, KHÔNG tự
+ * tính lại từ ba cột tiền: ba cột đó (`budgeted_cost`/`actual_cost`/`committed_cost`) là
+ * `null` với vai trò không xem được giá vốn (Mẫu D — chỉ vai trò xem giá vốn hoặc chính Thi
+ * công mới nhận số thật), nên tự tính từ ba cột đó sẽ ra sai cho phần lớn vai trò. `health`
+ * thì hiện cho MỌI vai trò xem được BC, đúng ý đồ gốc của BC-05. Vẫn dùng cache mặc định của
+ * TanStack Query (không `staleTime: 0` như báo cáo lãi/lỗ) vì phần hiện rộng (`health`) không
+ * phải dữ liệu nhạy cảm; riêng lượt gọi của vai trò xem được giá vốn thì CSDL tự ghi
+ * `sensitive_access_logs` một lần cho cả đợt gọi.
  */
 export function useSitesBudgetStatus(enabled = true) {
   const scope = useCompanyScope();
@@ -92,9 +98,11 @@ export interface SiteBudgetStatusRow {
   site_code: string;
   site_name: string;
   stage: SiteStage;
-  budgeted_cost: MoneyValue;
-  actual_cost: MoneyValue;
-  committed_cost: MoneyValue;
+  /** `null` với vai trò không xem được giá vốn — dùng `health`, không tự tính lại (Mẫu D, 0071). */
+  budgeted_cost: MoneyValue | null;
+  actual_cost: MoneyValue | null;
+  committed_cost: MoneyValue | null;
+  health: BudgetHealth;
 }
 
 /**

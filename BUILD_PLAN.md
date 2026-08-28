@@ -179,7 +179,7 @@ statusColumn(...)   // enum quy về 5 nhóm chuẩn
   bỏ hẳn bảng `tasks` (dùng notifications + entity's own trạng thái là đủ) hay thật sự dùng nó
   cho việc không gắn với phê duyệt — hỏi Haan trước khi chọn một bên.
 
-### 1.5 Tìm kiếm toàn hệ thống (AFD 5.3) — ✅ v1 xong (Phase 3G), ✅ mở rộng 5 bảng (Phase 4A)
+### 1.5 Tìm kiếm toàn hệ thống (AFD 5.3) — ✅ xong, phủ đủ 10/10 module có "hồ sơ" (Phase 4A)
 
 Hàm CSDL `global_search` (`db/migrations/0057_global_search.sql`), gọi thẳng qua PostgREST RPC
 — không qua Workers, vì đây chỉ là một truy vấn đọc trên bảng đã có RLS (CLAUDE.md 3.1). Gộp
@@ -204,6 +204,21 @@ lương/căn cước/sức khỏe; `payment_requests` chỉ lấy `code`/`title`
 thêm cho nhánh RLS khó nhất (`employees_select` gộp nhiều điều kiện, không phải Mẫu A trơn):
 HCNS thấy được, Kinh doanh cùng pháp nhân nhưng không liên quan thì không — xác nhận cả qua
 `db/src/__tests__/search.test.ts` (chạy trên CSDL thật) lẫn qua browser thật.
+
+**Đợt ba (`db/migrations/0070_global_search_kho.sql`) — nối nốt Module KHO**, module cuối
+cùng còn thiếu trong 10 module có "hồ sơ" để tìm (NEN/BC không có, không tính). Ba màn hình
+Kho (`materials`, `stocktakes`, `scaffolding_assets`) chưa có trang chi tiết riêng — thay vì
+dựng một mẫu bố cục thứ 8 (CLAUDE.md 4.6 cấm), kết quả tìm kiếm trỏ THẲNG về màn hình danh
+sách kèm query param mà chính màn hình đó đọc để tự lọc/tự mở đúng dòng: `?ma=<mã>` cho
+`/kho/vat-tu` (đọc trong `MaterialListPage`, giống cách `query` local state đã lọc theo mã/
+tên/quy cách), `?mo=<id>` cho `/kho/kiem-ke` và `/kho/gian-giao` (đọc để khởi tạo `openId`,
+mở sẵn đúng dòng đang mở rộng — cùng khuôn `StockMovementPage` đã đọc `?loai=`/`?vat-tu=` từ
+trước). Không có cột nhạy cảm nào ở ba bảng này (giá vốn nằm ở cột khác, đã khoá riêng từ
+0064) nên không cần `rls_sees_sensitive`. `warehouses` và `inventory_items` cố ý KHÔNG nối —
+`warehouses` là danh mục vị trí ít khi tra theo mã, `inventory_items` là dòng tồn theo từng
+cặp (vật tư, kho) chứ không phải một "hồ sơ" độc lập, tra đúng qua vật tư đã đủ. Test:
+`db/src/__tests__/search.test.ts` (thêm 3 ca: vật tư dùng chung, giàn giáo tôn trọng Mẫu A
+theo pháp nhân, đợt kiểm kê).
 
 ### 1.6 Seed script v1
 
@@ -787,7 +802,7 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
   từ trước. Một chỗ sai duy nhất tìm được: nút "Mở hợp đồng" (`draft-contract-button.tsx`) dùng
   `onClick={() => navigate(...)}` — đã sửa sang `<Button asChild><Link to=…>`.
 
-### 4B. Rà soát phân quyền toàn hệ thống — ⏳ đợt 1+2+3 xong + export sạch, còn rà nốt phần business logic chưa kiểm hết
+### 4B. Rà soát phân quyền toàn hệ thống — ⏳ đợt 1+2+3 xong (kể cả boq_items/unit_prices/view BC) + export sạch, còn phần business logic chưa kiểm hết
 
 - ✅ **Đợt 1 — khoá `EXECUTE` cho vai trò `anon` ở tầng HÀM** (`db/migrations/0062_lock_down_anon_functions.sql`).
   Chạy `mcp__supabase__get_advisors` (loại security) phát hiện 145/168 hàm — gồm cả hàm
@@ -911,11 +926,44 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
   `average_cost` của `authenticated` — bài test đó đã đỏ âm thầm từ lúc 0064 chạy, không ai
   chạy `npm test` đầy đủ để bắt được. Bỏ `average_cost` khỏi câu truy vấn (không dùng ở đâu
   khác trong bài test).
-- ⏳ **Chưa làm**: đợt 3 soát theo đúng hai chữ ký lỗi trên (~20/80 hàm đọc trực tiếp, ~60 còn
-  lại quét bằng grep có chủ đích), CHƯA phải đọc tuần tự từng dòng của cả ~80 hàm ghi dữ liệu
-  để tìm lỗi nghiệp vụ bất kỳ ngoài hai lớp đó; cũng chưa soát hết các view/hàm CHỈ ĐỌC ngoài
-  danh sách đã kiểm (còn `boq_items`, `unit_prices`, các view tổng hợp BC ngoài
-  `profit_loss_report`).
+- ✅ **Đợt 3 hoàn tất phần đã cam kết** — soát hết mọi điểm gọi `create_notification` (đối
+  chiếu tới định nghĩa CÒN HIỆU LỰC khi một hàm bị định nghĩa lại nhiều lần qua các migration,
+  ví dụ `decide_approval` thân thật nằm ở 0049 chứ không phải bản cũ ở 0021/0043) cho chữ ký
+  lỗi (a), và `boq_items`/`unit_prices`/mọi hàm ở 0058–0060 cho chữ ký lỗi (b). Tìm thêm đúng
+  MỘT lỗi mới, cùng lớp (b) với `construction_budget_status`: **`sites_budget_status()`**
+  (BC-05 "vượt ngân sách" trên Dashboard + cột/bộ lọc Ngân sách ở danh sách Công trình) trả
+  thẳng `budgeted_cost`/`actual_cost`/`committed_cost` — tiền thật — cho BẤT KỲ ai có quyền
+  `BC: VIEW` (gần như mọi vai trò, kể cả Kinh doanh — không nằm trong danh sách xem giá vốn,
+  CLAUDE.md 6.6). Migration gốc (0058) có ghi chú CỐ Ý không chặn, nhưng lý do ghi ở đó
+  ("đây là tín hiệu RỦI RO, không phải giá vốn") không đúng với việc trả nguyên ba cột tiền.
+  Vá ở `db/migrations/0071_fix_sites_budget_status_cost_leak.sql`: tách hai việc — TÌNH TRẠNG
+  (`health`: trong ngân sách/sắp vượt/vượt, tính sẵn trong SQL đúng công thức
+  `summarizeBudget()`) vẫn hiện RỘNG cho mọi vai trò xem BC (đúng ý đồ gốc, thẻ cảnh báo rủi ro
+  không cần giấu); SỐ TIỀN THẬT thì `NULL` cho vai trò không đủ quyền (`rls_sees_sensitive('cost')
+  OR auth_can_edit_module('TC')` — cùng điều kiện `construction_budget_status` dùng từ 0069, vì
+  chỉ huy trưởng cần theo dõi ngân sách công trình mình quản lý). Kéo theo sửa
+  `web/src/hooks/use-reports.ts` (`SiteBudgetStatusRow` thêm `health`, ba cột tiền thành
+  `| null`) và hai nơi tiêu thụ — `dashboard.tsx`/`tc/site-list.tsx` — đổi từ tự tính lại
+  `summarizeBudget()` sang đọc thẳng `health` (đọc từ cột tiền `null` sẽ ra sai cho phần lớn
+  vai trò nếu không đổi). Test: `db/src/__tests__/bc.test.ts` (Kinh doanh nhận `health` nhưng
+  cột tiền `null`). Toàn bộ đợt này (audit + vá + sửa 2 trang tiêu thụ + test) do một fork phụ
+  thực hiện trong lúc phiên chính làm việc khác — đã đối chiếu lại: đúng lớp lỗi, không phá
+  luồng cũ (171 test web + test liên quan ở `db/` xanh, `tsc -b` sạch).
+- ✅ **Rà lại trước khi commit (skill `backend-code-review`) lộ ra một chỗ 0071 tự mâu thuẫn
+  tiền lệ 0069** — vá ở `db/migrations/0073_fix_sites_budget_status_log_overreach.sql`. 0069
+  CỐ Ý chỉ ghi `sensitive_access_logs` cho `construction_budget_status` khi
+  `rls_sees_sensitive('cost')` đúng, KHÔNG ghi khi chỉ huy trưởng (`auth_can_edit_module('TC')`)
+  xem đúng công trình mình quản lý — vì đó là thao tác vận hành bình thường, ghi mọi lượt sẽ
+  phình bảng. `sites_budget_status` (0071) lại dùng điều kiện gộp cả TC để ghi log, và hàm này
+  gọi ở TẦN SUẤT CAO HƠN nhiều — mọi lượt mở Dashboard/danh sách Công trình, không phải chỉ khi
+  mở tab Ngân sách một công trình cụ thể. Giữ nguyên nghĩa là mỗi lần chỉ huy trưởng mở Dashboard
+  ghi thêm một dòng log — đúng kiểu phình bảng 0069 đã tránh cho hàm anh em của nó. Sửa: tách
+  riêng điều kiện ghi log (`rls_sees_sensitive('cost')` thôi) khỏi điều kiện hiện số tiền
+  (`v_cost_sighted`, giữ nguyên gồm cả TC) — hành vi hiển thị dữ liệu không đổi. Test:
+  `db/src/__tests__/bc.test.ts` (chỉ huy trưởng thấy số tiền thật của công trình mình, không bị
+  ghi log).
+- ⏳ **Chưa làm**: đọc tuần tự phần business logic bất kỳ của ~80 hàm ghi dữ liệu ngoài hai
+  chữ ký lỗi (a)/(b) đã quét — đợt 3 CHỈ quét đúng hai chữ ký đó, chưa phải rà toàn bộ nghiệp vụ.
 - Việc phụ phát hiện khi rà đợt 1 (KHÔNG liên quan quyền, đã sửa cùng đợt vì lộ ra lúc chạy lại
   `sx.test.ts` để xác nhận không hồi quy): `create_rental_agreement`/`return_rental_agreement`
   (SX-03) sinh `asset_code` lô mới bằng `to_char(now(), 'YYMMDDHH24MISS')` — độ phân giải MỘT
@@ -926,7 +974,7 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
   code nguồn trước khi nối hậu tố (`left(v_lot.asset_code, 44)`) vì thêm mili-giây làm vài
   code đã dài (qua nhiều vòng thuê/trả) vượt `varchar(64)`.
 
-### 4C. Áp Content Guidelines toàn diện — ⏳ mới rà một phần
+### 4C. Áp Content Guidelines toàn diện — ⏳ đối chiếu thư viện 5.1–5.6 xong, còn tương phản màu + vùng bấm ở các trang chưa quét
 
 - ✅ **Thuật ngữ chuẩn hoá (CGD 4.4)** — grep toàn bộ `web/src` theo 7 cặp từ CGD 4.5 cấm dùng
   (Owner/Chủ hồ sơ, Submit/Gửi duyệt, Approve/Chấp thuận, Handover/Chuyển tiếp, Active/Hiện
@@ -949,13 +997,39 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
   điện thoại). Cả hai sửa theo đúng khuôn `size-10 sm:size-8` đã dùng cho chuông thông báo/
   "Việc cần làm" (40px cảm ứng, 32px chuột). Thêm 2 ca test canh trong `design-rules.test.ts`
   để không mòn dần lại như đã từng xảy ra với nút lịch.
-- ⏳ **Chưa làm**: rà nhãn trạng thái/nút/thông báo/email/trạng thái rỗng theo đúng thư viện
-  CGD 5.1–5.6 (mới kiểm thuật ngữ + lỗi + định dạng, chưa đối chiếu từng chuỗi microcopy);
-  kiểm tương phản màu ngoài các token đã có test (`design-rules.test.ts` mới canh token, chưa
-  quét màu inline/tuỳ biến nếu có); quét vùng bấm nhỏ ở các trang chưa rà (mới xong Top Bar +
-  PWA banner, còn nhiều trang khác dùng icon-button riêng lẻ chưa kiểm hết).
+- ✅ **Đối chiếu thư viện nội dung CGD 5.1–5.6 với chữ thật trên màn hình** — cả năm mục:
+  - **5.1 nhãn trạng thái** (`shared/src/status.ts` `STATUS_META`) — khớp nguyên văn (Nháp/Chờ
+    duyệt/Đang xử lý/Hoàn thành/Quá hạn). Không lệch.
+  - **5.2 nút** (`shared/src/content.ts` `BUTTONS`) — khớp nguyên văn, kể cả "Xuất Excel"/"Xuất
+    PDF" (không rút gọn thành "Xuất") và "Duyệt" chỉ rút gọn trên nút. Grep thêm JSX sống tìm
+    chữ Anh cứng (Submit/Save/Cancel/Delete/Edit/Approve/Reject) và nút lệch chuẩn ngoài
+    `BUTTONS` — không có kết quả.
+  - **5.3 thông báo** — đối chiếu `NOTIFICATIONS` (TS) VÀ toàn bộ ~40 chuỗi `create_notification(...)`
+    sống rải trong `db/migrations/*.sql`. Mọi thông báo SQL đang chạy thật đều sạch; chỉ có
+    `NOTIFICATIONS.handedOver`/`.awaitingApproval` (object TS — hoá ra KHÔNG được import/dùng ở
+    đâu, code chết) còn giữ "cho bạn"/"chờ bạn phê duyệt" — sửa cho nhất quán dù không ai gọi.
+  - **5.4 email** — grep toàn repo không thấy mã gửi email/template nào tồn tại — đúng là CHƯA
+    làm vì hạ tầng Resend còn chặn (`RESEND_API_KEY`, mục 4D), không phải bỏ sót cần vá.
+  - **5.5 lỗi** — `ERRORS` khớp gần như nguyên văn CGD, kể cả một chỗ **CỐ Ý lệch đúng hướng**:
+    `exceedsApprovalLimit` đã bỏ sẵn "của bạn" — ưu tiên CLAUDE.md 4.4 (mới hơn, cấm đại từ nhân
+    xưng) hơn chữ gốc trong CGD (cũ hơn, còn "bạn"). Không lệch cần sửa.
+  - **5.6 trạng thái rỗng** — `MODULE_EMPTY_STATES` khớp bảng CGD nguyên văn (dòng TC cũng đã bỏ
+    đúng đại từ từ trước); rà cả 56 chỗ gọi `<EmptyState>` — trạng thái rỗng của các panel con
+    (không nằm trong bảng theo module của CGD) dùng chữ riêng là ĐÚNG, không phải vi phạm — CGD
+    chỉ quy định mức danh sách gốc.
+  - **Lệch thật duy nhất tìm được, cả ba đều cùng một lỗi (đại từ "bạn"/"của bạn", CLAUDE.md
+    4.4)**: `web/src/pages/kho/scan-page.tsx` (chữ ĐANG hiển thị cho người dùng — "trong phạm vi
+    của bạn" → "trong phạm vi đang xem") và hai chỗ trong `NOTIFICATIONS`/`EMPTY_STATES.noAccess`
+    (code chết, sửa cho nhất quán). Không có gì cần hỏi lại Haan — chữ "bạn" trong bản thân CGD
+    5.3 chỉ là chưa cập nhật theo quy tắc cấm đại từ ban hành sau, và phần còn lại của mã nguồn
+    đã tự đúng theo quy tắc mới từ trước.
+  - Quét thêm emoji (không có trong UI, chỉ có trong comment code — không sao) và chữ IN HOA
+    nhấn mạnh (không có).
+- ⏳ **Chưa làm**: kiểm tương phản màu ngoài các token đã có test (`design-rules.test.ts` mới
+  canh token, chưa quét màu inline/tuỳ biến nếu có); quét vùng bấm nhỏ ở các trang chưa rà (mới
+  xong Top Bar + PWA banner, còn nhiều trang khác dùng icon-button riêng lẻ chưa kiểm hết).
 
-### 4D. Tác vụ nền (NEN-04) — ⏳ hạ tầng xong + 3/4 loại cảnh báo, còn 1 loại + Queues
+### 4D. Tác vụ nền (NEN-04) — ⏳ hạ tầng xong + 4/4 loại cảnh báo (phần gắn phê duyệt), còn Queues + "hồ sơ thiếu chứng từ"
 
 - ✅ **Đã dựng `workers/`** — package thứ tư của monorepo (`shared`/`db`/`web`/`workers`), Hono +
   Cloudflare Cron Trigger, dùng Supabase client với `service_role` (Tech Stack 5.6). Đây là
@@ -1000,10 +1074,35 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
   gọi `create_notification` để không nhắc trùng 4 lần. Test xác nhận cả hai vế: CFO nhận đúng 1
   thông báo, TGD cũng đúng 1 (không nhân đôi), và không nhắc lại khi vẫn đứng trên ngưỡng ở lần
   cập nhật sau.
-- ⏳ **Chưa làm — 1/4 loại cảnh báo NEN-04 còn lại chưa có hàm quét nào**: việc quá hạn xử lý
-  (chưa có bảng "việc cần làm" nào đang dùng thật để quét — xem mục "Bảng `tasks`" ở CLAUDE.md
-  6.6). PRD NEN-04 còn nhắc "hồ sơ thiếu chứng từ" — chưa rõ diễn giải thành điều kiện SQL cụ
-  thể nào, cần hỏi Haan nếu làm tới.
+- ✅ **4/4 — việc quá hạn xử lý, phần gắn phê duyệt** (`scan_pending_approval_reminders`,
+  `db/migrations/0072_scan_pending_approval_reminders.sql`). Đọc lại BUILD_PLAN 1.4: "Việc cần
+  làm" ở Top Bar hiện chính là Hộp thư Phê duyệt (`usePendingApprovals`) — nên với việc CÓ gắn
+  phê duyệt, hệ thống ĐÃ có định nghĩa "quá hạn xử lý" rồi, không cần chờ quyết định bảng
+  `tasks`: một hồ sơ nằm ở người duyệt quá `PENDING_APPROVAL_AGING_DAYS` (3 ngày,
+  `shared/src/bc.ts`, ngưỡng đã dùng cho thẻ "để lâu" của BC-05) thì được nhắc, đúng MỘT lần
+  mỗi hồ sơ (cột mới `approvals.last_reminded_at`). Việc KHÔNG gắn phê duyệt (ví dụ nhắc giấy
+  tờ sắp hết hạn) vẫn treo đúng như cũ, chờ quyết định bảng `tasks`.
+  Người nhận KHÔNG tái dùng được `rls_can_approve` (hàm đó đọc phiên đăng nhập hiện tại, tác vụ
+  nền không có phiên) — viết hàm nội bộ mới `approval_reminder_recipients(subject, company_id)`
+  cùng lõi (vai trò còn hạn mức phê duyệt đang bật) và cùng mẫu `OR r.sees_all_companies` +
+  `DISTINCT` đã vá ở 0067/0068 cho CFO. ⚠️ Cố ý KHÔNG so khớp `max_amount` như
+  `rls_can_approve` làm — sai theo hướng THỪA (nhắc thêm một vai trò hạn mức thấp hơn) chỉ tốn
+  một thông báo vô hại, còn sai theo hướng THIẾU (bỏ sót người phải xử lý) mới là lỗi NEN-04
+  muốn tránh; đánh đổi này ghi rõ trong migration, đổi lại được nếu Haan thấy nhắc thừa gây
+  nhàm (CGD 3.4). Test (`db/src/__tests__/rls.test.ts`, describe "nhắc việc chờ phê duyệt để
+  lâu") dùng `stocktake_adjustment` — hạn mức seed sẵn cả KHO (gán trực tiếp NVC) và CFO (chỉ
+  gán "NVG") — đúng phép thử đã lộ ba lỗi CFO trước đó trong phiên này; xác nhận cả hai nhận
+  đúng 1 thông báo (không nhân đôi), quét lại không nhắc lại, và chưa đủ ngưỡng thì chưa nhắc.
+  ⚠️ **Phát hiện phụ lúc kiểm bằng SQL trực tiếp (không tin "Hoàn tất")**: hàm chỉ REVOKE khỏi
+  `authenticated, anon` (đúng khuôn `scan_hr_document_reminders`) nhưng vẫn còn `EXECUTE` cho
+  `PUBLIC` sau khi tạo — đối chiếu `pg_default_acl` không thấy PUBLIC được cấp mặc định, cũng
+  không thấy event trigger nào cấp lại; nguồn gốc chưa rõ, nhưng `has_function_privilege` xác
+  nhận CẢ `authenticated` LẪN `anon` gọi được qua đường PUBLIC nếu không revoke tường minh. Vá
+  bằng cách ghi thêm `PUBLIC` vào câu REVOKE (đúng khuôn `scan_receivable_reminders`, 0066, vốn
+  đã làm vậy) — khuyến nghị: **mọi hàm cron-only mới nên REVOKE cả PUBLIC tường minh, đừng tin
+  default đã đủ**, bất kể 0062 tưởng đã lo xong phần PUBLIC cho mọi hàm sau này.
+- ⏳ PRD NEN-04 còn nhắc "hồ sơ thiếu chứng từ" — chưa rõ diễn giải thành điều kiện SQL cụ thể
+  nào, cần hỏi Haan nếu làm tới.
 - Ghi chú tiện dùng lại sau: `shared/src/content.ts` có sẵn mẫu `NOTIFICATIONS.debtDue(party,
 amount, date)` cho "công nợ đến hạn" nhưng khung câu đó giả định "đến hạn vào ngày X" — không
   khớp cách `scan_receivable_reminders` diễn đạt ("đã chuyển sang khung … "). Chưa dùng lại

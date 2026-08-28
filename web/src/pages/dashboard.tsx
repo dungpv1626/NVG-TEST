@@ -65,7 +65,6 @@ import {
   shortNameFromFullName,
   statusLabel,
   sumMoney,
-  summarizeBudget,
   toMoney,
   toNvgDateInput,
   type DashboardPeriod,
@@ -297,17 +296,11 @@ export function DashboardPage() {
 
   const activeRentals = (rentalAgreements.data ?? []).filter((r) => r.status === 'dang_thue');
 
-  // Số công trình vượt ngân sách — tính health bằng đúng công thức summarizeBudget() dùng ở
-  // BudgetPanel (TC-05), không tính lại một ngưỡng khác ở đây.
+  // Số công trình vượt ngân sách — `health` đã tính sẵn ở CSDL (0071), cùng công thức
+  // summarizeBudget()/BudgetPanel (TC-05). KHÔNG tự tính lại từ ba cột tiền: với vai trò
+  // không xem được giá vốn, ba cột đó là null (Mẫu D) nên tự tính sẽ luôn ra "trong ngân sách".
   const overBudgetSiteCount = (sitesBudgetStatus.data ?? []).filter(
-    (s) =>
-      summarizeBudget([
-        {
-          budgetedAmount: s.budgeted_cost,
-          actualAmount: s.actual_cost,
-          committedAmount: s.committed_cost,
-        },
-      ]).health === 'vuot_ngan_sach',
+    (s) => s.health === 'vuot_ngan_sach',
   ).length;
 
   // Thẻ "Quá hạn" gộp mọi nguồn rủi ro thời hạn về một chỗ (BC-05) — hồ sơ 4 module gốc, công

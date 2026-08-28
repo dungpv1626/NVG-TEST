@@ -69,7 +69,7 @@ export const EMPTY_STATES = {
   filtered: 'Không tìm thấy kết quả phù hợp. Thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm.',
   inbox: 'Không có việc nào cần xử lý. Mọi thứ đã được cập nhật.',
   noAccess:
-    'Bạn chưa được gán vào hồ sơ nào ở mục này. Liên hệ quản lý trực tiếp nếu cần quyền truy cập.',
+    'Chưa được gán vào hồ sơ nào ở mục này. Liên hệ quản lý trực tiếp nếu cần quyền truy cập.',
 } as const;
 
 /** Trạng thái rỗng riêng theo module — Content Guidelines 5.6 (nguyên văn). */
@@ -107,9 +107,9 @@ export const NOTIFICATIONS = {
   debtDue: (party: string, amount: string, date: string) =>
     `${party} có khoản công nợ ${amount} đến hạn vào ${date}.`,
   handedOver: (fromPerson: string, recordName: string) =>
-    `${fromPerson} đã bàn giao ${recordName} cho bạn.`,
+    `${fromPerson} đã bàn giao ${recordName}.`,
   awaitingApproval: (recordName: string, waitingDays: number) =>
-    `${recordName} đang chờ bạn phê duyệt (chờ ${waitingDays} ngày).`,
+    `${recordName} đang chờ phê duyệt (chờ ${waitingDays} ngày).`,
   newVersion: (docName: string, updatedBy: string) =>
     `${docName} vừa được cập nhật phiên bản mới bởi ${updatedBy}.`,
 } as const;

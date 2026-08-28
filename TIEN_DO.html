@@ -88,8 +88,8 @@
   </p>
   <div class="stats">
     <div class="stat"><b>12/12</b><span class="xs muted">module đã dựng</span></div>
-    <div class="stat"><b>70</b><span class="xs muted">migration</span></div>
-    <div class="stat"><b>680</b><span class="xs muted">kiểm thử tự động</span></div>
+    <div class="stat"><b>74</b><span class="xs muted">migration</span></div>
+    <div class="stat"><b>688</b><span class="xs muted">kiểm thử tự động</span></div>
     <div class="stat"><b>91</b><span class="xs muted">bảng CSDL</span></div>
   </div>
 </section>
@@ -114,20 +114,19 @@
     <h3><span class="pill s-done">Đã xong</span></h3>
     <ul>
       <li>Hồ sơ 360° đầy đủ, breadcrumb đúng đường đi</li>
-      <li>Tìm kiếm toàn hệ thống — 9/12 module</li>
-      <li>Rà soát phân quyền — 3 đợt (khoá <code>anon</code>, đối chiếu RLS, rà logic RPC) — vá 6 lỗ hổng thật</li>
-      <li>Tác vụ nền NEN-04 — 3/4 loại cảnh báo đã chạy (giấy tờ nhân sự, công nợ quá hạn, vượt ngân sách)</li>
-      <li>Content Guidelines — thuật ngữ, lỗi, ngày giờ, vùng bấm 40px</li>
+      <li>Tìm kiếm toàn hệ thống — 10/10 module có hồ sơ (NEN, BC không có hồ sơ để tìm)</li>
+      <li>Rà soát phân quyền — 3 đợt trọn vẹn (khoá <code>anon</code>, đối chiếu RLS, rà logic RPC theo 2 chữ ký lỗi + <code>boq_items</code>/<code>unit_prices</code>/view BC) — vá 8 lỗ hổng thật</li>
+      <li>Tác vụ nền NEN-04 — 4/4 loại cảnh báo gắn được đã chạy (giấy tờ nhân sự, công nợ quá hạn, vượt ngân sách, chờ phê duyệt để lâu)</li>
+      <li>Content Guidelines — đối chiếu trọn thư viện 5.1–5.6 (nhãn, nút, thông báo, email, trạng thái rỗng) với chữ thật trên màn hình</li>
       <li>Xuất báo cáo — xác nhận không lộ dữ liệu nhạy cảm</li>
     </ul>
   </div>
   <div class="card">
     <h3><span class="pill s-progress">Đang làm</span></h3>
     <ul>
-      <li>1/4 loại cảnh báo còn thiếu — việc quá hạn xử lý (chờ quyết định bảng <code>tasks</code>)</li>
-      <li>Rà logic RPC — mới quét theo hai lớp lỗi đã biết, chưa đọc hết tuần tự ~80 hàm</li>
-      <li>Content Guidelines — chưa rà nhãn trạng thái/email/trạng thái rỗng theo thư viện chuẩn</li>
-      <li>Kho — còn 3/12 module chưa nối tìm kiếm</li>
+      <li>Rà logic RPC — còn phần đọc tuần tự nghiệp vụ bất kỳ ngoài 2 chữ ký lỗi đã quét</li>
+      <li>Content Guidelines — còn tương phản màu inline + vùng bấm nhỏ ở các trang chưa quét hết</li>
+      <li>"Hồ sơ thiếu chứng từ" (NEN-04) và việc quá hạn KHÔNG gắn phê duyệt — chờ quyết định bảng <code>tasks</code></li>
     </ul>
   </div>
   <div class="card">
@@ -145,10 +144,10 @@
 <h2>Kiểm thử tự động</h2>
 <div class="card">
   <div class="stats" style="margin-top:0">
-    <div class="stat"><b>680</b><span class="xs muted">tổng số</span></div>
+    <div class="stat"><b>688</b><span class="xs muted">tổng số</span></div>
     <div class="stat"><b>171</b><span class="xs muted">giao diện — chạy ~6 giây, không chạm mạng</span></div>
-    <div class="stat"><b>509</b><span class="xs muted">nghiệp vụ &amp; phân quyền — chạm CSDL Supabase thật</span></div>
-    <div class="stat"><b style="color:var(--done)">680/680 xanh</b><span class="xs muted">xác nhận 28/08/2026, chạy từng tệp</span></div>
+    <div class="stat"><b>517</b><span class="xs muted">nghiệp vụ &amp; phân quyền — chạm CSDL Supabase thật</span></div>
+    <div class="stat"><b style="color:var(--done)">688/688 xanh</b><span class="xs muted">xác nhận 28/08/2026, chạy từng tệp</span></div>
   </div>
   <p class="xs muted" style="margin-top:12px">
     <strong>Chạy dồn toàn bộ cùng lúc (<code>npm test</code>) có thể báo đỏ rải rác</strong> —

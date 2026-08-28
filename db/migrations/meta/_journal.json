@@ -491,6 +491,34 @@
       "when": 1787894981580,
       "tag": "0069_fix_construction_budget_status_overreach",
       "breakpoints": true
+    },
+    {
+      "idx": 70,
+      "version": "7",
+      "when": 1787897218249,
+      "tag": "0070_global_search_kho",
+      "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1787897521289,
+      "tag": "0071_fix_sites_budget_status_cost_leak",
+      "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1787898400434,
+      "tag": "0072_scan_pending_approval_reminders",
+      "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1787899259651,
+      "tag": "0073_fix_sites_budget_status_log_overreach",
+      "breakpoints": true
     }
   ]
 }

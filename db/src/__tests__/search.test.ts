@@ -22,6 +22,14 @@ interface Fixture {
   opportunityId: string;
   employeeCode: string;
   employeeId: string;
+  materialCode: string;
+  materialId: string;
+  scaffoldingAssetCode: string;
+  scaffoldingAssetId: string;
+  stocktakeCode: string;
+  stocktakeId: string;
+  warehouseId: string;
+  warehouseNvoId: string;
 }
 
 async function seedFixture(): Promise<Fixture> {
@@ -31,8 +39,12 @@ async function seedFixture(): Promise<Fixture> {
   const customerCode = 'TESTSEARCH-KH-' + stamp;
   const opportunityCode = 'TESTSEARCH-CH-' + stamp;
   const employeeCode = 'TESTSEARCH-NS-' + stamp;
+  const materialCode = 'TESTSEARCH-VT-' + stamp;
+  const scaffoldingAssetCode = 'TESTSEARCH-GG-' + stamp;
+  const stocktakeCode = 'TESTSEARCH-KK-' + stamp;
   try {
     const [nvc] = await sql<{ id: string }[]>`SELECT id FROM companies WHERE code = 'NVC'`;
+    const [nvo] = await sql<{ id: string }[]>`SELECT id FROM companies WHERE code = 'NVO'`;
 
     const [customer] = await sql<{ id: string }[]>`
       INSERT INTO customers (code, name)
@@ -54,6 +66,40 @@ async function seedFixture(): Promise<Fixture> {
       RETURNING id
     `;
 
+    const [material] = await sql<{ id: string }[]>`
+      INSERT INTO materials (code, group_code, name, specification, unit, is_scaffolding)
+      VALUES (${materialCode}, 'GIANGIAO', ${TEST_PREFIX + ' Giáo nêm tìm kiếm ' + stamp},
+              'Cao 1,5m', 'bộ', true)
+      RETURNING id
+    `;
+
+    const [warehouse] = await sql<{ id: string }[]>`
+      INSERT INTO warehouses (company_id, code, name, warehouse_type)
+      VALUES (${nvc!.id}, ${'KHO-TESTSEARCH-' + stamp},
+              ${TEST_PREFIX + ' Kho tìm kiếm ' + stamp}, 'vat_tu_xay_dung')
+      RETURNING id
+    `;
+    const [warehouseNvo] = await sql<{ id: string }[]>`
+      INSERT INTO warehouses (company_id, code, name, warehouse_type)
+      VALUES (${nvo!.id}, ${'KHO-TESTSEARCH-NVO-' + stamp},
+              ${TEST_PREFIX + ' Kho tìm kiếm NVO ' + stamp}, 'vat_tu_xay_dung')
+      RETURNING id
+    `;
+
+    const [scaffoldingAsset] = await sql<{ id: string }[]>`
+      INSERT INTO scaffolding_assets (company_id, asset_code, material_id, quantity, condition,
+                                      location_type, warehouse_id)
+      VALUES (${nvc!.id}, ${scaffoldingAssetCode}, ${material!.id}, 100, 'moi',
+              'kho', ${warehouse!.id})
+      RETURNING id
+    `;
+
+    const [stocktake] = await sql<{ id: string }[]>`
+      INSERT INTO stocktakes (company_id, code, warehouse_id, status)
+      VALUES (${nvc!.id}, ${stocktakeCode}, ${warehouse!.id}, 'dang_kiem')
+      RETURNING id
+    `;
+
     return {
       stamp,
       customerCode,
@@ -61,19 +107,31 @@ async function seedFixture(): Promise<Fixture> {
       opportunityId: opportunity!.id,
       employeeCode,
       employeeId: employee!.id,
+      materialCode,
+      materialId: material!.id,
+      scaffoldingAssetCode,
+      scaffoldingAssetId: scaffoldingAsset!.id,
+      stocktakeCode,
+      stocktakeId: stocktake!.id,
+      warehouseId: warehouse!.id,
+      warehouseNvoId: warehouseNvo!.id,
     };
   } finally {
     await sql.end();
   }
 }
 
-async function cleanupFixture(): Promise<void> {
+async function cleanupFixture(fixture: Fixture): Promise<void> {
   const { createConnection } = await import('../client');
   const { sql } = createConnection();
   try {
     await sql`DELETE FROM opportunities WHERE name LIKE ${TEST_PREFIX + '%'}`;
     await sql`DELETE FROM customers WHERE name LIKE ${TEST_PREFIX + '%'}`;
     await sql`DELETE FROM employees WHERE full_name LIKE ${TEST_PREFIX + '%'}`;
+    await sql`DELETE FROM stocktakes WHERE id = ${fixture.stocktakeId}`;
+    await sql`DELETE FROM scaffolding_assets WHERE id = ${fixture.scaffoldingAssetId}`;
+    await sql`DELETE FROM warehouses WHERE id IN (${fixture.warehouseId}, ${fixture.warehouseNvoId})`;
+    await sql`DELETE FROM materials WHERE id = ${fixture.materialId}`;
   } finally {
     await sql.end();
   }
@@ -84,18 +142,20 @@ describeDb('global_search — tìm kiếm toàn hệ thống (Mẫu A qua RLS c�
   let kinhDoanhNvc: SupabaseClient;
   let kinhDoanhNvo: SupabaseClient;
   let nhanSu: SupabaseClient;
+  let kho: SupabaseClient;
 
   beforeAll(async () => {
     fixture = await seedFixture();
-    [kinhDoanhNvc, kinhDoanhNvo, nhanSu] = await Promise.all([
+    [kinhDoanhNvc, kinhDoanhNvo, nhanSu, kho] = await Promise.all([
       signInAs(ACCOUNTS.kinhDoanhNvc),
       signInAs(ACCOUNTS.kinhDoanhNvo),
       signInAs(ACCOUNTS.nhanSu),
+      signInAs(ACCOUNTS.kho),
     ]);
   });
 
   afterAll(async () => {
-    await cleanupFixture();
+    await cleanupFixture(fixture);
   });
 
   it('tìm theo mã trả đúng module, đúng đường dẫn chi tiết', async () => {
@@ -173,5 +233,55 @@ describeDb('global_search — tìm kiếm toàn hệ thống (Mẫu A qua RLS c�
     expect(
       (kdData as Array<Record<string, unknown>>).find((r) => r.entity_id === fixture.employeeId),
     ).toBeUndefined();
+  });
+
+  // Module KHO (0070) — vật tư là danh mục DÙNG CHUNG (không company_id), giống customers.
+  it('vật tư trả đúng đường dẫn kèm ?ma= (không có trang chi tiết riêng)', async () => {
+    const { data, error } = await kho.rpc('global_search', { p_query: fixture.materialCode });
+    expect(error).toBeNull();
+
+    const rows = data as Array<Record<string, unknown>>;
+    const hit = rows.find((r) => r.entity_id === fixture.materialId);
+    expect(hit).toBeTruthy();
+    expect(hit!.module_code).toBe('KHO');
+    expect(hit!.entity_type).toBe('material');
+    expect(hit!.path).toBe(`/kho/vat-tu?ma=${fixture.materialCode}`);
+  });
+
+  // Giàn giáo là Mẫu A (company_id) — vai trò của pháp nhân khác không thấy qua tìm kiếm.
+  it('lô giàn giáo trả đúng đường dẫn kèm ?mo=, và tôn trọng Mẫu A theo pháp nhân', async () => {
+    const { data, error } = await kho.rpc('global_search', {
+      p_query: fixture.scaffoldingAssetCode,
+    });
+    expect(error).toBeNull();
+
+    const rows = data as Array<Record<string, unknown>>;
+    const hit = rows.find((r) => r.entity_id === fixture.scaffoldingAssetId);
+    expect(hit).toBeTruthy();
+    expect(hit!.module_code).toBe('KHO');
+    expect(hit!.entity_type).toBe('scaffolding_asset');
+    expect(hit!.path).toBe(`/kho/gian-giao?mo=${fixture.scaffoldingAssetId}`);
+
+    const { data: nvoData, error: nvoError } = await kinhDoanhNvo.rpc('global_search', {
+      p_query: fixture.scaffoldingAssetCode,
+    });
+    expect(nvoError).toBeNull();
+    expect(
+      (nvoData as Array<Record<string, unknown>>).find(
+        (r) => r.entity_id === fixture.scaffoldingAssetId,
+      ),
+    ).toBeUndefined();
+  });
+
+  it('đợt kiểm kê trả đúng đường dẫn kèm ?mo=', async () => {
+    const { data, error } = await kho.rpc('global_search', { p_query: fixture.stocktakeCode });
+    expect(error).toBeNull();
+
+    const rows = data as Array<Record<string, unknown>>;
+    const hit = rows.find((r) => r.entity_id === fixture.stocktakeId);
+    expect(hit).toBeTruthy();
+    expect(hit!.module_code).toBe('KHO');
+    expect(hit!.entity_type).toBe('stocktake');
+    expect(hit!.path).toBe(`/kho/kiem-ke?mo=${fixture.stocktakeId}`);
   });
 });

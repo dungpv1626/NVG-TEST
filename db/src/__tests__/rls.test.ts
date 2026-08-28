@@ -205,9 +205,17 @@ describeDb('RLS — chặn ghi trái phép', () => {
 
   it('người dùng không tự nâng quyền cho mình được', async () => {
     const kinhDoanh = await signInAs(ACCOUNTS.kinhDoanhNvc);
-    const { data: adminRole } = await kinhDoanh.from('roles').select('id').eq('code', 'ADMIN').single();
+    const { data: adminRole } = await kinhDoanh
+      .from('roles')
+      .select('id')
+      .eq('code', 'ADMIN')
+      .single();
     const { data: me } = await kinhDoanh.rpc('auth_user_id');
-    const { data: company } = await kinhDoanh.from('companies').select('id').eq('code', 'NVC').single();
+    const { data: company } = await kinhDoanh
+      .from('companies')
+      .select('id')
+      .eq('code', 'NVC')
+      .single();
 
     const { error } = await kinhDoanh.from('user_companies').insert({
       user_id: me,
@@ -301,14 +309,108 @@ describeDb('Hạ tầng xuyên suốt — thông báo và việc cần làm', ()
   });
 });
 
+/**
+ * NEN-04, loại cảnh báo thứ 4/4 — "công việc quá hạn xử lý" (`0072_scan_pending_approval_reminders.sql`).
+ *
+ * `stocktake_adjustment` được chọn vì hạn mức seed gồm cả KHO (10 triệu, gán trực tiếp NVC)
+ * VÀ CFO (không giới hạn, chỉ gán vào pháp nhân tổng hợp "NVG") — đúng phép thử đã lộ lỗi ở
+ * `budget_overrun_alert`/`record_delivery`/`record_acceptance` trong phiên này: lọc cứng
+ * `company_id` mà quên `OR sees_all_companies` sẽ khiến CFO không bao giờ được nhắc.
+ */
+describeDb('Hạ tầng xuyên suốt — nhắc việc chờ phê duyệt để lâu (NEN-04, 0072)', () => {
+  it('người đã đăng nhập KHÔNG gọi được scan_pending_approval_reminders', async () => {
+    const kho = await signInAs(ACCOUNTS.kho);
+    const { error } = await kho.rpc('scan_pending_approval_reminders');
+    expect(error, 'chỉ Cloudflare Cron Trigger được gọi hàm quét này').toBeTruthy();
+  });
+
+  it('nhắc đúng vai trò còn hạn mức (kể cả vai trò xem toàn NVG), không nhân đôi, không nhắc lại', async () => {
+    const kho = await signInAs(ACCOUNTS.kho);
+    const cfo = await signInAs(ACCOUNTS.cfo);
+    const { data: khoId } = await kho.rpc('auth_user_id');
+    const { data: cfoId } = await cfo.rpc('auth_user_id');
+
+    const { createConnection } = await import('../client');
+    const { sql } = createConnection();
+    let approvalId = '';
+    try {
+      const [nvc] = await sql<{ id: string }[]>`SELECT id FROM companies WHERE code = 'NVC'`;
+      const [approval] = await sql<{ id: string }[]>`
+        INSERT INTO approvals (company_id, subject, entity_type, entity_id, title, amount,
+                               status, requested_at)
+        VALUES (${nvc!.id}, 'stocktake_adjustment', 'stocktakes', gen_random_uuid(),
+                ${TEST_PREFIX + ' Chênh lệch kiểm kê nhắc việc ' + Date.now()}, 3000000,
+                'pending_approval', now() - interval '5 days')
+        RETURNING id
+      `;
+      approvalId = approval!.id;
+
+      const [firstRun] = await sql<{ scan_pending_approval_reminders: number }[]>`
+        SELECT scan_pending_approval_reminders()
+      `;
+      expect(Number(firstRun!.scan_pending_approval_reminders)).toBeGreaterThanOrEqual(1);
+
+      const notifs = await sql<{ user_id: string }[]>`
+        SELECT user_id FROM notifications
+         WHERE related_entity_type = 'approvals' AND related_entity_id = ${approvalId}
+      `;
+      const recipientIds = notifs.map((n) => n.user_id);
+      expect(recipientIds).toContain(khoId);
+      expect(recipientIds).toContain(cfoId);
+      expect(recipientIds.filter((id) => id === cfoId).length).toBe(1);
+
+      const [row] = await sql<{ last_reminded_at: string | null }[]>`
+        SELECT last_reminded_at FROM approvals WHERE id = ${approvalId}
+      `;
+      expect(row!.last_reminded_at).not.toBeNull();
+
+      // Quét lại ngay: đã nhắc rồi thì thôi (CGD 3.4 — không nhắc lại đã xử lý).
+      await sql`SELECT scan_pending_approval_reminders()`;
+      const notifsAgain = await sql<{ id: string }[]>`
+        SELECT id FROM notifications
+         WHERE related_entity_type = 'approvals' AND related_entity_id = ${approvalId}
+      `;
+      expect(notifsAgain.length).toBe(recipientIds.length);
+    } finally {
+      await sql`DELETE FROM notifications WHERE related_entity_type = 'approvals' AND related_entity_id = ${approvalId}`;
+      await sql`DELETE FROM approvals WHERE id = ${approvalId}`;
+      await sql.end();
+    }
+  });
+
+  it('chưa quá ngưỡng thì chưa nhắc', async () => {
+    const { createConnection } = await import('../client');
+    const { sql } = createConnection();
+    let approvalId = '';
+    try {
+      const [nvc] = await sql<{ id: string }[]>`SELECT id FROM companies WHERE code = 'NVC'`;
+      const [approval] = await sql<{ id: string }[]>`
+        INSERT INTO approvals (company_id, subject, entity_type, entity_id, title, amount,
+                               status, requested_at)
+        VALUES (${nvc!.id}, 'stocktake_adjustment', 'stocktakes', gen_random_uuid(),
+                ${TEST_PREFIX + ' Chênh lệch kiểm kê còn sớm ' + Date.now()}, 1000000,
+                'pending_approval', now() - interval '1 day')
+        RETURNING id
+      `;
+      approvalId = approval!.id;
+
+      await sql`SELECT scan_pending_approval_reminders()`;
+
+      const [row] = await sql<{ last_reminded_at: string | null }[]>`
+        SELECT last_reminded_at FROM approvals WHERE id = ${approvalId}
+      `;
+      expect(row!.last_reminded_at).toBeNull();
+    } finally {
+      await sql`DELETE FROM approvals WHERE id = ${approvalId}`;
+      await sql.end();
+    }
+  });
+});
+
 describeDb('Hạ tầng xuyên suốt — phiên bản tài liệu (NEN-05)', () => {
   it('chỉ MỘT phiên bản đang hiệu lực tại một thời điểm', async () => {
     const admin = await signInAs(ACCOUNTS.admin);
-    const { data: company } = await admin
-      .from('companies')
-      .select('id')
-      .eq('code', 'NVC')
-      .single();
+    const { data: company } = await admin.from('companies').select('id').eq('code', 'NVC').single();
 
     const { data: doc, error: docError } = await admin
       .from('documents')
@@ -350,7 +452,6 @@ describeDb('Hạ tầng xuyên suốt — phiên bản tài liệu (NEN-05)', ()
     expect(versions!.filter((v) => v.is_current_version)).toHaveLength(1);
     // Bản đang hiệu lực phải là bản mới nhất.
     expect(versions!.at(-1)!.is_current_version).toBe(true);
-
   });
 });
 
@@ -400,7 +501,6 @@ describeDb('CRM — pipeline cơ hội kinh doanh', () => {
     expect(data).toHaveLength(1);
     expect(data![0]!.from_stage).toBeNull();
     expect(data![0]!.to_stage).toBe('tiep_nhan');
-
   });
 
   it('chuyển giai đoạn luôn ghi vết, không có đường nào lách được (NEN-03)', async () => {
@@ -427,7 +527,6 @@ describeDb('CRM — pipeline cơ hội kinh doanh', () => {
       to_stage: 'khao_sat',
       note: 'Khách đồng ý cho khảo sát',
     });
-
   });
 
   it('không ghi được lịch sử giả từ trình duyệt', async () => {
@@ -440,7 +539,6 @@ describeDb('CRM — pipeline cơ hội kinh doanh', () => {
       note: 'Lịch sử giả mạo',
     });
     expect(error).toBeTruthy();
-
   });
 
   /**
@@ -459,7 +557,10 @@ describeDb('CRM — pipeline cơ hội kinh doanh', () => {
       .from('opportunities')
       .update({ stage: 'ky_hop_dong' })
       .eq('id', opportunityId);
-    expect(skipFunnel, 'nhảy thẳng tới Ký hợp đồng thì phễu bán hàng không còn đo được gì').toBeTruthy();
+    expect(
+      skipFunnel,
+      'nhảy thẳng tới Ký hợp đồng thì phễu bán hàng không còn đo được gì',
+    ).toBeTruthy();
 
     const { error: noReason } = await kinhDoanh
       .from('opportunities')
@@ -519,7 +620,6 @@ describeDb('CRM — pipeline cơ hội kinh doanh', () => {
       p_lost_reason: 'Khách chọn nhà thầu khác vì giá thấp hơn',
     });
     expect(withReason).toBeNull();
-
   });
 
   it('cơ hội đã bàn giao chuyển chế độ chỉ xem (CRM-06)', async () => {
@@ -543,7 +643,6 @@ describeDb('CRM — pipeline cơ hội kinh doanh', () => {
       p_lost_reason: null,
     });
     expect(move).toBeTruthy();
-
   });
 
   it('không chuyển được cơ hội sang pháp nhân khác (NEN-01)', async () => {
@@ -557,7 +656,10 @@ describeDb('CRM — pipeline cơ hội kinh doanh', () => {
     // Chặn phải nằm ở trigger: `WITH CHECK` không tham chiếu được giá trị CŨ của dòng, nên
     // đổi pháp nhân là lệnh hợp lệ ở cả hai đầu, và toàn bộ giá trị cơ hội nhảy sang P&L
     // của công ty kia mà không để lại vết gì.
-    const { error } = await admin.from('opportunities').update({ company_id: nvo!.id }).eq('id', id);
+    const { error } = await admin
+      .from('opportunities')
+      .update({ company_id: nvo!.id })
+      .eq('id', id);
     expect(error).toBeTruthy();
     expect(error!.message).toContain('pháp nhân');
   });
@@ -702,11 +804,7 @@ describeDb('CRM — báo giá và phê duyệt giá', () => {
     expect(error!.message).toContain('hạn mức');
 
     // Báo giá phải vẫn đang chờ duyệt, không bị đổi trạng thái nửa vời.
-    const { data: after } = await kd
-      .from('quotes')
-      .select('status')
-      .eq('id', quote.id)
-      .single();
+    const { data: after } = await kd.from('quotes').select('status').eq('id', quote.id).single();
     expect(after!.status).toBe('pending_approval');
   });
 
@@ -844,11 +942,7 @@ describeDb('CRM — báo giá và phê duyệt giá', () => {
     expect(rejected).toBeNull();
 
     // Về nháp để người phụ trách sửa và gửi lại — không kẹt ở trạng thái chờ mãi.
-    const { data: after } = await kd
-      .from('quotes')
-      .select('status')
-      .eq('id', quote.id)
-      .single();
+    const { data: after } = await kd.from('quotes').select('status').eq('id', quote.id).single();
     expect(after!.status).toBe('draft');
   });
 
@@ -970,9 +1064,8 @@ describeDb('Hộp thư Phê duyệt', () => {
 
     // Trong khi hộp thư của Tổng Giám đốc thì có, kèm đủ dữ liệu để quyết định tại chỗ.
     const { data: tgdInbox } = await tgd.rpc('my_pending_approvals');
-    const item = (tgdInbox ?? []).find(
-      (r: { entity_id: string }) => r.entity_id === quote!.id,
-    ) as { requested_by_name: string; company_code: string; parent_id: string } | undefined;
+    const item = (tgdInbox ?? []).find((r: { entity_id: string }) => r.entity_id === quote!.id) as
+      { requested_by_name: string; company_code: string; parent_id: string } | undefined;
     expect(item).toBeTruthy();
     expect(item!.requested_by_name).toBeTruthy();
     expect(item!.company_code).toBe('NVC');
@@ -1119,10 +1212,7 @@ describeDb('CRM — biên bản khảo sát', () => {
  * khách sẽ không ghi nhận được gì, và khiếu nại lại quay về Zalo như hiện trạng.
  */
 describeDb('CRM — khiếu nại khách hàng', () => {
-  async function createComplaint(
-    client: SupabaseClient,
-    overrides: Record<string, unknown> = {},
-  ) {
+  async function createComplaint(client: SupabaseClient, overrides: Record<string, unknown> = {}) {
     const { data: company } = await client
       .from('companies')
       .select('id')
@@ -1383,7 +1473,10 @@ describeDb('CRM — hồ sơ khách hàng', () => {
 
     // Nhưng sửa thì không. PostgREST không báo 42501 cho trường hợp này — nó cập nhật
     // 0 dòng và trả về error null, nên phải khẳng định bằng dữ liệu chứ không bằng mã lỗi.
-    await kdNvo.from('customers').update({ name: `${TEST_PREFIX} Bị sửa trộm` }).eq('id', created.id);
+    await kdNvo
+      .from('customers')
+      .update({ name: `${TEST_PREFIX} Bị sửa trộm` })
+      .eq('id', created.id);
     const { data: unchanged } = await kdNvc
       .from('customers')
       .select('name')
@@ -1422,7 +1515,10 @@ describeDb('CRM — hồ sơ khách hàng', () => {
       .single();
     expect(handover).toBeNull();
 
-    await kdNvc.from('customers').update({ notes: `${TEST_PREFIX} sau khi chuyển` }).eq('id', created.id);
+    await kdNvc
+      .from('customers')
+      .update({ notes: `${TEST_PREFIX} sau khi chuyển` })
+      .eq('id', created.id);
     const { data: after } = await kdNvo
       .from('customers')
       .select('notes')
@@ -1563,7 +1659,10 @@ describeDb('DA — gói thầu, dự toán và ngân sách', () => {
       .select('sensitive_kind, action, entity_type')
       .eq('entity_id', estimateId)
       .order('created_at');
-    expect(logs!.length, 'phải có ít nhất một lượt ghi (edit) và một lượt xem (view)').toBeGreaterThanOrEqual(2);
+    expect(
+      logs!.length,
+      'phải có ít nhất một lượt ghi (edit) và một lượt xem (view)',
+    ).toBeGreaterThanOrEqual(2);
     expect(logs!.every((l) => l.sensitive_kind === 'cost')).toBe(true);
     expect(logs!.map((l) => l.action)).toContain('view');
     expect(logs!.map((l) => l.action)).toContain('edit');
@@ -1757,7 +1856,10 @@ describeDb('DA — gói thầu, dự toán và ngân sách', () => {
     expect(submitted).toBeNull();
 
     // Nộp rồi thì hồ sơ đóng băng: bộ trên hệ thống phải khớp bộ đã gửi chủ đầu tư.
-    await dt.from('bid_documents').update({ notes: 'sửa sau khi nộp' }).eq('bidding_project_id', project.id);
+    await dt
+      .from('bid_documents')
+      .update({ notes: 'sửa sau khi nộp' })
+      .eq('bidding_project_id', project.id);
     const { data: docs } = await dt
       .from('bid_documents')
       .select('notes')
@@ -1804,8 +1906,20 @@ describeDb('DA — gói thầu, dự toán và ngân sách', () => {
     await dt.rpc('save_estimate_items', {
       p_estimate_id: estimateId,
       p_items: [
-        { cost_group: 'vat_tu', description: 'Thép', unit: 'kg', quantity: 1000, unit_price: 21_500 },
-        { cost_group: 'nhan_cong', description: 'Nhân công', unit: 'công', quantity: 100, unit_price: 350_000 },
+        {
+          cost_group: 'vat_tu',
+          description: 'Thép',
+          unit: 'kg',
+          quantity: 1000,
+          unit_price: 21_500,
+        },
+        {
+          cost_group: 'nhan_cong',
+          description: 'Nhân công',
+          unit: 'công',
+          quantity: 100,
+          unit_price: 350_000,
+        },
       ],
     });
     await dt.rpc('save_estimate_costs', {
@@ -1877,10 +1991,7 @@ describeDb('DA — gói thầu, dự toán và ngân sách', () => {
     const kdNvo = await signInAs(ACCOUNTS.kinhDoanhNvo);
     const project = await createBiddingProject(dt);
 
-    const { data: seen } = await kdNvo
-      .from('bidding_projects')
-      .select('id')
-      .eq('id', project.id);
+    const { data: seen } = await kdNvo.from('bidding_projects').select('id').eq('id', project.id);
     expect(seen).toEqual([]);
   });
 });
@@ -1898,7 +2009,11 @@ describeDb('TK — dự án thiết kế, phiên bản bản vẽ và bàn giao'
     client: SupabaseClient,
     extra: Record<string, unknown> = {},
   ): Promise<{ id: string; code: string; companyId: string }> {
-    const { data: company } = await client.from('companies').select('id').eq('code', 'NVO').single();
+    const { data: company } = await client
+      .from('companies')
+      .select('id')
+      .eq('code', 'NVO')
+      .single();
     const { data: me } = await client.rpc('auth_user_id');
     const { data: code } = await client.rpc('next_record_code', {
       p_company_code: 'NVO',
@@ -2019,10 +2134,7 @@ describeDb('TK — dự án thiết kế, phiên bản bản vẽ và bàn giao'
     expect(data!.filter((v) => v.discipline === 'ket_cau').map((v) => v.version)).toEqual([1]);
 
     // Trình duyệt không tự đặt được số phiên bản.
-    const { error } = await tk
-      .from('design_versions')
-      .update({ version: 99 })
-      .eq('id', ketCauId);
+    const { error } = await tk.from('design_versions').update({ version: 99 }).eq('id', ketCauId);
     expect(error, 'số phiên bản là căn cứ truy ngược, không được sửa').toBeTruthy();
   });
 
@@ -2649,7 +2761,11 @@ describeDb('HD — hợp đồng, điều khoản và phát sinh', () => {
   async function createSourceOpportunity(
     client: SupabaseClient,
   ): Promise<{ id: string; companyId: string }> {
-    const { data: company } = await client.from('companies').select('id').eq('code', 'NVC').single();
+    const { data: company } = await client
+      .from('companies')
+      .select('id')
+      .eq('code', 'NVC')
+      .single();
     const { data: customer } = await client.from('customers').select('id').limit(1).maybeSingle();
     if (!customer) throw new Error('Cần ít nhất một khách hàng để chạy test này.');
     const { data: me } = await client.rpc('auth_user_id');
@@ -2695,7 +2811,10 @@ describeDb('HD — hợp đồng, điều khoản và phát sinh', () => {
     contract: { id: string; companyId: string },
     value = 900_000_000,
   ): Promise<void> {
-    await client.from('contracts').update({ value, start_date: '2026-09-01' }).eq('id', contract.id);
+    await client
+      .from('contracts')
+      .update({ value, start_date: '2026-09-01' })
+      .eq('id', contract.id);
     for (const termType of ['pham_vi', 'gia_tri', 'tien_do_thanh_toan']) {
       await client.from('contract_terms').insert({
         company_id: contract.companyId,
@@ -2779,7 +2898,11 @@ describeDb('HD — hợp đồng, điều khoản và phát sinh', () => {
     const kdNvo = await signInAs(ACCOUNTS.kinhDoanhNvo);
     const { data: nvc } = await kd.from('companies').select('id').eq('code', 'NVC').single();
     const nvoSource = await (async () => {
-      const { data: company } = await kdNvo.from('companies').select('id').eq('code', 'NVO').single();
+      const { data: company } = await kdNvo
+        .from('companies')
+        .select('id')
+        .eq('code', 'NVO')
+        .single();
       const { data: customer } = await kdNvo.from('customers').select('id').limit(1).maybeSingle();
       const { data: me } = await kdNvo.rpc('auth_user_id');
       const { data: code } = await kdNvo.rpc('next_record_code', {

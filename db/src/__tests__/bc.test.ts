@@ -164,7 +164,59 @@ describeDb('BC-05 — sites_budget_status (tổng hợp toàn công trình, trá
     expect(Number(row!.budgeted_cost)).toBe(700_000_000);
     expect(Number(row!.actual_cost)).toBe(250_000_000);
     expect(Number(row!.committed_cost)).toBe(100_000_000);
+    expect(row!.health).toBe('trong_ngan_sach');
     expect(row).not.toHaveProperty('target_profit');
+  });
+
+  // 0071 — sites_budget_status trước đó trả tiền thật cho BẤT KỲ ai có BC:VIEW, kể cả Kinh
+  // doanh (KD), vai trò KHÔNG nằm trong danh sách xem giá vốn (CLAUDE.md 6.6). Vá bằng cách
+  // giữ `health` hiện rộng như thiết kế gốc (BC-05 cho "gần như mọi vai trò"), nhưng ẩn ba
+  // cột tiền thật với vai trò không đủ quyền — đúng Mẫu D.
+  it('Kinh doanh (không xem được giá vốn) vẫn thấy health nhưng KHÔNG nhận được số tiền thật (0071)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const { data, error } = await kd.rpc('sites_budget_status', { p_company_id: null });
+    expect(error).toBeNull();
+
+    const row = (data as Array<Record<string, unknown>>).find(
+      (r) => r.construction_site_id === fixture.siteId,
+    );
+    expect(row).toBeTruthy();
+
+    expect(row!.health).toBe('trong_ngan_sach');
+    expect(row!.budgeted_cost).toBeNull();
+    expect(row!.actual_cost).toBeNull();
+    expect(row!.committed_cost).toBeNull();
+  });
+
+  // 0073 — 0071 ban đầu ghi sensitive_access_logs cho CẢ vai trò Thi công (auth_can_edit_module
+  // ('TC')) xem đúng công trình mình quản lý, khác tiền lệ construction_budget_status (0069) đã
+  // đặt: hàm đó CHỈ ghi log cho rls_sees_sensitive('cost'), không ghi cho lượt xem thường ngày
+  // của chỉ huy trưởng. Vì sites_budget_status gọi ở MỌI lượt mở Dashboard/danh sách Công
+  // trình, giữ như 0071 sẽ ghi một dòng log mỗi lần — đúng kiểu phình bảng 0069 đã tránh.
+  it('chỉ huy trưởng thấy số tiền thật của công trình mình nhưng KHÔNG bị ghi log mỗi lượt Dashboard (0073)', async () => {
+    const chiHuy = await signInAs(ACCOUNTS.congTruongNvc);
+    const { data: chiHuyId } = await chiHuy.rpc('auth_user_id');
+    const { data, error } = await chiHuy.rpc('sites_budget_status', { p_company_id: null });
+    expect(error).toBeNull();
+
+    const row = (data as Array<Record<string, unknown>>).find(
+      (r) => r.construction_site_id === fixture.siteId,
+    );
+    expect(row).toBeTruthy();
+    expect(Number(row!.budgeted_cost)).toBe(700_000_000);
+
+    const { createConnection } = await import('../client');
+    const { sql } = createConnection();
+    try {
+      const logs = await sql<{ id: string }[]>`
+        SELECT id FROM sensitive_access_logs
+         WHERE sensitive_kind = 'cost' AND entity_type = 'construction_sites'
+           AND entity_id IS NULL AND user_id = ${chiHuyId as string}
+      `;
+      expect(logs.length).toBe(0);
+    } finally {
+      await sql.end();
+    }
   });
 });
 

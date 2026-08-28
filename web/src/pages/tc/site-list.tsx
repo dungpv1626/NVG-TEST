@@ -21,7 +21,6 @@ import {
   MODULE_EMPTY_STATES,
   SITE_STAGE_META,
   siteDisplayStatus,
-  summarizeBudget,
   type BudgetHealth,
 } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
@@ -51,18 +50,11 @@ export function SiteListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const overBudgetOnly = searchParams.get(BUDGET_FILTER_PARAM) === 'vuot';
 
+  // `health` đã tính sẵn ở CSDL (0071) — KHÔNG tự tính lại từ ba cột tiền: với vai trò không
+  // xem được giá vốn, ba cột đó là null (Mẫu D) nên tự tính sẽ luôn ra "trong ngân sách".
   const budgetStatus = useSitesBudgetStatus(canViewBc);
   const healthBySiteId = new Map(
-    (budgetStatus.data ?? []).map((s) => [
-      s.construction_site_id,
-      summarizeBudget([
-        {
-          budgetedAmount: s.budgeted_cost,
-          actualAmount: s.actual_cost,
-          committedAmount: s.committed_cost,
-        },
-      ]).health,
-    ]),
+    (budgetStatus.data ?? []).map((s) => [s.construction_site_id, s.health]),
   );
 
   const rows: SiteRow[] = (data ?? [])

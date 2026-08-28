@@ -10,6 +10,7 @@
  */
 
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { StocktakeStatus } from '@nvg/shared';
 import { formatDateTime, formatNumber, stocktakeStatusMeta, summarizeStocktake } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
@@ -266,9 +267,12 @@ export function StocktakePage() {
   const { data, isLoading, error } = useStocktakes();
   const start = useStartStocktake();
   const cancel = useCancelStocktake();
+  const [params] = useSearchParams();
 
   const [warehouseId, setWarehouseId] = useState('');
-  const [openId, setOpenId] = useState<string | null>(null);
+  // `?mo=` đến từ tìm kiếm toàn hệ thống (AFD 5.3) — không có trang chi tiết riêng cho một
+  // đợt kiểm kê, nên kết quả tìm kiếm trỏ về đây và mở sẵn đúng dòng.
+  const [openId, setOpenId] = useState<string | null>(params.get('mo'));
   const [pageError, setPageError] = useState<string | null>(null);
 
   async function startStocktake() {

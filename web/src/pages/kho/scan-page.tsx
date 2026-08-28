@@ -84,7 +84,7 @@ export function StockScanPage() {
       {isLoading && <TableSkeleton rows={2} columns={3} />}
 
       {!isLoading && !error && submitted && rows.length === 0 && (
-        <EmptyState message="Vật tư này chưa có tồn ở kho nào trong phạm vi của bạn. Lập phiếu nhập để đưa vào kho." />
+        <EmptyState message="Vật tư này chưa có tồn ở kho nào trong phạm vi đang xem. Lập phiếu nhập để đưa vào kho." />
       )}
 
       {material && (
@@ -123,7 +123,10 @@ export function StockScanPage() {
                       : 'Chưa có phát sinh nào'}
                   </p>
                   {alerts.map((alert) => (
-                    <p key={alert} className="mt-1 inline-flex items-center gap-1 text-status-overdue">
+                    <p
+                      key={alert}
+                      className="mt-1 inline-flex items-center gap-1 text-status-overdue"
+                    >
                       <AlertTriangle className="size-4 shrink-0" aria-hidden />
                       {STOCK_ALERT_LABELS[alert]}
                     </p>

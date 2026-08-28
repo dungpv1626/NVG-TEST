@@ -10,6 +10,7 @@
  */
 
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { ScaffoldingCondition, ScaffoldingEventType } from '@nvg/shared';
 import {
   ASSET_LOCATION_LABELS,
@@ -66,8 +67,11 @@ export function ScaffoldingPage() {
   const canEdit = useCan('KHO', 'edit');
   const { data, isLoading, error } = useScaffoldingAssets();
   const recordEvent = useRecordScaffoldingEvent();
+  const [params] = useSearchParams();
 
-  const [openId, setOpenId] = useState<string | null>(null);
+  // `?mo=` đến từ tìm kiếm toàn hệ thống (AFD 5.3) — không có trang chi tiết riêng cho một
+  // lô giàn giáo, nên kết quả tìm kiếm trỏ về đây và mở sẵn đúng dòng.
+  const [openId, setOpenId] = useState<string | null>(params.get('mo'));
   const [formAssetId, setFormAssetId] = useState<string | null>(null);
   const [eventType, setEventType] = useState<ScaffoldingEventType>('sua_chua');
   const [pageError, setPageError] = useState<string | null>(null);

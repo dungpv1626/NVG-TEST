@@ -10,12 +10,9 @@
  */
 
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { WarehouseType } from '@nvg/shared';
-import {
-  MATERIAL_GROUPS,
-  WAREHOUSE_TYPE_LABELS,
-  buildMaterialCode,
-} from '@nvg/shared';
+import { MATERIAL_GROUPS, WAREHOUSE_TYPE_LABELS, buildMaterialCode } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
@@ -39,11 +36,14 @@ export function MaterialListPage() {
   const canEdit = useCan('KHO', 'edit');
   const { data, isLoading, error } = useMaterials();
   const save = useSaveMaterial();
+  const [params] = useSearchParams();
   const [isFormOpen, setFormOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [code, setCode] = useState('');
   const [suggested, setSuggested] = useState('');
-  const [query, setQuery] = useState('');
+  // `?ma=` đến từ tìm kiếm toàn hệ thống (AFD 5.3) — vật tư không có trang chi tiết riêng
+  // (danh mục thuần, không vòng đời), nên kết quả tìm kiếm trỏ về đây, đã lọc sẵn đúng mã.
+  const [query, setQuery] = useState(params.get('ma') ?? '');
 
   const rows = (data ?? []).filter((m) => {
     const q = query.trim().toLowerCase();
@@ -121,7 +121,10 @@ export function MaterialListPage() {
           className="mb-4 space-y-4 rounded-lg border border-border bg-surface p-4"
         >
           {formError && (
-            <p role="alert" className="rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
+            <p
+              role="alert"
+              className="rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
+            >
               {formError}
             </p>
           )}
@@ -209,12 +212,24 @@ export function MaterialListPage() {
           <table className="w-full min-w-[44rem] text-left">
             <thead className="border-b border-border text-fg-muted">
               <tr>
-                <th scope="col" className="px-4 py-2 font-medium">Mã</th>
-                <th scope="col" className="px-4 py-2 font-medium">Nhóm</th>
-                <th scope="col" className="px-4 py-2 font-medium">Tên hàng</th>
-                <th scope="col" className="px-4 py-2 font-medium">Quy cách</th>
-                <th scope="col" className="px-4 py-2 font-medium">Đơn vị</th>
-                <th scope="col" className="px-4 py-2 font-medium">Mã vạch</th>
+                <th scope="col" className="px-4 py-2 font-medium">
+                  Mã
+                </th>
+                <th scope="col" className="px-4 py-2 font-medium">
+                  Nhóm
+                </th>
+                <th scope="col" className="px-4 py-2 font-medium">
+                  Tên hàng
+                </th>
+                <th scope="col" className="px-4 py-2 font-medium">
+                  Quy cách
+                </th>
+                <th scope="col" className="px-4 py-2 font-medium">
+                  Đơn vị
+                </th>
+                <th scope="col" className="px-4 py-2 font-medium">
+                  Mã vạch
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -299,7 +314,10 @@ export function WarehouseListPage() {
           className="mb-4 space-y-4 rounded-lg border border-border bg-surface p-4"
         >
           {formError && (
-            <p role="alert" className="rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
+            <p
+              role="alert"
+              className="rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
+            >
               {formError}
             </p>
           )}
