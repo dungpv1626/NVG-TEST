@@ -98,7 +98,7 @@
   <div class="stats">
     <div class="stat"><b>12 / 12</b><span class="xs muted">module đã dựng (đủ cả 12, Sản xuất &amp; Cho thuê ở mức cơ bản — xem bảng bên dưới)</span></div>
     <div class="stat"><b>91</b><span class="xs muted">bảng cơ sở dữ liệu</span></div>
-    <div class="stat"><b>64</b><span class="xs muted">migration đã chạy</span></div>
+    <div class="stat"><b>65</b><span class="xs muted">migration đã chạy</span></div>
     <div class="stat"><b>670+</b><span class="xs muted">kiểm thử tự động — phần chạm CSDL thật đôi khi đỏ do giới hạn tốc độ đăng nhập khi chạy dồn, không phải lỗi nghiệp vụ (chạy lại riêng tệp đó thì qua)</span></div>
   </div>
 </section>
@@ -205,6 +205,17 @@
           lỗi có thể hiện tiếng Anh kỹ thuật ở đúng màn hình Hộp thư Phê duyệt (dùng chung cho
           mọi loại phê duyệt), và hai nút bấm trên điện thoại nhỏ hơn chuẩn 40×40px (menu tài
           khoản, nút đóng thông báo cài đặt ứng dụng).</li>
+      <li><strong>Xuất báo cáo không lộ dữ liệu nhạy cảm</strong> — kiểm cả app chỉ có đúng hai
+          nút "xuất" (báo cáo lãi/lỗ theo công trình và báo cáo hiệu quả kinh doanh), cả hai chỉ
+          in lại đúng dữ liệu đã hiện trên màn hình chứ không tự tải thêm gì riêng, nên kế thừa
+          đúng khoá quyền của trang — không phát hiện lỗ hổng, không cần sửa.</li>
+      <li><strong>Xác nhận từng hàm trong đợt khoá "chưa đăng nhập" ở trên, và vá nốt một chỗ
+          tự gây ra</strong> — soát lại 9 hàm nội bộ từng có lệnh khoá riêng cho người ĐÃ đăng
+          nhập ở các migration cũ hơn: 8/9 đúng ý đồ, riêng một hàm quét nhắc giấy tờ nhân sự
+          sắp hết hạn (vốn chỉ dành cho tác vụ chạy nền hằng ngày) bị chính đợt khoá ở trên vô
+          tình mở lại cho MỌI người đã đăng nhập gọi thẳng — không lộ dữ liệu nhạy cảm, nhưng
+          gọi được là gửi lại một loạt thông báo cho cả công ty ngoài lịch, đúng điều migration
+          gốc đã ngăn từ đầu. Đã khoá lại và thêm kiểm thử canh không để lặp lại.</li>
     </ul>
   </div>
 

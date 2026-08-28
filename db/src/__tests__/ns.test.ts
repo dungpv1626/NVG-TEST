@@ -821,3 +821,16 @@ describeDb('NS — nghỉ phép, tài sản, nghỉ việc (NS-05, NS-08, NS-11)
     expect(status).toBe('dang_tuyen');
   });
 });
+
+describeDb('NS — quét nhắc giấy tờ hết hạn chỉ dành cho tác vụ nền (NS-10, NEN-04)', () => {
+  // Hồi quy có thật, không phải giả định: migration 0062 (khoá EXECUTE khỏi PUBLIC ở tầng hàm)
+  // vô tình cấp lại quyền gọi hàm này cho `authenticated`, vì trước đó nó "gọi được" nhờ PUBLIC
+  // chứ không phải nhờ được cấp riêng — đúng lỗi 0062 tìm ra và vá cho 144 hàm khác, nhưng lại
+  // giẫm lên đúng một hàm ĐÃ CÓ ý đồ chặn tường minh (0049: "chỉ tác vụ nền gọi; không mở cho
+  // trình duyệt để không ai bắn lại loạt thông báo cho cả công ty"). Vá lại ở 0065.
+  it('người đã đăng nhập KHÔNG gọi được scan_hr_document_reminders', async () => {
+    const hcns = await signInAs(ACCOUNTS.nhanSu);
+    const { error } = await hcns.rpc('scan_hr_document_reminders');
+    expect(error, 'chỉ Cloudflare Cron Trigger được gọi hàm quét này').toBeTruthy();
+  });
+});

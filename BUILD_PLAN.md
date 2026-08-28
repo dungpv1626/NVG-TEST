@@ -787,7 +787,7 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
   từ trước. Một chỗ sai duy nhất tìm được: nút "Mở hợp đồng" (`draft-contract-button.tsx`) dùng
   `onClick={() => navigate(...)}` — đã sửa sang `<Button asChild><Link to=…>`.
 
-### 4B. Rà soát phân quyền toàn hệ thống — ⏳ đợt 1+2 xong, còn export/RPC chưa soát
+### 4B. Rà soát phân quyền toàn hệ thống — ⏳ đợt 1+2 xong + export sạch, còn rà source RPC
 
 - ✅ **Đợt 1 — khoá `EXECUTE` cho vai trò `anon` ở tầng HÀM** (`db/migrations/0062_lock_down_anon_functions.sql`).
   Chạy `mcp__supabase__get_advisors` (loại security) phát hiện 145/168 hàm — gồm cả hàm
@@ -807,17 +807,29 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
   `GRANT EXECUTE ... TO authenticated`**, đúng khuôn `global_search` đã làm sẵn.
   Tiện thể vá `function_search_path_mutable` cho `global_search`/`attach_audit_touch` (thiếu
   `SET search_path = public`, lệch quy ước có từ `0002`).
-- ⚠️ **Phát hiện phụ, CHƯA sửa** — 9 hàm nội bộ từng có `REVOKE ... FROM authenticated` ở
-  migration cũ (`build_budget_lines`, `close_stocktake`, `quotation_goods_subtotal`,
-  `quotation_landed_total`, `purchase_request_budget_line`, `scan_hr_document_reminders`,
-  `post_payment_to_budget`, `payment_allocated_total`, `kt_period_locked`) đa số cũng vướng
-  đúng lỗi ngữ nghĩa này — `REVOKE ... FROM authenticated` là REVOKE khỏi một dòng cấp riêng
-  không tồn tại nên không xoá được quyền đến từ `PUBLIC`. Kiểm lại: `build_budget_lines` có vẻ
-  đã đóng đúng (không còn `PUBLIC` trong ACL — chắc do sửa tay), nhưng `close_stocktake` và
-  `scan_hr_document_reminders` vẫn còn `=X/postgres` (mở cho `PUBLIC`) sau khi migration cũ
-  tưởng đã khoá. Đợt 4B lần này CỐ Ý không sửa — cần xác nhận từng hàm có đúng là "chỉ gọi nội
-  bộ/qua cron `service_role`" trước khi khoá tiếp, tránh khoá nhầm một RPC màn hình nào đó
-  đang thật sự dùng.
+- ✅ **Phát hiện phụ, đã xác nhận từng hàm và sửa nốt 1 chỗ hồi quy** — rà lại 9 hàm nội bộ
+  từng có `REVOKE ... FROM authenticated` ở migration cũ (`build_budget_lines`,
+  `close_stocktake`, `quotation_goods_subtotal`, `quotation_landed_total`,
+  `purchase_request_budget_line`, `scan_hr_document_reminders`, `post_payment_to_budget`,
+  `payment_allocated_total`, `kt_period_locked`) bằng `has_function_privilege` sau khi đợt 1
+  chạy xong. 6/9 đã đúng ý đồ — chưa từng có `PUBLIC` access thật (REVOKE cũ vẫn đứng vững):
+  `build_budget_lines`, `quotation_goods_subtotal`, `quotation_landed_total`,
+  `purchase_request_budget_line`, `post_payment_to_budget`, `payment_allocated_total`.
+  `close_stocktake` và `kt_period_locked` mở cho `authenticated` là ĐÚNG Ý ĐỒ gốc
+  (`close_stocktake` gọi thẳng từ Frontend — `web/src/hooks/use-warehouse.ts`;
+  `kt_period_locked` migration gốc chỉ `REVOKE ... FROM anon`, chưa từng định chặn
+  `authenticated`). Riêng **`scan_hr_document_reminders` là hồi quy thật do chính đợt 1 gây
+  ra**: hàm này có comment + `REVOKE EXECUTE ... FROM authenticated, anon` tường minh từ
+  `0049` ("chỉ tác vụ nền gọi; không mở cho trình duyệt để không ai bắn lại loạt thông báo cho
+  cả công ty"), nhưng vì quyền đó trước giờ đến từ `PUBLIC` (đúng lỗi ngữ nghĩa đợt 1 vừa vá
+  cho 144 hàm khác), REVOKE cũ chưa từng có hiệu lực — đợt 1 chụp "authenticated gọi được" =
+  true nên vô tình CẤP LẠI, giữ nguyên đúng lỗ hổng migration gốc định vá. Không phải rò rỉ dữ
+  liệu Mẫu D, nhưng bất kỳ ai đăng nhập gọi thẳng được tác vụ vốn chỉ dành cho Cloudflare Cron
+  Trigger, gây "nhàm cảnh báo" (CGD 3.4). Vá bằng `db/migrations/0065_fix_hr_reminder_scan_regrant.sql`
+  (REVOKE lại đúng câu gốc), xác nhận qua `has_function_privilege` + `get_advisors` (hàm không
+  còn xuất hiện trong `authenticated_security_definer_function_executable`). Test canh:
+  `db/src/__tests__/ns.test.ts` ("người đã đăng nhập KHÔNG gọi được
+  scan_hr_document_reminders").
 - ✅ **Đợt 2 — đối chiếu RLS policy thật với mẫu A/B/C/D của BSD 4.1→4.12**, đọc hết cả tài
   liệu lẫn `pg_policies` của 90 bảng có RLS. Không phát hiện lỗ hổng phân quyền nào được xác
   nhận chắc chắn — mọi bảng trung tâm đều khớp đúng mẫu, kể cả nhánh khó nhất
@@ -840,10 +852,17 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
     Mẫu C nhưng bảng gốc dùng RLS kiểu A/B — phần hạn mức C nằm ở bảng `approvals` hợp nhất khi
     hồ sơ "gửi phê duyệt". Đây là kiến trúc đúng (hồ sơ cần nhìn thấy lúc đang soạn, không chỉ
     lúc chờ duyệt), chỉ khác cách đọc literal nhãn BSD.
-- ⏳ **Chưa làm**: kiểm dữ liệu nhạy cảm không lộ qua đường xuất Excel/CSV ở tầng frontend
-  (đợt 2 mới kiểm RLS + column-privilege ở tầng CSDL, chưa soát từng nút "Xuất Excel"); rà
-  source code của mọi RPC ghi dữ liệu (đợt 2 chỉ spot-check vài hàm tiêu biểu); xác nhận
-  `sensitive_access_logs` ghi đủ mọi lượt xem cột nhạy cảm.
+- ✅ **Xuất báo cáo không lộ dữ liệu nhạy cảm** — toàn bộ app chỉ có ĐÚNG hai đường "xuất":
+  `web/src/pages/bc/profit-loss.tsx` và `web/src/pages/bc/sales-effectiveness.tsx`, cả hai qua
+  chung `openPrintReport()` (`web/src/lib/print-report.ts` — mở cửa sổ in riêng rồi
+  `window.print()`, không có `.xlsx`/CSV tự tải nào trong repo). Cả hai chỉ chuyển thẳng dữ
+  liệu ĐÃ hiện trên màn hình thành HTML để in — không truy vấn thêm gì riêng cho việc xuất, nên
+  kế thừa đúng nguyên trạng khoá quyền của trang: `profit-loss.tsx` đọc qua hàm
+  `project_profit_loss` (chặn cả hàm cho vai trò không có quyền `profit`, lỗi ngay từ bước tải
+  dữ liệu chứ không phải lúc xuất); `sales-effectiveness.tsx` không đụng cột Mẫu D nào (đã ghi
+  chú sẵn trong file). Không cần sửa gì — chỉ xác nhận và ghi lại ở đây.
+- ⏳ **Chưa làm**: rà source code của mọi RPC ghi dữ liệu (đợt 2 chỉ spot-check vài hàm tiêu
+  biểu); xác nhận `sensitive_access_logs` ghi đủ mọi lượt xem cột nhạy cảm.
 - Việc phụ phát hiện khi rà đợt 1 (KHÔNG liên quan quyền, đã sửa cùng đợt vì lộ ra lúc chạy lại
   `sx.test.ts` để xác nhận không hồi quy): `create_rental_agreement`/`return_rental_agreement`
   (SX-03) sinh `asset_code` lô mới bằng `to_char(now(), 'YYMMDDHH24MISS')` — độ phân giải MỘT

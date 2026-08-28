@@ -1,0 +1,32 @@
+-- Vá hồi quy do chính migration 0062 gây ra — Phase 4B, rà lại 9 hàm bị nghi ngờ.
+--
+-- 0062 khoá EXECUTE khỏi PUBLIC cho mọi hàm trong schema public, rồi CẤP LẠI cho `authenticated`
+-- đúng tập hàm mà `authenticated` GỌI ĐƯỢC tại thời điểm chạy (chụp bằng has_function_privilege
+-- TRƯỚC khi revoke). Cách chụp đó không phân biệt được hai lý do khiến một hàm "gọi được":
+--   (a) cố ý mở cho người dùng đã đăng nhập — đa số các hàm.
+--   (b) chỉ MỞ NGẪU NHIÊN vì hàm được cấp cho PUBLIC lúc tạo và chưa từng bị REVOKE khỏi
+--       `authenticated` một cách CÓ HIỆU LỰC (đúng lỗi ngữ nghĩa 0062 đã vá cho anon: REVOKE
+--       khỏi `authenticated` khi quyền thật nằm ở dòng cấp PUBLIC là REVOKE khỏi một dòng không
+--       tồn tại — không xoá được gì).
+--
+-- Rà lại 9 hàm 0062 nêu "chưa sửa, cần xác nhận từng hàm": 6/9 đã đúng ý đồ (build_budget_lines,
+-- payment_allocated_total, post_payment_to_budget, purchase_request_budget_line,
+-- quotation_goods_subtotal, quotation_landed_total — chưa từng có PUBLIC access thật, REVOKE cũ
+-- coi như vẫn đứng). close_stocktake và kt_period_locked mở cho `authenticated` là ĐÚNG Ý ĐỒ gốc
+-- (close_stocktake gọi thẳng từ Frontend — web/src/hooks/use-warehouse.ts; kt_period_locked chỉ
+-- có REVOKE FROM anon trong 0041/0043, chưa từng định chặn authenticated).
+--
+-- Riêng scan_hr_document_reminders (0049) LÀ hồi quy thật: migration gốc ghi rõ trong comment
+-- "chỉ tác vụ nền gọi; không mở cho trình duyệt để không ai bắn lại loạt thông báo cho cả công
+-- ty" và có REVOKE EXECUTE ... FROM authenticated, anon tường minh — nhưng vì quyền đó trước đó
+-- đến từ PUBLIC (REVOKE FROM authenticated không có tác dụng, đúng lỗi 0062 đã tìm ra ở 145/168
+-- hàm), `authenticated` vẫn gọi được hàm này suốt từ 0049 tới trước migration này. 0062 quan sát
+-- "authenticated gọi được" là true nên đưa vào tập cấp lại, VÔ TÌNH giữ nguyên lỗ hổng thay vì
+-- vá nó theo đúng comment gốc của tác giả hàm.
+--
+-- Hàm này SECURITY DEFINER, quét TOÀN BỘ pháp nhân (không lọc theo rls_company_access), và gửi
+-- notification hàng loạt cho mọi người có vai trò NS ở công ty đó — gọi trực tiếp từ trình duyệt
+-- (bởi bất kỳ ai đã đăng nhập) nghĩa là bất kỳ ai cũng có thể ép chạy quét sớm hơn lịch, gây
+-- đúng hiện tượng "nhàm cảnh báo" (CGD 3.4) migration gốc đã cảnh báo tránh — không phải rò rỉ
+-- dữ liệu nhạy cảm (Mẫu D), nhưng vẫn là gọi được một tác vụ vốn định chỉ dành cho Cron Trigger.
+REVOKE EXECUTE ON FUNCTION public.scan_hr_document_reminders() FROM authenticated, anon;
