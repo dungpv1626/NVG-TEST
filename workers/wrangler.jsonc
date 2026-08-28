@@ -17,11 +17,13 @@
    * NEN-04 — quét cảnh báo định kỳ. `0 18 * * *` (UTC) = 01:00 sáng giờ Việt Nam (UTC+7) —
    * chạy sau giờ làm việc, trước khi Ban Giám đốc mở Dashboard buổi sáng.
    *
-   * ⚠️ Mới nối 2/4 loại cảnh báo NEN-04 liệt kê: nhắc hạn giấy tờ nhân sự
+   * ⚠️ Cron này chỉ gọi 2/4 loại cảnh báo NEN-04: nhắc hạn giấy tờ nhân sự
    * (`scan_hr_document_reminders` — NS-10) và công nợ phải thu quá hạn
-   * (`scan_receivable_reminders` — KT-04). Hai loại còn lại (việc quá hạn xử lý, chi phí vượt
-   * ngân sách) CHƯA có hàm quét — xem BUILD_PLAN.md mục 4D để không tưởng lầm là đã xong hết
-   * NEN-04.
+   * (`scan_receivable_reminders` — KT-04). Loại thứ ba — chi phí vượt ngân sách công trình
+   * (TC-05) — KHÔNG đi qua cron này: nó là trigger `budget_overrun_alert()` bắn NGAY lúc chi
+   * phí ghi sổ vượt ngưỡng (`db/migrations/0035_tc_rls.sql`, vá ở `0067`), không phải việc
+   * quét theo lịch. Loại còn lại (việc quá hạn xử lý) CHƯA có cơ chế nào — xem BUILD_PLAN.md
+   * mục 4D để không tưởng lầm là đã xong hết NEN-04.
    */
   "triggers": {
     "crons": ["0 18 * * *"]

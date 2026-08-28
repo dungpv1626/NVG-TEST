@@ -470,6 +470,13 @@
       "when": 1787891296725,
       "tag": "0066_scan_receivable_reminders",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1787892941364,
+      "tag": "0067_fix_budget_overrun_alert_recipients",
+      "breakpoints": true
     }
   ]
 }

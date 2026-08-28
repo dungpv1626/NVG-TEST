@@ -902,7 +902,7 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
   quét màu inline/tuỳ biến nếu có); quét vùng bấm nhỏ ở các trang chưa rà (mới xong Top Bar +
   PWA banner, còn nhiều trang khác dùng icon-button riêng lẻ chưa kiểm hết).
 
-### 4D. Tác vụ nền (NEN-04) — ⏳ hạ tầng xong + 2/4 loại cảnh báo, còn 2 loại + Queues
+### 4D. Tác vụ nền (NEN-04) — ⏳ hạ tầng xong + 3/4 loại cảnh báo, còn 1 loại + Queues
 
 - ✅ **Đã dựng `workers/`** — package thứ tư của monorepo (`shared`/`db`/`web`/`workers`), Hono +
   Cloudflare Cron Trigger, dùng Supabase client với `service_role` (Tech Stack 5.6). Đây là
@@ -928,11 +928,29 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
   làm tới. Test: `db/src/__tests__/kt.test.ts` (tạo thông báo đúng 1 lần khi chuyển khung, quét
   lại ngay không nhắc lại). Xác nhận lại qua `wrangler dev --test-scheduled` chạy cả hai hàm
   trong cùng một lượt cron.
-- ⏳ **Chưa làm — 2/4 loại cảnh báo NEN-04 còn lại chưa có hàm quét nào**: việc quá hạn xử lý,
-  chi phí vượt ngân sách công trình (công thức đã có sẵn ở `summarizeBudget()` —
-  `shared/src/tc.ts` — chỉ cần viết lại bằng SQL và thêm cơ chế chống nhắc lại kiểu
-  `last_reminded_stage`). PRD NEN-04 còn nhắc "hồ sơ thiếu chứng từ" — chưa rõ diễn giải thành
-  điều kiện SQL cụ thể nào, cần hỏi Haan nếu làm tới.
+- ✅ **3/4 — chi phí vượt ngân sách công trình** (TC-05). Hoá ra KHÔNG cần viết hàm quét mới:
+  trigger `budget_overrun_alert()` đã tồn tại từ Phase 3A (`db/migrations/0035_tc_rls.sql`,
+  chạy `AFTER UPDATE` trên `project_budgets`) và đã đúng kiểu "cảnh báo sớm" hơn cách 2 loại
+  kia làm — báo NGAY lúc chi phí đã phát sinh + đã cam kết vượt 90%, không đợi tới lượt quét
+  đêm. Chỉ là trigger này CHƯA từng có test nên không ai biết nó có chạy đúng không.
+  Viết test (`db/src/__tests__/tc.test.ts`) lộ ra **một lỗi thật, từ Phase 3A tới giờ**: điều
+  kiện nhận thông báo dùng cứng `uc.company_id = s.company_id`, mà CFO chỉ được gán vào pháp
+  nhân tổng hợp "NVG" (`db/src/seed/data.ts`) chứ không gán riêng vào NVC/NVS/NVO — nên với
+  MỌI công trình thật, CFO **không bao giờ nhận được** cảnh báo vượt ngân sách dù nằm trong
+  danh sách vai trò nhận. Đúng lớp lỗi CLAUDE.md 3.5 đã cảnh báo (lọc cứng `company_id` bỏ sót
+  vai trò xem toàn NVG), chỉ khác chỗ xảy ra là truy vấn người-nhận-thông-báo chứ không phải
+  policy RLS. TGD không lộ lỗi vì được gán riêng vào cả 4 pháp nhân nên luôn có một dòng khớp
+  thẳng — che mất lỗi khi trước giờ chỉ thử tay bằng tài khoản TGD. Đã vá ở
+  `db/migrations/0067_fix_budget_overrun_alert_recipients.sql`: đổi sang mẫu
+  `(uc.company_id = ... OR r.sees_all_companies)` đã dùng ở `0049_ns_rls.sql`; vì sửa này khiến
+  TGD có nhiều dòng `user_companies` cùng khớp điều kiện, phải gói `SELECT DISTINCT` trước khi
+  gọi `create_notification` để không nhắc trùng 4 lần. Test xác nhận cả hai vế: CFO nhận đúng 1
+  thông báo, TGD cũng đúng 1 (không nhân đôi), và không nhắc lại khi vẫn đứng trên ngưỡng ở lần
+  cập nhật sau.
+- ⏳ **Chưa làm — 1/4 loại cảnh báo NEN-04 còn lại chưa có hàm quét nào**: việc quá hạn xử lý
+  (chưa có bảng "việc cần làm" nào đang dùng thật để quét — xem mục "Bảng `tasks`" ở CLAUDE.md
+  6.6). PRD NEN-04 còn nhắc "hồ sơ thiếu chứng từ" — chưa rõ diễn giải thành điều kiện SQL cụ
+  thể nào, cần hỏi Haan nếu làm tới.
 - Ghi chú tiện dùng lại sau: `shared/src/content.ts` có sẵn mẫu `NOTIFICATIONS.debtDue(party,
 amount, date)` cho "công nợ đến hạn" nhưng khung câu đó giả định "đến hạn vào ngày X" — không
   khớp cách `scan_receivable_reminders` diễn đạt ("đã chuyển sang khung … "). Chưa dùng lại

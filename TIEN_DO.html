@@ -98,7 +98,7 @@
   <div class="stats">
     <div class="stat"><b>12 / 12</b><span class="xs muted">module đã dựng (đủ cả 12, Sản xuất &amp; Cho thuê ở mức cơ bản — xem bảng bên dưới)</span></div>
     <div class="stat"><b>91</b><span class="xs muted">bảng cơ sở dữ liệu</span></div>
-    <div class="stat"><b>66</b><span class="xs muted">migration đã chạy</span></div>
+    <div class="stat"><b>67</b><span class="xs muted">migration đã chạy</span></div>
     <div class="stat"><b>670+</b><span class="xs muted">kiểm thử tự động — phần chạm CSDL thật đôi khi đỏ do giới hạn tốc độ đăng nhập khi chạy dồn, không phải lỗi nghiệp vụ (chạy lại riêng tệp đó thì qua)</span></div>
   </div>
 </section>
@@ -224,8 +224,18 @@
           (dùng đúng mốc 30/60/90 ngày đã cấu hình sẵn ở màn hình Công nợ, không bịa mốc mới) —
           báo cho Kế toán, và không nhắc lại mỗi đêm nếu khoản nợ vẫn đứng yên ở cùng một mức.
           Cả hai đã thử chạy thật (chưa đưa lên mạng) và xác nhận đúng có thông báo mới sinh ra.
-          Việc quá hạn xử lý, vượt ngân sách, và việc gửi email vẫn chưa làm — hiện chỉ có thông
-          báo trong ứng dụng.</li>
+          Việc quá hạn xử lý và việc gửi email vẫn chưa làm — hiện chỉ có thông báo trong ứng
+          dụng.</li>
+      <li><strong>Cảnh báo vượt ngân sách công trình hoá ra đã có sẵn từ trước — nhưng có lỗi
+          chưa ai biết</strong> — không phải viết mới: từ giai đoạn dựng Module Thi công đã có
+          sẵn cơ chế báo NGAY khi chi phí một công trình vượt 90% ngân sách, còn sớm hơn cả hai
+          việc quét-mỗi-đêm ở trên. Chỉ là cơ chế đó chưa từng có kiểm thử, và khi viết kiểm thử
+          thì lộ ra: Giám đốc Tài chính (CFO) — vốn chỉ được gán vào mã pháp nhân tổng hợp
+          "NVG" chứ không gán riêng vào từng công ty — chưa bao giờ nhận được cảnh báo này, dù
+          tên nằm sẵn trong danh sách người cần biết. Cùng gốc lỗi với việc "chọn Toàn NVG mở
+          màn hình nào cũng trắng" đã sửa trước đây, chỉ khác chỗ xảy ra. Đã vá và có kiểm thử
+          canh cả hai đầu: CFO nhận được, và Tổng Giám đốc (được gán riêng vào cả bốn pháp
+          nhân) không bị báo trùng bốn lần.</li>
     </ul>
   </div>
 
@@ -629,10 +639,10 @@
       <li><strong>Lệnh sản xuất (SX-01)</strong> còn ở mức CRUD trơn — đổi trạng thái bằng ô chọn
           trực tiếp, chưa có luồng chuyển bước ràng buộc, chưa có định mức tiêu hao hay giá thành
           (SX-02 cố ý chưa làm gì, chờ khảo sát Xưởng giàn giáo NVS).</li>
-      <li><strong>Hai loại cảnh báo tự động còn thiếu (NEN-04)</strong> — việc quá hạn xử lý, chi
-          phí vượt ngân sách công trình. Công thức tính đã có sẵn ở nơi khác (Dashboard), chỉ
-          còn viết lại thành tác vụ chạy nền + tạo thông báo, theo đúng khuôn vừa dựng cho nhắc
-          hạn giấy tờ nhân sự và công nợ phải thu quá hạn.</li>
+      <li><strong>Một loại cảnh báo tự động còn thiếu (NEN-04)</strong> — việc quá hạn xử lý.
+          (Loại thứ hai, chi phí vượt ngân sách công trình, hoá ra đã có sẵn từ Module Thi công
+          — xem thẻ "Vừa xong" bên cạnh.) Chưa có bảng "việc cần làm" nào đang dùng thật để dựa
+          vào, nên còn chờ quyết định về bảng <code>tasks</code> ở dưới.</li>
       <li><strong>Bảng <code>tasks</code> — quyết định bỏ hay dùng thật.</strong> Trung tâm Thông
           báo (bảng <code>notifications</code>) đã nối xong (xem thẻ "Vừa xong" phía trên), nhưng
           "Việc cần làm" ở Top Bar vẫn chỉ là Hộp thư Phê duyệt — việc không gắn phê duyệt (vd.

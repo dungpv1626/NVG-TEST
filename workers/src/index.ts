@@ -30,9 +30,11 @@ function serviceClient(env: Env) {
  * Chạy các hàm quét cảnh báo định kỳ (NEN-04). Mỗi hàm tự chịu trách nhiệm không nhắc lại đã
  * xử lý (CGD 3.4) — ở đây chỉ gọi và ghi log, không có logic nghiệp vụ nào lặp lại từ SQL.
  *
- * 2/4 loại NEN-04 đã có hàm quét (giấy tờ nhân sự — NS-10; công nợ phải thu quá hạn — KT-04).
- * Hai loại còn lại (việc quá hạn xử lý, chi phí vượt ngân sách) chưa có hàm quét — thêm vào
- * mảng này khi có (BUILD_PLAN.md 4D).
+ * 2/4 loại NEN-04 chạy qua CRON QUÉT ở đây (giấy tờ nhân sự — NS-10; công nợ phải thu quá hạn
+ * — KT-04). Chi phí vượt ngân sách (TC-05) là loại thứ ba nhưng KHÔNG cần thêm vào mảng này —
+ * nó đã báo NGAY bằng trigger `budget_overrun_alert()` (0035, vá ở 0067), không cần đợi quét
+ * đêm. Loại còn lại (việc quá hạn xử lý) chưa có cơ chế nào — thêm vào mảng này khi có
+ * (BUILD_PLAN.md 4D).
  */
 const SCAN_FUNCTIONS = ['scan_hr_document_reminders', 'scan_receivable_reminders'] as const;
 

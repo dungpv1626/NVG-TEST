@@ -126,10 +126,7 @@ describeDb('TC — phạm vi pháp nhân và quyền xem phân hệ', () => {
   });
 
   it('không xóa hẳn được công trình (Backend Schema 1.4)', async () => {
-    const { error } = await chiHuy
-      .from('construction_sites')
-      .delete()
-      .eq('id', fixture.nvcSiteId);
+    const { error } = await chiHuy.from('construction_sites').delete().eq('id', fixture.nvcSiteId);
     expect(error?.code).toBe(PG_INSUFFICIENT_PRIVILEGE);
   });
 
@@ -215,7 +212,10 @@ describeDb('TC — nhật ký công trường là bằng chứng, không phải 
 
     // Vai trò chỉ-xem-và-phê-duyệt bị RLS lọc khỏi tầm với: không báo lỗi, nhưng cũng không
     // dòng nào đổi. Khẳng định bằng nội dung sau đó, không bằng mã lỗi.
-    await tgd.from('site_logs').update({ content: `${TEST_PREFIX} Sửa bởi BGĐ.` }).eq('id', logId);
+    await tgd
+      .from('site_logs')
+      .update({ content: `${TEST_PREFIX} Sửa bởi BGĐ.` })
+      .eq('id', logId);
 
     const { data } = await tgd.from('site_logs').select('content').eq('id', logId).single();
     expect(data!.content).not.toContain('Sửa bởi BGĐ');
@@ -465,11 +465,7 @@ describeDb('TC — bảo hành theo từng hạng mục (TC-07)', () => {
     });
     expect(error).toBeNull();
 
-    const { data } = await chiHuy
-      .from('warranties')
-      .select('status')
-      .eq('id', warrantyId)
-      .single();
+    const { data } = await chiHuy.from('warranties').select('status').eq('id', warrantyId).single();
     expect(data!.status).toBe('dang_xu_ly');
   });
 
@@ -493,11 +489,7 @@ describeDb('TC — bảo hành theo từng hạng mục (TC-07)', () => {
       .eq('id', (claim as { id: string }).id);
     expect(error).toBeNull();
 
-    const { data } = await chiHuy
-      .from('warranties')
-      .select('status')
-      .eq('id', warrantyId)
-      .single();
+    const { data } = await chiHuy.from('warranties').select('status').eq('id', warrantyId).single();
     expect(data!.status).toBe('con_han');
   });
 });
@@ -512,6 +504,84 @@ describeDb('TC — một hợp đồng mở một công trình', () => {
     expect(error).not.toBeNull();
   });
 });
+
+describeDb(
+  'TC — cảnh báo sớm vượt ngân sách báo đúng người, kể cả vai trò xem toàn NVG (TC-05, NEN-04)',
+  () => {
+    /**
+     * CFO chỉ được gán vào pháp nhân tổng hợp "NVG" (`db/src/seed/data.ts`), không gán riêng
+     * vào NVC/NVS/NVO — đúng cái bẫy CLAUDE.md 3.5 đã cảnh báo. TGD thì được gán riêng vào cả
+     * bốn pháp nhân nên một test chỉ đăng nhập bằng TGD sẽ không lộ lỗi này (0067 sửa và giải
+     * thích rõ vì sao che được tới giờ).
+     */
+    it('CFO nhận được cảnh báo dù không có user_companies khớp company_id của công trình, và không bị nhân đôi', async () => {
+      const { createConnection } = await import('../client');
+      const { sql } = createConnection();
+      const stamp = Date.now();
+      try {
+        const [site] = await sql<{ id: string; company_id: string }[]>`
+        INSERT INTO construction_sites (company_id, code, name, planned_end_date)
+        SELECT c.id, c.code || '-CT-BUDGET-' || ${String(stamp)},
+               ${TEST_PREFIX + ' Công trình vượt ngân sách '} || ${String(stamp)},
+               current_date + 90
+          FROM companies c WHERE c.code = 'NVC'
+        RETURNING id, company_id
+      `;
+        const [bidding] = await sql<{ id: string }[]>`
+        INSERT INTO bidding_projects (company_id, code, name)
+        VALUES (${site!.company_id}, ${'BUDGET-TEST-' + stamp},
+                ${TEST_PREFIX + ' Gói thầu vượt ngân sách ' + stamp})
+        RETURNING id
+      `;
+        const [budget] = await sql<{ id: string }[]>`
+        INSERT INTO project_budgets
+          (company_id, bidding_project_id, construction_site_id, cost_group, cost_code, name,
+           budgeted_amount, actual_amount, committed_amount)
+        VALUES (${site!.company_id}, ${bidding!.id}, ${site!.id}, 'vat_tu',
+                ${'BT-' + stamp}, ${TEST_PREFIX + ' Vật tư test'}, 100000000, 0, 0)
+        RETURNING id
+      `;
+
+        const [cfo] = await sql<{ id: string }[]>`
+        SELECT id FROM users WHERE email = ${ACCOUNTS.cfo}
+      `;
+        const [tgd] = await sql<{ id: string }[]>`
+        SELECT id FROM users WHERE email = ${ACCOUNTS.tgd}
+      `;
+
+        const countFor = async (userId: string): Promise<number> => {
+          const rows = await sql<{ n: string }[]>`
+          SELECT count(*)::text AS n FROM notifications
+           WHERE type = 'budget_exceeded'
+             AND related_entity_type = 'construction_sites'
+             AND related_entity_id = ${site!.id}
+             AND user_id = ${userId}
+        `;
+          return Number(rows[0]!.n);
+        };
+
+        // Vượt ngưỡng 90% lần đầu — cả CFO (chỉ có user_companies ở "NVG") và TGD (có
+        // user_companies riêng ở cả 4 pháp nhân) đều phải nhận đúng MỘT thông báo.
+        await sql`
+        UPDATE project_budgets SET actual_amount = 95000000 WHERE id = ${budget!.id}
+      `;
+        expect(await countFor(cfo!.id)).toBe(1);
+        expect(await countFor(tgd!.id)).toBe(1);
+
+        // Vẫn đứng trên ngưỡng ở lần cập nhật sau — không nhắc lại (CGD 3.4), và với TGD đây
+        // còn là phép thử không bị nhân đôi do có nhiều dòng user_companies cùng khớp điều
+        // kiện `sees_all_companies`.
+        await sql`
+        UPDATE project_budgets SET actual_amount = 97000000 WHERE id = ${budget!.id}
+      `;
+        expect(await countFor(cfo!.id)).toBe(1);
+        expect(await countFor(tgd!.id)).toBe(1);
+      } finally {
+        await sql.end();
+      }
+    });
+  },
+);
 
 describeDb('TC — hàm nội bộ không gọi được từ trình duyệt', () => {
   it('không tự mở được công trình ở pháp nhân bất kỳ', async () => {
@@ -551,10 +621,7 @@ async function companyOf(client: SupabaseClient, siteId: string): Promise<string
  * `golden-path.test.ts` cũng lập biên bản nghiệm thu chủ đầu tư — đếm tổng thì hai bài đua
  * nhau và bài nào cũng có lúc sai mà không phải do mã sản phẩm.
  */
-async function billingNoticesFor(
-  client: SupabaseClient,
-  acceptanceId: string,
-): Promise<number> {
+async function billingNoticesFor(client: SupabaseClient, acceptanceId: string): Promise<number> {
   const { count } = await client
     .from('notifications')
     .select('id', { count: 'exact', head: true })
