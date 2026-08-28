@@ -282,11 +282,13 @@ describeDb('TC — nghiệm thu là căn cứ thu tiền, và chỉ với chủ 
   let fixture: Fixture;
   let chiHuy: SupabaseClient;
   let ketoan: SupabaseClient;
+  let cfo: SupabaseClient;
 
   beforeAll(async () => {
     fixture = await seedSites();
     chiHuy = await signInAs(ACCOUNTS.congTruongNvc);
     ketoan = await signInAs(ACCOUNTS.ketoan);
+    cfo = await signInAs(ACCOUNTS.cfo);
   });
 
   it('không tạo thẳng được biên bản nghiệm thu bằng một câu INSERT', async () => {
@@ -334,6 +336,10 @@ describeDb('TC — nghiệm thu là căn cứ thu tiền, và chỉ với chủ 
     expect(data).toBeTruthy();
 
     expect(await billingNoticesFor(ketoan, data as string)).toBe(1);
+    // CFO chỉ được gán vào pháp nhân tổng hợp "NVG", không gán riêng vào NVC — trước
+    // migration 0068, điều kiện nhận thông báo lọc cứng company_id nên CFO không bao giờ
+    // nhận được, dù nằm trong danh sách người cần biết (TC-04).
+    expect(await billingNoticesFor(cfo, data as string)).toBe(1);
   });
 
   it('biên bản đã nghiệm thu thì không sửa được giá trị nữa', async () => {
@@ -576,6 +582,86 @@ describeDb(
       `;
         expect(await countFor(cfo!.id)).toBe(1);
         expect(await countFor(tgd!.id)).toBe(1);
+      } finally {
+        await sql.end();
+      }
+    });
+  },
+);
+
+describeDb(
+  'TC — ngân sách công trình là dữ liệu Mẫu D, không chỉ riêng dòng lợi nhuận (TC-05, NEN-07)',
+  () => {
+    it('vai trò chỉ có quyền XEM module TC nhưng không được xem giá vốn thì không thấy dòng ngân sách nào', async () => {
+      const { createConnection } = await import('../client');
+      const { sql } = createConnection();
+      const stamp = Date.now();
+      try {
+        const [site] = await sql<{ id: string }[]>`
+          INSERT INTO construction_sites (company_id, code, name, planned_end_date)
+          SELECT c.id, c.code || '-CT-COSTVIS-' || ${String(stamp)},
+                 ${TEST_PREFIX + ' Công trình kiểm Mẫu D '} || ${String(stamp)},
+                 current_date + 90
+            FROM companies c WHERE c.code = 'NVC'
+          RETURNING id
+        `;
+        const [bidding] = await sql<{ id: string }[]>`
+          INSERT INTO bidding_projects (company_id, code, name)
+          SELECT c.id, ${'COSTVIS-TEST-' + stamp}, ${TEST_PREFIX + ' Gói thầu kiểm Mẫu D ' + stamp}
+            FROM companies c WHERE c.code = 'NVC'
+          RETURNING id
+        `;
+        await sql`
+          INSERT INTO project_budgets
+            (company_id, bidding_project_id, construction_site_id, cost_group, cost_code, name,
+             budgeted_amount)
+          SELECT c.id, ${bidding!.id}, ${site!.id}, x.grp, ${'CV-' + stamp} || '-' || x.grp,
+                 ${TEST_PREFIX + ' Dòng ngân sách test'}, 10000000
+            FROM companies c, (VALUES ('vat_tu'::cost_group), ('loi_nhuan'::cost_group)) AS x(grp)
+           WHERE c.code = 'NVC'
+        `;
+
+        // NS được cấp quyền XEM module TC (để xác nhận chấm công công trường —
+        // `db/src/seed/data.ts`), nhưng KHÔNG nằm trong danh sách vai trò xem giá vốn
+        // (CLAUDE.md 6.6: TGĐ/CFO/BGĐ/Admin + DA_DT/TKE/MH). Trước migration 0068, hàm chỉ
+        // khoá riêng dòng "lợi nhuận", nên vai trò này vẫn đọc được đầy đủ các dòng chi phí
+        // khác (vật tư, nhân công…) — đúng loại rò rỉ Mẫu D mà CLAUDE.md 3.4 cấm.
+        const nhanSu = await signInAs(ACCOUNTS.nhanSu);
+        const { data: nsRows, error: nsError } = await nhanSu.rpc('construction_budget_status', {
+          p_site_id: site!.id,
+        });
+        expect(nsError).toBeNull();
+        expect(nsRows).toEqual([]);
+
+        // TGĐ vừa xem giá vốn vừa xem lợi nhuận — thấy cả hai dòng, và lượt xem được ghi
+        // vào sensitive_access_logs (NEN-07).
+        const tgd = await signInAs(ACCOUNTS.tgd);
+        const { data: tgdId } = await tgd.rpc('auth_user_id');
+        const { data: tgdRows, error: tgdError } = await tgd.rpc('construction_budget_status', {
+          p_site_id: site!.id,
+        });
+        expect(tgdError).toBeNull();
+        expect((tgdRows as { cost_group: string }[]).map((r) => r.cost_group).sort()).toEqual([
+          'loi_nhuan',
+          'vat_tu',
+        ]);
+
+        const logs = await sql<{ id: string }[]>`
+          SELECT id FROM sensitive_access_logs
+           WHERE sensitive_kind = 'cost' AND entity_type = 'construction_sites'
+             AND entity_id = ${site!.id} AND user_id = ${tgdId as string}
+        `;
+        expect(logs.length).toBeGreaterThanOrEqual(1);
+
+        // NS không có quyền xem giá vốn nên lượt gọi ở trên KHÔNG được ghi log — ghi log
+        // của một lượt xem không hợp lệ chỉ gây nhiễu, không phải bằng chứng hữu ích.
+        const { data: nsId } = await nhanSu.rpc('auth_user_id');
+        const nsLogs = await sql<{ id: string }[]>`
+          SELECT id FROM sensitive_access_logs
+           WHERE sensitive_kind = 'cost' AND entity_type = 'construction_sites'
+             AND entity_id = ${site!.id} AND user_id = ${nsId as string}
+        `;
+        expect(nsLogs.length).toBe(0);
       } finally {
         await sql.end();
       }

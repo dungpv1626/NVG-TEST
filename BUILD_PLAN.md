@@ -787,7 +787,7 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
   từ trước. Một chỗ sai duy nhất tìm được: nút "Mở hợp đồng" (`draft-contract-button.tsx`) dùng
   `onClick={() => navigate(...)}` — đã sửa sang `<Button asChild><Link to=…>`.
 
-### 4B. Rà soát phân quyền toàn hệ thống — ⏳ đợt 1+2 xong + export sạch, còn rà source RPC
+### 4B. Rà soát phân quyền toàn hệ thống — ⏳ đợt 1+2+3 xong + export sạch, còn rà nốt phần business logic chưa kiểm hết
 
 - ✅ **Đợt 1 — khoá `EXECUTE` cho vai trò `anon` ở tầng HÀM** (`db/migrations/0062_lock_down_anon_functions.sql`).
   Chạy `mcp__supabase__get_advisors` (loại security) phát hiện 145/168 hàm — gồm cả hàm
@@ -861,8 +861,41 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
   `project_profit_loss` (chặn cả hàm cho vai trò không có quyền `profit`, lỗi ngay từ bước tải
   dữ liệu chứ không phải lúc xuất); `sales-effectiveness.tsx` không đụng cột Mẫu D nào (đã ghi
   chú sẵn trong file). Không cần sửa gì — chỉ xác nhận và ghi lại ở đây.
-- ⏳ **Chưa làm**: rà source code của mọi RPC ghi dữ liệu (đợt 2 chỉ spot-check vài hàm tiêu
-  biểu); xác nhận `sensitive_access_logs` ghi đủ mọi lượt xem cột nhạy cảm.
+- ✅ **Đợt 3 — rà source code của mọi RPC ghi dữ liệu, đúng lớp lỗi vừa lộ ra ở
+  `budget_overrun_alert`** (0067) — hàm đúng ý đồ RLS/GRANT nhưng logic BÊN TRONG hàm tự làm
+  sai (không phải điều đợt 1/đợt 2 bắt được, vì đó là hai lớp khác: quyền EXECUTE và policy
+  RLS). Soát 35/35 điểm gọi `create_notification` theo mẫu "báo cả nhóm vai trò" và mọi hàm
+  chạm cột Mẫu D — không phải đọc tuần tự cả ~80 hàm ghi dữ liệu, mà tìm đúng hai chữ ký lỗi:
+  (a) lọc cứng `company_id` cộng với vai trò có `sees_all_companies`, (b) trả cột nhạy cảm mà
+  không qua `rls_sees_sensitive`/`log_sensitive_access`. Tìm thêm 3 chỗ, vá cùng
+  `db/migrations/0068_fix_cfo_notifications_and_budget_cost_leak.sql`:
+  - **`record_delivery`** (MH-08) và **`record_acceptance`** (TC-04) — cùng lỗi hệt
+    `budget_overrun_alert`: báo `('KT', 'CFO')` nhưng lọc cứng `company_id`, CFO không bao giờ
+    nhận được thông báo "bộ chứng từ sẵn sàng thanh toán" / "đủ căn cứ thu tiền". Vá cùng mẫu
+    `OR r.sees_all_companies` + `SELECT DISTINCT`. Test: thêm khẳng định CFO nhận đúng 1 thông
+    báo vào `db/src/__tests__/mh.test.ts` và `tc.test.ts` (cạnh khẳng định Kế toán đã có sẵn).
+  - **`construction_budget_status`** (TC-05) — khác lớp, không phải thông báo mà là RÒ RỈ giá
+    vốn: hàm chỉ khoá riêng dòng `loi_nhuan` sau `rls_sees_sensitive('profit')`, các dòng chi
+    phí còn lại (vật tư, nhân công, máy móc, thầu phụ, chi phí chung, dự phòng) trả cho BẤT KỲ
+    ai xem được module TC, không qua `rls_sees_sensitive('cost')` như mọi nơi khác đang khoá
+    giá vốn, và không ghi `sensitive_access_logs`. Vai trò NS được cấp `TC: VIEW` (để xác nhận
+    chấm công công trường) nên đọc được đầy đủ ngân sách công trình dù không nằm trong danh
+    sách CLAUDE.md 6.6 cho phép xem giá vốn. `web/src/hooks/use-construction-sites.ts` đã có
+    sẵn chú thích đúng ý đồ Mẫu D cho dòng lợi nhuận nhưng người viết chỉ áp cho lợi nhuận, bỏ
+    sót các dòng chi phí — vá cho khớp đúng ý đồ đó (dòng bị lọc mất, không phải giá trị bị che
+    rỗng — giữ nguyên cách Frontend đang tiêu thụ). Test:
+    `db/src/__tests__/tc.test.ts` ("ngân sách công trình là dữ liệu Mẫu D...") — vai trò NS gọi
+    hàm nhận mảng rỗng và KHÔNG bị ghi log; TGĐ nhận đủ cả hai dòng và có ghi log.
+  - Soát cũng xác nhận: 6/9 hàm nội bộ khác dùng chung mẫu thông báo đã đúng (không có vai trò
+    `sees_all_companies` nào trong danh sách nhận của chúng); mọi hàm trả cột nhạy cảm khác đã
+    tìm thấy (`estimates`, `profit_loss_report`, `inventory_items_cost`, `purchase_requests`
+    cost, `quotation_items` cost, `employees` lương/hồ sơ cá nhân, `hr_documents`) đều gọi
+    `log_sensitive_access` đúng.
+- ⏳ **Chưa làm**: đợt 3 soát theo đúng hai chữ ký lỗi trên (~20/80 hàm đọc trực tiếp, ~60 còn
+  lại quét bằng grep có chủ đích), CHƯA phải đọc tuần tự từng dòng của cả ~80 hàm ghi dữ liệu
+  để tìm lỗi nghiệp vụ bất kỳ ngoài hai lớp đó; cũng chưa soát hết các view/hàm CHỈ ĐỌC ngoài
+  danh sách đã kiểm (còn `boq_items`, `unit_prices`, các view tổng hợp BC ngoài
+  `profit_loss_report`).
 - Việc phụ phát hiện khi rà đợt 1 (KHÔNG liên quan quyền, đã sửa cùng đợt vì lộ ra lúc chạy lại
   `sx.test.ts` để xác nhận không hồi quy): `create_rental_agreement`/`return_rental_agreement`
   (SX-03) sinh `asset_code` lô mới bằng `to_char(now(), 'YYMMDDHH24MISS')` — độ phân giải MỘT

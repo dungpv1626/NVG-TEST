@@ -280,7 +280,11 @@ describeDb('MH — phạm vi pháp nhân và quyền xem phân hệ', () => {
 
   it('người đề nghị lấy từ phiên đăng nhập, không nhận từ trình duyệt (MH-01)', async () => {
     const tgd = await signInAs(ACCOUNTS.tgd);
-    const { data: tgdUser } = await tgd.from('users').select('id').eq('email', ACCOUNTS.tgd).single();
+    const { data: tgdUser } = await tgd
+      .from('users')
+      .select('id')
+      .eq('email', ACCOUNTS.tgd)
+      .single();
 
     // Cố tình khai người đề nghị là Tổng Giám đốc.
     const { data, error } = await chiHuy
@@ -825,6 +829,7 @@ describeDb('MH — giao nhận và bộ chứng từ sang Kế toán (MH-07, MH-
   let muaHang: SupabaseClient;
   let tgd: SupabaseClient;
   let ketoan: SupabaseClient;
+  let cfo: SupabaseClient;
   let requestId: string;
   let orderId: string;
   let orderItemId: string;
@@ -834,6 +839,7 @@ describeDb('MH — giao nhận và bộ chứng từ sang Kế toán (MH-07, MH-
     muaHang = await signInAs(ACCOUNTS.muaHang);
     tgd = await signInAs(ACCOUNTS.tgd);
     ketoan = await signInAs(ACCOUNTS.ketoan);
+    cfo = await signInAs(ACCOUNTS.cfo);
 
     await resetBudgetLine(fixture.budgetLineId);
 
@@ -963,6 +969,22 @@ describeDb('MH — giao nhận và bộ chứng từ sang Kế toán (MH-07, MH-
       .eq('type', 'purchase_order_delivered')
       .eq('related_entity_id', orderId);
     expect(count).toBe(1);
+
+    // CFO chỉ được gán vào pháp nhân tổng hợp "NVG", không gán riêng vào NVC — trước
+    // migration 0068, điều kiện nhận thông báo lọc cứng company_id nên CFO không bao giờ
+    // nhận được, dù nằm trong danh sách người cần biết (MH-08).
+    const { data: cfoRow } = await cfo
+      .from('users')
+      .select('id')
+      .eq('email', ACCOUNTS.cfo)
+      .single();
+    const { count: cfoCount } = await cfo
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', (cfoRow as { id: string }).id)
+      .eq('type', 'purchase_order_delivered')
+      .eq('related_entity_id', orderId);
+    expect(cfoCount).toBe(1);
   });
 
   it('đơn đã giao đủ thì không nhận thêm được nữa', async () => {

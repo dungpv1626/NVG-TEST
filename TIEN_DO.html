@@ -98,7 +98,7 @@
   <div class="stats">
     <div class="stat"><b>12 / 12</b><span class="xs muted">module đã dựng (đủ cả 12, Sản xuất &amp; Cho thuê ở mức cơ bản — xem bảng bên dưới)</span></div>
     <div class="stat"><b>91</b><span class="xs muted">bảng cơ sở dữ liệu</span></div>
-    <div class="stat"><b>67</b><span class="xs muted">migration đã chạy</span></div>
+    <div class="stat"><b>68</b><span class="xs muted">migration đã chạy</span></div>
     <div class="stat"><b>670+</b><span class="xs muted">kiểm thử tự động — phần chạm CSDL thật đôi khi đỏ do giới hạn tốc độ đăng nhập khi chạy dồn, không phải lỗi nghiệp vụ (chạy lại riêng tệp đó thì qua)</span></div>
   </div>
 </section>
@@ -236,6 +236,17 @@
           màn hình nào cũng trắng" đã sửa trước đây, chỉ khác chỗ xảy ra. Đã vá và có kiểm thử
           canh cả hai đầu: CFO nhận được, và Tổng Giám đốc (được gán riêng vào cả bốn pháp
           nhân) không bị báo trùng bốn lần.</li>
+      <li><strong>Soát tiếp cùng lỗi đó ở khắp hệ thống, tìm thêm ba chỗ</strong> — đúng lỗi
+          "Giám đốc Tài chính không nhận được thông báo" lặp lại thêm hai nơi khác: bộ chứng từ
+          mua hàng sẵn sàng thanh toán (Module Mua hàng) và biên bản nghiệm thu đủ căn cứ thu
+          tiền (Module Thi công) — cả hai đã vá cùng cách. Còn tìm ra một lỗi khác loại, nặng
+          hơn: màn hình ngân sách công trình đáng lẽ chỉ Ban Giám đốc/Tài chính và vài vai trò
+          nhất định mới xem được số tiền, nhưng trước đây chỉ riêng dòng "lợi nhuận" bị giấu —
+          các dòng chi phí khác (vật tư, nhân công…) thì AI xem được module Thi công cũng đọc
+          được, kể cả vai trò Hành chính – Nhân sự (được cấp quyền xem module này chỉ để xác
+          nhận chấm công công trường, không phải để xem tiền). Đã khoá đúng như những nơi khác
+          đang khoá giá vốn, và ghi lại đúng ai đã xem khi nào (bắt buộc theo quy định nội bộ
+          về dữ liệu nhạy cảm).</li>
     </ul>
   </div>
 
