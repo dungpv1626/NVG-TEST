@@ -787,11 +787,49 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
   từ trước. Một chỗ sai duy nhất tìm được: nút "Mở hợp đồng" (`draft-contract-button.tsx`) dùng
   `onClick={() => navigate(...)}` — đã sửa sang `<Button asChild><Link to=…>`.
 
-### 4B. Rà soát phân quyền toàn hệ thống
+### 4B. Rà soát phân quyền toàn hệ thống — ⏳ đợt 1 xong (khoá `anon` ở tầng HÀM), còn lại chưa làm
 
-- Đối chiếu **từng bảng trong ~65 bảng** với mẫu A/B/C/D đã ghi ở BSD 4.x
-- Kiểm tra dữ liệu nhạy cảm **không lộ qua đường vòng** (panel liên kết chéo, kết quả tìm kiếm, export)
-- `sensitive_access_logs` ghi đủ
+- ✅ **Đợt 1 — khoá `EXECUTE` cho vai trò `anon` ở tầng HÀM** (`db/migrations/0062_lock_down_anon_functions.sql`).
+  Chạy `mcp__supabase__get_advisors` (loại security) phát hiện 145/168 hàm — gồm cả hàm
+  SECURITY DEFINER ghi dữ liệu như `advance_payment_step`, `adjust_timesheet` — vẫn cho phép
+  `anon` (chưa đăng nhập) gọi qua `/rest/v1/rpc/...`, dù `0001_rls_foundation.sql` đã nói rõ ý
+  đồ "anon không đọc được bảng nghiệp vụ nào" và REVOKE ALL trên 57 bảng — ý đồ đó **chưa bao
+  giờ áp dụng cho HÀM**: Postgres mặc định cấp EXECUTE cho `PUBLIC` (kéo theo cả `anon`) lúc
+  tạo hàm, và chỉ 9/168 hàm được REVOKE tay. Không phải lỗ hổng khai thác được ngay (đọc thân
+  hàm xác nhận mọi hàm SECURITY DEFINER ghi dữ liệu đều mở đầu bằng
+  `IF auth_user_id() IS NULL THEN RAISE EXCEPTION` chặn `anon` ngay dòng đầu) nhưng là khoảng
+  hở phòng thủ nhiều lớp — đã đóng bằng cách REVOKE khỏi `PUBLIC` (không phải `anon` — thử
+  REVOKE trực tiếp từ `anon` trước, không ăn thua, vì quyền hiện tại nằm ở dòng cấp cho
+  `PUBLIC` chứ không phải một dòng cấp riêng cho `anon`) rồi CẤP LẠI đúng tập hàm
+  `authenticated` đang gọi được (chụp lại TRƯỚC khi revoke) — không đổi bất kỳ hành vi nào cho
+  người đã đăng nhập. Đặt `ALTER DEFAULT PRIVILEGES` để hàm tạo sau này không tự mở lại cho
+  `PUBLIC` — **từ nay mọi hàm RPC người dùng gọi phải tự thêm
+  `GRANT EXECUTE ... TO authenticated`**, đúng khuôn `global_search` đã làm sẵn.
+  Tiện thể vá `function_search_path_mutable` cho `global_search`/`attach_audit_touch` (thiếu
+  `SET search_path = public`, lệch quy ước có từ `0002`).
+- ⚠️ **Phát hiện phụ, CHƯA sửa** — 9 hàm nội bộ từng có `REVOKE ... FROM authenticated` ở
+  migration cũ (`build_budget_lines`, `close_stocktake`, `quotation_goods_subtotal`,
+  `quotation_landed_total`, `purchase_request_budget_line`, `scan_hr_document_reminders`,
+  `post_payment_to_budget`, `payment_allocated_total`, `kt_period_locked`) đa số cũng vướng
+  đúng lỗi ngữ nghĩa này — `REVOKE ... FROM authenticated` là REVOKE khỏi một dòng cấp riêng
+  không tồn tại nên không xoá được quyền đến từ `PUBLIC`. Kiểm lại: `build_budget_lines` có vẻ
+  đã đóng đúng (không còn `PUBLIC` trong ACL — chắc do sửa tay), nhưng `close_stocktake` và
+  `scan_hr_document_reminders` vẫn còn `=X/postgres` (mở cho `PUBLIC`) sau khi migration cũ
+  tưởng đã khoá. Đợt 4B lần này CỐ Ý không sửa — cần xác nhận từng hàm có đúng là "chỉ gọi nội
+  bộ/qua cron `service_role`" trước khi khoá tiếp, tránh khoá nhầm một RPC màn hình nào đó
+  đang thật sự dùng.
+- ⏳ **Chưa làm**: đối chiếu **từng bảng trong ~65 bảng** với mẫu A/B/C/D ở BSD 4.x (đợt 1 chỉ
+  soát tầng HÀM, chưa soát RLS policy của từng bảng); kiểm dữ liệu nhạy cảm không lộ qua đường
+  vòng (panel liên kết chéo, kết quả tìm kiếm, export); xác nhận `sensitive_access_logs` ghi đủ.
+- Việc phụ phát hiện khi rà đợt 1 (KHÔNG liên quan quyền, đã sửa cùng đợt vì lộ ra lúc chạy lại
+  `sx.test.ts` để xác nhận không hồi quy): `create_rental_agreement`/`return_rental_agreement`
+  (SX-03) sinh `asset_code` lô mới bằng `to_char(now(), 'YYMMDDHH24MISS')` — độ phân giải MỘT
+  GIÂY, và `now()` đứng yên suốt một transaction. Hai hợp đồng thuê cùng vật tư lập liên tiếp
+  trong cùng một giây (thao tác tay nhanh, hoặc test tự động) đụng khoá duy nhất
+  `scaffolding_assets_code`. Sửa bằng `clock_timestamp()` + mili-giây
+  (`db/migrations/0063_fix_scaffolding_asset_code_collision.sql`); đồng thời cắt bớt phần đầu
+  code nguồn trước khi nối hậu tố (`left(v_lot.asset_code, 44)`) vì thêm mili-giây làm vài
+  code đã dài (qua nhiều vòng thuê/trả) vượt `varchar(64)`.
 
 ### 4C. Áp Content Guidelines toàn diện
 

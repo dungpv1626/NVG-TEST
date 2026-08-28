@@ -98,7 +98,7 @@
   <div class="stats">
     <div class="stat"><b>12 / 12</b><span class="xs muted">module đã dựng (đủ cả 12, Sản xuất &amp; Cho thuê ở mức cơ bản — xem bảng bên dưới)</span></div>
     <div class="stat"><b>91</b><span class="xs muted">bảng cơ sở dữ liệu</span></div>
-    <div class="stat"><b>62</b><span class="xs muted">migration đã chạy</span></div>
+    <div class="stat"><b>64</b><span class="xs muted">migration đã chạy</span></div>
     <div class="stat"><b>670+</b><span class="xs muted">kiểm thử tự động — phần chạm CSDL thật đôi khi đỏ do giới hạn tốc độ đăng nhập khi chạy dồn, không phải lỗi nghiệp vụ (chạy lại riêng tệp đó thì qua)</span></div>
   </div>
 </section>
@@ -185,6 +185,15 @@
           thông báo gần nhất, bấm một dòng vừa đánh dấu đã đọc vừa sang thẳng hồ sơ liên quan.
           Có nút "Đánh dấu tất cả đã đọc". Phần ghi thông báo đã chạy ngầm từ rất sớm (8 phân hệ
           đều gọi), chỉ riêng phần đọc lại là chưa ai nối cho tới bây giờ.</li>
+      <li><strong>Khoá thêm một lớp phòng thủ cho người CHƯA đăng nhập</strong> — dò lại toàn bộ
+          168 hàm cơ sở dữ liệu bằng công cụ kiểm bảo mật của Supabase, phát hiện 145 hàm (kể cả
+          những hàm ghi dữ liệu như duyệt chi, chấm công) vẫn cho phép gọi từ vai trò "chưa đăng
+          nhập" — không phải lỗ hổng khai thác được ngay (mọi hàm đó đều tự chặn dòng đầu tiên
+          nếu không có phiên đăng nhập thật), nhưng là một lớp phòng thủ lẽ ra phải đóng từ đầu
+          mà chưa ai đóng. Đã khoá xong lớp này mà không đổi bất kỳ điều gì cho người dùng đã
+          đăng nhập. Việc phụ phát hiện khi kiểm lại: hai lần liên tiếp lập hợp đồng cho thuê
+          giàn giáo cùng loại vật tư trong CÙNG một giây có thể báo lỗi hệ thống khó hiểu — đã
+          sửa.</li>
     </ul>
   </div>
 
