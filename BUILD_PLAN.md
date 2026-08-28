@@ -891,6 +891,26 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
     tìm thấy (`estimates`, `profit_loss_report`, `inventory_items_cost`, `purchase_requests`
     cost, `quotation_items` cost, `employees` lương/hồ sơ cá nhân, `hr_documents`) đều gọi
     `log_sensitive_access` đúng.
+- ✅ **Hồi quy tự gây ra ở `construction_budget_status`, phát hiện bằng `npm test` đầy đủ và
+  vá ngay** — `db/migrations/0069_fix_construction_budget_status_overreach.sql`. Bản vá 0068
+  đòi `rls_sees_sensitive('cost')` cho MỌI dòng, kể cả dòng không phải lợi nhuận — nhưng danh
+  sách đó không có vai trò `TC`, nên vô tình khoá luôn chính chỉ huy trưởng công trình (có
+  `TC: WORK_APPROVE`, tức sửa được module TC), người đúng ra phải theo được ngân sách công
+  trình MÌNH quản lý (TC-05). `golden-path.test.ts` đã có sẵn một dòng chú thích xác nhận đúng
+  ý đồ gốc này và đỏ ngay sau khi 0068 chạy — đây là lý do phải chạy `npm test` đầy đủ (không
+  chỉ tệp vừa sửa) trước khi coi một đợt rà phân quyền là xong: đợt sửa X có thể phá đúng luồng
+  Y đang đứng. Sửa: dòng chi phí (không phải lợi nhuận) hiện cho AI SỬA ĐƯỢC module TC (chính
+  chủ công trình) HOẶC vai trò xem giá vốn — không đòi cả hai. NS vẫn bị chặn đúng như 0068
+  định làm. ⚠️ Còn một điểm CHƯA quyết, ghi lại trong chính migration: có nên ghi
+  `sensitive_access_logs` cho MỖI lần chỉ huy trưởng mở tab ngân sách công trình mình không
+  (NEN-07 đọc theo chữ là "mọi lượt xem") — đang CỐ Ý không ghi (coi là thao tác vận hành bình
+  thường, ghi mọi lượt sẽ làm bảng phình rất nhanh), cần Haan xác nhận nếu thấy quan trọng.
+  Cùng lúc phát hiện và sửa luôn một lỗi CÓ SẴN TỪ TRƯỚC (không liên quan phiên làm việc này):
+  `golden-path.test.ts` vẫn `select('quantity_on_hand, average_cost')` trên `inventory_items`
+  dù migration 0064 (28/08/2026, trước đó trong cùng phiên đã compact) đã khoá quyền đọc cột
+  `average_cost` của `authenticated` — bài test đó đã đỏ âm thầm từ lúc 0064 chạy, không ai
+  chạy `npm test` đầy đủ để bắt được. Bỏ `average_cost` khỏi câu truy vấn (không dùng ở đâu
+  khác trong bài test).
 - ⏳ **Chưa làm**: đợt 3 soát theo đúng hai chữ ký lỗi trên (~20/80 hàm đọc trực tiếp, ~60 còn
   lại quét bằng grep có chủ đích), CHƯA phải đọc tuần tự từng dòng của cả ~80 hàm ghi dữ liệu
   để tìm lỗi nghiệp vụ bất kỳ ngoài hai lớp đó; cũng chưa soát hết các view/hàm CHỈ ĐỌC ngoài
