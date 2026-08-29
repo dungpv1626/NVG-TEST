@@ -15,12 +15,12 @@ import {
   writeCapability,
 } from '@nvg/shared/design';
 import { ContractError, parseArtifact, parseRequest } from '../contracts';
-import {
-  stubArchModel,
-  stubLayoutIntent,
-  stubRenderResult,
-  stubSpaceProgram,
-} from '../workflows/steps';
+import { stubArchModel, stubLayoutIntent, stubRenderResult } from '../workflows/steps';
+import { buildSpaceProgram } from '../program/engine';
+import { testNorms, testRulePack } from './program-fixtures';
+
+const program1 = () =>
+  buildSpaceProgram({ brief: BRIEF, briefRef: REF, rules: testRulePack(), norms: testNorms() });
 
 const REF = `sha256:${'a'.repeat(64)}`;
 
@@ -159,7 +159,7 @@ describe('Kiểm tra ở ranh giới', () => {
 
 describe('Bước stub của khung xương', () => {
   it('mọi stub sinh ra dữ liệu ĐÚNG hợp đồng', () => {
-    const program = stubSpaceProgram(BRIEF, REF);
+    const program = program1();
     const intent = stubLayoutIntent(program.payload, REF);
     const plan = parseArtifact('floor_plan', {
       schema_version: '1.0.0',
@@ -171,7 +171,6 @@ describe('Bước stub của khung xương', () => {
     });
     const arch = stubArchModel(plan, REF);
 
-    expect(program.stub).toBe(true);
     expect(intent.payload.floors).toHaveLength(3);
     expect(arch.payload.massing.levels[0]?.extrude_to_m).toBeCloseTo(3.4);
   });
@@ -184,7 +183,7 @@ describe('Bước stub của khung xương', () => {
   it('stub bố cục vẫn không sinh toạ độ hay kích thước', () => {
     // Nguyên tắc bất biến số 2 áp dụng cho MỌI thứ đứng ở vị trí của mô hình ngôn ngữ,
     // kể cả mã tạm.
-    const program = stubSpaceProgram(BRIEF, REF);
+    const program = program1();
     const json = JSON.stringify(stubLayoutIntent(program.payload, REF).payload);
     for (const forbidden of ['x_m', 'y_m', 'polygon', 'area_m2', 'width_m']) {
       expect(json).not.toContain(forbidden);

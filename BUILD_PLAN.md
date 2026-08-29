@@ -1484,11 +1484,32 @@ chú giải.
 dùng được (giữ điểm nối trong hàm mục tiêu nhưng trả về rỗng); đánh giá bằng leave-one-out
 chứ không tách bộ dự án mẫu riêng.
 
-### Mốc 4 — Lớp 2: Space Program (TK-11)
+### Mốc 4 — Lớp 2: Space Program (TK-11) — 🔨 ĐANG LÀM (29/08/2026)
 
 Phải **chạy được với Knowledge Base rỗng** (quy tắc + mô hình ngôn ngữ, chất lượng thấp hơn
 nhưng đúng hợp đồng).
 **Ra:** kiến trúc sư đánh giá hợp lý trên ≥70% kho đánh giá.
+
+**Đã xong** (`workers/src/design/program/`, `kb/space_norms.yaml`, migration `0102`):
+
+- Engine soạn chương trình không gian, **hàm thuần và tất định** — chạy thật qua bộ giải
+  CP-SAT trong Container, ra mặt bằng đủ ba tầng.
+- **Ba nguồn tri thức, thứ tự ưu tiên cưỡng chế trong mã**: quy chuẩn (`rules/**`) > thống kê
+  thực nghiệm > chuẩn nghề nghiệp (`kb/space_norms.yaml`). Diện tích tối thiểu luôn lấy giá
+  trị lớn nhất của hai nguồn đầu.
+- **Quan hệ liền kề sinh từ rule pack**, không khai lại lần thứ hai ở đâu.
+- **Hook thống kê thực nghiệm** (`kb_room_area_stats`): ngưỡng đếm số **công trình**, cưỡng
+  chế bằng `HAVING` trong SQL. Trả rỗng ở quy mô kho hiện tại — đúng thiết kế, không phải
+  việc còn dở (`06-knowledge-base` 6.0b).
+- Quy nhu cầu viết bằng lời về mã không gian: lượt bảng bí danh chạy được ngay; lượt mô hình
+  ngôn ngữ bị chặn vì đầu bài là dữ liệu hạng 1 còn cấu hình demo đặt `max_data_class: 3`.
+  Có kiểm thử canh chính hàng rào đó.
+
+**Còn lại:**
+
+- Giao diện xem và sửa chương trình không gian (chưa có màn hình nào).
+- Bộ đo leave-one-out để đối chiếu với ngưỡng 70% — cần kho hồ sơ cũ, đang chờ tệp `.dwg`.
+- Chuẩn diện tích cần kiến trúc sư soát (câu hỏi Q-18 trong `TIEN_DO_THIET_KE.html`).
 
 ### Mốc 5 — Lõi Lớp 3 cho nhà phố (TK-12, TK-13) — kết thúc Giai đoạn 1
 

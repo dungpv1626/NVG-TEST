@@ -1,0 +1,282 @@
+# Chuẩn lập chương trình không gian — dữ liệu của Lớp 2.
+#
+# Nguồn: doc/design/03-data-contracts.md mục 3.2, 06-knowledge-base.md mục 6.0 và 6.4,
+# 08-milestones.md Mốc 4.
+#
+# ── Vì sao là DỮ LIỆU, không phải mã nguồn ─────────────────────────────────────────────
+# Cùng lý lẽ với rule pack và `room_vocabulary.yaml` (CLAUDE.md 8.7). Diện tích một phòng
+# khách "nên" là bao nhiêu không phải hằng số của phần mềm: nó đổi theo bề rộng lô, theo
+# thời kỳ, theo gu từng pháp nhân, và sẽ đổi lần nữa ngay khi kho hồ sơ cũ đủ lớn để nói
+# thay. Viết vào mã là buộc phải sửa mã cho mỗi lần đổi ý của Phòng Thiết kế.
+#
+# ── Ranh giới với `rules/` ─────────────────────────────────────────────────────────────
+# `rules/` là thứ Container ĐÁNH GIÁ trên hình học đã giải (tuân thủ quy chuẩn).
+# Tệp này là thứ Worker dùng để SOẠN chương trình không gian (thực hành nghề nghiệp).
+# Hai vai khác nhau, nên hai chỗ. Chỗ nào cả hai cùng nói (diện tích tối thiểu) thì
+# **rule pack thắng** — quy chuẩn không thương lượng được. Engine lấy `max(hai bên)`, nên
+# một quy chuẩn siết chặt hơn luôn có hiệu lực mà không phải sửa tệp này.
+#
+# ⚠️ Số ở mục `spaces` là SUY LUẬN từ thực hành phổ biến, CHƯA có kiến trúc sư NVG xác
+#    nhận (xem "Câu hỏi chờ Haan" trong TIEN_DO_THIET_KE.html). Sửa ở đây, không sửa mã.
+
+version: '1.0.0'
+
+# ── Thống kê thực nghiệm ───────────────────────────────────────────────────────────────
+# 06-knowledge-base 6.0(b): dưới ngưỡng này mỗi ô chỉ còn một hai công trình — đó là trùng
+# hợp, không phải phân bố. Hook vẫn chạy, chỉ là trả về rỗng cho tới khi kho đủ lớn.
+#
+# Đếm số CÔNG TRÌNH, không phải số phòng: một biệt thự mười lăm phòng ngủ tự nó vượt ngưỡng,
+# và "phân bố diện tích phòng ngủ của NVG" hoá ra là phân bố bên trong đúng một căn nhà.
+priors:
+  min_samples: 15
+  # Bề rộng lô là biến phân tầng chính: cách bố trí nhà 4 m và nhà 8 m khác nhau về bản
+  # chất, không phải khác về mức độ.
+  width_bands:
+    - { id: hep, max_width_m: 4.5, scale: 0.85 }
+    - { id: trung_binh, max_width_m: 6.0, scale: 1.0 }
+    - { id: rong, max_width_m: 8.0, scale: 1.15 }
+    - { id: rat_rong, max_width_m: null, scale: 1.3 }
+
+# ── Suy số phòng ngủ từ thành phần gia đình ────────────────────────────────────────────
+# `per_room` = số người dùng chung một phòng. Con cái mỗi người một phòng là mặc định của
+# nhà ở dân dụng hiện nay; ông bà và vợ chồng ở chung.
+occupancy:
+  vo_chong: { per_room: 2, room_type: master_bedroom, floor: mid }
+  ong_ba: { per_room: 2, room_type: bedroom, floor: ground }
+  con: { per_room: 1, room_type: bedroom, floor: mid }
+  khach: { per_room: 2, room_type: bedroom, floor: mid }
+  nguoi_giup_viec: { per_room: 2, room_type: bedroom, floor: ground }
+
+# ── Không gian luôn có, kể cả khi đầu bài không khai ───────────────────────────────────
+# Đầu bài do người bán hàng ghi thường bỏ qua những thứ hiển nhiên. Thiếu chúng thì Lớp 3
+# giải ra một căn nhà không có chỗ nấu ăn.
+mandatory:
+  nha_pho: [living, dining, kitchen, wc, stair, circulation]
+  biet_thu: [living, dining, kitchen, wc, stair, circulation]
+  nha_vuon: [living, dining, kitchen, wc, stair, circulation]
+
+# ── Không gian sinh theo tỉ lệ ─────────────────────────────────────────────────────────
+derived:
+  wc:
+    per_bedrooms: 2
+    min_per_floor: 1
+  circulation:
+    # Diện tích giao thông tính theo TỈ LỆ diện tích sàn, không phải một con số cố định:
+    # hành lang của tầng 40 m² và tầng 120 m² không thể bằng nhau (06-knowledge-base 6.4).
+    ratio_of_floor: 0.12
+  stair:
+    # Một thang cho mỗi lõi; số lõi lấy từ `massing.cores_preferred` của đầu bài.
+    per_core: 1
+
+# ── Trọng số quan hệ liền kề, suy từ mức nghiêm trọng của rule pack ────────────────────
+# Quan hệ liền kề KHÔNG khai ở đây — nguồn duy nhất là `rules/**/*.yaml` mục
+# `predicate: adjacency`. Tệp này chỉ nói mức nghiêm trọng đổi thành trọng số bao nhiêu
+# trong hàm mục tiêu của bộ giải.
+adjacency_weight:
+  error: 1.0
+  warning: 0.6
+
+# ── Chuẩn từng loại không gian ─────────────────────────────────────────────────────────
+# Mọi mã trong `kb/room_vocabulary.yaml` phải có mặt ở đây — có kiểm thử canh. Một loại
+# phòng thiếu chuẩn sẽ lọt vào chương trình không gian với diện tích bịa ra, hoặc tệ hơn,
+# làm cả bước dừng đúng lúc khách đang chờ.
+#
+#   floor:      ground | low | mid | top | any   — nguyện vọng, rule pack `floor_preference`
+#                                                  thắng khi hai bên nói khác nhau
+#   priority:   1 cao nhất. Dùng khi tổng diện tích mong muốn vượt sàn có được: cái nào
+#               nhường trước.
+#   auto:       false = chỉ tạo khi đầu bài khai đích danh hoặc quy tắc suy ra
+spaces:
+  living:
+    min_m2: 12
+    target_m2: 22
+    max_m2: 40
+    priority: 1
+    floor: ground
+    daylight: true
+    facade: true
+    ventilation: true
+  dining:
+    min_m2: 9
+    target_m2: 14
+    max_m2: 24
+    priority: 2
+    floor: ground
+    daylight: false
+    facade: false
+    ventilation: true
+  kitchen:
+    min_m2: 6
+    target_m2: 10
+    max_m2: 18
+    priority: 2
+    floor: ground
+    daylight: true
+    facade: false
+    ventilation: true
+  bedroom:
+    min_m2: 9
+    target_m2: 14
+    max_m2: 22
+    priority: 2
+    floor: mid
+    daylight: true
+    facade: true
+    ventilation: true
+  master_bedroom:
+    min_m2: 14
+    target_m2: 20
+    max_m2: 32
+    priority: 1
+    floor: mid
+    daylight: true
+    facade: true
+    ventilation: true
+  wc:
+    min_m2: 2.4
+    target_m2: 4
+    max_m2: 8
+    priority: 3
+    floor: any
+    daylight: false
+    facade: false
+    ventilation: true
+  stair:
+    min_m2: 4
+    target_m2: 8
+    max_m2: 14
+    priority: 1
+    floor: any
+    daylight: false
+    facade: false
+    ventilation: false
+  core:
+    # Lõi là NHÓM không gian đứng thẳng hàng liên tầng (thang + vệ sinh + hộp kỹ thuật),
+    # do Lớp 3 dựng. Không bao giờ tự sinh thành một dòng của chương trình không gian.
+    min_m2: 6
+    target_m2: 10
+    max_m2: 18
+    priority: 1
+    floor: any
+    daylight: false
+    facade: false
+    ventilation: false
+    auto: false
+  circulation:
+    min_m2: 3
+    target_m2: 8
+    max_m2: 24
+    priority: 3
+    floor: any
+    daylight: false
+    facade: false
+    ventilation: false
+  garage:
+    min_m2: 12
+    target_m2: 18
+    max_m2: 30
+    priority: 2
+    floor: ground
+    daylight: false
+    facade: true
+    ventilation: true
+  altar_room:
+    min_m2: 8
+    target_m2: 12
+    max_m2: 20
+    priority: 2
+    floor: top
+    daylight: true
+    facade: false
+    ventilation: true
+  study:
+    min_m2: 6
+    target_m2: 10
+    max_m2: 16
+    priority: 3
+    floor: mid
+    daylight: true
+    facade: true
+    ventilation: true
+  storage:
+    min_m2: 2
+    target_m2: 4
+    max_m2: 10
+    priority: 4
+    floor: any
+    daylight: false
+    facade: false
+    ventilation: false
+  laundry:
+    min_m2: 3
+    target_m2: 5
+    max_m2: 10
+    priority: 4
+    floor: top
+    daylight: true
+    facade: false
+    ventilation: true
+  balcony:
+    min_m2: 2
+    target_m2: 4
+    max_m2: 10
+    priority: 4
+    floor: mid
+    daylight: true
+    facade: true
+    ventilation: true
+  terrace:
+    min_m2: 6
+    target_m2: 14
+    max_m2: 40
+    priority: 4
+    floor: top
+    daylight: true
+    facade: true
+    ventilation: true
+  courtyard:
+    min_m2: 4
+    target_m2: 9
+    max_m2: 25
+    priority: 3
+    floor: ground
+    daylight: true
+    facade: false
+    ventilation: true
+  light_well:
+    min_m2: 1.5
+    target_m2: 3
+    max_m2: 8
+    priority: 3
+    floor: any
+    daylight: true
+    facade: false
+    ventilation: true
+  shaft:
+    min_m2: 0.3
+    target_m2: 0.6
+    max_m2: 2
+    priority: 4
+    floor: any
+    daylight: false
+    facade: false
+    ventilation: false
+    auto: false
+  shop:
+    min_m2: 12
+    target_m2: 25
+    max_m2: 60
+    priority: 1
+    floor: ground
+    daylight: true
+    facade: true
+    ventilation: true
+  technical:
+    min_m2: 2
+    target_m2: 4
+    max_m2: 8
+    priority: 4
+    floor: any
+    daylight: false
+    facade: false
+    ventilation: true

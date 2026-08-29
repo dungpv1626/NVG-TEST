@@ -20,18 +20,19 @@
 
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from 'cloudflare:workers';
 import { NonRetryableError } from 'cloudflare:workflows';
-import type { ArtifactDiscipline, PipelineStep } from '@nvg/shared/design';
+import type { ArtifactDiscipline, DesignBrief, PipelineStep } from '@nvg/shared/design';
 import { ArtifactRepository, type ArtifactScope, type WrittenArtifact } from '../artifacts';
 import { gateLayer2, readCompletenessThreshold } from '../brief/gate';
 import { createComputeBackend } from '../compute-backend';
 import type { DesignEnv } from '../env';
-import {
-  solveFloorPlan,
-  stubArchModel,
-  stubLayoutIntent,
-  stubRenderResult,
-  stubSpaceProgram,
-} from './steps';
+import { roomVocabulary } from '../kb/vocabulary-data';
+import { geminiClient } from '../llm/factory';
+import { buildSpaceProgram } from '../program/engine';
+import { resolveNeeds } from '../program/needs';
+import { spaceNorms } from '../program/norms-data';
+import { readRoomAreaPriors } from '../program/priors';
+import { rulePackFor } from '../program/rule-pack-data';
+import { solveFloorPlan, stubArchModel, stubLayoutIntent, stubRenderResult } from './steps';
 
 export interface DesignPipelineParams {
   tenantId: string;
@@ -79,6 +80,12 @@ export class DesignPipeline extends WorkflowEntrypoint<DesignEnv, DesignPipeline
     );
     const briefId = brief?.id ?? (await requireHead(repo, scope, 'design_brief'));
 
+    // Cảnh báo của Lớp 2 không có chỗ trong hợp đồng `SpaceProgram` (nó mô tả chương trình
+    // không gian, không mô tả quá trình soạn ra nó) nên đi theo kết quả chạy, cùng khuôn với
+    // `inferredLabels` của Workflow số hoá.
+    let layer2Notes: string[] = [];
+    let layer2Unresolved: string[] = [];
+
     const program = await guard(step, 'layer2_program', runs('layer2_program'), async () => {
       const head = await repo.head(p.projectId, p.discipline, 'design_brief');
       if (!head) throw new NonRetryableError('Chưa có đầu bài đang hiệu lực cho dự án này.');
@@ -89,14 +96,61 @@ export class DesignPipeline extends WorkflowEntrypoint<DesignEnv, DesignPipeline
       const gate = gateLayer2(head.payload, await readCompletenessThreshold(repo.db, p.tenantId));
       if (!gate.allowed) throw new NonRetryableError(gate.message);
 
-      const result = stubSpaceProgram(head.payload as never, briefId);
+      const brief = head.payload as DesignBrief;
+      const norms = spaceNorms();
+      const rules = rulePackFor(brief.locality);
+
+      // Phần chữ tự do đi qua bước quy đổi RIÊNG trước khi vào engine — engine phải tất định
+      // (xem chú thích đầu `program/engine.ts`).
+      const needs = await resolveNeeds(
+        [...(brief.family ?? []).flatMap((m) => m.needs ?? []), ...(brief.priorities ?? [])],
+        roomVocabulary(),
+        geminiClient(this.env),
+      );
+
+      // Thống kê thực nghiệm: rỗng ở quy mô kho hiện tại, và đó là hành vi đúng
+      // (06-knowledge-base 6.0b). Hỏng khi đọc thì KHÔNG chặn — Lớp 2 vẫn chạy bằng chuẩn
+      // nghề nghiệp, chỉ là chất lượng thấp hơn, đúng điều kiện vào của Mốc 4.
+      let priors = null;
+      try {
+        priors = await readRoomAreaPriors(repo.db, norms, {
+          tenantId: p.tenantId,
+          buildingType: brief.building_type,
+          siteWidthM: brief.site.width_m,
+          floors: brief.floors,
+        });
+      } catch (error) {
+        needs.notes.push(
+          `Chưa đọc được thống kê thực nghiệm nên đang dùng chuẩn nghề nghiệp: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+
+      const result = buildSpaceProgram({
+        brief,
+        briefRef: briefId,
+        rules,
+        norms,
+        priors,
+        extraSpaces: needs.spaces,
+      });
+      layer2Notes = [...result.warnings, ...needs.notes];
+      layer2Unresolved = needs.unresolved;
+
       return repo.write({
         scope,
         kind: 'space_program',
         payload: result.payload,
         inputs: [briefId],
         step: 'layer2_program',
-        params: { stub: result.stub },
+        // Cấu hình quyết định đầu ra, để `findComputed` biết khi nào kết quả cũ còn dùng
+        // được: đổi chuẩn diện tích hay đổi gói quy tắc địa phương là phải tính lại.
+        params: {
+          norms_version: norms.version,
+          locality: brief.locality,
+          priors_band: priors?.bandId ?? null,
+        },
       });
     });
     const programId = program?.id ?? (await requireHead(repo, scope, 'space_program'));
@@ -182,6 +236,8 @@ export class DesignPipeline extends WorkflowEntrypoint<DesignEnv, DesignPipeline
 
     return {
       status: 'ok' as const,
+      notes: layer2Notes,
+      unresolvedNeeds: layer2Unresolved,
       artifacts: {
         design_brief: briefId,
         space_program: programId,

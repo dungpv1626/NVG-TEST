@@ -274,16 +274,16 @@
           trích xuất dựng được đa giác phòng, nhãn phòng, lưới cột và ranh đất.
         </p>
         <p class="muted-t xs">
-          Giai đoạn 1 của tài liệu gồm Mốc 0 → Mốc 5. Đợt này làm 2/6 mốc đầu. Bốn trong sáu bước
-          của pipeline hiện là mã tạm đúng hợp đồng — đó là định nghĩa của "khung xương", không phải
-          thiếu sót.
+          Giai đoạn 1 của tài liệu gồm Mốc 0 → Mốc 5. Đợt này làm 3/6 mốc đầu. Ba trong sáu bước của
+          pipeline hiện là mã tạm đúng hợp đồng; Lớp 2 vừa có bản thật, chạy được cả khi kho hồ sơ
+          cũ còn rỗng.
         </p>
-        <div class="bar"><span style="width: 33%"></span></div>
+        <div class="bar"><span style="width: 50%"></span></div>
         <div class="stats">
           <div class="stat"><b>2/3</b><span class="xs muted-t">Việc của Mốc 0 đã xong</span></div>
-          <div class="stat"><b>209</b><span class="xs muted-t">Phép thử xanh của module</span></div>
+          <div class="stat"><b>253</b><span class="xs muted-t">Phép thử xanh của module</span></div>
           <div class="stat"><b>4</b><span class="xs muted-t">Vướng mắc đang mở</span></div>
-          <div class="stat"><b>13</b><span class="xs muted-t">Câu hỏi chờ Haan</span></div>
+          <div class="stat"><b>14</b><span class="xs muted-t">Câu hỏi chờ Haan</span></div>
         </div>
       </div>
 
@@ -319,11 +319,11 @@
               <td>
                 Layer 1 — Design Brief thay phiếu tiếp nhận
                 <span class="xs muted-t"
-                  >&mdash; xong nền tảng: cấu hình biểu mẫu, chấm điểm tất định, migration. Còn giao
-                  diện và Worker</span
+                  >&mdash; biểu mẫu một-chỗ-nhập, chấm điểm tất định, đúc artifact khi xác nhận,
+                  cổng chặn Lớp 2</span
                 >
               </td>
-              <td><span class="pill s-progress">Đang làm</span></td>
+              <td><span class="pill s-done">Xong</span></td>
             </tr>
             <tr>
               <td class="num">3</td>
@@ -337,8 +337,14 @@
             </tr>
             <tr>
               <td class="num">4</td>
-              <td>Layer 2 — Space Program</td>
-              <td><span class="pill s-draft">Ngoài đợt</span></td>
+              <td>
+                Layer 2 — Space Program
+                <span class="xs muted-t"
+                  >&mdash; engine soạn chương trình không gian đã chạy thật qua bộ giải; còn giao
+                  diện và phép đánh giá leave-one-out</span
+                >
+              </td>
+              <td><span class="pill s-progress">Đang làm</span></td>
             </tr>
             <tr>
               <td class="num">5</td>
@@ -423,6 +429,56 @@
             </tr>
           </thead>
           <tbody>
+            <tr>
+              <td class="num">29/08/2026</td>
+              <td>
+                Mốc 4: Lớp 2 &mdash; engine soạn chương trình không gian
+                (<code>workers/src/design/program/</code>, <code>kb/space_norms.yaml</code>,
+                migration <code>0102</code>, 38 + 7 kiểm thử)
+              </td>
+              <td>
+                <b>Chạy thật đầu-cuối qua bộ giải:</b> đầu bài nhà phố 5&times;18 m ba tầng &rarr;
+                chương trình 17 không gian &rarr; CP-SAT trong Container giải ra mặt bằng đủ ba
+                tầng. Bốn trong sáu bước pipeline nay là bản thật.
+                <br />
+                <b>Ba nguồn tri thức, thứ tự ưu tiên cưỡng chế trong mã:</b> quy chuẩn
+                (<code>rules/**</code>) &gt; thống kê thực nghiệm (Knowledge Base) &gt; chuẩn nghề
+                nghiệp (<code>kb/space_norms.yaml</code>). Diện tích tối thiểu luôn là
+                <b>lớn nhất</b> của hai nguồn đầu, nên một quy chuẩn siết chặt hơn có hiệu lực ngay
+                mà không phải sửa gì khác.
+                <br />
+                <b>Quan hệ liền kề KHÔNG khai lại lần hai:</b> sinh thẳng từ mục
+                <code>predicate: adjacency</code> của rule pack. Khai ở hai nơi thì bộ giải tối ưu
+                theo bộ này còn trình kiểm tra chấm điểm theo bộ kia, và không ai hiểu vì sao kết
+                quả &laquo;hợp lệ&raquo; mà vẫn bị cảnh báo.
+                <br />
+                <b>Engine tất định, mô hình ngôn ngữ bị đẩy ra rìa:</b> phần &laquo;hiểu tiếng
+                người&raquo; (nhu cầu viết bằng lời) là một bước riêng, giao cho engine một danh
+                sách mã đã sạch. Không thế thì cùng một đầu bài cho hai mã băm artifact khác nhau,
+                và cơ chế &laquo;đã tính rồi thì không tính lại&raquo; mất tác dụng.
+                <br />
+                <b>Thống kê thực nghiệm: hook có, kết quả rỗng &mdash; đúng thiết kế.</b> Ngưỡng đếm
+                số <b>công trình</b>, không phải số phòng: đếm phòng thì một biệt thự mười lăm phòng
+                ngủ tự nó vượt ngưỡng, và &laquo;phân bố diện tích của NVG&raquo; hoá ra là phân bố
+                bên trong đúng một căn nhà. Phép lọc đặt trong SQL nên không lớp gọi nào bỏ qua
+                được.
+                <br />
+                <b>Lệch tài liệu có chủ ý:</b> tài liệu đề xuất materialized view, ở đây là một hàm
+                đọc thẳng <code>kb_record</code>. Materialized view không chịu RLS &mdash; nó là bản
+                sao dữ liệu mọi tenant nằm ngoài mọi policy; đổi lấy điều đó phải có lý do tốc độ,
+                mà kho dưới 50 bộ thì không có. Lý do và điều kiện đổi lại ghi trong migration.
+                <br />
+                <b>Hai lỗi bắt được lúc làm, cả hai đều im lặng:</b> (1) phần vệ sinh tối thiểu mỗi
+                tầng bị thả nổi cho bước cân tải, nên cả ba khu dồn lên tầng nhẹ nhất &mdash; đúng
+                về số học, và là một căn nhà có hai tầng không có nhà vệ sinh nào. (2) Bộ giải chia
+                <b>hết</b> mặt sàn, không có khái niệm &laquo;phần còn lại để trống&raquo;, nên một
+                tầng có tổng diện tích tối đa nhỏ hơn mặt sàn là vô nghiệm ngay cả khi mọi phòng đều
+                thoải mái &mdash; và tập ràng buộc mâu thuẫn trả về chỉ vào
+                <code>max_area</code> của một hành lang, tức chỗ khó hiểu nhất có thể. Lỗi (2) chỉ
+                lộ ra khi chạy qua Container thật; nay có phép thử chặn nó mà không cần dựng
+                Container, và đã kiểm bằng cách gỡ bản vá để xác nhận phép thử đỏ đúng chỗ.
+              </td>
+            </tr>
             <tr>
               <td class="num">29/08/2026</td>
               <td>
@@ -1307,6 +1363,30 @@
                 điểm) hiện do tôi đặt. Ngưỡng 70% chỉ có nghĩa khi bảng trọng số đúng.
               </td>
               <td class="num">Mốc 2</td>
+            </tr>
+            <tr>
+              <td class="num">Q-18</td>
+              <td>
+                <b>Chuẩn diện tích và quy tắc suy phòng của Lớp 2 cần kiến trúc sư NVG soát.</b>
+                <code>kb/space_norms.yaml</code> đang giữ ba nhóm số do tôi suy từ thực hành phổ
+                biến, chưa ai trong nghề xác nhận:
+                <br />
+                (1) <b>diện tích mong muốn và tối đa</b> của 21 loại phòng &mdash; ví dụ phòng khách
+                22 m², phòng ngủ chính 20 m², theo hệ số nhân của dải bề rộng lô; (2)
+                <b>số người trên một phòng ngủ</b> theo vai trò &mdash; con cái mỗi cháu một phòng,
+                ông bà và vợ chồng ở chung, ông bà ưu tiên tầng trệt; (3)
+                <b>tỉ lệ diện tích giao thông</b> 12% mặt sàn và
+                <b>một khu vệ sinh cho mỗi hai phòng ngủ</b>.
+                <br />
+                Vì sao cần soát chứ không để đó: đây là thứ quyết định chương trình không gian trông
+                có hợp lý hay không, mà điều kiện ra của Mốc 4 chính là &laquo;kiến trúc sư đánh giá
+                hợp lý trên ≥70% kho&raquo;. Sai ở đây thì mọi phương án sinh ra đều lệch cùng một
+                hướng, và lệch đều thì không ai nhận ra là lệch.
+                <br />
+                Sửa là sửa <b>một tệp dữ liệu</b>, không phải sửa mã &mdash; nên soát muộn không tốn
+                công làm lại, chỉ tốn thời gian chạy với số chưa đúng.
+              </td>
+              <td class="num">Mốc 4</td>
             </tr>
             <tr>
               <td class="num">Q-17</td>

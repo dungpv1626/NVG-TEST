@@ -715,6 +715,13 @@
       "when": 1787931027540,
       "tag": "0101_tk_design_brief_structured",
       "breakpoints": true
+    },
+    {
+      "idx": 102,
+      "version": "7",
+      "when": 1787931027541,
+      "tag": "0102_kb_room_area_stats",
+      "breakpoints": true
     }
   ]
 }

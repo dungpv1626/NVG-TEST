@@ -11,9 +11,12 @@
  * `cloudflare:workers` — chỉ tồn tại trong runtime Workers, kiểm thử bằng Node không nạp
  * được. Ranh giới này giữ cho phần nghiệp vụ kiểm thử được mà không cần dựng cả Worker.
  *
- * ⚠️ MỐC 1: bốn trong sáu bước trả về STUB — dữ liệu đúng hợp đồng nhưng không phải kết quả
+ * ⚠️ BA trong sáu bước còn trả về STUB — dữ liệu đúng hợp đồng nhưng không phải kết quả
  * thật. Mỗi stub tự khai `stub: true` trong kết quả bước để không có cách nào nhầm nó với
  * kết quả thật ở lớp trên.
+ *
+ * Lớp 2 KHÔNG còn ở đây: bản thật nằm ở `../program/engine.ts` vì nó cần rule pack, chuẩn
+ * diện tích và thống kê thực nghiệm — quá nhiều đầu vào để nhét vừa chữ ký chung của tệp này.
  */
 
 import type {
@@ -33,56 +36,6 @@ export interface StepResult<T> {
   payload: T;
   /** `true` = kết quả tạm cho khung xương, KHÔNG phải kết quả thật của lớp đó. */
   stub: boolean;
-}
-
-/**
- * Layer 2 — chương trình không gian.
- *
- * STUB: bản thật gọi mô hình ngôn ngữ cộng truy hồi thống kê thực nghiệm từ Knowledge Base
- * (Mốc 3 + Mốc 4). Bản này chia đều số phòng theo số tầng của đầu bài, chỉ để có dữ liệu
- * đúng hợp đồng chảy qua đường ống.
- */
-export function stubSpaceProgram(brief: DesignBrief, briefRef: string): StepResult<SpaceProgram> {
-  const floors = brief.floors;
-  const spaces: SpaceProgram['spaces'] = [];
-
-  for (let level = 1; level <= floors; level += 1) {
-    spaces.push({
-      id: `main_${level}`,
-      type: level === 1 ? 'living' : 'bedroom',
-      floor: level,
-      min_area_m2: 12,
-      max_area_m2: 40,
-      priority: 1,
-      needs_daylight: true,
-      needs_facade: level === 1,
-      needs_ventilation: true,
-    });
-    spaces.push({
-      id: `landing_${level}`,
-      type: 'circulation',
-      floor: level,
-      min_area_m2: 6,
-      max_area_m2: 18,
-      priority: 2,
-      needs_daylight: false,
-      needs_facade: false,
-      needs_ventilation: false,
-    });
-  }
-
-  return {
-    stub: true,
-    payload: parseArtifact('space_program', {
-      schema_version: SCHEMA_VERSION,
-      brief_ref: briefRef,
-      spaces,
-      adjacency: [],
-      floor_allocation: Array.from({ length: floors }, (_, i) => ({ floor: i + 1 })),
-      reference_projects: [],
-      priors_applied: false,
-    }),
-  };
 }
 
 /**

@@ -26,8 +26,9 @@ import {
   stubArchModel,
   stubLayoutIntent,
   stubRenderResult,
-  stubSpaceProgram,
 } from '../workflows/steps';
+import { buildSpaceProgram } from '../program/engine';
+import { testNorms, testRulePack } from './program-fixtures';
 
 const computeUrl = process.env.DESIGN_COMPUTE_URL;
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -90,7 +91,12 @@ describeE2e('Pipeline khung xương — đầu bài tới ảnh phối cảnh', 
     const briefArtifact = await repo.write({ scope, kind: 'design_brief', payload: brief });
     expect(briefArtifact.id).toMatch(ARTIFACT_ID_PATTERN);
 
-    const program = stubSpaceProgram(brief as never, briefArtifact.id);
+    const program = buildSpaceProgram({
+      brief: brief as never,
+      briefRef: briefArtifact.id,
+      rules: testRulePack(),
+      norms: testNorms(),
+    });
     const programArtifact = await repo.write({
       scope,
       kind: 'space_program',
@@ -196,7 +202,12 @@ describeE2e('Pipeline khung xương — đầu bài tới ảnh phối cảnh', 
 
   it('bộ giải vô nghiệm trả lời giải thích đọc được, không phải lỗi', async () => {
     const impossible = structuredClone(
-      stubSpaceProgram(brief as never, `sha256:${'a'.repeat(64)}`).payload,
+      buildSpaceProgram({
+        brief: brief as never,
+        briefRef: `sha256:${'a'.repeat(64)}`,
+        rules: testRulePack(),
+        norms: testNorms(),
+      }).payload,
     );
     for (const space of impossible.spaces) {
       space.min_area_m2 = 60;
