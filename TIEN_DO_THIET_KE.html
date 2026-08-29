@@ -281,7 +281,7 @@
         <div class="bar"><span style="width: 50%"></span></div>
         <div class="stats">
           <div class="stat"><b>2/3</b><span class="xs muted-t">Việc của Mốc 0 đã xong</span></div>
-          <div class="stat"><b>253</b><span class="xs muted-t">Phép thử xanh của module</span></div>
+          <div class="stat"><b>261</b><span class="xs muted-t">Phép thử xanh của module</span></div>
           <div class="stat"><b>4</b><span class="xs muted-t">Vướng mắc đang mở</span></div>
           <div class="stat"><b>14</b><span class="xs muted-t">Câu hỏi chờ Haan</span></div>
         </div>
@@ -340,8 +340,8 @@
               <td>
                 Layer 2 — Space Program
                 <span class="xs muted-t"
-                  >&mdash; engine soạn chương trình không gian đã chạy thật qua bộ giải; còn giao
-                  diện và phép đánh giá leave-one-out</span
+                  >&mdash; engine, hai endpoint và tab giao diện đã chạy thật; còn phép đánh giá
+                  leave-one-out (chờ hồ sơ cũ)</span
                 >
               </td>
               <td><span class="pill s-progress">Đang làm</span></td>
@@ -429,6 +429,42 @@
             </tr>
           </thead>
           <tbody>
+            <tr>
+              <td class="num">29/08/2026</td>
+              <td>
+                Mốc 4: Lớp 2 nối tới người dùng &mdash; hai endpoint và tab
+                <b>Chương trình không gian</b> (<code>GET /design/program/:id</code>,
+                <code>POST /design/program/generate</code>, <code>program-panel.tsx</code>, 7 kiểm
+                thử giao diện)
+              </td>
+              <td>
+                <b>Chạy thật qua <code>wrangler dev</code>:</b> lập dự án &rarr; xác nhận đầu bài
+                &rarr; xem chương trình 17 không gian &rarr; chốt &rarr; artifact
+                <code>sha256:5b866a9a…</code>. Chốt lần hai trả về <b>đúng artifact cũ</b> kèm cờ
+                &laquo;dùng lại&raquo; &mdash; cùng đầu bài, cùng cấu hình thì không có gì đổi.
+                <br />
+                <b>Màn hình luôn hiện chương trình của đầu bài HIỆN TẠI</b>, tính lại mỗi lần mở.
+                Đọc bản đã đúc thì sau khi ai đó sửa đầu bài, màn hình vẫn hiện bản cũ mà không có
+                dấu hiệu nào &mdash; kiến trúc sư xem một đằng, bộ giải chạy một nẻo. Cờ &laquo;bản
+                đang xem có phải bản đã chốt không&raquo; trả lời riêng câu đó.
+                <br />
+                <b>Việc XEM tách khỏi việc CHỐT</b>, cùng lý lẽ với đầu bài:
+                <code>design_head</code> phải trỏ tới bản một người thật đã đọc và chấp nhận. Đúc
+                theo mỗi lần mở màn hình sẽ nhồi kho artifact bằng những bản chưa ai xem.
+                <br />
+                <b>Nhãn tiếng Việt của phòng do máy chủ gửi kèm</b>, lấy từ
+                <code>kb/room_vocabulary.yaml</code>. Khai bảng nhãn thứ hai trong trình duyệt thì
+                thêm một loại phòng phải sửa hai chỗ, và chỗ quên sửa hiện mã máy
+                (<code>altar_room</code>) giữa màn hình tiếng Việt.
+                <br />
+                <b>Một lỗi bắt được lúc chạy thật:</b> cờ &laquo;đã chốt&raquo; so bằng chuỗi JSON
+                nên vừa chốt xong đã báo là chưa chốt &mdash; thứ tự khoá đổi trên đường đi qua kho
+                tệp. Sửa thành so bằng <b>mã băm nội dung</b>, tức đúng định nghĩa danh tính của
+                artifact trong hệ thống này; so chuỗi là dựng một khái niệm &laquo;giống nhau&raquo;
+                thứ hai và nó sẽ bất đồng với khái niệm thật. Có phép thử canh mã băm sống sót qua
+                một vòng cất và đọc lại.
+              </td>
+            </tr>
             <tr>
               <td class="num">29/08/2026</td>
               <td>

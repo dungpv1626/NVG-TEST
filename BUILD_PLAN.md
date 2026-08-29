@@ -1504,12 +1504,18 @@ nhưng đúng hợp đồng).
 - Quy nhu cầu viết bằng lời về mã không gian: lượt bảng bí danh chạy được ngay; lượt mô hình
   ngôn ngữ bị chặn vì đầu bài là dữ liệu hạng 1 còn cấu hình demo đặt `max_data_class: 3`.
   Có kiểm thử canh chính hàng rào đó.
+- **Hai endpoint và tab giao diện**: `GET /design/program/:projectId` tính lại chương trình của
+  đầu bài đang hiệu lực; `POST /design/program/generate` chốt thành artifact và chuyển bản đang
+  hiệu lực. Tab **Chương trình không gian** trong Hồ sơ 360° của dự án thiết kế — mẫu bố cục 3,
+  không phát sinh mẫu mới nên không vướng câu hỏi Q-1.
 
 **Còn lại:**
 
-- Giao diện xem và sửa chương trình không gian (chưa có màn hình nào).
 - Bộ đo leave-one-out để đối chiếu với ngưỡng 70% — cần kho hồ sơ cũ, đang chờ tệp `.dwg`.
 - Chuẩn diện tích cần kiến trúc sư soát (câu hỏi Q-18 trong `TIEN_DO_THIET_KE.html`).
+- Sửa chương trình không gian bằng tay (thêm/bớt phòng, đổi diện tích) — chưa làm; hiện chỉ
+  xem và chốt. Sửa tay cần một artifact `space_program` do người soạn, tức một nhánh lineage
+  riêng; để lại tới khi có yêu cầu thật.
 
 ### Mốc 5 — Lõi Lớp 3 cho nhà phố (TK-12, TK-13) — kết thúc Giai đoạn 1
 

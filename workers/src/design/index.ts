@@ -12,7 +12,13 @@
  */
 
 import { Hono } from 'hono';
-import { BRIEF_FORM, DATA_CLASSES, type DataClass } from '@nvg/shared/design';
+import {
+  artifactId,
+  BRIEF_FORM,
+  DATA_CLASSES,
+  type DataClass,
+  type DesignBrief,
+} from '@nvg/shared/design';
 import { ContractError } from './contracts';
 import { createComputeBackend } from './compute-backend';
 import { DataClassViolation, ModelNotConfigured } from './llm/router';
@@ -20,7 +26,10 @@ import { geminiClient, modelRouter } from './llm/factory';
 import { PublishBridge } from './publish';
 import { ArtifactRepository } from './artifacts';
 import { buildBriefPayload } from './brief/payload';
+import { gateLayer2, readCompletenessThreshold } from './brief/gate';
+import { runLayer2 } from './program/run';
 import { retrieveFewShots } from './kb/retrieve';
+import { roomVocabulary } from './kb/vocabulary-data';
 import { embeddingText, withheldFields, type RationalePayload } from './kb/rationale';
 import { createSourceFileStore, type StoredSource } from './source-files';
 import type { DigitiseParams, DigitiseSource } from './workflows/digitise-steps';
@@ -271,6 +280,198 @@ designApp.post('/brief/confirm', async (c) => {
     completenessScore: built.completenessScore,
     missingFields: built.missingFields,
     issues: built.issues,
+  });
+});
+
+/**
+ * Nhãn tiếng Việt của mã phòng, gửi kèm kết quả.
+ *
+ * Vì sao gửi từ máy chủ chứ không khai lại ở `web/`: từ vựng phòng là MỘT tệp dữ liệu
+ * (`kb/room_vocabulary.yaml`). Khai bảng nhãn thứ hai trong trình duyệt thì thêm một loại
+ * phòng phải sửa hai chỗ, và chỗ quên sửa hiện ra mã máy (`altar_room`) giữa màn hình tiếng
+ * Việt — đúng thứ CLAUDE.md 4.1 cấm.
+ */
+function roomLabels(): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const type of roomVocabulary().vocabulary.types) out[type.code] = type.vi;
+  return out;
+}
+
+/**
+ * Đọc dự án dưới phiên người gọi và suy phạm vi dữ liệu từ đó.
+ *
+ * Đi qua RLS thay vì kiểm quyền lại ở tầng Worker: người không xem được hồ sơ thiết kế thì
+ * cũng không lập được chương trình không gian cho nó, và chỉ có MỘT bản quy tắc quyền —
+ * bản trong CSDL (CLAUDE.md 3.4).
+ */
+async function projectScope(
+  db: Awaited<ReturnType<typeof asUser>>,
+  projectId: string,
+): Promise<{ companyId: string; tenantId: string; actorId: string | null } | null> {
+  const project = await db
+    .from('design_projects')
+    .select('id, company_id')
+    .eq('id', projectId)
+    .is('deleted_at', null)
+    .maybeSingle();
+  if (project.error || !project.data) return null;
+
+  const companyId = project.data.company_id as string;
+  const company = await db.from('companies').select('tenant_id').eq('id', companyId).single();
+  if (company.error) return null;
+
+  const actor = await db.rpc('auth_user_id');
+  return {
+    companyId,
+    tenantId: company.data.tenant_id as string,
+    actorId: (actor.data as string | null) ?? null,
+  };
+}
+
+/**
+ * Chương trình không gian của đầu bài ĐANG HIỆU LỰC — tính lại mỗi lần gọi.
+ *
+ * Vì sao tính lại chứ không đọc bản đã đúc: engine tất định, nên tính lại luôn cho ra đúng
+ * thứ mà đầu bài hiện tại sinh ra. Đọc bản đã đúc thì sau khi ai đó sửa đầu bài, màn hình
+ * vẫn hiện chương trình cũ mà không có dấu hiệu nào — kiến trúc sư xem một đằng, bộ giải
+ * chạy một nẻo.
+ *
+ * `matchesHead` trả lời câu hỏi thật sự quan trọng: bản đang xem có đúng là bản đã chốt cho
+ * các lớp sau dùng không.
+ *
+ * ⚠️ Lượt gọi này đi qua bước quy nhu cầu viết bằng lời. Hiện bước đó bị chặn vì hạng dữ
+ * liệu nên không tốn gì; ngày mở khoá mô hình ngôn ngữ, cân nhắc nhớ đệm theo mã đầu bài để
+ * mỗi lần mở màn hình không thành một lượt gọi mạng.
+ */
+designApp.get('/program/:projectId', async (c) => {
+  const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+
+  const projectId = c.req.param('projectId');
+  const db = await asUser(c.env, token);
+  const scope = await projectScope(db, projectId);
+  if (!scope) {
+    return c.json(
+      {
+        error:
+          'Không tìm thấy hồ sơ thiết kế, hoặc tài khoản không được xem hồ sơ này. Người chịu trách nhiệm dự án hoặc Phòng Thiết kế xem được.',
+      },
+      404,
+    );
+  }
+
+  const repo = new ArtifactRepository(c.env);
+  const brief = await repo.head(projectId, 'kien_truc', 'design_brief');
+  if (!brief) {
+    return c.json(
+      { error: 'Chưa có đầu bài đã xác nhận. Hoàn tất và xác nhận đầu bài trước.' },
+      409,
+    );
+  }
+
+  const gate = gateLayer2(brief.payload, await readCompletenessThreshold(repo.db, scope.tenantId));
+  if (!gate.allowed) return c.json({ error: gate.message }, 409);
+
+  const run = await runLayer2(
+    c.env,
+    repo.db,
+    brief.payload as DesignBrief,
+    brief.id,
+    scope.tenantId,
+  );
+  const head = await repo.head(projectId, 'kien_truc', 'space_program');
+
+  return c.json({
+    program: run.payload,
+    warnings: run.warnings,
+    unresolvedNeeds: run.unresolved,
+    roomLabels: roomLabels(),
+    briefArtifactId: brief.id,
+    headArtifactId: head?.id ?? null,
+    // So bằng MÃ BĂM, không phải so chuỗi JSON: mã băm chính là định nghĩa danh tính của
+    // artifact trong hệ thống này (khoá chính của `design_artifact`). So chuỗi là dựng một
+    // khái niệm "giống nhau" thứ hai, và nó bất đồng với khái niệm thật ngay khi thứ tự khoá
+    // đổi trên đường đi qua kho tệp — đã xảy ra thật: vừa chốt xong đã báo là chưa chốt.
+    matchesHead: head ? (await artifactId(run.payload)) === head.id : false,
+  });
+});
+
+/**
+ * Chốt chương trình không gian — đúc artifact `space_program` và chuyển bản đang hiệu lực.
+ *
+ * Endpoint Workers vì đúng điều kiện (b) của CLAUDE.md 3.1: artifact + cạnh lineage + con trỏ
+ * bản hiệu lực phải toàn vẹn cùng lúc.
+ *
+ * Tách khỏi việc XEM, cùng lý lẽ với đầu bài: `design_head` phải trỏ tới bản một người thật
+ * đã xem và chấp nhận. Đúc theo mỗi lần mở màn hình sẽ nhồi kho artifact bằng những bản chưa
+ * ai đọc, và làm "đang hiệu lực" mất nghĩa.
+ */
+designApp.post('/program/generate', async (c) => {
+  const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+
+  const body = (await c.req.json()) as { projectId?: string };
+  if (!body.projectId) return c.json({ error: 'Thiếu mã hồ sơ thiết kế.' }, 400);
+
+  const db = await asUser(c.env, token);
+  const scope = await projectScope(db, body.projectId);
+  if (!scope) {
+    return c.json(
+      {
+        error:
+          'Không tìm thấy hồ sơ thiết kế, hoặc tài khoản không được sửa hồ sơ này. Người chịu trách nhiệm dự án hoặc Phòng Thiết kế thực hiện được việc này.',
+      },
+      404,
+    );
+  }
+
+  const repo = new ArtifactRepository(c.env);
+  const brief = await repo.head(body.projectId, 'kien_truc', 'design_brief');
+  if (!brief) {
+    return c.json(
+      { error: 'Chưa có đầu bài đã xác nhận. Hoàn tất và xác nhận đầu bài trước.' },
+      409,
+    );
+  }
+
+  // Cùng cổng chặn với đường ống nền: đầu bài chưa đủ thì Lớp 2 không chạy
+  // (03-data-contracts 3.1). Kiểm ở CẢ HAI lối vào, vì bỏ sót một lối là bỏ hẳn cổng chặn.
+  const gate = gateLayer2(brief.payload, await readCompletenessThreshold(repo.db, scope.tenantId));
+  if (!gate.allowed) return c.json({ error: gate.message }, 409);
+
+  const run = await runLayer2(
+    c.env,
+    repo.db,
+    brief.payload as DesignBrief,
+    brief.id,
+    scope.tenantId,
+  );
+
+  const artifact = await repo.write({
+    scope: {
+      tenantId: scope.tenantId,
+      companyId: scope.companyId,
+      projectId: body.projectId,
+      discipline: 'kien_truc',
+      actorId: scope.actorId,
+    },
+    kind: 'space_program',
+    payload: run.payload,
+    inputs: [brief.id],
+    step: 'layer2_program',
+    params: run.params,
+    setHead: true,
+  });
+
+  return c.json({
+    artifactId: artifact.id,
+    // `reused` nói thẳng "cùng đầu bài, cùng cấu hình nên không có gì đổi" — thông tin thật,
+    // và tránh cho người dùng tưởng vừa lập ra một bản khác.
+    reused: artifact.reused,
+    program: run.payload,
+    roomLabels: roomLabels(),
+    warnings: run.warnings,
+    unresolvedNeeds: run.unresolved,
   });
 });
 

@@ -9,7 +9,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import type { DesignBrief } from '@nvg/shared/design';
+import { artifactId, canonicalJson, type DesignBrief } from '@nvg/shared/design';
 import { parseArtifact } from '../contracts';
 import { buildSpaceProgram, ProgramError } from '../program/engine';
 import { bandFor, parseSpaceNorms, SpaceNormsError } from '../program/norms';
@@ -367,6 +367,16 @@ describe('Tất định', () => {
     // Đây là điều kiện để mã băm artifact có nghĩa: hai lần chạy ra hai mã băm khác nhau thì
     // "đã tính rồi thì không tính lại" không bao giờ có tác dụng.
     expect(JSON.stringify(build().payload)).toBe(JSON.stringify(build().payload));
+  });
+
+  it('mã băm sống sót qua một vòng cất và đọc lại', async () => {
+    // Màn hình trả lời câu "bản đang xem có phải bản đã chốt không" bằng cách so MÃ BĂM,
+    // không so chuỗi JSON. Phép thử này canh chính điều làm cho cách đó đúng: cất xuống kho
+    // rồi đọc lên vẫn ra đúng mã băm cũ. So chuỗi JSON thì không — thứ tự khoá đổi trên
+    // đường đi, và màn hình báo "chưa chốt" ngay sau khi vừa chốt xong. Đã xảy ra thật.
+    const payload = build().payload;
+    const roundTripped = parseArtifact('space_program', JSON.parse(canonicalJson(payload)));
+    expect(await artifactId(roundTripped)).toBe(await artifactId(payload));
   });
 
   it('không gian lạ trong đầu bài được NÓI RA, không bị nuốt', () => {

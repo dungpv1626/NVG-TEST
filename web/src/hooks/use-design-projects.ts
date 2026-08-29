@@ -365,6 +365,85 @@ export function useConfirmBriefArtifact() {
   });
 }
 
+/** Một không gian của chương trình không gian (hợp đồng `SpaceProgram`). */
+export interface ProgramSpace {
+  id: string;
+  type: string;
+  floor: number;
+  min_area_m2: number;
+  target_area_m2?: number | null;
+  max_area_m2?: number | null;
+  priority?: number;
+  needs_daylight?: boolean;
+  needs_facade?: boolean;
+  needs_ventilation?: boolean;
+}
+
+export interface SpaceProgramPayload {
+  spaces: ProgramSpace[];
+  adjacency?: { a: string; b: string; kind: string; weight?: number }[];
+  floor_allocation?: {
+    floor: number;
+    usable_area_m2?: number | null;
+    allocated_area_m2?: number | null;
+  }[];
+  reference_projects?: string[];
+  priors_applied?: boolean;
+}
+
+export interface ProgramView {
+  program: SpaceProgramPayload;
+  /** Mã phòng → tên tiếng Việt, do máy chủ gửi kèm từ `kb/room_vocabulary.yaml`. */
+  roomLabels: Record<string, string>;
+  warnings: string[];
+  unresolvedNeeds: string[];
+  briefArtifactId: string;
+  headArtifactId: string | null;
+  /** Bản đang xem có đúng là bản đã chốt cho các lớp sau dùng không. */
+  matchesHead: boolean;
+}
+
+/**
+ * Chương trình không gian của đầu bài đang hiệu lực.
+ *
+ * Qua Worker chứ không gọi thẳng Supabase: nội dung artifact nằm trong kho tệp mà trình duyệt
+ * không có quyền đọc, và bản thân việc soạn chương trình cần rule pack cùng chuẩn diện tích
+ * chỉ có ở phía máy chủ.
+ *
+ * `retry: false` vì phần lớn lỗi ở đây là trạng thái nghiệp vụ đọc được (chưa xác nhận đầu
+ * bài, đầu bài chưa đủ) — thử lại ba lần chỉ làm người dùng chờ lâu hơn để nhận cùng câu.
+ */
+export function useSpaceProgram(projectId: string, enabled = true) {
+  return useQuery<ProgramView, Error>({
+    queryKey: ['design_space_program', projectId],
+    queryFn: () => designApi<ProgramView>(`/design/program/${projectId}`),
+    enabled: Boolean(projectId) && enabled,
+    retry: false,
+  });
+}
+
+export interface GenerateProgramResult {
+  artifactId: string;
+  reused: boolean;
+  program: SpaceProgramPayload;
+  roomLabels: Record<string, string>;
+  warnings: string[];
+  unresolvedNeeds: string[];
+}
+
+/** Chốt chương trình không gian — đúc artifact và chuyển bản đang hiệu lực. */
+export function useGenerateSpaceProgram() {
+  const queryClient = useQueryClient();
+
+  return useMutation<GenerateProgramResult, Error, { projectId: string }>({
+    mutationFn: ({ projectId }) =>
+      designApi<GenerateProgramResult>('/design/program/generate', { projectId }),
+    onSuccess: (_result, { projectId }) => {
+      void queryClient.invalidateQueries({ queryKey: ['design_space_program', projectId] });
+    },
+  });
+}
+
 /**
  * Một mục cấu hình của engine thiết kế (`design_setting`).
  *

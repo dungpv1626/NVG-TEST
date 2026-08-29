@@ -36,6 +36,7 @@ import { useAuth, useCan } from '@/lib/auth';
 import { BriefPanel } from './brief-panel';
 import { ChangeRequestPanel } from './change-request-panel';
 import { DisciplinePanel } from './discipline-panel';
+import { ProgramPanel } from './program-panel';
 import { SurveyPanel } from './survey-panel';
 import { VersionPanel } from './version-panel';
 
@@ -271,6 +272,11 @@ export function DesignDetailPage() {
                 readOnly={readOnly}
               />
             ),
+          },
+          {
+            id: 'chuong-trinh-khong-gian',
+            label: 'Chương trình không gian',
+            content: <ProgramPanel projectId={project.id} readOnly={readOnly} />,
           },
           {
             id: 'phuong-an',

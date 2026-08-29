@@ -20,7 +20,12 @@ const BASE = (import.meta.env.VITE_DESIGN_API_URL ?? '').replace(/\/+$/, '');
 
 export class DesignApiError extends Error {}
 
-export async function designApi<T>(path: string, body: unknown): Promise<T> {
+/**
+ * Bỏ `body` để gọi GET. Phân biệt bằng chính sự có mặt của dữ liệu gửi đi thay vì thêm một
+ * tham số `method`: mọi endpoint của module này hoặc là đọc (không gửi gì), hoặc là ghi (gửi
+ * một đối tượng) — nên một tham số thứ hai chỉ tạo chỗ cho việc khai sai.
+ */
+export async function designApi<T>(path: string, body?: unknown): Promise<T> {
   if (!BASE) {
     throw new DesignApiError(
       'Chưa cấu hình địa chỉ dịch vụ thiết kế. Quản trị hệ thống bổ sung biến VITE_DESIGN_API_URL rồi phát hành lại ứng dụng.',
@@ -33,11 +38,16 @@ export async function designApi<T>(path: string, body: unknown): Promise<T> {
 
   let response: Response;
   try {
-    response = await fetch(`${BASE}${path}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify(body),
-    });
+    response = await fetch(
+      `${BASE}${path}`,
+      body === undefined
+        ? { method: 'GET', headers: { Authorization: `Bearer ${token}` } }
+        : {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify(body),
+          },
+    );
   } catch {
     throw new DesignApiError(
       'Không kết nối được dịch vụ thiết kế. Kiểm tra đường truyền rồi thử lại.',
