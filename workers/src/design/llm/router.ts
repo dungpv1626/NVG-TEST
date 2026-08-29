@@ -31,6 +31,14 @@ export interface ModelRoute {
   max_data_class: DataClass;
   enabled: boolean;
   purpose?: string;
+  /**
+   * Số chiều của vector nhúng — CHỈ có nghĩa với đầu ra nhúng.
+   *
+   * Nằm trong cấu hình chứ không trong mã nguồn vì nó phải khớp với bề rộng cột `vector(n)`
+   * trong CSDL: đổi con số này mà không đổi migration là làm hỏng mọi phép so vector đã lưu,
+   * nên nó cần ở chỗ người sửa nhìn thấy ràng buộc. Có kiểm thử canh hai nơi khớp nhau.
+   */
+  output_dimensions?: number;
 }
 
 export interface ModelConfig {
@@ -83,6 +91,9 @@ export function parseModelConfig(yamlText: string): ModelConfig {
   return raw;
 }
 
+/** Cấu hình mô hình đã qua lớp chặn, kèm khoá để gọi. Chỉ `resolve()` tạo ra được. */
+export type ResolvedRoute = ModelRoute & { apiKey: string };
+
 export class ModelRouter {
   constructor(
     private readonly config: ModelConfig,
@@ -95,7 +106,7 @@ export class ModelRouter {
    * Đây là ĐƯỜNG DUY NHẤT tới cấu hình mô hình. Không có biến thể "chỉ lấy tên mô hình" —
    * có biến thể đó là có đường vòng qua lớp chặn.
    */
-  resolve(routeName: string, dataClass: DataClass): ModelRoute {
+  resolve(routeName: string, dataClass: DataClass): ResolvedRoute {
     const route = this.config.routes[routeName];
     if (!route) {
       throw new ModelNotConfigured(routeName, 'không có mục tương ứng trong config/models.yaml.');
@@ -110,7 +121,9 @@ export class ModelRouter {
     if (!this.apiKey) {
       throw new ModelNotConfigured(routeName, 'chưa có khoá API trong Cloudflare Workers Secrets.');
     }
-    return route;
+    // Trả kèm khoá thay vì để bên gọi tự cầm một bản sao: có hai chỗ giữ khoá là có một
+    // chỗ dùng được khoá mà không đi qua lớp chặn này.
+    return { ...route, apiKey: this.apiKey };
   }
 
   /**

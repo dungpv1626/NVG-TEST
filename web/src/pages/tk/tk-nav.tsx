@@ -5,7 +5,10 @@
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
-const ITEMS = [{ to: '/tk/du-an', label: 'Dự án thiết kế' }];
+const ITEMS = [
+  { to: '/tk/du-an', label: 'Dự án thiết kế' },
+  { to: '/tk/ho-so-cu', label: 'Hồ sơ cũ đã số hoá' },
+];
 
 export function TkNav() {
   return (

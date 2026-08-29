@@ -1,0 +1,113 @@
+# Từ vựng phòng chuẩn của Module Thiết kế AI.
+#
+# Nguồn: doc/design/06-knowledge-base.md mục 6.1 ("LLM chuẩn hoá nhãn"), 03-data-contracts 3.4.
+#
+# Vì sao là DỮ LIỆU chứ không phải hằng số trong mã nguồn: cùng lý lẽ với `layer_mapping.yaml`
+# và rule pack (CLAUDE.md 8.7). Cách NVG gọi tên phòng thay đổi theo người vẽ và theo thời kỳ,
+# và sẽ còn thêm loại phòng mới (phòng xông hơi, phòng gym, kho lạnh…). Biến thứ đó thành mã
+# nguồn là buộc phải sửa code cho mỗi cái tên mới.
+#
+# ⚠️ Cạm bẫy: `code` ở đây phải PHỦ được các giá trị `target:` trong `rules/base/*.yaml`.
+# Một mã phòng không có rule nào nhắm tới sẽ đi qua toàn bộ engine mà KHÔNG bị kiểm quy chuẩn
+# nào — không có lỗi nào nổ ra, chỉ là phòng đó chưa từng được kiểm. Có kiểm thử canh chiều
+# ngược lại (mọi `target` của rule pack phải có trong danh sách này).
+#
+# `aliases` là các cách viết đã GẶP THẬT trong bản vẽ, dùng cho lượt đối chiếu tất định chạy
+# TRƯỚC khi gọi mô hình ngôn ngữ: nhãn nào khớp thẳng thì không tốn một lượt gọi mạng nào, và
+# quan trọng hơn — kết quả không đổi giữa hai lần chạy. Mô hình ngôn ngữ chỉ xử lý phần còn lại.
+# So khớp KHÔNG phân biệt hoa thường, bỏ dấu tiếng Việt, và bỏ mọi ký tự không phải chữ/số.
+
+version: '1.0.0'
+
+types:
+  - code: living
+    vi: Phòng khách
+    aliases: ['PK', 'P.KHACH', 'PHONG KHACH', 'SINH HOAT CHUNG', 'LIVING', 'LIVING ROOM', 'SHC']
+
+  - code: dining
+    vi: Phòng ăn
+    aliases: ['PA', 'P.AN', 'PHONG AN', 'BAN AN', 'DINING', 'DINING ROOM']
+
+  - code: kitchen
+    vi: Bếp
+    aliases: ['B', 'BEP', 'P.BEP', 'PHONG BEP', 'KITCHEN', 'BEP AN', 'KHU BEP']
+
+  - code: bedroom
+    vi: Phòng ngủ
+    aliases: ['PN', 'P.NGU', 'PHONG NGU', 'NGU', 'BEDROOM', 'BR']
+
+  - code: master_bedroom
+    vi: Phòng ngủ chính
+    aliases:
+      ['PN MASTER', 'MASTER', 'MASTER BEDROOM', 'PHONG NGU MASTER', 'PN CHINH', 'PHONG NGU CHINH']
+
+  - code: wc
+    vi: Khu vệ sinh
+    aliases: ['WC', 'VS', 'NHA VE SINH', 'PHONG VE SINH', 'P.VS', 'TOILET', 'BATHROOM', 'TAM']
+
+  - code: stair
+    vi: Thang bộ
+    aliases: ['THANG', 'CAU THANG', 'THANG BO', 'STAIR', 'STAIRS', 'CT']
+
+  - code: core
+    vi: Lõi thang
+    aliases: ['LOI THANG', 'CORE', 'THANG MAY', 'LIFT', 'ELEVATOR']
+
+  - code: circulation
+    vi: Giao thông
+    aliases: ['HANH LANG', 'SANH', 'HL', 'CHIEU NGHI', 'LOBBY', 'HALL', 'CORRIDOR', 'TIEN SANH']
+
+  - code: garage
+    vi: Để xe
+    aliases: ['GARA', 'GARAGE', 'DE XE', 'CHO DE XE', 'NHA XE', 'PARKING', 'GARA XE']
+
+  - code: altar_room
+    vi: Phòng thờ
+    aliases: ['PHONG THO', 'P.THO', 'THO', 'BAN THO', 'KHONG GIAN THO']
+
+  - code: study
+    vi: Phòng làm việc
+    aliases: ['PHONG LAM VIEC', 'LAM VIEC', 'P.LV', 'STUDY', 'OFFICE', 'PHONG DOC SACH']
+
+  - code: storage
+    vi: Kho
+    aliases: ['KHO', 'K', 'STORAGE', 'STORE', 'PHONG KHO']
+
+  - code: laundry
+    vi: Giặt phơi
+    aliases: ['GIAT', 'GIAT PHOI', 'SAN PHOI', 'PHOI DO', 'LAUNDRY']
+
+  - code: balcony
+    vi: Ban công
+    aliases: ['BAN CONG', 'BC', 'BALCONY', 'LOGGIA']
+
+  - code: terrace
+    vi: Sân thượng
+    aliases: ['SAN THUONG', 'ST', 'TERRACE', 'ROOF', 'MAI', 'TUM']
+
+  - code: courtyard
+    vi: Sân trong
+    aliases: ['SAN TRONG', 'SAN SAU', 'SAN TRUOC', 'SAN VUON', 'COURTYARD', 'GARDEN', 'SAN']
+
+  - code: light_well
+    vi: Giếng trời
+    aliases: ['GIENG TROI', 'GT', 'THONG TANG', 'LIGHT WELL', 'VOID']
+
+  - code: shaft
+    vi: Hộp kỹ thuật
+    aliases: ['HOP KY THUAT', 'HOP GEN', 'GEN', 'KY THUAT', 'SHAFT', 'DUCT', 'HT']
+
+  - code: shop
+    vi: Không gian kinh doanh
+    aliases: ['CUA HANG', 'KINH DOANH', 'SHOP', 'SHOPHOUSE', 'VAN PHONG', 'KIOT']
+
+  - code: technical
+    vi: Phòng kỹ thuật
+    aliases: ['PHONG KY THUAT', 'PKT', 'MAY BOM', 'PHONG MAY', 'TECHNICAL', 'MEP']
+
+# Mã nhóm dùng trong `target:` của rule pack để nhắm NHIỀU loại phòng cùng lúc. Chúng KHÔNG
+# phải nhãn phòng — mô hình ngôn ngữ không bao giờ được trả về các mã này.
+group_targets:
+  all: Mọi không gian
+  habitable: Không gian ở (khách, ăn, ngủ, làm việc, thờ)
+  load_bearing_wall: Tường chịu lực

@@ -108,8 +108,9 @@
    * khai thật. Chạy cục bộ: tạo `workers/.dev.vars` (đã có trong `.gitignore` chung của repo)
    * với dòng `SUPABASE_SERVICE_ROLE_KEY=...` lấy từ `.env` gốc.
    *
-   * `GEMINI_API_KEY` cũng là secret và CHƯA có — router mô hình tự báo "chưa cấu hình" thay
-   * vì gọi ra mạng rồi nhận lỗi khó đọc.
+   * `GEMINI_API_KEY` cũng là secret: thêm dòng đó vào `.dev.vars` khi chạy ở máy, và nạp lên
+   * bằng `wrangler secret put GEMINI_API_KEY` khi triển khai. Thiếu khoá thì router mô hình
+   * tự báo "chưa cấu hình" thay vì gọi ra mạng rồi nhận lỗi khó đọc.
    *
    * `DESIGN_COMPUTE_URL` đặt trong `workers/.dev.vars` khi chạy Container bằng Docker tại
    * chỗ: `DESIGN_COMPUTE_URL=http://localhost:8080`.

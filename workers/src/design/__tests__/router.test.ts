@@ -22,9 +22,10 @@ const CONFIG_PATH = fileURLToPath(new URL('../../../../config/models.yaml', impo
 const config = parseModelConfig(readFileSync(CONFIG_PATH, 'utf8'));
 
 describe('config/models.yaml', () => {
-  it('khai đủ sáu đầu ra mà tài liệu liệt kê', () => {
+  it('khai đủ các đầu ra mà tài liệu liệt kê', () => {
     expect(Object.keys(config.routes).sort()).toEqual([
       'kb_label_normalize',
+      'kb_rationale_embed',
       'layer1_brief',
       'layer2_program',
       'layer3_intent',
@@ -42,10 +43,23 @@ describe('config/models.yaml', () => {
     }
   });
 
-  it('không đầu ra nào bật khi chưa có khoá API', () => {
-    for (const route of Object.values(config.routes)) {
-      expect(route.enabled).toBe(false);
-    }
+  it('chỉ đầu ra nhóm `pro` còn tắt, và tắt có lý do', () => {
+    // Khoá gói miễn phí không có hạn mức cho nhóm `pro` (đo 29/08/2026: `gemini-pro-latest`
+    // trả 429, `gemini-2.5-pro` trả 404 "no longer available to new users"). Bật nó lên thì
+    // mọi lần dự phòng đều ăn 429 — thay một lỗi đọc được bằng một lỗi khó hiểu.
+    const off = Object.entries(config.routes)
+      .filter(([, route]) => !route.enabled)
+      .map(([name]) => name);
+    expect(off).toEqual(['layer3_intent_hard']);
+    expect(config.routes.layer3_intent_hard?.model).toMatch(/pro/);
+  });
+
+  it('đầu ra nhúng khai số chiều, và số chiều đó đánh chỉ mục được', () => {
+    // Chỉ mục vector của Postgres nhận tối đa 2000 chiều. Để mặc định 3072 thì cột vẫn lưu
+    // được nhưng KHÔNG BAO GIỜ đánh chỉ mục được, và điều đó chỉ lộ ra vào ngày kho đủ lớn.
+    const embed = config.routes.kb_rationale_embed;
+    expect(embed?.output_dimensions).toBe(1536);
+    expect(embed!.output_dimensions!).toBeLessThanOrEqual(2000);
   });
 
   it('từ chối cấu hình có hạng dữ liệu ngoài 1/2/3', () => {
@@ -95,7 +109,13 @@ describe('Lớp chặn hạng dữ liệu', () => {
   });
 
   it('báo "chưa cấu hình" chứ không gọi ra mạng khi đầu ra đang tắt', () => {
-    expect(() => router.resolve('layer1_brief', 3)).toThrow(ModelNotConfigured);
+    expect(() => router.resolve('layer3_intent_hard', 3)).toThrow(ModelNotConfigured);
+  });
+
+  it('trả khoá kèm cấu hình, chỉ qua đường đã kiểm hạng dữ liệu', () => {
+    // Khoá đi CÙNG kết quả `resolve` thay vì để bên gọi giữ một bản sao riêng: có hai chỗ
+    // giữ khoá là có một chỗ gọi được mô hình mà không đi qua lớp chặn.
+    expect(router.resolve('layer1_brief', 3).apiKey).toBe('khoa-gia-de-test');
   });
 
   it('báo thiếu khoá API riêng biệt với chuyện bị chặn hạng dữ liệu', () => {

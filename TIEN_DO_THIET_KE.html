@@ -283,7 +283,7 @@
           <div class="stat"><b>2/3</b><span class="xs muted-t">Việc của Mốc 0 đã xong</span></div>
           <div class="stat"><b>209</b><span class="xs muted-t">Phép thử xanh của module</span></div>
           <div class="stat"><b>4</b><span class="xs muted-t">Vướng mắc đang mở</span></div>
-          <div class="stat"><b>11</b><span class="xs muted-t">Câu hỏi chờ Haan</span></div>
+          <div class="stat"><b>13</b><span class="xs muted-t">Câu hỏi chờ Haan</span></div>
         </div>
       </div>
 
@@ -417,6 +417,103 @@
             </tr>
           </thead>
           <tbody>
+            <tr>
+              <td class="num">29/08/2026</td>
+              <td>
+                Giao diện chú giải hồ sơ cũ &mdash; Mốc 3 Bước 3 (<code>/tk/ho-so-cu</code>, 7 kiểm
+                thử giao diện)
+              </td>
+              <td>
+                Hàng chờ chú giải + màn hình chú giải: mặt bằng đã trích vẽ bằng SVG ngay cạnh năm
+                câu hỏi, câu trả lời là <b>lựa chọn có sẵn</b>, ô chữ tự do chỉ mở khi chọn
+                &laquo;Khác&raquo;. Tài liệu nói thẳng bước này phải mất
+                <b>10&ndash;15 phút mỗi công trình</b>; mở sẵn ô chữ cho cả năm câu là quay về đúng
+                thứ nó bảo tránh.
+                <br />
+                Màn hình nói TRƯỚC rằng chữ tự do không rời khỏi hệ thống &mdash; người nhập cần
+                biết trước khi gõ, không phải sau khi bấm lưu.
+                <br />
+                Đây là lớp gọi Worker <b>đầu tiên</b> của <code>web/</code>
+                (<code>lib/design-api.ts</code>). Mười hai module còn lại vẫn gọi thẳng Supabase và
+                đó vẫn là mặc định đúng; chú giải đi qua Worker vì nó phải tính vector nhúng bằng
+                khoá mà trình duyệt không được cầm.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">29/08/2026</td>
+              <td>
+                Truy hồi ba tầng + chọn đa dạng (MMR) &mdash; Mốc 3 mục 6.3 (<code>0099</code>,
+                <code>0100</code>, <code>kb/mmr.ts</code>, 17 + 17 kiểm thử)
+              </td>
+              <td>
+                <b>Chạy thật đầu-cuối</b> qua <code>wrangler dev</code>: chú giải một bản ghi &rarr;
+                Worker tính vector 1536 chiều &rarr; ghi cùng lúc với <code>rationale</code> và
+                <code>outcome</code> &rarr; truy hồi tìm lại đúng bản ghi đó. Ô chữ tự do
+                (<code>would_change</code>) bị GIỮ LẠI đúng như thiết kế và endpoint nói ra điều đó
+                (<code>withheld</code>).
+                <br />
+                Tầng 1&ndash;2 ở SQL, tầng 3 chia đôi: khoảng cách vector ở SQL, chọn đa dạng ở
+                Worker vì nó cần so từng ứng viên với những ứng viên ĐÃ CHỌN. Hàm truy hồi là
+                <b>SECURITY INVOKER</b> &mdash; đặt nhầm DEFINER là mở đường đọc tri thức của tenant
+                khác, và điều đó không có triệu chứng nào.
+                <br />
+                <b>Chưa đánh chỉ mục vector</b>, theo đúng mục 6.6: dưới vài nghìn bản ghi thì quét
+                tuần tự nhanh hơn, mà chỉ mục xấp xỉ còn đánh đổi độ chính xác.
+                <br />
+                Hai chỗ dễ hỏng âm thầm đã được canh bằng test: bản ghi <b>chưa chú giải</b> nhận
+                điểm tương đồng 0 chứ không bị loại (loại nó ra thì truy hồi trống rỗng suốt giai
+                đoạn đầu); và khi cả kho chưa có vector, phần &laquo;khác nhau&raquo; của MMR lùi về
+                so hình học thay vì trả 0 &mdash; trả 0 sẽ khiến MMR lặng lẽ thoái hoá thành xếp
+                hạng thuần, đúng thứ nó sinh ra để tránh.
+                <br />
+                Văn bản đem đi nhúng dựng theo <b>danh sách CHO PHÉP</b>: mã công trình, kích thước
+                lô thật và mọi ô chữ tự do ở lại trong hệ thống. Danh sách loại trừ sẽ hỏng vào ngày
+                hợp đồng thêm một trường mới, và hỏng trong im lặng.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">29/08/2026</td>
+              <td>
+                Chuẩn hoá nhãn phòng bằng mô hình ngôn ngữ &mdash; Mốc 3 Bước 1 phần cuối
+                (<code>kb/room_vocabulary.yaml</code>, <code>llm/gemini.ts</code>, 13 kiểm thử)
+              </td>
+              <td>
+                Khoá Gemini đã có, <b>đã gọi thật để kiểm chứng</b> (prompt không mang dữ liệu NVG).
+                <code>"P.SHC GD"</code> &rarr; <code>living</code>; <code>"PHÒNG XÔNG HƠI"</code>
+                &rarr; vào hàng chờ người xác nhận chứ mô hình KHÔNG bịa mã.
+                <br />
+                <b>Hai lượt, thứ tự quan trọng:</b> bảng bí danh (tất định, miễn phí) chạy trước, mô
+                hình chỉ nhận phần còn lại và chỉ một lượt gọi cho cả bộ hồ sơ. Đưa thẳng mọi nhãn
+                cho mô hình sẽ làm kết quả thôi tất định &mdash; mà bản ghi lại dùng làm few-shot,
+                nên sai ở đây dạy sai cho mọi phương án sinh sau đó.
+                <br />
+                Mô hình hỏng KHÔNG giết mẻ số hoá: bản ghi vẫn ra, chỉ mất phần suy đoán (PRD 5.1
+                &mdash; AI luôn ở mức phụ trợ). Từ vựng phòng là <b>dữ liệu</b>, và có kiểm thử canh
+                nó phủ được mọi <code>target</code> của rule pack: một mã phòng không rule nào nhắm
+                tới sẽ đi qua cả engine mà chưa từng bị kiểm quy chuẩn, không lỗi nào nổ ra.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">29/08/2026</td>
+              <td>Đo lại năng lực khoá Gemini thật &rarr; sửa <code>config/models.yaml</code></td>
+              <td>
+                Ba điều đo được, ghi vào chú thích cấu hình để không phải dò lại:
+                <b><code>gemini-2.5-pro</code> trả 404</b> &mdash; Google đã đóng mô hình này với
+                khoá mới lập, không phải lỗi khoá.
+                <b>Nhóm <code>pro</code> hết hạn mức (429)</b> &rarr; dấu hiệu gói miễn phí, nên
+                <code>max_data_class: 3</code> giữ nguyên, KHÔNG hạ. Nhóm <code>flash</code> chạy
+                tốt kể cả đầu ra JSON có lược đồ.
+                <br />
+                <code>layer3_intent_hard</code> để <b>tắt có chủ ý</b>: bật lên thì mọi lần dự phòng
+                đều ăn 429, tức thay một lỗi đọc được ("sinh sai cấu trúc") bằng một lỗi khó hiểu.
+                <br />
+                Đầu ra nhúng đặt <b>1536 chiều</b> chứ không để mặc định 3072: chỉ mục vector của
+                Postgres chỉ nhận tối đa 2000 chiều &mdash; để mặc định thì cột vẫn lưu được nhưng
+                KHÔNG BAO GIỜ đánh chỉ mục được, và điều đó chỉ lộ ra vào ngày kho đủ lớn. Mô hình
+                <b>không chuẩn hoá lại</b> vector khi cắt chiều (đo được: chuẩn 0,692), nên client
+                tự chuẩn hoá.
+              </td>
+            </tr>
             <tr>
               <td class="num">29/08/2026</td>
               <td>
@@ -1058,6 +1155,33 @@
                 Xem vướng mắc V-5. Nếu nhà phố NVG thường có tường chịu lực thẳng hàng suốt chiều
                 cao thì mô hình hiện tại đúng. Nếu thực tế hay chuyển trục giữa các tầng (dầm
                 chuyển) thì mô hình phải mở rộng.
+              </td>
+              <td class="num">Mốc 4</td>
+            </tr>
+            <tr>
+              <td class="num">Q-14</td>
+              <td>
+                <b>Bốn danh sách lựa chọn của bước chú giải đã đúng thực tế chưa?</b> Tài liệu nêu
+                năm câu hỏi nhưng chỉ liệt kê lựa chọn cho câu &laquo;vì sao cầu thang đặt ở
+                đây&raquo;. Bốn danh sách còn lại (<code>shared/src/design/annotation.ts</code>) là
+                <b>suy luận</b> từ thực tế nhà phố, đủ dùng để dựng màn hình nhưng chưa được kiến
+                trúc sư NVG xác nhận. Danh sách sai không làm hỏng gì ngay, nó chỉ làm kiến trúc sư
+                chọn &laquo;Khác&raquo; suốt &mdash; mà chữ tự do thì không đi vào vector tìm kiếm,
+                nên tri thức thu được sẽ nghèo đi trong im lặng.
+              </td>
+              <td class="num">Mốc 3</td>
+            </tr>
+            <tr>
+              <td class="num">Q-15</td>
+              <td>
+                <b>Khoá Gemini hiện tại là gói miễn phí hay trả phí?</b> Suy ra là MIỄN PHÍ vì nhóm
+                <code>pro</code> trả 429 &laquo;exceeded your current quota&raquo; (đo 29/08/2026),
+                nhưng đây là suy luận gián tiếp. Câu trả lời quyết định hai thứ: đầu ra dự phòng
+                <code>layer3_intent_hard</code> có bật được không, và
+                <b><code>max_data_class</code> có hạ xuống được không</b> &mdash; đang ở mức chặt
+                nhất (3), nghĩa là mọi lời gọi chỉ được mang dữ liệu giả lập hoặc đã ẩn danh. Nếu là
+                gói trả phí có cam kết không huấn luyện thì hạ xuống 2 sẽ cho phép nhúng cả phần chữ
+                tự do của kiến trúc sư, và tri thức thu được sẽ dày hơn hẳn.
               </td>
               <td class="num">Mốc 4</td>
             </tr>

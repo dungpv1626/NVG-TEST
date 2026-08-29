@@ -28,6 +28,7 @@
 import { sql } from 'drizzle-orm';
 import {
   boolean,
+  customType,
   doublePrecision,
   index,
   integer,
@@ -304,6 +305,17 @@ export const designSettings = pgTable(
  *     nhiều hồ sơ cũ không còn dự án trong hệ thống. Ràng buộc thật là ranh giới tenant —
  *     mục 6.0 của tài liệu: "rò rỉ giữa các tenant là hỏng sản phẩm".
  */
+/**
+ * Kiểu `extensions.vector(1536)` của pgvector.
+ *
+ * Không có chỉ mục vector nào — mục 6.6 của tài liệu: dưới vài nghìn bản ghi thì quét tuần
+ * tự nhanh hơn, mà chỉ mục xấp xỉ còn đánh đổi độ chính xác. Số 1536 nằm dưới trần 2000
+ * chiều của pgvector, nên thêm chỉ mục sau này không phải nhúng lại cả kho.
+ */
+const vector1536 = customType<{ data: number[]; driverData: string }>({
+  dataType: () => 'extensions.vector(1536)',
+});
+
 export const kbRecords = pgTable(
   'kb_record',
   {
@@ -344,6 +356,34 @@ export const kbRecords = pgTable(
       sql`COALESCE(jsonb_typeof(payload -> 'slicing_tree') = 'object', false)`,
     ),
 
+    // --- Truy hồi ba tầng (0099) ----------------------------------------------
+    /** Kích thước lô — bộ lọc tầng 2 của truy hồi (06-knowledge-base 6.3). */
+    siteWidthM: doublePrecision('site_width_m').generatedAlwaysAs(
+      sql`((payload -> 'site' ->> 'width_m')::double precision)`,
+    ),
+    siteDepthM: doublePrecision('site_depth_m').generatedAlwaysAs(
+      sql`((payload -> 'site' ->> 'depth_m')::double precision)`,
+    ),
+    familyArchetype: text('family_archetype').generatedAlwaysAs(
+      sql`(payload ->> 'family_archetype')`,
+    ),
+    style: text('style').generatedAlwaysAs(sql`(payload ->> 'style')`),
+
+    /** Bước 3 (tri thức ngầm) đã làm chưa — bộ lọc của hàng chờ chú giải. */
+    hasRationale: boolean('has_rationale').generatedAlwaysAs(
+      sql`COALESCE(jsonb_typeof(payload -> 'rationale') = 'object', false)`,
+    ),
+
+    /**
+     * Nhúng phần `rationale`, 1536 chiều (`extensions.vector`).
+     *
+     * KHÔNG phải cột sinh, khác mọi cột lọc còn lại: giá trị đến từ mô hình nhúng bên ngoài,
+     * không suy được từ `payload`. Ghi qua hàm `kb_apply_rationale` để chú giải và vector
+     * không lệch nhau. Drizzle chưa có kiểu `vector` gốc nên khai bằng `customType` mỏng —
+     * bảng này không bao giờ được đọc/ghi vector qua Drizzle, chỉ qua hàm SQL đó.
+     */
+    rationaleEmbedding: vector1536('rationale_embedding'),
+
     ...auditColumns(),
     ...softDelete(),
   },
@@ -358,6 +398,12 @@ export const kbRecords = pgTable(
       .on(t.tenantId, t.hasSlicingTree)
       .where(sql`deleted_at IS NULL`),
     index('kb_record_project_idx').on(t.projectId),
+    index('kb_record_geometry_idx')
+      .on(t.tenantId, t.buildingType, t.floors, t.siteWidthM)
+      .where(sql`deleted_at IS NULL`),
+    index('kb_record_annotation_queue_idx')
+      .on(t.tenantId, t.hasRationale, t.qualityScore.desc())
+      .where(sql`deleted_at IS NULL`),
   ],
 );
 

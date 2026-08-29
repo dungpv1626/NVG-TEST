@@ -15,35 +15,16 @@ import { Hono } from 'hono';
 import { DATA_CLASSES, type DataClass } from '@nvg/shared/design';
 import { ContractError } from './contracts';
 import { createComputeBackend } from './compute-backend';
-import {
-  ModelRouter,
-  parseModelConfig,
-  DataClassViolation,
-  ModelNotConfigured,
-} from './llm/router';
+import { DataClassViolation, ModelNotConfigured } from './llm/router';
+import { geminiClient, modelRouter } from './llm/factory';
 import { PublishBridge } from './publish';
+import { retrieveFewShots } from './kb/retrieve';
+import { embeddingText, withheldFields, type RationalePayload } from './kb/rationale';
 import { createSourceFileStore, type StoredSource } from './source-files';
 import type { DigitiseParams, DigitiseSource } from './workflows/digitise-steps';
 import type { DesignEnv } from './env';
 
-// Nạp `config/models.yaml` dạng văn bản. `wrangler.jsonc` khai `rules` kiểu Text cho `*.yaml`
-// để esbuild nhúng tệp vào bản dựng — Worker không có hệ tệp để đọc lúc chạy.
-import modelsYaml from '../../../config/models.yaml';
-
 export const designApp = new Hono<{ Bindings: DesignEnv }>();
-
-let cachedRouter: ModelRouter | undefined;
-
-/** Router mô hình dùng lại giữa các request trong cùng isolate — phân tích YAML một lần. */
-function modelRouter(env: DesignEnv): ModelRouter {
-  if (!cachedRouter) {
-    cachedRouter = new ModelRouter(
-      parseModelConfig(modelsYaml as unknown as string),
-      env.GEMINI_API_KEY,
-    );
-  }
-  return cachedRouter;
-}
 
 /**
  * Kiểm tra sống của cả hai runtime.
@@ -160,6 +141,121 @@ designApp.post('/kb/digitise', async (c) => {
   const run = await c.env.DIGITISE_PIPELINE.create({ params });
 
   return c.json({ runId: run.id, sources: stored }, 202);
+});
+
+/**
+ * Client Supabase chạy dưới PHIÊN CỦA NGƯỜI GỌI.
+ *
+ * Khoá `service_role` chỉ đóng vai `apikey`; vai trò thật do JWT trong `Authorization` quyết
+ * định, nên RLS vẫn áp dụng đầy đủ. Đây là điều phân biệt các tuyến "thay mặt người dùng" với
+ * tuyến chạy nền (Workflow) vốn cố ý vượt RLS.
+ */
+async function asUser(env: DesignEnv, token: string) {
+  const { createClient } = await import('@supabase/supabase-js');
+  return createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+/**
+ * Truy hồi hồ sơ tham chiếu — tầng 1+2 ở CSDL, chọn đa dạng ở đây (06-knowledge-base 6.3).
+ *
+ * Không kiểm quyền ở tầng này: `kb_retrieve_candidates` là SECURITY INVOKER nên RLS đã quyết
+ * định thấy được bản ghi nào. Kiểm thêm ở đây là tạo bản quy tắc thứ hai sẽ lệch (CLAUDE.md 3.4).
+ */
+designApp.post('/kb/retrieve', async (c) => {
+  const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+
+  const body = await c.req.json();
+  const db = await asUser(c.env, token);
+
+  const result = await retrieveFewShots(db, {
+    tenantId: body.tenantId,
+    buildingType: body.buildingType,
+    floors: body.floors,
+    widthM: body.widthM,
+    depthM: body.depthM,
+    familyArchetype: body.familyArchetype,
+    style: body.style,
+    minQuality: body.minQuality,
+    requireSlicingTree: body.requireSlicingTree,
+    excludeProjectCode: body.excludeProjectCode,
+    wantedAdjacency: body.wantedAdjacency,
+    k: body.k,
+    lambda: body.lambda,
+  });
+
+  return c.json(result);
+});
+
+/**
+ * Bước 3 số hoá — kiến trúc sư ghi tri thức ngầm, hệ thống tính lại vector nhúng.
+ *
+ * Chú giải và vector ghi trong CÙNG một câu lệnh SQL (`kb_apply_rationale`): tách ra thì có
+ * ngày lời gọi thứ hai hỏng và bản ghi mang chú giải mới với vector cũ — một sai lệch không
+ * có triệu chứng nào ngoài việc truy hồi trả kết quả kỳ lạ.
+ */
+designApp.post('/kb/annotate', async (c) => {
+  const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+
+  const body = (await c.req.json()) as {
+    id?: string;
+    rationale?: RationalePayload;
+    outcome?: { client_satisfied?: boolean | null; construction_issues?: string[] } | null;
+  };
+  if (!body.id) return c.json({ error: 'Thiếu mã bản ghi cần chú giải.' }, 400);
+
+  const db = await asUser(c.env, token);
+
+  // Đọc lại bản ghi qua RLS trước khi nhúng: người không được xem bản ghi thì cũng không được
+  // biến nội dung của nó thành một lời gọi ra dịch vụ ngoài.
+  const current = await db
+    .from('kb_record')
+    .select('payload')
+    .eq('id', body.id)
+    .is('deleted_at', null)
+    .maybeSingle();
+  if (current.error) return c.json({ error: 'Không đọc được bản ghi cần chú giải.' }, 500);
+  if (!current.data) {
+    return c.json(
+      {
+        error:
+          'Không tìm thấy bản ghi, hoặc tài khoản không được xem hồ sơ bộ môn này. Người có quyền ghi hồ sơ kiến trúc của Phòng Thiết kế thực hiện được việc này.',
+      },
+      404,
+    );
+  }
+
+  const record = { ...(current.data.payload as object), rationale: body.rationale ?? null };
+  const text = embeddingText(record);
+  const withheld = withheldFields(body.rationale);
+
+  let embedding: number[] | null = null;
+  const llm = geminiClient(c.env);
+  if (llm && text) {
+    try {
+      // Hạng 3: văn bản nhúng chỉ gồm lựa chọn rời rạc và thuộc tính không định danh — xem
+      // danh sách CHO PHÉP ở `kb/rationale.ts`. Ô chữ tự do không nằm trong đó.
+      embedding = await llm.embed('kb_rationale_embed', 3, text);
+    } catch (error) {
+      // Nhúng hỏng KHÔNG được làm mất phần chú giải người vừa nhập (AFD 6.3). Ghi chú giải,
+      // để vector rỗng, và nói rõ ra — chú giải lại là tính lại vector.
+      console.error('design: nhúng chú giải hỏng', error);
+    }
+  }
+
+  const saved = await db.rpc('kb_apply_rationale', {
+    p_id: body.id,
+    p_rationale: body.rationale ?? null,
+    p_embedding: embedding ? `[${embedding.join(',')}]` : null,
+    p_outcome: body.outcome ?? null,
+  });
+  if (saved.error) return c.json({ error: saved.error.message }, 403);
+
+  return c.json({ id: saved.data, embedded: embedding !== null, withheld });
 });
 
 /**

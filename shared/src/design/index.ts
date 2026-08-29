@@ -12,6 +12,7 @@
  */
 
 export * from './index.generated';
+export * from './annotation';
 
 // ---------------------------------------------------------------------------
 // Bộ môn — dùng lại enum `design_discipline` sẵn có (CLAUDE.md 8.5 T7)

@@ -28,34 +28,49 @@
 
 version: '1.0.0'
 
-# Chưa có khoá API (Haan bổ sung sau). Đặt `enabled: false` để lớp router trả lỗi rõ ràng
-# "chưa cấu hình" thay vì gọi ra mạng rồi nhận 401 khó đọc.
+# Khoá API đã có (kiểm chứng 29/08/2026 bằng lời gọi thật, prompt không mang dữ liệu NVG).
+#
+# ⚠️ Ba điều đo được hôm đó, ghi lại để không phải dò lại:
+#
+#  1. `gemini-2.5-pro` trả 404 "no longer available to new users" — không phải lỗi khoá.
+#     Google đã đóng mô hình này với khoá mới lập.
+#  2. Khoá hiện tại KHÔNG có hạn mức cho nhóm `pro`: `gemini-pro-latest` trả 429 "exceeded
+#     your current quota". Đây là dấu hiệu gói MIỄN PHÍ, khớp với quyết định T8 — nên
+#     `max_data_class: 3` ở dưới giữ nguyên, KHÔNG hạ.
+#  3. Nhóm `flash` chạy tốt, kể cả đầu ra JSON có lược đồ (`responseSchema`) — thứ mà mọi
+#     đầu ra dưới đây đều cần.
+
 routes:
   layer1_brief:
     provider: gemini
     model: gemini-2.5-flash
     max_data_class: 3
-    enabled: false
+    enabled: true
     purpose: Kiểm tra đầy đủ và nhất quán của đầu bài, chấm completeness_score.
 
   layer2_program:
     provider: gemini
     model: gemini-2.5-flash
     max_data_class: 3
-    enabled: false
+    enabled: true
     purpose: Sinh chương trình không gian từ đầu bài + thống kê thực nghiệm.
 
   layer3_intent:
     provider: gemini
     model: gemini-2.5-flash
     max_data_class: 3
-    enabled: false
+    enabled: true
     purpose: Sinh cây chia không gian (LayoutIntent). KHÔNG sinh toạ độ hay kích thước.
 
   # Đầu ra dự phòng khi `layer3_intent` sinh ra cấu trúc không hợp lệ nhiều lần liên tiếp.
+  #
+  # ⚠️ ĐANG TẮT, và đây là trạng thái ĐÚNG chứ không phải việc còn bỏ dở: khoá gói miễn phí
+  # không có hạn mức cho nhóm `pro` (điểm 2 ở trên). Để `enabled: true` thì lần dự phòng nào
+  # cũng ăn 429 — tức là thay một lỗi đọc được ("sinh sai cấu trúc") bằng một lỗi khó hiểu
+  # ("hết hạn mức"). Bật lại đúng lúc nâng gói, không sớm hơn.
   layer3_intent_hard:
     provider: gemini
-    model: gemini-2.5-pro
+    model: gemini-3.1-pro-preview
     max_data_class: 3
     enabled: false
     purpose: Phương án khó — nhiều cánh, đất không vuông vắn.
@@ -64,12 +79,29 @@ routes:
     provider: gemini
     model: gemini-2.5-flash
     max_data_class: 3
-    enabled: false
+    enabled: true
     purpose: Chọn tham số mặt đứng theo phong cách.
 
   kb_label_normalize:
     provider: gemini
     model: gemini-2.5-flash
     max_data_class: 3
-    enabled: false
+    enabled: true
     purpose: Chuẩn hoá nhãn phòng trích từ bản vẽ cũ.
+
+  # Nhúng phần chú giải của kiến trúc sư để truy hồi ba tầng (06-knowledge-base 6.3).
+  #
+  # `output_dimensions: 1536` là lựa chọn có lý do, không phải con số tuỳ tiện: mặc định của
+  # mô hình là 3072 chiều, mà chỉ mục vector của Postgres chỉ nhận tối đa 2000 chiều — để mặc
+  # định thì cột lưu được nhưng KHÔNG BAO GIỜ đánh chỉ mục được, và điều đó chỉ lộ ra vào ngày
+  # kho lớn tới mức cần chỉ mục.
+  #
+  # ⚠️ Mô hình này trả về vector CHƯA chuẩn hoá lại khi cắt bớt chiều (đo được: chuẩn 0,692 ở
+  # 1536 chiều thay vì 1,000). Bên gọi phải tự chuẩn hoá — xem `llm/gemini.ts`.
+  kb_rationale_embed:
+    provider: gemini
+    model: gemini-embedding-001
+    output_dimensions: 1536
+    max_data_class: 3
+    enabled: true
+    purpose: Nhúng chú giải công trình cũ để truy hồi few-shot.

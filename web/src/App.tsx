@@ -96,6 +96,12 @@ const DesignCreatePage = lazy(() =>
 const DesignDetailPage = lazy(() =>
   import('@/pages/tk/design-detail').then((m) => ({ default: m.DesignDetailPage })),
 );
+const KbListPage = lazy(() =>
+  import('@/pages/tk/kb-list').then((m) => ({ default: m.KbListPage })),
+);
+const KbAnnotatePage = lazy(() =>
+  import('@/pages/tk/kb-annotate').then((m) => ({ default: m.KbAnnotatePage })),
+);
 const ContractListPage = lazy(() =>
   import('@/pages/hd/contract-list').then((m) => ({ default: m.ContractListPage })),
 );
@@ -309,11 +315,15 @@ const router = createBrowserRouter(
           <Route path="da/don-gia" element={<UnitPriceListPage />} />
         </Route>
 
-        {/* TK — Thiết kế đa bộ môn (TK-01 → TK-08). TK-10 → TK-17 chưa làm. */}
+        {/* TK — Thiết kế đa bộ môn (TK-01 → TK-08) và Knowledge Base của engine thiết kế
+                  AI (TK-10 → TK-17, Mốc 3). Phân quyền chi tiết theo BỘ MÔN nằm trong RLS
+                  của `kb_record`, không ở đây: `ModuleGuard` chỉ chặn ở mức module. */}
         <Route element={<ModuleGuard module="TK" />}>
           <Route path="tk/du-an" element={<DesignListPage />} />
           <Route path="tk/du-an/tao-moi" element={<DesignCreatePage />} />
           <Route path="tk/du-an/:id" element={<DesignDetailPage />} />
+          <Route path="tk/ho-so-cu" element={<KbListPage />} />
+          <Route path="tk/ho-so-cu/:id" element={<KbAnnotatePage />} />
         </Route>
 
         {/* HD — Hợp đồng (HD-01 → HD-05). Không có màn hình "tạo mới": hợp đồng soạn
