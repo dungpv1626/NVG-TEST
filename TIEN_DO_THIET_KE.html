@@ -283,7 +283,7 @@
           <div class="stat"><b>2/3</b><span class="xs muted-t">Việc của Mốc 0 đã xong</span></div>
           <div class="stat"><b>209</b><span class="xs muted-t">Phép thử xanh của module</span></div>
           <div class="stat"><b>4</b><span class="xs muted-t">Vướng mắc đang mở</span></div>
-          <div class="stat"><b>14</b><span class="xs muted-t">Câu hỏi chờ Haan</span></div>
+          <div class="stat"><b>13</b><span class="xs muted-t">Câu hỏi chờ Haan</span></div>
         </div>
       </div>
 
@@ -423,6 +423,38 @@
             </tr>
           </thead>
           <tbody>
+            <tr>
+              <td class="num">29/08/2026</td>
+              <td>
+                Q-17: mở rộng hợp đồng <code>DesignBrief</code> lên <b>1.1.0</b> cho biệt thự (nhóm
+                <code>massing</code>, 39 + 15 kiểm thử)
+              </td>
+              <td>
+                Sáu câu hỏi mới, <b>chỉ hiện với biệt thự và nhà vườn</b>: số cánh nhà · hình bao
+                chữ nhật/L/U/T · số lõi thang · thang phụ dịch vụ · sân nằm đâu · quan hệ trong nhà
+                với sân vườn. Đây là nguồn thu hẹp lời giải chính của biệt thự &mdash; lô rộng không
+                tự ràng buộc như nhà phố nên phần thu hẹp phải đến từ thông tin.
+                <br />
+                Đã chạy thật một đầu bài biệt thự 18&times;25 m, hai cánh hình L, hai lõi thang:
+                artifact đúc xong mang <code>schema_version 1.1.0</code> và giữ nguyên vẹn phần
+                <code>massing</code>.
+                <br />
+                <b>Bắt được một lỗi kiểu ngay lúc làm:</b> lựa chọn trong tệp cấu hình luôn là chuỗi
+                (JSON không có khoá số) nhưng số cánh nhà là số nguyên trong hợp đồng &mdash; biểu
+                mẫu sẽ ghi <code>"2"</code> vào chỗ đòi <code>2</code>, màn hình trông vẫn đúng, và
+                lỗi chỉ nổ ở tận bước đúc artifact. Thêm khai báo <code>value_type</code> và một
+                kiểm thử canh <b>cả lớp lỗi này</b>: mọi lựa chọn của mọi trường phải được hợp đồng
+                chấp nhận ở đúng đường dẫn của nó.
+                <br />
+                <b>Gỡ một cảnh báo báo động giả:</b> phép so &laquo;số người trên số phòng
+                ngủ&raquo; sai về bản chất vì danh sách không gian là một TẬP HỢP, không mang số
+                lượng &mdash; số loại phòng ngủ tối đa luôn là hai, nên mọi gia đình trên bốn người
+                đều dính cảnh báo, tức gần như mọi đầu bài biệt thự. Thay bằng phép kiểm trả lời
+                được bằng đúng dữ liệu đang có: nhu cầu riêng của một nhóm thành viên mà danh sách
+                không gian chưa có. Một cảnh báo luôn nổ là một cảnh báo bị bỏ qua, kể cả lúc nó
+                đúng.
+              </td>
+            </tr>
             <tr>
               <td class="num">29/08/2026</td>
               <td>
@@ -1279,17 +1311,18 @@
             <tr>
               <td class="num">Q-17</td>
               <td>
-                <b
-                  >Hợp đồng <code>DesignBrief</code> chưa có chỗ chứa vài thông tin đặc thù biệt
-                  thự</b
-                >
-                &mdash; số cánh nhà, số lõi thang, có sân trong hay không &mdash; và nó khai
-                <code>additionalProperties: false</code> nên không nhét thêm được. Đợt này diễn đạt
-                gián tiếp qua khoảng lùi, mật độ, mặt tiếp cận và danh sách không gian. Sửa hợp đồng
-                ngay (thêm trường tuỳ chọn, tăng phiên bản phụ) hay để tới Mốc 7 khi làm biệt thự
-                thật? Theo nguyên tắc bất biến số 3, không tự thêm khi chưa có hợp đồng.
+                <b>Đã trả lời 29/08/2026 — sửa hợp đồng luôn ở giai đoạn này.</b> Thêm nhóm
+                <code>massing</code> vào <code>contracts/design-brief.schema.json</code>: số cánh
+                nhà, hình bao (chữ nhật/L/U/T), số lõi thang, thang phụ dịch vụ, tổ chức sân vườn,
+                quan hệ trong nhà với sân. Hợp đồng lên <b>1.1.0</b> &mdash; chỉ THÊM trường tuỳ
+                chọn nên tăng số phụ, bản ghi viết theo 1.0.0 vẫn đọc được nguyên vẹn.
+                <br />
+                Mọi trường là <b>lựa chọn rời rạc</b>, không phải số đo: bộ giải mới là nơi gán kích
+                thước (nguyên tắc bất biến 2). &laquo;Có sân trong hay không&raquo; vẫn khai ở
+                <code>required_spaces</code>; <code>massing.yards</code> khai sân <b>nằm đâu</b>
+                &mdash; hai câu hỏi khác nhau, không trùng nguồn.
               </td>
-              <td class="num">Mốc 7</td>
+              <td class="num">Đã xong</td>
             </tr>
             <tr>
               <td class="num">Q-15</td>

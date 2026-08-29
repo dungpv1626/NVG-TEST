@@ -151,13 +151,13 @@ function BriefControl({ field, value, onChange }: Omit<BriefFieldProps, 'issues'
             <Chip
               key={option.value}
               label={option.label}
-              active={matchesChoice(field.path, value, option.value)}
+              active={matchesChoice(field, value, option.value)}
               // Bấm lại lựa chọn đang chọn để bỏ chọn — không có nút "xoá" riêng cho từng ô.
               onClick={() =>
                 onChange(
-                  matchesChoice(field.path, value, option.value)
+                  matchesChoice(field, value, option.value)
                     ? undefined
-                    : toChoiceValue(field.path, option.value),
+                    : toChoiceValue(field, option.value),
                 )
               }
             />
@@ -361,16 +361,21 @@ function parseNumber(raw: string): number | undefined {
  * rỗng. Đó là cách phân biệt "đã hỏi, khách chưa quyết" với "chưa ai hỏi", điều mà hợp đồng
  * đòi hỏi tường minh ("bắt buộc THU THẬP dù được để trống").
  */
-function toChoiceValue(path: string, option: string): unknown {
-  if (path !== 'decision_maker') return option;
-  return option === 'chua_xac_dinh'
-    ? { name: null, relationship: null }
-    : { name: null, relationship: option };
+function toChoiceValue(field: BriefFormField, option: string): unknown {
+  if (field.path === 'decision_maker') {
+    return option === 'chua_xac_dinh'
+      ? { name: null, relationship: null }
+      : { name: null, relationship: option };
+  }
+  // Lựa chọn trong cấu hình luôn là chuỗi; hợp đồng có chỗ đòi số nguyên.
+  return field.value_type === 'number' ? Number(option) : option;
 }
 
-function matchesChoice(path: string, value: unknown, option: string): boolean {
-  if (path !== 'decision_maker') return value === option;
-  const dm = value as { relationship?: string | null } | undefined;
-  if (dm === undefined) return false;
-  return option === 'chua_xac_dinh' ? !dm.relationship : dm.relationship === option;
+function matchesChoice(field: BriefFormField, value: unknown, option: string): boolean {
+  if (field.path === 'decision_maker') {
+    const dm = value as { relationship?: string | null } | undefined;
+    if (dm === undefined) return false;
+    return option === 'chua_xac_dinh' ? !dm.relationship : dm.relationship === option;
+  }
+  return field.value_type === 'number' ? value === Number(option) : value === option;
 }

@@ -104,7 +104,80 @@ export const designBriefSchema = z
           .strict(),
       )
       .optional(),
-    required_spaces: z.array(z.string()).optional(),
+    /** Mã không gian, lấy từ kb/room_vocabulary.yaml. Mã không có trong từ vựng đó thì không rule nào của rule pack nhắm tới, và nó đi qua cả engine mà chưa từng bị kiểm quy chuẩn. "Có sân trong hay không" khai ở đây bằng mã `courtyard`; VỊ TRÍ các sân khai ở `massing.yards`. */
+    required_spaces: z
+      .array(z.string())
+      .describe(
+        'Mã không gian, lấy từ kb/room_vocabulary.yaml. Mã không có trong từ vựng đó thì không rule nào của rule pack nhắm tới, và nó đi qua cả engine mà chưa từng bị kiểm quy chuẩn. "Có sân trong hay không" khai ở đây bằng mã `courtyard`; VỊ TRÍ các sân khai ở `massing.yards`.',
+      )
+      .optional(),
+    /** Ý ĐỒ về tổ hợp khối, không phải hình học đã giải. Nhà phố là trường hợp một cánh nhà, khoảng lùi bằng không (04-layer3-floorplan) nên phần này để trống; với biệt thự và nhà vườn, lô rộng không tự ràng buộc như nhà phố nên đây là nguồn thu hẹp lời giải chính (01-overview 1.2). Mọi trường ở đây là LỰA CHỌN RỜI RẠC — bộ giải mới là nơi gán số đo (nguyên tắc bất biến 2). */
+    massing: z
+      .object({
+        /** Số cánh nhà mong muốn. Nhà phố luôn là 1; biệt thự 1–3. */
+        wings_preferred: z
+          .number()
+          .int()
+          .gte(1)
+          .lte(3)
+          .nullable()
+          .describe('Số cánh nhà mong muốn. Nhà phố luôn là 1; biệt thự 1–3.')
+          .optional(),
+        /** Hình bao mong muốn — hợp của các cánh nhà. Đi kèm `wings_preferred`: hình L/U/T không có nghĩa với một cánh. */
+        footprint_shape: z
+          .union([
+            z.literal('chu_nhat'),
+            z.literal('L'),
+            z.literal('U'),
+            z.literal('T'),
+            z.literal(null),
+          ])
+          .nullable()
+          .describe(
+            'Hình bao mong muốn — hợp của các cánh nhà. Đi kèm `wings_preferred`: hình L/U/T không có nghĩa với một cánh.',
+          )
+          .optional(),
+        /** Số lõi thang. Nhà phố 1; biệt thự 1–2 (chính, và phụ hoặc dịch vụ). */
+        cores_preferred: z
+          .number()
+          .int()
+          .gte(1)
+          .lte(2)
+          .nullable()
+          .describe('Số lõi thang. Nhà phố 1; biệt thự 1–2 (chính, và phụ hoặc dịch vụ).')
+          .optional(),
+        /** Có thang phụ hoặc lối dịch vụ riêng cho người giúp việc và bếp không. */
+        service_core: z
+          .boolean()
+          .describe('Có thang phụ hoặc lối dịch vụ riêng cho người giúp việc và bếp không.')
+          .optional(),
+        /** Tổ chức sân vườn — sân nằm ở đâu so với khối nhà. Khác `required_spaces`: ở đó khai CÓ sân, ở đây khai sân NẰM ĐÂU. */
+        yards: z
+          .array(z.enum(['san_truoc', 'san_ben', 'san_trong', 'san_sau']))
+          .describe(
+            'Tổ chức sân vườn — sân nằm ở đâu so với khối nhà. Khác `required_spaces`: ở đó khai CÓ sân, ở đây khai sân NẰM ĐÂU.',
+          )
+          .optional(),
+        /** Quan hệ trong nhà với sân vườn (01-overview 1.2). Mở tối đa = nhiều cửa kính lớn nhìn ra sân; kín đáo = ưu tiên riêng tư với bên ngoài. */
+        indoor_outdoor: z
+          .union([
+            z.literal('mo_toi_da'),
+            z.literal('can_bang'),
+            z.literal('kin_dao'),
+            z.literal(null),
+          ])
+          .nullable()
+          .describe(
+            'Quan hệ trong nhà với sân vườn (01-overview 1.2). Mở tối đa = nhiều cửa kính lớn nhìn ra sân; kín đáo = ưu tiên riêng tư với bên ngoài.',
+          )
+          .optional(),
+      })
+      .strict()
+      .nullable()
+      .describe(
+        'Ý ĐỒ về tổ hợp khối, không phải hình học đã giải. Nhà phố là trường hợp một cánh nhà, khoảng lùi bằng không (04-layer3-floorplan) nên phần này để trống; với biệt thự và nhà vườn, lô rộng không tự ràng buộc như nhà phố nên đây là nguồn thu hẹp lời giải chính (01-overview 1.2). Mọi trường ở đây là LỰA CHỌN RỜI RẠC — bộ giải mới là nơi gán số đo (nguyên tắc bất biến 2).',
+      )
+      .optional(),
     style: z
       .union([
         z.literal('hien_dai'),

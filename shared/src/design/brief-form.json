@@ -1,9 +1,7 @@
 {
   "_doc": "Cấu hình biểu mẫu Đầu bài thiết kế (Lớp 1 — TK-10). ĐÂY LÀ DỮ LIỆU: logic hiện/ẩn, nhãn, thứ tự và trọng số chấm điểm đều nằm ở tệp này, KHÔNG viết cứng trong brief-panel.tsx. Đường dẫn `path` trỏ vào payload DesignBrief (contracts/design-brief.schema.json); riêng tiền tố `legacy.` trỏ vào sáu cột chữ tự do của bảng design_briefs có từ TK-01. Mã trong `required_spaces` và `family[].needs` phải nằm trong kb/room_vocabulary.yaml — có kiểm thử canh.",
   "version": "1.0.0",
-  "consistency": {
-    "nguoi_moi_phong_ngu": 2
-  },
+  "consistency": {},
   "sections": [
     {
       "id": "loai_hinh",
@@ -360,6 +358,143 @@
             {
               "value": "indochine",
               "label": "Đông Dương"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "to_chuc",
+      "title": "Tổ chức khối nhà",
+      "hint": "Ý đồ về hình khối, không phải kích thước — bộ giải mới là nơi gán số đo. Nhà phố không hỏi phần này: nó luôn là một cánh nhà lấp kín lô.",
+      "when": {
+        "field": "building_type",
+        "in": ["biet_thu", "nha_vuon"]
+      },
+      "note": "Cả nhóm ẩn với nhà phố. Đây là nguồn thu hẹp lời giải chính của biệt thự: lô rộng không tự ràng buộc như nhà phố nên phần thu hẹp phải đến từ thông tin (01-overview 1.2).",
+      "fields": [
+        {
+          "path": "massing.wings_preferred",
+          "label": "Số cánh nhà mong muốn",
+          "control": "choice",
+          "weight": 2,
+          "value_type": "number",
+          "options": [
+            {
+              "value": "1",
+              "label": "Một cánh"
+            },
+            {
+              "value": "2",
+              "label": "Hai cánh"
+            },
+            {
+              "value": "3",
+              "label": "Ba cánh"
+            }
+          ]
+        },
+        {
+          "path": "massing.footprint_shape",
+          "label": "Hình bao khối nhà",
+          "control": "choice",
+          "weight": 2,
+          "hint": "Hình L, U hay T chỉ có nghĩa khi có từ hai cánh nhà trở lên.",
+          "options": [
+            {
+              "value": "chu_nhat",
+              "label": "Chữ nhật"
+            },
+            {
+              "value": "L",
+              "label": "Hình chữ L"
+            },
+            {
+              "value": "U",
+              "label": "Hình chữ U"
+            },
+            {
+              "value": "T",
+              "label": "Hình chữ T"
+            }
+          ]
+        },
+        {
+          "path": "massing.cores_preferred",
+          "label": "Số lõi thang",
+          "control": "choice",
+          "weight": 1,
+          "value_type": "number",
+          "options": [
+            {
+              "value": "1",
+              "label": "Một lõi"
+            },
+            {
+              "value": "2",
+              "label": "Hai lõi"
+            }
+          ]
+        },
+        {
+          "path": "massing.service_core",
+          "label": "Thang phụ hoặc lối dịch vụ riêng",
+          "control": "tristate",
+          "weight": 1,
+          "hint": "Lối đi riêng cho bếp và người giúp việc, không đi qua khu vực tiếp khách.",
+          "options": [
+            {
+              "value": "true",
+              "label": "Có"
+            },
+            {
+              "value": "false",
+              "label": "Không"
+            }
+          ]
+        },
+        {
+          "path": "massing.yards",
+          "label": "Sân nằm ở đâu",
+          "control": "multi",
+          "weight": 2,
+          "hint": "Khai CÓ sân ở phần Không gian bắt buộc; ở đây khai sân nằm đâu so với khối nhà.",
+          "options": [
+            {
+              "value": "san_truoc",
+              "label": "Sân trước"
+            },
+            {
+              "value": "san_ben",
+              "label": "Sân bên"
+            },
+            {
+              "value": "san_trong",
+              "label": "Sân trong"
+            },
+            {
+              "value": "san_sau",
+              "label": "Sân sau"
+            }
+          ]
+        },
+        {
+          "path": "massing.indoor_outdoor",
+          "label": "Quan hệ trong nhà với sân vườn",
+          "control": "choice",
+          "weight": 2,
+          "options": [
+            {
+              "value": "mo_toi_da",
+              "label": "Mở tối đa ra sân"
+            },
+            {
+              "value": "can_bang",
+              "label": "Cân bằng"
+            },
+            {
+              "value": "kin_dao",
+              "label": "Kín đáo, ưu tiên riêng tư"
             }
           ]
         }

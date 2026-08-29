@@ -32,5 +32,9 @@ export type DesignBriefDraft = z.infer<typeof designBriefDraftSchema>;
  *
  * Mỗi phiên bản đầu bài tự khai nó được viết theo hình dạng hợp đồng nào; không có nó thì
  * sau một lần đổi hợp đồng, không phân biệt được bản ghi cũ với bản ghi hỏng.
+ *
+ * `1.1.0` (29/08/2026): thêm `massing` — ý đồ tổ hợp khối cho biệt thự và nhà vườn. Chỉ THÊM
+ * trường tuỳ chọn nên tăng số phụ, không tăng số chính: bản ghi viết theo `1.0.0` vẫn đọc
+ * được nguyên vẹn (03-data-contracts, quy tắc semver).
  */
-export const BRIEF_SCHEMA_VERSION = '1.0.0';
+export const BRIEF_SCHEMA_VERSION = '1.1.0';

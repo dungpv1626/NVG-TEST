@@ -65,6 +65,42 @@ describe('Cấu hình biểu mẫu Đầu bài', () => {
     }
   });
 
+  it('mọi LỰA CHỌN đều được hợp đồng chấp nhận ở đúng đường dẫn của nó', () => {
+    // Mạnh hơn hẳn phép thử "đường dẫn có tồn tại không": nó bắt cả lỗi SAI KIỂU.
+    //
+    // Lựa chọn trong tệp cấu hình luôn là chuỗi vì JSON không có khoá số, nhưng hợp đồng có
+    // trường là số nguyên (`massing.wings_preferred`). Không có phép thử này thì biểu mẫu
+    // ghi `"1"` vào chỗ đòi `1`, mọi thứ trên màn hình trông vẫn đúng, và lỗi chỉ nổ ra ở
+    // tận bước đúc artifact — sau khi người dùng đã điền xong cả biểu mẫu.
+    for (const field of contractFields) {
+      if (!field.options || field.path === 'decision_maker') continue;
+
+      for (const option of field.options) {
+        const raw = field.value_type === 'number' ? Number(option.value) : option.value;
+        // Mỗi kiểu điều khiển ghi vào payload một hình dạng khác nhau. `family` là ngoại lệ:
+        // lựa chọn của nó là NHU CẦU của từng nhóm thành viên, nằm ở `family[].needs`.
+        const leaf =
+          field.control === 'family'
+            ? [{ role: 'vo_chong', count: 1, needs: [raw] }]
+            : field.control === 'multi'
+              ? [raw]
+              : field.control === 'tristate'
+                ? option.value === 'true'
+                : field.control === 'sides'
+                  ? { front: raw }
+                  : raw;
+
+        const result = designBriefDraftSchema.safeParse(probe(field.path, leaf));
+        expect(
+          result.success,
+          `${field.path} không nhận lựa chọn ${option.value}: ${
+            result.success ? '' : JSON.stringify(result.error.issues[0])
+          }`,
+        ).toBe(true);
+      }
+    }
+  });
+
   it('mọi điều kiện hiện/ẩn trỏ tới một trường đã khai', () => {
     // Điều kiện trỏ vào trường không tồn tại thì luôn sai, và trường mang nó bị ẩn vĩnh viễn.
     const declared = new Set(allFields.map((f) => f.path));
@@ -290,17 +326,36 @@ describe('Soát mâu thuẫn', () => {
     expect(codes({ required_spaces: ['bedroom'] })).toContain('chua_khai_nguoi_o');
   });
 
-  it('số người vượt sức chứa của số phòng ngủ đã khai', () => {
+  it('nhu cầu riêng của một nhóm mà danh sách không gian chưa có', () => {
+    const issues = checkBriefConsistency(
+      {
+        family: [{ role: 'ong_ba', count: 2, needs: ['bedroom', 'wc'] }],
+        required_spaces: ['living', 'bedroom'],
+      },
+      BRIEF_FORM,
+    );
+    const issue = issues.find((i) => i.code === 'nhu_cau_thieu_khong_gian');
+    expect(issue).toBeDefined();
+    // Nói bằng NHÃN tiếng Việt, không phải mã: người nhập không biết `wc` là gì.
+    expect(issue!.message).toContain('Khu vệ sinh');
+    expect(issue!.message).not.toContain('wc');
+  });
+
+  it('gia đình đông người KHÔNG bị cảnh báo oan', () => {
+    // Phép kiểm cũ so "số người trên số loại phòng ngủ" và sai về bản chất: danh sách không
+    // gian là một TẬP HỢP, không mang số lượng, nên số loại phòng ngủ tối đa luôn là hai —
+    // mọi gia đình trên bốn người đều dính cảnh báo, tức gần như mọi đầu bài biệt thự. Một
+    // cảnh báo luôn nổ là một cảnh báo bị bỏ qua, kể cả lúc nó đúng.
     expect(
       codes({
         family: [
           { role: 'ong_ba', count: 2 },
           { role: 'vo_chong', count: 2 },
-          { role: 'con', count: 2 },
+          { role: 'con', count: 3 },
         ],
-        required_spaces: ['bedroom'],
+        required_spaces: ['bedroom', 'master_bedroom', 'wc'],
       }),
-    ).toContain('nguoi_o_vuot_suc_chua');
+    ).toEqual([]);
   });
 
   it('ưu tiên tầng trên cùng trong nhà một tầng', () => {

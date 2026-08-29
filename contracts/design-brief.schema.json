@@ -83,7 +83,51 @@
         }
       }
     },
-    "required_spaces": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "required_spaces": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true,
+      "description": "Mã không gian, lấy từ kb/room_vocabulary.yaml. Mã không có trong từ vựng đó thì không rule nào của rule pack nhắm tới, và nó đi qua cả engine mà chưa từng bị kiểm quy chuẩn. \"Có sân trong hay không\" khai ở đây bằng mã `courtyard`; VỊ TRÍ các sân khai ở `massing.yards`."
+    },
+    "massing": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "Ý ĐỒ về tổ hợp khối, không phải hình học đã giải. Nhà phố là trường hợp một cánh nhà, khoảng lùi bằng không (04-layer3-floorplan) nên phần này để trống; với biệt thự và nhà vườn, lô rộng không tự ràng buộc như nhà phố nên đây là nguồn thu hẹp lời giải chính (01-overview 1.2). Mọi trường ở đây là LỰA CHỌN RỜI RẠC — bộ giải mới là nơi gán số đo (nguyên tắc bất biến 2).",
+      "properties": {
+        "wings_preferred": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "maximum": 3,
+          "description": "Số cánh nhà mong muốn. Nhà phố luôn là 1; biệt thự 1–3."
+        },
+        "footprint_shape": {
+          "type": ["string", "null"],
+          "enum": ["chu_nhat", "L", "U", "T", null],
+          "description": "Hình bao mong muốn — hợp của các cánh nhà. Đi kèm `wings_preferred`: hình L/U/T không có nghĩa với một cánh."
+        },
+        "cores_preferred": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "maximum": 2,
+          "description": "Số lõi thang. Nhà phố 1; biệt thự 1–2 (chính, và phụ hoặc dịch vụ)."
+        },
+        "service_core": {
+          "type": "boolean",
+          "description": "Có thang phụ hoặc lối dịch vụ riêng cho người giúp việc và bếp không."
+        },
+        "yards": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "enum": ["san_truoc", "san_ben", "san_trong", "san_sau"] },
+          "description": "Tổ chức sân vườn — sân nằm ở đâu so với khối nhà. Khác `required_spaces`: ở đó khai CÓ sân, ở đây khai sân NẰM ĐÂU."
+        },
+        "indoor_outdoor": {
+          "type": ["string", "null"],
+          "enum": ["mo_toi_da", "can_bang", "kin_dao", null],
+          "description": "Quan hệ trong nhà với sân vườn (01-overview 1.2). Mở tối đa = nhiều cửa kính lớn nhìn ra sân; kín đáo = ưu tiên riêng tư với bên ngoài."
+        }
+      }
+    },
     "style": { "type": ["string", "null"], "enum": ["hien_dai", "tan_co_dien", "indochine", null] },
     "budget_range_vnd": {
       "type": ["array", "null"],

@@ -81,6 +81,43 @@ describe('Phân nhánh theo loại hình đi từ cấu hình ra DOM', () => {
     expect(screen.queryByText('Mật độ xây dựng tối đa')).toBeNull();
   });
 
+  it('nhà phố KHÔNG hỏi tổ chức khối nhà', async () => {
+    // Nhà phố theo mô hình của engine luôn là một cánh nhà lấp kín lô — hỏi số cánh nhà là
+    // hỏi một câu chỉ có một đáp án.
+    state.briefs = [brief()];
+    state.surveys = [];
+    await openForm();
+    expect(screen.queryByText('Tổ chức khối nhà')).toBeNull();
+  });
+
+  it('biệt thự hỏi số cánh nhà, số lõi thang và tổ chức sân', async () => {
+    state.briefs = [brief()];
+    state.surveys = [];
+    await openForm();
+    await userEvent.click(screen.getByRole('button', { name: 'Biệt thự' }));
+
+    expect(await screen.findByText('Tổ chức khối nhà')).toBeTruthy();
+    expect(screen.getAllByText('Số cánh nhà mong muốn')).not.toHaveLength(0);
+    expect(screen.getAllByText('Số lõi thang')).not.toHaveLength(0);
+    expect(screen.getAllByText('Sân nằm ở đâu')).not.toHaveLength(0);
+  });
+
+  it('số cánh nhà ghi vào payload dưới dạng SỐ, không phải chuỗi', async () => {
+    // Lựa chọn trong tệp cấu hình luôn là chuỗi vì JSON không có khoá số. Ghi "2" vào chỗ
+    // hợp đồng đòi 2 thì màn hình trông vẫn đúng, và lỗi chỉ nổ ở tận bước đúc artifact.
+    state.briefs = [brief()];
+    state.surveys = [];
+    await openForm();
+    await userEvent.click(screen.getByRole('button', { name: 'Biệt thự' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Hai cánh' }));
+
+    // Chọn xong thì nút phải ở trạng thái đã chọn — nếu ghi sai kiểu, phép so sánh ngược lại
+    // sẽ không khớp và nút không sáng lên.
+    expect(screen.getByRole('button', { name: 'Hai cánh' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+  });
+
   it('đổi sang biệt thự thì hai câu hỏi đó XUẤT HIỆN', async () => {
     state.briefs = [brief()];
     state.surveys = [];

@@ -205,15 +205,27 @@ export function checkBriefConsistency(
     });
   }
 
-  // Số người vượt sức chứa của số phòng ngủ đã khai. `required_spaces` không mang SỐ LƯỢNG
-  // (nó là tập hợp, `uniqueItems`), nên chỉ ước lượng được từ số loại phòng ngủ có mặt.
-  const bedroomKinds = spaces.filter((s) => BEDROOM_CODES.includes(s)).length;
-  const perBedroom = config.consistency.nguoi_moi_phong_ngu;
-  if (bedroomKinds > 0 && people > bedroomKinds * perBedroom) {
+  // Nhu cầu riêng của một nhóm thành viên mà danh sách không gian bắt buộc không có.
+  //
+  // ⚠️ Chỗ này TỪNG là phép so "số người trên số phòng ngủ", và nó sai về bản chất:
+  // `required_spaces` là một TẬP HỢP (`uniqueItems`), không mang số lượng, nên số loại phòng
+  // ngủ tối đa luôn là hai. Mọi gia đình trên bốn người đều dính cảnh báo — tức là gần như
+  // mọi đầu bài biệt thự. Một cảnh báo luôn nổ là một cảnh báo bị bỏ qua, kể cả lúc nó đúng.
+  //
+  // Phép kiểm dưới đây trả lời được bằng đúng dữ liệu đang có, và không cần ngưỡng nào.
+  const missingNeeds = [
+    ...new Set(
+      (draft.family ?? [])
+        .flatMap((member) => member.needs ?? [])
+        .filter((need) => !spaces.includes(need)),
+    ),
+  ];
+  if (spaces.length > 0 && missingNeeds.length > 0) {
+    const labels = missingNeeds.map((need) => needLabel(config, need) ?? need).join(', ');
     found.push({
-      code: 'nguoi_o_vuot_suc_chua',
+      code: 'nhu_cau_thieu_khong_gian',
       severity: 'canh_bao',
-      message: `Đầu bài khai ${people} người ở nhưng chỉ có ${bedroomKinds} loại phòng ngủ. Xác nhận lại số phòng ngủ cần có với khách.`,
+      message: `Có thành viên cần ${labels} nhưng danh sách không gian bắt buộc chưa có. Bổ sung vào danh sách hoặc bỏ nhu cầu đó.`,
       paths: ['family', 'required_spaces'],
     });
   }
@@ -241,6 +253,12 @@ export function checkBriefConsistency(
   }
 
   return found;
+}
+
+/** Nhãn tiếng Việt của một mã không gian, lấy từ chính danh sách lựa chọn của biểu mẫu. */
+function needLabel(config: BriefFormConfig, code: string): string | undefined {
+  const spaces = fieldByPath(config, 'required_spaces');
+  return spaces?.options?.find((option) => option.value === code)?.label;
 }
 
 /** Nhãn của một trường theo cấu hình — dùng khi dựng thông báo ngoài giao diện. */

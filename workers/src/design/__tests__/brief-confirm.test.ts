@@ -11,7 +11,12 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { BRIEF_FORM, scoreBrief, type DesignBriefDraft } from '@nvg/shared/design';
+import {
+  BRIEF_FORM,
+  BRIEF_SCHEMA_VERSION,
+  scoreBrief,
+  type DesignBriefDraft,
+} from '@nvg/shared/design';
 import { buildBriefPayload, BriefPayloadError } from '../brief/payload';
 import { gateLayer2 } from '../brief/gate';
 
@@ -47,7 +52,9 @@ describe('Dựng payload artifact đầu bài', () => {
     const { payload } = build(full);
     expect(payload.project_id).toBe(PROJECT_ID);
     expect(payload.project_code).toBe('NVO-TK-2026-0001');
-    expect(payload.schema_version).toBe('1.0.0');
+    // So với hằng số chứ không viết cứng chuỗi: tăng phiên bản hợp đồng là việc bình thường,
+    // và một phép thử đỏ vì lý do đó chỉ dạy người đọc thói quen sửa test cho xanh.
+    expect(payload.schema_version).toBe(BRIEF_SCHEMA_VERSION);
   });
 
   it('BỎ HẲN điểm do máy khách gửi lên', () => {

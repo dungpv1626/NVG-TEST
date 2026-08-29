@@ -1464,9 +1464,14 @@ Hai gạch đầu dòng "di trú dữ liệu phiếu cũ" và "kiểm kê module
 cũng giải mâu thuẫn M2 trong `doc/design/README.md` (D4 nói không cần di trú, 3.1 nói phải
 có script) — D4 đúng với hiện trạng.
 
+**Q-17 đã trả lời — hợp đồng mở rộng luôn.** `DesignBrief` lên **1.1.0**: thêm nhóm
+`massing` (số cánh nhà, hình bao chữ nhật/L/U/T, số lõi thang, thang phụ dịch vụ, tổ chức
+sân vườn, quan hệ trong nhà với sân). Chỉ thêm trường tuỳ chọn nên tăng số phụ. Mọi trường
+là **lựa chọn rời rạc**, không phải số đo — bộ giải mới là nơi gán kích thước. "Có sân trong
+hay không" vẫn khai ở `required_spaces`; `massing.yards` khai sân **nằm đâu**.
+
 ⚠️ Còn chờ Haan: bốn danh sách lựa chọn và bảng trọng số chấm điểm chưa có kiến trúc sư xác
-nhận (Q-16); hợp đồng chưa có chỗ chứa số cánh nhà / lõi thang / sân trong của biệt thự
-(Q-17).
+nhận (Q-16 — sẽ rà cùng kiến trúc sư sau).
 
 ### Mốc 3 — Pipeline số hoá + Knowledge Base
 

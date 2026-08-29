@@ -106,6 +106,15 @@ const fieldSchema = z.object({
   min: z.number().optional(),
   max: z.number().optional(),
   options: z.array(optionSchema).optional(),
+  /**
+   * Kiểu thật của giá trị khi ghi vào payload.
+   *
+   * Lựa chọn trong tệp cấu hình luôn là CHUỖI (JSON không cho khoá số), nhưng hợp đồng có
+   * trường là số nguyên — `massing.wings_preferred` chẳng hạn. Không khai kiểu ở đây thì
+   * biểu mẫu ghi `"1"` vào chỗ đòi `1`, và lỗi chỉ nổ ra ở tận bước đúc artifact, sau khi
+   * người dùng đã điền xong cả biểu mẫu.
+   */
+  value_type: z.enum(['string', 'number']).optional(),
   when: conditionSchema.optional(),
   note: z.string().optional(),
 });
@@ -124,18 +133,15 @@ export const briefFormConfigSchema = z
     _doc: z.string().optional(),
     version: z.string().regex(/^\d+\.\d+\.\d+$/),
     sections: z.array(sectionSchema).min(1),
-    /** Tham số của các phép soát mâu thuẫn — xem `brief-completeness.ts`. */
-    consistency: z.object({
-      /**
-       * Số người tối đa một phòng ngủ được coi là chứa nổi, dùng cho cảnh báo
-       * "khai 6 người mà chỉ có phòng ngủ chung".
-       *
-       * ⚠️ Đây KHÔNG phải ngưỡng quy chuẩn — quy chuẩn về diện tích ở tối thiểu nằm trong
-       * rule pack và do Container đánh giá (CLAUDE.md 8.7). Đây chỉ là mức để hệ thống biết
-       * lúc nào nên hỏi lại người nhập.
-       */
-      nguoi_moi_phong_ngu: z.number().int().min(1),
-    }),
+    /**
+     * Cấu hình của phần soát mâu thuẫn.
+     *
+     * Hiện RỖNG, và đó là kết quả đúng chứ không phải chỗ bỏ dở: mọi phép kiểm ở
+     * `brief-completeness.ts` đều thuần số học và cấu trúc, không cần một ngưỡng nào. Giữ
+     * lại khoá để chỗ khai tham số nằm sẵn ở đây khi cần — nhưng khai một tham số mà không
+     * phép kiểm nào đọc tới còn tệ hơn không khai, vì nó tạo cảm giác đã cấu hình được.
+     */
+    consistency: z.object({}).strict(),
   })
   .strict();
 
