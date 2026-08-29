@@ -28,7 +28,7 @@ const BRIEF = {
   schema_version: '1.0.0',
   project_id: '11111111-1111-4111-8111-111111111111',
   building_type: 'nha_pho',
-  locality: 'thai_binh',
+  locality: 'hung_yen',
   site: { width_m: 5, depth_m: 18 },
   floors: 3,
 } as const;
@@ -62,7 +62,7 @@ describe('Chuẩn hoá JSON và mã băm artifact', () => {
   });
 
   it('băm cấu hình không mang tiền tố sha256 vì nó không phải mã artifact', async () => {
-    const hash = await paramsHash({ locality: 'thai_binh' });
+    const hash = await paramsHash({ locality: 'hung_yen' });
     expect(hash).toMatch(/^[0-9a-f]{64}$/);
   });
 });

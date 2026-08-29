@@ -23,7 +23,13 @@
  * cho cùng một chương trình không gian, và mã băm artifact có nghĩa.
  */
 
-import type { DesignBrief, SpaceProgram } from '@nvg/shared/design';
+import { formatNumber } from '@nvg/shared/format';
+import {
+  siteGeometry,
+  type DesignBrief,
+  type SiteGeometry,
+  type SpaceProgram,
+} from '@nvg/shared/design';
 import type { RulePack } from './rule-pack';
 import { bandFor, type FloorPreference, type SpaceNorms } from './norms';
 import type { RoomAreaPriors } from './priors';
@@ -75,14 +81,22 @@ export function buildSpaceProgram(inputs: ProgramInputs): ProgramResult {
   const buildingType = brief.building_type;
   const floors = brief.floors;
 
-  if (rules.localityMissing) {
+  // Hình học thửa đất tính MỘT lần rồi dùng chung: diện tích thật, ô chữ nhật xây được, phần
+  // đất không xếp được phòng. Tính lại ở từng chỗ cần là mở đường cho hai chỗ hiểu khác nhau.
+  const geometry = siteGeometry(brief.site);
+  const footprint = buildableFootprint(brief, geometry, rules, warnings);
+
+  // Dải bề rộng lấy theo ô XÂY ĐƯỢC, không theo mặt tiền: "nhà ống hẹp" là chuyện phòng bị
+  // bó bao nhiêu, và với thửa hình thang thì phần hẹp mới là phần quyết định điều đó.
+  const scale = bandFor(norms, geometry.buildable.widthM).scale;
+
+  if (geometry.unusedM2 > 0.5) {
     warnings.push(
-      `Chưa có gói quy tắc riêng cho địa phương "${brief.locality}" — đang áp dụng gói nền.`,
+      `Bộ giải làm việc trên phần đất hình chữ nhật ${formatNumber(geometry.buildable.widthM)} × ` +
+        `${formatNumber(geometry.buildable.depthM)} m; còn ${formatNumber(geometry.unusedM2)} m² ` +
+        'nằm ngoài phần đó chưa được xếp phòng.',
     );
   }
-
-  const footprint = buildableFootprint(brief, rules, warnings);
-  const scale = bandFor(norms, brief.site.width_m).scale;
 
   // ── 1. Có những không gian nào, mỗi loại mấy cái ────────────────────────────────────
   const requests = collectRequests(inputs, warnings);
@@ -150,15 +164,28 @@ export function buildSpaceProgram(inputs: ProgramInputs): ProgramResult {
  *
  * Khoảng lùi khai trong đầu bài THẮNG rule pack: đó là số đo thực tế của mảnh đất này (giấy
  * phép quy hoạch, chỉ giới đã cắm), còn rule pack là mức chung của loại hình.
+ *
+ * Hai con số vào đây đến từ HAI nguồn khác nhau, và trộn chúng là lỗi đã từng có:
+ *
+ *  · Khoảng lùi trừ vào **ô chữ nhật xây được** (`geometry.buildable`) — thứ bộ giải thật sự
+ *    xếp phòng lên. Với thửa hình thang, ô đó hẹp hơn mặt tiền.
+ *  · Mật độ xây dựng nhân với **diện tích THẬT của thửa** (`geometry.areaM2`), vì chỉ tiêu quy
+ *    hoạch tính trên diện tích ghi trong giấy chứng nhận, không phải trên hình bao. Dùng
+ *    `width_m × depth_m` như trước là nới trần mật độ cho mọi thửa không vuông vắn.
  */
-function buildableFootprint(brief: DesignBrief, rules: RulePack, warnings: string[]): number {
+function buildableFootprint(
+  brief: DesignBrief,
+  geometry: SiteGeometry,
+  rules: RulePack,
+  warnings: string[],
+): number {
   const packSetbacks = rules.setbacks(brief.building_type);
   const briefSetbacks = brief.site.setback_required_m ?? {};
   const side = (name: 'front' | 'back' | 'left' | 'right'): number =>
     briefSetbacks[name] ?? packSetbacks[name] ?? 0;
 
-  const width = brief.site.width_m - side('left') - side('right');
-  const depth = brief.site.depth_m - side('front') - side('back');
+  const width = geometry.buildable.widthM - side('left') - side('right');
+  const depth = geometry.buildable.depthM - side('front') - side('back');
   if (width <= 0 || depth <= 0) {
     throw new ProgramError(
       'Khoảng lùi bắt buộc lớn hơn kích thước lô — không còn phần đất nào xây được. Kiểm tra lại kích thước hoặc khoảng lùi trong đầu bài.',
@@ -166,8 +193,8 @@ function buildableFootprint(brief: DesignBrief, rules: RulePack, warnings: strin
   }
 
   const density = brief.site.max_density ?? rules.maxDensity(brief.building_type);
-  const lot = brief.site.width_m * brief.site.depth_m;
-  const byDensity = density === null || density === undefined ? Infinity : lot * density;
+  const byDensity =
+    density === null || density === undefined ? Infinity : geometry.areaM2 * density;
   const footprint = Math.min(width * depth, byDensity);
 
   if (density === null || density === undefined) {

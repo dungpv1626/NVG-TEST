@@ -24,7 +24,7 @@ const PROJECT_ID = '11111111-1111-1111-1111-111111111111';
 
 const full: DesignBriefDraft = {
   building_type: 'nha_pho',
-  locality: 'thai_binh',
+  locality: 'hung_yen',
   site: {
     width_m: 5,
     depth_m: 18,

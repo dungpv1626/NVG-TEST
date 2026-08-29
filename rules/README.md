@@ -11,13 +11,14 @@ phương đổi lại phải triển khai lại hệ thống.
 ```
 rules/
   base/                 áp dụng mọi nơi — QCVN 01:2021/BXD + quy tắc công năng
-  locality/
-    thai-binh/          ghi đè theo địa phương: khoảng lùi, mật độ xây dựng
+                        (gồm cả khoảng lùi và mật độ xây dựng: chúng là quy chuẩn QUỐC GIA)
+  locality/             ghi đè khi tỉnh có văn bản quy hoạch riêng — HIỆN CHƯA CÓ GÓI NÀO
   messages.vi.yaml      mẫu câu thông báo cho người dùng, theo rule_id
 ```
 
 `DesignBrief.locality` quyết định nạp gói nào. Gói địa phương **ghi đè** gói `base` theo
-`rule_id`; quy tắc không có trong gói địa phương thì lấy từ `base`.
+`rule_id`; quy tắc không có trong gói địa phương thì lấy từ `base`. Tỉnh chưa có gói riêng
+thì chạy nguyên gói `base` — xem `rules/locality/README.md`.
 
 ## Hai trường quan trọng nhất
 
@@ -59,12 +60,17 @@ thêm một cách mã hoá vào CP-SAT phải kiểm chứng.
 
 ## Trạng thái hiện tại
 
-Gói `base` soạn từ **QCVN 01:2021/BXD**. Gói `thai-binh` để mỏng, dày lên khi kiến trúc sư
-đọc và bổ sung.
+Gói `base` soạn từ **QCVN 01:2021/BXD**. `rules/locality/` chưa có gói nào — NVG chưa nhận
+được văn bản quy hoạch riêng của tỉnh nào để trích dẫn.
 
 ⚠️ **Chưa có kiến trúc sư đọc và xác nhận** — xem vướng mắc V-3 ở `TIEN_DO_THIET_KE.html`.
 Mọi quy tắc `source: "kinh nghiệm NVG"` dưới đây là **suy luận gián tiếp**, phải được xác
 nhận trước khi coi là yêu cầu đã chốt.
 
-⚠️ **Thái Bình đã sáp nhập vào tỉnh Hưng Yên** (sắp xếp đơn vị hành chính 2025). Tên thư mục
-và văn bản quy hoạch địa phương nào đang có hiệu lực — câu hỏi Q-8, chờ Haan.
+✅ **Câu hỏi Q-8 đã trả lời (29/08/2026).** Thái Bình đã sáp nhập vào tỉnh **Hưng Yên** sau
+sắp xếp đơn vị hành chính 2025; `thai_binh` không còn là giá trị `locality` hợp lệ. Biểu mẫu
+đầu bài nay cho chọn đủ **34 đơn vị hành chính**, nhóm đầu là bốn địa bàn NVG thường thi công
+(Hưng Yên, Hải Phòng, Ninh Bình, Hà Nội).
+
+⏳ **Còn treo:** văn bản quy hoạch của từng tỉnh. Chừng nào chưa có văn bản để trích vào khoá
+`source`, không tạo gói địa phương nào — xem `rules/locality/README.md` để biết vì sao.

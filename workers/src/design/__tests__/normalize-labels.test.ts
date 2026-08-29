@@ -42,8 +42,16 @@ describe('Từ vựng phòng', () => {
     const groups = new Set(Object.keys(vocabulary.group_targets ?? {}));
     const codes = new Set(vocabulary.types.map((t) => t.code));
 
+    // Duyệt gói nền CỘNG mọi gói địa phương đang có, thay vì liệt kê tay: gói địa phương
+    // sinh ra khi tỉnh gửi văn bản quy hoạch, và người thêm gói đó không có lý do gì để nhớ
+    // quay lại sửa danh sách trong một tệp kiểm thử.
+    const localityRoot = root('rules/locality');
+    const localityDirs = readdirSync(localityRoot, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => `rules/locality/${entry.name}`);
+
     const targets = new Set<string>();
-    for (const dir of ['rules/base', 'rules/locality/thai-binh']) {
+    for (const dir of ['rules/base', ...localityDirs]) {
       let files: string[];
       try {
         files = readdirSync(root(dir)).filter((f) => f.endsWith('.yaml'));

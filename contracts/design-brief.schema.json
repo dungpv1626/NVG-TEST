@@ -7,7 +7,9 @@
   "additionalProperties": false,
   "required": ["schema_version", "project_id", "building_type", "locality", "site", "floors"],
   "properties": {
-    "schema_version": { "$ref": "#/$defs/semver" },
+    "schema_version": {
+      "$ref": "#/$defs/semver"
+    },
     "project_id": {
       "type": "string",
       "format": "uuid",
@@ -18,7 +20,9 @@
       "maxLength": 40,
       "description": "Mã hồ sơ hiển thị (NVO-TK-2026-0001) — chỉ để đọc, không phải khoá."
     },
-    "building_type": { "$ref": "#/$defs/building_type" },
+    "building_type": {
+      "$ref": "#/$defs/building_type"
+    },
     "locality": {
       "type": "string",
       "pattern": "^[a-z0-9_]+$",
@@ -29,8 +33,51 @@
       "additionalProperties": false,
       "required": ["width_m", "depth_m"],
       "properties": {
-        "width_m": { "type": "number", "exclusiveMinimum": 0, "maximum": 500 },
-        "depth_m": { "type": "number", "exclusiveMinimum": 0, "maximum": 500 },
+        "shape": {
+          "type": ["string", "null"],
+          "enum": ["chu_nhat", "hinh_thang", "da_giac", null],
+          "description": "Hình thửa đất. Vắng mặt = chu_nhat. `hinh_thang`: mặt tiền và mặt hậu rộng khác nhau (dạng không đều phổ biến nhất trên thực địa) — khai thêm `rear_width_m`. `da_giac`: tứ giác, ngũ giác… không quy về hai dạng trên được — khai `boundary_m`."
+        },
+        "width_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 500,
+          "description": "**Chiều rộng MẶT TIỀN** — cạnh giáp đường, đo tại y = 0. Trước 29/08/2026 trường này chỉ ghi \"chiều rộng lô\", đọc được thành ba nghĩa khác nhau khi thửa không phải hình chữ nhật. Với `da_giac`, đây là chiều dài cạnh đầu tiên của `boundary_m` (đỉnh 0 → đỉnh 1)."
+        },
+        "depth_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 500,
+          "description": "Chiều sâu lớn nhất của thửa, đo vuông góc với mặt tiền."
+        },
+        "rear_width_m": {
+          "type": ["number", "null"],
+          "exclusiveMinimum": 0,
+          "maximum": 500,
+          "description": "Chiều rộng mặt hậu, đo tại y = depth_m. Chỉ có nghĩa với `shape: hinh_thang`; vắng mặt thì coi bằng `width_m`. Mô hình giả định hai cạnh bên đối xứng qua trục giữa — đủ cho việc soạn chương trình không gian; thửa lệch hẳn một bên thì khai bằng `da_giac`."
+        },
+        "boundary_m": {
+          "type": ["array", "null"],
+          "minItems": 3,
+          "maxItems": 24,
+          "items": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "number",
+              "minimum": -500,
+              "maximum": 500
+            }
+          },
+          "description": "Ranh giới thửa cho `shape: da_giac` — danh sách đỉnh [x, y] mét, đi theo một chiều, KHÔNG lặp lại đỉnh đầu ở cuối. Cạnh đỉnh 0 → đỉnh 1 là cạnh giáp đường. Bộ giải làm việc trên hình chữ nhật lớn nhất nội tiếp đa giác này, không phải trên chính đa giác — xem `siteGeometry` (@nvg/shared/design)."
+        },
+        "area_m2": {
+          "type": ["number", "null"],
+          "exclusiveMinimum": 0,
+          "maximum": 250000,
+          "description": "Diện tích theo giấy chứng nhận quyền sử dụng đất. KHÔNG dùng để tính toán — dùng để ĐỐI CHIẾU với diện tích suy ra từ kích thước đã khai; lệch nhiều nghĩa là một trong hai số đã nhập sai."
+        },
         "orientation": {
           "type": ["string", "null"],
           "enum": ["B", "BD", "D", "DN", "N", "TN", "T", "TB", null],
@@ -38,22 +85,39 @@
         },
         "access_sides": {
           "type": "array",
-          "items": { "type": "string", "enum": ["front", "back", "left", "right"] },
+          "items": {
+            "type": "string",
+            "enum": ["front", "back", "left", "right"]
+          },
           "uniqueItems": true
         },
         "adjacent": {
           "type": "object",
-          "additionalProperties": { "type": ["string", "null"] },
+          "additionalProperties": {
+            "type": ["string", "null"]
+          },
           "description": "Hiện trạng bốn phía: nha_hang_xom, hem_2m, duong_lon, dat_trong…"
         },
         "setback_required_m": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "front": { "type": "number", "minimum": 0 },
-            "back": { "type": "number", "minimum": 0 },
-            "left": { "type": "number", "minimum": 0 },
-            "right": { "type": "number", "minimum": 0 }
+            "front": {
+              "type": "number",
+              "minimum": 0
+            },
+            "back": {
+              "type": "number",
+              "minimum": 0
+            },
+            "left": {
+              "type": "number",
+              "minimum": 0
+            },
+            "right": {
+              "type": "number",
+              "minimum": 0
+            }
           }
         },
         "max_density": {
@@ -62,10 +126,17 @@
           "maximum": 1,
           "description": "Mật độ xây dựng tối đa, tỉ lệ 0..1. null = chưa biết, lấy theo rule pack."
         },
-        "legal_docs_available": { "type": "boolean" }
-      }
+        "legal_docs_available": {
+          "type": "boolean"
+        }
+      },
+      "description": "Thửa đất trong hệ toạ độ CỤC BỘ: trục x chạy dọc mặt tiền, trục y đi vào chiều sâu, gốc ở góc trước-trái, đường nằm ở y = 0. Mọi kích thước dưới đây đọc trong hệ đó."
     },
-    "floors": { "type": "integer", "minimum": 1, "maximum": 12 },
+    "floors": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 12
+    },
     "family": {
       "type": "array",
       "items": {
@@ -77,15 +148,29 @@
             "type": "string",
             "enum": ["ong_ba", "vo_chong", "con", "khach", "nguoi_giup_viec"]
           },
-          "count": { "type": "integer", "minimum": 0, "maximum": 20 },
-          "floor_pref": { "type": ["string", "null"], "enum": ["low", "mid", "top", null] },
-          "needs": { "type": "array", "items": { "type": "string" } }
+          "count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 20
+          },
+          "floor_pref": {
+            "type": ["string", "null"],
+            "enum": ["low", "mid", "top", null]
+          },
+          "needs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
         }
       }
     },
     "required_spaces": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string"
+      },
       "uniqueItems": true,
       "description": "Mã không gian, lấy từ kb/room_vocabulary.yaml. Mã không có trong từ vựng đó thì không rule nào của rule pack nhắm tới, và nó đi qua cả engine mà chưa từng bị kiểm quy chuẩn. \"Có sân trong hay không\" khai ở đây bằng mã `courtyard`; VỊ TRÍ các sân khai ở `massing.yards`."
     },
@@ -118,7 +203,10 @@
         "yards": {
           "type": "array",
           "uniqueItems": true,
-          "items": { "type": "string", "enum": ["san_truoc", "san_ben", "san_trong", "san_sau"] },
+          "items": {
+            "type": "string",
+            "enum": ["san_truoc", "san_ben", "san_trong", "san_sau"]
+          },
           "description": "Tổ chức sân vườn — sân nằm ở đâu so với khối nhà. Khác `required_spaces`: ở đó khai CÓ sân, ở đây khai sân NẰM ĐÂU."
         },
         "indoor_outdoor": {
@@ -128,21 +216,36 @@
         }
       }
     },
-    "style": { "type": ["string", "null"], "enum": ["hien_dai", "tan_co_dien", "indochine", null] },
+    "style": {
+      "type": ["string", "null"],
+      "enum": ["hien_dai", "tan_co_dien", "indochine", null]
+    },
     "budget_range_vnd": {
       "type": ["array", "null"],
       "minItems": 2,
       "maxItems": 2,
-      "items": { "type": "integer", "minimum": 0 },
+      "items": {
+        "type": "integer",
+        "minimum": 0
+      },
       "description": "[cận dưới, cận trên] đơn vị ĐỒNG, số nguyên (CLAUDE.md 4.2 — tiền không có phần thập phân)."
     },
-    "priorities": { "type": "array", "items": { "type": "string" } },
+    "priorities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "decision_maker": {
       "type": ["object", "null"],
       "additionalProperties": false,
       "properties": {
-        "name": { "type": ["string", "null"] },
-        "relationship": { "type": ["string", "null"] }
+        "name": {
+          "type": ["string", "null"]
+        },
+        "relationship": {
+          "type": ["string", "null"]
+        }
       },
       "description": "Bắt buộc THU THẬP dù được để trống — thiếu người quyết định là nguyên nhân hàng đầu phải sửa phương án nhiều lần (03-data-contracts 3.1)."
     },
@@ -152,10 +255,21 @@
       "maximum": 1,
       "description": "Ngưỡng cho phép chạy Layer 2 nằm trong config, KHÔNG hard-code ở đây."
     },
-    "missing_fields": { "type": "array", "items": { "type": "string" } }
+    "missing_fields": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
   },
   "$defs": {
-    "semver": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
-    "building_type": { "type": "string", "enum": ["nha_pho", "biet_thu", "nha_vuon"] }
+    "semver": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "building_type": {
+      "type": "string",
+      "enum": ["nha_pho", "biet_thu", "nha_vuon"]
+    }
   }
 }

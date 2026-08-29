@@ -136,6 +136,15 @@ def load_for_locality(rules_root: Path, locality: str | None) -> RulePack:
     """Nạp pack đang có hiệu lực cho một địa phương: pack nền, rồi pack địa phương ghi đè.
 
     `locality` lấy từ `DesignBrief.locality`. `None` thì chỉ nạp pack nền.
+
+    **Tỉnh chưa có gói riêng thì lùi về gói nền, KHÔNG ném lỗi.** Trước 29/08/2026 hàm này
+    ném `RulePackError`, và điều đó đúng khi đầu bài chỉ cho chọn một tỉnh duy nhất. Từ khi
+    biểu mẫu mở ra đủ 34 đơn vị hành chính, ném lỗi nghĩa là: người dùng chọn "Hải Phòng",
+    Lớp 2 chạy bình thường (Worker vốn đã lùi về gói nền), rồi Lớp 3b đổ ở bước giải ràng
+    buộc — hai lớp đọc cùng một rule pack mà kết luận khác nhau về chính sự tồn tại của nó.
+
+    Gói nền đã mang đủ khoảng lùi và mật độ theo QCVN 01:2021/BXD nên bản lùi về vẫn đúng
+    quy chuẩn quốc gia; `pack.locality is None` là cách gọi lại kết quả đó.
     """
     rules_root = Path(rules_root)
     base = load_pack(rules_root / "base")
@@ -143,12 +152,9 @@ def load_for_locality(rules_root: Path, locality: str | None) -> RulePack:
     if locality is None:
         return base
 
-    # Tên thư mục dùng gạch nối; giá trị trong đầu bài dùng gạch dưới (thai_binh -> thai-binh).
+    # Tên thư mục dùng gạch nối; giá trị trong đầu bài dùng gạch dưới (hung_yen -> hung-yen).
     locality_dir = rules_root / "locality" / locality.replace("_", "-")
     if not locality_dir.is_dir():
-        raise RulePackError(
-            f"không có rule pack cho địa phương {locality!r} tại {locality_dir}. "
-            "Thêm một địa phương là thêm DỮ LIỆU, không phải sửa mã nguồn."
-        )
+        return base
 
     return merge(base, load_pack(locality_dir))

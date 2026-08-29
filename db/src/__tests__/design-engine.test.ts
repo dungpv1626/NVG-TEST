@@ -425,7 +425,7 @@ describeDb('Module Thiết kế AI — nền tảng', () => {
         .select('key, value')
         .in('key', ['rule_pack_locality', 'brief_completeness_min']);
       const map = Object.fromEntries((data ?? []).map((r) => [r.key, r.value]));
-      expect(map.rule_pack_locality).toBe('thai_binh');
+      expect(map.rule_pack_locality).toBe('hung_yen');
       expect(map.brief_completeness_min).toBe(0.7);
     });
 

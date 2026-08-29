@@ -23,6 +23,7 @@
  * vào một con số sẽ cho người dùng một điểm thấp mà không biết phải làm gì.
  */
 
+import { formatNumber } from '../format';
 import type { DesignBriefDraft } from './brief-draft';
 import {
   isAnswered,
@@ -31,6 +32,8 @@ import {
   type BriefFormConfig,
   type BriefFormField,
 } from './brief-form';
+import type { DesignBrief } from './design-brief.generated';
+import { siteGeometry } from './site-geometry';
 
 // ---------------------------------------------------------------------------
 // Độ đầy đủ
@@ -154,6 +157,55 @@ export function checkBriefConsistency(
         message:
           'Khoảng lùi hai bên cộng lại đã bằng hoặc vượt bề rộng lô đất — không còn dải nào để đặt công trình. Kiểm tra lại số đo hoặc khoảng lùi theo quy hoạch.',
         paths: ['site.width_m', 'site.setback_required_m'],
+      });
+    }
+  }
+
+  // --- Hình thửa đất khai một đằng, số đo một nẻo ---------------------------
+  // Ba phép kiểm dưới đây đều thuần số học, và cả ba đều bắt loại nhầm mà không lỗi nào lộ
+  // ra: đầu bài vẫn hợp lệ theo hợp đồng, engine vẫn chạy, chỉ là chạy trên một mảnh đất
+  // khác mảnh đất thật.
+  const shape = site?.shape ?? 'chu_nhat';
+
+  if (shape === 'hinh_thang' && typeof site?.rear_width_m !== 'number') {
+    found.push({
+      code: 'hinh_thang_thieu_mat_hau',
+      severity: 'nghiem_trong',
+      message:
+        'Thửa đất khai là hình thang nhưng chưa có chiều rộng mặt hậu. Nhập số đo mặt hậu, hoặc chọn lại hình thửa là chữ nhật.',
+      paths: ['site.shape', 'site.rear_width_m'],
+    });
+  }
+
+  if (shape === 'da_giac' && (site?.boundary_m ?? []).length < 3) {
+    found.push({
+      code: 'da_giac_thieu_ranh_gioi',
+      severity: 'nghiem_trong',
+      message:
+        'Thửa đất khai là đa giác nhưng ranh giới chưa đủ ba đỉnh. Nhập toạ độ các đỉnh, hoặc chọn lại hình thửa.',
+      paths: ['site.shape', 'site.boundary_m'],
+    });
+  }
+
+  // Diện tích trên giấy chứng nhận đối chiếu với diện tích suy từ số đo. Ngưỡng 5% là mức
+  // để hệ thống biết lúc nào nên HỎI LẠI người nhập — sai số đo đạc thực địa vẫn nằm trong
+  // đó — chứ không phải một yêu cầu pháp lý; nó cùng loại với `nguoi_moi_phong_ngu`.
+  if (typeof site?.area_m2 === 'number' && site.area_m2 > 0) {
+    let computed: number | null = null;
+    try {
+      computed = siteGeometry(site as DesignBrief['site']).areaM2;
+    } catch {
+      // Số đo chưa đủ để dựng hình — hai phép kiểm ở trên đã nói ra rồi, không nói lại.
+      computed = null;
+    }
+    if (computed !== null && Math.abs(computed - site.area_m2) / site.area_m2 > 0.05) {
+      found.push({
+        code: 'dien_tich_lech_giay_to',
+        severity: 'canh_bao',
+        message:
+          `Diện tích suy ra từ số đo là ${formatNumber(computed)} m², lệch quá 5% so với ` +
+          `${formatNumber(site.area_m2)} m² ghi trên giấy chứng nhận. Kiểm tra lại số đo hoặc hình thửa.`,
+        paths: ['site.area_m2', 'site.width_m', 'site.depth_m'],
       });
     }
   }

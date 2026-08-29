@@ -68,6 +68,15 @@ const conditionSchema: z.ZodType<BriefCondition> = z.lazy(() =>
  * Kiểu điều khiển. KHÔNG có `date` và KHÔNG có `number` gốc của trình duyệt: hai thứ đó tự
  * sinh chữ tiếng Anh trên máy đặt ngôn ngữ khác (CLAUDE.md 4.1). `number` ở đây là ô chữ
  * với `inputMode`, `money_range` là hai `MoneyInput`.
+ *
+ * `choice` và `select` cùng là "chọn đúng một", khác nhau ở SỐ LƯỢNG lựa chọn: `choice` vẽ
+ * chip bật/tắt (đọc lướt được, hợp với 3–8 mục), `select` vẽ `<select>` gốc có nhóm (hợp với
+ * hàng chục mục). `<select>` nằm trong danh sách an toàn của CLAUDE.md 4.1 vì mọi chữ bên
+ * trong nó là chữ của chúng ta — nó không tự sinh câu nào như `date` hay `number`.
+ *
+ * `polygon` là bảng toạ độ đỉnh của ranh giới thửa đất — dạng duy nhất mô tả được thửa tứ
+ * giác hay ngũ giác không đều mà không mập mờ. Chiều dài các cạnh thì không: cùng bộ độ dài
+ * cạnh ứng với vô số hình khác nhau.
  */
 export const BRIEF_CONTROLS = [
   'text',
@@ -75,16 +84,40 @@ export const BRIEF_CONTROLS = [
   'number',
   'money_range',
   'choice',
+  'select',
   'multi',
   'tristate',
   'family',
   'sides',
+  'polygon',
 ] as const;
 export type BriefControl = (typeof BRIEF_CONTROLS)[number];
 
 const optionSchema = z.object({
   value: z.string(),
   label: z.string(),
+  /**
+   * Nhãn nhóm, chỉ dùng cho `select`.
+   *
+   * Sinh ra vì danh sách địa phương có 34 mục: đọc hết 34 dòng để tìm bốn tỉnh NVG thi công
+   * hằng ngày là bắt người dùng trả giá cho tính đầy đủ của danh sách. Nhóm giữ được cả hai —
+   * đủ 34 lựa chọn, mà bốn cái hay dùng nằm ngay đầu.
+   *
+   * Tuỳ chọn không khai `group` xếp trước mọi nhóm, đúng thứ tự khai trong tệp cấu hình.
+   */
+  group: z.string().optional(),
+  /**
+   * Giá trị KHÔNG còn chọn được nữa, nhưng vẫn phải đọc ra chữ.
+   *
+   * Sinh ra từ sắp xếp đơn vị hành chính 2025: `thai_binh` không còn là một tỉnh, nhưng hồ
+   * sơ đã xác nhận trước đó vẫn mang mã ấy — và bản đã xác nhận là BẤT BIẾN, sửa nó là làm
+   * sai lệch chính thứ nó sinh ra để bảo vệ. Bỏ hẳn lựa chọn khỏi cấu hình thì màn hình hiện
+   * đúng chữ `thai_binh` giữa một trang tiếng Việt.
+   *
+   * Danh sách chọn bỏ qua mục này; chỉ khi nó ĐANG là giá trị của hồ sơ thì mới hiện, xếp
+   * riêng một nhóm — để người sửa thấy mình đang giữ một giá trị đã hết hiệu lực.
+   */
+  retired: z.boolean().optional(),
   note: z.string().optional(),
 });
 

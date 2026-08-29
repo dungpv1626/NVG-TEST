@@ -31,7 +31,7 @@ function structured(overrides: Record<string, unknown> = {}) {
   return {
     schema_version: '1.0.0',
     building_type: 'nha_pho',
-    locality: 'thai_binh',
+    locality: 'hung_yen',
     site: { width_m: 5, depth_m: 18 },
     floors: 3,
     completeness_score: 0.62,

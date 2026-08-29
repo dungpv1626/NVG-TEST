@@ -206,9 +206,17 @@ class TestLocalityOverride:
         assert "stair_alignment" in merged.by_id()
         assert len(merged.rules) == len(base.rules)
 
-    def test_unknown_locality_names_the_fix(self) -> None:
-        with pytest.raises(RulePackError, match="thêm DỮ LIỆU"):
-            load_for_locality(RULES_ROOT, "nowhere")
+    def test_unknown_locality_falls_back_to_base_instead_of_raising(self) -> None:
+        """Tỉnh chưa có gói riêng phải cho ra ĐÚNG gói nền, không phải một lỗi.
+
+        Biểu mẫu đầu bài cho chọn 34 đơn vị hành chính còn `rules/locality/` chưa có gói
+        nào; ném lỗi ở đây nghĩa là Lớp 2 chạy xong (Worker vốn lùi về gói nền) rồi Lớp 3b
+        mới đổ — hai lớp đọc cùng một rule pack mà kết luận khác nhau về sự tồn tại của nó.
+        """
+        base = load_pack(RULES_ROOT / "base")
+        fallback = load_for_locality(RULES_ROOT, "nowhere")
+        assert [r.id for r in fallback.rules] == [r.id for r in base.rules]
+        assert fallback.locality is None
 
 
 class TestShippedPacks:
@@ -223,21 +231,26 @@ class TestShippedPacks:
         issues = [i for i in validate_pack(load_pack(RULES_ROOT / "base")) if i.level == "error"]
         assert issues == []
 
-    def test_thai_binh_pack_merges_onto_base(self) -> None:
-        pack = load_for_locality(RULES_ROOT, "thai_binh")
-        by_id = pack.by_id()
-        assert "setback_front" in by_id, "quy tắc riêng của địa phương"
-        assert "corridor_min_width" in by_id, "quy tắc nền vẫn kế thừa"
-        assert pack.locality == "thai_binh"
+    def test_base_pack_carries_setback_and_density(self) -> None:
+        """Khoảng lùi và mật độ là QCVN — quy chuẩn QUỐC GIA, nên phải ở gói nền.
+
+        Chúng từng nằm trong gói `thai-binh`, và hệ quả là tỉnh nào chưa có gói riêng cũng
+        chạy không khoảng lùi, không trần mật độ: biệt thự được phép phủ kín lô mà không có
+        lỗi nào nổ ra.
+        """
+        by_id = load_pack(RULES_ROOT / "base").by_id()
+        assert "setback_front" in by_id
+        assert "max_density_villa" in by_id
+        assert "corridor_min_width" in by_id
 
     def test_every_error_rule_cites_a_legal_document(self) -> None:
         """The invariant the whole split rests on."""
-        pack = load_for_locality(RULES_ROOT, "thai_binh")
+        pack = load_for_locality(RULES_ROOT, "hung_yen")
         offenders = [r.id for r in pack.errors() if not r.is_legal]
         assert offenders == [], f"quy tắc chặn phát hành mà không dẫn văn bản: {offenders}"
 
     def test_no_rule_targets_out_of_scope_building_type(self) -> None:
-        pack = load_for_locality(RULES_ROOT, "thai_binh")
+        pack = load_for_locality(RULES_ROOT, "hung_yen")
         for rule in pack.rules:
             assert "nha_xuong" not in rule.applies_to
 

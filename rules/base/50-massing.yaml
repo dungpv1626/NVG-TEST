@@ -1,7 +1,13 @@
 # Đặt khối trong lô: khoảng lùi và mật độ xây dựng.
 #
-# ⚠️ Các giá trị dưới đây lấy từ QCVN 01:2021/BXD (mức chung), CHƯA phải quy định riêng
-#    của địa phương. Khi có văn bản quy hoạch của tỉnh thì sửa ở đây, không sửa mã nguồn.
+# Mọi giá trị ở đây lấy từ QCVN 01:2021/BXD — quy chuẩn QUỐC GIA, nên chỗ đúng của chúng là
+# gói nền. Trước 29/08/2026 chúng nằm trong gói địa phương `thai-binh`, và hệ quả là bất kỳ
+# tỉnh nào chưa có gói riêng đều chạy KHÔNG có khoảng lùi và KHÔNG có trần mật độ — biệt thự
+# ở tỉnh đó được phép phủ kín lô. Lỗi không nổ ra ở đâu cả, chỉ ra một chương trình không
+# gian rộng hơn thực tế cho phép.
+#
+# Gói địa phương ghi đè theo `id` khi tỉnh có văn bản quy hoạch riêng — xem
+# `rules/locality/README.md`. Hiện chưa tỉnh nào có, nên `rules/locality/` chưa có gói nào.
 
 # Nhà phố lấp kín lô, khoảng lùi bằng không ở cả bốn phía.
 - id: setback_front
@@ -35,7 +41,8 @@
   source: 'QCVN 01:2021/BXD'
   auto_repair: none
 
-# Biệt thự: khoảng lùi bốn phía. Giá trị tạm, chờ văn bản quy hoạch địa phương.
+# Biệt thự: khoảng lùi trước. Đây là con số dễ khác nhau giữa các tỉnh nhất (phụ thuộc lộ
+# giới do quy hoạch địa phương ấn định) — tỉnh nào có văn bản riêng thì ghi đè `id` này.
 - id: setback_front_villa
   applies_to: [biet_thu, nha_vuon]
   scope: site

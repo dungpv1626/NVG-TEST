@@ -40,10 +40,66 @@ export const designBriefSchema = z
       .describe(
         'Chọn rule pack địa phương. Giá trị ánh xạ sang thư mục rules/locality/<locality với _ đổi thành ->.',
       ),
+    /** Thửa đất trong hệ toạ độ CỤC BỘ: trục x chạy dọc mặt tiền, trục y đi vào chiều sâu, gốc ở góc trước-trái, đường nằm ở y = 0. Mọi kích thước dưới đây đọc trong hệ đó. */
     site: z
       .object({
-        width_m: z.number().lte(500).gt(0),
-        depth_m: z.number().lte(500).gt(0),
+        /** Hình thửa đất. Vắng mặt = chu_nhat. `hinh_thang`: mặt tiền và mặt hậu rộng khác nhau (dạng không đều phổ biến nhất trên thực địa) — khai thêm `rear_width_m`. `da_giac`: tứ giác, ngũ giác… không quy về hai dạng trên được — khai `boundary_m`. */
+        shape: z
+          .union([
+            z.literal('chu_nhat'),
+            z.literal('hinh_thang'),
+            z.literal('da_giac'),
+            z.literal(null),
+          ])
+          .nullable()
+          .describe(
+            'Hình thửa đất. Vắng mặt = chu_nhat. `hinh_thang`: mặt tiền và mặt hậu rộng khác nhau (dạng không đều phổ biến nhất trên thực địa) — khai thêm `rear_width_m`. `da_giac`: tứ giác, ngũ giác… không quy về hai dạng trên được — khai `boundary_m`.',
+          )
+          .optional(),
+        /** **Chiều rộng MẶT TIỀN** — cạnh giáp đường, đo tại y = 0. Trước 29/08/2026 trường này chỉ ghi "chiều rộng lô", đọc được thành ba nghĩa khác nhau khi thửa không phải hình chữ nhật. Với `da_giac`, đây là chiều dài cạnh đầu tiên của `boundary_m` (đỉnh 0 → đỉnh 1). */
+        width_m: z
+          .number()
+          .lte(500)
+          .gt(0)
+          .describe(
+            '**Chiều rộng MẶT TIỀN** — cạnh giáp đường, đo tại y = 0. Trước 29/08/2026 trường này chỉ ghi "chiều rộng lô", đọc được thành ba nghĩa khác nhau khi thửa không phải hình chữ nhật. Với `da_giac`, đây là chiều dài cạnh đầu tiên của `boundary_m` (đỉnh 0 → đỉnh 1).',
+          ),
+        /** Chiều sâu lớn nhất của thửa, đo vuông góc với mặt tiền. */
+        depth_m: z
+          .number()
+          .lte(500)
+          .gt(0)
+          .describe('Chiều sâu lớn nhất của thửa, đo vuông góc với mặt tiền.'),
+        /** Chiều rộng mặt hậu, đo tại y = depth_m. Chỉ có nghĩa với `shape: hinh_thang`; vắng mặt thì coi bằng `width_m`. Mô hình giả định hai cạnh bên đối xứng qua trục giữa — đủ cho việc soạn chương trình không gian; thửa lệch hẳn một bên thì khai bằng `da_giac`. */
+        rear_width_m: z
+          .number()
+          .lte(500)
+          .gt(0)
+          .nullable()
+          .describe(
+            'Chiều rộng mặt hậu, đo tại y = depth_m. Chỉ có nghĩa với `shape: hinh_thang`; vắng mặt thì coi bằng `width_m`. Mô hình giả định hai cạnh bên đối xứng qua trục giữa — đủ cho việc soạn chương trình không gian; thửa lệch hẳn một bên thì khai bằng `da_giac`.',
+          )
+          .optional(),
+        /** Ranh giới thửa cho `shape: da_giac` — danh sách đỉnh [x, y] mét, đi theo một chiều, KHÔNG lặp lại đỉnh đầu ở cuối. Cạnh đỉnh 0 → đỉnh 1 là cạnh giáp đường. Bộ giải làm việc trên hình chữ nhật lớn nhất nội tiếp đa giác này, không phải trên chính đa giác — xem `siteGeometry` (@nvg/shared/design). */
+        boundary_m: z
+          .array(z.array(z.number().gte(-500).lte(500)).min(2).max(2))
+          .min(3)
+          .max(24)
+          .nullable()
+          .describe(
+            'Ranh giới thửa cho `shape: da_giac` — danh sách đỉnh [x, y] mét, đi theo một chiều, KHÔNG lặp lại đỉnh đầu ở cuối. Cạnh đỉnh 0 → đỉnh 1 là cạnh giáp đường. Bộ giải làm việc trên hình chữ nhật lớn nhất nội tiếp đa giác này, không phải trên chính đa giác — xem `siteGeometry` (@nvg/shared/design).',
+          )
+          .optional(),
+        /** Diện tích theo giấy chứng nhận quyền sử dụng đất. KHÔNG dùng để tính toán — dùng để ĐỐI CHIẾU với diện tích suy ra từ kích thước đã khai; lệch nhiều nghĩa là một trong hai số đã nhập sai. */
+        area_m2: z
+          .number()
+          .lte(250000)
+          .gt(0)
+          .nullable()
+          .describe(
+            'Diện tích theo giấy chứng nhận quyền sử dụng đất. KHÔNG dùng để tính toán — dùng để ĐỐI CHIẾU với diện tích suy ra từ kích thước đã khai; lệch nhiều nghĩa là một trong hai số đã nhập sai.',
+          )
+          .optional(),
         /** Hướng nhà: B bắc · BD bắc-đông · D đông · DN đông-nam · N nam · TN tây-nam · T tây · TB tây-bắc. */
         orientation: z
           .union([
@@ -87,7 +143,10 @@ export const designBriefSchema = z
           .optional(),
         legal_docs_available: z.boolean().optional(),
       })
-      .strict(),
+      .strict()
+      .describe(
+        'Thửa đất trong hệ toạ độ CỤC BỘ: trục x chạy dọc mặt tiền, trục y đi vào chiều sâu, gốc ở góc trước-trái, đường nằm ở y = 0. Mọi kích thước dưới đây đọc trong hệ đó.',
+      ),
     floors: z.number().int().gte(1).lte(12),
     family: z
       .array(

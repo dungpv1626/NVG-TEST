@@ -207,7 +207,7 @@ describe('Không gõ lại số đã có ở khảo sát', () => {
 
     const notice = await screen.findByText(/khác biên bản khảo sát/);
     expect(notice.textContent).toContain('5.2');
-    expect(notice.textContent).toContain('5 × 18');
+    expect(notice.textContent).toContain('mặt tiền 5 m × sâu 18 m');
   });
 });
 
@@ -271,7 +271,7 @@ describe('Chế độ xem — không để lọt mã máy ra màn hình', () => 
   // hình tiếng Việt. Nhân sự NVG có người không đọc được tiếng Anh (CLAUDE.md 4.1).
   const filled = {
     building_type: 'nha_pho',
-    locality: 'thai_binh',
+    locality: 'hung_yen',
     site: { width_m: 5, depth_m: 18, orientation: 'N' },
     floors: 3,
     family: [{ role: 'vo_chong', count: 2, floor_pref: 'mid', needs: ['bedroom'] }],
@@ -293,7 +293,7 @@ describe('Chế độ xem — không để lọt mã máy ra màn hình', () => 
     const text = container.textContent ?? '';
     for (const code of [
       'nha_pho',
-      'thai_binh',
+      'hung_yen',
       'hien_dai',
       'natural_light',
       'vo_chong',
@@ -324,5 +324,55 @@ describe('Chế độ xem — không để lọt mã máy ra màn hình', () => 
 
     expect(screen.queryByText('Số cánh nhà mong muốn')).not.toBeInTheDocument();
     expect(screen.queryByText('Số lõi thang')).not.toBeInTheDocument();
+  });
+});
+
+describe('Hình thửa đất', () => {
+  it('gõ được kích thước lẻ — dấu thập phân không bị nuốt giữa chừng', async () => {
+    // Ô số điều khiển đơn giản mất dấu chấm ngay khi vừa gõ: `Number("3.")` là 3 nên ô vẽ
+    // lại thành "3", và ký tự tiếp theo cho ra "35". Người nhập 3,5 m mặt tiền được một
+    // thửa rộng 35 m. Mà kích thước thửa đất thì gần như luôn lẻ.
+    state.briefs = [brief()];
+    state.surveys = [];
+    await openForm();
+
+    const field = screen.getByLabelText('Chiều rộng mặt tiền') as HTMLInputElement;
+    await userEvent.clear(field);
+    await userEvent.type(field, '3.5');
+    expect(field.value).toBe('3.5');
+
+    // Dấu phẩy là cách viết số thập phân của tiếng Việt — phải gõ được y như dấu chấm.
+    await userEvent.clear(field);
+    await userEvent.type(field, '4,25');
+    expect(field.value).toBe('4,25');
+  });
+
+  it('chọn Hình thang thì hỏi mặt hậu, chọn Đa giác thì hỏi ranh giới', async () => {
+    state.briefs = [brief()];
+    state.surveys = [];
+    await openForm();
+
+    expect(screen.queryByLabelText('Chiều rộng mặt hậu')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Hình thang' }));
+    expect(await screen.findByLabelText('Chiều rộng mặt hậu')).toBeTruthy();
+    expect(screen.queryAllByText('Ranh giới thửa đất')).toHaveLength(0);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Đa giác không đều' }));
+    expect(await screen.findAllByText('Ranh giới thửa đất')).not.toHaveLength(0);
+    // Đa giác thì hai ô kích thước không còn nghĩa — ranh giới đã nói đủ.
+    expect(screen.queryByLabelText('Chiều rộng mặt hậu')).toBeNull();
+    expect(screen.queryByLabelText('Chiều rộng mặt tiền')).toBeNull();
+  });
+
+  it('hình thang thiếu mặt hậu thì nói ra ngay, không chờ tới lúc lưu', async () => {
+    state.briefs = [brief()];
+    state.surveys = [];
+    await openForm();
+    await userEvent.click(screen.getByRole('button', { name: 'Hình thang' }));
+
+    expect(
+      (await screen.findAllByText(/chưa có chiều rộng mặt hậu/)).length,
+      'cảnh báo phải hiện cả cạnh ô lẫn ở cột phải',
+    ).toBeGreaterThan(0);
   });
 });

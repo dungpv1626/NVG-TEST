@@ -105,6 +105,9 @@ export async function runLayer2(
     params: {
       norms_version: norms.version,
       locality: brief.locality,
+      // Chế độ quy tắc đã chạy, KHÔNG phải địa phương đã chọn: hai thứ này khác nhau chừng
+      // nào còn tỉnh chưa có gói riêng, và bản kết quả phải nói được mình dựa trên bộ số nào.
+      rule_pack_locality: rules.localityMissing ? null : brief.locality,
       priors_band: priors?.bandId ?? null,
     },
   };

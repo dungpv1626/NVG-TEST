@@ -81,7 +81,7 @@ describeE2e('Pipeline khung xương — đầu bài tới ảnh phối cảnh', 
       schema_version: '1.0.0',
       project_id: project.data.id,
       building_type: 'nha_pho',
-      locality: 'thai_binh',
+      locality: 'hung_yen',
       site: { width_m: 5, depth_m: 18 },
       floors: 3,
     };
@@ -122,7 +122,7 @@ describeE2e('Pipeline khung xương — đầu bài tới ảnh phối cảnh', 
       intentRef: intentArtifact.id,
       program: program.payload,
       site: { width_m: 5, depth_m: 18 },
-      locality: 'thai_binh',
+      locality: 'hung_yen',
       timeBudgetS: 30,
     });
     expect(solved.status, JSON.stringify(solved.payload).slice(0, 400)).toBe('ok');
@@ -134,7 +134,7 @@ describeE2e('Pipeline khung xương — đầu bài tới ảnh phối cảnh', 
       payload: solved.payload,
       inputs: [intentArtifact.id],
       step: 'layer3b_solve',
-      params: { locality: 'thai_binh', timeBudgetS: 30 },
+      params: { locality: 'hung_yen', timeBudgetS: 30 },
     });
 
     const arch = stubArchModel(solved.payload, planArtifact.id);
@@ -220,7 +220,7 @@ describeE2e('Pipeline khung xương — đầu bài tới ảnh phối cảnh', 
       intentRef: `sha256:${'b'.repeat(64)}`,
       program: impossible,
       site: { width_m: 5, depth_m: 18 },
-      locality: 'thai_binh',
+      locality: 'hung_yen',
       timeBudgetS: 20,
     });
 

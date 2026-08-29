@@ -19,13 +19,14 @@
  * diện tích và thống kê thực nghiệm — quá nhiều đầu vào để nhét vừa chữ ký chung của tệp này.
  */
 
-import type {
-  ArchModel,
-  DesignBrief,
-  FloorPlan,
-  LayoutIntent,
-  RenderResult,
-  SpaceProgram,
+import {
+  siteGeometry,
+  type ArchModel,
+  type DesignBrief,
+  type FloorPlan,
+  type LayoutIntent,
+  type RenderResult,
+  type SpaceProgram,
 } from '@nvg/shared/design';
 import type { ComputeBackend } from '../compute-backend';
 import { parseArtifact } from '../contracts';
@@ -108,7 +109,14 @@ export async function solveFloorPlan(
     intent: LayoutIntent;
     intentRef: string;
     program: SpaceProgram;
-    site: { width_m: number; depth_m: number };
+    /**
+     * Phần `site` NGUYÊN VĂN của đầu bài, không phải kích thước đã quy đổi sẵn.
+     *
+     * Quy đổi sang ô chữ nhật xây được làm ở ĐÂY, tại điểm gọi duy nhất, chứ không ở lớp
+     * trên: nơi nào chuẩn bị lời gọi mà tự quy đổi thì nơi đó có cơ hội quy đổi sai một
+     * cách riêng, và bộ giải nhận một mảnh đất khác mảnh đất Lớp 2 đã soạn chương trình.
+     */
+    site: DesignBrief['site'];
     locality: string;
     timeBudgetS: number;
   },
@@ -116,11 +124,16 @@ export async function solveFloorPlan(
   | { status: 'ok'; payload: FloorPlan; solveTimeMs: number }
   | { status: 'infeasible'; payload: unknown; solveTimeMs: number }
 > {
+  // Bộ giải CP-SAT chia hết MỘT hình chữ nhật — nó không có khái niệm "phần đất thừa".
+  // Đưa vào kích thước thô của một thửa hình thang là bảo nó xếp phòng lên phần đất không
+  // tồn tại: lời giải vẫn ra, vẫn hợp lệ theo mọi ràng buộc, và tràn qua ranh giới thửa.
+  const buildable = siteGeometry(args.site).buildable;
+
   const response = await compute.solve({
     intent: args.intent,
     intent_ref: args.intentRef,
     program: args.program,
-    site: args.site,
+    site: { width_m: buildable.widthM, depth_m: buildable.depthM },
     rule_pack: { locality: args.locality },
     time_budget_s: args.timeBudgetS,
   });

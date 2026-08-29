@@ -20,7 +20,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, History, Ruler } from 'lucide-react';
-import { formatCurrency, formatDateTime } from '@nvg/shared';
+import { formatCurrency, formatDateTime, formatNumber } from '@nvg/shared';
 import {
   ACCESS_SIDES,
   BRIEF_FORM,
@@ -31,6 +31,7 @@ import {
   scoreBrief,
   setAtPath,
   SIDE_LABEL,
+  siteGeometry,
   valueAtPath,
   visibleFields,
   type BriefFormField,
@@ -522,9 +523,9 @@ function SurveyMismatch({
 
   return (
     <p className="mb-4 rounded border border-border bg-surface-sunken p-3 text-status-pending">
-      Kích thước trong đầu bài ({site.width_m ?? EM_DASH} × {site.depth_m ?? EM_DASH} m) khác biên
-      bản khảo sát ({survey.land_width ?? EM_DASH} × {survey.land_depth ?? EM_DASH} m). Xác nhận lại
-      số nào dùng để thiết kế.
+      Kích thước trong đầu bài (mặt tiền {site.width_m ?? EM_DASH} m × sâu {site.depth_m ?? EM_DASH}{' '}
+      m) khác biên bản khảo sát ({survey.land_width ?? EM_DASH} × {survey.land_depth ?? EM_DASH} m).
+      Xác nhận lại số nào dùng để thiết kế.
     </p>
   );
 }
@@ -589,6 +590,35 @@ function describeField(field: BriefFormField, value: unknown): string | null {
         return parts.join(' · ');
       })
       .join(' | ');
+  }
+
+  if (field.control === 'polygon') {
+    // KHÔNG đổ danh sách toạ độ ra màn hình: "0,0, 5,0, 5,18…" không ai đọc được, và với
+    // ngũ giác thì dài quá một dòng. Cái người đọc cần là hệ thống ĐANG HIỂU thửa đất này
+    // rộng bao nhiêu — toạ độ đã có ở chế độ sửa.
+    const points = value as [number, number][];
+    if (points.length < 3) return null;
+    try {
+      const geometry = siteGeometry({
+        width_m: 1,
+        depth_m: 1,
+        shape: 'da_giac',
+        boundary_m: points,
+      });
+      return (
+        `${points.length} đỉnh · ${formatNumber(geometry.areaM2)} m² · ` +
+        `phần xây được ${formatNumber(geometry.buildable.widthM)} × ` +
+        `${formatNumber(geometry.buildable.depthM)} m`
+      );
+    } catch {
+      return `${points.length} đỉnh — chưa dựng được hình thửa`;
+    }
+  }
+
+  if (field.control === 'number') {
+    return field.unit
+      ? `${formatNumber(Number(value))} ${field.unit}`
+      : formatNumber(Number(value));
   }
 
   if (field.control === 'sides') {

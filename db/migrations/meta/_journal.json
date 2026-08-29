@@ -722,6 +722,20 @@
       "when": 1787931027541,
       "tag": "0102_kb_room_area_stats",
       "breakpoints": true
+    },
+    {
+      "idx": 103,
+      "version": "7",
+      "when": 1787931027542,
+      "tag": "0103_vietnamese_enum_labels",
+      "breakpoints": true
+    },
+    {
+      "idx": 104,
+      "version": "7",
+      "when": 1787931027543,
+      "tag": "0104_locality_hung_yen",
+      "breakpoints": true
     }
   ]
 }

@@ -29,7 +29,7 @@ function brief(overrides: Partial<DesignBrief> = {}): DesignBrief {
     schema_version: '1.1.0',
     project_id: '11111111-1111-4111-8111-111111111111',
     building_type: 'nha_pho',
-    locality: 'thai_binh',
+    locality: 'hung_yen',
     site: { width_m: 5, depth_m: 18 },
     floors: 3,
     family: [
@@ -379,19 +379,80 @@ describe('Tất định', () => {
     expect(await artifactId(roundTripped)).toBe(await artifactId(payload));
   });
 
+  /**
+   * Diện tích sàn dùng được của một tầng, đọc thẳng từ `floor_allocation`.
+   *
+   * Đây là con số engine THỰC SỰ dùng làm ràng buộc, nên nó là thước đo đúng. Hai thước đo
+   * đã thử và loại:
+   *  · tổng `target_area_m2` — bộ ép vừa co theo nhu cầu phòng, nên thấp hơn sàn ở mọi
+   *    trường hợp; phép so "ít hơn" vẫn xanh dù bề rộng lấy sai.
+   *  · tổng `max_area_m2` — các phòng cạnh tranh nhau nên tổng này VƯỢT sàn ở tầng đông
+   *    phòng; nó là sàn dưới của độ phủ, không phải trần.
+   */
+  const usable = (result: ReturnType<typeof build>, floor: number): number =>
+    (result.payload.floor_allocation ?? []).find((f) => f.floor === floor)?.usable_area_m2 ?? 0;
+
+  it('thửa hình thang: sàn tính trên phần đất HẸP, không trên hình bao', () => {
+    // Mặt tiền 6 m, mặt hậu 4 m, sâu 20 m. Ô chữ nhật xây được là 4 × 20 = 80 m²; hình bao
+    // là 6 × 20 = 120 m². Lấy hình bao là xếp phòng lên 40 m² đất không tồn tại.
+    const trapezoid = brief({
+      site: { width_m: 6, depth_m: 20, shape: 'hinh_thang', rear_width_m: 4 },
+    });
+    expect(usable(build(trapezoid), 1)).toBe(80);
+
+    // Cùng mặt tiền, thửa chữ nhật thì dùng hết 6 × 20 — nên phép trên không phải là
+    // "engine luôn lấy ít".
+    expect(usable(build(brief({ site: { width_m: 6, depth_m: 20 } })), 1)).toBe(120);
+  });
+
+  it('phần đất ngoài ô chữ nhật được NÓI RA', () => {
+    // Bộ giải chia hết một hình chữ nhật, nên phần đất ngoài ô đó không bao giờ có phòng.
+    // Im lặng ở đây nghĩa là kiến trúc sư phát hiện ra ở bước chồng bản vẽ lên trích lục.
+    const result = build(
+      brief({ site: { width_m: 6, depth_m: 20, shape: 'hinh_thang', rear_width_m: 4 } }),
+    );
+    expect(result.warnings.some((w) => w.includes('nằm ngoài phần đó'))).toBe(true);
+  });
+
+  it('trần mật độ tính trên diện tích THẬT của thửa, không trên hình bao', () => {
+    // Biệt thự: gói nền cho trần mật độ 0,6 và khoảng lùi trước 3 m. Thửa hình thang mặt
+    // tiền 12 m, mặt hậu 8 m, sâu 20 m:
+    //  · ô chữ nhật xây được 8 × (20 − 3) = 136 m²;
+    //  · diện tích THẬT (12+8)/2 × 20 = 200 m² → trần 120 m² → **trần mật độ chặn**;
+    //  · hình bao 12 × 20 = 240 m² → trần 144 m² → ô chữ nhật chặn, ra 136 m².
+    // Hai đường cho hai con số khác nhau, và không lỗi nào nổ ra ở đường sai.
+    const villa = brief({
+      building_type: 'biet_thu',
+      floors: 2,
+      site: { width_m: 12, depth_m: 20, shape: 'hinh_thang', rear_width_m: 8 },
+    });
+    expect(usable(build(villa), 1)).toBe(120);
+  });
+
   it('không gian lạ trong đầu bài được NÓI RA, không bị nuốt', () => {
     const result = build(brief({ required_spaces: ['ho_boi_trong_nha'] }));
     expect(result.warnings.some((w) => w.includes('ho_boi_trong_nha'))).toBe(true);
   });
 
-  it('địa phương chưa có gói quy tắc riêng thì cảnh báo, không dừng', () => {
+  it('địa phương chưa có gói riêng vẫn chạy đủ quy chuẩn quốc gia, và KHÔNG cảnh báo', () => {
+    // Khoảng lùi và mật độ là QCVN — quy chuẩn quốc gia — nên chúng nằm ở gói nền. Tỉnh
+    // chưa có văn bản riêng vì thế không phải một tình trạng đáng cảnh báo: kết quả vẫn
+    // đúng quy chuẩn. Cảnh báo nổ ở mọi lần chạy là cảnh báo bị bỏ qua, và khi ấy cái
+    // cảnh báo thật đứng cạnh nó cũng chịu chung số phận.
+    //
+    // Chế độ đã chạy vẫn ghi lại được — `runLayer2` đặt vào `params.rule_pack_locality`.
+    const pack = testRulePack('ha_noi');
+    expect(pack.localityMissing, 'chưa tỉnh nào có gói riêng').toBe(true);
+    expect(pack.maxDensity('biet_thu'), 'trần mật độ phải đến từ gói nền').toBe(0.6);
+    expect(pack.setbacks('biet_thu').front, 'khoảng lùi phải đến từ gói nền').toBe(3);
+
     const elsewhere = buildSpaceProgram({
       brief: brief({ locality: 'ha_noi' }),
       briefRef: REF,
-      rules: testRulePack('ha_noi'),
+      rules: pack,
       norms,
     });
-    expect(elsewhere.warnings.some((w) => w.includes('ha_noi'))).toBe(true);
+    expect(elsewhere.warnings.filter((w) => w.includes('ha_noi'))).toEqual([]);
     expect(elsewhere.payload.spaces.length).toBeGreaterThan(0);
   });
 });

@@ -134,13 +134,14 @@ export class DesignPipeline extends WorkflowEntrypoint<DesignEnv, DesignPipeline
       if (!intentHead || !programHead || !briefHead) {
         throw new NonRetryableError('Thiếu artifact đầu vào cho bước giải ràng buộc.');
       }
-      const site = (briefHead.payload as { site: { width_m: number; depth_m: number } }).site;
-
+      // Gửi phần `site` NGUYÊN VĂN: `solveFloorPlan` tự quy về ô chữ nhật xây được. Quy đổi
+      // ở đây thì bước này có một bản quy đổi riêng, và Container nhận một mảnh đất khác
+      // mảnh đất Lớp 2 đã soạn chương trình lên.
       const solved = await solveFloorPlan(compute, {
         intent: intentHead.payload as never,
         intentRef: intentId,
         program: programHead.payload as never,
-        site,
+        site: (briefHead.payload as DesignBrief).site,
         locality: p.locality,
         timeBudgetS: p.timeBudgetS,
       });

@@ -91,7 +91,13 @@ export function parseRuleFile(yamlText: string, origin: string): Rule[] {
 export class RulePack {
   constructor(
     readonly rules: Rule[],
-    /** `true` khi đầu bài khai một địa phương chưa có pack riêng — chỉ có pack nền. */
+    /**
+     * `true` khi đầu bài khai một địa phương chưa có pack riêng — chỉ có pack nền.
+     *
+     * KHÔNG phải trạng thái lỗi: gói nền mang đủ khoảng lùi và mật độ theo QCVN 01:2021/BXD.
+     * Nó tồn tại để bản kết quả GHI LẠI mình đã chạy theo chế độ nào, chứ không để sinh cảnh
+     * báo — hiện chưa tỉnh nào có gói riêng nên cảnh báo sẽ nổ ở mọi lần chạy.
+     */
     readonly localityMissing: boolean = false,
   ) {}
 

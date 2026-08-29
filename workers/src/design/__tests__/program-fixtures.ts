@@ -22,13 +22,19 @@ const BASE = [
   'rules/base/20-daylight-access.yaml',
   'rules/base/30-adjacency.yaml',
   'rules/base/40-vertical.yaml',
+  'rules/base/50-massing.yaml',
 ];
 
-const LOCALITY: Record<string, string[]> = {
-  thai_binh: ['rules/locality/thai-binh/00-meta.yaml', 'rules/locality/thai-binh/10-massing.yaml'],
-};
+/**
+ * Gói địa phương dùng trong kiểm thử.
+ *
+ * RỖNG, giống `LOCALITY_FILES` thật: chưa tỉnh nào có văn bản quy hoạch riêng. Giữ lại cơ
+ * chế thay vì xoá — nó là chỗ khai gói đầu tiên khi có văn bản, và `mergePacks` vẫn phải
+ * chạy đúng ở nhánh rỗng.
+ */
+const LOCALITY: Record<string, string[]> = {};
 
-export function testRulePack(locality = 'thai_binh'): RulePack {
+export function testRulePack(locality = 'hung_yen'): RulePack {
   const files = LOCALITY[locality];
   return new RulePack(
     mergePacks(

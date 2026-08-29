@@ -15,6 +15,8 @@
  * `inputMode`. Có kiểm thử grep canh trong `web/src/test/design-rules.test.ts`.
  */
 
+import { useEffect, useRef, useState } from 'react';
+import { formatNumber } from '@nvg/shared/format';
 import {
   ACCESS_SIDES,
   FAMILY_ROLE_LABEL,
@@ -22,6 +24,7 @@ import {
   FLOOR_PREF_LABEL,
   FLOOR_PREFS,
   SIDE_LABEL,
+  siteGeometry,
   type BriefFormField,
 } from '@nvg/shared/design';
 import { Button } from '@/components/ui/button';
@@ -38,6 +41,57 @@ const FAMILY_ROLE_OPTIONS = FAMILY_ROLES.map((value) => ({
   label: FAMILY_ROLE_LABEL[value],
 }));
 const FLOOR_PREF_OPTIONS = FLOOR_PREFS.map((value) => ({ value, label: FLOOR_PREF_LABEL[value] }));
+
+/**
+ * Ô nhập số — giữ nguyên CHỮ người dùng đang gõ, chỉ phát ra SỐ.
+ *
+ * Ô điều khiển đơn giản (`value={String(value)}`) làm mất dấu thập phân giữa chừng: gõ "3"
+ * ra 3, gõ tiếp "." thì `Number("3.")` vẫn là 3 nên ô vẽ lại thành "3" — dấu chấm biến mất,
+ * và ký tự tiếp theo cho ra "35". Người nhập 3,5 m mặt tiền được một thửa rộng 35 m.
+ *
+ * Lỗi này thấy được trên màn hình nên không phải loại im lặng nhất, nhưng nó khiến MỌI kích
+ * thước lẻ không gõ nổi — mà kích thước thửa đất thì gần như luôn lẻ.
+ *
+ * Cách chữa: chữ nằm trong state của ô, số đi ra ngoài. Chỉ nạp lại chữ khi giá trị đổi TỪ
+ * BÊN NGOÀI (mở hồ sơ khác, bấm "Lấy từ khảo sát hiện trạng") — nhận ra bằng cách so với
+ * giá trị chính ô này vừa phát ra.
+ */
+function NumberField({
+  value,
+  label,
+  onChange,
+}: {
+  value: unknown;
+  label: string;
+  onChange: (value: number | undefined) => void;
+}) {
+  const asNumber = typeof value === 'number' ? value : undefined;
+  const [text, setText] = useState(asNumber === undefined ? '' : String(asNumber));
+  const emitted = useRef<number | undefined>(asNumber);
+
+  useEffect(() => {
+    if (asNumber !== emitted.current) {
+      setText(asNumber === undefined ? '' : String(asNumber));
+      emitted.current = asNumber;
+    }
+  }, [asNumber]);
+
+  return (
+    <Input
+      // `inputMode` mở bàn phím số trên di động mà KHÔNG kéo theo nút tăng/giảm và thông báo
+      // `step` tiếng Anh của ô số gốc (CLAUDE.md 4.1).
+      inputMode="decimal"
+      aria-label={label}
+      value={text}
+      onChange={(e) => {
+        setText(e.target.value);
+        const parsed = parseNumber(e.target.value);
+        emitted.current = parsed;
+        onChange(parsed);
+      }}
+    />
+  );
+}
 
 /** Nút viên thuốc — vùng bấm tối thiểu 40px cho ngón tay (CGD 6.8). */
 function Chip({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
@@ -106,15 +160,7 @@ function BriefControl({ field, value, onChange }: Omit<BriefFieldProps, 'issues'
       );
 
     case 'number':
-      return (
-        <Input
-          // `inputMode` mở bàn phím số trên di động mà KHÔNG kéo theo nút tăng/giảm và
-          // thông báo `step` tiếng Anh của ô số gốc.
-          inputMode="decimal"
-          value={value === undefined || value === null ? '' : String(value)}
-          onChange={(e) => onChange(parseNumber(e.target.value))}
-        />
-      );
+      return <NumberField value={value} label={field.label} onChange={onChange} />;
 
     case 'money_range': {
       const range = (value as [number, number] | undefined) ?? undefined;
@@ -160,6 +206,50 @@ function BriefControl({ field, value, onChange }: Omit<BriefFieldProps, 'issues'
           ))}
         </div>
       );
+
+    case 'select': {
+      // Giá trị đã hết hiệu lực (đơn vị hành chính cũ) không nằm trong danh sách chọn —
+      // TRỪ KHI hồ sơ đang mang đúng giá trị đó. Bỏ nó đi thì ô hiện trống, và lần lưu tiếp
+      // theo âm thầm xoá mất một câu trả lời mà người dùng không hề đụng tới.
+      const options = (field.options ?? []).filter((o) => !o.retired || o.value === value);
+      // Giữ nguyên thứ tự nhóm theo thứ tự XUẤT HIỆN trong cấu hình, không sắp lại theo
+      // bảng chữ cái: thứ tự đó là một quyết định nghiệp vụ ("bốn tỉnh hay thi công lên
+      // trước"), và sắp lại ở đây sẽ âm thầm huỷ nó.
+      const groups: { name: string | undefined; items: typeof options }[] = [];
+      for (const option of options) {
+        const last = groups[groups.length - 1];
+        if (last && last.name === option.group) last.items.push(option);
+        else groups.push({ name: option.group, items: [option] });
+      }
+      return (
+        <select
+          value={(value as string) ?? ''}
+          onChange={(e) =>
+            onChange(e.target.value === '' ? undefined : toChoiceValue(field, e.target.value))
+          }
+          className="h-10 w-full rounded-sm border border-border bg-surface px-3 sm:h-9"
+        >
+          <option value="">— Chưa chọn —</option>
+          {groups.map((group, index) =>
+            group.name === undefined ? (
+              group.items.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))
+            ) : (
+              <optgroup key={`${group.name}-${index}`} label={group.name}>
+                {group.items.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </optgroup>
+            ),
+          )}
+        </select>
+      );
+    }
 
     case 'multi': {
       const selected = (value as string[] | undefined) ?? [];
@@ -225,15 +315,78 @@ function BriefControl({ field, value, onChange }: Omit<BriefFieldProps, 'issues'
                   ))}
                 </select>
               ) : (
-                <Input
-                  inputMode="decimal"
-                  aria-label={`${field.label} — ${side.label}`}
-                  value={record[side.key] === undefined ? '' : String(record[side.key])}
-                  onChange={(e) => onChange(setSide(record, side.key, parseNumber(e.target.value)))}
+                <NumberField
+                  value={record[side.key]}
+                  label={`${field.label} — ${side.label}`}
+                  onChange={(next) => onChange(setSide(record, side.key, next))}
                 />
               )}
             </label>
           ))}
+        </div>
+      );
+    }
+
+    case 'polygon': {
+      const points = (value as [number, number][] | undefined) ?? [];
+      const update = (index: number, axis: 0 | 1, next: number | undefined) => {
+        onChange(
+          points.map((point, i) =>
+            i === index
+              ? ((axis === 0 ? [next ?? 0, point[1]] : [point[0], next ?? 0]) as [number, number])
+              : point,
+          ),
+        );
+      };
+      return (
+        <div className="space-y-3">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[22rem] border-collapse">
+              <thead>
+                <tr className="border-b border-border text-left text-fg-subtle">
+                  <th className="py-1 pr-2 font-normal">Đỉnh</th>
+                  <th className="py-1 pr-2 font-normal">Ngang (m)</th>
+                  <th className="py-1 pr-2 font-normal">Sâu (m)</th>
+                  <th className="py-1 font-normal" />
+                </tr>
+              </thead>
+              <tbody>
+                {points.map((point, index) => (
+                  <tr key={index} className="border-b border-border/60">
+                    <td className="py-1 pr-2 text-fg-subtle">{index + 1}</td>
+                    <td className="py-1 pr-2">
+                      <NumberField
+                        value={point[0]}
+                        label={`Đỉnh ${index + 1} — toạ độ ngang`}
+                        onChange={(next) => update(index, 0, next)}
+                      />
+                    </td>
+                    <td className="py-1 pr-2">
+                      <NumberField
+                        value={point[1]}
+                        label={`Đỉnh ${index + 1} — toạ độ sâu`}
+                        onChange={(next) => update(index, 1, next)}
+                      />
+                    </td>
+                    <td className="py-1">
+                      <Button variant="subtle" onClick={() => onChange(dropAt(points, index))}>
+                        Bỏ đỉnh
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              variant="secondary"
+              onClick={() => onChange([...points, points[points.length - 1] ?? [0, 0]])}
+            >
+              Thêm đỉnh
+            </Button>
+            <SitePreview points={points} />
+          </div>
         </div>
       );
     }
@@ -317,6 +470,38 @@ function BriefControl({ field, value, onChange }: Omit<BriefFieldProps, 'issues'
       );
     }
   }
+}
+
+/**
+ * Số liệu suy ra từ ranh giới, hiện ngay cạnh bảng toạ độ.
+ *
+ * Nhập toạ độ là việc dễ gõ nhầm và khó tự phát hiện — một dấu trừ đặt sai cho ra hình
+ * đúng số đỉnh, đúng thứ tự, sai hoàn toàn diện tích. Hiện lại ba con số hệ thống ĐANG HIỂU
+ * (diện tích, hình bao, ô xây được) là cách rẻ nhất để người nhập đối chiếu với trích lục
+ * ngay lúc gõ, thay vì phát hiện ở bước dựng mặt bằng.
+ */
+function SitePreview({ points }: { points: [number, number][] }) {
+  if (points.length < 3) {
+    return <span className="text-fg-subtle">Cần ít nhất ba đỉnh để dựng được hình thửa.</span>;
+  }
+  let geometry;
+  try {
+    geometry = siteGeometry({ width_m: 1, depth_m: 1, shape: 'da_giac', boundary_m: points });
+  } catch (error) {
+    return (
+      <span className="text-status-overdue">
+        {error instanceof Error ? error.message : 'Chưa dựng được hình thửa từ các đỉnh này.'}
+      </span>
+    );
+  }
+  return (
+    <span className="text-fg-subtle">
+      Diện tích {formatNumber(geometry.areaM2)} m² · hình bao {formatNumber(geometry.bboxWidthM)} ×{' '}
+      {formatNumber(geometry.bboxDepthM)} m · phần xây được{' '}
+      {formatNumber(geometry.buildable.widthM)} × {formatNumber(geometry.buildable.depthM)} m
+      {geometry.unusedM2 > 0.5 ? ` · còn ${formatNumber(geometry.unusedM2)} m² ngoài phần đó` : ''}
+    </span>
+  );
 }
 
 interface FamilyMember {

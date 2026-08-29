@@ -281,9 +281,9 @@
         <div class="bar"><span style="width: 50%"></span></div>
         <div class="stats">
           <div class="stat"><b>2/3</b><span class="xs muted-t">Việc của Mốc 0 đã xong</span></div>
-          <div class="stat"><b>264</b><span class="xs muted-t">Phép thử xanh của module</span></div>
+          <div class="stat"><b>281</b><span class="xs muted-t">Phép thử xanh của module</span></div>
           <div class="stat"><b>4</b><span class="xs muted-t">Vướng mắc đang mở</span></div>
-          <div class="stat"><b>14</b><span class="xs muted-t">Câu hỏi chờ Haan</span></div>
+          <div class="stat"><b>15</b><span class="xs muted-t">Câu hỏi chờ Haan</span></div>
         </div>
       </div>
 
@@ -299,6 +299,116 @@
             </tr>
           </thead>
           <tbody>
+            <tr>
+              <td class="num">29/08/2026</td>
+              <td>
+                Ba việc Haan chỉ ra sau lượt chạy thử: <b>lỗi chính tả</b>,
+                <b>địa phương</b>, <b>hình thửa đất</b>
+              </td>
+              <td>
+                <b>1. Chữ Việt không dấu do CSDL sinh ra.</b> Ảnh chụp màn hình của Haan:
+                &laquo;Bộ môn <b>kien truc</b> chưa có bản vẽ nào được phát hành.&raquo; Bốn chỗ
+                trong migration dựng câu bằng
+                <code>replace(&lt;enum&gt;::text, '_', ' ')</code>, cho ra chữ Việt không dấu giữa
+                một câu có dấu &mdash; kể cả tên dòng ngân sách (&laquo;Vat Tu&raquo;,
+                &laquo;Nhan Cong&raquo;). Riêng <code>build_budget_lines</code> còn tự mâu thuẫn:
+                khối INSERT thứ hai của chính nó đã ghi &laquo;Chi phí chung&raquo; có dấu.
+                <br />
+                Lọt lưới lâu vì đọc mã nguồn chỉ thấy <code>replace(...)</code>, và
+                <code>grep</code> một câu tiếng Việt không dấu thì không ra tệp nào &mdash; chữ chỉ
+                thành hình lúc chạy. Cùng loại với nhóm &laquo;chữ do trình duyệt tự sinh&raquo; ở
+                CLAUDE.md 4.1, chỉ khác nguồn sinh chữ là CSDL.
+                <br />
+                Migration <code>0103</code>: ba hàm nhãn trong CSDL, ba hàm cũ viết lại để gọi
+                chúng, và vá lại dữ liệu <code>project_budgets.name</code> đã ghi sai.
+                <code>db/src/__tests__/enum-labels.test.ts</code> so từng nhãn với bảng nhãn của
+                <code>shared/</code>, kiểm mọi nhánh enum đều có nhãn (đọc thẳng
+                <code>pg_enum</code>), và canh không hàm nào dựng lại chữ theo kiểu cũ. Phép thử
+                này bắt luôn một chỗ lệch có sẵn: CSDL ghi &laquo;Đang làm&raquo; còn
+                <code>shared/</code> ghi &laquo;Đang triển khai&raquo;.
+                <br />
+                Rà thêm toàn bộ chuỗi trong <code>web/ workers/ shared/ db/ compute/</code> bằng
+                một lượt quét tự động tìm câu tiếng Việt viết không dấu: <b>không còn chỗ nào</b>.
+                <br /><br />
+                <b>2. Thái Bình &rarr; Hưng Yên, và đủ 34 đơn vị hành chính.</b> Trả lời
+                <b>Q-8</b>. Biểu mẫu đầu bài nay cho chọn đủ 34 tỉnh, thành phố sau sắp xếp 2025,
+                nhóm đầu là bốn địa bàn NVG thường thi công (Hưng Yên · Hải Phòng · Ninh Bình · Hà
+                Nội). Thêm kiểu điều khiển <code>select</code> có nhóm &mdash; 34 chip thì thành
+                một bức tường.
+                <br />
+                Kèm theo là một lỗi phải sửa mới mở được danh sách:
+                <b>khoảng lùi và mật độ xây dựng đang nằm trong gói địa phương</b>, trong khi mọi
+                giá trị của chúng đều dẫn QCVN 01:2021/BXD &mdash; quy chuẩn QUỐC GIA. Hệ quả: tỉnh
+                nào chưa có gói riêng thì chạy KHÔNG khoảng lùi, KHÔNG trần mật độ; biệt thự được
+                phép phủ kín lô mà không lỗi nào nổ ra. Chuyển hết sang
+                <code>rules/base/50-massing.yaml</code>; <code>rules/locality/</code> nay rỗng, và
+                đó là trạng thái đúng &mdash; chưa tỉnh nào gửi văn bản quy hoạch để trích vào khoá
+                <code>source</code>, mà tạo gói chép lại số của quy chuẩn quốc gia là tạo bản sao
+                thứ hai của cùng con số.
+                <br />
+                Bộ nạp Python trước đây <b>ném lỗi</b> khi tỉnh chưa có gói, còn Worker thì lùi về
+                gói nền &mdash; với 34 lựa chọn, chênh lệch đó nghĩa là Lớp 2 chạy xong rồi Lớp 3b
+                mới đổ. Đã cho cả hai cùng lùi về gói nền.
+                <br />
+                Cảnh báo &laquo;chưa có gói riêng&raquo; ở Lớp 2 <b>bỏ đi</b>: nay nó đúng với mọi
+                lần chạy, mà cảnh báo nổ ở mọi lần chạy là cảnh báo bị bỏ qua (đúng bài học của lỗi
+                số 4 hôm trước). Chế độ đã chạy ghi vào
+                <code>params.rule_pack_locality</code> thay vì hét lên.
+                <br />
+                Hồ sơ <b>đã xác nhận</b> giữ nguyên <code>thai_binh</code> &mdash; trigger bất biến
+                chặn UPDATE, và đó là hành vi đúng. Nên <code>thai_binh</code> ở lại cấu hình dưới
+                dạng lựa chọn <code>retired</code>: không chọn được nữa, nhưng vẫn đọc ra chữ
+                &laquo;Thái Bình (đã sáp nhập vào Hưng Yên năm 2025)&raquo;.
+                <br /><br />
+                <b>3. Thửa đất không phải hình chữ nhật.</b> Haan hỏi: thửa tứ giác, ngũ giác không
+                đều thì sao, và chiều rộng mặt tiền ở đâu? Đầu bài trước đây mô tả thửa bằng đúng
+                hai số &mdash; ngầm khẳng định mọi thửa là hình chữ nhật. Hậu quả không nổ ra thành
+                lỗi: bộ giải nhận khu đất RỘNG HƠN thực tế, xếp phòng kín ô chữ nhật ảo đó, và bản
+                vẽ trông hợp lệ cho tới lúc chồng lên trích lục.
+                <br />
+                Hợp đồng <code>design-brief</code> thêm <code>shape</code> ·
+                <code>rear_width_m</code> · <code>boundary_m</code> · <code>area_m2</code>;
+                <code>width_m</code> nay ghi rõ là <b>chiều rộng MẶT TIỀN</b>. Ba dạng: chữ nhật ·
+                hình thang (mặt tiền khác mặt hậu &mdash; dạng không đều phổ biến nhất) · đa giác
+                (nhập toạ độ từng đỉnh; chiều dài các cạnh thì không đủ, cùng bộ độ dài ứng với vô
+                số hình).
+                <br />
+                <code>shared/src/design/site-geometry.ts</code> là nơi DUY NHẤT suy ra hình học:
+                diện tích thật (dây giày), hình bao, và <b>ô chữ nhật lớn nhất nội tiếp</b> &mdash;
+                thứ bộ giải thật sự làm việc trên đó, vì CP-SAT chia hết một hình chữ nhật và không
+                có khái niệm &laquo;phần đất thừa&raquo;. Worker quy đổi một lần rồi gửi
+                <code>{ width_m, depth_m }</code> sang Container y như trước, nên Container không
+                bao giờ nhìn thấy đa giác và không có bản cài đặt hình học thứ hai để lệch
+                (CLAUDE.md 8.7).
+                <br />
+                Engine sửa hai đường: khoảng lùi trừ vào <b>ô xây được</b>, còn mật độ nhân với
+                <b>diện tích THẬT</b> &mdash; dùng <code>width × depth</code> là nới trần mật độ cho
+                mọi thửa không vuông vắn. Phần đất ngoài ô chữ nhật được <b>đo và nói ra</b>, không
+                bị nuốt.
+                <br />
+                Phép kiểm &laquo;ô nằm gọn trong thửa&raquo; ban đầu THIẾU một điều kiện, và bản
+                kiểm thử đầu cũng không bắt được: với thửa bị khoét rãnh chữ V ở giữa cạnh, bốn góc
+                của ô đều là đỉnh của thửa và không cạnh nào cắt ngang &mdash; hai phép kiểm đầu
+                đều nói &laquo;nằm gọn&raquo; trong khi cả cái rãnh nằm ngoài. Thêm phép kiểm
+                &laquo;không đỉnh nào nằm hẳn trong lòng ô&raquo;, và thay hình kiểm thử bằng hình
+                bắt được đúng chỗ đó. Đã thử phá từng phép kiểm để chắc chúng cắn.
+                <br />
+                <b>Lỗi có sẵn phát hiện lúc gõ thử:</b> ô số điều khiển nuốt dấu thập phân giữa
+                chừng &mdash; gõ &laquo;3.5&raquo; ra &laquo;35&raquo;, vì
+                <code>Number("3.")</code> vẫn là 3 nên ô vẽ lại và dấu chấm biến mất. Người nhập
+                3,5 m mặt tiền được một thửa rộng 35 m. Chữ nay nằm trong state của ô, số đi ra
+                ngoài; áp cho cả ô số, ô khoảng lùi và bảng toạ độ đỉnh.
+                <br /><br />
+                <b>Kiểm chứng:</b> 209 phép thử giao diện · 396 phép thử logic · pipeline đầu-cuối
+                chạy thật qua Container Docker · 114 phép thử Python · <code>tsc</code> và
+                <code>prettier</code> sạch · hợp đồng khớp bản sinh. Chạy lại bằng Chrome trên hồ sơ
+                <code>NVO-TK-2026-2399</code>: câu &laquo;Bộ môn <b>Kiến trúc</b>&raquo; đã đúng
+                chính tả, danh sách 34 tỉnh hiện đủ, thửa ngũ giác nhập được và hiện
+                &laquo;diện tích 114 m² · hình bao 8 × 16,5 m · phần xây được 8 × 12 m · còn 18 m²
+                ngoài phần đó&raquo;. Chương trình không gian của hồ sơ cũ giữ nguyên trạng thái
+                &laquo;đã chốt&raquo; &mdash; thay đổi tương thích ngược với đầu bài hình chữ nhật.
+              </td>
+            </tr>
             <tr>
               <td class="num"><b>0</b></td>
               <td>
@@ -1370,13 +1480,18 @@
             <tr>
               <td class="num">Q-8</td>
               <td>
-                Sau sắp xếp đơn vị hành chính 2025, <b>Thái Bình đã sáp nhập vào tỉnh Hưng Yên</b>.
-                Tên gói quy tắc địa phương đặt theo đơn vị hành chính mới hay giữ
-                <code>thai-binh</code>? Và văn bản quy hoạch địa phương nào đang có hiệu lực để lấy
-                khoảng lùi và mật độ xây dựng?
-                <span class="xs muted-t"
-                  >Không chặn: gói <code>base/</code> lấy từ quy chuẩn quốc gia.</span
-                >
+                <b>Đã trả lời 29/08/2026 — Hưng Yên, và mở ra đủ 34 đơn vị hành chính.</b> Biểu
+                mẫu đầu bài cho chọn 34 tỉnh, thành phố sau sắp xếp 2025; nhóm đầu là bốn địa bàn
+                NVG thường thi công (Hưng Yên · Hải Phòng · Ninh Bình · Hà Nội).
+                <code>thai_binh</code> giữ lại dưới dạng lựa chọn đã hết hiệu lực để hồ sơ xác nhận
+                trước sáp nhập vẫn đọc ra chữ.
+                <br />
+                Kèm quyết định về CHỖ ĐẶT quy tắc: mọi giá trị dẫn QCVN 01:2021/BXD chuyển về
+                <code>rules/base/</code>, và <code>rules/locality/</code> chỉ có gói khi tỉnh gửi
+                văn bản quy hoạch cụ thể để trích vào khoá <code>source</code>.
+                <br />
+                <b>Còn treo:</b> văn bản quy hoạch của từng tỉnh — khoảng lùi và mật độ hiện vẫn là
+                mức chung quốc gia, chưa phải mức riêng của Hưng Yên hay các tỉnh lân cận.
               </td>
               <td class="num">Mốc 0.3</td>
             </tr>
@@ -1438,6 +1553,44 @@
                 <br />
                 Cùng câu hỏi này: <b>bảng trọng số chấm điểm</b> (bề rộng lô 3 điểm, phong cách 1
                 điểm) hiện do tôi đặt. Ngưỡng 70% chỉ có nghĩa khi bảng trọng số đúng.
+              </td>
+              <td class="num">Mốc 2</td>
+            </tr>
+            <tr>
+              <td class="num">Q-19</td>
+              <td>
+                <b>Thửa không vuông vắn: mất phần đất ở góc có chấp nhận được không?</b> Bộ giải
+                CP-SAT chia hết MỘT hình chữ nhật &mdash; nó không có khái niệm &laquo;phần đất
+                thừa&raquo;. Nên với thửa hình thang hay đa giác, engine làm việc trên <b>ô chữ nhật
+                lớn nhất nội tiếp</b> và phần đất ngoài ô đó không được xếp phòng (hệ thống đo và
+                nói ra con số, không giấu). Thửa hình thang mặt tiền 6 m &rarr; mặt hậu 4 m, sâu
+                20 m mất 20 trên 100 m².
+                <br />
+                Kiến trúc sư NVG thực tế xử lý phần đất đó thế nào &mdash; làm sân, làm ban công
+                đua ra, hay vẫn xây thành phòng méo? Nếu buộc phải xây vào đó thì mô hình bộ giải
+                phải mở rộng (chia theo đa giác, không theo hình chữ nhật) &mdash; đó là thay đổi
+                lớn ở Lớp 3b, cần biết SỚM.
+                <br />
+                Câu hỏi kèm: mô hình hiện giả định thửa hình thang có <b>hai cạnh bên đối xứng</b>
+                qua trục giữa. Thửa lệch hẳn một bên phải khai bằng đa giác (nhập toạ độ từng đỉnh)
+                &mdash; như vậy có quá nặng cho người nhập không, hay nên có thêm dạng &laquo;hình
+                thang lệch&raquo; chỉ cần ba số?
+              </td>
+              <td class="num">Mốc 2</td>
+            </tr>
+            <tr>
+              <td class="num">Q-20</td>
+              <td>
+                <b>Toạ độ đỉnh thửa lấy từ đâu?</b> Dạng đa giác hiện bắt nhập tay toạ độ từng đỉnh
+                (ngang, sâu &mdash; mét). Đó là cách DUY NHẤT mô tả một thửa ngũ giác không mập mờ:
+                cùng bộ chiều dài các cạnh ứng với vô số hình khác nhau. Nhưng nhân sự NVG cầm
+                trích lục hay bản đồ hiện trạng &mdash; có sẵn toạ độ để chép sang không, hay phải
+                dựng lại từ chiều dài cạnh và góc?
+                <br />
+                Nếu không có sẵn, đường đi tự nhiên là lấy ranh giới từ tệp CAD khảo sát: bộ trích
+                <code>compute/</code> đã đọc được <code>site_boundary_m</code> từ DXF. Nối được thì
+                người dùng không phải gõ đỉnh nào &mdash; nhưng nó gắn dạng đa giác vào Mốc 3, đang
+                chờ hồ sơ <code>.dwg</code> thật.
               </td>
               <td class="num">Mốc 2</td>
             </tr>

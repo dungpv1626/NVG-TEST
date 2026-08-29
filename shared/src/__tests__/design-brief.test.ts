@@ -138,15 +138,55 @@ describe('Cấu hình biểu mẫu Đầu bài', () => {
     }
   });
 
-  it('danh sách địa phương khớp thư mục gói quy tắc', () => {
-    // Chọn một địa phương không có gói quy tắc thì hệ thống im lặng rơi về gói nền.
-    const packs = new Set(readdirSync(root('rules/locality')));
+  it('mọi gói quy tắc địa phương đều chọn được từ biểu mẫu', () => {
+    // Chiều ràng buộc đã ĐỔI ngày 29/08/2026, và chiều mới mới là chiều bắt được lỗi thật.
+    //
+    // Trước đây biểu mẫu chỉ có một địa phương nên "mỗi lựa chọn phải có một gói" là kiểm
+    // được. Từ khi danh sách mở ra đủ 34 đơn vị hành chính, ràng buộc đó đòi 34 gói quy
+    // tắc — mà tạo một gói chép lại đúng số của quy chuẩn quốc gia là tạo bản sao thứ hai
+    // của cùng con số, không phải một quy định địa phương.
+    //
+    // Chiều còn lại thì vẫn hỏng thật được: một gói nằm trong `rules/locality/` mà không
+    // lựa chọn nào sinh ra được giá trị `locality` ấy là một gói KHÔNG BAO GIỜ chạy. Nó
+    // trông như đã cấu hình xong, không có lỗi nào nổ ra, và mọi hồ sơ ở tỉnh đó âm thầm
+    // chạy bằng gói nền.
     const field = allFields.find((f) => f.path === 'locality')!;
-    for (const option of field.options ?? []) {
-      expect(packs, `chưa có gói quy tắc: ${option.value}`).toContain(
-        option.value.replace(/_/g, '-'),
-      );
+    const selectable = new Set(
+      (field.options ?? []).map((option) => option.value.replace(/_/g, '-')),
+    );
+    const packs = readdirSync(root('rules/locality'), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
+
+    for (const pack of packs) {
+      expect(selectable, `gói quy tắc không ai chọn tới được: ${pack}`).toContain(pack);
     }
+  });
+
+  it('danh sách địa phương là 34 đơn vị hành chính, mã viết đúng quy ước', () => {
+    const field = allFields.find((f) => f.path === 'locality')!;
+    const options = (field.options ?? []).filter((option) => !option.retired);
+    expect(options).toHaveLength(34);
+    for (const option of options) {
+      // Mã phải khớp mẫu của hợp đồng (`^[a-z0-9_]+$`) VÀ đổi được thành tên thư mục gói
+      // quy tắc bằng đúng một phép thay gạch dưới thành gạch nối.
+      expect(option.value, option.label).toMatch(/^[a-z0-9_]+$/);
+      expect(option.label.trim(), option.value).not.toBe('');
+    }
+    expect(new Set(options.map((o) => o.value)).size, 'mã trùng nhau').toBe(34);
+
+    // Đơn vị hành chính đã hết hiệu lực vẫn phải có NHÃN — hồ sơ xác nhận trước sắp xếp
+    // 2025 là bất biến, không sửa lại được, nên màn hình phải đọc ra chữ cho mã cũ.
+    const retired = (field.options ?? []).filter((option) => option.retired);
+    expect(retired.map((option) => option.value)).toContain('thai_binh');
+    // Bốn địa bàn NVG thi công thường xuyên phải nằm ở nhóm đầu, không lẫn vào 30 tỉnh còn
+    // lại — đây là lý do `select` có nhóm.
+    expect(options.slice(0, 4).map((o) => o.value)).toEqual([
+      'hung_yen',
+      'hai_phong',
+      'ninh_binh',
+      'ha_noi',
+    ]);
   });
 
   it('không hard-code ngưỡng độ đầy đủ ở bất kỳ đâu trong shared/design', () => {
@@ -184,7 +224,7 @@ describe('Đã trả lời hay chưa', () => {
 describe('Chấm độ đầy đủ', () => {
   const nhaPho: DesignBriefDraft = {
     building_type: 'nha_pho',
-    locality: 'thai_binh',
+    locality: 'hung_yen',
     site: { width_m: 5, depth_m: 18 },
     floors: 3,
   };
@@ -293,6 +333,50 @@ describe('Soát mâu thuẫn', () => {
     expect(
       codes({ site: { width_m: 5, depth_m: 18, setback_required_m: { left: 3, right: 3 } } }),
     ).toContain('khoang_lui_vuot_be_rong');
+  });
+
+  it('hình thang mà thiếu mặt hậu thì hỏi lại', () => {
+    expect(codes({ site: { width_m: 6, depth_m: 20, shape: 'hinh_thang' } })).toContain(
+      'hinh_thang_thieu_mat_hau',
+    );
+    expect(
+      codes({ site: { width_m: 6, depth_m: 20, shape: 'hinh_thang', rear_width_m: 4 } }),
+    ).not.toContain('hinh_thang_thieu_mat_hau');
+  });
+
+  it('đa giác mà ranh giới chưa đủ ba đỉnh thì hỏi lại', () => {
+    expect(
+      codes({
+        site: {
+          width_m: 6,
+          depth_m: 20,
+          shape: 'da_giac',
+          boundary_m: [
+            [0, 0],
+            [6, 0],
+          ],
+        },
+      }),
+    ).toContain('da_giac_thieu_ranh_gioi');
+  });
+
+  it('diện tích trên giấy chứng nhận lệch quá 5% so với số đo', () => {
+    // 6 × 20 = 120 m² suy từ số đo, còn giấy tờ ghi 150 m² — một trong hai số đã nhập sai,
+    // và cả hai đều hợp lệ theo hợp đồng nên không có gì khác bắt được.
+    expect(codes({ site: { width_m: 6, depth_m: 20, area_m2: 150 } })).toContain(
+      'dien_tich_lech_giay_to',
+    );
+    // Trong 5% thì im: sai số đo đạc thực địa nằm trong khoảng đó.
+    expect(codes({ site: { width_m: 6, depth_m: 20, area_m2: 123 } })).not.toContain(
+      'dien_tich_lech_giay_to',
+    );
+    // Thửa hình thang: diện tích thật là 100 m², KHÔNG phải hình bao 120 m². Nếu phép đối
+    // chiếu dùng hình bao thì giấy tờ ghi đúng 100 m² lại bị báo lệch.
+    expect(
+      codes({
+        site: { width_m: 6, depth_m: 20, shape: 'hinh_thang', rear_width_m: 4, area_m2: 100 },
+      }),
+    ).not.toContain('dien_tich_lech_giay_to');
   });
 
   it('khoảng lùi hợp lệ thì im lặng', () => {

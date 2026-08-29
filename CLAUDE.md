@@ -649,7 +649,7 @@ Bộ sinh zod: `scripts/contracts-gen.mjs`. `npm run contracts:gen` để sinh,
 | T6 | Quyền chuỗi qua bảng mới **`role_capabilities(role_id, capability)`**, khởi động chỉ với `design.*` | Ma trận `permissions` hiện chỉ tới mức module, không phân biệt được ba bộ môn. **Không sửa** ma trận cũ — 12 module đang chạy trên đó |
 | T7 | **Dùng lại enum `design_discipline`** sẵn có. Ánh xạ: `KT→kien_truc`, `KC→ket_cau`, `DN→dien_nuoc` | Một bộ từ vựng duy nhất. Enum này đã có index phụ thuộc |
 | T8 | Giai đoạn demo, mô hình ngôn ngữ **chỉ chạy dữ liệu giả lập hoặc ẩn danh** | Đầu bài khách hàng là dữ liệu hạng 1; gói Gemini miễn phí có thể được dùng để huấn luyện (mục 5.1). Lớp chặn `data_class` vẫn dựng ngay từ khung |
-| T9 | Rule pack: `base/` từ **QCVN 01:2021/BXD**, `locality/thai-binh/` ghi đè | NVG thi công chủ yếu ở Thái Bình và tỉnh lân cận |
+| T9 | Rule pack: **mọi giá trị QCVN 01:2021/BXD nằm ở `base/`** (kể cả khoảng lùi, mật độ); `locality/<tỉnh>/` chỉ ra đời khi có văn bản quy hoạch của tỉnh để trích vào `source` — hiện chưa tỉnh nào có. Đầu bài chọn được **34 đơn vị hành chính**, nhóm đầu là Hưng Yên · Hải Phòng · Ninh Bình · Hà Nội | Thái Bình đã sáp nhập vào Hưng Yên (2025). Gói địa phương chép lại số của quy chuẩn quốc gia là bản sao thứ hai của cùng con số — sửa quy chuẩn thì bản sao không đổi theo, và không có gì báo |
 
 ### 8.6 Đính chính hạ tầng Cloudflare — tài liệu đã lỗi thời
 

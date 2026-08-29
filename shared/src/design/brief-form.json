@@ -32,16 +32,189 @@
         {
           "path": "locality",
           "label": "Địa phương",
-          "control": "choice",
+          "control": "select",
           "weight": 1,
           "hint": "Quyết định gói quy tắc địa phương áp dụng lên gói nền.",
           "options": [
             {
+              "value": "hung_yen",
+              "label": "Hưng Yên",
+              "group": "Địa bàn NVG thường thi công"
+            },
+            {
+              "value": "hai_phong",
+              "label": "Hải Phòng",
+              "group": "Địa bàn NVG thường thi công"
+            },
+            {
+              "value": "ninh_binh",
+              "label": "Ninh Bình",
+              "group": "Địa bàn NVG thường thi công"
+            },
+            {
+              "value": "ha_noi",
+              "label": "Hà Nội",
+              "group": "Địa bàn NVG thường thi công"
+            },
+            {
+              "value": "an_giang",
+              "label": "An Giang",
+              "group": "Tỉnh, thành phố khác"
+            },
+            {
+              "value": "bac_ninh",
+              "label": "Bắc Ninh",
+              "group": "Tỉnh, thành phố khác"
+            },
+            {
+              "value": "ca_mau",
+              "label": "Cà Mau",
+              "group": "Tỉnh, thành phố khác"
+            },
+            {
+              "value": "cao_bang",
+              "label": "Cao Bằng",
+              "group": "Tỉnh, thành phố khác"
+            },
+            {
+              "value": "can_tho",
+              "label": "Cần Thơ",
+              "group": "Tỉnh, thành phố khác"
+            },
+            {
+              "value": "da_nang",
+              "label": "Đà Nẵng",
+              "group": "Tỉnh, thành phố khác"
+            },
+            {
+              "value": "dak_lak",
+              "label": "Đắk Lắk",
+              "group": "Tỉnh, thành phố khác"
+            },
+            {
+              "value": "dien_bien",
+              "label": "Điện Biên",
+              "group": "Tỉnh, thành phố khác"
+            },
+            {
+              "value": "dong_nai",
+              "label": "Đồng Nai",
+              "group": "Tỉnh, thành phố khác"
+            },
+            {
+              "value": "dong_thap",
+              "label": "Đồng Tháp",
+              "group": "Tỉnh, thành phố khác"
+            },
+            {
+              "value": "gia_lai",
+              "label": "Gia Lai",
+              "group": "Tỉnh, thành phố khác"
+            },
+            {
+              "value": "ha_tinh",
+              "label": "Hà Tĩnh",
+              "group": "Tỉnh, thành phố khác"
+            },
+            {
+              "value": "ho_chi_minh",
+              "label": "Thành phố Hồ Chí Minh",
+              "group": "Tỉnh, thành phố khác"
+            },
+            {
+              "value": "hue",
+              "label": "Huế",
+              "group": "Tỉnh, thành phố khác"
+            },
+            {
+              "value": "khanh_hoa",
+              "label": "Khánh Hòa",
+              "group": "Tỉnh, thành phố khác"
+            },
+            {
+              "value": "lai_chau",
+              "label": "Lai Châu",
+              "group": "Tỉnh, thành phố khác"
+            },
+            {
+              "value": "lam_dong",
+              "label": "Lâm Đồng",
+              "group": "Tỉnh, thành phố khác"
+            },
+            {
+              "value": "lang_son",
+              "label": "Lạng Sơn",
+              "group": "Tỉnh, thành phố khác"
+            },
+            {
+              "value": "lao_cai",
+              "label": "Lào Cai",
+              "group": "Tỉnh, thành phố khác"
+            },
+            {
+              "value": "nghe_an",
+              "label": "Nghệ An",
+              "group": "Tỉnh, thành phố khác"
+            },
+            {
+              "value": "phu_tho",
+              "label": "Phú Thọ",
+              "group": "Tỉnh, thành phố khác"
+            },
+            {
+              "value": "quang_ngai",
+              "label": "Quảng Ngãi",
+              "group": "Tỉnh, thành phố khác"
+            },
+            {
+              "value": "quang_ninh",
+              "label": "Quảng Ninh",
+              "group": "Tỉnh, thành phố khác"
+            },
+            {
+              "value": "quang_tri",
+              "label": "Quảng Trị",
+              "group": "Tỉnh, thành phố khác"
+            },
+            {
+              "value": "son_la",
+              "label": "Sơn La",
+              "group": "Tỉnh, thành phố khác"
+            },
+            {
+              "value": "tay_ninh",
+              "label": "Tây Ninh",
+              "group": "Tỉnh, thành phố khác"
+            },
+            {
+              "value": "thai_nguyen",
+              "label": "Thái Nguyên",
+              "group": "Tỉnh, thành phố khác"
+            },
+            {
+              "value": "thanh_hoa",
+              "label": "Thanh Hóa",
+              "group": "Tỉnh, thành phố khác"
+            },
+            {
+              "value": "tuyen_quang",
+              "label": "Tuyên Quang",
+              "group": "Tỉnh, thành phố khác"
+            },
+            {
+              "value": "vinh_long",
+              "label": "Vĩnh Long",
+              "group": "Tỉnh, thành phố khác"
+            },
+            {
               "value": "thai_binh",
-              "label": "Thái Bình"
+              "label": "Thái Bình (đã sáp nhập vào Hưng Yên năm 2025)",
+              "retired": true,
+              "note": "Chỉ để đọc lại hồ sơ đã xác nhận trước khi sáp nhập — bản đã xác nhận là bất biến nên không sửa lại được.",
+              "group": "Không còn dùng"
             }
           ],
-          "note": "Danh sách phải khớp thư mục rules/locality/ (gạch dưới đổi thành gạch nối). Thái Bình đã sáp nhập vào Hưng Yên năm 2025 — chờ Haan xác nhận (câu hỏi Q-8)."
+          "note": "34 đơn vị hành chính sau sắp xếp năm 2025 (Thái Bình đã sáp nhập vào Hưng Yên). Tỉnh chưa có gói quy tắc riêng trong rules/locality/ vẫn chọn được — engine chạy trên gói nền QCVN 01:2021/BXD và ghi lại điều đó trong params.rule_pack_locality."
         }
       ]
     },
@@ -50,14 +223,45 @@
       "title": "Khu đất",
       "fields": [
         {
+          "path": "site.shape",
+          "label": "Hình thửa đất",
+          "control": "choice",
+          "weight": 1,
+          "hint": "Chọn dạng gần đúng nhất. Phần lớn thửa không vuông vắn là hình thang — mặt tiền và mặt hậu rộng khác nhau.",
+          "options": [
+            {
+              "value": "chu_nhat",
+              "label": "Chữ nhật"
+            },
+            {
+              "value": "hinh_thang",
+              "label": "Hình thang",
+              "note": "Mặt tiền và mặt hậu rộng khác nhau"
+            },
+            {
+              "value": "da_giac",
+              "label": "Đa giác không đều",
+              "note": "Tứ giác, ngũ giác… phải nhập từng đỉnh"
+            }
+          ],
+          "note": "Vắng mặt = chữ nhật, để đầu bài cũ đọc lên vẫn đúng."
+        },
+        {
           "path": "site.width_m",
-          "label": "Chiều rộng lô đất",
+          "label": "Chiều rộng mặt tiền",
           "control": "number",
           "unit": "m",
           "weight": 3,
           "min": 0.1,
           "max": 500,
-          "note": "Trọng số cao nhất: thiếu số này thì bộ giải không có bài toán nào để giải."
+          "note": "Trọng số cao nhất: thiếu số này thì bộ giải không có bài toán nào để giải.",
+          "hint": "Cạnh giáp đường. Với thửa hình thang, đây là cạnh phía đường — không phải cạnh rộng nhất.",
+          "when": {
+            "not": {
+              "field": "site.shape",
+              "equals": "da_giac"
+            }
+          }
         },
         {
           "path": "site.depth_m",
@@ -66,7 +270,49 @@
           "unit": "m",
           "weight": 3,
           "min": 0.1,
-          "max": 500
+          "max": 500,
+          "when": {
+            "not": {
+              "field": "site.shape",
+              "equals": "da_giac"
+            }
+          }
+        },
+        {
+          "path": "site.rear_width_m",
+          "label": "Chiều rộng mặt hậu",
+          "control": "number",
+          "unit": "m",
+          "weight": 2,
+          "min": 0.1,
+          "max": 500,
+          "hint": "Cạnh đối diện mặt tiền. Bộ giải chỉ xếp phòng được trên phần đất chữ nhật, nên nó lấy theo cạnh HẸP hơn trong hai cạnh.",
+          "when": {
+            "field": "site.shape",
+            "equals": "hinh_thang"
+          }
+        },
+        {
+          "path": "site.boundary_m",
+          "label": "Ranh giới thửa đất",
+          "control": "polygon",
+          "weight": 3,
+          "hint": "Toạ độ từng đỉnh, đơn vị mét. Trục ngang chạy dọc mặt tiền, trục dọc đi vào chiều sâu; gốc đặt ở góc trước-trái, đường nằm ở 0. Cạnh nối đỉnh 1 với đỉnh 2 là cạnh giáp đường.",
+          "when": {
+            "field": "site.shape",
+            "equals": "da_giac"
+          },
+          "note": "Đo từ trích lục hoặc bản đồ hiện trạng. Ít nhất ba đỉnh, đi theo một chiều, không lặp lại đỉnh đầu."
+        },
+        {
+          "path": "site.area_m2",
+          "label": "Diện tích theo giấy chứng nhận",
+          "control": "number",
+          "unit": "m²",
+          "weight": 1,
+          "min": 0.1,
+          "max": 250000,
+          "hint": "Không dùng để tính toán — dùng để đối chiếu với diện tích suy ra từ số đo. Lệch quá 5% thì hệ thống hỏi lại."
         },
         {
           "path": "site.orientation",
