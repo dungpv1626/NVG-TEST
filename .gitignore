@@ -41,3 +41,17 @@ doc/*.md
 # File lock tạm của LibreOffice/Word
 .~lock.*#
 ~$*
+
+# Module Thiết kế: tài nguyên nặng / không được phát tán lại
+# - kb/vendor/: bộ cài ODA File Converter (~100MB, giấy phép Open Design Alliance
+#   không cho phát tán lại). Dockerfile COPY vào image lúc build.
+# - kb/samples/: hồ sơ .dwg thật của NVG — dữ liệu khách hàng, không lên git.
+# Loại trừ NỘI DUNG chứ không loại trừ thư mục: git không đi vào thư mục đã bị
+# loại, nên dòng phủ định `!` sẽ vô tác dụng nếu viết `kb/vendor/`.
+kb/vendor/*
+!kb/vendor/README.md
+kb/samples/*
+!kb/samples/README.md
+
+# Ảnh đối chiếu do pipeline trích xuất sinh ra
+kb/out/

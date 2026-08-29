@@ -31,7 +31,13 @@ export function BoqPanel({
   const { data: items } = useBoqItems(parent);
   const createItem = useCreateBoqItem();
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState({ itemCode: '', name: '', unit: '', quantity: '', drawingRef: '' });
+  const [form, setForm] = useState({
+    itemCode: '',
+    name: '',
+    unit: '',
+    quantity: '',
+    drawingRef: '',
+  });
 
   const outdated = (items ?? []).filter(
     (i) => i.drawing_version && !i.drawing_version.is_current_version,
@@ -79,7 +85,19 @@ export function BoqPanel({
       )}
 
       {(items ?? []).length === 0 ? (
-        <EmptyState message="Chưa bóc tách hạng mục nào. Nhập bảng khối lượng theo hồ sơ mời thầu và bản vẽ đang hiệu lực." />
+        <EmptyState
+          message={
+            /*
+             * Trạng thái rỗng phải nói được hành động NGƯỜI ĐANG XEM làm được (CGD 5.6).
+             * Từ 29/08/2026 Kinh doanh xem được Module Thiết kế (câu hỏi Q-12) nhưng không
+             * bóc tách khối lượng — câu gợi ý cũ biến màn hình rỗng thành một việc họ không
+             * làm được và không hiểu vì sao.
+             */
+            readOnly
+              ? 'Chưa bóc tách hạng mục nào. Vai trò hiện tại chỉ xem, việc bóc tách do Dự toán hoặc Thiết kế thực hiện.'
+              : 'Chưa bóc tách hạng mục nào. Nhập bảng khối lượng theo hồ sơ mời thầu và bản vẽ đang hiệu lực.'
+          }
+        />
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border bg-surface">
           <table className="w-full min-w-[640px] border-collapse text-left">
@@ -160,12 +178,20 @@ export function BoqPanel({
           </div>
 
           {error && (
-            <p role="alert" className="mt-3 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
+            <p
+              role="alert"
+              className="mt-3 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
+            >
               {error}
             </p>
           )}
 
-          <Button type="submit" variant="secondary" className="mt-3" disabled={createItem.isPending}>
+          <Button
+            type="submit"
+            variant="secondary"
+            className="mt-3"
+            disabled={createItem.isPending}
+          >
             {createItem.isPending ? 'Đang lưu…' : BUTTONS.save}
           </Button>
         </form>

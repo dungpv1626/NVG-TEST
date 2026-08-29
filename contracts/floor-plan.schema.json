@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nvg.vn/contracts/floor-plan.schema.json",
+  "title": "FloorPlan",
+  "description": "Mặt bằng đã giải — output Layer 3b/3c. Nguồn: doc/design/03-data-contracts.md mục 3.4. Hệ toạ độ: gốc ở góc trước-trái lô đất, x sang phải, y vào sâu, đơn vị MÉT.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "intent_ref",
+    "rule_pack_version",
+    "site",
+    "levels",
+    "constraint_report"
+  ],
+  "properties": {
+    "schema_version": { "$ref": "#/$defs/semver" },
+    "intent_ref": { "$ref": "#/$defs/artifact_ref" },
+    "rule_pack_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "BẮT BUỘC. Không có nó thì không tái lập được phương án cũ sau khi quy chuẩn thay đổi (03-data-contracts 3.4)."
+    },
+    "site": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width_m", "depth_m"],
+      "properties": {
+        "width_m": { "type": "number", "exclusiveMinimum": 0 },
+        "depth_m": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "structural_grid": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "axes_x_m": { "type": "array", "items": { "type": "number" } },
+        "axes_y_m": { "type": "array", "items": { "type": "number" } }
+      },
+      "description": "Lưới trục do hệ thống ĐỀ XUẤT — kỹ sư kết cấu quyết định (CLAUDE.md 8.7)."
+    },
+    "levels": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["level", "rooms"],
+        "properties": {
+          "level": { "type": "integer", "minimum": 1, "maximum": 12 },
+          "height_m": { "type": "number", "exclusiveMinimum": 0 },
+          "rooms": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "type", "polygon", "area_m2"],
+              "properties": {
+                "id": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+                "type": { "type": "string", "minLength": 1 },
+                "wing": { "type": ["string", "null"], "pattern": "^W[0-9]+$" },
+                "polygon": { "$ref": "#/$defs/polygon" },
+                "area_m2": { "type": "number", "minimum": 0 },
+                "has_daylight": { "type": "boolean" }
+              }
+            }
+          },
+          "voids": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "polygon"],
+              "properties": {
+                "id": { "type": "string" },
+                "kind": { "type": "string", "enum": ["lightwell", "courtyard", "atrium"] },
+                "polygon": { "$ref": "#/$defs/polygon" }
+              }
+            }
+          },
+          "walls": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "a", "b"],
+              "properties": {
+                "id": { "type": "string" },
+                "a": { "$ref": "#/$defs/point" },
+                "b": { "$ref": "#/$defs/point" },
+                "thickness_m": { "type": "number", "exclusiveMinimum": 0 },
+                "load_bearing": { "type": "boolean" }
+              },
+              "description": "Ngữ nghĩa IFC — IfcWall (02-architecture 2.7b)."
+            }
+          },
+          "openings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "wall", "kind", "offset_m", "width_m"],
+              "properties": {
+                "id": { "type": "string" },
+                "wall": { "type": "string" },
+                "kind": { "type": "string", "enum": ["door", "window", "opening"] },
+                "offset_m": { "type": "number", "minimum": 0 },
+                "width_m": { "type": "number", "exclusiveMinimum": 0 },
+                "height_m": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+                "sill_m": { "type": ["number", "null"], "minimum": 0 }
+              },
+              "description": "Ngữ nghĩa IFC — IfcDoor / IfcWindow."
+            }
+          }
+        }
+      }
+    },
+    "cores": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "polygon", "levels"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^C[0-9]+$" },
+          "polygon": { "$ref": "#/$defs/polygon" },
+          "levels": { "type": "array", "items": { "type": "integer", "minimum": 1 } }
+        }
+      },
+      "description": "Lõi dùng chung giữa các tầng: cùng một đa giác cho mọi tầng trong danh sách."
+    },
+    "constraint_report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": { "type": "string", "enum": ["pass", "warning", "infeasible"] },
+        "violations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["rule_id", "severity", "message"],
+            "properties": {
+              "rule_id": { "type": "string" },
+              "severity": { "type": "string", "enum": ["error", "warning"] },
+              "message": { "type": "string" },
+              "involved": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "semver": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "artifact_ref": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "point": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "number" } },
+    "polygon": {
+      "type": "array",
+      "minItems": 3,
+      "items": { "$ref": "#/$defs/point" },
+      "description": "Đỉnh theo chiều kim đồng hồ, KHÔNG lặp đỉnh đầu ở cuối (03-data-contracts 3.4)."
+    }
+  }
+}

@@ -12,7 +12,8 @@
     "./format": "./src/format.ts",
     "./terminology": "./src/terminology.ts",
     "./content": "./src/content.ts",
-    "./codes": "./src/codes.ts"
+    "./codes": "./src/codes.ts",
+    "./design": "./src/design/index.ts"
   },
   "scripts": {
     "build": "tsc -b",

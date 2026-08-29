@@ -6,16 +6,7 @@
  * cấu hình được, KHÔNG hard-code."
  */
 
-import {
-  boolean,
-  index,
-  integer,
-  pgTable,
-  text,
-  unique,
-  uuid,
-  varchar,
-} from 'drizzle-orm/pg-core';
+import { boolean, index, integer, pgTable, text, unique, uuid, varchar } from 'drizzle-orm/pg-core';
 import { approvalSubjectEnum, roleCodeEnum } from './_enums';
 import { auditColumns } from './_audit';
 import { money, primaryId, softDelete } from './_helpers';
@@ -66,6 +57,41 @@ export const permissions = pgTable(
     ...auditColumns(),
   },
   (t) => [unique('permissions_role_module_unique').on(t.roleId, t.moduleCode)],
+);
+
+/**
+ * Quyền dạng CHUỖI gắn với vai trò — bổ sung cho `permissions`, không thay thế.
+ *
+ * Nguồn: `doc/design/02-architecture.md` mục 2.8, CLAUDE.md 8.5 T6.
+ *
+ * Vì sao cần thêm khi đã có `permissions`: ma trận kia chỉ tới mức MODULE
+ * (`TK` + 5 cờ), không phân biệt được ba bộ môn. Mà "kiến trúc sư không ký được hồ sơ
+ * kết cấu" là ràng buộc pháp lý chứ không phải tuỳ chọn cấu hình — nó cần quyền
+ * `design.publish.ket_cau` tách bạch với `design.publish.kien_truc`.
+ *
+ * Ma trận `permissions` GIỮ NGUYÊN cho 12 module đang chạy. Bảng này khởi động chỉ với
+ * nhóm `design.*`; danh sách giá trị hợp lệ ở `DESIGN_CAPABILITIES` (`@nvg/shared/design`).
+ *
+ * KHÔNG hard-code tên vai trò trong chính sách RLS — tenant thứ hai sẽ có cơ cấu tổ chức
+ * khác. Policy hỏi `auth_has_capability('design.publish.ket_cau')`, không hỏi "có phải KC".
+ */
+export const roleCapabilities = pgTable(
+  'role_capabilities',
+  {
+    id: primaryId(),
+    roleId: uuid('role_id')
+      .notNull()
+      .references(() => roles.id, { onDelete: 'cascade' }),
+
+    /** Chuỗi phân cấp bằng dấu chấm, ví dụ `design.floorplan.write`. */
+    capability: varchar('capability', { length: 64 }).notNull(),
+
+    ...auditColumns(),
+  },
+  (t) => [
+    unique('role_capabilities_unique').on(t.roleId, t.capability),
+    index('role_capabilities_capability_idx').on(t.capability),
+  ],
 );
 
 /**
@@ -147,5 +173,6 @@ export const approvalLimits = pgTable(
 
 export type Role = typeof roles.$inferSelect;
 export type Permission = typeof permissions.$inferSelect;
+export type RoleCapability = typeof roleCapabilities.$inferSelect;
 export type UserCompany = typeof userCompanies.$inferSelect;
 export type ApprovalLimit = typeof approvalLimits.$inferSelect;

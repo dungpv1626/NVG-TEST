@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nvg.vn/contracts/space-program.schema.json",
+  "title": "SpaceProgram",
+  "description": "Chương trình không gian — output Layer 2. Nguồn: doc/design/03-data-contracts.md mục 3.2.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "brief_ref", "spaces"],
+  "properties": {
+    "schema_version": { "$ref": "#/$defs/semver" },
+    "brief_ref": { "$ref": "#/$defs/artifact_ref" },
+    "spaces": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "type", "floor", "min_area_m2"],
+        "properties": {
+          "id": { "$ref": "#/$defs/space_id" },
+          "type": { "type": "string", "minLength": 1 },
+          "floor": { "type": "integer", "minimum": 1, "maximum": 12 },
+          "target_area_m2": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+          "min_area_m2": { "type": "number", "exclusiveMinimum": 0 },
+          "max_area_m2": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+          "priority": { "type": "integer", "minimum": 1, "description": "1 là cao nhất." },
+          "needs_daylight": { "type": "boolean" },
+          "needs_facade": { "type": "boolean" },
+          "needs_ventilation": { "type": "boolean" }
+        }
+      }
+    },
+    "adjacency": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["a", "b", "kind"],
+        "properties": {
+          "a": { "$ref": "#/$defs/space_id" },
+          "b": { "$ref": "#/$defs/space_id" },
+          "kind": {
+            "type": "string",
+            "enum": ["adjacent", "near", "separate"],
+            "description": "adjacent = phải kề nhau · near = cùng tầng, gần · separate = nên cách nhau."
+          },
+          "weight": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    },
+    "floor_allocation": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["floor"],
+        "properties": {
+          "floor": { "type": "integer", "minimum": 1, "maximum": 12 },
+          "usable_area_m2": { "type": ["number", "null"], "minimum": 0 },
+          "allocated_area_m2": { "type": ["number", "null"], "minimum": 0 }
+        }
+      }
+    },
+    "reference_projects": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Mã dự án tham chiếu trong Knowledge Base — để truy được 'số này lấy từ đâu'."
+    },
+    "priors_applied": { "type": "boolean" }
+  },
+  "$defs": {
+    "semver": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "artifact_ref": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "space_id": { "type": "string", "pattern": "^[a-z0-9_]+$" }
+  }
+}

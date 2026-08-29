@@ -666,6 +666,34 @@
       "when": 1787931027533,
       "tag": "0094_fix_my_pending_approvals_estimate_parent_module",
       "breakpoints": true
+    },
+    {
+      "idx": 95,
+      "version": "7",
+      "when": 1787931027534,
+      "tag": "0095_design_engine_foundation",
+      "breakpoints": true
+    },
+    {
+      "idx": 96,
+      "version": "7",
+      "when": 1787931027535,
+      "tag": "0096_design_engine_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 97,
+      "version": "7",
+      "when": 1787931027536,
+      "tag": "0097_kd_view_design_module",
+      "breakpoints": true
+    },
+    {
+      "idx": 98,
+      "version": "7",
+      "when": 1787931027537,
+      "tag": "0098_kb_records",
+      "breakpoints": true
     }
   ]
 }

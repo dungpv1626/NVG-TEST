@@ -1,0 +1,83 @@
+# Ánh xạ TÊN LỚP bản vẽ → VAI TRÒ mà trình trích xuất hiểu.
+#
+# Nguồn: `doc/design/06-knowledge-base.md` — "Rào cản: quy ước lớp bản vẽ không đồng nhất.
+# Giải bằng bảng ánh xạ layer, bổ sung dần theo thời kỳ và người vẽ."
+#
+# Đây là DỮ LIỆU, không phải mã nguồn — cùng nguyên tắc với rule pack (CLAUDE.md 8.2 điểm 4).
+# Thêm một quy ước đặt tên mới là sửa tệp này, KHÔNG sửa `cad/extract.py`.
+#
+# ⚠️ Bảng dưới đây là PHỎNG ĐOÁN dựng từ quy ước AutoCAD phổ biến và cách đặt tên tiếng Việt
+# thường gặp. Chưa đối chiếu với hồ sơ thật của NVG vì `kb/samples/` còn trống (Mốc 0.1).
+# Khi có 5 bộ `.dwg` đầu tiên: chạy trích xuất, đọc mục `layers_unmapped` trong kết quả, rồi
+# bổ sung vào đây. Đó chính là quy trình dự kiến, không phải việc chữa cháy.
+#
+# Mẫu so khớp là glob (`fnmatch`), KHÔNG phân biệt hoa thường. Lớp khớp nhiều vai trò thì
+# vai trò khai TRƯỚC thắng — nên đặt mẫu hẹp lên trên mẫu rộng.
+#
+# ⚠️ Cạm bẫy đã sập một lần: mẫu `A-ROOM*` ở `room_boundary` nuốt luôn lớp `A-ROOM-IDEN`
+# vốn là lớp NHÃN, khiến mọi phòng trích ra đều không có tên mà không có lỗi nào nổ lên.
+# Theo chuẩn lớp AIA, ranh vùng nằm ở `A-AREA-*` còn `A-ROOM-*` là nhóm định danh — đừng
+# gộp chúng lại chỉ vì tên nghe giống nhau.
+
+version: '2026.08.1'
+
+# Đơn vị dùng khi bản vẽ không khai `$INSUNITS`. Hồ sơ kiến trúc Việt Nam gần như luôn vẽ
+# bằng milimét. Kết quả trích xuất luôn ghi `units_assumed` để biết con số nào là đọc được
+# và con số nào là suy ra.
+default_units: mm
+
+roles:
+  # Đa giác khép kín bao quanh một phòng. Đây là nguồn hình học chính.
+  room_boundary:
+    - '*ROOM*BOUND*'
+    - '*PHONG*RANH*'
+    - 'A-AREA*'
+    - '*_RANH_PHONG*'
+    - 'KT-PHONG*'
+
+  # Chữ đặt tên phòng. Trích xuất giữ NGUYÊN VĂN; việc quy về `bedroom`/`living` là của lớp
+  # mô hình ngôn ngữ ở Worker (`06-knowledge-base.md` mục 6.1), không phải của Container.
+  room_label:
+    - '*ROOM*IDEN*'
+    - '*TEN*PHONG*'
+    - 'A-ANNO-TEXT*'
+    - '*_TEXT_PHONG*'
+    - 'KT-TEXT*'
+    - '*NOTE*'
+
+  wall:
+    - 'A-WALL*'
+    - '*TUONG*'
+    - 'KT-TUONG*'
+
+  structural_column:
+    - 'S-COL*'
+    - '*COT*'
+    - 'KC-COT*'
+
+  site_boundary:
+    - '*RANH*DAT*'
+    - '*SITE*BOUND*'
+    - 'C-PROP*'
+
+  door:
+    - 'A-DOOR*'
+    - '*CUA*DI*'
+
+  window:
+    - 'A-GLAZ*'
+    - '*CUA*SO*'
+
+# Lớp cố tình bỏ qua: có mặt trong mọi bản vẽ nhưng không mang thông tin hình học phòng.
+# Khai tường minh để chúng không lọt vào `layers_unmapped` và làm nhiễu danh sách cần bổ sung.
+ignore:
+  - '*DIM*'
+  - '*KICH*THUOC*'
+  - 'DEFPOINTS'
+  - '*HATCH*'
+  - '*AXIS*'
+  - '*TRUC*'
+  - '*KHUNG*TEN*'
+  - '*TITLE*'
+  - '*VIEWPORT*'
+  - '0'

@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nvg.vn/contracts/layout-intent.schema.json",
+  "title": "LayoutIntent",
+  "description": "Ý đồ bố cục — output Layer 3a, thứ DUY NHẤT mô hình ngôn ngữ sinh ra. KHÔNG có toạ độ tuyệt đối, KHÔNG có kích thước chính xác: chỉ cấu trúc và gợi ý tỉ lệ (nguyên tắc bất biến 2, CLAUDE.md 8.2). Nguồn: doc/design/03-data-contracts.md mục 3.3.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "program_ref", "variant_id", "massing", "cores", "floors"],
+  "properties": {
+    "schema_version": { "$ref": "#/$defs/semver" },
+    "program_ref": { "$ref": "#/$defs/artifact_ref" },
+    "variant_id": {
+      "type": "string",
+      "pattern": "^[A-Z]$",
+      "description": "3–4 phương án mỗi lần chạy: A, B, C, D."
+    },
+    "variant_label": { "type": "string" },
+    "massing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["wings"],
+      "properties": {
+        "wings": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id"],
+            "properties": {
+              "id": { "$ref": "#/$defs/wing_id" },
+              "x_hint": { "type": "number" },
+              "y_hint": { "type": "number" },
+              "w_hint_m": { "type": "number", "exclusiveMinimum": 0 },
+              "d_hint_m": { "type": "number", "exclusiveMinimum": 0 }
+            }
+          }
+        },
+        "wing_links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["a", "b"],
+            "properties": {
+              "a": { "$ref": "#/$defs/wing_id" },
+              "b": { "$ref": "#/$defs/wing_id" },
+              "via": { "type": ["string", "null"] }
+            }
+          },
+          "description": "Rỗng với nhà phố; dùng cho biệt thự nhiều cánh."
+        }
+      }
+    },
+    "cores": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "wing"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^C[0-9]+$" },
+          "wing": { "$ref": "#/$defs/wing_id" },
+          "band": { "type": "string", "enum": ["left", "right", "center"] },
+          "position_hint": { "type": "string", "enum": ["front", "middle", "rear"] },
+          "contains": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["stair", "wc", "shaft", "lift"] }
+          }
+        }
+      }
+    },
+    "floors": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["level", "wings"],
+        "properties": {
+          "level": { "type": "integer", "minimum": 1, "maximum": 12 },
+          "wings": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["wing_id", "tree"],
+              "properties": {
+                "wing_id": { "$ref": "#/$defs/wing_id" },
+                "tree": { "$ref": "#/$defs/layout_node" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "rationale": { "type": "string" }
+  },
+  "$defs": {
+    "semver": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "artifact_ref": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "wing_id": { "type": "string", "pattern": "^W[0-9]+$" },
+    "layout_node": {
+      "description": "Nút của cây chia không gian — ĐÚNG MỘT trong ba dạng, không được lai. Cây chia đệ quy không thể sinh khe hở hay chồng lấn: đó là tính chất của cấu trúc dữ liệu, không phải kết quả kiểm tra.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["split", "a", "b"],
+          "properties": {
+            "split": {
+              "type": "string",
+              "enum": ["H", "V"],
+              "description": "H = cắt ngang · V = cắt dọc."
+            },
+            "ratio_hint": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "exclusiveMaximum": 1,
+              "description": "CHỈ là gợi ý cho hàm mục tiêu; bộ giải được phép bỏ qua."
+            },
+            "a": { "$ref": "#/$defs/layout_node" },
+            "b": { "$ref": "#/$defs/layout_node" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["room"],
+          "properties": { "room": { "type": "string", "pattern": "^[a-z0-9_]+$" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["void"],
+          "properties": {
+            "void": { "type": "string", "enum": ["lightwell", "courtyard", "atrium"] }
+          }
+        }
+      ]
+    }
+  }
+}

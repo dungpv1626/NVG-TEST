@@ -1,0 +1,9 @@
+# Siêu dữ liệu của gói quy tắc nền.
+# Phiên bản đánh theo ngày phát hành: YYYY.MM.n
+pack:
+  id: base
+  version: '2026.08.1'
+  locality: null # null = áp dụng mọi nơi
+  description: >-
+    Quy tắc nền cho nhà ở dân dụng, soạn từ QCVN 01:2021/BXD và kinh nghiệm
+    Phòng Thiết kế Nhà Việt Group. Gói địa phương ghi đè theo rule_id.

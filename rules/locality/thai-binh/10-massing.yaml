@@ -1,0 +1,56 @@
+# Đặt khối trong lô: khoảng lùi và mật độ xây dựng.
+#
+# ⚠️ Các giá trị dưới đây lấy từ QCVN 01:2021/BXD (mức chung), CHƯA phải quy định riêng
+#    của địa phương. Khi có văn bản quy hoạch của tỉnh thì sửa ở đây, không sửa mã nguồn.
+
+# Nhà phố lấp kín lô, khoảng lùi bằng không ở cả bốn phía.
+- id: setback_front
+  applies_to: [nha_pho]
+  scope: site
+  predicate: setback
+  side: front
+  value_m: 0.0
+  severity: error
+  source: 'QCVN 01:2021/BXD'
+  auto_repair: none
+
+- id: setback_back
+  applies_to: [nha_pho]
+  scope: site
+  predicate: setback
+  side: back
+  value_m: 0.0
+  severity: error
+  source: 'QCVN 01:2021/BXD'
+  auto_repair: none
+
+# Mật độ xây dựng tối đa cho lô nhỏ. QCVN 01:2021/BXD cho phép tới 100% với lô
+# diện tích ≤ 90 m²; giá trị này thu hẹp dần khi lô lớn hơn.
+- id: max_density_small_lot
+  applies_to: [nha_pho]
+  scope: site
+  predicate: max_density
+  value: 1.0
+  severity: error
+  source: 'QCVN 01:2021/BXD'
+  auto_repair: none
+
+# Biệt thự: khoảng lùi bốn phía. Giá trị tạm, chờ văn bản quy hoạch địa phương.
+- id: setback_front_villa
+  applies_to: [biet_thu, nha_vuon]
+  scope: site
+  predicate: setback
+  side: front
+  value_m: 3.0
+  severity: error
+  source: 'QCVN 01:2021/BXD'
+  auto_repair: none
+
+- id: max_density_villa
+  applies_to: [biet_thu, nha_vuon]
+  scope: site
+  predicate: max_density
+  value: 0.6
+  severity: error
+  source: 'QCVN 01:2021/BXD'
+  auto_repair: none

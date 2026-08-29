@@ -115,7 +115,12 @@ export function EstimatePanel({
   if (!current) {
     return (
       <EmptyState
-        message="Chưa có bản dự toán nào. Lập bản đầu tiên sau khi bóc tách xong khối lượng."
+        message={
+          // Xem chú thích cùng nội dung ở `boq-panel.tsx`.
+          readOnly
+            ? 'Chưa có bản dự toán nào. Vai trò hiện tại chỉ xem, việc lập dự toán do Dự toán hoặc Thiết kế thực hiện.'
+            : 'Chưa có bản dự toán nào. Lập bản đầu tiên sau khi bóc tách xong khối lượng.'
+        }
         action={
           readOnly ? undefined : (
             <Button variant="secondary" onClick={() => void newVersion()}>

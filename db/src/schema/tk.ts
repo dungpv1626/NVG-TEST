@@ -21,12 +21,14 @@
  *     giống cách `bid_documents` của Module DA đã làm. Giữ `file_url` riêng ở đây nghĩa là
  *     bản vẽ có hai nơi quản lý phiên bản, đúng thứ PRD Mục 2.3 cấm.
  *
- * 🚫 TK-10 → TK-17 (AI Preliminary Design Engine) KHÔNG có ở đây — CLAUDE.md 5.6.
+ * 📐 TK-10 → TK-17 (AI Preliminary Design Engine) ở `db/src/schema/design.ts` — bảng artifact
+ * và đồ thị phụ thuộc, cơ chế khác hẳn hệ tài liệu. Bảng ở đây được DÙNG LẠI, không thay thế.
  * ⏸ TK-09 (thư viện thiết kế) lùi sang Phase 4, đã đánh dấu "lùi được" trong BUILD_PLAN.
  */
 
 import { sql } from 'drizzle-orm';
 import {
+  boolean,
   date,
   index,
   integer,
@@ -99,6 +101,21 @@ export const designProjects = pgTable(
 
     /** Nguyên nhân dừng thiết kế — bắt buộc khi chuyển sang `dung_thiet_ke`. */
     stoppedReason: text('stopped_reason'),
+
+    /**
+     * Dự án NHÁP do khách vãng lai trên website tạo, chưa phải dự án chính thức
+     * (`doc/design/02-architecture.md` mục 2.8b).
+     *
+     * Khi Kinh doanh tiếp nhận thì CHUYỂN ĐỔI tại chỗ — đặt `converted_at`/`converted_by`,
+     * hạ cờ này — chứ không tạo dự án mới rồi chép sang: chép sang là mất toàn bộ artifact
+     * và đồ thị phụ thuộc đã sinh trong lúc khách tự thử.
+     *
+     * ⚠️ Luồng khách vãng lai THẬT (đăng nhập ẩn danh, giới hạn số lần) thuộc Mốc 8 và chưa
+     * mở. Hiện chưa có `anon` access nào trong hệ thống — xem câu hỏi Q-4.
+     */
+    isDraft: boolean('is_draft').notNull().default(false),
+    convertedAt: timestamp('converted_at', { withTimezone: true }),
+    convertedBy: uuid('converted_by').references(() => users.id, { onDelete: 'set null' }),
 
     notes: text('notes'),
 
@@ -276,7 +293,9 @@ export const designVersions = pgTable(
      */
     uniqueIndex('design_versions_one_current_per_discipline')
       .on(t.designProjectId, t.discipline)
-      .where(sql`${t.isCurrentVersion} AND ${t.publishedAt} IS NOT NULL AND ${t.deletedAt} IS NULL`),
+      .where(
+        sql`${t.isCurrentVersion} AND ${t.publishedAt} IS NOT NULL AND ${t.deletedAt} IS NULL`,
+      ),
     uniqueIndex('design_versions_project_discipline_version').on(
       t.designProjectId,
       t.discipline,

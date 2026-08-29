@@ -1,0 +1,58 @@
+# Mẫu câu thông báo cho người dùng, tra theo rule_id.
+#
+# Sinh từ mẫu câu, KHÔNG gọi mô hình ngôn ngữ: tất định, rẻ, dịch được, và không bịa.
+# Văn phong theo CGD 4: không đại từ nhân xưng, không emoji, không viết hoa để nhấn mạnh.
+# Lỗi = [việc gì không thực hiện được] + [vì sao / cần làm gì].
+
+templates:
+  corridor_min_width: 'Hành lang {room} chỉ còn {actual} m, tối thiểu {required} m.'
+  stair_min_width: 'Vế thang chỉ còn {actual} m, tối thiểu {required} m.'
+  room_min_dimension_bedroom: '{room} có cạnh nhỏ nhất {actual} m, tối thiểu {required} m.'
+  min_area: '{room} chỉ đạt {actual} m², yêu cầu tối thiểu {required} m².'
+  max_area: '{room} đạt {actual} m², vượt mức tối đa {required} m².'
+  aspect_ratio_max: '{room} có tỉ lệ dài trên rộng {actual}, vượt mức {required}.'
+  requires_daylight: '{room} không tiếp giáp mặt thoáng nên không lấy được sáng tự nhiên.'
+  requires_access: '{room} chưa có lối vào.'
+  adjacency_adjacent: '{a} và {b} cần liền kề nhau.'
+  adjacency_separate: '{a} và {b} không nên đặt cạnh nhau.'
+  floor_preference_top: '{room} đang ở tầng {actual}, nên đặt ở tầng trên cùng.'
+  floor_preference_ground: '{room} đang ở tầng {actual}, cần đặt ở tầng trệt.'
+  aligned_across_floors: '{target} lệch {actual} m giữa các tầng, yêu cầu thẳng hàng.'
+  setback: 'Khoảng lùi phía {side} chỉ còn {actual} m, tối thiểu {required} m.'
+  max_density: 'Mật độ xây dựng {actual}, vượt mức tối đa {required}.'
+  module_multiple: 'Kích thước {actual} m không phải bội số của module {required} m.'
+
+# Mẫu câu ghép khi nhiều quy tắc cùng nằm trong một tập mâu thuẫn.
+#
+# Khi bộ giải VÔ NGHIỆM thì không có phương án nào, nên không có `{actual}` để điền — mẫu câu
+# vi phạm ở trên không dùng được. Tập mâu thuẫn cần diễn đạt YÊU CẦU chứ không phải vi phạm:
+# "không thể đồng thời có hành lang rộng ≥ 0,9 m và phòng ngủ chính ≥ 14 m²".
+combined:
+  prefix: 'Trên {constraint} không thể đồng thời có:'
+  separator: ', '
+  suffix: '.'
+  fallback_constraint: 'khu đất và số tầng đã cho'
+
+# Yêu cầu ở dạng cụm danh từ, tra theo rule_id rồi mới tới predicate.
+requirements:
+  corridor_min_width: 'hành lang rộng tối thiểu {required} m'
+  stair_min_width: 'vế thang rộng tối thiểu {required} m'
+  room_min_dimension_bedroom: 'phòng ngủ có cạnh nhỏ nhất {required} m'
+  min_area: '{target} tối thiểu {required} m²'
+  max_area: '{target} không quá {required} m²'
+  min_dimension: '{target} có cạnh nhỏ nhất {required} m'
+  aspect_ratio_max: '{target} có tỉ lệ dài trên rộng không quá {required}'
+  requires_daylight: '{target} tiếp giáp mặt thoáng'
+  requires_access: '{target} có lối vào'
+  adjacency: '{target} đúng quan hệ vị trí đã đặt'
+  floor_preference: '{target} ở đúng tầng ưu tiên'
+  aligned_across_floors: '{target} thẳng hàng giữa các tầng'
+  setback: 'khoảng lùi tối thiểu {required} m'
+  max_density: 'mật độ xây dựng không quá {required}'
+  module_multiple: 'kích thước là bội số {required} m'
+
+# Nhãn nguồn quy tắc, hiển thị trên thẻ ràng buộc để kiến trúc sư biết ngay
+# vi phạm này chặn phát hành hay bỏ qua được.
+source_labels:
+  legal: 'Quy chuẩn — chặn phát hành'
+  experience: 'Kinh nghiệm NVG — bỏ qua được'

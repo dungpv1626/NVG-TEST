@@ -23,7 +23,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'logic',
-          include: ['shared/**/*.test.ts', 'db/**/*.test.ts'],
+          include: ['shared/**/*.test.ts', 'db/**/*.test.ts', 'workers/**/*.test.ts'],
           environment: 'node',
           /*
            * Hạn 5 giây mặc định của Vitest quá ngắn cho nhóm này.

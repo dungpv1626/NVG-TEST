@@ -22,6 +22,8 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:web": "vitest run --project web",
+    "contracts:gen": "node scripts/contracts-gen.mjs",
+    "contracts:check": "node scripts/contracts-gen.mjs --check",
     "test:watch": "vitest --project web",
     "db:generate": "npm run generate --workspace=db",
     "db:migrate": "npm run migrate --workspace=db",
@@ -32,10 +34,12 @@
     "deploy:workers": "npm run build --workspace=shared && wrangler deploy --config workers/wrangler.jsonc"
   },
   "devDependencies": {
-    "typescript": "^5.7.3",
-    "prettier": "^3.4.2",
-    "vitest": "^3.0.5",
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.13.1",
+    "json-schema-to-zod": "^2.8.1",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5",
     "wrangler": "^4.126.0"
   }
 }

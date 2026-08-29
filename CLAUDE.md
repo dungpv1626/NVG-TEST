@@ -381,8 +381,10 @@ Hệ thống chỉ **tích hợp hoặc liên kết dữ liệu**, không thay t
 
 ### 5.6 Hai chốt chặn riêng
 
-- **KHÔNG bắt đầu viết code TK-10 → TK-17** (AI Preliminary Design Engine) trước khi tài liệu đặc tả AI v02
-  đã có trong `doc/` và đã được đọc. Xem 6.4.
+- ~~**KHÔNG bắt đầu viết code TK-10 → TK-17** trước khi tài liệu đặc tả AI đã có trong `doc/`.~~
+  **Chốt chặn này đã GỠ ngày 28/08/2026** — bộ tài liệu đặc tả nằm ở `doc/design/` (14 file) và đã
+  được đọc. Hàng rào cho module thiết kế nay ở **mục 8**; đọc `doc/design/README.md` trước, vì nó
+  chứa các đính chính chỗ tài liệu mô tả sai hiện trạng.
 - **Module TC và SX đang ở mức ĐỊNH HƯỚNG** — hai bộ phận liên quan (Chỉ huy–Giám sát công trường, Xưởng sản
   xuất giàn giáo) **chưa có phiếu khảo sát trực tiếp** (PRD 1.2, 10). Khi triển khai hai module này: đánh dấu
   rõ phần nào là suy luận gián tiếp, hỏi lại Haan, **không coi là yêu cầu đã chốt**.
@@ -477,9 +479,11 @@ luôn là người quyết định cuối cùng" (PRD 2.3).
 2. **AI Preliminary Design Engine (TK-10→TK-17) là tính năng quan trọng, quyết định thành công dự án** — có
    tài liệu đặc tả riêng, và được triển khai **ngay sau khi phần hệ thống cốt lõi đạt 90%**.
    → Điều này **thay thế** IPD 3.3 ("không nằm trong lịch trình, chỉ làm nếu còn thời gian Tuần 6").
-3. **Tài liệu đặc tả AI v02 đã tồn tại**, Haan sẽ bổ sung vào `doc/` khi bắt đầu phần thiết kế AI.
-   → **Cấm viết code TK-10→TK-17 trước khi tài liệu đó có trong `doc/` và đã đọc.**
+3. ~~**Tài liệu đặc tả AI v02 đã tồn tại**, Haan sẽ bổ sung vào `doc/`.~~
+   **Đã xong 28/08/2026**: bộ tài liệu (14 file) nằm ở `doc/design/`. Hàng rào chuyển sang **mục 8**.
    → Điều này **thay thế** IPD 7 ("chưa được soạn thảo").
+   → ⚠️ Số phiên bản còn lệch: mục này ghi "v02", thư mục nguồn có `v03.docx`/`v04.docx`/PDF `v2`,
+   còn `doc/design/00-README.md` nhắc tới `v05.docx` không tồn tại. Đang chờ Haan xác nhận (Q-5).
 4. **Repo** = chính thư mục `/home/haan/Documents/Project/NVG`, `doc/` nằm bên trong.
 5. **CLAUDE.md không ghi ngày/mốc cụ thể** (tránh lỗi thời) — tra IPD 2 khi cần ngày.
 6. **Thêm thư mục `shared/`** song song `web/ workers/ db/` cho Zod schema, type và hằng số dùng chung.
@@ -560,3 +564,171 @@ Gộp từ PRD 10, TSD 7, CGD 7, BSD 5, IPD 7:
 4. Với mỗi thao tác: quyết định **Supabase trực tiếp hay Workers** theo quy tắc ở mục 3.1.
 5. Dùng lại **7 mẫu bố cục** (4.6), **thư viện nội dung** CGD 5, **thuật ngữ chuẩn** (4.5), **5 màu trạng thái** (4.3).
 6. Gặp mơ hồ về nghiệp vụ → **hỏi Haan**, không tự quyết.
+
+---
+
+## 8. Module Thiết kế AI (TK-10 → TK-17)
+
+> Mục này là **hàng rào cứng** cho riêng module thiết kế. Nó **không** thay thế mục 1–7;
+> nơi nào mục này im lặng thì áp dụng quy tắc chung của các mục trên.
+
+### 8.1 Tài liệu và thứ tự ưu tiên
+
+Tài liệu đặc tả nằm ở **`doc/design/`** (14 file, copy vào repo 28/08/2026). Bộ này là
+**nguồn sự thật cho việc triển khai TK-10 → TK-17**, thắng các bản `.docx` trình bày cho
+khách hàng.
+
+**Đọc `doc/design/README.md` TRƯỚC** — nó chứa 6 đính chính những chỗ tài liệu mô tả sai
+hiện trạng hoặc đã lỗi thời, cộng bảng ánh xạ sang bảng và enum đang chạy. Làm theo nguyên
+văn tài liệu mà bỏ qua bảng đính chính sẽ dựng sai nền tảng.
+
+Chốt chặn của mục 5.6 (**cấm viết code TK-10→TK-17 trước khi tài liệu có trong repo**) đã
+được **gỡ** kể từ 28/08/2026.
+
+Ngoài phạm vi TK-10→TK-17, thứ tự `PRD > AFD > TSD > CGD > BSD > IPD` vẫn giữ nguyên.
+
+### 8.2 Chín nguyên tắc bất biến
+
+Vi phạm bất kỳ điểm nào là lỗi kiến trúc, không phải lỗi phong cách.
+
+1. **Không có bước nào đi thẳng từ chữ sang ảnh.** Mọi ảnh dẫn xuất từ hình học đã giải.
+2. **Mô hình ngôn ngữ không bao giờ sinh toạ độ hay kích thước.** Nó sinh *cấu trúc* (cây
+   chia không gian, lựa chọn rời rạc); **bộ giải gán số**.
+3. **Mọi ranh giới giữa các lớp có JSON Schema** trong `contracts/`. Không có hợp đồng thì
+   không viết code cho lớp đó — dừng và hỏi.
+4. **Quy tắc kiến trúc là dữ liệu, không phải mã nguồn.** Rule pack YAML. Không hard-code
+   một ngưỡng quy chuẩn nào ở bất kỳ đâu (`if corridor_width < 0.9` là sai).
+5. **Một nguồn hình học.** Container sinh glTF; trình duyệt chỉ đọc. Không dựng hình bằng
+   JavaScript.
+6. **Artifact bất biến, băm nội dung, có lineage.** Không `UPDATE`, không ghi đè. Sửa = tạo
+   artifact mới + đổi `design_head`.
+7. **Mọi bảng của module mang `tenant_id`** — kể cả khi hiện chỉ có một tenant.
+8. **Mọi artifact và tài liệu mang `discipline`** — kể cả khi Giai đoạn 1 chỉ sinh kiến trúc.
+9. **Engine không tự sinh và không tự phát hành nội dung kết cấu, điện nước, phòng cháy
+   chữa cháy.** Nó chuẩn bị nền hình học; kỹ sư có chứng chỉ hành nghề ký và chịu trách
+   nhiệm. Mỗi lần phát hành mang **đúng một** bộ môn.
+
+### 8.3 Hai runtime — biết mã đang viết chạy ở đâu
+
+| | **Worker (TypeScript)** | **Container (Python)** |
+|---|---|---|
+| Chạy gì | Giao diện, API, gọi mô hình ngôn ngữ, đọc/ghi artifact, điều phối | Bộ giải CP-SAT, hình học, đọc/ghi tệp CAD, dựng mô hình ba chiều |
+| Vì sao | Nghẽn ở vào/ra, cùng codebase | OR-Tools, trimesh, ezdxf, shapely chỉ có ở Python |
+| Gọi nhau | Worker → Container qua HTTP | Container **không gọi ngược** Worker |
+
+**Nhầm chỗ là lỗi kiến trúc.** Đừng gọi mô hình ngôn ngữ từ Container. Đừng cài thư viện
+hình học phía TypeScript.
+
+Container phải **không giữ trạng thái** và **không dùng giao diện lập trình đặc thù
+Cloudflare bên trong** — đó là thứ cho phép đổi chỗ triển khai mà không viết lại.
+
+### 8.4 Ánh xạ thư mục — tài liệu giả định monorepo khác
+
+| Tài liệu | Repo |
+|---|---|
+| `packages/contracts/*.schema.json` | `contracts/` ở gốc (nguồn gốc, viết tay) |
+| → sinh zod | `shared/src/design/*.generated.ts`, xuất qua `@nvg/shared/design` |
+| → sinh Pydantic | **KHÔNG sinh.** Python nạp thẳng `contracts/*.schema.json`, validate bằng `jsonschema` — xem 8.8 |
+| `apps/web/src/modules/design/` | `workers/src/design/` |
+| `services/design-compute/` | `compute/` ở gốc — Python, **không** phải npm workspace |
+| `rules/`, `config/models.yaml`, `tests/golden/` | giữ nguyên ở gốc |
+
+Bộ sinh zod: `scripts/contracts-gen.mjs`. `npm run contracts:gen` để sinh,
+`npm run contracts:check` để so bản sinh với bản đã commit. **Không sửa tay
+`shared/src/design/*.generated.ts`** — sửa JSON Schema rồi sinh lại.
+
+### 8.5 Quyết định đã chốt (28/08/2026) — không mở lại trừ khi điều kiện đổi
+
+| # | Quyết định | Lý do / đánh đổi |
+|---|---|---|
+| T1 | **Vite SPA + Worker Hono**, KHÔNG Next.js | Tài liệu ghi "Next.js — kế thừa, không đổi" là **mô tả sai** nền tảng. Không nội dung nào cần Next.js |
+| T2 | **Container Python + OR-Tools CP-SAT** cho Layer 3b | Cơ chế giả định của CP-SAT trả về **tập ràng buộc mâu thuẫn nhỏ nhất** — đó là thứ tạo ra tính năng phân tích tác động. Thay thế phương án cũ trong BUILD_PLAN ("thuật toán tự xây bằng TypeScript") |
+| T3 | Giai đoạn dev **giữ gói Cloudflare Free** → `compute/` chạy bằng **Docker tại chỗ**, Worker gọi `localhost:8080` qua interface `ComputeBackend` | Containers không có trên gói Free. Khi nâng gói chỉ đổi một tệp sang `getContainer()` |
+| T4 | **R2 cho artifact** (dữ liệu máy đọc) + **Supabase Storage cho hồ sơ phát hành** (đi qua `documents`/`document_versions`). Cài đặt qua interface `ArtifactStore`, adapter `supabase://` dùng ngay, adapter `r2://` viết sẵn | R2 cần bật thanh toán. Cùng khuôn với `RenderBackend` mà tài liệu đã dùng |
+| T5 | Bảng module mang **cả `tenant_id` lẫn `company_id`** | `tenant_id` giữ đúng nguyên tắc 7 và sẵn sàng bán lại; `company_id` để artifact truy được về pháp nhân — bắt buộc theo mục 3.5 |
+| T6 | Quyền chuỗi qua bảng mới **`role_capabilities(role_id, capability)`**, khởi động chỉ với `design.*` | Ma trận `permissions` hiện chỉ tới mức module, không phân biệt được ba bộ môn. **Không sửa** ma trận cũ — 12 module đang chạy trên đó |
+| T7 | **Dùng lại enum `design_discipline`** sẵn có. Ánh xạ: `KT→kien_truc`, `KC→ket_cau`, `DN→dien_nuoc` | Một bộ từ vựng duy nhất. Enum này đã có index phụ thuộc |
+| T8 | Giai đoạn demo, mô hình ngôn ngữ **chỉ chạy dữ liệu giả lập hoặc ẩn danh** | Đầu bài khách hàng là dữ liệu hạng 1; gói Gemini miễn phí có thể được dùng để huấn luyện (mục 5.1). Lớp chặn `data_class` vẫn dựng ngay từ khung |
+| T9 | Rule pack: `base/` từ **QCVN 01:2021/BXD**, `locality/thai-binh/` ghi đè | NVG thi công chủ yếu ở Thái Bình và tỉnh lân cận |
+
+### 8.6 Đính chính hạ tầng Cloudflare — tài liệu đã lỗi thời
+
+1. **"~0,5 vCPU, 4 GiB" không phải giới hạn cứng.** Containers có sáu hạng, từ `lite`
+   (1/16 vCPU) tới `standard-4` (**4 vCPU, 12 GiB**), cộng hạng tuỳ chỉnh mở cho mọi tài
+   khoản. Con số tài liệu dùng đúng bằng `standard-1`. Nên `num_search_workers=1` là **lựa
+   chọn tiết kiệm, không phải ràng buộc**, và kịch bản "đo thấy chậm thì phải chuyển VPS"
+   mất phần lớn lý do — nâng hạng là đủ.
+2. **Worker gọi Container qua Durable Object binding**, không phải "service binding": khai
+   `containers[]` + `durable_objects.bindings` + `migrations.new_sqlite_classes`, gọi bằng
+   `getContainer(env.DESIGN_COMPUTE, id).fetch(...)`.
+3. **Containers không có trên gói Workers Free** — cần Workers Paid.
+
+### 8.7 Ranh giới cứng khi viết mã
+
+- **Cấm hard-code ngưỡng quy chuẩn** ở bất kỳ đâu — có kiểm thử grep canh.
+- **`compute/solver/` cấm import phần gọi mô hình ngôn ngữ.** Bộ giải phải tất định.
+- **Vị từ hình học chỉ cài đặt MỘT nơi: Container.** Worker đọc rule pack để hiển thị cho
+  người dùng nhưng **không tự đánh giá rule** — nếu không sẽ có hai bản thực thi lệch nhau.
+  Đây cũng là lý do hoãn tầng WebAssembly.
+- **Xuất DXF một chiều.** Không nhập ngược tệp CAD đã sửa — sẽ mất toàn bộ siêu dữ liệu
+  ràng buộc và không có cách nào biết ràng buộc nào đã bị phá.
+- **Quy ước lớp bản vẽ là DỮ LIỆU**, ở `kb/layer_mapping.yaml` — cùng lý lẽ với rule pack.
+  Cấm viết tên lớp (`"A-AREA-ROOM"`) vào mã trích xuất: quy ước của NVG lệch nhau giữa các
+  thời kỳ và người vẽ, nên đó là thứ sẽ đổi mãi. Trình trích xuất trả về `layers_unmapped`
+  để bổ sung dần; lớp cố ý bỏ qua khai ở mục `ignore` **tách bạch** với lớp chưa ánh xạ —
+  trộn hai loại vào nhau thì danh sách cần xử lý dài tới mức hết người đọc.
+- **Container KHÔNG quy chuẩn hoá nhãn phòng.** `"PN2"` → `bedroom` là việc của mô hình ngôn
+  ngữ ở Worker (`06-knowledge-base.md` 6.1). Trích xuất giữ nguyên văn — đặt bảng từ đồng
+  nghĩa vào Python là biến tri thức đang thay đổi thành mã nguồn, và phá ranh giới ở 8.3.
+- **Không tạo lại thứ đã có**: dự án (`design_projects`), khách hàng (`customers`), người
+  dùng (`users`), hệ tài liệu (`documents` + `document_versions`). Tham chiếu, không sao chép.
+- **Nhãn cảnh báo do mã nguồn chèn**, không phụ thuộc người dùng nhớ bật và không tắt được
+  từ giao diện: ảnh phối cảnh mang *"Ảnh tham khảo ý tưởng — chưa phải phương án thi công"*;
+  bảng khối lượng mang *"Khối lượng sơ bộ — không dùng làm căn cứ ký hợp đồng"*; lưới trục
+  do hệ thống đề xuất mang *"Đề xuất — kỹ sư kết cấu quyết định"*.
+
+### 8.8 Bốn quy ước dựng ở Mốc 1 — đọc trước khi thêm bảng hay endpoint
+
+Bốn điểm dưới đây đã đứng vững bằng kiểm thử trên CSDL thật. Chúng là hệ quả trực tiếp của
+mục 8.2, ghi lại ở đây để không phải suy lại từ đầu.
+
+1. **Khoá chính của `design_artifact` CHÍNH LÀ mã băm nội dung** (`sha256:` + 64 hex), không
+   phải UUID. Nhờ đó "cùng input + cùng cấu hình → cùng artifact" là ràng buộc do CSDL giữ,
+   không phải quy ước phải nhớ. Bảng **không có** policy UPDATE/DELETE: tính bất biến do
+   CSDL cưỡng chế, không do kỷ luật lập trình. Sửa = tạo artifact mới + đổi `design_head`.
+
+2. **Quyền của module chia theo BỘ MÔN, không theo lớp.** `design.project.all` ·
+   `design.read|write|publish.<discipline>` · `design.settings.write` — danh sách đầy đủ ở
+   `DESIGN_CAPABILITIES` (`@nvg/shared/design`). Ví dụ trong tài liệu (`design.brief.read`,
+   `design.floorplan.write`) là ví dụ, không phải danh sách chốt; chia theo lớp thì mỗi
+   policy phải liệt kê đủ sáu lớp mà vẫn không trả lời được câu hỏi duy nhất CSDL cần trả
+   lời — "người này có được ghi bộ môn này của dự án này không". **Cấu hình khai ra mà không
+   policy nào đọc tới còn tệ hơn không khai: nó tạo cảm giác đã phân quyền.**
+
+3. **Ba chiều RLS gói trong hai hàm** — `rls_design_readable` / `rls_design_writable`. Mọi
+   policy của module gọi chúng; không bảng nào chép lại điều kiện. Hai hàm đó dựng TIẾP trên
+   `rls_design_project_readable/writable` của Module TK, nên gỡ quyền TK của một người là gỡ
+   luôn quyền ở đây — không phải nhớ gỡ ở hai nơi.
+
+4. **Phạm vi tenant suy từ pháp nhân**: `companies.tenant_id`, chứ không có bảng nối
+   người dùng ↔ tenant. Phạm vi tenant của một người ĐÃ được xác định bởi các pháp nhân họ
+   được gán; thêm bảng nối thứ hai là tạo hai nguồn sự thật có thể nói khác nhau. Chú ý
+   `auth_tenant_ids()` cố ý **không** dùng `auth_sees_all_companies()`: "xem mọi pháp nhân"
+   là phạm vi TRONG một tenant, không phải giấy thông hành sang tenant khác.
+
+Ranh giới runtime: Worker gọi Container qua `POST /solve`, và **vô nghiệm trả mã 200** kèm
+`InfeasibilityReport`. Nó là kết quả hạng nhất, không phải lỗi — trả 4xx sẽ khiến lớp gọi
+coi là hỏng hóc và giấu mất lời giải thích. Chỉ 422 (sai hợp đồng, không thử lại) và 503
+(hết giờ, đáng thử lại) mới là lỗi thật.
+
+### 8.9 Theo dõi tiến độ — bắt buộc
+
+Module có file tiến độ riêng **`TIEN_DO_THIET_KE.html`** ở gốc repo, tách khỏi
+`TIEN_DO.html` (file kia theo dõi 12 module nghiệp vụ).
+
+**Xong bất kỳ việc nào là cập nhật ngay, không gom lại một lượt.** Gặp vướng mắc chưa gỡ
+được thì ghi vào phần "Vướng mắc" **ngay lúc gặp**, kể cả khi đang đi tiếp việc khác — ghi
+đủ bốn ý: gặp ở đâu, đã thử gì, đang chặn cái gì, cần gì để gỡ.
+
+Câu hỏi cần Haan trả lời ghi vào phần "Câu hỏi chờ Haan" của cùng file đó, **không** để
+trôi trong lịch sử trao đổi.

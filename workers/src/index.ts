@@ -1,23 +1,27 @@
 /**
- * Worker API tùy chỉnh (Tech Stack 3.2) — hiện chỉ có Cron Trigger cho NEN-04, chưa có endpoint
- * REST nào (chưa nghiệp vụ nào trong BSD 4.1→4.12 cần lớp này, theo quy tắc CLAUDE.md 3.1).
+ * Worker API tùy chỉnh (Tech Stack 3.2) — Cron Trigger cho NEN-04 và API Module Thiết kế AI.
  *
- * `fetch` chỉ phục vụ kiểm tra sống (Cloudflare cần một handler fetch để deploy Worker, và một
- * route kiểm tra sống giúp xác nhận Worker đã lên chứ không tự dựng thêm nghiệp vụ gì).
- * `scheduled` là nơi thật sự chạy — Cron Trigger khai ở `wrangler.jsonc` gọi vào đây.
+ * `fetch` phục vụ kiểm tra sống, cộng với API của Module Thiết kế AI dưới tiền tố `/design`
+ * (module đó thoả cả ba điều kiện của quy tắc CLAUDE.md 3.1 — xem `src/design/index.ts`).
+ * `scheduled` là nơi tác vụ nền chạy — Cron Trigger khai ở `wrangler.jsonc` gọi vào đây.
  */
 
 import { Hono } from 'hono';
 import { createClient } from '@supabase/supabase-js';
+import { designApp } from './design';
+import type { DesignEnv } from './design/env';
 
-interface Env {
-  SUPABASE_URL: string;
-  SUPABASE_SERVICE_ROLE_KEY: string;
-}
+type Env = DesignEnv;
 
 const app = new Hono<{ Bindings: Env }>();
 
 app.get('/', (c) => c.json({ ok: true, service: 'nvg-api' }));
+
+/**
+ * Module Thiết kế AI (TK-10 → TK-17) — xem `src/design/index.ts` để biết vì sao module này
+ * cần lớp Workers trong khi 12 module còn lại gọi thẳng Supabase.
+ */
+app.route('/design', designApp);
 
 function serviceClient(env: Env) {
   // service_role vượt RLS — CHỈ dùng ở đây, không bao giờ trong web/ (CLAUDE.md 5.5).
@@ -53,6 +57,8 @@ export async function runScheduledScans(env: Env): Promise<Record<string, number
 
   return results;
 }
+
+export { DesignPipeline, DigitisePipeline } from './design';
 
 export default {
   fetch: app.fetch,

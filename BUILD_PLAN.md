@@ -1276,44 +1276,216 @@ DA-11 (Gemini đọc bản vẽ) · TK-09 (thư viện thiết kế) · NS-02 (k
 
 # PHASE 5 — AI Preliminary Design Engine (TK-10 → TK-17)
 
-**Điều kiện vào (bắt buộc):**
+> **Viết lại toàn bộ ngày 28/08/2026.** Phương án cũ của mục này (tự viết bộ giải ràng buộc
+> bằng TypeScript trên Workers; dựng ba chiều thủ tục bằng Three.js) **đã bị thay thế** bởi
+> bộ tài liệu đặc tả ở `doc/design/`. Giữ hai phương án song song sẽ tạo hai kế hoạch mâu
+> thuẫn trong cùng repo.
 
-1. Hệ thống lõi đạt ~90% (quyết định của Haan)
-2. **Tài liệu "AI Preliminary Design Engine v02" đã có trong `doc/` và đã đọc**
+**Điều kiện vào:** ✅ **đã thoả cả hai** — hệ thống lõi ~90%, và bộ tài liệu đặc tả (14 file)
+đã nằm ở `doc/design/`.
 
-🚫 **Không viết một dòng code nào của phase này trước khi thoả cả 2 điều kiện.**
+**Đọc trước khi làm bất cứ việc gì ở đây:** `doc/design/README.md` (6 đính chính chỗ tài liệu
+mô tả sai hiện trạng + bảng ánh xạ sang bảng và enum đang chạy), rồi `CLAUDE.md` mục 8.
 
-### 5.0 Spike thuật toán trước ★ khuyến nghị mạnh
+**Tiến độ và vướng mắc: `TIEN_DO_THIET_KE.html`** — xong việc nào cập nhật ngay.
 
-Trong 5 lớp, **TK-12/TK-13 là phần bất định nhất**: PRD chỉ định rõ **KHÔNG dùng LLM sinh toạ độ**,
-phải tự viết thuật toán ràng buộc/phân vùng không gian bằng TypeScript. Các lớp còn lại đều là đường
-đã có sẵn (Gemini API, Three.js).
+## Kiến trúc — khác hẳn phương án cũ
 
-→ Làm **một spike độc lập**, tách khỏi hệ thống chính, trả lời: sinh được bao nhiêu phương án mặt bằng
-hợp lệ (không chồng lấn, vừa khít khu đất, thoả quan hệ công năng) cho một khu đất mẫu?
-Biết sớm giới hạn của nó quan trọng hơn làm đúng thứ tự các lớp.
+Hai runtime. Ranh giới là ranh giới **năng lực thư viện**, không phải sở thích:
 
-### 5.1 → 5.5 Năm lớp (PRD 5, bảng công nghệ)
+| | Worker (TypeScript) | Container (Python) |
+| --- | --- | --- |
+| Chạy gì | Giao diện, API, gọi mô hình ngôn ngữ, artifact, điều phối | Bộ giải CP-SAT, hình học, tệp CAD, mô hình ba chiều |
+| Vì sao | Nghẽn ở vào/ra, cùng codebase | OR-Tools, trimesh, ezdxf, shapely chỉ có ở Python |
 
-| Lớp                              | Yêu cầu      | Công nghệ (PRD đã chốt)                                                                                      |
-| -------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------ |
-| L1 Requirement Intelligence      | TK-10        | Gemini Flash + bộ quy tắc kiến trúc nhà ở đã hệ thống hoá sẵn                                                |
-| L2 Functional Programming        | TK-11        | Gemini Flash + quy tắc diện tích/quan hệ phòng chuẩn                                                         |
-| L3 Floor Plan + Re-design        | TK-12, TK-13 | **Thuật toán ràng buộc TỰ XÂY (TypeScript, Workers)** — Gemini chỉ diễn giải tác động bằng ngôn ngữ tự nhiên |
-| L4 Architecture Generation       | TK-14        | Thư viện mẫu kiến trúc dựng sẵn + Gemini chọn/phối theo phong cách                                           |
-| L5 Parametric 3D + Visualization | TK-15, TK-16 | **Three.js** (dựng thủ tục, không gọi AI) + Gemini 2.5 Flash Image dùng ảnh 3D làm tham chiếu                |
+Năm lớp, mỗi lớp là một hàm thuần `(artifact vào, cấu hình) → artifact ra`:
 
-### 5.6 Output chuẩn (TK-17)
+```
+DesignBrief ─► SpaceProgram ─► LayoutIntent ─► FloorPlan ─► ArchModel ─► Mesh3D ─► Renders
+ (Worker)       (Worker)        (Worker)       (Container)  (cả hai)    (Container) (Worker)
+```
 
-6 loại gắn với mỗi dự án thiết kế: Design Brief · Functional Program · **Editable Floor Plan
-(dữ liệu hình học, KHÔNG phải ảnh)** · Architecture Concept · Parametric 3D Model · AI Visualization —
-mỗi loại đi qua đúng luồng review/phê duyệt TK-03.
+**Nguyên tắc chi phối mọi thứ:** mô hình ngôn ngữ sinh **cấu trúc** (cây chia không gian),
+**bộ giải gán số**. Mô hình ngôn ngữ không bao giờ sinh toạ độ hay kích thước.
 
-### 🚧 Ranh giới bắt buộc
+Vì sao **OR-Tools CP-SAT** chứ không phải thuật toán tự viết: cơ chế giả định của CP-SAT trả
+về **tập ràng buộc mâu thuẫn** khi vô nghiệm (đo được 29/08/2026: OR-Tools chỉ hứa tập ĐỦ,
+không hứa nhỏ nhất — trên đầu bài thật nó trả ~40 mục; bộ giải thu hẹp còn 2 bằng bộ lọc xoá
+dần, xem vướng mắc V-4). Đó chính là thứ tạo ra tính năng phân
+tích tác động — không có nó thì hệ thống chỉ nói được "không hợp lệ" mà không nói được *cái
+gì xung đột với cái gì*, và cũng không đề xuất được phương án nới lỏng.
 
-- Mọi phương án AI ở trạng thái **NHÁP/ĐỀ XUẤT** cho tới khi Phòng Thiết kế xác nhận
-- **Kết cấu, MEP, an toàn, PCCC luôn do kỹ sư chuyên môn xác minh** — AI chỉ đề xuất
-- Không gửi bản vẽ nguồn / dữ liệu khách hàng lên gói miễn phí Gemini nhiều hơn mức cần thiết
+## Mốc — làm tuần tự, điều kiện ra xác định "xong", không phải lịch
+
+### Mốc 0 — Kiểm chứng rủi ro kỹ thuật ⏳ ĐANG LÀM
+
+| # | Việc | Điều kiện ra |
+| --- | --- | --- |
+| 0.1 | Đọc 5 tệp `.dwg` cũ qua ODA File Converter + `ezdxf` trong container | Trích được đa giác ranh phòng và nhãn phòng; kiến trúc sư xác nhận đúng ≥4/5. **Mã đã xong và chạy thật (29/08)** — `compute/src/design_compute/cad/`, kiểm chứng bằng bản vẽ tự dựng đi vòng DXF → DWG → DXF qua chính ODA. **Còn chờ 5 hồ sơ thật để đo độ nhất quán quy ước lớp — vướng mắc V-1** |
+| 0.2 | Model CP-SAT nhỏ: căn 5×18, 4 tầng, giải liên tầng trong **một** mô hình | Có nghiệm hợp lệ; ép mâu thuẫn → tập ràng buộc xung đột đọc hiểu được. **Đo bằng Docker tại chỗ — vướng mắc V-2** |
+| 0.3 | 20 quy tắc đầu từ QCVN 01:2021/BXD + trình kiểm tra định dạng rule pack | Kiến trúc sư đọc hiểu và đề xuất thêm ≥5 quy tắc. **Phần xác nhận để mở — vướng mắc V-3** |
+
+### Mốc 3 — Pipeline số hoá + Knowledge Base ⏳ ĐANG LÀM
+
+Chạy song song Mốc 2 được (chỉ cần Mốc 1). Phần chạy trong Container đã xong 29/08/2026:
+
+- Hợp đồng `contracts/kb-record.schema.json` — bản ghi vượt ranh giới Container → Worker nên
+  phải có lược đồ (nguyên tắc bất biến 3). `slicing_tree` dùng lại **nguyên**
+  `layout_node` của `layout-intent`: bản ghi được đưa vào prompt Layer 3a làm few-shot, lệch
+  định dạng là dạy mô hình sinh sai.
+- `compute/src/design_compute/cad/` — bọc ODA File Converter (`xvfb-run`, thư mục tạm một
+  tệp), bảng ánh xạ lớp bản vẽ dạng **dữ liệu** (`kb/layer_mapping.yaml`), trình trích xuất
+  mặt bằng: đa giác phòng, nhãn nguyên văn, lưới cột, ranh đất.
+- `compute/src/design_compute/kb/slicing.py` — suy ngược cây chia không gian. Lá mang **chỉ
+  số** phòng, không mang tên: hình học giải trong Container, từ vựng chuẩn hoá ở Worker.
+  Mặt bằng không thuộc lớp slicing trả `None` thay vì một cây gần đúng.
+- `compute/src/design_compute/kb/crosscheck.py` — Bước 2 kiểm tra chéo → `quality_score`.
+  Phép kiểm **chưa chạy được cũng kéo điểm xuống**: điểm tuyệt đối phải nghĩa là "đã kiểm
+  hết", không phải "kiểm được ít nên không trượt".
+- `compute/src/design_compute/kb/record.py` — lắp bản ghi và validate theo hợp đồng.
+
+- Hợp đồng `contracts/cad-extraction.schema.json` + `POST /extract` và `POST /kb/record`.
+  Tệp CAD gửi bằng **multipart** — đích đến vẫn là R2 (mục 8.5 T4) nhưng R2 cần bật thanh
+  toán, nên chỗ phải đổi gói gọn trong một phương thức của `HttpComputeBackend`.
+- `ComputeBackend` phía Worker có thêm `extract()` và `buildKbRecord()`. Phân loại lỗi:
+  tệp sai định dạng → 422 không thử lại · container đang khởi động → đáng thử lại ·
+  **thiếu ODA File Converter → 503 nhưng KHÔNG thử lại** (vấn đề triển khai, không phải sự
+  cố tạm thời — Container nói rõ `retryable: false` trong thân phản hồi thay vì để lớp gọi
+  suy đoán từ mã trạng thái).
+
+- Bảng `kb_record` (`db/migrations/0098_kb_records.sql`). `payload` là nguồn sự thật; mọi
+  cột dùng để lọc là cột `GENERATED ALWAYS … STORED` đọc thẳng từ payload, nên hai nguồn
+  **không thể** nói khác nhau. Phân quyền **hai** chiều (tenant + bộ môn), cố ý không có
+  chiều dự án: bản ghi là tri thức mức tenant và `project_id` được phép rỗng. Không bất
+  biến (Bước 3 bổ sung `rationale`), không có policy DELETE — xoá mềm, chỉ mục duy nhất là
+  một phần để số hoá lại cùng mã công trình được.
+
+- `DigitisePipeline` — Workflow **mỗi tệp một step**, cộng kho tệp nguồn khoá theo **mã băm
+  nội dung** (Bước 0 của tài liệu: cùng bản vẽ ở ba thư mục chỉ chiếm chỗ và trích một lần).
+  Tuyến `POST /design/kb/digitise` lưu tệp rồi khởi động Workflow, trả `runId` ngay thay vì
+  giữ kết nối chờ. Quyền hỏi thẳng CSDL (`rls_kb_writable`) dưới phiên người gọi.
+- **Một tệp lỗi không giết cả mẻ** — kiểm chứng đầu-cuối: một DXF tốt + một PDF gửi nhầm vẫn
+  ra bản ghi từ phần dùng được, tệp hỏng được ghi nhận. Cơ chế: lỗi tạm thời ném tiếp cho
+  Workflow thử lại, lỗi của chính tệp bắt lại và đi tiếp.
+
+Còn lại của Mốc 3: Bước 0 đầy đủ (xác định bản có hiệu lực theo quy ước tên tệp và thư mục
+`08_Hồ sơ phát hành`), chuẩn hoá nhãn phòng bằng mô hình ngôn ngữ (chờ `GEMINI_API_KEY`),
+extractor cho tổng mặt bằng / kết cấu / mặt cắt / bảng thống kê, pgvector cho
+`rationale_embedding`, giao diện chú giải, truy hồi ba tầng + MMR.
+
+### Mốc 1 — Khung xương ✅ XONG (29/08/2026)
+
+- `contracts/` — JSON Schema đủ **cả 5 lớp**, kể cả lớp chưa cài đặt. Sinh zod →
+  `shared/src/design/` bằng `scripts/contracts-gen.mjs` (`npm run contracts:check` canh lệch).
+  Phía Python **không sinh mã**: nạp thẳng `contracts/*.schema.json`, validate bằng
+  `jsonschema` — bản sao cần bước kiểm tra để không lệch, đọc thẳng nguồn gốc thì không có
+  gì để lệch. Cả hai bên **đều validate** ở ranh giới; không bên nào tin bên kia.
+- Bảng `design_artifact` · `design_artifact_edge` · `design_head` — mang `tenant_id`,
+  `company_id`, `discipline`; khoá ngoại tới `design_projects` và `users` **sẵn có**.
+- Bảng `tenants` (một dòng NVG) + bảng `role_capabilities(role_id, capability)` cho quyền
+  chuỗi `design.*`. **Không sửa** ma trận `permissions` — 12 module đang chạy trên đó.
+- RLS **ba chiều** trên mọi bảng module: tenant · phân công dự án · bộ môn — gói trong hai
+  hàm dùng chung (`rls_design_readable` / `rls_design_writable`) để không bảng nào chép lại
+  điều kiện rồi lệch. Phạm vi tenant suy từ `companies.tenant_id`, không có bảng nối riêng.
+- Trình nạp rule pack (`base/` + `locality/` ghi đè) + engine vị từ trong Container, có mặt
+  tiếp xúc HTTP `GET /health` + `POST /solve`.
+- Bộ định tuyến mô hình ngôn ngữ + **lớp chặn `data_class`** — `resolve()` là đường duy nhất
+  tới cấu hình mô hình và bắt buộc nhận `data_class`, không có lối vòng.
+- Khung Cloudflare Workflow đủ 6 bước, chạy lại được từ giữa, phân biệt lỗi đáng thử lại với
+  lỗi cấu trúc; bước chưa cài đặt trả mã tạm đúng hợp đồng.
+- Cầu nối phát hành sang `documents`/`document_versions` — ký theo **từng** bộ môn.
+- Cột dự án nháp cho khách vãng lai + cơ chế chuyển thành dự án chính thức.
+
+**Điều kiện ra — đã đạt, có kiểm thử:** pipeline sáu bước chạy thông đầu-cuối qua CẢ HAI
+runtime thật (Supabase Storage + bộ giải trong Docker); mọi artifact có băm nội dung và
+lineage; truy vấn được "bản nào đang hiệu lực"; cùng đầu vào + cùng cấu hình → **cùng mã
+băm** và chỉ một dòng artifact; dữ liệu hạng 1 bị chặn ở đầu ra gói miễn phí; artifact không
+sửa/xoá được từ trình duyệt; không ghi được artifact ngoài bộ môn được phân công; phát hành
+`ket_cau` bị chặn vì người ký không có `design.publish.ket_cau`.
+**100 phép thử xanh** (37 Python + 63 TypeScript).
+
+⚠️ **Bốn quy ước then chốt do mốc này dựng ra — xem CLAUDE.md 8.8 trước khi thêm bảng hay
+endpoint.** Hai chỗ lệch tài liệu đã ghi ở `contracts/README.md`; hai phát hiện mới ở
+`TIEN_DO_THIET_KE.html` (vướng mắc V-6, câu hỏi Q-12 và Q-13).
+
+### Mốc 2 — Lớp 1: Design Brief (TK-10)
+
+Biểu mẫu thích ứng, logic hiện/ẩn nằm trong cấu hình JSON chứ không viết cứng trong giao
+diện. Mô hình ngôn ngữ kiểm tra đầy đủ và nhất quán → `completeness_score`.
+
+⚠️ Đây là mốc **rủi ro vận hành cao nhất** của Giai đoạn 1 vì nó động vào phần đang chạy
+thật: `design_briefs` đã có phiên bản, có giao diện, có hàm RPC. Chưa quyết mở rộng hay thay
+hẳn — câu hỏi Q-2 ở `TIEN_DO_THIET_KE.html`.
+
+### Mốc 3 — Pipeline số hoá + Knowledge Base
+
+Mỗi tệp là một bước Workflow; một tệp lỗi không giết cả mẻ. Trình trích xuất cho mặt bằng,
+tổng mặt bằng, kết cấu, mặt cắt, bảng thống kê. Bảng ánh xạ lớp CAD. Kiểm tra chéo tự động →
+`quality_score`. Suy ngược cây chia không gian từ hình học. Truy hồi ba tầng. Giao diện nhập
+chú giải.
+
+⚠️ Kho hồ sơ thực tế **dưới 50 bộ**. Hệ quả: không phân hạng A/B/C; thống kê thực nghiệm chưa
+dùng được (giữ điểm nối trong hàm mục tiêu nhưng trả về rỗng); đánh giá bằng leave-one-out
+chứ không tách bộ dự án mẫu riêng.
+
+### Mốc 4 — Lớp 2: Space Program (TK-11)
+
+Phải **chạy được với Knowledge Base rỗng** (quy tắc + mô hình ngôn ngữ, chất lượng thấp hơn
+nhưng đúng hợp đồng).
+**Ra:** kiến trúc sư đánh giá hợp lý trên ≥70% kho đánh giá.
+
+### Mốc 5 — Lõi Lớp 3 cho nhà phố (TK-12, TK-13) — kết thúc Giai đoạn 1
+
+Đặt khối trong lô · sinh cấu trúc bố cục + kiểm tra · **CP-SAT liên tầng trong Container**,
+cơ chế giả định → báo cáo vô nghiệm · tinh chỉnh hình học · trình chỉnh sửa mặt bằng (Konva)
+· phân tích tác động · **gói trình khách để chốt phương án sớm** (mặt bằng tô màu công năng,
+khối ba chiều đơn giản, bảng so sánh) · **xuất DXF** · bảng thống kê tự sinh · phát hành bộ
+môn kiến trúc.
+
+**Ra:** kiến trúc sư chọn một phương án của hệ thống làm điểm khởi đầu trên **≥40%** (cổng
+chặn; mục tiêu 70% theo dõi qua bộ đo). Đổi 3 tầng → 4 tầng: sinh lại dưới 60 giây, cả 4 tầng
+nhất quán, lõi thang và trục kết cấu giữ nguyên. DXF mở được trong AutoCAD.
+
+### Mốc 6 · 6b · 6c — giai đoạn sau
+
+Mặt đứng, mặt cắt, mô hình ba chiều có vật liệu, phối cảnh qua dịch vụ ảnh (Mốc 6) → nâng
+chất lượng đầu ra kiến trúc lên mức bản vẽ kỹ thuật (6b) → phối hợp liên bộ môn: kỹ sư kết
+cấu và điện nước làm việc trên nền hình học chung, phát hiện xung đột, phát hành theo từng bộ
+môn với chữ ký riêng (6c).
+
+**Mốc 6b không bỏ qua được** — không thể mời kỹ sư kết cấu vào làm việc trên một nền hình học
+còn ở mức phương án sơ bộ.
+
+### Mốc 7 · 8 · 9 — giai đoạn sau
+
+Biệt thự và nhà vườn (nhiều cánh nhà, hình L/U/T, khoảng lùi bốn phía, khoảng rỗng là sân
+trong) · mở cho khách trên website (dự án nháp, giới hạn tần suất, chống lạm dụng) · bóc tách
+khối lượng sơ bộ, thư viện phong cách, tenant thứ hai.
+
+**Ngưỡng chấp nhận của biệt thự đặt BẰNG nhà phố.** Nếu đo thấy thấp hơn, cách xử lý là làm
+giàu đầu vào ở Lớp 1 và bổ sung quy tắc — **không phải hạ ngưỡng**. Hạ ngưỡng là biến chênh
+lệch tạm thời thành chuẩn mực vĩnh viễn.
+
+## 🚧 Ranh giới bắt buộc
+
+- Mọi phương án của hệ thống ở trạng thái **NHÁP/ĐỀ XUẤT** cho tới khi người có thẩm quyền
+  xác nhận qua đúng luồng phê duyệt TK-03.
+- **Kết cấu, cơ điện, phòng cháy chữa cháy luôn do kỹ sư có chứng chỉ hành nghề xác minh và
+  ký.** Engine chuẩn bị nền hình học và phát hiện xung đột; nó **không** tính tiết diện,
+  không tính tải trọng, không kết luận về phòng cháy.
+- Một lần phát hành mang **đúng một** bộ môn. Trưởng phòng Thiết kế không ký được hồ sơ kết
+  cấu, kể cả khi họ là trưởng phòng.
+- Giai đoạn demo: mô hình ngôn ngữ **chỉ chạy dữ liệu giả lập hoặc ẩn danh**. Đầu bài khách
+  hàng là dữ liệu hạng 1; gói Gemini miễn phí có thể được dùng để huấn luyện.
+- **Xuất DXF một chiều.** Không nhập ngược tệp CAD đã sửa — mất toàn bộ siêu dữ liệu ràng buộc.
+- **Cấm hard-code ngưỡng quy chuẩn.** Quy tắc kiến trúc là dữ liệu YAML, kiến trúc sư phải đọc
+  và sửa được.
+
+## Đầu ra chuẩn (TK-17)
+
+Sáu loại gắn với mỗi dự án thiết kế: Design Brief · Space Program · **mặt bằng chỉnh sửa được
+(dữ liệu hình học, KHÔNG phải ảnh)** · phương án kiến trúc · mô hình ba chiều tham số · ảnh
+phối cảnh — mỗi loại đi qua đúng luồng góp ý và phê duyệt TK-03.
 
 ---
 

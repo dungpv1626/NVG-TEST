@@ -32,8 +32,74 @@
 
   "observability": { "enabled": true },
 
+  /**
+   * Nạp `config/models.yaml` vào bản dựng dạng VĂN BẢN. Worker không có hệ tệp để đọc lúc
+   * chạy, mà tên mô hình thì không được là hằng số trong mã nguồn (doc/design 5.6) — nhúng
+   * tệp cấu hình là cách duy nhất thoả cả hai.
+   */
+  "rules": [{ "type": "Text", "globs": ["**/*.yaml"], "fallthrough": true }],
+
+  /**
+   * Điều phối pipeline thiết kế (doc/design/02-architecture.md 2.5). Workflows có trên CẢ
+   * gói Free lẫn Paid nên phần này bật được ngay, khác Containers ở dưới.
+   */
+  "workflows": [
+    {
+      "name": "nvg-design-pipeline",
+      "binding": "DESIGN_PIPELINE",
+      "class_name": "DesignPipeline",
+    },
+    {
+      // Số hoá hồ sơ cũ (Mốc 3) — mỗi tệp một bước, chạy lại riêng tệp lỗi được.
+      "name": "nvg-digitise-pipeline",
+      "binding": "DIGITISE_PIPELINE",
+      "class_name": "DigitisePipeline",
+    },
+  ],
+
+  /**
+   * ⚠️ BA KHỐI DƯỚI ĐÂY ĐỂ CHÚ THÍCH CÓ CHỦ Ý — bật khi nâng lên Workers Paid.
+   *
+   * Cloudflare Containers ghi `N/A` trên gói Free, và R2 cần bật thanh toán. Giai đoạn dev
+   * giữ gói Free (quyết định T3/T4 — CLAUDE.md 8.5), nên:
+   *   · Container tính toán chạy bằng Docker tại chỗ, Worker gọi qua `DESIGN_COMPUTE_URL`;
+   *   · artifact lưu qua Supabase Storage, adapter R2 đã viết sẵn.
+   *
+   * Khi nâng gói: bỏ chú thích ba khối, đặt `DESIGN_ARTIFACT_STORE=r2`, và đổi
+   * `createComputeBackend` sang adapter `getContainer()` — chỗ phải sửa nằm đúng một tệp
+   * (`src/design/compute-backend.ts`).
+   *
+   * Lưu ý đính chính tài liệu (CLAUDE.md 8.6): Worker gọi Container qua **Durable Object
+   * binding**, KHÔNG phải "service binding" như tài liệu đặc tả viết. Và "~0,5 vCPU" không
+   * phải giới hạn nền tảng — đó là hạng `standard-1`; có tới `standard-4` (4 vCPU, 12 GiB)
+   * cộng hạng tuỳ chỉnh, nên chậm thì NÂNG HẠNG là đủ, không cần chuyển sang VPS.
+   *
+   * "containers": [
+   *   {
+   *     "class_name": "DesignCompute",
+   *     "image": "../compute/Dockerfile",
+   *     "instance_type": "standard-1",
+   *     "max_instances": 2,
+   *   },
+   * ],
+   * "durable_objects": {
+   *   "bindings": [{ "name": "DESIGN_COMPUTE", "class_name": "DesignCompute" }],
+   * },
+   * "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DesignCompute"] }],
+   * "r2_buckets": [
+   *   { "binding": "DESIGN_ARTIFACTS", "bucket_name": "nvg-design-artifacts" },
+   *   { "binding": "DESIGN_SOURCES", "bucket_name": "nvg-design-sources" }
+   * ],
+   */
+
   "vars": {
     "SUPABASE_URL": "https://awaiwegmuykhctnysvou.supabase.co",
+
+    /**
+     * Kho artifact: `supabase` (gói Free) hoặc `r2` (sau khi bật thanh toán và mở
+     * `r2_buckets` ở trên). Mặc định phải là thứ CHẮC CHẮN chạy được.
+     */
+    "DESIGN_ARTIFACT_STORE": "supabase",
   },
 
   /**
@@ -41,5 +107,11 @@
    * `wrangler secret put SUPABASE_SERVICE_ROLE_KEY --config workers/wrangler.jsonc` lúc triển
    * khai thật. Chạy cục bộ: tạo `workers/.dev.vars` (đã có trong `.gitignore` chung của repo)
    * với dòng `SUPABASE_SERVICE_ROLE_KEY=...` lấy từ `.env` gốc.
+   *
+   * `GEMINI_API_KEY` cũng là secret và CHƯA có — router mô hình tự báo "chưa cấu hình" thay
+   * vì gọi ra mạng rồi nhận lỗi khó đọc.
+   *
+   * `DESIGN_COMPUTE_URL` đặt trong `workers/.dev.vars` khi chạy Container bằng Docker tại
+   * chỗ: `DESIGN_COMPUTE_URL=http://localhost:8080`.
    */
 }

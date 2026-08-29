@@ -3,8 +3,10 @@
  *
  * Nguồn: PRD TK-01 → TK-09, Backend Schema 4.4, Webapp Flow 3.3.
  *
- * 🚫 TK-10 → TK-17 (AI Preliminary Design Engine) KHÔNG nằm ở đây: tài liệu đặc tả riêng
- * chưa có trong `doc/`, và CLAUDE.md 5.6 cấm viết code phần đó trước khi đọc tài liệu.
+ * 📐 TK-10 → TK-17 (AI Preliminary Design Engine) nằm ở `@nvg/shared/design` — đường dẫn con
+ * riêng, cố ý không gộp vào đây: kiểu `DesignBrief` bên đó là HỢP ĐỒNG DỮ LIỆU của engine,
+ * khác `design_briefs` của TK-01. Hai khái niệm trùng tên nhưng khác nghĩa (việc hợp nhất
+ * chúng là Mốc 2, đang chờ Haan trả lời câu hỏi Q-2).
  */
 
 import type { StatusGroup } from './status';

@@ -186,8 +186,19 @@ export async function cleanupTestData(): Promise<void> {
     await sql`DELETE FROM contracts WHERE title LIKE ${TEST_PREFIX + '%'}`;
     // Xoá gói thầu kéo theo khối lượng, dự toán, hồ sơ thầu và ngân sách (khoá ngoại CASCADE).
     await sql`DELETE FROM bidding_projects WHERE name LIKE ${TEST_PREFIX + '%'}`;
-    // Xoá dự án thiết kế kéo theo đầu bài, phiên bản, tiến độ bộ môn, yêu cầu thay đổi
-    // và cả dự toán NVO (khoá ngoại CASCADE).
+    // Module Thiết kế AI: `design_head.artifact_id` cố ý là ON DELETE RESTRICT (không xoá
+    // được artifact đang là bản hiệu lực). Xoá dự án cha thì hai bảng cùng bị cascade, và thứ
+    // tự Postgres chọn có thể chạm RESTRICT trước — nên hạ con trỏ xuống trước, tường minh.
+    await sql`
+      DELETE FROM design_head
+       WHERE project_id IN (SELECT id FROM design_projects WHERE name LIKE ${TEST_PREFIX + '%'})
+    `;
+    // Xoá dự án thiết kế kéo theo đầu bài, phiên bản, tiến độ bộ môn, yêu cầu thay đổi,
+    // artifact của Module Thiết kế AI và cả dự toán NVO (khoá ngoại CASCADE).
+    // `kb_record.project_code` là cột SINH từ payload, nên lọc theo nó vẫn đúng tiền tố test.
+    // Phải xoá TRƯỚC `design_projects`: khoá ngoại là ON DELETE SET NULL nên xoá dự án không
+    // dọn được bản ghi, nó chỉ mồ côi đi.
+    await sql`DELETE FROM kb_record WHERE project_code LIKE ${TEST_PREFIX + '%'}`;
     await sql`DELETE FROM design_projects WHERE name LIKE ${TEST_PREFIX + '%'}`;
     await sql`DELETE FROM unit_prices WHERE name LIKE ${TEST_PREFIX + '%'}`;
     await sql`DELETE FROM opportunities WHERE name LIKE ${TEST_PREFIX + '%'}`;

@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nvg.vn/contracts/publish-request.schema.json",
+  "title": "PublishRequest",
+  "description": "Cầu nối sang hệ quản lý tài liệu sẵn có — ĐIỂM GIAO DUY NHẤT giữa artifact và hồ sơ chính thức. Publish là MỘT CHIỀU. Nguồn: doc/design/03-data-contracts.md mục 3.8b.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "tenant_id",
+    "project_id",
+    "artifact_ids",
+    "discipline",
+    "documents",
+    "signed_by"
+  ],
+  "properties": {
+    "schema_version": { "$ref": "#/$defs/semver" },
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "project_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "design_projects.id — bảng SẴN CÓ."
+    },
+    "artifact_ids": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/artifact_ref" },
+      "description": "Khoá là kind của artifact nguồn (floor_plan, arch_model…). Giữ tham chiếu ngược để sau này truy được 'bản vẽ này sinh ra từ đầu bài nào'."
+    },
+    "discipline": {
+      "$ref": "#/$defs/discipline",
+      "description": "MỘT lần publish = MỘT bộ môn. Ký theo từng bộ môn, không ký gộp: kiến trúc sư không ký được hồ sơ kết cấu kể cả khi là trưởng phòng."
+    },
+    "documents": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "name", "uri"],
+        "properties": {
+          "kind": { "type": "string", "enum": ["dxf", "pdf", "png", "gltf", "json"] },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Phần tên theo quy ước NVG ngoài đời (MatBang, PhuongAn…). Số phiên bản do hệ tài liệu cấp, module KHÔNG tự đặt."
+          },
+          "uri": { "type": "string", "pattern": "^(r2|supabase)://.+" },
+          "mime_type": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "signed_by": {
+      "type": "string",
+      "format": "uuid",
+      "description": "users.id của người CHỊU TRÁCH NHIỆM CHUYÊN MÔN bộ môn này. Cưỡng chế bằng quyền design.publish.<discipline>, không bằng quy ước."
+    },
+    "signed_at": { "type": ["string", "null"], "format": "date-time" },
+    "change_reason": {
+      "type": ["string", "null"],
+      "description": "NEN-05 bắt buộc khi phát hành bản điều chỉnh (bản thứ 2 trở đi)."
+    }
+  },
+  "$defs": {
+    "semver": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "artifact_ref": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "discipline": {
+      "type": "string",
+      "enum": ["kien_truc", "ket_cau", "dien_nuoc"],
+      "description": "Dùng lại enum design_discipline sẵn có (CLAUDE.md 8.5 T7). Ánh xạ từ tài liệu: KT→kien_truc · KC→ket_cau · DN→dien_nuoc. Giá trị phuong_an của enum KHÔNG dùng cho artifact — nó là giai đoạn hồ sơ, không phải bộ môn."
+    }
+  }
+}

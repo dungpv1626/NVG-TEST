@@ -1,0 +1,75 @@
+# Định tuyến mô hình ngôn ngữ cho Module Thiết kế AI.
+#
+# Nguồn: doc/design/05-tech-stack.md mục 5.6, doc/design/01-overview.md mục 1.5.
+#
+# Nguyên tắc: TÊN MÔ HÌNH KHÔNG BAO GIỜ LÀ HẰNG SỐ TRONG MÃ NGUỒN. Đổi nhà cung cấp hoặc
+# đổi mô hình là sửa tệp này, không sửa code.
+#
+# `max_data_class` là hạng dữ liệu NHẠY CẢM NHẤT mà đầu ra này được phép nhận.
+#
+# ⚠️ Đọc ngược với trực giác: số NHỎ = nhạy cảm HƠN. Đầu ra khai `1` nhận được cả ba hạng;
+# đầu ra khai `3` chỉ nhận hạng 3. Tên trường lấy nguyên từ tài liệu đặc tả để không sinh
+# ra từ vựng thứ hai.
+#
+#   1 — Nhạy cảm: thông tin khách hàng, đầu bài, hợp đồng, dự toán, liên hệ.
+#       CHỈ dịch vụ có cam kết không lưu trữ VÀ không huấn luyện.
+#   2 — Trung bình: mặt bằng kích thước thật, bản vẽ kỹ thuật, mô hình ba chiều.
+#       Chỉ dịch vụ có cam kết không lưu trữ.
+#   3 — Thấp: ảnh khối, bản đồ độ sâu, mô tả phong cách.
+#
+# Lời gọi mang `data_class` NHỎ HƠN `max_data_class` (tức nhạy cảm hơn mức cho phép) bị lớp
+# chặn từ chối trước khi ra mạng (`workers/src/design/llm/router.ts`).
+#
+# ⚠️ GIAI ĐOẠN DEMO: gói Gemini miễn phí có thể được Google dùng để cải thiện sản phẩm
+# (CLAUDE.md 5.1, quyết định T8), nên MỌI đầu ra dưới đây đặt `max_data_class: 3` — mức
+# CHẶT NHẤT, chỉ nhận dữ liệu giả lập hoặc đã ẩn danh. HẠ con số này (3 → 2 → 1) là nới
+# lỏng, và không được làm cho tới khi có cam kết bằng văn bản của nhà cung cấp: hạ xuống 1
+# là mở đường cho đầu bài thật của khách đi ra dịch vụ ngoài mà không ai nhận ra.
+
+version: '1.0.0'
+
+# Chưa có khoá API (Haan bổ sung sau). Đặt `enabled: false` để lớp router trả lỗi rõ ràng
+# "chưa cấu hình" thay vì gọi ra mạng rồi nhận 401 khó đọc.
+routes:
+  layer1_brief:
+    provider: gemini
+    model: gemini-2.5-flash
+    max_data_class: 3
+    enabled: false
+    purpose: Kiểm tra đầy đủ và nhất quán của đầu bài, chấm completeness_score.
+
+  layer2_program:
+    provider: gemini
+    model: gemini-2.5-flash
+    max_data_class: 3
+    enabled: false
+    purpose: Sinh chương trình không gian từ đầu bài + thống kê thực nghiệm.
+
+  layer3_intent:
+    provider: gemini
+    model: gemini-2.5-flash
+    max_data_class: 3
+    enabled: false
+    purpose: Sinh cây chia không gian (LayoutIntent). KHÔNG sinh toạ độ hay kích thước.
+
+  # Đầu ra dự phòng khi `layer3_intent` sinh ra cấu trúc không hợp lệ nhiều lần liên tiếp.
+  layer3_intent_hard:
+    provider: gemini
+    model: gemini-2.5-pro
+    max_data_class: 3
+    enabled: false
+    purpose: Phương án khó — nhiều cánh, đất không vuông vắn.
+
+  layer4_facade:
+    provider: gemini
+    model: gemini-2.5-flash
+    max_data_class: 3
+    enabled: false
+    purpose: Chọn tham số mặt đứng theo phong cách.
+
+  kb_label_normalize:
+    provider: gemini
+    model: gemini-2.5-flash
+    max_data_class: 3
+    enabled: false
+    purpose: Chuẩn hoá nhãn phòng trích từ bản vẽ cũ.

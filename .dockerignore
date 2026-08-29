@@ -1,0 +1,17 @@
+# Bối cảnh build của `compute/Dockerfile` là GỐC REPO (image cần cả `rules/`, `contracts/` và
+# `kb/vendor/`). Không loại trừ thì Docker gửi toàn bộ repo — kể cả `node_modules/` — sang
+# daemon ở mỗi lần build.
+node_modules
+**/node_modules
+.git
+.wrangler
+**/dist
+**/.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+kb/out
+kb/samples
+web
+doc
+*.html

@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nvg.vn/contracts/arch-model.schema.json",
+  "title": "ArchModel",
+  "description": "Mô hình kiến trúc tham số — output Layer 4. CHƯA cài đặt ở Mốc 1; hợp đồng viết sẵn để bước stub trả đúng hình dạng. Nguồn: doc/design/03-data-contracts.md mục 3.6.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "floorplan_ref", "massing"],
+  "properties": {
+    "schema_version": { "$ref": "#/$defs/semver" },
+    "floorplan_ref": { "$ref": "#/$defs/artifact_ref" },
+    "style": { "type": ["string", "null"], "enum": ["hien_dai", "tan_co_dien", "indochine", null] },
+    "style_template_version": { "type": ["string", "null"] },
+    "massing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["levels"],
+      "properties": {
+        "levels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["level", "extrude_from_m", "extrude_to_m"],
+            "properties": {
+              "level": { "type": "integer", "minimum": 1 },
+              "extrude_from_m": { "type": "number" },
+              "extrude_to_m": { "type": "number" }
+            }
+          }
+        }
+      }
+    },
+    "roof": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["flat", "gable", "hip", "mansard"] },
+        "parapet_h_m": { "type": ["number", "null"], "minimum": 0 },
+        "pitch_deg": { "type": ["number", "null"], "minimum": 0, "maximum": 89 }
+      }
+    },
+    "facades": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["direction"],
+        "properties": {
+          "direction": { "type": "string", "enum": ["front", "back", "left", "right"] },
+          "openings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["level", "x_m", "w_m", "h_m", "kind"],
+              "properties": {
+                "level": { "type": "integer", "minimum": 1 },
+                "x_m": { "type": "number" },
+                "w_m": { "type": "number", "exclusiveMinimum": 0 },
+                "h_m": { "type": "number", "exclusiveMinimum": 0 },
+                "sill_m": { "type": ["number", "null"], "minimum": 0 },
+                "kind": { "type": "string", "enum": ["window", "door", "louver", "opening"] }
+              }
+            }
+          },
+          "materials": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["zone", "material"],
+              "properties": {
+                "zone": { "type": "string" },
+                "material": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "plane"],
+        "properties": {
+          "id": { "type": "string" },
+          "plane": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["axis", "at_m"],
+            "properties": {
+              "axis": { "type": "string", "enum": ["x", "y"] },
+              "at_m": { "type": "number" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "semver": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "artifact_ref": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  }
+}

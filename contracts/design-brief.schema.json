@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nvg.vn/contracts/design-brief.schema.json",
+  "title": "DesignBrief",
+  "description": "Đầu bài thiết kế — output Layer 1. Nguồn: doc/design/03-data-contracts.md mục 3.1.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "project_id", "building_type", "locality", "site", "floors"],
+  "properties": {
+    "schema_version": { "$ref": "#/$defs/semver" },
+    "project_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Khoá ngoại tới design_projects.id — bảng SẴN CÓ. Tài liệu ví dụ ghi mã hiển thị 'NVO-028'; repo dùng UUID và giữ mã hiển thị ở project_code."
+    },
+    "project_code": {
+      "type": "string",
+      "maxLength": 40,
+      "description": "Mã hồ sơ hiển thị (NVO-TK-2026-0001) — chỉ để đọc, không phải khoá."
+    },
+    "building_type": { "$ref": "#/$defs/building_type" },
+    "locality": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$",
+      "description": "Chọn rule pack địa phương. Giá trị ánh xạ sang thư mục rules/locality/<locality với _ đổi thành ->."
+    },
+    "site": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width_m", "depth_m"],
+      "properties": {
+        "width_m": { "type": "number", "exclusiveMinimum": 0, "maximum": 500 },
+        "depth_m": { "type": "number", "exclusiveMinimum": 0, "maximum": 500 },
+        "orientation": {
+          "type": ["string", "null"],
+          "enum": ["B", "BD", "D", "DN", "N", "TN", "T", "TB", null],
+          "description": "Hướng nhà: B bắc · BD bắc-đông · D đông · DN đông-nam · N nam · TN tây-nam · T tây · TB tây-bắc."
+        },
+        "access_sides": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["front", "back", "left", "right"] },
+          "uniqueItems": true
+        },
+        "adjacent": {
+          "type": "object",
+          "additionalProperties": { "type": ["string", "null"] },
+          "description": "Hiện trạng bốn phía: nha_hang_xom, hem_2m, duong_lon, dat_trong…"
+        },
+        "setback_required_m": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "front": { "type": "number", "minimum": 0 },
+            "back": { "type": "number", "minimum": 0 },
+            "left": { "type": "number", "minimum": 0 },
+            "right": { "type": "number", "minimum": 0 }
+          }
+        },
+        "max_density": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Mật độ xây dựng tối đa, tỉ lệ 0..1. null = chưa biết, lấy theo rule pack."
+        },
+        "legal_docs_available": { "type": "boolean" }
+      }
+    },
+    "floors": { "type": "integer", "minimum": 1, "maximum": 12 },
+    "family": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "count"],
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": ["ong_ba", "vo_chong", "con", "khach", "nguoi_giup_viec"]
+          },
+          "count": { "type": "integer", "minimum": 0, "maximum": 20 },
+          "floor_pref": { "type": ["string", "null"], "enum": ["low", "mid", "top", null] },
+          "needs": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "required_spaces": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "style": { "type": ["string", "null"], "enum": ["hien_dai", "tan_co_dien", "indochine", null] },
+    "budget_range_vnd": {
+      "type": ["array", "null"],
+      "minItems": 2,
+      "maxItems": 2,
+      "items": { "type": "integer", "minimum": 0 },
+      "description": "[cận dưới, cận trên] đơn vị ĐỒNG, số nguyên (CLAUDE.md 4.2 — tiền không có phần thập phân)."
+    },
+    "priorities": { "type": "array", "items": { "type": "string" } },
+    "decision_maker": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": ["string", "null"] },
+        "relationship": { "type": ["string", "null"] }
+      },
+      "description": "Bắt buộc THU THẬP dù được để trống — thiếu người quyết định là nguyên nhân hàng đầu phải sửa phương án nhiều lần (03-data-contracts 3.1)."
+    },
+    "completeness_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Ngưỡng cho phép chạy Layer 2 nằm trong config, KHÔNG hard-code ở đây."
+    },
+    "missing_fields": { "type": "array", "items": { "type": "string" } }
+  },
+  "$defs": {
+    "semver": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "building_type": { "type": "string", "enum": ["nha_pho", "biet_thu", "nha_vuon"] }
+  }
+}

@@ -14,6 +14,7 @@ export * from './_scoped';
 export * from './companies';
 export * from './users';
 export * from './roles';
+export * from './tenants';
 
 // --- Hạ tầng xuyên suốt (Backend Schema 4.1) ---
 export * from './documents';
@@ -29,6 +30,9 @@ export * from './da';
 
 // --- Module TK — Thiết kế (Backend Schema 4.4) ---
 export * from './tk';
+
+// --- Module Thiết kế AI, TK-10 → TK-17 (doc/design/, CLAUDE.md mục 8) ---
+export * from './design';
 
 // --- Module HD — Hợp đồng (Backend Schema 4.5) ---
 export * from './hd';

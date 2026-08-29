@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nvg.vn/contracts/cad-extraction.schema.json",
+  "title": "CadExtraction",
+  "description": "Kết quả trích một bản vẽ mặt bằng CAD — Bước 1 của pipeline số hoá (doc/design/06-knowledge-base.md mục 6.1). Đi từ Container sang Worker nên phải có hợp đồng (nguyên tắc bất biến 3). ĐÂY KHÔNG PHẢI FloorPlan: FloorPlan là kết quả của bộ giải cho một phương án MỚI, còn cái này là hình học đọc được từ một công trình ĐÃ XÂY.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "source_file", "units", "units_assumed", "rooms"],
+  "properties": {
+    "schema_version": { "$ref": "#/$defs/semver" },
+    "source_file": { "type": "string", "minLength": 1 },
+    "units": {
+      "type": "string",
+      "enum": ["mm", "cm", "m", "in", "ft"],
+      "description": "Đơn vị gốc của bản vẽ. Mọi toạ độ trong bản ghi này ĐÃ quy về mét bất kể giá trị này."
+    },
+    "units_assumed": {
+      "type": "boolean",
+      "description": "Bản vẽ không khai $INSUNITS nên đơn vị là suy ra từ bảng ánh xạ. Một diện tích sai hệ số 1000 mà không có dấu hiệu gì còn nguy hiểm hơn không trích được."
+    },
+    "rooms": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["polygon_m", "area_m2", "layer", "label_source"],
+        "properties": {
+          "polygon_m": { "$ref": "#/$defs/polygon" },
+          "area_m2": { "type": "number", "exclusiveMinimum": 0 },
+          "layer": { "type": "string" },
+          "label_raw": {
+            "type": ["string", "null"],
+            "description": "NGUYÊN VĂN chuỗi trong bản vẽ. Container KHÔNG quy về mã phòng chuẩn — việc đó thuộc lớp mô hình ngôn ngữ ở Worker (CLAUDE.md 8.3)."
+          },
+          "label_source": {
+            "type": "string",
+            "enum": ["contains", "nearest", "none"],
+            "description": "Nhãn nằm trong đa giác, hay chỉ là nhãn gần nhất, hay không có. Người xác nhận cần biết mức độ chắc chắn chứ không chỉ biết kết quả."
+          }
+        }
+      }
+    },
+    "columns_m": { "type": "array", "items": { "$ref": "#/$defs/point" } },
+    "site_boundary_m": {
+      "oneOf": [{ "$ref": "#/$defs/polygon" }, { "type": "null" }]
+    },
+    "unmatched_labels": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Chữ trên lớp nhãn không ghép được vào phòng nào. Giữ lại thay vì vứt đi: thường là số diện tích hoặc ghi chú mà người xác nhận cần nhìn thấy."
+    },
+    "layers_seen": { "type": "array", "items": { "type": "string" } },
+    "layers_unmapped": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Lớp chưa có mẫu trong kb/layer_mapping.yaml và cũng không nằm trong danh sách cố ý bỏ qua. Đây là danh sách việc cần bổ sung, không phải lỗi."
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "detail"],
+        "properties": {
+          "code": { "type": "string" },
+          "detail": { "type": "string" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "semver": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "point": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": { "type": "number" }
+    },
+    "polygon": {
+      "type": "array",
+      "minItems": 3,
+      "items": { "$ref": "#/$defs/point" }
+    }
+  }
+}

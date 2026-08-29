@@ -1,0 +1,32 @@
+[project]
+name = "design-compute"
+version = "0.1.0"
+description = "Lõi tính toán module Thiết kế AI — bộ giải CP-SAT, hình học, CAD, mô hình ba chiều"
+requires-python = ">=3.12"
+dependencies = [
+  "ortools>=9.11",
+  "shapely>=2.0",
+  "ezdxf>=1.3",
+  "pydantic>=2.9",
+  "pyyaml>=6.0",
+  "jsonschema>=4.23",
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.32",
+  # Nhận tệp CAD qua multipart. FastAPI không kèm sẵn; thiếu nó thì endpoint tải tệp
+  # báo lỗi lúc CHẠY chứ không phải lúc khởi động.
+  "python-multipart>=0.0.12",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3", "hypothesis>=6.112", "httpx>=0.27"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
