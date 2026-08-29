@@ -22,6 +22,7 @@ import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from 'cloud
 import { NonRetryableError } from 'cloudflare:workflows';
 import type { ArtifactDiscipline, PipelineStep } from '@nvg/shared/design';
 import { ArtifactRepository, type ArtifactScope, type WrittenArtifact } from '../artifacts';
+import { gateLayer2, readCompletenessThreshold } from '../brief/gate';
 import { createComputeBackend } from '../compute-backend';
 import type { DesignEnv } from '../env';
 import {
@@ -81,6 +82,13 @@ export class DesignPipeline extends WorkflowEntrypoint<DesignEnv, DesignPipeline
     const program = await guard(step, 'layer2_program', runs('layer2_program'), async () => {
       const head = await repo.head(p.projectId, p.discipline, 'design_brief');
       if (!head) throw new NonRetryableError('Chưa có đầu bài đang hiệu lực cho dự án này.');
+
+      // Cổng chặn duy nhất của quy tắc "đầu bài chưa đủ thì không chạy Lớp 2"
+      // (03-data-contracts 3.1). Đặt ở đây chứ không ở giao diện: giao diện ẩn nút là để
+      // đỡ phiền, còn chỗ này mới là chỗ không vòng qua được.
+      const gate = gateLayer2(head.payload, await readCompletenessThreshold(repo.db, p.tenantId));
+      if (!gate.allowed) throw new NonRetryableError(gate.message);
+
       const result = stubSpaceProgram(head.payload as never, briefId);
       return repo.write({
         scope,

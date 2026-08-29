@@ -1,0 +1,229 @@
+/**
+ * Biểu mẫu Đầu bài — dựng thật trong bộ nhớ, không gọi mạng.
+ *
+ * Điều quan trọng nhất bộ này chứng minh: **phân nhánh theo loại hình thật sự đi từ tệp cấu
+ * hình ra DOM.** Nếu ai đó "sửa cho nhanh" bằng một câu `if` trong JSX thì tệp cấu hình trở
+ * thành trang trí, và lời hứa "thêm câu hỏi cho biệt thự là sửa một tệp JSON" hết hiệu lực
+ * mà không có gì báo.
+ *
+ * Ngoài ra: mức độ đầy đủ hiện bằng CHỮ chứ không chỉ bằng màu; danh sách còn thiếu bấm
+ * được; và kích thước lệch với biên bản khảo sát thì hiện CẢ HAI con số.
+ */
+
+import { describe, expect, it, vi } from 'vitest';
+import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { renderWithApp } from '@/test/render';
+
+const state = vi.hoisted(() => ({
+  briefs: [] as unknown[],
+  surveys: [] as unknown[],
+}));
+
+vi.mock('@/lib/auth', () => ({
+  useAuth: () => ({
+    profile: { id: 'u1', fullName: 'Lê Văn C', assignments: [], permissions: [] },
+  }),
+  useCan: () => true,
+}));
+
+vi.mock('@/hooks/use-design-surveys', () => ({
+  useDesignSurveys: () => ({ data: state.surveys, isLoading: false }),
+}));
+
+vi.mock('@/hooks/use-design-projects', () => ({
+  useDesignBriefs: () => ({ data: state.briefs, isLoading: false }),
+  useDesignSetting: () => ({ data: 0.7 }),
+  useSaveDesignBrief: () => ({ mutateAsync: vi.fn() }),
+  useSaveBriefDraft: () => ({ mutateAsync: vi.fn() }),
+  useConfirmBriefArtifact: () => ({ mutateAsync: vi.fn() }),
+}));
+
+function brief(over: Record<string, unknown> = {}) {
+  return {
+    id: 'b1',
+    version: 1,
+    is_current_version: true,
+    design_task: null,
+    functional_needs: null,
+    budget_amount: null,
+    budget_note: null,
+    style_note: null,
+    site_condition: null,
+    legal_documents: null,
+    change_reason: null,
+    confirmed_at: null,
+    created_at: '2026-08-01T00:00:00Z',
+    author: null,
+    structured: { building_type: 'nha_pho', site: { width_m: 5, depth_m: 18 }, floors: 3 },
+    completeness_score: '0.400',
+    missing_fields: ['style'],
+    artifact_id: null,
+    site_source_survey_id: null,
+    ...over,
+  };
+}
+
+async function openForm() {
+  const { BriefPanel } = await import('../brief-panel');
+  const view = renderWithApp(<BriefPanel projectId="p1" companyId="c1" readOnly={false} />);
+  await userEvent.click(await screen.findByRole('button', { name: /Sửa đầu bài|Lập đầu bài/ }));
+  return view;
+}
+
+describe('Phân nhánh theo loại hình đi từ cấu hình ra DOM', () => {
+  it('nhà phố KHÔNG hỏi khoảng lùi và mật độ', async () => {
+    state.briefs = [brief()];
+    state.surveys = [];
+    await openForm();
+
+    expect(screen.queryByText('Khoảng lùi theo quy hoạch')).toBeNull();
+    expect(screen.queryByText('Mật độ xây dựng tối đa')).toBeNull();
+  });
+
+  it('đổi sang biệt thự thì hai câu hỏi đó XUẤT HIỆN', async () => {
+    state.briefs = [brief()];
+    state.surveys = [];
+    await openForm();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Biệt thự' }));
+
+    // Nhãn xuất hiện ở hai chỗ và đó là ĐÚNG: một lần ở ô nhập vừa hiện ra, một lần ở danh
+    // sách "còn thiếu" — trường mới hiện thì đương nhiên chưa ai điền.
+    expect(await screen.findAllByText('Khoảng lùi theo quy hoạch')).not.toHaveLength(0);
+    expect(screen.getAllByText('Mật độ xây dựng tối đa')).not.toHaveLength(0);
+    expect(screen.getByRole('link', { name: /Khoảng lùi theo quy hoạch/ })).toBeTruthy();
+  });
+});
+
+describe('Thước độ đầy đủ', () => {
+  it('hiện phần trăm KÈM CHỮ, không chỉ bằng màu', async () => {
+    state.briefs = [brief()];
+    state.surveys = [];
+    const { BriefPanel } = await import('../brief-panel');
+    renderWithApp(<BriefPanel projectId="p1" companyId="c1" readOnly={false} />);
+
+    expect(await screen.findByText('40%')).toBeTruthy();
+    expect(screen.getByText(/Chưa đủ để dựng phương án tự động/)).toBeTruthy();
+  });
+
+  it('danh sách còn thiếu bấm được để nhảy tới đúng ô', async () => {
+    state.briefs = [brief()];
+    state.surveys = [];
+    await openForm();
+
+    const link = await screen.findByRole('link', { name: /Phong cách kiến trúc/ });
+    expect(link.getAttribute('href')).toBe('#brief-style');
+    expect(link.className).toContain('min-h-10');
+  });
+
+  it('chỉ dùng năm màu trạng thái chuẩn, không tạo màu thứ sáu', async () => {
+    state.briefs = [brief()];
+    state.surveys = [];
+    const { BriefPanel } = await import('../brief-panel');
+    const { container } = renderWithApp(
+      <BriefPanel projectId="p1" companyId="c1" readOnly={false} />,
+    );
+    await screen.findByText('40%');
+
+    const bar = container.querySelector('[role="progressbar"] > div')!;
+    expect(bar.className).toMatch(/bg-status-(draft|pending|completed|progress|overdue)/);
+  });
+});
+
+describe('Không gõ lại số đã có ở khảo sát', () => {
+  it('có khảo sát thì hiện nút lấy theo biên bản', async () => {
+    state.briefs = [brief()];
+    state.surveys = [
+      {
+        id: 's1',
+        land_width: '5.0',
+        land_depth: '18.0',
+        surveyed_at: '2026-08-02T00:00:00Z',
+        created_at: '2026-08-02T00:00:00Z',
+      },
+    ];
+    await openForm();
+    expect(await screen.findByRole('button', { name: /Lấy theo biên bản khảo sát/ })).toBeTruthy();
+  });
+
+  it('lệch với biên bản đã dùng thì hiện CẢ HAI con số', async () => {
+    // Giấu một bên đi thì không ai biết đã lệch. Khách nói một đằng, đo thực tế một nẻo là
+    // chuyện thường — người quyết định phải nhìn thấy cả hai mới quyết được.
+    state.briefs = [
+      brief({
+        site_source_survey_id: 's1',
+        structured: { building_type: 'nha_pho', site: { width_m: 5, depth_m: 18 }, floors: 3 },
+      }),
+    ];
+    state.surveys = [
+      {
+        id: 's1',
+        land_width: '5.2',
+        land_depth: '18.0',
+        surveyed_at: null,
+        created_at: '2026-08-02T00:00:00Z',
+      },
+    ];
+    const { BriefPanel } = await import('../brief-panel');
+    renderWithApp(<BriefPanel projectId="p1" companyId="c1" readOnly={false} />);
+
+    const notice = await screen.findByText(/khác biên bản khảo sát/);
+    expect(notice.textContent).toContain('5.2');
+    expect(notice.textContent).toContain('5 × 18');
+  });
+});
+
+describe('Phiên bản và xác nhận', () => {
+  it('bản chưa xác nhận lưu tại chỗ, KHÔNG hỏi nguyên nhân', async () => {
+    // Biểu mẫu ba mươi trường mà mỗi lần lưu đều đòi lý do thì không ai dùng nổi.
+    state.briefs = [brief()];
+    state.surveys = [];
+    await openForm();
+
+    expect(screen.getByRole('button', { name: 'Lưu nháp' })).toBeTruthy();
+    expect(screen.queryByText('Nguyên nhân điều chỉnh')).toBeNull();
+  });
+
+  it('bản ĐÃ xác nhận thì lần lưu sau là phiên bản mới và phải nêu nguyên nhân', async () => {
+    state.briefs = [brief({ confirmed_at: '2026-08-03T00:00:00Z' })];
+    state.surveys = [];
+    const { BriefPanel } = await import('../brief-panel');
+    renderWithApp(<BriefPanel projectId="p1" companyId="c1" readOnly={false} />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Điều chỉnh đầu bài' }));
+
+    expect(await screen.findByText('Nguyên nhân điều chỉnh')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Lưu đầu bài' })).toBeTruthy();
+  });
+
+  it('đã xác nhận rồi thì không còn nút Xác nhận', async () => {
+    state.briefs = [brief({ confirmed_at: '2026-08-03T00:00:00Z' })];
+    state.surveys = [];
+    const { BriefPanel } = await import('../brief-panel');
+    renderWithApp(<BriefPanel projectId="p1" companyId="c1" readOnly={false} />);
+    await screen.findByText(/Đã xác nhận/);
+    expect(screen.queryByRole('button', { name: 'Xác nhận đầu bài' })).toBeNull();
+  });
+
+  it('chỉ xem thì không có nút sửa nào', async () => {
+    state.briefs = [brief()];
+    state.surveys = [];
+    const { BriefPanel } = await import('../brief-panel');
+    renderWithApp(<BriefPanel projectId="p1" companyId="c1" readOnly />);
+    await screen.findByText(/Đầu bài đang hiệu lực/);
+    expect(screen.queryByRole('button', { name: 'Sửa đầu bài' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Xác nhận đầu bài' })).toBeNull();
+  });
+});
+
+describe('Vùng bấm cho ngón tay', () => {
+  it('mọi nút lựa chọn trong biểu mẫu đạt tối thiểu 40px', async () => {
+    state.briefs = [brief()];
+    state.surveys = [];
+    const { container } = await openForm();
+
+    const chips = [...container.querySelectorAll('button[aria-pressed]')];
+    expect(chips.length).toBeGreaterThan(5);
+    for (const chip of chips) expect(chip.className).toContain('min-h-10');
+  });
+});

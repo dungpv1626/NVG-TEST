@@ -1,0 +1,503 @@
+{
+  "_doc": "Cấu hình biểu mẫu Đầu bài thiết kế (Lớp 1 — TK-10). ĐÂY LÀ DỮ LIỆU: logic hiện/ẩn, nhãn, thứ tự và trọng số chấm điểm đều nằm ở tệp này, KHÔNG viết cứng trong brief-panel.tsx. Đường dẫn `path` trỏ vào payload DesignBrief (contracts/design-brief.schema.json); riêng tiền tố `legacy.` trỏ vào sáu cột chữ tự do của bảng design_briefs có từ TK-01. Mã trong `required_spaces` và `family[].needs` phải nằm trong kb/room_vocabulary.yaml — có kiểm thử canh.",
+  "version": "1.0.0",
+  "consistency": {
+    "nguoi_moi_phong_ngu": 2
+  },
+  "sections": [
+    {
+      "id": "loai_hinh",
+      "title": "Loại hình và địa phương",
+      "hint": "Loại hình quyết định phần còn lại của biểu mẫu và bộ quy tắc áp dụng.",
+      "fields": [
+        {
+          "path": "building_type",
+          "label": "Loại hình công trình",
+          "control": "choice",
+          "weight": 2,
+          "options": [
+            {
+              "value": "nha_pho",
+              "label": "Nhà phố"
+            },
+            {
+              "value": "biet_thu",
+              "label": "Biệt thự"
+            },
+            {
+              "value": "nha_vuon",
+              "label": "Nhà vườn"
+            }
+          ],
+          "note": "Nhà xưởng công nghiệp nằm ngoài phạm vi engine thiết kế (01-overview 1.1)."
+        },
+        {
+          "path": "locality",
+          "label": "Địa phương",
+          "control": "choice",
+          "weight": 1,
+          "hint": "Quyết định gói quy tắc địa phương áp dụng lên gói nền.",
+          "options": [
+            {
+              "value": "thai_binh",
+              "label": "Thái Bình"
+            }
+          ],
+          "note": "Danh sách phải khớp thư mục rules/locality/ (gạch dưới đổi thành gạch nối). Thái Bình đã sáp nhập vào Hưng Yên năm 2025 — chờ Haan xác nhận (câu hỏi Q-8)."
+        }
+      ]
+    },
+    {
+      "id": "khu_dat",
+      "title": "Khu đất",
+      "fields": [
+        {
+          "path": "site.width_m",
+          "label": "Chiều rộng lô đất",
+          "control": "number",
+          "unit": "m",
+          "weight": 3,
+          "min": 0.1,
+          "max": 500,
+          "note": "Trọng số cao nhất: thiếu số này thì bộ giải không có bài toán nào để giải."
+        },
+        {
+          "path": "site.depth_m",
+          "label": "Chiều sâu lô đất",
+          "control": "number",
+          "unit": "m",
+          "weight": 3,
+          "min": 0.1,
+          "max": 500
+        },
+        {
+          "path": "site.orientation",
+          "label": "Hướng nhà",
+          "control": "choice",
+          "weight": 2,
+          "hint": "Hướng của mặt tiền chính.",
+          "options": [
+            {
+              "value": "B",
+              "label": "Bắc"
+            },
+            {
+              "value": "BD",
+              "label": "Bắc — Đông"
+            },
+            {
+              "value": "D",
+              "label": "Đông"
+            },
+            {
+              "value": "DN",
+              "label": "Đông Nam"
+            },
+            {
+              "value": "N",
+              "label": "Nam"
+            },
+            {
+              "value": "TN",
+              "label": "Tây Nam"
+            },
+            {
+              "value": "T",
+              "label": "Tây"
+            },
+            {
+              "value": "TB",
+              "label": "Tây Bắc"
+            }
+          ]
+        },
+        {
+          "path": "site.access_sides",
+          "label": "Mặt tiếp cận được",
+          "control": "multi",
+          "weight": 1,
+          "hint": "Mặt nào giáp đường hoặc hẻm, đi vào được.",
+          "options": [
+            {
+              "value": "front",
+              "label": "Mặt trước"
+            },
+            {
+              "value": "back",
+              "label": "Mặt sau"
+            },
+            {
+              "value": "left",
+              "label": "Bên trái"
+            },
+            {
+              "value": "right",
+              "label": "Bên phải"
+            }
+          ]
+        },
+        {
+          "path": "site.adjacent",
+          "label": "Hiện trạng bốn phía",
+          "control": "sides",
+          "weight": 1,
+          "options": [
+            {
+              "value": "nha_hang_xom",
+              "label": "Nhà hàng xóm"
+            },
+            {
+              "value": "hem_2m",
+              "label": "Hẻm 2 m"
+            },
+            {
+              "value": "hem_3m",
+              "label": "Hẻm 3 m"
+            },
+            {
+              "value": "duong_lon",
+              "label": "Đường lớn"
+            },
+            {
+              "value": "dat_trong",
+              "label": "Đất trống"
+            },
+            {
+              "value": "ao_ho",
+              "label": "Ao hồ, kênh mương"
+            }
+          ]
+        },
+        {
+          "path": "site.setback_required_m",
+          "label": "Khoảng lùi theo quy hoạch",
+          "control": "sides",
+          "unit": "m",
+          "weight": 2,
+          "hint": "Chỉ điền khi văn bản quy hoạch nói khác quy chuẩn chung. Để trống thì lấy theo gói quy tắc.",
+          "when": {
+            "field": "building_type",
+            "in": ["biet_thu", "nha_vuon"]
+          },
+          "note": "Ẩn với nhà phố: theo mô hình của engine, nhà phố là trường hợp một cánh nhà với khoảng lùi hai bên bằng không (04-layer3-floorplan)."
+        },
+        {
+          "path": "site.max_density",
+          "label": "Mật độ xây dựng tối đa",
+          "control": "number",
+          "unit": "%",
+          "weight": 1,
+          "min": 0,
+          "max": 100,
+          "hint": "Để trống thì lấy theo gói quy tắc địa phương.",
+          "when": {
+            "field": "building_type",
+            "in": ["biet_thu", "nha_vuon"]
+          }
+        },
+        {
+          "path": "site.legal_docs_available",
+          "label": "Hồ sơ pháp lý khu đất",
+          "control": "tristate",
+          "weight": 1,
+          "options": [
+            {
+              "value": "true",
+              "label": "Đã có"
+            },
+            {
+              "value": "false",
+              "label": "Chưa có"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "quy_mo",
+      "title": "Quy mô và gia đình",
+      "fields": [
+        {
+          "path": "floors",
+          "label": "Số tầng",
+          "control": "number",
+          "weight": 3,
+          "min": 1,
+          "max": 12
+        },
+        {
+          "path": "family",
+          "label": "Thành viên gia đình",
+          "control": "family",
+          "weight": 2,
+          "hint": "Ai sẽ ở, bao nhiêu người, có ưu tiên tầng nào không.",
+          "options": [
+            {
+              "value": "bedroom",
+              "label": "Phòng ngủ riêng"
+            },
+            {
+              "value": "master_bedroom",
+              "label": "Phòng ngủ chính"
+            },
+            {
+              "value": "wc",
+              "label": "Khu vệ sinh riêng"
+            },
+            {
+              "value": "study",
+              "label": "Góc làm việc"
+            },
+            {
+              "value": "storage",
+              "label": "Tủ đồ, kho riêng"
+            },
+            {
+              "value": "balcony",
+              "label": "Ban công riêng"
+            }
+          ],
+          "note": "Mã trong `needs` lấy từ kb/room_vocabulary.yaml — mã lạ sẽ đi qua cả engine mà không rule nào nhắm tới."
+        }
+      ]
+    },
+    {
+      "id": "khong_gian",
+      "title": "Không gian và phong cách",
+      "fields": [
+        {
+          "path": "required_spaces",
+          "label": "Không gian bắt buộc có",
+          "control": "multi",
+          "weight": 2,
+          "hint": "Thang bộ, hành lang và hộp kỹ thuật do hệ thống tự bố trí, không cần chọn.",
+          "options": [
+            {
+              "value": "living",
+              "label": "Phòng khách"
+            },
+            {
+              "value": "dining",
+              "label": "Phòng ăn"
+            },
+            {
+              "value": "kitchen",
+              "label": "Bếp"
+            },
+            {
+              "value": "bedroom",
+              "label": "Phòng ngủ"
+            },
+            {
+              "value": "master_bedroom",
+              "label": "Phòng ngủ chính"
+            },
+            {
+              "value": "wc",
+              "label": "Khu vệ sinh"
+            },
+            {
+              "value": "altar_room",
+              "label": "Phòng thờ"
+            },
+            {
+              "value": "garage",
+              "label": "Chỗ để xe"
+            },
+            {
+              "value": "study",
+              "label": "Phòng làm việc"
+            },
+            {
+              "value": "storage",
+              "label": "Kho"
+            },
+            {
+              "value": "laundry",
+              "label": "Chỗ giặt phơi"
+            },
+            {
+              "value": "balcony",
+              "label": "Ban công"
+            },
+            {
+              "value": "terrace",
+              "label": "Sân thượng"
+            },
+            {
+              "value": "light_well",
+              "label": "Giếng trời"
+            },
+            {
+              "value": "shop",
+              "label": "Không gian kinh doanh"
+            },
+            {
+              "value": "courtyard",
+              "label": "Sân trong",
+              "note": "Thường gặp ở biệt thự và nhà vườn, nhưng nhà phố lô rộng vẫn làm được."
+            },
+            {
+              "value": "technical",
+              "label": "Phòng kỹ thuật"
+            }
+          ]
+        },
+        {
+          "path": "style",
+          "label": "Phong cách kiến trúc",
+          "control": "choice",
+          "weight": 1,
+          "options": [
+            {
+              "value": "hien_dai",
+              "label": "Hiện đại"
+            },
+            {
+              "value": "tan_co_dien",
+              "label": "Tân cổ điển"
+            },
+            {
+              "value": "indochine",
+              "label": "Đông Dương"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "uu_tien",
+      "title": "Ưu tiên, ngân sách và người quyết định",
+      "hint": "Với biệt thự và nhà vườn, phần này là nguồn thu hẹp lời giải chính — lô rộng không tự ràng buộc như nhà phố.",
+      "fields": [
+        {
+          "path": "priorities",
+          "label": "Thứ tự ưu tiên của gia đình",
+          "control": "multi",
+          "weight": 1,
+          "hint": "Chọn theo thứ tự quan trọng giảm dần.",
+          "options": [
+            {
+              "value": "natural_light",
+              "label": "Lấy sáng tự nhiên"
+            },
+            {
+              "value": "natural_ventilation",
+              "label": "Thông gió tự nhiên"
+            },
+            {
+              "value": "feng_shui",
+              "label": "Phong thuỷ"
+            },
+            {
+              "value": "area_efficiency",
+              "label": "Hiệu quả diện tích"
+            },
+            {
+              "value": "privacy",
+              "label": "Riêng tư giữa các thế hệ"
+            },
+            {
+              "value": "low_cost",
+              "label": "Tiết kiệm chi phí"
+            },
+            {
+              "value": "easy_maintenance",
+              "label": "Dễ bảo trì"
+            },
+            {
+              "value": "garden",
+              "label": "Cây xanh, sân vườn"
+            },
+            {
+              "value": "indoor_outdoor",
+              "label": "Gắn kết trong nhà với sân vườn"
+            }
+          ]
+        },
+        {
+          "path": "budget_range_vnd",
+          "label": "Khoảng ngân sách",
+          "control": "money_range",
+          "weight": 1,
+          "hint": "Đơn vị đồng. Khoảng chứ không phải một con số — ngân sách chốt cứng ở bước sơ bộ thường sai."
+        },
+        {
+          "path": "decision_maker",
+          "label": "Người quyết định cuối",
+          "control": "choice",
+          "weight": 2,
+          "hint": "Ai là người nói câu cuối cùng khi hai ý kiến khác nhau.",
+          "options": [
+            {
+              "value": "chu_nha",
+              "label": "Chủ nhà"
+            },
+            {
+              "value": "vo_chong_chu_nha",
+              "label": "Hai vợ chồng cùng quyết"
+            },
+            {
+              "value": "ong_ba",
+              "label": "Ông bà"
+            },
+            {
+              "value": "nguoi_dai_dien",
+              "label": "Người đại diện được uỷ quyền"
+            },
+            {
+              "value": "chua_xac_dinh",
+              "label": "Chưa xác định được",
+              "note": "Đã hỏi mà khách chưa quyết — khác hẳn chưa ai hỏi. Chọn mục này vẫn được tính là đã trả lời."
+            }
+          ],
+          "note": "Bắt buộc THU THẬP dù được để trống (03-data-contracts 3.1): thiếu người quyết định là nguyên nhân hàng đầu khiến phương án phải sửa nhiều lần. Biểu mẫu có thêm lựa chọn \"chưa xác định được\" — đã hỏi mà chưa có câu trả lời khác hẳn chưa ai hỏi."
+        }
+      ]
+    },
+    {
+      "id": "ghi_chu",
+      "title": "Ghi chú của Phòng Thiết kế",
+      "hint": "Phần chữ tự do, dành cho những điều các ô ở trên không chứa được. Kinh doanh và Dự toán đọc phần này.",
+      "fields": [
+        {
+          "path": "legacy.design_task",
+          "label": "Nhiệm vụ thiết kế",
+          "control": "textarea",
+          "weight": 0,
+          "hint": "Phạm vi công việc NVO nhận làm cho công trình này.",
+          "note": "Trọng số 0: đây là ô chữ tự do của TK-01, không nằm trong hợp đồng dữ liệu nên không tính vào độ đầy đủ."
+        },
+        {
+          "path": "legacy.functional_needs",
+          "label": "Ghi chú thêm về công năng",
+          "control": "textarea",
+          "weight": 0,
+          "hint": "Những yêu cầu công năng mà danh sách không gian ở trên chưa diễn đạt hết.",
+          "note": "Nhãn đã đổi so với TK-01: nhu cầu công năng chính nay khai có cấu trúc ở phần Gia đình và Không gian. Giữ câu hỏi cũ ở đây là bắt nhập hai lần."
+        },
+        {
+          "path": "legacy.style_note",
+          "label": "Ghi chú thêm về phong cách",
+          "control": "textarea",
+          "weight": 0,
+          "hint": "Vật liệu, màu sắc, công trình tham chiếu khách đưa."
+        },
+        {
+          "path": "legacy.site_condition",
+          "label": "Ghi chú thêm về hiện trạng",
+          "control": "textarea",
+          "weight": 0,
+          "hint": "Cốt nền, chênh cao, hạ tầng, công trình cũ trên đất. Kích thước và hướng đã khai ở phần Khu đất."
+        },
+        {
+          "path": "legacy.legal_documents",
+          "label": "Hồ sơ pháp lý hiện có",
+          "control": "textarea",
+          "weight": 0,
+          "hint": "Liệt kê giấy tờ: sổ đỏ, giấy phép xây dựng, bản đồ quy hoạch."
+        }
+      ]
+    }
+  ]
+}

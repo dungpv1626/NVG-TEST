@@ -1,52 +1,70 @@
 /**
- * Tab Đầu bài của Chi tiết Dự án thiết kế (TK-01).
+ * Tab Đầu bài của Chi tiết Dự án thiết kế — TK-01 và Lớp 1 của engine thiết kế (TK-10).
  *
- * TK-01 yêu cầu "một đầu bài ĐANG HIỆU LỰC duy nhất". Vì vậy màn hình này KHÔNG sửa tại chỗ:
- * mỗi lần lưu là một phiên bản mới, bản cũ lùi thành lịch sử và khoá lại. Sửa đè lên bản cũ
- * thì mất căn cứ trả lời "khách đổi yêu cầu lúc nào" — đúng câu hỏi hay phải trả lời nhất
- * khi phát sinh tranh cãi về khối lượng công việc.
+ * **Một biểu mẫu duy nhất.** Điều kiện ra của Mốc 2 ghi rõ "không còn nhập hai nơi"
+ * (`doc/design/08-milestones.md`), nên phần có cấu trúc mà engine cần và phần chữ tự do mà
+ * Kinh doanh với Dự toán đọc nằm chung một chỗ, lưu chung một lần.
+ *
+ * **Nội dung biểu mẫu KHÔNG nằm trong tệp này.** Trường nào, thứ tự nào, hiện với loại hình
+ * nào, nặng bao nhiêu điểm — tất cả ở `shared/src/design/brief-form.json`. Ở đây chỉ có
+ * cách vẽ và cách lưu. Thêm câu hỏi cho biệt thự là sửa tệp JSON đó.
+ *
+ * **Hai chế độ lưu, khác nhau ở chỗ đã xác nhận hay chưa:**
+ *  - Chưa xác nhận → "Lưu nháp" sửa tại chỗ, không đẻ phiên bản.
+ *  - Đã xác nhận → "Điều chỉnh đầu bài" lập phiên bản mới, bắt buộc nêu nguyên nhân (NEN-05).
+ *
+ * Vì sao không phải mỗi lần lưu là một phiên bản như bản cũ: biểu mẫu này dài gấp ba lần,
+ * và mỗi phiên bản từ bản thứ hai đều đòi lý do. Dấu vết kiểm toán tồn tại để trả lời "khách
+ * đổi yêu cầu lúc nào" — chưa xác nhận thì chưa ai dựa vào bản đó.
  */
 
-import { useState, type FormEvent } from 'react';
-import { CheckCircle2, History } from 'lucide-react';
-import { BUTTONS, formatCurrency, formatDateTime } from '@nvg/shared';
+import { useEffect, useMemo, useState } from 'react';
+import { CheckCircle2, History, Ruler } from 'lucide-react';
+import { formatDateTime } from '@nvg/shared';
+import {
+  BRIEF_FORM,
+  checkBriefConsistency,
+  scoreBrief,
+  setAtPath,
+  valueAtPath,
+  visibleFields,
+  type DesignBriefDraft,
+} from '@nvg/shared/design';
 import { Button } from '@/components/ui/button';
-import { Field } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
-import { MoneyInput } from '@/components/ui/money-input';
 import { EmptyState } from '@/components/ui/states';
 import {
-  useConfirmDesignBrief,
+  useConfirmBriefArtifact,
   useDesignBriefs,
+  useDesignSetting,
+  useSaveBriefDraft,
   useSaveDesignBrief,
   type DesignBriefRecord,
 } from '@/hooks/use-design-projects';
+import { useDesignSurveys } from '@/hooks/use-design-surveys';
 import { toUserMessage } from '@/hooks/use-error-message';
-import { useAuth } from '@/lib/auth';
+import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard';
+import { BriefField } from './brief-field';
 
 const EM_DASH = '—';
 
-interface BriefForm {
-  designTask: string;
-  functionalNeeds: string;
-  budgetAmount: string;
-  budgetNote: string;
-  styleNote: string;
-  siteCondition: string;
-  legalDocuments: string;
-  changeReason: string;
-}
+/** Sáu ô chữ tự do của TK-01 — cột riêng trong bảng, không nằm trong hợp đồng dữ liệu. */
+type LegacyText = Record<string, string | null>;
 
-function toForm(brief: DesignBriefRecord | undefined): BriefForm {
+const LEGACY_COLUMNS: Record<string, string> = {
+  'legacy.design_task': 'design_task',
+  'legacy.functional_needs': 'functional_needs',
+  'legacy.style_note': 'style_note',
+  'legacy.site_condition': 'site_condition',
+  'legacy.legal_documents': 'legal_documents',
+};
+
+function toLegacy(brief: DesignBriefRecord | undefined): LegacyText {
   return {
-    designTask: brief?.design_task ?? '',
-    functionalNeeds: brief?.functional_needs ?? '',
-    budgetAmount: brief?.budget_amount != null ? String(brief.budget_amount) : '',
-    budgetNote: brief?.budget_note ?? '',
-    styleNote: brief?.style_note ?? '',
-    siteCondition: brief?.site_condition ?? '',
-    legalDocuments: brief?.legal_documents ?? '',
-    changeReason: '',
+    design_task: brief?.design_task ?? null,
+    functional_needs: brief?.functional_needs ?? null,
+    style_note: brief?.style_note ?? null,
+    site_condition: brief?.site_condition ?? null,
+    legal_documents: brief?.legal_documents ?? null,
   };
 }
 
@@ -59,172 +77,217 @@ export function BriefPanel({
   companyId: string;
   readOnly: boolean;
 }) {
-  const { profile } = useAuth();
   const { data: briefs, isLoading } = useDesignBriefs(projectId);
-  const saveBrief = useSaveDesignBrief();
-  const confirmBrief = useConfirmDesignBrief();
+  const { data: surveys } = useDesignSurveys(projectId);
+  const { data: thresholdRaw } = useDesignSetting('brief_completeness_min');
 
-  const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState<BriefForm>(() => toForm(undefined));
-  const [error, setError] = useState<string | null>(null);
+  const saveNewVersion = useSaveDesignBrief();
+  const saveDraft = useSaveBriefDraft();
+  const confirmArtifact = useConfirmBriefArtifact();
 
   const current = briefs?.find((b) => b.is_current_version);
   const history = (briefs ?? []).filter((b) => !b.is_current_version);
+  const survey = surveys?.[0];
+
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<DesignBriefDraft>({});
+  const [legacy, setLegacy] = useState<LegacyText>(toLegacy(undefined));
+  const [surveyId, setSurveyId] = useState<string | null>(null);
+  const [changeReason, setChangeReason] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  // Chỉ nạp lại khi ĐỔI bản ghi, không phải mỗi lần vẽ lại: nạp lại giữa chừng là xoá những
+  // gì người dùng vừa gõ (Webapp Flow 6.3).
+  useEffect(() => {
+    if (editing) return;
+    setDraft((current?.structured as DesignBriefDraft) ?? {});
+    setLegacy(toLegacy(current));
+    setSurveyId(current?.site_source_survey_id ?? null);
+  }, [current, editing]);
+
+  useUnsavedChangesGuard(editing);
+
+  const score = useMemo(() => scoreBrief(draft, BRIEF_FORM), [draft]);
+  const issues = useMemo(() => checkBriefConsistency(draft, BRIEF_FORM), [draft]);
+  const shown = useMemo(() => visibleFields(BRIEF_FORM, draft), [draft]);
+  const threshold = typeof thresholdRaw === 'number' ? thresholdRaw : null;
+
+  /** Bản đã xác nhận là bất biến — sửa nó nghĩa là lập phiên bản mới. */
+  const needsNewVersion = Boolean(current?.confirmed_at);
 
   function startEditing() {
-    setForm(toForm(current));
+    setDraft((current?.structured as DesignBriefDraft) ?? {});
+    setLegacy(toLegacy(current));
+    setSurveyId(current?.site_source_survey_id ?? null);
+    setChangeReason('');
     setError(null);
     setEditing(true);
   }
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
-
-    // Bản thứ hai trở đi bắt buộc nêu nguyên nhân (NEN-05). Hỏi ngay tại chỗ thay vì để CSDL
-    // trả lỗi rồi người dùng mới biết mình vừa gõ xong một biểu mẫu dài mà chưa lưu được.
-    if (current && !form.changeReason.trim()) {
-      setError('Vui lòng nêu nguyên nhân điều chỉnh đầu bài so với bản đang hiệu lực.');
+  function setField(path: string, value: unknown) {
+    if (path.startsWith('legacy.')) {
+      const column = LEGACY_COLUMNS[path]!;
+      setLegacy((prev) => ({ ...prev, [column]: (value as string | undefined) ?? null }));
       return;
     }
+    setDraft((prev) => setAtPath(prev, path, value));
+  }
+
+  /** Chép kích thước lô từ biên bản khảo sát — không gõ lại con số đã có (PRD 2.3). */
+  function copyFromSurvey() {
+    if (!survey) return;
+    let next = draft;
+    if (survey.land_width) next = setAtPath(next, 'site.width_m', Number(survey.land_width));
+    if (survey.land_depth) next = setAtPath(next, 'site.depth_m', Number(survey.land_depth));
+    setDraft(next);
+    setSurveyId(survey.id);
+  }
+
+  async function save() {
+    setError(null);
+
+    // Điểm ghi vào payload để cột sinh trong CSDL có giá trị hiển thị ngay. Con số quyết
+    // định Lớp 2 thì Worker tự tính lại khi xác nhận — cái này chỉ để lọc và hiện.
+    const payload: DesignBriefDraft = {
+      ...draft,
+      completeness_score: score.score,
+      missing_fields: score.missingFields,
+    };
 
     try {
-      await saveBrief.mutateAsync({
-        projectId,
-        companyId,
-        designTask: form.designTask.trim() || null,
-        functionalNeeds: form.functionalNeeds.trim() || null,
-        budgetAmount: form.budgetAmount.trim() || null,
-        budgetNote: form.budgetNote.trim() || null,
-        styleNote: form.styleNote.trim() || null,
-        siteCondition: form.siteCondition.trim() || null,
-        legalDocuments: form.legalDocuments.trim() || null,
-        changeReason: form.changeReason.trim() || null,
-      });
+      if (needsNewVersion || !current) {
+        if (current && !changeReason.trim()) {
+          setError('Vui lòng nêu nguyên nhân điều chỉnh đầu bài so với bản đang hiệu lực.');
+          return;
+        }
+        await saveNewVersion.mutateAsync({
+          projectId,
+          companyId,
+          designTask: legacy.design_task ?? null,
+          functionalNeeds: legacy.functional_needs ?? null,
+          budgetAmount: null,
+          budgetNote: null,
+          styleNote: legacy.style_note ?? null,
+          siteCondition: legacy.site_condition ?? null,
+          legalDocuments: legacy.legal_documents ?? null,
+          changeReason: changeReason.trim() || null,
+          structured: payload,
+          siteSourceSurveyId: surveyId,
+        });
+      } else {
+        await saveDraft.mutateAsync({
+          briefId: current.id,
+          structured: payload,
+          legacy,
+          siteSourceSurveyId: surveyId,
+        });
+      }
       setEditing(false);
     } catch (e) {
       setError(toUserMessage(e, 'create'));
     }
   }
 
+  async function confirm() {
+    if (!current) return;
+    setError(null);
+    try {
+      await confirmArtifact.mutateAsync({ briefId: current.id });
+    } catch (e) {
+      setError(toUserMessage(e, 'edit'));
+    }
+  }
+
   if (isLoading) return null;
 
+  // ---------------------------------------------------------------------------
+  // Chế độ nhập
+  // ---------------------------------------------------------------------------
   if (editing) {
-    const set = (field: keyof BriefForm) => (value: string) =>
-      setForm((f) => ({ ...f, [field]: value }));
+    const issuesFor = (path: string) =>
+      issues.filter((i) => i.paths.includes(path)).map((i) => i.message);
 
     return (
-      <form
-        onSubmit={handleSubmit}
-        noValidate
-        className="rounded-lg border border-border bg-surface p-4 shadow-card"
-      >
-        <p className="mb-4 text-fg-subtle">
-          {current
-            ? `Lưu sẽ tạo phiên bản ${current.version + 1}. Bản ${current.version} chuyển thành lịch sử, không mất đi.`
-            : 'Đây là bản đầu bài đầu tiên của dự án.'}
-        </p>
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="space-y-6">
+          {BRIEF_FORM.sections.map((section) => {
+            const fields = shown.filter((v) => v.section.id === section.id);
+            if (fields.length === 0) return null;
+            return (
+              <section
+                key={section.id}
+                id={`brief-section-${section.id}`}
+                className="rounded-lg border border-border bg-surface p-4 shadow-card"
+              >
+                <h3 className="font-semibold">{section.title}</h3>
+                {section.hint && <p className="mt-0.5 text-fg-subtle">{section.hint}</p>}
+                <div className="mt-3 space-y-4">
+                  {fields.map(({ field }) => (
+                    <BriefField
+                      key={field.path}
+                      field={field}
+                      value={
+                        field.path.startsWith('legacy.')
+                          ? (legacy[LEGACY_COLUMNS[field.path]!] ?? undefined)
+                          : valueAtPath(draft, field.path)
+                      }
+                      onChange={(value) => setField(field.path, value)}
+                      issues={issuesFor(field.path)}
+                    />
+                  ))}
+                </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Nhiệm vụ thiết kế" className="sm:col-span-2">
-            <textarea
-              value={form.designTask}
-              onChange={(e) => set('designTask')(e.target.value)}
-              rows={3}
-              className="w-full rounded-sm border border-border bg-surface px-3 py-2"
-              placeholder="Phạm vi công việc nhận làm: thiết kế kiến trúc, kết cấu, điện nước, hồ sơ xin phép…"
-            />
-          </Field>
+                {section.id === 'khu_dat' && survey && (
+                  <Button variant="secondary" className="mt-3" onClick={copyFromSurvey}>
+                    <Ruler className="size-4" />
+                    Lấy theo biên bản khảo sát{' '}
+                    {formatDateTime(survey.surveyed_at ?? survey.created_at)}
+                  </Button>
+                )}
+              </section>
+            );
+          })}
 
-          <Field label="Nhu cầu công năng" className="sm:col-span-2">
-            <textarea
-              value={form.functionalNeeds}
-              onChange={(e) => set('functionalNeeds')(e.target.value)}
-              rows={4}
-              className="w-full rounded-sm border border-border bg-surface px-3 py-2"
-              placeholder="Số tầng, số phòng ngủ, thành viên gia đình, thói quen sử dụng, yêu cầu riêng…"
-            />
-          </Field>
-
-          <Field label="Ngân sách dự kiến" hint="Đơn vị đồng.">
-            <MoneyInput value={form.budgetAmount} onChange={set('budgetAmount')} />
-          </Field>
-
-          <Field label="Ghi chú về ngân sách">
-            <Input
-              value={form.budgetNote}
-              onChange={(e) => set('budgetNote')(e.target.value)}
-              placeholder="Đã gồm nội thất chưa, khoản nào tách riêng…"
-            />
-          </Field>
-
-          <Field label="Phong cách kiến trúc" className="sm:col-span-2">
-            <Input
-              value={form.styleNote}
-              onChange={(e) => set('styleNote')(e.target.value)}
-              placeholder="Hiện đại, tân cổ điển, nhiệt đới…"
-            />
-          </Field>
-
-          <Field label="Hiện trạng khu đất" className="sm:col-span-2">
-            <textarea
-              value={form.siteCondition}
-              onChange={(e) => set('siteCondition')(e.target.value)}
-              rows={3}
-              className="w-full rounded-sm border border-border bg-surface px-3 py-2"
-              placeholder="Kích thước, hướng, cốt nền, công trình lân cận, hạ tầng điện nước, đường vào…"
-            />
-          </Field>
-
-          <Field label="Hồ sơ pháp lý" className="sm:col-span-2">
-            <textarea
-              value={form.legalDocuments}
-              onChange={(e) => set('legalDocuments')(e.target.value)}
-              rows={3}
-              className="w-full rounded-sm border border-border bg-surface px-3 py-2"
-              placeholder="Sổ đỏ, chỉ giới xây dựng, mật độ, tầng cao cho phép, giấy phép xây dựng…"
-            />
-          </Field>
-
-          {current && (
-            <Field
-              label="Nguyên nhân điều chỉnh"
-              required
-              className="sm:col-span-2"
-              hint="Vì sao đầu bài phải đổi — căn cứ này là thứ trả lời được câu hỏi phát sinh sau này."
-            >
+          {needsNewVersion && (
+            <section className="rounded-lg border border-border bg-surface p-4 shadow-card">
+              <h3 className="font-semibold">Nguyên nhân điều chỉnh</h3>
+              <p className="mt-0.5 text-fg-subtle">
+                Bản đang hiệu lực đã được xác nhận, nên lần lưu này lập phiên bản mới.
+              </p>
               <textarea
-                value={form.changeReason}
-                onChange={(e) => set('changeReason')(e.target.value)}
                 rows={2}
-                className="w-full rounded-sm border border-border bg-surface px-3 py-2"
+                value={changeReason}
+                onChange={(e) => setChangeReason(e.target.value)}
+                placeholder="Ví dụ: khách bổ sung phòng thờ ở tầng trên cùng"
+                className="mt-2 w-full rounded border border-border bg-surface p-2"
               />
-            </Field>
+            </section>
           )}
+
+          {error && <p className="text-status-overdue">{error}</p>}
+
+          <div className="flex flex-wrap gap-2">
+            <Button variant="primary" onClick={() => void save()}>
+              {needsNewVersion || !current ? 'Lưu đầu bài' : 'Lưu nháp'}
+            </Button>
+            <Button variant="secondary" onClick={() => setEditing(false)}>
+              Hủy
+            </Button>
+          </div>
         </div>
 
-        {error && (
-          <p role="alert" className="mt-4 text-status-overdue">
-            {error}
-          </p>
-        )}
-
-        <div className="mt-6 flex gap-2">
-          <Button type="submit" variant="primary" disabled={saveBrief.isPending}>
-            {saveBrief.isPending ? 'Đang lưu…' : BUTTONS.save}
-          </Button>
-          <Button type="button" variant="secondary" onClick={() => setEditing(false)}>
-            {BUTTONS.cancel}
-          </Button>
-        </div>
-      </form>
+        <CompletenessPanel score={score} issues={issues} threshold={threshold} />
+      </div>
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // Chưa có đầu bài
+  // ---------------------------------------------------------------------------
   if (!current) {
     return (
       <EmptyState
-        message="Chưa có đầu bài. Ghi nhận nhiệm vụ thiết kế, nhu cầu công năng, ngân sách và hiện trạng khu đất trước khi dựng phương án."
+        message="Chưa có đầu bài. Ghi nhận khu đất, quy mô, nhu cầu của gia đình và ngân sách trước khi dựng phương án."
         action={
           readOnly ? undefined : (
             <Button variant="primary" onClick={startEditing}>
@@ -236,79 +299,220 @@ export function BriefPanel({
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // Chế độ xem
+  // ---------------------------------------------------------------------------
+  const savedScore =
+    current.completeness_score !== null ? Number(current.completeness_score) : null;
+
   return (
-    <div className="space-y-4">
-      <div className="rounded-lg border border-border bg-surface p-4 shadow-card">
-        <div className="mb-4 flex flex-wrap items-center gap-3">
-          <p className="font-medium">Đầu bài đang hiệu lực — phiên bản {current.version}</p>
-          {current.confirmed_at ? (
-            <span className="inline-flex items-center gap-1 text-status-completed">
-              <CheckCircle2 className="size-4" />
-              Đã xác nhận {formatDateTime(current.confirmed_at)}
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="space-y-4">
+        <div className="rounded-lg border border-border bg-surface p-4 shadow-card">
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <p className="font-medium">Đầu bài đang hiệu lực — phiên bản {current.version}</p>
+            {current.confirmed_at ? (
+              <span className="inline-flex items-center gap-1 text-status-completed">
+                <CheckCircle2 className="size-4" />
+                Đã xác nhận {formatDateTime(current.confirmed_at)}
+              </span>
+            ) : (
+              <span className="text-status-pending">Chưa xác nhận</span>
+            )}
+            <span className="ml-auto flex flex-wrap gap-2">
+              {!readOnly && !current.confirmed_at && (
+                <Button variant="secondary" onClick={() => void confirm()}>
+                  Xác nhận đầu bài
+                </Button>
+              )}
+              {!readOnly && (
+                <Button variant="secondary" onClick={startEditing}>
+                  {current.confirmed_at ? 'Điều chỉnh đầu bài' : 'Sửa đầu bài'}
+                </Button>
+              )}
             </span>
-          ) : (
-            <span className="text-status-pending">Chưa xác nhận</span>
-          )}
-          <span className="ml-auto flex gap-2">
-            {!readOnly && !current.confirmed_at && profile && (
-              <Button
-                variant="secondary"
-                onClick={() =>
-                  void confirmBrief.mutateAsync({ briefId: current.id, userId: profile.id })
-                }
-              >
-                Xác nhận đầu bài
-              </Button>
+          </div>
+
+          <SurveyMismatch brief={current} survey={survey} />
+
+          <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+            {BRIEF_FORM.sections.flatMap((section) =>
+              section.fields
+                .filter((field) => !field.path.startsWith('legacy.'))
+                .map((field) => (
+                  <ReadOnlyField
+                    key={field.path}
+                    label={field.label}
+                    value={describe(valueAtPath(current.structured, field.path))}
+                  />
+                )),
             )}
-            {!readOnly && (
-              <Button variant="secondary" onClick={startEditing}>
-                Điều chỉnh đầu bài
-              </Button>
-            )}
-          </span>
+            <ReadOnlyField label="Nhiệm vụ thiết kế" value={current.design_task} wide />
+            <ReadOnlyField
+              label="Ghi chú thêm về công năng"
+              value={current.functional_needs}
+              wide
+            />
+            <ReadOnlyField label="Ghi chú thêm về phong cách" value={current.style_note} wide />
+            <ReadOnlyField label="Ghi chú thêm về hiện trạng" value={current.site_condition} wide />
+            <ReadOnlyField label="Hồ sơ pháp lý hiện có" value={current.legal_documents} wide />
+          </dl>
         </div>
 
-        <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-          <BriefField label="Nhiệm vụ thiết kế" value={current.design_task} wide />
-          <BriefField label="Nhu cầu công năng" value={current.functional_needs} wide />
-          <BriefField
-            label="Ngân sách dự kiến"
-            value={current.budget_amount != null ? formatCurrency(current.budget_amount) : null}
-          />
-          <BriefField label="Ghi chú ngân sách" value={current.budget_note} />
-          <BriefField label="Phong cách kiến trúc" value={current.style_note} wide />
-          <BriefField label="Hiện trạng khu đất" value={current.site_condition} wide />
-          <BriefField label="Hồ sơ pháp lý" value={current.legal_documents} wide />
-        </dl>
+        {history.length > 0 && (
+          <div className="rounded-lg border border-border bg-surface p-4 shadow-card">
+            <p className="mb-3 flex items-center gap-2 font-medium">
+              <History className="size-4 text-fg-subtle" />
+              Các phiên bản trước ({history.length})
+            </p>
+            <ul className="space-y-3">
+              {history.map((brief) => (
+                <li key={brief.id} className="border-l-2 border-border pl-3">
+                  <p className="font-medium">
+                    Phiên bản {brief.version}
+                    <span className="ml-2 font-normal text-fg-subtle">
+                      {formatDateTime(brief.created_at)}
+                      {brief.author ? ` — ${brief.author.full_name}` : ''}
+                    </span>
+                  </p>
+                  <p className="text-fg-subtle">{brief.change_reason ?? 'Bản đầu tiên'}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
-      {history.length > 0 && (
+      <CompletenessPanel
+        score={{ ...score, score: savedScore ?? score.score }}
+        issues={issues}
+        threshold={threshold}
+        artifactId={current.artifact_id}
+      />
+    </div>
+  );
+}
+
+/**
+ * Thước độ đầy đủ + danh sách còn thiếu + danh sách mâu thuẫn.
+ *
+ * Trạng thái hiện bằng CHỮ kèm màu, không bằng màu một mình (CGD 6.8). Dùng đúng năm màu
+ * trạng thái chuẩn: chưa đủ là "Chờ duyệt" (vàng) chứ KHÔNG phải "Quá hạn" (đỏ) — thiếu
+ * thông tin không phải là trễ hạn.
+ */
+function CompletenessPanel({
+  score,
+  issues,
+  threshold,
+  artifactId,
+}: {
+  score: ReturnType<typeof scoreBrief>;
+  issues: ReturnType<typeof checkBriefConsistency>;
+  threshold: number | null;
+  artifactId?: string | null;
+}) {
+  const percent = Math.round(score.score * 100);
+  const enough = threshold !== null && score.score >= threshold;
+  const tone = score.score === 0 ? 'draft' : enough ? 'completed' : 'pending';
+
+  return (
+    <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+      <div className="rounded-lg border border-border bg-surface p-4 shadow-card">
+        <p className="font-medium">Mức độ đầy đủ</p>
+        <p className={`mt-1 text-2xl font-semibold text-status-${tone}`}>{percent}%</p>
+        <div
+          className="mt-2 h-2 w-full overflow-hidden rounded-full bg-surface-sunken"
+          role="progressbar"
+          aria-valuenow={percent}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Mức độ đầy đủ của đầu bài"
+        >
+          <div className={`h-full bg-status-${tone}`} style={{ width: `${percent}%` }} />
+        </div>
+        <p className="mt-2 text-fg-subtle">
+          {threshold === null
+            ? 'Chưa cấu hình mức đầy đủ tối thiểu.'
+            : enough
+              ? 'Đã đủ thông tin để dựng phương án tự động.'
+              : `Chưa đủ để dựng phương án tự động — cần từ ${Math.round(threshold * 100)}%.`}
+        </p>
+        {artifactId && (
+          <p className="mt-2 text-fg-subtle">Đã đúc bản dữ liệu cho engine thiết kế.</p>
+        )}
+      </div>
+
+      {score.missing.length > 0 && (
         <div className="rounded-lg border border-border bg-surface p-4 shadow-card">
-          <p className="mb-3 flex items-center gap-2 font-medium">
-            <History className="size-4 text-fg-subtle" />
-            Các phiên bản trước ({history.length})
-          </p>
-          <ul className="space-y-3">
-            {history.map((brief) => (
-              <li key={brief.id} className="border-l-2 border-border pl-3">
-                <p className="font-medium">
-                  Phiên bản {brief.version}
-                  <span className="ml-2 font-normal text-fg-subtle">
-                    {formatDateTime(brief.created_at)}
-                    {brief.author ? ` — ${brief.author.full_name}` : ''}
-                  </span>
-                </p>
-                <p className="text-fg-subtle">{brief.change_reason ?? 'Bản đầu tiên'}</p>
+          <p className="font-medium">Còn thiếu ({score.missing.length})</p>
+          <ul className="mt-2 space-y-1">
+            {score.missing.map((item) => (
+              <li key={item.path}>
+                <a
+                  href={`#brief-${item.path.replace(/\./g, '-')}`}
+                  className="flex min-h-10 items-center text-brand hover:underline"
+                >
+                  {item.label}
+                  <span className="ml-1 text-fg-subtle">— {item.sectionTitle}</span>
+                </a>
               </li>
             ))}
           </ul>
         </div>
       )}
-    </div>
+
+      {issues.length > 0 && (
+        <div className="rounded-lg border border-border bg-surface p-4 shadow-card">
+          <p className="font-medium">Chỗ chưa nhất quán ({issues.length})</p>
+          <ul className="mt-2 space-y-2">
+            {issues.map((issue) => (
+              <li
+                key={issue.code}
+                className={
+                  issue.severity === 'nghiem_trong' ? 'text-status-overdue' : 'text-status-pending'
+                }
+              >
+                {issue.message}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </aside>
   );
 }
 
-function BriefField({
+/**
+ * Kích thước trong đầu bài lệch với biên bản khảo sát.
+ *
+ * Hiện CẢ HAI con số chứ không im lặng lấy một bên: khách nói một đằng, đo thực tế một nẻo
+ * là chuyện thường, và người quyết định phải nhìn thấy cả hai mới quyết được.
+ */
+function SurveyMismatch({
+  brief,
+  survey,
+}: {
+  brief: DesignBriefRecord;
+  survey: { id: string; land_width: string | null; land_depth: string | null } | undefined;
+}) {
+  if (!survey || brief.site_source_survey_id !== survey.id) return null;
+
+  const site = (brief.structured?.site ?? {}) as { width_m?: number; depth_m?: number };
+  const differs =
+    (survey.land_width !== null && Number(survey.land_width) !== site.width_m) ||
+    (survey.land_depth !== null && Number(survey.land_depth) !== site.depth_m);
+  if (!differs) return null;
+
+  return (
+    <p className="mb-4 rounded border border-border bg-surface-sunken p-3 text-status-pending">
+      Kích thước trong đầu bài ({site.width_m ?? EM_DASH} × {site.depth_m ?? EM_DASH} m) khác biên
+      bản khảo sát ({survey.land_width ?? EM_DASH} × {survey.land_depth ?? EM_DASH} m). Xác nhận lại
+      số nào dùng để thiết kế.
+    </p>
+  );
+}
+
+function ReadOnlyField({
   label,
   value,
   wide,
@@ -323,4 +527,18 @@ function BriefField({
       <dd className="whitespace-pre-wrap">{value ?? EM_DASH}</dd>
     </div>
   );
+}
+
+/** Giá trị trong payload → chuỗi đọc được. Không dịch mã ở đây; nhãn nằm ở cấu hình. */
+function describe(value: unknown): string | null {
+  if (value === undefined || value === null || value === '') return null;
+  if (Array.isArray(value)) return value.length ? value.join(', ') : null;
+  if (typeof value === 'boolean') return value ? 'Có' : 'Không';
+  if (typeof value === 'object') {
+    const parts = Object.entries(value as Record<string, unknown>)
+      .filter(([, v]) => v !== null && v !== undefined)
+      .map(([k, v]) => `${k}: ${describe(v) ?? EM_DASH}`);
+    return parts.length ? parts.join(' · ') : null;
+  }
+  return String(value);
 }

@@ -17,6 +17,8 @@ import type {
   DisciplineTaskStatus,
   MoneyValue,
 } from '@nvg/shared';
+import type { DesignBriefDraft } from '@nvg/shared/design';
+import { designApi } from '@/lib/design-api';
 import { useCompanyScope, withCompanyScope } from '@/lib/company-scope';
 import { supabase } from '@/lib/supabase';
 
@@ -213,11 +215,21 @@ export interface DesignBriefRecord {
   confirmed_at: string | null;
   created_at: string;
   author: { full_name: string } | null;
+
+  // --- Đầu bài có cấu trúc (Lớp 1, TK-10 — migration 0101) --------------------
+  /** Payload theo `contracts/design-brief.schema.json`. */
+  structured: DesignBriefDraft;
+  /** Cột SINH từ `structured`. Postgres trả `numeric` dạng chuỗi. */
+  completeness_score: string | null;
+  missing_fields: string[] | null;
+  artifact_id: string | null;
+  site_source_survey_id: string | null;
 }
 
 const BRIEF_SELECT =
   'id, version, is_current_version, design_task, functional_needs, budget_amount, budget_note, ' +
   'style_note, site_condition, legal_documents, change_reason, confirmed_at, created_at, ' +
+  'structured, completeness_score, missing_fields, artifact_id, site_source_survey_id, ' +
   'author:users!design_briefs_created_by_users_id_fk(full_name)';
 
 /** Toàn bộ phiên bản đầu bài, mới nhất trước — bản đang hiệu lực nằm đầu danh sách. */
@@ -249,6 +261,10 @@ export interface NewDesignBriefInput {
   siteCondition: string | null;
   legalDocuments: string | null;
   changeReason: string | null;
+  /** Phần có cấu trúc theo hợp đồng `DesignBrief`. */
+  structured: DesignBriefDraft;
+  /** Biên bản khảo sát đã dùng để điền kích thước lô, nếu có. */
+  siteSourceSurveyId?: string | null;
 }
 
 /**
@@ -273,6 +289,8 @@ export function useSaveDesignBrief() {
           site_condition: input.siteCondition,
           legal_documents: input.legalDocuments,
           change_reason: input.changeReason,
+          structured: input.structured,
+          site_source_survey_id: input.siteSourceSurveyId ?? null,
         })
         .select('id')
         .single();
@@ -281,6 +299,90 @@ export function useSaveDesignBrief() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['design_briefs'] });
+    },
+  });
+}
+
+/**
+ * Lưu nháp đầu bài đang hiệu lực — SỬA TẠI CHỖ, không đẻ phiên bản mới.
+ *
+ * Chỉ dùng khi bản đó CHƯA xác nhận. Biểu mẫu có cấu trúc dài gấp ba lần bản chữ tự do cũ;
+ * bắt nêu nguyên nhân điều chỉnh cho từng lần lưu dở thì không ai dùng nổi. Sau khi xác
+ * nhận, trigger `design_briefs_freeze_after_confirm` chặn mọi thay đổi nội dung — muốn đổi
+ * thì lập phiên bản mới như cũ.
+ */
+export function useSaveBriefDraft() {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    void,
+    Error,
+    {
+      briefId: string;
+      structured: DesignBriefDraft;
+      legacy: Record<string, string | null>;
+      siteSourceSurveyId?: string | null;
+    }
+  >({
+    mutationFn: async ({ briefId, structured, legacy, siteSourceSurveyId }) => {
+      const { error } = await supabase
+        .from('design_briefs')
+        .update({ structured, ...legacy, site_source_survey_id: siteSourceSurveyId ?? null })
+        .eq('id', briefId)
+        .select('id')
+        .single();
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['design_briefs'] });
+    },
+  });
+}
+
+export interface ConfirmBriefResult {
+  artifactId: string;
+  completenessScore: number;
+  missingFields: string[];
+  issues: { code: string; severity: string; message: string; paths: string[] }[];
+}
+
+/**
+ * Xác nhận đầu bài — đi qua Worker vì bước này đúc artifact bất biến.
+ *
+ * Đây là một trong ba trường hợp CLAUDE.md 3.1 cho phép có endpoint Workers: ghi
+ * `design_artifact` + cạnh lineage + `design_head` phải toàn vẹn cùng lúc. Worker cũng
+ * TÍNH LẠI độ đầy đủ và bỏ con số trình duyệt gửi lên.
+ */
+export function useConfirmBriefArtifact() {
+  const queryClient = useQueryClient();
+
+  return useMutation<ConfirmBriefResult, Error, { briefId: string }>({
+    mutationFn: ({ briefId }) =>
+      designApi<ConfirmBriefResult>('/design/brief/confirm', { briefId }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['design_briefs'] });
+    },
+  });
+}
+
+/**
+ * Một mục cấu hình của engine thiết kế (`design_setting`).
+ *
+ * Đọc thẳng Supabase: RLS đã giới hạn theo tenant của người dùng nên không cần truyền
+ * `tenant_id` từ trình duyệt. Ngưỡng độ đầy đủ KHÔNG được viết cứng ở `web/`.
+ */
+export function useDesignSetting(key: string) {
+  return useQuery<unknown, Error>({
+    queryKey: ['design_setting', key],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('design_setting')
+        .select('value')
+        .eq('key', key)
+        .limit(1)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return data?.value ?? null;
     },
   });
 }

@@ -32,6 +32,7 @@ import {
   date,
   index,
   integer,
+  jsonb,
   numeric,
   pgTable,
   text,
@@ -174,11 +175,58 @@ export const designBriefs = pgTable(
     confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
     confirmedBy: uuid('confirmed_by').references(() => users.id, { onDelete: 'set null' }),
 
+    // --- Đầu bài có cấu trúc — Lớp 1 của engine thiết kế (TK-10, migration 0101) --------
+
+    /**
+     * Toàn bộ đầu bài theo `contracts/design-brief.schema.json`. Nguồn của artifact
+     * `design_brief`; đã xác nhận thì bất biến (trigger `design_briefs_freeze_after_confirm`).
+     */
+    structured: jsonb('structured').notNull().default({}),
+
+    /**
+     * Cột SINH từ `structured` — bộ nhớ đệm để lọc và hiển thị.
+     *
+     * KHÔNG phải chốt chặn: con số này do trình duyệt tính rồi ghi vào payload. Chốt chặn
+     * Lớp 2 đọc điểm trong artifact, do Worker tự tính lại bằng `@nvg/shared/design`.
+     */
+    completenessScore: numeric('completeness_score', { precision: 4, scale: 3 }).generatedAlwaysAs(
+      sql`CASE WHEN jsonb_typeof(structured -> 'completeness_score') = 'number' THEN (structured ->> 'completeness_score')::numeric END`,
+    ),
+
+    missingFields: jsonb('missing_fields').generatedAlwaysAs(
+      sql`CASE WHEN jsonb_typeof(structured -> 'missing_fields') = 'array' THEN structured -> 'missing_fields' ELSE '[]'::jsonb END`,
+    ),
+
+    /**
+     * Artifact `design_brief` đúc khi xác nhận — truy ngược được hai chiều.
+     *
+     * Khoá ngoại tới `design_artifact` khai trong migration `0101`, **cố ý không khai lại ở
+     * đây**: `design.ts` đã import `designProjects` từ tệp này, nên tham chiếu ngược lại sẽ
+     * tạo vòng import giữa hai mô-đun. Ràng buộc thật nằm ở CSDL, chỗ nó không vòng qua được.
+     */
+    artifactId: text('artifact_id'),
+
+    /**
+     * Biên bản khảo sát (TK-02) đã dùng để điền kích thước lô. Rỗng = nhập tay.
+     *
+     * Đầu bài giữ số của CHÍNH NÓ chứ không đọc thẳng từ khảo sát: đầu bài thường nhập
+     * trước lúc đi đo, và khách trên website thì không có khảo sát nào. Cột này để màn hình
+     * đối chiếu được và nói ra khi hai bên lệch — không có nó thì lệch vẫn lệch, chỉ là
+     * không ai biết.
+     */
+    siteSourceSurveyId: uuid('site_source_survey_id').references(() => designSurveys.id, {
+      onDelete: 'set null',
+    }),
+
     ...auditColumns(),
     ...softDelete(),
   },
   (t) => [
     index('design_briefs_project_idx').on(t.designProjectId, t.version),
+    /** Hàng chờ: đầu bài đang hiệu lực chưa đủ thông tin để chạy Lớp 2. */
+    index('design_briefs_completeness_idx')
+      .on(t.designProjectId, t.completenessScore)
+      .where(sql`${t.isCurrentVersion} AND ${t.deletedAt} IS NULL`),
     /** Một dự án chỉ MỘT đầu bài đang hiệu lực tại một thời điểm (TK-01, NEN-05). */
     uniqueIndex('design_briefs_one_current_per_project')
       .on(t.designProjectId)

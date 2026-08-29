@@ -283,7 +283,7 @@
           <div class="stat"><b>2/3</b><span class="xs muted-t">Việc của Mốc 0 đã xong</span></div>
           <div class="stat"><b>209</b><span class="xs muted-t">Phép thử xanh của module</span></div>
           <div class="stat"><b>4</b><span class="xs muted-t">Vướng mắc đang mở</span></div>
-          <div class="stat"><b>13</b><span class="xs muted-t">Câu hỏi chờ Haan</span></div>
+          <div class="stat"><b>14</b><span class="xs muted-t">Câu hỏi chờ Haan</span></div>
         </div>
       </div>
 
@@ -316,8 +316,14 @@
             </tr>
             <tr>
               <td class="num">2</td>
-              <td>Layer 1 — Design Brief thay phiếu tiếp nhận</td>
-              <td><span class="pill s-draft">Ngoài đợt</span></td>
+              <td>
+                Layer 1 — Design Brief thay phiếu tiếp nhận
+                <span class="xs muted-t"
+                  >&mdash; xong nền tảng: cấu hình biểu mẫu, chấm điểm tất định, migration. Còn giao
+                  diện và Worker</span
+                >
+              </td>
+              <td><span class="pill s-progress">Đang làm</span></td>
             </tr>
             <tr>
               <td class="num">3</td>
@@ -417,6 +423,79 @@
             </tr>
           </thead>
           <tbody>
+            <tr>
+              <td class="num">29/08/2026</td>
+              <td>
+                Mốc 2 hoàn tất: biểu mẫu Đầu bài một-chỗ-nhập, đúc artifact khi xác nhận, cổng chặn
+                Lớp 2 (<code>brief-panel.tsx</code>, <code>POST /design/brief/confirm</code>, 13 +
+                12 kiểm thử)
+              </td>
+              <td>
+                <b>Chạy thật đầu-cuối</b> qua <code>wrangler dev</code>: lập đầu bài &rarr; xác nhận
+                &rarr; artifact <code>sha256:75f8498…</code> &rarr; <code>design_head</code> trỏ
+                đúng. Đầu bài khai láo điểm 0,99 bị Worker <b>tính lại</b> và chặn với câu
+                &laquo;Chưa đủ thông tin bắt buộc&hellip; Còn thiếu: Địa phương&raquo;.
+                <br />
+                <b>Điểm máy khách gửi lên bị bỏ hoàn toàn.</b> Trình duyệt cũng chấm điểm, nhưng đó
+                là để hiện ngay khi người dùng gõ. Con số đi vào artifact quyết định Lớp 2 có chạy
+                hay không, mà artifact thì bất biến &mdash; tin trình duyệt nghĩa là ai gọi được
+                endpoint cũng vượt cổng chặn bằng một dòng JSON.
+                <br />
+                <b>Đúc artifact khi XÁC NHẬN, không phải mỗi lần lưu:</b> <code>design_head</code>
+                phải trỏ tới đầu bài người thật đã ký nhận. Kéo theo hai chế độ lưu &mdash; chưa xác
+                nhận thì &laquo;Lưu nháp&raquo; sửa tại chỗ, đã xác nhận thì lập phiên bản mới kèm
+                nguyên nhân như TK-01 cũ.
+                <br />
+                Thông báo lỗi hợp đồng được dịch sang <b>nhãn nghiệp vụ</b>: lớp hợp đồng nói
+                &laquo;locality &mdash; Required&raquo;, đúng với người viết mã và vô nghĩa với kiến
+                trúc sư đang ngồi trước màn hình (CGD 5.5).
+                <br />
+                Kích thước lô lệch với biên bản khảo sát thì hiện <b>cả hai con số</b>. Giấu một bên
+                đi thì không ai biết đã lệch &mdash; khách nói một đằng, đo thực tế một nẻo là
+                chuyện thường.
+                <br />
+                Ngưỡng đọc từ <code>design_setting</code>; <b>không có số dự phòng viết cứng</b>
+                &mdash; cấu hình bị xoá nhầm phải làm hệ thống dừng và nói ra, không phải lặng lẽ
+                chạy theo một con số trong mã.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">29/08/2026</td>
+              <td>
+                Mốc 2 nền tảng: từ vựng, cấu hình biểu mẫu thích ứng, bộ chấm điểm tất định,
+                migration <code>0101</code> (<code>shared/src/design/brief-*</code>, 37 + 13 kiểm
+                thử)
+              </td>
+              <td>
+                <b>Q-2 đã trả lời</b> &mdash; MỞ RỘNG <code>design_briefs</code>, không tạo bảng thứ
+                hai. TK-01 và TK-10 mô tả CÙNG một hồ sơ ở hai mức chi tiết; hai bảng nghĩa là hai
+                nơi nhập, đúng cái điều kiện ra của Mốc 2 cấm.
+                <br />
+                <b>Chấm điểm bằng quy tắc, không bằng mô hình ngôn ngữ.</b> Đầu bài khách là dữ liệu
+                hạng 1, mà demo chỉ được gửi hạng 3 &mdash; để mô hình chấm thì Lớp 2 bị chặn vì một
+                lý do chẳng liên quan gì tới đầu bài. Ngoài ra &laquo;đủ trường chưa&raquo; vốn là
+                phép đếm có trọng số; giao cho mô hình là biến phép tính tất định thành câu trả lời
+                đổi theo từng lần gọi.
+                <br />
+                Logic hiện/ẩn nằm trong <code>brief-form.json</code> &mdash; giao diện đọc cấu hình
+                rồi vẽ, không có <code>if (buildingType === 'biet_thu')</code> nào trong mã. Thêm
+                câu hỏi cho biệt thự sau này là sửa một tệp dữ liệu.
+                <br />
+                <b>Ba cạm bẫy đã được kiểm thử canh:</b> (1) gõ nhầm một đường dẫn thì trường đó
+                không bao giờ được chấm, điểm luôn thấp hơn thật và không lỗi nào nổ &mdash; test
+                hỏi thẳng hợp đồng; (2) coi <code>false</code>/<code>0</code> là &laquo;chưa trả
+                lời&raquo; thì mọi đầu bài nhà phố (khoảng lùi 0) vĩnh viễn không đạt ngưỡng; (3) mã
+                phòng lạ trong danh sách lựa chọn sẽ đi hết engine mà chưa từng bị kiểm quy chuẩn
+                &mdash; test canh mọi mã nằm trong <code>kb/room_vocabulary.yaml</code>.
+                <br />
+                Migration <code>0101</code>: <code>structured</code> jsonb + hai cột SINH từ nó +
+                trigger <b>riêng cho bảng này</b> đóng băng nội dung sau khi xác nhận.
+                <b>Cố ý KHÔNG mở rộng <code>freeze_record_identity</code></b> &mdash; hàm đó gắn với
+                khoảng mười trigger của các module đang chạy thật; sửa nó để thêm một cột cho một
+                bảng là đặt cả mười chỗ kia vào rủi ro. Đã chạy lại toàn bộ 126 phép thử RLS
+                <b>trước và sau</b> migration: xanh nguyên hai lần.
+              </td>
+            </tr>
             <tr>
               <td class="num">29/08/2026</td>
               <td>
@@ -1059,12 +1138,22 @@
             <tr>
               <td class="num">Q-2</td>
               <td>
-                Bảng <code>design_briefs</code> đang chạy (có phiên bản, có giao diện, có hàm RPC)
-                gần như không giao với hợp đồng <code>DesignBrief</code> mới. <b>Mở rộng</b> bảng cũ
-                bằng cột JSONB, hay <b>thay hẳn</b> bảng và giao diện? Tài liệu tự mâu thuẫn ở chỗ
-                này.
+                <b>Đã trả lời 29/08/2026 — MỞ RỘNG bảng cũ.</b> Thêm cột
+                <code>structured</code> jsonb vào <code>design_briefs</code>, giữ nguyên phiên bản,
+                bốn trigger, ba policy và sáu ô chữ tự do. Tab Đầu bài thành MỘT biểu mẫu ghi cả hai
+                phần.
+                <br />
+                Kèm ba quyết định con: (a) chấm độ đầy đủ bằng <b>quy tắc tất định</b>, mô hình ngôn
+                ngữ là phụ trợ và hiện chưa bật được vì đầu bài là dữ liệu hạng 1; (b) đầu bài giữ
+                kích thước lô của chính nó, lấy được từ khảo sát và cảnh báo khi lệch; (c) khai đủ
+                cả ba loại hình ngay, không làm nhà phố trước.
+                <br />
+                Mâu thuẫn <b>M2</b> của <code>doc/design/README.md</code> cũng giải theo: CSDL có
+                <b>0 dòng</b> <code>design_briefs</code> và chỉ tab Đầu bài đọc bảng này, nên hai
+                gạch đầu dòng &laquo;di trú dữ liệu&raquo; và &laquo;kiểm kê module khác&raquo; của
+                Mốc 2 thực tế đã rỗng &mdash; không viết script di trú nào.
               </td>
-              <td class="num">Mốc 2</td>
+              <td class="num">Đã xong</td>
             </tr>
             <tr>
               <td class="num">Q-3</td>
@@ -1170,6 +1259,37 @@
                 nên tri thức thu được sẽ nghèo đi trong im lặng.
               </td>
               <td class="num">Mốc 3</td>
+            </tr>
+            <tr>
+              <td class="num">Q-16</td>
+              <td>
+                <b>Bốn danh sách lựa chọn của biểu mẫu Đầu bài đã đúng thực tế chưa?</b> Hướng nhà
+                và loại hình lấy thẳng từ hợp đồng, nhưng danh sách <b>không gian bắt buộc</b>,
+                <b>thứ tự ưu tiên</b>, <b>hiện trạng bốn phía</b> và <b>người quyết định cuối</b>
+                (<code>shared/src/design/brief-form.json</code>) là suy luận từ thực tế nhà ở, chưa
+                có kiến trúc sư NVG xác nhận. Danh sách thiếu không làm hỏng gì ngay &mdash; nó chỉ
+                làm người nhập không tìm thấy mục cần chọn và bỏ trống, rồi điểm đầy đủ thấp mà
+                không ai hiểu vì sao.
+                <br />
+                Cùng câu hỏi này: <b>bảng trọng số chấm điểm</b> (bề rộng lô 3 điểm, phong cách 1
+                điểm) hiện do tôi đặt. Ngưỡng 70% chỉ có nghĩa khi bảng trọng số đúng.
+              </td>
+              <td class="num">Mốc 2</td>
+            </tr>
+            <tr>
+              <td class="num">Q-17</td>
+              <td>
+                <b
+                  >Hợp đồng <code>DesignBrief</code> chưa có chỗ chứa vài thông tin đặc thù biệt
+                  thự</b
+                >
+                &mdash; số cánh nhà, số lõi thang, có sân trong hay không &mdash; và nó khai
+                <code>additionalProperties: false</code> nên không nhét thêm được. Đợt này diễn đạt
+                gián tiếp qua khoảng lùi, mật độ, mặt tiếp cận và danh sách không gian. Sửa hợp đồng
+                ngay (thêm trường tuỳ chọn, tăng phiên bản phụ) hay để tới Mốc 7 khi làm biệt thự
+                thật? Theo nguyên tắc bất biến số 3, không tự thêm khi chưa có hợp đồng.
+              </td>
+              <td class="num">Mốc 7</td>
             </tr>
             <tr>
               <td class="num">Q-15</td>

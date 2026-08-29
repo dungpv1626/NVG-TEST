@@ -13,6 +13,11 @@
 
 export * from './index.generated';
 export * from './annotation';
+export * from './brief-vocabulary';
+export * from './brief-draft';
+export * from './brief-form';
+export * from './brief-form-data';
+export * from './brief-completeness';
 
 // ---------------------------------------------------------------------------
 // Bộ môn — dùng lại enum `design_discipline` sẵn có (CLAUDE.md 8.5 T7)

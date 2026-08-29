@@ -708,6 +708,13 @@
       "when": 1787931027539,
       "tag": "0100_kb_annotation_outcome",
       "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1787931027540,
+      "tag": "0101_tk_design_brief_structured",
+      "breakpoints": true
     }
   ]
 }

@@ -105,7 +105,11 @@ describe('Chuẩn hoá nhãn phòng', () => {
 
   it('chỉ hỏi mô hình phần bảng bí danh không trả lời được, và lọc trùng', async () => {
     const { client, generateJson } = fakeLlm([{ label: 'P.SINH HOAT', code: 'living' }]);
-    await normaliseRoomLabels([plan('PK', 'P.SINH HOAT'), plan('P.SINH HOAT', 'WC')], index, client);
+    await normaliseRoomLabels(
+      [plan('PK', 'P.SINH HOAT'), plan('P.SINH HOAT', 'WC')],
+      index,
+      client,
+    );
 
     expect(generateJson).toHaveBeenCalledTimes(1);
     const prompt = generateJson.mock.calls[0]![2].prompt;

@@ -1432,14 +1432,41 @@ sửa/xoá được từ trình duyệt; không ghi được artifact ngoài b�
 endpoint.** Hai chỗ lệch tài liệu đã ghi ở `contracts/README.md`; hai phát hiện mới ở
 `TIEN_DO_THIET_KE.html` (vướng mắc V-6, câu hỏi Q-12 và Q-13).
 
-### Mốc 2 — Lớp 1: Design Brief (TK-10)
+### Mốc 2 — Lớp 1: Design Brief (TK-10) ✅ XONG (29/08/2026)
 
-Biểu mẫu thích ứng, logic hiện/ẩn nằm trong cấu hình JSON chứ không viết cứng trong giao
-diện. Mô hình ngôn ngữ kiểm tra đầy đủ và nhất quán → `completeness_score`.
+**Q-2 đã trả lời: MỞ RỘNG `design_briefs`, không thay bảng.** TK-01 và TK-10 mô tả CÙNG một
+hồ sơ ở hai mức chi tiết — PRD TK-10 nói thẳng "tiếp nhận yêu cầu khách hàng và chuẩn hoá
+thành Design Brief". Hai bảng nghĩa là hai nơi nhập, đúng cái điều kiện ra của mốc này cấm.
 
-⚠️ Đây là mốc **rủi ro vận hành cao nhất** của Giai đoạn 1 vì nó động vào phần đang chạy
-thật: `design_briefs` đã có phiên bản, có giao diện, có hàm RPC. Chưa quyết mở rộng hay thay
-hẳn — câu hỏi Q-2 ở `TIEN_DO_THIET_KE.html`.
+- `shared/src/design/brief-form.json` — biểu mẫu thích ứng dạng **dữ liệu**: trường nào, thứ
+  tự nào, hiện với loại hình nào, nặng bao nhiêu điểm. Giao diện đọc cấu hình rồi vẽ; không
+  có `if (buildingType === 'biet_thu')` nào trong mã. Đặt trong `shared/src/` chứ không ở
+  `config/` vì `shared/tsconfig.json` khai `rootDir: "./src"` — để ngoài thì phải thêm một bộ
+  sinh và một lệnh `--check` chạy tay, mà repo chưa có CI.
+- `brief-completeness.ts` — chấm điểm **tất định**, không gọi mạng. Chấm trên những trường
+  ĐANG HIỆN, nên hàm bắt buộc nhận cấu hình; nhà phố ẩn khoảng lùi thì không bị tính là thiếu.
+  Phần soát mâu thuẫn tách hàm riêng: thiếu trường thì bổ sung là xong, mâu thuẫn thì phải
+  chọn bỏ một bên.
+- `0101_tk_design_brief_structured.sql` — `structured` jsonb + hai cột SINH từ nó + trigger
+  **riêng cho bảng này** đóng băng nội dung sau khi xác nhận. Cố ý KHÔNG mở rộng
+  `freeze_record_identity`: hàm đó gắn với khoảng mười trigger đang chạy thật.
+- `POST /design/brief/confirm` — đúc artifact khi XÁC NHẬN, và **tính lại điểm**, bỏ hẳn con
+  số máy khách gửi lên. Lỗi hợp đồng dịch sang nhãn nghiệp vụ tiếng Việt.
+- Cổng chặn Lớp 2 trong `design-pipeline.ts`, ngưỡng đọc từ `design_setting`. **Không có số
+  dự phòng viết cứng**: cấu hình bị xoá nhầm phải làm hệ thống dừng và nói ra.
+
+**Điều kiện ra — đã đạt:** một chỗ nhập duy nhất (tab Đầu bài) · 126 phép thử RLS xanh
+nguyên trước và sau migration · artifact validate theo lược đồ, chạy thật đầu-cuối qua
+`wrangler dev`.
+
+Hai gạch đầu dòng "di trú dữ liệu phiếu cũ" và "kiểm kê module khác" của `08-milestones`
+**thực tế đã rỗng**: CSDL có 0 dòng `design_briefs` và chỉ tab Đầu bài đọc bảng này. Điều này
+cũng giải mâu thuẫn M2 trong `doc/design/README.md` (D4 nói không cần di trú, 3.1 nói phải
+có script) — D4 đúng với hiện trạng.
+
+⚠️ Còn chờ Haan: bốn danh sách lựa chọn và bảng trọng số chấm điểm chưa có kiến trúc sư xác
+nhận (Q-16); hợp đồng chưa có chỗ chứa số cánh nhà / lõi thang / sân trong của biệt thự
+(Q-17).
 
 ### Mốc 3 — Pipeline số hoá + Knowledge Base
 

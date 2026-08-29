@@ -55,7 +55,14 @@ export interface WrittenArtifact {
 }
 
 export class ArtifactRepository {
-  private readonly db: SupabaseClient;
+  /**
+   * Client `service_role`, vượt RLS.
+   *
+   * Để `readonly` công khai thay vì `private` vì cổng chặn Lớp 2 phải đọc
+   * `design_setting` trong CÙNG một lượt chạy nền, và dựng thêm một client thứ hai chỉ để
+   * đọc một dòng cấu hình là thêm một chỗ giữ khoá `service_role`.
+   */
+  readonly db: SupabaseClient;
   private readonly store: ArtifactStore;
 
   constructor(env: DesignEnv) {

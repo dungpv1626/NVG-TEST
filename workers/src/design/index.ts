@@ -12,12 +12,14 @@
  */
 
 import { Hono } from 'hono';
-import { DATA_CLASSES, type DataClass } from '@nvg/shared/design';
+import { BRIEF_FORM, DATA_CLASSES, type DataClass } from '@nvg/shared/design';
 import { ContractError } from './contracts';
 import { createComputeBackend } from './compute-backend';
 import { DataClassViolation, ModelNotConfigured } from './llm/router';
 import { geminiClient, modelRouter } from './llm/factory';
 import { PublishBridge } from './publish';
+import { ArtifactRepository } from './artifacts';
+import { buildBriefPayload } from './brief/payload';
 import { retrieveFewShots } from './kb/retrieve';
 import { embeddingText, withheldFields, type RationalePayload } from './kb/rationale';
 import { createSourceFileStore, type StoredSource } from './source-files';
@@ -157,6 +159,120 @@ async function asUser(env: DesignEnv, token: string) {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
+
+/**
+ * Xác nhận đầu bài — đúc artifact `design_brief` bất biến.
+ *
+ * Vì sao đây là endpoint Workers chứ không phải một lệnh Supabase (CLAUDE.md 3.1): nó ghi
+ * `design_artifact` + cạnh lineage + `design_head` phải toàn vẹn cùng lúc — điều kiện (b).
+ * Phần đọc và lưu nháp đầu bài vẫn gọi thẳng Supabase từ trình duyệt, và nên giữ như vậy.
+ *
+ * Vì sao đúc lúc XÁC NHẬN chứ không phải mỗi lần lưu: `design_head` phải trỏ tới một đầu
+ * bài người thật đã ký nhận. Đúc theo từng lần lưu sẽ nhồi kho artifact bằng các bản nháp
+ * nửa vời và làm "đang hiệu lực" mất nghĩa.
+ */
+designApp.post('/brief/confirm', async (c) => {
+  const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+
+  const body = (await c.req.json()) as { briefId?: string };
+  if (!body.briefId) return c.json({ error: 'Thiếu mã đầu bài cần xác nhận.' }, 400);
+
+  const db = await asUser(c.env, token);
+
+  // Đọc qua RLS: người không được xem đầu bài thì cũng không đúc được artifact từ nó. Không
+  // chép lại điều kiện quyền ở tầng Worker — bản trong CSDL mới là bản không vòng qua được.
+  const brief = await db
+    .from('design_briefs')
+    .select(
+      'id, company_id, design_project_id, structured, confirmed_at, is_current_version, ' +
+        'project:design_projects!design_briefs_design_project_id_design_projects_id_fk(code, company_id)',
+    )
+    .eq('id', body.briefId)
+    .is('deleted_at', null)
+    .maybeSingle();
+
+  if (brief.error) return c.json({ error: 'Không đọc được đầu bài cần xác nhận.' }, 500);
+  if (!brief.data) {
+    return c.json(
+      {
+        error:
+          'Không tìm thấy đầu bài, hoặc tài khoản không được sửa hồ sơ thiết kế này. Người chịu trách nhiệm dự án hoặc Phòng Thiết kế thực hiện được việc này.',
+      },
+      404,
+    );
+  }
+  // Quan hệ lồng làm suy kiểu của thư viện khách rối; khai tường minh hình dạng đã chọn.
+  const row = brief.data as unknown as {
+    company_id: string;
+    design_project_id: string;
+    structured: unknown;
+    confirmed_at: string | null;
+    is_current_version: boolean;
+    project: { code: string; company_id: string };
+  };
+
+  if (!row.is_current_version) {
+    return c.json({ error: 'Chỉ xác nhận được đầu bài đang hiệu lực.' }, 409);
+  }
+  if (row.confirmed_at) {
+    return c.json({ error: 'Đầu bài này đã được xác nhận.' }, 409);
+  }
+
+  // Tenant suy từ pháp nhân, không bắt trình duyệt gửi: phạm vi tenant của một người ĐÃ được
+  // xác định bởi các pháp nhân họ được gán (CLAUDE.md 8.8 điểm 4).
+  const company = await db.from('companies').select('tenant_id').eq('id', row.company_id).single();
+  if (company.error)
+    return c.json({ error: 'Không xác định được phạm vi dữ liệu của hồ sơ.' }, 500);
+
+  const actor = await db.rpc('auth_user_id');
+  const built = buildBriefPayload({
+    structured: row.structured,
+    projectId: row.design_project_id,
+    projectCode: row.project.code,
+  });
+
+  // Đúc artifact TRƯỚC khi đánh dấu xác nhận: hợp đồng thiếu trường bắt buộc thì dừng ở đây
+  // với câu đọc được, và đầu bài vẫn ở trạng thái sửa được.
+  const repo = new ArtifactRepository(c.env);
+  const artifact = await repo.write({
+    scope: {
+      tenantId: company.data.tenant_id as string,
+      companyId: row.company_id,
+      projectId: row.design_project_id,
+      discipline: 'kien_truc',
+      actorId: (actor.data as string | null) ?? null,
+    },
+    kind: 'design_brief',
+    payload: built.payload,
+    step: 'layer1_brief',
+    params: { form_config_version: BRIEF_FORM.version },
+    setHead: true,
+  });
+
+  // Một lệnh ghi duy nhất: điểm đã tính lại, dấu xác nhận và mã artifact cùng lúc. Tách ra
+  // thì có ngày lệnh thứ hai hỏng và đầu bài mang dấu xác nhận với điểm cũ — mà lúc đó
+  // trigger đóng băng đã có hiệu lực, không sửa lại được nữa.
+  const saved = await db
+    .from('design_briefs')
+    .update({
+      structured: built.payload,
+      confirmed_at: new Date().toISOString(),
+      confirmed_by: (actor.data as string | null) ?? null,
+      artifact_id: artifact.id,
+    })
+    .eq('id', body.briefId)
+    .select('id')
+    .single();
+  if (saved.error) return c.json({ error: saved.error.message }, 403);
+
+  return c.json({
+    artifactId: artifact.id,
+    completenessScore: built.completenessScore,
+    missingFields: built.missingFields,
+    issues: built.issues,
+  });
+});
 
 /**
  * Truy hồi hồ sơ tham chiếu — tầng 1+2 ở CSDL, chọn đa dạng ở đây (06-knowledge-base 6.3).

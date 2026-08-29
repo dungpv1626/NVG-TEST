@@ -1,0 +1,381 @@
+/**
+ * Đầu bài thiết kế (Lớp 1 — TK-10): cấu hình biểu mẫu, chấm độ đầy đủ, soát mâu thuẫn.
+ *
+ * Bộ này canh những chỗ hỏng KHÔNG có triệu chứng:
+ *
+ *  - Gõ nhầm một `path` trong cấu hình → trường đó không bao giờ được tính, điểm luôn thấp
+ *    hơn thật, và không lỗi nào nổ ra.
+ *  - Điều kiện hiện/ẩn của giao diện lệch với của bộ chấm điểm → có mục "còn thiếu" mà
+ *    không màn hình nào cho nhập.
+ *  - Mã phòng lạ trong danh sách lựa chọn → đi hết engine mà chưa từng bị kiểm quy chuẩn.
+ *  - Coi `false`/`0` là "chưa trả lời" → mọi đầu bài nhà phố (khoảng lùi 0) vĩnh viễn không
+ *    đạt ngưỡng, trong khi màn hình trông như đã điền đủ.
+ */
+
+import { readdirSync, readFileSync } from 'node:fs';
+import { fileURLToPath, URL } from 'node:url';
+import { load as parseYaml } from 'js-yaml';
+import { describe, expect, it } from 'vitest';
+import {
+  BRIEF_FORM,
+  briefFormConfigSchema,
+  checkBriefConsistency,
+  designBriefDraftSchema,
+  evaluateCondition,
+  familyArchetype,
+  householdSize,
+  isAnswered,
+  scoreBrief,
+  visibleFields,
+  type BriefFormConfig,
+  type DesignBriefDraft,
+} from '../design';
+
+const root = (p: string) => fileURLToPath(new URL(`../../../${p}`, import.meta.url));
+
+const allFields = BRIEF_FORM.sections.flatMap((s) => s.fields);
+/** Trường của hợp đồng dữ liệu. Tiền tố `legacy.` là sáu cột chữ tự do của TK-01. */
+const contractFields = allFields.filter((f) => !f.path.startsWith('legacy.'));
+
+/** Dựng một đối tượng chỉ có đúng một đường dẫn, để hỏi hợp đồng "có khoá này không". */
+function probe(path: string, leaf: unknown): unknown {
+  const keys = path.split('.');
+  return keys.reduceRight<unknown>((value, key) => ({ [key]: value }), leaf);
+}
+
+describe('Cấu hình biểu mẫu Đầu bài', () => {
+  it('hợp lệ theo lược đồ của chính nó', () => {
+    expect(() => briefFormConfigSchema.parse(BRIEF_FORM)).not.toThrow();
+  });
+
+  it('không có đường dẫn trùng nhau', () => {
+    const paths = allFields.map((f) => f.path);
+    expect(new Set(paths).size).toBe(paths.length);
+  });
+
+  it('mọi đường dẫn đều tồn tại trong hợp đồng DesignBrief', () => {
+    // Gõ nhầm `site.with_m` thì trường đó không bao giờ được chấm, điểm luôn thấp hơn thật,
+    // và không có lỗi nào nổ ra. Hỏi thẳng hợp đồng: nó `.strict()` nên khoá lạ bị nêu tên.
+    for (const field of contractFields) {
+      const result = designBriefDraftSchema.safeParse(probe(field.path, null));
+      const unknownKey = result.success
+        ? undefined
+        : result.error.issues.find((i) => i.code === 'unrecognized_keys');
+      expect(unknownKey, `đường dẫn lạ: ${field.path}`).toBeUndefined();
+    }
+  });
+
+  it('mọi điều kiện hiện/ẩn trỏ tới một trường đã khai', () => {
+    // Điều kiện trỏ vào trường không tồn tại thì luôn sai, và trường mang nó bị ẩn vĩnh viễn.
+    const declared = new Set(allFields.map((f) => f.path));
+    const conditionFields: string[] = [];
+    const walk = (c: unknown): void => {
+      if (!c || typeof c !== 'object') return;
+      const node = c as Record<string, unknown>;
+      if (typeof node.field === 'string') conditionFields.push(node.field);
+      for (const inner of [node.all, node.any, node.not].flat()) walk(inner);
+    };
+    for (const section of BRIEF_FORM.sections) {
+      walk(section.when);
+      for (const field of section.fields) walk(field.when);
+    }
+
+    expect(conditionFields.length).toBeGreaterThan(0);
+    for (const field of conditionFields) expect(declared).toContain(field);
+  });
+
+  it('mã không gian và nhu cầu đều nằm trong từ vựng phòng đang chạy', () => {
+    // Mã phòng không có trong `kb/room_vocabulary.yaml` thì KHÔNG rule nào của rule pack
+    // nhắm tới nó — nó đi qua toàn bộ engine mà chưa từng bị kiểm quy chuẩn nào, và không
+    // có lỗi nào nổ ra. Ví dụ trong tài liệu dùng `garage_moto`, `drying_yard` — hai mã
+    // không tồn tại; đây là kiểm thử chặn đúng loại nhầm đó.
+    const vocabulary = parseYaml(readFileSync(root('kb/room_vocabulary.yaml'), 'utf8')) as {
+      types: { code: string }[];
+    };
+    const codes = new Set(vocabulary.types.map((t) => t.code));
+
+    for (const path of ['required_spaces', 'family']) {
+      const field = allFields.find((f) => f.path === path)!;
+      for (const option of field.options ?? []) {
+        expect(codes, `${path}: mã lạ ${option.value}`).toContain(option.value);
+      }
+    }
+  });
+
+  it('danh sách địa phương khớp thư mục gói quy tắc', () => {
+    // Chọn một địa phương không có gói quy tắc thì hệ thống im lặng rơi về gói nền.
+    const packs = new Set(readdirSync(root('rules/locality')));
+    const field = allFields.find((f) => f.path === 'locality')!;
+    for (const option of field.options ?? []) {
+      expect(packs, `chưa có gói quy tắc: ${option.value}`).toContain(
+        option.value.replace(/_/g, '-'),
+      );
+    }
+  });
+
+  it('không hard-code ngưỡng độ đầy đủ ở bất kỳ đâu trong shared/design', () => {
+    // Ngưỡng nằm trong `design_setting.brief_completeness_min`. Nó hay bò ngược vào mã theo
+    // kiểu "tạm để đây cho chạy", và khi đó Quản trị hệ thống sửa cấu hình mà không có gì đổi.
+    const files = readdirSync(root('shared/src/design')).filter((f) => f.endsWith('.ts'));
+    for (const file of files) {
+      const source = readFileSync(root(`shared/src/design/${file}`), 'utf8');
+      const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+      expect(code, `${file} có ngưỡng viết cứng`).not.toMatch(/[^.\w]0\.7\b/);
+    }
+  });
+});
+
+describe('Đã trả lời hay chưa', () => {
+  it('rỗng là chưa trả lời', () => {
+    for (const value of [undefined, null, '', [], {}]) expect(isAnswered(value)).toBe(false);
+  });
+
+  it('`false` và `0` LÀ câu trả lời', () => {
+    // "Chưa có hồ sơ pháp lý" và "khoảng lùi bằng không" đều là câu trả lời. Coi chúng là
+    // chỗ trống thì mọi đầu bài nhà phố vĩnh viễn không đạt ngưỡng.
+    expect(isAnswered(false)).toBe(true);
+    expect(isAnswered(0)).toBe(true);
+  });
+
+  it('người quyết định để trống có chủ ý vẫn tính là đã trả lời', () => {
+    // "Đã hỏi, khách chưa quyết" khác hẳn "chưa ai hỏi" — hợp đồng ghi rõ đây là trường bắt
+    // buộc THU THẬP dù được để trống.
+    expect(isAnswered({ name: null, relationship: null })).toBe(true);
+    expect(isAnswered(undefined)).toBe(false);
+  });
+});
+
+describe('Chấm độ đầy đủ', () => {
+  const nhaPho: DesignBriefDraft = {
+    building_type: 'nha_pho',
+    locality: 'thai_binh',
+    site: { width_m: 5, depth_m: 18 },
+    floors: 3,
+  };
+
+  it('trường bị ẩn KHÔNG bao giờ nằm trong danh sách còn thiếu', () => {
+    // Đòi nhà phố khai khoảng lùi là bắt điền một ô không màn hình nào hiện ra.
+    const result = scoreBrief(nhaPho, BRIEF_FORM);
+    expect(result.missingFields).not.toContain('site.setback_required_m');
+    expect(result.missingFields).not.toContain('site.max_density');
+  });
+
+  it('biệt thự hỏi nhiều hơn nhà phố — phân nhánh thật sự chạy', () => {
+    const pho = scoreBrief(nhaPho, BRIEF_FORM);
+    const villa = scoreBrief({ ...nhaPho, building_type: 'biet_thu' }, BRIEF_FORM);
+    expect(villa.totalWeight).toBeGreaterThan(pho.totalWeight);
+    expect(villa.missingFields).toContain('site.setback_required_m');
+  });
+
+  it('thiếu bề rộng lô rớt điểm nặng hơn thiếu phong cách', () => {
+    // Cho hai thứ cùng trọng số nghĩa là một đầu bài đủ phong cách, ngân sách, ưu tiên mà
+    // thiếu kích thước lô vẫn đạt ngưỡng — rồi Lớp 2 chạy vào một bài toán không giải được.
+    const full: DesignBriefDraft = {
+      ...nhaPho,
+      site: { width_m: 5, depth_m: 18, orientation: 'DN', access_sides: ['front'] },
+      style: 'hien_dai',
+    };
+    const noWidth = scoreBrief({ ...full, site: { ...full.site, width_m: undefined } }, BRIEF_FORM);
+    const noStyle = scoreBrief({ ...full, style: undefined }, BRIEF_FORM);
+    expect(noWidth.score).toBeLessThan(noStyle.score);
+  });
+
+  it('trường chữ tự do không tham gia chấm điểm', () => {
+    const legacy = allFields.filter((f) => f.path.startsWith('legacy.'));
+    expect(legacy.length).toBeGreaterThan(0);
+    for (const field of legacy) expect(field.weight).toBe(0);
+    expect(scoreBrief(nhaPho, BRIEF_FORM).missingFields).not.toContain('legacy.design_task');
+  });
+
+  it('biểu mẫu trắng cho 0, không cho NaN', () => {
+    const empty = scoreBrief({}, BRIEF_FORM);
+    expect(empty.score).toBe(0);
+    expect(Number.isFinite(empty.score)).toBe(true);
+  });
+
+  it('tất định và làm tròn ba chữ số — cùng độ chính xác với cột trong CSDL', () => {
+    const first = scoreBrief(nhaPho, BRIEF_FORM);
+    const again = scoreBrief(
+      { floors: 3, site: { depth_m: 18, width_m: 5 }, ...nhaPho },
+      BRIEF_FORM,
+    );
+    expect(again.score).toBe(first.score);
+    expect(String(first.score).split('.')[1]?.length ?? 0).toBeLessThanOrEqual(3);
+  });
+
+  it('nặng trước trong danh sách còn thiếu', () => {
+    const result = scoreBrief({ building_type: 'nha_pho' }, BRIEF_FORM);
+    expect(result.missingFields[0]).toMatch(/site\.(width|depth)_m|floors/);
+  });
+});
+
+describe('Điều kiện hiện/ẩn', () => {
+  it('sáu dạng đều chạy', () => {
+    const payload = { building_type: 'biet_thu', floors: 3, site: { width_m: 0 } };
+    expect(evaluateCondition({ field: 'building_type', equals: 'biet_thu' }, payload)).toBe(true);
+    expect(evaluateCondition({ field: 'building_type', in: ['nha_pho'] }, payload)).toBe(false);
+    // `0` là câu trả lời, nên `filled` phải đúng.
+    expect(evaluateCondition({ field: 'site.width_m', filled: true }, payload)).toBe(true);
+    expect(evaluateCondition({ field: 'style', filled: false }, payload)).toBe(true);
+    expect(
+      evaluateCondition(
+        {
+          all: [
+            { field: 'floors', equals: 3 },
+            { field: 'style', filled: false },
+          ],
+        },
+        payload,
+      ),
+    ).toBe(true);
+    expect(evaluateCondition({ not: { field: 'floors', equals: 3 } }, payload)).toBe(false);
+  });
+
+  it('giao diện và bộ chấm điểm dùng CHUNG một hàm', () => {
+    // Hai bản thực thi khác nhau sẽ đẻ ra mục "còn thiếu" mà không màn hình nào cho nhập —
+    // lỗi không ai tái hiện được vì mỗi bên đều đúng theo lượt đọc riêng.
+    const draft: DesignBriefDraft = { building_type: 'nha_pho' };
+    const shown = new Set(visibleFields(BRIEF_FORM, draft).map((v) => v.field.path));
+    for (const path of scoreBrief(draft, BRIEF_FORM).missingFields) expect(shown).toContain(path);
+  });
+});
+
+describe('Soát mâu thuẫn', () => {
+  const codes = (draft: DesignBriefDraft) =>
+    checkBriefConsistency(draft, BRIEF_FORM).map((i) => i.code);
+
+  it('biểu mẫu trắng KHÔNG nổ cảnh báo nào', () => {
+    // Cảnh báo lúc chưa ai nhập gì là kiểu phiền nhiễu khiến người dùng học cách bỏ qua mọi
+    // cảnh báo, kể cả cảnh báo thật.
+    expect(checkBriefConsistency({}, BRIEF_FORM)).toEqual([]);
+  });
+
+  it('khoảng lùi nuốt hết lô đất', () => {
+    expect(
+      codes({ site: { width_m: 5, depth_m: 18, setback_required_m: { front: 10, back: 10 } } }),
+    ).toContain('khoang_lui_vuot_chieu_sau');
+    expect(
+      codes({ site: { width_m: 5, depth_m: 18, setback_required_m: { left: 3, right: 3 } } }),
+    ).toContain('khoang_lui_vuot_be_rong');
+  });
+
+  it('khoảng lùi hợp lệ thì im lặng', () => {
+    expect(
+      codes({
+        site: {
+          width_m: 20,
+          depth_m: 30,
+          setback_required_m: { front: 3, back: 3, left: 2, right: 2 },
+        },
+      }),
+    ).toEqual([]);
+  });
+
+  it('nhà phố mà khai khoảng lùi hai bên', () => {
+    expect(
+      codes({
+        building_type: 'nha_pho',
+        site: { width_m: 5, depth_m: 18, setback_required_m: { left: 1 } },
+      }),
+    ).toContain('nha_pho_co_khoang_lui_ben');
+  });
+
+  it('có người ở mà không có phòng ngủ nào', () => {
+    expect(
+      codes({ family: [{ role: 'vo_chong', count: 2 }], required_spaces: ['living', 'kitchen'] }),
+    ).toContain('thieu_phong_ngu');
+  });
+
+  it('khai phòng ngủ mà chưa cho biết ai ở', () => {
+    expect(codes({ required_spaces: ['bedroom'] })).toContain('chua_khai_nguoi_o');
+  });
+
+  it('số người vượt sức chứa của số phòng ngủ đã khai', () => {
+    expect(
+      codes({
+        family: [
+          { role: 'ong_ba', count: 2 },
+          { role: 'vo_chong', count: 2 },
+          { role: 'con', count: 2 },
+        ],
+        required_spaces: ['bedroom'],
+      }),
+    ).toContain('nguoi_o_vuot_suc_chua');
+  });
+
+  it('ưu tiên tầng trên cùng trong nhà một tầng', () => {
+    expect(
+      codes({ floors: 1, family: [{ role: 'ong_ba', count: 2, floor_pref: 'top' }] }),
+    ).toContain('uu_tien_tang_khong_ton_tai');
+  });
+
+  it('ngân sách đảo ngược', () => {
+    expect(codes({ budget_range_vnd: [3_000_000_000, 2_000_000_000] })).toContain(
+      'ngan_sach_dao_nguoc',
+    );
+    expect(codes({ budget_range_vnd: [2_000_000_000, 3_000_000_000] })).toEqual([]);
+  });
+
+  it('không mặt nào tiếp cận được', () => {
+    expect(codes({ site: { access_sides: [] } })).toContain('khong_co_mat_tiep_can');
+  });
+});
+
+describe('Suy kiểu gia đình từ thành viên', () => {
+  it('ba thế hệ khi có cả ông bà lẫn con', () => {
+    expect(
+      familyArchetype([
+        { role: 'ong_ba', count: 2 },
+        { role: 'vo_chong', count: 2 },
+        { role: 'con', count: 2 },
+      ]),
+    ).toBe('3_the_he');
+  });
+
+  it('hạt nhân khi chỉ có vợ chồng', () => {
+    expect(familyArchetype([{ role: 'vo_chong', count: 2 }])).toBe('hat_nhan');
+  });
+
+  it('thành viên khai số 0 không tính là có mặt', () => {
+    expect(
+      familyArchetype([
+        { role: 'ong_ba', count: 0 },
+        { role: 'vo_chong', count: 2 },
+      ]),
+    ).toBe('hat_nhan');
+  });
+
+  it('chưa khai ai thì trả rỗng, không đoán', () => {
+    expect(familyArchetype([])).toBeNull();
+    expect(familyArchetype(undefined)).toBeNull();
+  });
+
+  it('đếm đúng tổng số người', () => {
+    expect(
+      householdSize([
+        { role: 'ong_ba', count: 2 },
+        { role: 'con', count: 3 },
+      ]),
+    ).toBe(5);
+    expect(householdSize(undefined)).toBe(0);
+  });
+});
+
+describe('Lược đồ bản nháp', () => {
+  it('nhận biểu mẫu điền dở', () => {
+    expect(designBriefDraftSchema.safeParse({}).success).toBe(true);
+    expect(designBriefDraftSchema.safeParse({ site: { width_m: 5 } }).success).toBe(true);
+  });
+
+  it('vẫn TỪ CHỐI khoá lạ', () => {
+    // `.partial()` giữ `.strict()`. Mất tính chất này khi nâng zod thì khoá bịa sẽ lọt vào
+    // payload và chỉ nổ ở tận bước đúc artifact.
+    expect(designBriefDraftSchema.safeParse({ khoa_bia: 1 }).success).toBe(false);
+    expect(designBriefDraftSchema.safeParse({ site: { rong: 5 } }).success).toBe(false);
+  });
+
+  it('cấu hình sai bị chặn ngay lúc nạp', () => {
+    const broken = { ...(BRIEF_FORM as BriefFormConfig), version: 'một chấm không' };
+    expect(() => briefFormConfigSchema.parse(broken)).toThrow();
+  });
+});
