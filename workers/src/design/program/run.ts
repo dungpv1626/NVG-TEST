@@ -46,13 +46,29 @@ export async function runLayer2(
   const norms = spaceNorms();
   const rules = rulePackFor(brief.locality);
 
-  // Phần chữ tự do đi qua bước quy đổi RIÊNG trước khi vào engine — engine phải tất định
-  // (xem chú thích đầu `engine.ts`).
-  const needs = await resolveNeeds(
-    [...(brief.family ?? []).flatMap((m) => m.needs ?? []), ...(brief.priorities ?? [])],
-    roomVocabulary(),
-    geminiClient(env),
-  );
+  // Nhu cầu riêng của từng nhóm thành viên tách làm hai đường, và ranh giới ở đây quan trọng:
+  //
+  //  · Biểu mẫu hiện hành cho chọn từ danh sách, nên phần lớn giá trị ĐÃ LÀ mã không gian
+  //    chuẩn. Chúng đi thẳng vào engine. Cho chúng chạy qua bước quy đổi là nhờ bảng bí danh
+  //    dịch một mã về chính nó — đúng cho tới ngày có mã phòng mà tên tiếng Anh không nằm
+  //    trong bí danh của chính nó, rồi im lặng biến mất.
+  //  · Phần còn lại là chữ tự do (hợp đồng cho phép, và bước dán đầu bài từ tin nhắn sẽ sinh
+  //    ra nhiều), mới cần quy đổi.
+  //
+  // `priorities` KHÔNG đi vào đây. Đó là thứ tự ưu tiên thiết kế ("lấy sáng tự nhiên"), không
+  // phải một không gian — đưa vào thì lần chạy nào cũng đọng lại một danh sách "chưa quy được"
+  // không bao giờ vơi, và một cảnh báo luôn nổ là một cảnh báo bị bỏ qua.
+  const vocabulary = roomVocabulary();
+  const known = new Set(vocabulary.codes);
+  const declared: string[] = [];
+  const freeText: string[] = [];
+  for (const phrase of (brief.family ?? []).flatMap((m) => m.needs ?? [])) {
+    const text = phrase?.trim();
+    if (!text) continue;
+    (known.has(text) ? declared : freeText).push(text);
+  }
+
+  const needs = await resolveNeeds(freeText, vocabulary, geminiClient(env));
 
   // Thống kê thực nghiệm: rỗng ở quy mô kho hiện tại, và đó là hành vi đúng
   // (06-knowledge-base 6.0b). Hỏng khi đọc thì KHÔNG chặn — Lớp 2 vẫn chạy bằng chuẩn nghề
@@ -79,7 +95,7 @@ export async function runLayer2(
     rules,
     norms,
     priors,
-    extraSpaces: needs.spaces,
+    extraSpaces: [...declared, ...needs.spaces],
   });
 
   return {

@@ -15,33 +15,29 @@
  * `inputMode`. Có kiểm thử grep canh trong `web/src/test/design-rules.test.ts`.
  */
 
-import type { BriefFormField } from '@nvg/shared/design';
+import {
+  ACCESS_SIDES,
+  FAMILY_ROLE_LABEL,
+  FAMILY_ROLES,
+  FLOOR_PREF_LABEL,
+  FLOOR_PREFS,
+  SIDE_LABEL,
+  type BriefFormField,
+} from '@nvg/shared/design';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { MoneyInput } from '@/components/ui/money-input';
 import { cn } from '@/lib/utils';
 
-const SIDES = [
-  { key: 'front', label: 'Mặt trước' },
-  { key: 'back', label: 'Mặt sau' },
-  { key: 'left', label: 'Bên trái' },
-  { key: 'right', label: 'Bên phải' },
-] as const;
-
-const FAMILY_ROLES = [
-  { value: 'ong_ba', label: 'Ông bà' },
-  { value: 'vo_chong', label: 'Vợ chồng' },
-  { value: 'con', label: 'Con' },
-  { value: 'khach', label: 'Khách' },
-  { value: 'nguoi_giup_viec', label: 'Người giúp việc' },
-] as const;
-
-const FLOOR_PREFS = [
-  { value: 'low', label: 'Tầng thấp' },
-  { value: 'mid', label: 'Tầng giữa' },
-  { value: 'top', label: 'Tầng trên cùng' },
-] as const;
+// Nhãn lấy TỪ `@nvg/shared/design`, không khai lại ở đây: cùng bộ nhãn còn được dùng ở chế
+// độ xem đầu bài, và hai bản khai riêng sẽ lệch nhau đúng vào ngày thêm một vai trò mới.
+const SIDES = ACCESS_SIDES.map((key) => ({ key, label: SIDE_LABEL[key] }));
+const FAMILY_ROLE_OPTIONS = FAMILY_ROLES.map((value) => ({
+  value,
+  label: FAMILY_ROLE_LABEL[value],
+}));
+const FLOOR_PREF_OPTIONS = FLOOR_PREFS.map((value) => ({ value, label: FLOOR_PREF_LABEL[value] }));
 
 /** Nút viên thuốc — vùng bấm tối thiểu 40px cho ngón tay (CGD 6.8). */
 function Chip({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
@@ -259,7 +255,7 @@ function BriefControl({ field, value, onChange }: Omit<BriefFieldProps, 'issues'
                   onChange={(e) => update(index, { role: e.target.value })}
                   className="min-h-10 rounded border border-border bg-surface px-2"
                 >
-                  {FAMILY_ROLES.map((role) => (
+                  {FAMILY_ROLE_OPTIONS.map((role) => (
                     <option key={role.value} value={role.value}>
                       {role.label}
                     </option>
@@ -279,7 +275,7 @@ function BriefControl({ field, value, onChange }: Omit<BriefFieldProps, 'issues'
                   className="min-h-10 rounded border border-border bg-surface px-2"
                 >
                   <option value="">Không ưu tiên tầng</option>
-                  {FLOOR_PREFS.map((pref) => (
+                  {FLOOR_PREF_OPTIONS.map((pref) => (
                     <option key={pref.value} value={pref.value}>
                       {pref.label}
                     </option>

@@ -7,6 +7,7 @@
  */
 
 import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import { createClient } from '@supabase/supabase-js';
 import { designApp } from './design';
 import type { DesignEnv } from './design/env';
@@ -14,6 +15,41 @@ import type { DesignEnv } from './design/env';
 type Env = DesignEnv;
 
 const app = new Hono<{ Bindings: Env }>();
+
+/**
+ * Chia sẻ tài nguyên khác nguồn.
+ *
+ * Bắt buộc phải có: giao diện chạy trên một Worker khác (`nvg`, Static Assets) còn API nằm ở
+ * Worker này, nên MỌI lời gọi từ trình duyệt đều là khác nguồn. Thiếu lớp này thì trình duyệt
+ * chặn ngay từ bước hỏi trước (`OPTIONS`), và thứ hiện ra trên màn hình là "không kết nối
+ * được" — không phân biệt được với mất mạng. Đã xảy ra thật: cả lớp API của Module Thiết kế
+ * chưa từng gọi được từ trình duyệt cho tới khi thêm đoạn này.
+ *
+ * Danh sách nguồn là DỮ LIỆU (`ALLOWED_ORIGINS`, ngăn cách bằng dấu phẩy), không phải hằng số:
+ * tên miền chính thức của NVG còn chưa chốt (CLAUDE.md 6.6), và địa chỉ bản chạy thử đổi theo
+ * môi trường. Để trống thì chỉ cho phép máy phát triển — mặc định phải là mức HẸP nhất.
+ *
+ * KHÔNG dùng `*`: mọi endpoint ở đây nhận thẻ đăng nhập qua tiêu đề `Authorization`, và mở cho
+ * mọi nguồn là mời bất kỳ trang nào cũng gọi được API bằng thẻ họ lấy được.
+ */
+const DEV_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173'];
+
+app.use(
+  '*',
+  cors({
+    origin: (origin, c) => {
+      const configured = (c.env.ALLOWED_ORIGINS ?? '')
+        .split(',')
+        .map((value: string) => value.trim())
+        .filter(Boolean);
+      const allowed = configured.length ? configured : DEV_ORIGINS;
+      return allowed.includes(origin) ? origin : null;
+    },
+    allowMethods: ['GET', 'POST', 'OPTIONS'],
+    allowHeaders: ['Authorization', 'Content-Type'],
+    maxAge: 600,
+  }),
+);
 
 app.get('/', (c) => c.json({ ok: true, service: 'nvg-api' }));
 

@@ -100,6 +100,15 @@
      * `r2_buckets` ở trên). Mặc định phải là thứ CHẮC CHẮN chạy được.
      */
     "DESIGN_ARTIFACT_STORE": "supabase",
+
+    /**
+     * Nguồn được phép gọi API từ trình duyệt, ngăn cách bằng dấu phẩy. Giao diện chạy trên
+     * Worker `nvg` (Static Assets) còn API ở Worker này, nên mọi lời gọi đều là khác nguồn.
+     *
+     * Để trống thì chỉ cho phép `localhost:5173` — mặc định hẹp nhất. Thêm tên miền chính
+     * thức của NVG vào đây khi có (CLAUDE.md 6.6, vấn đề còn mở).
+     */
+    "ALLOWED_ORIGINS": "https://nvg.tests99.workers.dev,http://localhost:5173",
   },
 
   /**

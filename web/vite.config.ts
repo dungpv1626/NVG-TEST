@@ -140,6 +140,11 @@ export default defineConfig(({ mode }) => {
       // Khóa service_role KHÔNG BAO GIỜ xuất hiện ở đây (Tech Stack 5.6).
       'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(env.VITE_SUPABASE_URL ?? ''),
       'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(env.VITE_SUPABASE_ANON_KEY ?? ''),
+      // Địa chỉ Worker của Module Thiết kế AI. Phải khai Ở ĐÂY mới tới được trình duyệt:
+      // `.env` nằm ở gốc repo chứ không phải trong `web/`, nên Vite KHÔNG tự nạp nó — mọi
+      // biến đều phải đi qua `define`. Thiếu một dòng ở đây thì màn hình liên quan báo
+      // "chưa cấu hình dịch vụ" trong khi `.env` có đủ, và bản dựng vẫn xanh.
+      'import.meta.env.VITE_DESIGN_API_URL': JSON.stringify(env.VITE_DESIGN_API_URL ?? ''),
     },
     server: { port: 5173 },
     build: {

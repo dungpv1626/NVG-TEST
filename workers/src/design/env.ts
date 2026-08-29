@@ -7,6 +7,13 @@
 
 export interface DesignEnv {
   SUPABASE_URL: string;
+  /**
+   * Nguồn được phép gọi API từ trình duyệt, ngăn cách bằng dấu phẩy.
+   *
+   * Để trống thì chỉ cho phép máy phát triển — mặc định phải là mức hẹp nhất, vì mở rộng là
+   * việc phải làm có ý thức còn thu hẹp thì không ai nhớ.
+   */
+  ALLOWED_ORIGINS?: string;
   /** ⚠️ Vượt RLS. CHỈ dùng trong Workers, không bao giờ ở `web/` (CLAUDE.md 5.5). */
   SUPABASE_SERVICE_ROLE_KEY: string;
 

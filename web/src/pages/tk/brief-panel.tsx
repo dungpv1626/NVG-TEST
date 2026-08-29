@@ -20,15 +20,23 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, History, Ruler } from 'lucide-react';
-import { formatDateTime } from '@nvg/shared';
+import { formatCurrency, formatDateTime } from '@nvg/shared';
 import {
+  ACCESS_SIDES,
   BRIEF_FORM,
   checkBriefConsistency,
+  FAMILY_ROLE_LABEL,
+  FLOOR_PREF_LABEL,
+  isFieldVisible,
   scoreBrief,
   setAtPath,
+  SIDE_LABEL,
   valueAtPath,
   visibleFields,
+  type BriefFormField,
   type DesignBriefDraft,
+  type FamilyRole,
+  type FloorPref,
 } from '@nvg/shared/design';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/states';
@@ -336,14 +344,23 @@ export function BriefPanel({
           <SurveyMismatch brief={current} survey={survey} />
 
           <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+            {/*
+              Lọc bằng ĐÚNG hàm mà biểu mẫu dùng: câu hỏi chỉ dành cho biệt thự không được
+              hiện ở chế độ xem của một hồ sơ nhà phố, dù chỉ hiện dấu gạch ngang. Một danh
+              sách trường trống kéo dài làm người đọc tưởng hồ sơ còn thiếu.
+            */}
             {BRIEF_FORM.sections.flatMap((section) =>
               section.fields
-                .filter((field) => !field.path.startsWith('legacy.'))
+                .filter(
+                  (field) =>
+                    !field.path.startsWith('legacy.') &&
+                    isFieldVisible(field, section, current.structured ?? {}),
+                )
                 .map((field) => (
                   <ReadOnlyField
                     key={field.path}
                     label={field.label}
-                    value={describe(valueAtPath(current.structured, field.path))}
+                    value={describeField(field, valueAtPath(current.structured, field.path))}
                   />
                 )),
             )}
@@ -530,15 +547,69 @@ function ReadOnlyField({
 }
 
 /** Giá trị trong payload → chuỗi đọc được. Không dịch mã ở đây; nhãn nằm ở cấu hình. */
-function describe(value: unknown): string | null {
+/**
+ * Một giá trị đã lưu, viết ra bằng tiếng Việt.
+ *
+ * Phải BIẾT TRƯỜNG mới viết đúng: cùng một chuỗi `"bedroom"` là "Phòng ngủ" ở danh sách
+ * không gian và là một vai trò khác ở chỗ khác; một cặp số là khoảng ngân sách ở đây và là
+ * kích thước ở chỗ khác. Bản trước đổ thẳng giá trị ra màn hình nên hiện `nha_pho`,
+ * `[object Object]` và `2000000000` — mã máy giữa một màn hình tiếng Việt (CLAUDE.md 4.1),
+ * đúng thứ nhân sự NVG không đọc được.
+ */
+function describeField(field: BriefFormField, value: unknown): string | null {
   if (value === undefined || value === null || value === '') return null;
-  if (Array.isArray(value)) return value.length ? value.join(', ') : null;
-  if (typeof value === 'boolean') return value ? 'Có' : 'Không';
-  if (typeof value === 'object') {
-    const parts = Object.entries(value as Record<string, unknown>)
-      .filter(([, v]) => v !== null && v !== undefined)
-      .map(([k, v]) => `${k}: ${describe(v) ?? EM_DASH}`);
+
+  const label = (raw: unknown): string => {
+    const found = field.options?.find((option) => String(option.value) === String(raw));
+    return found ? found.label : String(raw);
+  };
+
+  if (field.control === 'money_range') {
+    const [low, high] = value as (number | null)[];
+    if (low === null && high === null) return null;
+    return `${formatCurrency(low ?? 0)} – ${formatCurrency(high ?? 0)}`;
+  }
+
+  if (field.control === 'family') {
+    const members = value as {
+      role?: string;
+      count?: number;
+      floor_pref?: string | null;
+      needs?: string[];
+    }[];
+    if (!members.length) return null;
+    return members
+      .map((member) => {
+        const role = FAMILY_ROLE_LABEL[member.role as FamilyRole] ?? member.role ?? '';
+        const parts = [`${role}: ${member.count ?? 0} người`];
+        if (member.floor_pref) {
+          parts.push(FLOOR_PREF_LABEL[member.floor_pref as FloorPref] ?? member.floor_pref);
+        }
+        if (member.needs?.length) parts.push(member.needs.map(label).join(', '));
+        return parts.join(' · ');
+      })
+      .join(' | ');
+  }
+
+  if (field.control === 'sides') {
+    const sides = value as Record<string, unknown>;
+    const parts = ACCESS_SIDES.filter((side) => sides[side]).map(
+      (side) => `${SIDE_LABEL[side]}: ${String(sides[side])}`,
+    );
     return parts.length ? parts.join(' · ') : null;
   }
-  return String(value);
+
+  if (Array.isArray(value)) return value.length ? value.map(label).join(', ') : null;
+  if (typeof value === 'boolean') return value ? 'Có' : 'Không';
+
+  if (typeof value === 'object') {
+    // Đi qua bảng nhãn chứ không đổ thẳng ra chuỗi: người quyết định cuối lưu dưới dạng
+    // `{ relationship: 'chu_nha' }`, và bỏ bước này thì màn hình hiện đúng chữ `chu_nha`.
+    const parts = Object.values(value as Record<string, unknown>)
+      .filter((v) => v !== null && v !== undefined && v !== '')
+      .map((v) => label(v));
+    return parts.length ? parts.join(' · ') : null;
+  }
+
+  return label(value);
 }

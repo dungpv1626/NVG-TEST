@@ -264,3 +264,65 @@ describe('Vùng bấm cho ngón tay', () => {
     for (const chip of chips) expect(chip.className).toContain('min-h-10');
   });
 });
+
+describe('Chế độ xem — không để lọt mã máy ra màn hình', () => {
+  // Đây là lỗi đã lọt thật, và nó không gây lỗi nào khác để lộ ra: bản trước đổ thẳng giá trị
+  // đã lưu ra màn hình, nên hiện `nha_pho`, `[object Object]` và `2000000000` giữa một màn
+  // hình tiếng Việt. Nhân sự NVG có người không đọc được tiếng Anh (CLAUDE.md 4.1).
+  const filled = {
+    building_type: 'nha_pho',
+    locality: 'thai_binh',
+    site: { width_m: 5, depth_m: 18, orientation: 'N' },
+    floors: 3,
+    family: [{ role: 'vo_chong', count: 2, floor_pref: 'mid', needs: ['bedroom'] }],
+    required_spaces: ['living', 'kitchen'],
+    style: 'hien_dai',
+    budget_range_vnd: [2000000000, 3000000000],
+    priorities: ['natural_light'],
+    decision_maker: { relationship: 'chu_nha' },
+  };
+
+  it('lựa chọn hiện bằng nhãn tiếng Việt, không phải mã', async () => {
+    state.briefs = [brief({ structured: filled })];
+    const { BriefPanel } = await import('../brief-panel');
+    const { container } = renderWithApp(
+      <BriefPanel projectId="p1" companyId="c1" readOnly={false} />,
+    );
+    await screen.findByText('Nhà phố');
+
+    const text = container.textContent ?? '';
+    for (const code of [
+      'nha_pho',
+      'thai_binh',
+      'hien_dai',
+      'natural_light',
+      'vo_chong',
+      'chu_nha',
+      '[object Object]',
+    ]) {
+      expect(text).not.toContain(code);
+    }
+  });
+
+  it('thành viên gia đình đọc được, tiền có đơn vị', async () => {
+    state.briefs = [brief({ structured: filled })];
+    const { BriefPanel } = await import('../brief-panel');
+    const { container } = renderWithApp(
+      <BriefPanel projectId="p1" companyId="c1" readOnly={false} />,
+    );
+    await screen.findByText(/Vợ chồng: 2 người/);
+    expect(container.textContent).toContain('2.000.000.000 đồng');
+  });
+
+  it('câu hỏi riêng của biệt thự KHÔNG hiện ở hồ sơ nhà phố', async () => {
+    // Hiện ra kèm dấu gạch ngang cũng là sai: một danh sách trường trống kéo dài làm người
+    // đọc tưởng hồ sơ còn thiếu thông tin.
+    state.briefs = [brief({ structured: filled })];
+    const { BriefPanel } = await import('../brief-panel');
+    renderWithApp(<BriefPanel projectId="p1" companyId="c1" readOnly={false} />);
+    await screen.findByText('Nhà phố');
+
+    expect(screen.queryByText('Số cánh nhà mong muốn')).not.toBeInTheDocument();
+    expect(screen.queryByText('Số lõi thang')).not.toBeInTheDocument();
+  });
+});

@@ -281,7 +281,7 @@
         <div class="bar"><span style="width: 50%"></span></div>
         <div class="stats">
           <div class="stat"><b>2/3</b><span class="xs muted-t">Việc của Mốc 0 đã xong</span></div>
-          <div class="stat"><b>261</b><span class="xs muted-t">Phép thử xanh của module</span></div>
+          <div class="stat"><b>264</b><span class="xs muted-t">Phép thử xanh của module</span></div>
           <div class="stat"><b>4</b><span class="xs muted-t">Vướng mắc đang mở</span></div>
           <div class="stat"><b>14</b><span class="xs muted-t">Câu hỏi chờ Haan</span></div>
         </div>
@@ -429,6 +429,47 @@
             </tr>
           </thead>
           <tbody>
+            <tr>
+              <td class="num">29/08/2026</td>
+              <td>
+                Chạy thử bằng trình duyệt thật (Chrome) &mdash; bắt được
+                <b>bốn lỗi chặn</b> mà kiểm thử tự động không thấy
+              </td>
+              <td>
+                Chạy trọn một vòng nghiệp vụ trên hồ sơ
+                <code>NVO-TK-2026-2399</code>: lập đầu bài &rarr; xác nhận &rarr; xem chương trình
+                15 không gian &rarr; chốt. Bốn lỗi dưới đây đều
+                <b>không hiện ra trong bất kỳ phép thử nào</b> vì chúng nằm ở chỗ mã nguồn không
+                nhìn thấy: cấu hình dựng, tầng mạng, và cách dữ liệu hiện lên màn hình.
+                <br />
+                <b>1. Biến <code>VITE_DESIGN_API_URL</code> chưa bao giờ tới được trình duyệt.</b>
+                Tệp <code>.env</code> nằm ở gốc repo chứ không phải trong <code>web/</code>, nên
+                Vite không tự nạp &mdash; mọi biến phải khai trong <code>define</code> của
+                <code>vite.config.ts</code>, và biến này khai từ Mốc 3 mà thiếu dòng đó. Hệ quả: cả
+                lớp API của module báo "chưa cấu hình dịch vụ" trong khi <code>.env</code> có đủ.
+                <br />
+                <b>2. Worker chưa hề có lớp chia sẻ tài nguyên khác nguồn.</b> Giao diện chạy trên
+                một Worker còn API ở Worker khác, nên mọi lời gọi đều là khác nguồn; thiếu lớp này
+                thì trình duyệt chặn ngay từ bước hỏi trước và màn hình chỉ hiện "không kết nối
+                được" &mdash; không phân biệt được với mất mạng.
+                <b>Cả lớp API của Module Thiết kế chưa từng gọi được từ trình duyệt.</b> Danh sách
+                nguồn để làm dữ liệu (<code>ALLOWED_ORIGINS</code>), mặc định hẹp nhất, và KHÔNG
+                dùng <code>*</code> vì mọi endpoint nhận thẻ đăng nhập.
+                <br />
+                <b>3. Chế độ xem đầu bài đổ thẳng dữ liệu ra màn hình:</b>
+                <code>nha_pho</code>, <code>chu_nha</code>, <code>[object Object]</code>,
+                <code>2000000000</code> &mdash; mã máy giữa một màn hình tiếng Việt, đúng thứ nhân
+                sự NVG không đọc được (CLAUDE.md 4.1). Sửa thành hàm biết TRƯỜNG mới viết ra chữ, và
+                lọc bằng đúng hàm mà biểu mẫu dùng nên câu hỏi riêng của biệt thự không còn hiện ở
+                hồ sơ nhà phố. Gộp luôn hai bảng nhãn vai trò trùng nhau về một chỗ.
+                <br />
+                <b>4. Một cảnh báo luôn nổ ở Lớp 2:</b> thứ tự ưu tiên thiết kế
+                (<code>natural_light</code>&hellip;) bị đưa vào bước quy nhu cầu về không gian, nên
+                lần chạy nào cũng đọng lại một danh sách "chưa quy được" không bao giờ vơi &mdash;
+                hiện đúng mã máy lên màn hình. Ưu tiên không phải một không gian; và nhu cầu đã là
+                mã chuẩn thì đi thẳng vào engine, không nhờ bảng bí danh dịch một mã về chính nó.
+              </td>
+            </tr>
             <tr>
               <td class="num">29/08/2026</td>
               <td>
