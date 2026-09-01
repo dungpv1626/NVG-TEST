@@ -22,11 +22,23 @@ from design_compute.cad.extract import (
     from_payload,
     to_payload,
 )
-from design_compute.cad.layers import LayerMapping, LayerMappingError, load_mapping
+from design_compute.cad.export import (
+    DxfExportError,
+    TitleBlock,
+    export_floor_plan,
+)
+from design_compute.cad.layers import (
+    ExportLayer,
+    LayerMapping,
+    LayerMappingError,
+    load_mapping,
+)
 
 __all__ = [
     "EXTRACTION_SCHEMA_VERSION",
     "CadConversionError",
+    "DxfExportError",
+    "ExportLayer",
     "ConversionResult",
     "ExtractedFloorPlan",
     "ExtractedRoom",
@@ -35,11 +47,13 @@ __all__ = [
     "LayerMappingError",
     "OdaUnavailable",
     "dwg_to_dxf",
+    "export_floor_plan",
     "extract_floor_plan",
     "extract_from_dwg",
     "from_payload",
     "load_mapping",
     "oda_available",
     "oda_path",
+    "TitleBlock",
     "to_payload",
 ]

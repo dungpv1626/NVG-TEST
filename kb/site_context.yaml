@@ -1,0 +1,33 @@
+# Hiện trạng bốn phía của thửa đất nói lên điều gì về mặt thoáng.
+#
+# Nguồn: `doc/design/04-layer3-floorplan.md` mục 4.4 (vị từ `requires_daylight`), biểu mẫu
+# Đầu bài trường `site.adjacent` (`shared/src/design/brief-form.json`).
+#
+# ── Vì sao là DỮ LIỆU chứ không phải hằng số trong mã nguồn ────────────────────────────
+# Cùng lý lẽ với rule pack và `room_vocabulary.yaml` (CLAUDE.md 8.7). "Nhà phố có hai mặt
+# thoáng" là một quy ước tiện tay, không phải sự thật: lô góc có ba, lô giáp ao hồ có mặt sau
+# rất thoáng, lô kẹp giữa hai nhà cao tầng thì mặt bên coi như không có. Viết con số hai vào
+# mã là buộc mọi thửa phải giống nhau, và sai lệch KHÔNG nổ ra thành lỗi — nó chỉ ra một mặt
+# bằng có phòng ngủ tối.
+#
+# ⚠️ Mọi giá trị `value` của trường `site.adjacent` trong biểu mẫu Đầu bài phải có mặt ở đây.
+# Thiếu một mã thì mặt đó rơi về `default_open`, tức là đoán — có kiểm thử canh chiều này.
+
+version: '1.0.0'
+
+# `true` = mặt đó lấy được sáng và gió tự nhiên.
+open_faces:
+  nha_hang_xom: false
+  hem_2m: true
+  hem_3m: true
+  duong_lon: true
+  dat_trong: true
+  ao_ho: true
+
+# Chưa khai hiện trạng thì coi như bị che. Đoán về phía CHẶT hơn: đoán thoáng mà thực tế bị
+# che thì bản vẽ ra có phòng ngủ không cửa sổ, và không có gì báo.
+default_open: false
+
+# Mặt luôn được coi là thoáng dù hiện trạng khai gì: đó là mặt tiếp đường, và nếu nó bị bịt
+# thì thửa đất không vào được.
+always_open: [front]

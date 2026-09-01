@@ -76,9 +76,10 @@ COPY compute/bench/ /app/bench/
 # không phải tải về từ đâu cả — đĩa của container bị xoá sạch sau mỗi lần chạy.
 COPY rules/ /app/rules/
 
-# Bảng ánh xạ lớp bản vẽ cũng là DỮ LIỆU (xem kb/layer_mapping.yaml). Chỉ chép đúng tệp này,
+# Bảng ánh xạ lớp bản vẽ và chuẩn cấu tạo cũng là DỮ LIỆU. Chỉ chép đúng hai tệp này,
 # KHÔNG chép cả kb/: hai thư mục con còn lại chứa hồ sơ khách hàng và bộ cài ~100MB.
 COPY kb/layer_mapping.yaml /app/kb/layer_mapping.yaml
+COPY kb/construction_norms.yaml /app/kb/construction_norms.yaml
 
 # Hợp đồng dữ liệu cũng là DỮ LIỆU đọc lúc chạy: Container validate ở ranh giới bằng chính
 # tệp JSON Schema gốc, không dùng bản sinh ra (xem `src/design_compute/contracts.py`).
@@ -88,6 +89,7 @@ ENV PYTHONPATH=/app/src \
     NVG_RULES_ROOT=/app/rules \
     NVG_CONTRACTS_ROOT=/app/contracts \
     NVG_LAYER_MAPPING=/app/kb/layer_mapping.yaml \
+    NVG_CONSTRUCTION_NORMS=/app/kb/construction_norms.yaml \
     XDG_RUNTIME_DIR=/tmp/runtime-root
 
 EXPOSE 8080

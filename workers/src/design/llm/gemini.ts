@@ -32,6 +32,12 @@ export class LlmCallFailed extends Error {
   }
 }
 
+/** Một ảnh gửi kèm lời gọi — nhị phân mã hoá base64, không tiền tố `data:`. */
+export interface GenerateImagePart {
+  mimeType: string;
+  dataBase64: string;
+}
+
 export interface GenerateOptions {
   /** Chỉ dẫn hệ thống — vai trò và ràng buộc, KHÔNG chứa dữ liệu của lần gọi này. */
   system?: string;
@@ -44,6 +50,12 @@ export interface GenerateOptions {
    */
   temperature?: number;
   maxOutputTokens?: number;
+  /**
+   * Ảnh gửi kèm — bước đọc ảnh trích lục/sổ đỏ (`site_boundary_extract`) là lời gọi ĐẦU TIÊN
+   * dùng trường này. Vắng mặt (mặc định) thì `parts` giống hệt trước khi có trường này, nên
+   * mọi lời gọi chỉ-chữ hiện có không cần sửa gì.
+   */
+  images?: GenerateImagePart[];
 }
 
 export class GeminiClient {
@@ -62,8 +74,15 @@ export class GeminiClient {
   ): Promise<T> {
     const route = this.router.resolve(routeName, dataClass);
 
+    const parts = [
+      ...(options.images ?? []).map((img) => ({
+        inlineData: { mimeType: img.mimeType, data: img.dataBase64 },
+      })),
+      { text: options.prompt },
+    ];
+
     const body = {
-      contents: [{ role: 'user', parts: [{ text: options.prompt }] }],
+      contents: [{ role: 'user', parts }],
       ...(options.system ? { systemInstruction: { parts: [{ text: options.system }] } } : {}),
       generationConfig: {
         responseMimeType: 'application/json',

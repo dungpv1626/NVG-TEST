@@ -192,12 +192,17 @@ describe('khu đất gửi sang bộ giải', () => {
       timeBudgetS: 30,
     }) as never;
 
-  /** Bắt lấy `site` đã gửi đi rồi dừng — không cần một Container thật để trả lời. */
+  /**
+   * Bắt lấy KÍCH THƯỚC ô chữ nhật đã gửi đi rồi dừng — không cần Container thật.
+   *
+   * Chỉ giữ hai cạnh: phần còn lại của `site` (diện tích thật, mặt thoáng, khoảng lùi) là
+   * dữ liệu đi kèm, còn thứ phép thử này canh là chỗ hai lớp dễ nói khác nhau nhất.
+   */
   async function sentSite(site: unknown): Promise<{ width_m: number; depth_m: number }> {
     let captured: { width_m: number; depth_m: number } | null = null;
     const backend = {
       solve: (request: { site: { width_m: number; depth_m: number } }) => {
-        captured = request.site;
+        captured = { width_m: request.site.width_m, depth_m: request.site.depth_m };
         throw new ComputeUnavailable('dừng ở đây');
       },
     };

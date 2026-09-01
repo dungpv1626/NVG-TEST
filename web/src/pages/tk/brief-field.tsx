@@ -32,6 +32,8 @@ import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { MoneyInput } from '@/components/ui/money-input';
 import { cn } from '@/lib/utils';
+import { SiteImageUpload } from './site-image-upload';
+import type { SiteBoundaryExtractionResult } from '@/hooks/use-site-boundary-extraction';
 
 // Nhãn lấy TỪ `@nvg/shared/design`, không khai lại ở đây: cùng bộ nhãn còn được dùng ở chế
 // độ xem đầu bài, và hai bản khai riêng sẽ lệch nhau đúng vào ngày thêm một vai trò mới.
@@ -118,15 +120,33 @@ export interface BriefFieldProps {
   onChange: (value: unknown) => void;
   /** Mã lỗi nhất quán đang chỉ vào trường này — hiện ngay dưới ô. */
   issues?: string[];
+  /** Dự án đang sửa — chỉ trường `site.boundary_m` cần, để gọi được tính năng đọc ảnh trích lục. */
+  projectId: string;
+  /** Số tầng hiện khai — chỉ trường `required_spaces` (control `space_floor`) cần, để dựng
+   * danh sách tầng ghim được. */
+  floors: number;
 }
 
-export function BriefField({ field, value, onChange, issues = [] }: BriefFieldProps) {
+export function BriefField({
+  field,
+  value,
+  onChange,
+  issues = [],
+  projectId,
+  floors,
+}: BriefFieldProps) {
   const hint = field.unit ? `${field.hint ?? ''} Đơn vị: ${field.unit}.`.trim() : field.hint;
 
   return (
     <div id={`brief-${field.path.replace(/\./g, '-')}`} className="scroll-mt-24">
       <Field label={field.label} hint={hint}>
-        <BriefControl field={field} value={value} onChange={onChange} />
+        <BriefControl
+          field={field}
+          value={value}
+          onChange={onChange}
+          projectId={projectId}
+          floors={floors}
+        />
       </Field>
       {issues.map((message) => (
         <p key={message} className="mt-1 text-status-overdue">
@@ -137,7 +157,13 @@ export function BriefField({ field, value, onChange, issues = [] }: BriefFieldPr
   );
 }
 
-function BriefControl({ field, value, onChange }: Omit<BriefFieldProps, 'issues'>) {
+function BriefControl({
+  field,
+  value,
+  onChange,
+  projectId,
+  floors,
+}: Omit<BriefFieldProps, 'issues'>) {
   switch (field.control) {
     case 'textarea':
       return (
@@ -275,6 +301,60 @@ function BriefControl({ field, value, onChange }: Omit<BriefFieldProps, 'issues'
       );
     }
 
+    case 'space_floor': {
+      const items = (value as { type: string; floor: number | null }[] | undefined) ?? [];
+      const toggle = (type: string) => {
+        const next = items.some((it) => it.type === type)
+          ? items.filter((it) => it.type !== type)
+          : [...items, { type, floor: null }];
+        onChange(next.length ? next : undefined);
+      };
+      const setFloor = (type: string, floor: number | null) =>
+        onChange(items.map((it) => (it.type === type ? { ...it, floor } : it)));
+
+      return (
+        <div className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            {(field.options ?? []).map((option) => (
+              <Chip
+                key={option.value}
+                label={option.label}
+                active={items.some((it) => it.type === option.value)}
+                onClick={() => toggle(option.value)}
+              />
+            ))}
+          </div>
+          {items.length > 0 && floors > 1 && (
+            <div className="space-y-1.5">
+              <p className="text-fg-subtle">
+                Ghim vào tầng cụ thể — không bắt buộc, bỏ trống để hệ thống tự xếp
+              </p>
+              {items.map((it) => (
+                <div key={it.type} className="flex items-center gap-2">
+                  <span className="w-40 shrink-0">
+                    {field.options?.find((o) => o.value === it.type)?.label ?? it.type}
+                  </span>
+                  <select
+                    aria-label={`Tầng — ${it.type}`}
+                    value={it.floor ?? ''}
+                    onChange={(e) =>
+                      setFloor(it.type, e.target.value ? Number(e.target.value) : null)
+                    }
+                    className="min-h-10 rounded border border-border bg-surface px-2"
+                  >
+                    <option value="">Để hệ thống tự xếp</option>
+                    {Array.from({ length: floors }, (_, i) => i + 1).map((f) => (
+                      <option key={f} value={f}>{`Tầng ${f}`}</option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
     case 'tristate':
       return (
         <div className="flex flex-wrap gap-2">
@@ -327,69 +407,14 @@ function BriefControl({ field, value, onChange }: Omit<BriefFieldProps, 'issues'
       );
     }
 
-    case 'polygon': {
-      const points = (value as [number, number][] | undefined) ?? [];
-      const update = (index: number, axis: 0 | 1, next: number | undefined) => {
-        onChange(
-          points.map((point, i) =>
-            i === index
-              ? ((axis === 0 ? [next ?? 0, point[1]] : [point[0], next ?? 0]) as [number, number])
-              : point,
-          ),
-        );
-      };
+    case 'polygon':
       return (
-        <div className="space-y-3">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[22rem] border-collapse">
-              <thead>
-                <tr className="border-b border-border text-left text-fg-subtle">
-                  <th className="py-1 pr-2 font-normal">Đỉnh</th>
-                  <th className="py-1 pr-2 font-normal">Ngang (m)</th>
-                  <th className="py-1 pr-2 font-normal">Sâu (m)</th>
-                  <th className="py-1 font-normal" />
-                </tr>
-              </thead>
-              <tbody>
-                {points.map((point, index) => (
-                  <tr key={index} className="border-b border-border/60">
-                    <td className="py-1 pr-2 text-fg-subtle">{index + 1}</td>
-                    <td className="py-1 pr-2">
-                      <NumberField
-                        value={point[0]}
-                        label={`Đỉnh ${index + 1} — toạ độ ngang`}
-                        onChange={(next) => update(index, 0, next)}
-                      />
-                    </td>
-                    <td className="py-1 pr-2">
-                      <NumberField
-                        value={point[1]}
-                        label={`Đỉnh ${index + 1} — toạ độ sâu`}
-                        onChange={(next) => update(index, 1, next)}
-                      />
-                    </td>
-                    <td className="py-1">
-                      <Button variant="subtle" onClick={() => onChange(dropAt(points, index))}>
-                        Bỏ đỉnh
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              variant="secondary"
-              onClick={() => onChange([...points, points[points.length - 1] ?? [0, 0]])}
-            >
-              Thêm đỉnh
-            </Button>
-            <SitePreview points={points} />
-          </div>
-        </div>
+        <PolygonControl
+          value={value as [number, number][] | undefined}
+          onChange={onChange}
+          projectId={projectId}
+        />
       );
-    }
 
     case 'family': {
       const members = (value as FamilyMember[] | undefined) ?? [];
@@ -473,6 +498,133 @@ function BriefControl({ field, value, onChange }: Omit<BriefFieldProps, 'issues'
 }
 
 /**
+ * Bảng đỉnh của ranh giới thửa đất — tách khỏi `BriefControl` để dùng `useState` không vướng
+ * quy tắc gọi hook, vì `BriefControl` gọi các nhánh khác nhau trong một `switch`.
+ *
+ * Ôm luôn `SiteImageUpload`: kết quả đọc ảnh GHI ĐÈ trực tiếp bảng đỉnh (cùng tiền lệ
+ * `copyFromSurvey` ở `brief-panel.tsx` — không hộp thoại xác nhận, người dùng luôn sửa lại
+ * được từng đỉnh trước khi lưu), và cảnh báo/độ tin cậy đọc được từ ảnh chỉ có ý nghĩa hiển
+ * thị ngay tại đây — không lưu vào `draft`, mất đi khi rời màn hình là đúng vì đây là siêu dữ
+ * liệu của LẦN ĐỌC gần nhất, không phải của đầu bài.
+ */
+function PolygonControl({
+  value,
+  onChange,
+  projectId,
+}: {
+  value: [number, number][] | undefined;
+  onChange: (value: unknown) => void;
+  projectId: string;
+}) {
+  const points = value ?? [];
+  const [extraction, setExtraction] = useState<SiteBoundaryExtractionResult | null>(null);
+
+  const update = (index: number, axis: 0 | 1, next: number | undefined) => {
+    onChange(
+      points.map((point, i) =>
+        i === index
+          ? ((axis === 0 ? [next ?? 0, point[1]] : [point[0], next ?? 0]) as [number, number])
+          : point,
+      ),
+    );
+  };
+
+  // Đối chiếu theo SỐ ĐỈNH: người dùng thêm/bớt tay sau khi đọc ảnh thì huy hiệu độ tin cậy
+  // tự mất đi thay vì trỏ nhầm sang đỉnh khác — không cần theo dõi riêng "đã sửa tay chưa".
+  const matchesCurrentPoints = extraction && extraction.edges.length === points.length;
+
+  return (
+    <div className="space-y-3">
+      <SiteImageUpload
+        projectId={projectId}
+        onExtract={(result) => {
+          setExtraction(result);
+          onChange(result.boundaryM);
+        }}
+      />
+      {matchesCurrentPoints && extraction.warnings.length > 0 && (
+        <div className="rounded border border-border bg-surface-sunken p-3">
+          <p className="font-semibold">Chỗ đọc chưa chắc chắn</p>
+          <ul className="mt-1 list-disc pl-5 text-fg-subtle">
+            {extraction.warnings.map((w, i) => (
+              <li key={i}>{w.detail}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[22rem] border-collapse">
+          <thead>
+            <tr className="border-b border-border text-left text-fg-subtle">
+              <th className="py-1 pr-2 font-normal">Đỉnh</th>
+              <th className="py-1 pr-2 font-normal">Ngang (m)</th>
+              <th className="py-1 pr-2 font-normal">Sâu (m)</th>
+              <th className="py-1 font-normal" />
+            </tr>
+          </thead>
+          <tbody>
+            {points.map((point, index) => {
+              const edge = matchesCurrentPoints ? extraction.edges[index] : undefined;
+              const needsReview =
+                matchesCurrentPoints &&
+                (edge?.confidence === 'low' || extraction.assumedAngleIndices.includes(index));
+              return (
+                <tr key={index} className="border-b border-border/60">
+                  <td className="py-1 pr-2 text-fg-subtle">
+                    {index + 1}
+                    {needsReview && (
+                      <span
+                        className="ml-1 rounded border border-status-pending px-1 text-[0.7em] font-normal text-status-pending"
+                        title="Đọc từ ảnh với độ tin cậy thấp — kiểm tra lại đỉnh này với thực địa."
+                      >
+                        kiểm tra lại
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-1 pr-2">
+                    <NumberField
+                      value={point[0]}
+                      label={`Đỉnh ${index + 1} — toạ độ ngang`}
+                      onChange={(next) => update(index, 0, next)}
+                    />
+                  </td>
+                  <td className="py-1 pr-2">
+                    <NumberField
+                      value={point[1]}
+                      label={`Đỉnh ${index + 1} — toạ độ sâu`}
+                      onChange={(next) => update(index, 1, next)}
+                    />
+                  </td>
+                  <td className="py-1">
+                    <Button variant="subtle" onClick={() => onChange(dropAt(points, index))}>
+                      Bỏ đỉnh
+                    </Button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button
+          variant="secondary"
+          onClick={() => onChange([...points, points[points.length - 1] ?? [0, 0]])}
+        >
+          Thêm đỉnh
+        </Button>
+        <SitePreview points={points} />
+      </div>
+      {matchesCurrentPoints && (
+        <p className="text-fg-subtle">
+          Ranh giới do AI đọc từ ảnh — bản nháp, đối chiếu với trích lục trước khi xác nhận đầu bài.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
  * Số liệu suy ra từ ranh giới, hiện ngay cạnh bảng toạ độ.
  *
  * Nhập toạ độ là việc dễ gõ nhầm và khó tự phát hiện — một dấu trừ đặt sai cho ra hình
@@ -535,28 +687,11 @@ function parseNumber(raw: string): number | undefined {
   return Number.isFinite(value) ? value : undefined;
 }
 
-/**
- * Người quyết định cuối là ĐỐI TƯỢNG trong hợp đồng, không phải chuỗi.
- *
- * Lựa chọn "Chưa xác định được" ghi `{ name: null, relationship: null }` — có mặt nhưng
- * rỗng. Đó là cách phân biệt "đã hỏi, khách chưa quyết" với "chưa ai hỏi", điều mà hợp đồng
- * đòi hỏi tường minh ("bắt buộc THU THẬP dù được để trống").
- */
 function toChoiceValue(field: BriefFormField, option: string): unknown {
-  if (field.path === 'decision_maker') {
-    return option === 'chua_xac_dinh'
-      ? { name: null, relationship: null }
-      : { name: null, relationship: option };
-  }
   // Lựa chọn trong cấu hình luôn là chuỗi; hợp đồng có chỗ đòi số nguyên.
   return field.value_type === 'number' ? Number(option) : option;
 }
 
 function matchesChoice(field: BriefFormField, value: unknown, option: string): boolean {
-  if (field.path === 'decision_maker') {
-    const dm = value as { relationship?: string | null } | undefined;
-    if (dm === undefined) return false;
-    return option === 'chua_xac_dinh' ? !dm.relationship : dm.relationship === option;
-  }
   return field.value_type === 'number' ? value === Number(option) : value === option;
 }

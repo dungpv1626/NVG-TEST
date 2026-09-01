@@ -81,7 +81,7 @@
         "orientation": {
           "type": ["string", "null"],
           "enum": ["B", "BD", "D", "DN", "N", "TN", "T", "TB", null],
-          "description": "Hướng nhà: B bắc · BD bắc-đông · D đông · DN đông-nam · N nam · TN tây-nam · T tây · TB tây-bắc."
+          "description": "Hướng nhà: B bắc · BD đông-bắc · D đông · DN đông-nam · N nam · TN tây-nam · T tây · TB tây-bắc."
         },
         "access_sides": {
           "type": "array",
@@ -169,10 +169,22 @@
     "required_spaces": {
       "type": "array",
       "items": {
-        "type": "string"
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Mã không gian, lấy từ kb/room_vocabulary.yaml. Mã không có trong từ vựng đó thì không rule nào của rule pack nhắm tới, và nó đi qua cả engine mà chưa từng bị kiểm quy chuẩn."
+          },
+          "floor": {
+            "type": ["integer", "null"],
+            "minimum": 1,
+            "description": "Ghim cứng vào đúng tầng này. `null`/vắng mặt = để Lớp 2 tự xếp theo nguyện vọng và cân tải (mặc định, hành vi hiện tại)."
+          }
+        }
       },
-      "uniqueItems": true,
-      "description": "Mã không gian, lấy từ kb/room_vocabulary.yaml. Mã không có trong từ vựng đó thì không rule nào của rule pack nhắm tới, và nó đi qua cả engine mà chưa từng bị kiểm quy chuẩn. \"Có sân trong hay không\" khai ở đây bằng mã `courtyard`; VỊ TRÍ các sân khai ở `massing.yards`."
+      "description": "Không gian bắt buộc có, mỗi phần tử một loại. \"Có sân trong hay không\" khai ở đây bằng mã `courtyard`; VỊ TRÍ các sân khai ở `massing.yards`."
     },
     "massing": {
       "type": ["object", "null"],

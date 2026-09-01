@@ -55,6 +55,17 @@ def m2_to_units2_ceil(square_metres: float) -> int:
     return rounded if abs(exact - rounded) < 1e-9 else int(exact) + 1
 
 
+def m2_to_units2_floor(square_metres: float) -> int:
+    """Mét vuông sang module vuông, làm tròn XUỐNG. Dùng cho diện tích tối đa.
+
+    Làm tròn lên ở một cận TRÊN là âm thầm nới nó ra: 9,04 m² thành 9,1 m² thì một phòng
+    vượt trần vẫn qua được.
+    """
+    exact = square_metres / (MODULE_MM / 1000) ** 2
+    rounded = round(exact)
+    return rounded if abs(exact - rounded) < 1e-9 else int(exact)
+
+
 def units_to_m2(square_units: int) -> float:
     """Module vuông đổi ngược về mét vuông."""
     return square_units * (MODULE_MM / 1000) ** 2

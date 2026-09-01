@@ -31,6 +31,7 @@ describe('config/models.yaml', () => {
       'layer3_intent',
       'layer3_intent_hard',
       'layer4_facade',
+      'site_boundary_extract',
     ]);
   });
 

@@ -226,25 +226,33 @@ function collectRequests(inputs: ProgramInputs, warnings: string[]): Request[] {
   const requests: Request[] = [];
   const seen = new Set<string>();
 
-  const addSingle = (type: string): void => {
+  // `pinned` không cần kiểm ở đây so với `range` — hàm biết `brief.floors` qua closure, nên
+  // đây là chỗ DUY NHẤT phải nhớ luật "ghim ngoài 1..floors thì bỏ ghim, không bỏ cả yêu cầu".
+  const addSingle = (type: string, pinned?: number): void => {
     const norm = norms.spaces[type];
     if (!norm || managed.has(type) || seen.has(type)) return;
     seen.add(type);
-    requests.push({ type, preference: norm.floor });
+    if (pinned !== undefined && (pinned < 1 || pinned > brief.floors)) {
+      warnings.push(
+        `Không gian "${type}" ghim vào tầng ${pinned} nhưng công trình chỉ có ${brief.floors} tầng — bỏ qua ghim, để hệ thống tự xếp.`,
+      );
+      pinned = undefined;
+    }
+    requests.push({ type, preference: norm.floor, pinned });
   };
 
   for (const type of norms.mandatory[brief.building_type] ?? []) addSingle(type);
 
-  for (const type of brief.required_spaces ?? []) {
-    if (!norms.spaces[type]) {
+  for (const space of brief.required_spaces ?? []) {
+    if (!norms.spaces[space.type]) {
       // Mã lạ KHÔNG bị nuốt: nó có thể là mã đúng nhưng chưa vào từ vựng, và im lặng bỏ đi
       // nghĩa là khách yêu cầu một không gian rồi không thấy nó ở đâu nữa.
       warnings.push(
-        `Không gian "${type}" chưa có trong chuẩn diện tích nên chưa đưa vào chương trình.`,
+        `Không gian "${space.type}" chưa có trong chuẩn diện tích nên chưa đưa vào chương trình.`,
       );
       continue;
     }
-    addSingle(type);
+    addSingle(space.type, space.floor ?? undefined);
   }
   for (const type of inputs.extraSpaces ?? []) addSingle(type);
 
@@ -411,12 +419,14 @@ function areasFor(
  * nghiệm kèm tập ràng buộc mâu thuẫn — đó mới là câu trả lời dùng được, không phải một
  * chương trình đã bị bóp cho vừa.
  *
- * **Chiều thừa chỗ — dễ bỏ sót, và đã làm vô nghiệm thật.** Bộ giải CP-SAT chia HẾT mặt sàn:
- * không có khái niệm "phần còn lại để trống". Nên nếu tổng diện tích TỐI ĐA của một tầng nhỏ
- * hơn mặt sàn, bài toán vô nghiệm ngay cả khi mọi phòng đều thoải mái — và tập ràng buộc
- * mâu thuẫn trả về sẽ chỉ vào `max_area` của một hành lang, tức là chỗ khó hiểu nhất có thể.
- * Phần dôi ra giao cho khối giao thông, vì đó chính là thứ nó là: sảnh, hành lang, chiếu
- * nghỉ — phần sàn không thuộc phòng nào.
+ * **Chiều thừa chỗ — dễ bỏ sót.** Bộ giải CP-SAT chia HẾT mặt sàn: không có khái niệm "phần
+ * còn lại để trống". Nên nếu tổng diện tích TỐI ĐA của một tầng nhỏ hơn mặt sàn thì phần dôi
+ * ra phải rơi vào một phòng nào đó. Giao nó cho khối giao thông, vì đó chính là thứ nó là:
+ * sảnh, hành lang, chiếu nghỉ — phần sàn không thuộc phòng nào.
+ *
+ * Từ Mốc 5, bộ giải coi `max_area` của chương trình là KHOẢN PHẠT chứ không phải ràng buộc
+ * cứng (`compute/src/design_compute/solver/model.py`), nên bước này không còn là ranh giới
+ * giữa "có phương án" và "vô nghiệm" — nó chỉ quyết định phần dôi ra rơi vào đâu cho hợp lý.
  */
 function fitToFloors(
   instances: Instance[],

@@ -35,7 +35,7 @@ const full: DesignBriefDraft = {
   },
   floors: 4,
   family: [{ role: 'vo_chong', count: 2 }],
-  required_spaces: ['living', 'kitchen', 'bedroom'],
+  required_spaces: [{ type: 'living' }, { type: 'kitchen' }, { type: 'bedroom' }],
   style: 'hien_dai',
   budget_range_vnd: [2_000_000_000, 3_000_000_000],
   priorities: ['natural_light'],

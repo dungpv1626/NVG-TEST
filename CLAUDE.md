@@ -535,24 +535,24 @@ luôn là người quyết định cuối cùng" (PRD 2.3).
 
 Gộp từ PRD 10, TSD 7, CGD 7, BSD 5, IPD 7:
 
-| Vấn đề                                                                                                                                    | Ảnh hưởng                                                                                                                                                                                                                                                                                             |
-| ----------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Phần mềm kế toán chính thức** để tích hợp (MISA SME / AMIS / Fast?)                                                                     | Chưa thiết kế được payload endpoint `/api/export/accounting-software` (KT-08)                                                                                                                                                                                                                         |
-| **Hạn mức phê duyệt chính thức** theo cấp/loại nghiệp vụ                                                                                  | Đang dùng mức tạm; dữ liệu `approval_limits` phải cấu hình được                                                                                                                                                                                                                                       |
-| **Bộ mã vật tư / công trình / nhà cung cấp** thống nhất                                                                                   | NVG chưa có; sẽ tự tạo mẫu trước go-live từng giai đoạn                                                                                                                                                                                                                                               |
-| **Khảo sát Xưởng giàn giáo (NVS) + Chỉ huy công trường**                                                                                  | Module TC/SX có thể phải sửa lại một phần                                                                                                                                                                                                                                                             |
-| **`unit_prices` dùng chung DA/TK/MH?**                                                                                                    | Cần xác nhận NVO có cần bảng đơn giá riêng không (BSD 5). Đang triển khai DÙNG CHUNG, tách sẵn theo `company_id`                                                                                                                                                                                      |
-| **Ai được xem GIÁ VỐN**                                                                                                                   | Đang mở cho TGĐ/CFO/BGĐ/Admin + **DA_DT, TKE, MH** (suy từ TK-07 và MH-04/05). Lợi nhuận vẫn chỉ TGĐ/CFO/BGĐ/Admin. Lương thêm NS và KT; **căn cước/sức khỏe/kỷ luật (`personal`) hẹp hơn lương — không có KT**. Cả bốn nhóm sửa ở cùng hàm `rls_sees_sensitive`                                      |
-| **Cơ chế lương/thưởng chi tiết** từng công ty/nhóm nhân sự                                                                                | Chưa cấu hình được NS-06. Đã có sẵn HÌNH THỨC trả lương và số công đã chốt; thiếu đúng phần công thức                                                                                                                                                                                                 |
-| **Ai xác nhận bảng chấm công từng khối** (NS-04)                                                                                          | Đang SUY LUẬN: người có quyền `approve` trên phân hệ phụ trách khối — công trường → TC, văn phòng và xưởng → NS. Cùng gốc với "trưởng đơn vị" của KT-01, sẽ giải cùng lúc khi Module NS có cây tổ chức. Sửa trong `confirm_timesheet_period`                                                          |
-| **Một ngày công bằng mấy giờ** (NS-04)                                                                                                    | Đang lấy **8 giờ** (Bộ luật Lao động 2019 Điều 105). Xưởng có thể chạy ca 12 giờ; nếu vậy ngày công quy đổi của khối xưởng đang sai. Sửa ở `HOURS_PER_WORKDAY` (`@nvg/shared/ns`) **và** hàm `consolidate_timesheets` — có test đối chiếu hai bản                                                     |
-| **Ai duyệt yêu cầu tuyển dụng** (NS-02)                                                                                                   | Đang đặt Tổng Giám đốc, vì tăng biên chế là quyết định ngân sách của cả công ty. Đổi bằng cấu hình `approval_limits`, không sửa mã                                                                                                                                                                    |
-| **"Trưởng đơn vị" ở bước 1 của luồng duyệt chi (KT-01) là AI** — Haan xác nhận 27/08/2026: chưa có thông tin, chờ khảo sát đầy đủ         | Đang SUY LUẬN: người có quyền `approve` trên module phát sinh khoản chi (`payment_requests.origin_module`). Kéo theo: vai trò TC/MH/KHO được cấp `approve` trên chính phân hệ của mình. Khi Module NS có cây tổ chức, thay điều kiện trong hàm `rls_payment_step_actor` — không phải sửa chỗ nào khác |
-| **Mốc chia nhóm công nợ quá hạn** (KT-04) — Haan xác nhận 27/08/2026: chưa có mốc, giữ giả định nhưng Quản trị hệ thống phải sửa lại được | Đã chuyển thành DỮ LIỆU trong bảng `aging_buckets`, seed 30/60/90 ngày từ `DEFAULT_AGING_BUCKETS`. KHÔNG hard-code ở bất kỳ đâu — cùng quy tắc với `approval_limits` (5.2). Mốc riêng của pháp nhân THAY THẾ mốc chung, không trộn                                                                    |
-| **Đo "hiệu suất nhân sự/tổ đội/nhà cung cấp"** (BC-03 phần 4) đo bằng gì                                                                  | CỐ Ý CHƯA làm — TC chưa có bảng phân công tổ đội, MH chưa có sổ đánh giá nhà cung cấp. Ba phần đầu của BC-03 (nguồn khách, phễu bán hàng, tỷ lệ trúng thầu) đã xong ở `db/migrations/0059_bc_sales_effectiveness.sql`                                                                                 |
+| Vấn đề                                                                                                                                    | Ảnh hưởng                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ----------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Phần mềm kế toán chính thức** để tích hợp (MISA SME / AMIS / Fast?)                                                                     | Chưa thiết kế được payload endpoint `/api/export/accounting-software` (KT-08)                                                                                                                                                                                                                                                                                                                                                                        |
+| **Hạn mức phê duyệt chính thức** theo cấp/loại nghiệp vụ                                                                                  | Đang dùng mức tạm; dữ liệu `approval_limits` phải cấu hình được                                                                                                                                                                                                                                                                                                                                                                                      |
+| **Bộ mã vật tư / công trình / nhà cung cấp** thống nhất                                                                                   | NVG chưa có; sẽ tự tạo mẫu trước go-live từng giai đoạn                                                                                                                                                                                                                                                                                                                                                                                              |
+| **Khảo sát Xưởng giàn giáo (NVS) + Chỉ huy công trường**                                                                                  | Module TC/SX có thể phải sửa lại một phần                                                                                                                                                                                                                                                                                                                                                                                                            |
+| **`unit_prices` dùng chung DA/TK/MH?**                                                                                                    | Cần xác nhận NVO có cần bảng đơn giá riêng không (BSD 5). Đang triển khai DÙNG CHUNG, tách sẵn theo `company_id`                                                                                                                                                                                                                                                                                                                                     |
+| **Ai được xem GIÁ VỐN**                                                                                                                   | Đang mở cho TGĐ/CFO/BGĐ/Admin + **DA_DT, TKE, MH** (suy từ TK-07 và MH-04/05). Lợi nhuận vẫn chỉ TGĐ/CFO/BGĐ/Admin. Lương thêm NS và KT; **căn cước/sức khỏe/kỷ luật (`personal`) hẹp hơn lương — không có KT**. Cả bốn nhóm sửa ở cùng hàm `rls_sees_sensitive`                                                                                                                                                                                     |
+| **Cơ chế lương/thưởng chi tiết** từng công ty/nhóm nhân sự                                                                                | Chưa cấu hình được NS-06. Đã có sẵn HÌNH THỨC trả lương và số công đã chốt; thiếu đúng phần công thức                                                                                                                                                                                                                                                                                                                                                |
+| **Ai xác nhận bảng chấm công từng khối** (NS-04)                                                                                          | Đang SUY LUẬN: người có quyền `approve` trên phân hệ phụ trách khối — công trường → TC, văn phòng và xưởng → NS. Cùng gốc với "trưởng đơn vị" của KT-01, sẽ giải cùng lúc khi Module NS có cây tổ chức. Sửa trong `confirm_timesheet_period`                                                                                                                                                                                                         |
+| **Một ngày công bằng mấy giờ** (NS-04)                                                                                                    | Đang lấy **8 giờ** (Bộ luật Lao động 2019 Điều 105). Xưởng có thể chạy ca 12 giờ; nếu vậy ngày công quy đổi của khối xưởng đang sai. Sửa ở `HOURS_PER_WORKDAY` (`@nvg/shared/ns`) **và** hàm `consolidate_timesheets` — có test đối chiếu hai bản                                                                                                                                                                                                    |
+| **Ai duyệt yêu cầu tuyển dụng** (NS-02)                                                                                                   | Đang đặt Tổng Giám đốc, vì tăng biên chế là quyết định ngân sách của cả công ty. Đổi bằng cấu hình `approval_limits`, không sửa mã                                                                                                                                                                                                                                                                                                                   |
+| **"Trưởng đơn vị" ở bước 1 của luồng duyệt chi (KT-01) là AI** — Haan xác nhận 27/08/2026: chưa có thông tin, chờ khảo sát đầy đủ         | Đang SUY LUẬN: người có quyền `approve` trên module phát sinh khoản chi (`payment_requests.origin_module`). Kéo theo: vai trò TC/MH/KHO được cấp `approve` trên chính phân hệ của mình. Khi Module NS có cây tổ chức, thay điều kiện trong hàm `rls_payment_step_actor` — không phải sửa chỗ nào khác                                                                                                                                                |
+| **Mốc chia nhóm công nợ quá hạn** (KT-04) — Haan xác nhận 27/08/2026: chưa có mốc, giữ giả định nhưng Quản trị hệ thống phải sửa lại được | Đã chuyển thành DỮ LIỆU trong bảng `aging_buckets`, seed 30/60/90 ngày từ `DEFAULT_AGING_BUCKETS`. KHÔNG hard-code ở bất kỳ đâu — cùng quy tắc với `approval_limits` (5.2). Mốc riêng của pháp nhân THAY THẾ mốc chung, không trộn                                                                                                                                                                                                                   |
+| **Đo "hiệu suất nhân sự/tổ đội/nhà cung cấp"** (BC-03 phần 4) đo bằng gì                                                                  | CỐ Ý CHƯA làm — TC chưa có bảng phân công tổ đội, MH chưa có sổ đánh giá nhà cung cấp. Ba phần đầu của BC-03 (nguồn khách, phễu bán hàng, tỷ lệ trúng thầu) đã xong ở `db/migrations/0059_bc_sales_effectiveness.sql`                                                                                                                                                                                                                                |
 | **Bảng `tasks` — bỏ hẳn hay dùng thật?**                                                                                                  | Có sẵn từ Phase 0 (BUILD_PLAN 1.4), chưa từng được ghi/đọc ở bất kỳ đâu. Trung tâm Thông báo (bảng `notifications`) đã lên hình ở Phase 3G — nút chuông Top Bar giờ đọc thật, đánh dấu đã đọc, điều hướng tới `action_url`. "Việc cần làm" vẫn chỉ là Hộp thư Phê duyệt (`usePendingApprovals`); việc không gắn phê duyệt (vd. nhắc giấy tờ sắp hết hạn) hiện chỉ sinh `notification` một chiều, không có nơi "xử lý xong thì biến mất" đúng AFD 5.4 |
-| **Tên miền chính thức** · **đầu mối hỗ trợ kỹ thuật** (điền vào mẫu lỗi CGD 5.5) · **SSO** (chờ NVG có email công ty)                     | Chưa chặn phát triển                                                                                                                                                                                                                                                                                  |
-| **Hạn mức + điều khoản bảo mật gói miễn phí Gemini**                                                                                      | Cần kiểm tra lại tại thời điểm triển khai; cân nhắc gói trả phí khi dùng dữ liệu thật                                                                                                                                                                                                                 |
+| **Tên miền chính thức** · **đầu mối hỗ trợ kỹ thuật** (điền vào mẫu lỗi CGD 5.5) · **SSO** (chờ NVG có email công ty)                     | Chưa chặn phát triển                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| **Hạn mức + điều khoản bảo mật gói miễn phí Gemini**                                                                                      | Cần kiểm tra lại tại thời điểm triển khai; cân nhắc gói trả phí khi dùng dữ liệu thật                                                                                                                                                                                                                                                                                                                                                                |
 
 ---
 
@@ -592,7 +592,7 @@ Ngoài phạm vi TK-10→TK-17, thứ tự `PRD > AFD > TSD > CGD > BSD > IPD` v
 Vi phạm bất kỳ điểm nào là lỗi kiến trúc, không phải lỗi phong cách.
 
 1. **Không có bước nào đi thẳng từ chữ sang ảnh.** Mọi ảnh dẫn xuất từ hình học đã giải.
-2. **Mô hình ngôn ngữ không bao giờ sinh toạ độ hay kích thước.** Nó sinh *cấu trúc* (cây
+2. **Mô hình ngôn ngữ không bao giờ sinh toạ độ hay kích thước.** Nó sinh _cấu trúc_ (cây
    chia không gian, lựa chọn rời rạc); **bộ giải gán số**.
 3. **Mọi ranh giới giữa các lớp có JSON Schema** trong `contracts/`. Không có hợp đồng thì
    không viết code cho lớp đó — dừng và hỏi.
@@ -610,11 +610,11 @@ Vi phạm bất kỳ điểm nào là lỗi kiến trúc, không phải lỗi ph
 
 ### 8.3 Hai runtime — biết mã đang viết chạy ở đâu
 
-| | **Worker (TypeScript)** | **Container (Python)** |
-|---|---|---|
-| Chạy gì | Giao diện, API, gọi mô hình ngôn ngữ, đọc/ghi artifact, điều phối | Bộ giải CP-SAT, hình học, đọc/ghi tệp CAD, dựng mô hình ba chiều |
-| Vì sao | Nghẽn ở vào/ra, cùng codebase | OR-Tools, trimesh, ezdxf, shapely chỉ có ở Python |
-| Gọi nhau | Worker → Container qua HTTP | Container **không gọi ngược** Worker |
+|          | **Worker (TypeScript)**                                           | **Container (Python)**                                           |
+| -------- | ----------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Chạy gì  | Giao diện, API, gọi mô hình ngôn ngữ, đọc/ghi artifact, điều phối | Bộ giải CP-SAT, hình học, đọc/ghi tệp CAD, dựng mô hình ba chiều |
+| Vì sao   | Nghẽn ở vào/ra, cùng codebase                                     | OR-Tools, trimesh, ezdxf, shapely chỉ có ở Python                |
+| Gọi nhau | Worker → Container qua HTTP                                       | Container **không gọi ngược** Worker                             |
 
 **Nhầm chỗ là lỗi kiến trúc.** Đừng gọi mô hình ngôn ngữ từ Container. Đừng cài thư viện
 hình học phía TypeScript.
@@ -624,14 +624,14 @@ Cloudflare bên trong** — đó là thứ cho phép đổi chỗ triển khai m
 
 ### 8.4 Ánh xạ thư mục — tài liệu giả định monorepo khác
 
-| Tài liệu | Repo |
-|---|---|
-| `packages/contracts/*.schema.json` | `contracts/` ở gốc (nguồn gốc, viết tay) |
-| → sinh zod | `shared/src/design/*.generated.ts`, xuất qua `@nvg/shared/design` |
-| → sinh Pydantic | **KHÔNG sinh.** Python nạp thẳng `contracts/*.schema.json`, validate bằng `jsonschema` — xem 8.8 |
-| `apps/web/src/modules/design/` | `workers/src/design/` |
-| `services/design-compute/` | `compute/` ở gốc — Python, **không** phải npm workspace |
-| `rules/`, `config/models.yaml`, `tests/golden/` | giữ nguyên ở gốc |
+| Tài liệu                                        | Repo                                                                                             |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `packages/contracts/*.schema.json`              | `contracts/` ở gốc (nguồn gốc, viết tay)                                                         |
+| → sinh zod                                      | `shared/src/design/*.generated.ts`, xuất qua `@nvg/shared/design`                                |
+| → sinh Pydantic                                 | **KHÔNG sinh.** Python nạp thẳng `contracts/*.schema.json`, validate bằng `jsonschema` — xem 8.8 |
+| `apps/web/src/modules/design/`                  | `workers/src/design/`                                                                            |
+| `services/design-compute/`                      | `compute/` ở gốc — Python, **không** phải npm workspace                                          |
+| `rules/`, `config/models.yaml`, `tests/golden/` | giữ nguyên ở gốc                                                                                 |
 
 Bộ sinh zod: `scripts/contracts-gen.mjs`. `npm run contracts:gen` để sinh,
 `npm run contracts:check` để so bản sinh với bản đã commit. **Không sửa tay
@@ -639,17 +639,17 @@ Bộ sinh zod: `scripts/contracts-gen.mjs`. `npm run contracts:gen` để sinh,
 
 ### 8.5 Quyết định đã chốt (28/08/2026) — không mở lại trừ khi điều kiện đổi
 
-| # | Quyết định | Lý do / đánh đổi |
-|---|---|---|
-| T1 | **Vite SPA + Worker Hono**, KHÔNG Next.js | Tài liệu ghi "Next.js — kế thừa, không đổi" là **mô tả sai** nền tảng. Không nội dung nào cần Next.js |
-| T2 | **Container Python + OR-Tools CP-SAT** cho Layer 3b | Cơ chế giả định của CP-SAT trả về **tập ràng buộc mâu thuẫn nhỏ nhất** — đó là thứ tạo ra tính năng phân tích tác động. Thay thế phương án cũ trong BUILD_PLAN ("thuật toán tự xây bằng TypeScript") |
-| T3 | Giai đoạn dev **giữ gói Cloudflare Free** → `compute/` chạy bằng **Docker tại chỗ**, Worker gọi `localhost:8080` qua interface `ComputeBackend` | Containers không có trên gói Free. Khi nâng gói chỉ đổi một tệp sang `getContainer()` |
-| T4 | **R2 cho artifact** (dữ liệu máy đọc) + **Supabase Storage cho hồ sơ phát hành** (đi qua `documents`/`document_versions`). Cài đặt qua interface `ArtifactStore`, adapter `supabase://` dùng ngay, adapter `r2://` viết sẵn | R2 cần bật thanh toán. Cùng khuôn với `RenderBackend` mà tài liệu đã dùng |
-| T5 | Bảng module mang **cả `tenant_id` lẫn `company_id`** | `tenant_id` giữ đúng nguyên tắc 7 và sẵn sàng bán lại; `company_id` để artifact truy được về pháp nhân — bắt buộc theo mục 3.5 |
-| T6 | Quyền chuỗi qua bảng mới **`role_capabilities(role_id, capability)`**, khởi động chỉ với `design.*` | Ma trận `permissions` hiện chỉ tới mức module, không phân biệt được ba bộ môn. **Không sửa** ma trận cũ — 12 module đang chạy trên đó |
-| T7 | **Dùng lại enum `design_discipline`** sẵn có. Ánh xạ: `KT→kien_truc`, `KC→ket_cau`, `DN→dien_nuoc` | Một bộ từ vựng duy nhất. Enum này đã có index phụ thuộc |
-| T8 | Giai đoạn demo, mô hình ngôn ngữ **chỉ chạy dữ liệu giả lập hoặc ẩn danh** | Đầu bài khách hàng là dữ liệu hạng 1; gói Gemini miễn phí có thể được dùng để huấn luyện (mục 5.1). Lớp chặn `data_class` vẫn dựng ngay từ khung |
-| T9 | Rule pack: **mọi giá trị QCVN 01:2021/BXD nằm ở `base/`** (kể cả khoảng lùi, mật độ); `locality/<tỉnh>/` chỉ ra đời khi có văn bản quy hoạch của tỉnh để trích vào `source` — hiện chưa tỉnh nào có. Đầu bài chọn được **34 đơn vị hành chính**, nhóm đầu là Hưng Yên · Hải Phòng · Ninh Bình · Hà Nội | Thái Bình đã sáp nhập vào Hưng Yên (2025). Gói địa phương chép lại số của quy chuẩn quốc gia là bản sao thứ hai của cùng con số — sửa quy chuẩn thì bản sao không đổi theo, và không có gì báo |
+| #   | Quyết định                                                                                                                                                                                                                                                                                             | Lý do / đánh đổi                                                                                                                                                                                     |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| T1  | **Vite SPA + Worker Hono**, KHÔNG Next.js                                                                                                                                                                                                                                                              | Tài liệu ghi "Next.js — kế thừa, không đổi" là **mô tả sai** nền tảng. Không nội dung nào cần Next.js                                                                                                |
+| T2  | **Container Python + OR-Tools CP-SAT** cho Layer 3b                                                                                                                                                                                                                                                    | Cơ chế giả định của CP-SAT trả về **tập ràng buộc mâu thuẫn nhỏ nhất** — đó là thứ tạo ra tính năng phân tích tác động. Thay thế phương án cũ trong BUILD_PLAN ("thuật toán tự xây bằng TypeScript") |
+| T3  | Giai đoạn dev **giữ gói Cloudflare Free** → `compute/` chạy bằng **Docker tại chỗ**, Worker gọi `localhost:8080` qua interface `ComputeBackend`                                                                                                                                                        | Containers không có trên gói Free. Khi nâng gói chỉ đổi một tệp sang `getContainer()`                                                                                                                |
+| T4  | **R2 cho artifact** (dữ liệu máy đọc) + **Supabase Storage cho hồ sơ phát hành** (đi qua `documents`/`document_versions`). Cài đặt qua interface `ArtifactStore`, adapter `supabase://` dùng ngay, adapter `r2://` viết sẵn                                                                            | R2 cần bật thanh toán. Cùng khuôn với `RenderBackend` mà tài liệu đã dùng                                                                                                                            |
+| T5  | Bảng module mang **cả `tenant_id` lẫn `company_id`**                                                                                                                                                                                                                                                   | `tenant_id` giữ đúng nguyên tắc 7 và sẵn sàng bán lại; `company_id` để artifact truy được về pháp nhân — bắt buộc theo mục 3.5                                                                       |
+| T6  | Quyền chuỗi qua bảng mới **`role_capabilities(role_id, capability)`**, khởi động chỉ với `design.*`                                                                                                                                                                                                    | Ma trận `permissions` hiện chỉ tới mức module, không phân biệt được ba bộ môn. **Không sửa** ma trận cũ — 12 module đang chạy trên đó                                                                |
+| T7  | **Dùng lại enum `design_discipline`** sẵn có. Ánh xạ: `KT→kien_truc`, `KC→ket_cau`, `DN→dien_nuoc`                                                                                                                                                                                                     | Một bộ từ vựng duy nhất. Enum này đã có index phụ thuộc                                                                                                                                              |
+| T8  | Giai đoạn demo, mô hình ngôn ngữ **chỉ chạy dữ liệu giả lập hoặc ẩn danh**                                                                                                                                                                                                                             | Đầu bài khách hàng là dữ liệu hạng 1; gói Gemini miễn phí có thể được dùng để huấn luyện (mục 5.1). Lớp chặn `data_class` vẫn dựng ngay từ khung                                                     |
+| T9  | Rule pack: **mọi giá trị QCVN 01:2021/BXD nằm ở `base/`** (kể cả khoảng lùi, mật độ); `locality/<tỉnh>/` chỉ ra đời khi có văn bản quy hoạch của tỉnh để trích vào `source` — hiện chưa tỉnh nào có. Đầu bài chọn được **34 đơn vị hành chính**, nhóm đầu là Hưng Yên · Hải Phòng · Ninh Bình · Hà Nội | Thái Bình đã sáp nhập vào Hưng Yên (2025). Gói địa phương chép lại số của quy chuẩn quốc gia là bản sao thứ hai của cùng con số — sửa quy chuẩn thì bản sao không đổi theo, và không có gì báo       |
 
 ### 8.6 Đính chính hạ tầng Cloudflare — tài liệu đã lỗi thời
 
@@ -683,11 +683,11 @@ Bộ sinh zod: `scripts/contracts-gen.mjs`. `npm run contracts:gen` để sinh,
 - **Không tạo lại thứ đã có**: dự án (`design_projects`), khách hàng (`customers`), người
   dùng (`users`), hệ tài liệu (`documents` + `document_versions`). Tham chiếu, không sao chép.
 - **Nhãn cảnh báo do mã nguồn chèn**, không phụ thuộc người dùng nhớ bật và không tắt được
-  từ giao diện: ảnh phối cảnh mang *"Ảnh tham khảo ý tưởng — chưa phải phương án thi công"*;
-  bảng khối lượng mang *"Khối lượng sơ bộ — không dùng làm căn cứ ký hợp đồng"*; lưới trục
-  do hệ thống đề xuất mang *"Đề xuất — kỹ sư kết cấu quyết định"*.
+  từ giao diện: ảnh phối cảnh mang _"Ảnh tham khảo ý tưởng — chưa phải phương án thi công"_;
+  bảng khối lượng mang _"Khối lượng sơ bộ — không dùng làm căn cứ ký hợp đồng"_; lưới trục
+  do hệ thống đề xuất mang _"Đề xuất — kỹ sư kết cấu quyết định"_.
 
-### 8.8 Bốn quy ước dựng ở Mốc 1 — đọc trước khi thêm bảng hay endpoint
+### 8.8 Bảy quy ước của Lớp 1–3 — đọc trước khi thêm bảng, endpoint hay quy tắc
 
 Bốn điểm dưới đây đã đứng vững bằng kiểm thử trên CSDL thật. Chúng là hệ quả trực tiếp của
 mục 8.2, ghi lại ở đây để không phải suy lại từ đầu.
@@ -716,10 +716,32 @@ mục 8.2, ghi lại ở đây để không phải suy lại từ đầu.
    `auth_tenant_ids()` cố ý **không** dùng `auth_sees_all_companies()`: "xem mọi pháp nhân"
    là phạm vi TRONG một tenant, không phải giấy thông hành sang tenant khác.
 
+5. **Chỉ đường cắt thuộc KẾT CẤU CHÍNH mới dùng chung giữa các tầng** (`structural_depth`,
+   mặc định 2 tầng cây đầu). Dùng chung mọi đường cắt mà các tầng cùng phương nghe chặt chẽ
+   hơn nhưng ép hai tầng có số phòng khác nhau phải có cùng diện tích ở từng dải — và cái
+   hiện ra là vô nghiệm với tập ràng buộc trỏ vào hai phòng chẳng liên quan gì tới nhau.
+   Nhà thật có vài tuyến tường chịu lực, còn vách ngăn thì mỗi tầng một khác. **Lõi thang
+   KHÔNG dựa vào cơ chế này** — nó có ràng buộc trùng khít riêng (`stair_alignment`), nên
+   vẫn thẳng hàng dù nằm sâu bao nhiêu trong cây.
+
+6. **Cây chia không gian lấp KÍN mặt sàn.** Tổng diện tích phòng của một tầng luôn bằng
+   đúng diện tích hình bao — không có khái niệm "phần còn lại để trống"; muốn để trống thì
+   khai một lá `void`. Hệ quả: `max_area` của chương trình không gian là **khoản phạt**, không
+   phải ràng buộc cứng (nó đến từ `kb/space_norms.yaml`, không từ quy chuẩn). Quy chuẩn nào
+   thật sự chặn diện tích tối đa thì khai thành quy tắc `max_area` mức `error` trong rule pack.
+
+7. **Ngưỡng quy chuẩn ở `rules/`; quy ước cấu tạo và bối cảnh thửa ở `kb/`.** Ba tệp dữ liệu
+   Container đọc lúc chạy: `layer_mapping.yaml` (tên lớp bản vẽ, cả đọc lẫn GHI),
+   `construction_norms.yaml` (bề dày tường, kích thước cửa), và — do Worker đọc rồi gửi kèm
+   lời gọi — `site_context.yaml` (hiện trạng bốn phía → mặt thoáng) cùng `room_vocabulary.yaml`
+   (nhãn tiếng Việt, thành viên của nhóm mã phòng). Số ở `kb/` quyết định bản vẽ TRÔNG thế
+   nào; số ở `rules/` quyết định phương án có hợp lệ hay không. Đừng trộn hai loại.
+
 Ranh giới runtime: Worker gọi Container qua `POST /solve`, và **vô nghiệm trả mã 200** kèm
 `InfeasibilityReport`. Nó là kết quả hạng nhất, không phải lỗi — trả 4xx sẽ khiến lớp gọi
 coi là hỏng hóc và giấu mất lời giải thích. Chỉ 422 (sai hợp đồng, không thử lại) và 503
-(hết giờ, đáng thử lại) mới là lỗi thật.
+(hết giờ, đáng thử lại) mới là lỗi thật. `POST /export/dxf` là **một chiều**: không có, và
+sẽ không có, endpoint nhập ngược tệp CAD đã sửa tay.
 
 ### 8.9 Theo dõi tiến độ — bắt buộc
 

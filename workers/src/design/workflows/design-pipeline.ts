@@ -26,7 +26,12 @@ import { gateLayer2, readCompletenessThreshold } from '../brief/gate';
 import { createComputeBackend } from '../compute-backend';
 import type { DesignEnv } from '../env';
 import { runLayer2 } from '../program/run';
-import { solveFloorPlan, stubArchModel, stubLayoutIntent, stubRenderResult } from './steps';
+import { layoutIntent, solveFloorPlan, stubArchModel, stubRenderResult } from './steps';
+import { spaceLabels } from '../layout/labels';
+import { siteFaces } from '../layout/site-context';
+import { siteContextTable } from '../layout/site-context-data';
+import { roomVocabulary } from '../kb/vocabulary-data';
+import { roomGroups } from '../kb/vocabulary';
 
 export interface DesignPipelineParams {
   tenantId: string;
@@ -113,15 +118,25 @@ export class DesignPipeline extends WorkflowEntrypoint<DesignEnv, DesignPipeline
 
     const intent = await guard(step, 'layer3a_intent', runs('layer3a_intent'), async () => {
       const head = await repo.head(p.projectId, p.discipline, 'space_program');
-      if (!head) throw new NonRetryableError('Chưa có chương trình không gian.');
-      const result = stubLayoutIntent(head.payload as never, programId);
+      const briefForIntent = await repo.head(p.projectId, p.discipline, 'design_brief');
+      if (!head || !briefForIntent) {
+        throw new NonRetryableError('Chưa có chương trình không gian.');
+      }
+      // Mặt thoáng quyết định CẤU TRÚC cây, không chỉ quyết định lúc kiểm: thửa bị bịt mặt
+      // sau thì dải trong cùng phải có giếng trời ngay từ lúc sinh ý đồ, chứ không phải để
+      // bộ giải báo vô nghiệm rồi mới biết.
+      const faces = siteFaces(
+        (briefForIntent.payload as DesignBrief).site as never,
+        siteContextTable(),
+      );
+      const result = layoutIntent(head.payload as never, programId, { openFaces: faces.open });
       return repo.write({
         scope,
         kind: 'layout_intent',
         payload: result.payload,
         inputs: [programId],
         step: 'layer3a_intent',
-        params: { stub: result.stub },
+        params: { stub: result.stub, variant: result.payload.variant_id },
       });
     });
     const intentId = intent?.id ?? (await requireHead(repo, scope, 'layout_intent'));
@@ -137,13 +152,22 @@ export class DesignPipeline extends WorkflowEntrypoint<DesignEnv, DesignPipeline
       // Gửi phần `site` NGUYÊN VĂN: `solveFloorPlan` tự quy về ô chữ nhật xây được. Quy đổi
       // ở đây thì bước này có một bản quy đổi riêng, và Container nhận một mảnh đất khác
       // mảnh đất Lớp 2 đã soạn chương trình lên.
+      const briefSite = (briefHead.payload as DesignBrief).site;
+      const faces = siteFaces(briefSite as never, siteContextTable());
+      const vi: Record<string, string> = {};
+      for (const type of roomVocabulary().vocabulary.types) vi[type.code] = type.vi;
+
       const solved = await solveFloorPlan(compute, {
         intent: intentHead.payload as never,
         intentRef: intentId,
         program: programHead.payload as never,
-        site: (briefHead.payload as DesignBrief).site,
+        site: briefSite,
         locality: p.locality,
         timeBudgetS: p.timeBudgetS,
+        openFaces: faces.open,
+        accessFaces: faces.access,
+        labels: spaceLabels(programHead.payload as never, vi),
+        groups: roomGroups(roomVocabulary().vocabulary),
       });
 
       // Vô nghiệm KHÔNG phải lỗi: `InfeasibilityReport` là một artifact hạng nhất, quan trọng

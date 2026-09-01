@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nvg.vn/contracts/site-boundary-extraction.schema.json",
+  "title": "SiteBoundaryExtraction",
+  "description": "Gemini đọc ảnh trích lục/sổ đỏ ra CẤU TRÚC — không tự tính toán hình học (nguyên tắc bất biến 2, CLAUDE.md 8.2: mô hình ngôn ngữ không sinh toạ độ hay kích thước bằng suy luận, chỉ sinh cấu trúc/chép chữ số đã in). Hai nguồn có thể có trên cùng một ảnh: `edges` (đọc số ghi trên hình vẽ sơ đồ, có thể ước lượng) và `vertex_coordinates` (chép nguyên văn một bảng toạ độ in sẵn, nếu ảnh có — chính xác hơn hẳn vì không cần suy luận gì). Lớp gọi ưu tiên tuyệt đối `vertex_coordinates` khi có ≥3 điểm; ngược lại dùng `polygonFromEdges` (@nvg/shared/design) đi bộ theo `edges`. Cả hai đều dựng `DesignBrief.site.boundary_m`. Không phải artifact bất biến: kết quả chỉ là dữ liệu NHÁP điền vào biểu mẫu Đầu bài, người dùng xem lại/sửa/lưu như mọi trường khác.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "edges", "closed_shape_confidence"],
+  "properties": {
+    "schema_version": { "$ref": "#/$defs/semver" },
+    "frontage_edge_index": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "Cạnh giáp đường/lộ giới, do mô hình nhận diện qua chữ ghi trên ảnh (vd. \"lộ giới\", \"đường đi chung\"). `null` nếu ảnh không ghi rõ — lớp gọi mặc định cạnh 0."
+    },
+    "edges": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 24,
+      "items": { "$ref": "#/$defs/edge" },
+      "description": "Đánh số liên tục theo MỘT chiều duy nhất quanh ranh giới, bắt đầu từ cạnh giáp đường khi xác định được. Cạnh `i` nối đỉnh `i` tới đỉnh `i+1`. Vẫn phải điền đủ ngay cả khi `vertex_coordinates` đã có — lớp gọi chỉ dùng phần `boundary_label`/`length_source` của mảng này làm tham khảo khi đã có toạ độ, không dùng để dựng hình trong trường hợp đó."
+    },
+    "vertex_coordinates": {
+      "type": "array",
+      "maxItems": 24,
+      "items": { "$ref": "#/$defs/vertex_coordinate" },
+      "description": "Toạ độ TỪNG ĐỈNH chép NGUYÊN VĂN từ bảng số liệu in trên ảnh (ví dụ \"BẢNG KÊ TOẠ ĐỘ\", \"BẢNG KÊ GÓC THỬA\" — cột X/Y hoặc tương đương) khi ảnh CÓ bảng này. Đây là việc ĐỌC CHỮ SỐ đã in, không phải tính toán hay ước lượng — không suy ra chiều dài/góc, không làm tròn, không đổi đơn vị. Để RỖNG khi ảnh không có bảng toạ độ (chỉ có hình vẽ sơ đồ). Khi có ≥3 điểm, lớp gọi dùng THẲNG mảng này để dựng ranh giới — chính xác tuyệt đối, bỏ qua toàn bộ phần suy góc/chia đều của `edges`."
+    },
+    "closed_shape_confidence": {
+      "enum": ["high", "medium", "low"],
+      "description": "Đánh giá tổng thể của mô hình về việc danh sách cạnh có khép kín thành một hình hay không. Chỉ để cảnh báo — lớp gọi luôn tự tính độ khép kín thật bằng công thức (`polygonFromEdges`), không rẽ nhánh theo trường này."
+    },
+    "warnings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/warning" },
+      "description": "Cảnh báo mức tài liệu — ảnh mờ, thiếu góc, chữ viết tay khó đọc… Cùng hình dạng `{code, detail}` với `CadExtraction.warnings`."
+    },
+    "notes": {
+      "type": ["string", "null"],
+      "description": "Ghi chú tự do của mô hình khi có điều đáng nói nhưng không thuộc field nào ở trên — ví dụ ảnh có hai thửa, chỉ đọc thửa được khoanh."
+    }
+  },
+  "$defs": {
+    "semver": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["index", "length_m", "length_source", "turn_deg", "turn_source", "confidence"],
+      "properties": {
+        "index": { "type": "integer", "minimum": 0, "maximum": 23 },
+        "label_raw": {
+          "type": ["string", "null"],
+          "description": "Chữ/số NGUYÊN VĂN ghi trên ảnh cho cạnh này, ví dụ \"12.45\" hoặc \"12,45m\" — KHÔNG quy chuẩn hoá (cùng lý lẽ `layers_unmapped`, CLAUDE.md 8.7: quy ước đọc là dữ liệu người xác nhận cần thấy nguyên văn, không phải việc của bước trích xuất)."
+        },
+        "length_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 500,
+          "description": "Chiều dài cạnh, quy về mét."
+        },
+        "length_source": {
+          "enum": ["labeled", "scaled", "estimated"],
+          "description": "labeled: đọc thẳng số ghi trên ảnh. scaled: suy từ thước tỷ lệ vẽ trên ảnh. estimated: không có căn cứ số, mô hình ước lượng tỷ lệ so với các cạnh khác."
+        },
+        "turn_deg": {
+          "type": ["number", "null"],
+          "minimum": -180,
+          "maximum": 180,
+          "description": "Góc quay NGOÀI sang cạnh kế tiếp (dương = quay trái/ngược chiều kim đồng hồ). `null` khi ảnh không đủ căn cứ để đọc — lớp gọi (`polygonFromEdges`) tự chia đều phần góc còn thiếu, KHÔNG suy đoán ở đây."
+        },
+        "turn_source": {
+          "enum": ["labeled", "right_angle_assumed", "estimated", "unknown"],
+          "description": "labeled: có số đo góc ghi trên ảnh. right_angle_assumed: ảnh vẽ như góc vuông, không ghi số. estimated: mô hình ước lượng từ hình vẽ tay không theo tỷ lệ. unknown: không có căn cứ, khớp với `turn_deg: null`."
+        },
+        "boundary_label": {
+          "type": ["string", "null"],
+          "description": "Ghi chú giáp ranh nguyên văn trên ảnh cho cạnh này, ví dụ \"giáp hẻm 2m\", \"giáp đất ông Nguyễn Văn A\"."
+        },
+        "confidence": {
+          "enum": ["high", "medium", "low"],
+          "description": "Độ tin cậy của RIÊNG cạnh này — khác `closed_shape_confidence` (đánh giá cả hình). Giao diện gắn cảnh báo lên đúng đỉnh có cạnh `confidence: low`."
+        }
+      }
+    },
+    "warning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "detail"],
+      "properties": {
+        "code": { "type": "string" },
+        "detail": { "type": "string" }
+      }
+    },
+    "vertex_coordinate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["index", "x", "y"],
+      "properties": {
+        "index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 23,
+          "description": "Số hiệu góc thửa đúng như ghi trong bảng (giữ nguyên thứ tự bảng, không tự sắp xếp lại — đây chính là chiều đi quanh ranh giới)."
+        },
+        "label_raw": {
+          "type": ["string", "null"],
+          "description": "Số hiệu góc thửa NGUYÊN VĂN ghi trong bảng, ví dụ \"1\", \"2\", \"10\" — chỉ để đối chiếu khi người dùng xem lại."
+        },
+        "x": {
+          "type": "number",
+          "description": "Cột X (hoặc tương đương) trong bảng, chép đúng số đã in — không làm tròn, không quy đổi đơn vị, không trừ đi giá trị nào."
+        },
+        "y": {
+          "type": "number",
+          "description": "Cột Y (hoặc tương đương) trong bảng, chép đúng số đã in — không làm tròn, không quy đổi đơn vị, không trừ đi giá trị nào."
+        }
+      }
+    }
+  }
+}

@@ -11,12 +11,13 @@
  * `cloudflare:workers` — chỉ tồn tại trong runtime Workers, kiểm thử bằng Node không nạp
  * được. Ranh giới này giữ cho phần nghiệp vụ kiểm thử được mà không cần dựng cả Worker.
  *
- * ⚠️ BA trong sáu bước còn trả về STUB — dữ liệu đúng hợp đồng nhưng không phải kết quả
+ * ⚠️ HAI trong sáu bước còn trả về STUB — dữ liệu đúng hợp đồng nhưng không phải kết quả
  * thật. Mỗi stub tự khai `stub: true` trong kết quả bước để không có cách nào nhầm nó với
  * kết quả thật ở lớp trên.
  *
- * Lớp 2 KHÔNG còn ở đây: bản thật nằm ở `../program/engine.ts` vì nó cần rule pack, chuẩn
- * diện tích và thống kê thực nghiệm — quá nhiều đầu vào để nhét vừa chữ ký chung của tệp này.
+ * Lớp 2 và Lớp 3a KHÔNG còn ở đây: bản thật nằm ở `../program/engine.ts` và
+ * `../layout/intent.ts` vì chúng cần rule pack, chuẩn diện tích và bảng hiện trạng bốn phía —
+ * quá nhiều đầu vào để nhét vừa chữ ký chung của tệp này.
  */
 
 import {
@@ -30,6 +31,8 @@ import {
 } from '@nvg/shared/design';
 import type { ComputeBackend } from '../compute-backend';
 import { parseArtifact } from '../contracts';
+import { buildLayoutIntent, type LayoutVariant } from '../layout/intent';
+import type { Face } from '../layout/site-context';
 
 const SCHEMA_VERSION = '1.0.0';
 
@@ -42,58 +45,28 @@ export interface StepResult<T> {
 /**
  * Layer 3a — ý đồ bố cục.
  *
- * STUB: bản thật gọi mô hình ngôn ngữ sinh cây chia không gian (Mốc 5). Bản này dựng một cây
- * một lát cắt cho mỗi tầng — hợp lệ về cấu trúc, nghèo nàn về kiến trúc, và đó là điều cần
- * thiết: một stub trông "đẹp" sẽ có người tưởng lớp này đã xong.
+ * Bản THẬT nằm ở `../layout/intent.ts` (bộ sinh tất định theo khung nhà ống). Hàm này chỉ
+ * gói nó lại cho pipeline và kiểm hợp đồng ở đầu ra.
  *
- * Chú ý: kể cả stub cũng KHÔNG sinh toạ độ hay kích thước — nguyên tắc bất biến 2
- * (CLAUDE.md 8.2) áp dụng cho mọi thứ đứng ở vị trí của mô hình ngôn ngữ.
+ * Nó KHÔNG sinh toạ độ hay kích thước — nguyên tắc bất biến 2 (CLAUDE.md 8.2) áp dụng cho mọi
+ * thứ đứng ở vị trí của Lớp 3a, kể cả khi đó là mã nguồn thay vì mô hình ngôn ngữ.
  */
-export function stubLayoutIntent(
+export function layoutIntent(
   program: SpaceProgram,
   programRef: string,
-  variantId = 'A',
+  options: { variant?: LayoutVariant; openFaces?: readonly Face[] } = {},
 ): StepResult<LayoutIntent> {
-  const levels = [...new Set(program.spaces.map((s) => s.floor))].sort((a, b) => a - b);
-
-  const floors = levels.map((level) => {
-    const onFloor = program.spaces.filter((s) => s.floor === level);
-    return {
-      level,
-      wings: [
-        {
-          wing_id: 'W1',
-          tree: buildBalancedTree(onFloor.map((s) => s.id)),
-        },
-      ],
-    };
-  });
-
   return {
-    stub: true,
-    payload: parseArtifact('layout_intent', {
-      schema_version: SCHEMA_VERSION,
-      program_ref: programRef,
-      variant_id: variantId,
-      variant_label: 'Khung xương — chưa phải phương án kiến trúc',
-      massing: { wings: [{ id: 'W1' }], wing_links: [] },
-      cores: [{ id: 'C1', wing: 'W1', band: 'left', position_hint: 'middle', contains: ['stair'] }],
-      floors,
-      rationale: 'Kết quả tạm của khung xương Mốc 1: cây chia đều, chưa có suy luận kiến trúc nào.',
-    }),
-  };
-}
-
-/** Cây nhị phân chia đôi danh sách phòng — cấu trúc hợp lệ, không mang ý đồ kiến trúc. */
-function buildBalancedTree(roomIds: string[]): unknown {
-  if (roomIds.length === 0) return { void: 'lightwell' };
-  if (roomIds.length === 1) return { room: roomIds[0] };
-  const mid = Math.ceil(roomIds.length / 2);
-  return {
-    split: 'H',
-    ratio_hint: 0.5,
-    a: buildBalancedTree(roomIds.slice(0, mid)),
-    b: buildBalancedTree(roomIds.slice(mid)),
+    stub: false,
+    payload: parseArtifact(
+      'layout_intent',
+      buildLayoutIntent({
+        program,
+        programRef,
+        variant: options.variant,
+        openFaces: options.openFaces,
+      }),
+    ),
   };
 }
 
@@ -119,6 +92,18 @@ export async function solveFloorPlan(
     site: DesignBrief['site'];
     locality: string;
     timeBudgetS: number;
+    /**
+     * Mặt thoáng và mặt vào được của thửa, cùng nhãn tiếng Việt của từng không gian.
+     *
+     * Lớp gọi cấp, tệp này KHÔNG tự tra: cả hai đến từ tệp YAML dưới `kb/`, mà YAML chỉ nhúng
+     * được vào bản dựng Worker. Tệp này phải chạy được dưới Node thuần để kiểm thử.
+     * Thiếu thì Container dùng mặc định của nó và câu thông báo rơi về mã không gian.
+     */
+    openFaces?: readonly Face[];
+    accessFaces?: readonly Face[];
+    labels?: Record<string, string>;
+    /** Thành viên của từng nhóm mã phòng (`habitable`…) — xem `kb/room_vocabulary.yaml`. */
+    groups?: Record<string, string[]>;
   },
 ): Promise<
   | { status: 'ok'; payload: FloorPlan; solveTimeMs: number }
@@ -127,15 +112,28 @@ export async function solveFloorPlan(
   // Bộ giải CP-SAT chia hết MỘT hình chữ nhật — nó không có khái niệm "phần đất thừa".
   // Đưa vào kích thước thô của một thửa hình thang là bảo nó xếp phòng lên phần đất không
   // tồn tại: lời giải vẫn ra, vẫn hợp lệ theo mọi ràng buộc, và tràn qua ranh giới thửa.
-  const buildable = siteGeometry(args.site).buildable;
+  const geometry = siteGeometry(args.site);
+  const buildable = geometry.buildable;
 
   const response = await compute.solve({
     intent: args.intent,
     intent_ref: args.intentRef,
     program: args.program,
-    site: { width_m: buildable.widthM, depth_m: buildable.depthM },
+    site: {
+      width_m: buildable.widthM,
+      depth_m: buildable.depthM,
+      // Diện tích THẬT của thửa, không phải tích hai cạnh ô chữ nhật: mật độ xây dựng lấy nó
+      // làm mẫu số, và thửa hình thang có ô chữ nhật nhỏ hơn thửa.
+      area_m2: geometry.areaM2,
+      open_faces: args.openFaces ? [...args.openFaces] : undefined,
+      access_faces: args.accessFaces ? [...args.accessFaces] : undefined,
+      setback_required_m: args.site.setback_required_m,
+      max_density: args.site.max_density ?? null,
+    },
     rule_pack: { locality: args.locality },
     time_budget_s: args.timeBudgetS,
+    labels: args.labels,
+    groups: args.groups,
   });
 
   if (response.status === 'infeasible') {

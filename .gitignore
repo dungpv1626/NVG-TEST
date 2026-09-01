@@ -55,3 +55,8 @@ kb/samples/*
 
 # Ảnh đối chiếu do pipeline trích xuất sinh ra
 kb/out/
+
+# Python bytecode do container/pytest sinh ra khi chạy với thư mục nguồn được gắn vào.
+__pycache__/
+*.py[cod]
+.pytest_cache/

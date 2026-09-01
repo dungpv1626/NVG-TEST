@@ -236,7 +236,7 @@ export function checkBriefConsistency(
   }
 
   // --- Người ở và phòng ngủ nói ngược nhau ----------------------------------
-  const hasBedroom = spaces.some((s) => BEDROOM_CODES.includes(s));
+  const hasBedroom = spaces.some((s) => BEDROOM_CODES.includes(s.type));
 
   if (people > 0 && spaces.length > 0 && !hasBedroom) {
     found.push({
@@ -260,16 +260,18 @@ export function checkBriefConsistency(
   // Nhu cầu riêng của một nhóm thành viên mà danh sách không gian bắt buộc không có.
   //
   // ⚠️ Chỗ này TỪNG là phép so "số người trên số phòng ngủ", và nó sai về bản chất:
-  // `required_spaces` là một TẬP HỢP (`uniqueItems`), không mang số lượng, nên số loại phòng
-  // ngủ tối đa luôn là hai. Mọi gia đình trên bốn người đều dính cảnh báo — tức là gần như
-  // mọi đầu bài biệt thự. Một cảnh báo luôn nổ là một cảnh báo bị bỏ qua, kể cả lúc nó đúng.
+  // `required_spaces` là một TẬP MÃ KHÔNG GIAN — mỗi loại xuất hiện đúng một lần (`engine.ts`'s
+  // `addSingle` tự dedup), không mang số lượng hay diện tích, nên số loại phòng ngủ tối đa
+  // luôn là hai (`bedroom`/`master_bedroom`), kể cả khi có ghim tầng. Mọi gia đình trên bốn
+  // người đều dính cảnh báo — tức là gần như mọi đầu bài biệt thự. Một cảnh báo luôn nổ là
+  // một cảnh báo bị bỏ qua, kể cả lúc nó đúng.
   //
   // Phép kiểm dưới đây trả lời được bằng đúng dữ liệu đang có, và không cần ngưỡng nào.
   const missingNeeds = [
     ...new Set(
       (draft.family ?? [])
         .flatMap((member) => member.needs ?? [])
-        .filter((need) => !spaces.includes(need)),
+        .filter((need) => !spaces.some((s) => s.type === need)),
     ),
   ];
   if (spaces.length > 0 && missingNeeds.length > 0) {
@@ -290,6 +292,23 @@ export function checkBriefConsistency(
       message:
         'Công trình một tầng nhưng có thành viên khai ưu tiên tầng trên cùng. Bỏ ưu tiên đó hoặc tăng số tầng.',
       paths: ['floors', 'family'],
+    });
+  }
+
+  // --- Ghim tầng không tồn tại -----------------------------------------------
+  // Cùng loại lỗi với "Ưu tiên tầng không tồn tại" ở trên: hạ số tầng SAU khi đã ghim một
+  // không gian vào một tầng cụ thể. Engine (`collectRequests`) tự bỏ ghim và cảnh báo khi gặp
+  // trường hợp này nên không bao giờ vỡ chương trình — nhưng người nhập nên thấy ngay ở đây,
+  // sớm hơn, thay vì phải mở tab Chương trình không gian mới biết.
+  const invalidPins = spaces.filter(
+    (s) => typeof s.floor === 'number' && (s.floor < 1 || s.floor > (draft.floors ?? 1)),
+  );
+  if (invalidPins.length > 0) {
+    found.push({
+      code: 'ghim_tang_khong_ton_tai',
+      severity: 'canh_bao',
+      message: `${invalidPins.length} không gian đang ghim vào tầng không tồn tại trong công trình. Sửa lại tầng ghim hoặc tăng số tầng.`,
+      paths: ['floors', 'required_spaces'],
     });
   }
 

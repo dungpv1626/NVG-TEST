@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev --config wrangler.jsonc",
+    "dev": "wrangler dev --config wrangler.jsonc --port 8788",
     "typecheck": "tsc -b --pretty",
     "deploy": "wrangler deploy --config wrangler.jsonc"
   },

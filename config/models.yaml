@@ -89,6 +89,25 @@ routes:
     enabled: true
     purpose: Chuẩn hoá nhãn phòng trích từ bản vẽ cũ.
 
+  # Đọc ảnh trích lục/sổ đỏ thành danh sách CẠNH có cấu trúc (chiều dài, góc, độ tin cậy) để
+  # dựng site.boundary_m — KHÔNG sinh toạ độ, polygonFromEdges (@nvg/shared/design) mới là chỗ
+  # đi bộ theo cấu trúc này ra toạ độ (nguyên tắc bất biến 2, CLAUDE.md 8.2).
+  #
+  # ⚠️ Ảnh trích lục/sổ đỏ của một dự án THẬT luôn là data_class 2 ("mặt bằng kích thước
+  # thật") — Worker (`workers/src/design/site/extract-boundary.ts`) khai dataClass=2 CỨNG cho
+  # MỌI lời gọi, không có đường khai 3. Đúng ra max_data_class phải là 3 (chặn hoàn toàn) theo
+  # quyết định T8 (CLAUDE.md 8.5), cho tới khi có cam kết bằng văn bản của nhà cung cấp.
+  #
+  # ⚠️ TẠM THỜI hạ xuống 2 (31/08/2026, Haan xác nhận trực tiếp) — CHỈ để tự thử bằng ảnh sổ đỏ
+  # LẤY TRÊN MẠNG (không phải dữ liệu khách hàng thật) trong lúc chạy thử cục bộ. Đưa số này về
+  # 3 trước khi có ảnh thật của khách chạm vào route này, hoặc trước khi triển khai production.
+  site_boundary_extract:
+    provider: gemini
+    model: gemini-2.5-flash
+    max_data_class: 2
+    enabled: true
+    purpose: Đọc ảnh trích lục/sổ đỏ thành danh sách cạnh có cấu trúc để dựng ranh giới thửa đất.
+
   # Nhúng phần chú giải của kiến trúc sư để truy hồi ba tầng (06-knowledge-base 6.3).
   #
   # `output_dimensions: 1536` là lựa chọn có lý do, không phải con số tuỳ tiện: mặc định của

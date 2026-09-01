@@ -68,6 +68,26 @@ roles:
     - 'A-GLAZ*'
     - '*CUA*SO*'
 
+# ── Tên lớp khi HỆ THỐNG XUẤT bản vẽ ───────────────────────────────────────────────────
+# Bảng `roles` ở trên là để ĐỌC: một vai trò khớp nhiều mẫu, vì mỗi thời kỳ NVG đặt tên một
+# kiểu. Xuất thì phải chọn đúng MỘT tên, nên nó khai riêng ở đây.
+#
+# Mọi tên dưới đây được chọn sao cho khớp lại chính các mẫu ở trên: bản vẽ hệ thống xuất ra,
+# đọc ngược vào lại đúng vai trò cũ. Đổi một tên ở đây mà quên đối chiếu với `roles`/`ignore`
+# là làm đứt vòng đó — có kiểm thử canh.
+#
+# `color` là mã màu ACI của AutoCAD.
+export:
+  room_boundary: { layer: 'KT-PHONG', color: 8 }
+  room_label: { layer: 'KT-TEXT', color: 7 }
+  wall: { layer: 'KT-TUONG', color: 7 }
+  door: { layer: 'KT-CUA-DI', color: 3 }
+  window: { layer: 'KT-CUA-SO', color: 4 }
+  void: { layer: 'KT-THONG-TANG', color: 6 }
+  site_boundary: { layer: 'C-RANH-DAT', color: 2 }
+  grid: { layer: 'KT-TRUC', color: 1 }
+  title_block: { layer: 'KT-KHUNG-TEN', color: 7 }
+
 # Lớp cố tình bỏ qua: có mặt trong mọi bản vẽ nhưng không mang thông tin hình học phòng.
 # Khai tường minh để chúng không lọt vào `layers_unmapped` và làm nhiễu danh sách cần bổ sung.
 ignore:

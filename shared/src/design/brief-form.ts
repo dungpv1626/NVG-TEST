@@ -77,6 +77,10 @@ const conditionSchema: z.ZodType<BriefCondition> = z.lazy(() =>
  * `polygon` là bảng toạ độ đỉnh của ranh giới thửa đất — dạng duy nhất mô tả được thửa tứ
  * giác hay ngũ giác không đều mà không mập mờ. Chiều dài các cạnh thì không: cùng bộ độ dài
  * cạnh ứng với vô số hình khác nhau.
+ *
+ * `space_floor` giống `multi` (chip bật/tắt chọn không gian) CỘNG một tầng ghim tuỳ chọn cho
+ * từng mục đã chọn — dùng cho `required_spaces`, nơi giá trị là mảng `{type, floor}` chứ
+ * không phải mảng chuỗi thuần.
  */
 export const BRIEF_CONTROLS = [
   'text',
@@ -86,6 +90,7 @@ export const BRIEF_CONTROLS = [
   'choice',
   'select',
   'multi',
+  'space_floor',
   'tristate',
   'family',
   'sides',

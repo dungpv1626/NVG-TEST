@@ -110,7 +110,21 @@ class TestContracts:
                 {
                     "schema_version": "1.0.0",
                     "intent_ref": "sha256:" + "b" * 64,
-                    "site": {"width_m": 5.0, "depth_m": 18.0},
+                    "site": {
+            "width_m": 5.0,
+            "depth_m": 18.0,
+            "area_m2": 90.0,
+            "open_faces": ["front", "back"],
+            "access_faces": ["front"],
+        },
+        "labels": {
+            "garage_1": "Gara",
+            "landing_1": "Thang bộ tầng 1",
+            "living_1": "Phòng khách",
+            "bedroom_2": "Phòng ngủ 1",
+            "landing_2": "Thang bộ tầng 2",
+            "bedroom_3": "Phòng ngủ 2",
+        },
                     "levels": [{"level": 1, "rooms": []}],
                     "constraint_report": {"status": "pass"},
                 },
@@ -132,15 +146,15 @@ def _program(**overrides: object) -> dict:
             "type": "garage",
             "floor": 1,
             "min_area_m2": 14.0,
-            "max_area_m2": 22.0,
+            "max_area_m2": 60.0,
             "needs_daylight": False,
         },
         {
             "id": "landing_1",
-            "type": "circulation",
+            "type": "stair",
             "floor": 1,
             "min_area_m2": 8.0,
-            "max_area_m2": 22.0,
+            "max_area_m2": 60.0,
             "needs_daylight": False,
         },
         {
@@ -148,7 +162,7 @@ def _program(**overrides: object) -> dict:
             "type": "living",
             "floor": 1,
             "min_area_m2": 16.0,
-            "max_area_m2": 34.0,
+            "max_area_m2": 60.0,
             "needs_daylight": True,
         },
         {
@@ -156,15 +170,15 @@ def _program(**overrides: object) -> dict:
             "type": "bedroom",
             "floor": 2,
             "min_area_m2": 14.0,
-            "max_area_m2": 22.0,
+            "max_area_m2": 60.0,
             "needs_daylight": True,
         },
         {
             "id": "landing_2",
-            "type": "circulation",
+            "type": "stair",
             "floor": 2,
             "min_area_m2": 8.0,
-            "max_area_m2": 22.0,
+            "max_area_m2": 60.0,
             "needs_daylight": False,
         },
         {
@@ -172,7 +186,7 @@ def _program(**overrides: object) -> dict:
             "type": "bedroom",
             "floor": 2,
             "min_area_m2": 16.0,
-            "max_area_m2": 34.0,
+            "max_area_m2": 60.0,
             "needs_daylight": True,
         },
     ]
@@ -213,7 +227,21 @@ def _payload(**overrides: object) -> dict:
         "intent": _intent(),
         "intent_ref": REF,
         "program": _program(),
-        "site": {"width_m": 5.0, "depth_m": 18.0},
+        "site": {
+            "width_m": 5.0,
+            "depth_m": 18.0,
+            "area_m2": 90.0,
+            "open_faces": ["front", "back"],
+            "access_faces": ["front"],
+        },
+        "labels": {
+            "garage_1": "Gara",
+            "landing_1": "Thang bộ tầng 1",
+            "living_1": "Phòng khách",
+            "bedroom_2": "Phòng ngủ 1",
+            "landing_2": "Thang bộ tầng 2",
+            "bedroom_3": "Phòng ngủ 2",
+        },
         "rule_pack": {"locality": "thai_binh"},
         "time_budget_s": 30,
         **overrides,
@@ -311,3 +339,59 @@ class TestSolve:
         # Tập mâu thuẫn phải đủ nhỏ để đọc: OR-Tools trả tập ĐỦ (~40 mục trên đầu bài thật),
         # bộ giải thu hẹp lại bằng bộ lọc xoá dần trước khi tới người đọc (vướng mắc V-4).
         assert 1 <= len(body["report"]["conflict_set"]) <= 6
+
+
+class TestExportDxf:
+    """Xuất bản vẽ: MỘT CHIỀU, và tệp ra phải mở được."""
+
+    def test_exports_the_solved_plan(self) -> None:
+        plan = client.post("/solve", json=_payload()).json()["floor_plan"]
+        response = client.post(
+            "/export/dxf",
+            json={
+                "floor_plan": plan,
+                "level": 1,
+                "title_block": {
+                    "project_code": "NVO-TK-2026-0001",
+                    "project_name": "[TEST] Nhà anh A",
+                    "discipline": "Kiến trúc",
+                    "sheet": "Mặt bằng",
+                    "version": "a1b2c3d4",
+                    "date": "30/08/2026",
+                },
+            },
+        )
+        assert response.status_code == 200, response.text
+        assert response.headers["content-type"].startswith("application/dxf")
+        body = response.content.decode("utf-8")
+        assert body.startswith("  0\nSECTION"), "tệp phải là DXF hợp lệ ngay từ dòng đầu"
+        assert "NVO-TK-2026-0001" in body
+
+    def test_a_level_that_does_not_exist_is_a_data_error_not_a_crash(self) -> None:
+        plan = client.post("/solve", json=_payload()).json()["floor_plan"]
+        response = client.post(
+            "/export/dxf",
+            json={
+                "floor_plan": plan,
+                "level": 9,
+                "title_block": {
+                    "project_code": "X",
+                    "project_name": "X",
+                    "discipline": "Kiến trúc",
+                    "sheet": "Mặt bằng",
+                    "version": "v",
+                    "date": "30/08/2026",
+                },
+            },
+        )
+        assert response.status_code == 422
+        assert response.json()["retryable"] is False
+
+    def test_the_solved_plan_carries_walls_and_openings(self) -> None:
+        """Lớp 3c: mặt bằng không còn là danh sách ô chữ nhật trần."""
+        plan = client.post("/solve", json=_payload()).json()["floor_plan"]
+        level = plan["levels"][0]
+        assert level["walls"], "mặt bằng phải có tường"
+        wall_ids = {w["id"] for w in level["walls"]}
+        for opening in level["openings"]:
+            assert opening["wall"] in wall_ids, "lỗ mở trỏ tới bức tường không tồn tại"

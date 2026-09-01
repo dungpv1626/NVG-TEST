@@ -1,83 +1,79 @@
 """Chuyển đổi giữa hợp đồng dữ liệu và mô hình nội bộ của bộ giải.
 
 Hợp đồng nói bằng ngôn ngữ kiến trúc (cây chia không gian, mét, số thực); bộ giải nói bằng
-ngôn ngữ tối ưu hoá (vùng front/mid/rear, milimét, số nguyên). Toàn bộ việc dịch nằm ở đây
-để `solver/` không phải biết gì về JSON, và để chỗ dịch có thể thay đổi mà không đụng bộ giải.
+ngôn ngữ tối ưu hoá (module nguyên, biến, ràng buộc). Toàn bộ việc dịch nằm ở đây để `solver/`
+không phải biết gì về JSON, và để chỗ dịch có thể thay đổi mà không đụng bộ giải.
 
-⚠️ GIỚI HẠN ĐÃ BIẾT (vướng mắc V-6, ghi trong TIEN_DO_THIET_KE.html)
+Từ Mốc 5, cây bố cục được đọc NGUYÊN VẸN — cả lát cắt ngang lẫn lát cắt dọc, sâu tuỳ ý, kể cả
+lá `void`. Bản Mốc 0.2 trước đó ép mọi tầng vào ba dải theo chiều sâu và vì vậy làm phẳng mất
+mọi lát cắt dọc (vướng mắc V-6). Giới hạn đó đã hết.
 
-Mô hình hiện tại của bộ giải chia mỗi tầng thành BA vùng theo chiều sâu: mặt tiền · dải lõi ·
-phía sau. Vì vậy hàm `_zones_from_tree` dưới đây chỉ đọc được các lát cắt NGANG (`split: "H"`)
-của cây. Lát cắt DỌC (`split: "V"`) — hai phòng cạnh nhau theo chiều rộng — chưa biểu diễn
-được, và bị gộp chung vào một vùng.
-
-Với nhà phố 5m thì gần đúng (bề rộng đó hiếm khi chia dọc ngoài dải lõi). Với biệt thự thì
-KHÔNG dùng được. Mở rộng thuộc Mốc 5, cùng lúc với việc mã hoá các vị từ còn lại.
+Còn lại một giới hạn thật: **một cánh nhà**. `massing.wings` nhiều hơn một phần tử là biệt thự
+hình L/U/T, thuộc Mốc 7 — ở đây báo lỗi thay vì lặng lẽ bỏ qua các cánh còn lại.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
+from design_compute.geometry import Cell, build_walls_and_openings, load_construction_norms
 from design_compute.rules.loader import default_rules_root, load_for_locality
 from design_compute.rules.messages import MessageCatalog
-from design_compute.solver.model import RoomSpec, SolveRequest, SolveResult, Zone
+from design_compute.solver.model import (
+    CIRCULATION_TYPES,
+    AdjacencyRequest,
+    FloorLayout,
+    RoomSpec,
+    SolveRequest,
+    SolveResult,
+    Violation,
+)
+from design_compute.solver.tree import leaves as tree_leaves
+
+_VALID_SIDES = ("front", "back", "left", "right")
 
 
-def _flatten_rooms(node: dict[str, Any]) -> list[str]:
-    """Mã phòng theo THỨ TỰ HÌNH HỌC từ mặt tiền vào sâu.
-
-    Với lát cắt ngang, nhánh `a` nằm phía mặt tiền và `b` nằm phía sau — đó là quy ước của
-    hợp đồng (gốc toạ độ ở góc trước-trái, `y` vào sâu). Nhờ vậy thứ tự duyệt cây chính là
-    thứ tự vào sâu, không cần toạ độ.
-    """
-    if "room" in node:
-        return [str(node["room"])]
-    if "void" in node:
-        return []
-    return _flatten_rooms(node["a"]) + _flatten_rooms(node["b"])
+def _single_wing(floor: dict[str, Any]) -> dict[str, Any]:
+    wings = floor.get("wings") or []
+    if len(wings) != 1:
+        raise ValueError(
+            f"Tầng {floor.get('level')} có {len(wings)} cánh nhà. Giai đoạn 1 chỉ giải nhà phố "
+            "một cánh; biệt thự nhiều cánh thuộc Mốc 7."
+        )
+    return wings[0]
 
 
-def _zones_from_tree(node: dict[str, Any]) -> dict[str, Zone]:
-    """Gán mỗi phòng của một tầng vào một trong ba vùng của bộ giải.
-
-    Phòng đầu tiên (sát mặt tiền) vào `front`, phòng cuối vào `rear`, còn lại vào `mid` —
-    dải giữa là nơi lõi thang đi qua ở mọi tầng.
-    """
-    rooms = _flatten_rooms(node)
-    if not rooms:
-        return {}
-    if len(rooms) == 1:
-        return {rooms[0]: "front"}
-    if len(rooms) == 2:
-        return {rooms[0]: "front", rooms[1]: "rear"}
-
-    zones: dict[str, Zone] = {rooms[0]: "front", rooms[-1]: "rear"}
-    for room_id in rooms[1:-1]:
-        zones[room_id] = "mid"
-    return zones
+def _sides(values: Any, fallback: tuple[str, ...]) -> tuple[str, ...]:
+    if not values:
+        return fallback
+    picked = tuple(str(v) for v in values if str(v) in _VALID_SIDES)
+    return picked or fallback
 
 
 def build_solve_request(
     *,
     intent: dict[str, Any],
     program: dict[str, Any],
-    site: dict[str, float],
+    site: dict[str, Any],
     locality: str,
     time_budget_s: float,
     building_type: str = "nha_pho",
+    labels: dict[str, str] | None = None,
+    groups: dict[str, list[str]] | None = None,
 ) -> SolveRequest:
     """Dựng đầu vào cho bộ giải từ `LayoutIntent` + `SpaceProgram` đã kiểm hợp đồng."""
-    zones: dict[str, Zone] = {}
+    layouts: list[FloorLayout] = []
+    placed_ids: set[str] = set()
     for floor in intent["floors"]:
-        for wing in floor["wings"]:
-            zones.update(_zones_from_tree(wing["tree"]))
+        tree = _single_wing(floor)["tree"]
+        layouts.append(FloorLayout(level=int(floor["level"]), tree=tree))
+        placed_ids.update(leaf.ref for leaf in tree_leaves(tree) if leaf.kind == "room")
 
+    labels = labels or {}
     rooms: list[RoomSpec] = []
     for space in program["spaces"]:
         space_id = space["id"]
-        zone = zones.get(space_id)
-        if zone is None:
+        if space_id not in placed_ids:
             # Phòng có trong chương trình nhưng không có trong cây là lỗi cấu trúc của
             # LayoutIntent (03-data-contracts 3.3, ràng buộc validate số 2). Bộ giải không
             # đoán bù — nó sẽ đặt phòng ở chỗ tuỳ ý và không ai biết là đã sai.
@@ -92,80 +88,204 @@ def build_solve_request(
                 id=space_id,
                 type=str(space["type"]),
                 floor=int(space["floor"]),
-                zone=zone,
                 target_area_m2=float(target) if target is not None else min_area,
                 min_area_m2=min_area,
                 max_area_m2=(
                     float(space["max_area_m2"]) if space.get("max_area_m2") is not None else None
                 ),
                 needs_daylight=bool(space.get("needs_daylight", False)),
+                label=labels.get(space_id),
             )
         )
 
+    adjacency = tuple(
+        AdjacencyRequest(
+            a=str(item["a"]),
+            b=str(item["b"]),
+            kind=str(item["kind"]),  # type: ignore[arg-type]
+            weight=float(item.get("weight", 1.0)),
+        )
+        for item in program.get("adjacency", [])
+    )
+
     floors = max((r.floor for r in rooms), default=1)
+
+    setbacks = site.get("setback_required_m") or {}
 
     return SolveRequest(
         site_width_m=float(site["width_m"]),
         site_depth_m=float(site["depth_m"]),
         floors=floors,
         rooms=tuple(rooms),
+        layouts=tuple(layouts),
         rule_pack=load_for_locality(default_rules_root(), locality),
         building_type=building_type,
+        site_area_m2=(float(site["area_m2"]) if site.get("area_m2") is not None else None),
+        open_faces=_sides(site.get("open_faces"), ("front", "back")),  # type: ignore[arg-type]
+        access_faces=_sides(site.get("access_faces"), ("front",)),  # type: ignore[arg-type]
+        adjacency=adjacency,
+        room_groups={name: tuple(members) for name, members in (groups or {}).items()},
+        setback_override_m={
+            side: float(setbacks[side]) for side in _VALID_SIDES if setbacks.get(side) is not None
+        },
+        max_density_override=(
+            float(site["max_density"]) if site.get("max_density") is not None else None
+        ),
         time_limit_s=float(time_budget_s),
     )
 
 
+def _render_violation(
+    violation: Violation, *, request: SolveRequest, messages: MessageCatalog
+) -> dict[str, Any]:
+    """Một vi phạm thành câu tiếng Việt đọc được, ghép từ mẫu câu chứ không từ mô hình ngôn ngữ."""
+    by_id = {room.id: room for room in request.rooms}
+
+    def name(space_id: str) -> str:
+        room = by_id.get(space_id)
+        return (room.label if room and room.label else None) or space_id
+
+    involved = list(violation.involved)
+    params: dict[str, Any] = {
+        "actual": violation.actual,
+        "required": violation.required,
+    }
+    if involved:
+        params["room"] = name(involved[0])
+        params["target"] = name(involved[0])
+        params["side"] = involved[0]
+        params["a"] = name(involved[0])
+    if len(involved) > 1:
+        params["b"] = name(involved[1])
+
+    return {
+        "rule_id": violation.rule_id,
+        "severity": violation.severity,
+        "message": messages.render(violation.rule_id, violation.predicate, **params),
+        "involved": involved,
+    }
+
+
 def floor_plan_from_result(
-    result: SolveResult, *, request: SolveRequest, intent_ref: str, site: dict[str, float]
+    result: SolveResult,
+    *,
+    request: SolveRequest,
+    intent_ref: str,
+    site: dict[str, Any],
+    messages: MessageCatalog,
 ) -> dict[str, Any]:
     """Dựng payload `FloorPlan` từ kết quả bộ giải.
 
     `rule_pack_version` là BẮT BUỘC trong hợp đồng: không có nó thì không tái lập được
     phương án cũ sau khi quy chuẩn thay đổi (03-data-contracts 3.4).
     """
-    # `requires_daylight` chưa được mã hoá vào mô hình (Mốc 5). Cho tới lúc đó, cờ này chỉ
-    # chép lại YÊU CẦU của chương trình không gian, không phải kết quả kiểm tra hình học —
-    # suy ra từ vị trí phòng lúc này là nói dối bằng dữ liệu trông có vẻ đã kiểm.
-    wants_daylight = {r.id: r.needs_daylight for r in request.rooms}
+    levels: dict[int, dict[str, list[dict[str, Any]]]] = {}
 
-    levels: dict[int, list[dict[str, Any]]] = {}
     for room in result.rooms:
-        levels.setdefault(room.floor, []).append(
+        entry = levels.setdefault(room.floor, {"rooms": [], "voids": []})
+        entry["rooms"].append(
             {
                 "id": room.id,
                 "type": room.type,
                 "wing": "W1",
                 "polygon": room.polygon,
                 "area_m2": round(room.area_m2, 3),
-                "has_daylight": wants_daylight.get(room.id, False),
+                # Không còn chép lại YÊU CẦU của chương trình không gian: từ Mốc 5 đây là kết
+                # quả ĐO trên hình học đã giải — phòng có tiếp giáp mặt thoáng hay giếng trời
+                # thật hay không.
+                "has_daylight": room.has_daylight,
             }
         )
 
-    # Lõi thang là biến DÙNG CHUNG giữa các tầng: MỘT đa giác cho mọi tầng, không phải mỗi
-    # tầng một bản sao. Bộ giải đã trả sẵn đúng hình đó, ở đây chỉ gắn mã.
+    for void in result.voids:
+        entry = levels.setdefault(void.floor, {"rooms": [], "voids": []})
+        entry["voids"].append({"id": void.id, "kind": void.kind, "polygon": void.polygon})
+
+    # ── Lớp 3c: đọc tường và lỗ mở ra từ các đa giác phòng ────────────────────────────
+    norms = load_construction_norms()
+    footprint = result.footprint_m or (0.0, 0.0, float(site["width_m"]), float(site["depth_m"]))
+    geometry: dict[int, tuple[list[Any], list[Any]]] = {}
+    for level in levels:
+        cells = [
+            Cell(r.id, r.type, r.x0_m, r.y0_m, r.x1_m, r.y1_m)
+            for r in result.rooms
+            if r.floor == level
+        ] + [
+            Cell(v.id, v.kind, v.x0_m, v.y0_m, v.x1_m, v.y1_m, is_void=True)
+            for v in result.voids
+            if v.floor == level
+        ]
+        walls, openings = build_walls_and_openings(
+            cells,
+            level=level,
+            footprint=footprint,
+            structural_x=result.structural_axes_x_m,
+            structural_y=result.structural_axes_y_m,
+            open_faces=request.open_faces,
+            access_faces=request.access_faces,
+            circulation_types=CIRCULATION_TYPES,
+            norms=norms,
+        )
+        geometry[level] = (
+            [
+                {
+                    "id": w.id,
+                    "a": list(w.a),
+                    "b": list(w.b),
+                    "thickness_m": w.thickness_m,
+                    "load_bearing": w.load_bearing,
+                }
+                for w in walls
+            ],
+            [
+                {
+                    "id": o.id,
+                    "wall": o.wall,
+                    "kind": o.kind,
+                    "offset_m": o.offset_m,
+                    "width_m": o.width_m,
+                    "height_m": o.height_m,
+                    "sill_m": o.sill_m,
+                }
+                for o in openings
+            ],
+        )
+
+    # Lõi thang là hình học DÙNG CHUNG giữa các tầng: MỘT đa giác cho mọi tầng, không phải mỗi
+    # tầng một bản sao. Bộ giải đã ràng buộc chúng trùng khít, ở đây chỉ gắn mã.
     cores: list[dict[str, Any]] = []
     if result.core:
         cores.append({"id": "C1", **result.core})
+
+    violations = [
+        _render_violation(v, request=request, messages=messages) for v in result.violations
+    ]
 
     return {
         "schema_version": "1.0.0",
         "intent_ref": intent_ref,
         "rule_pack_version": result.rule_pack_version,
-        "site": {"width_m": site["width_m"], "depth_m": site["depth_m"]},
+        "site": {"width_m": float(site["width_m"]), "depth_m": float(site["depth_m"])},
         "structural_grid": {
             "axes_x_m": result.structural_axes_x_m,
             "axes_y_m": result.structural_axes_y_m,
         },
         "levels": [
-            {"level": level, "rooms": rooms, "voids": [], "walls": [], "openings": []}
-            for level, rooms in sorted(levels.items())
+            {
+                "level": level,
+                "rooms": entry["rooms"],
+                "voids": entry["voids"],
+                "walls": geometry.get(level, ([], []))[0],
+                "openings": geometry.get(level, ([], []))[1],
+            }
+            for level, entry in sorted(levels.items())
         ],
         "cores": cores,
         "constraint_report": {
-            # `warning` của bộ giải nghĩa là "có nghiệm nhưng chưa chứng minh tối ưu, hoặc có
-            # vi phạm mức cảnh báo" — ánh xạ thẳng sang trạng thái cùng tên của hợp đồng.
+            # `warning` nghĩa là "có nghiệm nhưng chưa chứng minh tối ưu, hoặc có vi phạm mức
+            # cảnh báo" — ánh xạ thẳng sang trạng thái cùng tên của hợp đồng.
             "status": "pass" if result.status == "pass" else "warning",
-            "violations": result.violations,
+            "violations": violations,
         },
     }
 
@@ -196,20 +316,20 @@ def infeasibility_report_from_result(
     relaxations: list[dict[str, Any]] = []
     for entry in result.conflict_set:
         rule = by_id.get(entry.rule_id)
-        params: dict[str, Any] = {"target": _target_label(entry, rule)}
+        params: dict[str, Any] = {"target": _target_label(entry, rule, request)}
         if rule is not None:
             for key in _THRESHOLD_KEYS:
                 if key in rule.params:
                     params["required"] = rule.params[key]
                     break
-        parts.append(
-            messages.requirement(entry.rule_id, rule.predicate if rule else "", **params)
-        )
+        parts.append(messages.requirement(entry.rule_id, rule.predicate if rule else "", **params))
         if rule is not None and rule.auto_repair != "none":
             relaxations.append({"rule_id": rule.id, "action": rule.auto_repair})
 
     if parts:
-        constraint = f"khu đất {request.site_width_m:g}×{request.site_depth_m:g} m, {request.floors} tầng"
+        constraint = (
+            f"khu đất {request.site_width_m:g}×{request.site_depth_m:g} m, {request.floors} tầng"
+        )
         human = messages.combine(parts, constraint=constraint)
     else:
         human = (
@@ -227,10 +347,14 @@ def infeasibility_report_from_result(
     }
 
 
-def _target_label(entry: Any, rule: Any) -> str:
+def _target_label(entry: Any, rule: Any, request: SolveRequest) -> str:
     """Tên hiển thị của thứ bị ràng buộc: phòng cụ thể nếu có, không thì đối tượng của quy tắc."""
     if entry.involved:
-        return entry.involved[0]
+        first = entry.involved[0]
+        for room in request.rooms:
+            if room.id == first:
+                return room.label or first
+        return first
     if rule is not None:
         return str(rule.params.get("target", rule.id))
     return entry.rule_id

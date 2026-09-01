@@ -13,4 +13,5 @@ export * from './publish-request.generated';
 export * from './render-request.generated';
 export * from './render-result.generated';
 export * from './schedules.generated';
+export * from './site-boundary-extraction.generated';
 export * from './space-program.generated';

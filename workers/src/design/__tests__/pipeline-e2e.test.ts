@@ -21,12 +21,7 @@ import { ARTIFACT_ID_PATTERN, artifactId } from '@nvg/shared/design';
 import { ArtifactRepository, type ArtifactScope } from '../artifacts';
 import { HttpComputeBackend } from '../compute-backend';
 import type { DesignEnv } from '../env';
-import {
-  solveFloorPlan,
-  stubArchModel,
-  stubLayoutIntent,
-  stubRenderResult,
-} from '../workflows/steps';
+import { solveFloorPlan, stubArchModel, layoutIntent, stubRenderResult } from '../workflows/steps';
 import { buildSpaceProgram } from '../program/engine';
 import { testNorms, testRulePack } from './program-fixtures';
 
@@ -77,6 +72,11 @@ describeE2e('Pipeline khung xương — đầu bài tới ảnh phối cảnh', 
       actorId: null,
     };
 
+    // Đầu bài phải có thành phần gia đình, không chỉ kích thước lô.
+    //
+    // Không khai gia đình thì Lớp 2 không suy ra phòng ngủ nào, và ra một toà nhà ba tầng mà
+    // tầng hai tầng ba chỉ có khu vệ sinh. Bộ giải trả vô nghiệm cho thứ đó là ĐÚNG — nhưng
+    // đây là phép thử của pipeline, không phải phép thử của một đầu bài vô lý.
     brief = {
       schema_version: '1.0.0',
       project_id: project.data.id,
@@ -84,6 +84,10 @@ describeE2e('Pipeline khung xương — đầu bài tới ảnh phối cảnh', 
       locality: 'hung_yen',
       site: { width_m: 5, depth_m: 18 },
       floors: 3,
+      family: [
+        { role: 'vo_chong', count: 2 },
+        { role: 'con', count: 2 },
+      ],
     };
   });
 
@@ -106,7 +110,7 @@ describeE2e('Pipeline khung xương — đầu bài tới ảnh phối cảnh', 
       params: { stub: true },
     });
 
-    const intent = stubLayoutIntent(program.payload, programArtifact.id);
+    const intent = layoutIntent(program.payload, programArtifact.id);
     const intentArtifact = await repo.write({
       scope,
       kind: 'layout_intent',
@@ -213,7 +217,7 @@ describeE2e('Pipeline khung xương — đầu bài tới ảnh phối cảnh', 
       space.min_area_m2 = 60;
       space.max_area_m2 = 90;
     }
-    const intent = stubLayoutIntent(impossible, `sha256:${'a'.repeat(64)}`);
+    const intent = layoutIntent(impossible, `sha256:${'a'.repeat(64)}`);
 
     const solved = await solveFloorPlan(new HttpComputeBackend(computeUrl!), {
       intent: intent.payload,

@@ -54,6 +54,45 @@ export async function designApi<T>(path: string, body?: unknown): Promise<T> {
     );
   }
 
+  return parseResponse<T>(response);
+}
+
+/**
+ * Tải một tệp nhị phân lên — bước đọc ảnh trích lục/sổ đỏ là lời gọi ĐẦU TIÊN của `web/` gửi
+ * `multipart/form-data` thay vì JSON, nên tách khỏi `designApi` thay vì thêm tham số thứ ba
+ * cho một hàm vốn chỉ có hai hình dạng "đọc" và "ghi JSON".
+ *
+ * KHÔNG tự đặt `Content-Type`: trình duyệt phải tự sinh giá trị kèm `boundary` của chính
+ * `FormData`, đặt tay sẽ làm mất `boundary` và Worker không tách được từng phần.
+ */
+export async function designApiUpload<T>(path: string, form: FormData): Promise<T> {
+  if (!BASE) {
+    throw new DesignApiError(
+      'Chưa cấu hình địa chỉ dịch vụ thiết kế. Quản trị hệ thống bổ sung biến VITE_DESIGN_API_URL rồi phát hành lại ứng dụng.',
+    );
+  }
+
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new DesignApiError('Phiên đăng nhập đã hết hạn. Đăng nhập lại để tiếp tục.');
+
+  let response: Response;
+  try {
+    response = await fetch(`${BASE}${path}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+  } catch {
+    throw new DesignApiError(
+      'Không kết nối được dịch vụ thiết kế. Kiểm tra đường truyền rồi thử lại.',
+    );
+  }
+
+  return parseResponse<T>(response);
+}
+
+async function parseResponse<T>(response: Response): Promise<T> {
   const payload = (await response.json().catch(() => ({}))) as { error?: string };
   if (!response.ok) {
     // Không hiện mã HTTP cho người dùng (CGD 5.5) — Worker đã trả sẵn câu tiếng Việt.

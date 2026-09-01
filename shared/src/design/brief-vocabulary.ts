@@ -21,7 +21,7 @@ export type Orientation = (typeof ORIENTATIONS)[number];
 
 export const ORIENTATION_LABEL: Readonly<Record<Orientation, string>> = {
   B: 'Bắc',
-  BD: 'Bắc — Đông',
+  BD: 'Đông Bắc',
   D: 'Đông',
   DN: 'Đông Nam',
   N: 'Nam',

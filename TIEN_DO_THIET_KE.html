@@ -254,7 +254,7 @@
       <header>
         <h1>Module Thiết kế AI — tiến độ</h1>
         <p class="muted-t">
-          TK-10 → TK-17 · AI Preliminary Design Engine. Cập nhật <b>29/08/2026</b>.
+          TK-10 → TK-17 · AI Preliminary Design Engine. Cập nhật <b>30/08/2026</b>.
         </p>
         <p class="xs muted-t">
           Tài liệu đặc tả: <code>doc/design/</code> · Kế hoạch: <code>BUILD_PLAN.md</code> Phase 5 ·
@@ -266,24 +266,34 @@
       <h2>1. Trạng thái tổng quan</h2>
       <div class="card">
         <p>
-          <b>Mốc 1 đã đạt. Mốc 0.1 đã dựng xong phần mã, còn chờ hồ sơ thật.</b> Pipeline sáu bước
-          chạy thông từ đầu bài tới ảnh phối cảnh, đi qua CẢ HAI runtime thật — Worker ghi artifact
-          vào Supabase Storage, Container giải ràng buộc bằng CP-SAT. Mọi artifact có mã băm nội
-          dung và cạnh truy vết nguồn gốc; phân quyền ba chiều đứng vững trên cơ sở dữ liệu thật. Từ
-          29/08 đọc được cả hồ sơ <code>.dwg</code>: ODA File Converter chạy trong container, trình
-          trích xuất dựng được đa giác phòng, nhãn phòng, lưới cột và ranh đất.
+          <b>Mốc 1 và Mốc 2 đã đạt. Mốc 5 xong nửa bộ giải; nửa giao diện chờ câu hỏi Q-1.</b>
+          Pipeline sáu bước chạy thông từ đầu bài tới ảnh phối cảnh, đi qua CẢ HAI runtime thật —
+          Worker ghi artifact vào Supabase Storage, Container giải ràng buộc bằng CP-SAT. Từ 30/08
+          <b>bốn trong sáu bước là bản thật</b>: Lớp 3a sinh ý đồ bố cục tất định theo khung nhà
+          ống, Lớp 3b mã hoá đủ mười vị từ của rule pack, Lớp 3c đọc ra tường và lỗ mở, và mặt bằng
+          xuất được ra DXF có khung tên.
         </p>
         <p class="muted-t xs">
-          Giai đoạn 1 của tài liệu gồm Mốc 0 → Mốc 5. Đợt này làm 3/6 mốc đầu. Ba trong sáu bước của
-          pipeline hiện là mã tạm đúng hợp đồng; Lớp 2 vừa có bản thật, chạy được cả khi kho hồ sơ
-          cũ còn rỗng.
+          Giai đoạn 1 của tài liệu gồm Mốc 0 → Mốc 5. Còn lại: trình chỉnh sửa mặt bằng, gói trình
+          khách, bảng thống kê và cầu nối phát hành — tất cả đều là giao diện, và Q-1 (khung làm
+          việc thiết kế có được là mẫu bố cục thứ 8 không) là cửa vào của chúng.
         </p>
-        <div class="bar"><span style="width: 50%"></span></div>
+        <p class="muted-t xs">
+          <b>Đang chờ Haan, không chặn việc viết mã:</b> ba câu hỏi Q-1, Q-18 và Q-21 đã hỏi
+          30/08/2026 và chưa giải đáp được ngay. Q-1 quyết định dựng giao diện thiết kế theo hướng
+          nào; Q-18 và Q-21 quyết định TỈ LỆ của mặt bằng vẽ ra (xem vướng mắc V-7). Hai câu sau chỉ
+          chặn phần nghiệm thu chất lượng phương án, và sửa là sửa một tệp dữ liệu chứ không phải
+          sửa mã — nên chạy tiếp với số hiện tại không tạo nợ kỹ thuật, chỉ tạo nợ
+          <i>độ tin cậy của con số</i>.
+        </p>
+        <div class="bar"><span style="width: 68%"></span></div>
         <div class="stats">
           <div class="stat"><b>2/3</b><span class="xs muted-t">Việc của Mốc 0 đã xong</span></div>
-          <div class="stat"><b>281</b><span class="xs muted-t">Phép thử xanh của module</span></div>
+          <div class="stat">
+            <b>787</b><span class="xs muted-t">Phép thử xanh của cả kho mã</span>
+          </div>
           <div class="stat"><b>4</b><span class="xs muted-t">Vướng mắc đang mở</span></div>
-          <div class="stat"><b>15</b><span class="xs muted-t">Câu hỏi chờ Haan</span></div>
+          <div class="stat"><b>16</b><span class="xs muted-t">Câu hỏi chờ Haan</span></div>
         </div>
       </div>
 
@@ -302,17 +312,17 @@
             <tr>
               <td class="num">29/08/2026</td>
               <td>
-                Ba việc Haan chỉ ra sau lượt chạy thử: <b>lỗi chính tả</b>,
-                <b>địa phương</b>, <b>hình thửa đất</b>
+                Ba việc Haan chỉ ra sau lượt chạy thử: <b>lỗi chính tả</b>, <b>địa phương</b>,
+                <b>hình thửa đất</b>
               </td>
               <td>
-                <b>1. Chữ Việt không dấu do CSDL sinh ra.</b> Ảnh chụp màn hình của Haan:
-                &laquo;Bộ môn <b>kien truc</b> chưa có bản vẽ nào được phát hành.&raquo; Bốn chỗ
-                trong migration dựng câu bằng
-                <code>replace(&lt;enum&gt;::text, '_', ' ')</code>, cho ra chữ Việt không dấu giữa
-                một câu có dấu &mdash; kể cả tên dòng ngân sách (&laquo;Vat Tu&raquo;,
-                &laquo;Nhan Cong&raquo;). Riêng <code>build_budget_lines</code> còn tự mâu thuẫn:
-                khối INSERT thứ hai của chính nó đã ghi &laquo;Chi phí chung&raquo; có dấu.
+                <b>1. Chữ Việt không dấu do CSDL sinh ra.</b> Ảnh chụp màn hình của Haan: &laquo;Bộ
+                môn <b>kien truc</b> chưa có bản vẽ nào được phát hành.&raquo; Bốn chỗ trong
+                migration dựng câu bằng <code>replace(&lt;enum&gt;::text, '_', ' ')</code>, cho ra
+                chữ Việt không dấu giữa một câu có dấu &mdash; kể cả tên dòng ngân sách (&laquo;Vat
+                Tu&raquo;, &laquo;Nhan Cong&raquo;). Riêng <code>build_budget_lines</code> còn tự
+                mâu thuẫn: khối INSERT thứ hai của chính nó đã ghi &laquo;Chi phí chung&raquo; có
+                dấu.
                 <br />
                 Lọt lưới lâu vì đọc mã nguồn chỉ thấy <code>replace(...)</code>, và
                 <code>grep</code> một câu tiếng Việt không dấu thì không ra tệp nào &mdash; chữ chỉ
@@ -323,18 +333,17 @@
                 chúng, và vá lại dữ liệu <code>project_budgets.name</code> đã ghi sai.
                 <code>db/src/__tests__/enum-labels.test.ts</code> so từng nhãn với bảng nhãn của
                 <code>shared/</code>, kiểm mọi nhánh enum đều có nhãn (đọc thẳng
-                <code>pg_enum</code>), và canh không hàm nào dựng lại chữ theo kiểu cũ. Phép thử
-                này bắt luôn một chỗ lệch có sẵn: CSDL ghi &laquo;Đang làm&raquo; còn
+                <code>pg_enum</code>), và canh không hàm nào dựng lại chữ theo kiểu cũ. Phép thử này
+                bắt luôn một chỗ lệch có sẵn: CSDL ghi &laquo;Đang làm&raquo; còn
                 <code>shared/</code> ghi &laquo;Đang triển khai&raquo;.
                 <br />
-                Rà thêm toàn bộ chuỗi trong <code>web/ workers/ shared/ db/ compute/</code> bằng
-                một lượt quét tự động tìm câu tiếng Việt viết không dấu: <b>không còn chỗ nào</b>.
+                Rà thêm toàn bộ chuỗi trong <code>web/ workers/ shared/ db/ compute/</code> bằng một
+                lượt quét tự động tìm câu tiếng Việt viết không dấu: <b>không còn chỗ nào</b>.
                 <br /><br />
-                <b>2. Thái Bình &rarr; Hưng Yên, và đủ 34 đơn vị hành chính.</b> Trả lời
-                <b>Q-8</b>. Biểu mẫu đầu bài nay cho chọn đủ 34 tỉnh, thành phố sau sắp xếp 2025,
-                nhóm đầu là bốn địa bàn NVG thường thi công (Hưng Yên · Hải Phòng · Ninh Bình · Hà
-                Nội). Thêm kiểu điều khiển <code>select</code> có nhóm &mdash; 34 chip thì thành
-                một bức tường.
+                <b>2. Thái Bình &rarr; Hưng Yên, và đủ 34 đơn vị hành chính.</b> Trả lời <b>Q-8</b>.
+                Biểu mẫu đầu bài nay cho chọn đủ 34 tỉnh, thành phố sau sắp xếp 2025, nhóm đầu là
+                bốn địa bàn NVG thường thi công (Hưng Yên · Hải Phòng · Ninh Bình · Hà Nội). Thêm
+                kiểu điều khiển <code>select</code> có nhóm &mdash; 34 chip thì thành một bức tường.
                 <br />
                 Kèm theo là một lỗi phải sửa mới mở được danh sách:
                 <b>khoảng lùi và mật độ xây dựng đang nằm trong gói địa phương</b>, trong khi mọi
@@ -352,14 +361,13 @@
                 <br />
                 Cảnh báo &laquo;chưa có gói riêng&raquo; ở Lớp 2 <b>bỏ đi</b>: nay nó đúng với mọi
                 lần chạy, mà cảnh báo nổ ở mọi lần chạy là cảnh báo bị bỏ qua (đúng bài học của lỗi
-                số 4 hôm trước). Chế độ đã chạy ghi vào
-                <code>params.rule_pack_locality</code> thay vì hét lên.
+                số 4 hôm trước). Chế độ đã chạy ghi vào <code>params.rule_pack_locality</code> thay
+                vì hét lên.
                 <br />
                 Hồ sơ <b>đã xác nhận</b> giữ nguyên <code>thai_binh</code> &mdash; trigger bất biến
                 chặn UPDATE, và đó là hành vi đúng. Nên <code>thai_binh</code> ở lại cấu hình dưới
                 dạng lựa chọn <code>retired</code>: không chọn được nữa, nhưng vẫn đọc ra chữ
-                &laquo;Thái Bình (đã sáp nhập vào Hưng Yên năm 2025)&raquo;.
-                <br /><br />
+                &laquo;Thái Bình (đã sáp nhập vào Hưng Yên năm 2025)&raquo;. <br /><br />
                 <b>3. Thửa đất không phải hình chữ nhật.</b> Haan hỏi: thửa tứ giác, ngũ giác không
                 đều thì sao, và chiều rộng mặt tiền ở đâu? Đầu bài trước đây mô tả thửa bằng đúng
                 hai số &mdash; ngầm khẳng định mọi thửa là hình chữ nhật. Hậu quả không nổ ra thành
@@ -388,25 +396,24 @@
                 <br />
                 Phép kiểm &laquo;ô nằm gọn trong thửa&raquo; ban đầu THIẾU một điều kiện, và bản
                 kiểm thử đầu cũng không bắt được: với thửa bị khoét rãnh chữ V ở giữa cạnh, bốn góc
-                của ô đều là đỉnh của thửa và không cạnh nào cắt ngang &mdash; hai phép kiểm đầu
-                đều nói &laquo;nằm gọn&raquo; trong khi cả cái rãnh nằm ngoài. Thêm phép kiểm
+                của ô đều là đỉnh của thửa và không cạnh nào cắt ngang &mdash; hai phép kiểm đầu đều
+                nói &laquo;nằm gọn&raquo; trong khi cả cái rãnh nằm ngoài. Thêm phép kiểm
                 &laquo;không đỉnh nào nằm hẳn trong lòng ô&raquo;, và thay hình kiểm thử bằng hình
                 bắt được đúng chỗ đó. Đã thử phá từng phép kiểm để chắc chúng cắn.
                 <br />
                 <b>Lỗi có sẵn phát hiện lúc gõ thử:</b> ô số điều khiển nuốt dấu thập phân giữa
                 chừng &mdash; gõ &laquo;3.5&raquo; ra &laquo;35&raquo;, vì
-                <code>Number("3.")</code> vẫn là 3 nên ô vẽ lại và dấu chấm biến mất. Người nhập
-                3,5 m mặt tiền được một thửa rộng 35 m. Chữ nay nằm trong state của ô, số đi ra
-                ngoài; áp cho cả ô số, ô khoảng lùi và bảng toạ độ đỉnh.
-                <br /><br />
+                <code>Number("3.")</code> vẫn là 3 nên ô vẽ lại và dấu chấm biến mất. Người nhập 3,5
+                m mặt tiền được một thửa rộng 35 m. Chữ nay nằm trong state của ô, số đi ra ngoài;
+                áp cho cả ô số, ô khoảng lùi và bảng toạ độ đỉnh. <br /><br />
                 <b>Kiểm chứng:</b> 209 phép thử giao diện · 396 phép thử logic · pipeline đầu-cuối
                 chạy thật qua Container Docker · 114 phép thử Python · <code>tsc</code> và
                 <code>prettier</code> sạch · hợp đồng khớp bản sinh. Chạy lại bằng Chrome trên hồ sơ
                 <code>NVO-TK-2026-2399</code>: câu &laquo;Bộ môn <b>Kiến trúc</b>&raquo; đã đúng
-                chính tả, danh sách 34 tỉnh hiện đủ, thửa ngũ giác nhập được và hiện
-                &laquo;diện tích 114 m² · hình bao 8 × 16,5 m · phần xây được 8 × 12 m · còn 18 m²
-                ngoài phần đó&raquo;. Chương trình không gian của hồ sơ cũ giữ nguyên trạng thái
-                &laquo;đã chốt&raquo; &mdash; thay đổi tương thích ngược với đầu bài hình chữ nhật.
+                chính tả, danh sách 34 tỉnh hiện đủ, thửa ngũ giác nhập được và hiện &laquo;diện
+                tích 114 m² · hình bao 8 × 16,5 m · phần xây được 8 × 12 m · còn 18 m² ngoài phần
+                đó&raquo;. Chương trình không gian của hồ sơ cũ giữ nguyên trạng thái &laquo;đã
+                chốt&raquo; &mdash; thay đổi tương thích ngược với đầu bài hình chữ nhật.
               </td>
             </tr>
             <tr>
@@ -459,10 +466,16 @@
             <tr>
               <td class="num">5</td>
               <td>
-                Lõi Layer 3 nhà phố + trình chỉnh sửa + xuất DXF
+                <b>Lõi Layer 3 nhà phố</b> + trình chỉnh sửa + xuất DXF
                 <span class="xs muted-t">(kết thúc Giai đoạn 1)</span>
+                <br />
+                <span class="xs muted-t"
+                  >Xong: đặt khối, Lớp 3a sinh ý đồ bố cục, CP-SAT đủ mười vị từ, Lớp 3c tường và lỗ
+                  mở, xuất DXF có khung tên. Còn: trình chỉnh sửa, phân tích tác động trên giao
+                  diện, gói trình khách, bảng thống kê, cầu nối phát hành — đều chờ Q-1.</span
+                >
               </td>
-              <td><span class="pill s-draft">Ngoài đợt</span></td>
+              <td><span class="pill s-progress">Đang làm</span></td>
             </tr>
             <tr>
               <td class="num">6 · 6b · 6c</td>
@@ -519,8 +532,8 @@
               <td>20 quy tắc đầu tiên từ QCVN 01:2021/BXD + trình kiểm tra định dạng rule pack</td>
               <td><span class="pill s-progress">Xong phần kỹ thuật</span></td>
               <td class="xs">
-                <b>27 quy tắc</b> (22 nền + 5 Thái Bình ghi đè). Trình kiểm tra chặn đúng. Phần kiến
-                trúc sư xác nhận để mở — xem V-3
+                <b>27 quy tắc</b>, toàn bộ ở gói nền (từ 29/08 không tỉnh nào có gói riêng — xem
+                Q-8). Trình kiểm tra chặn đúng. Phần kiến trúc sư xác nhận để mở — xem V-3
               </td>
             </tr>
           </tbody>
@@ -539,6 +552,309 @@
             </tr>
           </thead>
           <tbody>
+            <tr>
+              <td class="num">31/08/2026</td>
+              <td>
+                <b>Ghim một không gian bắt buộc vào đúng một tầng trong Đầu bài</b>
+              </td>
+              <td>
+                Haan quan sát: Đầu bài không có cách khai &laquo;tầng 1 gồm gara, phòng khách,
+                bếp; tầng 2 gồm phòng ngủ&raquo;. Không phải lỗi — tab &laquo;Chương trình không
+                gian&raquo; (Lớp 2) đã tự nhóm theo tầng, chỉ là việc XẾP TẦNG hoàn toàn do engine
+                quyết định, không ghim được. Phát hiện khi đọc <code>engine.ts</code>: cơ chế ghim
+                (<code>Request.pinned</code>) đã có sẵn trong lõi thuật toán, chỉ dùng nội bộ cho
+                <code>stair</code>/<code>circulation</code>/<code>wc</code> — việc cần làm là để lộ
+                nó ra cho <code>required_spaces</code>, không phải xây từ đầu.
+                <br />
+                Đổi <code>required_spaces</code> từ <code>string[]</code> sang
+                <code>{`{type, floor: number|null}[]`}</code> (hợp đồng
+                <code>contracts/design-brief.schema.json</code>, theo tiền lệ object inline của
+                <code>family</code>, không dùng <code>$defs</code>). Control mới
+                <code>space_floor</code> (<code>brief-field.tsx</code>): giữ nguyên hàng chip chọn
+                như cũ, thêm danh sách phụ bên dưới — mỗi mục đã chọn có một <code>&lt;select&gt;</code>
+                ghim tầng, mặc định &laquo;Để hệ thống tự xếp&raquo;, ẩn hẳn khi nhà một tầng.
+                Engine (<code>collectRequests</code>) đọc <code>floor</code>, tự bỏ ghim kèm cảnh
+                báo nếu tầng ghim không còn hợp lệ (hạ số tầng sau khi đã ghim) — cùng lớp phòng
+                thủ thêm ở <code>checkBriefConsistency</code> (mã <code>ghim_tang_khong_ton_tai</code>)
+                để người nhập thấy ngay ở Đầu bài, sớm hơn tận lúc mở tab Chương trình không gian.
+                <br />
+                Bắt được một lỗi thật khi chạy test chế độ xem: <code>describeField</code>
+                (<code>brief-panel.tsx</code>) có một nhánh chung cho mọi control kiểu mảng, đổ
+                thẳng <code>String(giá trị)</code> — với phần tử giờ là object thì ra
+                &laquo;[object Object]&raquo; ngay trên màn hình đã xác nhận. Test cũ
+                (&laquo;không để lọt mã máy ra màn hình&raquo;) bắt đúng lớp lỗi này; thêm nhánh
+                riêng cho <code>space_floor</code>.
+                <br />
+                Kiểm chứng: 4 test control mới + 2 test engine (ghim thắng nguyện vọng, ghim tầng
+                không tồn tại vẫn giữ không gian) + 1 test soát mâu thuẫn — toàn bộ 8 suite liên
+                quan xanh (<code>design-brief</code>, <code>space-program</code>,
+                <code>brief-confirm</code>, <code>brief-form</code>, <code>program-panel</code>),
+                <code>contracts:check</code>/<code>tsc</code>/<code>prettier</code> sạch.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">31/08/2026</td>
+              <td>
+                <b>Sửa khung phác họa thửa đất cắt mất một phần hình (toạ độ âm)</b>
+              </td>
+              <td>
+                Chạy thử thật: ảnh trích lục đọc đúng diện tích (66,35&nbsp;m² &mdash; khớp số in
+                trên ảnh) nhưng khung vẽ chỉ hiện một mảnh, cắt cụt ở cạnh phải/dưới.
+                <code>SitePlanPreview</code> tính <code>viewBox</code> bằng <code>minX = -pad</code>
+                &mdash; giả định ranh giới luôn bắt đầu gần (0,0), đúng với chữ nhật/hình thang
+                (dựng từ gốc) nhưng SAI với đa giác đọc từ ảnh:
+                <code>polygonFromCoordinates</code> tịnh tiến về ĐỈNH ĐẦU TIÊN (một điểm bất kỳ
+                trên biên), nên các đỉnh khác thường có toạ độ âm — phần đó bị SVG clip lặng lẽ,
+                không lỗi, không cảnh báo. Sửa: tính <code>minX</code>/<code>minY</code> từ toạ độ
+                MIN THẬT của ranh giới thay vì giả định bằng 0.
+                <br />
+                Thêm test tái hiện đúng bug (đa giác toàn toạ độ âm, assert mọi đỉnh nằm trong
+                <code>viewBox</code>) — test cũ không bắt được vì mọi ví dụ trước giờ tình cờ dùng
+                toạ độ dương từ gốc.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">31/08/2026</td>
+              <td>
+                <b>Ba lỗi chặn khi chạy thử Phần B thật + thêm đường đọc bảng toạ độ in sẵn</b>
+              </td>
+              <td>
+                Chạy thử tải ảnh trích lục thật, gặp lần lượt ba lỗi khác nhau, sửa từng cái:
+                (1) &laquo;Không kết nối được dịch vụ thiết kế&raquo; — <code>workers/package.json</code>
+                thiếu <code>--port 8788</code>, Wrangler mặc định chạy cổng 8787 lệch với
+                <code>.env</code>; (2) <code>DataClassViolation</code> — đúng kiến trúc
+                (<code>max_data_class: 3</code> chặn ảnh hạng 2), Haan xác nhận ảnh test lấy trên
+                mạng nên hạ TẠM THỜI xuống 2 trong <code>config/models.yaml</code>, có ghi rõ ngày
+                + lý do + nhắc trả lại 3 trước khi chạm dữ liệu khách thật; (3) Gemini 400
+                &laquo;too many states for serving&raquo; — mảng <code>edges</code> lồng nhiều
+                <code>enum</code> cộng <code>minItems</code>/<code>maxItems</code> vượt giới hạn bộ
+                giải mã ràng buộc của Gemini, bỏ hai giới hạn đó khỏi schema GỬI Gemini (validate
+                thật vẫn ở Zod sau khi nhận).
+                <br />
+                Phân tích ảnh trích lục thật cho thấy nguyên nhân sâu hơn khi Gemini vẽ sai lệch
+                7,6 lần diện tích: ảnh có kèm bảng &laquo;BẢNG KÊ TOẠ ĐỘ&raquo; (X, Y từng đỉnh) —
+                số liệu đo đạc chính xác, đáng tin hơn hẳn việc ước lượng hình vẽ sơ đồ bằng mắt.
+                Thêm trường <code>vertex_coordinates</code> vào hợp đồng
+                (Gemini chỉ CHÉP số đã in, không tính toán — đúng nguyên tắc bất biến 2) và hàm
+                thuần mới <code>polygonFromCoordinates</code>
+                (<code>shared/src/design/site-boundary-from-coordinates.ts</code>) dựng ranh giới
+                trực tiếp từ toạ độ khi có ≥3 điểm — ưu tiên tuyệt đối, chính xác hơn đường
+                cạnh/góc cũ. Xử lý khoan dung: khi có bảng toạ độ hợp lệ, lỗi ở <code>edges</code>
+                (Gemini hay điền giữ chỗ <code>length_m: 0</code> vì coi là phụ) không còn chặn
+                mất cả kết quả — đọc từng phần tử độc lập, bỏ phần tử hỏng thay vì ném
+                <code>ContractError</code>.
+                <br />
+                Cũng sửa <code>LlmCallFailed</code> rò rỉ nguyên văn mã HTTP + JSON lỗi của Gemini
+                ra màn hình (vi phạm CGD 5.5) — <code>onError</code> giờ dịch sang thông báo tiếng
+                Việt gọn, chi tiết thật chỉ ghi log.
+                <br />
+                Kiểm chứng: test mới cho cả hai đường (toạ độ thật ra đúng 66,3&nbsp;m², edges
+                giữ chỗ vẫn ra kết quả), toàn bộ suite <code>extract-boundary</code> +
+                <code>site-boundary-from-coordinates</code> xanh, <code>tsc</code>/
+                <code>contracts:check</code>/<code>prettier</code> sạch.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">31/08/2026</td>
+              <td>
+                <b>Phần B: tải ảnh trích lục/sổ đỏ, Gemini đọc thành cạnh, dựng ranh giới</b>
+              </td>
+              <td>
+                Tiếp Phần A cùng ngày. Theo đúng nguyên tắc bất biến 2 (CLAUDE.md 8.2): Gemini
+                <b>không</b> trả toạ độ — nó trả danh sách CẠNH có cấu trúc (chiều dài, góc
+                quay, nguồn đọc, độ tin cậy), hợp đồng mới
+                <code>contracts/site-boundary-extraction.schema.json</code>. Một hàm thuần mới
+                <code>polygonFromEdges</code> (<code>shared/src/design/site-boundary-from-edges.ts</code>)
+                mới là chỗ gán toạ độ: đi bộ theo cạnh, góc thiếu thì chia đều phần dư — mọi
+                góc đều thiếu tự nhiên rơi về đa giác đều, không cần nhánh riêng. Không tự sửa
+                khi các góc ĐÃ BIẾT mâu thuẫn nhau, chỉ báo qua <code>closureErrorM</code>/
+                <code>closureErrorDeg</code>.
+                <br />
+                Mở rộng <code>GeminiClient.generateJson</code> nhận thêm ảnh (<code>images</code>,
+                optional, không phá 6 lời gọi text-only đang có). Logic nghiệp vụ mới
+                <code>workers/src/design/site/extract-boundary.ts</code>: gọi Gemini → validate
+                Zod → dựng đa giác → gộp cảnh báo (không khép kín, góc suy ra). Route mới
+                <code>POST /design/site/extract-boundary</code> (đồng bộ, không Workflow — chỉ
+                một lượt gọi + một phép tính thuần): kiểm quyền qua RPC có sẵn
+                <code>rls_design_writable</code>, lưu ảnh gốc vào bucket <code>design-sources</code>
+                đã có (không tạo bucket/migration mới).
+                <br />
+                <b><code>dataClass = 2</code> khai CỨNG trong code</b>, không nhận từ client —
+                ảnh sổ đỏ thật luôn là dữ liệu hạng 2. Với <code>max_data_class: 3</code> hiện
+                đặt cho MỌI route (quyết định T8), tính năng này <b>tự động bị chặn với ảnh
+                thật</b> cho tới khi Haan có cam kết bằng văn bản của nhà cung cấp rồi tự hạ số
+                — đúng kiến trúc, không phải lỗi, đã ghi rõ trong cả
+                <code>config/models.yaml</code> lẫn doc-comment.
+                <br />
+                Phía giao diện: <code>designApiUpload</code> (lời gọi multipart đầu tiên của
+                <code>web/</code>, tách khỏi <code>designApi</code> JSON), hook
+                <code>useExtractSiteBoundary</code>, nút <b>&laquo;Tải ảnh trích lục&raquo;</b>
+                (<code>site-image-upload.tsx</code>) phía trên bảng đỉnh. Kết quả GHI ĐÈ trực
+                tiếp bảng đỉnh (cùng tiền lệ &laquo;Lấy theo biên bản khảo sát&raquo;, không hộp
+                thoại xác nhận — luồng nháp/xác nhận Đầu bài sẵn có CHÍNH LÀ bước người dùng xác
+                nhận). Bảng đỉnh có tách riêng thành <code>PolygonControl</code> để dùng
+                <code>useState</code> không vướng quy tắc gọi hook trong <code>switch</code>; mỗi
+                đỉnh có huy hiệu <i>&laquo;kiểm tra lại&raquo;</i> khi cạnh tương ứng đọc với độ
+                tin cậy thấp hoặc dùng góc suy ra — tự mất khi số đỉnh không khớp (người dùng đã
+                sửa tay), không trỏ nhầm đỉnh.
+                <br />
+                Chạy thử trực tiếp trên trình duyệt (dự án Test1, chưa bật <code>wrangler
+                dev</code>): tải một ảnh PNG mẫu qua input ẩn — xác nhận đúng luồng lỗi mạng
+                hiện tiếng Việt (&laquo;Không kết nối được dịch vụ thiết kế…&raquo;), nút quay
+                lại trạng thái sẵn sàng, không vỡ trang, không lỗi console. Đường Gemini thật
+                (cần <code>wrangler dev</code> + dữ liệu demo/giả lập) để đợt sau khi có nhu cầu
+                kiểm cụ thể.
+                <br />
+                Kiểm chứng: 15 phép thử mới (8 <code>polygonFromEdges</code> + 7
+                <code>extractSiteBoundary</code>) + 427 phép thử logic + 216 phép thử giao diện
+                module thiết kế đều xanh, <code>contracts:check</code>/<code>tsc</code>/
+                <code>prettier</code> sạch.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">31/08/2026</td>
+              <td>
+                <b>Nhãn hướng Đông Bắc còn sót + khung phác họa thửa đất (nền lưới ô)</b>
+              </td>
+              <td>
+                Bản sửa 30/08 mới chạm một trong hai nguồn: <code>ORIENTATION_LABEL</code>
+                (<code>brief-vocabulary.ts</code>) đã đúng nhưng field
+                <code>site.orientation</code> trong <code>brief-form.json</code> hard-code MỘT
+                danh sách lựa chọn RIÊNG — đây mới là nguồn Chip thật hiện trên màn hình, nên
+                &laquo;Bắc — Đông&raquo; vẫn còn. Đã grep toàn repo xác nhận đây là chỗ duy nhất
+                còn sai, sửa thành &laquo;Đông Bắc&raquo;.
+                <br />
+                Thêm khung <b>&laquo;Phác họa thửa đất&raquo;</b> (component mới
+                <code>site-plan-preview.tsx</code>) — SVG nền lưới ô, vẽ CẢ BA hình dạng (chữ
+                nhật/hình thang/đa giác) từ cùng một nguồn hình học <code>siteGeometry()</code>
+                (<code>shared/src/design/site-geometry.ts</code>) đã có sẵn — không viết lại logic
+                dựng ranh giới. Đặt bên cạnh các trường kích thước trong mục Khu đất (sub-grid chỉ
+                riêng section này, sticky), tự vẽ lại theo từng phím gõ. Bước lưới tự chọn theo tỷ
+                lệ thửa (0,5–50 m) để cả lô 5 m lẫn 50 m đều hiển thị đẹp; ô xây được (
+                <code>buildable</code>) vẽ viền nét đứt chồng lên ranh giới thật để đọc ra ngay
+                phần đất &laquo;thừa&raquo; ngoài hình chữ nhật bộ giải dùng.
+                <br />
+                Chạy thử trực tiếp trên trình duyệt (dự án <i>Test1</i>): xác nhận cả ba hình dạng
+                vẽ đúng, và bắt được một ca biên có thật của <code>site-geometry.ts</code> — tam
+                giác hẹp không tìm được hình chữ nhật nội tiếp nào từ tập ứng viên theo đỉnh, hiện
+                đúng thông báo lỗi thay vì vỡ trang. Không lưu dữ liệu thử (bấm Hủy).
+                <br />
+                Phần B của yêu cầu — tải ảnh trích lục/sổ đỏ, Gemini đọc thành danh sách cạnh có
+                cấu trúc (không toạ độ, theo nguyên tắc bất biến 8.2), dựng đa giác — đã lên kế
+                hoạch chi tiết nhưng CHƯA làm, theo đúng lựa chọn của Haan (làm Phần A trước, chạy
+                thử ổn rồi mới làm Phần B). Ràng buộc cần nhớ khi làm: mọi route Gemini hiện đặt
+                <code>max_data_class: 3</code> (quyết định T8) nên ảnh sổ đỏ THẬT của khách (hạng
+                2) sẽ bị chặn cho tới khi Haan tự nới cấu hình — hành vi đúng kiến trúc, không
+                phải lỗi.
+                <br />
+                Kiểm chứng: 216 phép thử giao diện + 43 phép thử logic xanh (module thiết kế),
+                <code>tsc</code> và <code>prettier</code> sạch.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">30/08/2026</td>
+              <td><b>Sửa nội dung Đầu bài theo phản hồi Haan (đọc trực tiếp màn hình)</b></td>
+              <td>
+                Ba việc: <b>1.</b> Nhãn lựa chọn địa phương &laquo;Thái Bình (đã sáp nhập vào Hưng
+                Yên năm 2025)&raquo; — chỉ hiện khi đọc lại hồ sơ đã xác nhận trước sáp nhập (mục
+                <code>retired</code> trong <code>brief-form.json</code>) — rút gọn còn
+                <b>&laquo;Hưng Yên (Thái Bình cũ)&raquo;</b>; giữ mã
+                <code>thai_binh</code> nguyên vẹn vì hồ sơ đã xác nhận bất biến, chỉ đổi CHỮ hiển
+                thị. <b>2.</b> Nhãn hướng nhà Đông Bắc bị ghi sai cả thứ tự lẫn cách nối
+                (&laquo;Bắc — Đông&raquo;, lẽ ra hướng phụ đứng trước như ba tổ hợp còn lại) — sửa
+                thành <b>&laquo;Đông Bắc&raquo;</b> ở <code>brief-vocabulary.ts</code> và mô tả
+                trong <code>contracts/design-brief.schema.json</code>, sinh lại Zod bằng
+                <code>contracts:gen</code>. <b>3.</b> Bỏ hẳn trường <b>&laquo;Người quyết định
+                cuối&raquo;</b> khỏi biểu mẫu Đầu bài theo yêu cầu Haan — dọn luôn hai nhánh xử lý
+                riêng cho nó trong <code>brief-field.tsx</code>. Hợp đồng <code>DesignBrief</code>
+                GIỮ NGUYÊN trường <code>decision_maker</code> (vẫn tuỳ chọn) để không phá hồ sơ cũ
+                đã lưu giá trị đó — chỉ ngừng hỏi ở biểu mẫu, không xoá khỏi lược đồ dữ liệu.
+                Kiểm chứng: 43 phép thử logic + 209 phép thử giao diện xanh, <code>tsc</code> và
+                <code>prettier</code> sạch.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">30/08/2026</td>
+              <td>
+                <b>Mốc 5 — nửa bộ giải:</b> cây chia không gian tổng quát, mười vị từ, Lớp 3a thật,
+                Lớp 3c tường và lỗ mở, xuất DXF
+              </td>
+              <td>
+                Bốn trong sáu bước của pipeline nay là bản thật. Một căn nhà ống 5&times;18 m ba
+                tầng giải xong trong <b>1,1 giây</b> (trước đó mô hình Mốc 0.2 chỉ mã hoá bốn vị
+                từ). Kiểm chứng: <b>162 phép thử Python</b> · <b>416 phép thử logic</b> ·
+                <b>209 phép thử giao diện</b> · pipeline đầu-cuối chạy thật qua Container Docker ·
+                <code>tsc</code>, <code>prettier</code> và hợp đồng sạch.
+                <br />
+                <b>1. Cây chia không gian đọc NGUYÊN VẸN, gỡ vướng mắc V-6.</b> Mô hình cũ ép mọi
+                tầng vào ba dải theo chiều sâu nên làm phẳng mất mọi lát cắt DỌC, và bắt mọi tầng có
+                cùng diện tích theo từng dải (V-5). Bản mới đọc cả lát cắt ngang lẫn dọc, sâu tuỳ ý,
+                kể cả lá <code>void</code> (giếng trời, thông tầng). Việc dùng chung đường cắt giữa
+                các tầng nay <b>suy ra từ cây</b>: tầng nào chia giống nhau thì tự thẳng hàng.
+                <br />
+                <b>2. Chỉ KẾT CẤU CHÍNH mới dùng chung đường cắt.</b> Đây là chỗ đã đi sai một lượt:
+                dùng chung MỌI đường cắt mà các tầng cùng phương nghe có vẻ chặt chẽ hơn, nhưng nó
+                ép hai tầng có số phòng khác nhau phải có cùng diện tích ở từng dải — và cái hiện ra
+                là vô nghiệm với tập ràng buộc trỏ vào hai phòng chẳng liên quan gì tới nhau. Nhà
+                thật có vài tuyến tường chịu lực, còn vách ngăn thì mỗi tầng một khác. Lõi thang
+                không dựa vào cơ chế này: nó có ràng buộc trùng khít riêng.
+                <br />
+                <b>3. Mã hoá nốt sáu vị từ còn lại.</b> <code>requires_daylight</code> (mặt thoáng
+                hoặc giếng trời) · <code>requires_access</code> · <code>adjacency</code> ·
+                <code>aspect_ratio_max</code> · <code>setback</code> · <code>max_density</code>.
+                Ràng buộc CẤU TRÚC không thoả (phòng ngủ lọt giữa nhà nên không thể có mặt thoáng)
+                đi qua đúng cơ chế giả định của CP-SAT, nên nó xuất hiện cùng danh sách với các mâu
+                thuẫn số học thay vì thành loại lỗi thứ hai người đọc phải học riêng.
+                <br />
+                <b>4. Mặt thoáng là DỮ LIỆU của thửa, không phải hằng số về loại hình.</b>
+                "Nhà phố có hai mặt thoáng" đúng với phần lớn thửa và sai với lô góc. Bảng
+                <code>kb/site_context.yaml</code> ánh xạ hiện trạng bốn phía trong Đầu bài sang danh
+                sách mặt thoáng; chưa khai thì coi như bị che — đoán về phía chặt hơn, vì đoán
+                thoáng mà thực tế bị che thì bản vẽ ra có phòng ngủ tối và không có gì báo.
+                <br />
+                <b>5. Lớp 3a có bản thật, tất định.</b> Khung nhà ống: dải mặt tiền · hành lang dọc
+                chạy suốt · các dải phòng xếp vào sâu. Khung này thoả hai vị từ khó nhất
+                <i>theo cấu trúc</i> — mọi phòng giáp hành lang nên không phòng nào phải đi xuyên
+                phòng khác, và dải nằm giữa được mở giếng trời khi có phòng cần sáng. Ba phương án
+                khác nhau về cấu trúc (thang hông trái · hông phải · phía sau), không phải khác vài
+                con số. Bản mô hình ngôn ngữ vẫn là đích; bộ sinh tất định là bộ kiểm cấu trúc mà
+                đầu ra của nó phải đi qua, và là đường lùi khi hết hạn mức API.
+                <br />
+                <b>6. Chứng minh kề nhau bằng CẤU TRÚC trước khi hỏi bộ giải.</b> Đo được: 6,6 giây
+                xuống <b>1,1 giây</b>. Phần đắt nhất của mô hình là những biến bool trả lời "hai ô
+                này có chạm nhau không", và với khung nhà ống thì phần lớn trong số đó trả lời được
+                bằng hình học của cây.
+                <br />
+                <b
+                  >7. Cận trên diện tích của chương trình thành khoản PHẠT, không phải ràng buộc
+                  cứng.</b
+                >
+                Nó đến từ <code>kb/space_norms.yaml</code> chứ không từ quy chuẩn. Cây chia lấp KÍN
+                mặt sàn, nên để nó cứng thì mọi tầng có chương trình nhỏ hơn mặt sàn đều vô nghiệm,
+                kèm tập mâu thuẫn trỏ vào cận trên của một khu vệ sinh.
+                <br />
+                <b>8. Nhóm mã phòng khai thành viên tường minh.</b>
+                <code>aspect_ratio_max</code> nhắm nhóm <code>habitable</code>, mà nhóm đó trước đây
+                rơi vào mọi loại phòng — nên hành lang dài và hẹp bị cảnh báo, dù dài và hẹp là đúng
+                bản chất của nó. Cảnh báo sai loại đó làm kiến trúc sư quen bỏ qua danh sách vi
+                phạm.
+                <br />
+                <b>9. Lớp 3c: tường và lỗ mở.</b> Tường là đoạn thẳng đã GỘP — ba phòng chung một
+                tuyến là một bức tường chạy suốt, không phải ba đoạn chồng mép (không gộp thì mọi
+                phép đếm vật tư đếm ba lần). Cửa rơi vào tường chung giữa phòng và không gian giao
+                thông; cửa sổ chỉ mở ra mặt thoáng. Bề dày tường và kích thước cửa nằm ở
+                <code>kb/construction_norms.yaml</code>, không con số nào trong mã nguồn.
+                <br />
+                <b>10. Xuất DXF một chiều, có khung tên.</b> Milimét, tên lớp lấy từ mục
+                <code>export:</code> của <code>kb/layer_mapping.yaml</code> — và các tên ở đó được
+                chọn sao cho khớp lại chính những mẫu ở mục <code>roles:</code>: bản vẽ hệ thống
+                xuất ra, đọc ngược vào lại đúng vai trò cũ (có kiểm thử canh vòng đó). Phiên bản
+                trên khung tên LÀ mã băm nội dung rút gọn — trong hệ thống này không có số phiên bản
+                nào khác, và đánh số tay sẽ là nguồn sự thật thứ hai. Hai nhãn cảnh báo do mã nguồn
+                chèn, không tắt được: «Phương án sơ bộ — chưa phải hồ sơ thi công» và «Lưới trục là
+                đề xuất của hệ thống — kỹ sư kết cấu quyết định».
+              </td>
+            </tr>
             <tr>
               <td class="num">29/08/2026</td>
               <td>
@@ -1340,49 +1656,82 @@
 
       <div class="flag">
         <h3>V-5 · Cây chia không gian ép các tầng có cùng diện tích theo vùng</h3>
+        <p class="kv"><b>Đã gỡ 30/08/2026</b></p>
         <p class="kv">
-          <b>Gặp ở đâu</b> Mốc 0.2, lần chạy đầu báo vô nghiệm cho một đầu bài trông rất bình
-          thường.
+          <b>Nguyên nhân cũ</b> Mô hình Mốc 0.2 dùng chung BA đường cắt cố định cho mọi tầng, nên
+          mỗi vùng (mặt tiền · dải lõi · phía sau) bắt buộc có cùng tổng diện tích ở mọi tầng.
         </p>
         <p class="kv">
-          <b>Nguyên nhân</b> Ba đường cắt định vị lõi thang là biến <b>dùng chung</b> giữa các tầng
-          — đó chính là thứ làm lõi và trục tường chịu lực thẳng hàng. Hệ quả kéo theo: mỗi vùng
-          (mặt tiền · dải lõi · phía sau) có <b>cùng tổng diện tích ở mọi tầng</b>. Cái thay đổi
-          theo tầng là cách chia nhỏ trong vùng, không phải độ lớn của vùng.
+          <b>Cách gỡ</b> Việc dùng chung nay SUY RA từ cây chứ không áp đặt: hai tầng chia giống
+          nhau thì thẳng hàng, chia khác nhau thì độc lập. Và chỉ những đường cắt thuộc
+          <b>kết cấu chính</b> mới dùng chung — vách ngăn bên trong từng dải là việc của từng tầng.
         </p>
         <p class="kv">
-          <b>Đây là đúng, không phải lỗi</b> Với nhà phố, các đường cắt đó là tuyến tường chịu lực
-          chạy suốt chiều cao nhà. Nhưng nó <b>ràng buộc Layer 2</b>: hai phòng chiếm trọn cùng một
-          vùng ở hai tầng khác nhau phải có khoảng diện tích giao nhau.
-        </p>
-        <p class="kv">
-          <b>Cần gì</b> Layer 2 (Mốc 4) phải biết ràng buộc này khi sinh chương trình không gian,
-          nếu không sẽ đẻ ra những đầu bài vô nghiệm mà nhìn thì rất hợp lý. Đã ghi vào phần chú
-          thích của <code>compute/src/design_compute/solver/model.py</code>.
+          <b>Bài học ghi lại</b> Bản sửa đầu tiên dùng chung MỌI đường cắt mà các tầng cùng phương.
+          Nghe chặt chẽ hơn, nhưng nó ép hai tầng có số phòng khác nhau phải có cùng diện tích ở
+          từng dải, và cái hiện ra là vô nghiệm với tập ràng buộc trỏ vào hai phòng chẳng liên quan
+          gì tới nhau. Nhà thật có vài tuyến tường chịu lực, còn vách ngăn thì mỗi tầng một khác.
         </p>
       </div>
 
       <div class="flag">
         <h3>V-6 · Bộ giải chưa biểu diễn được lát cắt DỌC của cây chia không gian</h3>
+        <p class="kv"><b>Đã gỡ 30/08/2026</b></p>
         <p class="kv">
-          <b>Gặp ở đâu</b> Mốc 1, khi viết lớp dịch giữa hợp đồng dữ liệu và mô hình nội bộ của bộ
-          giải (<code>compute/src/design_compute/adapters.py</code>).
+          <b>Nguyên nhân cũ</b> Lớp dịch chia mỗi tầng thành ba vùng theo chiều sâu nên chỉ đọc được
+          lát cắt ngang; lát cắt dọc bị gộp vào cùng một vùng.
         </p>
         <p class="kv">
-          <b>Nguyên nhân</b> Mô hình hiện tại chia mỗi tầng thành <b>ba vùng theo chiều sâu</b>: mặt
-          tiền · dải lõi · phía sau. Vì vậy lớp dịch chỉ đọc được lát cắt ngang (<code
-            >split: "H"</code
-          >) của cây. Lát cắt dọc — hai phòng cạnh nhau theo chiều rộng — hiện bị gộp vào cùng một
-          vùng.
+          <b>Cách gỡ</b> Bộ giải nay dựng mô hình thẳng từ cây: nút chia mang một đường cắt ngang
+          hoặc dọc, lá là phòng hoặc khoảng rỗng, sâu tuỳ ý. Có kiểm thử canh hai phòng cạnh nhau
+          theo chiều rộng ra đúng hai ô chung một cạnh đứng.
         </p>
         <p class="kv">
-          <b>Đang chặn</b> Chưa chặn gì trong đợt này: với nhà phố bề rộng 5 m thì gần đúng (bề rộng
-          đó hiếm khi chia dọc ngoài dải lõi). Nhưng nó <b>không dùng được cho biệt thự</b> — Mốc 7.
+          <b>Còn lại cho Mốc 7</b> Biệt thự nhiều cánh (<code>massing.wings</code> hơn một phần tử)
+          vẫn báo lỗi thay vì lặng lẽ bỏ qua các cánh còn lại. Đặt khối cho biệt thự là bài toán tối
+          ưu riêng, chưa làm.
+        </p>
+      </div>
+
+      <div class="flag">
+        <h3>V-7 · Chuẩn cấu tạo và chuẩn diện tích chưa ai trong nghề soát</h3>
+        <p class="kv"><b>Gặp ở đâu</b> Mốc 5, khi mặt bằng bắt đầu có hình dạng thật để nhìn.</p>
+        <p class="kv">
+          <b>Vấn đề</b> Hình học đã đúng — không khe hở, không chồng lấn, lõi thẳng hàng, mọi phòng
+          có lối vào và mặt thoáng. Nhưng <b>tỉ lệ</b> của mặt bằng thì do dữ liệu quyết định, và dữ
+          liệu đó là suy luận của tôi: <code>kb/space_norms.yaml</code> (diện tích từng loại phòng)
+          và <code>kb/construction_norms.yaml</code> (bề dày tường, kích thước cửa).
         </p>
         <p class="kv">
-          <b>Cần gì</b> Mở rộng mô hình bộ giải sang cây chia hai chiều đầy đủ, làm cùng lúc với
-          việc mã hoá các vị từ còn lại ở Mốc 5. Đã ghi rõ giới hạn ngay đầu tệp
-          <code>adapters.py</code> để không ai dùng nhầm cho biệt thự.
+          <b>Biểu hiện</b> Với một đầu bài mà chương trình không gian nhỏ hơn hẳn mặt sàn — ví dụ
+          gia đình bốn người trên lô 5&times;18 m ba tầng — bộ giải phải thổi phồng vài phòng cho
+          lấp kín sàn, và ra một phòng khách 47 m². Đó không phải lỗi hình học: căn nhà thật sự quá
+          lớn so với nhu cầu, và người thiết kế sẽ giảm số tầng hoặc chừa sân sau. Hệ thống hiện
+          chưa có cách nói điều đó.
+        </p>
+        <p class="kv">
+          <b>Đã hỏi Haan 30/08/2026 &mdash; chưa giải đáp được ngay.</b> Giữ nguyên số hiện tại và
+          đi tiếp; đây là vướng mắc <b>không chặn việc viết mã</b>, chỉ chặn phần nghiệm thu chất
+          lượng phương án. Cùng loại với V-3 (rule pack chờ kiến trúc sư đọc): sửa là sửa
+          <b>một tệp dữ liệu</b>, không phải sửa mã, nên soát muộn không tốn công làm lại &mdash;
+          chỉ tốn thời gian chạy với số chưa đúng.
+        </p>
+        <p class="kv">
+          <b>Rủi ro của việc để lâu</b> Mọi phương án sinh ra đều lệch cùng một hướng, và lệch đều
+          thì không ai nhận ra là lệch. Nguy hiểm hơn: nếu đưa bản vẽ ra cho Phòng Thiết kế xem
+          trước khi soát, họ sẽ đánh giá <b>chất lượng dữ liệu</b> mà tưởng là đánh giá
+          <b>năng lực engine</b> &mdash; và kết luận rút ra sẽ sai chỗ.
+        </p>
+        <p class="kv">
+          <b>Cần gì để gỡ</b> Một buổi để kiến trúc sư NVG đọc hai tệp
+          <code>kb/space_norms.yaml</code> và <code>kb/construction_norms.yaml</code>. Gộp chung
+          buổi với V-3 (đọc <code>rules/base/*.yaml</code>) &mdash; cùng một người, cùng một loại
+          việc, và ba tệp đó nói về cùng một ngôi nhà.
+        </p>
+        <p class="kv">
+          <b>Hai việc kèm theo, làm SAU khi có số đúng</b> Cho phép hình bao thu lại theo chiều sâu
+          (chừa sân sau) và để Lớp 2 nói ra khi số tầng vượt nhu cầu. Làm trước khi có số đúng là
+          chỉnh một cơ chế theo một mục tiêu chưa biết đúng hay sai.
         </p>
       </div>
 
@@ -1480,9 +1829,9 @@
             <tr>
               <td class="num">Q-8</td>
               <td>
-                <b>Đã trả lời 29/08/2026 — Hưng Yên, và mở ra đủ 34 đơn vị hành chính.</b> Biểu
-                mẫu đầu bài cho chọn 34 tỉnh, thành phố sau sắp xếp 2025; nhóm đầu là bốn địa bàn
-                NVG thường thi công (Hưng Yên · Hải Phòng · Ninh Bình · Hà Nội).
+                <b>Đã trả lời 29/08/2026 — Hưng Yên, và mở ra đủ 34 đơn vị hành chính.</b> Biểu mẫu
+                đầu bài cho chọn 34 tỉnh, thành phố sau sắp xếp 2025; nhóm đầu là bốn địa bàn NVG
+                thường thi công (Hưng Yên · Hải Phòng · Ninh Bình · Hà Nội).
                 <code>thai_binh</code> giữ lại dưới dạng lựa chọn đã hết hiệu lực để hồ sơ xác nhận
                 trước sáp nhập vẫn đọc ra chữ.
                 <br />
@@ -1561,15 +1910,15 @@
               <td>
                 <b>Thửa không vuông vắn: mất phần đất ở góc có chấp nhận được không?</b> Bộ giải
                 CP-SAT chia hết MỘT hình chữ nhật &mdash; nó không có khái niệm &laquo;phần đất
-                thừa&raquo;. Nên với thửa hình thang hay đa giác, engine làm việc trên <b>ô chữ nhật
-                lớn nhất nội tiếp</b> và phần đất ngoài ô đó không được xếp phòng (hệ thống đo và
-                nói ra con số, không giấu). Thửa hình thang mặt tiền 6 m &rarr; mặt hậu 4 m, sâu
-                20 m mất 20 trên 100 m².
+                thừa&raquo;. Nên với thửa hình thang hay đa giác, engine làm việc trên
+                <b>ô chữ nhật lớn nhất nội tiếp</b> và phần đất ngoài ô đó không được xếp phòng (hệ
+                thống đo và nói ra con số, không giấu). Thửa hình thang mặt tiền 6 m &rarr; mặt hậu
+                4 m, sâu 20 m mất 20 trên 100 m².
                 <br />
-                Kiến trúc sư NVG thực tế xử lý phần đất đó thế nào &mdash; làm sân, làm ban công
-                đua ra, hay vẫn xây thành phòng méo? Nếu buộc phải xây vào đó thì mô hình bộ giải
-                phải mở rộng (chia theo đa giác, không theo hình chữ nhật) &mdash; đó là thay đổi
-                lớn ở Lớp 3b, cần biết SỚM.
+                Kiến trúc sư NVG thực tế xử lý phần đất đó thế nào &mdash; làm sân, làm ban công đua
+                ra, hay vẫn xây thành phòng méo? Nếu buộc phải xây vào đó thì mô hình bộ giải phải
+                mở rộng (chia theo đa giác, không theo hình chữ nhật) &mdash; đó là thay đổi lớn ở
+                Lớp 3b, cần biết SỚM.
                 <br />
                 Câu hỏi kèm: mô hình hiện giả định thửa hình thang có <b>hai cạnh bên đối xứng</b>
                 qua trục giữa. Thửa lệch hẳn một bên phải khai bằng đa giác (nhập toạ độ từng đỉnh)
@@ -1583,9 +1932,9 @@
               <td>
                 <b>Toạ độ đỉnh thửa lấy từ đâu?</b> Dạng đa giác hiện bắt nhập tay toạ độ từng đỉnh
                 (ngang, sâu &mdash; mét). Đó là cách DUY NHẤT mô tả một thửa ngũ giác không mập mờ:
-                cùng bộ chiều dài các cạnh ứng với vô số hình khác nhau. Nhưng nhân sự NVG cầm
-                trích lục hay bản đồ hiện trạng &mdash; có sẵn toạ độ để chép sang không, hay phải
-                dựng lại từ chiều dài cạnh và góc?
+                cùng bộ chiều dài các cạnh ứng với vô số hình khác nhau. Nhưng nhân sự NVG cầm trích
+                lục hay bản đồ hiện trạng &mdash; có sẵn toạ độ để chép sang không, hay phải dựng
+                lại từ chiều dài cạnh và góc?
                 <br />
                 Nếu không có sẵn, đường đi tự nhiên là lấy ranh giới từ tệp CAD khảo sát: bộ trích
                 <code>compute/</code> đã đọc được <code>site_boundary_m</code> từ DXF. Nối được thì
@@ -1615,8 +1964,12 @@
                 <br />
                 Sửa là sửa <b>một tệp dữ liệu</b>, không phải sửa mã &mdash; nên soát muộn không tốn
                 công làm lại, chỉ tốn thời gian chạy với số chưa đúng.
+                <br />
+                <b>Hỏi lại 30/08/2026 &mdash; chưa giải đáp được ngay.</b> Từ Mốc 5, câu hỏi này
+                không còn chỉ ảnh hưởng bảng chương trình không gian: nó quyết định luôn TỈ LỆ của
+                mặt bằng vẽ ra. Xem vướng mắc V-7 để biết biểu hiện cụ thể.
               </td>
-              <td class="num">Mốc 4</td>
+              <td class="num">Mốc 4 · 5</td>
             </tr>
             <tr>
               <td class="num">Q-17</td>
@@ -1648,6 +2001,29 @@
               </td>
               <td class="num">Mốc 4</td>
             </tr>
+            <tr>
+              <td class="num">Q-21</td>
+              <td>
+                <b>Chuẩn cấu tạo có đúng cách NVG xây không?</b>
+                <code>kb/construction_norms.yaml</code> đang giữ ba nhóm số do tôi suy, chưa ai
+                trong nghề xác nhận: bề dày tường bao và tường chịu lực 220, tường ngăn 110; cửa
+                phòng 900&times;2200 và cửa vào nhà 1200&times;2400; cửa sổ cao 1500, bệ 900, bề
+                rộng lấy 55% đoạn tường mặt thoáng.
+                <br />
+                Vì sao cần soát chứ không để đó: đây là thứ quyết định bản vẽ DXF trông thế nào, và
+                bản vẽ là thứ Phòng Thiết kế nhận về để làm tiếp. Sai bề dày tường thì mọi kích
+                thước thông thuỷ trên bản vẽ lệch theo, và người nhận phải sửa tay từng phòng — đúng
+                cái việc mà hệ thống sinh ra để bỏ đi.
+                <br />
+                Kèm theo: <b>loại phòng nào KHÔNG mở cửa sổ</b> ra mặt phố dù có tiếp giáp. Đang đặt
+                thang bộ, lõi thang, phòng kỹ thuật và gara.
+                <br />
+                <b>Đã hỏi 30/08/2026 &mdash; chưa giải đáp được ngay.</b> Giữ số hiện tại và đi
+                tiếp. Không chặn việc viết mã; chặn phần nghiệm thu. Gộp buổi soát với Q-18 và vướng
+                mắc V-3.
+              </td>
+              <td class="num">Mốc 5</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -1670,16 +2046,25 @@
           </thead>
           <tbody>
             <tr>
-              <td><code>solve_time</code></td>
-              <td>Bộ giải CP-SAT giải xong căn 5×18 m, 4 tầng, 18 phòng — có chứng minh tối ưu</td>
-              <td class="num"><b>6 ms</b></td>
-              <td class="xs">Docker tại chỗ, 29/08/2026 (chưa phải hạ tầng thật, xem V-2)</td>
+              <td><code>solve_time</code> · đủ vị từ</td>
+              <td>
+                Nhà ống 5×18 m, 3 tầng, 11 không gian, mười vị từ đã mã hoá — có chứng minh tối ưu
+              </td>
+              <td class="num"><b>1,1 giây</b></td>
+              <td class="xs">
+                Docker tại chỗ, 30/08/2026. Trước khi chứng minh kề nhau bằng cấu trúc: 6,6 giây.
+                Ngân sách là 60 giây, nên còn biên rộng kể cả khi hạ tầng thật chậm hơn nhiều lần
+                (V-2)
+              </td>
             </tr>
             <tr>
-              <td><code>solve_time</code> · 5 tầng</td>
-              <td>Thêm một tầng vào cùng mô hình, giữ nguyên lõi và trục</td>
-              <td class="num"><b>4 ms</b></td>
-              <td class="xs">Docker tại chỗ, 22 phòng</td>
+              <td><code>solve_time</code> · bốn vị từ</td>
+              <td>Mô hình Mốc 0.2: căn 5×18 m, 4 tầng, 18 phòng, mới mã hoá bốn vị từ</td>
+              <td class="num"><b>6 ms</b></td>
+              <td class="xs">
+                Docker tại chỗ, 29/08/2026. Giữ lại để thấy giá của sáu vị từ còn lại — đừng đọc con
+                số này như hiệu năng hiện tại
+              </td>
             </tr>
             <tr>
               <td>Kích thước tập mâu thuẫn</td>
@@ -1689,9 +2074,18 @@
             </tr>
             <tr>
               <td>Số quy tắc</td>
-              <td>Rule pack Thái Bình (gồm cả kế thừa từ gói nền)</td>
+              <td>Rule pack nền (chưa tỉnh nào có gói địa phương riêng)</td>
               <td class="num"><b>27</b></td>
-              <td class="xs">22 nền + 5 ghi đè địa phương</td>
+              <td class="xs">Toàn bộ dẫn QCVN 01:2021/BXD, TCVN 4451:2012 hoặc kinh nghiệm NVG</td>
+            </tr>
+            <tr>
+              <td>Vị từ đã mã hoá</td>
+              <td>Vị từ của rule pack thật sự ràng buộc mô hình, không chỉ nạp rồi để đó</td>
+              <td class="num"><b>10 / 12</b></td>
+              <td class="xs">
+                Còn <code>module_multiple</code> (đúng theo cấu trúc vì bộ giải làm việc bằng module
+                nguyên) và <code>floor_preference</code> (do Lớp 2 quyết định, bộ giải chỉ kiểm)
+              </td>
             </tr>
             <tr>
               <td>Pipeline sáu bước</td>
@@ -1704,19 +2098,22 @@
               </td>
             </tr>
             <tr>
-              <td>Kiểm thử của module</td>
-              <td>Python trong Container · hợp đồng và chính sách · phân quyền trên CSDL thật</td>
-              <td class="num"><b>37 · 63</b></td>
+              <td>Kiểm thử của cả kho mã</td>
+              <td>Python trong Container · logic và phân quyền trên CSDL thật · giao diện</td>
+              <td class="num"><b>162 · 416 · 209</b></td>
               <td class="xs">
-                37 phép thử Python trong Docker + 63 phép thử TypeScript (30 chạy trong bộ nhớ, 33
-                chạm CSDL và Container thật). Tổng 100, đều xanh, 29/08/2026
+                Tổng 787, đều xanh, 30/08/2026. Riêng module thiết kế: 162 phép thử Python (bộ giải,
+                hình học, CAD, hợp đồng) và 78 phép thử TypeScript
               </td>
             </tr>
             <tr>
               <td>Gói bản dựng Worker</td>
               <td>Toàn bộ Worker sau khi thêm module thiết kế</td>
-              <td class="num"><b>217 KiB</b></td>
-              <td class="xs">Nén; giới hạn gói Free là 3 MB</td>
+              <td class="num"><b>274 KiB</b></td>
+              <td class="xs">
+                Nén, đo 30/08/2026; giới hạn gói Free là 3 MB. Tăng từ 217 KiB do thêm Lớp 3a, bảng
+                hiện trạng bốn phía và chuẩn cấu tạo
+              </td>
             </tr>
             <tr>
               <td><code>solve_time</code> p95</td>

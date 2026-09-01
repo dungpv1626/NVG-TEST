@@ -8,14 +8,32 @@ Gói này phải giữ tính TẤT ĐỊNH: không bao giờ import phần gọi
 """
 
 from design_compute.solver.units import MODULE_MM, m_to_units, units_to_m, units_to_m2
-from design_compute.solver.model import SolveRequest, SolveResult, solve_townhouse
+from design_compute.solver.model import (
+    AdjacencyRequest,
+    FloorLayout,
+    PlacedRoom,
+    PlacedVoid,
+    RoomSpec,
+    SolveRequest,
+    SolveResult,
+    Violation,
+    solve_townhouse,
+)
+from design_compute.solver.evaluate import evaluate_violations
 
 __all__ = [
     "MODULE_MM",
     "m_to_units",
     "units_to_m",
     "units_to_m2",
+    "AdjacencyRequest",
+    "FloorLayout",
+    "PlacedRoom",
+    "PlacedVoid",
+    "RoomSpec",
     "SolveRequest",
     "SolveResult",
+    "Violation",
+    "evaluate_violations",
     "solve_townhouse",
 ]

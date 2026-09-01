@@ -49,6 +49,14 @@ def default_mapping_path() -> Path:
 
 
 @dataclass(frozen=True, slots=True)
+class ExportLayer:
+    """Tên lớp và màu dùng khi HỆ THỐNG xuất bản vẽ."""
+
+    layer: str
+    color: int
+
+
+@dataclass(frozen=True, slots=True)
 class LayerMapping:
     """Bảng tra: tên lớp → vai trò."""
 
@@ -57,6 +65,7 @@ class LayerMapping:
     # Giữ thứ tự khai báo: vai trò khai TRƯỚC thắng khi một lớp khớp nhiều mẫu.
     roles: tuple[tuple[str, tuple[str, ...]], ...]
     ignore: tuple[str, ...]
+    export: dict[str, ExportLayer]
 
     @property
     def default_unit_scale(self) -> float:
@@ -92,6 +101,16 @@ class LayerMapping:
                 seen[layer] = None
         return tuple(seen)
 
+    def export_layer(self, role: str) -> ExportLayer:
+        """Lớp để GHI cho một vai trò. Thiếu khai báo là lỗi cấu hình, không đoán bù."""
+        found = self.export.get(role)
+        if found is None:
+            raise LayerMappingError(
+                f"bảng ánh xạ chưa khai tên lớp xuất cho vai trò {role!r} — bổ sung vào mục "
+                "`export:` của kb/layer_mapping.yaml"
+            )
+        return found
+
     def layers_for(self, role: str) -> tuple[str, ...]:
         """Các mẫu tên lớp khai cho một vai trò — dùng để báo lỗi cho người đọc hiểu."""
         for name, patterns in self.roles:
@@ -126,9 +145,19 @@ def load_mapping(path: Path | None = None) -> LayerMapping:
             raise LayerMappingError(f"{path}: vai trò {role!r} phải có ít nhất một mẫu tên lớp")
         roles.append((str(role), tuple(str(p) for p in patterns)))
 
+    export_raw = raw.get("export") or {}
+    if not isinstance(export_raw, dict):
+        raise LayerMappingError(f"{path}: mục `export:` phải là ánh xạ vai trò → tên lớp")
+    export: dict[str, ExportLayer] = {}
+    for role, spec in export_raw.items():
+        if not isinstance(spec, dict) or "layer" not in spec:
+            raise LayerMappingError(f"{path}: vai trò xuất {role!r} phải khai `layer`")
+        export[str(role)] = ExportLayer(str(spec["layer"]), int(spec.get("color", 7)))
+
     return LayerMapping(
         version=str(raw.get("version", "0")),
         default_units=units,
         roles=tuple(roles),
         ignore=tuple(str(p) for p in (raw.get("ignore") or [])),
+        export=export,
     )

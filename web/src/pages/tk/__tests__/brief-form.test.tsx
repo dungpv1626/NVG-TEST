@@ -275,7 +275,7 @@ describe('Chế độ xem — không để lọt mã máy ra màn hình', () => 
     site: { width_m: 5, depth_m: 18, orientation: 'N' },
     floors: 3,
     family: [{ role: 'vo_chong', count: 2, floor_pref: 'mid', needs: ['bedroom'] }],
-    required_spaces: ['living', 'kitchen'],
+    required_spaces: [{ type: 'living' }, { type: 'kitchen' }],
     style: 'hien_dai',
     budget_range_vnd: [2000000000, 3000000000],
     priorities: ['natural_light'],
@@ -374,5 +374,52 @@ describe('Hình thửa đất', () => {
       (await screen.findAllByText(/chưa có chiều rộng mặt hậu/)).length,
       'cảnh báo phải hiện cả cạnh ô lẫn ở cột phải',
     ).toBeGreaterThan(0);
+  });
+});
+
+describe('Không gian bắt buộc — ghim tầng', () => {
+  it('chọn không gian thì hiện ô ghim tầng, mặc định để hệ thống tự xếp', async () => {
+    state.briefs = [brief()]; // floors: 3
+    state.surveys = [];
+    await openForm();
+
+    expect(screen.queryByLabelText('Tầng — garage')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Chỗ để xe' }));
+
+    const select = (await screen.findByLabelText('Tầng — garage')) as HTMLSelectElement;
+    expect(select.value).toBe('');
+  });
+
+  it('ghim vào một tầng cụ thể thì ô ghi đúng giá trị đó', async () => {
+    state.briefs = [brief()];
+    state.surveys = [];
+    await openForm();
+    await userEvent.click(screen.getByRole('button', { name: 'Chỗ để xe' }));
+
+    const select = (await screen.findByLabelText('Tầng — garage')) as HTMLSelectElement;
+    await userEvent.selectOptions(select, '1');
+    expect(select.value).toBe('1');
+  });
+
+  it('bỏ chọn không gian thì mất luôn ô ghim tầng của nó', async () => {
+    state.briefs = [brief()];
+    state.surveys = [];
+    await openForm();
+    const chip = screen.getByRole('button', { name: 'Chỗ để xe' });
+    await userEvent.click(chip);
+    await screen.findByLabelText('Tầng — garage');
+
+    await userEvent.click(chip);
+    expect(screen.queryByLabelText('Tầng — garage')).toBeNull();
+  });
+
+  it('nhà một tầng thì không hiện khu vực ghim tầng — chỉ một tầng thì không có gì để chọn', async () => {
+    state.briefs = [brief({ structured: { building_type: 'nha_pho', floors: 1 } })];
+    state.surveys = [];
+    await openForm();
+    await userEvent.click(screen.getByRole('button', { name: 'Chỗ để xe' }));
+
+    expect(screen.queryByLabelText('Tầng — garage')).toBeNull();
+    expect(screen.queryByText(/Ghim vào tầng cụ thể/)).toBeNull();
   });
 });

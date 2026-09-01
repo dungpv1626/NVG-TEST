@@ -53,6 +53,7 @@ import { useDesignSurveys } from '@/hooks/use-design-surveys';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard';
 import { BriefField } from './brief-field';
+import { SitePlanPreview } from './site-plan-preview';
 
 const EM_DASH = '—';
 
@@ -230,21 +231,48 @@ export function BriefPanel({
               >
                 <h3 className="font-semibold">{section.title}</h3>
                 {section.hint && <p className="mt-0.5 text-fg-subtle">{section.hint}</p>}
-                <div className="mt-3 space-y-4">
-                  {fields.map(({ field }) => (
-                    <BriefField
-                      key={field.path}
-                      field={field}
-                      value={
-                        field.path.startsWith('legacy.')
-                          ? (legacy[LEGACY_COLUMNS[field.path]!] ?? undefined)
-                          : valueAtPath(draft, field.path)
-                      }
-                      onChange={(value) => setField(field.path, value)}
-                      issues={issuesFor(field.path)}
-                    />
-                  ))}
-                </div>
+                {section.id === 'khu_dat' ? (
+                  <div className="mt-3 grid gap-4 md:grid-cols-[minmax(0,1fr)_16rem]">
+                    <div className="space-y-4">
+                      {fields.map(({ field }) => (
+                        <BriefField
+                          key={field.path}
+                          field={field}
+                          value={
+                            field.path.startsWith('legacy.')
+                              ? (legacy[LEGACY_COLUMNS[field.path]!] ?? undefined)
+                              : valueAtPath(draft, field.path)
+                          }
+                          onChange={(value) => setField(field.path, value)}
+                          issues={issuesFor(field.path)}
+                          projectId={projectId}
+                          floors={draft.floors ?? 1}
+                        />
+                      ))}
+                    </div>
+                    <div className="md:sticky md:top-4 md:self-start">
+                      <SitePlanPreview site={draft.site} />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-3 space-y-4">
+                    {fields.map(({ field }) => (
+                      <BriefField
+                        key={field.path}
+                        field={field}
+                        value={
+                          field.path.startsWith('legacy.')
+                            ? (legacy[LEGACY_COLUMNS[field.path]!] ?? undefined)
+                            : valueAtPath(draft, field.path)
+                        }
+                        onChange={(value) => setField(field.path, value)}
+                        issues={issuesFor(field.path)}
+                        projectId={projectId}
+                        floors={draft.floors ?? 1}
+                      />
+                    ))}
+                  </div>
+                )}
 
                 {section.id === 'khu_dat' && survey && (
                   <Button variant="secondary" className="mt-3" onClick={copyFromSurvey}>
@@ -590,6 +618,16 @@ function describeField(field: BriefFormField, value: unknown): string | null {
         return parts.join(' · ');
       })
       .join(' | ');
+  }
+
+  if (field.control === 'space_floor') {
+    const items = value as { type: string; floor?: number | null }[];
+    if (!items.length) return null;
+    return items
+      .map((it) =>
+        typeof it.floor === 'number' ? `${label(it.type)} (Tầng ${it.floor})` : label(it.type),
+      )
+      .join(', ');
   }
 
   if (field.control === 'polygon') {

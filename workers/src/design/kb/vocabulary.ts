@@ -15,10 +15,16 @@ export interface RoomTypeEntry {
   aliases?: string[];
 }
 
+export interface RoomGroupEntry {
+  vi: string;
+  /** Mã phòng thuộc nhóm. `null` = mọi mã phòng. */
+  members: string[] | null;
+}
+
 export interface RoomVocabulary {
   version: string;
   types: RoomTypeEntry[];
-  group_targets?: Record<string, string>;
+  group_targets?: Record<string, RoomGroupEntry>;
 }
 
 export function parseVocabulary(yamlText: string): RoomVocabulary {
@@ -34,6 +40,23 @@ export function parseVocabulary(yamlText: string): RoomVocabulary {
     }
   }
   return raw;
+}
+
+/**
+ * Thành viên của từng nhóm mã phòng, gửi kèm lời gọi bộ giải.
+ *
+ * Bộ giải cần biết `target: habitable` của một quy tắc phủ những loại phòng nào. Nó KHÔNG tự
+ * tra: bảng từ vựng là tệp dữ liệu phía Worker, và giữ bản sao thứ hai trong Container thì
+ * thêm một loại phòng phải sửa hai chỗ.
+ *
+ * Nhóm khai `members: null` (nghĩa là mọi mã phòng) không cần gửi — bộ giải đã hiểu `all`.
+ */
+export function roomGroups(vocabulary: RoomVocabulary): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  for (const [name, entry] of Object.entries(vocabulary.group_targets ?? {})) {
+    if (entry?.members) out[name] = entry.members;
+  }
+  return out;
 }
 
 /**

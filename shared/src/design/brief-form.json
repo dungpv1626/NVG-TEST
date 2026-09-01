@@ -208,7 +208,7 @@
             },
             {
               "value": "thai_binh",
-              "label": "Thái Bình (đã sáp nhập vào Hưng Yên năm 2025)",
+              "label": "Hưng Yên (Thái Bình cũ)",
               "retired": true,
               "note": "Chỉ để đọc lại hồ sơ đã xác nhận trước khi sáp nhập — bản đã xác nhận là bất biến nên không sửa lại được.",
               "group": "Không còn dùng"
@@ -327,7 +327,7 @@
             },
             {
               "value": "BD",
-              "label": "Bắc — Đông"
+              "label": "Đông Bắc"
             },
             {
               "value": "D",
@@ -512,9 +512,9 @@
         {
           "path": "required_spaces",
           "label": "Không gian bắt buộc có",
-          "control": "multi",
+          "control": "space_floor",
           "weight": 2,
-          "hint": "Thang bộ, hành lang và hộp kỹ thuật do hệ thống tự bố trí, không cần chọn.",
+          "hint": "Thang bộ, hành lang và hộp kỹ thuật do hệ thống tự bố trí, không cần chọn. Có thể ghim một không gian vào đúng tầng mong muốn; bỏ trống để hệ thống tự xếp.",
           "options": [
             {
               "value": "living",
@@ -802,37 +802,6 @@
           "control": "money_range",
           "weight": 1,
           "hint": "Đơn vị đồng. Khoảng chứ không phải một con số — ngân sách chốt cứng ở bước sơ bộ thường sai."
-        },
-        {
-          "path": "decision_maker",
-          "label": "Người quyết định cuối",
-          "control": "choice",
-          "weight": 2,
-          "hint": "Ai là người nói câu cuối cùng khi hai ý kiến khác nhau.",
-          "options": [
-            {
-              "value": "chu_nha",
-              "label": "Chủ nhà"
-            },
-            {
-              "value": "vo_chong_chu_nha",
-              "label": "Hai vợ chồng cùng quyết"
-            },
-            {
-              "value": "ong_ba",
-              "label": "Ông bà"
-            },
-            {
-              "value": "nguoi_dai_dien",
-              "label": "Người đại diện được uỷ quyền"
-            },
-            {
-              "value": "chua_xac_dinh",
-              "label": "Chưa xác định được",
-              "note": "Đã hỏi mà khách chưa quyết — khác hẳn chưa ai hỏi. Chọn mục này vẫn được tính là đã trả lời."
-            }
-          ],
-          "note": "Bắt buộc THU THẬP dù được để trống (03-data-contracts 3.1): thiếu người quyết định là nguyên nhân hàng đầu khiến phương án phải sửa nhiều lần. Biểu mẫu có thêm lựa chọn \"chưa xác định được\" — đã hỏi mà chưa có câu trả lời khác hẳn chưa ai hỏi."
         }
       ]
     },

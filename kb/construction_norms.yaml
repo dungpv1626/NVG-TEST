@@ -1,0 +1,43 @@
+# Chuẩn cấu tạo dùng để dựng tường và lỗ mở từ hình học đã giải (Lớp 3c).
+#
+# Nguồn: `doc/design/04-layer3-floorplan.md` mục 4.5 ("sinh danh sách walls và openings từ
+# polygon phòng"), hợp đồng `contracts/floor-plan.schema.json`.
+#
+# ── Vì sao là DỮ LIỆU chứ không phải hằng số trong mã nguồn ────────────────────────────
+# Cùng lý lẽ với rule pack và `layer_mapping.yaml` (CLAUDE.md 8.7). Bề dày tường và bề rộng
+# cửa là quy ước cấu tạo của từng đơn vị thi công: NVG xây tường 110 hay 220, cửa phòng ngủ
+# 800 hay 900 — đổi theo hồ sơ, theo chủ đầu tư, và sẽ đổi lần nữa.
+#
+# ⚠️ Đây KHÔNG phải ngưỡng quy chuẩn. Ngưỡng quy chuẩn (bề rộng hành lang tối thiểu, diện tích
+# phòng tối thiểu) nằm ở `rules/` và có mức nghiêm trọng, có nguồn dẫn. Số ở đây chỉ quyết định
+# bản vẽ TRÔNG thế nào, không quyết định phương án có hợp lệ hay không.
+#
+# ⚠️ Chưa có kiến trúc sư NVG xác nhận — cùng nhóm câu hỏi với `kb/space_norms.yaml` (Q-18).
+
+version: '1.0.0'
+
+walls:
+  # Tường bao và tường chịu lực dày hơn tường ngăn.
+  exterior_m: 0.22
+  load_bearing_m: 0.22
+  partition_m: 0.11
+
+openings:
+  door:
+    width_m: 0.9
+    height_m: 2.2
+  entrance:
+    width_m: 1.2
+    height_m: 2.4
+  window:
+    height_m: 1.5
+    sill_m: 0.9
+    # Bề rộng cửa sổ lấy theo TỈ LỆ đoạn tường mặt thoáng của phòng, kẹp trong hai cận dưới.
+    # Lấy tỉ lệ chứ không lấy một con số cố định: một phòng ngủ 2,4 m và một phòng khách 5 m
+    # không thể cùng một ô cửa.
+    share_of_wall: 0.55
+    min_width_m: 0.8
+    max_width_m: 3.0
+
+# Loại phòng KHÔNG mở cửa sổ ra mặt thoáng dù có tiếp giáp.
+no_window_types: [stair, core, technical, garage]

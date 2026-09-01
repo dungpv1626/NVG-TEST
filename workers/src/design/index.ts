@@ -23,6 +23,7 @@ import { ContractError } from './contracts';
 import { createComputeBackend } from './compute-backend';
 import { DataClassViolation, ModelNotConfigured } from './llm/router';
 import { geminiClient, modelRouter } from './llm/factory';
+import { LlmCallFailed } from './llm/gemini';
 import { PublishBridge } from './publish';
 import { ArtifactRepository } from './artifacts';
 import { buildBriefPayload } from './brief/payload';
@@ -33,6 +34,7 @@ import { roomVocabulary } from './kb/vocabulary-data';
 import { embeddingText, withheldFields, type RationalePayload } from './kb/rationale';
 import { createSourceFileStore, type StoredSource } from './source-files';
 import type { DigitiseParams, DigitiseSource } from './workflows/digitise-steps';
+import { extractSiteBoundary } from './site/extract-boundary';
 import type { DesignEnv } from './env';
 
 export const designApp = new Hono<{ Bindings: DesignEnv }>();
@@ -397,6 +399,94 @@ designApp.get('/program/:projectId', async (c) => {
 });
 
 /**
+ * Xuất một tầng của mặt bằng đang hiệu lực ra DXF.
+ *
+ * Endpoint Workers vì đúng điều kiện (a) của CLAUDE.md 3.1: nó gọi Container tính toán. Phần
+ * dựng tệp nằm ở Container, nơi có `ezdxf` — Worker chỉ ghép khung tên và đặt tên tệp.
+ *
+ * MỘT CHIỀU. Không có endpoint nhập ngược, và sẽ không có: mặt bằng của hệ thống là một cây
+ * ràng buộc đã giải, còn tệp DXF chỉ là hình chiếu phẳng của nó. Đọc ngược một tệp ai đó đã
+ * kéo tay thì mất sạch siêu dữ liệu ràng buộc và không có cách nào biết ràng buộc nào đã bị
+ * phá (CLAUDE.md 8.7).
+ */
+designApp.get('/floor-plan/:projectId/dxf', async (c) => {
+  const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+
+  const projectId = c.req.param('projectId');
+  const level = Number.parseInt(c.req.query('level') ?? '1', 10);
+  if (!Number.isInteger(level) || level < 1 || level > 12) {
+    return c.json({ error: 'Số tầng không hợp lệ. Nhập số tầng từ 1 đến 12.' }, 400);
+  }
+
+  const db = await asUser(c.env, token);
+  const project = await db
+    .from('design_projects')
+    .select('id, code, name')
+    .eq('id', projectId)
+    .is('deleted_at', null)
+    .maybeSingle();
+  if (project.error || !project.data) {
+    return c.json(
+      {
+        error:
+          'Không tìm thấy hồ sơ thiết kế, hoặc tài khoản không được xem hồ sơ này. Người chịu trách nhiệm dự án hoặc Phòng Thiết kế xem được.',
+      },
+      404,
+    );
+  }
+
+  const repo = new ArtifactRepository(c.env);
+  const head = await repo.head(projectId, 'kien_truc', 'floor_plan');
+  if (!head) {
+    return c.json(
+      { error: 'Chưa có mặt bằng đang hiệu lực. Chạy bước giải ràng buộc trước khi xuất bản vẽ.' },
+      409,
+    );
+  }
+
+  const compute = createComputeBackend(c.env);
+  const now = new Date();
+  const date = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+  // Phiên bản LÀ mã băm nội dung, rút gọn. Trong hệ thống này không có số phiên bản nào khác:
+  // artifact bất biến, sửa là tạo bản mới, nên tám ký tự đầu của mã băm truy được về đúng một
+  // bản duy nhất. Đánh số tay sẽ là nguồn sự thật thứ hai và sớm muộn nói khác đi.
+  const version = head.id.replace(/^sha256:/, '').slice(0, 8);
+
+  let dxf: ArrayBuffer;
+  try {
+    dxf = await compute.exportDxf({
+      floor_plan: head.payload,
+      level,
+      title_block: {
+        project_code: String(project.data.code ?? ''),
+        project_name: String(project.data.name ?? ''),
+        discipline: 'Kiến trúc',
+        sheet: 'Mặt bằng',
+        version,
+        date,
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return c.json({ error: message }, 502);
+  }
+
+  // ⚠️ Quy ước đặt tên tệp của NVG ngoài đời khác mã hồ sơ trong hệ thống (câu hỏi Q-7 chờ
+  // Haan). Tạm ghép từ mã hệ thống để tệp luôn truy được về đúng hồ sơ; đổi quy ước là sửa
+  // đúng dòng này.
+  const slug = String(project.data.code ?? 'ho-so').replace(/[^A-Za-z0-9-]/g, '');
+  const filename = `${slug}_KT_MatBang_T${level}_V${version}.dxf`;
+
+  return new Response(dxf, {
+    headers: {
+      'Content-Type': 'application/dxf',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+    },
+  });
+});
+
+/**
  * Chốt chương trình không gian — đúc artifact `space_program` và chuyển bản đang hiệu lực.
  *
  * Endpoint Workers vì đúng điều kiện (b) của CLAUDE.md 3.1: artifact + cạnh lineage + con trỏ
@@ -472,6 +562,121 @@ designApp.post('/program/generate', async (c) => {
     roomLabels: roomLabels(),
     warnings: run.warnings,
     unresolvedNeeds: run.unresolved,
+  });
+});
+
+/**
+ * Trần kích thước ảnh tải lên để đọc ranh giới thửa đất.
+ *
+ * Nhỏ hơn hẳn `MAX_SOURCE_BYTES` (50 MB, trần LƯU TRỮ của `source-files.ts`): đây là trần
+ * PAYLOAD gửi thẳng vào lời gọi Gemini — request quá khổ dễ hết giờ ở tầng mạng trước khi
+ * kịp trả lỗi đọc được. Ảnh chụp bằng điện thoại nén JPEG hiếm khi vượt vài megabyte.
+ */
+const MAX_SITE_IMAGE_BYTES = 15 * 1024 * 1024;
+
+const SITE_IMAGE_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+]);
+
+/**
+ * Đọc ảnh trích lục/sổ đỏ, trả về ranh giới thửa đất để điền nháp vào bảng đỉnh của biểu mẫu
+ * Đầu bài — người dùng vẫn xem lại/sửa từng đỉnh trước khi lưu.
+ *
+ * Đồng bộ, không qua Workflow: chỉ một lượt gọi Gemini rồi một phép tính thuần
+ * (`polygonFromEdges`), không có bước nào cần điều phối nhiều lần thử lại.
+ *
+ * Endpoint Workers vì đúng điều kiện (a) của CLAUDE.md 3.1: gọi dịch vụ bên ngoài (Gemini).
+ * KHÔNG đúc artifact — xem doc-comment của `extractSiteBoundary`.
+ */
+designApp.post('/site/extract-boundary', async (c) => {
+  const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+
+  const llm = geminiClient(c.env);
+  if (!llm) {
+    return c.json(
+      {
+        error: 'Chưa cấu hình mô hình đọc ảnh. Báo Quản trị hệ thống bổ sung khoá Gemini.',
+        retryable: false,
+      },
+      503,
+    );
+  }
+
+  const form = await c.req.formData();
+  const projectId = form.get('projectId');
+  const file = form.get('file');
+  if (typeof projectId !== 'string' || !projectId) {
+    return c.json({ error: 'Thiếu mã hồ sơ thiết kế.' }, 400);
+  }
+  if (!(file instanceof File)) {
+    return c.json({ error: 'Chưa chọn ảnh trích lục/sổ đỏ để đọc.' }, 400);
+  }
+  if (!SITE_IMAGE_MIME_TYPES.has(file.type)) {
+    return c.json({ error: 'Chỉ nhận ảnh định dạng JPEG, PNG, WEBP hoặc HEIC/HEIF.' }, 400);
+  }
+  if (file.size > MAX_SITE_IMAGE_BYTES) {
+    return c.json(
+      {
+        error: `Ảnh nặng ${Math.round(file.size / 1024 / 1024)} MB, vượt hạn ${MAX_SITE_IMAGE_BYTES / 1024 / 1024} MB. Chụp lại ở độ phân giải thấp hơn hoặc cắt bớt phần thừa quanh thửa đất.`,
+      },
+      400,
+    );
+  }
+
+  const db = await asUser(c.env, token);
+  const scope = await projectScope(db, projectId);
+  if (!scope) {
+    return c.json(
+      {
+        error:
+          'Không tìm thấy hồ sơ thiết kế, hoặc tài khoản không được sửa hồ sơ này. Người chịu trách nhiệm dự án hoặc Phòng Thiết kế thực hiện được việc này.',
+      },
+      404,
+    );
+  }
+
+  // Hỏi thẳng CSDL, không chép lại điều kiện quyền ở tầng Worker (CLAUDE.md 3.4) — đây là
+  // hàm đã cấp quyền RPC sẵn cho việc này (cùng mẫu với `rls_kb_writable` ở `/kb/digitise`).
+  const allowed = await db.rpc('rls_design_writable', {
+    p_tenant_id: scope.tenantId,
+    p_project_id: projectId,
+    p_discipline: 'kien_truc',
+  });
+  if (allowed.error) return c.json({ error: 'Không kiểm tra được quyền sửa hồ sơ.' }, 500);
+  if (allowed.data !== true) {
+    return c.json(
+      {
+        error:
+          'Không đủ quyền sửa hồ sơ kiến trúc của dự án này. Người chịu trách nhiệm dự án hoặc Phòng Thiết kế thực hiện được việc này.',
+      },
+      403,
+    );
+  }
+
+  const bytes = new Uint8Array(await file.arrayBuffer());
+
+  // Giữ ảnh gốc để truy ngược khi kết quả đọc trông sai — cùng kho với bản vẽ CAD nguồn
+  // (`source-files.ts`: "tệp nhị phân do người tải lên, giữ để truy ngược, không gắn
+  // artifact" khớp đúng bản chất của ảnh này).
+  const store = createSourceFileStore(c.env);
+  const saved: StoredSource = await store.put(file.name || 'trich-luc.jpg', bytes);
+
+  const result = await extractSiteBoundary(llm, { mimeType: file.type, bytes });
+
+  return c.json({
+    boundaryM: result.boundaryM,
+    edges: result.edges,
+    assumedAngleIndices: result.assumedAngleIndices,
+    closureErrorM: result.closureErrorM,
+    closureErrorDeg: result.closureErrorDeg,
+    closedShapeConfidence: result.closedShapeConfidence,
+    warnings: result.warnings,
+    sourceUri: saved.uri,
   });
 });
 
@@ -590,6 +795,15 @@ designApp.onError((error, c) => {
   }
   if (error instanceof ModelNotConfigured) {
     return c.json({ error: error.message, retryable: false }, 503);
+  }
+  if (error instanceof LlmCallFailed) {
+    // `error.message` chứa nguyên văn mã HTTP + JSON lỗi của nhà cung cấp (đã ghi log ở trên) —
+    // đúng thứ CGD 5.5 cấm hiện cho người dùng. Chỉ hai nhóm nguyên nhân thật sự khác nhau với
+    // người dùng: quá tải/tạm thời (thử lại được) và mọi trường hợp còn lại.
+    const message = error.retryable
+      ? 'Mô hình ngôn ngữ đang quá tải, thử lại sau ít phút.'
+      : 'Không đọc được ảnh bằng mô hình ngôn ngữ. Thử lại sau, hoặc báo Quản trị hệ thống nếu vẫn lỗi.';
+    return c.json({ error: message, retryable: error.retryable }, error.retryable ? 503 : 502);
   }
   if ((error as { retryable?: boolean }).retryable) {
     return c.json({ error: error.message, retryable: true }, 503);

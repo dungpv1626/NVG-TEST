@@ -19,6 +19,8 @@ export * from './brief-form';
 export * from './brief-form-data';
 export * from './brief-completeness';
 export * from './site-geometry';
+export * from './site-boundary-from-edges';
+export * from './site-boundary-from-coordinates';
 
 // ---------------------------------------------------------------------------
 // Bộ môn — dùng lại enum `design_discipline` sẵn có (CLAUDE.md 8.5 T7)

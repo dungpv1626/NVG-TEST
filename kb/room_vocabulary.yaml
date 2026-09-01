@@ -107,7 +107,18 @@ types:
 
 # Mã nhóm dùng trong `target:` của rule pack để nhắm NHIỀU loại phòng cùng lúc. Chúng KHÔNG
 # phải nhãn phòng — mô hình ngôn ngữ không bao giờ được trả về các mã này.
+# `members` là danh sách mã phòng thuộc nhóm. `null` = mọi mã.
+#
+# Khai tường minh chứ không để mã nguồn đoán: nhóm `habitable` mà rơi vào mọi loại phòng thì
+# quy tắc "tỉ lệ dài trên rộng không quá 2,5" đè lên cả hành lang — mà hành lang dài và hẹp là
+# đúng bản chất của nó. Cảnh báo sai loại đó làm kiến trúc sư quen bỏ qua danh sách vi phạm.
 group_targets:
-  all: Mọi không gian
-  habitable: Không gian ở (khách, ăn, ngủ, làm việc, thờ)
-  load_bearing_wall: Tường chịu lực
+  all:
+    vi: Mọi không gian
+    members: null
+  habitable:
+    vi: Không gian ở (khách, ăn, ngủ, làm việc, thờ)
+    members: [living, dining, bedroom, master_bedroom, study, altar_room, shop]
+  load_bearing_wall:
+    vi: Tường chịu lực
+    members: []

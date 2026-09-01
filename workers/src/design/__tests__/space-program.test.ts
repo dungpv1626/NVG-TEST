@@ -171,8 +171,9 @@ describe('Soạn chương trình không gian', () => {
   });
 
   it('quy tắc thắng nguyện vọng về tầng: phòng thờ lên trên cùng, gara xuống trệt', () => {
-    const spaces = build(brief({ required_spaces: ['altar_room', 'garage'], floors: 4 })).payload
-      .spaces;
+    const spaces = build(
+      brief({ required_spaces: [{ type: 'altar_room' }, { type: 'garage' }], floors: 4 }),
+    ).payload.spaces;
     expect(spaces.find((s) => s.type === 'altar_room')?.floor).toBe(4);
     expect(spaces.find((s) => s.type === 'garage')?.floor).toBe(1);
   });
@@ -181,6 +182,23 @@ describe('Soạn chương trình không gian', () => {
     const spaces = build(brief({ family: [{ role: 'con', count: 1, floor_pref: 'top' }] })).payload
       .spaces;
     expect(spaces.find((s) => s.type === 'bedroom')?.floor).toBe(3);
+  });
+
+  it('ghim tầng từ đầu bài thắng cả nguyện vọng lẫn cân tải', () => {
+    // `garage` mặc định xuống trệt theo rule pack (test ở trên) — ghim thẳng lên tầng 2 phải
+    // thắng cả điều đó lẫn bước cân tải, vì đây là chỉ định CỨNG của người dùng.
+    const spaces = build(brief({ required_spaces: [{ type: 'garage', floor: 2 }], floors: 3 }))
+      .payload.spaces;
+    expect(spaces.find((s) => s.type === 'garage')?.floor).toBe(2);
+  });
+
+  it('ghim vào tầng không tồn tại: bỏ ghim, cảnh báo, không mất không gian', () => {
+    const result = build(brief({ required_spaces: [{ type: 'garage', floor: 99 }], floors: 3 }));
+    expect(result.warnings.some((w) => w.includes('garage') && w.includes('99'))).toBe(true);
+    const garage = result.payload.spaces.find((s) => s.type === 'garage');
+    expect(garage).toBeDefined();
+    expect(garage!.floor).toBeGreaterThanOrEqual(1);
+    expect(garage!.floor).toBeLessThanOrEqual(3);
   });
 });
 
@@ -294,7 +312,12 @@ describe('Phủ được mặt sàn — điều kiện để bộ giải có ngh
         building_type: 'biet_thu',
         site: { width_m: 18, depth_m: 25, max_density: 0.6 },
         floors: 2,
-        required_spaces: ['study', 'altar_room', 'garage', 'laundry'],
+        required_spaces: [
+          { type: 'study' },
+          { type: 'altar_room' },
+          { type: 'garage' },
+          { type: 'laundry' },
+        ],
       }),
     ],
   ];
@@ -342,7 +365,7 @@ describe('Quan hệ liền kề — sinh từ rule pack, không khai lại', () 
   });
 
   it('quan hệ phạm vi CẢ NHÀ vẫn sinh khi hai phòng khác tầng', () => {
-    const program = build(brief({ required_spaces: ['altar_room'], floors: 3 })).payload;
+    const program = build(brief({ required_spaces: [{ type: 'altar_room' }], floors: 3 })).payload;
     const altar = program.spaces.find((s) => s.type === 'altar_room')!;
     const wcs = program.spaces.filter((s) => s.type === 'wc' && s.floor !== altar.floor);
     expect(wcs.length).toBeGreaterThan(0);
@@ -430,7 +453,7 @@ describe('Tất định', () => {
   });
 
   it('không gian lạ trong đầu bài được NÓI RA, không bị nuốt', () => {
-    const result = build(brief({ required_spaces: ['ho_boi_trong_nha'] }));
+    const result = build(brief({ required_spaces: [{ type: 'ho_boi_trong_nha' }] }));
     expect(result.warnings.some((w) => w.includes('ho_boi_trong_nha'))).toBe(true);
   });
 

@@ -73,7 +73,7 @@ describe('Cấu hình biểu mẫu Đầu bài', () => {
     // ghi `"1"` vào chỗ đòi `1`, mọi thứ trên màn hình trông vẫn đúng, và lỗi chỉ nổ ra ở
     // tận bước đúc artifact — sau khi người dùng đã điền xong cả biểu mẫu.
     for (const field of contractFields) {
-      if (!field.options || field.path === 'decision_maker') continue;
+      if (!field.options) continue;
 
       for (const option of field.options) {
         const raw = field.value_type === 'number' ? Number(option.value) : option.value;
@@ -84,11 +84,13 @@ describe('Cấu hình biểu mẫu Đầu bài', () => {
             ? [{ role: 'vo_chong', count: 1, needs: [raw] }]
             : field.control === 'multi'
               ? [raw]
-              : field.control === 'tristate'
-                ? option.value === 'true'
-                : field.control === 'sides'
-                  ? { front: raw }
-                  : raw;
+              : field.control === 'space_floor'
+                ? [{ type: raw }]
+                : field.control === 'tristate'
+                  ? option.value === 'true'
+                  : field.control === 'sides'
+                    ? { front: raw }
+                    : raw;
 
         const result = designBriefDraftSchema.safeParse(probe(field.path, leaf));
         expect(
@@ -402,19 +404,22 @@ describe('Soát mâu thuẫn', () => {
 
   it('có người ở mà không có phòng ngủ nào', () => {
     expect(
-      codes({ family: [{ role: 'vo_chong', count: 2 }], required_spaces: ['living', 'kitchen'] }),
+      codes({
+        family: [{ role: 'vo_chong', count: 2 }],
+        required_spaces: [{ type: 'living' }, { type: 'kitchen' }],
+      }),
     ).toContain('thieu_phong_ngu');
   });
 
   it('khai phòng ngủ mà chưa cho biết ai ở', () => {
-    expect(codes({ required_spaces: ['bedroom'] })).toContain('chua_khai_nguoi_o');
+    expect(codes({ required_spaces: [{ type: 'bedroom' }] })).toContain('chua_khai_nguoi_o');
   });
 
   it('nhu cầu riêng của một nhóm mà danh sách không gian chưa có', () => {
     const issues = checkBriefConsistency(
       {
         family: [{ role: 'ong_ba', count: 2, needs: ['bedroom', 'wc'] }],
-        required_spaces: ['living', 'bedroom'],
+        required_spaces: [{ type: 'living' }, { type: 'bedroom' }],
       },
       BRIEF_FORM,
     );
@@ -437,7 +442,7 @@ describe('Soát mâu thuẫn', () => {
           { role: 'vo_chong', count: 2 },
           { role: 'con', count: 3 },
         ],
-        required_spaces: ['bedroom', 'master_bedroom', 'wc'],
+        required_spaces: [{ type: 'bedroom' }, { type: 'master_bedroom' }, { type: 'wc' }],
       }),
     ).toEqual([]);
   });
@@ -446,6 +451,15 @@ describe('Soát mâu thuẫn', () => {
     expect(
       codes({ floors: 1, family: [{ role: 'ong_ba', count: 2, floor_pref: 'top' }] }),
     ).toContain('uu_tien_tang_khong_ton_tai');
+  });
+
+  it('ghim tầng không tồn tại (hạ số tầng sau khi đã ghim)', () => {
+    expect(codes({ floors: 2, required_spaces: [{ type: 'garage', floor: 3 }] })).toContain(
+      'ghim_tang_khong_ton_tai',
+    );
+    expect(codes({ floors: 2, required_spaces: [{ type: 'garage', floor: 2 }] })).not.toContain(
+      'ghim_tang_khong_ton_tai',
+    );
   });
 
   it('ngân sách đảo ngược', () => {

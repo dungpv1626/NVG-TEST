@@ -25,9 +25,41 @@ export interface SolveRequest {
   intent_ref: string;
   /** `SpaceProgram` đã kiểm hợp đồng — bộ giải cần diện tích tối thiểu/tối đa của từng phòng. */
   program: unknown;
-  site: { width_m: number; depth_m: number };
+  /**
+   * Ô chữ nhật xây được, cộng những gì thửa đất áp lên phần đặt khối.
+   *
+   * `width_m`/`depth_m` là ô chữ nhật lớn nhất nội tiếp thửa — Worker quy đổi một lần ở
+   * `solveFloorPlan`. `area_m2` là diện tích THẬT của thửa, dùng làm mẫu số cho mật độ xây
+   * dựng: lấy tích hai cạnh ô chữ nhật là phạt oan mọi thửa không vuông vắn.
+   *
+   * `open_faces`/`access_faces` suy từ hiện trạng bốn phía trong đầu bài. Gửi sang thay vì
+   * để Container đoán: "nhà phố có hai mặt thoáng" đúng với phần lớn thửa và sai với lô góc.
+   */
+  site: {
+    width_m: number;
+    depth_m: number;
+    area_m2?: number;
+    open_faces?: string[];
+    access_faces?: string[];
+    setback_required_m?: Record<string, number>;
+    max_density?: number | null;
+  };
   rule_pack: { locality: string; version?: string };
   time_budget_s: number;
+  /**
+   * Nhãn tiếng Việt của từng không gian.
+   *
+   * Container không giữ bảng từ vựng (CLAUDE.md 8.7) nhưng câu thông báo vi phạm phải đọc
+   * được. Thiếu nhãn thì câu rơi về mã không gian — đúng chứ không đẹp.
+   */
+  labels?: Record<string, string>;
+  /**
+   * Thành viên của từng nhóm mã phòng: `habitable` gồm những mã nào.
+   *
+   * Quy tắc nhắm cả nhóm (`target: habitable`) chỉ áp đúng khi bộ giải biết nhóm đó gồm gì.
+   * Gửi sang thay vì để Container tự tra, cùng lý do với `labels`.
+   */
+  groups?: Record<string, string[]>;
 }
 
 /** Bộ giải trả về MỘT trong hai: mặt bằng, hoặc lời giải thích vì sao vô nghiệm. */
@@ -65,10 +97,33 @@ export interface KbRecordResponse {
   checks: { code: string; outcome: 'pass' | 'fail' | 'skipped'; detail: string }[];
 }
 
+/** Khung tên của bản vẽ xuất ra. Container không biết mã hồ sơ của NVG — Worker cấp hết. */
+export interface DxfTitleBlock {
+  project_code: string;
+  project_name: string;
+  discipline: string;
+  sheet: string;
+  version: string;
+  date: string;
+}
+
+export interface ExportDxfRequest {
+  floor_plan: unknown;
+  level: number;
+  title_block: DxfTitleBlock;
+}
+
 export interface ComputeBackend {
   readonly name: string;
   health(): Promise<boolean>;
   solve(request: SolveRequest): Promise<SolveResponse>;
+  /**
+   * Xuất một tầng của mặt bằng ra DXF. MỘT CHIỀU — không có đường nhập ngược (CLAUDE.md 8.7).
+   *
+   * Trả byte chứ không trả đường dẫn: Container không giữ trạng thái và không ghi ra đĩa, nên
+   * không có chỗ nào để tệp nằm lại chờ ai tới lấy.
+   */
+  exportDxf(request: ExportDxfRequest): Promise<ArrayBuffer>;
   /** Bước 1 số hoá — trích hình học từ một bản vẽ `.dxf`/`.dwg`. */
   extract(file: CadFile): Promise<{ status: 'ok'; extraction: unknown }>;
   /** Bước 2 số hoá — kiểm tra chéo và lắp bản ghi Knowledge Base. */
@@ -165,6 +220,26 @@ export class HttpComputeBackend implements ComputeBackend {
   buildKbRecord(request: KbRecordRequest): Promise<KbRecordResponse> {
     return this.call<KbRecordResponse>('/kb/record', request);
   }
+
+  async exportDxf(request: ExportDxfRequest): Promise<ArrayBuffer> {
+    let res: Response;
+    try {
+      res = await fetch(`${this.baseUrl}/export/dxf`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+        signal: AbortSignal.timeout(60_000),
+      });
+    } catch (error) {
+      throw new ComputeUnavailable(error instanceof Error ? error.message : String(error));
+    }
+    if (!res.ok) {
+      const detail = await res.text().catch(() => '');
+      if (res.status >= 500) throw new ComputeUnavailable(`máy chủ trả ${res.status}. ${detail}`);
+      throw new Error(`Không xuất được bản vẽ (${res.status}). ${detail}`);
+    }
+    return await res.arrayBuffer();
+  }
 }
 
 /**
@@ -190,6 +265,10 @@ export class UnconfiguredComputeBackend implements ComputeBackend {
   }
 
   async buildKbRecord(): Promise<never> {
+    throw this.unavailable();
+  }
+
+  async exportDxf(): Promise<never> {
     throw this.unavailable();
   }
 

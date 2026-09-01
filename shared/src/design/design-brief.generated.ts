@@ -100,7 +100,7 @@ export const designBriefSchema = z
             'Diện tích theo giấy chứng nhận quyền sử dụng đất. KHÔNG dùng để tính toán — dùng để ĐỐI CHIẾU với diện tích suy ra từ kích thước đã khai; lệch nhiều nghĩa là một trong hai số đã nhập sai.',
           )
           .optional(),
-        /** Hướng nhà: B bắc · BD bắc-đông · D đông · DN đông-nam · N nam · TN tây-nam · T tây · TB tây-bắc. */
+        /** Hướng nhà: B bắc · BD đông-bắc · D đông · DN đông-nam · N nam · TN tây-nam · T tây · TB tây-bắc. */
         orientation: z
           .union([
             z.literal('B'),
@@ -115,7 +115,7 @@ export const designBriefSchema = z
           ])
           .nullable()
           .describe(
-            'Hướng nhà: B bắc · BD bắc-đông · D đông · DN đông-nam · N nam · TN tây-nam · T tây · TB tây-bắc.',
+            'Hướng nhà: B bắc · BD đông-bắc · D đông · DN đông-nam · N nam · TN tây-nam · T tây · TB tây-bắc.',
           )
           .optional(),
         access_sides: z.array(z.enum(['front', 'back', 'left', 'right'])).optional(),
@@ -163,11 +163,32 @@ export const designBriefSchema = z
           .strict(),
       )
       .optional(),
-    /** Mã không gian, lấy từ kb/room_vocabulary.yaml. Mã không có trong từ vựng đó thì không rule nào của rule pack nhắm tới, và nó đi qua cả engine mà chưa từng bị kiểm quy chuẩn. "Có sân trong hay không" khai ở đây bằng mã `courtyard`; VỊ TRÍ các sân khai ở `massing.yards`. */
+    /** Không gian bắt buộc có, mỗi phần tử một loại. "Có sân trong hay không" khai ở đây bằng mã `courtyard`; VỊ TRÍ các sân khai ở `massing.yards`. */
     required_spaces: z
-      .array(z.string())
+      .array(
+        z
+          .object({
+            /** Mã không gian, lấy từ kb/room_vocabulary.yaml. Mã không có trong từ vựng đó thì không rule nào của rule pack nhắm tới, và nó đi qua cả engine mà chưa từng bị kiểm quy chuẩn. */
+            type: z
+              .string()
+              .describe(
+                'Mã không gian, lấy từ kb/room_vocabulary.yaml. Mã không có trong từ vựng đó thì không rule nào của rule pack nhắm tới, và nó đi qua cả engine mà chưa từng bị kiểm quy chuẩn.',
+              ),
+            /** Ghim cứng vào đúng tầng này. `null`/vắng mặt = để Lớp 2 tự xếp theo nguyện vọng và cân tải (mặc định, hành vi hiện tại). */
+            floor: z
+              .number()
+              .int()
+              .gte(1)
+              .nullable()
+              .describe(
+                'Ghim cứng vào đúng tầng này. `null`/vắng mặt = để Lớp 2 tự xếp theo nguyện vọng và cân tải (mặc định, hành vi hiện tại).',
+              )
+              .optional(),
+          })
+          .strict(),
+      )
       .describe(
-        'Mã không gian, lấy từ kb/room_vocabulary.yaml. Mã không có trong từ vựng đó thì không rule nào của rule pack nhắm tới, và nó đi qua cả engine mà chưa từng bị kiểm quy chuẩn. "Có sân trong hay không" khai ở đây bằng mã `courtyard`; VỊ TRÍ các sân khai ở `massing.yards`.',
+        'Không gian bắt buộc có, mỗi phần tử một loại. "Có sân trong hay không" khai ở đây bằng mã `courtyard`; VỊ TRÍ các sân khai ở `massing.yards`.',
       )
       .optional(),
     /** Ý ĐỒ về tổ hợp khối, không phải hình học đã giải. Nhà phố là trường hợp một cánh nhà, khoảng lùi bằng không (04-layer3-floorplan) nên phần này để trống; với biệt thự và nhà vườn, lô rộng không tự ràng buộc như nhà phố nên đây là nguồn thu hẹp lời giải chính (01-overview 1.2). Mọi trường ở đây là LỰA CHỌN RỜI RẠC — bộ giải mới là nơi gán số đo (nguyên tắc bất biến 2). */

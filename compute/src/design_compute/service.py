@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, File, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field
 
 from design_compute.adapters import (
@@ -33,8 +33,11 @@ from design_compute.adapters import (
 )
 from design_compute.cad import (
     CadConversionError,
+    DxfExportError,
     OdaUnavailable,
+    TitleBlock,
     dwg_to_dxf,
+    export_floor_plan,
     extract_floor_plan,
     from_payload,
     load_mapping,
@@ -56,8 +59,24 @@ class RulePackRef(BaseModel):
 
 
 class SiteRef(BaseModel):
+    """Ô chữ nhật xây được, cộng những gì thửa đất áp lên phần đặt khối.
+
+    `width_m`/`depth_m` là ô chữ nhật lớn nhất nội tiếp thửa, do Worker quy đổi — không phải
+    kích thước thô của thửa. `area_m2` mới là diện tích THẬT của thửa, dùng cho mật độ xây
+    dựng: lấy tích hai cạnh của ô chữ nhật là tự phạt oan mọi thửa không vuông vắn.
+
+    `open_faces` và `access_faces` suy từ hiện trạng bốn phía trong đầu bài. Chúng là DỮ LIỆU
+    của thửa, không phải một hằng số về loại hình: một căn nhà phố lô góc có ba mặt thoáng, và
+    không có gì trong mã nguồn được phép giả định là hai.
+    """
+
     width_m: float
     depth_m: float
+    area_m2: float | None = None
+    open_faces: list[str] | None = None
+    access_faces: list[str] | None = None
+    setback_required_m: dict[str, float] | None = None
+    max_density: float | None = None
 
 
 class SolvePayload(BaseModel):
@@ -75,6 +94,13 @@ class SolvePayload(BaseModel):
     rule_pack: RulePackRef
     time_budget_s: float = Field(default=60.0, gt=0, le=600)
     building_type: str = "nha_pho"
+    # Nhãn tiếng Việt của từng không gian, do Worker cấp. Container không giữ bảng từ vựng
+    # (CLAUDE.md 8.7) nhưng câu thông báo vi phạm phải đọc được — thiếu nhãn thì câu rơi về
+    # mã không gian, đúng chứ không đẹp.
+    labels: dict[str, str] | None = None
+    # Thành viên của từng nhóm mã phòng (`habitable`…). Thiếu thì nhóm được hiểu là phủ mọi
+    # loại phòng — kiểm thừa chứ không bỏ sót.
+    groups: dict[str, list[str]] | None = None
 
 
 @app.get("/health")
@@ -110,7 +136,7 @@ def solve(payload: SolvePayload) -> JSONResponse:
     `FloorPlan` (03-data-contracts 3.5) — nên nó cũng trả mã 200, kèm `status: "infeasible"`.
     Trả 4xx sẽ khiến lớp gọi coi đây là hỏng hóc và giấu mất lời giải thích.
     """
-    site = {"width_m": payload.site.width_m, "depth_m": payload.site.depth_m}
+    site = payload.site.model_dump()
 
     validate("layout-intent", payload.intent)
     validate("space-program", payload.program)
@@ -122,14 +148,17 @@ def solve(payload: SolvePayload) -> JSONResponse:
         locality=payload.rule_pack.locality,
         time_budget_s=payload.time_budget_s,
         building_type=payload.building_type,
+        labels=payload.labels,
+        groups=payload.groups,
     )
+
+    messages = MessageCatalog.load(default_rules_root() / "messages.vi.yaml")
 
     started = time.monotonic()
     result = solve_townhouse(request)
     elapsed_ms = int((time.monotonic() - started) * 1000)
 
     if result.status == "infeasible":
-        messages = MessageCatalog.load(default_rules_root() / "messages.vi.yaml")
         report = infeasibility_report_from_result(result, request=request, messages=messages)
         validate("infeasibility-report", report)
         return JSONResponse(
@@ -152,10 +181,55 @@ def solve(payload: SolvePayload) -> JSONResponse:
         )
 
     plan = floor_plan_from_result(
-        result, request=request, intent_ref=payload.intent_ref, site=site
+        result,
+        request=request,
+        intent_ref=payload.intent_ref,
+        site=site,
+        messages=messages,
     )
     validate("floor-plan", plan)
     return JSONResponse({"status": "ok", "floor_plan": plan, "solve_time_ms": elapsed_ms})
+
+
+class TitleBlockPayload(BaseModel):
+    """Khung tên. Container không biết mã hồ sơ hay tên khách của NVG — Worker cấp hết."""
+
+    project_code: str
+    project_name: str
+    discipline: str
+    sheet: str
+    version: str
+    date: str
+
+
+class ExportDxfPayload(BaseModel):
+    floor_plan: dict[str, Any]
+    level: int = Field(default=1, ge=1, le=12)
+    title_block: TitleBlockPayload
+
+
+@app.post("/export/dxf")
+def export_dxf(payload: ExportDxfPayload) -> Response:
+    """Xuất một tầng của mặt bằng ra DXF. MỘT CHIỀU — không có đường nhập ngược.
+
+    Trả thẳng byte của tệp chứ không trả đường dẫn: Container không giữ trạng thái và không
+    ghi ra đĩa, nên không có chỗ nào để tệp nằm lại chờ ai tới lấy.
+    """
+    validate("floor-plan", payload.floor_plan)
+    title = TitleBlock(
+        project_code=payload.title_block.project_code,
+        project_name=payload.title_block.project_name,
+        discipline=payload.title_block.discipline,
+        sheet=payload.title_block.sheet,
+        version=payload.title_block.version,
+        date=payload.title_block.date,
+        rule_pack_version=str(payload.floor_plan.get("rule_pack_version", "")),
+    )
+    try:
+        data = export_floor_plan(payload.floor_plan, level=payload.level, title=title)
+    except DxfExportError as exc:
+        return JSONResponse(status_code=422, content={"error": str(exc), "retryable": False})
+    return Response(content=data, media_type="application/dxf")
 
 
 # ---------------------------------------------------------------------------
