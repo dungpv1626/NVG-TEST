@@ -301,6 +301,7 @@ describeDb('NS — chấm công ba khối (NS-04, NS-05)', () => {
   let hcns: SupabaseClient;
   let chiHuy: SupabaseClient;
   let ketoan: SupabaseClient;
+  let banGiamDoc: SupabaseClient;
   const YEAR = TEST_TIMESHEET_YEAR;
   const MONTH = 3;
 
@@ -327,6 +328,7 @@ describeDb('NS — chấm công ba khối (NS-04, NS-05)', () => {
     hcns = await signInAs(ACCOUNTS.nhanSu);
     chiHuy = await signInAs(ACCOUNTS.congTruongNvc);
     ketoan = await signInAs(ACCOUNTS.ketoan);
+    banGiamDoc = await signInAs(ACCOUNTS.tgd);
   }, 60_000);
 
   it('chỉ Hành chính – Nhân sự mở được kỳ chấm công', async () => {
@@ -463,6 +465,46 @@ describeDb('NS — chấm công ba khối (NS-04, NS-05)', () => {
     expect(error?.message).toContain('trưởng đơn vị');
   });
 
+  /*
+   * Khảo sát Xưởng sản xuất giàn giáo (02/09/2026): "Cuối tháng người phụ trách xưởng chốt
+   * bảng công và sản lượng, Phó Giám đốc xác nhận, sau đó chuyển HCNS/Kế toán tính và thanh
+   * toán lương." Trước khi có phiếu này, khối xưởng bị gộp vào nhánh HCNS cùng khối văn phòng.
+   */
+  it('Hành chính – Nhân sự KHÔNG xác nhận thay khối xưởng (NS-04, khảo sát 02/09/2026)', async () => {
+    // Tháng riêng để không tiêu mất kỳ chấm công mà các test khác trong cùng nhóm đang dùng.
+    const otherMonth = MONTH + 1;
+    const { data: workshop, error: openError } = await hcns.rpc('open_timesheet_period', {
+      p_company_id: fixture.nvcCompanyId,
+      p_year: YEAR,
+      p_month: otherMonth,
+      p_source_type: 'xuong',
+    });
+    expect(openError).toBeNull();
+
+    await hcns.rpc('save_attendance', {
+      p_period_id: workshop,
+      p_entries: [
+        {
+          employee_id: fixture.workshopEmployeeId,
+          work_date: `${YEAR}-${String(otherMonth).padStart(2, '0')}-02`,
+          kind: 'lam_viec',
+          hours: 8,
+        },
+      ],
+    });
+    await hcns.rpc('submit_timesheet_period', { p_period_id: workshop });
+
+    const denied = await hcns.rpc('confirm_timesheet_period', { p_period_id: workshop });
+    expect(denied.error?.message).toContain('trưởng đơn vị');
+
+    // Chỉ huy công trường cũng không ký thay được — quyền của họ là khối công trường.
+    const deniedSite = await chiHuy.rpc('confirm_timesheet_period', { p_period_id: workshop });
+    expect(deniedSite.error).not.toBeNull();
+
+    const ok = await banGiamDoc.rpc('confirm_timesheet_period', { p_period_id: workshop });
+    expect(ok.error).toBeNull();
+  });
+
   it('đủ ba khối xác nhận thì chốt được, và số công quy đổi đúng 8 giờ một công', async () => {
     const site = await openPeriod(hcns, 'cong_truong');
     const confirmed = await chiHuy.rpc('confirm_timesheet_period', { p_period_id: site });
@@ -484,7 +526,11 @@ describeDb('NS — chấm công ba khối (NS-04, NS-05)', () => {
       ],
     });
     await hcns.rpc('submit_timesheet_period', { p_period_id: workshop });
-    await hcns.rpc('confirm_timesheet_period', { p_period_id: workshop });
+    // Khối xưởng do người phê duyệt trên phân hệ SX ký, không phải HCNS — xem test dưới.
+    const workshopConfirm = await banGiamDoc.rpc('confirm_timesheet_period', {
+      p_period_id: workshop,
+    });
+    expect(workshopConfirm.error).toBeNull();
 
     const { data, error } = await hcns.rpc('consolidate_timesheets', {
       p_company_id: fixture.nvcCompanyId,
@@ -954,5 +1000,180 @@ describeDb('NS — quét nhắc giấy tờ hết hạn chỉ dành cho tác v�
     const hcns = await signInAs(ACCOUNTS.nhanSu);
     const { error } = await hcns.rpc('scan_hr_document_reminders');
     expect(error, 'chỉ Cloudflare Cron Trigger được gọi hàm quét này').toBeTruthy();
+  });
+});
+
+/*
+ * Khối xưởng — thêm 02/09/2026 sau khi có phiếu khảo sát Xưởng sản xuất giàn giáo.
+ *
+ * Trước đó khối xưởng bị gộp vào nhánh HCNS: Xưởng không ghi được công của chính mình và
+ * không ký được bảng công của chính mình. Phiếu mô tả khác hẳn — "người phụ trách xưởng chốt
+ * bảng công và sản lượng, Phó Giám đốc xác nhận, sau đó chuyển HCNS/Kế toán".
+ *
+ * Ba điều được canh ở đây: Xưởng GHI được và ĐỌC LẠI được công khối mình (ghi mà không đọc
+ * lại được thì màn hình chấm công vô dụng); Xưởng KHÔNG ký thay Phó Giám đốc; và quyền này
+ * không tràn sang khối văn phòng.
+ */
+describeDb('NS — khối xưởng do Xưởng ghi công (NS-04, khảo sát 02/09/2026)', () => {
+  let xuong: SupabaseClient;
+  let banGiamDoc: SupabaseClient;
+  let thuKho: SupabaseClient;
+  let nvsCompanyId: string;
+  let workshopEmployeeId: string;
+  let officeEmployeeId: string;
+  let periodId: string;
+  const YEAR = TEST_TIMESHEET_YEAR;
+  const MONTH = 5;
+
+  beforeAll(async () => {
+    const { createConnection } = await import('../client');
+    const { sql } = createConnection();
+    const stamp = String(Date.now());
+    try {
+      const [nvs] = await sql<{ id: string }[]>`SELECT id FROM companies WHERE code = 'NVS'`;
+      nvsCompanyId = nvs!.id;
+
+      const insert = async (name: string, block: string) => {
+        const [row] = await sql<{ id: string }[]>`
+          INSERT INTO employees (
+            company_id, code, full_name, block, position, status, hire_date,
+            id_number, base_salary, allowance, salary_type
+          )
+          VALUES (
+            ${nvsCompanyId}, ${'NVS-NS-TEST-' + block + '-' + stamp}, ${name}, ${block}::work_block,
+            ${'Nhân viên thử nghiệm'}, 'chinh_thuc', current_date - 400,
+            ${'0791000' + Math.floor(Math.random() * 100000)}, ${'15000000'}, ${'500000'}, 'thang'
+          )
+          RETURNING id
+        `;
+        return row!.id;
+      };
+
+      workshopEmployeeId = await insert(`${TEST_PREFIX} Thợ cơ khí ${stamp}`, 'xuong');
+      officeEmployeeId = await insert(`${TEST_PREFIX} Admin xưởng ${stamp}`, 'van_phong');
+    } finally {
+      await sql.end();
+    }
+
+    xuong = await signInAs(ACCOUNTS.xuongNvs);
+    banGiamDoc = await signInAs(ACCOUNTS.tgd);
+    thuKho = await signInAs(ACCOUNTS.kho);
+
+    const hcns = await signInAs(ACCOUNTS.nhanSu);
+    const { data } = await hcns.rpc('open_timesheet_period', {
+      p_company_id: nvsCompanyId,
+      p_year: YEAR,
+      p_month: MONTH,
+      p_source_type: 'xuong',
+    });
+    periodId = data as string;
+  }, 60_000);
+
+  it('Xưởng ghi được công khối xưởng và đọc lại được đúng dòng vừa ghi', async () => {
+    const { error } = await xuong.rpc('save_attendance', {
+      p_period_id: periodId,
+      p_entries: [
+        {
+          employee_id: workshopEmployeeId,
+          work_date: `${YEAR}-0${MONTH}-02`,
+          kind: 'lam_viec',
+          hours: 8,
+          output_quantity: 20,
+        },
+      ],
+    });
+    expect(error).toBeNull();
+
+    const { data: entries } = await xuong
+      .from('timesheet_entries')
+      .select('employee_id, hours')
+      .eq('timesheet_period_id', periodId);
+    expect(entries).toHaveLength(1);
+    expect(entries![0]!.employee_id).toBe(workshopEmployeeId);
+  });
+
+  /*
+   * Hàng rào chống tái phát cho lỗi của migration 0106, vá ở 0107.
+   *
+   * 0106 mở khối xưởng bằng "có quyền sửa phân hệ SX" — cờ đó Thủ kho cũng có, vì Kho giữ
+   * `SX: WORK` để kiểm đếm và bàn giao lô giàn giáo. Hệ quả: Thủ kho ghi được đầu vào tính
+   * lương của một bộ phận không thuộc quyền mình. Lỗi lọt lưới vì test cũ chỉ hỏi "Xưởng làm
+   * được không" và "HCNS có bị chặn không", không ai hỏi "còn AI khác lọt vào không".
+   *
+   * Thủ kho ở đây là người dùng thật của phân hệ SX, không phải một vai trò ngẫu nhiên —
+   * đúng vai trò dễ lọt nhất.
+   */
+  it('Thủ kho KHÔNG ghi được công và KHÔNG đọc được hồ sơ khối xưởng (0107)', async () => {
+    const { data: period, error: openError } = await (
+      await signInAs(ACCOUNTS.nhanSu)
+    ).rpc('open_timesheet_period', {
+      p_company_id: nvsCompanyId,
+      p_year: YEAR,
+      p_month: MONTH + 1,
+      p_source_type: 'xuong',
+    });
+    expect(openError).toBeNull();
+
+    const write = await thuKho.rpc('save_attendance', {
+      p_period_id: period,
+      p_entries: [
+        {
+          employee_id: workshopEmployeeId,
+          work_date: `${YEAR}-0${MONTH + 1}-02`,
+          kind: 'lam_viec',
+          hours: 8,
+        },
+      ],
+    });
+    expect(write.error, 'Thủ kho không được ghi công khối xưởng').not.toBeNull();
+
+    const { data: read } = await thuKho
+      .from('employees')
+      .select('id')
+      .eq('id', workshopEmployeeId)
+      .maybeSingle();
+    expect(read, 'Thủ kho không được đọc hồ sơ nhân sự khối xưởng').toBeNull();
+  });
+
+  it('Xưởng đọc được hồ sơ người khối xưởng nhưng KHÔNG đọc hồ sơ khối văn phòng', async () => {
+    const { data: workshop } = await xuong
+      .from('employees')
+      .select('id')
+      .eq('id', workshopEmployeeId)
+      .maybeSingle();
+    expect(workshop).not.toBeNull();
+
+    const { data: office } = await xuong
+      .from('employees')
+      .select('id')
+      .eq('id', officeEmployeeId)
+      .maybeSingle();
+    expect(office).toBeNull();
+  });
+
+  it('Xưởng gửi xác nhận được nhưng KHÔNG tự ký duyệt — người ký là Phó Giám đốc', async () => {
+    const submitted = await xuong.rpc('submit_timesheet_period', { p_period_id: periodId });
+    expect(submitted.error).toBeNull();
+
+    // Thông báo phải tới người KÝ ĐƯỢC, không phải người mang mã vai trò trùng tên phân hệ:
+    // vai trò `SX` điều hành xưởng nhưng không có quyền phê duyệt.
+    const { data: bgdRow } = await banGiamDoc
+      .from('users')
+      .select('id')
+      .eq('email', ACCOUNTS.tgd)
+      .single();
+    const { count } = await banGiamDoc
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', (bgdRow as { id: string }).id)
+      .eq('type', 'timesheet_pending_confirm')
+      .eq('related_entity_id', periodId);
+    expect(count).toBe(1);
+
+    const denied = await xuong.rpc('confirm_timesheet_period', { p_period_id: periodId });
+    expect(denied.error?.message).toContain('trưởng đơn vị');
+
+    const ok = await banGiamDoc.rpc('confirm_timesheet_period', { p_period_id: periodId });
+    expect(ok.error).toBeNull();
   });
 });

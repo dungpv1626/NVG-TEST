@@ -715,3 +715,91 @@ async function billingNoticesFor(client: SupabaseClient, acceptanceId: string): 
     .eq('related_entity_id', acceptanceId);
   return count ?? 0;
 }
+
+/*
+ * Hồ sơ và bản vẽ của công trình — NEN-05, NEN-06.
+ *
+ * Khảo sát Chỉ huy – Giám sát công trường 02/09/2026: vướng mắc số một là "chưa có danh mục
+ * kiểm soát phiên bản; người giao việc chưa xác nhận rõ bản vẽ nào đang có hiệu lực", và hậu
+ * quả đã xảy ra thật — một phần công việc phải tháo dỡ làm lại vì thi công theo bản cũ.
+ *
+ * Bất biến canh ở đây là bất biến của CSDL, không phải của màn hình: phát hành bản mới thì
+ * bản trước MẤT hiệu lực trong cùng giao dịch, nên không lúc nào có hai bản cùng hiệu lực.
+ */
+describeDb('TC — bản vẽ công trình chỉ có MỘT bản đang hiệu lực (NEN-05)', () => {
+  let fixture: Fixture;
+  let chiHuy: SupabaseClient;
+  let documentId: string;
+
+  beforeAll(async () => {
+    fixture = await seedSites();
+    chiHuy = await signInAs(ACCOUNTS.congTruongNvc);
+
+    const { data: site } = await chiHuy
+      .from('construction_sites')
+      .select('company_id')
+      .eq('id', fixture.nvcSiteId)
+      .single();
+
+    const { data, error } = await chiHuy
+      .from('documents')
+      .insert({
+        company_id: (site as { company_id: string }).company_id,
+        title: `${TEST_PREFIX} Bản vẽ kết cấu móng`,
+        category: 'ban_ve_thi_cong',
+        related_entity_type: 'construction_sites',
+        related_entity_id: fixture.nvcSiteId,
+      })
+      .select('id')
+      .single();
+    if (error) throw new Error(`Không dựng được tài liệu: ${error.message}`);
+    documentId = (data as { id: string }).id;
+  });
+
+  it('bản đầu tiên không cần nguyên nhân thay đổi — chưa có gì để so', async () => {
+    const { error } = await chiHuy.rpc('publish_document_version', {
+      p_document_id: documentId,
+      p_file_url: 'cong-trinh/test/mong-r1.pdf',
+      p_file_name: 'mong-r1.pdf',
+      p_change_reason: null,
+    });
+    expect(error).toBeNull();
+  });
+
+  it('bản điều chỉnh KHÔNG phát hành được nếu thiếu nguyên nhân thay đổi', async () => {
+    const { error } = await chiHuy.rpc('publish_document_version', {
+      p_document_id: documentId,
+      p_file_url: 'cong-trinh/test/mong-r2.pdf',
+      p_file_name: 'mong-r2.pdf',
+      p_change_reason: null,
+    });
+    expect(error?.message).toContain('nguyên nhân thay đổi');
+  });
+
+  it('phát hành bản mới thì bản trước mất hiệu lực — không bao giờ có hai bản cùng hiệu lực', async () => {
+    const { error } = await chiHuy.rpc('publish_document_version', {
+      p_document_id: documentId,
+      p_file_url: 'cong-trinh/test/mong-r2.pdf',
+      p_file_name: 'mong-r2.pdf',
+      p_change_reason: 'Chủ đầu tư đổi cao độ đáy móng',
+    });
+    expect(error).toBeNull();
+
+    const { data: versions } = await chiHuy
+      .from('document_versions')
+      .select('version, is_current_version, change_reason')
+      .eq('document_id', documentId)
+      .order('version');
+
+    const rows = versions as { version: number; is_current_version: boolean }[];
+    expect(rows).toHaveLength(2);
+    expect(rows.filter((v) => v.is_current_version)).toHaveLength(1);
+    expect(rows.find((v) => v.is_current_version)!.version).toBe(2);
+  });
+
+  it('công trường của pháp nhân khác KHÔNG đọc được hồ sơ này (Mẫu A)', async () => {
+    const nvo = await signInAs(ACCOUNTS.thietKeNvo);
+    const { data } = await nvo.from('documents').select('id').eq('id', documentId).maybeSingle();
+    expect(data).toBeNull();
+  });
+});

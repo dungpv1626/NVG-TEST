@@ -415,16 +415,70 @@ không thuộc về hạng mục)
   thầu nhưng vẫn cần TC-05.
 - ✅ TC-03 (đề nghị mua vật tư từ công trường) — xong ở 3B: tab **Đề nghị mua** ở Chi tiết
   Công trình mở thẳng biểu mẫu của Module MH đã gắn sẵn công trình.
-- ⚠️ Module **ĐỊNH HƯỚNG** — chưa có khảo sát Chỉ huy công trường (PRD 10). **Đã CỐ Ý chưa
-  làm**, chờ khảo sát chứ không phải quên:
-  - Kế hoạch tiến độ chi tiết theo đầu việc và kế hoạch nhân sự/vật tư theo thời gian (phần
-    còn lại của TC-01) — chưa biết công trường lập tiến độ theo hạng mục, theo tuần hay theo
-    mũi thi công.
-  - Lịch sử đánh giá tổ đội theo từng đợt (TC-06) — hiện giữ đánh giá gần nhất, các lần trước
-    vẫn truy được qua `audit_logs`.
-  - Ảnh hiện trường mới là cột `photo_urls`, chưa có màn hình tải ảnh.
-  - Ba con số suy luận cần xác nhận: cửa sổ sửa nhật ký **24 giờ**, ngưỡng cảnh báo ngân sách
-    **90%**, thang đánh giá tổ đội **1–5**.
+- ✅ **MH-07 — Ban công trường ký nhận được hàng giao thẳng tới chân công trình**
+  (migration 0106, theo khảo sát 02/09/2026: "thủ kho/người được giao phối hợp với kỹ thuật
+  kiểm tra… Hai bên ký giao nhận"). Mở HẸP: chỉ với đề nghị mua có gắn công trình — hàng mua
+  cho văn phòng hay cho gói thầu vẫn chỉ Mua hàng và Kho ký được. Có test cả hai chiều.
+
+#### Khảo sát Chỉ huy – Giám sát công trường đã về (02/09/2026) — còn gì phải làm
+
+Module KHÔNG còn ở mức ĐỊNH HƯỚNG. Phần dưới đây là **khoảng trống thật đã được xác nhận**,
+không còn là phỏng đoán. Xếp theo đúng thứ tự ưu tiên mà người điền phiếu tự nêu.
+
+- ⏳ **Ưu tiên 1 người dùng tự nêu — luồng đề nghị công trường ↔ văn phòng có người tiếp nhận,
+  thời hạn và cảnh báo quá hạn.** Nguyên văn: "Mỗi yêu cầu về vật tư, bản vẽ, nghiệm thu, phát
+  sinh, tổ đội, thanh toán hoặc hỗ trợ kỹ thuật phải được lập ngay tại hiện trường; có người
+  tiếp nhận, người phê duyệt, thời hạn xử lý, trạng thái đang chờ và cảnh báo quá hạn."
+  → Đây chính là bảng `tasks` bỏ trống từ Phase 0 (câu hỏi 23). Khảo sát vừa cho nó một lý do
+  tồn tại rõ ràng: Hộp thư Phê duyệt phủ được vật tư và thanh toán, KHÔNG phủ được "chờ văn
+  phòng trả lời bản vẽ" — thứ đang làm công trường phải gọi nhắc nhiều lần.
+  → Cảnh báo trong phiếu, phải chép vào bất kỳ thiết kế nào: "nếu chỉ yêu cầu công trường cập
+  nhật nhưng các phòng ban không xử lý trên cùng hệ thống thì phần mềm không giải quyết được
+  điểm nghẽn."
+- ⏳ **Quản lý phiên bản bản vẽ ĐANG CÓ HIỆU LỰC ở hiện trường.** Vướng mắc số 1 của bộ phận, và
+  là nguyên nhân lần làm lại gần nhất ("thi công theo bản vẽ đang lưu tại hiện trường, sau đó
+  phát hiện đã có điều chỉnh mà công trường chưa nhận được bản cập nhật"). Hệ `documents` +
+  `document_versions` của NEN-05 đã có sẵn cơ chế phiên bản — việc còn lại là gắn nó vào Chi
+  tiết Công trình và bắt buộc xác nhận đúng bản vẽ trước khi giao việc. **Không dựng cơ chế
+  phiên bản thứ hai.**
+- ⏳ **Bảng xác nhận khối lượng tổ đội / nhà thầu phụ.** Tổ đội thanh toán theo **khối lượng
+  hoàn thành × đơn giá hợp đồng**; kỹ thuật hiện trường đo bóc, chỉ huy trưởng kiểm tra, Phòng
+  Thi công/Dự án kiểm tra rồi mới chuyển Kế toán. "Khối lượng chưa đạt chất lượng, chưa nghiệm
+  thu hoặc chưa đủ hồ sơ chưa được tính thanh toán" — đây là ràng buộc, không phải quy trình
+  giấy tờ. Bảng này cũng là thứ mở khoá BC-03 phần 4 (hiệu suất tổ đội).
+- ⏳ **Danh sách tồn tại (punch list) và theo dõi sửa lỗi**, **phiếu yêu cầu làm rõ kỹ thuật
+  (RFI)**, **hồ sơ an toàn lao động** (đào tạo, cấp phát bảo hộ, biên bản vi phạm, sự cố và
+  tình huống suýt tai nạn). Cả ba đều nằm trong danh sách biểu mẫu đang dùng hằng ngày.
+- ⏳ Kế hoạch tiến độ chi tiết (phần còn lại của TC-01) — khảo sát cho biết đo **theo hạng
+  mục/đầu việc**, xác nhận bằng khối lượng đã nghiệm thu; còn thiếu mức chi tiết (theo tuần
+  hay theo mũi thi công) và ai cập nhật % hoàn thành. Xem câu hỏi 10.
+- ⏳ Lịch sử đánh giá tổ đội theo từng đợt (TC-06) — hiện giữ đánh giá gần nhất, các lần trước
+  vẫn truy được qua `audit_logs`.
+- ⏳ Ảnh hiện trường mới là cột `photo_urls`, chưa có màn hình tải ảnh. Phiếu đòi thêm: ảnh phải
+  **tự ghi thời gian, vị trí và hạng mục**.
+- ⚠️ Ba con số suy luận vẫn CHƯA được khảo sát trả lời: cửa sổ sửa nhật ký **24 giờ**, ngưỡng
+  cảnh báo ngân sách **90%**, thang đánh giá tổ đội **1–5**. Chỉ có con số 24 giờ được ủng hộ
+  gián tiếp (báo cáo ngày phải gửi trước 20 giờ tối).
+
+**Hai ràng buộc trải nghiệm phải tôn trọng, do người dùng tự đặt ra:**
+
+1. **Tối đa 10–20 phút nhập liệu mỗi ngày** (câu hỏi trong phiếu hỏi thẳng, người điền chọn
+   "10–20 phút"; phần tự do còn siết hơn: "nhập liệu trong khoảng 5–10 phút mỗi ngày"). Mọi
+   màn hình công trường phải đo được bằng thước này, không phải bằng số trường đã có.
+2. **Điều kiện hiện trường tốt hơn giả định ban đầu**: sóng mạng "ổn định", văn phòng công
+   trường "đủ" chỗ ngồi, máy tính, máy in/scan. → Offline-first cho TC KHÔNG cấp thiết (khác
+   với Kho và Xưởng, nơi phiếu ghi mạng "đôi lúc không ổn định"). Vẫn cần bố cục di động thật
+   vì thao tác chính diễn ra khi đang đi lại trên công trường.
+
+- ✅ **Tab "Hồ sơ – Bản vẽ" ở Chi tiết Công trình** (04/09/2026) — vướng mắc số MỘT của khảo
+  sát công trường. Dùng lại `documents` + `document_versions` (NEN-05/NEN-06), **không dựng cơ
+  chế phiên bản thứ hai**: cùng bộ mà bản vẽ thiết kế (TK-05), dự toán (DA-06) và hợp đồng
+  (HD-01) đang dùng. Bản đang hiệu lực đứng riêng và nói rõ **bằng chữ**; bản cũ gập lại, mang
+  chữ "Không còn hiệu lực" — nhìn nhầm bản cũ chính là nguyên nhân lần tháo dỡ làm lại mà
+  phiếu kể. Nguyên nhân thay đổi bắt buộc từ bản thứ hai, do CSDL giữ chứ không do màn hình.
+  Tab đứng ngay sau Nhật ký: phải biết bản nào đang dùng TRƯỚC khi giao việc cho tổ đội.
+  → ⏳ Tải tệp thật lên Supabase Storage vẫn chưa làm — hiện ghi nhận đường dẫn, đúng cách
+  `version-panel` của Module Thiết kế đang làm. Cơ chế phiên bản chạy đúng từ bây giờ.
 
 ### 3B. Module MH (BSD 4.7) ✅ xong
 
@@ -596,6 +650,18 @@ NS-01→NS-11 đòi: giấy tờ có hạn (NS-10), kỳ+ngày công+tổng hợ
 - ✅ Chấm công **3 khối** (NS-04): mỗi khối một kỳ riêng vì ba người xác nhận khác nhau;
   chốt kỳ chỉ chạy khi **cả ba khối** đã được trưởng đơn vị xác nhận — HCNS là đầu mối tổng
   hợp, không phải người ký thay.
+- ✅ **Khối xưởng tách khỏi nhánh HCNS** (migration 0106, khảo sát Xưởng 02/09/2026: "người phụ
+  trách xưởng chốt bảng công và sản lượng, Phó Giám đốc xác nhận"). Ánh xạ khối → phân hệ nay
+  gói trong `timesheet_block_module`: công trường → TC, xưởng → SX, văn phòng → NS. Kèm theo:
+  Xưởng đọc được hồ sơ nhân sự và dòng công của khối mình (ghi mà không đọc lại được thì màn
+  hình chấm công vô dụng) — mở đúng bằng phạm vi chỉ huy công trường đã có, cột lương vẫn khuất.
+- 🔒 **Hai lỗi tìm ra khi làm việc trên**: (1) `confirm_timesheet_period` không tính
+  `sees_all_companies`, nên Ban Giám đốc và Tổng Giám đốc — vốn được gán vào mã tổng hợp NVG —
+  không xác nhận được bảng công của bất kỳ pháp nhân nào (đúng bẫy CLAUDE.md 3.5); (2) thông báo
+  "chờ xác nhận" gửi theo MÃ VAI TRÒ, trùng khớp một cách tình cờ với hai khối cũ và sai hẳn với
+  khối xưởng. Nay gửi theo đúng điều kiện `confirm_timesheet_period` dùng để cho phép ký, và
+  bằng `EXISTS` chứ không nối bảng — nối bảng thì người được gán nhiều pháp nhân nhận bốn thông
+  báo giống hệt nhau.
 - ✅ `consolidate_timesheets()` = `POST /api/timesheets/consolidate` (BSD 4.10), làm bằng hàm
   CSDL theo quy tắc chọn lớp ở CLAUDE.md 3.1. Chốt xong Kế toán nhận số liệu, **không nhập lại**.
 - ✅ **Điều chỉnh sau khi chốt bắt buộc nêu lý do và ghi tên người phê duyệt** (`adjust_timesheet`,
@@ -630,21 +696,34 @@ NS-01→NS-11 đòi: giấy tờ có hạn (NS-10), kỳ+ngày công+tổng hợ
 hạn chế theo cột như D**. Kế toán đọc được DÒNG hồ sơ (tên, khối) vì họ phải đối chiếu bảng
 công đã chốt — nhưng không đọc được căn cước, sức khỏe, kỷ luật.
 
-### 3F. Module SX (BSD 4.12) — mức cơ bản ✅ SX-03 xong, SX-01 chỉ khung
+### 3F. Module SX (BSD 4.12) — ✅ SX-03 xong, SX-01 chỉ khung, SX-02 chưa làm
 
 `production_orders` · `material_consumption` · `rental_agreements` · `rental_agreement_items` (thêm —
 SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng thuê thường gồm nhiều mã giàn giáo).
 
 - ✅ `create_rental_agreement` — lập hợp đồng VÀ chuyển đúng lô `scaffolding_assets` sang vị trí
   "khách đang thuê" trong CÙNG một giao dịch (không có bước "tạo hợp đồng rồi xuất kho sau").
-  Chỉ xuất từ lô tình trạng **"còn dùng được"** — lô "mới" coi như Kho chưa phân loại sẵn sàng
-  cho thuê (⚠️ giả định cần Haan xác nhận, cùng nhóm với các giả định KHO-06 khác).
+  Xuất từ lô **"còn dùng được" và "mới"**, ưu tiên hàng đã qua sử dụng trước để giữ hàng mới
+  cho khách yêu cầu hàng mới; lô giao cho khách GIỮ NGUYÊN tình trạng của lô nguồn. Giả định
+  cũ ("lô mới coi như chưa phân loại xong") đã bị khảo sát bác: dây chuyền kết thúc bằng
+  "kiểm tra thành phẩm → đếm, bó kiện, dán nhận diện → lập phiếu nhập kho thành phẩm"
+  (migration 0106, câu hỏi 22 đã đóng).
 - ✅ `return_rental_agreement` = `POST /api/rental-agreements/:id/return` — thu hồi, tách phần
   ĐẠT (gộp lại lô "còn dùng được" ở kho) / HƯ HỎNG (lô "hỏng chờ sửa" riêng + để lại biên bản
   `scaffolding_events`, KHO-06) / MẤT (rời sổ, để lại biên bản có bên chịu trách nhiệm), tính
-  doanh thu theo SỐ NGÀY ĐÃ THUÊ THẬT và tổng bồi thường, ghi một lần khi đóng hợp đồng. Một lần
-  gọi phải khai đủ MỌI loại giàn giáo đã thuê — thiếu một dòng thì cả giao dịch rollback, không
-  đóng hợp đồng dở dang.
+  doanh thu theo SỐ NGÀY ĐÃ THUÊ THẬT và tổng bồi thường.
+- ✅ **Thu hồi NHIỀU ĐỢT** (migration 0106) — mỗi lần gọi ghi nhận một đợt trả, doanh thu và bồi
+  thường **cộng dồn**, số ngày tính riêng cho từng đợt (ngày bắt đầu thuê → ngày trả của đợt
+  đó), hợp đồng chỉ đóng khi mọi dòng đã trả hết. Bản trước bắt khai đủ MỌI loại trong một lần
+  gọi — đúng với giả định "khách trả một lần", sai với thực tế mà khảo sát mô tả: "Nếu khách
+  giao hoặc trả nhiều lần, tiền thuê phải tính riêng theo từng đợt hoặc theo số dư hằng ngày."
+  Bất biến giữ nguyên: một dòng khai sai (trả vượt số còn lại) thì cả đợt rollback, kể cả các
+  dòng hợp lệ trong cùng lời gọi.
+- 🔒 **Lỗi tìm ra khi làm việc trên**: một dòng thuê gom hàng từ nhiều lô kho thì bên khách cũng
+  thành nhiều lô (`create_rental_agreement` sinh một lô cho mỗi lô nguồn), nhưng bản thu hồi cũ
+  chỉ lấy lô ĐẦU TIÊN rồi báo "Lô giàn giáo đang ghi ở bên thuê không đủ để trả" — khách trả đủ
+  hàng mà hệ thống từ chối. Có sẵn từ trước, cho phép xuất cả lô "mới" chỉ làm nó dễ gặp hơn
+  hẳn. Nay trừ dần qua từng lô; có test.
 - ✅ **Hai khách thuê cùng một loại giàn giáo không gộp chung lô**: thêm cột
   `scaffolding_assets.current_rental_agreement_id` (khai kiểu `uuid` trơn ở `kho.ts`, không
   `.references()`, để tránh vòng phụ thuộc `kho.ts ↔ sx.ts` — FK thật khai bằng SQL tay ở
@@ -654,12 +733,56 @@ SX-03 đòi doanh thu/hiệu suất "theo NHÓM tài sản", một hợp đồng
   hao chuẩn, kế hoạch sản xuất theo tổ hay công thức giá thành. Trạng thái đổi bằng ô chọn trực
   tiếp, chưa có luồng chuyển bước ràng buộc — PRD ghi thẳng "cần xác nhận thêm" (SX-02 giá thành
   CỐ Ý chưa làm gì cả, chờ khảo sát Xưởng).
-- ⚠️ **Giả định cần Haan xác nhận**: ai vận hành module — tạm cấp quyền `SX: WORK` cho vai trò
-  **Kho** (họ đã quản lý vòng đời vật lý giàn giáo qua KHO-06, xem `db/src/seed/data.ts`), chờ
-  khảo sát Xưởng giàn giáo NVS để biết vai trò thật sự đứng ra cho thuê.
+- ✅ **Ai vận hành module — câu hỏi 21 đã đóng.** Thêm vai trò thứ 13 `SX` "Xưởng sản xuất –
+  Cho thuê" (migration 0105, `@nvg/shared/roles`, `db/src/seed/data.ts`). Kho **giữ** `SX: WORK`
+  vì chính họ kiểm đếm và bàn giao lô hàng, nhưng không còn là vai trò duy nhất. Vai trò mới
+  KHÔNG có `approve` — mọi biểu mẫu xưởng trong phiếu đều ghi người duyệt là "Phó Giám
+  đốc/Ban Giám đốc", và BGĐ đã sẵn có `SX: xem + phê duyệt`.
 - ⏳ **CỐ Ý chưa làm**, không phải quên: luồng "hủy hợp đồng trước khi thu hồi" (enum `huy` có
   sẵn nhưng chưa có hàm/nút) — BSD chỉ đặc tả đúng một endpoint thu hồi, chưa rõ nghiệp vụ hủy
   thật sự cần gì.
+
+#### Khảo sát Xưởng sản xuất giàn giáo đã về (02/09/2026) — còn gì phải làm
+
+Module KHÔNG còn ở mức ĐỊNH HƯỚNG. Thứ tự dưới đây là **đúng thứ tự người điền phiếu tự xếp**:
+"Sau khi quản lý ổn định dòng tài sản này mới mở rộng sâu sang kế hoạch sản xuất, định mức
+nguyên vật liệu, năng suất, chất lượng và giá thành."
+
+- ⏳ **Ưu tiên 1 — vòng đời tài sản giàn giáo phải khép kín và tra được tức thời.** Nguyên văn:
+  "sản xuất mới → nhập kho → bán hoặc cho thuê → giao cho khách hàng/công trình → giao thêm
+  hoặc trả bớt → thu hồi → kiểm đếm → phân loại tốt, thiếu, hỏng → sửa chữa → nhập lại kho".
+  Đã có: xuất, thu hồi nhiều đợt, tách đạt/hỏng/mất, lô riêng theo hợp đồng.
+  Còn thiếu ba mắt xích:
+  - **Giao thêm giữa kỳ** — mỗi đợt giao có ngày bắt đầu tính thuê riêng, nên cần bảng đợt
+    giao chứ không nhét thêm vào `rental_agreement_items` được. Xem câu hỏi 26.
+  - **Biên bản thu hồi từng đợt** có chữ ký hai bên và hình ảnh ("lập biên bản có chữ ký và
+    hình ảnh nếu có thiếu hoặc hư hỏng"). Hiện đợt trả chỉ để lại con số cộng dồn trên
+    `rental_agreement_items` cộng `scaffolding_events` cho phần hỏng/mất — **không có bản ghi
+    ngày tháng của riêng đợt đó**, nên tranh chấp thì không dựng lại được.
+  - ~~Sửa chữa hàng thu hồi rồi nhập lại kho~~ — **đã có sẵn, ghi nhầm là thiếu**:
+    `record_scaffolding_event` với `event_type = 'sua_chua'` và tình trạng sau sửa
+    `con_dung_duoc` chuyển đúng số lượng từ lô "hỏng chờ sửa" sang lô dùng được, gộp vào lô
+    cùng vật tư – tình trạng – vị trí, và để lại biên bản (KHO-06, migration 0039/0079).
+    Màn hình Giàn giáo đã có sẵn thao tác này. Kiểm lại trước khi dựng cái thứ hai.
+- ⏳ **Ưu tiên 2 — SX-01 đủ nghĩa.** Hiện chỉ CRUD. Phiếu đòi lệnh sản xuất phải có "mã sản
+  phẩm, quy cách, số lượng, thời hạn và người duyệt", và **thay đổi phải lập phiên bản mới**
+  ghi rõ nội dung thay đổi, thời điểm, người xác nhận — vì đây đúng là nguyên nhân lần làm lại
+  gần nhất của xưởng. Trạng thái hiện đổi bằng ô chọn trực tiếp, chưa có luồng chuyển bước.
+- ⏳ **Ưu tiên 3 — định mức nguyên vật liệu (BOM) có phiên bản**, rồi mới tới **SX-02 giá thành**.
+  Phiếu mô tả đủ cấu phần giá thành (vật tư trực tiếp theo định mức × giá mua thực tế, nhân
+  công trực tiếp, vật tư phụ và năng lượng, khấu hao/sửa chữa máy, chi phí quản lý xưởng, gia
+  công ngoài, phế phẩm và hao hụt) và yêu cầu **phân biệt giá thành KẾ HOẠCH với giá thành
+  THỰC TẾ** — hai con số, không phải một.
+- ⏳ **Ghi nhận lỗi theo sản phẩm – công đoạn – người thực hiện – nguyên nhân** (phiếu nói thẳng
+  là cần), **sổ máy móc và bảo dưỡng**.
+- ⚠️ **Chặn bởi dữ liệu, không bởi mã**: catalogue sản phẩm giàn giáo chưa có ("phần này anh
+  gửi catalogue"), định mức chưa biết ai giữ, tỷ lệ lỗi và giá trị thất thoát chưa thống kê.
+  Phiếu ghi rõ **"không nên ước lượng một con số để điền"** — đừng tự đặt giá trị mặc định.
+  Xem CLAUDE.md 6.6.
+- ⚠️ **Điều kiện triển khai người dùng tự nêu, ảnh hưởng thứ tự làm việc**: phải chốt số dư
+  ban đầu và thống nhất mã sản phẩm/quy cách/đơn vị tính trước khi chạy; thao tác được trên
+  điện thoại, quét mã QR, đính kèm ảnh; **mạng ở xưởng "đôi lúc không ổn định"** — khác công
+  trường, nên đây mới là chỗ offline thật sự có giá trị (cùng nhóm với KHO-09, câu hỏi 1).
 
 ### 3G. Module BC — đầy đủ — ✅ BC-01/BC-02/BC-03 (một phần)/BC-05/BC-06/BC-07 xong, ⏳ BC-04 chưa làm
 
@@ -1611,20 +1734,24 @@ theo hạn mức · truy vết ngược tới chứng từ gốc.
 | 6   | **Công thức lương** NS-06                                                                                                                                                                                                                                                                                                                                                                                                | Phase 3E                                                                 |
 | 7   | **Đầu mối hỗ trợ kỹ thuật** (điền vào mẫu lỗi CGD 5.5)                                                                                                                                                                                                                                                                                                                                                                   | Phase 4C                                                                 |
 | 8   | **Một hợp đồng mở được nhiều công trình không?** Hiện chặn ở một, để tránh bấm hai lần thành hai công trình chia nhau một bộ ngân sách                                                                                                                                                                                                                                                                                   | Phase 3A (đã làm, đổi được bằng một tham số)                             |
-| 9   | **Ba con số suy luận của TC**: cửa sổ sửa nhật ký 24 giờ · ngưỡng cảnh báo ngân sách 90% · thang đánh giá tổ đội 1–5                                                                                                                                                                                                                                                                                                     | Phase 3A (đã làm, sửa ở một chỗ)                                         |
-| 10  | **Công trường đo tiến độ thế nào** (theo khối lượng, theo đầu việc, theo mũi thi công?) — quyết định luôn cả kế hoạch tiến độ chi tiết của TC-01                                                                                                                                                                                                                                                                         | Phase 3A phần còn lại                                                    |
+| 9   | **Ba con số suy luận của TC**: cửa sổ sửa nhật ký 24 giờ · ngưỡng cảnh báo ngân sách 90% · thang đánh giá tổ đội 1–5. Khảo sát 02/09/2026 **không** trả lời; chỉ ủng hộ gián tiếp con số 24 giờ (báo cáo ngày gửi trước 20 giờ tối)                                                                                                                                                                                      | Phase 3A (đã làm, sửa ở một chỗ)                                         |
+| 10  | **Công trường đo tiến độ thế nào** — khảo sát 02/09/2026 trả lời một nửa: theo **hạng mục/đầu việc**, xác nhận bằng **khối lượng hoàn thành đã nghiệm thu**. Còn thiếu: mức chi tiết của kế hoạch (theo tuần hay theo mũi thi công) và ai cập nhật % hoàn thành                                                                                                                                                          | Phase 3A phần còn lại                                                    |
 | 11  | **Một đề nghị mua có được đặt hàng nhiều nhà cung cấp không?** Hiện một đề nghị → một đơn hàng. Đề nghị 20 mặt hàng mà mỗi nhóm hàng một nhà cung cấp thì phải tách thành nhiều đề nghị                                                                                                                                                                                                                                  | Phase 3B (đã làm, mở rộng được)                                          |
-| 12  | **Ai ký nhận hàng tại công trường** — Kho, chỉ huy trưởng, hay cả hai? Hiện mở cho Mua hàng và Kho                                                                                                                                                                                                                                                                                                                       | Phase 3B (đã làm, sửa ở một hàm)                                         |
+| 12  | ~~**Ai ký nhận hàng tại công trường**~~ — **ĐÃ CHỐT** 02/09/2026: "thủ kho/người được giao phối hợp với kỹ thuật kiểm tra… Hai bên ký giao nhận". Nay mở thêm cho vai trò TC, **chỉ** với đề nghị mua gắn công trình                                                                                                                                                                                                     | Phase 3B (đã làm, sửa ở một hàm)                                         |
 | 13  | **Bảng giá khung MH-09** — NVG thoả thuận theo tháng hay quý, điều chỉnh giá báo trước bao lâu?                                                                                                                                                                                                                                                                                                                          | Chặn MH-09                                                               |
 | 14  | **Vật tư mua sẵn về kho chung rồi mới xuất cho công trình thì ghi chi phí lúc nào?** Mua theo đề nghị gắn công trình đã ghi khi hàng về (MH-07); còn hàng từ kho chung hiện KHÔNG về được ngân sách công trình nào. Đây là quyết định kế toán, không phải lựa chọn kỹ thuật                                                                                                                                              | Phase 3C (khoảng trống thật, chưa lấp)                                   |
 | 15  | **Ngưỡng "tồn lâu, chậm luân chuyển" 90 ngày** — đang lấy bằng một quý cho khớp chu kỳ kiểm kê                                                                                                                                                                                                                                                                                                                           | Phase 3C (đã làm, sửa ở một chỗ)                                         |
 | 16  | **Kho tự duyệt được chênh lệch kiểm kê tới 10 triệu** — theo hạn mức mặc định. Kho vừa đếm vừa duyệt là một chốt kiểm soát yếu, cần xác nhận NVG muốn vậy                                                                                                                                                                                                                                                                | Phase 3C (đổi bằng cấu hình `approval_limits`)                           |
-| 17  | **"Trưởng đơn vị" xác nhận công từng khối là ai?** — chi tiết + giả định tạm ở 3E                                                                                                                                                                                                                                                                                                                                        | Phase 3E (đã làm, sửa ở `confirm_timesheet_period`)                      |
+| 17  | **"Trưởng đơn vị" xác nhận công từng khối là ai?** — **hai trong ba khối ĐÃ CHỐT** 02/09/2026 (công trường → chỉ huy trưởng, xưởng → Phó Giám đốc). Khối **văn phòng** vẫn là suy luận                                                                                                                                                                                                                                   | Phase 3E (đã làm, sửa ở `confirm_timesheet_period`)                      |
 | 18  | **Một ngày công bằng bao nhiêu giờ?** — chi tiết + giả định tạm ở 3E                                                                                                                                                                                                                                                                                                                                                     | Phase 3E (đã làm, hằng số ở `@nvg/shared/ns` + SQL, có test đối chiếu)   |
 | 19  | **Ai duyệt yêu cầu tuyển dụng?** — chi tiết + giả định tạm ở 3E                                                                                                                                                                                                                                                                                                                                                          | Phase 3E (đã làm, đổi bằng cấu hình `approval_limits`)                   |
 | 20  | **Kế toán được đọc hồ sơ nhân sự tới đâu?** — chi tiết + giả định tạm ở 3E                                                                                                                                                                                                                                                                                                                                               | Phase 3E (đã làm, sửa ở `rls_employee_readable`)                         |
-| 21  | **Ai vận hành Module SX?** — chi tiết + giả định tạm ở 3F                                                                                                                                                                                                                                                                                                                                                                | Phase 3F (đã làm, đổi ở `db/src/seed/data.ts`)                           |
-| 22  | **Lô giàn giáo "mới" cho thuê được ngay không?** — chi tiết + giả định tạm ở 3F                                                                                                                                                                                                                                                                                                                                          | Phase 3F (đã làm, sửa điều kiện `condition` trong hàm)                   |
+| 21  | ~~**Ai vận hành Module SX?**~~ — **ĐÃ CHỐT** 02/09/2026: thêm vai trò thứ 13 `SX` "Xưởng sản xuất – Cho thuê"; Kho giữ phần chứng từ và kiểm đếm                                                                                                                                                                                                                                                                         | Phase 3F (đã làm, đổi ở `db/src/seed/data.ts`)                           |
+| 22  | ~~**Lô giàn giáo "mới" cho thuê được ngay không?**~~ — **ĐÃ CHỐT** 02/09/2026: **được**, hàng mới đã qua kiểm tra chất lượng trước khi nhập kho thành phẩm                                                                                                                                                                                                                                                               | Phase 3F (đã làm, sửa điều kiện `condition` trong hàm)                   |
 | 23  | **Bảng `tasks` — bỏ hẳn hay dùng thật?** Có sẵn từ Phase 0, chưa từng được ghi/đọc. "Việc cần làm" ở Top Bar hiện chỉ là Hộp thư Phê duyệt (`usePendingApprovals`) — đủ cho luồng phê duyệt, nhưng việc không gắn phê duyệt (vd. nhắc giấy tờ sắp hết hạn) hiện chỉ SINH `notification`, không có nơi "xử lý xong thì biến mất" đúng nghĩa AFD 5.4                                                                       | Phase 1.4 (Trung tâm Thông báo đã xong ở Phase 3G, `tasks` vẫn để trống) |
 | 24  | **`move_site_stage` (TC) có nên gửi thông báo khi chuyển bước không, và cho ai?** Hiện KHÔNG gửi ở bất kỳ bước nào — kể cả "tạm dừng thi công"/"hoàn thành" — trong khi mọi hàm ghi sự kiện lớn khác của module (`open_construction_site`, `handover_design_to_construction`, `generate_project_budget`) đều báo. Phát hiện ở đợt rà business logic 4B (28/08/2026)                                                      | Phase 3A (chưa vá — chờ xác nhận vai trò nhận)                           |
 | 25  | **Dòng dự toán chi tiết có nên được phép dùng nhóm `chi_phi_chung`/`du_phong`/`loi_nhuan` không?** `COST_GROUPS` hiện cho phép, và khi dùng thì trùng mã với 3 khoản tổng nhập ở `save_estimate_costs` — đã vá phần mất tiền (0080, cộng dồn thay vì bỏ qua) nhưng chưa quyết có nên GIỚI HẠN dropdown chỉ còn 4 nhóm vật tư/nhân công/máy móc/thầu phụ hay để nguyên. Phát hiện ở đợt rà business logic 4B (28/08/2026) | Phase 2B (đã vá phần mất tiền, còn câu hỏi UX)                           |
+| 26  | **Giao thêm giữa kỳ trong một hợp đồng thuê tính tiền từ ngày nào?** Thu hồi nhiều đợt đã làm (0106). Giao thêm thì chưa: mỗi đợt giao cần ngày bắt đầu tính thuê riêng, nên phải thêm bảng đợt giao chứ không mở rộng `rental_agreement_items` được. Khảo sát Xưởng 02/09/2026 xác nhận đây là việc xảy ra thường xuyên ("giao thêm, trả bớt, điều chuyển, gia hạn")                                                    | Chặn phần còn lại của SX-03                                              |
+| 27  | **Công trình nội bộ mượn giàn giáo có tính giá thuê nội bộ không?** Khảo sát Xưởng đề nghị "tính giá thuê nội bộ hoặc ít nhất ghi nhận chi phí sử dụng nội bộ". Đây là quyết định kế toán (có phát sinh thanh toán giữa pháp nhân không), không phải lựa chọn kỹ thuật. Hiện điều chuyển tới công trình chỉ ghi `scaffolding_events`, không sinh doanh thu cho NVS cũng không sinh chi phí cho công trình                | Chặn SX-03 phần nội bộ và độ chính xác của TC-05                         |
+| 28  | **Catalogue sản phẩm giàn giáo + bảng định mức + tỷ lệ lỗi + giá trị thất thoát/năm** — bốn ô khảo sát để trống. Phiếu ghi rõ "không nên ước lượng một con số để điền"                                                                                                                                                                                                                                                   | Chặn SX-01 đủ nghĩa và toàn bộ SX-02                                     |
+| 29  | **Hồ sơ công trường nào bắt buộc giữ bản giấy có chữ ký gốc?** Cần danh sách cụ thể để biết chỗ nào ký điện tử được, chỗ nào chỉ đính kèm bản chụp — liên quan trực tiếp tới PRD 2.3 "không bắt nhập liệu hai lần"                                                                                                                                                                                                       | Chặn thiết kế màn hình nghiệm thu và nhật ký của TC                      |

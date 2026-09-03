@@ -64,6 +64,8 @@ export const ACCOUNTS = {
   ketCauNvo: 'ketcau.nvo@nhavietgroup.test',
   muaHang: 'muahang@nhavietgroup.test',
   kho: 'kho@nhavietgroup.test',
+  /** Vai trò `SX` — Xưởng sản xuất – Cho thuê (NVS), thêm 02/09/2026 theo khảo sát Xưởng. */
+  xuongNvs: 'sanxuat.nvs@nhavietgroup.test',
   ketoan: 'ketoan@nhavietgroup.test',
   nhanSu: 'nhansu@nhavietgroup.test',
 } as const;

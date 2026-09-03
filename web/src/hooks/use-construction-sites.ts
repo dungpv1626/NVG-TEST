@@ -551,7 +551,9 @@ export function useSaveWarranty() {
       if (error) throw error;
     },
     onSuccess: (_v, { siteId }) => {
-      void queryClient.invalidateQueries({ queryKey: ['construction-sites', siteId, 'warranties'] });
+      void queryClient.invalidateQueries({
+        queryKey: ['construction-sites', siteId, 'warranties'],
+      });
     },
   });
 }
@@ -612,7 +614,137 @@ export function useSaveWarrantyClaim() {
     },
     onSuccess: (_v, { siteId }) => {
       void queryClient.invalidateQueries({ queryKey: ['warranty-claims'] });
-      void queryClient.invalidateQueries({ queryKey: ['construction-sites', siteId, 'warranties'] });
+      void queryClient.invalidateQueries({
+        queryKey: ['construction-sites', siteId, 'warranties'],
+      });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Hồ sơ và bản vẽ của công trình (NEN-05, NEN-06)
+//
+// Khảo sát Chỉ huy – Giám sát công trường 02/09/2026 xếp đây là vướng mắc số MỘT, và nêu
+// đúng hậu quả: "thi công theo bản vẽ đang lưu tại hiện trường, sau đó phát hiện Chủ đầu tư
+// hoặc thiết kế đã có điều chỉnh mà công trường chưa nhận được bản cập nhật chính thức. Một
+// phần công việc phải tháo dỡ hoặc sửa lại."
+//
+// KHÔNG dựng cơ chế phiên bản thứ hai: dùng lại đúng `documents` + `document_versions` mà
+// bản vẽ thiết kế (TK-05), dự toán (DA-06) và hợp đồng (HD-01) đang dùng. Ràng buộc "chỉ MỘT
+// bản đang hiệu lực" do unique index trong CSDL giữ, không do màn hình này giữ.
+// ---------------------------------------------------------------------------
+
+export interface SiteDocumentVersionRecord {
+  id: string;
+  version: number;
+  is_current_version: boolean;
+  file_name: string;
+  file_url: string;
+  change_reason: string | null;
+  published_at: string | null;
+  publisher: { full_name: string } | null;
+}
+
+export interface SiteDocumentRecord {
+  id: string;
+  title: string;
+  category: string;
+  description: string | null;
+  versions: SiteDocumentVersionRecord[];
+}
+
+export function useSiteDocuments(siteId: string | undefined) {
+  return useQuery<SiteDocumentRecord[], Error>({
+    queryKey: ['construction-sites', siteId, 'documents'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('documents')
+        .select(
+          'id, title, category, description, ' +
+            'versions:document_versions(id, version, is_current_version, file_name, file_url, ' +
+            'change_reason, published_at, publisher:users!document_versions_published_by_users_id_fk(full_name))',
+        )
+        .eq('related_entity_type', 'construction_sites')
+        .eq('related_entity_id', siteId!)
+        .is('deleted_at', null)
+        .order('category')
+        .order('title');
+      if (error) throw new Error(error.message);
+
+      // Bản mới nhất lên đầu — người mở tab này để biết bản NÀO đang dùng được, không phải
+      // để đọc lịch sử theo thứ tự thời gian.
+      return (data ?? []).map((d) => ({
+        ...(d as unknown as SiteDocumentRecord),
+        versions: [...((d as unknown as SiteDocumentRecord).versions ?? [])].sort(
+          (a, b) => b.version - a.version,
+        ),
+      }));
+    },
+    enabled: Boolean(siteId),
+  });
+}
+
+/**
+ * Phát hành một phiên bản mới của hồ sơ công trình.
+ *
+ * Tài liệu logic được tạo ở lần phát hành ĐẦU TIÊN, không phải bằng một nút "Tạo tài liệu"
+ * riêng: một tài liệu chưa có phiên bản nào là một dòng rỗng trong kho hồ sơ, và người dùng
+ * sẽ phải nhớ bấm hai nút mới xong một việc.
+ *
+ * Nguyên nhân thay đổi bắt buộc từ bản thứ hai trở đi — điều kiện đó do
+ * `publish_document_version` giữ (NEN-05), ở đây chỉ chặn sớm để báo lỗi ngay tại biểu mẫu.
+ */
+export function usePublishSiteDocumentVersion() {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    string,
+    Error,
+    {
+      siteId: string;
+      companyId: string;
+      documentId: string | null;
+      title: string;
+      category: string;
+      fileName: string;
+      changeReason: string | null;
+    }
+  >({
+    mutationFn: async (input) => {
+      let documentId = input.documentId;
+
+      if (!documentId) {
+        const { data: created, error: docError } = await supabase
+          .from('documents')
+          .insert({
+            company_id: input.companyId,
+            title: input.title,
+            category: input.category,
+            related_entity_type: 'construction_sites',
+            related_entity_id: input.siteId,
+          })
+          .select('id')
+          .single();
+        if (docError) throw docError;
+        documentId = (created as { id: string }).id;
+      }
+
+      const { data, error } = await supabase.rpc('publish_document_version', {
+        p_document_id: documentId,
+        // ⏳ Tải tệp thật lên Supabase Storage làm ở bước hoàn thiện kho hồ sơ; ở đây ghi
+        // nhận đường dẫn để cơ chế phiên bản chạy đúng từ bây giờ — cùng cách `version-panel`
+        // của Module Thiết kế đang làm.
+        p_file_url: `cong-trinh/${input.siteId}/${Date.now()}-${input.fileName}`,
+        p_file_name: input.fileName,
+        p_change_reason: input.changeReason,
+      });
+      if (error) throw error;
+      return data as string;
+    },
+    onSuccess: (_id, { siteId }) => {
+      void queryClient.invalidateQueries({
+        queryKey: ['construction-sites', siteId, 'documents'],
+      });
     },
   });
 }

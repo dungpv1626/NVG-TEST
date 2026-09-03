@@ -24,6 +24,9 @@ export const ROLE_CODES = [
   'KT',
   'NS',
   'ADMIN',
+  // Thêm sau, nên nằm CUỐI danh sách: giá trị enum trong Postgres chỉ thêm được vào cuối
+  // bằng `ALTER TYPE ... ADD VALUE`, chèn giữa sẽ làm lệch thứ tự giữa các môi trường.
+  'SX',
 ] as const;
 
 export type RoleCode = (typeof ROLE_CODES)[number];
@@ -109,6 +112,25 @@ export const ROLES: Readonly<Record<RoleCode, RoleMeta>> = {
     label: 'Quản trị hệ thống',
     defaultRoute: '/nen/quan-tri',
     seesAllCompanies: true,
+  },
+  /*
+   * Xưởng sản xuất giàn giáo (NVS) — thêm 02/09/2026 sau khi có phiếu khảo sát.
+   *
+   * Xưởng là một đơn vị có bộ máy riêng ("1 Phó giám đốc, 1 admin, 4 nhân viên kinh doanh,
+   * 1 nhân viên kho, 1 tổ trưởng sản xuất, 10 công nhân cơ khí") vận hành cả sản xuất lẫn
+   * cho thuê. Trước khi có khảo sát, quyền Module SX được tạm gán cho vai trò Kho vì họ đã
+   * quản lý vòng đời vật lý giàn giáo — nay Kho giữ đúng phần chứng từ nhập – xuất – tồn,
+   * còn điều hành sản xuất và hợp đồng thuê thuộc về vai trò này.
+   *
+   * KHÔNG có quyền `approve`: mọi biểu mẫu xưởng liệt kê trong phiếu khảo sát (lệnh sản
+   * xuất, đề nghị cấp vật tư, bảng chấm công, sổ máy móc) đều ghi người duyệt là "Phó Giám
+   * đốc/Ban Giám đốc" — vai trò BGĐ đã có sẵn quyền phê duyệt trên Module SX.
+   */
+  SX: {
+    code: 'SX',
+    label: 'Xưởng sản xuất – Cho thuê',
+    defaultRoute: '/sx/lenh-san-xuat',
+    seesAllCompanies: false,
   },
 } as const;
 

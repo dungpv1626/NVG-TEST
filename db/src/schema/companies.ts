@@ -7,12 +7,27 @@
  * KHÔNG phải pháp nhân giao dịch thật.
  */
 
-import { boolean, integer, pgTable, text, varchar } from 'drizzle-orm/pg-core';
+import { boolean, integer, pgTable, text, uuid, varchar } from 'drizzle-orm/pg-core';
 import { auditColumns } from './_audit';
 import { primaryId, softDelete } from './_helpers';
+import { tenants } from './tenants';
 
 export const companies = pgTable('companies', {
   id: primaryId(),
+
+  /**
+   * Tenant sở hữu pháp nhân này — thêm ở migration 0095 (nền Module Thiết kế).
+   *
+   * Đây là NGUỒN DUY NHẤT xác định phạm vi tenant của một người: `auth_tenant_ids()` suy từ
+   * các pháp nhân họ được gán, không có bảng nối người dùng ↔ tenant (CLAUDE.md 8.8 mục 4).
+   *
+   * Cột đã NOT NULL trong CSDL từ 0095 nhưng khai thiếu ở đây, nên `db:seed` hỏng lặng lẽ:
+   * `onConflictDoUpdate` vẫn phải dựng được dòng hợp lệ trước khi phát hiện trùng khoá, nên
+   * thiếu `tenant_id` là gãy ngay ở pháp nhân đầu tiên dù cả 4 dòng đều đã tồn tại.
+   */
+  tenantId: uuid('tenant_id')
+    .notNull()
+    .references(() => tenants.id, { onDelete: 'restrict' }),
 
   /** Mã pháp nhân: NVC / NVS / NVO / NVG. */
   code: varchar('code', { length: 8 }).notNull().unique(),

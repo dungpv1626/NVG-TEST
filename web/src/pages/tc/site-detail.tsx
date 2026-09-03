@@ -33,6 +33,7 @@ import { toUserMessage } from '@/hooks/use-error-message';
 import { useCan } from '@/lib/auth';
 import { AcceptancePanel } from './acceptance-panel';
 import { BudgetPanel } from './budget-panel';
+import { SiteDocumentPanel } from './document-panel';
 import { SiteLogPanel } from './site-log-panel';
 import { SitePurchaseRequestPanel } from './purchase-request-panel';
 import { SubcontractorPanel } from './subcontractor-panel';
@@ -156,6 +157,16 @@ export function SiteDetailPage() {
             badge: logs?.length || undefined,
             content: (
               <SiteLogPanel siteId={site.id} companyId={site.company_id} readOnly={readOnly} />
+            ),
+          },
+          {
+            // Đứng ngay sau Nhật ký: khảo sát công trường 02/09/2026 xếp "không biết bản vẽ
+            // nào đang có hiệu lực" là vướng mắc số một, và người mở màn hình này cần biết
+            // điều đó TRƯỚC khi giao việc cho tổ đội, không phải sau khi xem ngân sách.
+            id: 'ho-so',
+            label: 'Hồ sơ – Bản vẽ',
+            content: (
+              <SiteDocumentPanel siteId={site.id} companyId={site.company_id} readOnly={readOnly} />
             ),
           },
           {

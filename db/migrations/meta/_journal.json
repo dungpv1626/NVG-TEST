@@ -736,6 +736,27 @@
       "when": 1787931027543,
       "tag": "0104_locality_hung_yen",
       "breakpoints": true
+    },
+    {
+      "idx": 105,
+      "version": "7",
+      "when": 1787931027544,
+      "tag": "0105_role_xuong",
+      "breakpoints": true
+    },
+    {
+      "idx": 106,
+      "version": "7",
+      "when": 1787931027545,
+      "tag": "0106_khao_sat_xuong_cong_truong",
+      "breakpoints": true
+    },
+    {
+      "idx": 107,
+      "version": "7",
+      "when": 1787931027546,
+      "tag": "0107_siet_quyen_khoi_xuong",
+      "breakpoints": true
     }
   ]
 }

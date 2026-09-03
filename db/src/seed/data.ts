@@ -218,10 +218,12 @@ export const ROLE_SEED: RoleSeed[] = [
     seesAllCompanies: false,
     defaultRoute: '/kho/quet-ma',
     /*
-     * ⚠️ GIẢ ĐỊNH CHỜ HAAN XÁC NHẬN (CLAUDE.md 5.6): Module SX chưa có khảo sát Xưởng giàn
-     * giáo NVS, nên chưa rõ ai thật sự vận hành cho thuê giàn giáo. Tạm gán cho vai trò Kho
-     * vì họ đã quản lý vòng đời vật lý của giàn giáo (KHO-06) — SX-03 chỉ là lớp hợp đồng
-     * phủ lên đúng những lô đó. Đổi được bằng cách sửa dòng này khi có vai trò riêng.
+     * Khảo sát Xưởng giàn giáo 02/09/2026 đã trả lời câu hỏi "ai vận hành Module SX":
+     * "Kho chịu trách nhiệm chứng từ và số liệu nhập – xuất – tồn", còn kế hoạch sản xuất,
+     * chất lượng, sửa chữa và giao – thu hồi thuộc về Xưởng. Kho vẫn giữ `SX: WORK` vì
+     * chính họ kiểm đếm và bàn giao lô hàng khi giao/thu hồi ("Kho/Xưởng chuẩn bị hàng,
+     * kiểm đếm, tổ chức bốc xếp và bàn giao"), nhưng KHÔNG còn là vai trò duy nhất —
+     * xem vai trò `SX` bên dưới.
      */
     permissions: { KHO: WORK_APPROVE, MH: VIEW, SX: WORK },
   },
@@ -246,6 +248,26 @@ export const ROLE_SEED: RoleSeed[] = [
      * công trường vẫn do Ban chỉ huy xác nhận bằng quyền `approve` trên phân hệ TC.
      */
     permissions: { NS: WORK_APPROVE, TC: VIEW },
+  },
+  {
+    code: 'SX',
+    label: 'Xưởng sản xuất – Cho thuê',
+    description: 'Kế hoạch và lệnh sản xuất, sửa chữa giàn giáo thu hồi, hợp đồng cho thuê.',
+    seesAllCompanies: false,
+    defaultRoute: '/sx/lenh-san-xuat',
+    /*
+     * Thêm 02/09/2026 theo phiếu khảo sát Xưởng sản xuất giàn giáo. Xem chú thích đầy đủ ở
+     * `ROLES.SX` (`@nvg/shared/roles`) và migration 0105.
+     *
+     * `MH: ['view', 'create']` — xưởng lập phiếu đề nghị mua/cấp nguyên vật liệu ("Phiếu đề
+     * nghị mua hoặc cấp nguyên vật liệu — người lập: người phụ trách xưởng"), nhưng việc tìm
+     * nhà cung cấp và hỏi giá thuộc Cung ứng – Vật tư, đúng như chính phiếu khảo sát đề nghị.
+     *
+     * KHÔNG có `approve` trên SX: mọi biểu mẫu xưởng đều ghi người duyệt là "Phó Giám
+     * đốc/Ban Giám đốc" — vai trò BGĐ đã có `SX: VIEW_APPROVE`. Điều này cũng khiến bảng
+     * chấm công khối xưởng (NS-04) phải do Phó Giám đốc xác nhận chứ không tự ký tự duyệt.
+     */
+    permissions: { BC: VIEW, SX: WORK, KHO: VIEW, MH: ['view', 'create'], KT: RAISE_ONLY },
   },
   {
     code: 'ADMIN',
@@ -317,11 +339,9 @@ export const USER_SEED: UserSeed[] = [
     jobTitle: 'Trưởng sản xuất',
     department: 'NVS — Phòng Sản xuất',
     fromDocs: true,
-    // Vai trò 'TC' là chỗ giữ chỗ từ trước khi Module SX tồn tại — không có quyền SX nào cả,
-    // nên tài khoản này KHÔNG mở được màn hình Sản xuất dù tên và chức danh nói vậy. Đổi sang
-    // 'KHO', vai trò đang tạm giữ SX:WORK theo giả định ở dòng comment của role đó (chờ Haan
-    // xác nhận ai thật sự vận hành module).
-    assignments: [{ company: 'NVS', role: 'KHO', isPrimary: true }],
+    // Từ 02/09/2026 dùng đúng vai trò của mình: `SX` — "Xưởng sản xuất – Cho thuê". Trước đó
+    // tài khoản này phải mượn vai trò Kho vì chưa có vai trò nào giữ Module SX.
+    assignments: [{ company: 'NVS', role: 'SX', isPrimary: true }],
   },
   {
     email: 'admin@nhavietgroup.test',

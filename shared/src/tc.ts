@@ -314,7 +314,10 @@ export function siteDisplayStatus(stage: SiteStage, plannedEndDate: string | nul
  *
  * Trả `null` khi chưa đặt thời hạn — chưa biết thì nói chưa biết, không mặc định là còn hạn.
  */
-export function warrantyDaysLeft(warrantyUntil: string | null, today: Date = new Date()): number | null {
+export function warrantyDaysLeft(
+  warrantyUntil: string | null,
+  today: Date = new Date(),
+): number | null {
   if (!warrantyUntil) return null;
   const until = new Date(warrantyUntil);
   if (Number.isNaN(until.getTime())) return null;
@@ -322,3 +325,33 @@ export function warrantyDaysLeft(warrantyUntil: string | null, today: Date = new
   const startOfDay = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
   return Math.round((startOfDay(until) - startOfDay(today)) / 86_400_000);
 }
+
+/**
+ * Loại hồ sơ của công trình — cột `documents.category` (NEN-06).
+ *
+ * Nguồn: khảo sát Chỉ huy – Giám sát công trường 02/09/2026, câu "Những giấy tờ nào anh/chị
+ * phải làm tại công trường". Chỉ giữ những loại có PHIÊN BẢN và có bản đang hiệu lực — đó là
+ * điều kiện để một tài liệu thuộc về cơ chế `documents`/`document_versions` (NEN-05).
+ *
+ * Nhật ký và ảnh hiện trường KHÔNG nằm ở đây: ảnh chụp lúc 9 giờ sáng không có "phiên bản mới
+ * hơn", nhét vào kho hồ sơ chỉ làm loãng nó (xem ghi chú `site_logs.photo_urls`).
+ */
+export const SITE_DOCUMENT_CATEGORIES = [
+  'ban_ve_thi_cong',
+  'bien_phap_thi_cong',
+  'tien_do',
+  'ban_ve_hoan_cong',
+  'ho_so_chat_luong',
+  'khac',
+] as const;
+
+export type SiteDocumentCategory = (typeof SITE_DOCUMENT_CATEGORIES)[number];
+
+export const SITE_DOCUMENT_CATEGORY_LABELS: Readonly<Record<SiteDocumentCategory, string>> = {
+  ban_ve_thi_cong: 'Bản vẽ thi công',
+  bien_phap_thi_cong: 'Biện pháp thi công',
+  tien_do: 'Tiến độ',
+  ban_ve_hoan_cong: 'Bản vẽ hoàn công',
+  ho_so_chat_luong: 'Hồ sơ chất lượng',
+  khac: 'Tài liệu khác',
+};

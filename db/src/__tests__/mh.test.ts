@@ -1133,3 +1133,74 @@ describeDb('MH — danh mục nhà cung cấp và lịch sử giá (MH-03, MH-05
     expect(error).toBeTruthy();
   });
 });
+
+/*
+ * Khảo sát Chỉ huy – Giám sát công trường (02/09/2026): "Khi hàng về, thủ kho/người được
+ * giao phối hợp với kỹ thuật kiểm tra số lượng, quy cách, chất lượng và chứng từ. Hai bên ký
+ * giao nhận." Trước phiếu này, chỉ Mua hàng và Kho ghi nhận được giao nhận — công trường
+ * đứng ngay tại điểm giao mà không ký được, nên chứng từ luôn phải làm lại ở văn phòng.
+ *
+ * Quyền mở HẸP: chỉ với đề nghị mua có gắn công trình.
+ */
+describeDb('MH — Ban công trường ký nhận hàng về công trình (MH-07, khảo sát 02/09/2026)', () => {
+  let fixture: Fixture;
+  let muaHang: SupabaseClient;
+  let tgd: SupabaseClient;
+  let congTruong: SupabaseClient;
+
+  /** Dựng một đơn đặt hàng sẵn sàng nhận hàng; `siteId = null` là mua cho văn phòng. */
+  async function orderReadyToReceive(siteId: string | null) {
+    const requestId = await createRequest(muaHang, {
+      companyId: fixture.nvcCompanyId,
+      siteId,
+      costCode: siteId ? undefined : null,
+      title: siteId ? 'Thép về công trường' : 'Văn phòng phẩm',
+    });
+    await approveRequest(muaHang, tgd, requestId);
+    const quote = await addQuotation(muaHang, fixture.nvcCompanyId, requestId, {
+      supplierId: fixture.supplierA,
+      unitPrice: 20_000,
+    });
+    await muaHang.rpc('select_quotation', { p_quotation_id: quote });
+    const { data: orderId } = await muaHang.rpc('create_purchase_order', { p_quotation_id: quote });
+    const { data: item } = await muaHang
+      .from('purchase_order_items')
+      .select('id')
+      .eq('purchase_order_id', orderId as string)
+      .single();
+    return { orderId: orderId as string, itemId: (item as { id: string }).id };
+  }
+
+  beforeAll(async () => {
+    fixture = await seedFixture();
+    muaHang = await signInAs(ACCOUNTS.muaHang);
+    tgd = await signInAs(ACCOUNTS.tgd);
+    congTruong = await signInAs(ACCOUNTS.congTruongNvc);
+    await resetBudgetLine(fixture.budgetLineId);
+  });
+
+  it('ký nhận được đợt hàng của đề nghị mua gắn công trình', async () => {
+    const { orderId, itemId } = await orderReadyToReceive(fixture.nvcSiteId);
+
+    const { data, error } = await congTruong.rpc('record_delivery', {
+      p_purchase_order_id: orderId,
+      p_delivered_date: new Date().toISOString().slice(0, 10),
+      p_items: [{ purchase_order_item_id: itemId, quantity_ok: 100 }],
+      p_delivered_by_name: 'Lái xe nhà cung cấp',
+    });
+    expect(error).toBeNull();
+    expect(data).toBeTruthy();
+  });
+
+  it('KHÔNG ký nhận được hàng mua cho văn phòng (không gắn công trình)', async () => {
+    const { orderId, itemId } = await orderReadyToReceive(null);
+
+    const { error } = await congTruong.rpc('record_delivery', {
+      p_purchase_order_id: orderId,
+      p_delivered_date: new Date().toISOString().slice(0, 10),
+      p_items: [{ purchase_order_item_id: itemId, quantity_ok: 100 }],
+    });
+    expect(error).toBeTruthy();
+    expect(error!.message).toContain('Ban công trường');
+  });
+});

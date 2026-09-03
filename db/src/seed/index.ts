@@ -21,6 +21,7 @@ import {
   companies,
   permissions,
   roles,
+  tenants,
   userCompanies,
   users,
 } from '../schema/index';
@@ -46,10 +47,22 @@ async function main() {
 
   try {
     // --- Pháp nhân ---------------------------------------------------------
+    //
+    // `companies.tenant_id` NOT NULL từ migration 0095. Tenant `nvg` do chính migration đó
+    // tạo, nên ở đây chỉ đọc lại — seed KHÔNG tạo tenant mới.
+    const [nvgTenant] = await db
+      .select({ id: tenants.id })
+      .from(tenants)
+      .where(eq(tenants.code, 'nvg'));
+    if (!nvgTenant) {
+      throw new Error('Chưa có tenant "nvg" — chạy `npm run db:migrate` trước khi seed.');
+    }
+
     for (const c of COMPANY_SEED) {
       await db
         .insert(companies)
         .values({
+          tenantId: nvgTenant.id,
           code: c.code,
           legalName: c.legalName,
           shortName: c.shortName,

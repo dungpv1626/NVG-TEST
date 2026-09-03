@@ -74,8 +74,9 @@
 <header>
   <h1>Tiến độ phát triển — Hệ thống Quản trị Nhà Việt Group</h1>
   <p class="xs muted">
-    Cập nhật: <strong>28/08/2026</strong> · Chi tiết đầy đủ: <code>BUILD_PLAN.md</code> ·
-    Ràng buộc/quyết định: <code>CLAUDE.md</code> §6
+    Cập nhật: <strong>04/09/2026</strong> · Chi tiết đầy đủ: <code>BUILD_PLAN.md</code> ·
+    Ràng buộc/quyết định: <code>CLAUDE.md</code> §6 ·
+    Module Thiết kế AI có file riêng: <code>TIEN_DO_THIET_KE.html</code>
   </p>
 </header>
 
@@ -85,12 +86,17 @@
     ~90% tới bản demo ~95%. Giai đoạn 1 và 2 đã nghiệm thu; Giai đoạn 3 (liên kết chéo, rà soát
     phân quyền, tác vụ nền) đang chạy. Một công trình đi trọn được: hợp đồng → ngân sách → mua
     hàng/kho → nghiệm thu → thanh toán → thu tiền → lãi/lỗ, mỗi bước truy ngược được tới chứng từ gốc.
+    <br><br>
+    <strong>Mốc mới nhất — 02/09/2026: hai phiếu khảo sát cuối đã về</strong> (Xưởng sản xuất giàn
+    giáo, Chỉ huy – Giám sát công trường). Đây là chốt chặn cuối còn lại từ PRD Mục 10: Module TC
+    và SX không còn phải suy luận gián tiếp. Đổi lại, khảo sát mở ra một loạt việc mới có căn cứ
+    rõ ràng — xem hai mục dưới.
   </p>
   <div class="stats">
     <div class="stat"><b>12/12</b><span class="xs muted">module đã dựng</span></div>
-    <div class="stat"><b>85</b><span class="xs muted">migration</span></div>
-    <div class="stat"><b>700</b><span class="xs muted">kiểm thử tự động</span></div>
-    <div class="stat"><b>91</b><span class="xs muted">bảng CSDL</span></div>
+    <div class="stat"><b>108</b><span class="xs muted">migration</span></div>
+    <div class="stat"><b>1.101</b><span class="xs muted">kiểm thử tự động</span></div>
+    <div class="stat"><b>100</b><span class="xs muted">bảng CSDL</span></div>
   </div>
 </section>
 
@@ -103,7 +109,7 @@
     <tr><td><strong>P2</strong> CRM · DA · TK · HD</td><td>Giai đoạn 1 PRD — một cơ hội chạy trọn tới hợp đồng</td><td><span class="pill s-done">Xong</span></td></tr>
     <tr><td><strong>P3</strong> TC · MH · KHO · KT · NS · SX · BC</td><td>Giai đoạn 2 PRD — một công trình chạy trọn tới lãi/lỗ</td><td><span class="pill s-done">Xong</span></td></tr>
     <tr><td><strong>P4</strong> Liên kết chéo &amp; bàn giao</td><td>Rà soát phân quyền, tác vụ nền, Content Guidelines, kiểm thử đầu-cuối</td><td><span class="pill s-progress">Đang làm</span></td></tr>
-    <tr><td><strong>P5</strong> AI thiết kế sơ bộ</td><td>TK-10 → TK-17</td><td><span class="pill s-overdue">Đang chờ</span></td></tr>
+    <tr><td><strong>P5</strong> AI thiết kế sơ bộ</td><td>TK-10 → TK-17 — đã qua Mốc 5 (bộ giải mặt bằng CP-SAT, xuất DXF). Tiến độ chi tiết ở <code>TIEN_DO_THIET_KE.html</code></td><td><span class="pill s-progress">Đang làm</span></td></tr>
   </tbody>
 </table>
 </div>
@@ -119,34 +125,95 @@
       <li>Tác vụ nền NEN-04 — 4/4 loại cảnh báo gắn được đã chạy (giấy tờ nhân sự, công nợ quá hạn, vượt ngân sách, chờ phê duyệt để lâu)</li>
       <li>Content Guidelines — đối chiếu trọn thư viện 5.1–5.6, tương phản màu (không có màu tuỳ biến ngoài token), vùng bấm di động (3 chỗ vá thêm: bộ chọn pháp nhân compact, nút chuyển tháng lịch chọn ngày, nút Pipeline/Danh sách)</li>
       <li>Xuất báo cáo — xác nhận không lộ dữ liệu nhạy cảm</li>
+      <li><strong>Bản vẽ đang có hiệu lực ở công trường</strong> (04/09) — tab <em>Hồ sơ – Bản vẽ</em> ở Chi tiết Công trình, dùng lại kho hồ sơ có phiên bản sẵn có chứ không dựng cơ chế thứ hai. Bản đang hiệu lực nói rõ bằng chữ; bản cũ gập lại, mang chữ “Không còn hiệu lực”; đổi bản bắt buộc nêu nguyên nhân. Đây là vướng mắc số một của khảo sát công trường</li>
+      <li><strong>Vá lỗ hổng phân quyền do chính đợt trước mở ra</strong> (04/09, migration <code>0107</code>) — điều kiện mở cho khối xưởng dùng “có quyền sửa phân hệ SX”, mà cờ đó Thủ kho cũng có. Hệ quả đo được: Thủ kho ghi được bảng chấm công khối xưởng. Nay hỏi thẳng vai trò Xưởng; đã dựng lại được cả trước và sau khi vá, và có kiểm thử chống tái phát</li>
+      <li><strong>Áp hai phiếu khảo sát cuối (02/09/2026)</strong> — Xưởng giàn giáo NVS và Chỉ huy – Giám sát công trường. TC và SX không còn ở mức ĐỊNH HƯỚNG. Bốn giả định được thay bằng câu trả lời thật: vai trò vận hành Module SX (thêm vai trò thứ 13 <code>SX</code>), bảng chấm công khối xưởng do Phó Giám đốc xác nhận, công trường ký nhận được hàng về công trình, lô giàn giáo “mới” cho thuê được. Thêm: thu hồi giàn giáo <strong>nhiều đợt</strong>, tiền thuê tính riêng từng đợt</li>
     </ul>
   </div>
   <div class="card">
     <h3><span class="pill s-progress">Đang làm</span></h3>
     <ul>
+      <li><strong>Bảng xác nhận khối lượng tổ đội</strong> — khảo sát cho đủ công thức (khối lượng nghiệm thu × đơn giá hợp đồng; kỹ thuật đo bóc → chỉ huy trưởng kiểm → Phòng Thi công/Dự án kiểm → Kế toán). Chưa dựng vì phải chốt trước: chuỗi ba cấp này đi qua <strong>Hộp thư Phê duyệt dùng chung</strong> (một mẫu duy nhất cho mọi phê duyệt) hay dựng luồng riêng. Hiện <code>acceptance_records</code> lập một bước, giá trị nhập tay một cục — chưa có dòng khối lượng theo đầu việc</li>
       <li>"Hồ sơ thiếu chứng từ" (NEN-04) — chờ Haan trả lời câu hỏi cuối bảng bên dưới, chưa viết được migration nếu chưa rõ điều kiện cụ thể</li>
-      <li>Việc quá hạn xử lý KHÔNG gắn phê duyệt — chờ quyết định bảng <code>tasks</code></li>
+      <li>Việc quá hạn xử lý KHÔNG gắn phê duyệt — chờ quyết định bảng <code>tasks</code>. Khảo sát công trường vừa cho việc này một lý do rõ ràng: "mỗi yêu cầu… phải có người tiếp nhận, người phê duyệt, thời hạn xử lý, trạng thái đang chờ và cảnh báo quá hạn"</li>
     </ul>
   </div>
   <div class="card">
     <h3><span class="pill s-overdue">Đang chờ</span></h3>
     <ul>
-      <li><strong>P5 AI thiết kế</strong> — chờ tài liệu đặc tả v02 vào <code>doc/</code></li>
-      <li><strong>Tách môi trường dev/production</strong> — bắt buộc trước khi nhập dữ liệu thật, chưa làm</li>
+      <li><strong>Tách môi trường dev/production</strong> — bắt buộc trước khi nhập dòng dữ liệu thật đầu tiên, chưa làm. Hiện máy phát triển và bản chạy thử công khai dùng chung một CSDL</li>
       <li>Cloudflare Queues (gửi email) — chờ <code>RESEND_API_KEY</code></li>
-      <li>BC-04, SX-01/02 (giá thành sản xuất) — chờ khảo sát Xưởng NVS</li>
-      <li>~17 quyết định nghiệp vụ nhỏ khác — xem bảng bên dưới</li>
+      <li>BC-04 — chờ quyết định chỉ số</li>
+      <li>SX-01 đủ nghĩa / SX-02 giá thành — khảo sát Xưởng đã về (02/09/2026) nhưng còn chặn bởi DỮ LIỆU: catalogue sản phẩm, bảng định mức, tỷ lệ lỗi, giá trị thất thoát</li>
+      <li>14 quyết định nghiệp vụ còn treo — xem bảng cuối trang; 4 dòng mới đến từ hai phiếu khảo sát</li>
     </ul>
+  </div>
+</div>
+
+<h2>Hai phiếu khảo sát cuối — đã áp vào hệ thống (02/09/2026)</h2>
+<div class="card">
+  <p class="xs muted">
+    Nguồn: <code>doc/khao-sat/HoSo_KhaoSat_NVG_full.md</code> — nay đủ <strong>12/12 bộ phận</strong>.
+    Người điền: Nguyễn Thị Phượng (Phó giám đốc Xưởng) và Nguyễn Công Minh (Trưởng phòng thi công).
+  </p>
+
+  <h3 style="margin-top:14px">Bốn chỗ suy luận đã thay bằng câu trả lời thật</h3>
+  <div class="tablewrap" style="box-shadow:none;border:0">
+  <table>
+    <thead><tr><th>Trước đây đang đoán</th><th>Khảo sát nói</th></tr></thead>
+    <tbody>
+      <tr><td>Ai vận hành phân hệ Sản xuất – Cho thuê</td><td>Xưởng là đơn vị có bộ máy riêng → <strong>thêm vai trò thứ 13 “Xưởng sản xuất – Cho thuê”</strong>. Kho giữ đúng phần chứng từ và kiểm đếm</td></tr>
+      <tr><td>Ai xác nhận bảng chấm công khối xưởng</td><td><strong>Phó Giám đốc</strong>, không phải Hành chính – Nhân sự. Khối công trường thì chỉ huy trưởng — cũng đúng nguyên văn</td></tr>
+      <tr><td>Ai ký nhận vật tư giao thẳng tới công trường</td><td>“Thủ kho phối hợp với kỹ thuật… hai bên ký giao nhận” → mở thêm cho Ban công trường, <strong>chỉ</strong> với đề nghị mua gắn công trình</td></tr>
+      <tr><td>Lô giàn giáo “mới” có cho thuê được ngay không</td><td><strong>Được</strong> — hàng mới đã qua kiểm tra chất lượng trước khi nhập kho thành phẩm</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 style="margin-top:16px">Nghiệp vụ sửa theo mô tả thật</h3>
+  <ul>
+    <li><strong>Thu hồi giàn giáo nhiều đợt.</strong> Khảo sát: “Nếu khách giao hoặc trả nhiều lần, tiền thuê phải tính riêng theo từng đợt hoặc theo số dư hằng ngày.” Bản cũ bắt khai đủ mọi loại trong một lần — chỉ đúng với giả định khách trả một lần. Nay doanh thu cộng dồn theo số ngày thuê thật của từng đợt; hợp đồng chỉ đóng khi trả hết</li>
+    <li><strong>Ba lỗi tìm ra khi làm:</strong> thu hồi chỉ trừ được lô đầu tiên (khách trả đủ hàng mà hệ thống từ chối) · Ban Giám đốc và Tổng Giám đốc không xác nhận được bảng công của bất kỳ pháp nhân nào · thông báo “chờ xác nhận” gửi sai người và gửi trùng bốn lần</li>
+    <li><strong>Một lỗi có sẵn, chặn cả việc nạp dữ liệu mẫu:</strong> <code>npm run db:seed</code> hỏng từ migration <code>0095</code> — bảng pháp nhân thiếu cột <code>tenant_id</code> trong khai báo. Đã sửa</li>
+  </ul>
+
+  <h3 style="margin-top:16px">Việc mới có căn cứ — xếp theo đúng thứ tự người dùng tự nêu</h3>
+  <div class="grid grid-3" style="margin-top:8px">
+    <div class="card" style="box-shadow:none">
+      <h3>Công trường</h3>
+      <ul class="xs">
+        <li><s>Quản lý bản vẽ đang có hiệu lực</s> — <strong>xong 04/09</strong>. Còn lại: tải tệp thật lên kho lưu trữ (hiện mới ghi nhận đường dẫn)</li>
+        <li><strong>Bảng xác nhận khối lượng tổ đội</strong> — khảo sát cho đủ công thức. Cũng là thứ mở khoá báo cáo hiệu suất tổ đội đang bỏ trống</li>
+        <li>Luồng đề nghị công trường ↔ văn phòng có thời hạn và cảnh báo quá hạn</li>
+        <li>Danh sách tồn tại, yêu cầu làm rõ kỹ thuật, hồ sơ an toàn lao động</li>
+      </ul>
+    </div>
+    <div class="card" style="box-shadow:none">
+      <h3>Xưởng</h3>
+      <ul class="xs">
+        <li><strong>Khép kín vòng đời tài sản giàn giáo</strong> — còn thiếu: giao thêm giữa kỳ, biên bản thu hồi từng đợt có chữ ký và hình ảnh. <em>Sửa chữa hàng hỏng rồi nhập lại kho thì đã có sẵn</em> — kiểm lại ngày 04/09, ghi nhầm là thiếu ở bản trước</li>
+        <li>Lệnh sản xuất đủ nghĩa: có mã sản phẩm, quy cách, người duyệt, và <strong>đổi thì lập phiên bản mới</strong> — đúng nguyên nhân lần làm lại gần nhất của xưởng</li>
+        <li>Định mức vật tư có phiên bản → rồi mới tới giá thành (kế hoạch và thực tế là hai con số)</li>
+      </ul>
+    </div>
+    <div class="card" style="box-shadow:none">
+      <h3>Ràng buộc người dùng tự đặt</h3>
+      <ul class="xs">
+        <li>Công trường chấp nhận <strong>tối đa 10–20 phút nhập liệu mỗi ngày</strong>; phần tự do còn siết hơn: 5–10 phút. Mọi màn hình công trường phải đo bằng thước này</li>
+        <li>Mạng ở công trường <strong>ổn định</strong>, văn phòng công trường đủ máy — nên offline thật không cấp thiết ở đây. Ngược lại mạng ở <strong>xưởng “đôi lúc không ổn định”</strong></li>
+        <li>“Nếu chỉ yêu cầu công trường cập nhật mà các phòng ban không xử lý trên cùng hệ thống thì phần mềm không giải quyết được điểm nghẽn”</li>
+      </ul>
+    </div>
   </div>
 </div>
 
 <h2>Kiểm thử tự động</h2>
 <div class="card">
   <div class="stats" style="margin-top:0">
-    <div class="stat"><b>700</b><span class="xs muted">tổng số</span></div>
-    <div class="stat"><b>174</b><span class="xs muted">giao diện — chạy ~6 giây, không chạm mạng</span></div>
-    <div class="stat"><b>526</b><span class="xs muted">nghiệp vụ &amp; phân quyền — chạm CSDL Supabase thật</span></div>
-    <div class="stat"><b style="color:var(--done)">700/700 xanh</b><span class="xs muted">xác nhận 28/08/2026, chạy từng tệp</span></div>
+    <div class="stat"><b>1.101</b><span class="xs muted">tổng số</span></div>
+    <div class="stat"><b>226</b><span class="xs muted">giao diện — chạy ~9 giây, không chạm mạng</span></div>
+    <div class="stat"><b>875</b><span class="xs muted">nghiệp vụ, phân quyền &amp; engine thiết kế</span></div>
+    <div class="stat"><b style="color:var(--done)">xanh</b><span class="xs muted">xác nhận 04/09/2026, chạy từng tệp</span></div>
   </div>
   <p class="xs muted" style="margin-top:12px">
     <strong>Chạy dồn toàn bộ cùng lúc (<code>npm test</code>) có thể báo đỏ rải rác</strong> —
@@ -177,7 +244,7 @@
     <tr><td><code>thietke.nvo@nhavietgroup.test</code></td><td>Kiến trúc sư</td><td>NVO</td><td class="xs muted">Dự án thiết kế</td></tr>
     <tr><td><code>ketcau.nvo@nhavietgroup.test</code></td><td>Kỹ sư Kết cấu</td><td>NVO</td><td class="xs muted">Dự án thiết kế</td></tr>
     <tr><td><code>congtruong.nvc@nhavietgroup.test</code></td><td>Chỉ huy trưởng</td><td>NVC</td><td class="xs muted">Công trình</td></tr>
-    <tr><td><code>sanxuat.nvs@nhavietgroup.test</code></td><td>Trưởng sản xuất</td><td>NVS</td><td class="xs muted">Quét mã kho</td></tr>
+    <tr><td><code>sanxuat.nvs@nhavietgroup.test</code></td><td>Trưởng sản xuất <span class="pill s-done">vai trò mới</span></td><td>NVS</td><td class="xs muted">Lệnh sản xuất</td></tr>
     <tr><td><code>muahang@nhavietgroup.test</code></td><td>Trưởng phòng Mua hàng</td><td>Cả ba pháp nhân</td><td class="xs muted">Đề nghị mua</td></tr>
     <tr><td><code>kho@nhavietgroup.test</code></td><td>Thủ kho</td><td>NVC, NVS</td><td class="xs muted">Quét mã kho</td></tr>
     <tr><td><code>ketoan@nhavietgroup.test</code></td><td>Kế toán nội bộ</td><td>Cả ba pháp nhân</td><td class="xs muted">Đề nghị thanh toán</td></tr>
@@ -195,7 +262,12 @@
 
 <h2>Câu hỏi cần Nhà Việt Group trả lời</h2>
 <div class="card">
-  <p class="xs muted">Danh sách đầy đủ ở <code>CLAUDE.md</code> §6.6 — đây là các mục ưu tiên cao nhất.</p>
+  <p class="xs muted">
+    Danh sách đầy đủ ở <code>CLAUDE.md</code> §6.6 — đây là các mục ưu tiên cao nhất.
+    Bốn dòng đánh dấu <span class="pill s-overdue">Chặn…</span> là mới, đến từ hai phiếu khảo sát
+    ngày 02/09/2026: phiếu ghi thẳng <em>“không nên ước lượng một con số để điền”</em>, nên phần
+    mềm không tự đặt giá trị mặc định thay.
+  </p>
   <div class="tablewrap" style="box-shadow:none;border:0">
   <table>
     <thead><tr><th>Câu hỏi</th><th>Mức độ</th></tr></thead>
@@ -204,11 +276,14 @@
       <tr><td>Hạn mức phê duyệt chính thức theo vai trò/loại nghiệp vụ (đang dùng mức tạm)</td><td><span class="pill s-overdue">Cần sớm</span></td></tr>
       <tr><td>Phần mềm kế toán chính thức để tích hợp (MISA / AMIS / Fast?)</td><td><span class="pill s-pending">Giai đoạn 2</span></td></tr>
       <tr><td>Quy chế lương/thưởng chi tiết theo công ty và nhóm nhân sự</td><td><span class="pill s-pending">Giai đoạn 2</span></td></tr>
-      <tr><td>Một ngày công = mấy giờ? (đang lấy 8h theo luật; xưởng chạy ca 12h thì sai)</td><td><span class="pill s-pending">Giai đoạn 2</span></td></tr>
-      <tr><td>Ai xác nhận bảng chấm công từng khối, ai duyệt yêu cầu tuyển dụng</td><td><span class="pill s-pending">Đang suy luận tạm</span></td></tr>
+      <tr><td>Một ngày công = mấy giờ? (đang lấy 8h theo luật; khảo sát Xưởng để trống ô này nên chưa loại trừ được ca 12h)</td><td><span class="pill s-pending">Giai đoạn 2</span></td></tr>
+      <tr><td>Ai xác nhận bảng chấm công <strong>khối văn phòng</strong>, ai duyệt yêu cầu tuyển dụng <span class="xs muted">(công trường và xưởng đã chốt theo khảo sát 02/09)</span></td><td><span class="pill s-pending">Đang suy luận tạm</span></td></tr>
       <tr><td>"Trưởng đơn vị" bước 1 duyệt chi là ai (KT-01)</td><td><span class="pill s-draft">Chờ khảo sát</span></td></tr>
       <tr><td>Đo hiệu suất nhân sự/tổ đội/nhà cung cấp bằng chỉ số gì (BC-03 phần 4)</td><td><span class="pill s-draft">Cố ý chưa làm</span></td></tr>
-      <tr><td>Khảo sát trực tiếp Xưởng giàn giáo NVS + Chỉ huy công trường</td><td><span class="pill s-draft">Chưa có, chặn TC/SX làm sâu</span></td></tr>
+      <tr><td>Catalogue sản phẩm giàn giáo, bảng định mức vật tư, tỷ lệ lỗi, giá trị thất thoát/năm <span class="xs muted">(bốn ô khảo sát để trống — phiếu ghi rõ “không nên ước lượng một con số để điền”)</span></td><td><span class="pill s-overdue">Chặn SX-01/SX-02</span></td></tr>
+      <tr><td>Giao thêm giữa kỳ trong một hợp đồng thuê tính tiền từ ngày nào <span class="xs muted">(thu hồi nhiều đợt đã làm; giao thêm cần bảng đợt giao riêng)</span></td><td><span class="pill s-overdue">Chặn phần còn lại của SX-03</span></td></tr>
+      <tr><td>Công trình nội bộ mượn giàn giáo có tính giá thuê nội bộ không <span class="xs muted">(quyết định kế toán, ảnh hưởng độ chính xác của TC-05)</span></td><td><span class="pill s-pending">Chưa quyết</span></td></tr>
+      <tr><td>Hồ sơ công trường nào bắt buộc giữ bản giấy có chữ ký gốc</td><td><span class="pill s-pending">Chưa quyết</span></td></tr>
       <tr><td>Đầu mối hỗ trợ kỹ thuật, tên miền chính thức</td><td><span class="pill s-draft">Chưa chặn phát triển</span></td></tr>
       <tr><td>"Hồ sơ thiếu chứng từ" (NEN-04) nghĩa là gì — áp dụng cho loại hồ sơ nào (đề nghị chi đã trả nhưng thiếu hoá đơn? đơn hàng đã nhận nhưng thiếu phiếu giao nhận?), thiếu CỘT dữ liệu nào cụ thể, bao lâu thì nhắc, nhắc ai</td><td><span class="pill s-draft">Chưa rõ, chưa viết được migration</span></td></tr>
     </tbody>

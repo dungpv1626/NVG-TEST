@@ -35,13 +35,34 @@ describe('config/models.yaml', () => {
     ]);
   });
 
-  it('giai đoạn demo: MỌI đầu ra chỉ nhận hạng 3', () => {
-    // Gói Gemini miễn phí có thể được dùng để cải thiện sản phẩm (CLAUDE.md 5.1, T8), nên
-    // demo chỉ chạy dữ liệu giả lập hoặc đã ẩn danh. Test này là hàng rào: nới `max_data_class`
-    // trong cấu hình mà không có cam kết bằng văn bản của nhà cung cấp sẽ làm đỏ ở đây.
-    for (const route of Object.values(config.routes)) {
-      expect(route.max_data_class).toBe(3);
+  /*
+   * Gói Gemini miễn phí có thể được dùng để cải thiện sản phẩm (CLAUDE.md 5.1, quyết định
+   * T8), nên demo chỉ chạy dữ liệu giả lập hoặc đã ẩn danh. Test này là hàng rào: nới
+   * `max_data_class` trong cấu hình mà không có cam kết bằng văn bản của nhà cung cấp sẽ
+   * làm đỏ ở đây.
+   *
+   * MỘT ngoại lệ, khai tên tường minh chứ không nới cả loạt: `site_boundary_extract` được
+   * Haan xác nhận trực tiếp hạ xuống hạng 2 ngày 31/08/2026, CHỈ để tự thử bằng ảnh sổ đỏ
+   * lấy trên mạng trong lúc chạy thử cục bộ. Trước 04/09/2026 test này đứng ở "mọi đầu ra
+   * đều là 3" nên nó ĐỎ suốt từ hôm đó — một hàng rào đang đỏ thì không còn canh được gì,
+   * vì người đọc quen mắt với màu đỏ sẵn có sẽ không nhận ra lần nới tiếp theo.
+   *
+   * Ngoại lệ này phải biến mất trước khi có ảnh thật của khách chạm vào route đó, hoặc
+   * trước khi triển khai production — lúc đó xoá hẳn nhánh dưới đây, đừng thêm tên thứ hai.
+   */
+  const TAM_THOI_HANG_2 = new Set(['site_boundary_extract']);
+
+  it('giai đoạn demo: mọi đầu ra chỉ nhận hạng 3, trừ đúng một ngoại lệ đã khai tên', () => {
+    for (const [name, route] of Object.entries(config.routes)) {
+      expect(route.max_data_class, `đầu ra ${name}`).toBe(TAM_THOI_HANG_2.has(name) ? 2 : 3);
     }
+  });
+
+  it('ngoại lệ hạng 2 KHÔNG được lan sang đầu ra thứ hai', () => {
+    const hang2 = Object.entries(config.routes)
+      .filter(([, route]) => route.max_data_class !== 3)
+      .map(([name]) => name);
+    expect(hang2).toEqual([...TAM_THOI_HANG_2]);
   });
 
   it('chỉ đầu ra nhóm `pro` còn tắt, và tắt có lý do', () => {
