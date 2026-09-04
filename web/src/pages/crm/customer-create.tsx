@@ -17,7 +17,7 @@ import { BlockedNotice } from '@/components/ui/states';
 import { useCreateEntity } from '@/hooks/use-entity';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard';
-import { useAuth, useCan } from '@/lib/auth';
+import { companyCodeOf, useAuth, useCan } from '@/lib/auth';
 import { useCompanyStore } from '@/lib/company-store';
 import { supabase } from '@/lib/supabase';
 import {
@@ -71,9 +71,7 @@ export function CustomerCreatePage() {
     try {
       // Mã hồ sơ do CSDL cấp — hai người tạo cùng lúc không thể nhận trùng mã.
       const companyCode =
-        profile?.assignments.find((a) => a.companyId === selectedCompanyId)?.companyCode ??
-        profile?.assignments[0]?.companyCode ??
-        'NVG';
+        companyCodeOf(profile, selectedCompanyId) ?? profile?.assignments[0]?.companyCode ?? 'NVG';
 
       const { data: code, error: codeError } = await supabase.rpc('next_record_code', {
         p_company_code: companyCode,

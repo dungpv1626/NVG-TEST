@@ -30,7 +30,7 @@ import { DraftContractButton } from '@/components/contract/draft-contract-button
 import { BoqPanel } from '@/components/estimate/boq-panel';
 import { EstimatePanel } from '@/components/estimate/estimate-panel';
 import { toUserMessage } from '@/hooks/use-error-message';
-import { useAuth, useCan } from '@/lib/auth';
+import { companyCodeOf, useAuth, useCan } from '@/lib/auth';
 import { BidDocumentsPanel } from './bid-documents-panel';
 import { BudgetPanel } from './budget-panel';
 
@@ -63,8 +63,7 @@ export function BiddingDetailPage() {
   const project = data;
   // Nộp thầu rồi thì hồ sơ đóng băng — bộ trên hệ thống phải khớp bộ đã gửi chủ đầu tư.
   const readOnly = !canEdit || project.submitted_at !== null;
-  const companyCode =
-    profile?.assignments.find((a) => a.companyId === project.company_id)?.companyCode ?? 'NVC';
+  const companyCode = companyCodeOf(profile, project.company_id) ?? 'NVC';
 
   async function run(action: () => Promise<unknown>) {
     setActionError(null);

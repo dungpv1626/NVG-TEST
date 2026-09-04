@@ -70,7 +70,7 @@ export function HrDocumentPage() {
     event.preventDefault();
     setPageError(null);
     if (!scope.companyId || scope.isAggregate) {
-      setPageError('Chọn một pháp nhân cụ thể ở thanh bên trước khi thêm giấy tờ.');
+      setPageError('Chọn một pháp nhân cụ thể ở bộ chọn góc trên bên trái trước khi thêm giấy tờ.');
       return;
     }
     try {

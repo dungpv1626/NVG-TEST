@@ -33,7 +33,7 @@ import {
   type UnitPriceRecord,
 } from '@/hooks/use-unit-prices';
 import { useCan } from '@/lib/auth';
-import { useCompanyStore } from '@/lib/company-store';
+import { useCompanyScope } from '@/lib/company-scope';
 import { DaNav } from './da-nav';
 
 interface UnitPriceRow extends EntityRow {
@@ -42,7 +42,8 @@ interface UnitPriceRow extends EntityRow {
 
 export function UnitPriceListPage() {
   const canCreate = useCan('DA', 'create');
-  const companyId = useCompanyStore((s) => s.selectedCompanyId);
+  const scope = useCompanyScope();
+  const companyId = scope.companyId;
   const { data, isLoading, error, refetch } = useUnitPrices();
   const createPrice = useCreateUnitPrice();
 
@@ -80,8 +81,12 @@ export function UnitPriceListPage() {
       setFormError('Vui lòng nhập mã, tên, đơn vị tính và đơn giá.');
       return;
     }
-    if (!companyId) {
-      setFormError('Chưa chọn pháp nhân. Chọn pháp nhân ở thanh bên trước khi thêm đơn giá.');
+    // Chế độ gộp "Toàn NVG" không ghi được — NVG là mã tổng hợp, không phải pháp nhân giao
+    // dịch (Backend Schema 2.2). CSDL cũng chặn (migration 0108).
+    if (scope.isAggregate || !companyId) {
+      setFormError(
+        'Đơn giá thuộc về một pháp nhân cụ thể. Chọn NVC, NVO hoặc NVS ở bộ chọn góc trên bên trái trước khi thêm đơn giá.',
+      );
       return;
     }
     try {

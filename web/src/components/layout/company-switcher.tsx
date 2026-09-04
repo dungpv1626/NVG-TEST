@@ -1,8 +1,11 @@
 /**
  * Bộ chọn pháp nhân — Webapp Flow Mục 2.2.
  *
- * Đặt ở góc trên bên trái sidebar. Lựa chọn "Toàn NVG" CHỈ hiện với Ban Giám đốc và
- * Back Office (vai trò có `sees_all_companies`).
+ * Đặt ở góc trên bên trái sidebar. Danh sách lấy từ `profile.scopeCompanies`, KHÔNG từ
+ * `profile.assignments`: vai trò cấp tập đoàn (`sees_all_companies`) xem được cả ba pháp
+ * nhân dù chỉ được gán vào NVG. Dựng từ `assignments` thì Giám đốc Tài chính và Quản trị
+ * hệ thống chỉ có đúng một mục, rơi vào nhánh "một pháp nhân duy nhất" bên dưới và mất hẳn
+ * khả năng bấm — kẹt vĩnh viễn ở chế độ gộp.
  *
  * Chuyển pháp nhân KHÔNG tải lại trang — chỉ đổi state, giữ nguyên module đang xem.
  *
@@ -22,24 +25,16 @@ export function CompanySwitcher({ compact = false }: { compact?: boolean } = {})
   const { profile } = useAuth();
   const { selectedCompanyId, setSelectedCompany } = useCompanyStore();
 
-  // Một người có thể giữ nhiều vai trò ở cùng một pháp nhân — gộp lại thành một mục.
-  const options = useMemo(() => {
-    const byId = new Map<string, { id: string; code: string; name: string; roles: string[] }>();
-    for (const a of profile?.assignments ?? []) {
-      const existing = byId.get(a.companyId);
-      if (existing) {
-        if (!existing.roles.includes(a.roleLabel)) existing.roles.push(a.roleLabel);
-      } else {
-        byId.set(a.companyId, {
-          id: a.companyId,
-          code: a.companyCode,
-          name: a.companyShortName,
-          roles: [a.roleLabel],
-        });
-      }
-    }
-    return [...byId.values()];
-  }, [profile]);
+  const options = useMemo(
+    () =>
+      (profile?.scopeCompanies ?? []).map((c) => ({
+        id: c.companyId,
+        code: c.companyCode,
+        name: c.companyShortName,
+        roles: c.roleLabels,
+      })),
+    [profile],
+  );
 
   const selected = options.find((o) => o.id === selectedCompanyId) ?? options[0];
 
@@ -60,7 +55,7 @@ export function CompanySwitcher({ compact = false }: { compact?: boolean } = {})
       );
     }
     return (
-      <div className="flex items-center gap-2 rounded-sm px-2 py-2">
+      <div className="flex items-center gap-2 rounded-md border border-border px-2 py-2">
         <Building2 className="text-fg-subtle" />
         <div className="min-w-0">
           <div className="truncate font-semibold">{selected.name}</div>
@@ -74,7 +69,11 @@ export function CompanySwitcher({ compact = false }: { compact?: boolean } = {})
     <DropdownMenu.Root>
       <DropdownMenu.Trigger
         className={cn(
-          'flex items-center gap-2 rounded-sm text-left hover:bg-surface-hover',
+          // Viền + nền trũng để đọc ra là ĐIỀU KHIỂN. Trước đây chỉ có mỗi mũi tên 16px gợi ý
+          // bấm được, nên khối này trông y hệt một tiêu đề và người dùng không tìm ra chỗ đổi
+          // pháp nhân — trong khi Bảng điều khiển vẫn bảo họ "chọn một pháp nhân ở thanh bên".
+          'flex items-center gap-2 rounded-md text-left',
+          'border border-border bg-surface-sunken hover:bg-surface-hover',
           // Vùng bấm tối thiểu 40px trên di động, 32px trên máy tính có chuột (Content
           // Guidelines 6.8) — compact chỉ hiện dưới `lg:` (top-bar.tsx), đúng nơi ngón tay cần
           // vùng bấm lớn nhất; trước đây `px-2 py-1` quanh icon 16px + chữ ra dưới 40px, cùng

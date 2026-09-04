@@ -58,7 +58,7 @@ export function PaymentRequestCreatePage() {
     return (
       <BlockedNotice
         title="Chọn pháp nhân trước khi lập đề nghị"
-        detail="Khoản chi thuộc về một pháp nhân cụ thể vì nó vào P&L của đúng công ty đó. Chọn NVC, NVO hoặc NVS ở thanh bên."
+        detail="Khoản chi thuộc về một pháp nhân cụ thể vì nó vào P&L của đúng công ty đó. Chọn NVC, NVO hoặc NVS ở bộ chọn pháp nhân góc trên bên trái."
       />
     );
   }

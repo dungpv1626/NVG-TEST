@@ -75,7 +75,9 @@ export function RecruitmentPage() {
     setPageError(null);
     setNotice(null);
     if (!scope.companyId || scope.isAggregate) {
-      setPageError('Chọn một pháp nhân cụ thể ở thanh bên trước khi lập yêu cầu tuyển dụng.');
+      setPageError(
+        'Chọn một pháp nhân cụ thể ở bộ chọn góc trên bên trái trước khi lập yêu cầu tuyển dụng.',
+      );
       return;
     }
     try {

@@ -31,8 +31,15 @@ vi.mock('@/lib/auth', () => ({
     profile: {
       id: 'u1',
       fullName: 'Bùi Văn Thi',
-      assignments: [
-        { companyId: 'nvc-id', companyShortName: 'Nhà Việt Cons', roleLabel: 'Tổng Giám đốc' },
+      assignments: [{ companyId: 'nvc-id', companyCode: 'NVC', roleLabel: 'Tổng Giám đốc' }],
+      scopeCompanies: [
+        {
+          companyId: 'nvc-id',
+          companyCode: 'NVC',
+          companyShortName: 'Nhà Việt Cons',
+          roleLabels: ['Tổng Giám đốc'],
+          viaSeesAll: false,
+        },
       ],
       permissions: Object.entries(state.can).map(([moduleCode, p]) => ({ moduleCode, ...p })),
     },

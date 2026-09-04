@@ -32,7 +32,7 @@ import {
   useUpdateDesignProject,
 } from '@/hooks/use-design-projects';
 import { toUserMessage } from '@/hooks/use-error-message';
-import { useAuth, useCan } from '@/lib/auth';
+import { companyCodeOf, useAuth, useCan } from '@/lib/auth';
 import { BriefPanel } from './brief-panel';
 import { ChangeRequestPanel } from './change-request-panel';
 import { DisciplinePanel } from './discipline-panel';
@@ -328,10 +328,7 @@ export function DesignDetailPage() {
                 <EstimatePanel
                   parent={{ kind: 'design', id: project.id }}
                   companyId={project.company_id}
-                  companyCode={
-                    profile?.assignments.find((a) => a.companyId === project.company_id)
-                      ?.companyCode ?? 'NVO'
-                  }
+                  companyCode={companyCodeOf(profile, project.company_id) ?? 'NVO'}
                   readOnly={readOnly}
                 />
               </div>

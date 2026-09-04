@@ -287,7 +287,7 @@ export function ReceivablePage() {
       {scope.isAggregate && (
         <BlockedNotice
           title="Đang xem gộp Toàn NVG"
-          detail="Danh sách bên dưới gộp cả ba pháp nhân và có cột Pháp nhân để đọc đúng số. Chọn một pháp nhân cụ thể ở thanh bên nếu cần lập khoản công nợ mới."
+          detail="Danh sách bên dưới gộp cả ba pháp nhân và có cột Pháp nhân để đọc đúng số. Chọn một pháp nhân cụ thể ở bộ chọn góc trên bên trái nếu cần lập khoản công nợ mới."
         />
       )}
 

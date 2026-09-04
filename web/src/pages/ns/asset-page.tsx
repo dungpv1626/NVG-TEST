@@ -67,7 +67,7 @@ export function AssetPage() {
     setPageError(null);
     setNotice(null);
     if (!scope.companyId || scope.isAggregate) {
-      setPageError('Chọn một pháp nhân cụ thể ở thanh bên trước khi thêm tài sản.');
+      setPageError('Chọn một pháp nhân cụ thể ở bộ chọn góc trên bên trái trước khi thêm tài sản.');
       return;
     }
     try {

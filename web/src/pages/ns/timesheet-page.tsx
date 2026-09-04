@@ -168,7 +168,7 @@ export function TimesheetPage() {
         <div className="mb-4">
           <BlockedNotice
             title="Đang xem gộp cả ba pháp nhân"
-            detail="Kỳ chấm công thuộc về một pháp nhân cụ thể. Chọn NVC, NVO hoặc NVS ở thanh bên trái để mở kỳ, ghi công và chốt kỳ; ở chế độ gộp chỉ xem được."
+            detail="Kỳ chấm công thuộc về một pháp nhân cụ thể. Chọn NVC, NVO hoặc NVS ở bộ chọn pháp nhân góc trên bên trái để mở kỳ, ghi công và chốt kỳ; ở chế độ gộp chỉ xem được."
           />
         </div>
       )}

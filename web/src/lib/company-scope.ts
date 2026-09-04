@@ -35,8 +35,11 @@ export function useCompanyScope(): CompanyScope {
   const companyId = useCompanyStore((s) => s.selectedCompanyId);
 
   return useMemo(() => {
-    const assignment = profile?.assignments.find((a) => a.companyId === companyId);
-    const code = assignment?.companyCode ?? null;
+    // Tra trong `scopeCompanies`, không trong `assignments`: vai trò cấp tập đoàn chọn được
+    // pháp nhân họ không được gán vào, và mã pháp nhân ở đây quyết định cả nhãn hiển thị lẫn
+    // tiền tố mã hồ sơ mới — tra hụt thì mã `null` kéo theo hồ sơ mang tiền tố sai công ty.
+    const code =
+      profile?.scopeCompanies.find((c) => c.companyId === companyId)?.companyCode ?? null;
     // Không suy ra từ mã cứng 'NVG' mà từ thuộc tính `isTransactional` — thêm pháp nhân mới
     // trong tương lai (PRD Mục 6, "hỗ trợ thêm công ty thành viên mới") không phải sửa ở đây.
     const isAggregate = code !== null && !COMPANIES[code].isTransactional;

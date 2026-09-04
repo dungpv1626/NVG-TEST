@@ -27,6 +27,25 @@ export interface CompanyAssignment {
   isPrimary: boolean;
 }
 
+/**
+ * Một mục trong bộ chọn phạm vi pháp nhân.
+ *
+ * KHÔNG đồng nhất với `CompanyAssignment`: dòng gán trong `user_companies` nói người này
+ * LÀM VIỆC ở pháp nhân nào, còn danh sách này nói họ XEM ĐƯỢC phạm vi nào. Vai trò cấp tập
+ * đoàn (`sees_all_companies`) đọc được dữ liệu cả ba pháp nhân dù chỉ được gán vào NVG —
+ * dựng bộ chọn từ `assignments` thì họ chỉ có đúng một mục, tức là không có cách nào thoát
+ * chế độ gộp, trong khi Bảng điều khiển vẫn bảo họ "chọn một pháp nhân để xem riêng".
+ */
+export interface CompanyOption {
+  companyId: string;
+  companyCode: CompanyCode;
+  companyShortName: string;
+  /** Nhãn mọi vai trò người dùng giữ ở pháp nhân này — một người có thể giữ nhiều vai trò. */
+  roleLabels: string[];
+  /** `true` khi mục này có được nhờ `sees_all_companies`, không nhờ dòng gán trực tiếp. */
+  viaSeesAll: boolean;
+}
+
 export interface ModulePermission {
   moduleCode: ModuleCode;
   canView: boolean;
@@ -43,6 +62,12 @@ export interface UserProfile {
   jobTitle: string | null;
   department: string | null;
   assignments: CompanyAssignment[];
+  /**
+   * Các pháp nhân người dùng được phép CHỌN ở bộ chọn phạm vi — luôn là tập cha của
+   * `assignments`. Đây là danh sách duy nhất mà bộ chọn, `useCompanyScope` và các màn hình
+   * tra `company_id` → mã pháp nhân được phép dùng.
+   */
+  scopeCompanies: CompanyOption[];
   permissions: ModulePermission[];
   /** Xem được dữ liệu của mọi pháp nhân — chỉ vai trò cấp tập đoàn. */
   seesAllCompanies: boolean;
@@ -78,6 +103,21 @@ function toVietnameseAuthError(message: string): string {
   return 'Không đăng nhập được. Thử lại hoặc liên hệ quản trị hệ thống.';
 }
 
+/** Một dòng `user_companies` kèm hai bảng liên kết, như PostgREST trả về. */
+export interface CompanyRow {
+  is_primary: boolean;
+  companies: { id: string; code: string; short_name: string; display_order: number };
+  roles: { code: string; label: string; sees_all_companies: boolean; default_route: string | null };
+}
+
+/** Một dòng của danh mục `companies` — chỉ tải khi vai trò xem được mọi pháp nhân. */
+export interface CompanyCatalogRow {
+  id: string;
+  code: string;
+  short_name: string;
+  display_order: number;
+}
+
 async function loadProfile(authUserId: string): Promise<UserProfile | null> {
   const { data: user, error } = await supabase
     .from('users')
@@ -96,13 +136,9 @@ async function loadProfile(authUserId: string): Promise<UserProfile | null> {
     )
     .eq('user_id', user.id);
 
-  type Row = {
-    is_primary: boolean;
-    companies: { id: string; code: string; short_name: string; display_order: number };
-    roles: { code: string; label: string; sees_all_companies: boolean; default_route: string | null };
-  };
+  const rawRows = (rows ?? []) as unknown as CompanyRow[];
 
-  const assignments: CompanyAssignment[] = ((rows ?? []) as unknown as Row[])
+  const assignments: CompanyAssignment[] = rawRows
     .map((r) => ({
       companyId: r.companies.id,
       companyCode: r.companies.code as CompanyCode,
@@ -118,12 +154,27 @@ async function loadProfile(authUserId: string): Promise<UserProfile | null> {
     .map(({ displayOrder: _drop, ...rest }) => rest);
 
   const roleCodes = [...new Set(assignments.map((a) => a.roleCode))];
+  const seesAllCompanies = assignments.some((a) => a.seesAllCompanies);
 
   // Hợp nhất quyền của mọi vai trò người dùng giữ: quyền rộng nhất thắng.
-  const { data: permRows } = await supabase
-    .from('permissions')
-    .select('module_code, can_view, can_create, can_edit, can_delete, can_approve, roles!inner(code)')
-    .in('roles.code', roleCodes.length ? roleCodes : ['__none__']);
+  //
+  // Danh mục pháp nhân chỉ tải khi người dùng giữ vai trò cấp tập đoàn — người thường không
+  // cần tới nó, và hai truy vấn này không phụ thuộc nhau nên chạy song song.
+  const [{ data: permRows }, { data: companyRows }] = await Promise.all([
+    supabase
+      .from('permissions')
+      .select(
+        'module_code, can_view, can_create, can_edit, can_delete, can_approve, roles!inner(code)',
+      )
+      .in('roles.code', roleCodes.length ? roleCodes : ['__none__']),
+    seesAllCompanies
+      ? supabase
+          .from('companies')
+          .select('id, code, short_name, display_order')
+          .is('deleted_at', null)
+          .order('display_order')
+      : Promise.resolve({ data: null }),
+  ]);
 
   const merged = new Map<string, ModulePermission>();
   for (const p of (permRows ?? []) as unknown as Array<Record<string, boolean | string>>) {
@@ -146,9 +197,74 @@ async function loadProfile(authUserId: string): Promise<UserProfile | null> {
     jobTitle: user.job_title,
     department: user.department,
     assignments,
+    scopeCompanies: buildScopeCompanies(rawRows, companyRows),
     permissions: [...merged.values()],
-    seesAllCompanies: assignments.some((a) => a.seesAllCompanies),
+    seesAllCompanies,
   };
+}
+
+/**
+ * Ghép danh sách pháp nhân chọn được: các dòng gán trực tiếp, cộng thêm MỌI pháp nhân nếu
+ * người dùng giữ vai trò cấp tập đoàn.
+ *
+ * Bổ sung ở đây, không bằng cách thêm dòng vào `user_companies`: "xem mọi pháp nhân" là một
+ * thuộc tính của VAI TRÒ, nhân bản nó thành bốn dòng gán là tạo nguồn sự thật thứ hai —
+ * quản trị viên đổi vai trò mà quên sửa dòng gán thì hai nơi nói khác nhau.
+ *
+ * ⚠️ Đây chỉ là danh sách HIỂN THỊ. Người dùng có sửa state trong trình duyệt để chọn một
+ * pháp nhân không thuộc phạm vi của mình thì RLS vẫn trả về rỗng — hàng rào nằm trong CSDL.
+ */
+export function buildScopeCompanies(
+  rows: CompanyRow[],
+  allCompanies: CompanyCatalogRow[] | null,
+): CompanyOption[] {
+  const byId = new Map<string, CompanyOption & { displayOrder: number }>();
+
+  for (const r of rows) {
+    const existing = byId.get(r.companies.id);
+    if (existing) {
+      if (!existing.roleLabels.includes(r.roles.label)) existing.roleLabels.push(r.roles.label);
+      continue;
+    }
+    byId.set(r.companies.id, {
+      companyId: r.companies.id,
+      companyCode: r.companies.code as CompanyCode,
+      companyShortName: r.companies.short_name,
+      roleLabels: [r.roles.label],
+      viaSeesAll: false,
+      displayOrder: r.companies.display_order,
+    });
+  }
+
+  // Nhãn vai trò cho pháp nhân thêm vào: chính vai trò đã mở phạm vi đó ra, chứ không phải
+  // một vai trò khác người dùng tình cờ giữ ở pháp nhân khác.
+  const seesAllLabels = [
+    ...new Set(rows.filter((r) => r.roles.sees_all_companies).map((r) => r.roles.label)),
+  ];
+  for (const c of allCompanies ?? []) {
+    if (byId.has(c.id)) continue;
+    byId.set(c.id, {
+      companyId: c.id,
+      companyCode: c.code as CompanyCode,
+      companyShortName: c.short_name,
+      roleLabels: seesAllLabels,
+      viaSeesAll: true,
+      displayOrder: c.display_order,
+    });
+  }
+
+  return [...byId.values()]
+    .sort((a, b) => a.displayOrder - b.displayOrder)
+    .map(({ displayOrder: _drop, ...rest }) => rest);
+}
+
+/** Tra mã pháp nhân từ `company_id` của một dòng dữ liệu — dùng để đặt mã hồ sơ mới. */
+export function companyCodeOf(
+  profile: UserProfile | null | undefined,
+  companyId: string | null | undefined,
+): CompanyCode | null {
+  if (!profile || !companyId) return null;
+  return profile.scopeCompanies.find((c) => c.companyId === companyId)?.companyCode ?? null;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -190,6 +306,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    *
    * Cũng xử lý trường hợp id đã lưu không còn hợp lệ (quản trị viên đổi phân quyền): rơi về
    * pháp nhân đầu tiên thay vì kẹt ở một id không còn thuộc về người này.
+   *
+   * Kiểm tra tính hợp lệ theo `scopeCompanies`, nhưng giá trị rơi về lấy từ `assignments`:
+   * người giữ vai trò cấp tập đoàn được PHÉP chọn cả ba pháp nhân, song nơi họ làm việc vẫn
+   * là pháp nhân được gán — lấy phần tử đầu của `scopeCompanies` sẽ đẩy Phó Giám đốc NVS vào
+   * chế độ gộp mỗi lần đăng nhập, dù họ chưa hề chọn như vậy.
    */
   useEffect(() => {
     const { selectedCompanyId, setSelectedCompany, reset } = useCompanyStore.getState();
@@ -199,7 +320,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const stillValid = profile.assignments.some((a) => a.companyId === selectedCompanyId);
+    const stillValid = profile.scopeCompanies.some((c) => c.companyId === selectedCompanyId);
     if (!stillValid) setSelectedCompany(profile.assignments[0]!.companyId);
   }, [profile]);
 

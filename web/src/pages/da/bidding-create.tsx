@@ -22,8 +22,8 @@ import { useEntityList } from '@/hooks/use-entity';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useOpportunities } from '@/hooks/use-opportunities';
 import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard';
-import { useAuth, useCan } from '@/lib/auth';
-import { useCompanyStore } from '@/lib/company-store';
+import { companyCodeOf, useAuth, useCan } from '@/lib/auth';
+import { useCompanyScope } from '@/lib/company-scope';
 import { supabase } from '@/lib/supabase';
 
 const BREADCRUMBS = [
@@ -41,7 +41,8 @@ export function BiddingCreatePage() {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const canCreate = useCan('DA', 'create');
-  const companyId = useCompanyStore((s) => s.selectedCompanyId);
+  const scope = useCompanyScope();
+  const companyId = scope.companyId;
 
   const { data: customers } = useEntityList<CustomerOption>({
     table: 'customers',
@@ -96,13 +97,14 @@ export function BiddingCreatePage() {
       return;
     }
     if (!companyId) {
-      setError('Chưa chọn pháp nhân. Chọn pháp nhân ở thanh bên trước khi tạo hồ sơ.');
+      setError(
+        'Chưa chọn pháp nhân. Chọn pháp nhân ở bộ chọn góc trên bên trái trước khi tạo hồ sơ.',
+      );
       return;
     }
 
     try {
-      const companyCode =
-        profile?.assignments.find((a) => a.companyId === companyId)?.companyCode ?? 'NVC';
+      const companyCode = companyCodeOf(profile, companyId) ?? 'NVC';
       const { data: code, error: codeError } = await supabase.rpc('next_record_code', {
         p_company_code: companyCode,
         p_record_type: 'DA',
@@ -134,6 +136,27 @@ export function BiddingCreatePage() {
     // KHÔNG hỏi ở đây: `useUnsavedChangesGuard` đã chặn mọi lần chuyển trang, kể cả
     // lần này. Hỏi thêm một lần nữa là bắt người dùng xác nhận hai lần cho một việc.
     navigate('/da/goi-thau');
+  }
+
+  // Chế độ gộp "Toàn NVG" KHÔNG ghi được: NVG là mã tổng hợp toàn tập đoàn, không phải pháp
+  // nhân giao dịch (Backend Schema 2.2). Hồ sơ ghi vào đó rơi ra ngoài P&L của cả ba công ty
+  // — biến mất khỏi mọi màn hình đã lọc, mà báo cáo gộp vẫn cộng vào. CSDL cũng chặn
+  // (migration 0108); chặn ở đây để người dùng biết trước khi gõ xong cả biểu mẫu.
+  if (scope.isAggregate || !scope.companyId) {
+    return (
+      <>
+        <PageHeader title="Tạo gói thầu mới" breadcrumbs={BREADCRUMBS} />
+        <BlockedNotice
+          title="Chọn pháp nhân trước khi tạo gói thầu"
+          detail="Gói thầu thuộc về một pháp nhân cụ thể vì doanh thu và chi phí của nó vào P&amp;L của đúng công ty đó. Chọn NVC, NVO hoặc NVS ở bộ chọn góc trên bên trái."
+          action={
+            <Button variant="secondary" onClick={() => navigate('/da/goi-thau')}>
+              {BUTTONS.back}
+            </Button>
+          }
+        />
+      </>
+    );
   }
 
   if (!canCreate) {

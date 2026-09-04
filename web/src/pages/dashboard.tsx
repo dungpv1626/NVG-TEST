@@ -345,7 +345,8 @@ export function DashboardPage() {
   const closedTimesheetCount = timesheets.data?.length ?? 0;
 
   const currentCompany =
-    profile?.assignments.find((a) => a.companyId === scope.companyId) ?? profile?.assignments[0];
+    profile?.scopeCompanies.find((c) => c.companyId === scope.companyId) ??
+    profile?.scopeCompanies[0];
 
   // Lời chào cá nhân hoá bằng TÊN là NGOẠI LỆ DUY NHẤT của quy tắc không dùng đại từ
   // nhân xưng (Content Guidelines 4.2) — dùng tên, không dùng anh/chị.
@@ -358,7 +359,7 @@ export function DashboardPage() {
         size="hero"
         description={
           currentCompany
-            ? `${currentCompany.companyShortName} · ${currentCompany.roleLabel}`
+            ? `${currentCompany.companyShortName} · ${currentCompany.roleLabels.join(' · ')}`
             : undefined
         }
         actions={<QuickActions />}
@@ -383,7 +384,8 @@ export function DashboardPage() {
             )}
           >
             <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-status-pending" />
-            Đang gộp số liệu mọi pháp nhân. Chọn một pháp nhân ở thanh bên để xem riêng.
+            Đang gộp số liệu mọi pháp nhân. Chọn một pháp nhân ở bộ chọn góc trên bên trái để xem
+            riêng.
           </span>
         )}
       </div>

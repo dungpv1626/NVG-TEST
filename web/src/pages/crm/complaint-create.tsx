@@ -29,8 +29,8 @@ import { useEntityList } from '@/hooks/use-entity';
 import { useCreateComplaint } from '@/hooks/use-complaints';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard';
-import { useAuth, useCan } from '@/lib/auth';
-import { useCompanyStore } from '@/lib/company-store';
+import { companyCodeOf, useAuth, useCan } from '@/lib/auth';
+import { useCompanyScope } from '@/lib/company-scope';
 import { supabase } from '@/lib/supabase';
 
 interface CustomerOption {
@@ -50,7 +50,8 @@ export function ComplaintCreatePage() {
   const [searchParams] = useSearchParams();
   const { profile } = useAuth();
   const canCreate = useCan('CRM', 'create');
-  const selectedCompanyId = useCompanyStore((s) => s.selectedCompanyId);
+  const scope = useCompanyScope();
+  const selectedCompanyId = scope.companyId;
 
   const { data: customers, isLoading: loadingCustomers } = useEntityList<CustomerOption>({
     table: 'customers',
@@ -93,9 +94,7 @@ export function ComplaintCreatePage() {
 
     try {
       const companyCode =
-        profile?.assignments.find((a) => a.companyId === selectedCompanyId)?.companyCode ??
-        profile?.assignments[0]?.companyCode ??
-        'NVG';
+        companyCodeOf(profile, selectedCompanyId) ?? profile?.assignments[0]?.companyCode ?? 'NVG';
 
       const { data: code, error: codeError } = await supabase.rpc('next_record_code', {
         p_company_code: companyCode,
@@ -128,6 +127,22 @@ export function ComplaintCreatePage() {
     // KHÔNG hỏi ở đây: `useUnsavedChangesGuard` đã chặn mọi lần chuyển trang, kể cả
     // lần này. Hỏi thêm một lần nữa là bắt người dùng xác nhận hai lần cho một việc.
     navigate('/crm/khieu-nai');
+  }
+
+  // Chế độ gộp "Toàn NVG" KHÔNG ghi được: NVG là mã tổng hợp toàn tập đoàn, không phải pháp
+  // nhân giao dịch (Backend Schema 2.2). Hồ sơ ghi vào đó rơi ra ngoài P&L của cả ba công ty
+  // — biến mất khỏi mọi màn hình đã lọc, mà báo cáo gộp vẫn cộng vào. CSDL cũng chặn
+  // (migration 0108); chặn ở đây để người dùng biết trước khi gõ xong cả biểu mẫu.
+  if (scope.isAggregate || !scope.companyId) {
+    return (
+      <>
+        <PageHeader title="Ghi nhận khiếu nại" breadcrumbs={BREADCRUMBS} />
+        <BlockedNotice
+          title="Chọn pháp nhân trước khi ghi nhận khiếu nại"
+          detail="Khiếu nại gắn với hợp đồng và công trình của một pháp nhân cụ thể. Chọn NVC, NVO hoặc NVS ở bộ chọn góc trên bên trái."
+        />
+      </>
+    );
   }
 
   if (!canCreate) {

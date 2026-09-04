@@ -54,7 +54,7 @@ export function EmployeeCreatePage() {
     setPageError(null);
 
     if (!scope.companyId || scope.isAggregate) {
-      setPageError('Chọn một pháp nhân cụ thể ở thanh bên trước khi thêm nhân sự.');
+      setPageError('Chọn một pháp nhân cụ thể ở bộ chọn góc trên bên trái trước khi thêm nhân sự.');
       return;
     }
 

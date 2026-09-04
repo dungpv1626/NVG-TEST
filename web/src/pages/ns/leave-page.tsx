@@ -63,7 +63,9 @@ export function LeavePage() {
     setNotice(null);
 
     if (!scope.companyId || scope.isAggregate) {
-      setPageError('Chọn một pháp nhân cụ thể ở thanh bên trước khi lập đơn nghỉ phép.');
+      setPageError(
+        'Chọn một pháp nhân cụ thể ở bộ chọn góc trên bên trái trước khi lập đơn nghỉ phép.',
+      );
       return;
     }
     if (dayCount <= 0) {

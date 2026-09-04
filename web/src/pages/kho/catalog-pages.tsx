@@ -270,7 +270,9 @@ export function WarehouseListPage() {
     event.preventDefault();
     setFormError(null);
     if (!scope.companyId || scope.isAggregate) {
-      setFormError('Kho thuộc về một pháp nhân cụ thể. Chọn NVC, NVO hoặc NVS ở thanh bên.');
+      setFormError(
+        'Kho thuộc về một pháp nhân cụ thể. Chọn NVC, NVO hoặc NVS ở bộ chọn pháp nhân góc trên bên trái.',
+      );
       return;
     }
     const form = event.currentTarget;

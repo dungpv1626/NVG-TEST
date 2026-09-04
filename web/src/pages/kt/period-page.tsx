@@ -73,7 +73,9 @@ export function AccountingPeriodPage() {
       return;
     }
     if (!scope.companyId || scope.isAggregate) {
-      setPageError('Chọn một pháp nhân cụ thể ở thanh bên trước khi mở kỳ kế toán.');
+      setPageError(
+        'Chọn một pháp nhân cụ thể ở bộ chọn góc trên bên trái trước khi mở kỳ kế toán.',
+      );
       return;
     }
     try {
