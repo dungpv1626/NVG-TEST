@@ -287,7 +287,12 @@ export const ATTENDANCE_KIND_LABELS: Readonly<Record<AttendanceKind, string>> = 
  *
  * ⚠️ SUY LUẬN — tài liệu không nêu. 8 giờ theo Bộ luật Lao động 2019 Điều 105. Dùng để quy
  * giờ ra ngày công khi tổng hợp; **cần NVG xác nhận** vì xưởng có thể tính theo ca 12 giờ.
- * Chỉ dùng ở một chỗ (`summarizeAttendance`) nên đổi lại là đổi một hằng số.
+ * Khảo sát Xưởng (02/09/2026) xác nhận có máy chấm công nhưng để trống cách tính lương, nên
+ * chưa loại trừ được ca 12 giờ.
+ *
+ * Từ NEN-12, giá trị THẬT nằm ở tham số `hours_per_workday` trong `system_parameters` và do
+ * CSDL áp dụng khi chốt kỳ (`consolidate_timesheets` — migration 0112). Hằng số này còn lại chỉ
+ * là giá trị DỰ PHÒNG cho phần tính trong trình duyệt khi tham số chưa cấu hình.
  */
 export const HOURS_PER_WORKDAY = 8;
 

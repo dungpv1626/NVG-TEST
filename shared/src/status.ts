@@ -1,11 +1,16 @@
 /**
- * 5 nhóm trạng thái chuẩn — dùng THỐNG NHẤT cho toàn bộ 12 module.
+ * 6 nhóm trạng thái chuẩn — dùng THỐNG NHẤT cho toàn bộ 12 module.
  *
- * Nguồn: Content Guidelines 5.1 (nhãn chữ) + Webapp Flow 5.5 (ý nghĩa điều hướng)
- *        + Backend Schema 1.4 (giá trị lưu trong cột `status`).
+ * Nguồn: Content Guidelines v1.2 5.1 (nhãn chữ) + Webapp Flow v1.1 5.5 (ý nghĩa điều hướng)
+ *        + Backend Schema v1.1 1.4 (giá trị lưu trong cột `status`).
+ *
+ * `disputed` là nhóm thứ SÁU, thêm ở Content Guidelines v1.2 theo khảo sát Xưởng giàn giáo.
+ * Nó không phải "một trạng thái xấu" — nó là trạng thái KHOÁ SỐ LIỆU GỐC: khi hai bên chưa
+ * thống nhất số thiếu/hỏng, biên bản và ảnh giữ nguyên, mọi thay đổi phải là chứng từ điều
+ * chỉnh mới có người duyệt (PRD SX-19, Backend Schema v1.1 3.5).
  *
  * QUY TẮC BẤT BIẾN (CLAUDE.md 5.4):
- *  - KHÔNG tạo màu trạng thái mới. Module có trạng thái con riêng vẫn phải quy về 1 trong 5 nhóm này.
+ *  - KHÔNG tạo màu trạng thái mới. Module có trạng thái con riêng vẫn phải quy về 1 trong 6 nhóm này.
  *  - KHÔNG dùng màu làm cách duy nhất truyền đạt thông tin — luôn hiển thị kèm nhãn chữ.
  */
 
@@ -15,6 +20,7 @@ export const STATUS_GROUPS = [
   'in_progress',
   'completed',
   'overdue',
+  'disputed',
 ] as const;
 
 export type StatusGroup = (typeof STATUS_GROUPS)[number];
@@ -54,6 +60,12 @@ export const STATUS_META: Readonly<Record<StatusGroup, StatusMeta>> = {
     color: '#CA3521',
     meaning: 'Đẩy lên Trung tâm Thông báo và làm nổi bật trên Dashboard liên quan.',
   },
+  disputed: {
+    label: 'Tranh chấp',
+    color: '#8270DB',
+    meaning:
+      'Số liệu gốc bị khoá: biên bản, ảnh và số lượng giữ nguyên, chỉ lập được chứng từ điều chỉnh mới có người duyệt.',
+  },
 } as const;
 
 /** Nhãn chữ tiếng Việt của một nhóm trạng thái. */
@@ -62,7 +74,7 @@ export function statusLabel(status: StatusGroup): string {
 }
 
 /**
- * Ánh xạ trạng thái con riêng của module về 1 trong 5 nhóm chuẩn.
+ * Ánh xạ trạng thái con riêng của module về 1 trong 6 nhóm chuẩn.
  *
  * Ví dụ Kho có trạng thái riêng "Đang kiểm kê" (Content Guidelines 5.1, ghi chú) —
  * vẫn phải quy về `in_progress` khi hiển thị.

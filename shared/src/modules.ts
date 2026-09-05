@@ -29,7 +29,7 @@ export interface ModuleMeta {
   /** Tên hiển thị trên sidebar — Content Guidelines 4.8 (số nhiều, không thêm "Danh sách"). */
   readonly label: string;
   /**
-   * Tên rút gọn cho thanh điều hướng dưới của điện thoại (Webapp Flow 4.7).
+   * Tên rút gọn cho thanh điều hướng dưới của điện thoại (Webapp Flow 4.8).
    *
    * Không phải tên thứ hai của module: đây là cùng một khái niệm, chỉ bỏ vế bổ nghĩa cho
    * vừa bề ngang ~70px. Cắt tự động bằng dấu ba chấm thì "Kế toán – Tài chính" thành
@@ -64,14 +64,16 @@ export const MODULES: Readonly<Record<ModuleCode, ModuleMeta>> = {
     code: 'DA',
     label: 'Dự án – Đấu thầu',
     shortLabel: 'Đấu thầu',
-    description: 'Gói thầu, bóc tách khối lượng, đơn giá/định mức, dự toán, phê duyệt giá, ngân sách.',
+    description:
+      'Gói thầu, bóc tách khối lượng, đơn giá/định mức, dự toán, phê duyệt giá, ngân sách.',
     phase: 1,
   },
   TK: {
     code: 'TK',
     label: 'Thiết kế',
     shortLabel: 'Thiết kế',
-    description: 'Đầu bài, phương án kiến trúc, hồ sơ đa bộ môn, phiên bản bản vẽ, yêu cầu thay đổi.',
+    description:
+      'Đầu bài, phương án kiến trúc, hồ sơ đa bộ môn, phiên bản bản vẽ, yêu cầu thay đổi.',
     phase: 1,
   },
   HD: {
@@ -114,7 +116,8 @@ export const MODULES: Readonly<Record<ModuleCode, ModuleMeta>> = {
     code: 'NS',
     label: 'Hành chính – Nhân sự',
     shortLabel: 'Nhân sự',
-    description: 'Hồ sơ nhân sự, tuyển dụng, chấm công 3 khối, hợp đồng lao động, tài sản cấp phát.',
+    description:
+      'Hồ sơ nhân sự, tuyển dụng, chấm công 3 khối, hợp đồng lao động, tài sản cấp phát.',
     phase: 2,
   },
   SX: {

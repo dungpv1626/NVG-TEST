@@ -2,7 +2,7 @@
  * Sidebar — vùng 1 của App Shell (Webapp Flow Mục 2.1).
  *
  * CHỈ hiện từ khổ máy tính bảng ngang trở lên. Trên điện thoại, điều hướng chuyển sang
- * thanh dưới (`bottom-nav.tsx`) — Webapp Flow 4.7 cấm thu nhỏ bố cục máy tính rồi bắt
+ * thanh dưới (`bottom-nav.tsx`) — Webapp Flow 4.8 cấm thu nhỏ bố cục máy tính rồi bắt
  * người dùng bấm vào các mục li ti.
  *
  * Danh sách module và thứ tự lấy từ `module-nav.ts`, dùng chung với thanh dưới.

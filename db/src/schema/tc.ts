@@ -1,21 +1,25 @@
 /**
  * Module TC — Thi công và Ngân sách công trình.
  *
- * Nguồn: PRD TC-01 → TC-08, Backend Schema 4.6, Webapp Flow 3.4.
+ * Nguồn: PRD v1.4 TC-01 → TC-20, Backend Schema v1.1 4.6, Webapp Flow v1.1 3.4.
  *
- * ⚠️ MODULE ĐỊNH HƯỚNG (PRD Mục 1.2, Mục 10; CLAUDE.md 5.6). Bộ phận Chỉ huy – Giám sát
- * công trường CHƯA có phiếu khảo sát trực tiếp. Lược đồ dưới đây cố ý để RỘNG ở chỗ chưa
- * chắc: phần lớn cột cho phép rỗng, và những gì có thể mô tả bằng một dòng chữ tự do thì
- * chưa dựng thành bảng riêng. Khi có khảo sát thật, thêm cột/bảng dễ hơn nhiều so với gỡ
- * một cấu trúc đã đoán sai mà dữ liệu thật đã trót đổ vào.
+ * ⚠️ LƯỢC ĐỒ NÀY MỚI PHỦ PHẦN LÕI CỦA PHẠM VI CŨ (TC-01 → TC-08 của PRD v1.3).
  *
- * Đã CỐ Ý CHƯA làm — chờ khảo sát, đừng tự thêm:
- *  - Kế hoạch tiến độ chi tiết theo đầu việc (một phần TC-01). Chưa biết công trường lập
- *    tiến độ theo hạng mục, theo tuần hay theo mũi thi công; đoán sai thì cả màn hình nhập
- *    liệu phải làm lại. Hiện chỉ giữ mốc bắt đầu/kết thúc dự kiến ở `construction_sites`.
- *  - Kế hoạch nhân sự và vật tư theo thời gian (phần còn lại TC-01). Vật tư đã có ngân
- *    sách theo nhóm chi phí (DA-09) và đề nghị mua (TC-03/MH-01); dựng thêm một lớp kế
- *    hoạch nữa khi chưa biết công trường dùng gì là làm cho có.
+ * Phiếu khảo sát Chỉ huy – Giám sát công trường về ngày 02/09/2026 và PRD v1.4 đã THAY TOÀN BỘ
+ * tám yêu cầu cũ bằng hai mươi yêu cầu mới. Sáu bảng dưới đây (`construction_sites`,
+ * `site_logs`, `acceptance_records`, `subcontractors`, `warranties`, `warranty_claims`) vẫn
+ * đúng và giữ nguyên, nhưng Backend Schema v1.1 Mục 4.6 liệt kê khoảng hai mươi tám bảng cho
+ * module này — phần còn lại nằm ở các đợt sau, xem `BUILD_PLAN.md`.
+ *
+ * Bảy yêu cầu HOÀN TOÀN MỚI, chưa có bảng nào ở đây: bản vẽ đang hiệu lực và xác nhận trước khi
+ * giao việc (TC-03), phiếu giao việc (TC-04), theo dõi trạng thái đề nghị kèm cảnh báo quá hạn
+ * (TC-10 — ưu tiên số một của công trường), yêu cầu làm rõ kỹ thuật (TC-15), quản lý thay đổi
+ * và phát sinh (TC-16), an toàn lao động và sự cố (TC-18), giàn giáo mượn tại công trường
+ * (TC-19).
+ *
+ * Ba con số SUY LUẬN của module này đã chuyển thành tham số cấu hình được (migration 0112):
+ * cửa sổ sửa nhật ký, ngưỡng cảnh báo ngân sách, thang đánh giá tổ đội. Khảo sát KHÔNG xác
+ * nhận con số nào trong ba con số đó — đừng coi chúng là quy chế của NVG.
  */
 
 import { sql } from 'drizzle-orm';
@@ -187,12 +191,29 @@ export const siteLogs = pgTable(
 
     loggedBy: uuid('logged_by').references(() => users.id, { onDelete: 'set null' }),
 
+    /**
+     * Dấu thời gian hiện trường — Backend Schema v1.1 Mục 1.4 (migration 0116).
+     *
+     * `clientCreatedAt` là thời điểm NGHIỆP VỤ: người dùng bấm lúc nào, không phải máy chủ
+     * nhận lúc nào. Nhật ký ghi lúc 16 giờ ngoài công trường mất sóng, đồng bộ lúc 21 giờ, vẫn
+     * là nhật ký của 16 giờ. Rỗng = nhập trực tiếp khi có mạng; nơi đọc dùng
+     * `coalesce(client_created_at, created_at)`.
+     */
+    clientCreatedAt: timestamp('client_created_at', { withTimezone: true }),
+    /** Máy chủ tự đặt (trigger `stamp_field_sync`), KHÔNG nhận từ trình duyệt. */
+    syncedAt: timestamp('synced_at', { withTimezone: true }),
+    /** Mã khử trùng do thiết bị sinh — cùng khuôn `stock_movements` (0038), không sửa được. */
+    clientGeneratedId: varchar('client_generated_id', { length: 64 }),
+
     ...auditColumns(),
     ...softDelete(),
   },
   (t) => [
     index('site_logs_site_date_idx').on(t.constructionSiteId, t.logDate),
     index('site_logs_type_idx').on(t.constructionSiteId, t.logType),
+    uniqueIndex('site_logs_client_id')
+      .on(t.clientGeneratedId)
+      .where(sql`${t.clientGeneratedId} IS NOT NULL`),
   ],
 );
 

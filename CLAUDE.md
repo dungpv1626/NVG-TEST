@@ -23,7 +23,12 @@ trên Excel / Word / Zalo / Google Drive / email — không có nguồn dữ li�
 `HD` hợp đồng · `TC` thi công–ngân sách · `MH` mua hàng–vật tư · `KHO` kho · `KT` kế toán–tài chính ·
 `NS` nhân sự–hành chính · `BC` báo cáo–dashboard · `SX` sản xuất–cho thuê giàn giáo.
 
-Mục tiêu: bản **demo ~95% hoàn chỉnh trong 6 tuần**, chia 3 giai đoạn (PRD 4).
+Mục tiêu: bản **demo ~95% hoàn chỉnh**, chia 3 giai đoạn (PRD 4).
+
+> **KHÔNG ghi mốc thời gian vào bất kỳ tài liệu nào của dự án** (QĐ-1, 05/09/2026). Bộ tài
+> liệu v1.4 đã gỡ toàn bộ ngày/tuần và chỉ cam kết **THỨ TỰ** cùng **TIÊU CHÍ HOÀN THÀNH**.
+> Ngoại lệ duy nhất có chủ đích: quy tắc định dạng ngày `dd/mm/yyyy` cho giao diện (CGD 4.3)
+> — đó là quy tắc viết cho người dùng, không phải mốc dự án.
 
 ---
 
@@ -33,12 +38,25 @@ Toàn bộ tài liệu nguồn nằm trong `doc/` dưới dạng `.docx`.
 
 | Mã      | File                                        | Trả lời câu hỏi                         | Đọc khi                                                   |
 | ------- | ------------------------------------------- | --------------------------------------- | --------------------------------------------------------- |
-| **PRD** | `PRD_He_thong_Quan_tri_NVG_v1.3.docx`       | Hệ thống làm được **GÌ**?               | Cần yêu cầu chức năng, business rule, ranh giới KHÔNG làm |
-| **AFD** | `Webapp_Flow_Document_NVG_v1.0.docx`        | Người dùng đi **ĐẾN ĐÂU**, như thế nào? | Dựng màn hình, điều hướng, hành trình người dùng          |
-| **TSD** | `TechStack_Document_NVG_v1.1.docx`          | Xây **BẰNG GÌ**, ở **ĐÂU**?             | Chọn thư viện, hạ tầng, CI/CD, môi trường                 |
-| **CGD** | `ContentGuidelines_Document_NVG_v1.1.docx`  | Hệ thống **NÓI/HIỂN THỊ** thế nào?      | Viết microcopy, đặt tên nút, màu, font, khoảng cách       |
-| **BSD** | `BackendSchema_Document_NVG_v1.0.docx`      | Dữ liệu **TỔ CHỨC** ra sao?             | Thiết kế bảng, quan hệ, RLS, API tùy chỉnh                |
-| **IPD** | `ImplementationPlan_Document_NVG_v1.0.docx` | **LÀM GÌ, KHI NÀO, AI LÀM**?            | Xem mốc, lịch tuần, quy trình deploy                      |
+| **PRD** | `PRD_He_thong_Quan_tri_NVG_v1_4.docx`       | Hệ thống làm được **GÌ**?               | Cần yêu cầu chức năng, business rule, ranh giới KHÔNG làm |
+| **AFD** | `Webapp_Flow_Document_NVG_v1_1.docx`        | Người dùng đi **ĐẾN ĐÂU**, như thế nào? | Dựng màn hình, điều hướng, hành trình người dùng          |
+| **TSD** | `TechStack_Document_NVG_v1_2.docx`          | Xây **BẰNG GÌ**, ở **ĐÂU**?             | Chọn thư viện, hạ tầng, CI/CD, môi trường                 |
+| **CGD** | `ContentGuidelines_Document_NVG_v1_2.docx`  | Hệ thống **NÓI/HIỂN THỊ** thế nào?      | Viết microcopy, đặt tên nút, màu, font, khoảng cách       |
+| **BSD** | `BackendSchema_Document_NVG_v1_1.docx`      | Dữ liệu **TỔ CHỨC** ra sao?             | Thiết kế bảng, quan hệ, RLS, API tùy chỉnh                |
+| **IPD** | `ImplementationPlan_Document_NVG_v1_1.docx` | **LÀM GÌ, AI LÀM, theo THỨ TỰ nào**?    | Xem mốc, thứ tự khối công việc, quy trình deploy          |
+
+### `doc/CHANGELOG_NVG_docs.md` — đọc TRƯỚC khi mở bất kỳ tài liệu nào
+
+Bộ tài liệu được cập nhật đồng loạt ngày 05/09/2026 sau khi có đủ **11 phiếu khảo sát / 10 bộ
+phận** (trước đó thiếu phiếu Xưởng giàn giáo và Chỉ huy công trường). File CHANGELOG là bản đối
+chiếu TRƯỚC–SAU đầy đủ giữa bộ cũ và bộ hiện hành, kèm sáu quyết định gốc (QĐ-1 → QĐ-6) tạo ra
+đợt thay đổi.
+
+Nó tồn tại để **không phải đọc lại cả sáu tài liệu mới biết cái gì đã đổi**. Mở nó trước, rồi
+mới mở tài liệu gốc ở đúng mục cần.
+
+Mức độ thay đổi, để biết chỗ nào phải đọc kỹ: **TC đi từ 8 lên 20 yêu cầu**, **SX từ 3 lên 22**,
+BSD từ ~65 lên ~95 thực thể, mẫu bố cục 7 → 9, mẫu RLS 4 → 5, màu trạng thái 5 → 6.
 
 ### Hồ sơ khảo sát vận hành — nguồn YÊU CẦU GỐC, đứng dưới PRD
 
@@ -88,7 +106,7 @@ có mâu thuẫn kỹ thuật về TK-10→TK-17, tài liệu riêng đó là ng
 
 ### 3.1 Kiến trúc backend kết hợp 2 lớp — quy tắc quan trọng nhất (TSD 3.2, BSD 1.3)
 
-Đây là quyết định then chốt để làm xong 12 module trong 6 tuần. **Đọc kỹ trước khi viết bất kỳ endpoint nào.**
+Đây là quyết định then chốt để làm xong 12 module trong phạm vi đã cam kết. **Đọc kỹ trước khi viết bất kỳ endpoint nào.**
 
 | Lớp                           | Công nghệ                                 | Dùng cho                                                                |
 | ----------------------------- | ----------------------------------------- | ----------------------------------------------------------------------- |
@@ -146,16 +164,31 @@ và hằng số nghiệp vụ (5 nhóm trạng thái, mã module, mã màu, đ�
 Quy tắc phân quyền viết **trực tiếp thành policy trong CSDL**, không kiểm ở tầng UI hay tầng API — để
 dù gọi thẳng Supabase hay qua Workers, quyền luôn được kiểm ở đúng một nơi và không vòng qua được.
 
-Mỗi bảng áp dụng **đúng một trong 4 mẫu chuẩn** (BSD 3.3 ghi sẵn mẫu nào cho bảng nào):
+Mỗi bảng áp dụng **đúng một trong 5 mẫu chuẩn** (BSD 3.3 ghi sẵn mẫu nào cho bảng nào):
 
-| Mẫu                                 | Logic                                                                                                                                                   | Áp dụng cho                                        |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| **A** — theo pháp nhân              | Chỉ thấy dòng có `company_id` thuộc pháp nhân người dùng (`user_companies`); BGĐ/Admin thấy mọi pháp nhân                                               | Đa số bảng giao dịch                               |
-| **B** — theo người chịu trách nhiệm | Điều kiện A + chỉ người chịu trách nhiệm/phối hợp/quản lý trực tiếp mới sửa; người khác chỉ xem                                                         | Nháp báo giá, dự toán đang soạn, hồ sơ nhân sự     |
-| **C** — theo hạn mức phê duyệt      | Chỉ hiện trong Hộp thư Phê duyệt và cho phép duyệt nếu giá trị nằm trong hạn mức vai trò (`approval_limits`)                                            | `price_approvals`, `payment_requests`, `contracts` |
-| **D** — hạn chế theo CỘT            | Xem được dòng theo A, nhưng cột nhạy cảm (giá vốn, lợi nhuận, lương) chỉ trả giá trị thật cho vai trò được phép — vai trò khác nhận rỗng qua view riêng | `estimates`, `project_budgets`, `employees`        |
+| Mẫu                                 | Logic                                                                                                                                                                         | Áp dụng cho                                                                 |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| **A** — theo pháp nhân              | Chỉ thấy dòng có `company_id` thuộc pháp nhân người dùng (`user_companies`); BGĐ/Admin thấy mọi pháp nhân                                                                     | Đa số bảng giao dịch                                                        |
+| **B** — theo người chịu trách nhiệm | Điều kiện A + chỉ người chịu trách nhiệm/phối hợp/quản lý trực tiếp mới sửa; người khác chỉ xem                                                                               | Nháp báo giá, dự toán đang soạn, hồ sơ nhân sự                              |
+| **C** — theo hạn mức phê duyệt      | Chỉ hiện trong Hộp thư Phê duyệt và cho phép duyệt nếu giá trị nằm trong hạn mức vai trò (`approval_limits`)                                                                  | `price_approvals`, `payment_requests`, `contracts`                          |
+| **D** — hạn chế theo CỘT            | Xem được dòng theo A, nhưng cột nhạy cảm (giá vốn, lợi nhuận, lương) chỉ trả giá trị thật cho vai trò được phép — vai trò khác nhận rỗng qua view riêng                       | `estimates`, `project_budgets`, `employees`, `product_costs`                |
+| **E** — theo PHẠM VI HIỆN TRƯỜNG    | Chỉ xem/ghi được dữ liệu thuộc công trình/xưởng mình được phân công (`user_site_assignments`); cấp quản lý xem toàn đơn vị. Áp cả cho thao tác ghi khi đồng bộ từ ngoại tuyến | `site_logs`, `acceptance_records`, và các bảng hiện trường TC/SX khi ra đời |
 
 Mọi lượt xem/sửa dữ liệu **Mẫu D** phải ghi vào `sensitive_access_logs` (BSD 3.4, PRD NEN-07).
+
+> **Mẫu E — dấu hiệu "cấp quản lý" KHÔNG phải quyền `approve`.** Khảo sát giao chính chỉ huy
+> trưởng ký xác nhận bảng chấm công khối công trường, nên họ CÓ `approve` trên phân hệ TC. Lấy
+> `approve` làm dấu hiệu quản lý thì đúng người cần giới hạn lại được miễn trừ và Mẫu E không áp
+> lên ai. Phạm vi được khai thành thuộc tính của vai trò: cột **`roles.site_scoped`**, đúng cách
+> AFD 2.3 phân biệt hai vai trò ("Công trình CỦA TÔI" so với "TẤT CẢ công trình").
+>
+> Vai trò hiện trường đầu tiên là **`CHT`** — Chỉ huy trưởng / Kỹ thuật hiện trường (migration
+> `0114`/`0115`). Quyền của nó giống hệt `TC`; khác biệt duy nhất là phạm vi.
+>
+> ⚠️ **Quên phân công phải dẫn tới thấy ÍT đi, không phải thấy nhiều hơn.** Đừng cài kiểu "có
+> bản ghi phân công thì mới bị giới hạn" — một chỉ huy trưởng mới, chưa được phân công, sẽ thấy
+> toàn bộ công trình của pháp nhân. Người được ghi ở `construction_sites.responsible_user_id`
+> được coi như đã phân công (một nguồn dữ liệu duy nhất, PRD 2.3).
 
 > **Lưới an toàn có sẵn của Supabase**: dự án này có event trigger `ensure_rls` (hàm
 > `public.rls_auto_enable`) TỰ ĐỘNG bật RLS cho mọi bảng mới tạo trong schema `public`.
@@ -240,29 +273,31 @@ Có test canh sẵn trong `web/src/test/design-rules.test.ts`.
 
 ### 4.2 Cơ sở dữ liệu (BSD 1.4) — áp dụng thống nhất cho MỌI bảng
 
-| Quy ước            | Chuẩn                                                                                                                   |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| Tên bảng / cột     | `snake_case`, tiếng Anh, **tên bảng số nhiều** (`customers`, không `customer`)                                          |
-| Khóa chính         | Cột `id`, kiểu **UUID** sinh tự động — KHÔNG số nguyên tự tăng                                                          |
-| Khóa ngoại         | `<tên_bảng_số_ít>_id` (ví dụ `customer_id` → `customers`)                                                               |
-| Đa pháp nhân       | `company_id` trên mọi bảng nghiệp vụ (trừ bảng dùng chung — xem 3.5)                                                    |
-| Audit columns      | Mọi bảng có `created_at`, `updated_at`, `created_by`, `updated_by`                                                      |
-| Xóa mềm            | Bảng nghiệp vụ quan trọng dùng `deleted_at` (rỗng = chưa xóa), KHÔNG xóa hẳn                                            |
-| Phiên bản tài liệu | Bảng cần theo dõi phiên bản có `version` (int tăng dần) + `is_current_version` (bool)                                   |
-| Trạng thái         | Cột `status` enum, luôn quy về **5 nhóm chuẩn**: `draft` / `pending_approval` / `in_progress` / `completed` / `overdue` |
-| Tiền tệ            | **`bigint`, đơn vị đồng (VNĐ), KHÔNG số thập phân**                                                                     |
-| Lịch sử            | Thay đổi trạng thái/giá trị quan trọng ghi vào **bảng lịch sử riêng**, không ghi đè (BSD 2.3)                           |
+| Quy ước                | Chuẩn                                                                                                                                                                         |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tên bảng / cột         | `snake_case`, tiếng Anh, **tên bảng số nhiều** (`customers`, không `customer`)                                                                                                |
+| Khóa chính             | Cột `id`, kiểu **UUID** sinh tự động — KHÔNG số nguyên tự tăng                                                                                                                |
+| Khóa ngoại             | `<tên_bảng_số_ít>_id` (ví dụ `customer_id` → `customers`)                                                                                                                     |
+| Đa pháp nhân           | `company_id` trên mọi bảng nghiệp vụ (trừ bảng dùng chung — xem 3.5)                                                                                                          |
+| Audit columns          | Mọi bảng có `created_at`, `updated_at`, `created_by`, `updated_by`                                                                                                            |
+| Xóa mềm                | Bảng nghiệp vụ quan trọng dùng `deleted_at` (rỗng = chưa xóa), KHÔNG xóa hẳn                                                                                                  |
+| Phiên bản tài liệu     | Bảng cần theo dõi phiên bản có `version` (int tăng dần) + `is_current_version` (bool)                                                                                         |
+| Trạng thái             | Cột `status` enum, luôn quy về **6 nhóm chuẩn**: `draft` / `pending_approval` / `in_progress` / `completed` / `overdue` / `disputed`                                          |
+| Tiền tệ                | **`bigint`, đơn vị đồng (VNĐ), KHÔNG số thập phân**                                                                                                                           |
+| Số lượng vật lý        | **`numeric` có phần thập phân**, KHÔNG số nguyên — thép và vật tư tính theo kg, mét, m² với giá trị lẻ. Đơn vị tính lưu ở bảng danh mục, không nhúng vào tên cột              |
+| Bản ghi từ hiện trường | Thêm `client_created_at` (người dùng BẤM lúc nào — mốc NGHIỆP VỤ), `synced_at` (máy chủ tự đặt, không nhận từ trình duyệt), `client_generated_id` (khử trùng khi đồng bộ lại) |
+| Lịch sử                | Thay đổi trạng thái/giá trị quan trọng ghi vào **bảng lịch sử riêng**, không ghi đè (BSD 2.3)                                                                                 |
 
 ### 4.3 UI tokens (CGD 6.3 – 6.5)
 
 Khai báo thẳng làm CSS variable của shadcn/ui + token Tailwind, **không dùng thư viện màu bên thứ ba**.
 
-| Vai trò                                                                     | Mã màu                                                    |
-| --------------------------------------------------------------------------- | --------------------------------------------------------- |
-| Brand Blue — **DUY NHẤT một hành động chính mỗi màn hình**, liên kết, focus | `#0C66E4`                                                 |
-| Nền chính / nền phụ (vùng trũng) / viền                                     | `#FFFFFF` / `#F7F8F9` / `#DCDFE4`                         |
-| Chữ chính / chữ phụ (KHÔNG dùng đen `#000000`)                              | `#172B4D` / `#44546F`                                     |
-| Nháp · Chờ duyệt · Đang xử lý · Hoàn thành · Quá hạn                        | `#6B778C` · `#B38600` · `#0C66E4` · `#22A06B` · `#CA3521` |
+| Vai trò                                                                     | Mã màu                                                                |
+| --------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Brand Blue — **DUY NHẤT một hành động chính mỗi màn hình**, liên kết, focus | `#0C66E4`                                                             |
+| Nền chính / nền phụ (vùng trũng) / viền                                     | `#FFFFFF` / `#F7F8F9` / `#DCDFE4`                                     |
+| Chữ chính / chữ phụ (KHÔNG dùng đen `#000000`)                              | `#172B4D` / `#44546F`                                                 |
+| Nháp · Chờ duyệt · Đang xử lý · Hoàn thành · Quá hạn · **Tranh chấp**       | `#6B778C` · `#B38600` · `#0C66E4` · `#22A06B` · `#CA3521` · `#8270DB` |
 
 - Font: **Inter**; body **~14px** (mật độ thông tin có chủ đích — đây là phần mềm quản trị, không phải app tiêu dùng).
 - Khoảng cách: **lưới bội số 8px**. Bo góc **4–8px**; **ngoại lệ duy nhất**: nhãn trạng thái (Lozenge) bo tròn hoàn toàn.
@@ -297,7 +332,7 @@ Khai báo thẳng làm CSS variable của shadcn/ui + token Tailwind, **không d
 | Công ty thành viên                | **Pháp nhân** / gọi thẳng tên                | Công ty con, Chi nhánh, Entity     |
 | Quá thời hạn xử lý                | **Quá hạn**                                  | Trễ hạn, Chậm, Overdue             |
 
-### 4.6 7 mẫu bố cục màn hình (AFD 4) — mọi màn hình phải thuộc một trong 7
+### 4.6 9 mẫu bố cục màn hình (AFD 4) — mọi màn hình phải thuộc một trong 9
 
 1. **Dashboard** — lưới thẻ, mỗi thẻ bấm được dẫn tới danh sách đã lọc sẵn.
 2. **Danh sách** — cột 1 là mã/tên; cột cố định: người chịu trách nhiệm, trạng thái (có màu), thời hạn. Giữ bộ lọc khi quay lại.
@@ -308,10 +343,29 @@ Khai báo thẳng làm CSS variable của shadcn/ui + token Tailwind, **không d
 5. **Kanban/Pipeline** — chỉ cho quy trình có số trạng thái cố định (CRM-02). Duyệt tuần tự dùng mẫu 6.
 6. **Hộp thư Phê duyệt** — **MỘT mẫu duy nhất cho mọi loại phê duyệt** ở mọi module. Xem nhanh bên phải
    đủ để quyết định; duyệt xong tự sang hồ sơ tiếp theo.
-7. **Di động (Kho, công trường)** — bottom navigation 4–5 mục, KHÔNG thu nhỏ layout desktop; luôn hiện
-   trạng thái đồng bộ dữ liệu.
+7. **Request Tracker** (MỚI ở AFD v1.1 §4.7) — màn hình cho người **GỬI** đề nghị, đối xứng với mẫu 6
+   dành cho người **DUYỆT**. Mỗi dòng hiện: bước hiện tại, ai đang giữ, đã chờ bao lâu, hạn còn lại;
+   thanh tiến trình chỉ ra bước đang tắc; nút "Thúc" ghi vào lịch sử hồ sơ. Đây là cách thay việc gọi
+   điện và nhắn Zalo nhiều lần — **ưu tiên số một của công trường** (TC-10).
+8. **Di động (Kho, Xưởng, công trường)** — bottom navigation 4–5 mục, KHÔNG thu nhỏ layout desktop; luôn
+   hiện trạng thái đồng bộ dữ liệu. Mở rộng ở AFD v1.1 từ hai nhóm lên **ba** (thêm Xưởng), và thêm ba
+   ràng buộc: nút chụp ảnh luôn trong tầm ngón cái, **không bao giờ ẩn sau menu** (ảnh là chứng cứ chính
+   của cả ba nhóm); ưu tiên chọn từ danh sách gợi ý thay vì gõ tay (người dùng đeo găng, ngoài nắng, bụi
+   và ồn); đồng hồ **ngân sách thao tác** trên màn hình chốt ngày.
+   ⚠️ Mục này **đổi số từ 4.7 sang 4.8** ở AFD v1.1 do chèn thêm Request Tracker — comment cũ trỏ "4.7"
+   trong mã nguồn đã được sửa theo.
+9. **Asset Ledger — Sổ cái tài sản luân chuyển** (MỚI ở AFD v1.1 §4.9) — ma trận **hàng = mã sản phẩm,
+   cột = trạng thái/vị trí** (kho, xưởng, đang trên đường, tại từng khách, tại từng công trình nội bộ,
+   đang sửa, chờ thanh lý, thiếu chưa thu hồi). Mỗi ô bấm được để mở danh sách chứng từ tạo ra con số đó.
+   **Dòng tổng của mỗi mã phải luôn cân; không cân thì cảnh báo ngay trên dòng đó**, không để người dùng
+   tự phát hiện. Có bộ lọc thời gian để xem lại sổ cái tại một ngày trong quá khứ (SX-15, KHO-06).
 
-**Không tự nghĩ mẫu thứ 8.** Bản đồ màn hình theo module: AFD 7.
+**Không tự nghĩ mẫu thứ 10.** Bản đồ màn hình theo module: AFD 7.
+
+> **Ngân sách thao tác hiện trường là TIÊU CHÍ NGHIỆM THU, không phải mong muốn** (PRD v1.4 Mục 6).
+> Thao tác cập nhật hằng ngày của một chỉ huy trưởng hoặc người phụ trách xưởng **không vượt quá 10–20
+> phút, mục tiêu 5–10 phút**. Khảo sát nói rõ hệ quả nếu vượt: người dùng quay lại Excel và Zalo, và
+> khi đó phần mềm chỉ làm tăng việc cho công trường mà không gỡ được điểm nghẽn nào.
 
 ### 4.7 Kiểm thử (TSD 2.6, 3.6)
 
@@ -364,6 +418,33 @@ Chạy `npm test` đầy đủ CHỈ khi Haan yêu cầu, hoặc ngay trước k
 
 - **KHÔNG hard-code hạn mức phê duyệt.** Cấu hình qua bảng `approval_limits` (PRD NEN-02). Mức 10 triệu /
   50 triệu trong tài liệu chỉ là giá trị mặc định ban đầu.
+- **NEN-12 — tham số hoá thay vì cố định.** Mọi giá trị NVG cho biết là **biến động** phải nằm trong bảng
+  `system_parameters`, không hard-code: đơn giá thuê giàn giáo, bảng giá bồi thường, giá thuê nội bộ,
+  ngưỡng tỷ lệ lỗi, thời hạn cam kết phản hồi của từng phòng ban (`sla_definitions`).
+  → **Ba bảng cấu hình song song, đừng gộp:** `approval_limits` (hạn mức, có bước duyệt và loại nghiệp
+  vụ) · `aging_buckets` (mốc tuổi nợ, có thứ tự và khoảng ngày) · `system_parameters` (phần còn lại).
+  Hai bảng đầu có lược đồ riêng đúng hình dạng dữ liệu của chúng và đã có kiểm thử — Haan đã chốt giữ
+  nguyên (05/09/2026).
+  → **Đổi tham số KHÔNG hồi tố.** Chứng từ đã phát hành phải LƯU LẠI giá trị đã áp dụng (ví dụ
+  `unit_price_applied`), không đọc lại tham số hiện hành khi hiển thị lịch sử. Cưỡng chế nằm ở phía
+  chứng từ, không ở bảng tham số.
+  → **`coalesce` đặt ở NƠI GỌI, không giấu trong hàm đọc.** `system_parameter_number()` trả `NULL` khi
+  chưa cấu hình và cố ý không tự dựng lại mặc định — bài học migration 0046: mặc định dựng lại trong SQL
+  khiến việc xoá hết cấu hình trông như thể cấu hình vẫn còn hiệu lực.
+- **Quy tắc bất biến của chứng từ đã phát hành (BSD v1.1 3.5).** Ba nhóm không sửa trực tiếp được, mọi
+  thay đổi phải là **chứng từ điều chỉnh mới có người duyệt**: chứng từ giao nhận/thu hồi giàn giáo có
+  chữ ký hai bên · biên bản nghiệm thu đã ký với Chủ đầu tư/Tư vấn giám sát · chứng từ kế toán thuộc kỳ
+  đã khoá. Cưỡng chế ở **CSDL** (`frozen_after_signed`, `close_accounting_period`), không ở giao diện —
+  ẩn nút Sửa không chặn được một câu PATCH thẳng vào PostgREST.
+- **KHÔNG hiển thị số ước lượng.** Chỉ số mà NVG chưa có dữ liệu thật (tỷ lệ lỗi, tỷ lệ thất thoát, năng
+  suất chuẩn) hiện **"Chưa đủ dữ liệu"** — KHÔNG hiện `0`, KHÔNG điền số mặc định. Câu chuẩn dùng lại ở
+  `EMPTY_STATES.notEnoughData` (`@nvg/shared`), có test canh trong `web/src/test/design-rules.test.ts`.
+  Khảo sát Xưởng viết thẳng: _"không nên ước lượng một con số để điền vì đây là dữ liệu quan trọng cho
+  quản trị tài sản và định giá cho thuê"_. Hiện `0` là báo cáo sai theo hướng lạc quan nhất — "tỷ lệ lỗi
+  0%" đọc như xưởng không có lỗi nào, chứ không đọc như chưa đếm.
+- **Trách nhiệm hai chiều, có thời hạn.** Không chỉ yêu cầu hiện trường cập nhật; văn phòng cũng phải xử
+  lý trên cùng hệ thống với thời hạn phản hồi cấu hình được (`sla_definitions`). Thiếu vế thứ hai thì
+  phần mềm chỉ làm tăng việc cho công trường mà không gỡ được điểm nghẽn.
 - **KHÔNG lưu**: mật khẩu thô, mã OTP, tài khoản ngân hàng cá nhân, tin đồn, nhận xét cảm tính chưa kiểm
   chứng, trao đổi cá nhân không liên quan công việc (PRD 2.2, NEN "Ranh giới").
 - **Ghi nhật ký truy cập** với dữ liệu nhạy cảm: giá vốn, lợi nhuận, lương, nội dung thương thảo, dữ liệu
@@ -386,7 +467,7 @@ Hệ thống chỉ **tích hợp hoặc liên kết dữ liệu**, không thay t
 - **Điều hướng phản ánh phân quyền**: ẩn menu/nút/liên kết khi không có quyền — **KHÔNG hiển thị rồi mới báo
   lỗi** khi bấm (AFD 6.5). Dữ liệu nhạy cảm ẩn cả trong panel liên kết chéo, không chỉ màn hình chính.
 - **KHÔNG bao giờ để mất dữ liệu đang nhập**: tự lưu nháp, hỏi xác nhận khi rời trang (AFD 6.3).
-- **KHÔNG tạo màu trạng thái mới** ngoài 5 màu chuẩn — trạng thái riêng của module vẫn phải quy về 1 trong 5.
+- **KHÔNG tạo màu trạng thái mới** ngoài 6 màu chuẩn — trạng thái riêng của module vẫn phải quy về 1 trong 6.
 - **KHÔNG dùng màu làm cách duy nhất truyền đạt thông tin** — trạng thái luôn kèm chữ (CGD 6.8, AFD 6.4).
 - Không quá **3 cú nhấp** để tới một hồ sơ cụ thể (AFD 1.3).
 - Vùng bấm trên di động tối thiểu **~40×40px** (CGD 6.8).
@@ -413,9 +494,24 @@ Hệ thống chỉ **tích hợp hoặc liên kết dữ liệu**, không thay t
   → TC và SX nay có nguồn yêu cầu trực tiếp như 10 bộ phận còn lại. Bốn chỗ suy luận trong mã
   nguồn đã được thay bằng câu trả lời thật (migration `0105`, `0106`; xem BUILD_PLAN 3A/3F).
   → **Vẫn còn chỗ trống, nhưng là trống KHÁC**: phiếu để ngỏ một số ô cần số liệu (tỷ lệ lỗi,
-  giá trị thất thoát/năm, đơn giá công đoạn, catalogue sản phẩm giàn giáo, một ngày công bằng
-  mấy giờ ở xưởng). Người điền ghi thẳng "không nên ước lượng một con số để điền" — **đừng tự
-  điền hộ**, hỏi Haan. Danh sách ở mục 6.6 và `TIEN_DO.html`.
+  giá trị thất thoát/năm, đơn giá công đoạn, một ngày công bằng mấy giờ ở xưởng). Người điền ghi
+  thẳng "không nên ước lượng một con số để điền" — **đừng tự điền hộ**, hỏi Haan. Danh sách ở mục
+  6.6 và `TIEN_DO.html`.
+
+> ⚠️ **Gỡ chốt chặn KHÔNG có nghĩa hai module đã xong — phạm vi vừa nở ra rất nhiều.** PRD v1.4
+> thay **toàn bộ** TC-01→TC-08 bằng **TC-01→TC-20**, và SX-01→SX-03 bằng **SX-01→SX-22**. Trong
+> đó bảy yêu cầu TC là hoàn toàn mới (bản vẽ đang hiệu lực, phiếu giao việc, theo dõi trạng thái
+> đề nghị, RFI, quản lý phát sinh, an toàn lao động, giàn giáo tại công trường), và SX chuyển từ
+> "Giai đoạn 3, mức định hướng" sang **"Giai đoạn 2, phạm vi đầy đủ"** (QĐ-2).
+>
+> Mã nguồn hiện có mới phủ phần lõi của phạm vi CŨ. Đối chiếu phần còn thiếu ở `BUILD_PLAN.md`
+> trước khi bắt đầu bất kỳ việc gì thuộc hai module này.
+>
+> **Nếu buộc phải cắt, cắt theo đúng thứ tự IPD v1.1 §4.3 — không tự chọn:**
+> · **Giữ bằng mọi giá:** SX-15 → SX-21 (vòng đời tài sản cho thuê) và TC-05, TC-09, TC-10,
+> TC-13 (liên thông công trường – văn phòng). Đây là ưu tiên số một mà chính hai bộ phận tự nêu.
+> · **Hoàn thiện dần sau:** SX-07 (định mức), SX-10 (năng suất chuẩn), SX-22 (giá thành) — các
+> phần này cần dữ liệu thực tế tích luỹ mới có ý nghĩa.
 
 ---
 
@@ -423,35 +519,50 @@ Hệ thống chỉ **tích hợp hoặc liên kết dữ liệu**, không thay t
 
 ### 6.1 Quyết định công nghệ đã chốt — KHÔNG mở lại trừ khi điều kiện đổi (TSD 6)
 
-| Hạng mục          | Đã chọn                                 | Đã loại                        | Vì sao loại                                                                    |
-| ----------------- | --------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------ |
-| Kiến trúc trang   | **SPA + Vite**                          | Next.js / SSR                  | App quản trị nội bộ, không cần SEO; triển khai lên Cloudflare đơn giản hơn     |
-| Framework         | **React 18**                            | Vue, Angular                   | Hệ sinh thái lớn nhất, công cụ AI hỗ trợ tốt nhất → giảm rủi ro tiến độ 6 tuần |
-| CSDL              | **PostgreSQL**                          | MongoDB / NoSQL                | Dữ liệu quan hệ chặt (Hồ sơ 360°), cần toàn vẹn giao dịch tài chính            |
-| Nhà cung cấp CSDL | **Supabase**                            | Neon, PlanetScale, tự dựng VPS | Có sẵn Auth + Storage + Realtime trong cùng nền tảng; không có nhân sự DevOps  |
-| Backend tùy chỉnh | **Cloudflare Workers**                  | Supabase Edge Functions        | Gộp frontend + backend trên cùng hạ tầng Cloudflare, hiệu năng biên mạng       |
-| Kiểu API          | **REST**                                | GraphQL                        | Đơn giản hơn để triển khai/gỡ lỗi trong thời gian ngắn                         |
-| Xác thực          | **Supabase Auth**                       | Auth0, Clerk                   | Đủ tính năng, không phát sinh nhà cung cấp/chi phí thêm                        |
-| Lưu tệp           | **Supabase Storage**                    | Cloudflare R2                  | Dùng lại đúng cơ chế RLS, không phải đồng bộ quyền ở hai nơi                   |
-| Di động           | **PWA**                                 | React Native                   | Đủ cho offline cơ bản (KHO-09), không tốn thời gian phát triển/duyệt app       |
-| AI/OCR            | **Google Gemini (Flash, gói miễn phí)** | Claude API, OpenAI API         | Không phát sinh chi phí giai đoạn demo                                         |
+| Hạng mục          | Đã chọn                                 | Đã loại                        | Vì sao loại                                                                   |
+| ----------------- | --------------------------------------- | ------------------------------ | ----------------------------------------------------------------------------- |
+| Kiến trúc trang   | **SPA + Vite**                          | Next.js / SSR                  | App quản trị nội bộ, không cần SEO; triển khai lên Cloudflare đơn giản hơn    |
+| Framework         | **React 18**                            | Vue, Angular                   | Hệ sinh thái lớn nhất, công cụ AI hỗ trợ tốt nhất → giảm rủi ro tiến độ       |
+| CSDL              | **PostgreSQL**                          | MongoDB / NoSQL                | Dữ liệu quan hệ chặt (Hồ sơ 360°), cần toàn vẹn giao dịch tài chính           |
+| Nhà cung cấp CSDL | **Supabase**                            | Neon, PlanetScale, tự dựng VPS | Có sẵn Auth + Storage + Realtime trong cùng nền tảng; không có nhân sự DevOps |
+| Backend tùy chỉnh | **Cloudflare Workers**                  | Supabase Edge Functions        | Gộp frontend + backend trên cùng hạ tầng Cloudflare, hiệu năng biên mạng      |
+| Kiểu API          | **REST**                                | GraphQL                        | Đơn giản hơn để triển khai/gỡ lỗi trong thời gian ngắn                        |
+| Xác thực          | **Supabase Auth**                       | Auth0, Clerk                   | Đủ tính năng, không phát sinh nhà cung cấp/chi phí thêm                       |
+| Lưu tệp           | **Supabase Storage**                    | Cloudflare R2                  | Dùng lại đúng cơ chế RLS, không phải đồng bộ quyền ở hai nơi                  |
+| Di động           | **PWA**                                 | React Native                   | Đủ cho offline cơ bản (KHO-09), không tốn thời gian phát triển/duyệt app      |
+| AI/OCR            | **Google Gemini (Flash, gói miễn phí)** | Claude API, OpenAI API         | Không phát sinh chi phí giai đoạn demo                                        |
 
 Ghi chú: TSD 5.6 có nhắc "khóa Claude API" trong danh sách secret — đây là dấu vết còn sót; nhà cung cấp AI
 đã chốt là **Gemini** (TSD 3.5, 6).
 
-### 6.2 Lộ trình 3 giai đoạn (PRD 4) — ngày cụ thể tra IPD 2, KHÔNG chép vào đây
+### 6.2 Lộ trình 3 giai đoạn (PRD 4) — chỉ THỨ TỰ và TIÊU CHÍ, KHÔNG có ngày
 
-| Giai đoạn | Module                                                 | Tiêu chí hoàn thành (PRD 7)                                                                                                                                                    |
-| --------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **GĐ 1**  | NEN, CRM, DA, TK (trừ AI), HD, BC cơ bản               | Một cơ hội chạy trọn **CRM → DA/TK → HD** trên dữ liệu thật, có lịch sử phiên bản dự toán + người phê duyệt truy vết được                                                      |
-| **GĐ 2**  | TC, MH, KHO, KT, NS, SX (cơ bản), BC đầy đủ            | Một công trình chạy trọn **Hợp đồng → Ngân sách → Mua hàng/Kho → Nghiệm thu → Đề nghị thanh toán → Thu tiền → Lãi/lỗ**; BGĐ xem được dashboard gần thực; chấm công 3 khối chạy |
-| **GĐ 3**  | Hoàn thiện liên kết chéo → **~95%** + AI Design Engine | 12 module liên kết thông suốt, không lỗi chặn luồng chính; kịch bản demo đầu-cuối cho cả NVC/NVO/NVS + Back Office                                                             |
+| Giai đoạn | Module                                                 | Tiêu chí hoàn thành (PRD 7)                                                                                               |
+| --------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| **GĐ 1**  | NEN, CRM, DA, TK (trừ AI), HD, BC cơ bản               | Một cơ hội chạy trọn **CRM → DA/TK → HD** trên dữ liệu thật, có lịch sử phiên bản dự toán + người phê duyệt truy vết được |
+| **GĐ 2**  | TC, MH, KHO, KT, NS, **SX phạm vi ĐẦY ĐỦ**, BC đầy đủ  | **Bốn** luồng đầu-cuối phải CÙNG chạy được — xem bảng dưới                                                                |
+| **GĐ 3**  | Hoàn thiện liên kết chéo → **~95%** + AI Design Engine | 12 module liên kết thông suốt, không lỗi chặn luồng chính; kịch bản demo đầu-cuối cho cả NVC/NVO/NVS + Back Office        |
+
+**Bốn luồng bắt buộc của Mốc M2** (IPD v1.1 2.2 — M2 chỉ đạt khi cả bốn cùng chạy):
+
+1. Công trình chạy trọn **Hợp đồng → Ngân sách → Mua hàng/Kho → Nghiệm thu → Đề nghị thanh toán →
+   Thu tiền → Lãi/lỗ**.
+2. **Đơn thuê giàn giáo** chạy trọn: báo giá có kiểm tồn → xuất kho → chuỗi sự kiện giao–trả → thu hồi
+   và kiểm đếm → đối soát → tất toán (ưu tiên số một của NVS).
+3. **Lệnh sản xuất** chạy trọn: lệnh có phiên bản → cấp vật tư theo định mức → công đoạn → chất lượng →
+   nhập kho thành phẩm → giá thành.
+4. **Vận hành công trường hằng ngày** chạy trọn: nhật ký điện tử → đề nghị vật tư có hạn xử lý →
+   nghiệm thu bằng checklist.
 
 **Nguyên tắc nghiệm thu (PRD 7, 4)**: không đo bằng số tính năng đã lập trình xong, mà bằng **nhân sự thực sự
 dùng, dữ liệu đúng, báo cáo đối soát được, quy trình trọng yếu chạy xuyên suốt**.
 
-**Khi chậm tiến độ (IPD 4.3)**: ưu tiên luồng nghiệp vụ trọng yếu trong tiêu chí mốc; lùi tính năng phụ
-(ví dụ TK-09 thư viện thiết kế, DA-11 hỗ trợ AI bóc tách) — **không lùi mốc**.
+⚠️ **SX đã chuyển từ "GĐ 3, mức định hướng" sang "GĐ 2, phạm vi đầy đủ"** (QĐ-2, PRD v1.4 Mục 4) — cả
+sản xuất, định mức và giá thành, không chỉ tài sản cho thuê.
+
+**Khi phải cắt (IPD v1.1 4.3)**: **thứ tự cắt đã định sẵn**, không tự chọn — xem mục 5.6. Ưu tiên luồng
+nghiệp vụ trọng yếu trong tiêu chí mốc; lùi tính năng phụ (ví dụ TK-09 thư viện thiết kế, DA-11 hỗ trợ AI
+bóc tách).
 
 ### 6.3 Môi trường và quy trình nhánh (TSD 5.3, 5.4, IPD 5)
 
@@ -499,14 +610,15 @@ luôn là người quyết định cuối cùng" (PRD 2.3).
 
 ### 6.5 Quyết định đã xác nhận qua trao đổi — TÀI LIỆU CHƯA CẬP NHẬT
 
-> Sáu điểm dưới đây là chỗ tài liệu mâu thuẫn hoặc bỏ trống, đã hỏi Haan và được chốt.
+> Các điểm dưới đây là chỗ tài liệu mâu thuẫn hoặc bỏ trống, đã hỏi Haan và được chốt.
 > Khi tài liệu gốc được cập nhật, xóa mục tương ứng khỏi đây.
 
-1. **Thứ tự ưu tiên tài liệu**: `PRD > AFD > TSD > CGD > BSD > IPD`. PRD v1.3 là bản mới nhất; các tài liệu
-   khác ghi "PRD v1.2" chỉ là tham chiếu chưa cập nhật.
+1. **Thứ tự ưu tiên tài liệu**: `PRD > AFD > TSD > CGD > BSD > IPD`. ~~PRD v1.3 là bản mới nhất; các tài
+   liệu khác ghi "PRD v1.2" chỉ là tham chiếu chưa cập nhật.~~ **Đã hết hiệu lực 05/09/2026**: bộ tài liệu
+   được cập nhật đồng loạt và mọi tham chiếu chéo nay đều trỏ đúng phiên bản hiện hành.
 2. **AI Preliminary Design Engine (TK-10→TK-17) là tính năng quan trọng, quyết định thành công dự án** — có
    tài liệu đặc tả riêng, và được triển khai **ngay sau khi phần hệ thống cốt lõi đạt 90%**.
-   → Điều này **thay thế** IPD 3.3 ("không nằm trong lịch trình, chỉ làm nếu còn thời gian Tuần 6").
+   → Điều này **thay thế** IPD 3.3 ("không nằm trong lịch trình, chỉ làm nếu còn thời gian").
 3. ~~**Tài liệu đặc tả AI v02 đã tồn tại**, Haan sẽ bổ sung vào `doc/`.~~
    **Đã xong 28/08/2026**: bộ tài liệu (14 file) nằm ở `doc/design/`. Hàng rào chuyển sang **mục 8**.
    → Điều này **thay thế** IPD 7 ("chưa được soạn thảo").
@@ -573,36 +685,65 @@ luôn là người quyết định cuối cùng" (PRD 2.3).
     viên kinh doanh của NVS" hiện phải dùng chung vai trò này với xưởng — tách được chỉ khi
     thêm chiều pháp nhân vào ma trận. Chưa chặn gì, nhưng đừng nhầm là đã mô hình hoá đúng.
 
+11. **Vai trò thứ 14 — `CHT` "Chỉ huy trưởng / Kỹ thuật hiện trường"** (05/09/2026, theo AFD v1.1 2.3).
+    → Quyền **giống hệt `TC`**, kể cả `approve` (khảo sát giao chính chỉ huy trưởng ký xác nhận
+    bảng công khối công trường — migration 0106). Khác biệt duy nhất là **PHẠM VI**: cột
+    `roles.site_scoped` bật, nên chỉ thấy công trình được phân công (mẫu RLS E).
+    → Vai trò `TC` được đổi nhãn thành **"Trưởng phòng Thi công"** cho khớp AFD v1.1 — cùng mã,
+    cùng quyền, chỉ đổi chữ hiển thị.
+    → Vì sao phải tách: nếu không, Mẫu E không có đối tượng nào để áp (xem hộp cảnh báo ở mục 3.4).
+    → AFD v1.1 còn thêm hai vai trò nữa **CHƯA làm**: _Trưởng phòng Thi công_ đã dùng lại `TC`,
+    nhưng _Tổ trưởng sản xuất_ (bố cục di động "Việc của tổ hôm nay") thì chưa có — nó thuộc đợt SX.
+
+12. **Sáu quyết định gốc của đợt tài liệu v1.4** (`doc/CHANGELOG_NVG_docs.md` mục 1) — mọi thay đổi
+    trong bộ tài liệu mới đều truy được về một trong sáu:
+    | #        | Quyết định                                                                                                                                                                                                                                                                                                                                                                 |
+    | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+    | **QĐ-1** | **Loại bỏ toàn bộ mốc thời gian** khỏi tài liệu; chỉ cam kết thứ tự và tiêu chí hoàn thành                                                                                                                                                                                                                                                                                 |
+    | **QĐ-2** | **Module SX làm phạm vi ĐẦY ĐỦ**: cả sản xuất + định mức + giá thành, không chỉ tài sản cho thuê                                                                                                                                                                                                                                                                           |
+    | **QĐ-3** | **Module TC mở rộng đầy đủ**: bản vẽ hiệu lực, RFI, nhật ký mobile-offline, checklist nghiệm thu + ảnh, khối lượng tổ đội, an toàn/sự cố, cảnh báo văn phòng quá hạn                                                                                                                                                                                                       |
+    | **QĐ-4** | Phiếu công trường được coi là khảo sát của **cả NVC và NVO**; khác biệt xử lý bằng **cấu hình**, KHÔNG tách thành hai module                                                                                                                                                                                                                                               |
+    | **QĐ-5** | Các ô trống trong khảo sát: catalogue lấy từ PDF (PRD Phụ lục D); định mức nằm trên file/bản giấy do **trưởng bộ phận sản xuất** giữ, **giá biến động liên tục**; **tỷ lệ lỗi biến động, phải chỉnh sửa được**; chấm công xưởng = máy chấm công nhưng **cách tính lương chưa rõ**; chấm công công trường **chưa rõ**; bảng giá bồi thường **để tạm, admin điều chỉnh sau** |
+    | **QĐ-6** | **Ghi nhận giá thuê nội bộ là BẮT BUỘC**; mức giá do Ban Giám đốc quyết sau và **cấu hình được**                                                                                                                                                                                                                                                                           |
+
 ### 6.6 Vấn đề còn mở — cần NVG xác nhận, KHÔNG tự quyết
 
 Gộp từ PRD 10, TSD 7, CGD 7, BSD 5, IPD 7:
 
-| Vấn đề                                                                                                                                    | Ảnh hưởng                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| ----------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Phần mềm kế toán chính thức** để tích hợp (MISA SME / AMIS / Fast?)                                                                     | Chưa thiết kế được payload endpoint `/api/export/accounting-software` (KT-08)                                                                                                                                                                                                                                                                                                                                                                        |
-| **Hạn mức phê duyệt chính thức** theo cấp/loại nghiệp vụ                                                                                  | Đang dùng mức tạm; dữ liệu `approval_limits` phải cấu hình được                                                                                                                                                                                                                                                                                                                                                                                      |
-| **Bộ mã vật tư / công trình / nhà cung cấp** thống nhất                                                                                   | NVG chưa có; sẽ tự tạo mẫu trước go-live từng giai đoạn                                                                                                                                                                                                                                                                                                                                                                                              |
-| ~~**Khảo sát Xưởng giàn giáo (NVS) + Chỉ huy công trường**~~ — **ĐÃ CÓ 02/09/2026**                                                       | Hai phiếu ở `doc/khao-sat/HoSo_KhaoSat_NVG_full.md`. Bốn giả định đã được thay bằng câu trả lời thật (migration 0105/0106). Phần phiếu để trống chuyển thành các dòng **Xưởng** và **Công trường** bên dưới                                                                                                                                                                                                                                          |
-| **`unit_prices` dùng chung DA/TK/MH?**                                                                                                    | Cần xác nhận NVO có cần bảng đơn giá riêng không (BSD 5). Đang triển khai DÙNG CHUNG, tách sẵn theo `company_id`                                                                                                                                                                                                                                                                                                                                     |
-| **Ai được xem GIÁ VỐN**                                                                                                                   | Đang mở cho TGĐ/CFO/BGĐ/Admin + **DA_DT, TKE, MH** (suy từ TK-07 và MH-04/05). Lợi nhuận vẫn chỉ TGĐ/CFO/BGĐ/Admin. Lương thêm NS và KT; **căn cước/sức khỏe/kỷ luật (`personal`) hẹp hơn lương — không có KT**. Cả bốn nhóm sửa ở cùng hàm `rls_sees_sensitive`                                                                                                                                                                                     |
-| **Cơ chế lương/thưởng chi tiết** từng công ty/nhóm nhân sự                                                                                | Chưa cấu hình được NS-06. Đã có sẵn HÌNH THỨC trả lương và số công đã chốt; thiếu đúng phần công thức                                                                                                                                                                                                                                                                                                                                                |
-| **Ai xác nhận bảng chấm công từng khối** (NS-04) — **hai trong ba khối đã CHỐT 02/09/2026**                                               | Công trường → chỉ huy trưởng (`approve` trên TC) và xưởng → Phó Giám đốc (`approve` trên SX) nay là NGUYÊN VĂN khảo sát, không còn suy luận. Khối **văn phòng** vẫn là suy luận (`approve` trên NS), cùng gốc với "trưởng đơn vị" của KT-01. Ánh xạ khối → phân hệ nằm ở hàm `timesheet_block_module`                                                                                                                                                |
-| **Một ngày công bằng mấy giờ** (NS-04) — khảo sát Xưởng KHÔNG trả lời                                                                     | Vẫn lấy **8 giờ** (Bộ luật Lao động 2019 Điều 105). Phiếu để trống cả hình thức chấm công (`[máy chấm công/bảng giấy]`) lẫn cách tính lương (`[ngày công/thời gian/sản phẩm]`), nên chưa loại trừ được ca 12 giờ. Sửa ở `HOURS_PER_WORKDAY` (`@nvg/shared/ns`) **và** hàm `consolidate_timesheets` — có test đối chiếu hai bản                                                                                                                       |
-| **Ai duyệt yêu cầu tuyển dụng** (NS-02)                                                                                                   | Đang đặt Tổng Giám đốc, vì tăng biên chế là quyết định ngân sách của cả công ty. Đổi bằng cấu hình `approval_limits`, không sửa mã                                                                                                                                                                                                                                                                                                                   |
-| **"Trưởng đơn vị" ở bước 1 của luồng duyệt chi (KT-01) là AI** — Haan xác nhận 27/08/2026: chưa có thông tin, chờ khảo sát đầy đủ         | Đang SUY LUẬN: người có quyền `approve` trên module phát sinh khoản chi (`payment_requests.origin_module`). Kéo theo: vai trò TC/MH/KHO được cấp `approve` trên chính phân hệ của mình. Khi Module NS có cây tổ chức, thay điều kiện trong hàm `rls_payment_step_actor` — không phải sửa chỗ nào khác                                                                                                                                                |
-| **Mốc chia nhóm công nợ quá hạn** (KT-04) — Haan xác nhận 27/08/2026: chưa có mốc, giữ giả định nhưng Quản trị hệ thống phải sửa lại được | Đã chuyển thành DỮ LIỆU trong bảng `aging_buckets`, seed 30/60/90 ngày từ `DEFAULT_AGING_BUCKETS`. KHÔNG hard-code ở bất kỳ đâu — cùng quy tắc với `approval_limits` (5.2). Mốc riêng của pháp nhân THAY THẾ mốc chung, không trộn                                                                                                                                                                                                                   |
-| **Đo "hiệu suất nhân sự/tổ đội/nhà cung cấp"** (BC-03 phần 4) đo bằng gì                                                                  | CỐ Ý CHƯA làm — TC chưa có bảng phân công tổ đội, MH chưa có sổ đánh giá nhà cung cấp. Khảo sát công trường đã cho ĐƠN VỊ ĐO của tổ đội: **khối lượng hoàn thành × đơn giá hợp đồng**, kỹ thuật hiện trường đo bóc, chỉ huy trưởng kiểm tra trước khi chuyển Kế toán. Ba phần đầu của BC-03 đã xong ở `db/migrations/0059_bc_sales_effectiveness.sql`                                                                                                |
-| **Bảng `tasks` — bỏ hẳn hay dùng thật?**                                                                                                  | Có sẵn từ Phase 0 (BUILD_PLAN 1.4), chưa từng được ghi/đọc ở bất kỳ đâu. Trung tâm Thông báo (bảng `notifications`) đã lên hình ở Phase 3G — nút chuông Top Bar giờ đọc thật, đánh dấu đã đọc, điều hướng tới `action_url`. "Việc cần làm" vẫn chỉ là Hộp thư Phê duyệt (`usePendingApprovals`); việc không gắn phê duyệt (vd. nhắc giấy tờ sắp hết hạn) hiện chỉ sinh `notification` một chiều, không có nơi "xử lý xong thì biến mất" đúng AFD 5.4 |
-| **Tên miền chính thức** · **đầu mối hỗ trợ kỹ thuật** (điền vào mẫu lỗi CGD 5.5) · **SSO** (chờ NVG có email công ty)                     | Chưa chặn phát triển                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| **Hạn mức + điều khoản bảo mật gói miễn phí Gemini**                                                                                      | Cần kiểm tra lại tại thời điểm triển khai; cân nhắc gói trả phí khi dùng dữ liệu thật                                                                                                                                                                                                                                                                                                                                                                |
-| **Xưởng — catalogue sản phẩm giàn giáo** (mã, quy cách, nguyên liệu chính, sản lượng/tháng, bán hay cho thuê)                             | Ô này trong phiếu ghi "phần này anh gửi catalogue để dẽ vào số liệu" — chưa có. Đây là danh mục `materials` gốc của NVS; thiếu nó thì SX-01/SX-02 không có đối tượng để gắn định mức và giá thành                                                                                                                                                                                                                                                    |
-| **Xưởng — định mức nguyên vật liệu ai giữ, lưu ở đâu**                                                                                    | Phiếu để trống cả hai ô (`[file Excel/bản vẽ/sổ theo dõi]`, `[người phụ trách xưởng/kỹ thuật/kế toán giá thành]`). Định mức có PHIÊN BẢN, ngày áp dụng và người duyệt — thiết kế bảng cần biết ai là người chịu trách nhiệm                                                                                                                                                                                                                          |
-| **Xưởng — tỷ lệ lỗi và giá trị thất thoát/hư hỏng hằng năm**                                                                              | Phiếu ghi thẳng "Không nên ước lượng một con số để điền vì đây là dữ liệu quan trọng cho quản trị tài sản và định giá cho thuê". **KHÔNG tự điền số mặc định** — cần kiểm kê và đối chiếu 12 tháng gần nhất                                                                                                                                                                                                                                          |
-| **Xưởng — công trình nội bộ mượn giàn giáo có tính giá thuê nội bộ không**                                                                | Phiếu đề nghị "tính giá thuê nội bộ hoặc ít nhất ghi nhận chi phí sử dụng nội bộ để phản ánh đúng chi phí công trình". Đây là quyết định KẾ TOÁN (có phát sinh thanh toán giữa pháp nhân không), không phải lựa chọn kỹ thuật. Hiện điều chuyển tới công trình chỉ ghi `scaffolding_events`, không sinh doanh thu/chi phí                                                                                                                            |
-| **Xưởng — giao thêm giữa kỳ trong cùng một hợp đồng thuê**                                                                                | Thu hồi nhiều đợt đã làm (migration 0106). Giao thêm thì CHƯA: mỗi đợt giao có ngày bắt đầu tính thuê riêng nên cần bảng đợt giao, không nhét thêm vào `rental_agreement_items` được. Cần biết NVG tính từ ngày giao của từng đợt hay từ ngày ký hợp đồng                                                                                                                                                                                            |
-| **Công trường — đo tiến độ theo gì**                                                                                                      | Khảo sát cho thấy đo theo **hạng mục/đầu việc**, xác nhận bằng **khối lượng hoàn thành đã nghiệm thu** (chưa nghiệm thu thì chưa tính). Còn thiếu: mức chi tiết của kế hoạch tiến độ (theo tuần hay theo mũi thi công) và ai là người cập nhật % hoàn thành                                                                                                                                                                                          |
-| **Công trường — ba con số suy luận của TC**                                                                                               | Cửa sổ sửa nhật ký **24 giờ** · ngưỡng cảnh báo ngân sách **90%** · thang đánh giá tổ đội **1–5**. Khảo sát KHÔNG nói tới cả ba; chỉ gián tiếp ủng hộ con số 24 giờ (báo cáo ngày phải gửi trước 20 giờ tối)                                                                                                                                                                                                                                         |
-| **Công trường — hồ sơ nào bắt buộc giữ bản giấy có chữ ký gốc**                                                                           | Phiếu ghi "Hồ sơ gốc bắt buộc phải ký, đóng dấu hoặc lưu bản giấy vẫn phải được quản lý theo quy định; phần mềm lưu bản điện tử để tra cứu". Cần danh sách cụ thể để biết chỗ nào ký điện tử được, chỗ nào chỉ đính kèm bản chụp (liên quan PRD 2.3 "không bắt nhập liệu hai lần")                                                                                                                                                                   |
+| Vấn đề                                                                                                                                    | Ảnh hưởng                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Phần mềm kế toán chính thức** để tích hợp (MISA SME / AMIS / Fast?)                                                                     | Chưa thiết kế được payload endpoint `/api/export/accounting-software` (KT-08)                                                                                                                                                                                                                                                                                                                                                                                                        |
+| **Hạn mức phê duyệt chính thức** theo cấp/loại nghiệp vụ                                                                                  | Đang dùng mức tạm; dữ liệu `approval_limits` phải cấu hình được                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| **Bộ mã vật tư / công trình / nhà cung cấp** thống nhất                                                                                   | NVG chưa có; sẽ tự tạo mẫu trước go-live từng giai đoạn                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ~~**Khảo sát Xưởng giàn giáo (NVS) + Chỉ huy công trường**~~ — **ĐÃ CÓ 02/09/2026**                                                       | Hai phiếu ở `doc/khao-sat/HoSo_KhaoSat_NVG_full.md`. Bốn giả định đã được thay bằng câu trả lời thật (migration 0105/0106). Phần phiếu để trống chuyển thành các dòng **Xưởng** và **Công trường** bên dưới                                                                                                                                                                                                                                                                          |
+| **`unit_prices` dùng chung DA/TK/MH?**                                                                                                    | Cần xác nhận NVO có cần bảng đơn giá riêng không (BSD 5). Đang triển khai DÙNG CHUNG, tách sẵn theo `company_id`                                                                                                                                                                                                                                                                                                                                                                     |
+| **Ai được xem GIÁ VỐN**                                                                                                                   | Đang mở cho TGĐ/CFO/BGĐ/Admin + **DA_DT, TKE, MH** (suy từ TK-07 và MH-04/05). Lợi nhuận vẫn chỉ TGĐ/CFO/BGĐ/Admin. Lương thêm NS và KT; **căn cước/sức khỏe/kỷ luật (`personal`) hẹp hơn lương — không có KT**. Cả bốn nhóm sửa ở cùng hàm `rls_sees_sensitive`                                                                                                                                                                                                                     |
+| **Cơ chế lương/thưởng chi tiết** từng công ty/nhóm nhân sự                                                                                | Chưa cấu hình được NS-06. Đã có sẵn HÌNH THỨC trả lương và số công đã chốt; thiếu đúng phần công thức                                                                                                                                                                                                                                                                                                                                                                                |
+| **Ai xác nhận bảng chấm công từng khối** (NS-04) — **hai trong ba khối đã CHỐT 02/09/2026**                                               | Công trường → chỉ huy trưởng (`approve` trên TC) và xưởng → Phó Giám đốc (`approve` trên SX) nay là NGUYÊN VĂN khảo sát, không còn suy luận. Khối **văn phòng** vẫn là suy luận (`approve` trên NS), cùng gốc với "trưởng đơn vị" của KT-01. Ánh xạ khối → phân hệ nằm ở hàm `timesheet_block_module`                                                                                                                                                                                |
+| **Một ngày công bằng mấy giờ** (NS-04) — khảo sát Xưởng KHÔNG trả lời                                                                     | Vẫn lấy **8 giờ** (Bộ luật Lao động 2019 Điều 105). Phiếu để trống cả hình thức chấm công (`[máy chấm công/bảng giấy]`) lẫn cách tính lương (`[ngày công/thời gian/sản phẩm]`), nên chưa loại trừ được ca 12 giờ. Sửa ở `HOURS_PER_WORKDAY` (`@nvg/shared/ns`) **và** hàm `consolidate_timesheets` — có test đối chiếu hai bản                                                                                                                                                       |
+| **Ai duyệt yêu cầu tuyển dụng** (NS-02)                                                                                                   | Đang đặt Tổng Giám đốc, vì tăng biên chế là quyết định ngân sách của cả công ty. Đổi bằng cấu hình `approval_limits`, không sửa mã                                                                                                                                                                                                                                                                                                                                                   |
+| **"Trưởng đơn vị" ở bước 1 của luồng duyệt chi (KT-01) là AI** — Haan xác nhận 27/08/2026: chưa có thông tin, chờ khảo sát đầy đủ         | Đang SUY LUẬN: người có quyền `approve` trên module phát sinh khoản chi (`payment_requests.origin_module`). Kéo theo: vai trò TC/MH/KHO được cấp `approve` trên chính phân hệ của mình. Khi Module NS có cây tổ chức, thay điều kiện trong hàm `rls_payment_step_actor` — không phải sửa chỗ nào khác                                                                                                                                                                                |
+| **Mốc chia nhóm công nợ quá hạn** (KT-04) — Haan xác nhận 27/08/2026: chưa có mốc, giữ giả định nhưng Quản trị hệ thống phải sửa lại được | Đã chuyển thành DỮ LIỆU trong bảng `aging_buckets`, seed 30/60/90 ngày từ `DEFAULT_AGING_BUCKETS`. KHÔNG hard-code ở bất kỳ đâu — cùng quy tắc với `approval_limits` (5.2). Mốc riêng của pháp nhân THAY THẾ mốc chung, không trộn                                                                                                                                                                                                                                                   |
+| **Đo "hiệu suất nhân sự/tổ đội/nhà cung cấp"** (BC-03 phần 4) đo bằng gì                                                                  | CỐ Ý CHƯA làm — TC chưa có bảng phân công tổ đội, MH chưa có sổ đánh giá nhà cung cấp. Khảo sát công trường đã cho ĐƠN VỊ ĐO của tổ đội: **khối lượng hoàn thành × đơn giá hợp đồng**, kỹ thuật hiện trường đo bóc, chỉ huy trưởng kiểm tra trước khi chuyển Kế toán. Ba phần đầu của BC-03 đã xong ở `db/migrations/0059_bc_sales_effectiveness.sql`                                                                                                                                |
+| **Bảng `tasks` — bỏ hẳn hay dùng thật?**                                                                                                  | Có sẵn từ Phase 0 (BUILD_PLAN 1.4), chưa từng được ghi/đọc ở bất kỳ đâu. Trung tâm Thông báo (bảng `notifications`) đã lên hình ở Phase 3G — nút chuông Top Bar giờ đọc thật, đánh dấu đã đọc, điều hướng tới `action_url`. "Việc cần làm" vẫn chỉ là Hộp thư Phê duyệt (`usePendingApprovals`); việc không gắn phê duyệt (vd. nhắc giấy tờ sắp hết hạn) hiện chỉ sinh `notification` một chiều, không có nơi "xử lý xong thì biến mất" đúng AFD 5.4                                 |
+| **Tên miền chính thức** · **đầu mối hỗ trợ kỹ thuật** (điền vào mẫu lỗi CGD 5.5) · **SSO** (chờ NVG có email công ty)                     | Chưa chặn phát triển                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| **Hạn mức + điều khoản bảo mật gói miễn phí Gemini**                                                                                      | Cần kiểm tra lại tại thời điểm triển khai; cân nhắc gói trả phí khi dùng dữ liệu thật                                                                                                                                                                                                                                                                                                                                                                                                |
+| ~~**Xưởng — catalogue sản phẩm giàn giáo**~~ — **CÓ MỘT PHẦN 05/09/2026**                                                                 | PRD v1.4 **Phụ lục D** nay có mã, quy cách (mm), nguyên liệu chính, hồ sơ chứng chỉ kiểm định và 3 địa điểm — đủ làm **bộ mã khởi tạo** cho SX-01 và KHO-02. **Vẫn thiếu hai thứ Catalogue KHÔNG có**: sản lượng/tháng và phân loại bán / cho thuê / cả hai, cho TỪNG mã — xem dòng riêng bên dưới                                                                                                                                                                                   |
+| ~~**Xưởng — định mức nguyên vật liệu ai giữ, lưu ở đâu**~~ — **ĐÃ TRẢ LỜI 05/09/2026**                                                    | QĐ-5: định mức nằm trên **các file trên máy tính công ty và bản giấy**, do **trưởng bộ phận sản xuất** nắm giữ, và **giá biến động liên tục**. Việc số hoá là hạng mục chuẩn hoá dữ liệu **bắt buộc trước khi vận hành** SX-07. Vẫn cần chính bộ định mức hiện hành — xem dòng bên dưới                                                                                                                                                                                              |
+| **Xưởng — tỷ lệ lỗi và giá trị thất thoát/hư hỏng hằng năm**                                                                              | Phiếu ghi thẳng "Không nên ước lượng một con số để điền vì đây là dữ liệu quan trọng cho quản trị tài sản và định giá cho thuê". **KHÔNG tự điền số mặc định** — cần kiểm kê và đối chiếu 12 tháng gần nhất. Đến khi có, mọi chỉ số liên quan hiện **"Chưa đủ dữ liệu"** (5.2). Ngưỡng cho phép là tham số `defect_rate_threshold`, hiện để RỖNG                                                                                                                                     |
+| ~~**Xưởng — công trình nội bộ có tính giá thuê nội bộ không**~~ — **ĐÃ CHỐT 05/09/2026**                                                  | **QĐ-6: việc GHI NHẬN là BẮT BUỘC.** Công trình nội bộ phải lập chứng từ đầy đủ như khách ngoài (SX-21) và ghi nhận giá trị theo giá thuê nội bộ; có thể không phát sinh thanh toán thật giữa các đơn vị, nhưng số liệu phải có để phân bổ đúng chi phí công trình. **Mức giá** do BGĐ quyết — tham số `internal_rental_price`, hiện để RỖNG. `rental_agreements.is_internal` đánh dấu; **báo cáo hợp nhất toàn NVG phải LOẠI TRỪ** các giao dịch này để không đếm hai lần doanh thu |
+| **Xưởng — giao thêm giữa kỳ trong cùng một hợp đồng thuê**                                                                                | Thu hồi nhiều đợt đã làm (migration 0106). Giao thêm thì CHƯA: mỗi đợt giao có ngày bắt đầu tính thuê riêng nên cần bảng đợt giao, không nhét thêm vào `rental_agreement_items` được. Cần biết NVG tính từ ngày giao của từng đợt hay từ ngày ký hợp đồng                                                                                                                                                                                                                            |
+| **Công trường — đo tiến độ theo gì**                                                                                                      | Khảo sát cho thấy đo theo **hạng mục/đầu việc**, xác nhận bằng **khối lượng hoàn thành đã nghiệm thu** (chưa nghiệm thu thì chưa tính). Còn thiếu: mức chi tiết của kế hoạch tiến độ (theo tuần hay theo mũi thi công) và ai là người cập nhật % hoàn thành                                                                                                                                                                                                                          |
+| **Công trường — ba con số suy luận của TC**                                                                                               | Cửa sổ sửa nhật ký **24 giờ** · ngưỡng cảnh báo ngân sách **90%** · thang đánh giá tổ đội **1–5**. Khảo sát KHÔNG nói tới cả ba; chỉ gián tiếp ủng hộ con số 24 giờ (báo cáo ngày phải gửi trước 20 giờ tối). Cả ba **đã chuyển thành tham số cấu hình được** (migration 0112) nên NVG sửa được mà không phải triển khai lại — nhưng chúng vẫn là giả định chưa ai xác nhận                                                                                                          |
+| **Công trường — hồ sơ nào bắt buộc giữ bản giấy có chữ ký gốc**                                                                           | Phiếu ghi "Hồ sơ gốc bắt buộc phải ký, đóng dấu hoặc lưu bản giấy vẫn phải được quản lý theo quy định; phần mềm lưu bản điện tử để tra cứu". Cần danh sách cụ thể để biết chỗ nào ký điện tử được, chỗ nào chỉ đính kèm bản chụp (liên quan PRD 2.3 "không bắt nhập liệu hai lần")                                                                                                                                                                                                   |
+| **Thời hạn cam kết phản hồi của từng phòng ban** (MỚI — PRD v1.4 Mục 10)                                                                  | Cần BGĐ quyết. **Không có tham số này thì cơ chế cảnh báo quá hạn TC-10 không có căn cứ để chạy** — nguyên văn PRD. Bảng `sla_definitions` đã dựng và **cố ý để RỖNG**: nạp sẵn một con số sẽ tạo đồng hồ đếm ngược trông như đã cam kết, và người duyệt bị gắn nhãn quá hạn theo thời hạn chưa ai ký                                                                                                                                                                                |
+| **Bảng giá bồi thường giàn giáo thiếu – hỏng theo mã** (MỚI — SX-19)                                                                      | Cần BGĐ ban hành. Khởi tạo tạm để hệ thống vận hành được, quản trị viên sửa sau — tham số `compensation_price_table`, hiện để RỖNG                                                                                                                                                                                                                                                                                                                                                   |
+| **Ngưỡng tỷ lệ lỗi sản xuất cho phép** (MỚI — SX-12)                                                                                      | Theo nhóm sản phẩm / giai đoạn / lô, biến động. Tham số `defect_rate_threshold`, hiện để RỖNG                                                                                                                                                                                                                                                                                                                                                                                        |
+| **Sản lượng/tháng và phân loại bán hay cho thuê cho TỪNG mã sản phẩm** (MỚI)                                                              | Catalogue (Phụ lục D) **không có** hai thông tin này. Chặn SX-01 (phân loại mục đích khai thác), SX-06 (kế hoạch theo năng lực thật) và BC-04                                                                                                                                                                                                                                                                                                                                        |
+| **Phương thức ghi nhận công tại công trường** (MỚI — TC-08, NS-04)                                                                        | Chưa chốt; phương án đang cân nhắc là **chụp ảnh có gắn thời gian và vị trí**. Cần quyết định trước khi xây phần chấm công khối công trường                                                                                                                                                                                                                                                                                                                                          |
+| **Số bản ghi tối thiểu để hiện một chỉ số** thay vì "Chưa đủ dữ liệu" (MỚI — BSD v1.1 Mục 5)                                              | Chưa xác định. Tham số `min_samples_for_metric`, hiện để RỖNG — cố ý không hard-code trong truy vấn báo cáo                                                                                                                                                                                                                                                                                                                                                                          |
+| **Rà soát nội bộ — địa chỉ xưởng chính của NVS** (MỚI)                                                                                    | Catalogue ghi **hai địa chỉ khác nhau ở hai vị trí trong cùng tài liệu**: Xã Tây Sơn và Xã Vũ Sơn, cùng huyện Kiến Xương. Cần NVS xác nhận trước khi khởi tạo danh mục kho (KHO-01). ⚠️ Kèm theo: Phụ lục D.5 ghi **"Thái Bình"**, nhưng theo quyết định **T9** (mục 8.5) Thái Bình đã sáp nhập vào **Hưng Yên** từ 2025 — seed `warehouses` phải dùng tên đơn vị hành chính hiện hành. Đây là dữ liệu catalogue cũ, không phải lỗi tài liệu                                         |
+| **Rà soát nội bộ — tính cập nhật của Catalogue** (MỚI)                                                                                    | Catalogue phát hành **2022**. Cần NVS xác nhận danh mục sản phẩm còn đúng (có mã nào đã ngừng, mã nào mới) và các chứng chỉ kiểm định còn hiệu lực hay không (SX-13)                                                                                                                                                                                                                                                                                                                 |
 
 ---
 
@@ -612,7 +753,7 @@ Gộp từ PRD 10, TSD 7, CGD 7, BSD 5, IPD 7:
 2. Đọc **BSD 4.x** tương ứng — bảng dữ liệu, **mẫu RLS A/B/C/D**, endpoint tùy chỉnh đã đặc tả.
 3. Đọc **AFD 3.x** (hành trình người dùng) + **AFD 7** (bản đồ màn hình của module).
 4. Với mỗi thao tác: quyết định **Supabase trực tiếp hay Workers** theo quy tắc ở mục 3.1.
-5. Dùng lại **7 mẫu bố cục** (4.6), **thư viện nội dung** CGD 5, **thuật ngữ chuẩn** (4.5), **5 màu trạng thái** (4.3).
+5. Dùng lại **9 mẫu bố cục** (4.6), **thư viện nội dung** CGD 5, **thuật ngữ chuẩn** (4.5), **6 màu trạng thái** (4.3).
 6. Gặp mơ hồ về nghiệp vụ → **hỏi Haan**, không tự quyết.
 
 ---

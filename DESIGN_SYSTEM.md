@@ -25,8 +25,7 @@ Xác nhận với Haan (chủ đích, không phải sơ suất): thay Brand Blue
 `#EA580C` bằng cặp thương hiệu mới **rừng (forest) + bạc hà (mint)**, theo phong cách một bản demo
 tham chiếu ("dashboard soft light style"). Từng điểm:
 
-- **5 màu trạng thái (Nháp/Chờ duyệt/Đang xử lý/Hoàn thành/Quá hạn) GIỮ NGUYÊN Y HỆT**, không đổi
-  hex, không đổi `StatusLozenge`. Đây vẫn là hàng rào cứng nhất của hệ thống màu — test canh tại
+- **Các màu trạng thái GIỮ NGUYÊN Y HỆT**, không đổi hex, không đổi `StatusLozenge`. Đây vẫn là hàng rào cứng nhất của hệ thống màu — test canh tại
   `web/src/test/design-rules.test.ts` ("Ranh giới màu thương hiệu (rừng & bạc hà) với màu trạng
   thái"): `status-lozenge.tsx` không được dùng token `brand`/`mint`/`forest`.
 - **Font GIỮ NGUYÊN Be Vietnam Pro** — bản demo tham chiếu dùng Plus Jakarta Sans nhưng Haan chọn
@@ -43,11 +42,22 @@ tham chiếu ("dashboard soft light style"). Từng điểm:
 
 ### 2.1 Giữ nguyên — không đụng tới
 
-| Vai trò                                              | Mã                                                        | Ghi chú                                                                                                                                                                                                                                    |
-| ---------------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Nháp · Chờ duyệt · Đang xử lý · Hoàn thành · Quá hạn | `#6B778C` · `#B38600` · `#0C66E4` · `#22A06B` · `#CA3521` | 5 màu trạng thái. **Không tạo màu thứ 6.** Riêng "Đang xử lý" trùng hex với Brand Blue cũ — đó là hai token ĐỘC LẬP (`--color-status-progress` và `--color-brand`), trùng ngẫu nhiên; đổi `--color-brand` KHÔNG kéo theo đổi "Đang xử lý". |
+| Vai trò                                                           | Mã                                                                    | Ghi chú                                                                                                                                                                                                                                    |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Nháp · Chờ duyệt · Đang xử lý · Hoàn thành · Quá hạn · Tranh chấp | `#6B778C` · `#B38600` · `#0C66E4` · `#22A06B` · `#CA3521` · `#8270DB` | 6 màu trạng thái. **Không tạo màu thứ 7.** Riêng "Đang xử lý" trùng hex với Brand Blue cũ — đó là hai token ĐỘC LẬP (`--color-status-progress` và `--color-brand`), trùng ngẫu nhiên; đổi `--color-brand` KHÔNG kéo theo đổi "Đang xử lý". |
 
 > Brand Blue `#0C66E4` làm "hành động chính" — hàng rào đã bị dỡ bỏ có chủ đích, xem 1.1 và 2.4.
+
+> **Tím "Tranh chấp" `#8270DB` là màu trạng thái thứ sáu**, thêm ở Content Guidelines v1.2 theo
+> khảo sát Xưởng giàn giáo (PRD v1.4 SX-19). Nó chỉ dùng cho hồ sơ thu hồi/bồi thường giàn giáo
+> chưa thống nhất với khách — trạng thái KHOÁ SỐ LIỆU GỐC, không phải "một sắc thái của quá hạn".
+> Ràng buộc y hệt cam an toàn trước đây: **không dùng tím ở đâu khác** — không làm nền dòng bảng,
+> không làm màu nút, không làm chuỗi biểu đồ; đặt tím vào chỗ khác là phá hệ thống trạng thái.
+>
+> Giá trị CHỮ thực dùng là `#6953D4`, không phải `#8270DB`: bản gốc chỉ đạt 3.26:1 trên nền nhạt
+> `#EAE6FF` của chính nó, dưới ngưỡng 4.5:1 mà nhãn 12px bắt buộc phải đạt. Đây là lần thứ tư
+> phải làm đậm một màu của CGD 6.3 — cùng lý do và cùng cách xử lý với Nháp/Chờ duyệt/Hoàn thành
+> (xem chú thích trong `web/src/index.css`). Sắc và nền giữ nguyên để không ai phải học lại màu.
 
 ### 2.2 Thay thế CGD 6.3 — dải trung tính ám sắc XANH LÁ nhạt
 

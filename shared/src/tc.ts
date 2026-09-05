@@ -38,7 +38,7 @@ export type SiteStage = (typeof SITE_STAGES)[number];
 
 export interface SiteStageMeta {
   readonly label: string;
-  /** Quy về 1 trong 5 nhóm trạng thái chuẩn khi hiển thị (Content Guidelines 5.1). */
+  /** Quy về 1 trong 6 nhóm trạng thái chuẩn khi hiển thị (Content Guidelines 5.1). */
   readonly statusGroup: StatusGroup;
   readonly description: string;
   readonly isTerminal: boolean;
@@ -217,7 +217,12 @@ export const WARRANTY_CLAIM_STATUS_META: Readonly<
  *
  * ⚠️ SUY LUẬN. PRD TC-05 yêu cầu "cảnh báo SỚM khi có NGUY CƠ vượt ngân sách" nhưng không
  * nói sớm là bao nhiêu phần trăm. 90% là mức đội triển khai đề xuất để bắt đầu; NVG xác
- * nhận hoặc đổi sau. Đổi ngưỡng chỉ cần sửa một hằng số ở đây.
+ * nhận hoặc đổi sau.
+ *
+ * Từ NEN-12, ngưỡng THẬT nằm ở tham số `budget_warning_threshold` trong `system_parameters` và
+ * do CSDL áp dụng (`sites_budget_status`, `budget_overrun_alert` — migration 0112). Hằng số này
+ * còn lại chỉ là giá trị DỰ PHÒNG cho phần tính trong trình duyệt khi tham số chưa cấu hình —
+ * đừng đổi ở đây rồi tưởng đã đổi cho cả hệ thống.
  *
  * "Nguy cơ" tính trên ĐÃ PHÁT SINH + ĐÃ CAM KẾT, không chỉ đã phát sinh: đơn hàng đã ký mà
  * chưa nhận hoá đơn vẫn là tiền chắc chắn phải trả. Chỉ nhìn chi phí đã ghi sổ thì cảnh báo

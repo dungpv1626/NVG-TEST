@@ -21,6 +21,7 @@ export * from './documents';
 export * from './notifications';
 export * from './audit';
 export * from './approvals';
+export * from './nen';
 
 // --- Module CRM (Backend Schema 4.2) ---
 export * from './crm';

@@ -81,7 +81,7 @@ export type PurchaseRequestStage = (typeof PURCHASE_REQUEST_STAGES)[number];
 
 export interface PurchaseRequestStageMeta {
   readonly label: string;
-  /** Quy về 1 trong 5 nhóm trạng thái chuẩn khi hiển thị (Content Guidelines 5.1). */
+  /** Quy về 1 trong 6 nhóm trạng thái chuẩn khi hiển thị (Content Guidelines 5.1). */
   readonly statusGroup: StatusGroup;
   readonly description: string;
   readonly isTerminal: boolean;
@@ -297,13 +297,7 @@ export function compareQuotations(
  * Đơn đặt hàng và giao nhận (MH-06, MH-07)
  * ========================================================================== */
 
-export const PURCHASE_ORDER_STAGES = [
-  'nhap',
-  'da_dat',
-  'dang_giao',
-  'da_giao_du',
-  'huy',
-] as const;
+export const PURCHASE_ORDER_STAGES = ['nhap', 'da_dat', 'dang_giao', 'da_giao_du', 'huy'] as const;
 
 export type PurchaseOrderStage = (typeof PURCHASE_ORDER_STAGES)[number];
 
@@ -314,7 +308,7 @@ export const PURCHASE_ORDER_STAGE_META: Readonly<
     label: 'Nháp',
     statusGroup: 'draft',
     description: 'Đang soạn đơn hàng, chưa gửi nhà cung cấp.',
-    },
+  },
   da_dat: {
     label: 'Đã đặt hàng',
     statusGroup: 'in_progress',

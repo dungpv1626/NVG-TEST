@@ -38,6 +38,14 @@ export interface PendingApproval {
    * kế), vì `parent_id` cùng kiểu uuid không tự phân biệt được nguồn (0094).
    */
   parent_module: 'DA' | 'TK' | null;
+  /**
+   * Hạn xử lý theo cam kết của phòng ban (`sla_definitions`, NEN-12 — migration 0113).
+   *
+   * `null` khi Ban Giám đốc CHƯA ban hành thời hạn cho loại nghiệp vụ này. Khi rỗng thì
+   * KHÔNG hiện đồng hồ — không hiện "còn 0 ngày", không gắn nhãn quá hạn. Hồ sơ đó không
+   * đúng hạn cũng không trễ hạn, nó là CHƯA BIẾT (PRD v1.4 Mục 2.3).
+   */
+  due_at: string | null;
 }
 
 /**

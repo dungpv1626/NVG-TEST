@@ -24,6 +24,7 @@ const STYLES: Record<StatusGroup, string> = {
   in_progress: 'bg-status-progress-bg text-status-progress',
   completed: 'bg-status-completed-bg text-status-completed',
   overdue: 'bg-status-overdue-bg text-status-overdue',
+  disputed: 'bg-status-disputed-bg text-status-disputed',
 };
 
 export function StatusLozenge({ status, className }: { status: StatusGroup; className?: string }) {
@@ -46,7 +47,7 @@ export function StatusLozenge({ status, className }: { status: StatusGroup; clas
  * Nhãn riêng của module đặt cạnh nhãn trạng thái chuẩn.
  *
  * Module nào cũng có trạng thái con riêng ("Đã duyệt", "Đang tuyển", "Chờ trưởng đơn vị xác
- * nhận") và tất cả đều quy về 5 nhóm chuẩn (CLAUDE.md 5.4). Hiện cả hai là đúng — nhóm chuẩn
+ * nhận") và tất cả đều quy về 6 nhóm chuẩn (CLAUDE.md 5.4). Hiện cả hai là đúng — nhóm chuẩn
  * cho người quét nhanh cả bảng, nhãn riêng cho người cần biết chính xác đang ở bước nào.
  *
  * Nhưng khi hai nhãn TRÙNG NHAU thì hiện cả hai thành ra "Chờ duyệt  Chờ duyệt" — người đọc

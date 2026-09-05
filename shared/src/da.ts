@@ -32,7 +32,7 @@ export type BiddingStage = (typeof BIDDING_STAGES)[number];
 
 export interface BiddingStageMeta {
   readonly label: string;
-  /** Quy về 1 trong 5 nhóm trạng thái chuẩn khi hiển thị nhãn (Content Guidelines 5.1). */
+  /** Quy về 1 trong 6 nhóm trạng thái chuẩn khi hiển thị nhãn (Content Guidelines 5.1). */
   readonly statusGroup: StatusGroup;
   readonly description: string;
   /** Bước kết thúc — không đi tiếp được. */
@@ -176,8 +176,7 @@ export function biddingDisplayStatus(
   submissionDeadline: string | null,
 ): StatusGroup {
   const meta = BIDDING_STAGE_META[stage];
-  const notSubmittedYet =
-    stage !== 'nop_thau' && stage !== 'trung_thau' && stage !== 'truot_thau';
+  const notSubmittedYet = stage !== 'nop_thau' && stage !== 'trung_thau' && stage !== 'truot_thau';
 
   if (notSubmittedYet && submissionDeadline) {
     const deadline = new Date(submissionDeadline);

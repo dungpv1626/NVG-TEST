@@ -103,7 +103,7 @@ export function useActiveModule(): ModuleCode | null {
   );
 }
 
-/** Số mục tối đa trên thanh điều hướng dưới của điện thoại — Webapp Flow 4.7: 4–5 mục. */
+/** Số mục tối đa trên thanh điều hướng dưới của điện thoại — Webapp Flow 4.8: 4–5 mục. */
 export const BOTTOM_NAV_LIMIT = 5;
 
 /**

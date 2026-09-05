@@ -5,7 +5,7 @@
  * cùng một nhà cung cấp bị nhập ba lần với ba mã khác nhau, và lịch sử giá MH-05 vỡ làm ba.
  *
  * Cột trạng thái dùng nhóm chuẩn: nhà cung cấp chính và dự phòng đều là "Đang xử lý" (đang
- * giao dịch), đã ngừng giao dịch là "Hoàn thành" (hồ sơ đã đóng). Không tạo màu thứ sáu.
+ * giao dịch), đã ngừng giao dịch là "Hoàn thành" (hồ sơ đã đóng). Không tạo màu thứ bảy.
  */
 
 import { useState } from 'react';

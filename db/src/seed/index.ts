@@ -95,6 +95,7 @@ async function main() {
           description: r.description,
           seesAllCompanies: r.seesAllCompanies,
           defaultRoute: r.defaultRoute,
+          siteScoped: r.siteScoped ?? false,
         })
         .onConflictDoUpdate({
           target: roles.code,
@@ -103,6 +104,7 @@ async function main() {
             description: r.description,
             seesAllCompanies: r.seesAllCompanies,
             defaultRoute: r.defaultRoute,
+            siteScoped: r.siteScoped ?? false,
             updatedAt: sqlOp`now()`,
           },
         })

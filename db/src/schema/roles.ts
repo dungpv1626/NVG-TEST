@@ -30,6 +30,16 @@ export const roles = pgTable('roles', {
   /** Trang mặc định sau khi đăng nhập — Webapp Flow 2.3. */
   defaultRoute: varchar('default_route', { length: 128 }),
 
+  /**
+   * Vai trò làm việc tại MỘT công trình/xưởng cụ thể — mẫu RLS E (Backend Schema v1.1 3.3).
+   *
+   * Chỉ thấy nơi mình được phân công qua `user_site_assignments`. Đánh dấu ở BẢNG VAI TRÒ chứ
+   * không suy từ tổ hợp quyền: chỉ huy trưởng vẫn có `approve` trên phân hệ TC (khảo sát giao
+   * họ ký bảng công khối công trường — migration 0106), nên `approve` không phân biệt được
+   * cấp quản lý với người hiện trường. Xem migration 0115.
+   */
+  siteScoped: boolean('site_scoped').notNull().default(false),
+
   ...auditColumns(),
 });
 

@@ -37,6 +37,25 @@ describe('Ranh giới màu thương hiệu (rừng & bạc hà) với màu trạ
   });
 });
 
+describe('Chỉ số chưa đủ dữ liệu không được hiện thành số 0', () => {
+  /**
+   * PRD v1.4 Mục 2.3 và Content Guidelines v1.2 5.6 thêm một quy tắc hiển thị mới: chỉ số mà
+   * NVG chưa có dữ liệu thật phải hiện "Chưa đủ dữ liệu", KHÔNG hiện 0 và KHÔNG điền số ước
+   * lượng. Khảo sát Xưởng nói thẳng về tỷ lệ lỗi và giá trị thất thoát: "không nên ước lượng
+   * một con số để điền".
+   *
+   * Test canh CÂU CHỮ chứ không canh nơi dùng: câu này phải tồn tại đúng một bản trong thư
+   * viện nội dung để mọi màn hình dùng lại, thay vì mỗi nơi tự nghĩ một cách diễn đạt (Content
+   * Guidelines 5: "dùng lại, đừng nghĩ cách diễn đạt mới"). Nơi dùng thì còn thêm mãi; câu
+   * chuẩn thì chỉ có một.
+   */
+  it('thư viện nội dung có sẵn câu chuẩn để mọi màn hình dùng lại', async () => {
+    const { EMPTY_STATES, MODULE_EMPTY_STATES } = await import('@nvg/shared');
+    expect(EMPTY_STATES.notEnoughData).toContain('Chưa đủ dữ liệu');
+    expect(MODULE_EMPTY_STATES.BC).toBe(EMPTY_STATES.notEnoughData);
+  });
+});
+
 describe('Nạp phông cho tiếng Việt', () => {
   const css = source('index.css');
 
@@ -99,6 +118,7 @@ describe('Tương phản màu đạt WCAG AA', () => {
     ['nhãn Đang xử lý', 'status-progress', 'status-progress-bg'],
     ['nhãn Hoàn thành', 'status-completed', 'status-completed-bg'],
     ['nhãn Quá hạn', 'status-overdue', 'status-overdue-bg'],
+    ['nhãn Tranh chấp', 'status-disputed', 'status-disputed-bg'],
   ])('%s đạt ≥ 4.5:1', (_label, fg, bg) => {
     expect(contrast(token(fg), token(bg))).toBeGreaterThanOrEqual(4.5);
   });

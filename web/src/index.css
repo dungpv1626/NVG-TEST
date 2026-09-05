@@ -40,7 +40,7 @@
      DESIGN_SYSTEM.md). `brand` dùng cho hành động chính, liên kết, focus ring — vẫn DUY NHẤT
      một hành động chính trên mỗi màn hình, không rải khắp nơi.
      `brand-forest`/`brand-mint`/`brand-mint-ink` là các vai trò riêng bản demo cần (khối logo
-     tối, nền pill nhấn, chữ trên nền mint) — không lấn vào 5 màu trạng thái bên dưới (xem test
+     tối, nền pill nhấn, chữ trên nền mint) — không lấn vào 6 màu trạng thái bên dưới (xem test
      "Ranh giới màu thương hiệu" trong design-rules.test.ts). */
   --color-brand: #2c6e4b; /* forest-600 — hành động chính, link, focus ring */
   --color-brand-hover: #1b5138; /* forest-700 */
@@ -87,27 +87,30 @@
   --color-fg-subtle: #5a574f; /* chữ phụ — 7.0:1 trên trắng, 6.6:1 trên nền trũng */
   --color-fg-inverse: #ffffff;
 
-  /* --- 5 màu trạng thái (6.3, ánh xạ đúng Content Guidelines 5.1) -----------
+  /* --- 6 màu trạng thái (6.3, ánh xạ đúng Content Guidelines v1.2 5.1) ------
      Dùng cho nhãn trạng thái dạng Lozenge. KHÔNG dùng làm nền lớn của khối giao diện.
-     KHÔNG tạo màu trạng thái thứ 6. */
+     KHÔNG tạo màu trạng thái thứ 7 — trạng thái riêng của module quy về 1 trong 6 màu này. */
   --color-status-draft: #616b7e; /* Nháp */
   --color-status-pending: #906c00; /* Chờ duyệt */
   --color-status-progress: #0c66e4; /* Đang xử lý */
   --color-status-completed: #1c8157; /* Hoàn thành */
   --color-status-overdue: #ca3521; /* Quá hạn */
+  --color-status-disputed: #6953d4; /* Tranh chấp */
 
   /* Nền nhạt tương ứng cho Lozenge — chữ đậm trên nền nhạt cùng tông (6.2).
 
-     ⚠️ Ba giá trị CHỮ ở trên đã được làm đậm so với CGD 6.3 (`#6B778C` `#B38600` `#22A06B`).
-     Bản gốc không đạt tương phản 4.5:1 trên chính nền nhạt của nó: Nháp 3.83, Chờ duyệt 3.09,
-     Hoàn thành 3.11. Nhãn trạng thái là chữ 12px nên KHÔNG được tính là "chữ lớn" của WCAG,
-     tức là vẫn phải đạt 4.5:1. Đã làm đậm vừa đủ chạm ngưỡng, giữ nguyên sắc màu và nền để
-     người dùng cũ không phải học lại màu nào là trạng thái nào. Đo lại: 4.55 · 4.51 · 4.53. */
+     ⚠️ BỐN giá trị CHỮ ở trên đã được làm đậm so với CGD 6.3 (`#6B778C` `#B38600` `#22A06B`
+     `#8270DB`). Bản gốc không đạt tương phản 4.5:1 trên chính nền nhạt của nó: Nháp 3.83,
+     Chờ duyệt 3.09, Hoàn thành 3.11, Tranh chấp 3.26. Nhãn trạng thái là chữ 12px nên KHÔNG
+     được tính là "chữ lớn" của WCAG, tức là vẫn phải đạt 4.5:1. Đã làm đậm vừa đủ chạm ngưỡng,
+     giữ nguyên sắc màu (Tranh chấp giữ đúng sắc 250°) và nền để người dùng cũ không phải học
+     lại màu nào là trạng thái nào. Đo lại: 4.55 · 4.51 · 4.53 · 4.56. */
   --color-status-draft-bg: #ebecf0;
   --color-status-pending-bg: #fff7d6;
   --color-status-progress-bg: #e9f2fe;
   --color-status-completed-bg: #dcfff1;
   --color-status-overdue-bg: #ffeceb;
+  --color-status-disputed-bg: #eae6ff;
 
   /* --- Kiểu chữ (6.4) -------------------------------------------------------
      Be Vietnam Pro — phông được thiết kế cho tiếng Việt, thay Inter (DESIGN_SYSTEM.md 3).

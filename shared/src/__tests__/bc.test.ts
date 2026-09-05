@@ -96,7 +96,7 @@ describe('matchesPeriodFilter', () => {
 });
 
 describe('countByStatus', () => {
-  it('đếm đủ 5 nhóm, nhóm rỗng vẫn có mặt với số 0', () => {
+  it('đếm đủ 6 nhóm, nhóm rỗng vẫn có mặt với số 0', () => {
     const counts = countByStatus([
       { status: 'draft' },
       { status: 'overdue' },
@@ -108,6 +108,7 @@ describe('countByStatus', () => {
       in_progress: 0,
       completed: 0,
       overdue: 2,
+      disputed: 0,
     });
   });
 });

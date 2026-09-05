@@ -154,7 +154,7 @@ describe('Thước độ đầy đủ', () => {
     expect(link.className).toContain('min-h-10');
   });
 
-  it('chỉ dùng năm màu trạng thái chuẩn, không tạo màu thứ sáu', async () => {
+  it('chỉ dùng sáu màu trạng thái chuẩn, không tạo màu thứ bảy', async () => {
     state.briefs = [brief()];
     state.surveys = [];
     const { BriefPanel } = await import('../brief-panel');
@@ -164,7 +164,7 @@ describe('Thước độ đầy đủ', () => {
     await screen.findByText('40%');
 
     const bar = container.querySelector('[role="progressbar"] > div')!;
-    expect(bar.className).toMatch(/bg-status-(draft|pending|completed|progress|overdue)/);
+    expect(bar.className).toMatch(/bg-status-(draft|pending|completed|progress|overdue|disputed)/);
   });
 });
 

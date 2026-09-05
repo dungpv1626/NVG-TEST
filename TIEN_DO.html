@@ -1,303 +1,918 @@
 <!doctype html>
 <html lang="vi">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tiến độ phát triển — Hệ thống Quản trị NVG</title>
-<style>
-  :root {
-    --brand: #0C66E4; --brand-subtle: #E9F2FE;
-    --surface: #FFFFFF; --sunken: #F7F8F9; --border: #DCDFE4;
-    --fg: #172B4D; --fg-subtle: #44546F;
-    --draft: #6B778C;    --draft-bg: #EBECF0;
-    --pending: #B38600;  --pending-bg: #FFF7D6;
-    --progress: #0C66E4; --progress-bg: #E9F2FE;
-    --done: #22A06B;     --done-bg: #DCFFF1;
-    --overdue: #CA3521;  --overdue-bg: #FFECEB;
-    --radius: 8px;
-    --shadow: 0 1px 1px rgb(9 30 66 / .13), 0 0 1px rgb(9 30 66 / .16);
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; padding: 24px 16px 48px;
-    background: var(--sunken); color: var(--fg);
-    font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-    font-size: 14px; line-height: 1.45;
-  }
-  .wrap { max-width: 980px; margin: 0 auto; }
-  header { margin-bottom: 20px; }
-  h1 { font-size: 20px; margin: 0 0 4px; }
-  h2 { font-size: 15px; margin: 28px 0 10px; }
-  h3 { font-size: 14px; margin: 0 0 8px; }
-  p  { margin: 0 0 6px; }
-  .muted { color: var(--fg-subtle); }
-  .xs { font-size: 12px; }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tiến độ phát triển — Hệ thống Quản trị NVG</title>
+    <style>
+      :root {
+        --brand: #0c66e4;
+        --brand-subtle: #e9f2fe;
+        --surface: #ffffff;
+        --sunken: #f7f8f9;
+        --border: #dcdfe4;
+        --fg: #172b4d;
+        --fg-subtle: #44546f;
+        --draft: #6b778c;
+        --draft-bg: #ebecf0;
+        --pending: #b38600;
+        --pending-bg: #fff7d6;
+        --progress: #0c66e4;
+        --progress-bg: #e9f2fe;
+        --done: #22a06b;
+        --done-bg: #dcfff1;
+        --overdue: #ca3521;
+        --overdue-bg: #ffeceb;
+        --radius: 8px;
+        --shadow: 0 1px 1px rgb(9 30 66 / 0.13), 0 0 1px rgb(9 30 66 / 0.16);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 24px 16px 48px;
+        background: var(--sunken);
+        color: var(--fg);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
+        font-size: 14px;
+        line-height: 1.45;
+      }
+      .wrap {
+        max-width: 980px;
+        margin: 0 auto;
+      }
+      header {
+        margin-bottom: 20px;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 0 0 4px;
+      }
+      h2 {
+        font-size: 15px;
+        margin: 28px 0 10px;
+      }
+      h3 {
+        font-size: 14px;
+        margin: 0 0 8px;
+      }
+      p {
+        margin: 0 0 6px;
+      }
+      .muted {
+        color: var(--fg-subtle);
+      }
+      .xs {
+        font-size: 12px;
+      }
 
-  .card { background: var(--surface); border: 1px solid var(--border);
-          border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px 16px; }
-  .grid { display: grid; gap: 12px; }
-  @media (min-width: 760px) { .grid-3 { grid-template-columns: repeat(3, 1fr); } }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 14px 16px;
+      }
+      .grid {
+        display: grid;
+        gap: 12px;
+      }
+      @media (min-width: 760px) {
+        .grid-3 {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
 
-  .pill { display: inline-block; border-radius: 999px; padding: 1px 8px;
-          font-size: 12px; font-weight: 600; white-space: nowrap; }
-  .s-draft    { color: var(--draft);    background: var(--draft-bg); }
-  .s-pending  { color: var(--pending);  background: var(--pending-bg); }
-  .s-progress { color: var(--progress); background: var(--progress-bg); }
-  .s-done     { color: var(--done);     background: var(--done-bg); }
-  .s-overdue  { color: var(--overdue);  background: var(--overdue-bg); }
+      .pill {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 1px 8px;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .s-draft {
+        color: var(--draft);
+        background: var(--draft-bg);
+      }
+      .s-pending {
+        color: var(--pending);
+        background: var(--pending-bg);
+      }
+      .s-progress {
+        color: var(--progress);
+        background: var(--progress-bg);
+      }
+      .s-done {
+        color: var(--done);
+        background: var(--done-bg);
+      }
+      .s-overdue {
+        color: var(--overdue);
+        background: var(--overdue-bg);
+      }
 
-  .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 10px; }
-  @media (min-width: 620px) { .stats { grid-template-columns: repeat(4, 1fr); } }
-  .stat b { display: block; font-size: 22px; line-height: 1.2; }
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-top: 10px;
+      }
+      @media (min-width: 620px) {
+        .stats {
+          grid-template-columns: repeat(4, 1fr);
+        }
+      }
+      .stat b {
+        display: block;
+        font-size: 22px;
+        line-height: 1.2;
+      }
 
-  .bar { height: 8px; border-radius: 999px; background: var(--draft-bg); overflow: hidden; margin-top: 6px; }
-  .bar > span { display: block; height: 100%; background: var(--brand); }
+      .bar {
+        height: 8px;
+        border-radius: 999px;
+        background: var(--draft-bg);
+        overflow: hidden;
+        margin-top: 6px;
+      }
+      .bar > span {
+        display: block;
+        height: 100%;
+        background: var(--brand);
+      }
 
-  ul { margin: 0; padding-left: 18px; }
-  li { margin-bottom: 5px; }
-  li:last-child { margin-bottom: 0; }
+      ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+      li {
+        margin-bottom: 5px;
+      }
+      li:last-child {
+        margin-bottom: 0;
+      }
 
-  .tablewrap { overflow-x: auto; border: 1px solid var(--border);
-               border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
-  table { border-collapse: collapse; width: 100%; min-width: 560px; }
-  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
-  th { color: var(--fg-subtle); font-weight: 500; white-space: nowrap; font-size: 12px; }
-  tr:last-child td { border-bottom: 0; }
-  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+      .tablewrap {
+        overflow-x: auto;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        min-width: 560px;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--border);
+        vertical-align: top;
+      }
+      th {
+        color: var(--fg-subtle);
+        font-weight: 500;
+        white-space: nowrap;
+        font-size: 12px;
+      }
+      tr:last-child td {
+        border-bottom: 0;
+      }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+      }
 
-  footer { margin-top: 32px; padding-top: 14px; border-top: 1px solid var(--border); }
-</style>
-</head>
-<body>
-<div class="wrap">
+      footer {
+        margin-top: 32px;
+        padding-top: 14px;
+        border-top: 1px solid var(--border);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <h1>Tiến độ phát triển — Hệ thống Quản trị Nhà Việt Group</h1>
+        <p class="xs muted">
+          Cập nhật: <strong>04/09/2026</strong> · Chi tiết đầy đủ: <code>BUILD_PLAN.md</code> · Ràng
+          buộc/quyết định: <code>CLAUDE.md</code> §6 · Module Thiết kế AI có file riêng:
+          <code>TIEN_DO_THIET_KE.html</code>
+        </p>
+      </header>
 
-<header>
-  <h1>Tiến độ phát triển — Hệ thống Quản trị Nhà Việt Group</h1>
-  <p class="xs muted">
-    Cập nhật: <strong>04/09/2026</strong> · Chi tiết đầy đủ: <code>BUILD_PLAN.md</code> ·
-    Ràng buộc/quyết định: <code>CLAUDE.md</code> §6 ·
-    Module Thiết kế AI có file riêng: <code>TIEN_DO_THIET_KE.html</code>
-  </p>
-</header>
+      <section class="card">
+        <div class="bar"><span style="width: 70%"></span></div>
+        <p class="xs muted" style="margin-top: 6px">
+          <strong
+            >Con số này vừa giảm từ ~90% xuống ~70%, và đó KHÔNG phải vì công việc bị hỏng hay làm
+            lại.</strong
+          >
+          Mẫu số đổi: bộ tài liệu cập nhật ngày 05/09/2026 mở rộng phạm vi rất nhiều. Không dòng mã
+          nào đã viết bị bỏ đi; phần việc phía trước dài ra. <br /><br />
+          Đo theo phạm vi cũ (PRD v1.3) thì vẫn là <strong>~90%</strong>: một công trình đi trọn
+          được từ hợp đồng → ngân sách → mua hàng/kho → nghiệm thu → thanh toán → thu tiền → lãi/lỗ,
+          mỗi bước truy ngược được tới chứng từ gốc. Đo theo phạm vi mới (PRD v1.4) thì còn
+          <strong>~70%</strong>, vì <strong>Module TC đi từ 8 lên 20 yêu cầu</strong> và
+          <strong>Module SX từ 3 lên 22</strong>. <br /><br />
+          <strong
+            >Mốc mới nhất — 05/09/2026: bộ 6 tài liệu đã cập nhật theo khảo sát đầy đủ.</strong
+          >
+          Đợt này làm xong phần <strong>nền tảng xuyên suốt</strong> mà mọi việc TC/SX sắp tới đều
+          dựa vào: trạng thái thứ sáu "Tranh chấp", bảng tham số hệ thống (NEN-12), thời hạn cam kết
+          xử lý + đồng hồ hạn trên Hộp thư Phê duyệt, mẫu phân quyền E theo phạm vi công trình, bộ
+          ba cột đồng bộ hiện trường, quy tắc bất biến của chứng từ đã ký. Phần 42 yêu cầu TC/SX mới
+          thì chưa động tới — đã ghi thành Phase 6 trong <code>BUILD_PLAN.md</code>. <br /><br />
+          Bản đối chiếu TRƯỚC–SAU đầy đủ giữa bộ tài liệu cũ và mới:
+          <code>doc/CHANGELOG_NVG_docs.md</code>.
+        </p>
+        <div class="stats">
+          <div class="stat"><b>12/12</b><span class="xs muted">module đã dựng</span></div>
+          <div class="stat"><b>117</b><span class="xs muted">migration</span></div>
+          <div class="stat"><b>1.115</b><span class="xs muted">kiểm thử tự động</span></div>
+          <div class="stat"><b>103</b><span class="xs muted">bảng CSDL</span></div>
+        </div>
+      </section>
 
-<section class="card">
-  <div class="bar"><span style="width: 90%"></span></div>
-  <p class="xs muted" style="margin-top:6px">
-    ~90% tới bản demo ~95%. Giai đoạn 1 và 2 đã nghiệm thu; Giai đoạn 3 (liên kết chéo, rà soát
-    phân quyền, tác vụ nền) đang chạy. Một công trình đi trọn được: hợp đồng → ngân sách → mua
-    hàng/kho → nghiệm thu → thanh toán → thu tiền → lãi/lỗ, mỗi bước truy ngược được tới chứng từ gốc.
-    <br><br>
-    <strong>Mốc mới nhất — 02/09/2026: hai phiếu khảo sát cuối đã về</strong> (Xưởng sản xuất giàn
-    giáo, Chỉ huy – Giám sát công trường). Đây là chốt chặn cuối còn lại từ PRD Mục 10: Module TC
-    và SX không còn phải suy luận gián tiếp. Đổi lại, khảo sát mở ra một loạt việc mới có căn cứ
-    rõ ràng — xem hai mục dưới.
-  </p>
-  <div class="stats">
-    <div class="stat"><b>12/12</b><span class="xs muted">module đã dựng</span></div>
-    <div class="stat"><b>108</b><span class="xs muted">migration</span></div>
-    <div class="stat"><b>1.101</b><span class="xs muted">kiểm thử tự động</span></div>
-    <div class="stat"><b>100</b><span class="xs muted">bảng CSDL</span></div>
-  </div>
-</section>
+      <section class="card">
+        <h2 style="margin-top: 0">Đợt 05/09/2026 — đồng bộ theo bộ tài liệu v1.4</h2>
+        <p class="xs muted">
+          Tám thay đổi xuyên suốt, chạm vào mọi module. Migration <code>0110</code> →
+          <code>0117</code>.
+        </p>
+        <div class="tablewrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Thay đổi</th>
+                <th>Vì sao cần</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Trạng thái thứ sáu — "Tranh chấp" (tím)</strong></td>
+                <td>
+                  Khi hai bên chưa thống nhất số giàn giáo thiếu/hỏng, số liệu gốc bị KHOÁ: biên bản
+                  và ảnh giữ nguyên, chỉ lập được chứng từ điều chỉnh mới có người duyệt. Năm nhóm
+                  cũ đều mô tả hồ sơ đang đi tới đâu, không nhóm nào nói được điều này
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Bảng tham số hệ thống (NEN-12)</strong></td>
+                <td>
+                  Mọi giá trị NVG cho biết là biến động nay cấu hình được, có lịch sử, không hồi tố.
+                  Bốn con số trước đây nằm cứng trong mã (cửa sổ sửa nhật ký 24 giờ, ngưỡng ngân
+                  sách 90%, thang tổ đội 1–5, 8 giờ/ngày công) đã chuyển vào đây — ba trong bốn là
+                  suy luận mà khảo sát không xác nhận
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>Thời hạn cam kết xử lý + đồng hồ hạn trên Hộp thư Phê duyệt</strong>
+                </td>
+                <td>
+                  Trước đây chỉ hiện "Chờ N ngày" — biết đã chờ bao lâu nhưng không biết bao lâu là
+                  quá. Hồ sơ quá hạn nay lên đầu danh sách.
+                  <strong>Bảng thời hạn cố ý để RỖNG</strong> tới khi Ban Giám đốc ban hành
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Mẫu phân quyền E + vai trò "Chỉ huy trưởng"</strong></td>
+                <td>
+                  Người hiện trường chỉ thấy công trình mình được phân công. Phải tách vai trò mới
+                  áp được: chỉ huy trưởng CÓ quyền phê duyệt (họ ký bảng công khối công trường), nên
+                  không thể lấy quyền phê duyệt làm dấu hiệu "cấp quản lý"
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Ba cột đồng bộ hiện trường</strong></td>
+                <td>
+                  Nhật ký ghi lúc 16 giờ ngoài công trường mất sóng, đồng bộ lúc 21 giờ, vẫn phải là
+                  nhật ký của 16 giờ. Thêm cột sau khi đã có dữ liệu thật thì không dựng lại được
+                  thời điểm người dùng đã bấm
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Bất biến của chứng từ đã ký</strong></td>
+                <td>
+                  Biên bản nghiệm thu đã ký với Chủ đầu tư là căn cứ thanh toán. Trước đây nội dung
+                  vẫn sửa được sau khi ký — bên kia chỉ cần hỏi "sửa lần cuối khi nào" là mất giá
+                  trị chứng cứ
+                </td>
+              </tr>
+              <tr>
+                <td><strong>"Chưa đủ dữ liệu" thay cho số 0</strong></td>
+                <td>
+                  Khảo sát Xưởng viết thẳng: "không nên ước lượng một con số để điền". Hiện 0% tỷ lệ
+                  lỗi đọc như xưởng không có lỗi nào, chứ không đọc như chưa đếm
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Bỏ toàn bộ mốc thời gian</strong></td>
+                <td>
+                  QĐ-1: tài liệu chỉ cam kết THỨ TỰ và TIÊU CHÍ HOÀN THÀNH. Ngoại lệ có chủ đích:
+                  định dạng ngày dd/mm/yyyy cho giao diện
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
 
-<h2>Trạng thái theo giai đoạn</h2>
-<div class="tablewrap">
-<table>
-  <thead><tr><th>Giai đoạn</th><th>Nội dung</th><th>Trạng thái</th></tr></thead>
-  <tbody>
-    <tr><td><strong>P0–P1</strong> Nền móng</td><td>Đăng nhập, RLS, bộ công cụ dùng chung, PWA</td><td><span class="pill s-done">Xong</span></td></tr>
-    <tr><td><strong>P2</strong> CRM · DA · TK · HD</td><td>Giai đoạn 1 PRD — một cơ hội chạy trọn tới hợp đồng</td><td><span class="pill s-done">Xong</span></td></tr>
-    <tr><td><strong>P3</strong> TC · MH · KHO · KT · NS · SX · BC</td><td>Giai đoạn 2 PRD — một công trình chạy trọn tới lãi/lỗ</td><td><span class="pill s-done">Xong</span></td></tr>
-    <tr><td><strong>P4</strong> Liên kết chéo &amp; bàn giao</td><td>Rà soát phân quyền, tác vụ nền, Content Guidelines, kiểm thử đầu-cuối</td><td><span class="pill s-progress">Đang làm</span></td></tr>
-    <tr><td><strong>P5</strong> AI thiết kế sơ bộ</td><td>TK-10 → TK-17 — đã qua Mốc 5 (bộ giải mặt bằng CP-SAT, xuất DXF). Tiến độ chi tiết ở <code>TIEN_DO_THIET_KE.html</code></td><td><span class="pill s-progress">Đang làm</span></td></tr>
-  </tbody>
-</table>
-</div>
+      <h2>Trạng thái theo giai đoạn</h2>
+      <div class="tablewrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Giai đoạn</th>
+              <th>Nội dung</th>
+              <th>Trạng thái</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>P0–P1</strong> Nền móng</td>
+              <td>Đăng nhập, RLS, bộ công cụ dùng chung, PWA</td>
+              <td><span class="pill s-done">Xong</span></td>
+            </tr>
+            <tr>
+              <td><strong>P2</strong> CRM · DA · TK · HD</td>
+              <td>Giai đoạn 1 PRD — một cơ hội chạy trọn tới hợp đồng</td>
+              <td><span class="pill s-done">Xong</span></td>
+            </tr>
+            <tr>
+              <td><strong>P3</strong> TC · MH · KHO · KT · NS · SX · BC</td>
+              <td>Giai đoạn 2 PRD — một công trình chạy trọn tới lãi/lỗ</td>
+              <td><span class="pill s-done">Xong</span></td>
+            </tr>
+            <tr>
+              <td><strong>P4</strong> Liên kết chéo &amp; bàn giao</td>
+              <td>Rà soát phân quyền, tác vụ nền, Content Guidelines, kiểm thử đầu-cuối</td>
+              <td><span class="pill s-progress">Đang làm</span></td>
+            </tr>
+            <tr>
+              <td><strong>P5</strong> AI thiết kế sơ bộ</td>
+              <td>
+                TK-10 → TK-17 — đã qua Mốc 5 (bộ giải mặt bằng CP-SAT, xuất DXF). Tiến độ chi tiết ở
+                <code>TIEN_DO_THIET_KE.html</code>
+              </td>
+              <td><span class="pill s-progress">Đang làm</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-<h2>Đang làm / đang chờ (Phase 4)</h2>
-<div class="grid grid-3">
-  <div class="card">
-    <h3><span class="pill s-done">Đã xong</span></h3>
-    <ul>
-      <li>Hồ sơ 360° đầy đủ, breadcrumb đúng đường đi</li>
-      <li>Tìm kiếm toàn hệ thống — 10/10 module có hồ sơ (NEN, BC không có hồ sơ để tìm)</li>
-      <li>Rà soát phân quyền — 4 đợt trọn vẹn (khoá <code>anon</code>, đối chiếu RLS, rà logic RPC theo 2 chữ ký lỗi + <code>boq_items</code>/<code>unit_prices</code>/view BC, rồi đọc tuần tự ~101 hàm ghi dữ liệu) — vá 17 lỗi thật</li>
-      <li>Tác vụ nền NEN-04 — 4/4 loại cảnh báo gắn được đã chạy (giấy tờ nhân sự, công nợ quá hạn, vượt ngân sách, chờ phê duyệt để lâu)</li>
-      <li>Content Guidelines — đối chiếu trọn thư viện 5.1–5.6, tương phản màu (không có màu tuỳ biến ngoài token), vùng bấm di động (3 chỗ vá thêm: bộ chọn pháp nhân compact, nút chuyển tháng lịch chọn ngày, nút Pipeline/Danh sách)</li>
-      <li>Xuất báo cáo — xác nhận không lộ dữ liệu nhạy cảm</li>
-      <li><strong>Bản vẽ đang có hiệu lực ở công trường</strong> (04/09) — tab <em>Hồ sơ – Bản vẽ</em> ở Chi tiết Công trình, dùng lại kho hồ sơ có phiên bản sẵn có chứ không dựng cơ chế thứ hai. Bản đang hiệu lực nói rõ bằng chữ; bản cũ gập lại, mang chữ “Không còn hiệu lực”; đổi bản bắt buộc nêu nguyên nhân. Đây là vướng mắc số một của khảo sát công trường</li>
-      <li><strong>Vá lỗ hổng phân quyền do chính đợt trước mở ra</strong> (04/09, migration <code>0107</code>) — điều kiện mở cho khối xưởng dùng “có quyền sửa phân hệ SX”, mà cờ đó Thủ kho cũng có. Hệ quả đo được: Thủ kho ghi được bảng chấm công khối xưởng. Nay hỏi thẳng vai trò Xưởng; đã dựng lại được cả trước và sau khi vá, và có kiểm thử chống tái phát</li>
-      <li><strong>Áp hai phiếu khảo sát cuối (02/09/2026)</strong> — Xưởng giàn giáo NVS và Chỉ huy – Giám sát công trường. TC và SX không còn ở mức ĐỊNH HƯỚNG. Bốn giả định được thay bằng câu trả lời thật: vai trò vận hành Module SX (thêm vai trò thứ 13 <code>SX</code>), bảng chấm công khối xưởng do Phó Giám đốc xác nhận, công trường ký nhận được hàng về công trình, lô giàn giáo “mới” cho thuê được. Thêm: thu hồi giàn giáo <strong>nhiều đợt</strong>, tiền thuê tính riêng từng đợt</li>
-    </ul>
-  </div>
-  <div class="card">
-    <h3><span class="pill s-progress">Đang làm</span></h3>
-    <ul>
-      <li><strong>Bảng xác nhận khối lượng tổ đội</strong> — khảo sát cho đủ công thức (khối lượng nghiệm thu × đơn giá hợp đồng; kỹ thuật đo bóc → chỉ huy trưởng kiểm → Phòng Thi công/Dự án kiểm → Kế toán). Chưa dựng vì phải chốt trước: chuỗi ba cấp này đi qua <strong>Hộp thư Phê duyệt dùng chung</strong> (một mẫu duy nhất cho mọi phê duyệt) hay dựng luồng riêng. Hiện <code>acceptance_records</code> lập một bước, giá trị nhập tay một cục — chưa có dòng khối lượng theo đầu việc</li>
-      <li>"Hồ sơ thiếu chứng từ" (NEN-04) — chờ Haan trả lời câu hỏi cuối bảng bên dưới, chưa viết được migration nếu chưa rõ điều kiện cụ thể</li>
-      <li>Việc quá hạn xử lý KHÔNG gắn phê duyệt — chờ quyết định bảng <code>tasks</code>. Khảo sát công trường vừa cho việc này một lý do rõ ràng: "mỗi yêu cầu… phải có người tiếp nhận, người phê duyệt, thời hạn xử lý, trạng thái đang chờ và cảnh báo quá hạn"</li>
-    </ul>
-  </div>
-  <div class="card">
-    <h3><span class="pill s-overdue">Đang chờ</span></h3>
-    <ul>
-      <li><strong>Tách môi trường dev/production</strong> — bắt buộc trước khi nhập dòng dữ liệu thật đầu tiên, chưa làm. Hiện máy phát triển và bản chạy thử công khai dùng chung một CSDL</li>
-      <li>Cloudflare Queues (gửi email) — chờ <code>RESEND_API_KEY</code></li>
-      <li>BC-04 — chờ quyết định chỉ số</li>
-      <li>SX-01 đủ nghĩa / SX-02 giá thành — khảo sát Xưởng đã về (02/09/2026) nhưng còn chặn bởi DỮ LIỆU: catalogue sản phẩm, bảng định mức, tỷ lệ lỗi, giá trị thất thoát</li>
-      <li>14 quyết định nghiệp vụ còn treo — xem bảng cuối trang; 4 dòng mới đến từ hai phiếu khảo sát</li>
-    </ul>
-  </div>
-</div>
+      <h2>Đang làm / đang chờ (Phase 4)</h2>
+      <div class="grid grid-3">
+        <div class="card">
+          <h3><span class="pill s-done">Đã xong</span></h3>
+          <ul>
+            <li>Hồ sơ 360° đầy đủ, breadcrumb đúng đường đi</li>
+            <li>Tìm kiếm toàn hệ thống — 10/10 module có hồ sơ (NEN, BC không có hồ sơ để tìm)</li>
+            <li>
+              Rà soát phân quyền — 4 đợt trọn vẹn (khoá <code>anon</code>, đối chiếu RLS, rà logic
+              RPC theo 2 chữ ký lỗi + <code>boq_items</code>/<code>unit_prices</code>/view BC, rồi
+              đọc tuần tự ~101 hàm ghi dữ liệu) — vá 17 lỗi thật
+            </li>
+            <li>
+              Tác vụ nền NEN-04 — 4/4 loại cảnh báo gắn được đã chạy (giấy tờ nhân sự, công nợ quá
+              hạn, vượt ngân sách, chờ phê duyệt để lâu)
+            </li>
+            <li>
+              Content Guidelines — đối chiếu trọn thư viện 5.1–5.6, tương phản màu (không có màu tuỳ
+              biến ngoài token), vùng bấm di động (3 chỗ vá thêm: bộ chọn pháp nhân compact, nút
+              chuyển tháng lịch chọn ngày, nút Pipeline/Danh sách)
+            </li>
+            <li>Xuất báo cáo — xác nhận không lộ dữ liệu nhạy cảm</li>
+            <li>
+              <strong>Bản vẽ đang có hiệu lực ở công trường</strong> (04/09) — tab
+              <em>Hồ sơ – Bản vẽ</em> ở Chi tiết Công trình, dùng lại kho hồ sơ có phiên bản sẵn có
+              chứ không dựng cơ chế thứ hai. Bản đang hiệu lực nói rõ bằng chữ; bản cũ gập lại, mang
+              chữ “Không còn hiệu lực”; đổi bản bắt buộc nêu nguyên nhân. Đây là vướng mắc số một
+              của khảo sát công trường
+            </li>
+            <li>
+              <strong>Vá lỗ hổng phân quyền do chính đợt trước mở ra</strong> (04/09, migration
+              <code>0107</code>) — điều kiện mở cho khối xưởng dùng “có quyền sửa phân hệ SX”, mà cờ
+              đó Thủ kho cũng có. Hệ quả đo được: Thủ kho ghi được bảng chấm công khối xưởng. Nay
+              hỏi thẳng vai trò Xưởng; đã dựng lại được cả trước và sau khi vá, và có kiểm thử chống
+              tái phát
+            </li>
+            <li>
+              <strong>Áp hai phiếu khảo sát cuối (02/09/2026)</strong> — Xưởng giàn giáo NVS và Chỉ
+              huy – Giám sát công trường. TC và SX không còn ở mức ĐỊNH HƯỚNG. Bốn giả định được
+              thay bằng câu trả lời thật: vai trò vận hành Module SX (thêm vai trò thứ 13
+              <code>SX</code>), bảng chấm công khối xưởng do Phó Giám đốc xác nhận, công trường ký
+              nhận được hàng về công trình, lô giàn giáo “mới” cho thuê được. Thêm: thu hồi giàn
+              giáo <strong>nhiều đợt</strong>, tiền thuê tính riêng từng đợt
+            </li>
+            <li>
+              <strong>Đồng bộ theo bộ tài liệu v1.4 (05/09/2026)</strong> — tám thay đổi xuyên suốt,
+              migration <code>0110</code>→<code>0117</code>: trạng thái thứ sáu "Tranh chấp";
+              <code>system_parameters</code> + lịch sử (NEN-12), gồm cả bốn con số trước đây
+              hard-code (cửa sổ sửa nhật ký, ngưỡng ngân sách, thang tổ đội, giờ/công);
+              <code>sla_definitions</code> + đồng hồ hạn xử lý trên Hộp thư Phê duyệt; mẫu RLS
+              <strong>E</strong> + <code>user_site_assignments</code> + vai trò thứ 14
+              <code>CHT</code> (Chỉ huy trưởng, tách khỏi <code>TC</code> vì <code>TC</code> giữ
+              quyền phê duyệt bảng công nên không dùng được làm dấu hiệu "cấp quản lý"); ba cột đồng
+              bộ hiện trường; khoá nội dung biên bản nghiệm thu sau khi ký; câu chuẩn "Chưa đủ dữ
+              liệu". Chưa đụng tới 42 yêu cầu TC/SX mới — ghi thành Phase 6 ở
+              <code>BUILD_PLAN.md</code>
+            </li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3><span class="pill s-progress">Đang làm</span></h3>
+          <ul>
+            <li>
+              <strong>Bảng xác nhận khối lượng tổ đội</strong> — khảo sát cho đủ công thức (khối
+              lượng nghiệm thu × đơn giá hợp đồng; kỹ thuật đo bóc → chỉ huy trưởng kiểm → Phòng Thi
+              công/Dự án kiểm → Kế toán). Chưa dựng vì phải chốt trước: chuỗi ba cấp này đi qua
+              <strong>Hộp thư Phê duyệt dùng chung</strong> (một mẫu duy nhất cho mọi phê duyệt) hay
+              dựng luồng riêng. Hiện <code>acceptance_records</code> lập một bước, giá trị nhập tay
+              một cục — chưa có dòng khối lượng theo đầu việc
+            </li>
+            <li>
+              "Hồ sơ thiếu chứng từ" (NEN-04) — chờ Haan trả lời câu hỏi cuối bảng bên dưới, chưa
+              viết được migration nếu chưa rõ điều kiện cụ thể
+            </li>
+            <li>
+              Việc quá hạn xử lý KHÔNG gắn phê duyệt — chờ quyết định bảng <code>tasks</code>. Khảo
+              sát công trường vừa cho việc này một lý do rõ ràng: "mỗi yêu cầu… phải có người tiếp
+              nhận, người phê duyệt, thời hạn xử lý, trạng thái đang chờ và cảnh báo quá hạn"
+            </li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3><span class="pill s-overdue">Đang chờ</span></h3>
+          <ul>
+            <li>
+              <strong>Tách môi trường dev/production</strong> — bắt buộc trước khi nhập dòng dữ liệu
+              thật đầu tiên, chưa làm. Hiện máy phát triển và bản chạy thử công khai dùng chung một
+              CSDL
+            </li>
+            <li>Cloudflare Queues (gửi email) — chờ <code>RESEND_API_KEY</code></li>
+            <li>BC-04 — chờ quyết định chỉ số</li>
+            <li>
+              SX-01 đủ nghĩa / SX-02 giá thành — khảo sát Xưởng đã về (02/09/2026) nhưng còn chặn
+              bởi DỮ LIỆU: catalogue sản phẩm, bảng định mức, tỷ lệ lỗi, giá trị thất thoát
+            </li>
+            <li>
+              14 quyết định nghiệp vụ còn treo — xem bảng cuối trang; 4 dòng mới đến từ hai phiếu
+              khảo sát
+            </li>
+          </ul>
+        </div>
+      </div>
 
-<h2>Hai phiếu khảo sát cuối — đã áp vào hệ thống (02/09/2026)</h2>
-<div class="card">
-  <p class="xs muted">
-    Nguồn: <code>doc/khao-sat/HoSo_KhaoSat_NVG_full.md</code> — nay đủ <strong>12/12 bộ phận</strong>.
-    Người điền: Nguyễn Thị Phượng (Phó giám đốc Xưởng) và Nguyễn Công Minh (Trưởng phòng thi công).
-  </p>
+      <h2>Hai phiếu khảo sát cuối — đã áp vào hệ thống (02/09/2026)</h2>
+      <div class="card">
+        <p class="xs muted">
+          Nguồn: <code>doc/khao-sat/HoSo_KhaoSat_NVG_full.md</code> — nay đủ
+          <strong>12/12 bộ phận</strong>. Người điền: Nguyễn Thị Phượng (Phó giám đốc Xưởng) và
+          Nguyễn Công Minh (Trưởng phòng thi công).
+        </p>
 
-  <h3 style="margin-top:14px">Bốn chỗ suy luận đã thay bằng câu trả lời thật</h3>
-  <div class="tablewrap" style="box-shadow:none;border:0">
-  <table>
-    <thead><tr><th>Trước đây đang đoán</th><th>Khảo sát nói</th></tr></thead>
-    <tbody>
-      <tr><td>Ai vận hành phân hệ Sản xuất – Cho thuê</td><td>Xưởng là đơn vị có bộ máy riêng → <strong>thêm vai trò thứ 13 “Xưởng sản xuất – Cho thuê”</strong>. Kho giữ đúng phần chứng từ và kiểm đếm</td></tr>
-      <tr><td>Ai xác nhận bảng chấm công khối xưởng</td><td><strong>Phó Giám đốc</strong>, không phải Hành chính – Nhân sự. Khối công trường thì chỉ huy trưởng — cũng đúng nguyên văn</td></tr>
-      <tr><td>Ai ký nhận vật tư giao thẳng tới công trường</td><td>“Thủ kho phối hợp với kỹ thuật… hai bên ký giao nhận” → mở thêm cho Ban công trường, <strong>chỉ</strong> với đề nghị mua gắn công trình</td></tr>
-      <tr><td>Lô giàn giáo “mới” có cho thuê được ngay không</td><td><strong>Được</strong> — hàng mới đã qua kiểm tra chất lượng trước khi nhập kho thành phẩm</td></tr>
-    </tbody>
-  </table>
-  </div>
+        <h3 style="margin-top: 14px">Bốn chỗ suy luận đã thay bằng câu trả lời thật</h3>
+        <div class="tablewrap" style="box-shadow: none; border: 0">
+          <table>
+            <thead>
+              <tr>
+                <th>Trước đây đang đoán</th>
+                <th>Khảo sát nói</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Ai vận hành phân hệ Sản xuất – Cho thuê</td>
+                <td>
+                  Xưởng là đơn vị có bộ máy riêng →
+                  <strong>thêm vai trò thứ 13 “Xưởng sản xuất – Cho thuê”</strong>. Kho giữ đúng
+                  phần chứng từ và kiểm đếm
+                </td>
+              </tr>
+              <tr>
+                <td>Ai xác nhận bảng chấm công khối xưởng</td>
+                <td>
+                  <strong>Phó Giám đốc</strong>, không phải Hành chính – Nhân sự. Khối công trường
+                  thì chỉ huy trưởng — cũng đúng nguyên văn
+                </td>
+              </tr>
+              <tr>
+                <td>Ai ký nhận vật tư giao thẳng tới công trường</td>
+                <td>
+                  “Thủ kho phối hợp với kỹ thuật… hai bên ký giao nhận” → mở thêm cho Ban công
+                  trường, <strong>chỉ</strong> với đề nghị mua gắn công trình
+                </td>
+              </tr>
+              <tr>
+                <td>Lô giàn giáo “mới” có cho thuê được ngay không</td>
+                <td>
+                  <strong>Được</strong> — hàng mới đã qua kiểm tra chất lượng trước khi nhập kho
+                  thành phẩm
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-  <h3 style="margin-top:16px">Nghiệp vụ sửa theo mô tả thật</h3>
-  <ul>
-    <li><strong>Thu hồi giàn giáo nhiều đợt.</strong> Khảo sát: “Nếu khách giao hoặc trả nhiều lần, tiền thuê phải tính riêng theo từng đợt hoặc theo số dư hằng ngày.” Bản cũ bắt khai đủ mọi loại trong một lần — chỉ đúng với giả định khách trả một lần. Nay doanh thu cộng dồn theo số ngày thuê thật của từng đợt; hợp đồng chỉ đóng khi trả hết</li>
-    <li><strong>Ba lỗi tìm ra khi làm:</strong> thu hồi chỉ trừ được lô đầu tiên (khách trả đủ hàng mà hệ thống từ chối) · Ban Giám đốc và Tổng Giám đốc không xác nhận được bảng công của bất kỳ pháp nhân nào · thông báo “chờ xác nhận” gửi sai người và gửi trùng bốn lần</li>
-    <li><strong>Một lỗi có sẵn, chặn cả việc nạp dữ liệu mẫu:</strong> <code>npm run db:seed</code> hỏng từ migration <code>0095</code> — bảng pháp nhân thiếu cột <code>tenant_id</code> trong khai báo. Đã sửa</li>
-  </ul>
+        <h3 style="margin-top: 16px">Nghiệp vụ sửa theo mô tả thật</h3>
+        <ul>
+          <li>
+            <strong>Thu hồi giàn giáo nhiều đợt.</strong> Khảo sát: “Nếu khách giao hoặc trả nhiều
+            lần, tiền thuê phải tính riêng theo từng đợt hoặc theo số dư hằng ngày.” Bản cũ bắt khai
+            đủ mọi loại trong một lần — chỉ đúng với giả định khách trả một lần. Nay doanh thu cộng
+            dồn theo số ngày thuê thật của từng đợt; hợp đồng chỉ đóng khi trả hết
+          </li>
+          <li>
+            <strong>Ba lỗi tìm ra khi làm:</strong> thu hồi chỉ trừ được lô đầu tiên (khách trả đủ
+            hàng mà hệ thống từ chối) · Ban Giám đốc và Tổng Giám đốc không xác nhận được bảng công
+            của bất kỳ pháp nhân nào · thông báo “chờ xác nhận” gửi sai người và gửi trùng bốn lần
+          </li>
+          <li>
+            <strong>Một lỗi có sẵn, chặn cả việc nạp dữ liệu mẫu:</strong>
+            <code>npm run db:seed</code> hỏng từ migration <code>0095</code> — bảng pháp nhân thiếu
+            cột <code>tenant_id</code> trong khai báo. Đã sửa
+          </li>
+        </ul>
 
-  <h3 style="margin-top:16px">Việc mới có căn cứ — xếp theo đúng thứ tự người dùng tự nêu</h3>
-  <div class="grid grid-3" style="margin-top:8px">
-    <div class="card" style="box-shadow:none">
-      <h3>Công trường</h3>
-      <ul class="xs">
-        <li><s>Quản lý bản vẽ đang có hiệu lực</s> — <strong>xong 04/09</strong>. Còn lại: tải tệp thật lên kho lưu trữ (hiện mới ghi nhận đường dẫn)</li>
-        <li><strong>Bảng xác nhận khối lượng tổ đội</strong> — khảo sát cho đủ công thức. Cũng là thứ mở khoá báo cáo hiệu suất tổ đội đang bỏ trống</li>
-        <li>Luồng đề nghị công trường ↔ văn phòng có thời hạn và cảnh báo quá hạn</li>
-        <li>Danh sách tồn tại, yêu cầu làm rõ kỹ thuật, hồ sơ an toàn lao động</li>
-      </ul>
+        <h3 style="margin-top: 16px">
+          Việc mới có căn cứ — xếp theo đúng thứ tự người dùng tự nêu
+        </h3>
+        <div class="grid grid-3" style="margin-top: 8px">
+          <div class="card" style="box-shadow: none">
+            <h3>Công trường</h3>
+            <ul class="xs">
+              <li>
+                <s>Quản lý bản vẽ đang có hiệu lực</s> — <strong>xong 04/09</strong>. Còn lại: tải
+                tệp thật lên kho lưu trữ (hiện mới ghi nhận đường dẫn)
+              </li>
+              <li>
+                <strong>Bảng xác nhận khối lượng tổ đội</strong> — khảo sát cho đủ công thức. Cũng
+                là thứ mở khoá báo cáo hiệu suất tổ đội đang bỏ trống
+              </li>
+              <li>Luồng đề nghị công trường ↔ văn phòng có thời hạn và cảnh báo quá hạn</li>
+              <li>Danh sách tồn tại, yêu cầu làm rõ kỹ thuật, hồ sơ an toàn lao động</li>
+            </ul>
+          </div>
+          <div class="card" style="box-shadow: none">
+            <h3>Xưởng</h3>
+            <ul class="xs">
+              <li>
+                <strong>Khép kín vòng đời tài sản giàn giáo</strong> — còn thiếu: giao thêm giữa kỳ,
+                biên bản thu hồi từng đợt có chữ ký và hình ảnh.
+                <em>Sửa chữa hàng hỏng rồi nhập lại kho thì đã có sẵn</em> — kiểm lại ngày 04/09,
+                ghi nhầm là thiếu ở bản trước
+              </li>
+              <li>
+                Lệnh sản xuất đủ nghĩa: có mã sản phẩm, quy cách, người duyệt, và
+                <strong>đổi thì lập phiên bản mới</strong> — đúng nguyên nhân lần làm lại gần nhất
+                của xưởng
+              </li>
+              <li>
+                Định mức vật tư có phiên bản → rồi mới tới giá thành (kế hoạch và thực tế là hai con
+                số)
+              </li>
+            </ul>
+          </div>
+          <div class="card" style="box-shadow: none">
+            <h3>Ràng buộc người dùng tự đặt</h3>
+            <ul class="xs">
+              <li>
+                Công trường chấp nhận <strong>tối đa 10–20 phút nhập liệu mỗi ngày</strong>; phần tự
+                do còn siết hơn: 5–10 phút. Mọi màn hình công trường phải đo bằng thước này
+              </li>
+              <li>
+                Mạng ở công trường <strong>ổn định</strong>, văn phòng công trường đủ máy — nên
+                offline thật không cấp thiết ở đây. Ngược lại mạng ở
+                <strong>xưởng “đôi lúc không ổn định”</strong>
+              </li>
+              <li>
+                “Nếu chỉ yêu cầu công trường cập nhật mà các phòng ban không xử lý trên cùng hệ
+                thống thì phần mềm không giải quyết được điểm nghẽn”
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <h2>Kiểm thử tự động</h2>
+      <div class="card">
+        <div class="stats" style="margin-top: 0">
+          <div class="stat"><b>1.114</b><span class="xs muted">tổng số</span></div>
+          <div class="stat">
+            <b>231</b><span class="xs muted">giao diện — chạy ~9 giây, không chạm mạng</span>
+          </div>
+          <div class="stat">
+            <b>883</b><span class="xs muted">nghiệp vụ, phân quyền &amp; engine thiết kế</span>
+          </div>
+          <div class="stat">
+            <b style="color: var(--done)">xanh</b
+            ><span class="xs muted">xác nhận 04/09/2026, chạy từng tệp</span>
+          </div>
+        </div>
+        <p class="xs muted" style="margin-top: 12px">
+          <strong>Chạy dồn toàn bộ cùng lúc (<code>npm test</code>) có thể báo đỏ rải rác</strong> —
+          Supabase Auth giới hạn tốc độ đăng nhập khi nhiều tài khoản đăng nhập liên tiếp trong thời
+          gian ngắn, không phải lỗi nghiệp vụ. Gặp đỏ ở phần chạm CSDL: chạy lại riêng đúng tệp đó
+          trước khi kết luận là lỗi thật.
+        </p>
+      </div>
+
+      <h2>Tài khoản để chạy thử</h2>
+      <div class="card">
+        <p><strong>Mật khẩu chung cho mọi tài khoản:</strong> <code>NhaViet2026</code></p>
+        <p class="xs muted">
+          Môi trường DEV, tạo bằng <code>npm run db:seed</code>. Vai trò không có quyền vào một phân
+          hệ thì phân hệ đó không hiện trên thanh bên; gõ thẳng đường dẫn cũng bị chặn.
+        </p>
+        <div class="tablewrap" style="box-shadow: none; border: 0">
+          <table>
+            <thead>
+              <tr>
+                <th>Tài khoản</th>
+                <th>Chức danh</th>
+                <th>Pháp nhân</th>
+                <th>Vào thẳng</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>tgd@nhavietgroup.test</code></td>
+                <td>Tổng Giám đốc</td>
+                <td>Toàn NVG</td>
+                <td class="xs muted">Dashboard</td>
+              </tr>
+              <tr>
+                <td><code>cfo@nhavietgroup.test</code></td>
+                <td>Giám đốc Tài chính</td>
+                <td>Toàn NVG</td>
+                <td class="xs muted">Dashboard</td>
+              </tr>
+              <tr>
+                <td><code>pgd.nvs@nhavietgroup.test</code></td>
+                <td>PGĐ điều hành NVS</td>
+                <td>NVS</td>
+                <td class="xs muted">Dashboard</td>
+              </tr>
+              <tr>
+                <td><code>admin@nhavietgroup.test</code></td>
+                <td>Quản trị viên</td>
+                <td>Toàn NVG</td>
+                <td class="xs muted">Quản trị hệ thống</td>
+              </tr>
+              <tr>
+                <td><code>kinhdoanh.nvc@nhavietgroup.test</code></td>
+                <td>Kinh doanh</td>
+                <td>NVC</td>
+                <td class="xs muted">Cơ hội</td>
+              </tr>
+              <tr>
+                <td><code>kinhdoanh.nvo@nhavietgroup.test</code></td>
+                <td>Kinh doanh</td>
+                <td>NVO</td>
+                <td class="xs muted">Cơ hội</td>
+              </tr>
+              <tr>
+                <td><code>dauthau.nvc@nhavietgroup.test</code></td>
+                <td>Trưởng nhóm Dự toán</td>
+                <td>NVC</td>
+                <td class="xs muted">Gói thầu</td>
+              </tr>
+              <tr>
+                <td><code>thietke.nvo@nhavietgroup.test</code></td>
+                <td>Kiến trúc sư</td>
+                <td>NVO</td>
+                <td class="xs muted">Dự án thiết kế</td>
+              </tr>
+              <tr>
+                <td><code>ketcau.nvo@nhavietgroup.test</code></td>
+                <td>Kỹ sư Kết cấu</td>
+                <td>NVO</td>
+                <td class="xs muted">Dự án thiết kế</td>
+              </tr>
+              <tr>
+                <td><code>congtruong.nvc@nhavietgroup.test</code></td>
+                <td>Chỉ huy trưởng</td>
+                <td>NVC</td>
+                <td class="xs muted">Công trình</td>
+              </tr>
+              <tr>
+                <td><code>sanxuat.nvs@nhavietgroup.test</code></td>
+                <td>Trưởng sản xuất <span class="pill s-done">vai trò mới</span></td>
+                <td>NVS</td>
+                <td class="xs muted">Lệnh sản xuất</td>
+              </tr>
+              <tr>
+                <td><code>muahang@nhavietgroup.test</code></td>
+                <td>Trưởng phòng Mua hàng</td>
+                <td>Cả ba pháp nhân</td>
+                <td class="xs muted">Đề nghị mua</td>
+              </tr>
+              <tr>
+                <td><code>kho@nhavietgroup.test</code></td>
+                <td>Thủ kho</td>
+                <td>NVC, NVS</td>
+                <td class="xs muted">Quét mã kho</td>
+              </tr>
+              <tr>
+                <td><code>ketoan@nhavietgroup.test</code></td>
+                <td>Kế toán nội bộ</td>
+                <td>Cả ba pháp nhân</td>
+                <td class="xs muted">Đề nghị thanh toán</td>
+              </tr>
+              <tr>
+                <td><code>nhansu@nhavietgroup.test</code></td>
+                <td>Trưởng phòng HCNS</td>
+                <td>Cả ba pháp nhân</td>
+                <td class="xs muted">Việc cần xử lý</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="xs muted" style="margin-top: 10px">
+          <strong>Luồng duyệt chi cần 3 tài khoản:</strong> <code>congtruong.nvc</code> lập đề nghị
+          → <code>ketoan</code> kiểm chứng từ → <code>cfo</code> kiểm dòng tiền và phê duyệt.
+          <strong>Nên thử trước:</strong> <code>tgd</code> (Dashboard + Hộp thư Phê duyệt gom mọi
+          module), <code>dauthau.nvc</code> (trọn một gói thầu từ bóc khối lượng tới hợp đồng).
+        </p>
+      </div>
+
+      <h2>Câu hỏi cần Nhà Việt Group trả lời</h2>
+      <div class="card">
+        <p class="xs muted">
+          Danh sách đầy đủ ở <code>CLAUDE.md</code> §6.6 — đây là các mục ưu tiên cao nhất. Bộ tài
+          liệu 05/09/2026 đã trả lời ba dòng cũ (giá thuê nội bộ, nơi giữ định mức, catalogue — đánh
+          dấu <s>gạch ngang</s> bên dưới) và mở ra bảy dòng mới, phần lớn là tham số cấu hình
+          <strong>cố ý để RỖNG</strong> chờ Ban Giám đốc quyết, không phải chỗ code còn thiếu.
+        </p>
+        <div class="tablewrap" style="box-shadow: none; border: 0">
+          <table>
+            <thead>
+              <tr>
+                <th>Câu hỏi</th>
+                <th>Mức độ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Bộ mã thống nhất cho vật tư, công trình, nhà cung cấp</td>
+                <td><span class="pill s-overdue">Cần trước khi nhập liệu thật</span></td>
+              </tr>
+              <tr>
+                <td>
+                  Hạn mức phê duyệt chính thức theo vai trò/loại nghiệp vụ (đang dùng mức tạm)
+                </td>
+                <td><span class="pill s-overdue">Cần sớm</span></td>
+              </tr>
+              <tr>
+                <td>Phần mềm kế toán chính thức để tích hợp (MISA / AMIS / Fast?)</td>
+                <td><span class="pill s-pending">Giai đoạn 2</span></td>
+              </tr>
+              <tr>
+                <td>Quy chế lương/thưởng chi tiết theo công ty và nhóm nhân sự</td>
+                <td><span class="pill s-pending">Giai đoạn 2</span></td>
+              </tr>
+              <tr>
+                <td>
+                  Một ngày công = mấy giờ? (đang lấy 8h theo luật; khảo sát Xưởng để trống ô này nên
+                  chưa loại trừ được ca 12h)
+                </td>
+                <td><span class="pill s-pending">Giai đoạn 2</span></td>
+              </tr>
+              <tr>
+                <td>
+                  Ai xác nhận bảng chấm công <strong>khối văn phòng</strong>, ai duyệt yêu cầu tuyển
+                  dụng
+                  <span class="xs muted">(công trường và xưởng đã chốt theo khảo sát 02/09)</span>
+                </td>
+                <td><span class="pill s-pending">Đang suy luận tạm</span></td>
+              </tr>
+              <tr>
+                <td>"Trưởng đơn vị" bước 1 duyệt chi là ai (KT-01)</td>
+                <td><span class="pill s-draft">Chờ khảo sát</span></td>
+              </tr>
+              <tr>
+                <td>Đo hiệu suất nhân sự/tổ đội/nhà cung cấp bằng chỉ số gì (BC-03 phần 4)</td>
+                <td><span class="pill s-draft">Cố ý chưa làm</span></td>
+              </tr>
+              <tr>
+                <td>
+                  Catalogue sản phẩm giàn giáo, bảng định mức vật tư, tỷ lệ lỗi, giá trị thất
+                  thoát/năm
+                  <span class="xs muted"
+                    >(bốn ô khảo sát để trống — phiếu ghi rõ “không nên ước lượng một con số để
+                    điền”)</span
+                  >
+                </td>
+                <td><span class="pill s-overdue">Chặn SX-01/SX-02</span></td>
+              </tr>
+              <tr>
+                <td>
+                  Giao thêm giữa kỳ trong một hợp đồng thuê tính tiền từ ngày nào
+                  <span class="xs muted"
+                    >(thu hồi nhiều đợt đã làm; giao thêm cần bảng đợt giao riêng)</span
+                  >
+                </td>
+                <td><span class="pill s-overdue">Chặn phần còn lại của SX-03</span></td>
+              </tr>
+              <tr>
+                <td><s>Công trình nội bộ mượn giàn giáo có tính giá thuê nội bộ không</s></td>
+                <td>
+                  <span class="pill s-done"
+                    >Đã chốt 05/09 — bắt buộc ghi nhận, mức giá chờ BGĐ</span
+                  >
+                </td>
+              </tr>
+              <tr>
+                <td>Hồ sơ công trường nào bắt buộc giữ bản giấy có chữ ký gốc</td>
+                <td><span class="pill s-pending">Chưa quyết</span></td>
+              </tr>
+              <tr>
+                <td>Đầu mối hỗ trợ kỹ thuật, tên miền chính thức</td>
+                <td><span class="pill s-draft">Chưa chặn phát triển</span></td>
+              </tr>
+              <tr>
+                <td>
+                  "Hồ sơ thiếu chứng từ" (NEN-04) nghĩa là gì — áp dụng cho loại hồ sơ nào (đề nghị
+                  chi đã trả nhưng thiếu hoá đơn? đơn hàng đã nhận nhưng thiếu phiếu giao nhận?),
+                  thiếu CỘT dữ liệu nào cụ thể, bao lâu thì nhắc, nhắc ai
+                </td>
+                <td><span class="pill s-draft">Chưa rõ, chưa viết được migration</span></td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>Thời hạn cam kết phản hồi của từng phòng ban</strong>
+                  <span class="xs muted"
+                    >(bảng <code>sla_definitions</code> đã dựng, cố ý để RỖNG)</span
+                  >
+                </td>
+                <td><span class="pill s-overdue">Chặn cảnh báo quá hạn TC-10</span></td>
+              </tr>
+              <tr>
+                <td>
+                  Bảng giá bồi thường giàn giáo thiếu – hỏng theo mã
+                  <span class="xs muted">(khởi tạo tạm được, admin sửa sau)</span>
+                </td>
+                <td><span class="pill s-pending">Chặn SX-19</span></td>
+              </tr>
+              <tr>
+                <td>Ngưỡng tỷ lệ lỗi sản xuất cho phép theo nhóm/lô</td>
+                <td><span class="pill s-pending">Chặn SX-12</span></td>
+              </tr>
+              <tr>
+                <td>
+                  Sản lượng/tháng và phân loại bán hay cho thuê cho TỪNG mã sản phẩm
+                  <span class="xs muted">(Catalogue Phụ lục D không có hai thông tin này)</span>
+                </td>
+                <td><span class="pill s-overdue">Chặn SX-01 đủ nghĩa</span></td>
+              </tr>
+              <tr>
+                <td>
+                  Phương thức ghi nhận công tại công trường
+                  <span class="xs muted">(đang cân nhắc ảnh + thời gian + vị trí)</span>
+                </td>
+                <td><span class="pill s-overdue">Chặn TC-08</span></td>
+              </tr>
+              <tr>
+                <td>
+                  Địa chỉ xưởng chính của NVS
+                  <span class="xs muted"
+                    >(catalogue ghi hai địa chỉ khác nhau; kèm theo — Thái Bình đã sáp nhập vào Hưng
+                    Yên từ 2025)</span
+                  >
+                </td>
+                <td><span class="pill s-draft">Rà soát nội bộ NVS</span></td>
+              </tr>
+              <tr>
+                <td>
+                  Catalogue phát hành 2022 còn đúng không
+                  <span class="xs muted">(mã ngừng/mới, chứng chỉ còn hiệu lực)</span>
+                </td>
+                <td><span class="pill s-draft">Rà soát nội bộ NVS</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <footer>
+        <p class="xs muted">
+          Ảnh chụp trạng thái, cập nhật thủ công cùng nhịp với <code>BUILD_PLAN.md</code>. % là ước
+          lượng theo luồng nghiệp vụ chạy được đầu-cuối, không phải theo số tính năng đã lập trình.
+        </p>
+      </footer>
     </div>
-    <div class="card" style="box-shadow:none">
-      <h3>Xưởng</h3>
-      <ul class="xs">
-        <li><strong>Khép kín vòng đời tài sản giàn giáo</strong> — còn thiếu: giao thêm giữa kỳ, biên bản thu hồi từng đợt có chữ ký và hình ảnh. <em>Sửa chữa hàng hỏng rồi nhập lại kho thì đã có sẵn</em> — kiểm lại ngày 04/09, ghi nhầm là thiếu ở bản trước</li>
-        <li>Lệnh sản xuất đủ nghĩa: có mã sản phẩm, quy cách, người duyệt, và <strong>đổi thì lập phiên bản mới</strong> — đúng nguyên nhân lần làm lại gần nhất của xưởng</li>
-        <li>Định mức vật tư có phiên bản → rồi mới tới giá thành (kế hoạch và thực tế là hai con số)</li>
-      </ul>
-    </div>
-    <div class="card" style="box-shadow:none">
-      <h3>Ràng buộc người dùng tự đặt</h3>
-      <ul class="xs">
-        <li>Công trường chấp nhận <strong>tối đa 10–20 phút nhập liệu mỗi ngày</strong>; phần tự do còn siết hơn: 5–10 phút. Mọi màn hình công trường phải đo bằng thước này</li>
-        <li>Mạng ở công trường <strong>ổn định</strong>, văn phòng công trường đủ máy — nên offline thật không cấp thiết ở đây. Ngược lại mạng ở <strong>xưởng “đôi lúc không ổn định”</strong></li>
-        <li>“Nếu chỉ yêu cầu công trường cập nhật mà các phòng ban không xử lý trên cùng hệ thống thì phần mềm không giải quyết được điểm nghẽn”</li>
-      </ul>
-    </div>
-  </div>
-</div>
-
-<h2>Kiểm thử tự động</h2>
-<div class="card">
-  <div class="stats" style="margin-top:0">
-    <div class="stat"><b>1.114</b><span class="xs muted">tổng số</span></div>
-    <div class="stat"><b>231</b><span class="xs muted">giao diện — chạy ~9 giây, không chạm mạng</span></div>
-    <div class="stat"><b>883</b><span class="xs muted">nghiệp vụ, phân quyền &amp; engine thiết kế</span></div>
-    <div class="stat"><b style="color:var(--done)">xanh</b><span class="xs muted">xác nhận 04/09/2026, chạy từng tệp</span></div>
-  </div>
-  <p class="xs muted" style="margin-top:12px">
-    <strong>Chạy dồn toàn bộ cùng lúc (<code>npm test</code>) có thể báo đỏ rải rác</strong> —
-    Supabase Auth giới hạn tốc độ đăng nhập khi nhiều tài khoản đăng nhập liên tiếp trong thời
-    gian ngắn, không phải lỗi nghiệp vụ. Gặp đỏ ở phần chạm CSDL: chạy lại riêng đúng tệp đó
-    trước khi kết luận là lỗi thật.
-  </p>
-</div>
-
-<h2>Tài khoản để chạy thử</h2>
-<div class="card">
-  <p><strong>Mật khẩu chung cho mọi tài khoản:</strong> <code>NhaViet2026</code></p>
-  <p class="xs muted">
-    Môi trường DEV, tạo bằng <code>npm run db:seed</code>. Vai trò không có quyền vào một phân
-    hệ thì phân hệ đó không hiện trên thanh bên; gõ thẳng đường dẫn cũng bị chặn.
-  </p>
-  <div class="tablewrap" style="box-shadow:none;border:0">
-  <table>
-    <thead><tr><th>Tài khoản</th><th>Chức danh</th><th>Pháp nhân</th><th>Vào thẳng</th></tr></thead>
-    <tbody>
-    <tr><td><code>tgd@nhavietgroup.test</code></td><td>Tổng Giám đốc</td><td>Toàn NVG</td><td class="xs muted">Dashboard</td></tr>
-    <tr><td><code>cfo@nhavietgroup.test</code></td><td>Giám đốc Tài chính</td><td>Toàn NVG</td><td class="xs muted">Dashboard</td></tr>
-    <tr><td><code>pgd.nvs@nhavietgroup.test</code></td><td>PGĐ điều hành NVS</td><td>NVS</td><td class="xs muted">Dashboard</td></tr>
-    <tr><td><code>admin@nhavietgroup.test</code></td><td>Quản trị viên</td><td>Toàn NVG</td><td class="xs muted">Quản trị hệ thống</td></tr>
-    <tr><td><code>kinhdoanh.nvc@nhavietgroup.test</code></td><td>Kinh doanh</td><td>NVC</td><td class="xs muted">Cơ hội</td></tr>
-    <tr><td><code>kinhdoanh.nvo@nhavietgroup.test</code></td><td>Kinh doanh</td><td>NVO</td><td class="xs muted">Cơ hội</td></tr>
-    <tr><td><code>dauthau.nvc@nhavietgroup.test</code></td><td>Trưởng nhóm Dự toán</td><td>NVC</td><td class="xs muted">Gói thầu</td></tr>
-    <tr><td><code>thietke.nvo@nhavietgroup.test</code></td><td>Kiến trúc sư</td><td>NVO</td><td class="xs muted">Dự án thiết kế</td></tr>
-    <tr><td><code>ketcau.nvo@nhavietgroup.test</code></td><td>Kỹ sư Kết cấu</td><td>NVO</td><td class="xs muted">Dự án thiết kế</td></tr>
-    <tr><td><code>congtruong.nvc@nhavietgroup.test</code></td><td>Chỉ huy trưởng</td><td>NVC</td><td class="xs muted">Công trình</td></tr>
-    <tr><td><code>sanxuat.nvs@nhavietgroup.test</code></td><td>Trưởng sản xuất <span class="pill s-done">vai trò mới</span></td><td>NVS</td><td class="xs muted">Lệnh sản xuất</td></tr>
-    <tr><td><code>muahang@nhavietgroup.test</code></td><td>Trưởng phòng Mua hàng</td><td>Cả ba pháp nhân</td><td class="xs muted">Đề nghị mua</td></tr>
-    <tr><td><code>kho@nhavietgroup.test</code></td><td>Thủ kho</td><td>NVC, NVS</td><td class="xs muted">Quét mã kho</td></tr>
-    <tr><td><code>ketoan@nhavietgroup.test</code></td><td>Kế toán nội bộ</td><td>Cả ba pháp nhân</td><td class="xs muted">Đề nghị thanh toán</td></tr>
-    <tr><td><code>nhansu@nhavietgroup.test</code></td><td>Trưởng phòng HCNS</td><td>Cả ba pháp nhân</td><td class="xs muted">Việc cần xử lý</td></tr>
-    </tbody>
-  </table>
-  </div>
-  <p class="xs muted" style="margin-top:10px">
-    <strong>Luồng duyệt chi cần 3 tài khoản:</strong> <code>congtruong.nvc</code> lập đề nghị →
-    <code>ketoan</code> kiểm chứng từ → <code>cfo</code> kiểm dòng tiền và phê duyệt.
-    <strong>Nên thử trước:</strong> <code>tgd</code> (Dashboard + Hộp thư Phê duyệt gom mọi module),
-    <code>dauthau.nvc</code> (trọn một gói thầu từ bóc khối lượng tới hợp đồng).
-  </p>
-</div>
-
-<h2>Câu hỏi cần Nhà Việt Group trả lời</h2>
-<div class="card">
-  <p class="xs muted">
-    Danh sách đầy đủ ở <code>CLAUDE.md</code> §6.6 — đây là các mục ưu tiên cao nhất.
-    Bốn dòng đánh dấu <span class="pill s-overdue">Chặn…</span> là mới, đến từ hai phiếu khảo sát
-    ngày 02/09/2026: phiếu ghi thẳng <em>“không nên ước lượng một con số để điền”</em>, nên phần
-    mềm không tự đặt giá trị mặc định thay.
-  </p>
-  <div class="tablewrap" style="box-shadow:none;border:0">
-  <table>
-    <thead><tr><th>Câu hỏi</th><th>Mức độ</th></tr></thead>
-    <tbody>
-      <tr><td>Bộ mã thống nhất cho vật tư, công trình, nhà cung cấp</td><td><span class="pill s-overdue">Cần trước khi nhập liệu thật</span></td></tr>
-      <tr><td>Hạn mức phê duyệt chính thức theo vai trò/loại nghiệp vụ (đang dùng mức tạm)</td><td><span class="pill s-overdue">Cần sớm</span></td></tr>
-      <tr><td>Phần mềm kế toán chính thức để tích hợp (MISA / AMIS / Fast?)</td><td><span class="pill s-pending">Giai đoạn 2</span></td></tr>
-      <tr><td>Quy chế lương/thưởng chi tiết theo công ty và nhóm nhân sự</td><td><span class="pill s-pending">Giai đoạn 2</span></td></tr>
-      <tr><td>Một ngày công = mấy giờ? (đang lấy 8h theo luật; khảo sát Xưởng để trống ô này nên chưa loại trừ được ca 12h)</td><td><span class="pill s-pending">Giai đoạn 2</span></td></tr>
-      <tr><td>Ai xác nhận bảng chấm công <strong>khối văn phòng</strong>, ai duyệt yêu cầu tuyển dụng <span class="xs muted">(công trường và xưởng đã chốt theo khảo sát 02/09)</span></td><td><span class="pill s-pending">Đang suy luận tạm</span></td></tr>
-      <tr><td>"Trưởng đơn vị" bước 1 duyệt chi là ai (KT-01)</td><td><span class="pill s-draft">Chờ khảo sát</span></td></tr>
-      <tr><td>Đo hiệu suất nhân sự/tổ đội/nhà cung cấp bằng chỉ số gì (BC-03 phần 4)</td><td><span class="pill s-draft">Cố ý chưa làm</span></td></tr>
-      <tr><td>Catalogue sản phẩm giàn giáo, bảng định mức vật tư, tỷ lệ lỗi, giá trị thất thoát/năm <span class="xs muted">(bốn ô khảo sát để trống — phiếu ghi rõ “không nên ước lượng một con số để điền”)</span></td><td><span class="pill s-overdue">Chặn SX-01/SX-02</span></td></tr>
-      <tr><td>Giao thêm giữa kỳ trong một hợp đồng thuê tính tiền từ ngày nào <span class="xs muted">(thu hồi nhiều đợt đã làm; giao thêm cần bảng đợt giao riêng)</span></td><td><span class="pill s-overdue">Chặn phần còn lại của SX-03</span></td></tr>
-      <tr><td>Công trình nội bộ mượn giàn giáo có tính giá thuê nội bộ không <span class="xs muted">(quyết định kế toán, ảnh hưởng độ chính xác của TC-05)</span></td><td><span class="pill s-pending">Chưa quyết</span></td></tr>
-      <tr><td>Hồ sơ công trường nào bắt buộc giữ bản giấy có chữ ký gốc</td><td><span class="pill s-pending">Chưa quyết</span></td></tr>
-      <tr><td>Đầu mối hỗ trợ kỹ thuật, tên miền chính thức</td><td><span class="pill s-draft">Chưa chặn phát triển</span></td></tr>
-      <tr><td>"Hồ sơ thiếu chứng từ" (NEN-04) nghĩa là gì — áp dụng cho loại hồ sơ nào (đề nghị chi đã trả nhưng thiếu hoá đơn? đơn hàng đã nhận nhưng thiếu phiếu giao nhận?), thiếu CỘT dữ liệu nào cụ thể, bao lâu thì nhắc, nhắc ai</td><td><span class="pill s-draft">Chưa rõ, chưa viết được migration</span></td></tr>
-    </tbody>
-  </table>
-  </div>
-</div>
-
-<footer>
-  <p class="xs muted">
-    Ảnh chụp trạng thái, cập nhật thủ công cùng nhịp với <code>BUILD_PLAN.md</code>. % là ước
-    lượng theo luồng nghiệp vụ chạy được đầu-cuối, không phải theo số tính năng đã lập trình.
-  </p>
-</footer>
-
-</div>
-</body>
+  </body>
 </html>

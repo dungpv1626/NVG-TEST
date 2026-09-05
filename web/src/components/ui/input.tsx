@@ -76,7 +76,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           'transition-[border-color,box-shadow] duration-(--motion-fast) ease-(--ease-out)',
           'hover:border-fg-subtle',
           'disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:opacity-60',
-          // Viền lỗi dùng màu "Quá hạn" — cùng hệ 5 màu trạng thái, không tạo màu mới.
+          // Viền lỗi dùng màu "Quá hạn" — cùng hệ 6 màu trạng thái, không tạo màu mới.
           'aria-[invalid=true]:border-status-overdue',
           className,
         )}

@@ -37,7 +37,7 @@ describe('complaintDisplayStatus', () => {
     expect(complaintDisplayStatus('in_progress', undefined, now)).toBe('in_progress');
   });
 
-  it('luôn trả về một trong 5 nhóm trạng thái chuẩn', () => {
+  it('luôn trả về một trong 6 nhóm trạng thái chuẩn', () => {
     // Không được sinh ra trạng thái thứ 6: màu trạng thái chỉ có đúng 5 (CGD 6.4).
     const groups = ['draft', 'pending_approval', 'in_progress', 'completed', 'overdue'];
     for (const status of groups) {

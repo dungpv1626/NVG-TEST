@@ -12,7 +12,7 @@
  *  - Hành động hàng loạt khi chọn nhiều dòng.
  *  - Trạng thái rỗng LUÔN kèm nút hành động gợi ý, không để trang trắng.
  *
- * Trên điện thoại, cùng dữ liệu đó hiển thị dạng THẺ thay vì bảng (Webapp Flow 4.7: không
+ * Trên điện thoại, cùng dữ liệu đó hiển thị dạng THẺ thay vì bảng (Webapp Flow 4.8: không
  * thu nhỏ bố cục máy tính). Bảng 6–8 cột trên màn hình 390px chỉ còn cách cuộn ngang, mà
  * cuộn ngang thì ba cột cố định — người chịu trách nhiệm, trạng thái, thời hạn — nằm ngoài
  * màn hình đúng lúc cần nhìn nhất.

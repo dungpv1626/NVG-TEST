@@ -18,7 +18,12 @@ import {
   usePendingApprovals,
   type PendingApproval,
 } from '@/hooks/use-approvals';
-import { APPROVAL_SUBJECT_LABELS, formatCurrency, formatDateTime } from '@nvg/shared';
+import {
+  APPROVAL_SUBJECT_LABELS,
+  formatCurrency,
+  formatDateTime,
+  formatDeadline,
+} from '@nvg/shared';
 
 /**
  * Đường dẫn tới hồ sơ đầy đủ theo loại hồ sơ nguồn.
@@ -70,6 +75,7 @@ export function ApprovalInboxPage() {
     title: row.title,
     requestedBy: row.requested_by_name ?? 'Không rõ',
     requestedAt: row.requested_at,
+    dueAt: row.due_at,
     amount: row.amount,
     fullRecordPath: fullRecordPath(row),
     preview: <ApprovalPreview row={row} />,
@@ -116,6 +122,12 @@ function ApprovalPreview({ row }: { row: PendingApproval }) {
         />
         <Row label="Người đề nghị" value={row.requested_by_name ?? 'Không rõ'} />
         <Row label="Thời điểm gửi" value={formatDateTime(row.requested_at)} />
+        {/*
+          Hạn xử lý chỉ hiện khi Ban Giám đốc đã ban hành cam kết thời hạn cho loại nghiệp vụ
+          này (`sla_definitions`, NEN-12). Chưa có thì bỏ hẳn dòng, KHÔNG hiện "Chưa có hạn" —
+          một dòng như vậy đọc như lời hứa rằng hệ thống đang theo dõi hạn, mà nó thì không.
+        */}
+        {row.due_at && <Row label="Hạn xử lý" value={formatDeadline(row.due_at)} strong />}
         <div>
           <dt className="text-xs text-fg-subtle">Trạng thái</dt>
           <dd className="mt-0.5">

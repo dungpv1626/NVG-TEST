@@ -771,6 +771,62 @@
       "when": 1787931027548,
       "tag": "0109_chan_trung_dong_cau_hinh_dung_chung",
       "breakpoints": true
+    },
+    {
+      "idx": 110,
+      "version": "7",
+      "when": 1787931027549,
+      "tag": "0110_trang_thai_tranh_chap",
+      "breakpoints": true
+    },
+    {
+      "idx": 111,
+      "version": "7",
+      "when": 1787931027550,
+      "tag": "0111_tham_so_he_thong",
+      "breakpoints": true
+    },
+    {
+      "idx": 112,
+      "version": "7",
+      "when": 1787931027551,
+      "tag": "0112_tham_so_thay_so_cung",
+      "breakpoints": true
+    },
+    {
+      "idx": 113,
+      "version": "7",
+      "when": 1787931027552,
+      "tag": "0113_sla_han_xu_ly",
+      "breakpoints": true
+    },
+    {
+      "idx": 114,
+      "version": "7",
+      "when": 1787931027553,
+      "tag": "0114_vai_tro_chi_huy_truong",
+      "breakpoints": true
+    },
+    {
+      "idx": 115,
+      "version": "7",
+      "when": 1787931027554,
+      "tag": "0115_mau_e_pham_vi_hien_truong",
+      "breakpoints": true
+    },
+    {
+      "idx": 116,
+      "version": "7",
+      "when": 1787931027555,
+      "tag": "0116_dau_thoi_gian_hien_truong",
+      "breakpoints": true
+    },
+    {
+      "idx": 117,
+      "version": "7",
+      "when": 1787931027556,
+      "tag": "0117_bat_bien_chung_tu_da_ky",
+      "breakpoints": true
     }
   ]
 }

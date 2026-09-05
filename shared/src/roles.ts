@@ -27,6 +27,7 @@ export const ROLE_CODES = [
   // Thêm sau, nên nằm CUỐI danh sách: giá trị enum trong Postgres chỉ thêm được vào cuối
   // bằng `ALTER TYPE ... ADD VALUE`, chèn giữa sẽ làm lệch thứ tự giữa các môi trường.
   'SX',
+  'CHT',
 ] as const;
 
 export type RoleCode = (typeof ROLE_CODES)[number];
@@ -38,6 +39,14 @@ export interface RoleMeta {
   readonly defaultRoute: string;
   /** Xem được dữ liệu của mọi pháp nhân (mẫu RLS A cho phép BGĐ/Admin vượt phạm vi pháp nhân). */
   readonly seesAllCompanies: boolean;
+  /**
+   * Vai trò làm việc tại MỘT công trình/xưởng cụ thể — mẫu RLS E (Backend Schema v1.1 3.3).
+   *
+   * Chỉ thấy nơi mình được phân công (`user_site_assignments`). Đây là PHẠM VI, không phải
+   * mức quyền: chỉ huy trưởng vẫn ký xác nhận bảng công khối công trường như trước, chỉ là
+   * không đọc được công trình của người khác. Vai trò không đánh dấu thì nhìn toàn đơn vị.
+   */
+  readonly siteScoped?: boolean;
 }
 
 export const ROLES: Readonly<Record<RoleCode, RoleMeta>> = {
@@ -79,7 +88,7 @@ export const ROLES: Readonly<Record<RoleCode, RoleMeta>> = {
   },
   TC: {
     code: 'TC',
-    label: 'Thi công / Ban công trường',
+    label: 'Trưởng phòng Thi công',
     defaultRoute: '/tc/cong-trinh',
     seesAllCompanies: false,
   },
@@ -131,6 +140,33 @@ export const ROLES: Readonly<Record<RoleCode, RoleMeta>> = {
     label: 'Xưởng sản xuất – Cho thuê',
     defaultRoute: '/sx/lenh-san-xuat',
     seesAllCompanies: false,
+  },
+  /*
+   * Chỉ huy trưởng / Kỹ thuật hiện trường — thêm 05/09/2026 theo Webapp Flow v1.1 Mục 2.3.
+   *
+   * Vì sao tách khỏi vai trò `TC`:
+   *
+   *   Trước đây một vai trò `TC` gánh cả Trưởng phòng Thi công lẫn Ban chỉ huy công trường,
+   *   nên CSDL không phân biệt được ai nhìn toàn đơn vị với ai làm việc tại một công trình.
+   *   Mẫu phân quyền E (Backend Schema v1.1 3.3 — "người dùng hiện trường chỉ xem/ghi được
+   *   dữ liệu thuộc công trình mình được phân công") vì thế không có đối tượng nào để áp.
+   *
+   *   Khảo sát Chỉ huy – Giám sát công trường mô tả hai lớp rõ ràng: 1 trưởng phòng, 2 nhân
+   *   viên phòng, và 3 chỉ huy trưởng + 3 kỹ thuật hiện trường ở các công trình khác nhau.
+   *   Một chỉ huy trưởng không có lý do nghiệp vụ nào để đọc nhật ký của công trình khác.
+   *
+   * Quyền hạn GIỮ NGUYÊN như `TC`, kể cả `approve`: khảo sát giao chính chỉ huy trưởng ký
+   * xác nhận bảng chấm công khối công trường (migration 0106). Khác biệt duy nhất là PHẠM VI
+   * (`siteScoped`) — đúng cách Webapp Flow v1.1 Mục 2.3 phân biệt hai vai trò: "Công trình
+   * CỦA TÔI" so với "TẤT CẢ công trình". Nếu lấy `approve` làm dấu hiệu cấp quản lý thì chỉ
+   * huy trưởng cũng được miễn trừ và mẫu E không áp lên ai.
+   */
+  CHT: {
+    code: 'CHT',
+    label: 'Chỉ huy trưởng / Kỹ thuật hiện trường',
+    defaultRoute: '/tc/cong-trinh',
+    seesAllCompanies: false,
+    siteScoped: true,
   },
 } as const;
 

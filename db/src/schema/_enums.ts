@@ -81,8 +81,8 @@ import {
 } from '@nvg/shared';
 
 /**
- * 5 nhóm trạng thái chuẩn — Content Guidelines 5.1, Webapp Flow 5.5, Backend Schema 1.4.
- * Module có trạng thái con riêng vẫn phải quy về một trong 5 giá trị này khi hiển thị.
+ * 6 nhóm trạng thái chuẩn — Content Guidelines v1.2 5.1, Webapp Flow v1.1 5.5, Backend Schema v1.1 1.4.
+ * Module có trạng thái con riêng vẫn phải quy về một trong 6 giá trị này khi hiển thị.
  */
 export const statusGroupEnum = pgEnum('status_group', STATUS_GROUPS);
 

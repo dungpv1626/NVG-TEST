@@ -60,6 +60,8 @@ export const ACCOUNTS = {
   kinhDoanhNvo: 'kinhdoanh.nvo@nhavietgroup.test',
   dauThauNvc: 'dauthau.nvc@nhavietgroup.test',
   congTruongNvc: 'congtruong.nvc@nhavietgroup.test',
+  /** Vai trò `CHT` — chỉ huy trưởng, chỉ thấy công trình được phân công (mẫu RLS E, 0115). */
+  chiHuyTruongNvc: 'chihuytruong.nvc@nhavietgroup.test',
   thietKeNvo: 'thietke.nvo@nhavietgroup.test',
   ketCauNvo: 'ketcau.nvo@nhavietgroup.test',
   muaHang: 'muahang@nhavietgroup.test',
@@ -88,6 +90,9 @@ export const PROTECTED_TABLES = [
   'permissions',
   'user_companies',
   'approval_limits',
+  'system_parameters',
+  'sla_definitions',
+  'user_site_assignments',
 ] as const;
 
 /** Mã lỗi Postgres cho "insufficient_privilege" — RLS chặn thành công. */

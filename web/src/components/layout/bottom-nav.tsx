@@ -1,5 +1,11 @@
 /**
- * Thanh điều hướng dưới — bố cục di động (Webapp Flow Mục 4.7).
+ * Thanh điều hướng dưới — bố cục di động (Webapp Flow Mục 4.8).
+ *
+ * ⚠️ Mục này đổi số từ 4.7 sang 4.8 ở Webapp Flow v1.1 (chèn thêm 4.7 Request Tracker), và mở
+ * rộng từ HAI nhóm nghiệp vụ hiện trường lên BA: Kho, Công trường, và Xưởng sản xuất. Ba yêu
+ * cầu mới của v1.1 chưa làm ở đây, xem `BUILD_PLAN.md`: nút chụp ảnh luôn trong tầm ngón cái và
+ * không bao giờ ẩn sau menu; ưu tiên chọn từ danh sách gợi ý thay vì gõ tay; đồng hồ ngân sách
+ * thao tác trên màn hình chốt ngày (ngưỡng nghiệm thu 10–20 phút, PRD v1.4 Mục 6).
  *
  * "KHÔNG thu nhỏ bố cục máy tính": trên điện thoại, sidebar biến mất hẳn và điều hướng
  * chuyển xuống đây — ngón tay cầm máy một tay với tới được, không phải vươn lên góc trên.

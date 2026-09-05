@@ -77,7 +77,7 @@ function table(props: Partial<React.ComponentProps<typeof EntityTable>> = {}) {
  * Truy vấn giới hạn trong BẢNG của khổ máy tính.
  *
  * `EntityTable` dựng đồng thời hai bố cục — danh sách thẻ cho điện thoại và bảng cho máy tính —
- * rồi để CSS quyết định bố cục nào hiện (Webapp Flow 4.7: không thu nhỏ bố cục máy tính). Trên
+ * rồi để CSS quyết định bố cục nào hiện (Webapp Flow 4.8: không thu nhỏ bố cục máy tính). Trên
  * trình duyệt thật, `display: none` loại hẳn bố cục kia khỏi cây trợ năng nên người dùng và trình
  * đọc màn hình chỉ gặp một bản. Nhưng jsdom không áp CSS, nên mọi nội dung có mặt hai lần ở đây.
  * Ràng buộc truy vấn vào bảng để mỗi khẳng định nói về đúng một bố cục xác định.

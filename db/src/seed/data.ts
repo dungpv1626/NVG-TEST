@@ -79,6 +79,8 @@ export interface RoleSeed {
   description: string;
   seesAllCompanies: boolean;
   defaultRoute: string;
+  /** Vai trò hiện trường — chỉ thấy công trình được phân công (mẫu RLS E, migration 0115). */
+  siteScoped?: boolean;
   /** Module → quyền. Module không liệt kê = KHÔNG hiện trên menu (Webapp Flow 6.5). */
   permissions: Partial<Record<ModuleCode, Perm[]>>;
 }
@@ -197,10 +199,29 @@ export const ROLE_SEED: RoleSeed[] = [
   },
   {
     code: 'TC',
-    label: 'Thi công / Ban công trường',
-    description: 'Tiến độ, nhật ký công trường, nghiệm thu, đề nghị vật tư.',
+    label: 'Trưởng phòng Thi công',
+    description:
+      'Nhiều công trình, phê duyệt, báo cáo tiến độ – chi phí, xác nhận bảng công khối công trường.',
     seesAllCompanies: false,
     defaultRoute: '/tc/cong-trinh',
+    permissions: { BC: VIEW, TC: WORK_APPROVE, MH: ['view', 'create'], KHO: VIEW, KT: RAISE_ONLY },
+  },
+  /*
+   * Chỉ huy trưởng / Kỹ thuật hiện trường — cùng phân hệ TC nhưng KHÔNG có `approve`.
+   *
+   * Đây là vai trò mà mẫu phân quyền E tồn tại vì nó (xem `rls_site_in_scope`, migration 0115):
+   * chỉ thấy công trình mình được phân công. Vai trò `TC` ở trên giữ quyền phê duyệt và vì thế
+   * được miễn trừ khỏi giới hạn đó — đúng nguyên văn Backend Schema v1.1 3.3 ("cấp quản lý xem
+   * được toàn bộ đơn vị mình phụ trách").
+   */
+  {
+    code: 'CHT',
+    label: 'Chỉ huy trưởng / Kỹ thuật hiện trường',
+    description:
+      'Nhật ký, bản vẽ đang hiệu lực, đề nghị vật tư, nghiệm thu — trong phạm vi công trình được phân công.',
+    seesAllCompanies: false,
+    defaultRoute: '/tc/cong-trinh',
+    siteScoped: true,
     permissions: { BC: VIEW, TC: WORK_APPROVE, MH: ['view', 'create'], KHO: VIEW, KT: RAISE_ONLY },
   },
   {
@@ -402,6 +423,21 @@ export const USER_SEED: UserSeed[] = [
     department: 'NVC — Ban công trường 01',
     fromDocs: false,
     assignments: [{ company: 'NVC', role: 'TC', isPrimary: true }],
+  },
+  {
+    /*
+     * Chỉ huy trưởng của một công trình cụ thể — tài khoản để kiểm mẫu RLS E.
+     *
+     * `congtruong.nvc` GIỮ NGUYÊN vai trò `TC` (Ban chỉ huy, nhìn toàn đơn vị): đổi vai trò
+     * của tài khoản đang được cả bộ kiểm thử dùng sẽ trộn hai thay đổi vào nhau và khi test
+     * đỏ thì không biết đỏ vì phân quyền mới hay vì đổi tài khoản.
+     */
+    email: 'chihuytruong.nvc@nhavietgroup.test',
+    fullName: 'Đỗ Văn K',
+    jobTitle: 'Chỉ huy trưởng công trình',
+    department: 'NVC — Ban công trường 02',
+    fromDocs: false,
+    assignments: [{ company: 'NVC', role: 'CHT', isPrimary: true }],
   },
   {
     email: 'muahang@nhavietgroup.test',

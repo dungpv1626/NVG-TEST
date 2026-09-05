@@ -70,6 +70,18 @@ export const EMPTY_STATES = {
   inbox: 'Không có việc nào cần xử lý. Mọi thứ đã được cập nhật.',
   noAccess:
     'Chưa được gán vào hồ sơ nào ở mục này. Liên hệ quản lý trực tiếp nếu cần quyền truy cập.',
+  /**
+   * Chỉ số CHƯA CÓ đủ dữ liệu thật — Content Guidelines v1.2 5.6, PRD v1.4 Mục 2.3.
+   *
+   * Khác hẳn "bằng 0". Khảo sát Xưởng nói thẳng về tỷ lệ lỗi và giá trị thất thoát: "không nên
+   * ước lượng một con số để điền vì đây là dữ liệu quan trọng cho quản trị tài sản và định giá
+   * cho thuê". Hiện `0` cho một chỉ số chưa đo được là báo cáo sai theo hướng lạc quan nhất —
+   * "tỷ lệ lỗi 0%" đọc như xưởng không có lỗi nào, chứ không đọc như chưa đếm.
+   *
+   * Dùng cho mọi thẻ chỉ số, biểu đồ và ô báo cáo mà nguồn dữ liệu chưa đủ mẫu.
+   */
+  notEnoughData:
+    'Chưa đủ dữ liệu để tính chỉ số này. Số liệu sẽ hiển thị khi có đủ bản ghi thực tế.',
 } as const;
 
 /** Trạng thái rỗng riêng theo module — Content Guidelines 5.6 (nguyên văn). */
@@ -84,6 +96,7 @@ export const MODULE_EMPTY_STATES: Readonly<Record<string, string>> = {
   KT: 'Không có đề nghị thanh toán nào đang chờ xử lý.',
   NS: "Chưa có hồ sơ nhân sự nào. Bấm 'Thêm nhân sự' để bắt đầu.",
   SX: "Chưa có hợp đồng thuê giàn giáo nào. Bấm 'Lập hợp đồng thuê' để bắt đầu.",
+  BC: 'Chưa đủ dữ liệu để tính chỉ số này. Số liệu sẽ hiển thị khi có đủ bản ghi thực tế.',
 } as const;
 
 /**
@@ -96,6 +109,19 @@ export const SCREEN_EMPTY_STATES = {
   /** CRM-08 — trạng thái rỗng ở đây là tin TỐT, nên nói theo hướng tích cực. */
   complaints:
     'Chưa ghi nhận khiếu nại nào. Ghi nhận ngay khi khách phản ánh để không bỏ sót hạn xử lý.',
+
+  /* --- Module SX, Content Guidelines v1.2 5.6 (nguyên văn) --- */
+  sxProduction: "Chưa có lệnh sản xuất nào. Bấm 'Tạo lệnh sản xuất' để bắt đầu.",
+  sxRental: "Chưa có đơn thuê nào đang hoạt động. Bấm 'Lập đơn thuê' để bắt đầu.",
+  /**
+   * Sổ cái tài sản chưa chốt số dư đầu (KHO-11, MỚI ở PRD v1.4).
+   *
+   * Đây KHÔNG phải trạng thái rỗng thường: nó nói rằng con số chưa đáng tin, chứ không phải
+   * chưa có gì. Xưởng nêu trực tiếp yêu cầu chốt số dư ban đầu trước khi vận hành — sau khi
+   * chốt, tồn chỉ biến động bằng chứng từ.
+   */
+  sxAssetLedger:
+    'Chưa chốt số dư ban đầu của tài sản. Kiểm kê và chốt số dư trước khi ghi nhận biến động.',
 } as const;
 
 /** Mẫu thông báo hệ thống — Content Guidelines 5.3. Nêu sự việc trước, mức độ khẩn sau. */

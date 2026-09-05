@@ -64,6 +64,7 @@ const STATUS_DOT: Readonly<Record<StatusGroup, string>> = {
   in_progress: 'bg-status-progress',
   completed: 'bg-status-completed',
   overdue: 'bg-status-overdue',
+  disputed: 'bg-status-disputed',
 };
 
 export function DesignShowcasePage() {
@@ -80,7 +81,7 @@ export function DesignShowcasePage() {
 
       <Section
         title="Nhãn trạng thái"
-        note="Năm nhóm chuẩn, không có nhóm thứ sáu. Luôn kèm chữ — không bao giờ chỉ có màu, vì khoảng 8% nam giới không phân biệt được đỏ với lục."
+        note="Sáu nhóm chuẩn, không có nhóm thứ bảy. Luôn kèm chữ — không bao giờ chỉ có màu, vì khoảng 8% nam giới không phân biệt được đỏ với lục."
       >
         <div className="flex flex-wrap gap-2">
           {STATUS_GROUPS.map((s) => (

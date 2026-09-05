@@ -255,6 +255,14 @@ export const stockMovements = pgTable(
      */
     clientGeneratedId: varchar('client_generated_id', { length: 64 }),
 
+    /**
+     * Dấu thời gian hiện trường — Backend Schema v1.1 Mục 1.4 (migration 0116).
+     * `clientCreatedAt` là lúc thủ kho BẤM; `syncedAt` do máy chủ tự đặt, không nhận từ
+     * trình duyệt. Chênh lệch hai mốc là thứ duy nhất cho biết kho mất sóng bao lâu.
+     */
+    clientCreatedAt: timestamp('client_created_at', { withTimezone: true }),
+    syncedAt: timestamp('synced_at', { withTimezone: true }),
+
     /** Người giao và người nhận — chữ ký xác nhận hai bên (KHO-03, KHO-04, KHO-05). */
     performedBy: uuid('performed_by').references(() => users.id, { onDelete: 'set null' }),
     counterpartName: varchar('counterpart_name', { length: 128 }),
@@ -392,6 +400,10 @@ export const stocktakeItems = pgTable(
     countedQuantity: numeric('counted_quantity', { precision: 18, scale: 3 }),
 
     varianceNote: text('variance_note'),
+
+    /** Dấu thời gian hiện trường — Backend Schema v1.1 Mục 1.4 (migration 0116). */
+    clientCreatedAt: timestamp('client_created_at', { withTimezone: true }),
+    syncedAt: timestamp('synced_at', { withTimezone: true }),
 
     ...auditColumns(),
   },

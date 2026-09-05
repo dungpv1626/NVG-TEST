@@ -1,5 +1,5 @@
 /**
- * Quét mã vật tư (KHO-09) — mẫu bố cục Di động (Webapp Flow 4.7).
+ * Quét mã vật tư (KHO-09) — mẫu bố cục Di động (Webapp Flow 4.8).
  *
  * Webapp Flow 3.6 bước 1: "quét mã vật tư hoặc mã giàn giáo, hệ thống hiển thị phiếu liên
  * quan". Đây là trang mặc định của vai trò Kho vì nó là thao tác họ làm nhiều nhất.

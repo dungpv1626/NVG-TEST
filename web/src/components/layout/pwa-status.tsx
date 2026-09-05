@@ -1,7 +1,7 @@
 /**
  * Ba thông báo vòng đời ứng dụng cài trên điện thoại.
  *
- *  1. Mất kết nối — Webapp Flow 4.7 yêu cầu màn hình di động LUÔN hiện trạng thái đồng bộ
+ *  1. Mất kết nối — Webapp Flow 4.8 yêu cầu màn hình di động LUÔN hiện trạng thái đồng bộ
  *     dữ liệu. Không nói gì thì người dùng ở công trường tưởng dữ liệu đã lưu.
  *  2. Có bản mới — hỏi trước khi tải lại, không tự nạp giữa chừng (Webapp Flow 6.3).
  *  3. Mời cài lên màn hình chính — hỏi ĐÚNG MỘT LẦN, từ chối rồi thì thôi

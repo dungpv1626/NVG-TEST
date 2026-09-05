@@ -152,6 +152,93 @@ describeDb('TC — phạm vi pháp nhân và quyền xem phân hệ', () => {
   });
 });
 
+/**
+ * Gán trực tiếp một người dùng vào công trình — cơ sở của mẫu phân quyền E (migration 0115).
+ *
+ * Đi đường trực tiếp (bỏ qua RLS) vì đây là DỰNG BỐI CẢNH: ai phân công ai là việc của Trưởng
+ * phòng Thi công qua giao diện Quản trị, không phải điều test này đang kiểm.
+ */
+async function assignUserToSite(input: { email: string; siteId: string }): Promise<void> {
+  const { createConnection } = await import('../client');
+  const { sql } = createConnection();
+  try {
+    await sql`
+      INSERT INTO user_site_assignments (user_id, construction_site_id)
+      SELECT u.id, ${input.siteId}::uuid FROM users u WHERE u.email = ${input.email}
+    `;
+  } finally {
+    await sql.end();
+  }
+}
+
+/**
+ * Mẫu phân quyền E — phạm vi hiện trường (Backend Schema v1.1 3.3, migration 0115).
+ *
+ * Đây là hàng rào MỚI và THU HẸP quyền — đúng loại thay đổi đã từng gây lỗi thật khi áp
+ * nhầm điều kiện (Giám đốc Tài chính/Quản trị viên chỉ gán vào NVG mở màn hình nào cũng
+ * trắng, CLAUDE.md 3.5). Test phải khẳng định CẢ HAI CHIỀU: người chưa phân công thấy ÍT
+ * đi (không phải nhiều hơn), và người có vai trò toàn đơn vị không bị ảnh hưởng.
+ */
+describeDb('TC — mẫu phân quyền E: phạm vi hiện trường (Backend Schema v1.1 3.3)', () => {
+  let fixture: Fixture;
+  let chiHuy: SupabaseClient; // CHT — site_scoped
+  let truongPhong: SupabaseClient; // TC — KHÔNG site_scoped, xem toàn đơn vị
+
+  beforeAll(async () => {
+    fixture = await seedSites();
+    chiHuy = await signInAs(ACCOUNTS.chiHuyTruongNvc);
+    truongPhong = await signInAs(ACCOUNTS.congTruongNvc);
+  });
+
+  it('CHT chưa được phân công thì KHÔNG thấy công trình nào — quên phân công phải thấy ÍT đi', async () => {
+    const { data } = await chiHuy
+      .from('construction_sites')
+      .select('id')
+      .eq('id', fixture.nvcSiteId);
+    expect(data).toEqual([]);
+  });
+
+  it('Trưởng phòng Thi công (không site_scoped) vẫn thấy toàn bộ công trình pháp nhân mình', async () => {
+    const { data } = await truongPhong
+      .from('construction_sites')
+      .select('id')
+      .eq('id', fixture.nvcSiteId);
+    expect(data!.map((r) => r.id)).toEqual([fixture.nvcSiteId]);
+  });
+
+  it('được phân công thì thấy đúng công trình đó và ghi được nhật ký', async () => {
+    await assignUserToSite({ email: ACCOUNTS.chiHuyTruongNvc, siteId: fixture.nvcSiteId });
+
+    const { data } = await chiHuy
+      .from('construction_sites')
+      .select('id')
+      .eq('id', fixture.nvcSiteId);
+    expect(data!.map((r) => r.id)).toEqual([fixture.nvcSiteId]);
+
+    const chiHuyId = (await chiHuy.rpc('auth_user_id')).data as string;
+    const { error } = await chiHuy.from('site_logs').insert({
+      company_id: await companyOf(chiHuy, fixture.nvcSiteId),
+      construction_site_id: fixture.nvcSiteId,
+      log_date: new Date().toISOString().slice(0, 10),
+      content: `${TEST_PREFIX} CHT ghi nhật ký công trình được phân công.`,
+      logged_by: chiHuyId,
+    });
+    expect(error).toBeNull();
+  });
+
+  it('phân công một công trình KHÔNG mở luôn công trình khác của cùng pháp nhân', async () => {
+    // fixture.nvcSiteId đã được phân công ở test trước; nvoSiteId khác pháp nhân nên đã
+    // đóng sẵn — kiểm thêm một công trình NVC thứ hai, CHƯA phân công, để tách bạch rạch
+    // ròi hai lý do có thể đóng (khác pháp nhân so với chưa phân công).
+    const second = await seedSites();
+    const { data } = await chiHuy
+      .from('construction_sites')
+      .select('id')
+      .eq('id', second.nvcSiteId);
+    expect(data).toEqual([]);
+  });
+});
+
 describeDb('TC — nhật ký công trường là bằng chứng, không phải bản nháp (TC-02, TC-08)', () => {
   let fixture: Fixture;
   let chiHuy: SupabaseClient;
@@ -194,6 +281,34 @@ describeDb('TC — nhật ký công trường là bằng chứng, không phải 
 
     const { data } = await chiHuy.from('site_logs').select('content').eq('id', logId).single();
     expect(data!.content).toContain('16h30');
+  });
+
+  /**
+   * `synced_at` (migration 0116) phải trả lời "về tới máy chủ LẦN ĐẦU lúc nào" — một sự kiện
+   * đúng một lần. Sửa nội dung trong 24 giờ (TC-08, test ngay phía trên) là UPDATE hợp lệ và
+   * thường xuyên; nếu trigger đặt lại `synced_at` ở mọi UPDATE thì con số đo "công trường mất
+   * sóng bao lâu" bị xoá mất ngay lần sửa đầu tiên.
+   */
+  it('sửa nhật ký KHÔNG đặt lại synced_at — đó là mốc chỉ ghi một lần', async () => {
+    const { data: before } = await chiHuy
+      .from('site_logs')
+      .select('synced_at')
+      .eq('id', logId)
+      .single();
+    const syncedAtBefore = (before as { synced_at: string }).synced_at;
+    expect(syncedAtBefore).toBeTruthy();
+
+    await chiHuy
+      .from('site_logs')
+      .update({ content: `${TEST_PREFIX} Sửa lần hai, kiểm synced_at.` })
+      .eq('id', logId);
+
+    const { data: after } = await chiHuy
+      .from('site_logs')
+      .select('synced_at')
+      .eq('id', logId)
+      .single();
+    expect((after as { synced_at: string }).synced_at).toBe(syncedAtBefore);
   });
 
   it('Kế toán không có quyền sửa phân hệ Thi công nên không ghi được nhật ký', async () => {
@@ -365,6 +480,35 @@ describeDb('TC — nghiệm thu là căn cứ thu tiền, và chỉ với chủ 
       .eq('id', (data as { id: string }).id)
       .single();
     expect(Number((after as { value: number }).value)).toBe(900_000_000);
+  });
+
+  /**
+   * `frozen_after_signed` (migration 0117) là hàng phòng thủ THỨ HAI, độc lập với RLS.
+   *
+   * Test trên chỉ chứng minh RLS chặn — `status = 'nhap'` trong policy UPDATE (0035) đã lọc
+   * dòng khỏi tầm với TRƯỚC KHI trigger kịp chạy, nên nó không hề chứng minh trigger đúng.
+   * Đi bằng kết nối trực tiếp (bỏ qua RLS) để chạm thẳng vào trigger — đây là kịch bản sẽ
+   * xảy ra thật nếu RLS có lỗi hoặc một hàm nội bộ tương lai quên kiểm tra trạng thái.
+   */
+  it('trigger frozen_after_signed tự chặn được, không chỉ nhờ RLS', async () => {
+    const { data } = await chiHuy
+      .from('acceptance_records')
+      .select('id')
+      .eq('construction_site_id', fixture.nvcSiteId)
+      .eq('status', 'da_nghiem_thu')
+      .eq('acceptance_type', 'khach_hang')
+      .limit(1)
+      .single();
+
+    const { createConnection } = await import('../client');
+    const { sql } = createConnection();
+    try {
+      await expect(
+        sql`UPDATE acceptance_records SET value = 1 WHERE id = ${(data as { id: string }).id}`,
+      ).rejects.toThrow('Không sửa được nội dung biên bản đã ký');
+    } finally {
+      await sql.end();
+    }
   });
 });
 

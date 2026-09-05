@@ -9,6 +9,8 @@
  *
  * Quy tắc bắt buộc:
  *  - Danh sách bên trái sắp theo MỨC ĐỘ KHẨN / thời gian chờ, không phải theo thứ tự tạo.
+ *    Từ Webapp Flow v1.1, mẫu này có thêm ĐỒNG HỒ HẠN XỬ LÝ và hồ sơ quá hạn nằm trên đầu —
+ *    thứ tự do `my_pending_approvals` quyết định, component không sắp lại.
  *  - Xem nhanh bên phải đủ thông tin để QUYẾT ĐỊNH mà không cần rời Hộp thư; có nút
  *    "Xem đầy đủ hồ sơ" nếu cần xem sâu hơn.
  *  - Sau khi phê duyệt/từ chối, TỰ ĐỘNG chuyển sang hồ sơ tiếp theo — không bắt người duyệt
@@ -23,6 +25,7 @@ import { Link } from 'react-router-dom';
 import {
   BUTTONS,
   formatCurrency,
+  formatDeadline,
   formatWaiting,
   type ApprovalSubject,
   type MoneyValue,
@@ -42,12 +45,29 @@ export interface ApprovalItem {
   /** Người gửi phê duyệt. */
   requestedBy: string;
   requestedAt: string;
+  /**
+   * Hạn xử lý theo cam kết của phòng ban (`sla_definitions`, NEN-12).
+   *
+   * `null` khi Ban Giám đốc CHƯA ban hành thời hạn cho loại nghiệp vụ này — và khi đó dòng
+   * KHÔNG hiện đồng hồ. Hiện "còn 0 ngày" hay gắn nhãn quá hạn theo một thời hạn chưa ai ký
+   * là tệ hơn không có đồng hồ: người duyệt bị chấm trễ theo một luật không tồn tại.
+   */
+  dueAt?: string | null;
   /** Giá trị hồ sơ, đơn vị đồng. `null` với nghiệp vụ không gắn tiền (nghỉ phép). */
   amount: MoneyValue | null;
   /** Đường dẫn tới hồ sơ đầy đủ ở module tương ứng. */
   fullRecordPath: string;
   /** Nội dung xem nhanh — đủ để quyết định mà không rời Hộp thư. */
   preview: ReactNode;
+}
+
+/**
+ * Hồ sơ đã quá hạn xử lý.
+ *
+ * Không có `dueAt` thì KHÔNG quá hạn — thiếu cam kết thời hạn khác hẳn với trễ hạn.
+ */
+function isOverdue(item: ApprovalItem): boolean {
+  return item.dueAt != null && new Date(item.dueAt).getTime() < Date.now();
 }
 
 export interface ApprovalInboxProps {
@@ -168,13 +188,24 @@ export function ApprovalInbox({
               >
                 <div className="flex items-start justify-between gap-2">
                   <span className="truncate font-medium">{item.title}</span>
-                  <StatusLozenge status="pending_approval" />
+                  <StatusLozenge status={isOverdue(item) ? 'overdue' : 'pending_approval'} />
                 </div>
                 <div className="mt-1 font-mono text-xs text-fg-subtle">{item.code}</div>
                 <div className="mt-1 flex items-center justify-between gap-2 text-xs text-fg-subtle">
                   <span className="truncate">{item.requestedBy}</span>
-                  <span>{formatWaiting(item.requestedAt)}</span>
+                  <span className="shrink-0">{formatWaiting(item.requestedAt)}</span>
                 </div>
+                {/* Đồng hồ hạn xử lý chỉ hiện khi ĐÃ có cam kết thời hạn — xem chú thích dueAt. */}
+                {item.dueAt && (
+                  <div
+                    className={cn(
+                      'mt-1 text-xs',
+                      isOverdue(item) ? 'font-medium text-status-overdue' : 'text-fg-subtle',
+                    )}
+                  >
+                    {formatDeadline(item.dueAt)}
+                  </div>
+                )}
                 {item.amount !== null && (
                   <div className="mt-1 font-medium tabular-nums">{formatCurrency(item.amount)}</div>
                 )}

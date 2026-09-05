@@ -62,7 +62,7 @@ export type DesignStage = (typeof DESIGN_STAGES)[number];
 
 export interface DesignStageMeta {
   readonly label: string;
-  /** Quy về 1 trong 5 nhóm trạng thái chuẩn khi hiển thị nhãn (Content Guidelines 5.1). */
+  /** Quy về 1 trong 6 nhóm trạng thái chuẩn khi hiển thị nhãn (Content Guidelines 5.1). */
   readonly statusGroup: StatusGroup;
   readonly description: string;
   readonly isTerminal: boolean;

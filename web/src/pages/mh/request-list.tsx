@@ -76,7 +76,7 @@ export function PurchaseRequestListPage() {
           {
             key: 'urgency',
             header: 'Mức cần',
-            // Cần gấp in đậm chứ không tô màu: năm màu trạng thái đã dành cho vòng đời hồ sơ,
+            // Cần gấp in đậm chứ không tô màu: sáu màu trạng thái đã dành cho vòng đời hồ sơ,
             // thêm một màu nữa ở cột này là phá hệ thống (Content Guidelines 6.8).
             render: (r) =>
               r.isUrgent ? (

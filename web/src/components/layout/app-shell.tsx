@@ -11,7 +11,7 @@
  *   4. Content area (vùng nội dung chính)
  *   5. Panel ngữ cảnh (phải, chỉ ở màn hình Chi tiết) — bổ sung ở Phase 2/4A
  *
- * Trên điện thoại (Webapp Flow 4.7): sidebar ẩn hẳn, điều hướng chuyển xuống thanh dưới —
+ * Trên điện thoại (Webapp Flow 4.8): sidebar ẩn hẳn, điều hướng chuyển xuống thanh dưới —
  * KHÔNG thu nhỏ bố cục máy tính. Trạng thái kết nối và lời mời cài đặt ứng dụng luôn hiển
  * thị ở khung này, không nằm trong từng màn hình.
  */
