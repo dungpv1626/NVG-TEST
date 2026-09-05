@@ -488,10 +488,18 @@ export interface FloorPlanVariant {
   infeasibility: { message: string; conflictRules: string[] } | null;
 }
 
+export interface FloorPlanGeneration {
+  programArtifactId: string;
+  createdAt: string;
+  variants: FloorPlanVariant[];
+}
+
 export interface FloorPlanVariantsView {
   programArtifactId: string;
   headArtifactId: string | null;
   variants: FloorPlanVariant[];
+  /** Các đợt phương án của chương trình không gian trước — bản cũ còn nguyên để so sánh. */
+  previous: FloorPlanGeneration[];
 }
 
 /**

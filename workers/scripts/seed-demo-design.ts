@@ -9,6 +9,9 @@
  *     set -a; . ./.env; set +a
  *     DESIGN_COMPUTE_URL=http://localhost:8080 npx tsx workers/scripts/seed-demo-design.ts
  *
+ * `DEMO_FLOORS=5` mô phỏng cảnh 7 (khách đổi ý từ bốn lên năm tầng): đầu bài mới, chương trình
+ * mới, ba phương án mới — đợt cũ vẫn còn nguyên trong lịch sử để so sánh.
+ *
  * Idempotent: chạy lại thì cập nhật dự án theo mã, artifact cùng nội dung dùng lại (mã băm).
  *
  * Vì sao không đi qua `runLayer2`/`siteContextTable`: các mô-đun `*-data.ts` nhúng YAML bằng
@@ -46,7 +49,7 @@ const RULE_FILES = [
 export const DEMO_PROJECT_CODE = 'NVO-TK-2026-0028';
 
 /** Đầu bài NVO-028 — đúng ví dụ minh hoạ của tài liệu, không phải dự án có thật. */
-export function demoStructured(projectId: string): Record<string, unknown> {
+export function demoStructured(projectId: string, floors = 4): Record<string, unknown> {
   return {
     schema_version: '1.0.0',
     project_id: projectId,
@@ -62,7 +65,7 @@ export function demoStructured(projectId: string): Record<string, unknown> {
       adjacent: { front: 'duong_lon', left: 'nha_hang_xom', right: 'hem_2m', back: 'nha_hang_xom' },
       legal_docs_available: true,
     },
-    floors: 4,
+    floors,
     family: [
       { role: 'ong_ba', count: 2 },
       { role: 'vo_chong', count: 2 },
@@ -73,8 +76,8 @@ export function demoStructured(projectId: string): Record<string, unknown> {
       { type: 'living', floor: 1 },
       { type: 'kitchen', floor: 1 },
       { type: 'dining', floor: 1 },
-      { type: 'altar_room', floor: 4 },
-      { type: 'laundry', floor: 4 },
+      { type: 'altar_room', floor: floors },
+      { type: 'laundry', floor: floors },
     ],
     style: 'hien_dai',
     budget_range_vnd: [2_000_000_000, 3_000_000_000],
@@ -115,7 +118,7 @@ async function main(): Promise<void> {
       {
         company_id: company.data.id,
         code: DEMO_PROJECT_CODE,
-        name: 'Nhà anh Tuấn — nhà phố 4 tầng (demo)',
+        name: 'Nhà anh Tuấn — nhà phố (demo)',
         stage: 'phuong_an',
         responsible_user_id: (responsible.data?.id as string | undefined) ?? null,
         site_address: 'Lô 5 × 18 m, hướng Đông Nam, hẻm 2 m bên phải (dữ liệu minh hoạ)',
@@ -129,6 +132,26 @@ async function main(): Promise<void> {
     .single();
   if (project.error) throw new Error(project.error.message);
   const projectId = project.data.id as string;
+
+  // `DEMO_RESET=1`: xoá sạch artifact, lineage, bản hiệu lực và đầu bài của dự án demo để nạp
+  // lại từ đầu (dữ liệu bịa, hạng 3 — không phải hồ sơ khách).
+  if (process.env.DEMO_RESET === '1') {
+    for (const [table, column] of [
+      ['design_head', 'project_id'],
+      ['design_artifact_edge', 'from_id'],
+    ] as const) {
+      if (column === 'from_id') {
+        const ids = await admin.from('design_artifact').select('id').eq('project_id', projectId);
+        const list = (ids.data ?? []).map((r) => r.id as string);
+        if (list.length) await admin.from('design_artifact_edge').delete().in('from_id', list);
+      } else {
+        await admin.from(table).delete().eq(column, projectId);
+      }
+    }
+    await admin.from('design_artifact').delete().eq('project_id', projectId);
+    await admin.from('design_briefs').delete().eq('design_project_id', projectId);
+    console.log('Đã xoá dữ liệu cũ của dự án demo.');
+  }
 
   // Một biên bản khảo sát hiện trạng, để tab Khảo sát có chỗ đính ảnh (cảnh 2).
   const survey = await admin
@@ -149,7 +172,8 @@ async function main(): Promise<void> {
       orientation: 'Đông Nam',
       measurement_notes: 'Đo thực địa 5,02 × 18,05 m; cốt nền cao hơn vỉa hè 0,35 m.',
       surrounding_notes: 'Mặt trước đường 7 m; bên phải hẻm 2 m; bên trái và sau giáp nhà 3 tầng.',
-      usage_notes: 'Ông bà ở tầng 2; phòng thờ tầng trên cùng; cần chỗ để hai xe máy và một ô tô nhỏ.',
+      usage_notes:
+        'Ông bà ở tầng 2; phòng thờ tầng trên cùng; cần chỗ để hai xe máy và một ô tô nhỏ.',
     });
     if (created.error) throw new Error(created.error.message);
   }
@@ -165,8 +189,9 @@ async function main(): Promise<void> {
 
   // Lớp 1 — đúc đầu bài đúng đường `/brief/confirm` đi: qua `buildBriefPayload` để điểm
   // đầy đủ và danh sách thiếu được tính bằng cùng một hàm.
+  const floors = Number.parseInt(process.env.DEMO_FLOORS ?? '4', 10) || 4;
   const built = buildBriefPayload({
-    structured: demoStructured(projectId),
+    structured: demoStructured(projectId, floors),
     projectId,
     projectCode: DEMO_PROJECT_CODE,
   });
@@ -178,28 +203,36 @@ async function main(): Promise<void> {
     params: { form_config_version: BRIEF_FORM.version },
   });
 
-  const existingBrief = await admin
+  // Đầu bài đã xác nhận là BẤT BIẾN (trigger đóng băng): đổi số tầng là lập PHIÊN BẢN MỚI, bản
+  // cũ giữ nguyên làm căn cứ đối chiếu — đúng đường "Điều chỉnh đầu bài" của giao diện.
+  const current = await admin
     .from('design_briefs')
-    .select('id')
+    .select('id, version, artifact_id')
     .eq('design_project_id', projectId)
     .eq('is_current_version', true)
     .is('deleted_at', null)
     .maybeSingle();
-  const briefRow = {
-    company_id: company.data.id,
-    design_project_id: projectId,
-    version: 1,
-    is_current_version: true,
-    structured: built.payload,
-    confirmed_at: new Date().toISOString(),
-    artifact_id: briefArtifact.id,
-    design_task: 'Thiết kế nhà phố 4 tầng cho gia đình ba thế hệ, sáu người.',
-    change_reason: 'Bản đầu tiên',
-  };
-  const savedBrief = existingBrief.data
-    ? await admin.from('design_briefs').update(briefRow).eq('id', existingBrief.data.id)
-    : await admin.from('design_briefs').insert(briefRow);
-  if (savedBrief.error) throw new Error(savedBrief.error.message);
+  if (!current.data || current.data.artifact_id !== briefArtifact.id) {
+    if (current.data) {
+      const retired = await admin
+        .from('design_briefs')
+        .update({ is_current_version: false })
+        .eq('id', current.data.id);
+      if (retired.error) throw new Error(retired.error.message);
+    }
+    const inserted = await admin.from('design_briefs').insert({
+      company_id: company.data.id,
+      design_project_id: projectId,
+      version: ((current.data?.version as number | undefined) ?? 0) + 1,
+      is_current_version: true,
+      structured: built.payload,
+      confirmed_at: new Date().toISOString(),
+      artifact_id: briefArtifact.id,
+      design_task: `Thiết kế nhà phố ${floors} tầng cho gia đình ba thế hệ, sáu người.`,
+      change_reason: current.data ? `Khách đổi ý: ${floors} tầng` : 'Bản đầu tiên',
+    });
+    if (inserted.error) throw new Error(inserted.error.message);
+  }
 
   // Lớp 2 — chương trình không gian, cùng engine tất định của tuyến `/program/generate`.
   const rules = new RulePack(

@@ -94,6 +94,11 @@ function rank(space: Space): [number, number, number] {
   return [needsLight, service, space.priority ?? 99];
 }
 
+/** Phòng nhỏ trước — dùng để chọn phòng phục vụ đi cùng thang khi không có khu vệ sinh. */
+function byArea(a: Space, b: Space): number {
+  return (a.target_area_m2 ?? a.min_area_m2) - (b.target_area_m2 ?? b.min_area_m2);
+}
+
 function byRank(a: Space, b: Space): number {
   const ra = rank(a);
   const rb = rank(b);
@@ -168,7 +173,20 @@ export function floorTree(
   // né tránh: khoảng rỗng phía trước trên tầng lửng hoặc tầng áp mái là thứ nhà ống vẫn làm,
   // và nó không mang ràng buộc diện tích nào nên không kéo các tầng còn lại theo.
   const front = others.find((o) => !SERVICE_TYPES.has(o.type)) ?? null;
-  const rest = front ? others.filter((o) => o.id !== front.id) : others;
+  const afterFront = front ? others.filter((o) => o.id !== front.id) : others;
+
+  // Thang đi CÙNG một phòng phục vụ (ưu tiên khu vệ sinh) trong một dải, thang ở phía hành
+  // lang. Để thang một mình là nó trải hết bề rộng phần sau — 4,1 m × 2,8 m = 13,9 m² cho
+  // một vế thang, và tỉ lệ giao thông vọt lên 29% (vướng mắc V-11). Nhà ống thật đặt thang
+  // cạnh khu vệ sinh, đúng như thế này. Khu vệ sinh vẫn có lối vào: thang là không gian giao
+  // thông (`every_room_requires_access` chấp nhận kề thang).
+  const companion =
+    stair.length > 0
+      ? (afterFront.find((o) => o.type === 'wc') ??
+        [...afterFront].filter((o) => SERVICE_TYPES.has(o.type)).sort(byArea)[0] ??
+        null)
+      : null;
+  const rest = companion ? afterFront.filter((o) => o.id !== companion.id) : afterFront;
 
   // Các phòng còn lại xếp thành dải từ ngoài vào trong. Đảo thứ tự trước khi chia dải để
   // phòng CẦN SÁNG rơi vào dải trong cùng — đó là dải duy nhất chạm mặt sau.
@@ -185,7 +203,13 @@ export function floorTree(
     );
 
   const spineNode = spine.length > 0 ? rooms(spine) : null;
-  const stairNode = stair.length > 0 ? rooms(stair) : null;
+  const stairOnly = stair.length > 0 ? rooms(stair) : null;
+  const stairNode: LayoutNode | null =
+    stairOnly && companion
+      ? variant.spine === 'left'
+        ? { split: 'V', ratio_hint: 0.6, a: stairOnly, b: { room: companion.id } }
+        : { split: 'V', ratio_hint: 0.4, a: { room: companion.id }, b: stairOnly }
+      : stairOnly;
 
   const stack: LayoutNode[] = [];
   if (stairNode && variant.core === 'front') stack.push(stairNode);

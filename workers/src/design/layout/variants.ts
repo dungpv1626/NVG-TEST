@@ -27,7 +27,7 @@ import { summariseFloorPlan, type FloorPlanSummary } from './summary';
 /** Phần của kho artifact mà lớp này cần — thu hẹp để bản giả trong kiểm thử nhỏ. */
 export type VariantRepo = Pick<
   ArtifactRepository,
-  'head' | 'write' | 'findComputed' | 'get' | 'setHead' | 'edgesFrom' | 'lineage'
+  'head' | 'write' | 'findComputed' | 'get' | 'setHead' | 'edgesFrom' | 'lineage' | 'listKind'
 >;
 
 export interface VariantContext {
@@ -223,10 +223,21 @@ export interface VariantView {
   infeasibility: { message: string; conflictRules: string[] } | null;
 }
 
+export interface Generation {
+  programArtifactId: string;
+  createdAt: string;
+  variants: VariantView[];
+}
+
 export interface VariantsListing {
   programArtifactId: string;
   headArtifactId: string | null;
   variants: VariantView[];
+  /**
+   * Các đợt phương án của những chương trình không gian TRƯỚC (khách đổi ý, giải lại) — mới
+   * nhất trước. Bản cũ vẫn còn nguyên để so sánh: đó là điều 11-design-flow 11.6 hứa với khách.
+   */
+  previous: Generation[];
 }
 
 /**
@@ -237,9 +248,39 @@ export async function listVariants(ctx: VariantContext): Promise<VariantsListing
   const { repo, scope } = ctx;
   const { program, programId } = await requireInputs(ctx);
   const labels = spaceLabels(program, ctx.viByType);
-  const labelOf = new Map(LAYOUT_VARIANTS.map((v) => [v.id, v.label] as const));
   const head = await repo.head(scope.projectId, scope.discipline, 'floor_plan');
 
+  const variants = await variantsOfProgram(ctx, programId, labels, head?.id ?? null);
+
+  // Đợt trước: mọi chương trình không gian khác của dự án còn có phương án đã sinh.
+  const previous: Generation[] = [];
+  for (const item of await repo.listKind(scope.projectId, scope.discipline, 'space_program', 6)) {
+    if (item.id === programId || previous.length >= 3) continue;
+    const older = await repo.get(item.id, scope.projectId);
+    if (!older || older.kind !== 'space_program') continue;
+    const olderLabels = spaceLabels(older.payload as SpaceProgram, ctx.viByType);
+    const olderVariants = await variantsOfProgram(ctx, item.id, olderLabels, head?.id ?? null);
+    if (olderVariants.length > 0) {
+      previous.push({
+        programArtifactId: item.id,
+        createdAt: item.createdAt,
+        variants: olderVariants,
+      });
+    }
+  }
+
+  return { programArtifactId: programId, headArtifactId: head?.id ?? null, variants, previous };
+}
+
+/** Mọi phương án đã sinh từ MỘT chương trình không gian, theo lineage chương trình → ý đồ → mặt bằng. */
+async function variantsOfProgram(
+  ctx: VariantContext,
+  programId: string,
+  labels: Record<string, string>,
+  headId: string | null,
+): Promise<VariantView[]> {
+  const { repo, scope } = ctx;
+  const labelOf = new Map(LAYOUT_VARIANTS.map((v) => [v.id, v.label] as const));
   const variants: VariantView[] = [];
   for (const intentId of await repo.edgesFrom(programId, 'layer3a_intent')) {
     const intent = await repo.get(intentId, scope.projectId);
@@ -257,7 +298,7 @@ export async function listVariants(ctx: VariantContext): Promise<VariantsListing
           intentArtifactId: intentId,
           artifactId: out.id,
           createdAt: out.createdAt,
-          isHead: head?.id === out.id,
+          isHead: headId === out.id,
           status: 'ok',
           summary: summariseFloorPlan(plan, labels, ctx.groups),
           floorPlan: plan,
@@ -286,13 +327,12 @@ export async function listVariants(ctx: VariantContext): Promise<VariantsListing
       }
     }
   }
-
   // Cùng biến thể có thể có nhiều bản (đổi ngân sách giải, đổi locality) — bản mới nhất lên
   // trước trong từng nhóm, nhóm xếp theo mã biến thể để A · B · C luôn đứng đúng thứ tự.
   variants.sort(
     (a, b) => a.variantId.localeCompare(b.variantId) || b.createdAt.localeCompare(a.createdAt),
   );
-  return { programArtifactId: programId, headArtifactId: head?.id ?? null, variants };
+  return variants;
 }
 
 /**

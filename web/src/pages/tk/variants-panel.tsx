@@ -17,13 +17,15 @@
 
 import { useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, LayoutGrid } from 'lucide-react';
-import { formatNumber } from '@nvg/shared';
+import { formatDateTime, formatNumber } from '@nvg/shared';
+import { compareFloorPlans, type FloorPlan } from '@nvg/shared/design';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/states';
 import {
   useChooseFloorPlan,
   useFloorPlanVariants,
   useGenerateFloorPlans,
+  type FloorPlanGeneration,
   type FloorPlanVariant,
 } from '@/hooks/use-design-projects';
 import { toUserMessage } from '@/hooks/use-error-message';
@@ -135,8 +137,22 @@ export function VariantsPanel({
         ))}
       </div>
 
+      {(view.previous ?? []).length > 0 && (
+        <PreviousGenerations
+          previous={view.previous}
+          current={
+            view.variants.find((v) => v.isHead) ??
+            view.variants.find((v) => v.status === 'ok') ??
+            null
+          }
+          onView={(id) => setViewing(id)}
+        />
+      )}
+
       {(() => {
-        const shown = view.variants.find((v) => v.artifactId === (viewing ?? headId));
+        const shown = [...view.variants, ...(view.previous ?? []).flatMap((g) => g.variants)].find(
+          (v) => v.artifactId === (viewing ?? headId),
+        );
         if (!shown || shown.status !== 'ok') return null;
         return (
           <>
@@ -216,6 +232,102 @@ function ComparisonTable({ variants }: { variants: FloorPlanVariant[] }): React.
         </tbody>
       </table>
     </div>
+  );
+}
+
+/**
+ * Đợt trước — bản cũ còn nguyên để so sánh (11-design-flow 11.6: "phương án cũ vẫn còn nguyên
+ * trong lịch sử"). Kèm phần tác động: điều gì đã đổi giữa phương án A của đợt trước và phương
+ * án đang hiện hành, bằng câu tiếng Việt tất định (TK-13), tính ngay trên trình duyệt từ hai
+ * mặt bằng đã có trong danh sách.
+ */
+function PreviousGenerations({
+  previous,
+  current,
+  onView,
+}: {
+  previous: FloorPlanGeneration[];
+  current: FloorPlanVariant | null;
+  onView: (artifactId: string) => void;
+}): React.ReactElement {
+  return (
+    <section className="rounded border border-border bg-surface p-4">
+      <h3 className="font-medium">Đợt trước ({previous.length})</h3>
+      <p className="text-fg-subtle">
+        Chương trình không gian đã đổi và phương án được giải lại. Bản cũ vẫn còn nguyên để so sánh;
+        chọn "Xem bản vẽ" để mở lại.
+      </p>
+      <ul className="mt-3 space-y-4">
+        {previous.map((generation) => {
+          const reference =
+            generation.variants.find(
+              (v) => v.status === 'ok' && v.variantId === current?.variantId,
+            ) ??
+            generation.variants.find((v) => v.status === 'ok') ??
+            null;
+          const labels: Record<string, string> = {};
+          for (const v of [reference, current]) {
+            for (const level of v?.summary?.levels ?? []) {
+              for (const room of level.rooms) labels[room.id] = room.label;
+            }
+          }
+          const changes =
+            reference?.floorPlan && current?.floorPlan
+              ? compareFloorPlans(
+                  reference.floorPlan as FloorPlan,
+                  current.floorPlan as FloorPlan,
+                  labels,
+                )
+              : [];
+          return (
+            <li key={generation.programArtifactId} className="rounded border border-border p-3">
+              <p className="font-medium">
+                Đợt {formatDateTime(generation.createdAt)}
+                <span className="ml-2 font-normal text-fg-subtle">
+                  {generation.variants
+                    .map((v) =>
+                      v.summary
+                        ? `${v.variantId}: ${formatNumber(v.summary.total_area_m2, 1)} m², ${v.summary.bedrooms} phòng ngủ`
+                        : `${v.variantId}: vô nghiệm`,
+                    )
+                    .join(' · ')}
+                </span>
+              </p>
+              {reference && current && (
+                <div className="mt-2">
+                  <p className="text-fg-subtle">
+                    Tác động so với bản đang hiệu lực (phương án {reference.variantId} đợt này →
+                    phương án {current.variantId} hiện hành):
+                  </p>
+                  {changes.length === 0 ? (
+                    <p>Không có thay đổi đáng kể.</p>
+                  ) : (
+                    <ul className="list-disc space-y-0.5 pl-5">
+                      {changes.map((c) => (
+                        <li key={c.message}>{c.message}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+              <div className="mt-2 flex flex-wrap gap-2">
+                {generation.variants
+                  .filter((v) => v.status === 'ok')
+                  .map((v) => (
+                    <Button
+                      key={v.artifactId}
+                      variant="secondary"
+                      onClick={() => onView(v.artifactId)}
+                    >
+                      Xem bản vẽ {v.variantId}
+                    </Button>
+                  ))}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

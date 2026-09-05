@@ -76,6 +76,21 @@ derived:
     # Một thang cho mỗi lõi; số lõi lấy từ `massing.cores_preferred` của đầu bài.
     per_core: 1
 
+# ── Xếp phòng thả nổi vào tầng ────────────────────────────────────────────────────────
+# Trước 06/09/2026 mỗi phòng thả nổi đi vào tầng đang NHẸ NHẤT trong dải cho phép: bốn phòng
+# ngủ rải mỗi tầng một phòng, tầng nào cũng trống 40 %, và bộ giải phải phình khu vệ sinh lên
+# 43 m² hay mở thông tầng 12 m để lấp — kiến trúc sư nhìn là mất tin. Nay: chỉ MỞ tầng mới khi
+# các tầng đang dùng đã đầy tới `fill_target_ratio` (diện tích mong muốn / sàn). Tầng nào sau
+# đó vẫn dưới `filler_below_ratio` thì thêm không gian bổ sung theo `fillers` cho tới khi đủ.
+# Ba con số là mặc định của team (14-phuong-an-demo 14.5), kiến trúc sư NVG đổi ở đây.
+allocation:
+  fill_target_ratio: 0.62
+  filler_below_ratio: 0.45
+  fillers:
+    nha_pho: [study, storage, balcony]
+    biet_thu: [study, storage, balcony]
+    nha_vuon: [study, storage, terrace]
+
 # ── Trọng số quan hệ liền kề, suy từ mức nghiêm trọng của rule pack ────────────────────
 # Quan hệ liền kề KHÔNG khai ở đây — nguồn duy nhất là `rules/**/*.yaml` mục
 # `predicate: adjacency`. Tệp này chỉ nói mức nghiêm trọng đổi thành trọng số bao nhiêu

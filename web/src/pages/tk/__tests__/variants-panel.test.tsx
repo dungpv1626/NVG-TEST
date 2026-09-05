@@ -43,6 +43,12 @@ vi.mock('@/hooks/use-design-projects', () => ({
   }),
 }));
 
+// Ba khối con (tờ bản vẽ, khối ba chiều, bảng thống kê) có bộ kiểm thử riêng — ở đây thay
+// bằng bản rỗng để bộ này chỉ canh phần liệt kê và so sánh phương án.
+vi.mock('../sheet-viewer', () => ({ SheetViewer: () => null }));
+vi.mock('../massing-viewer', () => ({ MassingViewer: () => null }));
+vi.mock('../schedules-panel', () => ({ SchedulesPanel: () => null }));
+
 const { VariantsPanel } = await import('../variants-panel');
 
 function variant(id: string, isHead: boolean) {
@@ -133,11 +139,57 @@ describe('Tab Phương án kiến trúc — phần engine sinh', () => {
     });
   });
 
+  it('đợt trước còn nguyên, kèm tác động so với bản hiện hành bằng tiếng Việt', () => {
+    state.error = null;
+    const plan = (levels: number[]) => ({
+      schema_version: '1.0.0',
+      intent_ref: `sha256:${'a'.repeat(64)}`,
+      rule_pack_version: '1',
+      site: { width_m: 5, depth_m: 18 },
+      levels: levels.map((level) => ({
+        level,
+        rooms: [
+          {
+            id: `altar_room_1`,
+            type: 'altar_room',
+            polygon: [
+              [0, 0],
+              [5, 0],
+              [5, 3],
+              [0, 3],
+            ],
+            area_m2: 15,
+          },
+        ].filter(() => level === levels[levels.length - 1]),
+      })),
+      cores: [],
+      constraint_report: { status: 'pass' },
+    });
+    const current = { ...variant('A', true), floorPlan: plan([1, 2, 3, 4, 5]) };
+    const old = {
+      ...variant('A', false),
+      artifactId: `sha256:${'c'.repeat(64)}`,
+      floorPlan: plan([1, 2, 3, 4]),
+    };
+    state.view = {
+      programArtifactId: 'x',
+      headArtifactId: current.artifactId,
+      variants: [current],
+      previous: [{ programArtifactId: 'p0', createdAt: '2026-09-06T01:00:00Z', variants: [old] }],
+    };
+    renderWithApp(<VariantsPanel projectId="p1" readOnly={false} />);
+    expect(screen.getByText('Đợt trước (1)')).toBeInTheDocument();
+    expect(screen.getByText('Thêm tầng 5.')).toBeInTheDocument();
+    expect(screen.getByText(/chuyển từ tầng 4 sang tầng 5/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Xem bản vẽ A' })).toBeInTheDocument();
+  });
+
   it('vô nghiệm hiện lời giải thích, không có nút chọn', () => {
     state.error = null;
     state.view = {
       programArtifactId: 'x',
       headArtifactId: null,
+      previous: [],
       variants: [
         {
           ...variant('C', false),
@@ -159,7 +211,7 @@ describe('Tab Phương án kiến trúc — phần engine sinh', () => {
 
   it('chưa có phương án thì mời sinh; chưa chốt chương trình thì bày như trạng thái rỗng', async () => {
     state.error = null;
-    state.view = { programArtifactId: 'x', headArtifactId: null, variants: [] };
+    state.view = { programArtifactId: 'x', headArtifactId: null, variants: [], previous: [] };
     state.generate.mockClear();
     const first = renderWithApp(<VariantsPanel projectId="p1" readOnly={false} />);
     await userEvent.click(screen.getByRole('button', { name: 'Sinh phương án' }));

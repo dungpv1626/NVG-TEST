@@ -19,6 +19,7 @@ export * from './brief-form';
 export * from './brief-form-data';
 export * from './brief-completeness';
 export * from './site-geometry';
+export * from './compare';
 export * from './site-boundary-from-edges';
 export * from './site-boundary-from-coordinates';
 

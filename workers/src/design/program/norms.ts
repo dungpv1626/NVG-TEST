@@ -53,6 +53,12 @@ export interface SpaceNorms {
   };
   adjacency_weight: Record<'error' | 'warning', number>;
   spaces: Record<string, SpaceNorm>;
+  /** Cách xếp phòng thả nổi vào tầng và không gian bổ sung khi tầng còn trống — xem YAML. */
+  allocation: {
+    fill_target_ratio: number;
+    filler_below_ratio: number;
+    fillers: Record<string, string[]>;
+  };
 }
 
 export class SpaceNormsError extends Error {
@@ -176,6 +182,35 @@ export function parseSpaceNorms(yamlText: string): SpaceNorms {
   const derivedRaw = (raw.derived ?? {}) as Record<string, Record<string, unknown>>;
   const weightRaw = (raw.adjacency_weight ?? {}) as Record<string, unknown>;
 
+  // Thiếu mục `allocation` thì dùng ngưỡng mặc định — tệp cũ vẫn nạp được; nhưng tỉ lệ phải nằm
+  // trong (0, 1] vì chúng nhân với mặt sàn.
+  const allocationRaw = (raw.allocation ?? {}) as Record<string, unknown>;
+  const ratio = (key: string, fallback: number): number => {
+    const value =
+      allocationRaw[key] === undefined ? fallback : num(allocationRaw[key], `allocation.${key}`);
+    if (!(value > 0 && value <= 1)) {
+      throw new SpaceNormsError(`kb/space_norms.yaml: allocation.${key} phải trong (0, 1].`);
+    }
+    return value;
+  };
+  const fillersRaw = (allocationRaw.fillers ?? {}) as Record<string, unknown>;
+  const fillers: Record<string, string[]> = {};
+  for (const [type, list] of Object.entries(fillersRaw)) {
+    fillers[type] = Array.isArray(list) ? list.map(String) : [];
+    for (const code of fillers[type]) {
+      if (!spaces[code]) {
+        throw new SpaceNormsError(
+          `kb/space_norms.yaml: allocation.fillers.${type} nhắc "${code}" chưa có chuẩn diện tích.`,
+        );
+      }
+    }
+  }
+  const allocation = {
+    fill_target_ratio: ratio('fill_target_ratio', 0.62),
+    filler_below_ratio: ratio('filler_below_ratio', 0.45),
+    fillers,
+  };
+
   return {
     version: String(raw.version ?? '0.0.0'),
     priors: { min_samples: num(priorsRaw?.min_samples, 'priors.min_samples'), width_bands },
@@ -199,6 +234,7 @@ export function parseSpaceNorms(yamlText: string): SpaceNorms {
       warning: num(weightRaw.warning, 'adjacency_weight.warning'),
     },
     spaces,
+    allocation,
   };
 }
 

@@ -152,6 +152,13 @@ class FakeRepo implements VariantRepo {
   async edgesFrom(fromId: string, step: PipelineStep) {
     return this.edges.filter((e) => e.from === fromId && e.step === step).map((e) => e.to);
   }
+  async listKind(projectId: string, _discipline: string, kind: ArtifactKind, limit = 10) {
+    return [...this.artifacts.entries()]
+      .filter(([, a]) => a.kind === kind)
+      .map(([id, a]) => ({ id, createdAt: a.createdAt }))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, limit);
+  }
   async lineage(id: string) {
     return this.edges
       .filter((e) => e.to === id)
@@ -312,6 +319,38 @@ describe('Sinh phương án mặt bằng — đường chạy đồng bộ', () 
     const again = await generateVariants(ctx);
     expect(again.headArtifactId).toBe(b.artifactId);
     expect((await listVariants(ctx)).variants.find((v) => v.isHead)?.variantId).toBe('B');
+  });
+
+  it('đổi chương trình không gian: đợt trước vẫn còn để so sánh, đợt mới là hiện hành', async () => {
+    const { repo, ctx } = await setup();
+    const first = await generateVariants(ctx);
+
+    // Khách đổi ý: thêm phòng ngủ ở tầng 3 → chương trình mới → giải lại.
+    const changed = program();
+    changed.spaces.push(space('bedroom_3', 'bedroom', 3, { needs_daylight: true }));
+    changed.spaces.push(space('stair_3', 'stair', 3));
+    changed.spaces.push(space('circulation_3', 'circulation', 3));
+    const brief = await repo.head(ctx.scope.projectId, 'kien_truc', 'design_brief');
+    await repo.write({
+      scope: ctx.scope,
+      kind: 'space_program',
+      payload: changed,
+      inputs: [brief!.id],
+      step: 'layer2_program',
+      params: { v: 2 },
+    });
+    const second = await generateVariants(ctx);
+    expect(second.programArtifactId).not.toBe(first.programArtifactId);
+
+    const listing = await listVariants(ctx);
+    expect(listing.variants.map((v) => v.variantId)).toEqual(['A', 'B', 'C']);
+    expect(listing.previous).toHaveLength(1);
+    expect(listing.previous[0]!.programArtifactId).toBe(first.programArtifactId);
+    expect(listing.previous[0]!.variants.map((v) => v.artifactId)).toEqual(
+      first.results.map((r) => r.artifactId),
+    );
+    // Bản hiệu lực vẫn là bản của đợt trước cho tới khi kiến trúc sư chọn lại — không lặng lẽ đổi.
+    expect(listing.headArtifactId).toBe(first.headArtifactId);
   });
 
   it('không chọn được thứ không phải mặt bằng của dự án này', async () => {

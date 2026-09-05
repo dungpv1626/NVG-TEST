@@ -118,6 +118,31 @@ describe('Lớp 3a — ý đồ bố cục', () => {
     expect([...paths.keys()].some((k) => k.startsWith('void:'))).toBe(true);
   });
 
+  it('thang đi cùng khu vệ sinh trong một dải, thang ở phía hành lang (V-11)', () => {
+    const program = townhouse();
+    const tree = floorTree(
+      program.spaces.filter((s) => s.floor === 1),
+      LAYOUT_VARIANTS[0]!,
+      ['front', 'back'],
+    )!;
+    const paths = new Map(leafPaths(tree));
+    const stairPath = paths.get('stair_1')!;
+    const wcPath = paths.get('wc_1')!;
+    // Cùng một nút cha (chỉ khác nhánh cuối) — tức là cạnh nhau trong cùng một dải.
+    expect(stairPath.slice(0, -1)).toBe(wcPath.slice(0, -1));
+    // Hành lang bên trái → thang ở nhánh `a` (bên trái, kề hành lang), vệ sinh ở `b`.
+    expect(stairPath.endsWith('a')).toBe(true);
+    expect(wcPath.endsWith('b')).toBe(true);
+
+    const mirrored = floorTree(
+      program.spaces.filter((s) => s.floor === 1),
+      LAYOUT_VARIANTS[1]!,
+      ['front', 'back'],
+    )!;
+    const mirroredPaths = new Map(leafPaths(mirrored));
+    expect(mirroredPaths.get('stair_1')!.endsWith('b')).toBe(true);
+  });
+
   it('lõi thang nằm cùng một đường đi ở mọi tầng có thang', () => {
     const program = townhouse();
     const intent = buildLayoutIntent({ program, programRef: REF }) as never as {

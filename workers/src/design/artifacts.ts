@@ -232,6 +232,25 @@ export class ArtifactRepository {
     return { id: data.id as string, kind, payload, createdAt: data.created_at as string };
   }
 
+  /** Mọi artifact một loại của dự án, mới nhất trước — để liệt kê các đợt phương án. */
+  async listKind(
+    projectId: string,
+    discipline: ArtifactDiscipline,
+    kind: ArtifactKind,
+    limit = 10,
+  ): Promise<Array<{ id: string; createdAt: string }>> {
+    const { data, error } = await this.db
+      .from('design_artifact')
+      .select('id, created_at')
+      .eq('project_id', projectId)
+      .eq('discipline', discipline)
+      .eq('kind', kind)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((r) => ({ id: r.id as string, createdAt: r.created_at as string }));
+  }
+
   /** Mọi artifact mà một bước đã sinh ra TỪ một artifact đầu vào — chiều xuôi của `lineage`. */
   async edgesFrom(fromId: string, step: PipelineStep): Promise<string[]> {
     const { data, error } = await this.db

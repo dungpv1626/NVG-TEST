@@ -102,7 +102,16 @@ export function buildSpaceProgram(inputs: ProgramInputs): ProgramResult {
   const requests = collectRequests(inputs, warnings);
 
   // ── 2. Gán tầng ─────────────────────────────────────────────────────────────────────
-  const instances = assignFloors(requests, floors, norms, rules, buildingType, inputs, scale);
+  const instances = assignFloors(
+    requests,
+    floors,
+    norms,
+    rules,
+    buildingType,
+    inputs,
+    scale,
+    footprint,
+  );
 
   if (!instances.length) {
     throw new ProgramError(
@@ -351,11 +360,13 @@ function assignFloors(
   buildingType: string,
   inputs: ProgramInputs,
   scale: number,
+  footprint: number,
 ): Instance[] {
   const rulePreference = rules.floorPreference(buildingType);
   const load = new Array<number>(floors + 1).fill(0);
   const placed: Instance[] = [];
   const pending: Array<{ instance: Omit<Instance, 'floor'>; range: [number, number] }> = [];
+  const capacity = footprint * norms.allocation.fill_target_ratio;
 
   for (const request of requests) {
     const norm = norms.spaces[request.type]!;
@@ -380,15 +391,60 @@ function assignFloors(
     }
   }
 
-  // Chọn trong dải cho phép, ưu tiên tầng đang nhẹ nhất; hoà thì lấy tầng thấp hơn. Duyệt
-  // theo thứ tự đầu vào nên kết quả tất định.
+  // Tải "cố định" của mỗi tầng là phần ghim (thang, giao thông, vệ sinh tối thiểu, phòng ghim
+  // tầng). Một tầng được coi là ĐANG DÙNG khi đã có phòng thả nổi nào đó đặt lên trên phần đó.
+  const fixed = [...load];
+
+  // Chọn trong dải cho phép: ưu tiên tầng ĐANG DÙNG còn chỗ (nhẹ nhất trong số đó); hết thì mở
+  // tầng thấp nhất chưa dùng còn chỗ; không tầng nào còn chỗ thì rơi về tầng nhẹ nhất. Duyệt
+  // theo thứ tự đầu vào nên kết quả tất định. Lý do ở `kb/space_norms.yaml` mục `allocation`.
   for (const { instance, range } of pending) {
-    let best = range[0];
-    for (let level = range[0] + 1; level <= range[1]; level += 1) {
-      if ((load[level] ?? 0) < (load[best] ?? 0)) best = level;
+    const fits = (level: number) => (load[level] ?? 0) + instance.target <= capacity;
+    let best: number | null = null;
+    for (let level = range[0]; level <= range[1]; level += 1) {
+      const inUse = (load[level] ?? 0) > (fixed[level] ?? 0);
+      if (inUse && fits(level) && (best === null || (load[level] ?? 0) < (load[best] ?? 0)))
+        best = level;
+    }
+    if (best === null) {
+      for (let level = range[0]; level <= range[1]; level += 1) {
+        if (fits(level)) {
+          best = level;
+          break;
+        }
+      }
+    }
+    if (best === null) {
+      best = range[0];
+      for (let level = range[0] + 1; level <= range[1]; level += 1) {
+        if ((load[level] ?? 0) < (load[best] ?? 0)) best = level;
+      }
     }
     load[best] = (load[best] ?? 0) + instance.target;
     placed.push({ ...instance, floor: best });
+  }
+
+  // Tầng còn trống quá thì thêm không gian bổ sung theo danh sách của loại hình — tới khi đủ
+  // ngưỡng, hoặc hết danh sách. Mỗi loại một cái mỗi tầng.
+  const fillers = norms.allocation.fillers[buildingType] ?? [];
+  const floorOf = new Map<number, Set<string>>();
+  for (const it of placed) floorOf.set(it.floor, (floorOf.get(it.floor) ?? new Set()).add(it.type));
+  for (let level = 1; level <= floors; level += 1) {
+    for (const type of fillers) {
+      if ((load[level] ?? 0) >= footprint * norms.allocation.filler_below_ratio) break;
+      const norm = norms.spaces[type];
+      if (!norm || floorOf.get(level)?.has(type)) continue;
+      const areas = areasFor(type, norm, rules, buildingType, inputs, scale);
+      placed.push({
+        type,
+        preference: norm.floor,
+        priority: norm.priority,
+        ...areas,
+        floor: level,
+      });
+      load[level] = (load[level] ?? 0) + areas.target;
+      floorOf.set(level, (floorOf.get(level) ?? new Set()).add(type));
+    }
   }
   return placed;
 }

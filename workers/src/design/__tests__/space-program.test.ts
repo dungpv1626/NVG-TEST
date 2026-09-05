@@ -160,6 +160,39 @@ describe('Soạn chương trình không gian', () => {
     expect([...floors].sort()).toEqual([1, 2, 3, 4]);
   });
 
+  it('phòng thả nổi dồn vào tầng đang dùng trước khi mở tầng mới; tầng trống được bổ sung (V-11)', () => {
+    // Ba thế hệ, bốn phòng ngủ, bốn tầng: trước đây mỗi tầng một phòng ngủ và tầng nào cũng
+    // trống 40 % — bộ giải phải phình vệ sinh hay mở thông tầng để lấp. Nay hai phòng ngủ ở
+    // chung một tầng khi còn chỗ, và không tầng nào dưới ngưỡng bổ sung.
+    const program = build(
+      brief({
+        floors: 4,
+        family: [
+          { role: 'ong_ba', count: 2 },
+          { role: 'vo_chong', count: 2 },
+          { role: 'con', count: 2 },
+        ],
+        required_spaces: [
+          { type: 'altar_room', floor: 4 },
+          { type: 'garage', floor: 1 },
+        ],
+      }),
+    ).payload;
+    const bedroomsByFloor = new Map<number, number>();
+    for (const s of program.spaces) {
+      if (s.type === 'bedroom' || s.type === 'master_bedroom') {
+        bedroomsByFloor.set(s.floor, (bedroomsByFloor.get(s.floor) ?? 0) + 1);
+      }
+    }
+    expect(Math.max(...bedroomsByFloor.values())).toBeGreaterThanOrEqual(2);
+    for (const allocation of program.floor_allocation ?? []) {
+      const ratio = (allocation.allocated_area_m2 ?? 0) / (allocation.usable_area_m2 ?? 1);
+      expect(ratio, `tầng ${allocation.floor} còn trống quá`).toBeGreaterThanOrEqual(
+        norms.allocation.filler_below_ratio - 1e-9,
+      );
+    }
+  });
+
   it('diện tích đã phân bổ mỗi tầng khớp tổng diện tích mong muốn của tầng đó', () => {
     const program = build().payload;
     for (const allocation of program.floor_allocation ?? []) {
