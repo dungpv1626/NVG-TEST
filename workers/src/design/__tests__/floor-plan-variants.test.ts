@@ -199,6 +199,9 @@ class FakeCompute implements ComputeBackend {
   async schedules(): Promise<unknown> {
     throw new Error('không dùng trong bộ này');
   }
+  async exportGlb(): Promise<ArrayBuffer> {
+    throw new Error('không dùng trong bộ này');
+  }
   async exportXlsx(): Promise<ArrayBuffer> {
     throw new Error('không dùng trong bộ này');
   }
@@ -253,6 +256,15 @@ describe('Sinh phương án mặt bằng — đường chạy đồng bộ', () 
     expect(await repo.head(ctx.scope.projectId, 'kien_truc', 'layout_intent')).toMatchObject({
       id: outcome.results[0]!.intentArtifactId,
     });
+    // Lớp 4 tất định đi liền sau mỗi mặt bằng khả thi, và bản hiệu lực của nó đi theo mặt bằng.
+    for (const r of outcome.results) {
+      expect(await repo.edgesFrom(r.artifactId, 'layer4_arch')).toHaveLength(1);
+    }
+    const archHead = await repo.head(ctx.scope.projectId, 'kien_truc', 'arch_model');
+    expect(archHead).not.toBeNull();
+    expect((archHead!.payload as { floorplan_ref: string }).floorplan_ref).toBe(
+      outcome.results[0]!.artifactId,
+    );
 
     const listing = await listVariants(ctx);
     expect(listing.variants).toHaveLength(3);
@@ -290,6 +302,13 @@ describe('Sinh phương án mặt bằng — đường chạy đồng bộ', () 
     expect((await repo.head(ctx.scope.projectId, 'kien_truc', 'layout_intent'))?.id).toBe(
       b.intentArtifactId,
     );
+    expect(
+      (
+        (await repo.head(ctx.scope.projectId, 'kien_truc', 'arch_model'))?.payload as {
+          floorplan_ref: string;
+        }
+      ).floorplan_ref,
+    ).toBe(b.artifactId);
     const again = await generateVariants(ctx);
     expect(again.headArtifactId).toBe(b.artifactId);
     expect((await listVariants(ctx)).variants.find((v) => v.isHead)?.variantId).toBe('B');

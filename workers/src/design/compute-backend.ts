@@ -142,6 +142,8 @@ export interface ComputeBackend {
    * duy nhất cho cả DXF lẫn SVG (bất biến #5: trình duyệt không dựng hình).
    */
   exportSvg(request: ExportDxfRequest): Promise<string>;
+  /** Khối ba chiều sơ bộ (glTF nhị phân) đùn từ mặt bằng — trình duyệt chỉ xem. */
+  exportGlb(request: { floor_plan: unknown }): Promise<ArrayBuffer>;
   /** Bảng thống kê cửa · cửa sổ · diện tích · khối lượng sơ bộ — tính lại từ mặt bằng (TK-17). */
   schedules(request: SchedulesRequest): Promise<unknown>;
   /** Cùng bảng đó dạng XLSX để bàn giao. */
@@ -253,6 +255,11 @@ export class HttpComputeBackend implements ComputeBackend {
     return await res.arrayBuffer();
   }
 
+  async exportGlb(request: { floor_plan: unknown }): Promise<ArrayBuffer> {
+    const res = await this.exportCall('/export/glb', request);
+    return await res.arrayBuffer();
+  }
+
   async schedules(request: SchedulesRequest): Promise<unknown> {
     const res = await this.exportCall('/schedules', request);
     return await res.json();
@@ -265,7 +272,7 @@ export class HttpComputeBackend implements ComputeBackend {
 
   private async exportCall(
     path: string,
-    request: ExportDxfRequest | SchedulesRequest,
+    request: ExportDxfRequest | SchedulesRequest | { floor_plan: unknown },
   ): Promise<Response> {
     let res: Response;
     try {
@@ -322,6 +329,10 @@ export class UnconfiguredComputeBackend implements ComputeBackend {
   }
 
   async schedules(): Promise<never> {
+    throw this.unavailable();
+  }
+
+  async exportGlb(): Promise<never> {
     throw this.unavailable();
   }
 

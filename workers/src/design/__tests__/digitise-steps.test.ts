@@ -57,6 +57,9 @@ function backend(overrides: Partial<ComputeBackend> = {}): ComputeBackend {
     async schedules() {
       throw new Error('không dùng');
     },
+    async exportGlb() {
+      throw new Error('không dùng');
+    },
     async exportXlsx() {
       throw new Error('không dùng');
     },

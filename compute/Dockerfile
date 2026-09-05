@@ -59,6 +59,10 @@ RUN pip install --no-cache-dir \
         "shapely>=2.0" \
         "ezdxf>=1.3" \
         "openpyxl>=3.1" \
+        "trimesh>=4.4" \
+        "mapbox-earcut>=1.0" \
+        "numpy>=1.26" \
+        "scipy>=1.13" \
         "pydantic>=2.9" \
         "pyyaml>=6.0" \
         "jsonschema>=4.23" \

@@ -26,7 +26,7 @@ import { gateLayer2, readCompletenessThreshold } from '../brief/gate';
 import { createComputeBackend } from '../compute-backend';
 import type { DesignEnv } from '../env';
 import { runLayer2 } from '../program/run';
-import { layoutIntent, solveFloorPlan, stubArchModel, stubRenderResult } from './steps';
+import { buildArchModel, layoutIntent, solveFloorPlan, stubRenderResult } from './steps';
 import { spaceLabels } from '../layout/labels';
 import { siteFaces } from '../layout/site-context';
 import { siteContextTable } from '../layout/site-context-data';
@@ -191,7 +191,7 @@ export class DesignPipeline extends WorkflowEntrypoint<DesignEnv, DesignPipeline
     const arch = await guard(step, 'layer4_arch', runs('layer4_arch'), async () => {
       const head = await repo.head(p.projectId, p.discipline, 'floor_plan');
       if (!head) throw new NonRetryableError('Chưa có mặt bằng đang hiệu lực.');
-      const result = stubArchModel(head.payload as never, planId);
+      const result = buildArchModel(head.payload as never, planId);
       return repo.write({
         scope,
         kind: 'arch_model',

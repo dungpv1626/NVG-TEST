@@ -27,6 +27,7 @@ import {
   type FloorPlanVariant,
 } from '@/hooks/use-design-projects';
 import { toUserMessage } from '@/hooks/use-error-message';
+import { MassingViewer } from './massing-viewer';
 import { SchedulesPanel } from './schedules-panel';
 import { SheetViewer } from './sheet-viewer';
 
@@ -143,6 +144,11 @@ export function VariantsPanel({
               projectId={projectId}
               artifactId={shown.artifactId}
               levels={(shown.summary?.levels ?? []).map((l) => l.level)}
+              variantLabel={`Phương án ${shown.variantId}`}
+            />
+            <MassingViewer
+              projectId={projectId}
+              artifactId={shown.artifactId}
               variantLabel={`Phương án ${shown.variantId}`}
             />
             <SchedulesPanel

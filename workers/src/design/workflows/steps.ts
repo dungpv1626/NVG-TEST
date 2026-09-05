@@ -35,6 +35,12 @@ import { buildLayoutIntent, type LayoutVariant } from '../layout/intent';
 import type { Face } from '../layout/site-context';
 
 const SCHEMA_VERSION = '1.0.0';
+// Dự phòng khi mặt bằng cũ chưa mang cao độ hay cửa chưa mang chiều cao — cùng giá trị với
+// kb/construction_norms.yaml, nhưng đường chính là đọc từ FloorPlan.
+const DEFAULT_STOREY_M = 3.6;
+const DEFAULT_DOOR_H = 2.2;
+const DEFAULT_WINDOW_H = 1.6;
+const DEFAULT_PARAPET_M = 0.9;
 
 export interface StepResult<T> {
   payload: T;
@@ -152,30 +158,83 @@ export async function solveFloorPlan(
 }
 
 /**
- * Layer 4 — mô hình kiến trúc tham số.
+ * Layer 4 — mô hình kiến trúc tham số, bản TẤT ĐỊNH cho khối sơ bộ (Mốc 5, 11-design-flow 11.4b).
  *
- * STUB: bản thật gọi mô hình ngôn ngữ chọn tham số mặt đứng theo phong cách, rồi Container
- * dựng mặt cắt và bảng thống kê (Mốc 6).
+ * Không còn là stub: khối theo cao độ tầng thật của `FloorPlan.levels[].height_m` (đọc từ chuẩn
+ * cấu tạo, không phải hằng số), lỗ mở mặt đứng lấy từ các lỗ mở nằm trên tường ngoài, mái bằng
+ * có lan can. Phần mô hình ngôn ngữ chọn tham số mặt đứng theo phong cách (TK-14) đến sau và chỉ
+ * BỔ SUNG vào cấu trúc này, không thay nó.
+ *
+ * Nguyên tắc bất biến 2 vẫn đúng: mọi con số ở đây là chép từ hình học đã giải, không có số nào
+ * được "sáng tác" tại chỗ.
  */
-export function stubArchModel(plan: FloorPlan, planRef: string): StepResult<ArchModel> {
+export function buildArchModel(plan: FloorPlan, planRef: string): StepResult<ArchModel> {
   let base = 0;
   const levels = plan.levels.map((level) => {
-    const height = level.height_m ?? 3.4;
+    const height = level.height_m ?? DEFAULT_STOREY_M;
     const row = { level: level.level, extrude_from_m: base, extrude_to_m: base + height };
     base += height;
     return row;
   });
 
+  const width = plan.site.width_m;
+  const depth = plan.site.depth_m;
+  const eps = 1e-6;
+  type FacadeOpening = NonNullable<NonNullable<ArchModel['facades']>[number]['openings']>[number];
+  const facades: Record<'front' | 'back' | 'left' | 'right', FacadeOpening[]> = {
+    front: [],
+    back: [],
+    left: [],
+    right: [],
+  };
+  for (const level of plan.levels) {
+    const walls = new Map((level.walls ?? []).map((w) => [w.id, w]));
+    for (const opening of level.openings ?? []) {
+      const wall = walls.get(opening.wall);
+      if (!wall) continue;
+      const ax = wall.a[0] ?? 0;
+      const ay = wall.a[1] ?? 0;
+      const bx = wall.b[0] ?? 0;
+      const by = wall.b[1] ?? 0;
+      const vertical = Math.abs(bx - ax) < eps;
+      let direction: keyof typeof facades | null = null;
+      if (vertical && Math.abs(ax) < eps) direction = 'left';
+      else if (vertical && Math.abs(ax - width) < eps) direction = 'right';
+      else if (!vertical && Math.abs(ay) < eps) direction = 'front';
+      else if (!vertical && Math.abs(ay - depth) < eps) direction = 'back';
+      if (!direction) continue;
+      const origin = vertical ? Math.min(ay, by) : Math.min(ax, bx);
+      const kind = opening.kind === 'opening' ? 'opening' : opening.kind;
+      facades[direction].push({
+        level: level.level,
+        x_m: origin + opening.offset_m,
+        w_m: opening.width_m,
+        h_m: opening.height_m ?? (kind === 'door' ? DEFAULT_DOOR_H : DEFAULT_WINDOW_H),
+        sill_m: kind === 'door' ? 0 : (opening.sill_m ?? null),
+        kind,
+      });
+    }
+  }
+
+  // Mặt cắt A-A dọc qua lõi thang (cùng vị trí với ký hiệu trên tờ mặt bằng).
+  const stair = plan.levels[0]?.rooms.find((r) => r.type === 'stair' || r.type === 'core');
+  const stairX = stair
+    ? stair.polygon.reduce((s, p) => s + (p[0] ?? 0), 0) / stair.polygon.length
+    : width / 2;
+
   return {
-    stub: true,
+    stub: false,
     payload: parseArtifact('arch_model', {
       schema_version: SCHEMA_VERSION,
       floorplan_ref: planRef,
       style: null,
       massing: { levels },
-      roof: { kind: 'flat', parapet_h_m: 0.9 },
-      facades: [],
-      sections: [],
+      roof: { kind: 'flat', parapet_h_m: DEFAULT_PARAPET_M },
+      facades: (['front', 'back', 'left', 'right'] as const).map((direction) => ({
+        direction,
+        openings: facades[direction],
+      })),
+      sections: [{ id: 'A', plane: { axis: 'x', at_m: Math.round(stairX * 1000) / 1000 } }],
     }),
   };
 }

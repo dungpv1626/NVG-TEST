@@ -571,6 +571,21 @@ designApp.get('/floor-plan/:projectId/svg', async (c) => {
   }
 });
 
+/** Khối ba chiều sơ bộ của mặt bằng đang hiệu lực (hoặc `?artifact=`) — glTF nhị phân, trình duyệt chỉ xem. */
+designApp.get('/floor-plan/:projectId/glb', async (c) => {
+  const prepared = await prepareSheet(c);
+  if ('response' in prepared) return prepared.response;
+  const { compute, request } = prepared;
+  try {
+    const glb = await compute.exportGlb({ floor_plan: request.floor_plan });
+    return new Response(glb, {
+      headers: { 'Content-Type': 'model/gltf-binary', 'Cache-Control': 'private, max-age=300' },
+    });
+  } catch (error) {
+    return c.json({ error: error instanceof Error ? error.message : String(error) }, 502);
+  }
+});
+
 /**
  * Bảng thống kê của mặt bằng đang hiệu lực (hoặc `?artifact=`), tính lại mỗi lần gọi — cùng
  * mặt bằng thì cùng bảng, và mặt bằng đổi là bảng đổi theo (11-design-flow 11.6 Output 4).

@@ -611,6 +611,25 @@ export async function downloadFloorPlanXlsx(
   URL.revokeObjectURL(url);
 }
 
+/**
+ * Khối ba chiều sơ bộ (glTF nhị phân) của một phương án — trả về URL đối tượng trong bộ nhớ để
+ * three.js nạp. Thu hồi URL khi truy vấn bị dọn.
+ */
+export function useMassingModel(projectId: string, artifactId: string | null) {
+  return useQuery<string, Error>({
+    queryKey: ['design_floor_plan_glb', projectId, artifactId],
+    queryFn: async () => {
+      const query = artifactId ? `?artifact=${artifactId}` : '';
+      const response = await designApiFile(`/design/floor-plan/${projectId}/glb${query}`);
+      return URL.createObjectURL(await response.blob());
+    },
+    enabled: Boolean(projectId),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+}
+
 /** Tải tệp DXF của một tầng về máy — cùng tờ với SVG đang xem. */
 export async function downloadFloorPlanDxf(
   projectId: string,

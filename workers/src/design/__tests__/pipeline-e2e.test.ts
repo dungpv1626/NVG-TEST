@@ -21,7 +21,7 @@ import { ARTIFACT_ID_PATTERN, artifactId } from '@nvg/shared/design';
 import { ArtifactRepository, type ArtifactScope } from '../artifacts';
 import { HttpComputeBackend } from '../compute-backend';
 import type { DesignEnv } from '../env';
-import { solveFloorPlan, stubArchModel, layoutIntent, stubRenderResult } from '../workflows/steps';
+import { solveFloorPlan, buildArchModel, layoutIntent, stubRenderResult } from '../workflows/steps';
 import { buildSpaceProgram } from '../program/engine';
 import { chooseVariant, generateVariants, listVariants } from '../layout/variants';
 import { parseSiteContext } from '../layout/site-context';
@@ -145,7 +145,7 @@ describeE2e('Pipeline khung xương — đầu bài tới ảnh phối cảnh', 
       params: { locality: 'hung_yen', timeBudgetS: 30 },
     });
 
-    const arch = stubArchModel(solved.payload, planArtifact.id);
+    const arch = buildArchModel(solved.payload, planArtifact.id);
     const archArtifact = await repo.write({
       scope,
       kind: 'arch_model',

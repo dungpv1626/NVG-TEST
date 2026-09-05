@@ -21,7 +21,7 @@ import type { ComputeBackend } from '../compute-backend';
 import { LAYOUT_VARIANTS, type LayoutVariant } from './intent';
 import { spaceLabels } from './labels';
 import { siteFaces, type SiteContextTable } from './site-context';
-import { layoutIntent, solveFloorPlan } from '../workflows/steps';
+import { buildArchModel, layoutIntent, solveFloorPlan } from '../workflows/steps';
 import { summariseFloorPlan, type FloorPlanSummary } from './summary';
 
 /** Phần của kho artifact mà lớp này cần — thu hẹp để bản giả trong kiểm thử nhỏ. */
@@ -141,6 +141,10 @@ export async function generateVariants(
     if (computed) {
       const found = await repo.get(computed, scope.projectId);
       if (found && (found.kind === 'floor_plan' || found.kind === 'infeasibility_report')) {
+        // Mặt bằng giải từ trước khi có Lớp 4 tất định thì chưa có mô hình kiến trúc — bổ sung
+        // ngay ở đây, để lineage của mọi mặt bằng khả thi đều đầy đủ.
+        if (found.kind === 'floor_plan')
+          await ensureArchModel(repo, scope, found.id, found.payload as FloorPlan);
         results.push({
           variantId: variant.id,
           label: variant.label,
@@ -176,6 +180,10 @@ export async function generateVariants(
       params: solveParams,
       setHead: false,
     });
+    if (solved.status === 'ok') {
+      // Lớp 4 tất định đi liền sau: khối sơ bộ và lỗ mở mặt đứng chép từ mặt bằng vừa giải.
+      await ensureArchModel(repo, scope, written.id, solved.payload);
+    }
     results.push({
       variantId: variant.id,
       label: variant.label,
@@ -193,6 +201,7 @@ export async function generateVariants(
     if (first) {
       await repo.setHead(scope, 'layout_intent', first.intentArtifactId);
       await repo.setHead(scope, 'floor_plan', first.artifactId);
+      await setArchHead(repo, scope, first.artifactId);
       head = { id: first.artifactId, payload: null };
     }
   }
@@ -304,4 +313,31 @@ export async function chooseVariant(ctx: VariantContext, artifactId: string): Pr
     if (intent?.kind === 'layout_intent') await repo.setHead(scope, 'layout_intent', intentId);
   }
   await repo.setHead(scope, 'floor_plan', artifactId);
+  await setArchHead(repo, scope, artifactId);
+}
+
+async function ensureArchModel(
+  repo: VariantRepo,
+  scope: ArtifactScope,
+  planId: string,
+  plan: FloorPlan,
+): Promise<void> {
+  const [existing] = await repo.edgesFrom(planId, 'layer4_arch');
+  if (existing) return;
+  const arch = buildArchModel(plan, planId);
+  await repo.write({
+    scope,
+    kind: 'arch_model',
+    payload: arch.payload,
+    inputs: [planId],
+    step: 'layer4_arch',
+    params: { stub: arch.stub },
+    setHead: false,
+  });
+}
+
+/** Mô hình kiến trúc sinh từ mặt bằng này (nếu đã có) thành bản hiệu lực — đi theo mặt bằng. */
+async function setArchHead(repo: VariantRepo, scope: ArtifactScope, planId: string): Promise<void> {
+  const [archId] = await repo.edgesFrom(planId, 'layer4_arch');
+  if (archId) await repo.setHead(scope, 'arch_model', archId);
 }

@@ -33,6 +33,7 @@ from design_compute.adapters import (
 )
 from design_compute.sheet import render_svg
 from design_compute.schedules import build_schedules, schedules_to_xlsx
+from design_compute.massing import MassingError, massing_glb
 from design_compute.geometry.norms import load_construction_norms
 from design_compute.cad.export import build_sheet
 from design_compute.cad import (
@@ -269,6 +270,21 @@ def export_svg(payload: ExportDxfPayload) -> Response:
     except DxfExportError as exc:
         return JSONResponse(status_code=422, content={"error": str(exc), "retryable": False})
     return Response(content=render_svg(sheet), media_type="image/svg+xml")
+
+
+class MassingPayload(BaseModel):
+    floor_plan: dict[str, Any]
+
+
+@app.post("/export/glb")
+def export_glb(payload: MassingPayload) -> Response:
+    """Khối ba chiều sơ bộ (glTF nhị phân) đùn từ mặt bằng — trình duyệt chỉ xem (bất biến #5)."""
+    validate("floor-plan", payload.floor_plan)
+    try:
+        data = massing_glb(payload.floor_plan)
+    except MassingError as exc:
+        return JSONResponse(status_code=422, content={"error": str(exc), "retryable": False})
+    return Response(content=data, media_type="model/gltf-binary")
 
 
 class SchedulesPayload(BaseModel):

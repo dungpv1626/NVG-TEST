@@ -15,7 +15,7 @@ import {
   writeCapability,
 } from '@nvg/shared/design';
 import { ContractError, parseArtifact, parseRequest } from '../contracts';
-import { stubArchModel, layoutIntent, stubRenderResult } from '../workflows/steps';
+import { buildArchModel, layoutIntent, stubRenderResult } from '../workflows/steps';
 import { buildSpaceProgram } from '../program/engine';
 import { testNorms, testRulePack } from './program-fixtures';
 
@@ -169,7 +169,7 @@ describe('Các bước của pipeline', () => {
       levels: [{ level: 1, height_m: 3.4, rooms: [] }],
       constraint_report: { status: 'pass' },
     });
-    const arch = stubArchModel(plan, REF);
+    const arch = buildArchModel(plan, REF);
 
     expect(intent.payload.floors).toHaveLength(3);
     expect(arch.payload.massing.levels[0]?.extrude_to_m).toBeCloseTo(3.4);
