@@ -52,3 +52,7 @@ export function testNorms(): SpaceNorms {
 export function testVocabularyYaml(): string {
   return read('kb/room_vocabulary.yaml');
 }
+
+export function testSiteContextYaml(): string {
+  return read('kb/site_context.yaml');
+}

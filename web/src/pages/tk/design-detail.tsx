@@ -38,6 +38,7 @@ import { ChangeRequestPanel } from './change-request-panel';
 import { DisciplinePanel } from './discipline-panel';
 import { ProgramPanel } from './program-panel';
 import { SurveyPanel } from './survey-panel';
+import { VariantsPanel } from './variants-panel';
 import { VersionPanel } from './version-panel';
 
 const EM_DASH = '—';
@@ -282,13 +283,18 @@ export function DesignDetailPage() {
             id: 'phuong-an',
             label: 'Phương án kiến trúc',
             content: (
-              <VersionPanel
-                projectId={project.id}
-                companyId={project.company_id}
-                disciplines={CONCEPT_DISCIPLINES}
-                readOnly={readOnly}
-                emptyMessage="Chưa có phương án kiến trúc nào. Thêm phương án rồi phát hành để gửi khách hàng xem và ghi nhận góp ý."
-              />
+              <div className="space-y-8">
+                {/* Phương án do engine sinh (TK-12) đứng trước; bên dưới là các bản phương án
+                    tải lên theo cơ chế phiên bản của TK-03 — hai nguồn, cùng một tab. */}
+                <VariantsPanel projectId={project.id} readOnly={readOnly} />
+                <VersionPanel
+                  projectId={project.id}
+                  companyId={project.company_id}
+                  disciplines={CONCEPT_DISCIPLINES}
+                  readOnly={readOnly}
+                  emptyMessage="Chưa có bản phương án nào tải lên. Thêm phương án rồi phát hành để gửi khách hàng xem và ghi nhận góp ý."
+                />
+              </div>
             ),
           },
           {

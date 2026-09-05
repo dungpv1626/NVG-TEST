@@ -35,6 +35,15 @@ import { embeddingText, withheldFields, type RationalePayload } from './kb/ratio
 import { createSourceFileStore, type StoredSource } from './source-files';
 import type { DigitiseParams, DigitiseSource } from './workflows/digitise-steps';
 import { extractSiteBoundary } from './site/extract-boundary';
+import { siteContextTable } from './layout/site-context-data';
+import { roomGroups } from './kb/vocabulary';
+import {
+  chooseVariant,
+  generateVariants,
+  listVariants,
+  VariantsPrerequisiteMissing,
+  type VariantContext,
+} from './layout/variants';
 import type { DesignEnv } from './env';
 
 export const designApp = new Hono<{ Bindings: DesignEnv }>();
@@ -396,6 +405,120 @@ designApp.get('/program/:projectId', async (c) => {
     // đổi trên đường đi qua kho tệp — đã xảy ra thật: vừa chốt xong đã báo là chưa chốt.
     matchesHead: head ? (await artifactId(run.payload)) === head.id : false,
   });
+});
+
+/**
+ * Ngữ cảnh dùng chung của ba tuyến phương án: kho artifact, Container, và hai bảng tra từ
+ * `kb/`. Dựng ở MỘT chỗ để ba tuyến không mỗi nơi tra một kiểu.
+ */
+function variantContext(
+  env: DesignEnv,
+  projectId: string,
+  scope: { companyId: string; tenantId: string; actorId: string | null },
+): VariantContext {
+  return {
+    repo: new ArtifactRepository(env),
+    compute: createComputeBackend(env),
+    scope: {
+      tenantId: scope.tenantId,
+      companyId: scope.companyId,
+      projectId,
+      discipline: 'kien_truc',
+      actorId: scope.actorId,
+    },
+    siteContext: siteContextTable(),
+    viByType: roomLabels(),
+    groups: roomGroups(roomVocabulary().vocabulary),
+  };
+}
+
+const PROJECT_NOT_VISIBLE =
+  'Không tìm thấy hồ sơ thiết kế, hoặc tài khoản không được xem hồ sơ này. Người chịu trách nhiệm dự án hoặc Phòng Thiết kế xem được.';
+
+/**
+ * Sinh các phương án mặt bằng (Lớp 3a + 3b) cho chương trình không gian đang hiệu lực.
+ *
+ * ĐỒNG BỘ, không qua Workflow — lý do ở đầu `layout/variants.ts`. Endpoint Workers vì thoả cả
+ * (a) gọi Container lẫn (b) ghi artifact + lineage + con trỏ hiệu lực toàn vẹn cùng lúc.
+ *
+ * Vô nghiệm KHÔNG phải lỗi: một biến thể vô nghiệm vẫn nằm trong danh sách trả về kèm lời
+ * giải thích, và tuyến vẫn trả 200.
+ */
+designApp.post('/floor-plan/generate', async (c) => {
+  const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+
+  const body = (await c.req.json()) as { projectId?: string; timeBudgetS?: number };
+  if (!body.projectId) return c.json({ error: 'Thiếu mã hồ sơ thiết kế.' }, 400);
+
+  const db = await asUser(c.env, token);
+  const scope = await projectScope(db, body.projectId);
+  if (!scope) return c.json({ error: PROJECT_NOT_VISIBLE }, 404);
+
+  const ctx = variantContext(c.env, body.projectId, scope);
+  try {
+    const outcome = await generateVariants(ctx, {
+      timeBudgetS:
+        typeof body.timeBudgetS === 'number' && body.timeBudgetS > 0 && body.timeBudgetS <= 60
+          ? body.timeBudgetS
+          : undefined,
+    });
+    const listing = await listVariants(ctx);
+    return c.json({ ...listing, generated: outcome.results });
+  } catch (error) {
+    if (error instanceof VariantsPrerequisiteMissing) return c.json({ error: error.message }, 409);
+    if (error instanceof ContractError) return c.json({ error: error.message }, 422);
+    const message = error instanceof Error ? error.message : String(error);
+    return c.json({ error: message }, 502);
+  }
+});
+
+/** Danh sách phương án đã sinh cho chương trình không gian đang hiệu lực, kèm bản đang chọn. */
+designApp.get('/floor-plan/:projectId', async (c) => {
+  const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+
+  const projectId = c.req.param('projectId');
+  const db = await asUser(c.env, token);
+  const scope = await projectScope(db, projectId);
+  if (!scope) return c.json({ error: PROJECT_NOT_VISIBLE }, 404);
+
+  try {
+    return c.json(await listVariants(variantContext(c.env, projectId, scope)));
+  } catch (error) {
+    if (error instanceof VariantsPrerequisiteMissing) return c.json({ error: error.message }, 409);
+    const message = error instanceof Error ? error.message : String(error);
+    return c.json({ error: message }, 502);
+  }
+});
+
+/**
+ * Chọn một phương án làm bản đang hiệu lực — "kiến trúc sư chọn một phương án AI làm điểm
+ * khởi đầu" (08-milestones, điều kiện ra Mốc 5). Mọi bước sau (DXF, khối 3D, thống kê) đọc
+ * bản này.
+ */
+designApp.post('/floor-plan/choose', async (c) => {
+  const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+
+  const body = (await c.req.json()) as { projectId?: string; artifactId?: string };
+  if (!body.projectId || !body.artifactId) {
+    return c.json({ error: 'Thiếu mã hồ sơ thiết kế hoặc mã phương án.' }, 400);
+  }
+
+  const db = await asUser(c.env, token);
+  const scope = await projectScope(db, body.projectId);
+  if (!scope) return c.json({ error: PROJECT_NOT_VISIBLE }, 404);
+
+  const ctx = variantContext(c.env, body.projectId, scope);
+  try {
+    await chooseVariant(ctx, body.artifactId);
+    return c.json(await listVariants(ctx));
+  } catch (error) {
+    if (error instanceof VariantsPrerequisiteMissing) return c.json({ error: error.message }, 409);
+    const message = error instanceof Error ? error.message : String(error);
+    return c.json({ error: message }, 502);
+  }
 });
 
 /**

@@ -271,27 +271,29 @@
       <h2>1. Đang ở đâu</h2>
       <div class="card">
         <p>
-          <b>Pipeline sáu lớp chạy thông qua cả hai runtime; engine sinh được MỘT loại tờ.</b>
-          Một bộ hồ sơ nhà ở thật có <b>47 loại tờ</b>, trong đó 29 loại engine
-          <i>không được phép</i> tự phát hành (kỹ sư có chứng chỉ ký — bất biến #9). Còn
-          <b>18 loại</b> engine được phép, hiện làm được 1.
+          <b>Đang thi hành phương án ra demo</b> (<code>doc/design/14-phuong-an-demo.md</code>, Haan
+          chốt 06/09/2026): bảy bước, mỗi bước mở một cảnh trong kịch bản mười cảnh. Thước đo không
+          còn là Mốc mà là <b>cảnh demo chạy được</b>. <b>Bước 1 xong</b>: Lớp 3 gọi được từ API, ba
+          phương án sinh trong vài giây, chọn được bản hiệu lực, ảnh khảo sát hiện trạng đính được
+          vào biên bản; có dự án demo NVO-028 nạp sẵn.
         </p>
         <p class="muted-t xs">
-          Hai chỗ hụt lớn nhất đều là <i>khe hở giữa các Mốc</i>, không phải quên: <b>V-8</b> trình
-          trích xuất nhìn thấy khoảng một phần sáu bản vẽ thật, và <b>V-9</b> ba năng lực nền của
-          mọi loại tờ (chuỗi kích thước · bong bóng trục · khung tờ khổ giấy) chưa Mốc nào nhận sở
-          hữu.
+          Hai việc lớn còn lại đều là chuyện <i>bản vẽ trông có thật không</i>: <b>V-9</b> bộ chú
+          thích và khung tờ (bước 2), và <b>V-11</b> tỉ lệ giao thông 29% vì thang và hành lang mỗi
+          thứ chiếm trọn một dải ngang (bước 5). Trích xuất hồ sơ cũ (V-8) chỉ làm bậc 1 ở bước 6.
         </p>
-        <div class="bar"><span style="width: 55%"></span></div>
+        <div class="bar"><span style="width: 60%"></span></div>
         <div class="stats">
           <div class="stat">
-            <b>1 / 18</b><span class="xs muted-t">Loại tờ engine được phép phát hành, đã làm</span>
+            <b>1 / 7</b><span class="xs muted-t">Bước của phương án demo đã xong</span>
           </div>
           <div class="stat">
-            <b>1.148</b><span class="xs muted-t">Phép thử xanh (983 vitest + 165 pytest)</span>
+            <b>1.168</b><span class="xs muted-t">Phép thử xanh (1.002 vitest + 166 pytest)</span>
           </div>
           <div class="stat"><b>7</b><span class="xs muted-t">Vướng mắc đang mở</span></div>
-          <div class="stat"><b>16</b><span class="xs muted-t">Câu hỏi chờ Haan</span></div>
+          <div class="stat">
+            <b>16</b><span class="xs muted-t">Mặc định team đã chốt — NVG đổi được</span>
+          </div>
         </div>
       </div>
 
@@ -372,39 +374,47 @@
       </div>
 
       <!-- ============ 3. SẼ LÀM ============ -->
-      <h2>3. Sẽ làm — theo thứ tự</h2>
+      <h2>3. Sẽ làm — bảy bước của phương án demo</h2>
       <div class="card">
         <p class="xs muted-t">
-          Thứ tự do Haan chốt 05/09/2026: <b>phần cơ bản trước</b> (đầu bài, khảo sát hiện trạng,
-          bản vẽ 2D, phác thảo, phối cảnh); <b>điện nước làm sau, nhưng chắc chắn làm</b>.
+          Thứ tự và tiêu chí xong ở <code>doc/design/14-phuong-an-demo.md</code> mục 14.7. Mỗi bước
+          kết thúc bằng một cảnh chạy được; xong bước nào đánh dấu ngay ở đây.
         </p>
         <ol>
           <li>
-            <b>Đi vào block khi trích xuất</b> (<code>virtual_entities()</code>) — việc giá trị cao
-            nhất: 83–93% hình học nằm trong block và hiện không nhìn thấy. Gỡ phần lớn V-8.
+            <span class="pill s-done">Xong 06/09</span> <b>Gỡ kẹt + nền</b> — tuyến đồng bộ
+            <code>POST /design/floor-plan/generate</code> (3 biến thể) · <code>GET</code> danh sách
+            theo lineage · <code>POST /choose</code>; tab Phương án có bảng so sánh bằng ngôn ngữ
+            khách; <code>height_m</code> phát ra từ chuẩn cấu tạo; ảnh/video hiện trạng đính biên
+            bản khảo sát (bucket riêng, RLS theo thư mục dự án, migration 0118/0119); dự án demo
+            NVO-028 (<code>workers/scripts/seed-demo-design.ts</code>). Mở cảnh 2 · 4.
           </li>
           <li>
-            <b>Tách tờ trong modelspace</b> — một DXF là trọn hồ sơ một bộ môn, 22–73 tờ xếp cạnh
-            nhau. Thuật toán đã chạy được ở <code>compute/bench/khaosat_dxf.py</code>, bảng tra ba
-            họ khung tên ở <code>kb/title_block.yaml</code>. Còn phải đưa vào
-            <code>extract.py</code>.
+            <span class="pill s-progress">Đang làm</span> <b>Mô hình tờ</b> —
+            <code>sheet.py</code> trong Container: trục + bong bóng · kích thước hai lớp bốn cạnh ·
+            tường đậm · cửa cung quay · cửa sổ nét đôi · thang đủ bậc · ký hiệu mặt cắt · khung A3 +
+            khung tên BLOCK/ATTRIB. Xuất DXF (lớp <code>NV-*</code>) và SVG; trình xem SVG trong
+            tab, tô màu công năng. Mở cảnh 5 · 8.
           </li>
           <li>
-            <b>Dựng đa giác phòng từ đồ thị tim tường</b> (<code>shapely.polygonize</code>) — bản vẽ
-            NVG không có lớp ranh phòng, nên đọc thẳng từ lớp là ngõ cụt.
+            <b>Thống kê + bàn giao</b> — <code>schedules</code> thật từ <code>openings[]</code> và
+            <code>rooms[]</code> → bảng và XLSX; nút tải DXF/XLSX. Cảnh 8.
           </li>
           <li>
-            <b>Ba năng lực nền của mọi loại tờ</b> (V-9): chuỗi kích thước hai lớp · bong bóng trục
-            hai đầu · khung tờ khổ giấy A3. Kho mã hiện không có một thực thể
-            <code>DIMENSION</code> nào; hồ sơ thật có hơn mười nghìn.
+            <b>Khối 3D</b> — <code>trimesh</code> đùn → glTF → artifact
+            <code>arch_model</code> thật; three.js chỉ xem; nhãn "Khối sơ bộ" do mã chèn. Cảnh 6.
           </li>
           <li>
-            <b>Nối <code>DESIGN_PIPELINE</code></b> để Lớp 3a→5 gọi được từ API (V-10) — không có
-            bước này thì điều kiện ra của Mốc 5 không đo được.
+            <b>Đổi ý và tác động</b> — 4 → 5 tầng giải lại giữ lõi thang, so sánh hai bản, lineage;
+            V-4 deletion filter; V-11 thang và hành lang chung một dải. Cảnh 7.
           </li>
           <li>
-            <b>Bốn loại tờ kiến trúc kế tiếp</b>: mặt bằng kiến trúc · mặt bằng định vị cửa · mặt
-            bằng lát sàn · thống kê cửa. Cả bốn dùng lại đúng ba năng lực nền ở trên.
+            <b>Phối cảnh + số hoá</b> — ảnh khối từ canvas luôn có; Gemini khi có khoá trả phí;
+            <code>extract.py</code> bậc 1 (vào block, tách tờ, ATTRIB). Cảnh 9 · 10.
+          </li>
+          <li>
+            <b>Phát hành + kịch bản</b> — publish bridge với DXF/PDF thật; bài Playwright mười cảnh;
+            dọn Q-3/Q-5. Cảnh 1→10.
           </li>
         </ol>
       </div>
@@ -424,6 +434,17 @@
             </tr>
           </thead>
           <tbody>
+            <tr>
+              <td class="num">06/09</td>
+              <td>Bước 1 của phương án demo — gỡ V-10, ảnh khảo sát, dự án demo</td>
+              <td class="xs">
+                Lớp 3 chạy đồng bộ qua ba tuyến <code>/design/floor-plan/*</code>, dùng chung hàm
+                bước với Workflow; bảng so sánh phương án; đường ống thật (Container + Supabase)
+                kiểm bằng <code>pipeline-e2e</code>; ảnh hiện trạng đính biên bản với RLS trên cả
+                bảng lẫn bucket; dự án NVO-028 nạp bằng script. Phát hiện trên đường: đầu bài đúc
+                theo hợp đồng cũ không đọc được nữa — nay báo câu nghiệp vụ thay vì 502.
+              </td>
+            </tr>
             <tr>
               <td class="num">06/09</td>
               <td>Rút tri thức khỏi hồ sơ thật, đưa vào <code>kb/</code></td>
@@ -526,14 +547,19 @@
               </td>
             </tr>
             <tr>
-              <td class="num">V-10</td>
+              <td class="num">V-11</td>
               <td>
-                <b>Lớp 3a→5 không chạy được từ API.</b> <code>DESIGN_PIPELINE</code> khai trong
-                wrangler nhưng vắng trong <code>DesignEnv</code> và không có tuyến nào gọi tới.
+                <b>Tỉ lệ giao thông 29%, thang bộ 13,9 m² mỗi tầng</b> trên lô 5 × 18 m — vì cây
+                chia không gian đặt thang và hành lang mỗi thứ trọn một dải ngang (<code
+                  >MAX_ROOMS_PER_BAND = 1</code
+                >), nên thang rộng đủ 5 m. Nhà thật để thang cạnh hành lang trong cùng một dải (2,2
+                + 1,0 m). Kiến trúc sư nhìn con số này là mất tin ngay, trước cả khi xem bản vẽ.
               </td>
-              <td class="xs">Điều kiện ra của Mốc 5</td>
+              <td class="xs">Cảnh 5 · 7 (chất lượng phương án)</td>
               <td class="xs">
-                Nối binding và thêm tuyến; không có bước này thì Mốc 5 không đo được
+                Cho phép lát cắt dọc trong dải thang: nút thang + hành lang chia theo bề rộng, các
+                phòng ở còn lại vẫn trải hết bề rộng. Làm ở bước 5, sau khi có bản vẽ để đối chiếu
+                bằng mắt.
               </td>
             </tr>
             <tr>
@@ -582,14 +608,20 @@
         </table>
       </div>
       <p class="xs muted-t">
-        <b>Đã gỡ:</b> V-1 (chưa có hồ sơ <code>.dwg</code> thật — gỡ 05/09) · V-5 (cây chia ép các
-        tầng cùng diện tích theo vùng) · V-6 (bộ giải chưa biểu diễn được lát cắt dọc).
+        <b>Đã gỡ:</b> V-10 (Lớp 3 không gọi được từ API — gỡ 06/09 bằng tuyến đồng bộ, Workflow giữ
+        cho việc chạy nền) · V-1 (chưa có hồ sơ <code>.dwg</code> thật — gỡ 05/09) · V-5 (cây chia
+        ép các tầng cùng diện tích theo vùng) · V-6 (bộ giải chưa biểu diễn được lát cắt dọc).
       </p>
 
       <!-- ============ 6. CÂU HỎI ============ -->
-      <h2>6. Câu hỏi chờ Haan</h2>
+      <h2>6. Mặc định team đã chốt — NVG có thể đổi</h2>
       <p class="xs muted-t">
-        Không câu nào chặn việc viết mã; chúng chặn việc biết mình làm đúng hay không.
+        Theo chỉ đạo 06/09/2026, không câu nào còn ở trạng thái chờ: mỗi câu được trả lời bằng một
+        <b>mặc định là dữ liệu</b> (YAML, tham số, cờ cấu hình), ghi ở
+        <code>doc/design/14-phuong-an-demo.md</code> mục 14.5. Bảng dưới giữ nguyên câu hỏi gốc để
+        NVG biết mình đang đổi cái gì khi sửa mặc định. Hai mặc định đáng chú ý nhất: lớp xuất dùng
+        quy ước <code>NV-*</code> của chính NVG (Q-24), và chiều cao tầng 3,6 / 3,9 m là tham số
+        theo đầu bài (Q-25).
       </p>
       <div class="tablewrap">
         <table>
@@ -755,7 +787,7 @@
           <tbody>
             <tr>
               <td>Phép thử xanh — toàn kho mã</td>
-              <td class="num"><b>1.148</b></td>
+              <td class="num"><b>1.168</b></td>
               <td class="xs">
                 983 vitest (<code>web</code> 234 · <code>logic</code> phần còn lại) + 165 pytest.
                 157 phép thử bỏ qua có chủ đích. ⚠️ Chạy cả bộ một lượt làm 21 phép thử

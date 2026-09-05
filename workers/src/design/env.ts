@@ -38,4 +38,13 @@ export interface DesignEnv {
 
   /** Workflow số hoá hồ sơ cũ (Mốc 3). Mỗi tệp là một bước chạy lại riêng được. */
   DIGITISE_PIPELINE?: Workflow;
+
+  /**
+   * Workflow điều phối pipeline thiết kế đầy đủ (`workflows/design-pipeline.ts`).
+   *
+   * Đường chạy DEMO không đi qua đây: Lớp 3 giải trong mili-giây nên tuyến đồng bộ
+   * `/floor-plan/generate` gọi thẳng các hàm bước. Workflow giữ lại cho việc chạy nền dài
+   * (số hoá hàng loạt, sinh lại toàn bộ dự án) — xem `doc/design/14-phuong-an-demo.md` 14.6(a).
+   */
+  DESIGN_PIPELINE?: Workflow;
 }

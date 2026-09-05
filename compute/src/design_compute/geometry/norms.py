@@ -49,6 +49,15 @@ class ConstructionNorms:
     wc_window_height_m: float
     wc_window_sill_m: float
     no_window_types: frozenset[str]
+    # Cao độ tầng — đọc từ mặt cắt hồ sơ thật (HS-01). Tầng trên cùng cao hơn các tầng còn
+    # lại, nên là hai số chứ không phải một. Đây là chỗ duy nhất giữ con số này: bộ giải không
+    # có biến chiều cao, còn `FloorPlan.levels[].height_m` mang nó ra cho khối 3D và mặt cắt.
+    storey_height_m: float
+    top_storey_height_m: float
+
+    def storey_height(self, level: int, top_level: int) -> float:
+        """Chiều cao của một tầng, biết tầng nào là tầng trên cùng."""
+        return self.top_storey_height_m if level == top_level else self.storey_height_m
 
 
 def _number(source: dict[str, Any], *path: str) -> float:
@@ -91,6 +100,8 @@ def parse_construction_norms(text: str) -> ConstructionNorms:
         wc_window_height_m=_number(raw, "openings", "wc_window", "height_m"),
         wc_window_sill_m=_number(raw, "openings", "wc_window", "sill_m"),
         no_window_types=frozenset(str(t) for t in (raw.get("no_window_types") or [])),
+        storey_height_m=_number(raw, "levels", "storey_height_m"),
+        top_storey_height_m=_number(raw, "levels", "top_storey_height_m"),
     )
 
 

@@ -253,6 +253,8 @@ def floor_plan_from_result(
 
     # Lõi thang là hình học DÙNG CHUNG giữa các tầng: MỘT đa giác cho mọi tầng, không phải mỗi
     # tầng một bản sao. Bộ giải đã ràng buộc chúng trùng khít, ở đây chỉ gắn mã.
+    top_level = max(levels) if levels else 1
+
     cores: list[dict[str, Any]] = []
     if result.core:
         cores.append({"id": "C1", **result.core})
@@ -273,6 +275,9 @@ def floor_plan_from_result(
         "levels": [
             {
                 "level": level,
+                # Cao độ tầng là DỮ LIỆU của chuẩn cấu tạo, không phải hằng số trong mã: trước
+                # đây `stubArchModel` ở Worker mặc định cứng 3,4 m trong khi hồ sơ thật là 3,6 m.
+                "height_m": norms.storey_height(level, top_level),
                 "rooms": entry["rooms"],
                 "voids": entry["voids"],
                 "walls": geometry.get(level, ([], []))[0],

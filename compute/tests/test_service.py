@@ -396,3 +396,21 @@ class TestExportDxf:
         wall_ids = {w["id"] for w in level["walls"]}
         for opening in level["openings"]:
             assert opening["wall"] in wall_ids, "lỗ mở trỏ tới bức tường không tồn tại"
+
+
+class TestStoreyHeight:
+    def test_levels_carry_storey_height_from_construction_norms(self) -> None:
+        """`height_m` đi ra từ chuẩn cấu tạo, tầng trên cùng cao hơn.
+
+        Trước 06/09/2026 mặt bằng KHÔNG mang chiều cao tầng, và Worker mặc định cứng 3,4 m
+        trong khi hồ sơ thật đọc được 3,6 m (tầng trên cùng 3,9 m). Khối 3D, mặt cắt và mọi
+        cao độ lát sàn đều dựa vào con số này — nó phải là dữ liệu, và phải ra khỏi Container.
+        """
+        from design_compute.geometry.norms import load_construction_norms
+
+        norms = load_construction_norms()
+        plan = client.post("/solve", json=_payload()).json()["floor_plan"]
+        heights = {lv["level"]: lv["height_m"] for lv in plan["levels"]}
+        assert heights[1] == norms.storey_height_m
+        assert heights[2] == norms.top_storey_height_m
+        assert heights[2] > heights[1]

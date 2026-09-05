@@ -205,6 +205,44 @@ export class ArtifactRepository {
     return (data?.to_id as string | undefined) ?? null;
   }
 
+  /**
+   * Đọc một artifact theo mã băm, kèm payload đã kiểm hợp đồng.
+   *
+   * Kiểm `projectId` ngay tại đây chứ không để lớp gọi tự so: một mã băm là danh tính toàn
+   * cục, và tuyến "chọn phương án" nhận mã từ trình duyệt — không kiểm thì một mã hợp lệ của
+   * dự án khác cũng đặt được làm bản hiệu lực của dự án này.
+   */
+  async get(
+    id: string,
+    projectId: string,
+  ): Promise<{ id: string; kind: ArtifactKind; payload: unknown; createdAt: string } | null> {
+    const { data, error } = await this.db
+      .from('design_artifact')
+      .select('id, kind, payload_uri, created_at')
+      .eq('id', id)
+      .eq('project_id', projectId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) return null;
+    const kind = data.kind as ArtifactKind;
+    const payload = parseArtifact(
+      kind,
+      JSON.parse(await this.store.get(data.payload_uri as string)),
+    );
+    return { id: data.id as string, kind, payload, createdAt: data.created_at as string };
+  }
+
+  /** Mọi artifact mà một bước đã sinh ra TỪ một artifact đầu vào — chiều xuôi của `lineage`. */
+  async edgesFrom(fromId: string, step: PipelineStep): Promise<string[]> {
+    const { data, error } = await this.db
+      .from('design_artifact_edge')
+      .select('to_id')
+      .eq('from_id', fromId)
+      .eq('step', step);
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((r) => r.to_id as string);
+  }
+
   /** Đường đi ngược từ một artifact về mọi input trực tiếp — nền của "vì sao ra bản này". */
   async lineage(id: string): Promise<Array<{ fromId: string; step: string; paramsHash: string }>> {
     const { data, error } = await this.db

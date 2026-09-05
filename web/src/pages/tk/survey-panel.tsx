@@ -17,7 +17,9 @@ import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/states';
 import { useDesignSurveys, useCreateDesignSurvey } from '@/hooks/use-design-surveys';
 import { toUserMessage } from '@/hooks/use-error-message';
+import { useSurveyPhotos } from '@/hooks/use-survey-photos';
 import { useAuth } from '@/lib/auth';
+import { SurveyPhotos } from './survey-photos';
 
 const EM_DASH = '—';
 
@@ -32,6 +34,7 @@ export function SurveyPanel({
 }) {
   const { profile } = useAuth();
   const { data: surveys } = useDesignSurveys(projectId);
+  const { data: photos } = useSurveyPhotos(projectId);
   const createSurvey = useCreateDesignSurvey();
 
   const [adding, setAdding] = useState(false);
@@ -51,9 +54,7 @@ export function SurveyPanel({
    * rời nhau thì sớm muộn có biên bản mà diện tích không khớp kích thước.
    */
   const computedArea =
-    form.landWidth && form.landDepth
-      ? String(Number(form.landWidth) * Number(form.landDepth))
-      : '';
+    form.landWidth && form.landDepth ? String(Number(form.landWidth) * Number(form.landDepth)) : '';
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -226,6 +227,14 @@ export function SurveyPanel({
                 <SurveyBlock label="Nhu cầu sử dụng" value={s.usage_notes} />
                 <SurveyBlock label="Ghi chú khác" value={s.notes} />
               </div>
+
+              <SurveyPhotos
+                projectId={projectId}
+                companyId={companyId}
+                surveyId={s.id}
+                photos={(photos ?? []).filter((p) => p.design_survey_id === s.id)}
+                readOnly={readOnly}
+              />
             </li>
           ))}
         </ul>

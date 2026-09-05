@@ -444,6 +444,95 @@ export function useGenerateSpaceProgram() {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Phương án mặt bằng — Lớp 3 (TK-12, TK-13)
+// ---------------------------------------------------------------------------
+
+export interface VariantRoom {
+  id: string;
+  type: string;
+  label: string;
+  area_m2: number;
+  has_daylight: boolean;
+}
+
+export interface VariantLevel {
+  level: number;
+  height_m: number | null;
+  area_m2: number;
+  rooms: VariantRoom[];
+}
+
+export interface VariantSummary {
+  levels: VariantLevel[];
+  total_area_m2: number;
+  bedrooms: number;
+  circulation_share: number;
+  altar_level: number | null;
+  garage_level: number | null;
+  constraint_status: 'pass' | 'warning' | 'infeasible';
+  violations: { rule_id: string; severity: 'error' | 'warning'; message: string }[];
+}
+
+export interface FloorPlanVariant {
+  variantId: string;
+  label: string;
+  intentArtifactId: string;
+  artifactId: string;
+  createdAt: string;
+  isHead: boolean;
+  status: 'ok' | 'infeasible';
+  summary: VariantSummary | null;
+  /** Hình học đã giải — chỉ để HIỂN THỊ; trình duyệt không dựng gì thêm (CLAUDE.md 8.2 #5). */
+  floorPlan: unknown;
+  infeasibility: { message: string; conflictRules: string[] } | null;
+}
+
+export interface FloorPlanVariantsView {
+  programArtifactId: string;
+  headArtifactId: string | null;
+  variants: FloorPlanVariant[];
+}
+
+/**
+ * Các phương án đã sinh cho chương trình không gian đang hiệu lực.
+ *
+ * `retry: false` cùng lý do với `useSpaceProgram`: "chưa chốt chương trình không gian" là
+ * trạng thái nghiệp vụ, không phải lỗi mạng.
+ */
+export function useFloorPlanVariants(projectId: string, enabled = true) {
+  return useQuery<FloorPlanVariantsView, Error>({
+    queryKey: ['design_floor_plan_variants', projectId],
+    queryFn: () => designApi<FloorPlanVariantsView>(`/design/floor-plan/${projectId}`),
+    enabled: Boolean(projectId) && enabled,
+    retry: false,
+  });
+}
+
+/** Sinh (hoặc sinh lại) ba phương án. Đồng bộ — kết quả về trong vài giây. */
+export function useGenerateFloorPlans() {
+  const queryClient = useQueryClient();
+  return useMutation<FloorPlanVariantsView, Error, { projectId: string }>({
+    mutationFn: ({ projectId }) =>
+      designApi<FloorPlanVariantsView>('/design/floor-plan/generate', { projectId }),
+    onSuccess: (view, { projectId }) => {
+      queryClient.setQueryData(['design_floor_plan_variants', projectId], view);
+    },
+  });
+}
+
+/** Chọn một phương án làm bản đang hiệu lực cho các bước sau (bản vẽ, khối 3D, thống kê). */
+export function useChooseFloorPlan() {
+  const queryClient = useQueryClient();
+  return useMutation<FloorPlanVariantsView, Error, { projectId: string; artifactId: string }>({
+    mutationFn: ({ projectId, artifactId }) =>
+      designApi<FloorPlanVariantsView>('/design/floor-plan/choose', { projectId, artifactId }),
+    onSuccess: (view, { projectId }) => {
+      queryClient.setQueryData(['design_floor_plan_variants', projectId], view);
+    },
+  });
+}
+
 /**
  * Một mục cấu hình của engine thiết kế (`design_setting`).
  *

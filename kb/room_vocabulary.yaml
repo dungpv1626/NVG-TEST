@@ -49,7 +49,19 @@ strip_patterns:
 types:
   - code: living
     vi: Phòng khách
-    aliases: ['PK', 'P.KHACH', 'PHONG KHACH', 'SINH HOAT CHUNG', 'LIVING', 'LIVING ROOM', 'SHC', 'P.KHACH + THO', 'KHACH + THO', 'P.KHACH+THO']
+    aliases:
+      [
+        'PK',
+        'P.KHACH',
+        'PHONG KHACH',
+        'SINH HOAT CHUNG',
+        'LIVING',
+        'LIVING ROOM',
+        'SHC',
+        'P.KHACH + THO',
+        'KHACH + THO',
+        'P.KHACH+THO',
+      ]
 
   - code: dining
     vi: Phòng ăn
@@ -82,7 +94,19 @@ types:
 
   - code: circulation
     vi: Giao thông
-    aliases: ['HANH LANG', 'SANH', 'HL', 'CHIEU NGHI', 'LOBBY', 'HALL', 'CORRIDOR', 'TIEN SANH', 'SANH/ SINH HOAT CHUNG', 'SANH SINH HOAT CHUNG']
+    aliases:
+      [
+        'HANH LANG',
+        'SANH',
+        'HL',
+        'CHIEU NGHI',
+        'LOBBY',
+        'HALL',
+        'CORRIDOR',
+        'TIEN SANH',
+        'SANH/ SINH HOAT CHUNG',
+        'SANH SINH HOAT CHUNG',
+      ]
 
   - code: garage
     vi: Để xe
@@ -114,7 +138,18 @@ types:
 
   - code: courtyard
     vi: Sân trong
-    aliases: ['SAN TRONG', 'SAN SAU', 'SAN TRUOC', 'SAN VUON', 'COURTYARD', 'GARDEN', 'SAN', 'SAN NGOAI NHA', 'SAN TRONG NHA']
+    aliases:
+      [
+        'SAN TRONG',
+        'SAN SAU',
+        'SAN TRUOC',
+        'SAN VUON',
+        'COURTYARD',
+        'GARDEN',
+        'SAN',
+        'SAN NGOAI NHA',
+        'SAN TRONG NHA',
+      ]
 
   - code: light_well
     vi: Giếng trời
@@ -130,7 +165,19 @@ types:
 
   - code: technical
     vi: Phòng kỹ thuật
-    aliases: ['PHONG KY THUAT', 'PKT', 'MAY BOM', 'PHONG MAY', 'TECHNICAL', 'MEP', 'PKTTM', 'P.KTTM', 'PHONG KY THUAT THANG MAY', 'KTTM']
+    aliases:
+      [
+        'PHONG KY THUAT',
+        'PKT',
+        'MAY BOM',
+        'PHONG MAY',
+        'TECHNICAL',
+        'MEP',
+        'PKTTM',
+        'P.KTTM',
+        'PHONG KY THUAT THANG MAY',
+        'KTTM',
+      ]
 
 # Mã nhóm dùng trong `target:` của rule pack để nhắm NHIỀU loại phòng cùng lúc. Chúng KHÔNG
 # phải nhãn phòng — mô hình ngôn ngữ không bao giờ được trả về các mã này.
@@ -149,3 +196,11 @@ group_targets:
   load_bearing_wall:
     vi: Tường chịu lực
     members: []
+  # Hai nhóm dưới đây phục vụ BẢNG SO SÁNH phương án bằng ngôn ngữ khách (11-design-flow 11.4b):
+  # "diện tích giao thông" và "số phòng ngủ" đọc từ đây, không viết cứng mã phòng ở Worker.
+  circulation:
+    vi: Giao thông (thang, lõi, hành lang)
+    members: [stair, core, circulation]
+  sleeping:
+    vi: Phòng ngủ
+    members: [bedroom, master_bedroom]
