@@ -11,6 +11,7 @@ danh sách đó để người đọc biết chính xác cần bổ sung mẫu n
 from __future__ import annotations
 
 import os
+import unicodedata
 from dataclasses import dataclass
 from fnmatch import fnmatch
 from pathlib import Path
@@ -28,6 +29,17 @@ INSUNITS_TO_METRES: dict[int, tuple[str, float]] = {
 
 # Tên đơn vị cho phép trong `default_units` của tệp ánh xạ.
 UNIT_SCALES: dict[str, float] = {name: scale for name, scale in INSUNITS_TO_METRES.values()}
+
+
+def fold(text: str) -> str:
+    """Đưa tên lớp và mẫu về cùng một dạng so khớp: bỏ dấu, bỏ `đ`, viết hoa.
+
+    Bắt buộc, không phải tiện nghi. Hồ sơ thật có lớp `A2_CẮT BT`, `A6_THẤY ĐẬM`,
+    `A12_NÉT KHUẤT` — so khớp không gấp dấu thì mẫu `*CAT*` trượt hết, im lặng, và bảng
+    ánh xạ trông như thể đã phủ trong khi không khớp dòng nào.
+    """
+    stripped = unicodedata.normalize("NFD", text.replace("đ", "d").replace("Đ", "D"))
+    return "".join(c for c in stripped if not unicodedata.combining(c)).upper()
 
 
 class LayerMappingError(RuntimeError):
@@ -66,6 +78,10 @@ class LayerMapping:
     roles: tuple[tuple[str, tuple[str, ...]], ...]
     ignore: tuple[str, ...]
     export: dict[str, ExportLayer]
+    # Lớp NVG đặt theo ĐỘ ĐẬM NÉT chứ không theo vật thể (`NV-Thay`, `A8_NÉT KHUẤT`…).
+    # Không gán được vai trò, nhưng KHÁC `ignore`: nội dung của chúng vẫn phải đọc.
+    # Khai riêng để chúng không làm nhiễu `unmapped()`.
+    line_weight: tuple[str, ...] = ()
 
     @property
     def default_unit_scale(self) -> float:
@@ -74,12 +90,12 @@ class LayerMapping:
 
     def role_of(self, layer: str) -> str | None:
         """Vai trò của một lớp; `None` nếu lớp bị bỏ qua hoặc chưa có mẫu nào khớp."""
-        name = layer.strip().upper()
+        name = fold(layer.strip())
         for pattern in self.ignore:
-            if fnmatch(name, pattern.upper()):
+            if fnmatch(name, fold(pattern)):
                 return None
         for role, patterns in self.roles:
-            if any(fnmatch(name, p.upper()) for p in patterns):
+            if any(fnmatch(name, fold(p)) for p in patterns):
                 return role
         return None
 
@@ -90,14 +106,23 @@ class LayerMapping:
         `layers_unmapped` còn đọc được: nếu trộn hai loại vào nhau thì mọi bản vẽ đều báo vài
         chục lớp cần xử lý và không ai đọc nữa.
         """
-        name = layer.strip().upper()
-        return any(fnmatch(name, p.upper()) for p in self.ignore)
+        name = fold(layer.strip())
+        return any(fnmatch(name, fold(p)) for p in self.ignore)
+
+    def is_line_weight(self, layer: str) -> bool:
+        """Lớp có phải loại đặt tên theo độ đậm nét không."""
+        name = fold(layer.strip())
+        return any(fnmatch(name, fold(p)) for p in self.line_weight)
 
     def unmapped(self, layers: list[str]) -> tuple[str, ...]:
-        """Những lớp chưa ánh xạ và cũng chưa bị bỏ qua — danh sách việc cần bổ sung."""
+        """Những lớp chưa ánh xạ, chưa bị bỏ qua, và không phải lớp độ đậm nét."""
         seen: dict[str, None] = {}
         for layer in layers:
-            if self.role_of(layer) is None and not self.is_ignored(layer):
+            if (
+                self.role_of(layer) is None
+                and not self.is_ignored(layer)
+                and not self.is_line_weight(layer)
+            ):
                 seen[layer] = None
         return tuple(seen)
 
@@ -160,4 +185,5 @@ def load_mapping(path: Path | None = None) -> LayerMapping:
         roles=tuple(roles),
         ignore=tuple(str(p) for p in (raw.get("ignore") or [])),
         export=export,
+        line_weight=tuple(str(p) for p in (raw.get("line_weight_layers") or [])),
     )

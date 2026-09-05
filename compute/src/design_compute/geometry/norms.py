@@ -36,6 +36,8 @@ class ConstructionNorms:
     partition_m: float
     door_width_m: float
     door_height_m: float
+    wc_door_width_m: float
+    wc_door_height_m: float
     entrance_width_m: float
     entrance_height_m: float
     window_height_m: float
@@ -43,6 +45,9 @@ class ConstructionNorms:
     window_share: float
     window_min_m: float
     window_max_m: float
+    wc_window_width_m: float
+    wc_window_height_m: float
+    wc_window_sill_m: float
     no_window_types: frozenset[str]
 
 
@@ -73,6 +78,8 @@ def parse_construction_norms(text: str) -> ConstructionNorms:
         partition_m=_number(raw, "walls", "partition_m"),
         door_width_m=_number(raw, "openings", "door", "width_m"),
         door_height_m=_number(raw, "openings", "door", "height_m"),
+        wc_door_width_m=_number(raw, "openings", "wc_door", "width_m"),
+        wc_door_height_m=_number(raw, "openings", "wc_door", "height_m"),
         entrance_width_m=_number(raw, "openings", "entrance", "width_m"),
         entrance_height_m=_number(raw, "openings", "entrance", "height_m"),
         window_height_m=_number(raw, "openings", "window", "height_m"),
@@ -80,6 +87,9 @@ def parse_construction_norms(text: str) -> ConstructionNorms:
         window_share=_number(raw, "openings", "window", "share_of_wall"),
         window_min_m=_number(raw, "openings", "window", "min_width_m"),
         window_max_m=_number(raw, "openings", "window", "max_width_m"),
+        wc_window_width_m=_number(raw, "openings", "wc_window", "width_m"),
+        wc_window_height_m=_number(raw, "openings", "wc_window", "height_m"),
+        wc_window_sill_m=_number(raw, "openings", "wc_window", "sill_m"),
         no_window_types=frozenset(str(t) for t in (raw.get("no_window_types") or [])),
     )
 

@@ -330,9 +330,26 @@ giao diện và bộ xuất CAD (`05-tech-stack.md` mục 5.5).
 | Cây xanh, cảnh quan | `KT-CANHQUAN` |
 | Lưới cột kết cấu | `KC-COT` |
 
-Tệp xuất ra mang khung tên và mã phiên bản theo quy ước hiện hành của Nhà Việt Group —
-dạng `NVO026_NhaAnhA_KT_MatBang_V03_11082026` — khổ A3, riêng tổng mặt bằng khổ A1 hoặc
-A2. Số phiên bản do hệ quản lý tài liệu cấp qua publish bridge, giao diện không tự đặt.
+Tệp xuất ra mang khung tên và mã phiên bản theo quy ước `NVO026_NhaAnhA_KT_MatBang_V03_11082026`
+— khổ A3, riêng tổng mặt bằng khổ A1 hoặc A2. Số phiên bản do hệ quản lý tài liệu cấp qua
+publish bridge, giao diện không tự đặt.
+
+> ⚠️ **Sửa 05/09/2026 sau khi đối chiếu hai hồ sơ thật.** Ba điểm.
+>
+> **(a)** Câu gốc ghi quy ước tên file là "quy ước hiện hành của Nhà Việt Group". **Không
+> phải** — hồ sơ thật không dùng quy ước này. Nó là quy ước MỚI cho bản vẽ hệ thống xuất ra.
+> Khổ A3 thì đúng: cả 265 tờ của hai hồ sơ thật đều A3. Xem `13-ho-so-thuc-te.md` 13.8.
+>
+> **(b)** Bảng lớp DXF ngay trên **không khớp** với mục `export:` của
+> `kb/layer_mapping.yaml` đang chạy (`KT-CUA` vs `KT-CUA-DI`, `KT-CUASO` vs `KT-CUA-SO`), và
+> năm lớp `KT-THANG`, `KT-KICHTHUOC`, `KT-GHICHU`, `KT-NOITHAT`, `KT-CANHQUAN` **không tồn
+> tại ở cả hai nơi**. NVG ngoài đời dùng `NV-Tuong`, `NV-Cua`, `NV-Dim`, `NV-Truc`,
+> `NV-GhiChu`, `NV-NoiThat` — cân nhắc dùng thẳng quy ước của họ. Chờ Haan chốt: Q-24.
+>
+> **(c)** Tám yếu tố bắt buộc ở mục 12.8 áp cho **CẢ bộ xuất DXF**, không chỉ màn hình — đó
+> là hệ quả trực tiếp của chính câu "một định nghĩa hình học duy nhất cho cả hai chế độ".
+> Bộ xuất hiện **không có yếu tố nào** trong tám yếu tố đó, và trong toàn kho mã không tồn
+> tại một thực thể `DIMENSION` nào. Xem vướng mắc V-9.
 
 ---
 

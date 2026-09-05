@@ -80,9 +80,40 @@ class TestLayerMapping:
         Trộn hai loại vào nhau thì mọi bản vẽ đều báo vài chục lớp cần xử lý, và danh sách
         đó lập tức hết người đọc.
         """
-        assert MAPPING.role_of("A-ANNO-DIMS") is None
-        assert MAPPING.is_ignored("A-ANNO-DIMS")
-        assert MAPPING.unmapped(["A-ANNO-DIMS"]) == ()
+        assert MAPPING.role_of("DEFPOINTS") is None
+        assert MAPPING.is_ignored("DEFPOINTS")
+        assert MAPPING.unmapped(["DEFPOINTS"]) == ()
+
+    def test_dimension_layers_are_a_role_now_not_something_to_ignore(self) -> None:
+        """Lớp kích thước ĐÃ CHUYỂN từ `ignore` sang một vai trò (05/09/2026).
+
+        Hai hồ sơ thật có hơn mười nghìn thực thể DIMENSION, và chuỗi kích thước là một
+        trong ba năng lực nền của mọi loại tờ (`kb/sheet_catalogue.yaml`). Bỏ qua chúng là
+        vứt đi đúng thứ đang thiếu.
+        """
+        assert MAPPING.role_of("NV-Dim") == "dimension"
+        assert not MAPPING.is_ignored("NV-Dim")
+
+    def test_layer_names_match_with_vietnamese_diacritics_folded(self) -> None:
+        """Tên lớp thật có dấu: `A2_CẮT BT`, `A6_THẤY ĐẬM`, `A12_NÉT KHUẤT`.
+
+        So khớp không gấp dấu thì mọi mẫu viết không dấu đều trượt — im lặng, và bảng ánh xạ
+        trông như đã phủ trong khi không khớp dòng nào.
+        """
+        assert MAPPING.role_of("A2_CẮT BT") == "wall"
+        assert MAPPING.is_line_weight("A6_THẤY ĐẬM")
+        assert MAPPING.is_line_weight("A12_NÉT KHUẤT")
+
+    def test_line_weight_layers_are_neither_a_role_nor_ignored(self) -> None:
+        """NVG đặt tên lớp theo ĐỘ ĐẬM NÉT KHI IN, không theo vật thể.
+
+        `NV-Thay` chứa lẫn tường, thiết bị và đường bao — bất cứ thứ gì in cùng độ đậm đó.
+        Không gán vai trò được, nhưng cũng KHÔNG được bỏ qua như `ignore`: nội dung vẫn phải
+        đọc. Tách riêng để danh sách `unmapped` còn đọc được.
+        """
+        assert MAPPING.is_line_weight("NV-Thay")
+        assert not MAPPING.is_ignored("NV-Thay")
+        assert MAPPING.unmapped(["NV-Thay", "NV-Khuat"]) == ()
 
     def test_unknown_layer_is_reported_for_follow_up(self) -> None:
         assert MAPPING.unmapped(["XYZ-LOP-LA"]) == ("XYZ-LOP-LA",)

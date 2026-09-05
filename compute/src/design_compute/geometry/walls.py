@@ -264,7 +264,11 @@ def _place_openings(
             wall = _wall_for(walls, orientation, line, start, end)
             if wall is None:
                 continue
-            emit(wall, "door", start, end, norms.door_width_m, norms.door_height_m, None)
+            # Cua ve sinh hep hon cua phong: do duoc 700x2100 va 750x2200 tren ho so that
+            # (kb/construction_norms.yaml, muc `do_duoc`). Mot be rong cho moi phong la sai.
+            door_w = norms.wc_door_width_m if room.type == "wc" else norms.door_width_m
+            door_h = norms.wc_door_height_m if room.type == "wc" else norms.door_height_m
+            emit(wall, "door", start, end, door_w, door_h, None)
             placed_door = True
             break
 
@@ -295,6 +299,19 @@ def _place_openings(
                 continue
             wall = _wall_for(walls, orientation, line, start, end)
             if wall is None:
+                continue
+            # Cua so ve sinh la o thoang co dinh 600x600 dat cao, khong lay theo ti le
+            # mat thoang nhu phong o — do duoc tren ho so that (ma `sw`).
+            if room.type == "wc":
+                emit(
+                    wall,
+                    "window",
+                    start,
+                    end,
+                    norms.wc_window_width_m,
+                    norms.wc_window_height_m,
+                    norms.wc_window_sill_m,
+                )
                 continue
             width = min(norms.window_max_m, max(norms.window_min_m, (end - start) * norms.window_share))
             emit(

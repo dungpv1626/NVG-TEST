@@ -285,8 +285,23 @@ Mục này trả lời câu hỏi thực tế: khi Mốc 5 đạt điều kiện
 khối 3D. Đây là thứ đủ để quyết định về công năng và bố cục.
 
 **Nhưng chưa có ảnh phối cảnh photorealistic.** Cái đó thuộc Mốc 6. Nếu cần trình khách
-ảnh đẹp trước khi ký hợp đồng, kiến trúc sư vẫn dùng Veras và Enscape như hiện nay —
+ảnh đẹp trước khi ký hợp đồng, kiến trúc sư vẫn dùng công cụ dựng ảnh sẵn có như hiện nay —
 nhưng nhập tệp DXF do hệ thống xuất ra thay vì dựng lại mô hình từ đầu trong SketchUp.
+
+> ⚠️ **Sửa 05/09/2026 sau khi đối chiếu hai hồ sơ thật.** Câu gốc ghi "Veras và Enscape".
+> Ảnh phối cảnh trong hồ sơ thật mang tên `aicomplex_angle_*.jpg` và
+> `aicomplex-edited-*.png` — **NVG đã dùng một công cụ dựng ảnh AI trong sản xuất**.
+>
+> **Haan chốt 05/09/2026: giai đoạn dev và test dùng tạm Gemini API** (tuyến `layer5_render`
+> ở `config/models.yaml`). Việc của engine là **cấp liệu** cho nó, không phải sở hữu bộ dựng
+> ảnh — một de-scope đáng kể cho Mốc 6, và là lý do **phối cảnh thành việc DỄ, không phải
+> việc khó**. Vì Gemini nhận ảnh + chữ chứ không nhận điều kiện hoá depth/normal, engine chỉ
+> cần dựng **một ảnh khối trắng** thay vì cả bộ bản đồ điều kiện.
+>
+> ⚠️ Tuyến đang **tắt**: đo 05/09/2026 thấy khoá gói miễn phí không có hạn mức sinh ảnh (hai
+> mô hình ảnh trả 429 trong khi mô hình chữ vẫn OK). Chạy được thì phải nâng gói trả phí —
+> xem `13-ho-so-thuc-te.md` 13.13b và 13.13c.
+
 Theo khảo sát, riêng khâu dựng mô hình ba chiều đang mất 1–2 ngày mỗi phương án.
 
 **Giá trị Giai đoạn 1 nằm ở hai chỗ.** Với nội bộ: thời gian ra phương án, khả năng đổi
@@ -396,7 +411,7 @@ Bộ PDF gồm bốn mặt bằng có ghi diện tích từng phòng, kèm bản
 so sánh ngắn giữa các phương án.
 
 Chưa có ảnh phối cảnh ở giai đoạn này. Nếu cần trình khách, kiến trúc sư nhập tệp DXF vào
-SketchUp hoặc Revit rồi render bằng Veras hoặc Enscape như quy trình hiện tại — nhưng
+SketchUp hoặc Revit rồi render bằng công cụ sẵn có như quy trình hiện tại — nhưng
 không phải dựng lại khối từ đầu.
 
 ### Tình huống kiểm chứng giá trị

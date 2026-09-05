@@ -148,7 +148,7 @@ endpoint mới khi BSD đã có sẵn cái tương đương.
 NVG/
 ├── CLAUDE.md         # file này
 ├── doc/              # 6 tài liệu .docx + docx2md.py — KHÔNG sửa nội dung tài liệu
-│   ├── design/       # 14 file đặc tả AI Preliminary Design Engine (mục 8)
+│   ├── design/       # 15 file đặc tả AI Preliminary Design Engine (mục 8)
 │   └── khao-sat/     # hồ sơ khảo sát vận hành 12 bộ phận (mục 2)
 ├── web/              # React 18 + Vite (SPA) — toàn bộ frontend
 ├── workers/          # Cloudflare Workers + Hono — API tùy chỉnh, cron, queue
@@ -765,13 +765,20 @@ Gộp từ PRD 10, TSD 7, CGD 7, BSD 5, IPD 7:
 
 ### 8.1 Tài liệu và thứ tự ưu tiên
 
-Tài liệu đặc tả nằm ở **`doc/design/`** (14 file, copy vào repo 28/08/2026). Bộ này là
+Tài liệu đặc tả nằm ở **`doc/design/`** (14 file, copy vào repo 28/08/2026, cộng
+`13-ho-so-thuc-te.md` viết 05/09/2026). Bộ này là
 **nguồn sự thật cho việc triển khai TK-10 → TK-17**, thắng các bản `.docx` trình bày cho
 khách hàng.
 
-**Đọc `doc/design/README.md` TRƯỚC** — nó chứa 6 đính chính những chỗ tài liệu mô tả sai
-hiện trạng hoặc đã lỗi thời, cộng bảng ánh xạ sang bảng và enum đang chạy. Làm theo nguyên
-văn tài liệu mà bỏ qua bảng đính chính sẽ dựng sai nền tảng.
+**Đọc `doc/design/README.md` TRƯỚC** — nó chứa **11 đính chính** những chỗ tài liệu mô tả
+sai hiện trạng hoặc đã lỗi thời, cộng bảng ánh xạ sang bảng và enum đang chạy. Sáu điểm đầu
+(Đ1–Đ6) đối chiếu với nền tảng kỹ thuật; **năm điểm sau (Đ7–Đ11) đối chiếu với hồ sơ thật của
+NVG** và là những chỗ sai nặng hơn. Làm theo nguyên văn tài liệu mà bỏ qua bảng đính chính sẽ
+dựng sai nền tảng.
+
+Trước khi đụng vào phần số hoá hồ sơ cũ hoặc bộ xuất CAD, đọc thêm
+**`doc/design/13-ho-so-thuc-te.md`** — hồ sơ thật của NVG chứa gì, đo được bằng cách nào, và
+mười một chỗ mã nguồn đang dựa trên giả định sai.
 
 Chốt chặn của mục 5.6 (**cấm viết code TK-10→TK-17 trước khi tài liệu có trong repo**) đã
 được **gỡ** kể từ 28/08/2026.
@@ -878,9 +885,9 @@ Bộ sinh zod: `scripts/contracts-gen.mjs`. `npm run contracts:gen` để sinh,
   bảng khối lượng mang _"Khối lượng sơ bộ — không dùng làm căn cứ ký hợp đồng"_; lưới trục
   do hệ thống đề xuất mang _"Đề xuất — kỹ sư kết cấu quyết định"_.
 
-### 8.8 Bảy quy ước của Lớp 1–3 — đọc trước khi thêm bảng, endpoint hay quy tắc
+### 8.8 Tám quy ước của Lớp 1–3 — đọc trước khi thêm bảng, endpoint hay quy tắc
 
-Bốn điểm dưới đây đã đứng vững bằng kiểm thử trên CSDL thật. Chúng là hệ quả trực tiếp của
+Bốn điểm đầu đã đứng vững bằng kiểm thử trên CSDL thật; điểm 8 đo trên hồ sơ thật của NVG. Chúng là hệ quả trực tiếp của
 mục 8.2, ghi lại ở đây để không phải suy lại từ đầu.
 
 1. **Khoá chính của `design_artifact` CHÍNH LÀ mã băm nội dung** (`sha256:` + 64 hex), không
@@ -921,12 +928,36 @@ mục 8.2, ghi lại ở đây để không phải suy lại từ đầu.
    phải ràng buộc cứng (nó đến từ `kb/space_norms.yaml`, không từ quy chuẩn). Quy chuẩn nào
    thật sự chặn diện tích tối đa thì khai thành quy tắc `max_area` mức `error` trong rule pack.
 
-7. **Ngưỡng quy chuẩn ở `rules/`; quy ước cấu tạo và bối cảnh thửa ở `kb/`.** Ba tệp dữ liệu
-   Container đọc lúc chạy: `layer_mapping.yaml` (tên lớp bản vẽ, cả đọc lẫn GHI),
-   `construction_norms.yaml` (bề dày tường, kích thước cửa), và — do Worker đọc rồi gửi kèm
-   lời gọi — `site_context.yaml` (hiện trạng bốn phía → mặt thoáng) cùng `room_vocabulary.yaml`
-   (nhãn tiếng Việt, thành viên của nhóm mã phòng). Số ở `kb/` quyết định bản vẽ TRÔNG thế
-   nào; số ở `rules/` quyết định phương án có hợp lệ hay không. Đừng trộn hai loại.
+7. **Ngưỡng quy chuẩn ở `rules/`; quy ước cấu tạo và bối cảnh thửa ở `kb/`.** Container đọc
+   lúc chạy: `layer_mapping.yaml` (tên lớp bản vẽ, cả đọc lẫn GHI) và
+   `construction_norms.yaml` (bề dày tường, kích thước cửa, cao độ tầng). Worker đọc rồi gửi
+   kèm lời gọi: `site_context.yaml` (hiện trạng bốn phía → mặt thoáng) và
+   `room_vocabulary.yaml` (nhãn tiếng Việt, nhóm mã phòng). Số ở `kb/` quyết định bản vẽ
+   TRÔNG thế nào; số ở `rules/` quyết định phương án có hợp lệ hay không. Đừng trộn hai loại.
+
+   Ba tệp thêm ngày 06/09/2026, rút từ hai hồ sơ thật — chi tiết ở `13-ho-so-thuc-te.md`
+   mục 13.15: `sheet_catalogue.yaml` (**47 loại tờ** của một bộ hồ sơ, và loại nào engine
+   được phép tự phát hành) · `title_block.yaml` (**ba** họ quy ước khung tên, kèm danh sách
+   ô là dữ liệu hạng 1 phải LOẠI) · `text_encoding.yaml` (giải mã TCVN3).
+
+   ⚠️ **Trước khi ghi một con số vào `kb/`, hỏi nó thuộc tầng nào.** Từ vựng và quy ước thì
+   **n = 1 đã đủ** — thấy một lần nghĩa là nó có thật. Định mức và phân bố thì **cần 15 công
+   trình** (`space_norms.yaml`, `priors.min_samples`); ghi vào từ hai hồ sơ là biến trùng hợp
+   thành chuẩn. Hiện `kb/` **chưa có** hồ sơ nào đủ cho tầng thứ hai.
+
+8. **Bản vẽ NVG KHÔNG mô tả phòng bằng đa giác khép kín trên một lớp riêng.** Đo trên hai hồ
+   sơ thật ngày 05/09/2026, gồm **cả hai tập kiến trúc**: không lớp nào trong 97 + 94 lớp khớp
+   `*ROOM*BOUND*`, `A-AREA*` hay `KT-PHONG*`. Lý do sâu hơn chuyện đặt tên — **NVG đặt tên lớp
+   theo ĐỘ ĐẬM NÉT KHI IN, không theo vật thể** (`NV-Thay`, `NV-Khuat`, `NV-Manh`, `NV-MoDam`,
+   `NV-Cat`), và ba bộ môn dùng ba quy ước khác hẳn nhau. Nên mô hình "một lớp = một vai trò
+   ngữ nghĩa" không có đối tượng để khớp; đa giác phòng phải dựng từ **đồ thị tim tường**.
+   → Kéo theo ba điều bắt buộc khi đụng vào trình trích xuất: **phải đi vào block**
+   (`virtual_entities()` — 83% hình học nằm trong đó, riêng bản vẽ kiến trúc là 89–93%);
+   **phải đọc `ATTRIB`** (mã tờ, tên tờ, tỷ lệ, cao độ tầng, bảng cửa, nhãn trục đều nằm ở đó);
+   và **một tệp DXF là trọn hồ sơ một bộ môn, 22–73 tờ xếp cạnh nhau trong cùng modelspace**,
+   không phải một tầng. Đầy đủ ở `doc/design/13-ho-so-thuc-te.md`.
+   ⚠️ Cả ba chỗ sai này **hỏng im lặng** — không lỗi, không cảnh báo, chỉ trả ít dữ liệu hơn
+   thực tế. Cách duy nhất phát hiện là đối chiếu với bản vẽ thật.
 
 Ranh giới runtime: Worker gọi Container qua `POST /solve`, và **vô nghiệm trả mã 200** kèm
 `InfeasibilityReport`. Nó là kết quả hạng nhất, không phải lỗi — trả 4xx sẽ khiến lớp gọi

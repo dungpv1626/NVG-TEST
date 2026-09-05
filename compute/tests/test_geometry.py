@@ -220,10 +220,15 @@ class TestDxfExport:
             assert spec.layer in names, f"thiếu lớp cho vai trò {role}"
             assert mapping.role_of(spec.layer) == role, f"lớp {spec.layer} đọc ngược sai vai trò"
 
-        # Lưới trục và khung tên cố ý nằm trong danh sách BỎ QUA khi đọc: chúng là ghi chú của
-        # bản vẽ, không phải hình học phòng.
-        for role in ("grid", "title_block"):
-            assert mapping.is_ignored(mapping.export_layer(role).layer)
+        # Lưới trục, chuỗi kích thước và khung tên TRƯỚC ĐÂY nằm trong danh sách bỏ qua, với
+        # lý do "chúng là ghi chú của bản vẽ, không phải hình học phòng". Đã đổi 05/09/2026:
+        # nhãn bong bóng trục chính là `structural_grid` mà `06-knowledge-base.md` xếp ưu tiên
+        # P1-cao, khung tên mang mã tờ và tỷ lệ, còn chuỗi kích thước là một trong ba năng lực
+        # nền của mọi loại tờ. Bỏ qua chúng là vứt đi đúng thứ đang thiếu.
+        for role in ("grid", "dimension", "title_block"):
+            spec = mapping.export_layer(role)
+            assert not mapping.is_ignored(spec.layer), f"lớp {spec.layer} không được bỏ qua nữa"
+            assert mapping.role_of(spec.layer) == role, f"lớp {spec.layer} đọc ngược sai vai trò"
 
     def test_the_title_block_carries_the_version_and_the_mandatory_notice(self, tmp_path) -> None:
         """Nhãn cảnh báo do MÃ NGUỒN chèn, không phụ thuộc người dùng nhớ bật (CLAUDE.md 8.7)."""

@@ -108,6 +108,61 @@ routes:
     enabled: true
     purpose: Đọc ảnh trích lục/sổ đỏ thành danh sách cạnh có cấu trúc để dựng ranh giới thửa đất.
 
+  # Sinh ảnh phối cảnh từ ảnh khối — Layer 5, đi qua interface `RenderBackend`.
+  #
+  # Haan chốt 05/09/2026: **giai đoạn dev và test dùng tạm Gemini API**. Đây là câu trả lời cho
+  # Q-22, sau khi hồ sơ thật cho thấy NVG đã dùng một công cụ dựng ảnh AI trong sản xuất
+  # (ảnh `aicomplex_*` trong hồ sơ Mạnh).
+  #
+  # ✅ **Tuyến này đặt `max_data_class: 3` mà KHÔNG phải nới lỏng gì** — khác hẳn
+  # `site_boundary_extract`. Chính bảng hạng ở đầu tệp đã xếp "ảnh khối, bản đồ độ sâu, mô tả
+  # phong cách" vào hạng 3. Kiến trúc đã lường trước đúng trường hợp này.
+  #
+  # ⚠️ Nhưng điều đó CHỈ đúng nếu ảnh gửi đi là ảnh khối thuần hình học. Ba thứ kéo nó lên
+  # hạng nhạy cảm hơn và phải bị lược bỏ trước khi gửi:
+  #   · chuỗi kích thước hoặc cao độ hiện trên ảnh   → hạng 2 ("mặt bằng kích thước thật")
+  #   · tên phòng, tên chủ đầu tư, mã hồ sơ, khung tên → hạng 1
+  #   · đoạn mô tả lấy nguyên văn từ đầu bài           → hạng 1
+  # Mô tả phong cách gửi kèm phải là từ vựng phong cách ("nhà lô hiện đại, mặt tiền 5 m, ba
+  # tầng"), KHÔNG phải chữ của khách. Lớp gọi khai `dataClass` CỨNG bằng 3 và không nhận số
+  # này từ bên ngoài — cùng khuôn với `site/extract-boundary.ts`.
+  #
+  # ⚠️ ĐANG TẮT vì ĐO ĐƯỢC, không phải vì phỏng đoán (05/09/2026, lời gọi thật không mang dữ
+  # liệu NVG):
+  #
+  #   · liệt kê mô hình → khoá thấy được 6 mô hình sinh ảnh: `gemini-2.5-flash-image`,
+  #     `gemini-3-pro-image`, `gemini-3-pro-image-preview`, `gemini-3.1-flash-image`,
+  #     `gemini-3.1-flash-image-preview`, `gemini-3.1-flash-lite-image`.
+  #   · gọi thật `gemini-2.5-flash-image` → **429 RESOURCE_EXHAUSTED**.
+  #   · gọi thật `gemini-3.1-flash-image` → **429 RESOURCE_EXHAUSTED**.
+  #   · gọi thật `gemini-2.5-flash` (chữ) ngay sau đó → **OK, 31 token**.
+  #
+  # Tức là khoá KHÔNG hết hạn mức nói chung; nó **không có hạn mức sinh ảnh**. Đây là dấu hiệu
+  # thứ ba khẳng định gói MIỄN PHÍ, cùng loại với nhóm `pro` ở điểm 2 — và nó trả lời dứt điểm
+  # câu hỏi Q-15. Bật `enabled: true` bây giờ chỉ đổi một lỗi đọc được ("chưa có ảnh khối để
+  # dựng") thành một lỗi khó hiểu ("hết hạn mức"), đúng bài học của `layer3_intent_hard`.
+  #
+  # → **Muốn chạy tuyến này phải nâng gói trả phí.** Việc đó là quyết định của Haan, không
+  # phải việc bật một cờ.
+  #
+  # ⚠️ Kể cả khi đã nâng gói: theo PRD mục 5.1, tính năng AI là phụ trợ tuỳ chọn — hết hạn mức
+  # KHÔNG được chặn luồng chính. Khi tuyến này lỗi, trả về chính ảnh khối kèm nhãn cảnh báo,
+  # không trả lỗi ra người dùng.
+  #
+  # ⚠️ Gemini nhận ảnh + chữ, KHÔNG nhận điều kiện hoá kiểu depth/normal như Stable Diffusion.
+  # Nên `views[].depth_png` và `edge_png` của hợp đồng để trống (chúng vốn đã là tuỳ chọn) và
+  # engine chỉ cần dựng MỘT ảnh khối tốt. Đổi lại, độ bám hình học yếu hơn — ảnh có thể đẹp mà
+  # lệch khối. Đó là lý do nhãn "Ảnh tham khảo ý tưởng — chưa phải phương án thi công"
+  # (01-overview 1.4) do MÃ chèn, không phụ thuộc người dùng nhớ bật.
+  layer5_render:
+    provider: gemini
+    model: gemini-2.5-flash-image
+    max_data_class: 3
+    enabled: false
+    purpose:
+      Sinh ảnh phối cảnh tham khảo từ ảnh khối ba chiều. Dev và test dùng tạm Gemini (Haan chốt
+      05/09/2026). Chờ nâng gói trả phí mới bật được — xem chú thích trên.
+
   # Nhúng phần chú giải của kiến trúc sư để truy hồi ba tầng (06-knowledge-base 6.3).
   #
   # `output_dimensions: 1536` là lựa chọn có lý do, không phải con số tuỳ tiện: mặc định của

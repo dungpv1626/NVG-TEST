@@ -85,6 +85,26 @@ describe('Từ vựng phòng', () => {
     expect(index.lookup('WC2')).toBe('wc');
   });
 
+  it('quy được nhãn NGUYÊN VĂN đo từ hai hồ sơ thật', () => {
+    // Nguồn: doc/design/13-ho-so-thuc-te.md muc 13.14. Day la nhan that, khong phai vi du.
+    expect(index.lookup('P.NGỦ 1')).toBe('bedroom');
+    expect(index.lookup('P.NGỦ3')).toBe('bedroom');
+    expect(index.lookup('P.BẾP')).toBe('kitchen');
+    expect(index.lookup('P.KHÁCH + THỜ')).toBe('living');
+    expect(index.lookup('WC 3.1')).toBe('wc');
+    expect(index.lookup('SÂN NGOÀI NHÀ')).toBe('courtyard');
+    expect(index.lookup('ban công kính')).toBe('balcony');
+    expect(index.lookup('hộp kỹ thuật')).toBe('shaft');
+    expect(index.lookup('PKTTM')).toBe('technical');
+  });
+
+  it('gỡ được đuôi diện tích viết liền nhãn', () => {
+    // Nhan that: "SẢNH/ SINH HOẠT CHUNG 11.3m²". Phai go CA dien tich lan so moi tra duoc,
+    // nen day la phep thu cho viec go DON chu khong phai go mot lan.
+    expect(index.lookup('SẢNH/ SINH HOẠT CHUNG 11.3m²')).toBe('circulation');
+    expect(index.lookup('P.NGỦ 2 16.118m²')).toBe('bedroom');
+  });
+
   it('nhận cả chính mã chuẩn — bản vẽ do hệ thống xuất ra không phải đi vòng qua mô hình', () => {
     for (const type of vocabulary.types) expect(index.lookup(type.code)).toBe(type.code);
   });

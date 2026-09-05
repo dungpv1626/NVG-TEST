@@ -1,33 +1,44 @@
 # Ánh xạ TÊN LỚP bản vẽ → VAI TRÒ mà trình trích xuất hiểu.
 #
-# Nguồn: `doc/design/06-knowledge-base.md` — "Rào cản: quy ước lớp bản vẽ không đồng nhất.
-# Giải bằng bảng ánh xạ layer, bổ sung dần theo thời kỳ và người vẽ."
+# Nguồn: `doc/design/06-knowledge-base.md`; đối chiếu và viết lại ngày 05/09/2026 sau khi
+# đo sáu tệp DXF của hai hồ sơ thật (`doc/design/13-ho-so-thuc-te.md` mục 13.6).
 #
 # Đây là DỮ LIỆU, không phải mã nguồn — cùng nguyên tắc với rule pack (CLAUDE.md 8.2 điểm 4).
 # Thêm một quy ước đặt tên mới là sửa tệp này, KHÔNG sửa `cad/extract.py`.
 #
-# ⚠️ Bảng dưới đây là PHỎNG ĐOÁN dựng từ quy ước AutoCAD phổ biến và cách đặt tên tiếng Việt
-# thường gặp. Chưa đối chiếu với hồ sơ thật của NVG vì `kb/samples/` còn trống (Mốc 0.1).
-# Khi có 5 bộ `.dwg` đầu tiên: chạy trích xuất, đọc mục `layers_unmapped` trong kết quả, rồi
-# bổ sung vào đây. Đó chính là quy trình dự kiến, không phải việc chữa cháy.
+# ══ ĐIỀU QUAN TRỌNG NHẤT PHẢI ĐỌC TRƯỚC ═══════════════════════════════════════════════
+# **NVG đặt tên lớp theo ĐỘ ĐẬM NÉT KHI IN, không theo vật thể.** `NV-Thay`, `NV-Khuat`,
+# `NV-Manh`, `NV-MoDam`, `NV-Cat` là các mức nét, và mỗi lớp chứa lẫn lộn tường, thiết bị,
+# đường bao — bất cứ thứ gì cần in cùng độ đậm đó.
 #
-# Mẫu so khớp là glob (`fnmatch`), KHÔNG phân biệt hoa thường. Lớp khớp nhiều vai trò thì
-# vai trò khai TRƯỚC thắng — nên đặt mẫu hẹp lên trên mẫu rộng.
+# Hệ quả: mô hình "một lớp = một vai trò ngữ nghĩa" KHÔNG có đối tượng để khớp trên phần
+# lớn hồ sơ. Bảng dưới đây vẫn hữu ích cho những lớp CÓ đặt theo vật thể (`NV-Tuong`,
+# `NV-Cua`, `NV-Truc`, `NV-Dim`), nhưng nó KHÔNG đủ để dựng lại mặt bằng.
 #
-# ⚠️ Cạm bẫy đã sập một lần: mẫu `A-ROOM*` ở `room_boundary` nuốt luôn lớp `A-ROOM-IDEN`
-# vốn là lớp NHÃN, khiến mọi phòng trích ra đều không có tên mà không có lỗi nào nổ lên.
-# Theo chuẩn lớp AIA, ranh vùng nằm ở `A-AREA-*` còn `A-ROOM-*` là nhóm định danh — đừng
-# gộp chúng lại chỉ vì tên nghe giống nhau.
+# **Không hồ sơ nào có lớp ranh phòng.** Đã kiểm cả sáu tệp, gồm CẢ HAI tập kiến trúc:
+# không lớp nào trong 97 + 94 lớp khớp `*ROOM*BOUND*`, `A-AREA*` hay `KT-PHONG*`. Đa giác
+# phòng phải dựng từ ĐỒ THỊ TIM TƯỜNG, không phải đọc thẳng từ một lớp. Mục `room_boundary`
+# dưới đây giữ lại chỉ để đọc bản vẽ của đơn vị KHÁC, không dùng cho hồ sơ NVG.
+#
+# Mẫu so khớp là glob (`fnmatch`), KHÔNG phân biệt hoa thường, và phải GẤP DẤU tiếng Việt
+# trước khi khớp — nếu không `*TUONG*` sẽ trượt `NV_THẤY`, `A12_NÉT KHUẤT`.
+# Lớp khớp nhiều vai trò thì vai trò khai TRƯỚC thắng — đặt mẫu hẹp lên trên mẫu rộng.
 
-version: '2026.08.1'
+version: '2026.09.1'
 
-# Đơn vị dùng khi bản vẽ không khai `$INSUNITS`. Hồ sơ kiến trúc Việt Nam gần như luôn vẽ
-# bằng milimét. Kết quả trích xuất luôn ghi `units_assumed` để biết con số nào là đọc được
-# và con số nào là suy ra.
-default_units: mm
+default_units: mm # ho so kien truc Viet Nam gan nhu luon ve bang milimet
+
+# ── Ba họ quy ước đặt tên đo được ──────────────────────────────────────────────────────
+# Ghi ra để biết một tên lạ thuộc họ nào, và để `layers_unmapped` đọc được thay vì là một
+# đống chữ. Ba bộ môn dùng ba họ khác hẳn nhau, ngay trong cùng một hồ sơ.
+conventions:
+  NV: { mau: ['NV-*', 'NV *', 'NV_*', 'NV - *'], bo_mon: [KT, DN], ghi_chu: 'Đặt theo độ đậm nét là chính' }
+  bang: { mau: ['!*'], bo_mon: [KT, DN], ghi_chu: 'Dấu chấm than để lớp nổi lên đầu danh sách' }
+  A_so: { mau: ['A[0-9]*_*', '[0-9]_*'], bo_mon: [KC], ghi_chu: 'Chỉ 13-15 lớp, kỷ luật hơn hẳn KT/DN' }
 
 roles:
-  # Đa giác khép kín bao quanh một phòng. Đây là nguồn hình học chính.
+  # Đa giác khép kín bao quanh một phòng.
+  # ⚠️ KHÔNG hồ sơ NVG nào có lớp này. Giữ để đọc bản vẽ của đơn vị khác.
   room_boundary:
     - '*ROOM*BOUND*'
     - '*PHONG*RANH*'
@@ -35,46 +46,125 @@ roles:
     - '*_RANH_PHONG*'
     - 'KT-PHONG*'
 
-  # Chữ đặt tên phòng. Trích xuất giữ NGUYÊN VĂN; việc quy về `bedroom`/`living` là của lớp
-  # mô hình ngôn ngữ ở Worker (`06-knowledge-base.md` mục 6.1), không phải của Container.
+  # Chữ đặt tên phòng. Trích xuất giữ NGUYÊN VĂN; quy về `bedroom`/`living` là việc của lớp
+  # mô hình ngôn ngữ ở Worker, không phải của Container (CLAUDE.md 8.7).
   room_label:
+    - 'NV-GhiChu'
+    - '!GHICHU'
+    - 'A10_TEXT'
+    - '!TEXT'
+    - 'AI-TEXT'
+    - 'KT-TEXT*'
     - '*ROOM*IDEN*'
     - '*TEN*PHONG*'
     - 'A-ANNO-TEXT*'
-    - '*_TEXT_PHONG*'
-    - 'KT-TEXT*'
-    - '*NOTE*'
 
   wall:
+    - 'NV-Tuong'
+    - '!TUONG'
+    - 'NV-BeTong'
+    - 'NV - BeTong'
+    - '!BETONG'
+    - 'A2_CAT BT'
     - 'A-WALL*'
     - '*TUONG*'
-    - 'KT-TUONG*'
-
-  structural_column:
-    - 'S-COL*'
-    - '*COT*'
-    - 'KC-COT*'
-
-  site_boundary:
-    - '*RANH*DAT*'
-    - '*SITE*BOUND*'
-    - 'C-PROP*'
 
   door:
+    - 'NV-Cua'
+    - 'LEAF'
     - 'A-DOOR*'
     - '*CUA*DI*'
 
   window:
+    - 'WINDOW'
+    - 'SILL'
+    - 'OPENING'
     - 'A-GLAZ*'
     - '*CUA*SO*'
+
+  structural_column:
+    - '!CO'
+    - 'A1_ THEP'
+    - 'S-COL*'
+    - 'KC-COT*'
+
+  # Trục và bong bóng trục. Trước đây nằm trong `ignore` — SAI: nhãn trục là
+  # `structural_grid`, thứ mà `06-knowledge-base.md` xếp ưu tiên P1-cao.
+  grid:
+    - 'NV-Truc'
+    - '!TRUC'
+    - 'A9_TRUC'
+    - 'KT-TRUC'
+    - '*TRUC*'
+    - '*AXIS*'
+
+  dimension:
+    - 'NV-Dim'
+    - '!DIM'
+    - '*DIM*'
+    - '*KICH*THUOC*'
+
+  furniture:
+    - 'NV-NoiThat'
+    - '!NOITHAT'
+    - 'FURNITURE'
+    - 'FF-FURN'
+    - 'NV-HatchNoiThat'
+
+  fixture: # thiet bi ve sinh, thiet bi bep, thiet bi dien
+    - 'NV-ThietBi'
+    - '!THIETBI'
+    - 'MT ThietBi'
+    - 'MT Dien'
+    - 'AI-THIET BI DIEN'
+
+  mep: # duong ong va day dan cua tap dien nuoc
+    - 'NV - InDN'
+    - 'NV-InDN'
+
+  title_block:
+    - '!KHUNGTEN'
+    - 'Khung ten'
+    - '*KHUNG*TEN*'
+    - '*TITLE*'
+
+  site_boundary:
+    - 'CHIGIOI'
+    - '*RANH*DAT*'
+    - '*SITE*BOUND*'
+    - 'C-PROP*'
+
+# ── Lớp đặt theo ĐỘ ĐẬM NÉT, không theo vật thể ────────────────────────────────────────
+# Không gán được vai trò, nhưng cũng KHÔNG được bỏ qua: chúng mang phần lớn hình học
+# tường và đường bao. Khai riêng để chúng không lọt vào `layers_unmapped` và làm nhiễu
+# danh sách cần bổ sung — nhưng vẫn phải ĐỌC nội dung, khác hẳn `ignore`.
+line_weight_layers:
+  ['NV-Thay', 'NV-Khuat', 'NV-Manh', 'NV-MoDam', 'NV-MoNhat', 'NV-Cat', 'NV-NetThay',
+   'NV-NetDut', 'NV_THAY', '!THAY', '!KHUAT', '!MANH', '!MO.2', '1_CAT',
+   'A6_THAY DAM', 'A7_THAY MANH', 'A8_NET KHUAT', 'A12_NET KHUAT']
+
+# ── Lớp cố tình bỏ qua ─────────────────────────────────────────────────────────────────
+# Có mặt trong mọi bản vẽ nhưng không mang thông tin hình học phòng.
+#
+# ⚠️ `'0'` ĐÃ ĐƯỢC GỠ khỏi danh sách này (05/09/2026). Lớp `0` mang **87.623 thực thể**
+#    trên sáu tệp — lớp lớn nhất trong toàn bộ hồ sơ, và HS-01 KC đặt cả khung tên ở đó.
+#    Bỏ qua nó là bỏ qua phần lớn bản vẽ, im lặng, không vào cả `layers_unmapped`.
+ignore:
+  - 'DEFPOINTS'
+  - '*VIEWPORT*'
+  - 'TAILIEUKIENTRUC.NET-*' # dau vet tep tai ve, khong phai noi dung ho so
+  - 'DWGshare.com*'
+  - 'XHOME-*'
+  - 'KCS_*'
+  - 'TDT-*'
 
 # ── Tên lớp khi HỆ THỐNG XUẤT bản vẽ ───────────────────────────────────────────────────
 # Bảng `roles` ở trên là để ĐỌC: một vai trò khớp nhiều mẫu, vì mỗi thời kỳ NVG đặt tên một
 # kiểu. Xuất thì phải chọn đúng MỘT tên, nên nó khai riêng ở đây.
 #
-# Mọi tên dưới đây được chọn sao cho khớp lại chính các mẫu ở trên: bản vẽ hệ thống xuất ra,
-# đọc ngược vào lại đúng vai trò cũ. Đổi một tên ở đây mà quên đối chiếu với `roles`/`ignore`
-# là làm đứt vòng đó — có kiểm thử canh.
+# ⚠️ Đang chờ Haan chốt (Q-24): giữ quy ước `KT-*` này, hay xuất theo chính quy ước `NV-*`
+#    mà NVG dùng ngoài đời để bản vẽ hệ thống mở lên trông quen thuộc với người vẽ. Đến khi
+#    có quyết định thì giữ nguyên — đổi tên lớp xuất là đổi thứ đã có kiểm thử canh.
 #
 # `color` là mã màu ACI của AutoCAD.
 export:
@@ -86,18 +176,5 @@ export:
   void: { layer: 'KT-THONG-TANG', color: 6 }
   site_boundary: { layer: 'C-RANH-DAT', color: 2 }
   grid: { layer: 'KT-TRUC', color: 1 }
+  dimension: { layer: 'KT-KICH-THUOC', color: 8 }
   title_block: { layer: 'KT-KHUNG-TEN', color: 7 }
-
-# Lớp cố tình bỏ qua: có mặt trong mọi bản vẽ nhưng không mang thông tin hình học phòng.
-# Khai tường minh để chúng không lọt vào `layers_unmapped` và làm nhiễu danh sách cần bổ sung.
-ignore:
-  - '*DIM*'
-  - '*KICH*THUOC*'
-  - 'DEFPOINTS'
-  - '*HATCH*'
-  - '*AXIS*'
-  - '*TRUC*'
-  - '*KHUNG*TEN*'
-  - '*TITLE*'
-  - '*VIEWPORT*'
-  - '0'

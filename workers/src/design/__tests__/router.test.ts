@@ -31,6 +31,7 @@ describe('config/models.yaml', () => {
       'layer3_intent',
       'layer3_intent_hard',
       'layer4_facade',
+      'layer5_render',
       'site_boundary_extract',
     ]);
   });
@@ -65,15 +66,30 @@ describe('config/models.yaml', () => {
     expect(hang2).toEqual([...TAM_THOI_HANG_2]);
   });
 
-  it('chỉ đầu ra nhóm `pro` còn tắt, và tắt có lý do', () => {
-    // Khoá gói miễn phí không có hạn mức cho nhóm `pro` (đo 29/08/2026: `gemini-pro-latest`
-    // trả 429, `gemini-2.5-pro` trả 404 "no longer available to new users"). Bật nó lên thì
-    // mọi lần dự phòng đều ăn 429 — thay một lỗi đọc được bằng một lỗi khó hiểu.
+  /*
+   * Hai đầu ra đang tắt, và cả hai tắt vì CÙNG một lý do đo được: khoá gói miễn phí không có
+   * hạn mức cho chúng. Bật lên thì mọi lần gọi đều ăn 429 — thay một lỗi đọc được bằng một
+   * lỗi khó hiểu.
+   *
+   *   `layer3_intent_hard` — nhóm `pro`. Đo 29/08/2026: `gemini-pro-latest` trả 429,
+   *   `gemini-2.5-pro` trả 404 "no longer available to new users".
+   *
+   *   `layer5_render` — nhóm sinh ảnh. Đo 05/09/2026: `gemini-2.5-flash-image` và
+   *   `gemini-3.1-flash-image` đều trả 429 RESOURCE_EXHAUSTED, trong khi `gemini-2.5-flash`
+   *   (chữ) gọi ngay sau đó vẫn OK. Tức khoá không hết hạn mức nói chung, nó không có hạn
+   *   mức SINH ẢNH.
+   *
+   * Cả hai chỉ bật lại khi nâng gói trả phí, không sớm hơn. Thêm tên thứ ba vào đây phải kèm
+   * một phép đo, không phải một phỏng đoán.
+   */
+  it('chỉ những đầu ra không có hạn mức trên gói miễn phí còn tắt, và tắt có lý do', () => {
     const off = Object.entries(config.routes)
       .filter(([, route]) => !route.enabled)
-      .map(([name]) => name);
-    expect(off).toEqual(['layer3_intent_hard']);
+      .map(([name]) => name)
+      .sort();
+    expect(off).toEqual(['layer3_intent_hard', 'layer5_render']);
     expect(config.routes.layer3_intent_hard?.model).toMatch(/pro/);
+    expect(config.routes.layer5_render?.model).toMatch(/image/);
   });
 
   it('đầu ra nhúng khai số chiều, và số chiều đó đánh chỉ mục được', () => {

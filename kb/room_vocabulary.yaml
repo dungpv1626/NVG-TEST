@@ -17,12 +17,39 @@
 # quan trọng hơn — kết quả không đổi giữa hai lần chạy. Mô hình ngôn ngữ chỉ xử lý phần còn lại.
 # So khớp KHÔNG phân biệt hoa thường, bỏ dấu tiếng Việt, và bỏ mọi ký tự không phải chữ/số.
 
+# ── Bí danh đo được từ hồ sơ thật (05/09/2026) ─────────────────────────────────────────
+# Các bí danh sau lấy nguyên văn từ hai bộ hồ sơ thật, không phải phỏng đoán:
+# `P.NGỦ 1..5` · `P.BẾP` · `P.KHÁCH + THỜ` · `WC 1..4` · `SÂN` · `SÂN NGOÀI NHÀ` ·
+# `BAN CÔNG` · `ban công kính` · `hộp kỹ thuật` · `SẢNH/ SINH HOẠT CHUNG` · `PKTTM`.
+# Cách đo: `doc/design/13-ho-so-thuc-te.md` mục 13.14.
+#
+# Hai điều học được, quan trọng hơn bản thân danh sách:
+#
+# **(a) NVG gộp công năng vào MỘT nhãn.** `P.KHÁCH + THỜ` là một phòng, không phải hai.
+# Bảng này quy nó về `living`; phòng thờ riêng vẫn có mã `altar_room` cho hồ sơ nào tách.
+# Đừng tách một nhãn gộp thành hai phòng khi số hoá — làm vậy là bịa ra một phòng không có
+# trên bản vẽ, và diện tích sẽ không cân.
+#
+# **(b) Nhãn có khi mang cả diện tích**: `SẢNH/ SINH HOẠT CHUNG 11.3m²`. Đuôi đó phải được
+# gỡ trước khi tra, nếu không nhãn nào cũng thành nhãn lạ và bị đẩy sang mô hình ngôn ngữ.
+# Quy tắc gỡ khai ở `strip_patterns` bên dưới, và `VocabularyIndex.lookup` đọc nó.
+
 version: '1.0.0'
+
+# Đuôi cần gỡ khỏi nhãn trước khi tra bảng. Là DỮ LIỆU vì đây là thói quen ghi chú của
+# người vẽ, không phải quy tắc của phần mềm — sẽ có thêm dạng đuôi khác.
+# Biểu thức chính quy, khớp trên nhãn ĐÃ chuẩn hoá (bỏ dấu, viết hoa, bỏ ký tự đặc biệt).
+strip_patterns:
+  # Dien tich viet lien nhan: "SẢNH/ SINH HOẠT CHUNG 11.3m²" -> "SANHSINHHOATCHUNG113M".
+  # Chu `²` bien mat khi chuan hoa (NFD khong tach ky tu so mu), nen mau phai chap nhan
+  # ca "…113M" lan "…113M2" — dung mau nao cung duoc, nhung phai thu tren nhan DA chuan hoa.
+  - '[0-9]+M2?$'
+  - '[0-9]+$' # so thu tu phong: "PN2", "WC 3.1"
 
 types:
   - code: living
     vi: Phòng khách
-    aliases: ['PK', 'P.KHACH', 'PHONG KHACH', 'SINH HOAT CHUNG', 'LIVING', 'LIVING ROOM', 'SHC']
+    aliases: ['PK', 'P.KHACH', 'PHONG KHACH', 'SINH HOAT CHUNG', 'LIVING', 'LIVING ROOM', 'SHC', 'P.KHACH + THO', 'KHACH + THO', 'P.KHACH+THO']
 
   - code: dining
     vi: Phòng ăn
@@ -55,7 +82,7 @@ types:
 
   - code: circulation
     vi: Giao thông
-    aliases: ['HANH LANG', 'SANH', 'HL', 'CHIEU NGHI', 'LOBBY', 'HALL', 'CORRIDOR', 'TIEN SANH']
+    aliases: ['HANH LANG', 'SANH', 'HL', 'CHIEU NGHI', 'LOBBY', 'HALL', 'CORRIDOR', 'TIEN SANH', 'SANH/ SINH HOAT CHUNG', 'SANH SINH HOAT CHUNG']
 
   - code: garage
     vi: Để xe
@@ -79,7 +106,7 @@ types:
 
   - code: balcony
     vi: Ban công
-    aliases: ['BAN CONG', 'BC', 'BALCONY', 'LOGGIA']
+    aliases: ['BAN CONG', 'BC', 'BALCONY', 'LOGGIA', 'BAN CONG KINH', 'BC KINH']
 
   - code: terrace
     vi: Sân thượng
@@ -87,7 +114,7 @@ types:
 
   - code: courtyard
     vi: Sân trong
-    aliases: ['SAN TRONG', 'SAN SAU', 'SAN TRUOC', 'SAN VUON', 'COURTYARD', 'GARDEN', 'SAN']
+    aliases: ['SAN TRONG', 'SAN SAU', 'SAN TRUOC', 'SAN VUON', 'COURTYARD', 'GARDEN', 'SAN', 'SAN NGOAI NHA', 'SAN TRONG NHA']
 
   - code: light_well
     vi: Giếng trời
@@ -103,7 +130,7 @@ types:
 
   - code: technical
     vi: Phòng kỹ thuật
-    aliases: ['PHONG KY THUAT', 'PKT', 'MAY BOM', 'PHONG MAY', 'TECHNICAL', 'MEP']
+    aliases: ['PHONG KY THUAT', 'PKT', 'MAY BOM', 'PHONG MAY', 'TECHNICAL', 'MEP', 'PKTTM', 'P.KTTM', 'PHONG KY THUAT THANG MAY', 'KTTM']
 
 # Mã nhóm dùng trong `target:` của rule pack để nhắm NHIỀU loại phòng cùng lúc. Chúng KHÔNG
 # phải nhãn phòng — mô hình ngôn ngữ không bao giờ được trả về các mã này.

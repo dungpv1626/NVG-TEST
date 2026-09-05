@@ -1,0 +1,70 @@
+# Khung tên bản vẽ NVG — ánh xạ ATTRIB sang ô thông tin.
+#
+# Nguồn: đo trên sáu tệp DXF của hai hồ sơ thật ngày 05/09/2026
+# (`doc/design/13-ho-so-thuc-te.md` mục 13.5). Hai hồ sơ ẩn danh là HS-01 và HS-02.
+#
+# ── Vì sao là DỮ LIỆU ──────────────────────────────────────────────────────────────────
+# Cùng lý lẽ với `layer_mapping.yaml`. Nhưng ở đây lý do mạnh hơn: **ba tệp đo được dùng
+# ba quy ước khung tên khác hẳn nhau**, và hai trong ba nằm ngay trong cùng một hồ sơ.
+# Viết tên thẻ vào mã trích xuất là bảo đảm chỉ đọc được một phần ba số tờ.
+#
+# ── Ba họ quy ước đã gặp ───────────────────────────────────────────────────────────────
+# `semantic_kt` và `semantic_kc` đặt tên thẻ theo Ý NGHĨA — đọc bằng cách tra tên thẻ.
+# `default_as_tag` thì KHÔNG: tên thẻ chính là chữ mặc định của khối (`KT/01`, `1/115`,
+# `22/09/2025`), còn nội dung thật nằm ở giá trị. Với họ này, tra theo tên thẻ sẽ ra một
+# danh mục tờ mà mọi tờ đều tên `KT/01`.
+#
+# ⚠️ Hỏng IM LẶNG. Trích xuất không báo lỗi, chỉ trả về ít tờ hơn thực tế hoặc trả về mã
+#    tờ trùng nhau. Cách duy nhất phát hiện là đếm ngược lại số khung tên.
+
+version: '1.0.0'
+
+# Ô thông tin chuẩn mà mọi họ quy ước phải quy về. Đây là hợp đồng nội bộ của trình trích
+# xuất; thêm ô mới thì phải bổ sung cả ở đây lẫn ở từng họ bên dưới.
+fields:
+  [sheet_code, sheet_name, scale, discipline, date, level]
+
+families:
+  # HS-01, tập kiến trúc. Thẻ đặt theo viết tắt tiếng Việt.
+  semantic_kt:
+    detect_tags: ['KHBV', 'TBV']
+    map:
+      sheet_code: KHBV # ky hieu ban ve  -> "kt/08"
+      sheet_name: TBV # ten ban ve     -> "MẶT BẰNG kiến trúc TẦNG 1"
+      scale: TL # ty le          -> "1:70"
+      discipline: HM # hang muc       -> "KIẾN TRÚC"
+      date: HT # hoan thanh     -> "08/2026"
+    do_duoc: 'HS-01 KT: 52 tờ, thẻ đủ trên cả 52.'
+
+  # HS-01 và HS-02, tập kết cấu. Cùng nghĩa nhưng tên thẻ khác hẳn, và tên tờ tách hai dòng.
+  semantic_kc:
+    detect_tags: ['SOHIEU', 'TENBANVE01']
+    map:
+      sheet_code: SOHIEU # -> "GC-01", "KC-14"
+      sheet_name: [TENBANVE01, TENBANVE02] # noi hai dong, dong 2 thuong rong
+      scale: TYLE # -> "1/100"
+    do_duoc: 'HS-01 KC: 72 tờ · HS-02 KC: 37 tờ.'
+
+  # HS-02, tập kiến trúc. Thẻ KHÔNG mang nghĩa — nó là chữ mặc định của khối.
+  # Nhận diện bằng chính hình dạng đó, rồi đọc theo VỊ TRÍ thẻ trong khối, không theo tên.
+  default_as_tag:
+    detect_tags: ['KT/01', '1/115']
+    map:
+      sheet_code: 'KT/01' # gia tri that: "KT/12", "KT/31"
+      scale: '1/115' # gia tri that: "1/60", "1/40", "1/20"
+      date: '22/09/2025' # gia tri that: "03/2026"
+      discipline: KBG # o duy nhat con dat ten theo nghia
+    sheet_name: null # khong co o ten to trong ho quy uoc nay
+    do_duoc: 'HS-02 KT: 31 tờ. Không tờ nào có ô tên bản vẽ.'
+
+# Lớp mà khối khung tên nằm trên. Dùng để khoanh vùng, KHÔNG dùng làm điều kiện đủ —
+# HS-01 KC đặt khung tên trên lớp `0`.
+layers: ['!KHUNGTEN', 'Khung ten', '0']
+
+# ── Ô đọc được từ khung tên nhưng KHÔNG đưa vào hệ thống ────────────────────────────────
+# Khung tên còn mang chủ đầu tư, địa chỉ công trình, tên và chức danh người ký, thư điện tử
+# và địa chỉ văn phòng. Đó là dữ liệu HẠNG 1 (`config/models.yaml`). Trình trích xuất đọc
+# qua chúng là chuyện bình thường, nhưng KHÔNG ghi vào tri thức dùng lại và KHÔNG gửi kèm
+# lời gọi mô hình ngôn ngữ. Danh sách để biết mà loại, không phải để thu thập.
+pii_fields_do_not_store:
+  ['chu dau tu', 'dia chi cong trinh', 'ten nguoi ky', 'chuc danh', 'email', 'dia chi van phong']

@@ -1,43 +1,104 @@
 # Chuẩn cấu tạo dùng để dựng tường và lỗ mở từ hình học đã giải (Lớp 3c).
 #
-# Nguồn: `doc/design/04-layer3-floorplan.md` mục 4.5 ("sinh danh sách walls và openings từ
-# polygon phòng"), hợp đồng `contracts/floor-plan.schema.json`.
+# Nguồn: `doc/design/04-layer3-floorplan.md` mục 4.5, hợp đồng `contracts/floor-plan.schema.json`.
+# Đối chiếu với hồ sơ thật ngày 05/09/2026 — xem `do_duoc` bên dưới.
 #
 # ── Vì sao là DỮ LIỆU chứ không phải hằng số trong mã nguồn ────────────────────────────
 # Cùng lý lẽ với rule pack và `layer_mapping.yaml` (CLAUDE.md 8.7). Bề dày tường và bề rộng
-# cửa là quy ước cấu tạo của từng đơn vị thi công: NVG xây tường 110 hay 220, cửa phòng ngủ
-# 800 hay 900 — đổi theo hồ sơ, theo chủ đầu tư, và sẽ đổi lần nữa.
+# cửa là quy ước cấu tạo của từng đơn vị thi công, và đổi theo hồ sơ lẫn theo chủ đầu tư.
 #
-# ⚠️ Đây KHÔNG phải ngưỡng quy chuẩn. Ngưỡng quy chuẩn (bề rộng hành lang tối thiểu, diện tích
-# phòng tối thiểu) nằm ở `rules/` và có mức nghiêm trọng, có nguồn dẫn. Số ở đây chỉ quyết định
-# bản vẽ TRÔNG thế nào, không quyết định phương án có hợp lệ hay không.
+# ⚠️ Đây KHÔNG phải ngưỡng quy chuẩn. Ngưỡng quy chuẩn nằm ở `rules/`, có mức nghiêm trọng
+# và có nguồn dẫn. Số ở đây chỉ quyết định bản vẽ TRÔNG thế nào, không quyết định phương án
+# có hợp lệ hay không.
 #
-# ⚠️ Chưa có kiến trúc sư NVG xác nhận — cùng nhóm câu hỏi với `kb/space_norms.yaml` (Q-18).
+# ══ QUY ƯỚC ĐO CỦA NVG — đọc trước khi dùng bất kỳ con số nào ═════════════════════════
+# Ghi chú in trên mọi tờ chi tiết cửa của hồ sơ thật, nguyên văn:
+#
+#     "kích thước cửa trên bản vẽ là kích thước THÔNG THỦY HOÀN THIỆN"
+#     "trát hèm tất cả cửa"
+#
+# Nghĩa là các con số dưới đây là **lọt lòng sau hoàn thiện**, KHÔNG phải lỗ chờ xây thô.
+# Lỗ chờ phải cộng thêm phần trát hèm. Nhầm hai thứ này thì mọi ô cửa hẹp lại vài centimet
+# — đủ để một hành lang trượt ngưỡng quy chuẩn mà không ai hiểu vì sao.
 
-version: '1.0.0'
+version: '2.0.0'
+
+do_duoc:
+  ngay: '2026-09-05'
+  ho_so: 'HS-01 — nhà phố 5 tầng + phòng KTTM (52 tờ kiến trúc)'
+  to: 'kt/51 thống kê cửa; kt/42–kt/50 chi tiết cửa; cao độ đọc từ mặt cắt'
+  canh_bao: >-
+    MỘT công trình. Đủ để BÁC một con số sai, chưa đủ để dựng phân bố. Ngưỡng thống kê là
+    15 công trình (`kb/space_norms.yaml`, mục `priors.min_samples`).
 
 walls:
-  # Tường bao và tường chịu lực dày hơn tường ngăn.
+  # Xác nhận trên hồ sơ thật: ghi chú kết cấu có cả "GỜ CHÂN TƯỜNG 110" lẫn "… 220",
+  # đúng cặp bề dày mà tệp này vẫn giả định.
   exterior_m: 0.22
   load_bearing_m: 0.22
   partition_m: 0.11
 
+levels:
+  # Đọc từ cao độ ghi trên mặt cắt HS-01: +0.000 · +3.600 · +7.200 · +10.800 · +14.700 · +18.400.
+  # Bốn tầng đầu đúng 3,6 m. Tầng trên cùng cao hơn (3,9 m rồi 3,7 m) — đừng lấy một con số
+  # duy nhất áp cho mọi tầng.
+  storey_height_m: 3.6
+  top_storey_height_m: 3.9
+
 openings:
+  # Cửa phòng ngủ / phòng trong nhà. 900x2200 là con số ĐO ĐƯỢC (mã d4, 6 bộ,
+  # nhựa composite vân gỗ, 1 cánh mở quay) — trùng đúng giá trị vẫn giả định trước đó.
   door:
     width_m: 0.9
     height_m: 2.2
+
+  # Cửa vệ sinh HẸP HƠN cửa phòng: đo được 700x2100 (DW1) và 750x2200 (DW2).
+  # Trước đây mô hình chỉ có MỘT bề rộng cửa cho mọi phòng — đó là chỗ sai.
+  wc_door:
+    width_m: 0.75
+    height_m: 2.2
+
+  # Cửa chính và cửa ra ban công. Giá trị cũ (1,2 x 2,4) KHÔNG khớp hồ sơ thật:
+  # đo được 1650x2500 · 1670x2500 · 2150x2500 · 3000x2500 · 3800x3000 — rộng hơn nhiều và
+  # cao 2,5 m chứ không phải 2,4 m. Lấy bản hẹp nhất làm mặc định để không bịa ra mặt tiền
+  # rộng hơn thực tế; bề rộng thật do mặt thoáng của phòng quyết định.
   entrance:
-    width_m: 1.2
-    height_m: 2.4
+    width_m: 1.65
+    height_m: 2.5
+
   window:
-    height_m: 1.5
+    # Đo được ba cỡ: 690x1600 (1 cánh mở hất) · 1550x1600 (2 cánh lùa) · 1200x1300 (2 cánh
+    # lùa). Chiều cao 1,6 m phổ biến hơn 1,5 m của giả định cũ.
+    height_m: 1.6
+    # Cao độ bệ cửa +0.900 đọc thẳng từ mặt cắt — xác nhận đúng giả định cũ.
     sill_m: 0.9
-    # Bề rộng cửa sổ lấy theo TỈ LỆ đoạn tường mặt thoáng của phòng, kẹp trong hai cận dưới.
+    # Bề rộng lấy theo TỈ LỆ đoạn tường mặt thoáng của phòng, kẹp trong hai cận.
     # Lấy tỉ lệ chứ không lấy một con số cố định: một phòng ngủ 2,4 m và một phòng khách 5 m
-    # không thể cùng một ô cửa.
+    # không thể cùng một ô cửa. Hai cận dưới/trên đặt theo cỡ nhỏ nhất và lớn nhất đo được.
     share_of_wall: 0.55
-    min_width_m: 0.8
-    max_width_m: 3.0
+    min_width_m: 0.69
+    max_width_m: 1.55
+
+  # Cửa sổ vệ sinh: 600x600, mở hất. Nhỏ hơn hẳn cửa sổ phòng ở, nên tách riêng.
+  wc_window:
+    width_m: 0.6
+    height_m: 0.6
+    sill_m: 1.8
 
 # Loại phòng KHÔNG mở cửa sổ ra mặt thoáng dù có tiếp giáp.
 no_window_types: [stair, core, technical, garage]
+
+# ── Vật liệu và quy cách ghi trên bảng thống kê cửa ────────────────────────────────────
+# Chưa dùng để dựng hình. Ghi lại vì bảng thống kê cửa (`kt/51`) là một trong số ít loại tờ
+# engine sinh ra được bằng cách CHÉP, và nó cần đúng những cột này.
+schedule_columns: [stt, ky_hieu, vi_tri, so_luong, kich_thuoc_mm, vat_lieu, phu_kien, ghi_chu]
+materials_seen:
+  ['nhôm kính trong', 'nhôm kính mờ', 'nhựa composite vân gỗ']
+hardware_seen:
+  ['kinlong chính hãng', 'tay khóa inox 304']
+opening_types_seen:
+  ['1 cánh mở quay', '2 cánh mở quay', '2 cánh mở lùa', '4 cánh mở trượt quay',
+   '1 cánh mở hất', 'mở ra ngoài', 'mở vào trong']
+notes_on_every_sheet:
+  - 'trát hèm tất cả cửa'
+  - 'kích thước cửa trên bản vẽ là kích thước thông thủy hoàn thiện'

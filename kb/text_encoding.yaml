@@ -1,0 +1,129 @@
+# Bảng mã chữ trong bản vẽ NVG — dữ liệu để giải mã, không phải mã nguồn.
+#
+# Nguồn: đo trên sáu tệp DXF của hai hồ sơ thật ngày 05/09/2026
+# (`doc/design/13-ho-so-thuc-te.md` mục 13.6). Cách đo lại ghi ở mục 13.14.
+#
+# ── Vấn đề ─────────────────────────────────────────────────────────────────────────────
+# Hồ sơ NVG trộn HAI bảng mã trong CÙNG một tệp: phông TCVN3 8-bit (họ `.Vn*`) dùng cho
+# phần lớn chữ vẽ tay, và Unicode dùng cho phần khung tên soạn sau. Header khai
+# `$DWGCODEPAGE=ANSI_1252` nhưng điều đó KHÔNG cho biết chuỗi nào thuộc bảng nào.
+#
+# Đọc sai theo hướng nào cũng hỏng: bỏ qua TCVN3 thì nhãn phòng ra chữ rác
+# (`MÆT B»NG` thay vì `MẶT BẰNG`); giải mã mù thì chuỗi Unicode đã đúng bị làm hỏng
+# (`MÓNG` thành `MỂNG`). Cả hai lỗi đều IM LẶNG — không có ngoại lệ nào nổ ra.
+#
+# ── Cách quyết định: theo KIỂU CHỮ, không theo từng chuỗi ───────────────────────────────
+# Quy trình hai lượt, tất định, không cần từ điển:
+#
+#   1. Với mỗi chuỗi, xem có chứa ký tự nào trong `markers` không. Đó là 49 ký tự chỉ
+#      xuất hiện khi chuỗi đang ở TCVN3; chúng không phải chữ cái tiếng Việt Unicode nào.
+#   2. Kiểu chữ (group code 7) nào có ÍT NHẤT một chuỗi mang dấu hiệu thì cả kiểu chữ đó
+#      là TCVN3 — giải mã toàn bộ chuỗi thuộc kiểu đó.
+#
+# Vì sao phải có lượt 2: chuỗi ngắn có thể không chứa dấu hiệu nào. `CHI TIÕT` chỉ có `Õ`,
+# vốn cũng là chữ Việt hợp lệ, nên xét riêng nó thì không kết luận được. Nhưng kiểu chữ của
+# nó (`VnAvantH Bold`) có những chuỗi khác CÓ dấu hiệu — đó là bằng chứng nằm trong chính
+# tệp đó. Đây là ví dụ thật, không phải giả định.
+#
+# Số kiểu chữ TCVN3 đo được: 14 (KT) · 4 (KC) · 12 (ĐN) trên mỗi hồ sơ.
+
+version: '1.0.0'
+
+# 49 ký tự KHÔNG THỂ là chữ tiếng Việt Unicode. Thấy một cái là chắc chắn TCVN3.
+# Sinh ra bằng cách lấy tập khoá của `table` trừ đi bảng chữ cái tiếng Việt.
+markers: '¡¢£¤¥¦§¨©ª«¬­®µ¶·¸¹»¼½¾ÆÇËÎÏÐÑÖ×ØÞßäåæçëîïðñö÷øûü'
+
+# Tên kiểu chữ đã gặp thuộc họ TCVN3. Danh sách này là GỢI Ý bổ trợ, KHÔNG phải điều kiện:
+# quyết định vẫn dựa vào dấu hiệu đo được trong từng tệp, vì tên kiểu chữ do người vẽ đặt
+# và có cái không mang chữ "Vn" nào (`INTCON`, `chu thuong`, `CHU HOA Day`, `BLH`, `VHH`).
+known_styles:
+  ['VnAvant', 'VnAvantH', 'VnAvantH Bold', 'VnAvantH chuan', 'VnArialH', 'VnArialH Bold',
+   'VnBlackH', 'VnHelvetInsH', 'VNAVANH', 'AVANH', 'AvantH', 'Avant thuong', 'VntimeH',
+   'VNSimli', 'VNCC-vnsimli', 'VNCC-RMS', 'INTCON', 'VHH', 'BLH', 'CA.JSC1', 'T1']
+
+# Tệp phông tương ứng, đọc từ bảng STYLE (group code 3). Không phải kiểu chữ nào cũng khai —
+# kiểu chữ TrueType thường để trống ô này, nên KHÔNG dùng nó làm điều kiện duy nhất.
+known_fonts: ['vnsimli.shx', 'vntimeh.shx', 'vnromans.shx', 'VNCC-RMS.shx']
+
+# ── Bảng giải mã ───────────────────────────────────────────────────────────────────────
+# Dựng bằng đối chiếu thực tế: mỗi dòng đều có ít nhất một từ xác nhận được trong chính
+# hồ sơ (ví dụ 0xB5 → 'a' vì `nhµ` = `nhà`).
+#
+# TCVN3 dùng phông hoa RIÊNG cho chữ in hoa: CÙNG mã byte, glyph khác. Nên sau khi tra
+# bảng còn phải suy chữ hoa/thường từ các chữ cái ASCII có trong chính từ đó — một từ mà
+# mọi chữ ASCII đều hoa thì toàn từ là hoa.
+table:
+  0xA1: 'Ă'
+  0xA2: 'Â'
+  0xA3: 'Ê'
+  0xA4: 'Ô'
+  0xA5: 'Ơ'
+  0xA6: 'Ư'
+  0xA7: 'Đ'
+  0xA8: 'ă'
+  0xA9: 'â'
+  0xAA: 'ê'
+  0xAB: 'ô'
+  0xAC: 'ơ'
+  0xAD: 'ư'
+  0xAE: 'đ'
+  0xB5: 'à'
+  0xB6: 'ả'
+  0xB7: 'ã'
+  0xB8: 'á'
+  0xB9: 'ạ'
+  0xBB: 'ằ'
+  0xBC: 'ẳ'
+  0xBD: 'ẵ'
+  0xBE: 'ắ'
+  0xC6: 'ặ'
+  0xC7: 'ầ'
+  0xC8: 'ẩ'
+  0xC9: 'ẫ'
+  0xCA: 'ấ'
+  0xCB: 'ậ'
+  0xCC: 'è'
+  0xCD: 'ẻ'
+  0xCE: 'ẻ'
+  0xCF: 'ẽ'
+  0xD0: 'é'
+  0xD1: 'ẹ'
+  0xD2: 'ề'
+  0xD3: 'ể'
+  0xD4: 'ễ'
+  0xD5: 'ế'
+  0xD6: 'ệ'
+  0xD7: 'ì'
+  0xD8: 'ỉ'
+  0xD9: 'ĩ'
+  0xDD: 'í'
+  0xDE: 'ị'
+  0xDF: 'ò'
+  0xE0: 'ỏ'
+  0xE1: 'õ'
+  0xE3: 'ó'
+  0xE4: 'ọ'
+  0xE5: 'ồ'
+  0xE6: 'ổ'
+  0xE7: 'ỗ'
+  0xE8: 'ố'
+  0xE9: 'ộ'
+  0xEA: 'ờ'
+  0xEB: 'ở'
+  0xEC: 'ỡ'
+  0xED: 'ớ'
+  0xEE: 'ợ'
+  0xEF: 'ù'
+  0xF0: 'ủ'
+  0xF1: 'ủ'
+  0xF2: 'ũ'
+  0xF3: 'ú'
+  0xF4: 'ụ'
+  0xF5: 'ừ'
+  0xF6: 'ử'
+  0xF7: 'ữ'
+  0xF8: 'ứ'
+  0xF9: 'ự'
+  0xFA: 'ỳ'
+  0xFB: 'ỷ'
+  0xFC: 'ỹ'

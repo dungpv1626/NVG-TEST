@@ -28,6 +28,14 @@ version: '1.0.0'
 # Đếm số CÔNG TRÌNH, không phải số phòng: một biệt thự mười lăm phòng ngủ tự nó vượt ngưỡng,
 # và "phân bố diện tích phòng ngủ của NVG" hoá ra là phân bố bên trong đúng một căn nhà.
 priors:
+  # ⚠️ Trong giai đoạn demo, ngưỡng này KHÔNG BAO GIỜ đạt — và đó là điều đã biết trước, không
+  # phải chuyện chờ xem. Haan chốt 06/09/2026 (Q-27): bản thiết kế là thông tin nhạy cảm, khách
+  # hàng hạn chế cung cấp, nên chỉ có HAI hồ sơ và sẽ không xin thêm.
+  #
+  # Nghĩa là hook thống kê luôn trả về RỖNG suốt giai đoạn này, đúng như thiết kế. Hệ quả thật
+  # sự nằm ở chỗ khác: **số ở mục `spaces` không thể suy từ dữ liệu**, nên chúng phải do kiến
+  # trúc sư NVG ấn định (Q-18). Đừng hạ ngưỡng xuống cho khớp số hồ sơ đang có — hạ xuống 2 thì
+  # phân bố tính ra từ hai căn nhà, và nó sẽ trông y như một con số đã được kiểm chứng.
   min_samples: 15
   # Bề rộng lô là biến phân tầng chính: cách bố trí nhà 4 m và nhà 8 m khác nhau về bản
   # chất, không phải khác về mức độ.

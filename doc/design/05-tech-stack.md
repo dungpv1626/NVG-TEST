@@ -65,6 +65,10 @@ Chưa xuất IFC ở giai đoạn này, **nhưng giữ mô hình dữ liệu n�
 (`NVO026_NhaAnhA_KT_MatBang_V03_11082026`), khổ A3 (A1/A2 cho tổng mặt bằng). Số phiên
 bản do hệ tài liệu cấp qua publish bridge, không tự đặt.
 
+> ⚠️ **Sửa 05/09/2026 sau khi đối chiếu hai hồ sơ thật.** Quy ước tên file này là quy ước
+> **MỚI cho bản vẽ hệ thống xuất ra**, không phải mô tả hồ sơ cũ của NVG — xem
+> `13-ho-so-thuc-te.md` mục 13.8. Khổ A3 thì **đúng**: cả 265 tờ của hai hồ sơ thật đều A3.
+
 ## 5.6 LLM — trong Worker
 
 | Vai trò | CHỐT |

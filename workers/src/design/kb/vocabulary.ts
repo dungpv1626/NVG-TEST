@@ -25,6 +25,12 @@ export interface RoomVocabulary {
   version: string;
   types: RoomTypeEntry[];
   group_targets?: Record<string, RoomGroupEntry>;
+  /**
+   * Đuôi cần gỡ khỏi nhãn trước khi tra, theo thứ tự thử. Biểu thức chính quy, khớp trên
+   * nhãn ĐÃ chuẩn hoá. Là dữ liệu vì đây là thói quen ghi chú của người vẽ chứ không phải
+   * quy tắc của phần mềm — hồ sơ thật có nhãn mang cả diện tích ("… 11.3m²").
+   */
+  strip_patterns?: string[];
 }
 
 export function parseVocabulary(yamlText: string): RoomVocabulary {
@@ -79,8 +85,13 @@ export function normaliseKey(label: string): string {
 /** Bảng tra bí danh → mã phòng, dựng một lần rồi dùng lại. */
 export class VocabularyIndex {
   private readonly byKey = new Map<string, string>();
+  private readonly stripPatterns: RegExp[];
 
   constructor(readonly vocabulary: RoomVocabulary) {
+    // Mặc định giữ đúng hành vi cũ nếu tệp YAML chưa khai: bỏ số thứ tự ở đuôi.
+    this.stripPatterns = (vocabulary.strip_patterns ?? ['[0-9]+$']).map(
+      (source) => new RegExp(source),
+    );
     for (const entry of vocabulary.types) {
       // Bản thân mã phòng cũng là một bí danh: bản vẽ mới do chính hệ thống xuất ra sẽ mang
       // đúng mã chuẩn, và bắt nó đi vòng qua mô hình ngôn ngữ là tốn tiền để ra lại chính nó.
@@ -104,13 +115,24 @@ export class VocabularyIndex {
   /**
    * Tra nhãn nguyên văn, không gọi mạng. Trả `undefined` khi không chắc.
    *
-   * Hai lượt: khớp nguyên nhãn trước, rồi bỏ phần số đuôi ("PN2" → "PN"). Số đuôi gần như
-   * luôn là số thứ tự phòng chứ không đổi loại phòng — nhưng thử nguyên nhãn TRƯỚC vì có
-   * loại phòng mà con số là một phần của tên.
+   * Khớp nguyên nhãn TRƯỚC, rồi mới thử từng đuôi khai ở `strip_patterns`. Thứ tự đó quan
+   * trọng: có loại phòng mà con số là một phần của tên, và gỡ trước là quy sai loại.
+   *
+   * Gỡ dồn chứ không thay phiên: nhãn thật `"SẢNH/ SINH HOẠT CHUNG 11.3m²"` mang cả diện
+   * tích lẫn số, phải gỡ hết mới còn phần tra được.
    */
   lookup(label: string): string | undefined {
-    const key = normaliseKey(label);
+    let key = normaliseKey(label);
     if (!key) return undefined;
-    return this.byKey.get(key) ?? this.byKey.get(key.replace(/[0-9]+$/, ''));
+    const hit = this.byKey.get(key);
+    if (hit) return hit;
+    for (const pattern of this.stripPatterns) {
+      const shorter = key.replace(pattern, '');
+      if (shorter === key) continue;
+      key = shorter;
+      const next = this.byKey.get(key);
+      if (next) return next;
+    }
+    return undefined;
   }
 }
