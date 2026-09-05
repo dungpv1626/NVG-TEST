@@ -166,7 +166,11 @@ export const approvalLimits = pgTable(
     ...auditColumns(),
   },
   (t) => [
-    unique('approval_limits_unique').on(t.roleId, t.subject, t.step, t.companyId),
+    // `nullsNotDistinct`: xem chú thích cùng loại ở `agingBuckets`. Hạn mức dùng chung
+    // (`company_id` rỗng) từng bị nhân tới 12 bản sao vì lỗ hổng này (migration 0109).
+    unique('approval_limits_unique')
+      .on(t.roleId, t.subject, t.step, t.companyId)
+      .nullsNotDistinct(),
     index('approval_limits_subject_idx').on(t.subject),
   ],
 );

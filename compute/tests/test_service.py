@@ -30,6 +30,7 @@ EXPECTED_CONTRACTS = {
     "render-request",
     "render-result",
     "schedules",
+    "site-boundary-extraction",
     "space-program",
 }
 

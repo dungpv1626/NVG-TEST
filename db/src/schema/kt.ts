@@ -34,6 +34,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
   varchar,
@@ -549,7 +550,10 @@ export const agingBuckets = pgTable(
   },
   (t) => [
     index('aging_buckets_order_idx').on(t.companyId, t.position),
-    uniqueIndex('aging_buckets_code').on(t.companyId, t.code),
+    // `nullsNotDistinct` để dòng dùng chung (`company_id` rỗng) cũng được chống trùng: mặc
+    // định Postgres coi hai NULL là KHÁC nhau, nên `ON CONFLICT DO NOTHING` của bộ nạp trượt
+    // đúng ở nhóm đó và đã nhân 4 mốc thành 20 dòng (migration 0109).
+    unique('aging_buckets_code').on(t.companyId, t.code).nullsNotDistinct(),
   ],
 );
 

@@ -764,6 +764,13 @@
       "when": 1787931027547,
       "tag": "0108_chan_ghi_vao_ma_tong_hop",
       "breakpoints": true
+    },
+    {
+      "idx": 109,
+      "version": "7",
+      "when": 1787931027548,
+      "tag": "0109_chan_trung_dong_cau_hinh_dung_chung",
+      "breakpoints": true
     }
   ]
 }

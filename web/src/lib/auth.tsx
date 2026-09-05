@@ -311,8 +311,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * người giữ vai trò cấp tập đoàn được PHÉP chọn cả ba pháp nhân, song nơi họ làm việc vẫn
    * là pháp nhân được gán — lấy phần tử đầu của `scopeCompanies` sẽ đẩy Phó Giám đốc NVS vào
    * chế độ gộp mỗi lần đăng nhập, dù họ chưa hề chọn như vậy.
+   *
+   * ⚠️ Chờ `loading` xong mới làm gì cả. Trong lúc còn khôi phục phiên, `profile` là rỗng vì
+   * CHƯA TẢI XONG, không phải vì đã đăng xuất — mà hai trường hợp đó cần hai xử lý ngược
+   * nhau. Coi lẫn chúng thì mỗi lần tải trang chạy đúng chuỗi này: xoá lựa chọn đã lưu, rồi
+   * khi hồ sơ về thì thấy rỗng nên rơi về pháp nhân được gán. Người giữ vai trò cấp tập đoàn
+   * vì thế mất lựa chọn sau MỌI lần tải lại và bị đẩy về chế độ gộp — đúng cái chế độ không
+   * tạo được hồ sơ. Bộ nhớ `persist` của kho trạng thái khi đó là vô dụng: nó khôi phục đúng
+   * giá trị, chỉ để bị ghi đè vài mili giây sau.
    */
   useEffect(() => {
+    if (loading) return;
+
     const { selectedCompanyId, setSelectedCompany, reset } = useCompanyStore.getState();
 
     if (!profile || profile.assignments.length === 0) {
@@ -322,7 +332,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const stillValid = profile.scopeCompanies.some((c) => c.companyId === selectedCompanyId);
     if (!stillValid) setSelectedCompany(profile.assignments[0]!.companyId);
-  }, [profile]);
+  }, [profile, loading]);
 
   const value = useMemo<AuthState>(
     () => ({

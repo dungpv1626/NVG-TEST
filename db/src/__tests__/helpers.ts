@@ -206,6 +206,37 @@ export async function cleanupTestData(): Promise<void> {
     await sql`DELETE FROM opportunities WHERE name LIKE ${TEST_PREFIX + '%'}`;
     await sql`DELETE FROM documents WHERE title LIKE ${TEST_PREFIX + '%'}`;
     await sql`DELETE FROM customers WHERE name LIKE ${TEST_PREFIX + '%'}`;
+
+    /*
+     * `notifications` cùng hình dạng với `approvals` ở trên: một bảng phục vụ mọi module nên
+     * `related_entity_id` KHÔNG có khóa ngoại, và vì vậy xoá hồ sơ nguồn không dọn theo dòng
+     * thông báo nào. Khác `approvals` ở chỗ tiêu đề không mang tiền tố test — thông báo do
+     * trigger sinh ra từ mã hồ sơ, nên lọc theo `[TEST]` bắt hụt gần hết.
+     *
+     * Đã đo trên CSDL phát triển trước khi thêm bước này: 10.469 thông báo, trong đó 9.691
+     * (93%) trỏ tới bản ghi không còn tồn tại. Người mở chuông thông báo thấy một bức tường
+     * thông báo mà bấm vào cái nào cũng không ra hồ sơ.
+     *
+     * Lọc theo "bản ghi đích không còn tồn tại" chứ không theo tiền tố: đó đúng là cách chúng
+     * chết. Xoá MỀM không lọt lưới này — dòng bị xoá mềm vẫn còn trong bảng, chỉ có
+     * `deleted_at`, nên thông báo về nó vẫn giữ nguyên.
+     */
+    const entityTypes = await sql<{ related_entity_type: string }[]>`
+      SELECT DISTINCT n.related_entity_type
+      FROM notifications n
+      JOIN information_schema.tables t
+        ON t.table_schema = 'public' AND t.table_name = n.related_entity_type
+      WHERE n.related_entity_type IS NOT NULL`;
+
+    for (const { related_entity_type: entity } of entityTypes) {
+      // Tên bảng đã được đối chiếu với `information_schema` ở truy vấn trên nên nội suy an toàn.
+      await sql.unsafe(
+        `DELETE FROM notifications n
+         WHERE n.related_entity_type = '${entity}'
+           AND n.related_entity_id IS NOT NULL
+           AND NOT EXISTS (SELECT 1 FROM "${entity}" x WHERE x.id = n.related_entity_id)`,
+      );
+    }
   } finally {
     await sql.end();
   }
