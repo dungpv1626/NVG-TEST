@@ -196,6 +196,12 @@ class FakeCompute implements ComputeBackend {
   async exportSvg(): Promise<string> {
     throw new Error('không dùng trong bộ này');
   }
+  async schedules(): Promise<unknown> {
+    throw new Error('không dùng trong bộ này');
+  }
+  async exportXlsx(): Promise<ArrayBuffer> {
+    throw new Error('không dùng trong bộ này');
+  }
   async extract(): Promise<{ status: 'ok'; extraction: unknown }> {
     throw new Error('không dùng trong bộ này');
   }

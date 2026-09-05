@@ -572,6 +572,51 @@ designApp.get('/floor-plan/:projectId/svg', async (c) => {
 });
 
 /**
+ * Bảng thống kê của mặt bằng đang hiệu lực (hoặc `?artifact=`), tính lại mỗi lần gọi — cùng
+ * mặt bằng thì cùng bảng, và mặt bằng đổi là bảng đổi theo (11-design-flow 11.6 Output 4).
+ * Không đúc artifact ở bước này: cạnh lineage chỉ nhận các bước đã khai.
+ */
+designApp.get('/floor-plan/:projectId/schedules', async (c) => {
+  const prepared = await prepareSheet(c);
+  if ('response' in prepared) return prepared.response;
+  const { compute, request, planId } = prepared;
+  try {
+    const schedules = await compute.schedules({
+      floor_plan: request.floor_plan,
+      floorplan_ref: planId,
+      labels: request.labels,
+    });
+    // Kèm bảng nhãn theo MÃ PHÒNG: hợp đồng chỉ ghi `room_type`, giao diện cần tên tiếng Việt.
+    return c.json({ schedules, roomLabels: roomLabels() });
+  } catch (error) {
+    return c.json({ error: error instanceof Error ? error.message : String(error) }, 502);
+  }
+});
+
+designApp.get('/floor-plan/:projectId/xlsx', async (c) => {
+  const prepared = await prepareSheet(c);
+  if ('response' in prepared) return prepared.response;
+  const { compute, request, planId, filename } = prepared;
+  try {
+    // Nhãn theo LOẠI phòng cho sheet diện tích (hợp đồng ghi `room_type`).
+    const xlsx = await compute.exportXlsx({
+      floor_plan: request.floor_plan,
+      floorplan_ref: planId,
+      labels: roomLabels(),
+      title: `${request.title_block.project_code} — ${request.title_block.project_name}`,
+    });
+    return new Response(xlsx, {
+      headers: {
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition': `attachment; filename="${filename.replace(/_MatBang_T\d+/, '_ThongKe')}.xlsx"`,
+      },
+    });
+  } catch (error) {
+    return c.json({ error: error instanceof Error ? error.message : String(error) }, 502);
+  }
+});
+
+/**
  * Phần chung của hai tuyến xuất tờ: quyền, mặt bằng (bản hiệu lực hoặc một phương án cụ thể
  * qua `?artifact=`), nhãn tiếng Việt từ chương trình không gian, nhóm màu, khung tên, tên tệp.
  */
@@ -589,6 +634,8 @@ async function prepareSheet(c: {
       compute: ReturnType<typeof createComputeBackend>;
       request: ExportDxfRequest;
       filename: string;
+      /** Mã băm của mặt bằng đang dùng — làm `floorplan_ref` của bảng thống kê. */
+      planId: string;
     }
 > {
   const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
@@ -658,6 +705,7 @@ async function prepareSheet(c: {
       sheet_code: `kt/${String(level).padStart(2, '0')}`,
     },
     filename: `${slug}_KT_MatBang_T${level}_V${version}`,
+    planId: plan.id,
   };
 }
 

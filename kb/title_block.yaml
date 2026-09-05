@@ -21,8 +21,7 @@ version: '1.0.0'
 
 # Ô thông tin chuẩn mà mọi họ quy ước phải quy về. Đây là hợp đồng nội bộ của trình trích
 # xuất; thêm ô mới thì phải bổ sung cả ở đây lẫn ở từng họ bên dưới.
-fields:
-  [sheet_code, sheet_name, scale, discipline, date, level]
+fields: [sheet_code, sheet_name, scale, discipline, date, level]
 
 families:
   # HS-01, tập kiến trúc. Thẻ đặt theo viết tắt tiếng Việt.

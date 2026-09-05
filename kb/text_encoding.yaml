@@ -37,9 +37,29 @@ markers: '¡¢£¤¥¦§¨©ª«¬­®µ¶·¸¹»¼½¾ÆÇËÎÏÐÑÖ×ØÞß
 # quyết định vẫn dựa vào dấu hiệu đo được trong từng tệp, vì tên kiểu chữ do người vẽ đặt
 # và có cái không mang chữ "Vn" nào (`INTCON`, `chu thuong`, `CHU HOA Day`, `BLH`, `VHH`).
 known_styles:
-  ['VnAvant', 'VnAvantH', 'VnAvantH Bold', 'VnAvantH chuan', 'VnArialH', 'VnArialH Bold',
-   'VnBlackH', 'VnHelvetInsH', 'VNAVANH', 'AVANH', 'AvantH', 'Avant thuong', 'VntimeH',
-   'VNSimli', 'VNCC-vnsimli', 'VNCC-RMS', 'INTCON', 'VHH', 'BLH', 'CA.JSC1', 'T1']
+  [
+    'VnAvant',
+    'VnAvantH',
+    'VnAvantH Bold',
+    'VnAvantH chuan',
+    'VnArialH',
+    'VnArialH Bold',
+    'VnBlackH',
+    'VnHelvetInsH',
+    'VNAVANH',
+    'AVANH',
+    'AvantH',
+    'Avant thuong',
+    'VntimeH',
+    'VNSimli',
+    'VNCC-vnsimli',
+    'VNCC-RMS',
+    'INTCON',
+    'VHH',
+    'BLH',
+    'CA.JSC1',
+    'T1',
+  ]
 
 # Tệp phông tương ứng, đọc từ bảng STYLE (group code 3). Không phải kiểu chữ nào cũng khai —
 # kiểu chữ TrueType thường để trống ô này, nên KHÔNG dùng nó làm điều kiện duy nhất.

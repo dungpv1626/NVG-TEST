@@ -119,6 +119,13 @@ export interface ExportDxfRequest {
   sheet_code?: string;
 }
 
+export interface SchedulesRequest {
+  floor_plan: unknown;
+  floorplan_ref: string;
+  labels?: Record<string, string>;
+  title?: string;
+}
+
 export interface ComputeBackend {
   readonly name: string;
   health(): Promise<boolean>;
@@ -135,6 +142,10 @@ export interface ComputeBackend {
    * duy nhất cho cả DXF lẫn SVG (bất biến #5: trình duyệt không dựng hình).
    */
   exportSvg(request: ExportDxfRequest): Promise<string>;
+  /** Bảng thống kê cửa · cửa sổ · diện tích · khối lượng sơ bộ — tính lại từ mặt bằng (TK-17). */
+  schedules(request: SchedulesRequest): Promise<unknown>;
+  /** Cùng bảng đó dạng XLSX để bàn giao. */
+  exportXlsx(request: SchedulesRequest): Promise<ArrayBuffer>;
   /** Bước 1 số hoá — trích hình học từ một bản vẽ `.dxf`/`.dwg`. */
   extract(file: CadFile): Promise<{ status: 'ok'; extraction: unknown }>;
   /** Bước 2 số hoá — kiểm tra chéo và lắp bản ghi Knowledge Base. */
@@ -242,7 +253,20 @@ export class HttpComputeBackend implements ComputeBackend {
     return await res.arrayBuffer();
   }
 
-  private async exportCall(path: string, request: ExportDxfRequest): Promise<Response> {
+  async schedules(request: SchedulesRequest): Promise<unknown> {
+    const res = await this.exportCall('/schedules', request);
+    return await res.json();
+  }
+
+  async exportXlsx(request: SchedulesRequest): Promise<ArrayBuffer> {
+    const res = await this.exportCall('/export/xlsx', request);
+    return await res.arrayBuffer();
+  }
+
+  private async exportCall(
+    path: string,
+    request: ExportDxfRequest | SchedulesRequest,
+  ): Promise<Response> {
     let res: Response;
     try {
       res = await fetch(`${this.baseUrl}${path}`, {
@@ -294,6 +318,14 @@ export class UnconfiguredComputeBackend implements ComputeBackend {
   }
 
   async exportSvg(): Promise<never> {
+    throw this.unavailable();
+  }
+
+  async schedules(): Promise<never> {
+    throw this.unavailable();
+  }
+
+  async exportXlsx(): Promise<never> {
     throw this.unavailable();
   }
 

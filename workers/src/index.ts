@@ -47,6 +47,9 @@ app.use(
     },
     allowMethods: ['GET', 'POST', 'OPTIONS'],
     allowHeaders: ['Authorization', 'Content-Type'],
+    // Tên tệp tải về (DXF, XLSX) nằm ở header này; không khai thì trình duyệt không đọc được
+    // và mọi tệp rơi về một tên mặc định.
+    exposeHeaders: ['Content-Disposition'],
     maxAge: 600,
   }),
 );

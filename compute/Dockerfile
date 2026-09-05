@@ -58,6 +58,7 @@ RUN pip install --no-cache-dir \
         "ortools>=9.11" \
         "shapely>=2.0" \
         "ezdxf>=1.3" \
+        "openpyxl>=3.1" \
         "pydantic>=2.9" \
         "pyyaml>=6.0" \
         "jsonschema>=4.23" \

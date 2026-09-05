@@ -92,13 +92,26 @@ no_window_types: [stair, core, technical, garage]
 # Chưa dùng để dựng hình. Ghi lại vì bảng thống kê cửa (`kt/51`) là một trong số ít loại tờ
 # engine sinh ra được bằng cách CHÉP, và nó cần đúng những cột này.
 schedule_columns: [stt, ky_hieu, vi_tri, so_luong, kich_thuoc_mm, vat_lieu, phu_kien, ghi_chu]
-materials_seen:
-  ['nhôm kính trong', 'nhôm kính mờ', 'nhựa composite vân gỗ']
-hardware_seen:
-  ['kinlong chính hãng', 'tay khóa inox 304']
+materials_seen: ['nhôm kính trong', 'nhôm kính mờ', 'nhựa composite vân gỗ']
+hardware_seen: ['kinlong chính hãng', 'tay khóa inox 304']
 opening_types_seen:
-  ['1 cánh mở quay', '2 cánh mở quay', '2 cánh mở lùa', '4 cánh mở trượt quay',
-   '1 cánh mở hất', 'mở ra ngoài', 'mở vào trong']
+  [
+    '1 cánh mở quay',
+    '2 cánh mở quay',
+    '2 cánh mở lùa',
+    '4 cánh mở trượt quay',
+    '1 cánh mở hất',
+    'mở ra ngoài',
+    'mở vào trong',
+  ]
+# Vật liệu MẶC ĐỊNH ghi vào bảng thống kê cửa khi phương án chưa chọn — lấy từ chính danh sách
+# `materials_seen` ở trên (HS-01), không bịa. Kiến trúc sư sửa trên bảng; đây chỉ là giá trị mồi.
+schedule_defaults:
+  door: 'nhựa composite vân gỗ'
+  wc_door: 'nhựa composite vân gỗ'
+  entrance: 'nhôm kính trong'
+  window: 'nhôm kính trong'
+  wc_window: 'nhôm kính mờ'
 notes_on_every_sheet:
   - 'trát hèm tất cả cửa'
   - 'kích thước cửa trên bản vẽ là kích thước thông thủy hoàn thiện'

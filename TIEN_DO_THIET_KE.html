@@ -273,23 +273,24 @@
         <p>
           <b>Đang thi hành phương án ra demo</b> (<code>doc/design/14-phuong-an-demo.md</code>, Haan
           chốt 06/09/2026): bảy bước, mỗi bước mở một cảnh trong kịch bản mười cảnh. Thước đo không
-          còn là Mốc mà là <b>cảnh demo chạy được</b>. <b>Bước 1 và 2 xong</b>: Lớp 3 gọi được từ
+          còn là Mốc mà là <b>cảnh demo chạy được</b>. <b>Bước 1, 2 và 3 xong</b>: Lớp 3 gọi được từ
           API, ba phương án sinh trong vài giây, chọn được bản hiệu lực, ảnh khảo sát đính được vào
           biên bản, dự án demo NVO-028 nạp sẵn; và <b>bản vẽ đọc được như bản vẽ thật</b> — trục,
-          kích thước, cửa, thang, khung tên — cùng một mô hình tờ cho DXF lẫn màn hình (V-9 gỡ).
+          kích thước, cửa, thang, khung tên — cùng một mô hình tờ cho DXF lẫn màn hình (V-9 gỡ);
+          bảng thống kê cửa và diện tích tự sinh, tải được XLSX và DXF.
         </p>
         <p class="muted-t xs">
           Việc lớn còn lại về chất lượng phương án là <b>V-11</b>: tỉ lệ giao thông 29% vì thang và
           hành lang mỗi thứ chiếm trọn một dải ngang — nhìn thấy rõ trên bản vẽ (thang một vế thẳng
           rộng 5 m). Xử lý ở bước 5. Trích xuất hồ sơ cũ (V-8) chỉ làm bậc 1 ở bước 6.
         </p>
-        <div class="bar"><span style="width: 66%"></span></div>
+        <div class="bar"><span style="width: 70%"></span></div>
         <div class="stats">
           <div class="stat">
-            <b>2 / 7</b><span class="xs muted-t">Bước của phương án demo đã xong</span>
+            <b>3 / 7</b><span class="xs muted-t">Bước của phương án demo đã xong</span>
           </div>
           <div class="stat">
-            <b>1.182</b><span class="xs muted-t">Phép thử xanh (1.004 vitest + 178 pytest)</span>
+            <b>1.188</b><span class="xs muted-t">Phép thử xanh (1.005 vitest + 183 pytest)</span>
           </div>
           <div class="stat"><b>6</b><span class="xs muted-t">Vướng mắc đang mở</span></div>
           <div class="stat">
@@ -407,13 +408,21 @@
             >
           </li>
           <li>
-            <span class="pill s-progress">Đang làm</span> <b>Thống kê + bàn giao</b> —
-            <code>schedules</code> thật từ <code>openings[]</code> và <code>rooms[]</code> → bảng và
-            XLSX; nút tải DXF/XLSX. Cảnh 8.
+            <span class="pill s-done">Xong 06/09</span> <b>Thống kê + bàn giao</b> —
+            <code>compute/src/design_compute/schedules.py</code>: bảng cửa (mã D/DW/W theo cỡ, từ
+            rộng tới hẹp, vật liệu mồi từ <code>schedule_defaults</code> của chuẩn cấu tạo), bảng
+            diện tích theo tầng, khối lượng sơ bộ (mét dài tường theo bề dày, tổng sàn); đúng hợp
+            đồng <code>schedules</code>, nhãn "Khối lượng sơ bộ" do mã chèn. XLSX ba sheet
+            (openpyxl) qua <code>/export/xlsx</code>. Worker:
+            <code>/floor-plan/:id/schedules</code> và <code>/xlsx</code>. Tab Phương án: bảng thống
+            kê dưới bản vẽ, nút tải XLSX và DXF. Cảnh 8 xong. Chưa đúc artifact
+            <code>schedules</code> (cạnh lineage chỉ nhận bước đã khai — để dành cho bước 7 phát
+            hành).
           </li>
           <li>
-            <b>Khối 3D</b> — <code>trimesh</code> đùn → glTF → artifact
-            <code>arch_model</code> thật; three.js chỉ xem; nhãn "Khối sơ bộ" do mã chèn. Cảnh 6.
+            <span class="pill s-progress">Đang làm</span> <b>Khối 3D</b> — <code>trimesh</code> đùn
+            → glTF → artifact <code>arch_model</code> thật; three.js chỉ xem; nhãn "Khối sơ bộ" do
+            mã chèn. Cảnh 6.
           </li>
           <li>
             <b>Đổi ý và tác động</b> — 4 → 5 tầng giải lại giữ lõi thang, so sánh hai bản, lineage;
@@ -786,7 +795,7 @@
           <tbody>
             <tr>
               <td>Phép thử xanh — toàn kho mã</td>
-              <td class="num"><b>1.182</b></td>
+              <td class="num"><b>1.188</b></td>
               <td class="xs">
                 983 vitest (<code>web</code> 234 · <code>logic</code> phần còn lại) + 165 pytest.
                 157 phép thử bỏ qua có chủ đích. ⚠️ Chạy cả bộ một lượt làm 21 phép thử

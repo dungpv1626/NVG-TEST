@@ -554,6 +554,63 @@ export function useFloorPlanSheet(projectId: string, artifactId: string | null, 
   });
 }
 
+export interface ScheduleOpeningRow {
+  code: string;
+  w_m: number;
+  h_m: number;
+  count: number;
+  material?: string | null;
+}
+
+export interface SchedulesView {
+  schedules: {
+    doors: ScheduleOpeningRow[];
+    windows: ScheduleOpeningRow[];
+    areas: { level: number; room_type: string; area_m2: number }[];
+    materials: {
+      code: string;
+      name: string;
+      area_m2?: number | null;
+      volume_m3?: number | null;
+      count?: number | null;
+    }[];
+    disclaimer: string;
+  };
+  roomLabels: Record<string, string>;
+}
+
+/** Bảng thống kê của một phương án — tính lại từ mặt bằng, nên đổi mặt bằng là bảng đổi theo. */
+export function useFloorPlanSchedules(projectId: string, artifactId: string | null) {
+  return useQuery<SchedulesView, Error>({
+    queryKey: ['design_floor_plan_schedules', projectId, artifactId],
+    queryFn: () =>
+      designApi<SchedulesView>(
+        `/design/floor-plan/${projectId}/schedules${artifactId ? `?artifact=${artifactId}` : ''}`,
+      ),
+    enabled: Boolean(projectId),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/** Tải bảng thống kê dạng XLSX. */
+export async function downloadFloorPlanXlsx(
+  projectId: string,
+  artifactId: string | null,
+): Promise<void> {
+  const query = artifactId ? `?artifact=${artifactId}` : '';
+  const response = await designApiFile(`/design/floor-plan/${projectId}/xlsx${query}`);
+  const name =
+    /filename="([^"]+)"/.exec(response.headers.get('Content-Disposition') ?? '')?.[1] ??
+    'thong-ke.xlsx';
+  const url = URL.createObjectURL(await response.blob());
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 /** Tải tệp DXF của một tầng về máy — cùng tờ với SVG đang xem. */
 export async function downloadFloorPlanDxf(
   projectId: string,

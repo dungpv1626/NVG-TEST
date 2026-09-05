@@ -32,6 +32,8 @@ from design_compute.adapters import (
     infeasibility_report_from_result,
 )
 from design_compute.sheet import render_svg
+from design_compute.schedules import build_schedules, schedules_to_xlsx
+from design_compute.geometry.norms import load_construction_norms
 from design_compute.cad.export import build_sheet
 from design_compute.cad import (
     CadConversionError,
@@ -267,6 +269,35 @@ def export_svg(payload: ExportDxfPayload) -> Response:
     except DxfExportError as exc:
         return JSONResponse(status_code=422, content={"error": str(exc), "retryable": False})
     return Response(content=render_svg(sheet), media_type="image/svg+xml")
+
+
+class SchedulesPayload(BaseModel):
+    floor_plan: dict[str, Any]
+    floorplan_ref: str
+    labels: dict[str, str] | None = None
+    title: str = ""
+
+
+@app.post("/schedules")
+def schedules(payload: SchedulesPayload) -> JSONResponse:
+    """Bảng thống kê cửa · cửa sổ · diện tích · khối lượng sơ bộ, tính lại từ mặt bằng mỗi lần gọi."""
+    validate("floor-plan", payload.floor_plan)
+    result = build_schedules(payload.floor_plan, floorplan_ref=payload.floorplan_ref, norms=load_construction_norms())
+    validate("schedules", result)
+    return JSONResponse(result)
+
+
+@app.post("/export/xlsx")
+def export_xlsx(payload: SchedulesPayload) -> Response:
+    """Cùng bảng thống kê đó, dạng XLSX để bàn giao — nhãn cảnh báo ở dòng đầu mỗi sheet."""
+    validate("floor-plan", payload.floor_plan)
+    result = build_schedules(payload.floor_plan, floorplan_ref=payload.floorplan_ref, norms=load_construction_norms())
+    validate("schedules", result)
+    data = schedules_to_xlsx(result, labels=payload.labels, title=payload.title)
+    return Response(
+        content=data,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
 
 
 # ---------------------------------------------------------------------------

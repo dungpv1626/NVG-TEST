@@ -32,9 +32,15 @@ default_units: mm # ho so kien truc Viet Nam gan nhu luon ve bang milimet
 # Ghi ra để biết một tên lạ thuộc họ nào, và để `layers_unmapped` đọc được thay vì là một
 # đống chữ. Ba bộ môn dùng ba họ khác hẳn nhau, ngay trong cùng một hồ sơ.
 conventions:
-  NV: { mau: ['NV-*', 'NV *', 'NV_*', 'NV - *'], bo_mon: [KT, DN], ghi_chu: 'Đặt theo độ đậm nét là chính' }
+  NV:
+    {
+      mau: ['NV-*', 'NV *', 'NV_*', 'NV - *'],
+      bo_mon: [KT, DN],
+      ghi_chu: 'Đặt theo độ đậm nét là chính',
+    }
   bang: { mau: ['!*'], bo_mon: [KT, DN], ghi_chu: 'Dấu chấm than để lớp nổi lên đầu danh sách' }
-  A_so: { mau: ['A[0-9]*_*', '[0-9]_*'], bo_mon: [KC], ghi_chu: 'Chỉ 13-15 lớp, kỷ luật hơn hẳn KT/DN' }
+  A_so:
+    { mau: ['A[0-9]*_*', '[0-9]_*'], bo_mon: [KC], ghi_chu: 'Chỉ 13-15 lớp, kỷ luật hơn hẳn KT/DN' }
 
 roles:
   # Đa giác khép kín bao quanh một phòng.
@@ -158,9 +164,26 @@ roles:
 # tường và đường bao. Khai riêng để chúng không lọt vào `layers_unmapped` và làm nhiễu
 # danh sách cần bổ sung — nhưng vẫn phải ĐỌC nội dung, khác hẳn `ignore`.
 line_weight_layers:
-  ['NV-Thay', 'NV-Khuat', 'NV-Manh', 'NV-MoDam', 'NV-MoNhat', 'NV-Cat', 'NV-NetThay',
-   'NV-NetDut', 'NV_THAY', '!THAY', '!KHUAT', '!MANH', '!MO.2', '1_CAT',
-   'A6_THAY DAM', 'A7_THAY MANH', 'A8_NET KHUAT', 'A12_NET KHUAT']
+  [
+    'NV-Thay',
+    'NV-Khuat',
+    'NV-Manh',
+    'NV-MoDam',
+    'NV-MoNhat',
+    'NV-Cat',
+    'NV-NetThay',
+    'NV-NetDut',
+    'NV_THAY',
+    '!THAY',
+    '!KHUAT',
+    '!MANH',
+    '!MO.2',
+    '1_CAT',
+    'A6_THAY DAM',
+    'A7_THAY MANH',
+    'A8_NET KHUAT',
+    'A12_NET KHUAT',
+  ]
 
 # ── Lớp cố tình bỏ qua ─────────────────────────────────────────────────────────────────
 # Có mặt trong mọi bản vẽ nhưng không mang thông tin hình học phòng.

@@ -27,6 +27,7 @@ import {
   type FloorPlanVariant,
 } from '@/hooks/use-design-projects';
 import { toUserMessage } from '@/hooks/use-error-message';
+import { SchedulesPanel } from './schedules-panel';
 import { SheetViewer } from './sheet-viewer';
 
 export function VariantsPanel({
@@ -137,12 +138,19 @@ export function VariantsPanel({
         const shown = view.variants.find((v) => v.artifactId === (viewing ?? headId));
         if (!shown || shown.status !== 'ok') return null;
         return (
-          <SheetViewer
-            projectId={projectId}
-            artifactId={shown.artifactId}
-            levels={(shown.summary?.levels ?? []).map((l) => l.level)}
-            variantLabel={`Phương án ${shown.variantId}`}
-          />
+          <>
+            <SheetViewer
+              projectId={projectId}
+              artifactId={shown.artifactId}
+              levels={(shown.summary?.levels ?? []).map((l) => l.level)}
+              variantLabel={`Phương án ${shown.variantId}`}
+            />
+            <SchedulesPanel
+              projectId={projectId}
+              artifactId={shown.artifactId}
+              variantLabel={`Phương án ${shown.variantId}`}
+            />
+          </>
         );
       })()}
     </div>

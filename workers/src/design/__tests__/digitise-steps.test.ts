@@ -54,6 +54,12 @@ function backend(overrides: Partial<ComputeBackend> = {}): ComputeBackend {
     async exportSvg() {
       throw new Error('không dùng');
     },
+    async schedules() {
+      throw new Error('không dùng');
+    },
+    async exportXlsx() {
+      throw new Error('không dùng');
+    },
     async extract() {
       return { status: 'ok', extraction: { rooms: [] } };
     },
