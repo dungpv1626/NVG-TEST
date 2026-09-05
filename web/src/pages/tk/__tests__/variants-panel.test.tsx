@@ -41,6 +41,14 @@ vi.mock('@/hooks/use-design-projects', () => ({
     isError: false,
     error: null,
   }),
+  usePublishFloorPlan: () => ({
+    mutateAsync: vi.fn(() => Promise.resolve({ documents: [] })),
+    isPending: false,
+    isError: false,
+    isSuccess: false,
+    error: null,
+    data: undefined,
+  }),
 }));
 
 // Ba khối con (tờ bản vẽ, khối ba chiều, bảng thống kê) có bộ kiểm thử riêng — ở đây thay

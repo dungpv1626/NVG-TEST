@@ -271,24 +271,24 @@
       <h2>1. Đang ở đâu</h2>
       <div class="card">
         <p>
-          <b>Đang thi hành phương án ra demo</b> (<code>doc/design/14-phuong-an-demo.md</code>, Haan
-          chốt 06/09/2026): bảy bước, mỗi bước mở một cảnh trong kịch bản mười cảnh. Thước đo không
-          còn là Mốc mà là <b>cảnh demo chạy được</b>. <b>Bước 1 → 6 xong</b>: Lớp 3 gọi được từ
-          API, ba phương án sinh trong vài giây, chọn được bản hiệu lực, ảnh khảo sát đính được vào
-          biên bản, dự án demo NVO-028 nạp sẵn; và <b>bản vẽ đọc được như bản vẽ thật</b> — trục,
-          kích thước, cửa, thang, khung tên — cùng một mô hình tờ cho DXF lẫn màn hình (V-9 gỡ);
-          bảng thống kê cửa và diện tích tự sinh, tải được XLSX và DXF; khối ba chiều xoay được trên
-          trình duyệt.
+          <b>Phương án ra demo đã thi hành trọn</b> (<code>doc/design/14-phuong-an-demo.md</code>,
+          Haan chốt 06/09/2026): bảy bước, mười cảnh, và <b>bài Playwright mười cảnh xanh</b> trên
+          máy phát triển — đó là điều kiện "demo xong" của phương án. <b>Cả bảy bước xong</b>: Lớp 3
+          gọi được từ API, ba phương án sinh trong vài giây, chọn được bản hiệu lực, ảnh khảo sát
+          đính được vào biên bản, dự án demo NVO-028 nạp sẵn; và
+          <b>bản vẽ đọc được như bản vẽ thật</b> — trục, kích thước, cửa, thang, khung tên — cùng
+          một mô hình tờ cho DXF lẫn màn hình (V-9 gỡ); bảng thống kê cửa và diện tích tự sinh, tải
+          được XLSX và DXF; khối ba chiều xoay được trên trình duyệt.
         </p>
         <p class="muted-t xs">
           Còn lại: tỉ lệ giao thông 25–33 % (kiến trúc sư chỉnh <code>ratio_of_floor</code> trong
           <code>kb/space_norms.yaml</code>), phương án B vô nghiệm trên đề bài demo (V-12), và ảnh
           Gemini chỉ chạy khi có khoá trả phí (Q-15 — quyết định tiền của Haan).
         </p>
-        <div class="bar"><span style="width: 88%"></span></div>
+        <div class="bar"><span style="width: 100%"></span></div>
         <div class="stats">
           <div class="stat">
-            <b>6 / 7</b><span class="xs muted-t">Bước của phương án demo đã xong</span>
+            <b>7 / 7</b><span class="xs muted-t">Bước của phương án demo đã xong</span>
           </div>
           <div class="stat">
             <b>1.211</b><span class="xs muted-t">Phép thử xanh (1.022 vitest + 189 pytest)</span>
@@ -465,8 +465,19 @@
             ảnh — R2). Cảnh 9 · 10.
           </li>
           <li>
-            <span class="pill s-progress">Đang làm</span> <b>Phát hành + kịch bản</b> — publish
-            bridge với DXF/PDF thật; bài Playwright mười cảnh; dọn Q-3/Q-5. Cảnh 1→10.
+            <span class="pill s-done">Xong 06/09</span> <b>Phát hành + kịch bản</b> —
+            <code>POST /design/floor-plan/publish</code>: DXF từng tầng vào kho artifact rồi qua
+            publish bridge (tài liệu logic một cái mỗi dự án × bộ môn, số phiên bản do hệ tài liệu
+            cấp, người ký cần <code>design.publish.kien_truc</code> — RLS quyết); nút "Phát hành hồ
+            sơ kiến trúc" trong tab Phương án; kiểm chứng một lần với tài khoản Thiết kế NVO.
+            <b>Bài Playwright mười cảnh</b> <code>web/e2e/demo-thiet-ke.spec.ts</code> (<code
+              >npm run test:e2e</code
+            >) chạy trên đúng bộ trình diễn: đăng nhập → đầu bài → khảo sát → chương trình → ba
+            phương án → tờ bản vẽ SVG (đổi tầng, tô màu) → tải DXF và XLSX đúng tên tệp → khối ba
+            chiều (canvas) → chụp ảnh khối có nhãn, tuyến phối cảnh trả lý do → đợt trước kèm tác
+            động → kho hồ sơ cũ. <b>Xanh, 18 giây.</b> Q-3/Q-5 chốt mặc định ở
+            <code>14-phuong-an-demo.md</code> 14.10; BUILD_PLAN Phase 5 cập nhật trạng thái Mốc
+            0/4/5. Cảnh 1 → 10.
           </li>
         </ol>
       </div>
@@ -806,7 +817,7 @@
           <tbody>
             <tr>
               <td>Phép thử xanh — toàn kho mã</td>
-              <td class="num"><b>1.211</b></td>
+              <td class="num"><b>1.211</b> + 1 e2e</td>
               <td class="xs">
                 983 vitest (<code>web</code> 234 · <code>logic</code> phần còn lại) + 165 pytest.
                 157 phép thử bỏ qua có chủ đích. ⚠️ Chạy cả bộ một lượt làm 21 phép thử

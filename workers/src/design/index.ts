@@ -26,6 +26,7 @@ import { geminiClient, modelRouter } from './llm/factory';
 import { LlmCallFailed } from './llm/gemini';
 import { PublishBridge } from './publish';
 import { ArtifactRepository } from './artifacts';
+import { createArtifactStore } from './artifact-store';
 import { buildBriefPayload } from './brief/payload';
 import { gateLayer2, readCompletenessThreshold } from './brief/gate';
 import { runLayer2 } from './program/run';
@@ -671,6 +672,100 @@ designApp.post('/render', async (c) => {
     style: body.style ?? null,
   });
   return c.json(outcome);
+});
+
+/**
+ * Phát hành hồ sơ kiến trúc của phương án đang hiệu lực (cảnh 9 của demo, TK-17 → TK-03).
+ *
+ * Sinh DXF cho từng tầng, cất vào kho artifact (DXF là văn bản nên cùng kho JSON), rồi đi qua
+ * `PublishBridge` — điểm giao DUY NHẤT sang hệ tài liệu: tài liệu logic một cái cho mỗi
+ * (dự án × bộ môn), số phiên bản do hệ tài liệu cấp, người ký phải có `design.publish.kien_truc`
+ * (RLS quyết, không phải Worker). Bản ghi `design_publication` giữ tham chiếu ngược tới
+ * artifact mặt bằng và mô hình kiến trúc.
+ */
+designApp.post('/floor-plan/publish', async (c) => {
+  const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+
+  const body = (await c.req.json()) as { projectId?: string; changeReason?: string | null };
+  if (!body.projectId) return c.json({ error: 'Thiếu mã hồ sơ thiết kế.' }, 400);
+
+  const db = await asUser(c.env, token);
+  const scope = await projectScope(db, body.projectId);
+  if (!scope) return c.json({ error: PROJECT_NOT_VISIBLE }, 404);
+  if (!scope.actorId) return c.json({ error: 'Không xác định được người ký.' }, 401);
+
+  const repo = new ArtifactRepository(c.env);
+  const head = await repo.head(body.projectId, 'kien_truc', 'floor_plan');
+  if (!head) {
+    return c.json(
+      { error: 'Chưa có mặt bằng đang hiệu lực. Sinh và chọn một phương án trước khi phát hành.' },
+      409,
+    );
+  }
+  const arch = await repo.head(body.projectId, 'kien_truc', 'arch_model');
+  const plan = head.payload as { levels: Array<{ level: number }> };
+
+  const project = await db
+    .from('design_projects')
+    .select('code, name')
+    .eq('id', body.projectId)
+    .single();
+  if (project.error) return c.json({ error: PROJECT_NOT_VISIBLE }, 404);
+  const version = head.id.replace(/^sha256:/, '').slice(0, 8);
+  const slug = String(project.data.code ?? 'ho-so').replace(/[^A-Za-z0-9-]/g, '');
+  const now = new Date();
+  const date = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+  const program = await repo.head(body.projectId, 'kien_truc', 'space_program');
+
+  const compute = createComputeBackend(c.env);
+  const store = createArtifactStore(c.env);
+  const documents: Array<{ kind: 'dxf'; name: string; uri: string; mime_type: string }> = [];
+  try {
+    for (const level of plan.levels.map((l) => l.level).sort((a, b) => a - b)) {
+      const dxf = await compute.exportDxf({
+        floor_plan: head.payload,
+        level,
+        title_block: {
+          project_code: String(project.data.code ?? ''),
+          project_name: String(project.data.name ?? ''),
+          discipline: 'Kiến trúc',
+          sheet: 'Mặt bằng công năng',
+          version,
+          date,
+        },
+        labels: program ? spaceLabels(program.payload as never, roomLabels()) : {},
+        groups: roomGroups(roomVocabulary().vocabulary),
+        sheet_code: `kt/${String(level).padStart(2, '0')}`,
+      });
+      const name = `${slug}_KT_MatBang_T${level}_V${version}.dxf`;
+      const uri = await store.put(
+        `${body.projectId}/publish/${version}/${name}`,
+        new TextDecoder().decode(dxf),
+      );
+      documents.push({ kind: 'dxf', name, uri, mime_type: 'application/dxf' });
+    }
+  } catch (error) {
+    return c.json({ error: error instanceof Error ? error.message : String(error) }, 502);
+  }
+
+  try {
+    const bridge = new PublishBridge(c.env, token);
+    const outcome = await bridge.publish({
+      schema_version: '1.0.0',
+      tenant_id: scope.tenantId,
+      project_id: body.projectId,
+      artifact_ids: { floor_plan: head.id, ...(arch ? { arch_model: arch.id } : {}) },
+      discipline: 'kien_truc',
+      documents,
+      signed_by: scope.actorId,
+      change_reason: body.changeReason ?? `Phát hành mặt bằng phương án ${version}`,
+    });
+    return c.json({ ...outcome, documents: documents.map((d) => d.name) }, 201);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return c.json({ error: message }, message.includes('người ký') ? 403 : 502);
+  }
 });
 
 /**

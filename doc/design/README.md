@@ -269,7 +269,7 @@ mới**.
 | Làm Layer 3 (mặt bằng) | `04-layer3-floorplan` — phần khó nhất |
 | Viết giao diện | `12-ux-ui` (bắt buộc) |
 | Thêm/sửa quy tắc kiến trúc | `07-rule-pack` |
-| Không biết làm gì tiếp | **`14-phuong-an-demo`** (đề xuất thứ tự ra demo, chờ chốt) rồi `08-milestones` |
+| Không biết làm gì tiếp | **`14-phuong-an-demo`** (phương án demo đã chốt và thi hành 06/09/2026; mục 14.10 ghi gì còn khác) rồi `08-milestones` |
 | Gặp viết tắt lạ | `10-glossary` |
 | Làm phần số hoá hồ sơ cũ, hoặc bộ xuất CAD | **`13-ho-so-thuc-te`** — hồ sơ thật của NVG chứa gì, đo được, và chỗ nào tài liệu này sai |
 | Gặp chỗ chưa rõ | `09-open-questions`, rồi `TIEN_DO_THIET_KE.html` phần Câu hỏi |

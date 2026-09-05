@@ -653,6 +653,25 @@ export function useRenderFromMassing() {
   });
 }
 
+export interface PublishFloorPlanResult {
+  publicationId: string;
+  documentId: string;
+  documentVersionId: string;
+  documents: string[];
+}
+
+/** Phát hành hồ sơ kiến trúc của phương án đang hiệu lực sang hệ tài liệu (TK-03/TK-05). */
+export function usePublishFloorPlan() {
+  const queryClient = useQueryClient();
+  return useMutation<PublishFloorPlanResult, Error, { projectId: string; changeReason?: string }>({
+    mutationFn: (body) => designApi<PublishFloorPlanResult>('/design/floor-plan/publish', body),
+    onSuccess: (_r, { projectId }) => {
+      void queryClient.invalidateQueries({ queryKey: ['design_versions', projectId] });
+      void queryClient.invalidateQueries({ queryKey: ['documents'] });
+    },
+  });
+}
+
 /** Tải tệp DXF của một tầng về máy — cùng tờ với SVG đang xem. */
 export async function downloadFloorPlanDxf(
   projectId: string,

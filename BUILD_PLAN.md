@@ -1461,7 +1461,7 @@ gì xung đột với cái gì_, và cũng không đề xuất được phương
 
 ## Mốc — làm tuần tự, điều kiện ra xác định "xong", không phải lịch
 
-### Mốc 0 — Kiểm chứng rủi ro kỹ thuật ⏳ ĐANG LÀM
+### Mốc 0 — Kiểm chứng rủi ro kỹ thuật ✅ 0.1 đạt bậc 1 (06/09/2026), 0.2 và 0.3 xong
 
 | #   | Việc                                                                     | Điều kiện ra                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | --- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1637,7 +1637,7 @@ chú giải.
 dùng được (giữ điểm nối trong hàm mục tiêu nhưng trả về rỗng); đánh giá bằng leave-one-out
 chứ không tách bộ dự án mẫu riêng.
 
-### Mốc 4 — Lớp 2: Space Program (TK-11) — 🔨 ĐANG LÀM (29/08/2026)
+### Mốc 4 — Lớp 2: Space Program (TK-11) — ✅ XONG cho demo (06/09/2026: dồn phòng theo ngưỡng đầy sàn, bổ sung phòng — `kb/space_norms.yaml` mục `allocation`)
 
 Phải **chạy được với Knowledge Base rỗng** (quy tắc + mô hình ngôn ngữ, chất lượng thấp hơn
 nhưng đúng hợp đồng).
@@ -1670,7 +1670,7 @@ nhưng đúng hợp đồng).
   xem và chốt. Sửa tay cần một artifact `space_program` do người soạn, tức một nhánh lineage
   riêng; để lại tới khi có yêu cầu thật.
 
-### Mốc 5 — Lõi Lớp 3 cho nhà phố (TK-12, TK-13) — kết thúc Giai đoạn 1
+### Mốc 5 — Lõi Lớp 3 cho nhà phố (TK-12, TK-13) — ✅ XONG theo phương án demo (06/09/2026), trừ trình chỉnh sửa Konva (cắt có chủ đích — `doc/design/14-phuong-an-demo.md` 14.3)
 
 Đặt khối trong lô · sinh cấu trúc bố cục + kiểm tra · **CP-SAT liên tầng trong Container**,
 cơ chế giả định → báo cáo vô nghiệm · tinh chỉnh hình học · trình chỉnh sửa mặt bằng (Konva)

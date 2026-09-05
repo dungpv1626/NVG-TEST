@@ -1,7 +1,9 @@
 # 14 — Phương án ra bản demo: đơn giản hoá, tự gỡ vướng mắc
 
-> **Trạng thái: ĐỀ XUẤT, chờ Haan chốt (06/09/2026).** Khi được chốt, tài liệu này THAY mục
-> 13.12 và mục 3 của `TIEN_DO_THIET_KE.html` làm thứ tự thi hành. Chưa chốt thì chưa sửa mã.
+> **Trạng thái: ĐÃ CHỐT (Haan, 06/09/2026) — đã thi hành đủ bảy bước trong cùng ngày.**
+> Tài liệu này THAY mục 13.12 làm thứ tự thi hành; kết quả từng bước ghi ở
+> `TIEN_DO_THIET_KE.html` mục 3. Điều kiện "demo xong" ở 14.2 đã đạt: bài Playwright mười cảnh
+> (`web/e2e/demo-thiet-ke.spec.ts`, `npm run test:e2e`) xanh trên máy phát triển.
 >
 > Chỉ đạo gốc: *giải quyết các vướng mắc theo phương châm đơn giản hoá, đạt mục tiêu bằng mọi
 > cách; đã đủ thông tin, các vướng mắc tự giải quyết ở phía team dev; ra một bản demo ấn tượng.*
@@ -154,6 +156,21 @@ là thứ kiến trúc sư nhìn vào để tin, và **số hoá hồ sơ cũ xu
 chín cảnh còn lại.
 
 ---
+
+## 14.10 Sau khi thi hành — những gì còn khác với phương án
+
+- **Bước 3 chưa đúc artifact `schedules`, bước 6 chưa đúc `render_result`**: cạnh lineage chỉ
+  nhận các bước đã khai trong CHECK của `design_artifact_edge`, và ảnh cần kho tệp nhị phân (R2).
+  Bảng thống kê tính lại từ mặt bằng mỗi lần gọi nên không mất gì về nghiệp vụ.
+- **Phát hành** đưa một tờ DXF cho mỗi tầng vào kho artifact và MỘT phiên bản tài liệu (tệp
+  tầng 1) qua publish bridge; PDF chưa có. Đủ cho cảnh 9, chưa phải bộ hồ sơ.
+- **Phương án B** (hành lang bên phải) vô nghiệm trên đề bài demo (V-12) — demo chạy với hai
+  phương án A và C.
+- **Tỉ lệ giao thông** còn 25–33 % (`ratio_of_floor` 0,12 mỗi tầng). Là dữ liệu, kiến trúc sư
+  NVG chỉnh trong `kb/space_norms.yaml`.
+- **Q-3, Q-5 (tài liệu)**: chốt mặc định — `doc/design/*.md` là nguồn sự thật cho TK-10→17;
+  các bản `.docx` v02/v03/v04 là bản trình bày, không so phiên bản với nhau; ba mâu thuẫn nội bộ
+  đã được đính chính ở `README.md` (Đ1–Đ11) và không sửa vào bản gốc.
 
 ## 14.8 Hai việc chỉ Haan làm được
 

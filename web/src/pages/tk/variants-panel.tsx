@@ -25,6 +25,7 @@ import {
   useChooseFloorPlan,
   useFloorPlanVariants,
   useGenerateFloorPlans,
+  usePublishFloorPlan,
   type FloorPlanGeneration,
   type FloorPlanVariant,
 } from '@/hooks/use-design-projects';
@@ -44,6 +45,7 @@ export function VariantsPanel({
   const variants = useFloorPlanVariants(projectId);
   const generate = useGenerateFloorPlans();
   const choose = useChooseFloorPlan();
+  const publish = usePublishFloorPlan();
   // Phương án đang XEM bản vẽ — mặc định là bản hiệu lực; bấm "Xem bản vẽ" ở thẻ khác để đổi.
   const [viewing, setViewing] = useState<string | null>(null);
   // Ảnh khối chụp từ trình xem ba chiều — đầu vào của phối cảnh.
@@ -112,12 +114,32 @@ export function VariantsPanel({
             </p>
           </div>
           {!readOnly && (
-            <Button variant="secondary" onClick={onGenerate} disabled={busy}>
-              {generate.isPending ? 'Đang sinh…' : 'Sinh lại phương án'}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" onClick={onGenerate} disabled={busy}>
+                {generate.isPending ? 'Đang sinh…' : 'Sinh lại phương án'}
+              </Button>
+              {view.headArtifactId && (
+                <Button
+                  variant="primary"
+                  disabled={busy || publish.isPending}
+                  onClick={() => void publish.mutateAsync({ projectId }).catch(() => undefined)}
+                >
+                  {publish.isPending ? 'Đang phát hành…' : 'Phát hành hồ sơ kiến trúc'}
+                </Button>
+              )}
+            </div>
           )}
         </div>
         {error && <p className="mt-3 text-status-overdue">{error}</p>}
+        {publish.isError && (
+          <p className="mt-3 text-status-overdue">{toUserMessage(publish.error)}</p>
+        )}
+        {publish.isSuccess && (
+          <p className="mt-3 text-status-completed">
+            Đã phát hành {publish.data.documents.length} tờ mặt bằng vào hệ tài liệu (phiên bản do
+            hệ tài liệu cấp). Xem ở tab Phiên bản bản vẽ và Hồ sơ liên quan.
+          </p>
+        )}
       </div>
 
       <ComparisonTable variants={view.variants} />
