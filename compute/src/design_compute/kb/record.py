@@ -113,6 +113,20 @@ def build_record(
         "slicing_tree": tree_payload,
         "has_brief": has_brief,
         "extraction_warnings": warnings,
+        # Danh mục tờ của cả bộ hồ sơ (gộp mọi tệp) — bậc 1 của số hoá, để tra cứu và để engine
+        # học cách tái tạo SheetSet. Không phải hình học nên không qua phép kiểm nào.
+        "sheets": [
+            {
+                "source_file": getattr(plan, "source_file", None),
+                "code": s.code,
+                "name": s.name,
+                "scale": s.scale,
+                "discipline": s.discipline,
+                "date": s.date,
+            }
+            for plan in plans
+            for s in getattr(plan, "sheets", ())
+        ],
     }
 
     grid_x = sorted({round(c[0], 2) for plan in plans for c in getattr(plan, "columns_m", ())})

@@ -30,6 +30,7 @@ import {
 } from '@/hooks/use-design-projects';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { MassingViewer } from './massing-viewer';
+import { RenderPanel } from './render-panel';
 import { SchedulesPanel } from './schedules-panel';
 import { SheetViewer } from './sheet-viewer';
 
@@ -45,6 +46,8 @@ export function VariantsPanel({
   const choose = useChooseFloorPlan();
   // Phương án đang XEM bản vẽ — mặc định là bản hiệu lực; bấm "Xem bản vẽ" ở thẻ khác để đổi.
   const [viewing, setViewing] = useState<string | null>(null);
+  // Ảnh khối chụp từ trình xem ba chiều — đầu vào của phối cảnh.
+  const [snapshot, setSnapshot] = useState<string | null>(null);
   const headId = variants.data?.headArtifactId ?? null;
   useEffect(() => {
     setViewing((current) => current ?? headId);
@@ -165,6 +168,13 @@ export function VariantsPanel({
             <MassingViewer
               projectId={projectId}
               artifactId={shown.artifactId}
+              variantLabel={`Phương án ${shown.variantId}`}
+              onSnapshot={setSnapshot}
+            />
+            <RenderPanel
+              projectId={projectId}
+              snapshot={snapshot}
+              style={null}
               variantLabel={`Phương án ${shown.variantId}`}
             />
             <SchedulesPanel

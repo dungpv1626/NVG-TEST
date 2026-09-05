@@ -140,6 +140,36 @@ export function KbAnnotatePage() {
             </p>
           )}
 
+          {data.payload.sheets?.length ? (
+            <div className="mt-3 overflow-x-auto rounded border border-border">
+              <table className="w-full min-w-[28rem] border-collapse">
+                <caption className="bg-surface-sunken px-3 py-2 text-left font-semibold">
+                  Danh mục tờ đọc từ khung tên ({data.payload.sheets.length})
+                </caption>
+                <thead>
+                  <tr className="border-b border-border text-left">
+                    <th className="px-3 py-2 font-medium">Ký hiệu</th>
+                    <th className="px-3 py-2 font-medium">Tên tờ</th>
+                    <th className="px-3 py-2 font-medium">Tỷ lệ</th>
+                    <th className="px-3 py-2 font-medium">Hạng mục</th>
+                    <th className="px-3 py-2 font-medium">Hoàn thành</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.payload.sheets.map((s, i) => (
+                    <tr key={`${s.code}-${i}`} className="border-b border-border last:border-0">
+                      <td className="px-3 py-2 font-medium">{s.code}</td>
+                      <td className="px-3 py-2">{s.name ?? '—'}</td>
+                      <td className="px-3 py-2 tabular-nums">{s.scale ?? '—'}</td>
+                      <td className="px-3 py-2">{s.discipline ?? '—'}</td>
+                      <td className="px-3 py-2 tabular-nums">{s.date ?? '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+
           {data.payload.extraction_warnings?.length ? (
             <div className="mt-3 rounded border border-border bg-surface-sunken p-3">
               <p className="font-semibold">Chỗ trích xuất chưa chắc chắn</p>

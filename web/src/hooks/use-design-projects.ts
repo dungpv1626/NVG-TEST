@@ -638,6 +638,21 @@ export function useMassingModel(projectId: string, artifactId: string | null) {
   });
 }
 
+export type RenderOutcome =
+  | { status: 'rendered'; mimeType: string; dataBase64: string; style: string; watermark: string }
+  | { status: 'unavailable'; reason: string; style: string; watermark: string };
+
+/** Dựng ảnh phối cảnh từ ảnh khối (data URL PNG). Tuyến tắt → `unavailable` kèm lý do, không lỗi. */
+export function useRenderFromMassing() {
+  return useMutation<
+    RenderOutcome,
+    Error,
+    { projectId: string; image: string; style: string | null }
+  >({
+    mutationFn: (body) => designApi<RenderOutcome>('/design/render', body),
+  });
+}
+
 /** Tải tệp DXF của một tầng về máy — cùng tờ với SVG đang xem. */
 export async function downloadFloorPlanDxf(
   projectId: string,

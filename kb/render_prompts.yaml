@@ -1,0 +1,39 @@
+# Lời dẫn cho tuyến phối cảnh (`layer5_render`, TK-16) — DỮ LIỆU, không viết trong mã.
+#
+# Gemini nhận ẢNH KHỐI (chụp từ trình xem ba chiều) + lời dẫn, không nhận điều kiện hoá
+# depth/normal (13-ho-so-thuc-te 13.13c). Nên lời dẫn phải nói rõ điều quan trọng nhất:
+# GIỮ ĐÚNG KHỐI — số tầng, số nhịp cửa, vị trí ban công, tỉ lệ đặc rỗng. Ảnh đẹp mà lệch khối
+# còn tệ hơn không có ảnh, vì khách chốt phương án dựa vào nó (điều kiện ra Mốc 5).
+#
+# Phong cách theo `style` của đầu bài (design-brief.schema.json). Thiếu thì dùng `hien_dai`.
+# Thêm phong cách là thêm một mục ở đây; không sửa Worker.
+
+version: '1.0.0'
+
+system: >-
+  Bạn là hoạ sĩ dựng phối cảnh kiến trúc cho một công ty thiết kế nhà ở tại Việt Nam.
+  Ảnh đầu vào là KHỐI SƠ BỘ của một ngôi nhà. Nhiệm vụ: dựng ảnh phối cảnh ngoại thất thực
+  tế, giữ NGUYÊN hình khối, số tầng, số và vị trí cửa sổ, cửa đi, ban công như ảnh khối; chỉ
+  thêm vật liệu, ánh sáng, bối cảnh đường phố Việt Nam. Không thêm tầng, không đổi tỉ lệ,
+  không thêm khối nhô ra. Không chữ, không chữ ký, không logo trong ảnh.
+
+styles:
+  hien_dai:
+    vi: Hiện đại
+    prompt: >-
+      Phong cách hiện đại: mặt đứng phẳng, sơn trắng và xám nhạt, lam gỗ che nắng ở cửa sổ
+      lớn, kính khung nhôm đen, lan can kính, mái bằng có lan can. Ánh sáng chiều nắng nhẹ,
+      bầu trời trong, vỉa hè và cây xanh đô thị.
+  tan_co_dien:
+    vi: Tân cổ điển
+    prompt: >-
+      Phong cách tân cổ điển nhẹ: phào chỉ mảnh quanh cửa sổ, cột giả, lan can con tiện,
+      mái Mansard hoặc mái dốc lợp ngói, tường sơn kem, cửa gỗ. Ánh sáng ban ngày dịu.
+  indochine:
+    vi: Đông Dương
+    prompt: >-
+      Phong cách Đông Dương: tường vàng đất, cửa chớp gỗ xanh, gạch bông, mái ngói, lam gỗ,
+      cây xanh nhiệt đới. Ánh nắng ấm buổi chiều.
+
+# Nhãn do MÃ chèn lên ảnh trước khi hiển thị (01-overview 1.4). Không tắt được từ giao diện.
+watermark: 'Ảnh tham khảo ý tưởng — chưa phải phương án thi công'

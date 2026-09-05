@@ -48,6 +48,7 @@ vi.mock('@/hooks/use-design-projects', () => ({
 vi.mock('../sheet-viewer', () => ({ SheetViewer: () => null }));
 vi.mock('../massing-viewer', () => ({ MassingViewer: () => null }));
 vi.mock('../schedules-panel', () => ({ SchedulesPanel: () => null }));
+vi.mock('../render-panel', () => ({ RenderPanel: () => null }));
 
 const { VariantsPanel } = await import('../variants-panel');
 

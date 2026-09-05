@@ -5,13 +5,30 @@
   "description": "Kết quả trích một bản vẽ mặt bằng CAD — Bước 1 của pipeline số hoá (doc/design/06-knowledge-base.md mục 6.1). Đi từ Container sang Worker nên phải có hợp đồng (nguyên tắc bất biến 3). ĐÂY KHÔNG PHẢI FloorPlan: FloorPlan là kết quả của bộ giải cho một phương án MỚI, còn cái này là hình học đọc được từ một công trình ĐÃ XÂY.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "source_file", "units", "units_assumed", "rooms"],
+  "required": [
+    "schema_version",
+    "source_file",
+    "units",
+    "units_assumed",
+    "rooms"
+  ],
   "properties": {
-    "schema_version": { "$ref": "#/$defs/semver" },
-    "source_file": { "type": "string", "minLength": 1 },
+    "schema_version": {
+      "$ref": "#/$defs/semver"
+    },
+    "source_file": {
+      "type": "string",
+      "minLength": 1
+    },
     "units": {
       "type": "string",
-      "enum": ["mm", "cm", "m", "in", "ft"],
+      "enum": [
+        "mm",
+        "cm",
+        "m",
+        "in",
+        "ft"
+      ],
       "description": "Đơn vị gốc của bản vẽ. Mọi toạ độ trong bản ghi này ĐÃ quy về mét bất kể giá trị này."
     },
     "units_assumed": {
@@ -23,36 +40,76 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["polygon_m", "area_m2", "layer", "label_source"],
+        "required": [
+          "polygon_m",
+          "area_m2",
+          "layer",
+          "label_source"
+        ],
         "properties": {
-          "polygon_m": { "$ref": "#/$defs/polygon" },
-          "area_m2": { "type": "number", "exclusiveMinimum": 0 },
-          "layer": { "type": "string" },
+          "polygon_m": {
+            "$ref": "#/$defs/polygon"
+          },
+          "area_m2": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "layer": {
+            "type": "string"
+          },
           "label_raw": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "description": "NGUYÊN VĂN chuỗi trong bản vẽ. Container KHÔNG quy về mã phòng chuẩn — việc đó thuộc lớp mô hình ngôn ngữ ở Worker (CLAUDE.md 8.3)."
           },
           "label_source": {
             "type": "string",
-            "enum": ["contains", "nearest", "none"],
+            "enum": [
+              "contains",
+              "nearest",
+              "none"
+            ],
             "description": "Nhãn nằm trong đa giác, hay chỉ là nhãn gần nhất, hay không có. Người xác nhận cần biết mức độ chắc chắn chứ không chỉ biết kết quả."
           }
         }
       }
     },
-    "columns_m": { "type": "array", "items": { "$ref": "#/$defs/point" } },
+    "columns_m": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/point"
+      }
+    },
     "site_boundary_m": {
-      "oneOf": [{ "$ref": "#/$defs/polygon" }, { "type": "null" }]
+      "oneOf": [
+        {
+          "$ref": "#/$defs/polygon"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "unmatched_labels": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string"
+      },
       "description": "Chữ trên lớp nhãn không ghép được vào phòng nào. Giữ lại thay vì vứt đi: thường là số diện tích hoặc ghi chú mà người xác nhận cần nhìn thấy."
     },
-    "layers_seen": { "type": "array", "items": { "type": "string" } },
+    "layers_seen": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "layers_unmapped": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string"
+      },
       "description": "Lớp chưa có mẫu trong kb/layer_mapping.yaml và cũng không nằm trong danh sách cố ý bỏ qua. Đây là danh sách việc cần bổ sung, không phải lỗi."
     },
     "warnings": {
@@ -60,26 +117,111 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["code", "detail"],
+        "required": [
+          "code",
+          "detail"
+        ],
         "properties": {
-          "code": { "type": "string" },
-          "detail": { "type": "string" }
+          "code": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          }
         }
       }
+    },
+    "sheets": {
+      "type": "array",
+      "description": "Danh mục TỜ đọc từ ATTRIB khung tên — tất định, theo họ quy ước trong kb/title_block.yaml. Một tệp DXF của NVG là trọn hồ sơ một bộ môn, 22–73 tờ xếp cạnh nhau (13-ho-so-thuc-te 13.6 (7)). Rỗng khi tệp không có khối khung tên.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "origin_m"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "scale": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "discipline": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "origin_m": {
+            "$ref": "#/$defs/point"
+          }
+        }
+      }
+    },
+    "title_block_family": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Họ quy ước khung tên nhận ra được (khoá trong kb/title_block.yaml), hoặc null."
+    },
+    "entity_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "modelspace",
+        "in_blocks"
+      ],
+      "properties": {
+        "modelspace": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "in_blocks": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "description": "Số thực thể đọc ở modelspace so với bên trong block. Hồ sơ thật: 83–93 % nằm trong block — chỉ duyệt modelspace là bỏ qua phần lớn bản vẽ mà không có lỗi nào báo."
     }
   },
   "$defs": {
-    "semver": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "semver": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
     "point": {
       "type": "array",
       "minItems": 2,
       "maxItems": 2,
-      "items": { "type": "number" }
+      "items": {
+        "type": "number"
+      }
     },
     "polygon": {
       "type": "array",
       "minItems": 3,
-      "items": { "$ref": "#/$defs/point" }
+      "items": {
+        "$ref": "#/$defs/point"
+      }
     }
   }
 }

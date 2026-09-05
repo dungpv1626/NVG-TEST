@@ -85,6 +85,8 @@ COPY rules/ /app/rules/
 # KHÔNG chép cả kb/: hai thư mục con còn lại chứa hồ sơ khách hàng và bộ cài ~100MB.
 COPY kb/layer_mapping.yaml /app/kb/layer_mapping.yaml
 COPY kb/construction_norms.yaml /app/kb/construction_norms.yaml
+COPY kb/text_encoding.yaml /app/kb/text_encoding.yaml
+COPY kb/title_block.yaml /app/kb/title_block.yaml
 
 # Hợp đồng dữ liệu cũng là DỮ LIỆU đọc lúc chạy: Container validate ở ranh giới bằng chính
 # tệp JSON Schema gốc, không dùng bản sinh ra (xem `src/design_compute/contracts.py`).
@@ -95,6 +97,8 @@ ENV PYTHONPATH=/app/src \
     NVG_CONTRACTS_ROOT=/app/contracts \
     NVG_LAYER_MAPPING=/app/kb/layer_mapping.yaml \
     NVG_CONSTRUCTION_NORMS=/app/kb/construction_norms.yaml \
+    NVG_TEXT_ENCODING=/app/kb/text_encoding.yaml \
+    NVG_TITLE_BLOCK=/app/kb/title_block.yaml \
     XDG_RUNTIME_DIR=/tmp/runtime-root
 
 EXPOSE 8080

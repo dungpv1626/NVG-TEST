@@ -113,6 +113,41 @@ export class GeminiClient {
   }
 
   /**
+   * Sinh ẢNH từ ảnh + chữ (tuyến `layer5_render`). Mô hình sinh ảnh của Gemini trả ảnh trong
+   * `inlineData` của một part; không có part ảnh nào thì là lỗi đọc được, không phải ảnh rỗng.
+   */
+  async generateImage(
+    routeName: string,
+    dataClass: DataClass,
+    options: { system: string; prompt: string; image: GenerateImagePart },
+  ): Promise<{ mimeType: string; dataBase64: string }> {
+    const route = this.router.resolve(routeName, dataClass);
+    const body = {
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { inlineData: { mimeType: options.image.mimeType, data: options.image.dataBase64 } },
+            { text: options.prompt },
+          ],
+        },
+      ],
+      systemInstruction: { parts: [{ text: options.system }] },
+      generationConfig: { responseModalities: ['IMAGE'] },
+    };
+    const data = await this.call<GeminiGenerateResponse>(route, 'generateContent', body);
+    const part = data.candidates?.[0]?.content?.parts?.find((p) => p.inlineData?.data);
+    if (!part?.inlineData?.data) {
+      const reason = data.candidates?.[0]?.finishReason ?? 'không rõ';
+      throw new LlmCallFailed(
+        `Mô hình không trả về ảnh cho bước "${routeName}" (lý do: ${reason}).`,
+        false,
+      );
+    }
+    return { mimeType: part.inlineData.mimeType ?? 'image/png', dataBase64: part.inlineData.data };
+  }
+
+  /**
    * Nhúng một đoạn văn bản thành vector.
    *
    * ⚠️ Tự chuẩn hoá về độ dài 1 SAU khi nhận. Mô hình trả vector đã chuẩn hoá ở số chiều mặc
@@ -181,7 +216,10 @@ export class GeminiClient {
 }
 
 interface GeminiGenerateResponse {
-  candidates?: { content?: { parts?: { text?: string }[] }; finishReason?: string }[];
+  candidates?: {
+    content?: { parts?: { text?: string; inlineData?: { mimeType?: string; data?: string } }[] };
+    finishReason?: string;
+  }[];
 }
 
 /** Chuẩn hoá vector về độ dài 1. Vector toàn số 0 giữ nguyên — chia cho 0 sẽ ra NaN. */

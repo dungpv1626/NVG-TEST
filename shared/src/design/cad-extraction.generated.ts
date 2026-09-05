@@ -86,6 +86,41 @@ export const cadExtractionSchema = z
           .strict(),
       )
       .optional(),
+    /** Danh mục TỜ đọc từ ATTRIB khung tên — tất định, theo họ quy ước trong kb/title_block.yaml. Một tệp DXF của NVG là trọn hồ sơ một bộ môn, 22–73 tờ xếp cạnh nhau (13-ho-so-thuc-te 13.6 (7)). Rỗng khi tệp không có khối khung tên. */
+    sheets: z
+      .array(
+        z
+          .object({
+            code: z.string().min(1),
+            name: z.string().nullable().optional(),
+            scale: z.string().nullable().optional(),
+            discipline: z.string().nullable().optional(),
+            date: z.string().nullable().optional(),
+            origin_m: cadExtractionPointSchema,
+          })
+          .strict(),
+      )
+      .describe(
+        'Danh mục TỜ đọc từ ATTRIB khung tên — tất định, theo họ quy ước trong kb/title_block.yaml. Một tệp DXF của NVG là trọn hồ sơ một bộ môn, 22–73 tờ xếp cạnh nhau (13-ho-so-thuc-te 13.6 (7)). Rỗng khi tệp không có khối khung tên.',
+      )
+      .optional(),
+    /** Họ quy ước khung tên nhận ra được (khoá trong kb/title_block.yaml), hoặc null. */
+    title_block_family: z
+      .string()
+      .nullable()
+      .describe('Họ quy ước khung tên nhận ra được (khoá trong kb/title_block.yaml), hoặc null.')
+      .optional(),
+    /** Số thực thể đọc ở modelspace so với bên trong block. Hồ sơ thật: 83–93 % nằm trong block — chỉ duyệt modelspace là bỏ qua phần lớn bản vẽ mà không có lỗi nào báo. */
+    entity_counts: z
+      .object({
+        modelspace: z.number().int().gte(0),
+        in_blocks: z.number().int().gte(0),
+      })
+      .strict()
+      .describe(
+        'Số thực thể đọc ở modelspace so với bên trong block. Hồ sơ thật: 83–93 % nằm trong block — chỉ duyệt modelspace là bỏ qua phần lớn bản vẽ mà không có lỗi nào báo.',
+      )
+      .optional(),
   })
   .strict()
   .describe(

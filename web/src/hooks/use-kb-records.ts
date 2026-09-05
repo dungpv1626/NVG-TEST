@@ -71,6 +71,15 @@ export interface KbRecordPayload {
   rationale?: AnnotationRationale | null;
   outcome?: AnnotationOutcome | null;
   extraction_warnings?: { code: string; detail: string }[];
+  /** Danh mục tờ của bộ hồ sơ gốc, đọc từ khung tên (bậc 1 của số hoá). */
+  sheets?: {
+    source_file?: string | null;
+    code: string;
+    name?: string | null;
+    scale?: string | null;
+    discipline?: string | null;
+    date?: string | null;
+  }[];
 }
 
 export function useKbRecord(id: string | undefined) {

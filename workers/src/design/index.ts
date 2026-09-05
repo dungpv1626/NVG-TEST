@@ -35,6 +35,8 @@ import { embeddingText, withheldFields, type RationalePayload } from './kb/ratio
 import { createSourceFileStore, type StoredSource } from './source-files';
 import type { DigitiseParams, DigitiseSource } from './workflows/digitise-steps';
 import { extractSiteBoundary } from './site/extract-boundary';
+import { parseImageDataUrl, renderFromMassing } from './render/render';
+import { renderPrompts } from './render/prompts-data';
 import { siteContextTable } from './layout/site-context-data';
 import { roomGroups } from './kb/vocabulary';
 import { spaceLabels } from './layout/labels';
@@ -629,6 +631,46 @@ designApp.get('/floor-plan/:projectId/xlsx', async (c) => {
   } catch (error) {
     return c.json({ error: error instanceof Error ? error.message : String(error) }, 502);
   }
+});
+
+/**
+ * Phối cảnh tham khảo từ ảnh khối (TK-16). Đồng bộ: một lời gọi mô hình sinh ảnh, không có
+ * bước nào cần điều phối. Endpoint Workers vì gọi dịch vụ ngoài (a). Tuyến tắt/hết hạn mức
+ * → 200 với `status: "unavailable"` và lý do đọc được — AI là phụ trợ, không chặn luồng chính.
+ *
+ * Ảnh khối là hình học đã giải (hạng 3); route `layer5_render` khai `max_data_class: 3`.
+ */
+designApp.post('/render', async (c) => {
+  const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+
+  const body = (await c.req.json()) as {
+    projectId?: string;
+    image?: string;
+    style?: string | null;
+  };
+  if (!body.projectId || !body.image) {
+    return c.json({ error: 'Thiếu mã hồ sơ thiết kế hoặc ảnh khối.' }, 400);
+  }
+  const image = parseImageDataUrl(body.image);
+  if (!image) return c.json({ error: 'Ảnh khối phải là PNG/JPEG dạng data URL.' }, 400);
+  // Ảnh chụp canvas hiếm khi quá vài megabyte; chặn để một tệp gửi nhầm không ngốn bộ nhớ.
+  if (image.dataBase64.length > 8 * 1024 * 1024) {
+    return c.json({ error: 'Ảnh khối quá lớn (trên 6 MB). Thu nhỏ khung xem rồi chụp lại.' }, 400);
+  }
+
+  const db = await asUser(c.env, token);
+  const scope = await projectScope(db, body.projectId);
+  if (!scope) return c.json({ error: PROJECT_NOT_VISIBLE }, 404);
+
+  const outcome = await renderFromMassing({
+    router: modelRouter(c.env),
+    client: geminiClient(c.env),
+    prompts: renderPrompts(),
+    image,
+    style: body.style ?? null,
+  });
+  return c.json(outcome);
 });
 
 /**

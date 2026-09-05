@@ -18,16 +18,34 @@
     "has_brief"
   ],
   "properties": {
-    "schema_version": { "$ref": "#/$defs/semver" },
-    "tenant_id": { "$ref": "#/$defs/uuid" },
+    "schema_version": {
+      "$ref": "#/$defs/semver"
+    },
+    "tenant_id": {
+      "$ref": "#/$defs/uuid"
+    },
     "project_id": {
-      "oneOf": [{ "$ref": "#/$defs/uuid" }, { "type": "null" }],
+      "oneOf": [
+        {
+          "$ref": "#/$defs/uuid"
+        },
+        {
+          "type": "null"
+        }
+      ],
       "description": "Khoá ngoại tới bảng dự án SẴN CÓ (`design_projects`). Rỗng khi hồ sơ cũ không còn dự án tương ứng trong hệ thống — vẫn số hoá được, chỉ là không nối được sang module khác."
     },
-    "project_code": { "type": "string", "minLength": 1 },
+    "project_code": {
+      "type": "string",
+      "minLength": 1
+    },
     "tier": {
       "type": "string",
-      "enum": ["A", "B", "C"],
+      "enum": [
+        "A",
+        "B",
+        "C"
+      ],
       "description": "Ở quy mô dưới 50 bộ thì tất cả là hạng A (mục 6.0). Giữ cả ba giá trị vì kho sẽ lớn lên; KHÔNG dựng giao diện quản lý phân hạng khi chưa cần."
     },
     "quality_score": {
@@ -38,62 +56,128 @@
     },
     "building_type": {
       "type": "string",
-      "enum": ["nha_pho", "biet_thu", "nha_vuon"],
+      "enum": [
+        "nha_pho",
+        "biet_thu",
+        "nha_vuon"
+      ],
       "description": "Cùng bộ từ vựng với rule pack (`VALID_BUILDING_TYPES`). `nha_xuong` nằm ngoài phạm vi module."
     },
     "site": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["width_m", "depth_m"],
+      "required": [
+        "width_m",
+        "depth_m"
+      ],
       "properties": {
-        "width_m": { "type": "number", "exclusiveMinimum": 0 },
-        "depth_m": { "type": "number", "exclusiveMinimum": 0 },
+        "width_m": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "depth_m": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
         "orientation": {
           "oneOf": [
             {
               "type": "string",
-              "enum": ["B", "DB", "D", "DN", "N", "TN", "T", "TB"]
+              "enum": [
+                "B",
+                "DB",
+                "D",
+                "DN",
+                "N",
+                "TN",
+                "T",
+                "TB"
+              ]
             },
-            { "type": "null" }
+            {
+              "type": "null"
+            }
           ],
           "description": "Hướng nhà theo tám hướng, viết tắt tiếng Việt (B = bắc, DN = đông nam…)."
         },
         "setback_m": {
           "type": "object",
-          "additionalProperties": { "type": "number", "minimum": 0 },
+          "additionalProperties": {
+            "type": "number",
+            "minimum": 0
+          },
           "description": "Khoảng lùi theo từng cạnh: front · rear · left · right."
         }
       }
     },
-    "floors": { "type": "integer", "minimum": 1, "maximum": 12 },
-    "family_archetype": { "type": ["string", "null"] },
-    "style": { "type": ["string", "null"] },
+    "floors": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 12
+    },
+    "family_archetype": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "style": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "floor_plans": {
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["level", "rooms"],
+        "required": [
+          "level",
+          "rooms"
+        ],
         "properties": {
-          "level": { "type": "integer", "minimum": 1, "maximum": 12 },
+          "level": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12
+          },
           "rooms": {
             "type": "array",
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["polygon", "area_m2"],
+              "required": [
+                "polygon",
+                "area_m2"
+              ],
               "properties": {
                 "type": {
-                  "oneOf": [{ "$ref": "#/$defs/room_type" }, { "type": "null" }],
+                  "oneOf": [
+                    {
+                      "$ref": "#/$defs/room_type"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
                   "description": "Mã phòng ĐÃ chuẩn hoá. Rỗng khi chưa chuẩn hoá được — trích xuất trong Container KHÔNG tự quy nhãn, việc đó thuộc lớp mô hình ngôn ngữ ở Worker (mục 6.1)."
                 },
                 "label_raw": {
-                  "type": ["string", "null"],
+                  "type": [
+                    "string",
+                    "null"
+                  ],
                   "description": "Nguyên văn chuỗi trong bản vẽ. Giữ lại để người xác nhận đối chiếu được kết quả chuẩn hoá."
                 },
-                "polygon": { "$ref": "#/$defs/polygon" },
-                "area_m2": { "type": "number", "exclusiveMinimum": 0 }
+                "polygon": {
+                  "$ref": "#/$defs/polygon"
+                },
+                "area_m2": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
               }
             }
           }
@@ -101,15 +185,32 @@
       }
     },
     "slicing_tree": {
-      "oneOf": [{ "$ref": "#/$defs/layout_node" }, { "type": "null" }],
+      "oneOf": [
+        {
+          "$ref": "#/$defs/layout_node"
+        },
+        {
+          "type": "null"
+        }
+      ],
       "description": "Trường quan trọng nhất cho Layer 3a: few-shot phải đưa vào ĐÚNG định dạng mà mô hình ngôn ngữ cần sinh ra, nên đây là cùng một `layout_node` với LayoutIntent. Rỗng khi mặt bằng không thuộc lớp slicing — khi đó phải hạ `quality_score` và KHÔNG dùng bản ghi làm few-shot."
     },
     "structural_grid": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "axes_x_m": { "type": "array", "items": { "type": "number" } },
-        "axes_y_m": { "type": "array", "items": { "type": "number" } }
+        "axes_x_m": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        "axes_y_m": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        }
       }
     },
     "adjacency_graph": {
@@ -117,13 +218,26 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["a", "b", "kind"],
+        "required": [
+          "a",
+          "b",
+          "kind"
+        ],
         "properties": {
-          "a": { "$ref": "#/$defs/room_type" },
-          "b": { "$ref": "#/$defs/room_type" },
+          "a": {
+            "$ref": "#/$defs/room_type"
+          },
+          "b": {
+            "$ref": "#/$defs/room_type"
+          },
           "kind": {
             "type": "string",
-            "enum": ["adjacent", "connected", "visible", "separated"]
+            "enum": [
+              "adjacent",
+              "connected",
+              "visible",
+              "separated"
+            ]
           }
         }
       }
@@ -134,13 +248,35 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "stair_position": { "type": ["string", "null"] },
-            "kitchen_position": { "type": ["string", "null"] },
-            "biggest_constraint": { "type": ["string", "null"] },
-            "would_change": { "type": ["string", "null"] }
+            "stair_position": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "kitchen_position": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "biggest_constraint": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "would_change": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
           }
         },
-        { "type": "null" }
+        {
+          "type": "null"
+        }
       ],
       "description": "Bước 3 — tri thức ngầm, do kiến trúc sư chọn từ danh sách có sẵn (10–15 phút mỗi công trình), KHÔNG bắt viết luận."
     },
@@ -150,11 +286,23 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "client_satisfied": { "type": ["boolean", "null"] },
-            "construction_issues": { "type": "array", "items": { "type": "string" } }
+            "client_satisfied": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "construction_issues": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
           }
         },
-        { "type": "null" }
+        {
+          "type": "null"
+        }
       ]
     },
     "has_brief": {
@@ -166,13 +314,66 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["code", "detail"],
+        "required": [
+          "code",
+          "detail"
+        ],
         "properties": {
-          "code": { "type": "string" },
-          "detail": { "type": "string" }
+          "code": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          }
         }
       },
       "description": "Những chỗ trích xuất không chắc chắn. Đi kèm bản ghi thay vì chỉ nằm trong nhật ký, vì người xác nhận cần thấy chúng đúng lúc đang xem bản ghi."
+    },
+    "sheets": {
+      "type": "array",
+      "description": "Danh mục tờ của bộ hồ sơ gốc (chép từ cad-extraction.sheets, gộp mọi tệp). Để tra cứu và để engine học cách tái tạo SheetSet; không phải hình học.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code"
+        ],
+        "properties": {
+          "source_file": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "scale": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "discipline": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
     }
   },
   "$defs": {
@@ -192,12 +393,16 @@
       "type": "array",
       "minItems": 2,
       "maxItems": 2,
-      "items": { "type": "number" }
+      "items": {
+        "type": "number"
+      }
     },
     "polygon": {
       "type": "array",
       "minItems": 3,
-      "items": { "$ref": "#/$defs/point" },
+      "items": {
+        "$ref": "#/$defs/point"
+      },
       "description": "Đỉnh theo chiều kim đồng hồ, KHÔNG lặp đỉnh đầu ở cuối (03-data-contracts 3.4)."
     },
     "layout_node": {
@@ -206,11 +411,18 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["split", "a", "b"],
+          "required": [
+            "split",
+            "a",
+            "b"
+          ],
           "properties": {
             "split": {
               "type": "string",
-              "enum": ["H", "V"],
+              "enum": [
+                "H",
+                "V"
+              ],
               "description": "H = cắt ngang · V = cắt dọc."
             },
             "ratio_hint": {
@@ -218,26 +430,40 @@
               "exclusiveMinimum": 0,
               "exclusiveMaximum": 1
             },
-            "a": { "$ref": "#/$defs/layout_node" },
-            "b": { "$ref": "#/$defs/layout_node" }
+            "a": {
+              "$ref": "#/$defs/layout_node"
+            },
+            "b": {
+              "$ref": "#/$defs/layout_node"
+            }
           }
         },
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["room"],
+          "required": [
+            "room"
+          ],
           "properties": {
-            "room": { "$ref": "#/$defs/room_type" }
+            "room": {
+              "$ref": "#/$defs/room_type"
+            }
           }
         },
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["void"],
+          "required": [
+            "void"
+          ],
           "properties": {
             "void": {
               "type": "string",
-              "enum": ["lightwell", "courtyard", "atrium"]
+              "enum": [
+                "lightwell",
+                "courtyard",
+                "atrium"
+              ]
             }
           }
         }
