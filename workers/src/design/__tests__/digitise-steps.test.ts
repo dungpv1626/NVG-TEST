@@ -51,6 +51,9 @@ function backend(overrides: Partial<ComputeBackend> = {}): ComputeBackend {
     async exportDxf() {
       throw new Error('không dùng');
     },
+    async exportSvg() {
+      throw new Error('không dùng');
+    },
     async extract() {
       return { status: 'ok', extraction: { rooms: [] } };
     },

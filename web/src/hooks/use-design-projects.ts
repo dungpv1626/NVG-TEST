@@ -18,7 +18,7 @@ import type {
   MoneyValue,
 } from '@nvg/shared';
 import type { DesignBriefDraft } from '@nvg/shared/design';
-import { designApi } from '@/lib/design-api';
+import { designApi, designApiFile } from '@/lib/design-api';
 import { useCompanyScope, withCompanyScope } from '@/lib/company-scope';
 import { supabase } from '@/lib/supabase';
 
@@ -531,6 +531,47 @@ export function useChooseFloorPlan() {
       queryClient.setQueryData(['design_floor_plan_variants', projectId], view);
     },
   });
+}
+
+/**
+ * Tờ bản vẽ (SVG) của một tầng, do Container dựng — trình duyệt chỉ hiển thị.
+ *
+ * `artifactId` rỗng = bản đang hiệu lực. Khoá truy vấn mang cả ba tham số để đổi tầng hay đổi
+ * phương án là một tờ khác, không phải tờ cũ hiện nhầm.
+ */
+export function useFloorPlanSheet(projectId: string, artifactId: string | null, level: number) {
+  return useQuery<string, Error>({
+    queryKey: ['design_floor_plan_sheet', projectId, artifactId, level],
+    queryFn: async () => {
+      const query = new URLSearchParams({ level: String(level) });
+      if (artifactId) query.set('artifact', artifactId);
+      const response = await designApiFile(`/design/floor-plan/${projectId}/svg?${query}`);
+      return await response.text();
+    },
+    enabled: Boolean(projectId) && level >= 1,
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/** Tải tệp DXF của một tầng về máy — cùng tờ với SVG đang xem. */
+export async function downloadFloorPlanDxf(
+  projectId: string,
+  artifactId: string | null,
+  level: number,
+): Promise<void> {
+  const query = new URLSearchParams({ level: String(level) });
+  if (artifactId) query.set('artifact', artifactId);
+  const response = await designApiFile(`/design/floor-plan/${projectId}/dxf?${query}`);
+  const name =
+    /filename="([^"]+)"/.exec(response.headers.get('Content-Disposition') ?? '')?.[1] ??
+    `mat-bang-tang-${level}.dxf`;
+  const url = URL.createObjectURL(await response.blob());
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 /**

@@ -204,3 +204,11 @@ group_targets:
   sleeping:
     vi: Phòng ngủ
     members: [bedroom, master_bedroom]
+  # Hai nhóm còn lại của bảng màu công năng trên bản vẽ (11-design-flow 11.4b: sinh hoạt chung ·
+  # phòng ngủ · phụ trợ · giao thông · ngoài trời). `habitable` đóng vai "sinh hoạt chung".
+  service:
+    vi: Phụ trợ (bếp, vệ sinh, kho, kỹ thuật, để xe)
+    members: [kitchen, wc, storage, laundry, technical, shaft, garage]
+  outdoor:
+    vi: Ngoài trời (ban công, sân, giếng trời)
+    members: [balcony, terrace, courtyard, light_well]

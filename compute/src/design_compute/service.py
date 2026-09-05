@@ -31,6 +31,8 @@ from design_compute.adapters import (
     floor_plan_from_result,
     infeasibility_report_from_result,
 )
+from design_compute.sheet import render_svg
+from design_compute.cad.export import build_sheet
 from design_compute.cad import (
     CadConversionError,
     DxfExportError,
@@ -206,6 +208,24 @@ class ExportDxfPayload(BaseModel):
     floor_plan: dict[str, Any]
     level: int = Field(default=1, ge=1, le=12)
     title_block: TitleBlockPayload
+    # Nhãn tiếng Việt của từng không gian và nhóm mã phòng — Worker cấp từ `kb/`, Container không
+    # tự tra (cùng lý do với /solve).
+    labels: dict[str, str] | None = None
+    groups: dict[str, list[str]] | None = None
+    sheet_code: str | None = None
+
+
+def _title_of(payload: ExportDxfPayload) -> TitleBlock:
+    return TitleBlock(
+        project_code=payload.title_block.project_code,
+        project_name=payload.title_block.project_name,
+        discipline=payload.title_block.discipline,
+        sheet=payload.title_block.sheet,
+        version=payload.title_block.version,
+        date=payload.title_block.date,
+        rule_pack_version=str(payload.floor_plan.get("rule_pack_version", "")),
+        sheet_code=payload.sheet_code or "",
+    )
 
 
 @app.post("/export/dxf")
@@ -216,20 +236,37 @@ def export_dxf(payload: ExportDxfPayload) -> Response:
     ghi ra đĩa, nên không có chỗ nào để tệp nằm lại chờ ai tới lấy.
     """
     validate("floor-plan", payload.floor_plan)
-    title = TitleBlock(
-        project_code=payload.title_block.project_code,
-        project_name=payload.title_block.project_name,
-        discipline=payload.title_block.discipline,
-        sheet=payload.title_block.sheet,
-        version=payload.title_block.version,
-        date=payload.title_block.date,
-        rule_pack_version=str(payload.floor_plan.get("rule_pack_version", "")),
-    )
     try:
-        data = export_floor_plan(payload.floor_plan, level=payload.level, title=title)
+        data = export_floor_plan(
+            payload.floor_plan,
+            level=payload.level,
+            title=_title_of(payload),
+            labels=payload.labels,
+            groups=payload.groups,
+        )
     except DxfExportError as exc:
         return JSONResponse(status_code=422, content={"error": str(exc), "retryable": False})
     return Response(content=data, media_type="application/dxf")
+
+
+@app.post("/export/svg")
+def export_svg(payload: ExportDxfPayload) -> Response:
+    """Cùng tờ bản vẽ đó, dạng SVG để trình duyệt HIỂN THỊ — cùng một `SheetModel` với DXF.
+
+    Trình duyệt không dựng hình (bất biến #5): nó nhận tệp này và chỉ tô màu bằng CSS.
+    """
+    validate("floor-plan", payload.floor_plan)
+    try:
+        sheet = build_sheet(
+            payload.floor_plan,
+            level=payload.level,
+            title=_title_of(payload),
+            labels=payload.labels,
+            groups=payload.groups,
+        )
+    except DxfExportError as exc:
+        return JSONResponse(status_code=422, content={"error": str(exc), "retryable": False})
+    return Response(content=render_svg(sheet), media_type="image/svg+xml")
 
 
 # ---------------------------------------------------------------------------

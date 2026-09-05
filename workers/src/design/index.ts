@@ -20,7 +20,7 @@ import {
   type DesignBrief,
 } from '@nvg/shared/design';
 import { ContractError } from './contracts';
-import { createComputeBackend } from './compute-backend';
+import { createComputeBackend, type ExportDxfRequest } from './compute-backend';
 import { DataClassViolation, ModelNotConfigured } from './llm/router';
 import { geminiClient, modelRouter } from './llm/factory';
 import { LlmCallFailed } from './llm/gemini';
@@ -37,6 +37,7 @@ import type { DigitiseParams, DigitiseSource } from './workflows/digitise-steps'
 import { extractSiteBoundary } from './site/extract-boundary';
 import { siteContextTable } from './layout/site-context-data';
 import { roomGroups } from './kb/vocabulary';
+import { spaceLabels } from './layout/labels';
 import {
   chooseVariant,
   generateVariants,
@@ -533,13 +534,70 @@ designApp.post('/floor-plan/choose', async (c) => {
  * phá (CLAUDE.md 8.7).
  */
 designApp.get('/floor-plan/:projectId/dxf', async (c) => {
+  const prepared = await prepareSheet(c);
+  if ('response' in prepared) return prepared.response;
+  const { compute, request, filename } = prepared;
+  try {
+    const dxf = await compute.exportDxf(request);
+    return new Response(dxf, {
+      headers: {
+        'Content-Type': 'application/dxf',
+        'Content-Disposition': `attachment; filename="${filename}.dxf"`,
+      },
+    });
+  } catch (error) {
+    return c.json({ error: error instanceof Error ? error.message : String(error) }, 502);
+  }
+});
+
+/**
+ * CÙNG tờ bản vẽ đó, dạng SVG để tab Phương án hiển thị. Container dựng từ một `SheetModel`
+ * chung cho cả DXF và SVG — trình duyệt không dựng hình (CLAUDE.md 8.2 #5), chỉ tô màu bằng CSS.
+ */
+designApp.get('/floor-plan/:projectId/svg', async (c) => {
+  const prepared = await prepareSheet(c);
+  if ('response' in prepared) return prepared.response;
+  const { compute, request } = prepared;
+  try {
+    const svg = await compute.exportSvg(request);
+    return new Response(svg, {
+      headers: {
+        'Content-Type': 'image/svg+xml; charset=utf-8',
+        'Cache-Control': 'private, max-age=300',
+      },
+    });
+  } catch (error) {
+    return c.json({ error: error instanceof Error ? error.message : String(error) }, 502);
+  }
+});
+
+/**
+ * Phần chung của hai tuyến xuất tờ: quyền, mặt bằng (bản hiệu lực hoặc một phương án cụ thể
+ * qua `?artifact=`), nhãn tiếng Việt từ chương trình không gian, nhóm màu, khung tên, tên tệp.
+ */
+async function prepareSheet(c: {
+  req: {
+    header(name: string): string | undefined;
+    param(name: string): string;
+    query(name: string): string | undefined;
+  };
+  env: DesignEnv;
+  json(body: unknown, status: number): Response;
+}): Promise<
+  | { response: Response }
+  | {
+      compute: ReturnType<typeof createComputeBackend>;
+      request: ExportDxfRequest;
+      filename: string;
+    }
+> {
   const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
-  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+  if (!token) return { response: c.json({ error: 'Chưa đăng nhập.' }, 401) };
 
   const projectId = c.req.param('projectId');
   const level = Number.parseInt(c.req.query('level') ?? '1', 10);
   if (!Number.isInteger(level) || level < 1 || level > 12) {
-    return c.json({ error: 'Số tầng không hợp lệ. Nhập số tầng từ 1 đến 12.' }, 400);
+    return { response: c.json({ error: 'Số tầng không hợp lệ. Nhập số tầng từ 1 đến 12.' }, 400) };
   }
 
   const db = await asUser(c.env, token);
@@ -549,65 +607,59 @@ designApp.get('/floor-plan/:projectId/dxf', async (c) => {
     .eq('id', projectId)
     .is('deleted_at', null)
     .maybeSingle();
-  if (project.error || !project.data) {
-    return c.json(
-      {
-        error:
-          'Không tìm thấy hồ sơ thiết kế, hoặc tài khoản không được xem hồ sơ này. Người chịu trách nhiệm dự án hoặc Phòng Thiết kế xem được.',
-      },
-      404,
-    );
-  }
+  if (project.error || !project.data)
+    return { response: c.json({ error: PROJECT_NOT_VISIBLE }, 404) };
 
   const repo = new ArtifactRepository(c.env);
-  const head = await repo.head(projectId, 'kien_truc', 'floor_plan');
-  if (!head) {
-    return c.json(
-      { error: 'Chưa có mặt bằng đang hiệu lực. Chạy bước giải ràng buộc trước khi xuất bản vẽ.' },
-      409,
-    );
+  const wanted = c.req.query('artifact');
+  const plan = wanted
+    ? await repo.get(wanted, projectId)
+    : await repo.head(projectId, 'kien_truc', 'floor_plan');
+  if (!plan || (wanted && (plan as { kind?: string }).kind !== 'floor_plan')) {
+    return {
+      response: c.json(
+        {
+          error:
+            'Chưa có mặt bằng đang hiệu lực. Sinh và chọn một phương án trước khi xuất bản vẽ.',
+        },
+        409,
+      ),
+    };
   }
 
-  const compute = createComputeBackend(c.env);
+  // Nhãn tiếng Việt theo mã không gian — cùng hàm với bộ giải, nên bản vẽ và bảng so sánh gọi
+  // một phòng bằng cùng một tên.
+  let labels: Record<string, string> = {};
+  const program = await repo.head(projectId, 'kien_truc', 'space_program');
+  if (program) labels = spaceLabels(program.payload as never, roomLabels());
+
   const now = new Date();
   const date = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
-  // Phiên bản LÀ mã băm nội dung, rút gọn. Trong hệ thống này không có số phiên bản nào khác:
-  // artifact bất biến, sửa là tạo bản mới, nên tám ký tự đầu của mã băm truy được về đúng một
-  // bản duy nhất. Đánh số tay sẽ là nguồn sự thật thứ hai và sớm muộn nói khác đi.
-  const version = head.id.replace(/^sha256:/, '').slice(0, 8);
+  // Phiên bản LÀ mã băm nội dung, rút gọn: artifact bất biến, sửa là tạo bản mới, nên tám ký tự
+  // đầu truy được về đúng một bản. Đánh số tay sẽ là nguồn sự thật thứ hai.
+  const version = plan.id.replace(/^sha256:/, '').slice(0, 8);
+  const slug = String(project.data.code ?? 'ho-so').replace(/[^A-Za-z0-9-]/g, '');
 
-  let dxf: ArrayBuffer;
-  try {
-    dxf = await compute.exportDxf({
-      floor_plan: head.payload,
+  return {
+    compute: createComputeBackend(c.env),
+    request: {
+      floor_plan: plan.payload,
       level,
       title_block: {
         project_code: String(project.data.code ?? ''),
         project_name: String(project.data.name ?? ''),
         discipline: 'Kiến trúc',
-        sheet: 'Mặt bằng',
+        sheet: 'Mặt bằng công năng',
         version,
         date,
       },
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return c.json({ error: message }, 502);
-  }
-
-  // ⚠️ Quy ước đặt tên tệp của NVG ngoài đời khác mã hồ sơ trong hệ thống (câu hỏi Q-7 chờ
-  // Haan). Tạm ghép từ mã hệ thống để tệp luôn truy được về đúng hồ sơ; đổi quy ước là sửa
-  // đúng dòng này.
-  const slug = String(project.data.code ?? 'ho-so').replace(/[^A-Za-z0-9-]/g, '');
-  const filename = `${slug}_KT_MatBang_T${level}_V${version}.dxf`;
-
-  return new Response(dxf, {
-    headers: {
-      'Content-Type': 'application/dxf',
-      'Content-Disposition': `attachment; filename="${filename}"`,
+      labels,
+      groups: roomGroups(roomVocabulary().vocabulary),
+      sheet_code: `kt/${String(level).padStart(2, '0')}`,
     },
-  });
-});
+    filename: `${slug}_KT_MatBang_T${level}_V${version}`,
+  };
+}
 
 /**
  * Chốt chương trình không gian — đúc artifact `space_program` và chuyển bản đang hiệu lực.

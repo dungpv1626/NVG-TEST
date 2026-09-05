@@ -15,6 +15,7 @@
  * sinh thành SVG ở bước sau, giao diện chỉ hiển thị — một nguồn hình học duy nhất.
  */
 
+import { useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, LayoutGrid } from 'lucide-react';
 import { formatNumber } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
@@ -26,6 +27,7 @@ import {
   type FloorPlanVariant,
 } from '@/hooks/use-design-projects';
 import { toUserMessage } from '@/hooks/use-error-message';
+import { SheetViewer } from './sheet-viewer';
 
 export function VariantsPanel({
   projectId,
@@ -37,6 +39,12 @@ export function VariantsPanel({
   const variants = useFloorPlanVariants(projectId);
   const generate = useGenerateFloorPlans();
   const choose = useChooseFloorPlan();
+  // Phương án đang XEM bản vẽ — mặc định là bản hiệu lực; bấm "Xem bản vẽ" ở thẻ khác để đổi.
+  const [viewing, setViewing] = useState<string | null>(null);
+  const headId = variants.data?.headArtifactId ?? null;
+  useEffect(() => {
+    setViewing((current) => current ?? headId);
+  }, [headId]);
 
   if (variants.isLoading) return <VariantsSkeleton />;
 
@@ -113,15 +121,30 @@ export function VariantsPanel({
             key={variant.artifactId}
             variant={variant}
             canChoose={!readOnly && variant.status === 'ok' && !variant.isHead}
+            isViewing={variant.artifactId === (viewing ?? headId)}
             busy={busy}
             onChoose={() =>
               void choose
                 .mutateAsync({ projectId, artifactId: variant.artifactId })
                 .catch(() => undefined)
             }
+            onView={() => setViewing(variant.artifactId)}
           />
         ))}
       </div>
+
+      {(() => {
+        const shown = view.variants.find((v) => v.artifactId === (viewing ?? headId));
+        if (!shown || shown.status !== 'ok') return null;
+        return (
+          <SheetViewer
+            projectId={projectId}
+            artifactId={shown.artifactId}
+            levels={(shown.summary?.levels ?? []).map((l) => l.level)}
+            variantLabel={`Phương án ${shown.variantId}`}
+          />
+        );
+      })()}
     </div>
   );
 }
@@ -196,13 +219,17 @@ function constraintText(v: FloorPlanVariant): string {
 function VariantCard({
   variant,
   canChoose,
+  isViewing,
   busy,
   onChoose,
+  onView,
 }: {
   variant: FloorPlanVariant;
   canChoose: boolean;
+  isViewing: boolean;
   busy: boolean;
   onChoose: () => void;
+  onView: () => void;
 }): React.ReactElement {
   return (
     <section className="flex flex-col rounded border border-border bg-surface p-4">
@@ -258,11 +285,18 @@ function VariantCard({
         </div>
       )}
 
-      {canChoose && (
-        <div className="mt-auto pt-4">
-          <Button variant="secondary" onClick={onChoose} disabled={busy}>
-            Chọn phương án này
-          </Button>
+      {(canChoose || (variant.status === 'ok' && !isViewing)) && (
+        <div className="mt-auto flex flex-wrap gap-2 pt-4">
+          {variant.status === 'ok' && !isViewing && (
+            <Button variant="secondary" onClick={onView}>
+              Xem bản vẽ
+            </Button>
+          )}
+          {canChoose && (
+            <Button variant="secondary" onClick={onChoose} disabled={busy}>
+              Chọn phương án này
+            </Button>
+          )}
         </div>
       )}
     </section>

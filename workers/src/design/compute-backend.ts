@@ -111,6 +111,12 @@ export interface ExportDxfRequest {
   floor_plan: unknown;
   level: number;
   title_block: DxfTitleBlock;
+  /** Mã không gian → nhãn tiếng Việt (`spaceLabels`). Container không tự tra `kb/`. */
+  labels?: Record<string, string>;
+  /** Nhóm mã phòng (`group_targets`) — để đa giác phòng mang `data-group` cho CSS tô màu. */
+  groups?: Record<string, string[]>;
+  /** Mã tờ theo họ `kt/NN`; rỗng thì Container đặt theo số tầng. */
+  sheet_code?: string;
 }
 
 export interface ComputeBackend {
@@ -124,6 +130,11 @@ export interface ComputeBackend {
    * không có chỗ nào để tệp nằm lại chờ ai tới lấy.
    */
   exportDxf(request: ExportDxfRequest): Promise<ArrayBuffer>;
+  /**
+   * CÙNG tờ bản vẽ đó dạng SVG để trình duyệt hiển thị — Container dựng từ một `SheetModel`
+   * duy nhất cho cả DXF lẫn SVG (bất biến #5: trình duyệt không dựng hình).
+   */
+  exportSvg(request: ExportDxfRequest): Promise<string>;
   /** Bước 1 số hoá — trích hình học từ một bản vẽ `.dxf`/`.dwg`. */
   extract(file: CadFile): Promise<{ status: 'ok'; extraction: unknown }>;
   /** Bước 2 số hoá — kiểm tra chéo và lắp bản ghi Knowledge Base. */
@@ -221,10 +232,20 @@ export class HttpComputeBackend implements ComputeBackend {
     return this.call<KbRecordResponse>('/kb/record', request);
   }
 
+  async exportSvg(request: ExportDxfRequest): Promise<string> {
+    const res = await this.exportCall('/export/svg', request);
+    return await res.text();
+  }
+
   async exportDxf(request: ExportDxfRequest): Promise<ArrayBuffer> {
+    const res = await this.exportCall('/export/dxf', request);
+    return await res.arrayBuffer();
+  }
+
+  private async exportCall(path: string, request: ExportDxfRequest): Promise<Response> {
     let res: Response;
     try {
-      res = await fetch(`${this.baseUrl}/export/dxf`, {
+      res = await fetch(`${this.baseUrl}${path}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(request),
@@ -238,7 +259,7 @@ export class HttpComputeBackend implements ComputeBackend {
       if (res.status >= 500) throw new ComputeUnavailable(`máy chủ trả ${res.status}. ${detail}`);
       throw new Error(`Không xuất được bản vẽ (${res.status}). ${detail}`);
     }
-    return await res.arrayBuffer();
+    return res;
   }
 }
 
@@ -269,6 +290,10 @@ export class UnconfiguredComputeBackend implements ComputeBackend {
   }
 
   async exportDxf(): Promise<never> {
+    throw this.unavailable();
+  }
+
+  async exportSvg(): Promise<never> {
     throw this.unavailable();
   }
 

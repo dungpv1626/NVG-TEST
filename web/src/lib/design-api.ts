@@ -102,3 +102,33 @@ async function parseResponse<T>(response: Response): Promise<T> {
   }
   return payload as T;
 }
+
+/**
+ * Đọc một tuyến trả TỆP (SVG, DXF) thay vì JSON. Lỗi vẫn là JSON tiếng Việt do Worker trả.
+ */
+export async function designApiFile(path: string): Promise<Response> {
+  if (!BASE) {
+    throw new DesignApiError(
+      'Chưa cấu hình địa chỉ dịch vụ thiết kế. Quản trị hệ thống bổ sung biến VITE_DESIGN_API_URL rồi phát hành lại ứng dụng.',
+    );
+  }
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new DesignApiError('Phiên đăng nhập đã hết hạn. Đăng nhập lại để tiếp tục.');
+
+  let response: Response;
+  try {
+    response = await fetch(`${BASE}${path}`, { headers: { Authorization: `Bearer ${token}` } });
+  } catch {
+    throw new DesignApiError(
+      'Không kết nối được dịch vụ thiết kế. Kiểm tra đường truyền rồi thử lại.',
+    );
+  }
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => ({}))) as { error?: string };
+    throw new DesignApiError(
+      payload.error ?? 'Không thực hiện được thao tác. Thử lại sau ít phút.',
+    );
+  }
+  return response;
+}

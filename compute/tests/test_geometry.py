@@ -236,8 +236,19 @@ class TestDxfExport:
         path = tmp_path / "mat-bang.dxf"
         path.write_bytes(data)
         doc = ezdxf.readfile(path)
+        # Chữ tĩnh của khung tên nằm trong ĐỊNH NGHĨA block, không ở modelspace — gom cả hai.
         text = " ".join(entity.dxf.text for entity in doc.modelspace().query("TEXT"))
-        assert "a1b2c3d4" in text
+        for block in doc.blocks:
+            if block.name.startswith("NVG_"):
+                text += " " + " ".join(e.dxf.text for e in block.query("TEXT"))
+        # Khung tên là BLOCK có ATTRIB (họ `semantic_kt` của kb/title_block.yaml) — đúng cách
+        # HS-01 KT làm, và là thứ trình trích xuất đọc lại thành mã tờ. Phiên bản nằm ở đó.
+        inserts = list(doc.modelspace().query("INSERT"))
+        assert inserts, "thiếu khung tên dạng BLOCK"
+        attribs = {a.dxf.tag: a.dxf.text for ins in inserts for a in ins.attribs}
+        assert attribs.get("PB") == "a1b2c3d4"
+        assert attribs.get("KHBV") and attribs.get("TL", "").startswith("1:")
+        assert "Phương án sơ bộ" in text
         assert "kỹ sư kết cấu quyết định" in text
         assert "chưa phải hồ sơ thi công" in text
 
