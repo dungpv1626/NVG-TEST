@@ -11,6 +11,16 @@
  *
  * Không dùng `title` của trình duyệt: chữ đó chỉ hiện khi rê chuột (điện thoại không có), hiện
  * chậm, và không xuống dòng được.
+ *
+ * ## Tự mở lần đầu (`autoOpenKey`)
+ *
+ * Khai `autoOpenKey` thì bảng TỰ mở ngay khi phần đó hiện ra, không chờ ai bấm dấu hỏi — người
+ * chưa dùng bao giờ không biết có hướng dẫn để mà tìm. Chỉ tự mở MỘT lần cho mỗi phần trên mỗi
+ * trình duyệt (ghi vào `localStorage`); lần sau bấm dấu hỏi để mở lại. Bật lên mỗi lần vào tab
+ * là thành thứ người dùng bấm bỏ theo phản xạ, và khi đó nó không còn được đọc nữa.
+ *
+ * Chỉ khai ở phần lấp đầy MỘT tab. Bốn khối con của tab Phương án cùng hiện một lúc, tự mở cả
+ * bốn là bốn bảng đè lên nhau.
  */
 
 import { HelpCircle } from 'lucide-react';
@@ -24,13 +34,50 @@ export interface SectionHelpProps {
   steps: string[];
   /** Một lưu ý duy nhất, nếu có — thứ dễ làm sai nhất ở phần này. */
   note?: string;
+  /**
+   * Khai để bảng tự mở lần ĐẦU người dùng vào phần này. Chuỗi phải ổn định giữa các lần triển
+   * khai — nó là khoá ghi nhớ, đổi chuỗi là bảng tự mở lại với người đã đọc rồi.
+   */
+  autoOpenKey?: string;
   className?: string;
 }
 
-export function SectionHelp({ title, steps, note, className }: SectionHelpProps) {
+/** Khoá ghi nhớ "đã tự mở rồi" trong `localStorage`. */
+const SEEN_PREFIX = 'nvg.huong-dan.';
+
+/**
+ * Đã tự mở bảng này bao giờ chưa.
+ *
+ * Bọc try/catch vì `localStorage` NÉM lỗi chứ không trả rỗng ở chế độ ẩn danh và khi trình duyệt
+ * chặn lưu dữ liệu trang. Đọc hỏng thì coi như chưa từng mở: thà hiện thừa một lần còn hơn nuốt
+ * mất hướng dẫn của người lần đầu dùng.
+ */
+function alreadySeen(key: string): boolean {
+  try {
+    return window.localStorage.getItem(SEEN_PREFIX + key) !== null;
+  } catch {
+    return false;
+  }
+}
+
+function rememberSeen(key: string): void {
+  try {
+    window.localStorage.setItem(SEEN_PREFIX + key, '1');
+  } catch {
+    // Không ghi được thì bảng sẽ tự mở lại lần sau — phiền, nhưng không hỏng gì.
+  }
+}
+
+export function SectionHelp({ title, steps, note, autoOpenKey, className }: SectionHelpProps) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLSpanElement>(null);
   const panelId = useId();
+
+  useEffect(() => {
+    if (!autoOpenKey || alreadySeen(autoOpenKey)) return;
+    rememberSeen(autoOpenKey);
+    setOpen(true);
+  }, [autoOpenKey]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -84,6 +131,16 @@ export function SectionHelp({ title, steps, note, className }: SectionHelpProps)
             ))}
           </ol>
           {note && <p className="mt-2 text-status-pending">{note}</p>}
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className={cn(
+              'mt-3 text-brand hover:underline focus-visible:outline-none',
+              'focus-visible:ring-2 focus-visible:ring-brand',
+            )}
+          >
+            Đã hiểu
+          </button>
         </div>
       )}
     </span>

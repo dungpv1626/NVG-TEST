@@ -103,7 +103,7 @@ export function SurveyPanel({
     <div className="space-y-4">
       <p className="flex items-center gap-1 font-medium">
         Biên bản khảo sát hiện trạng
-        <SectionHelp {...DESIGN_HELP.survey} />
+        <SectionHelp {...DESIGN_HELP.survey} autoOpenKey="tk.khao-sat" />
       </p>
 
       {error && (

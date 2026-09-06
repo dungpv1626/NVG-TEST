@@ -122,7 +122,7 @@ export function VariantsPanel({
           <div>
             <p className="flex items-center gap-1 font-medium">
               {feasible.length} phương án khả thi trên {view.variants.length} đã sinh
-              <SectionHelp {...DESIGN_HELP.variants} />
+              <SectionHelp {...DESIGN_HELP.variants} autoOpenKey="tk.phuong-an" />
             </p>
             <p className="mt-1 text-fg-subtle">
               Mỗi phương án là một cấu trúc bố cục khác nhau, không phải vài con số khác nhau. Chọn

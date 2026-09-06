@@ -7,7 +7,7 @@
  * có tám dấu hỏi giống hệt nhau thì trình đọc màn hình không phân biệt được cái nào là cái nào.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SectionHelp } from '../section-help';
@@ -38,6 +38,61 @@ describe('SectionHelp', () => {
 
     await user.keyboard('{Escape}');
     expect(screen.queryByText('Chọn tầng.')).not.toBeInTheDocument();
+  });
+
+  it('tự mở lần ĐẦU vào phần đó, lần sau thì không', async () => {
+    // Người chưa dùng bao giờ không biết có hướng dẫn để mà đi tìm dấu hỏi.
+    window.localStorage.clear();
+    const guide = { title: 'Đầu bài thiết kế', steps: ['Điền các mục còn trống.'] };
+
+    const first = render(<SectionHelp {...guide} autoOpenKey="tk.dau-bai" />);
+    expect(await screen.findByText('Điền các mục còn trống.')).toBeInTheDocument();
+    first.unmount();
+
+    render(<SectionHelp {...guide} autoOpenKey="tk.dau-bai" />);
+    expect(screen.queryByText('Điền các mục còn trống.')).not.toBeInTheDocument();
+  });
+
+  it('không khai autoOpenKey thì im lặng — bốn khối con không bật cùng lúc', () => {
+    window.localStorage.clear();
+    render(<SectionHelp title="Khối ba chiều" steps={['Kéo chuột để xoay.']} />);
+    expect(screen.queryByText('Kéo chuột để xoay.')).not.toBeInTheDocument();
+  });
+
+  it('nút Đã hiểu đóng bảng vừa tự mở', async () => {
+    window.localStorage.clear();
+    const user = userEvent.setup();
+    render(
+      <SectionHelp
+        title="Phương án kiến trúc"
+        steps={['So sánh các phương án.']}
+        autoOpenKey="tk.phuong-an"
+      />,
+    );
+    expect(await screen.findByText('So sánh các phương án.')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Đã hiểu' }));
+    expect(screen.queryByText('So sánh các phương án.')).not.toBeInTheDocument();
+  });
+
+  it('localStorage ném lỗi thì vẫn mở được, không làm hỏng màn hình', async () => {
+    // Chế độ ẩn danh và trình duyệt chặn lưu dữ liệu trang đều NÉM chứ không trả rỗng.
+    const spy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('bị chặn');
+    });
+    const setSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('bị chặn');
+    });
+    render(
+      <SectionHelp
+        title="Khảo sát hiện trạng"
+        steps={['Nhập kích thước.']}
+        autoOpenKey="tk.khao-sat"
+      />,
+    );
+    expect(await screen.findByText('Nhập kích thước.')).toBeInTheDocument();
+    spy.mockRestore();
+    setSpy.mockRestore();
   });
 
   it('mọi mục hướng dẫn của Module Thiết kế đều ngắn và viết bằng tiếng Việt có dấu', () => {

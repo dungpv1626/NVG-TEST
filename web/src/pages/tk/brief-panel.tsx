@@ -351,7 +351,7 @@ export function BriefPanel({
           <div className="mb-4 flex flex-wrap items-center gap-3">
             <p className="flex items-center gap-1 font-medium">
               Đầu bài đang hiệu lực — phiên bản {current.version}
-              <SectionHelp {...DESIGN_HELP.brief} />
+              <SectionHelp {...DESIGN_HELP.brief} autoOpenKey="tk.dau-bai" />
             </p>
             {current.confirmed_at ? (
               <span className="inline-flex items-center gap-1 text-status-completed">

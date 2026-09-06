@@ -113,7 +113,7 @@ function Header({
         <div>
           <p className="flex items-center gap-1 font-medium">
             {total} không gian trên {new Set(view.program.spaces.map((s) => s.floor)).size} tầng
-            <SectionHelp {...DESIGN_HELP.program} />
+            <SectionHelp {...DESIGN_HELP.program} autoOpenKey="tk.chuong-trinh-khong-gian" />
           </p>
           <p className="mt-1 text-fg-subtle">
             {view.program.priors_applied

@@ -511,7 +511,12 @@
                 <b>Mã quy tắc</b> (<code>corridor_min_width</code>&hellip;) gỡ khỏi thẻ vô nghiệm,
                 thay bằng bước gỡ tiếp theo &mdash; mã vẫn nằm trong artifact để tra.<br />
                 <b>Hướng dẫn theo phần</b>: nút dấu hỏi ở tám phần, mỗi phần ba bước và một lưu ý
-                (<code>web/src/pages/tk/help-texts.ts</code>).<br />
+                (<code>web/src/pages/tk/help-texts.ts</code>). Ở bốn phần lấp đầy một tab (Đầu bài,
+                Khảo sát, Chương trình không gian, Phương án) bảng <b>tự mở lần đầu</b> vào phần đó
+                &mdash; người chưa dùng bao giờ không biết có hướng dẫn để mà đi tìm dấu hỏi. Chỉ
+                một lần cho mỗi phần trên mỗi trình duyệt; bật lên mỗi lần là thành thứ bấm bỏ theo
+                phản xạ. Bốn khối con của tab Phương án cùng hiện một lúc nên giữ nút dấu hỏi, không
+                tự mở.<br />
                 <b>Gemini gói miễn phí</b> đo lại: cả ba mô hình sinh ảnh trả
                 <code>limit: 0</code> &mdash; không phải hết hạn mức trong ngày mà là không cấp lượt
                 nào. Câu trả lời dứt điểm cho Q-15.
