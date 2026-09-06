@@ -23,6 +23,10 @@
 @import '@fontsource/be-vietnam-pro/700.css';
 @import '@fontsource/be-vietnam-pro/800.css';
 
+/* Bảng màu riêng của Module Thiết kế — bản TỐI. Chỉ đè `--color-tk-*` khai trong @theme dưới
+   đây; xem chú thích đầu tệp đó. Đặt SAU @theme khi biên dịch nên độ ưu tiên đúng. */
+@import './pages/tk/tk-theme.css';
+
 /**
  * Token thiết kế — Content Guidelines Mục 6.3 đến 6.5.
  *
@@ -125,6 +129,12 @@
 
   /* Thang chữ khai TƯỜNG MINH (DESIGN_SYSTEM.md 3). Đặt cỡ tuỳ chỗ thì sau vài module sẽ có
      bảy cỡ chữ gần giống nhau, và không ai dám sửa cỡ nào vì không biết chỗ khác đang dựa vào. */
+  /* Cỡ nhỏ nhất của thang, tồn tại cho ĐÚNG MỘT chỗ: nhãn module khi thanh điều hướng thu
+     gọn (`sidebar.tsx`). Ở bề rộng 80px, nhãn 12px bị cắt cụt thành "Khách …" — một nhãn cụt
+     còn tệ hơn một nhãn nhỏ, vì nó không cho biết mục đó là gì. Bản mẫu cũng đặt 10px cho
+     đúng chỗ này. KHÔNG dùng cỡ này cho nội dung đọc thành câu. */
+  --text-2xs: 0.625rem;
+  --text-2xs--line-height: 1.2;
   --text-xs: 0.75rem; /* 12px — nhãn phụ, chú thích, nhãn trạng thái */
   --text-xs--line-height: 1.3333333;
   --text-base: 0.875rem; /* 14px — nội dung chính, bảng, biểu mẫu */
@@ -170,6 +180,120 @@
   --motion-fast: 120ms; /* trỏ chuột, nhấn nút */
   --motion-base: 180ms; /* đổi tab, mở panel */
   --motion-slow: 240ms; /* lớp phủ, hộp thoại */
+
+  /* --- Bảng màu riêng của Module Thiết kế (`--color-tk-*`) --------------------
+     Module Thiết kế có ngôn ngữ thị giác riêng, dựng theo bộ bàn giao thiết kế
+     "Trang thiết kế dự án" (Haan cung cấp 06/09/2026). Giá trị dưới đây chép NGUYÊN VĂN từ
+     hằng `LIGHT` của bản mẫu; bản tối nằm ở `pages/tk/tk-theme.css` và chỉ ĐÈ chính những
+     token này — Tailwind biên dịch utility thành `var(--color-tk-…)` nên đặt giá trị mới trên
+     một tổ tiên là cả nhánh đổi theo, không cần lớp phủ nào khác.
+
+     Vì sao một bộ token thứ hai thay vì mở rộng bộ chung:
+      · Bộ chung (`--color-surface`, `--color-fg`, `--color-brand`…) dùng cho 11 module còn
+        lại và có test đo tương phản trên đúng những hex đó. Đổi chúng để hợp bản mẫu là đổi
+        cả 11 module — Haan đã chốt KHÔNG (quyết định 1, 06/09/2026).
+      · Bộ này chỉ sống trong phạm vi `[data-tk-theme]`, tức chỉ các trang `/tk/*`.
+
+     ⚠️ Năm họ màu chức năng `bl`/`gr`/`am`/`pu`/`rd` là màu PHÂN LOẠI THẺ, không phải màu
+     trạng thái. Chúng chỉ được làm nền, viền và ô icon BÊN TRONG thẻ công cụ. Cấm dùng làm
+     nhãn trạng thái, nền dòng bảng hay màu nút hành động chính — tím `pu` và hổ phách `am` ở
+     rất gần "Tranh chấp" và "Chờ duyệt", trộn hai hệ là bắt người dùng đoán. `StatusLozenge`
+     không đọc một token `tk` nào; có test canh trong design-rules.test.ts. */
+  --color-tk-bg: #f1f4f2;
+  --color-tk-panel: #ffffff;
+  --color-tk-card: #fbfdfc;
+  --color-tk-line: #e2e8e4;
+  --color-tk-line2: #d3dcd7;
+  --color-tk-tx: #1c2622;
+  --color-tk-t2: #55645e;
+  --color-tk-t3: #7d8c86;
+  --color-tk-acc: #0f8a5a;
+  --color-tk-acc-dim: #d6efe2;
+  --color-tk-deep: #eef2f0;
+  --color-tk-hover: #f0f5f2;
+  --color-tk-hover2: #f0f5f2;
+  --color-tk-chip-mute: #eaf0ed;
+  --color-tk-btn: #12a463;
+  --color-tk-btn2: #15b46d;
+  --color-tk-btn-fg: #ffffff;
+  --color-tk-dot-red: #d94257;
+  --color-tk-plan-ink: #5c6f68;
+  --color-tk-plan-dim: #aab8b2;
+
+  --color-tk-bl-bg: #eff6fd;
+  --color-tk-bl-line: #cfe1f4;
+  --color-tk-bl-tile: #dfecfa;
+  --color-tk-bl-fg: #1c6dbb;
+  --color-tk-bl-chipfg: #175a9c;
+  --color-tk-bl-deep: #f7fbff;
+  --color-tk-bl-bar: #2b86d9;
+
+  --color-tk-gr-deep2: #dff2e8;
+  --color-tk-gr-badge: #e2f5ea;
+  --color-tk-gr-badgeline: #bfe4d0;
+  --color-tk-gr-fg2: #0d7a52;
+  --color-tk-gr-bg: #eff8f3;
+  --color-tk-gr-line: #cbe8d8;
+  --color-tk-gr-tile: #ddf1e6;
+  --color-tk-gr-fg: #12855a;
+  --color-tk-gr-chipfg: #0f6e4b;
+  --color-tk-gr-deep: #f6fcf9;
+  --color-tk-gr-line2: #dbeee4;
+  --color-tk-gr-rulebg: #eff8f3;
+  --color-tk-gr-line3: #bfe0cf;
+  --color-tk-gr-hover: #e2f3ea;
+  --color-tk-gr-stroke: #8fc0a8;
+
+  --color-tk-am-bg: #fdf7e8;
+  --color-tk-am-line: #ecdcb4;
+  --color-tk-am-line3: #e5d3a6;
+  --color-tk-am-fg: #8a6210;
+  --color-tk-am-line2: #e5d3a6;
+  --color-tk-am-chip: #fbf0d6;
+  --color-tk-am-bg2: #fdf7e8;
+  --color-tk-am-fg2: #6f5313;
+
+  --color-tk-pu-bg: #f4f1fd;
+  --color-tk-pu-line: #dcd4f6;
+  --color-tk-pu-tile: #e7e1fb;
+  --color-tk-pu-fg: #5443c4;
+  --color-tk-pu-chipfg: #4c3cb8;
+  --color-tk-pu-deep: #faf8ff;
+  --color-tk-pu-solid: #6d5ce0;
+  --color-tk-pu-solid2: #7f70ea;
+  --color-tk-pu-sel: #7a68e8;
+  --color-tk-pu-stroke: #9c92dd;
+  --color-tk-pu-stroke2: #cfc7f2;
+  --color-tk-pu-stroke3: #7c70c9;
+  --color-tk-pu-stroke4: #b3aae6;
+
+  --color-tk-rd-bg: #fdf1f1;
+  --color-tk-rd-line: #f3d2d4;
+  --color-tk-rd-tile: #fadedf;
+  --color-tk-rd-fg: #a8323c;
+  --color-tk-rd-deep: #fff8f8;
+  --color-tk-rd-line2: #e9b8bc;
+  --color-tk-rd-fg2: #93262f;
+  --color-tk-rd-hover: #f7e3e4;
+
+  /* --- Thanh điều hướng của Module Thiết kế (bản mẫu §4.3) --------------------
+     Thanh này LUÔN tối, ở cả chế độ sáng lẫn tối — bản mẫu ghi rõ là chủ ý. Nên nó không
+     nằm trong bộ `--color-tk-*` (bộ đó có bản đè ở chế độ tối và có test đòi đủ cặp); ở đây
+     một giá trị dùng cho cả hai chế độ. Chỉ áp trong phạm vi `/tk/*`. */
+  --color-navdark-bg: #0c1210;
+  --color-navdark-line: #16201d;
+  --color-navdark-fg: #8b9b95;
+  --color-navdark-fg-strong: #e9efec;
+  --color-navdark-hover: #141d1a;
+  --color-navdark-sel: #13221c;
+  --color-navdark-sel-fg: #3ddc97;
+  --color-navdark-btn: #0f1614;
+
+  /* Bóng đổ của bản mẫu Thiết kế. Bộ `--shadow-*` chung tính cho nền sáng (đen 6–14%), đặt
+     lên nền tối thì không nhìn thấy gì — nền càng tối thì bóng phải càng đậm mới tách được
+     lớp. Hai mức đúng bản mẫu §4.5. */
+  --shadow-tk-panel: 0 12px 26px rgb(0 0 0 / 0.22);
+  --shadow-tk-card: 0 14px 30px rgb(0 0 0 / 0.26);
 }
 
 /* Lưới khoảng cách bội số 8px (6.5) khớp thang mặc định của Tailwind

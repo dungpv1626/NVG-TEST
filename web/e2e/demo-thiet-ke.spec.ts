@@ -36,8 +36,28 @@ async function openProject(page: Page): Promise<void> {
   await expect(page).toHaveURL(/\/tk\/du-an\//);
 }
 
-async function tab(page: Page, name: string): Promise<void> {
-  await page.getByRole('tab', { name }).click();
+/**
+ * Mở một phần của hồ sơ thiết kế.
+ *
+ * Từ 06/09/2026 màn hình có bố cục HAI CẤP: ba tab cấp một trên thanh tab, còn sáu bước quy
+ * trình là màn hình con mở từ thẻ công cụ ở Tổng quan. Hàm này đi đúng đường người dùng đi —
+ * bấm thẻ, không nhảy thẳng bằng URL — nên nó cũng là phép kiểm rằng các thẻ trỏ đúng chỗ.
+ *
+ * Nhắm theo `href` chứ không theo nhãn: nhãn trên thẻ và tiêu đề màn hình con cố ý khác nhau
+ * ở một chỗ (thẻ "AI phương án kiến trúc" mở màn hình "Phương án kiến trúc"), nên tìm theo
+ * chữ sẽ bắt nhầm liên kết mà vẫn bấm được — hỏng ở bước khẳng định sau đó chứ không ở đây.
+ */
+async function tab(page: Page, tabId: string, heading: string): Promise<void> {
+  const strip = page.getByRole('tab', { name: heading, exact: true });
+  if ((await strip.count()) > 0) {
+    await strip.first().click();
+    return;
+  }
+  // Đang ở một màn hình con khác thì quay về Tổng quan trước — thẻ công cụ chỉ có ở đó.
+  const back = page.getByRole('button', { name: 'Tổng quan' });
+  if ((await back.count()) > 0) await back.first().click();
+  await page.locator(`a[href$="?tab=${tabId}"]`).first().click();
+  await expect(page.getByRole('heading', { name: heading, level: 2 })).toBeVisible();
 }
 
 test('Mười cảnh demo Module Thiết kế chạy liền mạch', async ({ page }) => {
@@ -45,22 +65,25 @@ test('Mười cảnh demo Module Thiết kế chạy liền mạch', async ({ pa
   await openProject(page);
 
   // Cảnh 1 — Đầu bài đã xác nhận, độ đầy đủ có số.
-  await tab(page, 'Đầu bài');
+  await tab(page, 'dau-bai', 'Đầu bài thiết kế');
   await expect(page.getByText(/Đã xác nhận/)).toBeVisible();
   await expect(page.getByText(/Mức độ đầy đủ/)).toBeVisible();
 
   // Cảnh 2 — Khảo sát hiện trạng có chỗ đính ảnh ngay trên biên bản.
-  await tab(page, 'Khảo sát hiện trạng');
+  await tab(page, 'khao-sat', 'Khảo sát hiện trạng');
   await expect(page.getByText(/Ảnh hiện trạng/).first()).toBeVisible();
   await expect(page.getByRole('button', { name: /Thêm ảnh hiện trạng/ }).first()).toBeVisible();
 
   // Cảnh 3 — Chương trình không gian đã chốt.
-  await tab(page, 'Chương trình không gian');
+  await tab(page, 'chuong-trinh-khong-gian', 'Chương trình không gian');
   await expect(page.getByText(/Đã chốt, các bước sau đang dùng bản này/)).toBeVisible();
 
   // Cảnh 4 — Ba phương án, bảng so sánh bằng ngôn ngữ khách.
-  await tab(page, 'Phương án kiến trúc');
-  await expect(page.getByText(/phương án khả thi trên/)).toBeVisible();
+  await tab(page, 'phuong-an', 'Phương án kiến trúc');
+  // Chờ lâu hơn mặc định 5 giây: khối này đọc kết quả bộ giải qua Worker, và lần gọi đầu sau
+  // khi Worker vừa khởi động mất khoảng mười giây. Hết giờ ở đây là bài đỏ vì CHẬM chứ không
+  // phải vì sai — đúng loại báo động giả mà CLAUDE.md 4.7 cảnh báo.
+  await expect(page.getByText(/phương án khả thi trên/)).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole('cell', { name: 'Số phòng ngủ' })).toBeVisible();
   await expect(page.getByRole('cell', { name: 'Phòng thờ', exact: true })).toBeVisible();
   await expect(page.getByText('Đang hiệu lực').first()).toBeVisible();
@@ -92,14 +115,20 @@ test('Mười cảnh demo Module Thiết kế chạy liền mạch', async ({ pa
     page.getByText('Khối sơ bộ — chưa thể hiện vật liệu và mặt đứng').first(),
   ).toBeVisible();
 
-  // Cảnh 9 — Phối cảnh: chụp ảnh khối, nhãn in lên ảnh; tuyến Gemini tắt thì nói lý do.
+  // Cảnh 9 — Phối cảnh: chụp ảnh khối, nhãn in lên ảnh; tuyến sinh ảnh không chạy được thì
+  // NÓI RÕ LÝ DO và giữ ảnh khối. Khẳng định dưới cố ý nhận mọi lý do đọc được, không liệt kê
+  // từng câu: nhà cung cấp đã đổi hai lần (Gemini → Hugging Face → Pollinations) và mỗi lần
+  // đổi lại thêm một lý do mới — liệt kê cứng thì test đỏ vì một câu tiếng Việt hợp lệ.
   await page.getByRole('button', { name: 'Chụp ảnh khối' }).click();
   await expect(page.getByAltText('Ảnh khối sơ bộ có nhãn cảnh báo')).toBeVisible();
   await page.getByRole('button', { name: /Dựng ảnh phối cảnh/ }).click();
   await expect(
     page
-      .getByText(/đang tắt|Chưa có khoá|Không dựng được/)
-      .or(page.getByAltText('Ảnh phối cảnh tham khảo có nhãn cảnh báo')),
+      // Ba khung hình (ngày, đêm, góc nghiêng) nên có tới ba lý do hoặc ba ảnh — cảnh này chỉ
+      // cần khẳng định khung đầu tiên nói được điều gì đó, không phải cả ba giống nhau.
+      .getByText(/Chưa dựng được ảnh phối cảnh/)
+      .or(page.getByAltText(/Ảnh phối cảnh tham khảo/))
+      .first(),
   ).toBeVisible();
 
   // Cảnh 7 — Đổi ý: đợt trước còn nguyên kèm câu tác động.

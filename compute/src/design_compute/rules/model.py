@@ -28,6 +28,10 @@ VALID_PREDICATES: frozenset[str] = frozenset(
         "aspect_ratio_max",
         "requires_daylight",
         "requires_access",
+        # Phòng phải tiếp giáp một MẶT cụ thể của hình bao (`face: access | open`). Khác
+        # `requires_daylight` ở chỗ nó không nhận giếng trời thay thế — chỗ để xe lấy sáng
+        # qua giếng trời vẫn là chỗ để xe mà ô tô không vào được.
+        "requires_face",
         "adjacency",
         "floor_preference",
         "aligned_across_floors",

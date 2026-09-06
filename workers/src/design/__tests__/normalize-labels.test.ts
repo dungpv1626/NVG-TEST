@@ -42,6 +42,20 @@ describe('Từ vựng phòng', () => {
     const groups = new Set(Object.keys(vocabulary.group_targets ?? {}));
     const codes = new Set(vocabulary.types.map((t) => t.code));
 
+    // Đích thứ ba, hợp lệ nhưng không phải mã phòng: LOẠI KHOẢNG RỖNG. Giếng trời không phải
+    // một phòng nên nó không có trong từ vựng, nhưng quy tắc vẫn nhắm được tới nó
+    // (`lightwell_max_area`). Đọc từ chính hợp đồng thay vì gõ tay, cùng lý do với vòng lặp
+    // gói địa phương ngay dưới đây.
+    const intentSchema = JSON.parse(
+      readFileSync(root('contracts/layout-intent.schema.json'), 'utf8'),
+    ) as { $defs?: Record<string, unknown> };
+    const voidKinds = new Set(
+      JSON.stringify(intentSchema)
+        .match(/"lightwell"|"courtyard"|"atrium"/g)
+        ?.map((m) => m.replaceAll('"', '')) ?? [],
+    );
+    expect(voidKinds.size).toBe(3);
+
     // Duyệt gói nền CỘNG mọi gói địa phương đang có, thay vì liệt kê tay: gói địa phương
     // sinh ra khi tỉnh gửi văn bản quy hoạch, và người thêm gói đó không có lý do gì để nhớ
     // quay lại sửa danh sách trong một tệp kiểm thử.
@@ -68,7 +82,9 @@ describe('Từ vựng phòng', () => {
     }
 
     expect(targets.size).toBeGreaterThan(0);
-    const missing = [...targets].filter((t) => !codes.has(t) && !groups.has(t));
+    const missing = [...targets].filter(
+      (t) => !codes.has(t) && !groups.has(t) && !voidKinds.has(t),
+    );
     expect(missing).toEqual([]);
   });
 

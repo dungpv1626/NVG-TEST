@@ -1,0 +1,151 @@
+/**
+ * Bản TỐI của bảng màu Module Thiết kế — chỉ ĐÈ token đã khai ở `index.css` (`@theme`).
+ *
+ * Giá trị chép nguyên văn từ hằng `DARK` của bộ bàn giao "Trang thiết kế dự án".
+ *
+ * Ba điều phải giữ:
+ *
+ *  1. **Chỉ đè, không khai token mới.** Token nào có ở đây mà không có trong `@theme` thì
+ *     Tailwind không sinh utility cho nó — khai ra cũng không ai đọc được. Ngược lại, token
+ *     nào có trong `@theme` mà thiếu ở đây thì ở chế độ tối nó giữ nguyên giá trị SÁNG, tức
+ *     một mảng chữ đen trên nền đen: hỏng im lặng, không lỗi, không cảnh báo. Có test đối
+ *     chiếu hai danh sách trong `design-rules.test.ts`.
+ *
+ *  2. **Khối này chỉ chứa bảng màu RIÊNG của module.** Phần bắc cầu sang token dùng chung
+ *     (`--color-surface`, `--color-fg`, `--color-brand`…) nằm ở khối thứ hai bên dưới, và sáu
+ *     màu trạng thái thì không đụng tới ở cả hai khối.
+ *
+ *  3. **Không có `prefers-color-scheme`.** Bản mẫu chỉ có hai trạng thái do người dùng chọn.
+ *     Thêm "theo hệ thống" là thêm trạng thái thứ ba mà không ai đặc tả cách nó hiện lên nút.
+ */
+
+[data-tk-theme='toi'] {
+  --color-tk-bg: #0b100f;
+  --color-tk-panel: #111a17;
+  --color-tk-card: #101a17;
+  --color-tk-line: #1d2a26;
+  --color-tk-line2: #25342f;
+  --color-tk-tx: #e9efec;
+  --color-tk-t2: #9db0a9;
+  --color-tk-t3: #6b7d77;
+  --color-tk-acc: #3ddc97;
+  --color-tk-acc-dim: #1c3b30;
+  --color-tk-deep: #0a0f0e;
+  --color-tk-hover: #14201c;
+  --color-tk-hover2: #16211d;
+  --color-tk-chip-mute: #17211d;
+  --color-tk-btn: #2fbe79;
+  --color-tk-btn2: #43d68e;
+  --color-tk-btn-fg: #04150d;
+  --color-tk-dot-red: #f2647a;
+  --color-tk-plan-ink: #8fa8a0;
+  --color-tk-plan-dim: #3a5049;
+
+  --color-tk-bl-bg: #0e1d2a;
+  --color-tk-bl-line: #1c3a52;
+  --color-tk-bl-tile: #16324a;
+  --color-tk-bl-fg: #6fb2ee;
+  --color-tk-bl-chipfg: #a5cff2;
+  --color-tk-bl-deep: #0b1620;
+  --color-tk-bl-bar: #4fa3e8;
+
+  --color-tk-gr-deep2: #123024;
+  --color-tk-gr-badge: #152e24;
+  --color-tk-gr-badgeline: #1f4436;
+  --color-tk-gr-fg2: #7ceec1;
+  --color-tk-gr-bg: #0d1f19;
+  --color-tk-gr-line: #1c4436;
+  --color-tk-gr-tile: #16382c;
+  --color-tk-gr-fg: #5cd6a0;
+  --color-tk-gr-chipfg: #9fe1c4;
+  --color-tk-gr-deep: #0b1a15;
+  --color-tk-gr-line2: #143026;
+  --color-tk-gr-rulebg: #0f1f19;
+  --color-tk-gr-line3: #23604a;
+  --color-tk-gr-hover: #164031;
+  --color-tk-gr-stroke: #3d6d5b;
+
+  --color-tk-am-bg: #211b0e;
+  --color-tk-am-line: #3a2f13;
+  --color-tk-am-line3: #4a3c17;
+  --color-tk-am-fg: #f0c674;
+  --color-tk-am-line2: #46381a;
+  --color-tk-am-chip: #2a2211;
+  --color-tk-am-bg2: #1d1809;
+  --color-tk-am-fg2: #d8c9a2;
+
+  --color-tk-pu-bg: #171232;
+  --color-tk-pu-line: #372a63;
+  --color-tk-pu-tile: #2b2258;
+  --color-tk-pu-fg: #b8aef5;
+  --color-tk-pu-chipfg: #c5bcfa;
+  --color-tk-pu-deep: #0e0b1e;
+  --color-tk-pu-solid: #6d5ce0;
+  --color-tk-pu-solid2: #7f70ea;
+  --color-tk-pu-sel: #8b7ff0;
+  --color-tk-pu-stroke: #6f66b8;
+  --color-tk-pu-stroke2: #3a3470;
+  --color-tk-pu-stroke3: #8b83cf;
+  --color-tk-pu-stroke4: #4b4390;
+
+  --color-tk-rd-bg: #231114;
+  --color-tk-rd-line: #4d2226;
+  --color-tk-rd-tile: #3a181d;
+  --color-tk-rd-fg: #f08f96;
+  --color-tk-rd-deep: #1a0d10;
+  --color-tk-rd-line2: #6b2a30;
+  --color-tk-rd-fg2: #f6b3b8;
+  --color-tk-rd-hover: #4a1f25;
+}
+
+/**
+ * Ánh xạ token TRUNG TÍNH DÙNG CHUNG sang bảng màu Module Thiết kế, cho toàn bộ workspace.
+ *
+ * Cùng bộ chọn với khối trên, cố ý tách làm hai khối: khối trên là bảng màu RIÊNG của module,
+ * khối này là phần bắc cầu sang hệ token dùng chung. Trộn vào nhau thì lần sau không ai biết
+ * dòng nào chép từ bản mẫu, dòng nào là quyết định của ta.
+ *
+ * Vì sao cần: mọi màn hình trong module dùng lại thành phần chung của cả 12 module —
+ * `Breadcrumb`, `RelatedGroups`, `Button`, `EntityTable`, `EmptyState` — và chúng đọc
+ * `--color-surface`, `--color-fg-subtle`… Không ánh xạ thì trên nền tối, panel "Hồ sơ liên
+ * quan" hiện ra một ô TRẮNG, còn đầu bảng và chữ phụ chìm hẳn vào nền.
+ *
+ * Bản kế hoạch ban đầu định giữ thân các màn hình con ở nền SÁNG như "tờ giấy đặt trên bàn
+ * tối". Mở trình duyệt xem thì hỏng: các panel đó phần lớn trong suốt hoặc dùng
+ * `--color-surface-sunken`, nên chúng nhận nền tối nhưng giữ nguyên màu chữ của chế độ sáng —
+ * bảng chương trình không gian không đọc được một dòng nào (06/09/2026). Nên workspace tối là
+ * tối toàn phần.
+ *
+ * Ở chế độ SÁNG không luật nào khớp, nên token dùng chung giữ nguyên giá trị gốc đã đo tương phản.
+ *
+ * KHÔNG ánh xạ sáu màu trạng thái: nhãn trạng thái là hệ màu ĐÓNG, mỗi nhãn tự mang nền pastel
+ * và chữ đậm của riêng nó nên vẫn đọc được trên nền tối, và đổi chúng là phá hàng rào cứng
+ * nhất của hệ màu (CLAUDE.md 4.3).
+ */
+[data-tk-theme='toi'] {
+  /* Bộ phận do trình duyệt tự vẽ — thanh cuộn, danh sách của `<select>`, bảng lịch của
+     `<input type=date>` — không đọc token của ta. `color-scheme` là cách duy nhất bảo chúng
+     đổi theo. Thiếu dòng này thì một thanh cuộn trắng chạy dọc giữa màn hình tối. */
+  color-scheme: dark;
+
+  --color-surface: var(--color-tk-panel);
+  /* Nền trũng = nền TRANG của bản mẫu, không phải nền ô lõm. Kể từ khi cả khung ứng dụng
+     nằm trong phạm vi này, đây là màu người dùng thấy nhiều nhất. */
+  --color-surface-sunken: var(--color-tk-bg);
+  --color-surface-hover: var(--color-tk-hover);
+  --color-surface-muted: var(--color-tk-hover);
+  --color-surface-subtle: var(--color-tk-card);
+  --color-surface-empty: var(--color-tk-deep);
+  --color-border: var(--color-tk-line);
+  --color-border-dashed: var(--color-tk-line2);
+  /* KHÔNG dùng `--color-tk-line2` cho viền cần thấy rõ: `#25342f` trên nền `#111a17` chỉ đạt
+     ~1,2:1, dưới hẳn ngưỡng 3:1 của WCAG 1.4.11 — viền ô nhập và nút phụ sẽ biến mất. `t3`
+     đạt ~3,7:1. */
+  --color-border-strong: var(--color-tk-t3);
+  --color-fg: var(--color-tk-tx);
+  --color-fg-subtle: var(--color-tk-t2);
+  --color-fg-inverse: var(--color-tk-btn-fg);
+  --color-brand: var(--color-tk-btn);
+  --color-brand-hover: var(--color-tk-btn2);
+  --color-brand-subtle: var(--color-tk-acc-dim);
+}

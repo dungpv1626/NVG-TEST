@@ -22,7 +22,7 @@ import {
 import { ContractError } from './contracts';
 import { createComputeBackend, type ExportDxfRequest } from './compute-backend';
 import { DataClassViolation, ModelNotConfigured } from './llm/router';
-import { geminiClient, modelRouter } from './llm/factory';
+import { geminiClient, modelRouter, renderImageClient } from './llm/factory';
 import { LlmCallFailed } from './llm/gemini';
 import { PublishBridge } from './publish';
 import { ArtifactRepository } from './artifacts';
@@ -36,7 +36,9 @@ import { embeddingText, withheldFields, type RationalePayload } from './kb/ratio
 import { createSourceFileStore, type StoredSource } from './source-files';
 import type { DigitiseParams, DigitiseSource } from './workflows/digitise-steps';
 import { extractSiteBoundary } from './site/extract-boundary';
-import { parseImageDataUrl, renderFromMassing } from './render/render';
+import { describeSite, parseImageDataUrl, renderFromMassing } from './render/render';
+import type { RenderSite } from './render/render';
+import { siteFaces } from './layout/site-context';
 import { renderPrompts } from './render/prompts-data';
 import { siteContextTable } from './layout/site-context-data';
 import { roomGroups } from './kb/vocabulary';
@@ -48,6 +50,8 @@ import {
   VariantsPrerequisiteMissing,
   type VariantContext,
 } from './layout/variants';
+import { ruleCatalogue } from './layout/summary';
+import { rulePackFor } from './program/rule-pack-data';
 import type { DesignEnv } from './env';
 
 export const designApp = new Hono<{ Bindings: DesignEnv }>();
@@ -433,6 +437,12 @@ function variantContext(
     siteContext: siteContextTable(),
     viByType: roomLabels(),
     groups: roomGroups(roomVocabulary().vocabulary),
+    rulesFor: (locality, buildingType) =>
+      ruleCatalogue(
+        rulePackFor(locality).rules,
+        buildingType,
+        roomGroups(roomVocabulary().vocabulary),
+      ),
   };
 }
 
@@ -580,7 +590,12 @@ designApp.get('/floor-plan/:projectId/glb', async (c) => {
   if ('response' in prepared) return prepared.response;
   const { compute, request } = prepared;
   try {
-    const glb = await compute.exportGlb({ floor_plan: request.floor_plan });
+    // Nhóm mã phòng đi kèm: khối ba chiều cần nhóm `outdoor` để dựng lan can thay vì tường
+    // ở cạnh hở của ban công. Container không giữ bảng từ vựng (CLAUDE.md 8.7).
+    const glb = await compute.exportGlb({
+      floor_plan: request.floor_plan,
+      groups: request.groups,
+    });
     return new Response(glb, {
       headers: { 'Content-Type': 'model/gltf-binary', 'Cache-Control': 'private, max-age=300' },
     });
@@ -649,6 +664,7 @@ designApp.post('/render', async (c) => {
     projectId?: string;
     image?: string;
     style?: string | null;
+    view?: string | null;
   };
   if (!body.projectId || !body.image) {
     return c.json({ error: 'Thiếu mã hồ sơ thiết kế hoặc ảnh khối.' }, 400);
@@ -664,14 +680,57 @@ designApp.post('/render', async (c) => {
   const scope = await projectScope(db, body.projectId);
   if (!scope) return c.json({ error: PROJECT_NOT_VISIBLE }, 404);
 
+  // Ngữ cảnh thửa đất: ảnh khối không nói được rằng hai bên đã có nhà xây sát, nên không có vế
+  // này thì mô hình dựng công trình đứng tự do và hay cho nó hai mặt tiền. Đọc từ đầu bài đang
+  // hiệu lực, và CHỈ lấy phần hình học + mã danh mục (`RenderSite`) để lời gọi vẫn ở hạng 3.
+  //
+  // Không có đầu bài, hay đầu bài lập theo hợp đồng cũ, thì bỏ vế ngữ cảnh và vẫn dựng ảnh —
+  // ảnh kém ngữ cảnh vẫn hơn không có ảnh, và đây là tính năng phụ trợ (PRD 5.1).
+  let siteContext: string | null = null;
+  try {
+    const brief = await new ArtifactRepository(c.env).head(
+      body.projectId,
+      'kien_truc',
+      'design_brief',
+    );
+    if (brief) {
+      const payload = brief.payload as RenderSite;
+      siteContext = describeSite(
+        payload,
+        siteFaces(payload.site ?? undefined, siteContextTable()).open,
+        renderPrompts().context,
+      );
+    }
+  } catch (error) {
+    console.error(`[layer5_render] không đọc được đầu bài để dựng ngữ cảnh: ${String(error)}`);
+  }
+
   const outcome = await renderFromMassing({
     router: modelRouter(c.env),
-    client: geminiClient(c.env),
+    // Client chọn theo `provider` của tuyến, không gắn cứng một hãng — xem `llm/factory.ts`.
+    client: renderImageClient(c.env),
     prompts: renderPrompts(),
     image,
     style: body.style ?? null,
+    view: body.view ?? null,
+    siteContext,
   });
   return c.json(outcome);
+});
+
+/**
+ * Danh sách khung hình phối cảnh dựng được — mã, nhãn tiếng Việt, góc chụp ảnh khối.
+ *
+ * Có endpoint riêng để giao diện KHÔNG phải giữ bản sao thứ hai của danh sách này: nhãn
+ * "Toàn cảnh ban ngày" và mã `ngay` nằm ở `kb/render_prompts.yaml`, thêm một khung hình là
+ * thêm một mục ở đó. Lời dẫn KHÔNG trả ra — trình duyệt không cần và không nên có.
+ */
+designApp.get('/render/views', (c) => {
+  const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+  return c.json({
+    views: renderPrompts().views.map(({ id, vi, camera }) => ({ id, vi, camera })),
+  });
 });
 
 /**

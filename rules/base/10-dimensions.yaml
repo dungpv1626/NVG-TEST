@@ -91,6 +91,122 @@
   source: 'kinh nghiệm NVG'
   auto_repair: shrink_adjacent
 
+# ── Cạnh nhỏ nhất của các phòng còn lại ────────────────────────────────────────────────
+# Thêm 06/09/2026 sau khi đo trên chính bản vẽ demo: vệ sinh 4,10 × 1,00 m · kho 4,10 × 1,00 m
+# · giặt 0,60 × 8,30 m · ban công 0,40 × 9,00 m. Cả bốn đều HỢP LỆ theo bộ quy tắc cũ, vì
+# `min_dimension` khi đó chỉ khai cho hành lang, thang và phòng ngủ — một khu vệ sinh thoả
+# `min_area_wc` 2,4 m² bằng một dải rộng đúng một mét mà không quy tắc nào chặn.
+#
+# Các con số dưới đây là MẶC ĐỊNH CỦA TEAM, chưa có kiến trúc sư NVG soát (Q-29) — nên nguồn
+# ghi là kinh nghiệm và mức là cảnh báo, đúng ranh giới ở `rules/README.md`. Chúng vào hàm
+# mục tiêu của bộ giải chứ không chặn phát hành.
+
+- id: room_min_dimension_wc
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: min_dimension
+  target: wc
+  value_m: 1.2
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: shrink_adjacent
+
+- id: room_min_dimension_kitchen
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: min_dimension
+  target: kitchen
+  value_m: 1.8
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: shrink_adjacent
+
+# Bề rộng lọt lòng đủ cho một ô tô con đỗ và mở cửa. Nhỏ hơn thì đó là chỗ để xe máy, và
+# NVG cần nói rõ điều đó trong đầu bài chứ không để bộ giải quyết hộ.
+- id: room_min_dimension_garage
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: min_dimension
+  target: garage
+  value_m: 2.4
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: shrink_adjacent
+
+- id: room_min_dimension_storage
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: min_dimension
+  target: storage
+  value_m: 1.0
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: shrink_adjacent
+
+- id: room_min_dimension_laundry
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: min_dimension
+  target: laundry
+  value_m: 1.2
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: shrink_adjacent
+
+# Chiều sâu ban công. `min_dimension` ràng buộc CẢ HAI cạnh, nên đây vừa là chiều sâu vừa là
+# bề rộng tối thiểu — một ban công 0,4 m thì không ai đứng được, dù nó dài bao nhiêu.
+- id: room_min_dimension_balcony
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: min_dimension
+  target: balcony
+  value_m: 1.2
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: shrink_adjacent
+
+# ── Tỉ lệ dài trên rộng cho hai nhóm còn lại ───────────────────────────────────────────
+# `aspect_ratio_max_habitable` đã có từ trước nhưng nhóm `habitable` KHÔNG gồm vệ sinh, kho,
+# giặt, để xe hay ban công (`kb/room_vocabulary.yaml` mục `group_targets`) — nên đúng những
+# phòng dễ bị bóp thành dải hẹp lại là những phòng không quy tắc nào nhìn tới.
+#
+# Nhóm `circulation` cố ý KHÔNG có quy tắc tỉ lệ: hành lang dài và hẹp là đúng bản chất của
+# nó, và một cảnh báo sai loại đó làm kiến trúc sư quen bỏ qua cả danh sách.
+- id: aspect_ratio_max_service
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: aspect_ratio_max
+  target: service
+  value: 3.0
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: shrink_adjacent
+
+- id: aspect_ratio_max_outdoor
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: aspect_ratio_max
+  target: outdoor
+  value: 4.0
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: shrink_adjacent
+
+# ── Giếng trời ─────────────────────────────────────────────────────────────────────────
+# Cận TRÊN, không phải cận dưới. Cây chia lấp kín mặt sàn nên phần sàn không phòng nào nhận
+# rơi hết vào khoảng rỗng, và trước 06/09/2026 không có gì chặn: bản vẽ demo có giếng trời
+# 33–37 m² trên sàn 90 m². Bề rộng tối thiểu của giếng trời đã lấy theo quy tắc hành lang
+# (`corridor_min_width`) ngay trong bộ giải — cùng con số, cùng lý do.
+- id: lightwell_max_area
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: max_area
+  target: lightwell
+  value_m2: 8.0
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: shrink_adjacent
+
 - id: module_grid_100mm
   applies_to: [nha_pho, biet_thu, nha_vuon]
   scope: building

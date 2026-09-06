@@ -1,10 +1,15 @@
 /**
- * Chi tiết Dự án thiết kế — "Hồ sơ 360°" (Webapp Flow 4.3), các tab đúng theo hành trình
- * 3.3: Đầu bài → Khảo sát → Phương án → Hồ sơ kỹ thuật → Phiên bản bản vẽ → Dự toán →
- * Yêu cầu thay đổi, và nút Bàn giao thi công ở header.
+ * Chi tiết Dự án thiết kế — "Hồ sơ 360°" (Webapp Flow 4.3), hành trình 3.3: Đầu bài → Khảo
+ * sát → Phương án → Hồ sơ kỹ thuật → Phiên bản bản vẽ → Dự toán → Yêu cầu thay đổi, và nút
+ * Bàn giao thi công ở header.
  *
- * Các tab là những KHÍA CẠNH của cùng một hồ sơ, không phải các trang riêng — nên chúng
- * dùng chung một đường dẫn và tab hiện tại nằm ở `?tab=`.
+ * Các tab là những KHÍA CẠNH của cùng một hồ sơ, không phải các trang riêng — nên chúng dùng
+ * chung một đường dẫn và tab hiện tại nằm ở `?tab=`. Điều đó KHÔNG đổi khi đổi giao diện.
+ *
+ * Đổi ở đây (06/09/2026) chỉ là VỎ: thay `EntityDetail` bằng `DesignWorkspace` của riêng
+ * Module Thiết kế, dựng theo bộ bàn giao thiết kế. Bốn tab cấp một nằm trên thanh tab, sáu
+ * bước quy trình thành màn hình con mở từ thẻ công cụ ở Tổng quan — xem chú thích đầu
+ * `design-workspace.tsx`. Nội dung từng tab giữ nguyên component cũ, không sửa một dòng.
  */
 
 import { useState } from 'react';
@@ -20,8 +25,9 @@ import {
 import { DraftContractButton } from '@/components/contract/draft-contract-button';
 import { BoqPanel } from '@/components/estimate/boq-panel';
 import { EstimatePanel } from '@/components/estimate/estimate-panel';
-import { DetailFields, EntityDetail, RecordNotFound } from '@/components/entity/entity-detail';
+import { DetailFields, RecordNotFound } from '@/components/entity/entity-detail';
 import { Button } from '@/components/ui/button';
+import { SectionHelp } from '@/components/ui/section-help';
 import { CardGridSkeleton, ErrorState } from '@/components/ui/states';
 import { useContractForSource } from '@/hooks/use-contracts';
 import {
@@ -33,6 +39,9 @@ import {
 } from '@/hooks/use-design-projects';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { companyCodeOf, useAuth, useCan } from '@/lib/auth';
+import { DesignWorkspace } from './design-workspace';
+import { DESIGN_HELP } from './help-texts';
+import { OverviewPanel } from './overview/overview-panel';
 import { BriefPanel } from './brief-panel';
 import { ChangeRequestPanel } from './change-request-panel';
 import { DisciplinePanel } from './discipline-panel';
@@ -98,73 +107,85 @@ export function DesignDetailPage() {
     );
   }
 
-  const actions =
-    canEdit && project.handed_over_at === null && project.stage !== 'dung_thiet_ke' ? (
-      <>
-        {project.stage === 'phuong_an' && (
+  /**
+   * Hàng nút của header (bản mẫu §5.4 có hai nút: hướng dẫn và hành động chính).
+   *
+   * Nút hướng dẫn LUÔN có, kể cả với người chỉ được xem — người xem cũng cần hiểu màn hình
+   * đang bày cái gì. Còn "Tạo phương án mới" của bản mẫu nằm ở chân thẻ AI phương án chứ
+   * không ở đây: mỗi màn hình chỉ được có MỘT hành động chính (CGD 6.3), và ở màn hình này
+   * hành động đó là "Bàn giao thi công" — điểm kết của cả module.
+   */
+  const actions = (
+    <>
+      <SectionHelp {...DESIGN_HELP.workspace} triggerLabel="Hướng dẫn sử dụng" />
+      {canEdit && project.handed_over_at === null && project.stage !== 'dung_thiet_ke' && (
+        <>
+          {project.stage === 'phuong_an' && (
+            <Button
+              variant="secondary"
+              onClick={() =>
+                void run(() =>
+                  moveStage.mutateAsync({ projectId: project.id, stage: 'cho_khach_duyet' }),
+                )
+              }
+            >
+              Gửi khách hàng duyệt phương án
+            </Button>
+          )}
+          {project.stage === 'dau_bai' && (
+            <Button
+              variant="secondary"
+              onClick={() =>
+                void run(() => moveStage.mutateAsync({ projectId: project.id, stage: 'phuong_an' }))
+              }
+            >
+              Bắt đầu dựng phương án
+            </Button>
+          )}
+          {project.stage === 'ho_so_ky_thuat' && (
+            <Button
+              variant="secondary"
+              onClick={() =>
+                void run(() => moveStage.mutateAsync({ projectId: project.id, stage: 'du_toan' }))
+              }
+            >
+              Chuyển sang lập dự toán
+            </Button>
+          )}
+          {/* Webapp Flow 3.3 bước 5: dự toán xong thì gửi Kinh doanh chốt với khách và ký. */}
+          {project.stage === 'du_toan' && (
+            <DraftContractButton
+              sourceType="design_projects"
+              sourceId={project.id}
+              defaultType="thiet_ke"
+              existingContractId={contractId}
+            />
+          )}
           <Button
-            variant="secondary"
+            variant="primary"
+            disabled={blockingCount > 0 || handover.isPending}
+            title={
+              blockingCount > 0
+                ? `Còn ${blockingCount} hạng mục chưa đồng bộ. Xem tab Hồ sơ kỹ thuật.`
+                : undefined
+            }
             onClick={() =>
-              void run(() =>
-                moveStage.mutateAsync({ projectId: project.id, stage: 'cho_khach_duyet' }),
+              void run(
+                () => handover.mutateAsync({ projectId: project.id }),
+                (notified) =>
+                  setNotice(`Đã bàn giao hồ sơ thi công và thông báo cho ${notified} người.`),
               )
             }
           >
-            Gửi khách hàng duyệt phương án
+            Bàn giao thi công
           </Button>
-        )}
-        {project.stage === 'dau_bai' && (
-          <Button
-            variant="secondary"
-            onClick={() =>
-              void run(() => moveStage.mutateAsync({ projectId: project.id, stage: 'phuong_an' }))
-            }
-          >
-            Bắt đầu dựng phương án
+          <Button variant="secondary" onClick={stopDesign}>
+            Dừng thiết kế
           </Button>
-        )}
-        {project.stage === 'ho_so_ky_thuat' && (
-          <Button
-            variant="secondary"
-            onClick={() =>
-              void run(() => moveStage.mutateAsync({ projectId: project.id, stage: 'du_toan' }))
-            }
-          >
-            Chuyển sang lập dự toán
-          </Button>
-        )}
-        {/* Webapp Flow 3.3 bước 5: dự toán xong thì gửi Kinh doanh chốt với khách và ký. */}
-        {project.stage === 'du_toan' && (
-          <DraftContractButton
-            sourceType="design_projects"
-            sourceId={project.id}
-            defaultType="thiet_ke"
-            existingContractId={contractId}
-          />
-        )}
-        <Button
-          variant="primary"
-          disabled={blockingCount > 0 || handover.isPending}
-          title={
-            blockingCount > 0
-              ? `Còn ${blockingCount} hạng mục chưa đồng bộ. Xem tab Hồ sơ kỹ thuật.`
-              : undefined
-          }
-          onClick={() =>
-            void run(
-              () => handover.mutateAsync({ projectId: project.id }),
-              (notified) =>
-                setNotice(`Đã bàn giao hồ sơ thi công và thông báo cho ${notified} người.`),
-            )
-          }
-        >
-          Bàn giao thi công
-        </Button>
-        <Button variant="secondary" onClick={stopDesign}>
-          Dừng thiết kế
-        </Button>
-      </>
-    ) : undefined;
+        </>
+      )}
+    </>
+  );
 
   return (
     <>
@@ -182,7 +203,7 @@ export function DesignDetailPage() {
         </p>
       )}
 
-      <EntityDetail
+      <DesignWorkspace
         breadcrumbs={[
           { label: 'Thiết kế' },
           { label: 'Dự án thiết kế', to: '/tk/du-an' },
@@ -191,70 +212,46 @@ export function DesignDetailPage() {
         title={project.name}
         code={project.code}
         status={designDisplayStatus(project.stage, project.handover_deadline)}
-        responsiblePerson={project.responsible?.full_name ?? null}
         deadline={project.handover_deadline}
+        meta={[
+          DESIGN_STAGE_META[project.stage].label,
+          <>
+            Người chịu trách nhiệm{' '}
+            <span className="text-tk-tx">{project.responsible?.full_name ?? 'chưa phân công'}</span>
+          </>,
+          project.handover_deadline ? (
+            <>
+              Hạn bàn giao{' '}
+              <span className="text-tk-tx">{formatDate(project.handover_deadline)}</span>
+            </>
+          ) : null,
+        ]}
         actions={actions}
+        primaryTabIds={['tong-quan', 'phien-ban', 'thay-doi']}
         tabs={[
           {
             id: 'tong-quan',
             label: 'Tổng quan',
             content: (
-              <>
-                <DetailFields
-                  fields={[
-                    { label: 'Bước hiện tại', value: DESIGN_STAGE_META[project.stage].label },
-                    {
-                      label: 'Khách hàng',
-                      value: project.customer ? (
-                        <Link
-                          to={`/crm/khach-hang/${project.customer.id}`}
-                          className="font-medium text-brand hover:underline"
-                        >
-                          {project.customer.name}
-                        </Link>
-                      ) : (
-                        EM_DASH
-                      ),
-                    },
-                    {
-                      label: 'Hạn bàn giao hồ sơ',
-                      value: project.handover_deadline
-                        ? formatDate(project.handover_deadline)
-                        : EM_DASH,
-                    },
-                    { label: 'Địa điểm khu đất', value: project.site_address ?? EM_DASH },
-                    {
-                      label: 'Nguyên nhân dừng thiết kế',
-                      value: project.stopped_reason ?? EM_DASH,
-                    },
-                  ]}
-                />
-                <label className="mt-4 block">
-                  <span className="block font-medium">Ghi chú</span>
-                  {readOnly ? (
-                    <p className="mt-1 whitespace-pre-wrap">{project.notes ?? EM_DASH}</p>
-                  ) : (
-                    <textarea
-                      defaultValue={project.notes ?? ''}
-                      rows={3}
-                      className="mt-1 w-full rounded-sm border border-border bg-surface px-3 py-2"
-                      onBlur={(e) =>
-                        void run(() =>
-                          updateProject.mutateAsync({
-                            id: project.id,
-                            changes: { notes: e.target.value.trim() || null },
-                          }),
-                        )
-                      }
-                    />
-                  )}
-                </label>
-              </>
+              <OverviewPanel
+                project={project}
+                readOnly={readOnly}
+                onSaveNotes={(value) =>
+                  void run(() =>
+                    updateProject.mutateAsync({
+                      id: project.id,
+                      changes: { notes: value.trim() || null },
+                    }),
+                  )
+                }
+              />
             ),
           },
           {
             id: 'dau-bai',
-            label: 'Đầu bài',
+            label: 'Đầu bài thiết kế',
+            subtitle:
+              'Chuẩn hoá yêu cầu khách hàng thành dữ liệu có cấu trúc cho Lớp 1 của engine.',
             content: (
               <BriefPanel
                 projectId={project.id}
@@ -266,6 +263,7 @@ export function DesignDetailPage() {
           {
             id: 'khao-sat',
             label: 'Khảo sát hiện trạng',
+            subtitle: 'Số đo, ảnh và ghi chú hiện trạng khu đất — đầu vào của đầu bài.',
             content: (
               <SurveyPanel
                 projectId={project.id}
@@ -277,11 +275,15 @@ export function DesignDetailPage() {
           {
             id: 'chuong-trinh-khong-gian',
             label: 'Chương trình không gian',
+            subtitle:
+              'Danh sách phòng, diện tích và tầng — kết quả Lớp 2, chốt trước khi sinh phương án.',
             content: <ProgramPanel projectId={project.id} readOnly={readOnly} />,
           },
           {
             id: 'phuong-an',
             label: 'Phương án kiến trúc',
+            subtitle:
+              'Phương án do bộ giải sinh, bản vẽ, khối ba chiều, thống kê và phối cảnh tham khảo.',
             content: (
               <div className="space-y-8">
                 {/* Phương án do engine sinh (TK-12) đứng trước; bên dưới là các bản phương án
@@ -300,6 +302,7 @@ export function DesignDetailPage() {
           {
             id: 'ho-so-ky-thuat',
             label: 'Hồ sơ kỹ thuật',
+            subtitle: 'Tiến độ ba bộ môn và các hạng mục còn chặn bàn giao thi công.',
             content: (
               <DisciplinePanel
                 projectId={project.id}
@@ -324,6 +327,7 @@ export function DesignDetailPage() {
           {
             id: 'du-toan',
             label: 'Dự toán',
+            subtitle: 'Khối lượng và dự toán lập trên phương án đã chọn.',
             content: (
               <div className="space-y-4">
                 <BoqPanel

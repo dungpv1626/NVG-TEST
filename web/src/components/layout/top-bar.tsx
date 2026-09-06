@@ -17,8 +17,10 @@ import { usePendingApprovals } from '@/hooks/use-approvals';
 import { SEARCH_MIN_LENGTH, useGlobalSearch, type GlobalSearchResult } from '@/hooks/use-search';
 import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
+import { TkThemeToggle } from '@/pages/tk/tk-theme';
 import { CompanySwitcher } from './company-switcher';
 import { NotificationBell } from './notification-bell';
+import { useTkScope } from './tk-chrome';
 
 /** Nhãn tiếng Việt trong nhóm module — bổ sung cho tên module khi một module có nhiều loại
  * hồ sơ khác nhau (CRM gồm cả khách hàng lẫn cơ hội). */
@@ -49,9 +51,10 @@ function groupByModule(
   return groups;
 }
 
-function GlobalSearchBox() {
+function GlobalSearchBox({ tk }: { tk: boolean }) {
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [rawQuery, setRawQuery] = useState('');
   const [term, setTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -64,6 +67,23 @@ function GlobalSearchBox() {
 
   const { data: results, isFetching } = useGlobalSearch(term);
   const groups = groupByModule(results ?? []);
+
+  /**
+   * Ctrl+K (Cmd+K trên máy Mac) đưa con trỏ vào ô tìm kiếm — bản mẫu §8 có chip nhắc phím này.
+   * Gắn phím tắt cho MỌI module chứ không riêng Thiết kế: phím tắt là hành vi, không phải màu
+   * sắc, và một phím chỉ chạy ở một module là thứ người dùng không đoán được. Chỉ cái CHIP là
+   * riêng của Thiết kế, vì nó là chi tiết thị giác của bản mẫu.
+   */
+  useEffect(() => {
+    function handleShortcut(event: KeyboardEvent) {
+      if (event.key.toLowerCase() !== 'k' || !(event.ctrlKey || event.metaKey)) return;
+      event.preventDefault();
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+    document.addEventListener('keydown', handleShortcut);
+    return () => document.removeEventListener('keydown', handleShortcut);
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -85,14 +105,18 @@ function GlobalSearchBox() {
   const showPanel = isOpen && rawQuery.trim().length >= SEARCH_MIN_LENGTH;
 
   return (
-    <div ref={containerRef} className="relative min-w-0 max-w-md flex-1">
+    <div
+      ref={containerRef}
+      className={cn('relative min-w-0 flex-1', tk ? 'max-w-[420px]' : 'max-w-md')}
+    >
       <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-fg-subtle" />
       <input
+        ref={inputRef}
         type="search"
         role="combobox"
         aria-expanded={showPanel}
         aria-controls="global-search-results"
-        placeholder="Tìm hồ sơ, khách hàng, vật tư…"
+        placeholder={tk ? 'Tìm dự án, khách hàng, bản vẽ…' : 'Tìm hồ sơ, khách hàng, vật tư…'}
         value={rawQuery}
         onChange={(e) => {
           setRawQuery(e.target.value);
@@ -103,11 +127,24 @@ function GlobalSearchBox() {
           if (e.key === 'Escape') setIsOpen(false);
         }}
         className={cn(
-          'h-10 w-full rounded-md border border-border sm:h-8',
-          'bg-surface-muted pl-8 pr-3',
+          'w-full rounded-md border border-border',
+          'bg-surface-muted pl-8',
           'placeholder:text-fg-subtle',
+          tk ? 'h-9 pr-20' : 'h-10 pr-3 sm:h-8',
         )}
       />
+      {/* Chip nhắc phím tắt. Chỉ là nhắc — phím tắt tự nó luôn chạy, xem `handleShortcut`. */}
+      {tk && (
+        <span
+          aria-hidden
+          className={cn(
+            'pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2',
+            'rounded-xs border border-border px-1.5 py-0.5 text-xs text-fg-subtle',
+          )}
+        >
+          Ctrl K
+        </span>
+      )}
 
       {showPanel && (
         <div
@@ -214,6 +251,7 @@ function IconButton({
 
 export function TopBar() {
   const { profile, signOut } = useAuth();
+  const tk = useTkScope();
   // Dùng CHUNG truy vấn với Hộp thư Phê duyệt: nếu đếm bằng một truy vấn riêng,
   // hai con số sẽ lệch nhau ngay khi điều kiện lọc đổi ở một bên.
   const { data: pending } = usePendingApprovals();
@@ -222,10 +260,16 @@ export function TopBar() {
   return (
     <header
       className={cn(
-        'flex h-12 shrink-0 items-center gap-3 border-b border-border bg-surface px-4',
-        // Panel nổi bo góc từ lg: trở lên (thay thanh full-bleed) — DESIGN_SYSTEM.md.
-        // Dưới lg: giữ nguyên thanh full-bleed cũ, vì bản demo chỉ thiết kế cho desktop.
-        'lg:rounded-lg lg:border',
+        'flex shrink-0 items-center border-b border-border',
+        tk
+          ? // Bản mẫu §5.3: cao 60px, sát mép, đệm ngang 24px, chỉ một đường viền dưới.
+            'h-15 gap-4 bg-tk-bg px-6'
+          : cn(
+              'h-12 gap-3 bg-surface px-4',
+              // Panel nổi bo góc từ lg: trở lên (thay thanh full-bleed) — DESIGN_SYSTEM.md.
+              // Dưới lg: giữ nguyên thanh full-bleed cũ, vì bản demo chỉ thiết kế cho desktop.
+              'lg:rounded-lg lg:border',
+            ),
       )}
     >
       {/* Pháp nhân đang chọn — trên máy tính nằm ở sidebar, ở điện thoại sidebar ẩn nên
@@ -238,7 +282,7 @@ export function TopBar() {
       {/* Tìm kiếm toàn hệ thống — Webapp Flow 5.3.
           Tìm trên TẤT CẢ module người dùng có quyền xem, không phải tìm riêng từng module —
           RLS của từng bảng nguồn tự lọc, xem `global_search` (migration 0057). */}
-      <GlobalSearchBox />
+      <GlobalSearchBox tk={tk} />
 
       <div className="ml-auto flex items-center gap-1">
         {/* Thông báo và Việc cần làm tách thành hai danh sách riêng (Webapp Flow 5.4),
@@ -251,6 +295,9 @@ export function TopBar() {
           <CheckSquare className="size-4" />
         </IconButton>
         <NotificationBell />
+        {/* Nút chuyển sáng/tối chỉ có nghĩa trong Module Thiết kế — 11 module còn lại chưa có
+            chế độ tối (Content Guidelines 6.7), bày nút ở đó là hứa một thứ không tồn tại. */}
+        {tk && <TkThemeToggle />}
 
         <DropdownMenu.Root>
           <DropdownMenu.Trigger
@@ -271,7 +318,20 @@ export function TopBar() {
             >
               {profile?.fullName?.trim().split(/\s+/).at(-1)?.[0] ?? '?'}
             </span>
-            <span className="hidden max-w-40 truncate sm:inline">{profile?.fullName}</span>
+            {tk ? (
+              // Bản mẫu §5.3 bày tên kèm chức danh — ở màn hình dùng chung nhiều pháp nhân,
+              // biết mình đang đăng nhập bằng vai trò nào là thông tin có ích, không phải trang trí.
+              <span className="hidden min-w-0 flex-col items-start leading-tight sm:flex">
+                <span className="max-w-40 truncate">{profile?.fullName}</span>
+                {profile?.jobTitle && (
+                  <span className="max-w-40 truncate text-xs text-fg-subtle">
+                    {profile.jobTitle}
+                  </span>
+                )}
+              </span>
+            ) : (
+              <span className="hidden max-w-40 truncate sm:inline">{profile?.fullName}</span>
+            )}
           </DropdownMenu.Trigger>
 
           <DropdownMenu.Portal>

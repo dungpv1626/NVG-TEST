@@ -940,6 +940,17 @@ mục 8.2, ghi lại ở đây để không phải suy lại từ đầu.
    được phép tự phát hành) · `title_block.yaml` (**ba** họ quy ước khung tên, kèm danh sách
    ô là dữ liệu hạng 1 phải LOẠI) · `text_encoding.yaml` (giải mã TCVN3).
 
+   Thêm 06/09/2026: vị từ **`requires_face`** (`face: access | open`) trong `rules/` — phòng
+   phải giáp một MẶT cụ thể của hình bao, không nhận phương án thay thế. Khác `requires_daylight`
+   ở đúng chỗ đó, và đó là toàn bộ lý do nó tồn tại: một chỗ để xe lấy sáng qua giếng trời vẫn
+   là chỗ để xe mà ô tô không vào được. Nó là ràng buộc CẤU TRÚC (suy từ cây chia, không phụ
+   thuộc toạ độ), nên mức `warning` cố ý không thêm gì vào mô hình — chỗ sửa được là Lớp 3a,
+   xếp phòng vào dải giáp đúng mặt ngay từ ý đồ. Đi kèm là mục `outdoor` của
+   `construction_norms.yaml`: cạnh giáp mặt thoáng của ban công là **lan can**, không phải
+   tường, và phép suy "đoạn nào là lan can" nằm ở **một nơi** (`geometry/outdoor.py`) dùng chung
+   cho tờ bản vẽ và khối ba chiều. Phải xét theo ĐOẠN, không theo cả bức: tường mặt tiền chạy
+   chung cho ban công và phòng bên cạnh.
+
    ⚠️ **Trước khi ghi một con số vào `kb/`, hỏi nó thuộc tầng nào.** Từ vựng và quy ước thì
    **n = 1 đã đủ** — thấy một lần nghĩa là nó có thật. Định mức và phân bố thì **cần 15 công
    trình** (`space_norms.yaml`, `priors.min_samples`); ghi vào từ hai hồ sơ là biến trùng hợp

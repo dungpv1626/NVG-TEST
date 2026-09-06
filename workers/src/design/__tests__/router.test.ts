@@ -74,22 +74,33 @@ describe('config/models.yaml', () => {
    *   `layer3_intent_hard` — nhóm `pro`. Đo 29/08/2026: `gemini-pro-latest` trả 429,
    *   `gemini-2.5-pro` trả 404 "no longer available to new users".
    *
-   *   `layer5_render` — nhóm sinh ảnh. Đo 05/09/2026: `gemini-2.5-flash-image` và
-   *   `gemini-3.1-flash-image` đều trả 429 RESOURCE_EXHAUSTED, trong khi `gemini-2.5-flash`
-   *   (chữ) gọi ngay sau đó vẫn OK. Tức khoá không hết hạn mức nói chung, nó không có hạn
-   *   mức SINH ẢNH.
+   * Nhóm SINH ẢNH của Gemini cũng không có hạn mức (đo 05 và 06/09/2026: `limit: 0`), nhưng
+   * tuyến phối cảnh KHÔNG vì thế mà tắt — nó đã đổi sang nhà cung cấp khác, xem test dưới.
    *
-   * Cả hai chỉ bật lại khi nâng gói trả phí, không sớm hơn. Thêm tên thứ ba vào đây phải kèm
-   * một phép đo, không phải một phỏng đoán.
+   * Thêm tên thứ hai vào đây phải kèm một phép đo, không phải một phỏng đoán.
    */
   it('chỉ những đầu ra không có hạn mức trên gói miễn phí còn tắt, và tắt có lý do', () => {
     const off = Object.entries(config.routes)
       .filter(([, route]) => !route.enabled)
       .map(([name]) => name)
       .sort();
-    expect(off).toEqual(['layer3_intent_hard', 'layer5_render']);
+    expect(off).toEqual(['layer3_intent_hard']);
     expect(config.routes.layer3_intent_hard?.model).toMatch(/pro/);
-    expect(config.routes.layer5_render?.model).toMatch(/image/);
+  });
+
+  /**
+   * Tuyến phối cảnh: nhà cung cấp hết hạn mức thì ĐỔI NHÀ CUNG CẤP, không tắt tính năng.
+   *
+   * Đây là chỗ dễ quay về trạng thái cũ nhất: chỉ cần ai đó đổi `provider` về `gemini` cho
+   * "gọn" là tính năng chết lặng — Gemini gói miễn phí trả `limit: 0` cho mọi mô hình sinh
+   * ảnh, và người dùng chỉ thấy dòng "chưa dựng được ảnh".
+   */
+  it('tuyến phối cảnh bật, và nhà cung cấp nào cũng phải khai đủ thứ nó cần', () => {
+    const route = config.routes.layer5_render;
+    expect(route?.enabled).toBe(true);
+    expect(route?.max_data_class).toBe(3); // ảnh khối là hạng 3 — KHÔNG được hạ xuống 2 hay 1.
+    // Nhà cung cấp không suy được địa chỉ từ tên mô hình thì phải khai `endpoint`.
+    if (route?.provider !== 'gemini') expect(route?.endpoint).toMatch(/^https:\/\//);
   });
 
   it('đầu ra nhúng khai số chiều, và số chiều đó đánh chỉ mục được', () => {
@@ -110,7 +121,7 @@ describe('config/models.yaml', () => {
 });
 
 describe('Lớp chặn hạng dữ liệu', () => {
-  const router = new ModelRouter(config, 'khoa-gia-de-test');
+  const router = new ModelRouter(config, { gemini: 'khoa-gia-de-test' });
 
   it('chặn dữ liệu hạng 1 tới đầu ra gói miễn phí', () => {
     expect(() => router.resolve('layer1_brief', 1)).toThrow(DataClassViolation);
@@ -162,7 +173,7 @@ describe('Lớp chặn hạng dữ liệu', () => {
       routes: { probe: { provider: 'p', model: 'm', max_data_class: 3 as const, enabled: true } },
     };
     expect(() => new ModelRouter(enabled).resolve('probe', 3)).toThrow(/khoá API/);
-    expect(new ModelRouter(enabled, 'k').resolve('probe', 3).model).toBe('m');
+    expect(new ModelRouter(enabled, { p: 'k' }).resolve('probe', 3).model).toBe('m');
   });
 
   it('đầu ra khai hạng 1 nhận được CẢ BA hạng — chốt chiều so sánh', () => {
@@ -173,7 +184,7 @@ describe('Lớp chặn hạng dữ liệu', () => {
       ...config,
       routes: { safe: { provider: 'p', model: 'm', max_data_class: 1 as const, enabled: true } },
     };
-    const r = new ModelRouter(trusted, 'k');
+    const r = new ModelRouter(trusted, { p: 'k' });
     for (const dc of DATA_CLASSES) expect(r.allows('safe', dc)).toBe(true);
     expect(r.resolve('safe', 1).model).toBe('m');
   });

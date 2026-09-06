@@ -538,7 +538,9 @@ describe('Đọc nhu cầu viết bằng lời', () => {
       fileURLToPath(new URL('../../../../config/models.yaml', import.meta.url)),
       'utf-8',
     );
-    const llm = new GeminiClient(new ModelRouter(parseModelConfig(modelsYaml), 'khoa-gia-lap'));
+    const llm = new GeminiClient(
+      new ModelRouter(parseModelConfig(modelsYaml), { gemini: 'khoa-gia-lap' }),
+    );
     const result = await resolveNeeds(['cần một phòng xông hơi ở tầng áp mái'], vocabulary, llm);
 
     expect(result.unresolved).toHaveLength(1);

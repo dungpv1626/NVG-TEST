@@ -23,7 +23,8 @@ tự thẳng hàng, tầng nào chia khác thì tách ra — và chỗ tách ra 
 Vị từ đã mã hoá
 ---------------
 `min_dimension` · `min_area` · `max_area` · `aspect_ratio_max` · `requires_daylight` ·
-`requires_access` · `adjacency` · `aligned_across_floors` · `setback` · `max_density`.
+`requires_access` · `requires_face` · `adjacency` · `aligned_across_floors` · `setback` ·
+`max_density`.
 `module_multiple` đúng theo cấu trúc vì bộ giải làm việc bằng số module nguyên.
 `floor_preference` do Lớp 2 quyết định (phòng nào ở tầng nào) nên bộ giải chỉ KIỂM, xem
 `evaluate.py`.
@@ -498,6 +499,7 @@ class _Builder:
         self._align_cores()
         self._apply_daylight()
         self._apply_access()
+        self._apply_face()
         self._apply_adjacency()
 
         if self.soft_terms:
@@ -557,6 +559,27 @@ class _Builder:
             lit = self._assume(self._entry(corridor[1], key))
             self.m.Add(rect.w >= units).OnlyEnforceIf(lit)
             self.m.Add(rect.h >= units).OnlyEnforceIf(lit)
+
+        # Và cận TRÊN, tra theo chính LOẠI khoảng rỗng (`lightwell`, `atrium`, `courtyard`).
+        #
+        # Không có nó thì khoảng rỗng là thứ duy nhất trong mô hình không mang chi phí nào:
+        # không diện tích mong muốn, không cận trên, không phạt. Cây chia lấp kín mặt sàn, nên
+        # mọi mét vuông không phòng nào mong muốn đổ hết vào đây — đo được trên bản vẽ demo
+        # 06/09/2026: giếng trời 33 m² và 37 m² trên sàn 90 m².
+        #
+        # Là KHOẢN PHẠT chứ không phải ràng buộc cứng, cùng lý do với cận trên của phòng: mặt
+        # sàn phải chia hết, nên một cận trên cứng ở đây biến mọi tầng rộng hơn chương trình
+        # thành vô nghiệm.
+        cap = threshold_for_target(
+            _scoped(rules_for(self.req.rule_pack, self.req.building_type, "max_area"), "floor"),
+            kind,
+            "value_m2",
+            self.req.room_groups,
+        )
+        if cap is not None:
+            over = self.m.NewIntVar(0, self.W * self.D, f"soft::void_over::{key}")
+            self.m.Add(over >= rect.area - m2_to_units2_floor(cap[0]))
+            self._soft(_W_OVER_MAX_AREA, over)
 
     def _place_room(self, level: int, room_id: str, path: str, x0, x1, y0, y1) -> None:
         room = self.rooms_by_id.get(room_id)
@@ -812,6 +835,35 @@ class _Builder:
                 miss = self.m.NewIntVar(0, 1, f"soft::daylight::{room_id}.miss")
                 self.m.Add(miss == 1 - lit)
                 self._soft(_W_ADJACENCY, miss)
+
+    def _apply_face(self) -> None:
+        """`requires_face` — phòng phải tiếp giáp mặt vào được, hoặc mặt thoáng.
+
+        Đây là ràng buộc CẤU TRÚC thuần: `room_faces` suy từ cây chia, không phụ thuộc toạ độ.
+        Nên chỉ có hai kết cục, và cả hai đều biết TRƯỚC khi giải — thoả, hoặc không đời nào
+        thoả. Không có gì cho bộ giải xoay xở.
+
+        Vì vậy mức `warning` cố ý KHÔNG thêm gì vào mô hình: một khoản phạt hằng số cộng vào
+        hàm mục tiêu không đổi được nghiệm nào, chỉ làm mọi nghiệm cùng xấu đi một lượng bằng
+        nhau. Vi phạm vẫn hiện ra đầy đủ, do `evaluate.py` đo trên nghiệm. Chỗ thật sự sửa
+        được là Lớp 3a — xếp phòng vào dải giáp đúng mặt ngay từ ý đồ bố cục.
+        """
+        rules = _scoped(
+            rules_for(self.req.rule_pack, self.req.building_type, "requires_face"), "floor"
+        )
+        if not rules:
+            return
+        for room_id in self.room_rects:
+            room = self.rooms_by_id[room_id]
+            rule = _rule_for_room(rules, room, self.req.room_groups)
+            if rule is None or rule.severity is not Severity.ERROR:
+                continue
+            which = str(rule.params.get("face", "open"))
+            if which == "access" and room.floor != 1:
+                continue
+            wanted = set(self.req.access_faces if which == "access" else self.req.open_faces)
+            if not (self.room_faces.get(room_id, frozenset()) & wanted):
+                self._fail(rule, room_id)
 
     def _apply_access(self) -> None:
         """Mọi phòng phải có lối vào: giáp một không gian giao thông, hoặc giáp lối vào nhà."""

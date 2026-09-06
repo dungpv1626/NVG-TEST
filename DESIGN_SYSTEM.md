@@ -164,6 +164,7 @@ precache của service worker, và không gửi địa chỉ IP người dùng s
 
 | Token               | Cỡ       | Dùng cho                                                                                                    |
 | ------------------- | -------- | ----------------------------------------------------------------------------------------------------------- |
+| `--text-2xs`        | 10px     | **chỉ một chỗ**: nhãn module khi thanh điều hướng thu gọn (xem 4.1). Không dùng cho câu chữ đọc thành đoạn  |
 | `--text-xs`         | 12px     | nhãn phụ, chú thích, nhãn trạng thái                                                                        |
 | `--text-base`       | **14px** | nội dung chính, bảng, biểu mẫu                                                                              |
 | `--text-md`         | 16px     | tiêu đề thẻ                                                                                                 |
@@ -205,6 +206,28 @@ của Tailwind, không phải token.
 
 ---
 
+### 4.1 Thanh điều hướng thu gọn được (06/09/2026)
+
+Thanh trái có hai bề rộng: **240px** mở và **80px** thu, đổi bằng nút ở góc trên thanh, ghi nhớ
+theo máy (`localStorage`, cùng lý lẽ với chế độ sáng/tối của Module Thiết kế). Thu gọn trả lại
+160px cho vùng nội dung — đáng kể ở bản vẽ, bảng dự toán nhiều cột và lưới thẻ.
+
+Ba ràng buộc:
+
+- **Thu gọn KHÔNG bỏ chữ.** Mỗi mục xếp dọc: biểu tượng trên, `shortLabel` 10px dưới. Một cột
+  toàn biểu tượng bắt người dùng học 12 hình mới, và `title` chỉ hiện sau khi rê chuột đứng
+  yên — vô dụng lúc đang quét mắt tìm chỗ bấm.
+- **Chữ xuống dòng, không cắt cụt.** "Khách …" không nói được mục đó là gì.
+- **Tên đọc được luôn là nhãn đầy đủ** (`aria-label`), dù trên màn hình chỉ thấy nhãn ngắn. Mọi
+  `shortLabel` là một phần của `label` nên không phạm WCAG 2.5.3 — có test canh.
+
+⚠️ Mục điều hướng dùng `Link`, **không** `NavLink`: `NavLink` tự tính trạng thái hoạt động theo
+đường dẫn của chính nó và ghi đè `aria-current` truyền vào, nên có những đường dẫn mà mục vẫn
+sáng pill nền mint mà `aria-current` bị bỏ trống — khi đó màu là cách DUY NHẤT nói cho biết đang
+ở đâu, đúng thứ CGD 6.8 cấm. Một nguồn sự thật: `useActiveModule()`.
+
+---
+
 ## 5. Chuyển động — bổ sung, CGD chưa có
 
 CGD 6.1 cấm "hoạt ảnh phô trương" nhưng không nói gì về chuyển động chức năng. Bổ sung:
@@ -225,9 +248,113 @@ chú ý.
 
 ## 6. Những gì KHÔNG đổi
 
-- Chế độ tối: chưa làm (CGD 6.7). Token khai theo kiểu đổi được để sau này rẻ.
+- Chế độ tối: **chưa làm cho 11 module** (CGD 6.7). Riêng Module Thiết kế có bảng màu và chế độ
+  tối của riêng nó — xem Mục 7.
 - Lozenge bo tròn hoàn toàn (CGD 6.5) — riêng bo góc thẻ/nút/input đã đổi ở cập nhật 1.1, xem Mục 4.
 - Lưới bội số 8px (CGD 6.5).
 - Biểu tượng dạng đường nét, một màu (CGD 6.2) — Lucide React.
 - Vùng bấm ≥ 40×40px trên di động (CGD 6.8).
 - Trạng thái luôn kèm chữ, không dùng màu làm cách duy nhất truyền đạt (CGD 6.8).
+
+---
+
+## 7. Module Thiết kế — bảng màu riêng, có phạm vi (06/09/2026)
+
+Module Thiết kế dựng lại giao diện theo **bộ bàn giao thiết kế** riêng
+(`Giao diện chỉnh sửa bản vẽ/design_handoff_trang_thiet_ke/`, Haan cung cấp). Đây là module bán
+được AI Preliminary Design Engine hay không, nên nó có ngôn ngữ thị giác của một công cụ thiết
+kế chứ không của một màn hình hồ sơ. Haan chốt phạm vi: **chỉ trong `/tk/*`**, 11 module còn
+lại không đổi một pixel.
+
+**Cập nhật 06/09/2026 — phạm vi gồm cả khung sườn.** Bản đầu chỉ đổi vùng nội dung, giữ nguyên
+thanh trái và thanh trên sáng màu. Mở ra xem thì đọc thành "một trang tối dán vào một ứng dụng
+sáng": hai trong ba dải trên màn hình không thuộc bản mẫu. Haan chốt lại: khung sườn cũng mặc
+vỏ Thiết kế, nhưng **chỉ khi đường dẫn nằm trong `/tk/*`** — ra module khác là trở lại vỏ chung.
+Phạm vi suy từ đường dẫn (`useTkScope`, `components/layout/tk-chrome.ts`), không từ một cờ ai đó
+bật rồi quên tắt; có test canh cả hai chiều rò và co.
+
+### 7.1 Hai bộ token song song
+
+|         | Bộ chung                                          | Bộ Module Thiết kế                                               |
+| ------- | ------------------------------------------------- | ---------------------------------------------------------------- |
+| Tiền tố | `--color-surface`, `--color-fg`, `--color-brand`… | `--color-tk-*` (71 token)                                        |
+| Khai ở  | `@theme` trong `web/src/index.css`                | cũng ở `@theme`, bản SÁNG                                        |
+| Bản tối | không có                                          | `web/src/pages/tk/tk-theme.css`, bộ chọn `[data-tk-theme='toi']` |
+| Phạm vi | toàn hệ thống                                     | chỉ nhánh DOM mang `data-tk-theme`                               |
+
+Giá trị chép **nguyên văn** từ hằng `LIGHT`/`DARK` của bản mẫu. Sáu token chỉ phục vụ thanh
+điều hướng (`--side`, `--nav-*`, `--logo-*`, `--hero-line`) **không chép sang** — đợt này không
+dựng lại khung sườn, và khai một hệ màu không ai đọc tới thì tệ hơn không khai.
+
+Hai test canh trong `web/src/test/design-rules.test.ts`: mọi token phải có đủ cả bản sáng lẫn
+bản tối (thiếu một token là một mảng chữ vô hình trên nền tối, không lỗi, không cảnh báo), và
+bản tối không được khai token nào ngoài danh sách `@theme`.
+
+### 7.2 Bắc cầu sang token dùng chung — và một giả định đã sai
+
+`[data-tk-theme='toi']` còn **ánh xạ lại token trung tính dùng chung** (`--color-surface`,
+`--color-fg`, `--color-fg-subtle`, `--color-border`…) sang bảng màu tối. Cần thiết vì mọi màn
+hình trong module dùng lại `Breadcrumb`, `Button`, `EntityTable`, `EmptyState`… của cả 12 module.
+
+> Kế hoạch ban đầu định giữ thân các màn hình con ở nền **sáng** như "tờ giấy đặt trên bàn tối",
+> ánh xạ chỉ áp cho phần vỏ. Mở trình duyệt xem thì hỏng: các panel đó phần lớn trong suốt hoặc
+> dùng `--color-surface-sunken`, nên chúng nhận nền tối mà giữ nguyên màu chữ của chế độ sáng —
+> bảng Chương trình không gian không đọc được một dòng nào. **Workspace tối là tối toàn phần.**
+> Ghi lại vì đây là loại lỗi chỉ mắt người bắt được, typecheck và test đều xanh.
+
+Ba điều KHÔNG ánh xạ:
+
+- **Sáu màu trạng thái.** Hệ màu đóng; mỗi nhãn tự mang nền pastel và chữ đậm của nó nên vẫn đọc
+  được trên nền tối. Đổi chúng là phá hàng rào cứng nhất của hệ màu.
+- **`--color-border-strong` KHÔNG lấy `--color-tk-line2`.** `#25342f` trên `#111a17` chỉ đạt
+  ~1,2:1, dưới hẳn ngưỡng 3:1 của WCAG 1.4.11 — viền ô nhập và nút phụ sẽ biến mất. Dùng
+  `--color-tk-t3` (~3,7:1).
+- **Tờ bản vẽ giữ nền giấy trắng.** SVG do Container sinh mang mực `#172B4D` trên giấy trắng;
+  bản vẽ LÀ giấy, đảo màu nó là làm hỏng thứ người dùng sẽ in ra.
+
+`color-scheme: dark` đặt kèm cho phần trình duyệt tự vẽ (thanh cuộn, danh sách `<select>`, bảng
+lịch) — không có nó thì một thanh cuộn trắng chạy dọc giữa màn hình tối.
+
+### 7.3 Hai chỗ cố ý lệch khỏi Mục 3 và Mục 4
+
+| Bản mẫu                                           | Quy tắc chung                               | Xử lý                                                                                                        |
+| ------------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Chữ nội dung 13px, phông hệ thống                 | 14px + Be Vietnam Pro (Mục 3)               | **Theo quy tắc chung.** Dấu tiếng Việt ở 13px phông hệ thống là đúng thứ đã chọn Be Vietnam Pro để tránh     |
+| Bóng hover `0 14px 30px rgba(0,0,0,.26)` trên thẻ | phẳng + hairline, bỏ bóng ở thẻ/nút (Mục 4) | **Theo bản mẫu, CHỈ trong `/tk/*`.** Ngoại lệ có phạm vi, không nới quy tắc chung                            |
+| Nút chính "Tạo phương án mới" ở header dự án      | mỗi màn hình đúng MỘT hành động chính (2.4) | Nút đó nằm ở **chân thẻ AI phương án**, không ở header — hành động chính của màn hình là "Bàn giao thi công" |
+
+Hai mức bóng của bản mẫu khai thành `--shadow-tk-panel` và `--shadow-tk-card`. Bộ `--shadow-*`
+chung tính cho nền sáng (đen 6–14%) nên đặt lên nền tối thì không tách được lớp nào — nền càng
+tối, bóng phải càng đậm.
+
+### 7.4 Khung sườn trong phạm vi Thiết kế
+
+Ba khác biệt so với vỏ chung, đều chỉ sống trong `/tk/*`:
+
+| Vùng       | Vỏ chung                            | Vỏ Thiết kế (bản mẫu §5.1–5.3)                                                              |
+| ---------- | ----------------------------------- | ------------------------------------------------------------------------------------------- |
+| Bố cục     | panel nổi, khe hở 12px, bo góc 16px | ba vùng sát nhau, phân cách bằng đúng một đường viền                                        |
+| Thanh trái | nền `--color-surface` sáng          | bảng màu tối CỐ ĐỊNH `--color-navdark-*`                                                    |
+| Thanh trên | cao 48px, bo góc từ `lg:`           | cao 60px, sát mép, ô tìm kiếm 420px kèm chip `Ctrl K`, nút chuyển sáng/tối, tên + chức danh |
+
+⚠️ **Thanh trái tối ở CẢ hai chế độ**, đúng như bản mẫu §4.3 ghi là chủ ý. Nên nó dùng bộ
+`--color-navdark-*` chỉ có một giá trị, không dùng `--color-tk-*` (bộ đó đổi theo chế độ và có
+test đòi đủ cặp sáng–tối).
+
+⚠️ **`text-fg` phải khai trên chính phần tử mang `data-tk-theme`.** `body` nằm ngoài phạm vi đó,
+nên `color: var(--color-fg)` của nó đã tính ra màu chữ chế độ SÁNG trước khi vào tới đây; thành
+phần nào không tự đặt màu sẽ kế thừa màu ấy và biến mất trên nền tối. Đã xảy ra thật với tên
+người dùng ở thanh trên (06/09/2026).
+
+Phím tắt `Ctrl K` gắn cho **mọi module**, chỉ cái chip nhắc là riêng của Thiết kế: phím tắt là
+hành vi, và một phím chỉ chạy ở một module là thứ người dùng không đoán được.
+
+### 7.5 Năm họ màu phân loại thẻ
+
+`--color-tk-bl-*` (xanh dương) · `-gr-*` (xanh lá) · `-am-*` (hổ phách) · `-pu-*` (tím) ·
+`-rd-*` (đỏ) — gán cho sáu thẻ công cụ của trang Tổng quan.
+
+⚠️ Đây là màu **phân loại**, không phải màu trạng thái. Tím `#6d5ce0` nằm sát "Tranh chấp", hổ
+phách sát "Chờ duyệt", đỏ sát "Quá hạn". Nên chúng **chỉ được làm nền, viền và ô icon BÊN TRONG
+thẻ** — cấm làm nhãn trạng thái, nền dòng bảng hay màu nút hành động chính. `StatusLozenge`
+không đọc một token `tk` nào; có test canh.

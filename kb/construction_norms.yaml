@@ -91,7 +91,20 @@ openings:
     sill_m: 1.8
 
 # Loại phòng KHÔNG mở cửa sổ ra mặt thoáng dù có tiếp giáp.
-no_window_types: [stair, core, technical, garage]
+#
+# Ban công và sân thượng vào danh sách này ngày 06/09/2026 vì lý do ngược với ba loại kia:
+# không phải "không cần cửa sổ" mà là "cạnh giáp mặt thoáng của nó KHÔNG phải tường". Cạnh đó
+# là lan can, và khối ba chiều dựng nó thành lan can — một ô cửa sổ đặt vào đấy sẽ khoét lỗ
+# giữa lan can.
+no_window_types: [stair, core, technical, garage, balcony, terrace]
+
+# ── Không gian ngoài trời ──────────────────────────────────────────────────────────────
+# Cạnh giáp mặt thoáng của ban công, lô gia, sân thượng dựng thành LAN CAN, không phải tường:
+# thấp, mỏng, và không có lanh tô phía trên. Không có mục này thì ban công ra khối ba chiều là
+# một hộp kín bốn phía tường, không đọc ra được là ban công.
+outdoor:
+  railing_h_m: 1.1
+  railing_thickness_m: 0.1
 
 # ── Vật liệu và quy cách ghi trên bảng thống kê cửa ────────────────────────────────────
 # Chưa dùng để dựng hình. Ghi lại vì bảng thống kê cửa (`kt/51`) là một trong số ít loại tờ

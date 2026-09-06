@@ -179,6 +179,39 @@ describe('Lớp 3a — ý đồ bố cục', () => {
     expect(paths.get('void:lightwell')).toBe('ab');
   });
 
+  it('giếng trời đứng về phía đối diện hành lang, ở cả ba phương án', () => {
+    // Bài canh cho lỗi làm phương án B vô nghiệm ở MỌI lần sinh (06/09/2026): giếng trời
+    // luôn bị đẩy xuống cuối dải, tức luôn nằm bên phải phòng. Với hành lang bên phải nó
+    // chắn ngay giữa phòng và hành lang, mà bề rộng tối thiểu của nó lấy theo
+    // `corridor_min_width` nên bộ giải không bóp về không được — mọi phòng cần sáng mất lối
+    // vào cùng lúc.
+    //
+    // Đo bằng ĐƯỜNG ĐI trong cây chứ không bằng toạ độ: `a` là bên trái của một lát cắt V.
+    for (const variant of LAYOUT_VARIANTS) {
+      const tree = floorTree(
+        // Một tầng có phòng cần sáng nằm giữa nhà: mặt sau bị bịt nên dải trong cùng cũng
+        // không chạm mặt thoáng, và giếng trời chắc chắn được mở.
+        [
+          space('circulation_9', 'circulation', 9),
+          space('living_9', 'living', 9, { needs_daylight: true, priority: 1 }),
+          space('bedroom_9', 'bedroom', 9, { needs_daylight: true, priority: 2 }),
+        ],
+        variant,
+        ['front'],
+      )!;
+      const paths = new Map(leafPaths(tree));
+      const lightwell = paths.get('void:lightwell');
+      expect(lightwell, `phương án ${variant.id} phải mở giếng trời`).toBeDefined();
+
+      // Bước cuối của đường đi là bên nào của lát cắt V trong cùng — giếng trời phải đứng
+      // ngược phía hành lang.
+      const side = lightwell!.slice(-1);
+      expect(side, `giếng trời của phương án ${variant.id} đứng sai phía`).toBe(
+        variant.spine === 'left' ? 'b' : 'a',
+      );
+    }
+  });
+
   it('ba phương án khác nhau về CẤU TRÚC, không phải khác vài con số', () => {
     const program = townhouse();
     const shapes = LAYOUT_VARIANTS.map((variant) =>
@@ -263,6 +296,94 @@ describe('Nhãn không gian', () => {
   it('thiếu nhãn thì rơi về mã không gian, không rơi về chuỗi rỗng', () => {
     const labels = spaceLabels(townhouse(), {});
     expect(labels.living_1).toBe('living');
+  });
+});
+
+describe('Vị trí bắt buộc — vị từ `requires_face`', () => {
+  const withGarageAndBalcony = (): SpaceProgram =>
+    ({
+      schema_version: '1.0.0',
+      brief_ref: REF,
+      spaces: [
+        space('stair_1', 'stair', 1),
+        space('circulation_1', 'circulation', 1),
+        space('living_1', 'living', 1, { needs_daylight: true, priority: 1 }),
+        space('garage_1', 'garage', 1, { priority: 4 }),
+        space('kitchen_1', 'kitchen', 1, { needs_daylight: true, priority: 3 }),
+        space('circulation_2', 'circulation', 2),
+        space('bedroom_1', 'bedroom', 2, { needs_daylight: true, priority: 2 }),
+        space('balcony_1', 'balcony', 2, { needs_daylight: true, priority: 4 }),
+      ],
+      adjacency: [],
+    }) as SpaceProgram;
+
+  const faceOf = (type: string) =>
+    type === 'garage' ? ('access' as const) : type === 'balcony' ? ('open' as const) : null;
+
+  const floors = (faces?: typeof faceOf) => {
+    const intent = buildLayoutIntent({
+      program: withGarageAndBalcony(),
+      programRef: REF,
+      openFaces: ['front', 'back'],
+      accessFaces: ['front'],
+      faceOf: faces,
+    }) as never as { floors: Array<{ level: number; wings: Array<{ tree: LayoutNode }> }> };
+    return new Map(intent.floors.map((f) => [f.level, f.wings[0]!.tree]));
+  };
+
+  /**
+   * Lá CHẮC CHẮN chạm một mặt của hình bao, suy từ cấu trúc cây — cùng phép suy với
+   * `touches_root_face` phía Container: chạm mặt trước khi và chỉ khi mọi lát cắt NGANG trên
+   * đường đi đều rẽ nhánh `a`; chạm mặt trái khi mọi lát cắt DỌC đều rẽ nhánh `a`.
+   */
+  const touches = (tree: LayoutNode, ref: string, face: 'front' | 'left'): boolean => {
+    const path = leafPaths(tree).find(([leaf]) => leaf === ref)?.[1];
+    if (path === undefined) return false;
+    const axis = face === 'front' ? 'H' : 'V';
+    let node = tree;
+    for (const branch of path) {
+      if (!('split' in node)) return false;
+      if (node.split === axis && branch === 'b') return false;
+      node = branch === 'a' ? node.a : node.b;
+    }
+    return true;
+  };
+  const touchesFront = (tree: LayoutNode, ref: string) => touches(tree, ref, 'front');
+
+  it('chỗ để xe ra mặt tiền, không nằm sau phòng khách', () => {
+    /*
+     * Trước 06/09/2026 dải mặt tiền luôn nhận phòng đứng đầu bảng xếp hạng theo nhu cầu chiếu
+     * sáng, tức luôn là phòng khách — và chỗ để xe rơi vào chồng dải phía sau. Bố cục đó hợp
+     * lệ theo mọi quy tắc đang có (chỗ để xe vẫn giáp hành lang) nhưng ô tô phải đi xuyên
+     * phòng khách mới vào được.
+     */
+    expect(touchesFront(floors(faceOf).get(1)!, 'garage_1')).toBe(true);
+    expect(touchesFront(floors(faceOf).get(1)!, 'living_1')).toBe(false);
+  });
+
+  it('không có gói quy tắc thì giữ nguyên cách xếp cũ, không đoán bù', () => {
+    // `NO_RULES` là trạng thái thật của mọi lớp gọi chưa có gói quy tắc trong tay.
+    expect(touchesFront(floors().get(1)!, 'living_1')).toBe(true);
+  });
+
+  it('ban công ra mặt thoáng và vẫn kề hành lang', () => {
+    const tree = floors(faceOf).get(2)!;
+    expect(touchesFront(tree, 'balcony_1')).toBe(true);
+    expect(touchesFront(tree, 'bedroom_1')).toBe(true);
+
+    // Và cùng phía với hành lang — phương án mặc định có hành lang bên TRÁI. Đó là điều kiện
+    // để ban công chung một đoạn biên với khối giao thông; đặt về phía kia thì nó không kề
+    // không gian giao thông nào, và `every_room_requires_access` — mức chặn phát hành — kết
+    // luận vô nghiệm.
+    expect(touches(tree, 'balcony_1', 'left')).toBe(true);
+    expect(touches(tree, 'circulation_2', 'left')).toBe(true);
+    expect(touches(tree, 'bedroom_1', 'left')).toBe(false);
+  });
+
+  it('mặt vào được chỉ có nghĩa ở tầng trệt', () => {
+    // Tầng hai không có mặt nào ô tô vào được, nên quy tắc không được đẩy phòng nào ra đó.
+    const tree = floors(faceOf).get(2)!;
+    expect(leafPaths(tree).some(([leaf]) => leaf === 'garage_1')).toBe(false);
   });
 });
 

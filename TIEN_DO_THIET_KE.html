@@ -282,8 +282,8 @@
         </p>
         <p class="muted-t xs">
           Còn lại: tỉ lệ giao thông 25–33 % (kiến trúc sư chỉnh <code>ratio_of_floor</code> trong
-          <code>kb/space_norms.yaml</code>), phương án B vô nghiệm trên đề bài demo (V-12), và ảnh
-          Gemini chỉ chạy khi có khoá trả phí (Q-15 — quyết định tiền của Haan).
+          <code>kb/space_norms.yaml</code>) và phương án B vô nghiệm trên đề bài demo (V-12). Ảnh
+          phối cảnh nay dựng được thật (Pollinations), không còn chờ khoá trả phí.
         </p>
         <div class="bar"><span style="width: 100%"></span></div>
         <div class="stats">
@@ -293,7 +293,7 @@
           <div class="stat">
             <b>1.211</b><span class="xs muted-t">Phép thử xanh (1.022 vitest + 189 pytest)</span>
           </div>
-          <div class="stat"><b>4</b><span class="xs muted-t">Vướng mắc đang mở</span></div>
+          <div class="stat"><b>5</b><span class="xs muted-t">Vướng mắc đang mở</span></div>
           <div class="stat">
             <b>16</b><span class="xs muted-t">Mặc định team đã chốt — NVG đổi được</span>
           </div>
@@ -499,6 +499,370 @@
           <tbody>
             <tr>
               <td class="num">06/09</td>
+              <td>Phương án B vô nghiệm ở mọi lần sinh &mdash; giếng trời đứng chắn hành lang</td>
+              <td class="xs">
+                Haan báo &laquo;phương án B luôn bị lỗi&raquo;. Đúng là LUÔN, và không phải ngẫu
+                nhiên: <code>bandNode</code> đẩy giếng trời xuống cuối dải, tức luôn nằm bên PHẢI
+                phòng, bất kể hành lang ở đâu. A và C có hành lang bên trái nên vô hại;
+                <b>B có hành lang bên phải</b>, nên giếng trời nằm chắn ngay giữa phòng và hành
+                lang. Không gỡ được: bề rộng tối thiểu của giếng trời mượn chính ngưỡng
+                <code>corridor_min_width</code> (0,9 m &mdash; một khe 20 cm không lấy sáng cho ai),
+                nên bộ giải không bóp nó về không. Mọi phòng cần sáng ở phần sau mất lối vào cùng
+                lúc, và <code>every_room_requires_access</code> ở mức chặn phát hành kết luận vô
+                nghiệm.<br />
+                <b>Đọc đúng báo cáo vô nghiệm mới ra</b>: tập mâu thuẫn ghi
+                <code>corridor_min_width</code> trên một <code>void_2_…</code> &mdash; một KHOẢNG
+                RỖNG, không phải hành lang &mdash; cạnh <code>every_room_requires_access</code> của
+                phòng thờ. Phòng thờ chỉ là phòng CP-SAT chọn làm đại diện; đuổi theo riêng nó sẽ
+                không bao giờ tới nguyên nhân.<br />
+                Sửa: giếng trời đứng về phía ĐỐI DIỆN hành lang &mdash; đúng lý lẽ đã ghi sẵn cho
+                ban công ngay trong cùng tệp, chỉ ngược chiều, mà lúc đó chưa áp cho giếng trời. Sau
+                khi sửa: <b>3 trên 3 phương án khả thi</b>, B ra 451,5 m² với 16 cảnh báo (A và C là
+                17). Bài canh trong <code>layout-intent.test.ts</code> đã thử ngược: trả lại mã cũ
+                thì nó đỏ, và đỏ đúng ở phương án B.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">06/09</td>
+              <td>&laquo;Kiểm tra đường truyền&raquo; chỉ sai hướng &mdash; đã đổi</td>
+              <td class="xs">
+                Worker chưa chạy thì tab Chương trình không gian hiện &laquo;Không kết nối được dịch
+                vụ thiết kế. Kiểm tra đường truyền rồi thử lại&raquo;. Máy vẫn vào mạng bình thường
+                &mdash; mọi tab gọi thẳng Supabase (Đầu bài, Khảo sát, Phiên bản bản vẽ) vẫn chạy,
+                nên rất dễ tưởng ứng dụng bình thường cho tới khi chạm đúng bước cần engine. Câu mới
+                nói đúng cái hỏng, nói rõ phần còn lại vẫn dùng được, và nêu AI xử lý được &mdash;
+                kiến trúc sư không khởi động lại được dịch vụ (CGD 5.5).
+              </td>
+            </tr>
+            <tr>
+              <td class="num">06/09</td>
+              <td>Sửa và gỡ được biên bản khảo sát &mdash; và một lỗi quyền báo sai chỗ</td>
+              <td class="xs">
+                Haan gõ nhầm hướng nhà, phải lập biên bản thứ hai, và bản hỏng nằm lại vĩnh viễn
+                cạnh bản đúng &mdash; người đọc sau không biết tin bản nào. Nay mỗi biên bản có nút
+                <b>Sửa</b> và <b>Gỡ</b>. Sửa giữ nguyên <code>surveyed_at</code>: mốc ĐI ĐO không
+                dời vì gõ lại, và đây là chỗ dễ hỏng im lặng nhất nên có bài canh riêng. Gỡ là xoá
+                MỀM, xác nhận hỏi ngay trên dòng đó (không dùng <code>window.confirm</code> &mdash;
+                nút &laquo;OK&raquo;/&laquo;Cancel&raquo; tiếng Anh không ép được, CLAUDE.md 4.1),
+                và nói trước hệ quả: bao nhiêu ảnh ẩn theo, và đầu bài có đang lấy số đo từ biên bản
+                này không.<br />
+                <b>Lỗi lộ ra khi thử</b>: bấm gỡ thì hiện &laquo;Vai trò hiện tại không có quyền
+                chỉnh sửa hồ sơ này&raquo; &mdash; sai hoàn toàn, vì người bấm chính là người đi đo
+                kiêm người chịu trách nhiệm dự án. Nguyên nhân: policy SELECT loại dòng đã xoá, mà
+                PostgREST luôn đọc lại dòng sau khi UPDATE, nên câu lệnh đặt
+                <code>deleted_at</code> bị chính policy SELECT từ chối. Repo đã gặp y hệt với ảnh
+                (migration 0119) và giải bằng hàm <code>SECURITY DEFINER</code>; nay biên bản có
+                <code>hide_design_survey</code> (migration <b>0120</b>). Hàm lặp lại ĐÚNG điều kiện
+                Mẫu B của policy UPDATE chứ không chỉ kiểm quyền sửa dự án &mdash; nới ra thì gỡ hẳn
+                một biên bản lại dễ hơn sửa một chữ trong đó.<br />
+                <b>Trạng thái rỗng</b> khi chỉ xem nay nói rõ ai lập biên bản, thay vì gợi ý một
+                việc người đọc không làm được. Bốn bài RLS mới
+                (<code>db/src/__tests__/design-survey-edit.test.ts</code>) canh cả bốn: sửa được,
+                mốc đi đo giữ nguyên, UPDATE thẳng phải hỏng, và vai trò ngoài phạm vi bị từ chối.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">06/09</td>
+              <td>Hồ sơ biệt thự đầu tiên &mdash; và một lỗi tiếng Anh lọt lưới ở tab Đầu bài</td>
+              <td class="xs">
+                Gỡ hồ sơ thử <code>Test1</code> (xoá mềm, khôi phục được) và lập
+                <b>NVO-TK-2026-2737 &mdash; Biệt thự nhà vườn (demo)</b>: lô 15 &times; 20 m hướng
+                Nam, hai tầng, hai cánh hình chữ L, ba thế hệ cùng ở. Đây là đầu bài
+                <code>biet_thu</code> đầu tiên, nên là lần đầu nhóm trường <code>massing.*</code> và
+                <code>site.setback_required_m</code> / <code>max_density</code> hiện ra thật &mdash;
+                nhà phố vẫn ẩn chúng. Độ đầy đủ <b>92,3%</b>, trên ngưỡng
+                <code>brief_completeness_min</code> = 0,7 nên chạy được Lớp 2. Hai ô còn thiếu là
+                khoảng lùi và mật độ xây dựng: <b>cố ý để trống</b> cho rule pack quyết, vì chưa
+                tỉnh nào có văn bản quy hoạch để trích vào <code>source</code> (T9).<br />
+                <b>Lỗi lộ ra ngay khi soát</b>: dòng &laquo;Hiện trạng bốn phía&raquo; in nguyên mã
+                máy &mdash; <code>duong_lon</code>, <code>hem_3m</code>,
+                <code>nha_hang_xom</code> &mdash; giữa một màn hình tiếng Việt (CLAUDE.md 4.1).
+                Nhánh <code>sides</code> của <code>describeField</code> là chỗ DUY NHẤT bỏ qua bảng
+                nhãn, nằm ngay trên đoạn chú thích cảnh báo đúng lỗi đó. Sửa một chữ (<code
+                  >String</code
+                >
+                &rarr; <code>label</code>), <code>web/src/pages/tk/brief-panel.tsx</code>. Chỉ lộ
+                khi có đầu bài khai đủ bốn phía &mdash; hồ sơ nhà phố demo khai ba nên đi qua nhiều
+                đợt soát mà không ai thấy.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">06/09</td>
+              <td>Bản vẽ lạc hậu so với đầu bài: nói ra, và tự chuyển khi sinh lại</td>
+              <td class="xs">
+                Haan báo &ldquo;thi thoảng bản vẽ chỉ có 4 tầng thay vì 5&rdquo; và &ldquo;tầng 1
+                không có cửa vào&rdquo;. Cả hai là <b>một</b> nguyên nhân, và không phải lỗi hình
+                học: <code>design_head/floor_plan</code> vẫn trỏ vào mặt bằng
+                <code>4cf38eb9</code> (4 tầng) sinh từ chương trình không gian cũ, trong khi đầu bài
+                đã lên 5 tầng và chương trình mới đã lên hiệu lực từ hôm trước (<code
+                  >updated_at</code
+                >
+                bằng đúng <code>created_at</code>). Năm mặt bằng sinh sau đó đều có đủ 5 tầng và đều
+                có cửa vào 2,75 &times; 2,5 m &mdash; không cái nào được dùng. Artifact bất biến nên
+                bản cũ giữ lỗi cũ vĩnh viễn.<br />
+                Nay: <code>listVariants</code> khai <code>headStale</code> khi bản hiệu lực không
+                thuộc chương trình hiện hành, màn hình Phương án hiện dải cảnh báo kèm nút Sinh lại;
+                <code>generateVariants</code> chuyển con trỏ sang <b>đúng chữ cái</b> phương án cũ.
+                Khung tên ghi &ldquo;Tầng 4/5&rdquo; chứ không còn &ldquo;Tầng 4&rdquo;, nên đếm số
+                tầng không còn là việc của người xem.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">06/09</td>
+              <td>
+                Chỗ để xe ra mặt đường; ban công ra mặt thoáng &mdash; vị từ
+                <code>requires_face</code>
+              </td>
+              <td class="xs">
+                Đo trên chính bản vẽ demo: phòng khách chiếm hết mặt tiền (y 0&ndash;3,2 m), chỗ để
+                xe nằm SAU nó (y 3,2&ndash;6,2 m). Ô tô phải đi xuyên phòng khách.
+                <code>every_room_requires_access</code> không bắt được vì chỗ để xe vẫn giáp hành
+                lang &mdash; lối vào cho xe là quan hệ với ĐƯỜNG, không phải với hành lang.<br />
+                Vị từ mới <code>requires_face</code> (<code>face: access | open</code>) khai trong
+                rule pack, đo ở <code>evaluate.py</code>, và Lớp 3a đọc nó để xếp chỗ ngay từ ý đồ
+                bố cục. Ban công đứng cạnh phòng mặt tiền về phía hành lang &mdash; đặt phía kia thì
+                nó không kề không gian giao thông nào và bộ giải kết luận vô nghiệm. Kết quả đo lại:
+                chỗ để xe 5,0 &times; 4,0 m ngay mặt đường; ban công 1,7 &times; 4,0 m trên mặt tiền
+                (trước đó là dải 0,40 &times; 9,00 m nằm giữa nhà).
+              </td>
+            </tr>
+            <tr>
+              <td class="num">06/09</td>
+              <td>
+                Ngưỡng cạnh nhỏ nhất và tỉ lệ cho nhóm <code>service</code> · <code>outdoor</code>
+              </td>
+              <td class="xs">
+                Đo được: vệ sinh 4,10 &times; 1,00 m &middot; kho 4,10 &times; 1,00 &middot; giặt
+                0,60 &times; 8,30 &middot; ban công 0,40 &times; 9,00. Cả bốn HỢP LỆ theo bộ quy tắc
+                cũ &mdash; <code>min_dimension</code> chỉ khai cho hành lang, thang, phòng ngủ, và
+                <code>aspect_ratio_max</code> chỉ nhắm nhóm <code>habitable</code>, nhóm không gồm
+                đúng những phòng dễ bị bóp thành dải.<br />
+                Thêm 8 quy tắc DỮ LIỆU (không sửa mã): cạnh nhỏ nhất cho vệ sinh 1,2 &middot; bếp
+                1,8 &middot; để xe 2,4 &middot; kho 1,0 &middot; giặt 1,2 &middot; ban công 1,2 m;
+                tỉ lệ tối đa 3,0 cho <code>service</code> và 4,0 cho <code>outdoor</code>. Nhóm
+                <code>circulation</code> cố ý không có &mdash; hành lang dài và hẹp là đúng bản chất
+                của nó. Kết quả: vệ sinh nay 1,5 &times; 3,5 m, giặt 1,9 &times; 5,6 m.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">06/09</td>
+              <td>Giếng trời thôi làm chỗ đổ phần sàn thừa</td>
+              <td class="xs">
+                Tầng 4 có 56,7 m&sup2; phòng và <b>33,3 m&sup2; giếng trời</b> trên sàn 90 m&sup2;;
+                tầng 5 là 52,4 và 37,6. Gần 40 % mặt sàn mở lên trời, và không quy tắc nào nói gì.
+                Nguyên nhân: khoảng rỗng là thứ DUY NHẤT trong mô hình không có diện tích mong muốn,
+                không cận trên và không bị phạt &mdash; nên nó luôn là chỗ rẻ nhất để dồn phần dôi.
+                <code>fitToFloors</code> có nâng cận trên của khối giao thông, nhưng hàm mục tiêu
+                phạt theo độ lệch so với diện tích MONG MUỐN, nên bước đó không đổi được gì.<br />
+                Thêm <code>lightwell_max_area</code> 8 m&sup2; (khoản phạt, không phải ràng buộc
+                cứng &mdash; mặt sàn phải chia hết), <code>_place_void</code> đọc nó, và
+                <code>evaluate.py</code> đo nó. Giếng trời lớn nhất còn 12,3 m&sup2;, và nó hiện
+                thành một dòng vi phạm đọc được thay vì im lặng.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">06/09</td>
+              <td>Nét bao tường là biên của HỢP, không phải chu vi từng bức</td>
+              <td class="xs">
+                Ảnh chụp cho thấy tường chồng mép ở mỗi nút giao. Tường đi theo TIM, nên hai tứ giác
+                chồng nhau một đoạn bằng nửa bề dày; mỗi bức có nét bao riêng nên cả hai đều được vẽ
+                &mdash; nét cắt ngang trong thân tường, và mỗi tường thò qua tường kia.<br />
+                Nay hợp nhất bằng <code>shapely</code> rồi chỉ vẽ biên (kể cả
+                <code>interiors</code>, là mặt trong của bốn bức quây kín một phòng); poché vẫn tô
+                theo từng đoạn vì một hình có lỗ không diễn đạt được bằng một vòng khép kín. Kèm hai
+                chỗ ký hiệu đè nhau: tam giác mặt cắt đẩy ra ngoài vòng tròn, và ba vành ghi chú
+                tách bạch lại (vành trục 2,6 &rarr; 1,9 m) để vòng tròn trục thôi đè lên vòng tròn
+                mặt cắt.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">06/09</td>
+              <td>Ban công đọc ra được là ban công, trên cả bản vẽ lẫn khối ba chiều</td>
+              <td class="xs">
+                Cạnh giáp mặt thoáng của ban công là LAN CAN, không phải tường: cao 1,1 m, dày 0,1 m
+                (<code>kb/construction_norms.yaml</code> mục <code>outdoor</code>), không lanh tô,
+                không cửa sổ. Mái không đổ ra ban công.<br />
+                Phép suy nằm ở <code>geometry/outdoor.py</code>, dùng chung cho tờ bản vẽ và khối ba
+                chiều &mdash; hai bản thực thi lệch nhau thì hai nơi nói khác nhau về cùng một cạnh.
+                Phải xét theo ĐOẠN chứ không theo cả bức tường: tường mặt tiền chạy chung cho ban
+                công 1,7 m và phòng làm việc 3,3 m, nên điểm giữa của bức tường trả lời theo phòng
+                làm việc.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">06/09</td>
+              <td>Khối ba chiều: cửa đi và cửa sổ hiện ra đúng là cửa</td>
+              <td class="xs">
+                Haan nhận xét khối chưa thể hiện rõ cửa vào và cửa sổ. Mô hình vốn CÓ đủ lỗ mở
+                &mdash; Container đã đùn bệ, lanh tô và tấm kính từ lâu &mdash; nhưng cả ba hiện ra
+                cùng một màu với mảng tường.<br />
+                Nguyên nhân: <code>trimesh</code> ghi màu mặt thành màu <b>đỉnh</b> (COLOR_0) chứ
+                không thành vật liệu, nên sau khi xuất glTF thì <code>material.color</code> của mọi
+                mesh đều trắng. Trình duyệt dò kính bằng <code>hex === 0x8cb0cd</code> nên
+                <b>không bao giờ khớp</b>: cửa nhận đúng vật liệu như tường. Hỏng im lặng &mdash;
+                không lỗi, không cảnh báo, chỉ là mấy ô chữ nhật viền mảnh trên mảng tường.<br />
+                Sửa: Container đặt <b>tên nút theo loại</b> (<code>wall</code> · <code>slab</code> ·
+                <code>parapet</code> · <code>window</code> · <code>door</code>) &mdash; kênh duy
+                nhất còn sống sót qua bước xuất; trình duyệt tô theo tên, cửa đi thành tấm đặc màu
+                gỗ, cửa sổ thành kính mờ, và <b>lỗ mở cũng có nét viền</b> (trước đây chỉ tường mới
+                có, nên ô kính chìm vào tường khi thu nhỏ hình). Hình học không đổi &mdash; vẫn đúng
+                một nguồn hình học.<br />
+                Kiểm: hai test pytest mới canh tên nút sống sót qua vòng glTF; 22 test hình học
+                xanh; soát tận mắt trên trình duyệt sau khi dựng lại ảnh Docker.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">06/09</td>
+              <td>Rà lại bản dựng theo ảnh mẫu &mdash; vá ba nguyên nhân làm giao diện còn thô</td>
+              <td class="xs">
+                Haan gửi hai ảnh chụp bản mẫu kèm nhận xét &laquo;vẫn hơi thô&raquo;. Đối chiếu từng
+                khối bằng <code>getComputedStyle</code>: chi tiết nhỏ đã đúng (thẻ bo 14px, ô icon
+                36px bo 10px, mô tả 12px/1.5), cái sai nằm ở ba chỗ lớn.<br />
+                <b>Một</b> &mdash; hai trong ba dải màn hình chưa phải bản mẫu. Thanh trái và thanh
+                trên vẫn là vỏ chung sáng màu, nên trang đọc ra là một trang tối dán vào một ứng
+                dụng sáng. Nay có vỏ riêng theo bản mẫu §5.1&ndash;5.3,
+                <b>chỉ bật trong <code>/tk/*</code></b> (<code>useTkScope</code>); 11 module còn lại
+                không đổi một pixel, có test canh cả hai chiều rò và co.<br />
+                <b>Hai</b> &mdash; lưới sáu thẻ viết <code>md:grid-cols-2</code> cố định thay vì
+                <code>auto-fit minmax(292px,1fr)</code>. Ở màn 1850px mỗi thẻ nở tới <b>684px</b>:
+                ruột thẻ loãng, trang dài gấp đôi. Một dòng CSS, nhưng là nguyên nhân chính.<br />
+                <b>Ba</b> &mdash; thân màn hình con lệch trái <b>24px</b> so với header (header có
+                <code>px-6</code>, thân không có).<br />
+                Kèm theo: nút &laquo;Hướng dẫn sử dụng&raquo; ở header, ba nút hành động ở chân thẻ
+                (thẻ đổi từ <code>&lt;a&gt;</code> bọc ngoài sang liên kết phủ &mdash;
+                <code>&lt;button&gt;</code> lồng trong <code>&lt;a&gt;</code> là HTML không hợp lệ),
+                hai ô xem trước 96px ở thẻ Khảo sát, bóng đổ riêng cho nền tối, và màn hình con
+                Phương án kiến trúc dựng lại theo §5.6 (badge A&middot;B&middot;C, viền 1,5px cho
+                thẻ đang xem, bảng so sánh nằm trong panel).<br />
+                Kiểm: <code>tsc</code> sạch &middot; prettier sạch &middot; <b>293 test web</b> xanh
+                (thêm tệp <code>tk-chrome.test.tsx</code>) &middot; <b>Playwright mười cảnh xanh</b>
+                &middot; soát tay hai chế độ màu và một module ngoài Thiết kế.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">06/09</td>
+              <td>Dựng lại giao diện Trang dự án thiết kế theo bộ bàn giao thiết kế</td>
+              <td class="xs">
+                Màn hình cũ dùng lại nguyên <code>EntityDetail</code> &mdash; mẫu &laquo;Hồ sơ
+                360&deg;&raquo; dùng chung cho cả 12 module. Đúng cho một module hồ sơ, nhưng đọc ra
+                là <b>một hồ sơ có mười tab</b>: bốn bước của engine nằm ngang hàng với tab Lịch sử,
+                và không chỗ nào nói cho biết dự án đang ở đâu trong quy trình.<br />
+                Nay có vỏ riêng <code>design-workspace.tsx</code>, bố cục <b>hai cấp</b> đúng bản
+                mẫu: ba tab cấp một cộng Lịch sử trên thanh tab, sáu bước quy trình thành màn hình
+                con mở từ thẻ công cụ ở Tổng quan. <code>?tab=</code> giữ nguyên cho cả hai cấp nên
+                mọi đường dẫn cũ vẫn trỏ đúng chỗ. Cơ chế tab (phím mũi tên, roving tabindex) tách
+                thành <code>use-detail-tabs.ts</code> dùng chung với
+                <code>EntityDetail</code> &mdash; một hành vi, hai lớp áo; 10 test của
+                <code>EntityDetail</code> không đổi một dòng.<br />
+                Tab Tổng quan là bộ điều phối mới: dải bảy bước, sáu thẻ công cụ, thông tin dự án,
+                cột phải (hồ sơ liên quan &middot; nhân sự &middot; hoạt động &middot; việc cần
+                làm), dự án gần đây. <b>Mọi con số lấy từ truy vấn thật</b>; chỗ chưa có dữ liệu nói
+                &laquo;chưa có&raquo;, không hiện <code>0</code> &mdash; có test canh cả trang không
+                được xuất hiện một số 0 đứng một mình.<br />
+                <b>Dải bảy bước không phải cỗ máy trạng thái thứ hai.</b>
+                <code>design_projects.stage</code> vẫn là thẩm quyền duy nhất về bước nghiệp vụ và
+                hiện thành nhãn trạng thái; dải này trả lời câu khác &mdash; sản phẩm từng bước đã
+                có chưa &mdash; suy tất định từ artifact và bản ghi đang tồn tại, không lưu ở
+                đâu.<br />
+                <b>Hoạt động gần đây KHÔNG đọc <code>audit_logs</code></b
+                >: bảng đó theo NEN-07 chỉ TGĐ/CFO/BGĐ/Quản trị viên đọc được, nên kiến trúc sư mở
+                ra sẽ thấy panel rỗng vĩnh viễn mà không có gì báo. Ghép từ phiên bản đã phát hành,
+                yêu cầu thay đổi, đầu bài và đợt sinh phương án &mdash; đều là bản ghi họ đã đọc
+                được ở tab khác.<br />
+                <b>Chế độ sáng/tối phạm vi module</b> (Haan chốt 06/09): 71 token
+                <code>--color-tk-*</code> chép nguyên văn từ bản mẫu, bản tối đè trong
+                <code>tk-theme.css</code>, ghi nhớ theo máy. Khung sườn ứng dụng và 11 module còn
+                lại không đổi một pixel.<br />
+                <b>Bảng ràng buộc nay có nguồn quy tắc</b>: mỗi vi phạm mang trích dẫn nguyên văn
+                (<code>QCVN 01:2021/BXD</code>, <code>kinh nghiệm NVG</code>) và cờ chặn phát hành,
+                cộng mẫu số &laquo;22/25 quy tắc đạt&raquo;. Làm giàu ở Worker lúc trả lời, dùng
+                chính gói quy tắc đã gửi cho bộ giải &mdash; artifact không đổi. Tra không ra
+                <code>rule_id</code> thì để nguồn rỗng, tuyệt đối không suy nguồn từ mức độ nghiêm
+                trọng.<br />
+                <b>Thanh điều hướng trái thu gọn được</b> (Haan yêu cầu thêm sau khi xem bản đầu):
+                240px &harr; 80px, ghi nhớ theo máy. Thu gọn thì mỗi mục xếp dọc &mdash; biểu tượng
+                trên, nhãn ngắn 10px dưới, cho xuống dòng chứ không cắt cụt &mdash; còn tên đọc được
+                vẫn là nhãn đầy đủ. Đây là thay đổi ở khung sườn <b>dùng chung</b> nên có ở cả 12
+                module; bảng màu và bố cục của 11 module còn lại không đổi.<br />
+                Kèm một chỗ sửa đúng: mục điều hướng chuyển từ <code>NavLink</code> sang
+                <code>Link</code>. <code>NavLink</code> tự tính trạng thái hoạt động và ghi đè
+                <code>aria-current</code>, nên có đường dẫn mà mục vẫn sáng pill nền mint mà
+                <code>aria-current</code> bỏ trống &mdash; màu thành cách duy nhất nói cho biết đang
+                ở đâu, đúng thứ CGD 6.8 cấm.<br />
+                Kiểm: <code>tsc</code> sạch, prettier sạch, <b>289 test web</b> +
+                <b>218 test logic</b> xanh (thêm 31 test mới), <b>Playwright mười cảnh xanh</b>,
+                soát bằng mắt cả hai chế độ màu và cả hai bề rộng thanh điều hướng trên bản chạy
+                thử.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">06/09</td>
+              <td>Phối cảnh: thêm ngữ cảnh thửa đất và ba khung hình</td>
+              <td class="xs">
+                <b>Ảnh khối không nói được ngữ cảnh.</b> Nó là một khối đứng một mình trên nền lưới,
+                nên mô hình mặc định dựng công trình đứng tự do và hay cho nó hai mặt tiền — nhà phố
+                kẹp giữa thành lô góc (Haan bắt được khi xem ảnh đầu tiên). Nay lời gọi mang kèm một
+                câu ngữ cảnh dựng <b>tất định bằng mã</b> từ chính đầu bài:
+                <code>site.adjacent</code> bốn phía, <code>site.access_sides</code>, kích thước lô,
+                số tầng, loại công trình. Hai mặt bên đều bị che thì thêm câu chốt &laquo;chỉ một
+                mặt tiền, hai tường hông là tường chung, không dựng lô góc&raquo;.<br />
+                Mặt <b>chưa khai</b> hiện trạng thì im lặng, không bịa. Từ vựng nằm ở
+                <code>kb/render_prompts.yaml</code>; vế &laquo;mặt này có thoáng không&raquo; vẫn
+                dùng lại <code>kb/site_context.yaml</code> của bộ giải, không cài lần thứ hai — có
+                test đối chiếu hai tệp phải phủ đủ mọi mã của biểu mẫu Đầu bài.<br />
+                Chỉ lấy phần <b>hình học và mã danh mục</b> của đầu bài (kiểu
+                <code>RenderSite</code> hẹp có chủ đích), không lấy chữ nào do khách viết — đó là
+                thứ giữ lời gọi ở hạng dữ liệu 3.<br />
+                <b>Ba khung hình</b> thay cho một: toàn cảnh ban ngày, toàn cảnh ban đêm, góc
+                nghiêng. Gọi song song, mỗi khung một lời gọi — gộp làm một thì chờ ba lần lâu hơn
+                mới thấy tấm đầu và một khung hỏng là mất cả ba. Danh sách khung hình lấy từ máy
+                chủ, trình duyệt không giữ bản sao.<br />
+                Góc nghiêng KHÔNG cố định: nó là chính khung người dùng đang xem, xoay thêm 31°
+                quanh trục đứng — cố định thì việc người dùng xoay khối tới góc mình muốn bị bỏ qua.
+                Một lần bấm &laquo;Chụp ảnh khối&raquo; lấy cả hai góc.<br />
+                Đã soát trên bản chạy thử: ba ảnh ra đủ, ~20–25 giây mỗi ảnh. Đối chứng riêng ca kẹp
+                giữa hai nhà hàng xóm cho thấy ảnh ra có nhà hai bên và tường hông bịt kín, đúng thứ
+                câu ngữ cảnh yêu cầu.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">06/09</td>
+              <td>Tuyến phối cảnh chạy được — thử ba nhà cung cấp, chốt Pollinations</td>
+              <td class="xs">
+                <b>Gemini loại</b>: cả ba mô hình sinh ảnh trả <code>limit: 0</code> — gói miễn phí
+                không cấp một lượt nào, chờ sang ngày mai cũng không đổi.<br />
+                <b>Hugging Face loại</b>: chạy được và bám khối tốt, nhưng hạn mức miễn phí chỉ
+                khoảng 0,10 đô một tháng — bốn lần gọi để đo là hết sạch.<br />
+                <b>Pollinations đang dùng</b>: mô hình <code>kontext</code> trên đường
+                <code>POST /v1/images/edits</code>, khoảng 18–21 giây một ảnh, bám khối rất sát trên
+                ảnh thật. Đã soát end-to-end trên bản chạy thử: chụp ảnh khối rồi dựng ảnh, cả hai
+                ảnh đều có nhãn cảnh báo do mã in lên.<br />
+                <b>Phải là đường ẢNH sang ẢNH.</b> Pollinations còn có
+                <code>GET /image/{prompt}</code> rẻ hơn nhưng là CHỮ sang ẢNH — nó dựng một ngôi nhà
+                khác chứ không dựng ngôi nhà bộ giải vừa xếp, vi phạm nguyên tắc bất biến 1. Không
+                đổi sang đường đó dù rẻ hơn.<br />
+                <b>Lời dẫn là tiếng Anh</b>, có bằng chứng: cùng ảnh vào, cùng yêu cầu đổi phong
+                cách, lời dẫn tiếng Việt cho ra ảnh gần như không đổi còn tiếng Anh đổi đúng mặt
+                đứng. Mô hình không báo lỗi khi không hiểu — nó trả về ảnh khối tô lại. Nhãn
+                <code>vi</code> và nhãn cảnh báo trên ảnh vẫn tiếng Việt.<br />
+                Khoá API tra theo <b>nhà cung cấp</b> trong <code>ModelRouter</code>; tên mô hình và
+                địa chỉ nằm ở <code>config/models.yaml</code>. Đổi nhà cung cấp là sửa hai dòng cấu
+                hình — giao diện và mã gọi không đổi.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">06/09</td>
+              <td>Lỗi của nhà cung cấp lọt ra màn hình — đã vá</td>
+              <td class="xs">
+                Lộ ra khi chạy thật: hết hạn mức, màn hình hiện nguyên văn &laquo;trả lỗi 402. You
+                have depleted your monthly included credits&hellip;&raquo; — vừa có mã HTTP vừa là
+                tiếng Anh, trái CGD 5.5, và kiến trúc sư không đọc được cũng không xử lý được. Nay
+                chi tiết chỉ vào log; màn hình nói theo tình huống (khoá hết hiệu lực / hết hạn mức
+                / quá tải / lỗi khác) kèm <b>ai xử lý được</b>, và luôn nhắc ảnh khối vẫn dùng được.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">06/09</td>
               <td>Soát bằng mắt sau bước 7 — bốn phản hồi của Haan</td>
               <td class="xs">
                 <b>Lối vào nhà</b>: mặt tiền tầng trệt trước đây KHÔNG có lỗ mở nào. Bước đặt cửa
@@ -625,6 +989,30 @@
           </thead>
           <tbody>
             <tr>
+              <td class="num">V-19</td>
+              <td>
+                <b
+                  >Chương trình không gian chỉ giao 45&ndash;60 % mặt sàn ở các tầng trên, nên một
+                  phòng phải phình ra nhận hết phần còn lại.</b
+                >
+                Sau khi chặn cửa &ldquo;đổ vào giếng trời&rdquo; (V-16), phần dôi rơi vào phòng thật
+                &mdash; nhưng cây chia chỉ có vài lá trên một tầng, nên nó dồn vào một chỗ: tầng 4
+                ra một cái kho 4,1 &times; 10,5 m (43 m&sup2;), tầng 2 một phòng ngủ 43 m&sup2;.
+                Không quy tắc nào bắt được (tỉ lệ 2,56 vẫn dưới 3,0) và hàm mục tiêu tuyến tính nên
+                dồn một chỗ hay chia đều đều cùng giá.<br />
+                Đã thử nâng diện tích mong muốn ở <code>fitToFloors</code> và <b>bỏ</b>: nó xoá mất
+                hiệu lực của thống kê thực nghiệm (trung vị 26,5 m&sup2; của phòng khách bị đẩy
+                thẳng lên cận trên 40 m&sup2;), tức đổi một cái xấu lấy một cái sai.
+              </td>
+              <td class="xs">Mức hoàn thiện mặt bằng các tầng trên</td>
+              <td class="xs">
+                Hai đường: nới <code>filler_below_ratio</code> (0,45) để engine thêm không gian bổ
+                sung cho tới khi tầng đủ đầy &mdash; cần kiến trúc sư NVG chốt (Q-29); hoặc để hàm
+                mục tiêu phạt LUỸ TIẾN theo độ lệch diện tích để chia đều rẻ hơn dồn một chỗ. Đường
+                thứ hai đắt hơn hẳn về thời gian giải.
+              </td>
+            </tr>
+            <tr>
               <td class="num">V-12</td>
               <td>
                 <b>Phương án B (hành lang bên phải) vô nghiệm trên đề bài demo</b> ở cả 4 và 5 tầng,
@@ -715,6 +1103,21 @@
                 đây là <b>đường duy nhất</b> để những con số này thôi là phỏng đoán.
               </td>
               <td class="num">Mốc 4 · 5</td>
+            </tr>
+            <tr>
+              <td class="num">Q-29</td>
+              <td>
+                <b>Kích thước tối thiểu của phòng phụ trợ là bao nhiêu?</b> Tám ngưỡng mới trong
+                <code>rules/base/10-dimensions.yaml</code> đang là mặc định của team, nguồn ghi
+                &ldquo;kinh nghiệm NVG&rdquo; nên chỉ cảnh báo chứ không chặn phát hành: cạnh nhỏ
+                nhất của vệ sinh 1,2 &middot; bếp 1,8 &middot; chỗ để xe 2,4 &middot; kho 1,0
+                &middot; giặt 1,2 &middot; ban công 1,2 m; tỉ lệ dài trên rộng tối đa 3,0 cho nhóm
+                phụ trợ và 4,0 cho nhóm ngoài trời; giếng trời không quá 8 m&sup2;.<br />
+                Kèm theo: <code>min_area_wc</code> hiện là 2,4 m&sup2; &mdash; một khu vệ sinh có
+                tắm ở hồ sơ NVG rộng bao nhiêu? Và <code>filler_below_ratio</code> 0,45 có phải mức
+                đúng để engine thôi thêm không gian bổ sung không (xem V-19)?
+              </td>
+              <td class="num">Mốc 5</td>
             </tr>
             <tr>
               <td class="num">Q-21</td>
@@ -819,8 +1222,9 @@
         <b>Đã trả lời:</b> Q-2 (mở rộng bảng cũ) · Q-7 (quy ước tên file — tài liệu sai) · Q-8 (Hưng
         Yên, 34 đơn vị hành chính) · Q-12 · Q-13 · Q-15 (khoá Gemini là gói miễn phí — đo lại 06/09:
         mô hình sinh ảnh trả <code>limit: 0</code>, tức không cấp lượt nào, chờ sang ngày mai cũng
-        không đổi) · Q-17 (sửa hợp đồng luôn) · Q-22 (dev và test dùng tạm Gemini API) ·
-        <b>Q-27</b> và <b>Q-28</b> — xem dưới.
+        không đổi) · Q-17 (sửa hợp đồng luôn) · Q-22 (dev và test dùng dịch vụ sinh ảnh ngoài — nay
+        là Pollinations, mô hình <code>kontext</code>, đường ảnh sang ảnh) · <b>Q-27</b> và
+        <b>Q-28</b> — xem dưới.
       </p>
 
       <div class="flag">

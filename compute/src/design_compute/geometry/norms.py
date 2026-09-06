@@ -56,6 +56,10 @@ class ConstructionNorms:
     # có biến chiều cao, còn `FloorPlan.levels[].height_m` mang nó ra cho khối 3D và mặt cắt.
     storey_height_m: float
     top_storey_height_m: float
+    # Lan can của ban công, lô gia, sân thượng. Cạnh giáp mặt thoáng của chúng không phải
+    # tường, nên khối ba chiều cần biết dựng nó cao bao nhiêu và dày bao nhiêu.
+    railing_h_m: float
+    railing_thickness_m: float
     # Vật liệu mặc định cho bảng thống kê cửa (`schedule_defaults`) — chỉ là giá trị mồi.
     schedule_materials: dict[str, str]
 
@@ -108,6 +112,8 @@ def parse_construction_norms(text: str) -> ConstructionNorms:
         no_window_types=frozenset(str(t) for t in (raw.get("no_window_types") or [])),
         storey_height_m=_number(raw, "levels", "storey_height_m"),
         top_storey_height_m=_number(raw, "levels", "top_storey_height_m"),
+        railing_h_m=_number(raw, "outdoor", "railing_h_m"),
+        railing_thickness_m=_number(raw, "outdoor", "railing_thickness_m"),
         schedule_materials={str(k): str(v) for k, v in (raw.get("schedule_defaults") or {}).items()},
     )
 

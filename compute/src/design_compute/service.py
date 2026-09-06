@@ -279,6 +279,9 @@ def export_svg(payload: ExportDxfPayload) -> Response:
 
 class MassingPayload(BaseModel):
     floor_plan: dict[str, Any]
+    # Nhóm mã phòng (`kb/room_vocabulary.yaml`) — cần nhóm `outdoor` để dựng lan can thay vì
+    # tường ở cạnh hở của ban công. Worker cấp, giống hệt tuyến xuất tờ bản vẽ.
+    groups: dict[str, list[str]] | None = None
 
 
 @app.post("/export/glb")
@@ -286,7 +289,7 @@ def export_glb(payload: MassingPayload) -> Response:
     """Khối ba chiều sơ bộ (glTF nhị phân) đùn từ mặt bằng — trình duyệt chỉ xem (bất biến #5)."""
     validate("floor-plan", payload.floor_plan)
     try:
-        data = massing_glb(payload.floor_plan)
+        data = massing_glb(payload.floor_plan, payload.groups)
     except MassingError as exc:
         return JSONResponse(status_code=422, content={"error": str(exc), "retryable": False})
     return Response(content=data, media_type="model/gltf-binary")

@@ -198,6 +198,21 @@ nội dung — giải mã mù quáng sẽ làm hỏng chuỗi vốn đã đúng.
 đồ độ sâu, bản đồ pháp tuyến), không phải sở hữu bộ dựng ảnh. Đây là một de-scope đáng kể cho
 Mốc 6 — nhưng cần Haan xác nhận công cụ đó là gì trước (câu hỏi 1 ở `13-ho-so-thuc-te` 13.13).
 
+**Hiện trạng 06/09/2026, để không phải dò lại.** Trong lúc chờ câu trả lời đó, tuyến
+`layer5_render` đã chạy được bằng **Pollinations** (mô hình `kontext`, `POST /v1/images/edits`,
+ảnh → ảnh, ~18–21 giây một ảnh). Đã thử và loại hai nhà cung cấp trước đó: **Gemini** (gói miễn
+phí trả `limit: 0` cho mọi mô hình sinh ảnh) và **Hugging Face** (chạy được nhưng hạn mức miễn
+phí chỉ đủ ba tới bốn ảnh một tháng).
+
+Ba điều đáng nhớ, đúng cho mọi nhà cung cấp đã thử: mô hình **ảnh → ảnh** giữ đúng khối đã giải,
+còn **chữ → ảnh** thì dựng một ngôi nhà khác nên vi phạm nguyên tắc bất biến 1 — đừng đổi sang
+đường rẻ hơn ấy; lời dẫn phải viết **tiếng Anh** (lời dẫn tiếng Việt bị mô hình bỏ qua lặng lẽ,
+không báo lỗi); và độ bám khối không tuyệt đối, nên nhãn cảnh báo do mã in lên ảnh là bắt buộc.
+
+Nhà cung cấp, tên mô hình và địa chỉ endpoint đều là dữ liệu trong `config/models.yaml`, nên nếu
+Đ11 dẫn tới kết luận de-scope thì việc bỏ tuyến này là gỡ một mục cấu hình, không phải viết lại
+lớp gọi.
+
 ---
 
 ## NGUỒN DỮ LIỆU NỀN ĐÃ RÚT TỪ HỒ SƠ THẬT (06/09/2026)

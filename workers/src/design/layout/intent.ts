@@ -133,13 +133,53 @@ interface Band {
   readonly rooms: Space[];
   /** Dải này có chạm một mặt thoáng không — quyết định có phải mở giếng trời hay không. */
   readonly onFacade: boolean;
+  /** Hành lang dọc nằm bên nào — giếng trời phải tránh đứng chắn phía đó. */
+  readonly spine: 'left' | 'right';
 }
 
+/**
+ * Ruột của một dải nằm sâu trong nhà: phòng, và giếng trời cạnh nó nếu phòng cần sáng.
+ *
+ * **Giếng trời đứng về phía ĐỐI DIỆN hành lang.** Cùng lý lẽ đã ghi cho ban công ở dưới,
+ * chỉ ngược chiều: ban công phải đứng CÙNG phía hành lang để chạm được nó, còn giếng trời
+ * là thứ chen vào giữa nên phải tránh sang phía kia.
+ *
+ * Bản trước luôn `push` giếng trời xuống cuối dải, tức luôn nằm bên PHẢI phòng, bất kể hành
+ * lang ở đâu. Với phương án A và C (hành lang bên trái) điều đó vô hại. Với phương án B
+ * (hành lang bên phải) thì giếng trời nằm CHẮN giữa phòng và hành lang, và không có cách nào
+ * gỡ: bề rộng tối thiểu của giếng trời mượn chính ngưỡng `corridor_min_width` (0,9 m — một
+ * khe 20 cm không lấy sáng cho ai), nên bộ giải không bóp nó về không được. Mọi phòng cần
+ * sáng trong phần sau mất lối vào cùng lúc, và `every_room_requires_access` ở mức chặn phát
+ * hành kết luận vô nghiệm.
+ *
+ * Đo trên hồ sơ NVO-TK-2026-2737 ngày 06/09/2026: phương án B hỏng ở MỌI lần sinh, còn A và
+ * C luôn giải được — tập ràng buộc mâu thuẫn trỏ vào `corridor_min_width` của một
+ * `void_2_…` và `every_room_requires_access` của phòng thờ. Phòng thờ chỉ là phòng mà
+ * CP-SAT chọn làm đại diện; mọi phòng cần sáng khác cũng vướng y hệt.
+ */
 function bandNode(band: Band): LayoutNode {
   const needsLightwell = !band.onFacade && band.rooms.some((r) => r.needs_daylight === true);
   const parts: LayoutNode[] = band.rooms.map((room) => ({ room: room.id }));
-  if (needsLightwell) parts.push({ void: 'lightwell' });
+  if (needsLightwell) {
+    if (band.spine === 'left') parts.push({ void: 'lightwell' });
+    else parts.unshift({ void: 'lightwell' });
+  }
   return chain('V', parts);
+}
+
+/** Mặt nào của hình bao mà một loại phòng BẮT BUỘC giáp — đọc từ vị từ `requires_face`. */
+export type FaceNeed = (roomType: string) => 'open' | 'access' | null;
+
+export interface FloorContext {
+  /** Tầng đang dựng. Mặt vào được chỉ có nghĩa ở tầng trệt. */
+  readonly level?: number;
+  /** Mặt nào của thửa vào được từ ngoài. */
+  readonly accessFaces?: readonly Face[];
+  /**
+   * Tra `requires_face` theo loại phòng. Vắng mặt thì trả về `null` cho mọi loại và cây dựng
+   * y như trước — gói quy tắc là thứ có thể không có trong tay lớp gọi (xem `NO_RULES`).
+   */
+  readonly faceOf?: FaceNeed;
 }
 
 /**
@@ -152,6 +192,7 @@ export function floorTree(
   spaces: Space[],
   variant: LayoutVariant,
   openFaces: readonly Face[],
+  context: FloorContext = {},
 ): LayoutNode | null {
   if (spaces.length === 0) return null;
 
@@ -172,8 +213,41 @@ export function floorTree(
   // Tầng không có phòng nào đáng ra mặt tiền thì dải đó thành THÔNG TẦNG. Đây không phải cách
   // né tránh: khoảng rỗng phía trước trên tầng lửng hoặc tầng áp mái là thứ nhà ống vẫn làm,
   // và nó không mang ràng buộc diện tích nào nên không kéo các tầng còn lại theo.
-  const front = others.find((o) => !SERVICE_TYPES.has(o.type)) ?? null;
-  const afterFront = front ? others.filter((o) => o.id !== front.id) : others;
+  //
+  // ── Hai ngoại lệ đi TRƯỚC bảng xếp hạng ────────────────────────────────────────────
+  //
+  // Chúng đến từ vị từ `requires_face` của gói quy tắc, và cả hai nói cùng một điều: có
+  // những phòng mà VỊ TRÍ là bản chất, không phải sở thích.
+  //
+  //  · **Chỗ để xe phải giáp mặt đường.** Xếp hạng theo nhu cầu chiếu sáng luôn đẩy phòng
+  //    khách ra mặt tiền và dồn chỗ để xe vào trong — đo được 06/09/2026 trên bản vẽ demo:
+  //    phòng khách y 0–3,2 m, chỗ để xe y 3,2–6,2 m, và ô tô phải đi xuyên phòng khách.
+  //    `every_room_requires_access` không bắt được vì chỗ để xe VẪN giáp hành lang; lối vào
+  //    cho xe là quan hệ với đường, không phải với hành lang.
+  //  · **Ban công phải giáp mặt thoáng.** Không có ràng buộc này thì nó là một phòng như
+  //    mọi phòng khác và rơi vào giữa nhà — bản vẽ demo có ban công 0,40 × 9,00 m, bốn phía
+  //    là tường.
+  //
+  // Ban công đặt CẠNH phòng mặt tiền (lát cắt dọc), không đặt TRƯỚC nó: lát cắt ngang sẽ
+  // đẩy phòng mặt tiền ra khỏi mặt trước theo cấu trúc cây, và `bedroom_requires_daylight`
+  // — mức chặn phát hành — kết luận vô nghiệm. Ban công lệch một bên là cách nhà ống thật
+  // vẫn làm.
+  const faceOf = context.faceOf ?? (() => null);
+  const accessFaces = context.accessFaces?.length ? context.accessFaces : (['front'] as const);
+  const onGround = (context.level ?? 1) === 1;
+
+  const accessRoom =
+    onGround && accessFaces.includes('front')
+      ? (others.find((o) => faceOf(o.type) === 'access') ?? null)
+      : null;
+  const outdoorRoom = frontIsOpen
+    ? (others.find((o) => o.id !== accessRoom?.id && faceOf(o.type) === 'open') ?? null)
+    : null;
+
+  const ranked = others.find((o) => !SERVICE_TYPES.has(o.type) && o.id !== outdoorRoom?.id);
+  const front = accessRoom ?? ranked ?? null;
+  const taken = new Set([front?.id, outdoorRoom?.id].filter(Boolean) as string[]);
+  const afterFront = others.filter((o) => !taken.has(o.id));
 
   // Thang đi CÙNG một phòng phục vụ (ưu tiên khu vệ sinh) trong một dải, thang ở phía hành
   // lang. Để thang một mình là nó trải hết bề rộng phần sau — 4,1 m × 2,8 m = 13,9 m² cho
@@ -215,7 +289,7 @@ export function floorTree(
   if (stairNode && variant.core === 'front') stack.push(stairNode);
   roomBands.forEach((band, index) => {
     const last = index === roomBands.length - 1 && !(stairNode && variant.core === 'rear');
-    stack.push(bandNode({ rooms: band, onFacade: last && backIsOpen }));
+    stack.push(bandNode({ rooms: band, onFacade: last && backIsOpen, spine: variant.spine }));
   });
   if (stairNode && variant.core === 'rear') stack.push(stairNode);
 
@@ -228,11 +302,28 @@ export function floorTree(
   // khít, và bộ giải báo `stair_alignment` mâu thuẫn — đúng nhưng không ai đoán ra vì sao.
   if (stack.length === 1 && stairNode) stack.push({ void: 'atrium' });
 
-  const frontSlot: LayoutNode = front
+  // Ruột của dải mặt tiền: phòng mặt tiền, và ban công nằm CẠNH nó — cùng một lát cắt dọc,
+  // nên cả hai vẫn chạm mặt trước.
+  //
+  // Ban công đứng về phía HÀNH LANG, không phải phía đối diện. Đây không phải chuyện thẩm mỹ:
+  // hành lang dọc chạy từ sau dải mặt tiền trở vào, nên chỉ phần dải mặt tiền nằm cùng phía
+  // với nó mới chung được một đoạn biên với nó. Đặt ban công về phía kia thì nó không kề
+  // không gian giao thông nào, và `every_room_requires_access` — mức chặn phát hành — kết
+  // luận vô nghiệm. Ban công đi ra từ chiếu nghỉ cũng là cách nhà ống thật vẫn làm.
+  const frontCore: LayoutNode | null = front ? { room: front.id } : null;
+  const withOutdoor: LayoutNode | null = outdoorRoom
+    ? frontCore
+      ? variant.spine === 'left'
+        ? { split: 'V', ratio_hint: 0.25, a: { room: outdoorRoom.id }, b: frontCore }
+        : { split: 'V', ratio_hint: 0.75, a: frontCore, b: { room: outdoorRoom.id } }
+      : { room: outdoorRoom.id }
+    : frontCore;
+
+  const frontSlot: LayoutNode = withOutdoor
     ? frontIsOpen
-      ? { room: front.id }
+      ? withOutdoor
       : // Mặt trước bị bịt: phòng mặt tiền cũng cần giếng trời như một dải nằm giữa.
-        { split: 'V', ratio_hint: 0.75, a: { room: front.id }, b: { void: 'lightwell' } }
+        { split: 'V', ratio_hint: 0.75, a: withOutdoor, b: { void: 'lightwell' } }
     : { void: 'atrium' };
 
   if (stack.length === 0) {
@@ -255,6 +346,9 @@ export interface BuildIntentArgs {
   readonly programRef: string;
   readonly variant?: LayoutVariant;
   readonly openFaces?: readonly Face[];
+  readonly accessFaces?: readonly Face[];
+  /** Tra `requires_face` theo loại phòng — xem `FloorContext`. */
+  readonly faceOf?: FaceNeed;
 }
 
 /** Dựng `LayoutIntent` cho một phương án. Đầu ra vẫn phải qua `parseArtifact` của lớp gọi. */
@@ -269,6 +363,7 @@ export function buildLayoutIntent(args: BuildIntentArgs): Record<string, unknown
         args.program.spaces.filter((s) => s.floor === level),
         variant,
         openFaces,
+        { level, accessFaces: args.accessFaces, faceOf: args.faceOf },
       );
       return tree === null ? null : { level, wings: [{ wing_id: 'W1', tree }] };
     })

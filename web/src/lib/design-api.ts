@@ -21,6 +21,19 @@ const BASE = (import.meta.env.VITE_DESIGN_API_URL ?? '').replace(/\/+$/, '');
 export class DesignApiError extends Error {}
 
 /**
+ * `fetch` ném ra khi KHÔNG chạm tới được dịch vụ — chưa chạy, đổ, hoặc bị chặn giữa đường.
+ *
+ * Bản trước bảo người dùng "kiểm tra đường truyền": sai hướng, và tốn thời gian thật. Máy
+ * vẫn vào mạng bình thường (mọi tab khác của module gọi thẳng Supabase nên vẫn chạy) — thứ
+ * không phản hồi là dịch vụ thiết kế, và kiến trúc sư không có cách nào khởi động lại nó.
+ * Nên câu này nói đúng cái hỏng và nêu AI xử lý được (CGD 5.5), chỉ giữ lại "thử lại" cho
+ * trường hợp trục trặc thoáng qua.
+ */
+const UNREACHABLE_MESSAGE =
+  'Dịch vụ thiết kế đang không phản hồi. Các phần khác của hồ sơ vẫn dùng được bình thường. ' +
+  'Thử lại sau ít phút; nếu vẫn vậy, báo Quản trị hệ thống — chỉ bên đó khởi động lại được dịch vụ.';
+
+/**
  * Bỏ `body` để gọi GET. Phân biệt bằng chính sự có mặt của dữ liệu gửi đi thay vì thêm một
  * tham số `method`: mọi endpoint của module này hoặc là đọc (không gửi gì), hoặc là ghi (gửi
  * một đối tượng) — nên một tham số thứ hai chỉ tạo chỗ cho việc khai sai.
@@ -49,9 +62,7 @@ export async function designApi<T>(path: string, body?: unknown): Promise<T> {
           },
     );
   } catch {
-    throw new DesignApiError(
-      'Không kết nối được dịch vụ thiết kế. Kiểm tra đường truyền rồi thử lại.',
-    );
+    throw new DesignApiError(UNREACHABLE_MESSAGE);
   }
 
   return parseResponse<T>(response);
@@ -84,9 +95,7 @@ export async function designApiUpload<T>(path: string, form: FormData): Promise<
       body: form,
     });
   } catch {
-    throw new DesignApiError(
-      'Không kết nối được dịch vụ thiết kế. Kiểm tra đường truyền rồi thử lại.',
-    );
+    throw new DesignApiError(UNREACHABLE_MESSAGE);
   }
 
   return parseResponse<T>(response);
@@ -120,9 +129,7 @@ export async function designApiFile(path: string): Promise<Response> {
   try {
     response = await fetch(`${BASE}${path}`, { headers: { Authorization: `Bearer ${token}` } });
   } catch {
-    throw new DesignApiError(
-      'Không kết nối được dịch vụ thiết kế. Kiểm tra đường truyền rồi thử lại.',
-    );
+    throw new DesignApiError(UNREACHABLE_MESSAGE);
   }
   if (!response.ok) {
     const payload = (await response.json().catch(() => ({}))) as { error?: string };

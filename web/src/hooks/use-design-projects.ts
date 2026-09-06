@@ -471,7 +471,25 @@ export interface VariantSummary {
   altar_level: number | null;
   garage_level: number | null;
   constraint_status: 'pass' | 'warning' | 'infeasible';
-  violations: { rule_id: string; severity: 'error' | 'warning'; message: string }[];
+  violations: VariantViolation[];
+  /** Số quy tắc áp cho loại công trình này — mẫu số của "16/18 đạt". */
+  rulesChecked: number;
+  /** `rulesChecked` trừ số quy tắc bị vi phạm. */
+  rulesPassed: number;
+}
+
+export interface VariantViolation {
+  rule_id: string;
+  severity: 'error' | 'warning';
+  message: string;
+  involved?: string[];
+  /**
+   * Trích dẫn nguồn nguyên văn của quy tắc (`QCVN 01:2021/BXD`, `kinh nghiệm NVG`), rỗng khi
+   * máy chủ không tra được. Rỗng thì hiện dòng KHÔNG có nguồn — đừng suy nguồn từ `severity`.
+   */
+  source: string | null;
+  /** Có chặn phát hành hay không. Cảnh báo bỏ qua được vẫn phải hiện, chỉ là không chặn. */
+  blocking: boolean;
 }
 
 export interface FloorPlanVariant {
@@ -498,6 +516,13 @@ export interface FloorPlanVariantsView {
   programArtifactId: string;
   headArtifactId: string | null;
   variants: FloorPlanVariant[];
+  /**
+   * Bản vẽ đang hiệu lực không thuộc chương trình không gian đang hiệu lực.
+   *
+   * Tức là bản vẽ và khối ba chiều trên màn hình đang mô tả một công trình khác công trình
+   * đang được yêu cầu, mà bản thân bản vẽ không có cách nào nói ra điều đó.
+   */
+  headStale?: boolean;
   /** Các đợt phương án của chương trình không gian trước — bản cũ còn nguyên để so sánh. */
   previous: FloorPlanGeneration[];
 }
@@ -639,17 +664,47 @@ export function useMassingModel(projectId: string, artifactId: string | null) {
 }
 
 export type RenderOutcome =
-  | { status: 'rendered'; mimeType: string; dataBase64: string; style: string; watermark: string }
-  | { status: 'unavailable'; reason: string; style: string; watermark: string };
+  | {
+      status: 'rendered';
+      mimeType: string;
+      dataBase64: string;
+      style: string;
+      view: string;
+      watermark: string;
+    }
+  | { status: 'unavailable'; reason: string; style: string; view: string; watermark: string };
 
 /** Dựng ảnh phối cảnh từ ảnh khối (data URL PNG). Tuyến tắt → `unavailable` kèm lý do, không lỗi. */
 export function useRenderFromMassing() {
   return useMutation<
     RenderOutcome,
     Error,
-    { projectId: string; image: string; style: string | null }
+    { projectId: string; image: string; style: string | null; view: string }
   >({
     mutationFn: (body) => designApi<RenderOutcome>('/design/render', body),
+  });
+}
+
+export interface RenderViewInfo {
+  id: string;
+  /** Nhãn tiếng Việt hiện trên màn hình. */
+  vi: string;
+  /** Mã góc máy — khớp khoá của ảnh khối chụp từ trình xem ba chiều. */
+  camera: string;
+}
+
+/**
+ * Danh sách khung hình phối cảnh, lấy từ máy chủ.
+ *
+ * Không viết cứng ba khung hình ở đây: mã, nhãn và góc máy nằm ở `kb/render_prompts.yaml`, và
+ * một bản sao thứ hai trong trình duyệt là thứ sẽ lệch vào lần thêm khung hình thứ tư.
+ */
+export function useRenderViews() {
+  return useQuery<RenderViewInfo[]>({
+    queryKey: ['design_render_views'],
+    queryFn: async () =>
+      (await designApi<{ views: RenderViewInfo[] }>('/design/render/views')).views,
+    staleTime: Infinity,
   });
 }
 

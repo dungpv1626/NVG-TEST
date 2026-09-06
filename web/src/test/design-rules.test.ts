@@ -37,6 +37,61 @@ describe('Ranh giới màu thương hiệu (rừng & bạc hà) với màu trạ
   });
 });
 
+describe('Bảng màu riêng của Module Thiết kế', () => {
+  const theme = source('index.css');
+  const dark = source('pages/tk/tk-theme.css');
+  const declared = (css: string) =>
+    new Set([...css.matchAll(/(--color-tk-[a-z0-9-]+)\s*:/g)].map((m) => m[1]!));
+
+  /**
+   * Token nào khai ở `@theme` mà thiếu bản đè ở khối tối thì ở chế độ tối nó giữ nguyên giá
+   * trị SÁNG — chữ gần trắng trên nền gần trắng, hoặc chữ đen trên nền đen. Không lỗi, không
+   * cảnh báo, không ai thấy cho tới khi mở đúng màn hình đó ở đúng chế độ đó.
+   */
+  it('mọi token `--color-tk-*` có đủ cả bản sáng lẫn bản tối', () => {
+    const light = declared(theme);
+    expect(light.size).toBeGreaterThan(50);
+    expect([...light].filter((t) => !declared(dark).has(t))).toEqual([]);
+  });
+
+  /** Chiều ngược lại: đè một token chưa khai thì Tailwind không sinh utility, đè cũng vô ích. */
+  it('khối tối KHÔNG khai token nào ngoài danh sách của `@theme`', () => {
+    const light = declared(theme);
+    expect([...declared(dark)].filter((t) => !light.has(t))).toEqual([]);
+  });
+
+  /**
+   * Năm họ màu phân loại thẻ (`tk-am`, `tk-pu`, `tk-rd`…) nằm rất gần ba màu trạng thái Chờ
+   * duyệt, Tranh chấp và Quá hạn. Để chúng lọt vào nhãn trạng thái là bắt người dùng phân
+   * biệt hai hệ tín hiệu cùng sắc — đúng lý do đã cấm cam an toàn trước đây.
+   */
+  it('status-lozenge.tsx KHÔNG dùng token của Module Thiết kế', () => {
+    expect(source('components/ui/status-lozenge.tsx')).not.toMatch(/\btk-/);
+  });
+});
+
+describe('Thanh điều hướng thu gọn', () => {
+  /**
+   * Ở trạng thái thu gọn, chữ NHÌN THẤY là `shortLabel` còn tên đọc được của liên kết là
+   * `label` đầy đủ. WCAG 2.5.3 (Label in Name) đòi tên đọc được phải CHỨA chữ nhìn thấy —
+   * nếu không, người dùng ra lệnh bằng giọng nói ("bấm Khách hàng") sẽ không khớp được với
+   * thứ họ đang nhìn.
+   *
+   * Đây là ràng buộc giữa hai chuỗi trong `shared/src/modules.ts`, không nhìn thấy khi sửa
+   * từng chuỗi một — đúng loại quy tắc mòn dần mà tệp này tồn tại để canh.
+   */
+  it('nhãn ngắn của mọi module nằm trong nhãn đầy đủ (WCAG 2.5.3)', async () => {
+    // Nạp động cùng lý do với khối dưới: tệp này chạy dưới jsdom, `@nvg/shared` nạp tĩnh ở
+    // đầu tệp sẽ kéo theo cả nhánh phụ thuộc không cần cho một phép kiểm chuỗi.
+    const { MODULE_CODES, MODULES } = await import('@nvg/shared');
+    const lech = MODULE_CODES.filter((code) => {
+      const { label, shortLabel } = MODULES[code];
+      return !label.toLowerCase().includes(shortLabel.toLowerCase());
+    });
+    expect(lech).toEqual([]);
+  });
+});
+
 describe('Chỉ số chưa đủ dữ liệu không được hiện thành số 0', () => {
   /**
    * PRD v1.4 Mục 2.3 và Content Guidelines v1.2 5.6 thêm một quy tắc hiển thị mới: chỉ số mà

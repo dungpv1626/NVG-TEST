@@ -108,11 +108,7 @@ routes:
     enabled: true
     purpose: Đọc ảnh trích lục/sổ đỏ thành danh sách cạnh có cấu trúc để dựng ranh giới thửa đất.
 
-  # Sinh ảnh phối cảnh từ ảnh khối — Layer 5, đi qua interface `RenderBackend`.
-  #
-  # Haan chốt 05/09/2026: **giai đoạn dev và test dùng tạm Gemini API**. Đây là câu trả lời cho
-  # Q-22, sau khi hồ sơ thật cho thấy NVG đã dùng một công cụ dựng ảnh AI trong sản xuất
-  # (ảnh `aicomplex_*` trong hồ sơ Mạnh).
+  # Sinh ảnh phối cảnh từ ảnh khối — Lớp 5, đi qua interface `RenderBackend`.
   #
   # ✅ **Tuyến này đặt `max_data_class: 3` mà KHÔNG phải nới lỏng gì** — khác hẳn
   # `site_boundary_extract`. Chính bảng hạng ở đầu tệp đã xếp "ảnh khối, bản đồ độ sâu, mô tả
@@ -127,51 +123,45 @@ routes:
   # tầng"), KHÔNG phải chữ của khách. Lớp gọi khai `dataClass` CỨNG bằng 3 và không nhận số
   # này từ bên ngoài — cùng khuôn với `site/extract-boundary.ts`.
   #
-  # ⚠️ ĐANG TẮT vì ĐO ĐƯỢC, không phải vì phỏng đoán (05/09/2026, lời gọi thật không mang dữ
-  # liệu NVG):
+  # ── Đã thử ba nhà cung cấp, ghi lại để không đi lại đường cũ ──────────────────────────────
   #
-  #   · liệt kê mô hình → khoá thấy được 6 mô hình sinh ảnh: `gemini-2.5-flash-image`,
-  #     `gemini-3-pro-image`, `gemini-3-pro-image-preview`, `gemini-3.1-flash-image`,
-  #     `gemini-3.1-flash-image-preview`, `gemini-3.1-flash-lite-image`.
-  #   · gọi thật `gemini-2.5-flash-image` → **429 RESOURCE_EXHAUSTED**.
-  #   · gọi thật `gemini-3.1-flash-image` → **429 RESOURCE_EXHAUSTED**.
-  #   · gọi thật `gemini-2.5-flash` (chữ) ngay sau đó → **OK, 31 token**.
+  # · **Gemini — LOẠI.** Lời gọi thật 05 và 06/09/2026: cả ba mô hình sinh ảnh trả nguyên văn
+  #   `Quota exceeded … generate_content_free_tier_requests, limit: 0`. `limit: 0` nghĩa là gói
+  #   miễn phí không cấp một lượt sinh ảnh nào; chờ sang ngày mai không đổi được gì.
+  # · **Hugging Face — LOẠI.** Chạy được (`FLUX.1-Kontext-dev` qua đối tác `fal-ai`, ~9 giây,
+  #   bám khối tốt) nhưng hạn mức miễn phí chỉ khoảng 0,10 đô một tháng: bốn lần gọi để đo là
+  #   hết sạch. Quá ít để dùng trong lúc phát triển.
+  # · **Pollinations — ĐANG DÙNG** (06/09/2026, Haan chốt). Mô hình `kontext` trên đường
+  #   `POST /v1/images/edits`, ~18,5 giây cho ảnh 1024×1024, bám khối rất sát trên ảnh thật.
   #
-  # Đo lại 06/09/2026 (hạn mức miễn phí đặt lại theo ngày, nên một lần 429 chưa đủ kết luận),
-  # lần này đọc kỹ phần chi tiết của lỗi thay vì chỉ nhìn mã 429. Cả ba mô hình sinh ảnh đều
-  # trả về nguyên văn:
+  # ⚠️ **Phải là đường ẢNH → ẢNH (`/v1/images/edits`).** Pollinations còn có `GET /image/{prompt}`
+  # rẻ hơn, nhưng đó là CHỮ → ẢNH: nó dựng một ngôi nhà khác chứ không dựng ngôi nhà bộ giải vừa
+  # xếp, tức phá nguyên tắc bất biến 1 (CLAUDE.md 8.2). Không đổi sang đường đó dù rẻ hơn.
   #
-  #     Quota exceeded for metric: generativelanguage.googleapis.com/
-  #     generate_content_free_tier_requests, **limit: 0**, model: <tên mô hình>
+  # `model` ở đây đóng đúng vai trò của một biến môi trường `POLLINATIONS_IMAGE_MODEL`, nhưng
+  # nằm trong tệp có phiên bản và có chú thích — đổi mô hình là sửa một dòng, không sửa mã.
+  # Danh sách mô hình dùng được lấy ở `GET /v1/models`; chọn mô hình có `image` trong
+  # `input_modalities` VÀ `/v1/images/edits` trong `supported_endpoints`. Đừng đoán tên.
   #
-  # `limit: 0` là câu trả lời dứt khoát: không phải "đã dùng hết trong ngày" mà là **gói miễn
-  # phí không cấp một lượt sinh ảnh nào**. Chờ sang ngày mai không đổi được gì.
+  # ⚠️ Pollinations KHÔNG có cam kết không-lưu-trữ, nên `max_data_class: 3` giữ nguyên và KHÔNG
+  # được hạ. Ảnh gửi đi phải là ảnh khối trần.
   #
-  # Tức là khoá KHÔNG hết hạn mức nói chung; nó **không có hạn mức sinh ảnh**. Đây là dấu hiệu
-  # thứ ba khẳng định gói MIỄN PHÍ, cùng loại với nhóm `pro` ở điểm 2 — và nó trả lời dứt điểm
-  # câu hỏi Q-15. Bật `enabled: true` bây giờ chỉ đổi một lỗi đọc được ("chưa có ảnh khối để
-  # dựng") thành một lỗi khó hiểu ("hết hạn mức"), đúng bài học của `layer3_intent_hard`.
+  # ⚠️ Theo PRD mục 5.1, tính năng AI là phụ trợ tuỳ chọn — hết hạn mức KHÔNG được chặn luồng
+  # chính. Khi tuyến này lỗi, màn hình giữ ảnh khối kèm nhãn cảnh báo, không trả lỗi ra người
+  # dùng.
   #
-  # → **Muốn chạy tuyến này phải nâng gói trả phí.** Việc đó là quyết định của Haan, không
-  # phải việc bật một cờ.
-  #
-  # ⚠️ Kể cả khi đã nâng gói: theo PRD mục 5.1, tính năng AI là phụ trợ tuỳ chọn — hết hạn mức
-  # KHÔNG được chặn luồng chính. Khi tuyến này lỗi, trả về chính ảnh khối kèm nhãn cảnh báo,
-  # không trả lỗi ra người dùng.
-  #
-  # ⚠️ Gemini nhận ảnh + chữ, KHÔNG nhận điều kiện hoá kiểu depth/normal như Stable Diffusion.
-  # Nên `views[].depth_png` và `edge_png` của hợp đồng để trống (chúng vốn đã là tuỳ chọn) và
-  # engine chỉ cần dựng MỘT ảnh khối tốt. Đổi lại, độ bám hình học yếu hơn — ảnh có thể đẹp mà
-  # lệch khối. Đó là lý do nhãn "Ảnh tham khảo ý tưởng — chưa phải phương án thi công"
-  # (01-overview 1.4) do MÃ chèn, không phụ thuộc người dùng nhớ bật.
+  # ⚠️ Độ bám hình học của mô hình sinh ảnh vẫn không tuyệt đối — ảnh có thể đẹp mà lệch khối.
+  # Đó là lý do nhãn "Ảnh tham khảo ý tưởng — chưa phải phương án thi công" (01-overview 1.4)
+  # do MÃ chèn lên ảnh, không phụ thuộc người dùng nhớ bật.
   layer5_render:
-    provider: gemini
-    model: gemini-2.5-flash-image
+    provider: pollinations
+    model: kontext
+    endpoint: https://gen.pollinations.ai/v1/images/edits
     max_data_class: 3
-    enabled: false
+    enabled: true
     purpose:
-      Sinh ảnh phối cảnh tham khảo từ ảnh khối ba chiều. Dev và test dùng tạm Gemini (Haan chốt
-      05/09/2026). Chờ nâng gói trả phí mới bật được — xem chú thích trên.
+      Sinh ảnh phối cảnh tham khảo TỪ ảnh khối ba chiều (ảnh → ảnh, không phải chữ → ảnh). Dev
+      và test dùng Pollinations — xem chú thích trên về hai nhà cung cấp đã loại.
 
   # Nhúng phần chú giải của kiến trúc sư để truy hồi ba tầng (06-knowledge-base 6.3).
   #

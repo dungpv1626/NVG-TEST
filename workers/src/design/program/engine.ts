@@ -480,6 +480,14 @@ function areasFor(
  * ra phải rơi vào một phòng nào đó. Giao nó cho khối giao thông, vì đó chính là thứ nó là:
  * sảnh, hành lang, chiếu nghỉ — phần sàn không thuộc phòng nào.
  *
+ * ⚠️ Nới cận trên ở đây KHÔNG kéo phần dôi vào phòng: hàm mục tiêu của bộ giải phạt theo độ
+ * lệch so với diện tích MONG MUỐN, mà mong muốn thì bước này cố ý không đụng tới — nó là con
+ * số của chuẩn nghề hoặc của thống kê thực nghiệm, không phải chỗ để nhét phần sàn thừa. Thứ
+ * thật sự đẩy phần dôi vào phòng là CẬN TRÊN CỦA GIẾNG TRỜI (`lightwell_max_area` trong rule
+ * pack): trước khi có nó, khoảng rỗng là thứ duy nhất trong mô hình không mang chi phí nào,
+ * nên mọi mét vuông không ai mong muốn đổ hết vào đó — đo được 06/09/2026, giếng trời 33 m²
+ * trên sàn 90 m².
+ *
  * Từ Mốc 5, bộ giải coi `max_area` của chương trình là KHOẢN PHẠT chứ không phải ràng buộc
  * cứng (`compute/src/design_compute/solver/model.py`), nên bước này không còn là ranh giới
  * giữa "có phương án" và "vô nghiệm" — nó chỉ quyết định phần dôi ra rơi vào đâu cho hợp lý.

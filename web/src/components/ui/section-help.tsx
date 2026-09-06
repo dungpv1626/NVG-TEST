@@ -39,6 +39,14 @@ export interface SectionHelpProps {
    * khai — nó là khoá ghi nhớ, đổi chuỗi là bảng tự mở lại với người đã đọc rồi.
    */
   autoOpenKey?: string;
+  /**
+   * Hiện nút mở dưới dạng NÚT CÓ CHỮ thay vì dấu hỏi tròn 24px.
+   *
+   * Dấu hỏi tròn đúng cho một mục nhỏ bên trong màn hình — nó nép cạnh tiêu đề mục và không
+   * tranh chỗ. Ở hàng nút của cả trang thì ngược lại: một dấu hỏi 24px đứng cạnh nút cao 40px
+   * đọc ra như một vết bẩn, và không ai đoán được nó mở cái gì.
+   */
+  triggerLabel?: string;
   className?: string;
 }
 
@@ -68,7 +76,14 @@ function rememberSeen(key: string): void {
   }
 }
 
-export function SectionHelp({ title, steps, note, autoOpenKey, className }: SectionHelpProps) {
+export function SectionHelp({
+  title,
+  steps,
+  note,
+  autoOpenKey,
+  triggerLabel,
+  className,
+}: SectionHelpProps) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLSpanElement>(null);
   const panelId = useId();
@@ -106,13 +121,17 @@ export function SectionHelp({ title, steps, note, autoOpenKey, className }: Sect
         aria-label={`Hướng dẫn: ${title}`}
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          'inline-flex size-6 items-center justify-center rounded-full text-fg-subtle',
+          'inline-flex items-center justify-center text-fg-subtle',
           'hover:bg-surface-sunken hover:text-fg focus-visible:outline-none',
           'focus-visible:ring-2 focus-visible:ring-brand',
+          triggerLabel
+            ? 'h-10 gap-1.5 rounded-sm border border-border-strong px-3.5'
+            : 'size-6 rounded-full',
           open && 'bg-surface-sunken text-fg',
         )}
       >
         <HelpCircle className="size-4" aria-hidden />
+        {triggerLabel}
       </button>
       {open && (
         <div
@@ -120,7 +139,10 @@ export function SectionHelp({ title, steps, note, autoOpenKey, className }: Sect
           role="dialog"
           aria-label={`Hướng dẫn: ${title}`}
           className={cn(
-            'absolute left-0 top-8 z-30 w-80 max-w-[calc(100vw-2rem)] rounded border',
+            'absolute top-8 z-30 w-80 max-w-[calc(100vw-2rem)] rounded border',
+            // Nút có chữ nằm ở hàng nút góc phải màn hình; neo bảng bên trái thì nó tràn khỏi
+            // mép phải cửa sổ.
+            triggerLabel ? 'right-0 top-12' : 'left-0',
             'border-border bg-surface p-3 shadow-overlay',
           )}
         >

@@ -22,7 +22,7 @@ import { LAYOUT_VARIANTS, type LayoutVariant } from './intent';
 import { spaceLabels } from './labels';
 import { siteFaces, type SiteContextTable } from './site-context';
 import { buildArchModel, layoutIntent, solveFloorPlan } from '../workflows/steps';
-import { summariseFloorPlan, type FloorPlanSummary } from './summary';
+import { NO_RULES, summariseFloorPlan, type FloorPlanSummary, type RuleCatalogue } from './summary';
 
 /** Phần của kho artifact mà lớp này cần — thu hẹp để bản giả trong kiểm thử nhỏ. */
 export type VariantRepo = Pick<
@@ -39,6 +39,18 @@ export interface VariantContext {
   viByType: Record<string, string>;
   /** Nhóm mã phòng (`group_targets`) — gửi cho bộ giải và dùng để tóm tắt. */
   groups: Record<string, string[]>;
+  /**
+   * Tra cứu quy tắc để gắn nguồn và đếm mẫu số "16/18 đạt".
+   *
+   * Truyền vào từ ngoài chứ không tự nạp: gói quy tắc nằm trong các tệp `rules/**` được nhúng
+   * vào bản dựng Worker dưới dạng văn bản, và `import` thẳng chúng từ đây sẽ kéo cả tệp YAML
+   * vào mọi nơi nhập tệp này — kể cả bộ kiểm thử, nơi không có bước nhúng đó. Điểm nạp dữ
+   * liệu là `index.ts`, đúng chỗ `siteContext` và `viByType` đang được lắp.
+   *
+   * Vắng mặt thì kết quả không mang nguồn và mẫu số bằng 0 — thiếu thông tin, không phải sai
+   * thông tin.
+   */
+  rulesFor?: (locality: string, buildingType: string) => RuleCatalogue;
 }
 
 export interface VariantResult {
@@ -128,6 +140,10 @@ export async function generateVariants(
   const faces = siteFaces(brief.site as never, ctx.siteContext);
   const labels = spaceLabels(program, ctx.viByType);
   const results: VariantResult[] = [];
+  // Cùng gói quy tắc sẽ gửi cho bộ giải. Lớp 3a đọc nó để BIẾT phòng nào phải giáp mặt nào
+  // (`requires_face`) rồi xếp chỗ cho đúng ngay từ đầu — chứ không để bộ giải phát hiện sai
+  // rồi báo vi phạm trên một bố cục không sửa được bằng toạ độ.
+  const rules = ctx.rulesFor?.(brief.locality, brief.building_type) ?? NO_RULES;
 
   // Dấu vân mã hình học của Container — hỏi MỘT lần cho cả mẻ, rồi đưa vào khoá bộ nhớ đệm.
   // Không có nó thì "cùng đầu vào, cùng cấu hình" bỏ sót chính phần mã sinh ra hình học: sửa
@@ -138,7 +154,12 @@ export async function generateVariants(
   const solverVersion = (await compute.health()).solverVersion;
 
   for (const variant of variants) {
-    const intent = layoutIntent(program, programId, { variant, openFaces: faces.open });
+    const intent = layoutIntent(program, programId, {
+      variant,
+      openFaces: faces.open,
+      accessFaces: faces.access,
+      faceOf: rules.faceOf,
+    });
     const intentArtifact = await repo.write({
       scope,
       kind: 'layout_intent',
@@ -222,6 +243,39 @@ export async function generateVariants(
   }
 
   let head = await repo.head(scope.projectId, scope.discipline, 'floor_plan');
+
+  // Bản đang hiệu lực có thuộc ĐỢT vừa sinh không? Nếu không thì nó là hậu duệ của một chương
+  // trình không gian đã bị thay — và giữ nguyên nó là để màn hình vẽ một công trình khác hẳn
+  // công trình đang được yêu cầu.
+  //
+  // Đo được 06/09/2026 trên dự án demo: đầu bài lên phiên bản 2 (5 tầng), chương trình không
+  // gian mới đã lên hiệu lực, nhưng `design_head/floor_plan` vẫn trỏ vào mặt bằng 4 tầng sinh
+  // từ chương trình cũ — `updated_at` bằng đúng `created_at`. Mọi mặt bằng sinh sau đó đều có
+  // đủ 5 tầng; không cái nào được dùng.
+  //
+  // Chuyển sang ĐÚNG CHỮ CÁI phương án cũ, không phải sang phương án khả thi đầu tiên: lựa
+  // chọn của kiến trúc sư là "phương án C", và phương án C của chương trình mới vẫn là C.
+  const inThisRound = head ? results.some((r) => r.artifactId === head!.id) : false;
+  if (head && !inThisRound) {
+    // Chữ cái phương án của bản cũ đọc từ ý đồ đang hiệu lực — hai con trỏ luôn được đặt cùng
+    // lúc, nên chúng luôn khớp nhau.
+    const headIntent = await repo.head(scope.projectId, scope.discipline, 'layout_intent');
+    const previousLetter = headIntent
+      ? ((headIntent.payload as LayoutIntent | null)?.variant_id ?? null)
+      : null;
+    const sameLetter = results.find(
+      (r) => r.kind === 'floor_plan' && r.variantId === previousLetter,
+    );
+    const anyFeasible = results.find((r) => r.kind === 'floor_plan');
+    const moveTo = sameLetter ?? anyFeasible;
+    if (moveTo) {
+      await repo.setHead(scope, 'layout_intent', moveTo.intentArtifactId);
+      await repo.setHead(scope, 'floor_plan', moveTo.artifactId);
+      await setArchHead(repo, scope, moveTo.artifactId);
+      head = { id: moveTo.artifactId, payload: null };
+    }
+  }
+
   if (!head) {
     const first = results.find((r) => r.kind === 'floor_plan');
     if (first) {
@@ -278,6 +332,18 @@ export interface VariantsListing {
   headArtifactId: string | null;
   variants: VariantView[];
   /**
+   * Bản vẽ đang hiệu lực KHÔNG phải hậu duệ của chương trình không gian đang hiệu lực.
+   *
+   * Nghĩa là màn hình đang vẽ một công trình khác công trình đang được yêu cầu — số tầng khác,
+   * số phòng khác — và không có gì trên bản vẽ nói điều đó. Đây là trạng thái đo được thật:
+   * đầu bài lên 5 tầng, chương trình không gian lên theo, còn con trỏ mặt bằng ở lại bản 4
+   * tầng suốt một ngày (06/09/2026).
+   *
+   * Không tự sửa ở tuyến ĐỌC: đặt lại bản hiệu lực là một thay đổi, và một lần mở màn hình
+   * không phải là một thao tác. Sinh lại phương án mới chuyển con trỏ.
+   */
+  headStale: boolean;
+  /**
    * Các đợt phương án của những chương trình không gian TRƯỚC (khách đổi ý, giải lại) — mới
    * nhất trước. Bản cũ vẫn còn nguyên để so sánh: đó là điều 11-design-flow 11.6 hứa với khách.
    */
@@ -290,11 +356,13 @@ export interface VariantsListing {
  */
 export async function listVariants(ctx: VariantContext): Promise<VariantsListing> {
   const { repo, scope } = ctx;
-  const { program, programId } = await requireInputs(ctx);
+  const { brief, program, programId } = await requireInputs(ctx);
   const labels = spaceLabels(program, ctx.viByType);
   const head = await repo.head(scope.projectId, scope.discipline, 'floor_plan');
+  // Cùng gói quy tắc đã gửi cho bộ giải — xem `ruleCatalogue` trong `summary.ts`.
+  const rules = ctx.rulesFor?.(brief.locality, brief.building_type) ?? NO_RULES;
 
-  const variants = await variantsOfProgram(ctx, programId, labels, head?.id ?? null);
+  const variants = await variantsOfProgram(ctx, programId, labels, head?.id ?? null, rules);
 
   // Đợt trước: mọi chương trình không gian khác của dự án còn có phương án đã sinh.
   const previous: Generation[] = [];
@@ -303,7 +371,13 @@ export async function listVariants(ctx: VariantContext): Promise<VariantsListing
     const older = await repo.get(item.id, scope.projectId);
     if (!older || older.kind !== 'space_program') continue;
     const olderLabels = spaceLabels(older.payload as SpaceProgram, ctx.viByType);
-    const olderVariants = await variantsOfProgram(ctx, item.id, olderLabels, head?.id ?? null);
+    const olderVariants = await variantsOfProgram(
+      ctx,
+      item.id,
+      olderLabels,
+      head?.id ?? null,
+      rules,
+    );
     if (olderVariants.length > 0) {
       previous.push({
         programArtifactId: item.id,
@@ -313,7 +387,14 @@ export async function listVariants(ctx: VariantContext): Promise<VariantsListing
     }
   }
 
-  return { programArtifactId: programId, headArtifactId: head?.id ?? null, variants, previous };
+  return {
+    programArtifactId: programId,
+    headArtifactId: head?.id ?? null,
+    variants,
+    // Có bản hiệu lực, mà nó không nằm trong danh sách phương án của chương trình hiện hành.
+    headStale: Boolean(head) && !variants.some((v) => v.artifactId === head!.id),
+    previous,
+  };
 }
 
 /** Mọi phương án đã sinh từ MỘT chương trình không gian, theo lineage chương trình → ý đồ → mặt bằng. */
@@ -322,6 +403,7 @@ async function variantsOfProgram(
   programId: string,
   labels: Record<string, string>,
   headId: string | null,
+  rules: RuleCatalogue,
 ): Promise<VariantView[]> {
   const { repo, scope } = ctx;
   const labelOf = new Map(LAYOUT_VARIANTS.map((v) => [v.id, v.label] as const));
@@ -344,7 +426,7 @@ async function variantsOfProgram(
           createdAt: out.createdAt,
           isHead: headId === out.id,
           status: 'ok',
-          summary: summariseFloorPlan(plan, labels, ctx.groups),
+          summary: summariseFloorPlan(plan, labels, ctx.groups, rules),
           floorPlan: plan,
           infeasibility: null,
         });

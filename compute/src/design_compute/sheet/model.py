@@ -66,7 +66,16 @@ SCALES = (50, 60, 70, 75, 100, 125, 150, 200)
 
 # Khoảng cách ghi chú quanh công trình, tính bằng MÉT mô hình (không phụ thuộc tỷ lệ, vì chúng
 # phải né tường và cửa của chính công trình).
-GRID_EXTENSION_M = 2.6
+# Ba vành ghi chú, tính từ mép công trình ra ngoài — chuỗi kích thước, vòng tròn trục, rồi ký
+# hiệu mặt cắt. Chúng phải TÁCH BẠCH: vòng tròn trục và vòng tròn mặt cắt có thể rơi vào cùng
+# một hoành độ (ký hiệu mặt cắt đặt giữa vế thang, mà vế thang thường sát một trục), và khi hai
+# vòng tròn cùng bán kính chỉ cách nhau 0,24 m thì chúng đè lên nhau — thấy trên bản in thử
+# 06/09/2026, chữ "C" của trục nằm đè lên chữ "A" của mặt cắt.
+#
+# Bán kính vòng tròn ở tỷ lệ 1:70 là 0,28 m mô hình, nên khoảng cách giữa hai TÂM phải hơn
+# 0,56 m. Vành trục lùi vào 1,9 m (mép ngoài 2,18) còn vành mặt cắt ở 3,4 m (tâm 3,12, mép
+# trong 2,84) — hở 0,66 m.
+GRID_EXTENSION_M = 1.9
 INNER_DIM_M = 1.0
 OUTER_DIM_M = 1.7
 SECTION_MARK_M = 3.4
@@ -344,10 +353,11 @@ def build_floor_plan_sheet(
         L["door"],
         L["window"],
         leaf_mm,
+        frozenset(groups.get("outdoor") or ()),
     )
     _stairs(sheet, floor, L["stair"], L["annotation"])
     _section_marks(sheet, floor, width_m, depth_m, L["annotation"])
-    _title_block(sheet, title, level, L["title_block"])
+    _title_block(sheet, title, level, len(levels), L["title_block"])
     return sheet
 
 
@@ -506,6 +516,13 @@ def _wall_frame(wall: dict[str, Any]) -> tuple[tuple[float, float], tuple[float,
     return (ax, ay), u, n, length
 
 
+def _outdoor_helpers():
+    """Nhập TẠI CHỖ, cùng lý do với `load_construction_norms`: tránh vòng nhập lúc nạp mô-đun."""
+    from design_compute.geometry.outdoor import railing_spans, split_by
+
+    return railing_spans, split_by
+
+
 def _walls_and_openings(
     sheet: SheetModel,
     floor: dict[str, Any],
@@ -517,11 +534,15 @@ def _walls_and_openings(
     door_layer: str,
     window_layer: str,
     leaf_mm: float,
+    outdoor_types: frozenset[str] = frozenset(),
 ) -> None:
     rooms = [
         (str(r.get("type", "")), [(_mm(px), _mm(py)) for px, py in r["polygon"]])
         for r in floor.get("rooms", [])
     ]
+    open_air = [poly for kind, poly in rooms if kind in outdoor_types]
+    indoor = [poly for kind, poly in rooms if kind not in outdoor_types]
+    railing_spans, split_by = _outdoor_helpers()
     by_wall: dict[str, list[dict[str, Any]]] = {}
     for opening in floor.get("openings", []):
         wall_id = str(opening.get("wall"))
@@ -531,10 +552,20 @@ def _walls_and_openings(
             )
         by_wall.setdefault(wall_id, []).append(opening)
 
+    # Thân tường của MỌI bức, gom lại để vẽ thành MỘT hình hợp — xem `_draw_wall_bodies`.
+    bodies: list[tuple[tuple[float, float], ...]] = []
+
     for wall_id, wall in walls.items():
         origin, u, n, length = _wall_frame(wall)
+        ax_, ay_ = _mm(wall["a"][0]), _mm(wall["a"][1])
+        bx_, by_ = _mm(wall["b"][0]), _mm(wall["b"][1])
         t = _mm(float(wall.get("thickness_m") or 0.11))
         half = t / 2
+
+        # Cạnh hở của ban công là LAN CAN, không phải tường: hai nét mảnh, không tô poché.
+        # Vẽ nó như tường thì ban công ra bản vẽ là một phòng kín bốn phía — cùng lỗi mà khối
+        # ba chiều mắc phải, và cùng phép suy (`geometry/outdoor.py`).
+        rails = railing_spans((ax_, ay_), (bx_, by_), open_air, indoor, step=150.0)
 
         def P(s: float, off: float) -> tuple[float, float]:
             return (origin[0] + u[0] * s + n[0] * off, origin[1] + u[1] * s + n[1] * off)
@@ -559,9 +590,12 @@ def _walls_and_openings(
             segments.append((cursor, length))
 
         for s0, s1 in segments:
-            quad = (P(s0, -half), P(s1, -half), P(s1, half), P(s0, half))
-            sheet.add(Polyline(wall_layer, quad, weight="heavy"))
-            sheet.add(Polyline(hatch_layer, quad, weight="thin", fill="poche", no_stroke=True))
+            for lo, hi, is_rail in split_by(s0, s1, rails):
+                if is_rail:
+                    for off in (-half, half):
+                        sheet.add(Line(wall_layer, P(lo, off), P(hi, off), weight="thin"))
+                else:
+                    bodies.append((P(lo, -half), P(hi, -half), P(hi, half), P(lo, half)))
 
         for s0, s1, o in cuts:
             kind = o.get("kind")
@@ -582,6 +616,53 @@ def _walls_and_openings(
                 # Lỗ mở không cánh: chỉ hai nét mép.
                 sheet.add(Line(door_layer, P(s0, -half), P(s0, half), weight="thin"))
                 sheet.add(Line(door_layer, P(s1, -half), P(s1, half), weight="thin"))
+
+    _draw_wall_bodies(sheet, bodies, wall_layer, hatch_layer)
+
+
+def _draw_wall_bodies(
+    sheet: SheetModel,
+    bodies: list[tuple[tuple[float, float], ...]],
+    wall_layer: str,
+    hatch_layer: str,
+) -> None:
+    """Vẽ thân tường thành MỘT hình hợp, không phải từng tứ giác rời.
+
+    Trước 06/09/2026 mỗi bức tường được vẽ thành một tứ giác khép kín có nét bao đậm riêng.
+    Tường trên mặt bằng đi theo TIM, nên ở mỗi nút chữ T hay chữ L hai tứ giác chồng lên nhau
+    một đoạn bằng nửa bề dày, và cả hai nét bao đều được vẽ: trong thân tường hiện ra một nét
+    cắt ngang, và mỗi tường thò qua tường kia. Ảnh chụp mặt bằng demo cho thấy đúng như vậy.
+
+    Đây là bước "làm sạch nút tường" mà mọi phần mềm CAD đều làm: nét bao là biên của HỢP các
+    thân tường, không phải chu vi của từng cái. Hợp xong thì mọi đoạn nằm bên trong biến mất —
+    không phải xoá từng nét, mà là chúng không còn thuộc biên nữa.
+
+    Hình hợp có thể có LỖ (một ô kín bốn phía tường), nên phải vẽ cả `interiors`: đó chính là
+    mặt trong của bốn bức tường bao quanh phòng.
+
+    Poché thì NGƯỢC LẠI — vẫn tô theo từng đoạn tường, không theo hình hợp. Một hình hợp có lỗ
+    không diễn đạt được bằng một vòng khép kín duy nhất, nên tô theo vòng ngoài sẽ lấp kín cả
+    lòng phòng. Các mảng tô chồng mép nhau không sao: poché là một màu đặc, chồng lên nhau
+    trông y hệt không chồng. Vấn đề ban đầu nằm ở NÉT BAO, và chỉ ở nét bao.
+    """
+    if not bodies:
+        return
+    from shapely.geometry import Polygon
+    from shapely.ops import unary_union
+
+    for pts in bodies:
+        sheet.add(Polyline(hatch_layer, pts, weight="thin", fill="poche", no_stroke=True))
+
+    polys = [Polygon(pts) for pts in bodies]
+    merged = unary_union([p for p in polys if p.is_valid and p.area > 1e-9])
+
+    for part in getattr(merged, "geoms", [merged]):
+        if part.is_empty or part.geom_type != "Polygon":
+            continue
+        for ring in (part.exterior, *part.interiors):
+            points = tuple((round(x, 4), round(y, 4)) for x, y in ring.coords[:-1])
+            if len(points) >= 3:
+                sheet.add(Polyline(wall_layer, points, weight="heavy"))
 
 
 def _leaf(
@@ -706,13 +787,31 @@ def _section_marks(sheet: SheetModel, floor: dict[str, Any], width_m: float, dep
             break
     r = sheet.paper(BUBBLE_RADIUS_MM)
     h = sheet.paper(TEXT_MM)
-    off = _mm(SECTION_MARK_M)
+    # TÂM vòng tròn lùi vào đúng một bán kính, để MÉP NGOÀI của nó — chứ không phải tâm — nằm
+    # đúng trên ranh giới phần dự trữ mà `choose_scale` đã tính.
+    #
+    # Trước 06/09/2026 tâm đặt thẳng tại `SECTION_MARK_M`, nên ở tỷ lệ 1:70 vòng tròn (bán
+    # kính 0,28 m mô hình) thò ra ngoài phần dự trữ và nét trên cùng của dải khung tên cắt
+    # ngang qua giữa chữ "A". Nới phần dự trữ thì cũng xử lý được, nhưng nhà phố 5 × 18 m khi
+    # đó rơi từ 1:70 xuống 1:75 — mà 1:70 là tỷ lệ đo được trong hồ sơ thật của NVG.
+    off = _mm(SECTION_MARK_M) - r
     for cy, direction in ((-off, 1.0), (bd + off, -1.0)):
         sheet.add(Circle(layer, (x, cy), r))
         sheet.add(Text(layer, (x, cy), "A", h, bold=True))
-        # Tam giác chỉ hướng nhìn (về phía bên trái bản vẽ).
-        tip = (x - r * 2.2, cy)
-        sheet.add(Polyline(layer, (tip, (x - r, cy + r * 0.7), (x - r, cy - r * 0.7)), weight="thin", fill="ink"))
+        # Tam giác chỉ hướng nhìn (về phía bên trái bản vẽ), đặt HẲN ra ngoài vòng tròn.
+        #
+        # Bản trước đặt đáy tam giác tại `x - r`, tức đúng trên đường tròn ở cao độ tâm — nên
+        # hai góc đáy lệch `±0,7 r` nằm LỌT vào trong vòng tròn và đè lên chữ. Đáy phải nằm
+        # ngoài bán kính một khoảng ít nhất bằng nửa chiều cao của chính nó.
+        base_x = x - r * 1.35
+        sheet.add(
+            Polyline(
+                layer,
+                ((base_x - r * 1.2, cy), (base_x, cy + r * 0.7), (base_x, cy - r * 0.7)),
+                weight="thin",
+                fill="ink",
+            )
+        )
         # Đoạn nét cắt hướng vào công trình.
         y_edge = 0.0 if direction > 0 else bd
         sheet.add(Line(layer, (x, cy + direction * r), (x, y_edge - direction * _mm(0.3)), weight="medium", linetype="dashdot"))
@@ -721,7 +820,9 @@ def _section_marks(sheet: SheetModel, floor: dict[str, Any], width_m: float, dep
 # ── Khung tên (dải dưới, BLOCK có ATTRIB) ───────────────────────────────────────────────
 
 
-def _title_block(sheet: SheetModel, title: SheetTitle, level: int, layer: str) -> None:
+def _title_block(
+    sheet: SheetModel, title: SheetTitle, level: int, total_levels: int, layer: str
+) -> None:
     fx, fy = sheet.frame_origin
     fw, _fh = sheet.frame_size
     m = sheet.paper(MARGIN_MM)
@@ -736,7 +837,10 @@ def _title_block(sheet: SheetModel, title: SheetTitle, level: int, layer: str) -
             strip,
             attribs=(
                 ("KHBV", title.sheet_code),
-                ("TBV", f"{title.sheet_name} — Tầng {level}"),
+                # Tầng mấy TRÊN MẤY. Chỉ ghi "Tầng 4" thì một bộ hồ sơ bốn tờ dựng từ mặt bằng
+                # cũ trông y hệt bốn tờ đầu của một bộ năm tờ — đúng cái đã xảy ra 06/09/2026,
+                # và cách duy nhất phát hiện là đếm số nút chọn tầng trên màn hình.
+                ("TBV", f"{title.sheet_name} — Tầng {level}/{total_levels}"),
                 ("TL", f"1:{sheet.scale}"),
                 ("HM", title.discipline),
                 ("HT", title.date),

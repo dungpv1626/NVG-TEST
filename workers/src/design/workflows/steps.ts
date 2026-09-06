@@ -31,7 +31,7 @@ import {
 } from '@nvg/shared/design';
 import type { ComputeBackend } from '../compute-backend';
 import { parseArtifact } from '../contracts';
-import { buildLayoutIntent, type LayoutVariant } from '../layout/intent';
+import { buildLayoutIntent, type FaceNeed, type LayoutVariant } from '../layout/intent';
 import type { Face } from '../layout/site-context';
 
 const SCHEMA_VERSION = '1.0.0';
@@ -60,7 +60,13 @@ export interface StepResult<T> {
 export function layoutIntent(
   program: SpaceProgram,
   programRef: string,
-  options: { variant?: LayoutVariant; openFaces?: readonly Face[] } = {},
+  options: {
+    variant?: LayoutVariant;
+    openFaces?: readonly Face[];
+    accessFaces?: readonly Face[];
+    /** Tra `requires_face` theo loại phòng — gói quy tắc do lớp gọi cấp, tệp này không tự nạp. */
+    faceOf?: FaceNeed;
+  } = {},
 ): StepResult<LayoutIntent> {
   return {
     stub: false,
@@ -71,6 +77,8 @@ export function layoutIntent(
         programRef,
         variant: options.variant,
         openFaces: options.openFaces,
+        accessFaces: options.accessFaces,
+        faceOf: options.faceOf,
       }),
     ),
   };

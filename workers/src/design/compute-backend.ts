@@ -156,7 +156,10 @@ export interface ComputeBackend {
    */
   exportSvg(request: ExportDxfRequest): Promise<string>;
   /** Khối ba chiều sơ bộ (glTF nhị phân) đùn từ mặt bằng — trình duyệt chỉ xem. */
-  exportGlb(request: { floor_plan: unknown }): Promise<ArrayBuffer>;
+  exportGlb(request: {
+    floor_plan: unknown;
+    groups?: Record<string, string[]>;
+  }): Promise<ArrayBuffer>;
   /** Bảng thống kê cửa · cửa sổ · diện tích · khối lượng sơ bộ — tính lại từ mặt bằng (TK-17). */
   schedules(request: SchedulesRequest): Promise<unknown>;
   /** Cùng bảng đó dạng XLSX để bàn giao. */
@@ -272,7 +275,10 @@ export class HttpComputeBackend implements ComputeBackend {
     return await res.arrayBuffer();
   }
 
-  async exportGlb(request: { floor_plan: unknown }): Promise<ArrayBuffer> {
+  async exportGlb(request: {
+    floor_plan: unknown;
+    groups?: Record<string, string[]>;
+  }): Promise<ArrayBuffer> {
     const res = await this.exportCall('/export/glb', request);
     return await res.arrayBuffer();
   }

@@ -39,6 +39,17 @@ export interface ModelRoute {
    * nên nó cần ở chỗ người sửa nhìn thấy ràng buộc. Có kiểm thử canh hai nơi khớp nhau.
    */
   output_dimensions?: number;
+  /**
+   * Địa chỉ HTTP đầy đủ của đầu ra — CHỈ dùng cho nhà cung cấp không có một gốc URL duy nhất.
+   *
+   * Gemini suy ra địa chỉ từ tên mô hình nên không cần trường này. Hugging Face thì ngược lại:
+   * mỗi mô hình được phục vụ bởi một đối tác định tuyến khác nhau (`fal-ai`, `nscale`,
+   * `replicate`…) và đường dẫn mang mã mô hình RIÊNG của đối tác đó
+   * (`fal-ai/flux-kontext/dev` chứ không phải `black-forest-labs/FLUX.1-Kontext-dev`). Ánh xạ
+   * ấy do Hugging Face công bố và đổi được bất cứ lúc nào, nên nó là DỮ LIỆU — viết vào mã là
+   * đúng loại hằng số mà đầu tệp `config/models.yaml` cấm.
+   */
+  endpoint?: string;
 }
 
 export interface ModelConfig {
@@ -94,10 +105,19 @@ export function parseModelConfig(yamlText: string): ModelConfig {
 /** Cấu hình mô hình đã qua lớp chặn, kèm khoá để gọi. Chỉ `resolve()` tạo ra được. */
 export type ResolvedRoute = ModelRoute & { apiKey: string };
 
+/**
+ * Khoá API theo NHÀ CUNG CẤP (`gemini`, `pollinations`…), lấy từ Cloudflare Workers Secrets.
+ *
+ * Theo nhà cung cấp chứ không phải một khoá duy nhất, vì từ 06/09/2026 có hai nhà cung cấp
+ * cùng lúc. Để mỗi client tự cầm khoá của mình thì lại có chỗ dùng được khoá mà không đi qua
+ * lớp chặn hạng dữ liệu — đúng thứ mà cả tệp này tồn tại để ngăn.
+ */
+export type ProviderKeys = Partial<Record<string, string>>;
+
 export class ModelRouter {
   constructor(
     private readonly config: ModelConfig,
-    private readonly apiKey?: string,
+    private readonly apiKeys: ProviderKeys = {},
   ) {}
 
   /**
@@ -118,12 +138,16 @@ export class ModelRouter {
     if (!route.enabled) {
       throw new ModelNotConfigured(routeName, 'đầu ra đang tắt trong cấu hình.');
     }
-    if (!this.apiKey) {
-      throw new ModelNotConfigured(routeName, 'chưa có khoá API trong Cloudflare Workers Secrets.');
+    const apiKey = this.apiKeys[route.provider];
+    if (!apiKey) {
+      throw new ModelNotConfigured(
+        routeName,
+        `chưa có khoá API của nhà cung cấp "${route.provider}" trong Cloudflare Workers Secrets.`,
+      );
     }
     // Trả kèm khoá thay vì để bên gọi tự cầm một bản sao: có hai chỗ giữ khoá là có một
     // chỗ dùng được khoá mà không đi qua lớp chặn này.
-    return { ...route, apiKey: this.apiKey };
+    return { ...route, apiKey };
   }
 
   /**
@@ -135,6 +159,17 @@ export class ModelRouter {
   allows(routeName: string, dataClass: DataClass): boolean {
     const route = this.config.routes[routeName];
     return route !== undefined && dataClass >= route.max_data_class;
+  }
+
+  /**
+   * Nhà cung cấp của một đầu ra, KHÔNG kèm khoá và KHÔNG kiểm hạng dữ liệu.
+   *
+   * Dùng để chọn client nào gọi (`geminiClient` hay `pollinationsImageClient`) — câu hỏi đó
+   * phải trả lời được TRƯỚC khi biết sẽ gửi dữ liệu hạng nào, và bản thân câu trả lời không
+   * mở đường ra mạng: muốn gọi thật vẫn phải qua `resolve()`.
+   */
+  providerOf(routeName: string): string | undefined {
+    return this.config.routes[routeName]?.provider;
   }
 
   get version(): string {

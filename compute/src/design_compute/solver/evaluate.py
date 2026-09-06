@@ -124,6 +124,10 @@ def evaluate_violations(
         _check_aspect(by_predicate, room, add, request.room_groups)
         _check_daylight(by_predicate, request, room, voids, footprint, add)
         _check_access(by_predicate, request, room, rooms, footprint, add)
+        _check_face(by_predicate, request, room, footprint, add)
+
+    for void in voids:
+        _check_void_area(by_predicate, void, add)
 
     _check_floor_preference(by_predicate, request, rooms, add)
     _check_core_alignment(by_predicate, rooms, CORE_TYPES, add)
@@ -227,6 +231,48 @@ def _check_access(by_predicate, request, room, rooms, footprint, add) -> None:
             continue
         if _touch(room, other):
             return
+    add(rule, (room.id,), None, None)
+
+
+def _check_void_area(by_predicate, void, add) -> None:
+    """Cận trên của khoảng rỗng, tra theo LOẠI của nó (`lightwell`, `courtyard`, `atrium`).
+
+    Khoảng rỗng không phải phòng nên nó không đi qua `_check_area`, và trước 06/09/2026 đó
+    là lý do một giếng trời 37 m² không xuất hiện trong bất kỳ danh sách vi phạm nào.
+    """
+    for rule in by_predicate.get("max_area", []):
+        if rule.scope != "floor" or rule.params.get("target") != void.kind:
+            continue
+        required = float(rule.params.get("value_m2", 0.0))
+        actual = (void.x1_m - void.x0_m) * (void.y1_m - void.y0_m)
+        if actual > required + _EPS:
+            add(rule, (void.id,), _num(actual), _num(required))
+        return
+
+
+def _check_face(by_predicate, request, room, footprint, add) -> None:
+    """Phòng phải tiếp giáp một MẶT cụ thể của hình bao — mặt vào được, hoặc mặt thoáng.
+
+    Khác `requires_daylight` ở đúng một điểm và điểm đó là toàn bộ lý do vị từ này tồn tại:
+    không có phương án thay thế. Chiếu sáng chấp nhận giếng trời; còn một chỗ để xe lấy sáng
+    qua giếng trời vẫn là chỗ để xe mà ô tô không vào được, và một ban công bốn phía là tường
+    vẫn không phải ban công.
+    """
+    rule = _best_rule(
+        [r for r in by_predicate.get("requires_face", []) if r.scope == "floor"],
+        room,
+        request.room_groups,
+    )
+    if rule is None:
+        return
+    which = str(rule.params.get("face", "open"))
+    wanted = set(request.access_faces if which == "access" else request.open_faces)
+    # Mặt vào được chỉ có nghĩa ở tầng trệt: tầng trên không có mặt nào xe vào được, nên áp
+    # quy tắc lên đó là sinh ra một vi phạm không ai sửa được.
+    if which == "access" and room.floor != 1:
+        return
+    if _faces(room, footprint) & wanted:
+        return
     add(rule, (room.id,), None, None)
 
 

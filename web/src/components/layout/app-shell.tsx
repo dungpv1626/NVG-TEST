@@ -20,10 +20,12 @@ import { Suspense, type ReactNode } from 'react';
 import { Outlet } from 'react-router-dom';
 import { CardGridSkeleton } from '@/components/ui/states';
 import { cn } from '@/lib/utils';
+import { TkThemeProvider, useTkTheme } from '@/pages/tk/tk-theme';
 import { Breadcrumb, type Crumb } from './breadcrumb';
 import { BottomNav } from './bottom-nav';
 import { OfflineBar, PwaPrompts } from './pwa-status';
 import { Sidebar } from './sidebar';
+import { useTkScope } from './tk-chrome';
 import { TopBar } from './top-bar';
 
 export interface PageHeaderProps {
@@ -76,13 +78,44 @@ export function PageHeader({
 }
 
 export function AppShell() {
+  // Trạng thái sáng/tối của Module Thiết kế sống ở KHUNG chứ không trong trang, vì thanh
+  // trái và thanh trên cũng đổi màu theo nó — để trong trang thì nút bấm ở một cây React
+  // còn thứ phải đổi màu lại ở cây khác.
+  return (
+    <TkThemeProvider>
+      <ShellBody />
+    </TkThemeProvider>
+  );
+}
+
+function ShellBody() {
+  const tk = useTkScope();
+  const { theme } = useTkTheme();
+
   return (
     // `100dvh` chứ không `100vh`: trên trình duyệt di động, `100vh` tính cả phần thanh địa
     // chỉ tự ẩn/hiện, nên đáy màn hình bị đẩy xuống dưới vùng nhìn thấy và thanh điều hướng
     // dưới nằm ngoài màn hình.
-    <div className="flex h-[100dvh] overflow-hidden bg-surface-sunken lg:gap-3 lg:p-3">
+    //
+    // `data-tk-theme` chỉ có mặt trong `/tk/*`. Nó đè bộ token chung (`--color-surface`,
+    // `--color-fg`, `--color-border`…) nên cả khung đổi theo mà không phải viết class có điều
+    // kiện ở từng thành phần — ra module khác thuộc tính biến mất và mọi thứ trở lại như cũ.
+    //
+    // Trong phạm vi Thiết kế thì bỏ khe hở và bo góc của bố cục "panel nổi": bản mẫu §5.1 xếp
+    // ba vùng sát nhau, phân cách bằng đúng một đường viền.
+    <div
+      data-tk-theme={tk ? theme : undefined}
+      className={cn(
+        // `text-fg` phải khai Ở ĐÂY, không thể dựa vào `body`. `body` nằm NGOÀI phạm vi
+        // `data-tk-theme`, nên `color: var(--color-fg)` của nó đã tính ra màu chữ của chế độ
+        // SÁNG trước khi vào tới đây; mọi thành phần không tự đặt màu sẽ kế thừa màu đó và
+        // biến mất trên nền tối (thấy tận mắt: tên người dùng ở thanh trên, 06/09/2026).
+        'flex h-[100dvh] overflow-hidden bg-surface-sunken text-fg',
+        !tk && 'lg:gap-3 lg:p-3',
+      )}
+    >
       <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden lg:gap-3">
+      <div className={cn('flex min-w-0 flex-1 flex-col overflow-hidden', !tk && 'lg:gap-3')}>
         <TopBar />
         <OfflineBar />
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">

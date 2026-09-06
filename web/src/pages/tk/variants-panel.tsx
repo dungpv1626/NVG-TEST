@@ -16,7 +16,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle2, LayoutGrid } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Info, LayoutGrid } from 'lucide-react';
 import { formatDateTime, formatNumber } from '@nvg/shared';
 import { compareFloorPlans, type FloorPlan } from '@nvg/shared/design';
 import { Button } from '@/components/ui/button';
@@ -28,14 +28,17 @@ import {
   usePublishFloorPlan,
   type FloorPlanGeneration,
   type FloorPlanVariant,
+  type VariantSummary,
 } from '@/hooks/use-design-projects';
 import { toUserMessage } from '@/hooks/use-error-message';
-import { MassingViewer } from './massing-viewer';
+import { MassingViewer, type MassingShots } from './massing-viewer';
 import { RenderPanel } from './render-panel';
 import { SchedulesPanel } from './schedules-panel';
 import { SheetViewer } from './sheet-viewer';
 import { SectionHelp } from '@/components/ui/section-help';
 import { DESIGN_HELP } from './help-texts';
+import { Panel } from './tk-ui';
+import { cn } from '@/lib/utils';
 
 export function VariantsPanel({
   projectId,
@@ -51,7 +54,7 @@ export function VariantsPanel({
   // Phương án đang XEM bản vẽ — mặc định là bản hiệu lực; bấm "Xem bản vẽ" ở thẻ khác để đổi.
   const [viewing, setViewing] = useState<string | null>(null);
   // Ảnh khối chụp từ trình xem ba chiều — đầu vào của phối cảnh.
-  const [snapshot, setSnapshot] = useState<string | null>(null);
+  const [shots, setShots] = useState<MassingShots | null>(null);
   const headId = variants.data?.headArtifactId ?? null;
   // Phương án mở sẵn khi vào màn hình.
   //
@@ -117,7 +120,11 @@ export function VariantsPanel({
 
   return (
     <div className="space-y-6">
-      <div className="rounded border border-border bg-surface-sunken p-4">
+      {view.headStale && (
+        <StaleHeadNotice onGenerate={onGenerate} busy={busy} readOnly={readOnly} />
+      )}
+
+      <Panel>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="flex items-center gap-1 font-medium">
@@ -156,7 +163,7 @@ export function VariantsPanel({
             hệ tài liệu cấp). Xem ở tab Phiên bản bản vẽ và Hồ sơ liên quan.
           </p>
         )}
-      </div>
+      </Panel>
 
       <ComparisonTable variants={view.variants} />
 
@@ -207,11 +214,11 @@ export function VariantsPanel({
               projectId={projectId}
               artifactId={shown.artifactId}
               variantLabel={`Phương án ${shown.variantId}`}
-              onSnapshot={setSnapshot}
+              onSnapshot={setShots}
             />
             <RenderPanel
               projectId={projectId}
-              snapshot={snapshot}
+              shots={shots}
               style={null}
               variantLabel={`Phương án ${shown.variantId}`}
             />
@@ -228,6 +235,46 @@ export function VariantsPanel({
 }
 
 /** Cột = phương án, hàng = câu khách hay hỏi. Không có thuật ngữ kỹ thuật ở các hàng đầu. */
+/**
+ * Bản vẽ đang hiệu lực không thuộc chương trình không gian đang hiệu lực.
+ *
+ * Đây là hỏng LẶNG LẼ điển hình: bản vẽ vẫn mở được, vẫn đẹp, vẫn tải được DXF — chỉ là nó vẽ
+ * một công trình khác. Đo được 06/09/2026: đầu bài lên 5 tầng, bản vẽ đang hiệu lực vẫn 4 tầng,
+ * và cách duy nhất nhận ra là đếm số nút chọn tầng.
+ *
+ * Dùng màu "Quá hạn" chứ không phải "Chờ duyệt": đây là dữ liệu đang SAI trên màn hình, không
+ * phải một việc đang chờ ai đó. Kèm chữ, không chỉ màu (CGD 6.8).
+ */
+function StaleHeadNotice({
+  onGenerate,
+  busy,
+  readOnly,
+}: {
+  onGenerate: () => void;
+  busy: boolean;
+  readOnly: boolean;
+}): React.ReactElement {
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-4 rounded-lg border border-status-overdue/40 bg-status-overdue/5 p-4">
+      <div className="min-w-0">
+        <p className="font-medium text-status-overdue">
+          Bản vẽ đang hiệu lực dựng từ chương trình không gian cũ
+        </p>
+        <p className="mt-1 text-fg-subtle">
+          Chương trình không gian đã được chốt lại sau khi bản vẽ này được sinh, nên bản vẽ, khối ba
+          chiều và bảng thống kê đang mô tả một phương án không còn khớp đầu bài. Sinh lại phương án
+          để cập nhật.
+        </p>
+      </div>
+      {!readOnly && (
+        <Button variant="primary" onClick={onGenerate} disabled={busy}>
+          Sinh lại phương án
+        </Button>
+      )}
+    </div>
+  );
+}
+
 function ComparisonTable({ variants }: { variants: FloorPlanVariant[] }): React.ReactElement {
   const rows: Array<{ label: string; cell: (v: FloorPlanVariant) => string }> = [
     {
@@ -253,10 +300,10 @@ function ComparisonTable({ variants }: { variants: FloorPlanVariant[] }): React.
   ];
 
   return (
-    <div className="overflow-x-auto rounded border border-border">
+    <div className="overflow-x-auto rounded-lg border border-tk-line bg-tk-panel">
       <table className="w-full min-w-[36rem] border-collapse">
         <thead>
-          <tr className="border-b border-border bg-surface-sunken text-left">
+          <tr className="border-b border-tk-line bg-tk-deep text-left">
             <th className="px-3 py-2 font-medium">So sánh</th>
             {variants.map((v) => (
               <th key={v.artifactId} className="px-3 py-2 font-medium">
@@ -268,7 +315,7 @@ function ComparisonTable({ variants }: { variants: FloorPlanVariant[] }): React.
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row.label} className="border-b border-border last:border-0">
+            <tr key={row.label} className="border-b border-tk-line last:border-0">
               <td className="px-3 py-2 text-fg-subtle">{row.label}</td>
               {variants.map((v) => (
                 <td key={v.artifactId} className="px-3 py-2 tabular-nums">
@@ -406,9 +453,22 @@ function VariantCard({
   onView: () => void;
 }): React.ReactElement {
   return (
-    <section className="flex flex-col rounded border border-border bg-surface p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div>
+    <section
+      className={cn(
+        'flex flex-col rounded-lg border-[1.5px] bg-tk-panel p-4',
+        // Thẻ đang xem bản vẽ nổi lên bằng viền tím và bóng (bản mẫu §5.6). Viền KHÔNG phải
+        // cách duy nhất nhận ra nó: bên dưới thẻ có dòng "Đang xem bản vẽ" (CGD 6.8).
+        isViewing ? 'border-tk-pu-sel shadow-tk-panel' : 'border-tk-line',
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <span
+          aria-hidden
+          className="grid size-9 shrink-0 place-items-center rounded-md bg-tk-pu-tile font-semibold text-tk-pu-fg"
+        >
+          {variant.variantId}
+        </span>
+        <div className="min-w-0 flex-1">
           <h3 className="font-medium">Phương án {variant.variantId}</h3>
           <p className="text-fg-subtle">{variant.label}</p>
         </div>
@@ -419,9 +479,12 @@ function VariantCard({
           </span>
         )}
       </div>
+      {isViewing && variant.status === 'ok' && (
+        <p className="mt-2 text-xs text-tk-pu-fg">Đang xem bản vẽ của phương án này</p>
+      )}
 
       {variant.status === 'infeasible' ? (
-        <div className="mt-3 rounded border border-border bg-surface-sunken p-3">
+        <div className="mt-3 rounded-md border border-tk-line bg-tk-deep p-3">
           <p className="flex items-center gap-2 font-medium text-status-overdue">
             <AlertTriangle className="size-4" aria-hidden />
             Không xếp được
@@ -452,13 +515,7 @@ function VariantCard({
               </p>
             </div>
           ))}
-          {variant.summary && variant.summary.violations.length > 0 && (
-            <ul className="list-disc space-y-1 pl-5 text-status-pending">
-              {variant.summary.violations.map((v) => (
-                <li key={`${v.rule_id}-${v.message}`}>{v.message}</li>
-              ))}
-            </ul>
-          )}
+          {variant.summary && <RuleList summary={variant.summary} />}
         </div>
       )}
 
@@ -477,6 +534,57 @@ function VariantCard({
         </div>
       )}
     </section>
+  );
+}
+
+/**
+ * Kết quả kiểm tra ràng buộc của một phương án (bộ bàn giao thiết kế §5.6).
+ *
+ * Ba điều bắt buộc, lấy từ chính đặc tả trải nghiệm của module:
+ *
+ *  · **Không bao giờ chặn im lặng.** Mỗi dòng nói ra QUY TẮC nào, NGUỒN nào, và có chặn phát
+ *    hành hay không. Một cảnh báo không nói nguồn thì kiến trúc sư không có cách nào biết nên
+ *    sửa bản vẽ hay nên bỏ qua.
+ *  · **Nguồn hiện nguyên văn từ gói quy tắc.** Không tra được thì bỏ trống vế nguồn — suy nguồn
+ *    từ mức độ nghiêm trọng là gán nhầm thẩm quyền pháp lý cho một quy tắc kinh nghiệm.
+ *  · **Số quy tắc ĐẠT cũng phải hiện.** "16/18 đạt" nói khác hẳn "2 cảnh báo": vế đầu cho biết
+ *    bộ kiểm tra đã chạy đủ, vế sau để ngỏ khả năng nó mới chạy được hai quy tắc.
+ */
+function RuleList({ summary }: { summary: VariantSummary }): React.ReactElement | null {
+  const { violations, rulesChecked, rulesPassed } = summary;
+  if (violations.length === 0 && rulesChecked === 0) return null;
+
+  return (
+    <div>
+      {rulesChecked > 0 && (
+        <p className={violations.length === 0 ? 'text-status-completed' : 'font-medium'}>
+          {rulesPassed}/{rulesChecked} quy tắc đạt
+          {violations.length > 0 && ` · ${violations.length} cần xem lại`}
+        </p>
+      )}
+      {violations.length > 0 && (
+        <ul className="mt-1.5 space-y-1.5">
+          {violations.map((v) => (
+            <li key={`${v.rule_id}-${v.message}`} className="flex gap-2">
+              {v.blocking ? (
+                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-status-overdue" aria-hidden />
+              ) : (
+                <Info className="mt-0.5 size-4 shrink-0 text-status-pending" aria-hidden />
+              )}
+              <span className="min-w-0">
+                <span className="block">{v.message}</span>
+                <span className="block text-fg-subtle">
+                  {/* Nguồn rỗng thì chỉ nói được vế chặn hay không — vẫn hơn bịa một trích dẫn. */}
+                  {[v.source, v.blocking ? 'chặn phát hành' : 'bỏ qua được']
+                    .filter(Boolean)
+                    .join(' · ')}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 

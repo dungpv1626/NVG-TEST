@@ -1,6 +1,8 @@
 /**
  * Tab Hồ sơ kỹ thuật của Chi tiết Dự án thiết kế (TK-04).
  *
+ * Đây là màn hình mà thẻ công cụ số sáu ở Tổng quan mở ra — hai chỗ cùng tên, cùng đích.
+ *
  * Hai việc trên cùng một màn hình, vì trong thực tế chúng là một việc:
  *  1. Theo dõi tiến độ ba bộ môn triển khai SONG SONG.
  *  2. Kiểm tra đồng bộ trước khi phát hành và bàn giao.

@@ -28,7 +28,7 @@ import {
   type VariantContext,
   type VariantRepo,
 } from '../layout/variants';
-import { summariseFloorPlan } from '../layout/summary';
+import { ruleCatalogue, summariseFloorPlan } from '../layout/summary';
 import { testSiteContextYaml, testVocabularyYaml } from './program-fixtures';
 
 const REF = `sha256:${'a'.repeat(64)}`;
@@ -421,8 +421,47 @@ describe('Sinh phương án mặt bằng — đường chạy đồng bộ', () 
     expect(listing.previous[0]!.variants.map((v) => v.artifactId)).toEqual(
       first.results.map((r) => r.artifactId),
     );
-    // Bản hiệu lực vẫn là bản của đợt trước cho tới khi kiến trúc sư chọn lại — không lặng lẽ đổi.
-    expect(listing.headArtifactId).toBe(first.headArtifactId);
+    // Bản hiệu lực CHUYỂN sang đợt mới, giữ nguyên chữ cái phương án đã chọn.
+    //
+    // Đây không phải "lặng lẽ đổi lựa chọn của kiến trúc sư" — cùng lý lẽ đã ghi cho trường
+    // hợp giải lại cùng một ý đồ: lựa chọn của họ là phương án A/B/C, và chữ cái đó giữ
+    // nguyên; thứ thay đổi là bản tính của chính phương án ấy, lần này vì chương trình không
+    // gian đã đổi. Giữ bản cũ mới là hại: nó là hậu duệ của một chương trình đã bị thay, nên
+    // màn hình vẽ một công trình khác công trình đang được yêu cầu, và không có gì nói ra
+    // điều đó. Đo được 06/09/2026 trên dự án demo: đầu bài lên 5 tầng, bản vẽ hiệu lực ở lại
+    // 4 tầng, phát hiện được chỉ bằng cách đếm số nút chọn tầng.
+    const headLetter = second.results.find((r) => r.artifactId === listing.headArtifactId);
+    const firstHeadLetter = first.results.find((r) => r.artifactId === first.headArtifactId);
+    expect(listing.headArtifactId).not.toBe(first.headArtifactId);
+    expect(headLetter?.variantId).toBe(firstHeadLetter?.variantId);
+    expect(listing.headStale).toBe(false);
+  });
+
+  it('bản hiệu lực thuộc chương trình cũ mà chưa sinh lại thì bị khai là lạc hậu', async () => {
+    const { repo, ctx } = await setup();
+    await generateVariants(ctx);
+
+    // Chốt một chương trình không gian mới nhưng KHÔNG sinh lại phương án — đúng trạng thái
+    // đã xảy ra thật. Con trỏ bản hiệu lực không tự đổi ở tuyến ĐỌC, nên phải nói ra.
+    const changed = program();
+    changed.spaces.push(space('bedroom_3', 'bedroom', 3, { needs_daylight: true }));
+    changed.spaces.push(space('stair_3', 'stair', 3));
+    changed.spaces.push(space('circulation_3', 'circulation', 3));
+    const brief = await repo.head(ctx.scope.projectId, 'kien_truc', 'design_brief');
+    await repo.write({
+      scope: ctx.scope,
+      kind: 'space_program',
+      payload: changed,
+      inputs: [brief!.id],
+      step: 'layer2_program',
+      params: { v: 2 },
+    });
+
+    const listing = await listVariants(ctx);
+    expect(listing.headStale).toBe(true);
+    // Và tuyến đọc KHÔNG tự sửa: mở một màn hình không phải là một thao tác.
+    expect(listing.headArtifactId).not.toBeNull();
+    expect(listing.variants.some((v) => v.artifactId === listing.headArtifactId)).toBe(false);
   });
 
   it('không chọn được thứ không phải mặt bằng của dự án này', async () => {
@@ -481,5 +520,101 @@ describe('Bảng so sánh bằng ngôn ngữ khách', () => {
     expect(summary.bedrooms).toBe(2);
     // Không có nhóm thì không có con số — không đoán.
     expect(summariseFloorPlan(plan, {}, {}).circulation_share).toBe(0);
+  });
+});
+
+describe('Nguồn quy tắc đi kèm kết quả kiểm tra ràng buộc', () => {
+  const RULES = [
+    {
+      id: 'corridor_min_width',
+      applies_to: ['nha_pho', 'biet_thu'],
+      scope: 'floor',
+      predicate: 'min_dimension',
+      severity: 'error' as const,
+      source: 'QCVN 01:2021/BXD',
+      params: {},
+    },
+    {
+      id: 'altar_on_top',
+      applies_to: ['nha_pho'],
+      scope: 'building',
+      predicate: 'floor_preference',
+      severity: 'warning' as const,
+      source: 'kinh nghiệm NVG',
+      params: {},
+    },
+    {
+      id: 'garden_setback',
+      applies_to: ['nha_vuon'],
+      scope: 'building',
+      predicate: 'setback',
+      severity: 'error' as const,
+      source: 'QCVN 01:2021/BXD',
+      params: {},
+    },
+  ];
+
+  function planWith(violations: { rule_id: string; severity: 'error' | 'warning' }[]) {
+    const plan = fakePlan(REF, program().spaces);
+    return {
+      ...plan,
+      constraint_report: {
+        status: violations.length ? ('warning' as const) : ('pass' as const),
+        violations: violations.map((v) => ({ ...v, message: `vi phạm ${v.rule_id}` })),
+      },
+    };
+  }
+
+  it('mẫu số chỉ đếm quy tắc áp cho ĐÚNG loại công trình', () => {
+    // `garden_setback` chỉ áp cho nhà vườn — đếm nó vào mẫu số của một dự án nhà phố là báo
+    // cáo hệ thống đã kiểm một quy tắc chưa từng chạy.
+    expect(ruleCatalogue(RULES, 'nha_pho').checked).toBe(2);
+    expect(ruleCatalogue(RULES, 'nha_vuon').checked).toBe(1);
+  });
+
+  it('mỗi vi phạm mang nguồn nguyên văn và cờ chặn phát hành', () => {
+    const summary = summariseFloorPlan(
+      planWith([{ rule_id: 'altar_on_top', severity: 'warning' }]),
+      {},
+      {},
+      ruleCatalogue(RULES, 'nha_pho'),
+    );
+    expect(summary.rulesChecked).toBe(2);
+    expect(summary.rulesPassed).toBe(1);
+    expect(summary.violations[0]).toMatchObject({
+      source: 'kinh nghiệm NVG',
+      blocking: false,
+    });
+  });
+
+  it('quy tắc không tra được thì nguồn RỖNG, không suy từ mức độ nghiêm trọng', () => {
+    const summary = summariseFloorPlan(
+      planWith([{ rule_id: 'khong_co_trong_goi', severity: 'error' }]),
+      {},
+      {},
+      ruleCatalogue(RULES, 'nha_pho'),
+    );
+    expect(summary.violations[0]!.source).toBeNull();
+    expect(summary.violations[0]!.blocking).toBe(true);
+  });
+
+  it('không có gói quy tắc thì mẫu số bằng 0, không bịa một con số', () => {
+    const summary = summariseFloorPlan(planWith([]), {}, {});
+    expect(summary.rulesChecked).toBe(0);
+    expect(summary.rulesPassed).toBe(0);
+  });
+
+  it('số quy tắc đạt không bao giờ âm dù gói và bản vẽ lệch phiên bản', () => {
+    const summary = summariseFloorPlan(
+      planWith([
+        { rule_id: 'a', severity: 'error' },
+        { rule_id: 'b', severity: 'error' },
+        { rule_id: 'c', severity: 'error' },
+      ]),
+      {},
+      {},
+      ruleCatalogue(RULES, 'nha_vuon'),
+    );
+    expect(summary.rulesPassed).toBe(0);
   });
 });

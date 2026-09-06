@@ -35,3 +35,37 @@
   severity: error
   source: 'QCVN 01:2021/BXD'
   auto_repair: none
+
+# ── Mặt nào của hình bao mà phòng BẮT BUỘC tiếp giáp ───────────────────────────────────
+# Vị từ `requires_face` thêm 06/09/2026. Nó khác `requires_daylight` ở chỗ nói MẶT NÀO:
+# chiếu sáng chấp nhận cả giếng trời, còn hai quy tắc dưới đây thì không — một chỗ để xe
+# lấy sáng qua giếng trời vẫn là chỗ để xe mà ô tô không vào được.
+#
+# `face: access` = mặt vào được từ ngoài (`site.access_sides` của đầu bài).
+# `face: open`   = mặt thoáng (`open_faces`).
+
+# Đo được 06/09/2026 trên chính bản vẽ demo: phòng khách chiếm hết mặt tiền (y 0–3,2 m), chỗ
+# để xe nằm SAU nó (y 3,2–6,2 m). Bố cục đó hợp lệ theo mọi quy tắc đang có, và ô tô phải đi
+# xuyên phòng khách mới vào được. Lối vào cho xe là quan hệ với ĐƯỜNG, không phải quan hệ với
+# hành lang, nên `every_room_requires_access` không bắt được.
+- id: garage_on_access_face
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: requires_face
+  target: garage
+  face: access
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: none
+
+# Ban công, sân, sân thượng phải nằm trên mặt thoáng. Trước quy tắc này, ban công tầng 4 của
+# bản vẽ demo là một dải 0,40 × 9,00 m NẰM GIỮA NHÀ, bốn phía là tường.
+- id: outdoor_on_open_face
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: requires_face
+  target: outdoor
+  face: open
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: none

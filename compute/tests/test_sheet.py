@@ -172,3 +172,166 @@ class TestSvg:
     def test_labels_are_optional_and_fall_back_to_the_room_type(self) -> None:
         svg = render_svg(build_sheet(_plan(), level=1, title=_title()))
         assert "LIVING" in svg
+
+
+class TestWallCleanup:
+    """Thân tường vẽ thành MỘT hình hợp, không phải từng tứ giác rời chồng mép nhau."""
+
+    @staticmethod
+    def _tee():
+        """Một nút chữ T: tường ngang chạy suốt, tường dọc đâm vào giữa nó."""
+        return {
+            "site": {"width_m": 6.0, "depth_m": 6.0},
+            "structural_grid": {"axes_x_m": [0, 3, 6], "axes_y_m": [0, 3, 6]},
+            "levels": [
+                {
+                    "level": 1,
+                    "height_m": 3.6,
+                    "rooms": [
+                        {
+                            "id": "r1",
+                            "type": "living",
+                            "polygon": [[0, 0], [6, 0], [6, 3], [0, 3]],
+                            "area_m2": 18.0,
+                        },
+                        {
+                            "id": "r2",
+                            "type": "bedroom",
+                            "polygon": [[0, 3], [3, 3], [3, 6], [0, 6]],
+                            "area_m2": 9.0,
+                        },
+                        {
+                            "id": "r3",
+                            "type": "bedroom",
+                            "polygon": [[3, 3], [6, 3], [6, 6], [3, 6]],
+                            "area_m2": 9.0,
+                        },
+                    ],
+                    "voids": [],
+                    "walls": [
+                        {"id": "H1", "a": [0, 3], "b": [6, 3], "thickness_m": 0.22},
+                        {"id": "V1", "a": [3, 3], "b": [3, 6], "thickness_m": 0.22},
+                    ],
+                    "openings": [],
+                }
+            ],
+            "cores": [],
+            "constraint_report": {"status": "pass", "violations": []},
+        }
+
+    def test_a_t_junction_leaves_no_line_inside_the_wall_body(self) -> None:
+        """Trước 06/09/2026 mỗi bức tường có nét bao riêng, nên nút chữ T có nét cắt ngang.
+
+        Tường đi theo TIM, nên hai tứ giác chồng nhau một đoạn bằng nửa bề dày và cả hai nét
+        bao đều được vẽ. Ảnh chụp mặt bằng demo cho thấy đúng như vậy: một nét chạy ngang giữa
+        thân tường, và mỗi tường thò qua tường kia.
+
+        Nay nét bao là biên của HỢP: một nút chữ T cho ra đúng MỘT vòng khép kín.
+        """
+        from design_compute.sheet.model import Polyline
+
+        sheet = build_sheet(self._tee(), level=1, title=_title())
+        rings = [
+            e
+            for e in sheet.entities
+            if isinstance(e, Polyline) and e.layer.endswith("Tuong") and not e.no_stroke
+        ]
+        assert len(rings) == 1, [r.points for r in rings]
+
+    def test_the_poche_still_covers_every_wall_segment(self) -> None:
+        """Tô poché vẫn theo từng đoạn — hình hợp có LỖ thì một vòng khép kín tô sai."""
+        from design_compute.sheet.model import Polyline
+
+        sheet = build_sheet(self._tee(), level=1, title=_title())
+        poche = [e for e in sheet.entities if isinstance(e, Polyline) and e.fill == "poche"]
+        assert len(poche) == 2, "hai đoạn tường, hai mảng tô"
+
+    def test_a_closed_room_keeps_its_inner_outline(self) -> None:
+        """Bốn bức tường quây kín một phòng: hợp có lỗ, và mặt trong phải còn nét bao."""
+        from design_compute.sheet.model import Polyline
+
+        plan = self._tee()
+        plan["levels"][0]["walls"] = [
+            {"id": "N", "a": [1, 1], "b": [5, 1], "thickness_m": 0.22},
+            {"id": "E", "a": [5, 1], "b": [5, 5], "thickness_m": 0.22},
+            {"id": "S", "a": [5, 5], "b": [1, 5], "thickness_m": 0.22},
+            {"id": "W", "a": [1, 5], "b": [1, 1], "thickness_m": 0.22},
+        ]
+        sheet = build_sheet(plan, level=1, title=_title())
+        rings = [
+            e
+            for e in sheet.entities
+            if isinstance(e, Polyline) and e.layer.endswith("Tuong") and not e.no_stroke
+        ]
+        assert len(rings) == 2, "một vòng ngoài, một vòng trong"
+
+
+class TestBalconyOnSheet:
+    """Ban công trên MẶT BẰNG cũng phải đọc ra được — cùng lỗi, cùng cách sửa với khối 3D."""
+
+    @staticmethod
+    def _plan():
+        return {
+            "site": {"width_m": 4.0, "depth_m": 6.0},
+            "structural_grid": {"axes_x_m": [0, 4], "axes_y_m": [0, 1.5, 6]},
+            "levels": [
+                {
+                    "level": 1,
+                    "height_m": 3.6,
+                    "rooms": [
+                        {
+                            "id": "balcony_1",
+                            "type": "balcony",
+                            "polygon": [[0, 0], [4, 0], [4, 1.5], [0, 1.5]],
+                            "area_m2": 6.0,
+                        },
+                        {
+                            "id": "bedroom_1",
+                            "type": "bedroom",
+                            "polygon": [[0, 1.5], [4, 1.5], [4, 6], [0, 6]],
+                            "area_m2": 18.0,
+                        },
+                    ],
+                    "voids": [],
+                    "walls": [
+                        {"id": "W-front", "a": [0, 0], "b": [4, 0], "thickness_m": 0.22},
+                        {"id": "W-mid", "a": [0, 1.5], "b": [4, 1.5], "thickness_m": 0.11},
+                        {"id": "W-back", "a": [0, 6], "b": [4, 6], "thickness_m": 0.22},
+                    ],
+                    "openings": [],
+                }
+            ],
+            "cores": [],
+            "constraint_report": {"status": "pass", "violations": []},
+        }
+
+    def test_the_open_edge_is_two_thin_lines_not_a_poche_wall(self) -> None:
+        from design_compute.sheet.model import Line, Polyline
+
+        groups = {"outdoor": ["balcony", "terrace", "courtyard", "light_well"]}
+        sheet = build_sheet(self._plan(), level=1, title=_title(), groups=groups)
+
+        poche = [e for e in sheet.entities if isinstance(e, Polyline) and e.fill == "poche"]
+        # Ba bức tường, nhưng cạnh hở của ban công không được tô: chỉ còn hai mảng poché.
+        assert len(poche) == 2
+
+        # Hai nét mảnh song song, lệch khỏi tim tường đúng nửa bề dày (110 mm) — không nét
+        # nào NẰM TRÊN tim, vì lan can là hai mép chứ không phải một đường.
+        rails = [
+            e
+            for e in sheet.entities
+            if isinstance(e, Line)
+            and e.weight == "thin"
+            and e.linetype == "solid"
+            and abs(e.a[1]) < 200
+            and abs(e.b[1]) < 200
+        ]
+        assert len(rails) == 2, rails
+        assert {round(e.a[1]) for e in rails} == {-110, 110}
+
+    def test_without_the_group_table_it_stays_a_wall(self) -> None:
+        from design_compute.sheet.model import Polyline
+
+        sheet = build_sheet(self._plan(), level=1, title=_title())
+        poche = [e for e in sheet.entities if isinstance(e, Polyline) and e.fill == "poche"]
+        assert len(poche) == 3

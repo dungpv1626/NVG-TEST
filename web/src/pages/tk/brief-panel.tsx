@@ -667,7 +667,7 @@ function describeField(field: BriefFormField, value: unknown): string | null {
   if (field.control === 'sides') {
     const sides = value as Record<string, unknown>;
     const parts = ACCESS_SIDES.filter((side) => sides[side]).map(
-      (side) => `${SIDE_LABEL[side]}: ${String(sides[side])}`,
+      (side) => `${SIDE_LABEL[side]}: ${label(sides[side])}`,
     );
     return parts.length ? parts.join(' · ') : null;
   }

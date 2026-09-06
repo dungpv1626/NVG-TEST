@@ -6,7 +6,12 @@
  * do mã chèn, không có chỗ tắt.
  *
  * Nút "Chụp ảnh khối" lấy đúng khung hình đang xem — đây là ảnh đầu vào của tuyến phối cảnh
- * (bước 6): Gemini nhận ảnh khối này cùng lời mô tả, không nhận hình học.
+ * (bước 6): mô hình sinh ảnh nhận ảnh khối này cùng lời mô tả, không nhận hình học.
+ *
+ * Một lần bấm chụp HAI góc, vì tuyến phối cảnh dựng ba khung hình mà hai trong ba dùng chung
+ * góc nhìn thẳng còn khung thứ ba là góc nghiêng. Góc nghiêng KHÔNG phải một khung cố định:
+ * nó là chính khung người dùng đang xem, xoay thêm một góc quanh trục đứng — nếu cố định thì
+ * việc người dùng xoay khối tới góc mình muốn (đúng lời hướng dẫn trên màn hình) sẽ bị bỏ qua.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -19,6 +24,18 @@ import { DESIGN_HELP } from './help-texts';
 
 export const MASSING_NOTICE = 'Khối sơ bộ — chưa thể hiện vật liệu và mặt đứng';
 
+/** Ảnh khối theo từng góc máy. Khoá dùng đúng bộ từ vựng `camera` của khung hình phối cảnh. */
+export type MassingShots = Record<string, string>;
+
+/**
+ * Góc xoay thêm quanh trục đứng cho từng góc máy, tính bằng radian.
+ *
+ * `eye_level` giữ nguyên khung người dùng đang xem. `street_level` xoay thêm khoảng 31° — đủ
+ * để thấy đây là khối ba chiều nhìn xiên từ vỉa hè, chưa tới mức phơi cả tường hông dài gấp ba
+ * mặt tiền. Xoay nhiều hơn thì ảnh ra trông như một lô góc, đúng thứ câu ngữ cảnh đang chống.
+ */
+const CAMERA_YAW: Record<string, number> = { eye_level: 0, street_level: 0.55 };
+
 export function MassingViewer({
   projectId,
   artifactId,
@@ -28,12 +45,12 @@ export function MassingViewer({
   projectId: string;
   artifactId: string | null;
   variantLabel: string;
-  /** Nhận ảnh PNG (data URL) của khung hình đang xem. */
-  onSnapshot?: (dataUrl: string) => void;
+  /** Nhận ảnh PNG (data URL) theo từng góc máy, khoá là mã `camera` của khung hình. */
+  onSnapshot?: (shots: MassingShots) => void;
 }): React.ReactElement {
   const model = useMassingModel(projectId, artifactId);
   const mountRef = useRef<HTMLDivElement>(null);
-  const captureRef = useRef<(() => string | null) | null>(null);
+  const captureRef = useRef<(() => MassingShots) | null>(null);
   const [webglError, setWebglError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -75,26 +92,46 @@ export function MassingViewer({
         const gltf = await new GLTFLoader().loadAsync(url);
         if (disposed) return;
         const root = gltf.scene;
-        // Khối trắng, nét cạnh mảnh — đúng "trắng hoặc xám nhạt, không vật liệu".
+        /**
+         * Tô theo TÊN NÚT, không theo màu vật liệu.
+         *
+         * `trimesh` ghi màu mặt thành màu ĐỈNH (COLOR_0) chứ không thành vật liệu, nên sau khi
+         * xuất glTF thì `material.color` của MỌI mesh đều trắng. Bản trước dò kính bằng
+         * `hex === 0x8cb0cd` nên không bao giờ khớp: cửa đi và cửa sổ nhận đúng vật liệu như
+         * tường, và trên màn hình chúng chỉ còn là mấy ô chữ nhật viền mảnh cùng màu mảng tường
+         * (Haan chỉ ra 06/09/2026). Container nay đặt tên nút theo loại — xem `massing.py`.
+         *
+         * Vẫn là "trình duyệt chỉ xem": hình học không đổi, đây là vật liệu và ánh sáng.
+         */
+        const STYLE: Record<string, { color: number; opacity?: number; edge: number }> = {
+          window: { color: 0x6f9ec4, opacity: 0.42, edge: 0x2f5b7d },
+          // Cửa đi tô đặc và đậm hơn hẳn: cửa vào là thứ khách tìm đầu tiên khi nhìn khối, mà
+          // kính trong suốt thì ở xa đọc thành một vệt mờ như cửa sổ.
+          door: { color: 0x7a6a5a, edge: 0x3f342a },
+          wall: { color: 0xe8e5df, edge: 0x44546f },
+          // Lan can ban công: mảnh, sáng hơn tường, và có viền riêng để đọc ra được từ xa là
+          // một cạnh HỞ chứ không phải một mảng tường thấp.
+          railing: { color: 0xf2efe9, edge: 0x2f5b7d },
+          slab: { color: 0xd6d2ca, edge: 0x44546f },
+          parapet: { color: 0xdedad2, edge: 0x44546f },
+        };
         root.traverse((obj) => {
           const mesh = obj as { isMesh?: boolean; material?: unknown; geometry?: unknown };
-          if (mesh.isMesh && mesh.geometry) {
-            const material = mesh.material as { color?: { getHex(): number } } | undefined;
-            const hex = material?.color?.getHex() ?? 0xffffff;
-            const glass = hex === 0x8cb0cd;
-            (obj as unknown as { material: unknown }).material = new THREE.MeshLambertMaterial({
-              color: glass ? 0x8cb0cd : hex,
-              transparent: glass,
-              opacity: glass ? 0.45 : 1,
-            });
-            if (!glass) {
-              const edges = new THREE.LineSegments(
-                new THREE.EdgesGeometry(mesh.geometry as never, 20),
-                new THREE.LineBasicMaterial({ color: 0x44546f }),
-              );
-              (obj as unknown as { add(o: unknown): void }).add(edges);
-            }
-          }
+          if (!mesh.isMesh || !mesh.geometry) return;
+          const name = obj.name || obj.parent?.name || '';
+          const style = STYLE[name.split('-')[0] ?? ''] ?? STYLE.wall!;
+          (obj as unknown as { material: unknown }).material = new THREE.MeshLambertMaterial({
+            color: style.color,
+            transparent: style.opacity !== undefined,
+            opacity: style.opacity ?? 1,
+          });
+          // Lỗ mở CŨNG có nét viền. Không có viền thì ô kính mờ chìm vào mảng tường ngay khi
+          // thu nhỏ hình — đúng cái làm cửa sổ "không rõ".
+          const edges = new THREE.LineSegments(
+            new THREE.EdgesGeometry(mesh.geometry as never, 20),
+            new THREE.LineBasicMaterial({ color: style.edge }),
+          );
+          (obj as unknown as { add(o: unknown): void }).add(edges);
         });
         scene.add(root);
 
@@ -133,8 +170,25 @@ export function MassingViewer({
         };
         tick();
         captureRef.current = () => {
+          const savedPosition = camera.position.clone();
+          const shots: MassingShots = {};
+          const offset = new THREE.Vector3();
+          const spherical = new THREE.Spherical();
+          for (const [id, yaw] of Object.entries(CAMERA_YAW)) {
+            offset.copy(camera.position).sub(controls.target);
+            spherical.setFromVector3(offset);
+            spherical.theta += yaw;
+            camera.position.copy(controls.target).add(offset.setFromSpherical(spherical));
+            camera.lookAt(controls.target);
+            renderer.render(scene, camera);
+            shots[id] = renderer.domElement.toDataURL('image/png');
+            // Về đúng chỗ cũ SAU MỖI góc, không cộng dồn: xoay tiếp từ góc vừa chụp thì góc
+            // thứ ba sẽ lệch gấp đôi, và lỗi đó chỉ lộ ra khi thêm góc máy thứ ba.
+            camera.position.copy(savedPosition);
+            camera.lookAt(controls.target);
+          }
           renderer.render(scene, camera);
-          return renderer.domElement.toDataURL('image/png');
+          return shots;
         };
 
         const onResize = () => {
@@ -180,8 +234,8 @@ export function MassingViewer({
           <Button
             variant="secondary"
             onClick={() => {
-              const png = captureRef.current?.();
-              if (png) onSnapshot(png);
+              const shots = captureRef.current?.();
+              if (shots) onSnapshot(shots);
             }}
           >
             <Camera className="size-4" />

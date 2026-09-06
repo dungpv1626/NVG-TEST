@@ -21,6 +21,16 @@ export interface DesignEnv {
   GEMINI_API_KEY?: string;
 
   /**
+   * Khoá Pollinations (`sk_…`) — nhà cung cấp của tuyến phối cảnh trong giai đoạn dev và test.
+   *
+   * Tách khỏi `GEMINI_API_KEY` chứ không dùng chung một biến "khoá AI": hai nhà cung cấp có
+   * chính sách lưu trữ khác nhau, nên chỗ nào gọi ai phải nhìn thấy được. Router tự khớp khoá
+   * theo `provider` của từng tuyến (`llm/router.ts`), nên đổi nhà cung cấp trong
+   * `config/models.yaml` là đổi luôn khoá được dùng.
+   */
+  POLLINATIONS_API_KEY?: string;
+
+  /**
    * Địa chỉ Container tính toán khi chạy bằng Docker tại chỗ (gói Cloudflare Free chưa có
    * Containers — quyết định T3). Khi nâng gói thì đổi sang binding Durable Object, chỗ đổi
    * nằm đúng một tệp: `compute-backend.ts`.

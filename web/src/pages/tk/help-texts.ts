@@ -15,6 +15,16 @@ export interface SectionGuide {
 }
 
 export const DESIGN_HELP = {
+  /** Hướng dẫn của CẢ trang dự án — nút "Hướng dẫn sử dụng" ở hàng nút trên cùng. */
+  workspace: {
+    title: 'Trang dự án thiết kế',
+    steps: [
+      'Đi lần lượt bảy bước ở dải Tiến trình thiết kế; bước sau cần bước trước đã xong.',
+      'Bấm một thẻ trong Bộ công cụ thiết kế để mở bước đó; bấm Tổng quan để quay lại.',
+      'Ba tab trên cùng dành cho hồ sơ đã phát hành, yêu cầu thay đổi và lịch sử.',
+    ],
+    note: 'Mọi kết quả do engine sinh đều ở trạng thái đề xuất cho tới khi người có thẩm quyền phát hành.',
+  },
   brief: {
     title: 'Đầu bài thiết kế',
     steps: [
