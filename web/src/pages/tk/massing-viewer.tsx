@@ -14,6 +14,8 @@ import { Box, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMassingModel } from '@/hooks/use-design-projects';
 import { toUserMessage } from '@/hooks/use-error-message';
+import { SectionHelp } from '@/components/ui/section-help';
+import { DESIGN_HELP } from './help-texts';
 
 export const MASSING_NOTICE = 'Khối sơ bộ — chưa thể hiện vật liệu và mặt đứng';
 
@@ -99,14 +101,26 @@ export function MassingViewer({
         const box = new THREE.Box3().setFromObject(root);
         const size = box.getSize(new THREE.Vector3());
         const centre = box.getCenter(new THREE.Vector3());
-        controls.target.copy(centre);
+
+        // Khung hình mặc định nhìn vào MẶT TIỀN, không nhìn vào tường bên.
+        //
+        // Mặt tiền nhà lô rộng 5 m còn tường bên dài 18 m. Ngắm vào tâm khối rồi lùi máy ảnh
+        // theo bán kính bao thì tường bên — dài gấp ba — chiếm gần hết khung, còn lối vào và
+        // cửa sổ nằm ở rìa ảnh: đúng thứ khách muốn xem lại là thứ nhìn kém nhất. Nên ngắm
+        // vào PHẦN TRƯỚC của khối và đứng chủ yếu phía trước.
+        //
+        // Mặt tiền quay về phía +Z (massing.py đặt chiều sâu lô chạy theo -Z).
+        const target = new THREE.Vector3(centre.x, centre.y, box.max.z - size.z * 0.28);
+        controls.target.copy(target);
+        // Cái phải lọt khung là bề rộng mặt tiền và chiều cao công trình, không phải chiều sâu lô.
+        const fit = Math.max(size.x, size.y) * 1.35;
+        const distance = fit / 2 / Math.tan((camera.fov * Math.PI) / 360);
+        // Lệch khoảng 28° so với trục vuông góc mặt tiền: đủ thấy đây là khối ba chiều, chưa
+        // tới mức tường bên che mất mặt tiền.
+        const direction = new THREE.Vector3(0.52, 0.42, 1).normalize();
+        camera.position.copy(target).addScaledVector(direction, distance);
+        camera.lookAt(target);
         const radius = Math.max(size.x, size.y, size.z);
-        camera.position.set(
-          centre.x + radius * 1.1,
-          centre.y + radius * 0.8,
-          centre.z + radius * 1.4,
-        );
-        camera.lookAt(centre);
         scene.add(
           new THREE.GridHelper(radius * 3, 30, 0xdcdfe4, 0xeceef1).translateY(box.min.y - 0.01),
         );
@@ -156,7 +170,10 @@ export function MassingViewer({
     <section className="rounded border border-border bg-surface p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="font-medium">Khối ba chiều — {variantLabel}</h3>
+          <h3 className="flex items-center gap-1 font-medium">
+            Khối ba chiều — {variantLabel}
+            <SectionHelp {...DESIGN_HELP.massing} />
+          </h3>
           <p className="text-fg-subtle">Kéo để xoay, lăn chuột để phóng. {MASSING_NOTICE}.</p>
         </div>
         {onSnapshot && (

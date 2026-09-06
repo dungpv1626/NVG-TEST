@@ -43,7 +43,7 @@ function backend(overrides: Partial<ComputeBackend> = {}): ComputeBackend {
   return {
     name: 'gia-lap',
     async health() {
-      return true;
+      return { reachable: true, solverVersion: 'test-solver' };
     },
     async solve() {
       throw new Error('không dùng');

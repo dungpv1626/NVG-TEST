@@ -20,6 +20,8 @@ import { toUserMessage } from '@/hooks/use-error-message';
 import { useSurveyPhotos } from '@/hooks/use-survey-photos';
 import { useAuth } from '@/lib/auth';
 import { SurveyPhotos } from './survey-photos';
+import { SectionHelp } from '@/components/ui/section-help';
+import { DESIGN_HELP } from './help-texts';
 
 const EM_DASH = '—';
 
@@ -99,6 +101,11 @@ export function SurveyPanel({
 
   return (
     <div className="space-y-4">
+      <p className="flex items-center gap-1 font-medium">
+        Biên bản khảo sát hiện trạng
+        <SectionHelp {...DESIGN_HELP.survey} />
+      </p>
+
       {error && (
         <p role="alert" className="rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
           {error}

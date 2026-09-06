@@ -327,8 +327,23 @@ def build_floor_plan_sheet(
     _rooms(sheet, floor, labels, groups, L["room_boundary"], L["room_label"])
     _voids(sheet, floor, L["void"])
     walls = {str(w["id"]): w for w in floor.get("walls", [])}
+    # Bề rộng MỘT cánh cửa là số đo được, không phải quy ước vẽ — lấy từ chuẩn cấu tạo. Nhập
+    # tại chỗ để tệp này không kéo theo `geometry` lúc nạp mô-đun (đã có một vòng nhập làm
+    # Container chết lúc khởi động, 06/09/2026 — xem `tests/test_import_order.py`).
+    from design_compute.geometry.norms import load_construction_norms
+
+    leaf_mm = _mm(load_construction_norms().door_width_m)
     _walls_and_openings(
-        sheet, floor, walls, level, circulation_types, L["wall"], L["hatch"], L["door"], L["window"]
+        sheet,
+        floor,
+        walls,
+        level,
+        circulation_types,
+        L["wall"],
+        L["hatch"],
+        L["door"],
+        L["window"],
+        leaf_mm,
     )
     _stairs(sheet, floor, L["stair"], L["annotation"])
     _section_marks(sheet, floor, width_m, depth_m, L["annotation"])
@@ -501,6 +516,7 @@ def _walls_and_openings(
     hatch_layer: str,
     door_layer: str,
     window_layer: str,
+    leaf_mm: float,
 ) -> None:
     rooms = [
         (str(r.get("type", "")), [(_mm(px), _mm(py)) for px, py in r["polygon"]])
@@ -551,7 +567,9 @@ def _walls_and_openings(
             kind = o.get("kind")
             w = s1 - s0
             if kind == "door":
-                _door(sheet, P, s0, s1, w, half, n, rooms, circulation_types, door_layer)
+                _door(
+                    sheet, P, s0, s1, w, half, n, rooms, circulation_types, door_layer, leaf_mm
+                )
             elif kind == "window":
                 # Cửa sổ: hai mặt tường đi tiếp bằng nét mảnh, kính là nét đôi ở giữa.
                 for off in (-half, half):
@@ -566,6 +584,28 @@ def _walls_and_openings(
                 sheet.add(Line(door_layer, P(s1, -half), P(s1, half), weight="thin"))
 
 
+def _leaf(
+    sheet: SheetModel,
+    P,
+    hinge_s: float,
+    open_s: float,
+    side: float,
+    half: float,
+    n: tuple[float, float],
+    layer: str,
+) -> None:
+    """Một cánh cửa: nét cánh vuông góc tường tại bản lề, cung quay tới mép mở."""
+    width = abs(open_s - hinge_s)
+    hinge = P(hinge_s, side * half)
+    tip = (hinge[0] + n[0] * side * width, hinge[1] + n[1] * side * width)
+    sheet.add(Line(layer, hinge, tip, weight="medium"))
+    a0 = math.degrees(math.atan2(tip[1] - hinge[1], tip[0] - hinge[0]))
+    end = P(open_s, side * half)
+    a1 = math.degrees(math.atan2(end[1] - hinge[1], end[0] - hinge[0]))
+    start_deg, end_deg = (a0, a1) if ((a1 - a0) % 360) <= 180 else (a1, a0)
+    sheet.add(Arc(layer, hinge, width, start_deg, end_deg))
+
+
 def _door(
     sheet: SheetModel,
     P,
@@ -577,8 +617,17 @@ def _door(
     rooms: list[tuple[str, list[tuple[float, float]]]],
     circulation_types: frozenset[str],
     layer: str,
+    leaf_mm: float,
 ) -> None:
-    """Cửa đi: cánh + cung quay, mở VÀO phòng (không mở ra hành lang)."""
+    """Cửa đi: cánh + cung quay, mở VÀO phòng (không mở ra hành lang).
+
+    Rộng hơn HAI lần cánh đo được thì vẽ hai cánh, mỗi cánh quay từ một bên má cửa. Cửa vào
+    nhà rộng 2,75 m vẽ một cánh duy nhất cho ra một cung bán kính 2,75 m quét gần hết phòng
+    khách — đúng hình học nhưng không phải cách nhà ở được vẽ, và người xem bản vẽ nhận ra
+    ngay. Hồ sơ thật của NVG có sẵn cả "2 cánh mở quay" lẫn "2 cánh mở lùa"
+    (`kb/construction_norms.yaml`, `opening_types_seen`); ngưỡng hai lần cánh là quy ước vẽ,
+    còn bề rộng một cánh là số ĐO ĐƯỢC nên nó nằm ở tệp chuẩn cấu tạo chứ không ở đây.
+    """
     mid = (s0 + s1) / 2
     probe = half + 150.0
     side = 1.0
@@ -588,15 +637,11 @@ def _door(
             if _polygon_contains(polygon, (px, py)) and room_type not in circulation_types:
                 side = sign
                 break
-    hinge = P(s0, side * half)
-    tip = (hinge[0] + n[0] * side * w, hinge[1] + n[1] * side * w)
-    sheet.add(Line(layer, hinge, tip, weight="medium"))
-    # Cung từ đầu cánh tới mép đối diện của lỗ mở, tâm ở bản lề.
-    a0 = math.degrees(math.atan2(tip[1] - hinge[1], tip[0] - hinge[0]))
-    end = P(s1, side * half)
-    a1 = math.degrees(math.atan2(end[1] - hinge[1], end[0] - hinge[0]))
-    start_deg, end_deg = (a0, a1) if ((a1 - a0) % 360) <= 180 else (a1, a0)
-    sheet.add(Arc(layer, hinge, w, start_deg, end_deg))
+    if w > 2 * leaf_mm:
+        _leaf(sheet, P, s0, mid, side, half, n, layer)
+        _leaf(sheet, P, s1, mid, side, half, n, layer)
+    else:
+        _leaf(sheet, P, s0, s1, side, half, n, layer)
     # Hai nét mép lỗ mở.
     sheet.add(Line(layer, P(s0, -half), P(s0, half), weight="thin"))
     sheet.add(Line(layer, P(s1, -half), P(s1, half), weight="thin"))

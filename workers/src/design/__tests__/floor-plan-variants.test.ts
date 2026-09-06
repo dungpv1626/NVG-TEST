@@ -75,7 +75,15 @@ const brief = {
 };
 
 /** Mặt bằng giả: mỗi phòng một dải ngang 5 m, đủ để tóm tắt và băm ra mã khác nhau theo ý đồ. */
-function fakePlan(intentRef: string, spaces: Space[]): FloorPlan {
+/**
+ * Mặt bằng giả.
+ *
+ * `rulePackVersion` mang phiên bản bộ giải vào NỘI DUNG: hai lần giải bằng hai phiên bản mã
+ * khác nhau phải cho ra hai artifact khác mã băm, đúng như ngoài đời (bản có lối vào nhà và
+ * bản không có). Nếu để giống hệt nhau thì mọi bài về bộ nhớ đệm đều xanh vì lý do sai — hai
+ * lần ghi ra cùng một mã băm, chứ không phải vì cơ chế làm đúng.
+ */
+function fakePlan(intentRef: string, spaces: Space[], rulePackVersion = '2026.08.1'): FloorPlan {
   const levels = [...new Set(spaces.map((s) => s.floor))].sort().map((level) => {
     let y = 0;
     const rooms = spaces
@@ -96,7 +104,7 @@ function fakePlan(intentRef: string, spaces: Space[]): FloorPlan {
   return {
     schema_version: '1.0.0',
     intent_ref: intentRef,
-    rule_pack_version: '2026.08.1',
+    rule_pack_version: rulePackVersion,
     site: { width_m: 5, depth_m: 18 },
     structural_grid: { axes_x_m: [0, 5], axes_y_m: [0, 18] },
     levels,
@@ -171,8 +179,10 @@ class FakeCompute implements ComputeBackend {
   calls = 0;
   /** Biến thể vô nghiệm theo mã, để canh đường vô nghiệm. */
   infeasible = new Set<string>();
+  /** Dấu vân mã hình học — đổi giá trị này mô phỏng việc dựng lại ảnh Docker sau khi sửa mã. */
+  solverVersion: string | null = 'test-solver';
   async health() {
-    return true;
+    return { reachable: true, solverVersion: this.solverVersion };
   }
   async solve(request: SolveRequest): Promise<SolveResponse> {
     this.calls += 1;
@@ -193,7 +203,11 @@ class FakeCompute implements ComputeBackend {
     }
     return {
       status: 'ok',
-      floor_plan: fakePlan(request.intent_ref, (request.program as SpaceProgram).spaces),
+      floor_plan: fakePlan(
+        request.intent_ref,
+        (request.program as SpaceProgram).spaces,
+        this.solverVersion ?? 'khong-ro',
+      ),
       solve_time_ms: 6,
     };
   }
@@ -295,6 +309,64 @@ describe('Sinh phương án mặt bằng — đường chạy đồng bộ', () 
     const again = await generateVariants(ctx);
     expect(compute.calls).toBe(3);
     expect(again.results.every((r) => r.reused)).toBe(true);
+  });
+
+  it('đổi mã hình học của Container thì GIẢI LẠI, không dùng lại mặt bằng cũ', async () => {
+    // Bài học 06/09/2026: khoá bộ nhớ đệm trước đây chỉ có (địa phương, ngân sách thời gian,
+    // biến thể) — không có mã nguồn của Container. Nên sửa xong chỗ đặt cửa vào nhà, dựng lại
+    // ảnh Docker rồi chạy lại, bộ giải báo 0ms và trả về đúng mặt bằng cũ KHÔNG có lối vào.
+    // Hỏng im lặng: không lỗi, không cảnh báo, chỉ là bản vá không tới được người xem.
+    const { compute, ctx } = await setup();
+    await generateVariants(ctx);
+    expect(compute.calls).toBe(3);
+
+    compute.solverVersion = 'sau-khi-sua-bo-dung-tuong';
+    await generateVariants(ctx);
+    // Điều được canh là bộ giải CÓ CHẠY LẠI. Cờ `reused` thì không: nó nói artifact cùng mã
+    // băm đã tồn tại, và với một bộ giải giả trả về y hệt thì nó vẫn đúng — đó chính là điều
+    // cơ chế băm nội dung phải làm.
+    expect(compute.calls).toBe(6);
+  });
+
+  it('giải lại vì đổi mã hình học KHÔNG làm bảng so sánh mọc thêm cột', async () => {
+    // Cùng một ý đồ, hai lần giải bằng hai phiên bản mã khác nhau → hai mặt bằng treo dưới
+    // cùng một nút lineage. Trả cả hai ra màn hình thì bảng so sánh có năm cột cho ba biến
+    // thể, hai cột cùng tên "Phương án A" với đúng những con số ấy (đo được 06/09/2026).
+    const { compute, ctx } = await setup();
+    await generateVariants(ctx);
+    compute.solverVersion = 'phien-ban-khac';
+    await generateVariants(ctx);
+
+    const listing = await listVariants(ctx);
+    expect(listing.variants.map((v) => v.variantId)).toEqual(['A', 'B', 'C']);
+  });
+
+  it('giải lại cùng biến thể thì bản đang hiệu lực chuyển sang bản mới của chính nó', async () => {
+    // Không chuyển thì màn hình nửa nọ nửa kia: thẻ tóm tắt lấy bản mới, tờ bản vẽ vẽ bản cũ
+    // (đo được 06/09/2026 — thẻ ghi phòng khách 16 m², bản vẽ ghi 20 m²). Lựa chọn của kiến
+    // trúc sư là BIẾN THỂ A/B/C và nó không đổi; thứ đổi là bản tính của chính biến thể ấy.
+    const { compute, ctx } = await setup();
+    const first = await generateVariants(ctx);
+    const headBefore = first.headArtifactId;
+    expect(headBefore).toBeTruthy();
+
+    compute.solverVersion = 'sau-khi-sua-bo-dung-tuong';
+    const second = await generateVariants(ctx);
+    expect(second.headArtifactId).not.toBe(headBefore);
+
+    const listing = await listVariants(ctx);
+    const head = listing.variants.find((v) => v.isHead);
+    expect(head?.artifactId).toBe(second.headArtifactId);
+    // …và biến thể được chọn vẫn là biến thể cũ.
+    expect(head?.variantId).toBe(first.results.find((r) => r.artifactId === headBefore)?.variantId);
+  });
+
+  it('Container không nói ra được phiên bản thì giải lại, KHÔNG đoán là vẫn như cũ', async () => {
+    const { compute, ctx } = await setup();
+    await generateVariants(ctx);
+    compute.solverVersion = null;
+    await generateVariants(ctx);
+    expect(compute.calls).toBe(6);
   });
 
   it('chọn phương án khác chuyển cả ý đồ lẫn mặt bằng; sinh lại không đổi lựa chọn', async () => {

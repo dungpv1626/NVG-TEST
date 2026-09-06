@@ -137,6 +137,16 @@ routes:
   #   · gọi thật `gemini-3.1-flash-image` → **429 RESOURCE_EXHAUSTED**.
   #   · gọi thật `gemini-2.5-flash` (chữ) ngay sau đó → **OK, 31 token**.
   #
+  # Đo lại 06/09/2026 (hạn mức miễn phí đặt lại theo ngày, nên một lần 429 chưa đủ kết luận),
+  # lần này đọc kỹ phần chi tiết của lỗi thay vì chỉ nhìn mã 429. Cả ba mô hình sinh ảnh đều
+  # trả về nguyên văn:
+  #
+  #     Quota exceeded for metric: generativelanguage.googleapis.com/
+  #     generate_content_free_tier_requests, **limit: 0**, model: <tên mô hình>
+  #
+  # `limit: 0` là câu trả lời dứt khoát: không phải "đã dùng hết trong ngày" mà là **gói miễn
+  # phí không cấp một lượt sinh ảnh nào**. Chờ sang ngày mai không đổi được gì.
+  #
   # Tức là khoá KHÔNG hết hạn mức nói chung; nó **không có hạn mức sinh ảnh**. Đây là dấu hiệu
   # thứ ba khẳng định gói MIỄN PHÍ, cùng loại với nhóm `pro` ở điểm 2 — và nó trả lời dứt điểm
   # câu hỏi Q-15. Bật `enabled: true` bây giờ chỉ đổi một lỗi đọc được ("chưa có ảnh khối để

@@ -27,6 +27,8 @@ import {
   type ProgramView,
 } from '@/hooks/use-design-projects';
 import { toUserMessage } from '@/hooks/use-error-message';
+import { SectionHelp } from '@/components/ui/section-help';
+import { DESIGN_HELP } from './help-texts';
 
 export function ProgramPanel({
   projectId,
@@ -109,8 +111,9 @@ function Header({
     <div className="rounded border border-border bg-surface-sunken p-4">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="font-medium">
+          <p className="flex items-center gap-1 font-medium">
             {total} không gian trên {new Set(view.program.spaces.map((s) => s.floor)).size} tầng
+            <SectionHelp {...DESIGN_HELP.program} />
           </p>
           <p className="mt-1 text-fg-subtle">
             {view.program.priors_applied

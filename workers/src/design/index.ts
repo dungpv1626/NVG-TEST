@@ -63,7 +63,7 @@ designApp.get('/health', async (c) => {
   return c.json({
     ok: true,
     module: 'design',
-    compute: { backend: compute.name, reachable: await compute.health() },
+    compute: { backend: compute.name, ...(await compute.health()) },
     models: { version: modelRouter(c.env).version },
   });
 });

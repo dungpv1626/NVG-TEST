@@ -14,6 +14,8 @@ import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { downloadFloorPlanDxf, useFloorPlanSheet } from '@/hooks/use-design-projects';
 import { toUserMessage } from '@/hooks/use-error-message';
+import { SectionHelp } from '@/components/ui/section-help';
+import { DESIGN_HELP } from './help-texts';
 
 const GROUP_LABELS: Array<[string, string]> = [
   ['habitable', 'Sinh hoạt chung'],
@@ -69,7 +71,10 @@ export function SheetViewer({
     <section className="rounded border border-border bg-surface p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="font-medium">Bản vẽ — {variantLabel}</h3>
+          <h3 className="flex items-center gap-1 font-medium">
+            Bản vẽ — {variantLabel}
+            <SectionHelp {...DESIGN_HELP.sheet} />
+          </h3>
           <p className="text-fg-subtle">
             Cùng một tờ với tệp DXF: trục, kích thước, cửa, thang do hệ thống dựng, không phải sơ
             đồ.

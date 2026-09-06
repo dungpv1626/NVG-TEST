@@ -65,6 +65,11 @@ openings:
   entrance:
     width_m: 1.65
     height_m: 2.5
+    # Bề rộng thật lấy theo đoạn tường mặt tiền của phòng, kẹp giữa bản hẹp nhất và bản rộng
+    # nhất ĐO ĐƯỢC (1650 và 3800). Một con số cố định là sai ở cả hai đầu: cửa vào sảnh hẹp
+    # và cửa cuốn gara rộng cùng nằm trên một mặt tiền. Cùng cách làm với `window`.
+    share_of_wall: 0.55
+    max_width_m: 3.8
 
   window:
     # Đo được ba cỡ: 690x1600 (1 cánh mở hất) · 1550x1600 (2 cánh lùa) · 1200x1300 (2 cánh

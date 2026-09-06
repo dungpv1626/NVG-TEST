@@ -9,6 +9,7 @@ from __future__ import annotations
 import ezdxf
 
 from design_compute.cad.export import TitleBlock, build_sheet, export_floor_plan
+from design_compute.geometry import load_construction_norms
 from design_compute.sheet import choose_scale, render_svg
 from design_compute.sheet.model import Dimension, TitleBlockRef
 
@@ -77,15 +78,42 @@ class TestEightElements:
         assert {"A", "C", "1", "3"} <= texts
 
     def test_doors_have_a_swing_arc_and_windows_a_double_line(self, tmp_path) -> None:
+        leaf = load_construction_norms().door_width_m
         plan = _plan()
         doors = [o for o in plan["levels"][0]["openings"] if o["kind"] == "door"]
+        # Cửa rộng hơn hai lần cánh vẽ HAI cánh: một cung bán kính 2,75 m quét gần hết phòng
+        # khách là đúng hình học nhưng không phải cách nhà ở được vẽ (06/09/2026).
+        expected = sum(2 if float(d["width_m"]) > 2 * leaf else 1 for d in doors)
         data = export_floor_plan(plan, level=1, title=_title())
         path = tmp_path / "s.dxf"
         path.write_bytes(data)
         doc = ezdxf.readfile(path)
         arcs = [e for e in doc.modelspace().query("ARC") if e.dxf.layer == "NV-Cua"]
-        assert len(arcs) == len(doors)
+        assert len(arcs) == expected
         assert all(e.dxf.layer for e in doc.modelspace().query("LINE") if e.dxf.layer == "NV-CuaSo")
+
+    def test_a_wide_entrance_is_drawn_as_two_leaves(self, tmp_path) -> None:
+        """Bán kính mỗi cung phải là NỬA lỗ mở, không phải cả lỗ mở."""
+        leaf = load_construction_norms().door_width_m
+        plan = _plan()
+        wide = 2.5 * leaf
+        plan["levels"][0]["openings"][0] = {
+            **plan["levels"][0]["openings"][0],
+            "kind": "door",
+            "width_m": wide,
+            "offset_m": 0.5,
+        }
+        data = export_floor_plan(plan, level=1, title=_title())
+        path = tmp_path / "s.dxf"
+        path.write_bytes(data)
+        doc = ezdxf.readfile(path)
+        radii = sorted(
+            round(e.dxf.radius, 1)
+            for e in doc.modelspace().query("ARC")
+            if e.dxf.layer == "NV-Cua"
+        )
+        assert radii.count(round(wide * 1000 / 2, 1)) == 2
+        assert round(wide * 1000, 1) not in radii
 
     def test_walls_are_heavy_double_lines_with_poche(self, tmp_path) -> None:
         data = export_floor_plan(_plan(), level=1, title=_title())

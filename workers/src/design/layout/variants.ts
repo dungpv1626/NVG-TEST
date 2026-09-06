@@ -49,6 +49,11 @@ export interface VariantResult {
   kind: 'floor_plan' | 'infeasibility_report';
   /** `true` nghĩa là cùng chương trình, cùng cấu hình — bộ giải không chạy lại. */
   reused: boolean;
+  /**
+   * Những bản giải TRƯỚC của đúng biến thể này (cùng ý đồ, khác cấu hình hoặc khác phiên bản
+   * mã hình học). Cần để biết bản đang hiệu lực có phải bản cũ của chính biến thể này không.
+   */
+  supersedes: string[];
   solveTimeMs: number;
 }
 
@@ -124,6 +129,14 @@ export async function generateVariants(
   const labels = spaceLabels(program, ctx.viByType);
   const results: VariantResult[] = [];
 
+  // Dấu vân mã hình học của Container — hỏi MỘT lần cho cả mẻ, rồi đưa vào khoá bộ nhớ đệm.
+  // Không có nó thì "cùng đầu vào, cùng cấu hình" bỏ sót chính phần mã sinh ra hình học: sửa
+  // xong bộ dựng tường rồi dựng lại ảnh Docker vẫn nhận về mặt bằng cũ, không lỗi, không cảnh
+  // báo (đo được 06/09/2026 — mặt bằng cũ không có lối vào nhà vẫn được dùng lại nguyên vẹn).
+  // Container không nói ra được thì để `null`: khi đó khoá khác mọi khoá đã lưu, tức là TÍNH
+  // LẠI — chậm hơn nhưng không bao giờ trả về hình học lỗi thời.
+  const solverVersion = (await compute.health()).solverVersion;
+
   for (const variant of variants) {
     const intent = layoutIntent(program, programId, { variant, openFaces: faces.open });
     const intentArtifact = await repo.write({
@@ -136,7 +149,15 @@ export async function generateVariants(
       setHead: false,
     });
 
-    const solveParams = { locality: brief.locality, timeBudgetS, variant: variant.id };
+    // Chụp danh sách bản giải cũ của cùng ý đồ TRƯỚC khi ghi bản mới — sau khi ghi thì bản
+    // mới cũng nằm trong danh sách và không phân biệt được cũ với mới nữa.
+    const siblings = await repo.edgesFrom(intentArtifact.id, 'layer3b_solve');
+    const solveParams = {
+      locality: brief.locality,
+      timeBudgetS,
+      variant: variant.id,
+      solverVersion,
+    };
     const computed = await repo.findComputed(intentArtifact.id, 'layer3b_solve', solveParams);
     if (computed) {
       const found = await repo.get(computed, scope.projectId);
@@ -152,6 +173,10 @@ export async function generateVariants(
           artifactId: found.id,
           kind: found.kind,
           reused: true,
+          // Cũng phải khai ở đây: bản đang hiệu lực có thể là một bản giải CŨ của đúng biến
+          // thể này, còn bản khớp cấu hình hiện tại đã có sẵn nên bộ giải không chạy lại.
+          // Bỏ trống thì con trỏ hiệu lực kẹt lại ở bản cũ mà không lần nào gỡ ra được.
+          supersedes: siblings.filter((id) => id !== found.id),
           solveTimeMs: 0,
         });
         continue;
@@ -191,6 +216,7 @@ export async function generateVariants(
       artifactId: written.id,
       kind,
       reused: written.reused,
+      supersedes: siblings.filter((id) => id !== written.id),
       solveTimeMs: solved.solveTimeMs,
     });
   }
@@ -203,6 +229,24 @@ export async function generateVariants(
       await repo.setHead(scope, 'floor_plan', first.artifactId);
       await setArchHead(repo, scope, first.artifactId);
       head = { id: first.artifactId, payload: null };
+    }
+  } else {
+    // Bản đang hiệu lực trỏ tới một mặt bằng CŨ của đúng biến thể vừa giải lại (mã hình học
+    // đổi, rule pack đổi) thì chuyển sang bản mới.
+    //
+    // Đây KHÔNG phải "lặng lẽ đổi lựa chọn của kiến trúc sư": lựa chọn của họ là biến thể
+    // A/B/C, và biến thể đó giữ nguyên. Thứ thay đổi là bản tính của chính biến thể ấy. Giữ
+    // bản cũ thì màn hình rơi vào trạng thái nửa nọ nửa kia — thẻ tóm tắt hiện số mới còn tờ
+    // bản vẽ vẽ hình cũ (đo được 06/09/2026: thẻ ghi phòng khách 16 m², bản vẽ ghi 20 m²).
+    const refreshed = results.find(
+      (r) =>
+        r.kind === 'floor_plan' && r.artifactId !== head!.id && r.supersedes.includes(head!.id),
+    );
+    if (refreshed) {
+      await repo.setHead(scope, 'layout_intent', refreshed.intentArtifactId);
+      await repo.setHead(scope, 'floor_plan', refreshed.artifactId);
+      await setArchHead(repo, scope, refreshed.artifactId);
+      head = { id: refreshed.artifactId, payload: null };
     }
   }
 
@@ -327,12 +371,23 @@ async function variantsOfProgram(
       }
     }
   }
-  // Cùng biến thể có thể có nhiều bản (đổi ngân sách giải, đổi locality) — bản mới nhất lên
-  // trước trong từng nhóm, nhóm xếp theo mã biến thể để A · B · C luôn đứng đúng thứ tự.
+  // Cùng biến thể có thể có nhiều bản giải từ CÙNG một ý đồ: đổi ngân sách giải, đổi địa
+  // phương, hay — thường gặp nhất — dựng lại ảnh Docker sau khi sửa mã hình học. Xếp bản mới
+  // nhất lên trước trong từng nhóm, nhóm xếp theo mã biến thể để A · B · C đứng đúng thứ tự.
   variants.sort(
     (a, b) => a.variantId.localeCompare(b.variantId) || b.createdAt.localeCompare(a.createdAt),
   );
-  return variants;
+
+  // …rồi chỉ giữ MỘT bản cho mỗi biến thể. Trả về cả hai bản thì bảng so sánh mọc thêm cột
+  // "Phương án A" thứ hai với đúng những con số ấy, và người dùng không có cách nào biết cột
+  // nào là cột nào (đo được 06/09/2026: 5 cột cho 3 biến thể). Bản đang hiệu lực được ưu tiên
+  // giữ — nếu không, chọn xong một phương án rồi sinh lại là lựa chọn đó biến khỏi màn hình.
+  const kept = new Map<string, VariantView>();
+  for (const variant of variants) {
+    const current = kept.get(variant.variantId);
+    if (!current || (variant.isHead && !current.isHead)) kept.set(variant.variantId, variant);
+  }
+  return [...kept.values()];
 }
 
 /**

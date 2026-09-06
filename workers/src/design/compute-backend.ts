@@ -126,9 +126,22 @@ export interface SchedulesRequest {
   title?: string;
 }
 
+/**
+ * Kết quả kiểm tra sống của lớp tính toán.
+ *
+ * `solverVersion` là dấu vân của mã hình học + chuẩn cấu tạo + rule pack trong ảnh Docker
+ * (`compute/src/design_compute/version.py`). Nó phải nằm trong khoá bộ nhớ đệm của bước giải:
+ * thiếu nó, sửa xong mã hình học rồi dựng lại ảnh vẫn nhận về đúng mặt bằng cũ, không lỗi và
+ * không cảnh báo. Rỗng nghĩa là Container không nói ra được — khi đó KHÔNG dùng lại kết quả cũ.
+ */
+export interface ComputeHealth {
+  reachable: boolean;
+  solverVersion: string | null;
+}
+
 export interface ComputeBackend {
   readonly name: string;
-  health(): Promise<boolean>;
+  health(): Promise<ComputeHealth>;
   solve(request: SolveRequest): Promise<SolveResponse>;
   /**
    * Xuất một tầng của mặt bằng ra DXF. MỘT CHIỀU — không có đường nhập ngược (CLAUDE.md 8.7).
@@ -191,12 +204,16 @@ export class HttpComputeBackend implements ComputeBackend {
     return (await res.json()) as T;
   }
 
-  async health(): Promise<boolean> {
+  async health(): Promise<ComputeHealth> {
     try {
-      await this.call<{ ok: boolean }>('/health', undefined, 5_000);
-      return true;
+      const body = await this.call<{ ok: boolean; solver_version?: string }>(
+        '/health',
+        undefined,
+        5_000,
+      );
+      return { reachable: true, solverVersion: body.solver_version ?? null };
     } catch {
-      return false;
+      return { reachable: false, solverVersion: null };
     }
   }
 
@@ -304,8 +321,8 @@ export class HttpComputeBackend implements ComputeBackend {
 export class UnconfiguredComputeBackend implements ComputeBackend {
   readonly name = 'unconfigured';
 
-  async health(): Promise<boolean> {
-    return false;
+  async health(): Promise<ComputeHealth> {
+    return { reachable: false, solverVersion: null };
   }
 
   async solve(): Promise<SolveResponse> {

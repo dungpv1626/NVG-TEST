@@ -34,6 +34,8 @@ import { MassingViewer } from './massing-viewer';
 import { RenderPanel } from './render-panel';
 import { SchedulesPanel } from './schedules-panel';
 import { SheetViewer } from './sheet-viewer';
+import { SectionHelp } from '@/components/ui/section-help';
+import { DESIGN_HELP } from './help-texts';
 
 export function VariantsPanel({
   projectId,
@@ -51,9 +53,22 @@ export function VariantsPanel({
   // Ảnh khối chụp từ trình xem ba chiều — đầu vào của phối cảnh.
   const [snapshot, setSnapshot] = useState<string | null>(null);
   const headId = variants.data?.headArtifactId ?? null;
+  // Phương án mở sẵn khi vào màn hình.
+  //
+  // Bản đang hiệu lực có thể thuộc một ĐỢT TRƯỚC — khách đổi đầu bài, đợt mới đã sinh nhưng
+  // chưa ai chọn lại. Khi đó mở thẳng bản cũ là bày ra một màn hình nửa nọ nửa kia: thẻ tóm
+  // tắt phía trên là đợt mới, còn tờ bản vẽ, khối ba chiều và bảng thống kê phía dưới là đợt
+  // cũ, cùng mang nhãn "Phương án A" (đo được 06/09/2026: thẻ ghi 5 tầng 356,8 m², bảng thống
+  // kê ghi 4 tầng 303,5 m²). Nên chỉ mở sẵn bản hiệu lực khi nó thuộc đợt đang xem; không thì
+  // mở phương án khả thi đầu tiên của đợt này. Bản cũ vẫn xem được qua nút ở khối "Đợt trước".
+  const current = variants.data?.variants ?? [];
+  const defaultViewing =
+    current.find((v) => v.artifactId === headId)?.artifactId ??
+    current.find((v) => v.status === 'ok')?.artifactId ??
+    null;
   useEffect(() => {
-    setViewing((current) => current ?? headId);
-  }, [headId]);
+    setViewing((value) => value ?? defaultViewing);
+  }, [defaultViewing]);
 
   if (variants.isLoading) return <VariantsSkeleton />;
 
@@ -105,8 +120,9 @@ export function VariantsPanel({
       <div className="rounded border border-border bg-surface-sunken p-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="font-medium">
+            <p className="flex items-center gap-1 font-medium">
               {feasible.length} phương án khả thi trên {view.variants.length} đã sinh
+              <SectionHelp {...DESIGN_HELP.variants} />
             </p>
             <p className="mt-1 text-fg-subtle">
               Mỗi phương án là một cấu trúc bố cục khác nhau, không phải vài con số khác nhau. Chọn
@@ -150,7 +166,7 @@ export function VariantsPanel({
             key={variant.artifactId}
             variant={variant}
             canChoose={!readOnly && variant.status === 'ok' && !variant.isHead}
-            isViewing={variant.artifactId === (viewing ?? headId)}
+            isViewing={variant.artifactId === (viewing ?? defaultViewing)}
             busy={busy}
             onChoose={() =>
               void choose
@@ -176,7 +192,7 @@ export function VariantsPanel({
 
       {(() => {
         const shown = [...view.variants, ...(view.previous ?? []).flatMap((g) => g.variants)].find(
-          (v) => v.artifactId === (viewing ?? headId),
+          (v) => v.artifactId === (viewing ?? defaultViewing),
         );
         if (!shown || shown.status !== 'ok') return null;
         return (
@@ -411,11 +427,14 @@ function VariantCard({
             Không xếp được
           </p>
           <p className="mt-1">{variant.infeasibility?.message}</p>
-          {variant.infeasibility && variant.infeasibility.conflictRules.length > 0 && (
-            <p className="mt-1 text-fg-subtle">
-              Quy tắc mâu thuẫn: {variant.infeasibility.conflictRules.join(', ')}
-            </p>
-          )}
+          {/* Mã quy tắc (`corridor_min_width`…) CỐ Ý không hiện: đó là tên biến trong bộ quy
+              tắc, người dùng không đọc được và cũng không làm gì được với nó. Câu ngay trên đã
+              nói bằng tiếng Việt hai yêu cầu nào đang chọi nhau; chỗ này nói bước tiếp theo.
+              Mã vẫn nằm nguyên trong artifact InfeasibilityReport để tra khi cần. */}
+          <p className="mt-1 text-fg-subtle">
+            Cách gỡ: bớt yêu cầu hoặc tăng diện tích ở Chương trình không gian, rồi sinh lại phương
+            án.
+          </p>
         </div>
       ) : (
         <div className="mt-3 space-y-3">

@@ -89,15 +89,89 @@ class TestOpenings:
             assert 0 <= door.offset_m
             assert door.offset_m + door.width_m <= wall.length_m + 1e-6
 
+    def _front_doors(self, cells: list[Cell]) -> list:
+        """Cửa nằm trên tường mặt tiền y = 0 — tức lối vào nhà, không phải cửa thông phòng."""
+        walls, openings = _build(cells)
+        facade = {
+            w.id for w in walls if w.orientation == "horizontal" and abs(w.a[1]) < 1e-6
+        }
+        return [o for o in openings if o.kind == "door" and o.wall in facade]
+
     def test_the_ground_floor_front_room_gets_an_entrance(self) -> None:
         """Phòng mặt tiền tầng trệt vào thẳng từ đường; nó không cần đi qua hành lang."""
         cells = [
             Cell("living_1", "living", 0.0, 0.0, 5.0, 9.0),
             Cell("store_1", "store", 0.0, 9.0, 5.0, 18.0),
         ]
-        _, openings = _build(cells)
-        entrance = [o for o in openings if o.kind == "door" and o.width_m >= NORMS.door_width_m]
-        assert entrance, "phòng mặt tiền tầng trệt phải có cửa vào nhà"
+        assert self._front_doors(cells), "phòng mặt tiền tầng trệt phải có cửa vào nhà"
+
+    def test_the_entrance_survives_a_front_room_that_already_has_an_inner_door(self) -> None:
+        """Bài học 06/09/2026: mặt tiền tầng trệt từng KHÔNG có lối vào nào.
+
+        Bước đặt cửa vào nhà trước đây chỉ chạy khi phòng mặt tiền chưa có cửa thông vào nhà —
+        mà phòng mặt tiền thì gần như luôn giáp hành lang, nên điều kiện đó gần như không bao
+        giờ đúng. Bài cũ không thấy vì phương án mẫu của nó không có không gian giao thông.
+        Đây là mặt bằng nhà ống thật: phòng khách mặt tiền GIÁP hành lang.
+        """
+        assert self._front_doors(_townhouse_level()), "mặt tiền tầng trệt phải có lối vào"
+
+    def test_a_hall_or_garage_on_the_street_face_also_gets_the_entrance(self) -> None:
+        """Sảnh và gara giáp đường là chỗ đặt cửa chính phổ biến nhất của nhà lô.
+
+        Cả hai đều bị bỏ qua trước đây: sảnh vì là không gian giao thông, gara vì nằm trong
+        `no_window_types` và đã có cửa thông vào trong.
+        """
+        for kind in ("circulation", "garage"):
+            cells = [
+                Cell(f"front_1", kind, 0.0, 0.0, 5.0, 5.0),
+                Cell("stair_1", "stair", 0.0, 5.0, 5.0, 9.0),
+                Cell("living_1", "living", 0.0, 9.0, 5.0, 18.0),
+            ]
+            assert self._front_doors(cells), f"{kind} giáp đường phải có cửa vào nhà"
+
+    def test_the_entrance_is_wider_than_an_inner_door_and_within_measured_range(self) -> None:
+        """Bề rộng theo đoạn tường mặt tiền, kẹp giữa hai cỡ ĐO ĐƯỢC (1,65 và 3,8)."""
+        doors = self._front_doors(_townhouse_level())
+        assert doors
+        for door in doors:
+            assert door.width_m >= NORMS.entrance_width_m > NORMS.door_width_m
+            assert door.width_m <= NORMS.entrance_max_width_m
+
+    def test_no_two_openings_overlap_on_the_same_wall(self) -> None:
+        """Hai lỗ mở chồng nhau là hỏng ở cả ba nơi cùng lúc.
+
+        Bản vẽ ra hai ký hiệu đè nhau, bảng thống kê đếm thừa một ô cửa, và khối ba chiều dựng
+        một tấm kính nằm trong một tấm kính khác. Đây là điều đã xảy ra ngay sau khi sửa chỗ
+        đặt cửa vào nhà (06/09/2026): phòng mặt tiền nhận cả cửa vào lẫn cửa sổ, và cả hai đều
+        căn giữa đúng đoạn tường ấy.
+        """
+        for cells in (_townhouse_level(), self._front_hall_level()):
+            _, openings = _build(cells)
+            spans: dict[str, list[tuple[float, float]]] = {}
+            for o in openings:
+                spans.setdefault(o.wall, []).append((o.offset_m, o.offset_m + o.width_m))
+            for wall_id, items in spans.items():
+                items.sort()
+                for (a0, a1), (b0, b1) in zip(items, items[1:]):
+                    assert b0 >= a1 - 1e-6, f"{wall_id}: ({a0},{a1}) chồng ({b0},{b1})"
+
+    @staticmethod
+    def _front_hall_level() -> list[Cell]:
+        return [
+            Cell("living_1", "living", 0.0, 0.0, 5.0, 5.0),
+            Cell("stair_1", "stair", 0.0, 5.0, 5.0, 9.0),
+            Cell("kitchen_1", "kitchen", 0.0, 9.0, 5.0, 18.0),
+        ]
+
+    def test_upper_floors_have_no_entrance_from_the_street(self) -> None:
+        """Cửa vào nhà chỉ ở tầng trệt — tầng hai giáp mặt phố thì mở cửa sổ, không mở cửa."""
+        cells = [
+            Cell("bedroom_2", "bedroom", 0.0, 0.0, 5.0, 9.0),
+            Cell("circulation_2", "circulation", 0.0, 9.0, 5.0, 18.0),
+        ]
+        walls, openings = _build(cells, level=2)
+        facade = {w.id for w in walls if w.orientation == "horizontal" and abs(w.a[1]) < 1e-6}
+        assert [o for o in openings if o.kind == "door" and o.wall in facade] == []
 
     def test_windows_land_only_on_open_faces(self) -> None:
         walls, openings = _build(_townhouse_level())

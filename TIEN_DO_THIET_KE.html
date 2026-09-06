@@ -499,6 +499,44 @@
           <tbody>
             <tr>
               <td class="num">06/09</td>
+              <td>Soát bằng mắt sau bước 7 — bốn phản hồi của Haan</td>
+              <td class="xs">
+                <b>Lối vào nhà</b>: mặt tiền tầng trệt trước đây KHÔNG có lỗ mở nào. Bước đặt cửa
+                vào chỉ chạy khi phòng mặt tiền chưa có cửa thông trong nhà &mdash; điều gần như
+                không bao giờ đúng; không gian giao thông và gara còn bị bỏ qua hẳn. Nay lối vào là
+                thuộc tính của công trình, đặt trước và độc lập, bề rộng theo đoạn tường mặt tiền
+                kẹp giữa hai cỡ đo được (1,65 và 3,8 m). Rộng hơn hai lần cánh thì vẽ hai cánh.
+                <b>Khung hình mặc định của khối ba chiều</b> chuyển sang nhìn mặt tiền thay vì nhìn
+                tường bên dài gấp ba.<br />
+                <b>Mã quy tắc</b> (<code>corridor_min_width</code>&hellip;) gỡ khỏi thẻ vô nghiệm,
+                thay bằng bước gỡ tiếp theo &mdash; mã vẫn nằm trong artifact để tra.<br />
+                <b>Hướng dẫn theo phần</b>: nút dấu hỏi ở tám phần, mỗi phần ba bước và một lưu ý
+                (<code>web/src/pages/tk/help-texts.ts</code>).<br />
+                <b>Gemini gói miễn phí</b> đo lại: cả ba mô hình sinh ảnh trả
+                <code>limit: 0</code> &mdash; không phải hết hạn mức trong ngày mà là không cấp lượt
+                nào. Câu trả lời dứt điểm cho Q-15.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">06/09</td>
+              <td>Ba lỗi hỏng im lặng lộ ra khi soát &mdash; đã vá</td>
+              <td class="xs">
+                <b>Bộ nhớ đệm không có mã Container trong khoá</b>: sửa xong hình học, dựng lại ảnh
+                Docker, chạy lại &mdash; bộ giải báo <code>0ms</code> và trả về đúng mặt bằng cũ.
+                Nay <code>/health</code> trả <code>solver_version</code> (băm mã hình học + chuẩn
+                cấu tạo + rule pack) và Worker đưa vào khoá.<br />
+                <b>Bảng so sánh mọc thêm cột</b>: hai bản giải của cùng một ý đồ ra hai cột cùng
+                tên. Nay giữ một bản mỗi biến thể, và con trỏ hiệu lực theo sang bản mới của chính
+                biến thể đó.<br />
+                <b>Màn hình nửa nọ nửa kia</b>: thẻ tóm tắt là đợt mới còn tờ bản vẽ là đợt cũ (5
+                tầng 356,8 m² so với 4 tầng 303,5 m²). Nay chỉ mở sẵn bản hiệu lực khi nó thuộc đợt
+                đang xem.<br />
+                <b>Hai lỗ mở chồng nhau</b> trên tường mặt tiền (cửa vào và cửa sổ cùng căn giữa)
+                &mdash; có bài canh không cho chồng.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">06/09</td>
               <td>Bước 1 của phương án demo — gỡ V-10, ảnh khảo sát, dự án demo</td>
               <td class="xs">
                 Lớp 3 chạy đồng bộ qua ba tuyến <code>/design/floor-plan/*</code>, dùng chung hàm
@@ -774,9 +812,10 @@
       </div>
       <p class="xs muted-t">
         <b>Đã trả lời:</b> Q-2 (mở rộng bảng cũ) · Q-7 (quy ước tên file — tài liệu sai) · Q-8 (Hưng
-        Yên, 34 đơn vị hành chính) · Q-12 · Q-13 · Q-15 (khoá Gemini là gói miễn phí) · Q-17 (sửa
-        hợp đồng luôn) · Q-22 (dev và test dùng tạm Gemini API) · <b>Q-27</b> và <b>Q-28</b> — xem
-        dưới.
+        Yên, 34 đơn vị hành chính) · Q-12 · Q-13 · Q-15 (khoá Gemini là gói miễn phí — đo lại 06/09:
+        mô hình sinh ảnh trả <code>limit: 0</code>, tức không cấp lượt nào, chờ sang ngày mai cũng
+        không đổi) · Q-17 (sửa hợp đồng luôn) · Q-22 (dev và test dùng tạm Gemini API) ·
+        <b>Q-27</b> và <b>Q-28</b> — xem dưới.
       </p>
 
       <div class="flag">

@@ -54,6 +54,8 @@ import { toUserMessage } from '@/hooks/use-error-message';
 import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard';
 import { BriefField } from './brief-field';
 import { SitePlanPreview } from './site-plan-preview';
+import { SectionHelp } from '@/components/ui/section-help';
+import { DESIGN_HELP } from './help-texts';
 
 const EM_DASH = '—';
 
@@ -347,7 +349,10 @@ export function BriefPanel({
       <div className="space-y-4">
         <div className="rounded-lg border border-border bg-surface p-4 shadow-card">
           <div className="mb-4 flex flex-wrap items-center gap-3">
-            <p className="font-medium">Đầu bài đang hiệu lực — phiên bản {current.version}</p>
+            <p className="flex items-center gap-1 font-medium">
+              Đầu bài đang hiệu lực — phiên bản {current.version}
+              <SectionHelp {...DESIGN_HELP.brief} />
+            </p>
             {current.confirmed_at ? (
               <span className="inline-flex items-center gap-1 text-status-completed">
                 <CheckCircle2 className="size-4" />

@@ -12,6 +12,8 @@ import { formatNumber } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { downloadFloorPlanXlsx, useFloorPlanSchedules } from '@/hooks/use-design-projects';
 import { toUserMessage } from '@/hooks/use-error-message';
+import { SectionHelp } from '@/components/ui/section-help';
+import { DESIGN_HELP } from './help-texts';
 
 export function SchedulesPanel({
   projectId,
@@ -53,7 +55,10 @@ export function SchedulesPanel({
     <section className="rounded border border-border bg-surface p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="font-medium">Bảng thống kê — {variantLabel}</h3>
+          <h3 className="flex items-center gap-1 font-medium">
+            Bảng thống kê — {variantLabel}
+            <SectionHelp {...DESIGN_HELP.schedules} />
+          </h3>
           <p className="text-fg-subtle">{schedules.disclaimer}. Tự cập nhật khi mặt bằng đổi.</p>
         </div>
         <Button variant="secondary" onClick={() => void download()}>

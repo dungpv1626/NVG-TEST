@@ -34,6 +34,7 @@ from design_compute.adapters import (
 from design_compute.sheet import render_svg
 from design_compute.schedules import build_schedules, schedules_to_xlsx
 from design_compute.massing import MassingError, massing_glb
+from design_compute.version import solver_version
 from design_compute.geometry.norms import load_construction_norms
 from design_compute.cad.export import build_sheet
 from design_compute.cad import (
@@ -122,6 +123,10 @@ def health() -> dict[str, Any]:
         "ok": True,
         "service": "design-compute",
         "rule_pack": {"id": pack.id, "version": pack.version, "rules": len(pack.rules)},
+        # Dấu vân của mã hình học + chuẩn cấu tạo + rule pack. Worker đưa chuỗi này vào khoá bộ
+        # nhớ đệm của bước giải; thiếu nó thì một bản vá hình học không bao giờ tới được người
+        # xem vì kết quả cũ được dùng lại (xem `design_compute/version.py`).
+        "solver_version": solver_version(),
         "contracts": available_contracts(),
         # Đọc `.dwg` phụ thuộc một công cụ KHÔNG được commit (giấy phép Open Design Alliance),
         # nên cùng một ảnh Docker có thể có hoặc không có khả năng này. Nói ra ở đây để lớp gọi

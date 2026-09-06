@@ -16,6 +16,8 @@ import { Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useRenderFromMassing, type RenderOutcome } from '@/hooks/use-design-projects';
 import { toUserMessage } from '@/hooks/use-error-message';
+import { SectionHelp } from '@/components/ui/section-help';
+import { DESIGN_HELP } from './help-texts';
 
 /** Nhãn dự phòng khi chưa gọi máy chủ — cùng chuỗi với kb/render_prompts.yaml. */
 const FALLBACK_WATERMARK = 'Ảnh tham khảo ý tưởng — chưa phải phương án thi công';
@@ -110,7 +112,10 @@ export function RenderPanel({
     <section className="rounded border border-border bg-surface p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="font-medium">Phối cảnh tham khảo — {variantLabel}</h3>
+          <h3 className="flex items-center gap-1 font-medium">
+            Phối cảnh tham khảo — {variantLabel}
+            <SectionHelp {...DESIGN_HELP.render} />
+          </h3>
           <p className="text-fg-subtle">
             Chụp ảnh khối ở mục Khối ba chiều rồi dựng ảnh. Ảnh trả lời câu hỏi thẩm mỹ, không thay
             cho mặt bằng; nhãn cảnh báo in thẳng lên ảnh.

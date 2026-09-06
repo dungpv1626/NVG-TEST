@@ -249,11 +249,37 @@ def _place_openings(
     rooms = [c for c in cells if not c.is_void]
 
     for room in rooms:
+        # ── Cửa vào nhà: tầng trệt, phòng giáp mặt vào được ──────────────────────────
+        #
+        # ⚠️ Đặt TRƯỚC cửa đi trong nhà và KHÔNG phụ thuộc vào nó. Trước đây bước này chỉ chạy
+        # khi phòng mặt tiền chưa có cửa thông vào nhà, mà phòng mặt tiền thì gần như luôn có
+        # — nên mặt tiền tầng trệt ra bản vẽ và ra khối ba chiều KHÔNG có lối vào nào. Lối vào
+        # là thuộc tính của CÔNG TRÌNH (mặt nào vào được), không phải phần thưởng cho phòng
+        # nào chưa có cửa. Không gian giao thông cũng được nhận cửa vào: sảnh và gara giáp
+        # đường là chỗ đặt cửa chính phổ biến nhất của nhà lô.
+        entrance_face: str | None = None
+        if level == 1:
+            for face, orientation, line, start, end in _faces_of(room, footprint):
+                if face not in faces_access:
+                    continue
+                wall = _wall_for(walls, orientation, line, start, end)
+                if wall is None:
+                    continue
+                entrance_face = face
+                # Bề rộng theo đoạn tường mặt tiền, kẹp giữa hai cỡ đo được (1,65 và 3,8):
+                # cửa sảnh và cửa cuốn gara cùng nằm trên một mặt tiền nên một con số cố
+                # định sai ở cả hai đầu.
+                width = min(
+                    norms.entrance_max_width_m,
+                    max(norms.entrance_width_m, (end - start) * norms.entrance_share),
+                )
+                emit(wall, "door", start, end, width, norms.entrance_height_m, None)
+                break
+
         if room.type in circulation:
             continue
 
         # ── Cửa đi: vào tường chung với không gian giao thông gần nhất ────────────────
-        placed_door = False
         for other in rooms:
             if other.id == room.id or other.type not in circulation:
                 continue
@@ -269,33 +295,19 @@ def _place_openings(
             door_w = norms.wc_door_width_m if room.type == "wc" else norms.door_width_m
             door_h = norms.wc_door_height_m if room.type == "wc" else norms.door_height_m
             emit(wall, "door", start, end, door_w, door_h, None)
-            placed_door = True
             break
-
-        # ── Cửa vào nhà: tầng trệt, phòng giáp mặt vào được ──────────────────────────
-        if level == 1 and not placed_door:
-            for face, orientation, line, start, end in _faces_of(room, footprint):
-                if face not in faces_access:
-                    continue
-                wall = _wall_for(walls, orientation, line, start, end)
-                if wall is None:
-                    continue
-                emit(
-                    wall,
-                    "door",
-                    start,
-                    end,
-                    norms.entrance_width_m,
-                    norms.entrance_height_m,
-                    None,
-                )
-                break
 
         # ── Cửa sổ: mỗi mặt thoáng mà phòng tiếp giáp ────────────────────────────────
         if room.type in norms.no_window_types:
             continue
         for face, orientation, line, start, end in _faces_of(room, footprint):
             if face not in faces_open:
+                continue
+            # Mặt đã đặt cửa vào nhà thì thôi cửa sổ. Cả hai đều căn giữa cùng một đoạn tường
+            # nên chúng CHỒNG LÊN NHAU: bản vẽ ra hai ký hiệu đè nhau, bảng thống kê đếm thừa
+            # một ô cửa, và khối ba chiều dựng một tấm kính nằm trong một tấm kính khác. Cửa
+            # vào nhà đo được là ô kính cao 2,5 m — nó đã là mặt thoáng của phòng đó rồi.
+            if face == entrance_face:
                 continue
             wall = _wall_for(walls, orientation, line, start, end)
             if wall is None:

@@ -40,6 +40,8 @@ class ConstructionNorms:
     wc_door_height_m: float
     entrance_width_m: float
     entrance_height_m: float
+    entrance_share: float
+    entrance_max_width_m: float
     window_height_m: float
     window_sill_m: float
     window_share: float
@@ -93,6 +95,8 @@ def parse_construction_norms(text: str) -> ConstructionNorms:
         wc_door_height_m=_number(raw, "openings", "wc_door", "height_m"),
         entrance_width_m=_number(raw, "openings", "entrance", "width_m"),
         entrance_height_m=_number(raw, "openings", "entrance", "height_m"),
+        entrance_share=_number(raw, "openings", "entrance", "share_of_wall"),
+        entrance_max_width_m=_number(raw, "openings", "entrance", "max_width_m"),
         window_height_m=_number(raw, "openings", "window", "height_m"),
         window_sill_m=_number(raw, "openings", "window", "sill_m"),
         window_share=_number(raw, "openings", "window", "share_of_wall"),
