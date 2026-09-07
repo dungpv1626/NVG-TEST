@@ -140,6 +140,9 @@ function WorkspaceBody({
     scrollRef.current?.closest('main')?.scrollTo({ top: 0 });
   }, [shownId]);
 
+  /** Nhóm rỗng KHÔNG tính: xem chú thích ở chỗ dựng cột phải của màn hình con. */
+  const filledRelated = related.filter((group) => group.records.length > 0);
+
   const overdue = status === 'overdue';
   const countdown = deadline ? formatDeadline(deadline) : '';
 
@@ -156,7 +159,19 @@ function WorkspaceBody({
         className={cn('min-h-full bg-tk-bg text-tk-tx', 'tabular-nums', '-m-4 lg:-m-6')}
       >
         {/* ── Header ─────────────────────────────────────────────────────────── */}
-        <header className="sticky top-0 z-10 border-b border-tk-line bg-tk-bg px-4 pt-4 lg:px-6 lg:pt-6">
+        {/*
+          `-top-4 lg:-top-6` bù ĐÚNG phần đệm của `<main>` — không phải một con số canh mắt.
+
+          Vùng cuộn là `<main>`, và nó có `p-4 lg:p-6`. Chrome tính mốc dính của `sticky` theo
+          HỘP NỘI DUNG của vùng cuộn, tức là thấp hơn mép nhìn thấy đúng bằng phần đệm ấy. Nên
+          `top-0` làm header dừng lại ở dưới mép 24px, chừa một dải 24px mà nội dung đang cuộn
+          hiện xuyên qua: bấm vào màn hình con rồi cuộn thì phụ đề và nút «← Tổng quan» trồi lên
+          NẰM ĐÈ dòng mã hồ sơ của header (Haan bắt được 07/09/2026).
+
+          Bọc ngoài đã có `-m-4 lg:-m-6` để nền tràn kín; đây là vế còn lại của cùng phép bù đó.
+          Sửa đệm của `<main>` thì phải sửa cả ba chỗ — có test canh trong `tk-chrome.test.tsx`.
+        */}
+        <header className="sticky -top-4 z-10 border-b border-tk-line bg-tk-bg px-4 pt-4 lg:-top-6 lg:px-6 lg:pt-6">
           <Breadcrumb items={crumbs} />
 
           <div className="mt-3 flex flex-wrap items-end justify-between gap-x-5 gap-y-3">
@@ -242,23 +257,49 @@ function WorkspaceBody({
         {/* ── Nội dung ───────────────────────────────────────────────────────── */}
         {sub ? (
           <section aria-labelledby="tieu-de-man-hinh-con" className="px-4 pt-5 pb-7 lg:px-6">
+            {/*
+              Đường quay lại là lối ra DUY NHẤT của màn hình con — thanh tab bị ẩn khi ở đây
+              (bản mẫu §5.6). Bản đầu vẽ nó bằng cỡ chữ nhỏ nhất và màu chữ phụ, tức là mờ
+              hơn mọi thứ khác trên trang, trong khi nó là thứ người dùng cần thấy trước
+              tiên khi muốn đi tiếp. Nay là một nút có viền và nền, cỡ chữ thân bài.
+            */}
             <button
               type="button"
               onClick={() => selectTab('tong-quan')}
-              className="inline-flex h-10 items-center gap-1.5 text-xs text-tk-t2 transition-colors duration-(--motion-fast) ease-(--ease-out) hover:text-tk-tx"
+              className="inline-flex h-10 items-center gap-2 rounded-full border border-tk-line2 bg-tk-card px-4 font-medium text-tk-tx transition-colors duration-(--motion-fast) ease-(--ease-out) hover:border-tk-acc hover:bg-tk-hover hover:text-tk-acc"
             >
-              <ArrowLeft className="size-4" aria-hidden />
+              <ArrowLeft className="size-5" aria-hidden />
               Tổng quan
             </button>
-            <h2 id="tieu-de-man-hinh-con" className="mt-1 text-md font-semibold">
+            <h2 id="tieu-de-man-hinh-con" className="mt-3 text-lg font-semibold">
               {sub.label}
             </h2>
             {sub.subtitle && <p className="mt-1 text-xs text-tk-t2">{sub.subtitle}</p>}
-            <div className="mt-4 grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_20rem]">
+            {/*
+              Cột thứ hai chỉ khai khi THẬT SỰ có hồ sơ để liệt kê.
+
+              Hai chỗ đều phải xét, và chỗ hay quên là chỗ thứ hai:
+
+               1. Khai cứng `xl:grid-cols-[1fr_20rem]` thì lưới vẫn giữ chỗ 20rem dù
+                  `<aside>` không dựng ra.
+               2. Trang gọi luôn truyền một NHÓM «Hồ sơ liên quan», và nhóm đó rỗng khi dự án
+                  chưa nối với cơ hội nào. `related.length > 0` vẫn đúng, nên cột vẫn được
+                  dành chỗ để hiện đúng một câu «Chưa có hồ sơ liên quan» — 320px để nói rằng
+                  không có gì.
+
+              Cộng lại thành một dải trắng chạy dọc bên phải mọi màn hình con, và nội dung bên
+              trái bị bó lại vô cớ (Haan bắt được 07/09/2026).
+            */}
+            <div
+              className={cn(
+                'mt-4 grid items-start gap-5',
+                filledRelated.length > 0 && 'xl:grid-cols-[minmax(0,1fr)_20rem]',
+              )}
+            >
               <div className="min-w-0">{sub.content}</div>
-              {related.length > 0 && (
+              {filledRelated.length > 0 && (
                 <aside className="grid gap-3" aria-label="Hồ sơ liên quan">
-                  <RelatedGroups related={related} from={fromForRelated} />
+                  <RelatedGroups related={filledRelated} from={fromForRelated} />
                 </aside>
               )}
             </div>

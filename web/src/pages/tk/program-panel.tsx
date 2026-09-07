@@ -63,7 +63,12 @@ export function ProgramPanel({
     ? [...view.program.floor_allocation].sort((a, b) => a.floor - b.floor)
     : [...new Set(view.program.spaces.map((s) => s.floor))]
         .sort((a, b) => a - b)
-        .map((floor) => ({ floor, usable_area_m2: null, allocated_area_m2: null }));
+        .map((floor) => ({
+          floor,
+          usable_area_m2: null,
+          buildable_area_m2: null,
+          allocated_area_m2: null,
+        }));
 
   return (
     <div className="space-y-6">
@@ -75,6 +80,9 @@ export function ProgramPanel({
         onGenerate={() => void generate.mutateAsync({ projectId }).catch(() => undefined)}
       />
 
+      {view.aiSuggestion && (
+        <AiSuggestion suggestion={view.aiSuggestion} labels={view.roomLabels} />
+      )}
       {view.warnings.length > 0 && <Warnings items={view.warnings} />}
       {view.unresolvedNeeds.length > 0 && <UnresolvedNeeds items={view.unresolvedNeeds} />}
 
@@ -83,6 +91,7 @@ export function ProgramPanel({
           key={allocation.floor}
           floor={allocation.floor}
           usable={allocation.usable_area_m2 ?? null}
+          buildable={allocation.buildable_area_m2 ?? null}
           allocated={allocation.allocated_area_m2 ?? null}
           spaces={view.program.spaces.filter((s) => s.floor === allocation.floor)}
           labels={view.roomLabels}
@@ -147,6 +156,44 @@ function Header({
   );
 }
 
+/**
+ * Đề xuất của AI ở Lớp 2a, hiện nguyên văn để kiến trúc sư kiểm lại được.
+ *
+ * ⚠️ Khối này KHÔNG phải trang trí. AI có tham gia vào bảng diện tích bên dưới; thiếu chỗ nói
+ * ra nó đã đề xuất gì và vì sao thì con số trong bảng trở thành thứ không giải thích được, và
+ * "con người quyết định cuối cùng" (PRD 2.3) chỉ còn là một câu trong tài liệu.
+ *
+ * Nói rõ ranh giới ngay trên màn hình: AI chọn mức ƯU ÁI, không chọn mét vuông. Người đọc cần
+ * biết điều đó để biết mình đang kiểm lại cái gì.
+ */
+function AiSuggestion({
+  suggestion,
+  labels,
+}: {
+  suggestion: NonNullable<ProgramView['aiSuggestion']>;
+  labels: Record<string, string>;
+}): React.ReactElement {
+  const name = (code: string) => labels[code] ?? code;
+  return (
+    <div className="rounded border border-border bg-surface p-4">
+      <p className="font-medium">Đề xuất của AI về mức ưu tiên diện tích</p>
+      <p className="mt-1 text-fg-subtle">
+        AI chỉ chọn phòng nào nên rộng rãi, phòng nào nên tối giản. Diện tích cụ thể do quy chuẩn và
+        chuẩn nghề nghiệp quyết định — đề xuất này không đổi được mức tối thiểu hay tối đa.
+      </p>
+      {suggestion.rationale && <p className="mt-2">{suggestion.rationale}</p>}
+      {suggestion.generous.length > 0 && (
+        <p className="mt-2 text-fg-subtle">
+          Ưu tiên rộng rãi: {suggestion.generous.map(name).join(', ')}.
+        </p>
+      )}
+      {suggestion.modest.length > 0 && (
+        <p className="text-fg-subtle">Giữ tối giản: {suggestion.modest.map(name).join(', ')}.</p>
+      )}
+    </div>
+  );
+}
+
 function Warnings({ items }: { items: string[] }): React.ReactElement {
   return (
     <div className="rounded border border-border bg-surface p-4">
@@ -182,12 +229,14 @@ function UnresolvedNeeds({ items }: { items: string[] }): React.ReactElement {
 function FloorTable({
   floor,
   usable,
+  buildable,
   allocated,
   spaces,
   labels,
 }: {
   floor: number;
   usable: number | null;
+  buildable: number | null;
   allocated: number | null;
   spaces: ProgramSpace[];
   labels: Record<string, string>;
@@ -199,6 +248,20 @@ function FloorTable({
         {usable !== null && (
           <p className="text-fg-subtle">
             Sàn {formatNumber(usable, 1)} m² · đã bố trí {formatNumber(allocated ?? 0, 1)} m²
+            {/*
+              Phần đất KHÔNG xây tới phải hiện ra thành một con số, không biến mất lặng lẽ.
+              Từ 07/09/2026 mặt sàn co lại theo nhu cầu thay vì lấp kín phần xây được — đó là
+              một quyết định, và một quyết định không nhìn thấy được thì không kiểm lại được.
+            */}
+            {buildable !== null && buildable > usable + 0.5 && (
+              <>
+                {' · '}
+                <span title="Phần còn lại của đất xây được — để làm sân, vườn hoặc mở rộng sau.">
+                  xây được tới {formatNumber(buildable, 1)} m², còn{' '}
+                  {formatNumber(buildable - usable, 1)} m² chưa dùng
+                </span>
+              </>
+            )}
           </p>
         )}
       </div>

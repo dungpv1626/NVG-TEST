@@ -44,6 +44,17 @@ export interface SolveRequest {
     setback_required_m?: Record<string, number>;
     max_density?: number | null;
   };
+  /**
+   * Loại hình công trình — chọn TẬP QUY TẮC bộ giải áp dụng.
+   *
+   * Bắt buộc, cố ý không cho tuỳ chọn: phía Container có mặc định `"nha_pho"`
+   * (`service.py`), nên trường này vắng mặt KHÔNG gây lỗi — nó lặng lẽ giải mọi biệt thự
+   * bằng luật nhà phố. Đúng như đã xảy ra cho tới 07/09/2026 (V-23): biệt thự vừa mất
+   * `setback_front_villa` 3 m và `max_density_villa` 0,6, vừa nhận nhầm khoảng lùi 0 và mật
+   * độ 1,0 của nhà phố — tức được phép phủ kín lô, trong khi Lớp 2 vẫn áp đúng. Hai lớp bất
+   * đồng về cùng một khu đất và không có gì báo.
+   */
+  building_type: string;
   rule_pack: { locality: string; version?: string };
   time_budget_s: number;
   /**

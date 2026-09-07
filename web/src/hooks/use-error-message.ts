@@ -77,9 +77,15 @@ export function toUserMessage(error: unknown, action: ActionContext = 'view'): s
 
   // Thông báo do hàm nghiệp vụ tự phát (RAISE EXCEPTION) đã viết bằng tiếng Việt —
   // giữ nguyên vì đó chính là ngôn ngữ nghiệp vụ.
+  //
+  // Chỉ cắt tiền tố KỸ THUẬT: một mã không dấu, không khoảng trắng, rồi dấu hai chấm
+  // (`P0001: …`, `design: …`). Bản cũ cắt bằng `^.*?:\s*` — bất kỳ thứ gì tới dấu hai chấm
+  // ĐẦU TIÊN — nên một câu tiếng Việt viết đúng cũng bị xén: "Chưa đủ thông tin bắt buộc để
+  // chốt đầu bài. Còn thiếu: Mật độ xây dựng tối đa" tới người dùng chỉ còn "Mật độ xây dựng
+  // tối đa", tức là mất hẳn phần nói VIỆC GÌ không làm được (CGD 5.5 đòi đủ cả hai vế).
   const message = err.message ?? '';
   if (/[àáảãạăâđêôơư]/i.test(message)) {
-    return message.replace(/^.*?:\s*/, '');
+    return message.replace(/^[A-Za-z0-9_.-]{1,40}:\s+/, '');
   }
 
   return ERRORS.unknown(SUPPORT_CONTACT_PLACEHOLDER);

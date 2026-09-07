@@ -584,6 +584,92 @@ class TestMassing:
         assert y1 < 20.0, "hình bao phải thu lại, không chạm mép sau"
         assert not [v for v in result.violations if v.rule_id == "max_density_villa"]
 
+    def test_program_floor_area_shrinks_the_footprint_from_the_back(self, pack) -> None:
+        """Chương trình không gian chọn mặt sàn nhỏ hơn trần xây được thì hình bao phải thu theo.
+
+        Sàn xây được là một GIỚI HẠN, không phải một yêu cầu: một gia đình nhỏ trên lô rộng
+        không cần căn nhà lấp kín phần xây được. Lớp 2 chọn mặt sàn vừa đủ; nếu bộ giải bỏ qua
+        con số đó thì toàn bộ việc thu nhỏ biến mất ngay tại đây, và phần dôi ra phải chui vào
+        một phòng nào đó — đúng cái sai đã sửa ngày 07/09/2026.
+        """
+        rooms = (
+            _room("front_1", "living", 1, 30.0, minimum=14.0, maximum=200.0, daylight=True),
+            _room("stair_1", "stair", 1, 8.0, minimum=4.0, maximum=30.0),
+            _room("rear_1", "kitchen", 1, 20.0, minimum=6.0, maximum=200.0),
+        )
+        layouts = (
+            FloorLayout(
+                1,
+                {
+                    "split": "H",
+                    "a": {"room": "front_1"},
+                    "b": {"split": "V", "a": {"room": "stair_1"}, "b": {"room": "rear_1"}},
+                },
+            ),
+        )
+        base = dict(
+            rooms=rooms,
+            layouts=layouts,
+            floors=1,
+            building_type="nha_pho",
+            site_width_m=8.0,
+            site_depth_m=20.0,
+            open_faces=("front", "back", "left", "right"),
+        )
+        full = solve_townhouse(_request(pack, **base))
+        shrunk = solve_townhouse(
+            _request(pack, **base, target_floor_area_m2=80.0)
+        )
+        assert full.status in ("pass", "warning") and shrunk.status in ("pass", "warning")
+        assert full.footprint_m is not None and shrunk.footprint_m is not None
+        def area(fp: tuple[float, float, float, float]) -> float:
+            return (fp[2] - fp[0]) * (fp[3] - fp[1])
+
+        assert area(shrunk.footprint_m) <= 80.0 + 1e-6
+        assert area(shrunk.footprint_m) < area(full.footprint_m)
+        # Thu từ PHÍA SAU: mặt tiền giữ nguyên, chỉ chiều sâu ngắn lại.
+        assert shrunk.footprint_m[0] == full.footprint_m[0]
+        assert shrunk.footprint_m[2] == full.footprint_m[2]
+        assert shrunk.footprint_m[3] < full.footprint_m[3]
+
+    def test_program_floor_area_never_widens_beyond_the_legal_ceiling(self, pack) -> None:
+        """Con số của chương trình chỉ THU, không bao giờ NỚI.
+
+        Nó đến từ Lớp 2 qua mạng; khoảng lùi và mật độ là quy chuẩn. Cho phép nó nới ra là mở
+        đường cho một chương trình sai (hoặc bị sửa) vượt trần pháp lý mà không có gì chặn.
+        """
+        rooms = (
+            _room("front_1", "living", 1, 40.0, minimum=14.0, maximum=400.0, daylight=True),
+            _room("stair_1", "stair", 1, 8.0, minimum=4.0, maximum=30.0),
+            _room("rear_1", "kitchen", 1, 40.0, minimum=6.0, maximum=400.0),
+        )
+        layouts = (
+            FloorLayout(
+                1,
+                {
+                    "split": "H",
+                    "a": {"room": "front_1"},
+                    "b": {"split": "V", "a": {"room": "stair_1"}, "b": {"room": "rear_1"}},
+                },
+            ),
+        )
+        result = solve_townhouse(
+            _request(
+                pack,
+                rooms=rooms,
+                layouts=layouts,
+                floors=1,
+                building_type="biet_thu",
+                site_width_m=10.0,
+                site_depth_m=20.0,
+                open_faces=("front", "back", "left", "right"),
+                target_floor_area_m2=10_000.0,
+            )
+        )
+        assert result.footprint_m is not None
+        x0, y0, x1, y1 = result.footprint_m
+        assert (x1 - x0) * (y1 - y0) <= 0.6 * 10.0 * 20.0 + 1e-6
+
     def test_density_uses_the_real_lot_area_not_the_buildable_rectangle(self, pack) -> None:
         """Thửa không vuông vắn: ô chữ nhật xây được nhỏ hơn thửa, lấy nó làm mẫu số là phạt oan."""
         rooms = (
@@ -712,3 +798,65 @@ class TestDeterminism:
         result = solve_townhouse(_request(pack))
         assert result.solve_time_s > 0
         assert result.rule_pack_version
+
+
+class TestCutHints:
+    """`ratio_hint` là GỢI Ý nghiệm, không phải ràng buộc.
+
+    Trước 07/09/2026 trường này là trường chết: hợp đồng có, Lớp 3a điền, bộ giải bỏ qua. Hai
+    bài dưới đây khoá lại hai vế của nó — có tác dụng, và không bao giờ ép được một phương án
+    sai qua cửa.
+    """
+
+    def _one_floor(self, ratio: float):
+        rooms = [
+            RoomSpec(
+                id="living_1",
+                type="living",
+                floor=1,
+                target_area_m2=10.0,
+                min_area_m2=10.0,
+                max_area_m2=200.0,
+            ),
+            RoomSpec(
+                id="circulation_1",
+                type="circulation",
+                floor=1,
+                target_area_m2=10.0,
+                min_area_m2=10.0,
+                max_area_m2=200.0,
+            ),
+        ]
+        layouts = [
+            FloorLayout(
+                level=1,
+                tree={
+                    "split": "H",
+                    "ratio_hint": ratio,
+                    "a": {"room": "living_1"},
+                    "b": {"room": "circulation_1"},
+                },
+            )
+        ]
+        return rooms, layouts
+
+    def test_a_hint_moves_the_answer_when_the_objective_is_indifferent(self, pack) -> None:
+        """Hai phòng cùng diện tích mong muốn và mặt sàn rộng hơn tổng mong muốn: phần dôi ra
+        rơi vào phòng nào cũng cùng một khoản phạt, nên thứ quyết định là gợi ý."""
+        results = []
+        for ratio in (0.3, 0.6):
+            rooms, layouts = self._one_floor(ratio)
+            result = solve_townhouse(_request(pack, rooms=rooms, layouts=layouts, floors=1))
+            assert result.status in ("pass", "warning"), result.notes
+            living = next(r for r in result.rooms if r.id == "living_1")
+            results.append(living.area_m2)
+        assert results[0] < results[1], results
+
+    def test_a_hint_cannot_push_a_room_below_its_minimum(self, pack) -> None:
+        """Gợi ý vô lý vẫn phải cho phương án hợp lệ — nếu không, Lớp 3a lại quyết định hình
+        học, đúng điều nguyên tắc bất biến 2 cấm."""
+        rooms, layouts = self._one_floor(0.01)
+        result = solve_townhouse(_request(pack, rooms=rooms, layouts=layouts, floors=1))
+        assert result.status in ("pass", "warning"), result.notes
+        living = next(r for r in result.rooms if r.id == "living_1")
+        assert living.area_m2 >= 10.0

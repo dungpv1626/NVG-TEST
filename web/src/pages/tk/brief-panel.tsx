@@ -18,8 +18,8 @@
  * đổi yêu cầu lúc nào" — chưa xác nhận thì chưa ai dựa vào bản đó.
  */
 
-import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, History, Ruler } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { CheckCircle2, ChevronLeft, ChevronRight, FileDown, History, Ruler } from 'lucide-react';
 import { formatCurrency, formatDateTime, formatNumber } from '@nvg/shared';
 import {
   ACCESS_SIDES,
@@ -27,9 +27,18 @@ import {
   checkBriefConsistency,
   FAMILY_ROLE_LABEL,
   FLOOR_PREF_LABEL,
+  DERIVED_NEED_CODES,
+  ROOM_LABEL,
+  bedroomTypeFor,
+  bedroomsFor,
+  bedroomOwnerLabels,
+  displayNumber,
+  isBedroomType,
   isFieldVisible,
   scoreBrief,
   setAtPath,
+  syncBedroomRows,
+  withDerivedSiteDimensions,
   SIDE_LABEL,
   siteGeometry,
   valueAtPath,
@@ -52,12 +61,26 @@ import {
 import { useDesignSurveys } from '@/hooks/use-design-surveys';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard';
+import { cn } from '@/lib/utils';
 import { BriefField } from './brief-field';
+import { describeField } from './brief-describe';
+import { printBrief } from './brief-print';
 import { SitePlanPreview } from './site-plan-preview';
 import { SectionHelp } from '@/components/ui/section-help';
 import { DESIGN_HELP } from './help-texts';
 
 const EM_DASH = '—';
+
+/**
+ * Giờ:phút của dấu tự lưu.
+ *
+ * Tự dựng thay vì `toLocaleTimeString`: hàm đó theo ngôn ngữ và múi giờ của TRÌNH DUYỆT, nên
+ * trên máy đặt tiếng Anh nó trả về "11:47 PM" giữa một màn hình tiếng Việt — đúng loại chữ
+ * không nằm trong mã nguồn mà CLAUDE.md 4.1 cảnh báo. Định dạng 24 giờ theo CGD 4.3.
+ */
+function hhmm(at: Date): string {
+  return `${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}`;
+}
 
 /** Sáu ô chữ tự do của TK-01 — cột riêng trong bảng, không nằm trong hợp đồng dữ liệu. */
 type LegacyText = Record<string, string | null>;
@@ -83,10 +106,15 @@ function toLegacy(brief: DesignBriefRecord | undefined): LegacyText {
 export function BriefPanel({
   projectId,
   companyId,
+  projectName,
+  projectCode,
   readOnly,
 }: {
   projectId: string;
   companyId: string;
+  /** Chỉ dùng cho tiêu đề bản in — màn hình đã có tên dự án ở phần đầu trang. */
+  projectName: string;
+  projectCode: string;
   readOnly: boolean;
 }) {
   const { data: briefs, isLoading } = useDesignBriefs(projectId);
@@ -106,7 +134,43 @@ export function BriefPanel({
   const [legacy, setLegacy] = useState<LegacyText>(toLegacy(undefined));
   const [surveyId, setSurveyId] = useState<string | null>(null);
   const [changeReason, setChangeReason] = useState('');
+  /**
+   * Bước đang mở, giữ theo MÃ mục chứ không theo số thứ tự.
+   *
+   * `null` = bước đầu. Giữ theo số thì đổi loại hình sang nhà phố — vốn làm biến mất hẳn một
+   * bước ở giữa — sẽ đẩy người dùng sang một bước khác hẳn cái họ đang xem.
+   */
+  const [stepId, setStepId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * Có gì chưa ghi xuống CSDL không.
+   *
+   * Trước đây hàng rào «rời trang?» gắn thẳng vào `editing`, nên nó hỏi cả khi vừa mở biểu
+   * mẫu ra và chưa gõ gì. Cảnh báo nổ lúc không có gì để mất là cách chắc chắn nhất dạy
+   * người dùng bấm «Rời khỏi» theo phản xạ — đến lúc cảnh báo thật thì nó không còn tác dụng.
+   */
+  const [dirty, setDirty] = useState(false);
+  /**
+   * Đếm số lần sửa — để `persist()` biết bản nó vừa ghi có còn là bản mới nhất không.
+   *
+   * Lời ghi mất 200–800 ms; gõ tiếp trong khoảng đó rồi `setDirty(false)` vô điều kiện là
+   * coi phần vừa gõ như đã lưu: nhãn báo «Đã lưu», rời trang không hỏi, và phần đó mất. Nặng
+   * hơn với «Lưu nháp»: đóng biểu mẫu xong `useEffect` nạp lại bản đã lưu, phần vừa sửa biến
+   * mất ngay trên màn hình (rà soát 08/09/2026).
+   */
+  const edits = useRef(0);
+  /** Đang hỏi «Bỏ các thay đổi chưa lưu?» sau khi bấm Hủy lúc còn thay đổi. */
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
+  /**
+   * Mã bản ghi mà chính phiên nhập này vừa tạo ra ở lần lưu đầu.
+   *
+   * Cần vì `current` đến từ một truy vấn: tạo xong thì danh sách đầu bài còn đang tải lại,
+   * nên `current` vẫn rỗng thêm một nhịp. Không có mã này thì lần tự lưu ngay sau đó lại đi
+   * vào nhánh «tạo mới» và đẻ thêm một phiên bản.
+   */
+  const [draftBriefId, setDraftBriefId] = useState<string | null>(null);
+  /** Thời điểm ghi thành công gần nhất — để người dùng THẤY là đã lưu, không phải đoán. */
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
 
   // Chỉ nạp lại khi ĐỔI bản ghi, không phải mỗi lần vẽ lại: nạp lại giữa chừng là xoá những
   // gì người dùng vừa gõ (Webapp Flow 6.3).
@@ -117,9 +181,17 @@ export function BriefPanel({
     setSurveyId(current?.site_source_survey_id ?? null);
   }, [current, editing]);
 
-  useUnsavedChangesGuard(editing);
+  useUnsavedChangesGuard(editing && dirty);
 
   const score = useMemo(() => scoreBrief(draft, BRIEF_FORM), [draft]);
+  /**
+   * Bản MỚI NHẤT của những gì `persist()` cần — đọc qua ref, không qua closure.
+   *
+   * `save()` gọi `persist()` lần hai khi lượt đầu về trạng thái `stale`; nếu đọc `draft` từ
+   * closure thì lượt hai ghi lại đúng bản cũ mà lượt đầu vừa ghi, và phần gõ thêm vẫn mất.
+   */
+  const latest = useRef({ draft, legacy, surveyId, changeReason, draftBriefId });
+  latest.current = { draft, legacy, surveyId, changeReason, draftBriefId };
   const issues = useMemo(() => checkBriefConsistency(draft, BRIEF_FORM), [draft]);
   const shown = useMemo(() => visibleFields(BRIEF_FORM, draft), [draft]);
   const threshold = typeof thresholdRaw === 'number' ? thresholdRaw : null;
@@ -128,21 +200,77 @@ export function BriefPanel({
   const needsNewVersion = Boolean(current?.confirmed_at);
 
   function startEditing() {
-    setDraft((current?.structured as DesignBriefDraft) ?? {});
+    setStepId(null);
+    // Đồng bộ NGAY lúc mở, không chờ người dùng đụng vào phần Thành viên gia đình: đầu bài
+    // đã lưu trước 07/09/2026 chưa có dòng phòng ngủ nào, nên mở ra sẽ thấy một danh sách
+    // không gian thiếu hẳn phòng ngủ và không hiểu vì sao.
+    setDraft(withDerived((current?.structured as DesignBriefDraft) ?? {}));
     setLegacy(toLegacy(current));
     setSurveyId(current?.site_source_survey_id ?? null);
     setChangeReason('');
     setError(null);
+    setDirty(false);
+    setDraftBriefId(null);
+    setSavedAt(null);
+    setConfirmingCancel(false);
+    edits.current = 0;
     setEditing(true);
   }
 
   function setField(path: string, value: unknown) {
+    setDirty(true);
+    edits.current += 1;
     if (path.startsWith('legacy.')) {
       const column = LEGACY_COLUMNS[path]!;
       setLegacy((prev) => ({ ...prev, [column]: (value as string | undefined) ?? null }));
       return;
     }
-    setDraft((prev) => setAtPath(prev, path, value));
+    // Đổi Thành viên gia đình là đổi SỐ phòng ngủ, nên danh sách không gian phải theo ngay —
+    // đó là toàn bộ lý do hai chỗ này không phải hai lần khai. Chạy sau khi ghi giá trị mới
+    // chứ không trước, nếu không nó đồng bộ theo số cũ.
+    setDraft((prev) => withDerived(setAtPath(prev, path, value)));
+  }
+
+  /**
+   * Danh sách không gian mang đúng bấy nhiêu dòng phòng ngủ mà gia đình sinh ra.
+   *
+   * `syncBedroomRows` trả về CHÍNH mảng cũ khi không có gì đổi, nên gõ một ký tự vào ô khác
+   * không biến thành "đầu bài vừa đổi" — hộp thoại «rời trang?» chỉ nổ khi thật sự có thay đổi.
+   */
+  function withSyncedBedrooms(next: DesignBriefDraft): DesignBriefDraft {
+    const rows = syncBedroomRows(next);
+    return rows === next.required_spaces ? next : { ...next, required_spaces: rows };
+  }
+
+  /**
+   * Hai phép SUY chạy sau mỗi lần sửa, cùng một quy ước: trả về chính đối tượng cũ khi không
+   * có gì đổi, nên gõ một ký tự vào ô bất kỳ không biến thành "đầu bài vừa đổi".
+   *
+   * Thứ tự không quan trọng — một phép chạm `required_spaces`, phép kia chạm `site`.
+   */
+  function withDerived(next: DesignBriefDraft): DesignBriefDraft {
+    return withDerivedSiteDimensions(withSyncedBedrooms(next));
+  }
+
+  /**
+   * Mở cửa sổ in bản đầu bài.
+   *
+   * In theo `draft` chứ không theo `current.structured`: hai thứ này giống nhau ở chế độ xem,
+   * nhưng in ra thứ đang KHÔNG hiện trên màn hình là cách chắc chắn nhất để người dùng mất
+   * lòng tin vào cả bản in.
+   */
+  function exportPdf() {
+    printBrief({
+      projectName,
+      projectCode,
+      draft,
+      legacy,
+      version: current?.version ?? 1,
+      confirmedAt: current?.confirmed_at ?? null,
+      score,
+      issues,
+      threshold,
+    });
   }
 
   /** Chép kích thước lô từ biên bản khảo sát — không gõ lại con số đã có (PRD 2.3). */
@@ -153,10 +281,27 @@ export function BriefPanel({
     if (survey.land_depth) next = setAtPath(next, 'site.depth_m', Number(survey.land_depth));
     setDraft(next);
     setSurveyId(survey.id);
+    setDirty(true);
+    edits.current += 1;
   }
 
-  async function save() {
+  /**
+   * Ghi đầu bài xuống CSDL. Trả về `true` khi đã ghi xong.
+   *
+   * Tách khỏi `save()` để bước chuyển trang gọi lại được mà KHÔNG đóng biểu mẫu: «Tiếp» phải
+   * lưu, nhưng lưu xong người dùng vẫn phải ở nguyên trong biểu mẫu.
+   */
+  /**
+   * Ghi bản nháp đang có. `'ok'` = ghi xong và không ai gõ thêm trong lúc chờ; `'stale'` = ghi
+   * xong nhưng đã có sửa mới, `dirty` giữ nguyên; `'failed'` = lỗi, câu lỗi đã đặt.
+   */
+  async function persist(): Promise<'ok' | 'stale' | 'failed'> {
     setError(null);
+    const seen = edits.current;
+    // Che các biến cùng tên của component một cách có chủ ý: trong hàm này chỉ được đọc bản
+    // mới nhất (xem `latest`), không đọc bản closure của lần render đã gọi hàm.
+    const { draft, legacy, surveyId, changeReason, draftBriefId } = latest.current;
+    const score = scoreBrief(draft, BRIEF_FORM);
 
     // Điểm ghi vào payload để cột sinh trong CSDL có giá trị hiển thị ngay. Con số quyết
     // định Lớp 2 thì Worker tự tính lại khi xác nhận — cái này chỉ để lọc và hiện.
@@ -167,12 +312,15 @@ export function BriefPanel({
     };
 
     try {
-      if (needsNewVersion || !current) {
+      // Đọc `draftBriefId` khi `current` còn rỗng — xem chú thích ở chỗ khai biến.
+      const editingId = current?.id ?? draftBriefId;
+
+      if (needsNewVersion || !editingId) {
         if (current && !changeReason.trim()) {
           setError('Vui lòng nêu nguyên nhân điều chỉnh đầu bài so với bản đang hiệu lực.');
-          return;
+          return 'failed';
         }
-        await saveNewVersion.mutateAsync({
+        const created = await saveNewVersion.mutateAsync({
           projectId,
           companyId,
           designTask: legacy.design_task ?? null,
@@ -186,18 +334,35 @@ export function BriefPanel({
           structured: payload,
           siteSourceSurveyId: surveyId,
         });
+        setDraftBriefId(created.id);
       } else {
         await saveDraft.mutateAsync({
-          briefId: current.id,
+          briefId: editingId,
           structured: payload,
           legacy,
           siteSourceSurveyId: surveyId,
         });
       }
-      setEditing(false);
+      setSavedAt(new Date());
+      if (edits.current !== seen) return 'stale';
+      setDirty(false);
+      return 'ok';
     } catch (e) {
       setError(toUserMessage(e, 'create'));
+      return 'failed';
     }
+  }
+
+  async function save() {
+    // Có sửa trong lúc chờ thì ghi thêm một lượt nữa thay vì đóng biểu mẫu với bản cũ.
+    let result = await persist();
+    if (result === 'stale') result = await persist();
+    if (result === 'ok') setEditing(false);
+  }
+
+  function cancelEditing() {
+    if (dirty) setConfirmingCancel(true);
+    else setEditing(false);
   }
 
   async function confirm() {
@@ -216,77 +381,128 @@ export function BriefPanel({
   // Chế độ nhập
   // ---------------------------------------------------------------------------
   if (editing) {
+    const saving = saveNewVersion.isPending || saveDraft.isPending;
+    // Bản đã xác nhận thì KHÔNG có khái niệm "lưu nháp" — mọi lần ghi đều lập phiên bản mới.
+    const saveLabel = needsNewVersion ? 'Lưu đầu bài' : 'Lưu nháp';
+
     const issuesFor = (path: string) =>
       issues.filter((i) => i.paths.includes(path)).map((i) => i.message);
+
+    // Bước = MỤC đang có ít nhất một ô hiện ra. Không khai riêng danh sách bước trong cấu
+    // hình: khai hai lần thì thêm một mục mà quên thêm bước sẽ làm mục đó biến mất khỏi biểu
+    // mẫu mà không có gì báo. Nhà phố ẩn hẳn mục «Tổ chức khối nhà» nên còn năm bước.
+    const steps = BRIEF_FORM.sections
+      .map((section) => ({
+        section,
+        fields: shown.filter((v) => v.section.id === section.id),
+      }))
+      .filter((step) => step.fields.length > 0);
+
+    // Giữ theo MÃ mục, không theo số thứ tự: đổi loại hình sang nhà phố làm biến mất một bước
+    // ở giữa, và giữ theo số thì người dùng bị nhảy sang một mục khác hẳn cái đang xem.
+    //
+    // Bước đang xem biến mất (đang ở «Tổ chức khối nhà» rồi đổi sang nhà phố) thì đi tới bước
+    // còn lại GẦN NHẤT theo thứ tự cấu hình, không quay về bước 1: mất chỗ đứng giữa một biểu
+    // mẫu sáu bước là thứ người dùng phải trả giá cho một cú bấm ở bước khác.
+    const order = BRIEF_FORM.sections.findIndex((section) => section.id === stepId);
+    const index = Math.max(
+      0,
+      steps.findIndex((step) => step.section.id === stepId) !== -1
+        ? steps.findIndex((step) => step.section.id === stepId)
+        : steps.findIndex(
+            (step) => BRIEF_FORM.sections.findIndex((s) => s.id === step.section.id) >= order,
+          ),
+    );
+    const step = steps[index];
+    if (!step) return null;
+    const missingIn = (sectionId: string) =>
+      score.missing.filter((item) => item.sectionId === sectionId && !item.optional).length;
+
+    /**
+     * Đổi bước — VÀ lưu những gì vừa gõ.
+     *
+     * "Tự lưu nháp" là ràng buộc cứng (Webapp Flow 6.3, CLAUDE.md 5.4), và biểu mẫu nhiều
+     * bước là chỗ nó cần nhất: người dùng đọc thanh tiến trình rồi hiểu là đã sang phần
+     * khác, nên không còn lý do gì để bấm «Lưu nháp» nữa. Không tự lưu thì mọi thứ chỉ nằm
+     * trong bộ nhớ trình duyệt cho tới bước cuối — tải lại trang là mất sạch.
+     *
+     * Ghi nền, không chặn: người dùng sang bước mới ngay, còn lời gọi đi tiếp phía sau. Hỏng
+     * thì câu lỗi hiện ngay dưới các nút và `dirty` vẫn bật, nên lần đổi bước sau lưu lại.
+     *
+     * ⚠️ Bản ĐÃ xác nhận thì KHÔNG tự lưu. Ở đó mỗi lần lưu là một phiên bản mới bắt buộc
+     * nêu nguyên nhân (NEN-05); tự lưu sẽ đẻ năm phiên bản cho một lượt đi hết biểu mẫu và
+     * làm dấu vết "khách đổi yêu cầu lúc nào" mất hẳn nghĩa.
+     *
+     * Đang có lời ghi dở thì bỏ qua lượt này: hai lệnh tạo chồng nhau sinh ra hai bản ghi.
+     * `dirty` chưa tắt nên lần đổi bước kế tiếp lưu bù.
+     */
+    const goTo = (sectionId: string, path?: string) => {
+      if (dirty && !needsNewVersion && !saving) void persist();
+      setStepId(sectionId);
+      if (!path) return;
+      // Đợi bước mới vẽ xong rồi mới cuộn — ô cần tới chưa tồn tại trong DOM ở lượt này.
+      requestAnimationFrame(() => {
+        document.getElementById(`brief-${path.replace(/\./g, '-')}`)?.scrollIntoView({
+          block: 'center',
+        });
+      });
+    };
+
+    const fieldsOf = (list: typeof step.fields) =>
+      list.map(({ field }) => (
+        <BriefField
+          key={field.path}
+          field={field}
+          value={
+            field.path.startsWith('legacy.')
+              ? (legacy[LEGACY_COLUMNS[field.path]!] ?? undefined)
+              : valueAtPath(draft, field.path)
+          }
+          onChange={(value) => setField(field.path, value)}
+          issues={issuesFor(field.path)}
+          projectId={projectId}
+          floors={draft.floors ?? 1}
+          family={draft.family}
+        />
+      ));
+
+    const last = index === steps.length - 1;
 
     return (
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="space-y-6">
-          {BRIEF_FORM.sections.map((section) => {
-            const fields = shown.filter((v) => v.section.id === section.id);
-            if (fields.length === 0) return null;
-            return (
-              <section
-                key={section.id}
-                id={`brief-section-${section.id}`}
-                className="rounded-lg border border-border bg-surface p-4 shadow-card"
-              >
-                <h3 className="font-semibold">{section.title}</h3>
-                {section.hint && <p className="mt-0.5 text-fg-subtle">{section.hint}</p>}
-                {section.id === 'khu_dat' ? (
-                  <div className="mt-3 grid gap-4 md:grid-cols-[minmax(0,1fr)_16rem]">
-                    <div className="space-y-4">
-                      {fields.map(({ field }) => (
-                        <BriefField
-                          key={field.path}
-                          field={field}
-                          value={
-                            field.path.startsWith('legacy.')
-                              ? (legacy[LEGACY_COLUMNS[field.path]!] ?? undefined)
-                              : valueAtPath(draft, field.path)
-                          }
-                          onChange={(value) => setField(field.path, value)}
-                          issues={issuesFor(field.path)}
-                          projectId={projectId}
-                          floors={draft.floors ?? 1}
-                        />
-                      ))}
-                    </div>
-                    <div className="md:sticky md:top-4 md:self-start">
-                      <SitePlanPreview site={draft.site} />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-3 space-y-4">
-                    {fields.map(({ field }) => (
-                      <BriefField
-                        key={field.path}
-                        field={field}
-                        value={
-                          field.path.startsWith('legacy.')
-                            ? (legacy[LEGACY_COLUMNS[field.path]!] ?? undefined)
-                            : valueAtPath(draft, field.path)
-                        }
-                        onChange={(value) => setField(field.path, value)}
-                        issues={issuesFor(field.path)}
-                        projectId={projectId}
-                        floors={draft.floors ?? 1}
-                      />
-                    ))}
-                  </div>
-                )}
+          <StepBar steps={steps} index={index} missingIn={missingIn} onGo={goTo} />
 
-                {section.id === 'khu_dat' && survey && (
-                  <Button variant="secondary" className="mt-3" onClick={copyFromSurvey}>
-                    <Ruler className="size-4" />
-                    Lấy theo biên bản khảo sát{' '}
-                    {formatDateTime(survey.surveyed_at ?? survey.created_at)}
-                  </Button>
-                )}
-              </section>
-            );
-          })}
+          <section
+            key={step.section.id}
+            id={`brief-section-${step.section.id}`}
+            className="rounded-lg border border-border bg-surface p-4 shadow-card"
+          >
+            <h3 className="font-semibold">{step.section.title}</h3>
+            {step.section.hint && <p className="mt-0.5 text-fg-subtle">{step.section.hint}</p>}
+            {step.section.id === 'khu_dat' ? (
+              <div className="mt-3 grid gap-4 md:grid-cols-[minmax(0,1fr)_16rem]">
+                <div className="space-y-4">{fieldsOf(step.fields)}</div>
+                <div className="md:sticky md:top-4 md:self-start">
+                  <SitePlanPreview site={draft.site} />
+                </div>
+              </div>
+            ) : (
+              <div className="mt-3 space-y-4">{fieldsOf(step.fields)}</div>
+            )}
 
+            {step.section.id === 'khu_dat' && survey && (
+              <Button variant="secondary" className="mt-3" onClick={copyFromSurvey}>
+                <Ruler className="size-4" />
+                Lấy theo biên bản khảo sát {formatDateTime(survey.surveyed_at ?? survey.created_at)}
+              </Button>
+            )}
+          </section>
+
+          {/* Hiện ở MỌI bước, không chỉ bước cuối. «Lưu nháp» giữa chừng của một bản đã xác
+              nhận vẫn lập phiên bản mới, nên vẫn đòi nguyên nhân — mà ô để nhập nguyên nhân
+              lại chỉ có ở bước cuối. Người dùng nhận đúng câu «Vui lòng nêu nguyên nhân» kèm
+              một màn hình không có chỗ nào nêu được: một ngõ cụt kín. */}
           {needsNewVersion && (
             <section className="rounded-lg border border-border bg-surface p-4 shadow-card">
               <h3 className="font-semibold">Nguyên nhân điều chỉnh</h3>
@@ -305,17 +521,87 @@ export function BriefPanel({
 
           {error && <p className="text-status-overdue">{error}</p>}
 
-          <div className="flex flex-wrap gap-2">
-            <Button variant="primary" onClick={() => void save()}>
-              {needsNewVersion || !current ? 'Lưu đầu bài' : 'Lưu nháp'}
-            </Button>
-            <Button variant="secondary" onClick={() => setEditing(false)}>
+          {/* Đúng MỘT hành động chính mỗi màn hình (CGD 6.3): đang giữa chừng thì đó là
+              «Tiếp», tới bước cuối mới là «Lưu». «Lưu nháp» vẫn có ở mọi bước — bỏ dở giữa
+              chừng là chuyện thường, và bắt đi hết sáu bước mới được lưu là cách chắc chắn
+              để mất dữ liệu đã gõ. */}
+          <div className="flex flex-wrap items-center gap-2">
+            {index > 0 && (
+              <Button variant="secondary" onClick={() => goTo(steps[index - 1]!.section.id)}>
+                <ChevronLeft className="size-4" />
+                Quay lại
+              </Button>
+            )}
+            {last ? (
+              <Button variant="primary" onClick={() => void save()} disabled={saving}>
+                {saving ? 'Đang lưu…' : saveLabel}
+              </Button>
+            ) : (
+              <>
+                <Button variant="primary" onClick={() => goTo(steps[index + 1]!.section.id)}>
+                  Tiếp
+                  <ChevronRight className="size-4" />
+                </Button>
+                <Button variant="secondary" onClick={() => void save()} disabled={saving}>
+                  {saving ? 'Đang lưu…' : saveLabel}
+                </Button>
+              </>
+            )}
+            <Button variant="subtle" onClick={cancelEditing}>
               Hủy
             </Button>
+            {/* Tự lưu mà không nói gì thì người dùng vẫn phải đoán, và vẫn bấm «Lưu nháp»
+                cho chắc — đúng thứ việc tự lưu sinh ra để bỏ đi. */}
+            <span aria-live="polite" className="text-fg-subtle">
+              {saving
+                ? 'Đang lưu…'
+                : dirty
+                  ? 'Có thay đổi chưa lưu'
+                  : savedAt
+                    ? `Đã lưu lúc ${hhmm(savedAt)}`
+                    : ''}
+            </span>
           </div>
+          {/* «Hủy» lúc còn thay đổi phải hỏi: sáu bước, và bản đã xác nhận không tự lưu khi
+              đổi bước — bấm nhầm nút nằm ngay cạnh «Lưu» là mất cả buổi khai (AFD 6.3). Hộp
+              tự dựng, không `window.confirm`: nút của hộp gốc theo tiếng của trình duyệt. */}
+          {confirmingCancel && (
+            <div
+              role="alertdialog"
+              aria-labelledby="brief-cancel-title"
+              className="mt-3 rounded-sm border border-border bg-surface-sunken p-3"
+            >
+              <p id="brief-cancel-title" className="font-medium">
+                Bỏ các thay đổi chưa lưu?
+              </p>
+              <p className="mt-0.5 text-fg-subtle">
+                Những gì đã sửa từ lần lưu gần nhất sẽ mất.
+                {needsNewVersion ? ' Bản đã xác nhận không tự lưu khi đổi bước.' : ''}
+              </p>
+              <div className="mt-3 flex gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setConfirmingCancel(false);
+                    setEditing(false);
+                  }}
+                >
+                  Bỏ thay đổi
+                </Button>
+                <Button variant="subtle" onClick={() => setConfirmingCancel(false)}>
+                  Tiếp tục sửa
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
-        <CompletenessPanel score={score} issues={issues} threshold={threshold} />
+        <CompletenessPanel
+          score={score}
+          issues={issues}
+          threshold={threshold}
+          onJump={(sectionId, path) => goTo(sectionId, path)}
+        />
       </div>
     );
   }
@@ -362,9 +648,19 @@ export function BriefPanel({
               <span className="text-status-pending">Chưa xác nhận</span>
             )}
             <span className="ml-auto flex flex-wrap gap-2">
+              {/* Hiện CẢ ở chế độ chỉ xem — người cần bản in mang đi gặp khách thường đúng là
+                  người không còn quyền sửa hồ sơ. Cùng lý lẽ với nút của biên bản khảo sát. */}
+              <Button variant="subtle" onClick={exportPdf}>
+                <FileDown className="size-4" />
+                Xuất PDF
+              </Button>
               {!readOnly && !current.confirmed_at && (
-                <Button variant="secondary" onClick={() => void confirm()}>
-                  Xác nhận đầu bài
+                <Button
+                  variant="secondary"
+                  onClick={() => void confirm()}
+                  disabled={confirmArtifact.isPending}
+                >
+                  {confirmArtifact.isPending ? 'Đang xác nhận…' : 'Xác nhận đầu bài'}
                 </Button>
               )}
               {!readOnly && (
@@ -374,6 +670,17 @@ export function BriefPanel({
               )}
             </span>
           </div>
+
+          {/* Cùng ô `error` mà chế độ nhập dùng, nhưng trước đây CHỈ chế độ nhập vẽ nó ra.
+              «Xác nhận đầu bài» chạy ở chế độ xem, nên mọi câu nó trả về — thiếu trường bắt
+              buộc, không đủ quyền, dịch vụ thiết kế không phản hồi — đều được đặt vào state
+              rồi rơi thẳng xuống đất. Người dùng bấm nút và KHÔNG có gì xảy ra: không kết
+              quả, không lỗi, không dấu hiệu đang chạy. */}
+          {error && (
+            <p role="alert" className="mb-3 text-status-overdue">
+              {error}
+            </p>
+          )}
 
           <SurveyMismatch brief={current} survey={survey} />
 
@@ -394,7 +701,11 @@ export function BriefPanel({
                   <ReadOnlyField
                     key={field.path}
                     label={field.label}
-                    value={describeField(field, valueAtPath(current.structured, field.path))}
+                    value={describeField(
+                      field,
+                      valueAtPath(current.structured, field.path),
+                      current.structured?.family,
+                    )}
                   />
                 )),
             )}
@@ -445,6 +756,80 @@ export function BriefPanel({
 }
 
 /**
+ * Thanh tiến trình của biểu mẫu nhiều bước (AFD 4.6 mẫu 4).
+ *
+ * Ba việc, và cái thứ ba là lý do nó không chỉ là một dãy chấm tròn:
+ *
+ *  1. Nói đang ở đâu trong bao nhiêu bước.
+ *  2. **Đi thẳng tới bước bất kỳ.** Bảng khảo sát này thường được điền dở rồi quay lại bổ
+ *     sung đúng một chỗ; bắt bấm «Tiếp» năm lần để tới đó là lý do người ta bỏ sang Excel.
+ *  3. Nói bước nào CÒN THIẾU, ngay trên thanh. Không có nó thì phải mở từng bước mới biết,
+ *     và danh sách «Còn thiếu» ở cột phải là nơi duy nhất nhìn thấy điều đó.
+ *
+ * Số câu còn thiếu chỉ đếm ô BẮT BUỘC: gắn dấu cho một bước chỉ vì còn ô «(tùy chọn)» chưa
+ * điền là dạy người dùng bỏ qua chính dấu đó.
+ */
+function StepBar({
+  steps,
+  index,
+  missingIn,
+  onGo,
+}: {
+  steps: { section: { id: string; title: string } }[];
+  index: number;
+  missingIn: (sectionId: string) => number;
+  onGo: (sectionId: string) => void;
+}) {
+  return (
+    <nav
+      aria-label="Các bước của đầu bài"
+      className="rounded-lg border border-border bg-surface p-3 shadow-card"
+    >
+      <ol className="flex flex-wrap gap-1">
+        {steps.map((step, i) => {
+          const current = i === index;
+          const missing = missingIn(step.section.id);
+          return (
+            <li key={step.section.id}>
+              <button
+                type="button"
+                aria-current={current ? 'step' : undefined}
+                onClick={() => onGo(step.section.id)}
+                className={cn(
+                  'flex min-h-10 items-center gap-2 rounded px-2.5 text-left',
+                  current ? 'bg-brand-subtle font-semibold text-brand' : 'text-fg-subtle',
+                )}
+              >
+                <span
+                  aria-hidden
+                  className={cn(
+                    'inline-flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
+                    current ? 'bg-brand text-white' : 'bg-surface-sunken',
+                  )}
+                >
+                  {i + 1}
+                </span>
+                {step.section.title}
+                {/* Chữ, không phải chỉ một chấm màu: màu không bao giờ là cách truyền đạt
+                    duy nhất (CGD 6.8). */}
+                {missing > 0 && (
+                  <span className="rounded-full bg-status-pending-bg px-1.5 text-xs font-medium text-status-pending">
+                    thiếu {missing}
+                  </span>
+                )}
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+      <p className="mt-1 px-2.5 text-xs text-fg-subtle">
+        Bước {index + 1} trên {steps.length}. Lưu nháp được ở bất kỳ bước nào.
+      </p>
+    </nav>
+  );
+}
+
+/**
  * Thước độ đầy đủ + danh sách còn thiếu + danh sách mâu thuẫn.
  *
  * Trạng thái hiện bằng CHỮ kèm màu, không bằng màu một mình (CGD 6.8). Dùng đúng năm màu
@@ -456,11 +841,18 @@ function CompletenessPanel({
   issues,
   threshold,
   artifactId,
+  onJump,
 }: {
   score: ReturnType<typeof scoreBrief>;
   issues: ReturnType<typeof checkBriefConsistency>;
   threshold: number | null;
   artifactId?: string | null;
+  /**
+   * Nhảy tới một ô đang thiếu. Có vì biểu mẫu chia bước: ô cần tới thường nằm ở BƯỚC KHÁC,
+   * và một liên kết `#neo` thuần chỉ cuộn trong bước đang mở — bấm vào không có gì xảy ra,
+   * đúng kiểu hỏng im lặng. Vắng mặt ở chế độ chỉ xem, nơi mọi ô cùng nằm trên một trang.
+   */
+  onJump?: (sectionId: string, path: string) => void;
 }) {
   const percent = Math.round(score.score * 100);
   const enough = threshold !== null && score.score >= threshold;
@@ -501,10 +893,19 @@ function CompletenessPanel({
               <li key={item.path}>
                 <a
                   href={`#brief-${item.path.replace(/\./g, '-')}`}
-                  className="flex min-h-10 items-center text-brand hover:underline"
+                  onClick={
+                    onJump
+                      ? (event) => {
+                          event.preventDefault();
+                          onJump(item.sectionId, item.path);
+                        }
+                      : undefined
+                  }
+                  className="flex min-h-10 flex-wrap items-center gap-x-1 text-brand hover:underline"
                 >
                   {item.label}
-                  <span className="ml-1 text-fg-subtle">— {item.sectionTitle}</span>
+                  {item.optional && <span className="text-fg-subtle">(tùy chọn)</span>}
+                  <span className="text-fg-subtle">— {item.sectionTitle}</span>
                 </a>
               </li>
             ))}
@@ -581,108 +982,3 @@ function ReadOnlyField({
 }
 
 /** Giá trị trong payload → chuỗi đọc được. Không dịch mã ở đây; nhãn nằm ở cấu hình. */
-/**
- * Một giá trị đã lưu, viết ra bằng tiếng Việt.
- *
- * Phải BIẾT TRƯỜNG mới viết đúng: cùng một chuỗi `"bedroom"` là "Phòng ngủ" ở danh sách
- * không gian và là một vai trò khác ở chỗ khác; một cặp số là khoảng ngân sách ở đây và là
- * kích thước ở chỗ khác. Bản trước đổ thẳng giá trị ra màn hình nên hiện `nha_pho`,
- * `[object Object]` và `2000000000` — mã máy giữa một màn hình tiếng Việt (CLAUDE.md 4.1),
- * đúng thứ nhân sự NVG không đọc được.
- */
-function describeField(field: BriefFormField, value: unknown): string | null {
-  if (value === undefined || value === null || value === '') return null;
-
-  const label = (raw: unknown): string => {
-    const found = field.options?.find((option) => String(option.value) === String(raw));
-    return found ? found.label : String(raw);
-  };
-
-  if (field.control === 'money_range') {
-    const [low, high] = value as (number | null)[];
-    if (low === null && high === null) return null;
-    return `${formatCurrency(low ?? 0)} – ${formatCurrency(high ?? 0)}`;
-  }
-
-  if (field.control === 'family') {
-    const members = value as {
-      role?: string;
-      count?: number;
-      floor_pref?: string | null;
-      needs?: string[];
-    }[];
-    if (!members.length) return null;
-    return members
-      .map((member) => {
-        const role = FAMILY_ROLE_LABEL[member.role as FamilyRole] ?? member.role ?? '';
-        const parts = [`${role}: ${member.count ?? 0} người`];
-        if (member.floor_pref) {
-          parts.push(FLOOR_PREF_LABEL[member.floor_pref as FloorPref] ?? member.floor_pref);
-        }
-        if (member.needs?.length) parts.push(member.needs.map(label).join(', '));
-        return parts.join(' · ');
-      })
-      .join(' | ');
-  }
-
-  if (field.control === 'space_floor') {
-    const items = value as { type: string; floor?: number | null }[];
-    if (!items.length) return null;
-    return items
-      .map((it) =>
-        typeof it.floor === 'number' ? `${label(it.type)} (Tầng ${it.floor})` : label(it.type),
-      )
-      .join(', ');
-  }
-
-  if (field.control === 'polygon') {
-    // KHÔNG đổ danh sách toạ độ ra màn hình: "0,0, 5,0, 5,18…" không ai đọc được, và với
-    // ngũ giác thì dài quá một dòng. Cái người đọc cần là hệ thống ĐANG HIỂU thửa đất này
-    // rộng bao nhiêu — toạ độ đã có ở chế độ sửa.
-    const points = value as [number, number][];
-    if (points.length < 3) return null;
-    try {
-      const geometry = siteGeometry({
-        width_m: 1,
-        depth_m: 1,
-        shape: 'da_giac',
-        boundary_m: points,
-      });
-      return (
-        `${points.length} đỉnh · ${formatNumber(geometry.areaM2)} m² · ` +
-        `phần xây được ${formatNumber(geometry.buildable.widthM)} × ` +
-        `${formatNumber(geometry.buildable.depthM)} m`
-      );
-    } catch {
-      return `${points.length} đỉnh — chưa dựng được hình thửa`;
-    }
-  }
-
-  if (field.control === 'number') {
-    return field.unit
-      ? `${formatNumber(Number(value))} ${field.unit}`
-      : formatNumber(Number(value));
-  }
-
-  if (field.control === 'sides') {
-    const sides = value as Record<string, unknown>;
-    const parts = ACCESS_SIDES.filter((side) => sides[side]).map(
-      (side) => `${SIDE_LABEL[side]}: ${label(sides[side])}`,
-    );
-    return parts.length ? parts.join(' · ') : null;
-  }
-
-  if (Array.isArray(value)) return value.length ? value.map(label).join(', ') : null;
-  if (typeof value === 'boolean') return value ? 'Có' : 'Không';
-
-  if (typeof value === 'object') {
-    // Đi qua bảng nhãn chứ không đổ thẳng ra chuỗi: người quyết định cuối lưu dưới dạng
-    // `{ relationship: 'chu_nha' }`, và bỏ bước này thì màn hình hiện đúng chữ `chu_nha`.
-    const parts = Object.values(value as Record<string, unknown>)
-      .filter((v) => v !== null && v !== undefined && v !== '')
-      .map((v) => label(v));
-    return parts.length ? parts.join(' · ') : null;
-  }
-
-  return label(value);
-}

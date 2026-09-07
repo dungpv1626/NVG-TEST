@@ -143,6 +143,38 @@
   source: 'kinh nghiệm NVG'
   auto_repair: shrink_adjacent
 
+- id: room_min_dimension_study_area
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: min_dimension
+  target: study_area
+  value_m: 1.8
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: shrink_adjacent
+
+# Tủ đồ và phòng thay đồ. Không có số quy chuẩn cho hai loại này — ngưỡng dưới đây là bề
+# rộng lọt lòng còn đứng lấy đồ được khi một bên là cánh tủ sâu 0,6 m.
+- id: room_min_dimension_closet
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: min_dimension
+  target: closet
+  value_m: 0.9
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: shrink_adjacent
+
+- id: room_min_dimension_dressing_room
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: min_dimension
+  target: dressing_room
+  value_m: 1.5
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: shrink_adjacent
+
 - id: room_min_dimension_laundry
   applies_to: [nha_pho, biet_thu, nha_vuon]
   scope: floor

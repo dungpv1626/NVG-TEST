@@ -39,6 +39,14 @@ export const spaceProgramSchema = z
             needs_daylight: z.boolean().optional(),
             needs_facade: z.boolean().optional(),
             needs_ventilation: z.boolean().optional(),
+            /** Mã phòng MẸ khi không gian này nằm LỌT bên trong một phòng khác — hiện chỉ dùng cho khu vệ sinh của phòng ngủ khép kín. Hai hệ quả, và cả hai đều bắt buộc: cây bố cục đặt nó thành một lát cắt con bên trong ô của phòng mẹ, và bộ giải coi `requires_access` là thoả khi nó kề phòng mẹ — vì lối vào đi qua phòng mẹ, không qua hành lang. Thiếu vế thứ hai thì mọi phòng khép kín đều vô nghiệm. */
+            enclosed_in: z
+              .string()
+              .nullable()
+              .describe(
+                'Mã phòng MẸ khi không gian này nằm LỌT bên trong một phòng khác — hiện chỉ dùng cho khu vệ sinh của phòng ngủ khép kín. Hai hệ quả, và cả hai đều bắt buộc: cây bố cục đặt nó thành một lát cắt con bên trong ô của phòng mẹ, và bộ giải coi `requires_access` là thoả khi nó kề phòng mẹ — vì lối vào đi qua phòng mẹ, không qua hành lang. Thiếu vế thứ hai thì mọi phòng khép kín đều vô nghiệm.',
+              )
+              .optional(),
           })
           .strict(),
       )
@@ -65,7 +73,24 @@ export const spaceProgramSchema = z
         z
           .object({
             floor: z.number().int().gte(1).lte(12),
-            usable_area_m2: z.number().gte(0).nullable().optional(),
+            /** Mặt sàn CHỌN DÙNG của tầng này — thứ bộ giải chia hết. Từ 07/09/2026 đây không còn bằng trần xây được: sàn xây được là một GIỚI HẠN, không phải một yêu cầu, và ép chương trình lấp cho hết chỗ chỉ sinh ra hành lang mênh mông. Xem `buildable_area_m2` để biết phần còn lại. */
+            usable_area_m2: z
+              .number()
+              .gte(0)
+              .nullable()
+              .describe(
+                'Mặt sàn CHỌN DÙNG của tầng này — thứ bộ giải chia hết. Từ 07/09/2026 đây không còn bằng trần xây được: sàn xây được là một GIỚI HẠN, không phải một yêu cầu, và ép chương trình lấp cho hết chỗ chỉ sinh ra hành lang mênh mông. Xem `buildable_area_m2` để biết phần còn lại.',
+              )
+              .optional(),
+            /** Trần XÂY ĐƯỢC của tầng, sau khoảng lùi và mật độ. Khai riêng để việc thu nhỏ mặt sàn là một quyết định NHÌN THẤY ĐƯỢC: chênh lệch với `usable_area_m2` là phần đất còn lại làm sân vườn. Thiếu trường này thì chương trình co lại mà không ai biết nó đã co. */
+            buildable_area_m2: z
+              .number()
+              .gte(0)
+              .nullable()
+              .describe(
+                'Trần XÂY ĐƯỢC của tầng, sau khoảng lùi và mật độ. Khai riêng để việc thu nhỏ mặt sàn là một quyết định NHÌN THẤY ĐƯỢC: chênh lệch với `usable_area_m2` là phần đất còn lại làm sân vườn. Thiếu trường này thì chương trình co lại mà không ai biết nó đã co.',
+              )
+              .optional(),
             allocated_area_m2: z.number().gte(0).nullable().optional(),
           })
           .strict(),

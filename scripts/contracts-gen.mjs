@@ -27,10 +27,13 @@ import { readFileSync, readdirSync, writeFileSync, mkdirSync, existsSync } from 
 import { fileURLToPath } from 'node:url';
 import { dirname, join, basename } from 'node:path';
 import * as prettier from 'prettier';
+import yaml from 'js-yaml';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC_DIR = join(ROOT, 'contracts');
 const OUT_DIR = join(ROOT, 'shared', 'src', 'design');
+const NORMS_FILE = join(ROOT, 'kb', 'space_norms.yaml');
+const VOCAB_FILE = join(ROOT, 'kb', 'room_vocabulary.yaml');
 
 // ---------------------------------------------------------------------------
 // Tiện ích đặt tên
@@ -376,6 +379,77 @@ export type ${title} = z.infer<typeof ${rootConst}>;
 }
 
 // ---------------------------------------------------------------------------
+// Gương của `kb/` — chỉ hai mẩu biểu mẫu Đầu bài cần
+// ---------------------------------------------------------------------------
+
+/**
+ * Vì sao bảng này phải đi ra tới trình duyệt.
+ *
+ * "Mấy người một phòng ngủ" là tri thức, nên nó nằm ở `kb/` và chỉ Worker đọc lúc chạy
+ * (CLAUDE.md 8.8 mục 7). Nhưng biểu mẫu Đầu bài phải nói ngay tại chỗ rằng "Con · 2 người"
+ * cho ra HAI phòng ngủ còn "Ông bà · 2 người" cho ra MỘT — nếu không, người khai tích vào
+ * ô phòng ngủ ở phần gia đình rồi đi tìm chúng ở danh sách không gian mà không thấy, đúng
+ * chỗ đã báo lỗi ngày 06/09/2026.
+ *
+ * Ba cách lấy nó xuống trình duyệt, và vì sao chọn cách này:
+ *  · Chép tay sang `shared/` — hai bản, lệch nhau vào đúng ngày ai đó sửa YAML.
+ *  · Gọi Worker lúc mở biểu mẫu — buộc Đầu bài phải có dịch vụ thiết kế mới điền được, trong
+ *    khi cả phần còn lại của nó chạy thẳng trên Supabase.
+ *  · Sinh ra lúc build từ chính tệp YAML — một nguồn, không phụ thuộc lúc chạy, và
+ *    `contracts:check` bắt được lệch y như với `contracts/`.
+ *
+ * Chỉ lấy `occupancy` và bảng nhãn, không lấy cả tệp: diện tích chuẩn và định mức là việc của
+ * Lớp 2, đưa ra trình duyệt là mở đường cho một bản Lớp 2 thứ hai viết bằng TypeScript.
+ */
+function generateKbMirror() {
+  const norms = yaml.load(readFileSync(NORMS_FILE, 'utf8'));
+  const occupancy = norms?.occupancy ?? {};
+  const vocab = yaml.load(readFileSync(VOCAB_FILE, 'utf8'));
+  const labels = (vocab?.types ?? [])
+    .map((room) => `  ${key(room.code)}: ${JSON.stringify(room.vi)},`)
+    .join('\n');
+  const rows = Object.entries(occupancy)
+    .map(
+      ([role, rule]) =>
+        `  ${key(role)}: { perRoom: ${rule.per_room}, roomType: ${JSON.stringify(rule.room_type)} },`,
+    )
+    .join('\n');
+
+  return `/**
+ * SINH TỰ ĐỘNG từ \`kb/space_norms.yaml\` (mục \`occupancy\`) và \`kb/room_vocabulary.yaml\`
+ * (nhãn tiếng Việt) — KHÔNG SỬA TAY. Xem \`scripts/contracts-gen.mjs\`.
+ */
+
+/** Mấy người ở chung một phòng ngủ, và phòng đó là loại gì. */
+export interface OccupancyRule {
+  readonly perRoom: number;
+  readonly roomType: string;
+}
+
+export const OCCUPANCY: Readonly<Record<string, OccupancyRule>> = {
+${rows}
+};
+
+/** Số phòng ngủ một nhóm thành viên cần — cùng phép tính Lớp 2 dùng ở \`collectRequests\`. */
+export function bedroomsFor(role: string, count: number): number {
+  const rule = OCCUPANCY[role];
+  if (!rule || count <= 0) return 0;
+  return Math.ceil(count / rule.perRoom);
+}
+
+/** Loại phòng ngủ của một vai trò (\`bedroom\` hay \`master_bedroom\`); rỗng khi vai trò lạ. */
+export function bedroomTypeFor(role: string): string | null {
+  return OCCUPANCY[role]?.roomType ?? null;
+}
+
+/** Nhãn tiếng Việt của mã phòng — gương của \`kb/room_vocabulary.yaml\`. */
+export const ROOM_LABEL: Readonly<Record<string, string>> = {
+${labels}
+};
+`;
+}
+
+// ---------------------------------------------------------------------------
 
 const files = readdirSync(SRC_DIR)
   .filter((f) => f.endsWith('.schema.json'))
@@ -401,12 +475,15 @@ for (const file of files) {
   outputs.set(join(OUT_DIR, `${name}.generated.ts`), await format(generate(file)));
 }
 
+outputs.set(join(OUT_DIR, 'kb.generated.ts'), await format(generateKbMirror()));
+
 // Tệp gom — nơi duy nhất web/ và workers/ import vào.
 const barrel = `/**
  * SINH TỰ ĐỘNG — KHÔNG SỬA TAY. Xem \`scripts/contracts-gen.mjs\`.
  */
 
 ${files.map((f) => `export * from './${basename(f, '.schema.json')}.generated';`).join('\n')}
+export * from './kb.generated';
 `;
 outputs.set(join(OUT_DIR, 'index.generated.ts'), await format(barrel));
 

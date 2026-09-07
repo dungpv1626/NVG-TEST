@@ -31,7 +31,14 @@ import {
 } from '@nvg/shared/design';
 import type { ComputeBackend } from '../compute-backend';
 import { parseArtifact } from '../contracts';
-import { buildLayoutIntent, type FaceNeed, type LayoutVariant } from '../layout/intent';
+import {
+  buildLayoutIntent,
+  type BuildIntentArgs,
+  type FaceNeed,
+  type LayoutVariant,
+  type MinSide,
+  type Plate,
+} from '../layout/intent';
 import type { Face } from '../layout/site-context';
 
 const SCHEMA_VERSION = '1.0.0';
@@ -66,6 +73,12 @@ export function layoutIntent(
     accessFaces?: readonly Face[];
     /** Tra `requires_face` theo loại phòng — gói quy tắc do lớp gọi cấp, tệp này không tự nạp. */
     faceOf?: FaceNeed;
+    /** Mặt sàn dùng chung — Lớp 3a dùng để chọn khung mẫu, không để gán toạ độ. */
+    plate?: Plate;
+    /** Tra `min_dimension` theo loại phòng — cùng nguồn với `faceOf`. */
+    minSideOf?: MinSide;
+    /** Ý đồ khối nhà của đầu bài — xem `BuildIntentArgs.massing`. */
+    massing?: BuildIntentArgs['massing'];
   } = {},
 ): StepResult<LayoutIntent> {
   return {
@@ -79,6 +92,9 @@ export function layoutIntent(
         openFaces: options.openFaces,
         accessFaces: options.accessFaces,
         faceOf: options.faceOf,
+        plate: options.plate,
+        minSideOf: options.minSideOf,
+        massing: options.massing,
       }),
     ),
   };
@@ -104,6 +120,12 @@ export async function solveFloorPlan(
      * cách riêng, và bộ giải nhận một mảnh đất khác mảnh đất Lớp 2 đã soạn chương trình.
      */
     site: DesignBrief['site'];
+    /**
+     * Loại hình công trình — quyết định tập quy tắc bộ giải áp dụng (`applies_to` trong
+     * `rules/base/50-massing.yaml`). Bắt buộc: bỏ trống thì Container rơi về `"nha_pho"`
+     * và giải biệt thự bằng luật nhà phố mà không báo gì (V-23).
+     */
+    buildingType: DesignBrief['building_type'];
     locality: string;
     timeBudgetS: number;
     /**
@@ -144,6 +166,7 @@ export async function solveFloorPlan(
       setback_required_m: args.site.setback_required_m,
       max_density: args.site.max_density ?? null,
     },
+    building_type: args.buildingType,
     rule_pack: { locality: args.locality },
     time_budget_s: args.timeBudgetS,
     labels: args.labels,
@@ -176,6 +199,41 @@ export async function solveFloorPlan(
  * Nguyên tắc bất biến 2 vẫn đúng: mọi con số ở đây là chép từ hình học đã giải, không có số nào
  * được "sáng tác" tại chỗ.
  */
+/**
+ * Hình bao công trình `[x0, y0, x1, y1]` trong hệ toạ độ thửa.
+ *
+ * Bộ giải đã tính sẵn và `FloorPlan.footprint_m` chở sang — không suy lại, vì suy lại là bản
+ * thực thi thứ hai của cùng một phép và nó sẽ lệch.
+ *
+ * Đường lùi chỉ dành cho artifact tạo TRƯỚC 07/09/2026, lúc hợp đồng chưa có trường này:
+ * lấy hộp bao của toàn bộ tường. Artifact là bất biến nên chúng còn nằm đó mãi, và đọc chúng
+ * bằng ranh thửa sẽ cho ra đúng lỗi vừa sửa. Không có tường nào thì mới quay về ranh thửa —
+ * lúc đó chẳng có lỗ mở nào để phân loại, nên chọn gì cũng như nhau.
+ */
+function footprintOf(plan: FloorPlan): [number, number, number, number] {
+  const declared = plan.footprint_m;
+  if (declared && declared.length === 4) {
+    return [declared[0]!, declared[1]!, declared[2]!, declared[3]!];
+  }
+
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const level of plan.levels) {
+    for (const wall of level.walls ?? []) {
+      for (const [px, py] of [wall.a, wall.b]) {
+        minX = Math.min(minX, px ?? 0);
+        minY = Math.min(minY, py ?? 0);
+        maxX = Math.max(maxX, px ?? 0);
+        maxY = Math.max(maxY, py ?? 0);
+      }
+    }
+  }
+  if (!Number.isFinite(minX)) return [0, 0, plan.site.width_m, plan.site.depth_m];
+  return [minX, minY, maxX, maxY];
+}
+
 export function buildArchModel(plan: FloorPlan, planRef: string): StepResult<ArchModel> {
   let base = 0;
   const levels = plan.levels.map((level) => {
@@ -185,9 +243,14 @@ export function buildArchModel(plan: FloorPlan, planRef: string): StepResult<Arc
     return row;
   });
 
-  const width = plan.site.width_m;
-  const depth = plan.site.depth_m;
   const eps = 1e-6;
+  // Mặt ngoài đo theo HÌNH BAO CÔNG TRÌNH, không theo ranh thửa.
+  //
+  // Toạ độ phòng và tường là toạ độ tuyệt đối trong thửa, còn khối thì thụt vào theo khoảng
+  // lùi. So với `plan.site` là so với một đường mà không tường nào chạm tới: nhà phố (lùi 0)
+  // vẫn đúng nên lỗi không bao giờ lộ ra ở đề bài demo, còn mọi biệt thự có khoảng lùi thật
+  // thì trả về bốn mảng lỗ mở RỖNG — mất sạch cửa trên phối cảnh và khối ba chiều (V-22).
+  const [x0, y0, x1, y1] = footprintOf(plan);
   type FacadeOpening = NonNullable<NonNullable<ArchModel['facades']>[number]['openings']>[number];
   const facades: Record<'front' | 'back' | 'left' | 'right', FacadeOpening[]> = {
     front: [],
@@ -206,10 +269,10 @@ export function buildArchModel(plan: FloorPlan, planRef: string): StepResult<Arc
       const by = wall.b[1] ?? 0;
       const vertical = Math.abs(bx - ax) < eps;
       let direction: keyof typeof facades | null = null;
-      if (vertical && Math.abs(ax) < eps) direction = 'left';
-      else if (vertical && Math.abs(ax - width) < eps) direction = 'right';
-      else if (!vertical && Math.abs(ay) < eps) direction = 'front';
-      else if (!vertical && Math.abs(ay - depth) < eps) direction = 'back';
+      if (vertical && Math.abs(ax - x0) < eps) direction = 'left';
+      else if (vertical && Math.abs(ax - x1) < eps) direction = 'right';
+      else if (!vertical && Math.abs(ay - y0) < eps) direction = 'front';
+      else if (!vertical && Math.abs(ay - y1) < eps) direction = 'back';
       if (!direction) continue;
       const origin = vertical ? Math.min(ay, by) : Math.min(ax, bx);
       const kind = opening.kind === 'opening' ? 'opening' : opening.kind;
@@ -228,7 +291,7 @@ export function buildArchModel(plan: FloorPlan, planRef: string): StepResult<Arc
   const stair = plan.levels[0]?.rooms.find((r) => r.type === 'stair' || r.type === 'core');
   const stairX = stair
     ? stair.polygon.reduce((s, p) => s + (p[0] ?? 0), 0) / stair.polygon.length
-    : width / 2;
+    : (x0 + x1) / 2;
 
   return {
     stub: false,

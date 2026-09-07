@@ -123,6 +123,17 @@ const optionSchema = z.object({
    * riêng một nhóm — để người sửa thấy mình đang giữ một giá trị đã hết hiệu lực.
    */
   retired: z.boolean().optional(),
+  /**
+   * Chữ mờ gợi ý cho ô nhập ĐI KÈM lựa chọn này — hiện chỉ `required_spaces` dùng, cho cột
+   * «Tiện ích bổ sung».
+   *
+   * Nằm ở CẤU HÌNH chứ không ở mã: một gợi ý đúng cho phòng này lại vô nghĩa với phòng kia
+   * («bồn tắm nằm» ở dòng Chỗ để xe), và người sửa nó là kiến trúc sư chứ không phải người
+   * lập trình. Bản đầu dùng một chuỗi chung cho mọi dòng và Haan bắt ngay (07/09/2026).
+   *
+   * Không khai thì ô để trống — thà không gợi ý còn hơn gợi ý sai.
+   */
+  placeholder: z.string().optional(),
   note: z.string().optional(),
 });
 
@@ -138,11 +149,44 @@ const fieldSchema = z.object({
    * một nhận định nghiệp vụ, và người sửa nó phải sửa được mà không cần biết TypeScript.
    */
   weight: z.number().min(0).max(10),
+  /**
+   * Trường KHÔNG bắt buộc điền — biểu mẫu ghi thêm chữ «(tùy chọn)» sau nhãn.
+   *
+   * Tách khỏi `weight` vì hai thứ trả lời hai câu hỏi khác nhau: `weight` nói "thiếu cái này
+   * thì hồ sơ khuyết bao nhiêu", còn cờ này nói "để trống có sao không". Một khoảng lùi theo
+   * quy hoạch vẫn đáng có (nên `weight` > 0) nhưng để trống thì engine lấy theo gói quy tắc
+   * — người khai cần biết điều đó ngay tại ô, chứ không phải đọc hết dòng chú thích.
+   *
+   * Kéo theo: mục đó trong danh sách «Còn thiếu» cũng mang chữ «(tùy chọn)», nếu không thì
+   * hai chỗ trên cùng màn hình nói ngược nhau.
+   */
+  optional: z.boolean().optional(),
   unit: z.string().optional(),
   hint: z.string().optional(),
   placeholder: z.string().optional(),
   min: z.number().optional(),
   max: z.number().optional(),
+  /**
+   * Hệ số quy đổi: **số người dùng gõ × `value_scale` = số ghi vào payload**.
+   *
+   * Có vì `unit` chỉ là chữ hiện lên cạnh ô — nó KHÔNG đổi gì trong dữ liệu. Mật độ xây dựng
+   * là chỗ khoảng cách đó thành lỗi: biểu mẫu ghi `%` và cho nhập tới 100, còn hợp đồng chỉ
+   * nhận tỉ lệ 0–1. Không ai gõ `0.6` vào một ô ghi `%`, nên mọi câu trả lời thật đều trượt
+   * kiểm tra lúc đúc artifact — và quả thật, tới 07/09/2026 chưa đầu bài nào lưu được ô đó.
+   *
+   * Quy đổi ở MỘT nơi (`displayNumber`/`storedNumber` bên dưới), dùng chung cho ô nhập và ô
+   * hiển thị: hai bản quy đổi riêng thì màn hình chỉ và màn hình sửa sẽ nói hai con số khác
+   * nhau về cùng một trường.
+   */
+  value_scale: z.number().positive().optional(),
+  /**
+   * Với `multi`: THỨ TỰ CHỌN mang nghĩa, và biểu mẫu phải hiện thứ hạng ra.
+   *
+   * Payload vốn đã giữ thứ tự (mảng), nhưng nếu không hiện thì câu gợi ý «chọn theo thứ tự
+   * quan trọng giảm dần» là một yêu cầu người dùng không kiểm được: nhìn vào màn hình chỉ
+   * thấy các ô sáng lên, không thấy cái nào đứng trước cái nào.
+   */
+  ordered: z.boolean().optional(),
   options: z.array(optionSchema).optional(),
   /**
    * Kiểu thật của giá trị khi ghi vào payload.
@@ -239,6 +283,23 @@ export function setAtPath<T extends object>(payload: T, path: string, value: unk
  * Coi `false` hoặc `0` là chưa trả lời sẽ khiến mọi đầu bài nhà phố (khoảng lùi 0) không
  * bao giờ đạt ngưỡng, mà nhìn màn hình thì thấy đã điền đủ.
  */
+/**
+ * Số để HIỆN cho người dùng, từ số đã lưu trong payload.
+ *
+ * Làm tròn 6 chữ số sau dấu phẩy vì phép chia nhị phân không tròn: `0.6 / 0.01` ra
+ * `60.00000000000001`, và con số đó rơi thẳng vào ô nhập cho người dùng nhìn thấy.
+ */
+export function displayNumber(field: BriefFormField, stored: number): number {
+  if (!field.value_scale) return stored;
+  return Math.round((stored / field.value_scale) * 1e6) / 1e6;
+}
+
+/** Số để GHI vào payload, từ số người dùng vừa gõ. Tròn số cùng lý do với `displayNumber`. */
+export function storedNumber(field: BriefFormField, typed: number): number {
+  if (!field.value_scale) return typed;
+  return Math.round(typed * field.value_scale * 1e6) / 1e6;
+}
+
 export function isAnswered(value: unknown): boolean {
   if (value === undefined || value === null || value === '') return false;
   if (Array.isArray(value)) return value.length > 0;

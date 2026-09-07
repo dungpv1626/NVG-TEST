@@ -120,9 +120,48 @@ types:
     vi: Phòng làm việc
     aliases: ['PHONG LAM VIEC', 'LAM VIEC', 'P.LV', 'STUDY', 'OFFICE', 'PHONG DOC SACH']
 
+  # Khác `study` ở chỗ phục vụ AI: `study` là phòng làm việc của người lớn, còn đây là chỗ
+  # học của các con — thường là một góc mở kề phòng ngủ hoặc một phòng nhỏ dùng chung, và
+  # tiêu chuẩn diện tích lẫn yêu cầu chiếu sáng khác hẳn. Gộp làm một thì hai ô chọn trên
+  # biểu mẫu cùng sinh ra một phòng, tức là ô thứ hai không có tác dụng.
+  - code: study_area
+    vi: Không gian học tập
+    aliases:
+      [
+        'KHONG GIAN HOC TAP',
+        'GOC HOC TAP',
+        'CHO HOC',
+        'BAN HOC',
+        'PHONG HOC',
+        'STUDY AREA',
+        'HOMEWORK',
+      ]
+
   - code: storage
     vi: Kho
     aliases: ['KHO', 'K', 'STORAGE', 'STORE', 'PHONG KHO']
+
+  # Hai mã dưới đây tách từ một ô «Tủ đồ, kho riêng» duy nhất của biểu mẫu đầu bài
+  # (07/09/2026). Chúng KHÁC `storage` ở chỗ phục vụ riêng một phòng ngủ, không phải kho
+  # chung của cả nhà — và khác nhau ở quy mô: `closet` là hốc tủ âm tường đủ chỗ đứng lấy
+  # đồ, `dressing_room` là một phòng đi vào được, có chỗ thay đồ và gương.
+  - code: closet
+    vi: Tủ đồ
+    aliases: ['TU DO', 'TU AM TUONG', 'TU QUAN AO', 'CLOSET', 'WARDROBE']
+
+  - code: dressing_room
+    vi: Phòng thay đồ
+    aliases:
+      [
+        'PHONG THAY DO',
+        'P.THAY DO',
+        'THAY DO',
+        'PHONG THAY DO RIENG',
+        'DRESSING',
+        'DRESSING ROOM',
+        'WALK IN CLOSET',
+        'WALKIN CLOSET',
+      ]
 
   - code: laundry
     vi: Giặt phơi
@@ -192,7 +231,7 @@ group_targets:
     members: null
   habitable:
     vi: Không gian ở (khách, ăn, ngủ, làm việc, thờ)
-    members: [living, dining, bedroom, master_bedroom, study, altar_room, shop]
+    members: [living, dining, bedroom, master_bedroom, study, study_area, altar_room, shop]
   load_bearing_wall:
     vi: Tường chịu lực
     members: []
@@ -208,7 +247,7 @@ group_targets:
   # phòng ngủ · phụ trợ · giao thông · ngoài trời). `habitable` đóng vai "sinh hoạt chung".
   service:
     vi: Phụ trợ (bếp, vệ sinh, kho, kỹ thuật, để xe)
-    members: [kitchen, wc, storage, laundry, technical, shaft, garage]
+    members: [kitchen, wc, storage, closet, dressing_room, laundry, technical, shaft, garage]
   outdoor:
     vi: Ngoài trời (ban công, sân, giếng trời)
     members: [balcony, terrace, courtyard, light_well]

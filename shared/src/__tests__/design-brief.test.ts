@@ -18,6 +18,7 @@ import { load as parseYaml } from 'js-yaml';
 import { describe, expect, it } from 'vitest';
 import {
   BRIEF_FORM,
+  DECISION_RELATIONSHIPS,
   briefFormConfigSchema,
   checkBriefConsistency,
   designBriefDraftSchema,
@@ -189,6 +190,15 @@ describe('Cấu hình biểu mẫu Đầu bài', () => {
       'ninh_binh',
       'ha_noi',
     ]);
+  });
+
+  it('lựa chọn «Quan hệ của người quyết định» khớp DECISION_RELATIONSHIPS — một nguồn nhãn', () => {
+    // Ghi chú trong cấu hình nói nhãn "lấy từ DECISION_RELATIONSHIPS", nhưng tới 08/09/2026
+    // không nơi nào import hằng đó — hai bản chép tay chờ ngày lệch nhau. Bài này biến lời
+    // hứa thành phép kiểm.
+    const field = allFields.find((f) => f.path === 'decision_maker.relationship')!;
+    const pick = (o: { value: string; label: string }) => ({ value: o.value, label: o.label });
+    expect((field.options ?? []).map(pick)).toEqual(DECISION_RELATIONSHIPS.map(pick));
   });
 
   it('không hard-code ngưỡng độ đầy đủ ở bất kỳ đâu trong shared/design', () => {
@@ -402,32 +412,65 @@ describe('Soát mâu thuẫn', () => {
     ).toContain('nha_pho_co_khoang_lui_ben');
   });
 
-  it('có người ở mà không có phòng ngủ nào', () => {
+  it('khai người ở mà không suy ra được phòng ngủ nào', () => {
+    // Vai trò lạ (không có trong `occupancy`) là trường hợp DUY NHẤT còn lại: từ 06/09/2026
+    // phòng ngủ suy thẳng từ `family`, nên "có người mà thiếu phòng ngủ" không còn phụ thuộc
+    // danh sách không gian bắt buộc nữa.
+    expect(
+      codes({
+        family: [{ role: 'ban_be' as 'khach', count: 2 }],
+        required_spaces: [{ type: 'living' }, { type: 'kitchen' }],
+      }),
+    ).toContain('thieu_phong_ngu');
+  });
+
+  it('khai vợ chồng thì tự có phòng ngủ, KHÔNG báo thiếu', () => {
+    // Bài canh cho đúng một cảnh báo giả đã có thật: phép kiểm cũ hỏi danh sách không gian
+    // bắt buộc, nên mọi đầu bài mới đều dính lỗi "nghiêm trọng" ngay khi vừa khai xong gia
+    // đình. Một cảnh báo luôn nổ là một cảnh báo bị bỏ qua, kể cả lúc nó đúng.
     expect(
       codes({
         family: [{ role: 'vo_chong', count: 2 }],
         required_spaces: [{ type: 'living' }, { type: 'kitchen' }],
       }),
-    ).toContain('thieu_phong_ngu');
+    ).not.toContain('thieu_phong_ngu');
+  });
+
+  it('ghim phòng ngủ của một nhóm vào tầng không tồn tại', () => {
+    expect(codes({ floors: 2, family: [{ role: 'ong_ba', count: 2, floor: 3 }] })).toContain(
+      'ghim_tang_khong_ton_tai',
+    );
   });
 
   it('khai phòng ngủ mà chưa cho biết ai ở', () => {
     expect(codes({ required_spaces: [{ type: 'bedroom' }] })).toContain('chua_khai_nguoi_o');
   });
 
-  it('nhu cầu riêng của một nhóm mà danh sách không gian chưa có', () => {
-    const issues = checkBriefConsistency(
-      {
-        family: [{ role: 'ong_ba', count: 2, needs: ['bedroom', 'wc'] }],
-        required_spaces: [{ type: 'living' }, { type: 'bedroom' }],
-      },
-      BRIEF_FORM,
-    );
-    const issue = issues.find((i) => i.code === 'nhu_cau_thieu_khong_gian');
-    expect(issue).toBeDefined();
-    // Nói bằng NHÃN tiếng Việt, không phải mã: người nhập không biết `wc` là gì.
-    expect(issue!.message).toContain('Khu vệ sinh');
-    expect(issue!.message).not.toContain('wc');
+  it('chọn nhu cầu riêng KHÔNG sinh cảnh báo đòi bổ sung không gian', () => {
+    // Từng có một phép kiểm đòi thêm mã vừa chọn vào «Không gian bắt buộc có». Đã gỡ
+    // 07/09/2026: Lớp 2 tự làm việc đó — mã chuẩn trong `family[].needs` đi thành
+    // `extraSpaces` (`program/run.ts`) rồi thành một không gian (`program/engine.ts`,
+    // `addSingle`). Cảnh báo vừa nói sai sự thật vừa bắt nhập lại thứ đã có (CLAUDE.md 5.4),
+    // và nó nổ ngay lúc bấm ô chọn nên kéo theo cả những cảnh báo khác bị bỏ qua.
+    //
+    // Ba mã ở đây cố ý phủ ba đường khác nhau: `balcony` là không gian thật của ngôi nhà,
+    // `closet` chỉ tồn tại trong một phòng ngủ, `bedroom` là mã Lớp 2 tự suy và chỉ còn nằm
+    // trong đầu bài lưu trước 06/09/2026.
+    for (const need of ['balcony', 'closet', 'bedroom']) {
+      const issues = checkBriefConsistency(
+        {
+          family: [{ role: 'ong_ba', count: 2, needs: [need] }],
+          required_spaces: [{ type: 'living' }, { type: 'kitchen' }],
+        },
+        BRIEF_FORM,
+      );
+      expect(
+        issues.map((i) => i.code),
+        `nhu cầu "${need}"`,
+      ).not.toContain('nhu_cau_thieu_khong_gian');
+      // Và không mã máy nào lọt vào câu tiếng Việt trên màn hình (CLAUDE.md 4.1).
+      for (const issue of issues) expect(issue.message).not.toContain(need);
+    }
   });
 
   it('gia đình đông người KHÔNG bị cảnh báo oan', () => {

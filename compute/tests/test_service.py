@@ -26,6 +26,10 @@ EXPECTED_CONTRACTS = {
     "infeasibility-report",
     "kb-record",
     "layout-intent",
+    # Hợp đồng của Lớp 2a — Container KHÔNG dùng tới (lớp đó chạy hoàn toàn ở Worker), nhưng
+    # tệp vẫn nằm trong ảnh vì `contracts/` copy nguyên thư mục. Liệt kê ở đây để danh sách
+    # nói đúng thực tế thay vì trở thành chỗ phải nhớ loại trừ.
+    "program-intent",
     "publish-request",
     "render-request",
     "render-result",

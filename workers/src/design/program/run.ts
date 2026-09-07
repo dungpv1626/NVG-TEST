@@ -11,11 +11,13 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { DesignBrief, SpaceProgram } from '@nvg/shared/design';
+import { siteGeometry, type DesignBrief, type SpaceProgram } from '@nvg/shared/design';
 import type { DesignEnv } from '../env';
 import { roomVocabulary } from '../kb/vocabulary-data';
 import { geminiClient } from '../llm/factory';
 import { buildSpaceProgram } from './engine';
+import { plausibilityRules } from './plausibility-data';
+import { resolveProgramIntent } from './intent';
 import { resolveNeeds } from './needs';
 import { spaceNorms } from './norms-data';
 import { readRoomAreaPriors } from './priors';
@@ -27,6 +29,15 @@ export interface Layer2Run {
   warnings: string[];
   /** Đoạn chữ trong đầu bài chưa quy được về không gian nào. */
   unresolved: string[];
+  /**
+   * Đề xuất của AI ở Lớp 2a, viết ra để người đọc kiểm lại được.
+   *
+   * `null` khi mô hình không tham gia (chưa có khoá, hết hạn mức, trả sai cấu trúc). Đây là
+   * thứ duy nhất nói cho kiến trúc sư biết vì sao bếp được ưu ái hơn kho — thiếu nó thì AI
+   * tham gia mà không ai kiểm được, và "con người quyết định cuối cùng" (PRD 2.3) chỉ còn là
+   * một câu trong tài liệu.
+   */
+  aiSuggestion: { rationale: string; generous: string[]; modest: string[] } | null;
   /**
    * Cấu hình đã dùng — băm thành `params_hash` của cạnh lineage.
    *
@@ -89,19 +100,46 @@ export async function runLayer2(
     );
   }
 
+  // ── Lớp 2a: hỏi mô hình ngôn ngữ phòng nào nên rộng rãi ────────────────────────────
+  //
+  // Gửi đi là BẢN TÓM TẮT ĐÃ ẨN DANH, không phải đầu bài — xem `intent.ts`. Diện tích sàn
+  // trong bản tóm tắt lấy từ hình học thửa, làm tròn tới 10 m²; nó chỉ để mô hình biết "cỡ
+  // nào", vì một cái bếp trong căn 90 m²/tầng và trong căn 180 m²/tầng không cùng mức ưu ái.
+  //
+  // Không chặn luồng: hết hạn mức hay trả sai cấu trúc thì `intent` là `null` và chương trình
+  // vẫn soạn xong bằng chuẩn nghề (PRD 5.1).
+  const geometry = siteGeometry(brief.site);
+  const { intent, notes: intentNotes } = await resolveProgramIntent(
+    brief,
+    geometry.buildable.widthM * geometry.buildable.depthM,
+    vocabulary,
+    geminiClient(env),
+  );
+
   const result = buildSpaceProgram({
     brief,
     briefRef,
     rules,
     norms,
     priors,
-    extraSpaces: [...declared, ...needs.spaces],
+    // Không gian AI đề xuất thêm đi CHUNG đường với mã khai tường minh: engine vẫn kiểm mã có
+    // trong từ vựng và có chuẩn diện tích, nên một đề xuất lạ bị nói ra chứ không lọt vào.
+    extraSpaces: [...declared, ...needs.spaces, ...(intent?.add_spaces ?? [])],
+    plausibility: plausibilityRules(),
+    intent,
   });
 
   return {
     payload: result.payload,
-    warnings: [...result.warnings, ...needs.notes],
+    warnings: [...result.warnings, ...needs.notes, ...intentNotes],
     unresolved: needs.unresolved,
+    aiSuggestion: intent
+      ? {
+          rationale: intent.rationale ?? '',
+          generous: intent.emphasis.filter((e) => e.level === 'generous').map((e) => e.space_type),
+          modest: intent.emphasis.filter((e) => e.level === 'modest').map((e) => e.space_type),
+        }
+      : null,
     params: {
       norms_version: norms.version,
       locality: brief.locality,
@@ -109,6 +147,16 @@ export async function runLayer2(
       // nào còn tỉnh chưa có gói riêng, và bản kết quả phải nói được mình dựa trên bộ số nào.
       rule_pack_locality: rules.localityMissing ? null : brief.locality,
       priors_band: priors?.bandId ?? null,
+      // Đưa ĐÚNG thứ AI đã đề xuất vào tham số, không chỉ cờ "có dùng AI hay không".
+      //
+      // ⚠️ Cạnh lineage chỉ lưu `params_hash`, không lưu nguyên văn tham số — nên mục này
+      // KHÔNG làm đề xuất đọc lại được từ CSDL; nó chỉ bảo đảm một đề xuất khác cho ra một
+      // artifact khác, thay vì im lặng trả về bản đã tính với mức nhấn mạnh cũ. Phần đọc lại
+      // được cho người là `aiSuggestion` ở trên, hiện thẳng trên màn hình.
+      program_intent: intent
+        ? { emphasis: intent.emphasis, add_spaces: intent.add_spaces ?? [] }
+        : null,
+      plausibility_version: plausibilityRules().version,
     },
   };
 }

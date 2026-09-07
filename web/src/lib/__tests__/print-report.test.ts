@@ -26,7 +26,11 @@ describe('openPrintReport', () => {
     const close = vi.fn();
     const focus = vi.fn();
     const print = vi.fn();
-    const fakeWindow = { document: { write, close }, focus, print } as unknown as Window;
+    const fakeWindow = {
+      document: { write, close, images: [] },
+      focus,
+      print,
+    } as unknown as Window;
     const openSpy = vi.spyOn(window, 'open').mockReturnValue(fakeWindow);
 
     openPrintReport('Báo cáo lãi/lỗ theo công trình', '<table><tr><td>A</td></tr></table>');
@@ -57,7 +61,7 @@ describe('openPrintReport', () => {
   it('tiêu đề có ký tự HTML đặc biệt vẫn được escape trong `<title>`', () => {
     const write = vi.fn();
     const fakeWindow = {
-      document: { write, close: vi.fn() },
+      document: { write, close: vi.fn(), images: [] },
       focus: vi.fn(),
       print: vi.fn(),
     } as unknown as Window;

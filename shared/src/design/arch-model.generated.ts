@@ -25,6 +25,12 @@ export const archModelSchema = z
         z.literal('hien_dai'),
         z.literal('tan_co_dien'),
         z.literal('indochine'),
+        z.literal('mai_thai'),
+        z.literal('toi_gian'),
+        z.literal('nhiet_doi'),
+        z.literal('dia_trung_hai'),
+        z.literal('co_dien'),
+        z.literal('bac_au'),
         z.literal(null),
       ])
       .nullable()

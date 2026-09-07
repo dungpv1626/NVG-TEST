@@ -24,6 +24,7 @@
  */
 
 import { formatNumber } from '../format';
+import { bedroomsFor } from './kb.generated';
 import type { DesignBriefDraft } from './brief-draft';
 import {
   isAnswered,
@@ -45,7 +46,18 @@ export interface BriefScore {
   /** Đường dẫn các phần chưa có, nặng trước — đi thẳng vào `missing_fields` của artifact. */
   missingFields: string[];
   /** Kèm nhãn và nhóm, để giao diện không phải tra lại cấu hình. */
-  missing: { path: string; label: string; sectionId: string; sectionTitle: string }[];
+  missing: {
+    path: string;
+    label: string;
+    sectionId: string;
+    sectionTitle: string;
+    /**
+     * Trường để trống vẫn chạy tiếp được. Vẫn nằm trong danh sách này vì nó VẪN kéo điểm
+     * đầy đủ xuống — nhưng màn hình phải nói ra, nếu không thì ô nhập ghi «(tùy chọn)» còn
+     * danh sách bên cạnh đòi điền, hai chỗ nói ngược nhau.
+     */
+    optional: boolean;
+  }[];
   answeredWeight: number;
   totalWeight: number;
 }
@@ -80,6 +92,7 @@ export function scoreBrief(draft: DesignBriefDraft, config: BriefFormConfig): Br
         label: field.label,
         sectionId: section.id,
         sectionTitle: section.title,
+        optional: field.optional === true,
       });
     }
   }
@@ -112,6 +125,16 @@ export interface BriefIssue {
 }
 
 const BEDROOM_CODES = ['bedroom', 'master_bedroom'];
+
+/**
+ * Mã mà Lớp 2 TỰ SUY, nên không bao giờ là một "nhu cầu riêng" hợp lệ của thành viên.
+ *
+ * Phòng ngủ suy từ vai trò và số người; khu vệ sinh suy từ số tầng và số phòng ngủ (khép kín
+ * thì khai bằng `ensuite`). Biểu mẫu đã thôi đề xuất cả ba, nhưng đầu bài đã lưu còn mang
+ * chúng — và mọi chỗ HIỂN THỊ phải lọc chúng ra, nếu không màn hình đổ mã máy `bedroom` cho
+ * kiến trúc sư đọc (CLAUDE.md 4.1). Khai ở đây một lần thay vì lọc rời rạc ở từng màn hình.
+ */
+export const DERIVED_NEED_CODES: readonly string[] = [...BEDROOM_CODES, 'wc'];
 
 /**
  * Soát mâu thuẫn NỘI TẠI của đầu bài — đầu bài tự nói ngược chính nó.
@@ -236,13 +259,25 @@ export function checkBriefConsistency(
   }
 
   // --- Người ở và phòng ngủ nói ngược nhau ----------------------------------
+  //
+  // ⚠️ Phép kiểm này TỪNG hỏi "danh sách không gian bắt buộc có phòng ngủ không", và câu hỏi
+  // đó nay sai chỗ: phòng ngủ suy thẳng từ `family` (`kb/space_norms.yaml` mục `occupancy`),
+  // còn danh sách không gian không còn đề xuất hai mã đó nữa. Hỏi như cũ thì MỌI đầu bài mới
+  // đều dính một lỗi "nghiêm trọng" ngay khi vừa khai xong gia đình.
+  //
+  // Câu hỏi đúng: đã khai người ở thì có suy ra được phòng ngủ nào không. Trả lời được bằng
+  // đúng dữ liệu đang có, và dùng chung phép tính với Lớp 2 nên hai bên không thể lệch.
   const hasBedroom = spaces.some((s) => BEDROOM_CODES.includes(s.type));
+  const derivedBedrooms = (draft.family ?? []).reduce(
+    (sum, m) => sum + bedroomsFor(m.role ?? '', m.count ?? 0),
+    0,
+  );
 
-  if (people > 0 && spaces.length > 0 && !hasBedroom) {
+  if (people > 0 && derivedBedrooms === 0 && !hasBedroom) {
     found.push({
       code: 'thieu_phong_ngu',
       severity: 'nghiem_trong',
-      message: `Đầu bài khai ${people} người ở nhưng danh sách không gian bắt buộc không có phòng ngủ nào.`,
+      message: `Đầu bài khai ${people} người ở nhưng không suy ra được phòng ngủ nào. Kiểm tra lại vai trò và số người ở phần Thành viên gia đình.`,
       paths: ['family', 'required_spaces'],
     });
   }
@@ -257,32 +292,24 @@ export function checkBriefConsistency(
     });
   }
 
-  // Nhu cầu riêng của một nhóm thành viên mà danh sách không gian bắt buộc không có.
+  // ── Đã GỠ: «nhu cầu riêng mà danh sách không gian chưa có» ──────────────────────────
   //
-  // ⚠️ Chỗ này TỪNG là phép so "số người trên số phòng ngủ", và nó sai về bản chất:
-  // `required_spaces` là một TẬP MÃ KHÔNG GIAN — mỗi loại xuất hiện đúng một lần (`engine.ts`'s
-  // `addSingle` tự dedup), không mang số lượng hay diện tích, nên số loại phòng ngủ tối đa
-  // luôn là hai (`bedroom`/`master_bedroom`), kể cả khi có ghim tầng. Mọi gia đình trên bốn
-  // người đều dính cảnh báo — tức là gần như mọi đầu bài biệt thự. Một cảnh báo luôn nổ là
-  // một cảnh báo bị bỏ qua, kể cả lúc nó đúng.
+  // Phép kiểm này đòi người dùng thêm vào «Không gian bắt buộc có» một mã mà họ vừa chọn ở
+  // nhu cầu riêng của một nhóm thành viên. Nó sai vì Lớp 2 ĐÃ TỰ LÀM việc đó: mọi mã chuẩn
+  // trong `family[].needs` đi thẳng thành `extraSpaces` (`program/run.ts`, biến `declared`)
+  // rồi thành một không gian trong chương trình (`program/engine.ts`, `addSingle`).
   //
-  // Phép kiểm dưới đây trả lời được bằng đúng dữ liệu đang có, và không cần ngưỡng nào.
-  const missingNeeds = [
-    ...new Set(
-      (draft.family ?? [])
-        .flatMap((member) => member.needs ?? [])
-        .filter((need) => !spaces.some((s) => s.type === need)),
-    ),
-  ];
-  if (spaces.length > 0 && missingNeeds.length > 0) {
-    const labels = missingNeeds.map((need) => needLabel(config, need) ?? need).join(', ');
-    found.push({
-      code: 'nhu_cau_thieu_khong_gian',
-      severity: 'canh_bao',
-      message: `Có thành viên cần ${labels} nhưng danh sách không gian bắt buộc chưa có. Bổ sung vào danh sách hoặc bỏ nhu cầu đó.`,
-      paths: ['family', 'required_spaces'],
-    });
-  }
+  // Nên câu cảnh báo nói sai sự thật — không gian không hề thiếu — và việc nó yêu cầu là nhập
+  // lại thứ hệ thống đã có (CLAUDE.md 5.4). Nó lại nổ NGAY khi người dùng bấm một ô chọn, nên
+  // đúng kiểu cảnh báo người ta học cách bỏ qua, kể cả những cảnh báo khác quanh nó.
+  //
+  // Trước khi gỡ đã cân nhắc thu hẹp thay vì bỏ: chỉ miễn cho mã thuộc về một phòng ngủ
+  // (`closet`, `dressing_room`, `study`, `study_area`, `balcony`). Nhưng lập luận trên đúng
+  // cho MỌI mã chuẩn, không riêng năm mã đó — thu hẹp chỉ dời chỗ sai đi.
+  //
+  // Chỗ trống thật sự còn lại KHÔNG kiểm được ở đây: mã có trong từ vựng nhưng thiếu chuẩn
+  // diện tích thì `addSingle` lặng lẽ bỏ qua. Kiểm được điều đó cần `kb/space_norms.yaml`,
+  // thứ chỉ nạp ở Worker — và ở đó engine đã có cảnh báo riêng cho mã lạ.
 
   // --- Ưu tiên tầng không tồn tại -------------------------------------------
   if (draft.floors === 1 && (draft.family ?? []).some((m) => m.floor_pref === 'top')) {
@@ -300,15 +327,20 @@ export function checkBriefConsistency(
   // không gian vào một tầng cụ thể. Engine (`collectRequests`) tự bỏ ghim và cảnh báo khi gặp
   // trường hợp này nên không bao giờ vỡ chương trình — nhưng người nhập nên thấy ngay ở đây,
   // sớm hơn, thay vì phải mở tab Chương trình không gian mới biết.
-  const invalidPins = spaces.filter(
-    (s) => typeof s.floor === 'number' && (s.floor < 1 || s.floor > (draft.floors ?? 1)),
-  );
-  if (invalidPins.length > 0) {
+  const outOfRange = (floor: number | null | undefined) =>
+    typeof floor === 'number' && (floor < 1 || floor > (draft.floors ?? 1));
+  // Đếm cả hai chỗ ghim được tầng: danh sách không gian VÀ phòng ngủ của từng nhóm thành
+  // viên. Bỏ vế thứ hai thì hạ số tầng sau khi đã ghim phòng ngủ ông bà xuống tầng ba là một
+  // ghim lặng lẽ bị engine bỏ, mà biểu mẫu không nói gì.
+  const invalidPins =
+    spaces.filter((s) => outOfRange(s.floor)).length +
+    (draft.family ?? []).filter((m) => outOfRange(m.floor)).length;
+  if (invalidPins > 0) {
     found.push({
       code: 'ghim_tang_khong_ton_tai',
       severity: 'canh_bao',
-      message: `${invalidPins.length} không gian đang ghim vào tầng không tồn tại trong công trình. Sửa lại tầng ghim hoặc tăng số tầng.`,
-      paths: ['floors', 'required_spaces'],
+      message: `${invalidPins} chỗ đang ghim vào tầng không tồn tại trong công trình. Sửa lại tầng ghim hoặc tăng số tầng.`,
+      paths: ['floors', 'required_spaces', 'family'],
     });
   }
 
@@ -324,12 +356,6 @@ export function checkBriefConsistency(
   }
 
   return found;
-}
-
-/** Nhãn tiếng Việt của một mã không gian, lấy từ chính danh sách lựa chọn của biểu mẫu. */
-function needLabel(config: BriefFormConfig, code: string): string | undefined {
-  const spaces = fieldByPath(config, 'required_spaces');
-  return spaces?.options?.find((option) => option.value === code)?.label;
 }
 
 /** Nhãn của một trường theo cấu hình — dùng khi dựng thông báo ngoài giao diện. */

@@ -19,7 +19,7 @@
 # ⚠️ Số ở mục `spaces` là SUY LUẬN từ thực hành phổ biến, CHƯA có kiến trúc sư NVG xác
 #    nhận (xem "Câu hỏi chờ Haan" trong TIEN_DO_THIET_KE.html). Sửa ở đây, không sửa mã.
 
-version: '1.0.0'
+version: '1.1.0'
 
 # ── Thống kê thực nghiệm ───────────────────────────────────────────────────────────────
 # 06-knowledge-base 6.0(b): dưới ngưỡng này mỗi ô chỉ còn một hai công trình — đó là trùng
@@ -85,11 +85,27 @@ derived:
 # Ba con số là mặc định của team (14-phuong-an-demo 14.5), kiến trúc sư NVG đổi ở đây.
 allocation:
   fill_target_ratio: 0.62
-  filler_below_ratio: 0.45
+  # Ngưỡng thêm không gian bổ sung. Nâng 0,45 → 0,85 ngày 07/09/2026 sau khi đo trên bộ đầu
+  # bài đại diện: ở 0,45 thì một tầng chỉ có phòng ngủ chính, thang và hành lang đã được coi
+  # là "đủ đầy" và không nhận thêm gì, nên bước cấp phát phải thổi chính phòng ngủ đó lên
+  # 51,8 m² để lấp mặt sàn. Tầng hai nhà phố thật luôn có thêm ban công và giếng trời —
+  # thiếu chúng thì cái sai không nằm ở diện tích, nằm ở chỗ chương trình thiếu không gian.
+  filler_below_ratio: 0.85
+  # Ba bậc nhấn mạnh của Lớp 2a đổi thành hệ số nhân lên `weight`.
+  #
+  # Đây là chỗ DUY NHẤT đầu ra của mô hình ngôn ngữ chạm vào con số, và nó chạm rất nông:
+  # mô hình chỉ chọn được một trong ba bậc, còn ba bậc đó đáng bao nhiêu là do tệp này quyết.
+  # Nhờ vậy một mô hình "nhiệt tình" quá mức cũng không kéo diện tích đi đâu xa được — và
+  # tối thiểu quy chuẩn cùng trần nghề vẫn kẹp hai đầu.
+  emphasis:
+    generous: 1.7
+    normal: 1.0
+    modest: 0.55
+  # Danh sách theo THỨ TỰ ưu tiên thêm vào. Mỗi loại nhiều nhất một cái mỗi tầng.
   fillers:
-    nha_pho: [study, storage, balcony]
-    biet_thu: [study, storage, balcony]
-    nha_vuon: [study, storage, terrace]
+    nha_pho: [balcony, light_well, study, storage, terrace]
+    biet_thu: [balcony, study, storage, terrace, courtyard]
+    nha_vuon: [terrace, study, storage, courtyard]
 
 # ── Trọng số quan hệ liền kề, suy từ mức nghiêm trọng của rule pack ────────────────────
 # Quan hệ liền kề KHÔNG khai ở đây — nguồn duy nhất là `rules/**/*.yaml` mục
@@ -106,15 +122,24 @@ adjacency_weight:
 #
 #   floor:      ground | low | mid | top | any   — nguyện vọng, rule pack `floor_preference`
 #                                                  thắng khi hai bên nói khác nhau
-#   priority:   1 cao nhất. Dùng khi tổng diện tích mong muốn vượt sàn có được: cái nào
-#               nhường trước.
+#   priority:   1 cao nhất. Dùng khi tổng diện tích tối thiểu VƯỢT sàn có được: cái nào
+#               nhường trước. Chỉ có nghĩa ở chiều thiếu chỗ.
+#   weight:     phần sàn CÒN DƯ chia theo tỉ lệ này, sau khi mọi phòng đã có tối thiểu. Đây
+#               là thứ làm diện tích co giãn theo QUY MÔ công trình: cùng một bảng chuẩn cho
+#               ra bếp 10 m² trong nhà phố 90 m²/tầng và bếp 17 m² trong biệt thự 180 m²/tầng,
+#               mà không cần một hệ số nhân nào theo bề rộng lô.
+#               `0` = không nhận phần dư (giao thông tính riêng theo tỉ lệ sàn).
+#   max_m2:     trần NGHỀ, không phải trần quy chuẩn. Nó chặn phần dư dồn hết vào một phòng —
+#               không ai làm bếp 40 m². Số cũ đặt theo cỡ nhà phố nên biệt thự đụng trần ngay
+#               ở phòng khách; đã nới cho các phòng có lý do to ra ở nhà lớn (07/09/2026).
 #   auto:       false = chỉ tạo khi đầu bài khai đích danh hoặc quy tắc suy ra
 spaces:
   living:
     min_m2: 12
     target_m2: 22
-    max_m2: 40
+    max_m2: 70
     priority: 1
+    weight: 4.0
     floor: ground
     daylight: true
     facade: true
@@ -122,8 +147,9 @@ spaces:
   dining:
     min_m2: 9
     target_m2: 14
-    max_m2: 24
+    max_m2: 40
     priority: 2
+    weight: 1.8
     floor: ground
     daylight: false
     facade: false
@@ -131,8 +157,9 @@ spaces:
   kitchen:
     min_m2: 6
     target_m2: 10
-    max_m2: 18
+    max_m2: 28
     priority: 2
+    weight: 1.9
     floor: ground
     daylight: true
     facade: false
@@ -140,8 +167,9 @@ spaces:
   bedroom:
     min_m2: 9
     target_m2: 14
-    max_m2: 22
+    max_m2: 30
     priority: 2
+    weight: 1.6
     floor: mid
     daylight: true
     facade: true
@@ -149,8 +177,9 @@ spaces:
   master_bedroom:
     min_m2: 14
     target_m2: 20
-    max_m2: 32
+    max_m2: 45
     priority: 1
+    weight: 2.6
     floor: mid
     daylight: true
     facade: true
@@ -160,6 +189,7 @@ spaces:
     target_m2: 4
     max_m2: 8
     priority: 3
+    weight: 0.4
     floor: any
     daylight: false
     facade: false
@@ -169,6 +199,7 @@ spaces:
     target_m2: 8
     max_m2: 14
     priority: 1
+    weight: 0.3
     floor: any
     daylight: false
     facade: false
@@ -180,6 +211,7 @@ spaces:
     target_m2: 10
     max_m2: 18
     priority: 1
+    weight: 0.3
     floor: any
     daylight: false
     facade: false
@@ -190,6 +222,7 @@ spaces:
     target_m2: 8
     max_m2: 24
     priority: 3
+    weight: 0.0
     floor: any
     daylight: false
     facade: false
@@ -197,8 +230,9 @@ spaces:
   garage:
     min_m2: 12
     target_m2: 18
-    max_m2: 30
+    max_m2: 45
     priority: 2
+    weight: 1.2
     floor: ground
     daylight: false
     facade: true
@@ -206,8 +240,9 @@ spaces:
   altar_room:
     min_m2: 8
     target_m2: 12
-    max_m2: 20
+    max_m2: 28
     priority: 2
+    weight: 1.0
     floor: top
     daylight: true
     facade: false
@@ -215,8 +250,9 @@ spaces:
   study:
     min_m2: 6
     target_m2: 10
-    max_m2: 16
+    max_m2: 24
     priority: 3
+    weight: 1.0
     floor: mid
     daylight: true
     facade: true
@@ -226,15 +262,52 @@ spaces:
     target_m2: 4
     max_m2: 10
     priority: 4
+    weight: 0.5
     floor: any
     daylight: false
     facade: false
     ventilation: false
+  # Chỗ học của các con. Nhỏ hơn phòng làm việc và ưu tiên thấp hơn, nhưng VẪN đòi ánh sáng
+  # tự nhiên — đó là điểm phân biệt thật sự với một góc kê bàn bất kỳ.
+  study_area:
+    min_m2: 4
+    target_m2: 7
+    max_m2: 16
+    priority: 4
+    weight: 0.7
+    floor: mid
+    daylight: true
+    facade: false
+    ventilation: true
+  # Tủ đồ và phòng thay đồ đều phục vụ RIÊNG một phòng ngủ, nên `floor: any` — chúng đi theo
+  # phòng ngủ, không có tầng ưa thích của riêng mình. Khác nhau ở quy mô: hốc tủ chỉ cần chỗ
+  # đứng lấy đồ, phòng thay đồ cần chỗ thay và gương.
+  closet:
+    min_m2: 1.5
+    target_m2: 2.5
+    max_m2: 5
+    priority: 4
+    weight: 0.4
+    floor: any
+    daylight: false
+    facade: false
+    ventilation: false
+  dressing_room:
+    min_m2: 4
+    target_m2: 6
+    max_m2: 12
+    priority: 4
+    weight: 0.6
+    floor: any
+    daylight: false
+    facade: false
+    ventilation: true
   laundry:
     min_m2: 3
     target_m2: 5
     max_m2: 10
     priority: 4
+    weight: 0.5
     floor: top
     daylight: true
     facade: false
@@ -244,6 +317,7 @@ spaces:
     target_m2: 4
     max_m2: 10
     priority: 4
+    weight: 0.6
     floor: mid
     daylight: true
     facade: true
@@ -251,8 +325,9 @@ spaces:
   terrace:
     min_m2: 6
     target_m2: 14
-    max_m2: 40
+    max_m2: 60
     priority: 4
+    weight: 1.2
     floor: top
     daylight: true
     facade: true
@@ -260,8 +335,9 @@ spaces:
   courtyard:
     min_m2: 4
     target_m2: 9
-    max_m2: 25
+    max_m2: 40
     priority: 3
+    weight: 1.2
     floor: ground
     daylight: true
     facade: false
@@ -271,6 +347,7 @@ spaces:
     target_m2: 3
     max_m2: 8
     priority: 3
+    weight: 0.4
     floor: any
     daylight: true
     facade: false
@@ -280,6 +357,7 @@ spaces:
     target_m2: 0.6
     max_m2: 2
     priority: 4
+    weight: 0.1
     floor: any
     daylight: false
     facade: false
@@ -288,8 +366,9 @@ spaces:
   shop:
     min_m2: 12
     target_m2: 25
-    max_m2: 60
+    max_m2: 90
     priority: 1
+    weight: 2.5
     floor: ground
     daylight: true
     facade: true
@@ -299,6 +378,7 @@ spaces:
     target_m2: 4
     max_m2: 8
     priority: 4
+    weight: 0.3
     floor: any
     daylight: false
     facade: false

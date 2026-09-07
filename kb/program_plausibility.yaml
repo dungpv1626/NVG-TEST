@@ -1,0 +1,144 @@
+# Soát tính HỢP LÝ NGHỀ NGHIỆP của chương trình không gian — dữ liệu của Lớp 2.
+#
+# Nguồn: yêu cầu 07/09/2026 của Haan ("biệt thự lớn mà phòng bếp 6 m² nghe rất vô lý").
+#
+# ── Tệp này KHÁC `rules/` và khác `space_norms.yaml` ───────────────────────────────────
+#
+#   `rules/`                — quy chuẩn. Sai là KHÔNG HỢP PHÁP. Container đánh giá trên hình
+#                             học đã giải.
+#   `kb/space_norms.yaml`   — chuẩn nghề. Nói một phòng NÊN rộng bao nhiêu.
+#   tệp này                 — soát KẾT QUẢ. Nói chương trình vừa soạn có ĐÁNG TIN không.
+#
+# Vì sao cần tầng thứ ba: hai tầng trên đều đúng mà kết quả vẫn vô lý được. Bếp 6 m² không vi
+# phạm quy chuẩn nào (6 ≥ tối thiểu), không sai chuẩn nghề nào (6 CHÍNH LÀ tối thiểu của chuẩn
+# nghề) — nó chỉ vô lý khi đặt cạnh một căn nhà 360 m². Cái vô lý nằm ở QUAN HỆ giữa các con
+# số, không nằm ở từng con số.
+#
+# ⚠️ Là DỮ LIỆU vì đây là phán đoán nghề, không phải quy tắc của phần mềm — kiến trúc sư NVG
+# sẽ chỉnh. Cùng lý lẽ với rule pack (CLAUDE.md 8.7).
+#
+# Mỗi mục dùng ở HAI nơi, cùng một bản thực thi:
+#   · kiểm thử `program-plausibility.test.ts` — canh không cho tụt hạng
+#   · cảnh báo tại chỗ trên màn hình Chương trình không gian
+#
+# `severity`: error = chắc chắn sai, phải sửa · warning = đáng ngờ, người xem quyết định.
+
+version: '1.0.0'
+
+checks:
+  # ── Không phòng nào bị ép về đúng tối thiểu ─────────────────────────────────────────
+  # Một phòng nằm ĐÚNG tại tối thiểu quy chuẩn là dấu hiệu nó bị bước ép vừa sàn cắt, không
+  # phải nó được thiết kế như vậy. Đây chính là triệu chứng Haan nhìn thấy.
+  #
+  # Trừ bảy loại trong `exempt` — vệ sinh, hộp kỹ thuật, kho, tủ, giặt, ban công, giếng trời:
+  # mấy loại này ở tối thiểu là bình thường, không ai làm nhà vệ sinh rộng rãi vì thừa chỗ.
+  # `dressing_room` KHÔNG được miễn — đó là một phòng đi vào được, ép về tối thiểu thì nó
+  # thành cái hốc tủ mang tên khác.
+  - id: khong_phong_nao_bi_ep_ve_toi_thieu
+    kind: not_at_minimum
+    severity: error
+    exempt: [wc, shaft, storage, closet, laundry, balcony, light_well]
+    message: '{room} chỉ được {area} m² — đúng bằng mức tối thiểu, tức là đã bị cắt cho vừa sàn chứ không phải được thiết kế như vậy.'
+
+  # ── Diện tích phải co giãn theo quy mô công trình ───────────────────────────────────
+  # Đo theo sàn của CHÍNH TẦNG phòng đó nằm, không theo tổng sàn cả công trình. Bếp không to
+  # ra vì nhà có thêm tầng: một căn bốn tầng và một căn hai tầng cùng mặt bằng thì bếp bằng
+  # nhau. Ngưỡng theo tổng sàn (bản đầu, 07/09/2026) bắt nhà bốn tầng phải có bếp 16,5 m² —
+  # đúng về số học, vô lý về nghề.
+  #
+  # `floor_max_share` giữ cho ngưỡng SÀN cũng nhường mặt sàn: trên lô 3,5 × 12 m (42 m²/tầng),
+  # đòi bếp 8 m² và phòng khách 16 m² là đòi 57 % mặt sàn cho hai phòng, trong khi tầng đó còn
+  # phải có thang, khu vệ sinh và lối đi. Thiếu vế này thì bộ đo báo lỗi ở đúng những căn nhà
+  # nhỏ mà nó không giúp được gì — và một bộ đo luôn đỏ là một bộ đo bị tắt.
+  #
+  # `cap_m2` là điểm BÃO HOÀ: bếp 30 m² không phục vụ tốt hơn bếp 20 m². Không có nó thì một
+  # mặt sàn rất lớn đòi một cái bếp phi lý, và bộ đo lại thành nguồn của cái vô lý tiếp theo.
+  #
+  # Ba tỉ lệ hạ nhẹ ngày 07/09/2026 sau khi đo trên nhà MỘT TẦNG: ở đó mọi công năng dồn lên
+  # cùng một sàn nên tỉ lệ từng phòng tự nhiên nhỏ hơn nhà nhiều tầng (nơi tầng trệt chỉ gánh
+  # phần công cộng). Ngưỡng cũ bắt một căn 218 m² một tầng phải có phòng khách 39 m² — chặt
+  # hơn thực hành nghề.
+  - id: bep_tuong_xung_quy_mo
+    kind: min_share_of_floor
+    room: kitchen
+    share: 0.075
+    floor_m2: 8
+    floor_max_share: 0.15
+    cap_m2: 20
+    severity: error
+    message: 'Bếp {area} m² trên mặt sàn {total} m² — nhỏ hơn mức hợp lý ({expected} m²) cho một mặt bằng cỡ này.'
+
+  - id: phong_khach_tuong_xung_quy_mo
+    kind: min_share_of_floor
+    room: living
+    share: 0.16
+    floor_m2: 16
+    floor_max_share: 0.33
+    cap_m2: 48
+    severity: error
+    message: 'Phòng khách {area} m² trên mặt sàn {total} m² — nhỏ hơn mức hợp lý ({expected} m²) cho một mặt bằng cỡ này.'
+
+  - id: phong_ngu_chinh_tuong_xung_quy_mo
+    kind: min_share_of_floor
+    room: master_bedroom
+    share: 0.12
+    floor_m2: 16
+    floor_max_share: 0.3
+    cap_m2: 36
+    severity: warning
+    message: 'Phòng ngủ chính {area} m² trên mặt sàn {total} m² — nhỏ hơn mức hợp lý ({expected} m²).'
+
+  # ── Thứ bậc giữa các phòng ───────────────────────────────────────────────────────────
+  # Không cần con số nào: chỉ cần phòng khách không nhỏ hơn bếp, và phòng ngủ chính không nhỏ
+  # hơn phòng ngủ thường. Sai thứ bậc là dấu hiệu bước cấp phát chạy sai, kể cả khi mọi con số
+  # đều nằm trong khoảng cho phép.
+  - id: phong_khach_khong_nho_hon_bep
+    kind: at_least
+    room: living
+    than: kitchen
+    severity: error
+    message: 'Phòng khách ({area} m²) nhỏ hơn bếp ({other} m²).'
+
+  - id: phong_khach_khong_nho_hon_phong_an
+    kind: at_least
+    room: living
+    than: dining
+    severity: warning
+    message: 'Phòng khách ({area} m²) nhỏ hơn phòng ăn ({other} m²).'
+
+  - id: phong_ngu_chinh_khong_nho_hon_phong_ngu_thuong
+    kind: at_least
+    room: master_bedroom
+    than: bedroom
+    severity: error
+    message: 'Phòng ngủ chính ({area} m²) nhỏ hơn phòng ngủ thường ({other} m²).'
+
+  # ── Giao thông ───────────────────────────────────────────────────────────────────────
+  # Dưới ngưỡng dưới: hành lang không đủ để đi lại, và bộ giải sẽ phải lấy diện tích từ phòng.
+  # Trên ngưỡng trên: sàn đang bị bỏ phí — thường là dấu hiệu chương trình quá thưa so với lô.
+  - id: giao_thong_trong_khoang_hop_ly
+    kind: ratio_of_floor
+    room: circulation
+    min: 0.07
+    max: 0.22
+    severity: error
+    message: 'Tầng {floor}: giao thông {area} m² trên sàn {floor_area} m² ({pct}%) — ngoài khoảng hợp lý 7–22%.'
+
+  # ── Lấp đầy sàn ──────────────────────────────────────────────────────────────────────
+  # Bộ giải chia HẾT mặt sàn, không có khái niệm "để trống". Một tầng chỉ xếp 60% nghĩa là 40%
+  # còn lại sẽ bị nhồi vào một phòng nào đó — và phòng nhận phần đó không do ai chọn.
+  - id: tang_khong_bo_trong_qua_nhieu
+    kind: floor_fill
+    min: 0.85
+    max: 1.0
+    severity: error
+    message: 'Tầng {floor}: mới xếp {allocated} m² trên sàn {floor_area} m² ({pct}%) — phần còn lại sẽ bị nhồi vào một phòng nào đó chứ không để trống được.'
+
+  # ── Không có phòng nào trùng lặp vô cớ ───────────────────────────────────────────────
+  # Bếp và phòng khách nhiều hơn một cái là dấu hiệu một mã bị thêm hai lần từ hai nguồn — lỗi
+  # đã xảy ra thật ngày 06/09/2026 và không có triệu chứng nào ngoài chương trình phình ra.
+  - id: khong_trung_lap_khong_gian_don
+    kind: at_most_one
+    rooms: [living, kitchen, dining, altar_room, garage]
+    severity: error
+    message: 'Có {count} {room} trong cùng một công trình — nhiều khả năng một mã bị thêm từ hai nguồn.'

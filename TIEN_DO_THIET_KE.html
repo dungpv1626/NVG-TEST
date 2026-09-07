@@ -257,7 +257,7 @@
       <header>
         <h1>Module Thiết kế AI — tiến độ</h1>
         <p class="muted-t">
-          TK-10 → TK-17 · AI Preliminary Design Engine. Cập nhật <b>06/09/2026</b>.
+          TK-10 → TK-17 · AI Preliminary Design Engine. Cập nhật <b>07/09/2026</b>.
         </p>
         <p class="xs muted-t">
           Trang này là <b>bảng điều khiển</b>: khối lượng, trạng thái, vướng mắc, câu hỏi. Mọi lập
@@ -293,7 +293,7 @@
           <div class="stat">
             <b>1.211</b><span class="xs muted-t">Phép thử xanh (1.022 vitest + 189 pytest)</span>
           </div>
-          <div class="stat"><b>5</b><span class="xs muted-t">Vướng mắc đang mở</span></div>
+          <div class="stat"><b>9</b><span class="xs muted-t">Vướng mắc đang mở</span></div>
           <div class="stat">
             <b>16</b><span class="xs muted-t">Mặc định team đã chốt — NVG đổi được</span>
           </div>
@@ -482,6 +482,89 @@
         </ol>
       </div>
 
+      <!-- ============ 3b. NHÁNH AI ============ -->
+      <h2>3b. Sẽ làm — nhánh thiết kế bằng AI API, năm đợt</h2>
+      <div class="flag block">
+        <h3>Bốn quyết định của Haan · 08/09/2026</h3>
+        <p class="kv">
+          <b>T10</b> Nhánh AI (GPT &middot; Gemini &middot; Claude, API trả phí) chạy
+          <b>song song</b> bộ giải CP-SAT; người dùng chọn &laquo;Bộ giải nội bộ&raquo; hay
+          &laquo;AI&raquo; và chọn model ngay trên trang thiết kế. Hai nhánh đúc artifact vào
+          <b>cùng dòng lineage</b>. Bộ giải và Lớp 3a tất định không đổi một dòng.
+        </p>
+        <p class="kv">
+          <b>T11</b> Đầu ra &laquo;cả hai&raquo;: mặt bằng là <b>dữ liệu có cấu trúc</b> do AI đề
+          xuất, Container kiểm chồng lấn, khe hở, rule pack rồi dựng thành
+          <code>floor_plan</code> chuẩn (SVG, DXF, glTF, thống kê, phát hành dùng nguyên); phối
+          cảnh, nội thất, mặt đứng, mặt cắt là <b>ảnh</b> do model ảnh sinh.
+        </p>
+        <p class="kv">
+          <b>T12</b> Dữ liệu gửi đi <b>đầy đủ trừ danh tính</b>: lược tên khách, điện thoại, địa
+          chỉ, mã hồ sơ, ngân sách; gửi kích thước thật, gia đình, nhu cầu, phong cách, chữ tự do.
+          Căn cứ: API trả phí của ba nhà cung cấp cam kết không huấn luyện. Tuyến
+          <code>ai_*</code> đặt <code>max_data_class: 2</code>. T8 thu hẹp: chỉ còn áp cho Gemini
+          miễn phí và Pollinations.
+        </p>
+        <p class="kv">
+          <b>T13</b> Ảnh đợt đầu đủ bốn loại: mặt bằng có nội thất, phối cảnh ngoại thất nhiều góc,
+          nội thất từng phòng, mặt đứng và mặt cắt. Claude không sinh ảnh.
+        </p>
+        <p class="kv">
+          <b>Nới hai bất biến</b> Chỉ cho nhánh AI, có kiểm soát: #2 (AI trả chữ nhật phòng theo mét
+          nhưng toạ độ chỉ có hiệu lực sau <code>POST /plan/check</code> của Container) và #1 (ảnh
+          nội thất, mặt cắt là chữ + dữ liệu phòng sang ảnh, mang nhãn riêng &laquo;Ảnh minh hoạ —
+          không theo hình học đã giải&raquo;). Ghi vào CLAUDE.md 8.2/8.5 ở Đợt 5.
+        </p>
+      </div>
+      <div class="card">
+        <p class="xs muted-t">
+          Kế hoạch đầy đủ đã được Haan duyệt 08/09/2026. Hàng rào giữ nguyên: Container không gọi mô
+          hình ngôn ngữ; <code>ModelRouter.resolve(route, dataClass)</code> giữ hai tham số và
+          &laquo;chọn model&raquo; là chọn tên tuyến trong <code>config/models.yaml</code>; ẩn danh
+          ở một hàm có hợp đồng allow-list; đầu ra AI đi qua JSON Schema rồi Zod, hỏng thì đúng một
+          lượt sửa; prompt là dữ liệu; lượt gọi ghi bảng <code>design_ai_call</code> để thấy chi
+          phí.
+        </p>
+        <ol>
+          <li>
+            <span class="pill s-progress">Đang làm</span> <b>Đợt 0 — Chốt hiện trạng</b>: commit đợt
+            đầu bài + sửa lỗi 07–08/09 (78 tệp) sau khi test và rà soát; ghi T10–T13 và Q-30…Q-35
+            vào đây.
+          </li>
+          <li>
+            <span class="pill s-draft">Chưa</span> <b>Đợt 1 — Lớp nhà cung cấp</b>:
+            <code>TextModelClient</code> chung, client OpenAI + Anthropic cạnh Gemini, bộ chuyển ba
+            phương ngữ JSON Schema, hàm ẩn danh hạng 2 + hợp đồng <code>ai-brief-digest</code>,
+            tuyến <code>ai_*</code> trong <code>models.yaml</code>, migration 0121 (bảng
+            <code>design_ai_call</code>, mở CHECK kind/step, bucket <code>design-renders</code>),
+            <code>GET /design/ai/models</code>. Bàn giao: một lời gọi thật mỗi nhà cung cấp.
+          </li>
+          <li>
+            <span class="pill s-draft">Chưa</span> <b>Đợt 2 — Chương trình không gian bằng AI</b>:
+            <code>POST /design/program/ai-generate</code>, kiểm plausibility + rule pack, so sánh
+            với bộ giải; ô chọn <code>AiModePicker</code> ở tab Chương trình không gian.
+          </li>
+          <li>
+            <span class="pill s-draft">Chưa</span> <b>Đợt 3 — Mặt bằng do AI đề xuất</b> (rủi ro cao
+            nhất): hợp đồng <code>ai-floor-plan-proposal</code>, Container
+            <code>POST /plan/check</code> dùng lại <code>evaluate_violations</code> và
+            <code>floor_plan_from_result</code>, artifact <code>ai_plan_proposal</code>, thẻ phương
+            án hai nguồn. Bài bất biến: mặt bằng CP-SAT đưa qua <code>/plan/check</code> phải ra y
+            hệt.
+          </li>
+          <li>
+            <span class="pill s-draft">Chưa</span> <b>Đợt 4 — Bộ ảnh</b>: kho nhị phân, Container
+            <code>POST /image/stamp</code> (Pillow), <code>POST /design/ai/render</code>, artifact
+            <code>render_result</code> thật, thư viện ảnh theo phương án.
+          </li>
+          <li>
+            <span class="pill s-draft">Chưa</span>
+            <b>Đợt 5 — Chạy nền nếu cần, chi phí, tài liệu</b>: thẻ &laquo;Chi phí AI&raquo;,
+            CLAUDE.md 8.2/8.3/8.5, đính chính Đ12 trong <code>doc/design/README.md</code>.
+          </li>
+        </ol>
+      </div>
+
       <!-- ============ 4. ĐÃ LÀM ============ -->
       <h2>4. Đã làm</h2>
       <p class="xs muted-t">
@@ -497,6 +580,646 @@
             </tr>
           </thead>
           <tbody>
+            <tr>
+              <td class="num">08/09</td>
+              <td>Rà soát trước commit: 6 lỗi P1 và 12 lỗi P2 trên 78 tệp đang treo</td>
+              <td class="xs">
+                Ba lát rà song song (workers + compute · shared + hợp đồng · web). Đáng nhớ nhất:
+                <b>bốn route ghi artifact bằng <code>service_role</code> mà chỉ kiểm quyền ĐỌC</b>
+                &mdash; tài khoản chỉ xem (Kinh doanh, BGĐ) vẫn đổi được bản đầu bài, phương án
+                &laquo;đang hiệu lực&raquo;; nay hỏi <code>rls_design_writable</code> trước mọi lệnh
+                ghi, cùng hàm mà policy INSERT của <code>design_artifact</code> dùng. Kèm: ô
+                &laquo;Tầng&raquo; của thành viên gia đình bị nuốt sau lần đồng bộ đầu (engine không
+                bao giờ nhận ghim tầng); thửa đa giác suy kích thước một lần rồi giữ mãi; nhãn
+                &laquo;Phòng ngủ (con)&raquo; trùng khi khai tách nhóm; gõ tiếp trong lúc đang lưu
+                thì phần gõ thêm bị coi là đã lưu; nút &laquo;Hủy&raquo; vứt sáu bước khai không
+                hỏi; <code>min</code>/<code>max</code> khai trong cấu hình mà không ai đọc; ô «Số
+                người» hiện <code>NaN</code>; <code>plateFor</code> thiếu bước thu theo mật độ nên
+                lệch <code>_footprint</code>; diện tích thửa gửi cho mô hình làm tròn 10 m² gần bằng
+                số thật (nay bậc 50); phép soát «bị cắt cho vừa sàn» nổ oan với phòng do người khai;
+                hai chỗ trả nguyên văn lỗi PostgREST tiếng Anh. Mỗi lỗi có bài kiểm ghim.
+                <b>349 web + 597 logic + 220 pytest</b> xanh.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">08/09</td>
+              <td>Ô số nhận rồi vứt đi &mdash; và một lệnh Git làm mất 450 dòng chưa commit</td>
+              <td class="xs">
+                <b>Lỗi:</b> gõ một KHOẢNG («25-30») vào ô diện tích thì <code>Number()</code> ra
+                <code>NaN</code>, ô phát ra <code>undefined</code> &mdash; còn CHỮ nằm trong state
+                của chính ô nên vẫn hiện nguyên. Người dùng thấy con số mình vừa gõ, bấm Lưu, nhận
+                báo thành công, và bốn dòng phòng ngủ lưu xuống <code>null</code>. Đối chiếu CSDL:
+                phiên bản 8 giống hệt phiên bản 7. Nay ô kêu ngay tại chỗ, kèm chữ chứ không chỉ
+                viền đỏ (CGD 6.8). <b>Còn treo:</b> khách muốn khai một KHOẢNG diện tích là nhu cầu
+                thật &mdash; cần Haan quyết có mở rộng hợp đồng hay không.<br />
+                <b>Sự cố:</b> để dựng bản đỏ kiểm chứng bài test, tôi chạy
+                <code>git checkout web/src/pages/tk/brief-field.tsx</code> &mdash; tệp đó có ~450
+                dòng CHƯA COMMIT và lệnh đó xoá sạch. Đã tìm hết đường khôi phục (lịch sử tệp của
+                Claude Code, bộ nhớ đệm Vite, lịch sử cục bộ VS Code, <code>git fsck</code>): không
+                có bản nào, vì tệp chưa từng <code>git add</code>.<br />
+                <b>Dựng lại từ 24 bài kiểm đang đỏ</b> &mdash; chúng là bản đặc tả chính xác của
+                phần đã mất: bảng Không gian (ghim tầng, diện tích, tiện ích theo từng loại phòng,
+                cụm phòng ngủ gọi tên theo chủ nhân, ô «Thêm phòng»), quy đổi <code>%</code> ↔ tỉ
+                lệ, thứ hạng trên chip Ưu tiên, ô «Loại phòng ngủ» hai chiều, chọn tầng bằng số tầng
+                thật. Soát lại bằng cách đổ chính DOM sinh ra, không chỉ tin bài kiểm.
+                <b>345 bài web + 293 bài shared + 295 bài workers</b> xanh.<br />
+                <b>Đã ghi vào bộ nhớ:</b> kho này không bao giờ dùng
+                <code>git checkout &lt;tệp&gt;</code> &mdash; dựng bản đỏ bằng bản sao trong thư mục
+                nháp.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">07/09</td>
+              <td>Đầu bài &mdash; bốn lỗi Haan gặp khi đi thật trên hồ sơ NVO-TK-2026-2737</td>
+              <td class="xs">
+                <b>1. Bấm &laquo;Tiếp&raquo; không lưu.</b> Biểu mẫu chia bước giữ mọi thứ trong bộ
+                nhớ trình duyệt tới bước cuối, nên tải lại trang hay đóng tab giữa chừng là mất sạch
+                &mdash; đúng thứ &laquo;tự lưu nháp&raquo; (Webapp Flow 6.3) tồn tại để chặn. Nay
+                đổi bước là ghi xuống, <em>trừ</em> bản đã xác nhận: ở đó mỗi lần ghi là một phiên
+                bản mới phải nêu nguyên nhân (NEN-05), tự lưu sẽ đẻ năm phiên bản cho một lượt đi
+                hết biểu mẫu.<br />
+                <b>2. &laquo;Xác nhận đầu bài&raquo; im lặng hoàn toàn.</b> Câu lỗi vẫn được đặt vào
+                state, nhưng <em>chỉ chế độ nhập</em> vẽ nó ra &mdash; mà nút xác nhận nằm ở chế độ
+                xem. Mọi câu trả về (thiếu trường bắt buộc, thiếu quyền, dịch vụ thiết kế không phản
+                hồi) rơi thẳng xuống đất. Nút cũng không có trạng thái &laquo;đang xử lý&raquo;, dù
+                mười một nút khác cùng module đều có.<br />
+                <b>3. Ngõ cụt kín ở bản đã xác nhận.</b> &laquo;Lưu nháp&raquo; giữa chừng đòi nêu
+                nguyên nhân, mà ô nhập nguyên nhân chỉ hiện ở bước cuối. Nhãn nút cũng sai: bản đã
+                xác nhận không có nháp.<br />
+                <b>4. <code>toUserMessage</code> xén mất nửa đầu câu lỗi.</b> Nó cắt mọi thứ tới dấu
+                hai chấm ĐẦU TIÊN, nên &laquo;Chưa đủ thông tin bắt buộc để chốt đầu bài. Còn thiếu:
+                Mật độ xây dựng&raquo; tới người dùng chỉ còn &laquo;Mật độ xây dựng&raquo; &mdash;
+                mất hẳn vế nói việc gì không làm được (CGD 5.5). Lỗi này chỉ lộ ra khi lỗi số 2 được
+                sửa. Nay chỉ cắt tiền tố kỹ thuật không dấu (<code>P0001:</code>,
+                <code>design:</code>).<br />
+                Kèm: hàng rào &laquo;rời trang?&raquo; nay theo <code>dirty</code> thay vì theo
+                &laquo;đang mở biểu mẫu&raquo; &mdash; cảnh báo nổ lúc không có gì để mất là cách
+                dạy người dùng bấm &laquo;Rời khỏi&raquo; theo phản xạ. Có dấu &laquo;Đã lưu lúc
+                hh:mm&raquo; (tự dựng, không dùng <code>toLocaleTimeString</code>).<br />
+                <b>5 bài kiểm mới</b>, đã dựng lại bản đỏ để chắc mỗi bài ghim đúng một lỗi.
+                <b>343 bài web</b> xanh.<br />
+                <b>Nguyên nhân TRỰC TIẾP của lỗi 2 lúc Haan gặp:</b> Worker chưa chạy &mdash; cổng
+                8788 không có ai nghe. Chạy <code>npm run dev:workers</code>.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">07/09</td>
+              <td>
+                Rà đầu bài &mdash; đợt 4 giai đoạn 1: mục &laquo;Tổ chức khối nhà&raquo; thôi là lời
+                hứa suông
+              </td>
+              <td class="xs">
+                Sáu câu khó nhất của biểu mẫu, chiếm <b>10 trên 38 điểm</b> đầy đủ của một đầu bài
+                biệt thự, mà <b>không consumer nào đọc</b> ngoài
+                <code>cores_preferred</code> &mdash; và chính nó nối thẳng vào một vô nghiệm chắc
+                chắn (V-21).<br />
+                Mở rộng <code>massing</code> của hợp đồng <code>layout-intent</code> để chở ý đồ
+                khối nhà vào ARTIFACT: truy được, băm được, đọc lại được ở thẻ phương án. Chỉ lựa
+                chọn rời rạc đi qua &mdash; không con số kích thước nào, bộ giải vẫn là nơi gán số
+                (nguyên tắc 2, có bài kiểm canh).<br />
+                <b>Cặp <code>honoured</code>/<code>deferred</code></b> là phần giữ cho chỗ này không
+                nói dối: câu nào cây chia thật sự diễn đạt được, câu nào chưa và VÌ SAO, bằng tiếng
+                Việt. Im lặng thì cả sáu trông như đã được tôn trọng, và kiến trúc sư đọc phương án
+                không có cách nào biết mình đang nhìn kết quả của yêu cầu nào.<br />
+                <b>Một trường có hiệu lực THẬT ngay: <code>service_core</code>.</b> Diễn đạt bằng
+                <code>SpaceProgram.adjacency</code> &mdash; bếp kề khối giao thông, khối đó tách
+                khỏi phòng khách &mdash; nên nó vào thẳng hàm mục tiêu của bộ giải, không cần đổi gì
+                ở Container. Cố ý KHÔNG làm ràng buộc cứng: đây là quy ước tiện nghi chứ không phải
+                quy chuẩn, và đặt cứng thì một lô hẹp thành vô nghiệm, người dùng mất cả phương án
+                vì một ô chọn tiện nghi.<br />
+                <b>KHÔNG phát ra hai cánh nhà</b> dù đầu bài xin:
+                <code>adapters.py::_single_wing</code> NÉM LỖI khi nhận nhiều hơn một, tức là lỗi
+                500 chứ không phải kết quả kém hơn. Nguyện vọng nằm ở <code>wings_preferred</code>,
+                tách khỏi con số bộ giải thật sự nhận.<br />
+                <b>Bẫy chỉ lộ ra khi đi qua ranh giới hai runtime:</b> ảnh Docker chép
+                <code>contracts/</code> lúc build, mà <code>massing</code> khai
+                <code>additionalProperties: false</code> &mdash; nên thêm khoá vào lược đồ làm MỌI
+                lời gọi trả <b>422</b>, trong khi <code>contracts:check</code> xanh và toàn bộ test
+                một phía xanh. Bắt được nhờ bài tiền kiểm chạy qua Container thật; đã dựng lại ảnh
+                và ghi vào bộ nhớ dự án.<br />
+                Giai đoạn 2&ndash;4 (khung mẫu <code>villa</code> cho hình bao L/U/T, hai lõi thang,
+                hồ sơ kính) CHƯA làm &mdash; và giai đoạn 2 phải chờ chẩn V-12 trước, vì nó dùng
+                chung đường mã đối xứng gương và chung sàn <code>corridor_min_width</code>.<br />
+                Kiểm: <code>tsc</code> sạch &middot; hợp đồng khớp &middot;
+                <b>588 test logic + 336 test web + 220 test Python</b> &middot; 5 bài mới cho
+                digest.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">07/09</td>
+              <td>Rà đầu bài &mdash; đợt 2 và 3: chia bước, và xuất PDF bản đầu bài</td>
+              <td class="xs">
+                <b>31 câu trên một trang cuộn &rarr; sáu bước có thanh tiến trình</b> (AFD 4.6 mẫu
+                4). Nhà phố còn năm bước &mdash; mục &laquo;Tổ chức khối nhà&raquo; biến mất hẳn
+                thay vì nằm đó xám.<br />
+                Bước CHÍNH LÀ mục, không thêm tầng cấu hình nào: khai hai lần thì thêm một mục mà
+                quên thêm bước sẽ làm mục đó biến mất khỏi biểu mẫu, không có gì báo. Giữ bước theo
+                MÃ mục chứ không theo số thứ tự; bước đang xem biến mất (đang ở Tổ chức khối nhà rồi
+                đổi sang nhà phố) thì đi tới bước còn lại GẦN NHẤT, không rơi về bước 1.<br />
+                <b>Ba chỗ dời:</b> <code>floors</code> lên bước 1 vì nó gác cột &laquo;Tầng&raquo; ở
+                cả phần Gia đình lẫn bảng Không gian &mdash; khai muộn thì người điền từ trên xuống
+                đã đi qua hai cột đó lúc còn ẩn. Mục &laquo;Ghi chú của Phòng Thiết kế&raquo; (5 ô
+                chữ tự do ở cuối, khối bị bỏ qua nhiều nhất) xoá hẳn, mỗi ô về cạnh mục nó nối dài.
+                <code>legal_docs_available</code> và <code>legacy.legal_documents</code> &mdash;
+                cùng một câu hỏi, trước nằm cách nhau bốn bước &mdash; nay liền nhau, ô liệt kê chỉ
+                hiện khi trả lời &laquo;Đã có&raquo;.<br />
+                Thêm <b>8 câu gợi ý</b> cho ô trước giờ không có chữ nào, gồm hai ô trọng số 3
+                (<code>site.depth_m</code>, <code>floors</code>). Ba câu khối nhà viết theo HỆ QUẢ
+                chứ không định nghĩa thuật ngữ &mdash; &laquo;số lõi thang&raquo; là tiếng lóng
+                nghề, hỏi một gia chủ &laquo;Một lõi / Hai lõi&raquo; không kèm chữ nào là câu khó
+                trả lời nhất bảng.<br />
+                Thanh tiến trình nói bước nào CÒN THIẾU (chỉ đếm ô bắt buộc &mdash; gắn dấu vì ô
+                &laquo;tùy chọn&raquo; là dạy người dùng bỏ qua chính dấu đó), và đi thẳng tới bước
+                bất kỳ. Danh sách &laquo;Còn thiếu&raquo; ở cột phải nay CHUYỂN BƯỚC rồi mới cuộn:
+                một liên kết <code>#neo</code> thuần chỉ cuộn trong bước đang mở, bấm vào không có
+                gì xảy ra.<br />
+                <b>Xuất PDF bản đầu bài</b> &mdash; đối xứng với nút của biên bản khảo sát, hiện cả
+                ở chế độ chỉ xem. Tách <code>describeField</code> ra
+                <code>brief-describe.ts</code> để bản in dùng CHUNG đúng hàm màn hình dùng; dựng một
+                phép dịch riêng cho bản in là chuyện chắc chắn lệch, và bản in là thứ mang đi gặp
+                khách. Câu chưa trả lời in dấu <code>&mdash;</code> chứ không bỏ dòng: bỏ dòng thì
+                người đọc không phân biệt &laquo;không hỏi&raquo; với &laquo;quên hỏi&raquo;. In kèm
+                mức đầy đủ, còn thiếu và chỗ chưa nhất quán &mdash; thiếu ba phần đó thì nó chỉ là
+                ảnh chụp màn hình.<br />
+                <b>19 bài kiểm cũ</b> giả định một trang cuộn nên phải sửa: cho chúng ĐI QUA thanh
+                tiến trình thay vì nới lỏng khẳng định. Bài &laquo;thêm một người thì danh sách mọc
+                thêm một dòng&raquo; nay đi qua hai bước &mdash; đúng cách người dùng thật sự làm.
+                Thêm 6 bài cho khung wizard, 8 bài cho bản in.<br />
+                <b>Soát bản in thật (Haan, 07/09):</b> phần Thành viên gia đình in ra một dòng chữ
+                dài nối bằng <code>&middot;</code> và <code>|</code> &mdash; năm nhóm dồn vào một ô,
+                người đọc phải tự tách lại năm lần đúng lúc đang ngồi với khách. Nay in thành BẢNG
+                sáu cột (Thành viên &middot; Số người &middot; Phòng ngủ &middot; Loại phòng
+                &middot; Tầng &middot; Nhu cầu riêng) &mdash; cùng lý lẽ với bảng không gian: dữ
+                liệu có cấu trúc thì in ra cấu trúc. Tách <code>familyRows</code> dùng chung cho màn
+                hình (một dòng) và bản in (bảng): hai cách trình bày, MỘT phép đọc. Cột
+                &laquo;Tầng&raquo; chỉ hiện khi nhà nhiều hơn một tầng; nhóm không sinh phòng ngủ
+                nào thì bỏ trống ô loại phòng thay vì khẳng định &laquo;Riêng&raquo;; tên mục không
+                còn lặp hai lần khi mục chỉ có đúng một bảng.<br />
+                Kiểm: <code>tsc</code> sạch &middot; hợp đồng khớp &middot; prettier sạch &middot;
+                <b>588 test logic + 338 test web</b>. <b>Chưa soát được bằng mắt</b> &mdash; cầu nối
+                Chrome đang ngắt.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">07/09</td>
+              <td>Rà đầu bài &mdash; đợt 1: nội dung sai trong biểu mẫu</td>
+              <td class="xs">
+                <b>Mật độ xây dựng chưa bao giờ lưu được.</b> Biểu mẫu ghi <code>%</code> và cho
+                nhập tới 100; hợp đồng chỉ nhận tỉ lệ 0&ndash;1; không chỗ nào quy đổi. Đếm trên
+                CSDL: <b>0 đầu bài</b> có trường này &mdash; không ai điền nổi, nên không cần
+                migration. Thêm <code>value_scale</code> vào lược đồ cấu hình, quy đổi ở MỘT nơi
+                (<code>displayNumber</code>/<code>storedNumber</code>) dùng chung cho ô nhập và ô
+                hiển thị. Làm tròn 6 chữ số vì <code>0,6 / 0,01</code> ra
+                <code>60,00000000000001</code> &mdash; con số đó rơi thẳng vào ô cho người dùng nhìn
+                thấy.<br />
+                <b>Thửa đa giác không xác nhận được.</b> Hợp đồng BẮT BUỘC
+                <code>site.width_m</code>/<code>depth_m</code>, biểu mẫu lại ẩn hai ô đó ở nhánh
+                <code>da_giac</code> &mdash; hỏi lại thứ đã nằm trong toạ độ các đỉnh. Kết quả: chọn
+                hình đa giác thì <code>designBriefSchema</code> trượt ở đúng hai đường dẫn ấy, và
+                không gì nói ra cho tới lúc bấm &laquo;Xác nhận đầu bài&raquo;. Nay SUY từ ranh giới
+                theo đúng định nghĩa hợp đồng (mặt tiền = cạnh đỉnh 0&rarr;1), dùng lại số
+                <code>siteGeometry</code> đã tính &mdash; không có phép hình học thứ hai.<br />
+                <b>Người quyết định</b> &mdash; hợp đồng ghi &laquo;bắt buộc THU THẬP&raquo;, phần 6
+                mang tên &laquo;&hellip;và người quyết định&raquo;, mà không có ô nào. Thêm hai ô;
+                nhãn quan hệ lấy lại từ <code>DECISION_RELATIONSHIPS</code>, không chép tay.<br />
+                <b>Gỡ phép kiểm &laquo;nhu cầu riêng mà danh sách không gian chưa có&raquo;.</b> Ban
+                đầu định thu hẹp cho năm mã thuộc về phòng ngủ, rồi lần theo mã thì thấy nó sai ở
+                MỌI nhánh: mã chuẩn trong <code>family[].needs</code> đã đi thẳng thành
+                <code>extraSpaces</code> (<code>program/run.ts</code>) rồi thành không gian
+                (<code>engine.ts:401</code>). Cảnh báo vừa nói sai sự thật vừa bắt nhập lại thứ hệ
+                thống đã làm, lại nổ ngay lúc bấm ô chọn.<br />
+                <b>Hàng rào dữ liệu đang nhập</b> chỉ so <code>pathname</code> &mdash; cố ý, để biểu
+                mẫu nhiều bước đổi bước không bị hỏi. Nhưng nút &laquo;&larr; Tổng quan&raquo; cũng
+                chỉ đổi <code>?tab=</code>, nên nó ra khỏi trình soạn thảo qua đúng kẽ hở đó và xoá
+                sạch những gì đã gõ. Nay so thêm RIÊNG tham số <code>tab</code>.<br />
+                Cộng: <code>PRIORITIES</code> gỡ hẳn (bản sao chết của cấu hình, không nơi nào dùng,
+                chú thích còn ghi sai là &laquo;nuôi hàm mục tiêu bộ giải&raquo;); ô ưu tiên đã chọn
+                nay mang SỐ THỨ HẠNG nên câu &laquo;chọn theo thứ tự giảm dần&raquo; kiểm được; chú
+                thích <code>_doc</code> sửa &laquo;sáu cột&raquo; &rarr; năm.<br />
+                Kiểm: <code>tsc</code> sạch &middot; hợp đồng khớp &middot;
+                <b>583 test logic + 324 test web</b> &middot; 11 test mới.
+                <b>Chưa soát được bằng mắt</b> &mdash; cầu nối Chrome đang ngắt.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">07/09</td>
+              <td>Rà đầu bài &mdash; đợt 0: ba lỗi im lặng của nhánh biệt thự</td>
+              <td class="xs">
+                Bắt đầu từ một câu hỏi về trình bày (&laquo;chưa thấy nút xuất PDF ở đâu&raquo;) và
+                lộ ra bốn thứ hỏng KHÔNG có triệu chứng, cả bốn đều đúng với nhà phố nên đề bài demo
+                không chạm tới cái nào.<br />
+                <b>V-23 &mdash; loại hình không tới bộ giải.</b>
+                <code>SolveRequest</code> thiếu <code>building_type</code>, Container mặc định
+                <code>&quot;nha_pho&quot;</code>. Biệt thự vừa mất khoảng lùi 3 m và trần mật độ
+                0,6, vừa nhận nhầm lùi 0 và mật độ 1,0 &mdash; được phép phủ kín lô, trong khi Lớp 2
+                vẫn áp đúng. Trường mới để BẮT BUỘC, không tuỳ chọn: kiểu bắt ngay hai chỗ gọi trong
+                bài kiểm, đúng thứ mặc định phía Container đã che mất.<br />
+                <b>V-22 &mdash; mặt đứng đo theo ranh thửa.</b>
+                <code>buildArchModel</code> so tường với <code>plan.site</code>, còn khối thì thụt
+                vào theo khoảng lùi, nên biệt thự trả về bốn mảng lỗ mở RỖNG. Thêm
+                <code>footprint_m</code> vào hợp đồng <code>floor_plan</code> (bộ giải đã tính sẵn,
+                chỉ không ghi ra) và so theo nó; artifact cũ lùi về hộp bao của tường.
+                <b>Đo sau khi sửa</b> trên đề 12&times;18: thửa 12 &times; 18, hình bao
+                <code>[0, 3, 12, 12,3]</code>, mặt trước <b>3 lỗ mở</b> &mdash; mã cũ ra 0.<br />
+                <b>V-21 &mdash; hai lõi thang là vô nghiệm chắc chắn.</b>
+                <code>_align_cores</code> ép mọi lõi trùng khít với lõi đầu, kể cả hai lõi cùng
+                tầng. Kẹp <code>cores_preferred</code> về 1 kèm cảnh báo nói rõ yêu cầu được giữ lại
+                &mdash; gỡ một vô nghiệm nằm sẵn, không phải thêm ràng buộc.<br />
+                <b>Lỗi thứ tư, cùng họ:</b> Lớp 2 lấy đầu bài GHI ĐÈ gói quy tắc (<code
+                  >brief ?? pack</code
+                >), bộ giải lấy mức CHẶT hơn (<code>max</code>/<code>min</code>). Đầu bài khai lùi
+                nhỏ hơn quy chuẩn thì hai lớp soạn và thi hành trên hai mảnh đất khác nhau. Gom về
+                một phép ở <code>program/site-limits.ts</code>, chốt theo BỘ GIẢI vì đó là lớp cưỡng
+                chế &mdash; lớp soạn đề rộng tay hơn lớp thi hành thì phần chênh luôn thành thất bại
+                ở cuối. Cùng phép đó nay dùng cho <code>plateFor</code>, chỗ trước giờ quên trừ
+                khoảng lùi.<br />
+                <b>Tiền kiểm trên bộ giải THẬT</b> (bài mới
+                <code>villa-solve-preflight.test.ts</code>): 5 đề biệt thự / nhà vườn, giải hai lần
+                mỗi đề. Kết quả <b>y hệt nhau trước và sau</b> &mdash; không hồi quy. Nhưng nó phơi
+                ra <b>V-24</b>: 4 trong 5 đề ĐÃ vô nghiệm từ trước, và chưa ai biết vì chưa đề biệt
+                thự nào từng đi qua CP-SAT.<br />
+                Kiểm: <code>tsc</code> sạch &middot; hợp đồng khớp 16 tệp &middot;
+                <b>577 test logic + 321 test web + 220 test Python</b> &middot; 18 test mới (<code
+                  >villa-limits</code
+                >
+                11, tiền kiểm 7) &middot; soát tận mắt qua Container dựng lại.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">07/09</td>
+              <td>Soát bằng mắt vòng ba &mdash; dải trắng bên phải và bảng không gian</td>
+              <td class="xs">
+                <b>Dải trắng 320px chạy dọc bên phải mọi màn hình con.</b> Hai nguyên nhân chồng lên
+                nhau, và cái thứ hai là cái hay quên: lưới khai cứng
+                <code>xl:grid-cols-[1fr_20rem]</code> nên vẫn giữ chỗ dù
+                <code>&lt;aside&gt;</code> không dựng ra; và trang gọi LUÔN truyền một nhóm
+                &laquo;Hồ sơ liên quan&raquo;, nhóm đó rỗng khi dự án chưa nối cơ hội nào &mdash;
+                đếm số NHÓM thì điều kiện vẫn đúng, nên 320px được dành ra để hiện đúng một câu
+                &laquo;Chưa có hồ sơ liên quan&raquo;. Nay xét theo số BẢN GHI thật. Nội dung rộng
+                thêm ~320px ở mọi màn hình con.<br />
+                <b>Bảng &laquo;Không gian bắt buộc có&raquo; dựng lại</b> sau khi Haan chê gợi ý
+                sai:<br />
+                &middot; <b>Gợi ý ô tiện ích theo TỪNG loại phòng</b>, khai ở
+                <code>brief-form.json</code> (<code>options[].placeholder</code>). Bản đầu dùng một
+                chuỗi chung &mdash; &laquo;bồn tắm, quầy bar&hellip;&raquo; đứng ở cả dòng Chỗ để
+                xe, dòng Kho và dòng Bếp. Nay Chỗ để xe gợi &laquo;chỗ sạc xe điện, vòi rửa
+                xe&raquo;, Khu vệ sinh gợi &laquo;bồn tắm nằm, vòi sen đứng&raquo;. Loại chưa khai
+                thì để TRỐNG &mdash; thà không gợi ý còn hơn gợi ý sai. Sửa được ở cấu hình, không
+                cần đụng mã.<br />
+                &middot; <b>Gọi tên phòng ngủ theo CHỦ NHÂN</b>, không đánh số: &laquo;Phòng ngủ
+                (con 2) &middot; riêng&raquo; thay cho &laquo;Phòng ngủ 3 &middot; riêng&raquo;.
+                &laquo;Phòng ngủ 3&raquo; không nói được phòng đó của ai, mà đó chính là thứ người
+                khai cần biết để đặt tầng và diện tích. Nhóm chỉ sinh một phòng thì không đánh số
+                &mdash; &laquo;(ông bà)&raquo;, không phải &laquo;(ông bà 1)&raquo;.<br />
+                Chủ nhân SUY từ Thành viên gia đình chứ không lưu xuống dòng không gian: nó đã được
+                khai đúng một lần ở trên, chép xuống là tạo nguồn thứ hai có thể nói khác đi ngay
+                lần sau ai đó sửa số người. Suy được vì <code>syncBedroomRows</code> dựng lại toàn
+                bộ cụm theo đúng thứ tự gia đình &mdash; và nơi gọi vẫn kiểm số lượng khớp trước khi
+                dùng, vì gán nhầm &laquo;của ông bà&raquo; cho phòng của khách còn tệ hơn đánh số.
+                Vai trò lạ trả về rỗng, không in mã máy ra màn hình.<br />
+                &middot; <b>Tách hai cụm</b>: &laquo;Phòng ngủ&raquo; (theo Thành viên gia đình) và
+                &laquo;Không gian khác&raquo;. Trước đó mỗi dòng phòng ngủ tự mang chữ &laquo;theo
+                gia đình&raquo; ở cột cuối &mdash; bảy dòng là bảy lần lặp cùng một câu, mà vẫn
+                không nói được vì sao chúng khác các dòng kia. Một tiêu đề cụm nói đúng một lần và
+                nói rõ hơn.<br />
+                &middot; <b>Đơn vị <code>m²</code> lên tiêu đề cột</b>, bỏ khỏi từng dòng: mười tám
+                lần chữ <code>m²</code> xếp thành một cột không thêm thông tin nào mà lấy mất chỗ
+                của ô tiện ích. Hai chữ &laquo;(tuỳ chọn)&raquo; ở tiêu đề cột cũng gộp về câu hướng
+                dẫn, nói một lần.<br />
+                Kiểm: <code>tsc</code> sạch &middot; prettier sạch &middot;
+                <code>contracts:check</code> khớp &middot; <b>321 test web</b> +
+                <b>565 test logic</b> xanh (thêm 9 test mới) &middot; soát tận mắt trên
+                <code>NVO-TK-2026-2737</code> ở cả chế độ xem và chế độ sửa.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">07/09</td>
+              <td>
+                Soát bằng mắt vòng hai &mdash; phòng ngủ tự đồng bộ, cột tiện ích, xuất PDF khảo sát
+              </td>
+              <td class="xs">
+                <b>Header dính đè lên nội dung khi cuộn.</b> Không phải con số canh mắt:
+                <code>&lt;main&gt;</code> có <code>p-4 lg:p-6</code>, và Chrome tính mốc dính của
+                <code>sticky</code> theo HỘP NỘI DUNG của vùng cuộn &mdash; thấp hơn mép nhìn thấy
+                đúng bằng phần đệm ấy. Nên <code>top-0</code> chừa một dải 24px cho nội dung đang
+                cuộn trồi lên nằm đè dòng mã hồ sơ. Nay header mang <code>-top-4 lg:-top-6</code>,
+                là vế còn lại của phép bù mà bọc ngoài đã làm với <code>-m-4 lg:-m-6</code>.<br />
+                <b>Phòng ngủ nay là dòng THẬT ở danh sách không gian, tự đồng bộ</b> theo phần Thành
+                viên gia đình (Haan chốt 07/09 giữa ba phương án). Số lượng vẫn do gia đình quyết
+                &mdash; đồng bộ chạy MỘT chiều và dòng phòng ngủ không có nút gỡ, vì bấm xong nó
+                quay lại ngay ở lần đồng bộ kế tiếp. Cái được: ghim tầng, diện tích và tiện ích cho
+                TỪNG phòng, và danh sách không gian đọc ra đủ bức tranh. Ghép dòng cũ với dòng mới
+                theo thứ tự, ưu tiên trùng cả loại lẫn &laquo;khép kín&raquo;, nên thêm một đứa con
+                không làm mất diện tích đã gõ cho các phòng trước
+                (<code>shared/src/design/bedroom-sync.ts</code>, 11 bài canh).<br />
+                ⚠️ <b>Kéo theo một lỗi engine phải vá, và nó hỏng im lặng.</b> Dòng phòng ngủ khai
+                tường minh GHI ĐÈ lên một phòng suy từ gia đình &mdash; bản trước chỉ ĐẾM số dòng
+                rồi bỏ qua phòng bị thay, nên bỏ luôn khối <code>wc</code> khép kín gắn kèm. Không
+                lỗi, không cảnh báo, chỉ là căn nhà thiếu một khu vệ sinh. Vô hại chừng nào hiếm ai
+                khai tường minh phòng ngủ; từ nay biểu mẫu sinh MỌI dòng phòng ngủ nên nó sẽ đúng ở
+                mọi hồ sơ. Nay engine giữ lại chính dòng đó: <code>ensuite</code> của dòng thắng, và
+                dòng không nói gì &mdash; đầu bài cũ &mdash; thì rơi về câu trả lời của nhóm thành
+                viên. Ba bài canh cả ba nhánh.<br />
+                <b>Cột &laquo;Tiện ích bổ sung (tuỳ chọn)&raquo;</b> cho từng phòng
+                (<code>required_spaces[].amenities</code>, hợp đồng lên <code>1.3.0</code>). Engine
+                KHÔNG đọc &mdash; cố ý: một cái bồn tắm không phải một không gian, và bịa ra một mã
+                phòng cho nó là đưa nó vào cây chia không gian. Nó đi theo artifact và hiện ở chế độ
+                xem, để yêu cầu của khách không rơi lại vào Zalo.<br />
+                Bảng đổi từ <code>flex-wrap</code> sang MỘT lưới cho cả bảng: cột thứ tư đẩy tổng bề
+                rộng vượt cột nội dung nên mỗi dòng gãy làm hai, còn mỗi-dòng-một-lưới thì cột cuối
+                co theo nội dung của chính dòng đó và cả bảng lệch bậc thang.<br />
+                <b>Ô &laquo;Không gian học tập&raquo;</b> cho nhu cầu riêng của các con &mdash; mã
+                <code>study_area</code>, tách khỏi <code>study</code> (phòng làm việc của người lớn)
+                vì gộp lại thì hai ô chọn cùng sinh một phòng, tức ô thứ hai không có tác dụng. Đủ
+                bốn nơi bắt buộc như hai mã hôm nay.<br />
+                <b>Xuất PDF biên bản khảo sát</b>, có cả ở chế độ chỉ xem &mdash; người cần mang
+                biên bản ra công trường thường đúng là người không còn quyền sửa. Dùng lại cửa sổ in
+                của BC-06, không nhúng thư viện PDF (font của chúng thiếu glyph tiếng Việt có dấu).
+                Kèm một chỗ phải sửa ở hạ tầng in: <code>window.onload</code> của tài liệu dựng bằng
+                <code>document.write</code> KHÔNG bảo đảm ảnh đã về, nên in ngay lúc onload cho ra
+                một tệp toàn khung ảnh trống &mdash; nay chờ ảnh, có hạn 15 giây, và ảnh chưa ký
+                được đường dẫn thì NÓI RA số lượng chứ không im lặng in thiếu.<br />
+                Kiểm: <code>tsc</code> sạch &middot; prettier sạch &middot;
+                <code>contracts:check</code> khớp &middot; <b>315 test web</b> +
+                <b>562 test logic</b> xanh (thêm 20 test mới) &middot; soát tận mắt trên
+                <code>NVO-TK-2026-2737</code>: đổi số con 2&rarr;4 thì danh sách không gian mọc thêm
+                đúng hai dòng và giữ nguyên 22 m² của phòng ngủ chính; bản in khảo sát ra đủ số đo,
+                người khảo sát và ghi chú bằng tiếng Việt có dấu.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">07/09</td>
+              <td>Soát bằng mắt màn hình Đầu bài &mdash; bốn phản hồi của Haan</td>
+              <td class="xs">
+                <b>Bấm vào khoảng trống làm mất một lựa chọn đã chọn.</b> Nguyên nhân nằm ở HTML chứ
+                không ở mã xử lý sự kiện: nhãn trường bọc ô nhập trong <code>&lt;label&gt;</code>,
+                và trình duyệt chuyển mọi cú bấm rơi vào khoảng trống của
+                <code>&lt;label&gt;</code> &mdash; kể cả chữ nhãn và dòng chú thích &mdash; sang
+                phần tử nhập ĐẦU TIÊN bên trong. Với một ô chữ đó là hành vi mong muốn; với một HÀNG
+                nút chọn thì nó là bấm hộ nút đầu tiên. Lỗi hỏng im lặng: không có gì báo, chỉ là
+                lựa chọn tự tắt. Nay <code>Field</code> có chế độ <code>group</code> dựng
+                <code>&lt;fieldset&gt;</code> + <code>&lt;legend&gt;</code> &mdash; đúng phần tử
+                HTML dành cho &laquo;một nhãn chung cho nhiều ô&raquo;, và không có hành vi chuyển
+                cú bấm nào. Tám loại điều khiển nhiều ô của biểu mẫu Đầu bài đã chuyển.<br />
+                ⚠️ <b>Mới vá cho biểu mẫu Đầu bài.</b> <code>Field</code> dùng ở 374 chỗ khắp 12
+                module; chỗ nào bọc nhiều ô cũng dính lỗi này. Chưa rà &mdash; xem mục Vướng mắc.<br />
+                <b>Đường quay lại &laquo;&larr; Tổng quan&raquo;</b> là lối ra DUY NHẤT của màn hình
+                con (thanh tab bị ẩn khi ở đó), nhưng đang vẽ bằng cỡ chữ nhỏ nhất và màu chữ phụ
+                &mdash; mờ hơn mọi thứ khác trên trang. Nay là nút có viền và nền, cỡ chữ thân bài;
+                tiêu đề màn hình con lên 18px.<br />
+                <b>Ba trường KHÔNG bắt buộc nói ra là không bắt buộc</b>: Khoảng lùi theo quy hoạch
+                &middot; Mật độ xây dựng tối đa &middot; Hồ sơ pháp lý khu đất. Cờ
+                <code>optional</code> nằm ở <code>brief-form.json</code> chứ không ở mã, và danh
+                sách &laquo;Còn thiếu&raquo; cũng mang chữ &laquo;(tùy chọn)&raquo; &mdash; hai chỗ
+                trên cùng màn hình nói ngược nhau thì cái ghi &laquo;tùy chọn&raquo; là cái bị bỏ
+                qua. Điểm đầy đủ KHÔNG đổi: để trống vẫn kéo điểm xuống, vì đầu bài đủ hơn thì
+                phương án tốt hơn.<br />
+                <b>Ô &laquo;Tủ đồ, kho riêng&raquo; tách làm hai</b>: <code>closet</code> &laquo;Tủ
+                đồ&raquo; và <code>dressing_room</code> &laquo;Phòng thay đồ riêng&raquo;. Kho là
+                không gian CHUNG của cả nhà nên khai ở &laquo;Không gian bắt buộc có&raquo;, không
+                phải ở nhu cầu riêng của một nhóm thành viên. Hai mã mới đi đủ bốn nơi bắt buộc:
+                <code>kb/room_vocabulary.yaml</code> (từ vựng + bí danh + nhóm
+                <code>service</code>), <code>kb/space_norms.yaml</code> (chuẩn diện tích &mdash;
+                thiếu thì phòng lọt vào chương trình với diện tích bịa ra),
+                <code>rules/base/10-dimensions.yaml</code> (bề rộng tối thiểu &mdash; thiếu thì
+                phòng đi qua cả engine mà chưa từng bị kiểm quy chuẩn nào) và
+                <code>kb/program_plausibility.yaml</code>. Mã cũ <code>storage</code> giữ lại ở dạng
+                <code>retired</code>: bản đã xác nhận là BẤT BIẾN nên mã đó còn nằm đó mãi, và gỡ
+                nhãn đi thì màn hình in <code>storage</code> ra giữa một trang tiếng Việt.<br />
+                Lộ ra khi soát tận mắt: phép soát mâu thuẫn
+                <code>nhu_cau_thieu_khong_gian</code> nổ ngay khi vừa chọn hai mã mới, và câu cảnh
+                báo in nguyên <code>dressing_room</code>. Cả hai cùng một gốc &mdash; phép kiểm đòi
+                mọi nhu cầu riêng phải có mặt ở &laquo;Không gian bắt buộc có&raquo;, nhưng danh
+                sách đó là mức CÔNG TRÌNH và không có khái niệm &laquo;của ai&raquo;, nên với một
+                phòng thay đồ RIÊNG của một phòng ngủ thì lời khuyên đó sai. Nay phép kiểm chỉ soi
+                những mã đồng thời là không gian mức công trình &mdash; khép luôn đường rò mã máy,
+                vì hàm tra nhãn cũng chỉ tra trong đúng danh sách đó.<br />
+                Kiểm: <code>tsc</code> sạch &middot; prettier sạch &middot;
+                <code>contracts:check</code> khớp &middot; <b>306 test web</b> +
+                <b>323 test logic</b> xanh (thêm 5 test mới) &middot; soát tận mắt trên
+                <code>NVO-TK-2026-2737</code>: bấm nhãn, chú thích và phần trống của hàng nút đều
+                không đổi lựa chọn nào.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">07/09</td>
+              <td>Lớp 3a: khung hành lang ngang cho lô rộng &mdash; ba phương án hết vô nghiệm</td>
+              <td class="xs">
+                Haan báo &laquo;lỗi khi sinh phương án&raquo;: cả ba phương án của
+                <code>NVO-TK-2026-2737</code> trả về vô nghiệm, tập ràng buộc mâu thuẫn trỏ vào
+                <code>room_min_dimension_bedroom</code> và <code>corridor_min_width</code>.<br />
+                <b>Nguyên nhân là một giới hạn CỨNG của khung nhà ống, vốn có sẵn từ đầu.</b> Khung
+                đó xếp mỗi phòng thành một dải ngang trải hết bề rộng phần sau, nên một dải muốn sâu
+                tối thiểu <i>m</i> mét thì phòng trong nó phải rộng
+                <i>bề rộng phần sau &times; m</i>. Trên lô 15 m, phần sau rộng ~13 m &rarr; một
+                phòng ngủ phải hơn <b>31 m²</b> mới đứng nổi thành dải, trong khi phòng ngủ thật
+                rộng 20 m². Mọi biệt thự mặt tiền rộng đều vô nghiệm.<br />
+                <b>Vì sao tới hôm nay mới lộ:</b> chương trình không gian CŨ để hành lang nuốt 40 %
+                mặt sàn (đo trên chính hồ sơ đó: hành lang 122 m² / 300 m²), và chính phần thừa đó
+                cho bộ giải đủ chỗ xoay. Sửa xong Lớp 2 hôm qua thì giới hạn của Lớp 3a lộ ra ngay
+                &mdash; không phải lỗi mới, mà là lỗi cũ hết chỗ nấp.<br />
+                <b>Đã làm:</b> khung mẫu thứ hai &mdash; hành lang chạy NGANG giữa nhà, phòng bám
+                hai bên (<code>crossTree</code>). Mỗi phòng rộng <i>diện tích / chiều sâu dải</i>,
+                mà dải chỉ sâu non nửa nhà, nên phòng nhỏ vẫn đứng được. Hai vị từ khó nhất vẫn thoả
+                THEO CẤU TRÚC: mọi phòng giáp hành lang ở một cạnh dài; dải trước chạm mặt trước,
+                dải sau chạm mặt sau nên không phòng nào cần giếng trời &mdash; đổi lại khung này
+                đòi cả hai mặt thoáng, và đó là điều kiện để được chọn.<br />
+                <b>Chọn khung là phép đo, không phải phỏng đoán</b> (<code>chooseFrame</code>): giữ
+                khung nhà ống trừ khi nó không đặt nổi phòng ở một tầng nào đó. Quyết định MỘT lần
+                cho cả công trình &mdash; hai tầng chia khác nhau thì không dùng chung được đường
+                cắt kết cấu nào và lõi thang hết đường thẳng hàng. Cạnh tối thiểu đọc từ
+                <code>rules/</code> qua <code>RuleCatalogue.minSideOf</code>, và
+                <b>chỉ mức chặn</b>: tính cả mức cảnh báo thì một ngưỡng &laquo;kinh nghiệm NVG chưa
+                ai soát&raquo; loại mất đúng cái khung duy nhất giải được.<br />
+                <b>Ba việc đi kèm.</b> (a) <code>ratio_hint</code> từ trường CHẾT thành gợi ý nghiệm
+                thật: bộ giải chưa từng đọc nó: nay <code>AddHint</code> trên từng đường cắt, có hai
+                bài kiểm thử &mdash; một khoá &laquo;có tác dụng&raquo;, một khoá &laquo;gợi ý vô lý
+                vẫn không đẩy phòng xuống dưới tối thiểu&raquo;. (b) Nhãn phương án đọc TỪ artifact
+                chứ không dựng lại từ bảng biến thể tĩnh: khung đã đổi mà nhãn vẫn ghi &laquo;hành
+                lang bên trái&raquo; là ghi sai lên đúng chỗ người dùng dựa vào để phân biệt ba
+                phương án. (c) Đường chạy Workflow nhận cùng gói quy tắc và cùng mặt sàn
+                (<code>plateFor</code>, một phép tính dùng chung) &mdash; nếu không thì cùng một đầu
+                bài, nút bấm giải được còn đường ống thì không.<br />
+                <b>Đo lại trên chính hồ sơ đó:</b> 3/3 phương án khả thi (trước: 0/3), 34/35 quy tắc
+                đạt, hành lang 13,3 % mặt sàn (trước: 40 %). Tỉ lệ chia hai dải chốt ở 0,6 bằng đo
+                hàm mục tiêu: 0,40&rarr;12482 · 0,45&rarr;13290 · 0,50&rarr;8750 · 0,55&rarr;10466 ·
+                <b>0,60&rarr;2770</b> · 0,65&rarr;9846. Và vòng chia phải &laquo;đủ thì thôi&raquo;
+                chứ không nhặt tiếp phòng nhỏ cho vừa ngân sách &mdash; một khu vệ sinh 4 m² lọt vào
+                dải sâu 5,7 m bị bộ giải thổi lên <b>13,7 m²</b>, to hơn phòng ăn bên cạnh.<br />
+                <b>Còn lại:</b> chất lượng ba phương án chưa đều &mdash; phương án B đẹp (bếp
+                12&ndash;17 m², khách 62 m², chỗ để xe 19,7 m²), A và C vẫn thổi chỗ để xe lên
+                32&ndash;45 m². Hai dải dùng chung đường cắt kết cấu giữa các tầng nên không thể
+                chiều hết mọi diện tích mong muốn; đây là việc tiếp theo, không phải lỗi chặn.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">07/09</td>
+              <td>
+                Chương trình không gian: chia ngân sách sàn thay cho bảng số cố định, cộng Lớp 2a
+              </td>
+              <td class="xs">
+                Haan báo &laquo;biệt thự lớn mà phòng bếp 6 m² nghe rất vô lý&raquo;. Đúng, và
+                <b>6 chính là <code>kitchen.min_m2</code></b> &mdash; bếp không được tính ra 6, nó
+                bị CẮT về tối thiểu quy chuẩn. Ba tầng nguyên nhân, dựng bộ đo bảy đầu bài đại diện
+                mới tách được ra: <b>mốc 20 lỗi, sau khi sửa 0</b>.<br />
+                <b>(1) Một hồi quy do chính đợt sửa hôm trước gây ra.</b> Danh sách bắt buộc của
+                loại hình chạy trước, rồi vòng &laquo;một dòng một phòng&raquo; thêm lần nữa &mdash;
+                mọi biệt thự khai <code>kitchen</code> nhận HAI bếp và HAI phòng ăn. Không lỗi,
+                không cảnh báo: chỉ là ~30 m² nhu cầu ảo cộng vào một tầng, đủ để bước ép vừa sàn
+                cắt mọi phòng khác về tối thiểu.<br />
+                <b>(2) Diện tích không co giãn theo quy mô.</b> Bản cũ lấy <code>target_m2</code>
+                nhân một hệ số theo DẢI BỀ RỘNG lô, mà dải rộng nhất chỉ 1,3 lần &mdash; nên biệt
+                thự mặt tiền 15 m và nhà phố mặt tiền 9 m nhận cùng một bộ số. Nay là
+                <b>chia ngân sách sàn</b>: mọi phòng nhận tối thiểu trước, phần dư chia theo
+                <code>weight</code> và dâng dần, phòng nào chạm trần nghề thì rút ra và phần của nó
+                chia lại. Cùng một bảng chuẩn cho ra bếp 10 m² ở nhà phố 90 m²/tầng và 17 m² ở biệt
+                thự 180 m²/tầng, không cần hệ số nhân nào.<br />
+                <b>(3) Sàn xây được là một GIỚI HẠN, không phải một yêu cầu.</b> Nhà vườn 20 × 30 m
+                cho sáu người xếp 224 m² trên sàn 360 m² &mdash; 38 % mặt sàn không thuộc phòng nào,
+                mà bộ giải thì chia HẾT mặt sàn. Nay Lớp 2 chọn cỡ sàn vừa đủ (hai vế: chia đều cho
+                số tầng, và không nhỏ hơn tầng nặng nhất &mdash; bỏ vế nào cũng hỏng, đã đo cả hai),
+                và <b>Container thu hình bao theo con số đó</b>, thu từ phía sau như trần mật độ,
+                <b>chỉ thu chứ không bao giờ nới</b>. Phần đất chưa dùng hiện thành một con số riêng
+                (<code>buildable_area_m2</code>) &mdash; một quyết định không nhìn thấy được thì
+                không kiểm lại được.<br />
+                <b>Lớp 2a &mdash; AI vào đúng chỗ nó giỏi.</b> Hợp đồng <code>ProgramIntent</code>
+                <b>không có một trường nào mang đơn vị mét vuông</b>: mô hình chỉ chọn
+                <code>generous / normal / modest</code> cho từng loại phòng, và ba bậc đó đáng bao
+                nhiêu là do <code>kb/space_norms.yaml</code> quyết. Nguyên tắc bất biến 2 là một lý
+                do; lý do thứ hai thực tế hơn &mdash; khoá chính của <code>design_artifact</code> là
+                mã băm nội dung, nên số do mô hình sinh làm &laquo;cùng đầu vào → cùng
+                artifact&raquo; mất nghĩa.<br />
+                Đầu vào là <b>bản tóm tắt đã ẩn danh</b> dựng bằng DANH SÁCH CHO PHÉP (loại hình, số
+                tầng, diện tích sàn làm tròn 10 m², số phòng ngủ, số thế hệ, phong cách, mã ưu tiên)
+                &mdash; không tên, không ngân sách, không kích thước thật của thửa, và không một chữ
+                tự do nào của khách. Dựng bằng danh sách cho phép chứ không phải bằng cách bỏ bớt:
+                &laquo;bỏ bớt&raquo; nghĩa là một trường mới thêm vào hợp đồng đầu bài sẽ tự động đi
+                ra mạng cho tới khi có người nhớ ra. Cùng lý lẽ đã làm
+                <code>program/needs.ts</code> cố ý KHÔNG gọi mô hình.<br />
+                <b>Lời gọi thật lộ ngay một lỗ:</b> mô hình trả về <code>bedroom</code> và
+                <code>master_bedroom</code> trong <code>add_spaces</code> &mdash; hai mã LUÔN suy từ
+                gia đình. Đường <code>extraSpaces</code> sẽ cộng thêm một phòng ngủ không ai đặt, và
+                lỗ này có sẵn từ trước cho cả đường quy nhãn chữ tự do. Đã chặn ở
+                <code>addSingle</code>.<br />
+                <b>Tầng soát thứ ba: <code>kb/program_plausibility.yaml</code>.</b> Quy chuẩn đúng
+                và chuẩn nghề đúng vẫn cho ra kết quả vô lý được &mdash; bếp 6 m² không vi phạm gì
+                cả, nó chỉ vô lý khi đặt cạnh căn nhà 360 m². Cái sai nằm ở QUAN HỆ giữa các con số,
+                thứ không tầng nào ở trên nhìn được. Một bản thực thi, hai nơi dùng: kiểm thử hồi
+                quy, và cảnh báo hiện thẳng trên màn hình.<br />
+                <b>Hàng rào quan trọng nhất</b>: bài canh chạy lại cả bảy đầu bài với ý đồ cực đoan
+                (mọi phòng cùng <code>generous</code>, rồi cùng <code>modest</code>) và đòi kết quả
+                vẫn hợp lý. Phép kiểm không hỏi &laquo;mô hình có trả lời hợp lý không&raquo;
+                &mdash; nó hỏi <b>trả lời thế nào thì kết quả cũng phải hợp lý</b>.<br />
+                Đo trên hồ sơ thật của Haan: bếp <b>6 → 17,2 m²</b>, phòng khách
+                <b>28,6 → 50 m²</b>, giao thông tầng một thôi bị cắt về 3 m². Đề xuất của AI hiện
+                nguyên văn trên màn hình kèm câu nói rõ ranh giới. Kiểm thử: 302 web · 532 logic ·
+                218 pytest · 5 bài đầu-cuối chạy trên Container và kho artifact thật.<br />
+                ⚠️ <b>Còn mở:</b> lời gọi Lớp 2a mất 10–15 giây, đã nhớ lại theo bản tóm tắt trong
+                cùng isolate nhưng lần đầu vẫn chờ. Và cạnh lineage chỉ lưu
+                <code>params_hash</code>, không lưu nguyên văn tham số &mdash; nên đề xuất của AI
+                đọc lại được trên màn hình chứ chưa đọc lại được từ CSDL. Đúc
+                <code>program_intent</code> thành artifact riêng là cách gỡ, chưa làm.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">07/09</td>
+              <td>Số tầng dẫn dắt cả biểu mẫu; phòng ngủ khai đúng MỘT nơi</td>
+              <td class="xs">
+                <b>Hai thang đo cho một khái niệm.</b> Danh sách không gian ghim theo SỐ tầng
+                (&laquo;Tầng 1&raquo;), phần gia đình lại chọn &laquo;tầng thấp / tầng giữa / tầng
+                trên cùng&raquo; &mdash; cùng một biểu mẫu bắt người khai dịch qua lại, và
+                &laquo;tầng giữa&raquo; của một căn hai tầng thì không trỏ vào tầng nào. Nay mọi ô
+                chọn tầng dựng TỪ <code>floors</code>: khai 2 tầng thì chỉ có Tầng 1 và Tầng 2, khai
+                1 tầng thì không hỏi nữa. Thêm <code>family[].floor</code> vào hợp đồng;
+                <code>floor_pref</code> giữ lại CHỈ để đọc đầu bài cũ, và <code>floor</code> thắng
+                khi có cả hai. Ghim vượt số tầng (hạ tầng sau khi đã khai) bị bỏ kèm cảnh báo ở cả
+                Lớp 2 lẫn phép soát mâu thuẫn, và lựa chọn lệch dải vẫn hiện ra để sửa được &mdash;
+                bỏ nó đi là âm thầm xoá một câu trả lời người dùng chưa hề đụng tới.<br />
+                <b>Hai ô chọn nữa đang nói dối.</b> Phần gia đình có chip &laquo;Phòng ngủ
+                riêng&raquo; và &laquo;Phòng ngủ chính&raquo; ghi vào <code>needs</code>, nhưng mọi
+                nhóm thành viên ĐÃ tự có phòng ngủ suy từ vai trò và số người &mdash; cùng loại lỗi
+                với chip <code>"wc"</code> hôm qua. Haan báo đúng triệu chứng: tích năm nhóm mà danh
+                sách không gian vẫn một dòng &laquo;Phòng ngủ&raquo;. Nay phòng ngủ khai đúng MỘT
+                nơi (phần gia đình), hai mã đó rời danh sách đề xuất, và mỗi dòng thành viên nói
+                thẳng nó sinh ra mấy phòng: &laquo;Con &middot; 2 người &rarr; Cần 2 phòng
+                ngủ&raquo; so với &laquo;Ông bà &middot; 2 người &rarr; Cần 1 phòng ngủ&raquo;.<br />
+                Phép tính đó đến từ <code>kb/space_norms.yaml</code> qua một bản SINH
+                (<code>shared/src/design/kb.generated.ts</code>), không phải bản chép tay: chép tay
+                thì lệch vào đúng ngày ai đó sửa YAML, còn gọi Worker lúc mở biểu mẫu thì buộc Đầu
+                bài phải có dịch vụ thiết kế mới điền được, trong khi cả phần còn lại của nó chạy
+                thẳng trên Supabase. <code>contracts:check</code> canh lệch y như với
+                <code>contracts/</code>.<br />
+                <b>Phép soát &laquo;thiếu phòng ngủ&raquo; đã đổi câu hỏi.</b> Nó hỏi danh sách
+                không gian, nên sau thay đổi trên thì MỌI đầu bài mới đều dính một lỗi &laquo;nghiêm
+                trọng&raquo; ngay khi vừa khai xong gia đình &mdash; một cảnh báo luôn nổ là một
+                cảnh báo bị bỏ qua, kể cả lúc nó đúng. Nay hỏi &laquo;đã khai người ở thì có suy ra
+                được phòng ngủ nào không&raquo;, dùng chung phép tính với Lớp 2.<br />
+                Ba chỗ mã máy lọt ra màn hình dọn theo: cảnh báo bỏ ghim của Lớp 2 in
+                <code>Để xe</code> thay <code>garage</code>; dòng tóm tắt thành viên thôi in
+                <code>bedroom</code> (đầu bài đã lưu còn mang mã đó trong <code>needs</code>); và mã
+                đã ngừng đề xuất vẫn tra được nhãn nên dòng cũ không hiện
+                <code>master_bedroom</code>.<br />
+                <b>Danh sách không gian gọn lại</b>: nút &laquo;Thêm một phòng nữa&raquo; lặp trên
+                từng dòng &mdash; mười ba dòng là mười ba nút giống hệt nhau &mdash; thay bằng một ô
+                &laquo;Thêm phòng&raquo; ở CUỐI. Ô diện tích trước đó chỉ là một khung trống cạnh ô
+                tầng, không ai đoán ra dùng để làm gì; nay có tiêu đề cột và đơn vị m&sup2;.<br />
+                <b>Soát lại cùng ngày &mdash; ba chỗ Haan bắt được.</b> (1) Ô bật/tắt &laquo;Phòng
+                ngủ khép kín&raquo; nằm lẫn giữa các ô nhu cầu chọn-nhiều nên đọc lên thành một LỜI
+                KHẲNG ĐỊNH, không phải một lựa chọn: không thấy phương án còn lại đâu. Haan hỏi đúng
+                câu đó &mdash; &laquo;người giúp việc đâu cần phòng ngủ khép kín?&raquo;. Nay là ô
+                chọn hai vế &laquo;Phòng ngủ riêng / Phòng ngủ khép kín&raquo;, đặt ở hàng trên cùng
+                cạnh ô tầng vì nó là thuộc tính của PHÒNG NGỦ, khác hẳn hàng dưới nơi mỗi ô là một
+                không gian tăng thêm. Dòng nào để mặc định nay đọc rõ ra là &laquo;Phòng ngủ
+                riêng&raquo;. Vì sao là ô chọn chứ không phải hai ô viên thuốc: hàng dưới toàn ô
+                viên thuốc chọn-nhiều, nên một cặp loại-trừ vẽ y hệt chúng sẽ đọc nhầm thành
+                &laquo;chọn được cả hai&raquo; &mdash; đúng cái nhầm vừa phải sửa.<br />
+                &mdash;
+                <i
+                  >Bản đầu của lượt sửa này dùng cặp chữ &laquo;Vệ sinh chung / Vệ sinh khép
+                  kín&raquo;, và đó là đọc sai ý: Haan cần hai LỰA CHỌN cùng có mặt, không phải một
+                  cặp từ khác.</i
+                >
+                (2) Mười ba ô diện tích trống xếp thành cột vẫn trông như mười ba chỗ phải điền dù
+                câu hướng dẫn ngay trên nói là không bắt buộc &mdash; thêm chữ mờ
+                <code>tự tính</code> trong chính ô đó, là chỗ người dùng thật sự nhìn, và nhãn cột
+                gộp thành một cụm <b>Diện tích mong muốn (tuỳ chọn)</b> thay vì một chú thích rời
+                trôi sang bên phải. (3) <code>BRIEF_SCHEMA_VERSION</code> lên <b>1.2.0</b> cho cả
+                hai đợt: chỉ thêm trường tuỳ chọn nên tăng số phụ, bản ghi cũ đọc nguyên vẹn.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">06/09</td>
+              <td>Đầu bài: phòng ngủ khép kín, mỗi dòng một phòng, chín phong cách</td>
+              <td class="xs">
+                <b>Ô đang nói dối.</b> Phần Thành viên gia đình có chip &laquo;Khu vệ sinh
+                riêng&raquo; ghi chuỗi <code>"wc"</code> vào <code>needs</code> &mdash; mà
+                <code>wc</code> thuộc nhóm Lớp 2 tự suy nên <code>collectRequests</code> bỏ qua hoàn
+                toàn: chọn hay không đều ra cùng một chương trình. Nay khai bằng
+                <code>family[].ensuite</code>, và Lớp 2 sinh một <code>wc</code> mang
+                <code>enclosed_in</code> trỏ về phòng mẹ, cùng tầng phòng mẹ, KHÔNG tính vào định
+                mức wc chung (đếm hai lần thì căn nhà thừa đúng bấy nhiêu nhà vệ sinh mà không ai
+                đặt). Cây bố cục lồng nó thành lát cắt con trong ô phòng ngủ, và bộ giải coi
+                <code>requires_access</code> là thoả khi nó kề phòng MẸ &mdash; thiếu vế đó thì mọi
+                phòng khép kín đều vô nghiệm, vì không chạm hành lang nào chính là điều làm nó khép
+                kín. Đầu bài cũ khai bằng chuỗi vẫn đọc đúng, không phải di trú.<br />
+                <b>Một dòng = một PHÒNG</b>, không còn là một LOẠI. Hồ sơ biệt thự sinh bảy phòng
+                ngủ nhưng trước đây chỉ ghim được một dòng &laquo;Phòng ngủ&raquo;, và mọi thứ khai
+                ở đó áp cho cả bảy. Nay lặp mã được, mỗi dòng có tầng và
+                <b>diện tích mong muốn</b> riêng. Diện tích là nguyện vọng: nó thắng chuẩn nghề và
+                thống kê, nhưng KHÔNG xuống dưới tối thiểu quy chuẩn và vẫn bị
+                <code>fitToFloors</code> cắt khi tầng không đủ chỗ. Dòng khai tường minh GHI ĐÈ phần
+                suy từ gia đình chứ không cộng thêm &mdash; nếu không, ghim một phòng ngủ xuống tầng
+                một sẽ làm căn nhà mọc thêm phòng thứ tám.<br />
+                <b>Phong cách 3 &rarr; 9</b>: thêm Mái Thái, Tối giản, Nhiệt đới, Địa Trung Hải, Cổ
+                điển, Bắc Âu. Mỗi mã có một lời dẫn riêng ở
+                <code>kb/render_prompts.yaml</code> &mdash; thêm mã mà quên lời dẫn thì tuyến phối
+                cảnh lặng lẽ lùi về Hiện đại và khách nhận ảnh không đúng thứ vừa chọn.<br />
+                Hai chỗ mã máy lọt ra màn hình đã dọn theo: <code>aria-label</code> ô ghim tầng đổi
+                từ <code>Tầng &mdash; garage</code> sang <code>Tầng &mdash; Chỗ để xe</code> (đó là
+                chữ trình đọc màn hình đọc lên), và chuỗi <code>wc</code> cũ thôi hiện trong dòng
+                tóm tắt thành viên.
+              </td>
+            </tr>
             <tr>
               <td class="num">06/09</td>
               <td>Phương án B vô nghiệm ở mọi lần sinh &mdash; giếng trời đứng chắn hành lang</td>
@@ -989,6 +1712,158 @@
           </thead>
           <tbody>
             <tr>
+              <td class="num">V-24</td>
+              <td>
+                <b
+                  >Bốn trong năm đề biệt thự / nhà vườn của bộ đề KHÔNG giải được &mdash; và chuyện
+                  đó chưa ai biết vì chưa đề biệt thự nào từng đi qua bộ giải thật.</b
+                >
+                Đo ngày 07/09/2026 bằng bài tiền kiểm mới
+                (<code>workers/src/design/__tests__/villa-solve-preflight.test.ts</code>, cần
+                <code>DESIGN_COMPUTE_URL</code>): chỉ &laquo;Biệt thự 12&times;18, 3 tầng&raquo; ra
+                <code>ok</code>; bốn đề còn lại vô nghiệm,
+                <b>y hệt nhau trước và sau khi sửa V-23</b> &mdash; tức đây KHÔNG phải hồi quy của
+                đợt sửa, mà là hiện trạng.<br />
+                Vì sao lọt lưới: <code>space-program.test.ts</code> chỉ kiểm Lớp 2;
+                <code>floor-plan-variants.test.ts</code> dùng Container GIẢ; còn
+                <code>pipeline-e2e</code> chạy bộ giải thật thì chỉ có một đề
+                <b>nhà phố</b> 5&times;18. Không bài nào cho biệt thự đi qua CP-SAT.<br />
+                Nghi nguyên nhân ở khung mẫu: cả <code>tube</code> lẫn
+                <code>cross</code> (<code>layout/intent.ts</code>) đều dựng cho lô HẸP&ndash;SÂU của
+                nhà phố, trong khi mặt sàn biệt thự là RỘNG&ndash;NÔNG (đề 15&times;20 ra tấm 15
+                &times; 11,5 m sau khi trừ lùi và trần mật độ). Tập mâu thuẫn ủng hộ:
+                <code>corridor_min_width</code> trên các lá <code>void</code>,
+                <code>room_min_dimension_bedroom</code>, và một loạt <code>min_area</code> &mdash;
+                hình dạng của việc nhồi quá nhiều dải vào một tấm nông.
+              </td>
+              <td class="xs">
+                Toàn bộ nhánh biệt thự của Lớp 3b. Và chặn cả việc nối &laquo;Tổ chức khối
+                nhà&raquo; vào engine: nối sáu trường vào một bộ giải chưa giải nổi biệt thự thì
+                không có gì để nhìn thấy kết quả.
+              </td>
+              <td class="xs">
+                Khung mẫu <code>villa</code> cho tấm rộng&ndash;nông (đợt 4 giai đoạn 2 của kế hoạch
+                07/09). Chẩn <b>V-12 trước</b>: nó cũng là cặp <code>corridor_min_width</code> + lối
+                vào trên đường mã đối xứng gương, và làm khung biệt thự trước khi chẩn thì không
+                phân biệt được lỗi mới với lỗi cũ.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">V-23</td>
+              <td>
+                <b
+                  >Loại hình công trình chưa bao giờ được gửi sang bộ giải &mdash; mọi biệt thự đang
+                  được giải bằng bộ quy tắc NHÀ PHỐ.</b
+                >
+                <code>SolveRequest</code> (<code>workers/src/design/compute-backend.ts</code>) không
+                có trường <code>building_type</code>, nên
+                <code>compute/src/design_compute/service.py:102</code> rơi về mặc định
+                <code>&quot;nha_pho&quot;</code>. Không lỗi, không cảnh báo &mdash; chỉ ra một mặt
+                bằng khác.<br />
+                Nặng hơn chuyện thiếu: biệt thự vừa <b>mất</b> <code>setback_front_villa</code> (3,0
+                m) và <code>max_density_villa</code> (0,6), vừa <b>nhận nhầm</b>
+                <code>setback_front</code>/<code>setback_back</code> = 0 và
+                <code>max_density_small_lot</code> = 1,0 của nhà phố &mdash; tức là được phép phủ
+                kín lô. Lớp 2 thì áp đúng, nên hai lớp đang bất đồng về cùng một khu đất.<br />
+                Phía Python đã nhận sẵn tham số (<code>evaluate.py:92</code>,
+                <code>model.py:343/356</code>); chỉ thiếu bên gửi.
+              </td>
+              <td class="xs">
+                Toàn bộ nhánh biệt thự của Lớp 3b, và mọi việc nối &laquo;Tổ chức khối nhà&raquo;
+                vào engine &mdash; không có nó thì sáu trường khối nhà không có gì để tác động lên.
+              </td>
+              <td class="xs">
+                Thêm <code>building_type</code> vào <code>SolveRequest</code> và truyền từ
+                <code>solveFloorPlan</code>. Trước khi gộp phải chạy trọn bộ biệt thự trong
+                <code>program-corpus.ts</code> qua bộ giải: khoảng lùi 3 m cộng mật độ 0,6 có thể
+                làm lô đang chạy được thành vô nghiệm.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">V-22</td>
+              <td>
+                <b
+                  >Mặt đứng được phân loại theo ranh THỬA ĐẤT, không theo hình bao công trình
+                  &mdash; biệt thự có khoảng lùi thì mất sạch cửa.</b
+                >
+                <code>buildArchModel</code> (<code>workers/src/design/workflows/steps.ts:200</code>)
+                so toạ độ tường với <code>x=0</code>, <code>x=plan.site.width_m</code>,
+                <code>y=0</code>, <code>y=plan.site.depth_m</code>. Nhưng
+                <code>_footprint</code> thu khối vào theo khoảng lùi và toạ độ phòng là toạ độ TUYỆT
+                ĐỐI trong lô, nên không tường nào chạm bốn mốc đó. Kết quả:
+                <code>facades[].openings</code> rỗng &mdash; không cửa sổ, không cửa đi trên tuyến
+                phối cảnh và khối ba chiều.<br />
+                Hỏng im lặng theo kiểu tệ nhất: nhà phố (lùi 0) vẫn đúng, nên soát bằng đề bài demo
+                không bao giờ thấy.
+              </td>
+              <td class="xs">
+                Phối cảnh và khối ba chiều của mọi biệt thự. Chưa lộ ra vì V-23 đang làm biệt thự
+                chạy với khoảng lùi 0 &mdash;
+                <b>sửa V-23 mà không sửa cái này thì lỗi bật ra ngay</b>.
+              </td>
+              <td class="xs">
+                Thêm <code>footprint</code> vào <code>contracts/floor-plan.schema.json</code> (<code
+                  >adapters.py</code
+                >
+                đã có <code>result.footprint_m</code>, chỉ không ghi ra), rồi so theo hình bao.
+                Artifact cũ chưa có thì lùi về hộp bao của tường.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">V-21</td>
+              <td>
+                <b
+                  >Hai lõi thang là vô nghiệm chắc chắn: <code>_align_cores</code> ép MỌI lõi trùng
+                  khít với lõi đầu tiên.</b
+                >
+                <code>compute/src/design_compute/solver/model.py:789</code> gom mọi phòng thuộc
+                <code>CORE_TYPES</code> rồi thêm ràng buộc bốn cạnh bằng nhau với
+                <code>cores[0]</code> &mdash; <b>kể cả hai lõi trên CÙNG một tầng</b>. Ý định đúng
+                là &laquo;lõi thang chồng đúng vị trí GIỮA CÁC TẦNG&raquo;, nhưng cách viết không
+                phân biệt liên tầng với cùng tầng.<br />
+                Hệ quả: <code>massing.cores_preferred = 2</code> &mdash; trường DUY NHẤT trong sáu
+                trường khối nhà đang có tác dụng (<code>engine.ts:482</code>) &mdash; nối thẳng vào
+                một <code>InfeasibilityReport</code> có bảo đảm.
+              </td>
+              <td class="xs">
+                <code>cores_preferred = 2</code>. Chưa ai gặp vì phần Tổ chức khối nhà chưa được nối
+                dây, nên chưa đầu bài nào đẩy giá trị 2 xuống tới bộ giải.
+              </td>
+              <td class="xs">
+                Gom lõi theo NHÓM (<code>LayoutIntent.cores[].id</code>) rồi căn trong từng nhóm;
+                giữ hành vi cũ khi không có nhóm để artifact cũ vẫn giải được. Trước mắt kẹp
+                <code>cores_preferred</code> về 1 kèm cảnh báo. Viết bài kiểm ĐỎ trước &mdash; nó là
+                tài liệu của lỗi này.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">V-20</td>
+              <td>
+                <b
+                  >Lỗi &laquo;bấm vào khoảng trống làm mất một lựa chọn&raquo; mới vá cho biểu mẫu
+                  Đầu bài, chưa rà 11 module còn lại.</b
+                >
+                Nguyên nhân nằm ở thành phần dùng chung <code>Field</code>
+                (<code>web/src/components/ui/field.tsx</code>): nó bọc ô nhập trong
+                <code>&lt;label&gt;</code>, và trình duyệt chuyển cú bấm rơi vào khoảng trống của
+                nhãn sang phần tử nhập đầu tiên bên trong. Đúng cho MỘT ô nhập, sai cho một NHÓM ô.
+                <code>Field</code> đang được dùng ở <b>374 chỗ</b>; chỗ nào bọc từ hai ô trở lên
+                (hàng nút chọn, khoảng giá hai ô, nhóm ngày từ&ndash;đến) đều đang dính.<br />
+                Đã thử và bỏ phương án &laquo;tự đoán&raquo;: <code>Field</code> không đếm được con
+                của nó mà không dựng lại cả cây React, và đoán sai theo chiều ngược lại (dùng
+                <code>fieldset</code> cho một ô chữ) thì mất luôn hành vi bấm-nhãn-để-nhập.
+              </td>
+              <td class="xs">
+                Không chặn Module Thiết kế. Chặn độ tin cậy của biểu mẫu ở 11 module nghiệp vụ
+                &mdash; lỗi này hỏng im lặng, người dùng chỉ thấy lựa chọn tự mất.
+              </td>
+              <td class="xs">
+                Rà 374 chỗ gọi, gắn <code>group</code> cho chỗ nào bọc nhiều ô. Việc cơ học nhưng
+                phải mở từng màn hình để biết, nên tách thành một đợt riêng &mdash; chờ Haan xếp thứ
+                tự so với việc đang làm.
+              </td>
+            </tr>
+            <tr>
               <td class="num">V-19</td>
               <td>
                 <b
@@ -1214,6 +2089,60 @@
                 <b>số phiên bản tài liệu đặc tả AI</b> còn lệch giữa bốn nơi.
               </td>
               <td class="num">Mốc 5 · 8</td>
+            </tr>
+            <tr>
+              <td class="num">Q-30</td>
+              <td>
+                <b>Chữ tự do của đầu bài và ghi chú khảo sát thường chứa địa chỉ.</b> Máy lọc được
+                số điện thoại, email, mã hồ sơ, tên khách; địa chỉ thì không lọc chắc được. Mặc
+                định: lọc máy + nút &laquo;Xem dữ liệu sẽ gửi&raquo; để kiến trúc sư soát; địa chỉ
+                đi qua nếu người dùng không xoá. Chấp nhận, hay bắt xoá trước khi bấm?
+              </td>
+              <td class="num">Đợt 1</td>
+            </tr>
+            <tr>
+              <td class="num">Q-31</td>
+              <td>
+                <b>Ảnh khảo sát có gửi cho AI làm ngữ cảnh không?</b> Có thể có mặt người, biển số,
+                số nhà — hạng 1. Mặc định: <b>không</b> ở đợt đầu.
+              </td>
+              <td class="num">Đợt 4</td>
+            </tr>
+            <tr>
+              <td class="num">Q-32</td>
+              <td>
+                <b>Mặt cắt lấy từ đâu?</b> Container chưa có tờ mặt cắt. Mặc định: ảnh minh hoạ từ
+                dữ liệu tầng, cao độ, thang (nới bất biến #1, nhãn riêng). Hay chờ tờ mặt cắt thật
+                (việc riêng, khoảng ba ngày)?
+              </td>
+              <td class="num">Đợt 4</td>
+            </tr>
+            <tr>
+              <td class="num">Q-33</td>
+              <td>
+                <b>Ngân sách AI mỗi tháng và hành vi khi vượt.</b> Mặc định: chỉ cảnh báo, không
+                chặn; tham số <code>design_setting.ai_monthly_budget_usd</code>.
+              </td>
+              <td class="num">Đợt 5</td>
+            </tr>
+            <tr>
+              <td class="num">Q-34</td>
+              <td>
+                <b>Bậc model mặc định của từng nhà cung cấp</b> (Claude Opus 5 hay Sonnet 5; GPT bậc
+                nào; Gemini Pro hay Flash). Sửa được trong <code>config/models.yaml</code>; mặc định
+                ban đầu chọn bậc cao để đo chất lượng. Kèm: Haan xác nhận đã đọc điều khoản không
+                huấn luyện của cả ba — căn cứ của T12.
+              </td>
+              <td class="num">Đợt 1</td>
+            </tr>
+            <tr>
+              <td class="num">Q-35</td>
+              <td>
+                <b>Giữ Pollinations trong ô chọn model ảnh?</b> Miễn phí nhưng chỉ nhận ảnh khối
+                (hạng 3), không nhận bản vẽ kích thước thật. Mặc định: giữ, và ô chọn nói rõ vì sao
+                nó mờ ở loại cần bản vẽ.
+              </td>
+              <td class="num">Đợt 4</td>
             </tr>
           </tbody>
         </table>

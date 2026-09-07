@@ -7,8 +7,12 @@
   "additionalProperties": false,
   "required": ["schema_version", "brief_ref", "spaces"],
   "properties": {
-    "schema_version": { "$ref": "#/$defs/semver" },
-    "brief_ref": { "$ref": "#/$defs/artifact_ref" },
+    "schema_version": {
+      "$ref": "#/$defs/semver"
+    },
+    "brief_ref": {
+      "$ref": "#/$defs/artifact_ref"
+    },
     "spaces": {
       "type": "array",
       "minItems": 1,
@@ -17,16 +21,48 @@
         "additionalProperties": false,
         "required": ["id", "type", "floor", "min_area_m2"],
         "properties": {
-          "id": { "$ref": "#/$defs/space_id" },
-          "type": { "type": "string", "minLength": 1 },
-          "floor": { "type": "integer", "minimum": 1, "maximum": 12 },
-          "target_area_m2": { "type": ["number", "null"], "exclusiveMinimum": 0 },
-          "min_area_m2": { "type": "number", "exclusiveMinimum": 0 },
-          "max_area_m2": { "type": ["number", "null"], "exclusiveMinimum": 0 },
-          "priority": { "type": "integer", "minimum": 1, "description": "1 là cao nhất." },
-          "needs_daylight": { "type": "boolean" },
-          "needs_facade": { "type": "boolean" },
-          "needs_ventilation": { "type": "boolean" }
+          "id": {
+            "$ref": "#/$defs/space_id"
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1
+          },
+          "floor": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12
+          },
+          "target_area_m2": {
+            "type": ["number", "null"],
+            "exclusiveMinimum": 0
+          },
+          "min_area_m2": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "max_area_m2": {
+            "type": ["number", "null"],
+            "exclusiveMinimum": 0
+          },
+          "priority": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1 là cao nhất."
+          },
+          "needs_daylight": {
+            "type": "boolean"
+          },
+          "needs_facade": {
+            "type": "boolean"
+          },
+          "needs_ventilation": {
+            "type": "boolean"
+          },
+          "enclosed_in": {
+            "type": ["string", "null"],
+            "description": "Mã phòng MẸ khi không gian này nằm LỌT bên trong một phòng khác — hiện chỉ dùng cho khu vệ sinh của phòng ngủ khép kín. Hai hệ quả, và cả hai đều bắt buộc: cây bố cục đặt nó thành một lát cắt con bên trong ô của phòng mẹ, và bộ giải coi `requires_access` là thoả khi nó kề phòng mẹ — vì lối vào đi qua phòng mẹ, không qua hành lang. Thiếu vế thứ hai thì mọi phòng khép kín đều vô nghiệm."
+          }
         }
       }
     },
@@ -37,14 +73,22 @@
         "additionalProperties": false,
         "required": ["a", "b", "kind"],
         "properties": {
-          "a": { "$ref": "#/$defs/space_id" },
-          "b": { "$ref": "#/$defs/space_id" },
+          "a": {
+            "$ref": "#/$defs/space_id"
+          },
+          "b": {
+            "$ref": "#/$defs/space_id"
+          },
           "kind": {
             "type": "string",
             "enum": ["adjacent", "near", "separate"],
             "description": "adjacent = phải kề nhau · near = cùng tầng, gần · separate = nên cách nhau."
           },
-          "weight": { "type": "number", "minimum": 0, "maximum": 1 }
+          "weight": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
         }
       }
     },
@@ -55,22 +99,51 @@
         "additionalProperties": false,
         "required": ["floor"],
         "properties": {
-          "floor": { "type": "integer", "minimum": 1, "maximum": 12 },
-          "usable_area_m2": { "type": ["number", "null"], "minimum": 0 },
-          "allocated_area_m2": { "type": ["number", "null"], "minimum": 0 }
+          "floor": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12
+          },
+          "usable_area_m2": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "description": "Mặt sàn CHỌN DÙNG của tầng này — thứ bộ giải chia hết. Từ 07/09/2026 đây không còn bằng trần xây được: sàn xây được là một GIỚI HẠN, không phải một yêu cầu, và ép chương trình lấp cho hết chỗ chỉ sinh ra hành lang mênh mông. Xem `buildable_area_m2` để biết phần còn lại."
+          },
+          "buildable_area_m2": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "description": "Trần XÂY ĐƯỢC của tầng, sau khoảng lùi và mật độ. Khai riêng để việc thu nhỏ mặt sàn là một quyết định NHÌN THẤY ĐƯỢC: chênh lệch với `usable_area_m2` là phần đất còn lại làm sân vườn. Thiếu trường này thì chương trình co lại mà không ai biết nó đã co."
+          },
+          "allocated_area_m2": {
+            "type": ["number", "null"],
+            "minimum": 0
+          }
         }
       }
     },
     "reference_projects": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string"
+      },
       "description": "Mã dự án tham chiếu trong Knowledge Base — để truy được 'số này lấy từ đâu'."
     },
-    "priors_applied": { "type": "boolean" }
+    "priors_applied": {
+      "type": "boolean"
+    }
   },
   "$defs": {
-    "semver": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
-    "artifact_ref": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
-    "space_id": { "type": "string", "pattern": "^[a-z0-9_]+$" }
+    "semver": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "artifact_ref": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "space_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$"
+    }
   }
 }

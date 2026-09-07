@@ -79,6 +79,38 @@ export interface RuleCatalogue {
    * mà Lớp 2 đã đọc từ gói quy tắc để gán tầng.
    */
   faceOf: (roomType: string) => 'open' | 'access' | null;
+  /**
+   * Cạnh nhỏ nhất mà một loại phòng phải giữ, mét — vị từ `min_dimension`, **chỉ mức chặn**.
+   *
+   * Cùng loại việc với `faceOf`: TRA CỨU để xếp chỗ ở Lớp 3a, không phải phép đánh giá hình
+   * học. Lớp 3a cần nó để biết một dải rộng bao nhiêu thì còn đặt nổi phòng, tức là một tầng
+   * chứa được mấy dải — quyết định CẤU TRÚC, chưa có toạ độ nào.
+   *
+   * **Bỏ qua quy tắc mức cảnh báo là có chủ ý.** Câu hỏi Lớp 3a đặt ra là "khung này còn ra
+   * được phương án nào không", và chỉ quy tắc mức chặn mới trả lời được nó — quy tắc cảnh báo
+   * đi vào hàm mục tiêu của bộ giải chứ không làm bài toán vô nghiệm. Tính cả chúng thì một
+   * ngưỡng "kinh nghiệm NVG chưa ai soát" (`rules/base/10-dimensions.yaml`) đủ sức loại một
+   * khung mẫu, và loại đúng cái khung duy nhất giải được.
+   *
+   * Không có nó thì Lớp 3a phải mang sẵn một con số trong mã, và đó đúng là điều
+   * CLAUDE.md 8.7 cấm.
+   */
+  minSideOf: (roomType: string) => number | null;
+  /**
+   * Khoảng lùi bắt buộc từng cạnh theo gói quy tắc, mét.
+   *
+   * Lớp 3a cần nó để biết bộ giải sẽ chia ô chữ nhật NÀO. Thiếu nó thì mặt sàn dùng để chọn
+   * khung mẫu rộng hơn phần đất thật sự xây được, và một biệt thự lùi 3 m được chọn khung
+   * theo bề rộng nó không có (V-23).
+   */
+  setbacks: Readonly<Record<string, number>>;
+  /**
+   * Trần mật độ xây dựng theo gói quy tắc (0..1), `null` khi gói không nói gì.
+   *
+   * Cùng lý do với `setbacks`: bộ giải thu chiều sâu hình bao theo mật độ (`_footprint`), nên
+   * Lớp 3a phải biết con số đó để chọn khung mẫu trên đúng ô bộ giải sẽ chia.
+   */
+  maxDensity: number | null;
 }
 
 export function ruleCatalogue(
@@ -102,7 +134,50 @@ export function ruleCatalogue(
     return face === 'access' || face === 'open' ? face : null;
   };
 
-  return { checked: applicable.length, sourceOf: (id) => byId.get(id) ?? null, faceOf };
+  // Cùng thứ tự ưu tiên với `faceOf`: quy tắc nhắm đúng mã phòng thắng quy tắc nhắm cả nhóm.
+  // Nhiều quy tắc cùng nhắm một mã thì lấy con số CHẶT nhất — nới lỏng phải là hành động
+  // tường minh, giống `maxDensity` của `RulePack`.
+  const sideRules = applicable.filter(
+    (r) => r.predicate === 'min_dimension' && r.severity === 'error',
+  );
+  const minSideOf = (roomType: string): number | null => {
+    const exact = sideRules
+      .filter((r) => r.params?.target === roomType)
+      .map((r) => Number(r.params?.value_m));
+    const byGroup = sideRules
+      .filter((r) => {
+        const target = r.params?.target;
+        return typeof target === 'string' && (groups[target] ?? []).includes(roomType);
+      })
+      .map((r) => Number(r.params?.value_m));
+    const values = (exact.length ? exact : byGroup).filter((v) => Number.isFinite(v));
+    return values.length ? Math.max(...values) : null;
+  };
+
+  // Nhiều quy tắc cùng nhắm một cạnh thì lấy con số CHẶT nhất — cùng quy ước với `minSideOf`
+  // và với `RulePack.setbacks`.
+  const setbacks: Record<string, number> = {};
+  for (const rule of applicable.filter((r) => r.predicate === 'setback')) {
+    const side = String(rule.params?.side);
+    const value = Number(rule.params?.value_m);
+    if (Number.isFinite(value)) setbacks[side] = Math.max(setbacks[side] ?? 0, value);
+  }
+
+  // Nhiều quy tắc cùng nói thì lấy con số CHẶT nhất — cùng quy ước với `RulePack.maxDensity`.
+  const densities = applicable
+    .filter((r) => r.predicate === 'max_density')
+    .map((r) => Number(r.params?.value))
+    .filter((v) => Number.isFinite(v));
+  const maxDensity = densities.length ? Math.min(...densities) : null;
+
+  return {
+    checked: applicable.length,
+    sourceOf: (id) => byId.get(id) ?? null,
+    faceOf,
+    minSideOf,
+    setbacks,
+    maxDensity,
+  };
 }
 
 /** Gói rỗng — dùng khi lớp gọi không có gói quy tắc trong tay. Không bịa mẫu số. */
@@ -110,6 +185,9 @@ export const NO_RULES: RuleCatalogue = {
   checked: 0,
   sourceOf: () => null,
   faceOf: () => null,
+  minSideOf: () => null,
+  setbacks: {},
+  maxDensity: null,
 };
 
 function round(value: number, digits = 1): number {

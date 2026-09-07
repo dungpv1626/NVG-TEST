@@ -49,6 +49,49 @@
             }
           },
           "description": "Rỗng với nhà phố; dùng cho biệt thự nhiều cánh."
+        },
+        "shape": {
+          "type": ["string", "null"],
+          "enum": ["chu_nhat", "L", "U", "T", null],
+          "description": "Hình bao khối nhà mà đầu bài mong muốn (`massing.footprint_shape`). LỰA CHỌN RỜI RẠC, không phải kích thước — bộ giải vẫn là nơi gán số (nguyên tắc 2)."
+        },
+        "yards": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["san_truoc", "san_ben", "san_trong", "san_sau"] },
+          "description": "Sân nằm ở đâu so với khối nhà, theo đầu bài."
+        },
+        "indoor_outdoor": {
+          "type": ["string", "null"],
+          "enum": ["mo_toi_da", "can_bang", "kin_dao", null],
+          "description": "Quan hệ trong nhà với sân vườn. Worker gửi TÊN hồ sơ; con số kính và lan can nằm ở `kb/construction_norms.yaml` và chỉ Container đọc."
+        },
+        "service_core": {
+          "type": ["boolean", "null"],
+          "description": "Có lối dịch vụ riêng cho bếp, không đi qua khu tiếp khách. Diễn đạt bằng `SpaceProgram.adjacency`, không thành ràng buộc hình học."
+        },
+        "wings_preferred": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "maximum": 3,
+          "description": "Số cánh nhà đầu bài mong muốn. KHÁC `wings`: `wings` là những cánh bộ giải thật sự nhận, còn đây là nguyện vọng — hai con số lệch nhau thì `deferred` phải nói vì sao."
+        },
+        "honoured": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Trường của `massing` trong đầu bài mà cây chia này THẬT SỰ diễn đạt được."
+        },
+        "deferred": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["field", "reason"],
+            "properties": {
+              "field": { "type": "string" },
+              "reason": { "type": "string" }
+            }
+          },
+          "description": "Trường KHÔNG diễn đạt được, kèm lý do bằng tiếng Việt. Cặp `honoured`/`deferred` giữ cho phần này không nói dối: đầu bài hỏi sáu câu về khối nhà, và người dùng phải đọc được câu nào đã có tác dụng, câu nào chưa — im lặng thì cả sáu trông như đã được tôn trọng."
         }
       }
     },

@@ -28,7 +28,15 @@
       "properties": {
         "width_m": { "type": "number", "exclusiveMinimum": 0 },
         "depth_m": { "type": "number", "exclusiveMinimum": 0 }
-      }
+      },
+      "description": "Ô chữ nhật xây được của THỬA ĐẤT. KHÔNG phải hình bao công trình — xem `footprint_m`."
+    },
+    "footprint_m": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": { "type": "number", "minimum": 0 },
+      "description": "Hình bao công trình trong hệ toạ độ thửa: [x0, y0, x1, y1]. Bằng `site` khi khoảng lùi bốn phía đều bằng không (nhà phố); thụt vào khi có khoảng lùi (biệt thự). Phòng và tường mang toạ độ TUYỆT ĐỐI trong thửa, nên nơi nào cần biết cạnh nào là mặt ngoài phải so với ô này chứ không so với `site` — so nhầm thì mọi mặt đứng của biệt thự trả về rỗng mà không có lỗi nào (V-22). Vắng mặt ở artifact tạo trước 07/09/2026; nơi đọc phải lùi về hộp bao của tường."
     },
     "structural_grid": {
       "type": "object",

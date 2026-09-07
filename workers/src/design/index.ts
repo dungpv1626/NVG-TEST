@@ -253,6 +253,16 @@ designApp.post('/brief/confirm', async (c) => {
   if (company.error)
     return c.json({ error: 'Không xác định được phạm vi dữ liệu của hồ sơ.' }, 500);
 
+  // Kiểm quyền GHI trước khi đúc: artifact và `design_head` ghi bằng `service_role`, còn
+  // lệnh UPDATE `design_briefs` ở dưới mới đi qua RLS. Không kiểm ở đây thì người chỉ xem
+  // được vẫn đổi head xong rồi mới bị chặn ở bước cuối — head trỏ vào bản chưa ai ký nhận.
+  const denied = await denyUnlessWritable(
+    db,
+    company.data.tenant_id as string,
+    row.design_project_id,
+  );
+  if (denied) return c.json({ error: denied.error }, denied.status);
+
   const actor = await db.rpc('auth_user_id');
   const built = buildBriefPayload({
     structured: row.structured,
@@ -292,7 +302,17 @@ designApp.post('/brief/confirm', async (c) => {
     .eq('id', body.briefId)
     .select('id')
     .single();
-  if (saved.error) return c.json({ error: saved.error.message }, 403);
+  if (saved.error) {
+    // Nguyên văn PostgREST là tiếng Anh và có thể mang tên trigger — chỉ ghi log (CGD 5.5).
+    console.error('brief/confirm: không ghi được dấu xác nhận', saved.error);
+    return c.json(
+      {
+        error:
+          'Đã đúc đầu bài nhưng không ghi được dấu xác nhận. Tải lại trang rồi thử lại; nếu vẫn lỗi, báo Quản trị hệ thống.',
+      },
+      500,
+    );
+  }
 
   return c.json({
     artifactId: artifact.id,
@@ -345,6 +365,37 @@ async function projectScope(
     tenantId: company.data.tenant_id as string,
     actorId: (actor.data as string | null) ?? null,
   };
+}
+
+const DESIGN_WRITE_DENIED =
+  'Không đủ quyền sửa hồ sơ kiến trúc của dự án này. Người chịu trách nhiệm dự án hoặc Phòng Thiết kế thực hiện được việc này.';
+
+/**
+ * Hỏi CSDL "người này có được GHI bộ môn này của dự án này không" — trước mọi lệnh ghi
+ * artifact hay đổi `design_head`.
+ *
+ * Vì sao phải hỏi riêng: `ArtifactRepository` ghi bằng `service_role` (vượt RLS), còn
+ * `projectScope` chỉ chứng minh người gọi ĐỌC được dự án. Thiếu bước này, một tài khoản chỉ
+ * xem (Kinh doanh, Ban Giám đốc) vẫn đổi được bản "đang hiệu lực" của đầu bài hay phương án —
+ * lỗi bắt khi rà soát 08/09/2026. Hỏi đúng hàm mà policy INSERT của `design_artifact` dùng
+ * (`rls_design_writable`, migration 0096) để chỉ có MỘT bản quy tắc quyền (CLAUDE.md 3.4).
+ *
+ * Trả `null` khi được ghi; ngược lại trả câu tiếng Việt kèm mã HTTP để route trả thẳng.
+ */
+async function denyUnlessWritable(
+  db: Awaited<ReturnType<typeof asUser>>,
+  tenantId: string,
+  projectId: string,
+  discipline: 'kien_truc' | 'ket_cau' | 'dien_nuoc' = 'kien_truc',
+): Promise<{ error: string; status: 403 | 500 } | null> {
+  const allowed = await db.rpc('rls_design_writable', {
+    p_tenant_id: tenantId,
+    p_project_id: projectId,
+    p_discipline: discipline,
+  });
+  if (allowed.error) return { error: 'Không kiểm tra được quyền sửa hồ sơ.', status: 500 };
+  if (allowed.data !== true) return { error: DESIGN_WRITE_DENIED, status: 403 };
+  return null;
 }
 
 /**
@@ -404,6 +455,7 @@ designApp.get('/program/:projectId', async (c) => {
     program: run.payload,
     warnings: run.warnings,
     unresolvedNeeds: run.unresolved,
+    aiSuggestion: run.aiSuggestion,
     roomLabels: roomLabels(),
     briefArtifactId: brief.id,
     headArtifactId: head?.id ?? null,
@@ -468,6 +520,8 @@ designApp.post('/floor-plan/generate', async (c) => {
   const db = await asUser(c.env, token);
   const scope = await projectScope(db, body.projectId);
   if (!scope) return c.json({ error: PROJECT_NOT_VISIBLE }, 404);
+  const denied = await denyUnlessWritable(db, scope.tenantId, body.projectId);
+  if (denied) return c.json({ error: denied.error }, denied.status);
 
   const ctx = variantContext(c.env, body.projectId, scope);
   try {
@@ -523,6 +577,8 @@ designApp.post('/floor-plan/choose', async (c) => {
   const db = await asUser(c.env, token);
   const scope = await projectScope(db, body.projectId);
   if (!scope) return c.json({ error: PROJECT_NOT_VISIBLE }, 404);
+  const denied = await denyUnlessWritable(db, scope.tenantId, body.projectId);
+  if (denied) return c.json({ error: denied.error }, denied.status);
 
   const ctx = variantContext(c.env, body.projectId, scope);
   try {
@@ -948,6 +1004,8 @@ designApp.post('/program/generate', async (c) => {
       404,
     );
   }
+  const denied = await denyUnlessWritable(db, scope.tenantId, body.projectId);
+  if (denied) return c.json({ error: denied.error }, denied.status);
 
   const repo = new ArtifactRepository(c.env);
   const brief = await repo.head(body.projectId, 'kien_truc', 'design_brief');
@@ -996,6 +1054,7 @@ designApp.post('/program/generate', async (c) => {
     roomLabels: roomLabels(),
     warnings: run.warnings,
     unresolvedNeeds: run.unresolved,
+    aiSuggestion: run.aiSuggestion,
   });
 });
 
@@ -1082,15 +1141,7 @@ designApp.post('/site/extract-boundary', async (c) => {
     p_discipline: 'kien_truc',
   });
   if (allowed.error) return c.json({ error: 'Không kiểm tra được quyền sửa hồ sơ.' }, 500);
-  if (allowed.data !== true) {
-    return c.json(
-      {
-        error:
-          'Không đủ quyền sửa hồ sơ kiến trúc của dự án này. Người chịu trách nhiệm dự án hoặc Phòng Thiết kế thực hiện được việc này.',
-      },
-      403,
-    );
-  }
+  if (allowed.data !== true) return c.json({ error: DESIGN_WRITE_DENIED }, 403);
 
   const bytes = new Uint8Array(await file.arrayBuffer());
 
@@ -1209,7 +1260,16 @@ designApp.post('/kb/annotate', async (c) => {
     p_embedding: embedding ? `[${embedding.join(',')}]` : null,
     p_outcome: body.outcome ?? null,
   });
-  if (saved.error) return c.json({ error: saved.error.message }, 403);
+  if (saved.error) {
+    console.error('kb/annotate: không ghi được chú giải', saved.error);
+    return c.json(
+      {
+        error:
+          'Không ghi được chú giải. Chỉ người có quyền ghi kiến trúc mới chú giải được hồ sơ này.',
+      },
+      403,
+    );
+  }
 
   return c.json({ id: saved.data, embedded: embedding !== null, withheld });
 });

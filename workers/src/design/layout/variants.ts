@@ -19,6 +19,7 @@ import type { ArtifactRepository, ArtifactScope } from '../artifacts';
 import { ContractError } from '../contracts';
 import type { ComputeBackend } from '../compute-backend';
 import { LAYOUT_VARIANTS, type LayoutVariant } from './intent';
+import { plateFor } from './plate';
 import { spaceLabels } from './labels';
 import { siteFaces, type SiteContextTable } from './site-context';
 import { buildArchModel, layoutIntent, solveFloorPlan } from '../workflows/steps';
@@ -144,6 +145,7 @@ export async function generateVariants(
   // (`requires_face`) rồi xếp chỗ cho đúng ngay từ đầu — chứ không để bộ giải phát hiện sai
   // rồi báo vi phạm trên một bố cục không sửa được bằng toạ độ.
   const rules = ctx.rulesFor?.(brief.locality, brief.building_type) ?? NO_RULES;
+  const plate = plateFor(brief, program, rules.setbacks, rules.maxDensity);
 
   // Dấu vân mã hình học của Container — hỏi MỘT lần cho cả mẻ, rồi đưa vào khoá bộ nhớ đệm.
   // Không có nó thì "cùng đầu vào, cùng cấu hình" bỏ sót chính phần mã sinh ra hình học: sửa
@@ -155,11 +157,20 @@ export async function generateVariants(
 
   for (const variant of variants) {
     const intent = layoutIntent(program, programId, {
+      massing: brief.massing,
       variant,
       openFaces: faces.open,
       accessFaces: faces.access,
       faceOf: rules.faceOf,
+      plate,
+      minSideOf: rules.minSideOf,
     });
+    // Nhãn theo khung THẬT đã dựng, đọc lại từ chính artifact vừa sinh. Lấy `variant.label`
+    // ở đây là hiển thị khung mặc định trong khi bản vẽ dùng khung khác.
+    const label =
+      typeof (intent.payload as { variant_label?: unknown }).variant_label === 'string'
+        ? (intent.payload as { variant_label: string }).variant_label
+        : variant.label;
     const intentArtifact = await repo.write({
       scope,
       kind: 'layout_intent',
@@ -189,7 +200,7 @@ export async function generateVariants(
           await ensureArchModel(repo, scope, found.id, found.payload as FloorPlan);
         results.push({
           variantId: variant.id,
-          label: variant.label,
+          label,
           intentArtifactId: intentArtifact.id,
           artifactId: found.id,
           kind: found.kind,
@@ -209,6 +220,7 @@ export async function generateVariants(
       intentRef: intentArtifact.id,
       program,
       site: brief.site,
+      buildingType: brief.building_type,
       locality: brief.locality,
       timeBudgetS,
       openFaces: faces.open,
@@ -232,7 +244,7 @@ export async function generateVariants(
     }
     results.push({
       variantId: variant.id,
-      label: variant.label,
+      label,
       intentArtifactId: intentArtifact.id,
       artifactId: written.id,
       kind,
@@ -319,6 +331,14 @@ export interface VariantView {
   floorPlan: FloorPlan | null;
   /** Câu giải thích vô nghiệm sinh từ mẫu câu — không có mô hình ngôn ngữ nào ở đây. */
   infeasibility: { message: string; conflictRules: string[] } | null;
+  /**
+   * Mục «Tổ chức khối nhà» của đầu bài: câu nào phương án này đáp ứng, câu nào chưa.
+   *
+   * Đọc TỪ artifact chứ không tính lại: bản đang xem có thể được dựng bằng phiên bản mã cũ,
+   * và tính lại theo mã hôm nay sẽ mô tả một phương án khác cái đang hiện trên màn hình.
+   * `null` với artifact tạo trước 07/09/2026 — lúc đó chưa có phần này.
+   */
+  massing: { honoured: string[]; deferred: { field: string; reason: string }[] } | null;
 }
 
 export interface Generation {
@@ -406,12 +426,29 @@ async function variantsOfProgram(
   rules: RuleCatalogue,
 ): Promise<VariantView[]> {
   const { repo, scope } = ctx;
-  const labelOf = new Map(LAYOUT_VARIANTS.map((v) => [v.id, v.label] as const));
+  const fallbackLabel = new Map(LAYOUT_VARIANTS.map((v) => [v.id, v.label] as const));
   const variants: VariantView[] = [];
   for (const intentId of await repo.edgesFrom(programId, 'layer3a_intent')) {
     const intent = await repo.get(intentId, scope.projectId);
     if (!intent || intent.kind !== 'layout_intent') continue;
     const variantId = (intent.payload as LayoutIntent).variant_id ?? intentId.slice(-6);
+    // Nhãn ĐỌC TỪ ARTIFACT, không dựng lại từ bảng biến thể: khung mẫu do Lớp 3a chọn theo
+    // mặt sàn (`chooseFrame`), nên nhãn tĩnh "hành lang bên trái" có thể mô tả một bố cục
+    // khác hẳn bố cục đã giải. Bảng biến thể chỉ còn là đường lùi cho artifact cũ chưa mang
+    // nhãn nào.
+    const storedLabel = (intent.payload as LayoutIntent).variant_label;
+    const digest = (intent.payload as LayoutIntent).massing as {
+      honoured?: string[];
+      deferred?: { field: string; reason: string }[];
+    };
+    const massing =
+      digest?.honoured || digest?.deferred
+        ? { honoured: digest.honoured ?? [], deferred: digest.deferred ?? [] }
+        : null;
+    const label =
+      (typeof storedLabel === 'string' && storedLabel) ||
+      fallbackLabel.get(variantId) ||
+      `Phương án ${variantId}`;
 
     for (const outId of await repo.edgesFrom(intentId, 'layer3b_solve')) {
       const out = await repo.get(outId, scope.projectId);
@@ -420,7 +457,7 @@ async function variantsOfProgram(
         const plan = out.payload as FloorPlan;
         variants.push({
           variantId,
-          label: labelOf.get(variantId) ?? `Phương án ${variantId}`,
+          label,
           intentArtifactId: intentId,
           artifactId: out.id,
           createdAt: out.createdAt,
@@ -429,6 +466,7 @@ async function variantsOfProgram(
           summary: summariseFloorPlan(plan, labels, ctx.groups, rules),
           floorPlan: plan,
           infeasibility: null,
+          massing,
         });
       } else if (out.kind === 'infeasibility_report') {
         const report = out.payload as {
@@ -437,7 +475,7 @@ async function variantsOfProgram(
         };
         variants.push({
           variantId,
-          label: labelOf.get(variantId) ?? `Phương án ${variantId}`,
+          label,
           intentArtifactId: intentId,
           artifactId: out.id,
           createdAt: out.createdAt,
@@ -445,6 +483,7 @@ async function variantsOfProgram(
           status: 'infeasible',
           summary: null,
           floorPlan: null,
+          massing,
           infeasibility: {
             message: report.human_message,
             conflictRules: (report.conflict_set ?? []).map((c) => c.rule_id),

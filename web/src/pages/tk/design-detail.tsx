@@ -256,6 +256,8 @@ export function DesignDetailPage() {
               <BriefPanel
                 projectId={project.id}
                 companyId={project.company_id}
+                projectName={project.name}
+                projectCode={project.code}
                 readOnly={readOnly}
               />
             ),
@@ -268,6 +270,7 @@ export function DesignDetailPage() {
               <SurveyPanel
                 projectId={project.id}
                 companyId={project.company_id}
+                projectName={project.name}
                 readOnly={readOnly}
               />
             ),

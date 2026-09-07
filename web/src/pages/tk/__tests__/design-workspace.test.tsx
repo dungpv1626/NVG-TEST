@@ -12,7 +12,10 @@ import userEvent from '@testing-library/user-event';
 import { renderWithApp } from '@/test/render';
 import { DesignWorkspace } from '../design-workspace';
 
-function shell(route = '/tk/du-an/p') {
+function shell(
+  route = '/tk/du-an/p',
+  related?: React.ComponentProps<typeof DesignWorkspace>['related'],
+) {
   return renderWithApp(
     <DesignWorkspace
       breadcrumbs={[{ label: 'Thiết kế' }, { label: 'Nhà phố Nguyễn Văn A' }]}
@@ -34,9 +37,11 @@ function shell(route = '/tk/du-an/p') {
         },
       ]}
       historyContent={<p>Nhật ký hồ sơ</p>}
-      related={[
-        { title: 'Hồ sơ liên quan', records: [{ label: 'Khách hàng', value: 'Công ty A' }] },
-      ]}
+      related={
+        related ?? [
+          { title: 'Hồ sơ liên quan', records: [{ label: 'Khách hàng', value: 'Công ty A' }] },
+        ]
+      }
     />,
     { route },
   );
@@ -89,6 +94,27 @@ describe('Vỏ Trang dự án thiết kế', () => {
   it('hồ sơ liên quan vẫn hiện ở màn hình con (Webapp Flow 5.1)', () => {
     shell('/tk/du-an/p?tab=dau-bai');
     expect(screen.getByText('Công ty A')).toBeInTheDocument();
+  });
+
+  it('mọi nhóm hồ sơ liên quan đều rỗng thì KHÔNG dành chỗ cho cột phải', () => {
+    // Trang gọi luôn truyền một nhóm «Hồ sơ liên quan», và nhóm đó rỗng khi dự án chưa nối
+    // với cơ hội nào. Chỉ đếm số NHÓM thì cột 20rem vẫn được dành chỗ để hiện đúng một câu
+    // «Chưa có hồ sơ liên quan» — một dải trắng 320px chạy dọc bên phải mọi màn hình con,
+    // và nội dung bên trái bị bó lại vô cớ (Haan bắt được 07/09/2026).
+    const { container } = shell('/tk/du-an/p?tab=dau-bai', [
+      { title: 'Hồ sơ liên quan', records: [] },
+    ]);
+
+    expect(screen.queryByRole('complementary', { name: 'Hồ sơ liên quan' })).toBeNull();
+    const grid = container.querySelector('[aria-labelledby="tieu-de-man-hinh-con"] > div');
+    expect(grid?.className).not.toContain('grid-cols');
+  });
+
+  it('có hồ sơ thật thì cột phải vẫn dựng', () => {
+    const { container } = shell('/tk/du-an/p?tab=dau-bai');
+    expect(screen.getByRole('complementary', { name: 'Hồ sơ liên quan' })).toBeInTheDocument();
+    const grid = container.querySelector('[aria-labelledby="tieu-de-man-hinh-con"] > div');
+    expect(grid?.className).toContain('grid-cols');
   });
 
   it('tự mang bảng màu riêng kể cả khi dựng ngoài khung ứng dụng', () => {

@@ -15,8 +15,9 @@
  */
 
 import { useState, type FormEvent } from 'react';
-import { Pencil, Trash2 } from 'lucide-react';
+import { FileDown, Pencil, Trash2 } from 'lucide-react';
 import { BUTTONS, formatDateTime, formatNumber } from '@nvg/shared';
+import { escapeHtml, openPrintReport } from '@/lib/print-report';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -30,7 +31,7 @@ import {
   type DesignSurveyRecord,
 } from '@/hooks/use-design-surveys';
 import { toUserMessage } from '@/hooks/use-error-message';
-import { useSurveyPhotos } from '@/hooks/use-survey-photos';
+import { useSurveyPhotos, type SurveyPhotoRecord } from '@/hooks/use-survey-photos';
 import { useAuth } from '@/lib/auth';
 import { SurveyPhotos } from './survey-photos';
 import { SectionHelp } from '@/components/ui/section-help';
@@ -77,10 +78,13 @@ type EditorMode =
 export function SurveyPanel({
   projectId,
   companyId,
+  projectName,
   readOnly,
 }: {
   projectId: string;
   companyId: string;
+  /** Tên dự án — chỉ dùng làm tiêu đề bản in. */
+  projectName?: string;
   readOnly: boolean;
 }) {
   const { profile } = useAuth();
@@ -212,24 +216,46 @@ export function SurveyPanel({
                     ) : null}
                   </p>
 
-                  {!readOnly && mode.kind === 'closed' && removing !== s.id && (
+                  {mode.kind === 'closed' && removing !== s.id && (
                     <div className="flex shrink-0 gap-1">
+                      {/*
+                        Xuất PDF có CẢ ở chế độ chỉ xem: người cần mang biên bản ra công
+                        trường thường đúng là người không còn quyền sửa hồ sơ.
+                      */}
                       <Button
                         variant="subtle"
-                        onClick={() => setMode({ kind: 'edit', survey: s })}
-                        aria-label={`Sửa biên bản khảo sát ${formatDateTime(s.surveyed_at ?? s.created_at)}`}
+                        onClick={() =>
+                          printSurvey(
+                            s,
+                            (photos ?? []).filter((p) => p.design_survey_id === s.id),
+                            projectName,
+                          )
+                        }
+                        aria-label={`Xuất PDF biên bản khảo sát ${formatDateTime(s.surveyed_at ?? s.created_at)}`}
                       >
-                        <Pencil className="size-4" aria-hidden />
-                        Sửa
+                        <FileDown className="size-4" aria-hidden />
+                        Xuất PDF
                       </Button>
-                      <Button
-                        variant="subtle"
-                        onClick={() => setRemoving(s.id)}
-                        aria-label={`Gỡ biên bản khảo sát ${formatDateTime(s.surveyed_at ?? s.created_at)}`}
-                      >
-                        <Trash2 className="size-4" aria-hidden />
-                        Gỡ
-                      </Button>
+                      {!readOnly && (
+                        <>
+                          <Button
+                            variant="subtle"
+                            onClick={() => setMode({ kind: 'edit', survey: s })}
+                            aria-label={`Sửa biên bản khảo sát ${formatDateTime(s.surveyed_at ?? s.created_at)}`}
+                          >
+                            <Pencil className="size-4" aria-hidden />
+                            Sửa
+                          </Button>
+                          <Button
+                            variant="subtle"
+                            onClick={() => setRemoving(s.id)}
+                            aria-label={`Gỡ biên bản khảo sát ${formatDateTime(s.surveyed_at ?? s.created_at)}`}
+                          >
+                            <Trash2 className="size-4" aria-hidden />
+                            Gỡ
+                          </Button>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
@@ -460,4 +486,79 @@ function SurveyBlock({ label, value }: { label: string; value: string | null }) 
       <span className="whitespace-pre-wrap">{value}</span>
     </p>
   );
+}
+
+/**
+ * Xuất một biên bản khảo sát ra bản in (người dùng chọn "Lưu dưới dạng PDF" ở hộp thoại in).
+ *
+ * Dùng lại đúng cơ chế của báo cáo BC-06 — cửa sổ in riêng + `window.print()` — chứ KHÔNG
+ * nhúng thư viện dựng PDF: font mặc định của chúng thiếu glyph tiếng Việt có dấu, và đó là
+ * loại lỗi chỉ lộ ra ở tệp đã xuất chứ không lộ ra lúc đọc mã nguồn (CLAUDE.md 4.1).
+ *
+ * Ảnh hiện trạng đi kèm bằng đường ký tạm của Supabase Storage. Đây là lý do
+ * `openPrintReport` phải chờ ảnh tải xong mới in — nếu không, bản in ra toàn khung trống mà
+ * không có gì báo, và ảnh chính là thứ người mang biên bản ra công trường cần nhất.
+ *
+ * Ảnh chưa ký được đường dẫn thì bỏ qua và NÓI RA số lượng, chứ không im lặng in thiếu.
+ */
+function printSurvey(
+  survey: DesignSurveyRecord,
+  photos: SurveyPhotoRecord[],
+  projectName: string | undefined,
+): void {
+  const when = formatDateTime(survey.surveyed_at ?? survey.created_at);
+  const size =
+    survey.land_width && survey.land_depth
+      ? `${formatNumber(Number(survey.land_width))} × ${formatNumber(Number(survey.land_depth))} m`
+      : EM_DASH;
+  const area = survey.land_area ? `${formatNumber(Number(survey.land_area))} m²` : EM_DASH;
+
+  const facts: [string, string][] = [
+    ['Dự án', projectName ?? EM_DASH],
+    ['Thời điểm khảo sát', when],
+    ['Người khảo sát', survey.surveyor?.full_name ?? EM_DASH],
+    ['Kích thước', size],
+    ['Diện tích', area],
+    ['Hướng nhà', survey.orientation ?? EM_DASH],
+  ];
+
+  const blocks: [string, string | null][] = [
+    ['Số liệu đo đạc', survey.measurement_notes],
+    ['Hiện trạng xung quanh', survey.surrounding_notes],
+    ['Ghi chú nhu cầu sử dụng', survey.usage_notes],
+    ['Ghi chú khác', survey.notes],
+  ];
+
+  const withUrl = photos.filter((p) => p.url);
+  const missing = photos.length - withUrl.length;
+
+  const body = [
+    `<dl>${facts
+      .map(([k, v]) => `<div><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd></div>`)
+      .join('')}</dl>`,
+    ...blocks
+      .filter(([, v]) => Boolean(v))
+      .map(
+        ([k, v]) =>
+          `<div class="block"><strong>${escapeHtml(k)}</strong><p>${escapeHtml(v!)}</p></div>`,
+      ),
+    photos.length === 0
+      ? '<h2>Ảnh hiện trạng</h2><p class="muted">Biên bản này chưa có ảnh hiện trạng.</p>'
+      : [
+          `<h2>Ảnh hiện trạng (${photos.length})</h2>`,
+          missing > 0
+            ? `<p class="muted">${missing} tệp chưa tải được để in — mở lại trang rồi xuất lần nữa.</p>`
+            : '',
+          `<div class="photos">${withUrl
+            .map(
+              (p) =>
+                `<figure><img src="${escapeHtml(p.url!)}" alt="" /><figcaption>${escapeHtml(
+                  p.caption ?? p.file_name ?? '',
+                )}</figcaption></figure>`,
+            )
+            .join('')}</div>`,
+        ].join(''),
+  ].join('');
+
+  openPrintReport(`Biên bản khảo sát hiện trạng — ${when}`, body);
 }

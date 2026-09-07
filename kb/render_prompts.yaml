@@ -69,6 +69,48 @@ styles:
       French Indochine style: ochre yellow walls, green timber louvred shutters, encaustic
       cement tiles, clay tiled roof, timber louvre screens, tropical planting. Warm late
       afternoon sunlight.
+  mai_thai:
+    vi: Mái Thái
+    prompt: >-
+      Vietnamese "mai Thai" style: steeply pitched hipped roof clad in dark red or brown
+      profiled clay tiles with wide overhanging eaves, cream or beige rendered walls, white
+      trimmed window surrounds, a covered entrance porch with slender columns, low garden wall
+      with metal gate. Bright daylight, clear sky.
+  toi_gian:
+    vi: Tối giản
+    prompt: >-
+      Minimalist style: unbroken white or off-white rendered planes, very few openings placed
+      deliberately, deep window reveals, no mouldings and no decorative trim, flat roof with a
+      sharp thin edge, a single band of dark framing. Soft diffuse daylight, long clean
+      shadows, restrained planting.
+  nhiet_doi:
+    vi: Nhiệt đới
+    prompt: >-
+      Tropical modern style: deep cantilevered eaves and horizontal sun-shading fins, perforated
+      breeze-block screens, exposed fair-faced concrete with warm timber slats, wide sliding
+      glass doors, dense green planting spilling over the balconies and roof edge. Warm humid
+      daylight, dappled shade.
+  dia_trung_hai:
+    vi: Địa Trung Hải
+    prompt: >-
+      Mediterranean style: thick whitewashed or sand coloured lime-rendered walls, low pitched
+      roof in terracotta barrel tiles, arched openings and arcaded loggia, dark timber shutters
+      and wrought iron balustrades, terracotta paving. Strong warm sunlight, deep shadows,
+      olive and bougainvillea planting.
+  co_dien:
+    vi: Cổ điển
+    prompt: >-
+      Classical style, richer and more formal than neoclassical: strictly symmetrical facade,
+      full-height engaged columns with moulded capitals, heavy cornice and entablature, a
+      pedimented entrance reached by a wide stone stair, stone balustrades, tall arched windows
+      with carved surrounds, mansard roof. Even bright daylight.
+  bac_au:
+    vi: Bắc Âu
+    prompt: >-
+      Scandinavian style: simple gabled volume with no eaves overhang, pale grey or white
+      vertical timber cladding, large black framed windows in a regular rhythm, warm pale
+      timber entrance door and soffits, minimal detailing. Cool soft northern daylight, birch
+      and grass planting.
 
 # Ba khung hình dựng cho mỗi phương án. Thứ tự ở đây là thứ tự hiện trên màn hình.
 views:

@@ -107,6 +107,76 @@ export const layoutIntentSchema = z
           )
           .describe('Rỗng với nhà phố; dùng cho biệt thự nhiều cánh.')
           .optional(),
+        /** Hình bao khối nhà mà đầu bài mong muốn (`massing.footprint_shape`). LỰA CHỌN RỜI RẠC, không phải kích thước — bộ giải vẫn là nơi gán số (nguyên tắc 2). */
+        shape: z
+          .union([
+            z.literal('chu_nhat'),
+            z.literal('L'),
+            z.literal('U'),
+            z.literal('T'),
+            z.literal(null),
+          ])
+          .nullable()
+          .describe(
+            'Hình bao khối nhà mà đầu bài mong muốn (`massing.footprint_shape`). LỰA CHỌN RỜI RẠC, không phải kích thước — bộ giải vẫn là nơi gán số (nguyên tắc 2).',
+          )
+          .optional(),
+        /** Sân nằm ở đâu so với khối nhà, theo đầu bài. */
+        yards: z
+          .array(z.enum(['san_truoc', 'san_ben', 'san_trong', 'san_sau']))
+          .describe('Sân nằm ở đâu so với khối nhà, theo đầu bài.')
+          .optional(),
+        /** Quan hệ trong nhà với sân vườn. Worker gửi TÊN hồ sơ; con số kính và lan can nằm ở `kb/construction_norms.yaml` và chỉ Container đọc. */
+        indoor_outdoor: z
+          .union([
+            z.literal('mo_toi_da'),
+            z.literal('can_bang'),
+            z.literal('kin_dao'),
+            z.literal(null),
+          ])
+          .nullable()
+          .describe(
+            'Quan hệ trong nhà với sân vườn. Worker gửi TÊN hồ sơ; con số kính và lan can nằm ở `kb/construction_norms.yaml` và chỉ Container đọc.',
+          )
+          .optional(),
+        /** Có lối dịch vụ riêng cho bếp, không đi qua khu tiếp khách. Diễn đạt bằng `SpaceProgram.adjacency`, không thành ràng buộc hình học. */
+        service_core: z
+          .boolean()
+          .nullable()
+          .describe(
+            'Có lối dịch vụ riêng cho bếp, không đi qua khu tiếp khách. Diễn đạt bằng `SpaceProgram.adjacency`, không thành ràng buộc hình học.',
+          )
+          .optional(),
+        /** Số cánh nhà đầu bài mong muốn. KHÁC `wings`: `wings` là những cánh bộ giải thật sự nhận, còn đây là nguyện vọng — hai con số lệch nhau thì `deferred` phải nói vì sao. */
+        wings_preferred: z
+          .number()
+          .int()
+          .gte(1)
+          .lte(3)
+          .nullable()
+          .describe(
+            'Số cánh nhà đầu bài mong muốn. KHÁC `wings`: `wings` là những cánh bộ giải thật sự nhận, còn đây là nguyện vọng — hai con số lệch nhau thì `deferred` phải nói vì sao.',
+          )
+          .optional(),
+        /** Trường của `massing` trong đầu bài mà cây chia này THẬT SỰ diễn đạt được. */
+        honoured: z
+          .array(z.string())
+          .describe('Trường của `massing` trong đầu bài mà cây chia này THẬT SỰ diễn đạt được.')
+          .optional(),
+        /** Trường KHÔNG diễn đạt được, kèm lý do bằng tiếng Việt. Cặp `honoured`/`deferred` giữ cho phần này không nói dối: đầu bài hỏi sáu câu về khối nhà, và người dùng phải đọc được câu nào đã có tác dụng, câu nào chưa — im lặng thì cả sáu trông như đã được tôn trọng. */
+        deferred: z
+          .array(
+            z
+              .object({
+                field: z.string(),
+                reason: z.string(),
+              })
+              .strict(),
+          )
+          .describe(
+            'Trường KHÔNG diễn đạt được, kèm lý do bằng tiếng Việt. Cặp `honoured`/`deferred` giữ cho phần này không nói dối: đầu bài hỏi sáu câu về khối nhà, và người dùng phải đọc được câu nào đã có tác dụng, câu nào chưa — im lặng thì cả sáu trông như đã được tôn trọng.',
+          )
+          .optional(),
       })
       .strict(),
     cores: z

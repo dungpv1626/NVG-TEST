@@ -36,5 +36,13 @@ export type DesignBriefDraft = z.infer<typeof designBriefDraftSchema>;
  * `1.1.0` (29/08/2026): thêm `massing` — ý đồ tổ hợp khối cho biệt thự và nhà vườn. Chỉ THÊM
  * trường tuỳ chọn nên tăng số phụ, không tăng số chính: bản ghi viết theo `1.0.0` vẫn đọc
  * được nguyên vẹn (03-data-contracts, quy tắc semver).
+ *
+ * `1.2.0` (07/09/2026): thêm `family[].ensuite`, `family[].floor`, `required_spaces[].area_m2`,
+ * và sáu mã phong cách. Vẫn chỉ THÊM: `floor_pref` không bị gỡ, và bản ghi cũ đọc nguyên vẹn —
+ * Lớp 2 hiểu cả hai cách khai "khép kín" lẫn cả hai cách khai tầng.
+ *
+ * `1.3.0` (07/09/2026): thêm `required_spaces[].ensuite` và `required_spaces[].amenities`.
+ * Vẫn chỉ THÊM trường tuỳ chọn: `ensuite` vắng mặt nghĩa là "lấy theo `family`", đúng hành vi
+ * bản ghi cũ đang có.
  */
-export const BRIEF_SCHEMA_VERSION = '1.1.0';
+export const BRIEF_SCHEMA_VERSION = '1.3.0';

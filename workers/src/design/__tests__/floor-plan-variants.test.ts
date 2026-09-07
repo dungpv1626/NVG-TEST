@@ -181,11 +181,14 @@ class FakeCompute implements ComputeBackend {
   infeasible = new Set<string>();
   /** Dấu vân mã hình học — đổi giá trị này mô phỏng việc dựng lại ảnh Docker sau khi sửa mã. */
   solverVersion: string | null = 'test-solver';
+  /** Mọi lời gọi, để canh được cái gì thật sự đi qua ranh giới Worker → Container. */
+  requests: SolveRequest[] = [];
   async health() {
     return { reachable: true, solverVersion: this.solverVersion };
   }
   async solve(request: SolveRequest): Promise<SolveResponse> {
     this.calls += 1;
+    this.requests.push(request);
     const variant = (request.intent as { variant_id?: string }).variant_id ?? '';
     if (this.infeasible.has(variant)) {
       return {
@@ -266,6 +269,19 @@ async function setup(compute = new FakeCompute()) {
 }
 
 describe('Sinh phương án mặt bằng — đường chạy đồng bộ', () => {
+  it('loại hình công trình đi kèm mỗi lời gọi bộ giải', async () => {
+    // Bỏ sót trường này KHÔNG gây lỗi: phía Container có mặc định `"nha_pho"`, nên mọi biệt
+    // thự lặng lẽ được giải bằng luật nhà phố — vừa mất khoảng lùi 3 m và trần mật độ 0,6,
+    // vừa nhận nhầm lùi 0 và mật độ 1,0 (V-23). Đúng loại lỗi chỉ bài kiểm mới thấy.
+    const { compute, ctx } = await setup();
+    await generateVariants(ctx);
+
+    expect(compute.requests).toHaveLength(3);
+    for (const request of compute.requests) {
+      expect(request.building_type).toBe(brief.building_type);
+    }
+  });
+
   it('ba biến thể → ba mặt bằng có lineage, bản khả thi đầu tiên được chọn sẵn', async () => {
     const { repo, compute, ctx } = await setup();
     const outcome = await generateVariants(ctx);
@@ -570,6 +586,53 @@ describe('Nguồn quy tắc đi kèm kết quả kiểm tra ràng buộc', () =>
     // cáo hệ thống đã kiểm một quy tắc chưa từng chạy.
     expect(ruleCatalogue(RULES, 'nha_pho').checked).toBe(2);
     expect(ruleCatalogue(RULES, 'nha_vuon').checked).toBe(1);
+  });
+
+  it('cạnh nhỏ nhất chỉ đọc quy tắc mức CHẶN, bỏ qua mức cảnh báo', () => {
+    // Lớp 3a hỏi "khung này còn ra được phương án nào không". Quy tắc mức cảnh báo đi vào hàm
+    // mục tiêu của bộ giải chứ không làm bài toán vô nghiệm, nên tính chúng vào đây là để một
+    // ngưỡng kinh nghiệm chưa ai soát loại mất khung mẫu duy nhất giải được.
+    const rules = [
+      {
+        id: 'room_min_dimension_bedroom',
+        applies_to: ['nha_pho'],
+        scope: 'floor',
+        predicate: 'min_dimension',
+        severity: 'error' as const,
+        source: 'TCVN 4451:2012',
+        params: { target: 'bedroom', value_m: 2.4 },
+      },
+      {
+        id: 'room_min_dimension_wc',
+        applies_to: ['nha_pho'],
+        scope: 'floor',
+        predicate: 'min_dimension',
+        severity: 'warning' as const,
+        source: 'kinh nghiệm NVG',
+        params: { target: 'wc', value_m: 1.2 },
+      },
+    ];
+    const catalogue = ruleCatalogue(rules, 'nha_pho', { habitable: ['bedroom', 'living'] });
+    expect(catalogue.minSideOf('bedroom')).toBe(2.4);
+    expect(catalogue.minSideOf('wc')).toBeNull();
+    expect(catalogue.minSideOf('kitchen')).toBeNull();
+  });
+
+  it('quy tắc nhắm cả NHÓM cũng áp cho từng mã trong nhóm', () => {
+    const rules = [
+      {
+        id: 'min_dimension_habitable',
+        applies_to: ['nha_pho'],
+        scope: 'floor',
+        predicate: 'min_dimension',
+        severity: 'error' as const,
+        source: 'QCVN 01:2021/BXD',
+        params: { target: 'habitable', value_m: 2.1 },
+      },
+    ];
+    const catalogue = ruleCatalogue(rules, 'nha_pho', { habitable: ['bedroom', 'living'] });
+    expect(catalogue.minSideOf('living')).toBe(2.1);
+    expect(catalogue.minSideOf('wc')).toBeNull();
   });
 
   it('mỗi vi phạm mang nguồn nguyên văn và cờ chặn phát hành', () => {

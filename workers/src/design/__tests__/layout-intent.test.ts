@@ -14,7 +14,13 @@
 
 import { describe, expect, it } from 'vitest';
 import type { SpaceProgram } from '@nvg/shared/design';
-import { buildLayoutIntent, floorTree, LAYOUT_VARIANTS, type LayoutNode } from '../layout/intent';
+import {
+  buildLayoutIntent,
+  CROSS_FRONT_SHARE,
+  floorTree,
+  LAYOUT_VARIANTS,
+  type LayoutNode,
+} from '../layout/intent';
 import { spaceLabels } from '../layout/labels';
 import { parseSiteContext, siteFaces } from '../layout/site-context';
 import { testVocabularyYaml } from './program-fixtures';
@@ -399,5 +405,191 @@ describe('Nhóm mã phòng', () => {
     expect(groups.habitable).not.toContain('circulation');
     expect(groups.habitable).not.toContain('wc');
     expect(groups.all).toBeUndefined();
+  });
+});
+
+/**
+ * Khung hành lang ngang — xem phần mở đầu `layout/intent.ts`.
+ *
+ * Điều kiện ra của mục này không phải "cây có hình gì" mà là ba tính chất mà bộ giải sẽ kiểm
+ * lại: mọi phòng giáp không gian giao thông, mọi phòng chạm một mặt thoáng, và khung chỉ đổi
+ * khi khung nhà ống thật sự không đặt nổi phòng.
+ */
+describe('Khung hành lang ngang cho lô rộng', () => {
+  const wideVilla = (): SpaceProgram =>
+    ({
+      schema_version: '1.0.0',
+      brief_ref: REF,
+      spaces: [
+        space('stair_1', 'stair', 1, { min_area_m2: 4, target_area_m2: 5, max_area_m2: 14 }),
+        space('circulation_1', 'circulation', 1, {
+          min_area_m2: 3,
+          target_area_m2: 22,
+          max_area_m2: 24,
+        }),
+        space('living_1', 'living', 1, {
+          needs_daylight: true,
+          priority: 1,
+          min_area_m2: 14,
+          target_area_m2: 50,
+          max_area_m2: 70,
+        }),
+        space('garage_1', 'garage', 1, {
+          min_area_m2: 12,
+          target_area_m2: 18,
+          max_area_m2: 45,
+        }),
+        space('kitchen_1', 'kitchen', 1, {
+          needs_daylight: true,
+          priority: 3,
+          min_area_m2: 6,
+          target_area_m2: 15,
+          max_area_m2: 28,
+        }),
+        space('dining_1', 'dining', 1, { min_area_m2: 9, target_area_m2: 18, max_area_m2: 40 }),
+        space('wc_1', 'wc', 1, {
+          priority: 5,
+          min_area_m2: 2.4,
+          target_area_m2: 4,
+          max_area_m2: 8,
+        }),
+        space('storage_1', 'storage', 1, {
+          min_area_m2: 2,
+          target_area_m2: 4,
+          max_area_m2: 10,
+        }),
+        space('bedroom_1', 'bedroom', 1, {
+          needs_daylight: true,
+          min_area_m2: 9,
+          target_area_m2: 17,
+          max_area_m2: 30,
+        }),
+        space('bedroom_2', 'bedroom', 1, {
+          needs_daylight: true,
+          min_area_m2: 9,
+          target_area_m2: 17,
+          max_area_m2: 30,
+        }),
+      ],
+      adjacency: [],
+    }) as SpaceProgram;
+
+  // Lô 15 × 12 m: phần sau rộng ~13 m, nên một dải ngang muốn sâu 2,4 m phải chứa hơn 31 m².
+  // Không phòng ngủ nào đạt, và đó chính là điều khung nhà ống không giải nổi.
+  const widePlate = { widthM: 15, depthM: 12 };
+  const minSideOf = (type: string) =>
+    type === 'bedroom' ? 2.4 : type === 'circulation' ? 0.9 : null;
+  const bothFacesOpen = ['front', 'back'] as const;
+
+  const build = (variantIndex = 0) =>
+    buildLayoutIntent({
+      program: wideVilla(),
+      programRef: REF,
+      variant: LAYOUT_VARIANTS[variantIndex],
+      openFaces: bothFacesOpen,
+      accessFaces: ['front'],
+      faceOf: (type) => (type === 'garage' ? 'access' : null),
+      plate: widePlate,
+      minSideOf,
+    });
+
+  it('đổi sang khung ngang khi khung nhà ống không đặt nổi phòng', () => {
+    const intent = build() as { variant_label: string; rationale: string };
+    expect(intent.variant_label).toContain('Hành lang ngang');
+    expect(intent.rationale).toContain('hai bên');
+  });
+
+  it('giữ khung nhà ống khi nó vẫn đặt được — lô hẹp và sâu', () => {
+    const intent = buildLayoutIntent({
+      program: wideVilla(),
+      programRef: REF,
+      openFaces: bothFacesOpen,
+      plate: { widthM: 5, depthM: 18 },
+      minSideOf,
+    }) as { variant_label: string };
+    expect(intent.variant_label).toBe(LAYOUT_VARIANTS[0]!.label);
+  });
+
+  it('giữ khung nhà ống khi thiếu kích thước mặt sàn — không đoán', () => {
+    const intent = buildLayoutIntent({
+      program: wideVilla(),
+      programRef: REF,
+      openFaces: bothFacesOpen,
+      minSideOf,
+    }) as { variant_label: string };
+    expect(intent.variant_label).toBe(LAYOUT_VARIANTS[0]!.label);
+  });
+
+  it('giữ khung nhà ống khi mặt sau bị bịt — khung ngang không có giếng trời', () => {
+    const intent = buildLayoutIntent({
+      program: wideVilla(),
+      programRef: REF,
+      openFaces: ['front'],
+      plate: widePlate,
+      minSideOf,
+    }) as { variant_label: string };
+    expect(intent.variant_label).toBe(LAYOUT_VARIANTS[0]!.label);
+  });
+
+  it('mỗi phòng nằm cùng nhánh với hành lang hoặc kề nhánh chứa nó', () => {
+    const intent = build() as { floors: Array<{ wings: Array<{ tree: LayoutNode }> }> };
+    const paths = new Map(leafPaths(intent.floors[0]!.wings[0]!.tree));
+    // Cây là H(dải trước, H(hành lang, dải sau)): dải trước ở nhánh `a`, hành lang ở `ba`,
+    // dải sau ở `bb`. Mọi phòng phải nằm trong đúng ba nhánh đó — không có nhánh thứ tư nào
+    // để lọt vào, và đó là điều làm "mọi phòng giáp hành lang" đúng THEO CẤU TRÚC.
+    for (const [id, path] of paths) {
+      expect(path.startsWith('a') || path.startsWith('ba') || path.startsWith('bb')).toBe(true);
+      expect(id).not.toBe('');
+    }
+    expect(paths.get('circulation_1')!.startsWith('ba')).toBe(true);
+    expect(paths.get('stair_1')!.startsWith('ba')).toBe(true);
+  });
+
+  it('chỗ để xe nằm ở dải chạm mặt vào được', () => {
+    const paths = new Map(
+      leafPaths(
+        (build() as { floors: Array<{ wings: Array<{ tree: LayoutNode }> }> }).floors[0]!.wings[0]!
+          .tree,
+      ),
+    );
+    expect(paths.get('garage_1')!.startsWith('a')).toBe(true);
+  });
+
+  it('khung ngang không dùng giếng trời — mọi lá là phòng thật', () => {
+    const leaves = leafPaths(
+      (build() as { floors: Array<{ wings: Array<{ tree: LayoutNode }> }> }).floors[0]!.wings[0]!
+        .tree,
+    );
+    expect(leaves.filter(([id]) => id.startsWith('void:'))).toHaveLength(0);
+  });
+
+  it('ba phương án cho ba cây khác nhau, không phải ba lần cùng một cây', () => {
+    const trees = [0, 1, 2].map((i) =>
+      JSON.stringify(
+        (build(i) as { floors: Array<{ wings: Array<{ tree: LayoutNode }> }> }).floors[0]!.wings[0]!
+          .tree,
+      ),
+    );
+    expect(new Set(trees).size).toBe(3);
+  });
+
+  it('mọi phòng của chương trình đều xuất hiện đúng một lần', () => {
+    const program = wideVilla();
+    const leaves = leafPaths(
+      (build() as { floors: Array<{ wings: Array<{ tree: LayoutNode }> }> }).floors[0]!.wings[0]!
+        .tree,
+    ).map(([id]) => id);
+    expect([...leaves].sort()).toEqual(program.spaces.map((s) => s.id).sort());
+  });
+});
+
+describe('Tỉ lệ hai dải của khung ngang', () => {
+  it('dải trước luôn là dải SÂU hơn — phòng lớn xếp vào đó', () => {
+    // Vòng chia trong `crossTree` đưa phòng lớn vào dải trước. Đặt phần dải trước dưới một
+    // nửa là lặng lẽ đảo ngược ý đồ: phòng lớn rơi vào dải nông và bị bóp, phòng nhỏ rơi vào
+    // dải sâu và bị thổi lên. Không quy tắc nào bắt được — cả hai vẫn hợp lệ.
+    for (const share of Object.values(CROSS_FRONT_SHARE)) {
+      expect(share).toBeGreaterThanOrEqual(0.5);
+    }
   });
 });

@@ -19,6 +19,13 @@ export interface SpaceNorm {
   target_m2: number;
   max_m2: number;
   priority: number;
+  /**
+   * Phần sàn CÒN DƯ chia theo tỉ lệ này, sau khi mọi phòng đã nhận tối thiểu.
+   *
+   * Đây là thứ làm diện tích co giãn theo QUY MÔ công trình thay vì theo một hệ số nhân
+   * dán theo bề rộng lô — xem `kb/space_norms.yaml`. `0` = không nhận phần dư.
+   */
+  weight: number;
   floor: FloorPreference;
   daylight: boolean;
   facade: boolean;
@@ -58,6 +65,8 @@ export interface SpaceNorms {
     fill_target_ratio: number;
     filler_below_ratio: number;
     fillers: Record<string, string[]>;
+    /** Ba bậc nhấn mạnh của Lớp 2a → hệ số nhân lên `weight`. */
+    emphasis: Record<'generous' | 'normal' | 'modest', number>;
   };
 }
 
@@ -103,6 +112,7 @@ export function parseSpaceNorms(yamlText: string): SpaceNorms {
       target_m2: num(entry.target_m2, `${at}.target_m2`),
       max_m2: num(entry.max_m2, `${at}.max_m2`),
       priority: num(entry.priority, `${at}.priority`),
+      weight: num(entry.weight, `${at}.weight`),
       floor: floor as FloorPreference,
       daylight: bool(entry.daylight, `${at}.daylight`),
       facade: bool(entry.facade, `${at}.facade`),
@@ -205,10 +215,36 @@ export function parseSpaceNorms(yamlText: string): SpaceNorms {
       }
     }
   }
+  // Hệ số của ba bậc nhấn mạnh. Có mặc định để tệp cũ vẫn nạp được, nhưng `normal` phải
+  // bằng đúng 1 — nó là mốc, và một mốc lệch 1 làm mọi hồ sơ KHÔNG có đề xuất của AI cũng
+  // đổi diện tích, tức là một thay đổi ngầm áp lên cả những hồ sơ không dùng AI.
+  const emphasisRaw = (allocationRaw.emphasis ?? {}) as Record<string, unknown>;
+  const factor = (key: string, fallback: number): number => {
+    const value =
+      emphasisRaw[key] === undefined
+        ? fallback
+        : num(emphasisRaw[key], `allocation.emphasis.${key}`);
+    if (!(value > 0 && value <= 5)) {
+      throw new SpaceNormsError(
+        `kb/space_norms.yaml: allocation.emphasis.${key} phải trong (0, 5].`,
+      );
+    }
+    return value;
+  };
+  const emphasis = {
+    generous: factor('generous', 1.7),
+    normal: factor('normal', 1),
+    modest: factor('modest', 0.55),
+  };
+  if (emphasis.normal !== 1) {
+    throw new SpaceNormsError('kb/space_norms.yaml: allocation.emphasis.normal phải bằng 1.');
+  }
+
   const allocation = {
     fill_target_ratio: ratio('fill_target_ratio', 0.62),
     filler_below_ratio: ratio('filler_below_ratio', 0.45),
     fillers,
+    emphasis,
   };
 
   return {

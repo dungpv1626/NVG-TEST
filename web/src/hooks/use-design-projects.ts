@@ -384,7 +384,10 @@ export interface SpaceProgramPayload {
   adjacency?: { a: string; b: string; kind: string; weight?: number }[];
   floor_allocation?: {
     floor: number;
+    /** Mặt sàn engine CHỌN DÙNG — thứ bộ giải chia hết. */
     usable_area_m2?: number | null;
+    /** Trần XÂY ĐƯỢC sau khoảng lùi và mật độ. Chênh lệch với trên là phần đất chưa dùng. */
+    buildable_area_m2?: number | null;
     allocated_area_m2?: number | null;
   }[];
   reference_projects?: string[];
@@ -397,6 +400,12 @@ export interface ProgramView {
   roomLabels: Record<string, string>;
   warnings: string[];
   unresolvedNeeds: string[];
+  /** Đề xuất của AI ở Lớp 2a — `null` khi mô hình không tham gia lần này. */
+  aiSuggestion?: {
+    rationale: string;
+    generous: string[];
+    modest: string[];
+  } | null;
   briefArtifactId: string;
   headArtifactId: string | null;
   /** Bản đang xem có đúng là bản đã chốt cho các lớp sau dùng không. */
@@ -429,6 +438,12 @@ export interface GenerateProgramResult {
   roomLabels: Record<string, string>;
   warnings: string[];
   unresolvedNeeds: string[];
+  /** Đề xuất của AI ở Lớp 2a — `null` khi mô hình không tham gia lần này. */
+  aiSuggestion?: {
+    rationale: string;
+    generous: string[];
+    modest: string[];
+  } | null;
 }
 
 /** Chốt chương trình không gian — đúc artifact và chuyển bản đang hiệu lực. */
