@@ -20,13 +20,29 @@
 # Lời gọi mang `data_class` NHỎ HƠN `max_data_class` (tức nhạy cảm hơn mức cho phép) bị lớp
 # chặn từ chối trước khi ra mạng (`workers/src/design/llm/router.ts`).
 #
-# ⚠️ GIAI ĐOẠN DEMO: gói Gemini miễn phí có thể được Google dùng để cải thiện sản phẩm
-# (CLAUDE.md 5.1, quyết định T8), nên MỌI đầu ra dưới đây đặt `max_data_class: 3` — mức
-# CHẶT NHẤT, chỉ nhận dữ liệu giả lập hoặc đã ẩn danh. HẠ con số này (3 → 2 → 1) là nới
-# lỏng, và không được làm cho tới khi có cam kết bằng văn bản của nhà cung cấp: hạ xuống 1
-# là mở đường cho đầu bài thật của khách đi ra dịch vụ ngoài mà không ai nhận ra.
+# ⚠️ GÓI MIỄN PHÍ: gói Gemini miễn phí có thể được Google dùng để cải thiện sản phẩm
+# (CLAUDE.md 5.1, quyết định T8), và Pollinations không có cam kết lưu trữ — nên mọi đầu ra
+# `layer*`/`kb_*`/`site_*` dưới đây đặt `max_data_class: 3` (mức CHẶT NHẤT, chỉ nhận dữ liệu
+# giả lập hoặc đã ẩn danh), trừ một ngoại lệ tạm có ghi tên. HẠ con số này là nới lỏng, và
+# không được làm khi chưa có cam kết bằng văn bản của nhà cung cấp.
+#
+# ✅ NHÁNH AI (quyết định T12, 08/09/2026): các tuyến `ai_text_*` và `ai_image_*` dùng API TRẢ
+# PHÍ của OpenAI, Google và Anthropic — cả ba cam kết không huấn luyện trên dữ liệu gửi qua
+# API. Đó là căn cứ để chúng đặt `max_data_class: 2`: nhận đầu bài + khảo sát đã LƯỢC DANH
+# TÍNH (tên, điện thoại, địa chỉ, mã hồ sơ, ngân sách) nhưng còn kích thước thật và chữ tự do
+# (hợp đồng `contracts/ai-brief-digest.schema.json`, hàm `brief/anonymise.ts`). KHÔNG hạ tiếp
+# xuống 1: danh tính khách không có lý do gì để đi ra ngoài.
+#
+# ⚠️ Chính sách bám vào KHOÁ, không bám vào lời hứa: Google dùng cùng một API cho gói miễn phí
+# lẫn gói trả phí, nên hai tuyến Gemini của nhánh AI khai nhà cung cấp RIÊNG `gemini_paid` với
+# secret riêng `GEMINI_PAID_API_KEY`. Khoá `GEMINI_API_KEY` (gói miễn phí, các tuyến hạng 3)
+# không bao giờ được router cấp cho tuyến hạng 2 — rà soát 08/09/2026 bắt được chỗ hai tuyến
+# này từng dùng chung khoá miễn phí.
+#
+# `label` là chữ hiện trên ô chọn model của trang thiết kế (T10); `pricing` là giá niêm yết
+# để tính cột chi phí trong `design_ai_call` — cả hai là DỮ LIỆU, sửa ở đây khi giá đổi.
 
-version: '1.0.0'
+version: '1.1.0'
 
 # Khoá API đã có (kiểm chứng 29/08/2026 bằng lời gọi thật, prompt không mang dữ liệu NVG).
 #
@@ -156,6 +172,7 @@ routes:
   layer5_render:
     provider: pollinations
     model: kontext
+    label: Pollinations (miễn phí, chỉ ảnh khối)
     endpoint: https://gen.pollinations.ai/v1/images/edits
     max_data_class: 3
     enabled: true
@@ -179,3 +196,66 @@ routes:
     max_data_class: 3
     enabled: true
     purpose: Nhúng chú giải công trình cũ để truy hồi few-shot.
+
+  # ── Nhánh thiết kế bằng AI (T10–T13, 08/09/2026) ──────────────────────────────────────────
+  #
+  # Người dùng chọn MỘT trong các tuyến dưới đây trên trang thiết kế; trình duyệt chỉ gửi TÊN
+  # TUYẾN. Mỗi tuyến một nhà cung cấp, để đổi model hay đổi bậc (Opus ↔ Sonnet, Pro ↔ Flash) là
+  # sửa một dòng ở đây (câu hỏi Q-34: bậc mặc định, Haan chốt).
+  #
+  # ⚠️ Tên mô hình dưới đây lấy từ tài liệu công khai ngày 08/09/2026 và PHẢI kiểm bằng một lời
+  # gọi thật (prompt không mang dữ liệu NVG) trước khi bật cho người dùng — tiền lệ 29/08/2026:
+  # `gemini-2.5-pro` trả 404 với khoá mới lập. Ghi số đo (giây, USD) vào chú thích sau khi đo.
+  #
+  # Địa chỉ HTTP khai tường minh vì mỗi nhà cung cấp một gốc và mỗi việc một đường
+  # (`/v1/responses` cho chữ, `/v1/images/edits` cho ảnh) — cùng lý lẽ với `layer5_render`.
+
+  ai_text_openai:
+    provider: openai
+    model: gpt-5
+    label: GPT (OpenAI)
+    endpoint: https://api.openai.com/v1/responses
+    max_data_class: 2
+    enabled: true
+    purpose: Nhánh AI — chương trình không gian và mặt bằng đề xuất (văn bản có lược đồ).
+    pricing: { input_per_1m_usd: 1.25, output_per_1m_usd: 10 }
+
+  ai_text_gemini:
+    provider: gemini_paid
+    model: gemini-2.5-pro
+    label: Gemini (Google)
+    max_data_class: 2
+    enabled: true
+    purpose: Nhánh AI — chương trình không gian và mặt bằng đề xuất (văn bản có lược đồ).
+    pricing: { input_per_1m_usd: 1.25, output_per_1m_usd: 10 }
+
+  ai_text_anthropic:
+    provider: anthropic
+    model: claude-opus-5
+    label: Claude (Anthropic)
+    endpoint: https://api.anthropic.com/v1/messages
+    max_data_class: 2
+    enabled: true
+    purpose: Nhánh AI — chương trình không gian và mặt bằng đề xuất (văn bản có lược đồ).
+    pricing: { input_per_1m_usd: 5, output_per_1m_usd: 25 }
+
+  # Ảnh: chỉ OpenAI và Google có mô hình ảnh; Anthropic không có. Cả hai nhận NHIỀU ảnh vào
+  # (ảnh khối + tờ mặt bằng), nên giữ được đường ảnh → ảnh ở ba trong năm loại ảnh (T13).
+  ai_image_openai:
+    provider: openai
+    model: gpt-image-2
+    label: GPT Image (OpenAI)
+    endpoint: https://api.openai.com/v1/images/edits
+    max_data_class: 2
+    enabled: true
+    purpose: Nhánh AI — mặt bằng có nội thất, phối cảnh, nội thất, mặt đứng, mặt cắt.
+    pricing: { image_usd: 0.19 }
+
+  ai_image_gemini:
+    provider: gemini_paid
+    model: gemini-3.1-flash-image
+    label: Gemini Image (Google)
+    max_data_class: 2
+    enabled: true
+    purpose: Nhánh AI — mặt bằng có nội thất, phối cảnh, nội thất, mặt đứng, mặt cắt.
+    pricing: { image_usd: 0.04 }

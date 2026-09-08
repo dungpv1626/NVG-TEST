@@ -31,6 +31,20 @@ export interface DesignEnv {
   POLLINATIONS_API_KEY?: string;
 
   /**
+   * Khoá OpenAI và Anthropic — nhánh thiết kế bằng AI (T10–T13, 08/09/2026). API trả phí của
+   * cả hai cam kết không huấn luyện trên dữ liệu gửi qua API, là căn cứ để tuyến `ai_*` nhận
+   * dữ liệu hạng 2 (T12). Mỗi nhà cung cấp một biến, cùng lý do với `POLLINATIONS_API_KEY`.
+   */
+  OPENAI_API_KEY?: string;
+  ANTHROPIC_API_KEY?: string;
+  /**
+   * Khoá Gemini GÓI TRẢ PHÍ — nhà cung cấp `gemini_paid` trong `config/models.yaml`, tách hẳn
+   * khỏi `GEMINI_API_KEY` (gói miễn phí, chỉ tuyến hạng 3). Cùng API, khác cam kết: chính sách
+   * hạng dữ liệu bám vào khoá nào được cấp, nên hai khoá không được dùng chung một biến.
+   */
+  GEMINI_PAID_API_KEY?: string;
+
+  /**
    * Địa chỉ Container tính toán khi chạy bằng Docker tại chỗ (gói Cloudflare Free chưa có
    * Containers — quyết định T3). Khi nâng gói thì đổi sang binding Durable Object, chỗ đổi
    * nằm đúng một tệp: `compute-backend.ts`.

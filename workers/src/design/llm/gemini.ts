@@ -17,6 +17,16 @@
 
 import type { DataClass } from '@nvg/shared/design';
 import type { ModelRouter, ResolvedRoute } from './router';
+import { schemaFor } from './schema-dialect';
+import {
+  tokenCount,
+  type AiImageClient,
+  type AiImageOptions,
+  type AiImageResult,
+  type StructuredCallOptions,
+  type StructuredCallResult,
+  type TextModelClient,
+} from './text-client';
 
 const API_ROOT = 'https://generativelanguage.googleapis.com/v1beta/models';
 
@@ -26,6 +36,13 @@ export class LlmCallFailed extends Error {
     message: string,
     readonly retryable: boolean,
     readonly status?: number,
+    /**
+     * Câu dành cho NGƯỜI DÙNG khi `message` mang chi tiết kỹ thuật của nhà cung cấp. Vắng thì
+     * `designApp.onError` tự chọn: lỗi do client tự chẩn (không có mã HTTP, không thử lại —
+     * từ chối, không ra ảnh, lời dẫn rỗng…) đã là câu tiếng Việt sạch nên hiện nguyên;
+     * còn lại dùng câu chung.
+     */
+    readonly userMessage?: string,
   ) {
     super(message);
     this.name = 'LlmCallFailed';
@@ -58,8 +75,44 @@ export interface GenerateOptions {
   images?: GenerateImagePart[];
 }
 
-export class GeminiClient {
+export class GeminiClient implements TextModelClient, AiImageClient {
   constructor(private readonly router: ModelRouter) {}
+
+  /**
+   * Giao diện chung của nhánh AI (`text-client.ts`): nhận lược đồ ĐỘC LẬP nhà cung cấp và tự
+   * đổi sang phương ngữ `responseSchema`; trả kèm số token để ghi chi phí.
+   *
+   * `generateJson` ở dưới giữ nguyên chữ ký cho năm nơi gọi cũ — chúng đã viết lược đồ theo
+   * phương ngữ Gemini từ đầu, nên không đi qua bộ đổi.
+   */
+  async complete(
+    routeName: string,
+    dataClass: DataClass,
+    options: StructuredCallOptions,
+  ): Promise<StructuredCallResult> {
+    const route = this.router.resolve(routeName, dataClass);
+    const started = Date.now();
+    const { data, text } = await this.structured(route, routeName, {
+      ...options,
+      schema: schemaFor('gemini', options.schema),
+    });
+    let json: unknown;
+    try {
+      json = JSON.parse(text);
+    } catch {
+      throw new LlmCallFailed(
+        `Mô hình trả về nội dung không phải JSON hợp lệ ở bước "${routeName}".`,
+        true,
+      );
+    }
+    return {
+      json,
+      provider: route.provider,
+      model: route.model,
+      usage: geminiUsage(data),
+      latencyMs: Date.now() - started,
+    };
+  }
 
   /**
    * Gọi mô hình và trả về JSON đã phân tích.
@@ -73,7 +126,23 @@ export class GeminiClient {
     options: GenerateOptions,
   ): Promise<T> {
     const route = this.router.resolve(routeName, dataClass);
+    const { text } = await this.structured(route, routeName, options);
+    try {
+      return JSON.parse(text) as T;
+    } catch {
+      throw new LlmCallFailed(
+        `Mô hình trả về nội dung không phải JSON hợp lệ ở bước "${routeName}".`,
+        true,
+      );
+    }
+  }
 
+  /** Phần chung của `generateJson` và `complete`: dựng lời gọi, đọc phần chữ trả về. */
+  private async structured(
+    route: ResolvedRoute,
+    routeName: string,
+    options: GenerateOptions,
+  ): Promise<{ data: GeminiGenerateResponse; text: string }> {
     const parts = [
       ...(options.images ?? []).map((img) => ({
         inlineData: { mimeType: img.mimeType, data: img.dataBase64 },
@@ -102,14 +171,7 @@ export class GeminiClient {
         reason === 'MAX_TOKENS',
       );
     }
-    try {
-      return JSON.parse(text) as T;
-    } catch {
-      throw new LlmCallFailed(
-        `Mô hình trả về nội dung không phải JSON hợp lệ ở bước "${routeName}".`,
-        true,
-      );
-    }
+    return { data, text };
   }
 
   /**
@@ -119,15 +181,20 @@ export class GeminiClient {
   async generateImage(
     routeName: string,
     dataClass: DataClass,
-    options: { system: string; prompt: string; image: GenerateImagePart },
-  ): Promise<{ mimeType: string; dataBase64: string }> {
+    options: { system: string; prompt: string; image: GenerateImagePart } | AiImageOptions,
+  ): Promise<AiImageResult> {
     const route = this.router.resolve(routeName, dataClass);
+    // Hai hình dạng đầu vào: `image` (tuyến phối cảnh cũ, một ảnh khối) và `images[]` (nhánh
+    // AI, nhiều ảnh vào). Cùng một lời gọi — chỉ khác số part ảnh.
+    const images = 'images' in options ? options.images : [options.image];
     const body = {
       contents: [
         {
           role: 'user',
           parts: [
-            { inlineData: { mimeType: options.image.mimeType, data: options.image.dataBase64 } },
+            ...images.map((img) => ({
+              inlineData: { mimeType: img.mimeType, data: img.dataBase64 },
+            })),
             { text: options.prompt },
           ],
         },
@@ -135,6 +202,7 @@ export class GeminiClient {
       systemInstruction: { parts: [{ text: options.system }] },
       generationConfig: { responseModalities: ['IMAGE'] },
     };
+    const started = Date.now();
     const data = await this.call<GeminiGenerateResponse>(route, 'generateContent', body);
     const part = data.candidates?.[0]?.content?.parts?.find((p) => p.inlineData?.data);
     if (!part?.inlineData?.data) {
@@ -144,7 +212,14 @@ export class GeminiClient {
         false,
       );
     }
-    return { mimeType: part.inlineData.mimeType ?? 'image/png', dataBase64: part.inlineData.data };
+    return {
+      mimeType: part.inlineData.mimeType ?? 'image/png',
+      dataBase64: part.inlineData.data,
+      provider: route.provider,
+      model: route.model,
+      usage: geminiUsage(data),
+      latencyMs: Date.now() - started,
+    };
   }
 
   /**
@@ -220,6 +295,24 @@ interface GeminiGenerateResponse {
     content?: { parts?: { text?: string; inlineData?: { mimeType?: string; data?: string } }[] };
     finishReason?: string;
   }[];
+  usageMetadata?: {
+    promptTokenCount?: number;
+    candidatesTokenCount?: number;
+    /** Token SUY LUẬN của Gemini 2.5+ — tính giá như token ra, nên phải cộng vào chi phí. */
+    thoughtsTokenCount?: number;
+  };
+}
+
+function geminiUsage(data: GeminiGenerateResponse): {
+  inputTokens: number | null;
+  outputTokens: number | null;
+} {
+  const out = tokenCount(data.usageMetadata?.candidatesTokenCount);
+  const thoughts = tokenCount(data.usageMetadata?.thoughtsTokenCount) ?? 0;
+  return {
+    inputTokens: tokenCount(data.usageMetadata?.promptTokenCount),
+    outputTokens: out === null ? null : out + thoughts,
+  };
 }
 
 /** Chuẩn hoá vector về độ dài 1. Vector toàn số 0 giữ nguyên — chia cho 0 sẽ ra NaN. */

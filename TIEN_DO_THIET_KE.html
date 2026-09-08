@@ -527,12 +527,12 @@
         </p>
         <ol>
           <li>
-            <span class="pill s-progress">Đang làm</span> <b>Đợt 0 — Chốt hiện trạng</b>: commit đợt
-            đầu bài + sửa lỗi 07–08/09 (78 tệp) sau khi test và rà soát; ghi T10–T13 và Q-30…Q-35
-            vào đây.
+            <span class="pill s-done">Xong 08/09</span> <b>Đợt 0 — Chốt hiện trạng</b>: commit
+            <code>92cab16</code> (80 tệp) sau khi test và rà soát ba lát (6 P1, 12 P2 đã sửa);
+            T10–T13 và Q-30…Q-35 ghi ở đây.
           </li>
           <li>
-            <span class="pill s-draft">Chưa</span> <b>Đợt 1 — Lớp nhà cung cấp</b>:
+            <span class="pill s-progress">Xong mã, chờ khoá</span> <b>Đợt 1 — Lớp nhà cung cấp</b>:
             <code>TextModelClient</code> chung, client OpenAI + Anthropic cạnh Gemini, bộ chuyển ba
             phương ngữ JSON Schema, hàm ẩn danh hạng 2 + hợp đồng <code>ai-brief-digest</code>,
             tuyến <code>ai_*</code> trong <code>models.yaml</code>, migration 0121 (bảng
@@ -580,6 +580,63 @@
             </tr>
           </thead>
           <tbody>
+            <tr>
+              <td class="num">08/09</td>
+              <td>
+                Nhánh AI — Đợt 1: lớp nhà cung cấp OpenAI + Anthropic, ẩn danh hạng 2, nhật ký chi
+                phí
+              </td>
+              <td class="xs">
+                <b>Giao diện chung</b> <code>TextModelClient.complete()</code> /
+                <code>AiImageClient</code> (<code>llm/text-client.ts</code>); ba client cùng khuôn
+                <code>gemini.ts</code>: chỉ nhận TÊN TUYẾN, khoá chỉ ở header, không thử lại nội bộ.
+                <code>OpenAiClient</code> (Responses API <code>json_schema strict</code>,
+                <code>store: false</code>; ảnh qua <code>/v1/images/edits</code> nhiều ảnh vào),
+                <code>AnthropicClient</code> (<code>output_config.format</code>; không sinh ảnh),
+                <code>GeminiClient.complete()</code> giữ nguyên <code>generateJson</code> cho năm
+                nơi gọi cũ. <b>Bộ đổi ba phương ngữ JSON Schema</b> (<code>schema-dialect.ts</code>)
+                có golden test — chỉ nới, không thêm ràng buộc; ràng buộc thật ở Zod.<br />
+                <b>Ẩn danh hạng 2</b> <code>brief/anonymise.ts</code>: allow-list dựng trường theo
+                trường, kết quả đi qua hợp đồng <code>ai-brief-digest</code> (<code
+                  >additionalProperties: false</code
+                >
+                mọi cấp); <code>scrubIdentity</code> lược điện thoại, email, đường dẫn, mã hồ sơ,
+                dãy số ≥ 9 chữ số (căn cước, sổ đỏ) và tên khách theo từ nguyên vẹn; số đo và năm
+                giữ nguyên. Hạng dữ liệu khai cứng bằng 2.<br />
+                <b>Cấu hình</b> <code>models.yaml</code> 1.1.0: năm tuyến <code>ai_*</code> hạng 2
+                có <code>label</code>, <code>endpoint</code>, <code>pricing</code>; chú thích đầu
+                tệp viết lại theo T12. <code>router.publicRoutes()</code> cho ô chọn (không lộ
+                khoá); <code>resolve()</code> vẫn hai tham số.
+                <code>GET /design/ai/models</code> trả danh mục + mặc định từ
+                <code>design_setting</code>, tuyến thiếu khoá thì mờ kèm lý do.<br />
+                <b>Migration 0121</b> đã áp và kiểm bằng truy vấn thật: bảng
+                <code>design_ai_call</code> (RLS đọc ba chiều, không INSERT từ trình duyệt), CHECK
+                <code>kind</code>/<code>step</code> nới cho <code>ai_plan_proposal</code>, bucket
+                <code>design-renders</code> + policy đọc theo dự án, hai khoá
+                <code>ai_*_route_default</code>. Drizzle in một lỗi rồi báo «Hoàn tất» — đối chiếu
+                CSDL cho thấy mọi đối tượng đều có.<br />
+                <b>Rà soát riêng Đợt 1</b> bắt một P0 đúng: hai tuyến Gemini hạng 2 từng dùng CHUNG
+                khoá với gói miễn phí — chính sách phải bám vào khoá, không vào lời hứa. Nay tách
+                nhà cung cấp <code>gemini_paid</code> + secret <code>GEMINI_PAID_API_KEY</code>, có
+                test canh &laquo;tuyến AI không dùng chung nhà cung cấp với tuyến hạng 3&raquo;;
+                migration 0122 đổi mặc định sang OpenAI. Kèm sáu sửa nhỏ: bộ đổi lược đồ ném lỗi với
+                object dạng bản đồ thay vì ép đóng; <code>scrubIdentity</code> chỉ lược tên đơn khi
+                đứng sau danh xưng (không cắt «hướng Nam», «lan can», «Hà Nội»), mẫu mã hồ sơ thu
+                hẹp về mã của hệ thống (TCVN/QCVN đi qua), bắt số điện thoại có ngoặc; chi phí
+                Gemini cộng token suy luận; dòng <code>failed</code> giữ provider/model;
+                <code>/ai/models</code> trả 401 với token hỏng; <code>onError</code> hiện câu client
+                tự chẩn thay vì câu «không đọc được ảnh» viết cho một việc cũ.<br />
+                <b>Kiểm:</b> tsc sạch · 640 logic · 349 web · 17 hợp đồng khớp;
+                <code>GET /design/ai/models</code> gọi thật trên Worker: 200,
+                Gemini/Anthropic/OpenAI mờ đúng lý do «Chưa cấu hình khoá API». <b>Còn chờ:</b> khoá
+                <code>OPENAI_API_KEY</code>, <code>ANTHROPIC_API_KEY</code>,
+                <code>GEMINI_PAID_API_KEY</code> chưa có trong <code>.dev.vars</code> — nên chưa đo
+                được lời gọi thật với các tên model mới (<code>gpt-5</code>,
+                <code>claude-opus-5</code>, <code>gemini-2.5-pro</code>, <code>gpt-image-2</code>,
+                <code>gemini-3.1-flash-image</code>). Việc đo này là điều kiện bật tuyến cho người
+                dùng (Q-34).
+              </td>
+            </tr>
             <tr>
               <td class="num">08/09</td>
               <td>Rà soát trước commit: 6 lỗi P1 và 12 lỗi P2 trên 78 tệp đang treo</td>

@@ -125,6 +125,12 @@
    * theo `provider` của từng tuyến, nên đổi nhà cung cấp trong `config/models.yaml` là đổi luôn
    * khoá được dùng — không sửa mã.
    *
+   * `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` và `GEMINI_PAID_API_KEY` (nhánh thiết kế bằng AI,
+   * T10–T13) cũng là secret, cùng cách đặt. Thiếu khoá nào thì ô chọn model trên trang thiết kế
+   * mờ nhà cung cấp đó kèm lý do — không chặn nhánh bộ giải. `GEMINI_PAID_API_KEY` tách khỏi
+   * `GEMINI_API_KEY` vì chính sách hạng dữ liệu bám vào khoá: khoá miễn phí không bao giờ được
+   * cấp cho tuyến hạng 2.
+   *
    * `DESIGN_COMPUTE_URL` đặt trong `workers/.dev.vars` khi chạy Container bằng Docker tại
    * chỗ: `DESIGN_COMPUTE_URL=http://localhost:8080`.
    */

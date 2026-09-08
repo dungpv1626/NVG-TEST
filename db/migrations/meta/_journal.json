@@ -848,6 +848,20 @@
       "when": 1788705974485,
       "tag": "0120_tk_go_bien_ban_khao_sat",
       "breakpoints": true
+    },
+    {
+      "idx": 121,
+      "version": "7",
+      "when": 1788823898871,
+      "tag": "0121_tk_ai_design",
+      "breakpoints": true
+    },
+    {
+      "idx": 122,
+      "version": "7",
+      "when": 1788825861372,
+      "tag": "0122_tk_ai_default_routes",
+      "breakpoints": true
     }
   ]
 }

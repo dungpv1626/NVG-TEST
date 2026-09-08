@@ -23,6 +23,7 @@ import { ContractError } from './contracts';
 import { createComputeBackend, type ExportDxfRequest } from './compute-backend';
 import { DataClassViolation, ModelNotConfigured } from './llm/router';
 import { geminiClient, modelRouter, renderImageClient } from './llm/factory';
+import { aiModelCatalogue } from './ai/models';
 import { LlmCallFailed } from './llm/gemini';
 import { PublishBridge } from './publish';
 import { ArtifactRepository } from './artifacts';
@@ -88,6 +89,48 @@ designApp.get('/policy/data-class', (c) => {
         Object.fromEntries(DATA_CLASSES.map((dc) => [dc, router.allows(name, dc as DataClass)])),
       ]),
     ),
+  });
+});
+
+/**
+ * Danh mục model cho ô chọn của trang thiết kế (nhánh AI, T10).
+ *
+ * Trả TÊN TUYẾN kèm nhãn — không bao giờ trả khoá. Tuyến bật mà chưa có khoá vẫn được liệt kê
+ * kèm lý do để giao diện mờ nó và nói vì sao (AFD 6.5). Mặc định đọc từ `design_setting` của
+ * tenant qua RLS của chính người gọi, nên không cần truyền mã dự án.
+ */
+designApp.get('/ai/models', async (c) => {
+  const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+  const db = await asUser(c.env, token);
+
+  const catalogue = aiModelCatalogue(modelRouter(c.env));
+  const settings = await db
+    .from('design_setting')
+    .select('key, value')
+    .in('key', ['ai_text_route_default', 'ai_image_route_default']);
+  // Danh mục không phụ thuộc RLS, nên phải tự chặn token hỏng: PostgREST trả 401 thì người gọi
+  // chưa đăng nhập, không phải "tenant chưa cấu hình mặc định".
+  if (settings.error && settings.status === 401) {
+    return c.json({ error: 'Phiên đăng nhập đã hết hạn. Đăng nhập lại rồi mở lại trang.' }, 401);
+  }
+  const valueOf = (key: string): string | null => {
+    const row = (settings.data ?? []).find((r) => r.key === key);
+    return typeof row?.value === 'string' ? row.value : null;
+  };
+  // Mặc định chỉ có nghĩa khi nó trỏ vào một tuyến đang bấm được; không thì để trình duyệt
+  // chọn tuyến bật đầu tiên — đừng trỏ người dùng vào một lựa chọn mờ.
+  const pickDefault = (kind: 'text' | 'image', key: string) => {
+    const wanted = valueOf(key);
+    const usable = catalogue[kind].filter((o) => o.enabled);
+    return usable.find((o) => o.route === wanted)?.route ?? usable[0]?.route ?? null;
+  };
+  return c.json({
+    ...catalogue,
+    defaults: {
+      text: pickDefault('text', 'ai_text_route_default'),
+      image: pickDefault('image', 'ai_image_route_default'),
+    },
   });
 });
 
@@ -1294,9 +1337,16 @@ designApp.onError((error, c) => {
     // `error.message` chứa nguyên văn mã HTTP + JSON lỗi của nhà cung cấp (đã ghi log ở trên) —
     // đúng thứ CGD 5.5 cấm hiện cho người dùng. Chỉ hai nhóm nguyên nhân thật sự khác nhau với
     // người dùng: quá tải/tạm thời (thử lại được) và mọi trường hợp còn lại.
-    const message = error.retryable
-      ? 'Mô hình ngôn ngữ đang quá tải, thử lại sau ít phút.'
-      : 'Không đọc được ảnh bằng mô hình ngôn ngữ. Thử lại sau, hoặc báo Quản trị hệ thống nếu vẫn lỗi.';
+    // Client biết việc gì hỏng (từ chối, hết token, không ra ảnh…) thì tự nói bằng tiếng Việt
+    // qua `userMessage`; ở đây chỉ còn câu chung cho lỗi mạng/HTTP mà chi tiết là của nhà cung cấp.
+    const selfDiagnosed = error.status === undefined && !error.retryable;
+    const message =
+      error.userMessage ??
+      (selfDiagnosed
+        ? error.message
+        : error.retryable
+          ? 'Mô hình đang quá tải, thử lại sau ít phút.'
+          : 'Mô hình không xử lý được yêu cầu này. Thử lại sau, hoặc báo Quản trị hệ thống nếu vẫn lỗi.');
     return c.json({ error: message, retryable: error.retryable }, error.retryable ? 503 : 502);
   }
   if ((error as { retryable?: boolean }).retryable) {

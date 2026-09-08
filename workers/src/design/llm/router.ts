@@ -17,9 +17,23 @@
 import { load as parseYaml } from 'js-yaml';
 import type { DataClass } from '@nvg/shared/design';
 
+/** Giá niêm yết của nhà cung cấp — DỮ LIỆU để tính cột chi phí, không phải hằng số trong mã. */
+export interface RoutePricing {
+  input_per_1m_usd?: number;
+  output_per_1m_usd?: number;
+  /** Giá một ảnh, khi nhà cung cấp tính theo ảnh thay vì theo token. */
+  image_usd?: number;
+}
+
 export interface ModelRoute {
   provider: string;
   model: string;
+  /**
+   * Chữ hiện trên ô chọn model của trang thiết kế (T10). Chỉ tuyến `ai_*` cần; vắng thì
+   * giao diện không hiện tuyến đó.
+   */
+  label?: string;
+  pricing?: RoutePricing;
   /**
    * Hạng dữ liệu NHẠY CẢM NHẤT mà đầu ra này được phép nhận.
    *
@@ -55,6 +69,18 @@ export interface ModelRoute {
 export interface ModelConfig {
   version: string;
   routes: Record<string, ModelRoute>;
+}
+
+/** Một tuyến nhìn từ giao diện: đủ để chọn, không đủ để gọi. */
+export interface PublicRoute {
+  route: string;
+  provider: string;
+  model: string;
+  label: string;
+  maxDataClass: DataClass;
+  enabled: boolean;
+  hasKey: boolean;
+  pricing?: RoutePricing;
 }
 
 /** Lỗi chính sách dữ liệu — KHÔNG thử lại, và không có cách "vòng qua" nào từ mã gọi. */
@@ -170,6 +196,26 @@ export class ModelRouter {
    */
   providerOf(routeName: string): string | undefined {
     return this.config.routes[routeName]?.provider;
+  }
+
+  /**
+   * Danh sách tuyến cho ô chọn model — KHÔNG kèm khoá, KHÔNG mở đường ra mạng.
+   *
+   * `hasKey` nói "nhà cung cấp này đã có khoá trong Secrets" mà không lộ khoá, để giao diện ẩn
+   * tuyến chưa dùng được thay vì hiện rồi báo lỗi khi bấm (AFD 6.5). Muốn gọi thật vẫn phải
+   * qua `resolve()`.
+   */
+  publicRoutes(): PublicRoute[] {
+    return Object.entries(this.config.routes).map(([route, r]) => ({
+      route,
+      provider: r.provider,
+      model: r.model,
+      label: r.label ?? r.model,
+      maxDataClass: r.max_data_class,
+      enabled: r.enabled,
+      hasKey: Boolean(this.apiKeys[r.provider]),
+      pricing: r.pricing,
+    }));
   }
 
   get version(): string {

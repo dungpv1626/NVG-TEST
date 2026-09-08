@@ -24,6 +24,11 @@ const config = parseModelConfig(readFileSync(CONFIG_PATH, 'utf8'));
 describe('config/models.yaml', () => {
   it('khai đủ các đầu ra mà tài liệu liệt kê', () => {
     expect(Object.keys(config.routes).sort()).toEqual([
+      'ai_image_gemini',
+      'ai_image_openai',
+      'ai_text_anthropic',
+      'ai_text_gemini',
+      'ai_text_openai',
       'kb_label_normalize',
       'kb_rationale_embed',
       'layer1_brief',
@@ -49,21 +54,55 @@ describe('config/models.yaml', () => {
    * vì người đọc quen mắt với màu đỏ sẵn có sẽ không nhận ra lần nới tiếp theo.
    *
    * Ngoại lệ này phải biến mất trước khi có ảnh thật của khách chạm vào route đó, hoặc
-   * trước khi triển khai production — lúc đó xoá hẳn nhánh dưới đây, đừng thêm tên thứ hai.
+   * trước khi triển khai production — lúc đó xoá hẳn tên nó khỏi tập dưới đây.
+   *
+   * Từ 08/09/2026 (quyết định T12) có thêm nhóm thứ hai ở hạng 2, và nhóm này KHÔNG tạm: các
+   * tuyến `ai_text_*`/`ai_image_*` gọi API TRẢ PHÍ của OpenAI, Google, Anthropic — cả ba cam kết
+   * không huấn luyện trên dữ liệu gửi qua API. Chúng nhận đầu bài đã LƯỢC DANH TÍNH
+   * (`brief/anonymise.ts`), và test dưới canh chúng không tụt xuống 1.
    */
   const TAM_THOI_HANG_2 = new Set(['site_boundary_extract']);
+  const isAiRoute = (name: string) => /^ai_(text|image)_/.test(name);
 
-  it('giai đoạn demo: mọi đầu ra chỉ nhận hạng 3, trừ đúng một ngoại lệ đã khai tên', () => {
+  it('gói miễn phí chỉ nhận hạng 3 (trừ ngoại lệ tạm); tuyến AI trả phí nhận hạng 2, không thấp hơn', () => {
     for (const [name, route] of Object.entries(config.routes)) {
-      expect(route.max_data_class, `đầu ra ${name}`).toBe(TAM_THOI_HANG_2.has(name) ? 2 : 3);
+      const expected = isAiRoute(name) || TAM_THOI_HANG_2.has(name) ? 2 : 3;
+      expect(route.max_data_class, `đầu ra ${name}`).toBe(expected);
     }
   });
 
-  it('ngoại lệ hạng 2 KHÔNG được lan sang đầu ra thứ hai', () => {
+  it('ngoại lệ tạm hạng 2 KHÔNG lan sang đầu ra thứ hai ngoài nhóm AI trả phí', () => {
     const hang2 = Object.entries(config.routes)
-      .filter(([, route]) => route.max_data_class !== 3)
+      .filter(([name, route]) => route.max_data_class !== 3 && !isAiRoute(name))
       .map(([name]) => name);
     expect(hang2).toEqual([...TAM_THOI_HANG_2]);
+  });
+
+  it('mỗi tuyến AI có nhãn cho ô chọn, và nhà cung cấp không suy được địa chỉ thì khai endpoint', () => {
+    const ai = Object.entries(config.routes).filter(([name]) => isAiRoute(name));
+    expect(ai.length).toBeGreaterThanOrEqual(5);
+    for (const [name, route] of ai) {
+      expect(route.label, `nhãn của ${name}`).toBeTruthy();
+      if (!/^gemini/.test(route.provider)) expect(route.endpoint, name).toMatch(/^https:\/\//);
+    }
+    // Anthropic không sinh ảnh — không được có tuyến ảnh nào trỏ vào nó.
+    for (const [name, route] of ai) {
+      if (name.startsWith('ai_image_')) expect(route.provider, name).not.toBe('anthropic');
+    }
+  });
+
+  it('tuyến AI hạng 2 KHÔNG dùng chung nhà cung cấp (tức khoá) với tuyến gói miễn phí hạng 3', () => {
+    // Chính sách bám vào KHOÁ: Google dùng một API cho cả gói miễn phí lẫn trả phí, nên nếu hai
+    // tuyến Gemini của nhánh AI khai `provider: gemini` thì đầu bài kích thước thật đi ra bằng
+    // đúng khoá miễn phí mà T8 cấm (rà soát 08/09/2026).
+    const freeProviders = new Set(
+      Object.entries(config.routes)
+        .filter(([name, route]) => !isAiRoute(name) && route.max_data_class === 3)
+        .map(([, route]) => route.provider),
+    );
+    for (const [name, route] of Object.entries(config.routes)) {
+      if (isAiRoute(name)) expect(freeProviders.has(route.provider), name).toBe(false);
+    }
   });
 
   /*

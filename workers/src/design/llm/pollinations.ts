@@ -25,16 +25,17 @@
 
 import type { DataClass } from '@nvg/shared/design';
 import { LlmCallFailed } from './gemini';
+import { ALLOWED_IMAGE_INPUT, decodeBase64, sniffMime } from './image-bytes';
 import type { ModelRouter, ResolvedRoute } from './router';
+
+// Giữ lối xuất cũ: test và lớp gọi hiện có import `sniffMime` từ đây.
+export { sniffMime } from './image-bytes';
 
 /** Phản hồi kiểu OpenAI của `/v1/images/edits`. */
 interface EditResponse {
   data?: { b64_json?: string }[];
   error?: unknown;
 }
-
-/** Kiểu tệp ảnh nhận được ở đầu vào. Pollinations nhận cả ba. */
-const ALLOWED_INPUT = new Set(['image/png', 'image/jpeg', 'image/webp']);
 
 export class PollinationsImageClient {
   constructor(private readonly router: ModelRouter) {}
@@ -58,7 +59,7 @@ export class PollinationsImageClient {
         false,
       );
     }
-    if (!ALLOWED_INPUT.has(options.image.mimeType)) {
+    if (!ALLOWED_IMAGE_INPUT.has(options.image.mimeType)) {
       throw new LlmCallFailed(
         `Ảnh khối có kiểu tệp không gửi được: ${options.image.mimeType}. Nhận PNG, JPEG hoặc WebP.`,
         false,
@@ -122,28 +123,4 @@ export class PollinationsImageClient {
     }
     return (await res.json()) as EditResponse;
   }
-}
-
-/**
- * Nhận dạng kiểu ảnh từ vài byte đầu của chuỗi base64.
- *
- * Cần thiết vì phản hồi KHÔNG khai kiểu tệp, còn màn hình thì dựng `data:<kiểu>;base64,…` —
- * đoán bừa `image/png` cho một tệp JPEG là loại sai chỉ lộ ra ở một số trình duyệt. Đo được
- * 06/09/2026: `kontext` trả JPEG.
- */
-export function sniffMime(dataBase64: string): string {
-  if (dataBase64.startsWith('/9j/')) return 'image/jpeg';
-  if (dataBase64.startsWith('iVBORw0KGgo')) return 'image/png';
-  if (dataBase64.startsWith('UklGR')) return 'image/webp';
-  // Không nhận ra thì khai PNG: mọi trình duyệt đều tự dò lại theo nội dung, nên đây là
-  // phỏng đoán an toàn nhất chứ không phải một khẳng định.
-  return 'image/png';
-}
-
-/** base64 → nhị phân. `atob` có sẵn trong Workers và trong Node từ bản 16. */
-function decodeBase64(value: string): Uint8Array {
-  const binary = atob(value);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-  return bytes;
 }

@@ -33,8 +33,10 @@ import {
   index,
   integer,
   jsonb,
+  numeric,
   pgTable,
   primaryKey,
+  smallint,
   text,
   timestamp,
   uniqueIndex,
@@ -414,3 +416,57 @@ export type DesignPublication = typeof designPublications.$inferSelect;
 export type DesignProjectAssignment = typeof designProjectAssignments.$inferSelect;
 export type DesignSetting = typeof designSettings.$inferSelect;
 export type KbRecord = typeof kbRecords.$inferSelect;
+
+/**
+ * Nhật ký từng lượt gọi mô hình AI của nhà cung cấp ngoài — nhánh AI (T10–T13, migration 0121).
+ *
+ * Mỗi lượt một dòng, kể cả lượt hỏng hay bị bác: chi phí phải đối chiếu được theo dự án, model
+ * và việc. Chỉ Worker ghi bằng `service_role`; trình duyệt chỉ đọc (RLS ba chiều).
+ */
+export const designAiCalls = pgTable(
+  'design_ai_call',
+  {
+    id: primaryId(),
+
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'restrict' }),
+    ...companyScoped(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => designProjects.id, { onDelete: 'cascade' }),
+    discipline: designDisciplineEnum('discipline').notNull(),
+
+    /** Tên tuyến trong `config/models.yaml` (`ai_text_openai`…). */
+    route: varchar('route', { length: 64 }).notNull(),
+    provider: varchar('provider', { length: 32 }).notNull(),
+    model: varchar('model', { length: 96 }).notNull(),
+    /** Việc gì: `program`, `plan`, `plan_repair`, `image:exterior`… */
+    purpose: varchar('purpose', { length: 64 }).notNull(),
+    dataClass: smallint('data_class').notNull(),
+    promptVersion: varchar('prompt_version', { length: 16 }),
+
+    inputTokens: integer('input_tokens'),
+    outputTokens: integer('output_tokens'),
+    imageCount: integer('image_count').notNull().default(0),
+    latencyMs: integer('latency_ms').notNull(),
+    /** `ok` · `rejected` (đầu ra không đạt kiểm) · `failed` (lỗi gọi). */
+    status: varchar('status', { length: 16 }).notNull(),
+    errorCode: varchar('error_code', { length: 64 }),
+    /** Tính từ giá niêm yết trong `config/models.yaml` lúc gọi; rỗng khi tuyến không khai giá. */
+    costUsd: numeric('cost_usd', { precision: 10, scale: 6 }),
+
+    artifactId: artifactId('artifact_id').references(() => designArtifacts.id, {
+      onDelete: 'set null',
+    }),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+  },
+  (t) => [
+    index('design_ai_call_project_idx').on(t.projectId, t.createdAt),
+    index('design_ai_call_tenant_time_idx').on(t.tenantId, t.createdAt),
+  ],
+);
+
+export type DesignAiCall = typeof designAiCalls.$inferSelect;
