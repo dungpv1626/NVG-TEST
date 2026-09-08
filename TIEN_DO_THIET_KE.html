@@ -540,7 +540,8 @@
             <code>GET /design/ai/models</code>. Bàn giao: một lời gọi thật mỗi nhà cung cấp.
           </li>
           <li>
-            <span class="pill s-draft">Chưa</span> <b>Đợt 2 — Chương trình không gian bằng AI</b>:
+            <span class="pill s-progress">Xong mã, chờ khoá</span>
+            <b>Đợt 2 — Chương trình không gian bằng AI</b>:
             <code>POST /design/program/ai-generate</code>, kiểm plausibility + rule pack, so sánh
             với bộ giải; ô chọn <code>AiModePicker</code> ở tab Chương trình không gian.
           </li>
@@ -580,6 +581,48 @@
             </tr>
           </thead>
           <tbody>
+            <tr>
+              <td class="num">08/09</td>
+              <td>
+                Nhánh AI — Đợt 2: chương trình không gian do mô hình lập, kiểm và điền bằng mã
+              </td>
+              <td class="xs">
+                <b>Hợp đồng</b> <code>ai-space-program-proposal</code>: mô hình trả danh mục không
+                gian, tầng, diện tích mong muốn, <code>enclosed_in</code>, <code>rationale</code> và
+                <code>assumptions</code> (câu hỏi cho khách) — đây là chỗ nới có kiểm soát của bất
+                biến #2 theo T10/T11. Ba hợp đồng <code>space-program</code>,
+                <code>floor-plan</code>, <code>render-result</code> thêm trường tuỳ chọn
+                <code>generator</code> để truy vết nguồn sinh; artifact cũ vẫn hợp lệ. Ảnh Docker đã
+                dựng lại và container chạy lại (Container validate cả hai chiều).<br />
+                <b>Lõi</b> <code>ai/program.ts</code>: tri thức tiêm vào lời dẫn từ dữ liệu (từ
+                vựng, chuẩn nghề, tối thiểu quy chuẩn = max(rule, norm), sàn xây được từng tầng bằng
+                đúng <code>buildableFootprint</code> của engine, số phòng ngủ theo gia đình);
+                <code>checkProposal</code> nói lỗi bằng tiếng Việt (mã lạ, dưới tối thiểu, vượt sàn,
+                sai số phòng ngủ, thiếu bắt buộc, tầng ngoài dải); đúng MỘT lượt sửa kèm danh sách
+                lỗi rồi bác (<code>AiProgramRejected</code> → 422);
+                <code>programFromProposal</code> điền min/max/priority/needs/adjacency (cùng
+                <code>buildAdjacency</code>)/ <code>floor_allocation</code>, id đánh số
+                <code>type_n</code>; plausibility chạy sau thành cảnh báo. Bài bất biến: bản bộ giải
+                đưa qua bộ kiểm phải đạt. Lời dẫn ở <code>kb/ai_design_prompts.yaml</code> (tiếng
+                Anh, không mang ngưỡng; test canh).<br />
+                <b>Route</b> <code>POST /design/program/ai-generate {projectId, route}</code>: kiểm
+                quyền ghi, tuyến phải trong danh mục văn bản đang bấm được, cổng đầy đủ như
+                <code>/program/generate</code>; chữ tự do + khảo sát + tên/điện thoại/địa chỉ khách
+                đọc qua RLS người gọi rồi ẩn danh; ghi <code>design_ai_call</code> cho từng lượt (kể
+                cả lượt bị bác); trả kèm bảng so với bộ giải. <code>GET /program</code> trả thêm
+                <code>head.generator</code>.<br />
+                <b>Giao diện</b> <code>AiModePicker</code> (Cách lập: Bộ giải nội bộ / AI + ô Model,
+                tuyến thiếu khoá mờ kèm lý do; nhớ lựa chọn ở <code>localStorage</code>, mặc định từ
+                máy chủ). Tab Chương trình không gian: nút đổi chữ theo chế độ, dòng «Đang hỏi mô
+                hình — thường 15–40 giây», báo cáo lượt AI (nguồn, lý do, giả định, bảng so với bộ
+                giải, ghi chú từng phòng), bản chốt do AI lập thì bảng mặc định hiện bản đó với nút
+                đổi sang bản bộ giải để đối chiếu và <b>không</b> báo «đầu bài đã đổi» oan.<br />
+                <b>Kiểm:</b> tsc sạch · 652 logic · 352 web · 18 hợp đồng khớp; gọi thật trên
+                Worker: <code>GET /program</code> có <code>head</code>, <code>ai-generate</code> trả
+                409 tiếng Việt khi tuyến chưa có khoá. <b>Chưa đo được lời gọi thật</b> cho tới khi
+                có khoá (cùng điều kiện với Đợt 1).
+              </td>
+            </tr>
             <tr>
               <td class="num">08/09</td>
               <td>

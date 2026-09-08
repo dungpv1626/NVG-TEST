@@ -247,7 +247,7 @@ export function buildSpaceProgram(inputs: ProgramInputs): ProgramResult {
  *    hoạch tính trên diện tích ghi trong giấy chứng nhận, không phải trên hình bao. Dùng
  *    `width_m × depth_m` như trước là nới trần mật độ cho mọi thửa không vuông vắn.
  */
-function buildableFootprint(
+export function buildableFootprint(
   brief: DesignBrief,
   geometry: SiteGeometry,
   rules: RulePack,
@@ -994,7 +994,7 @@ function allocateAreas(
  * thì "vệ sinh cách xa phòng thờ" (phạm vi cả nhà) sẽ không được sinh khi hai phòng ở khác
  * tầng — đúng chỗ nó có nghĩa nhất.
  */
-function buildAdjacency(
+export function buildAdjacency(
   spaces: SpaceProgram['spaces'],
   rules: RulePack,
   norms: SpaceNorms,

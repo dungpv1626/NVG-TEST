@@ -130,6 +130,34 @@
     },
     "priors_applied": {
       "type": "boolean"
+    },
+    "generator": {
+      "type": ["object", "null"],
+      "description": "Nguồn sinh artifact — nhánh AI (T10) ghi để truy vết: kind 'ai' kèm nhà cung cấp, mô hình, tuyến, phiên bản lời dẫn và lý do mô hình đưa ra. Vắng hoặc 'solver' = nhánh tất định. Trường tuỳ chọn, thêm 08/09/2026; artifact cũ không có vẫn hợp lệ.",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["solver", "ai"]
+        },
+        "provider": {
+          "type": ["string", "null"]
+        },
+        "model": {
+          "type": ["string", "null"]
+        },
+        "route": {
+          "type": ["string", "null"]
+        },
+        "prompt_version": {
+          "type": ["string", "null"]
+        },
+        "rationale": {
+          "type": ["string", "null"],
+          "maxLength": 2000
+        }
+      }
     }
   },
   "$defs": {

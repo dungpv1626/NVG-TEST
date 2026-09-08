@@ -7,7 +7,9 @@
   "additionalProperties": false,
   "required": ["schema_version", "images", "backend"],
   "properties": {
-    "schema_version": { "$ref": "#/$defs/semver" },
+    "schema_version": {
+      "$ref": "#/$defs/semver"
+    },
     "images": {
       "type": "array",
       "items": {
@@ -15,9 +17,17 @@
         "additionalProperties": false,
         "required": ["view", "variant", "uri", "watermark_applied"],
         "properties": {
-          "view": { "type": "string" },
-          "variant": { "type": "integer", "minimum": 1 },
-          "uri": { "type": "string", "pattern": "^(r2|supabase)://.+" },
+          "view": {
+            "type": "string"
+          },
+          "variant": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "uri": {
+            "type": "string",
+            "pattern": "^(r2|supabase)://.+"
+          },
           "watermark_applied": {
             "type": "boolean",
             "description": "Phải là true TRƯỚC khi ảnh hiển thị cho khách. Kiểm tra trong mã nguồn, không tin tưởng (03-data-contracts 3.7). Nhãn: 'Ảnh tham khảo ý tưởng — chưa phải phương án thi công'."
@@ -29,9 +39,43 @@
       "type": "string",
       "enum": ["local_workstation", "serverless", "api_service", "stub"]
     },
-    "duration_s": { "type": ["number", "null"], "minimum": 0 }
+    "duration_s": {
+      "type": ["number", "null"],
+      "minimum": 0
+    },
+    "generator": {
+      "type": ["object", "null"],
+      "description": "Nguồn sinh artifact — nhánh AI (T10) ghi để truy vết: kind 'ai' kèm nhà cung cấp, mô hình, tuyến, phiên bản lời dẫn và lý do mô hình đưa ra. Vắng hoặc 'solver' = nhánh tất định. Trường tuỳ chọn, thêm 08/09/2026; artifact cũ không có vẫn hợp lệ.",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["solver", "ai"]
+        },
+        "provider": {
+          "type": ["string", "null"]
+        },
+        "model": {
+          "type": ["string", "null"]
+        },
+        "route": {
+          "type": ["string", "null"]
+        },
+        "prompt_version": {
+          "type": ["string", "null"]
+        },
+        "rationale": {
+          "type": ["string", "null"],
+          "maxLength": 2000
+        }
+      }
+    }
   },
   "$defs": {
-    "semver": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" }
+    "semver": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    }
   }
 }

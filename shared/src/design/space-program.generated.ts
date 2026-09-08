@@ -102,6 +102,22 @@ export const spaceProgramSchema = z
       .describe("Mã dự án tham chiếu trong Knowledge Base — để truy được 'số này lấy từ đâu'.")
       .optional(),
     priors_applied: z.boolean().optional(),
+    /** Nguồn sinh artifact — nhánh AI (T10) ghi để truy vết: kind 'ai' kèm nhà cung cấp, mô hình, tuyến, phiên bản lời dẫn và lý do mô hình đưa ra. Vắng hoặc 'solver' = nhánh tất định. Trường tuỳ chọn, thêm 08/09/2026; artifact cũ không có vẫn hợp lệ. */
+    generator: z
+      .object({
+        kind: z.enum(['solver', 'ai']),
+        provider: z.string().nullable().optional(),
+        model: z.string().nullable().optional(),
+        route: z.string().nullable().optional(),
+        prompt_version: z.string().nullable().optional(),
+        rationale: z.string().max(2000).nullable().optional(),
+      })
+      .strict()
+      .nullable()
+      .describe(
+        "Nguồn sinh artifact — nhánh AI (T10) ghi để truy vết: kind 'ai' kèm nhà cung cấp, mô hình, tuyến, phiên bản lời dẫn và lý do mô hình đưa ra. Vắng hoặc 'solver' = nhánh tất định. Trường tuỳ chọn, thêm 08/09/2026; artifact cũ không có vẫn hợp lệ.",
+      )
+      .optional(),
   })
   .strict()
   .describe(

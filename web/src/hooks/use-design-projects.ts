@@ -380,6 +380,9 @@ export interface ProgramSpace {
 }
 
 export interface SpaceProgramPayload {
+  /** Mã băm của đầu bài mà chương trình này lập từ — để biết bản chốt còn khớp đầu bài không. */
+  brief_ref?: string;
+  generator?: ProgramGenerator | null;
   spaces: ProgramSpace[];
   adjacency?: { a: string; b: string; kind: string; weight?: number }[];
   floor_allocation?: {
@@ -410,6 +413,15 @@ export interface ProgramView {
   headArtifactId: string | null;
   /** Bản đang xem có đúng là bản đã chốt cho các lớp sau dùng không. */
   matchesHead: boolean;
+  /**
+   * Bản ĐÃ CHỐT, kèm nguồn sinh. Cần vì bản chốt có thể do AI lập (nhánh AI, T10): khi đó
+   * `program` ở trên là bản bộ giải tính lại để đối chiếu, còn bản đang hiệu lực nằm ở đây.
+   */
+  head?: {
+    artifactId: string;
+    generator: ProgramGenerator;
+    program: SpaceProgramPayload;
+  } | null;
 }
 
 /**
@@ -1242,6 +1254,74 @@ export function useSaveChangeRequest() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['change_requests'] });
       void queryClient.invalidateQueries({ queryKey: ['design_sync'] });
+    },
+  });
+}
+// ---------------------------------------------------------------------------
+// Nhánh AI — danh mục model và lập chương trình bằng AI (T10–T13)
+// ---------------------------------------------------------------------------
+
+export interface AiModelOption {
+  route: string;
+  provider: string;
+  label: string;
+  model: string;
+  maxDataClass: number;
+  enabled: boolean;
+  unavailableReason: string | null;
+}
+
+export interface AiModelCatalogue {
+  text: AiModelOption[];
+  image: AiModelOption[];
+  defaults: { text: string | null; image: string | null };
+}
+
+/** Danh mục model cho ô chọn — đọc từ `config/models.yaml` qua Worker, không lộ khoá. */
+export function useAiModels() {
+  return useQuery<AiModelCatalogue, Error>({
+    queryKey: ['design_ai_models'],
+    queryFn: () => designApi<AiModelCatalogue>('/design/ai/models'),
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+}
+
+export interface ProgramGenerator {
+  kind: 'solver' | 'ai';
+  provider?: string | null;
+  model?: string | null;
+  route?: string | null;
+  prompt_version?: string | null;
+  rationale?: string | null;
+}
+
+export interface ProgramComparisonRow {
+  /** Mã không gian (theo `type_n`) hoặc loại khi chỉ một bên có. */
+  key: string;
+  type: string;
+  floor: number | null;
+  solver_m2: number | null;
+  ai_m2: number | null;
+}
+
+export interface GenerateProgramAiResult extends GenerateProgramResult {
+  generator: ProgramGenerator;
+  rationale: string;
+  assumptions: string[];
+  notes: Record<string, string>;
+  comparison: ProgramComparisonRow[];
+  repaired: boolean;
+}
+
+/** Lập chương trình không gian bằng AI rồi chốt — cùng dòng lineage với bộ giải. */
+export function useGenerateSpaceProgramAi() {
+  const queryClient = useQueryClient();
+  return useMutation<GenerateProgramAiResult, Error, { projectId: string; route: string }>({
+    mutationFn: ({ projectId, route }) =>
+      designApi<GenerateProgramAiResult>('/design/program/ai-generate', { projectId, route }),
+    onSuccess: (_result, { projectId }) => {
+      void queryClient.invalidateQueries({ queryKey: ['design_space_program', projectId] });
     },
   });
 }

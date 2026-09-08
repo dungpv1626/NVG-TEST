@@ -18,12 +18,20 @@ import {
   DATA_CLASSES,
   type DataClass,
   type DesignBrief,
+  type SpaceProgram,
 } from '@nvg/shared/design';
 import { ContractError } from './contracts';
 import { createComputeBackend, type ExportDxfRequest } from './compute-backend';
 import { DataClassViolation, ModelNotConfigured } from './llm/router';
-import { geminiClient, modelRouter, renderImageClient } from './llm/factory';
-import { aiModelCatalogue } from './ai/models';
+import { geminiClient, modelRouter, renderImageClient, textClientFor } from './llm/factory';
+import { aiModelCatalogue, isSelectableRoute } from './ai/models';
+import { aiPrompts } from './ai/prompts-data';
+import { AiProgramRejected, generateAiProgram } from './ai/program';
+import { compareProgramsById } from './ai/compare';
+import { recordAiCall } from './ai/call-log';
+import { AI_DIGEST_DATA_CLASS, anonymiseForAi, type AnonymiseInput } from './brief/anonymise';
+import { spaceNorms } from './program/norms-data';
+import { plausibilityRules } from './program/plausibility-data';
 import { LlmCallFailed } from './llm/gemini';
 import { PublishBridge } from './publish';
 import { ArtifactRepository } from './artifacts';
@@ -507,6 +515,15 @@ designApp.get('/program/:projectId', async (c) => {
     // khái niệm "giống nhau" thứ hai, và nó bất đồng với khái niệm thật ngay khi thứ tự khoá
     // đổi trên đường đi qua kho tệp — đã xảy ra thật: vừa chốt xong đã báo là chưa chốt.
     matchesHead: head ? (await artifactId(run.payload)) === head.id : false,
+    // Bản đã chốt do AI lập thì `matchesHead` luôn false (bản tính lại là của bộ giải) — màn
+    // hình cần biết điều đó để không nói «đầu bài đã đổi» oan, và để hiện bản AI đang hiệu lực.
+    head: head
+      ? {
+          artifactId: head.id,
+          generator: (head.payload as SpaceProgram).generator ?? { kind: 'solver' },
+          program: head.payload,
+        }
+      : null,
   });
 });
 
@@ -1100,6 +1117,203 @@ designApp.post('/program/generate', async (c) => {
     aiSuggestion: run.aiSuggestion,
   });
 });
+
+/**
+ * Lập chương trình không gian BẰNG AI rồi chốt — nhánh song song của `/program/generate` (T10).
+ *
+ * Cùng cổng chặn, cùng kiểm quyền ghi, cùng dòng lineage (`layer2_program` từ `design_brief`).
+ * Khác ở nguồn con số: mô hình đề xuất, Worker kiểm và điền phần tất định (`ai/program.ts`).
+ * Đầu vào của mô hình là đầu bài + khảo sát ĐÃ LƯỢC DANH TÍNH (hạng 2, T12).
+ */
+designApp.post('/program/ai-generate', async (c) => {
+  const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+
+  const body = (await c.req.json()) as { projectId?: string; route?: string };
+  if (!body.projectId) return c.json({ error: 'Thiếu mã hồ sơ thiết kế.' }, 400);
+  if (!body.route) return c.json({ error: 'Chưa chọn model AI.' }, 400);
+
+  const db = await asUser(c.env, token);
+  const scope = await projectScope(db, body.projectId);
+  if (!scope) return c.json({ error: PROJECT_NOT_VISIBLE }, 404);
+  const denied = await denyUnlessWritable(db, scope.tenantId, body.projectId);
+  if (denied) return c.json({ error: denied.error }, denied.status);
+
+  // Tuyến phải nằm trong danh mục VĂN BẢN và đang bấm được — trình duyệt không chọn được gì
+  // ngoài những tên `config/models.yaml` khai (hàng rào 2 của nhánh AI).
+  const router = modelRouter(c.env);
+  const catalogue = aiModelCatalogue(router);
+  if (!isSelectableRoute(catalogue, 'text', body.route)) {
+    return c.json(
+      {
+        error:
+          'Model đã chọn không dùng được lúc này. Chọn model khác trong ô «Model», hoặc dùng bộ giải nội bộ.',
+      },
+      409,
+    );
+  }
+  const client = textClientFor(c.env, body.route);
+  if (!client) return c.json({ error: 'Chưa cấu hình khoá API cho model đã chọn.' }, 503);
+
+  const repo = new ArtifactRepository(c.env);
+  const brief = await repo.head(body.projectId, 'kien_truc', 'design_brief');
+  if (!brief) {
+    return c.json(
+      { error: 'Chưa có đầu bài đã xác nhận. Hoàn tất và xác nhận đầu bài trước.' },
+      409,
+    );
+  }
+  const gate = gateLayer2(brief.payload, await readCompletenessThreshold(repo.db, scope.tenantId));
+  if (!gate.allowed) return c.json({ error: gate.message }, 409);
+
+  const briefPayload = brief.payload as DesignBrief;
+  // Chữ tự do và khảo sát đọc dưới PHIÊN NGƯỜI DÙNG (RLS) — không dùng service_role để gom
+  // dữ liệu mà người gọi không được xem.
+  const digest = anonymiseForAi(await aiDigestInputs(db, body.projectId, briefPayload));
+
+  const baseline = await runLayer2(c.env, repo.db, briefPayload, brief.id, scope.tenantId);
+  const rules = rulePackFor(briefPayload.locality);
+  const norms = spaceNorms();
+  const labels = roomLabels();
+  const publicRoute = router.publicRoutes().find((r) => r.route === body.route);
+  const callScope = {
+    tenantId: scope.tenantId,
+    companyId: scope.companyId,
+    projectId: body.projectId,
+    discipline: 'kien_truc' as const,
+    actorId: scope.actorId,
+  };
+
+  let result: Awaited<ReturnType<typeof generateAiProgram>>;
+  try {
+    result = await generateAiProgram({
+      brief: briefPayload,
+      briefRef: brief.id,
+      digest,
+      route: body.route,
+      client,
+      prompts: aiPrompts(),
+      rules,
+      norms,
+      vocabulary: roomVocabulary(),
+      labels,
+      plausibility: plausibilityRules(),
+    });
+  } catch (error) {
+    if (error instanceof AiProgramRejected) {
+      await recordAiCall(
+        repo.db,
+        callScope,
+        {
+          route: body.route,
+          purpose: 'program',
+          dataClass: AI_DIGEST_DATA_CLASS,
+          promptVersion: aiPrompts().version,
+        },
+        {
+          provider: publicRoute?.provider ?? '',
+          model: publicRoute?.model ?? '',
+          usage: { inputTokens: null, outputTokens: null },
+          latencyMs: 0,
+          status: 'rejected',
+          errorCode: 'AiProgramRejected',
+        },
+        publicRoute?.pricing,
+      );
+      return c.json({ error: error.message, findings: error.findings }, 422);
+    }
+    throw error;
+  }
+
+  const artifact = await repo.write({
+    scope: callScope,
+    kind: 'space_program',
+    payload: result.payload,
+    inputs: [brief.id],
+    step: 'layer2_program',
+    params: {
+      generator: result.payload.generator,
+      route: body.route,
+      prompt_version: aiPrompts().version,
+    },
+    setHead: true,
+  });
+  for (const call of result.calls) {
+    await recordAiCall(
+      repo.db,
+      callScope,
+      {
+        route: body.route,
+        purpose: 'program',
+        dataClass: AI_DIGEST_DATA_CLASS,
+        promptVersion: aiPrompts().version,
+      },
+      { ...call, status: 'ok', artifactId: artifact.id },
+      publicRoute?.pricing,
+    );
+  }
+
+  return c.json({
+    artifactId: artifact.id,
+    reused: artifact.reused,
+    program: result.payload,
+    roomLabels: labels,
+    warnings: result.warnings,
+    unresolvedNeeds: [],
+    aiSuggestion: null,
+    generator: result.payload.generator,
+    rationale: result.rationale,
+    assumptions: result.assumptions,
+    notes: result.notes,
+    comparison: compareProgramsById(baseline.payload, result.payload),
+    repaired: result.repaired,
+  });
+});
+
+/** Gom chữ tự do, khảo sát và danh tính cần lược — đọc qua RLS của chính người gọi. */
+async function aiDigestInputs(
+  db: Awaited<ReturnType<typeof asUser>>,
+  projectId: string,
+  brief: DesignBrief,
+): Promise<AnonymiseInput> {
+  const row = await db
+    .from('design_briefs')
+    .select(
+      'design_task, functional_needs, style_note, site_condition, legal_documents, site_source_survey_id',
+    )
+    .eq('design_project_id', projectId)
+    .eq('is_current_version', true)
+    .is('deleted_at', null)
+    .maybeSingle();
+  const freeText = (row.data ?? null) as AnonymiseInput['freeText'] & {
+    site_source_survey_id?: string | null;
+  };
+  let survey: AnonymiseInput['survey'] = null;
+  if (freeText?.site_source_survey_id) {
+    const s = await db
+      .from('design_surveys')
+      .select(
+        'land_width, land_depth, land_area, orientation, measurement_notes, surrounding_notes, usage_notes, notes',
+      )
+      .eq('id', freeText.site_source_survey_id)
+      .maybeSingle();
+    survey = (s.data ?? null) as AnonymiseInput['survey'];
+  }
+  const project = await db
+    .from('design_projects')
+    .select('customer:customers(name, phone, address)')
+    .eq('id', projectId)
+    .maybeSingle();
+  const customer = (
+    project.data as { customer?: { name?: string; phone?: string; address?: string } | null } | null
+  )?.customer;
+  return {
+    brief,
+    freeText,
+    survey,
+    identities: [customer?.name, customer?.phone, customer?.address],
+  };
+}
 
 /**
  * Trần kích thước ảnh tải lên để đọc ranh giới thửa đất.

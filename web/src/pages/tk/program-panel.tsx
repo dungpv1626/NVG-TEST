@@ -16,19 +16,26 @@
  *    dấu hiệu gì cho biết là cũ.
  */
 
-import { AlertTriangle, CheckCircle2, Layers } from 'lucide-react';
+import { useState } from 'react';
+import { AlertTriangle, CheckCircle2, Layers, Sparkles } from 'lucide-react';
 import { formatNumber } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/states';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import {
   useGenerateSpaceProgram,
+  useGenerateSpaceProgramAi,
   useSpaceProgram,
+  type GenerateProgramAiResult,
+  type ProgramGenerator,
   type ProgramSpace,
   type ProgramView,
+  type SpaceProgramPayload,
 } from '@/hooks/use-design-projects';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { SectionHelp } from '@/components/ui/section-help';
 import { DESIGN_HELP } from './help-texts';
+import { AiModePicker, useAiChoice, type AiChoice } from './ai-model-picker';
 
 export function ProgramPanel({
   projectId,
@@ -39,6 +46,12 @@ export function ProgramPanel({
 }): React.ReactElement {
   const program = useSpaceProgram(projectId);
   const generate = useGenerateSpaceProgram();
+  const generateAi = useGenerateSpaceProgramAi();
+  const ai = useAiChoice('text');
+  /** Kết quả lượt AI vừa chạy — hiện lý do và bảng so sánh cho tới khi rời tab. */
+  const [aiResult, setAiResult] = useState<GenerateProgramAiResult | null>(null);
+  /** Bản đang xem trong bảng: bộ giải tính lại, hay bản AI đã chốt. */
+  const [shown, setShown] = useState<'solver' | 'head'>('head');
 
   if (program.isLoading) return <ProgramSkeleton />;
 
@@ -59,31 +72,96 @@ export function ProgramPanel({
   }
 
   const view = program.data;
-  const floors = view.program.floor_allocation?.length
-    ? [...view.program.floor_allocation].sort((a, b) => a.floor - b.floor)
-    : [...new Set(view.program.spaces.map((s) => s.floor))]
-        .sort((a, b) => a - b)
-        .map((floor) => ({
-          floor,
-          usable_area_m2: null,
-          buildable_area_m2: null,
-          allocated_area_m2: null,
-        }));
+  // Bản chốt do AI lập cho ĐÚNG đầu bài hiện tại: bảng mặc định hiện bản đó (nó đang hiệu lực),
+  // bản bộ giải tính lại giữ làm đối chiếu. `matchesHead` khi ấy luôn false vì hai nhánh không
+  // cho ra cùng mã băm — không được đọc thành «đầu bài đã đổi».
+  const aiHead =
+    view.head &&
+    view.head.generator.kind === 'ai' &&
+    view.head.program.brief_ref === view.briefArtifactId
+      ? view.head
+      : null;
+  const table: SpaceProgramPayload = aiHead && shown === 'head' ? aiHead.program : view.program;
+  const floors = floorsOf(table);
+
+  const saving = generate.isPending || generateAi.isPending;
+  const runError = generate.isError
+    ? toUserMessage(generate.error)
+    : generateAi.isError
+      ? toUserMessage(generateAi.error)
+      : null;
+
+  const onGenerate = () => {
+    setAiResult(null);
+    if (ai.choice.mode === 'ai') {
+      if (!ai.choice.route) return;
+      void generateAi
+        .mutateAsync({ projectId, route: ai.choice.route })
+        .then((result) => {
+          setAiResult(result);
+          setShown('head');
+        })
+        .catch(() => undefined);
+    } else {
+      void generate.mutateAsync({ projectId }).catch(() => undefined);
+    }
+  };
 
   return (
     <div className="space-y-6">
       <Header
         view={view}
+        aiHead={aiHead}
         readOnly={readOnly}
-        saving={generate.isPending}
-        error={generate.isError ? toUserMessage(generate.error) : null}
-        onGenerate={() => void generate.mutateAsync({ projectId }).catch(() => undefined)}
+        saving={saving}
+        error={runError}
+        choice={ai.choice}
+        picker={
+          !readOnly && (
+            <AiModePicker
+              kind="text"
+              choice={ai.choice}
+              options={ai.options}
+              onMode={ai.pickMode}
+              onRoute={ai.pickRoute}
+              disabled={saving}
+            />
+          )
+        }
+        onGenerate={onGenerate}
       />
 
-      {view.aiSuggestion && (
+      {saving && ai.choice.mode === 'ai' && (
+        <p className="text-fg-subtle" aria-live="polite">
+          Đang hỏi mô hình — thường 15–40 giây. Kết quả sẽ được kiểm theo quy chuẩn trước khi chốt.
+        </p>
+      )}
+
+      {aiResult && <AiProgramReport result={aiResult} labels={view.roomLabels} />}
+
+      {aiHead && !aiResult && (
+        <AiHeadNotice generator={aiHead.generator} shown={shown} onShown={setShown} />
+      )}
+      {aiHead && aiResult && (
+        <div>
+          <SegmentedControl
+            options={['head', 'solver'] as const}
+            value={shown}
+            onChange={setShown}
+            getLabel={(o) => (o === 'head' ? 'Bản AI đã chốt' : 'Bộ giải nội bộ (đối chiếu)')}
+          />
+        </div>
+      )}
+
+      {view.aiSuggestion && shown === 'solver' && (
         <AiSuggestion suggestion={view.aiSuggestion} labels={view.roomLabels} />
       )}
-      {view.warnings.length > 0 && <Warnings items={view.warnings} />}
+      {(shown === 'solver' || !aiHead) && view.warnings.length > 0 && (
+        <Warnings items={view.warnings} />
+      )}
+      {aiResult && shown === 'head' && aiResult.warnings.length > 0 && (
+        <Warnings items={aiResult.warnings} />
+      )}
       {view.unresolvedNeeds.length > 0 && <UnresolvedNeeds items={view.unresolvedNeeds} />}
 
       {floors.map((allocation) => (
@@ -93,7 +171,7 @@ export function ProgramPanel({
           usable={allocation.usable_area_m2 ?? null}
           buildable={allocation.buildable_area_m2 ?? null}
           allocated={allocation.allocated_area_m2 ?? null}
-          spaces={view.program.spaces.filter((s) => s.floor === allocation.floor)}
+          spaces={table.spaces.filter((s) => s.floor === allocation.floor)}
           labels={view.roomLabels}
         />
       ))}
@@ -101,20 +179,173 @@ export function ProgramPanel({
   );
 }
 
+function floorsOf(program: SpaceProgramPayload) {
+  return program.floor_allocation?.length
+    ? [...program.floor_allocation].sort((a, b) => a.floor - b.floor)
+    : [...new Set(program.spaces.map((s) => s.floor))]
+        .sort((a, b) => a - b)
+        .map((floor) => ({
+          floor,
+          usable_area_m2: null,
+          buildable_area_m2: null,
+          allocated_area_m2: null,
+        }));
+}
+
+/** Tên nhà cung cấp và mô hình để hiện — không có tên mô hình thì chỉ nhãn chung. */
+function generatorLabel(generator: ProgramGenerator): string {
+  const parts = [generator.provider, generator.model].filter(Boolean);
+  return parts.length ? parts.join(' · ') : 'AI';
+}
+
+/**
+ * Bản đang hiệu lực do AI lập — nói ra ngay trên đầu, kèm lý do mô hình đã nêu, và cho đổi
+ * sang bản bộ giải để đối chiếu. Thiếu khối này thì bảng bên dưới là những con số không rõ
+ * nguồn, và «con người quyết định cuối cùng» (PRD 2.3) không có gì để kiểm.
+ */
+function AiHeadNotice({
+  generator,
+  shown,
+  onShown,
+}: {
+  generator: ProgramGenerator;
+  shown: 'solver' | 'head';
+  onShown: (value: 'solver' | 'head') => void;
+}): React.ReactElement {
+  return (
+    <div className="rounded border border-border bg-surface p-4">
+      <p className="flex items-center gap-2 font-medium">
+        <Sparkles className="size-4" aria-hidden />
+        Bản đã chốt do AI lập — {generatorLabel(generator)}
+      </p>
+      {generator.rationale && <p className="mt-2">{generator.rationale}</p>}
+      <div className="mt-3">
+        <SegmentedControl
+          options={['head', 'solver'] as const}
+          value={shown}
+          onChange={onShown}
+          getLabel={(o) => (o === 'head' ? 'Bản AI đã chốt' : 'Bộ giải nội bộ (đối chiếu)')}
+        />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Kết quả lượt AI vừa chạy: lý do, giả định (câu hỏi cho khách), và bảng so với bộ giải.
+ *
+ * Bảng so sánh là thứ làm lựa chọn «AI» kiểm lại được: kiến trúc sư thấy AI thêm gì, bớt gì,
+ * nới phòng nào — thay vì nhận một bảng số mới và phải tin.
+ */
+function AiProgramReport({
+  result,
+  labels,
+}: {
+  result: GenerateProgramAiResult;
+  labels: Record<string, string>;
+}): React.ReactElement {
+  const name = (type: string) => labels[type] ?? type;
+  const rows = result.comparison.filter(
+    (r) => r.solver_m2 === null || r.ai_m2 === null || Math.abs(r.solver_m2 - r.ai_m2) >= 0.5,
+  );
+  return (
+    <div className="rounded border border-border bg-surface p-4">
+      <p className="flex items-center gap-2 font-medium">
+        <Sparkles className="size-4" aria-hidden />
+        Chương trình do AI lập — {generatorLabel(result.generator)} · đã kiểm quy chuẩn
+        {result.warnings.length ? `: ${result.warnings.length} cảnh báo` : ': không có cảnh báo'}
+        {result.repaired ? ' · đã yêu cầu sửa một lần' : ''}
+      </p>
+      {result.rationale && <p className="mt-2">{result.rationale}</p>}
+      {result.assumptions.length > 0 && (
+        <div className="mt-3">
+          <p className="font-medium">Điều AI phải giả định — cần hỏi lại khách</p>
+          <ul className="mt-1 list-disc space-y-1 pl-5">
+            {result.assumptions.map((a) => (
+              <li key={a}>{a}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <details className="mt-3">
+        <summary className="cursor-pointer font-medium">
+          So với bộ giải nội bộ ({rows.length} chỗ khác)
+        </summary>
+        {rows.length === 0 ? (
+          <p className="mt-2 text-fg-subtle">Hai bản trùng nhau về diện tích từng không gian.</p>
+        ) : (
+          <div className="mt-2 overflow-x-auto rounded border border-border">
+            <table className="w-full min-w-[28rem] border-collapse">
+              <thead>
+                <tr className="border-b border-border bg-surface-sunken text-left">
+                  <th className="px-3 py-2 font-medium">Không gian</th>
+                  <th className="px-3 py-2 font-medium">Tầng</th>
+                  <th className="px-3 py-2 text-right font-medium">Bộ giải (m²)</th>
+                  <th className="px-3 py-2 text-right font-medium">AI (m²)</th>
+                  <th className="px-3 py-2 text-right font-medium">Chênh</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.key} className="border-b border-border last:border-0">
+                    <td className="px-3 py-2">
+                      {name(r.type)}
+                      {result.notes[r.key] ? (
+                        <span className="block text-xs text-fg-subtle">{result.notes[r.key]}</span>
+                      ) : null}
+                    </td>
+                    <td className="px-3 py-2">{r.floor ?? '—'}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      {r.solver_m2 === null ? 'không có' : formatNumber(r.solver_m2, 1)}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      {r.ai_m2 === null ? 'bỏ' : formatNumber(r.ai_m2, 1)}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      {r.solver_m2 !== null && r.ai_m2 !== null
+                        ? `${r.ai_m2 - r.solver_m2 >= 0 ? '+' : '−'}${formatNumber(Math.abs(r.ai_m2 - r.solver_m2), 1)}`
+                        : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </details>
+    </div>
+  );
+}
+
 function Header({
   view,
+  aiHead,
   readOnly,
   saving,
   error,
+  choice,
+  picker,
   onGenerate,
 }: {
   view: ProgramView;
+  aiHead: NonNullable<ProgramView['head']> | null;
   readOnly: boolean;
   saving: boolean;
   error: string | null;
+  choice: AiChoice;
+  picker: React.ReactNode;
   onGenerate: () => void;
 }): React.ReactElement {
   const total = view.program.spaces.length;
+  const aiMode = choice.mode === 'ai';
+  const canRun = aiMode ? Boolean(choice.route) : !view.matchesHead;
+  const buttonLabel = saving
+    ? aiMode
+      ? 'Đang lập bằng AI…'
+      : 'Đang chốt…'
+    : aiMode
+      ? 'Lập bằng AI rồi chốt'
+      : 'Chốt chương trình không gian';
 
   return (
     <div className="rounded border border-border bg-surface-sunken p-4">
@@ -130,10 +361,12 @@ function Header({
               : 'Diện tích lấy theo quy chuẩn và chuẩn nghề nghiệp — kho hồ sơ cũ chưa đủ để thống kê.'}
           </p>
           <p className="mt-2">
-            {view.matchesHead ? (
+            {view.matchesHead || aiHead ? (
               <span className="inline-flex items-center gap-1 text-status-completed">
                 <CheckCircle2 className="size-4" aria-hidden />
-                Đã chốt, các bước sau đang dùng bản này
+                {aiHead
+                  ? 'Đã chốt bản do AI lập, các bước sau đang dùng bản này'
+                  : 'Đã chốt, các bước sau đang dùng bản này'}
               </span>
             ) : view.headArtifactId ? (
               <span className="text-status-pending">
@@ -146,9 +379,12 @@ function Header({
         </div>
 
         {!readOnly && (
-          <Button variant="primary" onClick={onGenerate} disabled={saving || view.matchesHead}>
-            {saving ? 'Đang chốt…' : 'Chốt chương trình không gian'}
-          </Button>
+          <div className="flex flex-wrap items-end gap-3">
+            {picker}
+            <Button variant="primary" onClick={onGenerate} disabled={saving || !canRun}>
+              {buttonLabel}
+            </Button>
+          </div>
         )}
       </div>
       {error && <p className="mt-3 text-status-overdue">{error}</p>}
