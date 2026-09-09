@@ -29,6 +29,18 @@ import { useMutation } from '@tanstack/react-query';
 import { Chip, Panel } from '../tk-ui';
 import { AiModePicker, useAiChoice } from './ai-model-picker';
 
+/**
+ * Hai gói quy tắc kỹ sư chọn áp — mặc định TẮT CẢ HAI (T20, 09/09/2026).
+ *
+ * Tách làm hai vì chúng là hai loại khác hẳn nhau: một bên là văn bản pháp quy, một bên là
+ * thói quen của phòng thiết kế. Gộp làm một nút thì cảnh báo «dưới mức tối thiểu» hiện lên mà
+ * không ai biết đó là sai luật hay khác cách NVG quen làm.
+ */
+export interface AiRulePackChoice {
+  standards: boolean;
+  experience: boolean;
+}
+
 export interface AiProgramWarning {
   ruleId: string;
   severity: 'error' | 'warning';
@@ -47,15 +59,79 @@ export interface AiProgramResponse {
   notes: Record<string, string>;
   buildable: { widthM: number; depthM: number; areaM2: number; exact: boolean };
   repaired: boolean;
+  rulePacks: AiRulePackChoice;
   warnings: AiProgramWarning[];
   checkedRules: string[];
   uncheckedRules: Array<{ ruleId: string; predicate: string; source: string }>;
 }
 
 function useRunAiProgram() {
-  return useMutation<AiProgramResponse, Error, { projectId: string; route: string }>({
+  return useMutation<
+    AiProgramResponse,
+    Error,
+    { projectId: string; route: string; rulePacks: AiRulePackChoice }
+  >({
     mutationFn: (body) => designApi<AiProgramResponse>('/design/ai/program', body),
   });
+}
+
+/**
+ * Hai ô chọn gói quy tắc.
+ *
+ * Ghi rõ ngay trên màn hình gói nào là LUẬT, gói nào là thói quen — đó là toàn bộ lý do hai ô
+ * này tồn tại thay vì một nút. Không tích gì thì mô hình thiết kế tự do và không có cảnh báo
+ * nào; câu dưới nói thẳng điều đó để không ai tưởng màn hình hỏng.
+ */
+export function RulePackPicker({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: AiRulePackChoice;
+  onChange: (next: AiRulePackChoice) => void;
+  disabled?: boolean;
+}): React.ReactElement {
+  const none = !value.standards && !value.experience;
+  return (
+    <fieldset className="rounded-md border border-tk-line p-3">
+      <legend className="px-1 font-medium">Quy tắc áp cho lượt này</legend>
+      <label className="flex items-start gap-2">
+        <input
+          type="checkbox"
+          className="mt-1"
+          checked={value.standards}
+          disabled={disabled}
+          onChange={(e) => onChange({ ...value, standards: e.target.checked })}
+        />
+        <span>
+          <b>Quy chuẩn quốc gia</b>
+          <span className="block text-fg-subtle">
+            QCVN 01:2021/BXD và TCVN 4451:2012. Văn bản pháp quy, áp dụng toàn quốc.
+          </span>
+        </span>
+      </label>
+      <label className="mt-2 flex items-start gap-2">
+        <input
+          type="checkbox"
+          className="mt-1"
+          checked={value.experience}
+          disabled={disabled}
+          onChange={(e) => onChange({ ...value, experience: e.target.checked })}
+        />
+        <span>
+          <b>Kinh nghiệm nghề Nhà Việt Group</b>
+          <span className="block text-fg-subtle">
+            Cách phòng thiết kế quen làm. Không phải luật, bỏ qua được.
+          </span>
+        </span>
+      </label>
+      <p className="mt-2 text-fg-subtle">
+        {none
+          ? 'Chưa chọn gói nào: mô hình thiết kế tự do, và sẽ không có cảnh báo nào.'
+          : 'Gói đã chọn vừa được gửi cho mô hình để làm theo, vừa dùng để đối chiếu kết quả.'}
+      </p>
+    </fieldset>
+  );
 }
 
 export function AiProgramStep({
@@ -68,6 +144,8 @@ export function AiProgramStep({
   state: AiDesignState;
 }): React.ReactElement {
   const ai = useAiChoice('text', false);
+  // Mặc định TẮT cả hai (T20). Kỹ sư chủ động tích khi muốn áp.
+  const [packs, setPacks] = useState<AiRulePackChoice>({ standards: false, experience: false });
   const run = useRunAiProgram();
   const invalidate = useInvalidateAiDesign();
   const [result, setResult] = useState<AiProgramResponse | null>(null);
@@ -80,7 +158,7 @@ export function AiProgramStep({
     if (!ai.choice.route) return;
     setResult(null);
     void run
-      .mutateAsync({ projectId, route: ai.choice.route })
+      .mutateAsync({ projectId, route: ai.choice.route, rulePacks: packs })
       .then((out) => {
         setResult(out);
         invalidate(projectId);
@@ -107,23 +185,26 @@ export function AiProgramStep({
           </p>
         ) : (
           !readOnly && (
-            <div className="flex flex-wrap items-end gap-3">
-              <AiModePicker
-                kind="text"
-                choice={ai.choice}
-                options={ai.options}
-                onMode={ai.pickMode}
-                onRoute={ai.pickRoute}
-                allowSolver={false}
-                disabled={run.isPending}
-              />
-              <Button
-                variant="primary"
-                onClick={onRun}
-                disabled={run.isPending || !ai.choice.route}
-              >
-                {run.isPending ? 'Đang lập…' : 'Lập chương trình không gian'}
-              </Button>
+            <div className="space-y-3">
+              <RulePackPicker value={packs} onChange={setPacks} disabled={run.isPending} />
+              <div className="flex flex-wrap items-end gap-3">
+                <AiModePicker
+                  kind="text"
+                  choice={ai.choice}
+                  options={ai.options}
+                  onMode={ai.pickMode}
+                  onRoute={ai.pickRoute}
+                  allowSolver={false}
+                  disabled={run.isPending}
+                />
+                <Button
+                  variant="primary"
+                  onClick={onRun}
+                  disabled={run.isPending || !ai.choice.route}
+                >
+                  {run.isPending ? 'Đang lập…' : 'Lập chương trình không gian'}
+                </Button>
+              </div>
             </div>
           )
         )}

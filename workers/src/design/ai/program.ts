@@ -48,6 +48,8 @@ import { AI_DIGEST_DATA_CLASS } from '../brief/anonymise';
 import { roomGroups, type VocabularyIndex } from '../kb/vocabulary';
 import type { StructuredCallResult, TextModelClient } from '../llm/text-client';
 import { buildableFromDigest, type BuildableBox } from './buildable';
+import { injectableRules, type InjectedRule } from './rule-packs';
+import type { RulePack } from '../rules/rule-pack';
 import type { AiPrompts } from './prompts';
 
 const SCHEMA_VERSION = '1.0.0';
@@ -59,6 +61,20 @@ const SCHEMA_VERSION = '1.0.0';
  * token SUY LUẬN, thứ cũng tính vào trần này. Đo 08/09: các lượt thật dùng 1.100–2.600 token.
  */
 const PROGRAM_OUTPUT_TOKENS = 12_000;
+
+/**
+ * Vị từ mà bước LẬP CHƯƠNG TRÌNH hiểu được — hẹp có chủ ý.
+ *
+ * Ở bước này mới có diện tích, chưa có hình học. Gửi kèm `min_dimension` hay `setback` là gửi
+ * con số mô hình không dùng được vào việc gì, và chỉ làm loãng lời dẫn. Chúng thuộc bước xếp
+ * mặt bằng.
+ */
+const PROGRAM_PREDICATES: ReadonlySet<string> = new Set([
+  'min_area',
+  'max_area',
+  'floor_preference',
+  'adjacency',
+]);
 
 /** Đề xuất không đạt kiểm sau lượt sửa — lỗi nghiệp vụ đọc được, không thử lại. */
 export class AiProgramRejected extends Error {
@@ -85,6 +101,11 @@ export interface AiProgramInput {
   labels: Record<string, string>;
   /** Quy ước cấu tạo (`kb/construction_norms.yaml`) — bề dày tường, cao độ tầng, kích thước cửa. */
   construction: unknown;
+  /**
+   * Gói quy tắc KỸ SƯ đã chọn áp, đã gộp sẵn. Rỗng là trạng thái mặc định và hợp lệ: không
+   * tích gì thì mô hình thiết kế tự do và không có cảnh báo nào (T20, 09/09/2026).
+   */
+  rules: RulePack;
 }
 
 export interface AiProgramResult {
@@ -118,6 +139,14 @@ export interface ProgramKnowledge {
   required_by_brief: string[];
   room_types: { code: string; vi: string; group: string | null }[];
   construction: unknown;
+  /**
+   * Quy tắc kỹ sư đã chọn áp — RỖNG khi không tích gói nào, và đó là mặc định.
+   *
+   * ⚠️ Đây là chỗ duy nhất ngưỡng đi vào lời dẫn. Trước T20 (09/09/2026) mảng này không tồn
+   * tại: T14 cấm hẳn việc tiêm ngưỡng. Nay kỹ sư quyết theo từng hồ sơ, nhưng mặc định vẫn là
+   * KHÔNG — không tích gì thì mảng rỗng và mô hình thiết kế tự do như trước.
+   */
+  constraints: InjectedRule[];
 }
 
 export function programKnowledge(input: {
@@ -126,6 +155,7 @@ export function programKnowledge(input: {
   labels: Record<string, string>;
   buildable: BuildableBox;
   construction: unknown;
+  rules: RulePack;
 }): ProgramKnowledge {
   const { digest, vocabulary, labels, buildable } = input;
 
@@ -159,6 +189,7 @@ export function programKnowledge(input: {
       group: groupOf.get(t.code) ?? null,
     })),
     construction: input.construction,
+    constraints: injectableRules(input.rules, digest.building_type, PROGRAM_PREDICATES),
   };
 }
 
@@ -291,6 +322,7 @@ export async function generateAiProgram(input: AiProgramInput): Promise<AiProgra
     labels,
     buildable,
     construction: input.construction,
+    rules: input.rules,
   });
 
   const schema = proposalSchemaJson as Record<string, unknown>;

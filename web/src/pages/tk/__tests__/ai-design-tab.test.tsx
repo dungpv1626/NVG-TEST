@@ -153,6 +153,7 @@ describe('Bước chương trình không gian', () => {
       notes: {},
       buildable: { widthM: 5, depthM: 18, areaM2: 90, exact: true },
       repaired: false,
+      rulePacks: { standards: true, experience: false },
       warnings: [],
       checkedRules: ['min_area_wc'],
       uncheckedRules: [
@@ -165,7 +166,33 @@ describe('Bước chương trình không gian', () => {
       await screen.findByRole('button', { name: 'Lập chương trình không gian' }),
     );
 
-    expect(state.runProgram).toHaveBeenCalledWith({ projectId: 'p1', route: 'ai_text_openai' });
+    // Mặc định TẮT cả hai gói (T20, 09/09/2026): không tích gì thì mô hình thiết kế tự do.
+    expect(state.runProgram).toHaveBeenCalledWith({
+      projectId: 'p1',
+      route: 'ai_text_openai',
+      rulePacks: { standards: false, experience: false },
+    });
+  });
+
+  it('tích gói nào thì gửi đúng gói đó, và nói rõ gói nào là luật gói nào là thói quen', async () => {
+    state.design = designState();
+    state.runProgram.mockClear();
+    renderWithApp(<AiDesignTab projectId="p1" readOnly={false} />);
+
+    expect(
+      await screen.findByText(/Chưa chọn gói nào: mô hình thiết kế tự do/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Văn bản pháp quy, áp dụng toàn quốc/)).toBeInTheDocument();
+    expect(screen.getByText(/Không phải luật, bỏ qua được/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('checkbox', { name: /Quy chuẩn quốc gia/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Lập chương trình không gian' }));
+
+    expect(state.runProgram).toHaveBeenCalledWith({
+      projectId: 'p1',
+      route: 'ai_text_openai',
+      rulePacks: { standards: true, experience: false },
+    });
   });
 
   it('cảnh báo rỗng vẫn NÓI RA số quy tắc chưa đối chiếu được', async () => {
@@ -180,6 +207,7 @@ describe('Bước chương trình không gian', () => {
       notes: {},
       buildable: { widthM: 5, depthM: 18, areaM2: 90, exact: true },
       repaired: false,
+      rulePacks: { standards: true, experience: false },
       warnings: [],
       checkedRules: ['min_area_wc'],
       uncheckedRules: [

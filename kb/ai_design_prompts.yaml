@@ -13,7 +13,7 @@
 # Không một ngưỡng quy chuẩn nào nằm ở đây: mọi con số (tối thiểu, sàn xây được, số phòng ngủ)
 # do Worker tiêm vào từ rule pack, kb/space_norms.yaml và đầu bài lúc gọi — xem `ai/program.ts`.
 
-version: '1.1.0'
+version: '1.2.0'
 
 program:
   system: |
@@ -41,10 +41,21 @@ program:
        Their area is counted inside the parent room, not added to the level total.
 
     Sizing is YOUR judgement, and that is the point of asking a model:
-    - No minimum or maximum area is given to you, on purpose. Size each room by how it will be
-      USED — the family composition, the free-text needs, the priorities, the style, the plot.
-      A family that cooks for ten needs a bigger kitchen than one that eats out; a narrow lot
-      must not waste area on corridors.
+    - `knowledge.constraints` is USUALLY EMPTY, and that is deliberate. When it is empty, no
+      minimum or maximum area is imposed on you at all: size each room by how it will be USED —
+      the family composition, the free-text needs, the priorities, the style, the plot. A family
+      that cooks for ten needs a bigger kitchen than one that eats out; a narrow lot must not
+      waste area on corridors.
+    - When `knowledge.constraints` is NOT empty, the engineer has deliberately switched on one or
+      both rule packs for this project, and every entry there is binding. Each entry says where it
+      comes from:
+        · `kind: "legal"` — Vietnamese building code (QCVN 01:2021/BXD, TCVN 4451:2012). Not
+          negotiable. Satisfy it exactly.
+        · `kind: "experience"` — how this particular design office usually works. Follow it unless
+          the brief gives a clear reason not to, and when you deviate say why in that space's `why`.
+      Read `predicate` with `target`, `value` and `unit`: `min_area` with `unit: "m2"` is a floor
+      area in square metres, `max_area` a ceiling, `floor_preference` a preferred storey,
+      `adjacency` a required or forbidden neighbour relation.
     - `knowledge.construction` gives the wall thicknesses, storey heights and door and window
       sizes this office actually builds with. Areas you propose are CLEAR INTERNAL areas.
     - `knowledge.buildable_footprint_m` is the rectangle available on each level, already with

@@ -27,6 +27,7 @@ import { buildableFromDigest } from '../ai/buildable';
 import { parseAiPrompts } from '../ai/prompts';
 import { parseRuleMessages } from '../ai/plan-messages';
 import { reviewProgramAreas } from '../ai/rule-warnings';
+import { NO_RULE_PACKS, selectedRulePack } from '../ai/rule-packs';
 import { parseConstructionNorms } from '../kb/construction';
 import { parseVocabulary, VocabularyIndex } from '../kb/vocabulary';
 import { parseRuleFile, RulePack } from '../rules/rule-pack';
@@ -62,7 +63,24 @@ const nationalRules = new RulePack(
 const REF = `sha256:${'a'.repeat(64)}`;
 const digest = digestOf(VILLA);
 const buildable = buildableFromDigest(digest);
-const knowledge = programKnowledge({ digest, vocabulary, labels, buildable, construction });
+
+/** Gói kinh nghiệm nghề, tách khỏi quy chuẩn ngày 09/09/2026. */
+const experienceRules = new RulePack(
+  parseRuleFile(read('rules/nvg-experience.yaml'), 'nvg-experience'),
+  false,
+);
+const PACKS = { standards: nationalRules, experience: experienceRules };
+const emptyPack = selectedRulePack(NO_RULE_PACKS, PACKS);
+
+/** Mặc định: KHÔNG tích gói nào (T20) — mô hình thiết kế tự do. */
+const knowledge = programKnowledge({
+  digest,
+  vocabulary,
+  labels,
+  buildable,
+  construction,
+  rules: emptyPack,
+});
 
 /** Đề xuất hợp lệ: đủ phòng đầu bài đòi, đủ phòng ngủ theo gia đình, vừa sàn xây được. */
 function goodProposal(): AiSpaceProgramProposal {
@@ -110,7 +128,8 @@ function fakeClient(replies: unknown[]): TextModelClient & { calls: StructuredCa
 
 describe('Tri thức gửi cho mô hình', () => {
   /**
-   * Bài này là hàng rào chính của T14, và nó có một giới hạn phải nói rõ.
+   * Bài này là hàng rào chính của T14, và từ T20 (09/09/2026) nó canh đúng TRẠNG THÁI MẶC
+   * ĐỊNH: kỹ sư chưa tích gói nào. Bài ngay dưới canh trạng thái đã tích.
    *
    * Chỉ soi ngưỡng KHÔNG NGUYÊN: ngưỡng nguyên (1, 3, 4) trùng với số tầng, số phòng và chỉ số
    * mảng nên soi chúng chỉ sinh báo động giả — bài học 09/09/2026.
@@ -122,7 +141,7 @@ describe('Tri thức gửi cho mô hình', () => {
    * có cách nào phân biệt hai nguồn, nên bài này canh phần còn lại (1,2 và 2,4) và nhường
    * phần trùng cho bài kiểm CẤU TRÚC ngay dưới.
    */
-  it('KHÔNG mang một ngưỡng quy chuẩn nào (T14) — chỉ từ vựng, đầu bài và quy ước cấu tạo', () => {
+  it('chưa tích gói nào thì KHÔNG mang một ngưỡng nào — chỉ từ vựng, đầu bài, quy ước cấu tạo', () => {
     const text = JSON.stringify(knowledge);
     const fromKb = JSON.stringify(construction);
 
@@ -153,6 +172,78 @@ describe('Tri thức gửi cho mô hình', () => {
     for (const entry of knowledge.room_types) {
       expect(Object.keys(entry).sort()).toEqual(['code', 'group', 'vi']);
     }
+  });
+
+  it('chưa tích gói nào thì danh sách ràng buộc RỖNG', () => {
+    expect(knowledge.constraints).toEqual([]);
+  });
+
+  /**
+   * T20: gói đã tích đi vào lời dẫn, và mỗi ràng buộc mang theo NGUỒN cùng nhãn `legal` hay
+   * `experience`. Không có hai trường ấy thì mô hình không phân biệt được «luật» với «thói
+   * quen NVG», và màn hình cũng không.
+   */
+  it('tích gói quy chuẩn thì ngưỡng VÀO lời dẫn, kèm nguồn và nhãn loại', () => {
+    const k = programKnowledge({
+      digest,
+      vocabulary,
+      labels,
+      buildable,
+      construction,
+      rules: selectedRulePack({ standards: true, experience: false }, PACKS),
+    });
+    expect(k.constraints.length).toBeGreaterThan(0);
+    expect(k.constraints.every((r) => r.kind === 'legal')).toBe(true);
+    expect(k.constraints.every((r) => /QCVN|TCVN/.test(r.source))).toBe(true);
+
+    const bedroom = k.constraints.find((r) => r.id === 'min_area_bedroom');
+    expect(bedroom).toMatchObject({ target: 'bedroom', value: 9, unit: 'm2' });
+  });
+
+  it('tích gói kinh nghiệm thì ngưỡng của NVG vào, và KHÔNG lẫn quy chuẩn', () => {
+    const k = programKnowledge({
+      digest,
+      vocabulary,
+      labels,
+      buildable,
+      construction,
+      rules: selectedRulePack({ standards: false, experience: true }, PACKS),
+    });
+    expect(k.constraints.length).toBeGreaterThan(0);
+    expect(k.constraints.every((r) => r.kind === 'experience')).toBe(true);
+    expect(k.constraints.some((r) => r.id === 'min_area_living')).toBe(true);
+    expect(k.constraints.some((r) => /QCVN|TCVN/.test(r.source))).toBe(false);
+  });
+
+  it('tích cả hai thì có cả hai loại, phân biệt được bằng `kind`', () => {
+    const k = programKnowledge({
+      digest,
+      vocabulary,
+      labels,
+      buildable,
+      construction,
+      rules: selectedRulePack({ standards: true, experience: true }, PACKS),
+    });
+    const kinds = new Set(k.constraints.map((r) => r.kind));
+    expect(kinds).toEqual(new Set(['legal', 'experience']));
+  });
+
+  /**
+   * Bước lập chương trình mới có DIỆN TÍCH, chưa có hình học. Gửi kèm bề rộng tối thiểu là
+   * gửi con số mô hình không dùng được vào việc gì, và làm loãng lời dẫn.
+   */
+  it('không gửi vị từ cần hình học (bề rộng tối thiểu, khoảng lùi) ở bước này', () => {
+    const k = programKnowledge({
+      digest,
+      vocabulary,
+      labels,
+      buildable,
+      construction,
+      rules: selectedRulePack({ standards: true, experience: true }, PACKS),
+    });
+    const predicates = new Set(k.constraints.map((r) => r.predicate));
+    expect(predicates.has('min_dimension')).toBe(false);
+    expect(predicates.has('setback')).toBe(false);
   });
 
   it('mang thứ mô hình THẬT SỰ cần: từ vựng, số phòng ngủ, sàn xây được, quy ước cấu tạo', () => {
@@ -276,6 +367,7 @@ describe('generateAiProgram', () => {
       vocabulary,
       labels,
       construction,
+      rules: emptyPack,
     });
 
   it('đề xuất đạt ngay → một lượt gọi; lời dẫn mang tri thức, không mang danh tính', async () => {
@@ -323,15 +415,34 @@ describe('generateAiProgram', () => {
   });
 });
 
-describe('Cảnh báo quy chuẩn trên diện tích', () => {
-  const review = (spaces: Array<{ id: string; type: string; target_area_m2: number }>) =>
+describe('Cảnh báo trên diện tích — đo bằng ĐÚNG gói kỹ sư đã tích', () => {
+  const review = (
+    spaces: Array<{ id: string; type: string; target_area_m2: number }>,
+    choice = { standards: true, experience: false },
+  ) =>
     reviewProgramAreas({
       spaces,
       buildingType: 'biet_thu',
-      rules: nationalRules,
+      rules: selectedRulePack(choice, PACKS),
       labels,
       messages,
     });
+
+  it('chưa tích gói nào thì KHÔNG cảnh báo gì, dù phòng bé đến đâu', () => {
+    const out = review([{ id: 'bedroom_1', type: 'bedroom', target_area_m2: 1 }], NO_RULE_PACKS);
+    expect(out.warnings).toEqual([]);
+    expect(out.checked).toEqual([]);
+    expect(out.unchecked).toEqual([]);
+  });
+
+  it('phòng khách 12 m² chỉ bị nhắc khi tích gói KINH NGHIỆM, không phải gói quy chuẩn', () => {
+    const small = [{ id: 'living_1', type: 'living', target_area_m2: 12 }];
+    // 14 m² là thói quen của NVG, không có văn bản pháp quy nào bắt buộc.
+    expect(review(small, { standards: true, experience: false }).warnings).toEqual([]);
+    const withExperience = review(small, { standards: false, experience: true });
+    expect(withExperience.warnings).toHaveLength(1);
+    expect(withExperience.warnings[0]!.source).toMatch(/kinh nghiệm/i);
+  });
 
   it('phòng dưới diện tích tối thiểu sinh cảnh báo có nguồn văn bản', () => {
     const out = review([{ id: 'bedroom_1', type: 'bedroom', target_area_m2: 3 }]);

@@ -31,12 +31,13 @@ import { constructionNorms } from '../kb/construction-data';
 import { roomVocabulary } from '../kb/vocabulary-data';
 import { modelRouter, textClientFor } from '../llm/factory';
 import { LlmCallFailed } from '../llm/gemini';
-import { nationalRulePack } from '../rules/rule-pack-data';
+import { nationalRulePack, nvgExperiencePack } from '../rules/rule-pack-data';
 import { recordAiCall } from './call-log';
 import { aiModelCatalogue, isSelectableRoute } from './models';
 import { ruleMessages } from './plan-messages-data';
 import { aiPrompts } from './prompts-data';
 import { AiProgramRejected, generateAiProgram } from './program';
+import { selectedRulePack, type AiRulePackChoice } from './rule-packs';
 import { reviewProgramAreas } from './rule-warnings';
 import type { DesignBrief } from '@nvg/shared/design';
 
@@ -185,9 +186,24 @@ aiApp.post('/program', async (c) => {
   const token = bearer(c.req.header('Authorization'));
   if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
 
-  const body = (await c.req.json()) as { projectId?: string; route?: string };
+  const body = (await c.req.json()) as {
+    projectId?: string;
+    route?: string;
+    rulePacks?: Partial<AiRulePackChoice>;
+  };
   if (!body.projectId) return c.json({ error: 'Thiếu mã hồ sơ thiết kế.' }, 400);
   if (!body.route) return c.json({ error: 'Chưa chọn model AI.' }, 400);
+
+  // Mặc định TẮT cả hai gói (T20, 09/09/2026 — Haan). Trình duyệt không gửi gì thì mô hình
+  // thiết kế tự do và không có cảnh báo nào; kỹ sư chủ động tích khi muốn áp.
+  const choice: AiRulePackChoice = {
+    standards: body.rulePacks?.standards === true,
+    experience: body.rulePacks?.experience === true,
+  };
+  const rules = selectedRulePack(choice, {
+    standards: nationalRulePack(),
+    experience: nvgExperiencePack(),
+  });
 
   const db = await asUser(c.env, token);
   const scope = await projectScope(db, body.projectId);
@@ -250,6 +266,7 @@ aiApp.post('/program', async (c) => {
       vocabulary: roomVocabulary(),
       labels,
       construction: constructionNorms(),
+      rules,
     });
   } catch (error) {
     // Lượt gọi đã TỐN TIỀN dù kết quả bị bác — ghi nhật ký cả hai kiểu hỏng, không chỉ hỏng
@@ -306,10 +323,12 @@ aiApp.post('/program', async (c) => {
 
   // Cảnh báo quy chuẩn tính LÚC TRẢ VỀ, không lưu vào artifact: ngưỡng ở `rules/` đổi được,
   // và một cảnh báo đóng băng trong artifact sẽ nói về gói quy tắc của ngày hôm đúc nó.
+  // Đối chiếu bằng ĐÚNG gói kỹ sư đã tích — cùng bộ số đã gửi cho mô hình, nên cảnh báo không
+  // bao giờ nói về một ngưỡng mà mô hình chưa từng được biết.
   const review = reviewProgramAreas({
     spaces: result.payload.spaces,
     buildingType: digest.building_type,
-    rules: nationalRulePack(),
+    rules,
     labels,
     messages: ruleMessages(),
   });
@@ -324,6 +343,9 @@ aiApp.post('/program', async (c) => {
     notes: result.notes,
     buildable: result.buildable,
     repaired: result.repaired,
+    // Gói nào đã áp — màn hình phải nói ra, vì «không có cảnh báo» với gói tắt và với gói bật
+    // là hai chuyện hoàn toàn khác nhau.
+    rulePacks: choice,
     warnings: review.warnings,
     checkedRules: review.checked,
     // Danh sách quy tắc CHƯA đối chiếu được — phần quan trọng nhất của khối này. Cảnh báo rỗng

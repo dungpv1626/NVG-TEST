@@ -1,9 +1,19 @@
-# Siêu dữ liệu của gói quy tắc nền.
+# Siêu dữ liệu của gói QUY CHUẨN.
 # Phiên bản đánh theo ngày phát hành: YYYY.MM.n
+#
+# ⚠️ Đổi ngày 09/09/2026: gói này TRƯỚC ĐÂY trộn quy chuẩn với kinh nghiệm nghề
+# của NVG — 18 quy tắc văn bản pháp quy nằm lẫn 23 quy tắc thói quen. Một cảnh
+# báo hiện lên màn hình khi ấy không phân biệt được «sai luật» với «khác cách
+# NVG quen làm». 23 quy tắc kinh nghiệm đã chuyển sang `rules/nvg-experience.yaml`.
+#
+# Từ nay tệp này CHỈ chứa thứ trích được từ văn bản pháp quy. Quy tắc mới không
+# dẫn được ra QCVN hay TCVN thì thuộc gói kinh nghiệm, không thuộc đây.
 pack:
   id: base
-  version: '2026.08.1'
+  version: '2026.09.1'
   locality: null # null = áp dụng mọi nơi
   description: >-
-    Quy tắc nền cho nhà ở dân dụng, soạn từ QCVN 01:2021/BXD và kinh nghiệm
-    Phòng Thiết kế Nhà Việt Group. Gói địa phương ghi đè theo rule_id.
+    Quy chuẩn và tiêu chuẩn quốc gia cho nhà ở dân dụng: QCVN 01:2021/BXD và
+    TCVN 4451:2012. Chỉ văn bản pháp quy, mọi quy tắc ở mức `error`. Kinh nghiệm
+    nghề của NVG nằm riêng ở `rules/nvg-experience.yaml`. Gói địa phương ghi đè
+    theo rule_id.

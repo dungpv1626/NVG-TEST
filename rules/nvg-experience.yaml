@@ -1,0 +1,291 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+#  KINH NGHIỆM NGHỀ CỦA NHÀ VIỆT GROUP — KHÔNG PHẢI QUY CHUẨN
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+#  Tệp này gom 23 quy tắc mà Phòng Thiết kế NVG tự đặt ra, tách khỏi quy chuẩn
+#  quốc gia. Trước ngày 09/09/2026 chúng nằm lẫn trong `rules/base/` cùng
+#  QCVN 01:2021/BXD và TCVN 4451:2012, nên một cảnh báo «dưới mức tối thiểu»
+#  hiện lên màn hình mà không ai phân biệt được đó là luật hay là thói quen.
+#
+#  ⚠️ KHÔNG một dòng nào ở đây là văn bản pháp quy. Vi phạm chúng KHÔNG sai luật.
+#     Chúng là cách NVG quen làm, và có thể sai với một đầu bài cụ thể.
+#
+#  Ai đọc tệp này: kiến trúc sư NVG. Mỗi con số nên trả lời được câu hỏi
+#  «vì sao lại là con số này», và nếu không trả lời được thì nên sửa hoặc bỏ.
+#
+#  Cách dùng: gói này BẬT/TẮT được ngay trên màn hình thiết kế. Kỹ sư chọn có
+#  áp nó hay không cho từng hồ sơ.
+#
+#  Gói:      nvg_experience
+#  Phiên bản: 2026.09.1
+#  Phạm vi:  mọi địa phương
+#  Số quy tắc: 23, tất cả ở mức cảnh báo
+#
+#  Mức của mọi quy tắc ở đây là `warning` — theo quy ước đã ghi trong
+#  `rules/base/40-vertical.yaml`: chỉ quy tắc có nguồn là văn bản pháp quy mới
+#  được đặt mức `error`.
+#
+#  Ba con số ở phần «kích thước tối thiểu» nghi ngờ nhất, cần soát trước:
+#    · phòng khách 14 m² và phòng ngủ chính 14 m² — bằng nhau, có chủ ý không?
+#    · giếng trời tối đa 8 m² — quy tắc này khai sai mã phòng (`lightwell`
+#      thay vì `light_well`) nên CHƯA TỪNG chạy lần nào. Xem mục Vướng mắc
+#      trong TIEN_DO_THIET_KE.html.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ── KÍCH THƯỚC TỐI THIỂU — bề rộng lọt lòng nhỏ nhất của phòng ────────────────
+
+- id: room_min_dimension_balcony
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: min_dimension
+  target: balcony
+  value_m: 1.2
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: shrink_adjacent
+
+- id: room_min_dimension_closet
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: min_dimension
+  target: closet
+  value_m: 0.9
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: shrink_adjacent
+
+- id: room_min_dimension_dressing_room
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: min_dimension
+  target: dressing_room
+  value_m: 1.5
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: shrink_adjacent
+
+- id: room_min_dimension_garage
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: min_dimension
+  target: garage
+  value_m: 2.4
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: shrink_adjacent
+
+- id: room_min_dimension_kitchen
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: min_dimension
+  target: kitchen
+  value_m: 1.8
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: shrink_adjacent
+
+- id: room_min_dimension_laundry
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: min_dimension
+  target: laundry
+  value_m: 1.2
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: shrink_adjacent
+
+- id: room_min_dimension_storage
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: min_dimension
+  target: storage
+  value_m: 1.0
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: shrink_adjacent
+
+- id: room_min_dimension_study_area
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: min_dimension
+  target: study_area
+  value_m: 1.8
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: shrink_adjacent
+
+- id: room_min_dimension_wc
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: min_dimension
+  target: wc
+  value_m: 1.2
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: shrink_adjacent
+
+# ── DIỆN TÍCH TỐI THIỂU ───────────────────────────────────────────────────────
+
+- id: min_area_living
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: min_area
+  target: living
+  value_m2: 14.0
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: shrink_adjacent
+
+- id: min_area_master_bedroom
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: min_area
+  target: master_bedroom
+  value_m2: 14.0
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: shrink_adjacent
+
+# ── DIỆN TÍCH TỐI ĐA ──────────────────────────────────────────────────────────
+
+- id: lightwell_max_area
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: max_area
+  target: lightwell
+  value_m2: 8.0
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: shrink_adjacent
+
+# ── TỶ LỆ HÌNH DẠNG — phòng dài quá so với rộng thì khó dùng ──────────────────
+
+- id: aspect_ratio_max_habitable
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: aspect_ratio_max
+  target: habitable
+  value: 2.5
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: shrink_adjacent
+
+# ── Cạnh nhỏ nhất của các phòng còn lại ────────────────────────────────────────────────
+# Thêm 06/09/2026 sau khi đo trên chính bản vẽ demo: vệ sinh 4,10 × 1,00 m · kho 4,10 × 1,00 m
+# · giặt 0,60 × 8,30 m · ban công 0,40 × 9,00 m. Cả bốn đều HỢP LỆ theo bộ quy tắc cũ, vì
+# `min_dimension` khi đó chỉ khai cho hành lang, thang và phòng ngủ — một khu vệ sinh thoả
+# `min_area_wc` 2,4 m² bằng một dải rộng đúng một mét mà không quy tắc nào chặn.
+#
+# Các con số dưới đây là MẶC ĐỊNH CỦA TEAM, chưa có kiến trúc sư NVG soát (Q-29) — nên nguồn
+# ghi là kinh nghiệm và mức là cảnh báo, đúng ranh giới ở `rules/README.md`. Chúng vào hàm
+# mục tiêu của bộ giải chứ không chặn phát hành.
+
+- id: aspect_ratio_max_outdoor
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: aspect_ratio_max
+  target: outdoor
+  value: 4.0
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: shrink_adjacent
+
+- id: aspect_ratio_max_service
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: aspect_ratio_max
+  target: service
+  value: 3.0
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: shrink_adjacent
+
+# ── QUAN HỆ VỊ TRÍ giữa các không gian ────────────────────────────────────────
+
+- id: kitchen_near_dining
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: adjacency
+  a: kitchen
+  b: dining
+  kind: adjacent
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: none
+
+- id: wc_separate_from_altar_room
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: building
+  predicate: adjacency
+  a: wc
+  b: altar_room
+  kind: separate
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: move_to_floor
+
+- id: wc_separate_from_kitchen
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: adjacency
+  a: wc
+  b: kitchen
+  kind: separate
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: none
+
+# ── ƯU TIÊN TẦNG ──────────────────────────────────────────────────────────────
+
+- id: altar_room_top_floor
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: building
+  predicate: floor_preference
+  target: altar_room
+  value: top
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: move_to_floor
+
+- id: garage_ground_floor
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: building
+  predicate: floor_preference
+  target: garage
+  value: ground
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: move_to_floor
+
+# ── CHIẾU SÁNG VÀ THÔNG GIÓ ───────────────────────────────────────────────────
+
+- id: kitchen_requires_ventilation
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: requires_daylight
+  target: kitchen
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: none
+
+# ── GIÁP MẶT NÀO CỦA LÔ ĐẤT ───────────────────────────────────────────────────
+
+- id: garage_on_access_face
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: requires_face
+  target: garage
+  face: access
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: none
+
+- id: outdoor_on_open_face
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: requires_face
+  target: outdoor
+  face: open
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  auto_repair: none

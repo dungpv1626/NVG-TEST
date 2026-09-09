@@ -2143,6 +2143,32 @@
       <!-- ============ 5. VƯỚNG MẮC ============ -->
       <h2>5. Vướng mắc đang mở</h2>
       <div class="flag block">
+        <h3>T20 · Hai gói quy tắc, kỹ sư tự chọn — 09/09/2026</h3>
+        <p class="kv">
+          <b>Phát hiện:</b> <code>rules/base/</code> trộn hai loại. 41 quy tắc, trong đó
+          <b>18 trích từ QCVN 01:2021/BXD và TCVN 4451:2012</b>, còn <b>23 là thói quen của
+          Phòng Thiết kế NVG</b>. Màn hình vì thế báo &laquo;phòng khách dưới mức tối thiểu
+          14 m²&raquo; trông y như vi phạm quy chuẩn, trong khi 14 m² chỉ là cách NVG quen làm.
+        </p>
+        <p class="kv">
+          <b>Đã tách:</b> <code>rules/base/</code> nay chỉ còn 18 quy tắc pháp quy, đều mức
+          <code>error</code>. 23 quy tắc kinh nghiệm sang <code>rules/nvg-experience.yaml</code>,
+          đều mức <code>warning</code>, gom một tệp đọc được để Haan soát. Bộ giải nội bộ vẫn
+          nhận cả hai gói gộp lại nên hành vi không đổi.
+        </p>
+        <p class="kv">
+          <b>Haan chốt:</b> hai ô tích riêng trên màn hình, <b>mặc định TẮT CẢ HAI</b>. Gói đã
+          tích tác động <b>cả hai chiều</b>: vào lời dẫn để mô hình làm theo, và dùng đối chiếu
+          kết quả. Không tích gì thì mô hình thiết kế tự do và không cảnh báo nào.
+        </p>
+        <p class="kv">
+          <b>Còn chờ Haan:</b> soát 23 quy tắc trong tệp kinh nghiệm. Ba chỗ đáng ngờ đã ghi ở
+          đầu tệp — phòng khách và phòng ngủ chính cùng 14 m², và quy tắc giếng trời khai sai
+          mã phòng nên chưa từng chạy.
+        </p>
+      </div>
+
+      <div class="flag block">
         <h3>Quy tắc <code>lightwell_max_area</code> không bao giờ chạy — 09/09/2026</h3>
         <p class="kv">
           <b>Gặp ở đâu:</b> khi viết bộ đối chiếu quy chuẩn của nhánh AI

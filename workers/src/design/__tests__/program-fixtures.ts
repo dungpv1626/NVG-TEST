@@ -26,6 +26,14 @@ const BASE = [
 ];
 
 /**
+ * Gói kinh nghiệm nghề của NVG, tách khỏi `rules/base/` ngày 09/09/2026.
+ *
+ * Bộ giải nhận CẢ HAI gói gộp lại, đúng như `rulePackFor()` thật làm — tách tệp là để nhánh
+ * AI và màn hình phân biệt được nguồn cảnh báo, không phải để đổi hành vi bộ giải.
+ */
+const NVG = ['rules/nvg-experience.yaml'];
+
+/**
  * Gói địa phương dùng trong kiểm thử.
  *
  * RỖNG, giống `LOCALITY_FILES` thật: chưa tỉnh nào có văn bản quy hoạch riêng. Giữ lại cơ
@@ -38,7 +46,10 @@ export function testRulePack(locality = 'hung_yen'): RulePack {
   const files = LOCALITY[locality];
   return new RulePack(
     mergePacks(
-      BASE.flatMap((f) => parseRuleFile(read(f), f)),
+      mergePacks(
+        BASE.flatMap((f) => parseRuleFile(read(f), f)),
+        NVG.flatMap((f) => parseRuleFile(read(f), f)),
+      ),
       (files ?? []).flatMap((f) => parseRuleFile(read(f), f)),
     ),
     files === undefined,
