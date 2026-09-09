@@ -55,13 +55,15 @@ const router = new ModelRouter(
 describe('aiModelCatalogue', () => {
   const catalogue = aiModelCatalogue(router);
 
-  it('chỉ liệt kê tuyến ai_text_* ở văn bản, ai_image_* + phối cảnh ở ảnh', () => {
+  it('chỉ liệt kê tuyến ai_text_* ở văn bản và ai_image_* ở ảnh', () => {
     expect(catalogue.text.map((o) => o.route)).toEqual([
       'ai_text_openai',
       'ai_text_anthropic',
       'ai_text_gemini',
     ]);
-    expect(catalogue.image.map((o) => o.route)).toEqual(['ai_image_openai', 'layer5_render']);
+    // Tuyến phối cảnh cũ của bộ giải (`layer5_render`) CỐ Ý không có mặt: nhánh AI không
+    // import gì từ `render/` để bộ giải xoá được mà nhánh này không vỡ (T15, 09/09/2026).
+    expect(catalogue.image.map((o) => o.route)).toEqual(['ai_image_openai']);
   });
 
   it('thiếu khoá → mờ kèm lý do; đang tắt → mờ kèm lý do khác; có đủ → bấm được', () => {

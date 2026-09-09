@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nvg.vn/contracts/ai-floor-plan-proposal.schema.json",
+  "title": "AiFloorPlanProposal",
+  "description": "Mặt bằng do MÔ HÌNH đề xuất — đầu ra của nhánh AI, một DÒNG RIÊNG độc lập với bộ giải nội bộ (T10/T11/T14).\n\nTheo T14 (09/09/2026): mô hình chỉ nhận ĐẦU BÀI, không nhận ngưỡng quy chuẩn; kết quả KHÔNG đi qua Container, KHÔNG trở thành `floor-plan` chuẩn, và KHÔNG vào luồng phát hành. Nó là đề xuất để kiến trúc sư đọc — dùng lại được thì vẽ lại bằng bộ giải hoặc bằng tay.\n\nĐây là chỗ nới có kiểm soát thứ hai của nguyên tắc bất biến 2 (CLAUDE.md 8.2): mô hình đưa ra TOẠ ĐỘ chữ nhật theo mét. Ranh giới nằm ở chỗ toạ độ ấy không bao giờ được dựng thành tường, cửa hay khối ba chiều, và không có đường nào để nó đi vào hồ sơ.\n\nSau khi mô hình trả về, Worker đối chiếu `rules/base/` (quy chuẩn QUỐC GIA — QCVN 01:2021/BXD, TCVN; `locality/` KHÔNG dùng ở đây) và sinh CẢNH BÁO cho chỗ lệch. Cảnh báo không chặn kết quả và không tự sửa toạ độ.\n\nMô hình KHÔNG khai tường, không khai offset cửa. `connections` là TÔPÔ — phòng nào thông phòng nào — để bản vẽ đề xuất chỉ ra lối đi, không phải để dựng cửa.\n\nHệ toạ độ: gốc ở góc trước-trái lô đất, `x` sang phải, `y` vào sâu, đơn vị mét (giống `floor-plan`). Chữ nhật là KÍCH THƯỚC LỌT LÒNG của phòng, không phải tim tường — nhờ vậy cảnh báo `min_dimension` so sánh thẳng với ngưỡng quy chuẩn mà không phải trừ bề dày tường.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "program_ref",
+    "variant_id",
+    "variant_label",
+    "levels",
+    "rationale",
+    "svg"
+  ],
+  "properties": {
+    "schema_version": {
+      "$ref": "#/$defs/semver"
+    },
+    "program_ref": {
+      "$ref": "#/$defs/artifact_ref",
+      "description": "Chương trình không gian mà mặt bằng này bám theo — artifact của chính nhánh AI, hoặc bản do bộ giải lập nếu người dùng đã chốt bản đó. Chỉ dùng để lấy danh sách phòng và mã `id`."
+    },
+    "variant_id": {
+      "type": "string",
+      "pattern": "^AI-[A-Z]$",
+      "description": "Mã phương án của nhánh AI: AI-A, AI-B, AI-C. Tiền tố phân biệt với A/B/C của bộ giải, để hai nguồn không đè nhãn của nhau trong bảng so sánh."
+    },
+    "variant_label": {
+      "type": "string",
+      "maxLength": 120,
+      "description": "Tên phương án bằng tiếng Việt, mô tả CẤU TRÚC (« Lõi thang giữa, bếp thông phòng ăn »), không phải số."
+    },
+    "strategy": {
+      "type": ["string", "null"],
+      "maxLength": 200,
+      "description": "Ý đồ bố cục mà phương án này theo đuổi — Worker đưa vào lời dẫn để ba phương án khác nhau về cấu trúc, không phải khác vài chục xăng-ti-mét."
+    },
+    "levels": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["level", "rooms"],
+        "properties": {
+          "level": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "rooms": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "x0_m", "y0_m", "x1_m", "y1_m"],
+              "properties": {
+                "id": {
+                  "$ref": "#/$defs/space_id",
+                  "description": "Mã không gian LẤY TỪ chương trình không gian (`space_program.spaces[].id`). Không đặt mã mới."
+                },
+                "x0_m": {
+                  "type": "number"
+                },
+                "y0_m": {
+                  "type": "number"
+                },
+                "x1_m": {
+                  "type": "number"
+                },
+                "y1_m": {
+                  "type": "number"
+                }
+              }
+            }
+          },
+          "voids": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "x0_m", "y0_m", "x1_m", "y1_m"],
+              "properties": {
+                "id": {
+                  "$ref": "#/$defs/space_id"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": ["lightwell", "courtyard", "atrium"]
+                },
+                "x0_m": {
+                  "type": "number"
+                },
+                "y0_m": {
+                  "type": "number"
+                },
+                "x1_m": {
+                  "type": "number"
+                },
+                "y1_m": {
+                  "type": "number"
+                }
+              }
+            }
+          },
+          "connections": {
+            "type": "array",
+            "maxItems": 60,
+            "description": "Phòng nào thông sang phòng nào trên tầng này — tôpô, không toạ độ.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["a", "b"],
+              "properties": {
+                "a": {
+                  "$ref": "#/$defs/space_id"
+                },
+                "b": {
+                  "$ref": "#/$defs/space_id"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "rationale": {
+      "type": "string",
+      "maxLength": 1500,
+      "description": "Vì sao bố cục như vậy, tiếng Việt, 2–5 câu. Hiện thẳng cho kiến trúc sư."
+    },
+    "svg": {
+      "type": "string",
+      "maxLength": 400000,
+      "description": "Tờ bản vẽ mặt bằng do CHÍNH mô hình vẽ, dạng SVG, một tệp cho toàn bộ đề xuất (các tầng xếp cạnh nhau). Vẽ theo đúng toạ độ đã khai ở `levels[].rooms`: tường có bề dày, cửa có cánh mở, chuỗi kích thước, tên phòng và diện tích bằng tiếng Việt, trục và cao độ.\n\n⚠️ Đây là bản vẽ của MÔ HÌNH, không phải của bộ giải: nó không đi qua `build_walls_and_openings` và không được kiểm hình học. Cảnh báo quy chuẩn đo trên `levels[].rooms`, không đo trên tệp này — hai thứ có thể lệch nhau, và màn hình phải nói ra điều đó.\n\n⚠️ Nội dung do mô hình sinh nên KHÔNG TIN ĐƯỢC về mặt an toàn: Worker lược thẻ kịch bản, thuộc tính sự kiện và mọi tham chiếu ra ngoài trước khi lưu, và trình duyệt hiển thị nó qua `<img>` để trình duyệt không chạy kịch bản trong đó. Xem `ai/svg-guard.ts`."
+    }
+  },
+  "$defs": {
+    "semver": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "artifact_ref": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "space_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$"
+    }
+  }
+}

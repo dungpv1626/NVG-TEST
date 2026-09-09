@@ -12,7 +12,7 @@
 
 import { useEffect, useId, useState } from 'react';
 import { SegmentedControl } from '@/components/ui/segmented-control';
-import { useAiModels, type AiModelOption } from '@/hooks/use-design-projects';
+import { useAiModels, type AiModelOption } from '@/hooks/use-ai-design';
 
 export type AiMode = 'solver' | 'ai';
 

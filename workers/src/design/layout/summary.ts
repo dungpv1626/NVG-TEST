@@ -11,7 +11,7 @@
  */
 
 import type { FloorPlan } from '@nvg/shared/design';
-import type { Rule } from '../program/rule-pack';
+import type { Rule } from '../rules/rule-pack';
 
 export interface LevelSummary {
   level: number;

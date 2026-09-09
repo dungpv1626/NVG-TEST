@@ -1,54 +1,64 @@
 /**
- * Chương trình không gian do MÔ HÌNH lập — nhánh AI của Lớp 2 (T10–T13, 08/09/2026).
+ * Chương trình không gian do MÔ HÌNH lập — bước đầu của nhánh AI (T15–T18, 09/09/2026).
+ *
+ * ── Viết lại ngày 09/09/2026, và vì sao ──────────────────────────────────────────────
+ *
+ * Bản trước mượn bốn hàm của bộ giải (`buildableFootprint`, `buildAdjacency` từ
+ * `program/engine.ts`, `checkPlausibility`, `bandFor`) và đúc ra `space_program` — hợp đồng
+ * của bộ giải, với những trường chỉ bộ giải điền được. Haan chốt bộ giải sẽ bị XOÁ, nên mọi
+ * đường nối ấy là ngày mai nhánh AI vỡ theo. Bản này không nối gì sang đó nữa; ranh giới do
+ * `__tests__/ai-independence.test.ts` canh.
  *
  * ── Vai trò của mô hình và vai trò của mã ────────────────────────────────────────────
  *
- * Mô hình đề xuất DANH MỤC không gian, TẦNG và DIỆN TÍCH MONG MUỐN (hợp đồng
- * `ai-space-program-proposal`). Đây là chỗ nới có kiểm soát của nguyên tắc bất biến 2 (CLAUDE.md
- * 8.2), theo quyết định T10/T11 của Haan. Mọi thứ còn lại vẫn là mã tất định:
+ * Mô hình đề xuất DANH MỤC không gian, TẦNG và DIỆN TÍCH MONG MUỐN. Mã tất định lo phần còn lại:
  *
- *  · kiểm: mã phòng có trong từ vựng · tầng trong 1..N · số phòng ngủ đúng theo gia đình
- *    (cùng luật với engine) · không phòng nào dưới tối thiểu quy chuẩn · tổng từng tầng không
- *    vượt sàn xây được · đủ không gian bắt buộc của loại hình;
- *  · điền: `min/max/priority/needs_*` từ rule pack + `kb/space_norms.yaml`, `adjacency` từ rule
- *    pack (cùng hàm với engine), `floor_allocation` từ hình học thửa, `id` đánh số theo khuôn
- *    `type_n` của engine;
- *  · soát tính hợp lý nghề (`checkPlausibility`) chạy SAU, thành cảnh báo — như nhánh bộ giải.
+ *  · **kiểm** (chặn, kéo theo một lượt sửa): mã phòng có trong từ vựng · tầng trong 1..N ·
+ *    mã tạm không trùng · `ensuite_of` trỏ vào chỗ có thật · mỗi tầng có ít nhất một không
+ *    gian · tổng diện tích từng tầng không vượt sàn xây được · đủ không gian mà ĐẦU BÀI đòi ·
+ *    số phòng ngủ đúng theo thành phần gia đình;
+ *  · **điền**: `id` đánh số theo khuôn `type_n`, `brief_ref`, `generator`;
+ *  · **cảnh báo** (không chặn): lệch quy chuẩn quốc gia, đo SAU khi mô hình trả về
+ *    (`rule-warnings.ts`).
  *
- * Sai kiểm → đúng MỘT lượt sửa kèm danh sách lỗi cụ thể → vẫn sai → bác (`AiProgramRejected`),
- * không đúc artifact. Không có vòng lặp: gọi lại mô hình để nó tự sửa mãi là đốt tiền vào cùng
- * một loại sai (04-layer3-floorplan 4.3).
+ * Sai kiểm → đúng MỘT lượt sửa kèm danh sách lỗi cụ thể → vẫn sai → bác
+ * (`AiProgramRejected`), không đúc artifact. Không có vòng lặp: gọi lại mô hình để nó tự sửa
+ * mãi là đốt tiền vào cùng một loại sai.
  *
  * ── Dữ liệu gửi đi ───────────────────────────────────────────────────────────────────
  *
  * Hạng 2: đầu bài + khảo sát đã lược danh tính (`brief/anonymise.ts`), cộng phần TRI THỨC do
- * Worker tiêm vào — từ vựng, chuẩn nghề, tối thiểu quy chuẩn, sàn xây được từng tầng, số phòng
- * ngủ bắt buộc. Không một ngưỡng nào viết trong mã hay trong lời dẫn (CLAUDE.md 8.7).
+ * Worker tiêm: từ vựng phòng, quy ước cấu tạo (`kb/construction_norms.yaml`), sàn xây được
+ * từng tầng, số phòng ngủ bắt buộc. **Không một ngưỡng quy chuẩn nào** — đó là T14, và nó là
+ * lý do nhánh AI có giá trị: bó nó bằng đúng ràng buộc của bộ giải là dựng lại bộ giải bằng
+ * một công cụ dở hơn.
  */
 
 import {
   aiSpaceProgramProposalSchema,
   bedroomsFor,
   bedroomTypeFor,
-  siteGeometry,
   type AiBriefDigest,
+  type AiSpaceProgram,
   type AiSpaceProgramProposal,
-  type DesignBrief,
-  type SpaceProgram,
 } from '@nvg/shared/design';
 import type { ZodError } from 'zod';
 import proposalSchemaJson from '../../../../contracts/ai-space-program-proposal.schema.json';
 import { AI_DIGEST_DATA_CLASS } from '../brief/anonymise';
-import type { VocabularyIndex } from '../kb/vocabulary';
+import { roomGroups, type VocabularyIndex } from '../kb/vocabulary';
 import type { StructuredCallResult, TextModelClient } from '../llm/text-client';
-import { buildAdjacency, buildableFootprint } from '../program/engine';
-import { checkPlausibility, type PlausibilityRules } from '../program/plausibility';
-import type { SpaceNorms } from '../program/norms';
-import { bandFor } from '../program/norms';
-import type { RulePack } from '../program/rule-pack';
+import { buildableFromDigest, type BuildableBox } from './buildable';
 import type { AiPrompts } from './prompts';
 
 const SCHEMA_VERSION = '1.0.0';
+
+/**
+ * Ngân sách token đầu ra cho một chương trình không gian.
+ *
+ * Rộng hơn nhiều so với nhu cầu (một biệt thự 25 phòng ≈ 2.500 token): chỗ thừa là dành cho
+ * token SUY LUẬN, thứ cũng tính vào trần này. Đo 08/09: các lượt thật dùng 1.100–2.600 token.
+ */
+const PROGRAM_OUTPUT_TOKENS = 12_000;
 
 /** Đề xuất không đạt kiểm sau lượt sửa — lỗi nghiệp vụ đọc được, không thử lại. */
 export class AiProgramRejected extends Error {
@@ -58,97 +68,97 @@ export class AiProgramRejected extends Error {
     readonly attempts: number,
   ) {
     super(
-      `AI chưa lập được chương trình không gian đạt quy chuẩn sau ${attempts} lượt. ${findings[0] ?? ''}`.trim(),
+      `AI chưa lập được chương trình không gian dùng được sau ${attempts} lượt. ${findings[0] ?? ''}`.trim(),
     );
     this.name = 'AiProgramRejected';
   }
 }
 
 export interface AiProgramInput {
-  brief: DesignBrief;
-  briefRef: string;
   digest: AiBriefDigest;
+  briefRef: string;
   route: string;
   client: TextModelClient;
   prompts: AiPrompts;
-  rules: RulePack;
-  norms: SpaceNorms;
   vocabulary: VocabularyIndex;
   /** Nhãn tiếng Việt theo mã phòng — gửi kèm để mô hình hiểu mã. */
   labels: Record<string, string>;
-  plausibility: PlausibilityRules;
+  /** Quy ước cấu tạo (`kb/construction_norms.yaml`) — bề dày tường, cao độ tầng, kích thước cửa. */
+  construction: unknown;
 }
 
 export interface AiProgramResult {
-  payload: SpaceProgram;
+  payload: AiSpaceProgram;
   rationale: string;
   assumptions: string[];
   /** Ghi chú `why` theo mã không gian đã đánh số lại. */
   notes: Record<string, string>;
-  warnings: string[];
-  /** Lượt gọi đã thực hiện (1 hoặc 2), để ghi nhật ký. */
+  buildable: BuildableBox;
+  /** Lượt gọi đã thực hiện (1 hoặc 2), để ghi nhật ký chi phí. */
   calls: StructuredCallResult[];
-  /** Số lỗi kiểm ở lượt đầu — 0 nghĩa là không cần sửa. */
   repaired: boolean;
 }
 
-/** Tri thức tiêm vào lời dẫn — mọi con số ở đây đọc từ dữ liệu, không viết cứng. */
+/**
+ * Tri thức tiêm vào lời dẫn.
+ *
+ * ⚠️ Mọi con số ở đây đến từ ĐẦU BÀI hoặc từ `kb/` (quy ước cấu tạo). **Không** con số nào
+ * đến từ `rules/` — đó là ranh giới của T14, và có kiểm thử canh (`ai-prompts.test.ts` cùng
+ * bài kiểm ngưỡng trong `ai-program.test.ts`).
+ */
 export interface ProgramKnowledge {
   floors: number;
   building_type: string;
-  buildable_per_floor_m2: number[];
-  width_band: string;
+  buildable_per_level_m2: number[];
+  buildable_footprint_m: { width: number; depth: number };
+  /** `false` khi thửa là đa giác: ô chữ nhật có thể nhỏ hơn ô lớn nhất thật. */
+  buildable_exact: boolean;
   bedrooms_required: { type: string; count: number }[];
-  mandatory: string[];
-  room_types: {
-    code: string;
-    vi: string;
-    min_m2: number;
-    target_m2: number;
-    max_m2: number;
-    floor_pref: string;
-    daylight: boolean;
-    auto: boolean;
-  }[];
-  adjacency_rules: { a: string; b: string; kind: string }[];
+  /** Không gian ĐẦU BÀI đòi phải có — người dùng tự khai, không phải mặc định của hệ thống. */
+  required_by_brief: string[];
+  room_types: { code: string; vi: string; group: string | null }[];
+  construction: unknown;
 }
 
 export function programKnowledge(input: {
-  brief: DesignBrief;
-  rules: RulePack;
-  norms: SpaceNorms;
+  digest: AiBriefDigest;
+  vocabulary: VocabularyIndex;
   labels: Record<string, string>;
-  buildablePerFloor: number[];
-  widthBand: string;
+  buildable: BuildableBox;
+  construction: unknown;
 }): ProgramKnowledge {
-  const { brief, rules, norms, labels } = input;
-  const type = brief.building_type;
-  const floorPref = rules.floorPreference(type);
+  const { digest, vocabulary, labels, buildable } = input;
+
   const bedrooms = new Map<string, number>();
-  for (const member of brief.family ?? []) {
+  for (const member of digest.family ?? []) {
     const roomType = bedroomTypeFor(member.role ?? '');
     const count = bedroomsFor(member.role ?? '', member.count ?? 0);
     if (roomType && count > 0) bedrooms.set(roomType, (bedrooms.get(roomType) ?? 0) + count);
   }
+
+  // Nhóm chức năng (`circulation`, `sleeping`, `service`, `outdoor`…) giúp mô hình hiểu mã
+  // phòng thuộc họ nào. Nhóm khai `members: null` nghĩa là mọi mã — `roomGroups` đã bỏ chúng.
+  const groupOf = new Map<string, string>();
+  for (const [group, members] of Object.entries(roomGroups(vocabulary.vocabulary))) {
+    for (const code of members) if (!groupOf.has(code)) groupOf.set(code, group);
+  }
+
   return {
-    floors: brief.floors,
-    building_type: type,
-    buildable_per_floor_m2: input.buildablePerFloor,
-    width_band: input.widthBand,
-    bedrooms_required: [...bedrooms].map(([t, count]) => ({ type: t, count })),
-    mandatory: norms.mandatory[type] ?? [],
-    room_types: Object.entries(norms.spaces).map(([code, norm]) => ({
-      code,
-      vi: labels[code] ?? code,
-      // Tối thiểu là mức CHẶT hơn giữa quy chuẩn và chuẩn nghề — cùng phép với engine.
-      min_m2: Math.max(norm.min_m2, rules.minArea(type, code) ?? 0),
-      target_m2: norm.target_m2,
-      max_m2: norm.max_m2,
-      floor_pref: floorPref.get(code) ?? norm.floor,
-      daylight: norm.daylight,
-      auto: norm.auto,
+    floors: digest.floors,
+    building_type: digest.building_type,
+    // Cùng một trần cho mọi tầng: đầu bài chỉ khai một hình bao. Tầng lùi vào là quyết định
+    // THIẾT KẾ, và đó chính là thứ đi hỏi mô hình.
+    buildable_per_level_m2: Array.from({ length: digest.floors }, () => buildable.areaM2),
+    buildable_footprint_m: { width: buildable.widthM, depth: buildable.depthM },
+    buildable_exact: buildable.exact,
+    bedrooms_required: [...bedrooms].map(([type, count]) => ({ type, count })),
+    required_by_brief: [...new Set((digest.required_spaces ?? []).map((s) => s.type))],
+    room_types: vocabulary.vocabulary.types.map((t) => ({
+      code: t.code,
+      vi: labels[t.code] ?? t.vi,
+      group: groupOf.get(t.code) ?? null,
     })),
-    adjacency_rules: rules.adjacency(type).map((r) => ({ a: r.a, b: r.b, kind: r.kind })),
+    construction: input.construction,
   };
 }
 
@@ -159,53 +169,51 @@ export function checkProposal(
   labels: Record<string, string>,
 ): string[] {
   const issues: string[] = [];
-  const known = new Map(knowledge.room_types.map((r) => [r.code, r]));
+  const known = new Set(knowledge.room_types.map((r) => r.code));
   const name = (code: string) => labels[code] ?? code;
   const ids = new Set<string>();
 
   for (const s of proposal.spaces) {
     if (ids.has(s.id)) issues.push(`Mã tạm "${s.id}" bị dùng hai lần.`);
     ids.add(s.id);
-    const norm = known.get(s.type);
-    if (!norm) {
+    if (!known.has(s.type)) {
       issues.push(`Loại không gian "${s.type}" không có trong từ vựng — chỉ dùng mã đã cho.`);
       continue;
     }
-    if (s.floor > knowledge.floors) {
+    if (s.level > knowledge.floors) {
       issues.push(
-        `${name(s.type)} đặt ở tầng ${s.floor} nhưng nhà chỉ có ${knowledge.floors} tầng.`,
-      );
-    }
-    if (s.target_area_m2 + 0.05 < norm.min_m2) {
-      issues.push(
-        `${name(s.type)} ${s.target_area_m2} m² dưới mức tối thiểu ${norm.min_m2} m² của loại phòng này.`,
+        `${name(s.type)} đặt ở tầng ${s.level} nhưng nhà chỉ có ${knowledge.floors} tầng.`,
       );
     }
   }
+
   for (const s of proposal.spaces) {
-    if (s.enclosed_in && !ids.has(s.enclosed_in)) {
+    if (s.ensuite_of && !ids.has(s.ensuite_of)) {
       issues.push(
-        `${name(s.type)} khai nằm trong "${s.enclosed_in}" nhưng không có không gian nào mang mã đó.`,
+        `${name(s.type)} khai nằm trong "${s.ensuite_of}" nhưng không có không gian nào mang mã đó.`,
       );
     }
   }
 
   for (let level = 1; level <= knowledge.floors; level += 1) {
-    const onFloor = proposal.spaces.filter((s) => s.floor === level && !s.enclosed_in);
-    if (!onFloor.length) {
+    // Phòng khép kín trong phòng khác không cộng riêng: diện tích của nó đã nằm trong phòng mẹ.
+    const onLevel = proposal.spaces.filter((s) => s.level === level && !s.ensuite_of);
+    if (!onLevel.length) {
       issues.push(`Tầng ${level} không có không gian nào.`);
       continue;
     }
-    const sum = onFloor.reduce((acc, s) => acc + s.target_area_m2, 0);
-    const cap = knowledge.buildable_per_floor_m2[level - 1];
+    const sum = onLevel.reduce((acc, s) => acc + s.target_area_m2, 0);
+    const cap = knowledge.buildable_per_level_m2[level - 1];
     if (cap !== undefined && sum > cap + 0.5) {
       issues.push(`Tầng ${level} cộng lại ${round1(sum)} m², vượt sàn xây được ${round1(cap)} m².`);
     }
   }
 
-  for (const code of knowledge.mandatory) {
+  // Không gian bắt buộc lấy từ ĐẦU BÀI, không từ một danh sách mặc định của hệ thống: người
+  // dùng đã khai họ cần gì, và đó là thứ duy nhất có thẩm quyền ở đây.
+  for (const code of knowledge.required_by_brief) {
     if (!proposal.spaces.some((s) => s.type === code)) {
-      issues.push(`Thiếu ${name(code)} — không gian bắt buộc của loại hình này.`);
+      issues.push(`Thiếu ${name(code)} — đầu bài khai đây là không gian phải có.`);
     }
   }
 
@@ -224,26 +232,19 @@ export function checkProposal(
   return issues;
 }
 
-/**
- * Đổi đề xuất đã đạt kiểm thành `SpaceProgram` chuẩn — điền mọi phần tất định.
- */
+/** Đổi đề xuất đã đạt kiểm thành artifact `ai_space_program` — điền phần tất định. */
 export function programFromProposal(input: {
   proposal: AiSpaceProgramProposal;
-  brief: DesignBrief;
   briefRef: string;
-  rules: RulePack;
-  norms: SpaceNorms;
-  knowledge: ProgramKnowledge;
-  generator: NonNullable<SpaceProgram['generator']>;
-}): { payload: SpaceProgram; notes: Record<string, string> } {
-  const { proposal, brief, rules, norms, knowledge } = input;
-  const type = brief.building_type;
-  const daylightRequired = rules.requiresDaylight(type);
+  generator: AiSpaceProgram['generator'];
+}): { payload: AiSpaceProgram; notes: Record<string, string> } {
+  const { proposal } = input;
 
-  // Đánh số theo khuôn `type_n` của engine — bảng so sánh và nhãn dùng chung một cách gọi.
+  // Đánh số theo khuôn `type_n`: mã của mô hình chỉ là mã tạm để nó trỏ `enclosed_in`, và ba
+  // lượt gọi song song ở bước sau cần mã ổn định để nói về cùng một phòng.
   const counters = new Map<string, number>();
   const idMap = new Map<string, string>();
-  const ordered = [...proposal.spaces].sort((a, b) => a.floor - b.floor);
+  const ordered = [...proposal.spaces].sort((a, b) => a.level - b.level);
   for (const s of ordered) {
     const n = (counters.get(s.type) ?? 0) + 1;
     counters.set(s.type, n);
@@ -251,52 +252,25 @@ export function programFromProposal(input: {
   }
 
   const notes: Record<string, string> = {};
-  const spaces: SpaceProgram['spaces'] = ordered.map((s) => {
-    const norm = norms.spaces[s.type]!;
+  const spaces: AiSpaceProgram['spaces'] = ordered.map((s) => {
     const id = idMap.get(s.id)!;
-    const enclosedIn = s.enclosed_in ? (idMap.get(s.enclosed_in) ?? null) : null;
-    const min = Math.max(norm.min_m2, rules.minArea(type, s.type) ?? 0);
     if (s.why) notes[id] = s.why;
     return {
       id,
       type: s.type,
-      floor: s.floor,
-      min_area_m2: round1(min),
-      target_area_m2: round1(Math.max(min, s.target_area_m2)),
-      // Trần nghề vẫn là dữ liệu của kb; mô hình đề xuất lớn hơn thì trần theo đề xuất — bộ
-      // giải cần khoảng [min, max] chứa target.
-      max_area_m2: round1(Math.max(norm.max_m2, s.target_area_m2)),
-      priority: norm.priority,
-      needs_daylight: enclosedIn ? false : daylightRequired.has(s.type) || norm.daylight,
-      needs_facade: enclosedIn ? false : norm.facade,
-      needs_ventilation: norm.ventilation,
-      ...(enclosedIn ? { enclosed_in: enclosedIn } : {}),
+      level: s.level,
+      target_area_m2: round1(s.target_area_m2),
+      ensuite_of: s.ensuite_of ? (idMap.get(s.ensuite_of) ?? null) : null,
+      why: s.why ?? null,
     };
   });
 
-  const floorAllocation = Array.from({ length: brief.floors }, (_, i) => {
-    const level = i + 1;
-    const buildable = knowledge.buildable_per_floor_m2[i] ?? null;
-    const allocated = spaces
-      .filter((s) => s.floor === level && !s.enclosed_in)
-      .reduce((sum, s) => sum + (s.target_area_m2 ?? 0), 0);
-    return {
-      floor: level,
-      // Sàn DÙNG = tổng mô hình xếp, kẹp dưới trần xây được — bộ giải chia đúng phần này.
-      usable_area_m2: round1(buildable === null ? allocated : Math.min(buildable, allocated)),
-      buildable_area_m2: buildable === null ? null : round1(buildable),
-      allocated_area_m2: round1(allocated),
-    };
-  });
-
-  const payload: SpaceProgram = {
+  const payload: AiSpaceProgram = {
     schema_version: SCHEMA_VERSION,
     brief_ref: input.briefRef,
     spaces,
-    adjacency: buildAdjacency(spaces, rules, norms, type, brief.massing?.service_core === true),
-    floor_allocation: floorAllocation,
-    reference_projects: [],
-    priors_applied: false,
+    rationale: proposal.rationale,
+    assumptions: proposal.assumptions ?? [],
     generator: input.generator,
   };
   return { payload, notes };
@@ -308,36 +282,20 @@ export function programPrompt(digest: AiBriefDigest, knowledge: ProgramKnowledge
 }
 
 export async function generateAiProgram(input: AiProgramInput): Promise<AiProgramResult> {
-  const { brief, rules, norms, prompts, client, route, labels } = input;
+  const { digest, prompts, client, route, labels } = input;
 
-  // Sàn xây được từng tầng: cùng hàm với engine, nên hai nhánh nói cùng một con số.
-  const warnings: string[] = [];
-  const geometry = siteGeometry(brief.site);
-  const footprint = buildableFootprint(brief, geometry, rules, warnings);
+  const buildable = buildableFromDigest(digest);
   const knowledge = programKnowledge({
-    brief,
-    rules,
-    norms,
+    digest,
+    vocabulary: input.vocabulary,
     labels,
-    buildablePerFloor: Array.from({ length: brief.floors }, () => round1(footprint)),
-    // Dải bề rộng theo ô XÂY ĐƯỢC, cùng phép với engine.
-    widthBand: bandFor(norms, geometry.buildable.widthM).id,
+    buildable,
+    construction: input.construction,
   });
 
   const schema = proposalSchemaJson as Record<string, unknown>;
   const calls: StructuredCallResult[] = [];
-  const attempt = async (userPrompt: string, system: string) => {
-    const result = await client.complete(route, AI_DIGEST_DATA_CLASS, {
-      system,
-      prompt: userPrompt,
-      schema,
-      maxOutputTokens: 12_000,
-    });
-    calls.push(result);
-    return result;
-  };
-
-  const basePrompt = programPrompt(input.digest, knowledge);
+  const basePrompt = programPrompt(digest, knowledge);
   let issues: string[] = [];
   let proposal: AiSpaceProgramProposal | null = null;
 
@@ -345,8 +303,18 @@ export async function generateAiProgram(input: AiProgramInput): Promise<AiProgra
     const system =
       round === 0
         ? prompts.program.system
-        : `${prompts.program.system}\n\n${prompts.program.repair.replace('{issues}', issues.map((i) => `- ${i}`).join('\n'))}`;
-    const result = await attempt(basePrompt, system);
+        : `${prompts.program.system}\n\n${prompts.program.repair.replace(
+            '{issues}',
+            issues.map((i) => `- ${i}`).join('\n'),
+          )}`;
+    const result = await client.complete(route, AI_DIGEST_DATA_CLASS, {
+      system,
+      prompt: basePrompt,
+      schema,
+      maxOutputTokens: PROGRAM_OUTPUT_TOKENS,
+    });
+    calls.push(result);
+
     const parsed = aiSpaceProgramProposalSchema.safeParse(result.json);
     if (!parsed.success) {
       issues = describeZod(parsed.error);
@@ -363,31 +331,23 @@ export async function generateAiProgram(input: AiProgramInput): Promise<AiProgra
   const last = calls[calls.length - 1]!;
   const { payload, notes } = programFromProposal({
     proposal,
-    brief,
     briefRef: input.briefRef,
-    rules,
-    norms,
-    knowledge,
     generator: {
       kind: 'ai',
       provider: last.provider,
       model: last.model,
       route,
       prompt_version: prompts.version,
-      rationale: proposal.rationale,
+      repaired: calls.length > 1,
     },
   });
-
-  for (const finding of checkPlausibility(payload, input.plausibility)) {
-    warnings.push(finding.message);
-  }
 
   return {
     payload,
     rationale: proposal.rationale,
     assumptions: proposal.assumptions ?? [],
     notes,
-    warnings,
+    buildable,
     calls,
     repaired: calls.length > 1,
   };

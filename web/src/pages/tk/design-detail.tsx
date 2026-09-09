@@ -48,6 +48,7 @@ import { DisciplinePanel } from './discipline-panel';
 import { ProgramPanel } from './program-panel';
 import { SurveyPanel } from './survey-panel';
 import { VariantsPanel } from './variants-panel';
+import { AiDesignTab } from './ai/ai-design-tab';
 import { VersionPanel } from './version-panel';
 
 const EM_DASH = '—';
@@ -301,6 +302,13 @@ export function DesignDetailPage() {
                 />
               </div>
             ),
+          },
+          {
+            id: 'thiet-ke-ai',
+            label: 'Thiết kế AI',
+            subtitle:
+              'Chương trình không gian → mặt bằng từng tầng → mặt đứng → phối cảnh, do AI đề xuất. Kết quả là bản phác tham khảo, không đi vào hồ sơ phát hành.',
+            content: <AiDesignTab projectId={project.id} readOnly={readOnly} />,
           },
           {
             id: 'ho-so-ky-thuat',

@@ -63,6 +63,18 @@ export const ARTIFACT_KINDS = [
   'arch_model',
   'schedules',
   'render_result',
+  // ── Nhánh AI ─────────────────────────────────────────────────────────────
+  // CỐ Ý là những loại RIÊNG, không dùng lại loại của bộ giải. Nhánh AI phải sống được sau
+  // khi bộ giải bị xoá (T15–T19, 09/09/2026), nên nó không được mượn hợp đồng nào của bộ giải;
+  // và gọi mặt bằng của nó là `floor_plan` thì mọi thứ hạ nguồn — bản vẽ, khối ba chiều, thống
+  // kê, phát hành — đọc được nó và sẽ hỏng theo một cách khó lần.
+  'ai_space_program',
+  'ai_floor_plan',
+  'ai_facade_concept',
+  'ai_image_set',
+  // Mặt bằng theo phương án CŨ (T14): mô hình tự viết chuỗi SVG. Không sinh mới nữa — giữ ở
+  // đây để artifact đã đúc còn đọc được, vì artifact là bất biến.
+  'ai_plan_proposal',
 ] as const;
 
 export type ArtifactKind = (typeof ARTIFACT_KINDS)[number];
@@ -80,6 +92,16 @@ export const PIPELINE_STEPS = [
   'layer3b_solve',
   'layer4_arch',
   'layer5_render',
+  // ── Nhánh AI ─────────────────────────────────────────────────────────────
+  // Bốn bước nối nhau: đầu bài → chương trình → mặt bằng → mặt đứng → bộ ảnh. Kiểm máy và
+  // cảnh báo quy chuẩn KHÔNG phải bước: chúng tính lại lúc đọc, không sinh artifact.
+  'ai_program_propose',
+  'ai_plan_propose',
+  'ai_facade_propose',
+  // Kiến trúc sư sửa ý tưởng mặt đứng. Artifact bất biến nên bản sửa là artifact MỚI, nối
+  // lineage bằng bước này — không có `UPDATE`.
+  'ai_facade_edit',
+  'ai_image_render',
 ] as const;
 
 export type PipelineStep = (typeof PIPELINE_STEPS)[number];
@@ -92,6 +114,11 @@ export const STEP_OUTPUT_KIND: Readonly<Record<PipelineStep, ArtifactKind>> = {
   layer3b_solve: 'floor_plan',
   layer4_arch: 'arch_model',
   layer5_render: 'render_result',
+  ai_program_propose: 'ai_space_program',
+  ai_plan_propose: 'ai_floor_plan',
+  ai_facade_propose: 'ai_facade_concept',
+  ai_facade_edit: 'ai_facade_concept',
+  ai_image_render: 'ai_image_set',
 };
 
 // ---------------------------------------------------------------------------

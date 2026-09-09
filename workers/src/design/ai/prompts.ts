@@ -13,6 +13,15 @@ export interface AiPrompts {
     /** Lời dẫn lượt sửa, có chỗ `{issues}` để điền danh sách lỗi. */
     repair: string;
   };
+  floorPlan: {
+    /**
+     * Chỉ dẫn hệ thống cho bước xếp mặt bằng — tiếng Anh, không mang dữ liệu.
+     *
+     * CỐ Ý không có `repair` đi kèm: theo T14 nhánh AI không có tiêu chí đạt/không đạt để đòi
+     * mô hình sửa. Chỗ lệch quy chuẩn đo sau và hiện thành cảnh báo (`ai/rule-warnings.ts` và bộ kiểm mặt bằng của Đợt 2).
+     */
+    system: string;
+  };
 }
 
 export class AiPromptsError extends Error {
@@ -34,5 +43,13 @@ export function parseAiPrompts(raw: unknown): AiPrompts {
   if (!program.repair.includes('{issues}')) {
     throw new AiPromptsError('`program.repair` phải có chỗ điền `{issues}`.');
   }
-  return { version: doc.version, program: { system: program.system, repair: program.repair } };
+  const floorPlan = (doc as { floor_plan?: { system?: unknown } }).floor_plan;
+  if (!floorPlan || typeof floorPlan.system !== 'string') {
+    throw new AiPromptsError('kb/ai_design_prompts.yaml thiếu `floor_plan.system`.');
+  }
+  return {
+    version: doc.version,
+    program: { system: program.system, repair: program.repair },
+    floorPlan: { system: floorPlan.system },
+  };
 }

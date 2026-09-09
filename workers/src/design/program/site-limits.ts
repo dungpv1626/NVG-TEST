@@ -24,7 +24,7 @@
  */
 
 import type { DesignBrief } from '@nvg/shared/design';
-import type { RulePack } from './rule-pack';
+import type { RulePack } from '../rules/rule-pack';
 
 export const SIDES = ['front', 'back', 'left', 'right'] as const;
 export type Side = (typeof SIDES)[number];

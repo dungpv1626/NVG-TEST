@@ -1261,32 +1261,6 @@ export function useSaveChangeRequest() {
 // Nhánh AI — danh mục model và lập chương trình bằng AI (T10–T13)
 // ---------------------------------------------------------------------------
 
-export interface AiModelOption {
-  route: string;
-  provider: string;
-  label: string;
-  model: string;
-  maxDataClass: number;
-  enabled: boolean;
-  unavailableReason: string | null;
-}
-
-export interface AiModelCatalogue {
-  text: AiModelOption[];
-  image: AiModelOption[];
-  defaults: { text: string | null; image: string | null };
-}
-
-/** Danh mục model cho ô chọn — đọc từ `config/models.yaml` qua Worker, không lộ khoá. */
-export function useAiModels() {
-  return useQuery<AiModelCatalogue, Error>({
-    queryKey: ['design_ai_models'],
-    queryFn: () => designApi<AiModelCatalogue>('/design/ai/models'),
-    staleTime: 5 * 60_000,
-    retry: false,
-  });
-}
-
 export interface ProgramGenerator {
   kind: 'solver' | 'ai';
   provider?: string | null;
@@ -1312,6 +1286,58 @@ export interface GenerateProgramAiResult extends GenerateProgramResult {
   notes: Record<string, string>;
   comparison: ProgramComparisonRow[];
   repaired: boolean;
+}
+
+export interface AiPlanWarning {
+  ruleId: string;
+  severity: 'error' | 'warning';
+  source: string;
+  message: string;
+  level: number;
+  roomId: string | null;
+}
+
+export interface AiPlanVariantView {
+  artifactId: string;
+  reused: boolean;
+  plan: {
+    variant_id: string;
+    variant_label: string;
+    rationale: string;
+    svg: string;
+    levels: Array<{ level: number; rooms: Array<{ id: string }> }>;
+  };
+  /** Số chỗ đã lược khỏi bản vẽ do mô hình sinh. Khác 0 thì màn hình phải nói ra. */
+  svgRemoved: number;
+  warnings: AiPlanWarning[];
+  checkedRules: string[];
+  uncheckedRules: Array<{ ruleId: string; predicate: string; source: string }>;
+  findings: string[];
+  provider: string;
+  model: string;
+}
+
+export interface AiPlanResultView {
+  variants: AiPlanVariantView[];
+  failed: Array<{ strategyId: string; reason: string }>;
+  roomLabels: Record<string, string>;
+  programArtifactId: string;
+}
+
+/**
+ * Vẽ mặt bằng bằng AI — DÒNG RIÊNG (T14), không đụng vào phương án của bộ giải.
+ *
+ * Không `invalidateQueries` sang `design_floor_plan_variants`: kết quả này không phải phương án
+ * của bộ giải và không đặt `design_head`. Trộn hai nguồn vào một danh sách sẽ khiến các bước hạ
+ * nguồn — bản vẽ, khối ba chiều, thống kê, phát hành — tưởng đã có mặt bằng để đọc.
+ */
+export function useGenerateAiFloorPlan() {
+  return useMutation<AiPlanResultView, Error, { projectId: string; route: string; count?: number }>(
+    {
+      mutationFn: ({ projectId, route, count }) =>
+        designApi<AiPlanResultView>('/design/floor-plan/ai-generate', { projectId, route, count }),
+    },
+  );
 }
 
 /** Lập chương trình không gian bằng AI rồi chốt — cùng dòng lineage với bộ giải. */

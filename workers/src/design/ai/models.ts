@@ -8,7 +8,6 @@
 
 import type { DataClass } from '@nvg/shared/design';
 import type { ModelRouter, PublicRoute } from '../llm/router';
-import { RENDER_ROUTE } from '../render/render';
 
 export interface AiModelOption {
   route: string;
@@ -52,9 +51,10 @@ export function aiModelCatalogue(router: ModelRouter): AiModelCatalogue {
   const routes = router.publicRoutes();
   return {
     text: routes.filter((r) => r.route.startsWith(TEXT_ROUTE_PREFIX)).map(option),
-    image: routes
-      .filter((r) => r.route.startsWith(IMAGE_ROUTE_PREFIX) || r.route === RENDER_ROUTE)
-      .map(option),
+    // CHỈ tuyến `ai_image_*`. Tuyến phối cảnh cũ của bộ giải (`layer5_render`) cố ý không có
+    // mặt ở đây: nhánh AI không được import gì từ `render/` để bộ giải xoá được mà nhánh này
+    // không vỡ (T15, 09/09/2026 — có kiểm thử canh ở `ai-independence.test.ts`).
+    image: routes.filter((r) => r.route.startsWith(IMAGE_ROUTE_PREFIX)).map(option),
   };
 }
 

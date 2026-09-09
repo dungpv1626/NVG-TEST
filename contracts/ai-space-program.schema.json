@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nvg.vn/contracts/ai-space-program.schema.json",
+  "title": "AiSpaceProgram",
+  "description": "Chương trình không gian của NHÁNH AI — artifact được lưu, sau khi Worker đã kiểm và đánh lại mã phòng.\n\nCỐ Ý KHÔNG dùng lại `space-program` của bộ giải nội bộ (T15–T18, 09/09/2026). Hợp đồng kia mang `floor_allocation`, `priors_applied`, `adjacency`, `min/max/priority/needs_*` — mọi trường ấy do mã nguồn bộ giải điền (`program/engine.ts`, `program/norms.ts`). Nhánh AI phải sống được sau khi bộ giải bị xoá, nên nó có hợp đồng riêng, hẹp hơn, chỉ gồm thứ mô hình thật sự quyết.\n\nQuan hệ với `ai-space-program-proposal`: kia là đầu ra THÔ của mô hình (mã phòng tạm do mô hình đặt), đây là bản đã kiểm và đánh số lại theo khuôn `type_n`. Mọi tham chiếu `ensuite_of` đã ánh xạ sang mã mới.\n\nĐây là đề xuất để kiến trúc sư đọc và sửa, KHÔNG phải hồ sơ phát hành.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "brief_ref", "spaces", "rationale", "generator"],
+  "properties": {
+    "schema_version": { "$ref": "#/$defs/semver" },
+    "brief_ref": {
+      "$ref": "#/$defs/artifact_ref",
+      "description": "Đầu bài mà chương trình này lập theo. Worker điền, không hỏi mô hình."
+    },
+    "spaces": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 60,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "type", "level", "target_area_m2"],
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/space_id",
+            "description": "Mã do Worker đánh theo khuôn `type_n` (living_1, bedroom_2…). Bước xếp mặt bằng dùng đúng mã này."
+          },
+          "type": {
+            "$ref": "#/$defs/space_id",
+            "description": "Mã loại phòng trong kb/room_vocabulary.yaml."
+          },
+          "level": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Tầng, 1 là tầng trệt. Gọi là `level` chứ không `floor` để một từ vựng chạy suốt nhánh AI: chương trình, mặt bằng, lời dẫn, kiểm máy và giao diện không phải dịch tên trường cho nhau."
+          },
+          "target_area_m2": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Diện tích mong muốn, m²."
+          },
+          "ensuite_of": {
+            "type": ["string", "null"],
+            "description": "Mã phòng mẹ khi không gian này nằm TRONG phòng đó (vệ sinh khép kín trong phòng ngủ). Rỗng với mọi phòng khác."
+          },
+          "why": {
+            "type": ["string", "null"],
+            "maxLength": 200,
+            "description": "Một câu tiếng Việt vì sao chọn tầng/diện tích này."
+          }
+        }
+      }
+    },
+    "rationale": {
+      "type": "string",
+      "maxLength": 1500,
+      "description": "Ý đồ tổ chức không gian toàn nhà, tiếng Việt, 2–5 câu."
+    },
+    "assumptions": {
+      "type": "array",
+      "maxItems": 12,
+      "items": { "type": "string", "maxLength": 200 },
+      "description": "Điều mô hình phải GIẢ ĐỊNH vì đầu bài không nói. Giao diện bày thành danh sách câu hỏi cho khách."
+    },
+    "generator": { "$ref": "#/$defs/generator" }
+  },
+  "$defs": {
+    "semver": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "artifact_ref": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "space_id": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+    "generator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "provider", "model", "route", "prompt_version"],
+      "description": "Ai sinh ra artifact này. Nhánh AI luôn `kind: ai` — trường vẫn khai enum một giá trị để phân biệt với artifact của bộ giải khi hai dòng còn sống song song.",
+      "properties": {
+        "kind": { "type": "string", "enum": ["ai"] },
+        "provider": { "type": "string", "maxLength": 32 },
+        "model": { "type": "string", "maxLength": 96 },
+        "route": { "type": "string", "maxLength": 64 },
+        "prompt_version": { "type": "string", "maxLength": 16 },
+        "repaired": {
+          "type": "boolean",
+          "description": "Đã phải gọi thêm một lượt sửa. Giao diện nói ra để không ai tưởng lượt đầu đã đạt."
+        }
+      }
+    }
+  }
+}

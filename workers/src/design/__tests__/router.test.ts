@@ -27,8 +27,11 @@ describe('config/models.yaml', () => {
       'ai_image_gemini',
       'ai_image_openai',
       'ai_text_anthropic',
+      'ai_text_anthropic_fast',
       'ai_text_gemini',
+      'ai_text_gemini_fast',
       'ai_text_openai',
+      'ai_text_openai_fast',
       'kb_label_normalize',
       'kb_rationale_embed',
       'layer1_brief',
@@ -103,6 +106,20 @@ describe('config/models.yaml', () => {
     for (const [name, route] of Object.entries(config.routes)) {
       if (isAiRoute(name)) expect(freeProviders.has(route.provider), name).toBe(false);
     }
+  });
+
+  it('mọi tuyến của nhánh AI có nhãn riêng — ô chọn không được hiện hai dòng giống nhau', () => {
+    // Nhãn là thứ DUY NHẤT phân biệt hai bậc của cùng một nhà cung cấp trên ô chọn. Thiếu nhãn
+    // thì router lấy tạm tên model (`label ?? model`) — vẫn chạy, nhưng người dùng đọc thấy
+    // `gpt-5-mini` giữa các dòng tiếng Việt. Trùng nhãn thì tệ hơn: hai dòng y hệt, chọn dòng nào
+    // cũng không biết mình vừa chọn gì.
+    const labels = Object.entries(config.routes)
+      .filter(([name]) => isAiRoute(name))
+      .map(([name, route]) => {
+        expect(route.label, name).toBeTruthy();
+        return route.label;
+      });
+    expect(new Set(labels).size).toBe(labels.length);
   });
 
   /*

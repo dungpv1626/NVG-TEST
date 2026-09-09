@@ -483,7 +483,121 @@
       </div>
 
       <!-- ============ 3b. NHÁNH AI ============ -->
-      <h2>3b. Sẽ làm — nhánh thiết kế bằng AI API, năm đợt</h2>
+      <h2>3b. Bộ giải bằng AI — thay thế bộ giải nội bộ, bảy đợt</h2>
+      <div class="flag block">
+        <h3>Đổi hướng · 09/09/2026 — Haan</h3>
+        <p class="kv">
+          <b>Hiện trạng:</b> bộ giải CP-SAT nội bộ <b>không đạt qua thử nghiệm thực tế</b>. Bộ
+          giải bằng AI là bắt buộc; Haan đã thử qua web và đánh giá kết quả tốt.
+        </p>
+        <p class="kv">
+          <b>Yêu cầu tách sạch:</b> nhánh AI phải <b>độc lập hoàn toàn</b> với bộ giải nội bộ.
+          Khi nhánh AI làm tốt, bộ giải sẽ bị <b>xoá</b> — nên hai bên không được liên quan gì
+          đến nhau. Ranh giới do kiểm thử canh:
+          <code>workers/src/design/__tests__/ai-independence.test.ts</code> đọc từng dòng
+          <code>import</code> của nhánh AI và đỏ khi có tệp nào trỏ sang bộ giải, cả chiều ngược lại.
+        </p>
+        <p class="kv">
+          <b>Phạm vi giai đoạn 1:</b> mặt bằng từng tầng <b>100%</b> &middot; phối cảnh
+          <b>5 ảnh, 100%</b> (chính diện sáng, chính diện tối, cận cảnh cổng tầng 1, cận cảnh ban
+          công tầng 2, góc nghiêng) &middot; khối 3D <b>tuỳ chọn</b>. Giai đoạn 2 (chưa làm): hồ
+          sơ kỹ thuật thi công, kết cấu, điện nước — kỳ vọng 50&ndash;60%.
+        </p>
+        <p class="kv">
+          <b>T15</b> <b>AI thiết kế, chương trình cầm bút.</b> Mô hình trả TOÀN BỘ nội dung bản
+          vẽ dạng dữ liệu (từng đoạn tường + bề dày, cửa/cửa sổ + chiều mở, thang, tên + diện
+          tích); bộ vẽ SVG tất định bằng TypeScript trong Worker đặt lên giấy. Thay T14 &laquo;mô
+          hình tự vẽ SVG&raquo; — đo thật 09/09 cho ra bản phác không cửa, không chuỗi kích
+          thước, vách không bề dày, 13/25 phòng có tên. Dữ liệu thì <b>kiểm được</b>, tệp vẽ thì
+          chỉ đếm được ký tự.
+        </p>
+        <p class="kv">
+          <b>T16</b> Phối cảnh qua bước trung gian <b>ý tưởng mặt đứng</b>: AI đề xuất mái, vật
+          liệu, màu, cổng, ban công dạng dữ liệu + mặt đứng chính vẽ bằng cùng bộ vẽ; kiến trúc
+          sư sửa được <b>trước khi trả tiền ảnh</b>. Ảnh chính diện ban ngày là <b>ảnh neo</b>;
+          bốn ảnh còn lại dựng ảnh&rarr;ảnh từ ảnh neo + mặt đứng để cùng một ngôi nhà. Cần vì
+          đầu bài <b>không có</b> trường mái/vật liệu/màu/cổng/ban công — chỉ
+          <code>style</code> (1 trong 9) và một ô ghi chú.
+        </p>
+        <p class="kv">
+          <b>T17</b> Giao diện: <b>tab mới &laquo;Thiết kế AI&raquo;</b> với các bước nối nhau.
+          Hai tab của bộ giải giữ nguyên cho tới ngày dọn.
+        </p>
+        <p class="kv">
+          <b>T18</b> <b>Hai bước</b>: chương trình không gian (AI, viết lại sạch) rồi mặt bằng.
+          Mỗi lượt gọi nhỏ hơn, ít bị cắt, và kiến trúc sư duyệt danh sách phòng trước khi vẽ.
+        </p>
+        <p class="kv">
+          <b>T19</b> Tường AI khai sai sau <b>một lượt sửa</b> &rarr; <b>chương trình suy tường
+          từ phòng</b> (cạnh chung = vách 110, cạnh biên = tường 220), ghi rõ trên tờ
+          &laquo;Tường do chương trình suy từ phòng, không phải của AI&raquo;. Tờ vẽ vẫn dùng
+          được, chỗ suy hộ vẫn nhìn thấy.
+        </p>
+        <p class="kv">
+          <b>Quy tắc chi phí — nhắc lại:</b> không gọi API AI khi tự kiểm thử nếu Haan chưa cho
+          phép. Mỗi đợt nêu rõ số lượt, tuyến nào, ước chừng bao nhiêu tiền, rồi chờ đồng ý.
+        </p>
+      </div>
+
+      <div class="flag block">
+        <h3>Bảy đợt · trạng thái</h3>
+        <ol class="xs">
+          <li>
+            <span class="pill s-done">Xong 09/09</span>
+            <b>Đợt 0 — Nền</b>: bốn hợp đồng mới
+            (<code>ai_space_program</code>, <code>ai_floor_plan</code>,
+            <code>ai_facade_concept</code>, <code>ai_image_set</code>), migration
+            <code>0123</code> (13 loại artifact, 12 bước, bảng <code>design_ai_run</code>),
+            chuyển bộ đọc rule pack ra <code>design/rules/</code>, tách
+            <code>auth-scope.ts</code>, gỡ <code>RENDER_ROUTE</code> khỏi
+            <code>llm/factory</code> và <code>ai/models</code>, bộ tuyến riêng
+            <code>ai/routes.ts</code> (<code>/design/ai/models</code>,
+            <code>/design/ai/state/:id</code>), tệp hook riêng
+            <code>use-ai-design.ts</code>, và kiểm thử canh độc lập.
+            <b>0 lượt gọi API.</b>
+          </li>
+          <li>
+            <span class="pill s-done">Xong 09/09</span>
+            <b>Đợt 1 — Chương trình không gian</b>: viết lại <code>ai/program.ts</code> không
+            mượn một dòng nào của bộ giải (bốn khớp nối cũ —
+            <code>buildableFootprint</code>, <code>buildAdjacency</code>,
+            <code>checkPlausibility</code>, <code>bandFor</code> — đã cắt);
+            <code>ai/buildable.ts</code> suy sàn xây được từ khoảng lùi trong ĐẦU BÀI;
+            <code>ai/rule-warnings.ts</code> đối chiếu quy chuẩn quốc gia SAU khi mô hình trả
+            về; bộ đọc quy ước cấu tạo phía Worker (<code>kb/construction.ts</code>);
+            <code>POST /design/ai/program</code>; lời dẫn <code>program.system</code> viết lại
+            (v1.1.0), hợp đồng đề xuất đổi <code>floor</code>&rarr;<code>level</code> và
+            <code>enclosed_in</code>&rarr;<code>ensuite_of</code>; tab
+            &laquo;Thiết kế AI&raquo; + thẻ ở Tổng quan; gỡ nhánh AI khỏi
+            <code>program-panel</code> và xoá hai endpoint cũ.
+            <b>0 lượt gọi API.</b>
+          </li>
+          <li>
+            <span class="pill s-progress">Tiếp theo</span>
+            <b>Đợt 2 — Bút vẽ</b>: bộ vẽ SVG tất định (<code>ai/draw/</code>), kiểm máy, suy
+            tường dự phòng. <b>0 lượt gọi API</b> — Haan chấm tờ vẽ fixture A3 1:100
+            <b>trước</b> khi tốn tiền model.
+          </li>
+          <li>
+            <span class="pill s-draft">Chưa</span>
+            <b>Đợt 3 — Mặt bằng qua Workflow</b>: chạy nền, tiến độ, ba phương án, một lượt sửa.
+          </li>
+          <li>
+            <span class="pill s-draft">Chưa</span>
+            <b>Đợt 4 — Mặt đứng</b>: ý tưởng mặt đứng + tờ mặt đứng, sửa được.
+          </li>
+          <li>
+            <span class="pill s-draft">Chưa</span>
+            <b>Đợt 5 — Bộ ảnh</b>: kho nhị phân, ảnh neo + bốn góc dẫn xuất.
+          </li>
+          <li>
+            <span class="pill s-draft">Chưa</span>
+            <b>Đợt 6 — Trục đo + dọn</b>: CLAUDE.md 8.2/8.5, dọn đường mã cũ.
+          </li>
+        </ol>
+      </div>
+
+      <h3>Kế hoạch cũ (T10&ndash;T14) — giữ để đối chiếu</h3>
       <div class="flag block">
         <h3>Bốn quyết định của Haan · 08/09/2026</h3>
         <p class="kv">
@@ -582,6 +696,237 @@
           </thead>
           <tbody>
             <tr>
+              <td class="num">09/09</td>
+              <td>
+                Bộ giải AI — Đợt 0 và Đợt 1: nền độc lập, chương trình không gian cắt khỏi bộ
+                giải
+              </td>
+              <td class="xs">
+                <b>Haan chốt đổi hướng:</b> bộ giải CP-SAT không đạt qua thử nghiệm thực tế; bộ
+                giải bằng AI thay thế nó và phải <b>độc lập hoàn toàn</b> để sau này xoá bộ giải
+                mà không vỡ gì. Năm quyết định T15&ndash;T19 (xem mục 3b).<br />
+                <b>Đợt 0 — nền.</b> Bốn hợp đồng riêng của nhánh AI
+                (<code>ai_space_program</code>, <code>ai_floor_plan</code>,
+                <code>ai_facade_concept</code>, <code>ai_image_set</code>) — cố ý KHÔNG dùng lại
+                hợp đồng nào của bộ giải. Migration <code>0123</code> áp và kiểm trên CSDL thật:
+                13 loại artifact, 12 bước lineage, bảng <code>design_ai_run</code> có RLS chỉ
+                đọc. Bộ đọc rule pack chuyển từ <code>program/</code> ra
+                <code>design/rules/</code> (cả hai nhánh cùng đọc, nên nó không thuộc bộ giải);
+                <code>auth-scope.ts</code> tách khỏi <code>index.ts</code>;
+                <code>renderImageClient</code> ra khỏi <code>llm/factory</code>. Bộ tuyến riêng
+                <code>ai/routes.ts</code>, tệp hook riêng <code>use-ai-design.ts</code>.<br />
+                <b>Kiểm thử canh ranh giới</b>
+                (<code>ai-independence.test.ts</code>): đọc từng dòng <code>import</code> của
+                nhánh AI và đỏ khi có tệp nào trỏ sang bộ giải, cả chiều ngược lại. Lúc viết, nó
+                bắt đúng bốn khớp nối kế hoạch đã dự đoán.<br />
+                <b>Đợt 1 — chương trình không gian.</b> <code>ai/program.ts</code> viết lại, cắt
+                cả bốn khớp nối: diện tích xây được suy từ khoảng lùi trong ĐẦU BÀI
+                (<code>ai/buildable.ts</code>), liền kề bỏ hẳn, hợp lý hoá thay bằng kiểm riêng.
+                Cảnh báo quy chuẩn quốc gia đo SAU khi mô hình trả về
+                (<code>ai/rule-warnings.ts</code>) và <b>không chặn</b>. Endpoint
+                <code>POST /design/ai/program</code>; tab &laquo;Thiết kế AI&raquo; với dải bốn
+                bước; nhánh AI gỡ khỏi <code>program-panel</code>, hai endpoint cũ xoá.<br />
+                <b>Số đo:</b> 713 phép thử phía Worker/shared + 355 phía web đều xanh;
+                <code>npm run build</code> sạch; <code>/design/ai/models</code> và
+                <code>/design/ai/state/:id</code> gọi thật dưới phiên người dùng đều trả 200.
+                <b>0 lượt gọi API AI</b> trong cả hai đợt.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">09/09</td>
+              <td>T14 — nhánh AI tách thành DÒNG RIÊNG; mặt bằng do AI đề xuất (phần máy chủ)</td>
+              <td class="xs">
+                <b>Haan chốt hai điều đổi kiến trúc Đợt 3:</b> nhánh AI độc lập với bộ giải,
+                <b>không dùng chung rule</b>, <b>chỉ nhận đầu bài</b>; và đầu ra là dòng riêng —
+                không đi qua Container, không thành <code>floor_plan</code> chuẩn, không dùng lại
+                SVG/DXF/glTF/thống kê/phát hành. Về quy chuẩn:
+                <i
+                  >«nếu đúng là quy chuẩn VN tiêu chuẩn, được áp dụng toàn quốc thì oke, hãy sinh
+                  cảnh báo khi vi phạm»</i
+                >.<br />
+                <b>Ghi hàng rào TRƯỚC khi viết mã</b>, vì mã sắp viết mâu thuẫn với ba nguyên tắc
+                đang ghi: CLAUDE.md 8.2 có mục «Ngoại lệ có kiểm soát — nhánh AI» nói rõ điểm 1, 2,
+                4, 5 nới thế nào và ranh giới còn lại là gì; 8.5 có T10–T14. Không ghi thì ai đọc
+                CLAUDE.md rồi đọc <code>ai/plan.ts</code> sẽ thấy hai bên nói ngược nhau mà không có
+                chỗ nào giải thích.<br />
+                <b>Dọn phần làm cho hướng cũ:</b> gỡ khối <code>ai_repair</code> khỏi
+                <code>kb/construction_norms.yaml</code> và bốn trường tương ứng ở
+                <code>geometry/norms.py</code> — chúng cấu hình cho bước Container sửa mặt bằng, mà
+                bước đó đã bị huỷ. Cấu hình khai ra mà không mã nào đọc tới còn tệ hơn không khai
+                (8.8 điểm 2).<br />
+                <b>Viết mới:</b> <code>ai/plan.ts</code> (gọi ba ý đồ bố cục SONG SONG,
+                <code>allSettled</code> nên một ý đồ hỏng không kéo hai ý đồ kia; Worker điền
+                <code>variant_id</code>/<code>program_ref</code> để ba lượt không đè nhau) ·
+                <code>ai/plan-review.ts</code> (đối chiếu <code>rules/base/</code>, sinh cảnh báo) ·
+                <code>ai/plan-messages.ts</code> + <code>-data.ts</code> (đọc CÙNG tệp mẫu câu
+                <code>rules/messages.vi.yaml</code> mà Container dùng — chép sang TypeScript mới là
+                hai nguồn) · <code>nationalRulePack()</code> cố ý bỏ qua gói địa phương ·
+                <code>POST /design/floor-plan/ai-generate</code> · loại artifact
+                <code>ai_plan_proposal</code> + bước <code>ai_plan_propose</code>.<br />
+                <b>Chỗ đáng nghĩ nhất:</b> danh sách cảnh báo RỖNG rất dễ đọc thành «đạt quy chuẩn».
+                Thật ra chỉ đo được năm vị từ trên chữ nhật (kích thước nhỏ nhất, diện tích tối
+                thiểu/tối đa, tỉ lệ cạnh, có mặt thoáng); những vị từ còn lại — khoảng lùi, mật độ,
+                liền kề, thẳng hàng giữa các tầng, lối vào — cần hình bao thửa và hình học tường mà
+                nhánh AI không dựng. Nên kết quả trả về kèm <code>uncheckedRules</code>, và có test
+                đòi danh sách đó KHÔNG rỗng.<br />
+                <b>Kiểm:</b> tsc sạch · prettier sạch · <code>ai-plan.test.ts</code> 12 test mới
+                xanh (client giả, KHÔNG gọi API) · 380 test logic xanh · CSDL đã có sẵn CHECK cho
+                <code>ai_plan_proposal</code>/<code>ai_plan_propose</code> (migration 0121) · ba
+                nhánh chặn của endpoint gọi thật trên Worker: 400 «Chưa chọn model AI», 409 model
+                ngoài danh mục, 401 chưa đăng nhập.<br />
+                <b>Bổ sung cùng ngày — MÔ HÌNH TỰ VẼ TỜ BẢN VẼ.</b> Haan:
+                <i>«mô hình phải trả về ảnh mặt bằng theo tiêu chuẩn và dùng được chứ»</i>, và chọn
+                để chính AI vẽ (<i>«AI làm rất tốt»</i>, đã thử thực tế trên ChatGPT/Gemini). Hợp
+                đồng thêm trường <code>svg</code> BẮT BUỘC; lời dẫn mô tả cách vẽ như một bản vẽ chứ
+                không phải sơ đồ: tường có bề dày, cửa có cánh mở, chuỗi kích thước ngoài biên, tên
+                phòng và diện tích tiếng Việt, thang có mũi tên, khoảng rỗng gạch chéo, viewBox đúng
+                tỷ lệ.<br />
+                <b>Rủi ro phải chặn trước khi hiển thị:</b> SVG KHÔNG phải định dạng ảnh thuần — nó
+                chạy được <code>&lt;script&gt;</code>, <code>onload=</code>,
+                <code>&lt;foreignObject&gt;</code>, và gọi ra mạng qua
+                <code>href</code>/<code>url()</code>. Tệp này do dịch vụ ngoài sinh từ dữ liệu người
+                dùng nhập; hiển thị thẳng trong trang thì nó chạy dưới CHÍNH nguồn gốc ứng dụng, với
+                phiên đăng nhập của người xem. <code>ai/svg-guard.ts</code> lược trước khi đúc
+                artifact (artifact BẤT BIẾN — thứ lọt vào nằm đó mãi), và màn hình sẽ hiển thị qua
+                <code>&lt;img&gt;</code> để trình duyệt không chạy kịch bản trong đó. Hai lớp, cố ý
+                không dựa vào một lớp. Số chỗ đã lược trả về (<code>svgRemoved</code>) — lược im
+                lặng là sửa bản vẽ của mô hình sau lưng người xem.<br />
+                <b>Điều phải nói rõ trên màn hình:</b> cảnh báo quy chuẩn đo trên
+                <code>levels[].rooms</code>, KHÔNG đo trên tệp vẽ. Hai thứ do cùng một lượt gọi sinh
+                ra nhưng không có gì buộc chúng khớp nhau.<br />
+                <b>Kiểm thêm:</b> 7 test cho bộ lược (thẻ kịch bản, thuộc tính sự kiện viết hoa lẫn
+                lộn, <code>href</code> ra ngoài và <code>data:</code>, <code>foreignObject</code>,
+                <code>@import</code>, chú thích giấu thẻ đóng giả, và bản vẽ sạch đi qua NGUYÊN VẸN)
+                · tổng 19 test cho nhánh mặt bằng · 686 test logic xanh.<br />
+                <b>Còn thiếu để dùng được:</b> màn hình. Chưa có chỗ nào hiện tờ bản vẽ, cảnh báo và
+                danh sách quy tắc chưa đối chiếu được — đó là việc tiếp theo. Và chưa chạy thử bằng
+                lời gọi thật lần nào: theo rule mới (CLAUDE.md 6.4) phải xin phép Haan trước vì tốn
+                token. Câu hỏi lớn nhất chưa ai trả lời được:
+                <b>tờ SVG mô hình vẽ ra có thật sự dùng được không</b> — chỉ một lượt gọi thật mới
+                biết.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">08/09</td>
+              <td>Chọn được BẬC model trong từng nhà cung cấp — sáu tuyến, đo thật cả sáu</td>
+              <td class="xs">
+                Haan hỏi có chọn được Sonnet 5 hay Opus 5 không. Có, và không phải sửa mã: «chọn
+                model» là chọn TÊN TUYẾN khai trong <code>config/models.yaml</code>, trình duyệt
+                không bao giờ gửi tên model. Thêm bậc = thêm một khối YAML; ô chọn tự dài ra vì nó
+                đọc <code>GET /design/ai/models</code>. Nay mỗi nhà cung cấp hai bậc:
+                <b
+                  >gpt-5 / gpt-5-mini · gemini-3.1-pro-preview / gemini-3.8-flash · claude-opus-5 /
+                  claude-sonnet-5</b
+                >. Nhãn cũ («GPT (OpenAI)») đổi thành nhãn nói rõ bậc, kèm test đòi mọi tuyến AI có
+                nhãn và không nhãn nào trùng — hai dòng giống hệt trên ô chọn thì chọn dòng nào cũng
+                không biết mình vừa chọn gì.<br />
+                <b>Đo thật, cùng một đầu bài nhà phố hai tầng, mỗi tuyến một lượt:</b>
+                Gemini Flash <b>15 s</b> · gpt-5-mini 64 s · Gemini Pro 83 s · Claude Opus 100 s ·
+                GPT-5 140 s · <b>Claude Sonnet 181 s</b> (115 + 66, xem dưới).<br />
+                <b>Hai điều đo ra mới biết:</b> (1) Gemini Flash nhanh gấp <b>năm lần</b> bậc Pro mà
+                vẫn ra 24 phòng KHÔNG cảnh báo nào — nếu chất lượng đủ dùng thì đây là mặc định hợp
+                lý hơn hẳn. (2) <b>Sonnet CHẬM HƠN Opus</b> (181 s so với 100 s), ngược hoàn toàn
+                với trực giác «bậc nhẹ thì nhanh»: nó là tuyến đầu tiên trượt vòng kiểm và phải chạy
+                LƯỢT SỬA, nên tốn hai lời gọi. Đây cũng là lần đầu cơ chế một-lượt-sửa chạy thật
+                đầu-cuối, và nó đạt.<br />
+                <b>Đơn giá ba tuyến mới CỐ Ý để trống</b> nên <code>cost_usd</code> của chúng rỗng
+                (Q-36). Không biết giá thật thì để trống, không điền số ước lượng — CLAUDE.md 5.2.
+                Đây cũng là lý do bảng chi phí hiện chỉ có số cho ba tuyến bậc cao.<br />
+                <b>Phát hiện kèm:</b> khoá OpenAI gọi được <code>gpt-5.5</code>,
+                <code>gpt-5.5-pro</code> và nhóm <code>gpt-5.6</code> (thử thật, 200 cả ba), trong
+                khi tuyến đang dùng <code>gpt-5</code> phát hành 08/2025. Anthropic và Google đã là
+                đời mới nhất; riêng OpenAI lệch một bậc. GIỮ NGUYÊN — đổi model là đổi thứ Haan nhận
+                được khi bấm nút. Ghi thành Q-37.<br />
+                <b>Kiểm:</b> tsc sạch · prettier sạch · <code>router.test.ts</code> 20 test xanh ·
+                sáu lượt gọi thật qua đúng đường ứng dụng, HTTP 200 cả sáu.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">08/09</td>
+              <td>Lượt «Lập bằng AI» đầu tiên hỏng — <code>$ref</code> có từ khoá đứng cạnh</td>
+              <td class="xs">
+                Haan bấm «Lập bằng AI rồi chốt», OpenAI trả <b>400</b>:
+                <code>$ref cannot have keywords {'description'}</code> tại
+                <code>spaces.items.properties.id</code>. Không phải lỗi khoá — lỗi bộ đổi phương ngữ
+                của mình. Ở chế độ <code>strict</code>, OpenAI từ chối MỌI từ khoá đứng cạnh
+                <code>$ref</code>, mà <code>{ "$ref": …, "description": … }</code> là hình dạng bình
+                thường của hợp đồng do mình viết.<br />
+                <b>Sửa:</b> <code>schema-dialect.ts</code> nay nhúng <code>$ref</code> cho
+                <b>cả ba</b> nhà cung cấp, không riêng Gemini. Cách khác là bỏ các từ khoá anh em,
+                nhưng <code>description</code> là lời dặn cho mô hình — bỏ đi thì lược đồ hợp lệ mà
+                kết quả kém hơn, tức hỏng trong im lặng.<br />
+                <b>Đáng chú ý:</b> hợp đồng <code>ai-floor-plan-proposal</code> của Đợt 3 có đúng
+                hình dạng đó ở <code>rooms[].id</code> — sẽ vỡ y hệt khi tới lượt. Nên test mới
+                không chỉ ghim ca đã gặp mà <b>duyệt cả thư mục</b> <code>contracts/ai-*</code> × ba
+                nhà cung cấp và đòi không còn <code>$ref</code> nào: hợp đồng của các đợt sau được
+                canh sẵn mà người viết không phải nhớ quay lại thêm vào danh sách.<br />
+                Câu hiện cho người dùng vẫn đúng CGD 5.5 (không lộ mã HTTP hay JSON của nhà cung
+                cấp) — đã kiểm lại <code>onError</code>.<br />
+                <b>Sửa xong lộ tiếp lỗi thứ hai, chỉ ở Gemini:</b> 400 «Request contains an invalid
+                argument», không nói trường nào. Dựng đúng lược đồ mã gửi đi rồi bỏ dần từng từ khoá
+                mới ra thủ phạm: <code>maxItems</code> (và <code>minItems</code>) trên mảng ĐỐI
+                TƯỢNG. Ngưỡng đo được: 20 thì qua, 40 thì hỏng — Gemini có vẻ bung lược đồ theo số
+                phần tử nên vượt trần độ phức tạp, tức ngưỡng phụ thuộc mảng lớn cỡ nào chứ không
+                phải một con số ghim được. Bỏ hẳn hai từ khoá đó cho Gemini: bỏ là NỚI, số lượng
+                thật vẫn do Zod chặn khi kết quả về. Tài liệu Gemini ghi là nhận
+                <code>minItems</code>/<code>maxItems</code> — chú thích cũ trong mã tin theo tài
+                liệu, nay thay bằng số đo.<br />
+                <b>Thêm:</b> lượt gọi hỏng vì nhà cung cấp trước đây không để lại dòng nào trong
+                <code>design_ai_call</code> (chỉ lượt bị BÁC vì nghiệp vụ mới ghi). Một lượt hỏng
+                sau hai phút suy luận vẫn bị tính tiền, nên thẻ chi phí sẽ đọc thấp hơn hoá đơn thật
+                mà không ai biết vì sao. Nay ghi <code>status: failed</code> kèm
+                <code>http_&lt;mã&gt;</code>.<br />
+                <b
+                  >Chạy thật cả ba, cùng một đầu bài (nhà phố hai tầng), mỗi bên một lượt duy nhất —
+                  không lượt sửa nào:</b
+                >
+                GPT-5 <b>158 s</b>, 28 phòng, 5.980/7.107 token, <b>0,079 USD</b> · Claude Opus 5
+                <b>103 s</b>, 26 phòng, 8.708/7.286 token, <b>0,226 USD</b> · Gemini 3.1 Pro
+                <b>101 s</b>, 25 phòng, 4.755/10.913 token, <b>0,115 USD</b> (đơn giá còn là của bậc
+                2.5, xem Q-36). Cả ba trả lý do bằng tiếng Việt đọc được, và bộ kiểm hợp lý tự bắt
+                được cảnh báo tỉ lệ giao thông. Chênh giá giữa rẻ nhất và đắt nhất là
+                <b>ba lần</b> cho cùng một việc — đáng cân nhắc khi chọn mặc định.<br />
+                <b>Kéo theo giao diện:</b> dòng chờ hứa «15–40 giây» viết lúc chưa có khoá, thực tế
+                gấp bốn. Đổi thành «1,5–3 phút» theo số đo — hứa ngắn hơn thực tế thì người dùng
+                tưởng treo và bấm lại, mà bấm lại là một lượt tính tiền nữa.<br />
+                <b>Kiểm:</b> tsc sạch · prettier sạch · <code>schema-dialect.test.ts</code> 25 test
+                xanh (11 test mới, gồm vòng duyệt hợp đồng × ba nhà cung cấp) ·
+                <code>program-panel.test.tsx</code> 10 test xanh.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">08/09</td>
+              <td>Khoá API đã vào — kiểm năm tên model bằng lời gọi thật</td>
+              <td class="xs">
+                Haan điền <code>OPENAI_API_KEY</code>, <code>ANTHROPIC_API_KEY</code>,
+                <code>GEMINI_PAID_API_KEY</code> vào <code>workers/.dev.vars</code> (tệp đã trong
+                <code>.gitignore</code>, xác nhận lại bằng <code>git check-ignore</code>). Hai khoá
+                Gemini KHÁC nhau — điều kiện để tuyến hạng 2 không mượn khoá gói miễn phí.<br />
+                <b
+                  >Kiểm bằng lời gọi thật, prompt không mang dữ liệu NVG, đi đúng đường mã nguồn
+                  dùng (structured output có lược đồ):</b
+                >
+                <code>gpt-5</code> 200 · 2,3 s · 13/76 token, trả đúng JSON theo
+                <code>text.format json_schema strict</code> · <code>claude-opus-5</code> 200 · 2,5 s
+                · 231/19 token qua <code>output_config.format</code> · <code>gpt-image-2</code> và
+                <code>gemini-3.1-flash-image</code> xác nhận tồn tại qua
+                <code>GET</code> model.<br />
+                <b>Tiền lệ 29/08 lặp lại:</b> <code>gemini-2.5-pro</code> trả <b>404</b> «no longer
+                available to new users», dù vẫn nằm trong danh sách
+                <code>GET /v1beta/models</code> — danh sách đó không nói khoá này gọi được model
+                nào, chỉ lời gọi thật mới nói. Đổi sang <code>gemini-3.1-pro-preview</code> (200 ·
+                7,8 s · 7/103 token, <code>responseSchema</code> chạy đúng). Ghi số đo vào chú thích
+                <code>config/models.yaml</code>.<br />
+                <b>Sửa kèm:</b> <code>gemini.ts</code> đọc <code>parts[0].text</code> — dòng Gemini
+                3 chèn phần suy nghĩ vào <code>parts</code> và phần đó có thể không mang
+                <code>text</code>; nay tìm phần đầu tiên CÓ <code>text</code>. Lần đo này hai thứ
+                nằm chung một phần nên chưa vỡ, nhưng đó là may chứ không phải đúng.<br />
+                <b>Kiểm:</b> tsc sạch · prettier sạch · 141 test logic liên quan xanh ·
+                <code>GET /design/ai/models</code> gọi thật: cả sáu tuyến «bật», tên model đúng bản
+                đã sửa.
+              </td>
+            </tr>
+            <tr>
               <td class="num">08/09</td>
               <td>
                 Nhánh AI — Đợt 2: chương trình không gian do mô hình lập, kiểm và điền bằng mã
@@ -671,13 +1016,10 @@
                 tự chẩn thay vì câu «không đọc được ảnh» viết cho một việc cũ.<br />
                 <b>Kiểm:</b> tsc sạch · 640 logic · 349 web · 17 hợp đồng khớp;
                 <code>GET /design/ai/models</code> gọi thật trên Worker: 200,
-                Gemini/Anthropic/OpenAI mờ đúng lý do «Chưa cấu hình khoá API». <b>Còn chờ:</b> khoá
-                <code>OPENAI_API_KEY</code>, <code>ANTHROPIC_API_KEY</code>,
-                <code>GEMINI_PAID_API_KEY</code> chưa có trong <code>.dev.vars</code> — nên chưa đo
-                được lời gọi thật với các tên model mới (<code>gpt-5</code>,
-                <code>claude-opus-5</code>, <code>gemini-2.5-pro</code>, <code>gpt-image-2</code>,
-                <code>gemini-3.1-flash-image</code>). Việc đo này là điều kiện bật tuyến cho người
-                dùng (Q-34).
+                Gemini/Anthropic/OpenAI mờ đúng lý do «Chưa cấu hình khoá API».
+                <b>Đã gỡ 08/09 (chiều):</b> Haan điền ba khoá vào <code>workers/.dev.vars</code>;
+                hai khoá Gemini xác nhận KHÁC nhau, nên tuyến hạng 2 không mượn khoá gói miễn phí.
+                Cả sáu tuyến chuyển sang «bật».
               </td>
             </tr>
             <tr>
@@ -1800,6 +2142,32 @@
 
       <!-- ============ 5. VƯỚNG MẮC ============ -->
       <h2>5. Vướng mắc đang mở</h2>
+      <div class="flag block">
+        <h3>Quy tắc <code>lightwell_max_area</code> không bao giờ chạy — 09/09/2026</h3>
+        <p class="kv">
+          <b>Gặp ở đâu:</b> khi viết bộ đối chiếu quy chuẩn của nhánh AI
+          (<code>ai/rule-warnings.ts</code>), đối chiếu mọi <code>target</code> trong
+          <code>rules/base/</code> với mã phòng trong <code>kb/room_vocabulary.yaml</code>.
+        </p>
+        <p class="kv">
+          <b>Vấn đề:</b> <code>rules/base/10-dimensions.yaml</code> khai
+          <code>target: lightwell</code>, nhưng mã trong từ vựng là <code>light_well</code> (có
+          gạch dưới). Không có phòng nào mang mã <code>lightwell</code>, nên quy tắc «giếng trời
+          không quá 8 m²» <b>chưa từng khớp một phòng nào</b> — ở cả bộ giải lẫn nhánh AI. Nó
+          hỏng IM LẶNG: không lỗi, không cảnh báo, chỉ là một quy tắc không bao giờ nói gì.
+        </p>
+        <p class="kv">
+          <b>Chưa sửa, vì:</b> sửa một ký tự sẽ làm một quy tắc đang câm bắt đầu nói, và nó áp
+          cho <b>cả bộ giải</b> — có thể đổi hành vi và làm đỏ phép thử của nhánh kia. Đây cũng
+          là câu hỏi nghiệp vụ chứ không chỉ là lỗi gõ: mức 8 m² ghi nguồn
+          <i>«kinh nghiệm NVG»</i>, cần Haan xác nhận có muốn áp thật không.
+        </p>
+        <p class="kv">
+          <b>Cần gì để gỡ:</b> Haan xác nhận mức trần giếng trời. Sau đó sửa
+          <code>target</code> thành <code>light_well</code> rồi chạy lại phép thử của bộ giải.
+        </p>
+      </div>
+
       <div class="tablewrap">
         <table>
           <thead>
@@ -2243,6 +2611,33 @@
                 nó mờ ở loại cần bản vẽ.
               </td>
               <td class="num">Đợt 4</td>
+            </tr>
+            <tr>
+              <td class="num">Q-36</td>
+              <td>
+                <b>Đơn giá thật của các model đang dùng</b> — chỉ Haan lấy được, từ bảng điều khiển
+                của ba nhà cung cấp. Hai chỗ đang thiếu: tuyến <code>ai_text_gemini</code> giữ đơn
+                giá của bậc 2.5 Pro (1,25 / 10 USD mỗi triệu token) vì bậc 2.5 không gọi được nữa;
+                và ba tuyến bậc tiết kiệm (<code>gpt-5-mini</code>, <code>gemini-3.8-flash</code>,
+                <code>claude-sonnet-5</code>) <b>cố ý chưa khai <code>pricing</code></b> nên
+                <code>cost_usd</code> của chúng để RỖNG. Sai đơn giá chỉ làm lệch thẻ chi phí, không
+                ảnh hưởng lời gọi — nhưng một con số bịa còn tệ hơn ô trống (CLAUDE.md 5.2).
+              </td>
+              <td class="num">Đợt 5</td>
+            </tr>
+            <tr>
+              <td class="num">Q-37</td>
+              <td>
+                <b>Có đổi bậc cao của OpenAI sang đời mới hơn không?</b> Khoá của NVG gọi được
+                <code>gpt-5.5</code>, <code>gpt-5.5-pro</code> và nhóm <code>gpt-5.6</code> (đã thử
+                thật, 200 cả ba), trong khi tuyến đang dùng <code>gpt-5</code> phát hành 08/2025.
+                Anthropic và Google thì tuyến hiện tại đã là đời mới nhất, riêng OpenAI lệch một
+                bậc. Mặc định: <b>giữ <code>gpt-5</code></b> vì đó là bản duy nhất đã đo trên đầu
+                bài thật — đổi model là đổi thứ Haan nhận được khi bấm nút, không tự làm. Đổi thì
+                sửa một dòng <code>model</code> và một dòng <code>label</code> trong
+                <code>config/models.yaml</code>.
+              </td>
+              <td class="num">Đợt 2</td>
             </tr>
           </tbody>
         </table>

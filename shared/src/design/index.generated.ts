@@ -3,7 +3,12 @@
  */
 
 export * from './ai-brief-digest.generated';
+export * from './ai-facade-concept.generated';
+export * from './ai-floor-plan-proposal.generated';
+export * from './ai-floor-plan.generated';
+export * from './ai-image-set.generated';
 export * from './ai-space-program-proposal.generated';
+export * from './ai-space-program.generated';
 export * from './arch-model.generated';
 export * from './cad-extraction.generated';
 export * from './design-brief.generated';

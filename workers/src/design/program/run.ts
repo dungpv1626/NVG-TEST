@@ -21,7 +21,7 @@ import { resolveProgramIntent } from './intent';
 import { resolveNeeds } from './needs';
 import { spaceNorms } from './norms-data';
 import { readRoomAreaPriors } from './priors';
-import { rulePackFor } from './rule-pack-data';
+import { rulePackFor } from '../rules/rule-pack-data';
 
 export interface Layer2Run {
   payload: SpaceProgram;

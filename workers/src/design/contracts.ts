@@ -10,6 +10,11 @@
 
 import type { z } from 'zod';
 import {
+  aiFacadeConceptSchema,
+  aiFloorPlanProposalSchema,
+  aiFloorPlanSchema,
+  aiImageSetSchema,
+  aiSpaceProgramSchema,
   archModelSchema,
   designBriefSchema,
   floorPlanSchema,
@@ -33,6 +38,14 @@ export const ARTIFACT_SCHEMAS = {
   arch_model: archModelSchema,
   schedules: schedulesSchema,
   render_result: renderResultSchema,
+  ai_space_program: aiSpaceProgramSchema,
+  ai_floor_plan: aiFloorPlanSchema,
+  ai_facade_concept: aiFacadeConceptSchema,
+  ai_image_set: aiImageSetSchema,
+  // Loại cũ của nhánh AI (T14, mô hình tự viết chuỗi SVG). Đường mã sinh ra nó đã gỡ ngày
+  // 09/09/2026 cùng T15; giữ lược đồ ở đây để artifact ĐÃ ĐÚC còn đọc lại được — artifact là
+  // bất biến, thứ đã ghi thì không được biến thành không đọc nổi.
+  ai_plan_proposal: aiFloorPlanProposalSchema,
 } as const satisfies Record<ArtifactKind, z.ZodTypeAny>;
 
 export const REQUEST_SCHEMAS = {

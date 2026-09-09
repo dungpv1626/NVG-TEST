@@ -24,7 +24,14 @@ import { ProgressTrack } from './progress-track';
 import { ProjectFacts } from './project-facts';
 import { RecentProjects } from './recent-projects';
 import { designSteps } from './steps';
-import { BriefCard, ExportCard, ProgramCard, SurveyCard, VariantsCard } from './tool-cards';
+import {
+  AiDesignCard,
+  BriefCard,
+  ExportCard,
+  ProgramCard,
+  SurveyCard,
+  VariantsCard,
+} from './tool-cards';
 
 export function OverviewPanel({
   project,
@@ -58,6 +65,7 @@ export function OverviewPanel({
           <ProgramCard projectId={project.id} basePath={basePath} />
           <VariantsCard projectId={project.id} basePath={basePath} readOnly={readOnly} />
           <ExportCard projectId={project.id} basePath={basePath} />
+          <AiDesignCard projectId={project.id} basePath={basePath} />
         </section>
 
         <ProjectFacts project={project} readOnly={readOnly} onSaveNotes={onSaveNotes} />

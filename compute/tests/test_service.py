@@ -19,6 +19,13 @@ client = TestClient(app, raise_server_exceptions=False)
 # chỉ nói "lệch", còn danh sách nói thẳng tệp nào thiếu — và thêm một lớp mới buộc phải sửa
 # đúng một chỗ, có chủ đích.
 EXPECTED_CONTRACTS = {
+    # Ba hợp đồng của nhánh AI (T10–T14). Container KHÔNG đọc cái nào: theo T14 (09/09/2026)
+    # nhánh AI là dòng riêng, không đi qua Container. Chúng nằm trong ảnh vì `contracts/` được
+    # copy nguyên thư mục, và liệt kê ở đây để danh sách nói đúng thực tế thay vì trở thành chỗ
+    # phải nhớ loại trừ.
+    "ai-brief-digest",
+    "ai-floor-plan-proposal",
+    "ai-space-program-proposal",
     "arch-model",
     "cad-extraction",
     "design-brief",

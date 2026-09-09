@@ -42,7 +42,16 @@ const CONSTRAINT_KEYS = new Set([
   'uniqueItems',
 ]);
 
-/** Ràng buộc Gemini từ chối — nó GIỮ được `minimum`/`maximum`/`minItems`/`maxItems`. */
+/**
+ * Ràng buộc Gemini từ chối — nó GIỮ được `minimum`/`maximum` của số.
+ *
+ * `minItems`/`maxItems` thì KHÔNG, dù tài liệu ghi là nhận: đo ngày 08/09/2026 trên
+ * `gemini-3.1-pro-preview`, một mảng ĐỐI TƯỢNG có `maxItems: 40` trở lên làm cả lời gọi hỏng với
+ * đúng một câu «Request contains an invalid argument», không nói trường nào. `maxItems: 20` thì
+ * qua. Gemini có vẻ bung lược đồ ra theo số phần tử nên vượt trần độ phức tạp — nghĩa là ngưỡng
+ * phụ thuộc mảng lớn cỡ nào, không phải một con số ghim được. Bỏ hẳn cho chắc: bỏ là NỚI, mà số
+ * lượng thật vẫn do Zod chặn khi kết quả về.
+ */
 const GEMINI_STRIP = new Set([
   'exclusiveMinimum',
   'exclusiveMaximum',
@@ -52,6 +61,8 @@ const GEMINI_STRIP = new Set([
   'pattern',
   'format',
   'uniqueItems',
+  'minItems',
+  'maxItems',
   'additionalProperties',
 ]);
 
@@ -65,13 +76,16 @@ export class SchemaDialectError extends Error {
 
 export function schemaFor(provider: SchemaProvider, schema: Record<string, unknown>): Node {
   const root = structuredClone(schema) as Node;
-  if (provider === 'gemini') {
-    const defs = (root.$defs ?? {}) as Record<string, Node>;
-    const inlined = inlineRefs(root, defs, []) as Node;
-    delete inlined.$defs;
-    return transform(inlined, provider) as Node;
-  }
-  return transform(root, provider) as Node;
+  // Nhúng `$ref` cho CẢ BA nhà cung cấp, không riêng Gemini. OpenAI có đọc `$ref`, nhưng ở chế độ
+  // `strict` nó từ chối mọi từ khoá đứng cạnh: `{ "$ref": "#/$defs/space_id", "description": … }`
+  // trả 400 «$ref cannot have keywords {'description'}» (gặp thật 08/09/2026 ở
+  // `ai-space-program-proposal`). Cách khác là bỏ các từ khoá anh em, nhưng `description` là lời
+  // dặn cho mô hình — bỏ đi thì lược đồ vẫn hợp lệ mà kết quả kém hơn, và hỏng trong im lặng.
+  // Nhúng giữ được lời dặn và cho cả ba đi chung một đường.
+  const defs = (root.$defs ?? {}) as Record<string, Node>;
+  const inlined = inlineRefs(root, defs, []) as Node;
+  delete inlined.$defs;
+  return transform(inlined, provider) as Node;
 }
 
 function transform(node: unknown, provider: SchemaProvider): unknown {
@@ -200,7 +214,7 @@ function inlineRefs(node: unknown, defs: Record<string, Node>, stack: string[]):
     }
     if (stack.includes(name)) {
       throw new SchemaDialectError(
-        `Lược đồ đệ quy (${name}) không diễn đạt được cho Gemini — bỏ $ref vòng hoặc đổi nhà cung cấp.`,
+        `Lược đồ đệ quy (${name}) không nhúng được — bỏ $ref vòng trong hợp đồng.`,
       );
     }
     const { $ref: _ref, ...rest } = obj;

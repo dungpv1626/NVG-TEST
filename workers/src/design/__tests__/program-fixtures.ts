@@ -11,7 +11,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { parseSpaceNorms, type SpaceNorms } from '../program/norms';
-import { mergePacks, parseRuleFile, RulePack } from '../program/rule-pack';
+import { mergePacks, parseRuleFile, RulePack } from '../rules/rule-pack';
 
 const read = (relative: string): string =>
   readFileSync(fileURLToPath(new URL(`../../../../${relative}`, import.meta.url)), 'utf-8');

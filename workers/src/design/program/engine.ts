@@ -32,7 +32,7 @@ import {
   type ProgramIntent,
   type SpaceProgram,
 } from '@nvg/shared/design';
-import type { RulePack } from './rule-pack';
+import type { RulePack } from '../rules/rule-pack';
 import { effectiveMaxDensity, effectiveSetbacks } from './site-limits';
 import { checkPlausibility, type PlausibilityRules } from './plausibility';
 import { bandFor, type FloorPreference, type SpaceNorms } from './norms';

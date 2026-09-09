@@ -25,6 +25,7 @@ import {
   type DesignBriefRecord,
   type FloorPlanVariant,
 } from '@/hooks/use-design-projects';
+import { useAiDesignState } from '@/hooks/use-ai-design';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { CardAction, Chip, FAMILY, NotYet, ToolCard } from '../tk-ui';
 import { cn } from '@/lib/utils';
@@ -530,6 +531,50 @@ export function ExportCard({
                 : 'Không còn hạng mục nào chặn bàn giao'}
           </p>
         </div>
+      )}
+    </ToolCard>
+  );
+}
+
+// ── Thẻ 6: Thiết kế AI ────────────────────────────────────────────────────────
+
+/**
+ * Cửa vào nhánh AI (T15–T18, 09/09/2026).
+ *
+ * Thẻ này CỐ Ý không nằm trong dải "năm bước quy trình" của bộ giải: nhánh AI là một dòng
+ * riêng, không phải một bước của dòng kia. Nó bày đúng một con số — đã lập chương trình không
+ * gian chưa — vì đó là điều kiện để ba bước sau chạy được.
+ */
+export function AiDesignCard({
+  projectId,
+  basePath,
+}: {
+  projectId: string;
+  basePath: string;
+}): React.ReactElement {
+  const state = useAiDesignState(projectId);
+
+  return (
+    <ToolCard
+      family="pu"
+      icon={<Sparkles className={ICON} aria-hidden />}
+      title="Thiết kế AI"
+      description="Chương trình không gian, mặt bằng, mặt đứng và phối cảnh do AI đề xuất."
+      to={`${basePath}?tab=thiet-ke-ai`}
+    >
+      {state.isLoading ? (
+        <Waiting />
+      ) : (
+        <Deep family="pu">
+          {state.data?.program ? (
+            <>
+              Đã có chương trình không gian: {state.data.program.payload.spaces.length} không gian.
+              {state.data.plans.length > 0 && ` ${state.data.plans.length} phương án mặt bằng.`}
+            </>
+          ) : (
+            <NotYet>Chưa chạy bước nào. Mở để AI lập chương trình không gian.</NotYet>
+          )}
+        </Deep>
       )}
     </ToolCard>
   );

@@ -86,7 +86,6 @@ vi.mock('@/hooks/use-design-projects', () => ({
     isError: false,
     error: null,
   }),
-  useAiModels: () => ({ data: state.models, isLoading: false, error: null }),
 }));
 
 const { ProgramPanel } = await import('../program-panel');
@@ -209,89 +208,6 @@ describe('Tab Chương trình không gian', () => {
   });
 });
 
-describe('Nhánh AI trên tab Chương trình không gian', () => {
-  it('chọn «AI» thì nút đổi chữ và gửi đúng TÊN TUYẾN đã chọn, không phải tên mô hình', async () => {
-    state.error = null;
-    state.view = view();
-    state.generateAi.mockClear();
-    renderWithApp(<ProgramPanel projectId="p1" readOnly={false} />);
-
-    await userEvent.click(await screen.findByRole('button', { name: 'AI' }));
-    const select = screen.getByLabelText('Model');
-    expect((select as HTMLSelectElement).value).toBe('ai_text_openai');
-
-    // Dòng ghi chú về dữ liệu gửi đi luôn có mặt khi chọn AI.
-    expect(screen.getByText(/đã lược tên, số điện thoại, địa chỉ/)).toBeInTheDocument();
-
-    const run = screen.getByRole('button', { name: 'Lập bằng AI rồi chốt' });
-    await userEvent.click(run);
-    expect(state.generateAi).toHaveBeenCalledWith({ projectId: 'p1', route: 'ai_text_openai' });
-
-    // Báo cáo lượt AI: nguồn, lý do, giả định là câu hỏi cho khách, và bảng so với bộ giải.
-    expect(await screen.findByText(/Chương trình do AI lập — openai · gpt-x/)).toBeInTheDocument();
-    expect(screen.getByText(/đã yêu cầu sửa một lần/)).toBeInTheDocument();
-    expect(screen.getByText('Bếp mở thông phòng ăn.')).toBeInTheDocument();
-    expect(screen.getByText('Không có người giúp việc ở lại.')).toBeInTheDocument();
-    expect(screen.getByText(/So với bộ giải nội bộ \(2 chỗ khác\)/)).toBeInTheDocument();
-  });
-
-  it('model thiếu khoá vẫn hiện nhưng MỜ kèm lý do, không biến mất', async () => {
-    state.error = null;
-    state.view = view();
-    renderWithApp(<ProgramPanel projectId="p1" readOnly={false} />);
-    await userEvent.click(await screen.findByRole('button', { name: 'AI' }));
-
-    const option = screen.getByRole('option', {
-      name: /Claude \(Anthropic\) — Chưa cấu hình khoá API/,
-    });
-    expect(option).toBeDisabled();
-  });
-
-  it('bản đã chốt do AI lập thì nói rõ nguồn và KHÔNG báo «đầu bài đã đổi» oan', async () => {
-    // Hai nhánh không cho ra cùng mã băm nên `matchesHead` luôn false khi bản chốt là AI —
-    // đọc thành «đầu bài đã đổi» là báo sai.
-    state.error = null;
-    const briefRef = `sha256:${'a'.repeat(64)}`;
-    const base = view({ matchesHead: false, headArtifactId: `sha256:${'c'.repeat(64)}` }) as {
-      program: { spaces: unknown[]; floor_allocation: unknown[] };
-    };
-    state.view = {
-      ...base,
-      head: {
-        artifactId: `sha256:${'c'.repeat(64)}`,
-        generator: {
-          kind: 'ai',
-          provider: 'openai',
-          model: 'gpt-x',
-          rationale: 'Ưu tiên phòng khách thông bếp.',
-        },
-        program: {
-          brief_ref: briefRef,
-          spaces: [
-            {
-              id: 'living_1',
-              type: 'living',
-              floor: 1,
-              min_area_m2: 14,
-              target_area_m2: 31,
-              max_area_m2: 40,
-            },
-          ],
-          floor_allocation: [{ floor: 1, usable_area_m2: 90, allocated_area_m2: 31 }],
-        },
-      },
-    };
-    renderWithApp(<ProgramPanel projectId="p1" readOnly={false} />);
-
-    expect(await screen.findByText(/Đã chốt bản do AI lập/)).toBeInTheDocument();
-    expect(screen.queryByText(/Đầu bài đã đổi/)).not.toBeInTheDocument();
-    expect(screen.getByText(/Bản đã chốt do AI lập — openai · gpt-x/)).toBeInTheDocument();
-    expect(screen.getByText('Ưu tiên phòng khách thông bếp.')).toBeInTheDocument();
-    // Bảng mặc định hiện bản AI (31 m²), không phải bản bộ giải (22 m²).
-    expect(screen.getByText('31')).toBeInTheDocument();
-    expect(screen.queryByText('22')).not.toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole('button', { name: 'Bộ giải nội bộ (đối chiếu)' }));
-    expect(screen.getByText('22')).toBeInTheDocument();
-  });
-});
+// Ba bài kiểm nhánh AI trên tab này đã GỠ ngày 09/09/2026: nhánh AI chuyển thành một dòng
+// riêng với tab «Thiết kế AI», hợp đồng riêng và endpoint riêng (T15–T18). Chỗ kiểm tương
+// ứng nằm ở `ai-design-tab.test.tsx` và `workers/src/design/__tests__/ai-program.test.ts`.

@@ -34,7 +34,7 @@ import { roomVocabulary } from '../kb/vocabulary-data';
 import { roomGroups } from '../kb/vocabulary';
 import { ruleCatalogue } from '../layout/summary';
 import { plateFor } from '../layout/plate';
-import { rulePackFor } from '../program/rule-pack-data';
+import { rulePackFor } from '../rules/rule-pack-data';
 
 export interface DesignPipelineParams {
   tenantId: string;

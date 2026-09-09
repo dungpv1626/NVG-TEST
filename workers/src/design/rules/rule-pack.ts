@@ -3,6 +3,11 @@
  *
  * Nguồn: doc/design/07-rule-pack.md; CLAUDE.md 8.7.
  *
+ * Tệp này nằm ở `design/rules/` chứ không ở `design/program/` vì nó KHÔNG thuộc bộ giải: cả
+ * bộ giải nội bộ lẫn nhánh AI đều đọc cùng gói quy tắc này. Bộ giải sẽ bị xoá khi nhánh AI
+ * thay thế xong (T15, 09/09/2026); để bộ đọc trong thư mục của bộ giải thì hôm xoá sẽ kéo
+ * theo nhánh AI. Có kiểm thử canh ranh giới đó (`__tests__/ai-independence.test.ts`).
+ *
  * ⚠️ Ranh giới dễ hiểu nhầm, đọc kỹ trước khi thêm hàm vào tệp này:
  *
  *   "Vị từ hình học chỉ cài đặt MỘT nơi: Container." Tệp này KHÔNG vi phạm điều đó vì nó

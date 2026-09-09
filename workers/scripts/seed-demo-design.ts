@@ -32,7 +32,7 @@ import { parseSiteContext } from '../src/design/layout/site-context';
 import { generateVariants, listVariants } from '../src/design/layout/variants';
 import { buildSpaceProgram } from '../src/design/program/engine';
 import { parseSpaceNorms } from '../src/design/program/norms';
-import { mergePacks, parseRuleFile, RulePack } from '../src/design/program/rule-pack';
+import { mergePacks, parseRuleFile, RulePack } from '../src/design/rules/rule-pack';
 
 const read = (relative: string): string =>
   readFileSync(fileURLToPath(new URL(`../../${relative}`, import.meta.url)), 'utf-8');

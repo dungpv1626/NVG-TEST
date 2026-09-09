@@ -23,15 +23,9 @@ import {
 import { ContractError } from './contracts';
 import { createComputeBackend, type ExportDxfRequest } from './compute-backend';
 import { DataClassViolation, ModelNotConfigured } from './llm/router';
-import { geminiClient, modelRouter, renderImageClient, textClientFor } from './llm/factory';
-import { aiModelCatalogue, isSelectableRoute } from './ai/models';
-import { aiPrompts } from './ai/prompts-data';
-import { AiProgramRejected, generateAiProgram } from './ai/program';
-import { compareProgramsById } from './ai/compare';
-import { recordAiCall } from './ai/call-log';
-import { AI_DIGEST_DATA_CLASS, anonymiseForAi, type AnonymiseInput } from './brief/anonymise';
-import { spaceNorms } from './program/norms-data';
-import { plausibilityRules } from './program/plausibility-data';
+import { geminiClient, modelRouter } from './llm/factory';
+import { renderImageClient } from './render/render-client';
+import { aiApp } from './ai/routes';
 import { LlmCallFailed } from './llm/gemini';
 import { PublishBridge } from './publish';
 import { ArtifactRepository } from './artifacts';
@@ -60,10 +54,26 @@ import {
   type VariantContext,
 } from './layout/variants';
 import { ruleCatalogue } from './layout/summary';
-import { rulePackFor } from './program/rule-pack-data';
+import { rulePackFor } from './rules/rule-pack-data';
+import {
+  asUser,
+  denyUnlessWritable,
+  projectScope,
+  roomLabels,
+  DESIGN_WRITE_DENIED,
+  PROJECT_NOT_VISIBLE,
+} from './auth-scope';
 import type { DesignEnv } from './env';
 
 export const designApp = new Hono<{ Bindings: DesignEnv }>();
+
+/**
+ * Nhánh AI có bộ tuyến RIÊNG dưới `/design/ai`, trong một tệp không import gì của bộ giải.
+ *
+ * Gắn ở đây chứ không rải các tuyến AI vào tệp này, vì nhánh AI sẽ THAY THẾ bộ giải (T15,
+ * 09/09/2026): ngày xoá bộ giải, phần lớn tệp này biến mất, còn `ai/routes.ts` đứng nguyên.
+ */
+designApp.route('/ai', aiApp);
 
 /**
  * Kiểm tra sống của cả hai runtime.
@@ -97,48 +107,6 @@ designApp.get('/policy/data-class', (c) => {
         Object.fromEntries(DATA_CLASSES.map((dc) => [dc, router.allows(name, dc as DataClass)])),
       ]),
     ),
-  });
-});
-
-/**
- * Danh mục model cho ô chọn của trang thiết kế (nhánh AI, T10).
- *
- * Trả TÊN TUYẾN kèm nhãn — không bao giờ trả khoá. Tuyến bật mà chưa có khoá vẫn được liệt kê
- * kèm lý do để giao diện mờ nó và nói vì sao (AFD 6.5). Mặc định đọc từ `design_setting` của
- * tenant qua RLS của chính người gọi, nên không cần truyền mã dự án.
- */
-designApp.get('/ai/models', async (c) => {
-  const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
-  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
-  const db = await asUser(c.env, token);
-
-  const catalogue = aiModelCatalogue(modelRouter(c.env));
-  const settings = await db
-    .from('design_setting')
-    .select('key, value')
-    .in('key', ['ai_text_route_default', 'ai_image_route_default']);
-  // Danh mục không phụ thuộc RLS, nên phải tự chặn token hỏng: PostgREST trả 401 thì người gọi
-  // chưa đăng nhập, không phải "tenant chưa cấu hình mặc định".
-  if (settings.error && settings.status === 401) {
-    return c.json({ error: 'Phiên đăng nhập đã hết hạn. Đăng nhập lại rồi mở lại trang.' }, 401);
-  }
-  const valueOf = (key: string): string | null => {
-    const row = (settings.data ?? []).find((r) => r.key === key);
-    return typeof row?.value === 'string' ? row.value : null;
-  };
-  // Mặc định chỉ có nghĩa khi nó trỏ vào một tuyến đang bấm được; không thì để trình duyệt
-  // chọn tuyến bật đầu tiên — đừng trỏ người dùng vào một lựa chọn mờ.
-  const pickDefault = (kind: 'text' | 'image', key: string) => {
-    const wanted = valueOf(key);
-    const usable = catalogue[kind].filter((o) => o.enabled);
-    return usable.find((o) => o.route === wanted)?.route ?? usable[0]?.route ?? null;
-  };
-  return c.json({
-    ...catalogue,
-    defaults: {
-      text: pickDefault('text', 'ai_text_route_default'),
-      image: pickDefault('image', 'ai_image_route_default'),
-    },
   });
 });
 
@@ -223,21 +191,6 @@ designApp.post('/kb/digitise', async (c) => {
 
   return c.json({ runId: run.id, sources: stored }, 202);
 });
-
-/**
- * Client Supabase chạy dưới PHIÊN CỦA NGƯỜI GỌI.
- *
- * Khoá `service_role` chỉ đóng vai `apikey`; vai trò thật do JWT trong `Authorization` quyết
- * định, nên RLS vẫn áp dụng đầy đủ. Đây là điều phân biệt các tuyến "thay mặt người dùng" với
- * tuyến chạy nền (Workflow) vốn cố ý vượt RLS.
- */
-async function asUser(env: DesignEnv, token: string) {
-  const { createClient } = await import('@supabase/supabase-js');
-  return createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
 
 /**
  * Xác nhận đầu bài — đúc artifact `design_brief` bất biến.
@@ -374,82 +327,6 @@ designApp.post('/brief/confirm', async (c) => {
 });
 
 /**
- * Nhãn tiếng Việt của mã phòng, gửi kèm kết quả.
- *
- * Vì sao gửi từ máy chủ chứ không khai lại ở `web/`: từ vựng phòng là MỘT tệp dữ liệu
- * (`kb/room_vocabulary.yaml`). Khai bảng nhãn thứ hai trong trình duyệt thì thêm một loại
- * phòng phải sửa hai chỗ, và chỗ quên sửa hiện ra mã máy (`altar_room`) giữa màn hình tiếng
- * Việt — đúng thứ CLAUDE.md 4.1 cấm.
- */
-function roomLabels(): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const type of roomVocabulary().vocabulary.types) out[type.code] = type.vi;
-  return out;
-}
-
-/**
- * Đọc dự án dưới phiên người gọi và suy phạm vi dữ liệu từ đó.
- *
- * Đi qua RLS thay vì kiểm quyền lại ở tầng Worker: người không xem được hồ sơ thiết kế thì
- * cũng không lập được chương trình không gian cho nó, và chỉ có MỘT bản quy tắc quyền —
- * bản trong CSDL (CLAUDE.md 3.4).
- */
-async function projectScope(
-  db: Awaited<ReturnType<typeof asUser>>,
-  projectId: string,
-): Promise<{ companyId: string; tenantId: string; actorId: string | null } | null> {
-  const project = await db
-    .from('design_projects')
-    .select('id, company_id')
-    .eq('id', projectId)
-    .is('deleted_at', null)
-    .maybeSingle();
-  if (project.error || !project.data) return null;
-
-  const companyId = project.data.company_id as string;
-  const company = await db.from('companies').select('tenant_id').eq('id', companyId).single();
-  if (company.error) return null;
-
-  const actor = await db.rpc('auth_user_id');
-  return {
-    companyId,
-    tenantId: company.data.tenant_id as string,
-    actorId: (actor.data as string | null) ?? null,
-  };
-}
-
-const DESIGN_WRITE_DENIED =
-  'Không đủ quyền sửa hồ sơ kiến trúc của dự án này. Người chịu trách nhiệm dự án hoặc Phòng Thiết kế thực hiện được việc này.';
-
-/**
- * Hỏi CSDL "người này có được GHI bộ môn này của dự án này không" — trước mọi lệnh ghi
- * artifact hay đổi `design_head`.
- *
- * Vì sao phải hỏi riêng: `ArtifactRepository` ghi bằng `service_role` (vượt RLS), còn
- * `projectScope` chỉ chứng minh người gọi ĐỌC được dự án. Thiếu bước này, một tài khoản chỉ
- * xem (Kinh doanh, Ban Giám đốc) vẫn đổi được bản "đang hiệu lực" của đầu bài hay phương án —
- * lỗi bắt khi rà soát 08/09/2026. Hỏi đúng hàm mà policy INSERT của `design_artifact` dùng
- * (`rls_design_writable`, migration 0096) để chỉ có MỘT bản quy tắc quyền (CLAUDE.md 3.4).
- *
- * Trả `null` khi được ghi; ngược lại trả câu tiếng Việt kèm mã HTTP để route trả thẳng.
- */
-async function denyUnlessWritable(
-  db: Awaited<ReturnType<typeof asUser>>,
-  tenantId: string,
-  projectId: string,
-  discipline: 'kien_truc' | 'ket_cau' | 'dien_nuoc' = 'kien_truc',
-): Promise<{ error: string; status: 403 | 500 } | null> {
-  const allowed = await db.rpc('rls_design_writable', {
-    p_tenant_id: tenantId,
-    p_project_id: projectId,
-    p_discipline: discipline,
-  });
-  if (allowed.error) return { error: 'Không kiểm tra được quyền sửa hồ sơ.', status: 500 };
-  if (allowed.data !== true) return { error: DESIGN_WRITE_DENIED, status: 403 };
-  return null;
-}
-
-/**
  * Chương trình không gian của đầu bài ĐANG HIỆU LỰC — tính lại mỗi lần gọi.
  *
  * Vì sao tính lại chứ không đọc bản đã đúc: engine tất định, nên tính lại luôn cho ra đúng
@@ -557,9 +434,6 @@ function variantContext(
       ),
   };
 }
-
-const PROJECT_NOT_VISIBLE =
-  'Không tìm thấy hồ sơ thiết kế, hoặc tài khoản không được xem hồ sơ này. Người chịu trách nhiệm dự án hoặc Phòng Thiết kế xem được.';
 
 /**
  * Sinh các phương án mặt bằng (Lớp 3a + 3b) cho chương trình không gian đang hiệu lực.
@@ -1117,203 +991,6 @@ designApp.post('/program/generate', async (c) => {
     aiSuggestion: run.aiSuggestion,
   });
 });
-
-/**
- * Lập chương trình không gian BẰNG AI rồi chốt — nhánh song song của `/program/generate` (T10).
- *
- * Cùng cổng chặn, cùng kiểm quyền ghi, cùng dòng lineage (`layer2_program` từ `design_brief`).
- * Khác ở nguồn con số: mô hình đề xuất, Worker kiểm và điền phần tất định (`ai/program.ts`).
- * Đầu vào của mô hình là đầu bài + khảo sát ĐÃ LƯỢC DANH TÍNH (hạng 2, T12).
- */
-designApp.post('/program/ai-generate', async (c) => {
-  const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
-  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
-
-  const body = (await c.req.json()) as { projectId?: string; route?: string };
-  if (!body.projectId) return c.json({ error: 'Thiếu mã hồ sơ thiết kế.' }, 400);
-  if (!body.route) return c.json({ error: 'Chưa chọn model AI.' }, 400);
-
-  const db = await asUser(c.env, token);
-  const scope = await projectScope(db, body.projectId);
-  if (!scope) return c.json({ error: PROJECT_NOT_VISIBLE }, 404);
-  const denied = await denyUnlessWritable(db, scope.tenantId, body.projectId);
-  if (denied) return c.json({ error: denied.error }, denied.status);
-
-  // Tuyến phải nằm trong danh mục VĂN BẢN và đang bấm được — trình duyệt không chọn được gì
-  // ngoài những tên `config/models.yaml` khai (hàng rào 2 của nhánh AI).
-  const router = modelRouter(c.env);
-  const catalogue = aiModelCatalogue(router);
-  if (!isSelectableRoute(catalogue, 'text', body.route)) {
-    return c.json(
-      {
-        error:
-          'Model đã chọn không dùng được lúc này. Chọn model khác trong ô «Model», hoặc dùng bộ giải nội bộ.',
-      },
-      409,
-    );
-  }
-  const client = textClientFor(c.env, body.route);
-  if (!client) return c.json({ error: 'Chưa cấu hình khoá API cho model đã chọn.' }, 503);
-
-  const repo = new ArtifactRepository(c.env);
-  const brief = await repo.head(body.projectId, 'kien_truc', 'design_brief');
-  if (!brief) {
-    return c.json(
-      { error: 'Chưa có đầu bài đã xác nhận. Hoàn tất và xác nhận đầu bài trước.' },
-      409,
-    );
-  }
-  const gate = gateLayer2(brief.payload, await readCompletenessThreshold(repo.db, scope.tenantId));
-  if (!gate.allowed) return c.json({ error: gate.message }, 409);
-
-  const briefPayload = brief.payload as DesignBrief;
-  // Chữ tự do và khảo sát đọc dưới PHIÊN NGƯỜI DÙNG (RLS) — không dùng service_role để gom
-  // dữ liệu mà người gọi không được xem.
-  const digest = anonymiseForAi(await aiDigestInputs(db, body.projectId, briefPayload));
-
-  const baseline = await runLayer2(c.env, repo.db, briefPayload, brief.id, scope.tenantId);
-  const rules = rulePackFor(briefPayload.locality);
-  const norms = spaceNorms();
-  const labels = roomLabels();
-  const publicRoute = router.publicRoutes().find((r) => r.route === body.route);
-  const callScope = {
-    tenantId: scope.tenantId,
-    companyId: scope.companyId,
-    projectId: body.projectId,
-    discipline: 'kien_truc' as const,
-    actorId: scope.actorId,
-  };
-
-  let result: Awaited<ReturnType<typeof generateAiProgram>>;
-  try {
-    result = await generateAiProgram({
-      brief: briefPayload,
-      briefRef: brief.id,
-      digest,
-      route: body.route,
-      client,
-      prompts: aiPrompts(),
-      rules,
-      norms,
-      vocabulary: roomVocabulary(),
-      labels,
-      plausibility: plausibilityRules(),
-    });
-  } catch (error) {
-    if (error instanceof AiProgramRejected) {
-      await recordAiCall(
-        repo.db,
-        callScope,
-        {
-          route: body.route,
-          purpose: 'program',
-          dataClass: AI_DIGEST_DATA_CLASS,
-          promptVersion: aiPrompts().version,
-        },
-        {
-          provider: publicRoute?.provider ?? '',
-          model: publicRoute?.model ?? '',
-          usage: { inputTokens: null, outputTokens: null },
-          latencyMs: 0,
-          status: 'rejected',
-          errorCode: 'AiProgramRejected',
-        },
-        publicRoute?.pricing,
-      );
-      return c.json({ error: error.message, findings: error.findings }, 422);
-    }
-    throw error;
-  }
-
-  const artifact = await repo.write({
-    scope: callScope,
-    kind: 'space_program',
-    payload: result.payload,
-    inputs: [brief.id],
-    step: 'layer2_program',
-    params: {
-      generator: result.payload.generator,
-      route: body.route,
-      prompt_version: aiPrompts().version,
-    },
-    setHead: true,
-  });
-  for (const call of result.calls) {
-    await recordAiCall(
-      repo.db,
-      callScope,
-      {
-        route: body.route,
-        purpose: 'program',
-        dataClass: AI_DIGEST_DATA_CLASS,
-        promptVersion: aiPrompts().version,
-      },
-      { ...call, status: 'ok', artifactId: artifact.id },
-      publicRoute?.pricing,
-    );
-  }
-
-  return c.json({
-    artifactId: artifact.id,
-    reused: artifact.reused,
-    program: result.payload,
-    roomLabels: labels,
-    warnings: result.warnings,
-    unresolvedNeeds: [],
-    aiSuggestion: null,
-    generator: result.payload.generator,
-    rationale: result.rationale,
-    assumptions: result.assumptions,
-    notes: result.notes,
-    comparison: compareProgramsById(baseline.payload, result.payload),
-    repaired: result.repaired,
-  });
-});
-
-/** Gom chữ tự do, khảo sát và danh tính cần lược — đọc qua RLS của chính người gọi. */
-async function aiDigestInputs(
-  db: Awaited<ReturnType<typeof asUser>>,
-  projectId: string,
-  brief: DesignBrief,
-): Promise<AnonymiseInput> {
-  const row = await db
-    .from('design_briefs')
-    .select(
-      'design_task, functional_needs, style_note, site_condition, legal_documents, site_source_survey_id',
-    )
-    .eq('design_project_id', projectId)
-    .eq('is_current_version', true)
-    .is('deleted_at', null)
-    .maybeSingle();
-  const freeText = (row.data ?? null) as AnonymiseInput['freeText'] & {
-    site_source_survey_id?: string | null;
-  };
-  let survey: AnonymiseInput['survey'] = null;
-  if (freeText?.site_source_survey_id) {
-    const s = await db
-      .from('design_surveys')
-      .select(
-        'land_width, land_depth, land_area, orientation, measurement_notes, surrounding_notes, usage_notes, notes',
-      )
-      .eq('id', freeText.site_source_survey_id)
-      .maybeSingle();
-    survey = (s.data ?? null) as AnonymiseInput['survey'];
-  }
-  const project = await db
-    .from('design_projects')
-    .select('customer:customers(name, phone, address)')
-    .eq('id', projectId)
-    .maybeSingle();
-  const customer = (
-    project.data as { customer?: { name?: string; phone?: string; address?: string } | null } | null
-  )?.customer;
-  return {
-    brief,
-    freeText,
-    survey,
-    identities: [customer?.name, customer?.phone, customer?.address],
-  };
-}
 
 /**
  * Trần kích thước ảnh tải lên để đọc ranh giới thửa đất.

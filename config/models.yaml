@@ -200,12 +200,19 @@ routes:
   # ── Nhánh thiết kế bằng AI (T10–T13, 08/09/2026) ──────────────────────────────────────────
   #
   # Người dùng chọn MỘT trong các tuyến dưới đây trên trang thiết kế; trình duyệt chỉ gửi TÊN
-  # TUYẾN. Mỗi tuyến một nhà cung cấp, để đổi model hay đổi bậc (Opus ↔ Sonnet, Pro ↔ Flash) là
-  # sửa một dòng ở đây (câu hỏi Q-34: bậc mặc định, Haan chốt).
+  # TUYẾN. Mỗi nhà cung cấp có HAI tuyến — một bậc chất lượng cao, một bậc nhanh và rẻ hơn — nên
+  # ô chọn model liệt kê sáu dòng. Đổi model, thêm bậc hay bỏ bậc đều là sửa ở đây: không có tên
+  # mô hình nào nằm trong mã nguồn hay giao diện (câu hỏi Q-34: bậc mặc định, Haan chốt).
   #
-  # ⚠️ Tên mô hình dưới đây lấy từ tài liệu công khai ngày 08/09/2026 và PHẢI kiểm bằng một lời
-  # gọi thật (prompt không mang dữ liệu NVG) trước khi bật cho người dùng — tiền lệ 29/08/2026:
-  # `gemini-2.5-pro` trả 404 với khoá mới lập. Ghi số đo (giây, USD) vào chú thích sau khi đo.
+  # ⚠️ `label` là chữ HIỆN TRÊN Ô CHỌN. Đổi `model` thì sửa `label` theo — không có gì tự đồng bộ,
+  # và nhãn nói sai tên model thì người dùng so sánh chất lượng trên một giả thiết sai.
+  #
+  # ✔ Đã kiểm bằng lời gọi thật ngày 08/09/2026, prompt không mang dữ liệu NVG, đúng đường mà
+  # mã nguồn đi (structured output có lược đồ). Tiền lệ 29/08/2026 lặp lại y hệt: `gemini-2.5-pro`
+  # trả 404 "no longer available to new users" với khoá mới lập, phải đổi sang bản 3.1.
+  # Số đo lượt gọi rỗng (giây · token vào/ra): gpt-5 2,3 s · 13/76 — claude-opus-5 2,5 s · 231/19
+  # — gemini-3.1-pro-preview 7,8 s · 7/103. Model ảnh xác nhận tồn tại qua GET model, chưa dựng
+  # ảnh thật (Đợt 4 mới đo giây và USD mỗi ảnh).
   #
   # Địa chỉ HTTP khai tường minh vì mỗi nhà cung cấp một gốc và mỗi việc một đường
   # (`/v1/responses` cho chữ, `/v1/images/edits` cho ảnh) — cùng lý lẽ với `layer5_render`.
@@ -213,31 +220,65 @@ routes:
   ai_text_openai:
     provider: openai
     model: gpt-5
-    label: GPT (OpenAI)
+    label: GPT-5 (OpenAI) — chất lượng cao
     endpoint: https://api.openai.com/v1/responses
     max_data_class: 2
     enabled: true
     purpose: Nhánh AI — chương trình không gian và mặt bằng đề xuất (văn bản có lược đồ).
     pricing: { input_per_1m_usd: 1.25, output_per_1m_usd: 10 }
 
+  # Bậc tiết kiệm. Ba tuyến `_fast` CỐ Ý chưa khai `pricing`: đơn giá của chúng chưa đối chiếu
+  # bảng giá chính thức, và thà để thẻ chi phí ghi «Chưa đủ dữ liệu» còn hơn hiện một con số bịa
+  # (CLAUDE.md 5.2). Haan lấy đơn giá từ bảng điều khiển của từng nhà cung cấp rồi điền vào — Q-36.
+  ai_text_openai_fast:
+    provider: openai
+    model: gpt-5-mini
+    label: GPT-5 mini (OpenAI) — nhanh, rẻ hơn
+    endpoint: https://api.openai.com/v1/responses
+    max_data_class: 2
+    enabled: true
+    purpose: Nhánh AI — bậc tiết kiệm cho đầu bài đơn giản hoặc khi thử nhiều lượt.
+
   ai_text_gemini:
     provider: gemini_paid
-    model: gemini-2.5-pro
-    label: Gemini (Google)
+    # Bậc Pro cao nhất mà khoá gọi được. `gemini-2.5-pro` vẫn nằm trong danh sách `GET /models`
+    # nhưng gọi thì 404 — danh sách đó KHÔNG nói khoá này dùng được model nào, nên tên model chỉ
+    # xác nhận được bằng một lời gọi thật.
+    model: gemini-3.1-pro-preview
+    label: Gemini 3.1 Pro (Google) — chất lượng cao
     max_data_class: 2
     enabled: true
     purpose: Nhánh AI — chương trình không gian và mặt bằng đề xuất (văn bản có lược đồ).
+    # ⚠️ Đơn giá còn là giá của bậc 2.5 Pro — chưa đối chiếu bảng giá bản 3.1 (Q-36). Sai đơn giá
+    # chỉ làm lệch thẻ chi phí, không ảnh hưởng lời gọi.
     pricing: { input_per_1m_usd: 1.25, output_per_1m_usd: 10 }
+
+  ai_text_gemini_fast:
+    provider: gemini_paid
+    model: gemini-3.8-flash
+    label: Gemini 3.8 Flash (Google) — nhanh, rẻ hơn
+    max_data_class: 2
+    enabled: true
+    purpose: Nhánh AI — bậc tiết kiệm cho đầu bài đơn giản hoặc khi thử nhiều lượt.
 
   ai_text_anthropic:
     provider: anthropic
     model: claude-opus-5
-    label: Claude (Anthropic)
+    label: Claude Opus 5 (Anthropic) — chất lượng cao
     endpoint: https://api.anthropic.com/v1/messages
     max_data_class: 2
     enabled: true
     purpose: Nhánh AI — chương trình không gian và mặt bằng đề xuất (văn bản có lược đồ).
     pricing: { input_per_1m_usd: 5, output_per_1m_usd: 25 }
+
+  ai_text_anthropic_fast:
+    provider: anthropic
+    model: claude-sonnet-5
+    label: Claude Sonnet 5 (Anthropic) — nhanh, rẻ hơn
+    endpoint: https://api.anthropic.com/v1/messages
+    max_data_class: 2
+    enabled: true
+    purpose: Nhánh AI — bậc tiết kiệm cho đầu bài đơn giản hoặc khi thử nhiều lượt.
 
   # Ảnh: chỉ OpenAI và Google có mô hình ảnh; Anthropic không có. Cả hai nhận NHIỀU ảnh vào
   # (ảnh khối + tờ mặt bằng), nên giữ được đường ảnh → ảnh ở ba trong năm loại ảnh (T13).

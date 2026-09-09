@@ -14,8 +14,6 @@ import { AnthropicClient } from './anthropic';
 import { GeminiClient, LlmCallFailed } from './gemini';
 import { OpenAiClient } from './openai';
 import { PollinationsImageClient } from './pollinations';
-import type { RenderImageClient } from '../render/render';
-import { RENDER_ROUTE } from '../render/render';
 import { ModelRouter, parseModelConfig } from './router';
 import type { AiImageClient, TextModelClient } from './text-client';
 
@@ -51,27 +49,6 @@ export function resetModelRouterForTests(): void {
  */
 export function geminiClient(env: DesignEnv): GeminiClient | undefined {
   return env.GEMINI_API_KEY ? new GeminiClient(modelRouter(env)) : undefined;
-}
-
-/**
- * Client dựng ảnh phối cảnh, chọn theo `provider` của tuyến trong `config/models.yaml`.
- *
- * Đổi nhà cung cấp là sửa MỘT dòng cấu hình, không sửa mã gọi và không sửa giao diện — đó là
- * lý do `renderFromMassing` nhận một interface chứ không nhận `GeminiClient`.
- *
- * Thiếu khoá thì trả `undefined` (giống `geminiClient`): mất tính năng chứ không chặn luồng
- * chính, và màn hình tự nói ra lý do đọc được.
- */
-export function renderImageClient(env: DesignEnv): RenderImageClient | undefined {
-  const router = modelRouter(env);
-  switch (router.providerOf(RENDER_ROUTE)) {
-    case 'pollinations':
-      return env.POLLINATIONS_API_KEY ? new PollinationsImageClient(router) : undefined;
-    case 'gemini':
-      return env.GEMINI_API_KEY ? new GeminiClient(router) : undefined;
-    default:
-      return undefined;
-  }
 }
 
 /**

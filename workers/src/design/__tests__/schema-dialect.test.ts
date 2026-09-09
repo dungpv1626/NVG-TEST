@@ -6,8 +6,12 @@
  * ngày 08/09/2026, và một tính chất chung: bộ đổi chỉ NỚI, không bao giờ thêm ràng buộc.
  */
 
+import { readdirSync, readFileSync } from 'node:fs';
+import { fileURLToPath, URL } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { SchemaDialectError, schemaFor } from '../llm/schema-dialect';
+
+const root = (p: string) => fileURLToPath(new URL(`../../../../${p}`, import.meta.url));
 
 /** Lược đồ độc lập nhà cung cấp, có đủ thứ dễ vỡ: tuỳ chọn, enum, $ref, ràng buộc số, oneOf. */
 const PORTABLE = {
@@ -35,8 +39,10 @@ describe('OpenAI strict', () => {
     expect((out.required as string[]).sort()).toEqual(Object.keys(props).sort());
     expect(props.area!.type).toEqual(['number', 'null']);
     expect(props.level!.type).toEqual(['integer', 'null']);
-    // Enum tuỳ chọn thêm null vào cả `type` lẫn `enum`.
-    expect(props.shape!.anyOf).toEqual([{ $ref: '#/$defs/shape' }, { type: 'null' }]);
+    // `$ref` được nhúng trước, nên trường tuỳ chọn kiểu tham chiếu ra thẳng enum + null chứ
+    // không còn `anyOf` bọc `$ref` — OpenAI strict từ chối mọi từ khoá đứng cạnh `$ref`.
+    expect(props.shape).toEqual({ type: ['string', 'null'], enum: ['L', 'U', null] });
+    expect(JSON.stringify(out)).not.toContain('$ref');
   });
 
   it('bỏ ràng buộc số và chuỗi — chúng nằm ở Zod phía mình', () => {
@@ -84,10 +90,15 @@ describe('Gemini responseSchema', () => {
     expect(props.level).toEqual({ type: 'integer', nullable: true });
   });
 
-  it('giữ được minimum/maximum/minItems/maxItems — Gemini nhận chúng', () => {
+  it('giữ được minimum/maximum của SỐ — Gemini nhận chúng', () => {
     expect(props.area).toEqual({ type: 'number', minimum: 0, maximum: 500 });
-    expect(props.tags).toMatchObject({ minItems: 1, maxItems: 5 });
     expect(props.name).toEqual({ type: 'string' }); // pattern/minLength thì bỏ
+  });
+
+  it('bỏ minItems/maxItems — mảng lớn làm Gemini trả 400 không nói trường nào', () => {
+    // Đo 08/09/2026: `maxItems: 40` trên mảng đối tượng đủ để hỏng cả lời gọi. Số lượng thật vẫn
+    // do Zod chặn khi kết quả về, nên bỏ ở đây không mất gì.
+    expect(props.tags).toEqual({ type: 'array', items: { type: 'string' } });
   });
 
   it('lược đồ đệ quy thì nói ra, không lặp vô hạn', () => {
@@ -110,6 +121,63 @@ describe('Không THÊM ràng buộc trong im lặng', () => {
       expect(() => schemaFor(provider, map), provider).toThrow(SchemaDialectError);
     }
   });
+});
+
+describe('`$ref` có từ khoá đứng cạnh', () => {
+  // Gặp thật 08/09/2026 với `ai-space-program-proposal`: OpenAI trả 400
+  // «$ref cannot have keywords {'description'}» và cả lượt lập chương trình không gian hỏng.
+  // Đây là hình dạng bình thường của hợp đồng mình viết, nên phải chạy được ở cả ba nhà cung cấp.
+  const withSibling = {
+    type: 'object',
+    required: ['id'],
+    properties: {
+      id: { $ref: '#/$defs/space_id', description: 'Mã tạm do mô hình đặt.' },
+    },
+    $defs: { space_id: { type: 'string', pattern: '^[a-z_]+$' } },
+  };
+
+  for (const provider of ['openai', 'anthropic', 'gemini'] as const) {
+    it(`${provider}: nhúng tham chiếu, giữ lời dặn, không còn $ref nào`, () => {
+      const out = schemaFor(provider, withSibling);
+      expect(JSON.stringify(out)).not.toContain('$ref');
+      expect(out).not.toHaveProperty('$defs');
+      const id = (out.properties as Record<string, Record<string, unknown>>).id!;
+      expect(id.type).toBe('string');
+      expect(id.description).toBe('Mã tạm do mô hình đặt.');
+    });
+  }
+});
+
+describe('Mọi hợp đồng gửi cho mô hình đều đổi được sang cả ba phương ngữ', () => {
+  // Duyệt thư mục thay vì liệt kê tay: hợp đồng `ai-*` mới sinh ra ở các đợt sau (mặt bằng đề
+  // xuất là cái tiếp theo), và người viết nó không có lý do gì để nhớ quay lại thêm vào đây.
+  const files = readdirSync(root('contracts'))
+    .filter((f) => f.startsWith('ai-') && f.endsWith('.schema.json'))
+    .sort();
+
+  it('có hợp đồng để duyệt', () => expect(files.length).toBeGreaterThan(0));
+
+  for (const file of files) {
+    const schema = JSON.parse(readFileSync(root(`contracts/${file}`), 'utf8')) as Record<
+      string,
+      unknown
+    >;
+    for (const provider of ['openai', 'anthropic', 'gemini'] as const) {
+      it(`${file} → ${provider}`, () => {
+        const out = schemaFor(provider, schema);
+        const text = JSON.stringify(out);
+        // `$ref` còn sót là 400 ở OpenAI strict và bị bỏ qua ở Gemini — hai kiểu hỏng khác nhau,
+        // cùng một nguyên nhân.
+        expect(text).not.toContain('$ref');
+        // Gemini trả 400 cho `minItems`/`maxItems` trên mảng lớn, và câu lỗi KHÔNG nói trường nào
+        // — không có cách nào lần ra từ thông báo, nên chặn ở đây.
+        if (provider === 'gemini') {
+          expect(text).not.toContain('minItems');
+          expect(text).not.toContain('maxItems');
+        }
+      });
+    }
+  }
 });
 
 describe('Không đụng đầu vào', () => {

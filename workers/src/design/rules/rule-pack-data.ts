@@ -52,6 +52,22 @@ const cache = new Map<string, RulePack>();
  * (`params.rule_pack_locality`) và hiển thị thành một dòng thông tin — không phải một cảnh
  * báo. Cảnh báo nổ ở mọi lần chạy là cảnh báo bị bỏ qua.
  */
+/**
+ * Gói quy tắc QUỐC GIA — chỉ `rules/base/`, không bao giờ gộp gói địa phương.
+ *
+ * Dùng riêng cho nhánh AI (T14). Ở đó rule pack KHÔNG ràng buộc mô hình; nó chỉ để đối chiếu
+ * sau và sinh cảnh báo. Quy định riêng của một tỉnh không phải thứ đem cảnh báo trên một đề
+ * xuất tham khảo, nên hàm này cố ý bỏ qua `LOCALITY_FILES` thay vì nhận tham số địa phương —
+ * hiện `LOCALITY_FILES` rỗng nên hai đường cho cùng kết quả, và đó chính là lý do phải tách
+ * bằng một hàm riêng: ngày có gói tỉnh đầu tiên, nhánh AI không âm thầm đổi hành vi.
+ */
+export function nationalRulePack(): RulePack {
+  nationalCache ??= new RulePack(parseAll(BASE_FILES), false);
+  return nationalCache;
+}
+
+let nationalCache: RulePack | undefined;
+
 export function rulePackFor(locality: string): RulePack {
   const cached = cache.get(locality);
   if (cached) return cached;

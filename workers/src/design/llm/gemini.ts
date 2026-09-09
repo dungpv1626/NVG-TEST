@@ -75,6 +75,19 @@ export interface GenerateOptions {
   images?: GenerateImagePart[];
 }
 
+/**
+ * Hạn chờ một lượt gọi.
+ *
+ * 120 giây là đủ cho mọi bước cũ (chuẩn hoá nhãn, ý đồ bố cục, mô tả mặt tiền — vài trăm token
+ * đầu ra). KHÔNG đủ cho bước mô hình tự vẽ tờ mặt bằng: đo 09/09/2026, Gemini Flash vẽ nhà ba
+ * tầng vượt 122 giây và bị chính mình cắt ngang — mất trọn lượt gọi đã tính tiền mà không thu
+ * được gì. 500 giây là mức Haan chốt (09/09/2026) sau lần hỏng đó.
+ *
+ * ⚠️ Hạn này dài tới mức người dùng sẽ tưởng trang treo. Đó là lý do bước vẽ cần chạy nền
+ * (Đợt 5), không phải lý do để rút ngắn hạn và nhận về lỗi hết giờ.
+ */
+const TIMEOUT_MS = 500_000;
+
 export class GeminiClient implements TextModelClient, AiImageClient {
   constructor(private readonly router: ModelRouter) {}
 
@@ -100,8 +113,19 @@ export class GeminiClient implements TextModelClient, AiImageClient {
     try {
       json = JSON.parse(text);
     } catch {
+      // Nói VÌ SAO, không chỉ "không hợp lệ". Nguyên nhân thường gặp nhất là hết ngân sách token
+      // giữa chừng: mô hình trả về một chuỗi JSON bị cắt cụt, và câu lỗi chung khiến người đọc
+      // đi tìm lỗi ở lược đồ. `finishReason` cùng số token đã dùng trả lời ngay chỗ đó.
+      const usage = geminiUsage(data);
+      const reason = data.candidates?.[0]?.finishReason ?? 'không rõ';
+      const truncated = reason === 'MAX_TOKENS';
       throw new LlmCallFailed(
-        `Mô hình trả về nội dung không phải JSON hợp lệ ở bước "${routeName}".`,
+        `Mô hình trả về nội dung không phải JSON hợp lệ ở bước "${routeName}" ` +
+          `(lý do dừng: ${reason}; đã sinh ${usage.outputTokens ?? '?'} token, ` +
+          `dài ${text.length} ký tự).` +
+          (truncated
+            ? ' Kết quả bị cắt vì hết ngân sách token — tăng `maxOutputTokens` hoặc yêu cầu nội dung ngắn hơn.'
+            : ''),
         true,
       );
     }
@@ -162,7 +186,11 @@ export class GeminiClient implements TextModelClient, AiImageClient {
     };
 
     const data = await this.call<GeminiGenerateResponse>(route, 'generateContent', body);
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    // Dòng Gemini 3 chèn phần suy nghĩ vào `parts`; phần đó có thể KHÔNG mang `text`. Lấy cứng
+    // `parts[0]` thì gặp hôm nào mô hình tách phần suy nghĩ ra sẽ đọc thành "không có nội dung".
+    const text = data.candidates?.[0]?.content?.parts?.find(
+      (p) => typeof p.text === 'string',
+    )?.text;
     if (typeof text !== 'string') {
       // Hết token giữa chừng cũng rơi vào đây; nói rõ lý do thay vì "không đọc được".
       const reason = data.candidates?.[0]?.finishReason ?? 'không rõ';
@@ -267,7 +295,7 @@ export class GeminiClient implements TextModelClient, AiImageClient {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': route.apiKey },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(120_000),
+        signal: AbortSignal.timeout(TIMEOUT_MS),
       });
     } catch (error) {
       throw new LlmCallFailed(
