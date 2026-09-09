@@ -570,10 +570,12 @@
             <b>0 lượt gọi API.</b>
           </li>
           <li>
-            <span class="pill s-progress">Tiếp theo</span>
-            <b>Đợt 2 — Bút vẽ</b>: bộ vẽ SVG tất định (<code>ai/draw/</code>), kiểm máy, suy tường
-            dự phòng. <b>0 lượt gọi API</b> — Haan chấm tờ vẽ fixture A3 1:100 <b>trước</b> khi tốn
-            tiền model.
+            <span class="pill s-progress">Xong mã, chờ Haan chấm tờ vẽ</span>
+            <b>Đợt 2 — Bút vẽ</b>: bộ vẽ SVG tất định (<code>ai/draw/</code>, 13 tệp),
+            <code>kb/sheet_style.yaml</code>, bộ kiểm máy <code>ai/plan-check.ts</code>, suy tường
+            dự phòng (T19), cảnh báo quy chuẩn trên mặt bằng,
+            <code>GET /design/ai/plan/:projectId/sheet</code>, hai fixture viết tay + 5 tờ vàng.
+            <b>0 lượt gọi API.</b>
           </li>
           <li>
             <span class="pill s-draft">Chưa</span>
@@ -595,39 +597,42 @@
       </div>
 
       <div class="flag block">
-        <h3>Bàn giao sang phiên mới — chốt ngày 09/09/2026</h3>
+        <h3>Bàn giao sang phiên mới — cập nhật cuối ngày 09/09/2026</h3>
         <p class="kv">
-          <b>Đang đứng ở đâu:</b> nhánh <code>dev_design</code>, cây làm việc sạch, hai commit
-          <code>29dae36</code> (Đợt 0 + Đợt 1) và <code>9582879</code> (tách hai gói quy tắc, T20).
-          Đo lúc commit: <b>700 phép thử worker/shared + 356 phép thử web xanh</b>,
-          <code>npx tsc -b</code> sạch, <code>npm run contracts:check</code> sạch (&laquo;Hợp đồng
-          dữ liệu khớp — 23 tệp&raquo;), prettier sạch. <b>0 lượt gọi API AI trong cả đợt.</b>
+          <b>Đang đứng ở đâu:</b> nhánh <code>dev_design</code>.
+          <b>Đợt 2 — Bút vẽ đã xong mã.</b> Đo lúc chốt:
+          <b>435 phép thử phía Worker/shared + 356 phía web</b> xanh (riêng nhánh AI <b>67</b>),
+          <code>npx tsc -b</code> sạch, prettier sạch. <b>0 lượt gọi API AI.</b>
         </p>
         <p class="kv">
-          <b>Việc kế tiếp — Đợt 2, Bút vẽ.</b> Dựng <code>workers/src/design/ai/draw/</code> (~1.200
-          dòng: <code>svg</code>, <code>units</code>, <code>geometry</code>, <code>walls</code>,
-          <code>openings</code>, <code>stairs</code>, <code>rooms</code>, <code>dims</code>,
-          <code>symbols</code>, <code>sheet</code>, <code>derive-walls</code>,
-          <code>plan-sheet</code>, <code>elevation</code>), <code>kb/sheet_style.yaml</code>,
-          <code>ai/plan-check.ts</code>, <code>GET /design/ai/plan/:projectId/sheet</code>, và
-          fixture SVG vàng. Chi tiết từng mô-đun ở mục B và C của bản kế hoạch
-          (<code>~/.claude/plans/async-imagining-boot.md</code>). <b>Đợt này 0 lượt gọi API</b> —
-          dựng tờ vẽ từ dữ liệu fixture viết tay để Haan chấm <b>trước</b> khi tốn tiền model.
+          <b>Việc chờ Haan — chấm tờ vẽ.</b> Năm tờ dựng từ fixture viết tay (nhà phố 4&times;15 m
+          ba tầng, biệt thự 10&times;14 m hai tầng) nằm ở
+          <code>workers/src/design/__tests__/__snapshots__/*.svg</code>. Cách xem: phục vụ thư mục
+          đó bằng <code>python3 -m http.server</code> rồi mở trong trình duyệt. Cần biết: nét, cỡ
+          chữ, chuỗi kích thước, ký hiệu cửa và thang có đủ để một kiến trúc sư đọc không; thiếu gì
+          thì bổ sung trước khi Đợt 3 bắt đầu tiêu tiền model.
         </p>
         <p class="kv">
-          <b>Chờ Haan trước khi Đợt 2 chốt được phần kiểm:</b> soát 23 quy tắc trong
-          <code>rules/nvg-experience.yaml</code>. Câu trả lời về <code>lightwell_max_area</code> đổi
-          đúng một quy tắc mà bộ kiểm của bút vẽ sẽ đọc, nên bắt đầu dựng bộ vẽ được ngay, chỉ phần
-          đối chiếu là chờ.
+          <b>Ba điều đã tự quyết trong đợt, đổi được rẻ:</b> (1) hướng giấy và tỷ lệ do bộ vẽ chọn —
+          thử 1:50 &rarr; 1:100 &rarr; 1:200 trên cả tờ ngang lẫn tờ dọc, lấy cặp đầu tiên còn vừa;
+          nhà phố 4&times;15 m vì thế ra tờ A3 DỌC 1:50 thay vì tờ ngang 1:100 như ghi trong bản kế
+          hoạch. (2) Cảnh báo quy chuẩn cho mặt bằng đặt cạnh <code>reviewProgramAreas</code> trong
+          <code>ai/rule-warnings.ts</code>, không hồi sinh <code>plan-review.ts</code> (tệp đó chưa
+          từng tồn tại). (3) Đợt này KHÔNG đụng <code>web/</code> — màn hình mặt bằng thuộc Đợt 3.
         </p>
         <p class="kv">
-          <b>Soát bằng trình duyệt:</b> Claude in Chrome nay bật sẵn cho mọi phiên qua
-          <code>~/.claude/settings.json</code> &rarr;
-          <code>env.CLAUDE_CODE_ENABLE_CFC = "1"</code> (đo 09/09: khoá
-          <code>chrome: true</code> trong settings KHÔNG có tác dụng, chỉ biến môi trường mới ăn).
-          Hai điều phải làm đúng ngay: chọn browser <b>Linux <code>isLocal: true</code></b> chứ
-          không phải bản Windows, và phục vụ tờ SVG qua <code>python3 -m http.server</code> vì tiện
-          ích từ chối <code>file://</code>.
+          <b>Vẫn chờ Haan như cũ:</b> soát 23 quy tắc trong <code>rules/nvg-experience.yaml</code>.
+          Đợt 2 không phụ thuộc câu trả lời đó — bộ kiểm máy cố ý KHÔNG đọc quy chuẩn, chỉ hỏi dữ
+          liệu có tự mâu thuẫn không.
+        </p>
+        <p class="kv">
+          <b>Việc kế tiếp — Đợt 3, Mặt bằng qua Workflow:</b>
+          <code>workflows/ai-design*.ts</code> (stage plan), bảng <code>design_ai_run</code> +
+          <code>ai/runs.ts</code>, lời dẫn <code>floor_plan.{system,repair}</code>,
+          <code>ai/plan.ts</code> viết lại, <code>/plan/runs</code>, <code>/plan/choose</code>,
+          <code>/runs/:id</code>, <code>ai-plan-step</code>. Đây là đợt ĐẦU TIÊN tốn tiền: 3 ý đồ
+          &times; (1 + tối đa 1 lượt sửa) = 3&ndash;6 lượt, Gemini Pro ước
+          <b>0,9&ndash;1,8 USD mỗi lần đo</b>. Phải xin phép trước từng lần.
         </p>
         <p class="kv">
           <b>Ràng buộc còn hiệu lực:</b> không gọi API AI trả phí khi chưa xin phép — nêu rõ mấy
@@ -735,6 +740,49 @@
             </tr>
           </thead>
           <tbody>
+            <tr>
+              <td class="num">09/09</td>
+              <td>Bộ giải AI — Đợt 2: bút vẽ tất định, bộ kiểm máy, suy tường dự phòng</td>
+              <td class="xs">
+                <b>Bộ vẽ SVG</b> (<code>ai/draw/</code>, 13 tệp, hàm thuần, không DOM, không
+                Container): <code>style</code> + <code>units</code> + <code>geometry</code> +
+                <code>svg</code> làm nền; <code>walls</code> dựng đa giác từ tim tường, kéo dài đầu
+                tường để liền góc và CẮT lỗ mở bằng phép trừ trên khoảng (không vẽ đè hình trắng);
+                <code>openings</code> vẽ má cửa, cánh, cung quét, cửa sổ hai nét kính, cửa cuốn nét
+                đứt; <code>stairs</code> suy bậc từ số vế + tổng bậc; <code>rooms</code> co chữ và
+                XOAY DỌC khi phòng hẹp; <code>dims</code> suy chuỗi kích thước từ chính toạ độ tường
+                (T15 — tổng không thể lệch vì không ai khai riêng); <code>symbols</code>,
+                <code>sheet</code>, <code>plan-sheet</code>.<br />
+                <b>Quy ước trình bày là dữ liệu</b>: <code>kb/sheet_style.yaml</code> (khổ giấy, lề,
+                nét, cỡ chữ, màu, quầng chữ). Câu cảnh báo «Đề xuất AI — bản phác, không dùng để thi
+                công» CỐ Ý không nằm trong tệp cấu hình mà ở
+                <code>AI_DISCLAIMERS</code> (<code>@nvg/shared/design</code>) — nhãn do mã nguồn
+                chèn, không tắt được.<br />
+                <b>Hướng giấy + tỷ lệ tự chọn</b>: thử 1:50 → 1:100 → 1:200 trên cả tờ ngang lẫn tờ
+                dọc. Nhà phố 4×15 m ra tờ A3 dọc 1:50; ở tờ ngang 1:100 hình chỉ chiếm một dải hẹp
+                giữa giấy và chữ trong khu vệ sinh nhỏ tới mức phải bỏ.<br />
+                <b>Bộ kiểm máy</b> (<code>ai/plan-check.ts</code>): 11 nhóm kiểm — đối chiếu với
+                chương trình không gian, chữ nhật hợp lệ và trong hình bao, phòng không chồng nhau,
+                mọi phòng có cửa (suy từ hình học, ngoại lệ đọc từ nhóm <code>outdoor</code> của
+                <code>room_vocabulary.yaml</code>), lỗ mở trong tường và không chồng nhau, cửa sổ
+                chỉ trên tường bao, mỗi cạnh phòng được tường phủ ≥95%, diện tích khai khớp chữ
+                nhật, lõi thang chồng khít giữa các tầng. CỐ Ý không kiểm quy chuẩn ở đây.<br />
+                <b>T19 — suy tường từ phòng</b> (<code>ai/draw/derive-walls.ts</code>): cạnh chung
+                thành vách, cạnh biên thành tường bao; cửa của mô hình được đặt lại theo VỊ TRÍ THẬT
+                sang tường mới.<br />
+                <b>Cảnh báo quy chuẩn trên mặt bằng</b> (<code>reviewPlanRooms</code>): đo được 5 vị
+                từ thay vì 2 như bước chương trình — thêm bề rộng lọt lòng, tỷ lệ dài/rộng và yêu
+                cầu chiếu sáng; vẫn trả danh sách quy tắc CHƯA đối chiếu được.<br />
+                <b>Endpoint</b> <code>GET /design/ai/plan/:projectId/sheet</code> — vẽ lúc đọc,
+                không lưu; trả SVG để trình duyệt nạp bằng <code>&lt;img&gt;</code>.<br />
+                <b>Số đo:</b> 67 phép thử của nhánh AI (16 bộ vẽ, 18 bộ kiểm + cảnh báo), 435 phép
+                thử Worker/shared và 356 phía web đều xanh. Bộ kiểm bắt được
+                <b>ba lỗi thật trong chính fixture viết tay</b> (cửa chồng cửa sổ, lõi thang lệch 50
+                cm giữa hai tầng, thang biệt thự lệch 4,45 m) — đó là bằng chứng nó không phải bộ
+                kiểm luôn trả rỗng.
+                <b>0 lượt gọi API AI.</b>
+              </td>
+            </tr>
             <tr>
               <td class="num">09/09</td>
               <td>

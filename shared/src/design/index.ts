@@ -202,6 +202,17 @@ export const AI_DISCLAIMERS = {
   render: 'Ảnh tham khảo ý tưởng — chưa phải phương án thi công',
   schedules: 'Khối lượng sơ bộ — không dùng làm căn cứ ký hợp đồng',
   structuralGrid: 'Đề xuất — kỹ sư kết cấu quyết định',
+  /**
+   * In trên dải tiêu đề MỌI tờ vẽ của nhánh AI (mặt bằng, mặt đứng).
+   *
+   * Ở đây chứ không phải trong `kb/sheet_style.yaml`: quy ước trình bày là dữ liệu sửa được,
+   * còn câu này thì không được sửa và không được tắt (CLAUDE.md 8.7). Kết quả nhánh AI không
+   * đi vào hồ sơ phát hành (T14), nên một tờ rời khỏi màn hình mà không mang câu này là một tờ
+   * bản vẽ trông như hồ sơ thi công.
+   */
+  aiSheet: 'Đề xuất AI — bản phác, không dùng để thi công',
+  /** Ghi thêm khi `generator.walls_derived` bật — T19, xem `ai/draw/derive-walls.ts`. */
+  wallsDerived: 'Tường do chương trình suy từ phòng, không phải của AI',
 } as const;
 
 // ---------------------------------------------------------------------------

@@ -29,17 +29,20 @@ import { gateLayer2, readCompletenessThreshold } from '../brief/gate';
 import type { DesignEnv } from '../env';
 import { constructionNorms } from '../kb/construction-data';
 import { roomVocabulary } from '../kb/vocabulary-data';
+import { roomGroups } from '../kb/vocabulary';
 import { modelRouter, textClientFor } from '../llm/factory';
 import { LlmCallFailed } from '../llm/gemini';
 import { nationalRulePack, nvgExperiencePack } from '../rules/rule-pack-data';
 import { recordAiCall } from './call-log';
+import { planSheet } from './draw';
+import { PlanSheetError } from './draw/plan-sheet';
 import { aiModelCatalogue, isSelectableRoute } from './models';
 import { ruleMessages } from './plan-messages-data';
 import { aiPrompts } from './prompts-data';
 import { AiProgramRejected, generateAiProgram } from './program';
 import { selectedRulePack, type AiRulePackChoice } from './rule-packs';
 import { reviewProgramAreas } from './rule-warnings';
-import type { DesignBrief } from '@nvg/shared/design';
+import type { AiFloorPlan, DesignBrief } from '@nvg/shared/design';
 
 export const aiApp = new Hono<{ Bindings: DesignEnv }>();
 
@@ -330,6 +333,7 @@ aiApp.post('/program', async (c) => {
     buildingType: digest.building_type,
     rules,
     labels,
+    groups: roomGroups(roomVocabulary().vocabulary),
     messages: ruleMessages(),
   });
 
@@ -352,4 +356,66 @@ aiApp.post('/program', async (c) => {
     // chỉ có nghĩa "không lệch trong số thứ đo được ở bước này", không phải "đạt quy chuẩn".
     uncheckedRules: review.unchecked,
   });
+});
+
+/**
+ * Tờ mặt bằng của một tầng, dạng SVG — vẽ LÚC ĐỌC, không lưu.
+ *
+ * Vì sao không lưu: tờ vẽ là hàm thuần của artifact cộng `kb/sheet_style.yaml`, dựng hết
+ * khoảng 5 ms. Lưu nó là tạo bản sao thứ hai của cùng dữ liệu, và bản sao ấy sẽ cũ đi mỗi lần
+ * quy ước trình bày đổi — đúng thứ bất biến artifact tồn tại để tránh (CLAUDE.md 8.8 điểm 1).
+ *
+ * ⚠️ Cache NGẮN, KHÔNG `immutable`, dù địa chỉ có mang mã băm artifact. Tờ vẽ không chỉ phụ
+ * thuộc artifact: nó còn phụ thuộc mã bộ vẽ và `kb/sheet_style.yaml`, hai thứ KHÔNG nằm trong
+ * địa chỉ. Đánh dấu bất biến một năm thì một lần sửa cỡ chữ sẽ không tới được người đang mở
+ * trình duyệt, mà cũng không có gì báo. `private` để proxy dùng chung không giữ bản sao — đây
+ * là bản vẽ của một hồ sơ cụ thể, RLS quyết ai xem được.
+ *
+ * Trả SVG chứ không trả JSON có chuỗi SVG bên trong: trình duyệt nạp bằng `<img>`, nên kịch
+ * bản nhúng trong tệp — nếu mô hình có chèn được — cũng không chạy.
+ */
+aiApp.get('/plan/:projectId/sheet', async (c) => {
+  const token = bearer(c.req.header('Authorization'));
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+
+  const projectId = c.req.param('projectId');
+  const artifactId = c.req.query('artifactId');
+  if (!artifactId) return c.json({ error: 'Thiếu mã phương án cần xem.' }, 400);
+  const level = Number(c.req.query('level') ?? '1');
+  if (!Number.isInteger(level) || level < 1) {
+    return c.json({ error: 'Số tầng không hợp lệ.' }, 400);
+  }
+
+  const db = await asUser(c.env, token);
+  const scope = await projectScope(db, projectId);
+  if (!scope) return c.json({ error: PROJECT_NOT_VISIBLE }, 404);
+  const denied = await denyUnlessReadable(db, scope.tenantId, projectId);
+  if (denied) return c.json({ error: denied.error }, denied.status);
+
+  const repo = new ArtifactRepository(c.env);
+  const artifact = await repo.get(artifactId, projectId);
+  if (!artifact || artifact.kind !== 'ai_floor_plan') {
+    return c.json({ error: 'Không tìm thấy phương án mặt bằng này trong hồ sơ.' }, 404);
+  }
+
+  try {
+    const sheet = planSheet(artifact.payload as AiFloorPlan, level);
+    return new Response(sheet.svg, {
+      headers: {
+        'Content-Type': 'image/svg+xml; charset=utf-8',
+        'Cache-Control': 'private, max-age=300',
+        // Tỷ lệ và hướng giấy do bộ vẽ CHỌN, nên màn hình phải hỏi mới biết mà in ra chip
+        // «Tỷ lệ 1:50». Thân phản hồi là SVG nên không cài thêm trường được.
+        //
+        // Ghi chú của bộ vẽ (chỗ đã kẹp, đã hạ tỷ lệ) CỐ Ý không nhét vào header: câu tiếng
+        // Việt có dấu không đi qua header HTTP nguyên vẹn, và một con số đếm thì màn hình
+        // không làm gì được. Chúng đi cùng findings ở endpoint JSON của Đợt 3.
+        'X-Sheet-Scale': String(sheet.scale),
+        'X-Sheet-Orientation': sheet.orientation,
+      },
+    });
+  } catch (error) {
+    if (error instanceof PlanSheetError) return c.json({ error: error.message }, 404);
+    throw error;
+  }
 });

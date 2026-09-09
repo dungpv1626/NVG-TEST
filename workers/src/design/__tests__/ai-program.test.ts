@@ -29,7 +29,7 @@ import { parseRuleMessages } from '../ai/plan-messages';
 import { reviewProgramAreas } from '../ai/rule-warnings';
 import { NO_RULE_PACKS, selectedRulePack } from '../ai/rule-packs';
 import { parseConstructionNorms } from '../kb/construction';
-import { parseVocabulary, VocabularyIndex } from '../kb/vocabulary';
+import { parseVocabulary, roomGroups, VocabularyIndex } from '../kb/vocabulary';
 import { parseRuleFile, RulePack } from '../rules/rule-pack';
 import type {
   StructuredCallOptions,
@@ -43,6 +43,7 @@ const read = (p: string) => readFileSync(root(p), 'utf8');
 
 const vocabulary = new VocabularyIndex(parseVocabulary(read('kb/room_vocabulary.yaml')));
 const labels = Object.fromEntries(vocabulary.vocabulary.types.map((t) => [t.code, t.vi]));
+const groups = roomGroups(vocabulary.vocabulary);
 const construction = parseConstructionNorms(read('kb/construction_norms.yaml'));
 const prompts = parseAiPrompts(load(read('kb/ai_design_prompts.yaml')));
 const messages = parseRuleMessages(read('rules/messages.vi.yaml'));
@@ -425,6 +426,7 @@ describe('Cảnh báo trên diện tích — đo bằng ĐÚNG gói kỹ sư đ�
       buildingType: 'biet_thu',
       rules: selectedRulePack(choice, PACKS),
       labels,
+      groups,
       messages,
     });
 
