@@ -487,51 +487,51 @@
       <div class="flag block">
         <h3>Đổi hướng · 09/09/2026 — Haan</h3>
         <p class="kv">
-          <b>Hiện trạng:</b> bộ giải CP-SAT nội bộ <b>không đạt qua thử nghiệm thực tế</b>. Bộ
-          giải bằng AI là bắt buộc; Haan đã thử qua web và đánh giá kết quả tốt.
+          <b>Hiện trạng:</b> bộ giải CP-SAT nội bộ <b>không đạt qua thử nghiệm thực tế</b>. Bộ giải
+          bằng AI là bắt buộc; Haan đã thử qua web và đánh giá kết quả tốt.
         </p>
         <p class="kv">
-          <b>Yêu cầu tách sạch:</b> nhánh AI phải <b>độc lập hoàn toàn</b> với bộ giải nội bộ.
-          Khi nhánh AI làm tốt, bộ giải sẽ bị <b>xoá</b> — nên hai bên không được liên quan gì
-          đến nhau. Ranh giới do kiểm thử canh:
+          <b>Yêu cầu tách sạch:</b> nhánh AI phải <b>độc lập hoàn toàn</b> với bộ giải nội bộ. Khi
+          nhánh AI làm tốt, bộ giải sẽ bị <b>xoá</b> — nên hai bên không được liên quan gì đến nhau.
+          Ranh giới do kiểm thử canh:
           <code>workers/src/design/__tests__/ai-independence.test.ts</code> đọc từng dòng
-          <code>import</code> của nhánh AI và đỏ khi có tệp nào trỏ sang bộ giải, cả chiều ngược lại.
+          <code>import</code> của nhánh AI và đỏ khi có tệp nào trỏ sang bộ giải, cả chiều ngược
+          lại.
         </p>
         <p class="kv">
           <b>Phạm vi giai đoạn 1:</b> mặt bằng từng tầng <b>100%</b> &middot; phối cảnh
           <b>5 ảnh, 100%</b> (chính diện sáng, chính diện tối, cận cảnh cổng tầng 1, cận cảnh ban
-          công tầng 2, góc nghiêng) &middot; khối 3D <b>tuỳ chọn</b>. Giai đoạn 2 (chưa làm): hồ
-          sơ kỹ thuật thi công, kết cấu, điện nước — kỳ vọng 50&ndash;60%.
+          công tầng 2, góc nghiêng) &middot; khối 3D <b>tuỳ chọn</b>. Giai đoạn 2 (chưa làm): hồ sơ
+          kỹ thuật thi công, kết cấu, điện nước — kỳ vọng 50&ndash;60%.
         </p>
         <p class="kv">
-          <b>T15</b> <b>AI thiết kế, chương trình cầm bút.</b> Mô hình trả TOÀN BỘ nội dung bản
-          vẽ dạng dữ liệu (từng đoạn tường + bề dày, cửa/cửa sổ + chiều mở, thang, tên + diện
-          tích); bộ vẽ SVG tất định bằng TypeScript trong Worker đặt lên giấy. Thay T14 &laquo;mô
-          hình tự vẽ SVG&raquo; — đo thật 09/09 cho ra bản phác không cửa, không chuỗi kích
-          thước, vách không bề dày, 13/25 phòng có tên. Dữ liệu thì <b>kiểm được</b>, tệp vẽ thì
-          chỉ đếm được ký tự.
+          <b>T15</b> <b>AI thiết kế, chương trình cầm bút.</b> Mô hình trả TOÀN BỘ nội dung bản vẽ
+          dạng dữ liệu (từng đoạn tường + bề dày, cửa/cửa sổ + chiều mở, thang, tên + diện tích); bộ
+          vẽ SVG tất định bằng TypeScript trong Worker đặt lên giấy. Thay T14 &laquo;mô hình tự vẽ
+          SVG&raquo; — đo thật 09/09 cho ra bản phác không cửa, không chuỗi kích thước, vách không
+          bề dày, 13/25 phòng có tên. Dữ liệu thì <b>kiểm được</b>, tệp vẽ thì chỉ đếm được ký tự.
         </p>
         <p class="kv">
           <b>T16</b> Phối cảnh qua bước trung gian <b>ý tưởng mặt đứng</b>: AI đề xuất mái, vật
-          liệu, màu, cổng, ban công dạng dữ liệu + mặt đứng chính vẽ bằng cùng bộ vẽ; kiến trúc
-          sư sửa được <b>trước khi trả tiền ảnh</b>. Ảnh chính diện ban ngày là <b>ảnh neo</b>;
-          bốn ảnh còn lại dựng ảnh&rarr;ảnh từ ảnh neo + mặt đứng để cùng một ngôi nhà. Cần vì
-          đầu bài <b>không có</b> trường mái/vật liệu/màu/cổng/ban công — chỉ
-          <code>style</code> (1 trong 9) và một ô ghi chú.
+          liệu, màu, cổng, ban công dạng dữ liệu + mặt đứng chính vẽ bằng cùng bộ vẽ; kiến trúc sư
+          sửa được <b>trước khi trả tiền ảnh</b>. Ảnh chính diện ban ngày là <b>ảnh neo</b>; bốn ảnh
+          còn lại dựng ảnh&rarr;ảnh từ ảnh neo + mặt đứng để cùng một ngôi nhà. Cần vì đầu bài
+          <b>không có</b> trường mái/vật liệu/màu/cổng/ban công — chỉ <code>style</code> (1 trong 9)
+          và một ô ghi chú.
         </p>
         <p class="kv">
-          <b>T17</b> Giao diện: <b>tab mới &laquo;Thiết kế AI&raquo;</b> với các bước nối nhau.
-          Hai tab của bộ giải giữ nguyên cho tới ngày dọn.
+          <b>T17</b> Giao diện: <b>tab mới &laquo;Thiết kế AI&raquo;</b> với các bước nối nhau. Hai
+          tab của bộ giải giữ nguyên cho tới ngày dọn.
         </p>
         <p class="kv">
-          <b>T18</b> <b>Hai bước</b>: chương trình không gian (AI, viết lại sạch) rồi mặt bằng.
-          Mỗi lượt gọi nhỏ hơn, ít bị cắt, và kiến trúc sư duyệt danh sách phòng trước khi vẽ.
+          <b>T18</b> <b>Hai bước</b>: chương trình không gian (AI, viết lại sạch) rồi mặt bằng. Mỗi
+          lượt gọi nhỏ hơn, ít bị cắt, và kiến trúc sư duyệt danh sách phòng trước khi vẽ.
         </p>
         <p class="kv">
-          <b>T19</b> Tường AI khai sai sau <b>một lượt sửa</b> &rarr; <b>chương trình suy tường
-          từ phòng</b> (cạnh chung = vách 110, cạnh biên = tường 220), ghi rõ trên tờ
-          &laquo;Tường do chương trình suy từ phòng, không phải của AI&raquo;. Tờ vẽ vẫn dùng
-          được, chỗ suy hộ vẫn nhìn thấy.
+          <b>T19</b> Tường AI khai sai sau <b>một lượt sửa</b> &rarr;
+          <b>chương trình suy tường từ phòng</b> (cạnh chung = vách 110, cạnh biên = tường 220), ghi
+          rõ trên tờ &laquo;Tường do chương trình suy từ phòng, không phải của AI&raquo;. Tờ vẽ vẫn
+          dùng được, chỗ suy hộ vẫn nhìn thấy.
         </p>
         <p class="kv">
           <b>Quy tắc chi phí — nhắc lại:</b> không gọi API AI khi tự kiểm thử nếu Haan chưa cho
@@ -544,39 +544,36 @@
         <ol class="xs">
           <li>
             <span class="pill s-done">Xong 09/09</span>
-            <b>Đợt 0 — Nền</b>: bốn hợp đồng mới
-            (<code>ai_space_program</code>, <code>ai_floor_plan</code>,
-            <code>ai_facade_concept</code>, <code>ai_image_set</code>), migration
-            <code>0123</code> (13 loại artifact, 12 bước, bảng <code>design_ai_run</code>),
-            chuyển bộ đọc rule pack ra <code>design/rules/</code>, tách
+            <b>Đợt 0 — Nền</b>: bốn hợp đồng mới (<code>ai_space_program</code>,
+            <code>ai_floor_plan</code>, <code>ai_facade_concept</code>, <code>ai_image_set</code>),
+            migration <code>0123</code> (13 loại artifact, 12 bước, bảng
+            <code>design_ai_run</code>), chuyển bộ đọc rule pack ra <code>design/rules/</code>, tách
             <code>auth-scope.ts</code>, gỡ <code>RENDER_ROUTE</code> khỏi
             <code>llm/factory</code> và <code>ai/models</code>, bộ tuyến riêng
             <code>ai/routes.ts</code> (<code>/design/ai/models</code>,
-            <code>/design/ai/state/:id</code>), tệp hook riêng
-            <code>use-ai-design.ts</code>, và kiểm thử canh độc lập.
+            <code>/design/ai/state/:id</code>), tệp hook riêng <code>use-ai-design.ts</code>, và
+            kiểm thử canh độc lập.
             <b>0 lượt gọi API.</b>
           </li>
           <li>
             <span class="pill s-done">Xong 09/09</span>
-            <b>Đợt 1 — Chương trình không gian</b>: viết lại <code>ai/program.ts</code> không
-            mượn một dòng nào của bộ giải (bốn khớp nối cũ —
-            <code>buildableFootprint</code>, <code>buildAdjacency</code>,
-            <code>checkPlausibility</code>, <code>bandFor</code> — đã cắt);
-            <code>ai/buildable.ts</code> suy sàn xây được từ khoảng lùi trong ĐẦU BÀI;
-            <code>ai/rule-warnings.ts</code> đối chiếu quy chuẩn quốc gia SAU khi mô hình trả
-            về; bộ đọc quy ước cấu tạo phía Worker (<code>kb/construction.ts</code>);
+            <b>Đợt 1 — Chương trình không gian</b>: viết lại <code>ai/program.ts</code> không mượn
+            một dòng nào của bộ giải (bốn khớp nối cũ — <code>buildableFootprint</code>,
+            <code>buildAdjacency</code>, <code>checkPlausibility</code>, <code>bandFor</code> — đã
+            cắt); <code>ai/buildable.ts</code> suy sàn xây được từ khoảng lùi trong ĐẦU BÀI;
+            <code>ai/rule-warnings.ts</code> đối chiếu quy chuẩn quốc gia SAU khi mô hình trả về; bộ
+            đọc quy ước cấu tạo phía Worker (<code>kb/construction.ts</code>);
             <code>POST /design/ai/program</code>; lời dẫn <code>program.system</code> viết lại
             (v1.1.0), hợp đồng đề xuất đổi <code>floor</code>&rarr;<code>level</code> và
-            <code>enclosed_in</code>&rarr;<code>ensuite_of</code>; tab
-            &laquo;Thiết kế AI&raquo; + thẻ ở Tổng quan; gỡ nhánh AI khỏi
-            <code>program-panel</code> và xoá hai endpoint cũ.
+            <code>enclosed_in</code>&rarr;<code>ensuite_of</code>; tab &laquo;Thiết kế AI&raquo; +
+            thẻ ở Tổng quan; gỡ nhánh AI khỏi <code>program-panel</code> và xoá hai endpoint cũ.
             <b>0 lượt gọi API.</b>
           </li>
           <li>
             <span class="pill s-progress">Tiếp theo</span>
-            <b>Đợt 2 — Bút vẽ</b>: bộ vẽ SVG tất định (<code>ai/draw/</code>), kiểm máy, suy
-            tường dự phòng. <b>0 lượt gọi API</b> — Haan chấm tờ vẽ fixture A3 1:100
-            <b>trước</b> khi tốn tiền model.
+            <b>Đợt 2 — Bút vẽ</b>: bộ vẽ SVG tất định (<code>ai/draw/</code>), kiểm máy, suy tường
+            dự phòng. <b>0 lượt gọi API</b> — Haan chấm tờ vẽ fixture A3 1:100 <b>trước</b> khi tốn
+            tiền model.
           </li>
           <li>
             <span class="pill s-draft">Chưa</span>
@@ -595,6 +592,49 @@
             <b>Đợt 6 — Trục đo + dọn</b>: CLAUDE.md 8.2/8.5, dọn đường mã cũ.
           </li>
         </ol>
+      </div>
+
+      <div class="flag block">
+        <h3>Bàn giao sang phiên mới — chốt ngày 09/09/2026</h3>
+        <p class="kv">
+          <b>Đang đứng ở đâu:</b> nhánh <code>dev_design</code>, cây làm việc sạch, hai commit
+          <code>29dae36</code> (Đợt 0 + Đợt 1) và <code>9582879</code> (tách hai gói quy tắc, T20).
+          Đo lúc commit: <b>700 phép thử worker/shared + 356 phép thử web xanh</b>,
+          <code>npx tsc -b</code> sạch, <code>npm run contracts:check</code> sạch (&laquo;Hợp đồng
+          dữ liệu khớp — 23 tệp&raquo;), prettier sạch. <b>0 lượt gọi API AI trong cả đợt.</b>
+        </p>
+        <p class="kv">
+          <b>Việc kế tiếp — Đợt 2, Bút vẽ.</b> Dựng <code>workers/src/design/ai/draw/</code> (~1.200
+          dòng: <code>svg</code>, <code>units</code>, <code>geometry</code>, <code>walls</code>,
+          <code>openings</code>, <code>stairs</code>, <code>rooms</code>, <code>dims</code>,
+          <code>symbols</code>, <code>sheet</code>, <code>derive-walls</code>,
+          <code>plan-sheet</code>, <code>elevation</code>), <code>kb/sheet_style.yaml</code>,
+          <code>ai/plan-check.ts</code>, <code>GET /design/ai/plan/:projectId/sheet</code>, và
+          fixture SVG vàng. Chi tiết từng mô-đun ở mục B và C của bản kế hoạch
+          (<code>~/.claude/plans/async-imagining-boot.md</code>). <b>Đợt này 0 lượt gọi API</b> —
+          dựng tờ vẽ từ dữ liệu fixture viết tay để Haan chấm <b>trước</b> khi tốn tiền model.
+        </p>
+        <p class="kv">
+          <b>Chờ Haan trước khi Đợt 2 chốt được phần kiểm:</b> soát 23 quy tắc trong
+          <code>rules/nvg-experience.yaml</code>. Câu trả lời về <code>lightwell_max_area</code> đổi
+          đúng một quy tắc mà bộ kiểm của bút vẽ sẽ đọc, nên bắt đầu dựng bộ vẽ được ngay, chỉ phần
+          đối chiếu là chờ.
+        </p>
+        <p class="kv">
+          <b>Soát bằng trình duyệt:</b> Claude in Chrome nay bật sẵn cho mọi phiên qua
+          <code>~/.claude/settings.json</code> &rarr;
+          <code>env.CLAUDE_CODE_ENABLE_CFC = "1"</code> (đo 09/09: khoá
+          <code>chrome: true</code> trong settings KHÔNG có tác dụng, chỉ biến môi trường mới ăn).
+          Hai điều phải làm đúng ngay: chọn browser <b>Linux <code>isLocal: true</code></b> chứ
+          không phải bản Windows, và phục vụ tờ SVG qua <code>python3 -m http.server</code> vì tiện
+          ích từ chối <code>file://</code>.
+        </p>
+        <p class="kv">
+          <b>Ràng buộc còn hiệu lực:</b> không gọi API AI trả phí khi chưa xin phép — nêu rõ mấy
+          lượt, tuyến nào, ước bao nhiêu tiền, chứng minh điều gì, rồi chờ. Không dùng
+          <code>git checkout</code> trên tệp chưa commit. Chạy skill
+          <code>backend-code-review</code> trước mỗi commit. Chỉ chạy phép thử liên quan.
+        </p>
       </div>
 
       <h3>Kế hoạch cũ (T10&ndash;T14) — giữ để đối chiếu</h3>
@@ -698,29 +738,27 @@
             <tr>
               <td class="num">09/09</td>
               <td>
-                Bộ giải AI — Đợt 0 và Đợt 1: nền độc lập, chương trình không gian cắt khỏi bộ
-                giải
+                Bộ giải AI — Đợt 0 và Đợt 1: nền độc lập, chương trình không gian cắt khỏi bộ giải
               </td>
               <td class="xs">
-                <b>Haan chốt đổi hướng:</b> bộ giải CP-SAT không đạt qua thử nghiệm thực tế; bộ
-                giải bằng AI thay thế nó và phải <b>độc lập hoàn toàn</b> để sau này xoá bộ giải
-                mà không vỡ gì. Năm quyết định T15&ndash;T19 (xem mục 3b).<br />
-                <b>Đợt 0 — nền.</b> Bốn hợp đồng riêng của nhánh AI
-                (<code>ai_space_program</code>, <code>ai_floor_plan</code>,
-                <code>ai_facade_concept</code>, <code>ai_image_set</code>) — cố ý KHÔNG dùng lại
-                hợp đồng nào của bộ giải. Migration <code>0123</code> áp và kiểm trên CSDL thật:
-                13 loại artifact, 12 bước lineage, bảng <code>design_ai_run</code> có RLS chỉ
-                đọc. Bộ đọc rule pack chuyển từ <code>program/</code> ra
-                <code>design/rules/</code> (cả hai nhánh cùng đọc, nên nó không thuộc bộ giải);
-                <code>auth-scope.ts</code> tách khỏi <code>index.ts</code>;
+                <b>Haan chốt đổi hướng:</b> bộ giải CP-SAT không đạt qua thử nghiệm thực tế; bộ giải
+                bằng AI thay thế nó và phải <b>độc lập hoàn toàn</b> để sau này xoá bộ giải mà không
+                vỡ gì. Năm quyết định T15&ndash;T19 (xem mục 3b).<br />
+                <b>Đợt 0 — nền.</b> Bốn hợp đồng riêng của nhánh AI (<code>ai_space_program</code>,
+                <code>ai_floor_plan</code>, <code>ai_facade_concept</code>,
+                <code>ai_image_set</code>) — cố ý KHÔNG dùng lại hợp đồng nào của bộ giải. Migration
+                <code>0123</code> áp và kiểm trên CSDL thật: 13 loại artifact, 12 bước lineage, bảng
+                <code>design_ai_run</code> có RLS chỉ đọc. Bộ đọc rule pack chuyển từ
+                <code>program/</code> ra <code>design/rules/</code> (cả hai nhánh cùng đọc, nên nó
+                không thuộc bộ giải); <code>auth-scope.ts</code> tách khỏi <code>index.ts</code>;
                 <code>renderImageClient</code> ra khỏi <code>llm/factory</code>. Bộ tuyến riêng
                 <code>ai/routes.ts</code>, tệp hook riêng <code>use-ai-design.ts</code>.<br />
                 <b>Kiểm thử canh ranh giới</b>
-                (<code>ai-independence.test.ts</code>): đọc từng dòng <code>import</code> của
-                nhánh AI và đỏ khi có tệp nào trỏ sang bộ giải, cả chiều ngược lại. Lúc viết, nó
-                bắt đúng bốn khớp nối kế hoạch đã dự đoán.<br />
-                <b>Đợt 1 — chương trình không gian.</b> <code>ai/program.ts</code> viết lại, cắt
-                cả bốn khớp nối: diện tích xây được suy từ khoảng lùi trong ĐẦU BÀI
+                (<code>ai-independence.test.ts</code>): đọc từng dòng <code>import</code> của nhánh
+                AI và đỏ khi có tệp nào trỏ sang bộ giải, cả chiều ngược lại. Lúc viết, nó bắt đúng
+                bốn khớp nối kế hoạch đã dự đoán.<br />
+                <b>Đợt 1 — chương trình không gian.</b> <code>ai/program.ts</code> viết lại, cắt cả
+                bốn khớp nối: diện tích xây được suy từ khoảng lùi trong ĐẦU BÀI
                 (<code>ai/buildable.ts</code>), liền kề bỏ hẳn, hợp lý hoá thay bằng kiểm riêng.
                 Cảnh báo quy chuẩn quốc gia đo SAU khi mô hình trả về
                 (<code>ai/rule-warnings.ts</code>) và <b>không chặn</b>. Endpoint
@@ -2146,25 +2184,26 @@
         <h3>T20 · Hai gói quy tắc, kỹ sư tự chọn — 09/09/2026</h3>
         <p class="kv">
           <b>Phát hiện:</b> <code>rules/base/</code> trộn hai loại. 41 quy tắc, trong đó
-          <b>18 trích từ QCVN 01:2021/BXD và TCVN 4451:2012</b>, còn <b>23 là thói quen của
-          Phòng Thiết kế NVG</b>. Màn hình vì thế báo &laquo;phòng khách dưới mức tối thiểu
-          14 m²&raquo; trông y như vi phạm quy chuẩn, trong khi 14 m² chỉ là cách NVG quen làm.
+          <b>18 trích từ QCVN 01:2021/BXD và TCVN 4451:2012</b>, còn
+          <b>23 là thói quen của Phòng Thiết kế NVG</b>. Màn hình vì thế báo &laquo;phòng khách dưới
+          mức tối thiểu 14 m²&raquo; trông y như vi phạm quy chuẩn, trong khi 14 m² chỉ là cách NVG
+          quen làm.
         </p>
         <p class="kv">
           <b>Đã tách:</b> <code>rules/base/</code> nay chỉ còn 18 quy tắc pháp quy, đều mức
           <code>error</code>. 23 quy tắc kinh nghiệm sang <code>rules/nvg-experience.yaml</code>,
-          đều mức <code>warning</code>, gom một tệp đọc được để Haan soát. Bộ giải nội bộ vẫn
-          nhận cả hai gói gộp lại nên hành vi không đổi.
+          đều mức <code>warning</code>, gom một tệp đọc được để Haan soát. Bộ giải nội bộ vẫn nhận
+          cả hai gói gộp lại nên hành vi không đổi.
         </p>
         <p class="kv">
-          <b>Haan chốt:</b> hai ô tích riêng trên màn hình, <b>mặc định TẮT CẢ HAI</b>. Gói đã
-          tích tác động <b>cả hai chiều</b>: vào lời dẫn để mô hình làm theo, và dùng đối chiếu
-          kết quả. Không tích gì thì mô hình thiết kế tự do và không cảnh báo nào.
+          <b>Haan chốt:</b> hai ô tích riêng trên màn hình, <b>mặc định TẮT CẢ HAI</b>. Gói đã tích
+          tác động <b>cả hai chiều</b>: vào lời dẫn để mô hình làm theo, và dùng đối chiếu kết quả.
+          Không tích gì thì mô hình thiết kế tự do và không cảnh báo nào.
         </p>
         <p class="kv">
-          <b>Còn chờ Haan:</b> soát 23 quy tắc trong tệp kinh nghiệm. Ba chỗ đáng ngờ đã ghi ở
-          đầu tệp — phòng khách và phòng ngủ chính cùng 14 m², và quy tắc giếng trời khai sai
-          mã phòng nên chưa từng chạy.
+          <b>Còn chờ Haan:</b> soát 23 quy tắc trong tệp kinh nghiệm. Ba chỗ đáng ngờ đã ghi ở đầu
+          tệp — phòng khách và phòng ngủ chính cùng 14 m², và quy tắc giếng trời khai sai mã phòng
+          nên chưa từng chạy.
         </p>
       </div>
 
@@ -2177,16 +2216,16 @@
         </p>
         <p class="kv">
           <b>Vấn đề:</b> <code>rules/base/10-dimensions.yaml</code> khai
-          <code>target: lightwell</code>, nhưng mã trong từ vựng là <code>light_well</code> (có
-          gạch dưới). Không có phòng nào mang mã <code>lightwell</code>, nên quy tắc «giếng trời
-          không quá 8 m²» <b>chưa từng khớp một phòng nào</b> — ở cả bộ giải lẫn nhánh AI. Nó
-          hỏng IM LẶNG: không lỗi, không cảnh báo, chỉ là một quy tắc không bao giờ nói gì.
+          <code>target: lightwell</code>, nhưng mã trong từ vựng là <code>light_well</code> (có gạch
+          dưới). Không có phòng nào mang mã <code>lightwell</code>, nên quy tắc «giếng trời không
+          quá 8 m²» <b>chưa từng khớp một phòng nào</b> — ở cả bộ giải lẫn nhánh AI. Nó hỏng IM
+          LẶNG: không lỗi, không cảnh báo, chỉ là một quy tắc không bao giờ nói gì.
         </p>
         <p class="kv">
-          <b>Chưa sửa, vì:</b> sửa một ký tự sẽ làm một quy tắc đang câm bắt đầu nói, và nó áp
-          cho <b>cả bộ giải</b> — có thể đổi hành vi và làm đỏ phép thử của nhánh kia. Đây cũng
-          là câu hỏi nghiệp vụ chứ không chỉ là lỗi gõ: mức 8 m² ghi nguồn
-          <i>«kinh nghiệm NVG»</i>, cần Haan xác nhận có muốn áp thật không.
+          <b>Chưa sửa, vì:</b> sửa một ký tự sẽ làm một quy tắc đang câm bắt đầu nói, và nó áp cho
+          <b>cả bộ giải</b> — có thể đổi hành vi và làm đỏ phép thử của nhánh kia. Đây cũng là câu
+          hỏi nghiệp vụ chứ không chỉ là lỗi gõ: mức 8 m² ghi nguồn <i>«kinh nghiệm NVG»</i>, cần
+          Haan xác nhận có muốn áp thật không.
         </p>
         <p class="kv">
           <b>Cần gì để gỡ:</b> Haan xác nhận mức trần giếng trời. Sau đó sửa
