@@ -30,6 +30,7 @@ import {
 import { toUserMessage } from '@/hooks/use-error-message';
 import { SectionHelp } from '@/components/ui/section-help';
 import { DESIGN_HELP } from './help-texts';
+import { stampWatermark } from '@/lib/watermark';
 import type { MassingShots } from './massing-viewer';
 
 /** Nhãn dự phòng khi chưa gọi máy chủ — cùng chuỗi với kb/render_prompts.yaml. */
@@ -37,43 +38,6 @@ const FALLBACK_WATERMARK = 'Ảnh tham khảo ý tưởng — chưa phải phư�
 
 /** Góc máy dùng cho ô "Ảnh khối" bên trái, và là góc mặc định khi khung hình khai góc lạ. */
 const DEFAULT_CAMERA = 'eye_level';
-
-/** Vẽ nhãn lên góc dưới ảnh, trả về data URL mới. Không có ngữ cảnh canvas thì trả về ảnh gốc. */
-export async function stampWatermark(dataUrl: string, text: string): Promise<string> {
-  return new Promise((resolve) => {
-    const img = new Image();
-    // Không có sự kiện nào về (trình duyệt không giải mã được, hay môi trường không có ảnh
-    // thật) thì trả ảnh gốc sau một nhịp — không để lời hứa treo mãi.
-    const guard = window.setTimeout(() => resolve(dataUrl), 1500);
-    img.onload = () => {
-      window.clearTimeout(guard);
-      const canvas = document.createElement('canvas');
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        resolve(dataUrl);
-        return;
-      }
-      ctx.drawImage(img, 0, 0);
-      const size = Math.max(14, Math.round(canvas.width / 48));
-      ctx.font = `600 ${size}px "Be Vietnam Pro", Inter, Arial, sans-serif`;
-      const pad = Math.round(size * 0.6);
-      const width = ctx.measureText(text).width + pad * 2;
-      ctx.fillStyle = 'rgba(23, 43, 77, 0.78)';
-      ctx.fillRect(0, canvas.height - size - pad * 2, width, size + pad * 2);
-      ctx.fillStyle = '#FFFFFF';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(text, pad, canvas.height - (size + pad * 2) / 2);
-      resolve(canvas.toDataURL('image/png'));
-    };
-    img.onerror = () => {
-      window.clearTimeout(guard);
-      resolve(dataUrl);
-    };
-    img.src = dataUrl;
-  });
-}
 
 /** Kết quả của một khung hình: ảnh đã đóng dấu, hoặc lý do đọc được. */
 interface ViewState {
@@ -108,7 +72,7 @@ export function RenderPanel({
     setStampedFor(cover);
     setResults({});
     setError(null);
-    void stampWatermark(cover, FALLBACK_WATERMARK).then(setMassingStamped);
+    void stampWatermark(cover, FALLBACK_WATERMARK).then((out) => setMassingStamped(out.url));
   }
 
   async function runView(view: RenderViewInfo, image: string) {
@@ -122,7 +86,7 @@ export function RenderPanel({
       });
       if (outcome.status === 'rendered') {
         const raw = `data:${outcome.mimeType};base64,${outcome.dataBase64}`;
-        const stamped = await stampWatermark(raw, outcome.watermark);
+        const stamped = (await stampWatermark(raw, outcome.watermark)).url;
         setResults((current) => ({ ...current, [view.id]: { image: stamped } }));
       } else {
         setResults((current) => ({ ...current, [view.id]: { notice: outcome.reason } }));

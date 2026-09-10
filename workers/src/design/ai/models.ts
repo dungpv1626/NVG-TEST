@@ -20,6 +20,14 @@ export interface AiModelOption {
   enabled: boolean;
   /** Vì sao không bấm được. Rỗng khi `enabled`. */
   unavailableReason: string | null;
+  /**
+   * Giá một tấm ảnh, USD — CHỈ tuyến ảnh có.
+   *
+   * `null` khi cấu hình chưa khai giá, và màn hình phải hiện «Chưa đủ dữ liệu» chứ KHÔNG hiện
+   * `0` (CLAUDE.md 5.2). Ba tuyến `_fast` cố ý để trống giá, nên đây là trạng thái thật chứ
+   * không phải thiếu sót.
+   */
+  imageUsd: number | null;
 }
 
 export interface AiModelCatalogue {
@@ -44,6 +52,7 @@ function option(route: PublicRoute): AiModelOption {
     maxDataClass: route.maxDataClass,
     enabled: reason === null,
     unavailableReason: reason,
+    imageUsd: route.pricing?.image_usd ?? null,
   };
 }
 

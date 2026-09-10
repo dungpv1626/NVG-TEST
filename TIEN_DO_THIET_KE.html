@@ -598,7 +598,97 @@
             <span class="pill s-draft">Chưa</span>
             <b>Đợt 6 — Trục đo + dọn</b>: CLAUDE.md 8.2/8.5, dọn đường mã cũ.
           </li>
+          <li>
+            <span class="pill s-progress">Xong mã, chưa đo</span>
+            <b>Đợt 3b — Tờ mặt bằng do mô hình ẢNH vẽ (T21, 10/09/2026)</b>: Haan chấm bộ vẽ vector
+            <b>không đạt sau hai vòng sửa</b> và chuyển phần VẼ cho mô hình ảnh. Mô hình văn bản
+            khai thêm <code>levels[].sheet_prompt</code>; tuyến
+            <code>POST /design/ai/plan/:id/sheet-image</code> dựng ảnh
+            <b>theo yêu cầu, từng tầng một</b>. Bộ vẽ vector giữ nguyên, tụt xuống làm bản đối chiếu
+            kích thước.
+          </li>
         </ol>
+      </div>
+
+      <div class="flag block">
+        <h3>Đợt 3b — Tờ mặt bằng do mô hình ẢNH vẽ (T21, 10/09/2026)</h3>
+        <p class="kv">
+          <b>Vì sao đổi:</b> Haan xem năm tờ vẽ của Đợt 2 và chấm
+          <i>&laquo;chưa ổn mọi mặt&raquo;</i> — thiếu nội dung, trình bày kém, bố cục nhà vô lý,
+          đường nét chưa đạt. Sau một vòng sửa lớn (tường ruột trắng, khung tên cột phải theo hồ sơ
+          thật HS-01, nhãn phòng đóng khung, tỷ lệ tính vừa tờ) vẫn <b>không đạt</b>. Quyết định:
+          <b>chuyển phần VẼ cho mô hình ảnh</b>.
+        </p>
+        <p class="kv">
+          <b>Bốn điều Haan chốt:</b> (1) đầu ra là <b>ảnh PNG</b>, không phải SVG do mô hình viết;
+          (2) <b>một lượt gọi văn bản trả cả hai</b> — dữ liệu mặt bằng (để đo diện tích và cảnh báo
+          quy chuẩn) và lời dẫn vẽ tờ giấy; (3) <b>KHÔNG có ảnh neo</b>, mô hình ảnh chỉ nhận chữ;
+          (4) <b>giữ nguyên bộ vẽ vector</b> làm bản đối chiếu kích thước.
+        </p>
+        <p class="kv">
+          <b>Đánh đổi đã biết và đã chấp nhận</b> (điểm 3): hình trên giấy
+          <b>không khớp chính xác bảng diện tích</b>, và vẽ lại cùng một tầng sẽ ra một tấm khác. Bù
+          lại, lời dẫn bơm <b>tên phòng và số mét vuông thật lấy từ artifact</b> — đó là sợi dây duy
+          nhất còn buộc tờ ảnh vào bảng số. Rủi ro lớn nhất chưa đo được:
+          <b>chữ tiếng Việt có dấu</b> trên ảnh.
+        </p>
+        <p class="kv">
+          <b>Tự quyết trong đợt, đổi được rẻ:</b> (1) <b>vẽ THEO YÊU CẦU, không chạy sẵn cả loạt</b>
+          — một lượt chạy sinh 3 phương án, nhà 3 tầng là 9 tấm tức 0,36&ndash;1,71 USD cho một lần
+          bấm, trong khi kiến trúc sư chỉ đọc kỹ một phương án; cùng lý lẽ với T16. (2)
+          <code>sheet_prompt</code> để <b>TUỲ CHỌN</b>, không bắt buộc: lược đồ gửi cho mô hình chạy
+          strict, nên bắt buộc mà mô hình quên là mua thêm một lượt sửa 0,15&ndash;0,30 USD để đổi
+          lấy một đoạn văn không ảnh hưởng gì tới bảng diện tích. (3) <b>Một artifact một tờ</b> —
+          gom cả bộ thì vẽ tờ tầng 2 phải đúc lại artifact đang chứa tầng 1.
+        </p>
+        <p class="kv">
+          <b>Một lỗi có sẵn bị lôi ra:</b> tuyến <code>ai_image_openai</code>
+          <b>chưa bao giờ chạy được đường chữ &rarr; ảnh</b>. <code>config/models.yaml</code> trỏ
+          <code>/v1/images/edits</code> và <code>OpenAiClient.generateImage</code> luôn gửi
+          multipart — mà endpoint đó <b>bắt buộc</b> có ảnh vào, nên gọi không ảnh neo là 400. Chưa
+          lộ ra vì chưa tệp nào gọi <code>imageClientFor</code>. Đã vá: hai endpoint khai riêng
+          (<code>endpoint</code> = generations, <code>endpoint_edit</code> = edits), client chọn
+          theo số ảnh vào, có phép thử canh cả hai đường. Gemini không phải sửa.
+        </p>
+        <p class="kv">
+          <b>Nhãn cảnh báo hai lớp</b> (CLAUDE.md 8.7): byte trong kho <b>cố ý chưa đóng dấu</b> —
+          Worker không có canvas. Trình duyệt in nhãn lên pixel khi xem và khi tải về
+          (<code>web/src/lib/watermark.ts</code>, tách khỏi <code>render-panel.tsx</code> vì tệp đó
+          nằm trong đường dẫn cấm của nhánh AI). Lớp thứ hai là một <b>dòng chữ trong trang</b>,
+          luôn có mặt: canvas hỏng được, và một tấm ảnh AI không nhãn trông y hệt một tấm có nhãn.
+          Màn hình cũng <b>không in chip tỷ lệ lên tờ ảnh</b> — tờ ảnh không có tỷ lệ nào.
+        </p>
+        <p class="kv">
+          <b>Đo lúc chốt:</b> <b>809 phép thử Worker/shared</b> + <b>366 phía web</b> xanh,
+          <code>npx tsc -b</code> sạch, prettier sạch, <code>npm run contracts:check</code> khớp.
+          <b>0 lượt gọi API AI.</b>
+        </p>
+        <p class="kv">
+          <b>Rà soát trước commit bắt được ba chỗ, đã vá:</b> (1) <b>N+1 đọc kho</b> —
+          <code>/review</code> và tuyến đọc ảnh duyệt MỌI cạnh lineage rồi nạp payload từng cái, mà
+          mỗi payload là một lượt tải tệp; vẽ lại một tầng cộng thêm một lượt vào mọi lần mở màn
+          hình sau đó. Thêm <code>ArtifactRepository.edgeTargets</code> (đọc loại + thời điểm, KHÔNG
+          nạp payload), đi từ mới nhất và dừng sớm. (2) <b>Cửa sổ đóng dấu bằng nhãn RỖNG</b> — nhãn
+          tới từ <code>/review</code> chạy song song, nên có khoảnh khắc nó còn rỗng; đóng dấu chuỗi
+          rỗng vẽ ra ô nền không chữ, <code>stamped</code> vẫn báo <code>true</code>, và nút tải trỏ
+          vào tấm ảnh AI không nhãn. Nay chưa có nhãn thì chưa tải ảnh. (3) Câu nhúng PostgREST phải
+          gọi đích danh <b>tên ràng buộc khoá ngoại do Postgres tự đặt</b> (bảng cạnh có hai khoá
+          cùng trỏ <code>design_artifact</code>) — đổi sang hai truy vấn thường để không dựa vào một
+          quy ước đặt tên ngầm.
+        </p>
+        <p class="kv">
+          <b>Chưa chạy migration <code>0124</code>.</b> Máy phát triển và bản chạy thử công khai
+          dùng CHUNG một CSDL (CLAUDE.md 6.3), nên <code>npm run db:migrate</code> đổi luôn bản đang
+          chạy — chờ Haan bảo mới chạy.
+        </p>
+        <p class="kv">
+          <b>Xin phép để ĐO Đợt 3b</b> — chưa chạy:
+          <b>1 lượt văn bản (~0,09 USD) + 2 lượt ảnh</b> (<code>ai_image_gemini</code> 0,04 &middot;
+          <code>ai_image_openai</code> 0,19), tổng <b>khoảng 0,3 USD</b> cho một tầng. Chứng minh
+          đúng một câu: mô hình ảnh có vẽ nổi một mặt bằng đọc được không, và
+          <b>chữ tiếng Việt có dấu ra thế nào</b>. Chưa trả lời được câu đó thì chưa đáng mở rộng
+          sang nhiều tầng hay nhiều phương án.
+        </p>
       </div>
 
       <div class="flag block">

@@ -48,7 +48,8 @@ vi.mock('@/hooks/use-design-projects', () => ({
   }),
 }));
 
-const { RenderPanel, stampWatermark } = await import('../render-panel');
+const { RenderPanel } = await import('../render-panel');
+const { stampWatermark } = await import('@/lib/watermark');
 const PNG =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
 const SHOTS = { eye_level: PNG, street_level: `${PNG}#nghieng` };
@@ -100,7 +101,7 @@ describe('Phối cảnh tham khảo', () => {
   });
 
   it('không có canvas (jsdom) thì đóng dấu trả về chính ảnh, không ném lỗi', async () => {
-    const out = await stampWatermark(PNG, 'nhãn');
+    const out = (await stampWatermark(PNG, 'nhãn')).url;
     expect(typeof out).toBe('string');
   });
 });

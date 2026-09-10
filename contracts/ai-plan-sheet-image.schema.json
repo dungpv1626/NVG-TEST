@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nvg.vn/contracts/ai-plan-sheet-image.schema.json",
+  "title": "AiPlanSheetImage",
+  "description": "Tờ MẶT BẰNG CÔNG NĂNG của một tầng, do MÔ HÌNH ẢNH vẽ (T21, 10/09/2026).\n\nBộ vẽ vector tất định (T15) không cho ra tờ vẽ đạt sau hai vòng sửa, nên Haan quyết chuyển phần VẼ cho mô hình ảnh. Mô hình văn bản vẫn khai mặt bằng dạng dữ liệu — đó là thứ đo diện tích và đối chiếu quy chuẩn được — nhưng nay khai thêm `levels[].sheet_prompt`, và một mô hình ảnh dựng tờ giấy từ đoạn mô tả ấy.\n\n⚠️ KHÔNG CÓ ẢNH NEO. Mô hình ảnh chỉ nhận CHỮ, không nhận hình. Hệ quả đã biết và đã chấp nhận: **hình trên tờ này không dựng từ toạ độ**, nên kích thước và vị trí trên hình chỉ là minh hoạ. Số đúng nằm ở chính artifact `ai_floor_plan` và ở tờ vector dựng từ nó. Mọi chỗ hiển thị phải nói ra điều đó — xem `watermark_applied`.\n\nCỐ Ý KHÔNG dùng lại `ai-image-set`: hợp đồng kia bắt buộc `facade_ref` (tờ mặt bằng không có ý tưởng mặt đứng nào), khai `view` là enum năm góc ngoại thất (không có chỗ cho số TẦNG), và dựng quanh khái niệm ẢNH NEO mà ở đây cố ý không có. Nhét tờ mặt bằng vào đó là phải điền hai trường bịa.\n\nMỘT artifact = MỘT tờ = MỘT tầng. Không gom cả bộ: artifact là bất biến, nên gom lại thì vẽ tờ tầng 2 phải đúc lại cả artifact đang chứa tầng 1, và lineage mất nghĩa.\n\nẢnh lưu trong bucket `design-renders`, `uri` dạng `supabase://` hoặc `r2://`; trình duyệt đọc qua endpoint có kiểm quyền, không đọc thẳng kho.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "plan_ref",
+    "level",
+    "uri",
+    "mime",
+    "watermark_applied",
+    "generator"
+  ],
+  "properties": {
+    "schema_version": { "$ref": "#/$defs/semver" },
+    "plan_ref": {
+      "$ref": "#/$defs/artifact_ref",
+      "description": "Mặt bằng mà tờ này vẽ theo. Cũng là cạnh lineage `ai_plan_sheet`."
+    },
+    "level": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Số tầng, đúng giá trị `level` trong `ai_floor_plan`."
+    },
+    "uri": {
+      "type": "string",
+      "pattern": "^(r2|supabase)://.+",
+      "description": "Vị trí tệp ảnh trong kho nhị phân."
+    },
+    "mime": { "type": "string", "enum": ["image/png", "image/jpeg", "image/webp"] },
+    "width": { "type": ["integer", "null"], "minimum": 1 },
+    "height": { "type": ["integer", "null"], "minimum": 1 },
+    "watermark_applied": {
+      "type": "boolean",
+      "const": false,
+      "description": "Luôn `false` ở phiên bản này, CỐ Ý — cùng quyết định đã ghi ở `ai-image-set`. Byte lưu trong kho CHƯA đóng dấu: Worker không có canvas, và đóng dấu bằng Container thì phá tính độc lập của nhánh AI. Nhãn cảnh báo do mã nguồn chèn, trình duyệt in lên ảnh khi hiển thị VÀ khi tải về (`web/src/lib/watermark.ts`). Khai `const false` để không ai đặt `true` khi chưa có bước đóng dấu thật ở phía máy chủ."
+    },
+    "prompt_excerpt": {
+      "type": ["string", "null"],
+      "maxLength": 1200,
+      "description": "Đoạn `sheet_prompt` đã gửi đi, giữ nguyên văn. Cần cho việc đọc lại: cùng một mặt bằng vẽ hai lần ra hai tờ khác nhau, nên biết đã mô tả thế nào là cách duy nhất hiểu vì sao tờ này ra như vậy."
+    },
+    "generator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "provider", "model", "route", "prompt_version"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["ai"] },
+        "provider": { "type": "string", "maxLength": 32 },
+        "model": { "type": "string", "maxLength": 96 },
+        "route": { "type": "string", "maxLength": 64 },
+        "prompt_version": { "type": "string", "maxLength": 16 },
+        "latency_ms": { "type": ["integer", "null"], "minimum": 0 }
+      }
+    }
+  },
+  "$defs": {
+    "semver": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "artifact_ref": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  }
+}

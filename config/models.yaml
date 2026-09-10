@@ -286,7 +286,12 @@ routes:
     provider: openai
     model: gpt-image-2
     label: GPT Image (OpenAI)
-    endpoint: https://api.openai.com/v1/images/edits
+    # HAI địa chỉ, vì OpenAI tách làm hai đầu ra khác hẳn nhau. `endpoint` là đường CHỮ → ẢNH
+    # (JSON, không nhận ảnh vào) — đây là đường tờ mặt bằng của T21 đi, vì nó không có ảnh neo.
+    # `endpoint_edit` là đường ẢNH → ẢNH (multipart, bắt buộc có ảnh vào) — đường bộ ảnh phối
+    # cảnh của T16 sẽ đi. Gửi nhầm đường là lỗi 400, và chỉ lộ ra sau khi đã trả tiền.
+    endpoint: https://api.openai.com/v1/images/generations
+    endpoint_edit: https://api.openai.com/v1/images/edits
     max_data_class: 2
     enabled: true
     purpose: Nhánh AI — mặt bằng có nội thất, phối cảnh, nội thất, mặt đứng, mặt cắt.

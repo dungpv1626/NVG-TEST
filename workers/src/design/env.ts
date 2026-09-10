@@ -60,6 +60,9 @@ export interface DesignEnv {
   /** Bucket R2 cho tệp nguồn CAD — tách khỏi artifact, xem `source-files.ts`. */
   DESIGN_SOURCES?: R2Bucket;
 
+  /** Bucket R2 cho ảnh do mô hình sinh — tách khỏi artifact, xem `render-store.ts`. */
+  DESIGN_RENDERS?: R2Bucket;
+
   /** Workflow số hoá hồ sơ cũ (Mốc 3). Mỗi tệp là một bước chạy lại riêng được. */
   DIGITISE_PIPELINE?: Workflow;
 

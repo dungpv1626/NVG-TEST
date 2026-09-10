@@ -141,6 +141,15 @@ const townhouseLevel1: AiFloorPlanLevel = {
   windows: [win('s1', 'wy', 290, 60, 180, 60)],
   stairs: [{ id: 'st1', rect: [22, 1165, 272, 1365], up: '-y', flights: 2, treads: 18 }],
   voids: [],
+  // Chỉ tầng này có `sheet_prompt` — CỐ Ý. Trường là tuỳ chọn, nên fixture phải mang cả hai
+  // trạng thái để phép thử đường vẽ ảnh chạm được nhánh «tầng không có mô tả».
+  sheet_prompt:
+    'A narrow tube house ground floor, 4 m wide and 15 m deep, drawn as a top-down architectural ' +
+    'plan. From the street at the bottom: a motorbike garage with two scooters, then a living ' +
+    'room with a sofa facing a wall-mounted TV, then an open kitchen with a counter and a dining ' +
+    'table for four. Behind the kitchen the staircase runs up along the left wall, with a small ' +
+    'toilet beside it on the right. At the very back a light well with a floor drain brings ' +
+    'daylight into the middle of the house. The entrance is at the bottom of the sheet.',
 };
 
 const townhouseLevel2: AiFloorPlanLevel = {

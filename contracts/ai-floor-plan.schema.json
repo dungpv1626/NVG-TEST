@@ -155,6 +155,11 @@
             }
           }
         },
+        "sheet_prompt": {
+          "type": ["string", "null"],
+          "maxLength": 1200,
+          "description": "Lời dẫn vẽ TỜ GIẤY của tầng này cho một mô hình ẢNH (T21, 10/09/2026) — tiếng Anh, 6–10 câu. Mô tả NỘI DUNG riêng của tầng: phòng nào nằm ở đâu so với nhau, mảng nào lớn mảng nào nhỏ, thang và giếng trời ở đâu, cửa chính hướng nào, chỗ nào là ban công hay sân, đồ đạc đáng vẽ trong từng phòng. KHÔNG mô tả phong cách nét vẽ, khổ giấy hay khung tên — những thứ ấy là hằng số ở `kb/ai_design_prompts.yaml`, không phải việc của mô hình.\n\nTUỲ CHỌN, và đó là quyết định về TIỀN chứ không phải về gu: lược đồ này gửi cho mô hình ở chế độ strict, nên bắt buộc mà mô hình quên thì cả bản đề xuất hỏng phân tích và Workflow mua thêm một lượt sửa 0,15–0,30 USD để đổi lấy một đoạn văn không ảnh hưởng gì tới bảng diện tích. Thiếu thì bỏ tờ ảnh của tầng đó, tờ dữ liệu giữ nguyên."
+        },
         "doors": {
           "type": "array",
           "maxItems": 120,

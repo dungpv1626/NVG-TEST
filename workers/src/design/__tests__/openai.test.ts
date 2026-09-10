@@ -10,7 +10,8 @@ import { OpenAiClient } from '../llm/openai';
 import { DataClassViolation, ModelRouter } from '../llm/router';
 
 const TEXT_ENDPOINT = 'https://api.openai.com/v1/responses';
-const IMAGE_ENDPOINT = 'https://api.openai.com/v1/images/edits';
+const IMAGE_ENDPOINT = 'https://api.openai.com/v1/images/generations';
+const IMAGE_EDIT_ENDPOINT = 'https://api.openai.com/v1/images/edits';
 const SCHEMA = { type: 'object', required: ['a'], properties: { a: { type: 'string' } } };
 const JPEG_B64 = '/9j/4AAQSkZJRg==';
 
@@ -30,6 +31,15 @@ function client(key: string | null = 'sk-test') {
           provider: 'openai',
           model: 'gpt-image-test',
           endpoint: IMAGE_ENDPOINT,
+          endpoint_edit: IMAGE_EDIT_ENDPOINT,
+          max_data_class: 2,
+          enabled: true,
+        },
+        // Cấu hình KIỂU CŨ: chỉ một `endpoint`, trỏ thẳng đường ảnh → ảnh.
+        ai_image_legacy: {
+          provider: 'openai',
+          model: 'gpt-image-test',
+          endpoint: IMAGE_EDIT_ENDPOINT,
           max_data_class: 2,
           enabled: true,
         },
@@ -163,7 +173,7 @@ describe('Sinh ảnh', () => {
     expect(out.usage).toEqual({ inputTokens: 900, outputTokens: 1_200 });
 
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
-    expect(url).toBe(IMAGE_ENDPOINT);
+    expect(url).toBe(IMAGE_EDIT_ENDPOINT);
     const headers = init.headers as Record<string, string>;
     expect(headers.Authorization).toBe('Bearer sk-test');
     expect(headers['Content-Type']).toBeUndefined();
@@ -194,5 +204,47 @@ describe('Sinh ảnh', () => {
       client(null).generateImage('ai_image_openai', 2, { system: 's', prompt: 'p', images: [] }),
     ).rejects.toThrow(/khoá API/);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Đường CHỮ → ẢNH, thêm 10/09/2026 cùng T21 (tờ mặt bằng do mô hình ảnh vẽ, không có ảnh neo).
+ *
+ * Đây là chỗ đã HỎNG và hỏng im lặng: OpenAI tách sinh ảnh làm hai đầu ra, `/v1/images/edits`
+ * BẮT BUỘC có ảnh vào. Bản trước luôn gửi multipart, nên gọi không ảnh vào là gửi một biểu mẫu
+ * trống phần `image[]` và nhận 400 — chỉ lộ ra sau khi đã trả tiền một lượt.
+ */
+describe('Sinh ảnh từ CHỮ, không có ảnh vào', () => {
+  it('gọi đường generations bằng JSON, không phải đường edits bằng multipart', async () => {
+    const fetchMock = respond({ data: [{ b64_json: 'iVBORw0KGgo=' }] });
+    const out = await client().generateImage('ai_image_openai', 2, {
+      system: 'You draw architectural floor plans.',
+      prompt: 'Draw the ground floor.',
+      images: [],
+    });
+    expect(out.mimeType).toBe('image/png');
+
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe(IMAGE_ENDPOINT);
+    expect(url).not.toContain('/edits');
+    expect((init.headers as Record<string, string>)['Content-Type']).toBe('application/json');
+    expect(init.body).toBeTypeOf('string');
+    const body = JSON.parse(init.body as string) as Record<string, unknown>;
+    expect(body).toMatchObject({ model: 'gpt-image-test', n: 1 });
+    // Chỉ dẫn hệ thống phải đi kèm: đầu ra ảnh không có trường `system` riêng.
+    expect(String(body.prompt)).toContain('You draw architectural floor plans.');
+    expect(String(body.prompt)).toContain('Draw the ground floor.');
+  });
+
+  it('cấu hình cũ chỉ có một `endpoint` thì vẫn chạy như trước cho đường ảnh → ảnh', async () => {
+    const fetchMock = respond({ data: [{ b64_json: JPEG_B64 }] });
+    await client().generateImage('ai_image_legacy', 2, {
+      system: 's',
+      prompt: 'p',
+      images: [{ mimeType: 'image/png', dataBase64: 'iVBORw0KGgo=' }],
+    });
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe(IMAGE_EDIT_ENDPOINT);
+    expect(init.body).toBeInstanceOf(FormData);
   });
 });

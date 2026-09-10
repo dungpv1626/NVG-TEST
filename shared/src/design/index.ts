@@ -72,6 +72,10 @@ export const ARTIFACT_KINDS = [
   'ai_floor_plan',
   'ai_facade_concept',
   'ai_image_set',
+  // Tờ mặt bằng công năng do MÔ HÌNH ẢNH vẽ (T21, 10/09/2026) — một artifact một tầng. Nó
+  // KHÔNG thay `ai_floor_plan`: dữ liệu vẫn là nguồn đo diện tích và đối chiếu quy chuẩn, còn
+  // loại này chỉ là tờ giấy trình bày, không dựng từ toạ độ.
+  'ai_plan_sheet_image',
   // Mặt bằng theo phương án CŨ (T14): mô hình tự viết chuỗi SVG. Không sinh mới nữa — giữ ở
   // đây để artifact đã đúc còn đọc được, vì artifact là bất biến.
   'ai_plan_proposal',
@@ -102,6 +106,9 @@ export const PIPELINE_STEPS = [
   // lineage bằng bước này — không có `UPDATE`.
   'ai_facade_edit',
   'ai_image_render',
+  // Vẽ tờ mặt bằng bằng mô hình ảnh (T21). Nối từ `ai_floor_plan`, KHÔNG nối từ `ai_facade_*`:
+  // tờ mặt bằng không đi qua ý tưởng mặt đứng.
+  'ai_plan_sheet',
 ] as const;
 
 export type PipelineStep = (typeof PIPELINE_STEPS)[number];
@@ -119,6 +126,7 @@ export const STEP_OUTPUT_KIND: Readonly<Record<PipelineStep, ArtifactKind>> = {
   ai_facade_propose: 'ai_facade_concept',
   ai_facade_edit: 'ai_facade_concept',
   ai_image_render: 'ai_image_set',
+  ai_plan_sheet: 'ai_plan_sheet_image',
 };
 
 // ---------------------------------------------------------------------------

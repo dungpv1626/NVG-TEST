@@ -252,6 +252,38 @@ export class ArtifactRepository {
   }
 
   /** Mọi artifact mà một bước đã sinh ra TỪ một artifact đầu vào — chiều xuôi của `lineage`. */
+  /**
+   * Đích của các cạnh lineage, MỚI NHẤT TRƯỚC, kèm loại — nhưng KHÔNG nạp payload.
+   *
+   * Khác `edgesFrom` ở đúng chỗ quyết định: nó cho lớp gọi chọn được artifact nào đáng đọc
+   * TRƯỚC KHI trả tiền một lượt đọc kho. `get()` là một truy vấn CSDL cộng một lượt tải tệp
+   * từ kho đối tượng, nên một bước sinh ra nhiều artifact (vẽ lại một tầng nhiều lần) sẽ biến
+   * mỗi lần mở màn hình thành hàng chục lượt đi mạng — và con số ấy lớn dần theo thói quen
+   * dùng, không có gì báo.
+   */
+  async edgeTargets(
+    fromId: string,
+    step: PipelineStep,
+  ): Promise<Array<{ id: string; kind: ArtifactKind; createdAt: string }>> {
+    const ids = await this.edgesFrom(fromId, step);
+    if (ids.length === 0) return [];
+    // HAI truy vấn thường, cố ý KHÔNG dùng quan hệ nhúng của PostgREST: `design_artifact_edge`
+    // có hai khoá ngoại cùng trỏ `design_artifact` (`from_id` và `to_id`), nên câu nhúng phải
+    // gọi đích danh tên ràng buộc do Postgres TỰ đặt. Tên ấy không có trong migration nào —
+    // dựa vào nó là dựa vào một quy ước đặt tên ngầm của nền tảng.
+    const { data, error } = await this.db
+      .from('design_artifact')
+      .select('id, kind, created_at')
+      .in('id', ids)
+      .order('created_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((row) => ({
+      id: row.id as string,
+      kind: row.kind as ArtifactKind,
+      createdAt: row.created_at as string,
+    }));
+  }
+
   async edgesFrom(fromId: string, step: PipelineStep): Promise<string[]> {
     const { data, error } = await this.db
       .from('design_artifact_edge')

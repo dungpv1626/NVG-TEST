@@ -64,6 +64,18 @@ export interface ModelRoute {
    * đúng loại hằng số mà đầu tệp `config/models.yaml` cấm.
    */
   endpoint?: string;
+  /**
+   * Địa chỉ dành riêng cho lượt sinh ảnh CÓ ảnh vào (ảnh → ảnh).
+   *
+   * Chỉ OpenAI cần: hãng này tách làm hai đầu ra khác nhau cả về đường dẫn lẫn kiểu thân yêu
+   * cầu — `/v1/images/generations` nhận JSON và KHÔNG nhận ảnh vào, `/v1/images/edits` nhận
+   * multipart và BẮT BUỘC có ảnh vào. Đó là hình dạng API của họ, không phải của ta, nên nó
+   * khai tường minh ở đây thay vì để mã cắt chuỗi đường dẫn lúc chạy.
+   *
+   * Gemini không cần: một địa chỉ `generateContent` nhận cả hai kiểu, khác nhau chỉ ở số phần
+   * ảnh trong `contents`.
+   */
+  endpoint_edit?: string;
 }
 
 export interface ModelConfig {

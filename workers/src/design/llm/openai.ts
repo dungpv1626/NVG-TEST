@@ -143,7 +143,6 @@ export class OpenAiClient implements TextModelClient, AiImageClient {
     options: AiImageOptions,
   ): Promise<AiImageResult> {
     const route = this.router.resolve(routeName, dataClass);
-    const endpoint = requireEndpoint(route, routeName);
     for (const img of options.images) {
       if (!ALLOWED_IMAGE_INPUT.has(img.mimeType)) {
         throw new LlmCallFailed(
@@ -155,25 +154,47 @@ export class OpenAiClient implements TextModelClient, AiImageClient {
     const prompt = `${options.system}\n\n${options.prompt}`.trim();
     if (!prompt) throw new LlmCallFailed(`Đầu ra "${routeName}" gọi với lời dẫn rỗng.`, false);
 
-    const form = new FormData();
-    form.set('model', route.model);
-    form.set('prompt', prompt);
-    options.images.forEach((img, i) => {
-      form.append(
-        'image[]',
-        new Blob([decodeBase64(img.dataBase64)], { type: img.mimeType }),
-        `input-${i + 1}.${extensionFor(img.mimeType)}`,
-      );
-    });
-
+    // ── Hai đường khác hẳn nhau, và chọn nhầm là lỗi 400 chỉ lộ ra sau khi đã trả tiền ──
+    //
+    // OpenAI tách sinh ảnh làm hai đầu ra: `/v1/images/generations` nhận JSON và KHÔNG nhận
+    // ảnh vào; `/v1/images/edits` nhận multipart và BẮT BUỘC có ít nhất một ảnh vào. Cho tới
+    // 10/09/2026 tệp này luôn gửi multipart, nên đường CHỮ → ẢNH — đường mà tờ mặt bằng của
+    // T21 đi, vì nó cố ý không có ảnh neo — gửi đi một biểu mẫu không có phần `image[]` nào và
+    // nhận về 400.
     const started = Date.now();
-    // KHÔNG tự đặt `Content-Type`: ranh giới multipart do runtime sinh, đặt tay là hỏng.
-    const reply = await this.call<ImagesReply>(endpoint, route, {
-      headers: {},
-      body: form,
-      timeoutMs: IMAGE_TIMEOUT_MS,
-      what: 'dịch vụ sinh ảnh',
-    });
+    const noInputImages = options.images.length === 0;
+    const endpoint = noInputImages
+      ? requireEndpoint(route, routeName)
+      : requireEditEndpoint(route, routeName);
+
+    let reply: ImagesReply;
+    if (noInputImages) {
+      reply = await this.call<ImagesReply>(endpoint, route, {
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: route.model, prompt, n: 1 }),
+        timeoutMs: IMAGE_TIMEOUT_MS,
+        what: 'dịch vụ sinh ảnh',
+      });
+    } else {
+      const form = new FormData();
+      form.set('model', route.model);
+      form.set('prompt', prompt);
+      options.images.forEach((img, i) => {
+        form.append(
+          'image[]',
+          new Blob([decodeBase64(img.dataBase64)], { type: img.mimeType }),
+          `input-${i + 1}.${extensionFor(img.mimeType)}`,
+        );
+      });
+      // KHÔNG tự đặt `Content-Type`: ranh giới multipart do runtime sinh, đặt tay là hỏng.
+      reply = await this.call<ImagesReply>(endpoint, route, {
+        headers: {},
+        body: form,
+        timeoutMs: IMAGE_TIMEOUT_MS,
+        what: 'dịch vụ sinh ảnh',
+      });
+    }
+
     const b64 = reply.data?.[0]?.b64_json;
     if (!b64) {
       throw new LlmCallFailed(
@@ -224,6 +245,16 @@ export class OpenAiClient implements TextModelClient, AiImageClient {
     }
     return (await res.json()) as T;
   }
+}
+
+/**
+ * Địa chỉ ẢNH → ẢNH. Rơi về `endpoint` khi cấu hình chưa khai, để tuyến cũ không vỡ.
+ *
+ * Rơi về chứ không ném: trước 10/09/2026 mọi tuyến ảnh chỉ có một `endpoint` và nó trỏ thẳng
+ * `/v1/images/edits`. Một cấu hình cũ vẫn phải chạy đúng như trước.
+ */
+function requireEditEndpoint(route: ResolvedRoute, routeName: string): string {
+  return route.endpoint_edit ?? requireEndpoint(route, routeName);
 }
 
 function requireEndpoint(route: ResolvedRoute, routeName: string): string {

@@ -25,15 +25,16 @@ import {
   roomLabels,
 } from '../auth-scope';
 import { AI_DIGEST_DATA_CLASS, anonymiseForAi } from '../brief/anonymise';
+import { decodeBase64 } from '../llm/image-bytes';
 import { gateLayer2, readCompletenessThreshold } from '../brief/gate';
 import type { DesignEnv } from '../env';
 import { constructionNorms } from '../kb/construction-data';
 import { roomVocabulary } from '../kb/vocabulary-data';
 import { roomGroups } from '../kb/vocabulary';
-import { modelRouter, textClientFor } from '../llm/factory';
+import { imageClientFor, modelRouter, textClientFor } from '../llm/factory';
 import { LlmCallFailed } from '../llm/gemini';
 import { nationalRulePack, nvgExperiencePack } from '../rules/rule-pack-data';
-import { recordAiCall } from './call-log';
+import { recordAiCall, withAiCall } from './call-log';
 import { planSheet } from './draw';
 import { PlanSheetError } from './draw/plan-sheet';
 import { aiModelCatalogue, isSelectableRoute } from './models';
@@ -41,11 +42,18 @@ import { ruleMessages } from './plan-messages-data';
 import { aiPrompts } from './prompts-data';
 import { checkPlan } from './plan-check';
 import { AiProgramRejected, generateAiProgram } from './program';
+import { createRenderStore, renderKey, RenderStoreError } from '../render-store';
+import { assembleSheetImage, sheetImagePrompt, SheetImageUnavailable } from './sheet-image';
 import { activeRun, attachWorkflow, createRun, finishRun } from './runs';
 import { planStepSpecs, type AiDesignParams } from '../workflows/ai-design-steps';
 import { selectedRulePack, type AiRulePackChoice } from './rule-packs';
 import { reviewPlanRooms, reviewProgramAreas } from './rule-warnings';
-import type { AiFloorPlan, AiSpaceProgram, DesignBrief } from '@nvg/shared/design';
+import type {
+  AiFloorPlan,
+  AiPlanSheetImage,
+  AiSpaceProgram,
+  DesignBrief,
+} from '@nvg/shared/design';
 
 export const aiApp = new Hono<{ Bindings: DesignEnv }>();
 
@@ -437,6 +445,241 @@ aiApp.get('/plan/:projectId/sheet', async (c) => {
 });
 
 /**
+ * Vẽ tờ mặt bằng công năng của MỘT tầng bằng MÔ HÌNH ẢNH (T21, 10/09/2026).
+ *
+ * ── Vì sao tuyến này tồn tại, và vì sao nó KHÔNG nằm trong lượt chạy nền ───────────────
+ * Bộ vẽ vector tất định của T15 qua hai vòng sửa vẫn không cho ra tờ vẽ đạt, nên Haan chuyển
+ * phần VẼ sang mô hình ảnh. Nhưng một lượt chạy nền sinh BA phương án, và nhà ba tầng là chín
+ * tấm — 0,36 USD (Gemini) tới 1,71 USD (OpenAI) cho một lần bấm, trong khi kiến trúc sư chỉ
+ * đọc kỹ một phương án. Nên tờ ảnh vẽ THEO YÊU CẦU, từng tầng một: tiền đi theo đúng cái được
+ * xem. Cùng lý lẽ với T16 («kiến trúc sư sửa được trước khi trả tiền ảnh»).
+ *
+ * ── Vì sao đòi quyền GHI chứ không phải quyền đọc ──────────────────────────────────────
+ * Lượt này tiêu tiền thật. Người chỉ được xem hồ sơ không được phép tạo ra một hoá đơn.
+ *
+ * ⚠️ Tờ ảnh KHÔNG dựng từ toạ độ — mô hình ảnh chỉ nhận chữ, không có ảnh neo. Đó là lý do
+ * `assembleSheetImage` khai `watermark_applied: false` và màn hình phải in nhãn cảnh báo lên.
+ */
+aiApp.post('/plan/:projectId/sheet-image', async (c) => {
+  const token = bearer(c.req.header('Authorization'));
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+
+  const projectId = c.req.param('projectId');
+  const body = (await c.req.json()) as { artifactId?: string; level?: number; route?: string };
+  if (!body.artifactId) return c.json({ error: 'Thiếu mã phương án mặt bằng.' }, 400);
+  if (!body.route) return c.json({ error: 'Chưa chọn model vẽ ảnh.' }, 400);
+  const level = Number(body.level ?? 1);
+  if (!Number.isInteger(level) || level < 1) {
+    return c.json({ error: 'Số tầng không hợp lệ.' }, 400);
+  }
+
+  const db = await asUser(c.env, token);
+  const scope = await projectScope(db, projectId);
+  if (!scope) return c.json({ error: PROJECT_NOT_VISIBLE }, 404);
+  const denied = await denyUnlessWritable(db, scope.tenantId, projectId);
+  if (denied) return c.json({ error: denied.error }, denied.status);
+
+  const router = modelRouter(c.env);
+  if (!isSelectableRoute(aiModelCatalogue(router), 'image', body.route)) {
+    return c.json(
+      { error: 'Model vẽ ảnh đã chọn không dùng được lúc này. Chọn model khác trong danh sách.' },
+      409,
+    );
+  }
+  const client = imageClientFor(c.env, body.route);
+  if (!client) return c.json({ error: 'Chưa cấu hình khoá API cho model đã chọn.' }, 503);
+
+  const repo = new ArtifactRepository(c.env);
+  const artifact = await repo.get(body.artifactId, projectId);
+  if (!artifact || artifact.kind !== 'ai_floor_plan') {
+    return c.json({ error: 'Không tìm thấy phương án mặt bằng này trong hồ sơ.' }, 404);
+  }
+
+  const prompts = aiPrompts();
+  let prompt: ReturnType<typeof sheetImagePrompt>;
+  try {
+    prompt = sheetImagePrompt({
+      plan: artifact.payload as AiFloorPlan,
+      level,
+      prompts,
+      labels: roomLabels(),
+    });
+  } catch (error) {
+    // Tầng thiếu mô tả là trạng thái HỢP LỆ của dữ liệu (trường tuỳ chọn), không phải hỏng
+    // hóc — trả 409 kèm câu đọc được để màn hình rơi về bản đối chiếu vector.
+    if (error instanceof SheetImageUnavailable) return c.json({ error: error.message }, 409);
+    throw error;
+  }
+
+  const publicRoute = router.publicRoutes().find((r) => r.route === body.route);
+  const callScope = {
+    tenantId: scope.tenantId,
+    companyId: scope.companyId,
+    projectId,
+    discipline: DISCIPLINE,
+    actorId: scope.actorId,
+  };
+
+  let image;
+  try {
+    image = await withAiCall(
+      repo.db,
+      callScope,
+      {
+        route: body.route,
+        // `purpose` riêng, KHÔNG gộp với `plan`: tiền ảnh và tỷ lệ ảnh hỏng là hai con số phải
+        // tách ra được khỏi tiền của bước chữ.
+        purpose: 'plan_sheet_image',
+        dataClass: AI_DIGEST_DATA_CLASS,
+        promptVersion: prompts.version,
+      },
+      {
+        provider: router.providerOf(body.route) ?? 'unknown',
+        model: publicRoute?.model ?? 'unknown',
+        pricing: publicRoute?.pricing,
+      },
+      () =>
+        client.generateImage(body.route!, AI_DIGEST_DATA_CLASS, {
+          system: prompt.system,
+          prompt: prompt.prompt,
+          // RỖNG có chủ đích: không có ảnh neo. Xem đầu `ai/sheet-image.ts`.
+          images: [],
+        }),
+      1,
+    );
+  } catch (error) {
+    if (error instanceof LlmCallFailed) {
+      return c.json({ error: error.userMessage ?? error.message }, error.retryable ? 503 : 502);
+    }
+    throw error;
+  }
+
+  const bytes = decodeBase64(image.dataBase64);
+  const mime = image.mimeType;
+  const store = createRenderStore(c.env);
+  let uri: string;
+  try {
+    uri = await store.put(await renderKey(projectId, 'plan-sheet', bytes, mime), bytes, mime);
+  } catch (error) {
+    // Lượt gọi đã tính tiền rồi. Nói ra rằng ảnh có nhưng không cất được, đừng để câu lỗi
+    // nghe như thể mô hình hỏng.
+    if (error instanceof RenderStoreError) {
+      return c.json({ error: `Đã vẽ được tờ nhưng không lưu được: ${error.message}` }, 502);
+    }
+    throw error;
+  }
+
+  const written = await repo.write({
+    scope: callScope,
+    kind: 'ai_plan_sheet_image',
+    payload: assembleSheetImage({
+      planRef: artifact.id,
+      level,
+      uri,
+      mime,
+      sheetPrompt: prompt.sheetPrompt,
+      route: body.route,
+      provider: image.provider,
+      model: image.model,
+      promptVersion: prompts.version,
+      latencyMs: image.latencyMs,
+    }),
+    inputs: [artifact.id],
+    step: 'ai_plan_sheet',
+    params: { route: body.route, prompt_version: prompts.version, level },
+    // KHÔNG đặt head: một mặt bằng có nhiều tầng, và mỗi tầng vẽ lại được nhiều lần. `design_head`
+    // chỉ giữ được MỘT dòng cho mỗi (hồ sơ, bộ môn, loại) nên nó không mô tả nổi tập hợp này.
+    setHead: false,
+  });
+
+  return c.json({
+    imageArtifactId: written.id,
+    level,
+    watermark: prompts.sheetImage.watermark,
+  });
+});
+
+/**
+ * Đọc lại tờ ảnh đã vẽ. Trả về chính byte trong kho — CHƯA đóng dấu.
+ *
+ * Nhãn cảnh báo đi bằng JSON (`/plan/:projectId/review`) và do trình duyệt in lên ảnh, cả khi
+ * xem lẫn khi tải về. KHÔNG đi bằng header: câu tiếng Việt có dấu không qua header HTTP nguyên
+ * vẹn — cùng lý do đã ghi ở tuyến `/sheet` bên trên.
+ *
+ * `ETag` mang mã artifact ẢNH nên còn 304 được, nhưng `Cache-Control` vẫn ngắn và không
+ * `immutable`: địa chỉ mang mã MẶT BẰNG, mà cùng một mặt bằng vẽ lại sẽ ra tấm khác.
+ */
+aiApp.get('/plan/:projectId/sheet-image', async (c) => {
+  const token = bearer(c.req.header('Authorization'));
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+
+  const projectId = c.req.param('projectId');
+  const artifactId = c.req.query('artifactId');
+  if (!artifactId) return c.json({ error: 'Thiếu mã phương án cần xem.' }, 400);
+  const level = Number(c.req.query('level') ?? '1');
+  if (!Number.isInteger(level) || level < 1) {
+    return c.json({ error: 'Số tầng không hợp lệ.' }, 400);
+  }
+
+  const db = await asUser(c.env, token);
+  const scope = await projectScope(db, projectId);
+  if (!scope) return c.json({ error: PROJECT_NOT_VISIBLE }, 404);
+  const denied = await denyUnlessReadable(db, scope.tenantId, projectId);
+  if (denied) return c.json({ error: denied.error }, denied.status);
+
+  const repo = new ArtifactRepository(c.env);
+  const found = await latestSheetImage(repo, projectId, artifactId, level);
+  if (!found) {
+    return c.json({ error: 'Tầng này chưa có tờ vẽ do AI dựng.' }, 404);
+  }
+
+  const store = createRenderStore(c.env);
+  let image;
+  try {
+    image = await store.get(found.payload.uri);
+  } catch (error) {
+    if (error instanceof RenderStoreError) return c.json({ error: error.message }, 502);
+    throw error;
+  }
+  return new Response(image.bytes, {
+    headers: {
+      'Content-Type': found.payload.mime,
+      'Cache-Control': 'private, max-age=300',
+      ETag: `"${found.id}"`,
+    },
+  });
+});
+
+/**
+ * Tờ ảnh MỚI NHẤT của một tầng.
+ *
+ * Mới nhất chứ không phải duy nhất: vẽ lại cùng một tầng là chuyện bình thường (mô hình ảnh
+ * không tất định), và mỗi lần vẽ đúc một artifact mới nối vào cùng bản mặt bằng. Bản cũ vẫn ở
+ * đó — artifact bất biến — nên «mới nhất» là một phép chọn lúc đọc, không phải một trạng thái
+ * được ghi ở đâu cả.
+ */
+async function latestSheetImage(
+  repo: ArtifactRepository,
+  projectId: string,
+  planArtifactId: string,
+  level: number,
+): Promise<{ id: string; payload: AiPlanSheetImage } | null> {
+  // Đi từ MỚI NHẤT và dừng ngay khi khớp tầng. Số tầng nằm trong payload, mà payload thì ở kho
+  // đối tượng — nên mỗi lần thử là một lượt đi mạng. Vẽ lại một tầng là chuyện bình thường (mô
+  // hình ảnh không tất định), nên duyệt hết danh sách sẽ tốn thêm một lượt tải cho MỖI lần vẽ
+  // lại đã từng có, và con số ấy lớn dần theo thói quen dùng.
+  const targets = await repo.edgeTargets(planArtifactId, 'ai_plan_sheet');
+  for (const target of targets) {
+    if (target.kind !== 'ai_plan_sheet_image') continue;
+    const artifact = await repo.get(target.id, projectId);
+    if (!artifact) continue;
+    const payload = artifact.payload as AiPlanSheetImage;
+    if (payload.level === level) return { id: artifact.id, payload };
+  }
+  return null;
+}
+
+/**
  * Đọc lại một phương án mặt bằng: kiểm, cảnh báo và ghi chú bộ vẽ — TÍNH LÚC ĐỌC.
  *
  * Không lưu ba thứ này vào artifact, và đó là quyết định có lý do: bộ kiểm, gói quy tắc và bộ
@@ -516,6 +759,18 @@ aiApp.get('/plan/:projectId/review', async (c) => {
   // Ghi chú của bộ vẽ (nhãn phòng phải bỏ, lỗ mở đã kẹp, tờ vượt khổ) chỉ biết được khi DỰNG
   // tờ vẽ. Dựng cả bộ tầng ở đây tốn vài mili-giây và bỏ chuỗi SVG đi — đổi lại màn hình nói
   // được đúng những chỗ chương trình đã tự xử lý, thay vì để người dùng tự phát hiện.
+  // Tầng nào đã có tờ ảnh AI. Số tầng nằm trong payload, không nằm trên dòng CSDL, nên phải
+  // đọc kho — nhưng đi từ mới nhất và DỪNG ngay khi đã biết đủ mọi tầng của phương án. Không
+  // có chặn ấy thì mỗi lần vẽ lại một tầng cộng thêm một lượt tải vào MỌI lần mở màn hình sau
+  // đó, kể cả lần chỉ gạt một ô tích gói quy tắc.
+  const sheetImageLevels = new Set<number>();
+  for (const target of await repo.edgeTargets(artifact.id, 'ai_plan_sheet')) {
+    if (sheetImageLevels.size >= plan.levels.length) break;
+    if (target.kind !== 'ai_plan_sheet_image') continue;
+    const item = await repo.get(target.id, projectId);
+    if (item) sheetImageLevels.add((item.payload as AiPlanSheetImage).level);
+  }
+
   const levels = plan.levels.map((level) => {
     const sheet = planSheet(plan, level.level);
     return {
@@ -525,6 +780,13 @@ aiApp.get('/plan/:projectId/review', async (c) => {
       orientation: sheet.orientation,
       notes: sheet.notes,
       rooms: level.rooms.length,
+      // Tờ ảnh AI (T21). Ba trạng thái, không phải hai: đã có · vẽ được nhưng chưa vẽ · không
+      // vẽ được vì mô hình chưa khai mô tả. Gộp hai trạng thái sau thành «chưa có» thì người
+      // dùng bấm nút và nhận lỗi — đúng thứ AFD 6.5 cấm.
+      sheetImage: {
+        available: sheetImageLevels.has(level.level),
+        drawable: Boolean(level.sheet_prompt?.trim()),
+      },
     };
   });
 
@@ -539,6 +801,15 @@ aiApp.get('/plan/:projectId/review', async (c) => {
     wallsDerived: plan.generator.walls_derived === true,
     levels,
     roomLabels: labels,
+    // Nhãn bắt buộc của tờ ảnh AI — gửi từ MÁY CHỦ, không viết cứng ở trình duyệt (CLAUDE.md
+    // 8.7: nhãn do mã nguồn chèn, không tắt được từ giao diện). Trình duyệt in nó lên ảnh khi
+    // hiển thị và khi tải về, vì byte trong kho cố ý chưa đóng dấu.
+    sheetImageWatermark: aiPrompts().sheetImage.watermark,
+    // Câu nói ra điều nguy hiểm nhất về tờ ảnh, hiện bằng CHỮ trong trang. Đây là lớp bảo vệ
+    // thứ hai: canvas có thể không đóng dấu được, còn dòng chữ này thì luôn có.
+    sheetImageDisclaimer:
+      'Tờ vẽ do mô hình ảnh dựng theo lời mô tả, KHÔNG dựng từ toạ độ — kích thước, tỷ lệ và ' +
+      'vị trí trên hình chỉ là minh hoạ. Số đúng nằm ở bảng diện tích và ở bản đối chiếu dạng vector.',
     // Lỗi CHẶN còn lại: phương án vẫn được lưu (người dùng quyết chạy lại hay không), nhưng
     // phải hiện đỏ. Im lặng ở đây là để người đọc tin một bản vẽ chưa đáng tin.
     blocking: check.blocking,
