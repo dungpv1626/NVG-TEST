@@ -89,13 +89,16 @@ export function Chip({
   tone = 'mute',
 }: {
   children: React.ReactNode;
-  tone?: 'mute' | 'bl' | 'gr' | 'am';
+  tone?: 'mute' | 'bl' | 'gr' | 'am' | 'rd';
 }): React.ReactElement {
   const tones = {
     mute: 'bg-tk-chip-mute text-tk-t2',
     bl: 'bg-tk-bl-tile text-tk-bl-chipfg',
     gr: 'bg-tk-gr-badge text-tk-gr-fg2',
     am: 'bg-tk-am-chip text-tk-am-fg',
+    // Đỏ thêm ngày 10/09/2026 cho một lượt chạy nền HỎNG. Vàng đã mang nghĩa «chờ duyệt» và
+    // «có cảnh báo», nên dùng vàng cho việc hỏng là xoá mất khác biệt giữa hai chuyện.
+    rd: 'bg-tk-rd-tile text-tk-rd-fg2',
   } as const;
   return (
     <span className={cn('inline-flex h-6 items-center rounded-sm px-2.5 text-xs', tones[tone])}>

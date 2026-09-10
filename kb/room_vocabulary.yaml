@@ -251,3 +251,13 @@ group_targets:
   outdoor:
     vi: Ngoài trời (ban công, sân, giếng trời)
     members: [balcony, terrace, courtyard, light_well]
+  # Nhóm này trả lời đúng MỘT câu hỏi của bộ kiểm mặt bằng nhánh AI: phòng nào được phép không
+  # có cửa. «Mọi phòng phải có cửa» là phép kiểm CHẶN (`ai/plan-check.ts`), nên danh sách miễn
+  # trừ phải là dữ liệu — viết cứng trong mã thì hôm thêm một loại không gian ngoài trời mới, bộ
+  # kiểm sẽ đòi cửa cho một cái ban công và bắt mô hình sửa một thứ không sai.
+  #
+  # Giếng trời và hộp kỹ thuật không có cửa vì không ai vào; ban công và sân thượng vào từ phòng
+  # trong nhà nên cửa nằm ở tường của phòng ấy, không phải của chúng.
+  no_door_required:
+    vi: Không bắt buộc có cửa (ngoài trời, giếng trời, hộp kỹ thuật)
+    members: [balcony, terrace, courtyard, light_well, shaft]

@@ -155,7 +155,7 @@ function targetIsKnown(
  * kiểm CHẶN của `plan-check.ts` (`room_without_door`). Đo hai lần ở hai nơi thì một hôm nào đó
  * hai nơi sẽ nói khác nhau, và người đọc không biết tin bên nào.
  */
-const MEASURABLE_ON_PLAN = new Set([
+export const MEASURABLE_ON_PLAN = new Set([
   'min_area',
   'max_area',
   'min_dimension',

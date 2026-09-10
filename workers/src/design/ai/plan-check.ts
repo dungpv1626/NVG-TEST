@@ -82,6 +82,20 @@ const WALL_CODES = new Set([
   'window_on_partition',
 ]);
 
+/**
+ * Mã lỗi KHÔNG tự nói được gì khi tường đã sai — vì phép kiểm sinh ra nó ĐỌC hình học tường.
+ *
+ * «Phòng không có cửa» suy từ hình học: lùi từ điểm giữa lỗ mở ra mỗi bên nửa bề dày tường, rơi
+ * vào phòng nào thì cửa phục vụ phòng đó. Tường khai sai thì phép suy ấy sai theo, và một cửa
+ * nằm trên đoạn tường không tồn tại sẽ làm phòng của nó «mất cửa» — nên đây không phải bằng
+ * chứng độc lập về một thiếu sót thiết kế.
+ *
+ * Bỏ sót điều này thì T19 KHÔNG kích hoạt đúng vào trường hợp nó được dựng ra để cứu: tường sai
+ * kéo theo `room_without_door`, `wallOnly` thành false, và người dùng nhận một tờ vẽ hỏng kèm lời
+ * mời bấm lại — tức một lượt gọi tính tiền nữa. Phát hiện 10/09/2026 khi viết `ai-plan.test.ts`.
+ */
+const WALL_DEPENDENT_CODES = new Set(['room_without_door']);
+
 export interface PlanCheckInput {
   plan: AiFloorPlan;
   /** Chương trình không gian mà mặt bằng phải bám theo — nguồn của danh sách phòng. */
@@ -108,7 +122,11 @@ export function checkPlan(input: PlanCheckInput): PlanCheckResult {
   return {
     blocking,
     findings: issues.filter((issue) => issue.level === 'finding'),
-    wallOnly: blocking.length > 0 && blocking.every((issue) => WALL_CODES.has(issue.code)),
+    // Phải có ÍT NHẤT MỘT lỗi thuộc nhóm tường: một phòng thật sự không có cửa thì suy tường
+    // không cứu được gì, và bật cờ «tường do chương trình suy» lúc ấy là nói sai trên tờ vẽ.
+    wallOnly:
+      blocking.some((issue) => WALL_CODES.has(issue.code)) &&
+      blocking.every((issue) => WALL_CODES.has(issue.code) || WALL_DEPENDENT_CODES.has(issue.code)),
   };
 }
 

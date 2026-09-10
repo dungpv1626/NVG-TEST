@@ -68,6 +68,7 @@ function designState(over: Record<string, unknown> = {}) {
     briefArtifactId: REF,
     program: null,
     plans: [],
+    planHeadArtifactId: null,
     facadeArtifactId: null,
     imageSetArtifactId: null,
     runs: {},
@@ -103,7 +104,7 @@ describe('Dải bước của tab Thiết kế AI', () => {
 
     expect(await screen.findByText('2. Mặt bằng từng tầng')).toBeInTheDocument();
     expect(screen.getByText('Cần chương trình không gian trước.')).toBeInTheDocument();
-    expect(screen.getByText('Cần một phương án mặt bằng trước.')).toBeInTheDocument();
+    expect(screen.getByText('Cần chọn một phương án mặt bằng trước.')).toBeInTheDocument();
   });
 
   it('trạng thái từng bước luôn kèm chữ, không chỉ màu', async () => {

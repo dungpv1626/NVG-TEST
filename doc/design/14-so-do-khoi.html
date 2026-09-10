@@ -1,0 +1,911 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Trang này từng là artifact; bản trong kho tự mang khung tài liệu và khai charset,
+         vì `python3 -m http.server` KHÔNG gửi charset trong Content-Type. -->
+<title>AI thiết kế, chương trình cầm bút</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+/>
+<style>
+  /* Bảng màu lấy nguyên từ DESIGN_SYSTEM.md của dự án — rừng/bạc hà, dải trung tính ám xanh lá,
+     và sáu màu trạng thái không đổi hex. */
+  :root {
+    --ground: #f2f7f2;
+    --surface: #ffffff;
+    --sunken: #f7faf7;
+    --ink: #1c1c1a;
+    --ink-2: #5a574f;
+    --line: #e7ede7;
+    --line-2: #9a9485;
+    --brand: #2c6e4b;
+    --brand-deep: #17352a;
+    --mint: #d9f2d4;
+    --mint-ink: #123024;
+    --block: #ca3521;
+    --warn: #b38600;
+    --done: #1c8157;
+    --todo: #6b778c;
+    --shadow: 0 1px 2px rgba(28, 28, 26, 0.06), 0 8px 24px -16px rgba(28, 28, 26, 0.28);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --ground: #111a17;
+      --surface: #17211d;
+      --sunken: #14201b;
+      --ink: #e8efe9;
+      --ink-2: #9baaa1;
+      --line: #25342f;
+      --line-2: #4a5a53;
+      --brand: #7fc79b;
+      --brand-deep: #a8e6a1;
+      --mint: #1e3a2c;
+      --mint-ink: #cfeadb;
+      --block: #f0857a;
+      --warn: #e3b341;
+      --done: #4fbf8b;
+      --todo: #9baaa1;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -16px rgba(0, 0, 0, 0.8);
+    }
+  }
+
+  :root[data-theme='dark'] {
+    --ground: #111a17;
+    --surface: #17211d;
+    --sunken: #14201b;
+    --ink: #e8efe9;
+    --ink-2: #9baaa1;
+    --line: #25342f;
+    --line-2: #4a5a53;
+    --brand: #7fc79b;
+    --brand-deep: #a8e6a1;
+    --mint: #1e3a2c;
+    --mint-ink: #cfeadb;
+    --block: #f0857a;
+    --warn: #e3b341;
+    --done: #4fbf8b;
+    --todo: #9baaa1;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -16px rgba(0, 0, 0, 0.8);
+  }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: 'Be Vietnam Pro', 'Segoe UI', system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .sheet {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 20px 88px;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+  }
+
+  /* ── Khung tên, đặt theo lối tờ bản vẽ: tên, tỷ lệ nội dung, ngày ─────────────── */
+  header {
+    border-bottom: 2px solid var(--line-2);
+    padding: 56px 0 20px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 28px 48px;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(28px, 4.2vw, 44px);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.12;
+    text-wrap: balance;
+    max-width: 15ch;
+  }
+
+  .lede {
+    margin: 0;
+    max-width: 46ch;
+    color: var(--ink-2);
+    font-size: 16px;
+  }
+
+  .stamp {
+    margin-left: auto;
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: 2px 20px;
+    font-size: 12.5px;
+    color: var(--ink-2);
+    align-content: end;
+  }
+  .stamp dt {
+    margin: 0;
+  }
+  .stamp dd {
+    margin: 0;
+    color: var(--ink);
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 12px;
+  }
+
+  h2 {
+    margin: 0 0 6px;
+    font-size: 21px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  .claim {
+    margin: 0 0 22px;
+    max-width: 68ch;
+    color: var(--ink-2);
+  }
+
+  section {
+    display: flex;
+    flex-direction: column;
+  }
+
+  figure {
+    margin: 0;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    padding: 20px 20px 0;
+    overflow-x: auto;
+  }
+  figure svg {
+    display: block;
+    width: 100%;
+    min-width: 640px;
+    height: auto;
+  }
+  figcaption {
+    border-top: 1px solid var(--line);
+    margin-top: 16px;
+    padding: 12px 0 16px;
+    color: var(--ink-2);
+    font-size: 13px;
+    max-width: 90ch;
+  }
+  figcaption b {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  /* ── Ký hiệu dùng lại giữa cả ba sơ đồ, nên khai một lần thành chú giải ───────── */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 28px;
+    padding: 14px 18px;
+    background: var(--sunken);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--ink-2);
+  }
+  .legend span {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+  .legend svg {
+    flex: none;
+  }
+
+  code,
+  .mono {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.88em;
+    color: var(--brand);
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 13.5px;
+  }
+  caption {
+    text-align: left;
+    color: var(--ink-2);
+    font-size: 13px;
+    padding-bottom: 10px;
+  }
+  th,
+  td {
+    text-align: left;
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  th {
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--ink-2);
+    border-bottom: 1px solid var(--line-2);
+    white-space: nowrap;
+  }
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+  td:first-child {
+    white-space: nowrap;
+  }
+
+  .pill {
+    display: inline-block;
+    padding: 1px 9px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .pill-done {
+    background: var(--mint);
+    color: var(--mint-ink);
+  }
+  .pill-todo {
+    background: var(--sunken);
+    color: var(--todo);
+    border: 1px dashed var(--line-2);
+  }
+
+  .note {
+    border-left: 3px solid var(--brand);
+    padding: 2px 0 2px 16px;
+    margin: 0;
+    max-width: 72ch;
+    color: var(--ink-2);
+  }
+  .note b {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+    color: var(--ink-2);
+    font-size: 12.5px;
+    max-width: 80ch;
+  }
+
+  /* ── Lớp dùng trong SVG. Để ngoài thẻ <svg> để hai chế độ sáng/tối dùng chung token ── */
+  .band {
+    fill: var(--sunken);
+  }
+  .box {
+    fill: var(--surface);
+    stroke: var(--line-2);
+    stroke-width: 1;
+  }
+  .box-brand {
+    fill: var(--mint);
+    stroke: var(--brand);
+    stroke-width: 1;
+  }
+  .box-soft {
+    fill: var(--sunken);
+    stroke: var(--line-2);
+    stroke-width: 1;
+    stroke-dasharray: 5 4;
+  }
+  .hair {
+    stroke: var(--line);
+    stroke-width: 1;
+  }
+  .t-head {
+    fill: var(--ink);
+    font-size: 13.5px;
+    font-weight: 600;
+  }
+  .t-body {
+    fill: var(--ink-2);
+    font-size: 11.5px;
+  }
+  .t-eyebrow {
+    fill: var(--ink-2);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+  }
+  .t-mono {
+    fill: var(--brand);
+    font-size: 11px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  .t-arrow {
+    fill: var(--ink-2);
+    font-size: 10.5px;
+  }
+  .t-block {
+    fill: var(--block);
+    font-size: 10.5px;
+    font-weight: 500;
+  }
+  .t-warn {
+    fill: var(--warn);
+    font-size: 10.5px;
+    font-weight: 500;
+  }
+  .t-done {
+    fill: var(--done);
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .t-todo {
+    fill: var(--todo);
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .flow {
+    stroke: var(--ink-2);
+    stroke-width: 1.4;
+    fill: none;
+  }
+  .flow-todo {
+    stroke: var(--todo);
+    stroke-width: 1.4;
+    fill: none;
+    stroke-dasharray: 5 4;
+  }
+  .flow-block {
+    stroke: var(--block);
+    stroke-width: 1.6;
+    fill: none;
+  }
+  .flow-warn {
+    stroke: var(--warn);
+    stroke-width: 1.4;
+    fill: none;
+    stroke-dasharray: 5 4;
+  }
+  .tip {
+    fill: var(--ink-2);
+  }
+  .tip-todo {
+    fill: var(--todo);
+  }
+  .tip-block {
+    fill: var(--block);
+  }
+  .tip-warn {
+    fill: var(--warn);
+  }
+  .forbid {
+    stroke: var(--block);
+    stroke-width: 1.6;
+  }
+
+  @media (max-width: 720px) {
+    .stamp {
+      margin-left: 0;
+    }
+  }
+</style>
+  </head>
+  <body>
+
+<div class="sheet">
+  <header>
+    <div style="display: flex; flex-direction: column; gap: 14px">
+      <h1>AI thiết kế, chương trình cầm bút</h1>
+      <p class="lede">
+        Sơ đồ khối luồng hoạt động của nhánh Thiết kế AI — bốn bước nối nhau, ba lớp chạy, và hai
+        chỗ có hàng rào.
+      </p>
+    </div>
+    <dl class="stamp">
+      <dt>Quyết định</dt>
+      <dd>T15 → T20</dd>
+      <dt>Đối chiếu mã</dt>
+      <dd>dev_design · 2edb7ec</dd>
+      <dt>Đợt đã xong</dt>
+      <dd>0 · 1 · 2 / 6</dd>
+    </dl>
+  </header>
+
+  <div class="legend">
+    <span>
+      <svg width="46" height="12" viewBox="0 0 46 12" aria-hidden="true">
+        <path class="flow" d="M1 6 H36" marker-end="url(#lg-a)" />
+        <defs>
+          <marker id="lg-a" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+            <polygon class="tip" points="0,0 8,4 0,8" />
+          </marker>
+        </defs>
+      </svg>
+      Đã chạy được hôm nay
+    </span>
+    <span>
+      <svg width="46" height="12" viewBox="0 0 46 12" aria-hidden="true">
+        <path class="flow-todo" d="M1 6 H36" marker-end="url(#lg-b)" />
+        <defs>
+          <marker id="lg-b" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+            <polygon class="tip-todo" points="0,0 8,4 0,8" />
+          </marker>
+        </defs>
+      </svg>
+      Chưa làm (Đợt 3 trở đi)
+    </span>
+    <span>
+      <svg width="46" height="12" viewBox="0 0 46 12" aria-hidden="true">
+        <path class="flow-block" d="M1 6 H36" marker-end="url(#lg-c)" />
+        <defs>
+          <marker id="lg-c" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+            <polygon class="tip-block" points="0,0 8,4 0,8" />
+          </marker>
+        </defs>
+      </svg>
+      Chặn, bắt sửa
+    </span>
+    <span>
+      <svg width="46" height="12" viewBox="0 0 46 12" aria-hidden="true">
+        <path class="flow-warn" d="M1 6 H36" marker-end="url(#lg-d)" />
+        <defs>
+          <marker id="lg-d" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+            <polygon class="tip-warn" points="0,0 8,4 0,8" />
+          </marker>
+        </defs>
+      </svg>
+      Cảnh báo, không chặn
+    </span>
+  </div>
+
+  <!-- ══════════════ SƠ ĐỒ 1 ══════════════ -->
+  <section>
+    <h2>Bốn bước, ba lớp chạy</h2>
+    <p class="claim">
+      Mỗi bước là một lượt gọi mô hình riêng, và bàn giao cho bước sau bằng một artifact đã đúc chứ
+      không bằng biến trong bộ nhớ. Kiến trúc sư duyệt giữa các bước — đó là lý do không gộp bốn
+      bước thành một lượt gọi.
+    </p>
+    <figure>
+      <svg
+        viewBox="0 0 980 1010"
+        role="img"
+        aria-label="Sơ đồ khối bốn bước của nhánh Thiết kế AI xếp theo hàng, ba lớp chạy xếp theo cột: trình duyệt, Worker Cloudflare, và nhà cung cấp mô hình; dưới cùng là Supabase nơi lưu artifact và nhật ký."
+      >
+        <defs>
+          <marker id="f1a" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+            <polygon class="tip" points="0,0 8,4 0,8" />
+          </marker>
+          <marker id="f1b" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+            <polygon class="tip-todo" points="0,0 8,4 0,8" />
+          </marker>
+        </defs>
+
+        <!-- Tiêu đề cột = ba lớp chạy -->
+        <text class="t-eyebrow" x="115" y="20" text-anchor="middle">Trình duyệt</text>
+        <text class="t-eyebrow" x="490" y="20" text-anchor="middle">Worker — Cloudflare, TypeScript</text>
+        <text class="t-eyebrow" x="865" y="20" text-anchor="middle">Nhà cung cấp mô hình</text>
+        <line class="hair" x1="20" y1="32" x2="960" y2="32" />
+
+        <!-- ── Hàng 1: chương trình không gian ── -->
+        <rect class="band" x="20" y="46" width="940" height="184" rx="8" />
+        <rect class="box" x="30" y="86" width="170" height="104" rx="6" />
+        <text class="t-body" x="44" y="110">Chọn model và gói quy tắc</text>
+        <text class="t-body" x="44" y="128">(mặc định tắt cả hai).</text>
+        <text class="t-body" x="44" y="146">Bấm lập chương trình.</text>
+        <text class="t-body" x="44" y="170">Xem bảng tầng · loại · m².</text>
+
+        <rect class="box" x="280" y="60" width="420" height="156" rx="6" />
+        <text class="t-head" x="298" y="86">1 · Chương trình không gian</text>
+        <text class="t-body" x="298" y="110">Đầu bài đã xác nhận → lược danh tính (hạng 2) → lời dẫn</text>
+        <text class="t-body" x="298" y="130">Chạy đồng bộ, không qua hàng đợi</text>
+        <text class="t-body" x="298" y="150">Kiểm: mã phòng lạ, tầng trống, vượt diện tích xây được</text>
+        <text class="t-done" x="298" y="186">Đợt 1 — chạy được thật</text>
+        <text class="t-mono" x="510" y="186">POST /design/ai/program</text>
+
+        <rect class="box" x="780" y="86" width="170" height="104" rx="6" />
+        <text class="t-body" x="794" y="112">Mô hình chữ</text>
+        <text class="t-mono" x="794" y="134">OpenAI</text>
+        <text class="t-mono" x="794" y="152">Google Gemini</text>
+        <text class="t-mono" x="794" y="170">Anthropic</text>
+
+        <path class="flow" d="M204 120 H274" marker-end="url(#f1a)" />
+        <text class="t-arrow" x="239" y="112" text-anchor="middle">bấm chạy</text>
+        <path class="flow" d="M274 158 H208" marker-end="url(#f1a)" />
+        <text class="t-arrow" x="241" y="150" text-anchor="middle">trả kết quả</text>
+        <path class="flow" d="M706 120 H774" marker-end="url(#f1a)" />
+        <text class="t-arrow" x="740" y="112" text-anchor="middle">gửi lời dẫn</text>
+        <path class="flow" d="M774 158 H710" marker-end="url(#f1a)" />
+        <text class="t-arrow" x="742" y="150" text-anchor="middle">trả JSON</text>
+
+        <path class="flow" d="M490 230 V282" marker-end="url(#f1a)" />
+        <text class="t-mono" x="504" y="252">ai_space_program</text>
+        <text class="t-arrow" x="504" y="270">bước sau đọc bản đã đúc</text>
+
+        <!-- ── Hàng 2: mặt bằng ── -->
+        <rect class="band" x="20" y="296" width="940" height="214" rx="8" />
+        <rect class="box" x="30" y="346" width="170" height="118" rx="6" />
+        <text class="t-body" x="44" y="370">Xem tờ A3 từng tầng</text>
+        <text class="t-body" x="44" y="388">qua thẻ ảnh, nên kịch bản</text>
+        <text class="t-body" x="44" y="406">lạ trong tệp không chạy.</text>
+        <text class="t-body" x="44" y="430">Chọn một trong ba</text>
+        <text class="t-body" x="44" y="448">phương án.</text>
+
+        <rect class="box-brand" x="280" y="310" width="420" height="186" rx="6" />
+        <text class="t-head" x="298" y="336">2 · Mặt bằng từng tầng</text>
+        <text class="t-body" x="298" y="360">Ba ý đồ bố cục gọi song song, một ý đồ hỏng không kéo hai</text>
+        <text class="t-body" x="298" y="380">ý đồ kia theo</text>
+        <text class="t-body" x="298" y="400">Mô hình khai tường, cửa, thang thành dữ liệu — không tự vẽ</text>
+        <text class="t-body" x="298" y="420">Bộ vẽ tất định đặt lên giấy (sơ đồ 2)</text>
+        <text class="t-done" x="298" y="458">Đợt 2 — bút vẽ và bộ kiểm đã xong</text>
+        <text class="t-todo" x="298" y="478">Đợt 3 — còn phần gọi mô hình và chạy nền</text>
+
+        <rect class="box" x="780" y="346" width="170" height="118" rx="6" />
+        <text class="t-body" x="794" y="372">Mô hình chữ</text>
+        <text class="t-body" x="794" y="396">Một lượt cho mỗi ý đồ,</text>
+        <text class="t-body" x="794" y="414">cộng tối đa một lượt sửa</text>
+        <text class="t-body" x="794" y="432">khi bộ kiểm chặn.</text>
+
+        <path class="flow-todo" d="M204 380 H274" marker-end="url(#f1b)" />
+        <path class="flow" d="M274 424 H208" marker-end="url(#f1a)" />
+        <text class="t-arrow" x="241" y="416" text-anchor="middle">tờ vẽ, cảnh báo</text>
+        <path class="flow-todo" d="M706 380 H774" marker-end="url(#f1b)" />
+        <path class="flow-todo" d="M774 424 H710" marker-end="url(#f1b)" />
+
+        <path class="flow-todo" d="M490 510 V562" marker-end="url(#f1b)" />
+        <text class="t-mono" x="504" y="532">ai_floor_plan</text>
+        <text class="t-arrow" x="504" y="550">mặt bằng đã chọn khoá lỗ mở mặt tiền</text>
+
+        <!-- ── Hàng 3: mặt đứng ── -->
+        <rect class="band" x="20" y="576" width="940" height="164" rx="8" />
+        <rect class="box-soft" x="30" y="606" width="170" height="104" rx="6" />
+        <text class="t-body" x="44" y="632">Sửa mái, vật liệu, màu,</text>
+        <text class="t-body" x="44" y="650">cổng, ban công —</text>
+        <text class="t-body" x="44" y="668">trước khi trả tiền ảnh.</text>
+        <text class="t-body" x="44" y="692">Lưu lại thành bản mới.</text>
+
+        <rect class="box-soft" x="280" y="590" width="420" height="136" rx="6" />
+        <text class="t-head" x="298" y="616">3 · Ý tưởng mặt đứng</text>
+        <text class="t-body" x="298" y="640">Worker suy khung mặt đứng từ tường bao mặt trước — mô</text>
+        <text class="t-body" x="298" y="660">hình chỉ đề xuất phần trang trí, không dời lỗ mở</text>
+        <text class="t-body" x="298" y="680">Tờ mặt đứng dùng chung bộ vẽ với mặt bằng</text>
+        <text class="t-todo" x="298" y="710">Đợt 4 — chưa làm</text>
+
+        <rect class="box-soft" x="780" y="606" width="170" height="104" rx="6" />
+        <text class="t-body" x="794" y="632">Mô hình chữ</text>
+        <text class="t-body" x="794" y="656">Một tới hai lượt cho</text>
+        <text class="t-body" x="794" y="674">cả bước này.</text>
+
+        <path class="flow-todo" d="M204 640 H274" marker-end="url(#f1b)" />
+        <path class="flow-todo" d="M274 686 H208" marker-end="url(#f1b)" />
+        <path class="flow-todo" d="M706 640 H774" marker-end="url(#f1b)" />
+        <path class="flow-todo" d="M774 686 H710" marker-end="url(#f1b)" />
+
+        <path class="flow-todo" d="M490 740 V792" marker-end="url(#f1b)" />
+        <text class="t-mono" x="504" y="762">ai_facade_concept</text>
+        <text class="t-arrow" x="504" y="780">kèm tờ mặt đứng đã được kiến trúc sư sửa</text>
+
+        <!-- ── Hàng 4: bộ ảnh ── -->
+        <rect class="band" x="20" y="806" width="940" height="164" rx="8" />
+        <rect class="box-soft" x="30" y="836" width="170" height="104" rx="6" />
+        <text class="t-body" x="44" y="862">Rasterise tờ mặt đứng</text>
+        <text class="t-body" x="44" y="880">thành ảnh — Worker</text>
+        <text class="t-body" x="44" y="898">không làm được việc này.</text>
+        <text class="t-body" x="44" y="922">Xem, tải về có đóng dấu.</text>
+
+        <rect class="box-soft" x="280" y="820" width="420" height="136" rx="6" />
+        <text class="t-head" x="298" y="846">4 · Bộ ảnh trình khách</text>
+        <text class="t-body" x="298" y="870">Ảnh chính diện ban ngày là ảnh neo, dựng từ tờ mặt đứng</text>
+        <text class="t-body" x="298" y="890">Bốn góc còn lại dựng ảnh sang ảnh từ ảnh neo, để năm tấm</text>
+        <text class="t-body" x="298" y="910">không ra năm ngôi nhà khác nhau</text>
+        <text class="t-todo" x="298" y="940">Đợt 5 — chưa làm</text>
+
+        <rect class="box-soft" x="780" y="836" width="170" height="104" rx="6" />
+        <text class="t-body" x="794" y="862">Mô hình ảnh</text>
+        <text class="t-mono" x="794" y="884">OpenAI</text>
+        <text class="t-mono" x="794" y="902">Google Gemini</text>
+        <text class="t-body" x="794" y="926">Anthropic không sinh ảnh.</text>
+
+        <path class="flow-todo" d="M204 870 H274" marker-end="url(#f1b)" />
+        <path class="flow-todo" d="M274 916 H208" marker-end="url(#f1b)" />
+        <path class="flow-todo" d="M706 870 H774" marker-end="url(#f1b)" />
+        <path class="flow-todo" d="M774 916 H710" marker-end="url(#f1b)" />
+
+        <!-- ── Dải dữ liệu ── -->
+        <text class="t-eyebrow" x="20" y="994">Supabase — nơi bốn bước gặp nhau</text>
+        <text class="t-mono" x="252" y="994">design_artifact</text>
+        <text class="t-body" x="352" y="994">bất biến, khoá chính là mã băm nội dung</text>
+        <text class="t-mono" x="628" y="994">design_ai_call</text>
+        <text class="t-body" x="722" y="994">chi phí từng lượt</text>
+        <text class="t-mono" x="826" y="994">design_ai_run</text>
+        <text class="t-body" x="916" y="994">tiến độ</text>
+      </svg>
+      <figcaption>
+        <b>Container Python không có mặt trong sơ đồ này, và đó là điều cố ý.</b> Bộ giải nội bộ
+        chạy hình học trong Container; nhánh AI thì không gọi Container một lần nào — xem sơ đồ 3.
+        Đọc theo hàng để thấy một bước đi qua ba lớp nào; đọc theo cột dọc giữa để thấy artifact nào
+        bàn giao cho bước sau.
+      </figcaption>
+    </figure>
+  </section>
+
+  <!-- ══════════════ SƠ ĐỒ 2 ══════════════ -->
+  <section>
+    <h2>Vòng đời một đề xuất mặt bằng</h2>
+    <p class="claim">
+      Đây là chỗ quyết định T15 nằm: không có bước nào đi thẳng từ chữ sang tờ vẽ. Mô hình trả dữ
+      liệu, máy kiểm được dữ liệu ấy, rồi bộ vẽ tất định mới đặt lên giấy. Một tệp vẽ do mô hình tự
+      viết thì chỉ đếm được ký tự.
+    </p>
+    <figure>
+      <svg
+        viewBox="0 0 980 480"
+        role="img"
+        aria-label="Vòng đời một đề xuất mặt bằng: mô hình trả JSON, qua kiểm hợp đồng và bộ kiểm mười một nhóm; lỗi thì có một lượt sửa duy nhất, sau đó chương trình suy tường thay; đạt thì đúc artifact rồi bộ vẽ dựng tờ A3. Cảnh báo quy chuẩn đo trên bản đã đề xuất và chỉ hiện lên màn hình."
+      >
+        <defs>
+          <marker id="f2a" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+            <polygon class="tip" points="0,0 8,4 0,8" />
+          </marker>
+          <marker id="f2b" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+            <polygon class="tip-block" points="0,0 8,4 0,8" />
+          </marker>
+          <marker id="f2c" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+            <polygon class="tip-warn" points="0,0 8,4 0,8" />
+          </marker>
+        </defs>
+
+        <!-- Nhánh cảnh báo: đo trên bản đã đề xuất, và dừng ở màn hình -->
+        <rect class="box-soft" x="150" y="20" width="230" height="64" rx="6" />
+        <text class="t-head" x="166" y="46">Hai gói quy tắc</text>
+        <text class="t-body" x="166" y="68">kỹ sư tự tích, mặc định tắt</text>
+
+        <rect class="box" x="730" y="20" width="230" height="82" rx="6" />
+        <text class="t-head" x="746" y="46">Đối chiếu quy chuẩn</text>
+        <text class="t-body" x="746" y="66">5 vị từ đo được trên hình</text>
+        <text class="t-warn" x="746" y="88">chỉ hiện lên màn hình, không sửa artifact</text>
+
+        <path class="flow-warn" d="M384 52 H724" marker-end="url(#f2c)" />
+        <text class="t-warn" x="554" y="44" text-anchor="middle">gói đã tích mới được đối chiếu</text>
+        <path class="flow" d="M824 140 V108" marker-end="url(#f2a)" />
+        <text class="t-arrow" x="838" y="128">đo trên bản đã đề xuất</text>
+
+        <!-- Chuỗi chính -->
+        <rect class="box" x="20" y="140" width="150" height="92" rx="6" />
+        <text class="t-head" x="34" y="166">Đầu vào</text>
+        <text class="t-body" x="34" y="188">Đầu bài đã lược</text>
+        <text class="t-body" x="34" y="206">danh tính, chương</text>
+        <text class="t-body" x="34" y="224">trình, ý đồ bố cục</text>
+
+        <rect class="box" x="210" y="140" width="130" height="92" rx="6" />
+        <text class="t-head" x="224" y="166">Mô hình</text>
+        <text class="t-body" x="224" y="188">Khai tường, cửa,</text>
+        <text class="t-body" x="224" y="206">thang, tên phòng</text>
+        <text class="t-body" x="224" y="224">bằng centimet</text>
+
+        <rect class="box" x="380" y="140" width="130" height="92" rx="6" />
+        <text class="t-head" x="394" y="166">Hợp đồng</text>
+        <text class="t-body" x="394" y="188">JSON Schema rồi</text>
+        <text class="t-body" x="394" y="206">Zod. Sai hình dạng</text>
+        <text class="t-body" x="394" y="224">là dừng ngay</text>
+
+        <rect class="box-brand" x="550" y="140" width="160" height="92" rx="6" />
+        <text class="t-head" x="566" y="166">Bộ kiểm máy</text>
+        <text class="t-body" x="566" y="188">11 nhóm: phòng kín,</text>
+        <text class="t-body" x="566" y="206">có cửa, không chồng,</text>
+        <text class="t-body" x="566" y="224">thang chồng khít</text>
+
+        <rect class="box" x="750" y="140" width="150" height="92" rx="6" />
+        <text class="t-head" x="764" y="166">Artifact</text>
+        <text class="t-mono" x="764" y="188">ai_floor_plan</text>
+        <text class="t-body" x="764" y="210">Bất biến, có mã băm,</text>
+        <text class="t-body" x="764" y="228">truy được nguồn gốc</text>
+
+        <path class="flow" d="M174 186 H204" marker-end="url(#f2a)" />
+        <path class="flow" d="M344 186 H374" marker-end="url(#f2a)" />
+        <path class="flow" d="M514 186 H544" marker-end="url(#f2a)" />
+        <path class="flow" d="M714 186 H744" marker-end="url(#f2a)" />
+        <text class="t-arrow" x="729" y="178" text-anchor="middle">đạt</text>
+
+        <!-- Vòng sửa: một lượt duy nhất -->
+        <path class="flow-block" d="M590 236 V286 H275 V236" marker-end="url(#f2b)" />
+        <text class="t-block" x="432" y="274" text-anchor="middle">chặn → một lượt sửa duy nhất</text>
+
+        <!-- Lưới an toàn T19 -->
+        <path class="flow" d="M670 236 V334" marker-end="url(#f2a)" />
+        <text class="t-arrow" x="656" y="306" text-anchor="end">sau lượt sửa mà chỉ còn</text>
+        <text class="t-arrow" x="656" y="322" text-anchor="end">lỗi tường thì suy tường thay</text>
+
+        <rect class="box" x="590" y="340" width="170" height="82" rx="6" />
+        <text class="t-head" x="606" y="364">Suy tường từ phòng</text>
+        <text class="t-body" x="606" y="384">Cạnh chung thành vách,</text>
+        <text class="t-body" x="606" y="402">cạnh biên thành tường bao</text>
+        <text class="t-mono" x="606" y="418">walls_derived = true</text>
+        <path class="flow" d="M764 381 H870 V240" marker-end="url(#f2a)" />
+
+        <!-- Đầu ra: bộ vẽ rồi tờ giấy -->
+        <rect class="box" x="20" y="340" width="330" height="82" rx="6" />
+        <text class="t-head" x="34" y="364">Bộ vẽ SVG tất định — trong Worker</text>
+        <text class="t-body" x="34" y="386">Tường từ tim, cắt lỗ mở, cung quét cửa, bậc thang,</text>
+        <text class="t-body" x="34" y="404">và chuỗi kích thước suy từ chính toạ độ tường</text>
+
+        <rect class="box" x="390" y="340" width="170" height="82" rx="6" />
+        <text class="t-head" x="406" y="364">Tờ A3</text>
+        <text class="t-body" x="406" y="386">Tỷ lệ và hướng giấy</text>
+        <text class="t-body" x="406" y="404">do bộ vẽ tự chọn</text>
+        <path class="flow" d="M354 381 H384" marker-end="url(#f2a)" />
+
+        <path class="flow" d="M890 236 V456 H196 V428" marker-end="url(#f2a)" />
+        <text class="t-arrow" x="540" y="450" text-anchor="middle">vẽ lúc đọc, không lưu</text>
+      </svg>
+      <figcaption>
+        <b>Ba chỗ đáng chú ý.</b> Vòng sửa chỉ chạy <b>đúng một lượt</b> — lượt thứ hai tốn tiền như lượt
+        đầu mà tỷ lệ cứu được thấp hẳn. Nhánh suy tường là lưới an toàn, và chỗ suy hộ luôn hiện
+        thành một dòng trên tờ vẽ. Cảnh báo quy chuẩn đo <b>sau</b> khi mô hình trả về và không bao
+        giờ chặn: hai gói quy tắc mặc định tắt cả hai, kỹ sư tự tích theo từng hồ sơ.
+      </figcaption>
+    </figure>
+  </section>
+
+  <!-- ══════════════ SƠ ĐỒ 3 ══════════════ -->
+  <section>
+    <h2>Hàng rào giữa hai bộ giải</h2>
+    <p class="claim">
+      Bộ giải nội bộ không đạt qua thử nghiệm thực tế và sẽ bị xoá. Muốn xoá được mà không vỡ gì thì
+      hai bên không được chạm nhau — nên đây là ràng buộc có kiểm thử canh, không phải một thoả
+      thuận phải nhớ.
+    </p>
+    <figure>
+      <svg
+        viewBox="0 0 980 400"
+        role="img"
+        aria-label="Hai nhánh song song: nhánh AI và bộ giải nội bộ, cấm import theo cả hai chiều; bên dưới là hạ tầng dùng chung mà cả hai cùng đọc; một kiểm thử đọc từng dòng import để canh hàng rào."
+      >
+        <defs>
+          <marker id="f3a" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+            <polygon class="tip" points="0,0 8,4 0,8" />
+          </marker>
+        </defs>
+
+        <rect class="box-brand" x="20" y="20" width="400" height="150" rx="6" />
+        <text class="t-head" x="38" y="46">Nhánh AI — ở lại</text>
+        <text class="t-mono" x="38" y="70">design/ai/**</text>
+        <text class="t-body" x="150" y="70">lời dẫn, bộ kiểm, bộ vẽ</text>
+        <text class="t-mono" x="38" y="92">design/ai/draw/**</text>
+        <text class="t-body" x="170" y="92">13 tệp, TypeScript thuần</text>
+        <text class="t-mono" x="38" y="114">web/pages/tk/ai/**</text>
+        <text class="t-body" x="170" y="114">tab Thiết kế AI</text>
+        <text class="t-body" x="38" y="148">Không gọi Container một lần nào.</text>
+
+        <rect class="box-soft" x="560" y="20" width="400" height="150" rx="6" />
+        <text class="t-head" x="578" y="46">Bộ giải nội bộ — sẽ xoá</text>
+        <text class="t-mono" x="578" y="70">design/{program,layout,render}</text>
+        <text class="t-mono" x="578" y="92">compute/** + Docker</text>
+        <text class="t-body" x="712" y="92">CP-SAT, hình học, DXF</text>
+        <text class="t-mono" x="578" y="114">web/pages/tk/*-panel</text>
+        <text class="t-body" x="578" y="148">Hai tab cũ giữ nguyên tới ngày dọn.</text>
+
+        <!-- Hàng rào -->
+        <line class="forbid" x1="432" y1="95" x2="548" y2="95" />
+        <line class="forbid" x1="474" y1="77" x2="506" y2="113" />
+        <line class="forbid" x1="506" y1="77" x2="474" y2="113" />
+        <text class="t-block" x="490" y="140" text-anchor="middle">cấm import</text>
+        <text class="t-block" x="490" y="156" text-anchor="middle">cả hai chiều</text>
+
+        <!-- Hạ tầng dùng chung -->
+        <rect class="box" x="20" y="240" width="940" height="90" rx="6" />
+        <text class="t-head" x="38" y="266">Hạ tầng dùng chung — thứ ở lại sau khi bộ giải ra đi</text>
+        <text class="t-mono" x="38" y="292">auth-scope</text>
+        <text class="t-body" x="120" y="292">quyền và phạm vi qua RLS</text>
+        <text class="t-mono" x="290" y="292">artifacts</text>
+        <text class="t-body" x="358" y="292">đúc, băm, lineage</text>
+        <text class="t-mono" x="480" y="292">llm/</text>
+        <text class="t-body" x="518" y="292">bộ định tuyến model</text>
+        <text class="t-mono" x="660" y="292">rules/ + kb/</text>
+        <text class="t-body" x="756" y="292">quy chuẩn và từ vựng</text>
+        <text class="t-body" x="38" y="316">
+          Bộ đọc gói quy tắc từng nằm trong thư mục bộ giải và đã chuyển ra ngoài — để hôm xoá không kéo theo nhánh AI.
+        </text>
+
+        <path class="flow" d="M220 234 V176" marker-end="url(#f3a)" />
+        <text class="t-arrow" x="234" y="212">cùng đọc</text>
+        <path class="flow" d="M760 234 V176" marker-end="url(#f3a)" />
+        <text class="t-arrow" x="774" y="212">cùng đọc</text>
+
+        <rect class="box" x="20" y="352" width="940" height="42" rx="6" />
+        <text class="t-mono" x="38" y="378">ai-independence.test.ts</text>
+        <text class="t-body" x="200" y="378">
+          đọc từng dòng import của cả hai bên và đỏ khi có tệp nào vượt rào — kể cả chiều ngược lại.
+        </text>
+      </svg>
+      <figcaption>
+        <b>Hàng rào là thứ có kiểm thử canh, không phải trí nhớ.</b> Lúc viết, phép thử ấy bắt đúng
+        bốn khớp nối mà bản kế hoạch đã dự đoán. Ngày bộ giải bị xoá, điều kiện để nhánh AI không vỡ
+        chính là phép thử này vẫn xanh.
+      </figcaption>
+    </figure>
+  </section>
+
+  <!-- ══════════════ BẢNG ══════════════ -->
+  <section>
+    <h2>Bốn artifact, bốn bước</h2>
+    <table>
+      <caption>
+        Mỗi bước đúc đúng một loại artifact. Không loại nào dùng lại hợp đồng của bộ giải — cố ý,
+        để ngày dọn không phải gỡ hợp đồng ra khỏi hai nơi.
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">Artifact</th>
+          <th scope="col">Bước đúc ra nó</th>
+          <th scope="col">Nội dung</th>
+          <th scope="col">Trạng thái</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>ai_space_program</code></td>
+          <td>1 · Chương trình không gian</td>
+          <td>Danh sách phòng theo tầng, diện tích mong muốn, lý do và giả định</td>
+          <td><span class="pill pill-done">Đợt 1 — chạy được</span></td>
+        </tr>
+        <tr>
+          <td><code>ai_floor_plan</code></td>
+          <td>2 · Mặt bằng từng tầng</td>
+          <td>
+            Toàn bộ nội dung bản vẽ dạng dữ liệu: từng đoạn tường kèm bề dày, cửa và cửa sổ kèm
+            chiều mở, thang, tên và diện tích phòng
+          </td>
+          <td><span class="pill pill-done">Đợt 2 — bút vẽ, bộ kiểm</span></td>
+        </tr>
+        <tr>
+          <td><code>ai_facade_concept</code></td>
+          <td>3 · Ý tưởng mặt đứng</td>
+          <td>Mái, vật liệu, màu, cổng, ban công, và khung mặt đứng do Worker suy ra</td>
+          <td><span class="pill pill-todo">Đợt 4 — chưa làm</span></td>
+        </tr>
+        <tr>
+          <td><code>ai_image_set</code></td>
+          <td>4 · Bộ ảnh trình khách</td>
+          <td>Năm ảnh phối cảnh dựng từ một ảnh neo, kèm góc nào hỏng và hỏng vì sao</td>
+          <td><span class="pill pill-todo">Đợt 5 — chưa làm</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section style="gap: 16px">
+    <h2>Ba hàng rào không nới</h2>
+    <p class="note">
+      <b>Kết quả nhánh AI không đi vào hồ sơ phát hành.</b> Không xuất DXF cho người vẽ, không có
+      bảng thống kê, không lên hồ sơ ký đóng dấu. Muốn hồ sơ thì chạy bộ giải. Đánh đổi này đã biết
+      trước và chấp nhận — đổi lại, nhánh AI không bị bó bởi cùng bộ ràng buộc với bộ giải.
+    </p>
+    <p class="note">
+      <b>Mọi tờ vẽ mang câu cảnh báo do mã nguồn chèn.</b> «Đề xuất AI — bản phác, không dùng để thi
+      công» nằm trong mã, không nằm trong tệp cấu hình, nên không tắt được bằng một lần sửa cấu hình
+      và không phụ thuộc ai nhớ bật.
+    </p>
+    <p class="note">
+      <b>Dữ liệu gửi đi đầy đủ trừ danh tính.</b> Lược tên khách, điện thoại, địa chỉ, mã hồ sơ và
+      ngân sách; giữ kích thước thật, gia đình, nhu cầu, phong cách. Tờ vẽ gửi kèm cho nhà cung cấp
+      ảnh vì thế cố ý không có khung tên thật.
+    </p>
+  </section>
+
+  <footer>
+    Sơ đồ đối chiếu với mã nguồn nhánh <code>dev_design</code> tại commit
+    <code>2edb7ec</code>. Nét đứt là phần chưa viết, không phải phần đã viết mà chưa chạy — bốn bước
+    đã có hợp đồng dữ liệu và bảng lưu từ Đợt 0, nên phần còn thiếu là đường mã nối chúng lại.
+  </footer>
+</div>
+  </body>
+</html>

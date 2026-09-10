@@ -49,7 +49,12 @@ app.use(
     allowHeaders: ['Authorization', 'Content-Type'],
     // Tên tệp tải về (DXF, XLSX) nằm ở header này; không khai thì trình duyệt không đọc được
     // và mọi tệp rơi về một tên mặc định.
-    exposeHeaders: ['Content-Disposition'],
+    //
+    // `X-Sheet-*`: tỷ lệ và hướng giấy do BỘ VẼ chọn, và thân phản hồi là SVG nên không cài
+    // thêm trường được. Giao diện và API khác nguồn nhau (Worker `nvg` so với `nvg-api`), nên
+    // header không khai ở đây sẽ đọc ra `null` mà KHÔNG có lỗi nào — chip «Tỷ lệ 1:50» biến
+    // mất và không ai biết vì sao.
+    exposeHeaders: ['Content-Disposition', 'X-Sheet-Scale', 'X-Sheet-Orientation'],
     maxAge: 600,
   }),
 );
@@ -97,7 +102,7 @@ export async function runScheduledScans(env: Env): Promise<Record<string, number
   return results;
 }
 
-export { DesignPipeline, DigitisePipeline } from './design';
+export { AiDesignPipeline, DesignPipeline, DigitisePipeline } from './design';
 
 export default {
   fetch: app.fetch,

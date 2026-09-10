@@ -1248,3 +1248,4 @@ designApp.onError((error, c) => {
 
 export { DesignPipeline } from './workflows/design-pipeline';
 export { DigitisePipeline } from './workflows/digitise';
+export { AiDesignPipeline } from './workflows/ai-design';

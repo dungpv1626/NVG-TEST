@@ -55,6 +55,12 @@
       "binding": "DIGITISE_PIPELINE",
       "class_name": "DigitisePipeline",
     },
+    {
+      // Nhánh AI (T15) — một instance cho một giai đoạn, vì kiến trúc sư duyệt giữa các bước.
+      "name": "nvg-ai-design",
+      "binding": "AI_DESIGN_PIPELINE",
+      "class_name": "AiDesignPipeline",
+    },
   ],
 
   /**

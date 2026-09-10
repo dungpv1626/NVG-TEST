@@ -22,24 +22,13 @@ import {
   useAiDesignState,
   useInvalidateAiDesign,
   type AiDesignState,
+  type AiRulePackChoice,
   type AiSpaceProgramView,
 } from '@/hooks/use-ai-design';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useMutation } from '@tanstack/react-query';
 import { Chip, Panel } from '../tk-ui';
 import { AiModePicker, useAiChoice } from './ai-model-picker';
-
-/**
- * Hai gói quy tắc kỹ sư chọn áp — mặc định TẮT CẢ HAI (T20, 09/09/2026).
- *
- * Tách làm hai vì chúng là hai loại khác hẳn nhau: một bên là văn bản pháp quy, một bên là
- * thói quen của phòng thiết kế. Gộp làm một nút thì cảnh báo «dưới mức tối thiểu» hiện lên mà
- * không ai biết đó là sai luật hay khác cách NVG quen làm.
- */
-export interface AiRulePackChoice {
-  standards: boolean;
-  experience: boolean;
-}
 
 export interface AiProgramWarning {
   ruleId: string;

@@ -10,7 +10,12 @@
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
-import type { AiFloorPlan, AiFloorPlanLevel, AiSpaceProgram } from '@nvg/shared/design';
+import {
+  aiFloorPlanSchema,
+  type AiFloorPlan,
+  type AiFloorPlanLevel,
+  type AiSpaceProgram,
+} from '@nvg/shared/design';
 import { describe, expect, it } from 'vitest';
 import { checkPlan, type PlanCheckInput } from '../ai/plan-check';
 import { parseRuleMessages } from '../ai/plan-messages';
@@ -32,11 +37,11 @@ const style = parseSheetStyle(read('../../../../kb/sheet_style.yaml'));
 const groups = roomGroups(vocabulary);
 
 /**
- * Loại phòng KHÔNG bắt buộc có cửa — đọc từ nhóm `outdoor` của `kb/room_vocabulary.yaml`, cộng
- * ô trống. Danh sách là DỮ LIỆU, đúng như bộ kiểm yêu cầu; viết cứng ở đây thì phép thử sẽ
- * không đỏ khi ai đó thêm loại phòng ngoài trời mới mà quên miễn trừ.
+ * Loại phòng KHÔNG bắt buộc có cửa — đọc nguyên nhóm `no_door_required` của
+ * `kb/room_vocabulary.yaml`. Danh sách là DỮ LIỆU, đúng như bộ kiểm yêu cầu; viết cứng ở đây thì
+ * phép thử sẽ không đỏ khi ai đó thêm loại không gian ngoài trời mới mà quên miễn trừ.
  */
-const doorExemptTypes = new Set([...(groups.outdoor ?? []), 'light_well', 'void', 'shaft']);
+const doorExemptTypes = new Set(groups.no_door_required ?? []);
 
 /** Chương trình không gian suy từ chính mặt bằng — phép kiểm (2) so hai bên với nhau. */
 function programOf(plan: AiFloorPlan): AiSpaceProgram {
@@ -241,6 +246,46 @@ describe('bộ kiểm mặt bằng — từng phép kiểm bắt đúng chỗ h�
       ),
     }));
     expect(check(areaWrong).wallOnly).toBe(false);
+  });
+
+  it('«phòng không có cửa» không chặn lượt suy tường khi chính tường đang sai', () => {
+    // Đây là chỗ T19 từng KHÔNG kích hoạt đúng vào trường hợp nó sinh ra để cứu (vá 10/09/2026).
+    // Bỏ một đoạn tường mà cửa đang bám vào: cửa hoá ra «nằm trên tường không tồn tại», nên phòng
+    // của nó cũng bị báo mất cửa. Cả hai đều do tường, nên lượt suy tường vẫn phải mở.
+    const broken = withLevel1(TOWNHOUSE_PLAN, (level) => ({
+      ...level,
+      walls: level.walls.filter((wall) => wall.id !== 'p1'),
+    }));
+    const result = check(broken);
+    const codes = result.blocking.map((issue) => issue.code);
+    expect(codes).toContain('opening_wall_missing');
+    expect(result.wallOnly).toBe(true);
+  });
+
+  it('phòng thiếu cửa mà tường vẫn đúng thì KHÔNG suy tường', () => {
+    // Suy tường không cứu được một thiếu sót thiết kế, và bật cờ «tường do chương trình suy»
+    // lúc ấy là in một câu sai lên tờ vẽ.
+    const noDoor = withLevel1(TOWNHOUSE_PLAN, (level) => ({
+      ...level,
+      doors: (level.doors ?? []).filter((door) => door.id !== 'd1' && door.id !== 'd2'),
+    }));
+    const result = check(noDoor);
+    expect(result.blocking.map((issue) => issue.code)).toContain('room_without_door');
+    expect(result.wallOnly).toBe(false);
+  });
+});
+
+describe('fixture viết tay phải hợp lệ theo chính hợp đồng dữ liệu', () => {
+  // Bộ kiểm không hỏi về đơn vị, nên một fixture dùng toạ độ ngoài lưới vẫn đi qua sạch ở trên —
+  // rồi bị `repo.write` từ chối lúc ghi, sau khi đã trả tiền cho lượt gọi. Phép thử này đóng đúng
+  // khoảng trống đó (thêm 10/09/2026, sau khi nó đã xảy ra thật với `ai-plan.test.ts`).
+  it('hai fixture đi qua `aiFloorPlanSchema`', () => {
+    for (const plan of [TOWNHOUSE_PLAN, VILLA_PLAN]) {
+      const parsed = aiFloorPlanSchema.safeParse(plan);
+      expect(
+        parsed.success ? [] : parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`),
+      ).toEqual([]);
+    }
   });
 });
 

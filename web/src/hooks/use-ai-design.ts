@@ -9,8 +9,9 @@
  * đỏ nếu tệp này import từ `use-design-projects` hay từ panel nào của bộ giải.
  */
 
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { designApi } from '@/lib/design-api';
+import { designApi, designApiFile } from '@/lib/design-api';
 
 // ---------------------------------------------------------------------------
 // Danh mục model
@@ -112,6 +113,8 @@ export interface AiDesignState {
   briefArtifactId: string | null;
   program: { artifactId: string; payload: AiSpaceProgramView } | null;
   plans: Array<{ artifactId: string; createdAt: string }>;
+  /** Phương án đã CHỌN. Rỗng khi đã có phương án nhưng chưa ai chọn — bước mặt đứng chờ cái này. */
+  planHeadArtifactId: string | null;
   facadeArtifactId: string | null;
   imageSetArtifactId: string | null;
   runs: Partial<Record<AiStage, AiRunView>>;
@@ -157,13 +160,192 @@ export function useAiRun(runId: string | null) {
   });
 }
 
-/** Khởi động một giai đoạn chạy nền. Trả mã lượt chạy để màn hình theo dõi tiến độ. */
+/**
+ * Khởi động một giai đoạn chạy nền. Trả mã lượt chạy để màn hình theo dõi tiến độ.
+ *
+ * `options` được RẢI PHẲNG vào thân lời gọi, không gửi lồng: mỗi giai đoạn có tham số riêng
+ * (`count` và gói quy tắc ở bước mặt bằng, danh sách góc ở bước ảnh), và một lớp lồng chỉ thêm
+ * một chỗ để gửi sai khoá mà Worker im lặng bỏ qua.
+ */
 export function useStartAiRun(stage: Exclude<AiStage, 'program'>) {
   return useMutation<
     { runId: string },
     Error,
     { projectId: string; route: string; options?: Record<string, unknown> }
   >({
-    mutationFn: (body) => designApi<{ runId: string }>(`/design/ai/${stage}/runs`, body),
+    mutationFn: ({ projectId, route, options }) =>
+      designApi<{ runId: string }>(`/design/ai/${stage}/runs`, { projectId, route, ...options }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Bước 2 — mặt bằng
+// ---------------------------------------------------------------------------
+
+/** Hai gói quy tắc kỹ sư chọn áp — mặc định TẮT CẢ HAI (T20, 09/09/2026). */
+export interface AiRulePackChoice {
+  standards: boolean;
+  experience: boolean;
+}
+
+export interface AiPlanIssue {
+  code: string;
+  level: 'blocking' | 'finding';
+  ref?: string;
+  message: string;
+}
+
+export interface AiPlanWarning {
+  ruleId: string;
+  severity: 'error' | 'warning';
+  /** Văn bản quy chuẩn, nguyên văn — «cảnh báo» không có nghĩa gì nếu không nói theo văn bản nào. */
+  source: string;
+  message: string;
+  spaceId: string;
+  level: number;
+}
+
+export interface AiPlanLevelView {
+  level: number;
+  name: string;
+  /** Tỷ lệ và hướng giấy do BỘ VẼ chọn theo kích thước nhà, không phải người dùng đặt. */
+  scale: number;
+  orientation: 'landscape' | 'portrait';
+  notes: { code: string; message: string }[];
+  rooms: number;
+}
+
+export interface AiPlanReview {
+  artifactId: string;
+  createdAt: string;
+  variantId: string;
+  variantLabel: string;
+  strategy: string | null;
+  rationale: string;
+  generator: {
+    provider: string;
+    model: string;
+    prompt_version: string;
+    repaired?: boolean;
+    walls_derived?: boolean;
+  };
+  wallsDerived: boolean;
+  levels: AiPlanLevelView[];
+  roomLabels: Record<string, string>;
+  blocking: AiPlanIssue[];
+  findings: AiPlanIssue[];
+  rulePacks: AiRulePackChoice;
+  warnings: AiPlanWarning[];
+  checkedRules: string[];
+  uncheckedRules: Array<{ ruleId: string; predicate: string; source: string }>;
+}
+
+/**
+ * Đọc lại một phương án: kiểm, cảnh báo, ghi chú bộ vẽ — Worker tính LÚC ĐỌC.
+ *
+ * Gói quy tắc là tham số của lời gọi, không phải thuộc tính của phương án: cảnh báo là lăng
+ * kính người đọc chọn (T20). Đổi ô tích là đổi khoá truy vấn, nên danh sách cảnh báo tự nạp lại.
+ */
+export function useAiPlanReview(
+  projectId: string,
+  artifactId: string | null,
+  packs: AiRulePackChoice,
+) {
+  return useQuery<AiPlanReview, Error>({
+    queryKey: ['ai_plan_review', projectId, artifactId, packs.standards, packs.experience],
+    queryFn: () =>
+      designApi<AiPlanReview>(
+        `/design/ai/plan/${projectId}/review?artifactId=${encodeURIComponent(artifactId!)}` +
+          `${packs.standards ? '&standards=1' : ''}${packs.experience ? '&experience=1' : ''}`,
+      ),
+    enabled: Boolean(projectId && artifactId),
+  });
+}
+
+export interface AiPlanSheetState {
+  /** Địa chỉ blob để gắn vào `<img>`. `null` khi chưa có hoặc đang nạp. */
+  url: string | null;
+  scale: number | null;
+  orientation: string | null;
+  loading: boolean;
+  error: string | null;
+}
+
+/**
+ * Tờ mặt bằng một tầng, dạng ảnh.
+ *
+ * Hai điều cố ý ở đây. **Một**: tờ vẽ hiện qua `<img src=blob:>`, không bao giờ nhúng thẳng SVG
+ * vào trang — tên phòng do mô hình sinh là nội dung không tin được, và trong `<img>` thì kịch
+ * bản nhúng trong tệp không chạy (CLAUDE.md 8.2, điểm 5). **Hai**: không dùng TanStack Query —
+ * giá trị ở đây là một blob phải THU HỒI khi rời màn hình, còn bộ đệm của Query thì giữ lại giá
+ * trị cũ và biến mỗi lần mở tab thành một tờ vẽ rò trong bộ nhớ.
+ */
+export function useAiPlanSheet(
+  projectId: string,
+  artifactId: string | null,
+  level: number,
+): AiPlanSheetState {
+  const [state, setState] = useState<AiPlanSheetState>({
+    url: null,
+    scale: null,
+    orientation: null,
+    loading: false,
+    error: null,
+  });
+
+  useEffect(() => {
+    if (!projectId || !artifactId) {
+      setState({ url: null, scale: null, orientation: null, loading: false, error: null });
+      return;
+    }
+    let cancelled = false;
+    let objectUrl: string | null = null;
+    setState({ url: null, scale: null, orientation: null, loading: true, error: null });
+
+    void designApiFile(
+      `/design/ai/plan/${projectId}/sheet?artifactId=${encodeURIComponent(artifactId)}&level=${level}`,
+    )
+      .then(async (response) => {
+        const blob = await response.blob();
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        const scale = Number(response.headers.get('X-Sheet-Scale'));
+        setState({
+          url: objectUrl,
+          scale: Number.isFinite(scale) && scale > 0 ? scale : null,
+          orientation: response.headers.get('X-Sheet-Orientation'),
+          loading: false,
+          error: null,
+        });
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        setState({
+          url: null,
+          scale: null,
+          orientation: null,
+          loading: false,
+          error: error instanceof Error ? error.message : 'Không dựng được tờ mặt bằng.',
+        });
+      });
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [projectId, artifactId, level]);
+
+  return state;
+}
+
+/** Chọn một phương án làm bản đang hiệu lực — bước mặt đứng đọc bản này. */
+export function useChooseAiPlan() {
+  const queryClient = useQueryClient();
+  return useMutation<{ artifactId: string }, Error, { projectId: string; artifactId: string }>({
+    mutationFn: (body) => designApi<{ artifactId: string }>('/design/ai/plan/choose', body),
+    onSuccess: (_data, variables) =>
+      void queryClient.invalidateQueries({
+        queryKey: ['ai_design_state', variables.projectId],
+      }),
   });
 }

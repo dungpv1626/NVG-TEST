@@ -127,6 +127,9 @@ function topoOrder(defs, cyclic) {
 function numericChecks(s) {
   let out = '';
   if (s.type === 'integer') out += '.int()';
+  // `multipleOf` dùng cho lưới TOẠ ĐỘ: nửa centimet ở `ai-floor-plan` (xem `$defs.cm` ở đó).
+  // Chỉ sinh đúng ràng buộc đã khai — không tự suy ra một lưới mặc định nào.
+  if (typeof s.multipleOf === 'number') out += `.multipleOf(${s.multipleOf})`;
   if (typeof s.minimum === 'number') out += `.gte(${s.minimum})`;
   if (typeof s.maximum === 'number') out += `.lte(${s.maximum})`;
   if (typeof s.exclusiveMinimum === 'number') out += `.gt(${s.exclusiveMinimum})`;

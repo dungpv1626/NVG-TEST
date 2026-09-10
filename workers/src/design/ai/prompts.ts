@@ -14,14 +14,37 @@ export interface AiPrompts {
     repair: string;
   };
   floorPlan: {
-    /**
-     * Chỉ dẫn hệ thống cho bước xếp mặt bằng — tiếng Anh, không mang dữ liệu.
-     *
-     * CỐ Ý không có `repair` đi kèm: theo T14 nhánh AI không có tiêu chí đạt/không đạt để đòi
-     * mô hình sửa. Chỗ lệch quy chuẩn đo sau và hiện thành cảnh báo (`ai/rule-warnings.ts` và bộ kiểm mặt bằng của Đợt 2).
-     */
+    /** Chỉ dẫn hệ thống cho bước xếp mặt bằng — tiếng Anh, không mang dữ liệu. */
     system: string;
+    /**
+     * Lời dẫn lượt sửa, có chỗ `{issues}` để điền danh sách lỗi.
+     *
+     * Có mặt từ T15 (09/09/2026), và đó là một thay đổi về NGUYÊN TẮC chứ không phải thêm một
+     * chuỗi: trước đó mô hình tự viết SVG nên không có tiêu chí đạt/không đạt nào để đòi sửa.
+     * Nay mô hình khai dữ liệu, nên `ai/plan-check.ts` trả lời được câu «bản này tự mâu thuẫn ở
+     * đâu» và lượt sửa có cái mà bám vào. Vẫn đúng MỘT lượt.
+     *
+     * Lệch quy chuẩn thì KHÔNG đi qua đường này: nó hiện thành cảnh báo (`rule-warnings.ts`),
+     * không bao giờ bắt mô hình sửa (T14, T20).
+     */
+    repair: string;
+    /**
+     * Ba ý đồ bố cục gửi kèm ba lượt gọi song song.
+     *
+     * Là DỮ LIỆU chứ không phải hằng số trong mã vì đây là thứ sẽ đổi sau mỗi lần đo: ba phương
+     * án chỉ có giá trị khi chúng khác nhau về CẤU TRÚC, và việc tìm ba ý đồ thật sự khác nhau
+     * là việc chỉnh lời dẫn, không phải việc triển khai lại.
+     */
+    strategies: PlanStrategy[];
   };
+}
+
+/** Một ý đồ bố cục: mã phương án, nhãn tiếng Việt cho màn hình, câu tiếng Anh cho lời dẫn. */
+export interface PlanStrategy {
+  /** `AI-A`, `AI-B`, `AI-C` — khớp `variant_id` của hợp đồng `ai-floor-plan`. */
+  id: string;
+  label: string;
+  strategy: string;
 }
 
 export class AiPromptsError extends Error {
@@ -43,13 +66,54 @@ export function parseAiPrompts(raw: unknown): AiPrompts {
   if (!program.repair.includes('{issues}')) {
     throw new AiPromptsError('`program.repair` phải có chỗ điền `{issues}`.');
   }
-  const floorPlan = (doc as { floor_plan?: { system?: unknown } }).floor_plan;
-  if (!floorPlan || typeof floorPlan.system !== 'string') {
-    throw new AiPromptsError('kb/ai_design_prompts.yaml thiếu `floor_plan.system`.');
+  const floorPlan = (doc as { floor_plan?: { system?: unknown; repair?: unknown } }).floor_plan;
+  if (!floorPlan || typeof floorPlan.system !== 'string' || typeof floorPlan.repair !== 'string') {
+    throw new AiPromptsError(
+      'kb/ai_design_prompts.yaml thiếu `floor_plan.system` hoặc `floor_plan.repair`.',
+    );
   }
+  if (!floorPlan.repair.includes('{issues}')) {
+    throw new AiPromptsError('`floor_plan.repair` phải có chỗ điền `{issues}`.');
+  }
+  const strategies = parseStrategies((floorPlan as { strategies?: unknown }).strategies);
   return {
     version: doc.version,
     program: { system: program.system, repair: program.repair },
-    floorPlan: { system: floorPlan.system },
+    floorPlan: { system: floorPlan.system, repair: floorPlan.repair, strategies },
   };
+}
+
+/**
+ * Danh sách ý đồ bố cục — kiểm đủ hình dạng và mã không trùng.
+ *
+ * Mã trùng nhau là lỗi phải chặn lúc NẠP, không phải lúc chạy: hai phương án cùng `variant_id`
+ * sẽ đúc ra hai artifact mà màn hình không phân biệt được, và lúc ấy đã tốn tiền gọi mô hình.
+ */
+function parseStrategies(raw: unknown): PlanStrategy[] {
+  if (!Array.isArray(raw) || raw.length === 0) {
+    throw new AiPromptsError('kb/ai_design_prompts.yaml thiếu `floor_plan.strategies`.');
+  }
+  const seen = new Set<string>();
+  return raw.map((item, index) => {
+    const entry = item as Partial<PlanStrategy>;
+    if (
+      typeof entry.id !== 'string' ||
+      typeof entry.label !== 'string' ||
+      typeof entry.strategy !== 'string'
+    ) {
+      throw new AiPromptsError(
+        `\`floor_plan.strategies[${index}]\` phải có đủ \`id\`, \`label\`, \`strategy\`.`,
+      );
+    }
+    if (!/^AI-[A-Z]$/.test(entry.id)) {
+      throw new AiPromptsError(
+        `\`floor_plan.strategies[${index}].id\` phải theo khuôn AI-A, AI-B… (đang là "${entry.id}").`,
+      );
+    }
+    if (seen.has(entry.id)) {
+      throw new AiPromptsError(`Hai ý đồ bố cục cùng mã "${entry.id}".`);
+    }
+    seen.add(entry.id);
+    return { id: entry.id, label: entry.label, strategy: entry.strategy };
+  });
 }

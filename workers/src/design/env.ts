@@ -71,4 +71,13 @@ export interface DesignEnv {
    * (số hoá hàng loạt, sinh lại toàn bộ dự án) — xem `doc/design/14-phuong-an-demo.md` 14.6(a).
    */
   DESIGN_PIPELINE?: Workflow;
+
+  /**
+   * Workflow của NHÁNH AI (`workflows/ai-design.ts`) — một instance cho một giai đoạn.
+   *
+   * Tách khỏi `DESIGN_PIPELINE` vì nó thuộc dòng khác: nhánh AI thay thế bộ giải (T15), và ngày
+   * dọn bộ giải thì binding kia ra đi cùng. Không bật được (chạy ngoài runtime Workers) thì tuyến
+   * khởi động trả 503 kèm lý do, không âm thầm chạy đồng bộ.
+   */
+  AI_DESIGN_PIPELINE?: Workflow;
 }

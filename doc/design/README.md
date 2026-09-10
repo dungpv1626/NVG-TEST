@@ -280,6 +280,7 @@ mới**.
 |---|---|
 | Mới vào | `01-overview` → `02-architecture` → `03-data-contracts` |
 | Nhìn tổng thể nhanh | Sơ đồ ở `02-architecture` 2.0; luồng ở `11-design-flow` |
+| Nhìn tổng thể nhánh AI | **`14-so-do-khoi.html`** — ba sơ đồ khối (bốn bước × ba lớp chạy · vòng đời một đề xuất mặt bằng · hàng rào giữa hai bộ giải). Mở bằng trình duyệt; nó đối chiếu với mã nguồn, không phải với tài liệu |
 | Viết code bất kỳ layer nào | `03-data-contracts` (bắt buộc) |
 | Làm Layer 3 (mặt bằng) | `04-layer3-floorplan` — phần khó nhất |
 | Viết giao diện | `12-ux-ui` (bắt buộc) |

@@ -19,6 +19,7 @@ import { useAiDesignState, type AiDesignState } from '@/hooks/use-ai-design';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { Chip, Panel } from '../tk-ui';
 import { cn } from '@/lib/utils';
+import { AiPlanStep } from './ai-plan-step';
 import { AiProgramStep } from './ai-program-step';
 
 type StepId = 'chuong-trinh' | 'mat-bang' | 'mat-dung' | 'phoi-canh';
@@ -80,7 +81,9 @@ function statusOf(
       return {
         done: Boolean(state.facadeArtifactId),
         running: run('facade'),
-        blocked: state.plans.length ? null : 'Cần một phương án mặt bằng trước.',
+        // Có phương án là chưa đủ: phải có phương án được CHỌN. Mặt đứng dựng theo đúng một mặt
+        // bằng, và chọn bản nào là quyết định của người (PRD 2.3).
+        blocked: state.planHeadArtifactId ? null : 'Cần chọn một phương án mặt bằng trước.',
         count: 0,
       };
     case 'phoi-canh':
@@ -183,7 +186,10 @@ export function AiDesignTab({
         {open === 'chuong-trinh' && (
           <AiProgramStep projectId={projectId} readOnly={readOnly} state={data} />
         )}
-        {open !== 'chuong-trinh' && (
+        {open === 'mat-bang' && (
+          <AiPlanStep projectId={projectId} readOnly={readOnly} state={data} />
+        )}
+        {open !== 'chuong-trinh' && open !== 'mat-bang' && (
           <Panel title={active.label}>
             {/* Đúng câu của CLAUDE.md 5.2: chưa có thì nói chưa có, không hiện số 0 hay ô rỗng
                 trông như đã chạy xong. */}

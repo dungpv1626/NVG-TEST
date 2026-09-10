@@ -578,8 +578,13 @@
             <b>0 lượt gọi API.</b>
           </li>
           <li>
-            <span class="pill s-draft">Chưa</span>
-            <b>Đợt 3 — Mặt bằng qua Workflow</b>: chạy nền, tiến độ, ba phương án, một lượt sửa.
+            <span class="pill s-progress">Xong mã, chưa đo</span>
+            <b>Đợt 3 — Mặt bằng qua Workflow</b>: Workflow <code>AiDesignPipeline</code> (mỗi lượt
+            gọi là một <code>step.do</code> riêng nên thử lại không mua lại thứ đã mua),
+            <code>ai/plan.ts</code>, <code>ai/runs.ts</code> (tiến độ có so-và-đặt), lời dẫn
+            <code>floor_plan.{system,repair}</code> viết lại cho hợp đồng dữ liệu, ba ý đồ bố cục là
+            dữ liệu, bốn tuyến API, màn hình mặt bằng + dải tiến độ. <b>0 lượt gọi API</b> — mã đã
+            xong nhưng CHƯA chạy thật lần nào.
           </li>
           <li>
             <span class="pill s-draft">Chưa</span>
@@ -597,42 +602,75 @@
       </div>
 
       <div class="flag block">
-        <h3>Bàn giao sang phiên mới — cập nhật cuối ngày 09/09/2026</h3>
+        <h3>Bàn giao sang phiên mới — cập nhật cuối ngày 10/09/2026</h3>
         <p class="kv">
-          <b>Đang đứng ở đâu:</b> nhánh <code>dev_design</code>.
-          <b>Đợt 2 — Bút vẽ đã xong mã.</b> Đo lúc chốt:
-          <b>435 phép thử phía Worker/shared + 356 phía web</b> xanh (riêng nhánh AI <b>67</b>),
-          <code>npx tsc -b</code> sạch, prettier sạch. <b>0 lượt gọi API AI.</b>
+          <b>Đang đứng ở đâu:</b> nhánh <code>dev_design</code>. <b>Đợt 3 đã xong mã.</b> Đo lúc
+          chốt: <b>769 phép thử Worker/shared</b> + <b>356 phía web</b> xanh (riêng nhánh AI
+          <b>107</b>), <code>npx tsc -b</code> sạch, prettier sạch,
+          <code>npm run contracts:check</code> khớp. <b>0 lượt gọi API AI trong cả đợt.</b>
+          <i>Lưu ý khi chạy lại bộ đầy đủ:</i> <code>db/src/__tests__/tc.test.ts</code> đỏ 23 phép
+          thử vì hạn mức đăng nhập của Supabase Auth; chạy riêng tệp đó thì 40/40 xanh (đúng hiện
+          tượng đã ghi ở CLAUDE.md 4.7).
         </p>
         <p class="kv">
-          <b>Việc chờ Haan — chấm tờ vẽ.</b> Năm tờ dựng từ fixture viết tay (nhà phố 4&times;15 m
-          ba tầng, biệt thự 10&times;14 m hai tầng) nằm ở
-          <code>workers/src/design/__tests__/__snapshots__/*.svg</code>. Cách xem: phục vụ thư mục
-          đó bằng <code>python3 -m http.server</code> rồi mở trong trình duyệt. Cần biết: nét, cỡ
-          chữ, chuỗi kích thước, ký hiệu cửa và thang có đủ để một kiến trúc sư đọc không; thiếu gì
-          thì bổ sung trước khi Đợt 3 bắt đầu tiêu tiền model.
+          <b>Việc chờ Haan — hai thứ, thứ nhất chặn tiền.</b> (1) <b>Chấm năm tờ vẽ của Đợt 2</b>
+          (<code>workers/src/design/__tests__/__snapshots__/*.svg</code>, phục vụ bằng
+          <code>python3 -m http.server</code>): nét, cỡ chữ, chuỗi kích thước, ký hiệu cửa và thang
+          có đủ để một kiến trúc sư đọc không. Tờ vẽ chưa đạt thì mọi lượt gọi mô hình ở Đợt 3 đều
+          cho ra một bản vẽ không dùng được — tiền tiêu để nhận lại đúng khuyết điểm đã biết. (2)
+          Soát 23 quy tắc trong <code>rules/nvg-experience.yaml</code> (không chặn gì).
         </p>
         <p class="kv">
-          <b>Ba điều đã tự quyết trong đợt, đổi được rẻ:</b> (1) hướng giấy và tỷ lệ do bộ vẽ chọn —
-          thử 1:50 &rarr; 1:100 &rarr; 1:200 trên cả tờ ngang lẫn tờ dọc, lấy cặp đầu tiên còn vừa;
-          nhà phố 4&times;15 m vì thế ra tờ A3 DỌC 1:50 thay vì tờ ngang 1:100 như ghi trong bản kế
-          hoạch. (2) Cảnh báo quy chuẩn cho mặt bằng đặt cạnh <code>reviewProgramAreas</code> trong
-          <code>ai/rule-warnings.ts</code>, không hồi sinh <code>plan-review.ts</code> (tệp đó chưa
-          từng tồn tại). (3) Đợt này KHÔNG đụng <code>web/</code> — màn hình mặt bằng thuộc Đợt 3.
+          <b>Xin phép để ĐO Đợt 3</b> — chưa chạy, đang chờ Haan đồng ý:
+          <b>3 phương án &times; (1 lượt đề xuất + tối đa 1 lượt sửa) = 3&ndash;6 lượt</b>, tuyến
+          <code>ai_text_*</code> (chọn trên màn hình), ước <b>0,9&ndash;1,8 USD</b> một lần đo với
+          Gemini Pro — Flash rẻ khoảng mười lần, đủ cho một lần chạy khói. Chứng minh: mô hình có
+          khai nổi tường + cửa + thang theo hợp đồng dữ liệu không, tỷ lệ phải sửa là bao nhiêu, và
+          lưới an toàn suy tường (T19) có phải dùng tới không. Dự án đo:
+          <code>c815a6e6…</code> (biệt thự 15&times;20, 2 tầng) — <b>nối khảo sát trước khi đo</b>,
+          hiện <code>site_source_survey_id</code> còn rỗng nên <code>digest.survey = null</code>.
         </p>
         <p class="kv">
-          <b>Vẫn chờ Haan như cũ:</b> soát 23 quy tắc trong <code>rules/nvg-experience.yaml</code>.
-          Đợt 2 không phụ thuộc câu trả lời đó — bộ kiểm máy cố ý KHÔNG đọc quy chuẩn, chỉ hỏi dữ
-          liệu có tự mâu thuẫn không.
+          <b>Bốn điều tự quyết trong đợt, đổi được rẻ:</b> (1)
+          <b>Hợp đồng đổi từ cm NGUYÊN sang lưới NỬA cm</b> — vách 11 cm của NVG làm tim vách giữa
+          hai phòng rơi vào x,5, nên bắt số nguyên thì chính <code>derive-walls.ts</code> (T19) sinh
+          ra artifact mà hợp đồng từ chối lúc GHI, sau khi đã trả tiền. Mô hình vẫn được bảo khai số
+          nguyên. (2) Ba ý đồ bố cục nằm ở <code>kb/ai_design_prompts.yaml</code> chứ không phải
+          hằng số trong mã — đó là thứ sẽ chỉnh sau mỗi lần đo. (3) Thêm nhóm
+          <code>no_door_required</code> vào <code>kb/room_vocabulary.yaml</code> để danh sách phòng
+          được miễn cửa là DỮ LIỆU. (4) Thêm tuyến <code>GET /design/ai/plan/:id/review</code>: kiểm
+          và cảnh báo tính LÚC ĐỌC, gói quy tắc là tham số truy vấn — cảnh báo là lăng kính người
+          đọc chọn, không phải thuộc tính của bản vẽ.
         </p>
         <p class="kv">
-          <b>Việc kế tiếp — Đợt 3, Mặt bằng qua Workflow:</b>
-          <code>workflows/ai-design*.ts</code> (stage plan), bảng <code>design_ai_run</code> +
-          <code>ai/runs.ts</code>, lời dẫn <code>floor_plan.{system,repair}</code>,
-          <code>ai/plan.ts</code> viết lại, <code>/plan/runs</code>, <code>/plan/choose</code>,
-          <code>/runs/:id</code>, <code>ai-plan-step</code>. Đây là đợt ĐẦU TIÊN tốn tiền: 3 ý đồ
-          &times; (1 + tối đa 1 lượt sửa) = 3&ndash;6 lượt, Gemini Pro ước
-          <b>0,9&ndash;1,8 USD mỗi lần đo</b>. Phải xin phép trước từng lần.
+          <b>Hai lỗi tiềm ẩn của Đợt 2 mà phép thử Đợt 3 lôi ra</b> (cả hai đã vá, có phép thử
+          canh): (a) hai fixture viết tay chứa toạ độ ngoài lưới — bộ kiểm không hỏi về đơn vị nên
+          chúng đi qua sạch, và chỉ vỡ ở bước GHI artifact; nay có phép thử bắt cả hai fixture đi
+          qua <code>aiFloorPlanSchema</code>. (b) <code>wallOnly</code> tính sai: tường khai hỏng
+          kéo theo «phòng không có cửa», mà mã đó không thuộc nhóm tường, nên T19
+          <b>không kích hoạt đúng vào trường hợp nó sinh ra để cứu</b> — người dùng nhận tờ vẽ hỏng
+          kèm lời mời bấm lại, tức một lượt gọi tính tiền nữa.
+        </p>
+        <p class="kv">
+          <b>Bốn chỗ rà soát trước commit bắt được</b> (đã sửa, có phép thử): (a) lượt đầu trả về
+          cấu trúc hỏng thì lượt sửa gọi lại y NGUYÊN lời dẫn cũ — mua thêm một lượt để nhận lại
+          đúng cái sai vừa rồi; nay danh sách lỗi luôn được gửi kèm, kể cả khi không có bản cũ để
+          vá. (b) Mặc định thử lại của Cloudflare Workflows áp cho bước gọi mô hình nghĩa là một nhà
+          cung cấp chập chờn tính tiền đủ số lần thử; nay khai tường minh
+          <code>retries.limit = 1</code> và đổi lỗi không đáng thử lại thành
+          <code>NonRetryableError</code> ngay trong bước. (c) Tuyến khởi động lấy đầu bài ĐANG HIỆU
+          LỰC thay vì đầu bài mà chương trình không gian bám theo — đầu bài sửa sau lúc lập chương
+          trình thì mô hình nhận hai nguồn nói ngược nhau mà không gì báo; nay đi theo lineage. (d)
+          <code>count</code> không phải số làm lượt chạy mở ra với 0 phương án rồi kết thúc bằng
+          «hỏng» không rõ lý do.
+        </p>
+        <p class="kv">
+          <b>Việc kế tiếp — Đợt 4, Mặt đứng:</b> <code>ai/facade.ts</code>,
+          <code>facade-describe.ts</code>, <code>kb/facade_vocabulary.yaml</code>,
+          <code>draw/elevation.ts</code>, lời dẫn <code>facade.{system,repair}</code>, stage
+          <code>facade</code> của Workflow, ba tuyến, <code>ai-facade-step</code>. Ước
+          <b>1&ndash;2 lượt ≈ 0,1&ndash;0,3 USD</b> mỗi lần đo.
+          <b>Đừng bắt đầu trước khi Haan chấm tờ vẽ</b>: mặt đứng dựng trên chính bộ vẽ ấy.
         </p>
         <p class="kv">
           <b>Ràng buộc còn hiệu lực:</b> không gọi API AI trả phí khi chưa xin phép — nêu rõ mấy
@@ -740,6 +778,70 @@
             </tr>
           </thead>
           <tbody>
+            <tr>
+              <td class="num">10/09</td>
+              <td>
+                Bộ giải AI — Đợt 3: mặt bằng qua Workflow, tiến độ, ba phương án, một lượt sửa
+              </td>
+              <td class="xs">
+                <b>Lời dẫn viết lại cho hợp đồng DỮ LIỆU</b> (<code>floor_plan.system</code>,
+                v1.3.0): bản cũ còn bảo mô hình tự viết chuỗi SVG theo mét — nay là cm, tim tường,
+                kích thước lọt lòng, kèm một ví dụ tính sẵn để mô hình không nhầm mặt tường với tim
+                tường. Thêm <code>floor_plan.repair</code> (có <code>{issues}</code>) — chỉ có nghĩa
+                từ khi có bộ kiểm máy, và <b>ba ý đồ bố cục</b>
+                <code>floor_plan.strategies</code> là dữ liệu, vì ba lượt gọi cùng một lời dẫn cho
+                ra ba bản lệch nhau vài chục centimet chứ không phải ba cấu trúc để so.<br />
+                <b><code>ai/plan.ts</code></b> chia làm bốn mảnh rời — <code>callPlanModel</code> ·
+                <code>checkProposal</code> · <code>finalisePlan</code> ·
+                <code>generateAiPlan</code> ghép cả ba. Lý do chia là TIỀN: Workflow thử lại cả một
+                <code>step.do</code> khi bước đó hỏng, nên gộp «gọi &rarr; kiểm &rarr; sửa» vào một
+                bước thì một lần rớt mạng ở lượt sửa sẽ mua lại lượt đề xuất. Sáu trường Worker điền
+                (<code>schema_version</code>, <code>program_ref</code>, <code>variant_id</code>,
+                <code>strategy</code>, <code>north_deg</code>, <code>generator</code>) bị lược khỏi
+                cả lược đồ gửi đi lẫn câu trả lời — mô hình lỡ khai thì bỏ qua, không đốt một lượt
+                sửa để xoá một khoá ta ghi đè ngay sau đó. Lược đồ gửi mô hình SINH TỪ chính hợp
+                đồng, không viết bản thứ hai.<br />
+                <b>Workflow <code>AiDesignPipeline</code></b> (<code>workflows/ai-design.ts</code> +
+                <code>ai-design-steps.ts</code> tách phần kiểm thử được): một instance một GIAI ĐOẠN
+                vì kiến trúc sư duyệt giữa các bước; ba phương án chạy song song bằng
+                <code>allSettled</code> nên một phương án hỏng không giết hai phương án kia; mọi
+                lượt gọi ghi <code>design_ai_call</code> NGAY trong bước đã gọi, kể cả lượt hỏng —
+                tiền đã tiêu thì phải có dòng nhật ký. Lượt sửa làm bản vẽ TỆ HƠN thì giữ bản cũ
+                (<code>keepRepaired</code>, dùng chung cho cả hai đường chạy).<br />
+                <b>Tiến độ <code>ai/runs.ts</code></b
+                >: ba phương án cùng ghi một cột <code>jsonb</code>, nên mỗi lần ghi là một phép
+                <b>so-và-đặt</b> trên <code>progress.rev</code>; mất cập nhật ở đây hiện ra thành
+                «2/6» tụt về «1/6» mà không lỗi nào báo. Bước đã xong không tụt về đang chạy khi
+                Workflow dựng lại từ giữa; lượt chạy hỏng thì bước còn treo bị đánh dấu hỏng thay vì
+                quay mãi.<br />
+                <b>Bốn tuyến</b>: <code>POST /plan/runs</code> (kiểm hết điều kiện tốn-tiền-được
+                TRƯỚC khi mở instance, 409 khi đã có lượt chạy dở),
+                <code>POST /plan/choose</code> (ba phương án đúc với <code>setHead:false</code> —
+                «đang hiệu lực» không được là kết quả của một cuộc chạy đua),
+                <code>GET /plan/:id/review</code> (kiểm + cảnh báo + ghi chú bộ vẽ tính LÚC ĐỌC),
+                <code>GET /runs/:id</code> (đối chiếu trạng thái instance: dòng
+                <code>running</code> mà instance đã chết thì đánh dấu hỏng, không để thanh chờ quay
+                mãi).<br />
+                <b>Màn hình</b> <code>ai-plan-step</code> + <code>ai-run-progress</code>: tờ vẽ hiện
+                qua <code>&lt;img&gt;</code> chứ không nhúng SVG (chữ do mô hình sinh là nội dung
+                không tin được); lỗi máy (đỏ) tách khỏi cảnh báo quy chuẩn (vàng); số quy tắc CHƯA
+                đối chiếu được luôn hiện; dòng «tường do chương trình suy» khi T19 đã chạy.<br />
+                <b>Hợp đồng đổi</b>: <code>$defs.cm</code> từ số NGUYÊN sang lưới
+                <b>nửa centimet</b>
+                — vách 11 cm đo được trên hồ sơ thật làm tim vách rơi vào x,5, nên bắt số nguyên thì
+                chính lưới an toàn T19 sinh ra artifact mà hợp đồng từ chối lúc ghi. Nửa centimet
+                vẫn biểu diễn chính xác trong nhị phân nên mã băm artifact vẫn ổn định.
+                <code>scripts/contracts-gen.mjs</code> thêm <code>multipleOf</code>.<br />
+                <b>Vá hai lỗi tiềm ẩn của Đợt 2</b>: hai fixture viết tay dùng toạ độ ngoài lưới
+                (chỉ vỡ ở bước GHI, sau khi đã tốn tiền) — nay có phép thử bắt chúng đi qua
+                <code>aiFloorPlanSchema</code>; và <code>wallOnly</code> tính sai khiến T19 không
+                kích hoạt đúng lúc cần nhất (tường hỏng kéo theo «phòng không có cửa», mà mã đó
+                không thuộc nhóm tường).<br />
+                <b>Đo:</b> 769 phép thử Worker/shared + 356 web xanh, riêng nhánh AI 107 (thêm
+                <code>ai-plan.test.ts</code> 19, <code>ai-runs.test.ts</code> 8).
+                <b>0 lượt gọi API AI.</b>
+              </td>
+            </tr>
             <tr>
               <td class="num">09/09</td>
               <td>Bộ giải AI — Đợt 2: bút vẽ tất định, bộ kiểm máy, suy tường dự phòng</td>
