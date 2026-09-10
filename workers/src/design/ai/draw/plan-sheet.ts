@@ -17,7 +17,13 @@ import { DrawNotes, type DrawNote } from './notes';
 import { renderOpenings } from './openings';
 import { renderRoomLabels } from './rooms';
 import { renderDimensions } from './dims';
-import { renderFrame, renderTitleStrip, svgDocument } from './sheet';
+import {
+  renderFooter,
+  renderFrame,
+  renderSheetTitle,
+  renderTitleBlock,
+  svgDocument,
+} from './sheet';
 import { renderStairs } from './stairs';
 import { renderNorthArrow } from './symbols';
 import { CLS, polylinePath, tag } from './svg';
@@ -76,22 +82,22 @@ export function renderPlanSheet(
   const openings = renderOpenings(level, walls, paper, notes);
   const body = [
     renderFrame(area),
-    renderTitleStrip(area, style, {
-      levelName: level.name,
-      scale,
-      notes: plan.generator.walls_derived ? [AI_DISCLAIMERS.wallsDerived] : [],
-    }),
+    renderTitleBlock(area, style, { levelName: level.name, scale }),
+    renderSheetTitle(area, style, level.name),
+    renderFooter(area, style, plan.generator.walls_derived ? [AI_DISCLAIMERS.wallsDerived] : []),
     renderVoids(level.voids ?? [], paper),
     renderWalls(walls, openings.holes, paper),
     openings.svg,
     renderStairs(level.stairs ?? [], paper, style),
     renderRoomLabels(level.rooms, paper, style, labels, notes),
     renderDimensions(walls, bbox, paper, style),
+    // Mũi tên bắc nằm TRONG vùng hình, không sát khung: chữ «B» in phía ngoài vòng tròn, nên
+    // đặt đúng mép thì nó tràn qua nét khung hoặc qua cột khung tên. Chừa thêm một cỡ chữ.
     renderNorthArrow(
       plan.north_deg ?? 0,
       [
-        area.content.x1 - style.symbol.north_r_mm - 4,
-        area.content.y0 + style.symbol.north_r_mm + 4,
+        area.plan.x1 - style.symbol.north_r_mm - style.text_mm.north,
+        area.plan.y0 + style.symbol.north_r_mm + style.text_mm.north,
       ],
       paper,
       style,

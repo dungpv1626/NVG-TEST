@@ -161,3 +161,62 @@ export function subtractIntervals(total: number, holes: readonly Interval[]): In
 export function intervalsOverlap(a: Interval, b: Interval, tolerance = 0): boolean {
   return Math.min(a.to, b.to) - Math.max(a.from, b.from) > tolerance;
 }
+
+/**
+ * Phần đoạn thẳng `a→b` NẰM TRONG một tứ giác lồi, trả về theo tham số t ∈ [0, 1].
+ *
+ * Dùng để xoá nét: chỗ mặt tường này chạy xuyên vào ruột bức tường kia thì không được vẽ, nếu
+ * không mỗi ngã ba sẽ có hai gạch nhỏ đâm qua mặt bức chính. Đây là khác biệt giữa một bản vẽ
+ * và một hình ghép từ các hộp chữ nhật.
+ *
+ * Thuật toán Cyrus–Beck: cắt dần đoạn bằng bốn nửa mặt phẳng của tứ giác. `eps` co tứ giác vào
+ * một chút, nên hai mặt tường TRÙNG NHAU (vách mỏng ăn vào tường dày cùng một mặt phẳng) không
+ * bị coi là nằm trong nhau — đó là nét thật, phải giữ.
+ *
+ * `null` khi đoạn không có phần nào bên trong.
+ */
+export function clipSegmentByQuad(a: Pt, b: Pt, quad: readonly Pt[], eps = 0): Interval | null {
+  if (quad.length < 3) return null;
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  if (dx === 0 && dy === 0) return null;
+
+  // Tâm để suy chiều pháp tuyến NGOÀI của từng cạnh — không giả định thứ tự đỉnh cùng chiều
+  // kim đồng hồ hay ngược, vì tứ giác tường dựng từ pháp tuyến trái và có thể lật cả hai chiều.
+  let cx = 0;
+  let cy = 0;
+  for (const point of quad) {
+    cx += point[0] / quad.length;
+    cy += point[1] / quad.length;
+  }
+
+  let enter = 0;
+  let exit = 1;
+  for (let i = 0; i < quad.length; i += 1) {
+    const p1 = quad[i]!;
+    const p2 = quad[(i + 1) % quad.length]!;
+    let nx = -(p2[1] - p1[1]);
+    let ny = p2[0] - p1[0];
+    const length = Math.hypot(nx, ny);
+    if (length === 0) continue;
+    nx /= length;
+    ny /= length;
+    // Lật cho pháp tuyến chỉ ra NGOÀI (ra xa tâm).
+    if (nx * (cx - p1[0]) + ny * (cy - p1[1]) > 0) {
+      nx = -nx;
+      ny = -ny;
+    }
+    const denom = nx * dx + ny * dy;
+    const numer = nx * (a[0] - p1[0]) + ny * (a[1] - p1[1]) + eps;
+    if (Math.abs(denom) < 1e-12) {
+      if (numer > 0) return null; // song song và nằm hẳn ngoài cạnh này
+      continue;
+    }
+    const t = -numer / denom;
+    if (denom > 0) exit = Math.min(exit, t);
+    else enter = Math.max(enter, t);
+    if (enter >= exit) return null;
+  }
+  if (enter >= exit) return null;
+  return { from: enter, to: exit };
+}

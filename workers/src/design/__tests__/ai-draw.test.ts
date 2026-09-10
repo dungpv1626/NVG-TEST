@@ -49,7 +49,9 @@ function arcCount(svg: string): number {
 
 describe('kb/sheet_style.yaml', () => {
   it('nạp được và có đủ các khoá bộ vẽ dùng tới', () => {
-    expect(style.scales.length).toBeGreaterThan(0);
+    expect(style.scale_steps.length).toBeGreaterThan(0);
+    expect(style.title_block.w_mm).toBeGreaterThan(0);
+    expect(style.room_label.area_suffix).toBeTruthy();
     expect(style.orientations).toContain('portrait');
     expect(style.line_mm.wall_cut).toBeGreaterThan(0);
     expect(style.colour.ink).toMatch(/^#[0-9A-Fa-f]{6}$/);
@@ -116,7 +118,10 @@ describe('bộ vẽ mặt bằng — hình học', () => {
         expect(names).toHaveLength(level.rooms.length);
         expect(areas).toHaveLength(level.rooms.length);
         for (const room of level.rooms) {
-          const expected = room.label ?? labels[room.type] ?? room.type;
+          // Nhãn IN HOA theo quy ước bản vẽ của NVG (`room_label.uppercase`, đo trên hồ sơ thật).
+          const expected = (room.label ?? labels[room.type] ?? room.type).toLocaleUpperCase(
+            'vi-VN',
+          );
           expect(names).toContain(expected);
         }
       }
@@ -154,8 +159,11 @@ describe('bộ vẽ mặt bằng — hình học', () => {
       ],
     };
     const svg = sheet(hostile, 1).svg;
-    expect(svg).not.toContain('<script');
-    expect(svg).toContain('&lt;script&gt;');
+    expect(svg).not.toMatch(/<script/i);
+    // Nhãn phòng bị in hoa theo quy ước bản vẽ, nên so bằng dấu ngoặc ĐÃ THOÁT chứ không so cả
+    // chuỗi: thứ cần chứng minh là `<` không bao giờ đi vào tệp dưới dạng dấu mở thẻ.
+    expect(svg).toContain('&lt;');
+    expect(svg).toContain('SCRIPT');
   });
 
   it('không có tờ nào chứa kịch bản, liên kết ngoài hay bộ bắt sự kiện', () => {
@@ -170,17 +178,21 @@ describe('bộ vẽ mặt bằng — hình học', () => {
   });
 
   it('chọn tỷ lệ lớn nhất còn vừa giấy, và xoay giấy khi cần', () => {
-    // Biệt thự 10 × 14 m: 1:50 vừa tờ A3 DỌC, không vừa tờ ngang — nên phải ra tờ dọc.
+    // Biệt thự 10 × 14 m ra tờ A3 DỌC. Tỷ lệ do bộ vẽ TÍNH rồi làm tròn lên mức chuẩn gần
+    // nhất, không chọn trong ba mức cố định như bản trước — nên con số ở đây phải là một mức có
+    // thật trong `scale_steps`, và phải là mức nhỏ nhất còn vừa.
     const villa = sheet(VILLA_PLAN, 1);
-    expect(villa.scale).toBe(50);
+    expect(style.scale_steps).toContain(villa.scale);
     expect(villa.orientation).toBe('portrait');
 
-    // Gấp đôi kích thước thì 1:50 không còn vừa hướng nào, phải hạ xuống 1:100.
-    expect(sheet(scalePlan(VILLA_PLAN, 2), 1).scale).toBe(100);
+    // Gấp đôi kích thước thì tỷ lệ phải NHẢY LÊN đúng một bậc trở lên, không đứng yên.
+    const twice = sheet(scalePlan(VILLA_PLAN, 2), 1);
+    expect(twice.scale).toBeGreaterThan(villa.scale);
+    expect(style.scale_steps).toContain(twice.scale);
 
-    // Gấp bốn thì xuống tiếp 1:200 và vẫn ra tờ, không ném.
+    // Gấp bốn thì lớn hơn nữa và vẫn ra tờ, không ném.
     const huge = sheet(scalePlan(VILLA_PLAN, 4), 1);
-    expect(huge.scale).toBe(200);
+    expect(huge.scale).toBeGreaterThan(twice.scale);
     expect(huge.notes).toEqual([]);
   });
 

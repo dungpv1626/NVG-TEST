@@ -33,16 +33,18 @@ export interface Paper {
   u(unit: Pt): Pt;
 }
 
-/** Vùng vẽ hình trên giấy, tính bằng mm, đã trừ lề, dải tiêu đề và chỗ cho chuỗi kích thước. */
+/** Vùng vẽ hình trên giấy, tính bằng mm, đã trừ lề, khung tên và chỗ cho chuỗi kích thước. */
 export interface DrawArea {
   /** Khung bản vẽ (mm giấy) — nét khung chạy đúng trên đường này. */
   frame: Rect;
-  /** Dải tiêu đề, nằm trong khung, sát mép dưới. */
-  strip: Rect;
-  /** Phần còn lại để đặt hình và chuỗi kích thước. */
+  /** Khung tên: CỘT ĐỨNG sát mép phải, cao hết khung — đúng cách hồ sơ NVG đặt nó. */
+  block: Rect;
+  /** Phần còn lại để đặt hình, chuỗi kích thước và dòng tên bản vẽ. */
   content: Rect;
-  /** Phần dành riêng cho HÌNH — `content` đã trừ chỗ chuỗi kích thước ở trái và dưới. */
+  /** Phần dành riêng cho HÌNH — `content` đã trừ chuỗi kích thước và dải tên bản vẽ. */
   plan: Rect;
+  /** Dải dành cho dòng tên bản vẽ, ngay dưới `plan`. */
+  titleBand: Rect;
 }
 
 /** Khoảng hở tối thiểu giữa hình và khung ở hai cạnh KHÔNG có chuỗi kích thước, mm giấy. */
@@ -66,13 +68,22 @@ export function drawArea(style: SheetStyle, orientation: Orientation): DrawArea 
     x1: size.width - style.margin_mm.right,
     y1: size.height - style.margin_mm.bottom,
   };
-  const strip: Rect = {
-    x0: frame.x0,
-    y0: frame.y1 - style.title_strip.h_mm,
+  // Khung tên là một CỘT bên phải, cao hết khung — không phải dải ngang dưới đáy như bản trước.
+  const block: Rect = {
+    x0: frame.x1 - style.title_block.w_mm,
+    y0: frame.y0,
     x1: frame.x1,
     y1: frame.y1,
   };
-  const content: Rect = { x0: frame.x0, y0: frame.y0, x1: frame.x1, y1: strip.y0 };
+  const content: Rect = { x0: frame.x0, y0: frame.y0, x1: block.x0, y1: frame.y1 };
+
+  // Dòng tên bản vẽ nằm giữa, NGAY DƯỚI hình.
+  const titleBand: Rect = {
+    x0: content.x0,
+    y0: content.y1 - style.sheet_title.band_mm,
+    x1: content.x1,
+    y1: content.y1,
+  };
 
   // Chuỗi kích thước chạy dọc cạnh TRÁI và cạnh DƯỚI (mặt trước) — hai cạnh ấy phải chừa đủ
   // cho hai hàng chuỗi cộng chữ số, hai cạnh kia chỉ cần một khoảng hở cho dễ nhìn.
@@ -82,21 +93,25 @@ export function drawArea(style: SheetStyle, orientation: Orientation): DrawArea 
     x0: content.x0 + dimBand,
     y0: content.y0 + FREE_EDGE_PAD_MM,
     x1: content.x1 - FREE_EDGE_PAD_MM,
-    y1: content.y1 - dimBand,
+    y1: titleBand.y0 - dimBand,
   };
-  return { frame, strip, content, plan };
+  return { frame, block, content, plan, titleBand };
 }
 
 /**
  * Chọn hướng giấy và tỷ lệ: hình LỚN NHẤT còn lọt vùng vẽ.
  *
- * Duyệt tỷ lệ trước, hướng giấy sau — vẽ ở 1:50 trên tờ dọc bao giờ cũng hơn 1:100 trên tờ
- * ngang, vì tỷ lệ quyết định chữ trong phòng có đọc được không, còn hướng giấy thì không.
- * Cùng một tỷ lệ mà cả hai hướng đều vừa thì lấy hướng đứng trước trong `style.orientations`.
+ * Cách làm đổi ngày 10/09/2026. Bản trước duyệt một danh sách ba mức 1:50 / 1:100 / 1:200, nên
+ * một ngôi nhà dài hơn khổ 1:50 đúng vài centimet tụt thẳng xuống 1:100 và chữ trong phòng bé
+ * đi một nửa dù tờ giấy còn thừa chỗ. Đo trên hồ sơ thật: tờ mặt bằng của NVG ghi **1:70** —
+ * họ chọn tỷ lệ vừa tờ, không bó vào ba mức.
  *
- * Không có cặp nào vừa thì trả tỷ lệ CUỐI kèm `fits: false` — bộ vẽ vẫn ra tờ (thu nhỏ hơn
- * chuẩn còn hơn cắt mất một góc nhà) và ghi một dòng ghi chú để màn hình nói ra. Ném ở đây thì
- * một lô đất rộng bất thường sẽ thành lỗi máy chủ, trong khi thứ người dùng cần là tờ vẽ.
+ * Nay tính tỷ lệ CẦN THIẾT rồi làm tròn LÊN mức chuẩn gần nhất trong `scale_steps`. Làm tròn
+ * lên chứ không xuống: 1:63 làm tròn thành 1:60 là vẽ to hơn chỗ có, mất một góc nhà.
+ *
+ * Không mức nào vừa thì trả mức CUỐI kèm `fits: false` — bộ vẽ vẫn ra tờ (thu nhỏ hơn chuẩn
+ * còn hơn cắt mất một góc nhà) và ghi một dòng ghi chú để màn hình nói ra. Ném ở đây thì một lô
+ * đất rộng bất thường sẽ thành lỗi máy chủ, trong khi thứ người dùng cần là tờ vẽ.
  */
 export interface SheetLayout {
   orientation: Orientation;
@@ -109,20 +124,27 @@ export function chooseLayout(bbox: Rect, style: SheetStyle): SheetLayout {
   const w = bbox.x1 - bbox.x0;
   const h = bbox.y1 - bbox.y0;
 
-  for (const scale of style.scales) {
-    const k = mmPerCm(scale);
-    for (const orientation of style.orientations) {
-      const area = drawArea(style, orientation);
-      const availW = area.plan.x1 - area.plan.x0;
-      const availH = area.plan.y1 - area.plan.y0;
-      if (w * k <= availW && h * k <= availH) return { orientation, scale, area, fits: true };
-    }
+  let best: SheetLayout | null = null;
+  for (const orientation of style.orientations) {
+    const area = drawArea(style, orientation);
+    const availW = area.plan.x1 - area.plan.x0;
+    const availH = area.plan.y1 - area.plan.y0;
+    if (availW <= 0 || availH <= 0 || w <= 0 || h <= 0) continue;
+
+    // Tỷ lệ nhỏ nhất (hình to nhất) mà cả hai chiều còn lọt: 1 cm thật = 10/scale mm giấy.
+    const needed = Math.max((w * 10) / availW, (h * 10) / availH);
+    const step = style.scale_steps.find((value) => value >= needed - 1e-9);
+    if (step === undefined) continue;
+    // Hướng giấy nào cho tỷ lệ NHỎ HƠN thì thắng — tỷ lệ quyết định chữ trong phòng có đọc được
+    // không, còn hướng giấy thì không. Bằng nhau thì giữ hướng đứng trước trong `orientations`.
+    if (!best || step < best.scale) best = { orientation, scale: step, area, fits: true };
   }
+  if (best) return best;
 
   const orientation = style.orientations[0] ?? 'landscape';
   return {
     orientation,
-    scale: style.scales[style.scales.length - 1] ?? 100,
+    scale: style.scale_steps[style.scale_steps.length - 1] ?? 100,
     area: drawArea(style, orientation),
     fits: false,
   };

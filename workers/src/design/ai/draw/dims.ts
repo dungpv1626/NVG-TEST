@@ -61,7 +61,11 @@ function stations(
   min: number,
   max: number,
 ): number[] {
-  const raw = [min, max, ...walls.filter((w) => w.kind === 'e').map(coordinate)]
+  // Mọi bức tường CẮT NGANG trục đều là một trạm, không riêng tường bao. Bản trước chỉ lấy
+  // tường bao nên chuỗi chi tiết của một ngôi nhà chỉ còn «220 · 9780 · 220» — nghĩa là nó chỉ
+  // nói bề dày hai bức tường ngoài, còn ngôi nhà bên trong thì không đo gì. Lan can vẫn đứng
+  // ngoài: nó không phải trục để bắt kích thước.
+  const raw = [min, max, ...walls.filter((w) => w.kind !== 'r').map(coordinate)]
     .filter((value) => value >= min - AXIS_TOLERANCE_CM && value <= max + AXIS_TOLERANCE_CM)
     .sort((a, b) => a - b);
 

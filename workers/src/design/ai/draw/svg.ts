@@ -116,6 +116,9 @@ export const CLS = {
   frame: 'fr',
   titleRule: 'tr',
   wall: 'w',
+  wallFill: 'wf',
+  column: 'cl',
+  labelBox: 'lb',
   railing: 'rl',
   opening: 'op',
   doorLeaf: 'dl',
@@ -134,6 +137,9 @@ export const CLS = {
   textDisclaimer: 'tw',
   textNote: 'ts',
   textNorth: 'tnn',
+  textSheetTitle: 'tt',
+  textBlockLabel: 'tbl',
+  textFooter: 'tf',
 } as const;
 
 /** Khối `<style>` của tờ vẽ, sinh từ `kb/sheet_style.yaml`. */
@@ -153,7 +159,12 @@ export function sheetCss(style: SheetStyle): string {
       `stroke-linejoin:round}`,
     stroke(CLS.frame, c.ink, w.frame),
     stroke(CLS.titleRule, c.ink, w.title_rule),
-    `.${CLS.wall}{stroke:${c.ink};stroke-width:${num(w.wall_cut)};fill:${c.wall_fill}}`,
+    // Ruột tường và NÉT tường là hai lớp riêng: lớp ruột tô màu giấy để che thứ vẽ trước chạy
+    // xuống dưới tường, lớp nét đã được cắt sạch chỗ chui vào bức khác (`walls.ts`).
+    `.${CLS.wallFill}{fill:${c.wall_fill};stroke:none}`,
+    stroke(CLS.wall, c.ink, w.wall_cut),
+    `.${CLS.column}{fill:${c.ink};stroke:${c.ink};stroke-width:${num(w.column)}}`,
+    `.${CLS.labelBox}{fill:none;stroke:${c.hairline};stroke-width:${num(w.dim_line)}}`,
     stroke(CLS.railing, c.hairline, w.railing),
     stroke(CLS.opening, c.ink, w.opening),
     stroke(CLS.doorLeaf, c.hairline, w.door_leaf),
@@ -172,5 +183,8 @@ export function sheetCss(style: SheetStyle): string {
     text(CLS.textDisclaimer, t.disclaimer, c.ink, 'font-weight:600;text-anchor:start;'),
     text(CLS.textNote, t.strip_note, c.hairline, 'text-anchor:start;'),
     text(CLS.textNorth, t.north, c.ink, 'font-weight:700;'),
+    text(CLS.textSheetTitle, t.sheet_title, c.ink, 'font-weight:700;'),
+    text(CLS.textBlockLabel, t.block_label, c.dim, 'text-anchor:start;'),
+    text(CLS.textFooter, t.footer, c.dim, 'text-anchor:start;'),
   ].join('');
 }

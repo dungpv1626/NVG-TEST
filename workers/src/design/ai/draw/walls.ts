@@ -1,16 +1,26 @@
 /**
- * Tường: từ TIM tường của hợp đồng ra đa giác đặc trên tờ vẽ.
+ * Tường: từ TIM tường của hợp đồng ra nét tường trên tờ vẽ.
  *
- * Hai việc, và cả hai đều là chỗ bản vẽ dễ trông sai nhất:
+ * ── Vì sao ruột tường để TRẮNG (sửa 10/09/2026) ───────────────────────────────────────
+ * Bản trước tô đặc ruột tường bằng màu mực, và cả tờ vẽ đọc thành một vệt đen — sơ đồ khối
+ * chứ không phải bản vẽ. Đo trên hồ sơ thật của NVG (HS-01, 54 tờ A3 kiến trúc): tường là
+ * HAI NÉT MẢNH với ruột trắng; thứ duy nhất tô đặc là CỘT. Đây là khác biệt lớn nhất giữa hai
+ * loại hình, và nó chỉ tốn một lần đổi cách vẽ.
+ *
+ * Ba việc, và cả ba đều là chỗ bản vẽ dễ trông sai nhất:
  *
  *  1. **Nối góc.** Tường khai theo tim, nên hai bức gặp nhau ở góc để hở một ô vuông đúng
  *     bằng nửa bề dày. Kéo dài đầu tường ra bằng nửa bề dày của bức nó chạm thì góc liền.
  *  2. **Cắt lỗ mở.** Chỗ có cửa thì tường phải ĐỨT, không phải vẽ đè một hình trắng lên. Vẽ
  *     đè trông giống nhau trên màn hình nhưng sai khi in trên nền không trắng, và sai hẳn khi
  *     tờ vẽ được rasterise để làm ảnh tham chiếu.
+ *  3. **Xoá nét ở ngã ba.** Ruột trắng thì mọi nét đều nhìn thấy, kể cả đoạn mặt tường chạy
+ *     xuyên vào ruột bức tường kia. Không xoá thì mỗi ngã ba có hai gạch nhỏ đâm ngang qua mặt
+ *     bức chính — chỗ mà mắt người đọc bản vẽ nhận ra ngay là máy vẽ. Nét được cắt bằng
+ *     `clipSegmentByQuad` với thân của MỌI bức khác.
  *
- * Lan can (`k: 'r'`) không tô đặc: hai nét mảnh song song. Nó là lan can ban công, và vẽ nó
- * đặc như tường thì ban công đọc thành một cái hộp kín (cùng lý lẽ với mục `outdoor` của
+ * Lan can (`k: 'r'`) vẫn là hai nét mảnh riêng, mảnh hơn tường: nó là lan can ban công, và vẽ
+ * nó như tường thì ban công đọc thành một cái hộp kín (cùng lý lẽ với mục `outdoor` của
  * `kb/construction_norms.yaml`).
  */
 
@@ -18,6 +28,7 @@ import type { AiFloorPlanLevel } from '@nvg/shared/design';
 import {
   along,
   addVec,
+  clipSegmentByQuad,
   distanceToSegment,
   normalOf,
   subtractIntervals,
@@ -83,6 +94,7 @@ export function prepareWalls(walls: readonly WallInput[]): WallGeom[] {
   return raw.map((wall) => {
     const headExtension = extensionAt(wall.a, wall.id, raw);
     const tailExtension = extensionAt(wall.b, wall.id, raw);
+
     return {
       ...wall,
       origin: along(wall.a, wall.u, -headExtension),
@@ -93,12 +105,18 @@ export function prepareWalls(walls: readonly WallInput[]): WallGeom[] {
 }
 
 /**
- * Kéo dài bao nhiêu ở một đầu tường: nửa bề dày của bức DÀY NHẤT mà đầu này chạm tới.
+ * Kéo dài bao nhiêu ở một đầu tường — và CHỈ ở góc chữ L.
  *
- * "Chạm" đo bằng khoảng cách tới TIM bức kia, cho phép lệch tới nửa bề dày của nó cộng dung
- * sai. Nhờ vậy cùng một phép tính phục vụ cả ba kiểu gặp nhau: hai đầu tường trùng điểm, đầu
- * tường đâm vào giữa bức khác (chữ T), và đầu tường dừng ở MẶT bức khác thay vì ở tim — kiểu
- * cuối là kiểu mô hình hay khai nhất.
+ * Hai kiểu gặp nhau, hai cách xử lý khác hẳn:
+ *
+ *  · **Góc chữ L** — đầu bức này gặp ĐẦU bức kia. Cả hai cùng dừng ở tim nhau nên góc hở một ô
+ *    vuông bằng nửa bề dày; phải kéo dài tới MẶT XA của bức kia thì góc mới liền.
+ *  · **Ngã ba chữ T** — đầu bức này đâm vào GIỮA bức kia. Không kéo dài gì cả: đầu vách đã nằm
+ *    trong thân tường bao rồi, và nét thừa sẽ bị `renderWalls` cắt đi.
+ *
+ * ⚠️ Phân biệt hai kiểu là bắt buộc, không phải tinh chỉnh. Kéo dài ở ngã ba chữ T thì thân vách
+ * phủ TRỌN bề dày tường bao, và lúc cắt nét nó xoá luôn cả MẶT NGOÀI của tường bao — tường bao
+ * đứt một khúc ở đúng chỗ mỗi vách đâm vào. Lỗi này ẩn suốt thời gian ruột tường còn tô đặc.
  */
 function extensionAt(
   point: Pt,
@@ -109,7 +127,15 @@ function extensionAt(
   for (const other of walls) {
     if (other.id === selfId) continue;
     const gap = distanceToSegment(point, other.a, other.b);
-    if (gap <= other.t / 2 + TOUCH_TOLERANCE_CM) extension = Math.max(extension, other.t / 2);
+    if (gap > other.t / 2 + TOUCH_TOLERANCE_CM) continue;
+    // Gặp ở ĐẦU bức kia hay ở giữa? Đo tới hai đầu tim của nó; xa cả hai thì đây là ngã ba chữ T.
+    const toHead = Math.hypot(point[0] - other.a[0], point[1] - other.a[1]);
+    const toTail = Math.hypot(point[0] - other.b[0], point[1] - other.b[1]);
+    const corner = Math.min(toHead, toTail) <= other.t / 2 + TOUCH_TOLERANCE_CM;
+    if (!corner) continue;
+    // Vừa đủ tới mặt xa, không hơn: cộng thẳng `t/2` thì một đầu tường khai sẵn ở mặt ngoài bức
+    // kia sẽ chìa hẳn ra ngoài góc nhà.
+    extension = Math.max(extension, Math.max(0, other.t / 2 - gap));
   }
   return extension;
 }
@@ -145,37 +171,106 @@ export function runCorners(wall: WallGeom, run: Interval): [Pt, Pt, Pt, Pt] {
 }
 
 /**
+ * Dung sai co thân tường khi cắt nét, cm.
+ *
+ * Co vào thì hai mặt tường TRÙNG NHAU không bị coi là nằm trong nhau — vách 11 vuông góc ăn vào
+ * tường 22 thường có mặt trùng đúng một mặt phẳng, và nét ấy là nét thật phải giữ.
+ */
+const CLIP_INSET_CM = 0.5;
+
+/** Thân đầy đủ của một bức (chưa trừ lỗ mở) — dùng làm dao cắt nét của những bức khác. */
+function wallBody(wall: WallGeom): [Pt, Pt, Pt, Pt] {
+  return runCorners(wall, { from: 0, to: wall.drawnLength });
+}
+
+/**
  * Vẽ toàn bộ tường của một tầng.
  *
- * Gộp mọi đoạn đặc vào MỘT thẻ `<path>` nhiều đường con: một tầng nhà phố có tới vài trăm
- * đoạn, và một thẻ mỗi đoạn thì riêng phần thuộc tính đã dài hơn cả hình.
+ * Hai lớp: một lớp TÔ ruột bằng màu giấy (che nét gạch ô thông tầng và mọi thứ vẽ trước chạy
+ * vào dưới tường), rồi một lớp NÉT đã cắt sạch chỗ chui vào bức khác.
+ *
+ * Gộp mọi đoạn vào ít thẻ `<path>` nhất có thể: một tầng nhà phố có tới vài trăm đoạn, và một
+ * thẻ mỗi đoạn thì riêng phần thuộc tính đã dài hơn cả hình.
  */
 export function renderWalls(walls: readonly WallGeom[], holes: WallHoles, paper: Paper): string {
-  const solid: string[] = [];
+  const fills: string[] = [];
+  const edges: string[] = [];
   const railing: string[] = [];
+
+  // Dao cắt: thân của mọi bức KHÔNG phải lan can. Lan can chỉ hai nét mảnh nên không có ruột
+  // để nuốt nét của ai.
+  const bodies = walls
+    .filter((wall) => wall.kind !== 'r')
+    .map((wall) => ({ id: wall.id, quad: wallBody(wall) }));
 
   for (const wall of walls) {
     const runs = solidRuns(wall, holes.get(wall.id) ?? []);
     for (const run of runs) {
       if (run.to - run.from <= 0) continue;
-      const [nearStart, nearEnd, farEnd, farStart] = runCorners(wall, run);
+      const corners = runCorners(wall, run);
+      const [nearStart, nearEnd, farEnd, farStart] = corners;
+
       if (wall.kind === 'r') {
-        // Lan can: hai nét mảnh ở hai mặt, không tô ruột.
         railing.push(polylinePath([paper.p(nearStart), paper.p(nearEnd)], false));
         railing.push(polylinePath([paper.p(farStart), paper.p(farEnd)], false));
-      } else {
-        solid.push(
-          polylinePath(
-            [nearStart, nearEnd, farEnd, farStart].map((point) => paper.p(point)),
-            true,
-          ),
-        );
+        continue;
+      }
+
+      fills.push(
+        polylinePath(
+          corners.map((point) => paper.p(point)),
+          true,
+        ),
+      );
+
+      // Bốn cạnh của đoạn tường: hai MẶT chạy dọc, hai NẮP ở hai đầu. Nắp ở đầu tự do là nét
+      // thật (đầu hồi, má cửa); nắp ở ngã ba nằm trong ruột bức kia nên tự biến mất khi cắt —
+      // không cần phân biệt hai loại bằng tay.
+      const sides: Array<[Pt, Pt]> = [
+        [nearStart, nearEnd],
+        [farStart, farEnd],
+        [nearStart, farStart],
+        [nearEnd, farEnd],
+      ];
+      for (const [from, to] of sides) {
+        for (const piece of visibleParts(from, to, wall.id, bodies)) {
+          edges.push(polylinePath([paper.p(piece[0]), paper.p(piece[1])], false));
+        }
       }
     }
   }
 
   const parts: string[] = [];
-  if (solid.length) parts.push(tag('path', { class: CLS.wall, d: solid.join(' ') }));
+  if (fills.length) parts.push(tag('path', { class: CLS.wallFill, d: fills.join(' ') }));
+  if (edges.length) parts.push(tag('path', { class: CLS.wall, d: edges.join(' ') }));
   if (railing.length) parts.push(tag('path', { class: CLS.railing, d: railing.join(' ') }));
   return parts.join('');
+}
+
+/** Những đoạn con của `from→to` KHÔNG nằm trong ruột bức tường nào khác. */
+function visibleParts(
+  from: Pt,
+  to: Pt,
+  selfId: string,
+  bodies: ReadonlyArray<{ id: string; quad: readonly Pt[] }>,
+): Array<[Pt, Pt]> {
+  const length = Math.hypot(to[0] - from[0], to[1] - from[1]);
+  if (length <= 0) return [];
+
+  const covered: Interval[] = [];
+  for (const body of bodies) {
+    if (body.id === selfId) continue;
+    const hit = clipSegmentByQuad(from, to, body.quad, -CLIP_INSET_CM);
+    // `clipSegmentByQuad` trả tham số t ∈ [0,1]; `subtractIntervals` làm việc trên chiều dài.
+    if (hit) covered.push({ from: hit.from * length, to: hit.to * length });
+  }
+
+  const dx = (to[0] - from[0]) / length;
+  const dy = (to[1] - from[1]) / length;
+  return subtractIntervals(length, covered)
+    .filter((piece) => piece.to - piece.from > 0.05)
+    .map((piece) => [
+      [from[0] + dx * piece.from, from[1] + dy * piece.from] as Pt,
+      [from[0] + dx * piece.to, from[1] + dy * piece.to] as Pt,
+    ]);
 }

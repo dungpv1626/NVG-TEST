@@ -17,9 +17,11 @@ export interface SheetStyle {
   /** Hướng đặt giấy được phép thử, theo thứ tự ưu tiên khi cả hai cùng vừa. */
   orientations: Orientation[];
   margin_mm: { left: number; right: number; top: number; bottom: number };
-  title_strip: { h_mm: number; right_cell_w_mm: number };
+  title_block: { w_mm: number; row_h_mm: number; pad_mm: number };
+  sheet_title: { gap_mm: number; band_mm: number };
+  room_label: { uppercase: boolean; box: boolean; box_pad_mm: number; area_suffix: string };
   /** Tỷ lệ thử theo thứ tự, số nhỏ = hình lớn. Ví dụ 100 nghĩa là 1:100. */
-  scales: number[];
+  scale_steps: number[];
   line_mm: Record<LineKey, number>;
   text_mm: Record<TextKey, number>;
   text_min_mm: number;
@@ -43,6 +45,7 @@ export type LineKey =
   | 'frame'
   | 'title_rule'
   | 'wall_cut'
+  | 'column'
   | 'railing'
   | 'opening'
   | 'door_leaf'
@@ -55,7 +58,16 @@ export type LineKey =
   | 'north';
 
 export type TextKey =
-  'level_name' | 'disclaimer' | 'strip_note' | 'room_name' | 'room_area' | 'dim' | 'north';
+  | 'sheet_title'
+  | 'level_name'
+  | 'disclaimer'
+  | 'strip_note'
+  | 'block_label'
+  | 'room_name'
+  | 'room_area'
+  | 'dim'
+  | 'north'
+  | 'footer';
 
 export type ColourKey = 'ink' | 'hairline' | 'dim' | 'wall_fill' | 'void_fill' | 'paper';
 
@@ -63,6 +75,7 @@ const LINE_KEYS: LineKey[] = [
   'frame',
   'title_rule',
   'wall_cut',
+  'column',
   'railing',
   'opening',
   'door_leaf',
@@ -76,13 +89,16 @@ const LINE_KEYS: LineKey[] = [
 ];
 
 const TEXT_KEYS: TextKey[] = [
+  'sheet_title',
   'level_name',
   'disclaimer',
   'strip_note',
+  'block_label',
   'room_name',
   'room_area',
   'dim',
   'north',
+  'footer',
 ];
 
 const COLOUR_KEYS: ColourKey[] = ['ink', 'hairline', 'dim', 'wall_fill', 'void_fill', 'paper'];
@@ -110,10 +126,30 @@ export function parseSheetStyle(yamlText: string): SheetStyle {
     throw new SheetStyleError('mục "orientations" phải là danh sách "landscape" hoặc "portrait"');
   }
   const margin = numberGroup(raw.margin_mm, 'margin_mm', ['left', 'right', 'top', 'bottom']);
-  const strip = numberGroup(raw.title_strip, 'title_strip', ['h_mm', 'right_cell_w_mm']);
-  const scales = raw.scales;
+  const titleBlock = numberGroup(raw.title_block, 'title_block', ['w_mm', 'row_h_mm', 'pad_mm']);
+  const sheetTitle = numberGroup(raw.sheet_title, 'sheet_title', ['gap_mm', 'band_mm']);
+  const scales = raw.scale_steps;
   if (!Array.isArray(scales) || scales.length === 0 || scales.some((s) => !positive(s))) {
-    throw new SheetStyleError('mục "scales" phải là danh sách số dương');
+    throw new SheetStyleError('mục "scale_steps" phải là danh sách số dương');
+  }
+  // Phải TĂNG DẦN: bộ chọn tỷ lệ lấy mức đầu tiên còn vừa, nên một danh sách xáo trộn sẽ cho ra
+  // tờ vẽ nhỏ hơn mức đáng lẽ đạt được mà không có gì báo.
+  for (let i = 1; i < scales.length; i += 1) {
+    if ((scales[i] as number) <= (scales[i - 1] as number)) {
+      throw new SheetStyleError('mục "scale_steps" phải tăng dần');
+    }
+  }
+  const roomLabel = raw.room_label as Record<string, unknown> | undefined;
+  if (
+    !roomLabel ||
+    typeof roomLabel.uppercase !== 'boolean' ||
+    typeof roomLabel.box !== 'boolean' ||
+    !positive(roomLabel.box_pad_mm) ||
+    typeof roomLabel.area_suffix !== 'string'
+  ) {
+    throw new SheetStyleError(
+      'mục "room_label" cần đủ "uppercase", "box", "box_pad_mm", "area_suffix"',
+    );
   }
   const dim = numberGroup(raw.dim, 'dim', [
     'first_offset_mm',
@@ -140,8 +176,15 @@ export function parseSheetStyle(yamlText: string): SheetStyle {
     paper: paper as SheetStyle['paper'],
     orientations: (orientations as Orientation[]).slice(),
     margin_mm: margin as SheetStyle['margin_mm'],
-    title_strip: strip as SheetStyle['title_strip'],
-    scales: (scales as number[]).slice(),
+    title_block: titleBlock as SheetStyle['title_block'],
+    sheet_title: sheetTitle as SheetStyle['sheet_title'],
+    room_label: {
+      uppercase: roomLabel.uppercase,
+      box: roomLabel.box,
+      box_pad_mm: roomLabel.box_pad_mm,
+      area_suffix: roomLabel.area_suffix,
+    },
+    scale_steps: (scales as number[]).slice(),
     line_mm: numberGroup(raw.line_mm, 'line_mm', LINE_KEYS) as Record<LineKey, number>,
     text_mm: numberGroup(raw.text_mm, 'text_mm', TEXT_KEYS) as Record<TextKey, number>,
     text_min_mm: raw.text_min_mm as number,
