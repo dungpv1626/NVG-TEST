@@ -248,3 +248,55 @@ describe('Sinh ảnh từ CHỮ, không có ảnh vào', () => {
     expect(init.body).toBeInstanceOf(FormData);
   });
 });
+
+describe('hết giờ — chỗ tốn tiền nhất của cả tệp này', () => {
+  // Lượt `adbc2867` (11/09/2026) hỏng sau 6 phút 11 giây: huỷ ở giây 180, chờ 10 giây, huỷ lại ở
+  // giây 181. Hai lần huỷ là hai lần mô hình đã sinh xong phần lớn câu trả lời, và OpenAI tính
+  // tiền theo token nó sinh — không theo việc ta có đọc được thân phản hồi hay không.
+  it('huỷ vì hết giờ thì `retryable` là FALSE — nếu không, Workflow mua lần thứ hai', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new DOMException('The operation was aborted due to timeout', 'TimeoutError');
+      }),
+    );
+    const error = await client()
+      .complete('ai_text_openai', 2, { system: 's', prompt: 'p', schema: SCHEMA })
+      .catch((e) => e);
+    expect(error).toBeInstanceOf(LlmCallFailed);
+    expect((error as LlmCallFailed).retryable).toBe(false);
+  });
+
+  it('rớt kết nối thì VẪN thử lại — lời gọi có thể chưa tới được model', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new TypeError('fetch failed');
+      }),
+    );
+    const error = await client()
+      .complete('ai_text_openai', 2, { system: 's', prompt: 'p', schema: SCHEMA })
+      .catch((e) => e);
+    expect((error as LlmCallFailed).retryable).toBe(true);
+  });
+
+  it('hạn chờ văn bản là 300 giây, và nó phải KHỚP với hạn bước Workflow', async () => {
+    // Hai con số ràng buộc nhau: 300 + 10 (giãn cách thử lại) + 300 = 610 giây, nên bước phải cho
+    // 12 phút. Phép thử này đỏ khi ai đó nâng hạn chờ mà quên bước, tức khi một lượt ĐÃ TÍNH TIỀN
+    // sẽ bị bước cắt ngang.
+    const fetchMock = vi.fn(async (_url: string, init: RequestInit) => {
+      expect(init.signal).toBeDefined();
+      return new Response(JSON.stringify(textReply('{"a":"x"}')), { status: 200 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    await client().complete('ai_text_openai', 2, { system: 's', prompt: 'p', schema: SCHEMA });
+    const source = await import('node:fs').then((fs) =>
+      fs.readFileSync(new URL('../llm/openai.ts', import.meta.url), 'utf8'),
+    );
+    expect(source).toContain('const TEXT_TIMEOUT_MS = 300_000;');
+    const step = await import('node:fs').then((fs) =>
+      fs.readFileSync(new URL('../workflows/ai-design.ts', import.meta.url), 'utf8'),
+    );
+    expect(step).toContain("timeout: '12 minutes'");
+  });
+});

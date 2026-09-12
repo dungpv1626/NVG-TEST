@@ -13,7 +13,7 @@
 # Không một ngưỡng quy chuẩn nào nằm ở đây: mọi con số (tối thiểu, sàn xây được, số phòng ngủ)
 # do Worker tiêm vào từ rule pack, kb/space_norms.yaml và đầu bài lúc gọi — xem `ai/program.ts`.
 
-version: '1.4.0'
+version: '1.5.0'
 
 program:
   system: |
@@ -103,56 +103,49 @@ floor_plan:
     Lay out the floor plans — and declare the CONTENT OF THE DRAWING as data. A deterministic
     drawing engine puts it on paper; you never write SVG and never draw anything yourself.
 
+    YOU DECLARE ROOMS. THE PROGRAM DERIVES THE WALLS. This is the one thing to understand
+    before anything else: you never declare a wall, a wall thickness or a wall id. The program
+    reads your room rectangles and builds the walls from them — a shared edge between two
+    rooms becomes a partition, an outer edge becomes an external wall, the outer edge of a
+    balcony becomes a railing. Your job is the layout; the wall positions follow from it.
+
     UNITS AND AXES — read this twice, every number you emit depends on it:
     - Everything is in WHOLE CENTIMETRES. Integers only. Never metres, never decimals.
     - Origin is the FRONT-LEFT corner of the plot. `x` runs right along the street frontage,
       `y` runs back into the depth of the plot.
-    - Walls are declared on their CENTRELINE: `a` and `b` are the two ends of the centreline,
-      `t` is the thickness, spread evenly either side of it.
     - Room `rect` is `[x0, y0, x1, y1]` and is the CLEAR INSIDE dimension — inner face of wall
-      to inner face of wall. Not the centreline, not the outside.
-
-    How walls and rooms fit together, with a worked example. A single 4,00 × 5,00 m room with
-    200 mm exterior walls all round:
-      room:  rect [20, 20, 420, 520]          (clear inside: 400 × 500)
-      walls: a [10, 10] b [10, 530] t 20 k e  (left;  inner face at x = 10 + 10 = 20)
-             a [430, 10] b [430, 530] t 20 k e (right; inner face at 430 − 10 = 420)
-             a [10, 10] b [430, 10] t 20 k e  (front; inner face at y = 20)
-             a [10, 530] b [430, 530] t 20 k e (back;  inner face at y = 520)
-    Two rooms side by side sharing a 100 mm partition leave a 10 cm gap between their rects,
-    and the partition centreline runs down the middle of that gap.
+      to inner face of wall.
+    - Two rooms side by side LEAVE A GAP equal to the partition thickness between their
+      rects. With a 110 mm partition: one room ends at x = 300, the next starts at x = 311.
+      Against the outside, leave the external wall thickness: with 220 mm walls on a plot
+      400 cm wide, rooms run from x = 22 to x = 378.
 
     WHAT YOU DECLARE, per level:
     - `outline`: the polygon of the built footprint of that level (closes implicitly).
-    - `walls`: every wall segment — `k: "e"` for a wall facing outdoors or a light well,
-      `"p"` for an internal partition, `"r"` for a balcony or roof-terrace railing.
-    - `rooms`: every space from the program, with its clear `rect` and `area_m2`.
-    - `doors`: `wall` is the id of the wall the door sits in, `at` is the distance from that
-      wall's end `a` to the NEAR EDGE of the opening, `w` is the clear width. `hinge` says
-      which end of the wall the hinge is at, `side` which way the leaf swings when you stand
-      at `a` and look towards `b`.
-    - `windows`: same `wall` / `at` / `w`, plus sill height and opening height.
-    - `stairs`: the stair box, the direction the first flight climbs, number of flights and
-      total number of treads.
+    - `rooms`: every space from the program, with its clear `rect` and `area_m2`. The rooms,
+      stairs and voids of a level must FILL the outline — apart from the wall thicknesses
+      between them. If you want a part of the footprint left open, declare it as a void.
+    - `doors` and `windows`: anchored to a ROOM EDGE, not to a wall. `room` is the room id,
+      `edge` is `front` (the y-smaller edge), `back` (y-larger), `left` (x-smaller) or
+      `right` (x-larger), `at` is the distance from the START of that edge to the near jamb,
+      and `w` is the clear width. The start of an edge is its x-smaller corner for
+      front/back, its y-smaller corner for left/right. A door on the edge shared by two
+      rooms connects them; declare it once, from either side.
+      `hinge` is `near` or `far` — which end of the edge the hinge is at. `swing` is `in` or
+      `out` — whether the leaf sweeps into that room or out of it.
+    - `stairs`: the stair box (same rectangle as the stair room), the direction the first
+      flight climbs, number of flights and total number of treads.
     - `voids`: light wells, courtyards, double-height voids, the hole over the stair.
 
     WHAT YOU MUST NOT DECLARE — the program derives these, and declaring them only adds a way
     to be wrong:
-    - No dimension chains. The engine derives them from your wall coordinates.
+    - No walls, no wall thicknesses, no wall ids.
+    - No dimension chains. The engine derives them from the room coordinates.
     - No statement of which room a door serves. The engine derives it from the geometry.
-    - No SVG, no drawing, no text labels outside the `label` field of a room and the
-      `sheet_prompt` field of a level.
-
-    ONE MORE THING TO DECLARE, per level — `sheet_prompt`. An image model draws the presentation
-    sheet for that floor from this paragraph alone; it never sees your coordinates. Write 6–10
-    sentences of plain English describing WHAT IS ON THAT FLOOR: which room sits where relative
-    to the others, which areas are large and which are small, where the stair and any light well
-    are, which way the front door faces, which parts are balcony or open yard, and the furniture
-    worth drawing in each room. Name rooms the way a Vietnamese plan names them.
-    Do NOT describe line weights, paper size, title blocks, scale or drawing conventions — those
-    are fixed by the office and are not yours to set. Leave the field out entirely rather than
-    write a thin one: a vague paragraph produces a sheet nobody can use, and the numbered data
-    you declared above is unaffected either way.
+    - No north direction, no variant id, no furniture coordinates.
+    - No line weights, paper size, title block, scale or drawing convention: those are fixed
+      by the office and are not yours to set.
+    - No SVG, no drawing, no text labels outside the `label` field of a room.
 
     Hard rules. Your answer is checked by machine and sent back to you to fix if it breaks any
     of these, so check them yourself before answering:
@@ -160,33 +153,40 @@ floor_plan:
        exactly. Do not add rooms, do not drop rooms, do not rename ids. An `ensuite_of` room
        gets its own rectangle BESIDE its parent and must not overlap it — the parent's rectangle
        stops at the shared partition — with its door opening into the parent and nowhere else.
-    2. Rooms on the same level must not overlap, and every `rect` must sit inside that level's
-       `outline` and inside `knowledge.buildable_cm`.
-    3. EVERY EDGE of every room must be covered by a wall whose inner face lies on that edge
-       (at least 95% of its length). This is what makes a room a room. Walk the four sides of
-       each rectangle and make sure a wall runs along each one.
-    4. Every room needs at least one door or `opening` on its boundary — a room you cannot
-       walk into is a defect, not a design. Balconies, terraces, light wells and voids are
-       exempt.
-    5. Doors and windows must lie completely within their wall (`0 ≤ at` and
-       `at + w ≤` wall length) and must not overlap each other on the same wall.
-    6. Windows go ONLY on `k: "e"` walls. A window on an internal partition is rejected.
+    2. If your layout merges two program rooms into ONE open space (kitchen + dining, living +
+       altar), declare ONE rectangle and list the other ids in `also`. Do not drop a room id,
+       and do not invent a partition you did not want just to have the right number of rooms.
+    3. Rooms, stairs and voids on the same level must not overlap each other, every `rect` must
+       sit inside that level's `outline` and inside `knowledge.buildable_cm`, and together they
+       must leave no unassigned pocket that is more than 60 cm across in BOTH directions. The
+       gaps you leave for wall thicknesses are narrower than that and are expected; a hole in
+       the middle of the plan is not.
+    4. Every room needs at least one door or `opening` on one of its edges, AND must be
+       reachable from a door that opens to the outside — walk the chain of doors and stairs
+       from the entrance and make sure every room is on it. A cluster of rooms connected to
+       each other but not to the entrance is rejected. Balconies, terraces, light wells and
+       voids are exempt.
+    5. Doors and windows must lie completely within their room edge (`0 ≤ at` and
+       `at + w ≤` edge length) and must not overlap each other on the same edge.
+    6. Windows go ONLY on an edge that faces outdoors — the outline, a balcony, a light well or
+       a courtyard. A window on an edge shared with another indoor room is rejected.
     7. `area_m2` must match the rectangle: width × depth / 10 000, within 10% or 1 m².
     8. Every level except the top one needs a stair, and the stair box must sit in the SAME
        place on every level (within 20 cm). A stair that moves between floors cannot be built.
-    9. Wall ids unique within a level, every wall longer than 0, every `t` greater than 0, and
-       every door's and window's `wall` must name a wall that exists on that level.
+    9. Two rooms on the same level must not carry the same `label`. Leave `label` out and the
+       drawing engine names the room from its type — that is usually the right choice.
 
-    Use `knowledge.construction` for wall thicknesses, storey heights and door and window
-    sizes — those are the dimensions this office actually builds with. Set each level's `h`
-    from the storey heights there.
+    Use `knowledge.construction` for wall thicknesses (so you can leave the right gaps), storey
+    heights and door and window sizes — those are the dimensions this office actually builds
+    with. Set each level's `h` from the storey heights there, and make `treads` × riser height
+    equal it.
 
     Design judgement — this is the part worth asking a model for:
     - Put the rooms that need daylight and street frontage on the outside; push storage,
       bathrooms and circulation inward.
     - A Vietnamese tube house (nhà phố) is deep and narrow: a light well or courtyard partway
       back is usually what makes the middle of the house liveable. Use one when the plot is
-      deep, and declare it in `voids` with exterior walls around it.
+      deep, and declare it in `voids`.
     - Keep wet rooms stacked between levels, and keep the stair core in one place.
     - Read `site.adjacent` and `site.access_sides`: a side that abuts a neighbour gets no
       windows; the access side is where the entrance and any garage must be.
@@ -197,22 +197,12 @@ floor_plan:
       stair sits, where the void sits, which rooms face the street), not by a few centimetres.
     - `knowledge.constraints` is usually EMPTY, and that is deliberate: when it is, no code
       threshold is imposed on you at all. When it is not empty the engineer switched a rule pack
-      on for this project and every entry binds; `kind: "legal"` is the building code and is not
-      negotiable, `kind: "experience"` is how this office usually works — follow it unless the
-      brief gives a reason not to.
+      on for this project and every entry binds; it records how this office usually works —
+      follow it unless the brief gives a reason not to.
 
     Output ONLY a JSON object matching the provided schema. Write `variant_label`, `rationale`
     and any room `label` in Vietnamese (có dấu). Do not include markdown or commentary outside
     JSON.
-
-  # Ba ý đồ bố cục gửi kèm ba lượt gọi song song — DỮ LIỆU, không viết cứng trong mã.
-  #
-  # Vì sao phải có: ba lượt gọi cùng một lời dẫn cho ra ba bản gần như nhau, lệch vài chục
-  # xăng-ti-mét. Thứ kiến trúc sư cần so là ba CẤU TRÚC khác nhau — thang ở đâu, giếng trời ở
-  # đâu, phòng nào ra mặt tiền — nên ý đồ phải do Worker chỉ định, mỗi lượt một ý đồ.
-  #
-  # `label` là tiếng Việt vì nó hiện trên màn hình làm tên mặc định của phương án (mô hình trả
-  # nhãn riêng thì nhãn ấy thắng). `strategy` là tiếng Anh vì nó đi vào lời dẫn.
   strategies:
     - id: 'AI-A'
       label: 'Lõi thang giữa nhà'
@@ -254,57 +244,3 @@ floor_plan:
 
     Issues:
     {issues}
-
-# ---------------------------------------------------------------------------
-# Tờ mặt bằng công năng do MÔ HÌNH ẢNH vẽ (T21, 10/09/2026)
-# ---------------------------------------------------------------------------
-#
-# Vì sao có khối này: bộ vẽ SVG tất định của T15 qua hai vòng sửa vẫn không cho ra tờ vẽ mà một
-# kiến trúc sư chấp nhận được. Haan chuyển phần VẼ sang mô hình ảnh. Mô hình văn bản vẫn khai
-# mặt bằng dạng dữ liệu — đó mới là thứ đo diện tích và đối chiếu quy chuẩn được.
-#
-# Ba phần, ba chủ sở hữu khác nhau, và đó là toàn bộ lý do khối này chia làm ba khoá:
-#   · `system`  — HẰNG SỐ. Phong cách tờ vẽ của NVG. Không hồ sơ nào đổi được.
-#   · `prompt`  — KHUÔN. Worker điền số liệu THẬT lấy từ chính artifact.
-#   · `watermark` — câu in đè lên ảnh ở trình duyệt (CLAUDE.md 8.7).
-#
-# ⚠️ KHÔNG có ảnh neo: mô hình ảnh chỉ nhận chữ. Nên `prompt` là chỗ DUY NHẤT kéo tờ ảnh về
-# gần bảng diện tích — nó bơm tên phòng và số m² thật vào lời dẫn. Bỏ phần ấy đi thì tờ vẽ và
-# bảng số hoàn toàn không liên quan gì đến nhau.
-sheet_image:
-  system: |
-    You draw architectural floor plans. Output ONE image: a Vietnamese residential FUNCTIONAL
-    FLOOR PLAN (mặt bằng công năng), seen straight from above in orthogonal projection.
-
-    Drawing conventions — these are fixed and not negotiable:
-    - Pure line drawing. Black ink on white paper. No colour, no grey wash, no shadows, no
-      gradients, no 3D, no perspective, no people, no photographic texture.
-    - Cut walls are filled SOLID BLACK (poché). Interior partitions are thinner than the
-      exterior walls.
-    - Doors are drawn as a leaf plus its quarter-circle swing arc. Windows are drawn as three
-      thin parallel lines across the wall opening.
-    - Furniture is drawn as flat plan symbols: beds, wardrobes, sofas, dining tables, kitchen
-      counters and sinks, WC pans and basins, motorbikes or a car in a ground-floor garage.
-    - Every room carries its Vietnamese name in CAPITALS with the floor area in square metres
-      on the line directly underneath, e.g. PHÒNG KHÁCH over 30.6 m². Spell the Vietnamese
-      exactly as given, diacritics included.
-    - Dimension chains run OUTSIDE the building outline along the left edge and the bottom
-      edge, with tick marks and numbers.
-    - A north arrow and the floor name sit clear of the plan.
-    - White paper, even margins, nothing outside the drawing.
-
-    Never draw: a title block, a company name, a person's name, a signature, a file number, a
-    date, a stamp, a logo, or any watermark of your own. This sheet carries no identity.
-  prompt: |
-    Draw the floor plan sheet for: {level_name}
-
-    {sheet_prompt}
-
-    The rooms on this floor, with the areas that MUST appear on the sheet exactly as written:
-    {rooms}
-
-    Overall built footprint of this floor: {footprint}
-    North is {north} on the sheet.
-  # In đè lên ảnh ở trình duyệt. Tiếng Việt — đây là chữ cho người đọc tờ giấy, không phải lời
-  # dẫn cho mô hình. Nói rõ điều nguy hiểm nhất về tờ này: nó KHÔNG dựng từ toạ độ.
-  watermark: 'Đề xuất AI — hình vẽ minh hoạ, không dựng từ toạ độ, không đo được trên hình'

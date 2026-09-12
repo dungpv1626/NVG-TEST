@@ -24,7 +24,7 @@ import type { DesignEnv } from '../env';
 import { solveFloorPlan, buildArchModel, layoutIntent, stubRenderResult } from '../workflows/steps';
 import { buildSpaceProgram } from '../program/engine';
 import { chooseVariant, generateVariants, listVariants } from '../layout/variants';
-import { parseSiteContext } from '../layout/site-context';
+import { parseSiteContext } from '../kb/site-context';
 import { parseVocabulary, roomGroups } from '../kb/vocabulary';
 import { testSiteContextYaml, testVocabularyYaml } from './program-fixtures';
 import { testNorms, testRulePack } from './program-fixtures';

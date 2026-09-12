@@ -129,7 +129,12 @@ describe('Client sinh ảnh Pollinations', () => {
     }
   });
 
-  it('mạng hỏng hoặc hết giờ → đáng thử lại, không phải lỗi yêu cầu', async () => {
+  // ⚠️ Tuyến này KHÁC các tuyến trả phí, và khác có chủ đích. Từ 12/09/2026 lời gọi trả phí bị
+  // huỷ vì hết giờ KHÔNG được thử lại (nhà cung cấp vẫn tính tiền phần đã sinh — xem
+  // `provider-faults.test.ts`). Ở đây vẫn thử lại vì Pollinations MIỄN PHÍ: không có hoá đơn nào
+  // để mua hai lần, còn hàng đợi miễn phí tắc tạm thời là chuyện thường. Cờ `timeoutIsBilled=false`
+  // trong `pollinations.ts` là chỗ khai điều đó. Đừng «thống nhất» hai hành vi này.
+  it('mạng hỏng hoặc hết giờ → đáng thử lại, không phải lỗi yêu cầu (tuyến MIỄN PHÍ)', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(() => Promise.reject(new DOMException('timed out', 'TimeoutError'))),

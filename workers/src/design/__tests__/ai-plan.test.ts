@@ -30,6 +30,7 @@ import { parseAiPrompts } from '../ai/prompts';
 import { NO_RULE_PACKS, selectedRulePack } from '../ai/rule-packs';
 import { MEASURABLE_ON_PLAN } from '../ai/rule-warnings';
 import { parseConstructionNorms } from '../kb/construction';
+import { parseSiteContext } from '../kb/site-context';
 import { parseVocabulary, roomGroups } from '../kb/vocabulary';
 import { parseRuleFile, RulePack } from '../rules/rule-pack';
 import type {
@@ -38,7 +39,7 @@ import type {
   TextModelClient,
 } from '../llm/text-client';
 import { digestOf, TOWNHOUSE } from './ai-digest-fixtures';
-import { TOWNHOUSE_PLAN } from './ai-plan-fixtures';
+import { roomsProposalOf, TOWNHOUSE_PLAN } from './ai-plan-fixtures';
 
 const read = (p: string) =>
   readFileSync(fileURLToPath(new URL(`../../../../${p}`, import.meta.url)), 'utf8');
@@ -47,6 +48,7 @@ const vocabulary = parseVocabulary(read('kb/room_vocabulary.yaml'));
 const groups = roomGroups(vocabulary);
 const labels = Object.fromEntries(vocabulary.types.map((t) => [t.code, t.vi]));
 const construction = parseConstructionNorms(read('kb/construction_norms.yaml'));
+const siteContext = parseSiteContext(read('kb/site_context.yaml'));
 const prompts = parseAiPrompts(load(read('kb/ai_design_prompts.yaml')));
 const nationalRules = new RulePack(
   [
@@ -65,6 +67,8 @@ const emptyPack = selectedRulePack(NO_RULE_PACKS, PACKS);
 const PROGRAM_REF = `sha256:${'b'.repeat(64)}`;
 const digest = digestOf(TOWNHOUSE);
 const doorExemptTypes = new Set(groups.no_door_required ?? []);
+const verticalTypes = new Set(groups.circulation ?? []);
+const outdoorTypes = new Set(groups.outdoor ?? []);
 
 const VARIANT: PlanVariant = {
   id: 'AI-B',
@@ -101,9 +105,14 @@ function programOf(plan: AiFloorPlan): AiSpaceProgram {
 
 const PROGRAM = programOf(TOWNHOUSE_PLAN);
 
-/** Phần mô hình khai: mặt bằng fixture trừ sáu trường Worker điền. */
+/**
+ * Phần mô hình khai (T23): phòng và lỗ mở trên cạnh phòng, suy từ artifact fixture.
+ *
+ * `stripWorkerFields` vẫn đi qua đây vì đó là thứ đường chạy thật dùng — và vì một trong các phép
+ * thử bên dưới cố tình nhồi thêm sáu trường Worker điền để chứng minh chúng bị lược, không bị bác.
+ */
 function proposalOf(plan: AiFloorPlan): Record<string, unknown> {
-  return stripWorkerFields(plan) as Record<string, unknown>;
+  return stripWorkerFields(roomsProposalOf(plan)) as Record<string, unknown>;
 }
 
 interface FakeClient extends TextModelClient {
@@ -141,8 +150,11 @@ function input(client: TextModelClient, rules = emptyPack): AiPlanInput {
     prompts,
     labels,
     construction,
+    siteContext,
     rules,
     doorExemptTypes,
+    verticalTypes,
+    outdoorTypes,
   };
 }
 
@@ -170,7 +182,7 @@ describe('Lược đồ gửi cho mô hình', () => {
   const schema = planProposalJsonSchema();
   const properties = schema.properties as Record<string, unknown>;
 
-  it('không hỏi mô hình sáu trường Worker điền', () => {
+  it('không hỏi mô hình sáu trường Worker điền, và không hỏi TƯỜNG (T23)', () => {
     for (const key of [
       'schema_version',
       'program_ref',
@@ -182,19 +194,26 @@ describe('Lược đồ gửi cho mô hình', () => {
       expect(properties[key], key).toBeUndefined();
       expect(schema.required as string[]).not.toContain(key);
     }
+    // Và tuyệt đối không có `walls`: đó là chỗ T23 cắt, và cũng là chỗ dễ quay lại nhất vì
+    // artifact vẫn có nó.
+    const level = ((schema.$defs as Record<string, { properties?: Record<string, unknown> }>).level
+      ?.properties ?? {}) as Record<string, unknown>;
+    expect(level.walls).toBeUndefined();
+    expect(level.rooms).toBeDefined();
   });
 
-  it('vẫn là chính hợp đồng `ai-floor-plan`, không phải lược đồ thứ hai', () => {
+  it('là hợp đồng `ai-plan-rooms`, gửi nguyên vẹn không cắt gì', () => {
     expect(properties.levels).toBeDefined();
     expect(schema.$defs).toBeDefined();
     expect((schema.required as string[]).sort()).toEqual(['levels', 'rationale', 'variant_label']);
+    expect(schema.$id).toBe('https://nvg.vn/contracts/ai-plan-rooms.schema.json');
   });
 
-  it('không sửa tệp hợp đồng gốc khi lược', () => {
-    // `structuredClone` chứ không `delete` thẳng trên đối tượng đã import: cùng một tệp JSON
-    // được nhiều tệp khác import, và sửa nó là sửa cho cả bản dựng.
-    const again = planProposalJsonSchema();
-    expect((again.properties as Record<string, unknown>).levels).toBeDefined();
+  it('không sửa tệp hợp đồng gốc khi sao', () => {
+    // `structuredClone` chứ không trả thẳng đối tượng đã import: cùng một tệp JSON được nhiều tệp
+    // khác import, và sửa nó là sửa cho cả bản dựng.
+    planProposalJsonSchema().properties = {} as never;
+    expect((planProposalJsonSchema().properties as Record<string, unknown>).levels).toBeDefined();
   });
 });
 
@@ -206,6 +225,7 @@ describe('Tri thức tiêm vào lời dẫn', () => {
       variant: VARIANT,
       labels,
       construction,
+      siteContext,
       rules: emptyPack,
     });
     expect(context.knowledge.constraints).toEqual([]);
@@ -218,6 +238,7 @@ describe('Tri thức tiêm vào lời dẫn', () => {
       variant: VARIANT,
       labels,
       construction,
+      siteContext,
       rules: selectedRulePack({ standards: true, experience: false }, PACKS),
     });
     expect(context.knowledge.constraints.length).toBeGreaterThan(0);
@@ -233,6 +254,7 @@ describe('Tri thức tiêm vào lời dẫn', () => {
       variant: VARIANT,
       labels,
       construction,
+      siteContext,
       rules: emptyPack,
     });
     const box = context.knowledge.buildable_cm;
@@ -251,7 +273,8 @@ describe('Một lượt gọi là đủ khi mô hình khai đúng', () => {
 
     expect(client.options).toHaveLength(1);
     expect(result.repaired).toBe(false);
-    expect(result.wallsDerived).toBe(false);
+    // LUÔN `true` từ T23: tường của nhánh AI không còn đường nào khác để ra đời.
+    expect(result.wallsDerived).toBe(true);
     expect(result.check.blocking).toEqual([]);
     expect(result.calls).toHaveLength(1);
   });
@@ -321,9 +344,14 @@ describe('Đúng một lượt sửa', () => {
     const client = fakeClient([missingRoom(), proposalOf(worse)]);
     const result = await generateAiPlan(input(client));
 
-    const before = 1;
-    expect(result.check.blocking.length).toBe(before);
-    expect(keepRepaired(before, 2)).toBe(false);
+    // Bản cũ bỏ MỘT phòng, bản sửa bỏ HAI — nên bản sửa nhiều lỗi chặn hơn và bị loại. Số lỗi của
+    // bản cũ suy ra từ chính nó, không viết cứng: thêm một cổng kiểm mới là đổi con số ấy, và một
+    // phép thử viết cứng sẽ đỏ vì lý do chẳng liên quan gì tới điều nó đang nói.
+    const keptRooms = result.payload.levels[0]!.rooms.length;
+    expect(keptRooms).toBe(TOWNHOUSE_PLAN.levels[0]!.rooms.length - 1);
+    expect(keepRepaired(result.check.blocking.length, result.check.blocking.length + 1)).toBe(
+      false,
+    );
   });
 
   it('lượt sửa trả cấu trúc hỏng thì giữ bản cũ, không mất kết quả', async () => {
@@ -353,37 +381,74 @@ describe('Đúng một lượt sửa', () => {
   });
 });
 
-describe('T19 — tường sai sau lượt sửa thì chương trình suy từ phòng', () => {
-  /** Giữ đúng một đoạn tường ở tầng 1: phòng hở, và mọi lỗi đều thuộc nhóm tường. */
-  function brokenWalls(): Record<string, unknown> {
-    const plan = structuredClone(TOWNHOUSE_PLAN);
-    for (const level of plan.levels) {
-      level.walls = level.walls.slice(0, 1);
-      level.doors = [];
-      level.windows = [];
-    }
-    return proposalOf(plan);
-  }
+describe('T23 — mô hình khai phòng, chương trình suy tường', () => {
+  it('lỗ mở neo vào CẠNH PHÒNG trong lời gọi, và neo vào ĐOẠN TƯỜNG trong artifact', async () => {
+    const client = fakeClient([proposalOf(TOWNHOUSE_PLAN)]);
+    const { payload } = await generateAiPlan(input(client));
 
-  it('suy tường, bật cờ, và tờ vẽ phải nói ra', async () => {
-    const client = fakeClient([brokenWalls(), brokenWalls()]);
-    const result = await generateAiPlan(input(client));
+    // Phần mô hình khai: `room` + `edge`, không có `wall`.
+    const sent = JSON.parse(client.options[0]!.prompt) as { knowledge: unknown };
+    expect(sent).toHaveProperty('knowledge');
+    const proposal = proposalOf(TOWNHOUSE_PLAN) as {
+      levels: { doors: { room: string; edge: string; wall?: string }[] }[];
+    };
+    const firstSent = proposal.levels[0]!.doors[0]!;
+    expect(firstSent.room).toBeTruthy();
+    expect(firstSent.edge).toBeTruthy();
+    expect(firstSent.wall).toBeUndefined();
 
-    expect(result.wallsDerived).toBe(true);
-    expect(result.payload.generator.walls_derived).toBe(true);
-    // Suy xong thì phòng phải kín: đó đúng là việc mà lưới an toàn này làm.
-    expect(result.check.blocking.map((i) => i.code)).not.toContain('room_edge_uncovered');
+    // Artifact: ngược lại hoàn toàn — `wall` có, `room`/`edge` không.
+    const firstBuilt = payload.levels[0]!.doors![0]! as { wall: string; room?: string };
+    expect(payload.levels[0]!.walls.some((wall) => wall.id === firstBuilt.wall)).toBe(true);
+    expect(firstBuilt.room).toBeUndefined();
   });
 
-  it('không suy tường khi lỗi không phải do tường', async () => {
-    const plan = structuredClone(TOWNHOUSE_PLAN);
-    plan.levels[0]!.rooms = plan.levels[0]!.rooms.slice(1);
-    const broken = proposalOf(plan);
-    const client = fakeClient([broken, broken]);
+  it('cờ `walls_derived` LUÔN bật, và tờ vẽ luôn nói ra', async () => {
+    const client = fakeClient([proposalOf(TOWNHOUSE_PLAN)]);
+    const result = await generateAiPlan(input(client));
+    expect(result.wallsDerived).toBe(true);
+    expect(result.payload.generator.walls_derived).toBe(true);
+  });
+
+  it('`outline_faces` do Worker điền, đúng số cạnh, và không hỏi mô hình', async () => {
+    const client = fakeClient([proposalOf(TOWNHOUSE_PLAN)]);
+    const { payload } = await generateAiPlan(input(client));
+
+    for (const level of payload.levels) {
+      expect(level.outline_faces).toHaveLength(level.outline.length);
+    }
+    // Đầu bài `TOWNHOUSE` khai hai bên giáp nhà hàng xóm, nên hai cạnh hông phải là `boundary` —
+    // và lời gọi gửi cho mô hình KHÔNG chứa trường này.
+    expect(payload.levels[0]!.outline_faces).toContain('boundary');
+    expect(client.options[0]!.prompt).not.toContain('outline_faces');
+  });
+
+  it('cửa trỏ vào phòng không có, hoặc vượt khỏi cạnh, đều CHẶN và đi vào lượt sửa', async () => {
+    const bad = structuredClone(proposalOf(TOWNHOUSE_PLAN)) as {
+      levels: { doors: { room: string; at: number; w: number }[] }[];
+    };
+    bad.levels[0]!.doors[0]!.room = 'khong_co_phong_nay';
+    bad.levels[0]!.doors[1]!.at = 9_000;
+    const client = fakeClient([bad, proposalOf(TOWNHOUSE_PLAN)]);
     const result = await generateAiPlan(input(client));
 
-    // Dựng lại tường trên một bố cục đã sai là che lỗi, không phải sửa lỗi.
-    expect(result.wallsDerived).toBe(false);
-    expect(result.payload.generator.walls_derived).toBeUndefined();
+    expect(client.options).toHaveLength(2);
+    const repairPrompt = client.options[1]!.system;
+    expect(repairPrompt).toContain('khong_co_phong_nay');
+    expect(repairPrompt).toMatch(/chỉ dài \d+ cm/);
+    expect(result.check.blocking).toEqual([]);
+  });
+
+  it('cửa sổ trên cạnh chung với phòng TRONG NHÀ bị chặn', async () => {
+    const bad = structuredClone(proposalOf(TOWNHOUSE_PLAN)) as {
+      levels: { windows: { id: string; room: string; edge: string; at: number; w: number }[] }[];
+    };
+    // Cạnh sau của chỗ để xe là vách chung với phòng khách — một cửa sổ ở đó không tồn tại được.
+    bad.levels[0]!.windows = [{ id: 'sx', room: 'garage_1', edge: 'back', at: 10, w: 80 }];
+    const client = fakeClient([bad, bad]);
+    const result = await generateAiPlan(input(client));
+
+    const codes = result.check.blocking.map((issue) => issue.code);
+    expect(codes).toContain('window_on_interior_edge');
   });
 });

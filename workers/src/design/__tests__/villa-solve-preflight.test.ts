@@ -24,7 +24,7 @@ import { HttpComputeBackend } from '../compute-backend';
 import { buildSpaceProgram } from '../program/engine';
 import { buildArchModel, layoutIntent, solveFloorPlan } from '../workflows/steps';
 import { plateFor } from '../layout/plate';
-import { siteFaces, parseSiteContext } from '../layout/site-context';
+import { siteFaces, parseSiteContext } from '../kb/site-context';
 import { ruleCatalogue } from '../layout/summary';
 import { parseVocabulary, roomGroups } from '../kb/vocabulary';
 import { CORPUS } from './program-corpus';

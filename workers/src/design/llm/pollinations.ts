@@ -24,6 +24,7 @@
  */
 
 import type { DataClass } from '@nvg/shared/design';
+import { classifyNetworkFault } from './provider-faults';
 import { LlmCallFailed } from './gemini';
 import { ALLOWED_IMAGE_INPUT, decodeBase64, sniffMime } from './image-bytes';
 import type { ModelRouter, ResolvedRoute } from './router';
@@ -104,9 +105,15 @@ export class PollinationsImageClient {
       });
     } catch (error) {
       // Gồm cả hết giờ (`TimeoutError`) — đáng thử lại, khác hẳn lỗi yêu cầu sai.
+      // `false`: Pollinations là tuyến MIỄN PHÍ, nên hết giờ ở đây không để lại một hoá đơn nào —
+      // lý lẽ «đừng mua hai lần cùng một lượt sinh» của các tuyến trả phí không áp. Hàng đợi
+      // miễn phí tắc tạm thời là chuyện thường, và thử lại một lượt không tốn gì.
+      const fault = classifyNetworkFault(error, 'dịch vụ sinh ảnh', false);
       throw new LlmCallFailed(
         `Không gọi được dịch vụ sinh ảnh: ${error instanceof Error ? error.message : String(error)}`,
-        true,
+        fault.retryable,
+        undefined,
+        fault.userMessage,
       );
     }
 

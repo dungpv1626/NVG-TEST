@@ -12,7 +12,7 @@ import { AiPromptsError, parseAiPrompts } from '../ai/prompts';
 import {
   AREA_TOLERANCE_M2,
   AREA_TOLERANCE_RATIO,
-  EDGE_COVERAGE_MIN,
+  POCKET_MIN_SIDE_CM,
   STAIR_ALIGN_CM,
 } from '../ai/plan-check';
 
@@ -71,12 +71,15 @@ describe('kb/ai_design_prompts.yaml', () => {
 
   it('dung sai nói với mô hình khớp dung sai bộ kiểm thật sự dùng', () => {
     // Lời dẫn là DỮ LIỆU còn dung sai là hằng số trong mã: hai bản của cùng một con số. Không có
-    // phép thử này thì một lần chỉnh `EDGE_COVERAGE_MIN` sẽ để lại lời dẫn nói 95% trong khi bộ
+    // phép thử này thì một lần chỉnh `POCKET_MIN_SIDE_CM` sẽ để lại lời dẫn nói 60 cm trong khi bộ
     // kiểm đo mức khác — và mô hình bị bác vì một luật chưa ai nói cho nó.
     const system = prompts.floorPlan.system;
-    expect(system).toContain(`${EDGE_COVERAGE_MIN * 100}%`);
     expect(system).toContain(`${AREA_TOLERANCE_RATIO * 100}% or ${AREA_TOLERANCE_M2} m²`);
     expect(system).toContain(`within ${STAIR_ALIGN_CM} cm`);
+    // Ngưỡng của cổng G1: dưới mức này là khe tường, trên mức này là lỗ. Nói con số ra thay vì
+    // «không để lỗ nào lớn hơn một bức tường» — mô hình không đoán được «một bức tường» là bao
+    // nhiêu, và con số thì đối chiếu được với mã.
+    expect(system).toContain(`${POCKET_MIN_SIDE_CM} cm across in BOTH directions`);
   });
 
   it('thiếu chỗ điền {issues} thì từ chối nạp', () => {
@@ -86,54 +89,51 @@ describe('kb/ai_design_prompts.yaml', () => {
   });
 });
 
-describe('Lời dẫn vẽ tờ mặt bằng bằng mô hình ảnh (T21)', () => {
-  it('có đủ ba phần và bốn chỗ điền của khuôn', () => {
-    expect(prompts.sheetImage.system.length).toBeGreaterThan(200);
-    for (const slot of ['{level_name}', '{sheet_prompt}', '{rooms}', '{footprint}', '{north}']) {
-      expect(prompts.sheetImage.prompt, slot).toContain(slot);
+/**
+ * Lời dẫn và HỢP ĐỒNG là hai tệp dữ liệu tách rời, và Worker chép từ tệp này sang tệp kia.
+ *
+ * Không có phép thử nối hai bên thì chúng trôi khỏi nhau một cách hoàn toàn im lặng. Đã xảy ra
+ * thật ngày 11/09/2026: hợp đồng khai `strategy` tối đa **200** ký tự — một con số phỏng đoán —
+ * trong khi ba ý đồ bố cục thật dài **241–301**. Hệ quả không phải «đôi khi hỏng» mà là **mọi
+ * lượt ghi đều hỏng**, và hỏng ở bước CUỐI: mô hình đã chạy xong, đã sửa xong, đã kiểm lại đạt,
+ * rồi artifact bị hợp đồng từ chối. Hai lượt gọi trả tiền, không ghi được gì.
+ *
+ * Hai fixture không bắt được vì chúng dùng câu tiếng Việt tự viết dài 76–83 ký tự, chứ không
+ * phải đoạn tiếng Anh thật mà Worker chép vào. Fixture không trung thực thì không canh được gì.
+ */
+describe('Lời dẫn phải vừa hợp đồng mà Worker sẽ ghi', () => {
+  const plan = JSON.parse(
+    readFileSync(
+      fileURLToPath(new URL('../../../../contracts/ai-floor-plan.schema.json', import.meta.url)),
+      'utf8',
+    ),
+  ) as { properties: Record<string, { maxLength?: number }> };
+
+  it('mọi ý đồ bố cục lọt trần `strategy`', () => {
+    const cap = plan.properties.strategy?.maxLength;
+    expect(cap, 'hợp đồng phải khai trần cho `strategy`').toBeTypeOf('number');
+    for (const item of prompts.floorPlan.strategies) {
+      expect(
+        item.strategy.length,
+        `${item.id} dài ${item.strategy.length}, trần ${cap}`,
+      ).toBeLessThanOrEqual(cap!);
     }
   });
 
-  it('chỉ dẫn hệ thống là tiếng Anh, còn nhãn cảnh báo là tiếng Việt', () => {
-    // Cùng ranh giới với hai bước trên: chữ gửi cho mô hình thì tiếng Anh, chữ cho người đọc
-    // tờ giấy thì tiếng Việt (CLAUDE.md 4.1). Riêng phần dạy mô hình VIẾT tên phòng tiếng Việt
-    // buộc phải có ví dụ có dấu, nên bỏ dòng ví dụ ra trước khi đo.
-    const body = prompts.sheetImage.system
-      .replace(/\([^)]*\)/g, '')
-      .replace(/e\.g\.[^\n]*/g, '')
-      .replace(/Vietnamese[^\n]*/g, '');
-    expect(body.split('\n').filter((l) => vietnamese.test(l))).toEqual([]);
-    expect(vietnamese.test(prompts.sheetImage.watermark)).toBe(true);
-  });
-
-  it('cấm mô hình vẽ khung tên và bất cứ thứ gì nhận ra được hồ sơ', () => {
-    // Tờ này là dữ liệu hạng 2 và sẽ còn được gửi đi tiếp (T12). Một khung tên bịa có tên
-    // người trên đó trông y hệt một khung tên thật.
-    const system = prompts.sheetImage.system.toLowerCase();
-    for (const forbidden of ['title block', "person's name", 'signature', 'logo']) {
-      expect(system, forbidden).toContain(forbidden);
+  it('mọi nhãn phương án lọt trần `variant_label`', () => {
+    // Worker điền nhãn này khi mô hình không tự khai nhãn riêng — cùng đường vấp với `strategy`.
+    const cap = plan.properties.variant_label?.maxLength;
+    expect(cap).toBeTypeOf('number');
+    for (const item of prompts.floorPlan.strategies) {
+      expect(item.label.length, `${item.id}: ${item.label}`).toBeLessThanOrEqual(cap!);
     }
   });
 
-  it('nhãn cảnh báo nói rõ tờ này KHÔNG dựng từ toạ độ', () => {
-    // Đây là điều nguy hiểm nhất về tờ ảnh và là lý do nhãn tồn tại: nó trông như một bản vẽ
-    // kỹ thuật nhưng không có một kích thước nào đo được.
-    expect(prompts.sheetImage.watermark).toMatch(/không dựng từ toạ độ/);
-  });
-
-  it('thiếu {sheet_prompt} thì từ chối nạp, vì lượt gọi vẫn tính tiền', () => {
-    const base = raw as Record<string, unknown>;
-    expect(() =>
-      parseAiPrompts({
-        ...base,
-        sheet_image: { system: 'x', prompt: 'không có chỗ điền', watermark: 'y' },
-      }),
-    ).toThrow(AiPromptsError);
-  });
-
-  it('thiếu hẳn khối sheet_image thì từ chối nạp', () => {
-    const base = { ...(raw as Record<string, unknown>) };
-    delete base.sheet_image;
-    expect(() => parseAiPrompts(base)).toThrow(AiPromptsError);
+  it('trần còn CHỖ THỞ, không vừa khít', () => {
+    // Vừa khít nghĩa là lần chỉnh lời dẫn tiếp theo sẽ phá hợp đồng. Ý đồ bố cục là thứ sẽ dài
+    // ra sau mỗi lần đo, nên trần phải rộng hơn hẳn bản dài nhất hiện có.
+    const cap = plan.properties.strategy!.maxLength!;
+    const longest = Math.max(...prompts.floorPlan.strategies.map((s) => s.strategy.length));
+    expect(cap, `dài nhất ${longest}, trần ${cap}`).toBeGreaterThan(longest * 1.5);
   });
 });

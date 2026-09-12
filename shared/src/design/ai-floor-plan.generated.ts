@@ -26,19 +26,11 @@ export const aiFloorPlanElemIdSchema = z
 
 export type AiFloorPlanElemId = z.infer<typeof aiFloorPlanElemIdSchema>;
 
-/**
- * Xăng-ti-mét, lưới NỬA centimet. Toạ độ đo từ góc trước-trái lô đất.
- *
- * MÔ HÌNH khai số nguyên — lời dẫn nói thẳng như vậy, và không cần gì mịn hơn. Nửa centimet tồn tại vì CHƯƠNG TRÌNH cần: vách ngăn của NVG dày 11 cm (đo được trên hồ sơ thật, `kb/construction_norms.yaml`), nên tim vách giữa hai phòng có mặt trong ở toạ độ nguyên luôn rơi vào x,5. Bắt số nguyên ở đây thì `draw/derive-walls.ts` (T19) sinh ra artifact mà chính hợp đồng từ chối — và nó bị từ chối lúc GHI, sau khi đã trả tiền cho lượt gọi.
- *
- * Nửa centimet vẫn là số biểu diễn CHÍNH XÁC trong nhị phân, nên hai lượt cùng đầu vào vẫn cho cùng mã băm artifact — đó là lý do ban đầu của việc cấm số thực, và nó còn nguyên.
- */
+/** Xăng-ti-mét, lưới nửa centimet. Toạ độ đo từ góc trước-trái lô đất. Khai SỐ NGUYÊN. */
 export const aiFloorPlanCmSchema = z
   .number()
   .multipleOf(0.5)
-  .describe(
-    'Xăng-ti-mét, lưới NỬA centimet. Toạ độ đo từ góc trước-trái lô đất.\n\nMÔ HÌNH khai số nguyên — lời dẫn nói thẳng như vậy, và không cần gì mịn hơn. Nửa centimet tồn tại vì CHƯƠNG TRÌNH cần: vách ngăn của NVG dày 11 cm (đo được trên hồ sơ thật, `kb/construction_norms.yaml`), nên tim vách giữa hai phòng có mặt trong ở toạ độ nguyên luôn rơi vào x,5. Bắt số nguyên ở đây thì `draw/derive-walls.ts` (T19) sinh ra artifact mà chính hợp đồng từ chối — và nó bị từ chối lúc GHI, sau khi đã trả tiền cho lượt gọi.\n\nNửa centimet vẫn là số biểu diễn CHÍNH XÁC trong nhị phân, nên hai lượt cùng đầu vào vẫn cho cùng mã băm artifact — đó là lý do ban đầu của việc cấm số thực, và nó còn nguyên.',
-  );
+  .describe('Xăng-ti-mét, lưới nửa centimet. Toạ độ đo từ góc trước-trái lô đất. Khai SỐ NGUYÊN.');
 
 export type AiFloorPlanCm = z.infer<typeof aiFloorPlanCmSchema>;
 
@@ -81,6 +73,14 @@ export const aiFloorPlanLevelSchema = z
       .describe(
         'Hình bao khối xây của tầng, đa giác kín ngầm (điểm cuối tự nối điểm đầu). Nằm trong hình bao xây được mà lời dẫn đưa ra.',
       ),
+    /** Thuộc tính MẶT của từng cạnh hình bao, cùng thứ tự và cùng số lượng với `outline` — cạnh i nối điểm i với điểm i+1, cạnh cuối nối về điểm đầu. open = giáp ngoài trời, lấy được sáng và gió · boundary = giáp nhà hàng xóm hoặc ranh đất, KHÔNG phải mặt thoáng · unknown = chưa suy được. WORKER ĐIỀN từ hiện trạng bốn phía của đầu bài; mô hình không khai. */
+    outline_faces: z
+      .array(z.enum(['open', 'boundary', 'unknown']))
+      .max(24)
+      .describe(
+        'Thuộc tính MẶT của từng cạnh hình bao, cùng thứ tự và cùng số lượng với `outline` — cạnh i nối điểm i với điểm i+1, cạnh cuối nối về điểm đầu. open = giáp ngoài trời, lấy được sáng và gió · boundary = giáp nhà hàng xóm hoặc ranh đất, KHÔNG phải mặt thoáng · unknown = chưa suy được. WORKER ĐIỀN từ hiện trạng bốn phía của đầu bài; mô hình không khai.',
+      )
+      .optional(),
     walls: z
       .array(
         z
@@ -125,6 +125,14 @@ export const aiFloorPlanLevelSchema = z
               .describe(
                 'Diện tích phòng, m². Khai để đối chiếu với chữ nhật và với chương trình không gian; lệch quá 10% hoặc 1 m² là lỗi phải sửa.',
               ),
+            /** Mã phòng KHÁC mà chính chữ nhật này cũng phục vụ — khai khi chương trình không gian có hai phòng mà bố cục gộp làm một không gian mở (bếp + ăn, khách + thờ). Diện tích yêu cầu khi đối chiếu là TỔNG của phòng chính và các mã ở đây. */
+            also: z
+              .array(aiFloorPlanSpaceIdSchema)
+              .max(4)
+              .describe(
+                'Mã phòng KHÁC mà chính chữ nhật này cũng phục vụ — khai khi chương trình không gian có hai phòng mà bố cục gộp làm một không gian mở (bếp + ăn, khách + thờ). Diện tích yêu cầu khi đối chiếu là TỔNG của phòng chính và các mã ở đây.',
+              )
+              .optional(),
             /** Chữ in trong phòng, tiếng Việt. Rỗng thì bộ vẽ tự lấy nhãn từ kb/room_vocabulary.yaml — chỉ khai khi cần tên khác («Phòng ngủ ông bà»). */
             label: z
               .string()
@@ -139,19 +147,6 @@ export const aiFloorPlanLevelSchema = z
       )
       .min(1)
       .max(60),
-    /**
-     * Lời dẫn vẽ TỜ GIẤY của tầng này cho một mô hình ẢNH (T21, 10/09/2026) — tiếng Anh, 6–10 câu. Mô tả NỘI DUNG riêng của tầng: phòng nào nằm ở đâu so với nhau, mảng nào lớn mảng nào nhỏ, thang và giếng trời ở đâu, cửa chính hướng nào, chỗ nào là ban công hay sân, đồ đạc đáng vẽ trong từng phòng. KHÔNG mô tả phong cách nét vẽ, khổ giấy hay khung tên — những thứ ấy là hằng số ở `kb/ai_design_prompts.yaml`, không phải việc của mô hình.
-     *
-     * TUỲ CHỌN, và đó là quyết định về TIỀN chứ không phải về gu: lược đồ này gửi cho mô hình ở chế độ strict, nên bắt buộc mà mô hình quên thì cả bản đề xuất hỏng phân tích và Workflow mua thêm một lượt sửa 0,15–0,30 USD để đổi lấy một đoạn văn không ảnh hưởng gì tới bảng diện tích. Thiếu thì bỏ tờ ảnh của tầng đó, tờ dữ liệu giữ nguyên.
-     */
-    sheet_prompt: z
-      .string()
-      .max(1200)
-      .nullable()
-      .describe(
-        'Lời dẫn vẽ TỜ GIẤY của tầng này cho một mô hình ẢNH (T21, 10/09/2026) — tiếng Anh, 6–10 câu. Mô tả NỘI DUNG riêng của tầng: phòng nào nằm ở đâu so với nhau, mảng nào lớn mảng nào nhỏ, thang và giếng trời ở đâu, cửa chính hướng nào, chỗ nào là ban công hay sân, đồ đạc đáng vẽ trong từng phòng. KHÔNG mô tả phong cách nét vẽ, khổ giấy hay khung tên — những thứ ấy là hằng số ở `kb/ai_design_prompts.yaml`, không phải việc của mô hình.\n\nTUỲ CHỌN, và đó là quyết định về TIỀN chứ không phải về gu: lược đồ này gửi cho mô hình ở chế độ strict, nên bắt buộc mà mô hình quên thì cả bản đề xuất hỏng phân tích và Workflow mua thêm một lượt sửa 0,15–0,30 USD để đổi lấy một đoạn văn không ảnh hưởng gì tới bảng diện tích. Thiếu thì bỏ tờ ảnh của tầng đó, tờ dữ liệu giữ nguyên.',
-      )
-      .optional(),
     doors: z
       .array(
         z
@@ -309,13 +304,13 @@ export const aiFloorPlanSchema = z
       .describe(
         'Tên phương án bằng tiếng Việt, mô tả CẤU TRÚC («Lõi thang giữa, bếp thông phòng ăn»), không phải số.',
       ),
-    /** Ý đồ bố cục Worker đã gửi kèm, giữ lại để đọc artifact biết phương án này theo hướng nào. */
+    /** Ý đồ bố cục Worker đã gửi kèm, giữ lại NGUYÊN VĂN để đọc artifact biết phương án này theo hướng nào. Trần 600 chứ không phải 200: con số 200 là một phỏng đoán, và ba ý đồ thật ở `kb/ai_design_prompts.yaml` dài 241–301 ký tự — nên MỌI lượt ghi đều bị từ chối, sau khi đã trả tiền hai lượt gọi mô hình (đo 11/09/2026). Ý đồ bố cục là DỮ LIỆU sẽ dài ra theo mỗi lần chỉnh lời dẫn, nên trần phải có chỗ thở, và có phép thử đối chiếu hai nguồn với nhau. */
     strategy: z
       .string()
-      .max(200)
+      .max(600)
       .nullable()
       .describe(
-        'Ý đồ bố cục Worker đã gửi kèm, giữ lại để đọc artifact biết phương án này theo hướng nào.',
+        'Ý đồ bố cục Worker đã gửi kèm, giữ lại NGUYÊN VĂN để đọc artifact biết phương án này theo hướng nào. Trần 600 chứ không phải 200: con số 200 là một phỏng đoán, và ba ý đồ thật ở `kb/ai_design_prompts.yaml` dài 241–301 ký tự — nên MỌI lượt ghi đều bị từ chối, sau khi đã trả tiền hai lượt gọi mô hình (đo 11/09/2026). Ý đồ bố cục là DỮ LIỆU sẽ dài ra theo mỗi lần chỉnh lời dẫn, nên trần phải có chỗ thở, và có phép thử đối chiếu hai nguồn với nhau.',
       )
       .optional(),
     /** Góc của hướng bắc so với trục +y của bản vẽ, độ, cùng chiều kim đồng hồ. Worker suy từ hướng nhà trong đầu bài — mô hình không biết hướng và không được hỏi. */

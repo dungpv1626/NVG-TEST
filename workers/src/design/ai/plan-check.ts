@@ -2,8 +2,22 @@
  * Kiểm máy mặt bằng do mô hình đề xuất — trước khi vẽ, trước khi lưu.
  *
  * Đây là nửa còn lại của quyết định T15. Mô hình khai NỘI DUNG bản vẽ dưới dạng dữ liệu chính
- * là để chỗ này kiểm được: thiếu cửa, cửa đặt ngoài tường, tường không bao kín phòng, diện tích
- * khai lệch chữ nhật — máy bắt được và bắt mô hình sửa. Một tệp SVG thì chỉ đếm được ký tự.
+ * là để chỗ này kiểm được: phòng thiếu, phòng chồng nhau, phòng không tới được, mặt sàn còn lỗ,
+ * diện tích khai lệch chữ nhật — máy bắt được và bắt mô hình sửa. Một tệp SVG thì chỉ đếm được ký
+ * tự.
+ *
+ * ── Sáu phép kiểm đã XOÁ ngày 12/09/2026 (T23) ─────────────────────────────────────────
+ *
+ * `wall_duplicate_id` · `wall_degenerate` · `opening_wall_missing` · `opening_outside_wall` ·
+ * `window_on_partition` · `room_edge_uncovered`. Cả sáu tồn tại CHỈ VÌ mô hình khai tường, và từ
+ * T23 thì tường do chương trình suy từ chữ nhật phòng (`plan-geometry.ts`) — nên chúng không còn
+ * đối tượng để bắt: tường và phòng cùng một nguồn, không thể lệch nhau. Hai phép còn có ý nghĩa
+ * thì chuyển sang không gian CẠNH PHÒNG và nằm ở `plan-geometry.ts`: `opening_overlap` và
+ * `window_on_interior_edge` (tên cũ là `window_on_partition`).
+ *
+ * `room_edge_uncovered` là phép mất đi đáng nói nhất: nó bắt đúng lúc tường mô hình khai không
+ * trùng phòng mô hình khai, tức mô hình tự mâu thuẫn với chính nó. Xoá nó không làm yếu bộ kiểm vì
+ * mâu thuẫn ấy nay KHÔNG DIỄN ĐẠT ĐƯỢC.
  *
  * ── Hai mức, và ranh giới giữa chúng ───────────────────────────────────────────────────
  * `blocking` = tờ vẽ sẽ SAI nếu cứ vẽ, nên đáng tiêu thêm một lượt gọi để mô hình sửa. Đúng
@@ -20,14 +34,14 @@
 
 import type { AiFloorPlan, AiFloorPlanLevel, AiSpaceProgram } from '@nvg/shared/design';
 import {
-  intervalsOverlap,
+  emptyCells,
   overlapArea,
   pointInPolygon,
+  polygonArea,
   rectArea,
   rectContainsRect,
   toPt,
   toRect,
-  type Interval,
   type Pt,
   type Rect,
 } from './draw/geometry';
@@ -39,15 +53,24 @@ export const EDGE_TOLERANCE_CM = 1;
 /** Lõi thang giữa hai tầng lệch quá mức này thì không còn là một lõi. */
 export const STAIR_ALIGN_CM = 20;
 
-/** Phần cạnh phòng phải được tường phủ. Dưới mức này là phòng hở, không phải phòng. */
-export const EDGE_COVERAGE_MIN = 0.95;
-
 /** Diện tích khai lệch chữ nhật quá CẢ HAI ngưỡng này mới tính là sai. */
 export const AREA_TOLERANCE_RATIO = 0.1;
 export const AREA_TOLERANCE_M2 = 1;
 
 /** Hai phòng chồng nhau dưới mức này coi như chỉ chạm mép do làm tròn. */
 export const OVERLAP_TOLERANCE_CM2 = 100;
+
+/**
+ * Cạnh ngắn tối thiểu để một khoảng chưa xếp phòng được coi là LỖ, không phải khe tường (G1).
+ *
+ * 60 cm nằm giữa hai thứ không chồng nhau: bức tường dày nhất của `kb/construction_norms.yaml`
+ * là 22 cm, còn kích thước tối thiểu hẹp nhất trong `rules/` là 85 cm (kho, đo trên hồ sơ thật).
+ * Nên không khe tường nào vượt ngưỡng này, và không khoảng nào có thể thành phòng mà lọt dưới nó.
+ */
+export const POCKET_MIN_SIDE_CM = 60;
+
+/** Tổng diện tích lỗ cho phép trên một tầng trước khi coi là mặt sàn chưa lấp kín (G1), m². */
+export const POCKET_MAX_TOTAL_M2 = 1;
 
 export type IssueLevel = 'blocking' | 'finding';
 
@@ -64,37 +87,7 @@ export interface PlanIssue {
 export interface PlanCheckResult {
   blocking: PlanIssue[];
   findings: PlanIssue[];
-  /**
-   * Chỉ những mã lỗi thuộc NHÓM TƯỜNG. Sau lượt sửa mà chỉ còn nhóm này thì chương trình suy
-   * tường từ phòng (T19) và tờ vẽ vẫn dùng được — xem `draw/derive-walls.ts`.
-   */
-  wallOnly: boolean;
 }
-
-/** Mã lỗi do tường khai sai gây ra — nhóm mà T19 cứu được bằng cách suy tường từ phòng. */
-const WALL_CODES = new Set([
-  'wall_degenerate',
-  'wall_duplicate_id',
-  'room_edge_uncovered',
-  'opening_wall_missing',
-  'opening_outside_wall',
-  'opening_overlap',
-  'window_on_partition',
-]);
-
-/**
- * Mã lỗi KHÔNG tự nói được gì khi tường đã sai — vì phép kiểm sinh ra nó ĐỌC hình học tường.
- *
- * «Phòng không có cửa» suy từ hình học: lùi từ điểm giữa lỗ mở ra mỗi bên nửa bề dày tường, rơi
- * vào phòng nào thì cửa phục vụ phòng đó. Tường khai sai thì phép suy ấy sai theo, và một cửa
- * nằm trên đoạn tường không tồn tại sẽ làm phòng của nó «mất cửa» — nên đây không phải bằng
- * chứng độc lập về một thiếu sót thiết kế.
- *
- * Bỏ sót điều này thì T19 KHÔNG kích hoạt đúng vào trường hợp nó được dựng ra để cứu: tường sai
- * kéo theo `room_without_door`, `wallOnly` thành false, và người dùng nhận một tờ vẽ hỏng kèm lời
- * mời bấm lại — tức một lượt gọi tính tiền nữa. Phát hiện 10/09/2026 khi viết `ai-plan.test.ts`.
- */
-const WALL_DEPENDENT_CODES = new Set(['room_without_door']);
 
 export interface PlanCheckInput {
   plan: AiFloorPlan;
@@ -104,6 +97,14 @@ export interface PlanCheckInput {
   buildable?: Rect | null;
   /** Mã loại phòng KHÔNG bắt buộc có cửa: ngoài trời và ô trống (nhóm của room_vocabulary). */
   doorExemptTypes: ReadonlySet<string>;
+  /**
+   * Mã loại phòng GIAO THÔNG ĐỨNG — nhóm `circulation` của `kb/room_vocabulary.yaml`.
+   *
+   * Cần cho cổng G2: ô thang trong `stairs[]` và phòng thang trong `rooms[]` mô tả CÙNG một chỗ
+   * và chữ nhật của chúng trùng khít nhau một cách hợp lệ. Không có danh sách này thì G2 báo
+   * «thang chồng lên phòng» trên mọi mặt bằng đúng. Là DỮ LIỆU vì cùng lý lẽ với `doorExemptTypes`.
+   */
+  verticalTypes: ReadonlySet<string>;
 }
 
 export function checkPlan(input: PlanCheckInput): PlanCheckResult {
@@ -117,22 +118,30 @@ export function checkPlan(input: PlanCheckInput): PlanCheckResult {
     checkLevel(level, input, add);
   }
   checkStairs(input.plan, add);
+  checkReachability(input, add);
 
-  const blocking = issues.filter((issue) => issue.level === 'blocking');
   return {
-    blocking,
+    blocking: issues.filter((issue) => issue.level === 'blocking'),
     findings: issues.filter((issue) => issue.level === 'finding'),
-    // Phải có ÍT NHẤT MỘT lỗi thuộc nhóm tường: một phòng thật sự không có cửa thì suy tường
-    // không cứu được gì, và bật cờ «tường do chương trình suy» lúc ấy là nói sai trên tờ vẽ.
-    wallOnly:
-      blocking.some((issue) => WALL_CODES.has(issue.code)) &&
-      blocking.every((issue) => WALL_CODES.has(issue.code) || WALL_DEPENDENT_CODES.has(issue.code)),
   };
 }
 
 type Add = (level: IssueLevel, code: string, message: string, ref?: string) => void;
 
-/** (2) Mặt bằng phải xếp ĐÚNG danh sách phòng của chương trình, đúng tầng, không thừa không thiếu. */
+/**
+ * (2) Mặt bằng phải xếp ĐÚNG danh sách phòng của chương trình, đúng tầng, không thừa không thiếu.
+ *
+ * PHÒNG GHÉP (`also`, T23): một chữ nhật phục vụ nhiều mã phòng của chương trình — bếp thông
+ * phòng ăn, khách có bàn thờ. Đo trên hồ sơ thật 12/09/2026: 3 trong 6 mặt bằng của hai dự án
+ * NVO có phòng ghép. Không có đường này thì mô hình chỉ còn hai lựa chọn, và cả hai đều sai: bỏ
+ * một mã phòng (bị `room_missing` chặn), hoặc dựng một vách không tồn tại để có đủ phòng — tức
+ * bố cục bị hợp đồng bóp méo.
+ *
+ * Mã trong `also` tính là ĐÃ XẾP, nên không sinh `room_missing`; nhưng vẫn phải tồn tại trong
+ * chương trình, vẫn phải thuộc đúng tầng, và vẫn không được trùng với một chữ nhật khác. Riêng
+ * `room_wrong_type` thì cố ý KHÔNG áp: phòng ghép mang loại của phần chính («bếp ăn» là `kitchen`
+ * với `also: [dining]`), nên đòi loại khớp là đòi một điều tự mâu thuẫn.
+ */
 function checkAgainstProgram(input: PlanCheckInput, add: Add): void {
   const wanted = new Map(input.program.spaces.map((space) => [space.id, space]));
   const seen = new Set<string>();
@@ -144,6 +153,46 @@ function checkAgainstProgram(input: PlanCheckInput, add: Add): void {
         continue;
       }
       seen.add(room.id);
+
+      for (const merged of room.also ?? []) {
+        if (merged === room.id) {
+          add(
+            'blocking',
+            'room_merge_self',
+            `Phòng "${room.id}" khai chính nó trong "also" — trường này dành cho mã phòng KHÁC mà chữ nhật này cũng phục vụ.`,
+            room.id,
+          );
+          continue;
+        }
+        if (seen.has(merged)) {
+          add(
+            'blocking',
+            'room_duplicate',
+            `Phòng "${merged}" được khai hai lần: vừa là phòng riêng vừa ghép vào "${room.id}".`,
+            merged,
+          );
+          continue;
+        }
+        seen.add(merged);
+        const mergedSpace = wanted.get(merged);
+        if (!mergedSpace) {
+          add(
+            'blocking',
+            'room_unknown',
+            `Phòng "${merged}" ghép vào "${room.id}" nhưng không có trong chương trình không gian.`,
+            merged,
+          );
+          continue;
+        }
+        if (mergedSpace.level !== level.level) {
+          add(
+            'blocking',
+            'room_wrong_level',
+            `Phòng "${merged}" thuộc tầng ${mergedSpace.level} theo chương trình không gian nhưng được ghép vào "${room.id}" ở tầng ${level.level}.`,
+            merged,
+          );
+        }
+      }
 
       const space = wanted.get(room.id);
       if (!space) {
@@ -190,36 +239,12 @@ function checkLevel(level: AiFloorPlanLevel, input: PlanCheckInput, add: Add): v
   const walls = prepareWalls(level.walls);
   const where = `tầng ${level.level}`;
 
-  checkWalls(walls, where, add);
   checkRoomRects(level, input, where, add);
-  checkOverlaps(level, where, add);
-  checkOpenings(level, walls, where, add);
-  checkEdgeCoverage(level, walls, where, add);
+  checkOverlaps(level, input, where, add);
   checkDoorsPerRoom(level, walls, input, where, add);
-}
-
-/** (11) Tường phải có chiều dài, có bề dày, và mã duy nhất. */
-function checkWalls(walls: WallGeom[], where: string, add: Add): void {
-  const seen = new Set<string>();
-  for (const wall of walls) {
-    if (seen.has(wall.id)) {
-      add(
-        'blocking',
-        'wall_duplicate_id',
-        `Ở ${where} có hai đoạn tường cùng mã "${wall.id}".`,
-        wall.id,
-      );
-    }
-    seen.add(wall.id);
-    if (wall.length <= 0 || wall.t <= 0) {
-      add(
-        'blocking',
-        'wall_degenerate',
-        `Đoạn tường "${wall.id}" ở ${where} dài ${Math.round(wall.length)} cm, dày ${wall.t} cm — cả hai phải lớn hơn 0.`,
-        wall.id,
-      );
-    }
-  }
+  checkFloorCoverage(level, where, add);
+  checkVerticalElements(level, where, add);
+  checkRoomNames(level, where, add);
 }
 
 /** (3) và (9) Chữ nhật phòng hợp lệ, nằm trong hình bao, và diện tích khai khớp chữ nhật. */
@@ -279,158 +304,180 @@ function checkRoomRects(
   }
 }
 
-/** (4) Hai phòng không được chồng lên nhau. */
-function checkOverlaps(level: AiFloorPlanLevel, where: string, add: Add): void {
-  const rooms = level.rooms.map((room) => ({ id: room.id, rect: toRect(room.rect) }));
+/**
+ * (4) và cổng **G2** — không phần tử nào được chồng lên nhau, xét MỌI LOẠI CẶP.
+ *
+ * Trước 12/09/2026 phép này chỉ xét phòng ↔ phòng, nên một ô thang đặt trùng lên phòng ngủ vẫn
+ * ĐẠT và tờ vẽ ra một cái thang mọc giữa giường.
+ *
+ * Hai ngoại lệ là THẬT, không phải nới tay:
+ *  · ô thang trong `stairs[]` và phòng thang trong `rooms[]` mô tả CÙNG một chỗ — chữ nhật trùng
+ *    khít nhau là cách hợp đồng diễn đạt «đây là chỗ đặt thang», nên chỉ báo lỗi khi ô thang
+ *    chồng lên một phòng KHÔNG thuộc nhóm giao thông đứng (`verticalTypes`);
+ *  · ô trống `void` nằm ĐÚNG trên ô thang hoặc trên giếng trời là định nghĩa của nó — lỗ thông
+ *    tầng thì phải trùng chỗ thông. Nên void chỉ xung đột với phòng trong nhà, không xung đột
+ *    với thang và không xung đột với phòng ngoài trời (`doorExemptTypes` đã là nhóm ấy).
+ */
+function checkOverlaps(
+  level: AiFloorPlanLevel,
+  input: PlanCheckInput,
+  where: string,
+  add: Add,
+): void {
+  const rooms = level.rooms.map((room) => ({
+    id: room.id,
+    rect: toRect(room.rect),
+    type: room.type,
+  }));
+  const stairs = (level.stairs ?? []).map((stair) => ({ id: stair.id, rect: toRect(stair.rect) }));
+  const voids = (level.voids ?? []).map((hole) => ({ id: hole.id, rect: toRect(hole.rect) }));
+
+  const clash = (
+    code: string,
+    first: { id: string; rect: Rect },
+    second: { id: string; rect: Rect },
+    what: string,
+  ): void => {
+    const area = overlapArea(first.rect, second.rect);
+    if (area <= OVERLAP_TOLERANCE_CM2) return;
+    add(
+      'blocking',
+      code,
+      `Ở ${where}, ${what} chồng lên nhau ${(area / 10_000).toFixed(1)} m².`,
+      first.id,
+    );
+  };
+
   for (let i = 0; i < rooms.length; i += 1) {
     for (let j = i + 1; j < rooms.length; j += 1) {
       const first = rooms[i];
       const second = rooms[j];
       if (!first || !second) continue;
-      const area = overlapArea(first.rect, second.rect);
-      if (area > OVERLAP_TOLERANCE_CM2) {
-        add(
-          'blocking',
-          'room_overlap',
-          `Ở ${where}, phòng "${first.id}" và "${second.id}" chồng lên nhau ${(area / 10_000).toFixed(1)} m².`,
-          first.id,
-        );
-      }
+      clash('room_overlap', first, second, `phòng "${first.id}" và "${second.id}"`);
+    }
+  }
+
+  for (const stair of stairs) {
+    for (const room of rooms) {
+      if (input.verticalTypes.has(room.type)) continue;
+      clash('stair_overlaps_room', stair, room, `ô thang "${stair.id}" và phòng "${room.id}"`);
+    }
+  }
+
+  for (const hole of voids) {
+    for (const room of rooms) {
+      if (input.verticalTypes.has(room.type) || input.doorExemptTypes.has(room.type)) continue;
+      clash('void_overlaps_room', hole, room, `ô trống "${hole.id}" và phòng "${room.id}"`);
+    }
+    for (const other of voids) {
+      if (other.id <= hole.id) continue;
+      clash('void_overlaps_void', hole, other, `ô trống "${hole.id}" và "${other.id}"`);
     }
   }
 }
 
-/** (6) và (7) Lỗ mở phải nằm trong tường, không chồng nhau; cửa sổ chỉ trên tường bao. */
-function checkOpenings(level: AiFloorPlanLevel, walls: WallGeom[], where: string, add: Add): void {
-  const byId = new Map(walls.map((wall) => [wall.id, wall]));
-  const holes = new Map<string, Interval[]>();
+/**
+ * Cổng **G1** — mặt sàn phải được LẤP KÍN.
+ *
+ * Trước 12/09/2026 chiều duy nhất được kiểm là «phòng nằm trong hình bao»; không gì đo chiều
+ * ngược lại, nên một mặt bằng có lỗ 30 m² giữa nhà vẫn ĐẠT. CLAUDE.md 8.8 điểm 6 thì nói rõ cây
+ * chia không gian LẤP KÍN mặt sàn — muốn để trống thì khai một ô `void`.
+ *
+ * Phép đo không so hai con số tổng, vì so tổng thì không phân biệt được LỖ với BỀ DÀY TƯỜNG:
+ * `rect` của phòng là kích thước lọt lòng, nên một tầng đúng đắn vẫn có 10 trong 60 m² chưa phủ
+ * (đo trên fixture nhà phố) và toàn bộ chỗ ấy là tường. Thay vào đó: nén toạ độ ra từng ô chưa
+ * phủ, rồi chỉ tính những ô mà CẠNH NGẮN vượt `POCKET_MIN_SIDE_CM` — không khe tường nào rộng
+ * tới mức đó, và không khoảng nào hẹp hơn thế mà thành phòng được.
+ */
+function checkFloorCoverage(level: AiFloorPlanLevel, where: string, add: Add): void {
+  const outline = level.outline.map(toPt);
+  const covers = [
+    ...level.rooms.map((room) => toRect(room.rect)),
+    ...(level.stairs ?? []).map((stair) => toRect(stair.rect)),
+    ...(level.voids ?? []).map((hole) => toRect(hole.rect)),
+  ];
+  const pockets = emptyCells(outline, covers, EDGE_TOLERANCE_CM).filter(
+    (cell) => cell.thinnestCm > POCKET_MIN_SIDE_CM,
+  );
+  if (pockets.length === 0) return;
 
-  const place = (id: string, wallId: string, at: number, width: number, kind: string): void => {
-    const wall = byId.get(wallId);
-    if (!wall) {
-      add(
-        'blocking',
-        'opening_wall_missing',
-        `${kind} "${id}" ở ${where} ghi nằm trên tường "${wallId}" nhưng tầng này không có đoạn tường đó.`,
-        id,
-      );
+  const totalM2 = pockets.reduce((sum, cell) => sum + rectArea(cell.rect), 0) / 10_000;
+  if (totalM2 <= POCKET_MAX_TOTAL_M2) return;
+
+  const biggest = pockets.reduce((best, cell) =>
+    rectArea(cell.rect) > rectArea(best.rect) ? cell : best,
+  );
+  const outlineM2 = Math.abs(polygonArea(outline)) / 10_000;
+  add(
+    'blocking',
+    'floor_not_covered',
+    `Ở ${where} còn ${totalM2.toFixed(1)} m² trong hình bao ${outlineM2.toFixed(1)} m² không thuộc phòng, ô thang hay ô trống nào — khoảng lớn nhất là ${(rectArea(biggest.rect) / 10_000).toFixed(1)} m² tại x ${Math.round(biggest.rect.x0)}–${Math.round(biggest.rect.x1)}, y ${Math.round(biggest.rect.y0)}–${Math.round(biggest.rect.y1)} cm. Xếp phòng vào đó, hoặc khai một ô trống.`,
+  );
+}
+
+/**
+ * Cổng **G4** — ô thang và ô trống phải có hình học dùng được.
+ *
+ * Hôm nay một ô thang có cạnh ≤ 0 thì bộ vẽ KHÔNG vẽ gì và KHÔNG ghi ghi chú nào: hỏng im lặng,
+ * và người đọc tờ vẽ thấy một mặt bằng không có thang mà không có chữ nào nói vì sao.
+ */
+function checkVerticalElements(level: AiFloorPlanLevel, where: string, add: Add): void {
+  const outline = level.outline.map(toPt);
+
+  const inspect = (id: string, values: readonly number[], code: string, what: string): void => {
+    const rect = toRect(values);
+    if (rect.x1 - rect.x0 <= 0 || rect.y1 - rect.y0 <= 0) {
+      add('blocking', `${code}_rect_empty`, `${what} "${id}" ở ${where} có chữ nhật rỗng.`, id);
       return;
     }
-    if (width <= 0 || at < -EDGE_TOLERANCE_CM || at + width > wall.length + EDGE_TOLERANCE_CM) {
+    const corners: Pt[] = [
+      [rect.x0, rect.y0],
+      [rect.x1, rect.y0],
+      [rect.x1, rect.y1],
+      [rect.x0, rect.y1],
+    ];
+    if (!corners.every((corner) => pointInPolygon(corner, outline, EDGE_TOLERANCE_CM))) {
       add(
         'blocking',
-        'opening_outside_wall',
-        `${kind} "${id}" ở ${where} đặt tại ${at} cm, rộng ${width} cm, trong khi tường "${wallId}" chỉ dài ${Math.round(wall.length)} cm.`,
+        `${code}_outside_outline`,
+        `${what} "${id}" ở ${where} nằm lấn ra ngoài hình bao khối xây của tầng.`,
         id,
       );
-      return;
     }
-    const span: Interval = { from: at, to: at + width };
-    const existing = holes.get(wallId) ?? [];
-    for (const other of existing) {
-      if (intervalsOverlap(span, other, EDGE_TOLERANCE_CM)) {
-        add(
-          'blocking',
-          'opening_overlap',
-          `${kind} "${id}" ở ${where} chồng lên một lỗ mở khác trên cùng tường "${wallId}".`,
-          id,
-        );
-        return;
-      }
-    }
-    existing.push(span);
-    holes.set(wallId, existing);
   };
 
-  for (const door of level.doors ?? []) place(door.id, door.wall, door.at, door.w, 'Cửa');
-  for (const window of level.windows ?? []) {
-    place(window.id, window.wall, window.at, window.w, 'Cửa sổ');
-    const wall = byId.get(window.wall);
-    if (wall && wall.kind !== 'e') {
+  for (const stair of level.stairs ?? []) inspect(stair.id, stair.rect, 'stair', 'Ô thang');
+  for (const hole of level.voids ?? []) inspect(hole.id, hole.rect, 'void', 'Ô trống');
+}
+
+/**
+ * Cổng **G5** — không hai phòng nào trên cùng một tầng mang CÙNG một tên.
+ *
+ * Hồ sơ P1 có hai phòng cùng tên «P NGỦ 3» trên một tầng, và đúng cặp ấy mang hai nhãn diện tích
+ * sai 30%. Trùng tên không gây ra sai số, nhưng nó đi kèm: một tờ vẽ mà người đọc không phân biệt
+ * được hai phòng thì mọi câu hỏi về một trong hai đều không trả lời được.
+ *
+ * Chỉ so nhãn mô hình KHAI TƯỜNG MINH. Nhãn rỗng thì bộ vẽ lấy tên theo mã phòng
+ * (`kb/room_vocabulary.yaml`), nên hai phòng ngủ không nhãn đều ra «Phòng ngủ» — đó là việc của
+ * bộ vẽ (đánh số), không phải mâu thuẫn trong dữ liệu mô hình khai.
+ */
+function checkRoomNames(level: AiFloorPlanLevel, where: string, add: Add): void {
+  const seen = new Map<string, string>();
+  for (const room of level.rooms) {
+    const label = room.label?.trim().replace(/\s+/g, ' ').toLowerCase();
+    if (!label) continue;
+    const first = seen.get(label);
+    if (first) {
       add(
         'blocking',
-        'window_on_partition',
-        `Cửa sổ "${window.id}" ở ${where} đặt trên ${wall.kind === 'p' ? 'vách ngăn trong nhà' : 'lan can'} "${wall.id}" — cửa sổ chỉ đặt được trên tường bao.`,
-        window.id,
+        'room_name_duplicate',
+        `Ở ${where}, phòng "${first}" và "${room.id}" cùng mang nhãn "${room.label?.trim()}" — hai phòng trên một tầng phải phân biệt được bằng tên.`,
+        room.id,
       );
+      continue;
     }
+    seen.set(label, room.id);
   }
-}
-
-/** (8) Mỗi cạnh phòng phải được tường thẳng hàng phủ gần kín. */
-function checkEdgeCoverage(
-  level: AiFloorPlanLevel,
-  walls: WallGeom[],
-  where: string,
-  add: Add,
-): void {
-  for (const room of level.rooms) {
-    const rect = toRect(room.rect);
-    const edges = [
-      { name: 'trước', axis: 'x' as const, line: rect.y0, from: rect.x0, to: rect.x1, side: -1 },
-      { name: 'sau', axis: 'x' as const, line: rect.y1, from: rect.x0, to: rect.x1, side: 1 },
-      { name: 'trái', axis: 'y' as const, line: rect.x0, from: rect.y0, to: rect.y1, side: -1 },
-      { name: 'phải', axis: 'y' as const, line: rect.x1, from: rect.y0, to: rect.y1, side: 1 },
-    ];
-
-    for (const edge of edges) {
-      const length = edge.to - edge.from;
-      if (length <= 0) continue;
-      const covered = coveredLength(walls, edge);
-      if (covered / length < EDGE_COVERAGE_MIN) {
-        add(
-          'blocking',
-          'room_edge_uncovered',
-          `Cạnh ${edge.name} của phòng "${room.id}" ở ${where} chỉ được tường phủ ${Math.round((covered / length) * 100)}% — phòng không kín.`,
-          room.id,
-        );
-      }
-    }
-  }
-}
-
-interface Edge {
-  axis: 'x' | 'y';
-  /** Toạ độ đường thẳng chứa cạnh: `y` với cạnh ngang, `x` với cạnh dọc. */
-  line: number;
-  from: number;
-  to: number;
-  /** −1 khi tường nằm phía toạ độ NHỎ hơn cạnh (ngoài phòng), +1 khi nằm phía lớn hơn. */
-  side: number;
-}
-
-/** Tổng chiều dài cạnh được các đoạn tường thẳng hàng phủ — có gộp phần chồng nhau. */
-function coveredLength(walls: readonly WallGeom[], edge: Edge): number {
-  const spans: Interval[] = [];
-
-  for (const wall of walls) {
-    const horizontal = Math.abs(wall.a[1] - wall.b[1]) <= EDGE_TOLERANCE_CM;
-    const vertical = Math.abs(wall.a[0] - wall.b[0]) <= EDGE_TOLERANCE_CM;
-    if (edge.axis === 'x' ? !horizontal : !vertical) continue;
-
-    const centre = edge.axis === 'x' ? (wall.a[1] + wall.b[1]) / 2 : (wall.a[0] + wall.b[0]) / 2;
-    // Mặt tường giáp phòng: tim lùi ra ngoài nửa bề dày theo đúng phía của cạnh.
-    const face = centre - edge.side * (wall.t / 2);
-    if (Math.abs(face - edge.line) > EDGE_TOLERANCE_CM) continue;
-
-    const min = edge.axis === 'x' ? Math.min(wall.a[0], wall.b[0]) : Math.min(wall.a[1], wall.b[1]);
-    const max = edge.axis === 'x' ? Math.max(wall.a[0], wall.b[0]) : Math.max(wall.a[1], wall.b[1]);
-    const from = Math.max(edge.from, min);
-    const to = Math.min(edge.to, max);
-    if (to > from) spans.push({ from, to });
-  }
-
-  spans.sort((a, b) => a.from - b.from);
-  let total = 0;
-  let cursor = -Infinity;
-  for (const span of spans) {
-    const from = Math.max(span.from, cursor);
-    if (span.to > from) {
-      total += span.to - from;
-      cursor = span.to;
-    }
-  }
-  return total;
 }
 
 /**
@@ -450,9 +497,41 @@ function checkDoorsPerRoom(
   where: string,
   add: Add,
 ): void {
-  const byId = new Map(walls.map((wall) => [wall.id, wall]));
-  const rooms = level.rooms.map((room) => ({ room, rect: toRect(room.rect) }));
   const served = new Set<string>();
+  for (const link of doorLinks(level, walls)) {
+    for (const id of link.rooms) served.add(id);
+  }
+
+  for (const room of level.rooms) {
+    if (served.has(room.id)) continue;
+    if (input.doorExemptTypes.has(room.type)) continue;
+    add(
+      'blocking',
+      'room_without_door',
+      `Phòng "${room.id}" ở ${where} không có cửa hay ô thông nào mở vào — không đi tới được.`,
+      room.id,
+    );
+  }
+}
+
+/** Một cửa và những phòng nó nối. `toOutside` khi một phía không có phòng nào. */
+interface DoorLink {
+  id: string;
+  rooms: string[];
+  toOutside: boolean;
+}
+
+/**
+ * Phòng nào nằm hai bên mỗi cửa — nền của cả «phòng phải có cửa» và cổng G3.
+ *
+ * Suy từ HÌNH HỌC, không hỏi mô hình: lùi từ điểm giữa lỗ mở ra mỗi bên nửa bề dày tường cộng một
+ * chút, rơi vào phòng nào thì cửa ăn vào phòng đó. Một phía không có phòng nào nghĩa là cửa mở ra
+ * NGOÀI NHÀ — đó là cửa chính, cửa cổng, hoặc cửa ra ban công chưa khai thành phòng.
+ */
+function doorLinks(level: AiFloorPlanLevel, walls: readonly WallGeom[]): DoorLink[] {
+  const byId = new Map(walls.map((wall) => [wall.id, wall]));
+  const rooms = level.rooms.map((room) => ({ id: room.id, rect: toRect(room.rect) }));
+  const links: DoorLink[] = [];
 
   for (const door of level.doors ?? []) {
     const wall = byId.get(door.wall);
@@ -462,34 +541,129 @@ function checkDoorsPerRoom(
       wall.a[1] + wall.u[1] * (door.at + door.w / 2),
     ];
     const reach = wall.t / 2 + EDGE_TOLERANCE_CM;
-    for (const sign of [1, -1]) {
+    const sides = [1, -1].map((sign) => {
       const probe: Pt = [
         centre[0] + wall.n[0] * sign * reach,
         centre[1] + wall.n[1] * sign * reach,
       ];
-      for (const entry of rooms) {
-        if (
-          probe[0] >= entry.rect.x0 - EDGE_TOLERANCE_CM &&
-          probe[0] <= entry.rect.x1 + EDGE_TOLERANCE_CM &&
-          probe[1] >= entry.rect.y0 - EDGE_TOLERANCE_CM &&
-          probe[1] <= entry.rect.y1 + EDGE_TOLERANCE_CM
-        ) {
-          served.add(entry.room.id);
-        }
+      return rooms
+        .filter(
+          (entry) =>
+            probe[0] >= entry.rect.x0 - EDGE_TOLERANCE_CM &&
+            probe[0] <= entry.rect.x1 + EDGE_TOLERANCE_CM &&
+            probe[1] >= entry.rect.y0 - EDGE_TOLERANCE_CM &&
+            probe[1] <= entry.rect.y1 + EDGE_TOLERANCE_CM,
+        )
+        .map((entry) => entry.id);
+    });
+    const touched = [...new Set(sides.flat())];
+    if (touched.length === 0) continue;
+    links.push({
+      id: door.id,
+      rooms: touched,
+      toOutside: sides.some((side) => side.length === 0),
+    });
+  }
+  return links;
+}
+
+/**
+ * Cổng **G3** — mọi phòng phải ĐI TỚI ĐƯỢC từ cửa ngoài nhà.
+ *
+ * Trước 12/09/2026 câu hỏi duy nhất là «phòng này có cửa nào chạm vào không», nên một cụm phòng
+ * biệt lập nối nhau bằng cửa mà không nối ra ngoài vẫn ĐẠT. Đây là phép duyệt đồ thị thật: đỉnh
+ * là phòng, cạnh ngang là cửa, cạnh dọc là ô thang, và điểm xuất phát là phòng có cửa mở ra ngoài
+ * ở TẦNG 1.
+ *
+ * Vì sao chỉ tầng 1 làm điểm xuất phát: một cửa ra ban công ở tầng 3 cũng «mở ra ngoài» nhưng
+ * không ai vào nhà từ đó. Lấy nó làm lối vào thì một tầng trên hoàn toàn đứt khỏi thang vẫn đạt.
+ *
+ * Liên kết dọc suy từ `stairs[]`: chữ nhật ô thang của tầng n chạm phòng nào ở tầng n và tầng
+ * n+1 thì những phòng ấy nối nhau. Đi xuyên phòng KHÔNG bị coi là lỗi ở đây — đó là tiêu chí C1
+ * và C3 của bộ chấm, và `ensuite_of` của chương trình không gian nói rõ có những chỗ đi xuyên
+ * phòng là hợp lệ (WC khép kín).
+ *
+ * Phòng ngoài trời (`doorExemptTypes`) không cần tới được: giếng trời và hộp kỹ thuật thì không
+ * ai vào.
+ */
+function checkReachability(input: PlanCheckInput, add: Add): void {
+  const neighbours = new Map<string, Set<string>>();
+  const link = (from: string, to: string): void => {
+    if (from === to) return;
+    for (const [a, b] of [
+      [from, to],
+      [to, from],
+    ] as const) {
+      const set = neighbours.get(a) ?? new Set<string>();
+      set.add(b);
+      neighbours.set(a, set);
+    }
+  };
+
+  const levels = [...input.plan.levels].sort((a, b) => a.level - b.level);
+  const ground = Math.min(...levels.map((level) => level.level));
+  const entries: string[] = [];
+
+  for (const level of levels) {
+    const walls = prepareWalls(level.walls);
+    for (const door of doorLinks(level, walls)) {
+      for (const first of door.rooms) {
+        for (const second of door.rooms) link(first, second);
+        if (door.toOutside && level.level === ground) entries.push(first);
       }
     }
   }
 
-  for (const entry of rooms) {
-    if (served.has(entry.room.id)) continue;
-    if (input.doorExemptTypes.has(entry.room.type)) continue;
+  for (const level of levels) {
+    const above = levels.find((other) => other.level === level.level + 1);
+    if (!above) continue;
+    for (const stair of level.stairs ?? []) {
+      const rect = toRect(stair.rect);
+      const here = roomsTouching(level, rect);
+      const upstairs = roomsTouching(above, rect);
+      for (const from of here) for (const to of upstairs) link(from, to);
+    }
+  }
+
+  if (entries.length === 0) {
     add(
       'blocking',
-      'room_without_door',
-      `Phòng "${entry.room.id}" ở ${where} không có cửa hay ô thông nào mở vào — không đi tới được.`,
-      entry.room.id,
+      'no_entrance',
+      `Không phòng nào ở tầng ${ground} có cửa mở ra ngoài nhà — mặt bằng không có lối vào.`,
     );
+    return;
   }
+
+  const reached = new Set<string>();
+  const queue = [...entries];
+  while (queue.length) {
+    const current = queue.pop();
+    if (!current || reached.has(current)) continue;
+    reached.add(current);
+    for (const next of neighbours.get(current) ?? []) {
+      if (!reached.has(next)) queue.push(next);
+    }
+  }
+
+  for (const level of levels) {
+    for (const room of level.rooms) {
+      if (reached.has(room.id)) continue;
+      if (input.doorExemptTypes.has(room.type)) continue;
+      add(
+        'blocking',
+        'room_unreachable',
+        `Phòng "${room.id}" ở tầng ${level.level} không đi tới được từ cửa ngoài nhà: không có chuỗi cửa và thang nào dẫn tới nó.`,
+        room.id,
+      );
+    }
+  }
+}
+
+/** Phòng của một tầng có phần chung thật sự với một chữ nhật — dùng để nối hai tầng qua ô thang. */
+function roomsTouching(level: AiFloorPlanLevel, rect: Rect): string[] {
+  return level.rooms
+    .filter((room) => overlapArea(toRect(room.rect), rect) > OVERLAP_TOLERANCE_CM2)
+    .map((room) => room.id);
 }
 
 /** (10) Tầng nào cũng phải có thang lên tầng trên, và các lõi thang phải chồng khít nhau. */

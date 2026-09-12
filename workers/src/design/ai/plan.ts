@@ -3,14 +3,17 @@
  *
  * ── Việc của mô hình và việc của mã ──────────────────────────────────────────────────
  *
- * Mô hình khai TOÀN BỘ nội dung bản vẽ dạng dữ liệu: từng đoạn tường kèm bề dày, từng cửa và
- * cửa sổ kèm chiều mở, thang, tên và diện tích phòng. Mã tất định lo phần còn lại:
+ * Mô hình khai PHÒNG và LỖ MỞ TRÊN CẠNH PHÒNG (`contracts/ai-plan-rooms`), kèm thang, ô trống,
+ * tên và diện tích. Nó KHÔNG khai tường — đó là T23 (12/09/2026), thay phần khai tường của T15 và
+ * giữ nguyên phần «mô hình khai dữ liệu, chương trình cầm bút». Mã tất định lo phần còn lại:
  *
  *  · **điền** `schema_version`, `program_ref`, `variant_id`, `strategy`, `north_deg`,
  *    `generator` — sáu trường mô hình không có thẩm quyền hoặc không biết. Ba lượt gọi song
  *    song sẽ đặt trùng `variant_id` nếu để mô hình tự chọn, và mô hình không biết hướng nhà;
+ *  · **suy tường** từ chữ nhật phòng, ở MỌI lượt (`plan-geometry.ts`), và neo lỗ mở lên tường
+ *    vừa suy — nên tường và phòng không thể lệch nhau: chúng cùng một nguồn;
+ *  · **điền** `levels[].outline_faces` từ hiện trạng bốn phía của đầu bài (`outline-faces.ts`);
  *  · **kiểm** bằng `plan-check.ts` (chặn → đúng MỘT lượt sửa);
- *  · **suy tường hộ** khi sau lượt sửa chỉ còn nhóm lỗi tường (T19);
  *  · **vẽ** bằng `draw/` — không hỏi mô hình một nét nào.
  *
  * ── Vì sao tệp này chia thành bốn mảnh rời ──────────────────────────────────────────
@@ -43,23 +46,25 @@
  */
 
 import {
-  aiFloorPlanSchema,
+  aiPlanRoomsSchema,
   type AiBriefDigest,
   type AiFloorPlan,
-  type AiFloorPlanLevel,
+  type AiPlanRooms,
   type AiSpaceProgram,
 } from '@nvg/shared/design';
 import type { ZodError } from 'zod';
-import planSchemaJson from '../../../../contracts/ai-floor-plan.schema.json';
+import planSchemaJson from '../../../../contracts/ai-plan-rooms.schema.json';
 import { AI_DIGEST_DATA_CLASS } from '../brief/anonymise';
 import type { ConstructionNorms } from '../kb/construction';
 import type { StructuredCallResult, TextModelClient } from '../llm/text-client';
 import type { RulePack } from '../rules/rule-pack';
+import { siteFaces, type Face, type SiteContextTable } from '../kb/site-context';
 import { buildableFromDigest, type BuildableBox } from './buildable';
-import { deriveWalls } from './draw/derive-walls';
 import type { Rect } from './draw/geometry';
 import type { DrawNote } from './draw/notes';
-import { checkPlan, type PlanCheckResult } from './plan-check';
+import { outlineFaces } from './outline-faces';
+import { checkPlan, type PlanCheckResult, type PlanIssue } from './plan-check';
+import { levelFromRooms } from './plan-geometry';
 import type { AiPrompts } from './prompts';
 import { injectableRules, type InjectedRule } from './rule-packs';
 import { MEASURABLE_ON_PLAN } from './rule-warnings';
@@ -76,12 +81,13 @@ const SCHEMA_VERSION = '1.0.0';
 const PLAN_OUTPUT_TOKENS = 32_000;
 
 /**
- * Sáu trường Worker điền, lược khỏi lược đồ gửi cho mô hình và lược khỏi chính câu trả lời.
+ * Sáu trường Worker điền, lược khỏi CÂU TRẢ LỜI của mô hình.
  *
- * Lược khỏi CÂU TRẢ LỜI nữa, không chỉ khỏi lược đồ: mô hình thỉnh thoảng điền thêm một trường
- * nó từng thấy ở đâu đó, và `aiFloorPlanSchema` là `strict` nên một trường thừa sẽ đốt cả một
- * lượt sửa để đổi lấy việc xoá một khoá mà ta ghi đè ngay sau đó. Khoá LẠ thì vẫn chặn như cũ —
- * đó là lỗi thật, đáng một lượt sửa.
+ * Từ T23 chúng không còn nằm trong lược đồ gửi đi — hợp đồng `ai-plan-rooms` không có chúng. Nhưng
+ * phép lược ở phía câu trả lời thì vẫn cần: mô hình thỉnh thoảng điền thêm một trường nó từng thấy
+ * ở đâu đó, và `aiPlanRoomsSchema` là `strict` nên một trường thừa sẽ đốt cả một lượt sửa để đổi
+ * lấy việc xoá một khoá mà ta ghi đè ngay sau đó. Khoá LẠ thì vẫn chặn như cũ — đó là lỗi thật,
+ * đáng một lượt sửa.
  */
 const WORKER_FILLED = [
   'schema_version',
@@ -161,6 +167,13 @@ export interface PlanContext {
   /** Hình bao xây được đổi sang cm — đơn vị của hợp đồng mặt bằng. */
   buildableCm: Rect;
   northDeg: number;
+  /**
+   * Mặt thửa lấy được sáng, suy từ hiện trạng bốn phía của đầu bài (`kb/site_context.yaml`).
+   *
+   * Worker điền `levels[].outline_faces` từ đây. KHÔNG hỏi mô hình: hiện trạng bốn phía là
+   * khảo sát, tức dữ liệu đã có trước lượt gọi đầu tiên — xem `outline-faces.ts`.
+   */
+  openFaces: readonly Face[];
   /** Lược đồ gửi cho mô hình: hợp đồng `ai-floor-plan` trừ sáu trường Worker điền. */
   schema: Record<string, unknown>;
 }
@@ -174,6 +187,12 @@ export interface PlanContextInput {
   construction: ConstructionNorms;
   /** Gói quy tắc kỹ sư đã chọn, đã gộp. Rỗng là mặc định hợp lệ (T20). */
   rules: RulePack;
+  /**
+   * Bảng hiện trạng bốn phía (`kb/site_context.yaml`), ĐI QUA ĐẦU VÀO chứ không import tệp dữ
+   * liệu ở đây: tệp YAML chỉ nạp được qua bộ dựng của Worker, nên một lần import trong mô-đun
+   * thuần này làm cả tệp kiểm thử không tải nổi. Cùng khuôn với `construction`.
+   */
+  siteContext: SiteContextTable;
 }
 
 export function planContext(input: PlanContextInput): PlanContext {
@@ -183,6 +202,7 @@ export function planContext(input: PlanContextInput): PlanContext {
     buildable,
     buildableCm: buildableRectCm(buildable),
     northDeg: northDegFor(input.digest.site.orientation),
+    openFaces: siteFaces(input.digest.site, input.siteContext).open,
     schema: planProposalJsonSchema(),
   };
 }
@@ -241,33 +261,21 @@ export function northDegFor(orientation: string | null | undefined): number {
 }
 
 /**
- * Lược đồ gửi cho mô hình: chính hợp đồng `ai-floor-plan`, trừ sáu trường Worker điền.
+ * Lược đồ gửi cho mô hình: nguyên hợp đồng `ai-plan-rooms`, không cắt gì.
  *
- * Không viết một lược đồ thứ hai cho mô hình. Mô tả trong hợp đồng đã được viết CHO mô hình
- * đọc (đơn vị cm, tim tường, kích thước lọt lòng), và hai bản lược đồ song song là hai bản sẽ
- * lệch nhau — lệch ở đây nghĩa là mô hình khai đúng thứ Worker từ chối.
+ * Trước T23 hàm này lược sáu trường Worker điền khỏi hợp đồng artifact. Nay hai ranh giới có hai
+ * hợp đồng riêng, vì chúng là hai HÌNH DẠNG khác nhau chứ không phải một hình dạng bị cắt bớt: lỗ
+ * mở của mô hình neo vào cạnh phòng, lỗ mở của artifact neo vào đoạn tường. Phần TRÙNG giữa hai
+ * hợp đồng có `contracts-parity.test.ts` canh để không lệch.
  */
 export function planProposalJsonSchema(): Record<string, unknown> {
-  const schema = structuredClone(planSchemaJson) as Record<string, unknown>;
-  const properties = schema.properties as Record<string, unknown>;
-  for (const key of WORKER_FILLED) delete properties[key];
-  schema.required = (schema.required as string[]).filter(
-    (key) => !(WORKER_FILLED as readonly string[]).includes(key),
-  );
-  return schema;
+  return structuredClone(planSchemaJson) as Record<string, unknown>;
 }
 
-/** Phần mô hình khai: mặt bằng trừ sáu trường Worker điền. */
-const proposalSchema = aiFloorPlanSchema.omit({
-  schema_version: true,
-  program_ref: true,
-  variant_id: true,
-  strategy: true,
-  north_deg: true,
-  generator: true,
-});
+/** Phần mô hình khai — hợp đồng `ai-plan-rooms`. */
+const proposalSchema = aiPlanRoomsSchema;
 
-export type AiPlanProposal = ReturnType<typeof proposalSchema.parse>;
+export type AiPlanProposal = AiPlanRooms;
 
 /** Bỏ sáu trường Worker điền khỏi câu trả lời của mô hình, giữ nguyên mọi khoá khác. */
 export function stripWorkerFields(json: unknown): unknown {
@@ -343,10 +351,16 @@ export function planPrompt(
 ): string {
   // Bản cũ đi KÈM lượt sửa để mô hình vá chứ không vẽ lại: vẽ lại thì chỗ đang đúng cũng đổi,
   // và người soát phải đọc lại từ đầu một bản khác hẳn.
+  //
+  // KHÔNG thụt lề (T26, 12/09/2026). `JSON.stringify(…, null, 1)` thêm một dấu cách cho mỗi bậc
+  // của mỗi dòng, và thân lời gọi này là một cây sâu vài bậc với hàng trăm dòng — đo được ~2.100
+  // ký tự khoảng trắng thuần trên một lượt `plan`, tức 27% thân lời gọi, không mang một tin nào.
+  // JSON không thụt lề vẫn là JSON hợp lệ và mô hình đọc y như cũ.
+  //
+  // Đổi lại: nhật ký khó đọc hơn khi gỡ lỗi. Chỗ bù là `design_ai_call` — dán chuỗi ra và chạy
+  // `python3 -m json.tool` là có bản đẹp, không cần mỗi lượt gọi trả tiền cho nó.
   return JSON.stringify(
     previous ? { brief: digest, knowledge, previous } : { brief: digest, knowledge },
-    null,
-    1,
   );
 }
 
@@ -360,86 +374,121 @@ export interface PlanAssembleInput {
   route: string;
   promptVersion: string;
   repaired: boolean;
+  /** Quy ước cấu tạo của NVG — nguồn bề dày tường khi chương trình suy tường (T23). */
+  construction: ConstructionNorms;
   /** Loại phòng không bắt buộc có cửa — nhóm `outdoor` của `kb/room_vocabulary.yaml`. */
   doorExemptTypes: ReadonlySet<string>;
+  /** Loại phòng giao thông đứng — nhóm `circulation`, để cổng G2 không bắt oan ô thang. */
+  verticalTypes: ReadonlySet<string>;
+  /** Loại phòng ngoài trời — cạnh biên của chúng là LAN CAN, không phải tường (T23). */
+  outdoorTypes: ReadonlySet<string>;
 }
 
-/** Ghép phần mô hình khai với sáu trường Worker điền thành artifact `ai_floor_plan`. */
-export function assemblePlan(input: PlanAssembleInput): AiFloorPlan {
+export interface AssembledPlan {
+  payload: AiFloorPlan;
+  /**
+   * Mô hình tự mâu thuẫn ở bước neo lỗ mở: cửa trỏ vào phòng không có, cửa vượt khỏi cạnh phòng,
+   * hai lỗ chồng nhau trên một cạnh, cửa sổ trên cạnh chung với phòng trong nhà. Đều CHẶN, và đều
+   * đi vào lời dẫn của lượt sửa.
+   */
+  issues: PlanIssue[];
+  /** Chỗ chương trình tự xử lý — hiện lên màn hình, không im lặng. */
+  notes: DrawNote[];
+}
+
+/**
+ * Ghép phần mô hình khai thành artifact `ai_floor_plan`. Hàm THUẦN.
+ *
+ * Ba việc, không chỉ một phép ghép: điền sáu trường Worker điền · SUY TƯỜNG từ chữ nhật phòng và
+ * neo lỗ mở lên tường vừa suy (T23, `plan-geometry.ts`) · điền `outline_faces` từ hiện trạng bốn
+ * phía. Cả ba đều tất định, nên cùng một đề xuất luôn cho cùng một mã băm artifact.
+ */
+export function assemblePlan(input: PlanAssembleInput): AssembledPlan {
+  const issues: PlanIssue[] = [];
+  const notes: DrawNote[] = [];
+  const levels = input.proposal.levels.map((level) => {
+    const geometry = levelFromRooms(level, input.construction, input.outdoorTypes);
+    issues.push(...geometry.issues);
+    notes.push(...geometry.notes);
+    return {
+      ...geometry.level,
+      // Thuộc tính mặt của từng cạnh hình bao — Worker điền, không hỏi mô hình. Đây là thứ quyết
+      // định một cửa sổ có được tính là mặt thoáng hay không (`outline-faces.ts`).
+      outline_faces: outlineFaces(
+        geometry.level.outline.map(([x, y]) => [x, y] as [number, number]),
+        input.context.openFaces,
+      ),
+    };
+  });
+
   return {
-    schema_version: SCHEMA_VERSION,
-    program_ref: input.programRef,
-    variant_id: input.variant.id,
-    // Nhãn của mô hình thắng nhãn mặc định: nó mô tả CẤU TRÚC thật của bản vừa xếp, còn nhãn
-    // của Worker chỉ là tên ý đồ đã gửi đi.
-    variant_label: input.proposal.variant_label || input.variant.label,
-    strategy: input.variant.strategy,
-    north_deg: input.context.northDeg,
-    levels: input.proposal.levels,
-    rationale: input.proposal.rationale,
-    generator: {
-      kind: 'ai',
-      provider: input.call.provider,
-      model: input.call.model,
-      route: input.route,
-      prompt_version: input.promptVersion,
-      repaired: input.repaired,
+    payload: {
+      schema_version: SCHEMA_VERSION,
+      program_ref: input.programRef,
+      variant_id: input.variant.id,
+      // Nhãn của mô hình thắng nhãn mặc định: nó mô tả CẤU TRÚC thật của bản vừa xếp, còn nhãn
+      // của Worker chỉ là tên ý đồ đã gửi đi.
+      variant_label: input.proposal.variant_label || input.variant.label,
+      strategy: input.variant.strategy,
+      north_deg: input.context.northDeg,
+      levels,
+      rationale: input.proposal.rationale,
+      generator: {
+        kind: 'ai',
+        provider: input.call.provider,
+        model: input.call.model,
+        route: input.route,
+        prompt_version: input.promptVersion,
+        repaired: input.repaired,
+        // LUÔN bật từ T23: tường của nhánh AI không còn đường nào khác để ra đời. Tờ vẽ và màn
+        // hình vì vậy luôn in «Tường do chương trình suy từ phòng, không phải của AI».
+        walls_derived: true,
+      },
     },
+    issues,
+    notes,
   };
 }
 
 /** Kiểm một đề xuất — hàm THUẦN, không tốn gì, nên gọi lại bao nhiêu lần cũng được. */
 export function checkProposal(input: PlanAssembleInput): PlanCheckResult {
-  return checkPlan({
-    plan: assemblePlan(input),
+  return checkAssembled(assemblePlan(input), input);
+}
+
+/** Kiểm một artifact đã ghép, gộp cả lỗi của bước neo lỗ mở. */
+function checkAssembled(assembled: AssembledPlan, input: PlanAssembleInput): PlanCheckResult {
+  const check = checkPlan({
+    plan: assembled.payload,
     program: input.program,
     buildable: input.context.buildableCm,
     doorExemptTypes: input.doorExemptTypes,
+    verticalTypes: input.verticalTypes,
   });
+  return { ...check, blocking: [...assembled.issues, ...check.blocking] };
 }
 
 export interface PlanFinal {
   payload: AiFloorPlan;
-  /** Kết quả kiểm CUỐI CÙNG: sau lượt sửa, và sau khi suy tường nếu có. */
+  /** Kết quả kiểm CUỐI CÙNG, trên chính dữ liệu sẽ được vẽ và lưu. */
   check: PlanCheckResult;
   /** Chỗ chương trình đã tự xử lý — hiện lên màn hình, không im lặng. */
   notes: DrawNote[];
+  /**
+   * LUÔN `true` từ T23 (12/09/2026) — giữ trường lại vì artifact đúc trước ngày ấy mang `false`,
+   * và màn hình phải đọc đúng cờ của chính artifact đang xem chứ không đoán theo ngày.
+   */
   wallsDerived: boolean;
 }
 
-/**
- * Chốt một phương án: ghép artifact, kiểm, và suy tường hộ nếu cần (T19). Hàm THUẦN.
- *
- * Chỉ suy tường khi lỗi CHẶN còn lại thuộc toàn bộ nhóm tường: suy tường không cứu được phòng
- * đặt sai tầng hay hai phòng chồng nhau, và dựng lại tường trên một bố cục đã sai là che lỗi
- * chứ không phải sửa lỗi.
- */
-export function finalisePlan(
-  input: PlanAssembleInput & { construction: ConstructionNorms },
-): PlanFinal {
-  let payload = assemblePlan(input);
-  let check = checkProposal(input);
-  if (!check.blocking.length || !check.wallOnly) {
-    return { payload, check, notes: [], wallsDerived: false };
-  }
-
-  const notes: DrawNote[] = [];
-  const levels: AiFloorPlanLevel[] = [];
-  for (const level of payload.levels) {
-    const derived = deriveWalls(level, input.construction);
-    levels.push(derived.level);
-    notes.push(...derived.notes);
-  }
-  payload = { ...payload, levels, generator: { ...payload.generator, walls_derived: true } };
-  // Kiểm LẠI sau khi suy: tờ vẽ phải nói đúng tình trạng của chính dữ liệu đang vẽ, không phải
-  // tình trạng của bản mô hình khai trước đó.
-  check = checkPlan({
-    plan: payload,
-    program: input.program,
-    buildable: input.context.buildableCm,
-    doorExemptTypes: input.doorExemptTypes,
-  });
-  return { payload, check, notes, wallsDerived: true };
+/** Chốt một phương án: ghép artifact (kèm suy tường) rồi kiểm. Hàm THUẦN. */
+export function finalisePlan(input: PlanAssembleInput): PlanFinal {
+  const assembled = assemblePlan(input);
+  return {
+    payload: assembled.payload,
+    check: checkAssembled(assembled, input),
+    notes: assembled.notes,
+    wallsDerived: true,
+  };
 }
 
 export interface AiPlanInput extends PlanContextInput {
@@ -448,6 +497,8 @@ export interface AiPlanInput extends PlanContextInput {
   client: TextModelClient;
   prompts: AiPrompts;
   doorExemptTypes: ReadonlySet<string>;
+  verticalTypes: ReadonlySet<string>;
+  outdoorTypes: ReadonlySet<string>;
 }
 
 export interface AiPlanResult extends PlanFinal {
@@ -485,7 +536,10 @@ export async function generateAiPlan(input: AiPlanInput): Promise<AiPlanResult> 
     route: input.route,
     promptVersion: input.prompts.version,
     repaired: calls.length > 1,
+    construction: input.construction,
     doorExemptTypes: input.doorExemptTypes,
+    verticalTypes: input.verticalTypes,
+    outdoorTypes: input.outdoorTypes,
   });
 
   let proposal = attempt.proposal;
@@ -525,7 +579,7 @@ export async function generateAiPlan(input: AiPlanInput): Promise<AiPlanResult> 
   if (!proposal) throw new AiPlanRejected(issues, calls.length);
 
   const last = calls[calls.length - 1]!;
-  const final = finalisePlan({ ...assemble(proposal, last), construction: input.construction });
+  const final = finalisePlan(assemble(proposal, last));
   return { ...final, buildable: context.buildable, calls, repaired: calls.length > 1 };
 }
 

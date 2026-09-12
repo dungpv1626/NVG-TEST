@@ -307,9 +307,15 @@ export function programFromProposal(input: {
   return { payload, notes };
 }
 
-/** Lời dẫn người dùng: dữ liệu + tri thức, dạng JSON để mô hình không phải đoán cấu trúc. */
+/**
+ * Lời dẫn người dùng: dữ liệu + tri thức, dạng JSON để mô hình không phải đoán cấu trúc.
+ *
+ * Không thụt lề — cùng lý do như `planPrompt` (T26): khoảng trắng thuần không mang tin nào nhưng
+ * vẫn tính token. Bước này nhỏ hơn bước mặt bằng nên phần cắt được ít hơn, nhưng nó chạy ở MỌI
+ * hồ sơ còn bước mặt bằng thì chỉ chạy khi kỹ sư bấm.
+ */
 export function programPrompt(digest: AiBriefDigest, knowledge: ProgramKnowledge): string {
-  return JSON.stringify({ brief: digest, knowledge }, null, 1);
+  return JSON.stringify({ brief: digest, knowledge });
 }
 
 export async function generateAiProgram(input: AiProgramInput): Promise<AiProgramResult> {

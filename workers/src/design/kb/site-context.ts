@@ -4,6 +4,17 @@
  * Đây KHÔNG phải một vị từ hình học (CLAUDE.md 8.7 cấm cài đặt vị từ ở hai nơi) — nó là một
  * phép tra bảng trên dữ liệu của đầu bài, và kết quả đi thẳng vào lời gọi bộ giải dưới dạng
  * `site.open_faces`. Container vì vậy không bao giờ phải đoán loại hình nào có mấy mặt thoáng.
+ *
+ * ⚠️ Tệp này NẰM Ở `kb/`, không nằm ở `layout/` — chuyển ra ngày 12/09/2026, đúng lý lẽ đã
+ * chuyển `rules/` ra khỏi `program/` ngày 09/09. Cả hai nhánh cùng đọc nó: bộ giải gửi
+ * `site.open_faces` sang Container, còn nhánh AI dùng nó để gán thuộc tính MẶT cho từng cạnh
+ * hình bao (`ai/outline-faces.ts`) — thứ quyết định một cửa sổ có được tính là mặt thoáng hay
+ * không. Để trong thư mục của bộ giải thì `ai-independence.test.ts` chặn đúng chỗ cần dùng,
+ * và hôm xoá bộ giải sẽ kéo theo nhánh AI.
+ *
+ * Nó thuộc `kb/` cũng vì đúng định nghĩa ở CLAUDE.md 8.8 điểm 7: đây là BỐI CẢNH THỬA, không
+ * phải ngưỡng quy chuẩn. Nó quyết định bản vẽ trông thế nào, không quyết định phương án có hợp
+ * lệ hay không.
  */
 
 import { load as parseYaml } from 'js-yaml';

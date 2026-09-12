@@ -21,12 +21,14 @@ import { checkPlan, type PlanCheckInput } from '../ai/plan-check';
 import { parseRuleMessages } from '../ai/plan-messages';
 import { reviewPlanRooms } from '../ai/rule-warnings';
 import { parseRuleFile, RulePack } from '../rules/rule-pack';
-import { deriveWalls } from '../ai/draw/derive-walls';
+import { levelFromRooms } from '../ai/plan-geometry';
+import { prepareWalls } from '../ai/draw/walls';
+import { toRect } from '../ai/draw/geometry';
 import { renderPlanSheet } from '../ai/draw/plan-sheet';
 import { parseSheetStyle } from '../ai/draw/style';
 import { parseConstructionNorms } from '../kb/construction';
 import { parseVocabulary, roomGroups } from '../kb/vocabulary';
-import { TOWNHOUSE_PLAN, VILLA_PLAN } from './ai-plan-fixtures';
+import { roomsProposalOf, TOWNHOUSE_PLAN, VILLA_PLAN } from './ai-plan-fixtures';
 
 const read = (relative: string): string =>
   readFileSync(fileURLToPath(new URL(relative, import.meta.url)), 'utf8');
@@ -42,6 +44,7 @@ const groups = roomGroups(vocabulary);
  * phép thử sẽ không đỏ khi ai đó thêm loại không gian ngoài trời mới mà quên miễn trừ.
  */
 const doorExemptTypes = new Set(groups.no_door_required ?? []);
+const verticalTypes = new Set(groups.circulation ?? []);
 
 /** Chương trình không gian suy từ chính mặt bằng — phép kiểm (2) so hai bên với nhau. */
 function programOf(plan: AiFloorPlan): AiSpaceProgram {
@@ -72,7 +75,7 @@ function programOf(plan: AiFloorPlan): AiSpaceProgram {
 }
 
 const check = (plan: AiFloorPlan, overrides: Partial<PlanCheckInput> = {}) =>
-  checkPlan({ plan, program: programOf(plan), doorExemptTypes, ...overrides });
+  checkPlan({ plan, program: programOf(plan), doorExemptTypes, verticalTypes, ...overrides });
 
 /** Đổi tầng 1 của một phương án, giữ nguyên phần còn lại. */
 function withLevel1(plan: AiFloorPlan, change: (level: AiFloorPlanLevel) => AiFloorPlanLevel) {
@@ -102,9 +105,12 @@ describe('bộ kiểm mặt bằng — từng phép kiểm bắt đúng chỗ h�
       ...level,
       rooms: level.rooms.map((room, index) => (index === 0 ? { ...room, id: 'phong_la' } : room)),
     }));
-    const codes = checkPlan({ plan: renamed, program, doorExemptTypes }).blocking.map(
-      (i) => i.code,
-    );
+    const codes = checkPlan({
+      plan: renamed,
+      program,
+      doorExemptTypes,
+      verticalTypes,
+    }).blocking.map((i) => i.code);
     expect(codes).toContain('room_unknown');
     expect(codes).toContain('room_missing');
 
@@ -113,7 +119,9 @@ describe('bộ kiểm mặt bằng — từng phép kiểm bắt đúng chỗ h�
       spaces: program.spaces.map((space, index) => (index === 0 ? { ...space, level: 3 } : space)),
     };
     expect(
-      checkPlan({ plan, program: moved, doorExemptTypes }).blocking.map((i) => i.code),
+      checkPlan({ plan, program: moved, doorExemptTypes, verticalTypes }).blocking.map(
+        (i) => i.code,
+      ),
     ).toContain('room_wrong_level');
   });
 
@@ -146,8 +154,19 @@ describe('bộ kiểm mặt bằng — từng phép kiểm bắt đúng chỗ h�
       doors: (level.doors ?? []).filter((door) => door.id !== 'd1' && door.id !== 'd2'),
     }));
     const blocking = check(plan).blocking;
-    expect(blocking.map((i) => i.code)).toEqual(['room_without_door']);
-    expect(blocking[0]?.ref).toBe('living_1');
+    expect(blocking.filter((i) => i.code === 'room_without_door').map((i) => i.ref)).toEqual([
+      'living_1',
+    ]);
+
+    // Và cổng G3 nói tiếp phần hệ quả: cắt hai cửa ấy thì mọi thứ SAU phòng khách — bếp, thang,
+    // WC, và cả ba tầng trên — cũng không còn đường vào. Trước 12/09/2026 không phép nào đo chiều
+    // này, nên một cụm phòng biệt lập vẫn ĐẠT.
+    const unreachable = blocking.filter((i) => i.code === 'room_unreachable').map((i) => i.ref);
+    expect(unreachable).toContain('kitchen_1');
+    expect(unreachable).toContain('stair_1');
+    expect(unreachable).toContain('master_2');
+    // Phòng ngoài trời không cần tới được: giếng trời thì không ai vào.
+    expect(unreachable).not.toContain('light_well_1');
 
     // Giếng trời không có cửa vẫn hợp lệ vì thuộc nhóm ngoài trời của room_vocabulary.
     const noWellDoor = withLevel1(TOWNHOUSE_PLAN, (level) => ({
@@ -155,51 +174,6 @@ describe('bộ kiểm mặt bằng — từng phép kiểm bắt đúng chỗ h�
       doors: (level.doors ?? []).filter((door) => door.id !== 'd5'),
     }));
     expect(check(noWellDoor).blocking).toEqual([]);
-  });
-
-  it('cửa đặt ngoài đoạn tường, hoặc trên tường không có thật, đều bị bắt', () => {
-    const outside = withLevel1(TOWNHOUSE_PLAN, (level) => ({
-      ...level,
-      doors: (level.doors ?? []).map((door) => (door.id === 'd1' ? { ...door, at: 900 } : door)),
-    }));
-    expect(check(outside).blocking.map((i) => i.code)).toContain('opening_outside_wall');
-
-    const nowhere = withLevel1(TOWNHOUSE_PLAN, (level) => ({
-      ...level,
-      doors: (level.doors ?? []).map((door) =>
-        door.id === 'd1' ? { ...door, wall: 'khong_co' } : door,
-      ),
-    }));
-    expect(check(nowhere).blocking.map((i) => i.code)).toContain('opening_wall_missing');
-  });
-
-  it('hai lỗ mở chồng nhau trên cùng một tường thì bị bắt', () => {
-    const plan = withLevel1(VILLA_PLAN, (level) => ({
-      ...level,
-      windows: (level.windows ?? []).map((window) =>
-        window.id === 's2' ? { ...window, at: 250 } : window,
-      ),
-    }));
-    expect(check(plan).blocking.map((i) => i.code)).toContain('opening_overlap');
-  });
-
-  it('cửa sổ đặt trên vách ngăn trong nhà thì bị bắt', () => {
-    const plan = withLevel1(VILLA_PLAN, (level) => ({
-      ...level,
-      windows: (level.windows ?? []).map((window) =>
-        window.id === 's1' ? { ...window, wall: 'pv1', at: 200 } : window,
-      ),
-    }));
-    expect(check(plan).blocking.map((i) => i.code)).toContain('window_on_partition');
-  });
-
-  it('cạnh phòng không được tường phủ thì bị bắt', () => {
-    const plan = withLevel1(TOWNHOUSE_PLAN, (level) => ({
-      ...level,
-      walls: level.walls.filter((wall) => wall.id !== 'p2'),
-    }));
-    const codes = check(plan).blocking.map((i) => i.code);
-    expect(codes).toContain('room_edge_uncovered');
   });
 
   it('lõi thang lệch giữa hai tầng, hoặc thiếu thang, đều bị bắt', () => {
@@ -229,49 +203,12 @@ describe('bộ kiểm mặt bằng — từng phép kiểm bắt đúng chỗ h�
     );
   });
 
-  it('chỉ nhóm lỗi TƯỜNG mới bật `wallOnly` — mở đường cho lượt suy tường', () => {
-    // Bỏ tường hậu — không lỗ mở nào bám vào nó, nên chỉ còn đúng lỗi "cạnh phòng hở".
-    const wallsGone = withLevel1(TOWNHOUSE_PLAN, (level) => ({
-      ...level,
-      walls: level.walls.filter((wall) => wall.id !== 'wb'),
-    }));
-    const result = check(wallsGone);
-    expect(result.blocking.length).toBeGreaterThan(0);
-    expect(result.wallOnly).toBe(true);
-
-    const areaWrong = withLevel1(TOWNHOUSE_PLAN, (level) => ({
-      ...level,
-      rooms: level.rooms.map((room, index) =>
-        index === 0 ? { ...room, area_m2: room.area_m2 * 1.5 } : room,
-      ),
-    }));
-    expect(check(areaWrong).wallOnly).toBe(false);
-  });
-
-  it('«phòng không có cửa» không chặn lượt suy tường khi chính tường đang sai', () => {
-    // Đây là chỗ T19 từng KHÔNG kích hoạt đúng vào trường hợp nó sinh ra để cứu (vá 10/09/2026).
-    // Bỏ một đoạn tường mà cửa đang bám vào: cửa hoá ra «nằm trên tường không tồn tại», nên phòng
-    // của nó cũng bị báo mất cửa. Cả hai đều do tường, nên lượt suy tường vẫn phải mở.
-    const broken = withLevel1(TOWNHOUSE_PLAN, (level) => ({
-      ...level,
-      walls: level.walls.filter((wall) => wall.id !== 'p1'),
-    }));
-    const result = check(broken);
-    const codes = result.blocking.map((issue) => issue.code);
-    expect(codes).toContain('opening_wall_missing');
-    expect(result.wallOnly).toBe(true);
-  });
-
-  it('phòng thiếu cửa mà tường vẫn đúng thì KHÔNG suy tường', () => {
-    // Suy tường không cứu được một thiếu sót thiết kế, và bật cờ «tường do chương trình suy»
-    // lúc ấy là in một câu sai lên tờ vẽ.
+  it('phòng thiếu cửa vẫn bị bắt — tường đúng không cứu được một thiếu sót thiết kế', () => {
     const noDoor = withLevel1(TOWNHOUSE_PLAN, (level) => ({
       ...level,
       doors: (level.doors ?? []).filter((door) => door.id !== 'd1' && door.id !== 'd2'),
     }));
-    const result = check(noDoor);
-    expect(result.blocking.map((issue) => issue.code)).toContain('room_without_door');
-    expect(result.wallOnly).toBe(false);
+    expect(check(noDoor).blocking.map((issue) => issue.code)).toContain('room_without_door');
   });
 });
 
@@ -289,37 +226,124 @@ describe('fixture viết tay phải hợp lệ theo chính hợp đồng dữ li
   });
 });
 
-describe('T19 — suy tường từ phòng khi mô hình khai hỏng', () => {
-  it('dựng lại đủ tường cho một tầng đã mất hết vách, và tờ vẽ vẫn ra', () => {
-    const broken = withLevel1(TOWNHOUSE_PLAN, (level) => ({
-      ...level,
-      walls: level.walls.filter((wall) => wall.k === 'e'),
-    }));
-    const level1 = broken.levels[0]!;
-    const derived = deriveWalls(level1, norms);
+describe('T23 — chương trình suy tường từ phòng ở MỌI lượt', () => {
+  const outdoorTypes = new Set(groups.outdoor ?? []);
 
-    expect(derived.level.walls.length).toBeGreaterThan(level1.walls.length);
+  const geometryOf = (plan: AiFloorPlan, index: number) =>
+    levelFromRooms(roomsProposalOf(plan).levels[index]!, norms, outdoorTypes);
 
-    const repaired: AiFloorPlan = {
-      ...broken,
-      levels: [derived.level, ...broken.levels.slice(1)],
-      generator: { ...broken.generator, walls_derived: true },
-    };
-    // Không còn cạnh phòng nào hở sau khi suy tường — đó là lý do T19 tồn tại.
-    const codes = check(repaired).blocking.map((issue) => issue.code);
-    expect(codes).not.toContain('room_edge_uncovered');
-
-    const sheet = renderPlanSheet(repaired, 1, { style, labels: {} });
-    expect(sheet.svg).toContain('Tường do chương trình suy từ phòng');
+  it('mỗi cạnh phòng đều có tường chạy dọc — đúng cái `room_edge_uncovered` từng canh', () => {
+    // Phép kiểm `room_edge_uncovered` đã XOÁ cùng T23, vì mâu thuẫn nó bắt (tường mô hình khai
+    // không trùng phòng mô hình khai) nay không diễn đạt được. Nhưng BẤT BIẾN thì vẫn phải đúng,
+    // nên nó chuyển từ phép kiểm đầu ra của mô hình thành phép thử của chính bộ suy tường.
+    for (const plan of [TOWNHOUSE_PLAN, VILLA_PLAN]) {
+      for (let index = 0; index < plan.levels.length; index += 1) {
+        const { level } = geometryOf(plan, index);
+        const walls = prepareWalls(level.walls);
+        for (const room of level.rooms) {
+          const rect = toRect(room.rect);
+          for (const edge of [
+            { axis: 'x' as const, line: rect.y0, from: rect.x0, to: rect.x1, side: -1 },
+            { axis: 'x' as const, line: rect.y1, from: rect.x0, to: rect.x1, side: 1 },
+            { axis: 'y' as const, line: rect.x0, from: rect.y0, to: rect.y1, side: -1 },
+            { axis: 'y' as const, line: rect.x1, from: rect.y0, to: rect.y1, side: 1 },
+          ]) {
+            const covered = walls.some((wall) => {
+              const horizontal = Math.abs(wall.a[1] - wall.b[1]) <= 1;
+              if (edge.axis === 'x' ? !horizontal : horizontal) return false;
+              const centre =
+                edge.axis === 'x' ? (wall.a[1] + wall.b[1]) / 2 : (wall.a[0] + wall.b[0]) / 2;
+              return Math.abs(centre - edge.side * (wall.t / 2) - edge.line) <= 1;
+            });
+            expect(covered, `${room.id} cạnh ${edge.axis}@${edge.line}`).toBe(true);
+          }
+        }
+      }
+    }
   });
 
-  it('cửa của mô hình được đặt lại lên tường mới, không bị bỏ hết', () => {
-    const level1 = TOWNHOUSE_PLAN.levels[0]!;
-    const derived = deriveWalls(level1, norms);
-    const kept = (derived.level.doors ?? []).length;
-    expect(kept).toBeGreaterThanOrEqual((level1.doors ?? []).length - 1);
-    for (const door of derived.level.doors ?? []) {
-      expect(derived.level.walls.some((wall) => wall.id === door.wall)).toBe(true);
+  it('cạnh biên của phòng NGOÀI TRỜI thành lan can, cạnh giáp phòng trong thành tường bao', () => {
+    // Phân biệt này không phải thẩm mỹ: phép đối chiếu mặt thoáng chỉ tính cửa sổ trên tường `e`.
+    // Gộp hết thành `p` thì mọi cửa sổ mở ra ban công biến mất khỏi phép đo, và cảnh báo «phòng
+    // ngủ không có cửa sổ» nổ ra trên một mặt bằng đúng.
+    const { level } = geometryOf(TOWNHOUSE_PLAN, 1);
+    const balcony = toRect(level.rooms.find((room) => room.id === 'balcony_2')!.rect);
+    const onFrontEdgeOfBalcony = prepareWalls(level.walls).filter(
+      (wall) => Math.abs((wall.a[1] + wall.b[1]) / 2 + wall.t / 2 - balcony.y0) <= 1,
+    );
+    expect(onFrontEdgeOfBalcony.length).toBeGreaterThan(0);
+    expect(onFrontEdgeOfBalcony.every((wall) => wall.kind === 'r')).toBe(true);
+
+    // Cạnh sau của ban công giáp phòng ngủ chính: đó là ranh trong–ngoài, phải là tường bao.
+    const between = prepareWalls(level.walls).filter(
+      (wall) => Math.abs((wall.a[1] + wall.b[1]) / 2 - (balcony.y1 + 22 / 2)) <= 1,
+    );
+    expect(between.length).toBeGreaterThan(0);
+    expect(between.every((wall) => wall.kind === 'e')).toBe(true);
+  });
+
+  it('artifact dựng từ phần mô hình khai đi qua bộ kiểm SẠCH, và tờ vẽ nói ra chỗ suy hộ', () => {
+    for (const plan of [TOWNHOUSE_PLAN, VILLA_PLAN]) {
+      const levels = plan.levels.map((_, index) => {
+        const { level, issues } = geometryOf(plan, index);
+        expect(issues).toEqual([]);
+        return { ...level, outline_faces: plan.levels[index]!.outline_faces };
+      });
+      const rebuilt: AiFloorPlan = {
+        ...plan,
+        levels,
+        generator: { ...plan.generator, walls_derived: true },
+      };
+      const result = check(rebuilt);
+      expect(result.blocking).toEqual([]);
+      expect(result.findings).toEqual([]);
+
+      const sheet = renderPlanSheet(rebuilt, 1, { style, labels: {} });
+      expect(sheet.svg).toContain('Tường do chương trình suy từ phòng');
+    }
+  });
+
+  it('lỗ mở giữ nguyên số lượng, và mỗi cái neo vào một đoạn tường CÓ THẬT', () => {
+    for (const plan of [TOWNHOUSE_PLAN, VILLA_PLAN]) {
+      for (let index = 0; index < plan.levels.length; index += 1) {
+        const source = plan.levels[index]!;
+        const { level, notes } = geometryOf(plan, index);
+        expect(notes.map((note) => note.code)).toEqual([]);
+        expect((level.doors ?? []).length).toBe((source.doors ?? []).length);
+        expect((level.windows ?? []).length).toBe((source.windows ?? []).length);
+        for (const opening of [...(level.doors ?? []), ...(level.windows ?? [])]) {
+          expect(
+            level.walls.some((wall) => wall.id === opening.wall),
+            opening.id,
+          ).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('chiều mở cánh đi qua vòng artifact → đề xuất → artifact mà không lật', () => {
+    // Tường chương trình suy ra có thể chạy NGƯỢC chiều cạnh phòng. Thiếu phép lật bản lề và
+    // chiều quét thì một nửa số cửa mở sai phía, và KHÔNG lỗi nào nổ ra — tờ vẽ chỉ trông lạ.
+    for (const plan of [TOWNHOUSE_PLAN, VILLA_PLAN]) {
+      for (let index = 0; index < plan.levels.length; index += 1) {
+        const before = new Map(
+          (plan.levels[index]!.doors ?? []).map((door) => [door.id, door] as const),
+        );
+        for (const door of geometryOf(plan, index).level.doors ?? []) {
+          const original = before.get(door.id)!;
+          const sameWall = plan.levels[index]!.walls.find((w) => w.id === original.wall);
+          const derived = geometryOf(plan, index).level.walls.find((w) => w.id === door.wall);
+          if (!sameWall || !derived) continue;
+          // Cùng PHƯƠNG thì mới so được chiều; tường suy ra luôn cùng phương với tường gốc.
+          const sameDirection =
+            (sameWall.b[0]! - sameWall.a[0]!) * (derived.b[0]! - derived.a[0]!) +
+              (sameWall.b[1]! - sameWall.a[1]!) * (derived.b[1]! - derived.a[1]!) >
+            0;
+          if (!sameDirection) continue;
+          expect(door.hinge, `${door.id} bản lề`).toBe(original.hinge);
+          expect(door.side, `${door.id} chiều quét`).toBe(original.side);
+        }
+      }
     }
   });
 });
@@ -412,9 +436,43 @@ describe('quy tắc nhắm NHÓM phòng — không được biến mất im lặ
   });
 
   it('quy tắc khai mã phòng KHÔNG có thật rơi vào danh sách chưa đối chiếu được', () => {
-    // `lightwell_max_area` khai `lightwell` trong khi từ vựng ghi `light_well` — quy tắc chưa
-    // từng chạy lần nào (ghi chú đầu `rules/nvg-experience.yaml`). Nó phải HIỆN RA, không được
-    // im lặng, vì «không cảnh báo» rất dễ đọc thành «đạt quy chuẩn».
+    // Cơ chế: một quy tắc nhắm vào mã phòng không tồn tại phải HIỆN RA trong danh sách chưa đối
+    // chiếu được, không được im lặng — «không cảnh báo» rất dễ đọc thành «đạt».
+    //
+    // ⚠️ Phép thử này trước đây dùng `lightwell_max_area` làm ví dụ, vì quy tắc ấy khai `lightwell`
+    // trong khi từ vựng ghi `light_well` nên CHƯA TỪNG chạy. Tức nó dùng một LỖI THẬT làm mẫu —
+    // và khi lỗi được sửa ngày 12/09/2026, phép thử đỏ. Nay dùng một quy tắc BỊA RA: cơ chế vẫn
+    // được canh, mà không còn phụ thuộc vào việc một lỗi cụ thể còn tồn tại hay không.
+    const bogus = new RulePack(
+      parseRuleFile(
+        `- id: bogus_max_area_khong_co_ma_nay
+  applies_to: [biet_thu]
+  scope: floor
+  predicate: max_area
+  target: phong_khong_ton_tai
+  value_m2: 8.0
+  severity: warning
+  source: 'kinh nghiệm NVG'
+`,
+        'test://bogus.yaml',
+      ),
+      false,
+    );
+    const result = reviewPlanRooms({
+      levels: VILLA_PLAN.levels,
+      buildingType: 'biet_thu',
+      rules: bogus,
+      labels,
+      groups,
+      messages,
+    });
+    expect(result.unchecked.map((rule) => rule.ruleId)).toContain('bogus_max_area_khong_co_ma_nay');
+    expect(result.checked).not.toContain('bogus_max_area_khong_co_ma_nay');
+  });
+
+  it('giếng trời nay ĐO ĐƯỢC thật — mã phòng đã sửa thành `light_well` (12/09/2026)', () => {
+    // Mặt khác của cùng chuyện: quy tắc sau khi sửa mã phải RỜI khỏi danh sách chưa đối chiếu
+    // được. Không có phép thử này thì một lần sửa ngược lại sẽ không ai thấy.
     const result = reviewPlanRooms({
       levels: VILLA_PLAN.levels,
       buildingType: 'biet_thu',
@@ -423,7 +481,6 @@ describe('quy tắc nhắm NHÓM phòng — không được biến mất im lặ
       groups,
       messages,
     });
-    expect(result.unchecked.map((rule) => rule.ruleId)).toContain('lightwell_max_area');
-    expect(result.checked).not.toContain('lightwell_max_area');
+    expect(result.unchecked.map((rule) => rule.ruleId)).not.toContain('lightwell_max_area');
   });
 });

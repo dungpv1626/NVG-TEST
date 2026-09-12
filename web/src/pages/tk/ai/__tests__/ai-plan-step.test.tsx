@@ -18,15 +18,9 @@ import { screen } from '@testing-library/react';
 import { renderWithApp } from '@/test/render';
 
 const REF = `sha256:${'a'.repeat(64)}`;
-const WATERMARK = 'Đề xuất AI — hình vẽ minh hoạ, không dựng từ toạ độ, không đo được trên hình';
-const DISCLAIMER =
-  'Tờ vẽ do mô hình ảnh dựng theo lời mô tả, KHÔNG dựng từ toạ độ — kích thước, tỷ lệ và vị trí trên hình chỉ là minh hoạ. Số đúng nằm ở bảng diện tích và ở bản đối chiếu dạng vector.';
 
 const state = vi.hoisted(() => ({
   review: null as unknown,
-  sheetImage: { url: null as string | null, stamped: false, loading: false, error: null },
-  imageUsd: 0.04 as number | null,
-  render: vi.fn(() => Promise.resolve({ imageArtifactId: 'x', level: 1, watermark: 'w' })),
 }));
 
 vi.mock('@/hooks/use-ai-design', () => ({
@@ -38,21 +32,15 @@ vi.mock('@/hooks/use-ai-design', () => ({
     loading: false,
     error: null,
   }),
-  useAiSheetImage: () => state.sheetImage,
   useAiRun: () => ({ data: null }),
   useChooseAiPlan: () => ({ mutateAsync: vi.fn(), isPending: false, isError: false, error: null }),
   useInvalidateAiDesign: () => vi.fn(),
-  useRenderAiSheetImage: () => ({
-    mutateAsync: state.render,
-    isPending: false,
-    isError: false,
-    error: null,
-  }),
   useStartAiRun: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useAiModels: () => ({
     data: {
       text: [textRoute()],
-      image: [imageRoute()],
+      // Bước mặt bằng KHÔNG còn dùng tuyến ảnh nào sau T22 — tờ vẽ là SVG tất định.
+      image: [],
       defaults: { text: 'ai_text_openai', image: 'ai_image_gemini' },
     },
     isLoading: false,
@@ -71,17 +59,6 @@ const textRoute = () => ({
   imageUsd: null,
 });
 
-const imageRoute = () => ({
-  route: 'ai_image_gemini',
-  provider: 'gemini_paid',
-  label: 'Gemini Image (Google)',
-  model: 'gemini-image',
-  maxDataClass: 2,
-  enabled: true,
-  unavailableReason: null,
-  imageUsd: state.imageUsd,
-});
-
 const { AiPlanStep } = await import('../ai-plan-step');
 
 function review(over: Record<string, unknown> = {}) {
@@ -93,7 +70,7 @@ function review(over: Record<string, unknown> = {}) {
     strategy: null,
     rationale: 'Vì sao như vậy.',
     generator: { provider: 'openai', model: 'gpt-x', prompt_version: '1.4.0' },
-    wallsDerived: false,
+    wallsDerived: true,
     levels: [
       {
         level: 1,
@@ -102,7 +79,6 @@ function review(over: Record<string, unknown> = {}) {
         orientation: 'portrait',
         notes: [],
         rooms: 6,
-        sheetImage: { available: true, drawable: true },
       },
     ],
     roomLabels: {},
@@ -112,8 +88,6 @@ function review(over: Record<string, unknown> = {}) {
     warnings: [],
     checkedRules: [],
     uncheckedRules: [],
-    sheetImageWatermark: WATERMARK,
-    sheetImageDisclaimer: DISCLAIMER,
     ...over,
   };
 }
@@ -133,60 +107,58 @@ function show() {
   renderWithApp(<AiPlanStep projectId="p1" readOnly={false} state={designState as never} />);
 }
 
-describe('Tờ mặt bằng do mô hình ảnh dựng', () => {
-  it('nhãn cảnh báo nằm trong TRANG, không chỉ trên pixel', () => {
+describe('Tờ mặt bằng — tờ SVG tất định là tờ CHÍNH (T22, 12/09/2026)', () => {
+  // Đảo T21. Trước đó tờ do mô hình ảnh vẽ là bản mặc định và tờ vector tụt xuống làm «bản đối
+  // chiếu kích thước»; nay đường sinh ảnh cho mặt bằng đã gỡ hẳn. Lý do: một tấm ảnh không bao
+  // giờ đo được, nên giữ nó làm tờ chính thì mục tiêu «nâng cao độ chính xác» không thể đạt được
+  // bằng định nghĩa.
+  it('hiện tờ vẽ kèm CHIP TỶ LỆ — tờ này có tỷ lệ thật, khác tờ ảnh', () => {
     state.review = review();
-    state.sheetImage = { url: 'blob:ai-stamped', stamped: true, loading: false, error: null };
     show();
-    expect(screen.getByText(DISCLAIMER)).toBeInTheDocument();
+    expect(screen.getByText(/Tỷ lệ 1:60/)).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /Tờ mặt bằng Tầng 1/ })).toHaveAttribute(
+      'src',
+      'blob:vector',
+    );
   });
 
-  it('canvas không đóng dấu được thì nói thẳng là tệp tải về KHÔNG mang nhãn', () => {
+  it('nút tải là SVG, không phải PNG', () => {
     state.review = review();
-    state.sheetImage = { url: 'blob:ai-raw', stamped: false, loading: false, error: null };
     show();
-    expect(screen.getByText(/tải về sẽ KHÔNG mang nhãn/)).toBeInTheDocument();
-    // Dòng cảnh báo chính vẫn còn — đây mới là lớp bảo vệ duy nhất lúc này.
-    expect(screen.getByText(DISCLAIMER)).toBeInTheDocument();
+    const link = screen.getByRole('link', { name: /Tải tờ mặt bằng tầng 1/ });
+    expect(link).toHaveAttribute('href', 'blob:vector');
+    expect(link).toHaveAttribute('download', expect.stringContaining('.svg'));
   });
 
-  it('KHÔNG in chip tỷ lệ lên tờ ảnh — tờ ảnh không có tỷ lệ nào', () => {
+  it('KHÔNG còn bộ chọn nguồn, KHÔNG còn nút vẽ bằng AI, KHÔNG còn giá một tờ', () => {
+    // Ba thứ này cùng thuộc đường sinh ảnh. Để lại bất kỳ cái nào thì người dùng bấm vào một
+    // tuyến đã gỡ và nhận lỗi — đúng thứ AFD 6.5 cấm.
     state.review = review();
-    state.sheetImage = { url: 'blob:ai-stamped', stamped: true, loading: false, error: null };
     show();
-    expect(screen.queryByText(/Tỷ lệ 1:60/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Vẽ tờ này bằng AI/ })).toBeNull();
+    expect(screen.queryByText(/Tờ AI/)).toBeNull();
+    expect(screen.queryByText(/USD một tờ/)).toBeNull();
   });
 
-  it('nút tải trỏ vào ảnh ĐÃ đóng dấu, không phải blob gốc', () => {
+  it('nói rõ kích thước trên tờ ĐO ĐƯỢC — đó là điều đổi lại khi bỏ tờ ảnh', () => {
     state.review = review();
-    state.sheetImage = { url: 'blob:ai-stamped', stamped: true, loading: false, error: null };
     show();
-    const link = screen.getByRole('link', { name: /Tải tờ AI tầng 1/ });
-    expect(link).toHaveAttribute('href', 'blob:ai-stamped');
-    expect(link).toHaveAttribute('download', expect.stringContaining('.png'));
-  });
-});
-
-describe('Trước khi vẽ', () => {
-  it('hiện GIÁ một tờ trước khi bấm', () => {
-    state.review = review();
-    state.imageUsd = 0.04;
-    state.sheetImage = { url: null, stamped: false, loading: false, error: null };
-    show();
-    expect(screen.getByText(/0\.04 USD một tờ/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Vẽ tờ này bằng AI' })).toBeEnabled();
+    expect(screen.getByText(/mọi kích thước trên đây đo được/)).toBeInTheDocument();
   });
 
-  it('tuyến chưa khai giá thì nói «Chưa đủ dữ liệu», KHÔNG hiện 0', () => {
+  it('nói AI xếp phòng và chương trình dựng tường (T23) — không còn câu của lượt cứu hộ', () => {
     state.review = review();
-    state.imageUsd = null;
-    state.sheetImage = { url: null, stamped: false, loading: false, error: null };
     show();
-    expect(screen.getByText(/Chưa đủ dữ liệu/)).toBeInTheDocument();
-    expect(screen.queryByText(/0 USD một tờ/)).not.toBeInTheDocument();
+
+    // Câu này phải có mặt ở CẢ tờ vẽ và màn hình: tờ vẽ đi ra ngoài (in, gửi khách) còn màn hình
+    // thì không, nên một chỗ là không đủ (CLAUDE.md 8.7 — nhãn do mã chèn, không tắt được).
+    expect(screen.getByText(/AI xếp phòng, chương trình dựng tường/)).toBeInTheDocument();
+    // Và KHÔNG còn câu cũ của T19. Nó mô tả một lần cứu hộ («sau một lượt sửa mà tường khai vẫn
+    // không bao kín phòng») — một chuyện không còn xảy ra được, vì mô hình thôi khai tường.
+    expect(screen.queryByText(/sau một lượt sửa/)).not.toBeInTheDocument();
   });
 
-  it('tầng mô hình chưa khai mô tả thì KHÔNG có nút bấm, và nói vì sao', () => {
+  it('ghi chú của bộ vẽ vẫn hiện — chỗ chương trình tự xử lý không được im lặng', () => {
     state.review = review({
       levels: [
         {
@@ -194,16 +166,12 @@ describe('Trước khi vẽ', () => {
           name: 'Tầng 1',
           scale: 60,
           orientation: 'portrait',
-          notes: [],
+          notes: [{ code: 'label_dropped', message: 'Bỏ nhãn phòng quá nhỏ: WC 1.' }],
           rooms: 6,
-          sheetImage: { available: false, drawable: false },
         },
       ],
     });
-    state.imageUsd = 0.04;
-    state.sheetImage = { url: null, stamped: false, loading: false, error: null };
     show();
-    expect(screen.queryByRole('button', { name: 'Vẽ tờ này bằng AI' })).not.toBeInTheDocument();
-    expect(screen.getByText(/chưa có mô tả tờ vẽ nên không dựng được ảnh/)).toBeInTheDocument();
+    expect(screen.getByText(/Bỏ nhãn phòng quá nhỏ/)).toBeInTheDocument();
   });
 });

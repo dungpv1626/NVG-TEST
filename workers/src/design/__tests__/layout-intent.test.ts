@@ -22,7 +22,7 @@ import {
   type LayoutNode,
 } from '../layout/intent';
 import { spaceLabels } from '../layout/labels';
-import { parseSiteContext, siteFaces } from '../layout/site-context';
+import { parseSiteContext, siteFaces } from '../kb/site-context';
 import { testVocabularyYaml } from './program-fixtures';
 import { parseVocabulary, roomGroups } from '../kb/vocabulary';
 

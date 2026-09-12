@@ -12,7 +12,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { designApi, designApiFile } from '@/lib/design-api';
-import { stampWatermark } from '@/lib/watermark';
 
 // ---------------------------------------------------------------------------
 // Danh mục model
@@ -216,14 +215,6 @@ export interface AiPlanLevelView {
   orientation: 'landscape' | 'portrait';
   notes: { code: string; message: string }[];
   rooms: number;
-  /**
-   * Tờ ảnh AI của tầng này (T21). BA trạng thái, không phải hai:
-   *  · `available` — đã vẽ, đọc được ngay.
-   *  · `drawable` — mô hình có khai mô tả nên bấm vẽ được.
-   *  · cả hai `false` — mô hình chưa khai mô tả, nút phải MỜ kèm lý do (AFD 6.5), không để
-   *    người dùng bấm rồi nhận lỗi.
-   */
-  sheetImage: { available: boolean; drawable: boolean };
 }
 
 export interface AiPlanReview {
@@ -249,10 +240,6 @@ export interface AiPlanReview {
   warnings: AiPlanWarning[];
   checkedRules: string[];
   uncheckedRules: Array<{ ruleId: string; predicate: string; source: string }>;
-  /** Nhãn in ĐÈ lên tờ ảnh AI. Từ máy chủ — không viết cứng ở đây (CLAUDE.md 8.7). */
-  sheetImageWatermark: string;
-  /** Câu cảnh báo hiện bằng CHỮ dưới tờ ảnh — lớp bảo vệ thứ hai khi canvas không đóng dấu được. */
-  sheetImageDisclaimer: string;
 }
 
 /**
@@ -351,109 +338,6 @@ export function useAiPlanSheet(
   }, [projectId, artifactId, level]);
 
   return state;
-}
-
-export interface AiSheetImageState {
-  /** Ảnh ĐÃ đóng dấu, để hiển thị và để tải về. `null` khi chưa có hoặc đang nạp. */
-  url: string | null;
-  /** Nhãn đã in lên pixel chưa. `false` thì dòng cảnh báo bằng chữ là lớp duy nhất còn lại. */
-  stamped: boolean;
-  loading: boolean;
-  /** Lý do đọc được khi chưa có tờ — màn hình rơi về bản vector kèm câu này. */
-  error: string | null;
-}
-
-/**
- * Tờ mặt bằng do MÔ HÌNH ẢNH vẽ (T21) — đọc byte, đóng dấu, rồi mới trả ra.
- *
- * Ba điều cố ý:
- *
- * **Một.** Byte lấy về từ kho CHƯA có nhãn nào — Worker không có canvas nên nó không đóng dấu
- * được (`watermark_applied: false` trong hợp đồng). Nhãn in ở đây, và `url` trả ra là ảnh ĐÃ
- * đóng dấu — nên nút tải về dùng chính chuỗi này, không dùng blob gốc. Ảnh AI rời khỏi máy mà
- * không mang nhãn là đúng thứ CLAUDE.md 8.7 cấm.
- *
- * **Hai.** `stamped` nói ra khi canvas hỏng, để màn hình biết mình đang là lớp bảo vệ duy nhất.
- *
- * **Ba.** Không dùng TanStack Query, cùng lý do với `useAiPlanSheet`: giá trị là một blob phải
- * THU HỒI khi rời màn hình.
- */
-export function useAiSheetImage(
-  projectId: string,
-  artifactId: string | null,
-  level: number,
-  watermark: string,
-  /** Đổi giá trị này để nạp lại sau khi vừa vẽ xong một tờ mới. */
-  reloadKey = 0,
-): AiSheetImageState {
-  const [state, setState] = useState<AiSheetImageState>({
-    url: null,
-    stamped: false,
-    loading: false,
-    error: null,
-  });
-
-  useEffect(() => {
-    // Chưa có NHÃN thì chưa tải ảnh về. Nhãn tới từ `/review`, một lời gọi song song, nên có
-    // một khoảnh khắc nó còn rỗng — và đóng dấu bằng chuỗi rỗng vẽ ra một ô nền không chữ,
-    // `stamped` vẫn báo `true`, còn nút tải thì trỏ vào một tấm ảnh AI KHÔNG mang nhãn. Đó
-    // đúng là thứ CLAUDE.md 8.7 cấm, và nó im lặng: tấm không nhãn trông y hệt tấm có nhãn.
-    if (!projectId || !artifactId || !watermark) {
-      setState({ url: null, stamped: false, loading: false, error: null });
-      return;
-    }
-    let cancelled = false;
-    let objectUrl: string | null = null;
-    setState({ url: null, stamped: false, loading: true, error: null });
-
-    void designApiFile(
-      `/design/ai/plan/${projectId}/sheet-image?artifactId=${encodeURIComponent(artifactId)}&level=${level}`,
-    )
-      .then(async (response) => {
-        const blob = await response.blob();
-        if (cancelled) return;
-        objectUrl = URL.createObjectURL(blob);
-        const stamped = await stampWatermark(objectUrl, watermark);
-        if (cancelled) return;
-        setState({ url: stamped.url, stamped: stamped.stamped, loading: false, error: null });
-      })
-      .catch((error: unknown) => {
-        if (cancelled) return;
-        setState({
-          url: null,
-          stamped: false,
-          loading: false,
-          error: error instanceof Error ? error.message : 'Chưa có tờ vẽ do AI dựng.',
-        });
-      });
-
-    return () => {
-      cancelled = true;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [projectId, artifactId, level, watermark, reloadKey]);
-
-  return state;
-}
-
-/**
- * Vẽ tờ mặt bằng của một tầng bằng mô hình ảnh — LƯỢT GỌI TÍNH TIỀN.
- *
- * Một lần bấm là một tấm. Cố ý không vẽ sẵn cả bộ tầng của cả ba phương án: đó là chín tấm cho
- * một lần bấm, trong khi kiến trúc sư chỉ đọc kỹ một phương án.
- */
-export function useRenderAiSheetImage() {
-  const queryClient = useQueryClient();
-  return useMutation<
-    { imageArtifactId: string; level: number; watermark: string },
-    Error,
-    { projectId: string; artifactId: string; level: number; route: string }
-  >({
-    mutationFn: ({ projectId, ...body }) =>
-      designApi(`/design/ai/plan/${projectId}/sheet-image`, body),
-    onSuccess: (_data, variables) =>
-      void queryClient.invalidateQueries({ queryKey: ['ai_plan_review', variables.projectId] }),
-  });
 }
 
 /** Chọn một phương án làm bản đang hiệu lực — bước mặt đứng đọc bản này. */

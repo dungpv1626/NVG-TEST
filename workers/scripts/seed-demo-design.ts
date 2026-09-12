@@ -28,7 +28,7 @@ import { buildBriefPayload } from '../src/design/brief/payload';
 import { HttpComputeBackend } from '../src/design/compute-backend';
 import type { DesignEnv } from '../src/design/env';
 import { parseVocabulary, roomGroups } from '../src/design/kb/vocabulary';
-import { parseSiteContext } from '../src/design/layout/site-context';
+import { parseSiteContext } from '../src/design/kb/site-context';
 import { generateVariants, listVariants } from '../src/design/layout/variants';
 import { buildSpaceProgram } from '../src/design/program/engine';
 import { parseSpaceNorms } from '../src/design/program/norms';

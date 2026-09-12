@@ -238,6 +238,35 @@ export async function finishRun(
  * Dùng để trả 409 thay vì mở lượt thứ hai: hai lượt cùng giai đoạn chạy song song sẽ đúc ra hai
  * bộ artifact cho cùng một bước và nhân đôi tiền cho cùng một câu hỏi.
  */
+/**
+ * Bao lâu không nhúc nhích thì coi là ĐỨNG HÌNH.
+ *
+ * ── Vì sao cần con số này ─────────────────────────────────────────────────────────────
+ * `workflowDead` chỉ bắt được instance khai `errored` hoặc `terminated`. Nhưng một instance có
+ * thể thành THÂY MA: nó vẫn khai `running` trong khi không còn mã nào chạy nó. Gặp thật ngày
+ * 11/09/2026 — Worker nạp lại (hot reload lúc dev) đúng lúc một lượt đang bay; isolate bị xoá,
+ * dòng tiến độ còn nguyên, và cả hạn 10 phút của bước lẫn bộ đếm 180 giây của lời gọi đều không
+ * thể nổ vì không còn bộ đếm nào tồn tại. Trên bản đã triển khai cũng có đường tới trạng thái
+ * này: nhà cung cấp treo, isolate bị thu hồi giữa chừng.
+ *
+ * Hậu quả nặng hơn cái vòng quay vô hạn: `activeRun` thấy dòng ấy nên `POST /plan/runs` trả 409,
+ * và người dùng bị KHOÁ không chạy lại được, không có nút nào gỡ.
+ *
+ * ── Vì sao là 21 phút ────────────────────────────────────────────────────────────────
+ * `updated_at` chỉ nhúc nhích ở ranh giới các bước, nên nó đứng yên suốt thời gian một bước
+ * chạy. Bước tốn nhất là bước gọi mô hình: hạn 10 phút, cộng một lượt thử lại sau 10 giây, cộng
+ * 10 phút nữa — tức gần 21 phút mà KHÔNG có gì sai cả. Đặt ngưỡng thấp hơn là bắt nhầm một lượt
+ * chạy đang khoẻ, và bắt nhầm theo hướng tệ nhất: huỷ một lượt đã trả tiền.
+ */
+export const RUN_STALE_MS = 21 * 60_000;
+
+/** Dòng tiến độ đã đứng hình chưa — so mốc cập nhật cuối với `RUN_STALE_MS`. */
+export function runStalled(updatedAt: string | null, now = Date.now()): boolean {
+  if (!updatedAt) return false;
+  const last = Date.parse(updatedAt);
+  return Number.isFinite(last) && now - last > RUN_STALE_MS;
+}
+
 export async function activeRun(
   db: SupabaseClient,
   projectId: string,
@@ -245,7 +274,7 @@ export async function activeRun(
 ): Promise<{ id: string; createdAt: string } | null> {
   const { data, error } = await db
     .from('design_ai_run')
-    .select('id, created_at')
+    .select('id, created_at, updated_at')
     .eq('project_id', projectId)
     .eq('stage', stage)
     .in('status', ['queued', 'running'])
@@ -254,6 +283,9 @@ export async function activeRun(
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) return null;
+  // Đứng hình thì KHÔNG còn chặn lượt mới. Một dòng thây ma mà chặn được người dùng là biến một
+  // sự cố tạm thời thành một hồ sơ không dùng được nữa, và không có đường nào tự gỡ.
+  if (runStalled(data.updated_at as string | null)) return null;
   return { id: data.id as string, createdAt: data.created_at as string };
 }
 

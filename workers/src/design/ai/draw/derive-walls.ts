@@ -1,30 +1,36 @@
 /**
- * Suy tường từ chữ nhật phòng — lưới an toàn của quyết định T19.
+ * Suy tường từ chữ nhật phòng — cạnh chung thành vách ngăn, cạnh biên thành tường bao.
  *
- * Khi nào chạy: mô hình khai tường sai, đã cho SỬA một lượt, và sau lượt ấy chỉ còn nhóm lỗi
- * tường (`PlanCheckResult.wallOnly`). Lúc đó bỏ tường của mô hình và tự dựng lại: cạnh chung
- * giữa hai phòng thành vách ngăn, cạnh biên thành tường bao.
+ * Từ 12/09/2026 (T23) đây là đường DUY NHẤT tường của nhánh AI ra đời: mô hình không khai tường
+ * nữa. Trước đó nó là lưới an toàn của T19, chỉ chạy khi mô hình khai tường sai và đã cho sửa một
+ * lượt. Lý lẽ thì không đổi, chỉ mạnh thêm — vị trí tường suy được TẤT ĐỊNH từ chính chữ nhật
+ * phòng, nên hỏi mô hình là trả tiền cho thứ đã biết và mở ra một cách sai mới.
  *
- * Vì sao không trả về một tờ vẽ hỏng rồi bắt bấm lại: mỗi lượt bấm lại là một lượt gọi tính
- * tiền, và cái mô hình sai ở đây là phần MÁY suy được — vị trí tường suy từ chính chữ nhật
- * phòng mà mô hình đã khai đúng. Đổi lại, chỗ suy hộ phải NHÌN THẤY: `generator.walls_derived`
- * bật, và tờ vẽ in dòng «Tường do chương trình suy từ phòng, không phải của AI»
- * (`AI_DISCLAIMERS.wallsDerived`).
+ * Đổi lại, chỗ suy hộ phải NHÌN THẤY: `generator.walls_derived` luôn bật, và tờ vẽ in dòng
+ * «Tường do chương trình suy từ phòng, không phải của AI» (`AI_DISCLAIMERS.wallsDerived`).
  *
- * Giới hạn đã biết và chấp nhận: tường suy ra chỉ có hai bề dày (bao và ngăn), không có tường
- * chịu lực dày riêng, và cột thì không có. Mọi bức nằm GIỮA hai phòng đều mang loại `p`, kể cả
- * khi một bên là ban công hay giếng trời — chương trình không đọc được từ chữ nhật rằng bên
- * kia là ngoài trời. Trên tờ vẽ hai loại ấy trông y hệt nhau (chỉ `r` vẽ khác), nên chỗ này
- * không làm sai bản vẽ; nó chỉ khiến một cửa sổ hợp lệ bị đọc thành "cửa sổ trên vách ngăn"
- * nếu ai đó đem kết quả đã suy tường đi kiểm lại. Đây là bản phác tham khảo, không phải hồ sơ
- * kết cấu — nhánh AI không sinh kết cấu (CLAUDE.md 8.2 điểm 9).
+ * ── Bốn loại cạnh, và vì sao phải phân biệt ─────────────────────────────────────────
+ *
+ * | Hai bên cạnh                  | Loại tường | Vì sao                                         |
+ * | ----------------------------- | ---------- | ---------------------------------------------- |
+ * | hai phòng trong nhà           | `p` vách   | vách ngăn, không có cửa sổ                     |
+ * | một phòng trong, một ngoài    | `e` bao    | đây là ranh trong–ngoài, CÓ cửa sổ             |
+ * | hai phòng ngoài trời          | `r` lan can| hai ban công cạnh nhau                         |
+ * | cạnh biên của phòng trong nhà | `e` bao    | giáp ngoài trời hoặc giáp ranh đất             |
+ * | cạnh biên của phòng ngoài trời| `r` lan can| mép ban công là lan can, không phải tường      |
+ *
+ * Phân biệt `e` với `p` KHÔNG phải chuyện thẩm mỹ: phép đối chiếu mặt thoáng
+ * (`ai/rule-warnings.ts`) chỉ tính cửa sổ trên tường `e`. Gộp tất cả thành `p` thì mọi cửa sổ mở
+ * ra ban công hoặc ra giếng trời biến mất khỏi phép đo, và cảnh báo «phòng ngủ không có cửa sổ»
+ * nổ ra trên một mặt bằng đúng.
+ *
+ * Giới hạn đã biết và chấp nhận: chỉ hai bề dày (bao và ngăn), không có tường chịu lực dày riêng,
+ * không có cột. Đây là bản phác tham khảo, không phải hồ sơ kết cấu (CLAUDE.md 8.2 điểm 9).
  */
 
 import type { AiFloorPlanLevel } from '@nvg/shared/design';
 import type { ConstructionNorms } from '../../kb/construction';
-import { toRect, type Interval, type Rect } from './geometry';
-import { DrawNotes, type DrawNote } from './notes';
-import { prepareWalls } from './walls';
+import type { Interval, Rect } from './geometry';
 
 /** Khe giữa hai phòng rộng hơn mức này thì không phải một bức vách, mà là chỗ nào đó chưa khai. */
 const MAX_PARTITION_GAP_CM = 40;
@@ -32,7 +38,14 @@ const MAX_PARTITION_GAP_CM = 40;
 /** Hai cạnh phòng lệch nhau dưới mức này coi như thẳng hàng. */
 const ALIGN_TOLERANCE_CM = 2;
 
-type Wall = AiFloorPlanLevel['walls'][number];
+export type DerivedWall = AiFloorPlanLevel['walls'][number];
+
+/** Một phòng, chỉ với hai điều việc suy tường cần biết. */
+export interface WallSourceRoom {
+  rect: Rect;
+  /** Phòng thuộc nhóm `outdoor` của `kb/room_vocabulary.yaml` — ban công, sân thượng, giếng trời. */
+  outdoor: boolean;
+}
 
 interface Face {
   axis: 'x' | 'y';
@@ -42,34 +55,31 @@ interface Face {
   free: Interval[];
   /** +1 khi phần ngoài phòng nằm ở phía toạ độ LỚN hơn `line`. */
   outward: number;
-}
-
-export interface DerivedLevel {
-  level: AiFloorPlanLevel;
-  notes: DrawNote[];
+  outdoor: boolean;
 }
 
 /**
- * Dựng lại toàn bộ tường của một tầng từ chữ nhật phòng, và giữ lại những lỗ mở còn đặt được.
+ * Toàn bộ tường của một tầng, suy từ chữ nhật phòng.
  *
- * Cửa và cửa sổ của mô hình được ánh xạ sang tường mới theo VỊ TRÍ THẬT (điểm giữa lỗ mở trong
- * hệ toạ độ của tầng), không theo mã tường — mã tường cũ vừa bị bỏ. Lỗ nào không còn tường nào
- * chứa thì bỏ, kèm một dòng ghi chú: mất một ô cửa sổ còn hơn vẽ nó lơ lửng giữa phòng.
+ * Trả mảng RỖNG khi không phòng nào hợp lệ — nơi gọi ghi một dòng ghi chú, chứ không ném: một tờ
+ * vẽ thiếu tường kèm lời giải thích vẫn nói được nhiều hơn một lỗi máy chủ.
  */
-export function deriveWalls(level: AiFloorPlanLevel, norms: ConstructionNorms): DerivedLevel {
-  const notes = new DrawNotes();
+export function deriveWallsFromRooms(
+  rooms: readonly WallSourceRoom[],
+  norms: ConstructionNorms,
+): DerivedWall[] {
   const exteriorT = Math.round(norms.walls.exterior_m * 100);
   const partitionT = Math.round(norms.walls.partition_m * 100);
 
-  const faces = facesOf(level.rooms.map((room) => toRect(room.rect)));
-  const walls: Wall[] = [];
+  const faces = facesOf(rooms);
+  const walls: DerivedWall[] = [];
   let counter = 0;
   const nextId = (): string => {
     counter += 1;
     return `dw${counter}`;
   };
 
-  // Vách ngăn: hai mặt phòng quay vào nhau, cách nhau một khe hẹp.
+  // Vách giữa hai phòng: hai mặt phòng quay vào nhau, cách nhau một khe hẹp.
   for (let i = 0; i < faces.length; i += 1) {
     for (let j = i + 1; j < faces.length; j += 1) {
       const first = faces[i];
@@ -83,47 +93,65 @@ export function deriveWalls(level: AiFloorPlanLevel, norms: ConstructionNorms): 
 
       const shared = intersect(near.free, far.free);
       if (shared.length === 0) continue;
-      const thickness = gap > ALIGN_TOLERANCE_CM ? Math.round(gap) : partitionT;
+      const bothOutdoor = near.outdoor && far.outdoor;
+      const mixed = near.outdoor !== far.outdoor;
+      const kind: DerivedWall['k'] = bothOutdoor ? 'r' : mixed ? 'e' : 'p';
+      const thickness =
+        gap > ALIGN_TOLERANCE_CM ? Math.round(gap) : kind === 'e' ? exteriorT : partitionT;
       const centre = (near.line + far.line) / 2;
       for (const span of shared) {
-        walls.push(segment(nextId(), near.axis, centre, span, thickness, 'p'));
+        walls.push(segment(nextId(), near.axis, centre, span, thickness, kind));
       }
       near.free = subtract(near.free, shared);
       far.free = subtract(far.free, shared);
     }
   }
 
-  // Phần cạnh còn lại giáp ngoài trời: tường bao, tim lùi ra ngoài nửa bề dày.
+  // Phần cạnh còn lại giáp ngoài trời: tường bao (hoặc lan can), tim lùi ra ngoài nửa bề dày.
   for (const face of faces) {
+    const kind: DerivedWall['k'] = face.outdoor ? 'r' : 'e';
+    const thickness = face.outdoor ? partitionT : exteriorT;
     for (const span of face.free) {
-      const centre = face.line + face.outward * (exteriorT / 2);
-      walls.push(segment(nextId(), face.axis, centre, span, exteriorT, 'e'));
+      const centre = face.line + face.outward * (thickness / 2);
+      walls.push(segment(nextId(), face.axis, centre, span, thickness, kind));
     }
   }
 
-  if (walls.length === 0) {
-    notes.add(
-      'walls_not_derivable',
-      'Không suy được tường từ chữ nhật phòng của tầng này — tầng không có phòng nào hợp lệ.',
-    );
-    return { level, notes: notes.list() };
-  }
-
-  const remapped = remapOpenings(level, walls, notes);
-  return {
-    level: { ...level, walls, doors: remapped.doors, windows: remapped.windows },
-    notes: notes.list(),
-  };
+  return walls;
 }
 
 /** Bốn mặt của mỗi phòng, mỗi mặt ban đầu còn trống toàn bộ chiều dài. */
-function facesOf(rects: readonly Rect[]): Face[] {
+function facesOf(rooms: readonly WallSourceRoom[]): Face[] {
   const faces: Face[] = [];
-  for (const rect of rects) {
-    faces.push({ axis: 'x', line: rect.y0, outward: -1, free: [{ from: rect.x0, to: rect.x1 }] });
-    faces.push({ axis: 'x', line: rect.y1, outward: 1, free: [{ from: rect.x0, to: rect.x1 }] });
-    faces.push({ axis: 'y', line: rect.x0, outward: -1, free: [{ from: rect.y0, to: rect.y1 }] });
-    faces.push({ axis: 'y', line: rect.x1, outward: 1, free: [{ from: rect.y0, to: rect.y1 }] });
+  for (const { rect, outdoor } of rooms) {
+    faces.push({
+      axis: 'x',
+      line: rect.y0,
+      outward: -1,
+      outdoor,
+      free: [{ from: rect.x0, to: rect.x1 }],
+    });
+    faces.push({
+      axis: 'x',
+      line: rect.y1,
+      outward: 1,
+      outdoor,
+      free: [{ from: rect.x0, to: rect.x1 }],
+    });
+    faces.push({
+      axis: 'y',
+      line: rect.x0,
+      outward: -1,
+      outdoor,
+      free: [{ from: rect.y0, to: rect.y1 }],
+    });
+    faces.push({
+      axis: 'y',
+      line: rect.x1,
+      outward: 1,
+      outdoor,
+      free: [{ from: rect.y0, to: rect.y1 }],
+    });
   }
   return faces;
 }
@@ -135,8 +163,8 @@ function segment(
   centre: number,
   span: Interval,
   thickness: number,
-  kind: Wall['k'],
-): Wall {
+  kind: DerivedWall['k'],
+): DerivedWall {
   const a: [number, number] =
     axis === 'x' ? [round(span.from), round(centre)] : [round(centre), round(span.from)];
   const b: [number, number] =
@@ -144,7 +172,13 @@ function segment(
   return { id, a, b, t: thickness, k: kind };
 }
 
-/** Hợp đồng khai toạ độ là số NGUYÊN centimet — tim vách rơi vào nửa cm thì làm tròn ở đây. */
+/**
+ * Hợp đồng artifact cho phép lưới nửa centimet, và tim vách giữa hai phòng rơi đúng vào đó.
+ *
+ * Làm tròn về số nguyên thay vì giữ x,5: nửa centimet trên tim tường không đổi được gì trên tờ vẽ
+ * ở tỷ lệ 1:70, còn toạ độ nguyên thì đọc được trong nhật ký và trong tệp DXF. Sai số tối đa là
+ * 5 mm trên mỗi mặt tường — dưới bề rộng một nét in.
+ */
 function round(value: number): number {
   return Math.round(value);
 }
@@ -176,60 +210,4 @@ function subtract(from: readonly Interval[], holes: readonly Interval[]): Interv
     current = next;
   }
   return current;
-}
-
-/** Đưa cửa và cửa sổ của mô hình sang hệ tường mới, theo vị trí thật của điểm giữa lỗ mở. */
-function remapOpenings(
-  level: AiFloorPlanLevel,
-  walls: readonly Wall[],
-  notes: DrawNotes,
-): { doors: AiFloorPlanLevel['doors']; windows: AiFloorPlanLevel['windows'] } {
-  const before = new Map(prepareWalls(level.walls).map((wall) => [wall.id, wall]));
-  const after = prepareWalls(walls);
-
-  const relocate = (
-    id: string,
-    wallId: string,
-    at: number,
-    width: number,
-    kind: string,
-  ): { wall: string; at: number } | null => {
-    const source = before.get(wallId);
-    if (!source) return null;
-    const midpoint: [number, number] = [
-      source.a[0] + source.u[0] * (at + width / 2),
-      source.a[1] + source.u[1] * (at + width / 2),
-    ];
-
-    for (const wall of after) {
-      // CÙNG PHƯƠNG trước đã. Thiếu phép này thì một bức vuông góc đi ngang qua điểm giữa lỗ
-      // mở cũng lọt, và cửa bị xoay 90° trên tờ vẽ mà không có lỗi nào nổ ra.
-      const parallel = Math.abs(wall.u[0] * source.u[0] + wall.u[1] * source.u[1]);
-      if (parallel < 0.999) continue;
-      // Cùng phương và đi qua điểm giữa lỗ mở: chiếu lên tim tường rồi đo lệch ngang.
-      const alongAxis =
-        (midpoint[0] - wall.a[0]) * wall.u[0] + (midpoint[1] - wall.a[1]) * wall.u[1];
-      const acrossAxis =
-        (midpoint[0] - wall.a[0]) * wall.n[0] + (midpoint[1] - wall.a[1]) * wall.n[1];
-      if (Math.abs(acrossAxis) > wall.t / 2 + MAX_PARTITION_GAP_CM / 2) continue;
-      if (alongAxis < width / 2 || alongAxis > wall.length - width / 2) continue;
-      return { wall: wall.id, at: Math.round(alongAxis - width / 2) };
-    }
-
-    notes.add(
-      'opening_dropped_after_derive',
-      `${kind} "${id}" không còn đặt được sau khi chương trình suy lại tường — đã bỏ khỏi tờ vẽ.`,
-    );
-    return null;
-  };
-
-  const doors = (level.doors ?? []).flatMap((door) => {
-    const placed = relocate(door.id, door.wall, door.at, door.w, 'Cửa');
-    return placed ? [{ ...door, wall: placed.wall, at: placed.at }] : [];
-  });
-  const windows = (level.windows ?? []).flatMap((window) => {
-    const placed = relocate(window.id, window.wall, window.at, window.w, 'Cửa sổ');
-    return placed ? [{ ...window, wall: placed.wall, at: placed.at }] : [];
-  });
-  return { doors, windows };
 }

@@ -15,7 +15,9 @@
  *     lượt thử vào một yêu cầu sai cấu trúc.
  */
 
+import { classifyHttpFault, classifyNetworkFault } from './provider-faults';
 import type { DataClass } from '@nvg/shared/design';
+import type { TokenUsage } from './text-client';
 import type { ModelRouter, ResolvedRoute } from './router';
 import { schemaFor } from './schema-dialect';
 import {
@@ -43,6 +45,17 @@ export class LlmCallFailed extends Error {
      * còn lại dùng câu chung.
      */
     readonly userMessage?: string,
+    /**
+     * Số token lượt gọi đã dùng, khi biết được.
+     *
+     * ⚠️ Thêm 11/09/2026 sau khi đo trên nhật ký thật: **6/6 lượt hỏng ghi 0 đồng**. Loại hỏng
+     * ĐẮT NHẤT — mô hình sinh đủ 32.000 token rồi bị cắt giữa chừng nên JSON không phân tích
+     * được — lại là loại duy nhất không để lại dấu vết nào trong bảng chi phí, vì chỗ bắt lỗi
+     * không có cách nào biết đã tiêu bao nhiêu. Nhà cung cấp VẪN tính tiền phần token ấy.
+     *
+     * Nên lỗi phải mang số đo theo mình. Vắng thì đúng là không biết, chứ không phải bằng 0.
+     */
+    readonly usage?: TokenUsage,
   ) {
     super(message);
     this.name = 'LlmCallFailed';
@@ -124,9 +137,17 @@ export class GeminiClient implements TextModelClient, AiImageClient {
           `(lý do dừng: ${reason}; đã sinh ${usage.outputTokens ?? '?'} token, ` +
           `dài ${text.length} ký tự).` +
           (truncated
-            ? ' Kết quả bị cắt vì hết ngân sách token — tăng `maxOutputTokens` hoặc yêu cầu nội dung ngắn hơn.'
+            ? ' Kết quả bị cắt vì hết ngân sách token — phần lớn ngân sách đã bị token SUY NGHĨ ăn mất.' +
+              ' Hạ `thinking_level` của tuyến trong config/models.yaml, hoặc tăng `maxOutputTokens`.'
             : ''),
-        true,
+        // ⚠️ Cắt vì hết ngân sách token thì KHÔNG đáng thử lại — đây là sửa 11/09/2026 sau khi
+        // đo thật. Thử lại là gửi ĐÚNG lời dẫn ấy với ĐÚNG ngân sách ấy, nên nó sẽ cắt lại ở
+        // đúng chỗ ấy: mua lại y nguyên một thất bại đã biết trước, với giá 0,33 USD một lượt.
+        // Đây là lỗi CẤU HÌNH, không phải lỗi nhất thời.
+        !truncated,
+        undefined,
+        undefined,
+        usage,
       );
     }
     return {
@@ -181,7 +202,20 @@ export class GeminiClient implements TextModelClient, AiImageClient {
         responseMimeType: 'application/json',
         responseSchema: options.schema,
         temperature: options.temperature ?? 0,
-        maxOutputTokens: options.maxOutputTokens ?? 8192,
+        // Trần token: tuyến khai thì tuyến THẮNG nơi gọi, và `0` nghĩa là bỏ hẳn trường để nhà
+        // cung cấp dùng mức tối đa của model. Xem `max_output_tokens` ở router.ts.
+        ...maxTokensField(route.max_output_tokens, options.maxOutputTokens),
+        // Mức SUY NGHĨ, và nó chỉ có mặt khi tuyến khai — xem `thinking_level` ở
+        // `config/models.yaml`. Vì sao phải khai: đo ngày 11/09/2026 trên một lượt xếp mặt bằng
+        // thật cho thấy `maxOutputTokens` là trần CHUNG cho token nghĩ và token trả lời. Dòng
+        // Gemini 3 mặc định nghĩ ở mức `high`, nên nó tiêu 31.986 trên ngân sách 32.000 rồi chỉ
+        // còn chỗ cho 2.113 ký tự JSON — bị cắt, không phân tích được, và vẫn tính tiền đủ.
+        //
+        // Chỉ đặt khi có khai: `thinkingLevel` là của dòng Gemini 3. Các tuyến 2.5 của bộ giải
+        // không nhận trường này, và gửi kèm `thinkingBudget` cũ cùng lúc là lỗi 400.
+        ...(route.thinking_level
+          ? { thinkingConfig: { thinkingLevel: route.thinking_level } }
+          : {}),
       },
     };
 
@@ -298,20 +332,26 @@ export class GeminiClient implements TextModelClient, AiImageClient {
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
     } catch (error) {
+      const fault = classifyNetworkFault(error, 'mô hình ngôn ngữ');
       throw new LlmCallFailed(
         `Không gọi được mô hình ngôn ngữ: ${error instanceof Error ? error.message : String(error)}`,
-        true,
+        fault.retryable,
+        undefined,
+        fault.userMessage,
       );
     }
 
     if (!res.ok) {
       const detail = await res.text().catch(() => '');
-      // 429 = hết hạn mức trong khoảng thời gian, không phải yêu cầu sai → chờ rồi thử lại.
-      const retryable = res.status === 429 || res.status >= 500;
+      // Phân loại ở MỘT nơi cho cả ba nhà cung cấp — xem `provider-faults.ts`. Điểm mấu chốt:
+      // 429 có thể là «gọi quá nhanh» (chờ rồi thử lại) hoặc «hết tiền» (thử lại vô ích), và
+      // chỉ THÂN phản hồi phân biệt được. Câu nguyên văn vào nhật ký, câu tiếng Việt lên màn hình.
+      const fault = classifyHttpFault(res.status, detail);
       throw new LlmCallFailed(
         `Mô hình ngôn ngữ trả lỗi ${res.status}. ${detail.slice(0, 300)}`,
-        retryable,
+        fault.retryable,
         res.status,
+        fault.userMessage,
       );
     }
     return (await res.json()) as T;
@@ -329,6 +369,20 @@ interface GeminiGenerateResponse {
     /** Token SUY LUẬN của Gemini 2.5+ — tính giá như token ra, nên phải cộng vào chi phí. */
     thoughtsTokenCount?: number;
   };
+}
+
+/**
+ * Trường `maxOutputTokens` cho thân yêu cầu — hoặc không có trường nào.
+ *
+ * Ba trạng thái, cố ý phân biệt: tuyến khai `0` thì BỎ HẲN trường (đo mức tiêu thật); tuyến
+ * khai số dương thì dùng số ấy; tuyến không khai thì theo nơi gọi, rồi mới tới mặc định 8192.
+ */
+function maxTokensField(
+  routeCap: number | undefined,
+  requested: number | undefined,
+): { maxOutputTokens?: number } {
+  if (routeCap === 0) return {};
+  return { maxOutputTokens: routeCap ?? requested ?? 8192 };
 }
 
 function geminiUsage(data: GeminiGenerateResponse): {

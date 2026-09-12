@@ -2,46 +2,68 @@
 #  KINH NGHIỆM NGHỀ CỦA NHÀ VIỆT GROUP — KHÔNG PHẢI QUY CHUẨN
 # ═══════════════════════════════════════════════════════════════════════════════
 #
-#  Tệp này gom 23 quy tắc mà Phòng Thiết kế NVG tự đặt ra, tách khỏi quy chuẩn
-#  quốc gia. Trước ngày 09/09/2026 chúng nằm lẫn trong `rules/base/` cùng
-#  QCVN 01:2021/BXD và TCVN 4451:2012, nên một cảnh báo «dưới mức tối thiểu»
-#  hiện lên màn hình mà không ai phân biệt được đó là luật hay là thói quen.
+#  Gói:       nvg_experience
+#  Phiên bản: 2026.09.2
+#  Phạm vi:   mọi địa phương
+#  Số quy tắc: 31, tất cả ở mức `warning`
 #
 #  ⚠️ KHÔNG một dòng nào ở đây là văn bản pháp quy. Vi phạm chúng KHÔNG sai luật.
-#     Chúng là cách NVG quen làm, và có thể sai với một đầu bài cụ thể.
 #
-#  Ai đọc tệp này: kiến trúc sư NVG. Mỗi con số nên trả lời được câu hỏi
-#  «vì sao lại là con số này», và nếu không trả lời được thì nên sửa hoặc bỏ.
+#  Từ 12/09/2026 (T30) đây là GÓI QUY TẮC DUY NHẤT của nhánh AI: gói pháp quy
+#  (`rules/base/`) đã bị gỡ khỏi đường đọc của nhánh này. Lý do không phải «quy
+#  chuẩn không quan trọng» mà là chứng cứ không kiểm được — 14 quy tắc ghi nguồn
+#  QCVN mà không kèm một số mục nào, 4 quy tắc còn lại là TCVN (tiêu chuẩn TỰ
+#  NGUYỆN). Chi tiết ở `workers/src/design/rules/rule-pack-data.ts`.
+#  → Hệ quả phải nhớ: màn hình nay NÓI RA rằng không kiểm quy chuẩn
+#    (`AI_DISCLAIMERS.noCodeCheck`). Im lặng đọc thành «đã kiểm và đạt».
 #
-#  Cách dùng: gói này BẬT/TẮT được ngay trên màn hình thiết kế. Kỹ sư chọn có
-#  áp nó hay không cho từng hồ sơ.
+#  ── XUẤT XỨ CỦA TỪNG CON SỐ, ĐỌC ĐƯỢC BẰNG MÁY ───────────────────────────────
 #
-#  Gói:      nvg_experience
-#  Phiên bản: 2026.09.1
-#  Phạm vi:  mọi địa phương
-#  Số quy tắc: 23, tất cả ở mức cảnh báo
+#  Mỗi quy tắc BẮT BUỘC khai `n` = số mặt bằng đỡ cho con số ấy:
+#    · `n: 0`       — chưa ai đo. Mặc định của team, chưa có kiến trúc sư soát.
+#    · `n: 1…6`     — đo trên hồ sơ thật, kèm `khoang_quan_sat` và `n_du_an`.
+#  Hiện: **15 quy tắc có số đo**, 16 quy tắc `n: 0`.
 #
-#  Mức của mọi quy tắc ở đây là `warning` — theo quy ước đã ghi trong
-#  `rules/base/40-vertical.yaml`: chỉ quy tắc có nguồn là văn bản pháp quy mới
-#  được đặt mức `error`.
+#  ⚠️ n tối đa là 6 và n theo dự án tối đa là 2. CLAUDE.md 8.8 điểm 7 đòi **n ≥ 15**
+#     mới được gọi là ĐỊNH MỨC. Nên mọi con số ở đây là CHỈ DẤU, và T31 buộc hiện
+#     `n` lên màn hình thay vì chỉ ghi trong tệp này. Có phép thử canh rằng không
+#     quy tắc nào khai n ≥ 15 mà chưa bổ sung hồ sơ.
 #
-#  Ba con số ở phần «kích thước tối thiểu» nghi ngờ nhất, cần soát trước:
-#    · phòng khách 14 m² và phòng ngủ chính 14 m² — bằng nhau, có chủ ý không?
-#    · giếng trời tối đa 8 m² — quy tắc này khai sai mã phòng (`lightwell`
-#      thay vì `light_well`) nên CHƯA TỪNG chạy lần nào. Xem mục Vướng mắc
-#      trong TIEN_DO_THIET_KE.html.
+#  ── ĐIỀU KIỆN THÊM LẠI MỘT QUY TẮC PHÁP QUY (T34, 12/09/2026) ─────────────────
+#
+#  Quy tắc mức `error` chỉ được viết khi có ĐỦ BỐN thứ:
+#    1. số hiệu văn bản  2. SỐ MỤC trong văn bản
+#    3. `xac_minh`: đã kiểm bằng cách nào
+#    4. `hieu_luc_tu` / `hieu_luc_den`
+#  và **bản văn bản phải có trong repo**. Thiếu một trong bốn thì nó thuộc tệp này,
+#  mức `warning`. Rào chắn này tồn tại vì 18 quy tắc cũ đã vào repo đúng theo cách
+#  không ai kiểm được, và không ai thấy là chưa kiểm.
+#
+#  Ai đọc tệp này: kiến trúc sư NVG. Mỗi con số nên trả lời được «vì sao là con số
+#  này»; không trả lời được thì nên sửa hoặc bỏ.
+#
+#  Nguồn số đo: 2 dự án NVO đã xây, 6 mặt bằng độc lập (P1 nhà vườn 2 tầng 03/2026;
+#  P2 liền kề 5 tầng 08/2026). Phân tích đầy đủ ở
+#  `~/Documents/Doc/NVG/design/mat_bang_cong_nang/`.
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # ── KÍCH THƯỚC TỐI THIỂU — bề rộng lọt lòng nhỏ nhất của phòng ────────────────
 
+# SỬA 12/09/2026: 1,2 → 1,0. Quy tắc cũ đo SAI MỐC. Hợp đồng `ai-floor-plan` định nghĩa
+# `rooms[].rect` là kích thước LỌT LÒNG (mặt trong tường tới mặt trong tường), còn 1,20–1,25 m
+# là số đo tới MÉP SÀN. Đo trên 5 ban công của 2 dự án đã xây: lọt lòng 1,03–1,77 m. Để 1,2 thì
+# quy tắc báo vi phạm trên chính ban công NVG đã xây và đã được duyệt.
 - id: room_min_dimension_balcony
   applies_to: [nha_pho, biet_thu, nha_vuon]
   scope: floor
   predicate: min_dimension
   target: balcony
-  value_m: 1.2
+  value_m: 1.0
   severity: warning
-  source: 'kinh nghiệm NVG'
+  source: 'đo trên hồ sơ NVG'
+  n: 5
+  n_du_an: 2
+  khoang_quan_sat: '1,03 – 1,77 m lọt lòng; 1,20 – 1,25 m tới mép sàn'
   auto_repair: shrink_adjacent
 
 - id: room_min_dimension_closet
@@ -52,6 +74,7 @@
   value_m: 0.9
   severity: warning
   source: 'kinh nghiệm NVG'
+  n: 0
   auto_repair: shrink_adjacent
 
 - id: room_min_dimension_dressing_room
@@ -62,6 +85,7 @@
   value_m: 1.5
   severity: warning
   source: 'kinh nghiệm NVG'
+  n: 0
   auto_repair: shrink_adjacent
 
 - id: room_min_dimension_garage
@@ -72,6 +96,7 @@
   value_m: 2.4
   severity: warning
   source: 'kinh nghiệm NVG'
+  n: 0
   auto_repair: shrink_adjacent
 
 - id: room_min_dimension_kitchen
@@ -82,6 +107,7 @@
   value_m: 1.8
   severity: warning
   source: 'kinh nghiệm NVG'
+  n: 0
   auto_repair: shrink_adjacent
 
 - id: room_min_dimension_laundry
@@ -92,16 +118,23 @@
   value_m: 1.2
   severity: warning
   source: 'kinh nghiệm NVG'
+  n: 0
   auto_repair: shrink_adjacent
 
+# SỬA 12/09/2026: 1,0 → 0,85. Kho của dự án P2 rộng đúng 0,86 m (2,2 m², một dải trên đầu
+# giếng thang máy) — hẹp là CÓ CHỦ ĐÍCH, không phải lỗi thiết kế. Ngưỡng 1,0 m báo vi phạm trên
+# một phòng đã xây. ⚠️ n = 1: đây là CHỈ DẤU, không phải định mức (8.8 điểm 7 đòi n ≥ 15).
 - id: room_min_dimension_storage
   applies_to: [nha_pho, biet_thu, nha_vuon]
   scope: floor
   predicate: min_dimension
   target: storage
-  value_m: 1.0
+  value_m: 0.85
   severity: warning
-  source: 'kinh nghiệm NVG'
+  source: 'đo trên hồ sơ NVG'
+  n: 1
+  n_du_an: 1
+  khoang_quan_sat: '0,86 m (1 mẫu — kho kỹ thuật hẹp trên đầu giếng thang)'
   auto_repair: shrink_adjacent
 
 - id: room_min_dimension_study_area
@@ -112,20 +145,29 @@
   value_m: 1.8
   severity: warning
   source: 'kinh nghiệm NVG'
+  n: 0
   auto_repair: shrink_adjacent
 
+# SỬA 12/09/2026: 1,2 → 1,25 theo số đo. Sáu WC của 2 dự án: 1,30–1,56 m (phòng chữ nhật).
+# Một WC hình thang rộng 1,02–1,24 m thì KHÔNG ĐẠT ngưỡng này — đó là kết luận thật, không phải
+# lỗi của thước: phòng ấy hẹp hơn mọi WC chữ nhật trong cùng bộ hồ sơ.
 - id: room_min_dimension_wc
   applies_to: [nha_pho, biet_thu, nha_vuon]
   scope: floor
   predicate: min_dimension
   target: wc
-  value_m: 1.2
+  value_m: 1.25
   severity: warning
-  source: 'kinh nghiệm NVG'
+  source: 'đo trên hồ sơ NVG'
+  n: 5
+  n_du_an: 2
+  khoang_quan_sat: '1,30 – 1,56 m (chữ nhật); 1,02 – 1,24 m (1 WC hình thang)'
   auto_repair: shrink_adjacent
 
 # ── DIỆN TÍCH TỐI THIỂU ───────────────────────────────────────────────────────
 
+# XÁC NHẬN 12/09/2026: số đo thật là 15,7 – 22,0 m², nên ngưỡng 14 m² đứng vững — đây là một
+# trong ít con số «kinh nghiệm» được hồ sơ thật đỡ đúng như đã viết.
 - id: min_area_living
   applies_to: [nha_pho, biet_thu, nha_vuon]
   scope: floor
@@ -133,9 +175,15 @@
   target: living
   value_m2: 14.0
   severity: warning
-  source: 'kinh nghiệm NVG'
+  source: 'đo trên hồ sơ NVG'
+  n: 2
+  n_du_an: 2
+  khoang_quan_sat: '15,7 – 22,0 m²'
   auto_repair: shrink_adjacent
 
+# XÁC NHẬN 12/09/2026: số đo thật 15,0 – 15,7 m² (thân phòng; 17,7 nếu kể tiền phòng). Ngưỡng
+# 14 m² đứng vững. Câu hỏi cũ ở đầu tệp — «khách 14 và ngủ chính 14, bằng nhau có chủ ý không?» —
+# nay trả lời được: hai loại phòng có phân bố khác nhau, nhưng cùng cận dưới 14 thì đều đúng.
 - id: min_area_master_bedroom
   applies_to: [nha_pho, biet_thu, nha_vuon]
   scope: floor
@@ -143,19 +191,30 @@
   target: master_bedroom
   value_m2: 14.0
   severity: warning
-  source: 'kinh nghiệm NVG'
+  source: 'đo trên hồ sơ NVG'
+  n: 2
+  n_du_an: 2
+  khoang_quan_sat: '15,0 – 15,7 m² thân phòng (17,7 kể tiền phòng)'
   auto_repair: shrink_adjacent
 
 # ── DIỆN TÍCH TỐI ĐA ──────────────────────────────────────────────────────────
 
+# SỬA 12/09/2026: `target` từ `lightwell` thành `light_well`. Mã cũ KHÔNG TỒN TẠI trong
+# `kb/room_vocabulary.yaml`, nên quy tắc này CHƯA TỪNG CHẠY một lần nào kể từ khi được viết —
+# hỏng im lặng, không lỗi, không cảnh báo. Cùng loại lỗi với `load_bearing_wall_alignment`
+# (nhắm vào một nhóm có `members: []`). Có phép thử canh chiều này từ nay.
+# Ngưỡng 8 m² vẫn là kinh nghiệm chưa đo: hai giếng trời đo được là 1,0 và 2,4 m², quá nhỏ để
+# nói gì về cận trên.
 - id: lightwell_max_area
   applies_to: [nha_pho, biet_thu, nha_vuon]
   scope: floor
   predicate: max_area
-  target: lightwell
+  target: light_well
   value_m2: 8.0
   severity: warning
   source: 'kinh nghiệm NVG'
+  n: 0
+  khoang_quan_sat: 'chưa đo được cận trên (2 mẫu: 1,0 và 2,4 m²)'
   auto_repair: shrink_adjacent
 
 # ── TỶ LỆ HÌNH DẠNG — phòng dài quá so với rộng thì khó dùng ──────────────────
@@ -168,6 +227,7 @@
   value: 2.5
   severity: warning
   source: 'kinh nghiệm NVG'
+  n: 0
   auto_repair: shrink_adjacent
 
 # ── Cạnh nhỏ nhất của các phòng còn lại ────────────────────────────────────────────────
@@ -188,6 +248,7 @@
   value: 4.0
   severity: warning
   source: 'kinh nghiệm NVG'
+  n: 0
   auto_repair: shrink_adjacent
 
 - id: aspect_ratio_max_service
@@ -198,6 +259,7 @@
   value: 3.0
   severity: warning
   source: 'kinh nghiệm NVG'
+  n: 0
   auto_repair: shrink_adjacent
 
 # ── QUAN HỆ VỊ TRÍ giữa các không gian ────────────────────────────────────────
@@ -211,8 +273,10 @@
   kind: adjacent
   severity: warning
   source: 'kinh nghiệm NVG'
+  n: 0
   auto_repair: none
 
+# XÁC NHẬN 12/09/2026: 0 vi phạm trên 2 hồ sơ — không phòng thờ nào dưới hay chung tường WC.
 - id: wc_separate_from_altar_room
   applies_to: [nha_pho, biet_thu, nha_vuon]
   scope: building
@@ -221,7 +285,10 @@
   b: altar_room
   kind: separate
   severity: warning
-  source: 'kinh nghiệm NVG'
+  source: 'đo trên hồ sơ NVG'
+  n: 2
+  n_du_an: 2
+  khoang_quan_sat: '0 vi phạm / 2 hồ sơ'
   auto_repair: move_to_floor
 
 - id: wc_separate_from_kitchen
@@ -233,10 +300,12 @@
   kind: separate
   severity: warning
   source: 'kinh nghiệm NVG'
+  n: 0
   auto_repair: none
 
 # ── ƯU TIÊN TẦNG ──────────────────────────────────────────────────────────────
 
+# XÁC NHẬN 12/09/2026: 2/2 hồ sơ đặt phòng thờ ở tầng cao nhất có người ở.
 - id: altar_room_top_floor
   applies_to: [nha_pho, biet_thu, nha_vuon]
   scope: building
@@ -244,7 +313,10 @@
   target: altar_room
   value: top
   severity: warning
-  source: 'kinh nghiệm NVG'
+  source: 'đo trên hồ sơ NVG'
+  n: 2
+  n_du_an: 2
+  khoang_quan_sat: '2/2 hồ sơ'
   auto_repair: move_to_floor
 
 - id: garage_ground_floor
@@ -255,6 +327,7 @@
   value: ground
   severity: warning
   source: 'kinh nghiệm NVG'
+  n: 0
   auto_repair: move_to_floor
 
 # ── CHIẾU SÁNG VÀ THÔNG GIÓ ───────────────────────────────────────────────────
@@ -266,6 +339,7 @@
   target: kitchen
   severity: warning
   source: 'kinh nghiệm NVG'
+  n: 0
   auto_repair: none
 
 # ── GIÁP MẶT NÀO CỦA LÔ ĐẤT ───────────────────────────────────────────────────
@@ -278,6 +352,7 @@
   face: access
   severity: warning
   source: 'kinh nghiệm NVG'
+  n: 0
   auto_repair: none
 
 - id: outdoor_on_open_face
@@ -288,4 +363,5 @@
   face: open
   severity: warning
   source: 'kinh nghiệm NVG'
+  n: 0
   auto_repair: none

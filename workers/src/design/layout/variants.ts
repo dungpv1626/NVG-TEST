@@ -21,7 +21,7 @@ import type { ComputeBackend } from '../compute-backend';
 import { LAYOUT_VARIANTS, type LayoutVariant } from './intent';
 import { plateFor } from './plate';
 import { spaceLabels } from './labels';
-import { siteFaces, type SiteContextTable } from './site-context';
+import { siteFaces, type SiteContextTable } from '../kb/site-context';
 import { buildArchModel, layoutIntent, solveFloorPlan } from '../workflows/steps';
 import { NO_RULES, summariseFloorPlan, type FloorPlanSummary, type RuleCatalogue } from './summary';
 

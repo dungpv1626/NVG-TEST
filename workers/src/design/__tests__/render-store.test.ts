@@ -175,7 +175,7 @@ describe('Chọn đích lineage mà không nạp payload', () => {
       writable: true,
     });
 
-    const out = await repo.edgeTargets('sha256:plan', 'ai_plan_sheet');
+    const out = await repo.edgeTargets('sha256:plan', 'ai_image_render');
     expect(out.map((row) => row.id)).toEqual(['sha256:b', 'sha256:a']);
     expect(calls).toEqual(['design_artifact_edge', 'design_artifact']);
   });
@@ -200,7 +200,7 @@ describe('Chọn đích lineage mà không nạp payload', () => {
       typeof ArtifactRepository
     >;
     Object.defineProperty(repo, 'db', { value: db, writable: true });
-    expect(await repo.edgeTargets('sha256:plan', 'ai_plan_sheet')).toEqual([]);
+    expect(await repo.edgeTargets('sha256:plan', 'ai_image_render')).toEqual([]);
     expect(calls).toEqual(['design_artifact_edge']);
   });
 });

@@ -1,6 +1,6 @@
 /**
  * Điểm nạp DUY NHẤT của `kb/render_prompts.yaml` vào bản dựng Worker — cùng khuôn với
- * `layout/site-context-data.ts`.
+ * `kb/site-context-data.ts`.
  */
 
 import { load } from 'js-yaml';

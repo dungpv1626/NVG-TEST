@@ -220,3 +220,79 @@ export function clipSegmentByQuad(a: Pt, b: Pt, quad: readonly Pt[], eps = 0): I
   if (enter >= exit) return null;
   return { from: enter, to: exit };
 }
+
+/**
+ * Diện tích CÓ DẤU của một đa giác kín ngầm, cm² — dương khi các điểm quay ngược chiều kim
+ * đồng hồ trong hệ toạ độ của hợp đồng (`x` sang phải, `y` vào sâu).
+ *
+ * Dấu là phần có ích, không phải phụ phẩm: nó cho biết chiều quay, tức pháp tuyến nào là pháp
+ * tuyến NGOÀI của mỗi cạnh (`ai/outline-faces.ts`). Lấy trị tuyệt đối ở nơi gọi khi chỉ cần độ
+ * lớn.
+ */
+export function polygonArea(points: readonly Pt[]): number {
+  let total = 0;
+  for (let i = 0; i < points.length; i += 1) {
+    const a = points[i];
+    const b = points[(i + 1) % points.length];
+    if (!a || !b) continue;
+    total += a[0] * b[1] - b[0] * a[1];
+  }
+  return total / 2;
+}
+
+/** Một ô của lưới nén toạ độ: nằm trong đa giác mà KHÔNG chữ nhật nào phủ. */
+export interface EmptyCell {
+  rect: Rect;
+  /** Cạnh ngắn của ô, cm — thứ phân biệt một khoảng trống thật với khe tường. */
+  thinnestCm: number;
+}
+
+/**
+ * Những ô bên trong `polygon` mà không chữ nhật nào trong `covers` phủ.
+ *
+ * Phép NÉN TOẠ ĐỘ: lấy mọi cạnh của mọi chữ nhật và của hộp bao đa giác làm đường cắt, rồi xét
+ * từng ô của lưới thu được. Trong một lưới như thế, mỗi ô hoặc được phủ trọn hoặc không được
+ * phủ chút nào — nên không cần hình học đa giác tổng quát, và kết quả CHÍNH XÁC chứ không phải
+ * xấp xỉ theo độ mịn của lưới.
+ *
+ * Vì sao trả về từng ô kèm CẠNH NGẮN thay vì một con số tổng: phần chưa phủ của một mặt bằng
+ * đúng đắn gần như toàn bộ là BỀ DÀY TƯỜNG — `rect` của phòng là kích thước lọt lòng, nên khe
+ * giữa hai phòng là một dải rộng 11 cm. Đo trên fixture nhà phố: 10,4 trong 60 m² chưa phủ mà
+ * không có lỗi nào. Một con số tổng vì vậy không phân biệt được «tường» với «lỗ»; cạnh ngắn thì
+ * phân biệt được, vì không bức tường nào dày 60 cm và không phòng nào hẹp hơn thế.
+ */
+export function emptyCells(
+  polygon: readonly Pt[],
+  covers: readonly Rect[],
+  tolerance = 0,
+): EmptyCell[] {
+  const bounds = bboxOfPoints(polygon);
+  const xs = axisCuts(
+    [bounds.x0, bounds.x1, ...covers.flatMap((r) => [r.x0, r.x1])],
+    bounds.x0,
+    bounds.x1,
+  );
+  const ys = axisCuts(
+    [bounds.y0, bounds.y1, ...covers.flatMap((r) => [r.y0, r.y1])],
+    bounds.y0,
+    bounds.y1,
+  );
+
+  const cells: EmptyCell[] = [];
+  for (let i = 0; i + 1 < xs.length; i += 1) {
+    for (let j = 0; j + 1 < ys.length; j += 1) {
+      const rect: Rect = { x0: xs[i]!, y0: ys[j]!, x1: xs[i + 1]!, y1: ys[j + 1]! };
+      const centre = rectCentre(rect);
+      if (!pointInPolygon(centre, polygon, tolerance)) continue;
+      if (covers.some((cover) => rectContainsRect(cover, rect, tolerance))) continue;
+      cells.push({ rect, thinnestCm: Math.min(rectWidth(rect), rectHeight(rect)) });
+    }
+  }
+  return cells;
+}
+
+/** Các đường cắt trong khoảng `[min, max]`, đã sắp và khử trùng. */
+function axisCuts(values: readonly number[], min: number, max: number): number[] {
+  const inside = values.filter((value) => value > min && value < max);
+  return [min, ...[...new Set(inside)].sort((a, b) => a - b), max];
+}

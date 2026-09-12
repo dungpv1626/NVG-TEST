@@ -26,7 +26,8 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Sparkles } from 'lucide-react';
+import { AlertTriangle, Info, Sparkles } from 'lucide-react';
+import { AI_DISCLAIMERS } from '@nvg/shared/design';
 import { Button } from '@/components/ui/button';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Skeleton } from '@/components/ui/states';
@@ -34,10 +35,8 @@ import {
   useAiPlanReview,
   useAiPlanSheet,
   useAiRun,
-  useAiSheetImage,
   useChooseAiPlan,
   useInvalidateAiDesign,
-  useRenderAiSheetImage,
   useStartAiRun,
   type AiDesignState,
   type AiPlanIssue,
@@ -130,17 +129,6 @@ export function AiPlanStep({
     ? level
     : (levels[0]?.level ?? 1);
   const sheet = useAiPlanSheet(projectId, selected, currentLevel);
-  // Đổi số này sau mỗi lần vẽ xong để nạp lại tấm mới — cùng địa chỉ, khác nội dung, nên bộ đệm
-  // của trình duyệt không tự biết.
-  const [sheetReload, setSheetReload] = useState(0);
-  const renderSheet = useRenderAiSheetImage();
-  const sheetImage = useAiSheetImage(
-    projectId,
-    selected,
-    currentLevel,
-    review.data?.sheetImageWatermark ?? '',
-    sheetReload,
-  );
 
   const onRun = () => {
     if (!ai.choice.route) return;
@@ -296,22 +284,6 @@ export function AiPlanStep({
           level={currentLevel}
           onLevel={setLevel}
           sheet={sheet}
-          sheetImage={sheetImage}
-          imageRoute={imageAi.selected}
-          rendering={renderSheet.isPending}
-          renderError={renderSheet.isError ? toUserMessage(renderSheet.error) : null}
-          onRenderSheet={() => {
-            if (!imageAi.choice.route || !review.data) return;
-            void renderSheet
-              .mutateAsync({
-                projectId,
-                artifactId: review.data.artifactId,
-                level: currentLevel,
-                route: imageAi.choice.route,
-              })
-              .then(() => setSheetReload((value) => value + 1))
-              .catch(() => undefined);
-          }}
           readOnly={readOnly}
           isHead={review.data.artifactId === state.planHeadArtifactId}
           choosing={choose.isPending}
@@ -332,11 +304,6 @@ function PlanDetail({
   level,
   onLevel,
   sheet,
-  sheetImage,
-  imageRoute,
-  rendering,
-  renderError,
-  onRenderSheet,
   readOnly,
   isHead,
   choosing,
@@ -347,11 +314,6 @@ function PlanDetail({
   level: number;
   onLevel: (level: number) => void;
   sheet: ReturnType<typeof useAiPlanSheet>;
-  sheetImage: ReturnType<typeof useAiSheetImage>;
-  imageRoute: AiModelOption | null;
-  rendering: boolean;
-  renderError: string | null;
-  onRenderSheet: () => void;
   readOnly: boolean;
   isHead: boolean;
   choosing: boolean;
@@ -360,10 +322,6 @@ function PlanDetail({
 }): React.ReactElement {
   const current = review.levels.find((item) => item.level === level) ?? review.levels[0];
   const levelOptions = review.levels.map((item) => String(item.level));
-  // Tờ AI là bản MẶC ĐỊNH — đó là điều T21 đổi. Bản vector không biến mất, nó tụt xuống làm bản
-  // đối chiếu kích thước.
-  const [source, setSource] = useState<'ai' | 'vector'>('ai');
-  const canDraw = current?.sheetImage.drawable ?? false;
 
   return (
     <>
@@ -383,12 +341,18 @@ function PlanDetail({
         <p className="mt-2">{review.rationale}</p>
         {review.wallsDerived && (
           <p className="mt-3 flex items-start gap-2">
-            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-status-pending" aria-hidden />
-            {/* T19 — câu này phải có mặt ở CẢ tờ vẽ và màn hình. Tờ vẽ đi ra ngoài (in, gửi
-                khách) còn màn hình thì không, nên một chỗ là không đủ. */}
+            <Info className="mt-0.5 size-4 shrink-0 text-fg-muted" aria-hidden />
+            {/* T23 — câu này phải có mặt ở CẢ tờ vẽ và màn hình. Tờ vẽ đi ra ngoài (in, gửi
+                khách) còn màn hình thì không, nên một chỗ là không đủ.
+
+                Biểu tượng đổi từ tam giác cảnh báo sang chữ «i» ngày 12/09/2026: trước T23 đây là
+                một lần cứu hộ, tức chuyện bất thường; nay nó là cách hệ thống làm việc ở mọi lượt.
+                Để nguyên tam giác vàng thì mọi tờ vẽ đều trông như có vấn đề, và người dùng học
+                cách bỏ qua nó — lúc ấy cảnh báo thật cũng mất tác dụng. */}
             <span>
-              Tường trên tờ vẽ do <b>chương trình suy từ chữ nhật phòng</b>, không phải của AI: sau
-              một lượt sửa mà tường khai vẫn không bao kín phòng. Bố cục vẫn là của AI.
+              <b>AI xếp phòng, chương trình dựng tường.</b> Vị trí tường suy từ chữ nhật phòng và bề
+              dày lấy theo quy ước cấu tạo của Nhà Việt Group, nên đường nét trên tờ vẽ là của
+              chương trình; bố cục là của AI.
             </span>
           </p>
         )}
@@ -397,24 +361,13 @@ function PlanDetail({
             <Button variant="primary" onClick={onChoose} disabled={choosing || isHead}>
               {isHead ? 'Đang hiệu lực' : choosing ? 'Đang lưu…' : 'Chọn phương án này'}
             </Button>
-            {sheetImage.url && (
-              // Trỏ vào chuỗi ĐÃ đóng dấu, không phải blob gốc: ảnh AI rời khỏi máy mà không
-              // mang nhãn là đúng thứ CLAUDE.md 8.7 cấm.
-              <a
-                className="underline"
-                href={sheetImage.url}
-                download={`mat-bang-ai-${review.variantId}-tang-${level}.png`}
-              >
-                Tải tờ AI tầng {level} (PNG)
-              </a>
-            )}
             {sheet.url && (
               <a
                 className="underline"
                 href={sheet.url}
                 download={`mat-bang-${review.variantId}-tang-${level}.svg`}
               >
-                Tải bản đối chiếu tầng {level} (SVG)
+                Tải tờ mặt bằng tầng {level} (SVG)
               </a>
             )}
           </div>
@@ -425,9 +378,7 @@ function PlanDetail({
       <Panel
         title="Tờ mặt bằng"
         aside={
-          // Chip tỷ lệ CHỈ hiện ở bản vector. Tờ ảnh không có tỷ lệ nào — in «1:60» lên nó là
-          // nói dối, và là kiểu nói dối một kiến trúc sư sẽ tin.
-          source === 'vector' && sheet.scale ? (
+          sheet.scale ? (
             <Chip tone="mute">
               Tỷ lệ 1:{sheet.scale} · {sheet.orientation === 'portrait' ? 'tờ dọc' : 'tờ ngang'}
             </Chip>
@@ -445,101 +396,31 @@ function PlanDetail({
               }
             />
           )}
-          <SegmentedControl
-            options={['ai', 'vector']}
-            value={source}
-            onChange={(value) => setSource(value as 'ai' | 'vector')}
-            getLabel={(value) => (value === 'ai' ? 'Tờ AI' : 'Bản đối chiếu kích thước')}
-          />
         </div>
 
-        {source === 'ai' ? (
-          <>
-            {sheetImage.loading && <Skeleton className="h-96 w-full" />}
-            {sheetImage.url && (
-              // `<img>` chứ không phải nhúng thẳng: xem ghi chú đầu tệp. Chuỗi này là ảnh ĐÃ
-              // đóng dấu, nên nút tải về dùng đúng nó.
-              <img
-                src={sheetImage.url}
-                alt={`Tờ mặt bằng ${current?.name ?? `tầng ${level}`} — do mô hình ảnh dựng`}
-                className="w-full rounded-md border border-tk-line bg-white"
-              />
-            )}
-            {!sheetImage.loading && !sheetImage.url && (
-              // Trạng thái rỗng có HÀNH ĐỘNG, không để trang trắng (CGD 4.4).
-              <div className="rounded-md border border-dashed border-tk-line p-6 text-center">
-                <p className="text-fg-subtle">
-                  {canDraw
-                    ? `Chưa vẽ tờ ${current?.name ?? `tầng ${level}`} bằng AI.`
-                    : 'Phương án này chưa có mô tả tờ vẽ nên không dựng được ảnh. Xem bản đối chiếu kích thước, hoặc chạy lại bước mặt bằng.'}
-                </p>
-                {!readOnly && canDraw && (
-                  <Button
-                    className="mt-3"
-                    variant="primary"
-                    onClick={onRenderSheet}
-                    disabled={rendering || !imageRoute}
-                  >
-                    {rendering ? 'Đang vẽ…' : 'Vẽ tờ này bằng AI'}
-                  </Button>
-                )}
-                {!readOnly && canDraw && (
-                  <p className="mt-2 text-fg-subtle">
-                    {/* Giá hiện TRƯỚC khi bấm. Chưa khai giá thì nói «Chưa đủ dữ liệu», không
-                        hiện 0 — hiện 0 đọc như miễn phí (CLAUDE.md 5.2). */}
-                    {!imageRoute
-                      ? 'Chưa chọn model vẽ ảnh.'
-                      : imageRoute.imageUsd === null
-                        ? `${imageRoute.label} — chi phí một tờ: Chưa đủ dữ liệu`
-                        : `${imageRoute.label} — khoảng ${imageRoute.imageUsd} USD một tờ`}
-                  </p>
-                )}
-              </div>
-            )}
-            {renderError && <p className="mt-2 text-status-overdue">{renderError}</p>}
-
-            {/* Lớp bảo vệ thứ HAI, luôn có mặt trong trang. Nhãn in lên pixel có thể không
-                thành (canvas hỏng, trình duyệt không giải mã được ảnh), còn dòng này thì không
-                phụ thuộc gì cả. */}
-            <p className="mt-3 flex gap-2 text-fg-subtle">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-status-overdue" />
-              <span>{review.sheetImageDisclaimer}</span>
-            </p>
-            {sheetImage.url && !sheetImage.stamped && (
-              <p className="mt-1 text-status-overdue">
-                Không in được nhãn cảnh báo lên ảnh trên trình duyệt này — tấm ảnh tải về sẽ KHÔNG
-                mang nhãn.
-              </p>
-            )}
-          </>
-        ) : (
-          <>
-            {sheet.loading && <Skeleton className="h-96 w-full" />}
-            {sheet.error && <p className="text-status-overdue">{sheet.error}</p>}
-            {sheet.url && (
-              // `<img>` chứ không phải SVG nhúng: xem ghi chú đầu tệp.
-              <img
-                src={sheet.url}
-                alt={`Tờ mặt bằng ${current?.name ?? `tầng ${level}`} — bản đối chiếu kích thước`}
-                className="w-full rounded-md border border-tk-line bg-white"
-              />
-            )}
-            <p className="mt-3 text-fg-subtle">
-              Bản dựng từ chính toạ độ mô hình khai, nên kích thước trên đây đo được. Đây là chỗ đối
-              chiếu khi tờ AI và bảng diện tích nói khác nhau.
-            </p>
-            {(current?.notes.length ?? 0) > 0 && (
-              <ul className="mt-3 space-y-1">
-                {/* Chỗ bộ vẽ tự xử lý (kẹp lỗ mở quá khổ, bỏ nhãn phòng quá nhỏ, hạ tỷ lệ). Không
-                    phải lỗi, nhưng im lặng thì người đọc tưởng tờ vẽ nói đủ mọi thứ trong dữ liệu. */}
-                {current!.notes.map((note) => (
-                  <li key={note.code} className="text-fg-subtle">
-                    {note.message}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </>
+        {sheet.loading && <Skeleton className="h-96 w-full" />}
+        {sheet.error && <p className="text-status-overdue">{sheet.error}</p>}
+        {sheet.url && (
+          // `<img>` chứ không phải SVG nhúng: xem ghi chú đầu tệp.
+          <img
+            src={sheet.url}
+            alt={`Tờ mặt bằng ${current?.name ?? `tầng ${level}`}`}
+            className="w-full rounded-md border border-tk-line bg-white"
+          />
+        )}
+        <p className="mt-3 text-fg-subtle">
+          Tờ vẽ dựng từ chính toạ độ mô hình khai, nên mọi kích thước trên đây đo được.
+        </p>
+        {(current?.notes.length ?? 0) > 0 && (
+          <ul className="mt-3 space-y-1">
+            {/* Chỗ bộ vẽ tự xử lý (kẹp lỗ mở quá khổ, bỏ nhãn phòng quá nhỏ, hạ tỷ lệ). Không
+                phải lỗi, nhưng im lặng thì người đọc tưởng tờ vẽ nói đủ mọi thứ trong dữ liệu. */}
+            {current!.notes.map((note) => (
+              <li key={note.code} className="text-fg-subtle">
+                {note.message}
+              </li>
+            ))}
+          </ul>
         )}
       </Panel>
 
@@ -557,11 +438,16 @@ function PlanDetail({
         empty="Không có chỗ nào đáng ngờ."
       />
 
-      <Panel title="Đối chiếu quy chuẩn">
-        {!review.rulePacks.standards && !review.rulePacks.experience ? (
+      <Panel title="Đối chiếu thói quen thiết kế">
+        {/*
+         * Tiêu đề KHÔNG còn là «Đối chiếu quy chuẩn» (T30, 12/09/2026): nhánh AI không kiểm quy
+         * chuẩn nào nữa, nên để nguyên chữ ấy là nói sai ngay trên nhãn panel. Câu `noCodeCheck`
+         * ở dưới nói rõ điều đó, và nó do mã chèn — không tắt được từ giao diện (8.7).
+         */}
+        {!review.rulePacks.experience ? (
           <p className="text-fg-subtle">
-            Chưa tích gói quy tắc nào, nên không đối chiếu gì. Tích «Quy chuẩn quốc gia» hoặc «Kinh
-            nghiệm nghề» ở trên để xem chỗ lệch.
+            Chưa tích gói quy tắc nào, nên không đối chiếu gì. Tích «Kinh nghiệm nghề Nhà Việt
+            Group» ở bước trước để xem chỗ lệch.
           </p>
         ) : review.warnings.length === 0 ? (
           <p>Không có cảnh báo trong số quy tắc đo được trên mặt bằng.</p>
@@ -581,14 +467,14 @@ function PlanDetail({
             ))}
           </ul>
         )}
-        {(review.rulePacks.standards || review.rulePacks.experience) && (
+        {review.rulePacks.experience && (
           <p className="mt-3 text-fg-subtle">
             Đã đối chiếu {review.checkedRules.length} quy tắc.{' '}
             <b>{review.uncheckedRules.length} quy tắc chưa đối chiếu được</b> vì chúng cần thứ mặt
-            bằng chưa mô tả — khoảng lùi thực tế, chiều cao thông thuỷ, lối thoát hiểm. Danh sách
-            cảnh báo rỗng không có nghĩa là đạt quy chuẩn.
+            bằng chưa mô tả — khoảng lùi thực tế, chiều cao thông thuỷ, lối thoát hiểm.
           </p>
         )}
+        <p className="mt-3 font-medium">{AI_DISCLAIMERS.noCodeCheck}</p>
       </Panel>
     </>
   );

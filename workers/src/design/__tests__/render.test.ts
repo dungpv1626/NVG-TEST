@@ -18,7 +18,7 @@ import {
   renderFromMassing,
   type RenderImageClient,
 } from '../render/render';
-import { parseSiteContext, siteFaces } from '../layout/site-context';
+import { parseSiteContext, siteFaces } from '../kb/site-context';
 
 const prompts = parseRenderPrompts(
   load(

@@ -20,6 +20,7 @@
  *  · Không gửi `temperature` trừ khi lớp gọi khai: mô hình suy luận từ chối tham số này.
  */
 
+import { classifyHttpFault, classifyNetworkFault } from './provider-faults';
 import type { DataClass } from '@nvg/shared/design';
 import { LlmCallFailed, type GenerateImagePart } from './gemini';
 import { ALLOWED_IMAGE_INPUT, decodeBase64, extensionFor, sniffMime } from './image-bytes';
@@ -52,7 +53,11 @@ interface ImagesReply {
   error?: { message?: string };
 }
 
-const TEXT_TIMEOUT_MS = 180_000;
+// Hạn chờ lời gọi VĂN BẢN. Nâng từ 180 lên 300 giây ngày 12/09/2026: việc thật đo được
+// 154,7 s và 163,9 s, tức biên chỉ 10% — và lượt `adbc2867` huỷ ở đúng giây 180 hai lần liền.
+// Trần trên là hạn của BƯỚC Workflow (`MODEL_STEP.timeout`, xem `workflows/ai-design.ts`): một
+// lượt 300 s cộng một lượt thử lại vẫn phải nằm trong hạn ấy.
+const TEXT_TIMEOUT_MS = 300_000;
 const IMAGE_TIMEOUT_MS = 240_000;
 
 export class OpenAiClient implements TextModelClient, AiImageClient {
@@ -229,18 +234,22 @@ export class OpenAiClient implements TextModelClient, AiImageClient {
         signal: AbortSignal.timeout(init.timeoutMs),
       });
     } catch (error) {
+      const fault = classifyNetworkFault(error, init.what);
       throw new LlmCallFailed(
         `Không gọi được ${init.what}: ${error instanceof Error ? error.message : String(error)}`,
-        true,
+        fault.retryable,
+        undefined,
+        fault.userMessage,
       );
     }
     if (!res.ok) {
       const detail = await res.text().catch(() => '');
-      const retryable = res.status === 429 || res.status >= 500;
+      const fault = classifyHttpFault(res.status, detail);
       throw new LlmCallFailed(
         `${init.what[0]!.toUpperCase()}${init.what.slice(1)} trả lỗi ${res.status}. ${detail.slice(0, 300)}`,
-        retryable,
+        fault.retryable,
         res.status,
+        fault.userMessage,
       );
     }
     return (await res.json()) as T;

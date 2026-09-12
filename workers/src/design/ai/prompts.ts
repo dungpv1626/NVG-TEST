@@ -37,23 +37,6 @@ export interface AiPrompts {
      */
     strategies: PlanStrategy[];
   };
-  /**
-   * Tờ mặt bằng công năng do MÔ HÌNH ẢNH vẽ (T21, 10/09/2026).
-   *
-   * Ba khoá vì ba chủ sở hữu khác nhau, không phải vì gọn: `system` là phong cách tờ vẽ của
-   * NVG và không hồ sơ nào đổi được; `prompt` là khuôn Worker điền số liệu THẬT lấy từ chính
-   * artifact; `watermark` là câu in đè lên ảnh ở trình duyệt (CLAUDE.md 8.7).
-   */
-  sheetImage: {
-    system: string;
-    /**
-     * Khuôn lời dẫn. Bốn chỗ điền, và `{sheet_prompt}` là chỗ QUAN TRỌNG nhất — nó nhận đoạn
-     * mô tả do mô hình văn bản khai. Thiếu nó thì cả lượt gọi mất phần nội dung riêng của tầng
-     * mà vẫn tính tiền, nên chỗ này được kiểm ngay lúc nạp.
-     */
-    prompt: string;
-    watermark: string;
-  };
 }
 
 /** Một ý đồ bố cục: mã phương án, nhãn tiếng Việt cho màn hình, câu tiếng Anh cho lời dẫn. */
@@ -93,42 +76,11 @@ export function parseAiPrompts(raw: unknown): AiPrompts {
     throw new AiPromptsError('`floor_plan.repair` phải có chỗ điền `{issues}`.');
   }
   const strategies = parseStrategies((floorPlan as { strategies?: unknown }).strategies);
-  const sheetImage = parseSheetImage((doc as { sheet_image?: unknown }).sheet_image);
   return {
     version: doc.version,
     program: { system: program.system, repair: program.repair },
     floorPlan: { system: floorPlan.system, repair: floorPlan.repair, strategies },
-    sheetImage,
   };
-}
-
-/**
- * Khối lời dẫn cho mô hình ảnh — BẮT BUỘC, không phải tuỳ chọn.
- *
- * Lời dẫn là tệp nằm trong kho, không phải cấu hình lúc chạy: thiếu nó là lỗi triển khai, và
- * lỗi triển khai phải nổ lúc nạp chứ không phải lúc một kiến trúc sư bấm nút vẽ.
- */
-function parseSheetImage(raw: unknown): AiPrompts['sheetImage'] {
-  const block = raw as Partial<AiPrompts['sheetImage']> | undefined;
-  if (
-    !block ||
-    typeof block.system !== 'string' ||
-    typeof block.prompt !== 'string' ||
-    typeof block.watermark !== 'string'
-  ) {
-    throw new AiPromptsError(
-      'kb/ai_design_prompts.yaml thiếu `sheet_image.system`, `sheet_image.prompt` hoặc `sheet_image.watermark`.',
-    );
-  }
-  // Không có chỗ điền thì đoạn mô tả của mô hình văn bản rơi mất và tờ ảnh ra một ngôi nhà
-  // chung chung — vẫn tính tiền, vẫn trông như một tờ bản vẽ, và không có gì báo.
-  if (!block.prompt.includes('{sheet_prompt}')) {
-    throw new AiPromptsError('`sheet_image.prompt` phải có chỗ điền `{sheet_prompt}`.');
-  }
-  if (!block.watermark.trim()) {
-    throw new AiPromptsError('`sheet_image.watermark` không được rỗng — đây là nhãn bắt buộc.');
-  }
-  return { system: block.system, prompt: block.prompt, watermark: block.watermark };
 }
 
 /**

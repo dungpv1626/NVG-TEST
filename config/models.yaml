@@ -252,6 +252,17 @@ routes:
     # ⚠️ Đơn giá còn là giá của bậc 2.5 Pro — chưa đối chiếu bảng giá bản 3.1 (Q-36). Sai đơn giá
     # chỉ làm lệch thẻ chi phí, không ảnh hưởng lời gọi.
     pricing: { input_per_1m_usd: 1.25, output_per_1m_usd: 10 }
+    # Mức SUY NGHĨ — xem `thinking_level` ở workers/src/design/llm/router.ts.
+    # Đo 11/09/2026 trên một lượt xếp mặt bằng THẬT: để mặc định (`high`) thì token nghĩ ăn hết
+    # `maxOutputTokens` (31.986 trên ngân sách 32.000) và JSON bị cắt ở 2.113 ký tự — hỏng, mà
+    # vẫn tính đủ tiền. Nâng lên `medium` khi cần bố cục sâu hơn, nhưng phải nâng cả ngân sách
+    # token cùng lúc, nếu không sẽ cắt lại y hệt.
+    thinking_level: low
+    # ⚠️ ĐANG ĐO (11/09/2026) — `0` nghĩa là KHÔNG đặt trần, để model dùng mức tối đa của nó.
+    # Đặt một con số đoán rồi đo là đo chính con số mình đoán: lượt hỏng hôm trước sinh đúng
+    # 31.986 token trên trần 32.000, tức là nó ĐỤNG TRẦN chứ không phải cần đúng chừng ấy.
+    # Sau khi có số thật thì thay `0` bằng số đo được cộng biên an toàn.
+    max_output_tokens: 0
 
   ai_text_gemini_fast:
     provider: gemini_paid
@@ -260,6 +271,12 @@ routes:
     max_data_class: 2
     enabled: true
     purpose: Nhánh AI — bậc tiết kiệm cho đầu bài đơn giản hoặc khi thử nhiều lượt.
+    # Mức SUY NGHĨ — xem `thinking_level` ở workers/src/design/llm/router.ts.
+    # Đo 11/09/2026 trên một lượt xếp mặt bằng THẬT: để mặc định (`high`) thì token nghĩ ăn hết
+    # `maxOutputTokens` (31.986 trên ngân sách 32.000) và JSON bị cắt ở 2.113 ký tự — hỏng, mà
+    # vẫn tính đủ tiền. Nâng lên `medium` khi cần bố cục sâu hơn, nhưng phải nâng cả ngân sách
+    # token cùng lúc, nếu không sẽ cắt lại y hệt.
+    thinking_level: low
 
   ai_text_anthropic:
     provider: anthropic

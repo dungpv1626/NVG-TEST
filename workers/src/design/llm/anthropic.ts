@@ -17,6 +17,7 @@
  *  · `usage.input_tokens/output_tokens` luôn có.
  */
 
+import { classifyHttpFault, classifyNetworkFault } from './provider-faults';
 import type { DataClass } from '@nvg/shared/design';
 import { LlmCallFailed } from './gemini';
 import type { ModelRouter, ResolvedRoute } from './router';
@@ -30,7 +31,9 @@ import {
 
 /** Phiên bản API — dữ liệu của giao thức, không phải tên mô hình; đổi hiếm và có chủ ý. */
 const ANTHROPIC_VERSION = '2023-06-01';
-const TIMEOUT_MS = 180_000;
+// Nâng từ 180 lên 300 giây ngày 12/09/2026, cùng lý do như `openai.ts`: biên 10% trên việc
+// thật là quá sát, và một lượt huỷ vẫn bị nhà cung cấp tính tiền phần đã sinh.
+const TIMEOUT_MS = 300_000;
 
 interface MessagesReply {
   content?: { type?: string; text?: string }[];
@@ -124,19 +127,25 @@ export class AnthropicClient implements TextModelClient {
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
     } catch (error) {
+      const fault = classifyNetworkFault(error, 'mô hình ngôn ngữ');
       throw new LlmCallFailed(
         `Không gọi được mô hình ngôn ngữ: ${error instanceof Error ? error.message : String(error)}`,
-        true,
+        fault.retryable,
+        undefined,
+        fault.userMessage,
       );
     }
     if (!res.ok) {
       const detail = await res.text().catch(() => '');
-      // 429 (hết hạn mức tức thời) và 529 (quá tải) cùng 5xx đáng thử lại; 4xx còn lại thì không.
-      const retryable = res.status === 429 || res.status >= 500;
+      // Phân loại dùng chung — xem `provider-faults.ts`. 529 (quá tải) rơi vào nhánh 5xx nên vẫn
+      // đáng thử lại; còn 429 thì phải đọc THÂN phản hồi mới biết là «gọi quá nhanh» hay «hết
+      // tiền» — Anthropic báo hết tiền bằng câu «credit balance is too low», cũng mã 429.
+      const fault = classifyHttpFault(res.status, detail);
       throw new LlmCallFailed(
         `Mô hình ngôn ngữ trả lỗi ${res.status}. ${detail.slice(0, 300)}`,
-        retryable,
+        fault.retryable,
         res.status,
+        fault.userMessage,
       );
     }
     return (await res.json()) as MessagesReply;

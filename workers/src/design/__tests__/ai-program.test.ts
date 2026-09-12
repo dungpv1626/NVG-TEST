@@ -443,7 +443,13 @@ describe('Cảnh báo trên diện tích — đo bằng ĐÚNG gói kỹ sư đ�
     expect(review(small, { standards: true, experience: false }).warnings).toEqual([]);
     const withExperience = review(small, { standards: false, experience: true });
     expect(withExperience.warnings).toHaveLength(1);
-    expect(withExperience.warnings[0]!.source).toMatch(/kinh nghiệm/i);
+    // Khẳng định điều THẬT SỰ quan trọng: cảnh báo chỉ tên NVG, và KHÔNG nhắc một văn bản nào.
+    // Bản trước khớp chuỗi `/kinh nghiệm/`, nên nó đỏ ngày 12/09/2026 khi nguồn của các quy tắc
+    // đã đo được đổi thành `đo trên hồ sơ NVG` — một đổi tên vô hại làm đỏ một phép thử đúng.
+    // Người đọc màn hình cần biết «đây là thói quen của chúng ta hay là luật», chứ không cần
+    // biết câu ấy viết bằng đúng hai chữ nào.
+    expect(withExperience.warnings[0]!.source).toMatch(/NVG/);
+    expect(withExperience.warnings[0]!.source).not.toMatch(/QCVN|TCVN/);
   });
 
   it('phòng dưới diện tích tối thiểu sinh cảnh báo có nguồn văn bản', () => {

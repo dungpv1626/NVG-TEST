@@ -41,9 +41,9 @@ import type { DigitiseParams, DigitiseSource } from './workflows/digitise-steps'
 import { extractSiteBoundary } from './site/extract-boundary';
 import { describeSite, parseImageDataUrl, renderFromMassing } from './render/render';
 import type { RenderSite } from './render/render';
-import { siteFaces } from './layout/site-context';
+import { siteFaces } from './kb/site-context';
 import { renderPrompts } from './render/prompts-data';
-import { siteContextTable } from './layout/site-context-data';
+import { siteContextTable } from './kb/site-context-data';
 import { roomGroups } from './kb/vocabulary';
 import { spaceLabels } from './layout/labels';
 import {

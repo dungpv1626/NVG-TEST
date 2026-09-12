@@ -1,0 +1,291 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nvg.vn/contracts/ai-plan-rooms.schema.json",
+  "title": "AiPlanRooms",
+  "description": "Mặt bằng do mô hình ngôn ngữ khai: PHÒNG và LỖ MỞ TRÊN CẠNH PHÒNG. Mô hình KHÔNG khai tường — chương trình suy tường từ chữ nhật phòng.\n\nĐƠN VỊ: xăng-ti-mét NGUYÊN. Gốc toạ độ ở góc TRƯỚC-TRÁI lô đất, `x` sang phải dọc mặt tiền, `y` vào sâu.\n\nKHÔNG khai: bề dày tường, chuỗi kích thước, hướng bắc, mã phương án, toạ độ nội thất. Chương trình suy tất cả từ chữ nhật phòng và từ `kb/construction_norms.yaml`.",
+  "$comment": "Quyết định T23 (12/09/2026). Thay phần KHAI TƯỜNG của T15: mô hình vẫn khai toàn bộ nội dung bản vẽ dạng dữ liệu, nhưng thôi khai tường.\n\nVì sao tồn tại một hợp đồng RIÊNG thay vì lược `ai-floor-plan` như sáu trường Worker điền: lỗ mở ở đây neo vào CẠNH PHÒNG (`room` + `edge` + `at`), còn trong artifact chúng neo vào ĐOẠN TƯỜNG (`wall` + `at`). Đó là hai hình dạng khác nhau, không phải một hình dạng bị cắt bớt — nên diễn đạt bằng một phép xoá trường là nói sai. Phần TRÙNG giữa hai hợp đồng (`rooms`, `stairs`, `voids`, `rect`, `point`) có phép thử đối chiếu canh để hai bản không lệch: `contracts-parity.test.ts`.\n\nBa lý do bỏ việc khai tường, đo ngày 12/09/2026:\n\n1. TIỀN. Nhánh `walls` + neo lỗ mở theo tường chiếm ~4.710 ký tự lược đồ gửi đi MỖI LƯỢT, và phần lớn 13.247 token ĐẦU RA của một lượt `plan` là từng đoạn tường kèm bề dày — mà token đầu ra đắt gấp 4–8 lần token đầu vào.\n\n2. SÁU PHÉP KIỂM CHẶN tồn tại CHỈ VÌ mô hình khai tường: `wall_duplicate_id`, `wall_degenerate`, `opening_wall_missing`, `opening_outside_wall`, `window_on_partition`, `room_edge_uncovered`. Phép cuối là chỗ vỡ rõ nhất — nó bắt đúng lúc tường mô hình khai không trùng phòng mô hình khai, tức mô hình tự mâu thuẫn với chính nó.\n\n3. T19 đã đi nửa đường từ 09/09/2026: tường khai sai sau một lượt sửa thì chương trình suy tường từ phòng (`draw/derive-walls.ts`). Nửa còn lại là thôi hỏi.\n\nGiới hạn đã biết và chấp nhận: không diễn đạt được một bức vách KHÔNG phải ranh giới giữa hai phòng (vách lửng, vách trang trí). Ở bước thiết kế sơ bộ thì không mất gì; hồ sơ kỹ thuật là việc của kỹ sư sau khi xuất DXF (T33).\n\nNới điểm 2 của CLAUDE.md 8.2 KHÔNG rộng thêm: mô hình vẫn khai chữ nhật đúng như trước, chỉ bớt việc.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["variant_label", "levels", "rationale"],
+  "properties": {
+    "variant_label": {
+      "type": "string",
+      "maxLength": 120,
+      "description": "Tên phương án bằng tiếng Việt, mô tả CẤU TRÚC («Lõi thang giữa, bếp thông phòng ăn»), không phải số."
+    },
+    "levels": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 12,
+      "items": {
+        "$ref": "#/$defs/level"
+      }
+    },
+    "rationale": {
+      "type": "string",
+      "maxLength": 1500,
+      "description": "Vì sao bố cục như vậy, tiếng Việt, 2–5 câu."
+    }
+  },
+  "$defs": {
+    "space_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$"
+    },
+    "elem_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$",
+      "maxLength": 24
+    },
+    "cm": {
+      "type": "integer",
+      "description": "Xăng-ti-mét, số nguyên. Gốc ở góc trước-trái lô đất, x sang phải, y vào sâu.",
+      "$comment": "Hợp đồng artifact (`ai-floor-plan`) cho phép lưới NỬA centimet vì tim một bức vách dày 11 cm giữa hai phòng có mặt trong ở toạ độ nguyên thì rơi vào x,5. Ở đây KHÔNG cần: mô hình chỉ khai mặt trong của phòng, còn tim tường là việc của `draw/derive-walls.ts`. Ràng buộc chặt hơn thì lược đồ ngắn hơn và không có lựa chọn nào để mô hình chọn sai."
+    },
+    "point": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "$ref": "#/$defs/cm"
+      },
+      "description": "[x, y] cm."
+    },
+    "rect": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "$ref": "#/$defs/cm"
+      },
+      "description": "[x0, y0, x1, y1] cm, với x1 > x0 và y1 > y0."
+    },
+    "edge": {
+      "type": "string",
+      "enum": ["front", "back", "left", "right"],
+      "description": "Cạnh của chữ nhật phòng: front = cạnh y nhỏ · back = cạnh y lớn · left = cạnh x nhỏ · right = cạnh x lớn."
+    },
+    "level": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level", "name", "h", "outline", "rooms"],
+      "properties": {
+        "level": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Số tầng, 1 là tầng trệt."
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 40,
+          "description": "Tên tầng in trên tờ vẽ, tiếng Việt: «Tầng 1», «Tầng lửng», «Tầng mái»."
+        },
+        "h": {
+          "$ref": "#/$defs/cm",
+          "description": "Chiều cao tầng (sàn tới sàn), cm."
+        },
+        "outline": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 24,
+          "items": {
+            "$ref": "#/$defs/point"
+          },
+          "description": "Hình bao khối xây của tầng, đa giác kín ngầm (điểm cuối tự nối điểm đầu). Nằm trong hình bao xây được mà lời dẫn đưa ra."
+        },
+        "rooms": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 60,
+          "items": {
+            "$ref": "#/$defs/room"
+          },
+          "description": "Phòng phải LẤP KÍN hình bao: tổng diện tích phòng + ô thang + ô trống bằng diện tích hình bao, trừ bề dày tường. Muốn để trống thì khai một ô trống."
+        },
+        "doors": {
+          "type": "array",
+          "maxItems": 120,
+          "items": {
+            "$ref": "#/$defs/door"
+          }
+        },
+        "windows": {
+          "type": "array",
+          "maxItems": 160,
+          "items": {
+            "$ref": "#/$defs/window"
+          }
+        },
+        "stairs": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+            "$ref": "#/$defs/stair"
+          }
+        },
+        "voids": {
+          "type": "array",
+          "maxItems": 12,
+          "items": {
+            "$ref": "#/$defs/void_space"
+          }
+        }
+      }
+    },
+    "room": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "rect", "area_m2"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/space_id",
+          "description": "Mã LẤY TỪ chương trình không gian. Không đặt mã mới, không bỏ phòng nào."
+        },
+        "type": {
+          "$ref": "#/$defs/space_id"
+        },
+        "rect": {
+          "$ref": "#/$defs/rect",
+          "description": "Kích thước LỌT LÒNG của phòng — mặt trong tường tới mặt trong tường. Hai phòng cạnh nhau để cách nhau đúng bề dày vách (kb/construction_norms.yaml)."
+        },
+        "area_m2": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Diện tích phòng, m². Phải khớp chữ nhật; lệch quá 10% hoặc 1 m² là lỗi phải sửa."
+        },
+        "also": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+            "$ref": "#/$defs/space_id"
+          },
+          "description": "Mã phòng KHÁC mà chính chữ nhật này cũng phục vụ — khai khi chương trình không gian có hai phòng mà bố cục gộp làm một không gian mở (bếp + ăn, khách + thờ)."
+        },
+        "label": {
+          "type": ["string", "null"],
+          "maxLength": 40,
+          "description": "Chữ in trong phòng, tiếng Việt. Rỗng thì chương trình tự lấy nhãn theo mã phòng — chỉ khai khi cần tên khác («Phòng ngủ ông bà»). Hai phòng trên cùng một tầng không được cùng nhãn."
+        }
+      }
+    },
+    "door": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "room", "edge", "at", "w", "kind"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/elem_id"
+        },
+        "room": {
+          "$ref": "#/$defs/space_id",
+          "description": "Mã phòng có cạnh chứa cửa này."
+        },
+        "edge": {
+          "$ref": "#/$defs/edge"
+        },
+        "at": {
+          "$ref": "#/$defs/cm",
+          "description": "Khoảng cách từ ĐẦU cạnh tới mép gần của lỗ cửa, cm. Đầu cạnh là góc x nhỏ với front/back, góc y nhỏ với left/right."
+        },
+        "w": {
+          "$ref": "#/$defs/cm",
+          "description": "Bề rộng lỗ cửa thông thuỷ, cm."
+        },
+        "hinge": {
+          "type": ["string", "null"],
+          "enum": ["near", "far", null],
+          "description": "Bản lề ở đầu GẦN hay đầu XA của cạnh (gần = phía đầu cạnh, nơi đo `at`). Rỗng với cửa trượt, cổng, cửa để xe và ô thông không cánh."
+        },
+        "swing": {
+          "type": ["string", "null"],
+          "enum": ["in", "out", null],
+          "description": "Cánh quét VÀO TRONG phòng hay RA NGOÀI phòng."
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["single", "double", "sliding", "garage", "gate", "opening"],
+          "description": "single = cửa một cánh · double = hai cánh · sliding = cửa trượt · garage = cửa để xe · gate = cổng · opening = ô thông không cánh."
+        }
+      }
+    },
+    "window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "room", "edge", "at", "w"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/elem_id"
+        },
+        "room": {
+          "$ref": "#/$defs/space_id"
+        },
+        "edge": {
+          "$ref": "#/$defs/edge",
+          "description": "Cạnh của phòng chứa cửa sổ. Chỉ đặt trên cạnh giáp NGOÀI TRỜI — cạnh chung với một phòng khác trong nhà thì không có cửa sổ."
+        },
+        "at": {
+          "$ref": "#/$defs/cm"
+        },
+        "w": {
+          "$ref": "#/$defs/cm"
+        },
+        "sill": {
+          "$ref": "#/$defs/cm",
+          "description": "Cao độ bệ cửa sổ so với mặt sàn tầng, cm."
+        },
+        "h": {
+          "$ref": "#/$defs/cm",
+          "description": "Chiều cao ô cửa sổ, cm."
+        }
+      }
+    },
+    "stair": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "rect", "up"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/elem_id"
+        },
+        "rect": {
+          "$ref": "#/$defs/rect",
+          "description": "Ô thang, trùng khít chữ nhật của phòng thang trong `rooms`."
+        },
+        "up": {
+          "type": "string",
+          "enum": ["+x", "-x", "+y", "-y"],
+          "description": "Chiều đi LÊN của vế thang đầu tiên."
+        },
+        "flights": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3
+        },
+        "treads": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 40,
+          "description": "Tổng số bậc trong ô thang này. Số bậc × chiều cao bậc phải bằng chiều cao tầng."
+        }
+      }
+    },
+    "void_space": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "rect"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/elem_id"
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["light_well", "courtyard", "atrium", "void"],
+          "description": "light_well = giếng trời · courtyard = sân trong · atrium = thông tầng · void = ô trống trên thang."
+        },
+        "rect": {
+          "$ref": "#/$defs/rect"
+        }
+      }
+    }
+  }
+}

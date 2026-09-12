@@ -21,8 +21,9 @@
 import type { AiFloorPlanLevel } from '@nvg/shared/design';
 import { formatNumber } from '@nvg/shared/format';
 import type { Rule, RulePack, RuleSeverity } from '../rules/rule-pack';
-import { rectHeight, rectWidth, toRect } from './draw/geometry';
+import { rectHeight, rectWidth, toPt, toRect } from './draw/geometry';
 import { prepareWalls } from './draw/walls';
+import { faceAtPoint } from './outline-faces';
 import type { RuleMessages } from './plan-messages';
 
 /** Vị từ đo được trên một con số diện tích, không cần toạ độ. */
@@ -166,6 +167,9 @@ export const MEASURABLE_ON_PLAN = new Set([
 /** Sai lệch bỏ qua khi so số đo với ngưỡng, mét — dưới mức này là chuyện làm tròn. */
 const MEASURE_SLACK_M = 0.05;
 
+/** Tim tường lệch mặt hình bao tối đa bao nhiêu thì vẫn coi là nằm TRÊN cạnh ấy, cm. */
+const EDGE_SLACK_CM = 2;
+
 export interface PlanWarning extends ProgramWarning {
   /** Tầng chứa phòng — cùng một mã phòng không xuất hiện ở hai tầng, nhưng màn hình cần nói ra. */
   level: number;
@@ -281,10 +285,21 @@ function measure(
  * Suy từ HÌNH HỌC, cùng cách bộ kiểm suy phòng phục vụ của một cái cửa: lùi từ điểm giữa ô cửa
  * sổ vào trong nửa bề dày tường, rơi vào phòng nào thì phòng đó có sáng. Chỉ tính cửa sổ trên
  * tường bao — cửa sổ trên vách ngăn không mang ánh sáng trời vào (và đã bị bộ kiểm chặn).
+ *
+ * ⚠️ VÀ chỉ tính cửa sổ trên cạnh hình bao KHÔNG giáp ranh (`outline_faces`). Trước 12/09/2026
+ * phép này đếm một cửa sổ trên tường ranh là mặt thoáng hợp lệ — một cửa sổ không thể tồn tại
+ * — vì hợp đồng gộp tường ranh và tường giáp ngoài trời vào cùng loại `e`. Đo trên hồ sơ thật:
+ * cả hai dự án NVO đều có tường ranh, và nhà phố P2 có phòng ngủ CHỈ lấy sáng qua hành lang.
+ * Thiếu phép lọc này thì cảnh báo «phòng ngủ không có cửa sổ» im lặng không bao giờ nổ ra.
+ *
+ * Tầng nào chưa có `outline_faces` (artifact đúc trước 12/09/2026) thì giữ hành vi cũ: không
+ * có dữ liệu mặt thì không suy hộ một kết luận về ánh sáng.
  */
 function roomsWithDaylight(level: AiFloorPlanLevel): Set<string> {
   const walls = new Map(prepareWalls(level.walls).map((wall) => [wall.id, wall]));
   const rooms = level.rooms.map((room) => ({ id: room.id, rect: toRect(room.rect) }));
+  const outline = level.outline.map(toPt);
+  const faces = level.outline_faces ?? [];
   const lit = new Set<string>();
 
   for (const window of level.windows ?? []) {
@@ -293,6 +308,12 @@ function roomsWithDaylight(level: AiFloorPlanLevel): Set<string> {
     const distance = window.at + window.w / 2;
     const centreX = wall.a[0] + wall.u[0] * distance;
     const centreY = wall.a[1] + wall.u[1] * distance;
+    if (
+      faces.length === outline.length &&
+      faceAtPoint([centreX, centreY], outline, faces, wall.t / 2 + EDGE_SLACK_CM) === 'boundary'
+    ) {
+      continue;
+    }
     const reach = wall.t / 2 + 1;
     for (const sign of [1, -1]) {
       const x = centreX + wall.n[0] * sign * reach;

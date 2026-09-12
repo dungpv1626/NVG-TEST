@@ -10,6 +10,7 @@
  * hỏng lượt gọi — nhật ký không được đứng trước nghiệp vụ.
  */
 
+import { LlmCallFailed } from '../llm/gemini';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { DataClass } from '@nvg/shared/design';
 import type { RoutePricing } from '../llm/router';
@@ -128,7 +129,12 @@ export async function withAiCall<
       {
         provider: route.provider,
         model: route.model,
-        usage: { inputTokens: null, outputTokens: null },
+        // Số token lấy từ chính LỖI khi nó mang theo. Nhà cung cấp tính tiền phần token đã sinh
+        // dù kết quả không dùng được, nên bỏ trống ở đây là ghi một lượt đắt thành lượt 0 đồng.
+        usage: (error instanceof LlmCallFailed && error.usage) || {
+          inputTokens: null,
+          outputTokens: null,
+        },
         latencyMs: Date.now() - started,
         imageCount,
         status: 'failed',

@@ -17,10 +17,12 @@
  * `digitise-steps.ts` đã làm với `extractionJson`.
  */
 
+import { LlmCallFailed } from '../llm/gemini';
 import type { AiBriefDigest, AiSpaceProgram } from '@nvg/shared/design';
 import { AI_DIGEST_DATA_CLASS } from '../brief/anonymise';
 import type { ArtifactRepository } from '../artifacts';
 import type { ConstructionNorms } from '../kb/construction';
+import type { SiteContextTable } from '../kb/site-context';
 import type { RoutePricing } from '../llm/router';
 import type { TextModelClient } from '../llm/text-client';
 import type { RulePack } from '../rules/rule-pack';
@@ -79,13 +81,21 @@ export interface PlanStepDeps {
   prompts: AiPrompts;
   labels: Record<string, string>;
   construction: ConstructionNorms;
+  /** Bảng hiện trạng bốn phía — nguồn của `levels[].outline_faces`. */
+  siteContext: SiteContextTable;
   rules: RulePack;
   doorExemptTypes: ReadonlySet<string>;
+  /** Nhóm `circulation` của từ vựng — cổng G2 cần để phân biệt ô thang với phòng khác. */
+  verticalTypes: ReadonlySet<string>;
+  /** Nhóm `outdoor` của từ vựng — cạnh biên của chúng là lan can, không phải tường (T23). */
+  outdoorTypes: ReadonlySet<string>;
   repo: ArtifactRepository;
   /** Giá niêm yết của tuyến, để nhật ký chi phí có cột tiền. Thiếu thì cột tiền rỗng. */
   pricing?: RoutePricing;
   /** Nhà cung cấp theo cấu hình tuyến — dùng khi lượt gọi hỏng trước khi biết nhà cung cấp thật. */
   provider: string;
+  /** Model theo cấu hình tuyến, cùng lý do với `provider`: lượt hỏng vẫn phải cộng được theo model. */
+  model: string;
 }
 
 /** Mã bước, ổn định và đọc được trong nhật ký Workflow. */
@@ -147,10 +157,18 @@ export async function proposePlan(
   } catch (error) {
     // Lượt gọi hỏng ở tầng mạng hoặc nhà cung cấp: vẫn có thể đã tính tiền, nên vẫn ghi một
     // dòng. Rồi ném tiếp để Workflow thử lại theo chính sách của nó.
+    // ⚠️ Lượt hỏng ĐÃ TIÊU TIỀN, và loại tiêu nhiều nhất là loại bị cắt giữa chừng: mô hình
+    // sinh đủ ngân sách token rồi trả về một chuỗi JSON không phân tích được. Đo trên nhật ký
+    // thật ngày 11/09/2026: 6/6 dòng `failed` ghi 0 đồng và `model = "unknown"`, trong khi một
+    // lượt trong số đó tiêu 31.986 token — khoảng 0,33 USD. Nên lấy số token từ chính lỗi, và
+    // lấy tên model từ cấu hình tuyến chứ đừng ghi "unknown".
     await logCall(deps, scope, params, repairing, {
       provider: deps.provider,
-      model: 'unknown',
-      usage: { inputTokens: null, outputTokens: null },
+      model: deps.model,
+      usage: (error instanceof LlmCallFailed && error.usage) || {
+        inputTokens: null,
+        outputTokens: null,
+      },
       latencyMs: 0,
       status: 'failed',
       errorCode: error instanceof Error ? error.name : 'unknown',
@@ -171,8 +189,6 @@ export interface CheckOutcome {
   /** Câu lỗi CHẶN, tiếng Việt, cụ thể — chính là danh sách gửi kèm lượt sửa. */
   blocking: string[];
   findings: PlanIssue[];
-  /** Chỉ còn nhóm lỗi tường: lượt sửa xong mà vẫn vậy thì chương trình suy tường hộ (T19). */
-  wallOnly: boolean;
 }
 
 /** Kiểm một đề xuất. Hàm thuần, không tốn gì — nên là một bước riêng và chạy lại vô hại. */
@@ -188,7 +204,6 @@ export function checkPlanProposal(
   return {
     blocking: check.blocking.map((issue) => issue.message),
     findings: check.findings,
-    wallOnly: check.wallOnly,
   };
 }
 
@@ -220,10 +235,7 @@ export async function writePlan(
   call: PlanCallRecord,
   repaired: boolean,
 ): Promise<WriteOutcome> {
-  const final = finalisePlan({
-    ...assembleInput(deps, params, variant, proposalJson, call, repaired),
-    construction: deps.construction,
-  });
+  const final = finalisePlan(assembleInput(deps, params, variant, proposalJson, call, repaired));
 
   const artifact = await deps.repo.write({
     scope: scopeOf(params),
@@ -259,6 +271,7 @@ function contextFor(deps: PlanStepDeps, params: AiDesignParams, variant: PlanVar
     variant,
     labels: deps.labels,
     construction: deps.construction,
+    siteContext: deps.siteContext,
     rules: deps.rules,
   });
 }
@@ -281,7 +294,10 @@ function assembleInput(
     route: params.textRoute,
     promptVersion: deps.prompts.version,
     repaired,
+    construction: deps.construction,
     doorExemptTypes: deps.doorExemptTypes,
+    verticalTypes: deps.verticalTypes,
+    outdoorTypes: deps.outdoorTypes,
   };
 }
 

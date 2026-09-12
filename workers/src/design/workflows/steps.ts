@@ -39,7 +39,7 @@ import {
   type MinSide,
   type Plate,
 } from '../layout/intent';
-import type { Face } from '../layout/site-context';
+import type { Face } from '../kb/site-context';
 
 const SCHEMA_VERSION = '1.0.0';
 // Dự phòng khi mặt bằng cũ chưa mang cao độ hay cửa chưa mang chiều cao — cùng giá trị với

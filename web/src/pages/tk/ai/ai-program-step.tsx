@@ -13,6 +13,7 @@
  */
 
 import { useState } from 'react';
+import { AI_DISCLAIMERS } from '@nvg/shared/design';
 import { AlertTriangle, Sparkles } from 'lucide-react';
 import { formatNumber } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
@@ -80,26 +81,17 @@ export function RulePackPicker({
   onChange: (next: AiRulePackChoice) => void;
   disabled?: boolean;
 }): React.ReactElement {
-  const none = !value.standards && !value.experience;
+  const none = !value.experience;
   return (
     <fieldset className="rounded-md border border-tk-line p-3">
       <legend className="px-1 font-medium">Quy tắc áp cho lượt này</legend>
+      {/*
+       * Ô tích «Quy chuẩn quốc gia» đã GỠ ngày 12/09/2026 (T30). Một ô tích không bật gì còn tệ
+       * hơn không có ô: nó tạo cảm giác đã kiểm quy chuẩn — cùng lý lẽ với CLAUDE.md 8.8 điểm 2
+       * («cấu hình khai ra mà không policy nào đọc tới còn tệ hơn không khai»). Câu nói rõ rằng
+       * không kiểm quy chuẩn nằm ở dòng cuối fieldset này và ở panel đối chiếu của bước mặt bằng.
+       */}
       <label className="flex items-start gap-2">
-        <input
-          type="checkbox"
-          className="mt-1"
-          checked={value.standards}
-          disabled={disabled}
-          onChange={(e) => onChange({ ...value, standards: e.target.checked })}
-        />
-        <span>
-          <b>Quy chuẩn quốc gia</b>
-          <span className="block text-fg-subtle">
-            QCVN 01:2021/BXD và TCVN 4451:2012. Văn bản pháp quy, áp dụng toàn quốc.
-          </span>
-        </span>
-      </label>
-      <label className="mt-2 flex items-start gap-2">
         <input
           type="checkbox"
           className="mt-1"
@@ -119,6 +111,7 @@ export function RulePackPicker({
           ? 'Chưa chọn gói nào: mô hình thiết kế tự do, và sẽ không có cảnh báo nào.'
           : 'Gói đã chọn vừa được gửi cho mô hình để làm theo, vừa dùng để đối chiếu kết quả.'}
       </p>
+      <p className="mt-2 font-medium">{AI_DISCLAIMERS.noCodeCheck}</p>
     </fieldset>
   );
 }

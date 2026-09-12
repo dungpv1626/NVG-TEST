@@ -7,7 +7,7 @@ export * from './ai-facade-concept.generated';
 export * from './ai-floor-plan-proposal.generated';
 export * from './ai-floor-plan.generated';
 export * from './ai-image-set.generated';
-export * from './ai-plan-sheet-image.generated';
+export * from './ai-plan-rooms.generated';
 export * from './ai-space-program-proposal.generated';
 export * from './ai-space-program.generated';
 export * from './arch-model.generated';

@@ -76,6 +76,35 @@ export interface ModelRoute {
    * ảnh trong `contents`.
    */
   endpoint_edit?: string;
+  /**
+   * Mức SUY NGHĨ của dòng Gemini 3 — `minimal` | `low` | `medium` | `high`.
+   *
+   * Là DỮ LIỆU chứ không phải hằng số trong mã, vì nó là một cái van đánh đổi **chất lượng lấy
+   * tiền và lấy chỗ**: `maxOutputTokens` là trần CHUNG cho token nghĩ cộng token trả lời, nên
+   * nghĩ nhiều là vừa đắt hơn vừa còn ít chỗ cho JSON hơn. Chỉnh nó phải là sửa cấu hình, không
+   * phải một lần triển khai.
+   *
+   * Đo 11/09/2026: để mặc định (`high`) thì `gemini-3.1-pro-preview` tiêu 31.986 token trên
+   * ngân sách 32.000 và trả về một chuỗi JSON bị cắt ở 2.113 ký tự — hỏng, và vẫn tính tiền.
+   *
+   * Chỉ khai cho tuyến dòng Gemini 3. Dòng 2.5 dùng `thinkingBudget` cũ và không nhận trường
+   * này; gửi cả hai cùng lúc là lỗi 400.
+   */
+  thinking_level?: 'minimal' | 'low' | 'medium' | 'high';
+  /**
+   * Trần token đầu ra của tuyến — GHI ĐÈ con số mà nơi gọi xin.
+   *
+   * Vì sao ở đây chứ không ở nơi gọi: nơi gọi biết công việc cần bao nhiêu chữ, nhưng chỉ TUYẾN
+   * mới biết model này nghĩ tốn bao nhiêu, và `maxOutputTokens` là trần CHUNG cho cả nghĩ lẫn
+   * trả lời. Cùng một bước xếp mặt bằng cần ngân sách rất khác nhau giữa một model nghĩ nhiều
+   * và một model nghĩ ít — nên con số ấy thuộc về tuyến.
+   *
+   * **`0` nghĩa là KHÔNG đặt trần**: bỏ hẳn trường khi gọi, để nhà cung cấp dùng mức tối đa của
+   * chính model. Dùng khi cần ĐO xem một bước thật sự tiêu bao nhiêu — đặt một con số đoán rồi
+   * đo là đo chính con số mình đoán. Cẩn thận: không trần thì trần thật là mức tối đa của model,
+   * nên một lượt gọi hỏng có thể tốn tới cả bậc đó.
+   */
+  max_output_tokens?: number;
 }
 
 export interface ModelConfig {

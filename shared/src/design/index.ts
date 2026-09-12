@@ -75,7 +75,6 @@ export const ARTIFACT_KINDS = [
   // Tờ mặt bằng công năng do MÔ HÌNH ẢNH vẽ (T21, 10/09/2026) — một artifact một tầng. Nó
   // KHÔNG thay `ai_floor_plan`: dữ liệu vẫn là nguồn đo diện tích và đối chiếu quy chuẩn, còn
   // loại này chỉ là tờ giấy trình bày, không dựng từ toạ độ.
-  'ai_plan_sheet_image',
   // Mặt bằng theo phương án CŨ (T14): mô hình tự viết chuỗi SVG. Không sinh mới nữa — giữ ở
   // đây để artifact đã đúc còn đọc được, vì artifact là bất biến.
   'ai_plan_proposal',
@@ -108,7 +107,6 @@ export const PIPELINE_STEPS = [
   'ai_image_render',
   // Vẽ tờ mặt bằng bằng mô hình ảnh (T21). Nối từ `ai_floor_plan`, KHÔNG nối từ `ai_facade_*`:
   // tờ mặt bằng không đi qua ý tưởng mặt đứng.
-  'ai_plan_sheet',
 ] as const;
 
 export type PipelineStep = (typeof PIPELINE_STEPS)[number];
@@ -126,7 +124,6 @@ export const STEP_OUTPUT_KIND: Readonly<Record<PipelineStep, ArtifactKind>> = {
   ai_facade_propose: 'ai_facade_concept',
   ai_facade_edit: 'ai_facade_concept',
   ai_image_render: 'ai_image_set',
-  ai_plan_sheet: 'ai_plan_sheet_image',
 };
 
 // ---------------------------------------------------------------------------
@@ -219,8 +216,29 @@ export const AI_DISCLAIMERS = {
    * bản vẽ trông như hồ sơ thi công.
    */
   aiSheet: 'Đề xuất AI — bản phác, không dùng để thi công',
-  /** Ghi thêm khi `generator.walls_derived` bật — T19, xem `ai/draw/derive-walls.ts`. */
+  /**
+   * Ghi thêm khi `generator.walls_derived` bật — tức MỌI tờ của nhánh AI từ T23 (12/09/2026).
+   *
+   * Trước T23 đây là lời thú nhận một lần cứu hộ (T19: mô hình khai tường sai, đã cho sửa một
+   * lượt, chương trình dựng lại hộ). Nay nó là mô tả cách hệ thống làm việc: mô hình khai phòng,
+   * chương trình suy tường từ chữ nhật phòng. Câu chữ giữ nguyên vì nó vẫn nói đúng điều người
+   * đọc tờ vẽ cần biết — đường nét nào là của AI và đường nét nào không.
+   */
   wallsDerived: 'Tường do chương trình suy từ phòng, không phải của AI',
+  /**
+   * Hiện ở MỌI chỗ nhánh AI báo kết quả đối chiếu quy tắc — T30, 12/09/2026.
+   *
+   * Vì sao phải nói ra thay vì im lặng: nhánh AI không còn kiểm quy chuẩn nào (gói pháp quy
+   * rỗng, xem `rules/rule-pack-data.ts#nationalRulePack`). Một màn hình chấm điểm mà im lặng về
+   * quy chuẩn thì người đọc hiểu là **đã kiểm và đạt** — đúng thứ CLAUDE.md 5.2 cấm ở chỗ khác
+   * («KHÔNG hiển thị số ước lượng», hiện «Chưa đủ dữ liệu» thay vì `0`). Câu này là cùng một
+   * nguyên tắc, áp cho một khoảng trống chứ cho một con số.
+   *
+   * Cùng hạng với `aiSheet`: do MÃ chèn, không phụ thuộc người dùng nhớ bật, không tắt được từ
+   * giao diện (CLAUDE.md 8.7). Có phép thử canh.
+   */
+  noCodeCheck:
+    'Không kiểm quy chuẩn xây dựng. Chỉ đối chiếu thói quen thiết kế Nhà Việt Group đã đo trên 2 dự án.',
 } as const;
 
 // ---------------------------------------------------------------------------

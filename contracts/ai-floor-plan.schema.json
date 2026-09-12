@@ -15,7 +15,9 @@
     "generator"
   ],
   "properties": {
-    "schema_version": { "$ref": "#/$defs/semver" },
+    "schema_version": {
+      "$ref": "#/$defs/semver"
+    },
     "program_ref": {
       "$ref": "#/$defs/artifact_ref",
       "description": "Chương trình không gian (`ai_space_program`) mà mặt bằng bám theo. Worker điền."
@@ -32,8 +34,8 @@
     },
     "strategy": {
       "type": ["string", "null"],
-      "maxLength": 200,
-      "description": "Ý đồ bố cục Worker đã gửi kèm, giữ lại để đọc artifact biết phương án này theo hướng nào."
+      "maxLength": 600,
+      "description": "Ý đồ bố cục Worker đã gửi kèm, giữ lại NGUYÊN VĂN để đọc artifact biết phương án này theo hướng nào. Trần 600 chứ không phải 200: con số 200 là một phỏng đoán, và ba ý đồ thật ở `kb/ai_design_prompts.yaml` dài 241–301 ký tự — nên MỌI lượt ghi đều bị từ chối, sau khi đã trả tiền hai lượt gọi mô hình (đo 11/09/2026). Ý đồ bố cục là DỮ LIỆU sẽ dài ra theo mỗi lần chỉnh lời dẫn, nên trần phải có chỗ thở, và có phép thử đối chiếu hai nguồn với nhau."
     },
     "north_deg": {
       "type": "number",
@@ -45,37 +47,59 @@
       "type": "array",
       "minItems": 1,
       "maxItems": 12,
-      "items": { "$ref": "#/$defs/level" }
+      "items": {
+        "$ref": "#/$defs/level"
+      }
     },
     "rationale": {
       "type": "string",
       "maxLength": 1500,
       "description": "Vì sao bố cục như vậy, tiếng Việt, 2–5 câu."
     },
-    "generator": { "$ref": "#/$defs/generator" }
+    "generator": {
+      "$ref": "#/$defs/generator"
+    }
   },
   "$defs": {
-    "semver": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
-    "artifact_ref": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
-    "space_id": { "type": "string", "pattern": "^[a-z0-9_]+$" },
-    "elem_id": { "type": "string", "pattern": "^[a-z0-9_]+$", "maxLength": 24 },
+    "semver": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "artifact_ref": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "space_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$"
+    },
+    "elem_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$",
+      "maxLength": 24
+    },
     "cm": {
       "type": "number",
       "multipleOf": 0.5,
-      "description": "Xăng-ti-mét, lưới NỬA centimet. Toạ độ đo từ góc trước-trái lô đất.\n\nMÔ HÌNH khai số nguyên — lời dẫn nói thẳng như vậy, và không cần gì mịn hơn. Nửa centimet tồn tại vì CHƯƠNG TRÌNH cần: vách ngăn của NVG dày 11 cm (đo được trên hồ sơ thật, `kb/construction_norms.yaml`), nên tim vách giữa hai phòng có mặt trong ở toạ độ nguyên luôn rơi vào x,5. Bắt số nguyên ở đây thì `draw/derive-walls.ts` (T19) sinh ra artifact mà chính hợp đồng từ chối — và nó bị từ chối lúc GHI, sau khi đã trả tiền cho lượt gọi.\n\nNửa centimet vẫn là số biểu diễn CHÍNH XÁC trong nhị phân, nên hai lượt cùng đầu vào vẫn cho cùng mã băm artifact — đó là lý do ban đầu của việc cấm số thực, và nó còn nguyên."
+      "description": "Xăng-ti-mét, lưới nửa centimet. Toạ độ đo từ góc trước-trái lô đất. Khai SỐ NGUYÊN.",
+      "$comment": "Vì sao là lưới NỬA centimet chứ không phải số nguyên — lý lẽ cho người đọc hợp đồng, cố ý KHÔNG nằm ở `description`. `description` được `llm/schema-dialect.ts` nội suy vào MỌI chỗ dùng `$ref` (10 chỗ trong tệp này) và gửi cho mô hình ở mỗi lượt gọi, nên một đoạn văn 682 ký tự ở đây tốn ≈6.100 ký tự thừa một lượt. `$comment` nằm trong `META_KEYS` nên bị lược cho cả ba nhà cung cấp.\n\nMô hình khai số nguyên và không cần gì mịn hơn. Nửa centimet tồn tại vì CHƯƠNG TRÌNH cần: vách ngăn của NVG dày 11 cm (đo được trên hồ sơ thật, `kb/construction_norms.yaml`), nên tim vách giữa hai phòng có mặt trong ở toạ độ nguyên luôn rơi vào x,5. Bắt số nguyên ở đây thì `draw/derive-walls.ts` (T19) sinh ra artifact mà chính hợp đồng từ chối — và nó bị từ chối lúc GHI, sau khi đã trả tiền cho lượt gọi.\n\nNửa centimet vẫn là số biểu diễn CHÍNH XÁC trong nhị phân, nên hai lượt cùng đầu vào vẫn cho cùng mã băm artifact — đó là lý do ban đầu của việc cấm số thực, và nó còn nguyên."
     },
     "point": {
       "type": "array",
       "minItems": 2,
       "maxItems": 2,
-      "items": { "$ref": "#/$defs/cm" },
+      "items": {
+        "$ref": "#/$defs/cm"
+      },
       "description": "[x, y] tính bằng cm."
     },
     "rect": {
       "type": "array",
       "minItems": 4,
       "maxItems": 4,
-      "items": { "$ref": "#/$defs/cm" },
+      "items": {
+        "$ref": "#/$defs/cm"
+      },
       "description": "[x0, y0, x1, y1] cm, với x1 > x0 và y1 > y0."
     },
     "level": {
@@ -83,7 +107,11 @@
       "additionalProperties": false,
       "required": ["level", "name", "h", "outline", "walls", "rooms"],
       "properties": {
-        "level": { "type": "integer", "minimum": 1, "description": "Số tầng, 1 là tầng trệt." },
+        "level": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Số tầng, 1 là tầng trệt."
+        },
         "name": {
           "type": "string",
           "maxLength": 40,
@@ -97,8 +125,20 @@
           "type": "array",
           "minItems": 4,
           "maxItems": 24,
-          "items": { "$ref": "#/$defs/point" },
+          "items": {
+            "$ref": "#/$defs/point"
+          },
           "description": "Hình bao khối xây của tầng, đa giác kín ngầm (điểm cuối tự nối điểm đầu). Nằm trong hình bao xây được mà lời dẫn đưa ra."
+        },
+        "outline_faces": {
+          "type": "array",
+          "maxItems": 24,
+          "items": {
+            "type": "string",
+            "enum": ["open", "boundary", "unknown"]
+          },
+          "description": "Thuộc tính MẶT của từng cạnh hình bao, cùng thứ tự và cùng số lượng với `outline` — cạnh i nối điểm i với điểm i+1, cạnh cuối nối về điểm đầu. open = giáp ngoài trời, lấy được sáng và gió · boundary = giáp nhà hàng xóm hoặc ranh đất, KHÔNG phải mặt thoáng · unknown = chưa suy được. WORKER ĐIỀN từ hiện trạng bốn phía của đầu bài; mô hình không khai.",
+          "$comment": "Vì sao trường này tồn tại, và vì sao nó ở ĐẦU VÀO chứ không ở đầu ra của mô hình.\n\nHợp đồng chỉ có `walls[].k ∈ {e,p,r}`, trong đó `e` gộp cả tường giáp ngoài trời lẫn tường trên ranh đất. Hệ quả đo được 12/09/2026: phép đối chiếu mặt thoáng ĐẾM một cửa sổ trên tường ranh là mặt thoáng hợp lệ — một cửa sổ không thể tồn tại — và nó hỏng IM LẶNG, không lỗi, không cảnh báo.\n\nChỗ sửa không phải ở mô hình: hiện trạng bốn phía là KHẢO SÁT (`site.adjacent` + `kb/site_context.yaml`), tức dữ liệu đã có trước khi gọi mô hình. Hỏi mô hình là trả tiền để nó đoán lại thứ ta đã biết, và thêm một cách sai mới.\n\n`boundary` cố ý KHÔNG nói tường chung hay tường riêng. Haan chốt 12/09/2026: chung hay riêng là quyết định của KỸ SƯ cho từng khách hàng, nên nó không suy được từ hiện trạng và chưa có ô nhập nào. Khai ba giá trị trong đó một giá trị gộp hai khả năng là nói đúng phần biết được; thêm `party_wall`/`private_wall` lúc này là điền hộ một lựa chọn của người khác (CLAUDE.md 5.2)."
         },
         "walls": {
           "type": "array",
@@ -109,9 +149,17 @@
             "additionalProperties": false,
             "required": ["id", "a", "b", "t", "k"],
             "properties": {
-              "id": { "$ref": "#/$defs/elem_id" },
-              "a": { "$ref": "#/$defs/point", "description": "Đầu tường, trên TIM tường." },
-              "b": { "$ref": "#/$defs/point", "description": "Cuối tường, trên TIM tường." },
+              "id": {
+                "$ref": "#/$defs/elem_id"
+              },
+              "a": {
+                "$ref": "#/$defs/point",
+                "description": "Đầu tường, trên TIM tường."
+              },
+              "b": {
+                "$ref": "#/$defs/point",
+                "description": "Cuối tường, trên TIM tường."
+              },
               "t": {
                 "$ref": "#/$defs/cm",
                 "description": "Bề dày tường, cm, đối xứng qua tim. Bề dày thường dùng của NVG nằm ở kb/construction_norms.yaml."
@@ -137,7 +185,9 @@
                 "$ref": "#/$defs/space_id",
                 "description": "Mã LẤY TỪ chương trình không gian (`ai_space_program.spaces[].id`). Không đặt mã mới, không bỏ phòng nào."
               },
-              "type": { "$ref": "#/$defs/space_id" },
+              "type": {
+                "$ref": "#/$defs/space_id"
+              },
               "rect": {
                 "$ref": "#/$defs/rect",
                 "description": "Kích thước LỌT LÒNG của phòng — mặt trong tường tới mặt trong tường. Nhờ vậy cảnh báo kích thước tối thiểu so thẳng với ngưỡng quy chuẩn mà không phải trừ bề dày."
@@ -147,6 +197,15 @@
                 "exclusiveMinimum": 0,
                 "description": "Diện tích phòng, m². Khai để đối chiếu với chữ nhật và với chương trình không gian; lệch quá 10% hoặc 1 m² là lỗi phải sửa."
               },
+              "also": {
+                "type": "array",
+                "maxItems": 4,
+                "items": {
+                  "$ref": "#/$defs/space_id"
+                },
+                "description": "Mã phòng KHÁC mà chính chữ nhật này cũng phục vụ — khai khi chương trình không gian có hai phòng mà bố cục gộp làm một không gian mở (bếp + ăn, khách + thờ). Diện tích yêu cầu khi đối chiếu là TỔNG của phòng chính và các mã ở đây.",
+                "$comment": "Vì sao cần trường này, đo trên hồ sơ thật 12/09/2026 (`mat_bang_cong_nang/phong_do_duoc.csv`): 3 trong 6 mặt bằng của hai dự án NVO có phòng ghép — «BẾP ĂN» (kitchen|dining), «PHÒNG KHÁCH + THỜ» (living|altar_room), «PHÒNG BẾP» gộp ăn. Không có `also` thì chỉ còn hai đường, và cả hai đều sai: mô hình bỏ một mã phòng, nên `room_missing` CHẶN; hoặc nó dựng một vách không tồn tại để có đủ phòng, tức bố cục bị hợp đồng bóp méo.\n\nĐây cũng là thứ tiêu chí A1 và A3 của bộ chấm cần: A1 so diện tích theo yêu cầu và phải chia phần ghép theo từng chức năng; A3 hỏi bàn thờ nằm đâu, mà trên hồ sơ thật bàn thờ nằm TRONG phòng khách."
+              },
               "label": {
                 "type": ["string", "null"],
                 "maxLength": 40,
@@ -154,11 +213,6 @@
               }
             }
           }
-        },
-        "sheet_prompt": {
-          "type": ["string", "null"],
-          "maxLength": 1200,
-          "description": "Lời dẫn vẽ TỜ GIẤY của tầng này cho một mô hình ẢNH (T21, 10/09/2026) — tiếng Anh, 6–10 câu. Mô tả NỘI DUNG riêng của tầng: phòng nào nằm ở đâu so với nhau, mảng nào lớn mảng nào nhỏ, thang và giếng trời ở đâu, cửa chính hướng nào, chỗ nào là ban công hay sân, đồ đạc đáng vẽ trong từng phòng. KHÔNG mô tả phong cách nét vẽ, khổ giấy hay khung tên — những thứ ấy là hằng số ở `kb/ai_design_prompts.yaml`, không phải việc của mô hình.\n\nTUỲ CHỌN, và đó là quyết định về TIỀN chứ không phải về gu: lược đồ này gửi cho mô hình ở chế độ strict, nên bắt buộc mà mô hình quên thì cả bản đề xuất hỏng phân tích và Workflow mua thêm một lượt sửa 0,15–0,30 USD để đổi lấy một đoạn văn không ảnh hưởng gì tới bảng diện tích. Thiếu thì bỏ tờ ảnh của tầng đó, tờ dữ liệu giữ nguyên."
         },
         "doors": {
           "type": "array",
@@ -168,13 +222,21 @@
             "additionalProperties": false,
             "required": ["id", "wall", "at", "w", "kind"],
             "properties": {
-              "id": { "$ref": "#/$defs/elem_id" },
-              "wall": { "$ref": "#/$defs/elem_id", "description": "Mã đoạn tường chứa cửa." },
+              "id": {
+                "$ref": "#/$defs/elem_id"
+              },
+              "wall": {
+                "$ref": "#/$defs/elem_id",
+                "description": "Mã đoạn tường chứa cửa."
+              },
               "at": {
                 "$ref": "#/$defs/cm",
                 "description": "Khoảng cách từ đầu `a` của tường tới MÉP GẦN của lỗ cửa, cm."
               },
-              "w": { "$ref": "#/$defs/cm", "description": "Bề rộng lỗ cửa thông thuỷ, cm." },
+              "w": {
+                "$ref": "#/$defs/cm",
+                "description": "Bề rộng lỗ cửa thông thuỷ, cm."
+              },
               "hinge": {
                 "type": ["string", "null"],
                 "enum": ["a", "b", null],
@@ -201,15 +263,26 @@
             "additionalProperties": false,
             "required": ["id", "wall", "at", "w"],
             "properties": {
-              "id": { "$ref": "#/$defs/elem_id" },
-              "wall": { "$ref": "#/$defs/elem_id" },
-              "at": { "$ref": "#/$defs/cm" },
-              "w": { "$ref": "#/$defs/cm" },
+              "id": {
+                "$ref": "#/$defs/elem_id"
+              },
+              "wall": {
+                "$ref": "#/$defs/elem_id"
+              },
+              "at": {
+                "$ref": "#/$defs/cm"
+              },
+              "w": {
+                "$ref": "#/$defs/cm"
+              },
               "sill": {
                 "$ref": "#/$defs/cm",
                 "description": "Cao độ bệ cửa sổ so với mặt sàn tầng, cm."
               },
-              "h": { "$ref": "#/$defs/cm", "description": "Chiều cao ô cửa sổ, cm." }
+              "h": {
+                "$ref": "#/$defs/cm",
+                "description": "Chiều cao ô cửa sổ, cm."
+              }
             }
           }
         },
@@ -221,14 +294,22 @@
             "additionalProperties": false,
             "required": ["id", "rect", "up"],
             "properties": {
-              "id": { "$ref": "#/$defs/elem_id" },
-              "rect": { "$ref": "#/$defs/rect" },
+              "id": {
+                "$ref": "#/$defs/elem_id"
+              },
+              "rect": {
+                "$ref": "#/$defs/rect"
+              },
               "up": {
                 "type": "string",
                 "enum": ["+x", "-x", "+y", "-y"],
                 "description": "Chiều đi LÊN của vế thang đầu tiên."
               },
-              "flights": { "type": "integer", "minimum": 1, "maximum": 3 },
+              "flights": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3
+              },
               "treads": {
                 "type": "integer",
                 "minimum": 2,
@@ -246,13 +327,17 @@
             "additionalProperties": false,
             "required": ["id", "kind", "rect"],
             "properties": {
-              "id": { "$ref": "#/$defs/elem_id" },
+              "id": {
+                "$ref": "#/$defs/elem_id"
+              },
               "kind": {
                 "type": "string",
                 "enum": ["light_well", "courtyard", "atrium", "void"],
                 "description": "light_well = giếng trời · courtyard = sân trong · atrium = thông tầng · void = ô trống trên thang."
               },
-              "rect": { "$ref": "#/$defs/rect" }
+              "rect": {
+                "$ref": "#/$defs/rect"
+              }
             }
           }
         }
@@ -263,12 +348,29 @@
       "additionalProperties": false,
       "required": ["kind", "provider", "model", "route", "prompt_version"],
       "properties": {
-        "kind": { "type": "string", "enum": ["ai"] },
-        "provider": { "type": "string", "maxLength": 32 },
-        "model": { "type": "string", "maxLength": 96 },
-        "route": { "type": "string", "maxLength": 64 },
-        "prompt_version": { "type": "string", "maxLength": 16 },
-        "repaired": { "type": "boolean" },
+        "kind": {
+          "type": "string",
+          "enum": ["ai"]
+        },
+        "provider": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "model": {
+          "type": "string",
+          "maxLength": 96
+        },
+        "route": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "prompt_version": {
+          "type": "string",
+          "maxLength": 16
+        },
+        "repaired": {
+          "type": "boolean"
+        },
         "walls_derived": {
           "type": "boolean",
           "description": "Tường trong artifact này do CHƯƠNG TRÌNH suy từ chữ nhật phòng, không phải mô hình khai (T19): sau một lượt sửa mà tường vẫn không bao kín phòng thì suy hộ để tờ vẽ vẫn dùng được. Bật cờ này thì tờ vẽ và màn hình phải nói ra."

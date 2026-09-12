@@ -18,7 +18,7 @@ import { artifactId, type FloorPlan, type SpaceProgram } from '@nvg/shared/desig
 import type { ArtifactKind, PipelineStep } from '@nvg/shared/design';
 import type { ArtifactScope } from '../artifacts';
 import type { ComputeBackend, SolveRequest, SolveResponse } from '../compute-backend';
-import { parseSiteContext } from '../layout/site-context';
+import { parseSiteContext } from '../kb/site-context';
 import { parseVocabulary, roomGroups } from '../kb/vocabulary';
 import {
   chooseVariant,

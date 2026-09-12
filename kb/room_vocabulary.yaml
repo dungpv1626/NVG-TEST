@@ -202,6 +202,27 @@ types:
     vi: Không gian kinh doanh
     aliases: ['CUA HANG', 'KINH DOANH', 'SHOP', 'SHOPHOUSE', 'VAN PHONG', 'KIOT']
 
+  # ── HAI MÃ THÊM 12/09/2026 (T32) — rút từ 2 hồ sơ NVO đã xây ──────────────────────────
+  #
+  # Không phải chuyện làm đẹp từ vựng. Thiếu hai mã này thì hai không gian thật phải xếp vào
+  # `circulation`, và quy tắc `room_min_dimension_circulation` 1,1 m **báo vi phạm trên công
+  # trình đã xây** — hốc lavabo của P2 rộng đúng 1,05 m. Mã mới là cách bỏ một cảnh báo sai.
+
+  - code: porch
+    vi: Sảnh ngoài nhà
+    # P1 có hai sảnh: sảnh chính 6,4 m² (1,80 × 3,58, có 3 bậc và chiếu nghỉ) và sảnh phụ
+    # 4,6 m² (1,20 × 3,87, nằm dưới ban công tầng 2). Xếp vào `circulation` thì chúng vào TỬ SỐ
+    # của tỷ lệ giao thông (tiêu chí C2) dù nằm NGOÀI nhà và không có trong mẫu số là sàn lọt
+    # lòng — C2 phồng lên mà không ai biết vì sao.
+    aliases: ['SANH CHINH', 'SANH PHU', 'SANH', 'HIEN', 'TIEN SANH', 'PORCH', 'PORTICO']
+
+  - code: vanity
+    vi: Hốc lavabo
+    # P2 tầng 3: 1,4 m² (1,05 × 1,30), lavabo đặt NGOÀI khu vệ sinh để hai người dùng song song.
+    # Đây là lý do mã này phải có: 1,05 m hẹp hơn ngưỡng hành lang 1,1 m, nhưng nó không phải
+    # hành lang — không ai đi qua nó để tới đâu.
+    aliases: ['HOC LAVABO', 'LAVABO', 'CHO RUA TAY', 'RUA TAY', 'VANITY', 'WASHBASIN']
+
   - code: technical
     vi: Phòng kỹ thuật
     aliases:
@@ -247,10 +268,11 @@ group_targets:
   # phòng ngủ · phụ trợ · giao thông · ngoài trời). `habitable` đóng vai "sinh hoạt chung".
   service:
     vi: Phụ trợ (bếp, vệ sinh, kho, kỹ thuật, để xe)
-    members: [kitchen, wc, storage, closet, dressing_room, laundry, technical, shaft, garage]
+    members:
+      [kitchen, wc, storage, closet, dressing_room, laundry, technical, shaft, garage, vanity]
   outdoor:
     vi: Ngoài trời (ban công, sân, giếng trời)
-    members: [balcony, terrace, courtyard, light_well]
+    members: [balcony, terrace, courtyard, light_well, porch]
   # Nhóm này trả lời đúng MỘT câu hỏi của bộ kiểm mặt bằng nhánh AI: phòng nào được phép không
   # có cửa. «Mọi phòng phải có cửa» là phép kiểm CHẶN (`ai/plan-check.ts`), nên danh sách miễn
   # trừ phải là dữ liệu — viết cứng trong mã thì hôm thêm một loại không gian ngoài trời mới, bộ
@@ -260,4 +282,4 @@ group_targets:
   # trong nhà nên cửa nằm ở tường của phòng ấy, không phải của chúng.
   no_door_required:
     vi: Không bắt buộc có cửa (ngoài trời, giếng trời, hộp kỹ thuật)
-    members: [balcony, terrace, courtyard, light_well, shaft]
+    members: [balcony, terrace, courtyard, light_well, shaft, porch]

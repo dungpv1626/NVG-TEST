@@ -54,5 +54,7 @@ export const ROOM_LABEL: Readonly<Record<string, string>> = {
   light_well: 'Giếng trời',
   shaft: 'Hộp kỹ thuật',
   shop: 'Không gian kinh doanh',
+  porch: 'Sảnh ngoài nhà',
+  vanity: 'Hốc lavabo',
   technical: 'Phòng kỹ thuật',
 };

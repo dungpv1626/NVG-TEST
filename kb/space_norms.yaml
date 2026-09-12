@@ -352,6 +352,33 @@ spaces:
     daylight: true
     facade: false
     ventilation: true
+  # ── HAI MÃ THÊM 12/09/2026 (T32) ────────────────────────────────────────────────
+  # Số đo từ 2 hồ sơ NVO đã xây, n rất nhỏ — `priors.min_samples` của tệp này là 15, nên đây là
+  # CHỈ DẤU chứ không phải định mức (8.8 điểm 7). Khai vào đây là bắt buộc chứ không phải tuỳ
+  # chọn: một mã phòng thiếu chuẩn diện tích sẽ bị bỏ LẶNG LẼ khỏi chương trình không gian.
+  porch:
+    # P1: sảnh chính 6,4 m² (1,80 × 3,58) và sảnh phụ 4,6 m² (1,20 × 3,87). Cả hai nằm NGOÀI
+    # nhà, dưới mái đua hoặc dưới ban công tầng trên.
+    min_m2: 2
+    target_m2: 5
+    max_m2: 12
+    priority: 4
+    weight: 0.3
+    floor: ground
+    daylight: true
+    facade: true
+    ventilation: true
+  vanity:
+    # P2 tầng 3: 1,4 m² (1,05 × 1,30). Lavabo đặt ngoài khu vệ sinh để hai người dùng song song.
+    min_m2: 1
+    target_m2: 1.5
+    max_m2: 3
+    priority: 4
+    weight: 0.2
+    floor: any
+    daylight: false
+    facade: false
+    ventilation: true
   shaft:
     min_m2: 0.3
     target_m2: 0.6

@@ -17,6 +17,7 @@ import baseAdjacency from '../../../../rules/base/30-adjacency.yaml';
 import baseVertical from '../../../../rules/base/40-vertical.yaml';
 import baseMassing from '../../../../rules/base/50-massing.yaml';
 import nvgExperience from '../../../../rules/nvg-experience.yaml';
+import nvgMeasured from '../../../../rules/nvg-measured.yaml';
 import { mergePacks, parseRuleFile, RulePack, type Rule } from './rule-pack';
 
 const BASE_FILES: Array<[string, string]> = [
@@ -38,6 +39,26 @@ const BASE_FILES: Array<[string, string]> = [
  */
 const NVG_FILES: Array<[string, string]> = [
   ['rules/nvg-experience.yaml', nvgExperience as unknown as string],
+];
+
+/**
+ * Ngưỡng ĐO ĐƯỢC trên hồ sơ thật — chỉ NHÁNH AI đọc, bộ giải KHÔNG.
+ *
+ * Thêm 12/09/2026. Vì sao không gộp vào `NVG_FILES`: danh sách ấy được `rulePackFor()` gộp với
+ * `BASE_FILES` cho BỘ GIẢI, nên mọi quy tắc thêm vào đó đổi luôn khâu chia diện tích của bộ giải.
+ *
+ * Đo được hậu quả khi thử gộp: `room_min_area_wc: 3.0` (đo trên 5 khu vệ sinh thật, khoảng
+ * 3,1–4,5 m²) nâng mức tối thiểu của bộ giải từ 2,4 m² lên 3,0, và trên lô nhà phố 3,5 × 12 m thì
+ * +0,6 m² mỗi WC đẩy thang bộ xuống đúng mức sàn 4 m² — `program-plausibility.test.ts` đỏ 4 phép
+ * thử. Phép đo không sai; lô ấy chật thật. Nhưng **re-tune bộ giải là quyết định riêng có nghiệm
+ * thu riêng**, không phải hệ quả phụ của một đợt sửa gói quy tắc nhánh AI — nhất là khi bộ giải
+ * đã nằm trong diện xoá và T10 đòi 1.211 phép thử của nó đứng yên.
+ *
+ * Đây là cùng một nước đi đã làm T30 thành MỘT chỗ đổi: hai đường đọc tách nhau thì đổi một bên
+ * không kéo bên kia. Ngày xoá bộ giải, gộp hai tệp này lại là việc mười giây.
+ */
+const NVG_MEASURED_FILES: Array<[string, string]> = [
+  ['rules/nvg-measured.yaml', nvgMeasured as unknown as string],
 ];
 
 /**
@@ -66,16 +87,37 @@ const cache = new Map<string, RulePack>();
  * báo. Cảnh báo nổ ở mọi lần chạy là cảnh báo bị bỏ qua.
  */
 /**
- * Gói quy tắc QUỐC GIA — chỉ `rules/base/`, không bao giờ gộp gói địa phương.
+ * Gói quy tắc PHÁP QUY của nhánh AI — **cố ý RỖNG** từ 12/09/2026 (T30, Haan quyết).
  *
- * Dùng riêng cho nhánh AI (T14). Ở đó rule pack KHÔNG ràng buộc mô hình; nó chỉ để đối chiếu
- * sau và sinh cảnh báo. Quy định riêng của một tỉnh không phải thứ đem cảnh báo trên một đề
- * xuất tham khảo, nên hàm này cố ý bỏ qua `LOCALITY_FILES` thay vì nhận tham số địa phương —
- * hiện `LOCALITY_FILES` rỗng nên hai đường cho cùng kết quả, và đó chính là lý do phải tách
- * bằng một hàm riêng: ngày có gói tỉnh đầu tiên, nhánh AI không âm thầm đổi hành vi.
+ * Nhánh AI không kiểm quy chuẩn nữa. Lý do không phải «quy chuẩn không quan trọng» mà là
+ * **chứng cứ không kiểm được**:
+ *
+ *  · 4 quy tắc ghi nguồn `TCVN 4451:2012` — TCVN là tiêu chuẩn TỰ NGUYỆN, chỉ thành bắt buộc
+ *    khi QCVN/văn bản QPPL/hợp đồng viện dẫn. Dựng cổng pháp lý trên đó là nói quá.
+ *  · 14 quy tắc ghi `QCVN 01:2021/BXD` **không kèm một số mục nào**, nên không ai truy lại
+ *    được. Và `stair_min_width` / `corridor_min_width` bị gán cho một quy chuẩn QUY HOẠCH
+ *    (khoảng lùi, mật độ, tầng cao) — không phải chỗ nói bề rộng thang.
+ *
+ * Đo trên 2 hồ sơ NVO đã xây (12/09/2026) thì bỏ còn TỐT HƠN giữ: `module_grid_100mm` bắt oan
+ * **11/15 kích thước thật** (5020, 5140, 4780, 15880, 110, 140, 220, 520…); một quy tắc lấy
+ * sáng kiểu bao trùm bắt oan **2/7 phòng ngủ thật**; còn `load_bearing_wall_alignment` nhắm vào
+ * nhóm `load_bearing_wall` có `members: []` nên **chưa từng chạy lần nào**.
+ *
+ * Và nó nhất quán với nguyên tắc 9 của CLAUDE.md 8.2: tuân thủ pháp lý là việc của người có
+ * chứng chỉ hành nghề ký, không phải của engine.
+ *
+ * ⚠️ **`rules/base/` vẫn còn trên đĩa, và vẫn được `rulePackFor()` đọc cho BỘ GIẢI nội bộ.**
+ * Không xoá tệp trong đợt này: bộ giải đang ràng buộc CP-SAT trên chúng và 1.211 phép thử đang
+ * xanh không được vỡ (T10), trong khi bộ giải thì đã nằm trong diện xoá. Hai hàm tách riêng từ
+ * 09/09/2026 chính là thứ cho phép đổi một bên mà không đụng bên kia — xem ghi chú của
+ * `rulePackFor`. Ngày xoá bộ giải thì `rules/base/` đi theo.
+ *
+ * Điều kiện để BAO GIỜ thêm lại một quy tắc pháp quy (T34): số hiệu văn bản **+ số mục** +
+ * cách đã kiểm + hiệu lực từ/đến, **và bản văn bản phải có trong repo**. Thiếu một trong bốn
+ * thì nó vào gói kinh nghiệm, mức `warning`.
  */
 export function nationalRulePack(): RulePack {
-  nationalCache ??= new RulePack(parseAll(BASE_FILES), false);
+  nationalCache ??= new RulePack([], false);
   return nationalCache;
 }
 
@@ -88,7 +130,10 @@ let nationalCache: RulePack | undefined;
  * nói được cảnh báo nào đến từ luật, cảnh báo nào đến từ thói quen.
  */
 export function nvgExperiencePack(): RulePack {
-  experienceCache ??= new RulePack(parseAll(NVG_FILES), false);
+  experienceCache ??= new RulePack(
+    mergePacks(parseAll(NVG_FILES), parseAll(NVG_MEASURED_FILES)),
+    false,
+  );
   return experienceCache;
 }
 

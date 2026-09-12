@@ -1,5 +1,12 @@
 /**
- * Hai gói quy tắc mà KỸ SƯ chọn có áp hay không, cho từng hồ sơ.
+ * Gói quy tắc mà KỸ SƯ chọn có áp hay không, cho từng hồ sơ.
+ *
+ * ⚠️ **Từ 12/09/2026 (T30) chỉ còn MỘT gói: kinh nghiệm nghề NVG.** Gói pháp quy rỗng — xem
+ * `rules/rule-pack-data.ts#nationalRulePack`. Phần lý lẽ của T20 dưới đây **vẫn đúng và vẫn
+ * cần**: nó là lý do phải tách nguồn ra khỏi nhau ngay từ đầu, và nhờ đã tách mà việc gỡ gói
+ * pháp quy hôm nay là một chỗ đổi, không phải một đợt tái cấu trúc.
+ *
+ * Lịch sử để không dựng lại: hai gói quy tắc mà kỹ sư chọn có áp hay không, cho từng hồ sơ.
  *
  * Quyết định của Haan ngày 09/09/2026 (T20), thay một phần T14:
  *
@@ -18,7 +25,11 @@
 import { mergePacks, RulePack, type Rule, type RuleSeverity } from '../rules/rule-pack';
 
 export interface AiRulePackChoice {
-  /** QCVN 01:2021/BXD và TCVN — văn bản pháp quy, áp dụng toàn quốc. */
+  /**
+   * @deprecated KHÔNG còn tác dụng từ 12/09/2026 (T30) — gói pháp quy rỗng nên tích cũng không
+   * ra quy tắc nào. Giữ trường để `design_ai_run.params` của các lượt chạy CŨ còn đọc được;
+   * màn hình đã gỡ ô tích. Có phép thử canh rằng tích nó không sinh quy tắc nào.
+   */
   standards: boolean;
   /** Kinh nghiệm nghề của Phòng Thiết kế NVG — không phải luật, bỏ qua được. */
   experience: boolean;
@@ -47,9 +58,26 @@ export interface InjectedRule {
   kind: RuleKind;
 }
 
-/** Quy tắc thuộc văn bản pháp quy hay thuộc kinh nghiệm nghề — đọc từ trường `source`. */
+/**
+ * Quy tắc thuộc văn bản pháp quy hay thuộc kinh nghiệm nghề — đọc từ trường `source`.
+ *
+ * ⚠️ **Chiều mặc định là `experience`, và đó là điểm mấu chốt.** Bản trước hỏi ngược — «có chữ
+ * *kinh nghiệm* thì là thói quen, còn lại là luật» — nên mọi nguồn không khớp đúng chữ ấy đều
+ * thành `legal`. Lỗi ấy nổ ra thật ngày 12/09/2026 khi các quy tắc đo được trên hồ sơ mang nguồn
+ * `đo trên hồ sơ NVG`: chúng bị gắn nhãn pháp quy, tức màn hình lại gọi thói quen của NVG là
+ * vi phạm quy chuẩn — đúng một lỗi mà T20 đã sửa một lần.
+ *
+ * Nay hỏi xuôi: chỉ nguồn **dẫn được một văn bản** (QCVN/TCVN kèm số hiệu) mới là `legal`. Xếp
+ * sai hướng này vô hại — một điều luật bị gọi là thói quen thì cảnh báo vẫn hiện, chỉ nhẹ chữ
+ * hơn. Xếp sai hướng kia thì phần mềm nói người dùng đang vi phạm pháp luật.
+ *
+ * Điều kiện T34 (12/09/2026) buộc mọi quy tắc pháp quy phải có số hiệu + số mục, nên phép thử
+ * này khớp đúng thứ T34 đòi, không phải một mẹo đoán chữ.
+ */
+const LEGAL_SOURCE = /\b(QCVN|TCVN)\s*\d/i;
+
 export function kindOf(rule: Rule): RuleKind {
-  return /kinh nghi/i.test(rule.source) ? 'experience' : 'legal';
+  return LEGAL_SOURCE.test(rule.source) ? 'legal' : 'experience';
 }
 
 function valueOf(rule: Rule): { value: number | null; unit: InjectedRule['unit'] } {
@@ -75,6 +103,9 @@ export function selectedRulePack(
   packs: { standards: RulePack; experience: RulePack },
 ): RulePack {
   const chosen: Rule[][] = [];
+  // `standards` vẫn được đọc chứ không bị bỏ qua bằng một nhánh `if (false)`: gói truyền vào
+  // RỖNG là nơi duy nhất khai điều đó (T30). Nhờ vậy ngày gói pháp quy có nội dung đã kiểm
+  // (T34), chỉ cần sửa `nationalRulePack` — không phải tìm lại chỗ nào đã chặn cứng.
   if (choice.standards) chosen.push(packs.standards.rules);
   if (choice.experience) chosen.push(packs.experience.rules);
   if (!chosen.length) return new RulePack([], false);

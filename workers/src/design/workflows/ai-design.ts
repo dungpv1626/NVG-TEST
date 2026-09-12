@@ -16,10 +16,12 @@
 
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from 'cloudflare:workers';
 import { NonRetryableError } from 'cloudflare:workflows';
+import { userFacing } from '../llm/provider-faults';
 import { LlmCallFailed } from '../llm/gemini';
 import { ArtifactRepository } from '../artifacts';
 import type { DesignEnv } from '../env';
 import { constructionNorms } from '../kb/construction-data';
+import { siteContextTable } from '../kb/site-context-data';
 import { roomGroups } from '../kb/vocabulary';
 import { roomVocabulary } from '../kb/vocabulary-data';
 import { roomLabels } from '../auth-scope';
@@ -55,7 +57,11 @@ import { keepRepaired, type PlanVariant } from '../ai/plan';
  */
 const MODEL_STEP = {
   retries: { limit: 1, delay: '10 seconds', backoff: 'exponential' },
-  timeout: '10 minutes',
+  // 12 phút, không 10: hạn chờ một lời gọi văn bản là 300 giây (`llm/openai.ts`), nên trần thật
+  // của bước là 300 + 10 (giãn cách) + 300 = 610 giây. Để 10 phút thì lượt thử lại bị bước cắt
+  // ngang ở giây 600 — và cắt ở đó là mất luôn kết quả của một lượt ĐÃ TÍNH TIỀN. Hai con số này
+  // ràng buộc nhau; đổi một bên thì phải tính lại bên kia.
+  timeout: '12 minutes',
 } as const;
 
 /**
@@ -71,7 +77,10 @@ async function once<T>(work: () => Promise<T>): Promise<T> {
     return await work();
   } catch (error) {
     if (error instanceof LlmCallFailed && error.retryable === false) {
-      throw new NonRetryableError(error.message);
+      // Câu cho NGƯỜI ĐỌC, không phải nguyên văn nhà cung cấp: câu kia là tiếng Anh, mang mã
+      // HTTP và một khối JSON — CGD 4.4 cấm đưa những thứ đó lên màn hình. Nguyên văn vẫn nằm
+      // trong nhật ký Workflow và trong `design_ai_call`.
+      throw new NonRetryableError(userFacing(error));
     }
     throw error;
   }
@@ -91,19 +100,24 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
     }
 
     const router = modelRouter(this.env);
+    const publicRoute = router.publicRoutes().find((route) => route.route === params.textRoute);
     const deps: PlanStepDeps = {
       client,
       prompts: aiPrompts(),
       labels: roomLabels(),
       construction: constructionNorms(),
+      siteContext: siteContextTable(),
       rules: selectedRulePack(params.rulePacks, {
         standards: nationalRulePack(),
         experience: nvgExperiencePack(),
       }),
       doorExemptTypes: new Set(roomGroups(roomVocabulary().vocabulary).no_door_required ?? []),
+      verticalTypes: new Set(roomGroups(roomVocabulary().vocabulary).circulation ?? []),
+      outdoorTypes: new Set(roomGroups(roomVocabulary().vocabulary).outdoor ?? []),
       repo,
-      pricing: router.publicRoutes().find((route) => route.route === params.textRoute)?.pricing,
+      pricing: publicRoute?.pricing,
       provider: router.providerOf(params.textRoute) ?? 'unknown',
+      model: publicRoute?.model ?? 'unknown',
     };
 
     if (params.stage !== 'plan') {
@@ -127,7 +141,7 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
       else {
         failed.push({
           variantId: variant.id,
-          error: outcome?.reason instanceof Error ? outcome.reason.message : 'Lỗi không rõ.',
+          error: userFacing(outcome?.reason),
         });
       }
     });

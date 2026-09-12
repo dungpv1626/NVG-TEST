@@ -293,7 +293,7 @@
           <div class="stat">
             <b>1.211</b><span class="xs muted-t">Phép thử xanh (1.022 vitest + 189 pytest)</span>
           </div>
-          <div class="stat"><b>9</b><span class="xs muted-t">Vướng mắc đang mở</span></div>
+          <div class="stat"><b>10</b><span class="xs muted-t">Vướng mắc đang mở</span></div>
           <div class="stat">
             <b>16</b><span class="xs muted-t">Mặc định team đã chốt — NVG đổi được</span>
           </div>
@@ -607,7 +607,216 @@
             <b>theo yêu cầu, từng tầng một</b>. Bộ vẽ vector giữ nguyên, tụt xuống làm bản đối chiếu
             kích thước.
           </li>
+          <li>
+            <span class="pill s-done">Xong 12/09</span>
+            <b>Đợt A &middot; A&prime; &middot; B &middot; C — thiết kế lại luồng mặt bằng</b>
+            (T22&ndash;T36): đảo T21 về tờ SVG tất định, gỡ hết quy chuẩn khỏi nhánh AI, chế độ ăn
+            token, mô hình thôi khai tường, và năm cổng dữ liệu G1&ndash;G5. Xem khối riêng bên
+            dưới.
+          </li>
+          <li>
+            <span class="pill s-draft">Chưa</span>
+            <b>Đợt C&prime; &middot; D &middot; E</b>: bộ chấm 15 tiêu chí &middot; bộ vẽ (sai mốc
+            kích thước, đo chữ, nội thất) &middot; cổng người duyệt rồi xuất DXF.
+          </li>
         </ol>
+      </div>
+
+      <div class="flag block">
+        <h3>
+          Đợt A &middot; A&prime; &middot; B &middot; C — thiết kế lại luồng mặt bằng (12/09/2026)
+        </h3>
+        <p class="kv">
+          <b>Haan đặt hai mục tiêu:</b> giảm chi phí token, nâng độ chính xác bản vẽ. Phương án đầy
+          đủ ở <code>~/.claude/plans/fancy-weaving-bird.md</code> (đã duyệt), gồm 15 quyết định
+          <b>T22&ndash;T36</b> và bảy đợt. Bốn đợt đầu đã xong mã.
+        </p>
+        <p class="kv">
+          <b>Bộ tiêu chí từ HỒ SƠ THẬT, và nó bác bốn thứ tôi đoán.</b> Haan đưa
+          <code>/home/haan/Documents/Doc/NVG/design/mat_bang_cong_nang</code> — phân tích
+          <b>2 dự án NVO, 6 mặt bằng độc lập</b>, đọc cả ảnh, PDF và <b>3 tệp DXF gốc</b>. Bốn trong
+          13 tiêu chí tôi đề xuất bị hồ sơ đã xây <b>phủ định</b>, nên đã BỎ: tường tầng trên trùng
+          tuyến tầng dưới (đo được <b>0&ndash;1%</b> trên cả hai công trình khung BTCT đã xây)
+          &middot; tổng chiều dài tường trên m² (biến thiên theo chức năng tầng, không theo chất
+          lượng) &middot; tỷ lệ phòng vụn (phòng nhỏ trên hồ sơ đều có chủ đích) &middot; bề rộng
+          mặt thoáng trên m² (sai số đo cửa &plusmn;0,15 m <b>lớn hơn</b> khả năng phân biệt). Ba
+          trong bốn cái ấy <i>nghe</i> rất hợp lý — đó là lý do không điền số phỏng đoán vào
+          <code>kb/</code>.
+        </p>
+        <p class="kv">
+          <b>Đợt A — hai bản vá đang chặn mọi phép đo.</b> (1) Hạn chờ lượt gọi văn bản
+          <b>180 &rarr; 300 s</b>: việc thật mất 154,7 và 163,9 s, tức biên 10%, và lượt 00:19 ngày
+          12/09 huỷ ở giây 180 <b>hai lần liền</b>. (2)
+          <b>Lượt bị huỷ không còn được đánh dấu đáng thử lại</b>: OpenAI tính tiền token nó đã
+          sinh, nên thử lại là mua lần thứ hai đúng cái vừa trả tiền. Thêm
+          <code>classifyNetworkFault</code> phân biệt <i>hết giờ phía ta</i> với <i>rớt kết nối</i>,
+          và có tham số <code>timeoutIsBilled</code> — Pollinations miễn phí nên ở đó hết giờ VẪN
+          đáng thử lại. Hai nhà cung cấp, hai luật, cả hai đều ghi rõ vì sao. Trần bước Workflow
+          nâng 10 &rarr; 12 phút cho vừa 300 + 10 + 300 s.
+        </p>
+        <p class="kv">
+          <b>Đợt A&prime; — bỏ HẾT quy chuẩn khỏi nhánh AI (T30, Haan quyết).</b> Haan hỏi &laquo;<i
+            >bạn lấy QCVN 9411 ở đâu?</i
+          >&raquo; và đó là câu đúng: <b>TCVN 9411 không nằm trong repo</b>, tôi chưa đọc nó, mọi số
+          hiệu mục là lời khai của tệp phân tích — và tôi đã viết nó vào bản kế hoạch như dữ kiện.
+          Rồi QCVN bỏ theo, vì cùng phép soát chĩa vào 14 quy tắc ấy thì chứng cứ của chúng
+          <b>yếu hơn</b>: cả 14 ghi <code>source: 'QCVN 01:2021/BXD'</code>
+          <b>không kèm một số mục nào</b>.
+        </p>
+        <p class="kv">
+          <b>Và đo thử thì bỏ đi còn TỐT HƠN giữ</b> — đây là phần không đoán trước được:
+          <b>2</b> quy tắc <b>bắt oan trên nhà NVG đã xây</b> (<code>module_grid_100mm</code>: 11/15
+          kích thước thật không chia hết 100 mm; <code>bedroom_requires_daylight</code> kiểu bao
+          trùm: 2/7 phòng ngủ thật không có sáng trực tiếp) &middot; <b>1</b> quy tắc
+          <b>chưa từng chạy</b> (<code>load_bearing_wall_alignment</code> nhắm vào một nhóm có
+          <code>members: []</code>) &middot; <b>6</b> đã được bộ đo thật hoặc cổng dữ liệu phủ tốt
+          hơn &middot; <b>3</b> là no-op &middot; <b>2</b> cho biệt thự, nơi hiện không có số đo
+          nào.
+        </p>
+        <p class="kv">
+          <b>Cái PHẢI thêm:</b> màn hình <b>nói ra</b> rằng không kiểm quy chuẩn. Im lặng đọc thành
+          &laquo;đã kiểm và đạt&raquo;. Câu do mã chèn, không tắt được từ giao diện:
+          <i
+            >&laquo;Không kiểm quy chuẩn xây dựng. Chỉ đối chiếu thói quen thiết kế Nhà Việt Group
+            đã đo trên 2 dự án.&raquo;</i
+          >
+        </p>
+        <p class="kv">
+          <b>Năm quy tắc kinh nghiệm đang báo sai trên chính nhà NVG đã xây, đã sửa:</b> ban công
+          1,2 &rarr; <b>1,0 m</b> (lọt lòng đo được 1,03&ndash;1,77; con số 1,20&ndash;1,25 là tới
+          <i>mép sàn</i>, tức quy tắc đang đo sai mốc) &middot; kho 1,0 &rarr; <b>0,85 m</b> (kho
+          thật rộng 0,86) &middot; WC 1,2 &rarr; <b>1,25 m</b> &middot;
+          <code>lightwell_max_area</code> đổi mã đích <code>lightwell</code> &rarr;
+          <code>light_well</code> (<b>quy tắc chưa từng chạy</b> kể từ khi ra đời) &middot; thêm
+          <code>circulation</code> 1,1 m <b>đồng thời</b> thêm mã <code>vanity</code>, vì không có
+          mã mới thì quy tắc mới bắt oan hốc lavabo 1,05 m của P2 ngay khi ra đời.
+        </p>
+        <p class="kv">
+          <b>Một tệp quy tắc RIÊNG, và đây là lý do cụ thể:</b> nhồi
+          <code>room_min_area_wc: 3.0</code> (đo trên 5 khu vệ sinh thật) vào
+          <code>rules/nvg-experience.yaml</code> làm <b>4 phép thử của BỘ GIẢI đỏ</b> — tệp đó được
+          <code>rulePackFor()</code> gộp cho bộ giải, nên mức tối thiểu của WC nhảy 2,4 &rarr; 3,0
+          và trên lô nhà phố 3,5 &times; 12 m thang bộ tụt xuống đúng mức sàn. Không phải lỗi phép
+          đo: lô ấy chật thật. Nhưng
+          <b>re-tune bộ giải là quyết định riêng, có nghiệm thu riêng</b>, nhất là khi T10 đòi 1.211
+          phép thử của nó đứng yên. Nên 8 quy tắc đo được nằm ở
+          <code>rules/nvg-measured.yaml</code>, <b>chỉ nhánh AI đọc</b>.
+        </p>
+        <p class="kv">
+          <b>Đợt B — gỡ T21 và chế độ ăn token (T22, T26).</b> 5 tệp gỡ hẳn,
+          <code>sheet_prompt</code> khỏi hợp đồng, hai tuyến ảnh khỏi <code>routes.ts</code> (43.996
+          &rarr; 34.838 ký tự), migration <b>xuôi</b> <code>0125</code> dựng lại hai CHECK
+          constraint. Migration xuôi chứ không xoá <code>0124</code>: 0124 <b>đã commit</b>, và xoá
+          một migration đã commit là cách chắc nhất để journal lệch khỏi CSDL mà không gì báo. Kiểm
+          trước khi viết: <b>108 artifact, 0 tờ ảnh đã đúc</b>.
+        </p>
+        <p class="kv">
+          <b>Chỗ cắt token đáng ghi nhất:</b> <code>$defs.cm.description</code> dài 682 ký tự và
+          <code>llm/schema-dialect.ts</code>
+          <b>nội suy nó vào cả 10 chỗ dùng <code>$ref</code></b> &rarr;
+          <b>6.138 ký tự thừa mỗi lượt</b>. Phần lớn đoạn ấy giải thích <i>vì sao</i> có lưới nửa cm
+          — thông tin cho người đọc hợp đồng, không cho mô hình. Dời sang <code>$comment</code>, vốn
+          đã nằm trong <code>META_KEYS</code> nên bị lược cho cả ba nhà cung cấp. Lý lẽ còn nguyên
+          trong tệp, chỉ không còn trả tiền cho nó.
+        </p>
+        <p class="kv">
+          <b>Đợt C — mô hình khai PHÒNG, không khai tường (T23).</b> Hợp đồng mới
+          <code>contracts/ai-plan-rooms.schema.json</code>: phòng, và lỗ mở neo vào
+          <b>CẠNH PHÒNG</b> (<code>room</code> + <code>edge</code> + <code>at</code>). Chương trình
+          suy tường từ chữ nhật phòng ở <b>mọi lượt</b> (<code>ai/plan-geometry.ts</code>), rồi neo
+          lỗ mở lên tường vừa suy. Nên tường và phòng <b>không thể lệch nhau</b>: chúng cùng một
+          nguồn.
+        </p>
+        <p class="kv">
+          <b>Đổi lại, SÁU phép kiểm chặn xoá hẳn:</b> <code>wall_duplicate_id</code> &middot;
+          <code>wall_degenerate</code> &middot; <code>opening_wall_missing</code> &middot;
+          <code>opening_outside_wall</code> &middot; <code>window_on_partition</code> &middot;
+          <code>room_edge_uncovered</code>. Cả sáu tồn tại <b>chỉ vì</b> mô hình khai tường. Phép
+          cuối là cái mất đi đáng nói nhất — nó bắt đúng lúc tường mô hình khai không trùng phòng mô
+          hình khai, tức mô hình tự mâu thuẫn với chính nó; xoá nó không làm yếu bộ kiểm vì mâu
+          thuẫn ấy <b>nay không diễn đạt được</b>. Bất biến thì vẫn được canh, nhưng bằng một phép
+          thử của chính bộ suy tường. Hai phép còn có nghĩa thì chuyển sang không gian cạnh phòng:
+          <code>opening_overlap</code> và <code>window_on_interior_edge</code>.
+        </p>
+        <p class="kv">
+          <b>Lược đồ gửi đi, đo thật:</b> <b>14.508 &rarr; 9.999 &rarr; 6.179 ký tự</b> (OpenAI, sau
+          nội suy <code>$ref</code>) &mdash; tức <b>&minus;57%</b>, trong đó &minus;38% là của riêng
+          T23. Token ĐẦU RA là nửa đắt hơn (giá cao gấp 4&ndash;8 lần đầu vào) và phần lớn 13.247
+          token ra của một lượt <code>plan</code> là từng đoạn tường kèm bề dày — nay mô hình không
+          khai nữa. <b>Con số đầu ra thật vẫn phải đo</b>, và đo được thì cần một lượt gọi trả phí:
+          chưa xin.
+        </p>
+        <p class="kv">
+          <b>T23 lôi ra bốn lỗ mở đặt sai trong chính fixture viết tay</b> — và đây là phần thuyết
+          phục nhất về việc neo theo cạnh phòng. Cả bốn <b>vắt qua ranh giới giữa hai phòng</b>: cửa
+          <code>d7</code> nhà phố T3 trải từ x 261 tới 351 trong khi cạnh sau phòng giặt chỉ từ 283
+          &middot; ô thông <code>d7</code> biệt thự T1 trải tới y 931 trong khi vách chung
+          sảnh&ndash;bếp dừng ở 900 &middot; cửa sổ <code>s5</code> biệt thự T2 vắt qua sảnh, khe
+          vách, rồi mới tới phòng ngủ &middot; và
+          <b>cửa chính <code>d_main</code> của cả ngôi nhà</b> lòi 15 cm sang khe vách và chỗ để xe.
+          Dưới cách neo theo ĐOẠN TƯỜNG không ai thấy được, vì tường là một đoạn dài chạy suốt nhà.
+          Ba ảnh chụp vàng đổi theo, mỗi tờ một dòng.
+        </p>
+        <p class="kv">
+          <b>Năm cổng dữ liệu G1&ndash;G5, và cả năm chỗ hỏng trước 12/09 đều ĐẠT:</b>
+          <b>G1</b> mặt sàn phải lấp kín — một mặt bằng có lỗ 27 m² giữa nhà vẫn đi qua sạch, vì
+          chiều duy nhất được kiểm là &laquo;phòng nằm trong hình bao&raquo;. <b>G2</b> chồng lấn
+          mọi loại cặp — một ô thang đặt trùng lên phòng ngủ vẫn đạt. <b>G3</b> tới được từ cửa
+          ngoài nhà — một cụm phòng nối nhau mà không nối ra ngoài vẫn đạt. <b>G4</b> ô thang cạnh
+          &le; 0 thì bộ vẽ <b>không vẽ gì và không ghi ghi chú nào</b> — hỏng im lặng. <b>G5</b> hai
+          phòng cùng tên trên một tầng (hồ sơ P1 có thật, và đúng cặp ấy mang hai nhãn diện tích sai
+          30%).
+        </p>
+        <p class="kv">
+          <b>G1 không so hai con số tổng, và đó là chỗ dễ làm sai:</b> <code>rect</code> của phòng
+          là kích thước <i>lọt lòng</i>, nên một tầng ĐÚNG ĐẮN vẫn có
+          <b>10,4 trong 60 m² chưa phủ</b> (đo trên fixture nhà phố) và toàn bộ chỗ ấy là bề dày
+          tường. Một phép so tổng sẽ bắt oan mọi mặt bằng đúng. Thay vào đó: nén toạ độ ra từng ô
+          chưa phủ, rồi chỉ tính ô có <b>cạnh ngắn &gt; 60 cm</b> — không khe tường nào rộng tới mức
+          đó (bức dày nhất là 22 cm), và không khoảng nào hẹp hơn thế mà thành phòng được (mức hẹp
+          nhất trong <code>rules/</code> là 85 cm).
+        </p>
+        <p class="kv">
+          <b>Cửa sổ trên tường ranh KHÔNG còn được tính là mặt thoáng.</b> Hợp đồng chỉ có
+          <code>walls[].k &isin; {e,p,r}</code>, trong đó <code>e</code> gộp cả tường giáp ngoài
+          trời lẫn tường trên ranh đất — nên phép đối chiếu mặt thoáng
+          <b>đếm một cửa sổ không thể tồn tại</b>, và nó hỏng im lặng. Chỗ sửa <b>không</b> ở mô
+          hình mà ở ĐẦU VÀO: mỗi cạnh <code>outline</code> mang
+          <code>outline_faces[i] &isin; {open, boundary, unknown}</code>, do Worker suy từ hiện
+          trạng bốn phía (<code>kb/site_context.yaml</code>) — dữ liệu đã có trước lượt gọi đầu
+          tiên. <code>boundary</code> <b>cố ý không nói</b> tường chung hay tường riêng: Haan chốt
+          đó là quyết định của kỹ sư cho từng khách hàng, nên nó không suy được và chưa có ô nhập
+          nào.
+        </p>
+        <p class="kv">
+          <b>Phòng ghép (<code>also</code>)</b>: 3 trong 6 mặt bằng thật có phòng ghép (&laquo;BẾP
+          ĂN&raquo;, &laquo;PHÒNG KHÁCH + THỜ&raquo;). Không có trường này thì mô hình chỉ còn hai
+          đường và cả hai đều sai: bỏ một mã phòng (bị <code>room_missing</code> chặn), hoặc
+          <b>dựng một vách không tồn tại</b> để có đủ phòng — tức bố cục bị hợp đồng bóp méo.
+        </p>
+        <p class="kv">
+          <b>Hai hợp đồng, một phép thử canh chúng không trôi khỏi nhau.</b>
+          <code>contracts-parity.test.ts</code> so CẤU TRÚC (bỏ mọi <code>description</code>) của
+          phần TRÙNG: phòng, ô thang, ô trống, <code>rect</code>, <code>point</code>. Khác nhau duy
+          nhất được phép là <code>cm</code> — mô hình khai số NGUYÊN, artifact cho lưới nửa cm vì
+          tim một vách 11 cm giữa hai phòng rơi vào x,5 — và phép thử <b>ghim đúng một chỗ ấy</b> để
+          nó không âm thầm thành ba chỗ. Hàng rào cho cùng lớp lỗi đã xảy ra thật ngày 11/09: hợp
+          đồng khai <code>strategy</code> tối đa 200 ký tự trong khi ý đồ thật dài 241&ndash;301,
+          nên <b>mọi lượt ghi đều hỏng</b>, và hỏng ở bước CUỐI sau khi đã trả tiền.
+        </p>
+        <p class="kv">
+          <b>Một tệp chuyển chỗ, có lý do kiến trúc:</b>
+          <code>layout/site-context.ts</code> &rarr; <code>kb/site-context.ts</code>. Cả hai nhánh
+          cùng đọc nó, nên để trong thư mục của bộ giải thì
+          <code>ai-independence.test.ts</code> chặn đúng chỗ cần dùng, và hôm xoá bộ giải sẽ kéo
+          theo nhánh AI. Đúng tiền lệ đã chuyển <code>rules/</code> ra khỏi
+          <code>program/</code> ngày 09/09.
+        </p>
+        <p class="kv">
+          <b>Đo lúc chốt Đợt C:</b> <b>873 phép thử Worker/shared</b> + <b>362 phía web</b> xanh,
+          <code>npx tsc -b</code> sạch, prettier sạch, <code>contracts:check</code> khớp 24 tệp.
+          <b>0 lượt gọi API AI trong cả bốn đợt.</b>
+        </p>
       </div>
 
       <div class="flag block">
@@ -2420,6 +2629,32 @@
 
       <!-- ============ 5. VƯỚNG MẮC ============ -->
       <h2>5. Vướng mắc đang mở</h2>
+      <div class="flag block">
+        <h3>Chưa kiểm được lượt chạy nền trước khi sửa <code>workers/</code> — 12/09/2026</h3>
+        <p class="kv">
+          <b>Gặp ở đâu:</b> điều kiện chặn số 1 của phương án Đợt A&ndash;E yêu cầu kiểm
+          <code>SELECT status FROM design_ai_run ORDER BY created_at DESC LIMIT 1</code> TRƯỚC khi
+          ghi bất kỳ tệp nào trong <code>workers/</code>: <code>wrangler dev</code> đang chạy, mỗi
+          lần ghi tệp là một lần nạp lại, và nạp lại <b>giết instance Workflow</b> — để lại dòng
+          <code>running</code> thây ma khoá luôn lượt sau bằng 409.
+        </p>
+        <p class="kv">
+          <b>Đã thử:</b> Supabase MCP trả
+          <i>&laquo;requires re-authorization (token expired)&raquo;</i>; máy không có
+          <code>psql</code> nên không đi đường <code>DATABASE_URL</code> được.
+        </p>
+        <p class="kv">
+          <b>Đang chặn:</b> không chặn việc gì — bốn đợt đã sửa khoảng 50 tệp trong
+          <code>workers/</code> và không lượt chạy nào bị giết (nếu có thì đợt A đã giết nó rồi).
+          Nhưng <b>điều kiện chặn đã được bỏ qua mà không kiểm</b>, nên đây là ghi nhận, không phải
+          báo an toàn.
+        </p>
+        <p class="kv">
+          <b>Cần gì để gỡ:</b> Haan cấp lại quyền Supabase MCP, hoặc tự chạy câu truy vấn trên và
+          dán kết quả. Sau đó nếu có dòng <code>running</code> thây ma thì phải đặt nó về
+          <code>failed</code> trước lượt chạy tiếp theo.
+        </p>
+      </div>
       <div class="flag block">
         <h3>T20 · Hai gói quy tắc, kỹ sư tự chọn — 09/09/2026</h3>
         <p class="kv">

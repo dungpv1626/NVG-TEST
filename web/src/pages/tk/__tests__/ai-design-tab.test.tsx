@@ -11,6 +11,7 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
+import { AI_DISCLAIMERS } from '@nvg/shared/design';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithApp } from '@/test/render';
@@ -175,7 +176,11 @@ describe('Bước chương trình không gian', () => {
     });
   });
 
-  it('tích gói nào thì gửi đúng gói đó, và nói rõ gói nào là luật gói nào là thói quen', async () => {
+  it('tích gói nào thì gửi đúng gói đó, và màn hình NÓI RA rằng không kiểm quy chuẩn', async () => {
+    // Phép thử này trước 12/09/2026 canh hai ô tích và câu «Văn bản pháp quy, áp dụng toàn quốc».
+    // Ý của nó — màn hình phải nói rõ cảnh báo đến từ luật hay từ thói quen — vẫn đúng, nhưng
+    // T30 gỡ hẳn gói pháp quy khỏi nhánh AI, nên nay chỉ còn một gói và điều phải nói ra là
+    // điều NGƯỢC LẠI: rằng hệ thống KHÔNG kiểm quy chuẩn. Im lặng đọc thành «đã kiểm và đạt».
     state.design = designState();
     state.runProgram.mockClear();
     renderWithApp(<AiDesignTab projectId="p1" readOnly={false} />);
@@ -183,16 +188,24 @@ describe('Bước chương trình không gian', () => {
     expect(
       await screen.findByText(/Chưa chọn gói nào: mô hình thiết kế tự do/),
     ).toBeInTheDocument();
-    expect(screen.getByText(/Văn bản pháp quy, áp dụng toàn quốc/)).toBeInTheDocument();
     expect(screen.getByText(/Không phải luật, bỏ qua được/)).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('checkbox', { name: /Quy chuẩn quốc gia/ }));
+    // Ô tích «Quy chuẩn quốc gia» phải KHÔNG còn: một ô tích không bật gì còn tệ hơn không có ô,
+    // vì nó tạo cảm giác đã kiểm quy chuẩn.
+    expect(screen.queryByRole('checkbox', { name: /Quy chuẩn quốc gia/ })).toBeNull();
+    expect(screen.queryByText(/Văn bản pháp quy, áp dụng toàn quốc/)).toBeNull();
+    // Và câu thay thế phải có mặt — do MÃ chèn, không tắt được từ giao diện (8.7).
+    expect(screen.getAllByText(AI_DISCLAIMERS.noCodeCheck).length).toBeGreaterThan(0);
+
+    await userEvent.click(
+      screen.getByRole('checkbox', { name: /Kinh nghiệm nghề Nhà Việt Group/ }),
+    );
     await userEvent.click(screen.getByRole('button', { name: 'Lập chương trình không gian' }));
 
     expect(state.runProgram).toHaveBeenCalledWith({
       projectId: 'p1',
       route: 'ai_text_openai',
-      rulePacks: { standards: true, experience: false },
+      rulePacks: { standards: false, experience: true },
     });
   });
 
