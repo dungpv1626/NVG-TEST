@@ -4945,6 +4945,37 @@
           </thead>
           <tbody>
             <tr>
+              <td class="num">Q-47</td>
+              <td>
+                <b>Lỗ hổng cổng «đường đi hằng ngày» (T49)</b> (nhãn cũ Q-D trong ghi chú bàn giao
+                19/09/2026). <code>ai/tree/passage.ts#everydayRouteViolations</code> loang từ
+                <b>mọi</b> phòng khách và <b>mọi</b> phòng ăn <b>cùng một lúc</b> (đã bỏ gara, sảnh
+                ngoài). Nhà có phòng khách cánh phải, phòng ăn cánh trái, hai cánh chỉ nối nhau qua
+                gara: mỗi phép loang đều đạt, gộp lại không phòng nào bị nêu — nhưng đi từ phòng
+                khách sang phòng ăn vẫn xuyên gara. Đúng ca Haan chấm ở lượt Claude Sonnet của T53
+                («cả cánh trái chỉ vào được qua gara mà vẫn qua cổng»). Hai cách sửa, chọn một: (1)
+                <b>một điểm xuất phát</b> — chỉ <code>living</code> (không có thì
+                <code>dining</code>), đòi phòng ăn cũng tới được không qua gara; phải chọn đúng
+                phòng khách chính khi có hai. (2) <b>xét cụm liên thông</b> — bỏ gara, sảnh ngoài
+                rồi đòi mọi khu sinh hoạt chung và mọi đích hằng ngày nằm trong <b>một</b> cụm; bắt
+                được cả ca hai phòng khách hai cánh (đề xuất nghiêng về cách này). Cả hai đổi hành
+                vi CHẶN, phải đo lại trên các bản phác thật đã lưu trước khi giữ.
+              </td>
+              <td class="num">Trước khi sửa cổng đường đi</td>
+            </tr>
+            <tr>
+              <td class="num">Q-46</td>
+              <td>
+                <b>Ban công đua ra ngoài khối, phần đua không tính vào diện tích sàn công năng</b>
+                (nhãn cũ Q-A trong ghi chú bàn giao 19/09/2026).<br />
+                <b>ĐÃ TRẢ LỜI 19/09/2026:</b> Haan chốt LÀM, thành một đợt riêng.
+                <b>Chưa bắt đầu.</b> Đây là điều kiện để bật chặn luật «ban công quay cạnh dài ra
+                mặt thoáng» — hiện luật ấy chỉ là ghi chú <code>outdoor_off_face</code>. Đụng vào:
+                cây chia lấp kín mặt sàn, đường bao tầng, suy tường, tính diện tích, tờ vẽ, DXF.
+              </td>
+              <td class="num">Đợt riêng kế tiếp</td>
+            </tr>
+            <tr>
               <td class="num">Q-45</td>
               <td>
                 <b
