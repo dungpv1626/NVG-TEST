@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nvg.vn/contracts/ai-plan-edit.schema.json",
+  "title": "AiPlanEdit",
+  "$comment": "Lượt SỬA theo yêu cầu kỹ sư trên một mặt bằng AI đã lưu (T53, 16/09/2026 — Haan: «giai đoạn tiếp theo là sửa trên bản vẽ hiện tại … bỏ vách ngăn phòng khách với phòng để xe, ấn sửa lại»). Mô hình KHÔNG vẽ lại bản phác: nó dịch câu chat thành các thao tác trong một tập ĐÓNG; chương trình (`ai/edit/apply.ts`) áp lên cây chia đã lưu, cho qua cổng và chấm lại điểm. Giữ nguyên mọi chỗ kỹ sư không nhắc tới là tính chất của cách làm này, không phải lời hứa của mô hình.\n\nMỗi thao tác là MỘT hình dạng phẳng, trường không dùng để `null`: chế độ `strict` của OpenAI ép mọi trường tuỳ chọn thành «bắt buộc, có thể null», và một hình phẳng rẻ token hơn hẳn `oneOf` tám nhánh.\n\n`relayout` là lối thoát: yêu cầu cần đổi bố cục mà tám thao tác không diễn đạt được thì luồng gửi lại ý định cả nhà (`house_intent` của artifact) cho lượt `revise` như lượt thường.\n\n`description` là lời dặn gửi cho mô hình (bộ chuyển phương ngữ chỉ lược `$comment`), nên viết tiếng Anh, ngắn.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["ops", "unsupported", "explanation"],
+  "properties": {
+    "ops": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "$ref": "#/$defs/op"
+      }
+    },
+    "unsupported": {
+      "type": "array",
+      "maxItems": 6,
+      "items": {
+        "type": "string",
+        "maxLength": 300
+      },
+      "description": "Parts of the request you cannot do, in Vietnamese."
+    },
+    "explanation": {
+      "type": "string",
+      "maxLength": 600,
+      "description": "Vietnamese, one or two sentences on what will change."
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": ["string", "null"],
+      "maxLength": 40
+    },
+    "op": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "op",
+        "level",
+        "room",
+        "from",
+        "to",
+        "a",
+        "b",
+        "place",
+        "area_m2",
+        "delta_m",
+        "on",
+        "request"
+      ],
+      "properties": {
+        "op": {
+          "type": "string",
+          "enum": [
+            "move_door",
+            "open_wall",
+            "close_wall",
+            "swap_rooms",
+            "resize_room",
+            "move_wall",
+            "window",
+            "relayout"
+          ]
+        },
+        "level": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12
+        },
+        "room": {
+          "$ref": "#/$defs/id",
+          "description": "move_door, resize_room, window."
+        },
+        "from": {
+          "$ref": "#/$defs/id",
+          "description": "move_door: the room the door opens to now, when the room has several doors; else null."
+        },
+        "to": {
+          "$ref": "#/$defs/id",
+          "description": "move_door: room sharing a wall with `room`, or \"outside\"."
+        },
+        "a": {
+          "$ref": "#/$defs/id",
+          "description": "open_wall, close_wall, swap_rooms, move_wall."
+        },
+        "b": {
+          "$ref": "#/$defs/id"
+        },
+        "place": {
+          "type": ["string", "null"],
+          "enum": ["start", "middle", "end", null],
+          "description": "move_door: start = end of the wall with smaller x or y, end = larger."
+        },
+        "area_m2": {
+          "type": ["number", "null"],
+          "minimum": 1,
+          "maximum": 400
+        },
+        "delta_m": {
+          "type": ["number", "null"],
+          "minimum": -5,
+          "maximum": 5,
+          "description": "move_wall: positive makes a larger."
+        },
+        "on": {
+          "type": ["boolean", "null"],
+          "description": "window: true adds a window, false removes it."
+        },
+        "request": {
+          "type": ["string", "null"],
+          "maxLength": 600,
+          "description": "relayout: the change needed, in English."
+        }
+      }
+    }
+  }
+}

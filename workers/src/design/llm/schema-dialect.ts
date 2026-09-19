@@ -127,6 +127,12 @@ function transform(node: unknown, provider: SchemaProvider): unknown {
   return finish(out, provider);
 }
 
+/** Kiểu JSON Schema của một giá trị `enum` — `integer` gộp vào `number` như cách lược đồ khai. */
+function jsonType(value: unknown): string {
+  if (typeof value === 'number') return 'number';
+  return typeof value;
+}
+
 function isObjectNode(node: Node): boolean {
   return node.type === 'object' || node.properties !== undefined;
 }
@@ -154,6 +160,25 @@ function finish(node: Node, provider: SchemaProvider): Node {
 
   if (provider === 'anthropic') {
     if (isObjectNode(node)) node.additionalProperties = false;
+    // `enum` kèm kiểu MẢNG (`["string", "null"]`) thì Claude trả 400 «Enum value 'start' does not
+    // match declared type» — đo 17/09/2026 trên lượt sửa mặt bằng (trường `place`), OpenAI nhận
+    // được. Tách thành `anyOf`: nhánh kiểu đơn mang các giá trị, nhánh `null` riêng.
+    if (Array.isArray(node.type) && Array.isArray(node.enum)) {
+      const values = node.enum as unknown[];
+      const branches: Node[] = (node.type as string[]).map((type) =>
+        type === 'null'
+          ? { type: 'null' }
+          : {
+              type,
+              enum: values.filter(
+                (v) => v !== null && jsonType(v) === (type === 'integer' ? 'number' : type),
+              ),
+            },
+      );
+      delete node.type;
+      delete node.enum;
+      node.anyOf = branches;
+    }
     return node;
   }
 

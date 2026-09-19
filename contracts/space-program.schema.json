@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://nvg.vn/contracts/space-program.schema.json",
   "title": "SpaceProgram",
-  "description": "Chương trình không gian — output Layer 2. Nguồn: doc/design/03-data-contracts.md mục 3.2.",
+  "description": "Chương trình không gian — output Layer 2. Nguồn: doc/design/03-data-contracts.md mục 3.2.\n\nv1.1.0 (13/09/2026): diện tích khách khai ở đầu bài là TỐI THIỂU (T41), không còn đứng thành diện tích đề xuất cố định. Thêm `min_source`, `target_source` để màn hình nói được mỗi con số do ai quyết, `architect_edits` — những chỗ kiến trúc sư sửa diện tích đề xuất trước khi chốt, và `ai_intent` — đề xuất ưu tiên của AI mà bản chốt đã dùng.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema_version", "brief_ref", "spaces"],
@@ -35,15 +35,40 @@
           },
           "target_area_m2": {
             "type": ["number", "null"],
-            "exclusiveMinimum": 0
+            "exclusiveMinimum": 0,
+            "description": "Diện tích ĐỀ XUẤT. Chương trình chia phần sàn còn dư của tầng theo trọng số chuẩn nghề, hoặc lấy trung vị thống kê, hoặc kiến trúc sư sửa tay — xem `target_source`. Không bao giờ nhỏ hơn `min_area_m2`."
           },
           "min_area_m2": {
             "type": "number",
-            "exclusiveMinimum": 0
+            "exclusiveMinimum": 0,
+            "description": "Diện tích TỐI THIỂU — số lớn nhất trong ba nguồn: đầu bài khách khai, gói quy tắc (kinh nghiệm NVG), chuẩn nghề (`kb/space_norms.yaml`). Nguồn thắng ghi ở `min_source`."
           },
           "max_area_m2": {
             "type": ["number", "null"],
             "exclusiveMinimum": 0
+          },
+          "min_source": {
+            "type": "string",
+            "enum": ["brief", "rule_pack", "practice"],
+            "description": "Nguồn của `min_area_m2`: brief = khách khai ở đầu bài · rule_pack = gói quy tắc của bộ giải (từ 13/09/2026 chỉ còn kinh nghiệm nghề NVG — không còn quy chuẩn) · practice = chuẩn nghề (`kb/space_norms.yaml`). Trùng nhau thì ưu tiên theo đúng thứ tự đó. Vắng ở artifact trước v1.1.0."
+          },
+          "target_source": {
+            "type": "string",
+            "enum": ["program", "statistics", "architect"],
+            "description": "Ai quyết `target_area_m2`: program = chương trình chia sàn theo chuẩn nghề · statistics = trung vị công trình NVG đã làm · architect = kiến trúc sư sửa tay trước khi chốt. Vắng ở artifact trước v1.1.0."
+          },
+          "occupant": {
+            "type": ["string", "null"],
+            "maxLength": 80,
+            "description": "Phòng của ai — «Ông bà · 2 người», «Con 2 · 1 người», «khép kín — Vợ chồng · 2 người». Chỉ phòng ngủ suy từ «Thành viên gia đình» (và khu vệ sinh khép kín của nó) mới có; vắng = engine không biết phòng dành cho ai. Thêm 13/09/2026."
+          },
+          "includes": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "$ref": "#/$defs/space_type"
+            },
+            "description": "Tiện ích NẰM TRONG phòng này — tủ đồ, góc học tập, phòng thay đồ… — khai ở nhu cầu riêng của nhóm thành viên. Diện tích của chúng đã cộng vào ba con số diện tích của phòng; không có dòng không gian riêng. Danh sách mã ở `kb/space_norms.yaml` `in_bedroom`. Thêm 13/09/2026."
           },
           "priority": {
             "type": "integer",
@@ -131,6 +156,74 @@
     "priors_applied": {
       "type": "boolean"
     },
+    "architect_edits": {
+      "type": "array",
+      "maxItems": 200,
+      "description": "Diện tích đề xuất kiến trúc sư đã sửa trước khi chốt, mỗi không gian một dòng, xếp theo `space_id`. Lưu RIÊNG ngoài `spaces` để lần sau mở màn hình, chương trình tính lại từ đầu bài rồi áp lại đúng những chỗ sửa này — nhờ đó biết bản chốt còn khớp đầu bài hay không, và chỗ nào là của người.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["space_id", "target_area_m2"],
+        "properties": {
+          "space_id": {
+            "$ref": "#/$defs/space_id"
+          },
+          "target_area_m2": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        }
+      }
+    },
+    "ai_intent": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["route", "provider", "model", "emphasis", "add_spaces", "rationale"],
+      "description": "Đề xuất mức ưu tiên diện tích của AI (Lớp 2a) mà bản chốt đã dùng. Từ 13/09/2026 AI chỉ chạy khi kiến trúc sư BẤM NÚT và chọn mô hình — không còn tự gọi mỗi lần mở màn hình. Lưu kèm bản chốt để lần sau tính lại từ đầu bài vẫn áp đúng đề xuất ấy mà không gọi mô hình lần nữa. Vắng = chương trình lập thuần theo chuẩn nghề.",
+      "properties": {
+        "route": {
+          "type": "string",
+          "minLength": 1
+        },
+        "provider": {
+          "type": "string",
+          "minLength": 1
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "emphasis": {
+          "type": "array",
+          "maxItems": 40,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["space_type", "level"],
+            "properties": {
+              "space_type": {
+                "$ref": "#/$defs/space_type"
+              },
+              "level": {
+                "type": "string",
+                "enum": ["generous", "normal", "modest"]
+              }
+            }
+          }
+        },
+        "add_spaces": {
+          "type": "array",
+          "maxItems": 12,
+          "items": {
+            "$ref": "#/$defs/space_type"
+          }
+        },
+        "rationale": {
+          "type": "string",
+          "maxLength": 800
+        }
+      }
+    },
     "generator": {
       "type": ["object", "null"],
       "description": "Nguồn sinh artifact — nhánh AI (T10) ghi để truy vết: kind 'ai' kèm nhà cung cấp, mô hình, tuyến, phiên bản lời dẫn và lý do mô hình đưa ra. Vắng hoặc 'solver' = nhánh tất định. Trường tuỳ chọn, thêm 08/09/2026; artifact cũ không có vẫn hợp lệ.",
@@ -170,6 +263,10 @@
       "pattern": "^sha256:[0-9a-f]{64}$"
     },
     "space_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$"
+    },
+    "space_type": {
       "type": "string",
       "pattern": "^[a-z0-9_]+$"
     }

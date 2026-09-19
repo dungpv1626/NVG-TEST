@@ -66,7 +66,12 @@ function spacesTable(draft: DesignBriefDraft, floors: number): string {
   const labelOf = (type: string) =>
     field?.options?.find((option) => option.value === type)?.label ?? type;
 
-  const head = ['Không gian', floors > 1 ? 'Tầng' : null, 'Diện tích (m²)', 'Tiện ích bổ sung']
+  const head = [
+    'Không gian',
+    floors > 1 ? 'Tầng' : null,
+    'Diện tích tối thiểu (m²)',
+    'Tiện ích bổ sung',
+  ]
     .filter(Boolean)
     .map((h) => `<th>${escapeHtml(String(h))}</th>`)
     .join('');
@@ -176,7 +181,8 @@ export function printBrief(input: BriefPrintInput): void {
     .join('');
 
   const percent = Math.round(score.score * 100);
-  const enough = input.threshold !== null && score.score >= input.threshold;
+  const blocking = issues.filter((issue) => issue.severity === 'nghiem_trong').length;
+  const enough = input.threshold !== null && score.score >= input.threshold && blocking === 0;
   const missing = score.missing.length
     ? `<ul>${score.missing
         .map(
@@ -207,7 +213,9 @@ ${sections}
       ? 'chưa cấu hình mức đầy đủ tối thiểu'
       : enough
         ? 'đã đủ thông tin để dựng phương án tự động'
-        : `chưa đủ để dựng phương án tự động, cần từ ${Math.round(input.threshold * 100)}%`
+        : blocking > 0 && score.score >= input.threshold
+          ? `chưa dựng được phương án tự động — còn ${blocking} mâu thuẫn nghiêm trọng phải gỡ`
+          : `chưa đủ để dựng phương án tự động, cần từ ${Math.round(input.threshold * 100)}%`
   }</p>
 <h3>Còn thiếu (${score.missing.length})</h3>
 ${missing}

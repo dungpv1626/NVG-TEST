@@ -21,6 +21,7 @@ import type { DesignBriefDraft } from '@nvg/shared/design';
 import { designApi, designApiFile } from '@/lib/design-api';
 import { useCompanyScope, withCompanyScope } from '@/lib/company-scope';
 import { supabase } from '@/lib/supabase';
+import type { AiCallUsage } from './use-ai-design';
 
 export interface DesignProjectRecord {
   id: string;
@@ -373,6 +374,16 @@ export interface ProgramSpace {
   min_area_m2: number;
   target_area_m2?: number | null;
   max_area_m2?: number | null;
+  /** Nguồn của tối thiểu: khách khai · quy chuẩn · chuẩn nghề. Vắng ở bản chốt trước 13/09/2026. */
+  min_source?: 'brief' | 'rule_pack' | 'practice';
+  /** Ai quyết diện tích đề xuất: chương trình · thống kê NVG · kiến trúc sư sửa tay. */
+  target_source?: 'program' | 'statistics' | 'architect';
+  /** Phòng của ai — «Ông bà · 2 người». Chỉ phòng ngủ suy từ gia đình mới có. */
+  occupant?: string | null;
+  /** Tiện ích nằm trong phòng — diện tích đã cộng vào phòng. */
+  includes?: string[];
+  /** Mã phòng mẹ khi là khu vệ sinh khép kín. */
+  enclosed_in?: string | null;
   priority?: number;
   needs_daylight?: boolean;
   needs_facade?: boolean;
@@ -395,10 +406,54 @@ export interface SpaceProgramPayload {
   }[];
   reference_projects?: string[];
   priors_applied?: boolean;
+  /** Diện tích đề xuất kiến trúc sư đã sửa trước khi chốt. */
+  architect_edits?: ProgramAreaEdit[];
+  /** Đề xuất mức ưu tiên diện tích của AI mà bản này dùng. Vắng = lập thuần theo chuẩn nghề. */
+  ai_intent?: ProgramAiIntent | null;
+}
+
+/** Đề xuất ưu tiên diện tích của AI (Lớp 2a) — ba bậc, không có mét vuông nào. */
+export interface ProgramAiIntent {
+  route: string;
+  provider: string;
+  model: string;
+  emphasis: { space_type: string; level: 'generous' | 'normal' | 'modest' }[];
+  add_spaces: string[];
+  rationale: string;
+}
+
+export interface ProgramAreaEdit {
+  space_id: string;
+  target_area_m2: number;
+}
+
+/** Các bước ra con số «sàn mỗi tầng» (`program/engine.ts::PlateExplanation`). */
+export interface PlateExplanation {
+  site: { widthM: number; depthM: number; areaM2: number };
+  rect: { widthM: number; depthM: number };
+  setbacks: { front: number; back: number; left: number; right: number };
+  /** Vắng ở máy chủ cũ. */
+  yards?: { front: number; back: number; left: number; right: number };
+  afterSetbacks: { widthM: number; depthM: number; areaM2: number };
+  maxDensity: number | null;
+  /** Vắng ở máy chủ cũ. */
+  densityDeclared?: number | null;
+  densityRule?: { value: number; source: string | null } | null;
+  byDensityM2: number | null;
+  buildableM2: number;
+  floors: number;
+  roomDemandM2: number;
+  circulationRatio: number;
+  evenShareM2: number;
+  heaviest: { floor: number; plateM2: number } | null;
+  plateM2: number;
+  limitedBy: 'buildable' | 'even_share' | 'heaviest_floor';
 }
 
 export interface ProgramView {
   program: SpaceProgramPayload;
+  /** Vắng ở máy chủ cũ. */
+  plateExplanation?: PlateExplanation;
   /** Mã phòng → tên tiếng Việt, do máy chủ gửi kèm từ `kb/room_vocabulary.yaml`. */
   roomLabels: Record<string, string>;
   warnings: string[];
@@ -411,6 +466,13 @@ export interface ProgramView {
   } | null;
   briefArtifactId: string;
   headArtifactId: string | null;
+  /**
+   * Chỗ sửa diện tích của bản đang chốt. `program` ở trên là bản chương trình TÍNH (chưa sửa);
+   * màn hình áp những chỗ này lên để kiến trúc sư thấy lại đúng bản mình đã chốt.
+   */
+  headEdits?: ProgramAreaEdit[];
+  /** Đề xuất AI của bản đang chốt — rỗng khi bản chốt không dùng, hoặc lập từ đầu bài khác. */
+  headAiIntent?: ProgramAiIntent | null;
   /** Bản đang xem có đúng là bản đã chốt cho các lớp sau dùng không. */
   matchesHead: boolean;
   /**
@@ -443,6 +505,41 @@ export function useSpaceProgram(projectId: string, enabled = true) {
   });
 }
 
+/**
+ * Xem trước chương trình với một đề xuất AI CHƯA CHỐT (vừa hỏi về, hoặc vừa bỏ). Không gọi mô
+ * hình nào — đề xuất đi lên từ trình duyệt, máy chủ chỉ tính lại bảng diện tích.
+ */
+export function useSpaceProgramPreview(
+  projectId: string,
+  aiIntent: ProgramAiIntent | null | undefined,
+) {
+  return useQuery<ProgramView, Error>({
+    queryKey: ['design_space_program_preview', projectId, aiIntent ?? null],
+    queryFn: () =>
+      designApi<ProgramView>('/design/program/preview', { projectId, aiIntent: aiIntent ?? null }),
+    enabled: Boolean(projectId) && aiIntent !== undefined,
+    retry: false,
+  });
+}
+
+export interface ProgramIntentResult {
+  aiIntent: ProgramAiIntent | null;
+  /** Vì sao AI không cho ra đề xuất lần này (hết hạn mức, sai cấu trúc…). */
+  notes: string[];
+  usage: AiCallUsage | null;
+}
+
+/** Hỏi AI mức ưu tiên diện tích — MỘT lượt gọi tính tiền theo model đã chọn. */
+export function useAskProgramIntent() {
+  const queryClient = useQueryClient();
+  return useMutation<ProgramIntentResult, Error, { projectId: string; route: string }>({
+    mutationFn: (body) => designApi<ProgramIntentResult>('/design/program/intent', body),
+    onSettled: (_result, _error, { projectId }) => {
+      void queryClient.invalidateQueries({ queryKey: ['design_ai_call', projectId] });
+    },
+  });
+}
+
 export interface GenerateProgramResult {
   artifactId: string;
   reused: boolean;
@@ -462,9 +559,17 @@ export interface GenerateProgramResult {
 export function useGenerateSpaceProgram() {
   const queryClient = useQueryClient();
 
-  return useMutation<GenerateProgramResult, Error, { projectId: string }>({
-    mutationFn: ({ projectId }) =>
-      designApi<GenerateProgramResult>('/design/program/generate', { projectId }),
+  return useMutation<
+    GenerateProgramResult,
+    Error,
+    { projectId: string; edits?: ProgramAreaEdit[]; aiIntent?: ProgramAiIntent | null }
+  >({
+    mutationFn: ({ projectId, edits, aiIntent }) =>
+      designApi<GenerateProgramResult>('/design/program/generate', {
+        projectId,
+        edits,
+        aiIntent,
+      }),
     onSuccess: (_result, { projectId }) => {
       void queryClient.invalidateQueries({ queryKey: ['design_space_program', projectId] });
     },
@@ -690,7 +795,7 @@ export function useMassingModel(projectId: string, artifactId: string | null) {
   });
 }
 
-export type RenderOutcome =
+export type RenderOutcome = (
   | {
       status: 'rendered';
       mimeType: string;
@@ -699,7 +804,11 @@ export type RenderOutcome =
       view: string;
       watermark: string;
     }
-  | { status: 'unavailable'; reason: string; style: string; view: string; watermark: string };
+  | { status: 'unavailable'; reason: string; style: string; view: string; watermark: string }
+) & {
+  /** Số ảnh và chi phí của lượt dựng. Rỗng khi không dựng được (không có lượt nào tính tiền). */
+  usage?: AiCallUsage | null;
+};
 
 /** Dựng ảnh phối cảnh từ ảnh khối (data URL PNG). Tuyến tắt → `unavailable` kèm lý do, không lỗi. */
 export function useRenderFromMassing() {

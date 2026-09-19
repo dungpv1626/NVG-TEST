@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nvg.vn/contracts/ai-house-intent.schema.json",
+  "title": "AiHouseIntent",
+  "$comment": "CẢ NHÀ trong MỘT lượt gọi, do mô hình ngôn ngữ khai: phòng nào có, ở tầng nào, rộng bao nhiêu m², phòng nào cạnh/gần/xa/thông phòng nào, phòng nào mang cửa chính và cửa xe, và mỗi tầng một BẢN PHÁC LƯỚI (`sketches`) — mỗi ô lưới khoảng một mét ghi mã phòng chiếm nó. KHÔNG cửa, KHÔNG tường, KHÔNG kích thước — chương trình (`ai/arrange/sketch.ts`) nắn bản phác thành cây chia, căn vách theo diện tích, đặt cửa, dựng tường.\n\nT48 (16/09/2026, Haan chốt hướng B): thay `zone` + `street_facing` của từng phòng bằng bản phác. Lượt đo 5fda70dc: chín vùng không nói được «WC ở đầu hồi phòng ngủ, cửa mở vào phòng ngủ», còn bộ xếp chỉ biết vài khung hành lang có sẵn — tầng 1 không khai hành lang thì WC không có cửa. Cùng đầu bài, ChatGPT tự phác bố cục đọc được ngay. Lưới ô là dạng phác KHÔNG chồng lấn và KHÔNG sót sàn theo cấu tạo — đúng hai lỗi cây chia có toạ độ của T37 không chặn được. Bản phác không vẽ nổi (phòng không chữ nhật, thiếu phòng, chong chóng) thì bộ xếp lấy vùng từ bản phác và xếp như T43.\n\nQuyết định T45 (15/09/2026, Haan chốt). Tài liệu bàn giao `ai-architectural-floorplan-claude-code-handoff`: «One prompt creates one structured plan» — GPT chọn danh sách phòng, diện tích mục tiêu, vùng, quan hệ; code quyết toạ độ.\n\nThay hai lượt tách rời trước đó: chương trình không gian (`ai-space-program-proposal`) rồi mỗi tầng một ý định (`ai-plan-intent`). Haan: «prompt input chỉ lấy thông tin đầu bài và khảo sát thực tế, tạm bỏ qua thông tin từ chương trình không gian». Một lượt cho cả nhà vì các tầng trên từng chạy SONG SONG — tách danh sách phòng theo tầng thì hai tầng có thể cùng đặt phòng ngủ chính mà không lượt nào biết.\n\nMã phòng là MÃ TẠM của mô hình — duy nhất trong cả nhà, dùng để trỏ `ensuite_of`, `relationships`, `entry_room`, `garage_room`. Worker đánh lại theo khuôn `type_n` sau khi kiểm.\n\nDiện tích đầu bài khai là SÀN CỨNG (kiểm ở cả danh sách phòng lẫn tầng đã xếp); phòng đầu bài không khai thì số mô hình khai là mục tiêu để bộ giải bám.\n\nMọi trường bắt buộc, trường được phép rỗng khai `null`/mảng rỗng: chế độ `strict` của OpenAI ép mọi trường tuỳ chọn thành «bắt buộc, có thể null».\n\nT46 (15/09/2026): `description` là LỜI DẶN GỬI CHO MÔ HÌNH (bộ chuyển phương ngữ chỉ lược `$comment`), nên viết tiếng Anh, một vế ngắn; lý lẽ cho người đọc mã để ở `$comment`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "variant_label",
+    "rationale",
+    "assumptions",
+    "rooms",
+    "relationships",
+    "sketches",
+    "entry_room",
+    "garage_room"
+  ],
+  "properties": {
+    "variant_label": {
+      "type": "string",
+      "maxLength": 120,
+      "description": "Short Vietnamese name of the layout idea."
+    },
+    "rationale": {
+      "type": "string",
+      "maxLength": 1500,
+      "description": "Vietnamese, at most three sentences."
+    },
+    "assumptions": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "string",
+        "maxLength": 200
+      },
+      "description": "Vietnamese questions for the client, at most five."
+    },
+    "rooms": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 80,
+      "items": {
+        "$ref": "#/$defs/room"
+      },
+      "description": "One entry per space of the whole house."
+    },
+    "relationships": {
+      "type": "array",
+      "maxItems": 80,
+      "items": {
+        "$ref": "#/$defs/relationship"
+      },
+      "description": "Pairs of rooms on the same storey."
+    },
+    "sketches": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": {
+        "$ref": "#/$defs/sketch"
+      },
+      "description": "One occupancy grid per storey, see knowledge.sketch_grid."
+    },
+    "entry_room": {
+      "type": ["string", "null"],
+      "pattern": "^[a-z0-9_]+$",
+      "maxLength": 32,
+      "description": "Storey-1 room with the front door."
+    },
+    "garage_room": {
+      "type": ["string", "null"],
+      "pattern": "^[a-z0-9_]+$",
+      "maxLength": 32,
+      "description": "Room with the car door; null without parking."
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$",
+      "maxLength": 32
+    },
+    "room": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "level", "target_area_m2", "ensuite_of"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "type": {
+          "$ref": "#/$defs/id",
+          "description": "Code from knowledge.room_types."
+        },
+        "level": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Storey, 1 = ground."
+        },
+        "target_area_m2": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Target clear area, m²."
+        },
+        "ensuite_of": {
+          "type": ["string", "null"],
+          "pattern": "^[a-z0-9_]+$",
+          "maxLength": 32,
+          "description": "Parent room id when inside that room, else null."
+        }
+      }
+    },
+    "relationship": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["a", "b", "kind"],
+      "properties": {
+        "a": {
+          "$ref": "#/$defs/id"
+        },
+        "b": {
+          "$ref": "#/$defs/id"
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["adjacent", "near", "far", "open"],
+          "description": "adjacent = shared wall; open = one open space."
+        }
+      }
+    },
+    "sketch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level", "rows"],
+      "$comment": "Hàng đầu là mặt giáp đường (y nhỏ), ô đầu mỗi hàng là bên trái nhìn từ đường. Mỗi hàng là các mã cách nhau bằng dấu cách; `.` là ô không xây. Trần 40 × 40 ô: lưới khối nhà lớn nhất `knowledge.sketch_grid` đưa ra là 24 ô mỗi chiều, còn lại là chỗ cho mô hình đếm lệch — chương trình nắn hàng dài ngắn khác nhau và co giãn lưới về khối nhà.",
+      "properties": {
+        "level": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Storey, 1 = ground."
+        },
+        "rows": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 40,
+          "items": {
+            "type": "string",
+            "maxLength": 600,
+            "pattern": "^[a-z0-9_. ]+$"
+          },
+          "description": "First row on the street side; left to right as seen from the street; space-separated room ids, one per cell; . = not built."
+        }
+      }
+    }
+  }
+}

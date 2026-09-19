@@ -12,7 +12,7 @@
  */
 
 import type { AiFloorPlanLevel } from '@nvg/shared/design';
-import { addVec, along, toRect, type Pt } from './geometry';
+import { addVec, along, bboxOfPoints, toRect, type Pt, type Rect } from './geometry';
 import { CLS, polylinePath, tag, textEl } from './svg';
 import type { SheetStyle } from './style';
 import type { Paper } from './units';
@@ -22,7 +22,20 @@ type Stair = NonNullable<AiFloorPlanLevel['stairs']>[number];
 /** Nhãn chiều đi lên, in ở chân vế thứ nhất. */
 const UP_LABEL = 'LÊN';
 
-export function renderStairs(stairs: readonly Stair[], paper: Paper, style: SheetStyle): string {
+/** Nhãn ở tầng trên cùng: thang của tầng dưới đi lên tới đây, người đứng ở đây thì đi XUỐNG. */
+const DOWN_LABEL = 'XUỐNG';
+
+/**
+ * `arriving` = vẽ thang của TẦNG DƯỚI trên tờ tầng trên cùng. Tầng trên cùng không khai thang đi lên
+ * (hợp đồng: `stair: null`), nên trước đây ô thang của nó để trắng — tờ vẽ tầng 2 có chữ «Thang bộ»
+ * mà không có một bậc nào (13/09/2026).
+ */
+export function renderStairs(
+  stairs: readonly Stair[],
+  paper: Paper,
+  style: SheetStyle,
+  arriving = false,
+): string {
   const treads: string[] = [];
   const arrows: string[] = [];
   const labels: string[] = [];
@@ -84,7 +97,12 @@ export function renderStairs(stairs: readonly Stair[], paper: Paper, style: Shee
       // Lồng thang: khe giữa hai vế, dừng ở chiếu nghỉ vì từ đó trở đi sàn liền.
       if (lane > 0) {
         treads.push(
-          polylinePath([paper.p(at(0, laneFrom)), paper.p(at(flightLength, laneFrom))], false),
+          // Bắt đầu từ bậc đầu tiên, không từ mép ô: mép ô thường là chỗ đặt cửa vào thang, và một
+          // nét chạy tới đó đâm thẳng vào lỗ cửa.
+          polylinePath(
+            [paper.p(at(flightLength / stepCount, laneFrom)), paper.p(at(flightLength, laneFrom))],
+            false,
+          ),
         );
       }
     }
@@ -114,7 +132,13 @@ export function renderStairs(stairs: readonly Stair[], paper: Paper, style: Shee
     // Nhãn để NẰM NGANG dù vế thang chạy hướng nào: «LÊN» có ba chữ cái, xoay theo vế không
     // giúp đọc dễ hơn mà lại đẻ ra một quy ước phải nhớ (xoay chiều nào thì chữ không lộn).
     const labelAt = paper.p(at(flightLength * 0.08, laneWidth * 0.2));
-    labels.push(textEl(UP_LABEL, { x: labelAt[0], y: labelAt[1], class: CLS.textStair }));
+    labels.push(
+      textEl(arriving ? DOWN_LABEL : UP_LABEL, {
+        x: labelAt[0],
+        y: labelAt[1],
+        class: CLS.textStair,
+      }),
+    );
   }
 
   const parts: string[] = [];
@@ -142,4 +166,41 @@ function arrowHead(from: Pt, to: Pt, paper: Paper, style: SheetStyle): string {
     polylinePath([wing(1), [tip[0], tip[1]]], false),
     polylinePath([wing(-1), [tip[0], tip[1]]], false),
   ].join(' ');
+}
+
+/**
+ * Phần ô thang có BẬC, toạ độ thật — không gồm chiếu nghỉ. Bộ ghi tên phòng đặt «Thang bộ» ra
+ * chiếu nghỉ thay vì giữa đám bậc và mũi tên (tờ vẽ 13/09/2026).
+ */
+export function stairTreadZones(stairs: readonly Stair[]): Rect[] {
+  return stairs.map((stair) => {
+    const rect = toRect(stair.rect);
+    const horizontal = stair.up === '+x' || stair.up === '-x';
+    const runLength = horizontal ? rect.x1 - rect.x0 : rect.y1 - rect.y0;
+    const runWidth = horizontal ? rect.y1 - rect.y0 : rect.x1 - rect.x0;
+    const flights = Math.max(1, Math.min(3, stair.flights ?? 1));
+    const landing = flights > 1 ? Math.min(runWidth / flights, runLength / 3) : 0;
+    const flightLength = runLength - landing;
+    const points: Pt[] =
+      stair.up === '+x'
+        ? [
+            [rect.x0, rect.y0],
+            [rect.x0 + flightLength, rect.y1],
+          ]
+        : stair.up === '-x'
+          ? [
+              [rect.x1 - flightLength, rect.y0],
+              [rect.x1, rect.y1],
+            ]
+          : stair.up === '+y'
+            ? [
+                [rect.x0, rect.y0],
+                [rect.x1, rect.y0 + flightLength],
+              ]
+            : [
+                [rect.x0, rect.y1 - flightLength],
+                [rect.x1, rect.y1],
+              ];
+    return bboxOfPoints(points);
+  });
 }

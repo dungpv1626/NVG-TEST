@@ -48,7 +48,8 @@ import {
   type ProgramIntent,
 } from '@nvg/shared/design';
 import { DataClassViolation, ModelNotConfigured } from '../llm/router';
-import { LlmCallFailed, type GeminiClient } from '../llm/gemini';
+import { LlmCallFailed } from '../llm/gemini';
+import type { TextModelClient, TokenUsage } from '../llm/text-client';
 import type { VocabularyIndex } from '../kb/vocabulary';
 import { bedroomsFor } from '@nvg/shared/design';
 
@@ -61,6 +62,20 @@ export interface IntentResult {
   intent: ProgramIntent | null;
   /** Câu tiếng Việt nói cho kiến trúc sư biết AI có tham gia hay không, và vì sao. */
   notes: string[];
+  /**
+   * Lượt gọi đã ra mạng — để ghi nhật ký chi phí và hiện token lên màn hình. `null` khi không
+   * có lượt nào đi ra (chưa có client, bị chặn trước khi gọi).
+   */
+  call: IntentCall | null;
+}
+
+export interface IntentCall {
+  provider: string;
+  model: string;
+  usage: TokenUsage;
+  latencyMs: number;
+  status: 'ok' | 'rejected' | 'failed';
+  errorCode?: string;
 }
 
 /**
@@ -78,9 +93,27 @@ export interface BriefDigest {
   style: string | null;
   priorities: string[];
   space_types: string[];
+  /**
+   * Phần sàn CÒN LẠI cho không gian đề xuất thêm, tính bằng diện tích TỐI THIỂU: sàn cho phép
+   * mỗi tầng × số tầng − tổng tối thiểu của chương trình hiện có. Làm tròn XUỐNG bậc 5 m² —
+   * đủ để mô hình biết còn chỗ bao nhiêu, không đủ để suy ngược số đo thửa. `null` khi nơi gọi
+   * không tính (kiểm thử cũ).
+   */
+  spare_min_area_m2: number | null;
 }
 
-export function digestBrief(brief: DesignBrief, floorAreaM2: number): BriefDigest {
+/** Ngân sách diện tích cho không gian AI đề xuất thêm — xem `BriefDigest.spare_min_area_m2`. */
+export interface IntentAreaBudget {
+  spareMinAreaM2: number;
+  /** Diện tích tối thiểu của từng mã phòng (chuẩn nghề) — mô hình cần để tự cộng. */
+  minByType: Record<string, number>;
+}
+
+export function digestBrief(
+  brief: DesignBrief,
+  floorAreaM2: number,
+  budget?: IntentAreaBudget,
+): BriefDigest {
   return {
     building_type: brief.building_type,
     floors: brief.floors,
@@ -97,39 +130,40 @@ export function digestBrief(brief: DesignBrief, floorAreaM2: number): BriefDiges
     style: brief.style ?? null,
     priorities: [...(brief.priorities ?? [])],
     space_types: [...new Set((brief.required_spaces ?? []).map((s) => s.type))].sort(),
+    spare_min_area_m2: budget ? Math.max(0, Math.floor(budget.spareMinAreaM2 / 5) * 5) : null,
   };
 }
 
 /**
- * Nhớ lại kết quả theo BẢN TÓM TẮT, dùng chung giữa các request trong cùng isolate.
+ * Từ 13/09/2026 KHÔNG còn bộ nhớ đệm và KHÔNG còn tự gọi khi mở màn hình.
  *
- * Lời gọi thật mất 10–15 giây, và màn hình Chương trình không gian gọi lại mỗi lần mở tab —
- * người dùng ngồi nhìn khung xám suốt từng đó giây cho một câu trả lời không đổi. Bản tóm tắt
- * là toàn bộ đầu vào của lượt gọi, nên hai bản tóm tắt giống nhau thì câu trả lời dùng lại
- * được mà không mất gì.
- *
- * Cố ý KHÔNG lưu xuống CSDL: isolate sống ngắn nên bộ nhớ này tự hết hạn, và một đề xuất cũ
- * nằm lại nhiều ngày sau khi đã sửa lời nhắc là thứ khó truy hơn nhiều so với việc gọi lại.
+ * Trước đó màn hình Chương trình không gian gọi mô hình mỗi lần mở tab, nhớ tạm theo isolate.
+ * Chấp nhận được chừng nào đó là khoá Gemini miễn phí; hết chấp nhận được khi kỹ sư chọn được
+ * mô hình trả phí — mỗi lần mở trang thành một khoản tiền không ai bấm. Nay chỉ chạy khi bấm
+ * nút (`POST /design/program/intent`), và kết quả lưu kèm bản chốt (`space_program.ai_intent`).
  */
-const cache = new Map<string, ProgramIntent>();
-const CACHE_LIMIT = 64;
-
 export async function resolveProgramIntent(
   brief: DesignBrief,
   floorAreaM2: number,
   index: VocabularyIndex,
-  llm: GeminiClient | null | undefined,
+  llm: TextModelClient | null | undefined,
+  route: string,
+  budget?: IntentAreaBudget,
 ): Promise<IntentResult> {
   if (!llm) {
-    return { intent: null, notes: [] };
+    return { intent: null, notes: [], call: null };
   }
 
-  const digest = digestBrief(brief, floorAreaM2);
-  const cacheKey = JSON.stringify(digest);
-  const remembered = cache.get(cacheKey);
-  if (remembered) return { intent: remembered, notes: [] };
+  const digest = digestBrief(brief, floorAreaM2, budget);
 
-  const catalogue = index.vocabulary.types.map((t) => `${t.code} = ${t.vi}`).join('\n');
+  const catalogue = index.vocabulary.types
+    .map((t) => {
+      const min = budget?.minByType[t.code];
+      return min === undefined
+        ? `${t.code} = ${t.vi}`
+        : `${t.code} = ${t.vi} (tối thiểu ${min} m²)`;
+    })
+    .join('\n');
 
   const system = [
     'Vai trò: kiến trúc sư soạn chương trình không gian cho nhà ở dân dụng Việt Nam.',
@@ -137,18 +171,27 @@ export async function resolveProgramIntent(
     'TUYỆT ĐỐI KHÔNG trả về diện tích, kích thước hay bất kỳ con số mét vuông nào — việc gán số do bước sau làm.',
     'Chỉ dùng mã không gian có trong danh mục. Không bịa mã mới.',
     'Ở "add_spaces" chỉ nêu không gian mà hồ sơ này CÒN THIẾU. Không nêu phòng ngủ, phòng khách, bếp, phòng ăn, khu vệ sinh, thang bộ, giao thông — những thứ đó hệ thống luôn tự có.',
+    // Luật cứng về diện tích (Haan, 13/09/2026): lượt GPT-5 đầu tiên đề xuất thêm chín không
+    // gian trên một hồ sơ đã kín sàn, đẩy nhu cầu lên 226,9 m² trên sàn 180 m². Máy chủ vẫn tự
+    // bỏ phần vượt (`run.ts::fitAiAdditions`), nhưng mô hình phải được nói trước.
+    'LUẬT CỨNG VỀ DIỆN TÍCH: tổng diện tích TỐI THIỂU của các không gian nêu ở "add_spaces" KHÔNG ĐƯỢC VƯỢT "spare_min_area_m2" trong hồ sơ — đó là phần sàn còn lại sau khi đã trừ mọi không gian đang có, trên toàn bộ các tầng. Diện tích tối thiểu của từng mã ghi trong danh mục. "spare_min_area_m2" bằng 0 thì "add_spaces" phải rỗng. Không đủ chỗ cho một không gian đáng có thì nói ra trong "rationale", không nêu nó.',
+    'Không nêu tủ đồ, phòng thay đồ, góc học tập, góc làm việc: đó là tiện ích NẰM TRONG phòng ngủ, không phải không gian riêng.',
     'Nêu lý do ngắn gọn bằng tiếng Việt, một hai câu, không dùng đại từ nhân xưng.',
     'Danh mục mã không gian:',
     catalogue,
   ].join('\n');
 
+  // Mọi trường đều BẮT BUỘC và đóng `additionalProperties`: chế độ nghiêm của OpenAI đòi thế,
+  // và một lược đồ chạy được ở cả ba nhà cung cấp thì không phải rẽ nhánh theo nhà cung cấp.
   const schema = {
     type: 'object',
+    additionalProperties: false,
     properties: {
       emphasis: {
         type: 'array',
         items: {
           type: 'object',
+          additionalProperties: false,
           properties: {
             space_type: { type: 'string', enum: [...index.codes] },
             level: { type: 'string', enum: ['generous', 'normal', 'modest'] },
@@ -159,30 +202,62 @@ export async function resolveProgramIntent(
       add_spaces: { type: 'array', items: { type: 'string', enum: [...index.codes] } },
       rationale: { type: 'string' },
     },
-    required: ['emphasis', 'rationale'],
+    required: ['emphasis', 'add_spaces', 'rationale'],
   };
 
+  const started = Date.now();
   try {
-    const answer = await llm.generateJson<Omit<ProgramIntent, 'schema_version'>>(
-      'layer2_program',
-      INTENT_DATA_CLASS,
-      {
-        system,
-        prompt: `Hồ sơ (đã ẩn danh):\n${JSON.stringify(digest, null, 2)}`,
-        schema,
-      },
-    );
+    const result = await llm.complete(route, INTENT_DATA_CLASS, {
+      system,
+      prompt: `Hồ sơ (đã ẩn danh):\n${JSON.stringify(digest, null, 2)}`,
+      schema,
+    });
+    const call: IntentCall = {
+      provider: result.provider,
+      model: result.model,
+      usage: result.usage,
+      latencyMs: result.latencyMs,
+      status: 'ok',
+    };
     // Kiểm theo hợp đồng ngay tại ranh giới. Mô hình trả sai cấu trúc là chuyện thường; đi
     // tiếp với một cấu trúc sai thì cái sai lộ ra ở tận bảng diện tích.
-    const parsed = programIntentSchema.safeParse({ ...answer, schema_version: SCHEMA_VERSION });
+    const answer = (result.json ?? {}) as Record<string, unknown>;
+    const parsed = programIntentSchema.safeParse({
+      ...answer,
+      // Nhà cung cấp đổi trường tuỳ chọn thành `null` ở chế độ nghiêm; hợp đồng thì không nhận.
+      add_spaces: Array.isArray(answer.add_spaces) ? answer.add_spaces : [],
+      schema_version: SCHEMA_VERSION,
+    });
     if (!parsed.success) {
-      return { intent: null, notes: [NOTE_BAD_SHAPE] };
+      return {
+        intent: null,
+        notes: [NOTE_BAD_SHAPE],
+        call: { ...call, status: 'rejected', errorCode: 'contract' },
+      };
     }
-    if (cache.size >= CACHE_LIMIT) cache.clear();
-    cache.set(cacheKey, parsed.data);
-    return { intent: parsed.data, notes: [] };
+    return { intent: parsed.data, notes: [], call };
   } catch (error) {
-    return { intent: null, notes: [noteFor(error)] };
+    const note = noteFor(error);
+    // Bị chặn TRƯỚC khi ra mạng thì không có lượt gọi nào để tính tiền.
+    if (error instanceof DataClassViolation || error instanceof ModelNotConfigured) {
+      return { intent: null, notes: [note], call: null };
+    }
+    return {
+      intent: null,
+      notes: [note],
+      call: {
+        provider: '',
+        model: '',
+        // Nhà cung cấp tính tiền phần token đã sinh dù kết quả không dùng được.
+        usage: (error instanceof LlmCallFailed && error.usage) || {
+          inputTokens: null,
+          outputTokens: null,
+        },
+        latencyMs: (error instanceof LlmCallFailed && error.latencyMs) || Date.now() - started,
+        status: 'failed',
+        errorCode: error instanceof Error ? error.name : 'Error',
+      },
+    };
   }
 }
 

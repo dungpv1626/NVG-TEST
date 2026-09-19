@@ -95,6 +95,14 @@ export const aiSpaceProgramSchema = z
               .nullable()
               .describe('Một câu tiếng Việt vì sao chọn tầng/diện tích này.')
               .optional(),
+            /** Loại tiện ích nằm TRONG phòng này, không tách thành không gian riêng — tủ đồ, góc học tập, phòng thay đồ trong phòng ngủ (`kb/brief_fidelity.yaml` mục `in_bedroom_types`). Diện tích của chúng đã cộng vào `target_area_m2`. Worker điền, không hỏi mô hình. Vắng = không có. */
+            includes: z
+              .array(aiSpaceProgramSpaceIdSchema)
+              .max(8)
+              .describe(
+                'Loại tiện ích nằm TRONG phòng này, không tách thành không gian riêng — tủ đồ, góc học tập, phòng thay đồ trong phòng ngủ (`kb/brief_fidelity.yaml` mục `in_bedroom_types`). Diện tích của chúng đã cộng vào `target_area_m2`. Worker điền, không hỏi mô hình. Vắng = không có.',
+              )
+              .optional(),
           })
           .strict(),
       )

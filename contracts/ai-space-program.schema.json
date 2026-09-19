@@ -47,6 +47,12 @@
             "type": ["string", "null"],
             "maxLength": 200,
             "description": "Một câu tiếng Việt vì sao chọn tầng/diện tích này."
+          },
+          "includes": {
+            "type": "array",
+            "maxItems": 8,
+            "items": { "$ref": "#/$defs/space_id" },
+            "description": "Loại tiện ích nằm TRONG phòng này, không tách thành không gian riêng — tủ đồ, góc học tập, phòng thay đồ trong phòng ngủ (`kb/brief_fidelity.yaml` mục `in_bedroom_types`). Diện tích của chúng đã cộng vào `target_area_m2`. Worker điền, không hỏi mô hình. Vắng = không có."
           }
         }
       }

@@ -45,7 +45,112 @@ levels:
   storey_height_m: 3.6
   top_storey_height_m: 3.9
 
+# ── Thang (T37, 13/09/2026) ────────────────────────────────────────────────────────────
+# Nhánh AI không hỏi mô hình số bậc: chương trình tính `treads = round(chiều cao tầng / cao bậc)`.
+# Hỏi mô hình thì nó phải làm đúng phép chia ấy, và lượt 13/09/2026 cho thấy mỗi phép số học giao
+# cho mô hình là thêm một chỗ sai.
+#
+# ⚠️ SỐ THAM KHẢO, KHÔNG ÉP BUỘC (Haan, 13/09/2026: «số liệu từ hồ sơ mang tính tham khảo»). Đo
+# trên hai hồ sơ NVO (`kt/` mặt cắt thang): P1 nhà vườn h ≈ 171 mm (21 bậc / 3,6 m), P2 nhà phố
+# h ≈ 156 mm. Chương trình chỉ dùng số này để VẼ số bậc; không cổng kiểm nào chặn một phương án
+# vì nó. Kiến trúc sư đổi được theo từng công trình.
+stairs:
+  riser_m: 0.17
+  # Ô thang rộng ngang từ mức này thì vẽ HAI vế (chữ U), hẹp hơn thì một vế. Hai vế cần hai lối
+  # lên + khe giữa; vế P2 hẹp nhất đo được 0,83 m nên hai vế cần tối thiểu ~1,6–1,7 m.
+  two_flights_min_width_m: 1.6
+  # Bề sâu mặt bậc nhỏ nhất bộ giải ý định chấp nhận khi kiểm ô thang ĐỦ DÀI cho số bậc (15/09/2026,
+  # Haan duyệt; Q-45d). Khác `riser_m` ở trên (chỉ để vẽ): đây là điều kiện DỰNG, cùng lý lẽ với mục
+  # `usable` — ô thang ngắn hơn số bậc × bề sâu bậc + chiếu nghỉ thì không xây nổi cái thang ấy, bộ vẽ
+  # chỉ ép dẹt bậc lại. SỐ THAM KHẢO, chọn ở mức thấp của thang nhà ở; chiếu nghỉ sâu tối thiểu bằng
+  # bề rộng một vế. Kiến trúc sư đổi được.
+  going_m: 0.25
+
+# Hành lang bộ giải ý định tự dựng thành dải (T43, 14/09/2026) — bề rộng LỌT LÒNG mong muốn.
+#
+# SỐ THAM KHẢO: lấy mức «đạt» của tiêu chí C4 (`kb/plan_quality.yaml`, đo 3 mặt bằng). Bộ giải chỉ
+# dùng nó để vẽ dải hành lang; hẹp hơn hay rộng hơn đều không bị chặn, bộ chấm quyết điểm.
+circulation:
+  corridor_clear_m: 1.2
+
+# ── Cạnh ngắn DÙNG ĐƯỢC — điều kiện dựng của bộ giải ý định (V-28, 14/09/2026) ───────────
+#
+# Khác HẲN cạnh tối thiểu kinh nghiệm ở `rules/nvg-*.yaml`. Số kinh nghiệm là cách NVG quen làm và
+# chỉ vào điểm (Haan, 14/09/2026). Số ở đây là giới hạn HÌNH HỌC: dưới mức này căn phòng không đặt
+# nổi món đồ định nghĩa ra nó, nên bộ giải KHÔNG dựng phòng hẹp hơn (Haan duyệt 14/09/2026).
+#
+# Vì sao cần: lượt đo thật 9cce001a qua cổng với phòng ngủ ông bà lọt lòng 1,78 × 14,6 m và phòng ngủ
+# 1,5 × 13 m — cạnh ngắn chỉ bị trừ điểm nên phòng dạng hành lang vẫn thắng.
+#
+# SỐ THAM KHẢO dựng từ kích thước đồ đạc, LỌT LÒNG, sửa được. Mỗi số cố ý THẤP HƠN mức nhỏ nhất đo
+# được trên hồ sơ NVG đã xây (`rules/nvg-measured.yaml`) để không bác một phòng NVG từng làm:
+#   bedroom 2,2        giường 1,6 + lối đi 0,6 (đo thật nhỏ nhất 2,35)
+#   master_bedroom 2,6 giường 1,8 + lối đi 0,8 (đo thật 3,1)
+#   living 2,7         sofa 0,9 + lối 0,9 + kệ 0,9 (đo thật 3,5)
+#   garage 2,4         xe máy; có ô tô thì dùng `garage_with_car_m` — thân xe 1,8 + mở cửa 1,0
+# Loại phòng không có dòng thì không có điều kiện dựng — chỉ còn sàn kỹ thuật đặt vừa một cửa đi.
+usable:
+  min_side_m:
+    living: 2.7
+    dining: 2.1
+    kitchen: 1.5
+    bedroom: 2.2
+    master_bedroom: 2.6
+    study: 1.8
+    altar_room: 1.8
+    wc: 0.9
+    laundry: 1.0
+    storage: 0.8
+    balcony: 0.9
+    garage: 2.4
+  garage_with_car_m: 2.8
+  # Tỉ lệ dài/rộng LỌT LÒNG tối đa của phòng ở. Cạnh ngắn đạt mức vẫn chưa đủ: phát lại lượt 9cce001a
+  # sau khi thêm `min_side_m` ra phòng ngủ 2,85 × 16,56 m (47 m², chương trình 15 m²) — kê được giường
+  # nhưng là một hành lang có giường. Chỉ áp cho phòng ở; bếp, kho, giặt phơi, ban công dài là bình
+  # thường. Tham chiếu: phòng ngủ nhà phố NVG 3,3 × 5 m ≈ 1,5; phòng khách nhà phố 4 m ngang ≈ 2,6.
+  max_aspect:
+    bedroom: 2.5
+    master_bedroom: 2.5
+    living: 3.2
+    dining: 3.2
+    study: 3.0
+    altar_room: 3.0
+    # WC CHUNG — chỉ bắt ca vô lý. Lượt 9cce001a ra WC chung 1,07 × 8,97 m (tỉ lệ 8,4). Mức 3–4 thì quá
+    # chặt với cây chia: WC trong một dãy phòng dọc hành lang là một lát cắt chạy suốt chiều sâu dãy
+    # (dãy sâu 5,45 m → WC ~1,1 × 5,45 m, tỉ lệ ~5), vì cây chia không dựng được phòng chữ L để nhét
+    # phần còn lại phía sau. Bố cục WC gọn hơn là việc của kiến trúc sư trên CAD.
+    # KHÔNG áp cho phòng khép kín: cây chia dựng nó thành dải dọc một cạnh phòng mẹ, nên dạng dài là
+    # của cấu trúc — áp vào thì mọi phòng ngủ có WC riêng đều không dựng được.
+    wc: 6.0
+    # Ô thang: một vế 1,2 m ngang × 4,8 m (21 bậc cao 0,17 m, sâu 0,23 m) là tỉ lệ 4. Dài hơn là một
+    # dải hành lang mang tên thang — lượt 9cce001a dựng ô thang 9,43 × 1,64 m cắt ngang nhà, và tầng
+    # trên buộc phải chồng khít ô ấy nên cả tầng 2 vỡ theo.
+    stair: 4.0
+
 openings:
+  # Cửa nào dùng quy cách nào, theo `kind` mô hình khai (T40). Cửa trượt, cửa để xe, cổng và ô
+  # thông lấy bề rộng theo tỉ lệ đoạn tường như cửa chính — một con số cố định là sai ở cả hai đầu.
+  door_by_kind:
+    single: door
+    double: entrance
+    sliding: entrance
+    garage: entrance
+    gate: entrance
+    opening: entrance
+  # Phòng thuộc các loại này dùng cửa vệ sinh (hẹp hơn) và cửa sổ vệ sinh.
+  wc_door_types: [wc, vanity]
+  # Phòng nhỏ không ở người dùng cửa HẸP như cửa vệ sinh (chỉ cửa đi, cửa sổ vẫn theo loại phòng).
+  # Kho 1,2 m lọt lòng không đặt được cửa 0,9 m cộng hai má 0,1 m — lượt chạy thật 13/09/2026 (V-26).
+  narrow_door_types: [storage, closet, dressing_room, technical, shaft]
+  # Mép lỗ cửa cách góc tường tối thiểu — chỗ cho má cửa và khung. SỐ THAM KHẢO, dùng để đặt cửa
+  # lên tờ vẽ, kiến trúc sư chỉnh trong CAD. 0,10 chứ không 0,15: hành lang
+  # lọt lòng 1,10 m (số đo trên hồ sơ NVG) phải đặt được cửa 0,90 m ở đầu hành lang, và 0,15 m mỗi
+  # bên thì không đặt được.
+  door_margin_m: 0.1
+  # Cạnh ưu tiên khi chương trình tự đặt cửa sổ: mặt thoáng của hình bao trước, rồi tới cạnh giáp
+  # giếng trời, sân trong, ban công, sân thượng.
+  window_priority: [outline, light_well, courtyard, balcony, terrace]
+
   # Cửa phòng ngủ / phòng trong nhà. 900x2200 là con số ĐO ĐƯỢC (mã d4, 6 bộ,
   # nhựa composite vân gỗ, 1 cánh mở quay) — trùng đúng giá trị vẫn giả định trước đó.
   door:

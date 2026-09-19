@@ -56,6 +56,8 @@ interface Face {
   /** +1 khi phần ngoài phòng nằm ở phía toạ độ LỚN hơn `line`. */
   outward: number;
   outdoor: boolean;
+  /** Hai đầu cạnh ban đầu — để nhận ra phần còn lại nằm GIỮA cạnh (ô giao tường), không ở đầu. */
+  span: Interval;
 }
 
 /**
@@ -112,46 +114,118 @@ export function deriveWallsFromRooms(
     const kind: DerivedWall['k'] = face.outdoor ? 'r' : 'e';
     const thickness = face.outdoor ? partitionT : exteriorT;
     for (const span of face.free) {
+      // Mẩu nằm GIỮA cạnh và ngắn hơn một bề dày tường là ô giao của hai vách vuông góc (phòng trên
+      // dài suốt, hai phòng dưới cách nhau một vách) — không phải chỗ giáp ngoài trời. Suy nó thành
+      // tường bao là cắm một mẩu tường 22 cm vào giữa ngã ba (tờ vẽ 13/09/2026).
+      const inside =
+        span.from > face.span.from + ALIGN_TOLERANCE_CM &&
+        span.to < face.span.to - ALIGN_TOLERANCE_CM;
+      if (inside && span.to - span.from <= exteriorT + ALIGN_TOLERANCE_CM) continue;
       const centre = face.line + face.outward * (thickness / 2);
       walls.push(segment(nextId(), face.axis, centre, span, thickness, kind));
     }
   }
 
-  return walls;
+  return joinEnds(mergeCollinear(walls), Math.max(exteriorT, partitionT));
+}
+
+/**
+ * Nối hai đoạn cùng một bức bị cắt đôi ở ô giao tường — cùng trục, cùng tim, cùng bề dày, cùng loại,
+ * cách nhau không quá một bề dày tường.
+ *
+ * Mỗi đoạn vách suy từ đúng một cặp phòng, nên bức vách dài suốt dưới một phòng lớn bị chặt thành
+ * nhiều đoạn ở mỗi chỗ phòng bên kia đổi. Để nguyên thì mỗi chỗ chặt là một khe trống trên tờ vẽ.
+ */
+function mergeCollinear(walls: DerivedWall[]): DerivedWall[] {
+  const out: DerivedWall[] = [];
+  const key = (wall: DerivedWall) =>
+    `${xy(wall.a)[1] === xy(wall.b)[1] ? 'x' : 'y'}|${xy(wall.a)[1] === xy(wall.b)[1] ? xy(wall.a)[1] : xy(wall.a)[0]}|${wall.t}|${wall.k}`;
+  const groups = new Map<string, DerivedWall[]>();
+  for (const wall of walls) groups.set(key(wall), [...(groups.get(key(wall)) ?? []), wall]);
+  for (const group of groups.values()) {
+    const horizontal = xy(group[0]!.a)[1] === xy(group[0]!.b)[1];
+    const along = (wall: DerivedWall) =>
+      horizontal
+        ? {
+            from: Math.min(xy(wall.a)[0], xy(wall.b)[0]),
+            to: Math.max(xy(wall.a)[0], xy(wall.b)[0]),
+          }
+        : {
+            from: Math.min(xy(wall.a)[1], xy(wall.b)[1]),
+            to: Math.max(xy(wall.a)[1], xy(wall.b)[1]),
+          };
+    const sorted = [...group].sort((p, q) => along(p).from - along(q).from);
+    let current = sorted[0]!;
+    for (const next of sorted.slice(1)) {
+      const a = along(current);
+      const b = along(next);
+      if (b.from - a.to <= current.t + ALIGN_TOLERANCE_CM) {
+        const to = Math.max(a.to, b.to);
+        current = {
+          ...current,
+          b: horizontal ? [to, xy(current.a)[1]] : [xy(current.a)[0], to],
+          a: horizontal ? [a.from, xy(current.a)[1]] : [xy(current.a)[0], a.from],
+        };
+      } else {
+        out.push(current);
+        current = next;
+      }
+    }
+    out.push(current);
+  }
+  // Giữ thứ tự xuất hiện của đoạn đầu mỗi bức để mã tường ổn định giữa hai lần dựng.
+  const order = new Map(walls.map((wall, index) => [wall.id, index]));
+  return out.sort((p, q) => order.get(p.id)! - order.get(q.id)!);
+}
+
+/**
+ * Kéo đầu tường tới TIM bức vuông góc nó chạm.
+ *
+ * Tường suy từ mặt phòng dừng ở MẶT bức kia, nên ô vuông giao nhau không thuộc bức nào: góc nhà hở
+ * một khấc, ngã ba hở một lỗ. `draw/walls.ts` nối góc và ngã ba theo quy ước «đầu tường nằm ở tim
+ * bức kia» — đúng quy ước này thì cả góc chữ L lẫn ngã ba chữ T đều liền nét.
+ */
+function joinEnds(walls: DerivedWall[], maxThickness: number): DerivedWall[] {
+  const horizontal = (wall: DerivedWall) => xy(wall.a)[1] === xy(wall.b)[1];
+  const reach = maxThickness / 2 + maxThickness / 2 + ALIGN_TOLERANCE_CM;
+  return walls.map((wall) => {
+    const h = horizontal(wall);
+    const centre = h ? xy(wall.a)[1] : xy(wall.a)[0];
+    const lo = h ? Math.min(xy(wall.a)[0], xy(wall.b)[0]) : Math.min(xy(wall.a)[1], xy(wall.b)[1]);
+    const hi = h ? Math.max(xy(wall.a)[0], xy(wall.b)[0]) : Math.max(xy(wall.a)[1], xy(wall.b)[1]);
+    let from = lo;
+    let to = hi;
+    for (const other of walls) {
+      if (other === wall || horizontal(other) === h) continue;
+      const line = h ? xy(other.a)[0] : xy(other.a)[1];
+      const otherLo = h
+        ? Math.min(xy(other.a)[1], xy(other.b)[1])
+        : Math.min(xy(other.a)[0], xy(other.b)[0]);
+      const otherHi = h
+        ? Math.max(xy(other.a)[1], xy(other.b)[1])
+        : Math.max(xy(other.a)[0], xy(other.b)[0]);
+      const slack = wall.t / 2 + ALIGN_TOLERANCE_CM;
+      if (centre < otherLo - slack || centre > otherHi + slack) continue;
+      if (line < lo && lo - line <= reach) from = Math.min(from, line);
+      if (line > hi && line - hi <= reach) to = Math.max(to, line);
+    }
+    if (from === lo && to === hi) return wall;
+    return h
+      ? { ...wall, a: [from, centre], b: [to, centre] }
+      : { ...wall, a: [centre, from], b: [centre, to] };
+  });
 }
 
 /** Bốn mặt của mỗi phòng, mỗi mặt ban đầu còn trống toàn bộ chiều dài. */
 function facesOf(rooms: readonly WallSourceRoom[]): Face[] {
   const faces: Face[] = [];
   for (const { rect, outdoor } of rooms) {
-    faces.push({
-      axis: 'x',
-      line: rect.y0,
-      outward: -1,
-      outdoor,
-      free: [{ from: rect.x0, to: rect.x1 }],
-    });
-    faces.push({
-      axis: 'x',
-      line: rect.y1,
-      outward: 1,
-      outdoor,
-      free: [{ from: rect.x0, to: rect.x1 }],
-    });
-    faces.push({
-      axis: 'y',
-      line: rect.x0,
-      outward: -1,
-      outdoor,
-      free: [{ from: rect.y0, to: rect.y1 }],
-    });
-    faces.push({
-      axis: 'y',
-      line: rect.x1,
-      outward: 1,
-      outdoor,
-      free: [{ from: rect.y0, to: rect.y1 }],
-    });
+    const xs = { from: rect.x0, to: rect.x1 };
+    const ys = { from: rect.y0, to: rect.y1 };
+    faces.push({ axis: 'x', line: rect.y0, outward: -1, outdoor, free: [xs], span: xs });
+    faces.push({ axis: 'x', line: rect.y1, outward: 1, outdoor, free: [xs], span: xs });
+    faces.push({ axis: 'y', line: rect.x0, outward: -1, outdoor, free: [ys], span: ys });
+    faces.push({ axis: 'y', line: rect.x1, outward: 1, outdoor, free: [ys], span: ys });
   }
   return faces;
 }
@@ -181,6 +255,11 @@ function segment(
  */
 function round(value: number): number {
   return Math.round(value);
+}
+
+/** Toạ độ một đầu tường — hợp đồng khai mảng số, luôn đúng hai phần tử. */
+function xy(point: readonly number[]): [number, number] {
+  return [point[0]!, point[1]!];
 }
 
 function intersect(left: readonly Interval[], right: readonly Interval[]): Interval[] {

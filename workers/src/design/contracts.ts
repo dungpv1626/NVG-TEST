@@ -14,6 +14,7 @@ import {
   aiFloorPlanProposalSchema,
   aiFloorPlanSchema,
   aiImageSetSchema,
+  aiPlanSheetImageSchema,
   aiSpaceProgramSchema,
   archModelSchema,
   designBriefSchema,
@@ -42,6 +43,7 @@ export const ARTIFACT_SCHEMAS = {
   ai_floor_plan: aiFloorPlanSchema,
   ai_facade_concept: aiFacadeConceptSchema,
   ai_image_set: aiImageSetSchema,
+  ai_plan_sheet_image: aiPlanSheetImageSchema,
   // Loại cũ của nhánh AI (T14, mô hình tự viết chuỗi SVG). Đường mã sinh ra nó đã gỡ ngày
   // 09/09/2026 cùng T15; giữ lược đồ ở đây để artifact ĐÃ ĐÚC còn đọc lại được — artifact là
   // bất biến, thứ đã ghi thì không được biến thành không đọc nổi.

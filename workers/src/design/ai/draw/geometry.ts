@@ -58,6 +58,20 @@ export function overlapArea(a: Rect, b: Rect): number {
   return w > 0 && h > 0 ? w * h : 0;
 }
 
+/** Hai chữ nhật có phần chung đáng kể (> 1 dm²) — dùng để hỏi «phòng này nằm trên phòng kia». */
+export function rectsOverlap(a: Rect, b: Rect): boolean {
+  return overlapArea(a, b) > 100;
+}
+
+/** Hai chữ nhật chung một đoạn cạnh — tức có một bức tường chung giữa chúng. */
+export function rectsShareEdge(a: Rect, b: Rect): boolean {
+  const gap = 40; // khe rộng hơn bức tường dày nhất thì không còn là tường chung
+  const alongX = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0) > 0;
+  const alongY = Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0) > 0;
+  if (alongX && (Math.abs(b.y0 - a.y1) <= gap || Math.abs(a.y0 - b.y1) <= gap)) return true;
+  return alongY && (Math.abs(b.x0 - a.x1) <= gap || Math.abs(a.x0 - b.x1) <= gap);
+}
+
 export function rectContainsRect(outer: Rect, inner: Rect, tolerance = 0): boolean {
   return (
     inner.x0 >= outer.x0 - tolerance &&

@@ -31,6 +31,8 @@ import { toUserMessage } from '@/hooks/use-error-message';
 import { SectionHelp } from '@/components/ui/section-help';
 import { DESIGN_HELP } from './help-texts';
 import { stampWatermark } from '@/lib/watermark';
+import type { AiCallUsage } from '@/hooks/use-ai-design';
+import { AiUsageLine } from './ai/ai-usage';
 import type { MassingShots } from './massing-viewer';
 
 /** Nhãn dự phòng khi chưa gọi máy chủ — cùng chuỗi với kb/render_prompts.yaml. */
@@ -44,6 +46,7 @@ interface ViewState {
   image?: string;
   notice?: string;
   pending?: boolean;
+  usage?: AiCallUsage | null;
 }
 
 export function RenderPanel({
@@ -87,7 +90,10 @@ export function RenderPanel({
       if (outcome.status === 'rendered') {
         const raw = `data:${outcome.mimeType};base64,${outcome.dataBase64}`;
         const stamped = (await stampWatermark(raw, outcome.watermark)).url;
-        setResults((current) => ({ ...current, [view.id]: { image: stamped } }));
+        setResults((current) => ({
+          ...current,
+          [view.id]: { image: stamped, usage: outcome.usage },
+        }));
       } else {
         setResults((current) => ({ ...current, [view.id]: { notice: outcome.reason } }));
       }
@@ -166,6 +172,7 @@ export function RenderPanel({
                     {state?.pending ? 'Đang dựng…' : (state?.notice ?? 'Chưa dựng')}
                   </div>
                 )}
+                {state?.usage && <AiUsageLine usage={state.usage} />}
               </figure>
             );
           })}

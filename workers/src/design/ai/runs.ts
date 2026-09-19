@@ -187,6 +187,41 @@ export async function markStep(
   }
 }
 
+/**
+ * Ghi MỘT khoá của `progress.partial` cho lượt chạy nền đang chạy — theo dõi trực tiếp của bước
+ * mặt bằng (13/09/2026). Cùng phép so-và-đặt với `markStep` vì cả hai ghi chung một cột trong khi
+ * các tầng chạy song song. Lượt đã chốt (hỏng, đã dừng, xong) thì không ghi gì. Không bao giờ ném.
+ */
+export async function writeRunPartial(
+  db: SupabaseClient,
+  runId: string,
+  key: string,
+  value: unknown,
+): Promise<void> {
+  try {
+    for (let attempt = 0; attempt < CAS_ATTEMPTS; attempt += 1) {
+      const current = await readProgress(db, runId);
+      if (!current || (current.status !== 'running' && current.status !== 'queued')) return;
+      const progress: AiRunProgress = {
+        ...current.progress,
+        rev: current.progress.rev + 1,
+        partial: { ...current.progress.partial, [key]: value },
+      };
+      const { data, error } = await db
+        .from('design_ai_run')
+        .update({ progress, updated_at: new Date().toISOString() })
+        .eq('id', runId)
+        .eq('progress->>rev', String(current.progress.rev))
+        .in('status', ['queued', 'running'])
+        .select('id');
+      if (error) throw new Error(error.message);
+      if (data && data.length > 0) return;
+    }
+  } catch (error) {
+    console.error('design_ai_run: không ghi được theo dõi trực tiếp', error);
+  }
+}
+
 export interface FinishRunInput {
   status: Extract<AiRunStatus, 'done' | 'failed'>;
   /** Mã artifact đã đúc — để màn hình nhảy thẳng tới kết quả. */
@@ -252,19 +287,36 @@ export async function finishRun(
  * Hậu quả nặng hơn cái vòng quay vô hạn: `activeRun` thấy dòng ấy nên `POST /plan/runs` trả 409,
  * và người dùng bị KHOÁ không chạy lại được, không có nút nào gỡ.
  *
- * ── Vì sao là 21 phút ────────────────────────────────────────────────────────────────
+ * ── Vì sao là 25 phút ────────────────────────────────────────────────────────────────
  * `updated_at` chỉ nhúc nhích ở ranh giới các bước, nên nó đứng yên suốt thời gian một bước
- * chạy. Bước tốn nhất là bước gọi mô hình: hạn 10 phút, cộng một lượt thử lại sau 10 giây, cộng
- * 10 phút nữa — tức gần 21 phút mà KHÔNG có gì sai cả. Đặt ngưỡng thấp hơn là bắt nhầm một lượt
+ * chạy. Bước tốn nhất là bước gọi mô hình: hai lần thử 10 phút cách nhau 10 giây, nằm trong hạn bước
+ * 22 phút — tức gần 22 phút mà KHÔNG có gì sai cả. Đặt ngưỡng thấp hơn là bắt nhầm một lượt
  * chạy đang khoẻ, và bắt nhầm theo hướng tệ nhất: huỷ một lượt đã trả tiền.
  */
-export const RUN_STALE_MS = 21 * 60_000;
+// 21 → 35 (đặt tạm cho lượt đo 13/09/2026) → **25 phút**. Mốc này phải LỚN HƠN hạn của bước gọi
+// mô hình (nay 22 phút), nếu không màn hình tuyên bố lượt chạy đã chết trong khi lời gọi vẫn đang
+// bay — và tệ hơn, `finishRun` ghi «hỏng» đè lên một lượt sắp có kết quả.
+// ⚠️ TẠM ĐO 13/09/2026: nới theo hạn bước 120 phút (xem `workflows/ai-design.ts`, 120 phút). Trả về
+// 25 phút cùng lúc.
+export const RUN_STALE_MS = 125 * 60_000;
 
-/** Dòng tiến độ đã đứng hình chưa — so mốc cập nhật cuối với `RUN_STALE_MS`. */
-export function runStalled(updatedAt: string | null, now = Date.now()): boolean {
+/**
+ * Mốc «đứng hình» của lượt chạy CÓ NHỊP TIM — dòng có `progress.partial.live` được ghi lại mỗi 2
+ * giây bất kể lời gọi mô hình dài bao lâu (13/09/2026). Ba phút không có nhịp nào nghĩa là không
+ * còn mã nào chạy nó: lượt Claude Sonnet hôm ấy thành thây ma sau một lần nạp lại máy chủ phát
+ * triển, và màn hình quay 22 phút vì chỉ có mốc chung ở trên.
+ */
+export const LIVE_STALE_MS = 3 * 60_000;
+
+/** Dòng tiến độ đã đứng hình chưa — so mốc cập nhật cuối với ngưỡng (mặc định `RUN_STALE_MS`). */
+export function runStalled(
+  updatedAt: string | null,
+  now = Date.now(),
+  thresholdMs = RUN_STALE_MS,
+): boolean {
   if (!updatedAt) return false;
   const last = Date.parse(updatedAt);
-  return Number.isFinite(last) && now - last > RUN_STALE_MS;
+  return Number.isFinite(last) && now - last > thresholdMs;
 }
 
 export async function activeRun(
@@ -311,4 +363,69 @@ async function readProgress(
       ...(raw.partial ? { partial: raw.partial } : {}),
     },
   };
+}
+
+// ---------------------------------------------------------------------------
+// Lượt chạy ĐỒNG BỘ có theo dõi trực tiếp (bước chương trình không gian, 13/09/2026)
+// ---------------------------------------------------------------------------
+
+/**
+ * Mở dòng tiến độ cho một lượt gọi đồng bộ, với MÃ DO TRÌNH DUYỆT SINH.
+ *
+ * Vì sao trình duyệt sinh mã: lời gọi `/ai/program` giữ kết nối tới khi xong (vài phút), nên nó
+ * không trả được mã lượt chạy trước. Trình duyệt đặt sẵn một UUID, gửi kèm lời gọi, và hỏi
+ * `/ai/runs/:id` mỗi 2 giây trong lúc chờ. Mã đụng một dòng đã có thì bỏ theo dõi, KHÔNG ném —
+ * theo dõi là phụ trợ, không được chặn việc chính.
+ */
+export async function openLiveRun(
+  db: SupabaseClient,
+  scope: AiCallScope,
+  id: string,
+  stage: AiRunStage,
+  partial: Record<string, unknown>,
+): Promise<boolean> {
+  const { error } = await db.from('design_ai_run').insert({
+    id,
+    tenant_id: scope.tenantId,
+    company_id: scope.companyId,
+    project_id: scope.projectId,
+    discipline: scope.discipline,
+    stage,
+    workflow_id: null,
+    status: 'running',
+    progress: { rev: 1, steps: [], done: 0, total: 0, partial } satisfies AiRunProgress,
+    created_by: scope.actorId,
+  });
+  if (error) console.error('design_ai_run: không mở được dòng theo dõi', error);
+  return !error;
+}
+
+/** Câu ghi vào dòng lượt chạy khi kỹ sư bấm «Dừng» — tuyến đang chạy nhận ra nó và huỷ lời gọi. */
+export const RUN_CANCELLED = 'Đã dừng theo yêu cầu của kỹ sư.';
+
+/** Kỹ sư đã bấm «Dừng» chưa. Đọc lỗi thì coi như chưa — theo dõi không được tự huỷ việc chính. */
+export async function runCancelled(db: SupabaseClient, id: string): Promise<boolean> {
+  const { data } = await db
+    .from('design_ai_run')
+    .select('status, error')
+    .eq('id', id)
+    .maybeSingle();
+  return data?.status === 'failed' && data?.error === RUN_CANCELLED;
+}
+
+/** Ghi đè phần theo dõi trực tiếp. Hỏng thì chỉ log — không bao giờ ném. */
+export async function writeLiveRun(
+  db: SupabaseClient,
+  id: string,
+  rev: number,
+  partial: Record<string, unknown>,
+): Promise<void> {
+  const { error } = await db
+    .from('design_ai_run')
+    .update({
+      progress: { rev, steps: [], done: 0, total: 0, partial } satisfies AiRunProgress,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id);
+  if (error) console.error('design_ai_run: không ghi được tiến độ', error);
 }

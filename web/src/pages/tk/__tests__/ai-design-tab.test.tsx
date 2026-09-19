@@ -19,6 +19,8 @@ import { renderWithApp } from '@/test/render';
 const state = vi.hoisted(() => ({
   design: null as unknown,
   runProgram: vi.fn((_input: { projectId: string; route: string }) => Promise.resolve({})),
+  liveRun: null as unknown,
+  cancel: vi.fn(() => Promise.resolve({ stopped: true })),
 }));
 
 vi.mock('@/hooks/use-ai-design', () => ({
@@ -30,6 +32,19 @@ vi.mock('@/hooks/use-ai-design', () => ({
     refetch: vi.fn(),
   }),
   useInvalidateAiDesign: () => vi.fn(),
+  // Nhật ký chi phí: rỗng — phép thử ở đây không nói về tiền (xem `ai-usage.test.tsx`).
+  useAiCallLog: () => ({ data: [], isLoading: false, isError: false, error: null }),
+  useAiCallPrompts: () => ({ data: new Set() }),
+  useDownloadAiCallPrompt: () => ({ mutate: vi.fn(), isPending: false, isError: false }),
+  // Theo dõi trực tiếp: dòng lượt chạy giả, lượt 1 bị bác rồi lượt 2 đang viết.
+  useAiRun: () => ({ data: state.liveRun }),
+  useCancelAiRun: () => ({
+    mutateAsync: state.cancel,
+    isPending: false,
+    isError: false,
+    error: null,
+    data: undefined,
+  }),
   useAiModels: () => ({
     data: {
       text: [
@@ -104,8 +119,17 @@ describe('Dải bước của tab Thiết kế AI', () => {
     renderWithApp(<AiDesignTab projectId="p1" readOnly={false} />);
 
     expect(await screen.findByText('2. Mặt bằng từng tầng')).toBeInTheDocument();
-    expect(screen.getByText('Cần chương trình không gian trước.')).toBeInTheDocument();
+    // Mặt bằng đọc đầu bài + khảo sát, không chờ chương trình không gian (T45, 15/09/2026).
+    expect(screen.queryByText('Cần chương trình không gian trước.')).toBeNull();
     expect(screen.getByText('Cần chọn một phương án mặt bằng trước.')).toBeInTheDocument();
+  });
+
+  it('chưa xác nhận đầu bài thì cả chương trình không gian lẫn mặt bằng cùng chờ đầu bài', async () => {
+    state.design = designState({ briefArtifactId: null });
+    renderWithApp(<AiDesignTab projectId="p1" readOnly={false} />);
+
+    expect(await screen.findByText('2. Mặt bằng từng tầng')).toBeInTheDocument();
+    expect(screen.getAllByText('Cần xác nhận đầu bài trước.')).toHaveLength(2);
   });
 
   it('trạng thái từng bước luôn kèm chữ, không chỉ màu', async () => {
@@ -169,11 +193,89 @@ describe('Bước chương trình không gian', () => {
     );
 
     // Mặc định TẮT cả hai gói (T20, 09/09/2026): không tích gì thì mô hình thiết kế tự do.
-    expect(state.runProgram).toHaveBeenCalledWith({
-      projectId: 'p1',
-      route: 'ai_text_openai',
-      rulePacks: { standards: false, experience: false },
-    });
+    expect(state.runProgram).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectId: 'p1',
+        route: 'ai_text_openai',
+        rulePacks: { standards: false, experience: false },
+      }),
+    );
+  });
+
+  it('gửi kèm mã theo dõi và mức suy nghĩ; bảng theo dõi nói lý do lượt đầu bị bác và có nút Dừng', async () => {
+    state.design = designState();
+    state.runProgram.mockClear();
+    state.cancel.mockClear();
+    // Lời gọi chính treo — đúng lúc kỹ sư đang ngồi xem bảng theo dõi.
+    state.runProgram.mockReturnValue(new Promise(() => undefined));
+    state.liveRun = {
+      id: 'run',
+      stage: 'program',
+      status: 'running',
+      progress: {
+        steps: [],
+        partial: {
+          live: {
+            model: 'gpt-x',
+            route: 'ai_text_openai',
+            effort: 'low',
+            startedAt: new Date(Date.now() - 200_000).toISOString(),
+            elapsedMs: 200_000,
+            current: {
+              round: 2,
+              phase: 'writing',
+              outputChars: 3500,
+              startedAt: new Date(Date.now() - 50_000).toISOString(),
+            },
+            rounds: [
+              {
+                round: 1,
+                outcome: 'rejected',
+                issues: ['Thiếu phòng thờ ở tầng 2 — đầu bài khai.'],
+                usage: {
+                  route: 'ai_text_openai',
+                  purpose: 'program',
+                  provider: 'openai',
+                  model: 'gpt-x',
+                  inputTokens: 6046,
+                  outputTokens: 8791,
+                  imageCount: 0,
+                  latencyMs: 150_900,
+                  status: 'rejected',
+                  billed: true,
+                  costUsd: 0.095468,
+                  listCostUsd: 0.095468,
+                },
+              },
+            ],
+          },
+        },
+      },
+      result: null,
+      error: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    renderWithApp(<AiDesignTab projectId="p1" readOnly={false} />);
+    await userEvent.selectOptions(await screen.findByLabelText('Mức suy nghĩ'), 'low');
+    await userEvent.click(screen.getByRole('button', { name: 'Lập chương trình không gian' }));
+
+    const sent = state.runProgram.mock.calls[0]![0] as {
+      reasoningEffort?: string;
+      progressId?: string;
+    };
+    expect(sent.reasoningEffort).toBe('low');
+    expect(sent.progressId).toMatch(/^[0-9a-f-]{36}$/);
+
+    expect(await screen.findByText('Thiếu phòng thờ ở tầng 2 — đầu bài khai.')).toBeInTheDocument();
+    expect(screen.getByText('bị bộ kiểm bác')).toBeInTheDocument();
+    expect(screen.getByText(/đã nhận 3.500 ký tự ≈/)).toBeInTheDocument();
+    expect(screen.getByText(/mức suy nghĩ Thấp/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Dừng lượt gọi' }));
+    expect(state.cancel).toHaveBeenCalledWith({ runId: sent.progressId });
+    state.liveRun = null;
   });
 
   it('tích gói nào thì gửi đúng gói đó, và màn hình NÓI RA rằng không kiểm quy chuẩn', async () => {
@@ -202,11 +304,13 @@ describe('Bước chương trình không gian', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: 'Lập chương trình không gian' }));
 
-    expect(state.runProgram).toHaveBeenCalledWith({
-      projectId: 'p1',
-      route: 'ai_text_openai',
-      rulePacks: { standards: false, experience: true },
-    });
+    expect(state.runProgram).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectId: 'p1',
+        route: 'ai_text_openai',
+        rulePacks: { standards: false, experience: true },
+      }),
+    );
   });
 
   it('cảnh báo rỗng vẫn NÓI RA số quy tắc chưa đối chiếu được', async () => {

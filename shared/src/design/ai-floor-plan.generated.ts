@@ -52,6 +52,166 @@ export const aiFloorPlanRectSchema = z
 
 export type AiFloorPlanRect = z.infer<typeof aiFloorPlanRectSchema>;
 
+export const aiFloorPlanTreeIdSchema = z
+  .string()
+  .max(32)
+  .regex(/^[a-z0-9_]+$/);
+
+export type AiFloorPlanTreeId = z.infer<typeof aiFloorPlanTreeIdSchema>;
+
+/** Cây chia của tầng này — mọi toạ độ của tầng suy ra từ đây. T37: mô hình khai; từ T43 (14/09/2026): bộ giải `ai/arrange/` dựng từ ý định. TUỲ CHỌN: artifact đúc trước 13/09/2026 không có. */
+export const aiFloorPlanTreeSchema = z
+  .object({
+    footprint: aiFloorPlanRectSchema,
+    nodes: z
+      .array(
+        z
+          .object({
+            id: aiFloorPlanTreeIdSchema,
+            cut: z.enum(['x', 'y']),
+            at: aiFloorPlanCmSchema,
+            a: aiFloorPlanTreeIdSchema,
+            b: aiFloorPlanTreeIdSchema,
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(59),
+    also: z
+      .array(
+        z
+          .object({
+            room: aiFloorPlanTreeIdSchema,
+            with: z.array(aiFloorPlanTreeIdSchema).min(1).max(2),
+          })
+          .strict(),
+      )
+      .max(6),
+    doors: z
+      .array(
+        z
+          .object({
+            a: aiFloorPlanTreeIdSchema,
+            b: aiFloorPlanTreeIdSchema,
+            kind: z.enum(['single', 'double', 'sliding', 'garage', 'gate', 'opening']),
+            full: z.boolean().nullable().optional(),
+            place: z
+              .union([z.literal('start'), z.literal('middle'), z.literal('end'), z.literal(null)])
+              .nullable()
+              .optional(),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(60),
+    stair: z
+      .object({
+        room: aiFloorPlanTreeIdSchema,
+        up: z.enum(['+x', '-x', '+y', '-y']),
+      })
+      .strict()
+      .nullable(),
+    no_window: z.array(aiFloorPlanTreeIdSchema).max(20),
+  })
+  .strict()
+  .describe(
+    'Cây chia của tầng này — mọi toạ độ của tầng suy ra từ đây. T37: mô hình khai; từ T43 (14/09/2026): bộ giải `ai/arrange/` dựng từ ý định. TUỲ CHỌN: artifact đúc trước 13/09/2026 không có.',
+  );
+
+export type AiFloorPlanTree = z.infer<typeof aiFloorPlanTreeSchema>;
+
+export const aiFloorPlanZoneSchema = z.enum([
+  'front_left',
+  'front',
+  'front_right',
+  'left',
+  'center',
+  'right',
+  'back_left',
+  'back',
+  'back_right',
+]);
+
+export type AiFloorPlanZone = z.infer<typeof aiFloorPlanZoneSchema>;
+
+/** Ý định bố cục mô hình đã khai cho tầng này (T43), SAU khi chương trình chuẩn hoá (vùng mặc định, bỏ quan hệ trỏ phòng lạ). TUỲ CHỌN: artifact đúc trước 14/09/2026 không có. */
+export const aiFloorPlanIntentSchema = z
+  .object({
+    rooms: z
+      .array(
+        z
+          .object({
+            id: aiFloorPlanTreeIdSchema,
+            zone: aiFloorPlanZoneSchema,
+            street_facing: z.boolean(),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(40),
+    relationships: z
+      .array(
+        z
+          .object({
+            a: aiFloorPlanTreeIdSchema,
+            b: aiFloorPlanTreeIdSchema,
+            kind: z.enum(['adjacent', 'near', 'far', 'open']),
+          })
+          .strict(),
+      )
+      .max(30),
+    entry_room: z
+      .string()
+      .max(32)
+      .regex(/^[a-z0-9_]+$/)
+      .nullable(),
+    garage_room: z
+      .string()
+      .max(32)
+      .regex(/^[a-z0-9_]+$/)
+      .nullable(),
+  })
+  .strict()
+  .describe(
+    'Ý định bố cục mô hình đã khai cho tầng này (T43), SAU khi chương trình chuẩn hoá (vùng mặc định, bỏ quan hệ trỏ phòng lạ). TUỲ CHỌN: artifact đúc trước 14/09/2026 không có.',
+  );
+
+export type AiFloorPlanIntent = z.infer<typeof aiFloorPlanIntentSchema>;
+
+/** Bộ giải đã chọn cây của tầng này ra sao (T43): dựng bao nhiêu ứng viên, bao nhiêu qua cổng, cây được chọn khớp ý định bao nhiêu. TUỲ CHỌN. */
+export const aiFloorPlanArrangeSchema = z
+  .object({
+    /** Số cây ứng viên đã dựng được. */
+    candidates: z.number().int().gte(0).describe('Số cây ứng viên đã dựng được.'),
+    /** Số ứng viên qua cổng kiểm. */
+    passed: z.number().int().gte(0).describe('Số ứng viên qua cổng kiểm.'),
+    /** Độ khớp ý định của cây được chọn: vùng, quan hệ, mặt tiền. */
+    intent_fit: z
+      .number()
+      .gte(0)
+      .lte(1)
+      .describe('Độ khớp ý định của cây được chọn: vùng, quan hệ, mặt tiền.'),
+    /** Khoá bộ khung của cây được chọn — để truy vết, không hiển thị. */
+    parti: z
+      .string()
+      .max(120)
+      .describe('Khoá bộ khung của cây được chọn — để truy vết, không hiển thị.'),
+    /** Vòng nới đã phải dùng (0 = không nới). */
+    relaxed: z
+      .number()
+      .int()
+      .gte(0)
+      .lte(4)
+      .describe('Vòng nới đã phải dùng (0 = không nới).')
+      .optional(),
+  })
+  .strict()
+  .describe(
+    'Bộ giải đã chọn cây của tầng này ra sao (T43): dựng bao nhiêu ứng viên, bao nhiêu qua cổng, cây được chọn khớp ý định bao nhiêu. TUỲ CHỌN.',
+  );
+
+export type AiFloorPlanArrange = z.infer<typeof aiFloorPlanArrangeSchema>;
+
 export const aiFloorPlanLevelSchema = z
   .object({
     /** Số tầng, 1 là tầng trệt. */
@@ -131,6 +291,26 @@ export const aiFloorPlanLevelSchema = z
               .max(4)
               .describe(
                 'Mã phòng KHÁC mà chính chữ nhật này cũng phục vụ — khai khi chương trình không gian có hai phòng mà bố cục gộp làm một không gian mở (bếp + ăn, khách + thờ). Diện tích yêu cầu khi đối chiếu là TỔNG của phòng chính và các mã ở đây.',
+              )
+              .optional(),
+            /** Các khu của một không gian mở, để tờ vẽ ghi tên từng khu. Chỉ có ở phòng mang `also`. */
+            parts: z
+              .array(
+                z
+                  .object({
+                    id: aiFloorPlanSpaceIdSchema,
+                    type: aiFloorPlanSpaceIdSchema,
+                    /** Phần chữ nhật của phòng ghép mà khu này chiếm — RANH MỀM, không có tường. */
+                    rect: aiFloorPlanRectSchema.describe(
+                      'Phần chữ nhật của phòng ghép mà khu này chiếm — RANH MỀM, không có tường.',
+                    ),
+                    area_m2: z.number().gt(0),
+                  })
+                  .strict(),
+              )
+              .max(5)
+              .describe(
+                'Các khu của một không gian mở, để tờ vẽ ghi tên từng khu. Chỉ có ở phòng mang `also`.',
               )
               .optional(),
             /** Chữ in trong phòng, tiếng Việt. Rỗng thì bộ vẽ tự lấy nhãn từ kb/room_vocabulary.yaml — chỉ khai khi cần tên khác («Phòng ngủ ông bà»). */
@@ -243,6 +423,9 @@ export const aiFloorPlanLevelSchema = z
       )
       .max(12)
       .optional(),
+    tree: aiFloorPlanTreeSchema.optional(),
+    intent: aiFloorPlanIntentSchema.optional(),
+    arrange: aiFloorPlanArrangeSchema.optional(),
   })
   .strict();
 
@@ -255,7 +438,26 @@ export const aiFloorPlanGeneratorSchema = z
     model: z.string().max(96),
     route: z.string().max(64),
     prompt_version: z.string().max(16),
-    repaired: z.boolean().optional(),
+    /** Có ít nhất một lượt gọi thứ hai. Từ T39 (13/09/2026) nghĩa là đã LẤY MẪU LẠI ít nhất một tầng — không còn lượt vá bản cũ; tầng nào thì xem `resampled_levels`. */
+    repaired: z
+      .boolean()
+      .describe(
+        'Có ít nhất một lượt gọi thứ hai. Từ T39 (13/09/2026) nghĩa là đã LẤY MẪU LẠI ít nhất một tầng — không còn lượt vá bản cũ; tầng nào thì xem `resampled_levels`.',
+      )
+      .optional(),
+    /** tree = mô hình khai cây chia theo từng tầng, chương trình gán số (T37) · intent = mô hình khai ý định bố cục, chương trình dựng cây chia (T43). Vắng = artifact đúc trước 13/09/2026, mô hình khai chữ nhật phòng. */
+    layout: z
+      .enum(['tree', 'intent'])
+      .describe(
+        'tree = mô hình khai cây chia theo từng tầng, chương trình gán số (T37) · intent = mô hình khai ý định bố cục, chương trình dựng cây chia (T43). Vắng = artifact đúc trước 13/09/2026, mô hình khai chữ nhật phòng.',
+      )
+      .optional(),
+    /** Tầng đã phải lấy mẫu lại vì lượt đầu không qua cổng kiểm (T39). */
+    resampled_levels: z
+      .array(z.number().int().gte(1))
+      .max(12)
+      .describe('Tầng đã phải lấy mẫu lại vì lượt đầu không qua cổng kiểm (T39).')
+      .optional(),
     /** Tường trong artifact này do CHƯƠNG TRÌNH suy từ chữ nhật phòng, không phải mô hình khai (T19): sau một lượt sửa mà tường vẫn không bao kín phòng thì suy hộ để tờ vẽ vẫn dùng được. Bật cờ này thì tờ vẽ và màn hình phải nói ra. */
     walls_derived: z
       .boolean()
@@ -263,10 +465,135 @@ export const aiFloorPlanGeneratorSchema = z
         'Tường trong artifact này do CHƯƠNG TRÌNH suy từ chữ nhật phòng, không phải mô hình khai (T19): sau một lượt sửa mà tường vẫn không bao kín phòng thì suy hộ để tờ vẽ vẫn dùng được. Bật cờ này thì tờ vẽ và màn hình phải nói ra.',
       )
       .optional(),
+    /** Có mặt khi phương án này là bản SỬA của một phương án khác theo yêu cầu kỹ sư (T53). */
+    edit: z
+      .object({
+        /** Nguyên văn yêu cầu kỹ sư gõ vào ô «Yêu cầu sửa». */
+        instruction: z
+          .string()
+          .max(2000)
+          .describe('Nguyên văn yêu cầu kỹ sư gõ vào ô «Yêu cầu sửa».'),
+        /** Mã artifact mặt bằng được sửa. */
+        base_ref: z.string().max(80).describe('Mã artifact mặt bằng được sửa.'),
+        /** Thao tác đã áp (ai-plan-edit). */
+        ops: z.array(z.object({}).passthrough()).max(40).describe('Thao tác đã áp (ai-plan-edit).'),
+      })
+      .strict()
+      .nullable()
+      .describe(
+        'Có mặt khi phương án này là bản SỬA của một phương án khác theo yêu cầu kỹ sư (T53).',
+      )
+      .optional(),
   })
   .strict();
 
 export type AiFloorPlanGenerator = z.infer<typeof aiFloorPlanGeneratorSchema>;
+
+/** Điểm chất lượng do CHƯƠNG TRÌNH chấm (`ai/plan-score.ts`), không hỏi mô hình. TUỲ CHỌN: artifact đúc trước 12/09/2026 không có trường này và vẫn phải đọc lại được. */
+export const aiFloorPlanScoreSchema = z
+  .object({
+    /** Phiên bản THƯỚC chấm (`kb/plan_quality.yaml`), không phải phiên bản mặt bằng. */
+    score_version: z
+      .number()
+      .int()
+      .gte(1)
+      .describe('Phiên bản THƯỚC chấm (`kb/plan_quality.yaml`), không phải phiên bản mặt bằng.'),
+    /** Điểm tuyệt đối. Đọc PHẢI kèm `scored_weight`: 72 trên 85 phần trọng số chấm được, không phải 72/100. */
+    points: z
+      .number()
+      .gte(0)
+      .lte(100)
+      .describe(
+        'Điểm tuyệt đối. Đọc PHẢI kèm `scored_weight`: 72 trên 85 phần trọng số chấm được, không phải 72/100.',
+      ),
+    /** Tổng trọng số thật sự chấm được. Dưới 100 nghĩa là có tiêu chí thiếu đầu vào; phần thiếu KHÔNG được chia lại cho tiêu chí khác. */
+    scored_weight: z
+      .number()
+      .gte(0)
+      .lte(100)
+      .describe(
+        'Tổng trọng số thật sự chấm được. Dưới 100 nghĩa là có tiêu chí thiếu đầu vào; phần thiếu KHÔNG được chia lại cho tiêu chí khác.',
+      ),
+    /** Phần trọng số đã chấm mà dựa trên ngưỡng CHƯA AI ĐO (`n = 0`). Màn hình phải nói ra (T31). */
+    reasoned_weight: z
+      .number()
+      .gte(0)
+      .lte(100)
+      .describe(
+        'Phần trọng số đã chấm mà dựa trên ngưỡng CHƯA AI ĐO (`n = 0`). Màn hình phải nói ra (T31).',
+      ),
+    groups: z
+      .array(
+        z
+          .object({
+            code: z.string().max(8),
+            weight: z.number().gte(0).lte(100),
+            scored_weight: z.number().gte(0).lte(100),
+            points: z.number().gte(0).lte(100),
+          })
+          .strict(),
+      )
+      .max(12),
+    criteria: z
+      .array(
+        z
+          .object({
+            code: z.string().max(8),
+            group: z.string().max(8),
+            /** Giá trị đo được, đơn vị theo tiêu chí. Rỗng = chưa chấm được. */
+            value: z
+              .number()
+              .nullable()
+              .describe('Giá trị đo được, đơn vị theo tiêu chí. Rỗng = chưa chấm được.')
+              .optional(),
+            score: z.number().gte(0).lte(1).nullable().optional(),
+            /** Trọng số DANH NGHĨA. Tiêu chí thiếu dữ liệu vẫn mang trọng số của nó, chỉ không cộng vào điểm. */
+            weight: z
+              .number()
+              .gte(0)
+              .lte(100)
+              .describe(
+                'Trọng số DANH NGHĨA. Tiêu chí thiếu dữ liệu vẫn mang trọng số của nó, chỉ không cộng vào điểm.',
+              ),
+            /** Số mẫu đã đo. 0 = ngưỡng hoàn toàn là suy luận. */
+            n: z.number().int().gte(0).describe('Số mẫu đã đo. 0 = ngưỡng hoàn toàn là suy luận.'),
+            label: z.string().max(64).optional(),
+            /** gate = cổng dữ liệu đã bảo đảm nên không phải tiêu chí chấm điểm · thieu_du_lieu = phương án này không có đầu vào. */
+            not_scored: z
+              .union([z.literal('gate'), z.literal('thieu_du_lieu'), z.literal(null)])
+              .nullable()
+              .describe(
+                'gate = cổng dữ liệu đã bảo đảm nên không phải tiêu chí chấm điểm · thieu_du_lieu = phương án này không có đầu vào.',
+              )
+              .optional(),
+            /** Câu tiếng Việt nói vì sao không chấm được — hiện THAY cho con số, không hiện 0. */
+            why: z
+              .string()
+              .max(240)
+              .nullable()
+              .describe(
+                'Câu tiếng Việt nói vì sao không chấm được — hiện THAY cho con số, không hiện 0.',
+              )
+              .optional(),
+            /** Phần tử bị trừ điểm. Dùng cho màn hình VÀ cho ghi chú «tránh những chỗ này» của lượt lấy mẫu sau (T25). */
+            refs: z
+              .array(aiFloorPlanSpaceIdSchema)
+              .max(60)
+              .describe(
+                'Phần tử bị trừ điểm. Dùng cho màn hình VÀ cho ghi chú «tránh những chỗ này» của lượt lấy mẫu sau (T25).',
+              )
+              .optional(),
+          })
+          .strict(),
+      )
+      .max(40),
+  })
+  .strict()
+  .describe(
+    'Điểm chất lượng do CHƯƠNG TRÌNH chấm (`ai/plan-score.ts`), không hỏi mô hình. TUỲ CHỌN: artifact đúc trước 12/09/2026 không có trường này và vẫn phải đọc lại được.',
+  );
+
+export type AiFloorPlanScore = z.infer<typeof aiFloorPlanScoreSchema>;
 
 /**
  * Mặt bằng của NHÁNH AI — toàn bộ NỘI DUNG bản vẽ dưới dạng dữ liệu, một artifact cho cả phương án (mọi tầng).
@@ -281,7 +608,9 @@ export type AiFloorPlanGenerator = z.infer<typeof aiFloorPlanGeneratorSchema>;
  *
  * KHÔNG khai cửa phục vụ phòng nào: máy suy từ hình học (điểm giữa lỗ mở lùi vào mỗi bên nửa bề dày tường rơi vào phòng nào).
  *
- * Kết quả là ĐỀ XUẤT: không thành `floor_plan` chuẩn, không qua Container, không xuất DXF, không lên hồ sơ phát hành. Lệch quy chuẩn QUỐC GIA (`rules/base/`) hiện thành cảnh báo, không chặn.
+ * Kết quả là ĐỀ XUẤT: không thành `floor_plan` chuẩn, không qua Container, không lên hồ sơ phát hành.
+ *
+ * Từ T37 (13/09/2026) mô hình KHÔNG khai toạ độ nào của tầng ngoài nhát cắt của cây chia (`levels[].tree`); tường, phòng, cửa, cửa sổ và thang trong artifact đều do chương trình suy từ cây (`ai/tree/`). Artifact chỉ được ghi khi mọi tầng đã qua cổng kiểm (T39).
  */
 export const aiFloorPlanSchema = z
   .object({
@@ -326,10 +655,20 @@ export const aiFloorPlanSchema = z
     /** Vì sao bố cục như vậy, tiếng Việt, 2–5 câu. */
     rationale: z.string().max(1500).describe('Vì sao bố cục như vậy, tiếng Việt, 2–5 câu.'),
     generator: aiFloorPlanGeneratorSchema,
+    score: aiFloorPlanScoreSchema.optional(),
+    /** Ý định cả nhà mô hình khai (ai-house-intent, đã đánh mã type_n, có `sketches`) mà phương án này xếp từ đó (T53). Lượt sửa bố cục theo yêu cầu kỹ sư gửi lại nó làm `<previous_intent>`. Vắng = artifact đúc trước T53. */
+    house_intent: z
+      .object({})
+      .passthrough()
+      .nullable()
+      .describe(
+        'Ý định cả nhà mô hình khai (ai-house-intent, đã đánh mã type_n, có `sketches`) mà phương án này xếp từ đó (T53). Lượt sửa bố cục theo yêu cầu kỹ sư gửi lại nó làm `<previous_intent>`. Vắng = artifact đúc trước T53.',
+      )
+      .optional(),
   })
   .strict()
   .describe(
-    'Mặt bằng của NHÁNH AI — toàn bộ NỘI DUNG bản vẽ dưới dạng dữ liệu, một artifact cho cả phương án (mọi tầng).\n\nQuyết định T15 (09/09/2026 — Haan): «AI thiết kế, chương trình cầm bút». Mô hình khai từng đoạn tường kèm bề dày, từng cửa và cửa sổ kèm vị trí và chiều mở, thang, tên phòng và diện tích; bộ vẽ tất định trong Worker (`ai/draw/`) đặt lên giấy. Thay cho phương án cũ (T14) để mô hình tự viết chuỗi SVG — đo thật 09/09 cho ra bản phác không cửa, không chuỗi kích thước, vách không bề dày.\n\nVì sao dữ liệu chứ không phải tệp vẽ: dữ liệu KIỂM ĐƯỢC. Thiếu cửa, cửa đặt ngoài tường, tường không bao kín phòng, diện tích khai lệch chữ nhật — máy bắt được và yêu cầu mô hình sửa. Một tệp SVG thì chỉ đếm được ký tự.\n\nĐƠN VỊ: xăng-ti-mét, không phải mét, trên lưới nửa centimet. Mô hình khai SỐ NGUYÊN (lời dẫn nói thẳng), còn nửa centimet dành cho chương trình — tim vách 11 cm giữa hai phòng rơi vào x,5. Không có số thực tự do: hai lượt gọi cùng đầu vào phải cho cùng mã băm artifact. Xem `$defs.cm`. Gốc toạ độ ở góc TRƯỚC-TRÁI lô đất, `x` sang phải dọc mặt tiền, `y` vào sâu.\n\nKHÔNG khai chuỗi kích thước: bộ vẽ suy từ chính toạ độ tường. Bắt mô hình khai lại là thêm ~30% token và thêm một cách sai mới — một chuỗi kích thước cộng không ra tổng là bản vẽ không kiến trúc sư nào tin.\n\nKHÔNG khai cửa phục vụ phòng nào: máy suy từ hình học (điểm giữa lỗ mở lùi vào mỗi bên nửa bề dày tường rơi vào phòng nào).\n\nKết quả là ĐỀ XUẤT: không thành `floor_plan` chuẩn, không qua Container, không xuất DXF, không lên hồ sơ phát hành. Lệch quy chuẩn QUỐC GIA (`rules/base/`) hiện thành cảnh báo, không chặn.',
+    'Mặt bằng của NHÁNH AI — toàn bộ NỘI DUNG bản vẽ dưới dạng dữ liệu, một artifact cho cả phương án (mọi tầng).\n\nQuyết định T15 (09/09/2026 — Haan): «AI thiết kế, chương trình cầm bút». Mô hình khai từng đoạn tường kèm bề dày, từng cửa và cửa sổ kèm vị trí và chiều mở, thang, tên phòng và diện tích; bộ vẽ tất định trong Worker (`ai/draw/`) đặt lên giấy. Thay cho phương án cũ (T14) để mô hình tự viết chuỗi SVG — đo thật 09/09 cho ra bản phác không cửa, không chuỗi kích thước, vách không bề dày.\n\nVì sao dữ liệu chứ không phải tệp vẽ: dữ liệu KIỂM ĐƯỢC. Thiếu cửa, cửa đặt ngoài tường, tường không bao kín phòng, diện tích khai lệch chữ nhật — máy bắt được và yêu cầu mô hình sửa. Một tệp SVG thì chỉ đếm được ký tự.\n\nĐƠN VỊ: xăng-ti-mét, không phải mét, trên lưới nửa centimet. Mô hình khai SỐ NGUYÊN (lời dẫn nói thẳng), còn nửa centimet dành cho chương trình — tim vách 11 cm giữa hai phòng rơi vào x,5. Không có số thực tự do: hai lượt gọi cùng đầu vào phải cho cùng mã băm artifact. Xem `$defs.cm`. Gốc toạ độ ở góc TRƯỚC-TRÁI lô đất, `x` sang phải dọc mặt tiền, `y` vào sâu.\n\nKHÔNG khai chuỗi kích thước: bộ vẽ suy từ chính toạ độ tường. Bắt mô hình khai lại là thêm ~30% token và thêm một cách sai mới — một chuỗi kích thước cộng không ra tổng là bản vẽ không kiến trúc sư nào tin.\n\nKHÔNG khai cửa phục vụ phòng nào: máy suy từ hình học (điểm giữa lỗ mở lùi vào mỗi bên nửa bề dày tường rơi vào phòng nào).\n\nKết quả là ĐỀ XUẤT: không thành `floor_plan` chuẩn, không qua Container, không lên hồ sơ phát hành.\n\nTừ T37 (13/09/2026) mô hình KHÔNG khai toạ độ nào của tầng ngoài nhát cắt của cây chia (`levels[].tree`); tường, phòng, cửa, cửa sổ và thang trong artifact đều do chương trình suy từ cây (`ai/tree/`). Artifact chỉ được ghi khi mọi tầng đã qua cổng kiểm (T39).',
   );
 
 export type AiFloorPlan = z.infer<typeof aiFloorPlanSchema>;

@@ -34,6 +34,10 @@ VALID_PREDICATES: frozenset[str] = frozenset(
         "requires_face",
         "adjacency",
         "floor_preference",
+        # Cầu thang không nằm thẳng trục cửa chính (16/09/2026). CHỈ nhánh AI đo
+        # (`ai/rule-warnings.ts`); bộ giải không có vị từ này nên bỏ qua, nhưng vẫn phải nhận tên
+        # để đọc được `rules/nvg-experience.yaml`.
+        "stair_faces_entry",
         "aligned_across_floors",
         "setback",
         "max_density",
@@ -59,6 +63,12 @@ LEGAL_SOURCE_PREFIXES: tuple[str, ...] = (
 # Chuỗi chính xác dùng cho quy tắc đến từ kinh nghiệm thực tế của NVG chứ không từ một văn
 # bản đã ban hành. Quy tắc loại này chỉ được CẢNH BÁO, không bao giờ được chặn.
 EXPERIENCE_SOURCE = "kinh nghiệm NVG"
+
+# Chuỗi chính xác cho ràng buộc BỐ CỤC của bộ giải — thang, hộp kỹ thuật thẳng hàng; phòng nào
+# cũng có lối vào. Không phải văn bản pháp quy, nhưng được đặt mức `error`: vi phạm là ra một
+# ngôi nhà không dùng được. Thêm 13/09/2026 khi gói quy chuẩn `rules/base/` bị gỡ khỏi bộ giải
+# (Haan: «bỏ quy chuẩn VN đi») và ba ràng buộc này chuyển sang `rules/structure/`.
+STRUCTURE_SOURCE = "nguyên lý bố cục"
 
 
 class Severity(str, Enum):
@@ -96,6 +106,11 @@ class Rule:
     def is_experience(self) -> bool:
         """Đúng khi quy tắc đến từ kinh nghiệm NVG chứ không từ văn bản đã ban hành."""
         return self.source.strip() == EXPERIENCE_SOURCE
+
+    @property
+    def is_structural(self) -> bool:
+        """Đúng khi quy tắc là ràng buộc bố cục của bộ giải (`rules/structure/`)."""
+        return self.source.strip() == STRUCTURE_SOURCE
 
     def applies_to_type(self, building_type: str) -> bool:
         return building_type in self.applies_to

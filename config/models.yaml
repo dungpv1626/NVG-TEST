@@ -41,8 +41,21 @@
 #
 # `label` là chữ hiện trên ô chọn model của trang thiết kế (T10); `pricing` là giá niêm yết
 # để tính cột chi phí trong `design_ai_call` — cả hai là DỮ LIỆU, sửa ở đây khi giá đổi.
+#
+# Giá đối chiếu bảng giá CHÍNH THỨC ngày 13/09/2026 (ai.google.dev/gemini-api/docs/pricing ·
+# platform.claude.com/docs/en/about-claude/pricing · developers.openai.com/api/docs/pricing),
+# giá chuẩn, chưa trừ bộ nhớ đệm hay chạy lô. Tuyến dùng khoá MIỄN PHÍ vẫn khai `pricing`: đó
+# là giá NẾU trả phí, để màn hình hiện «0 USD (gói miễn phí) — theo giá trả phí ≈ …». Nhà cung
+# cấp nào không tính tiền thì khai ở `billing.free_providers`; `design_ai_call.cost_usd` luôn
+# ghi giá niêm yết, còn số tiền THẬT = 0 khi `provider` nằm trong danh sách đó.
 
-version: '1.1.0'
+version: '1.3.0'
+
+billing:
+  # Khoá của hai nhà cung cấp này không phát sinh hoá đơn: `gemini` là khoá gói miễn phí
+  # (`GEMINI_API_KEY`, T8), Pollinations không thu tiền. Theo NHÀ CUNG CẤP chứ không theo tuyến,
+  # vì tiền bám vào khoá — cùng lý lẽ tách `gemini_paid` ở trên.
+  free_providers: [gemini, pollinations]
 
 # Khoá API đã có (kiểm chứng 29/08/2026 bằng lời gọi thật, prompt không mang dữ liệu NVG).
 #
@@ -60,6 +73,7 @@ routes:
   layer1_brief:
     provider: gemini
     model: gemini-2.5-flash
+    pricing: { input_per_1m_usd: 0.3, output_per_1m_usd: 2.5 }
     max_data_class: 3
     enabled: true
     purpose: Kiểm tra đầy đủ và nhất quán của đầu bài, chấm completeness_score.
@@ -67,6 +81,7 @@ routes:
   layer2_program:
     provider: gemini
     model: gemini-2.5-flash
+    pricing: { input_per_1m_usd: 0.3, output_per_1m_usd: 2.5 }
     max_data_class: 3
     enabled: true
     purpose: Sinh chương trình không gian từ đầu bài + thống kê thực nghiệm.
@@ -74,6 +89,7 @@ routes:
   layer3_intent:
     provider: gemini
     model: gemini-2.5-flash
+    pricing: { input_per_1m_usd: 0.3, output_per_1m_usd: 2.5 }
     max_data_class: 3
     enabled: true
     purpose: Sinh cây chia không gian (LayoutIntent). KHÔNG sinh toạ độ hay kích thước.
@@ -94,6 +110,7 @@ routes:
   layer4_facade:
     provider: gemini
     model: gemini-2.5-flash
+    pricing: { input_per_1m_usd: 0.3, output_per_1m_usd: 2.5 }
     max_data_class: 3
     enabled: true
     purpose: Chọn tham số mặt đứng theo phong cách.
@@ -101,6 +118,7 @@ routes:
   kb_label_normalize:
     provider: gemini
     model: gemini-2.5-flash
+    pricing: { input_per_1m_usd: 0.3, output_per_1m_usd: 2.5 }
     max_data_class: 3
     enabled: true
     purpose: Chuẩn hoá nhãn phòng trích từ bản vẽ cũ.
@@ -120,6 +138,7 @@ routes:
   site_boundary_extract:
     provider: gemini
     model: gemini-2.5-flash
+    pricing: { input_per_1m_usd: 0.3, output_per_1m_usd: 2.5 }
     max_data_class: 2
     enabled: true
     purpose: Đọc ảnh trích lục/sổ đỏ thành danh sách cạnh có cấu trúc để dựng ranh giới thửa đất.
@@ -226,10 +245,31 @@ routes:
     enabled: true
     purpose: Nhánh AI — chương trình không gian và mặt bằng đề xuất (văn bản có lược đồ).
     pricing: { input_per_1m_usd: 1.25, output_per_1m_usd: 10 }
+    # ── Đo THẬT 13/09/2026, ghi lại vì nó quyết định hai dòng cấu hình phía dưới ──────────
+    #
+    # Một lượt xếp mặt bằng cho biệt thự 26 phòng: tiêu HẾT 32.000 token đầu ra (trần do
+    # `PLAN_OUTPUT_TOKENS` ở `ai/plan.ts` xin) mà vẫn bị cắt giữa chừng, và cũng vượt hạn chờ
+    # 300 giây. Câu trả lời JSON của một mặt bằng cỡ ấy chỉ nặng ~1.500–2.500 token — nghĩa là
+    # khoảng 90% ngân sách đi vào phần NGHĨ, thứ không hiện ra, vẫn tính tiền, vẫn ăn vào trần.
+    #
+    # `max_output_tokens` CỐ Ý để trống ở trạng thái thường: nâng trần không sửa được nguyên
+    # nhân, nó chỉ làm mỗi lượt hỏng đắt gấp đôi. Cái van đúng là `reasoning_effort` dưới đây.
+    #
+    # Trần 16.000 từ T38 (13/09/2026): lượt gọi nay là MỘT TẦNG và câu trả lời là một cây vài trăm
+    # token, nên 16.000 là chỗ cho phần nghĩ chứ không cho phần viết. Lượt đo trước (mức `0`, không
+    # trần) cho 30.742 và 33.200 token ra trên việc xếp CẢ NHÀ 26 phòng một lượt — việc lớn gấp
+    # nhiều lần. Trần là van giữ tiền: một tầng mà nghĩ quá 16.000 token thì bài đặt đang sai.
+    # ⚠️ TẠM ĐO 13/09/2026 — Haan: «tạm thời bỏ trần giới hạn token để test… bỏ trần giới hạn thời
+    # gian». `0` = không đặt trần / không đặt hạn chờ. Trả lại sau đợt đo.
+    max_output_tokens: 0
+    request_timeout_s: 0
+    #
+    # `reasoning_effort` cũng để trống = dùng mặc định của model, tức hành vi hiện nay. Vặn nó
+    # xuống `low` hoặc `minimal` là quyết định đánh đổi chất lượng bố cục lấy tiền và thời gian
+    # — để người trả tiền quyết, sau một lượt đo có ghi lại số token nghĩ.
+    # reasoning_effort: low
 
-  # Bậc tiết kiệm. Ba tuyến `_fast` CỐ Ý chưa khai `pricing`: đơn giá của chúng chưa đối chiếu
-  # bảng giá chính thức, và thà để thẻ chi phí ghi «Chưa đủ dữ liệu» còn hơn hiện một con số bịa
-  # (CLAUDE.md 5.2). Haan lấy đơn giá từ bảng điều khiển của từng nhà cung cấp rồi điền vào — Q-36.
+  # Bậc tiết kiệm. Đơn giá ba tuyến `_fast` đối chiếu bảng giá chính thức ngày 13/09/2026 (Q-36).
   ai_text_openai_fast:
     provider: openai
     model: gpt-5-mini
@@ -238,6 +278,13 @@ routes:
     max_data_class: 2
     enabled: true
     purpose: Nhánh AI — bậc tiết kiệm cho đầu bài đơn giản hoặc khi thử nhiều lượt.
+    pricing: { input_per_1m_usd: 0.25, output_per_1m_usd: 2 }
+    # ⚠️ ĐO 13/09/2026 — Haan cho phép một lượt đo luồng theo tầng (T38) «không giới hạn token».
+    # `0` = không gửi trần nào. Sau lượt đo thay bằng số đo được cộng biên an toàn.
+    # ⚠️ TẠM ĐO 13/09/2026 — Haan: «tạm thời bỏ trần giới hạn token để test… bỏ trần giới hạn thời
+    # gian». `0` = không đặt trần / không đặt hạn chờ. Trả lại sau đợt đo.
+    max_output_tokens: 0
+    request_timeout_s: 0
 
   ai_text_gemini:
     provider: gemini_paid
@@ -249,20 +296,20 @@ routes:
     max_data_class: 2
     enabled: true
     purpose: Nhánh AI — chương trình không gian và mặt bằng đề xuất (văn bản có lược đồ).
-    # ⚠️ Đơn giá còn là giá của bậc 2.5 Pro — chưa đối chiếu bảng giá bản 3.1 (Q-36). Sai đơn giá
-    # chỉ làm lệch thẻ chi phí, không ảnh hưởng lời gọi.
-    pricing: { input_per_1m_usd: 1.25, output_per_1m_usd: 10 }
+    # Giá cho lời nhắc ≤ 200k token (đối chiếu 13/09/2026); trên mức đó Google tính cao hơn.
+    pricing: { input_per_1m_usd: 2, output_per_1m_usd: 12 }
     # Mức SUY NGHĨ — xem `thinking_level` ở workers/src/design/llm/router.ts.
     # Đo 11/09/2026 trên một lượt xếp mặt bằng THẬT: để mặc định (`high`) thì token nghĩ ăn hết
     # `maxOutputTokens` (31.986 trên ngân sách 32.000) và JSON bị cắt ở 2.113 ký tự — hỏng, mà
     # vẫn tính đủ tiền. Nâng lên `medium` khi cần bố cục sâu hơn, nhưng phải nâng cả ngân sách
     # token cùng lúc, nếu không sẽ cắt lại y hệt.
     thinking_level: low
-    # ⚠️ ĐANG ĐO (11/09/2026) — `0` nghĩa là KHÔNG đặt trần, để model dùng mức tối đa của nó.
-    # Đặt một con số đoán rồi đo là đo chính con số mình đoán: lượt hỏng hôm trước sinh đúng
-    # 31.986 token trên trần 32.000, tức là nó ĐỤNG TRẦN chứ không phải cần đúng chừng ấy.
-    # Sau khi có số thật thì thay `0` bằng số đo được cộng biên an toàn.
+    # Trần 16.000 từ T38 (13/09/2026), cùng lý do với tuyến OpenAI: lượt gọi nay là một tầng. Mức `0`
+    # (không trần) đặt 11/09/2026 để đo lượt cả-nhà-một-lượt, và lượt ấy đã có số đo.
+    # ⚠️ TẠM ĐO 13/09/2026 — Haan: «tạm thời bỏ trần giới hạn token để test… bỏ trần giới hạn thời
+    # gian». `0` = không đặt trần / không đặt hạn chờ. Trả lại sau đợt đo.
     max_output_tokens: 0
+    request_timeout_s: 0
 
   ai_text_gemini_fast:
     provider: gemini_paid
@@ -271,12 +318,34 @@ routes:
     max_data_class: 2
     enabled: true
     purpose: Nhánh AI — bậc tiết kiệm cho đầu bài đơn giản hoặc khi thử nhiều lượt.
+    # Giá ưu đãi tới 31/12/2026; từ 01/01/2027 là 1,50 / 7,50 — sửa dòng này khi tới ngày.
+    pricing: { input_per_1m_usd: 0.75, output_per_1m_usd: 3.75 }
     # Mức SUY NGHĨ — xem `thinking_level` ở workers/src/design/llm/router.ts.
     # Đo 11/09/2026 trên một lượt xếp mặt bằng THẬT: để mặc định (`high`) thì token nghĩ ăn hết
     # `maxOutputTokens` (31.986 trên ngân sách 32.000) và JSON bị cắt ở 2.113 ký tự — hỏng, mà
     # vẫn tính đủ tiền. Nâng lên `medium` khi cần bố cục sâu hơn, nhưng phải nâng cả ngân sách
     # token cùng lúc, nếu không sẽ cắt lại y hệt.
     thinking_level: low
+    # ⚠️ TẠM ĐO 13/09/2026 — Haan: «tạm thời bỏ trần giới hạn token để test… bỏ trần giới hạn thời
+    # gian». `0` = không đặt trần / không đặt hạn chờ. Trả lại sau đợt đo.
+    max_output_tokens: 0
+    request_timeout_s: 0
+
+  # Bậc MIỄN PHÍ cho những bước chỉ gửi dữ liệu ĐÃ ẨN DANH (hạng 3) — hiện là đề xuất mức ưu tiên
+  # diện tích ở màn hình Chương trình không gian. Cùng khoá gói miễn phí với các tuyến `layer*`,
+  # nên `max_data_class: 3`: ô chọn model mờ nó đi ở mọi bước gửi đầu bài hạng 2.
+  ai_text_gemini_free:
+    provider: gemini
+    model: gemini-2.5-flash
+    label: Gemini 2.5 Flash (gói miễn phí) — chỉ dữ liệu đã ẩn danh
+    max_data_class: 3
+    enabled: true
+    purpose: Bước chỉ gửi bản tóm tắt đã ẩn danh — đề xuất mức ưu tiên diện tích (Lớp 2a).
+    pricing: { input_per_1m_usd: 0.3, output_per_1m_usd: 2.5 }
+    # ⚠️ TẠM ĐO 13/09/2026 — Haan: «tạm thời bỏ trần giới hạn token để test… bỏ trần giới hạn thời
+    # gian». `0` = không đặt trần / không đặt hạn chờ. Trả lại sau đợt đo.
+    max_output_tokens: 0
+    request_timeout_s: 0
 
   ai_text_anthropic:
     provider: anthropic
@@ -287,6 +356,16 @@ routes:
     enabled: true
     purpose: Nhánh AI — chương trình không gian và mặt bằng đề xuất (văn bản có lược đồ).
     pricing: { input_per_1m_usd: 5, output_per_1m_usd: 25 }
+    # ⚠️ TẠM ĐO 13/09/2026 — Haan: «tạm thời bỏ trần giới hạn token để test… bỏ trần giới hạn thời
+    # gian». `0` = không đặt hạn chờ; với Claude, `max_output_tokens: 0` = mức tối đa của model
+    # (128.000) khi truyền luồng — Claude bắt buộc có trần (`llm/anthropic.ts`). Trần 32.000 đặt
+    # trước đó đã cắt lượt Sonnet 5 ngày 17/09/2026 (32.000 token ra, 0,335 USD, hỏng).
+    # Mức suy nghĩ MẶC ĐỊNH của tuyến khi màn hình để «Mặc định của model» (17/09/2026, Haan duyệt). Claude 5
+    # tự để `high` nếu không gửi gì: lượt Sonnet 5 xếp mặt bằng ra 117.278 token (97% là nghĩ, câu trả
+    # lời ~7 KB), mức `medium` cùng đầu bài ra 58.668. Chọn mức khác trên màn hình vẫn thắng dòng này.
+    reasoning_effort: medium
+    max_output_tokens: 0
+    request_timeout_s: 0
 
   ai_text_anthropic_fast:
     provider: anthropic
@@ -296,29 +375,117 @@ routes:
     max_data_class: 2
     enabled: true
     purpose: Nhánh AI — bậc tiết kiệm cho đầu bài đơn giản hoặc khi thử nhiều lượt.
+    pricing: { input_per_1m_usd: 2, output_per_1m_usd: 10 }
+    # ⚠️ TẠM ĐO 13/09/2026 — Haan: «tạm thời bỏ trần giới hạn token để test… bỏ trần giới hạn thời
+    # gian». `0` = không đặt hạn chờ; với Claude, `max_output_tokens: 0` = mức tối đa của model
+    # (128.000) khi truyền luồng — Claude bắt buộc có trần (`llm/anthropic.ts`). Trần 32.000 đặt
+    # trước đó đã cắt lượt Sonnet 5 ngày 17/09/2026 (32.000 token ra, 0,335 USD, hỏng).
+    # Mức suy nghĩ MẶC ĐỊNH của tuyến khi màn hình để «Mặc định của model» (17/09/2026, Haan duyệt). Claude 5
+    # tự để `high` nếu không gửi gì: lượt Sonnet 5 xếp mặt bằng ra 117.278 token (97% là nghĩ, câu trả
+    # lời ~7 KB), mức `medium` cùng đầu bài ra 58.668. Chọn mức khác trên màn hình vẫn thắng dòng này.
+    reasoning_effort: medium
+    max_output_tokens: 0
+    request_timeout_s: 0
 
   # Ảnh: chỉ OpenAI và Google có mô hình ảnh; Anthropic không có. Cả hai nhận NHIỀU ảnh vào
   # (ảnh khối + tờ mặt bằng), nên giữ được đường ảnh → ảnh ở ba trong năm loại ảnh (T13).
+  # ── Sáu tuyến ảnh, tên mô hình lấy từ lượt LIỆT KÊ THẬT ngày 19/09/2026 ──────────────────
+  #
+  # Haan cho phép hai lượt gọi liệt kê (0 USD, không sinh ảnh) vì đoán tên mô hình là lượt gọi
+  # hỏng SAU KHI đã trả tiền. Kết quả, bằng chính hai khoá trả phí của dự án:
+  #
+  #   OpenAI  `GET /v1/models` → 136 mô hình, trong đó 10 mô hình ảnh. Bảng giá chỉ còn ba mô
+  #           hình ảnh HIỆN HÀNH (`gpt-image-2`, `gpt-image-2.5-flare`, `gpt-image-2.5-sunburst`);
+  #           `gpt-image-1*` và `gpt-image-1.5` tụt xuống mục «All models» (cũ). Kiểu `ImageModel`
+  #           trong tài liệu tham chiếu nhận cả ba ở CẢ HAI đầu ra, kể cả `/v1/images/edits`.
+  #   Gemini  `ListModels` → 6 mô hình ảnh; tất cả đều `generateContent`, tức đều nhận ảnh vào.
+  #           `gemini-2.5-flash-image` NGỪNG chạy 02/10/2026 nên không khai; hai bản `-preview`
+  #           là bản thử của chính hai mô hình đã khai nên cũng không khai.
+  #
+  # Chọn mô hình nào cho việc gì: tài liệu OpenAI nói thẳng «Sunburst cho luồng cần ĐỘ CHÍNH XÁC
+  # KHI SỬA ẢNH, Flare cho sinh ảnh nhanh hằng ngày» — việc của T57 là vẽ lại một mặt bằng có sẵn
+  # từ ảnh neo, tức đúng loại thứ nhất.
+  #
+  # ⚠️ **Giá mỗi ảnh của OpenAI là số SUY RA, không phải số hãng công bố.** Hãng tính ảnh theo
+  # TOKEN: `gpt-image-2` 4,00 USD/1M token ảnh vào · 15,00 USD/1M token ra; hai bản 2.5 gấp đôi
+  # (8,00 và 30,00). Lượt THẬT đã ghi trong `design_ai_call` ngày 19/09/2026 (`gpt-image-2`, tờ
+  # mặt bằng có nội thất): 2.353 token vào, 1.372 token ra → 2.353 × 4 + 1.372 × 15, chia một
+  # triệu = **0,030 USD**. Con số 0,19 khai trước đó là ước chừng và cao gấp hơn sáu lần — nó
+  # vào thẳng cột `cost_usd` của nhật ký nên đã báo đắt hơn hoá đơn thật. Số ở đây đổi theo cỡ
+  # ảnh và mức `quality`; khi nào đổi hai thứ ấy thì phải đo lại.
   ai_image_openai:
     provider: openai
     model: gpt-image-2
-    label: GPT Image (OpenAI)
+    label: GPT Image 2 (OpenAI) — rẻ nhất của OpenAI
     # HAI địa chỉ, vì OpenAI tách làm hai đầu ra khác hẳn nhau. `endpoint` là đường CHỮ → ẢNH
     # (JSON, không nhận ảnh vào) — đây là đường tờ mặt bằng của T21 đi, vì nó không có ảnh neo.
-    # `endpoint_edit` là đường ẢNH → ẢNH (multipart, bắt buộc có ảnh vào) — đường bộ ảnh phối
-    # cảnh của T16 sẽ đi. Gửi nhầm đường là lỗi 400, và chỉ lộ ra sau khi đã trả tiền.
+    # `endpoint_edit` là đường ẢNH → ẢNH (multipart, bắt buộc có ảnh vào) — đường tờ mặt bằng có
+    # nội thất của T57 và bộ ảnh phối cảnh của T16 đi. Gửi nhầm đường là lỗi 400, và chỉ lộ ra
+    # sau khi đã trả tiền.
     endpoint: https://api.openai.com/v1/images/generations
     endpoint_edit: https://api.openai.com/v1/images/edits
     max_data_class: 2
     enabled: true
     purpose: Nhánh AI — mặt bằng có nội thất, phối cảnh, nội thất, mặt đứng, mặt cắt.
-    pricing: { image_usd: 0.19 }
+    # Suy từ lượt thật 19/09/2026 — xem khối chú thích trên.
+    pricing: { image_usd: 0.03 }
+
+  ai_image_openai_precise:
+    provider: openai
+    model: gpt-image-2.5-sunburst
+    label: GPT Image 2.5 Sunburst (OpenAI) — bám ảnh gốc sát nhất
+    endpoint: https://api.openai.com/v1/images/generations
+    endpoint_edit: https://api.openai.com/v1/images/edits
+    max_data_class: 2
+    enabled: true
+    purpose: Nhánh AI — tờ mặt bằng có nội thất vẽ lại từ ảnh neo, nơi bám đúng hình là chính.
+    # Giá token gấp đôi `gpt-image-2` (8,00 vào / 30,00 ra), nên suy ra gấp đôi. CHƯA đo lượt thật.
+    pricing: { image_usd: 0.06 }
+
+  ai_image_openai_fast:
+    provider: openai
+    model: gpt-image-2.5-flare
+    label: GPT Image 2.5 Flare (OpenAI) — nhanh
+    endpoint: https://api.openai.com/v1/images/generations
+    endpoint_edit: https://api.openai.com/v1/images/edits
+    max_data_class: 2
+    enabled: true
+    purpose: Nhánh AI — phối cảnh và nội thất, nơi tốc độ đáng giá hơn độ bám hình.
+    # Cùng bậc giá với Sunburst. CHƯA đo lượt thật.
+    pricing: { image_usd: 0.06 }
 
   ai_image_gemini:
     provider: gemini_paid
     model: gemini-3.1-flash-image
-    label: Gemini Image (Google)
+    label: Gemini 3.1 Flash Image (Google)
     max_data_class: 2
     enabled: true
     purpose: Nhánh AI — mặt bằng có nội thất, phối cảnh, nội thất, mặt đứng, mặt cắt.
-    pricing: { image_usd: 0.04 }
+    # Ảnh cỡ 1K (đối chiếu lại 19/09/2026); 2K là 0,101, 4K là 0,151.
+    #
+    # ⚠️ Số này là giá Google CÔNG BỐ cho một ảnh 1K, nhưng nhật ký của chính dự án chưa khớp với
+    # nó: hai lượt thật 19/09/2026 ghi 2.247 và 2.922 token ra, mà giá ảnh của mô hình này là
+    # 60,00 USD/1M token ra — tức 0,135 và 0,175 USD nếu tính thẳng theo token. Hai cách đọc đều
+    # có lý (Google có thể đếm cả token chữ vào phần ra), và chỉ hoá đơn mới phân xử được. Giữ
+    # giá công bố vì nó là con số có nguồn; ai đối chiếu hoá đơn xong thì sửa dòng này.
+    pricing: { image_usd: 0.067 }
+
+  ai_image_gemini_pro:
+    provider: gemini_paid
+    model: gemini-3-pro-image
+    label: Gemini 3 Pro Image (Google) — chất lượng cao
+    max_data_class: 2
+    enabled: true
+    purpose: Nhánh AI — tờ trình khách cần chữ và số trên hình ít sai nhất.
+    # 120,00 USD/1M token ra; hãng quy ra 0,134 USD cho ảnh 1K/2K và 0,24 cho 4K. CHƯA đo lượt thật.
+    pricing: { image_usd: 0.134 }
+
+  ai_image_gemini_fast:
+    provider: gemini_paid
+    model: gemini-3.1-flash-lite-image
+    label: Gemini 3.1 Flash Lite Image (Google) — rẻ nhất
+    max_data_class: 2
+    enabled: true
+    purpose: Nhánh AI — vẽ thử nhiều lần cho rẻ trước khi chốt bằng một tuyến đắt hơn.
+    # 30,00 USD/1M token ra; hãng quy ra 0,0336 USD cho ảnh 1K. CHƯA đo lượt thật.
+    pricing: { image_usd: 0.034 }

@@ -10,14 +10,15 @@
  *  · V-21 — hai lõi thang là vô nghiệm chắc chắn, hiện đang bị kẹp về một.
  *
  * Kèm một lỗi thứ tư cùng họ: Lớp 2 lấy đầu bài GHI ĐÈ gói quy tắc, còn bộ giải lấy mức CHẶT
- * hơn. Đầu bài khai lùi nhỏ hơn quy chuẩn thì hai lớp soạn và thi hành trên hai mảnh đất khác
+ * hơn. (Từ 13/09/2026 gói quy chuẩn đã gỡ khỏi bộ giải — khoảng lùi và mật độ nay chỉ đến từ
+ * đầu bài; phép «mức chặt hơn» còn giữ cho gói địa phương.) Đầu bài khai lùi nhỏ hơn quy chuẩn thì hai lớp soạn và thi hành trên hai mảnh đất khác
  * nhau, và phần chênh biến thành phương án vô nghiệm ở cuối.
  */
 
 import { describe, expect, it } from 'vitest';
 import type { DesignBrief, FloorPlan, SpaceProgram } from '@nvg/shared/design';
 import { buildSpaceProgram } from '../program/engine';
-import { effectiveMaxDensity, effectiveSetbacks } from '../program/site-limits';
+import { effectiveMaxDensity, effectiveSetbacks, strictestSetbacks } from '../program/site-limits';
 import { plateFor } from '../layout/plate';
 import { buildArchModel, layoutIntent } from '../workflows/steps';
 import { testNorms, testRulePack } from './program-fixtures';
@@ -40,68 +41,82 @@ function brief(overrides: Partial<DesignBrief> = {}): DesignBrief {
   } as DesignBrief;
 }
 
-describe('Khoảng lùi và mật độ: lấy mức CHẶT hơn giữa gói quy tắc và đầu bài', () => {
-  it('đầu bài khai lùi NHỎ hơn quy chuẩn thì quy chuẩn thắng', () => {
-    // Đây là chỗ Lớp 2 và bộ giải từng nói khác nhau. Một ô nhập của người dùng không được
-    // phép nới QCVN 01:2021/BXD, và lớp soạn đề rộng tay hơn lớp cưỡng chế thì phần chênh
-    // luôn biến thành thất bại ở cuối chứ không thành thêm diện tích.
-    const setbacks = effectiveSetbacks(
+describe('Khoảng lùi và mật độ: bộ giải KHÔNG còn gói quy chuẩn — đầu bài quyết (13/09/2026)', () => {
+  // Haan: «bỏ quy chuẩn VN đi», cho toàn bộ bộ giải. Trước ngày ấy gói nền ép biệt thự lùi trước
+  // 3 m và mật độ 60 %, và thắng mọi số khai trong đầu bài nhỏ hơn. Nay đầu bài là nguồn duy nhất.
+  it('khoảng lùi là đúng số đầu bài khai, kể cả khi nhỏ', () => {
+    const small = effectiveSetbacks(
       brief({ site: { width_m: 20, depth_m: 25, setback_required_m: { front: 1 } } } as never),
       rules,
     );
-    expect(setbacks.front).toBe(3);
-  });
-
-  it('đầu bài khai lùi LỚN hơn quy chuẩn thì đầu bài thắng — chỉ giới đã cắm là thật', () => {
-    const setbacks = effectiveSetbacks(
+    expect(small.front).toBe(1);
+    const large = effectiveSetbacks(
       brief({ site: { width_m: 20, depth_m: 25, setback_required_m: { front: 6 } } } as never),
       rules,
     );
-    expect(setbacks.front).toBe(6);
+    expect(large.front).toBe(6);
   });
 
-  it('nhà phố vẫn lùi bằng không ở cả bốn phía', () => {
-    const setbacks = effectiveSetbacks(brief({ building_type: 'nha_pho' } as never), rules);
-    expect([setbacks.front, setbacks.back, setbacks.left, setbacks.right]).toEqual([0, 0, 0, 0]);
+  it('không khai khoảng lùi thì bằng không ở cả bốn phía, mọi loại nhà', () => {
+    for (const type of ['nha_pho', 'biet_thu'] as const) {
+      const setbacks = effectiveSetbacks(brief({ building_type: type } as never), rules);
+      expect([setbacks.front, setbacks.back, setbacks.left, setbacks.right]).toEqual([0, 0, 0, 0]);
+    }
   });
 
-  it('mật độ lấy mức chặt hơn theo cả hai chiều', () => {
-    const looser = effectiveMaxDensity(
-      brief({ site: { width_m: 20, depth_m: 25, max_density: 0.8 } } as never),
-      rules,
+  it('mật độ là đúng số đầu bài khai; để trống là KHÔNG BIẾT, không phải một số mặc định', () => {
+    expect(
+      effectiveMaxDensity(
+        brief({ site: { width_m: 20, depth_m: 25, max_density: 0.8 } } as never),
+        rules,
+      ),
+    ).toBe(0.8);
+    expect(effectiveMaxDensity(brief(), rules)).toBeNull();
+    expect(rules.maxDensity('biet_thu')).toBeNull();
+  });
+
+  it('cơ chế «mức chặt hơn» vẫn còn cho ngày có gói địa phương', () => {
+    // Gói `rules/locality/` (hiện rỗng) vẫn được đọc; khi có văn bản quy hoạch tỉnh, hai nguồn
+    // gặp nhau lại phải lấy mức chặt hơn — giữ phép thử cho chính cơ chế đó.
+    const out = strictestSetbacks(
+      { front: 3 },
+      brief({ site: { width_m: 20, depth_m: 25, setback_required_m: { front: 1 } } } as never),
     );
-    const tighter = effectiveMaxDensity(
-      brief({ site: { width_m: 20, depth_m: 25, max_density: 0.4 } } as never),
-      rules,
-    );
-    expect(looser).toBe(0.6); // gói quy tắc biệt thự
-    expect(tighter).toBe(0.4); // đầu bài chặt hơn
+    expect(out.front).toBe(3);
   });
 });
 
 describe('Mặt sàn giao cho Lớp 3a (plateFor) trừ khoảng lùi', () => {
   const emptyProgram = { floor_allocation: [] } as unknown as SpaceProgram;
 
-  it('biệt thự: bề rộng và chiều sâu đều thu vào theo lùi của gói quy tắc', () => {
+  it('biệt thự: thu vào đúng khoảng lùi đầu bài khai', () => {
     // Không trừ thì `chooseFrame` chọn khung mẫu theo một bề rộng công trình không có, và
     // biệt thự mặt tiền rộng nhận khung nhà ống.
-    const plate = plateFor(brief(), emptyProgram, rules.setbacks('biet_thu'));
-    expect(plate.widthM).toBe(20); // gói nền chưa đặt lùi hai bên cho biệt thự
-    expect(plate.depthM).toBe(22); // 25 − 3 (lùi trước)
+    const withSetback = brief({
+      site: { width_m: 20, depth_m: 25, setback_required_m: { front: 3 } },
+    } as never);
+    const plate = plateFor(withSetback, emptyProgram, rules.setbacks('biet_thu'));
+    expect(plate.widthM).toBe(20);
+    expect(plate.depthM).toBe(22); // 25 − 3 (lùi trước đầu bài khai)
   });
 
-  it('thu chiều sâu theo TRẦN MẬT ĐỘ, đúng như `_footprint` phía Python', () => {
-    // Thiếu bước này thì chương trình cũ (không `floor_allocation`) của biệt thự cho Worker
-    // một mặt sàn sâu 22 m trong khi bộ giải chia 15 m — khung mẫu chọn trên ô không tồn tại.
-    const density = rules.maxDensity('biet_thu');
-    expect(density).not.toBeNull();
-    const plate = plateFor(brief(), emptyProgram, rules.setbacks('biet_thu'), density);
-    expect(plate.depthM).toBeCloseTo(Math.min(22, (density! * 20 * 25) / 20), 6);
+  it('thu chiều sâu theo mật độ đầu bài khai, đúng như `_footprint` phía Python', () => {
+    const declared = brief({
+      site: { width_m: 20, depth_m: 25, setback_required_m: { front: 3 }, max_density: 0.6 },
+    } as never);
+    const plate = plateFor(
+      declared,
+      emptyProgram,
+      rules.setbacks('biet_thu'),
+      rules.maxDensity('biet_thu'),
+    );
+    expect(plate.depthM).toBeCloseTo(Math.min(22, (0.6 * 20 * 25) / 20), 6);
     expect(plate.depthM).toBeLessThan(22);
   });
 
   it('đầu bài khai mật độ CHẶT hơn gói thì đầu bài thắng — cùng chiều với bộ giải', () => {
-    const density = rules.maxDensity('biet_thu')!;
+    // Gói giả định 0,6 — cơ chế cho ngày có gói địa phương; gói hiện hành không khai mật độ.
+    const density = 0.6;
     const tighter = Math.max(0.1, density - 0.2);
     const plate = plateFor(
       brief({ site: { width_m: 20, depth_m: 25, max_density: tighter } } as never),

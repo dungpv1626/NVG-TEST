@@ -13,7 +13,8 @@ import type { DesignBrief } from '@nvg/shared/design';
 import { digestBrief, resolveProgramIntent } from '../program/intent';
 import { parseVocabulary, VocabularyIndex } from '../kb/vocabulary';
 import { DataClassViolation, ModelNotConfigured } from '../llm/router';
-import { LlmCallFailed, type GeminiClient } from '../llm/gemini';
+import { LlmCallFailed } from '../llm/gemini';
+import type { TextModelClient } from '../llm/text-client';
 import { testVocabularyYaml } from './program-fixtures';
 
 const index = new VocabularyIndex(parseVocabulary(testVocabularyYaml()));
@@ -39,8 +40,17 @@ const brief = (over: Partial<DesignBrief> = {}): DesignBrief =>
     ...over,
   }) as DesignBrief;
 
-const fakeLlm = (behaviour: () => unknown): GeminiClient =>
-  ({ generateJson: async () => behaviour() }) as unknown as GeminiClient;
+const fakeLlm = (behaviour: () => unknown): TextModelClient => ({
+  complete: async () => ({
+    json: behaviour(),
+    provider: 'openai',
+    model: 'gpt-x',
+    usage: { inputTokens: 1200, outputTokens: 300 },
+    latencyMs: 40,
+  }),
+});
+
+const ROUTE = 'ai_text_openai_fast';
 
 describe('Bản tóm tắt gửi cho mô hình — danh sách CHO PHÉP', () => {
   it('không mang tên, mã hồ sơ, ngân sách hay kích thước thật của thửa', () => {
@@ -109,7 +119,7 @@ describe('Mô hình hỏng thì chương trình vẫn soạn xong', () => {
 
   for (const [name, behaviour] of cases) {
     it(`${name} → không có ý đồ, có câu giải thích, KHÔNG ném lỗi`, async () => {
-      const result = await resolveProgramIntent(brief(), 172.8, index, fakeLlm(behaviour));
+      const result = await resolveProgramIntent(brief(), 172.8, index, fakeLlm(behaviour), ROUTE);
       expect(result.intent).toBeNull();
       expect(result.notes).toHaveLength(1);
       // Câu phải nói được việc gì không chạy VÀ hệ quả là gì (CGD 5.5).
@@ -117,20 +127,51 @@ describe('Mô hình hỏng thì chương trình vẫn soạn xong', () => {
     });
   }
 
+  it('lượt hỏng giữa chừng vẫn mang số token đã tính tiền; bị chặn trước khi gọi thì không có lượt', async () => {
+    const failed = await resolveProgramIntent(
+      brief(),
+      172.8,
+      index,
+      fakeLlm(() => {
+        throw new LlmCallFailed('cắt giữa chừng', false, 200, undefined, {
+          inputTokens: 900,
+          outputTokens: 4000,
+        });
+      }),
+      ROUTE,
+    );
+    expect(failed.call).toMatchObject({
+      status: 'failed',
+      usage: { inputTokens: 900, outputTokens: 4000 },
+    });
+
+    const blocked = await resolveProgramIntent(
+      brief(),
+      172.8,
+      index,
+      fakeLlm(() => {
+        throw new DataClassViolation(ROUTE, 1, 3);
+      }),
+      ROUTE,
+    );
+    expect(blocked.call).toBeNull();
+  });
+
   it('trả về cấu trúc sai hợp đồng → bỏ qua, không đi tiếp với dữ liệu hỏng', async () => {
     const result = await resolveProgramIntent(
       brief(),
       172.8,
       index,
       fakeLlm(() => ({ emphasis: [{ space_type: 'kitchen', level: 'rất rộng' }] })),
+      ROUTE,
     );
     expect(result.intent).toBeNull();
     expect(result.notes[0]).toContain('cấu trúc');
   });
 
   it('chưa có khoá mô hình → im lặng bỏ qua, không sinh ghi chú thừa', async () => {
-    const result = await resolveProgramIntent(brief(), 172.8, index, undefined);
-    expect(result).toEqual({ intent: null, notes: [] });
+    const result = await resolveProgramIntent(brief(), 172.8, index, undefined, ROUTE);
+    expect(result).toEqual({ intent: null, notes: [], call: null });
   });
 
   it('kết quả đúng hợp đồng đi qua nguyên vẹn, có đóng dấu phiên bản hợp đồng', async () => {
@@ -140,10 +181,44 @@ describe('Mô hình hỏng thì chương trình vẫn soạn xong', () => {
       index,
       fakeLlm(() => ({
         emphasis: [{ space_type: 'kitchen', level: 'generous' }],
+        add_spaces: null,
         rationale: 'Bếp là trung tâm sinh hoạt của gia đình ba thế hệ.',
       })),
+      ROUTE,
     );
     expect(ok.intent?.schema_version).toBe('1.0.0');
     expect(ok.intent?.emphasis).toEqual([{ space_type: 'kitchen', level: 'generous' }]);
+    // Lượt gọi mang đủ số token để ghi nhật ký chi phí và hiện lên màn hình.
+    expect(ok.call).toMatchObject({
+      provider: 'openai',
+      model: 'gpt-x',
+      usage: { inputTokens: 1200, outputTokens: 300 },
+      status: 'ok',
+    });
+  });
+});
+
+describe('Luật cứng về diện tích trong lời dẫn (13/09/2026)', () => {
+  it('lời dẫn nói phần sàn còn lại và diện tích tối thiểu từng mã; số làm tròn XUỐNG bậc 5', async () => {
+    let seen: { system: string; prompt: string } | null = null;
+    const llm: TextModelClient = {
+      complete: async (_route, _dc, options) => {
+        seen = { system: options.system, prompt: options.prompt };
+        return {
+          json: { emphasis: [], add_spaces: [], rationale: 'Không còn chỗ.' },
+          provider: 'openai',
+          model: 'gpt-x',
+          usage: { inputTokens: 1, outputTokens: 1 },
+          latencyMs: 1,
+        };
+      },
+    };
+    await resolveProgramIntent(brief(), 172.8, index, llm, ROUTE, {
+      spareMinAreaM2: 23.7,
+      minByType: { terrace: 6, kitchen: 6 },
+    });
+    expect(seen!.system).toContain('LUẬT CỨNG VỀ DIỆN TÍCH');
+    expect(seen!.system).toContain('(tối thiểu 6 m²)');
+    expect(seen!.prompt).toContain('"spare_min_area_m2": 20');
   });
 });

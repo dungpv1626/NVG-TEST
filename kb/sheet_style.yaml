@@ -74,6 +74,7 @@ line_mm:
   wall_cut: 0.25 # viền tường bị mặt phẳng cắt cắt qua — nét đậm nhất của HÌNH
   column: 0.25 # viền cột; ruột cột tô đặc
   railing: 0.18 # lan can ban công, sân thượng
+  soft_divider: 0.13 # ranh MỀM giữa các khu của một không gian mở — không phải tường (T48)
   opening: 0.25 # má cửa, nắp cửa sổ
   door_leaf: 0.18 # cánh cửa và cung quét
   window: 0.18 # nét kính cửa sổ

@@ -163,6 +163,27 @@ export class ArtifactRepository {
     if (error) throw new Error(error.message);
   }
 
+  /**
+   * Gỡ con trỏ "bản đang hiệu lực" khi nó đang trỏ đúng artifact này — dùng khi kỹ sư xoá phương án
+   * ấy khỏi danh sách (18/09/2026). Bảng `design_head` cố ý không mở DELETE cho trình duyệt, nên
+   * việc này đi bằng khoá dịch vụ như mọi lần ghi khác của kho artifact.
+   */
+  async clearHead(
+    projectId: string,
+    discipline: ArtifactDiscipline,
+    kind: ArtifactKind,
+    id: string,
+  ): Promise<void> {
+    const { error } = await this.db
+      .from('design_head')
+      .delete()
+      .eq('project_id', projectId)
+      .eq('discipline', discipline)
+      .eq('kind', kind)
+      .eq('artifact_id', id);
+    if (error) throw new Error(error.message);
+  }
+
   /** Bản đang hiệu lực của một loại artifact, kèm payload đã kiểm hợp đồng. */
   async head(
     projectId: string,

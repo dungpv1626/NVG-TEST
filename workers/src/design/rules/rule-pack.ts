@@ -121,6 +121,33 @@ export class RulePack {
     return values.length ? Math.max(...values) : null;
   }
 
+  /**
+   * Kích thước nhỏ nhất của cạnh ngắn cho một mã phòng, mét. Rỗng khi không quy tắc nào nhắm tới.
+   *
+   * Bộ chấm (tiêu chí B1) đọc qua đây thay vì khai lại con số trong `kb/plan_quality.yaml`: ngưỡng
+   * theo mã phòng là DỮ LIỆU QUY TẮC, còn trọng số và công thức là dữ liệu thước chấm. Hai tệp,
+   * hai loại, một nguồn cho mỗi loại.
+   *
+   * Nhiều quy tắc cùng nhắm một mã thì lấy cái CHẶT nhất, cùng lý lẽ với `maxDensity`: nới lỏng
+   * phải là hành động tường minh.
+   */
+  minDimension(buildingType: string, roomType: string): number | null {
+    const values = this.forType(buildingType, 'min_dimension')
+      .filter((r) => r.params.target === roomType)
+      .map((r) => Number(r.params.value_m))
+      .filter((v) => Number.isFinite(v));
+    return values.length ? Math.max(...values) : null;
+  }
+
+  /** Tỷ lệ dài/rộng tối đa cho một mã phòng. Rỗng khi không quy tắc nào nhắm tới (B2). */
+  aspectRatioMax(buildingType: string, roomType: string): number | null {
+    const values = this.forType(buildingType, 'aspect_ratio_max')
+      .filter((r) => r.params.target === roomType)
+      .map((r) => Number(r.params.value ?? r.params.ratio))
+      .filter((v) => Number.isFinite(v));
+    return values.length ? Math.min(...values) : null;
+  }
+
   /** Mã phòng buộc phải có chiếu sáng tự nhiên. */
   requiresDaylight(buildingType: string): Set<string> {
     return new Set(
@@ -183,6 +210,21 @@ export class RulePack {
       .filter((v) => Number.isFinite(v));
     // Nhiều quy tắc cùng nói thì lấy cái CHẶT nhất — nới lỏng phải là hành động tường minh.
     return values.length ? Math.min(...values) : null;
+  }
+
+  /**
+   * Nguồn văn bản của trần mật độ đang áp (`source` của quy tắc chặt nhất) — để màn hình nói
+   * được «60% theo QCVN 01:2021/BXD» thay vì một con số không rõ từ đâu ra.
+   */
+  maxDensitySource(buildingType: string): string | null {
+    const rules = this.forType(buildingType, 'max_density').filter((r) =>
+      Number.isFinite(Number(r.params.value)),
+    );
+    if (!rules.length) return null;
+    const strictest = rules.reduce((a, b) =>
+      Number(b.params.value) < Number(a.params.value) ? b : a,
+    );
+    return strictest.source;
   }
 }
 

@@ -21,7 +21,7 @@ import { checkPlan, type PlanCheckInput } from '../ai/plan-check';
 import { parseRuleMessages } from '../ai/plan-messages';
 import { reviewPlanRooms } from '../ai/rule-warnings';
 import { parseRuleFile, RulePack } from '../rules/rule-pack';
-import { levelFromRooms } from '../ai/plan-geometry';
+import { levelFromRooms, withMergedParts } from '../ai/plan-geometry';
 import { prepareWalls } from '../ai/draw/walls';
 import { toRect } from '../ai/draw/geometry';
 import { renderPlanSheet } from '../ai/draw/plan-sheet';
@@ -354,7 +354,9 @@ describe('T23 — chương trình suy tường từ phòng ở MỌI lượt', (
 
 const nationalRules = new RulePack(
   ['10-dimensions', '20-daylight-access', '30-adjacency', '40-vertical', '50-massing'].flatMap(
-    (name) => parseRuleFile(read(`../../../../rules/base/${name}.yaml`), `base/${name}.yaml`),
+    // Gói quy chuẩn CŨ chép vào dữ liệu kiểm thử (`rules/base/` đã xoá 13/09/2026) — chỉ để cơ
+    // chế đối chiếu có một gói thật để chạy.
+    (name) => parseRuleFile(read(`./fixtures/rules-legacy-base/${name}.yaml`), `base/${name}.yaml`),
   ),
 );
 const experienceRules = new RulePack(
@@ -482,5 +484,80 @@ describe('quy tắc nhắm NHÓM phòng — không được biến mất im lặ
       messages,
     });
     expect(result.unchecked.map((rule) => rule.ruleId)).not.toContain('lightwell_max_area');
+  });
+});
+
+describe('withMergedParts — chia khu của không gian mở (T48)', () => {
+  const room = {
+    id: 'living_1',
+    type: 'living',
+    rect: [0, 0, 600, 1500] as [number, number, number, number],
+    area_m2: 90,
+    also: ['dining_1', 'kitchen_1'],
+  };
+  const targets: Record<string, { type: string; target: number }> = {
+    living_1: { type: 'living', target: 56 },
+    dining_1: { type: 'dining', target: 15 },
+    kitchen_1: { type: 'kitchen', target: 12 },
+  };
+
+  it('chia dọc cạnh DÀI theo tỉ lệ diện tích mục tiêu, phủ kín chữ nhật, không chồng nhau', () => {
+    const [out] = withMergedParts([room], (id) => targets[id] ?? null);
+    const parts = out!.parts!;
+    expect(parts.map((part) => part.id)).toEqual(['living_1', 'dining_1', 'kitchen_1']);
+    expect(parts[0]!.rect[1]).toBe(0);
+    expect(parts[2]!.rect[3]).toBe(1500);
+    for (let i = 1; i < parts.length; i += 1) {
+      expect(parts[i]!.rect[1]).toBe(parts[i - 1]!.rect[3]);
+      expect(parts[i]!.rect[0]).toBe(0);
+      expect(parts[i]!.rect[2]).toBe(600);
+    }
+    // Khu lớn nhất là phòng chính, và các khu cộng lại bằng diện tích chữ nhật.
+    const total = parts.reduce((sum, part) => sum + part.area_m2, 0);
+    expect(Math.round(total)).toBe(90);
+    expect(parts[0]!.area_m2).toBeGreaterThan(parts[1]!.area_m2);
+  });
+
+  it('phòng không gộp thì không có khu nào', () => {
+    const [out] = withMergedParts([{ ...room, also: [] }], (id) => targets[id] ?? null);
+    expect(out!.parts).toBeUndefined();
+  });
+
+  /**
+   * Haan 18/09/2026, chấm lượt 3bc3d2ed: «không nên xếp cửa ra vào phòng ngủ ở phía bếp nấu nướng».
+   * Cửa phòng ngủ ấy mở vào chính không gian mở này — chỗ sửa được mà không đụng tường là THỨ TỰ
+   * các khu bên trong nó.
+   */
+  const zoning = {
+    cooking: new Set(['kitchen']),
+    quiet: new Set(['bedroom', 'master_bedroom', 'altar_room', 'study']),
+  };
+
+  it('phòng ngủ nằm ngay dưới: khu bếp dời khỏi vách chung, khu ăn xuống thay chỗ', () => {
+    const bedroom = {
+      id: 'bedroom_1',
+      type: 'bedroom',
+      rect: [0, 1510, 600, 2000] as [number, number, number, number],
+      area_m2: 29,
+    };
+    const out = withMergedParts([room, bedroom], (id) => targets[id] ?? null, zoning);
+    const parts = out[0]!.parts!;
+    expect(parts[parts.length - 1]!.id).not.toBe('kitchen_1');
+    expect(parts[0]!.id).toBe('living_1');
+    // Cạnh chung với phòng ngủ là cạnh y = 1500; khu nằm ở đó không phải bếp.
+    const atBedroom = parts.find((part) => part.rect[3] === 1500)!;
+    expect(atBedroom.id).toBe('dining_1');
+  });
+
+  it('không có phòng yên tĩnh nào kề: giữ nguyên thứ tự mô hình khai', () => {
+    const out = withMergedParts([room], (id) => targets[id] ?? null, zoning);
+    expect(out[0]!.parts!.map((part) => part.id)).toEqual(['living_1', 'dining_1', 'kitchen_1']);
+  });
+
+  it('thiếu diện tích mục tiêu của một thành viên thì KHÔNG chia — thà một nhãn chung còn hơn ranh đặt bừa', () => {
+    const [out] = withMergedParts([room], (id) =>
+      id === 'kitchen_1' ? null : (targets[id] ?? null),
+    );
+    expect(out!.parts).toBeUndefined();
   });
 });

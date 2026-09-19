@@ -55,6 +55,14 @@ occupancy:
   khach: { per_room: 2, room_type: bedroom, floor: mid }
   nguoi_giup_viec: { per_room: 2, room_type: bedroom, floor: ground }
 
+# ── Tiện ích NẰM TRONG phòng ngủ ───────────────────────────────────────────────────────
+# Nhu cầu riêng của một nhóm thành viên (`family[].needs`) mang mã ở đây KHÔNG thành một không
+# gian tách riêng: nó gộp vào phòng ngủ của chính nhóm đó — «Phòng ngủ ông bà (có tủ đồ)» — và
+# diện tích tối thiểu, đề xuất, tối đa của tiện ích cộng vào phòng. Haan (13/09/2026): «tủ đồ,
+# không gian học tập, phòng thay đồ trong phòng ngủ thì không cần tách riêng».
+# `balcony` cố ý KHÔNG có mặt: ban công là không gian ngoài trời, cần mặt thoáng và lan can.
+in_bedroom: [study, study_area, closet, dressing_room]
+
 # ── Không gian luôn có, kể cả khi đầu bài không khai ───────────────────────────────────
 # Đầu bài do người bán hàng ghi thường bỏ qua những thứ hiển nhiên. Thiếu chúng thì Lớp 3
 # giải ra một căn nhà không có chỗ nấu ăn.

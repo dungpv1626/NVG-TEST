@@ -28,11 +28,23 @@ export interface AiModelOption {
    * không phải thiếu sót.
    */
   imageUsd: number | null;
+  /** Giá niêm yết mỗi triệu token vào/ra, USD — `null` khi cấu hình chưa khai. */
+  inputPer1mUsd: number | null;
+  outputPer1mUsd: number | null;
+  /** `false` khi khoá của nhà cung cấp là gói miễn phí — tiền thật bằng 0. */
+  billed: boolean;
+  /** Nhận «mức suy nghĩ» theo lượt không — xem `PublicRoute.supportsEffort`. */
+  supportsEffort: boolean;
 }
 
 export interface AiModelCatalogue {
   text: AiModelOption[];
   image: AiModelOption[];
+  /**
+   * Nhà cung cấp không phát sinh hoá đơn. Màn hình nhật ký đọc thẳng `design_ai_call` qua RLS
+   * và cần danh sách này để tính tiền thật của từng dòng (cột `cost_usd` là giá niêm yết).
+   */
+  freeProviders: string[];
 }
 
 export const TEXT_ROUTE_PREFIX = 'ai_text_';
@@ -53,6 +65,10 @@ function option(route: PublicRoute): AiModelOption {
     enabled: reason === null,
     unavailableReason: reason,
     imageUsd: route.pricing?.image_usd ?? null,
+    inputPer1mUsd: route.pricing?.input_per_1m_usd ?? null,
+    outputPer1mUsd: route.pricing?.output_per_1m_usd ?? null,
+    billed: route.billed,
+    supportsEffort: route.supportsEffort,
   };
 }
 
@@ -64,14 +80,21 @@ export function aiModelCatalogue(router: ModelRouter): AiModelCatalogue {
     // mặt ở đây: nhánh AI không được import gì từ `render/` để bộ giải xoá được mà nhánh này
     // không vỡ (T15, 09/09/2026 — có kiểm thử canh ở `ai-independence.test.ts`).
     image: routes.filter((r) => r.route.startsWith(IMAGE_ROUTE_PREFIX)).map(option),
+    freeProviders: router.freeProviders,
   };
 }
 
 /** Tên tuyến người dùng gửi lên có nằm trong danh mục của LOẠI đó không. */
+/**
+ * @param dataClass Hạng dữ liệu lượt gọi sẽ gửi. Tuyến gói miễn phí chỉ nhận hạng 3 (đã ẩn
+ *   danh); chọn nó cho một bước gửi hạng 2 thì router cũng chặn, nhưng chặn ở đây trả được câu
+ *   409 đọc được thay vì một lỗi chính sách giữa chừng.
+ */
 export function isSelectableRoute(
   catalogue: AiModelCatalogue,
   kind: 'text' | 'image',
   route: string,
+  dataClass: DataClass = 2,
 ): boolean {
-  return catalogue[kind].some((o) => o.route === route && o.enabled);
+  return catalogue[kind].some((o) => o.route === route && o.enabled && dataClass >= o.maxDataClass);
 }

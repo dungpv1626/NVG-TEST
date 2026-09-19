@@ -239,6 +239,127 @@ types:
         'KTTM',
       ]
 
+# Cặp LOẠI phòng được phép ghép thành một không gian mở (T40, 13/09/2026) — tức mô hình khai một
+# ô trên cây chia và dùng `also` cho phòng thứ hai.
+#
+# Vì sao có danh sách cho phép chứ không để tự do: lượt chạy thật 13/09/2026 nhét `circulation_1`
+# và `circulation_2` vào `also` của phòng khách và phòng làm việc — hành lang có tên mà không có
+# hình, 91 m² sàn hai tầng không phủ, và tiêu chí C4 không có hành lang nào để chấm. Hành lang,
+# thang và WC không bao giờ là «một phần» của phòng khác.
+#
+# Nguồn ba cặp: hồ sơ thật NVO (`mat_bang_cong_nang/phong_do_duoc.csv`, 12/09/2026) — «BẾP ĂN»
+# (kitchen|dining), «PHÒNG KHÁCH + THỜ» (living|altar_room), «PHÒNG BẾP» gộp ăn. Thứ tự trong cặp
+# không quan trọng.
+#
+# Bếp mở thông phòng khách: Haan xác nhận 13/09/2026 — «tuỳ loại nhà và quyết định của gia chủ,
+# hoàn toàn có thể». Nên nó là cặp ĐƯỢC PHÉP; có ghép hay không là ý đồ bố cục của từng phương án,
+# đọc từ đầu bài, không phải luật.
+merge_allowed:
+  - [kitchen, dining]
+  - [living, dining]
+  - [living, altar_room]
+  - [kitchen, living]
+
+# Vùng mặc định trong lô khi mô hình BỎ SÓT một phòng ở ý định bố cục (T43, 14/09/2026).
+#
+# Mô hình khai phòng nào ở vùng nào (`contracts/ai-plan-intent`); bộ giải `ai/arrange/` dựng cây chia
+# từ đó. Thiếu một phòng thì chương trình không bác cả tầng — nó đặt phòng ấy vào vùng mặc định dưới
+# đây và ghi chú `intent_zone_defaulted`. `street` là mặc định của cờ «ra mặt đường».
+#
+# Đây là DỮ LIỆU THAM KHẢO, không phải luật: nó chỉ dùng khi mô hình im lặng, và kiến trúc sư sửa được.
+# Cố ý không đọc `kb/space_norms.yaml` (`facade`, `daylight`): bộ đọc tệp ấy nằm trong `program/` của
+# bộ giải nội bộ, mà nhánh AI không được import (`ai-independence.test.ts`).
+zone_defaults:
+  front: [living, garage, porch, shop]
+  center:
+    [
+      stair,
+      core,
+      circulation,
+      wc,
+      vanity,
+      storage,
+      closet,
+      dressing_room,
+      technical,
+      shaft,
+      study_area,
+      dining,
+    ]
+  back:
+    [
+      kitchen,
+      bedroom,
+      master_bedroom,
+      altar_room,
+      study,
+      laundry,
+      balcony,
+      terrace,
+      courtyard,
+      light_well,
+    ]
+  street: [living, garage, porch, shop, master_bedroom, balcony, terrace]
+
+# Phòng nào được ĐI XUYÊN để tới phòng khác (V-27, 13/09/2026 — Haan duyệt).
+#
+# Lượt chạy thật hôm ấy: cả Claude Sonnet lẫn gpt-5 đều khai cửa kho mở từ WC, giặt phơi qua WC hay qua
+# phòng ngủ, phòng ngủ 4 qua phòng ngủ 5 — và cổng cho qua, vì cổng chỉ hỏi «có đường tới không». Nay
+# `ai/tree/passage.ts` hỏi thêm «đường ấy đi xuyên những gì». Phòng chỉ tới được bằng cách đi xuyên
+# một phòng NGOÀI danh sách dưới đây là lỗi cổng.
+#
+#  · `through` — loại phòng đi xuyên được: giao thông và sinh hoạt chung. Ô ghép (`also`) đi xuyên
+#    được khi MỘT trong các loại của nó ở đây — bếp ghép phòng ăn là không gian chung.
+#  · `entry_through` — chỉ đi xuyên được khi chính nó có cửa ra ngoài nhà, và chỉ để vào một phòng
+#    thuộc `through`: nhà phố Việt Nam vào nhà qua chỗ để xe là chuyện thường, nhưng phòng ngủ mở thẳng
+#    từ gara thì không.
+#  · `served_from` — ngoại lệ ở BƯỚC CUỐI: phòng loại X được mở cửa từ các loại liệt kê, dù loại ấy
+#    không đi xuyên được. Kho mở từ bếp, WC vào qua hốc lavabo. Phòng khép kín (`ensuite_of`) luôn mở
+#    từ phòng mẹ, và phòng thuộc nhóm `no_door_required` (ban công…) mở từ bất kỳ phòng nào — hai điều
+#    đó không cần khai ở đây.
+#
+# Là DỮ LIỆU: loại hình nhà và thói quen từng gia chủ khác nhau. Sửa ở đây, không sửa mã.
+passage:
+  through: [circulation, core, stair, living, dining]
+  entry_through: [garage, porch]
+  # Loại phòng KHÔNG được nằm trên đường đi hằng ngày (T48, 16/09/2026). Đi qua chúng để tới WC hay
+  # xuống bếp là đường vòng: lượt đo 58d9ff66 ra một tầng 1 mà từ phòng khách phải qua sảnh ngoài rồi
+  # xuyên gara mới tới WC chung — Haan chấm «giao thông bất tiện». Vào NHÀ qua gara thì vẫn được
+  # (`entry_through`), đó là bước đầu tiên từ ngoài vào, không phải đường trong nhà.
+  not_a_route: [garage, porch]
+  # Loại phòng người trong nhà dùng hằng ngày: phải tới được từ khu sinh hoạt chung mà không đi xuyên
+  # `not_a_route`. WC khép kín của phòng ngủ không tính — nó là phòng riêng của phòng mẹ.
+  everyday: [wc, kitchen, dining, stair]
+  # Chỗ XUẤT PHÁT của đường đi hằng ngày: nơi cả nhà ngồi. Cố ý KHÔNG gồm hành lang và thang — chúng
+  # là đường, không phải chỗ ở; lấy chúng làm điểm xuất phát thì một hành lang chỉ vào được từ gara
+  # vẫn coi như đạt (đúng chỗ lượt đo 58d9ff66 lọt qua).
+  everyday_from: [living, dining]
+  # Loại phòng KHÔNG được mở cửa thẳng từ ô thang (Haan 18/09/2026, chấm lượt 78be09b4: «cửa phòng
+  # thờ mở ra là thang bộ — bất hợp lý»). Ô thang là một vế bậc, không phải sảnh: cánh cửa quét lên
+  # bậc và người bước ra hụt chân. Những phòng này phải vào từ hành lang hay khu sinh hoạt chung.
+  #
+  # Cố ý là danh sách PHỦ ĐỊNH và chỉ gồm phòng ở: WC, kho, giặt phơi vẫn mở từ chiếu nghỉ được —
+  # đó là cách nhà ống Việt Nam vẫn làm, và cấm luôn thì phát lại hai lượt đo thật mất phương án.
+  # Vắng mục này = không kiểm.
+  stair_not_for: [bedroom, master_bedroom, study, study_area, altar_room, shop]
+  # Trong MỘT không gian mở (khách + ăn + bếp là một phòng), khu nào đặt ở đâu là việc của chương
+  # trình. Hai danh sách dưới đây chỉ dùng cho việc ấy: xếp khu NẤU NƯỚNG xa cửa của phòng yên tĩnh
+  # nhất có thể (Haan 18/09/2026: «không nên xếp cửa ra vào phòng ngủ ở phía bếp nấu nướng»).
+  #
+  # ⚠️ T52 từng dùng cặp khái niệm này làm LUẬT (bác phương án, trừ điểm) và Haan đã cho gỡ vì sinh
+  # nhiễu. Ở đây KHÔNG sinh lỗi, không trừ điểm, không bác gì: chỉ đổi thứ tự các khu bên trong một
+  # phòng đã xếp xong — tường, cửa và diện tích không đổi.
+  cooking: [kitchen]
+  quiet: [bedroom, master_bedroom, altar_room, study, study_area]
+  served_from:
+    storage: [kitchen, garage]
+    laundry: [kitchen, garage]
+    technical: [garage, storage, kitchen]
+    wc: [vanity, dressing_room]
+    closet: [bedroom, master_bedroom]
+    dressing_room: [bedroom, master_bedroom]
+    study_area: [bedroom, master_bedroom]
+
 # Mã nhóm dùng trong `target:` của rule pack để nhắm NHIỀU loại phòng cùng lúc. Chúng KHÔNG
 # phải nhãn phòng — mô hình ngôn ngữ không bao giờ được trả về các mã này.
 # `members` là danh sách mã phòng thuộc nhóm. `null` = mọi mã.
@@ -280,6 +401,14 @@ group_targets:
   #
   # Giếng trời và hộp kỹ thuật không có cửa vì không ai vào; ban công và sân thượng vào từ phòng
   # trong nhà nên cửa nằm ở tường của phòng ấy, không phải của chúng.
+  # Phòng mà CHƯƠNG TRÌNH được mở thêm cửa vào, theo đúng thứ tự ưu tiên, khi mô hình khai một
+  # phòng mà quên nối nó với phần còn lại của tầng (`ai/tree/openings.ts`, V-26 13/09/2026). Chỉ
+  # phòng giao thông và sinh hoạt chung — không bao giờ mở lối đi xuyên qua phòng ngủ, WC hay kho
+  # của người khác. Phòng chỉ giáp những loại ngoài danh sách thì vẫn là lỗi cổng: đó là lỗi bố cục,
+  # thêm cửa không sửa được.
+  door_hosts:
+    vi: Được mở thêm cửa vào để nối phòng (giao thông, sinh hoạt chung)
+    members: [circulation, core, stair, living, dining, kitchen, garage, laundry]
   no_door_required:
     vi: Không bắt buộc có cửa (ngoài trời, giếng trời, hộp kỹ thuật)
     members: [balcony, terrace, courtyard, light_well, shaft, porch]

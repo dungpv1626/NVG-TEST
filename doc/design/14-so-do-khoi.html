@@ -535,37 +535,37 @@
         <!-- ── Hàng 2: mặt bằng ── -->
         <rect class="band" x="20" y="296" width="940" height="214" rx="8" />
         <rect class="box" x="30" y="346" width="170" height="118" rx="6" />
-        <text class="t-body" x="44" y="368">Tờ ảnh AI là bản chính;</text>
-        <text class="t-body" x="44" y="386">tờ vector để đối chiếu.</text>
-        <text class="t-body" x="44" y="408">Bấm vẽ từng tầng — giá</text>
-        <text class="t-body" x="44" y="426">hiện trước khi bấm.</text>
+        <text class="t-body" x="44" y="368">Tờ vector đo được</text>
+        <text class="t-body" x="44" y="386">(T22); xem ý định AI</text>
+        <text class="t-body" x="44" y="408">từng tầng và độ khớp</text>
+        <text class="t-body" x="44" y="426">ý đồ (T43).</text>
         <text class="t-body" x="44" y="448">Chọn một trong ba phương án.</text>
 
         <rect class="box-brand" x="280" y="310" width="420" height="186" rx="6" />
         <text class="t-head" x="298" y="336">2 · Mặt bằng từng tầng</text>
-        <text class="t-body" x="298" y="360">Ba ý đồ bố cục chạy song song qua Workflow, một ý đồ hỏng</text>
-        <text class="t-body" x="298" y="380">không kéo hai ý đồ kia theo</text>
-        <text class="t-body" x="298" y="400">Mô hình khai tường, cửa, thang thành DỮ LIỆU, và khai thêm</text>
-        <text class="t-body" x="298" y="420">một đoạn mô tả tờ giấy cho mô hình ảnh (sơ đồ 2)</text>
-        <text class="t-done" x="298" y="458">Đợt 3 — chạy nền, ba phương án, một lượt sửa</text>
-        <text class="t-done" x="298" y="478">Đợt 3b — tờ trình bày do mô hình ảnh vẽ (T21)</text>
+        <text class="t-body" x="298" y="360">Mỗi tầng một lượt: mô hình khai Ý ĐỊNH (vùng, quan hệ,</text>
+        <text class="t-body" x="298" y="380">cửa chính) — không toạ độ. Bộ giải ai/arrange/ dựng</text>
+        <text class="t-body" x="298" y="400">nhiều cây, cổng ai/tree/ kiểm, thước chấm chọn một</text>
+        <text class="t-body" x="298" y="420">Đầu bài đi dạng văn xuôi tiếng Việt; mốc tầng dưới dạng vùng</text>
+        <text class="t-done" x="298" y="458">T38 — tầng 1 trước, tầng trên song song, bám mốc</text>
+        <text class="t-done" x="298" y="478">T43 — ý định thay cây chia (14/09/2026), chờ đo thật</text>
 
         <rect class="box" x="780" y="346" width="170" height="118" rx="6" />
         <text class="t-body" x="794" y="370">Mô hình chữ — một lượt</text>
-        <text class="t-body" x="794" y="388">mỗi ý đồ, cộng tối đa</text>
-        <text class="t-body" x="794" y="406">một lượt sửa.</text>
-        <text class="t-body" x="794" y="432">Mô hình ẢNH — một lượt</text>
-        <text class="t-body" x="794" y="450">mỗi tờ, bấm riêng.</text>
+        <text class="t-body" x="794" y="388">mỗi tầng, cộng tối đa</text>
+        <text class="t-body" x="794" y="406">một lượt gọi lại.</text>
+        <text class="t-body" x="794" y="432">Lý do hình học thì</text>
+        <text class="t-body" x="794" y="450">không gọi lại.</text>
 
         <path class="flow" d="M204 370 H274" marker-end="url(#f1a)" />
         <text class="t-arrow" x="239" y="362" text-anchor="middle">bấm chạy</text>
         <path class="flow" d="M274 424 H208" marker-end="url(#f1a)" />
-        <text class="t-arrow" x="241" y="416" text-anchor="middle">hai tờ vẽ</text>
+        <text class="t-arrow" x="241" y="416" text-anchor="middle">tờ vẽ</text>
         <path class="flow" d="M706 370 H774" marker-end="url(#f1a)" />
         <path class="flow" d="M774 424 H710" marker-end="url(#f1a)" />
 
         <path class="flow-todo" d="M490 510 V562" marker-end="url(#f1b)" />
-        <text class="t-mono" x="504" y="532">ai_floor_plan · ai_plan_sheet_image</text>
+        <text class="t-mono" x="504" y="532">ai_floor_plan</text>
         <text class="t-arrow" x="504" y="550">mặt bằng đã chọn khoá lỗ mở mặt tiền</text>
 
         <!-- ── Hàng 3: mặt đứng ── -->
@@ -911,10 +911,11 @@
           <td><code>ai_floor_plan</code></td>
           <td>2 · Mặt bằng từng tầng</td>
           <td>
-            Toàn bộ nội dung bản vẽ dạng dữ liệu: từng đoạn tường kèm bề dày, cửa và cửa sổ kèm
-            chiều mở, thang, tên và diện tích phòng
+            Phòng, tường suy từ phòng, cửa, cửa sổ, thang của từng tầng; kèm <b>ý định</b> mô hình khai
+            (đã chuẩn hoá), <b>cây chia</b> bộ giải dựng và tóm tắt bộ giải (số cây thử, số qua cổng,
+            độ khớp ý đồ) — T43
           </td>
-          <td><span class="pill pill-done">Đợt 3 — chạy được</span></td>
+          <td><span class="pill pill-done">T43 — chạy được, chưa đo thật</span></td>
         </tr>
         <tr>
           <td><code>ai_plan_sheet_image</code></td>

@@ -105,10 +105,36 @@ export interface ModelRoute {
    * nên một lượt gọi hỏng có thể tốn tới cả bậc đó.
    */
   max_output_tokens?: number;
+  /**
+   * Mức SUY NGHĨ của dòng gpt-5 — `minimal` | `low` | `medium` | `high`.
+   *
+   * Đối xứng với `thinking_level` của Gemini, và sinh ra từ cùng một phép đo. 13/09/2026: một
+   * lượt xếp mặt bằng biệt thự 26 phòng tiêu **hết 32.000 token đầu ra** rồi vẫn bị cắt, trong
+   * khi câu trả lời JSON của một mặt bằng cỡ ấy chỉ nặng ~1.500–2.500 token — tức khoảng 90%
+   * ngân sách đi vào phần NGHĨ, thứ không hiện ra mà vẫn tính tiền và vẫn ăn vào trần. Lượt ấy
+   * cũng vượt hạn chờ 300 giây.
+   *
+   * **Không khai thì KHÔNG gửi trường nào**, để nhà cung cấp dùng mặc định của model — hành vi
+   * hôm nay giữ nguyên cho tới khi có người cố ý vặn. Đây là van đánh đổi chất lượng bố cục lấy
+   * tiền và thời gian, nên nó phải là một dòng cấu hình có người quyết, không phải một hằng số
+   * ai đó chọn hộ trong mã.
+   */
+  reasoning_effort?: 'minimal' | 'low' | 'medium' | 'high';
+  /**
+   * Hạn chờ MỘT lượt gọi, giây. `0` = không đặt hạn. Vắng = hạn mặc định trong client
+   * (`openai.ts` 600 s, `gemini.ts` 500 s, `anthropic.ts` 300 s). Thêm 13/09/2026 để đo lượt
+   * dài mà không bị client tự huỷ giữa chừng.
+   */
+  request_timeout_s?: number;
 }
 
 export interface ModelConfig {
   version: string;
+  /**
+   * Nhà cung cấp nào KHÔNG phát sinh hoá đơn (khoá gói miễn phí, dịch vụ không thu tiền).
+   * Theo nhà cung cấp chứ không theo tuyến: tiền bám vào khoá.
+   */
+  billing?: { free_providers?: string[] };
   routes: Record<string, ModelRoute>;
 }
 
@@ -122,6 +148,13 @@ export interface PublicRoute {
   enabled: boolean;
   hasKey: boolean;
   pricing?: RoutePricing;
+  /** `false` khi khoá của nhà cung cấp không phát sinh hoá đơn — tiền thật là 0. */
+  billed: boolean;
+  /**
+   * Tuyến nhận «mức suy nghĩ» theo lượt không: OpenAI luôn nhận; Gemini chỉ khi tuyến khai
+   * `thinking_level` (dòng 3); Anthropic đổi thành `output_config.effort` (13/09/2026).
+   */
+  supportsEffort: boolean;
 }
 
 /** Lỗi chính sách dữ liệu — KHÔNG thử lại, và không có cách "vòng qua" nào từ mã gọi. */
@@ -256,7 +289,25 @@ export class ModelRouter {
       enabled: r.enabled,
       hasKey: Boolean(this.apiKeys[r.provider]),
       pricing: r.pricing,
+      billed: this.isBilled(r.provider),
+      supportsEffort:
+        r.provider === 'openai' || r.provider === 'anthropic' || Boolean(r.thinking_level),
     }));
+  }
+
+  /** Khoá của nhà cung cấp này có phát sinh hoá đơn không (`billing.free_providers`). */
+  isBilled(provider: string): boolean {
+    return !(this.config.billing?.free_providers ?? []).includes(provider);
+  }
+
+  /** Danh sách nhà cung cấp miễn phí — màn hình nhật ký cần để tính tiền thật của dòng cũ. */
+  get freeProviders(): string[] {
+    return [...(this.config.billing?.free_providers ?? [])];
+  }
+
+  /** Giá niêm yết của một tuyến, không kèm khoá. */
+  pricingOf(routeName: string): RoutePricing | undefined {
+    return this.config.routes[routeName]?.pricing;
   }
 
   get version(): string {

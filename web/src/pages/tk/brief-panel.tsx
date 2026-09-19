@@ -29,6 +29,7 @@ import {
   FLOOR_PREF_LABEL,
   DERIVED_NEED_CODES,
   ROOM_LABEL,
+  briefAreaBudget,
   bedroomTypeFor,
   bedroomsFor,
   bedroomOwnerLabels,
@@ -192,7 +193,8 @@ export function BriefPanel({
    */
   const latest = useRef({ draft, legacy, surveyId, changeReason, draftBriefId });
   latest.current = { draft, legacy, surveyId, changeReason, draftBriefId };
-  const issues = useMemo(() => checkBriefConsistency(draft, BRIEF_FORM), [draft]);
+  const areaBudget = useMemo(() => briefAreaBudget(draft), [draft]);
+  const issues = useMemo(() => checkBriefConsistency(draft, BRIEF_FORM, legacy), [draft, legacy]);
   const shown = useMemo(() => visibleFields(BRIEF_FORM, draft), [draft]);
   const threshold = typeof thresholdRaw === 'number' ? thresholdRaw : null;
 
@@ -463,6 +465,7 @@ export function BriefPanel({
           projectId={projectId}
           floors={draft.floors ?? 1}
           family={draft.family}
+          areaBudget={field.path === 'required_spaces' ? areaBudget : undefined}
         />
       ));
 
@@ -855,7 +858,10 @@ function CompletenessPanel({
   onJump?: (sectionId: string, path: string) => void;
 }) {
   const percent = Math.round(score.score * 100);
-  const enough = threshold !== null && score.score >= threshold;
+  // Đủ điểm mà còn mâu thuẫn NGHIÊM TRỌNG thì chưa dựng được: nhánh AI và Lớp 2 đều chặn ở
+  // Worker (`brief/gate.ts`). Nói «đã đủ» ở đây là hứa một việc sẽ bị từ chối ngay khi bấm.
+  const blocking = issues.filter((issue) => issue.severity === 'nghiem_trong').length;
+  const enough = threshold !== null && score.score >= threshold && blocking === 0;
   const tone = score.score === 0 ? 'draft' : enough ? 'completed' : 'pending';
 
   return (
@@ -878,7 +884,9 @@ function CompletenessPanel({
             ? 'Chưa cấu hình mức đầy đủ tối thiểu.'
             : enough
               ? 'Đã đủ thông tin để dựng phương án tự động.'
-              : `Chưa đủ để dựng phương án tự động — cần từ ${Math.round(threshold * 100)}%.`}
+              : blocking > 0 && score.score >= threshold
+                ? `Chưa dựng được phương án tự động — còn ${blocking} mâu thuẫn nghiêm trọng phải gỡ.`
+                : `Chưa đủ để dựng phương án tự động — cần từ ${Math.round(threshold * 100)}%.`}
         </p>
         {artifactId && (
           <p className="mt-2 text-fg-subtle">Đã đúc bản dữ liệu cho engine thiết kế.</p>

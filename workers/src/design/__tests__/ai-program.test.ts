@@ -19,15 +19,18 @@ import { aiSpaceProgramSchema, type AiSpaceProgramProposal } from '@nvg/shared/d
 import {
   AiProgramRejected,
   checkProposal,
+  foldInBedroom,
   generateAiProgram,
   programFromProposal,
   programKnowledge,
 } from '../ai/program';
 import { buildableFromDigest } from '../ai/buildable';
 import { parseAiPrompts } from '../ai/prompts';
+import { criterionFor, parsePlanQuality } from '../ai/plan-quality';
 import { parseRuleMessages } from '../ai/plan-messages';
 import { reviewProgramAreas } from '../ai/rule-warnings';
 import { NO_RULE_PACKS, selectedRulePack } from '../ai/rule-packs';
+import { parseBriefFidelity } from '../kb/brief-fidelity';
 import { parseConstructionNorms } from '../kb/construction';
 import { parseVocabulary, roomGroups, VocabularyIndex } from '../kb/vocabulary';
 import { parseRuleFile, RulePack } from '../rules/rule-pack';
@@ -47,8 +50,12 @@ const groups = roomGroups(vocabulary.vocabulary);
 const construction = parseConstructionNorms(read('kb/construction_norms.yaml'));
 const prompts = parseAiPrompts(load(read('kb/ai_design_prompts.yaml')));
 const messages = parseRuleMessages(read('rules/messages.vi.yaml'));
+const fidelity = parseBriefFidelity(read('kb/brief_fidelity.yaml'));
 
-/** Gói quy chuẩn QUỐC GIA thật — cảnh báo phải đo trên `rules/base/`, không trên bản giả. */
+/**
+ * Gói quy chuẩn CŨ (`rules/base/` đã xoá 13/09/2026), chép vào dữ liệu kiểm thử — để cơ chế
+ * đối chiếu vẫn chạy trên một gói thật đủ loại vị từ. Không mã chạy thật nào đọc nó.
+ */
 const nationalRules = new RulePack(
   [
     '00-meta',
@@ -57,7 +64,12 @@ const nationalRules = new RulePack(
     '30-adjacency',
     '40-vertical',
     '50-massing',
-  ].flatMap((name) => parseRuleFile(read(`rules/base/${name}.yaml`), name)),
+  ].flatMap((name) =>
+    parseRuleFile(
+      read(`workers/src/design/__tests__/fixtures/rules-legacy-base/${name}.yaml`),
+      name,
+    ),
+  ),
   false,
 );
 
@@ -81,6 +93,7 @@ const knowledge = programKnowledge({
   buildable,
   construction,
   rules: emptyPack,
+  fidelity,
 });
 
 /** Đề xuất hợp lệ: đủ phòng đầu bài đòi, đủ phòng ngủ theo gia đình, vừa sàn xây được. */
@@ -144,7 +157,8 @@ describe('Tri thức gửi cho mô hình', () => {
    */
   it('chưa tích gói nào thì KHÔNG mang một ngưỡng nào — chỉ từ vựng, đầu bài, quy ước cấu tạo', () => {
     const text = JSON.stringify(knowledge);
-    const fromKb = JSON.stringify(construction);
+    // Chỉ phần quy ước cấu tạo THẬT SỰ gửi đi — mục `usable` bị lược trước khi gửi (V-28).
+    const fromKb = JSON.stringify(knowledge.construction);
 
     const thresholds = nationalRules.rules
       .flatMap((r) => [r.params.value_m, r.params.value_m2, r.params.value])
@@ -169,10 +183,33 @@ describe('Tri thức gửi cho mô hình', () => {
    * `max_m2` / `priority` vào `room_types` cho "mô hình đỡ đoán". Lúc ấy nhánh AI thành bộ giải
    * bằng một công cụ dở hơn — đúng thứ T14 sinh ra để tránh. Khoá lạ ở đây là đỏ ngay.
    */
+  it('không gửi điều kiện dựng của bộ giải (`usable`) cho mô hình', () => {
+    expect(construction.usable).toBeDefined();
+    expect(Object.keys(knowledge.construction as object)).not.toContain('usable');
+  });
+
   it('mỗi loại phòng chỉ mang mã, nhãn và nhóm — không diện tích, không thứ tự ưu tiên', () => {
     for (const entry of knowledge.room_types) {
       expect(Object.keys(entry).sort()).toEqual(['code', 'group', 'vi']);
     }
+  });
+
+  it('mang khoảng tỷ lệ giao thông mặt bằng sẽ được chấm (C2, theo loại hình) — vắng thước thì null', () => {
+    const quality = parsePlanQuality(read('kb/plan_quality.yaml'));
+    const spec = quality.criteria.find((c) => c.code === 'C2')!;
+    const band = criterionFor(spec, digest.building_type);
+    const k = programKnowledge({
+      digest,
+      vocabulary,
+      labels,
+      buildable,
+      construction,
+      rules: emptyPack,
+      fidelity,
+      quality,
+    });
+    expect(k.circulation_share).toEqual({ low: band.low, high: band.high });
+    expect(knowledge.circulation_share).toBeNull();
   });
 
   it('chưa tích gói nào thì danh sách ràng buộc RỖNG', () => {
@@ -192,6 +229,7 @@ describe('Tri thức gửi cho mô hình', () => {
       buildable,
       construction,
       rules: selectedRulePack({ standards: true, experience: false }, PACKS),
+      fidelity,
     });
     expect(k.constraints.length).toBeGreaterThan(0);
     expect(k.constraints.every((r) => r.kind === 'legal')).toBe(true);
@@ -209,6 +247,7 @@ describe('Tri thức gửi cho mô hình', () => {
       buildable,
       construction,
       rules: selectedRulePack({ standards: false, experience: true }, PACKS),
+      fidelity,
     });
     expect(k.constraints.length).toBeGreaterThan(0);
     expect(k.constraints.every((r) => r.kind === 'experience')).toBe(true);
@@ -224,6 +263,7 @@ describe('Tri thức gửi cho mô hình', () => {
       buildable,
       construction,
       rules: selectedRulePack({ standards: true, experience: true }, PACKS),
+      fidelity,
     });
     const kinds = new Set(k.constraints.map((r) => r.kind));
     expect(kinds).toEqual(new Set(['legal', 'experience']));
@@ -241,6 +281,7 @@ describe('Tri thức gửi cho mô hình', () => {
       buildable,
       construction,
       rules: selectedRulePack({ standards: true, experience: true }, PACKS),
+      fidelity,
     });
     const predicates = new Set(k.constraints.map((r) => r.predicate));
     expect(predicates.has('min_dimension')).toBe(false);
@@ -369,6 +410,7 @@ describe('generateAiProgram', () => {
       labels,
       construction,
       rules: emptyPack,
+      fidelity,
     });
 
   it('đề xuất đạt ngay → một lượt gọi; lời dẫn mang tri thức, không mang danh tính', async () => {
@@ -393,7 +435,9 @@ describe('generateAiProgram', () => {
     const out = await run(client);
     expect(out.repaired).toBe(true);
     expect(out.calls).toHaveLength(2);
-    expect(client.calls[1]!.system).toMatch(/Thiếu Phòng thờ/);
+    expect(client.calls[1]!.system).toBe(prompts.program.system);
+    expect(client.calls[1]!.prompt).toMatch(/Thiếu Phòng thờ/);
+    expect(client.calls[1]!.prompt.startsWith(client.calls[0]!.prompt)).toBe(true);
   });
 
   it('sai cả hai lượt → bác, KHÔNG gọi lượt thứ ba, câu lỗi đọc được', async () => {
@@ -412,7 +456,7 @@ describe('generateAiProgram', () => {
     const client = fakeClient([noRationale, goodProposal()]);
     const out = await run(client);
     expect(out.repaired).toBe(true);
-    expect(client.calls[1]!.system).toMatch(/Sai cấu trúc ở rationale/);
+    expect(client.calls[1]!.prompt).toMatch(/Sai cấu trúc ở rationale/);
   });
 });
 
@@ -469,5 +513,212 @@ describe('Cảnh báo trên diện tích — đo bằng ĐÚNG gói kỹ sư đ�
     expect(out.unchecked.length).toBeGreaterThan(0);
     // Những vị từ cần hình học, bước này chưa có: kích thước tối thiểu, mặt thoáng, khoảng lùi.
     expect(out.unchecked.map((u) => u.predicate)).toContain('min_dimension');
+  });
+});
+
+describe('Bám đầu bài — sáng tạo nhưng không mâu thuẫn đầu bài (13/09/2026)', () => {
+  /**
+   * Đầu bài CÓ ghim tầng, diện tích, khép kín, nhu cầu riêng, số xe và khoảng sân — đúng loại
+   * thông tin mà bộ kiểm cũ để mô hình nhìn thấy nhưng không kiểm.
+   */
+  const detailedBrief = {
+    ...VILLA,
+    family: [
+      { role: 'ong_ba', count: 2, floor: 1, ensuite: true, needs: ['storage'] },
+      { role: 'vo_chong', count: 2, floor: 2, ensuite: true, needs: ['balcony', 'study'] },
+      { role: 'con', count: 2, floor: 2, needs: ['balcony'] },
+    ],
+    required_spaces: [
+      { type: 'living', floor: 1, area_m2: 40 },
+      { type: 'kitchen', floor: 1 },
+      { type: 'dining' },
+      { type: 'wc' },
+      { type: 'garage', floor: 1 },
+      { type: 'altar_room', floor: 2 },
+    ],
+    parking: { cars: 1, motorbikes: 2 },
+    massing: { yards: ['san_ben'], yard_depth_m: { left: 3 } },
+  } as typeof VILLA;
+  const detailedDigest = digestOf(detailedBrief);
+  const detailedBuildable = buildableFromDigest(detailedDigest);
+  const detailed = programKnowledge({
+    digest: detailedDigest,
+    vocabulary,
+    labels,
+    buildable: detailedBuildable,
+    construction,
+    rules: emptyPack,
+    fidelity,
+  });
+
+  function faithful(): AiSpaceProgramProposal {
+    return {
+      schema_version: '1.0.0',
+      spaces: [
+        { id: 'l', type: 'living', level: 1, target_area_m2: 40 },
+        { id: 'k', type: 'kitchen', level: 1, target_area_m2: 14 },
+        { id: 'd', type: 'dining', level: 1, target_area_m2: 16 },
+        { id: 'w', type: 'wc', level: 1, target_area_m2: 4 },
+        { id: 'g', type: 'garage', level: 1, target_area_m2: 22 },
+        { id: 'b1', type: 'bedroom', level: 1, target_area_m2: 18 },
+        { id: 'b1w', type: 'wc', level: 1, target_area_m2: 5, ensuite_of: 'b1' },
+        { id: 's', type: 'storage', level: 1, target_area_m2: 4 },
+        { id: 't1', type: 'stair', level: 1, target_area_m2: 12 },
+        { id: 'm', type: 'master_bedroom', level: 2, target_area_m2: 26 },
+        { id: 'mw', type: 'wc', level: 2, target_area_m2: 6, ensuite_of: 'm' },
+        { id: 'mb', type: 'balcony', level: 2, target_area_m2: 5, ensuite_of: 'm' },
+        { id: 'ms', type: 'study_area', level: 2, target_area_m2: 5, ensuite_of: 'm' },
+        { id: 'c1', type: 'bedroom', level: 2, target_area_m2: 16 },
+        { id: 'c1b', type: 'balcony', level: 2, target_area_m2: 4, ensuite_of: 'c1' },
+        { id: 'c2', type: 'bedroom', level: 2, target_area_m2: 16 },
+        { id: 'c2b', type: 'balcony', level: 2, target_area_m2: 4, ensuite_of: 'c2' },
+        { id: 'a', type: 'altar_room', level: 2, target_area_m2: 12 },
+        { id: 't2', type: 'stair', level: 2, target_area_m2: 12 },
+        { id: 'h', type: 'circulation', level: 2, target_area_m2: 15 },
+      ],
+      rationale: 'Ông bà tầng một, ba phòng ngủ tầng hai có ban công riêng.',
+      assumptions: [],
+    };
+  }
+  const issuesOf = (proposal: AiSpaceProgramProposal) => checkProposal(proposal, detailed, labels);
+
+  it('tri thức mang từng dòng đầu bài, từng nhóm thành viên, chỗ đỗ và sàn đã trừ sân', () => {
+    expect(detailed.brief_spaces).toContainEqual({
+      type: 'living',
+      floor: 1,
+      area_m2: 40,
+      ensuite: null,
+    });
+    expect(detailed.members).toContainEqual(
+      expect.objectContaining({ role: 'con', rooms: 2, floor: 2, needs: ['balcony'] }),
+    );
+    expect(detailed.garage_min_m2).toBe(20);
+    // Lô 15 × 20, lùi trước 4 m, sân bên trái 3 m → 12 × 16.
+    expect(detailed.buildable_per_level_m2[0]).toBe(192);
+  });
+
+  it('đề xuất bám đủ đầu bài thì ĐẠT — phần không ghim vẫn tự do', () => {
+    expect(issuesOf(faithful())).toEqual([]);
+  });
+
+  it('diện tích khai là mức TỐI THIỂU: nhỏ hơn thì bác, lớn hơn bao nhiêu cũng được', () => {
+    const small = faithful();
+    small.spaces.find((s) => s.id === 'l')!.target_area_m2 = 38;
+    expect(issuesOf(small).join(' ')).toMatch(
+      /Phòng khách tầng 1: đầu bài khai tối thiểu 40 m², đề xuất 38 m² — nhỏ hơn mức tối thiểu/,
+    );
+    const large = faithful();
+    large.spaces.find((s) => s.id === 'l')!.target_area_m2 = 60;
+    expect(issuesOf(large)).toEqual([]);
+  });
+
+  it('phòng ghim tầng mà đặt tầng khác bị bác', () => {
+    const bad = faithful();
+    bad.spaces.find((s) => s.id === 'a')!.level = 1;
+    expect(issuesOf(bad).join(' ')).toMatch(/Thiếu Phòng thờ ở tầng 2/);
+  });
+
+  it('thành viên khép kín mà phòng ngủ không có khu vệ sinh khép kín bị bác', () => {
+    const bad = faithful();
+    bad.spaces.find((s) => s.id === 'b1w')!.ensuite_of = null;
+    expect(issuesOf(bad).join(' ')).toMatch(/1 Phòng ngủ ở tầng 1 khép kín/);
+  });
+
+  it('thiếu ban công riêng của từng phòng con bị bác; góc làm việc đáp ứng bằng không gian học tập', () => {
+    const bad = faithful();
+    bad.spaces = bad.spaces.filter((s) => s.id !== 'c2b');
+    const issues = issuesOf(bad).join(' ');
+    expect(issues).toMatch(/«Ban công» của thành viên cần 3 không gian ở tầng 2, đề xuất có 2/);
+    expect(issues).not.toMatch(/Góc làm việc|Phòng làm việc/);
+  });
+
+  it('tủ đồ, góc học tập trong phòng ngủ là TIỆN ÍCH trong phòng, không phải nhu cầu không gian', () => {
+    expect(detailed.members).toContainEqual(
+      expect.objectContaining({ role: 'vo_chong', needs: ['balcony'], in_room: ['study'] }),
+    );
+    // Không có góc học tập riêng vẫn ĐẠT — nó nằm trong phòng ngủ.
+    const noCorner = faithful();
+    noCorner.spaces = noCorner.spaces.filter((s) => s.id !== 'ms');
+    expect(issuesOf(noCorner)).toEqual([]);
+  });
+
+  it('mô hình lỡ tách góc học tập thành phòng khép kín thì Worker gộp lại vào phòng ngủ', () => {
+    const { proposal, includes } = foldInBedroom(
+      faithful(),
+      fidelity.inBedroomTypes,
+      fidelity.ensuiteParentTypes,
+    );
+    expect(proposal.spaces.find((s) => s.id === 'ms')).toBeUndefined();
+    expect(proposal.spaces.find((s) => s.id === 'm')!.target_area_m2).toBe(31);
+    expect(includes.get('m')).toEqual(['study_area']);
+    // Ban công và WC khép kín KHÔNG gộp — chúng là không gian thật.
+    expect(proposal.spaces.find((s) => s.id === 'mb')).toBeDefined();
+    expect(proposal.spaces.find((s) => s.id === 'mw')).toBeDefined();
+
+    const { payload } = programFromProposal({
+      proposal,
+      includes,
+      briefRef: `sha256:${'a'.repeat(64)}`,
+      generator: {
+        kind: 'ai',
+        provider: 'fake',
+        model: 'fake-1',
+        route: 'r',
+        prompt_version: '1',
+        repaired: false,
+      },
+    });
+    expect(payload.spaces.find((s) => s.type === 'master_bedroom')!.includes).toEqual([
+      'study_area',
+    ]);
+    expect(aiSpaceProgramSchema.safeParse(payload).success).toBe(true);
+  });
+
+  it('tiện ích đứng một mình (không thuộc phòng nào) thì giữ nguyên', () => {
+    const lone = faithful();
+    lone.spaces.push({ id: 'st', type: 'study_area', level: 1, target_area_m2: 6 });
+    const { proposal } = foldInBedroom(lone, fidelity.inBedroomTypes, fidelity.ensuiteParentTypes);
+    expect(proposal.spaces.find((s) => s.id === 'st')).toBeDefined();
+  });
+
+  it('danh sách tiện ích trong phòng ngủ khớp với bộ giải (`kb/space_norms.yaml` in_bedroom)', () => {
+    const norms = load(read('kb/space_norms.yaml')) as { in_bedroom: string[] };
+    expect([...fidelity.inBedroomTypes].sort()).toEqual([...norms.in_bedroom].sort());
+  });
+
+  it('chỗ để xe nhỏ hơn số xe đầu bài khai bị bác', () => {
+    const bad = faithful();
+    bad.spaces.find((s) => s.id === 'g')!.target_area_m2 = 10;
+    expect(issuesOf(bad).join(' ')).toMatch(/Chỗ để xe 10 m² không đủ/);
+  });
+
+  it('bịt lỗ khép kín: một phòng lớn gắn `ensuite_of` không né được trần sàn', () => {
+    const bad = faithful();
+    bad.spaces.push({ id: 'big', type: 'garage', level: 1, target_area_m2: 90, ensuite_of: 'b1' });
+    const issues = issuesOf(bad).join(' ');
+    expect(issues).toMatch(/Để xe không được làm phòng khép kín/);
+    expect(issues).toMatch(/Tầng 1 cộng lại .* vượt sàn xây được/);
+  });
+
+  it('nhà hai tầng mà một tầng không có thang bị bác', () => {
+    const bad = faithful();
+    bad.spaces = bad.spaces.filter((s) => s.id !== 't2');
+    expect(issuesOf(bad).join(' ')).toMatch(/Tầng 2 không có thang/);
+  });
+
+  it('dòng phòng ngủ lệch gia đình KHÔNG làm hai phép kiểm đòi hai điều ngược nhau', () => {
+    const conflicted = programKnowledge({
+      digest: digestOf({
+        ...detailedBrief,
+        required_spaces: [...detailedBrief.required_spaces!, { type: 'bedroom', floor: 1 }],
+      } as typeof VILLA),
+      vocabulary,
+      labels,
+      buildable: detailedBuildable,
+      construction,
+      rules: emptyPack,
+      fidelity,
+    });
+    expect(checkProposal(faithful(), conflicted, labels)).toEqual([]);
   });
 });

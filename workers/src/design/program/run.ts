@@ -11,13 +11,18 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { siteGeometry, type DesignBrief, type SpaceProgram } from '@nvg/shared/design';
+import {
+  ROOM_LABEL,
+  type DesignBrief,
+  type ProgramIntent,
+  type SpaceProgram,
+} from '@nvg/shared/design';
+import { fitAiAdditions } from './ai-additions';
 import type { DesignEnv } from '../env';
 import { roomVocabulary } from '../kb/vocabulary-data';
 import { geminiClient } from '../llm/factory';
-import { buildSpaceProgram } from './engine';
+import { buildSpaceProgram, type PlateExplanation } from './engine';
 import { plausibilityRules } from './plausibility-data';
-import { resolveProgramIntent } from './intent';
 import { resolveNeeds } from './needs';
 import { spaceNorms } from './norms-data';
 import { readRoomAreaPriors } from './priors';
@@ -25,6 +30,8 @@ import { rulePackFor } from '../rules/rule-pack-data';
 
 export interface Layer2Run {
   payload: SpaceProgram;
+  /** Các bước ra con số «sàn mỗi tầng» — hiện ở đầu màn hình Chương trình không gian. */
+  plateExplanation: PlateExplanation;
   /** Điều engine phải nói ra nhưng không đủ để dừng lại. */
   warnings: string[];
   /** Đoạn chữ trong đầu bài chưa quy được về không gian nào. */
@@ -47,12 +54,20 @@ export interface Layer2Run {
   params: Record<string, unknown>;
 }
 
+export type SavedAiIntent = NonNullable<SpaceProgram['ai_intent']>;
+
+/**
+ * @param aiIntent Đề xuất mức ưu tiên của AI ĐÃ CÓ — do kiến trúc sư bấm nút lấy về, hoặc lưu
+ *   kèm bản chốt. Tệp này KHÔNG gọi mô hình để lấy nó nữa (13/09/2026): mở màn hình không được
+ *   là một khoản tiền. Vắng thì chương trình lập thuần theo chuẩn nghề.
+ */
 export async function runLayer2(
   env: DesignEnv,
   db: SupabaseClient,
   brief: DesignBrief,
   briefRef: string,
   tenantId: string,
+  aiIntent: SavedAiIntent | null = null,
 ): Promise<Layer2Run> {
   const norms = spaceNorms();
   const rules = rulePackFor(brief.locality);
@@ -76,6 +91,9 @@ export async function runLayer2(
   for (const phrase of (brief.family ?? []).flatMap((m) => m.needs ?? [])) {
     const text = phrase?.trim();
     if (!text) continue;
+    // Tiện ích nằm trong phòng ngủ (tủ đồ, góc học tập…) KHÔNG thành không gian riêng: engine
+    // gộp nó vào phòng của chính nhóm thành viên đã khai (`kb/space_norms.yaml` `in_bedroom`).
+    if (norms.in_bedroom.includes(text)) continue;
     (known.has(text) ? declared : freeText).push(text);
   }
 
@@ -100,21 +118,37 @@ export async function runLayer2(
     );
   }
 
-  // ── Lớp 2a: hỏi mô hình ngôn ngữ phòng nào nên rộng rãi ────────────────────────────
-  //
-  // Gửi đi là BẢN TÓM TẮT ĐÃ ẨN DANH, không phải đầu bài — xem `intent.ts`. Diện tích sàn
-  // trong bản tóm tắt lấy từ hình học thửa, làm tròn tới 10 m²; nó chỉ để mô hình biết "cỡ
-  // nào", vì một cái bếp trong căn 90 m²/tầng và trong căn 180 m²/tầng không cùng mức ưu ái.
-  //
-  // Không chặn luồng: hết hạn mức hay trả sai cấu trúc thì `intent` là `null` và chương trình
-  // vẫn soạn xong bằng chuẩn nghề (PRD 5.1).
-  const geometry = siteGeometry(brief.site);
-  const { intent, notes: intentNotes } = await resolveProgramIntent(
-    brief,
-    geometry.buildable.widthM * geometry.buildable.depthM,
-    vocabulary,
-    geminiClient(env),
+  // ── Lớp 2a: đề xuất mức ưu tiên của AI, nếu kiến trúc sư đã lấy ─────────────────────
+  const intent: ProgramIntent | null = aiIntent
+    ? {
+        schema_version: '1.0.0',
+        emphasis: aiIntent.emphasis,
+        add_spaces: aiIntent.add_spaces,
+        rationale: aiIntent.rationale,
+      }
+    : null;
+
+  // Không gian AI đề xuất thêm chỉ được lấy tới đâu còn sàn tới đó (Haan, 13/09/2026). Lời dẫn
+  // đã nói luật này; đây là chỗ cưỡng chế — mô hình nói gì thì con số trên bảng cũng không vượt.
+  const additions = fitAiAdditions(
+    (intent?.add_spaces ?? []).filter((code) => !norms.in_bedroom.includes(code)),
+    () =>
+      buildSpaceProgram({
+        brief,
+        briefRef,
+        rules,
+        norms,
+        priors,
+        extraSpaces: [...declared, ...needs.spaces],
+        plausibility: null,
+        intent: null,
+      }),
+    norms,
+    (code: string) => ROOM_LABEL[code] ?? code,
   );
+  const appliedIntent = aiIntent
+    ? { ...aiIntent, add_spaces: aiIntent.add_spaces.filter((c) => additions.kept.includes(c)) }
+    : null;
 
   const result = buildSpaceProgram({
     brief,
@@ -124,14 +158,19 @@ export async function runLayer2(
     priors,
     // Không gian AI đề xuất thêm đi CHUNG đường với mã khai tường minh: engine vẫn kiểm mã có
     // trong từ vựng và có chuẩn diện tích, nên một đề xuất lạ bị nói ra chứ không lọt vào.
-    extraSpaces: [...declared, ...needs.spaces, ...(intent?.add_spaces ?? [])],
+    // Tiện ích trong phòng ngủ mà AI đề xuất thêm cũng không thành phòng riêng — không biết nó
+    // thuộc phòng ngủ nào thì bỏ, còn hơn một «Tủ đồ» đứng một mình giữa tầng.
+    extraSpaces: [...declared, ...needs.spaces, ...additions.kept],
     plausibility: plausibilityRules(),
     intent,
   });
 
   return {
-    payload: result.payload,
-    warnings: [...result.warnings, ...needs.notes, ...intentNotes],
+    // Đề xuất đi KÈM bản chương trình: nó là một đầu vào đã quyết định con số, và bản chốt phải
+    // mang được nó để lần sau tính lại ra đúng mã băm mà không gọi mô hình.
+    payload: appliedIntent ? { ...result.payload, ai_intent: appliedIntent } : result.payload,
+    plateExplanation: result.plateExplanation,
+    warnings: [...result.warnings, ...needs.notes, ...additions.notes],
     unresolved: needs.unresolved,
     aiSuggestion: intent
       ? {

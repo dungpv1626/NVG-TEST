@@ -49,10 +49,16 @@ export function buildableFromDigest(digest: AiBriefDigest): BuildableBox {
     boundary_m: site.boundary_m ?? null,
   } as Parameters<typeof siteGeometry>[0]);
 
-  const back = site.setback_required_m?.back ?? 0;
-  const front = site.setback_required_m?.front ?? 0;
-  const left = site.setback_required_m?.left ?? 0;
-  const right = site.setback_required_m?.right ?? 0;
+  // Mỗi mặt lấy mức LỚN HƠN giữa khoảng lùi quy hoạch và khoảng sân gia chủ muốn (13/09/2026).
+  // Trước đó đầu bài đòi sân trước, sân bên, sân sau mà không nói rộng bao nhiêu, nên phần đất
+  // xây được là cả lô trừ khoảng lùi — và lượt chạy thật phủ kín bề ngang 15 m.
+  const yard = digest.massing?.yard_depth_m ?? {};
+  const take = (side: 'front' | 'back' | 'left' | 'right') =>
+    Math.max(site.setback_required_m?.[side] ?? 0, yard?.[side] ?? 0);
+  const back = take('back');
+  const front = take('front');
+  const left = take('left');
+  const right = take('right');
 
   const rect = geometry.buildable;
   const x0 = rect.xM + left;

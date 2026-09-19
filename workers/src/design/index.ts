@@ -13,33 +13,41 @@
 
 import { Hono } from 'hono';
 import {
+  applyProgramEdits,
   artifactId,
+  spaceProgramSchema,
   BRIEF_FORM,
   DATA_CLASSES,
   type DataClass,
   type DesignBrief,
+  type ProgramEdit,
   type SpaceProgram,
 } from '@nvg/shared/design';
 import { ContractError } from './contracts';
 import { createComputeBackend, type ExportDxfRequest } from './compute-backend';
 import { DataClassViolation, ModelNotConfigured } from './llm/router';
-import { geminiClient, modelRouter } from './llm/factory';
+import { geminiClient, modelRouter, textClientFor } from './llm/factory';
 import { renderImageClient } from './render/render-client';
 import { aiApp } from './ai/routes';
 import { LlmCallFailed } from './llm/gemini';
 import { PublishBridge } from './publish';
 import { ArtifactRepository } from './artifacts';
 import { createArtifactStore } from './artifact-store';
+import { recordingClient } from './ai/prompt-record';
 import { buildBriefPayload } from './brief/payload';
 import { gateLayer2, readCompletenessThreshold } from './brief/gate';
-import { runLayer2 } from './program/run';
+import { runLayer2, type SavedAiIntent } from './program/run';
+import { spaceNorms } from './program/norms-data';
+import { resolveProgramIntent } from './program/intent';
+import { recordAiCall, usageSummary, type AiCallUsage } from './ai/call-log';
+import { aiModelCatalogue, isSelectableRoute } from './ai/models';
 import { retrieveFewShots } from './kb/retrieve';
 import { roomVocabulary } from './kb/vocabulary-data';
 import { embeddingText, withheldFields, type RationalePayload } from './kb/rationale';
 import { createSourceFileStore, type StoredSource } from './source-files';
 import type { DigitiseParams, DigitiseSource } from './workflows/digitise-steps';
-import { extractSiteBoundary } from './site/extract-boundary';
-import { describeSite, parseImageDataUrl, renderFromMassing } from './render/render';
+import { aiCallOfError, extractSiteBoundary } from './site/extract-boundary';
+import { describeSite, parseImageDataUrl, RENDER_ROUTE, renderFromMassing } from './render/render';
 import type { RenderSite } from './render/render';
 import { siteFaces } from './kb/site-context';
 import { renderPrompts } from './render/prompts-data';
@@ -337,72 +345,271 @@ designApp.post('/brief/confirm', async (c) => {
  * `matchesHead` trả lời câu hỏi thật sự quan trọng: bản đang xem có đúng là bản đã chốt cho
  * các lớp sau dùng không.
  *
- * ⚠️ Lượt gọi này đi qua bước quy nhu cầu viết bằng lời. Hiện bước đó bị chặn vì hạng dữ
- * liệu nên không tốn gì; ngày mở khoá mô hình ngôn ngữ, cân nhắc nhớ đệm theo mã đầu bài để
- * mỗi lần mở màn hình không thành một lượt gọi mạng.
+ * ✅ Từ 13/09/2026 tuyến này KHÔNG gọi mô hình nào. Đề xuất ưu tiên của AI chỉ lấy khi bấm nút
+ * (`POST /program/intent`) và đi kèm bản chốt (`space_program.ai_intent`); ở đây chỉ áp lại.
  */
 designApp.get('/program/:projectId', async (c) => {
   const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
   if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+  return programView(c.env, token, c.req.param('projectId'), undefined).then((out) =>
+    c.json(out.body, out.status),
+  );
+});
 
-  const projectId = c.req.param('projectId');
-  const db = await asUser(c.env, token);
+/**
+ * Xem trước chương trình với một đề xuất AI CHƯA CHỐT (vừa lấy về, hoặc kiến trúc sư vừa bỏ).
+ * Không gọi mô hình — đề xuất đi vào từ thân lượt gọi.
+ */
+designApp.post('/program/preview', async (c) => {
+  const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+  const body = (await c.req.json()) as { projectId?: string; aiIntent?: unknown };
+  if (!body.projectId) return c.json({ error: 'Thiếu mã hồ sơ thiết kế.' }, 400);
+  const aiIntent = parseAiIntent(body.aiIntent);
+  if (aiIntent === 'invalid') {
+    return c.json({ error: 'Đề xuất của AI không đúng dạng — lấy lại đề xuất rồi thử lại.' }, 400);
+  }
+  const out = await programView(c.env, token, body.projectId, aiIntent);
+  return c.json(out.body, out.status);
+});
+
+type ProgramViewOut =
+  | { status: 200; body: Record<string, unknown> }
+  | { status: 401 | 404 | 409; body: { error: string } };
+
+/**
+ * Dựng dữ liệu màn hình Chương trình không gian.
+ *
+ * @param aiIntentOverride `undefined` = dùng đề xuất AI của bản đang chốt (nếu bản chốt lập từ
+ *   CHÍNH đầu bài này); `null` = không dùng đề xuất nào; còn lại = đề xuất chưa chốt.
+ */
+async function programView(
+  env: DesignEnv,
+  token: string,
+  projectId: string,
+  aiIntentOverride: SavedAiIntent | null | undefined,
+): Promise<ProgramViewOut> {
+  const db = await asUser(env, token);
   const scope = await projectScope(db, projectId);
   if (!scope) {
-    return c.json(
-      {
+    return {
+      status: 404,
+      body: {
         error:
           'Không tìm thấy hồ sơ thiết kế, hoặc tài khoản không được xem hồ sơ này. Người chịu trách nhiệm dự án hoặc Phòng Thiết kế xem được.',
       },
-      404,
-    );
+    };
   }
 
-  const repo = new ArtifactRepository(c.env);
+  const repo = new ArtifactRepository(env);
   const brief = await repo.head(projectId, 'kien_truc', 'design_brief');
+  if (!brief) {
+    return {
+      status: 409,
+      body: { error: 'Chưa có đầu bài đã xác nhận. Hoàn tất và xác nhận đầu bài trước.' },
+    };
+  }
+
+  const gate = gateLayer2(brief.payload, await readCompletenessThreshold(repo.db, scope.tenantId));
+  if (!gate.allowed) return { status: 409, body: { error: gate.message } };
+
+  const head = await repo.head(projectId, 'kien_truc', 'space_program');
+  const headProgram = head?.payload as SpaceProgram | undefined;
+  const headIsSolver = headProgram && (headProgram.generator?.kind ?? 'solver') === 'solver';
+  // Đề xuất AI của bản chốt chỉ áp lại khi bản chốt lập từ CHÍNH đầu bài này: đề xuất dựa trên
+  // bản tóm tắt của đầu bài cũ, áp sang đầu bài đã sửa là nói thay AI một điều nó chưa nói.
+  const headIntent =
+    headIsSolver && headProgram.brief_ref === brief.id ? (headProgram.ai_intent ?? null) : null;
+  const aiIntent = aiIntentOverride === undefined ? headIntent : aiIntentOverride;
+
+  const run = await runLayer2(
+    env,
+    repo.db,
+    brief.payload as DesignBrief,
+    brief.id,
+    scope.tenantId,
+    aiIntent,
+  );
+  // Chỗ sửa của bản chốt đi KÈM bản chốt, không nằm trong bảng nào khác. Áp lại đúng những chỗ
+  // ấy lên bản vừa tính: khớp mã băm nghĩa là đầu bài chưa đổi VÀ không ai sửa thêm — nếu so
+  // thẳng bản tính với bản chốt thì mọi bản có chỗ sửa đều bị báo «đầu bài đã đổi» oan.
+  const headEdits = headIsSolver ? (headProgram.architect_edits ?? []) : [];
+  const reapplied = applyProgramEdits(run.payload, headEdits);
+
+  return {
+    status: 200,
+    body: {
+      program: run.payload,
+      headEdits,
+      headAiIntent: headIntent,
+      warnings: run.warnings,
+      unresolvedNeeds: run.unresolved,
+      aiSuggestion: run.aiSuggestion,
+      plateExplanation: run.plateExplanation,
+      roomLabels: roomLabels(),
+      briefArtifactId: brief.id,
+      headArtifactId: head?.id ?? null,
+      // So bằng MÃ BĂM, không phải so chuỗi JSON: mã băm chính là định nghĩa danh tính của
+      // artifact trong hệ thống này (khoá chính của `design_artifact`). So chuỗi là dựng một
+      // khái niệm "giống nhau" thứ hai, và nó bất đồng với khái niệm thật ngay khi thứ tự khoá
+      // đổi trên đường đi qua kho tệp — đã xảy ra thật: vừa chốt xong đã báo là chưa chốt.
+      matchesHead:
+        head && reapplied.errors.length === 0
+          ? (await artifactId(reapplied.program)) === head.id
+          : false,
+      // Bản đã chốt do AI lập thì `matchesHead` luôn false (bản tính lại là của bộ giải) — màn
+      // hình cần biết điều đó để không nói «đầu bài đã đổi» oan, và để hiện bản AI đang hiệu lực.
+      head: head
+        ? {
+            artifactId: head.id,
+            generator: headProgram?.generator ?? { kind: 'solver' },
+            program: head.payload,
+          }
+        : null,
+    },
+  };
+}
+
+/**
+ * Lấy đề xuất mức ưu tiên diện tích của AI — CHỈ khi kiến trúc sư bấm nút, với mô hình đã chọn.
+ *
+ * Không ghi artifact: đề xuất là một ĐẦU VÀO của bản chương trình, và nó được lưu khi bản đó
+ * được chốt. Nhưng lượt gọi thì LUÔN ghi nhật ký chi phí — kể cả hỏng — và trả số token, tiền
+ * về cho màn hình ngay.
+ */
+designApp.post('/program/intent', async (c) => {
+  const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+  const body = (await c.req.json()) as { projectId?: string; route?: string };
+  if (!body.projectId) return c.json({ error: 'Thiếu mã hồ sơ thiết kế.' }, 400);
+  if (!body.route) return c.json({ error: 'Chưa chọn model.' }, 400);
+
+  const db = await asUser(c.env, token);
+  const scope = await projectScope(db, body.projectId);
+  if (!scope) return c.json({ error: PROJECT_NOT_VISIBLE }, 404);
+  const denied = await denyUnlessWritable(db, scope.tenantId, body.projectId);
+  if (denied) return c.json({ error: denied.error }, denied.status);
+
+  const router = modelRouter(c.env);
+  if (!isSelectableRoute(aiModelCatalogue(router), 'text', body.route)) {
+    return c.json(
+      { error: 'Model đã chọn không dùng được lúc này. Chọn model khác trong danh sách đang bật.' },
+      409,
+    );
+  }
+  const client = textClientFor(c.env, body.route);
+  if (!client) return c.json({ error: 'Chưa cấu hình khoá API cho model đã chọn.' }, 503);
+
+  const repo = new ArtifactRepository(c.env);
+  const brief = await repo.head(body.projectId, 'kien_truc', 'design_brief');
   if (!brief) {
     return c.json(
       { error: 'Chưa có đầu bài đã xác nhận. Hoàn tất và xác nhận đầu bài trước.' },
       409,
     );
   }
-
   const gate = gateLayer2(brief.payload, await readCompletenessThreshold(repo.db, scope.tenantId));
   if (!gate.allowed) return c.json({ error: gate.message }, 409);
 
-  const run = await runLayer2(
-    c.env,
-    repo.db,
-    brief.payload as DesignBrief,
-    brief.id,
-    scope.tenantId,
+  const payload = brief.payload as DesignBrief;
+  // Phần sàn còn lại cho không gian đề xuất thêm — tính trên chương trình KHÔNG có đề xuất AI,
+  // bằng đúng engine sẽ dựng bảng. Gửi cho mô hình như một luật cứng (Haan, 13/09/2026); máy chủ
+  // vẫn cưỡng chế lần nữa khi dựng bảng (`fitAiAdditions`).
+  const baseline = await runLayer2(c.env, repo.db, payload, brief.id, scope.tenantId, null);
+  const plate = baseline.plateExplanation;
+  const usedMin = baseline.payload.spaces.reduce((sum, s) => sum + s.min_area_m2, 0);
+  const norms = spaceNorms();
+  const recorded = recordingClient(client);
+  const result = await resolveProgramIntent(
+    payload,
+    plate.buildableM2,
+    roomVocabulary(),
+    recorded.client,
+    body.route,
+    {
+      spareMinAreaM2: plate.buildableM2 * plate.floors - usedMin,
+      minByType: Object.fromEntries(
+        Object.entries(norms.spaces).map(([code, norm]) => [code, norm.min_m2]),
+      ),
+    },
   );
-  const head = await repo.head(projectId, 'kien_truc', 'space_program');
 
-  return c.json({
-    program: run.payload,
-    warnings: run.warnings,
-    unresolvedNeeds: run.unresolved,
-    aiSuggestion: run.aiSuggestion,
-    roomLabels: roomLabels(),
-    briefArtifactId: brief.id,
-    headArtifactId: head?.id ?? null,
-    // So bằng MÃ BĂM, không phải so chuỗi JSON: mã băm chính là định nghĩa danh tính của
-    // artifact trong hệ thống này (khoá chính của `design_artifact`). So chuỗi là dựng một
-    // khái niệm "giống nhau" thứ hai, và nó bất đồng với khái niệm thật ngay khi thứ tự khoá
-    // đổi trên đường đi qua kho tệp — đã xảy ra thật: vừa chốt xong đã báo là chưa chốt.
-    matchesHead: head ? (await artifactId(run.payload)) === head.id : false,
-    // Bản đã chốt do AI lập thì `matchesHead` luôn false (bản tính lại là của bộ giải) — màn
-    // hình cần biết điều đó để không nói «đầu bài đã đổi» oan, và để hiện bản AI đang hiệu lực.
-    head: head
-      ? {
-          artifactId: head.id,
-          generator: (head.payload as SpaceProgram).generator ?? { kind: 'solver' },
-          program: head.payload,
-        }
-      : null,
-  });
+  const route = router.publicRoutes().find((r) => r.route === body.route);
+  let usage: AiCallUsage | null = null;
+  if (result.call) {
+    const meta = { route: body.route, purpose: 'program_intent', dataClass: 3 as const };
+    const outcome = {
+      ...result.call,
+      provider: result.call.provider || route?.provider || 'unknown',
+      model: result.call.model || route?.model || 'unknown',
+      request: recorded.records[recorded.records.length - 1],
+    };
+    await recordAiCall(
+      repo.db,
+      {
+        tenantId: scope.tenantId,
+        companyId: scope.companyId,
+        projectId: body.projectId,
+        discipline: 'kien_truc',
+        actorId: scope.actorId,
+      },
+      meta,
+      outcome,
+      route?.pricing,
+      createArtifactStore(c.env),
+    );
+    usage = usageSummary(meta, outcome, route?.pricing, router.isBilled(outcome.provider));
+  }
+
+  const aiIntent: SavedAiIntent | null = result.intent
+    ? {
+        route: body.route,
+        provider: result.call?.provider || route?.provider || 'unknown',
+        model: result.call?.model || route?.model || 'unknown',
+        emphasis: result.intent.emphasis,
+        // Tiện ích nằm trong phòng ngủ không phải một không gian thêm — lọc ngay, để khối đề xuất
+        // trên màn hình không liệt kê thứ bảng diện tích sẽ không có.
+        add_spaces: (result.intent.add_spaces ?? []).filter(
+          (code) => !spaceNorms().in_bedroom.includes(code),
+        ),
+        rationale: result.intent.rationale ?? '',
+      }
+    : null;
+
+  return c.json({ aiIntent, notes: result.notes, usage });
 });
+
+/**
+ * Đọc đề xuất AI từ thân lượt gọi. `undefined` = không gửi; `null` = bỏ đề xuất; `'invalid'`
+ * = sai dạng — tuyến gọi báo 400, không lặng lẽ bỏ qua.
+ */
+function parseAiIntent(raw: unknown): SavedAiIntent | null | undefined | 'invalid' {
+  if (raw === undefined) return undefined;
+  if (raw === null) return null;
+  const parsed = spaceProgramSchema.shape.ai_intent.safeParse(raw);
+  return parsed.success ? parsed.data : 'invalid';
+}
+
+/**
+ * Đọc danh sách diện tích kiến trúc sư đã sửa từ thân lượt gọi chốt.
+ *
+ * Vắng = không sửa gì (màn hình cũ, hoặc chốt nguyên bản chương trình tính). Sai dạng thì trả
+ * rỗng để tuyến gọi báo 400 — KHÔNG lặng lẽ bỏ qua: bỏ qua là chốt một bản khác với bản kiến
+ * trúc sư vừa nhìn trên màn hình.
+ */
+function parseProgramEdits(raw: unknown): ProgramEdit[] | null {
+  if (raw === undefined || raw === null) return [];
+  if (!Array.isArray(raw) || raw.length > 200) return null;
+  const edits: ProgramEdit[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') return null;
+    const { space_id, target_area_m2 } = item as Record<string, unknown>;
+    if (typeof space_id !== 'string' || !/^[a-z0-9_]+$/.test(space_id)) return null;
+    if (typeof target_area_m2 !== 'number' || !Number.isFinite(target_area_m2)) return null;
+    edits.push({ space_id, target_area_m2 });
+  }
+  return edits;
+}
 
 /**
  * Ngữ cảnh dùng chung của ba tuyến phương án: kho artifact, Container, và hai bảng tra từ
@@ -695,8 +902,10 @@ designApp.post('/render', async (c) => {
     console.error(`[layer5_render] không đọc được đầu bài để dựng ngữ cảnh: ${String(error)}`);
   }
 
+  const router = modelRouter(c.env);
+  const started = Date.now();
   const outcome = await renderFromMassing({
-    router: modelRouter(c.env),
+    router,
     // Client chọn theo `provider` của tuyến, không gắn cứng một hãng — xem `llm/factory.ts`.
     client: renderImageClient(c.env),
     prompts: renderPrompts(),
@@ -705,7 +914,37 @@ designApp.post('/render', async (c) => {
     view: body.view ?? null,
     siteContext,
   });
-  return c.json(outcome);
+
+  // Ghi nhật ký và trả số đo cho lượt ĐÃ DỰNG được ảnh. Lượt «chưa dựng được» phần lớn bị chặn
+  // trước khi ra mạng (chính sách, thiếu khoá) nên không có gì để tính.
+  let usage: AiCallUsage | null = null;
+  if (outcome.status === 'rendered') {
+    const route = router.publicRoutes().find((r) => r.route === RENDER_ROUTE);
+    const meta = { route: RENDER_ROUTE, purpose: `render:${outcome.view}`, dataClass: 3 as const };
+    const call = {
+      provider: route?.provider ?? 'unknown',
+      model: route?.model ?? 'unknown',
+      usage: { inputTokens: null, outputTokens: null },
+      latencyMs: Date.now() - started,
+      imageCount: 1,
+      status: 'ok' as const,
+    };
+    await recordAiCall(
+      new ArtifactRepository(c.env).db,
+      {
+        tenantId: scope.tenantId,
+        companyId: scope.companyId,
+        projectId: body.projectId,
+        discipline: 'kien_truc',
+        actorId: scope.actorId,
+      },
+      meta,
+      call,
+      route?.pricing,
+    );
+    usage = usageSummary(meta, call, route?.pricing, router.isBilled(call.provider));
+  }
+  return c.json({ ...outcome, usage });
 });
 
 /**
@@ -924,8 +1163,19 @@ designApp.post('/program/generate', async (c) => {
   const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
   if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
 
-  const body = (await c.req.json()) as { projectId?: string };
+  const body = (await c.req.json()) as { projectId?: string; edits?: unknown; aiIntent?: unknown };
   if (!body.projectId) return c.json({ error: 'Thiếu mã hồ sơ thiết kế.' }, 400);
+  const aiIntent = parseAiIntent(body.aiIntent);
+  if (aiIntent === 'invalid') {
+    return c.json({ error: 'Đề xuất của AI không đúng dạng — lấy lại đề xuất rồi thử lại.' }, 400);
+  }
+  const edits = parseProgramEdits(body.edits);
+  if (!edits) {
+    return c.json(
+      { error: 'Danh sách diện tích đã sửa không đúng dạng — tải lại trang rồi thử lại.' },
+      400,
+    );
+  }
 
   const db = await asUser(c.env, token);
   const scope = await projectScope(db, body.projectId);
@@ -955,13 +1205,30 @@ designApp.post('/program/generate', async (c) => {
   const gate = gateLayer2(brief.payload, await readCompletenessThreshold(repo.db, scope.tenantId));
   if (!gate.allowed) return c.json({ error: gate.message }, 409);
 
+  // Đề xuất AI đi vào từ màn hình — thứ kiến trúc sư đang nhìn khi bấm chốt. Không gửi thì
+  // chốt thuần theo chuẩn nghề (màn hình cũ không biết trường này).
   const run = await runLayer2(
     c.env,
     repo.db,
     brief.payload as DesignBrief,
     brief.id,
     scope.tenantId,
+    aiIntent ?? null,
   );
+
+  // Trình duyệt đã soát khi gõ, nhưng thẩm quyền ở ĐÂY: một lượt gọi thẳng vào tuyến này
+  // không đi qua màn hình nào cả.
+  const applied = applyProgramEdits(run.payload, edits);
+  if (applied.errors.length > 0) {
+    return c.json(
+      {
+        error: `Chưa chốt được — ${applied.errors.length} chỗ sửa không hợp lệ: ${applied.errors
+          .map((e) => e.message)
+          .join(' ')}`,
+      },
+      422,
+    );
+  }
 
   const artifact = await repo.write({
     scope: {
@@ -972,10 +1239,12 @@ designApp.post('/program/generate', async (c) => {
       actorId: scope.actorId,
     },
     kind: 'space_program',
-    payload: run.payload,
+    payload: applied.program,
     inputs: [brief.id],
     step: 'layer2_program',
-    params: run.params,
+    // Chỗ sửa đã nằm trong payload nên mã băm artifact đã khác; đưa vào tham số để cạnh
+    // lineage cũng nói được bản này có bàn tay người.
+    params: { ...run.params, architect_edits: applied.edits },
     setHead: true,
   });
 
@@ -984,9 +1253,9 @@ designApp.post('/program/generate', async (c) => {
     // `reused` nói thẳng "cùng đầu bài, cùng cấu hình nên không có gì đổi" — thông tin thật,
     // và tránh cho người dùng tưởng vừa lập ra một bản khác.
     reused: artifact.reused,
-    program: run.payload,
+    program: applied.program,
     roomLabels: roomLabels(),
-    warnings: run.warnings,
+    warnings: [...run.warnings, ...applied.warnings.map((w) => w.message)],
     unresolvedNeeds: run.unresolved,
     aiSuggestion: run.aiSuggestion,
   });
@@ -1085,7 +1354,46 @@ designApp.post('/site/extract-boundary', async (c) => {
   const store = createSourceFileStore(c.env);
   const saved: StoredSource = await store.put(file.name || 'trich-luc.jpg', bytes);
 
-  const result = await extractSiteBoundary(llm, { mimeType: file.type, bytes });
+  const callScope = {
+    tenantId: scope.tenantId,
+    companyId: scope.companyId,
+    projectId,
+    discipline: 'kien_truc' as const,
+    actorId: scope.actorId,
+  };
+  const meta = { route: 'site_boundary_extract', purpose: 'site_boundary', dataClass: 2 as const };
+  const router = modelRouter(c.env);
+  const routeInfo = router.publicRoutes().find((r) => r.route === meta.route);
+  const artifactDb = new ArtifactRepository(c.env).db;
+  let result: Awaited<ReturnType<typeof extractSiteBoundary>>;
+  try {
+    result = await extractSiteBoundary(llm, { mimeType: file.type, bytes });
+  } catch (error) {
+    // Lượt gọi đã ra mạng thì đã tính tiền, dù đọc hỏng — ghi nhật ký rồi để lỗi đi tiếp.
+    const call = aiCallOfError(error);
+    const usageFromError = error instanceof LlmCallFailed ? error.usage : undefined;
+    if (call || usageFromError) {
+      await recordAiCall(
+        artifactDb,
+        callScope,
+        meta,
+        {
+          provider: call?.provider ?? routeInfo?.provider ?? 'unknown',
+          model: call?.model ?? routeInfo?.model ?? 'unknown',
+          usage: call?.usage ?? usageFromError ?? { inputTokens: null, outputTokens: null },
+          latencyMs:
+            call?.latencyMs ?? (error instanceof LlmCallFailed ? (error.latencyMs ?? 0) : 0),
+          status: call ? 'rejected' : 'failed',
+          errorCode: error instanceof Error ? error.name : 'Error',
+        },
+        routeInfo?.pricing,
+      );
+    }
+    throw error;
+  }
+  const outcome = { ...result.call, status: 'ok' as const };
+  await recordAiCall(artifactDb, callScope, meta, outcome, routeInfo?.pricing);
+  const usage = usageSummary(meta, outcome, routeInfo?.pricing, router.isBilled(outcome.provider));
 
   return c.json({
     boundaryM: result.boundaryM,
@@ -1096,6 +1404,7 @@ designApp.post('/site/extract-boundary', async (c) => {
     closedShapeConfidence: result.closedShapeConfidence,
     warnings: result.warnings,
     sourceUri: saved.uri,
+    usage,
   });
 });
 

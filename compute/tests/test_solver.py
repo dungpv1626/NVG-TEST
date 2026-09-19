@@ -17,7 +17,9 @@ from typing import Any
 
 import pytest
 
-from design_compute.rules import default_rules_root, load_for_locality
+from pathlib import Path
+
+from design_compute.rules import default_rules_root, load_for_locality, load_pack
 from design_compute.solver import FloorLayout, RoomSpec, SolveRequest, solve_townhouse
 
 RULES_ROOT = default_rules_root()
@@ -27,8 +29,20 @@ SITE_D = 18.0
 FLOOR_AREA = SITE_W * SITE_D
 
 
+# Gói quy chuẩn CŨ (`rules/base/` đã xoá 13/09/2026 — Haan: «bỏ quy chuẩn VN đi»), chép vào dữ
+# liệu kiểm thử. Các bài dưới kiểm CƠ CHẾ của bộ giải — lấy sáng, mặt bắt buộc, kích thước tối
+# thiểu, khoảng lùi, mật độ — nên cần một gói thật đủ loại vị từ để chạy trên. Gói ĐANG DÙNG
+# (`rules/structure/`) có bài riêng: `TestShippedStructurePack`.
+LEGACY_PACK_DIR = Path(__file__).parent / "fixtures" / "rules-legacy-base"
+
+
 @pytest.fixture(scope="module")
 def pack():
+    return load_pack(LEGACY_PACK_DIR)
+
+
+@pytest.fixture(scope="module")
+def shipped_pack():
     return load_for_locality(RULES_ROOT, None)
 
 
@@ -430,14 +444,14 @@ class TestRequiredFace:
         assert result.status in ("pass", "warning"), result.notes
         return {v.rule_id for v in result.violations}
 
-    def test_a_garage_behind_the_front_band_is_reported(self, pack) -> None:
-        assert "garage_on_access_face" in self._violations(pack, "living", "garage")
+    def test_a_garage_behind_the_front_band_is_reported(self, shipped_pack) -> None:
+        assert "garage_on_access_face" in self._violations(shipped_pack, "living", "garage")
 
     def test_a_garage_on_the_street_is_not(self, pack) -> None:
         assert "garage_on_access_face" not in self._violations(pack, "garage", "store")
 
-    def test_a_balcony_boxed_in_by_walls_is_reported(self, pack) -> None:
-        assert "outdoor_on_open_face" in self._violations(pack, "living", "balcony")
+    def test_a_balcony_boxed_in_by_walls_is_reported(self, shipped_pack) -> None:
+        assert "outdoor_on_open_face" in self._violations(shipped_pack, "living", "balcony")
 
     def test_a_balcony_on_the_facade_is_not(self, pack) -> None:
         assert "outdoor_on_open_face" not in self._violations(pack, "balcony", "store")
@@ -476,7 +490,7 @@ class TestSliverRooms:
     nhắm nhóm `habitable` — nhóm KHÔNG gồm vệ sinh, kho, giặt, để xe hay ban công.
     """
 
-    def test_a_one_metre_wide_wc_is_now_reported(self, pack) -> None:
+    def test_a_one_metre_wide_wc_is_now_reported(self, shipped_pack) -> None:
         # Dải ngang 4,1 × 1,0 m: đủ diện tích, sai hình.
         rooms = (
             _room("wc_1", "wc", 1, 4.1, minimum=2.4, maximum=4.2),
@@ -499,7 +513,7 @@ class TestSliverRooms:
                 },
             ),
         )
-        result = solve_townhouse(_request(pack, rooms=rooms, layouts=layouts, floors=1))
+        result = solve_townhouse(_request(shipped_pack, rooms=rooms, layouts=layouts, floors=1))
         assert result.status in ("pass", "warning"), result.notes
         wc = next(r for r in result.rooms if r.id == "wc_1")
         smallest = min(wc.x1_m - wc.x0_m, wc.y1_m - wc.y0_m)
@@ -704,7 +718,7 @@ class TestMassing:
 
 
 class TestWarningsAreReportedNotEnforced:
-    def test_a_warning_rule_shows_up_as_a_violation_but_still_solves(self, pack) -> None:
+    def test_a_warning_rule_shows_up_as_a_violation_but_still_solves(self, shipped_pack) -> None:
         """Quy tắc mức cảnh báo không được chặn — nó phải hiện ra trong danh sách vi phạm."""
         # Phòng thờ đặt ở tầng 1 trong khi `altar_room_top_floor` muốn nó ở tầng trên cùng.
         rooms = (
@@ -720,7 +734,7 @@ class TestWarningsAreReportedNotEnforced:
             )
             for level in (1, 2)
         )
-        result = solve_townhouse(_request(pack, rooms=rooms, layouts=layouts, floors=2))
+        result = solve_townhouse(_request(shipped_pack, rooms=rooms, layouts=layouts, floors=2))
 
         assert result.status in ("pass", "warning"), result.notes
         assert "altar_room_top_floor" in {v.rule_id for v in result.violations}

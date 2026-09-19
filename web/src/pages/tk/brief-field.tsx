@@ -31,6 +31,7 @@ import {
   memberWantsEnsuite,
   siteGeometry,
   storedNumber,
+  type BriefAreaBudget,
   type BriefFormField,
 } from '@nvg/shared/design';
 import { Button } from '@/components/ui/button';
@@ -302,6 +303,11 @@ export interface BriefFieldProps {
    * đây bằng một hàm dùng chung với chế độ xem, và hai bản suy riêng sẽ lệch nhau.
    */
   family?: FamilyMember[];
+  /**
+   * Phép tính diện tích của cả đầu bài — chỉ bảng «Không gian bắt buộc có» cần, để hiện dòng tổng
+   * ngay dưới bảng. Tính ở màn hình cha từ CÙNG hàm bộ kiểm dùng (`briefAreaBudget`).
+   */
+  areaBudget?: BriefAreaBudget;
 }
 
 export function BriefField({
@@ -312,6 +318,7 @@ export function BriefField({
   projectId,
   floors,
   family,
+  areaBudget,
 }: BriefFieldProps) {
   const hint = field.unit ? `${field.hint ?? ''} Đơn vị: ${field.unit}.`.trim() : field.hint;
 
@@ -330,6 +337,7 @@ export function BriefField({
           projectId={projectId}
           floors={floors}
           family={family}
+          areaBudget={areaBudget}
         />
       </Field>
       {issues.map((message) => (
@@ -348,6 +356,7 @@ function BriefControl({
   projectId,
   floors,
   family,
+  areaBudget,
 }: Omit<BriefFieldProps, 'issues'>) {
   switch (field.control) {
     case 'textarea':
@@ -609,7 +618,7 @@ function BriefControl({
             */}
             <NumberField
               value={it.area_m2 ?? undefined}
-              label={`Diện tích mong muốn — ${name}`}
+              label={`Diện tích tối thiểu — ${name}`}
               // Mười tám ô trống xếp thành cột trông như mười tám chỗ phải điền, dù câu hướng
               // dẫn ngay trên có nói là không bắt buộc. Chữ mờ trong chính ô đó là chỗ người
               // dùng thật sự nhìn.
@@ -682,7 +691,7 @@ function BriefControl({
             >
               <span className="text-xs text-fg-subtle">Không gian</span>
               {floors > 1 && <span className="text-xs text-fg-subtle">Tầng</span>}
-              <span className="text-xs text-fg-subtle">Diện tích (m²)</span>
+              <span className="text-xs text-fg-subtle">Diện tích tối thiểu (m²)</span>
               <span className="text-xs text-fg-subtle">Tiện ích bổ sung</span>
               <span />
 
@@ -702,6 +711,8 @@ function BriefControl({
             options={pickable}
             onAdd={(type) => commit([...items, { type, floor: null }])}
           />
+
+          {areaBudget && <AreaBudgetLine budget={areaBudget} />}
         </div>
       );
     }
@@ -746,11 +757,16 @@ function BriefControl({
                   ))}
                 </select>
               ) : (
-                <NumberField
-                  value={record[side.key]}
-                  label={`${field.label} — ${side.label}`}
-                  onChange={(next) => onChange(setSide(record, side.key, next))}
-                />
+                <>
+                  <NumberField
+                    value={record[side.key]}
+                    label={`${field.label} — ${side.label}`}
+                    onChange={(next) => onChange(setSide(record, side.key, next))}
+                  />
+                  {/* Đơn vị ngay cạnh ô: không có nó thì «Khoảng sân 2» đọc được thành 2 m² —
+                      Haan hỏi đúng câu đó ngày 13/09/2026. */}
+                  {field.unit && <span className="shrink-0 text-fg-subtle">{field.unit}</span>}
+                </>
               )}
             </label>
           ))}
@@ -1137,4 +1153,51 @@ function toChoiceValue(field: BriefFormField, option: string): unknown {
 
 function matchesChoice(field: BriefFormField, value: unknown, option: string): boolean {
   return field.value_type === 'number' ? value === Number(option) : value === option;
+}
+
+/**
+ * Dòng tổng dưới bảng không gian: tổng diện tích TỐI THIỂU đã khai so với sàn xây được.
+ *
+ * Hiện cả khi chưa vượt: người nhập cần thấy «còn bao nhiêu» lúc đang gõ, không phải chỉ thấy một
+ * câu lỗi sau khi đã vượt (Haan, 13/09/2026). Số liệu từ `briefAreaBudget` — cùng phép tính với
+ * cảnh báo, nên hai chỗ không bao giờ nói hai con số.
+ */
+function AreaBudgetLine({ budget }: { budget: BriefAreaBudget }) {
+  const floors = Object.entries(budget.pinnedByFloor)
+    .map(([floor, area]) => [Number(floor), area] as const)
+    .sort((a, b) => a[0] - b[0]);
+  if (budget.plateM2 === null) {
+    return (
+      <p className="text-fg-subtle">
+        Tổng diện tích tối thiểu đã khai: {formatNumber(budget.pinnedTotalM2)} m². Khai kích thước
+        lô đất để đối chiếu với phần sàn xây được.
+      </p>
+    );
+  }
+  const capacity = budget.totalPlateM2 ?? 0;
+  const over = budget.pinnedTotalM2 > capacity;
+  return (
+    <div className={over ? 'text-status-overdue' : 'text-fg-subtle'}>
+      <p>
+        Tổng diện tích tối thiểu đã khai: <b>{formatNumber(budget.pinnedTotalM2)} m²</b> / sàn xây
+        được {formatNumber(capacity)} m² ({formatNumber(budget.plateM2)} m² mỗi tầng ×{' '}
+        {budget.floors} tầng, sau khoảng lùi, sân và mật độ).
+      </p>
+      {floors.length > 0 && (
+        <p>
+          Theo tầng đã ghim:{' '}
+          {floors
+            .map(
+              ([floor, area]) =>
+                `tầng ${floor} ${formatNumber(area)}/${formatNumber(budget.plateM2!)} m²`,
+            )
+            .join(' · ')}
+          .
+        </p>
+      )}
+      <p className="text-xs">
+        Phần còn lại dành cho thang, hành lang, tường và các không gian thiết kế tự thêm.
+      </p>
+    </div>
+  );
 }

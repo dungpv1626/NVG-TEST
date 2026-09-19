@@ -52,6 +52,8 @@ export interface SpaceNorms {
   version: string;
   priors: { min_samples: number; width_bands: WidthBand[] };
   occupancy: Record<string, OccupancyNorm>;
+  /** Nhu cầu gộp vào phòng ngủ của nhóm thành viên thay vì thành không gian riêng. */
+  in_bedroom: string[];
   mandatory: Record<string, string[]>;
   derived: {
     wc: { per_bedrooms: number; min_per_floor: number };
@@ -178,6 +180,17 @@ export function parseSpaceNorms(yamlText: string): SpaceNorms {
     };
   }
 
+  const inBedroomRaw = raw.in_bedroom ?? [];
+  if (!Array.isArray(inBedroomRaw)) {
+    throw new SpaceNormsError('kb/space_norms.yaml: `in_bedroom` phải là danh sách mã không gian.');
+  }
+  const in_bedroom = inBedroomRaw.map(String);
+  for (const code of in_bedroom) {
+    if (!spaces[code]) {
+      throw new SpaceNormsError(`in_bedroom nhắc tới "${code}" không có trong mục spaces.`);
+    }
+  }
+
   const mandatory = (raw.mandatory ?? {}) as Record<string, string[]>;
   for (const [buildingType, list] of Object.entries(mandatory)) {
     for (const code of list) {
@@ -251,6 +264,7 @@ export function parseSpaceNorms(yamlText: string): SpaceNorms {
     version: String(raw.version ?? '0.0.0'),
     priors: { min_samples: num(priorsRaw?.min_samples, 'priors.min_samples'), width_bands },
     occupancy,
+    in_bedroom,
     mandatory,
     derived: {
       wc: {

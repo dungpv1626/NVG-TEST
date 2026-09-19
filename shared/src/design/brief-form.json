@@ -215,7 +215,7 @@
               "group": "Không còn dùng"
             }
           ],
-          "note": "34 đơn vị hành chính sau sắp xếp năm 2025 (Thái Bình đã sáp nhập vào Hưng Yên). Tỉnh chưa có gói quy tắc riêng trong rules/locality/ vẫn chọn được — engine chạy trên gói nền QCVN 01:2021/BXD và ghi lại điều đó trong params.rule_pack_locality."
+          "note": "34 đơn vị hành chính sau sắp xếp năm 2025 (Thái Bình đã sáp nhập vào Hưng Yên). Tỉnh chưa có gói quy tắc riêng trong rules/locality/ vẫn chọn được — engine chạy không gói địa phương (từ 13/09/2026 cũng không còn gói quy chuẩn quốc gia) và ghi lại điều đó trong params.rule_pack_locality."
         },
         {
           "path": "floors",
@@ -393,6 +393,57 @@
           ]
         },
         {
+          "path": "site.main_entrance_side",
+          "label": "Lối vào chính đặt ở mặt nào",
+          "control": "choice",
+          "weight": 1,
+          "hint": "Cửa chính cho người. Phải là một mặt tiếp cận được. Mặt tiền nhìn đẹp nhất chưa chắc là mặt đi vào tiện nhất.",
+          "options": [
+            {
+              "value": "front",
+              "label": "Mặt trước"
+            },
+            {
+              "value": "back",
+              "label": "Mặt sau"
+            },
+            {
+              "value": "left",
+              "label": "Bên trái"
+            },
+            {
+              "value": "right",
+              "label": "Bên phải"
+            }
+          ]
+        },
+        {
+          "path": "site.vehicle_entrance_side",
+          "label": "Lối xe vào đặt ở mặt nào",
+          "control": "choice",
+          "weight": 1,
+          "optional": true,
+          "hint": "Cổng xe hoặc cửa chỗ để xe. Có thể khác lối vào chính — ô tô không vào được hẻm dưới 3,5 m. Không có xe thì để trống.",
+          "options": [
+            {
+              "value": "front",
+              "label": "Mặt trước"
+            },
+            {
+              "value": "back",
+              "label": "Mặt sau"
+            },
+            {
+              "value": "left",
+              "label": "Bên trái"
+            },
+            {
+              "value": "right",
+              "label": "Bên phải"
+            }
+          ]
+        },
+        {
           "path": "site.adjacent",
           "label": "Hiện trạng bốn phía",
           "control": "sides",
@@ -426,13 +477,32 @@
           ]
         },
         {
+          "path": "site.boundary_walls",
+          "label": "Tường giáp nhà hàng xóm",
+          "control": "sides",
+          "weight": 0,
+          "optional": true,
+          "hint": "Chỉ khai ở mặt giáp nhà hàng xóm: tường CHUNG (dùng chung bức tường ranh) hay tường RIÊNG (xây tường của mình trong ranh đất). Chưa trao đổi với khách thì để «Chưa xác định».",
+          "options": [
+            {
+              "value": "chung",
+              "label": "Tường chung"
+            },
+            {
+              "value": "rieng",
+              "label": "Tường riêng"
+            }
+          ],
+          "note": "Quyết định của kỹ sư theo từng khách hàng (Haan, 12/09/2026) — không suy được từ hiện trạng. Trọng số 0: để trống không kéo điểm đầy đủ, vì câu này thường chỉ chốt được sau khi gặp hàng xóm."
+        },
+        {
           "path": "site.setback_required_m",
           "label": "Khoảng lùi theo quy hoạch",
           "control": "sides",
           "unit": "m",
           "weight": 2,
           "optional": true,
-          "hint": "Chỉ điền khi văn bản quy hoạch nói khác quy chuẩn chung. Để trống thì lấy theo gói quy tắc.",
+          "hint": "Bộ giải KHÔNG tự áp khoảng lùi theo quy chuẩn — số điền ở đây là số duy nhất nó dùng. Để trống một mặt = xây sát ranh mặt đó.",
           "when": {
             "field": "building_type",
             "in": ["biet_thu", "nha_vuon"]
@@ -449,7 +519,7 @@
           "min": 0,
           "max": 100,
           "value_scale": 0.01,
-          "hint": "Phần trăm diện tích thửa được phép phủ kín — ghi 60, không ghi 0,6. Để trống thì lấy theo gói quy tắc địa phương.",
+          "hint": "Phần trăm diện tích thửa được phép phủ kín — ghi 60, không ghi 0,6. Bộ giải KHÔNG tự áp mật độ theo quy chuẩn; để trống = không giới hạn mật độ.",
           "note": "Hợp đồng lưu TỈ LỆ 0–1, biểu mẫu hỏi PHẦN TRĂM; `value_scale` lo phần quy đổi. Trước 07/09/2026 không có bước đó, và hệ quả là chưa đầu bài nào lưu nổi ô này: mọi giá trị người ta thật sự gõ đều lớn hơn 1 nên trượt kiểm tra lúc đúc artifact.",
           "when": {
             "field": "building_type",
@@ -547,7 +617,7 @@
           "label": "Không gian bắt buộc có",
           "control": "space_floor",
           "weight": 2,
-          "hint": "Thang bộ, hành lang và hộp kỹ thuật do hệ thống tự bố trí, không cần chọn. Mỗi dòng là một phòng; tầng, diện tích và tiện ích đều không bắt buộc.",
+          "hint": "Thang bộ, hành lang và hộp kỹ thuật do hệ thống tự bố trí, không cần chọn. Mỗi dòng là một phòng; tầng, diện tích và tiện ích đều không bắt buộc. Cột diện tích là diện tích TỐI THIỂU — phòng thiết kế ra có thể lớn hơn, không nhỏ hơn. Tổng các mức tối thiểu phải vừa phần sàn xây được; dòng tổng ngay dưới bảng cho biết còn bao nhiêu.",
           "options": [
             {
               "value": "living",
@@ -640,6 +710,26 @@
               "placeholder": "tủ điện tổng, máy bơm nước"
             }
           ]
+        },
+        {
+          "path": "parking.cars",
+          "label": "Số ô tô cần chỗ đỗ",
+          "control": "number",
+          "weight": 1,
+          "optional": true,
+          "min": 0,
+          "max": 10,
+          "hint": "Số ô tô đỗ TRONG nhà. Diện tích chỗ để xe suy từ đây — không cần ghi «để ô tô» ở ô tiện ích nữa."
+        },
+        {
+          "path": "parking.motorbikes",
+          "label": "Số xe máy, xe điện",
+          "control": "number",
+          "weight": 0,
+          "optional": true,
+          "min": 0,
+          "max": 30,
+          "hint": "Gồm xe máy, xe máy điện, xe đạp điện."
         },
         {
           "path": "style",
@@ -823,6 +913,16 @@
           ]
         },
         {
+          "path": "massing.yard_depth_m",
+          "label": "Chiều sâu sân mong muốn — tính từ ranh đất tới tường nhà",
+          "control": "sides",
+          "unit": "m",
+          "weight": 2,
+          "optional": true,
+          "hint": "Điền KHOẢNG CÁCH theo mét, không phải diện tích: «Bên trái 3» là chừa dải sân rộng 3 m dọc bên trái. 0 hoặc để trống là không chừa sân ở mặt đó. Mỗi mặt lấy số LỚN HƠN giữa ô này và khoảng lùi quy hoạch — nên số nhỏ hơn khoảng lùi không có tác dụng.",
+          "note": "Thêm 13/09/2026 sau lượt chạy thật chiếm trọn bề ngang lô 15 m dù đầu bài đòi sân bên. Phần đất xây được lấy mức LỚN HƠN giữa số này và khoảng lùi quy hoạch."
+        },
+        {
           "path": "massing.indoor_outdoor",
           "label": "Quan hệ trong nhà với sân vườn",
           "control": "choice",
@@ -893,6 +993,10 @@
             {
               "value": "indoor_outdoor",
               "label": "Gắn kết trong nhà với sân vườn"
+            },
+            {
+              "value": "quiet_bedrooms",
+              "label": "Phòng ngủ tránh mặt đường ồn"
             }
           ]
         },

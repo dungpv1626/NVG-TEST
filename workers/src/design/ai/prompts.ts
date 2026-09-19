@@ -13,23 +13,32 @@ export interface AiPrompts {
     /** Lời dẫn lượt sửa, có chỗ `{issues}` để điền danh sách lỗi. */
     repair: string;
   };
-  floorPlan: {
-    /** Chỉ dẫn hệ thống cho bước xếp mặt bằng — tiếng Anh, không mang dữ liệu. */
+  floorLevel: {
+    /**
+     * Chỉ dẫn hệ thống cho bước khai Ý ĐỊNH BỐ CỤC của MỘT TẦNG (T43) — tiếng Anh, không mang dữ liệu.
+     */
     system: string;
     /**
-     * Lời dẫn lượt sửa, có chỗ `{issues}` để điền danh sách lỗi.
-     *
-     * Có mặt từ T15 (09/09/2026), và đó là một thay đổi về NGUYÊN TẮC chứ không phải thêm một
-     * chuỗi: trước đó mô hình tự viết SVG nên không có tiêu chí đạt/không đạt nào để đòi sửa.
-     * Nay mô hình khai dữ liệu, nên `ai/plan-check.ts` trả lời được câu «bản này tự mâu thuẫn ở
-     * đâu» và lượt sửa có cái mà bám vào. Vẫn đúng MỘT lượt.
-     *
-     * Lệch quy chuẩn thì KHÔNG đi qua đường này: nó hiện thành cảnh báo (`rule-warnings.ts`),
-     * không bao giờ bắt mô hình sửa (T14, T20).
+     * Phần nối vào khi LẤY MẪU LẠI một tầng vì câu trả lời trước sai hợp đồng, có chỗ `{avoid}`. KHÔNG
+     * mang câu trả lời cũ — không có ý định đúng hợp đồng nào để sửa.
      */
-    repair: string;
+    resample: string;
     /**
-     * Ba ý đồ bố cục gửi kèm ba lượt gọi song song.
+     * Lượt SỬA Ý ĐỊNH khi bộ giải không dựng được tầng vì lý do nằm ở ý định (T43) — có chỗ `{intent}`
+     * và `{avoid}`. Ý định chỉ ~1 KB nên gửi lại rẻ hơn hẳn để mô hình dựng lại từ đầu và sai chỗ khác.
+     */
+    revise: string;
+    /** Mã lỗi cổng → một dòng tiếng Anh, `{…}` điền từ `params` của lỗi. */
+    hints: Record<string, string>;
+    /** Dòng dùng khi mã lỗi chưa có trong `hints`; có `{code}` và `{ref}`. */
+    hintDefault: string;
+    /**
+     * Mã tiêu chí điểm (`kb/plan_quality.yaml`) → một dòng tiếng Anh, `{rooms}` = phòng làm mất điểm. Dùng
+     * khi phương án qua cổng nhưng dưới ngưỡng điểm (T53). Tiêu chí không có dòng thì không gửi.
+     */
+    scoreHints: Record<string, string>;
+    /**
+     * Ba ý đồ bố cục gửi kèm ba phương án.
      *
      * Là DỮ LIỆU chứ không phải hằng số trong mã vì đây là thứ sẽ đổi sau mỗi lần đo: ba phương
      * án chỉ có giá trị khi chúng khác nhau về CẤU TRÚC, và việc tìm ba ý đồ thật sự khác nhau
@@ -37,7 +46,38 @@ export interface AiPrompts {
      */
     strategies: PlanStrategy[];
   };
+  /**
+   * Lượt SỬA theo yêu cầu kỹ sư trên một bản vẽ đã lưu (T53). `user` có `{plan}` và `{request}`; `retry`
+   * có `{issues}` — nối vào khi thao tác lượt trước không qua cổng.
+   */
+  planEdit: { system: string; user: string; retry: string };
+  /**
+   * Tờ mặt bằng CÓ NỘI THẤT do mô hình ảnh vẽ từ ảnh neo (T57). `user` có bảy chỗ điền; `styles`
+   * là mã phong cách đầu bài → một câu tiếng Anh; `watermark` là câu tiếng Việt in đè lên ảnh.
+   */
+  sheetImage: {
+    system: string;
+    user: string;
+    styles: Record<string, string>;
+    watermark: string;
+  };
 }
+
+/**
+ * Bảy chỗ điền bắt buộc của `sheet_image.user`.
+ *
+ * Kiểm lúc NẠP chứ không lúc gọi, vì thiếu một chỗ điền chỉ lộ ra sau khi đã trả tiền một tấm ảnh:
+ * lời dẫn vẫn hợp lệ, mô hình vẫn vẽ, chỉ là vẽ thiếu tên phòng hoặc thiếu khung tên.
+ */
+const SHEET_IMAGE_SLOTS = [
+  '{level_name}',
+  '{rooms}',
+  '{footprint}',
+  '{dimensions}',
+  '{north}',
+  '{title_block}',
+  '{style}',
+] as const;
 
 /** Một ý đồ bố cục: mã phương án, nhãn tiếng Việt cho màn hình, câu tiếng Anh cho lời dẫn. */
 export interface PlanStrategy {
@@ -66,20 +106,108 @@ export function parseAiPrompts(raw: unknown): AiPrompts {
   if (!program.repair.includes('{issues}')) {
     throw new AiPromptsError('`program.repair` phải có chỗ điền `{issues}`.');
   }
-  const floorPlan = (doc as { floor_plan?: { system?: unknown; repair?: unknown } }).floor_plan;
-  if (!floorPlan || typeof floorPlan.system !== 'string' || typeof floorPlan.repair !== 'string') {
+  const floorLevel = (doc as { floor_level?: Record<string, unknown> }).floor_level;
+  if (
+    !floorLevel ||
+    typeof floorLevel.system !== 'string' ||
+    typeof floorLevel.resample !== 'string' ||
+    typeof floorLevel.revise !== 'string' ||
+    typeof floorLevel.hint_default !== 'string'
+  ) {
     throw new AiPromptsError(
-      'kb/ai_design_prompts.yaml thiếu `floor_plan.system` hoặc `floor_plan.repair`.',
+      'kb/ai_design_prompts.yaml thiếu `floor_level.system`, `floor_level.resample`, `floor_level.revise` hoặc `floor_level.hint_default`.',
     );
   }
-  if (!floorPlan.repair.includes('{issues}')) {
-    throw new AiPromptsError('`floor_plan.repair` phải có chỗ điền `{issues}`.');
+  if (!floorLevel.resample.includes('{avoid}')) {
+    throw new AiPromptsError('`floor_level.resample` phải có chỗ điền `{avoid}`.');
   }
-  const strategies = parseStrategies((floorPlan as { strategies?: unknown }).strategies);
+  if (!floorLevel.revise.includes('{avoid}') || !floorLevel.revise.includes('{intent}')) {
+    throw new AiPromptsError('`floor_level.revise` phải có chỗ điền `{intent}` và `{avoid}`.');
+  }
+  const hints = floorLevel.hints;
+  if (
+    !hints ||
+    typeof hints !== 'object' ||
+    Object.values(hints).some((line) => typeof line !== 'string')
+  ) {
+    throw new AiPromptsError('`floor_level.hints` phải là bảng mã lỗi → một dòng chữ.');
+  }
+  const scoreHints = floorLevel.score_hints ?? {};
+  if (
+    typeof scoreHints !== 'object' ||
+    Object.values(scoreHints).some((line) => typeof line !== 'string')
+  ) {
+    throw new AiPromptsError('`floor_level.score_hints` phải là bảng mã tiêu chí → một dòng chữ.');
+  }
+  const planEdit = (doc as { plan_edit?: Record<string, unknown> }).plan_edit;
+  if (
+    !planEdit ||
+    typeof planEdit.system !== 'string' ||
+    typeof planEdit.user !== 'string' ||
+    typeof planEdit.retry !== 'string' ||
+    !planEdit.user.includes('{plan}') ||
+    !planEdit.user.includes('{request}') ||
+    !planEdit.retry.includes('{issues}')
+  ) {
+    throw new AiPromptsError(
+      'kb/ai_design_prompts.yaml thiếu `plan_edit.system`, `plan_edit.user` (có `{plan}`, `{request}`) hoặc `plan_edit.retry` (có `{issues}`).',
+    );
+  }
+  const sheetImage = parseSheetImage((doc as { sheet_image?: unknown }).sheet_image);
+  const strategies = parseStrategies(floorLevel.strategies);
   return {
     version: doc.version,
     program: { system: program.system, repair: program.repair },
-    floorPlan: { system: floorPlan.system, repair: floorPlan.repair, strategies },
+    floorLevel: {
+      system: floorLevel.system,
+      resample: floorLevel.resample,
+      revise: floorLevel.revise,
+      hints: hints as Record<string, string>,
+      hintDefault: floorLevel.hint_default,
+      scoreHints: scoreHints as Record<string, string>,
+      strategies,
+    },
+    planEdit: { system: planEdit.system, user: planEdit.user, retry: planEdit.retry },
+    sheetImage,
+  };
+}
+
+/**
+ * Khối lời dẫn của tờ mặt bằng có nội thất — kiểm đủ bốn khoá và đủ bảy chỗ điền.
+ *
+ * Bảng `styles` được phép RỖNG: đầu bài có thể không khai phong cách, và khi ấy lời dẫn bỏ hẳn
+ * mệnh đề ấy. Nhưng khoá phải có mặt, để việc thiếu bảng phân biệt được với việc thiếu một mã.
+ */
+function parseSheetImage(raw: unknown): AiPrompts['sheetImage'] {
+  const block = raw as Record<string, unknown> | undefined;
+  if (
+    !block ||
+    typeof block !== 'object' ||
+    typeof block.system !== 'string' ||
+    typeof block.user !== 'string' ||
+    typeof block.watermark !== 'string'
+  ) {
+    throw new AiPromptsError(
+      'kb/ai_design_prompts.yaml thiếu `sheet_image.system`, `sheet_image.user` hoặc `sheet_image.watermark`.',
+    );
+  }
+  const missing = SHEET_IMAGE_SLOTS.filter((slot) => !(block.user as string).includes(slot));
+  if (missing.length) {
+    throw new AiPromptsError(`\`sheet_image.user\` thiếu chỗ điền ${missing.join(', ')}.`);
+  }
+  const styles = block.styles ?? {};
+  if (
+    typeof styles !== 'object' ||
+    styles === null ||
+    Object.values(styles).some((line) => typeof line !== 'string')
+  ) {
+    throw new AiPromptsError('`sheet_image.styles` phải là bảng mã phong cách → một dòng chữ.');
+  }
+  return {
+    system: block.system,
+    user: block.user,
+    styles: styles as Record<string, string>,
+    watermark: block.watermark,
   };
 }
 
@@ -91,7 +219,7 @@ export function parseAiPrompts(raw: unknown): AiPrompts {
  */
 function parseStrategies(raw: unknown): PlanStrategy[] {
   if (!Array.isArray(raw) || raw.length === 0) {
-    throw new AiPromptsError('kb/ai_design_prompts.yaml thiếu `floor_plan.strategies`.');
+    throw new AiPromptsError('kb/ai_design_prompts.yaml thiếu `floor_level.strategies`.');
   }
   const seen = new Set<string>();
   return raw.map((item, index) => {
@@ -102,12 +230,12 @@ function parseStrategies(raw: unknown): PlanStrategy[] {
       typeof entry.strategy !== 'string'
     ) {
       throw new AiPromptsError(
-        `\`floor_plan.strategies[${index}]\` phải có đủ \`id\`, \`label\`, \`strategy\`.`,
+        `\`floor_level.strategies[${index}]\` phải có đủ \`id\`, \`label\`, \`strategy\`.`,
       );
     }
     if (!/^AI-[A-Z]$/.test(entry.id)) {
       throw new AiPromptsError(
-        `\`floor_plan.strategies[${index}].id\` phải theo khuôn AI-A, AI-B… (đang là "${entry.id}").`,
+        `\`floor_level.strategies[${index}].id\` phải theo khuôn AI-A, AI-B… (đang là "${entry.id}").`,
       );
     }
     if (seen.has(entry.id)) {

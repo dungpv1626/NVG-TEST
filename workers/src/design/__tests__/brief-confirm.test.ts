@@ -146,3 +146,28 @@ describe('Cổng chặn Lớp 2', () => {
     expect(result.message).toContain('Chưa cấu hình');
   });
 });
+
+describe('Cổng chặn — mâu thuẫn NGHIÊM TRỌNG (13/09/2026)', () => {
+  it('đủ điểm mà đầu bài tự nói ngược chính nó thì vẫn chặn, và nói ra mâu thuẫn nào', () => {
+    const conflicted = {
+      completeness_score: 0.98,
+      missing_fields: [],
+      building_type: 'biet_thu',
+      floors: 2,
+      site: { width_m: 15, depth_m: 20, access_sides: ['front'], main_entrance_side: 'back' },
+    };
+    const result = gateLayer2(conflicted, 0.7);
+    expect(result.allowed).toBe(false);
+    expect(result.message).toContain('mâu thuẫn nghiêm trọng');
+    expect(result.message).toContain('Mặt tiếp cận được');
+  });
+
+  it('chỉ có CẢNH BÁO thì vẫn cho chạy', () => {
+    const warned = {
+      completeness_score: 0.9,
+      missing_fields: [],
+      massing: { wings_preferred: 2, footprint_shape: 'chu_nhat' },
+    };
+    expect(gateLayer2(warned, 0.7).allowed).toBe(true);
+  });
+});

@@ -32,6 +32,7 @@ import {
 } from '@nvg/shared/design';
 import { ContractError } from '../contracts';
 import type { GeminiClient } from '../llm/gemini';
+import type { TokenUsage } from '../llm/text-client';
 
 /** `schema_version` của `SiteBoundaryExtraction` — Worker tự gán, KHÔNG hỏi mô hình ngôn ngữ
  * (một chuỗi semver không phải thứ mô hình cần "đọc từ ảnh", hỏi nó chỉ thêm một cách để sai). */
@@ -58,6 +59,8 @@ export interface ExtractSiteBoundaryResult {
   closureErrorDeg: number;
   closedShapeConfidence: 'high' | 'medium' | 'low';
   warnings: { code: string; detail: string }[];
+  /** Lượt gọi mô hình — để ghi nhật ký chi phí và hiện số token lên màn hình. */
+  call: { provider: string; model: string; usage: TokenUsage; latencyMs: number };
 }
 
 const RESPONSE_SCHEMA = {
@@ -244,13 +247,43 @@ export async function extractSiteBoundary(
 ): Promise<ExtractSiteBoundaryResult> {
   const dataBase64 = base64Encode(input.bytes);
 
-  const raw = await llm.generateJson<Record<string, unknown>>('site_boundary_extract', 2, {
-    system: SYSTEM_PROMPT,
-    prompt: 'Đọc ảnh đính kèm và trả về danh sách cạnh theo đúng lược đồ đã cho.',
-    schema: RESPONSE_SCHEMA,
-    images: [{ mimeType: input.mimeType, dataBase64 }],
-  });
+  const answer = await llm.generateJsonWithUsage<Record<string, unknown>>(
+    'site_boundary_extract',
+    2,
+    {
+      system: SYSTEM_PROMPT,
+      prompt: 'Đọc ảnh đính kèm và trả về danh sách cạnh theo đúng lược đồ đã cho.',
+      schema: RESPONSE_SCHEMA,
+      images: [{ mimeType: input.mimeType, dataBase64 }],
+    },
+  );
+  const raw = answer.value;
+  const call = {
+    provider: answer.provider,
+    model: answer.model,
+    usage: answer.usage,
+    latencyMs: answer.latencyMs,
+  };
 
+  try {
+    return { ...interpretAnswer(raw), call };
+  } catch (error) {
+    // Đọc hỏng SAU khi mô hình đã trả lời thì lượt gọi vẫn đã tính tiền — gắn số đo vào lỗi để
+    // tuyến gọi ghi nhật ký và nói ra, thay vì một lượt tốn tiền mà không để lại dấu vết.
+    if (error && typeof error === 'object') (error as { aiCall?: typeof call }).aiCall = call;
+    throw error;
+  }
+}
+
+/** Lượt gọi mô hình gắn vào lỗi đọc ảnh, nếu lỗi xảy ra sau khi mô hình đã trả lời. */
+export function aiCallOfError(error: unknown): ExtractSiteBoundaryResult['call'] | undefined {
+  return error && typeof error === 'object'
+    ? (error as { aiCall?: ExtractSiteBoundaryResult['call'] }).aiCall
+    : undefined;
+}
+
+/** Diễn giải câu trả lời của mô hình thành ranh giới — phần THUẦN, không gọi mạng. */
+function interpretAnswer(raw: Record<string, unknown>): Omit<ExtractSiteBoundaryResult, 'call'> {
   const vertexCoordinates = readVertexCoordinates(raw.vertex_coordinates);
 
   let built;

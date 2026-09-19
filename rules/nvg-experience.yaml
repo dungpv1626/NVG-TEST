@@ -330,6 +330,22 @@
   n: 0
   auto_repair: move_to_floor
 
+# ── CẦU THANG VÀ CỬA CHÍNH ────────────────────────────────────────────────────
+
+# Thêm 16/09/2026 từ tài liệu «Nguyên tắc vàng thiết kế mặt bằng nhà ở» mục 9 (phong thuỷ hợp lý hoá).
+# Haan chốt chỉ lấy ý này trong ba ý phong thuỷ: nó đo được bằng hình học cửa + ô thang
+# (`ai/rule-warnings.ts#stairsFacingEntry`). «Bếp đối diện WC» và «bếp kẹp giữa hai thuỷ» vẫn không
+# đo — xem `kb/plan_quality.yaml` mục `khong_do_duoc`.
+- id: stair_not_facing_entry
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: stair_faces_entry
+  target: stair
+  severity: warning
+  source: 'kinh nghiệm NVG'
+  n: 0
+  auto_repair: none
+
 # ── CHIẾU SÁNG VÀ THÔNG GIÓ ───────────────────────────────────────────────────
 
 - id: kitchen_requires_ventilation

@@ -65,7 +65,7 @@ describe('Từ vựng phòng', () => {
       .map((entry) => `rules/locality/${entry.name}`);
 
     const targets = new Set<string>();
-    for (const dir of ['rules/base', ...localityDirs]) {
+    for (const dir of ['rules/structure', ...localityDirs]) {
       let files: string[];
       try {
         files = readdirSync(root(dir)).filter((f) => f.endsWith('.yaml'));

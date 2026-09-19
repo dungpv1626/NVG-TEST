@@ -24,7 +24,13 @@ EXPECTED_CONTRACTS = {
     # copy nguyên thư mục, và liệt kê ở đây để danh sách nói đúng thực tế thay vì trở thành chỗ
     # phải nhớ loại trừ.
     "ai-brief-digest",
+    "ai-facade-concept",
+    "ai-floor-plan",
     "ai-floor-plan-proposal",
+    "ai-image-set",
+    "ai-plan-rooms",
+    "ai-plan-tree",
+    "ai-space-program",
     "ai-space-program-proposal",
     "arch-model",
     "cad-extraction",

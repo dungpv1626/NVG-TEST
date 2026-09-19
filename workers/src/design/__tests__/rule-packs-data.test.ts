@@ -88,15 +88,31 @@ describe('nhánh AI KHÔNG kiểm pháp quy (T30)', () => {
     const body = src.slice(src.indexOf('export function nationalRulePack'));
     const end = body.indexOf('\n}');
     expect(body.slice(0, end)).toContain('new RulePack([], false)');
-    expect(body.slice(0, end)).not.toContain('BASE_FILES');
+    expect(body.slice(0, end)).not.toContain('STRUCTURE_FILES');
   });
 
-  it('`rules/base/` VẪN còn cho bộ giải — gỡ nhánh AI không được gỡ luôn bộ giải', () => {
-    // T10: 1.211 phép thử của bộ giải đang xanh không được vỡ. Bộ giải đọc qua `rulePackFor`,
-    // một hàm khác, và đó chính là lý do hai hàm được tách từ 09/09/2026.
+  it('bộ giải cũng KHÔNG còn đọc quy chuẩn (13/09/2026) — chỉ nguyên lý bố cục + kinh nghiệm NVG', () => {
+    // Haan: «bỏ quy chuẩn VN đi», cho toàn bộ bộ giải. `rules/base/` đã xoá; ba ràng buộc bố cục
+    // (thang, hộp kỹ thuật thẳng hàng; phòng nào cũng có lối vào) sống ở `rules/structure/`.
     const src = readFileSync(new URL('../rules/rule-pack-data.ts', import.meta.url), 'utf8');
-    expect(src).toContain('BASE_FILES');
-    expect(read('rules/base/10-dimensions.yaml').length).toBeGreaterThan(0);
+    // Soát DÒNG IMPORT, không soát chữ: chú thích vẫn được nhắc tới lịch sử của gói cũ.
+    expect(src).not.toMatch(/from '[^']*rules\/base\//);
+    expect(src).toContain('STRUCTURE_FILES');
+    const structure = read('rules/structure/10-layout.yaml');
+    for (const id of ['stair_alignment', 'shaft_alignment', 'every_room_requires_access']) {
+      expect(structure).toContain(`id: ${id}`);
+    }
+    // Không một ngưỡng pháp quy nào lọt sang gói bố cục.
+    for (const predicate of [
+      'setback',
+      'max_density',
+      'min_area',
+      'min_dimension',
+      'requires_daylight',
+    ]) {
+      expect(structure).not.toContain(`predicate: ${predicate}`);
+    }
+    expect(structure).not.toContain('QCVN');
   });
 
   it('tích «quy chuẩn quốc gia» không ra quy tắc nào — ô tích đã gỡ, trường chỉ còn để đọc lịch sử', () => {
@@ -181,6 +197,7 @@ describe('gói ĐO ĐƯỢC không được chạm vào bộ giải (12/09/2026)
     const ids = nvgExperiencePack().rules.map((r) => r.id);
     expect(ids).toContain('room_min_area_wc');
     expect(ids).toContain('room_min_dimension_closet');
-    expect(ids.length).toBe(31);
+    // 32 từ 16/09/2026: thêm `stair_not_facing_entry` («Nguyên tắc vàng» mục 9).
+    expect(ids.length).toBe(32);
   });
 });

@@ -62,10 +62,12 @@ describe('Chương trình không gian phải HỢP LÝ, không chỉ hợp lệ'
   });
 });
 
-describe('Phòng có diện tích do NGƯỜI khai', () => {
-  it('khai đúng bằng tối thiểu thì KHÔNG bị bảo là "đã bị cắt cho vừa sàn"', () => {
-    // Câu đó nói về phòng bị bước ép cắt. Khách khai bếp nhỏ là một quyết định; báo lỗi mức
-    // `error` với câu ngược lại là nói sai sự thật ngay trên màn hình (rà soát 08/09/2026).
+describe('Diện tích khách khai là TỐI THIỂU (T41)', () => {
+  it('khai nhỏ hơn chuẩn nghề thì KHÔNG ghim phòng về con số đó', () => {
+    // «Bếp tối thiểu 1 m²» không phải lời khách muốn một cái bếp 1 m². Trước 13/09/2026 con
+    // số khách khai đứng thành diện tích cố định, nên bếp bị giữ ở tối thiểu và bước soát phải
+    // miễn cho nó. Nay nó chỉ là một cận dưới — thua chuẩn nghề — và bếp nhận phần sàn như mọi
+    // phòng khác.
     const { brief } = CORPUS[0]!;
     const withTinyKitchen = {
       ...brief,
@@ -76,13 +78,25 @@ describe('Phòng có diện tích do NGƯỜI khai', () => {
     } as typeof brief;
     const { payload, warnings } = run(withTinyKitchen);
     const kitchen = payload.spaces.find((s) => s.type === 'kitchen')!;
-    expect(kitchen.target_area_m2).toBe(kitchen.min_area_m2);
+    expect(kitchen.min_source).not.toBe('brief');
+    expect(kitchen.target_area_m2!).toBeGreaterThan(kitchen.min_area_m2);
     expect(warnings.filter((w) => w.startsWith('Bếp chỉ được'))).toEqual([]);
+  });
 
-    // Và phép soát THUẦN vẫn bắt được cùng phòng đó khi không ai bảo nó là do người khai —
-    // tức là bài này ghim đúng cái cờ, không phải tắt phép soát.
-    const raw = checkPlausibility(payload, RULES).filter((f) => f.message.startsWith('Bếp'));
-    expect(raw).not.toHaveLength(0);
+  it('khai lớn hơn chuẩn nghề thì con số của khách thành tối thiểu, và nói ra nguồn', () => {
+    const { brief } = CORPUS[0]!;
+    const withBigKitchen = {
+      ...brief,
+      required_spaces: [
+        ...(brief.required_spaces ?? []).filter((s) => s.type !== 'kitchen'),
+        { type: 'kitchen', area_m2: 16 },
+      ],
+    } as typeof brief;
+    const kitchen = run(withBigKitchen).payload.spaces.find((s) => s.type === 'kitchen')!;
+    expect(kitchen.min_area_m2).toBe(16);
+    expect(kitchen.min_source).toBe('brief');
+    expect(kitchen.target_source).toBe('program');
+    expect(kitchen.target_area_m2!).toBeGreaterThanOrEqual(16);
   });
 });
 

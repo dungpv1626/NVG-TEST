@@ -17,6 +17,20 @@
  *    1:100 vừa khít, và chuỗi kích thước dọc có nhiều đoạn.
  *  · `VILLA_PLAN` — biệt thự 10 × 14 m, 2 tầng, hành lang giữa. Ca này nhiều phòng nhỏ và có
  *    ban công lẫn sân thượng, tức là có cả tường bao lẫn lan can trên cùng một tầng.
+ *
+ * ── Hai fixture này là ca thử BỘ VẼ, KHÔNG phải mặt bằng hay ────────────────────────────
+ *
+ * Bộ chấm của Đợt C′ trừ điểm khá nặng cả hai, và mọi chỗ bị trừ là một khuyết điểm THẬT của chính
+ * fixture: nhà phố có phòng khách không cửa sổ, khu vệ sinh hai tầng không chồng nhau, và phải đi
+ * xuyên phòng ngủ mới tới phòng ngủ chính. Đó là điều bình thường — chúng được viết để bộ vẽ có một
+ * tầng khó vẽ, không để làm mẫu bố cục. `plan-score.test.ts` ghim từng con số kèm lời giải thích,
+ * nên nó đọc được như một bản mô tả khuyết điểm của fixture, và sẽ đỏ nếu ai đó «cải thiện» fixture
+ * mà không cập nhật phép thử.
+ *
+ * Đã sửa MỘT chỗ thay vì ghi nhận: số bậc thang. Trước 12/09/2026 cả hai fixture khai 18–20 bậc cho
+ * tầng cao 3,6–3,9 m, tức chiều cao bậc 180–217 mm — không xây được, và lệch hẳn khỏi số đo thật
+ * (P1 ≈ 171 mm, P2 ≈ 156 mm). Đây là dữ liệu tự mâu thuẫn với cấu tạo, không phải lựa chọn bố cục,
+ * nên sửa: 21 bậc cho tầng 3,6 m (đúng 171 mm) và 22 bậc cho tầng 3,9 m.
  */
 
 import type { AiFloorPlan, AiFloorPlanLevel, AiPlanRooms } from '@nvg/shared/design';
@@ -159,7 +173,7 @@ const townhouseLevel1: AiFloorPlanLevel = {
     door('d5', 'wy', 100, 90, 'single', 'b', 'r'),
   ],
   windows: [win('s1', 'wy', 290, 60, 180, 60)],
-  stairs: [{ id: 'st1', rect: [22, 1165, 272, 1365], up: '-y', flights: 2, treads: 18 }],
+  stairs: [{ id: 'st1', rect: [22, 1165, 272, 1365], up: '-y', flights: 2, treads: 21 }],
   voids: [],
 };
 
@@ -202,7 +216,7 @@ const townhouseLevel2: AiFloorPlanLevel = {
     door('d6', 'p4', 290, 70),
   ],
   windows: [win('s1', 'wf', 40, 80), win('s2', 'wy', 100, 120)],
-  stairs: [{ id: 'st2', rect: [22, 1165, 272, 1365], up: '-y', flights: 2, treads: 18 }],
+  stairs: [{ id: 'st2', rect: [22, 1165, 272, 1365], up: '-y', flights: 2, treads: 21 }],
   voids: [{ id: 'v1', kind: 'light_well', rect: [22, 1387, 378, 1478] }],
 };
 
@@ -251,7 +265,7 @@ const townhouseLevel3: AiFloorPlanLevel = {
     door('d7', 'wt', 275, 90, 'single', 'b', 'r'),
   ],
   windows: [win('s1', 'wf', 40, 80), win('s2', 'wt', 100, 120)],
-  stairs: [{ id: 'st3', rect: [22, 1165, 272, 1365], up: '-y', flights: 2, treads: 18 }],
+  stairs: [{ id: 'st3', rect: [22, 1165, 272, 1365], up: '-y', flights: 2, treads: 22 }],
   voids: [],
 };
 
@@ -360,7 +374,7 @@ const villaLevel1: AiFloorPlanLevel = {
     win('s8', 'wb', 200, 150),
     win('s9', 'wb', 800, 150),
   ],
-  stairs: [{ id: 'st1', rect: [489, 911, 700, 1378], up: '+y', flights: 2, treads: 20 }],
+  stairs: [{ id: 'st1', rect: [489, 911, 700, 1378], up: '+y', flights: 2, treads: 21 }],
   voids: [],
 };
 
@@ -422,7 +436,7 @@ const villaLevel2: AiFloorPlanLevel = {
     win('s7', 'wr', 550, 120),
     win('s8', 'wr', 850, 150),
   ],
-  stairs: [{ id: 'st2', rect: [489, 911, 700, 1378], up: '+y', flights: 2, treads: 20 }],
+  stairs: [{ id: 'st2', rect: [489, 911, 700, 1378], up: '+y', flights: 2, treads: 21 }],
   voids: [],
 };
 

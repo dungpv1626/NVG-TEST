@@ -568,10 +568,33 @@ describe('Không gian bắt buộc — mỗi dòng một phòng', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Chỗ để xe' }));
 
     const area = (await screen.findByLabelText(
-      'Diện tích mong muốn — Chỗ để xe',
+      'Diện tích tối thiểu — Chỗ để xe',
     )) as HTMLInputElement;
     await userEvent.type(area, '18.5');
     expect(area.value).toBe('18.5');
+  });
+
+  it('dòng tổng dưới bảng nói tổng diện tích TỐI THIỂU so với sàn xây được, và đỏ khi vượt', async () => {
+    state.briefs = [
+      brief({
+        structured: {
+          building_type: 'biet_thu',
+          floors: 1,
+          site: { width_m: 10, depth_m: 10 },
+          required_spaces: [
+            { type: 'living', area_m2: 70 },
+            { type: 'kitchen', area_m2: 40 },
+          ],
+        },
+      }),
+    ];
+    state.surveys = [];
+    await openForm('Không gian và phong cách');
+
+    const line = (await screen.findByText(/Tổng diện tích tối thiểu đã khai:/)).closest('p')!;
+    expect(line.textContent).toContain('110 m²');
+    expect(line.textContent).toContain('sàn xây được 100 m²');
+    expect(line.closest('div')?.className).toContain('text-status-overdue');
   });
 
   it('nhà một tầng thì không hiện ô ghim tầng — nhưng vẫn nhập được diện tích', async () => {
@@ -581,7 +604,7 @@ describe('Không gian bắt buộc — mỗi dòng một phòng', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Chỗ để xe' }));
 
     expect(screen.queryByLabelText('Tầng — Chỗ để xe')).toBeNull();
-    expect(await screen.findByLabelText('Diện tích mong muốn — Chỗ để xe')).toBeTruthy();
+    expect(await screen.findByLabelText('Diện tích tối thiểu — Chỗ để xe')).toBeTruthy();
   });
 
   it('loại phòng ngủ là một lựa chọn HAI CHIỀU, nêu rõ cả hai vế', async () => {
@@ -917,7 +940,7 @@ describe('Phòng ngủ tự sinh từ Thành viên gia đình', () => {
     state.surveys = [];
     const { container } = await openForm('Không gian và phong cách');
 
-    expect(screen.getByText('Diện tích (m²)')).toBeTruthy();
+    expect(screen.getByText('Diện tích tối thiểu (m²)')).toBeTruthy();
     // Mười tám lần chữ `m²` xếp thành một cột không thêm thông tin nào mà lấy mất chỗ của ô
     // tiện ích.
     const table = container.querySelector('[style*="grid-template-columns"]');

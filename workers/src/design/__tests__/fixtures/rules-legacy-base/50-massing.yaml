@@ -1,0 +1,63 @@
+# Đặt khối trong lô: khoảng lùi và mật độ xây dựng.
+#
+# Mọi giá trị ở đây lấy từ QCVN 01:2021/BXD — quy chuẩn QUỐC GIA, nên chỗ đúng của chúng là
+# gói nền. Trước 29/08/2026 chúng nằm trong gói địa phương `thai-binh`, và hệ quả là bất kỳ
+# tỉnh nào chưa có gói riêng đều chạy KHÔNG có khoảng lùi và KHÔNG có trần mật độ — biệt thự
+# ở tỉnh đó được phép phủ kín lô. Lỗi không nổ ra ở đâu cả, chỉ ra một chương trình không
+# gian rộng hơn thực tế cho phép.
+#
+# Gói địa phương ghi đè theo `id` khi tỉnh có văn bản quy hoạch riêng — xem
+# `rules/locality/README.md`. Hiện chưa tỉnh nào có, nên `rules/locality/` chưa có gói nào.
+
+# Nhà phố lấp kín lô, khoảng lùi bằng không ở cả bốn phía.
+- id: setback_front
+  applies_to: [nha_pho]
+  scope: site
+  predicate: setback
+  side: front
+  value_m: 0.0
+  severity: error
+  source: 'QCVN 01:2021/BXD'
+  auto_repair: none
+
+- id: setback_back
+  applies_to: [nha_pho]
+  scope: site
+  predicate: setback
+  side: back
+  value_m: 0.0
+  severity: error
+  source: 'QCVN 01:2021/BXD'
+  auto_repair: none
+
+# Mật độ xây dựng tối đa cho lô nhỏ. QCVN 01:2021/BXD cho phép tới 100% với lô
+# diện tích ≤ 90 m²; giá trị này thu hẹp dần khi lô lớn hơn.
+- id: max_density_small_lot
+  applies_to: [nha_pho]
+  scope: site
+  predicate: max_density
+  value: 1.0
+  severity: error
+  source: 'QCVN 01:2021/BXD'
+  auto_repair: none
+
+# Biệt thự: khoảng lùi trước. Đây là con số dễ khác nhau giữa các tỉnh nhất (phụ thuộc lộ
+# giới do quy hoạch địa phương ấn định) — tỉnh nào có văn bản riêng thì ghi đè `id` này.
+- id: setback_front_villa
+  applies_to: [biet_thu, nha_vuon]
+  scope: site
+  predicate: setback
+  side: front
+  value_m: 3.0
+  severity: error
+  source: 'QCVN 01:2021/BXD'
+  auto_repair: none
+
+- id: max_density_villa
+  applies_to: [biet_thu, nha_vuon]
+  scope: site
+  predicate: max_density
+  value: 0.6
+  severity: error
+  source: 'QCVN 01:2021/BXD'
+  auto_repair: none

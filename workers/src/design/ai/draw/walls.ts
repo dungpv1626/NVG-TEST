@@ -260,7 +260,10 @@ function visibleParts(
   const covered: Interval[] = [];
   for (const body of bodies) {
     if (body.id === selfId) continue;
-    const hit = clipSegmentByQuad(from, to, body.quad, -CLIP_INSET_CM);
+    // Dương là CO vào (`numer + eps > 0` coi là ngoài). Bản trước truyền số âm, tức PHÌNH ra: nét mặt
+    // ngoài tường bao nằm đúng trên mép bức vuông góc bị xoá, và mọi góc nhà hở một khấc (tờ vẽ
+    // 13/09/2026).
+    const hit = clipSegmentByQuad(from, to, body.quad, CLIP_INSET_CM);
     // `clipSegmentByQuad` trả tham số t ∈ [0,1]; `subtractIntervals` làm việc trên chiều dài.
     if (hit) covered.push({ from: hit.from * length, to: hit.to * length });
   }

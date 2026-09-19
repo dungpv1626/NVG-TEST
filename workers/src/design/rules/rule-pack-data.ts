@@ -10,23 +10,22 @@
  * mục lúc chạy, và một `import` động theo biến sẽ không được esbuild gói vào.
  */
 
-import baseMeta from '../../../../rules/base/00-meta.yaml';
-import baseDimensions from '../../../../rules/base/10-dimensions.yaml';
-import baseDaylight from '../../../../rules/base/20-daylight-access.yaml';
-import baseAdjacency from '../../../../rules/base/30-adjacency.yaml';
-import baseVertical from '../../../../rules/base/40-vertical.yaml';
-import baseMassing from '../../../../rules/base/50-massing.yaml';
+import structureMeta from '../../../../rules/structure/00-meta.yaml';
+import structureLayout from '../../../../rules/structure/10-layout.yaml';
 import nvgExperience from '../../../../rules/nvg-experience.yaml';
 import nvgMeasured from '../../../../rules/nvg-measured.yaml';
 import { mergePacks, parseRuleFile, RulePack, type Rule } from './rule-pack';
 
-const BASE_FILES: Array<[string, string]> = [
-  ['rules/base/00-meta.yaml', baseMeta as unknown as string],
-  ['rules/base/10-dimensions.yaml', baseDimensions as unknown as string],
-  ['rules/base/20-daylight-access.yaml', baseDaylight as unknown as string],
-  ['rules/base/30-adjacency.yaml', baseAdjacency as unknown as string],
-  ['rules/base/40-vertical.yaml', baseVertical as unknown as string],
-  ['rules/base/50-massing.yaml', baseMassing as unknown as string],
+/**
+ * Nguyên lý bố cục của bộ giải — thang, hộp kỹ thuật thẳng hàng; phòng nào cũng có lối vào.
+ *
+ * Thay gói quy chuẩn `rules/base/` từ 13/09/2026 (Haan: «bỏ quy chuẩn VN đi», cho toàn bộ bộ
+ * giải). Không còn ngưỡng pháp quy nào: khoảng lùi và mật độ lấy từ đầu bài, diện tích tối
+ * thiểu từ đầu bài và chuẩn nghề.
+ */
+const STRUCTURE_FILES: Array<[string, string]> = [
+  ['rules/structure/00-meta.yaml', structureMeta as unknown as string],
+  ['rules/structure/10-layout.yaml', structureLayout as unknown as string],
 ];
 
 /**
@@ -106,11 +105,8 @@ const cache = new Map<string, RulePack>();
  * Và nó nhất quán với nguyên tắc 9 của CLAUDE.md 8.2: tuân thủ pháp lý là việc của người có
  * chứng chỉ hành nghề ký, không phải của engine.
  *
- * ⚠️ **`rules/base/` vẫn còn trên đĩa, và vẫn được `rulePackFor()` đọc cho BỘ GIẢI nội bộ.**
- * Không xoá tệp trong đợt này: bộ giải đang ràng buộc CP-SAT trên chúng và 1.211 phép thử đang
- * xanh không được vỡ (T10), trong khi bộ giải thì đã nằm trong diện xoá. Hai hàm tách riêng từ
- * 09/09/2026 chính là thứ cho phép đổi một bên mà không đụng bên kia — xem ghi chú của
- * `rulePackFor`. Ngày xoá bộ giải thì `rules/base/` đi theo.
+ * ✅ **13/09/2026: `rules/base/` đã xoá khỏi repo**, và bộ giải nội bộ cũng thôi đọc quy chuẩn
+ * (Haan quyết). Ba ràng buộc bố cục thật sự cần giữ chuyển sang `rules/structure/`.
  *
  * Điều kiện để BAO GIỜ thêm lại một quy tắc pháp quy (T34): số hiệu văn bản **+ số mục** +
  * cách đã kiểm + hiệu lực từ/đến, **và bản văn bản phải có trong repo**. Thiếu một trong bốn
@@ -144,11 +140,11 @@ export function rulePackFor(locality: string): RulePack {
   if (cached) return cached;
 
   const localityFiles = LOCALITY_FILES[locality];
-  // Bộ giải nội bộ vẫn nhận CẢ HAI gói gộp lại, đúng như trước ngày tách tệp — tách là để
-  // nhánh AI và màn hình phân biệt được nguồn, không phải để đổi hành vi bộ giải.
+  // Bộ giải nội bộ nhận nguyên lý bố cục + kinh nghiệm nghề NVG. KHÔNG còn gói quy chuẩn
+  // (13/09/2026) — xem `STRUCTURE_FILES`.
   const pack = new RulePack(
     mergePacks(
-      mergePacks(parseAll(BASE_FILES), parseAll(NVG_FILES)),
+      mergePacks(parseAll(STRUCTURE_FILES), parseAll(NVG_FILES)),
       localityFiles ? parseAll(localityFiles) : [],
     ),
     localityFiles === undefined,

@@ -20,6 +20,7 @@ import type { DataClass } from '@nvg/shared/design';
 import type { TokenUsage } from './text-client';
 import type { ModelRouter, ResolvedRoute } from './router';
 import { schemaFor } from './schema-dialect';
+import { outputBudget, requestTimeout, type ReasoningEffort } from './text-client';
 import {
   tokenCount,
   type AiImageClient,
@@ -56,6 +57,14 @@ export class LlmCallFailed extends Error {
      * Nên lỗi phải mang số đo theo mình. Vắng thì đúng là không biết, chứ không phải bằng 0.
      */
     readonly usage?: TokenUsage,
+    /**
+     * Lượt gọi mất bao lâu, khi biết được — thêm 13/09/2026.
+     *
+     * Cùng một lý lẽ với `usage`: dòng `failed` trong `design_ai_call` đang ghi `latency_ms = 0`
+     * ở MỌI lượt hỏng, tức chính con số chỉ ra «hỏng vì chờ quá lâu» hay «hỏng ngay lập tức» thì
+     * lại vắng mặt. `0` đọc như «trả lời tức thì», ngược hẳn sự thật.
+     */
+    readonly latencyMs?: number,
   ) {
     super(message);
     this.name = 'LlmCallFailed';
@@ -80,6 +89,10 @@ export interface GenerateOptions {
    */
   temperature?: number;
   maxOutputTokens?: number;
+  /** Mức suy nghĩ cho lượt này — xem `StructuredCallOptions.reasoningEffort`. */
+  reasoningEffort?: ReasoningEffort;
+  /** Huỷ lượt gọi — nút «Dừng». */
+  signal?: AbortSignal;
   /**
    * Ảnh gửi kèm — bước đọc ảnh trích lục/sổ đỏ (`site_boundary_extract`) là lời gọi ĐẦU TIÊN
    * dùng trường này. Vắng mặt (mặc định) thì `parts` giống hệt trước khi có trường này, nên
@@ -170,14 +183,39 @@ export class GeminiClient implements TextModelClient, AiImageClient {
     dataClass: DataClass,
     options: GenerateOptions,
   ): Promise<T> {
+    return (await this.generateJsonWithUsage<T>(routeName, dataClass, options)).value;
+  }
+
+  /**
+   * Như `generateJson`, kèm số token, nhà cung cấp, mô hình và thời gian — để nơi gọi ghi nhật
+   * ký chi phí và hiện lên màn hình (13/09/2026). Tách thành hàm riêng thay vì đổi kiểu trả về
+   * của `generateJson`: năm nơi gọi cũ không cần số đo và không phải sửa theo.
+   */
+  async generateJsonWithUsage<T>(
+    routeName: string,
+    dataClass: DataClass,
+    options: GenerateOptions,
+  ): Promise<{ value: T; provider: string; model: string; usage: TokenUsage; latencyMs: number }> {
     const route = this.router.resolve(routeName, dataClass);
-    const { text } = await this.structured(route, routeName, options);
+    const started = Date.now();
+    const { data, text } = await this.structured(route, routeName, options);
+    const usage = geminiUsage(data);
     try {
-      return JSON.parse(text) as T;
+      return {
+        value: JSON.parse(text) as T,
+        provider: route.provider,
+        model: route.model,
+        usage,
+        latencyMs: Date.now() - started,
+      };
     } catch {
       throw new LlmCallFailed(
         `Mô hình trả về nội dung không phải JSON hợp lệ ở bước "${routeName}".`,
         true,
+        undefined,
+        undefined,
+        usage,
+        Date.now() - started,
       );
     }
   }
@@ -213,13 +251,20 @@ export class GeminiClient implements TextModelClient, AiImageClient {
         //
         // Chỉ đặt khi có khai: `thinkingLevel` là của dòng Gemini 3. Các tuyến 2.5 của bộ giải
         // không nhận trường này, và gửi kèm `thinkingBudget` cũ cùng lúc là lỗi 400.
+        // Mức kỹ sư chọn cho lượt này thắng mức của tuyến — nhưng CHỈ trên tuyến vốn nhận
+        // `thinkingLevel` (dòng Gemini 3); gửi cho 2.5 là lỗi 400.
         ...(route.thinking_level
-          ? { thinkingConfig: { thinkingLevel: route.thinking_level } }
+          ? { thinkingConfig: { thinkingLevel: options.reasoningEffort ?? route.thinking_level } }
           : {}),
       },
     };
 
-    const data = await this.call<GeminiGenerateResponse>(route, 'generateContent', body);
+    const data = await this.call<GeminiGenerateResponse>(
+      route,
+      'generateContent',
+      body,
+      options.signal,
+    );
     // Dòng Gemini 3 chèn phần suy nghĩ vào `parts`; phần đó có thể KHÔNG mang `text`. Lấy cứng
     // `parts[0]` thì gặp hôm nào mô hình tách phần suy nghĩ ra sẽ đọc thành "không có nội dung".
     const text = data.candidates?.[0]?.content?.parts?.find(
@@ -322,6 +367,7 @@ export class GeminiClient implements TextModelClient, AiImageClient {
     route: ResolvedRoute,
     method: 'generateContent' | 'embedContent',
     body: unknown,
+    cancel?: AbortSignal,
   ): Promise<T> {
     let res: Response;
     try {
@@ -329,7 +375,7 @@ export class GeminiClient implements TextModelClient, AiImageClient {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': route.apiKey },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(TIMEOUT_MS),
+        signal: requestTimeout(route, TIMEOUT_MS, cancel),
       });
     } catch (error) {
       const fault = classifyNetworkFault(error, 'mô hình ngôn ngữ');
@@ -381,8 +427,8 @@ function maxTokensField(
   routeCap: number | undefined,
   requested: number | undefined,
 ): { maxOutputTokens?: number } {
-  if (routeCap === 0) return {};
-  return { maxOutputTokens: routeCap ?? requested ?? 8192 };
+  const budget = outputBudget(routeCap, requested, 8192);
+  return budget === null ? {} : { maxOutputTokens: budget };
 }
 
 function geminiUsage(data: GeminiGenerateResponse): {

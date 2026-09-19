@@ -35,6 +35,16 @@ function shell(
           subtitle: 'Chuẩn hoá yêu cầu khách hàng.',
           content: <p>Biểu mẫu đầu bài</p>,
         },
+        {
+          id: 'khao-sat',
+          label: 'Khảo sát hiện trạng',
+          content: <p>Biên bản khảo sát</p>,
+        },
+        {
+          id: 'chuong-trinh-khong-gian',
+          label: 'Chương trình không gian',
+          content: <p>Danh sách phòng</p>,
+        },
       ]}
       historyContent={<p>Nhật ký hồ sơ</p>}
       related={
@@ -81,6 +91,33 @@ describe('Vỏ Trang dự án thiết kế', () => {
     expect(screen.getByText('Bảng tổng quan')).toBeInTheDocument();
   });
 
+  it('màn hình con có nút sang bước tiếp theo — không phải quay ra Tổng quan', async () => {
+    shell('/tk/du-an/p?tab=dau-bai');
+    // Bước đầu: không có bước trước. Nút hiện ở đầu trang VÀ cuối trang (biểu mẫu dài).
+    expect(screen.queryByRole('button', { name: /Bước trước/ })).toBeNull();
+    const nexts = screen.getAllByRole('button', { name: 'Bước tiếp theo: Khảo sát hiện trạng' });
+    expect(nexts).toHaveLength(2);
+
+    await userEvent.click(nexts[1]!);
+    expect(screen.getByTestId('duong-dan-hien-tai')).toHaveTextContent('/tk/du-an/p?tab=khao-sat');
+    expect(screen.getByText('Biên bản khảo sát')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Bước trước: Đầu bài thiết kế' })).toHaveLength(2);
+    expect(
+      screen.getAllByRole('button', { name: 'Bước tiếp theo: Chương trình không gian' }),
+    ).toHaveLength(2);
+  });
+
+  it('bước cuối không có nút đi tiếp', () => {
+    shell('/tk/du-an/p?tab=chuong-trinh-khong-gian');
+    expect(screen.queryByRole('button', { name: /Bước tiếp theo/ })).toBeNull();
+    expect(screen.getAllByRole('button', { name: /Bước trước: Khảo sát/ })).toHaveLength(2);
+  });
+
+  it('tab cấp một không có dải chuyển bước', () => {
+    shell('/tk/du-an/p?tab=thay-doi');
+    expect(screen.queryByRole('navigation', { name: /Chuyển bước/ })).toBeNull();
+  });
+
   it('đổi tab bằng phím mũi tên, đúng mẫu ARIA tablist', async () => {
     shell();
     await userEvent.click(screen.getByRole('tab', { name: 'Tổng quan' }));
@@ -101,20 +138,18 @@ describe('Vỏ Trang dự án thiết kế', () => {
     // với cơ hội nào. Chỉ đếm số NHÓM thì cột 20rem vẫn được dành chỗ để hiện đúng một câu
     // «Chưa có hồ sơ liên quan» — một dải trắng 320px chạy dọc bên phải mọi màn hình con,
     // và nội dung bên trái bị bó lại vô cớ (Haan bắt được 07/09/2026).
-    const { container } = shell('/tk/du-an/p?tab=dau-bai', [
-      { title: 'Hồ sơ liên quan', records: [] },
-    ]);
+    shell('/tk/du-an/p?tab=dau-bai', [{ title: 'Hồ sơ liên quan', records: [] }]);
 
     expect(screen.queryByRole('complementary', { name: 'Hồ sơ liên quan' })).toBeNull();
-    const grid = container.querySelector('[aria-labelledby="tieu-de-man-hinh-con"] > div');
-    expect(grid?.className).not.toContain('grid-cols');
+    const grid = screen.getByTestId('luoi-man-hinh-con');
+    expect(grid.className).not.toContain('grid-cols');
   });
 
   it('có hồ sơ thật thì cột phải vẫn dựng', () => {
-    const { container } = shell('/tk/du-an/p?tab=dau-bai');
+    shell('/tk/du-an/p?tab=dau-bai');
     expect(screen.getByRole('complementary', { name: 'Hồ sơ liên quan' })).toBeInTheDocument();
-    const grid = container.querySelector('[aria-labelledby="tieu-de-man-hinh-con"] > div');
-    expect(grid?.className).toContain('grid-cols');
+    const grid = screen.getByTestId('luoi-man-hinh-con');
+    expect(grid.className).toContain('grid-cols');
   });
 
   it('tự mang bảng màu riêng kể cả khi dựng ngoài khung ứng dụng', () => {

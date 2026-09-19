@@ -21,9 +21,19 @@
 import type { AiFloorPlanLevel } from '@nvg/shared/design';
 import { formatNumber } from '@nvg/shared/format';
 import type { Rule, RulePack, RuleSeverity } from '../rules/rule-pack';
-import { rectHeight, rectWidth, toPt, toRect } from './draw/geometry';
+import {
+  rectHeight,
+  rectsOverlap,
+  rectsShareEdge,
+  rectWidth,
+  toPt,
+  toRect,
+  type Pt,
+  type Rect,
+} from './draw/geometry';
 import { prepareWalls } from './draw/walls';
 import { faceAtPoint } from './outline-faces';
+import { doorLinks } from './plan-check';
 import type { RuleMessages } from './plan-messages';
 
 /** Vị từ đo được trên một con số diện tích, không cần toạ độ. */
@@ -162,7 +172,20 @@ export const MEASURABLE_ON_PLAN = new Set([
   'min_dimension',
   'aspect_ratio_max',
   'requires_daylight',
+  'adjacency',
+  'floor_preference',
+  'stair_faces_entry',
 ]);
+
+/**
+ * Vị từ QUAN HỆ — đo trên nhiều phòng cùng lúc, không trên số đo của một phòng.
+ *
+ * `adjacency` và `floor_preference` đã được tiêm vào lời dẫn khi kỹ sư tích gói kinh nghiệm từ
+ * trước, nhưng tới 16/09/2026 KHÔNG được đo lại: `wc_separate_from_kitchen`, `kitchen_near_dining`,
+ * `garage_ground_floor` chưa từng sinh một cảnh báo nào. `stair_faces_entry` thêm cùng ngày theo tài
+ * liệu «Nguyên tắc vàng» mục 9 (Haan chốt: chỉ ý thang–cửa chính, vì đo được bằng hình học sẵn có).
+ */
+const RELATIONAL = new Set(['adjacency', 'floor_preference', 'stair_faces_entry']);
 
 /** Sai lệch bỏ qua khi so số đo với ngưỡng, mét — dưới mức này là chuyện làm tròn. */
 const MEASURE_SLACK_M = 0.05;
@@ -220,7 +243,7 @@ export function reviewPlanRooms(input: {
       const areaM2 = (rectWidth(rect) * rectHeight(rect)) / 10_000;
 
       for (const rule of applicable) {
-        if (!MEASURABLE_ON_PLAN.has(rule.predicate)) continue;
+        if (!MEASURABLE_ON_PLAN.has(rule.predicate) || RELATIONAL.has(rule.predicate)) continue;
         if (!targetIsKnown(rule, labels, groups)) continue;
         if (!targets(rule, room.type, groups)) continue;
         checked.add(rule.id);
@@ -244,7 +267,278 @@ export function reviewPlanRooms(input: {
     }
   }
 
+  const relational = applicable.filter(
+    (rule) => RELATIONAL.has(rule.predicate) && targetIsKnown(rule, labels, groups),
+  );
+  const nameOfRoom = (room: AiFloorPlanLevel['rooms'][number]): string =>
+    room.label?.trim() || nameOf(room.type);
+  for (const rule of relational) {
+    checked.add(rule.id);
+    for (const found of relationalViolations(rule, levels, groups)) {
+      const room = found.room;
+      warnings.push({
+        ruleId: rule.id,
+        severity: rule.severity,
+        source: rule.source,
+        message: messages.render(rule.id, found.messageKey, {
+          room: nameOfRoom(room),
+          a: nameOf(String(rule.params.a)),
+          b: nameOf(String(rule.params.b)),
+          actual: found.level,
+          target: nameOf(String(rule.params.target ?? '')),
+        }),
+        spaceId: room.id,
+        level: found.level,
+      });
+    }
+  }
+
   return { warnings, checked: [...checked].sort(), unchecked };
+}
+
+type PlanRoom = AiFloorPlanLevel['rooms'][number];
+
+interface RelationalViolation {
+  room: PlanRoom;
+  level: number;
+  /** Khoá mẫu câu trong `rules/messages.vi.yaml` khi quy tắc không có mẫu riêng theo mã. */
+  messageKey: string;
+}
+
+/** Một khu mang một loại phòng: phòng thường là chính nó, không gian mở là từng khu (`parts`). */
+interface TypedZone {
+  room: PlanRoom;
+  type: string;
+  rect: Rect;
+}
+
+function zonesOf(room: PlanRoom): TypedZone[] {
+  const parts = room.parts ?? [];
+  if (parts.length > 1) {
+    return parts.map((part) => ({ room, type: part.type, rect: toRect(part.rect) }));
+  }
+  return [{ room, type: room.type, rect: toRect(room.rect) }];
+}
+
+function relationalViolations(
+  rule: Rule,
+  levels: readonly AiFloorPlanLevel[],
+  groups: Record<string, string[]>,
+): RelationalViolation[] {
+  if (rule.predicate === 'adjacency') return adjacencyViolations(rule, levels, groups);
+  if (rule.predicate === 'floor_preference') return floorViolations(rule, levels, groups);
+  return levels.flatMap((level) =>
+    stairsFacingEntry(level).map((room) => ({
+      room,
+      level: level.level,
+      messageKey: 'stair_faces_entry',
+    })),
+  );
+}
+
+/**
+ * `kind: adjacent` — trên tầng có cả hai loại, phải có ít nhất một cặp chung tường (hoặc cùng một
+ * không gian mở). `kind: separate` — không cặp nào chung tường; `scope: building` thì thêm: không
+ * nằm chồng lên nhau ở hai tầng liền kề (WC trên phòng thờ, đúng cách A3 đo).
+ */
+function adjacencyViolations(
+  rule: Rule,
+  levels: readonly AiFloorPlanLevel[],
+  groups: Record<string, string[]>,
+): RelationalViolation[] {
+  const a = String(rule.params.a ?? '');
+  const b = String(rule.params.b ?? '');
+  const kind = String(rule.params.kind ?? '');
+  const isA = (type: string) => type === a || (groups[a]?.includes(type) ?? false);
+  const isB = (type: string) => type === b || (groups[b]?.includes(type) ?? false);
+  const zonesByLevel = new Map(
+    levels.map((level) => [level.level, level.rooms.flatMap(zonesOf)] as const),
+  );
+  const out: RelationalViolation[] = [];
+
+  for (const level of levels) {
+    const zones = zonesByLevel.get(level.level) ?? [];
+    const as = zones.filter((zone) => isA(zone.type));
+    const bs = zones.filter((zone) => isB(zone.type));
+    if (!as.length || !bs.length) continue;
+    const touching = (p: TypedZone, q: TypedZone) =>
+      p.room.id === q.room.id || rectsShareEdge(p.rect, q.rect);
+
+    if (kind === 'adjacent') {
+      if (!as.some((p) => bs.some((q) => touching(p, q)))) {
+        out.push({ room: as[0]!.room, level: level.level, messageKey: 'adjacency_adjacent' });
+      }
+      continue;
+    }
+    if (kind !== 'separate') continue;
+    for (const p of as) {
+      if (bs.some((q) => p.room.id !== q.room.id && rectsShareEdge(p.rect, q.rect))) {
+        out.push({ room: p.room, level: level.level, messageKey: 'adjacency_separate' });
+      }
+    }
+  }
+
+  if (kind === 'separate' && rule.scope === 'building') {
+    for (const level of levels) {
+      const zones = zonesByLevel.get(level.level) ?? [];
+      const above = zonesByLevel.get(level.level + 1) ?? [];
+      for (const [lower, upper] of [
+        [zones.filter((z) => isB(z.type)), above.filter((z) => isA(z.type))],
+        [zones.filter((z) => isA(z.type)), above.filter((z) => isB(z.type))],
+      ] as const) {
+        for (const top of upper) {
+          if (lower.some((bottom) => rectsOverlap(bottom.rect, top.rect))) {
+            out.push({ room: top.room, level: level.level + 1, messageKey: 'adjacency_separate' });
+          }
+        }
+      }
+    }
+  }
+  return dedupe(out);
+}
+
+/** `value: top` — tầng cao nhất có phòng ở (cùng định nghĩa A3); `value: ground` — tầng thấp nhất. */
+function floorViolations(
+  rule: Rule,
+  levels: readonly AiFloorPlanLevel[],
+  groups: Record<string, string[]>,
+): RelationalViolation[] {
+  const target = String(rule.params.target ?? '');
+  const value = String(rule.params.value ?? '');
+  if (value !== 'top' && value !== 'ground') return [];
+  const habitable = new Set(groups.habitable ?? []);
+  const habitableLevels = levels
+    .filter((level) => level.rooms.some((room) => zonesOf(room).some((z) => habitable.has(z.type))))
+    .map((level) => level.level);
+  const wanted =
+    value === 'top'
+      ? Math.max(...(habitableLevels.length ? habitableLevels : levels.map((l) => l.level)))
+      : Math.min(...levels.map((l) => l.level));
+  const isTarget = (type: string) => type === target || (groups[target]?.includes(type) ?? false);
+
+  return dedupe(
+    levels
+      .filter((level) => level.level !== wanted)
+      .flatMap((level) =>
+        level.rooms
+          .filter((room) => zonesOf(room).some((zone) => isTarget(zone.type)))
+          .map((room) => ({
+            room,
+            level: level.level,
+            messageKey: `floor_preference_${value}`,
+          })),
+      ),
+  );
+}
+
+function dedupe(found: RelationalViolation[]): RelationalViolation[] {
+  const seen = new Set<string>();
+  return found.filter((entry) => {
+    const key = `${entry.level}|${entry.room.id}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/** Lệch trục tối đa giữa tim cửa chính và mép ô thang vẫn coi là «thẳng trục», cm. */
+const AXIS_SLACK_CM = 30;
+
+const UP_VECTOR: Record<string, Pt> = { '+x': [1, 0], '-x': [-1, 0], '+y': [0, 1], '-y': [0, -1] };
+
+/**
+ * Ô thang «đâm thẳng» cửa chính: bước qua cửa ngoài nhà, đi thẳng theo pháp tuyến vào trong là gặp
+ * ngay chân thang, và vế đầu chạy DỌC theo hướng đi ấy (xuống thang là đi thẳng ra cửa).
+ *
+ * Đo trên hình học đã giải, không đoán:
+ *  · cửa chính = cửa có một phía là ngoài nhà, không phải cửa để xe hay cổng;
+ *  · «gặp ngay» = ô thang nằm trong chính phòng cửa mở vào, HOẶC ở phòng kế tiếp trên trục ấy và
+ *    hai phòng thông nhau bằng một cửa nằm trên trục (lệch ≤ `AXIS_SLACK_CM`);
+ *  · vế đầu cùng chiều đi vào — vế vuông góc thì bước vào nhìn thấy mặt bên thang, không «đâm».
+ *
+ * Giới hạn chấp nhận: không lần qua hai phòng trở lên, không xét ô thông không cửa giữa hai phòng.
+ */
+export function stairsFacingEntry(level: AiFloorPlanLevel): PlanRoom[] {
+  const stairs = level.stairs ?? [];
+  if (!stairs.length) return [];
+  const walls = prepareWalls(level.walls);
+  const byId = new Map(walls.map((wall) => [wall.id, wall]));
+  const kindOf = new Map((level.doors ?? []).map((door) => [door.id, door.kind]));
+  const links = doorLinks(level, walls);
+  const rooms = level.rooms.map((room) => ({ room, rect: toRect(room.rect) }));
+  const roomAt = (p: Pt) =>
+    rooms.find(
+      ({ rect }) => p[0] >= rect.x0 && p[0] <= rect.x1 && p[1] >= rect.y0 && p[1] <= rect.y1,
+    );
+  const found = new Map<string, PlanRoom>();
+
+  for (const link of links) {
+    if (!link.toOutside || link.rooms.length !== 1) continue;
+    const kind = kindOf.get(link.id);
+    if (kind === 'garage' || kind === 'gate') continue;
+    const door = (level.doors ?? []).find((d) => d.id === link.id);
+    const wall = door ? byId.get(door.wall) : undefined;
+    const entry = rooms.find(({ room }) => room.id === link.rooms[0]);
+    if (!wall || !entry) continue;
+
+    const reach = wall.t / 2 + 2;
+    const inward = [1, -1]
+      .map((sign): Pt => [wall.n[0] * sign, wall.n[1] * sign])
+      .find((dir) => roomAt([link.at[0] + dir[0] * reach, link.at[1] + dir[1] * reach]));
+    if (!inward) continue;
+    const alongX = Math.abs(inward[0]) > 0.9;
+    const lateral = alongX ? link.at[1] : link.at[0];
+
+    const onAxis = (rect: Rect) =>
+      alongX
+        ? lateral >= rect.y0 - AXIS_SLACK_CM && lateral <= rect.y1 + AXIS_SLACK_CM
+        : lateral >= rect.x0 - AXIS_SLACK_CM && lateral <= rect.x1 + AXIS_SLACK_CM;
+    const ahead = (rect: Rect) =>
+      alongX
+        ? inward[0] > 0
+          ? rect.x1 > link.at[0]
+          : rect.x0 < link.at[0]
+        : inward[1] > 0
+          ? rect.y1 > link.at[1]
+          : rect.y0 < link.at[1];
+    const runsInward = (up: string) => {
+      const v = UP_VECTOR[up];
+      return !!v && v[0] * inward[0] + v[1] * inward[1] > 0.9;
+    };
+
+    // Phòng kế tiếp trên trục: bước qua mép xa của phòng cửa mở vào.
+    const far = alongX
+      ? inward[0] > 0
+        ? entry.rect.x1
+        : entry.rect.x0
+      : inward[1] > 0
+        ? entry.rect.y1
+        : entry.rect.y0;
+    const probe: Pt = alongX
+      ? [far + inward[0] * (wall.t + 2), lateral]
+      : [lateral, far + inward[1] * (wall.t + 2)];
+    const next = roomAt(probe);
+    const passage = next
+      ? links.find((other) => {
+          if (!other.rooms.includes(entry.room.id) || !other.rooms.includes(next.room.id)) {
+            return false;
+          }
+          const offset = alongX ? other.at[1] - lateral : other.at[0] - lateral;
+          return Math.abs(offset) <= AXIS_SLACK_CM;
+        })
+      : undefined;
+
+    for (const stair of stairs) {
+      const rect = toRect(stair.rect);
+      if (!onAxis(rect) || !ahead(rect) || !runsInward(stair.up)) continue;
+      const inEntry = rectsOverlap(rect, entry.rect);
+      const inNext = !!next && !!passage && rectsOverlap(rect, next.rect);
+      if (!inEntry && !inNext) continue;
+      const host = inEntry ? entry.room : next!.room;
+      found.set(host.id, host);
+    }
+  }
+  return [...found.values()];
 }
 
 /** So một phòng với một quy tắc. Trả `null` khi quy tắc thiếu tham số để so. */
@@ -294,8 +588,12 @@ function measure(
  *
  * Tầng nào chưa có `outline_faces` (artifact đúc trước 12/09/2026) thì giữ hành vi cũ: không
  * có dữ liệu mặt thì không suy hộ một kết luận về ánh sáng.
+ *
+ * Xuất ra ngoài vì tiêu chí D1 của BỘ CHẤM đo đúng câu hỏi này. Hai bản thực thi của «phòng nào có
+ * sáng» là hai bản sẽ lệch, và lệch ở đây nghĩa là màn hình cảnh báo một phòng thiếu sáng trong khi
+ * bộ chấm cho nó đủ điểm mặt thoáng.
  */
-function roomsWithDaylight(level: AiFloorPlanLevel): Set<string> {
+export function roomsWithDaylight(level: AiFloorPlanLevel): Set<string> {
   const walls = new Map(prepareWalls(level.walls).map((wall) => [wall.id, wall]));
   const rooms = level.rooms.map((room) => ({ id: room.id, rect: toRect(room.rect) }));
   const outline = level.outline.map(toPt);

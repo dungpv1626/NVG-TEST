@@ -46,8 +46,8 @@ export const DESIGN_HELP = {
   program: {
     title: 'Chương trình không gian',
     steps: [
-      'Soát diện tích tối thiểu, mong muốn và tối đa của từng không gian.',
-      'Đọc phần cảnh báo và các nhu cầu chưa xếp được trước khi chốt.',
+      'Soát tối thiểu, đề xuất, tối đa của từng không gian — dưới mỗi số ghi rõ ai quyết.',
+      'Sửa ô Đề xuất nếu cần (không dưới tối thiểu), đọc cảnh báo, rồi mới chốt.',
       'Bấm Chốt chương trình không gian để các bước sau dùng bản này.',
     ],
     note: 'Chưa chốt thì chưa dựng được phương án. Đầu bài đổi thì phải chốt lại.',
@@ -59,7 +59,7 @@ export const DESIGN_HELP = {
       'Mở từng phương án để xem bản vẽ, khối ba chiều và bảng thống kê.',
       'Bấm Chọn phương án này để đặt bản đang hiệu lực cho các bước sau.',
     ],
-    note: 'Phương án không xếp được nghĩa là các yêu cầu mâu thuẫn nhau. Sửa đầu bài hoặc chương trình không gian rồi dựng lại — phần mềm không tự nới quy chuẩn.',
+    note: 'Phương án không xếp được nghĩa là các yêu cầu mâu thuẫn nhau. Sửa đầu bài hoặc chương trình không gian rồi dựng lại — phần mềm không tự nới yêu cầu nào.',
   },
   sheet: {
     title: 'Bản vẽ mặt bằng',

@@ -22,14 +22,18 @@ import { designApi } from '@/lib/design-api';
 import {
   useAiDesignState,
   useInvalidateAiDesign,
+  type AiCallUsage,
   type AiDesignState,
+  type ReasoningEffort,
   type AiRulePackChoice,
   type AiSpaceProgramView,
 } from '@/hooks/use-ai-design';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useMutation } from '@tanstack/react-query';
 import { Chip, Panel } from '../tk-ui';
-import { AiModePicker, useAiChoice } from './ai-model-picker';
+import { AiModePicker, ReasoningEffortPicker, useAiChoice } from './ai-model-picker';
+import { AiLiveCall } from './ai-live-call';
+import { AiUsageLine } from './ai-usage';
 
 export interface AiProgramWarning {
   ruleId: string;
@@ -53,13 +57,23 @@ export interface AiProgramResponse {
   warnings: AiProgramWarning[];
   checkedRules: string[];
   uncheckedRules: Array<{ ruleId: string; predicate: string; source: string }>;
+  /** Số token và chi phí của từng lượt gọi (lượt đầu, lượt sửa). Vắng ở máy chủ cũ. */
+  usage?: AiCallUsage[];
+  /** Kết quả kiểm từng lượt — lượt đầu bị bác vì sao. */
+  rounds?: { round: number; outcome: 'accepted' | 'rejected'; issues: string[] }[];
 }
 
 function useRunAiProgram() {
   return useMutation<
     AiProgramResponse,
     Error,
-    { projectId: string; route: string; rulePacks: AiRulePackChoice }
+    {
+      projectId: string;
+      route: string;
+      rulePacks: AiRulePackChoice;
+      reasoningEffort?: ReasoningEffort | null;
+      progressId?: string;
+    }
   >({
     mutationFn: (body) => designApi<AiProgramResponse>('/design/ai/program', body),
   });
@@ -131,6 +145,9 @@ export function AiProgramStep({
   const run = useRunAiProgram();
   const invalidate = useInvalidateAiDesign();
   const [result, setResult] = useState<AiProgramResponse | null>(null);
+  const [effort, setEffort] = useState<ReasoningEffort | null>(null);
+  // Mã theo dõi do trình duyệt sinh — gửi kèm lời gọi, rồi hỏi tiến độ theo mã này mỗi 2 giây.
+  const [progressId, setProgressId] = useState<string | null>(null);
 
   const program = result?.program ?? state.program?.payload ?? null;
   const labels = result?.roomLabels ?? state.roomLabels;
@@ -139,13 +156,22 @@ export function AiProgramStep({
   const onRun = () => {
     if (!ai.choice.route) return;
     setResult(null);
+    const id = crypto.randomUUID();
+    setProgressId(id);
     void run
-      .mutateAsync({ projectId, route: ai.choice.route, rulePacks: packs })
+      .mutateAsync({
+        projectId,
+        route: ai.choice.route,
+        rulePacks: packs,
+        reasoningEffort: ai.selected?.supportsEffort === false ? null : effort,
+        progressId: id,
+      })
       .then((out) => {
         setResult(out);
         invalidate(projectId);
       })
-      .catch(() => undefined);
+      // Lượt hỏng hay bị bác vẫn là một dòng chi phí — làm mới nhật ký cả khi lỗi.
+      .catch(() => invalidate(projectId));
   };
 
   return (
@@ -179,6 +205,12 @@ export function AiProgramStep({
                   allowSolver={false}
                   disabled={run.isPending}
                 />
+                <ReasoningEffortPicker
+                  value={effort}
+                  onChange={setEffort}
+                  option={ai.selected}
+                  disabled={run.isPending}
+                />
                 <Button
                   variant="primary"
                   onClick={onRun}
@@ -191,16 +223,25 @@ export function AiProgramStep({
           )
         )}
 
-        {/* Con số này là số ĐO, không phải ước lượng: 08/09/2026, cùng một đầu bài nhà phố hai
-            tầng — GPT 158 giây, Claude 103 giây. Hứa ngắn hơn thực tế thì người dùng tưởng
-            treo và bấm lại, mà bấm lại là một lượt gọi tính tiền nữa. */}
+        {/* Số ĐO 13/09/2026 trên biệt thự demo, GPT-5 mức mặc định: một lượt 145–151 giây; lượt
+            đầu bị bác phải gọi lượt sửa thì cả thảy ~5 phút. Hứa ngắn hơn thực tế thì người dùng
+            tưởng treo và bấm lại — mà bấm lại là thêm một lượt tính tiền. */}
         {run.isPending && (
           <p className="mt-3 text-fg-subtle" aria-live="polite">
-            Đang hỏi mô hình — thường 1,5&ndash;3 phút.
+            Đang hỏi mô hình — một lượt GPT-5 đo được khoảng 2,5 phút; nếu lượt đầu bị bộ kiểm bác
+            và phải gọi lượt sửa thì khoảng 5 phút.
           </p>
         )}
-        {run.isError && <p className="mt-3 text-status-overdue">{toUserMessage(run.error)}</p>}
+        {run.isError && (
+          <p className="mt-3 text-status-overdue">
+            {toUserMessage(run.error)} Số token và chi phí của lượt này ghi ở «Nhật ký gọi AI của hồ
+            sơ» bên dưới.
+          </p>
+        )}
+        {result && <AiUsageLine usage={result.usage} />}
       </Panel>
+
+      {progressId && <AiLiveCall runId={progressId} waiting={run.isPending} />}
 
       {run.isPending && <Skeleton className="h-64 w-full" />}
 
@@ -307,6 +348,16 @@ function ProgramTable({
                   <tr key={s.id} className="border-t border-tk-line">
                     <td className="py-2">
                       {labels[s.type] ?? s.type}
+                      {s.includes?.length ? (
+                        <span>
+                          {' '}
+                          (có{' '}
+                          {s.includes
+                            .map((type) => (labels[type] ?? type).toLocaleLowerCase('vi'))
+                            .join(', ')}
+                          )
+                        </span>
+                      ) : null}
                       {s.ensuite_of && (
                         <span className="text-fg-subtle">
                           {' '}

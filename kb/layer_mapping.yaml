@@ -213,6 +213,9 @@ ignore:
 # `color` là mã màu ACI của AutoCAD.
 export:
   room_boundary: { layer: 'NV-Phong', color: 8 }
+  # Ranh MỀM giữa các khu của một không gian mở (T48) — lớp riêng, để không ai bóc khối lượng tường
+  # theo nó và để người vẽ tắt được một nút.
+  soft_divider: { layer: 'NV-RanhMem', color: 8 }
   room_label: { layer: 'NV-GhiChu', color: 7 }
   wall: { layer: 'NV-Tuong', color: 7 }
   hatch: { layer: 'NV-Hach', color: 8 }

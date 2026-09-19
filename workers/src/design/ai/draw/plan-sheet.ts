@@ -14,7 +14,7 @@ import type { AiFloorPlan, AiFloorPlanLevel } from '@nvg/shared/design';
 import { AI_DISCLAIMERS } from '@nvg/shared/design';
 import { bboxOfPoints, toPt, toRect, type Pt, type Rect } from './geometry';
 import { DrawNotes, type DrawNote } from './notes';
-import { renderOpenings } from './openings';
+import { doorSwingZones, renderOpenings } from './openings';
 import { renderRoomLabels } from './rooms';
 import { renderDimensions } from './dims';
 import {
@@ -24,11 +24,11 @@ import {
   renderTitleBlock,
   svgDocument,
 } from './sheet';
-import { renderStairs } from './stairs';
+import { renderStairs, stairTreadZones } from './stairs';
 import { renderNorthArrow } from './symbols';
 import { CLS, polylinePath, tag } from './svg';
 import type { Orientation, SheetStyle } from './style';
-import { chooseLayout, paperFor } from './units';
+import { chooseLayout, paperFor, type Paper } from './units';
 import { prepareWalls, renderWalls } from './walls';
 
 export class PlanSheetError extends Error {
@@ -56,6 +56,16 @@ export interface PlanSheetResult {
   notes: DrawNote[];
 }
 
+/** Ghi chú in ở dải tiêu đề: gộp làm MỘT dòng, vì dải chỉ đủ chỗ cho hai dòng. */
+function sheetNotes(plan: AiFloorPlan, level: AiFloorPlanLevel): string[] {
+  const parts: string[] = [];
+  if (plan.generator.walls_derived) parts.push(AI_DISCLAIMERS.wallsDerived);
+  if (level.rooms.some((room) => (room.parts ?? []).length > 1)) {
+    parts.push(AI_DISCLAIMERS.openSpaceParts);
+  }
+  return parts.length ? [parts.join(' · ')] : [];
+}
+
 export function renderPlanSheet(
   plan: AiFloorPlan,
   levelNumber: number,
@@ -66,9 +76,8 @@ export function renderPlanSheet(
     throw new PlanSheetError(`Phương án này không có tầng ${levelNumber}.`);
   }
 
-  const { style, labels } = options;
+  const { style } = options;
   const notes = new DrawNotes();
-  const walls = prepareWalls(level.walls);
   const bbox = levelBounds(level);
   const { orientation, scale, area, fits } = chooseLayout(bbox, style);
   if (!fits) {
@@ -79,18 +88,14 @@ export function renderPlanSheet(
   }
   const paper = paperFor(bbox, area, scale);
 
-  const openings = renderOpenings(level, walls, paper, notes);
   const body = [
     renderFrame(area),
     renderTitleBlock(area, style, { levelName: level.name, scale }),
     renderSheetTitle(area, style, level.name),
-    renderFooter(area, style, plan.generator.walls_derived ? [AI_DISCLAIMERS.wallsDerived] : []),
-    renderVoids(level.voids ?? [], paper),
-    renderWalls(walls, openings.holes, paper),
-    openings.svg,
-    renderStairs(level.stairs ?? [], paper, style),
-    renderRoomLabels(level.rooms, paper, style, labels, notes),
-    renderDimensions(walls, bbox, paper, style),
+    // MỘT dòng ghi chú: dải tiêu đề chỉ đủ chỗ cho hai dòng trước khi chạm tên tờ vẽ (đo trên lượt
+    // fd3b0b86 — dòng thứ ba đè lên «Mặt bằng công năng — Tầng 1»).
+    renderFooter(area, style, sheetNotes(plan, level)),
+    renderPlanBody(plan, level, paper, options, notes),
     // Mũi tên bắc nằm TRONG vùng hình, không sát khung: chữ «B» in phía ngoài vòng tròn, nên
     // đặt đúng mép thì nó tràn qua nét khung hoặc qua cột khung tên. Chừa thêm một cỡ chữ.
     renderNorthArrow(
@@ -108,13 +113,69 @@ export function renderPlanSheet(
 }
 
 /**
+ * Phần HÌNH của một tầng — ô thông tầng, tường, lỗ mở, thang, chữ trong phòng, chuỗi kích thước —
+ * không khung, không khung tên, không mũi tên bắc.
+ *
+ * Tờ SVG và bộ xuất DXF (`ai/dxf/`) cùng gọi hàm này với hai bộ đổi toạ độ khác nhau, nên tệp CAD mang
+ * đúng tường đã cắt lỗ, đúng ký hiệu cửa, đúng chỗ đặt chữ mà kiến trúc sư đã xem trên màn hình — một
+ * nguồn hình học (CLAUDE.md 8.2 điểm 5).
+ */
+export function renderPlanBody(
+  plan: AiFloorPlan,
+  level: AiFloorPlanLevel,
+  paper: Paper,
+  options: PlanSheetOptions,
+  notes: DrawNotes,
+): string {
+  const { style, labels } = options;
+  const walls = prepareWalls(level.walls);
+  const bbox = levelBounds(level);
+  const openings = renderOpenings(level, walls, paper, notes);
+  const ownStairs = level.stairs ?? [];
+  const arriving = ownStairs.length === 0 ? stairsArrivingAt(plan, level) : [];
+  const stairs = ownStairs.length ? ownStairs : arriving;
+  return [
+    renderVoids(level.voids ?? [], paper),
+    renderWalls(walls, openings.holes, paper),
+    openings.svg,
+    renderStairs(stairs, paper, style, ownStairs.length === 0),
+    renderRoomLabels(level.rooms, paper, style, labels, notes, [
+      ...doorSwingZones(level, walls),
+      ...stairTreadZones(stairs),
+    ]),
+    renderDimensions(walls, bbox, paper, style),
+  ].join('');
+}
+
+/**
+ * Thang của tầng NGAY DƯỚI mà ô thang đứng trong khối xây của tầng này — vẽ lại ở tầng trên cùng.
+ *
+ * Cổng liên tầng đã bảo đảm ô thang các tầng chồng khít (`stair_not_aligned`), nên chép nguyên hình
+ * thang tầng dưới là đúng chỗ. Ô thang không nằm trong hình bao tầng này thì không vẽ.
+ */
+function stairsArrivingAt(
+  plan: AiFloorPlan,
+  level: AiFloorPlanLevel,
+): NonNullable<AiFloorPlanLevel['stairs']> {
+  const below = plan.levels.find((item) => item.level === level.level - 1);
+  if (!below?.stairs?.length) return [];
+  const bounds = bboxOfPoints(level.outline.map(toPt));
+  return below.stairs.filter((stair) => {
+    const rect = toRect(stair.rect);
+    return (
+      rect.x0 >= bounds.x0 && rect.x1 <= bounds.x1 && rect.y0 >= bounds.y0 && rect.y1 <= bounds.y1
+    );
+  });
+}
+
+/**
  * Hình bao để căn giấy: hình bao khối xây, cộng thêm mọi thứ có thể chìa ra ngoài nó.
  *
  * Lấy dư còn hơn thiếu — tường khai theo TIM nên nửa bề dày nằm ngoài đường bao, và mô hình
  * thỉnh thoảng khai ban công vượt ra ngoài `outline`. Thiếu vài centimet ở đây thì tờ vẽ mất
  * một mảng tường ngoài rìa mà không có lỗi nào nổ ra.
  */
-function levelBounds(level: AiFloorPlanLevel): Rect {
+export function levelBounds(level: AiFloorPlanLevel): Rect {
   const points: Pt[] = [];
   for (const point of level.outline) points.push(toPt(point));
   for (const wall of level.walls) {
@@ -135,10 +196,7 @@ function levelBounds(level: AiFloorPlanLevel): Rect {
 }
 
 /** Ô thông tầng, giếng trời, sân trong: nền nhạt + hai đường chéo — quy ước đọc là "không sàn". */
-function renderVoids(
-  voids: NonNullable<AiFloorPlanLevel['voids']>,
-  paper: ReturnType<typeof paperFor>,
-): string {
+function renderVoids(voids: NonNullable<AiFloorPlanLevel['voids']>, paper: Paper): string {
   const parts: string[] = [];
   for (const item of voids) {
     const rect = toRect(item.rect);

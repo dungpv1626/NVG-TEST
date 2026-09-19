@@ -68,6 +68,48 @@ export const aiBriefDigestSchema = z
           .nullable()
           .optional(),
         max_density: z.number().nullable().optional(),
+        main_entrance_side: z
+          .union([
+            z.literal('front'),
+            z.literal('back'),
+            z.literal('left'),
+            z.literal('right'),
+            z.literal(null),
+          ])
+          .nullable()
+          .optional(),
+        vehicle_entrance_side: z
+          .union([
+            z.literal('front'),
+            z.literal('back'),
+            z.literal('left'),
+            z.literal('right'),
+            z.literal(null),
+          ])
+          .nullable()
+          .optional(),
+        boundary_walls: z
+          .object({
+            front: z
+              .union([z.literal('chung'), z.literal('rieng'), z.literal(null)])
+              .nullable()
+              .optional(),
+            back: z
+              .union([z.literal('chung'), z.literal('rieng'), z.literal(null)])
+              .nullable()
+              .optional(),
+            left: z
+              .union([z.literal('chung'), z.literal('rieng'), z.literal(null)])
+              .nullable()
+              .optional(),
+            right: z
+              .union([z.literal('chung'), z.literal('rieng'), z.literal(null)])
+              .nullable()
+              .optional(),
+          })
+          .strict()
+          .nullable()
+          .optional(),
       })
       .strict(),
     family: z.array(
@@ -121,6 +163,24 @@ export const aiBriefDigestSchema = z
           ])
           .nullable()
           .optional(),
+        yard_depth_m: z
+          .object({
+            front: z.number().optional(),
+            back: z.number().optional(),
+            left: z.number().optional(),
+            right: z.number().optional(),
+          })
+          .strict()
+          .nullable()
+          .optional(),
+      })
+      .strict()
+      .nullable()
+      .optional(),
+    parking: z
+      .object({
+        cars: z.number().int().nullable().optional(),
+        motorbikes: z.number().int().nullable().optional(),
       })
       .strict()
       .nullable()

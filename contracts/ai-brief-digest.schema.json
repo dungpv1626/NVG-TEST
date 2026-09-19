@@ -18,10 +18,20 @@
     "survey"
   ],
   "properties": {
-    "schema_version": { "$ref": "#/$defs/semver" },
-    "building_type": { "type": "string", "enum": ["nha_pho", "biet_thu", "nha_vuon"] },
-    "locality": { "type": "string" },
-    "floors": { "type": "integer", "minimum": 1 },
+    "schema_version": {
+      "$ref": "#/$defs/semver"
+    },
+    "building_type": {
+      "type": "string",
+      "enum": ["nha_pho", "biet_thu", "nha_vuon"]
+    },
+    "locality": {
+      "type": "string"
+    },
+    "floors": {
+      "type": "integer",
+      "minimum": 1
+    },
     "site": {
       "type": "object",
       "additionalProperties": false,
@@ -31,12 +41,25 @@
           "type": ["string", "null"],
           "enum": ["chu_nhat", "hinh_thang", "da_giac", null]
         },
-        "width_m": { "type": "number" },
-        "depth_m": { "type": "number" },
-        "rear_width_m": { "type": ["number", "null"] },
+        "width_m": {
+          "type": "number"
+        },
+        "depth_m": {
+          "type": "number"
+        },
+        "rear_width_m": {
+          "type": ["number", "null"]
+        },
         "boundary_m": {
           "type": ["array", "null"],
-          "items": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          }
         },
         "orientation": {
           "type": ["string", "null"],
@@ -44,29 +67,80 @@
         },
         "access_sides": {
           "type": "array",
-          "items": { "type": "string", "enum": ["front", "back", "left", "right"] }
+          "items": {
+            "type": "string",
+            "enum": ["front", "back", "left", "right"]
+          }
         },
         "adjacent": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "front": { "type": ["string", "null"] },
-            "back": { "type": ["string", "null"] },
-            "left": { "type": ["string", "null"] },
-            "right": { "type": ["string", "null"] }
+            "front": {
+              "type": ["string", "null"]
+            },
+            "back": {
+              "type": ["string", "null"]
+            },
+            "left": {
+              "type": ["string", "null"]
+            },
+            "right": {
+              "type": ["string", "null"]
+            }
           }
         },
         "setback_required_m": {
           "type": ["object", "null"],
           "additionalProperties": false,
           "properties": {
-            "front": { "type": "number" },
-            "back": { "type": "number" },
-            "left": { "type": "number" },
-            "right": { "type": "number" }
+            "front": {
+              "type": "number"
+            },
+            "back": {
+              "type": "number"
+            },
+            "left": {
+              "type": "number"
+            },
+            "right": {
+              "type": "number"
+            }
           }
         },
-        "max_density": { "type": ["number", "null"] }
+        "max_density": {
+          "type": ["number", "null"]
+        },
+        "main_entrance_side": {
+          "type": ["string", "null"],
+          "enum": ["front", "back", "left", "right", null]
+        },
+        "vehicle_entrance_side": {
+          "type": ["string", "null"],
+          "enum": ["front", "back", "left", "right", null]
+        },
+        "boundary_walls": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "front": {
+              "type": ["string", "null"],
+              "enum": ["chung", "rieng", null]
+            },
+            "back": {
+              "type": ["string", "null"],
+              "enum": ["chung", "rieng", null]
+            },
+            "left": {
+              "type": ["string", "null"],
+              "enum": ["chung", "rieng", null]
+            },
+            "right": {
+              "type": ["string", "null"],
+              "enum": ["chung", "rieng", null]
+            }
+          }
+        }
       }
     },
     "family": {
@@ -80,11 +154,26 @@
             "type": "string",
             "enum": ["ong_ba", "vo_chong", "con", "khach", "nguoi_giup_viec"]
           },
-          "count": { "type": "integer", "minimum": 0 },
-          "floor": { "type": ["integer", "null"] },
-          "floor_pref": { "type": ["string", "null"], "enum": ["low", "mid", "top", null] },
-          "needs": { "type": "array", "items": { "type": "string" } },
-          "ensuite": { "type": ["boolean", "null"] }
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "floor": {
+            "type": ["integer", "null"]
+          },
+          "floor_pref": {
+            "type": ["string", "null"],
+            "enum": ["low", "mid", "top", null]
+          },
+          "needs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ensuite": {
+            "type": ["boolean", "null"]
+          }
         }
       }
     },
@@ -95,11 +184,21 @@
         "additionalProperties": false,
         "required": ["type"],
         "properties": {
-          "type": { "type": "string" },
-          "floor": { "type": ["integer", "null"] },
-          "area_m2": { "type": ["number", "null"] },
-          "ensuite": { "type": ["boolean", "null"] },
-          "amenities": { "type": ["string", "null"] }
+          "type": {
+            "type": "string"
+          },
+          "floor": {
+            "type": ["integer", "null"]
+          },
+          "area_m2": {
+            "type": ["number", "null"]
+          },
+          "ensuite": {
+            "type": ["boolean", "null"]
+          },
+          "amenities": {
+            "type": ["string", "null"]
+          }
         }
       }
     },
@@ -107,20 +206,59 @@
       "type": ["object", "null"],
       "additionalProperties": false,
       "properties": {
-        "wings_preferred": { "type": ["integer", "null"] },
+        "wings_preferred": {
+          "type": ["integer", "null"]
+        },
         "footprint_shape": {
           "type": ["string", "null"],
           "enum": ["chu_nhat", "L", "U", "T", null]
         },
-        "cores_preferred": { "type": ["integer", "null"] },
-        "service_core": { "type": ["boolean", "null"] },
+        "cores_preferred": {
+          "type": ["integer", "null"]
+        },
+        "service_core": {
+          "type": ["boolean", "null"]
+        },
         "yards": {
           "type": "array",
-          "items": { "type": "string", "enum": ["san_truoc", "san_ben", "san_trong", "san_sau"] }
+          "items": {
+            "type": "string",
+            "enum": ["san_truoc", "san_ben", "san_trong", "san_sau"]
+          }
         },
         "indoor_outdoor": {
           "type": ["string", "null"],
           "enum": ["mo_toi_da", "can_bang", "kin_dao", null]
+        },
+        "yard_depth_m": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "front": {
+              "type": "number"
+            },
+            "back": {
+              "type": "number"
+            },
+            "left": {
+              "type": "number"
+            },
+            "right": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    "parking": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "cars": {
+          "type": ["integer", "null"]
+        },
+        "motorbikes": {
+          "type": ["integer", "null"]
         }
       }
     },
@@ -139,16 +277,29 @@
         null
       ]
     },
-    "priorities": { "type": "array", "items": { "type": "string" } },
+    "priorities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "free_text": {
       "description": "Năm ô chữ tự do của đầu bài, ĐÃ lược danh tính. legal_documents cố ý không có: hay chứa số sổ đỏ.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "design_task": { "type": ["string", "null"] },
-        "functional_needs": { "type": ["string", "null"] },
-        "style_note": { "type": ["string", "null"] },
-        "site_condition": { "type": ["string", "null"] }
+        "design_task": {
+          "type": ["string", "null"]
+        },
+        "functional_needs": {
+          "type": ["string", "null"]
+        },
+        "style_note": {
+          "type": ["string", "null"]
+        },
+        "site_condition": {
+          "type": ["string", "null"]
+        }
       }
     },
     "survey": {
@@ -156,18 +307,37 @@
       "type": ["object", "null"],
       "additionalProperties": false,
       "properties": {
-        "land_width_m": { "type": ["number", "null"] },
-        "land_depth_m": { "type": ["number", "null"] },
-        "land_area_m2": { "type": ["number", "null"] },
-        "orientation": { "type": ["string", "null"] },
-        "measurement_notes": { "type": ["string", "null"] },
-        "surrounding_notes": { "type": ["string", "null"] },
-        "usage_notes": { "type": ["string", "null"] },
-        "notes": { "type": ["string", "null"] }
+        "land_width_m": {
+          "type": ["number", "null"]
+        },
+        "land_depth_m": {
+          "type": ["number", "null"]
+        },
+        "land_area_m2": {
+          "type": ["number", "null"]
+        },
+        "orientation": {
+          "type": ["string", "null"]
+        },
+        "measurement_notes": {
+          "type": ["string", "null"]
+        },
+        "surrounding_notes": {
+          "type": ["string", "null"]
+        },
+        "usage_notes": {
+          "type": ["string", "null"]
+        },
+        "notes": {
+          "type": ["string", "null"]
+        }
       }
     }
   },
   "$defs": {
-    "semver": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" }
+    "semver": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    }
   }
 }

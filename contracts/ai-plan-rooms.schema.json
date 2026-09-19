@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://nvg.vn/contracts/ai-plan-rooms.schema.json",
   "title": "AiPlanRooms",
-  "description": "Mặt bằng do mô hình ngôn ngữ khai: PHÒNG và LỖ MỞ TRÊN CẠNH PHÒNG. Mô hình KHÔNG khai tường — chương trình suy tường từ chữ nhật phòng.\n\nĐƠN VỊ: xăng-ti-mét NGUYÊN. Gốc toạ độ ở góc TRƯỚC-TRÁI lô đất, `x` sang phải dọc mặt tiền, `y` vào sâu.\n\nKHÔNG khai: bề dày tường, chuỗi kích thước, hướng bắc, mã phương án, toạ độ nội thất. Chương trình suy tất cả từ chữ nhật phòng và từ `kb/construction_norms.yaml`.",
+  "description": "Mặt bằng dạng PHÒNG và LỖ MỞ TRÊN CẠNH PHÒNG — hợp đồng NỘI BỘ từ T37 (13/09/2026): chương trình điền nó từ cây chia mô hình khai (`contracts/ai-plan-tree`), rồi suy tường từ chữ nhật phòng. Không còn gửi cho mô hình.\n\nĐƠN VỊ: xăng-ti-mét NGUYÊN. Gốc toạ độ ở góc TRƯỚC-TRÁI lô đất, `x` sang phải dọc mặt tiền, `y` vào sâu.\n\nKHÔNG khai: bề dày tường, chuỗi kích thước, hướng bắc, mã phương án, toạ độ nội thất. Chương trình suy tất cả từ chữ nhật phòng và từ `kb/construction_norms.yaml`.",
   "$comment": "Quyết định T23 (12/09/2026). Thay phần KHAI TƯỜNG của T15: mô hình vẫn khai toàn bộ nội dung bản vẽ dạng dữ liệu, nhưng thôi khai tường.\n\nVì sao tồn tại một hợp đồng RIÊNG thay vì lược `ai-floor-plan` như sáu trường Worker điền: lỗ mở ở đây neo vào CẠNH PHÒNG (`room` + `edge` + `at`), còn trong artifact chúng neo vào ĐOẠN TƯỜNG (`wall` + `at`). Đó là hai hình dạng khác nhau, không phải một hình dạng bị cắt bớt — nên diễn đạt bằng một phép xoá trường là nói sai. Phần TRÙNG giữa hai hợp đồng (`rooms`, `stairs`, `voids`, `rect`, `point`) có phép thử đối chiếu canh để hai bản không lệch: `contracts-parity.test.ts`.\n\nBa lý do bỏ việc khai tường, đo ngày 12/09/2026:\n\n1. TIỀN. Nhánh `walls` + neo lỗ mở theo tường chiếm ~4.710 ký tự lược đồ gửi đi MỖI LƯỢT, và phần lớn 13.247 token ĐẦU RA của một lượt `plan` là từng đoạn tường kèm bề dày — mà token đầu ra đắt gấp 4–8 lần token đầu vào.\n\n2. SÁU PHÉP KIỂM CHẶN tồn tại CHỈ VÌ mô hình khai tường: `wall_duplicate_id`, `wall_degenerate`, `opening_wall_missing`, `opening_outside_wall`, `window_on_partition`, `room_edge_uncovered`. Phép cuối là chỗ vỡ rõ nhất — nó bắt đúng lúc tường mô hình khai không trùng phòng mô hình khai, tức mô hình tự mâu thuẫn với chính nó.\n\n3. T19 đã đi nửa đường từ 09/09/2026: tường khai sai sau một lượt sửa thì chương trình suy tường từ phòng (`draw/derive-walls.ts`). Nửa còn lại là thôi hỏi.\n\nGiới hạn đã biết và chấp nhận: không diễn đạt được một bức vách KHÔNG phải ranh giới giữa hai phòng (vách lửng, vách trang trí). Ở bước thiết kế sơ bộ thì không mất gì; hồ sơ kỹ thuật là việc của kỹ sư sau khi xuất DXF (T33).\n\nNới điểm 2 của CLAUDE.md 8.2 KHÔNG rộng thêm: mô hình vẫn khai chữ nhật đúng như trước, chỉ bớt việc.",
   "type": "object",
   "additionalProperties": false,
@@ -38,9 +38,10 @@
       "maxLength": 24
     },
     "cm": {
-      "type": "integer",
-      "description": "Xăng-ti-mét, số nguyên. Gốc ở góc trước-trái lô đất, x sang phải, y vào sâu.",
-      "$comment": "Hợp đồng artifact (`ai-floor-plan`) cho phép lưới NỬA centimet vì tim một bức vách dày 11 cm giữa hai phòng có mặt trong ở toạ độ nguyên thì rơi vào x,5. Ở đây KHÔNG cần: mô hình chỉ khai mặt trong của phòng, còn tim tường là việc của `draw/derive-walls.ts`. Ràng buộc chặt hơn thì lược đồ ngắn hơn và không có lựa chọn nào để mô hình chọn sai."
+      "type": "number",
+      "multipleOf": 0.5,
+      "description": "Xăng-ti-mét, lưới nửa centimet. Gốc ở góc trước-trái lô đất, x sang phải, y vào sâu.",
+      "$comment": "Lưới NỬA centimet từ T37 (13/09/2026), giống hợp đồng artifact. Trước đó mô hình khai số nguyên ở đây nên số nguyên là đủ; nay CHƯƠNG TRÌNH điền hợp đồng này từ cây chia (`ai/tree/`), và mặt trong phòng nằm cách tim một bức vách 11 cm đúng 5,5 cm — tức rơi vào x,5 khi tim ở toạ độ nguyên. Bắt số nguyên thì chính chương trình sinh ra dữ liệu mà hợp đồng từ chối."
     },
     "point": {
       "type": "array",

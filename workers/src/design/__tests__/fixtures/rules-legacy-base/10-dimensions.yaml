@@ -1,0 +1,89 @@
+# Kích thước tối thiểu — QCVN 01:2021/BXD và TCVN 4451:2012 (nhà ở — nguyên tắc thiết kế).
+# Mọi giá trị ở đây là NGƯỠNG QUY CHUẨN. Không sao chép chúng vào mã nguồn.
+
+- id: corridor_min_width
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: min_dimension
+  target: circulation
+  value_m: 0.9
+  severity: error
+  source: 'QCVN 01:2021/BXD'
+  auto_repair: shrink_adjacent
+
+- id: stair_min_width
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: building
+  predicate: min_dimension
+  target: stair
+  value_m: 0.9
+  severity: error
+  source: 'QCVN 01:2021/BXD'
+  auto_repair: none
+
+- id: room_min_dimension_bedroom
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: min_dimension
+  target: bedroom
+  value_m: 2.4
+  severity: error
+  source: 'TCVN 4451:2012'
+  auto_repair: shrink_adjacent
+
+- id: min_area_bedroom
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: min_area
+  target: bedroom
+  value_m2: 9.0
+  severity: error
+  source: 'TCVN 4451:2012'
+  auto_repair: shrink_adjacent
+
+- id: min_area_wc
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: min_area
+  target: wc
+  value_m2: 2.4
+  severity: error
+  source: 'TCVN 4451:2012'
+  auto_repair: none
+
+- id: min_area_kitchen
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: min_area
+  target: kitchen
+  value_m2: 6.0
+  severity: error
+  source: 'TCVN 4451:2012'
+  auto_repair: shrink_adjacent
+
+# Bề rộng lọt lòng đủ cho một ô tô con đỗ và mở cửa. Nhỏ hơn thì đó là chỗ để xe máy, và
+# NVG cần nói rõ điều đó trong đầu bài chứ không để bộ giải quyết hộ.
+# Tủ đồ và phòng thay đồ. Không có số quy chuẩn cho hai loại này — ngưỡng dưới đây là bề
+# rộng lọt lòng còn đứng lấy đồ được khi một bên là cánh tủ sâu 0,6 m.
+# Chiều sâu ban công. `min_dimension` ràng buộc CẢ HAI cạnh, nên đây vừa là chiều sâu vừa là
+# bề rộng tối thiểu — một ban công 0,4 m thì không ai đứng được, dù nó dài bao nhiêu.
+# ── Tỉ lệ dài trên rộng cho hai nhóm còn lại ───────────────────────────────────────────
+# `aspect_ratio_max_habitable` đã có từ trước nhưng nhóm `habitable` KHÔNG gồm vệ sinh, kho,
+# giặt, để xe hay ban công (`kb/room_vocabulary.yaml` mục `group_targets`) — nên đúng những
+# phòng dễ bị bóp thành dải hẹp lại là những phòng không quy tắc nào nhìn tới.
+#
+# Nhóm `circulation` cố ý KHÔNG có quy tắc tỉ lệ: hành lang dài và hẹp là đúng bản chất của
+# nó, và một cảnh báo sai loại đó làm kiến trúc sư quen bỏ qua cả danh sách.
+# ── Giếng trời ─────────────────────────────────────────────────────────────────────────
+# Cận TRÊN, không phải cận dưới. Cây chia lấp kín mặt sàn nên phần sàn không phòng nào nhận
+# rơi hết vào khoảng rỗng, và trước 06/09/2026 không có gì chặn: bản vẽ demo có giếng trời
+# 33–37 m² trên sàn 90 m². Bề rộng tối thiểu của giếng trời đã lấy theo quy tắc hành lang
+# (`corridor_min_width`) ngay trong bộ giải — cùng con số, cùng lý do.
+- id: module_grid_100mm
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: building
+  predicate: module_multiple
+  value_m: 0.1
+  severity: error
+  source: 'QCVN 01:2021/BXD'
+  auto_repair: none

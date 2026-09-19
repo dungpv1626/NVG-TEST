@@ -39,6 +39,7 @@ import {
   pointInPolygon,
   polygonArea,
   rectArea,
+  rectCentre,
   rectContainsRect,
   toPt,
   toRect,
@@ -82,6 +83,12 @@ export interface PlanIssue {
   ref?: string;
   /** Câu tiếng Việt CỤ THỂ: nêu đúng phần tử và đúng con số, để lượt sửa có cái mà bám. */
   message: string;
+  /**
+   * Tham số của câu lỗi dạng dữ liệu — để dựng ghi chú «tránh những chỗ này» bằng TIẾNG ANH cho
+   * lượt lấy mẫu lại (T39) mà không phải bóc số ra khỏi câu tiếng Việt. Vắng ở các phép kiểm cũ;
+   * lời dẫn khi đó dùng câu mặc định theo `code` và `ref`.
+   */
+  params?: Record<string, string | number>;
 }
 
 export interface PlanCheckResult {
@@ -105,6 +112,15 @@ export interface PlanCheckInput {
    * «thang chồng lên phòng» trên mọi mặt bằng đúng. Là DỮ LIỆU vì cùng lý lẽ với `doorExemptTypes`.
    */
   verticalTypes: ReadonlySet<string>;
+  /**
+   * Có chạy hai phép kiểm LIÊN TẦNG không — thang chồng khít và đi tới được từ cửa ngoài tầng 1.
+   *
+   * `false` khi kiểm MỘT tầng lẻ trong luồng theo tầng (T38): tầng 2 đứng một mình thì nó là «tầng
+   * thấp nhất» và không có cửa ra ngoài, nên G3 sẽ báo cả tầng không có lối vào. Phép đi lại trong
+   * một tầng do `ai/tree/` kiểm (xuất phát từ ô thang); hai phép này chạy lại khi đã ghép đủ tầng.
+   * Mặc định `true`.
+   */
+  crossLevel?: boolean;
 }
 
 export function checkPlan(input: PlanCheckInput): PlanCheckResult {
@@ -117,8 +133,10 @@ export function checkPlan(input: PlanCheckInput): PlanCheckResult {
   for (const level of input.plan.levels) {
     checkLevel(level, input, add);
   }
-  checkStairs(input.plan, add);
-  checkReachability(input, add);
+  if (input.crossLevel !== false) {
+    checkStairs(input.plan, add);
+    checkReachability(input, add);
+  }
 
   return {
     blocking: issues.filter((issue) => issue.level === 'blocking'),
@@ -515,10 +533,13 @@ function checkDoorsPerRoom(
 }
 
 /** Một cửa và những phòng nó nối. `toOutside` khi một phía không có phòng nào. */
-interface DoorLink {
+export interface DoorLink {
   id: string;
   rooms: string[];
   toOutside: boolean;
+  /** Tim lỗ cửa, toạ độ thật (cm) — bộ đo quãng đường đi qua đây (T48). */
+  at: Pt;
+  level: number;
 }
 
 /**
@@ -528,7 +549,7 @@ interface DoorLink {
  * chút, rơi vào phòng nào thì cửa ăn vào phòng đó. Một phía không có phòng nào nghĩa là cửa mở ra
  * NGOÀI NHÀ — đó là cửa chính, cửa cổng, hoặc cửa ra ban công chưa khai thành phòng.
  */
-function doorLinks(level: AiFloorPlanLevel, walls: readonly WallGeom[]): DoorLink[] {
+export function doorLinks(level: AiFloorPlanLevel, walls: readonly WallGeom[]): DoorLink[] {
   const byId = new Map(walls.map((wall) => [wall.id, wall]));
   const rooms = level.rooms.map((room) => ({ id: room.id, rect: toRect(room.rect) }));
   const links: DoorLink[] = [];
@@ -562,6 +583,8 @@ function doorLinks(level: AiFloorPlanLevel, walls: readonly WallGeom[]): DoorLin
       id: door.id,
       rooms: touched,
       toOutside: sides.some((side) => side.length === 0),
+      at: centre,
+      level: level.level,
     });
   }
   return links;
@@ -587,6 +610,52 @@ function doorLinks(level: AiFloorPlanLevel, walls: readonly WallGeom[]): DoorLin
  * ai vào.
  */
 function checkReachability(input: PlanCheckInput, add: Add): void {
+  const graph = planGraph(input.plan);
+
+  if (graph.entries.length === 0) {
+    add(
+      'blocking',
+      'no_entrance',
+      `Không phòng nào ở tầng ${graph.ground} có cửa mở ra ngoài nhà — mặt bằng không có lối vào.`,
+    );
+    return;
+  }
+
+  const reached = reachableFrom(graph, graph.entries);
+  for (const [id, room] of graph.rooms) {
+    if (reached.has(id)) continue;
+    if (input.doorExemptTypes.has(room.type)) continue;
+    add(
+      'blocking',
+      'room_unreachable',
+      `Phòng "${id}" ở tầng ${room.level} không đi tới được từ cửa ngoài nhà: không có chuỗi cửa và thang nào dẫn tới nó.`,
+      id,
+    );
+  }
+}
+
+/**
+ * Đồ thị đi lại của cả phương án — đỉnh là phòng, cạnh ngang là cửa, cạnh dọc là ô thang.
+ *
+ * Xuất ra ngoài vì BỘ CHẤM cần đúng đồ thị này (tiêu chí C1, C3, C5). Dựng bản thứ hai ở đó là
+ * tạo hai câu trả lời cho câu hỏi «từ đây đi tới kia được không», và chúng sẽ lệch — lúc ấy cổng
+ * G3 nói mặt bằng liền mạch trong khi bộ chấm trừ điểm vì đường đi, hoặc ngược lại.
+ */
+export interface PlanGraph {
+  /** Phòng → các phòng nối trực tiếp. Quan hệ hai chiều. */
+  neighbours: Map<string, Set<string>>;
+  /** Phòng ở tầng thấp nhất có cửa mở RA NGOÀI nhà — điểm xuất phát của mọi đường đi. */
+  entries: string[];
+  /** Số tầng thấp nhất của phương án. */
+  ground: number;
+  rooms: Map<string, { level: number; type: string }>;
+  /** Cửa nối những phòng nào — giữ lại để bộ chấm đếm được số lần đi xuyên phòng. */
+  doors: DoorLink[];
+  /** Tâm từng phòng, toạ độ thật (cm) — bộ đo quãng đường đi (T48). */
+  centres: Map<string, Pt>;
+}
+
+export function planGraph(plan: AiFloorPlan): PlanGraph {
   const neighbours = new Map<string, Set<string>>();
   const link = (from: string, to: string): void => {
     if (from === to) return;
@@ -600,15 +669,25 @@ function checkReachability(input: PlanCheckInput, add: Add): void {
     }
   };
 
-  const levels = [...input.plan.levels].sort((a, b) => a.level - b.level);
+  const levels = [...plan.levels].sort((a, b) => a.level - b.level);
   const ground = Math.min(...levels.map((level) => level.level));
   const entries: string[] = [];
+  const rooms = new Map<string, { level: number; type: string }>();
+  const doors: DoorLink[] = [];
 
+  const centres = new Map<string, Pt>();
   for (const level of levels) {
+    for (const room of level.rooms) {
+      rooms.set(room.id, { level: level.level, type: room.type });
+      centres.set(room.id, rectCentre(toRect(room.rect)));
+    }
     const walls = prepareWalls(level.walls);
     for (const door of doorLinks(level, walls)) {
+      doors.push(door);
       for (const first of door.rooms) {
         for (const second of door.rooms) link(first, second);
+        // Chỉ tầng thấp nhất làm lối vào: một cửa ra ban công ở tầng 3 cũng «mở ra ngoài» nhưng
+        // không ai vào nhà từ đó, và lấy nó làm lối vào thì một tầng trên đứt hẳn khỏi thang vẫn đạt.
         if (door.toOutside && level.level === ground) entries.push(first);
       }
     }
@@ -625,38 +704,56 @@ function checkReachability(input: PlanCheckInput, add: Add): void {
     }
   }
 
-  if (entries.length === 0) {
-    add(
-      'blocking',
-      'no_entrance',
-      `Không phòng nào ở tầng ${ground} có cửa mở ra ngoài nhà — mặt bằng không có lối vào.`,
-    );
-    return;
-  }
+  return { neighbours, entries, ground, rooms, doors, centres };
+}
 
+/** Mọi phòng tới được từ một tập phòng xuất phát, có thể CẤM đi qua một số phòng. */
+export function reachableFrom(
+  graph: PlanGraph,
+  from: readonly string[],
+  forbidden: ReadonlySet<string> = new Set(),
+): Set<string> {
   const reached = new Set<string>();
-  const queue = [...entries];
+  const queue = from.filter((id) => !forbidden.has(id));
   while (queue.length) {
     const current = queue.pop();
     if (!current || reached.has(current)) continue;
     reached.add(current);
-    for (const next of neighbours.get(current) ?? []) {
-      if (!reached.has(next)) queue.push(next);
+    for (const next of graph.neighbours.get(current) ?? []) {
+      if (!reached.has(next) && !forbidden.has(next)) queue.push(next);
     }
   }
+  return reached;
+}
 
-  for (const level of levels) {
-    for (const room of level.rooms) {
-      if (reached.has(room.id)) continue;
-      if (input.doorExemptTypes.has(room.type)) continue;
-      add(
-        'blocking',
-        'room_unreachable',
-        `Phòng "${room.id}" ở tầng ${level.level} không đi tới được từ cửa ngoài nhà: không có chuỗi cửa và thang nào dẫn tới nó.`,
-        room.id,
-      );
+/**
+ * Số phòng ÍT NHẤT phải đi qua để từ `from` tới `to` — không đếm hai đầu.
+ *
+ * `null` khi không có đường nào. Đây là phép đo của tiêu chí C3 («từ lối vào tới chân thang»), nên
+ * nó đếm PHÒNG TRUNG GIAN, không đếm số cạnh: hai phòng thông nhau trực tiếp cho 0.
+ */
+export function roomsBetween(
+  graph: PlanGraph,
+  from: readonly string[],
+  to: ReadonlySet<string>,
+): number | null {
+  const seen = new Set<string>(from);
+  let frontier = [...from];
+  let hops = 0;
+  while (frontier.length) {
+    if (frontier.some((id) => to.has(id))) return Math.max(0, hops - 1);
+    const next: string[] = [];
+    for (const id of frontier) {
+      for (const neighbour of graph.neighbours.get(id) ?? []) {
+        if (seen.has(neighbour)) continue;
+        seen.add(neighbour);
+        next.push(neighbour);
+      }
     }
+    frontier = next;
+    hops += 1;
   }
+  return null;
 }
 
 /** Phòng của một tầng có phần chung thật sự với một chữ nhật — dùng để nối hai tầng qua ô thang. */

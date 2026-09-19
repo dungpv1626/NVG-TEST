@@ -25,6 +25,7 @@ const read = (p: string): unknown =>
 
 const rooms = read('contracts/ai-plan-rooms.schema.json') as Schema;
 const artifact = read('contracts/ai-floor-plan.schema.json') as Schema;
+const tree = read('contracts/ai-plan-tree.schema.json') as Schema;
 
 interface Schema {
   $defs: Record<string, Record<string, unknown>>;
@@ -53,14 +54,12 @@ describe('`ai-plan-rooms` và `ai-floor-plan` khớp nhau ở phần trùng', ()
     }
   });
 
-  it('`cm` khác nhau CÓ CHỦ ĐÍCH, và khác đúng một chỗ', () => {
-    // Hợp đồng của mô hình buộc số NGUYÊN; artifact cho lưới nửa centimet vì tim một bức vách dày
-    // 11 cm giữa hai phòng có mặt trong ở toạ độ nguyên thì rơi vào x,5. Đây là chỗ DUY NHẤT hai
-    // bên được phép khác, và phép thử ghim nó lại để nó không âm thầm thành ba chỗ.
-    expect(rooms.$defs.cm!.type).toBe('integer');
-    expect(artifact.$defs.cm!.type).toBe('number');
-    expect(artifact.$defs.cm!.multipleOf).toBe(0.5);
-    expect(rooms.$defs.cm!.multipleOf).toBeUndefined();
+  it('`cm` giống nhau từ T37 — cả hai hợp đồng nay do CHƯƠNG TRÌNH điền', () => {
+    // Trước 13/09/2026 hợp đồng phòng buộc số NGUYÊN vì mô hình khai nó. Nay chương trình điền nó
+    // từ cây chia, và mặt trong phòng cách tim vách 11 cm đúng 5,5 cm — nên hai bên cùng lưới nửa
+    // centimet. Còn số nguyên thì chuyển sang hợp đồng mô hình thật sự nhận (`ai-plan-tree`).
+    expect(structure(rooms.$defs.cm)).toEqual(structure(artifact.$defs.cm));
+    expect(tree.$defs.cm!.type).toBe('integer');
   });
 
   it('ô thang và ô trống giống nhau đến từng ràng buộc', () => {
@@ -117,5 +116,45 @@ describe('`ai-plan-rooms` và `ai-floor-plan` khớp nhau ở phần trùng', ()
     expect(ourLevel.required).not.toContain('walls');
     expect(theirLevel.properties.walls).toBeDefined();
     expect(theirLevel.required).toContain('walls');
+  });
+});
+
+describe('`ai-plan-tree` và cây lưu trong artifact khớp nhau', () => {
+  // Cây mô hình khai được lưu NGUYÊN VĂN trong `levels[].tree` của artifact (T37). Hai bản lệch
+  // nhau thì artifact từ chối đúng cây vừa qua cổng — hỏng ở bước ghi, sau khi đã trả tiền mọi tầng.
+  const stored = artifact.$defs.tree as unknown as Schema;
+
+  /** Bỏ thêm `$ref` tới mã phần tử: hai tệp đặt tên `$defs` khác nhau cho cùng một kiểu chuỗi. */
+  const shape = (node: unknown): unknown =>
+    JSON.parse(
+      JSON.stringify(structure(node)).replace(/"\$ref":"#\/\$defs\/(tree_id|id)"/g, '"$ref":"ID"'),
+    );
+
+  it('mã phần tử cùng ràng buộc', () => {
+    expect(structure(tree.$defs.id)).toEqual(structure(artifact.$defs.tree_id));
+  });
+
+  it('mọi trường của tầng trừ `variant_label`, `rationale` có mặt ở cả hai, cùng bắt buộc', () => {
+    const ours = Object.keys(tree.properties).filter(
+      (k) => k !== 'variant_label' && k !== 'rationale',
+    );
+    expect(Object.keys(stored.properties).sort()).toEqual([...ours].sort());
+    expect([...stored.required].sort()).toEqual(
+      tree.required.filter((k) => ours.includes(k)).sort(),
+    );
+  });
+
+  it('nút cắt, phòng ghép, cửa, thang, no_window giống nhau đến từng ràng buộc', () => {
+    const inline = (name: string) => shape(tree.$defs[name]);
+    const storedProps = stored.properties as Record<string, { items?: unknown }>;
+    expect(shape(storedProps.nodes!.items)).toEqual(inline('node'));
+    expect(shape(storedProps.also!.items)).toEqual(inline('merge'));
+    expect(shape(storedProps.doors!.items)).toEqual(inline('door'));
+    expect(shape(storedProps.stair)).toEqual(shape(tree.properties.stair));
+    for (const field of ['nodes', 'also', 'doors', 'no_window']) {
+      const a = structure(tree.properties[field]) as { minItems?: number; maxItems?: number };
+      const b = structure(storedProps[field]) as { minItems?: number; maxItems?: number };
+      expect([b.minItems, b.maxItems], field).toEqual([a.minItems, a.maxItems]);
+    }
   });
 });

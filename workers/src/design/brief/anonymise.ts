@@ -34,7 +34,7 @@ import {
 /** Bản gửi đi là hạng 2 — mặt bằng kích thước thật, đã lược danh tính. */
 export const AI_DIGEST_DATA_CLASS: DataClass = 2;
 
-const DIGEST_SCHEMA_VERSION = '1.0.0';
+const DIGEST_SCHEMA_VERSION = '1.1.0';
 
 /** Năm cột chữ tự do của `design_briefs`; `legal_documents` cố ý không đi. */
 export interface BriefFreeText {
@@ -166,6 +166,16 @@ export function anonymiseForAi(input: AnonymiseInput): AiBriefDigest {
           )
         : null,
       max_density: site.max_density ?? null,
+      main_entrance_side: site.main_entrance_side ?? null,
+      vehicle_entrance_side: site.vehicle_entrance_side ?? null,
+      boundary_walls: site.boundary_walls
+        ? {
+            front: site.boundary_walls.front ?? null,
+            back: site.boundary_walls.back ?? null,
+            left: site.boundary_walls.left ?? null,
+            right: site.boundary_walls.right ?? null,
+          }
+        : null,
     },
     family: (brief.family ?? []).map((m) => ({
       role: m.role,
@@ -191,7 +201,15 @@ export function anonymiseForAi(input: AnonymiseInput): AiBriefDigest {
           service_core: brief.massing.service_core ?? null,
           yards: [...(brief.massing.yards ?? [])],
           indoor_outdoor: brief.massing.indoor_outdoor ?? null,
+          yard_depth_m: brief.massing.yard_depth_m
+            ? Object.fromEntries(
+                Object.entries(brief.massing.yard_depth_m).filter(([, v]) => typeof v === 'number'),
+              )
+            : null,
         }
+      : null,
+    parking: brief.parking
+      ? { cars: brief.parking.cars ?? null, motorbikes: brief.parking.motorbikes ?? null }
       : null,
     style: brief.style ?? null,
     priorities: [...(brief.priorities ?? [])],

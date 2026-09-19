@@ -15,6 +15,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { DataClass } from '@nvg/shared/design';
 import type { RoutePricing } from '../llm/router';
 import type { TokenUsage } from '../llm/text-client';
+import { promptKey, type PromptRecord } from './prompt-record';
 
 export interface AiCallScope {
   tenantId: string;
@@ -41,6 +42,13 @@ export interface AiCallOutcome {
   status: 'ok' | 'rejected' | 'failed';
   errorCode?: string;
   artifactId?: string | null;
+  /** Nguyên văn lời gọi đã gửi — có thì lưu vào kho artifact để kỹ sư xuất ra đọc lại. */
+  request?: PromptRecord;
+}
+
+/** Nơi ghi bản ghi lời gọi — kho artifact của Worker (`ArtifactStore.put`). */
+export interface PromptSink {
+  put(key: string, payload: string): Promise<string>;
 }
 
 /** Chi phí từ giá niêm yết (dữ liệu trong `config/models.yaml`); thiếu giá thì `null`. */
@@ -67,14 +75,66 @@ export function costUsd(
   return known ? Math.round(total * 1_000_000) / 1_000_000 : null;
 }
 
+/**
+ * Một lượt gọi nhìn từ MÀN HÌNH: đủ để kỹ sư biết lượt vừa rồi tốn bao nhiêu.
+ *
+ * Hai con số tiền, và phải tách: `listCostUsd` là giá niêm yết của lượng token đã dùng;
+ * `costUsd` là tiền THẬT — bằng 0 khi khoá của nhà cung cấp là gói miễn phí. Gộp làm một thì
+ * hoặc giấu mất «nếu trả phí thì tốn bao nhiêu», hoặc báo một hoá đơn không có thật.
+ */
+export interface AiCallUsage {
+  route: string;
+  purpose: string;
+  provider: string;
+  model: string;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  imageCount: number;
+  latencyMs: number;
+  status: 'ok' | 'rejected' | 'failed';
+  billed: boolean;
+  /** Tiền thật; `null` khi tuyến chưa có giá niêm yết và khoá có tính tiền. */
+  costUsd: number | null;
+  /** Giá niêm yết của lượng đã dùng; `null` khi tuyến chưa có giá. */
+  listCostUsd: number | null;
+}
+
+export function usageSummary(
+  meta: AiCallMeta,
+  outcome: AiCallOutcome,
+  pricing: RoutePricing | undefined,
+  billed: boolean,
+): AiCallUsage {
+  const listCostUsd = costUsd(pricing, outcome.usage, outcome.imageCount ?? 0);
+  return {
+    route: meta.route,
+    purpose: meta.purpose,
+    provider: outcome.provider,
+    model: outcome.model,
+    inputTokens: outcome.usage.inputTokens,
+    outputTokens: outcome.usage.outputTokens,
+    imageCount: outcome.imageCount ?? 0,
+    latencyMs: Math.max(0, Math.round(outcome.latencyMs)),
+    status: outcome.status,
+    billed,
+    costUsd: billed ? listCostUsd : 0,
+    listCostUsd,
+  };
+}
+
 export async function recordAiCall(
   db: SupabaseClient,
   scope: AiCallScope,
   meta: AiCallMeta,
   outcome: AiCallOutcome,
   pricing: RoutePricing | undefined,
-): Promise<void> {
+  /** Có kho thì lưu nguyên văn lời gọi (`outcome.request`) cạnh dòng nhật ký. */
+  prompts?: PromptSink,
+): Promise<string | null> {
+  // Mã do Worker sinh TRƯỚC khi ghi, để bản ghi lời gọi trong kho mang đúng mã của dòng nhật ký.
+  const id = crypto.randomUUID();
   const { error } = await db.from('design_ai_call').insert({
+    id,
     tenant_id: scope.tenantId,
     company_id: scope.companyId,
     project_id: scope.projectId,
@@ -95,7 +155,19 @@ export async function recordAiCall(
     artifact_id: outcome.artifactId ?? null,
     created_by: scope.actorId,
   });
-  if (error) console.error('design_ai_call: không ghi được nhật ký lượt gọi', error);
+  if (error) {
+    console.error('design_ai_call: không ghi được nhật ký lượt gọi', error);
+    return null;
+  }
+  if (outcome.request && prompts) {
+    // Lưu hỏng thì KHÔNG làm hỏng lượt gọi: nhật ký tiền đã ghi, chỉ mất nút xuất lời gọi.
+    await prompts
+      .put(promptKey(scope.projectId, id), JSON.stringify(outcome.request))
+      .catch((cause: unknown) =>
+        console.error('design_ai_call: không lưu được nguyên văn lời gọi', cause),
+      );
+  }
+  return id;
 }
 
 /**

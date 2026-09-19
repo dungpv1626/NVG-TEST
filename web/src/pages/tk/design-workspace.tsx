@@ -25,7 +25,7 @@
  * `EntityDetail` — một hành vi, hai lớp áo.
  */
 
-import { ArrowLeft, History } from 'lucide-react';
+import { ArrowLeft, ArrowRight, History } from 'lucide-react';
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { formatDeadline, type StatusGroup } from '@nvg/shared';
@@ -116,6 +116,24 @@ function WorkspaceBody({
   // Đang ở màn hình con khi `?tab=` trỏ vào một tab không nằm trên thanh.
   const sub = activeAny && !primary.some((t) => t.id === activeAny.id) ? activeAny : null;
   const shown = sub ?? activePrimary;
+
+  /**
+   * Bước trước / bước sau của màn hình con đang mở.
+   *
+   * Thứ tự bước CHÍNH LÀ thứ tự các màn hình con trong `tabs` — trang gọi đã khai chúng theo
+   * đúng mạch quy trình (đầu bài → khảo sát → không gian → phương án → …). Không có danh sách
+   * thứ hai để hai bản trôi khỏi nhau.
+   *
+   * Trước đó lối ra duy nhất của màn hình con là «← Tổng quan»: làm xong đầu bài muốn sang
+   * khảo sát phải quay ra Tổng quan, cuộn tìm thẻ, bấm lại (Haan góp ý 13/09/2026).
+   */
+  const steps = useMemo(
+    () => allTabs.filter((t) => !primary.some((p) => p.id === t.id)),
+    [allTabs, primary],
+  );
+  const stepIndex = sub ? steps.findIndex((t) => t.id === sub.id) : -1;
+  const prevStep = stepIndex > 0 ? steps[stepIndex - 1] : undefined;
+  const nextStep = stepIndex >= 0 ? steps[stepIndex + 1] : undefined;
 
   // Đường đi thực tế thắng breadcrumb mặc định — cùng quy tắc với `EntityDetail`.
   const from = (location.state as { from?: BreadcrumbFrom } | null)?.from ?? null;
@@ -263,14 +281,19 @@ function WorkspaceBody({
               hơn mọi thứ khác trên trang, trong khi nó là thứ người dùng cần thấy trước
               tiên khi muốn đi tiếp. Nay là một nút có viền và nền, cỡ chữ thân bài.
             */}
-            <button
-              type="button"
-              onClick={() => selectTab('tong-quan')}
-              className="inline-flex h-10 items-center gap-2 rounded-full border border-tk-line2 bg-tk-card px-4 font-medium text-tk-tx transition-colors duration-(--motion-fast) ease-(--ease-out) hover:border-tk-acc hover:bg-tk-hover hover:text-tk-acc"
-            >
-              <ArrowLeft className="size-5" aria-hidden />
-              Tổng quan
-            </button>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <button type="button" onClick={() => selectTab('tong-quan')} className={NAV_BUTTON}>
+                <ArrowLeft className="size-5" aria-hidden />
+                Tổng quan
+              </button>
+              <StepNav
+                label="Chuyển bước"
+                prev={prevStep}
+                next={nextStep}
+                onSelect={selectTab}
+                compact
+              />
+            </div>
             <h2 id="tieu-de-man-hinh-con" className="mt-3 text-lg font-semibold">
               {sub.label}
             </h2>
@@ -291,6 +314,7 @@ function WorkspaceBody({
               trái bị bó lại vô cớ (Haan bắt được 07/09/2026).
             */}
             <div
+              data-testid="luoi-man-hinh-con"
               className={cn(
                 'mt-4 grid items-start gap-5',
                 filledRelated.length > 0 && 'xl:grid-cols-[minmax(0,1fr)_20rem]',
@@ -303,6 +327,18 @@ function WorkspaceBody({
                 </aside>
               )}
             </div>
+            {/* Nhắc lại ở cuối: màn hình đầu bài dài vài màn hình, và điểm người dùng muốn đi
+                tiếp là lúc vừa điền xong ô cuối — không phải lúc đang ở đầu trang. */}
+            {(prevStep || nextStep) && (
+              <div className="mt-7 border-t border-tk-line pt-5">
+                <StepNav
+                  label="Chuyển bước — cuối trang"
+                  prev={prevStep}
+                  next={nextStep}
+                  onSelect={selectTab}
+                />
+              </div>
+            )}
           </section>
         ) : (
           <div
@@ -317,5 +353,62 @@ function WorkspaceBody({
         )}
       </div>
     </>
+  );
+}
+
+/** Kiểu nút điều hướng của màn hình con — có viền và nền, cỡ chữ thân bài (xem chú thích nút «Tổng quan»). */
+const NAV_BUTTON =
+  'inline-flex h-10 min-w-0 items-center gap-2 rounded-full border border-tk-line2 bg-tk-card px-4 font-medium text-tk-tx transition-colors duration-(--motion-fast) ease-(--ease-out) hover:border-tk-acc hover:bg-tk-hover hover:text-tk-acc';
+
+/**
+ * Cặp nút «bước trước / bước tiếp theo» của màn hình con.
+ *
+ * Viền, không tô nền xanh: màn hình con đã có hành động chính của riêng nó (xác nhận đầu bài,
+ * chốt chương trình…) và mỗi màn hình chỉ được MỘT nút chính (CGD 6.3). Bản `compact` ở đầu
+ * trang chỉ ghi tên bước trên màn hình rộng — trên điện thoại nó nằm chung dòng với «Tổng quan».
+ */
+function StepNav({
+  label,
+  prev,
+  next,
+  onSelect,
+  compact = false,
+}: {
+  label: string;
+  prev: WorkspaceTab | undefined;
+  next: WorkspaceTab | undefined;
+  onSelect: (id: string) => void;
+  compact?: boolean;
+}): React.ReactElement | null {
+  if (!prev && !next) return null;
+  return (
+    <nav aria-label={label} className="flex min-w-0 flex-wrap items-center gap-2">
+      {prev && (
+        <button
+          type="button"
+          onClick={() => onSelect(prev.id)}
+          className={NAV_BUTTON}
+          aria-label={`Bước trước: ${prev.label}`}
+        >
+          <ArrowLeft className="size-5 shrink-0" aria-hidden />
+          <span className={cn('truncate', compact && 'hidden sm:inline')}>
+            {compact ? prev.label : `Bước trước: ${prev.label}`}
+          </span>
+        </button>
+      )}
+      {next && (
+        <button
+          type="button"
+          onClick={() => onSelect(next.id)}
+          className={cn(NAV_BUTTON, !compact && 'ml-auto')}
+          aria-label={`Bước tiếp theo: ${next.label}`}
+        >
+          <span className="truncate">
+            {compact ? `Tiếp theo: ${next.label}` : `Bước tiếp theo: ${next.label}`}
+          </span>
+          <ArrowRight className="size-5 shrink-0" aria-hidden />
+        </button>
+      )}
+    </nav>
   );
 }

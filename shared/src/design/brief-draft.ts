@@ -44,5 +44,10 @@ export type DesignBriefDraft = z.infer<typeof designBriefDraftSchema>;
  * `1.3.0` (07/09/2026): thêm `required_spaces[].ensuite` và `required_spaces[].amenities`.
  * Vẫn chỉ THÊM trường tuỳ chọn: `ensuite` vắng mặt nghĩa là "lấy theo `family`", đúng hành vi
  * bản ghi cũ đang có.
+ *
+ * `1.4.0` (13/09/2026): thêm `site.main_entrance_side`, `site.vehicle_entrance_side`,
+ * `site.boundary_walls`, `massing.yard_depth_m` và `parking`. Vẫn chỉ THÊM trường tuỳ chọn. Vì
+ * sao: lượt chạy thật 13/09/2026 chiếm trọn bề ngang lô dù đầu bài đòi sân bên — đầu bài nói sân
+ * NẰM ĐÂU mà không nói RỘNG BAO NHIÊU, và không nói lối vào, lối xe ở mặt nào.
  */
-export const BRIEF_SCHEMA_VERSION = '1.3.0';
+export const BRIEF_SCHEMA_VERSION = '1.4.0';

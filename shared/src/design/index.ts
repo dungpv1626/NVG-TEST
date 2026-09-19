@@ -21,6 +21,7 @@ export * from './brief-completeness';
 export * from './bedroom-sync';
 export * from './site-geometry';
 export * from './compare';
+export * from './program-edits';
 export * from './site-boundary-from-edges';
 export * from './site-boundary-from-coordinates';
 
@@ -72,9 +73,12 @@ export const ARTIFACT_KINDS = [
   'ai_floor_plan',
   'ai_facade_concept',
   'ai_image_set',
-  // Tờ mặt bằng công năng do MÔ HÌNH ẢNH vẽ (T21, 10/09/2026) — một artifact một tầng. Nó
-  // KHÔNG thay `ai_floor_plan`: dữ liệu vẫn là nguồn đo diện tích và đối chiếu quy chuẩn, còn
-  // loại này chỉ là tờ giấy trình bày, không dựng từ toạ độ.
+  // Tờ mặt bằng công năng CÓ NỘI THẤT do MÔ HÌNH ẢNH vẽ từ ẢNH NEO (T57, 19/09/2026) — một
+  // artifact một tầng. Nó KHÔNG thay `ai_floor_plan`: dữ liệu vẫn là nguồn đo diện tích và
+  // đối chiếu quy chuẩn, còn loại này là tờ giấy trình khách, mô hình viết cả chữ lẫn số nên
+  // không đo được. Loại này từng ra đời ở T21 rồi bị T22 xoá vì khi ấy KHÔNG có ảnh neo, tức
+  // mô hình vẽ một ngôi nhà khác; nay ảnh neo là bắt buộc trong hợp đồng.
+  'ai_plan_sheet_image',
   // Mặt bằng theo phương án CŨ (T14): mô hình tự viết chuỗi SVG. Không sinh mới nữa — giữ ở
   // đây để artifact đã đúc còn đọc được, vì artifact là bất biến.
   'ai_plan_proposal',
@@ -105,8 +109,9 @@ export const PIPELINE_STEPS = [
   // lineage bằng bước này — không có `UPDATE`.
   'ai_facade_edit',
   'ai_image_render',
-  // Vẽ tờ mặt bằng bằng mô hình ảnh (T21). Nối từ `ai_floor_plan`, KHÔNG nối từ `ai_facade_*`:
-  // tờ mặt bằng không đi qua ý tưởng mặt đứng.
+  // Vẽ tờ mặt bằng có nội thất bằng mô hình ảnh (T57). Nối từ `ai_floor_plan`, KHÔNG nối từ
+  // `ai_facade_*`: tờ mặt bằng không đi qua ý tưởng mặt đứng.
+  'ai_plan_sheet',
 ] as const;
 
 export type PipelineStep = (typeof PIPELINE_STEPS)[number];
@@ -124,6 +129,7 @@ export const STEP_OUTPUT_KIND: Readonly<Record<PipelineStep, ArtifactKind>> = {
   ai_facade_propose: 'ai_facade_concept',
   ai_facade_edit: 'ai_facade_concept',
   ai_image_render: 'ai_image_set',
+  ai_plan_sheet: 'ai_plan_sheet_image',
 };
 
 // ---------------------------------------------------------------------------
@@ -226,6 +232,14 @@ export const AI_DISCLAIMERS = {
    */
   wallsDerived: 'Tường do chương trình suy từ phòng, không phải của AI',
   /**
+   * In khi tờ vẽ có không gian mở chia khu (`rooms[].parts`) — T48, 16/09/2026.
+   *
+   * Haan chấm lượt đo 58d9ff66: một ô bếp + ăn + khách 86,8 m² chỉ ghi «PHÒNG KHÁCH» thì người đọc
+   * hiểu nhầm là một phòng khách khổng lồ. Nay mỗi khu một nhãn và giữa hai khu có nét đứt — câu này
+   * nói nét đứt ấy KHÔNG phải vách, để không ai bóc khối lượng tường theo nó.
+   */
+  openSpaceParts: 'Nét đứt trong một phòng là ranh mềm giữa các khu, không phải vách',
+  /**
    * Hiện ở MỌI chỗ nhánh AI báo kết quả đối chiếu quy tắc — T30, 12/09/2026.
    *
    * Vì sao phải nói ra thay vì im lặng: nhánh AI không còn kiểm quy chuẩn nào (gói pháp quy
@@ -239,6 +253,49 @@ export const AI_DISCLAIMERS = {
    */
   noCodeCheck:
     'Không kiểm quy chuẩn xây dựng. Chỉ đối chiếu thói quen thiết kế Nhà Việt Group đã đo trên 2 dự án.',
+  /**
+   * In cạnh MỌI chỗ hiện điểm chất lượng mặt bằng — T24 và mục 5.5 của phương án.
+   *
+   * Một con số trên màn hình được đọc như một lời phán. Thước này chỉ đo được thứ hình học đo
+   * được: diện tích, cạnh ngắn, đường đi, mặt thoáng, chỗ xếp thẳng hàng. Một mặt bằng hay vẫn
+   * có thể thấp điểm, và một mặt bằng vô hồn vẫn có thể cao điểm — nên điểm dùng để XẾP HẠNG ứng
+   * viên và CHỈ CHỖ YẾU, không bao giờ thay bước kiến trúc sư xem bằng mắt.
+   *
+   * Cùng hạng với `aiSheet` và `noCodeCheck`: do mã chèn, không tắt được từ giao diện (8.7).
+   */
+  scoreNotJudgement:
+    'Điểm chỉ đo những gì hình học đo được, không đo chất lượng thiết kế. Dùng để xếp hạng phương án và chỉ chỗ yếu — không thay bước kiến trúc sư xem bằng mắt.',
+  /**
+   * In LÊN PIXEL và in lại BẰNG CHỮ trong trang, ở mọi chỗ hiện tờ mặt bằng có nội thất do mô
+   * hình ảnh vẽ — T57, 19/09/2026.
+   *
+   * Đây là nhãn nguy hiểm nhất phải nói đúng, vì tờ ấy TRÔNG như một bản vẽ kỹ thuật: nó có
+   * chuỗi kích thước, có khung tên, có số mét vuông trong từng phòng. Nhưng chữ và số trên đó do
+   * mô hình ảnh viết (Haan chốt 19/09), nên chúng là hình vẽ chứ không phải số đo — dấu tiếng
+   * Việt có thể sai, con số có thể lệch bảng diện tích. Số đúng nằm ở tờ vector ngay bên trên.
+   *
+   * Khác `aiSheet` ở đúng chỗ đó: `aiSheet` nói «bản phác, đừng thi công theo», câu này nói
+   * «đừng ĐO trên hình này». Một tờ vector vẫn đo được; tờ này thì không.
+   *
+   * Cùng hạng với `aiSheet`: do mã chèn, không tắt được từ giao diện (CLAUDE.md 8.7, 8.2 điểm 1).
+   */
+  aiSheetImage:
+    'Ảnh minh hoạ do AI vẽ — không dựng từ toạ độ. Kích thước và diện tích in trên hình không đo được; số đúng ở tờ mặt bằng vector.',
+  /**
+   * Bản NGẮN của câu trên, để ĐÓNG DẤU lên chính tấm ảnh — T57b, 19/09/2026.
+   *
+   * Vì sao phải có bản riêng: `stampWatermark` in một dòng ngang đáy ảnh, và câu dài ở trên đo
+   * được ~1.500 điểm ảnh ở cỡ chữ của một tấm 1024 px — tức bị cắt mất vế sau, đúng vế nói
+   * «không đo được». Bản ngắn này giữ nguyên vế ấy và bỏ phần giải thích, thứ đã có bằng chữ
+   * trong trang.
+   *
+   * ⚠️ Trùng nguyên văn với `sheet_image.watermark` của `kb/ai_design_prompts.yaml` — câu máy chủ
+   * trả về sau một lượt vẽ. Trình duyệt KHÔNG đọc được `kb/`, nên đây là bản cho lúc xem lại một
+   * tờ đã vẽ từ phiên trước. Trước T57b chỗ ấy ngã về `render` («Ảnh tham khảo ý tưởng — chưa
+   * phải phương án thi công»), tức tấm tải về mất hẳn vế «không đo được» trong trường hợp THƯỜNG
+   * GẶP nhất. Có phép thử canh hai chuỗi khớp nhau.
+   */
+  aiSheetImageStamp: 'Ảnh minh hoạ do AI vẽ — không đo được trên hình',
 } as const;
 
 // ---------------------------------------------------------------------------

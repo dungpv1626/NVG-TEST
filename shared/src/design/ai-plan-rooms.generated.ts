@@ -18,11 +18,11 @@ export const aiPlanRoomsElemIdSchema = z
 
 export type AiPlanRoomsElemId = z.infer<typeof aiPlanRoomsElemIdSchema>;
 
-/** Xăng-ti-mét, số nguyên. Gốc ở góc trước-trái lô đất, x sang phải, y vào sâu. */
+/** Xăng-ti-mét, lưới nửa centimet. Gốc ở góc trước-trái lô đất, x sang phải, y vào sâu. */
 export const aiPlanRoomsCmSchema = z
   .number()
-  .int()
-  .describe('Xăng-ti-mét, số nguyên. Gốc ở góc trước-trái lô đất, x sang phải, y vào sâu.');
+  .multipleOf(0.5)
+  .describe('Xăng-ti-mét, lưới nửa centimet. Gốc ở góc trước-trái lô đất, x sang phải, y vào sâu.');
 
 export type AiPlanRoomsCm = z.infer<typeof aiPlanRoomsCmSchema>;
 
@@ -222,7 +222,7 @@ export const aiPlanRoomsLevelSchema = z
 export type AiPlanRoomsLevel = z.infer<typeof aiPlanRoomsLevelSchema>;
 
 /**
- * Mặt bằng do mô hình ngôn ngữ khai: PHÒNG và LỖ MỞ TRÊN CẠNH PHÒNG. Mô hình KHÔNG khai tường — chương trình suy tường từ chữ nhật phòng.
+ * Mặt bằng dạng PHÒNG và LỖ MỞ TRÊN CẠNH PHÒNG — hợp đồng NỘI BỘ từ T37 (13/09/2026): chương trình điền nó từ cây chia mô hình khai (`contracts/ai-plan-tree`), rồi suy tường từ chữ nhật phòng. Không còn gửi cho mô hình.
  *
  * ĐƠN VỊ: xăng-ti-mét NGUYÊN. Gốc toạ độ ở góc TRƯỚC-TRÁI lô đất, `x` sang phải dọc mặt tiền, `y` vào sâu.
  *
@@ -243,7 +243,7 @@ export const aiPlanRoomsSchema = z
   })
   .strict()
   .describe(
-    'Mặt bằng do mô hình ngôn ngữ khai: PHÒNG và LỖ MỞ TRÊN CẠNH PHÒNG. Mô hình KHÔNG khai tường — chương trình suy tường từ chữ nhật phòng.\n\nĐƠN VỊ: xăng-ti-mét NGUYÊN. Gốc toạ độ ở góc TRƯỚC-TRÁI lô đất, `x` sang phải dọc mặt tiền, `y` vào sâu.\n\nKHÔNG khai: bề dày tường, chuỗi kích thước, hướng bắc, mã phương án, toạ độ nội thất. Chương trình suy tất cả từ chữ nhật phòng và từ `kb/construction_norms.yaml`.',
+    'Mặt bằng dạng PHÒNG và LỖ MỞ TRÊN CẠNH PHÒNG — hợp đồng NỘI BỘ từ T37 (13/09/2026): chương trình điền nó từ cây chia mô hình khai (`contracts/ai-plan-tree`), rồi suy tường từ chữ nhật phòng. Không còn gửi cho mô hình.\n\nĐƠN VỊ: xăng-ti-mét NGUYÊN. Gốc toạ độ ở góc TRƯỚC-TRÁI lô đất, `x` sang phải dọc mặt tiền, `y` vào sâu.\n\nKHÔNG khai: bề dày tường, chuỗi kích thước, hướng bắc, mã phương án, toạ độ nội thất. Chương trình suy tất cả từ chữ nhật phòng và từ `kb/construction_norms.yaml`.',
   );
 
 export type AiPlanRooms = z.infer<typeof aiPlanRoomsSchema>;

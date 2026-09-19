@@ -18,6 +18,7 @@ import { EmptyState, Skeleton } from '@/components/ui/states';
 import { useAiDesignState, type AiDesignState } from '@/hooks/use-ai-design';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { Chip, Panel } from '../tk-ui';
+import { AiCallLedger } from './ai-usage';
 import { cn } from '@/lib/utils';
 import { AiPlanStep } from './ai-plan-step';
 import { AiProgramStep } from './ai-program-step';
@@ -74,7 +75,8 @@ function statusOf(
       return {
         done: state.plans.length > 0,
         running: run('plan'),
-        blocked: state.program ? null : 'Cần chương trình không gian trước.',
+        // Mặt bằng đọc đầu bài + khảo sát, không đọc chương trình không gian (T45, 15/09/2026).
+        blocked: state.briefArtifactId ? null : 'Cần xác nhận đầu bài trước.',
         count: state.plans.length,
       };
     case 'mat-dung':
@@ -197,6 +199,10 @@ export function AiDesignTab({
           </Panel>
         )}
       </div>
+
+      {/* Mọi lượt gọi AI của hồ sơ — kể cả của màn hình khác (đọc ảnh trích lục, đề xuất ưu tiên
+          diện tích, phối cảnh) — gom một chỗ, có dòng tổng. */}
+      <AiCallLedger projectId={projectId} />
     </div>
   );
 }

@@ -25,7 +25,9 @@
 
 import { formatNumber } from '@nvg/shared/format';
 import {
+  FAMILY_ROLE_LABEL,
   ROOM_LABEL,
+  type FamilyRole,
   siteGeometry,
   type DesignBrief,
   type SiteGeometry,
@@ -33,7 +35,7 @@ import {
   type SpaceProgram,
 } from '@nvg/shared/design';
 import type { RulePack } from '../rules/rule-pack';
-import { effectiveMaxDensity, effectiveSetbacks } from './site-limits';
+import { effectiveMaxDensity, effectiveSetbacks, type Side } from './site-limits';
 import { checkPlausibility, type PlausibilityRules } from './plausibility';
 import { bandFor, type FloorPreference, type SpaceNorms } from './norms';
 import type { RoomAreaPriors } from './priors';
@@ -78,9 +80,51 @@ export interface ProgramResult {
    * trả về vô nghiệm và không ai hiểu vì sao.
    */
   warnings: string[];
+  /**
+   * Vì sao mặt sàn mỗi tầng là con số đang hiện — từng bước, bằng số thật của hồ sơ này.
+   *
+   * Không đi vào artifact: nó là LỜI GIẢI THÍCH của phép tính, không phải một đầu vào hay đầu
+   * ra mới; đưa vào payload là đổi mã băm mỗi lần sửa câu chữ.
+   */
+  plateExplanation: PlateExplanation;
 }
 
-const SCHEMA_VERSION = '1.0.0';
+/**
+ * Các bước ra con số «sàn mỗi tầng» — đủ để màn hình kể lại phép tính mà không tự tính lại.
+ *
+ * Haan (13/09/2026): «nên có phần giải thích ở đầu về con số 180 m² mặt sàn». Con số ấy đi qua
+ * bốn phép (đất → khoảng lùi → mật độ → nhu cầu) và trước đó không phép nào hiện ra.
+ */
+export interface PlateExplanation {
+  site: { widthM: number; depthM: number; areaM2: number };
+  /** Phần hình chữ nhật xếp phòng được — hẹp hơn mặt tiền khi thửa không vuông. */
+  rect: { widthM: number; depthM: number };
+  setbacks: { front: number; back: number; left: number; right: number };
+  /** Khoảng sân mong muốn theo mặt (đầu bài) — mặt nào sân sâu hơn khoảng lùi thì sân quyết. */
+  yards: { front: number; back: number; left: number; right: number };
+  afterSetbacks: { widthM: number; depthM: number; areaM2: number };
+  /** Mật độ xây dựng tối đa ĐANG ÁP (0..1) — mức chặt hơn của hai nguồn dưới; `null` = chưa biết. */
+  maxDensity: number | null;
+  /** Mật độ đầu bài khai (0..1) — `null` khi để trống. */
+  densityDeclared: number | null;
+  /** Mật độ theo gói quy tắc (0..1) và văn bản nguồn — `null` khi gói không nói gì. */
+  densityRule: { value: number; source: string | null } | null;
+  byDensityM2: number | null;
+  /** Sàn xây được tối đa của một tầng = min(sau khoảng lùi, theo mật độ). */
+  buildableM2: number;
+  floors: number;
+  /** Tổng nhu cầu tự nhiên của các phòng (chưa kể giao thông), m². */
+  roomDemandM2: number;
+  circulationRatio: number;
+  /** Chia đều nhu cầu cho số tầng, cộng phần giao thông. */
+  evenShareM2: number;
+  /** Tầng nặng nhất sau khi xếp phòng vào tầng, kể cả giao thông. */
+  heaviest: { floor: number; plateM2: number } | null;
+  plateM2: number;
+  limitedBy: 'buildable' | 'even_share' | 'heaviest_floor';
+}
+
+const SCHEMA_VERSION = '1.1.0';
 
 interface Instance {
   type: string;
@@ -93,10 +137,16 @@ interface Instance {
   /** Tỉ lệ nhận phần sàn còn dư. `0` = không nhận (giao thông tính riêng). */
   weight: number;
   /**
-   * Diện tích đã do NGƯỜI hoặc DỮ LIỆU ĐO ấn định (`required_spaces[].area_m2`, hoặc trung
-   * vị thống kê thực nghiệm) — bước cấp phát không được đụng vào.
+   * Diện tích đã do DỮ LIỆU ĐO ấn định (trung vị thống kê thực nghiệm) — bước cấp phát không
+   * được đụng vào. Diện tích khách khai ở đầu bài KHÔNG còn nằm ở đây: nó là tối thiểu (T41).
    */
   fixedArea: boolean;
+  /** Nguồn thắng của `min` — để màn hình nói được con số tối thiểu là của ai. */
+  minSource: MinSource;
+  /** Phòng của ai — xem `Request.occupant`. */
+  occupant?: string;
+  /** Tiện ích gộp trong phòng — xem `Request.includes`. */
+  includes?: string[];
   key?: string;
   enclosedByKey?: string;
 }
@@ -110,7 +160,8 @@ export function buildSpaceProgram(inputs: ProgramInputs): ProgramResult {
   // Hình học thửa đất tính MỘT lần rồi dùng chung: diện tích thật, ô chữ nhật xây được, phần
   // đất không xếp được phòng. Tính lại ở từng chỗ cần là mở đường cho hai chỗ hiểu khác nhau.
   const geometry = siteGeometry(brief.site);
-  const footprint = buildableFootprint(brief, geometry, rules, warnings);
+  const site = footprintDetails(brief, geometry, rules, warnings);
+  const footprint = site.buildableM2;
 
   // Dải bề rộng lấy theo ô XÂY ĐƯỢC, không theo mặt tiền: "nhà ống hẹp" là chuyện phòng bị
   // bó bao nhiêu, và với thửa hình thang thì phần hẹp mới là phần quyết định điều đó.
@@ -128,7 +179,7 @@ export function buildSpaceProgram(inputs: ProgramInputs): ProgramResult {
   const requests = collectRequests(inputs, warnings);
 
   // ── 2. Gán tầng ─────────────────────────────────────────────────────────────────────
-  const { instances, plate } = assignFloors(
+  const { instances, plate, sizing } = assignFloors(
     requests,
     floors,
     norms,
@@ -177,6 +228,10 @@ export function buildSpaceProgram(inputs: ProgramInputs): ProgramResult {
       min_area_m2: round(it.min),
       target_area_m2: round(it.target),
       max_area_m2: round(it.max),
+      min_source: it.minSource,
+      target_source: it.fixedArea ? 'statistics' : 'program',
+      ...(it.occupant ? { occupant: it.occupant } : {}),
+      ...(it.includes?.length ? { includes: it.includes } : {}),
       priority: it.priority,
       // Khu vệ sinh khép kín lấy sáng và gió qua chính phòng mẹ, không qua hành lang — đòi nó
       // tự có mặt thoáng là ép một lỗ mở ra ngoài mà nhà thật không làm.
@@ -224,13 +279,32 @@ export function buildSpaceProgram(inputs: ProgramInputs): ProgramResult {
   // Đây là tầng bắt được thứ hai tầng trên bỏ lọt: quy chuẩn đúng và chuẩn nghề đúng vẫn cho
   // ra bếp 6 m² cạnh một căn nhà 360 m², vì cái sai nằm ở QUAN HỆ giữa các con số.
   if (inputs.plausibility) {
-    const fixedIds = new Set(instances.flatMap((it, i) => (it.fixedArea ? [ids[i]!] : [])));
+    // Phòng mà khách đã khai tối thiểu cũng miễn: nó to vì người biết công trình này muốn thế,
+    // và soát «phòng này to bất thường» trên con số của khách là cãi lại đầu bài.
+    const fixedIds = new Set(
+      instances.flatMap((it, i) => (it.fixedArea || it.minSource === 'brief' ? [ids[i]!] : [])),
+    );
     for (const finding of checkPlausibility(payload, inputs.plausibility, fixedIds)) {
       warnings.push(finding.message);
     }
   }
 
-  return { warnings, payload };
+  return {
+    warnings,
+    payload,
+    plateExplanation: {
+      site: {
+        widthM: brief.site.width_m,
+        depthM: brief.site.depth_m,
+        areaM2: geometry.areaM2,
+      },
+      rect: { widthM: geometry.buildable.widthM, depthM: geometry.buildable.depthM },
+      ...site,
+      floors,
+      ...sizing,
+      plateM2: plate,
+    },
+  };
 }
 
 /**
@@ -253,13 +327,43 @@ export function buildableFootprint(
   rules: RulePack,
   warnings: string[],
 ): number {
+  return footprintDetails(brief, geometry, rules, warnings).buildableM2;
+}
+
+function footprintDetails(
+  brief: DesignBrief,
+  geometry: SiteGeometry,
+  rules: RulePack,
+  warnings: string[],
+): Pick<
+  PlateExplanation,
+  | 'setbacks'
+  | 'yards'
+  | 'afterSetbacks'
+  | 'maxDensity'
+  | 'densityDeclared'
+  | 'densityRule'
+  | 'byDensityM2'
+  | 'buildableM2'
+> {
   // Mức CHẶT hơn giữa gói quy tắc và đầu bài — cùng một phép với bộ giải, xem `site-limits.ts`.
   // Trước 07/09/2026 chỗ này lấy đầu bài GHI ĐÈ gói quy tắc, nên đầu bài khai khoảng lùi nhỏ
   // hơn quy chuẩn thì Lớp 2 soạn chương trình trên phần đất bộ giải không cho xây.
   const setbacks = effectiveSetbacks(brief, rules);
+  // Khoảng sân mong muốn (đầu bài 1.4.0, T41) cũng lùi tường nhà vào: mỗi mặt lấy số lớn hơn giữa
+  // khoảng lùi và sân. Bỏ vế này thì sàn Lớp 2 lớn hơn sàn mà dòng tổng diện tích ở Đầu bài và
+  // nhánh AI dùng — cùng một hồ sơ, hai con số «sàn xây được» khác nhau.
+  const yardRaw = (brief.massing?.yard_depth_m ?? {}) as Partial<Record<Side, number | null>>;
+  const yards = {
+    front: yardRaw.front ?? 0,
+    back: yardRaw.back ?? 0,
+    left: yardRaw.left ?? 0,
+    right: yardRaw.right ?? 0,
+  };
+  const side = (key: Side) => Math.max(setbacks[key], yards[key]);
 
-  const width = geometry.buildable.widthM - setbacks.left - setbacks.right;
-  const depth = geometry.buildable.depthM - setbacks.front - setbacks.back;
+  const width = geometry.buildable.widthM - side('left') - side('right');
+  const depth = geometry.buildable.depthM - side('front') - side('back');
   if (width <= 0 || depth <= 0) {
     throw new ProgramError(
       'Khoảng lùi bắt buộc lớn hơn kích thước lô — không còn phần đất nào xây được. Kiểm tra lại kích thước hoặc khoảng lùi trong đầu bài.',
@@ -273,10 +377,27 @@ export function buildableFootprint(
 
   if (density === null || density === undefined) {
     warnings.push(
-      'Chưa biết mật độ xây dựng tối đa — đang lấy toàn bộ phần đất trong khoảng lùi. Bổ sung khi có chỉ tiêu quy hoạch.',
+      'Đầu bài chưa khai mật độ xây dựng tối đa — đang lấy toàn bộ phần đất trong khoảng lùi. Bộ giải không tự áp mật độ theo quy chuẩn; có chỉ tiêu quy hoạch thì khai ở Đầu bài.',
     );
   }
-  return footprint;
+  return {
+    setbacks: {
+      front: setbacks.front,
+      back: setbacks.back,
+      left: setbacks.left,
+      right: setbacks.right,
+    },
+    yards,
+    afterSetbacks: { widthM: width, depthM: depth, areaM2: width * depth },
+    maxDensity: density ?? null,
+    densityDeclared: brief.site.max_density ?? null,
+    densityRule: (() => {
+      const value = rules.maxDensity(brief.building_type);
+      return value === null ? null : { value, source: rules.maxDensitySource(brief.building_type) };
+    })(),
+    byDensityM2: Number.isFinite(byDensity) ? byDensity : null,
+    buildableM2: footprint,
+  };
 }
 
 interface Request {
@@ -285,9 +406,8 @@ interface Request {
   /** Rỗng = xếp theo nguyện vọng; có số = ghim đúng tầng đó. */
   pinned?: number;
   /**
-   * Diện tích mong muốn do kiến trúc sư khai, m². Nguyện vọng chứ không phải số đã chốt —
-   * `areasFor` kẹp nó không xuống dưới tối thiểu quy chuẩn, và `fitToFloors` vẫn cắt được
-   * khi tầng không đủ chỗ (và nói ra khi cắt).
+   * Diện tích TỐI THIỂU khách khai ở đầu bài, m² (`required_spaces[].area_m2`, T41). Gộp vào
+   * `min` cùng quy chuẩn và chuẩn nghề; phần sàn dư vẫn chia thêm cho phòng này như mọi phòng.
    */
   areaWanted?: number;
   /**
@@ -297,6 +417,16 @@ interface Request {
   key?: string;
   /** Khoá tạm của phòng MẸ khi đây là khu vệ sinh của một phòng ngủ khép kín. */
   enclosedByKey?: string;
+  /**
+   * Phòng của AI — «Ông bà · 2 người», «Con 2 · 1 người». Chỉ phòng ngủ suy từ gia đình (và
+   * khu vệ sinh khép kín của nó) mới có: đó là chỗ duy nhất engine BIẾT phòng dành cho ai.
+   */
+  occupant?: string;
+  /**
+   * Tiện ích NẰM TRONG phòng này (tủ đồ, góc học tập…), mã theo `kb/space_norms.yaml`
+   * `in_bedroom`. Diện tích của chúng cộng vào phòng, không thành dòng riêng.
+   */
+  includes?: string[];
 }
 
 /**
@@ -431,12 +561,29 @@ function collectRequests(inputs: ProgramInputs, warnings: string[]): Request[] {
     // đã lưu. Đọc nó ở đây rẻ hơn nhiều so với di trú một cột `jsonb` của artifact bất biến,
     // và nó làm đúng điều người khai đã định làm ngay từ đầu.
     const memberEnsuite = member.ensuite === true || (member.needs ?? []).includes('wc');
-    for (let i = 0; i < Math.ceil(member.count / rule.per_room); i += 1) {
+    const rooms = Math.ceil(member.count / rule.per_room);
+    for (let i = 0; i < rooms; i += 1) {
       bedrooms += 1;
+      // Phòng của ai — để kiến trúc sư đọc bảng biết ngay «phòng ngủ 15 m² tầng hai» là của
+      // con thứ hai chứ không phải của ông bà (Haan, 13/09/2026). Nhãn vai trò lấy từ đúng bộ
+      // từ vựng biểu mẫu đầu bài dùng, không đặt chữ thứ hai.
+      const people = Math.min(rule.per_room, member.count - i * rule.per_room);
+      const roleLabel = FAMILY_ROLE_LABEL[member.role as FamilyRole] ?? member.role;
+      const occupant = `${roleLabel}${rooms > 1 ? ` ${i + 1}` : ''} · ${people} người`;
+      // Tiện ích riêng của nhóm (tủ đồ, góc học tập…) gộp vào TỪNG phòng của nhóm — hai đứa con
+      // cùng khai «không gian học tập» thì mỗi phòng một góc học, không phải một phòng học chung.
+      const includes = [...new Set(member.needs ?? [])].filter(
+        (code) => norms.in_bedroom.includes(code) && norms.spaces[code],
+      );
       const standIn = overriddenRows.get(rule.room_type)?.shift();
       if (standIn) {
         // Phòng này đã có một dòng khai tường minh đứng thay. Vẫn ĐẾM vào `bedrooms` vì định
         // mức khu vệ sinh tính trên tổng số phòng ngủ thật, không trên số phòng suy diễn.
+        const standInRequest = requests.find((r) => r.key === standIn.key);
+        if (standInRequest) {
+          standInRequest.occupant = occupant;
+          if (includes.length) standInRequest.includes = includes;
+        }
         const wants = standIn.space.ensuite ?? memberEnsuite;
         if (wants && norms.spaces.wc) {
           ensuiteCount += 1;
@@ -445,6 +592,7 @@ function collectRequests(inputs: ProgramInputs, warnings: string[]): Request[] {
             preference: 'any',
             key: `k${(keySeq += 1)}`,
             enclosedByKey: standIn.key,
+            occupant: `khép kín — ${occupant}`,
           });
         }
         continue;
@@ -461,6 +609,8 @@ function collectRequests(inputs: ProgramInputs, warnings: string[]): Request[] {
         preference: (member.floor_pref as FloorPreference | null | undefined) ?? rule.floor,
         pinned: checkPin(rule.room_type, member.floor ?? undefined),
         key,
+        occupant,
+        ...(includes.length ? { includes } : {}),
       });
       // ── Phòng ngủ khép kín ────────────────────────────────────────────────────────
       // Khu vệ sinh nằm TRONG phòng, nên nó không mở ra hành lang và không thay được một khu
@@ -473,6 +623,7 @@ function collectRequests(inputs: ProgramInputs, warnings: string[]): Request[] {
           preference: 'any',
           key: `k${(keySeq += 1)}`,
           enclosedByKey: key,
+          occupant: `khép kín — ${occupant}`,
         });
       }
     }
@@ -576,7 +727,7 @@ function assignFloors(
   scale: number,
   buildable: number,
   warnings: string[],
-): { instances: Instance[]; plate: number } {
+): { instances: Instance[]; plate: number; sizing: PlateSizing } {
   const rulePreference = rules.floorPreference(buildingType);
   const load = new Array<number>(floors + 1).fill(0);
   const placed: Instance[] = [];
@@ -593,6 +744,8 @@ function assignFloors(
       preference: request.preference,
       priority: norm.priority,
       key: request.key,
+      ...(request.occupant ? { occupant: request.occupant } : {}),
+      ...(request.includes?.length ? { includes: request.includes } : {}),
       ...areasFor(
         request.type,
         norm,
@@ -602,6 +755,7 @@ function assignFloors(
         scale,
         request.areaWanted,
         norms,
+        request.includes,
       ),
     };
 
@@ -698,8 +852,26 @@ function assignFloors(
     return rooms.reduce((sum, it) => sum + it.target, 0) / (1 - circulationRatio);
   };
   let plate = capacity;
-  for (let level = 1; level <= floors; level += 1) plate = Math.max(plate, plateFor(level));
+  let heaviest: PlateSizing['heaviest'] = null;
+  for (let level = 1; level <= floors; level += 1) {
+    const need = plateFor(level);
+    if (need > (heaviest?.plateM2 ?? 0)) heaviest = { floor: level, plateM2: need };
+    plate = Math.max(plate, need);
+  }
+  const unclamped = plate;
   plate = Math.min(buildable, plate);
+  const sizing: PlateSizing = {
+    roomDemandM2: roomDemand,
+    circulationRatio,
+    evenShareM2: roomDemand / floors / (1 - circulationRatio),
+    heaviest,
+    limitedBy:
+      unclamped > buildable
+        ? 'buildable'
+        : heaviest && heaviest.plateM2 >= capacity
+          ? 'heaviest_floor'
+          : 'even_share',
+  };
 
   // Khu vệ sinh khép kín: đặt vào đúng tầng phòng mẹ, sau khi mọi phòng mẹ đã có tầng.
   const floorByKey = new Map(placed.filter((it) => it.key).map((it) => [it.key!, it.floor]));
@@ -724,6 +896,7 @@ function assignFloors(
       priority: norm.priority,
       key: request.key,
       enclosedByKey: request.enclosedByKey,
+      ...(request.occupant ? { occupant: request.occupant } : {}),
       floor: parentFloor,
       ...areas,
     });
@@ -760,8 +933,15 @@ function assignFloors(
       floorOf.set(level, (floorOf.get(level) ?? new Set()).add(type));
     }
   }
-  return { instances: placed, plate };
+  return { instances: placed, plate, sizing };
 }
+
+type PlateSizing = Pick<
+  PlateExplanation,
+  'roomDemandM2' | 'circulationRatio' | 'evenShareM2' | 'heaviest' | 'limitedBy'
+>;
+
+type MinSource = NonNullable<SpaceProgram['spaces'][number]['min_source']>;
 
 /** Ba con số diện tích của một loại phòng, theo đúng thứ tự ưu tiên ba nguồn tri thức. */
 function areasFor(
@@ -773,24 +953,68 @@ function areasFor(
   scale: number,
   areaWanted?: number,
   norms?: SpaceNorms,
-): { min: number; target: number; max: number; weight: number; fixedArea: boolean } {
-  const min = Math.max(norm.min_m2, rules.minArea(buildingType, type) ?? 0);
+  /** Tiện ích gộp trong phòng — tối thiểu, đề xuất, tối đa của chúng cộng vào phòng. */
+  includes: readonly string[] = [],
+): {
+  min: number;
+  target: number;
+  max: number;
+  weight: number;
+  fixedArea: boolean;
+  minSource: MinSource;
+} {
+  // ── Tối thiểu: số LỚN NHẤT của ba nguồn ──────────────────────────────────────────────
+  //
+  // Trước 13/09/2026 diện tích khách khai đi thẳng thành diện tích MONG MUỐN cố định, còn cột
+  // tối thiểu chỉ mang quy chuẩn và chuẩn nghề. Màn hình vì thế hiện «tối thiểu 14 — mong
+  // muốn 58» cho một phòng khách mà khách chỉ khai «tối thiểu 58»: con số của khách nằm sai
+  // cột, và cột «mong muốn» trông như có người mong muốn nó (Haan bắt được 13/09/2026). Đầu
+  // bài 1.4.0 đã nói rõ ô diện tích là TỐI THIỂU (T41) — nên nó gộp vào đây.
+  const extra = includes.reduce(
+    (sum, code) => {
+      const n = norms?.spaces[code];
+      return n
+        ? {
+            min: sum.min + n.min_m2,
+            target: sum.target + n.target_m2 * scale,
+            max: sum.max + n.max_m2,
+          }
+        : sum;
+    },
+    { min: 0, target: 0, max: 0 },
+  );
+  // Tiện ích cộng vào phần tối thiểu của NGHỀ và QUY CHUẨN, không cộng vào số khách khai: «phòng
+  // ngủ ông bà tối thiểu 20 m²» là con số của cả căn phòng, đã nghĩ tới cái tủ trong đó.
+  const regulationBase = rules.minArea(buildingType, type) ?? 0;
+  const regulation = regulationBase > 0 ? regulationBase + extra.min : 0;
+  const brief = areaWanted ?? 0;
+  const min = Math.max(norm.min_m2 + extra.min, regulation, brief);
+  // Trùng nhau thì nói tên nguồn có thẩm quyền cao hơn với dự án này: khách, rồi quy chuẩn.
+  const minSource: MinSource =
+    brief > 0 && brief >= min
+      ? 'brief'
+      : regulation > 0 && regulation >= min
+        ? 'rule_pack'
+        : 'practice';
   const fromPriors = inputs.priors?.medianFor(type) ?? null;
-  // Diện tích khai tường minh đứng TRÊN cả thống kê lẫn chuẩn nghề — đó là người biết công
-  // trình này nói ra. Nhưng nó không đứng trên tối thiểu quy chuẩn: con số đó không thương
-  // lượng được, kể cả khi khách muốn nhỏ hơn.
-  const decided = areaWanted ?? fromPriors ?? null;
   // `target` ở đây là NHU CẦU TỰ NHIÊN của loại phòng: dùng để cân tải giữa các tầng và để
   // suy ra công trình cần bao nhiêu sàn. Diện tích CUỐI CÙNG do `allocateAreas` quyết —
-  // trừ khi con số đã được người hoặc dữ liệu đo ấn định, lúc đó nó đứng nguyên.
-  const target = Math.max(min, decided ?? norm.target_m2 * scale);
-  const max = Math.max(target, norm.max_m2);
+  // trừ khi thống kê thực nghiệm đã đo được con số, lúc đó nó đứng nguyên.
+  const target = Math.max(min, (fromPriors ?? norm.target_m2 * scale) + extra.target);
+  const max = Math.max(target, norm.max_m2 + extra.max);
   // Ba bậc nhấn mạnh của Lớp 2a nhân vào TRỌNG SỐ, không vào diện tích. Đó là toàn bộ đường
   // đi của đầu ra mô hình ngôn ngữ vào con số: nó đổi được thứ tự ưu ái khi chia phần sàn còn
   // dư, và không đổi được tối thiểu quy chuẩn hay trần nghề.
   const level = inputs.intent?.emphasis?.find((e) => e.space_type === type)?.level;
   const factor = level && norms ? (norms.allocation.emphasis[level] ?? 1) : 1;
-  return { min, target, max, weight: norm.weight * factor, fixedArea: decided !== null };
+  return {
+    min,
+    target,
+    max,
+    weight: norm.weight * factor,
+    fixedArea: fromPriors !== null,
+    minSource,
+  };
 }
 
 /**
@@ -982,7 +1206,7 @@ function allocateAreas(
       }
     }
 
-    // Cận trên không bao giờ được thấp hơn diện tích mong muốn — miền rỗng là vô nghiệm.
+    // Cận trên không bao giờ được thấp hơn diện tích đề xuất — miền rỗng là vô nghiệm.
     for (const it of onFloor) it.max = Math.max(it.max, it.target);
   }
 }

@@ -18,7 +18,22 @@ import { supabase } from './supabase';
  */
 const BASE = (import.meta.env.VITE_DESIGN_API_URL ?? '').replace(/\/+$/, '');
 
-export class DesignApiError extends Error {}
+export class DesignApiError extends Error {
+  /**
+   * Mã HTTP của phản hồi, khi có một phản hồi.
+   *
+   * Rỗng nghĩa là chưa tới được máy chủ (chưa đăng nhập, chưa cấu hình địa chỉ, `fetch` ném).
+   * Có mã để chỗ gọi phân biệt được «chưa có» (404) với «có mà không lấy ra được» (502) — hai
+   * thứ mà một câu lỗi chung gộp lại thành một, và ở tuyến tờ ảnh thì gộp nhầm khiến người dùng
+   * trả tiền vẽ lại một tấm đã có.
+   */
+  readonly status?: number;
+
+  constructor(message: string, status?: number) {
+    super(message);
+    this.status = status;
+  }
+}
 
 /**
  * `fetch` ném ra khi KHÔNG chạm tới được dịch vụ — chưa chạy, đổ, hoặc bị chặn giữa đường.
@@ -104,9 +119,11 @@ export async function designApiUpload<T>(path: string, form: FormData): Promise<
 async function parseResponse<T>(response: Response): Promise<T> {
   const payload = (await response.json().catch(() => ({}))) as { error?: string };
   if (!response.ok) {
-    // Không hiện mã HTTP cho người dùng (CGD 5.5) — Worker đã trả sẵn câu tiếng Việt.
+    // Không hiện mã HTTP cho người dùng (CGD 5.5) — Worker đã trả sẵn câu tiếng Việt. Mã vẫn đi
+    // theo lỗi để mã nguồn phân biệt được các loại hỏng; nó không lên màn hình.
     throw new DesignApiError(
       payload.error ?? 'Không thực hiện được thao tác. Thử lại sau ít phút.',
+      response.status,
     );
   }
   return payload as T;
@@ -115,7 +132,20 @@ async function parseResponse<T>(response: Response): Promise<T> {
 /**
  * Đọc một tuyến trả TỆP (SVG, DXF) thay vì JSON. Lỗi vẫn là JSON tiếng Việt do Worker trả.
  */
-export async function designApiFile(path: string): Promise<Response> {
+export async function designApiFile(
+  path: string,
+  /**
+   * Bỏ qua bộ đệm HTTP của trình duyệt.
+   *
+   * Dùng cho tuyến mà phản hồi là ĐẦU VÀO của một lượt gọi tính tiền — ảnh neo của tờ mặt bằng
+   * (T57). Tuyến ấy khai `max-age=300` vì nó tất định và người xem tải lại nhiều lần; nhưng một
+   * bản chụp tới năm phút trước lại là thứ khác hẳn khi nó đi thẳng ra nhà cung cấp: mã bộ vẽ và
+   * `kb/sheet_style.yaml` đều đổi được mà không nằm trong địa chỉ, nên bản cũ có thể là bản đã sửa
+   * lỗi rồi. Một lượt tải vài chục ki-lô-byte, chỉ xảy ra khi người dùng bấm, đổi lấy việc chắc
+   * chắn trả tiền cho đúng tờ đang có.
+   */
+  fresh = false,
+): Promise<Response> {
   if (!BASE) {
     throw new DesignApiError(
       'Chưa cấu hình địa chỉ dịch vụ thiết kế. Quản trị hệ thống bổ sung biến VITE_DESIGN_API_URL rồi phát hành lại ứng dụng.',
@@ -127,7 +157,10 @@ export async function designApiFile(path: string): Promise<Response> {
 
   let response: Response;
   try {
-    response = await fetch(`${BASE}${path}`, { headers: { Authorization: `Bearer ${token}` } });
+    response = await fetch(`${BASE}${path}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      ...(fresh ? { cache: 'reload' as const } : {}),
+    });
   } catch {
     throw new DesignApiError(UNREACHABLE_MESSAGE);
   }
@@ -135,6 +168,7 @@ export async function designApiFile(path: string): Promise<Response> {
     const payload = (await response.json().catch(() => ({}))) as { error?: string };
     throw new DesignApiError(
       payload.error ?? 'Không thực hiện được thao tác. Thử lại sau ít phút.',
+      response.status,
     );
   }
   return response;

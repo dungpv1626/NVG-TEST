@@ -126,6 +126,39 @@
           "maximum": 1,
           "description": "Mật độ xây dựng tối đa, tỉ lệ 0..1. null = chưa biết, lấy theo rule pack."
         },
+        "main_entrance_side": {
+          "type": ["string", "null"],
+          "enum": ["front", "back", "left", "right", null],
+          "description": "Mặt đặt lối vào CHÍNH của người (cửa chính). Phải là một mặt tiếp cận được (`access_sides`). null = chưa quyết, kiến trúc sư chọn."
+        },
+        "vehicle_entrance_side": {
+          "type": ["string", "null"],
+          "enum": ["front", "back", "left", "right", null],
+          "description": "Mặt đặt cổng xe / cửa chỗ để xe. Có thể khác mặt lối vào chính (ví dụ ô tô vào từ đường lớn, người vào từ hẻm). null = chưa quyết hoặc không có xe."
+        },
+        "boundary_walls": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "front": {
+              "type": ["string", "null"],
+              "enum": ["chung", "rieng", null]
+            },
+            "back": {
+              "type": ["string", "null"],
+              "enum": ["chung", "rieng", null]
+            },
+            "left": {
+              "type": ["string", "null"],
+              "enum": ["chung", "rieng", null]
+            },
+            "right": {
+              "type": ["string", "null"],
+              "enum": ["chung", "rieng", null]
+            }
+          },
+          "description": "Tường trên cạnh giáp nhà hàng xóm là tường CHUNG hay tường RIÊNG — quyết định của kỹ sư theo từng khách hàng (Haan, 12/09/2026). null = chưa xác định. Chỉ có nghĩa ở cạnh `adjacent` là nhà hàng xóm."
+        },
         "legal_docs_available": {
           "type": "boolean"
         }
@@ -196,7 +229,7 @@
             "type": ["number", "null"],
             "exclusiveMinimum": 0,
             "maximum": 1000,
-            "description": "Diện tích MONG MUỐN của không gian này, m². Là nguyện vọng chứ không phải số đã chốt: Lớp 2 kẹp nó trong [tối thiểu theo quy chuẩn, sàn còn lại] và nói ra khi phải cắt. Vắng mặt = lấy chuẩn nghề (`kb/space_norms.yaml`) như trước."
+            "description": "Diện tích TỐI THIỂU của không gian này, m² — phòng được lớn hơn, không được nhỏ hơn (Haan, 13/09/2026). Không phải diện tích chốt cứng. Tổng các mức tối thiểu phải vừa phần sàn xây được sau khoảng lùi, sân và mật độ — bộ kiểm đầu bài đối chiếu. Vắng mặt = để thiết kế tự định."
           },
           "ensuite": {
             "type": ["boolean", "null"],
@@ -210,6 +243,25 @@
         }
       },
       "description": "Không gian bắt buộc có. MỘT PHẦN TỬ = MỘT PHÒNG, và cùng một mã được lặp lại nhiều lần khi cần ghim từng phòng vào tầng riêng hoặc cho từng phòng một diện tích riêng — trước 06/09/2026 mỗi phần tử là một LOẠI, nên một căn có bảy phòng ngủ chỉ ghim được chung một dòng. Phòng ngủ vẫn suy từ `family`; các phần tử `bedroom`/`master_bedroom` khai tường minh ở đây GHI ĐÈ lên bấy nhiêu phòng đầu tiên trong số đó, không cộng thêm. \"Có sân trong hay không\" khai ở đây bằng mã `courtyard`; VỊ TRÍ các sân khai ở `massing.yards`."
+    },
+    "parking": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "cars": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "maximum": 10,
+          "description": "Số ô tô cần chỗ đỗ trong nhà."
+        },
+        "motorbikes": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "maximum": 30,
+          "description": "Số xe máy, xe máy điện, xe đạp điện."
+        }
+      },
+      "description": "Số xe CẦN CHỖ ĐỖ — thay cho ô chữ tự do «để ô tô, 2 xe máy». Diện tích chỗ để xe suy từ đây theo `kb/brief_fidelity.yaml`."
     },
     "massing": {
       "type": ["object", "null"],
@@ -245,6 +297,29 @@
             "enum": ["san_truoc", "san_ben", "san_trong", "san_sau"]
           },
           "description": "Tổ chức sân vườn — sân nằm ở đâu so với khối nhà. Khác `required_spaces`: ở đó khai CÓ sân, ở đây khai sân NẰM ĐÂU."
+        },
+        "yard_depth_m": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "front": {
+              "type": "number",
+              "minimum": 0
+            },
+            "back": {
+              "type": "number",
+              "minimum": 0
+            },
+            "left": {
+              "type": "number",
+              "minimum": 0
+            },
+            "right": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "description": "Khoảng sân MONG MUỐN theo từng mặt, mét, đo từ RANH ĐẤT tới mặt ngoài khối nhà. Khác `site.setback_required_m` (quy hoạch bắt buộc): đây là ý muốn của gia chủ. Phần đất xây được lấy mức LỚN HƠN của hai số trên mỗi mặt."
         },
         "indoor_outdoor": {
           "type": ["string", "null"],

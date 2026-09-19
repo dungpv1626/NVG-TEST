@@ -146,3 +146,38 @@ describe('anonymiseForAi', () => {
     expect(anonymiseForAi({ brief: brief() }).survey).toBeNull();
   });
 });
+
+describe('trường đầu bài 1.4.0 đi tới mô hình (13/09/2026)', () => {
+  it('lối vào, lối xe, tường ranh, khoảng sân và số xe có mặt trong bản gửi', () => {
+    const digest = anonymiseForAi({
+      brief: brief({
+        site: {
+          width_m: 15,
+          depth_m: 20,
+          access_sides: ['front', 'left'],
+          main_entrance_side: 'front',
+          vehicle_entrance_side: 'front',
+          boundary_walls: { right: 'chung' },
+        },
+        massing: { yards: ['san_ben'], yard_depth_m: { left: 3 } },
+        parking: { cars: 1, motorbikes: 2 },
+      }),
+    });
+    expect(digest.site.main_entrance_side).toBe('front');
+    expect(digest.site.vehicle_entrance_side).toBe('front');
+    expect(digest.site.boundary_walls).toEqual({
+      front: null,
+      back: null,
+      left: null,
+      right: 'chung',
+    });
+    expect(digest.massing?.yard_depth_m).toEqual({ left: 3 });
+    expect(digest.parking).toEqual({ cars: 1, motorbikes: 2 });
+  });
+
+  it('đầu bài cũ không có các trường ấy vẫn dựng được bản gửi', () => {
+    const digest = anonymiseForAi({ brief: brief() });
+    expect(digest.site.main_entrance_side).toBeNull();
+    expect(digest.parking).toBeNull();
+  });
+});

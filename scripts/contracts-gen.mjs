@@ -262,6 +262,9 @@ ${indent}})`;
       const body = props.length ? `\n${props.join('\n')}\n${indent}` : '';
       let out = `z.object({${body}})`;
       if (s.additionalProperties === false) out += '.strict()';
+      // `true` = giữ nguyên khoá lạ khi đọc lại (T53: ý định cả nhà lưu trong artifact). Để mặc định thì
+      // zod LƯỢC SẠCH khoá lạ và trường đọc lại thành `{}` mà không báo gì.
+      else if (s.additionalProperties === true) out += '.passthrough()';
       else if (s.additionalProperties && typeof s.additionalProperties === 'object') {
         out += `.catchall(${zodExpr(s.additionalProperties, ctx, indent)})`;
       }

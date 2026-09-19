@@ -165,7 +165,7 @@ export function describeField(
     for (const [i, it] of items.entries()) {
       const detail = [
         typeof it.floor === 'number' ? `Tầng ${it.floor}` : null,
-        typeof it.area_m2 === 'number' ? `${formatNumber(it.area_m2)} m²` : null,
+        typeof it.area_m2 === 'number' ? `tối thiểu ${formatNumber(it.area_m2)} m²` : null,
         // Tiện ích bổ sung PHẢI hiện ở chế độ xem: đây là yêu cầu khách nói ra mà engine
         // không đọc, nên nếu màn hình cũng không hiện thì nó chỉ nằm trong CSDL — bằng chưa
         // từng ghi.

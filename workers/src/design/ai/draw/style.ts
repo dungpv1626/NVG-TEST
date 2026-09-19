@@ -47,6 +47,7 @@ export type LineKey =
   | 'wall_cut'
   | 'column'
   | 'railing'
+  | 'soft_divider'
   | 'opening'
   | 'door_leaf'
   | 'window'
@@ -77,6 +78,7 @@ const LINE_KEYS: LineKey[] = [
   'wall_cut',
   'column',
   'railing',
+  'soft_divider',
   'opening',
   'door_leaf',
   'window',

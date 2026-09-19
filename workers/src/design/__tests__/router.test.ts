@@ -25,11 +25,16 @@ describe('config/models.yaml', () => {
   it('khai đủ các đầu ra mà tài liệu liệt kê', () => {
     expect(Object.keys(config.routes).sort()).toEqual([
       'ai_image_gemini',
+      'ai_image_gemini_fast',
+      'ai_image_gemini_pro',
       'ai_image_openai',
+      'ai_image_openai_fast',
+      'ai_image_openai_precise',
       'ai_text_anthropic',
       'ai_text_anthropic_fast',
       'ai_text_gemini',
       'ai_text_gemini_fast',
+      'ai_text_gemini_free',
       'ai_text_openai',
       'ai_text_openai_fast',
       'kb_label_normalize',
@@ -66,17 +71,30 @@ describe('config/models.yaml', () => {
    */
   const TAM_THOI_HANG_2 = new Set(['site_boundary_extract']);
   const isAiRoute = (name: string) => /^ai_(text|image)_/.test(name);
+  /**
+   * Nhà cung cấp gói miễn phí — đọc từ CHÍNH cấu hình (`billing.free_providers`), không chép.
+   * Từ 13/09/2026 ô chọn model có một tuyến `ai_text_*` chạy khoá miễn phí cho bước chỉ gửi
+   * bản tóm tắt đã ẩn danh; tuyến ấy phải đứng ở hạng 3, không bao giờ hạng 2.
+   */
+  const FREE = new Set(config.billing?.free_providers ?? []);
+  const isPaidAiRoute = (name: string) =>
+    isAiRoute(name) && !FREE.has(config.routes[name]!.provider);
+
+  it('có danh sách nhà cung cấp miễn phí, và khoá miễn phí của Gemini nằm trong đó', () => {
+    expect(FREE.has('gemini')).toBe(true);
+    expect(FREE.has('gemini_paid')).toBe(false);
+  });
 
   it('gói miễn phí chỉ nhận hạng 3 (trừ ngoại lệ tạm); tuyến AI trả phí nhận hạng 2, không thấp hơn', () => {
     for (const [name, route] of Object.entries(config.routes)) {
-      const expected = isAiRoute(name) || TAM_THOI_HANG_2.has(name) ? 2 : 3;
+      const expected = isPaidAiRoute(name) || TAM_THOI_HANG_2.has(name) ? 2 : 3;
       expect(route.max_data_class, `đầu ra ${name}`).toBe(expected);
     }
   });
 
   it('ngoại lệ tạm hạng 2 KHÔNG lan sang đầu ra thứ hai ngoài nhóm AI trả phí', () => {
     const hang2 = Object.entries(config.routes)
-      .filter(([name, route]) => route.max_data_class !== 3 && !isAiRoute(name))
+      .filter(([name, route]) => route.max_data_class !== 3 && !isPaidAiRoute(name))
       .map(([name]) => name);
     expect(hang2).toEqual([...TAM_THOI_HANG_2]);
   });
@@ -104,7 +122,10 @@ describe('config/models.yaml', () => {
         .map(([, route]) => route.provider),
     );
     for (const [name, route] of Object.entries(config.routes)) {
-      if (isAiRoute(name)) expect(freeProviders.has(route.provider), name).toBe(false);
+      if (isAiRoute(name) && route.max_data_class === 2) {
+        expect(freeProviders.has(route.provider), name).toBe(false);
+        expect(FREE.has(route.provider), name).toBe(false);
+      }
     }
   });
 

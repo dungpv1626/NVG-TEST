@@ -10,7 +10,7 @@
  */
 
 import type { AiFloorPlanLevel } from '@nvg/shared/design';
-import { along, addVec, type Interval, type Pt } from './geometry';
+import { along, addVec, bboxOfPoints, type Interval, type Pt, type Rect } from './geometry';
 import { DrawNotes } from './notes';
 import { arcPath, CLS, polylinePath, tag } from './svg';
 import type { Paper } from './units';
@@ -199,4 +199,29 @@ function leafSymbols(door: Door, wall: WallGeom, span: Interval, paper: Paper): 
     return [...swing(span.from, width / 2, 1), ...swing(span.to, width / 2, -1)];
   }
   return (door.hinge ?? 'a') === 'b' ? swing(span.to, width, -1) : swing(span.from, width, 1);
+}
+
+/**
+ * Vùng cánh cửa quét, toạ độ THẬT — hình vuông cạnh bằng bề rộng lỗ mở, phía cánh mở vào.
+ *
+ * Bộ ghi tên phòng tránh những vùng này: ở khu vệ sinh 4 m², tên phòng đặt giữa phòng đè đúng lên
+ * cung cửa (tờ vẽ 13/09/2026).
+ */
+export function doorSwingZones(level: AiFloorPlanLevel, walls: readonly WallGeom[]): Rect[] {
+  const byId = new Map(walls.map((wall) => [wall.id, wall]));
+  const zones: Rect[] = [];
+  for (const door of level.doors ?? []) {
+    if (door.kind !== 'single' && door.kind !== 'double') continue;
+    const wall = byId.get(door.wall);
+    if (!wall || door.w <= 0) continue;
+    const sideSign = (door.side ?? 'l') === 'l' ? 1 : -1;
+    const from = Math.max(0, Math.min(door.at, wall.length - door.w));
+    const reach = door.kind === 'double' ? door.w / 2 : door.w;
+    const points = [from, from + door.w].flatMap((distance) => {
+      const onWall = along(wall.a, wall.u, distance);
+      return [onWall, addVec(onWall, wall.n, sideSign * reach)];
+    });
+    zones.push(bboxOfPoints(points));
+  }
+  return zones;
 }

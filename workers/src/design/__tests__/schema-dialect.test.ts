@@ -74,6 +74,17 @@ describe('Anthropic', () => {
     expect(props.area).toEqual({ type: 'number' });
     expect(props.name).toEqual({ type: 'string' });
   });
+
+  it('`enum` kèm kiểu mảng có null → `anyOf` (Claude trả 400 cho dạng gộp, đo 17/09/2026)', () => {
+    const place = {
+      type: 'object',
+      properties: { place: { type: ['string', 'null'], enum: ['start', 'end', null] } },
+    };
+    const sent = schemaFor('anthropic', place) as { properties: Record<string, unknown> };
+    expect(sent.properties.place).toEqual({
+      anyOf: [{ type: 'string', enum: ['start', 'end'] }, { type: 'null' }],
+    });
+  });
 });
 
 describe('Gemini responseSchema', () => {

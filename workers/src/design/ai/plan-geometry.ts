@@ -384,3 +384,151 @@ function sideOf(door: ProposalDoor, reversed: boolean): ArtifactDoor['side'] {
   // lật theo.
   return (reversed ? !left : left) ? 'l' : 'r';
 }
+
+/** Loại phòng quyết định chỗ đặt từng khu trong một không gian mở (`kb/room_vocabulary.yaml`). */
+export interface MergedZoning {
+  /** Khu nấu nướng. */
+  cooking: ReadonlySet<string>;
+  /** Phòng yên tĩnh: cửa của nó không nên mở thẳng vào khu nấu nướng. */
+  quiet: ReadonlySet<string>;
+}
+
+interface PartEntry {
+  id: string;
+  meta: { type: string; target: number };
+}
+
+/**
+ * Thứ tự các khu dọc trục chia — chọn thứ tự để khu NẤU NƯỚNG chung vách với phòng yên tĩnh ít nhất
+ * (Haan 18/09/2026, chấm lượt 3bc3d2ed: phòng ngủ 28,9 m² mở cửa thẳng vào khu bếp, vì bếp là khu
+ * cuối của dải khách–ăn–bếp và đúng cạnh chung với phòng ngủ ấy).
+ *
+ * Đây KHÔNG phải một luật: không lỗi, không cảnh báo, không trừ điểm. Tường, cửa và diện tích của
+ * phòng không đổi — chỉ đổi chỗ ghi nhãn trong chính không gian mở đó, thứ mà kiến trúc sư vẫn tự
+ * quyết khi bố trí đồ đạc. Hoà nhau thì giữ nguyên thứ tự mô hình khai.
+ */
+function bestPartOrder(
+  parts: readonly PartEntry[],
+  rect: Rect,
+  roomId: string,
+  rooms: AiFloorPlanLevel['rooms'],
+  zoning: MergedZoning | undefined,
+): PartEntry[] {
+  if (!zoning || parts.length < 2) return [...parts];
+  const cooking = parts.filter((part) => zoning.cooking.has(part.meta.type));
+  if (cooking.length === 0 || cooking.length === parts.length) return [...parts];
+  const quiet = rooms
+    .filter((other) => other.id !== roomId && zoning.quiet.has(other.type))
+    .map((other) => toRect(other.rect));
+  if (quiet.length === 0) return [...parts];
+
+  const horizontal = rect.x1 - rect.x0 >= rect.y1 - rect.y0;
+  const span = horizontal ? rect.x1 - rect.x0 : rect.y1 - rect.y0;
+  const total = parts.reduce((sum, part) => sum + part.meta.target, 0);
+
+  /** Tổng chiều dài vách chung giữa các khu nấu nướng và phòng yên tĩnh, cm. */
+  const cost = (order: readonly PartEntry[]): number => {
+    let cursor = horizontal ? rect.x0 : rect.y0;
+    let sum = 0;
+    for (const part of order) {
+      const end = cursor + (span * part.meta.target) / total;
+      if (zoning.cooking.has(part.meta.type)) {
+        const box: Rect = horizontal
+          ? { ...rect, x0: cursor, x1: end }
+          : { ...rect, y0: cursor, y1: end };
+        for (const other of quiet) sum += sharedEdgeLength(box, other);
+      }
+      cursor = end;
+    }
+    return sum;
+  };
+
+  let best = [...parts];
+  let bestCost = cost(best);
+  if (bestCost === 0) return best;
+  for (const order of permutations(parts)) {
+    const value = cost(order);
+    if (value < bestCost - 0.5) {
+      best = [...order];
+      bestCost = value;
+    }
+  }
+  return best;
+}
+
+/** Hoán vị, thứ tự tất định. Danh sách khu của một không gian mở nhiều nhất ba phần (`also` kẹp 2). */
+function permutations<T>(items: readonly T[]): T[][] {
+  if (items.length <= 1) return [[...items]];
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += 1) {
+    const rest = [...items.slice(0, i), ...items.slice(i + 1)];
+    for (const tail of permutations(rest)) out.push([items[i]!, ...tail]);
+  }
+  return out;
+}
+
+/** Chiều dài đoạn vách chung của hai chữ nhật, cm — 0 khi không kề nhau (kể cả khi chồng lấn). */
+function sharedEdgeLength(a: Rect, b: Rect, tolerance = 25): number {
+  const touchX = Math.abs(a.x1 - b.x0) <= tolerance || Math.abs(b.x1 - a.x0) <= tolerance;
+  const touchY = Math.abs(a.y1 - b.y0) <= tolerance || Math.abs(b.y1 - a.y0) <= tolerance;
+  if (touchY) return Math.max(0, Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0));
+  if (touchX) return Math.max(0, Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0));
+  return 0;
+}
+
+/** Ranh mềm làm tròn về mô-đun này, cm — cùng mô-đun bộ xếp đặt vách. */
+const PART_MODULE_CM = 5;
+
+/**
+ * Chia một không gian mở thành các KHU để tờ vẽ ghi tên từng khu (T48, 16/09/2026 — Haan chấm lượt
+ * 58d9ff66: «nếu gộp thì trên hình vẫn phải có chi tiết phân cách mềm giữa các khu vực»).
+ *
+ * Phòng mang `also` là MỘT ô không vách — bếp, ăn, khách chung một chữ nhật. Trước đây tờ vẽ chỉ ghi
+ * tên phòng chính, nên một ô 6 × 14,5 m đọc thành «phòng khách 86,8 m²». Nay chương trình chia chữ
+ * nhật ấy theo tỉ lệ diện tích MỤC TIÊU của từng phòng trong chương trình không gian, cắt dọc cạnh
+ * DÀI (dãy khu nối nhau theo chiều sâu, như nhà thật), và trả về `parts`.
+ *
+ * Đây là NHÃN ĐỌC, không phải hình học: không sinh tường, không đổi `area_m2` của phòng, không vào
+ * `walls[]`. Thiếu diện tích mục tiêu của một thành viên thì không chia — thà một nhãn chung còn hơn
+ * một ranh đặt bừa.
+ */
+export function withMergedParts(
+  rooms: AiFloorPlanLevel['rooms'],
+  targetOf: (id: string) => { type: string; target: number } | null,
+  zoning?: MergedZoning,
+): AiFloorPlanLevel['rooms'] {
+  return rooms.map((room) => {
+    const members = [room.id, ...(room.also ?? [])];
+    if (members.length < 2) return room;
+    const declared = members.map((id) => ({ id, meta: targetOf(id) }));
+    if (declared.some((part) => part.meta === null || part.meta.target <= 0)) return room;
+    const rect = toRect(room.rect);
+    const parts = bestPartOrder(declared as PartEntry[], rect, room.id, rooms, zoning);
+    const horizontal = rect.x1 - rect.x0 >= rect.y1 - rect.y0;
+    const span = horizontal ? rect.x1 - rect.x0 : rect.y1 - rect.y0;
+    const total = parts.reduce((sum, part) => sum + part.meta!.target, 0);
+    let cursor = horizontal ? rect.x0 : rect.y0;
+    const out = parts.map((part, index) => {
+      const end =
+        index === parts.length - 1
+          ? horizontal
+            ? rect.x1
+            : rect.y1
+          : Math.round((cursor + (span * part.meta!.target) / total) / PART_MODULE_CM) *
+            PART_MODULE_CM;
+      const box: Rect = horizontal
+        ? { ...rect, x0: cursor, x1: end }
+        : { ...rect, y0: cursor, y1: end };
+      cursor = end;
+      return {
+        id: part.id,
+        type: part.meta!.type,
+        rect: [box.x0, box.y0, box.x1, box.y1] as [number, number, number, number],
+        area_m2: Math.round(((box.x1 - box.x0) * (box.y1 - box.y0)) / 100) / 100,
+      };
+    });
+    // Ranh làm tròn có thể nuốt một khu hẹp hơn mô-đun: bỏ cả bảng, không vẽ ranh sai.
+    if (out.some((part) => part.area_m2 <= 0)) return room;
+    return { ...room, parts: out };
+  });
+}

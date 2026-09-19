@@ -1,0 +1,47 @@
+# Mức BÁM ĐẦU BÀI của nhánh AI — tham số của cổng kiểm chương trình không gian (13/09/2026).
+#
+# Haan chốt: «sinh không gian sáng tạo nhưng phải sát với đầu bài, không được conflict». Nên:
+#  · phần đầu bài ĐÃ KHAI (tầng ghim, diện tích ghim, khép kín, nhu cầu riêng, số xe, khoảng sân)
+#    là ràng buộc — mô hình trượt thì một lượt sửa, vẫn trượt thì bác;
+#  · phần đầu bài KHÔNG khai (phòng không ghim diện tích, số phòng phụ, giao thông, sân trong…)
+#    là chỗ mô hình sáng tạo.
+#
+# ⚠️ Đây KHÔNG phải ngưỡng quy chuẩn (`rules/`). Số ở đây nói «lệch bao nhiêu thì coi là không
+# còn là yêu cầu của gia chủ nữa», và số chỗ đỗ là SỐ THAM KHẢO (Haan, 13/09/2026: «số liệu từ hồ
+# sơ mang tính tham khảo, không ép buộc») — sửa ở đây, không phải sửa mã.
+
+version: '1.0.0'
+
+# Diện tích phòng đầu bài khai là mức TỐI THIỂU (Haan, 13/09/2026) — không dùng sai số: nhỏ hơn là
+# bác, lớn hơn là tự do. Sai số dưới đây chỉ còn áp cho CHỖ ĐỂ XE so với số xe, vì diện tích mỗi xe
+# là số tham khảo.
+area_tolerance_ratio: 0.2
+
+# Diện tích chỗ đỗ tối thiểu mỗi xe, m² — tham khảo, gồm cả lối lùi xe tối thiểu trong chỗ để xe.
+parking:
+  car_m2: 15
+  motorbike_m2: 2.5
+
+# Loại không gian được làm phòng KHÉP KÍN trong một phòng ngủ (`ensuite_of`). Không nằm trong danh
+# sách này thì không được khép kín — lượt chạy thật từng cho thấy khép kín là chỗ để một phòng lớn
+# né tổng diện tích tầng.
+ensuite_child_types: [wc, vanity, closet, dressing_room, balcony, study_area]
+
+# Loại phòng làm phòng MẸ của phòng khép kín.
+ensuite_parent_types: [bedroom, master_bedroom]
+
+# Loại không gian giao thông đứng phải có ở MỌI tầng khi nhà từ hai tầng.
+stair_types: [stair, core]
+
+# Tiện ích nằm TRONG phòng ngủ, không tách thành không gian riêng (Haan, 13/09/2026: «tủ đồ hay
+# không gian học tập, phòng thay đồ trong phòng ngủ thì không cần tách riêng, chỉ cần ghi gộp lại
+# … diện tích này cũng nằm ở trong phòng»). Cùng danh sách với `in_bedroom` của
+# `kb/space_norms.yaml` (bộ giải) — có phép thử canh hai bên không lệch nhau. Nhánh AI: mô hình được
+# dặn gộp; lỡ tách thì Worker gộp lại vào phòng mẹ trước khi kiểm (`ai/program.ts`).
+in_bedroom_types: [study, study_area, closet, dressing_room]
+
+# Nhu cầu riêng của thành viên được đáp ứng bởi những loại không gian nào. Vắng một mã thì chỉ
+# chính loại đó mới tính. «Góc làm việc» (`study`) trong phòng ngủ thường là một góc học tập
+# khép kín (`study_area`), không phải một phòng làm việc riêng cho mỗi người.
+need_equivalents:
+  study: [study, study_area]

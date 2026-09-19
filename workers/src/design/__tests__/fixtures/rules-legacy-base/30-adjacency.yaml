@@ -1,0 +1,11 @@
+# Quan hệ vị trí giữa các không gian.
+# Phần lớn là kinh nghiệm nghề nghiệp, KHÔNG phải quy chuẩn — nên severity là warning.
+
+# ⚠️ TỆP NÀY CỐ Ý RỖNG kể từ 09/09/2026.
+#
+# Cả ba quy tắc quan hệ vị trí (bếp gần phòng ăn, vệ sinh tách bếp, vệ sinh tách
+# phòng thờ) đều là kinh nghiệm nghề của NVG, không có văn bản pháp quy nào bắt
+# buộc. Chúng đã chuyển sang `rules/nvg-experience.yaml`.
+#
+# Giữ tệp lại thay vì xoá: bộ nạp khai sẵn sáu tệp, và ngày tìm ra một điều
+# khoản quy chuẩn thật về liền kề thì đây là chỗ của nó.

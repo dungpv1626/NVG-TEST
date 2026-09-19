@@ -270,3 +270,34 @@ function scalePlan(plan: AiFloorPlan, factor: number): AiFloorPlan {
     })),
   };
 }
+
+describe('không gian mở chia khu (T48)', () => {
+  /** Tờ mặt bằng có một phòng gộp bếp + ăn vào phòng khách, đã chia khu như artifact thật. */
+  function planWithParts(): AiFloorPlan {
+    const plan = structuredClone(VILLA_PLAN) as AiFloorPlan;
+    const level = plan.levels[0]!;
+    const host = level.rooms.find((room) => room.type === 'living') ?? level.rooms[0]!;
+    const [x0, y0, x1, y1] = host.rect;
+    const cut = Math.round((y0! + (y1! - y0!) * 0.6) / 5) * 5;
+    host.also = ['dining_zz'];
+    host.parts = [
+      { id: host.id, type: host.type, rect: [x0!, y0!, x1!, cut], area_m2: 20 },
+      { id: 'dining_zz', type: 'dining', rect: [x0!, cut, x1!, y1!], area_m2: 12 },
+    ];
+    return plan;
+  }
+
+  it('mỗi khu một nhãn, và giữa hai khu có nét đứt', () => {
+    const svg = sheet(planWithParts(), 1).svg;
+    const names = textsOfClass(svg, 'tn');
+    expect(names).toContain('PHÒNG ĂN');
+    expect(names.filter((name) => name === 'PHÒNG KHÁCH')).toHaveLength(1);
+    expect(svg.match(/class="sd"/g) ?? []).toHaveLength(1);
+  });
+
+  it('tờ vẽ nói rõ nét đứt là ranh mềm, không phải vách', () => {
+    expect(sheet(planWithParts(), 1).svg).toContain('ranh mềm giữa các khu');
+    // Tờ không có ô gộp thì không in câu ấy — nói thừa cũng là nói sai.
+    expect(sheet(VILLA_PLAN, 1).svg).not.toContain('ranh mềm giữa các khu');
+  });
+});

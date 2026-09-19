@@ -120,6 +120,7 @@ export const CLS = {
   column: 'cl',
   labelBox: 'lb',
   railing: 'rl',
+  softDivider: 'sd',
   opening: 'op',
   doorLeaf: 'dl',
   window: 'wn',
@@ -166,6 +167,9 @@ export function sheetCss(style: SheetStyle): string {
     `.${CLS.column}{fill:${c.ink};stroke:${c.ink};stroke-width:${num(w.column)}}`,
     `.${CLS.labelBox}{fill:none;stroke:${c.hairline};stroke-width:${num(w.dim_line)}}`,
     stroke(CLS.railing, c.hairline, w.railing),
+    // Ranh mềm: nét đứt mảnh giữa hai khu của một không gian mở — cố ý mảnh hơn lan can, để không ai
+    // đọc nhầm thành vách (T48).
+    stroke(CLS.softDivider, c.hairline, w.soft_divider, 'stroke-dasharray:2.4 1.6;'),
     stroke(CLS.opening, c.ink, w.opening),
     stroke(CLS.doorLeaf, c.hairline, w.door_leaf),
     stroke(CLS.window, c.hairline, w.window),

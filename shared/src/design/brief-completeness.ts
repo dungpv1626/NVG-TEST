@@ -35,6 +35,7 @@ import {
 } from './brief-form';
 import type { DesignBrief } from './design-brief.generated';
 import { siteGeometry } from './site-geometry';
+import { STYLE_LABEL } from './brief-vocabulary';
 
 // ---------------------------------------------------------------------------
 // Độ đầy đủ
@@ -153,6 +154,8 @@ export const DERIVED_NEED_CODES: readonly string[] = [...BEDROOM_CODES, 'wc'];
 export function checkBriefConsistency(
   draft: DesignBriefDraft,
   config: BriefFormConfig,
+  /** Ô chữ tự do nằm ngoài hợp đồng (cột `legacy.*`) — chỉ dùng để đối chiếu phong cách. */
+  legacy: { style_note?: string | null } = {},
 ): BriefIssue[] {
   const found: BriefIssue[] = [];
   const site = draft.site;
@@ -344,6 +347,8 @@ export function checkBriefConsistency(
     });
   }
 
+  found.push(...checkLayoutIntent(draft, legacy));
+
   // --- Ngân sách đảo ngược --------------------------------------------------
   const budget = draft.budget_range_vnd;
   if (budget && budget.length === 2 && budget[0]! > budget[1]!) {
@@ -356,6 +361,344 @@ export function checkBriefConsistency(
   }
 
   return found;
+}
+
+// ---------------------------------------------------------------------------
+// Mâu thuẫn về Ý ĐỒ BỐ CỤC — thêm 13/09/2026
+// ---------------------------------------------------------------------------
+
+type Side = 'front' | 'back' | 'left' | 'right';
+const SIDES: readonly Side[] = ['front', 'back', 'left', 'right'];
+const SIDE_VI: Record<Side, string> = {
+  front: 'mặt trước',
+  back: 'mặt sau',
+  left: 'bên trái',
+  right: 'bên phải',
+};
+
+/** Hiện trạng một mặt mà ô tô không đi vào được. Mã lấy từ `site.adjacent` của biểu mẫu. */
+const NARROW_ALLEYS = ['hem_2m', 'hem_3m'];
+
+/**
+ * Diện tích đã ghim trên một tầng vượt quá phần này của sàn xây được thì CẢNH BÁO: phần còn lại
+ * không đủ cho thang, hành lang và tường. Là mức để HỎI LẠI người nhập, cùng loại với ngưỡng 5%
+ * lệch giấy tờ ở trên — không phải một yêu cầu kỹ thuật.
+ */
+const PINNED_AREA_WARN_RATIO = 0.85;
+
+/**
+ * Các mâu thuẫn làm hỏng việc XẾP MẶT BẰNG, rút từ đầu bài thật «Biệt thự nhà vườn (demo)» mà bộ
+ * kiểm cũ chấm «98%, 0 chỗ chưa nhất quán» (13/09/2026): phòng khép kín ghim sai tầng so với gia
+ * đình, đòi ba sân mà không nói rộng bao nhiêu nên bản vẽ chiếm trọn bề ngang lô, «hai cánh» đi
+ * cùng «hình chữ nhật», phong cách chọn một kiểu ghi chú một kiểu.
+ *
+ * Mọi phép ở đây chỉ đối chiếu ĐẦU BÀI VỚI CHÍNH NÓ — không có ngưỡng quy chuẩn nào.
+ */
+function checkLayoutIntent(
+  draft: DesignBriefDraft,
+  legacy: { style_note?: string | null },
+): BriefIssue[] {
+  const found: BriefIssue[] = [];
+  const site = draft.site;
+  const access = site?.access_sides;
+
+  // --- Lối vào chính và lối xe phải là mặt tiếp cận được -------------------------------
+  for (const [path, value, what] of [
+    ['site.main_entrance_side', site?.main_entrance_side, 'Lối vào chính'],
+    ['site.vehicle_entrance_side', site?.vehicle_entrance_side, 'Lối xe'],
+  ] as const) {
+    if (value && access && access.length > 0 && !access.includes(value)) {
+      found.push({
+        code:
+          path === 'site.main_entrance_side' ? 'loi_vao_khong_tiep_can' : 'loi_xe_khong_tiep_can',
+        severity: 'nghiem_trong',
+        message: `${what} đặt ở ${SIDE_VI[value]}, nhưng mặt đó không nằm trong «Mặt tiếp cận được». Chọn lại mặt đặt ${what.toLowerCase()} hoặc bổ sung mặt tiếp cận.`,
+        paths: [path, 'site.access_sides'],
+      });
+    }
+  }
+
+  const cars = draft.parking?.cars ?? 0;
+  const bikes = draft.parking?.motorbikes ?? 0;
+  const vehicleSide = site?.vehicle_entrance_side;
+  if (vehicleSide && cars > 0) {
+    const adjacent = (site?.adjacent as Record<string, string | null> | undefined)?.[vehicleSide];
+    if (adjacent && NARROW_ALLEYS.includes(adjacent)) {
+      found.push({
+        code: 'loi_xe_hem_hep',
+        severity: 'canh_bao',
+        message: `Lối xe đặt ở ${SIDE_VI[vehicleSide]}, giáp hẻm hẹp — ô tô thường không vào được. Kiểm tra lại hoặc chuyển lối xe sang mặt giáp đường lớn.`,
+        paths: ['site.vehicle_entrance_side', 'site.adjacent', 'parking.cars'],
+      });
+    }
+  }
+  const spaces = draft.required_spaces ?? [];
+  if (cars + bikes > 0 && !spaces.some((space) => space.type === 'garage')) {
+    found.push({
+      code: 'xe_chua_co_cho_de',
+      severity: 'canh_bao',
+      message: `Đầu bài khai ${cars} ô tô, ${bikes} xe máy nhưng «Không gian bắt buộc có» chưa có chỗ để xe. Thêm dòng Chỗ để xe, ghim tầng nếu cần.`,
+      paths: ['parking.cars', 'required_spaces'],
+    });
+  }
+
+  // --- Tường chung/riêng khai ở mặt không giáp hàng xóm --------------------------------
+  const walls = site?.boundary_walls;
+  const adjacentMap = (site?.adjacent ?? {}) as Record<string, string | null>;
+  for (const side of SIDES) {
+    if (walls?.[side] && adjacentMap[side] && adjacentMap[side] !== 'nha_hang_xom') {
+      found.push({
+        code: 'tuong_ranh_khong_giap_hang_xom',
+        severity: 'canh_bao',
+        message: `Đã khai tường chung/riêng ở ${SIDE_VI[side]}, nhưng hiện trạng mặt đó không phải nhà hàng xóm. Bỏ lựa chọn tường ở mặt này hoặc sửa hiện trạng.`,
+        paths: ['site.boundary_walls', 'site.adjacent'],
+      });
+    }
+  }
+
+  // --- Sân: nằm đâu và rộng bao nhiêu phải khớp nhau -----------------------------------
+  const yards = draft.massing?.yards ?? [];
+  const depth = (draft.massing?.yard_depth_m ?? {}) as Partial<Record<Side, number>>;
+  const hasDepth = (side: Side) => typeof depth[side] === 'number' && depth[side]! > 0;
+  const missingDepth: string[] = [];
+  if (yards.includes('san_truoc') && !hasDepth('front')) missingDepth.push('sân trước');
+  if (yards.includes('san_sau') && !hasDepth('back')) missingDepth.push('sân sau');
+  if (yards.includes('san_ben') && !hasDepth('left') && !hasDepth('right')) {
+    missingDepth.push('sân bên');
+  }
+  if (missingDepth.length) {
+    found.push({
+      code: 'san_chua_co_kich_thuoc',
+      severity: 'canh_bao',
+      message: `Đầu bài đòi ${missingDepth.join(', ')} nhưng chưa khai khoảng sân. Không có con số thì bản thiết kế không biết chừa bao nhiêu và có thể phủ kín lô. Khai «Khoảng sân mong muốn theo từng mặt».`,
+      paths: ['massing.yards', 'massing.yard_depth_m'],
+    });
+  }
+  const orphanDepth = SIDES.filter((side) => {
+    if (!hasDepth(side)) return false;
+    if (side === 'front') return !yards.includes('san_truoc');
+    if (side === 'back') return !yards.includes('san_sau');
+    return !yards.includes('san_ben');
+  });
+  if (orphanDepth.length && yards.length) {
+    found.push({
+      code: 'kich_thuoc_san_khong_co_san',
+      severity: 'canh_bao',
+      message: `Đã khai khoảng sân ở ${orphanDepth.map((s) => SIDE_VI[s]).join(', ')} nhưng «Sân nằm ở đâu» không chọn sân ở mặt đó. Sửa một trong hai cho khớp.`,
+      paths: ['massing.yards', 'massing.yard_depth_m'],
+    });
+  }
+
+  // Sân mong muốn không lớn hơn khoảng lùi quy hoạch thì không đổi gì: mỗi mặt lấy số lớn hơn.
+  // Người nhập thường tưởng hai số CỘNG vào nhau (13/09/2026: «Mặt trước 1» trên lô đã lùi 4 m).
+  const setbacks = (site?.setback_required_m ?? {}) as Partial<Record<Side, number>>;
+  const shadowed = SIDES.filter((side) => hasDepth(side) && (setbacks[side] ?? 0) >= depth[side]!);
+  if (shadowed.length) {
+    found.push({
+      code: 'san_nho_hon_khoang_lui',
+      severity: 'canh_bao',
+      message: `Chiều sâu sân ở ${shadowed
+        .map(
+          (side) =>
+            `${SIDE_VI[side]} (${formatNumber(depth[side]!)} m, khoảng lùi ${formatNumber(setbacks[side]!)} m)`,
+        )
+        .join(
+          ', ',
+        )} không lớn hơn khoảng lùi quy hoạch nên không có tác dụng — hai số không cộng vào nhau, mỗi mặt lấy số lớn hơn. Muốn sân rộng hơn thì điền số lớn hơn khoảng lùi.`,
+      paths: ['massing.yard_depth_m', 'site.setback_required_m'],
+    });
+  }
+
+  // --- Diện tích TỐI THIỂU đã khai so với sàn xây được thật ------------------------------
+  // Cột diện tích của «Không gian bắt buộc có» là mức TỐI THIỂU (Haan, 13/09/2026). Nên tổng các
+  // mức ấy — theo từng tầng đã ghim, và cả nhà — không thể vượt phần sàn xây được sau khoảng lùi,
+  // sân và mật độ. Vượt thì không phương án nào đạt được, dù sáng tạo đến đâu.
+  const budget = briefAreaBudget(draft);
+  if (budget.plateM2 !== null) {
+    const plate = budget.plateM2;
+    for (const [floor, pinned] of Object.entries(budget.pinnedByFloor)
+      .map(([f, a]) => [Number(f), a] as const)
+      .sort((a, b) => a[0] - b[0])) {
+      if (pinned <= plate * PINNED_AREA_WARN_RATIO) continue;
+      const over = pinned > plate;
+      found.push({
+        code: over ? 'dien_tich_vuot_san_xay_duoc' : 'dien_tich_gan_kin_san',
+        severity: over ? 'nghiem_trong' : 'canh_bao',
+        message: over
+          ? `Tầng ${floor}: diện tích tối thiểu các phòng ghim ở tầng này cộng lại ${formatNumber(pinned)} m², vượt phần sàn xây được ${formatNumber(plate)} m² (sau khoảng lùi, sân và mật độ). Giảm diện tích tối thiểu, dời bớt phòng lên tầng khác, hoặc thu hẹp sân.`
+          : `Tầng ${floor}: diện tích tối thiểu các phòng ghim ở tầng này cộng lại ${formatNumber(pinned)} m² trên ${formatNumber(plate)} m² sàn xây được — gần kín, không còn chỗ cho thang, hành lang và tường. Kiểm tra lại diện tích hoặc khoảng sân.`,
+        paths: ['required_spaces', 'massing.yard_depth_m', 'site.setback_required_m'],
+      });
+    }
+    const total = budget.pinnedTotalM2;
+    const capacity = budget.totalPlateM2!;
+    if (total > capacity * PINNED_AREA_WARN_RATIO) {
+      const over = total > capacity;
+      found.push({
+        code: over ? 'tong_dien_tich_vuot_san' : 'tong_dien_tich_gan_kin_san',
+        severity: over ? 'nghiem_trong' : 'canh_bao',
+        message:
+          `Tổng diện tích tối thiểu đã khai ${formatNumber(total)} m² ` +
+          (over ? 'vượt' : 'gần kín') +
+          ` tổng sàn xây được ${formatNumber(capacity)} m² (${formatNumber(plate)} m² mỗi tầng × ${budget.floors} tầng, sau khoảng lùi, sân và mật độ)` +
+          (over
+            ? '. Không phương án nào đạt được: giảm diện tích tối thiểu, bỏ bớt phòng, thu hẹp sân hoặc tăng số tầng.'
+            : ' — phần còn lại không đủ cho thang, hành lang và tường. Kiểm tra lại diện tích tối thiểu hoặc khoảng sân.'),
+        paths: ['required_spaces', 'floors', 'massing.yard_depth_m'],
+      });
+    }
+  }
+
+  // --- Phòng ngủ khép kín: gia đình nói một tầng, danh sách không gian nói tầng khác ---
+  const fromFamily = new Map<number, number>();
+  for (const member of draft.family ?? []) {
+    if (member.ensuite !== true || typeof member.floor !== 'number') continue;
+    const rooms = bedroomsFor(member.role ?? '', member.count ?? 0);
+    fromFamily.set(member.floor, (fromFamily.get(member.floor) ?? 0) + rooms);
+  }
+  const fromRows = new Map<number, number>();
+  for (const space of spaces) {
+    if (!BEDROOM_CODES.includes(space.type) || space.ensuite !== true) continue;
+    if (typeof space.floor !== 'number') continue;
+    fromRows.set(space.floor, (fromRows.get(space.floor) ?? 0) + 1);
+  }
+  if (fromFamily.size && fromRows.size) {
+    const floors = [...new Set([...fromFamily.keys(), ...fromRows.keys()])].sort((a, b) => a - b);
+    const mismatched = floors.filter((f) => (fromFamily.get(f) ?? 0) !== (fromRows.get(f) ?? 0));
+    if (mismatched.length) {
+      found.push({
+        code: 'khep_kin_lech_gia_dinh',
+        severity: 'nghiem_trong',
+        message:
+          `Phòng ngủ khép kín không khớp giữa «Thành viên gia đình» và «Không gian bắt buộc có» ở ` +
+          mismatched
+            .map(
+              (f) =>
+                `tầng ${f} (gia đình ${fromFamily.get(f) ?? 0}, danh sách ${fromRows.get(f) ?? 0})`,
+            )
+            .join(', ') +
+          '. Sửa lại ô khép kín hoặc tầng của từng dòng phòng ngủ cho khớp với gia đình.',
+        paths: ['family', 'required_spaces'],
+      });
+    }
+  }
+
+  // --- Hình khối và thang tự nói ngược nhau ---------------------------------------------
+  const wings = draft.massing?.wings_preferred;
+  const shape = draft.massing?.footprint_shape;
+  if (typeof wings === 'number' && shape) {
+    if ((wings >= 2 && shape === 'chu_nhat') || (wings === 1 && shape !== 'chu_nhat')) {
+      found.push({
+        code: 'hinh_khoi_mau_thuan',
+        severity: 'canh_bao',
+        message:
+          wings >= 2
+            ? `Chọn ${wings} cánh nhà nhưng hình bao là chữ nhật — hai cánh trở lên thường cho hình L, U hoặc T. Chọn lại một trong hai.`
+            : 'Chọn một cánh nhà nhưng hình bao là chữ L, U hoặc T — các hình này cần từ hai cánh. Chọn lại một trong hai.',
+        paths: ['massing.wings_preferred', 'massing.footprint_shape'],
+      });
+    }
+  }
+  if (draft.massing?.cores_preferred === 1 && draft.massing?.service_core === true) {
+    found.push({
+      code: 'thang_phu_mot_loi',
+      severity: 'canh_bao',
+      message:
+        'Chọn một lõi thang nhưng lại có thang phụ hoặc lối dịch vụ riêng. Nếu cần thang phụ thì chọn hai lõi; nếu chỉ cần lối đi riêng ở tầng 1 thì ghi rõ ở ghi chú công năng.',
+      paths: ['massing.cores_preferred', 'massing.service_core'],
+    });
+  }
+
+  // --- Phong cách chọn một kiểu, ghi chú một kiểu ---------------------------------------
+  const note = normaliseText(legacy.style_note ?? '');
+  if (draft.style && note) {
+    const others = (Object.entries(STYLE_LABEL) as [string, string][])
+      .filter(([code, label]) => code !== draft.style && note.includes(normaliseText(label)))
+      .map(([, label]) => label);
+    if (others.length) {
+      found.push({
+        code: 'phong_cach_lech_ghi_chu',
+        severity: 'canh_bao',
+        message: `Phong cách chọn «${STYLE_LABEL[draft.style as keyof typeof STYLE_LABEL]}» nhưng ghi chú phong cách nhắc «${others.join(', ')}». Chọn lại phong cách hoặc sửa ghi chú.`,
+        paths: ['style', 'legacy.style_note'],
+      });
+    }
+  }
+
+  return found;
+}
+
+export interface BriefAreaBudget {
+  /** Sàn xây được MỖI TẦNG, m², sau khoảng lùi, sân và mật độ. `null` khi chưa đủ số đo. */
+  plateM2: number | null;
+  floors: number;
+  /** `plateM2 × floors`; `null` khi chưa đủ số đo. */
+  totalPlateM2: number | null;
+  /** Tổng diện tích TỐI THIỂU của mọi dòng đã khai diện tích, m². */
+  pinnedTotalM2: number;
+  /** Diện tích tối thiểu theo tầng — chỉ các dòng vừa ghim tầng vừa khai diện tích. */
+  pinnedByFloor: Record<number, number>;
+}
+
+/**
+ * Phép tính diện tích DÙNG CHUNG cho bộ kiểm và dòng tổng dưới bảng không gian — một phép, hai chỗ
+ * hiện, để màn hình không bao giờ nói một con số khác với cảnh báo.
+ */
+export function briefAreaBudget(draft: DesignBriefDraft): BriefAreaBudget {
+  const floors = Math.max(1, draft.floors ?? 1);
+  const plate = buildablePlateM2(draft);
+  const pinnedByFloor: Record<number, number> = {};
+  let pinnedTotalM2 = 0;
+  for (const space of draft.required_spaces ?? []) {
+    if (typeof space.area_m2 !== 'number' || space.area_m2 <= 0) continue;
+    pinnedTotalM2 += space.area_m2;
+    if (typeof space.floor === 'number') {
+      pinnedByFloor[space.floor] = (pinnedByFloor[space.floor] ?? 0) + space.area_m2;
+    }
+  }
+  const round = (n: number) => Math.round(n * 10) / 10;
+  return {
+    plateM2: plate,
+    floors,
+    totalPlateM2: plate === null ? null : round(plate * floors),
+    pinnedTotalM2: round(pinnedTotalM2),
+    pinnedByFloor: Object.fromEntries(
+      Object.entries(pinnedByFloor).map(([floor, area]) => [floor, round(area)]),
+    ),
+  };
+}
+
+/**
+ * Sàn xây được mỗi tầng, m²: ô chữ nhật lớn nhất trong thửa trừ mức LỚN HƠN giữa khoảng lùi quy
+ * hoạch và khoảng sân mong muốn trên mỗi mặt, rồi kẹp dưới mật độ xây dựng tối đa nếu đầu bài khai.
+ * `null` khi chưa đủ số đo. Cùng phép với `workers/src/design/ai/buildable.ts` và bước chương
+ * trình không gian, để màn hình đầu bài và bước sau nói cùng một con số.
+ */
+export function buildablePlateM2(draft: DesignBriefDraft): number | null {
+  const site = draft.site;
+  if (typeof site?.width_m !== 'number' || typeof site?.depth_m !== 'number') return null;
+  let geometry: { buildable: { widthM: number; depthM: number }; areaM2: number };
+  try {
+    geometry = siteGeometry(site as DesignBrief['site']);
+  } catch {
+    return null;
+  }
+  const rect = geometry.buildable;
+  const setback = (site.setback_required_m ?? {}) as Partial<Record<Side, number>>;
+  const yard = (draft.massing?.yard_depth_m ?? {}) as Partial<Record<Side, number>>;
+  const take = (side: Side) => Math.max(setback[side] ?? 0, yard[side] ?? 0);
+  const width = rect.widthM - take('left') - take('right');
+  const depth = rect.depthM - take('front') - take('back');
+  if (width <= 0 || depth <= 0) return 0;
+  let plate = width * depth;
+  if (typeof site.max_density === 'number' && site.max_density > 0) {
+    plate = Math.min(plate, site.max_density * geometry.areaM2);
+  }
+  return Math.round(plate * 10) / 10;
+}
+
+function normaliseText(text: string): string {
+  return text.normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
 /** Nhãn của một trường theo cấu hình — dùng khi dựng thông báo ngoài giao diện. */
