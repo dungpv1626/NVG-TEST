@@ -31,11 +31,14 @@
     "db:seed": "npm run seed --workspace=db",
     "db:studio": "npm run studio --workspace=db",
     "deploy:web": "npm run build && wrangler deploy --config web/wrangler.jsonc",
-    "deploy:workers": "npm run build --workspace=shared && wrangler deploy --config workers/wrangler.jsonc"
+    "deploy:workers": "npm run build --workspace=shared && wrangler deploy --config workers/wrangler.jsonc",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.13.1",
+    "js-yaml": "^4.3.2",
     "json-schema-to-zod": "^2.8.1",
     "prettier": "^3.4.2",
     "typescript": "^5.7.3",

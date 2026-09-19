@@ -15,12 +15,15 @@ export function SegmentedControl<T extends string>({
   onChange,
   getLabel,
   className,
+  disabled = false,
 }: {
   options: readonly T[];
   value: T;
   onChange: (value: T) => void;
   getLabel: (option: T) => string;
   className?: string;
+  /** Khoá cả bộ khi đang có việc chạy dở mà đổi lựa chọn giữa chừng sẽ cho kết quả khó hiểu. */
+  disabled?: boolean;
 }) {
   return (
     <div
@@ -37,9 +40,11 @@ export function SegmentedControl<T extends string>({
             type="button"
             onClick={() => onChange(option)}
             aria-pressed={active}
+            disabled={disabled}
             className={cn(
               'cursor-pointer whitespace-nowrap rounded-sm px-3 py-1.5 text-xs font-semibold',
               'transition-colors duration-(--motion-fast) ease-(--ease-out)',
+              'disabled:cursor-not-allowed disabled:opacity-60',
               active
                 ? 'bg-brand-mint text-brand-mint-ink'
                 : 'bg-transparent text-fg-subtle hover:text-fg',

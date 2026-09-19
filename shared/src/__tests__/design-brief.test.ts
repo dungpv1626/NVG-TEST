@@ -18,7 +18,9 @@ import { load as parseYaml } from 'js-yaml';
 import { describe, expect, it } from 'vitest';
 import {
   BRIEF_FORM,
+  DECISION_RELATIONSHIPS,
   briefFormConfigSchema,
+  briefAreaBudget,
   checkBriefConsistency,
   designBriefDraftSchema,
   evaluateCondition,
@@ -189,6 +191,15 @@ describe('Cấu hình biểu mẫu Đầu bài', () => {
       'ninh_binh',
       'ha_noi',
     ]);
+  });
+
+  it('lựa chọn «Quan hệ của người quyết định» khớp DECISION_RELATIONSHIPS — một nguồn nhãn', () => {
+    // Ghi chú trong cấu hình nói nhãn "lấy từ DECISION_RELATIONSHIPS", nhưng tới 08/09/2026
+    // không nơi nào import hằng đó — hai bản chép tay chờ ngày lệch nhau. Bài này biến lời
+    // hứa thành phép kiểm.
+    const field = allFields.find((f) => f.path === 'decision_maker.relationship')!;
+    const pick = (o: { value: string; label: string }) => ({ value: o.value, label: o.label });
+    expect((field.options ?? []).map(pick)).toEqual(DECISION_RELATIONSHIPS.map(pick));
   });
 
   it('không hard-code ngưỡng độ đầy đủ ở bất kỳ đâu trong shared/design', () => {
@@ -402,32 +413,65 @@ describe('Soát mâu thuẫn', () => {
     ).toContain('nha_pho_co_khoang_lui_ben');
   });
 
-  it('có người ở mà không có phòng ngủ nào', () => {
+  it('khai người ở mà không suy ra được phòng ngủ nào', () => {
+    // Vai trò lạ (không có trong `occupancy`) là trường hợp DUY NHẤT còn lại: từ 06/09/2026
+    // phòng ngủ suy thẳng từ `family`, nên "có người mà thiếu phòng ngủ" không còn phụ thuộc
+    // danh sách không gian bắt buộc nữa.
+    expect(
+      codes({
+        family: [{ role: 'ban_be' as 'khach', count: 2 }],
+        required_spaces: [{ type: 'living' }, { type: 'kitchen' }],
+      }),
+    ).toContain('thieu_phong_ngu');
+  });
+
+  it('khai vợ chồng thì tự có phòng ngủ, KHÔNG báo thiếu', () => {
+    // Bài canh cho đúng một cảnh báo giả đã có thật: phép kiểm cũ hỏi danh sách không gian
+    // bắt buộc, nên mọi đầu bài mới đều dính lỗi "nghiêm trọng" ngay khi vừa khai xong gia
+    // đình. Một cảnh báo luôn nổ là một cảnh báo bị bỏ qua, kể cả lúc nó đúng.
     expect(
       codes({
         family: [{ role: 'vo_chong', count: 2 }],
         required_spaces: [{ type: 'living' }, { type: 'kitchen' }],
       }),
-    ).toContain('thieu_phong_ngu');
+    ).not.toContain('thieu_phong_ngu');
+  });
+
+  it('ghim phòng ngủ của một nhóm vào tầng không tồn tại', () => {
+    expect(codes({ floors: 2, family: [{ role: 'ong_ba', count: 2, floor: 3 }] })).toContain(
+      'ghim_tang_khong_ton_tai',
+    );
   });
 
   it('khai phòng ngủ mà chưa cho biết ai ở', () => {
     expect(codes({ required_spaces: [{ type: 'bedroom' }] })).toContain('chua_khai_nguoi_o');
   });
 
-  it('nhu cầu riêng của một nhóm mà danh sách không gian chưa có', () => {
-    const issues = checkBriefConsistency(
-      {
-        family: [{ role: 'ong_ba', count: 2, needs: ['bedroom', 'wc'] }],
-        required_spaces: [{ type: 'living' }, { type: 'bedroom' }],
-      },
-      BRIEF_FORM,
-    );
-    const issue = issues.find((i) => i.code === 'nhu_cau_thieu_khong_gian');
-    expect(issue).toBeDefined();
-    // Nói bằng NHÃN tiếng Việt, không phải mã: người nhập không biết `wc` là gì.
-    expect(issue!.message).toContain('Khu vệ sinh');
-    expect(issue!.message).not.toContain('wc');
+  it('chọn nhu cầu riêng KHÔNG sinh cảnh báo đòi bổ sung không gian', () => {
+    // Từng có một phép kiểm đòi thêm mã vừa chọn vào «Không gian bắt buộc có». Đã gỡ
+    // 07/09/2026: Lớp 2 tự làm việc đó — mã chuẩn trong `family[].needs` đi thành
+    // `extraSpaces` (`program/run.ts`) rồi thành một không gian (`program/engine.ts`,
+    // `addSingle`). Cảnh báo vừa nói sai sự thật vừa bắt nhập lại thứ đã có (CLAUDE.md 5.4),
+    // và nó nổ ngay lúc bấm ô chọn nên kéo theo cả những cảnh báo khác bị bỏ qua.
+    //
+    // Ba mã ở đây cố ý phủ ba đường khác nhau: `balcony` là không gian thật của ngôi nhà,
+    // `closet` chỉ tồn tại trong một phòng ngủ, `bedroom` là mã Lớp 2 tự suy và chỉ còn nằm
+    // trong đầu bài lưu trước 06/09/2026.
+    for (const need of ['balcony', 'closet', 'bedroom']) {
+      const issues = checkBriefConsistency(
+        {
+          family: [{ role: 'ong_ba', count: 2, needs: [need] }],
+          required_spaces: [{ type: 'living' }, { type: 'kitchen' }],
+        },
+        BRIEF_FORM,
+      );
+      expect(
+        issues.map((i) => i.code),
+        `nhu cầu "${need}"`,
+      ).not.toContain('nhu_cau_thieu_khong_gian');
+      // Và không mã máy nào lọt vào câu tiếng Việt trên màn hình (CLAUDE.md 4.1).
+      for (const issue of issues) expect(issue.message).not.toContain(need);
+    }
   });
 
   it('gia đình đông người KHÔNG bị cảnh báo oan', () => {
@@ -530,5 +574,199 @@ describe('Lược đồ bản nháp', () => {
   it('cấu hình sai bị chặn ngay lúc nạp', () => {
     const broken = { ...(BRIEF_FORM as BriefFormConfig), version: 'một chấm không' };
     expect(() => briefFormConfigSchema.parse(broken)).toThrow();
+  });
+});
+
+describe('Soát mâu thuẫn về ý đồ bố cục (13/09/2026)', () => {
+  /**
+   * Dựng lại đúng những chỗ nói ngược của đầu bài thật «Biệt thự nhà vườn (demo)» — bộ kiểm cũ
+   * chấm nó «98%, 0 chỗ chưa nhất quán».
+   */
+  const villa: DesignBriefDraft = {
+    building_type: 'biet_thu',
+    floors: 2,
+    style: 'tan_co_dien',
+    site: {
+      width_m: 15,
+      depth_m: 20,
+      access_sides: ['front', 'left'],
+      adjacent: { front: 'duong_lon', back: 'dat_trong', left: 'hem_3m', right: 'nha_hang_xom' },
+      setback_required_m: { front: 4 },
+    },
+    family: [
+      { role: 'ong_ba', count: 2, floor: 1, ensuite: true },
+      { role: 'vo_chong', count: 2, floor: 2, ensuite: true },
+      { role: 'con', count: 2, floor: 2 },
+    ],
+    required_spaces: [
+      { type: 'bedroom', floor: 2, ensuite: true, area_m2: 28 },
+      { type: 'master_bedroom', floor: 2, ensuite: true, area_m2: 35 },
+      { type: 'bedroom', floor: 1, area_m2: 23 },
+      { type: 'living', floor: 1, area_m2: 58 },
+      { type: 'garage', floor: 1 },
+    ],
+    massing: {
+      wings_preferred: 2,
+      footprint_shape: 'chu_nhat',
+      cores_preferred: 1,
+      service_core: true,
+      yards: ['san_truoc', 'san_ben', 'san_sau'],
+    },
+  };
+  const codes = (draft: DesignBriefDraft, legacy = {}) =>
+    checkBriefConsistency(draft, BRIEF_FORM, legacy).map((i) => i.code);
+
+  it('bắt đủ các chỗ nói ngược của đầu bài demo', () => {
+    const found = codes(villa, { style_note: 'Hiện đại, mái dốc nhẹ, dễ bảo trì.' });
+    expect(found).toEqual(
+      expect.arrayContaining([
+        'khep_kin_lech_gia_dinh',
+        'san_chua_co_kich_thuoc',
+        'hinh_khoi_mau_thuan',
+        'thang_phu_mot_loi',
+        'phong_cach_lech_ghi_chu',
+      ]),
+    );
+  });
+
+  it('phòng ngủ khép kín lệch tầng giữa gia đình và danh sách là NGHIÊM TRỌNG', () => {
+    const issue = checkBriefConsistency(villa, BRIEF_FORM).find(
+      (i) => i.code === 'khep_kin_lech_gia_dinh',
+    )!;
+    expect(issue.severity).toBe('nghiem_trong');
+    expect(issue.message).toContain('tầng 1 (gia đình 1, danh sách 0)');
+  });
+
+  it('lối vào chính và lối xe phải là mặt tiếp cận được', () => {
+    const draft = { ...villa, site: { ...villa.site, main_entrance_side: 'back' as const } };
+    expect(codes(draft)).toContain('loi_vao_khong_tiep_can');
+    const car = {
+      ...villa,
+      site: { ...villa.site, vehicle_entrance_side: 'left' as const },
+      parking: { cars: 1 },
+    };
+    expect(codes(car)).toContain('loi_xe_hem_hep');
+  });
+
+  it('khai số xe mà không có chỗ để xe thì hỏi lại', () => {
+    const draft = { ...villa, parking: { cars: 1 }, required_spaces: [{ type: 'living' }] };
+    expect(codes(draft)).toContain('xe_chua_co_cho_de');
+  });
+
+  it('tường chung/riêng khai ở mặt không giáp hàng xóm thì hỏi lại', () => {
+    const draft = {
+      ...villa,
+      site: { ...villa.site, boundary_walls: { right: 'chung' as const, left: 'rieng' as const } },
+    };
+    const issues = checkBriefConsistency(draft, BRIEF_FORM).filter(
+      (i) => i.code === 'tuong_ranh_khong_giap_hang_xom',
+    );
+    expect(issues).toHaveLength(1);
+    expect(issues[0]!.message).toContain('bên trái');
+  });
+
+  it('diện tích đã ghim vượt sàn xây được sau khi chừa sân là NGHIÊM TRỌNG', () => {
+    const draft: DesignBriefDraft = {
+      ...villa,
+      massing: { yards: ['san_ben', 'san_sau'], yard_depth_m: { left: 5, back: 8 } },
+      required_spaces: [
+        { type: 'living', floor: 1, area_m2: 58 },
+        { type: 'kitchen', floor: 1, area_m2: 30 },
+      ],
+    };
+    // 15 × 20, lùi trước 4, sân trái 5, sân sau 8 → 10 × 8 = 80 m²; đã ghim 88 m².
+    const issue = checkBriefConsistency(draft, BRIEF_FORM).find(
+      (i) => i.code === 'dien_tich_vuot_san_xay_duoc',
+    );
+    expect(issue?.severity).toBe('nghiem_trong');
+    expect(issue?.message).toContain('80 m²');
+  });
+
+  it('đầu bài khớp nhau thì không nổ phép nào trong nhóm này', () => {
+    const clean: DesignBriefDraft = {
+      ...villa,
+      style: 'hien_dai',
+      family: [
+        { role: 'ong_ba', count: 2, floor: 1, ensuite: true },
+        { role: 'vo_chong', count: 2, floor: 2, ensuite: true },
+      ],
+      required_spaces: [
+        { type: 'bedroom', floor: 1, ensuite: true },
+        { type: 'master_bedroom', floor: 2, ensuite: true },
+        { type: 'garage', floor: 1 },
+      ],
+      site: { ...villa.site, main_entrance_side: 'front', vehicle_entrance_side: 'front' },
+      parking: { cars: 1, motorbikes: 2 },
+      massing: {
+        wings_preferred: 2,
+        footprint_shape: 'L',
+        cores_preferred: 1,
+        service_core: false,
+        yards: ['san_truoc', 'san_ben'],
+        yard_depth_m: { front: 5, left: 3 },
+      },
+    };
+    expect(codes(clean, { style_note: 'Hiện đại, mái dốc nhẹ.' })).toEqual([]);
+  });
+});
+
+describe('Chiều sâu sân so với khoảng lùi', () => {
+  it('sân không lớn hơn khoảng lùi thì cảnh báo là không có tác dụng — hai số không cộng', () => {
+    const issues = checkBriefConsistency(
+      {
+        site: { width_m: 15, depth_m: 20, setback_required_m: { front: 4 } },
+        massing: { yards: ['san_truoc', 'san_ben'], yard_depth_m: { front: 1, left: 2 } },
+      },
+      BRIEF_FORM,
+    );
+    const issue = issues.find((i) => i.code === 'san_nho_hon_khoang_lui');
+    expect(issue?.message).toContain('mặt trước (1 m, khoảng lùi 4 m)');
+    expect(issue?.message).not.toContain('bên trái');
+  });
+});
+
+describe('Diện tích TỐI THIỂU so với sàn xây được (13/09/2026)', () => {
+  const base: DesignBriefDraft = {
+    building_type: 'biet_thu',
+    floors: 2,
+    site: { width_m: 15, depth_m: 20, setback_required_m: { front: 4 } },
+    massing: { yards: ['san_ben'], yard_depth_m: { left: 3 } },
+  };
+
+  it('tính sàn xây được sau khoảng lùi, sân và mật độ', () => {
+    // 15 × 20, lùi trước 4, sân trái 3 → 12 × 16 = 192 m² mỗi tầng.
+    expect(briefAreaBudget(base)).toMatchObject({ plateM2: 192, floors: 2, totalPlateM2: 384 });
+    // Mật độ 50% trên lô 300 m² kẹp xuống 150 m².
+    const dense = { ...base, site: { ...base.site!, max_density: 0.5 } };
+    expect(briefAreaBudget(dense).plateM2).toBe(150);
+  });
+
+  it('tổng diện tích tối thiểu vượt tổng sàn xây được là NGHIÊM TRỌNG, kèm phép tính', () => {
+    const draft: DesignBriefDraft = {
+      ...base,
+      required_spaces: [
+        { type: 'living', area_m2: 150 },
+        { type: 'kitchen', area_m2: 120 },
+        { type: 'garage', area_m2: 130 },
+      ],
+    };
+    const issue = checkBriefConsistency(draft, BRIEF_FORM).find(
+      (i) => i.code === 'tong_dien_tich_vuot_san',
+    );
+    expect(issue?.severity).toBe('nghiem_trong');
+    expect(issue?.message).toContain('400 m²');
+    expect(issue?.message).toContain('384 m²');
+    expect(issue?.message).toContain('192 m² mỗi tầng × 2 tầng');
+  });
+
+  it('gần kín thì cảnh báo; còn rộng thì không nói gì', () => {
+    const near = { ...base, required_spaces: [{ type: 'living', area_m2: 340 }] };
+    expect(checkBriefConsistency(near, BRIEF_FORM).map((i) => i.code)).toContain(
+      'tong_dien_tich_gan_kin_san',
+    );
+    const roomy = { ...base, required_spaces: [{ type: 'living', area_m2: 60 }] };
+    expect(checkBriefConsistency(roomy, BRIEF_FORM).map((i) => i.code)).not.toContain(
+      'tong_dien_tich_gan_kin_san',
+    );
   });
 });

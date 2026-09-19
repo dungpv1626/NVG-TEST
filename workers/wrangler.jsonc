@@ -55,6 +55,12 @@
       "binding": "DIGITISE_PIPELINE",
       "class_name": "DigitisePipeline",
     },
+    {
+      // Nhánh AI (T15) — một instance cho một giai đoạn, vì kiến trúc sư duyệt giữa các bước.
+      "name": "nvg-ai-design",
+      "binding": "AI_DESIGN_PIPELINE",
+      "class_name": "AiDesignPipeline",
+    },
   ],
 
   /**
@@ -117,9 +123,19 @@
    * khai thật. Chạy cục bộ: tạo `workers/.dev.vars` (đã có trong `.gitignore` chung của repo)
    * với dòng `SUPABASE_SERVICE_ROLE_KEY=...` lấy từ `.env` gốc.
    *
-   * `GEMINI_API_KEY` cũng là secret: thêm dòng đó vào `.dev.vars` khi chạy ở máy, và nạp lên
-   * bằng `wrangler secret put GEMINI_API_KEY` khi triển khai. Thiếu khoá thì router mô hình
-   * tự báo "chưa cấu hình" thay vì gọi ra mạng rồi nhận lỗi khó đọc.
+   * `GEMINI_API_KEY` và `POLLINATIONS_API_KEY` cũng là secret: thêm hai dòng đó vào `.dev.vars`
+   * khi chạy ở máy, và nạp lên bằng `wrangler secret put <tên>` khi triển khai. Thiếu khoá thì
+   * router mô hình tự báo "chưa cấu hình" thay vì gọi ra mạng rồi nhận lỗi khó đọc.
+   *
+   * `POLLINATIONS_API_KEY` là khoá của tuyến phối cảnh (`layer5_render`). Router tự khớp khoá
+   * theo `provider` của từng tuyến, nên đổi nhà cung cấp trong `config/models.yaml` là đổi luôn
+   * khoá được dùng — không sửa mã.
+   *
+   * `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` và `GEMINI_PAID_API_KEY` (nhánh thiết kế bằng AI,
+   * T10–T13) cũng là secret, cùng cách đặt. Thiếu khoá nào thì ô chọn model trên trang thiết kế
+   * mờ nhà cung cấp đó kèm lý do — không chặn nhánh bộ giải. `GEMINI_PAID_API_KEY` tách khỏi
+   * `GEMINI_API_KEY` vì chính sách hạng dữ liệu bám vào khoá: khoá miễn phí không bao giờ được
+   * cấp cho tuyến hạng 2.
    *
    * `DESIGN_COMPUTE_URL` đặt trong `workers/.dev.vars` khi chạy Container bằng Docker tại
    * chỗ: `DESIGN_COMPUTE_URL=http://localhost:8080`.

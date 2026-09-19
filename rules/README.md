@@ -10,11 +10,16 @@ phương đổi lại phải triển khai lại hệ thống.
 
 ```
 rules/
-  base/                 áp dụng mọi nơi — QCVN 01:2021/BXD + quy tắc công năng
-                        (gồm cả khoảng lùi và mật độ xây dựng: chúng là quy chuẩn QUỐC GIA)
+  structure/            áp dụng mọi nơi — NGUYÊN LÝ BỐ CỤC của bộ giải (thang, hộp kỹ thuật
+                        thẳng hàng; mọi phòng có lối vào). KHÔNG chứa ngưỡng pháp quy nào.
+  nvg-experience.yaml   kinh nghiệm nghề NVG, mức `warning` — bộ giải và nhánh AI cùng đọc
   locality/             ghi đè khi tỉnh có văn bản quy hoạch riêng — HIỆN CHƯA CÓ GÓI NÀO
   messages.vi.yaml      mẫu câu thông báo cho người dùng, theo rule_id
 ```
+
+> ⚠️ **13/09/2026 — `base/` (QCVN 01:2021/BXD, TCVN) đã xoá** (Haan: «bỏ quy chuẩn VN đi», cho
+> toàn bộ bộ giải; CLAUDE.md T42). Khoảng lùi và mật độ nay CHỈ lấy từ đầu bài. Phần dưới nói
+> về `base` là lịch sử của cơ chế ghi đè — cơ chế vẫn còn, gói nền nay là `structure/`.
 
 `DesignBrief.locality` quyết định nạp gói nào. Gói địa phương **ghi đè** gói `base` theo
 `rule_id`; quy tắc không có trong gói địa phương thì lấy từ `base`. Tỉnh chưa có gói riêng

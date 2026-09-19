@@ -21,7 +21,10 @@ import { useAuth } from '@/lib/auth';
 import { useCompanyStore } from '@/lib/company-store';
 import { cn } from '@/lib/utils';
 
-export function CompanySwitcher({ compact = false }: { compact?: boolean } = {}) {
+export function CompanySwitcher({
+  compact = false,
+  onDark = false,
+}: { compact?: boolean; onDark?: boolean } = {}) {
   const { profile } = useAuth();
   const { selectedCompanyId, setSelectedCompany } = useCompanyStore();
 
@@ -38,6 +41,20 @@ export function CompanySwitcher({ compact = false }: { compact?: boolean } = {})
 
   const selected = options.find((o) => o.id === selectedCompanyId) ?? options[0];
 
+  /**
+   * Thanh điều hướng của Module Thiết kế tối ở CẢ hai chế độ (bản mẫu §4.3), nên bộ chọn đặt
+   * trong đó không đọc được token dùng chung: ở chế độ SÁNG chúng trả về màu của nền trắng và
+   * nút ra một mảng trắng nằm giữa thanh tối. Bảng màu `--color-navdark-*` chỉ có một giá trị,
+   * đúng thứ cần ở đây.
+   *
+   * Bảng xổ xuống KHÔNG áp bảng màu này: nó được cổng ra ngoài `<body>`, tức nằm trên nền
+   * trang chứ không trên thanh điều hướng.
+   */
+  const trigger = onDark
+    ? 'border-navdark-line bg-navdark-btn text-navdark-fg-strong hover:bg-navdark-hover'
+    : 'border-border bg-surface-sunken hover:bg-surface-hover';
+  const triggerIcon = onDark ? 'text-navdark-fg' : 'text-fg-subtle';
+
   if (!selected) return null;
 
   // Một pháp nhân duy nhất thì không cần bộ chọn — vẫn hiển thị tên cố định
@@ -46,17 +63,20 @@ export function CompanySwitcher({ compact = false }: { compact?: boolean } = {})
     if (compact) {
       return (
         <span
-          className="flex items-center gap-1.5 px-1 font-semibold"
+          className={cn(
+            'flex items-center gap-1.5 px-1 font-semibold',
+            onDark && 'text-navdark-fg-strong',
+          )}
           title={`${selected.name} — ${selected.roles.join(' · ')}`}
         >
-          <Building2 className="size-4 shrink-0 text-fg-subtle" />
+          <Building2 className={cn('size-4 shrink-0', triggerIcon)} />
           {selected.code}
         </span>
       );
     }
     return (
-      <div className="flex items-center gap-2 rounded-md border border-border px-2 py-2">
-        <Building2 className="text-fg-subtle" />
+      <div className={cn('flex items-center gap-2 rounded-md border px-2 py-2', trigger)}>
+        <Building2 className={cn('size-5', triggerIcon)} />
         <div className="min-w-0">
           <div className="truncate font-semibold">{selected.name}</div>
           <div className="truncate text-xs text-fg-subtle">{selected.roles.join(' · ')}</div>
@@ -72,8 +92,8 @@ export function CompanySwitcher({ compact = false }: { compact?: boolean } = {})
           // Viền + nền trũng để đọc ra là ĐIỀU KHIỂN. Trước đây chỉ có mỗi mũi tên 16px gợi ý
           // bấm được, nên khối này trông y hệt một tiêu đề và người dùng không tìm ra chỗ đổi
           // pháp nhân — trong khi Bảng điều khiển vẫn bảo họ "chọn một pháp nhân ở thanh bên".
-          'flex items-center gap-2 rounded-md text-left',
-          'border border-border bg-surface-sunken hover:bg-surface-hover',
+          'flex items-center gap-2 rounded-md border text-left',
+          trigger,
           // Vùng bấm tối thiểu 40px trên di động, 32px trên máy tính có chuột (Content
           // Guidelines 6.8) — compact chỉ hiện dưới `lg:` (top-bar.tsx), đúng nơi ngón tay cần
           // vùng bấm lớn nhất; trước đây `px-2 py-1` quanh icon 16px + chữ ra dưới 40px, cùng
@@ -83,7 +103,7 @@ export function CompanySwitcher({ compact = false }: { compact?: boolean } = {})
         aria-label={compact ? `Pháp nhân ${selected.code} — chọn pháp nhân khác` : 'Chọn pháp nhân'}
         title={compact ? `${selected.name} — ${selected.roles.join(' · ')}` : undefined}
       >
-        <Building2 className="size-4 shrink-0 text-fg-subtle" />
+        <Building2 className={cn('size-4 shrink-0', triggerIcon)} />
         {compact ? (
           selected.code
         ) : (
@@ -92,7 +112,7 @@ export function CompanySwitcher({ compact = false }: { compact?: boolean } = {})
             <div className="truncate text-xs text-fg-subtle">{selected.roles.join(' · ')}</div>
           </div>
         )}
-        <ChevronsUpDown className="size-4 shrink-0 text-fg-subtle" />
+        <ChevronsUpDown className={cn('size-4 shrink-0', triggerIcon)} />
       </DropdownMenu.Trigger>
 
       <DropdownMenu.Portal>

@@ -110,6 +110,29 @@ def load_pack(directory: Path, *, strict: bool = True) -> RulePack:
     return pack
 
 
+def load_rule_file(path: Path, *, pack_id: str, strict: bool = True) -> RulePack:
+    """Nạp MỘT tệp quy tắc (danh sách, không có `00-meta.yaml`) thành một pack.
+
+    Dùng cho `rules/nvg-experience.yaml`: gói kinh nghiệm là một tệp đơn, không phải thư mục.
+    """
+    path = Path(path)
+    loaded = yaml.safe_load(path.read_text(encoding="utf-8")) or []
+    if not isinstance(loaded, list):
+        raise RulePackError(f"{path}: cần một danh sách quy tắc, nhận được {type(loaded).__name__}")
+    pack = RulePack(
+        id=pack_id,
+        version="file",
+        rules=tuple(_parse_rule(raw, path) for raw in loaded),
+        locality=None,
+    )
+    issues = validate_pack(pack)
+    blocking = blocking_issues(issues)
+    if blocking and strict:
+        detail = "\n".join(f"  {i}" for i in blocking)
+        raise RulePackError(f"rule pack {pack.id!r} bị từ chối:\n{detail}")
+    return pack
+
+
 def merge(base: RulePack, override: RulePack) -> RulePack:
     """Đặt pack địa phương chồng lên pack nền.
 
@@ -143,11 +166,21 @@ def load_for_locality(rules_root: Path, locality: str | None) -> RulePack:
     Lớp 2 chạy bình thường (Worker vốn đã lùi về gói nền), rồi Lớp 3b đổ ở bước giải ràng
     buộc — hai lớp đọc cùng một rule pack mà kết luận khác nhau về chính sự tồn tại của nó.
 
-    Gói nền đã mang đủ khoảng lùi và mật độ theo QCVN 01:2021/BXD nên bản lùi về vẫn đúng
-    quy chuẩn quốc gia; `pack.locality is None` là cách gọi lại kết quả đó.
+    **Gói nền là `rules/structure/` — nguyên lý bố cục, KHÔNG phải quy chuẩn** (13/09/2026, Haan:
+    «bỏ quy chuẩn VN đi», cho toàn bộ bộ giải). Gói `rules/base/` (QCVN 01:2021/BXD, TCVN) đã
+    xoá: khoảng lùi và mật độ nay chỉ đến từ đầu bài qua `site`, không có số mặc định nào.
+    `pack.locality is None` vẫn là cách gọi lại việc tỉnh chưa có gói riêng.
     """
     rules_root = Path(rules_root)
-    base = load_pack(rules_root / "base")
+    base = load_pack(rules_root / "structure")
+    # Kinh nghiệm nghề NVG — đúng tệp Worker gộp vào gói của bộ giải (`rulePackFor`). Trước
+    # 13/09/2026 Container KHÔNG đọc tệp này: các quy tắc kinh nghiệm chuyển khỏi `rules/base/`
+    # sang đây, và từ hôm ấy `garage_on_access_face`, `outdoor_on_open_face`, kích thước tối
+    # thiểu từng phòng… không còn tới được bộ giải — bốn phép thử đỏ mà không ai nhận ra vì cả
+    # bộ đã đỏ sẵn vì lý do khác.
+    experience_file = rules_root / "nvg-experience.yaml"
+    if experience_file.is_file():
+        base = merge(base, load_rule_file(experience_file, pack_id="nvg_experience"))
 
     if locality is None:
         return base

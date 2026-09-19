@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nvg.vn/contracts/ai-plan-intent.schema.json",
+  "title": "AiPlanIntent",
+  "description": "MỘT tầng của mặt bằng, do mô hình ngôn ngữ khai dưới dạng Ý ĐỊNH BỐ CỤC: phòng nào ở vùng nào của lô, phòng nào ra mặt tiền, phòng nào cạnh/gần/xa/thông phòng nào, phòng nào có cửa chính. KHÔNG một toạ độ, KHÔNG cây chia, KHÔNG danh sách cửa — chương trình (`ai/arrange/`) dựng cây chia, đặt cửa, dựng tường.",
+  "$comment": "Quyết định T43 (14/09/2026, Haan chốt). Thay việc mô hình khai cây chia có toạ độ (`ai-plan-tree`, T37 — nay là hợp đồng NỘI BỘ, đầu ra của bộ giải).\n\nVì sao đổi, đo trên lượt thật 13/09/2026: với cây chia, `tree/sizing.ts` đã phải ghi đè mọi `at` mô hình khai (lệch diện tích 26–37 %), tức phần số không còn được dùng — còn lại tôpô, và chính tôpô hỏng: phòng không giáp hành lang, vào kho phải qua WC (V-26, V-27). Mỗi tầng 127–294 giây, 90 % token ra là phần nghĩ. Ý định chín vùng là thứ kiến trúc sư nói khi phác, và không có số học hai chiều nào để sai.\n\nVì sao chín vùng mà không phải toạ độ tương đối: vùng là tập RỜI RẠC nhỏ, kiểm được bằng enum, và bộ giải chiếu được vào lưới ba hàng × ba cột của hình bao bất kể lô rộng hay hẹp (lô 4 m chỉ còn một cột).\n\nMọi trường bắt buộc, trường được phép rỗng khai `null`/mảng rỗng: chế độ `strict` của OpenAI ép mọi trường tuỳ chọn thành «bắt buộc, có thể null».",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["variant_label", "rationale", "rooms", "relationships", "entry_room", "garage_room"],
+  "properties": {
+    "variant_label": {
+      "type": ["string", "null"],
+      "maxLength": 120,
+      "description": "Tên phương án, tiếng Việt, mô tả cấu trúc. Chỉ tầng 1 điền; tầng khác để null."
+    },
+    "rationale": {
+      "type": "string",
+      "maxLength": 300,
+      "description": "Vì sao tầng này xếp như vậy, tiếng Việt, 1–2 câu."
+    },
+    "rooms": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 40,
+      "items": {
+        "$ref": "#/$defs/room"
+      },
+      "description": "Mỗi phòng của tầng đúng một dòng."
+    },
+    "relationships": {
+      "type": "array",
+      "maxItems": 30,
+      "items": {
+        "$ref": "#/$defs/relationship"
+      }
+    },
+    "entry_room": {
+      "type": ["string", "null"],
+      "pattern": "^[a-z0-9_]+$",
+      "maxLength": 32,
+      "description": "Tầng 1: phòng mang cửa chính ra ngoài. Tầng khác: null."
+    },
+    "garage_room": {
+      "type": ["string", "null"],
+      "pattern": "^[a-z0-9_]+$",
+      "maxLength": 32,
+      "description": "Phòng mang cửa xe; null khi tầng không có chỗ để xe."
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$",
+      "maxLength": 32
+    },
+    "zone": {
+      "type": "string",
+      "enum": [
+        "front_left",
+        "front",
+        "front_right",
+        "left",
+        "center",
+        "right",
+        "back_left",
+        "back",
+        "back_right"
+      ],
+      "description": "Vùng trong lô: front = phía đường, back = phía sâu; left/right khi đứng ngoài đường nhìn vào."
+    },
+    "room": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "zone", "street_facing"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "zone": {
+          "$ref": "#/$defs/zone"
+        },
+        "street_facing": {
+          "type": "boolean",
+          "description": "Phòng muốn một cạnh ra mặt đường."
+        }
+      }
+    },
+    "relationship": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["a", "b", "kind"],
+      "properties": {
+        "a": {
+          "$ref": "#/$defs/id"
+        },
+        "b": {
+          "$ref": "#/$defs/id"
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["adjacent", "near", "far", "open"],
+          "description": "adjacent = chung vách · near = gần · far = xa · open = một không gian mở."
+        }
+      }
+    }
+  }
+}

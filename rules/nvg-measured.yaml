@@ -1,0 +1,162 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+#  ĐO TRÊN HỒ SƠ THẬT CỦA NVG — gói RIÊNG của nhánh AI
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+#  Gói:       nvg_measured
+#  Phiên bản: 2026.09.1
+#  Thêm:      12/09/2026
+#  Số quy tắc: 8, tất cả mức `warning`
+#
+#  ── VÌ SAO LÀ MỘT TỆP RIÊNG, KHÔNG GỘP VÀO `nvg-experience.yaml` ──────────────
+#
+#  Vì `nvg-experience.yaml` được ĐỌC BỞI CẢ HAI nhánh: nhánh AI qua
+#  `nvgExperiencePack()`, và BỘ GIẢI nội bộ qua `rulePackFor()` (gộp với
+#  `rules/base/`). Tệp này chỉ nhánh AI đọc.
+#
+#  Chuyện đã xảy ra thật khi thử gộp (12/09/2026): thêm `room_min_area_wc: 3.0`
+#  nâng mức tối thiểu của khu vệ sinh trong khâu chia diện tích của BỘ GIẢI từ
+#  2,4 m² (`kb/space_norms.yaml`) lên 3,0. Trên lô nhà phố 3,5 × 12 m, +0,6 m²
+#  mỗi WC làm thang bộ tụt xuống đúng mức sàn 4 m² và bếp xuống dưới mức hợp lý —
+#  `program-plausibility.test.ts` đỏ 4 phép thử. Không phải lỗi của phép đo: lô
+#  ấy chật thật. Nhưng **re-tune bộ giải là một quyết định riêng, có nghiệm thu
+#  riêng**, không phải hệ quả phụ của một đợt sửa gói quy tắc nhánh AI — nhất là
+#  khi bộ giải đã nằm trong diện xoá và T10 đòi 1.211 phép thử của nó đứng yên.
+#
+#  Đáng ghi thêm: con số 2,4 m² trong `space_norms.yaml` CÙNG XUẤT XỨ với quy tắc
+#  `min_area_wc` của TCVN 4451:2012 vừa bị gỡ khỏi `rules/base/` (T30) — cùng một
+#  con số, cùng một chỗ không kiểm được. Nên 3,0 m² đo trên 5 khu vệ sinh thật là
+#  chứng cứ TỐT HƠN. Ngày nào bộ giải được re-tune, đây là chỗ lấy số.
+#
+#  ── n ────────────────────────────────────────────────────────────────────────
+#  Nguồn: 2 dự án NVO đã xây, 6 mặt bằng độc lập (P1 nhà vườn 2 tầng 03/2026;
+#  P2 liền kề 5 tầng 08/2026). Phân tích ở
+#  `~/Documents/Doc/NVG/design/mat_bang_cong_nang/`.
+#
+#  ⚠️ n tối đa 6, n theo dự án tối đa 2. CLAUDE.md 8.8 điểm 7 đòi n ≥ 15 mới là
+#     ĐỊNH MỨC. Mọi con số ở đây là CHỈ DẤU.
+#
+#  Chỉ khai những vị từ bộ đối chiếu ĐO ĐƯỢC: `min_dimension`, `min_area`,
+#  `max_area`, `aspect_ratio_max`. Các quan hệ đo được khác (đi xuyên phòng ngủ,
+#  WC thẳng trục đứng, hộp kỹ thuật liên tục, tỷ lệ giao thông, lấy sáng theo loại
+#  nhà) CỐ Ý không khai thành quy tắc — chúng là TIÊU CHÍ CHẤM ĐIỂM (C1, E2, E4,
+#  C2, D1). Khai hai chỗ là hai bản thực thi của cùng phép đo, và chúng sẽ lệch.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+- id: room_min_dimension_bedroom
+  applies_to: [nha_pho, nha_vuon]
+  scope: floor
+  predicate: min_dimension
+  target: bedroom
+  value_m: 2.35
+  severity: warning
+  source: 'đo trên hồ sơ NVG'
+  n: 3
+  n_du_an: 2
+  khoang_quan_sat: '2,39 – 2,71 m (5 phòng)'
+  auto_repair: shrink_adjacent
+
+- id: room_min_area_bedroom
+  applies_to: [nha_pho, nha_vuon]
+  scope: floor
+  predicate: min_area
+  target: bedroom
+  value_m2: 9.0
+  severity: warning
+  source: 'đo trên hồ sơ NVG'
+  n: 3
+  n_du_an: 2
+  khoang_quan_sat: '9,1 – 10,6 m² (tính từ đa giác, KHÔNG từ nhãn)'
+  auto_repair: shrink_adjacent
+
+- id: room_aspect_ratio_max_bedroom
+  applies_to: [nha_pho, nha_vuon]
+  scope: floor
+  predicate: aspect_ratio_max
+  target: bedroom
+  value: 1.9
+  severity: warning
+  source: 'đo trên hồ sơ NVG'
+  n: 3
+  n_du_an: 2
+  khoang_quan_sat: '1,32 – 1,84'
+  auto_repair: shrink_adjacent
+
+- id: room_min_dimension_master_bedroom
+  applies_to: [nha_pho, nha_vuon]
+  scope: floor
+  predicate: min_dimension
+  target: master_bedroom
+  value_m: 3.1
+  severity: warning
+  source: 'đo trên hồ sơ NVG'
+  n: 2
+  n_du_an: 2
+  khoang_quan_sat: '3,12 – 3,66 m'
+  auto_repair: shrink_adjacent
+
+- id: room_min_area_wc
+  applies_to: [nha_pho, nha_vuon]
+  scope: floor
+  predicate: min_area
+  target: wc
+  value_m2: 3.0
+  severity: warning
+  source: 'đo trên hồ sơ NVG'
+  n: 5
+  n_du_an: 2
+  khoang_quan_sat: '3,1 – 4,5 m²'
+  auto_repair: shrink_adjacent
+
+- id: room_aspect_ratio_max_wc
+  applies_to: [nha_pho, nha_vuon]
+  scope: floor
+  predicate: aspect_ratio_max
+  target: wc
+  value: 2.2
+  severity: warning
+  source: 'đo trên hồ sơ NVG'
+  n: 5
+  n_du_an: 2
+  khoang_quan_sat: '1,84 – 2,14 (phòng chữ nhật)'
+  auto_repair: shrink_adjacent
+
+- id: room_min_dimension_living
+  applies_to: [nha_pho, nha_vuon]
+  scope: floor
+  predicate: min_dimension
+  target: living
+  value_m: 3.5
+  severity: warning
+  source: 'đo trên hồ sơ NVG'
+  n: 2
+  n_du_an: 2
+  khoang_quan_sat: '3,58 – 4,60 m'
+  ghi_chu: 'cả 2 mẫu là phòng khách MỞ THÔNG; đo theo vùng chức năng'
+  auto_repair: shrink_adjacent
+
+# Quy tắc thứ năm trong nhóm «đang báo sai»: hành lang CHƯA có ngưỡng nào, và thêm nó vào mà
+# không thêm mã `vanity` thì nó bắt oan ngay khi ra đời — hốc lavabo của P2 rộng 1,05 m và đang
+# không có mã riêng nên phải xếp vào `circulation`. Hai việc đi cùng nhau, xem `room_vocabulary`.
+- id: room_min_dimension_circulation
+  applies_to: [nha_pho, nha_vuon]
+  scope: floor
+  predicate: min_dimension
+  target: circulation
+  value_m: 1.1
+  severity: warning
+  source: 'đo trên hồ sơ NVG'
+  n: 3
+  n_du_an: 2
+  khoang_quan_sat: '1,10 – 1,30 m (hành lang)'
+  auto_repair: shrink_adjacent
+# ── HAI CHỖ CỐ Ý ĐỂ TRỐNG ─────────────────────────────────────────────────────
+#
+# 1. BỀ RỘNG VẾ THANG. Đo được 0,83 – 1,00 m trên 2 dự án, tức chính NVG đang làm tới 0,83 m.
+#    Không thể lấy số đo làm ngưỡng «đạt» mà vẫn bắt được trường hợp 0,83 ấy. Ngưỡng 0,9 m từng
+#    có trong `rules/base/` với nguồn QCVN không kèm số mục, và đã gỡ cùng cả gói pháp quy
+#    (T30, 12/09/2026). Cần Phòng Thiết kế cho một con số — xem mục 9 của phương án.
+#
+# 2. BẾP + ĂN GỘP. Hai mẫu đo được (3,585 và 4,49 m; 15,3 và 21,5 m²) đều là bếp GỘP với phòng
+#    ăn, nên KHÔNG áp cho bếp riêng. `room_min_dimension_kitchen` 1,8 m giữ nguyên cho bếp riêng.
+#    Quy tắc cho phòng ghép chỉ khai được sau khi hợp đồng có `also` (đợt C) — khai trước thì nó
+#    bắt oan mọi bếp riêng.

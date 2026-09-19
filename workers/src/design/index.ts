@@ -13,31 +13,75 @@
 
 import { Hono } from 'hono';
 import {
+  applyProgramEdits,
   artifactId,
+  spaceProgramSchema,
   BRIEF_FORM,
   DATA_CLASSES,
   type DataClass,
   type DesignBrief,
+  type ProgramEdit,
+  type SpaceProgram,
 } from '@nvg/shared/design';
 import { ContractError } from './contracts';
-import { createComputeBackend } from './compute-backend';
+import { createComputeBackend, type ExportDxfRequest } from './compute-backend';
 import { DataClassViolation, ModelNotConfigured } from './llm/router';
-import { geminiClient, modelRouter } from './llm/factory';
+import { geminiClient, modelRouter, textClientFor } from './llm/factory';
+import { renderImageClient } from './render/render-client';
+import { aiApp } from './ai/routes';
 import { LlmCallFailed } from './llm/gemini';
 import { PublishBridge } from './publish';
 import { ArtifactRepository } from './artifacts';
+import { createArtifactStore } from './artifact-store';
+import { recordingClient } from './ai/prompt-record';
 import { buildBriefPayload } from './brief/payload';
 import { gateLayer2, readCompletenessThreshold } from './brief/gate';
-import { runLayer2 } from './program/run';
+import { runLayer2, type SavedAiIntent } from './program/run';
+import { spaceNorms } from './program/norms-data';
+import { resolveProgramIntent } from './program/intent';
+import { recordAiCall, usageSummary, type AiCallUsage } from './ai/call-log';
+import { aiModelCatalogue, isSelectableRoute } from './ai/models';
 import { retrieveFewShots } from './kb/retrieve';
 import { roomVocabulary } from './kb/vocabulary-data';
 import { embeddingText, withheldFields, type RationalePayload } from './kb/rationale';
 import { createSourceFileStore, type StoredSource } from './source-files';
 import type { DigitiseParams, DigitiseSource } from './workflows/digitise-steps';
-import { extractSiteBoundary } from './site/extract-boundary';
+import { aiCallOfError, extractSiteBoundary } from './site/extract-boundary';
+import { describeSite, parseImageDataUrl, RENDER_ROUTE, renderFromMassing } from './render/render';
+import type { RenderSite } from './render/render';
+import { siteFaces } from './kb/site-context';
+import { renderPrompts } from './render/prompts-data';
+import { siteContextTable } from './kb/site-context-data';
+import { roomGroups } from './kb/vocabulary';
+import { spaceLabels } from './layout/labels';
+import {
+  chooseVariant,
+  generateVariants,
+  listVariants,
+  VariantsPrerequisiteMissing,
+  type VariantContext,
+} from './layout/variants';
+import { ruleCatalogue } from './layout/summary';
+import { rulePackFor } from './rules/rule-pack-data';
+import {
+  asUser,
+  denyUnlessWritable,
+  projectScope,
+  roomLabels,
+  DESIGN_WRITE_DENIED,
+  PROJECT_NOT_VISIBLE,
+} from './auth-scope';
 import type { DesignEnv } from './env';
 
 export const designApp = new Hono<{ Bindings: DesignEnv }>();
+
+/**
+ * Nhánh AI có bộ tuyến RIÊNG dưới `/design/ai`, trong một tệp không import gì của bộ giải.
+ *
+ * Gắn ở đây chứ không rải các tuyến AI vào tệp này, vì nhánh AI sẽ THAY THẾ bộ giải (T15,
+ * 09/09/2026): ngày xoá bộ giải, phần lớn tệp này biến mất, còn `ai/routes.ts` đứng nguyên.
+ */
+designApp.route('/ai', aiApp);
 
 /**
  * Kiểm tra sống của cả hai runtime.
@@ -50,7 +94,7 @@ designApp.get('/health', async (c) => {
   return c.json({
     ok: true,
     module: 'design',
-    compute: { backend: compute.name, reachable: await compute.health() },
+    compute: { backend: compute.name, ...(await compute.health()) },
     models: { version: modelRouter(c.env).version },
   });
 });
@@ -157,21 +201,6 @@ designApp.post('/kb/digitise', async (c) => {
 });
 
 /**
- * Client Supabase chạy dưới PHIÊN CỦA NGƯỜI GỌI.
- *
- * Khoá `service_role` chỉ đóng vai `apikey`; vai trò thật do JWT trong `Authorization` quyết
- * định, nên RLS vẫn áp dụng đầy đủ. Đây là điều phân biệt các tuyến "thay mặt người dùng" với
- * tuyến chạy nền (Workflow) vốn cố ý vượt RLS.
- */
-async function asUser(env: DesignEnv, token: string) {
-  const { createClient } = await import('@supabase/supabase-js');
-  return createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
-
-/**
  * Xác nhận đầu bài — đúc artifact `design_brief` bất biến.
  *
  * Vì sao đây là endpoint Workers chứ không phải một lệnh Supabase (CLAUDE.md 3.1): nó ghi
@@ -236,6 +265,16 @@ designApp.post('/brief/confirm', async (c) => {
   if (company.error)
     return c.json({ error: 'Không xác định được phạm vi dữ liệu của hồ sơ.' }, 500);
 
+  // Kiểm quyền GHI trước khi đúc: artifact và `design_head` ghi bằng `service_role`, còn
+  // lệnh UPDATE `design_briefs` ở dưới mới đi qua RLS. Không kiểm ở đây thì người chỉ xem
+  // được vẫn đổi head xong rồi mới bị chặn ở bước cuối — head trỏ vào bản chưa ai ký nhận.
+  const denied = await denyUnlessWritable(
+    db,
+    company.data.tenant_id as string,
+    row.design_project_id,
+  );
+  if (denied) return c.json({ error: denied.error }, denied.status);
+
   const actor = await db.rpc('auth_user_id');
   const built = buildBriefPayload({
     structured: row.structured,
@@ -275,7 +314,17 @@ designApp.post('/brief/confirm', async (c) => {
     .eq('id', body.briefId)
     .select('id')
     .single();
-  if (saved.error) return c.json({ error: saved.error.message }, 403);
+  if (saved.error) {
+    // Nguyên văn PostgREST là tiếng Anh và có thể mang tên trigger — chỉ ghi log (CGD 5.5).
+    console.error('brief/confirm: không ghi được dấu xác nhận', saved.error);
+    return c.json(
+      {
+        error:
+          'Đã đúc đầu bài nhưng không ghi được dấu xác nhận. Tải lại trang rồi thử lại; nếu vẫn lỗi, báo Quản trị hệ thống.',
+      },
+      500,
+    );
+  }
 
   return c.json({
     artifactId: artifact.id,
@@ -284,51 +333,6 @@ designApp.post('/brief/confirm', async (c) => {
     issues: built.issues,
   });
 });
-
-/**
- * Nhãn tiếng Việt của mã phòng, gửi kèm kết quả.
- *
- * Vì sao gửi từ máy chủ chứ không khai lại ở `web/`: từ vựng phòng là MỘT tệp dữ liệu
- * (`kb/room_vocabulary.yaml`). Khai bảng nhãn thứ hai trong trình duyệt thì thêm một loại
- * phòng phải sửa hai chỗ, và chỗ quên sửa hiện ra mã máy (`altar_room`) giữa màn hình tiếng
- * Việt — đúng thứ CLAUDE.md 4.1 cấm.
- */
-function roomLabels(): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const type of roomVocabulary().vocabulary.types) out[type.code] = type.vi;
-  return out;
-}
-
-/**
- * Đọc dự án dưới phiên người gọi và suy phạm vi dữ liệu từ đó.
- *
- * Đi qua RLS thay vì kiểm quyền lại ở tầng Worker: người không xem được hồ sơ thiết kế thì
- * cũng không lập được chương trình không gian cho nó, và chỉ có MỘT bản quy tắc quyền —
- * bản trong CSDL (CLAUDE.md 3.4).
- */
-async function projectScope(
-  db: Awaited<ReturnType<typeof asUser>>,
-  projectId: string,
-): Promise<{ companyId: string; tenantId: string; actorId: string | null } | null> {
-  const project = await db
-    .from('design_projects')
-    .select('id, company_id')
-    .eq('id', projectId)
-    .is('deleted_at', null)
-    .maybeSingle();
-  if (project.error || !project.data) return null;
-
-  const companyId = project.data.company_id as string;
-  const company = await db.from('companies').select('tenant_id').eq('id', companyId).single();
-  if (company.error) return null;
-
-  const actor = await db.rpc('auth_user_id');
-  return {
-    companyId,
-    tenantId: company.data.tenant_id as string,
-    actorId: (actor.data as string | null) ?? null,
-  };
-}
 
 /**
  * Chương trình không gian của đầu bài ĐANG HIỆU LỰC — tính lại mỗi lần gọi.
@@ -341,61 +345,391 @@ async function projectScope(
  * `matchesHead` trả lời câu hỏi thật sự quan trọng: bản đang xem có đúng là bản đã chốt cho
  * các lớp sau dùng không.
  *
- * ⚠️ Lượt gọi này đi qua bước quy nhu cầu viết bằng lời. Hiện bước đó bị chặn vì hạng dữ
- * liệu nên không tốn gì; ngày mở khoá mô hình ngôn ngữ, cân nhắc nhớ đệm theo mã đầu bài để
- * mỗi lần mở màn hình không thành một lượt gọi mạng.
+ * ✅ Từ 13/09/2026 tuyến này KHÔNG gọi mô hình nào. Đề xuất ưu tiên của AI chỉ lấy khi bấm nút
+ * (`POST /program/intent`) và đi kèm bản chốt (`space_program.ai_intent`); ở đây chỉ áp lại.
  */
 designApp.get('/program/:projectId', async (c) => {
   const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
   if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+  return programView(c.env, token, c.req.param('projectId'), undefined).then((out) =>
+    c.json(out.body, out.status),
+  );
+});
 
-  const projectId = c.req.param('projectId');
-  const db = await asUser(c.env, token);
+/**
+ * Xem trước chương trình với một đề xuất AI CHƯA CHỐT (vừa lấy về, hoặc kiến trúc sư vừa bỏ).
+ * Không gọi mô hình — đề xuất đi vào từ thân lượt gọi.
+ */
+designApp.post('/program/preview', async (c) => {
+  const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+  const body = (await c.req.json()) as { projectId?: string; aiIntent?: unknown };
+  if (!body.projectId) return c.json({ error: 'Thiếu mã hồ sơ thiết kế.' }, 400);
+  const aiIntent = parseAiIntent(body.aiIntent);
+  if (aiIntent === 'invalid') {
+    return c.json({ error: 'Đề xuất của AI không đúng dạng — lấy lại đề xuất rồi thử lại.' }, 400);
+  }
+  const out = await programView(c.env, token, body.projectId, aiIntent);
+  return c.json(out.body, out.status);
+});
+
+type ProgramViewOut =
+  | { status: 200; body: Record<string, unknown> }
+  | { status: 401 | 404 | 409; body: { error: string } };
+
+/**
+ * Dựng dữ liệu màn hình Chương trình không gian.
+ *
+ * @param aiIntentOverride `undefined` = dùng đề xuất AI của bản đang chốt (nếu bản chốt lập từ
+ *   CHÍNH đầu bài này); `null` = không dùng đề xuất nào; còn lại = đề xuất chưa chốt.
+ */
+async function programView(
+  env: DesignEnv,
+  token: string,
+  projectId: string,
+  aiIntentOverride: SavedAiIntent | null | undefined,
+): Promise<ProgramViewOut> {
+  const db = await asUser(env, token);
   const scope = await projectScope(db, projectId);
   if (!scope) {
-    return c.json(
-      {
+    return {
+      status: 404,
+      body: {
         error:
           'Không tìm thấy hồ sơ thiết kế, hoặc tài khoản không được xem hồ sơ này. Người chịu trách nhiệm dự án hoặc Phòng Thiết kế xem được.',
       },
-      404,
-    );
+    };
   }
 
-  const repo = new ArtifactRepository(c.env);
+  const repo = new ArtifactRepository(env);
   const brief = await repo.head(projectId, 'kien_truc', 'design_brief');
+  if (!brief) {
+    return {
+      status: 409,
+      body: { error: 'Chưa có đầu bài đã xác nhận. Hoàn tất và xác nhận đầu bài trước.' },
+    };
+  }
+
+  const gate = gateLayer2(brief.payload, await readCompletenessThreshold(repo.db, scope.tenantId));
+  if (!gate.allowed) return { status: 409, body: { error: gate.message } };
+
+  const head = await repo.head(projectId, 'kien_truc', 'space_program');
+  const headProgram = head?.payload as SpaceProgram | undefined;
+  const headIsSolver = headProgram && (headProgram.generator?.kind ?? 'solver') === 'solver';
+  // Đề xuất AI của bản chốt chỉ áp lại khi bản chốt lập từ CHÍNH đầu bài này: đề xuất dựa trên
+  // bản tóm tắt của đầu bài cũ, áp sang đầu bài đã sửa là nói thay AI một điều nó chưa nói.
+  const headIntent =
+    headIsSolver && headProgram.brief_ref === brief.id ? (headProgram.ai_intent ?? null) : null;
+  const aiIntent = aiIntentOverride === undefined ? headIntent : aiIntentOverride;
+
+  const run = await runLayer2(
+    env,
+    repo.db,
+    brief.payload as DesignBrief,
+    brief.id,
+    scope.tenantId,
+    aiIntent,
+  );
+  // Chỗ sửa của bản chốt đi KÈM bản chốt, không nằm trong bảng nào khác. Áp lại đúng những chỗ
+  // ấy lên bản vừa tính: khớp mã băm nghĩa là đầu bài chưa đổi VÀ không ai sửa thêm — nếu so
+  // thẳng bản tính với bản chốt thì mọi bản có chỗ sửa đều bị báo «đầu bài đã đổi» oan.
+  const headEdits = headIsSolver ? (headProgram.architect_edits ?? []) : [];
+  const reapplied = applyProgramEdits(run.payload, headEdits);
+
+  return {
+    status: 200,
+    body: {
+      program: run.payload,
+      headEdits,
+      headAiIntent: headIntent,
+      warnings: run.warnings,
+      unresolvedNeeds: run.unresolved,
+      aiSuggestion: run.aiSuggestion,
+      plateExplanation: run.plateExplanation,
+      roomLabels: roomLabels(),
+      briefArtifactId: brief.id,
+      headArtifactId: head?.id ?? null,
+      // So bằng MÃ BĂM, không phải so chuỗi JSON: mã băm chính là định nghĩa danh tính của
+      // artifact trong hệ thống này (khoá chính của `design_artifact`). So chuỗi là dựng một
+      // khái niệm "giống nhau" thứ hai, và nó bất đồng với khái niệm thật ngay khi thứ tự khoá
+      // đổi trên đường đi qua kho tệp — đã xảy ra thật: vừa chốt xong đã báo là chưa chốt.
+      matchesHead:
+        head && reapplied.errors.length === 0
+          ? (await artifactId(reapplied.program)) === head.id
+          : false,
+      // Bản đã chốt do AI lập thì `matchesHead` luôn false (bản tính lại là của bộ giải) — màn
+      // hình cần biết điều đó để không nói «đầu bài đã đổi» oan, và để hiện bản AI đang hiệu lực.
+      head: head
+        ? {
+            artifactId: head.id,
+            generator: headProgram?.generator ?? { kind: 'solver' },
+            program: head.payload,
+          }
+        : null,
+    },
+  };
+}
+
+/**
+ * Lấy đề xuất mức ưu tiên diện tích của AI — CHỈ khi kiến trúc sư bấm nút, với mô hình đã chọn.
+ *
+ * Không ghi artifact: đề xuất là một ĐẦU VÀO của bản chương trình, và nó được lưu khi bản đó
+ * được chốt. Nhưng lượt gọi thì LUÔN ghi nhật ký chi phí — kể cả hỏng — và trả số token, tiền
+ * về cho màn hình ngay.
+ */
+designApp.post('/program/intent', async (c) => {
+  const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+  const body = (await c.req.json()) as { projectId?: string; route?: string };
+  if (!body.projectId) return c.json({ error: 'Thiếu mã hồ sơ thiết kế.' }, 400);
+  if (!body.route) return c.json({ error: 'Chưa chọn model.' }, 400);
+
+  const db = await asUser(c.env, token);
+  const scope = await projectScope(db, body.projectId);
+  if (!scope) return c.json({ error: PROJECT_NOT_VISIBLE }, 404);
+  const denied = await denyUnlessWritable(db, scope.tenantId, body.projectId);
+  if (denied) return c.json({ error: denied.error }, denied.status);
+
+  const router = modelRouter(c.env);
+  if (!isSelectableRoute(aiModelCatalogue(router), 'text', body.route)) {
+    return c.json(
+      { error: 'Model đã chọn không dùng được lúc này. Chọn model khác trong danh sách đang bật.' },
+      409,
+    );
+  }
+  const client = textClientFor(c.env, body.route);
+  if (!client) return c.json({ error: 'Chưa cấu hình khoá API cho model đã chọn.' }, 503);
+
+  const repo = new ArtifactRepository(c.env);
+  const brief = await repo.head(body.projectId, 'kien_truc', 'design_brief');
   if (!brief) {
     return c.json(
       { error: 'Chưa có đầu bài đã xác nhận. Hoàn tất và xác nhận đầu bài trước.' },
       409,
     );
   }
-
   const gate = gateLayer2(brief.payload, await readCompletenessThreshold(repo.db, scope.tenantId));
   if (!gate.allowed) return c.json({ error: gate.message }, 409);
 
-  const run = await runLayer2(
-    c.env,
-    repo.db,
-    brief.payload as DesignBrief,
-    brief.id,
-    scope.tenantId,
+  const payload = brief.payload as DesignBrief;
+  // Phần sàn còn lại cho không gian đề xuất thêm — tính trên chương trình KHÔNG có đề xuất AI,
+  // bằng đúng engine sẽ dựng bảng. Gửi cho mô hình như một luật cứng (Haan, 13/09/2026); máy chủ
+  // vẫn cưỡng chế lần nữa khi dựng bảng (`fitAiAdditions`).
+  const baseline = await runLayer2(c.env, repo.db, payload, brief.id, scope.tenantId, null);
+  const plate = baseline.plateExplanation;
+  const usedMin = baseline.payload.spaces.reduce((sum, s) => sum + s.min_area_m2, 0);
+  const norms = spaceNorms();
+  const recorded = recordingClient(client);
+  const result = await resolveProgramIntent(
+    payload,
+    plate.buildableM2,
+    roomVocabulary(),
+    recorded.client,
+    body.route,
+    {
+      spareMinAreaM2: plate.buildableM2 * plate.floors - usedMin,
+      minByType: Object.fromEntries(
+        Object.entries(norms.spaces).map(([code, norm]) => [code, norm.min_m2]),
+      ),
+    },
   );
-  const head = await repo.head(projectId, 'kien_truc', 'space_program');
 
-  return c.json({
-    program: run.payload,
-    warnings: run.warnings,
-    unresolvedNeeds: run.unresolved,
-    roomLabels: roomLabels(),
-    briefArtifactId: brief.id,
-    headArtifactId: head?.id ?? null,
-    // So bằng MÃ BĂM, không phải so chuỗi JSON: mã băm chính là định nghĩa danh tính của
-    // artifact trong hệ thống này (khoá chính của `design_artifact`). So chuỗi là dựng một
-    // khái niệm "giống nhau" thứ hai, và nó bất đồng với khái niệm thật ngay khi thứ tự khoá
-    // đổi trên đường đi qua kho tệp — đã xảy ra thật: vừa chốt xong đã báo là chưa chốt.
-    matchesHead: head ? (await artifactId(run.payload)) === head.id : false,
-  });
+  const route = router.publicRoutes().find((r) => r.route === body.route);
+  let usage: AiCallUsage | null = null;
+  if (result.call) {
+    const meta = { route: body.route, purpose: 'program_intent', dataClass: 3 as const };
+    const outcome = {
+      ...result.call,
+      provider: result.call.provider || route?.provider || 'unknown',
+      model: result.call.model || route?.model || 'unknown',
+      request: recorded.records[recorded.records.length - 1],
+    };
+    await recordAiCall(
+      repo.db,
+      {
+        tenantId: scope.tenantId,
+        companyId: scope.companyId,
+        projectId: body.projectId,
+        discipline: 'kien_truc',
+        actorId: scope.actorId,
+      },
+      meta,
+      outcome,
+      route?.pricing,
+      createArtifactStore(c.env),
+    );
+    usage = usageSummary(meta, outcome, route?.pricing, router.isBilled(outcome.provider));
+  }
+
+  const aiIntent: SavedAiIntent | null = result.intent
+    ? {
+        route: body.route,
+        provider: result.call?.provider || route?.provider || 'unknown',
+        model: result.call?.model || route?.model || 'unknown',
+        emphasis: result.intent.emphasis,
+        // Tiện ích nằm trong phòng ngủ không phải một không gian thêm — lọc ngay, để khối đề xuất
+        // trên màn hình không liệt kê thứ bảng diện tích sẽ không có.
+        add_spaces: (result.intent.add_spaces ?? []).filter(
+          (code) => !spaceNorms().in_bedroom.includes(code),
+        ),
+        rationale: result.intent.rationale ?? '',
+      }
+    : null;
+
+  return c.json({ aiIntent, notes: result.notes, usage });
+});
+
+/**
+ * Đọc đề xuất AI từ thân lượt gọi. `undefined` = không gửi; `null` = bỏ đề xuất; `'invalid'`
+ * = sai dạng — tuyến gọi báo 400, không lặng lẽ bỏ qua.
+ */
+function parseAiIntent(raw: unknown): SavedAiIntent | null | undefined | 'invalid' {
+  if (raw === undefined) return undefined;
+  if (raw === null) return null;
+  const parsed = spaceProgramSchema.shape.ai_intent.safeParse(raw);
+  return parsed.success ? parsed.data : 'invalid';
+}
+
+/**
+ * Đọc danh sách diện tích kiến trúc sư đã sửa từ thân lượt gọi chốt.
+ *
+ * Vắng = không sửa gì (màn hình cũ, hoặc chốt nguyên bản chương trình tính). Sai dạng thì trả
+ * rỗng để tuyến gọi báo 400 — KHÔNG lặng lẽ bỏ qua: bỏ qua là chốt một bản khác với bản kiến
+ * trúc sư vừa nhìn trên màn hình.
+ */
+function parseProgramEdits(raw: unknown): ProgramEdit[] | null {
+  if (raw === undefined || raw === null) return [];
+  if (!Array.isArray(raw) || raw.length > 200) return null;
+  const edits: ProgramEdit[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') return null;
+    const { space_id, target_area_m2 } = item as Record<string, unknown>;
+    if (typeof space_id !== 'string' || !/^[a-z0-9_]+$/.test(space_id)) return null;
+    if (typeof target_area_m2 !== 'number' || !Number.isFinite(target_area_m2)) return null;
+    edits.push({ space_id, target_area_m2 });
+  }
+  return edits;
+}
+
+/**
+ * Ngữ cảnh dùng chung của ba tuyến phương án: kho artifact, Container, và hai bảng tra từ
+ * `kb/`. Dựng ở MỘT chỗ để ba tuyến không mỗi nơi tra một kiểu.
+ */
+function variantContext(
+  env: DesignEnv,
+  projectId: string,
+  scope: { companyId: string; tenantId: string; actorId: string | null },
+): VariantContext {
+  return {
+    repo: new ArtifactRepository(env),
+    compute: createComputeBackend(env),
+    scope: {
+      tenantId: scope.tenantId,
+      companyId: scope.companyId,
+      projectId,
+      discipline: 'kien_truc',
+      actorId: scope.actorId,
+    },
+    siteContext: siteContextTable(),
+    viByType: roomLabels(),
+    groups: roomGroups(roomVocabulary().vocabulary),
+    rulesFor: (locality, buildingType) =>
+      ruleCatalogue(
+        rulePackFor(locality).rules,
+        buildingType,
+        roomGroups(roomVocabulary().vocabulary),
+      ),
+  };
+}
+
+/**
+ * Sinh các phương án mặt bằng (Lớp 3a + 3b) cho chương trình không gian đang hiệu lực.
+ *
+ * ĐỒNG BỘ, không qua Workflow — lý do ở đầu `layout/variants.ts`. Endpoint Workers vì thoả cả
+ * (a) gọi Container lẫn (b) ghi artifact + lineage + con trỏ hiệu lực toàn vẹn cùng lúc.
+ *
+ * Vô nghiệm KHÔNG phải lỗi: một biến thể vô nghiệm vẫn nằm trong danh sách trả về kèm lời
+ * giải thích, và tuyến vẫn trả 200.
+ */
+designApp.post('/floor-plan/generate', async (c) => {
+  const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+
+  const body = (await c.req.json()) as { projectId?: string; timeBudgetS?: number };
+  if (!body.projectId) return c.json({ error: 'Thiếu mã hồ sơ thiết kế.' }, 400);
+
+  const db = await asUser(c.env, token);
+  const scope = await projectScope(db, body.projectId);
+  if (!scope) return c.json({ error: PROJECT_NOT_VISIBLE }, 404);
+  const denied = await denyUnlessWritable(db, scope.tenantId, body.projectId);
+  if (denied) return c.json({ error: denied.error }, denied.status);
+
+  const ctx = variantContext(c.env, body.projectId, scope);
+  try {
+    const outcome = await generateVariants(ctx, {
+      timeBudgetS:
+        typeof body.timeBudgetS === 'number' && body.timeBudgetS > 0 && body.timeBudgetS <= 60
+          ? body.timeBudgetS
+          : undefined,
+    });
+    const listing = await listVariants(ctx);
+    return c.json({ ...listing, generated: outcome.results });
+  } catch (error) {
+    if (error instanceof VariantsPrerequisiteMissing) return c.json({ error: error.message }, 409);
+    if (error instanceof ContractError) return c.json({ error: error.message }, 422);
+    const message = error instanceof Error ? error.message : String(error);
+    return c.json({ error: message }, 502);
+  }
+});
+
+/** Danh sách phương án đã sinh cho chương trình không gian đang hiệu lực, kèm bản đang chọn. */
+designApp.get('/floor-plan/:projectId', async (c) => {
+  const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+
+  const projectId = c.req.param('projectId');
+  const db = await asUser(c.env, token);
+  const scope = await projectScope(db, projectId);
+  if (!scope) return c.json({ error: PROJECT_NOT_VISIBLE }, 404);
+
+  try {
+    return c.json(await listVariants(variantContext(c.env, projectId, scope)));
+  } catch (error) {
+    if (error instanceof VariantsPrerequisiteMissing) return c.json({ error: error.message }, 409);
+    const message = error instanceof Error ? error.message : String(error);
+    return c.json({ error: message }, 502);
+  }
+});
+
+/**
+ * Chọn một phương án làm bản đang hiệu lực — "kiến trúc sư chọn một phương án AI làm điểm
+ * khởi đầu" (08-milestones, điều kiện ra Mốc 5). Mọi bước sau (DXF, khối 3D, thống kê) đọc
+ * bản này.
+ */
+designApp.post('/floor-plan/choose', async (c) => {
+  const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+
+  const body = (await c.req.json()) as { projectId?: string; artifactId?: string };
+  if (!body.projectId || !body.artifactId) {
+    return c.json({ error: 'Thiếu mã hồ sơ thiết kế hoặc mã phương án.' }, 400);
+  }
+
+  const db = await asUser(c.env, token);
+  const scope = await projectScope(db, body.projectId);
+  if (!scope) return c.json({ error: PROJECT_NOT_VISIBLE }, 404);
+  const denied = await denyUnlessWritable(db, scope.tenantId, body.projectId);
+  if (denied) return c.json({ error: denied.error }, denied.status);
+
+  const ctx = variantContext(c.env, body.projectId, scope);
+  try {
+    await chooseVariant(ctx, body.artifactId);
+    return c.json(await listVariants(ctx));
+  } catch (error) {
+    if (error instanceof VariantsPrerequisiteMissing) return c.json({ error: error.message }, 409);
+    const message = error instanceof Error ? error.message : String(error);
+    return c.json({ error: message }, 502);
+  }
 });
 
 /**
@@ -410,13 +744,347 @@ designApp.get('/program/:projectId', async (c) => {
  * phá (CLAUDE.md 8.7).
  */
 designApp.get('/floor-plan/:projectId/dxf', async (c) => {
+  const prepared = await prepareSheet(c);
+  if ('response' in prepared) return prepared.response;
+  const { compute, request, filename } = prepared;
+  try {
+    const dxf = await compute.exportDxf(request);
+    return new Response(dxf, {
+      headers: {
+        'Content-Type': 'application/dxf',
+        'Content-Disposition': `attachment; filename="${filename}.dxf"`,
+      },
+    });
+  } catch (error) {
+    return c.json({ error: error instanceof Error ? error.message : String(error) }, 502);
+  }
+});
+
+/**
+ * CÙNG tờ bản vẽ đó, dạng SVG để tab Phương án hiển thị. Container dựng từ một `SheetModel`
+ * chung cho cả DXF và SVG — trình duyệt không dựng hình (CLAUDE.md 8.2 #5), chỉ tô màu bằng CSS.
+ */
+designApp.get('/floor-plan/:projectId/svg', async (c) => {
+  const prepared = await prepareSheet(c);
+  if ('response' in prepared) return prepared.response;
+  const { compute, request } = prepared;
+  try {
+    const svg = await compute.exportSvg(request);
+    return new Response(svg, {
+      headers: {
+        'Content-Type': 'image/svg+xml; charset=utf-8',
+        'Cache-Control': 'private, max-age=300',
+      },
+    });
+  } catch (error) {
+    return c.json({ error: error instanceof Error ? error.message : String(error) }, 502);
+  }
+});
+
+/** Khối ba chiều sơ bộ của mặt bằng đang hiệu lực (hoặc `?artifact=`) — glTF nhị phân, trình duyệt chỉ xem. */
+designApp.get('/floor-plan/:projectId/glb', async (c) => {
+  const prepared = await prepareSheet(c);
+  if ('response' in prepared) return prepared.response;
+  const { compute, request } = prepared;
+  try {
+    // Nhóm mã phòng đi kèm: khối ba chiều cần nhóm `outdoor` để dựng lan can thay vì tường
+    // ở cạnh hở của ban công. Container không giữ bảng từ vựng (CLAUDE.md 8.7).
+    const glb = await compute.exportGlb({
+      floor_plan: request.floor_plan,
+      groups: request.groups,
+    });
+    return new Response(glb, {
+      headers: { 'Content-Type': 'model/gltf-binary', 'Cache-Control': 'private, max-age=300' },
+    });
+  } catch (error) {
+    return c.json({ error: error instanceof Error ? error.message : String(error) }, 502);
+  }
+});
+
+/**
+ * Bảng thống kê của mặt bằng đang hiệu lực (hoặc `?artifact=`), tính lại mỗi lần gọi — cùng
+ * mặt bằng thì cùng bảng, và mặt bằng đổi là bảng đổi theo (11-design-flow 11.6 Output 4).
+ * Không đúc artifact ở bước này: cạnh lineage chỉ nhận các bước đã khai.
+ */
+designApp.get('/floor-plan/:projectId/schedules', async (c) => {
+  const prepared = await prepareSheet(c);
+  if ('response' in prepared) return prepared.response;
+  const { compute, request, planId } = prepared;
+  try {
+    const schedules = await compute.schedules({
+      floor_plan: request.floor_plan,
+      floorplan_ref: planId,
+      labels: request.labels,
+    });
+    // Kèm bảng nhãn theo MÃ PHÒNG: hợp đồng chỉ ghi `room_type`, giao diện cần tên tiếng Việt.
+    return c.json({ schedules, roomLabels: roomLabels() });
+  } catch (error) {
+    return c.json({ error: error instanceof Error ? error.message : String(error) }, 502);
+  }
+});
+
+designApp.get('/floor-plan/:projectId/xlsx', async (c) => {
+  const prepared = await prepareSheet(c);
+  if ('response' in prepared) return prepared.response;
+  const { compute, request, planId, filename } = prepared;
+  try {
+    // Nhãn theo LOẠI phòng cho sheet diện tích (hợp đồng ghi `room_type`).
+    const xlsx = await compute.exportXlsx({
+      floor_plan: request.floor_plan,
+      floorplan_ref: planId,
+      labels: roomLabels(),
+      title: `${request.title_block.project_code} — ${request.title_block.project_name}`,
+    });
+    return new Response(xlsx, {
+      headers: {
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition': `attachment; filename="${filename.replace(/_MatBang_T\d+/, '_ThongKe')}.xlsx"`,
+      },
+    });
+  } catch (error) {
+    return c.json({ error: error instanceof Error ? error.message : String(error) }, 502);
+  }
+});
+
+/**
+ * Phối cảnh tham khảo từ ảnh khối (TK-16). Đồng bộ: một lời gọi mô hình sinh ảnh, không có
+ * bước nào cần điều phối. Endpoint Workers vì gọi dịch vụ ngoài (a). Tuyến tắt/hết hạn mức
+ * → 200 với `status: "unavailable"` và lý do đọc được — AI là phụ trợ, không chặn luồng chính.
+ *
+ * Ảnh khối là hình học đã giải (hạng 3); route `layer5_render` khai `max_data_class: 3`.
+ */
+designApp.post('/render', async (c) => {
   const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
   if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+
+  const body = (await c.req.json()) as {
+    projectId?: string;
+    image?: string;
+    style?: string | null;
+    view?: string | null;
+  };
+  if (!body.projectId || !body.image) {
+    return c.json({ error: 'Thiếu mã hồ sơ thiết kế hoặc ảnh khối.' }, 400);
+  }
+  const image = parseImageDataUrl(body.image);
+  if (!image) return c.json({ error: 'Ảnh khối phải là PNG/JPEG dạng data URL.' }, 400);
+  // Ảnh chụp canvas hiếm khi quá vài megabyte; chặn để một tệp gửi nhầm không ngốn bộ nhớ.
+  if (image.dataBase64.length > 8 * 1024 * 1024) {
+    return c.json({ error: 'Ảnh khối quá lớn (trên 6 MB). Thu nhỏ khung xem rồi chụp lại.' }, 400);
+  }
+
+  const db = await asUser(c.env, token);
+  const scope = await projectScope(db, body.projectId);
+  if (!scope) return c.json({ error: PROJECT_NOT_VISIBLE }, 404);
+
+  // Ngữ cảnh thửa đất: ảnh khối không nói được rằng hai bên đã có nhà xây sát, nên không có vế
+  // này thì mô hình dựng công trình đứng tự do và hay cho nó hai mặt tiền. Đọc từ đầu bài đang
+  // hiệu lực, và CHỈ lấy phần hình học + mã danh mục (`RenderSite`) để lời gọi vẫn ở hạng 3.
+  //
+  // Không có đầu bài, hay đầu bài lập theo hợp đồng cũ, thì bỏ vế ngữ cảnh và vẫn dựng ảnh —
+  // ảnh kém ngữ cảnh vẫn hơn không có ảnh, và đây là tính năng phụ trợ (PRD 5.1).
+  let siteContext: string | null = null;
+  try {
+    const brief = await new ArtifactRepository(c.env).head(
+      body.projectId,
+      'kien_truc',
+      'design_brief',
+    );
+    if (brief) {
+      const payload = brief.payload as RenderSite;
+      siteContext = describeSite(
+        payload,
+        siteFaces(payload.site ?? undefined, siteContextTable()).open,
+        renderPrompts().context,
+      );
+    }
+  } catch (error) {
+    console.error(`[layer5_render] không đọc được đầu bài để dựng ngữ cảnh: ${String(error)}`);
+  }
+
+  const router = modelRouter(c.env);
+  const started = Date.now();
+  const outcome = await renderFromMassing({
+    router,
+    // Client chọn theo `provider` của tuyến, không gắn cứng một hãng — xem `llm/factory.ts`.
+    client: renderImageClient(c.env),
+    prompts: renderPrompts(),
+    image,
+    style: body.style ?? null,
+    view: body.view ?? null,
+    siteContext,
+  });
+
+  // Ghi nhật ký và trả số đo cho lượt ĐÃ DỰNG được ảnh. Lượt «chưa dựng được» phần lớn bị chặn
+  // trước khi ra mạng (chính sách, thiếu khoá) nên không có gì để tính.
+  let usage: AiCallUsage | null = null;
+  if (outcome.status === 'rendered') {
+    const route = router.publicRoutes().find((r) => r.route === RENDER_ROUTE);
+    const meta = { route: RENDER_ROUTE, purpose: `render:${outcome.view}`, dataClass: 3 as const };
+    const call = {
+      provider: route?.provider ?? 'unknown',
+      model: route?.model ?? 'unknown',
+      usage: { inputTokens: null, outputTokens: null },
+      latencyMs: Date.now() - started,
+      imageCount: 1,
+      status: 'ok' as const,
+    };
+    await recordAiCall(
+      new ArtifactRepository(c.env).db,
+      {
+        tenantId: scope.tenantId,
+        companyId: scope.companyId,
+        projectId: body.projectId,
+        discipline: 'kien_truc',
+        actorId: scope.actorId,
+      },
+      meta,
+      call,
+      route?.pricing,
+    );
+    usage = usageSummary(meta, call, route?.pricing, router.isBilled(call.provider));
+  }
+  return c.json({ ...outcome, usage });
+});
+
+/**
+ * Danh sách khung hình phối cảnh dựng được — mã, nhãn tiếng Việt, góc chụp ảnh khối.
+ *
+ * Có endpoint riêng để giao diện KHÔNG phải giữ bản sao thứ hai của danh sách này: nhãn
+ * "Toàn cảnh ban ngày" và mã `ngay` nằm ở `kb/render_prompts.yaml`, thêm một khung hình là
+ * thêm một mục ở đó. Lời dẫn KHÔNG trả ra — trình duyệt không cần và không nên có.
+ */
+designApp.get('/render/views', (c) => {
+  const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+  return c.json({
+    views: renderPrompts().views.map(({ id, vi, camera }) => ({ id, vi, camera })),
+  });
+});
+
+/**
+ * Phát hành hồ sơ kiến trúc của phương án đang hiệu lực (cảnh 9 của demo, TK-17 → TK-03).
+ *
+ * Sinh DXF cho từng tầng, cất vào kho artifact (DXF là văn bản nên cùng kho JSON), rồi đi qua
+ * `PublishBridge` — điểm giao DUY NHẤT sang hệ tài liệu: tài liệu logic một cái cho mỗi
+ * (dự án × bộ môn), số phiên bản do hệ tài liệu cấp, người ký phải có `design.publish.kien_truc`
+ * (RLS quyết, không phải Worker). Bản ghi `design_publication` giữ tham chiếu ngược tới
+ * artifact mặt bằng và mô hình kiến trúc.
+ */
+designApp.post('/floor-plan/publish', async (c) => {
+  const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+
+  const body = (await c.req.json()) as { projectId?: string; changeReason?: string | null };
+  if (!body.projectId) return c.json({ error: 'Thiếu mã hồ sơ thiết kế.' }, 400);
+
+  const db = await asUser(c.env, token);
+  const scope = await projectScope(db, body.projectId);
+  if (!scope) return c.json({ error: PROJECT_NOT_VISIBLE }, 404);
+  if (!scope.actorId) return c.json({ error: 'Không xác định được người ký.' }, 401);
+
+  const repo = new ArtifactRepository(c.env);
+  const head = await repo.head(body.projectId, 'kien_truc', 'floor_plan');
+  if (!head) {
+    return c.json(
+      { error: 'Chưa có mặt bằng đang hiệu lực. Sinh và chọn một phương án trước khi phát hành.' },
+      409,
+    );
+  }
+  const arch = await repo.head(body.projectId, 'kien_truc', 'arch_model');
+  const plan = head.payload as { levels: Array<{ level: number }> };
+
+  const project = await db
+    .from('design_projects')
+    .select('code, name')
+    .eq('id', body.projectId)
+    .single();
+  if (project.error) return c.json({ error: PROJECT_NOT_VISIBLE }, 404);
+  const version = head.id.replace(/^sha256:/, '').slice(0, 8);
+  const slug = String(project.data.code ?? 'ho-so').replace(/[^A-Za-z0-9-]/g, '');
+  const now = new Date();
+  const date = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+  const program = await repo.head(body.projectId, 'kien_truc', 'space_program');
+
+  const compute = createComputeBackend(c.env);
+  const store = createArtifactStore(c.env);
+  const documents: Array<{ kind: 'dxf'; name: string; uri: string; mime_type: string }> = [];
+  try {
+    for (const level of plan.levels.map((l) => l.level).sort((a, b) => a - b)) {
+      const dxf = await compute.exportDxf({
+        floor_plan: head.payload,
+        level,
+        title_block: {
+          project_code: String(project.data.code ?? ''),
+          project_name: String(project.data.name ?? ''),
+          discipline: 'Kiến trúc',
+          sheet: 'Mặt bằng công năng',
+          version,
+          date,
+        },
+        labels: program ? spaceLabels(program.payload as never, roomLabels()) : {},
+        groups: roomGroups(roomVocabulary().vocabulary),
+        sheet_code: `kt/${String(level).padStart(2, '0')}`,
+      });
+      const name = `${slug}_KT_MatBang_T${level}_V${version}.dxf`;
+      const uri = await store.put(
+        `${body.projectId}/publish/${version}/${name}`,
+        new TextDecoder().decode(dxf),
+      );
+      documents.push({ kind: 'dxf', name, uri, mime_type: 'application/dxf' });
+    }
+  } catch (error) {
+    return c.json({ error: error instanceof Error ? error.message : String(error) }, 502);
+  }
+
+  try {
+    const bridge = new PublishBridge(c.env, token);
+    const outcome = await bridge.publish({
+      schema_version: '1.0.0',
+      tenant_id: scope.tenantId,
+      project_id: body.projectId,
+      artifact_ids: { floor_plan: head.id, ...(arch ? { arch_model: arch.id } : {}) },
+      discipline: 'kien_truc',
+      documents,
+      signed_by: scope.actorId,
+      change_reason: body.changeReason ?? `Phát hành mặt bằng phương án ${version}`,
+    });
+    return c.json({ ...outcome, documents: documents.map((d) => d.name) }, 201);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return c.json({ error: message }, message.includes('người ký') ? 403 : 502);
+  }
+});
+
+/**
+ * Phần chung của hai tuyến xuất tờ: quyền, mặt bằng (bản hiệu lực hoặc một phương án cụ thể
+ * qua `?artifact=`), nhãn tiếng Việt từ chương trình không gian, nhóm màu, khung tên, tên tệp.
+ */
+async function prepareSheet(c: {
+  req: {
+    header(name: string): string | undefined;
+    param(name: string): string;
+    query(name: string): string | undefined;
+  };
+  env: DesignEnv;
+  json(body: unknown, status: number): Response;
+}): Promise<
+  | { response: Response }
+  | {
+      compute: ReturnType<typeof createComputeBackend>;
+      request: ExportDxfRequest;
+      filename: string;
+      /** Mã băm của mặt bằng đang dùng — làm `floorplan_ref` của bảng thống kê. */
+      planId: string;
+    }
+> {
+  const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+  if (!token) return { response: c.json({ error: 'Chưa đăng nhập.' }, 401) };
 
   const projectId = c.req.param('projectId');
   const level = Number.parseInt(c.req.query('level') ?? '1', 10);
   if (!Number.isInteger(level) || level < 1 || level > 12) {
-    return c.json({ error: 'Số tầng không hợp lệ. Nhập số tầng từ 1 đến 12.' }, 400);
+    return { response: c.json({ error: 'Số tầng không hợp lệ. Nhập số tầng từ 1 đến 12.' }, 400) };
   }
 
   const db = await asUser(c.env, token);
@@ -426,65 +1094,60 @@ designApp.get('/floor-plan/:projectId/dxf', async (c) => {
     .eq('id', projectId)
     .is('deleted_at', null)
     .maybeSingle();
-  if (project.error || !project.data) {
-    return c.json(
-      {
-        error:
-          'Không tìm thấy hồ sơ thiết kế, hoặc tài khoản không được xem hồ sơ này. Người chịu trách nhiệm dự án hoặc Phòng Thiết kế xem được.',
-      },
-      404,
-    );
-  }
+  if (project.error || !project.data)
+    return { response: c.json({ error: PROJECT_NOT_VISIBLE }, 404) };
 
   const repo = new ArtifactRepository(c.env);
-  const head = await repo.head(projectId, 'kien_truc', 'floor_plan');
-  if (!head) {
-    return c.json(
-      { error: 'Chưa có mặt bằng đang hiệu lực. Chạy bước giải ràng buộc trước khi xuất bản vẽ.' },
-      409,
-    );
+  const wanted = c.req.query('artifact');
+  const plan = wanted
+    ? await repo.get(wanted, projectId)
+    : await repo.head(projectId, 'kien_truc', 'floor_plan');
+  if (!plan || (wanted && (plan as { kind?: string }).kind !== 'floor_plan')) {
+    return {
+      response: c.json(
+        {
+          error:
+            'Chưa có mặt bằng đang hiệu lực. Sinh và chọn một phương án trước khi xuất bản vẽ.',
+        },
+        409,
+      ),
+    };
   }
 
-  const compute = createComputeBackend(c.env);
+  // Nhãn tiếng Việt theo mã không gian — cùng hàm với bộ giải, nên bản vẽ và bảng so sánh gọi
+  // một phòng bằng cùng một tên.
+  let labels: Record<string, string> = {};
+  const program = await repo.head(projectId, 'kien_truc', 'space_program');
+  if (program) labels = spaceLabels(program.payload as never, roomLabels());
+
   const now = new Date();
   const date = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
-  // Phiên bản LÀ mã băm nội dung, rút gọn. Trong hệ thống này không có số phiên bản nào khác:
-  // artifact bất biến, sửa là tạo bản mới, nên tám ký tự đầu của mã băm truy được về đúng một
-  // bản duy nhất. Đánh số tay sẽ là nguồn sự thật thứ hai và sớm muộn nói khác đi.
-  const version = head.id.replace(/^sha256:/, '').slice(0, 8);
+  // Phiên bản LÀ mã băm nội dung, rút gọn: artifact bất biến, sửa là tạo bản mới, nên tám ký tự
+  // đầu truy được về đúng một bản. Đánh số tay sẽ là nguồn sự thật thứ hai.
+  const version = plan.id.replace(/^sha256:/, '').slice(0, 8);
+  const slug = String(project.data.code ?? 'ho-so').replace(/[^A-Za-z0-9-]/g, '');
 
-  let dxf: ArrayBuffer;
-  try {
-    dxf = await compute.exportDxf({
-      floor_plan: head.payload,
+  return {
+    compute: createComputeBackend(c.env),
+    request: {
+      floor_plan: plan.payload,
       level,
       title_block: {
         project_code: String(project.data.code ?? ''),
         project_name: String(project.data.name ?? ''),
         discipline: 'Kiến trúc',
-        sheet: 'Mặt bằng',
+        sheet: 'Mặt bằng công năng',
         version,
         date,
       },
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return c.json({ error: message }, 502);
-  }
-
-  // ⚠️ Quy ước đặt tên tệp của NVG ngoài đời khác mã hồ sơ trong hệ thống (câu hỏi Q-7 chờ
-  // Haan). Tạm ghép từ mã hệ thống để tệp luôn truy được về đúng hồ sơ; đổi quy ước là sửa
-  // đúng dòng này.
-  const slug = String(project.data.code ?? 'ho-so').replace(/[^A-Za-z0-9-]/g, '');
-  const filename = `${slug}_KT_MatBang_T${level}_V${version}.dxf`;
-
-  return new Response(dxf, {
-    headers: {
-      'Content-Type': 'application/dxf',
-      'Content-Disposition': `attachment; filename="${filename}"`,
+      labels,
+      groups: roomGroups(roomVocabulary().vocabulary),
+      sheet_code: `kt/${String(level).padStart(2, '0')}`,
     },
-  });
-});
+    filename: `${slug}_KT_MatBang_T${level}_V${version}`,
+    planId: plan.id,
+  };
+}
 
 /**
  * Chốt chương trình không gian — đúc artifact `space_program` và chuyển bản đang hiệu lực.
@@ -500,8 +1163,19 @@ designApp.post('/program/generate', async (c) => {
   const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
   if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
 
-  const body = (await c.req.json()) as { projectId?: string };
+  const body = (await c.req.json()) as { projectId?: string; edits?: unknown; aiIntent?: unknown };
   if (!body.projectId) return c.json({ error: 'Thiếu mã hồ sơ thiết kế.' }, 400);
+  const aiIntent = parseAiIntent(body.aiIntent);
+  if (aiIntent === 'invalid') {
+    return c.json({ error: 'Đề xuất của AI không đúng dạng — lấy lại đề xuất rồi thử lại.' }, 400);
+  }
+  const edits = parseProgramEdits(body.edits);
+  if (!edits) {
+    return c.json(
+      { error: 'Danh sách diện tích đã sửa không đúng dạng — tải lại trang rồi thử lại.' },
+      400,
+    );
+  }
 
   const db = await asUser(c.env, token);
   const scope = await projectScope(db, body.projectId);
@@ -514,6 +1188,8 @@ designApp.post('/program/generate', async (c) => {
       404,
     );
   }
+  const denied = await denyUnlessWritable(db, scope.tenantId, body.projectId);
+  if (denied) return c.json({ error: denied.error }, denied.status);
 
   const repo = new ArtifactRepository(c.env);
   const brief = await repo.head(body.projectId, 'kien_truc', 'design_brief');
@@ -529,13 +1205,30 @@ designApp.post('/program/generate', async (c) => {
   const gate = gateLayer2(brief.payload, await readCompletenessThreshold(repo.db, scope.tenantId));
   if (!gate.allowed) return c.json({ error: gate.message }, 409);
 
+  // Đề xuất AI đi vào từ màn hình — thứ kiến trúc sư đang nhìn khi bấm chốt. Không gửi thì
+  // chốt thuần theo chuẩn nghề (màn hình cũ không biết trường này).
   const run = await runLayer2(
     c.env,
     repo.db,
     brief.payload as DesignBrief,
     brief.id,
     scope.tenantId,
+    aiIntent ?? null,
   );
+
+  // Trình duyệt đã soát khi gõ, nhưng thẩm quyền ở ĐÂY: một lượt gọi thẳng vào tuyến này
+  // không đi qua màn hình nào cả.
+  const applied = applyProgramEdits(run.payload, edits);
+  if (applied.errors.length > 0) {
+    return c.json(
+      {
+        error: `Chưa chốt được — ${applied.errors.length} chỗ sửa không hợp lệ: ${applied.errors
+          .map((e) => e.message)
+          .join(' ')}`,
+      },
+      422,
+    );
+  }
 
   const artifact = await repo.write({
     scope: {
@@ -546,10 +1239,12 @@ designApp.post('/program/generate', async (c) => {
       actorId: scope.actorId,
     },
     kind: 'space_program',
-    payload: run.payload,
+    payload: applied.program,
     inputs: [brief.id],
     step: 'layer2_program',
-    params: run.params,
+    // Chỗ sửa đã nằm trong payload nên mã băm artifact đã khác; đưa vào tham số để cạnh
+    // lineage cũng nói được bản này có bàn tay người.
+    params: { ...run.params, architect_edits: applied.edits },
     setHead: true,
   });
 
@@ -558,10 +1253,11 @@ designApp.post('/program/generate', async (c) => {
     // `reused` nói thẳng "cùng đầu bài, cùng cấu hình nên không có gì đổi" — thông tin thật,
     // và tránh cho người dùng tưởng vừa lập ra một bản khác.
     reused: artifact.reused,
-    program: run.payload,
+    program: applied.program,
     roomLabels: roomLabels(),
-    warnings: run.warnings,
+    warnings: [...run.warnings, ...applied.warnings.map((w) => w.message)],
     unresolvedNeeds: run.unresolved,
+    aiSuggestion: run.aiSuggestion,
   });
 });
 
@@ -648,15 +1344,7 @@ designApp.post('/site/extract-boundary', async (c) => {
     p_discipline: 'kien_truc',
   });
   if (allowed.error) return c.json({ error: 'Không kiểm tra được quyền sửa hồ sơ.' }, 500);
-  if (allowed.data !== true) {
-    return c.json(
-      {
-        error:
-          'Không đủ quyền sửa hồ sơ kiến trúc của dự án này. Người chịu trách nhiệm dự án hoặc Phòng Thiết kế thực hiện được việc này.',
-      },
-      403,
-    );
-  }
+  if (allowed.data !== true) return c.json({ error: DESIGN_WRITE_DENIED }, 403);
 
   const bytes = new Uint8Array(await file.arrayBuffer());
 
@@ -666,7 +1354,46 @@ designApp.post('/site/extract-boundary', async (c) => {
   const store = createSourceFileStore(c.env);
   const saved: StoredSource = await store.put(file.name || 'trich-luc.jpg', bytes);
 
-  const result = await extractSiteBoundary(llm, { mimeType: file.type, bytes });
+  const callScope = {
+    tenantId: scope.tenantId,
+    companyId: scope.companyId,
+    projectId,
+    discipline: 'kien_truc' as const,
+    actorId: scope.actorId,
+  };
+  const meta = { route: 'site_boundary_extract', purpose: 'site_boundary', dataClass: 2 as const };
+  const router = modelRouter(c.env);
+  const routeInfo = router.publicRoutes().find((r) => r.route === meta.route);
+  const artifactDb = new ArtifactRepository(c.env).db;
+  let result: Awaited<ReturnType<typeof extractSiteBoundary>>;
+  try {
+    result = await extractSiteBoundary(llm, { mimeType: file.type, bytes });
+  } catch (error) {
+    // Lượt gọi đã ra mạng thì đã tính tiền, dù đọc hỏng — ghi nhật ký rồi để lỗi đi tiếp.
+    const call = aiCallOfError(error);
+    const usageFromError = error instanceof LlmCallFailed ? error.usage : undefined;
+    if (call || usageFromError) {
+      await recordAiCall(
+        artifactDb,
+        callScope,
+        meta,
+        {
+          provider: call?.provider ?? routeInfo?.provider ?? 'unknown',
+          model: call?.model ?? routeInfo?.model ?? 'unknown',
+          usage: call?.usage ?? usageFromError ?? { inputTokens: null, outputTokens: null },
+          latencyMs:
+            call?.latencyMs ?? (error instanceof LlmCallFailed ? (error.latencyMs ?? 0) : 0),
+          status: call ? 'rejected' : 'failed',
+          errorCode: error instanceof Error ? error.name : 'Error',
+        },
+        routeInfo?.pricing,
+      );
+    }
+    throw error;
+  }
+  const outcome = { ...result.call, status: 'ok' as const };
+  await recordAiCall(artifactDb, callScope, meta, outcome, routeInfo?.pricing);
+  const usage = usageSummary(meta, outcome, routeInfo?.pricing, router.isBilled(outcome.provider));
 
   return c.json({
     boundaryM: result.boundaryM,
@@ -677,6 +1404,7 @@ designApp.post('/site/extract-boundary', async (c) => {
     closedShapeConfidence: result.closedShapeConfidence,
     warnings: result.warnings,
     sourceUri: saved.uri,
+    usage,
   });
 });
 
@@ -775,7 +1503,16 @@ designApp.post('/kb/annotate', async (c) => {
     p_embedding: embedding ? `[${embedding.join(',')}]` : null,
     p_outcome: body.outcome ?? null,
   });
-  if (saved.error) return c.json({ error: saved.error.message }, 403);
+  if (saved.error) {
+    console.error('kb/annotate: không ghi được chú giải', saved.error);
+    return c.json(
+      {
+        error:
+          'Không ghi được chú giải. Chỉ người có quyền ghi kiến trúc mới chú giải được hồ sơ này.',
+      },
+      403,
+    );
+  }
 
   return c.json({ id: saved.data, embedded: embedding !== null, withheld });
 });
@@ -800,9 +1537,16 @@ designApp.onError((error, c) => {
     // `error.message` chứa nguyên văn mã HTTP + JSON lỗi của nhà cung cấp (đã ghi log ở trên) —
     // đúng thứ CGD 5.5 cấm hiện cho người dùng. Chỉ hai nhóm nguyên nhân thật sự khác nhau với
     // người dùng: quá tải/tạm thời (thử lại được) và mọi trường hợp còn lại.
-    const message = error.retryable
-      ? 'Mô hình ngôn ngữ đang quá tải, thử lại sau ít phút.'
-      : 'Không đọc được ảnh bằng mô hình ngôn ngữ. Thử lại sau, hoặc báo Quản trị hệ thống nếu vẫn lỗi.';
+    // Client biết việc gì hỏng (từ chối, hết token, không ra ảnh…) thì tự nói bằng tiếng Việt
+    // qua `userMessage`; ở đây chỉ còn câu chung cho lỗi mạng/HTTP mà chi tiết là của nhà cung cấp.
+    const selfDiagnosed = error.status === undefined && !error.retryable;
+    const message =
+      error.userMessage ??
+      (selfDiagnosed
+        ? error.message
+        : error.retryable
+          ? 'Mô hình đang quá tải, thử lại sau ít phút.'
+          : 'Mô hình không xử lý được yêu cầu này. Thử lại sau, hoặc báo Quản trị hệ thống nếu vẫn lỗi.');
     return c.json({ error: message, retryable: error.retryable }, error.retryable ? 503 : 502);
   }
   if ((error as { retryable?: boolean }).retryable) {
@@ -813,3 +1557,4 @@ designApp.onError((error, c) => {
 
 export { DesignPipeline } from './workflows/design-pipeline';
 export { DigitisePipeline } from './workflows/digitise';
+export { AiDesignPipeline } from './workflows/ai-design';

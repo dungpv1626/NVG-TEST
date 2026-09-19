@@ -24,6 +24,19 @@ const config = parseModelConfig(readFileSync(CONFIG_PATH, 'utf8'));
 describe('config/models.yaml', () => {
   it('khai đủ các đầu ra mà tài liệu liệt kê', () => {
     expect(Object.keys(config.routes).sort()).toEqual([
+      'ai_image_gemini',
+      'ai_image_gemini_fast',
+      'ai_image_gemini_pro',
+      'ai_image_openai',
+      'ai_image_openai_fast',
+      'ai_image_openai_precise',
+      'ai_text_anthropic',
+      'ai_text_anthropic_fast',
+      'ai_text_gemini',
+      'ai_text_gemini_fast',
+      'ai_text_gemini_free',
+      'ai_text_openai',
+      'ai_text_openai_fast',
       'kb_label_normalize',
       'kb_rationale_embed',
       'layer1_brief',
@@ -31,6 +44,7 @@ describe('config/models.yaml', () => {
       'layer3_intent',
       'layer3_intent_hard',
       'layer4_facade',
+      'layer5_render',
       'site_boundary_extract',
     ]);
   });
@@ -48,32 +62,122 @@ describe('config/models.yaml', () => {
    * vì người đọc quen mắt với màu đỏ sẵn có sẽ không nhận ra lần nới tiếp theo.
    *
    * Ngoại lệ này phải biến mất trước khi có ảnh thật của khách chạm vào route đó, hoặc
-   * trước khi triển khai production — lúc đó xoá hẳn nhánh dưới đây, đừng thêm tên thứ hai.
+   * trước khi triển khai production — lúc đó xoá hẳn tên nó khỏi tập dưới đây.
+   *
+   * Từ 08/09/2026 (quyết định T12) có thêm nhóm thứ hai ở hạng 2, và nhóm này KHÔNG tạm: các
+   * tuyến `ai_text_*`/`ai_image_*` gọi API TRẢ PHÍ của OpenAI, Google, Anthropic — cả ba cam kết
+   * không huấn luyện trên dữ liệu gửi qua API. Chúng nhận đầu bài đã LƯỢC DANH TÍNH
+   * (`brief/anonymise.ts`), và test dưới canh chúng không tụt xuống 1.
    */
   const TAM_THOI_HANG_2 = new Set(['site_boundary_extract']);
+  const isAiRoute = (name: string) => /^ai_(text|image)_/.test(name);
+  /**
+   * Nhà cung cấp gói miễn phí — đọc từ CHÍNH cấu hình (`billing.free_providers`), không chép.
+   * Từ 13/09/2026 ô chọn model có một tuyến `ai_text_*` chạy khoá miễn phí cho bước chỉ gửi
+   * bản tóm tắt đã ẩn danh; tuyến ấy phải đứng ở hạng 3, không bao giờ hạng 2.
+   */
+  const FREE = new Set(config.billing?.free_providers ?? []);
+  const isPaidAiRoute = (name: string) =>
+    isAiRoute(name) && !FREE.has(config.routes[name]!.provider);
 
-  it('giai đoạn demo: mọi đầu ra chỉ nhận hạng 3, trừ đúng một ngoại lệ đã khai tên', () => {
+  it('có danh sách nhà cung cấp miễn phí, và khoá miễn phí của Gemini nằm trong đó', () => {
+    expect(FREE.has('gemini')).toBe(true);
+    expect(FREE.has('gemini_paid')).toBe(false);
+  });
+
+  it('gói miễn phí chỉ nhận hạng 3 (trừ ngoại lệ tạm); tuyến AI trả phí nhận hạng 2, không thấp hơn', () => {
     for (const [name, route] of Object.entries(config.routes)) {
-      expect(route.max_data_class, `đầu ra ${name}`).toBe(TAM_THOI_HANG_2.has(name) ? 2 : 3);
+      const expected = isPaidAiRoute(name) || TAM_THOI_HANG_2.has(name) ? 2 : 3;
+      expect(route.max_data_class, `đầu ra ${name}`).toBe(expected);
     }
   });
 
-  it('ngoại lệ hạng 2 KHÔNG được lan sang đầu ra thứ hai', () => {
+  it('ngoại lệ tạm hạng 2 KHÔNG lan sang đầu ra thứ hai ngoài nhóm AI trả phí', () => {
     const hang2 = Object.entries(config.routes)
-      .filter(([, route]) => route.max_data_class !== 3)
+      .filter(([name, route]) => route.max_data_class !== 3 && !isPaidAiRoute(name))
       .map(([name]) => name);
     expect(hang2).toEqual([...TAM_THOI_HANG_2]);
   });
 
-  it('chỉ đầu ra nhóm `pro` còn tắt, và tắt có lý do', () => {
-    // Khoá gói miễn phí không có hạn mức cho nhóm `pro` (đo 29/08/2026: `gemini-pro-latest`
-    // trả 429, `gemini-2.5-pro` trả 404 "no longer available to new users"). Bật nó lên thì
-    // mọi lần dự phòng đều ăn 429 — thay một lỗi đọc được bằng một lỗi khó hiểu.
+  it('mỗi tuyến AI có nhãn cho ô chọn, và nhà cung cấp không suy được địa chỉ thì khai endpoint', () => {
+    const ai = Object.entries(config.routes).filter(([name]) => isAiRoute(name));
+    expect(ai.length).toBeGreaterThanOrEqual(5);
+    for (const [name, route] of ai) {
+      expect(route.label, `nhãn của ${name}`).toBeTruthy();
+      if (!/^gemini/.test(route.provider)) expect(route.endpoint, name).toMatch(/^https:\/\//);
+    }
+    // Anthropic không sinh ảnh — không được có tuyến ảnh nào trỏ vào nó.
+    for (const [name, route] of ai) {
+      if (name.startsWith('ai_image_')) expect(route.provider, name).not.toBe('anthropic');
+    }
+  });
+
+  it('tuyến AI hạng 2 KHÔNG dùng chung nhà cung cấp (tức khoá) với tuyến gói miễn phí hạng 3', () => {
+    // Chính sách bám vào KHOÁ: Google dùng một API cho cả gói miễn phí lẫn trả phí, nên nếu hai
+    // tuyến Gemini của nhánh AI khai `provider: gemini` thì đầu bài kích thước thật đi ra bằng
+    // đúng khoá miễn phí mà T8 cấm (rà soát 08/09/2026).
+    const freeProviders = new Set(
+      Object.entries(config.routes)
+        .filter(([name, route]) => !isAiRoute(name) && route.max_data_class === 3)
+        .map(([, route]) => route.provider),
+    );
+    for (const [name, route] of Object.entries(config.routes)) {
+      if (isAiRoute(name) && route.max_data_class === 2) {
+        expect(freeProviders.has(route.provider), name).toBe(false);
+        expect(FREE.has(route.provider), name).toBe(false);
+      }
+    }
+  });
+
+  it('mọi tuyến của nhánh AI có nhãn riêng — ô chọn không được hiện hai dòng giống nhau', () => {
+    // Nhãn là thứ DUY NHẤT phân biệt hai bậc của cùng một nhà cung cấp trên ô chọn. Thiếu nhãn
+    // thì router lấy tạm tên model (`label ?? model`) — vẫn chạy, nhưng người dùng đọc thấy
+    // `gpt-5-mini` giữa các dòng tiếng Việt. Trùng nhãn thì tệ hơn: hai dòng y hệt, chọn dòng nào
+    // cũng không biết mình vừa chọn gì.
+    const labels = Object.entries(config.routes)
+      .filter(([name]) => isAiRoute(name))
+      .map(([name, route]) => {
+        expect(route.label, name).toBeTruthy();
+        return route.label;
+      });
+    expect(new Set(labels).size).toBe(labels.length);
+  });
+
+  /*
+   * Hai đầu ra đang tắt, và cả hai tắt vì CÙNG một lý do đo được: khoá gói miễn phí không có
+   * hạn mức cho chúng. Bật lên thì mọi lần gọi đều ăn 429 — thay một lỗi đọc được bằng một
+   * lỗi khó hiểu.
+   *
+   *   `layer3_intent_hard` — nhóm `pro`. Đo 29/08/2026: `gemini-pro-latest` trả 429,
+   *   `gemini-2.5-pro` trả 404 "no longer available to new users".
+   *
+   * Nhóm SINH ẢNH của Gemini cũng không có hạn mức (đo 05 và 06/09/2026: `limit: 0`), nhưng
+   * tuyến phối cảnh KHÔNG vì thế mà tắt — nó đã đổi sang nhà cung cấp khác, xem test dưới.
+   *
+   * Thêm tên thứ hai vào đây phải kèm một phép đo, không phải một phỏng đoán.
+   */
+  it('chỉ những đầu ra không có hạn mức trên gói miễn phí còn tắt, và tắt có lý do', () => {
     const off = Object.entries(config.routes)
       .filter(([, route]) => !route.enabled)
-      .map(([name]) => name);
+      .map(([name]) => name)
+      .sort();
     expect(off).toEqual(['layer3_intent_hard']);
     expect(config.routes.layer3_intent_hard?.model).toMatch(/pro/);
+  });
+
+  /**
+   * Tuyến phối cảnh: nhà cung cấp hết hạn mức thì ĐỔI NHÀ CUNG CẤP, không tắt tính năng.
+   *
+   * Đây là chỗ dễ quay về trạng thái cũ nhất: chỉ cần ai đó đổi `provider` về `gemini` cho
+   * "gọn" là tính năng chết lặng — Gemini gói miễn phí trả `limit: 0` cho mọi mô hình sinh
+   * ảnh, và người dùng chỉ thấy dòng "chưa dựng được ảnh".
+   */
+  it('tuyến phối cảnh bật, và nhà cung cấp nào cũng phải khai đủ thứ nó cần', () => {
+    const route = config.routes.layer5_render;
+    expect(route?.enabled).toBe(true);
+    expect(route?.max_data_class).toBe(3); // ảnh khối là hạng 3 — KHÔNG được hạ xuống 2 hay 1.
+    // Nhà cung cấp không suy được địa chỉ từ tên mô hình thì phải khai `endpoint`.
+    if (route?.provider !== 'gemini') expect(route?.endpoint).toMatch(/^https:\/\//);
   });
 
   it('đầu ra nhúng khai số chiều, và số chiều đó đánh chỉ mục được', () => {
@@ -94,7 +198,7 @@ describe('config/models.yaml', () => {
 });
 
 describe('Lớp chặn hạng dữ liệu', () => {
-  const router = new ModelRouter(config, 'khoa-gia-de-test');
+  const router = new ModelRouter(config, { gemini: 'khoa-gia-de-test' });
 
   it('chặn dữ liệu hạng 1 tới đầu ra gói miễn phí', () => {
     expect(() => router.resolve('layer1_brief', 1)).toThrow(DataClassViolation);
@@ -146,7 +250,7 @@ describe('Lớp chặn hạng dữ liệu', () => {
       routes: { probe: { provider: 'p', model: 'm', max_data_class: 3 as const, enabled: true } },
     };
     expect(() => new ModelRouter(enabled).resolve('probe', 3)).toThrow(/khoá API/);
-    expect(new ModelRouter(enabled, 'k').resolve('probe', 3).model).toBe('m');
+    expect(new ModelRouter(enabled, { p: 'k' }).resolve('probe', 3).model).toBe('m');
   });
 
   it('đầu ra khai hạng 1 nhận được CẢ BA hạng — chốt chiều so sánh', () => {
@@ -157,7 +261,7 @@ describe('Lớp chặn hạng dữ liệu', () => {
       ...config,
       routes: { safe: { provider: 'p', model: 'm', max_data_class: 1 as const, enabled: true } },
     };
-    const r = new ModelRouter(trusted, 'k');
+    const r = new ModelRouter(trusted, { p: 'k' });
     for (const dc of DATA_CLASSES) expect(r.allows('safe', dc)).toBe(true);
     expect(r.resolve('safe', 1).model).toBe('m');
   });

@@ -328,3 +328,64 @@ export function siteGeometry(site: DesignBrief['site']): SiteGeometry {
     exact,
   };
 }
+
+/**
+ * Hình dạng LỎNG của phần `site`, đúng bằng thứ bản nháp có trong tay.
+ *
+ * Hợp đồng bắt buộc `width_m`/`depth_m`; bản nháp thì chưa — và với thửa đa giác, sinh ra hai
+ * trường đó chính là việc của hàm dưới đây. Bó kiểu ở đây thì nơi gọi phải ép kiểu, và ép
+ * kiểu ở nơi gọi là chỗ lỗi thật đi qua mà không ai thấy.
+ */
+type DraftSite = Omit<DesignBrief['site'], 'width_m' | 'depth_m'> & {
+  width_m?: number;
+  depth_m?: number;
+};
+
+/**
+ * Điền `width_m` / `depth_m` cho thửa ĐA GIÁC, suy từ chính ranh giới đã nhập.
+ *
+ * Vì sao cần: hợp đồng bắt buộc hai trường đó (`contracts/design-brief.schema.json`), nhưng
+ * biểu mẫu ẩn chúng khi chọn «Đa giác không đều» — với thửa đa giác, hỏi «chiều rộng mặt
+ * tiền» là hỏi lại một thứ đã nằm trong toạ độ các đỉnh. Hệ quả trước 07/09/2026: chọn hình
+ * đa giác thì đầu bài KHÔNG xác nhận được, `designBriefSchema` trượt ở đúng hai đường dẫn
+ * `site.width_m` và `site.depth_m`. Không có gì ở màn hình nói ra điều đó cho tới lúc bấm
+ * «Xác nhận đầu bài».
+ *
+ * Suy chứ không hỏi: hai con số này là HỆ QUẢ của ranh giới, và hỏi lại là mở đường cho hai
+ * nguồn nói khác nhau về cùng một thửa (CLAUDE.md 5.2). Định nghĩa lấy nguyên văn hợp đồng —
+ * mặt tiền là cạnh đỉnh 0 → đỉnh 1, chiều sâu là chiều sâu lớn nhất — và cả hai đã được
+ * `siteGeometry` tính sẵn, nên ở đây không có phép hình học thứ hai nào.
+ *
+ * Trả về CHÍNH đối tượng cũ khi không phải thêm gì: nơi gọi dùng tham chiếu để biết bản nháp
+ * có đổi hay không, giống `syncBedroomRows`.
+ */
+export function withDerivedSiteDimensions<T extends { site?: DraftSite }>(draft: T): T {
+  const site = draft.site;
+  if (!site || site.shape !== 'da_giac') return draft;
+
+  // KHÔNG dừng ở "đã có hai số": chúng là hệ quả của ranh giới, nên sửa một đỉnh là phải suy
+  // lại. Bản trước suy đúng một lần rồi giữ mãi — đổi đỉnh, hay đổi từ «Chữ nhật» 5×18 sang
+  // «Đa giác», đều để lại con số của hình cũ (lỗi bắt 08/09/2026). Không đổi thì trả về chính
+  // đối tượng cũ ở dưới, nên nơi gọi vẫn phân biệt được "có đổi" hay không.
+  let geometry: SiteGeometry;
+  try {
+    // Ép kiểu vì hàm này chạy trên BẢN NHÁP, nơi `width_m`/`depth_m` chưa có — đó chính là
+    // thứ nó sinh ra. Nhánh `da_giac` của `boundaryOf` không đọc hai trường đó, nên phép ép
+    // này an toàn ở đúng nhánh này và chỉ ở đây.
+    geometry = siteGeometry(site as DesignBrief['site']);
+  } catch {
+    // Ranh giới chưa đủ ba đỉnh hoặc chưa thành hình. Đã có kiểm tra riêng nói câu đó
+    // (`da_giac_thieu_ranh_gioi`); ở đây im lặng bỏ qua, không dựng một con số để lấp chỗ.
+    return draft;
+  }
+
+  // Đỉnh trùng nhau cho mặt tiền 0 m: đó là "chưa khai xong", không phải một thửa rộng 0 m.
+  // Ghi 0 vào thì trượt `exclusiveMinimum` ở đúng trường đang ẩn, không sửa được từ màn hình.
+  if (!(geometry.frontageM > 0) || !(geometry.bboxDepthM > 0)) return draft;
+  if (site.width_m === geometry.frontageM && site.depth_m === geometry.bboxDepthM) return draft;
+
+  return {
+    ...draft,
+    site: { ...site, width_m: geometry.frontageM, depth_m: geometry.bboxDepthM },
+  };
+}

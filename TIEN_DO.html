@@ -206,7 +206,7 @@
       <header>
         <h1>Tiến độ phát triển — Hệ thống Quản trị Nhà Việt Group</h1>
         <p class="xs muted">
-          Cập nhật: <strong>04/09/2026</strong> · Chi tiết đầy đủ: <code>BUILD_PLAN.md</code> · Ràng
+          Cập nhật: <strong>05/09/2026</strong> · Chi tiết đầy đủ: <code>BUILD_PLAN.md</code> · Ràng
           buộc/quyết định: <code>CLAUDE.md</code> §6 · Module Thiết kế AI có file riêng:
           <code>TIEN_DO_THIET_KE.html</code>
         </p>
@@ -239,9 +239,9 @@
         </p>
         <div class="stats">
           <div class="stat"><b>12/12</b><span class="xs muted">module đã dựng</span></div>
-          <div class="stat"><b>117</b><span class="xs muted">migration</span></div>
-          <div class="stat"><b>1.115</b><span class="xs muted">kiểm thử tự động</span></div>
-          <div class="stat"><b>103</b><span class="xs muted">bảng CSDL</span></div>
+          <div class="stat"><b>118</b><span class="xs muted">migration</span></div>
+          <div class="stat"><b>1.134</b><span class="xs muted">kiểm thử tự động</span></div>
+          <div class="stat"><b>104</b><span class="xs muted">bảng CSDL</span></div>
         </div>
       </section>
 
@@ -430,6 +430,17 @@
               liệu". Chưa đụng tới 42 yêu cầu TC/SX mới — ghi thành Phase 6 ở
               <code>BUILD_PLAN.md</code>
             </li>
+            <li>
+              <strong>Rà soát và kiểm chứng đợt trên</strong> — skill
+              <code>backend-code-review</code> bắt 3 lỗi mà kiểm thử tự động không thấy (transaction
+              chứa cả ALTER TYPE lẫn dòng dùng giá trị enum mới; <code>stamp_field_sync()</code> ghi
+              đè <code>synced_at</code> ở mọi lần UPDATE, không chỉ INSERT; ngoại lệ SECURITY
+              DEFINER thừa trong <code>frozen_after_signed()</code>) — cả ba đã vá thẳng vào
+              migration nguồn. Toàn bộ 1.134 kiểm thử tự động xanh (chạy từng tệp); kiểm chứng thêm
+              bằng trình duyệt thật: đồng hồ hạn xử lý trên Hộp thư Phê duyệt, và tài khoản chỉ huy
+              trưởng chỉ thấy đúng công trình được phân công (Mẫu E). Đã gộp vào nhánh
+              <code>main</code>
+            </li>
           </ul>
         </div>
         <div class="card">
@@ -610,16 +621,16 @@
       <h2>Kiểm thử tự động</h2>
       <div class="card">
         <div class="stats" style="margin-top: 0">
-          <div class="stat"><b>1.114</b><span class="xs muted">tổng số</span></div>
+          <div class="stat"><b>1.134</b><span class="xs muted">tổng số</span></div>
           <div class="stat">
-            <b>231</b><span class="xs muted">giao diện — chạy ~9 giây, không chạm mạng</span>
+            <b>234</b><span class="xs muted">giao diện — chạy ~9 giây, không chạm mạng</span>
           </div>
           <div class="stat">
-            <b>883</b><span class="xs muted">nghiệp vụ, phân quyền &amp; engine thiết kế</span>
+            <b>900</b><span class="xs muted">nghiệp vụ, phân quyền &amp; engine thiết kế</span>
           </div>
           <div class="stat">
             <b style="color: var(--done)">xanh</b
-            ><span class="xs muted">xác nhận 04/09/2026, chạy từng tệp</span>
+            ><span class="xs muted">xác nhận 05/09/2026, chạy từng tệp</span>
           </div>
         </div>
         <p class="xs muted" style="margin-top: 12px">

@@ -11,19 +11,21 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { parseSpaceNorms, type SpaceNorms } from '../program/norms';
-import { mergePacks, parseRuleFile, RulePack } from '../program/rule-pack';
+import { mergePacks, parseRuleFile, RulePack } from '../rules/rule-pack';
 
 const read = (relative: string): string =>
   readFileSync(fileURLToPath(new URL(`../../../../${relative}`, import.meta.url)), 'utf-8');
 
-const BASE = [
-  'rules/base/00-meta.yaml',
-  'rules/base/10-dimensions.yaml',
-  'rules/base/20-daylight-access.yaml',
-  'rules/base/30-adjacency.yaml',
-  'rules/base/40-vertical.yaml',
-  'rules/base/50-massing.yaml',
-];
+/** Nguyên lý bố cục — thay gói quy chuẩn `rules/base/` đã xoá ngày 13/09/2026. */
+const BASE = ['rules/structure/00-meta.yaml', 'rules/structure/10-layout.yaml'];
+
+/**
+ * Gói kinh nghiệm nghề của NVG, tách khỏi `rules/base/` ngày 09/09/2026.
+ *
+ * Bộ giải nhận CẢ HAI gói gộp lại, đúng như `rulePackFor()` thật làm — tách tệp là để nhánh
+ * AI và màn hình phân biệt được nguồn cảnh báo, không phải để đổi hành vi bộ giải.
+ */
+const NVG = ['rules/nvg-experience.yaml'];
 
 /**
  * Gói địa phương dùng trong kiểm thử.
@@ -38,7 +40,10 @@ export function testRulePack(locality = 'hung_yen'): RulePack {
   const files = LOCALITY[locality];
   return new RulePack(
     mergePacks(
-      BASE.flatMap((f) => parseRuleFile(read(f), f)),
+      mergePacks(
+        BASE.flatMap((f) => parseRuleFile(read(f), f)),
+        NVG.flatMap((f) => parseRuleFile(read(f), f)),
+      ),
       (files ?? []).flatMap((f) => parseRuleFile(read(f), f)),
     ),
     files === undefined,
@@ -51,4 +56,8 @@ export function testNorms(): SpaceNorms {
 
 export function testVocabularyYaml(): string {
   return read('kb/room_vocabulary.yaml');
+}
+
+export function testSiteContextYaml(): string {
+  return read('kb/site_context.yaml');
 }

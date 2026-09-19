@@ -18,7 +18,35 @@ import { supabase } from './supabase';
  */
 const BASE = (import.meta.env.VITE_DESIGN_API_URL ?? '').replace(/\/+$/, '');
 
-export class DesignApiError extends Error {}
+export class DesignApiError extends Error {
+  /**
+   * Mã HTTP của phản hồi, khi có một phản hồi.
+   *
+   * Rỗng nghĩa là chưa tới được máy chủ (chưa đăng nhập, chưa cấu hình địa chỉ, `fetch` ném).
+   * Có mã để chỗ gọi phân biệt được «chưa có» (404) với «có mà không lấy ra được» (502) — hai
+   * thứ mà một câu lỗi chung gộp lại thành một, và ở tuyến tờ ảnh thì gộp nhầm khiến người dùng
+   * trả tiền vẽ lại một tấm đã có.
+   */
+  readonly status?: number;
+
+  constructor(message: string, status?: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
+/**
+ * `fetch` ném ra khi KHÔNG chạm tới được dịch vụ — chưa chạy, đổ, hoặc bị chặn giữa đường.
+ *
+ * Bản trước bảo người dùng "kiểm tra đường truyền": sai hướng, và tốn thời gian thật. Máy
+ * vẫn vào mạng bình thường (mọi tab khác của module gọi thẳng Supabase nên vẫn chạy) — thứ
+ * không phản hồi là dịch vụ thiết kế, và kiến trúc sư không có cách nào khởi động lại nó.
+ * Nên câu này nói đúng cái hỏng và nêu AI xử lý được (CGD 5.5), chỉ giữ lại "thử lại" cho
+ * trường hợp trục trặc thoáng qua.
+ */
+const UNREACHABLE_MESSAGE =
+  'Dịch vụ thiết kế đang không phản hồi. Các phần khác của hồ sơ vẫn dùng được bình thường. ' +
+  'Thử lại sau ít phút; nếu vẫn vậy, báo Quản trị hệ thống — chỉ bên đó khởi động lại được dịch vụ.';
 
 /**
  * Bỏ `body` để gọi GET. Phân biệt bằng chính sự có mặt của dữ liệu gửi đi thay vì thêm một
@@ -49,9 +77,7 @@ export async function designApi<T>(path: string, body?: unknown): Promise<T> {
           },
     );
   } catch {
-    throw new DesignApiError(
-      'Không kết nối được dịch vụ thiết kế. Kiểm tra đường truyền rồi thử lại.',
-    );
+    throw new DesignApiError(UNREACHABLE_MESSAGE);
   }
 
   return parseResponse<T>(response);
@@ -84,9 +110,7 @@ export async function designApiUpload<T>(path: string, form: FormData): Promise<
       body: form,
     });
   } catch {
-    throw new DesignApiError(
-      'Không kết nối được dịch vụ thiết kế. Kiểm tra đường truyền rồi thử lại.',
-    );
+    throw new DesignApiError(UNREACHABLE_MESSAGE);
   }
 
   return parseResponse<T>(response);
@@ -95,10 +119,57 @@ export async function designApiUpload<T>(path: string, form: FormData): Promise<
 async function parseResponse<T>(response: Response): Promise<T> {
   const payload = (await response.json().catch(() => ({}))) as { error?: string };
   if (!response.ok) {
-    // Không hiện mã HTTP cho người dùng (CGD 5.5) — Worker đã trả sẵn câu tiếng Việt.
+    // Không hiện mã HTTP cho người dùng (CGD 5.5) — Worker đã trả sẵn câu tiếng Việt. Mã vẫn đi
+    // theo lỗi để mã nguồn phân biệt được các loại hỏng; nó không lên màn hình.
     throw new DesignApiError(
       payload.error ?? 'Không thực hiện được thao tác. Thử lại sau ít phút.',
+      response.status,
     );
   }
   return payload as T;
+}
+
+/**
+ * Đọc một tuyến trả TỆP (SVG, DXF) thay vì JSON. Lỗi vẫn là JSON tiếng Việt do Worker trả.
+ */
+export async function designApiFile(
+  path: string,
+  /**
+   * Bỏ qua bộ đệm HTTP của trình duyệt.
+   *
+   * Dùng cho tuyến mà phản hồi là ĐẦU VÀO của một lượt gọi tính tiền — ảnh neo của tờ mặt bằng
+   * (T57). Tuyến ấy khai `max-age=300` vì nó tất định và người xem tải lại nhiều lần; nhưng một
+   * bản chụp tới năm phút trước lại là thứ khác hẳn khi nó đi thẳng ra nhà cung cấp: mã bộ vẽ và
+   * `kb/sheet_style.yaml` đều đổi được mà không nằm trong địa chỉ, nên bản cũ có thể là bản đã sửa
+   * lỗi rồi. Một lượt tải vài chục ki-lô-byte, chỉ xảy ra khi người dùng bấm, đổi lấy việc chắc
+   * chắn trả tiền cho đúng tờ đang có.
+   */
+  fresh = false,
+): Promise<Response> {
+  if (!BASE) {
+    throw new DesignApiError(
+      'Chưa cấu hình địa chỉ dịch vụ thiết kế. Quản trị hệ thống bổ sung biến VITE_DESIGN_API_URL rồi phát hành lại ứng dụng.',
+    );
+  }
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new DesignApiError('Phiên đăng nhập đã hết hạn. Đăng nhập lại để tiếp tục.');
+
+  let response: Response;
+  try {
+    response = await fetch(`${BASE}${path}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      ...(fresh ? { cache: 'reload' as const } : {}),
+    });
+  } catch {
+    throw new DesignApiError(UNREACHABLE_MESSAGE);
+  }
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => ({}))) as { error?: string };
+    throw new DesignApiError(
+      payload.error ?? 'Không thực hiện được thao tác. Thử lại sau ít phút.',
+      response.status,
+    );
+  }
+  return response;
 }

@@ -19,6 +19,24 @@ client = TestClient(app, raise_server_exceptions=False)
 # chỉ nói "lệch", còn danh sách nói thẳng tệp nào thiếu — và thêm một lớp mới buộc phải sửa
 # đúng một chỗ, có chủ đích.
 EXPECTED_CONTRACTS = {
+    # Ba hợp đồng của nhánh AI (T10–T14). Container KHÔNG đọc cái nào: theo T14 (09/09/2026)
+    # nhánh AI là dòng riêng, không đi qua Container. Chúng nằm trong ảnh vì `contracts/` được
+    # copy nguyên thư mục, và liệt kê ở đây để danh sách nói đúng thực tế thay vì trở thành chỗ
+    # phải nhớ loại trừ.
+    "ai-brief-digest",
+    "ai-facade-concept",
+    "ai-floor-plan",
+    "ai-floor-plan-proposal",
+    # Bốn hợp đồng của luồng một lượt cho cả nhà (T45–T57) — cũng không đi qua Container.
+    "ai-house-intent",
+    "ai-image-set",
+    "ai-plan-edit",
+    "ai-plan-intent",
+    "ai-plan-rooms",
+    "ai-plan-sheet-image",
+    "ai-plan-tree",
+    "ai-space-program",
+    "ai-space-program-proposal",
     "arch-model",
     "cad-extraction",
     "design-brief",
@@ -26,6 +44,10 @@ EXPECTED_CONTRACTS = {
     "infeasibility-report",
     "kb-record",
     "layout-intent",
+    # Hợp đồng của Lớp 2a — Container KHÔNG dùng tới (lớp đó chạy hoàn toàn ở Worker), nhưng
+    # tệp vẫn nằm trong ảnh vì `contracts/` copy nguyên thư mục. Liệt kê ở đây để danh sách
+    # nói đúng thực tế thay vì trở thành chỗ phải nhớ loại trừ.
+    "program-intent",
     "publish-request",
     "render-request",
     "render-result",
@@ -396,3 +418,21 @@ class TestExportDxf:
         wall_ids = {w["id"] for w in level["walls"]}
         for opening in level["openings"]:
             assert opening["wall"] in wall_ids, "lỗ mở trỏ tới bức tường không tồn tại"
+
+
+class TestStoreyHeight:
+    def test_levels_carry_storey_height_from_construction_norms(self) -> None:
+        """`height_m` đi ra từ chuẩn cấu tạo, tầng trên cùng cao hơn.
+
+        Trước 06/09/2026 mặt bằng KHÔNG mang chiều cao tầng, và Worker mặc định cứng 3,4 m
+        trong khi hồ sơ thật đọc được 3,6 m (tầng trên cùng 3,9 m). Khối 3D, mặt cắt và mọi
+        cao độ lát sàn đều dựa vào con số này — nó phải là dữ liệu, và phải ra khỏi Container.
+        """
+        from design_compute.geometry.norms import load_construction_norms
+
+        norms = load_construction_norms()
+        plan = client.post("/solve", json=_payload()).json()["floor_plan"]
+        heights = {lv["level"]: lv["height_m"] for lv in plan["levels"]}
+        assert heights[1] == norms.storey_height_m
+        assert heights[2] == norms.top_storey_height_m
+        assert heights[2] > heights[1]

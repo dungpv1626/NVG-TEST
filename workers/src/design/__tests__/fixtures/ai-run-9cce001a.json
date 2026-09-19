@@ -1,0 +1,846 @@
+{
+  "_note": "Lượt đo thật 14/09/2026 — run 9cce001a, gpt-5-mini mức Thấp, hồ sơ «Biệt thự nhà vườn (demo)». Đầu bài ĐÃ lược danh tính (hạng 2, T12). Ý định là nguyên văn mô hình trả về, đọc lại từ trạng thái Workflow cục bộ. Xem V-28.",
+  "digest": {
+    "schema_version": "1.1.0",
+    "building_type": "biet_thu",
+    "locality": "hung_yen",
+    "floors": 2,
+    "site": {
+      "shape": "chu_nhat",
+      "width_m": 15,
+      "depth_m": 20,
+      "rear_width_m": null,
+      "boundary_m": null,
+      "orientation": "DN",
+      "access_sides": ["front", "left"],
+      "adjacent": {
+        "front": "duong_lon",
+        "back": "dat_trong",
+        "left": "hem_3m",
+        "right": "nha_hang_xom"
+      },
+      "setback_required_m": {
+        "front": 2,
+        "back": 0,
+        "left": 0,
+        "right": 0
+      },
+      "max_density": 0.8,
+      "main_entrance_side": "front",
+      "vehicle_entrance_side": "front",
+      "boundary_walls": {
+        "front": null,
+        "back": null,
+        "left": null,
+        "right": "rieng"
+      }
+    },
+    "family": [
+      {
+        "role": "ong_ba",
+        "count": 2,
+        "floor": 1,
+        "floor_pref": null,
+        "needs": ["bedroom", "closet"],
+        "ensuite": true
+      },
+      {
+        "role": "vo_chong",
+        "count": 2,
+        "floor": 2,
+        "floor_pref": null,
+        "needs": ["balcony", "study", "dressing_room"],
+        "ensuite": true
+      },
+      {
+        "role": "con",
+        "count": 2,
+        "floor": 2,
+        "floor_pref": null,
+        "needs": ["bedroom", "balcony", "study_area"],
+        "ensuite": null
+      },
+      {
+        "role": "nguoi_giup_viec",
+        "count": 1,
+        "floor": 1,
+        "floor_pref": null,
+        "needs": ["bedroom"],
+        "ensuite": null
+      },
+      {
+        "role": "khach",
+        "count": 1,
+        "floor": 2,
+        "floor_pref": null,
+        "needs": ["bedroom"],
+        "ensuite": null
+      }
+    ],
+    "required_spaces": [
+      {
+        "type": "garage",
+        "floor": 1,
+        "area_m2": null,
+        "ensuite": null,
+        "amenities": "để ô tô , 2 xe máy, 1 xe máy điện"
+      },
+      {
+        "type": "dining",
+        "floor": 1,
+        "area_m2": null,
+        "ensuite": null,
+        "amenities": null
+      },
+      {
+        "type": "kitchen",
+        "floor": 1,
+        "area_m2": null,
+        "ensuite": null,
+        "amenities": null
+      },
+      {
+        "type": "wc",
+        "floor": 1,
+        "area_m2": null,
+        "ensuite": null,
+        "amenities": null
+      },
+      {
+        "type": "storage",
+        "floor": 1,
+        "area_m2": null,
+        "ensuite": null,
+        "amenities": null
+      },
+      {
+        "type": "laundry",
+        "floor": 2,
+        "area_m2": null,
+        "ensuite": null,
+        "amenities": null
+      },
+      {
+        "type": "bedroom",
+        "floor": 1,
+        "area_m2": 25,
+        "ensuite": true,
+        "amenities": null
+      },
+      {
+        "type": "master_bedroom",
+        "floor": 2,
+        "area_m2": 30,
+        "ensuite": true,
+        "amenities": null
+      },
+      {
+        "type": "bedroom",
+        "floor": 2,
+        "area_m2": 20,
+        "ensuite": false,
+        "amenities": null
+      },
+      {
+        "type": "bedroom",
+        "floor": 2,
+        "area_m2": 20,
+        "ensuite": false,
+        "amenities": null
+      },
+      {
+        "type": "bedroom",
+        "floor": 1,
+        "area_m2": 15,
+        "ensuite": false,
+        "amenities": null
+      },
+      {
+        "type": "bedroom",
+        "floor": 2,
+        "area_m2": 15,
+        "ensuite": false,
+        "amenities": null
+      },
+      {
+        "type": "study",
+        "floor": 2,
+        "area_m2": 15,
+        "ensuite": null,
+        "amenities": null
+      },
+      {
+        "type": "altar_room",
+        "floor": 2,
+        "area_m2": null,
+        "ensuite": null,
+        "amenities": "hướng đông nam"
+      },
+      {
+        "type": "balcony",
+        "floor": 2,
+        "area_m2": null,
+        "ensuite": null,
+        "amenities": null
+      },
+      {
+        "type": "living",
+        "floor": 1,
+        "area_m2": 55,
+        "ensuite": null,
+        "amenities": null
+      },
+      {
+        "type": "wc",
+        "floor": 2,
+        "area_m2": null,
+        "ensuite": null,
+        "amenities": null
+      }
+    ],
+    "massing": {
+      "wings_preferred": 1,
+      "footprint_shape": "chu_nhat",
+      "cores_preferred": 1,
+      "service_core": false,
+      "yards": ["san_truoc", "san_ben"],
+      "indoor_outdoor": "can_bang",
+      "yard_depth_m": {
+        "front": 3,
+        "back": 0,
+        "left": 2,
+        "right": 0
+      }
+    },
+    "parking": {
+      "cars": 1,
+      "motorbikes": 2
+    },
+    "style": "hien_dai",
+    "priorities": ["garden", "natural_light", "privacy", "indoor_outdoor", "natural_ventilation"],
+    "free_text": {
+      "design_task": "Thiết kế biệt thự nhà vườn hai tầng trên lô 15 × 20 m, ba thế hệ cùng ở, ưu tiên sân vườn và lấy sáng tự nhiên.",
+      "functional_needs": "Tầng 1: để xe, khách, ăn, bếp, phòng ngủ ông bà, phòng ngủ giúp việc, khu phụ trợ. Tầng 2: phòng ngủ chính, phòng ngủ con, phòng ngủ khách phòng làm việc, phòng thờ, ban công.",
+      "style_note": "Hiện đại, mái dốc nhẹ, vật liệu hoàn thiện đơn giản, dễ bảo trì.",
+      "site_condition": "Giáp đường lớn phía trước, hẻm 3 m bên trái, nhà hàng xóm bên phải, đất trống phía sau."
+    },
+    "survey": null
+  },
+  "program": {
+    "schema_version": "1.0.0",
+    "brief_ref": "sha256:089f6a0abc7fc7d7b4bdbaef91f656ddbb19cda7a1f57046cfed8e9ac7d89c42",
+    "spaces": [
+      {
+        "id": "living_1",
+        "type": "living",
+        "level": 1,
+        "target_area_m2": 55,
+        "ensuite_of": null,
+        "why": "Đặt trước nhà, liên kết sân trước để đón khách, ưu tiên tầm nhìn ra vườn và lấy sáng tự nhiên theo ưu tiên của gia đình."
+      },
+      {
+        "id": "dining_1",
+        "type": "dining",
+        "level": 1,
+        "target_area_m2": 24,
+        "ensuite_of": null,
+        "why": "Liền kề bếp và gần phòng khách để phục vụ bữa ăn gia đình đông người, nhìn ra vườn bên trái."
+      },
+      {
+        "id": "kitchen_1",
+        "type": "kitchen",
+        "level": 1,
+        "target_area_m2": 18,
+        "ensuite_of": null,
+        "why": "Bếp tách nhưng liên thông phòng ăn, sát mặt bên thoáng để thoát mùi và đón gió tự nhiên."
+      },
+      {
+        "id": "bedroom_1",
+        "type": "bedroom",
+        "level": 1,
+        "target_area_m2": 28,
+        "ensuite_of": null,
+        "why": "Phòng ông bà ở tầng trệt để thuận tiện di chuyển; diện tích bao gồm tủ áo âm tường theo nhu cầu."
+      },
+      {
+        "id": "wc_1",
+        "type": "wc",
+        "level": 1,
+        "target_area_m2": 4,
+        "ensuite_of": "bedroom_1",
+        "why": "Vệ sinh khép kín cho ông bà, kích thước vừa đủ, bố trí áp tường ngoài để lấy sáng và thông gió."
+      },
+      {
+        "id": "bedroom_2",
+        "type": "bedroom",
+        "level": 1,
+        "target_area_m2": 15,
+        "ensuite_of": null,
+        "why": "Phòng người giúp việc gần khu bếp-kho để thuận tiện sinh hoạt và hỗ trợ công việc."
+      },
+      {
+        "id": "garage_1",
+        "type": "garage",
+        "level": 1,
+        "target_area_m2": 24,
+        "ensuite_of": null,
+        "why": "Bố trí hướng mặt tiền theo lối xe vào phía trước; 24 m² đủ 1 ô tô + 2 xe máy + 1 xe điện trong sai số 20% yêu cầu."
+      },
+      {
+        "id": "storage_1",
+        "type": "storage",
+        "level": 1,
+        "target_area_m2": 4,
+        "ensuite_of": null,
+        "why": "Kho nhỏ cạnh gara và bếp để chứa đồ gia dụng, dụng cụ làm vườn."
+      },
+      {
+        "id": "wc_2",
+        "type": "wc",
+        "level": 1,
+        "target_area_m2": 4,
+        "ensuite_of": null,
+        "why": "Vệ sinh chung tầng 1 phục vụ khách và khu sinh hoạt, dễ tiếp cận từ phòng khách-ăn."
+      },
+      {
+        "id": "stair_1",
+        "type": "stair",
+        "level": 1,
+        "target_area_m2": 16,
+        "ensuite_of": null,
+        "why": "Một lõi thang giữa nhà, thuận tổ chức giao thông và gom kỹ thuật, giúp chồng tầng ướt hợp lý."
+      },
+      {
+        "id": "circulation_1",
+        "type": "circulation",
+        "level": 1,
+        "target_area_m2": 10,
+        "ensuite_of": null,
+        "why": "Giao thông tối giản để ưu tiên diện tích cho các phòng chính, phù hợp lô đất 13×17 m xây dựng."
+      },
+      {
+        "id": "master_bedroom_1",
+        "type": "master_bedroom",
+        "level": 2,
+        "target_area_m2": 36,
+        "ensuite_of": null,
+        "why": "Phòng ngủ chính tầng 2 đảm bảo riêng tư; diện tích bao gồm góc làm việc và khu thay đồ trong phòng."
+      },
+      {
+        "id": "wc_3",
+        "type": "wc",
+        "level": 2,
+        "target_area_m2": 5,
+        "ensuite_of": "master_bedroom_1",
+        "why": "Vệ sinh khép kín rộng rãi cho phòng ngủ chính, đủ bố trí buồng tắm đứng, thông gió tự nhiên."
+      },
+      {
+        "id": "balcony_1",
+        "type": "balcony",
+        "level": 2,
+        "target_area_m2": 6,
+        "ensuite_of": "master_bedroom_1",
+        "why": "Ban công riêng cho phòng ngủ chính, tăng thông gió và góc thư giãn riêng tư."
+      },
+      {
+        "id": "bedroom_3",
+        "type": "bedroom",
+        "level": 2,
+        "target_area_m2": 22,
+        "ensuite_of": null,
+        "why": "Phòng con 1 đạt tối thiểu 20 m² và cộng thêm diện tích góc học tập trong phòng theo yêu cầu."
+      },
+      {
+        "id": "balcony_2",
+        "type": "balcony",
+        "level": 2,
+        "target_area_m2": 4,
+        "ensuite_of": "bedroom_3",
+        "why": "Ban công riêng cho phòng con 1 để lấy sáng và thông gió, an toàn lan can theo tiêu chuẩn."
+      },
+      {
+        "id": "bedroom_4",
+        "type": "bedroom",
+        "level": 2,
+        "target_area_m2": 22,
+        "ensuite_of": null,
+        "why": "Phòng con 2 đạt tối thiểu 20 m² và có góc học tập trong phòng; đặt tầng 2 đảm bảo yên tĩnh."
+      },
+      {
+        "id": "balcony_3",
+        "type": "balcony",
+        "level": 2,
+        "target_area_m2": 4,
+        "ensuite_of": "bedroom_4",
+        "why": "Ban công riêng cho phòng con 2, tăng đối lưu gió tự nhiên theo ưu tiên lấy sáng-thông gió."
+      },
+      {
+        "id": "bedroom_5",
+        "type": "bedroom",
+        "level": 2,
+        "target_area_m2": 15,
+        "ensuite_of": null,
+        "why": "Phòng ngủ khách gọn, đủ giường đôi và tủ áo; dùng vệ sinh chung tầng 2."
+      },
+      {
+        "id": "wc_4",
+        "type": "wc",
+        "level": 2,
+        "target_area_m2": 5,
+        "ensuite_of": null,
+        "why": "Vệ sinh chung tầng 2 phục vụ phòng con và phòng khách; bố trí chồng với WC dưới để tối ưu ống kỹ thuật."
+      },
+      {
+        "id": "laundry_1",
+        "type": "laundry",
+        "level": 2,
+        "target_area_m2": 8,
+        "ensuite_of": null,
+        "why": "Giặt-phơi tầng 2 để tiện phơi sấy, tiếp cận mặt thoáng sau/biên hông, dễ thoát ẩm và lấy nắng."
+      },
+      {
+        "id": "altar_room_1",
+        "type": "altar_room",
+        "level": 2,
+        "target_area_m2": 14,
+        "ensuite_of": null,
+        "why": "Phòng thờ độc lập, yên tĩnh tầng 2; bố trí bàn thờ quay hướng Đông Nam theo mong muốn gia chủ."
+      },
+      {
+        "id": "study_1",
+        "type": "study",
+        "level": 2,
+        "target_area_m2": 15,
+        "ensuite_of": null,
+        "why": "Phòng làm việc riêng cho gia đình, cách âm tương đối, gần nhưng tách khỏi khối phòng ngủ."
+      },
+      {
+        "id": "stair_2",
+        "type": "stair",
+        "level": 2,
+        "target_area_m2": 16,
+        "ensuite_of": null,
+        "why": "Lõi thang tiếp tục lên tầng 2, vị trí trục giữa thuận thông gió và chiếu sáng qua giếng trời phụ."
+      },
+      {
+        "id": "circulation_2",
+        "type": "circulation",
+        "level": 2,
+        "target_area_m2": 10,
+        "ensuite_of": null,
+        "why": "Hành lang ngắn, ưu tiên diện tích cho phòng ngủ và phòng thờ; tránh lãng phí diện tích."
+      }
+    ],
+    "rationale": "Tầng 1 ưu tiên đón khách, ăn-uống, bếp và phòng ngủ ông bà để thuận tiện tuổi cao, cùng gara thuận lối vào từ mặt tiền. Tầng 2 bố trí toàn bộ không gian riêng tư: phòng ngủ chính có làm việc trong phòng, hai phòng con có ban công, phòng khách nhỏ cho người thân ghé thăm, cùng phòng thờ hướng Đông Nam. Các vệ sinh xếp trục đứng, lõi thang giữa nhà tối ưu giao thông và thông gió. Diện tích từng tầng dưới ngưỡng xây dựng cho phép để giữ vườn và khoảng thoáng.",
+    "assumptions": [
+      "Hai phòng 20 m² tầng 2 sẽ là phòng của hai con (mỗi phòng có ban công riêng); phòng 15 m² tầng 2 là phòng ngủ khách, không cần ban công — xin xác nhận.",
+      "Gia chủ chấp nhận sử dụng các ban công riêng của phòng ngủ để đáp ứng nhu cầu “ban công tầng 2”; chưa cần thêm ban công chung trước phòng thờ — có cần bổ sung không?",
+      "Gara 24 m² đủ 1 ô tô + 2 xe máy + 1 xe máy điện, chừa lối đi; nếu cần chỗ sạc EV hoặc để xe đạp, đề nghị tăng thêm 3–4 m².",
+      "Phòng thờ quay hướng Đông Nam theo yêu cầu; xin xác nhận trục nhìn (trước/sau/biên) để bố trí cửa sổ và ô thoáng phù hợp phong thủy.",
+      "Khu giặt-phơi tầng 2 dùng phơi ngoài trời tại mặt thoáng sau/biên; nếu cần sân phơi riêng ngoài trời, có thể bổ sung một ban công kỹ thuật.",
+      "Bếp dự kiến bếp chữ L với đảo nhỏ; nếu gia đình nấu nhiều (tiệc 10 người thường xuyên), đề nghị tăng bếp lên ~20–22 m² và thêm kho khô 2–3 m².",
+      "Hành lang và giao thông được tiết giảm; nếu mong muốn sảnh tầng rộng hơn (đặt tủ trưng bày), có thể tăng circulation thêm 3–5 m².",
+      "Cửa gara mở về phía trước theo yêu cầu; xin xác nhận chiều rộng xe để chốt khẩu độ cửa và dải lùi xe trong sân trước."
+    ],
+    "generator": {
+      "kind": "ai",
+      "provider": "openai",
+      "model": "gpt-5",
+      "route": "ai_text_openai",
+      "prompt_version": "2.3.0",
+      "repaired": true
+    }
+  },
+  "intents": {
+    "level1": {
+      "variant_label": "Sảnh trước - thang giữa dải giữa - bếp ăn mở ra sau",
+      "rationale": "Vào nhà từ mặt tiền vào phòng khách; thang đặt ở dải giữa để chia khối, bếp ăn mở liên thông phía sau lấy sáng từ sân sau; các phòng ngủ tầng 1 đặt gần giao thông để đảm bảo riêng tư và truy cập thuận tiện cho ông bà và giúp việc.",
+      "rooms": [
+        {
+          "id": "living_1",
+          "zone": "front",
+          "street_facing": true
+        },
+        {
+          "id": "dining_1",
+          "zone": "center",
+          "street_facing": false
+        },
+        {
+          "id": "kitchen_1",
+          "zone": "center",
+          "street_facing": false
+        },
+        {
+          "id": "bedroom_1",
+          "zone": "left",
+          "street_facing": false
+        },
+        {
+          "id": "wc_1",
+          "zone": "left",
+          "street_facing": false
+        },
+        {
+          "id": "bedroom_2",
+          "zone": "back_right",
+          "street_facing": false
+        },
+        {
+          "id": "garage_1",
+          "zone": "front_right",
+          "street_facing": true
+        },
+        {
+          "id": "storage_1",
+          "zone": "back_right",
+          "street_facing": false
+        },
+        {
+          "id": "wc_2",
+          "zone": "back",
+          "street_facing": false
+        },
+        {
+          "id": "stair_1",
+          "zone": "center",
+          "street_facing": false
+        },
+        {
+          "id": "circulation_1",
+          "zone": "center",
+          "street_facing": false
+        }
+      ],
+      "relationships": [
+        {
+          "a": "kitchen_1",
+          "b": "dining_1",
+          "kind": "open"
+        },
+        {
+          "a": "garage_1",
+          "b": "living_1",
+          "kind": "adjacent"
+        },
+        {
+          "a": "living_1",
+          "b": "dining_1",
+          "kind": "adjacent"
+        },
+        {
+          "a": "stair_1",
+          "b": "kitchen_1",
+          "kind": "adjacent"
+        },
+        {
+          "a": "circulation_1",
+          "b": "bedroom_1",
+          "kind": "adjacent"
+        },
+        {
+          "a": "circulation_1",
+          "b": "bedroom_2",
+          "kind": "adjacent"
+        },
+        {
+          "a": "kitchen_1",
+          "b": "storage_1",
+          "kind": "adjacent"
+        },
+        {
+          "a": "kitchen_1",
+          "b": "wc_2",
+          "kind": "adjacent"
+        },
+        {
+          "a": "stair_1",
+          "b": "circulation_1",
+          "kind": "adjacent"
+        }
+      ],
+      "entry_room": "living_1",
+      "garage_room": "garage_1"
+    },
+    "level2": {
+      "variant_label": null,
+      "rationale": "Thang đặt về phía sau theo bản vẽ tầng dưới để tận dụng giếng sáng đứng sau; băng giao thông chính (circulation) chạy giữa, kết nối các phòng ngủ và phòng thờ ở tầng 2. Phòng ngủ chính và phòng thờ lấy mặt tiền trước (hướng Đông Nam) để đón sáng; hai phòng ngủ lớn khác hướng trước có ban công; các…",
+      "rooms": [
+        {
+          "id": "master_bedroom_1",
+          "zone": "front",
+          "street_facing": true
+        },
+        {
+          "id": "wc_3",
+          "zone": "front",
+          "street_facing": false
+        },
+        {
+          "id": "balcony_1",
+          "zone": "front",
+          "street_facing": true
+        },
+        {
+          "id": "bedroom_3",
+          "zone": "front_left",
+          "street_facing": true
+        },
+        {
+          "id": "balcony_2",
+          "zone": "front_left",
+          "street_facing": true
+        },
+        {
+          "id": "bedroom_4",
+          "zone": "front_right",
+          "street_facing": true
+        },
+        {
+          "id": "balcony_3",
+          "zone": "front_right",
+          "street_facing": true
+        },
+        {
+          "id": "bedroom_5",
+          "zone": "right",
+          "street_facing": false
+        },
+        {
+          "id": "wc_4",
+          "zone": "back_right",
+          "street_facing": false
+        },
+        {
+          "id": "laundry_1",
+          "zone": "back",
+          "street_facing": false
+        },
+        {
+          "id": "altar_room_1",
+          "zone": "front",
+          "street_facing": true
+        },
+        {
+          "id": "study_1",
+          "zone": "center",
+          "street_facing": false
+        },
+        {
+          "id": "stair_2",
+          "zone": "back",
+          "street_facing": false
+        },
+        {
+          "id": "circulation_2",
+          "zone": "center",
+          "street_facing": false
+        }
+      ],
+      "relationships": [
+        {
+          "a": "master_bedroom_1",
+          "b": "balcony_1",
+          "kind": "adjacent"
+        },
+        {
+          "a": "bedroom_3",
+          "b": "balcony_2",
+          "kind": "adjacent"
+        },
+        {
+          "a": "bedroom_4",
+          "b": "balcony_3",
+          "kind": "adjacent"
+        },
+        {
+          "a": "master_bedroom_1",
+          "b": "circulation_2",
+          "kind": "adjacent"
+        },
+        {
+          "a": "bedroom_3",
+          "b": "circulation_2",
+          "kind": "adjacent"
+        },
+        {
+          "a": "bedroom_4",
+          "b": "circulation_2",
+          "kind": "adjacent"
+        },
+        {
+          "a": "bedroom_5",
+          "b": "circulation_2",
+          "kind": "adjacent"
+        },
+        {
+          "a": "study_1",
+          "b": "circulation_2",
+          "kind": "adjacent"
+        },
+        {
+          "a": "altar_room_1",
+          "b": "circulation_2",
+          "kind": "adjacent"
+        },
+        {
+          "a": "wc_4",
+          "b": "circulation_2",
+          "kind": "adjacent"
+        },
+        {
+          "a": "laundry_1",
+          "b": "circulation_2",
+          "kind": "adjacent"
+        },
+        {
+          "a": "stair_2",
+          "b": "circulation_2",
+          "kind": "adjacent"
+        }
+      ],
+      "entry_room": null,
+      "garage_room": null
+    },
+    "level2_revised": {
+      "variant_label": null,
+      "rationale": "Diễn giải sửa lỗi: đưa phòng ngủ và WC không tiếp giáp giao thông vào vùng sát hành lang để đảm bảo truy cập từ thang/hành lang; giữ vị trí thang ở dải giữa-sau như chiến lược.",
+      "rooms": [
+        {
+          "id": "master_bedroom_1",
+          "zone": "front",
+          "street_facing": true
+        },
+        {
+          "id": "wc_3",
+          "zone": "front",
+          "street_facing": false
+        },
+        {
+          "id": "balcony_1",
+          "zone": "front",
+          "street_facing": true
+        },
+        {
+          "id": "bedroom_3",
+          "zone": "front_left",
+          "street_facing": true
+        },
+        {
+          "id": "balcony_2",
+          "zone": "front_left",
+          "street_facing": true
+        },
+        {
+          "id": "bedroom_4",
+          "zone": "center",
+          "street_facing": false
+        },
+        {
+          "id": "balcony_3",
+          "zone": "front_right",
+          "street_facing": true
+        },
+        {
+          "id": "bedroom_5",
+          "zone": "right",
+          "street_facing": false
+        },
+        {
+          "id": "wc_4",
+          "zone": "back",
+          "street_facing": false
+        },
+        {
+          "id": "laundry_1",
+          "zone": "back",
+          "street_facing": false
+        },
+        {
+          "id": "altar_room_1",
+          "zone": "front",
+          "street_facing": true
+        },
+        {
+          "id": "study_1",
+          "zone": "center",
+          "street_facing": false
+        },
+        {
+          "id": "stair_2",
+          "zone": "back",
+          "street_facing": false
+        },
+        {
+          "id": "circulation_2",
+          "zone": "center",
+          "street_facing": false
+        }
+      ],
+      "relationships": [
+        {
+          "a": "master_bedroom_1",
+          "b": "balcony_1",
+          "kind": "adjacent"
+        },
+        {
+          "a": "bedroom_3",
+          "b": "balcony_2",
+          "kind": "adjacent"
+        },
+        {
+          "a": "bedroom_4",
+          "b": "balcony_3",
+          "kind": "adjacent"
+        },
+        {
+          "a": "master_bedroom_1",
+          "b": "circulation_2",
+          "kind": "adjacent"
+        },
+        {
+          "a": "bedroom_3",
+          "b": "circulation_2",
+          "kind": "adjacent"
+        },
+        {
+          "a": "bedroom_4",
+          "b": "circulation_2",
+          "kind": "adjacent"
+        },
+        {
+          "a": "bedroom_5",
+          "b": "circulation_2",
+          "kind": "adjacent"
+        },
+        {
+          "a": "study_1",
+          "b": "circulation_2",
+          "kind": "adjacent"
+        },
+        {
+          "a": "altar_room_1",
+          "b": "circulation_2",
+          "kind": "adjacent"
+        },
+        {
+          "a": "wc_4",
+          "b": "circulation_2",
+          "kind": "adjacent"
+        },
+        {
+          "a": "laundry_1",
+          "b": "circulation_2",
+          "kind": "adjacent"
+        },
+        {
+          "a": "stair_2",
+          "b": "circulation_2",
+          "kind": "adjacent"
+        }
+      ],
+      "entry_room": null,
+      "garage_room": null
+    }
+  }
+}

@@ -1,43 +1,240 @@
 # Chuẩn cấu tạo dùng để dựng tường và lỗ mở từ hình học đã giải (Lớp 3c).
 #
-# Nguồn: `doc/design/04-layer3-floorplan.md` mục 4.5 ("sinh danh sách walls và openings từ
-# polygon phòng"), hợp đồng `contracts/floor-plan.schema.json`.
+# Nguồn: `doc/design/04-layer3-floorplan.md` mục 4.5, hợp đồng `contracts/floor-plan.schema.json`.
+# Đối chiếu với hồ sơ thật ngày 05/09/2026 — xem `do_duoc` bên dưới.
 #
 # ── Vì sao là DỮ LIỆU chứ không phải hằng số trong mã nguồn ────────────────────────────
 # Cùng lý lẽ với rule pack và `layer_mapping.yaml` (CLAUDE.md 8.7). Bề dày tường và bề rộng
-# cửa là quy ước cấu tạo của từng đơn vị thi công: NVG xây tường 110 hay 220, cửa phòng ngủ
-# 800 hay 900 — đổi theo hồ sơ, theo chủ đầu tư, và sẽ đổi lần nữa.
+# cửa là quy ước cấu tạo của từng đơn vị thi công, và đổi theo hồ sơ lẫn theo chủ đầu tư.
 #
-# ⚠️ Đây KHÔNG phải ngưỡng quy chuẩn. Ngưỡng quy chuẩn (bề rộng hành lang tối thiểu, diện tích
-# phòng tối thiểu) nằm ở `rules/` và có mức nghiêm trọng, có nguồn dẫn. Số ở đây chỉ quyết định
-# bản vẽ TRÔNG thế nào, không quyết định phương án có hợp lệ hay không.
+# ⚠️ Đây KHÔNG phải ngưỡng quy chuẩn. Ngưỡng quy chuẩn nằm ở `rules/`, có mức nghiêm trọng
+# và có nguồn dẫn. Số ở đây chỉ quyết định bản vẽ TRÔNG thế nào, không quyết định phương án
+# có hợp lệ hay không.
 #
-# ⚠️ Chưa có kiến trúc sư NVG xác nhận — cùng nhóm câu hỏi với `kb/space_norms.yaml` (Q-18).
+# ══ QUY ƯỚC ĐO CỦA NVG — đọc trước khi dùng bất kỳ con số nào ═════════════════════════
+# Ghi chú in trên mọi tờ chi tiết cửa của hồ sơ thật, nguyên văn:
+#
+#     "kích thước cửa trên bản vẽ là kích thước THÔNG THỦY HOÀN THIỆN"
+#     "trát hèm tất cả cửa"
+#
+# Nghĩa là các con số dưới đây là **lọt lòng sau hoàn thiện**, KHÔNG phải lỗ chờ xây thô.
+# Lỗ chờ phải cộng thêm phần trát hèm. Nhầm hai thứ này thì mọi ô cửa hẹp lại vài centimet
+# — đủ để một hành lang trượt ngưỡng quy chuẩn mà không ai hiểu vì sao.
 
-version: '1.0.0'
+version: '2.0.0'
+
+do_duoc:
+  ngay: '2026-09-05'
+  ho_so: 'HS-01 — nhà phố 5 tầng + phòng KTTM (52 tờ kiến trúc)'
+  to: 'kt/51 thống kê cửa; kt/42–kt/50 chi tiết cửa; cao độ đọc từ mặt cắt'
+  canh_bao: >-
+    MỘT công trình. Đủ để BÁC một con số sai, chưa đủ để dựng phân bố. Ngưỡng thống kê là
+    15 công trình (`kb/space_norms.yaml`, mục `priors.min_samples`).
 
 walls:
-  # Tường bao và tường chịu lực dày hơn tường ngăn.
+  # Xác nhận trên hồ sơ thật: ghi chú kết cấu có cả "GỜ CHÂN TƯỜNG 110" lẫn "… 220",
+  # đúng cặp bề dày mà tệp này vẫn giả định.
   exterior_m: 0.22
   load_bearing_m: 0.22
   partition_m: 0.11
 
+levels:
+  # Đọc từ cao độ ghi trên mặt cắt HS-01: +0.000 · +3.600 · +7.200 · +10.800 · +14.700 · +18.400.
+  # Bốn tầng đầu đúng 3,6 m. Tầng trên cùng cao hơn (3,9 m rồi 3,7 m) — đừng lấy một con số
+  # duy nhất áp cho mọi tầng.
+  storey_height_m: 3.6
+  top_storey_height_m: 3.9
+
+# ── Thang (T37, 13/09/2026) ────────────────────────────────────────────────────────────
+# Nhánh AI không hỏi mô hình số bậc: chương trình tính `treads = round(chiều cao tầng / cao bậc)`.
+# Hỏi mô hình thì nó phải làm đúng phép chia ấy, và lượt 13/09/2026 cho thấy mỗi phép số học giao
+# cho mô hình là thêm một chỗ sai.
+#
+# ⚠️ SỐ THAM KHẢO, KHÔNG ÉP BUỘC (Haan, 13/09/2026: «số liệu từ hồ sơ mang tính tham khảo»). Đo
+# trên hai hồ sơ NVO (`kt/` mặt cắt thang): P1 nhà vườn h ≈ 171 mm (21 bậc / 3,6 m), P2 nhà phố
+# h ≈ 156 mm. Chương trình chỉ dùng số này để VẼ số bậc; không cổng kiểm nào chặn một phương án
+# vì nó. Kiến trúc sư đổi được theo từng công trình.
+stairs:
+  riser_m: 0.17
+  # Ô thang rộng ngang từ mức này thì vẽ HAI vế (chữ U), hẹp hơn thì một vế. Hai vế cần hai lối
+  # lên + khe giữa; vế P2 hẹp nhất đo được 0,83 m nên hai vế cần tối thiểu ~1,6–1,7 m.
+  two_flights_min_width_m: 1.6
+  # Bề sâu mặt bậc nhỏ nhất bộ giải ý định chấp nhận khi kiểm ô thang ĐỦ DÀI cho số bậc (15/09/2026,
+  # Haan duyệt; Q-45d). Khác `riser_m` ở trên (chỉ để vẽ): đây là điều kiện DỰNG, cùng lý lẽ với mục
+  # `usable` — ô thang ngắn hơn số bậc × bề sâu bậc + chiếu nghỉ thì không xây nổi cái thang ấy, bộ vẽ
+  # chỉ ép dẹt bậc lại. SỐ THAM KHẢO, chọn ở mức thấp của thang nhà ở; chiếu nghỉ sâu tối thiểu bằng
+  # bề rộng một vế. Kiến trúc sư đổi được.
+  going_m: 0.25
+
+# Hành lang bộ giải ý định tự dựng thành dải (T43, 14/09/2026) — bề rộng LỌT LÒNG mong muốn.
+#
+# SỐ THAM KHẢO: lấy mức «đạt» của tiêu chí C4 (`kb/plan_quality.yaml`, đo 3 mặt bằng). Bộ giải chỉ
+# dùng nó để vẽ dải hành lang; hẹp hơn hay rộng hơn đều không bị chặn, bộ chấm quyết điểm.
+circulation:
+  corridor_clear_m: 1.2
+
+# ── Cạnh ngắn DÙNG ĐƯỢC — điều kiện dựng của bộ giải ý định (V-28, 14/09/2026) ───────────
+#
+# Khác HẲN cạnh tối thiểu kinh nghiệm ở `rules/nvg-*.yaml`. Số kinh nghiệm là cách NVG quen làm và
+# chỉ vào điểm (Haan, 14/09/2026). Số ở đây là giới hạn HÌNH HỌC: dưới mức này căn phòng không đặt
+# nổi món đồ định nghĩa ra nó, nên bộ giải KHÔNG dựng phòng hẹp hơn (Haan duyệt 14/09/2026).
+#
+# Vì sao cần: lượt đo thật 9cce001a qua cổng với phòng ngủ ông bà lọt lòng 1,78 × 14,6 m và phòng ngủ
+# 1,5 × 13 m — cạnh ngắn chỉ bị trừ điểm nên phòng dạng hành lang vẫn thắng.
+#
+# SỐ THAM KHẢO dựng từ kích thước đồ đạc, LỌT LÒNG, sửa được. Mỗi số cố ý THẤP HƠN mức nhỏ nhất đo
+# được trên hồ sơ NVG đã xây (`rules/nvg-measured.yaml`) để không bác một phòng NVG từng làm:
+#   bedroom 2,2        giường 1,6 + lối đi 0,6 (đo thật nhỏ nhất 2,35)
+#   master_bedroom 2,6 giường 1,8 + lối đi 0,8 (đo thật 3,1)
+#   living 2,7         sofa 0,9 + lối 0,9 + kệ 0,9 (đo thật 3,5)
+#   garage 2,4         xe máy; có ô tô thì dùng `garage_with_car_m` — thân xe 1,8 + mở cửa 1,0
+# Loại phòng không có dòng thì không có điều kiện dựng — chỉ còn sàn kỹ thuật đặt vừa một cửa đi.
+usable:
+  min_side_m:
+    living: 2.7
+    dining: 2.1
+    kitchen: 1.5
+    bedroom: 2.2
+    master_bedroom: 2.6
+    study: 1.8
+    altar_room: 1.8
+    wc: 0.9
+    laundry: 1.0
+    storage: 0.8
+    balcony: 0.9
+    garage: 2.4
+  garage_with_car_m: 2.8
+  # Tỉ lệ dài/rộng LỌT LÒNG tối đa của phòng ở. Cạnh ngắn đạt mức vẫn chưa đủ: phát lại lượt 9cce001a
+  # sau khi thêm `min_side_m` ra phòng ngủ 2,85 × 16,56 m (47 m², chương trình 15 m²) — kê được giường
+  # nhưng là một hành lang có giường. Chỉ áp cho phòng ở; bếp, kho, giặt phơi, ban công dài là bình
+  # thường. Tham chiếu: phòng ngủ nhà phố NVG 3,3 × 5 m ≈ 1,5; phòng khách nhà phố 4 m ngang ≈ 2,6.
+  max_aspect:
+    bedroom: 2.5
+    master_bedroom: 2.5
+    living: 3.2
+    dining: 3.2
+    study: 3.0
+    altar_room: 3.0
+    # WC CHUNG — chỉ bắt ca vô lý. Lượt 9cce001a ra WC chung 1,07 × 8,97 m (tỉ lệ 8,4). Mức 3–4 thì quá
+    # chặt với cây chia: WC trong một dãy phòng dọc hành lang là một lát cắt chạy suốt chiều sâu dãy
+    # (dãy sâu 5,45 m → WC ~1,1 × 5,45 m, tỉ lệ ~5), vì cây chia không dựng được phòng chữ L để nhét
+    # phần còn lại phía sau. Bố cục WC gọn hơn là việc của kiến trúc sư trên CAD.
+    # KHÔNG áp cho phòng khép kín: cây chia dựng nó thành dải dọc một cạnh phòng mẹ, nên dạng dài là
+    # của cấu trúc — áp vào thì mọi phòng ngủ có WC riêng đều không dựng được.
+    wc: 6.0
+    # Ô thang: một vế 1,2 m ngang × 4,8 m (21 bậc cao 0,17 m, sâu 0,23 m) là tỉ lệ 4. Dài hơn là một
+    # dải hành lang mang tên thang — lượt 9cce001a dựng ô thang 9,43 × 1,64 m cắt ngang nhà, và tầng
+    # trên buộc phải chồng khít ô ấy nên cả tầng 2 vỡ theo.
+    stair: 4.0
+
 openings:
+  # Cửa nào dùng quy cách nào, theo `kind` mô hình khai (T40). Cửa trượt, cửa để xe, cổng và ô
+  # thông lấy bề rộng theo tỉ lệ đoạn tường như cửa chính — một con số cố định là sai ở cả hai đầu.
+  door_by_kind:
+    single: door
+    double: entrance
+    sliding: entrance
+    garage: entrance
+    gate: entrance
+    opening: entrance
+  # Phòng thuộc các loại này dùng cửa vệ sinh (hẹp hơn) và cửa sổ vệ sinh.
+  wc_door_types: [wc, vanity]
+  # Phòng nhỏ không ở người dùng cửa HẸP như cửa vệ sinh (chỉ cửa đi, cửa sổ vẫn theo loại phòng).
+  # Kho 1,2 m lọt lòng không đặt được cửa 0,9 m cộng hai má 0,1 m — lượt chạy thật 13/09/2026 (V-26).
+  narrow_door_types: [storage, closet, dressing_room, technical, shaft]
+  # Mép lỗ cửa cách góc tường tối thiểu — chỗ cho má cửa và khung. SỐ THAM KHẢO, dùng để đặt cửa
+  # lên tờ vẽ, kiến trúc sư chỉnh trong CAD. 0,10 chứ không 0,15: hành lang
+  # lọt lòng 1,10 m (số đo trên hồ sơ NVG) phải đặt được cửa 0,90 m ở đầu hành lang, và 0,15 m mỗi
+  # bên thì không đặt được.
+  door_margin_m: 0.1
+  # Cạnh ưu tiên khi chương trình tự đặt cửa sổ: mặt thoáng của hình bao trước, rồi tới cạnh giáp
+  # giếng trời, sân trong, ban công, sân thượng.
+  window_priority: [outline, light_well, courtyard, balcony, terrace]
+
+  # Cửa phòng ngủ / phòng trong nhà. 900x2200 là con số ĐO ĐƯỢC (mã d4, 6 bộ,
+  # nhựa composite vân gỗ, 1 cánh mở quay) — trùng đúng giá trị vẫn giả định trước đó.
   door:
     width_m: 0.9
     height_m: 2.2
+
+  # Cửa vệ sinh HẸP HƠN cửa phòng: đo được 700x2100 (DW1) và 750x2200 (DW2).
+  # Trước đây mô hình chỉ có MỘT bề rộng cửa cho mọi phòng — đó là chỗ sai.
+  wc_door:
+    width_m: 0.75
+    height_m: 2.2
+
+  # Cửa chính và cửa ra ban công. Giá trị cũ (1,2 x 2,4) KHÔNG khớp hồ sơ thật:
+  # đo được 1650x2500 · 1670x2500 · 2150x2500 · 3000x2500 · 3800x3000 — rộng hơn nhiều và
+  # cao 2,5 m chứ không phải 2,4 m. Lấy bản hẹp nhất làm mặc định để không bịa ra mặt tiền
+  # rộng hơn thực tế; bề rộng thật do mặt thoáng của phòng quyết định.
   entrance:
-    width_m: 1.2
-    height_m: 2.4
-  window:
-    height_m: 1.5
-    sill_m: 0.9
-    # Bề rộng cửa sổ lấy theo TỈ LỆ đoạn tường mặt thoáng của phòng, kẹp trong hai cận dưới.
-    # Lấy tỉ lệ chứ không lấy một con số cố định: một phòng ngủ 2,4 m và một phòng khách 5 m
-    # không thể cùng một ô cửa.
+    width_m: 1.65
+    height_m: 2.5
+    # Bề rộng thật lấy theo đoạn tường mặt tiền của phòng, kẹp giữa bản hẹp nhất và bản rộng
+    # nhất ĐO ĐƯỢC (1650 và 3800). Một con số cố định là sai ở cả hai đầu: cửa vào sảnh hẹp
+    # và cửa cuốn gara rộng cùng nằm trên một mặt tiền. Cùng cách làm với `window`.
     share_of_wall: 0.55
-    min_width_m: 0.8
-    max_width_m: 3.0
+    max_width_m: 3.8
+
+  window:
+    # Đo được ba cỡ: 690x1600 (1 cánh mở hất) · 1550x1600 (2 cánh lùa) · 1200x1300 (2 cánh
+    # lùa). Chiều cao 1,6 m phổ biến hơn 1,5 m của giả định cũ.
+    height_m: 1.6
+    # Cao độ bệ cửa +0.900 đọc thẳng từ mặt cắt — xác nhận đúng giả định cũ.
+    sill_m: 0.9
+    # Bề rộng lấy theo TỈ LỆ đoạn tường mặt thoáng của phòng, kẹp trong hai cận.
+    # Lấy tỉ lệ chứ không lấy một con số cố định: một phòng ngủ 2,4 m và một phòng khách 5 m
+    # không thể cùng một ô cửa. Hai cận dưới/trên đặt theo cỡ nhỏ nhất và lớn nhất đo được.
+    share_of_wall: 0.55
+    min_width_m: 0.69
+    max_width_m: 1.55
+
+  # Cửa sổ vệ sinh: 600x600, mở hất. Nhỏ hơn hẳn cửa sổ phòng ở, nên tách riêng.
+  wc_window:
+    width_m: 0.6
+    height_m: 0.6
+    sill_m: 1.8
 
 # Loại phòng KHÔNG mở cửa sổ ra mặt thoáng dù có tiếp giáp.
-no_window_types: [stair, core, technical, garage]
+#
+# Ban công và sân thượng vào danh sách này ngày 06/09/2026 vì lý do ngược với ba loại kia:
+# không phải "không cần cửa sổ" mà là "cạnh giáp mặt thoáng của nó KHÔNG phải tường". Cạnh đó
+# là lan can, và khối ba chiều dựng nó thành lan can — một ô cửa sổ đặt vào đấy sẽ khoét lỗ
+# giữa lan can.
+no_window_types: [stair, core, technical, garage, balcony, terrace]
+
+# ── Không gian ngoài trời ──────────────────────────────────────────────────────────────
+# Cạnh giáp mặt thoáng của ban công, lô gia, sân thượng dựng thành LAN CAN, không phải tường:
+# thấp, mỏng, và không có lanh tô phía trên. Không có mục này thì ban công ra khối ba chiều là
+# một hộp kín bốn phía tường, không đọc ra được là ban công.
+outdoor:
+  railing_h_m: 1.1
+  railing_thickness_m: 0.1
+
+# ── Vật liệu và quy cách ghi trên bảng thống kê cửa ────────────────────────────────────
+# Chưa dùng để dựng hình. Ghi lại vì bảng thống kê cửa (`kt/51`) là một trong số ít loại tờ
+# engine sinh ra được bằng cách CHÉP, và nó cần đúng những cột này.
+schedule_columns: [stt, ky_hieu, vi_tri, so_luong, kich_thuoc_mm, vat_lieu, phu_kien, ghi_chu]
+materials_seen: ['nhôm kính trong', 'nhôm kính mờ', 'nhựa composite vân gỗ']
+hardware_seen: ['kinlong chính hãng', 'tay khóa inox 304']
+opening_types_seen:
+  [
+    '1 cánh mở quay',
+    '2 cánh mở quay',
+    '2 cánh mở lùa',
+    '4 cánh mở trượt quay',
+    '1 cánh mở hất',
+    'mở ra ngoài',
+    'mở vào trong',
+  ]
+# Vật liệu MẶC ĐỊNH ghi vào bảng thống kê cửa khi phương án chưa chọn — lấy từ chính danh sách
+# `materials_seen` ở trên (HS-01), không bịa. Kiến trúc sư sửa trên bảng; đây chỉ là giá trị mồi.
+schedule_defaults:
+  door: 'nhựa composite vân gỗ'
+  wc_door: 'nhựa composite vân gỗ'
+  entrance: 'nhôm kính trong'
+  window: 'nhôm kính trong'
+  wc_window: 'nhôm kính mờ'
+notes_on_every_sheet:
+  - 'trát hèm tất cả cửa'
+  - 'kích thước cửa trên bản vẽ là kích thước thông thủy hoàn thiện'

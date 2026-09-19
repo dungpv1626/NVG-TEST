@@ -95,6 +95,9 @@ def build_solve_request(
                 ),
                 needs_daylight=bool(space.get("needs_daylight", False)),
                 label=labels.get(space_id),
+                enclosed_in=(
+                    str(space["enclosed_in"]) if space.get("enclosed_in") is not None else None
+                ),
             )
         )
 
@@ -109,6 +112,15 @@ def build_solve_request(
     )
 
     floors = max((r.floor for r in rooms), default=1)
+
+    # Mặt sàn chương trình CHỌN DÙNG, lấy mức lớn nhất trong các tầng: hình bao dùng chung cho
+    # cả công trình, nên nó phải đủ cho tầng cần nhiều nhất. Không có trường này (chương trình
+    # cũ) thì để `None` và bộ giải giữ nguyên hành vi cũ — chia hết phần xây được.
+    wanted = [
+        float(entry["usable_area_m2"])
+        for entry in (program.get("floor_allocation") or [])
+        if entry.get("usable_area_m2") is not None
+    ]
 
     setbacks = site.get("setback_required_m") or {}
 
@@ -131,6 +143,7 @@ def build_solve_request(
         max_density_override=(
             float(site["max_density"]) if site.get("max_density") is not None else None
         ),
+        target_floor_area_m2=(max(wanted) if wanted else None),
         time_limit_s=float(time_budget_s),
     )
 
@@ -253,6 +266,8 @@ def floor_plan_from_result(
 
     # Lõi thang là hình học DÙNG CHUNG giữa các tầng: MỘT đa giác cho mọi tầng, không phải mỗi
     # tầng một bản sao. Bộ giải đã ràng buộc chúng trùng khít, ở đây chỉ gắn mã.
+    top_level = max(levels) if levels else 1
+
     cores: list[dict[str, Any]] = []
     if result.core:
         cores.append({"id": "C1", **result.core})
@@ -266,6 +281,10 @@ def floor_plan_from_result(
         "intent_ref": intent_ref,
         "rule_pack_version": result.rule_pack_version,
         "site": {"width_m": float(site["width_m"]), "depth_m": float(site["depth_m"])},
+        # Hình bao công trình, không phải ranh thửa. Đã tính sẵn ở trên cho việc dựng tường;
+        # ghi ra để Worker khỏi phải suy lại từ toạ độ tường — suy lại là bản thực thi thứ hai
+        # của cùng một phép, và nó đã lệch một lần rồi (V-22).
+        "footprint_m": [float(v) for v in footprint],
         "structural_grid": {
             "axes_x_m": result.structural_axes_x_m,
             "axes_y_m": result.structural_axes_y_m,
@@ -273,6 +292,9 @@ def floor_plan_from_result(
         "levels": [
             {
                 "level": level,
+                # Cao độ tầng là DỮ LIỆU của chuẩn cấu tạo, không phải hằng số trong mã: trước
+                # đây `stubArchModel` ở Worker mặc định cứng 3,4 m trong khi hồ sơ thật là 3,6 m.
+                "height_m": norms.storey_height(level, top_level),
                 "rooms": entry["rooms"],
                 "voids": entry["voids"],
                 "walls": geometry.get(level, ([], []))[0],

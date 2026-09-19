@@ -7,6 +7,7 @@
 import { useMutation } from '@tanstack/react-query';
 import type { Point, SiteBoundaryExtractionEdge } from '@nvg/shared/design';
 import { designApiUpload } from '@/lib/design-api';
+import type { AiCallUsage } from './use-ai-design';
 
 export interface SiteBoundaryExtractionResult {
   boundaryM: Point[];
@@ -18,6 +19,8 @@ export interface SiteBoundaryExtractionResult {
   closedShapeConfidence: 'high' | 'medium' | 'low';
   warnings: { code: string; detail: string }[];
   sourceUri: string;
+  /** Số token và chi phí của lượt đọc ảnh. Vắng ở máy chủ cũ. */
+  usage?: AiCallUsage | null;
 }
 
 export function useExtractSiteBoundary() {

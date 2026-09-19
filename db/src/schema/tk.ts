@@ -28,6 +28,7 @@
 
 import { sql } from 'drizzle-orm';
 import {
+  bigint,
   boolean,
   date,
   index,
@@ -280,6 +281,45 @@ export const designSurveys = pgTable(
     ...softDelete(),
   },
   (t) => [index('design_surveys_project_idx').on(t.designProjectId, t.surveyedAt)],
+);
+
+/**
+ * Ảnh và video hiện trạng đính kèm biên bản khảo sát (TK-02).
+ *
+ * Tệp nằm ở bucket riêng `design-site-photos` theo đường dẫn
+ * `<design_project_id>/<design_survey_id>/<uuid>.<đuôi>` — thư mục đầu chính là khoá phân
+ * quyền của policy trên `storage.objects` (migration 0118). Cột hiện trường theo BSD 1.4.
+ */
+export const designSurveyPhotos = pgTable(
+  'design_survey_photos',
+  {
+    id: primaryId(),
+    ...companyScoped(),
+
+    designProjectId: uuid('design_project_id')
+      .notNull()
+      .references(() => designProjects.id, { onDelete: 'cascade' }),
+    designSurveyId: uuid('design_survey_id')
+      .notNull()
+      .references(() => designSurveys.id, { onDelete: 'cascade' }),
+
+    storagePath: text('storage_path').notNull().unique(),
+    fileName: text('file_name').notNull(),
+    mimeType: varchar('mime_type', { length: 128 }).notNull(),
+    sizeBytes: bigint('size_bytes', { mode: 'number' }),
+    caption: text('caption'),
+    /** Thời điểm chụp theo thiết bị (EXIF) nếu đọc được — mốc nghiệp vụ của chứng cứ. */
+    takenAt: timestamp('taken_at', { withTimezone: true }),
+    clientCreatedAt: timestamp('client_created_at', { withTimezone: true }),
+    clientGeneratedId: uuid('client_generated_id').unique(),
+
+    ...auditColumns(),
+    ...softDelete(),
+  },
+  (t) => [
+    index('design_survey_photos_survey_idx').on(t.designSurveyId, t.createdAt),
+    index('design_survey_photos_project_idx').on(t.designProjectId),
+  ],
 );
 
 /**

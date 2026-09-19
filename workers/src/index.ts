@@ -47,6 +47,26 @@ app.use(
     },
     allowMethods: ['GET', 'POST', 'OPTIONS'],
     allowHeaders: ['Authorization', 'Content-Type'],
+    // Tên tệp tải về (DXF, XLSX) nằm ở header này; không khai thì trình duyệt không đọc được
+    // và mọi tệp rơi về một tên mặc định.
+    //
+    // `X-Sheet-*`: tỷ lệ và hướng giấy do BỘ VẼ chọn, và thân phản hồi là SVG nên không cài
+    // thêm trường được. Giao diện và API khác nguồn nhau (Worker `nvg` so với `nvg-api`), nên
+    // header không khai ở đây sẽ đọc ra `null` mà KHÔNG có lỗi nào — chip «Tỷ lệ 1:50» biến
+    // mất và không ai biết vì sao.
+    //
+    // `X-Anchor-*`: cỡ ảnh neo, tính bằng điểm ảnh (T57). Cái bẫy ở trên đã sập thật ngày
+    // 19/09/2026 — quên khai hai tên này thì trình duyệt không đặt được cỡ canvas và lượt vẽ
+    // dừng trước khi gọi mô hình. Có phép thử canh danh sách này khớp với header các tuyến
+    // thật sự đặt (`cors-expose.test.ts`), vì đây là loại lệch mà không mã nào ở hai phía nhìn
+    // thấy được.
+    exposeHeaders: [
+      'Content-Disposition',
+      'X-Sheet-Scale',
+      'X-Sheet-Orientation',
+      'X-Anchor-Width',
+      'X-Anchor-Height',
+    ],
     maxAge: 600,
   }),
 );
@@ -94,7 +114,7 @@ export async function runScheduledScans(env: Env): Promise<Record<string, number
   return results;
 }
 
-export { DesignPipeline, DigitisePipeline } from './design';
+export { AiDesignPipeline, DesignPipeline, DigitisePipeline } from './design';
 
 export default {
   fetch: app.fetch,

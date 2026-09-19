@@ -42,6 +42,20 @@ describe('Từ vựng phòng', () => {
     const groups = new Set(Object.keys(vocabulary.group_targets ?? {}));
     const codes = new Set(vocabulary.types.map((t) => t.code));
 
+    // Đích thứ ba, hợp lệ nhưng không phải mã phòng: LOẠI KHOẢNG RỖNG. Giếng trời không phải
+    // một phòng nên nó không có trong từ vựng, nhưng quy tắc vẫn nhắm được tới nó
+    // (`lightwell_max_area`). Đọc từ chính hợp đồng thay vì gõ tay, cùng lý do với vòng lặp
+    // gói địa phương ngay dưới đây.
+    const intentSchema = JSON.parse(
+      readFileSync(root('contracts/layout-intent.schema.json'), 'utf8'),
+    ) as { $defs?: Record<string, unknown> };
+    const voidKinds = new Set(
+      JSON.stringify(intentSchema)
+        .match(/"lightwell"|"courtyard"|"atrium"/g)
+        ?.map((m) => m.replaceAll('"', '')) ?? [],
+    );
+    expect(voidKinds.size).toBe(3);
+
     // Duyệt gói nền CỘNG mọi gói địa phương đang có, thay vì liệt kê tay: gói địa phương
     // sinh ra khi tỉnh gửi văn bản quy hoạch, và người thêm gói đó không có lý do gì để nhớ
     // quay lại sửa danh sách trong một tệp kiểm thử.
@@ -51,7 +65,7 @@ describe('Từ vựng phòng', () => {
       .map((entry) => `rules/locality/${entry.name}`);
 
     const targets = new Set<string>();
-    for (const dir of ['rules/base', ...localityDirs]) {
+    for (const dir of ['rules/structure', ...localityDirs]) {
       let files: string[];
       try {
         files = readdirSync(root(dir)).filter((f) => f.endsWith('.yaml'));
@@ -68,7 +82,9 @@ describe('Từ vựng phòng', () => {
     }
 
     expect(targets.size).toBeGreaterThan(0);
-    const missing = [...targets].filter((t) => !codes.has(t) && !groups.has(t));
+    const missing = [...targets].filter(
+      (t) => !codes.has(t) && !groups.has(t) && !voidKinds.has(t),
+    );
     expect(missing).toEqual([]);
   });
 
@@ -83,6 +99,26 @@ describe('Từ vựng phòng', () => {
     expect(index.lookup('PN2')).toBe('bedroom');
     expect(index.lookup('PN3')).toBe('bedroom');
     expect(index.lookup('WC2')).toBe('wc');
+  });
+
+  it('quy được nhãn NGUYÊN VĂN đo từ hai hồ sơ thật', () => {
+    // Nguồn: doc/design/13-ho-so-thuc-te.md muc 13.14. Day la nhan that, khong phai vi du.
+    expect(index.lookup('P.NGỦ 1')).toBe('bedroom');
+    expect(index.lookup('P.NGỦ3')).toBe('bedroom');
+    expect(index.lookup('P.BẾP')).toBe('kitchen');
+    expect(index.lookup('P.KHÁCH + THỜ')).toBe('living');
+    expect(index.lookup('WC 3.1')).toBe('wc');
+    expect(index.lookup('SÂN NGOÀI NHÀ')).toBe('courtyard');
+    expect(index.lookup('ban công kính')).toBe('balcony');
+    expect(index.lookup('hộp kỹ thuật')).toBe('shaft');
+    expect(index.lookup('PKTTM')).toBe('technical');
+  });
+
+  it('gỡ được đuôi diện tích viết liền nhãn', () => {
+    // Nhan that: "SẢNH/ SINH HOẠT CHUNG 11.3m²". Phai go CA dien tich lan so moi tra duoc,
+    // nen day la phep thu cho viec go DON chu khong phai go mot lan.
+    expect(index.lookup('SẢNH/ SINH HOẠT CHUNG 11.3m²')).toBe('circulation');
+    expect(index.lookup('P.NGỦ 2 16.118m²')).toBe('bedroom');
   });
 
   it('nhận cả chính mã chuẩn — bản vẽ do hệ thống xuất ra không phải đi vòng qua mô hình', () => {

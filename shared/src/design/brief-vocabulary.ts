@@ -38,13 +38,38 @@ export const BUILDING_TYPE_LABEL: Readonly<Record<DesignBriefBuildingType, strin
   nha_vuon: 'Nhà vườn',
 };
 
-export const STYLES = ['hien_dai', 'tan_co_dien', 'indochine'] as const;
+/**
+ * Phong cách kiến trúc — chín cái phổ biến trong nhà ở dân dụng Việt Nam.
+ *
+ * Đây là danh sách để CHỌN, không phải danh sách đầy đủ của ngành: mỗi mã thêm vào đây phải
+ * có một mục tương ứng trong `kb/render_prompts.yaml`, nếu không tuyến phối cảnh lặng lẽ lùi
+ * về `hien_dai` và khách nhận một ảnh không đúng thứ vừa chọn.
+ *
+ * Thứ tự ở đây là thứ tự hiện trên biểu mẫu: ba cái NVO làm nhiều nhất trước.
+ */
+export const STYLES = [
+  'hien_dai',
+  'tan_co_dien',
+  'indochine',
+  'mai_thai',
+  'toi_gian',
+  'nhiet_doi',
+  'dia_trung_hai',
+  'co_dien',
+  'bac_au',
+] as const;
 export type BriefStyle = (typeof STYLES)[number];
 
 export const STYLE_LABEL: Readonly<Record<BriefStyle, string>> = {
   hien_dai: 'Hiện đại',
   tan_co_dien: 'Tân cổ điển',
   indochine: 'Đông Dương',
+  mai_thai: 'Mái Thái',
+  toi_gian: 'Tối giản',
+  nhiet_doi: 'Nhiệt đới',
+  dia_trung_hai: 'Địa Trung Hải',
+  co_dien: 'Cổ điển',
+  bac_au: 'Bắc Âu',
 };
 
 export const FAMILY_ROLES = ['ong_ba', 'vo_chong', 'con', 'khach', 'nguoi_giup_viec'] as const;
@@ -58,6 +83,16 @@ export const FAMILY_ROLE_LABEL: Readonly<Record<FamilyRole, string>> = {
   nguoi_giup_viec: 'Người giúp việc',
 };
 
+/**
+ * Nguyện vọng tầng tương đối — CÁCH KHAI CŨ, chỉ còn để ĐỌC.
+ *
+ * Biểu mẫu không sinh thêm giá trị mới cho nó từ 06/09/2026: nó dùng một thang đo khác hẳn
+ * `required_spaces[].floor` (số tầng thật) cho đúng một khái niệm, nên cùng một biểu mẫu bắt
+ * người khai dịch qua lại giữa hai thang — và "tầng giữa" của một căn hai tầng thì không trỏ
+ * vào tầng nào. Thay bằng `family[].floor`.
+ *
+ * Giữ lại vì các đầu bài đã lưu mang giá trị này; bỏ đi là xoá một câu trả lời đã có.
+ */
 export const FLOOR_PREFS = ['low', 'mid', 'top'] as const;
 export type FloorPref = (typeof FLOOR_PREFS)[number];
 
@@ -92,18 +127,6 @@ export const ADJACENT_SUGGESTIONS: readonly { value: string; label: string }[] =
   { value: 'duong_lon', label: 'Đường lớn' },
   { value: 'dat_trong', label: 'Đất trống' },
   { value: 'ao_ho', label: 'Ao hồ, kênh mương' },
-];
-
-/** Ưu tiên của gia đình — nuôi hàm mục tiêu của bộ giải ở Lớp 3. */
-export const PRIORITIES: readonly { value: string; label: string }[] = [
-  { value: 'natural_light', label: 'Lấy sáng tự nhiên' },
-  { value: 'natural_ventilation', label: 'Thông gió tự nhiên' },
-  { value: 'feng_shui', label: 'Phong thuỷ' },
-  { value: 'area_efficiency', label: 'Hiệu quả diện tích' },
-  { value: 'privacy', label: 'Riêng tư giữa các thế hệ' },
-  { value: 'low_cost', label: 'Tiết kiệm chi phí' },
-  { value: 'easy_maintenance', label: 'Dễ bảo trì' },
-  { value: 'garden', label: 'Cây xanh, sân vườn' },
 ];
 
 /** Quan hệ của người quyết định cuối với công trình. */

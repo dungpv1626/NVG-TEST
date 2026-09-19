@@ -39,12 +39,25 @@ export const floorPlanSchema = z
       .describe(
         'BẮT BUỘC. Không có nó thì không tái lập được phương án cũ sau khi quy chuẩn thay đổi (03-data-contracts 3.4).',
       ),
+    /** Ô chữ nhật xây được của THỬA ĐẤT. KHÔNG phải hình bao công trình — xem `footprint_m`. */
     site: z
       .object({
         width_m: z.number().gt(0),
         depth_m: z.number().gt(0),
       })
-      .strict(),
+      .strict()
+      .describe(
+        'Ô chữ nhật xây được của THỬA ĐẤT. KHÔNG phải hình bao công trình — xem `footprint_m`.',
+      ),
+    /** Hình bao công trình trong hệ toạ độ thửa: [x0, y0, x1, y1]. Bằng `site` khi khoảng lùi bốn phía đều bằng không (nhà phố); thụt vào khi có khoảng lùi (biệt thự). Phòng và tường mang toạ độ TUYỆT ĐỐI trong thửa, nên nơi nào cần biết cạnh nào là mặt ngoài phải so với ô này chứ không so với `site` — so nhầm thì mọi mặt đứng của biệt thự trả về rỗng mà không có lỗi nào (V-22). Vắng mặt ở artifact tạo trước 07/09/2026; nơi đọc phải lùi về hộp bao của tường. */
+    footprint_m: z
+      .array(z.number().gte(0))
+      .min(4)
+      .max(4)
+      .describe(
+        'Hình bao công trình trong hệ toạ độ thửa: [x0, y0, x1, y1]. Bằng `site` khi khoảng lùi bốn phía đều bằng không (nhà phố); thụt vào khi có khoảng lùi (biệt thự). Phòng và tường mang toạ độ TUYỆT ĐỐI trong thửa, nên nơi nào cần biết cạnh nào là mặt ngoài phải so với ô này chứ không so với `site` — so nhầm thì mọi mặt đứng của biệt thự trả về rỗng mà không có lỗi nào (V-22). Vắng mặt ở artifact tạo trước 07/09/2026; nơi đọc phải lùi về hộp bao của tường.',
+      )
+      .optional(),
     /** Lưới trục do hệ thống ĐỀ XUẤT — kỹ sư kết cấu quyết định (CLAUDE.md 8.7). */
     structural_grid: z
       .object({
@@ -151,6 +164,22 @@ export const floorPlanSchema = z
           .optional(),
       })
       .strict(),
+    /** Nguồn sinh artifact — nhánh AI (T10) ghi để truy vết: kind 'ai' kèm nhà cung cấp, mô hình, tuyến, phiên bản lời dẫn và lý do mô hình đưa ra. Vắng hoặc 'solver' = nhánh tất định. Trường tuỳ chọn, thêm 08/09/2026; artifact cũ không có vẫn hợp lệ. */
+    generator: z
+      .object({
+        kind: z.enum(['solver', 'ai']),
+        provider: z.string().nullable().optional(),
+        model: z.string().nullable().optional(),
+        route: z.string().nullable().optional(),
+        prompt_version: z.string().nullable().optional(),
+        rationale: z.string().max(2000).nullable().optional(),
+      })
+      .strict()
+      .nullable()
+      .describe(
+        "Nguồn sinh artifact — nhánh AI (T10) ghi để truy vết: kind 'ai' kèm nhà cung cấp, mô hình, tuyến, phiên bản lời dẫn và lý do mô hình đưa ra. Vắng hoặc 'solver' = nhánh tất định. Trường tuỳ chọn, thêm 08/09/2026; artifact cũ không có vẫn hợp lệ.",
+      )
+      .optional(),
   })
   .strict()
   .describe(

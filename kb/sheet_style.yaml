@@ -1,0 +1,151 @@
+# Quy ước TRÌNH BÀY tờ bản vẽ của nhánh AI — khổ giấy, lề, nét, cỡ chữ, màu.
+#
+# ── Vì sao là DỮ LIỆU chứ không phải hằng số trong mã nguồn ────────────────────────────
+# Cùng lý lẽ với `layer_mapping.yaml` và `construction_norms.yaml` (CLAUDE.md 8.7): cách một
+# đơn vị trình bày bản vẽ là thói quen, và thói quen thì đổi. Bề dày nét và cỡ chữ là hai thứ
+# kiến trúc sư sẽ muốn chỉnh ngay sau khi nhìn tờ đầu tiên in ra giấy.
+#
+# ⚠️ Đây là `kb/`, KHÔNG phải `rules/` (CLAUDE.md 8.8 mục 7). Số ở đây quyết định tờ vẽ TRÔNG
+# thế nào; không con số nào ở đây được dùng để phán một phương án hợp lệ hay không. Đổi cỡ chữ
+# không bao giờ được làm đổi kết quả kiểm.
+#
+# ⚠️ Tệp này KHÔNG chứa câu cảnh báo in trên dải tiêu đề. Nhãn cảnh báo do MÃ NGUỒN chèn và
+# không tắt được (CLAUDE.md 8.7) — để nó ở đây là mở đường cho một lần sửa cấu hình xoá mất
+# dòng «Đề xuất AI — bản phác, không dùng để thi công». Câu chữ nằm ở `AI_DISCLAIMERS`
+# (`@nvg/shared/design`).
+#
+# ── Đơn vị ────────────────────────────────────────────────────────────────────────────
+# Mọi số đo trong tệp này tính bằng **mi-li-mét trên GIẤY**, không phải kích thước thật.
+# Hình học của công trình tính bằng xăng-ti-mét thật (hợp đồng `ai-floor-plan`); bộ vẽ đổi
+# sang mm giấy theo tỷ lệ đã chọn. Ở 1:100 thì 1 cm thật = 0,1 mm giấy.
+
+version: '1.0.0'
+
+# Khổ giấy A3, khai theo CẠNH DÀI và CẠNH NGẮN — hướng đặt giấy do bộ vẽ chọn, xem `orientations`.
+paper:
+  long_mm: 420
+  short_mm: 297
+
+# Hướng đặt giấy được phép thử, theo thứ tự ưu tiên khi cả hai cùng vừa.
+#
+# Nhà phố mặt tiền 4 m sâu 15 m nằm trên tờ ngang thì chiếm một dải hẹp giữa tờ giấy, còn bao
+# nhiêu bỏ trắng — và ở tỷ lệ đủ nhỏ để lọt bề dài, chữ trong phòng bé tới mức phải bỏ. Cho
+# phép xoay giấy thì đúng hình ấy lên được tỷ lệ lớn hơn một bậc. Đây là cách hồ sơ giấy vẫn
+# làm, không phải sáng kiến riêng.
+orientations: [landscape, portrait]
+
+# Lề trong của khung bản vẽ. Trái rộng hơn để đóng ghim không ăn vào hình.
+margin_mm:
+  left: 20
+  right: 10
+  top: 10
+  bottom: 10
+
+# Khung tên: CỘT DỌC sát mép phải, cao hết khung bản vẽ.
+#
+# Đo trên hồ sơ thật (HS-01, tập kiến trúc 54 tờ A3, 10/09/2026): NVG đặt khung tên thành một
+# cột đứng bên phải rộng khoảng 55 mm, không phải dải ngang dưới đáy. Bản trước của tệp này
+# dựng dải ngang — nhìn không ra tờ bản vẽ kiến trúc, và đó là chỗ sai đập vào mắt nhất.
+#
+# ⚠️ CỐ Ý chỉ mượn HÌNH DẠNG, không mượn nội dung. Khung tên thật mang chủ đầu tư, địa chỉ công
+# trình, chữ ký năm người — dữ liệu hạng 1. Tờ này sẽ được rasterise và gửi cho nhà cung cấp ảnh
+# ở bước phối cảnh, nên nó không được mang một chữ nào nhận ra được khách hàng (T12).
+title_block:
+  w_mm: 55
+  row_h_mm: 9
+  pad_mm: 2.5
+
+# Tên bản vẽ in đậm, căn giữa NGAY DƯỚI hình — đúng chỗ hồ sơ thật đặt nó.
+sheet_title:
+  gap_mm: 14 # khoảng cách từ mép dưới vùng hình xuống dòng tên bản vẽ
+  band_mm: 20 # chiều cao dải dành riêng cho dòng tên, trừ khỏi vùng vẽ hình
+
+# Tỷ lệ: chọn con số NHỎ NHẤT trong danh sách mà tầng còn lọt vùng vẽ.
+#
+# Đo trên hồ sơ thật: tờ mặt bằng của HS-01 ghi **1:70** — NVG không bó vào 1:50/1:100/1:200 mà
+# chọn tỷ lệ vừa tờ. Bản trước chỉ thử ba mức nên một ngôi nhà dài 15,9 m tụt thẳng từ 1:50
+# xuống 1:100 và chữ trong phòng bé đi một nửa dù tờ giấy còn thừa chỗ.
+scale_steps: [20, 25, 30, 40, 50, 60, 70, 75, 80, 100, 125, 150, 200, 250]
+
+# Bề dày nét, mm giấy. Thang nét theo ISO: 0,13 · 0,18 · 0,25 · 0,35 · 0,50 · 0,70.
+line_mm:
+  frame: 0.7 # khung bản vẽ
+  title_rule: 0.35 # đường kẻ của dải tiêu đề
+  wall_cut: 0.25 # viền tường bị mặt phẳng cắt cắt qua — nét đậm nhất của HÌNH
+  column: 0.25 # viền cột; ruột cột tô đặc
+  railing: 0.18 # lan can ban công, sân thượng
+  soft_divider: 0.13 # ranh MỀM giữa các khu của một không gian mở — không phải tường (T48)
+  opening: 0.25 # má cửa, nắp cửa sổ
+  door_leaf: 0.18 # cánh cửa và cung quét
+  window: 0.18 # nét kính cửa sổ
+  stair: 0.25 # bậc và vế thang
+  stair_arrow: 0.25
+  void: 0.18 # nét gạch chéo ô thông tầng, giếng trời
+  dim_line: 0.13 # đường và gióng của chuỗi kích thước
+  dim_tick: 0.25 # gạch chéo 45° đầu mút
+  north: 0.35
+
+# Cỡ chữ, mm giấy (chiều cao chữ hoa danh nghĩa). Cỡ nhỏ nhất đọc được khi in A3 là ~1,8 mm.
+text_mm:
+  sheet_title: 5.0 # tên bản vẽ in dưới hình
+  level_name: 3.2 # tên tầng trong khung tên
+  disclaimer: 2.4 # câu cảnh báo — CỐ Ý không nhỏ hơn tên phòng
+  strip_note: 2.2 # nhãn và giá trị trong khung tên
+  block_label: 1.8 # nhãn nhỏ in hoa của từng ô khung tên
+  room_name: 2.4
+  room_area: 2.0
+  dim: 2.0
+  north: 3.0
+  footer: 1.8 # ghi chú chân tờ
+
+# Chữ co lại khi phòng hẹp, nhưng không nhỏ hơn ngưỡng này — dưới đó thì bỏ hẳn chữ, vì một
+# dòng chữ không đọc được vẫn che mất nét vẽ.
+text_min_mm: 1.6
+
+# Quầng nền màu giấy vẽ quanh chữ, để tên phòng còn đọc được khi nằm đè lên bậc thang, nét
+# gạch ô thông tầng hay ruột tường tô đặc. Bề rộng nửa quầng, mm giấy. Đặt 0 là tắt.
+text_halo_mm: 0.45
+
+font_family: "'Be Vietnam Pro', 'Noto Sans', 'Segoe UI', system-ui, sans-serif"
+
+# Màu. Lấy trong hệ màu của CGD 6.3 chứ không dùng đen tuyền `#000000` — cùng quy tắc với
+# giao diện. Bản vẽ vẫn đọc như bản vẽ đơn sắc: đậm nhạt phân cấp, không tô màu công năng.
+colour:
+  ink: '#172B4D' # chữ chính, viền tường, khung
+  hairline: '#44546F' # nét phụ: cửa, thang, lan can
+  dim: '#6B778C' # chuỗi kích thước — nhạt hơn hình
+  # Ruột tường để TRẮNG, viền hai nét mảnh — đúng cách hồ sơ thật vẽ (đo 10/09/2026). Bản
+  # trước tô đặc màu mực, và cả tờ đọc thành một vệt đen: chỉ CỘT mới được tô đặc, còn tường
+  # thì không. Đây là khác biệt lớn nhất giữa một tờ bản vẽ và một sơ đồ khối.
+  wall_fill: '#FFFFFF'
+  void_fill: '#DCDFE4' # ô thông tầng, giếng trời
+  paper: '#FFFFFF'
+
+# Chuỗi kích thước.
+dim:
+  first_offset_mm: 10 # khoảng cách từ mép hình tới chuỗi kích thước thứ nhất
+  row_gap_mm: 7 # khoảng cách giữa chuỗi chi tiết và chuỗi tổng
+  tick_mm: 2.0 # nửa chiều dài gạch chéo 45°
+  ext_overshoot_mm: 1.5 # đoạn gióng vượt qua đường kích thước
+  text_gap_mm: 1.0 # khe giữa chữ số và đường kích thước
+
+# Nhãn phòng — khuôn đo được trên hồ sơ thật (HS-01, tờ «mặt bằng công năng»).
+#
+# Hai dòng trong một khung mảnh: tên phòng ở trên, diện tích ở dưới dạng `64(M2)`. Bản trước
+# viết một dòng «Phòng khách · 14,5 m²» — sai cả khuôn lẫn cách ghi đơn vị.
+#
+# ⚠️ `uppercase` mâu thuẫn bề mặt với CGD 4.4 («không in hoa để nhấn mạnh»). Quy tắc đó viết cho
+# microcopy GIAO DIỆN; đây là quy ước BẢN VẼ, và nó là thứ đo được trên hồ sơ NVG chứ không phải
+# lựa chọn nhấn mạnh. Để thành dữ liệu nên đổi lại chỉ tốn một dòng.
+room_label:
+  uppercase: true
+  box: true
+  box_pad_mm: 1.2
+  # Hậu tố đơn vị diện tích, nguyên văn hồ sơ. Dấu thập phân cũng theo hồ sơ: `3.1(M2)`.
+  area_suffix: '(M2)'
+
+# Ký hiệu.
+symbol:
+  north_r_mm: 7 # bán kính mũi tên bắc
+  stair_arrow_head_mm: 2.5
+  stair_gap_mm: 0.4 # khe giữa mép ô thang và nét bậc, mm giấy

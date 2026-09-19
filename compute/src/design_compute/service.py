@@ -31,6 +31,12 @@ from design_compute.adapters import (
     floor_plan_from_result,
     infeasibility_report_from_result,
 )
+from design_compute.sheet import render_svg
+from design_compute.schedules import build_schedules, schedules_to_xlsx
+from design_compute.massing import MassingError, massing_glb
+from design_compute.version import solver_version
+from design_compute.geometry.norms import load_construction_norms
+from design_compute.cad.export import build_sheet
 from design_compute.cad import (
     CadConversionError,
     DxfExportError,
@@ -117,6 +123,10 @@ def health() -> dict[str, Any]:
         "ok": True,
         "service": "design-compute",
         "rule_pack": {"id": pack.id, "version": pack.version, "rules": len(pack.rules)},
+        # Dấu vân của mã hình học + chuẩn cấu tạo + rule pack. Worker đưa chuỗi này vào khoá bộ
+        # nhớ đệm của bước giải; thiếu nó thì một bản vá hình học không bao giờ tới được người
+        # xem vì kết quả cũ được dùng lại (xem `design_compute/version.py`).
+        "solver_version": solver_version(),
         "contracts": available_contracts(),
         # Đọc `.dwg` phụ thuộc một công cụ KHÔNG được commit (giấy phép Open Design Alliance),
         # nên cùng một ảnh Docker có thể có hoặc không có khả năng này. Nói ra ở đây để lớp gọi
@@ -206,6 +216,24 @@ class ExportDxfPayload(BaseModel):
     floor_plan: dict[str, Any]
     level: int = Field(default=1, ge=1, le=12)
     title_block: TitleBlockPayload
+    # Nhãn tiếng Việt của từng không gian và nhóm mã phòng — Worker cấp từ `kb/`, Container không
+    # tự tra (cùng lý do với /solve).
+    labels: dict[str, str] | None = None
+    groups: dict[str, list[str]] | None = None
+    sheet_code: str | None = None
+
+
+def _title_of(payload: ExportDxfPayload) -> TitleBlock:
+    return TitleBlock(
+        project_code=payload.title_block.project_code,
+        project_name=payload.title_block.project_name,
+        discipline=payload.title_block.discipline,
+        sheet=payload.title_block.sheet,
+        version=payload.title_block.version,
+        date=payload.title_block.date,
+        rule_pack_version=str(payload.floor_plan.get("rule_pack_version", "")),
+        sheet_code=payload.sheet_code or "",
+    )
 
 
 @app.post("/export/dxf")
@@ -216,20 +244,84 @@ def export_dxf(payload: ExportDxfPayload) -> Response:
     ghi ra đĩa, nên không có chỗ nào để tệp nằm lại chờ ai tới lấy.
     """
     validate("floor-plan", payload.floor_plan)
-    title = TitleBlock(
-        project_code=payload.title_block.project_code,
-        project_name=payload.title_block.project_name,
-        discipline=payload.title_block.discipline,
-        sheet=payload.title_block.sheet,
-        version=payload.title_block.version,
-        date=payload.title_block.date,
-        rule_pack_version=str(payload.floor_plan.get("rule_pack_version", "")),
-    )
     try:
-        data = export_floor_plan(payload.floor_plan, level=payload.level, title=title)
+        data = export_floor_plan(
+            payload.floor_plan,
+            level=payload.level,
+            title=_title_of(payload),
+            labels=payload.labels,
+            groups=payload.groups,
+        )
     except DxfExportError as exc:
         return JSONResponse(status_code=422, content={"error": str(exc), "retryable": False})
     return Response(content=data, media_type="application/dxf")
+
+
+@app.post("/export/svg")
+def export_svg(payload: ExportDxfPayload) -> Response:
+    """Cùng tờ bản vẽ đó, dạng SVG để trình duyệt HIỂN THỊ — cùng một `SheetModel` với DXF.
+
+    Trình duyệt không dựng hình (bất biến #5): nó nhận tệp này và chỉ tô màu bằng CSS.
+    """
+    validate("floor-plan", payload.floor_plan)
+    try:
+        sheet = build_sheet(
+            payload.floor_plan,
+            level=payload.level,
+            title=_title_of(payload),
+            labels=payload.labels,
+            groups=payload.groups,
+        )
+    except DxfExportError as exc:
+        return JSONResponse(status_code=422, content={"error": str(exc), "retryable": False})
+    return Response(content=render_svg(sheet), media_type="image/svg+xml")
+
+
+class MassingPayload(BaseModel):
+    floor_plan: dict[str, Any]
+    # Nhóm mã phòng (`kb/room_vocabulary.yaml`) — cần nhóm `outdoor` để dựng lan can thay vì
+    # tường ở cạnh hở của ban công. Worker cấp, giống hệt tuyến xuất tờ bản vẽ.
+    groups: dict[str, list[str]] | None = None
+
+
+@app.post("/export/glb")
+def export_glb(payload: MassingPayload) -> Response:
+    """Khối ba chiều sơ bộ (glTF nhị phân) đùn từ mặt bằng — trình duyệt chỉ xem (bất biến #5)."""
+    validate("floor-plan", payload.floor_plan)
+    try:
+        data = massing_glb(payload.floor_plan, payload.groups)
+    except MassingError as exc:
+        return JSONResponse(status_code=422, content={"error": str(exc), "retryable": False})
+    return Response(content=data, media_type="model/gltf-binary")
+
+
+class SchedulesPayload(BaseModel):
+    floor_plan: dict[str, Any]
+    floorplan_ref: str
+    labels: dict[str, str] | None = None
+    title: str = ""
+
+
+@app.post("/schedules")
+def schedules(payload: SchedulesPayload) -> JSONResponse:
+    """Bảng thống kê cửa · cửa sổ · diện tích · khối lượng sơ bộ, tính lại từ mặt bằng mỗi lần gọi."""
+    validate("floor-plan", payload.floor_plan)
+    result = build_schedules(payload.floor_plan, floorplan_ref=payload.floorplan_ref, norms=load_construction_norms())
+    validate("schedules", result)
+    return JSONResponse(result)
+
+
+@app.post("/export/xlsx")
+def export_xlsx(payload: SchedulesPayload) -> Response:
+    """Cùng bảng thống kê đó, dạng XLSX để bàn giao — nhãn cảnh báo ở dòng đầu mỗi sheet."""
+    validate("floor-plan", payload.floor_plan)
+    result = build_schedules(payload.floor_plan, floorplan_ref=payload.floorplan_ref, norms=load_construction_norms())
+    validate("schedules", result)
+    data = schedules_to_xlsx(result, labels=payload.labels, title=payload.title)
+    return Response(
+        content=data,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
 
 
 # ---------------------------------------------------------------------------

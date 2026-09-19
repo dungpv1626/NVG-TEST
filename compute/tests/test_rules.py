@@ -186,22 +186,22 @@ class TestStructuralValidation:
 
 class TestLocalityOverride:
     def test_locality_overrides_base_by_rule_id(self) -> None:
-        base = load_pack(RULES_ROOT / "base")
+        base = load_pack(RULES_ROOT / "structure")
         rule = Rule(
-            id="corridor_min_width",
+            id="every_room_requires_access",
             applies_to=("nha_pho",),
             scope="floor",
-            predicate="min_dimension",
+            predicate="requires_access",
             severity=Severity.ERROR,
-            source="QCVN 01:2021/BXD",
-            params={"target": "circulation", "value_m": 1.2},
+            source="nguyên lý bố cục",
+            params={"target": "habitable"},
         )
         from design_compute.rules.model import RulePack
 
         override = RulePack(id="somewhere", version="2026.08.1", rules=(rule,))
         merged = merge(base, override)
 
-        assert merged.by_id()["corridor_min_width"].params["value_m"] == 1.2
+        assert merged.by_id()["every_room_requires_access"].params["target"] == "habitable"
         # Quy tắc không có trong pack địa phương thì giữ nguyên từ pack nền.
         assert "stair_alignment" in merged.by_id()
         assert len(merged.rules) == len(base.rules)
@@ -213,41 +213,54 @@ class TestLocalityOverride:
         nào; ném lỗi ở đây nghĩa là Lớp 2 chạy xong (Worker vốn lùi về gói nền) rồi Lớp 3b
         mới đổ — hai lớp đọc cùng một rule pack mà kết luận khác nhau về sự tồn tại của nó.
         """
-        base = load_pack(RULES_ROOT / "base")
+        base = load_for_locality(RULES_ROOT, None)
         fallback = load_for_locality(RULES_ROOT, "nowhere")
         assert [r.id for r in fallback.rules] == [r.id for r in base.rules]
         assert fallback.locality is None
 
 
 class TestShippedPacks:
-    """Các pack thật sự nằm trong `rules/` phải nạp được và nhất quán bên trong."""
+    """Các pack thật sự nằm trong `rules/` phải nạp được và nhất quán bên trong.
 
-    def test_base_pack_loads(self) -> None:
-        pack = load_pack(RULES_ROOT / "base")
-        assert len(pack.rules) >= 20, "Mốc 0.3 yêu cầu ít nhất 20 quy tắc"
+    Từ 13/09/2026 gói nền là `rules/structure/` — nguyên lý bố cục, KHÔNG phải quy chuẩn
+    (Haan: «bỏ quy chuẩn VN đi», cho toàn bộ bộ giải). `rules/base/` đã xoá.
+    """
+
+    def test_quy_chuan_pack_is_gone(self) -> None:
+        assert not (RULES_ROOT / "base").exists()
+
+    def test_structure_pack_loads_with_exactly_the_layout_rules(self) -> None:
+        pack = load_pack(RULES_ROOT / "structure")
+        assert {r.id for r in pack.rules} == {
+            "stair_alignment",
+            "shaft_alignment",
+            "every_room_requires_access",
+        }
         assert pack.version
 
-    def test_base_pack_has_no_blocking_issues(self) -> None:
-        issues = [i for i in validate_pack(load_pack(RULES_ROOT / "base")) if i.level == "error"]
+    def test_structure_pack_has_no_blocking_issues(self) -> None:
+        issues = validate_pack(load_pack(RULES_ROOT / "structure"))
         assert issues == []
 
-    def test_base_pack_carries_setback_and_density(self) -> None:
-        """Khoảng lùi và mật độ là QCVN — quy chuẩn QUỐC GIA, nên phải ở gói nền.
-
-        Chúng từng nằm trong gói `thai-binh`, và hệ quả là tỉnh nào chưa có gói riêng cũng
-        chạy không khoảng lùi, không trần mật độ: biệt thự được phép phủ kín lô mà không có
-        lỗi nào nổ ra.
-        """
-        by_id = load_pack(RULES_ROOT / "base").by_id()
-        assert "setback_front" in by_id
-        assert "max_density_villa" in by_id
-        assert "corridor_min_width" in by_id
-
-    def test_every_error_rule_cites_a_legal_document(self) -> None:
-        """The invariant the whole split rests on."""
+    def test_structure_pack_carries_no_legal_threshold(self) -> None:
+        """Khoảng lùi, mật độ, diện tích và kích thước tối thiểu, lấy sáng — không số nào còn
+        CHẶN. Gói kinh nghiệm NVG vẫn có vài ngưỡng, nhưng chỉ ở mức cảnh báo."""
         pack = load_for_locality(RULES_ROOT, "hung_yen")
-        offenders = [r.id for r in pack.errors() if not r.is_legal]
-        assert offenders == [], f"quy tắc chặn phát hành mà không dẫn văn bản: {offenders}"
+        banned = {"setback", "max_density", "min_area", "min_dimension", "requires_daylight", "module_multiple"}
+        assert [r.id for r in pack.errors() if r.predicate in banned] == []
+        assert [r.id for r in pack.rules if r.predicate in {"setback", "max_density"}] == []
+        assert [r.id for r in pack.rules if r.is_legal] == []
+
+    def test_experience_pack_reaches_the_solver(self) -> None:
+        """Container đọc cùng gói kinh nghiệm Worker gộp vào `rulePackFor`."""
+        ids = {r.id for r in load_for_locality(RULES_ROOT, None).rules}
+        assert {"garage_on_access_face", "outdoor_on_open_face", "stair_alignment"} <= ids
+
+    def test_every_error_rule_is_legal_or_structural(self) -> None:
+        """Mức chặn chỉ dành cho văn bản pháp quy hoặc ràng buộc bố cục — không bao giờ cho kinh nghiệm."""
+        pack = load_for_locality(RULES_ROOT, "hung_yen")
+        offenders = [r.id for r in pack.errors() if not (r.is_legal or r.is_structural)]
+        assert offenders == [], f"quy tắc chặn mà không phải pháp quy hay bố cục: {offenders}"
 
     def test_no_rule_targets_out_of_scope_building_type(self) -> None:
         pack = load_for_locality(RULES_ROOT, "hung_yen")

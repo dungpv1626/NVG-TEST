@@ -1,0 +1,159 @@
+# Danh mục LOẠI TỜ trong một bộ hồ sơ nhà ở NVG — thước đo phạm vi của engine.
+#
+# Nguồn: đọc ATTRIB khung tên của sáu tệp DXF thuộc hai hồ sơ thật, ngày 05/09/2026.
+# Chi tiết cách đo: `doc/design/13-ho-so-thuc-te.md` mục 13.4 và 13.14.
+#
+# ── Tệp này dùng để làm gì ─────────────────────────────────────────────────────────────
+# Mục tiêu cuối là "thiết kế được TOÀN BỘ các loại bản vẽ" (Haan, 05/09/2026). Không có
+# danh mục đóng thì câu đó không đo được, và "engine đã làm được bao nhiêu" mãi mãi là
+# cảm tính. Đây là mẫu số của chỉ số đó.
+#
+# ── Vì sao là DỮ LIỆU ──────────────────────────────────────────────────────────────────
+# Danh mục sẽ dài thêm: hai hồ sơ này đều là nhà phố 5 tầng của NVO. Biệt thự, nhà xưởng
+# NVC, hay hồ sơ có tầng hầm sẽ mang thêm loại tờ chưa có ở đây. Thêm một loại là sửa tệp
+# này, không sửa mã.
+#
+# ── Trường `engine` ────────────────────────────────────────────────────────────────────
+#   co            engine sinh được trọn vẹn và phát hành được
+#   nen           engine chỉ chuẩn bị NỀN hình học; kỹ sư có chứng chỉ tính, kiểm và ký.
+#                 Đây là bất biến #9 (CLAUDE.md 8.2), KHÔNG phải hạn chế tạm thời
+#   chep          nội dung lặp lại giữa các hồ sơ, sinh ra là CHÉP chứ không phải thiết kế
+#   chua          chưa làm
+#
+# ⚠️ `nen` không bao giờ chuyển thành `co` bằng cách viết thêm mã. Nó chỉ đổi nếu NVG đổi
+#    quy trình ký, và đó không phải quyết định của phần mềm.
+
+version: '1.0.0'
+
+do_duoc:
+  ho_so: ['HS-01 (nhà phố 5 tầng + phòng KTTM)', 'HS-02 (nhà phố, 5 tầng)']
+  so_to: { HS-01: 170, HS-02: 95 }
+  kho_giay: A3 # ca 265 to
+  ty_le_thuong_gap: ['1:70', '1:60', '1:100', '1:40', '1:30', '1:20']
+  ghi_chu: >-
+    Cả hai đều là nhà phố liền kề do NVO thiết kế. Danh mục dưới đây CHƯA phủ biệt thự,
+    nhà có tầng hầm, hay công trình công nghiệp của NVC.
+
+# ═══ KIẾN TRÚC — 16 loại ══════════════════════════════════════════════════════════════
+kien_truc:
+  - {
+      ma: 'kt/01-07',
+      ten: 'Mặt bằng công năng',
+      theo_tang: true,
+      engine: co,
+      ghi_chu: 'Engine sinh trọn từ 06/09/2026 qua mô hình tờ (compute/src/design_compute/sheet/): đủ tám yếu tố của 12-ux-ui 12.8, DXF lớp NV-* có DIMENSION thật và khung tên BLOCK/ATTRIB, SVG cùng nguồn.',
+    }
+  - {
+      ma: 'kt/08-14',
+      ten: 'Mặt bằng kiến trúc',
+      theo_tang: true,
+      engine: chua,
+      ghi_chu: 'Khác mặt bằng công năng ở chỗ có chuỗi kích thước và ký hiệu hoàn thiện.',
+    }
+  - { ma: 'kt/30-35', ten: 'Mặt bằng lát sàn', theo_tang: true, engine: chua }
+  - { ma: 'kt/36-41', ten: 'Mặt bằng định vị cửa', theo_tang: true, engine: chua }
+  - { ma: 'kt/07', ten: 'Mặt bằng mái (bê tông / ngói)', theo_tang: false, engine: chua }
+  - {
+      ma: 'kt/15-17',
+      ten: 'Mặt đứng theo trục',
+      theo_tang: false,
+      engine: chua,
+      ghi_chu: 'Bốn hướng: a-b, b-a, 1-4, 4-1.',
+    }
+  - { ma: 'kt/18,20', ten: 'Mặt cắt kiến trúc', theo_tang: false, engine: chua }
+  - { ma: 'kt/21', ten: 'Mặt bằng thang bộ', theo_tang: false, engine: chua }
+  - { ma: 'kt/22-23', ten: 'Mặt cắt thang bộ', theo_tang: false, engine: chua }
+  - { ma: '-', ten: 'Chi tiết bậc thang điển hình', theo_tang: false, engine: chua }
+  - {
+      ma: 'kt/24-29',
+      ten: 'Chi tiết WC',
+      theo_tang: false,
+      engine: chua,
+      ghi_chu: 'Một tờ cho mỗi WC: HS-01 có 6 tờ.',
+    }
+  - { ma: 'kt/42-48', ten: 'Chi tiết cửa đi', theo_tang: false, engine: chua }
+  - { ma: 'kt/49-50', ten: 'Chi tiết cửa sổ', theo_tang: false, engine: chua }
+  - {
+      ma: 'kt/51',
+      ten: 'Thống kê cửa',
+      theo_tang: false,
+      engine: chep,
+      ghi_chu: 'Bảng suy thẳng từ danh sách openings — xem kb/construction_norms.yaml.',
+    }
+  - { ma: '-', ten: 'Chi tiết lan can ban công', theo_tang: false, engine: chua }
+  - { ma: 'kt/19', ten: 'Chi tiết mái kính / mái trang trí', theo_tang: false, engine: chua }
+
+# ═══ KẾT CẤU — 21 loại ════════════════════════════════════════════════════════════════
+# Toàn bộ nhóm này là `nen` hoặc `chep`. Không tờ nào engine tự phát hành: tiết diện, thép
+# và tải trọng là việc của kỹ sư có chứng chỉ hành nghề (bất biến #9).
+ket_cau:
+  - { ma: 'DMBV', ten: 'Danh mục bản vẽ', engine: chep }
+  - {
+      ma: 'GC-01..05',
+      ten: 'Ghi chú chung',
+      engine: chep,
+      ghi_chu: 'Giống nhau giữa hai hồ sơ. Chứa bảng TCVN, cấp bê tông, chiều dày lớp bảo vệ.',
+    }
+  - { ma: 'KC-01', ten: 'Mặt bằng định vị cọc khoan nhồi', engine: nen }
+  - { ma: 'KC-02', ten: 'Mặt bằng kết cấu móng (đài móng / móng băng)', engine: nen }
+  - { ma: 'KC-03', ten: 'Mặt bằng định vị cổ móng / cổ cột', engine: nen }
+  - { ma: '-', ten: 'Mặt bằng định vị giằng chân tường', engine: nen }
+  - { ma: 'KC-05..07', ten: 'Chi tiết đài móng / móng băng', engine: nen }
+  - { ma: 'KC-08', ten: 'Chi tiết thép cổ móng / cổ cột - giằng tường', engine: nen }
+  - { ma: 'KC-09', ten: 'Thống kê thép móng', engine: nen }
+  - { ma: 'KC-11', ten: 'Chi tiết bể nước ngầm', engine: nen }
+  - { ma: 'KC-12', ten: 'Chi tiết bể phốt', engine: nen }
+  - { ma: '-', ten: 'Thống kê thép bể ngầm', engine: nen }
+  - { ma: 'KC-10,13-15', ten: 'Mặt bằng định vị cột', theo_tang: true, engine: nen }
+  - { ma: 'KC-16..18', ten: 'Chi tiết thép cột', engine: nen }
+  - { ma: 'KC-19', ten: 'Thống kê thép cột', engine: nen }
+  - { ma: 'KC-20,26,32,38,44,50', ten: 'Mặt bằng kết cấu', theo_tang: true, engine: nen }
+  - { ma: 'KC-21..23 (mỗi tầng 3 tờ)', ten: 'Chi tiết dầm', theo_tang: true, engine: nen }
+  - {
+      ma: 'KC-24,30,36,42,48,51',
+      ten: 'Mặt bằng thép sàn (lớp trên / lớp dưới)',
+      theo_tang: true,
+      engine: nen,
+    }
+  - { ma: 'KC-25,31,37,43,49,52', ten: 'Thống kê thép dầm sàn', theo_tang: true, engine: nen }
+  - { ma: 'KC-53..60', ten: 'Kết cấu thang bộ (mặt bằng, mặt cắt, chi tiết thép)', engine: nen }
+  - {
+      ma: 'KC-61..66',
+      ten: 'Mặt bằng định vị lanh tô và chi tiết lanh tô',
+      theo_tang: true,
+      engine: nen,
+    }
+
+# ═══ ĐIỆN NƯỚC — 10 loại ══════════════════════════════════════════════════════════════
+# Haan chốt 05/09/2026: nhóm này làm SAU, nhưng chắc chắn làm.
+dien_nuoc:
+  - { ma: 'DN/01-06', ten: 'Mặt bằng điện động lực', theo_tang: true, engine: nen }
+  - { ma: 'DN/07-11', ten: 'Mặt bằng điện nhẹ', theo_tang: true, engine: nen }
+  - { ma: 'DN/17-22', ten: 'Mặt bằng chiếu sáng', theo_tang: true, engine: nen }
+  - { ma: 'DN/12-16', ten: 'Mặt bằng điều hòa', theo_tang: true, engine: nen }
+  - { ma: 'DN/23-25', ten: 'Sơ đồ nguyên lý điện', engine: nen }
+  - { ma: 'DN/26', ten: 'Sơ đồ nguyên lý internet + camera', engine: nen }
+  - { ma: 'DN/27', ten: 'Mặt bằng cấp nước căn hộ', engine: nen }
+  - { ma: 'DN/28-33', ten: 'Mặt bằng cấp nước', theo_tang: true, engine: nen }
+  - { ma: 'DN/34-39', ten: 'Mặt bằng thoát nước', theo_tang: true, engine: nen }
+  - { ma: 'DN/40-43', ten: 'Mặt bằng thoát bệt', theo_tang: true, engine: nen }
+
+# ── Ba năng lực nền, điều kiện cần của MỌI loại tờ ở trên ──────────────────────────────
+# Chưa Mốc nào nhận sở hữu ba thứ này (vướng mắc V-9). Chúng không thuộc loại tờ nào cả,
+# nên dễ rơi vào khe giữa các Mốc — ghi ở đây để chúng có một chỗ đứng.
+nang_luc_nen:
+  - {
+      ten: 'Chuỗi kích thước hai lớp đủ bốn cạnh',
+      trang_thai: co,
+      ghi_chu: 'Trước 06/09/2026 kho mã không có một DIMENSION nào; nay mỗi tờ mặt bằng có 12 (hai lớp, bốn cạnh). Hồ sơ thật có hơn 10.000.',
+    }
+  - {
+      ten: 'Bong bóng trục hai đầu, có nhãn',
+      trang_thai: co,
+      ghi_chu: 'Có từ 06/09/2026 — compute/src/design_compute/sheet/model.py',
+    }
+  - {
+      ten: 'Khung tờ khổ giấy + khung tên',
+      trang_thai: co,
+      ghi_chu: 'Xem kb/title_block.yaml. Ba họ quy ước, phải chọn một để XUẤT.',
+    }

@@ -46,8 +46,14 @@ năm. Pipeline số hoá phục vụ dòng dự án mới nhiều hơn là backl
 
 ## 6.1 Pipeline số hoá
 
-Một công trình không phải một bản vẽ. Một bộ hồ sơ đầy đủ gồm ~10 nhóm tài liệu trong
-9 thư mục (`01_Đầu bài–khảo sát` → `09_Điều chỉnh–hoàn công`).
+Một công trình không phải một bản vẽ. Một bộ hồ sơ đầy đủ gồm ~10 nhóm tài liệu.
+
+> ⚠️ **Sửa 05/09/2026 sau khi đối chiếu hai hồ sơ thật.** Câu gốc ghi "9 thư mục
+> (`01_Đầu bài–khảo sát` → `09_Điều chỉnh–hoàn công`)". **Hồ sơ thật có 4 thư mục** và
+> không thư mục nào mang tên đó: `Ảnh khảo sát hiện trạng/` · `Hợp đồng - Báo giá - Phát
+> sinh/` · `Hồ sơ thiết kế thi công/Hồ sơ KT-KC-DN/` · `Hồ sơ thiết kế thi công/Phối
+> cảnh/`. Phân loại thư mục phải là **dữ liệu khớp mẫu trong `kb/`**, không phải danh sách
+> cứng. Xem `13-ho-so-thuc-te.md` mục 13.2.
 
 Chạy trên Cloudflare Workflows: **mỗi file là một step**. Một file lỗi không giết cả mẻ; sửa
 extractor rồi chạy lại riêng phần lỗi.
@@ -59,12 +65,21 @@ nhân sự và các thời kỳ.
 
 1. Quét thư mục dự án, băm nội dung để gộp bản trùng
 2. Xác định bản có hiệu lực theo thứ tự ưu tiên:
-   - Parse tên file theo quy ước `NVO026_NhaAnhA_KT_MatBang_V03_11082026` → lấy số
-     phiên bản cao nhất
-   - File trong thư mục `08_Hồ sơ phát hành` được ưu tiên tuyệt đối
+   - Ngày ở **đầu** tên file, nếu có
+   - Ngày trong **ATTRIB khung tên** của từng tờ
    - Vẫn mơ hồ → xếp hàng chờ người xác nhận, **không đoán**
+
 3. Phân loại loại bản vẽ: đường dẫn thư mục + tên file + nội dung khung tên. LLM đọc
    khung tên rồi phân loại chính xác hơn quy tắc cứng
+
+> ⚠️ **Sửa 05/09/2026 sau khi đối chiếu hai hồ sơ thật.** Hai bước gốc — "parse tên file theo quy ước
+> `NVO026_NhaAnhA_KT_MatBang_V03_11082026` → lấy số phiên bản cao nhất" và "file trong
+> thư mục `08_Hồ sơ phát hành` được ưu tiên tuyệt đối" — **đều không dùng được**. Tên file
+> thật không có số phiên bản, ngày đứng trước, và không nhất quán ngay trong cùng một hồ sơ
+> (ba file của một hồ sơ theo ba mẫu khác nhau, một file gõ nhầm `03.018`). Thư mục phát
+> hành không tồn tại. Quy ước `NVO026_…` là **quy ước MỚI cho bản vẽ hệ thống XUẤT ra**,
+> không phải mô tả hồ sơ cũ. Xem `13-ho-so-thuc-te.md` mục 13.8.
+
 
 ### Bước 1 — Extractor riêng cho từng loại bản vẽ
 

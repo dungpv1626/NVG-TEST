@@ -23,6 +23,7 @@ from design_compute.cad import (
     oda_available,
 )
 from design_compute.cad.convert import CadConversionError, OdaUnavailable, dwg_to_dxf, dxf_to_dwg
+from design_compute.cad.extract import from_payload, to_payload
 from design_compute.cad.layers import default_mapping_path
 
 MAPPING = load_mapping()
@@ -80,9 +81,40 @@ class TestLayerMapping:
         Trộn hai loại vào nhau thì mọi bản vẽ đều báo vài chục lớp cần xử lý, và danh sách
         đó lập tức hết người đọc.
         """
-        assert MAPPING.role_of("A-ANNO-DIMS") is None
-        assert MAPPING.is_ignored("A-ANNO-DIMS")
-        assert MAPPING.unmapped(["A-ANNO-DIMS"]) == ()
+        assert MAPPING.role_of("DEFPOINTS") is None
+        assert MAPPING.is_ignored("DEFPOINTS")
+        assert MAPPING.unmapped(["DEFPOINTS"]) == ()
+
+    def test_dimension_layers_are_a_role_now_not_something_to_ignore(self) -> None:
+        """Lớp kích thước ĐÃ CHUYỂN từ `ignore` sang một vai trò (05/09/2026).
+
+        Hai hồ sơ thật có hơn mười nghìn thực thể DIMENSION, và chuỗi kích thước là một
+        trong ba năng lực nền của mọi loại tờ (`kb/sheet_catalogue.yaml`). Bỏ qua chúng là
+        vứt đi đúng thứ đang thiếu.
+        """
+        assert MAPPING.role_of("NV-Dim") == "dimension"
+        assert not MAPPING.is_ignored("NV-Dim")
+
+    def test_layer_names_match_with_vietnamese_diacritics_folded(self) -> None:
+        """Tên lớp thật có dấu: `A2_CẮT BT`, `A6_THẤY ĐẬM`, `A12_NÉT KHUẤT`.
+
+        So khớp không gấp dấu thì mọi mẫu viết không dấu đều trượt — im lặng, và bảng ánh xạ
+        trông như đã phủ trong khi không khớp dòng nào.
+        """
+        assert MAPPING.role_of("A2_CẮT BT") == "wall"
+        assert MAPPING.is_line_weight("A6_THẤY ĐẬM")
+        assert MAPPING.is_line_weight("A12_NÉT KHUẤT")
+
+    def test_line_weight_layers_are_neither_a_role_nor_ignored(self) -> None:
+        """NVG đặt tên lớp theo ĐỘ ĐẬM NÉT KHI IN, không theo vật thể.
+
+        `NV-Thay` chứa lẫn tường, thiết bị và đường bao — bất cứ thứ gì in cùng độ đậm đó.
+        Không gán vai trò được, nhưng cũng KHÔNG được bỏ qua như `ignore`: nội dung vẫn phải
+        đọc. Tách riêng để danh sách `unmapped` còn đọc được.
+        """
+        assert MAPPING.is_line_weight("NV-Thay")
+        assert not MAPPING.is_ignored("NV-Thay")
+        assert MAPPING.unmapped(["NV-Thay", "NV-Khuat"]) == ()
 
     def test_unknown_layer_is_reported_for_follow_up(self) -> None:
         assert MAPPING.unmapped(["XYZ-LOP-LA"]) == ("XYZ-LOP-LA",)
@@ -286,3 +318,65 @@ class TestOdaPath:
         plan = extract_floor_plan(dwg_to_dxf(dwg, tmp_path / "back").dxf, mapping=MAPPING)
         assert sorted(r.area_m2 for r in plan.rooms) == [10.5, 21.0]
         assert {r.label_raw for r in plan.rooms} == {"PHONG KHACH", "PN1"}
+
+
+class TestRealDossierShape:
+    """Ba giả định sai của trình trích xuất (13-ho-so-thuc-te 13.10, V-8), nay đã đổi.
+
+    Bản vẽ NVG: phần lớn hình học nằm TRONG block; khung tên là INSERT có ATTRIB mang mã tờ;
+    chữ cũ là TCVN3. Mỗi test dựng một DXF nhỏ đúng hình dạng đó.
+    """
+
+    def test_geometry_inside_blocks_is_seen(self, tmp_path: Path) -> None:
+        doc = ezdxf.new("R2010", setup=True)
+        block = doc.blocks.new(name="PHONG_KHACH")
+        block.add_lwpolyline(LIVING, close=True, dxfattribs={"layer": "A-AREA-ROOM"})
+        block.add_text("PHONG KHACH", dxfattribs={"layer": "A-ROOM-IDEN"}).set_placement((3000, 1750))
+        doc.modelspace().add_blockref("PHONG_KHACH", (0, 0))
+        path = tmp_path / "block.dxf"
+        doc.saveas(path)
+
+        plan = extract_floor_plan(path)
+        assert len(plan.rooms) == 1, "phòng nằm trong block phải được nhìn thấy"
+        assert plan.rooms[0].label_raw == "PHONG KHACH"
+        assert plan.entities_in_blocks >= 2 and plan.entities_top == 1
+
+    def test_title_block_attribs_become_sheets(self, tmp_path: Path) -> None:
+        doc = ezdxf.new("R2010", setup=True)
+        block = doc.blocks.new(name="KHUNG_TEN")
+        block.add_lwpolyline([(0, 0), (400, 0), (400, 40), (0, 40)], close=True, dxfattribs={"layer": "Khung ten"})
+        # Họ `semantic_kt` của kb/title_block.yaml: KHBV mã tờ, TBV tên tờ, TL tỷ lệ, HM hạng mục.
+        for tag, at in (("KHBV", (300, 10)), ("TBV", (100, 10)), ("TL", (350, 10)), ("HM", (100, 30)), ("HT", (350, 30))):
+            block.add_attdef(tag, at, dxfattribs={"height": 5})
+        msp = doc.modelspace()
+        for i, (code, name) in enumerate((("kt/01", "MẶT BẰNG TẦNG 1"), ("kt/02", "MẶT BẰNG TẦNG 2"))):
+            ref = msp.add_blockref("KHUNG_TEN", (i * 50000, 0))
+            ref.add_auto_attribs({"KHBV": code, "TBV": name, "TL": "1:70", "HM": "KIẾN TRÚC", "HT": "08/2026"})
+        path = tmp_path / "sheets.dxf"
+        doc.saveas(path)
+
+        plan = extract_floor_plan(path)
+        assert plan.title_block_family == "semantic_kt"
+        assert [s.code for s in plan.sheets] == ["kt/01", "kt/02"]
+        assert plan.sheets[0].name == "MẶT BẰNG TẦNG 1"
+        assert plan.sheets[0].scale == "1:70" and plan.sheets[0].discipline == "KIẾN TRÚC"
+        payload = to_payload(plan)
+        assert payload["sheets"][1]["code"] == "kt/02"
+        assert from_payload(payload).sheets == plan.sheets
+
+    def test_tcvn3_labels_are_decoded_by_style(self, tmp_path: Path) -> None:
+        doc = ezdxf.new("R2010", setup=True)
+        doc.styles.new("VnAvant", dxfattribs={"font": "vnavant.ttf"})
+        msp = doc.modelspace()
+        msp.add_lwpolyline(LIVING, close=True, dxfattribs={"layer": "A-AREA-ROOM"})
+        # "cÊp l¹nh" là TCVN3 của "cấp lạnh"; chuỗi ngắn `CHI TIÕT` cùng kiểu chữ không mang ký tự
+        # dấu hiệu nào nhưng vẫn phải được giải vì kiểu chữ đã bị nhận diện.
+        msp.add_text("cÊp l¹nh", dxfattribs={"layer": "A-ROOM-IDEN", "style": "VnAvant"}).set_placement((3000, 1750))
+        msp.add_lwpolyline(BEDROOM, close=True, dxfattribs={"layer": "A-AREA-ROOM"})
+        msp.add_text("CHI TIÕT", dxfattribs={"layer": "A-ROOM-IDEN", "style": "VnAvant"}).set_placement((7500, 1750))
+        path = tmp_path / "tcvn3.dxf"
+        doc.saveas(path)
+
+        labels = {r.label_raw for r in extract_floor_plan(path).rooms}
+        assert "cấp lạnh" in labels
+        assert "CHI TIẾT" in labels

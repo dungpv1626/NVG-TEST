@@ -1,0 +1,42 @@
+# Chiếu sáng tự nhiên, thông gió và lối vào.
+
+- id: bedroom_requires_daylight
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: requires_daylight
+  target: bedroom
+  severity: error
+  source: 'QCVN 01:2021/BXD'
+  auto_repair: none
+
+- id: living_requires_daylight
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: requires_daylight
+  target: living
+  severity: error
+  source: 'QCVN 01:2021/BXD'
+  auto_repair: none
+
+- id: every_room_requires_access
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: floor
+  predicate: requires_access
+  target: all
+  severity: error
+  source: 'QCVN 01:2021/BXD'
+  auto_repair: none
+# ── Mặt nào của hình bao mà phòng BẮT BUỘC tiếp giáp ───────────────────────────────────
+# Vị từ `requires_face` thêm 06/09/2026. Nó khác `requires_daylight` ở chỗ nói MẶT NÀO:
+# chiếu sáng chấp nhận cả giếng trời, còn hai quy tắc dưới đây thì không — một chỗ để xe
+# lấy sáng qua giếng trời vẫn là chỗ để xe mà ô tô không vào được.
+#
+# `face: access` = mặt vào được từ ngoài (`site.access_sides` của đầu bài).
+# `face: open`   = mặt thoáng (`open_faces`).
+
+# Đo được 06/09/2026 trên chính bản vẽ demo: phòng khách chiếm hết mặt tiền (y 0–3,2 m), chỗ
+# để xe nằm SAU nó (y 3,2–6,2 m). Bố cục đó hợp lệ theo mọi quy tắc đang có, và ô tô phải đi
+# xuyên phòng khách mới vào được. Lối vào cho xe là quan hệ với ĐƯỜNG, không phải quan hệ với
+# hành lang, nên `every_room_requires_access` không bắt được.
+# Ban công, sân, sân thượng phải nằm trên mặt thoáng. Trước quy tắc này, ban công tầng 4 của
+# bản vẽ demo là một dải 0,40 × 9,00 m NẰM GIỮA NHÀ, bốn phía là tường.

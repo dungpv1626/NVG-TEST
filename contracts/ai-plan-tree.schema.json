@@ -1,0 +1,182 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nvg.vn/contracts/ai-plan-tree.schema.json",
+  "title": "AiPlanTree",
+  "description": "MỘT tầng của mặt bằng, do mô hình ngôn ngữ khai dưới dạng CÂY CHIA KHÔNG GIAN. Mô hình khai CẤU TRÚC (nhát cắt, phòng nào ở ô nào, phòng nào nối phòng nào); chương trình gán mọi con số còn lại.\n\nĐƠN VỊ: xăng-ti-mét NGUYÊN. Gốc toạ độ ở góc TRƯỚC-TRÁI lô đất, `x` sang phải dọc mặt tiền, `y` vào sâu.",
+  "$comment": "⚠️ Từ T43 (14/09/2026) đây là hợp đồng NỘI BỘ: đầu ra của bộ giải `ai/arrange/`, đầu vào của cổng `ai/tree/`. Mô hình KHÔNG còn khai cây — nó khai ý định bố cục (`ai-plan-intent`), chương trình dựng cây. Phần dưới giữ lý do gốc của T37.\n\nQuyết định T37–T40 (13/09/2026, Haan chốt). Thay việc mô hình khai chữ nhật phòng (`ai-plan-rooms`, T23).\n\nVì sao đổi, đo trên lượt chạy thật 13/09/2026 (gpt-5, biệt thự 26 phòng, artifact `sha256:b24674e8…`): 42 lỗi chặn, trong đó 7 cặp phòng CHỒNG nhau (ban công và phòng thờ nằm trọn trong phòng ngủ chính), 91 m² sàn không phủ, và 90–93% token đầu ra là phần suy nghĩ. Mô hình vật lộn với SỐ HỌC HAI CHIỀU — 12 chữ nhật phải khớp nhau đúng bề dày tường — chứ không vật lộn với ý đồ kiến trúc. Với cây chia, chồng lấn và sàn trống KHÔNG DIỄN ĐẠT ĐƯỢC: đó là tính chất của cấu trúc dữ liệu, không phải kết quả kiểm tra. Mỗi con số mô hình còn phải sinh là MỘT chiều và chỉ ràng buộc với ô cha của nó.\n\nVì sao danh sách nút PHẲNG chứ không phải cây lồng: `llm/schema-dialect.ts` từ chối `$ref` đệ quy (Gemini không đọc được tham chiếu, nên mọi lược đồ đều được nhúng thẳng). Nút trỏ tới con bằng mã, chương trình dựng lại cây và bắt vòng, bắt nút mồ côi.\n\nVì sao MỌI trường đều bắt buộc, kể cả trường được phép rỗng: ở chế độ `strict`, OpenAI ép mọi trường tuỳ chọn thành «bắt buộc, có thể null», nên mô hình trả `null` ở chỗ Zod chỉ chờ «vắng mặt». Khai thẳng `null` và mảng rỗng là hai phía nói cùng một ngôn ngữ.\n\nMượn Ý của `layout-intent` (bộ giải nội bộ) nhưng KHÔNG dùng lại một dòng nào — `ai-independence.test.ts` canh. Khác biệt cố ý: bộ giải chọn trong hai khung mẫu cứng `tube`/`cross` và chính hai khung ấy làm 4/5 đề biệt thự vô nghiệm; ở đây mô hình tự khai cây, và nhát cắt mang toạ độ thật chứ không phải `ratio_hint`.\n\nKHÔNG có trong hợp đồng, chương trình suy: kích thước lọt lòng và diện tích phòng, hình bao, vị trí/bề rộng/chiều mở cửa, CỬA SỔ, số bậc và số vế thang, chiều cao tầng, nhãn phòng.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "variant_label",
+    "rationale",
+    "footprint",
+    "nodes",
+    "also",
+    "doors",
+    "stair",
+    "no_window"
+  ],
+  "properties": {
+    "variant_label": {
+      "type": ["string", "null"],
+      "maxLength": 120,
+      "description": "Tên phương án, tiếng Việt, mô tả cấu trúc. Chỉ tầng 1 điền; tầng khác để null."
+    },
+    "rationale": {
+      "type": "string",
+      "maxLength": 300,
+      "description": "Vì sao tầng này xếp như vậy, tiếng Việt, 1–2 câu."
+    },
+    "footprint": {
+      "$ref": "#/$defs/rect",
+      "description": "Khối xây của tầng, tính tới mặt NGOÀI tường bao. Nằm trong knowledge.buildable_cm."
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 59,
+      "items": {
+        "$ref": "#/$defs/node"
+      },
+      "description": "Các nhát cắt. Nút gốc là nút không nút nào trỏ tới; nó chia chính footprint."
+    },
+    "also": {
+      "type": "array",
+      "maxItems": 6,
+      "items": {
+        "$ref": "#/$defs/merge"
+      },
+      "description": "Phòng ghép: một ô phục vụ thêm phòng khác của chương trình. Chỉ cặp trong knowledge.merge_allowed."
+    },
+    "doors": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 60,
+      "items": {
+        "$ref": "#/$defs/door"
+      }
+    },
+    "stair": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["room", "up"],
+      "properties": {
+        "room": {
+          "$ref": "#/$defs/id",
+          "description": "Mã phòng thang (một lá của cây)."
+        },
+        "up": {
+          "type": "string",
+          "enum": ["+x", "-x", "+y", "-y"],
+          "description": "Chiều đi LÊN của vế đầu tiên."
+        }
+      },
+      "description": "Thang của tầng. null khi tầng không có thang."
+    },
+    "no_window": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "$ref": "#/$defs/id"
+      },
+      "description": "Phòng KHÔNG muốn cửa sổ dù có cạnh giáp ngoài trời. Chương trình tự đặt cửa sổ cho mọi phòng còn lại."
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$",
+      "maxLength": 32
+    },
+    "cm": {
+      "type": "integer",
+      "description": "Xăng-ti-mét, số nguyên. Gốc ở góc trước-trái lô đất, x sang phải, y vào sâu.",
+      "$comment": "Số NGUYÊN, không phải lưới nửa centimet như hợp đồng artifact. Ở đây mô hình chỉ khai TIM tường của nhát cắt và mép ngoài của footprint; nửa centimet chỉ xuất hiện khi CHƯƠNG TRÌNH lùi mặt trong phòng vào nửa bề dày vách 11 cm (`ai/tree/`). Ràng buộc chặt hơn thì lược đồ ngắn hơn và mô hình có ít lựa chọn để chọn sai hơn — và hai lượt gọi cùng đầu vào vẫn cho cùng mã băm artifact."
+    },
+    "rect": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "$ref": "#/$defs/cm"
+      },
+      "description": "[x0, y0, x1, y1] cm, với x1 > x0 và y1 > y0."
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "cut", "at", "a", "b"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "cut": {
+          "type": "string",
+          "enum": ["x", "y"],
+          "description": "x = vách đứng tại x = at · y = vách ngang tại y = at."
+        },
+        "at": {
+          "$ref": "#/$defs/cm",
+          "description": "TIM bức vách, toạ độ tuyệt đối. Phải nằm hẳn bên trong ô đang chia."
+        },
+        "a": {
+          "$ref": "#/$defs/id",
+          "description": "Ô phía toạ độ NHỎ. Mã nút khác, mã phòng, unbuilt_N hoặc void_N."
+        },
+        "b": {
+          "$ref": "#/$defs/id",
+          "description": "Ô phía toạ độ LỚN. Mã nút khác, mã phòng, unbuilt_N hoặc void_N."
+        }
+      }
+    },
+    "merge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["room", "with"],
+      "properties": {
+        "room": {
+          "$ref": "#/$defs/id",
+          "description": "Phòng là lá của cây."
+        },
+        "with": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "description": "Phòng của chương trình dùng chung ô ấy. Không phải lá."
+        }
+      }
+    },
+    "door": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["a", "b", "kind"],
+      "properties": {
+        "a": {
+          "$ref": "#/$defs/id",
+          "description": "Mã phòng."
+        },
+        "b": {
+          "$ref": "#/$defs/id",
+          "description": "Mã phòng giáp a, hoặc outside."
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["single", "double", "sliding", "garage", "gate", "opening"],
+          "description": "single = một cánh · double = hai cánh · sliding = trượt · garage = cửa để xe · gate = cổng · opening = ô thông không cánh."
+        },
+        "full": {
+          "type": ["boolean", "null"],
+          "description": "Chỉ với opening: ô thông chạy suốt vách chung, chừa hai má cửa — bỏ vách giữa hai phòng. Do kỹ sư yêu cầu qua thao tác sửa (T53), bộ xếp không tự đặt."
+        },
+        "place": {
+          "type": ["string", "null"],
+          "enum": ["start", "middle", "end", null],
+          "description": "Vị trí cửa trên đoạn vách trống: start = đầu toạ độ nhỏ, end = đầu toạ độ lớn, middle hoặc null = giữa. Do kỹ sư yêu cầu qua thao tác sửa (T53)."
+        }
+      }
+    }
+  }
+}

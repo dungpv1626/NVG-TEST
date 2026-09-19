@@ -26,12 +26,15 @@ import { gateLayer2, readCompletenessThreshold } from '../brief/gate';
 import { createComputeBackend } from '../compute-backend';
 import type { DesignEnv } from '../env';
 import { runLayer2 } from '../program/run';
-import { layoutIntent, solveFloorPlan, stubArchModel, stubRenderResult } from './steps';
+import { buildArchModel, layoutIntent, solveFloorPlan, stubRenderResult } from './steps';
 import { spaceLabels } from '../layout/labels';
-import { siteFaces } from '../layout/site-context';
-import { siteContextTable } from '../layout/site-context-data';
+import { siteFaces } from '../kb/site-context';
+import { siteContextTable } from '../kb/site-context-data';
 import { roomVocabulary } from '../kb/vocabulary-data';
 import { roomGroups } from '../kb/vocabulary';
+import { ruleCatalogue } from '../layout/summary';
+import { plateFor } from '../layout/plate';
+import { rulePackFor } from '../rules/rule-pack-data';
 
 export interface DesignPipelineParams {
   tenantId: string;
@@ -125,11 +128,24 @@ export class DesignPipeline extends WorkflowEntrypoint<DesignEnv, DesignPipeline
       // Mặt thoáng quyết định CẤU TRÚC cây, không chỉ quyết định lúc kiểm: thửa bị bịt mặt
       // sau thì dải trong cùng phải có giếng trời ngay từ lúc sinh ý đồ, chứ không phải để
       // bộ giải báo vô nghiệm rồi mới biết.
-      const faces = siteFaces(
-        (briefForIntent.payload as DesignBrief).site as never,
-        siteContextTable(),
+      const brief = briefForIntent.payload as DesignBrief;
+      const faces = siteFaces(brief.site as never, siteContextTable());
+      // Cùng gói quy tắc và cùng mặt sàn mà đường chạy đồng bộ dùng (`layout/variants.ts`).
+      // Thiếu chúng thì Lớp 3a ở đây luôn dựng khung nhà ống, và một biệt thự mặt tiền rộng
+      // ra kết quả vô nghiệm trên đúng đầu bài mà nút "Sinh phương án" giải được.
+      const catalogue = ruleCatalogue(
+        rulePackFor(brief.locality).rules,
+        brief.building_type,
+        roomGroups(roomVocabulary().vocabulary),
       );
-      const result = layoutIntent(head.payload as never, programId, { openFaces: faces.open });
+      const result = layoutIntent(head.payload as never, programId, {
+        massing: brief.massing,
+        openFaces: faces.open,
+        accessFaces: faces.access,
+        faceOf: catalogue.faceOf,
+        minSideOf: catalogue.minSideOf,
+        plate: plateFor(brief, head.payload as never, catalogue.setbacks, catalogue.maxDensity),
+      });
       return repo.write({
         scope,
         kind: 'layout_intent',
@@ -152,7 +168,8 @@ export class DesignPipeline extends WorkflowEntrypoint<DesignEnv, DesignPipeline
       // Gửi phần `site` NGUYÊN VĂN: `solveFloorPlan` tự quy về ô chữ nhật xây được. Quy đổi
       // ở đây thì bước này có một bản quy đổi riêng, và Container nhận một mảnh đất khác
       // mảnh đất Lớp 2 đã soạn chương trình lên.
-      const briefSite = (briefHead.payload as DesignBrief).site;
+      const briefPayload = briefHead.payload as DesignBrief;
+      const briefSite = briefPayload.site;
       const faces = siteFaces(briefSite as never, siteContextTable());
       const vi: Record<string, string> = {};
       for (const type of roomVocabulary().vocabulary.types) vi[type.code] = type.vi;
@@ -162,6 +179,7 @@ export class DesignPipeline extends WorkflowEntrypoint<DesignEnv, DesignPipeline
         intentRef: intentId,
         program: programHead.payload as never,
         site: briefSite,
+        buildingType: briefPayload.building_type,
         locality: p.locality,
         timeBudgetS: p.timeBudgetS,
         openFaces: faces.open,
@@ -191,7 +209,7 @@ export class DesignPipeline extends WorkflowEntrypoint<DesignEnv, DesignPipeline
     const arch = await guard(step, 'layer4_arch', runs('layer4_arch'), async () => {
       const head = await repo.head(p.projectId, p.discipline, 'floor_plan');
       if (!head) throw new NonRetryableError('Chưa có mặt bằng đang hiệu lực.');
-      const result = stubArchModel(head.payload as never, planId);
+      const result = buildArchModel(head.payload as never, planId);
       return repo.write({
         scope,
         kind: 'arch_model',

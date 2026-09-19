@@ -17,7 +17,9 @@ from typing import Any
 
 import pytest
 
-from design_compute.rules import default_rules_root, load_for_locality
+from pathlib import Path
+
+from design_compute.rules import default_rules_root, load_for_locality, load_pack
 from design_compute.solver import FloorLayout, RoomSpec, SolveRequest, solve_townhouse
 
 RULES_ROOT = default_rules_root()
@@ -27,8 +29,20 @@ SITE_D = 18.0
 FLOOR_AREA = SITE_W * SITE_D
 
 
+# Gói quy chuẩn CŨ (`rules/base/` đã xoá 13/09/2026 — Haan: «bỏ quy chuẩn VN đi»), chép vào dữ
+# liệu kiểm thử. Các bài dưới kiểm CƠ CHẾ của bộ giải — lấy sáng, mặt bắt buộc, kích thước tối
+# thiểu, khoảng lùi, mật độ — nên cần một gói thật đủ loại vị từ để chạy trên. Gói ĐANG DÙNG
+# (`rules/structure/`) có bài riêng: `TestShippedStructurePack`.
+LEGACY_PACK_DIR = Path(__file__).parent / "fixtures" / "rules-legacy-base"
+
+
 @pytest.fixture(scope="module")
 def pack():
+    return load_pack(LEGACY_PACK_DIR)
+
+
+@pytest.fixture(scope="module")
+def shipped_pack():
     return load_for_locality(RULES_ROOT, None)
 
 
@@ -374,6 +388,141 @@ class TestAccess:
         assert front.y0_m == pytest.approx(0.0)
 
 
+class TestRequiredFace:
+    """`requires_face` — phòng phải giáp MẶT cụ thể của hình bao, không có phương án thay thế.
+
+    Khác `requires_daylight` ở đúng chỗ đó, và đó là toàn bộ lý do vị từ này tồn tại: chiếu
+    sáng chấp nhận giếng trời, còn một chỗ để xe lấy sáng qua giếng trời vẫn là chỗ để xe mà ô
+    tô không vào được. Đo được 06/09/2026 trên bản vẽ demo: phòng khách chiếm hết mặt tiền,
+    chỗ để xe nằm sau nó, và mọi quy tắc đang có đều thoả.
+    """
+
+    GROUPS = {"outdoor": ("balcony", "terrace", "courtyard", "light_well")}
+
+    @staticmethod
+    def _three_bands(front_type: str, middle_type: str):
+        """Dải mặt tiền · dải GIỮA (không chạm mặt nào) · dải sau, hành lang chạy dọc phía sau.
+
+        Dải giữa là chỗ duy nhất chứng minh được điều cần chứng minh: nó không chạm mặt trước
+        cũng không chạm mặt sau, nên `requires_face` phải bắt được, trong khi
+        `requires_daylight` thì không (giếng trời thay thế được).
+        """
+        rooms = (
+            _room("front_1", front_type, 1, 30.0, minimum=5.0, maximum=60.0),
+            _room("middle_1", middle_type, 1, 20.0, minimum=5.0, maximum=60.0),
+            _room("circulation_1", "circulation", 1, 15.0, minimum=5.0, maximum=60.0),
+            _room("rear_1", "store", 1, 25.0, minimum=5.0, maximum=60.0),
+        )
+        layouts = (
+            FloorLayout(
+                1,
+                {
+                    "split": "H",
+                    "ratio_hint": 0.3,
+                    "a": {"room": "front_1"},
+                    "b": {
+                        "split": "V",
+                        "ratio_hint": 0.25,
+                        "a": {"room": "circulation_1"},
+                        "b": {
+                            "split": "H",
+                            "ratio_hint": 0.5,
+                            "a": {"room": "middle_1"},
+                            "b": {"room": "rear_1"},
+                        },
+                    },
+                },
+            ),
+        )
+        return rooms, layouts
+
+    def _violations(self, pack, front_type: str, middle_type: str) -> set[str]:
+        rooms, layouts = self._three_bands(front_type, middle_type)
+        result = solve_townhouse(
+            _request(pack, rooms=rooms, layouts=layouts, floors=1, room_groups=self.GROUPS)
+        )
+        assert result.status in ("pass", "warning"), result.notes
+        return {v.rule_id for v in result.violations}
+
+    def test_a_garage_behind_the_front_band_is_reported(self, shipped_pack) -> None:
+        assert "garage_on_access_face" in self._violations(shipped_pack, "living", "garage")
+
+    def test_a_garage_on_the_street_is_not(self, pack) -> None:
+        assert "garage_on_access_face" not in self._violations(pack, "garage", "store")
+
+    def test_a_balcony_boxed_in_by_walls_is_reported(self, shipped_pack) -> None:
+        assert "outdoor_on_open_face" in self._violations(shipped_pack, "living", "balcony")
+
+    def test_a_balcony_on_the_facade_is_not(self, pack) -> None:
+        assert "outdoor_on_open_face" not in self._violations(pack, "balcony", "store")
+
+    def test_the_access_face_rule_does_not_leak_to_upper_floors(self, pack) -> None:
+        """Tầng hai không có mặt nào ô tô vào được — áp quy tắc lên đó là sinh vi phạm không ai sửa được."""
+        rooms = (
+            _room("front_1", "living", 1, 45.0, minimum=5.0, maximum=90.0),
+            _room("circulation_1", "circulation", 1, 45.0, minimum=5.0, maximum=90.0),
+            _room("front_2", "garage", 2, 45.0, minimum=5.0, maximum=90.0),
+            _room("circulation_2", "circulation", 2, 45.0, minimum=5.0, maximum=90.0),
+        )
+        layouts = tuple(
+            FloorLayout(
+                level,
+                {
+                    "split": "H",
+                    "ratio_hint": 0.5,
+                    "a": {"room": f"front_{level}"},
+                    "b": {"room": f"circulation_{level}"},
+                },
+            )
+            for level in (1, 2)
+        )
+        result = solve_townhouse(_request(pack, rooms=rooms, layouts=layouts, floors=2))
+        assert result.status in ("pass", "warning"), result.notes
+        flagged = {i for v in result.violations if v.rule_id == "garage_on_access_face" for i in v.involved}
+        assert "front_2" not in flagged
+
+
+class TestSliverRooms:
+    """Phòng hình que — đo được trên chính bản vẽ demo trước khi có ngưỡng.
+
+    Vệ sinh 4,10 × 1,00 m thoả `min_area_wc` 2,4 m² một cách hoàn toàn hợp lệ: bộ quy tắc cũ
+    chỉ khai `min_dimension` cho hành lang, thang và phòng ngủ, còn `aspect_ratio_max` chỉ
+    nhắm nhóm `habitable` — nhóm KHÔNG gồm vệ sinh, kho, giặt, để xe hay ban công.
+    """
+
+    def test_a_one_metre_wide_wc_is_now_reported(self, shipped_pack) -> None:
+        # Dải ngang 4,1 × 1,0 m: đủ diện tích, sai hình.
+        rooms = (
+            _room("wc_1", "wc", 1, 4.1, minimum=2.4, maximum=4.2),
+            _room("circulation_1", "circulation", 1, 20.0, minimum=5.0, maximum=90.0),
+            _room("rear_1", "store", 1, 60.0, minimum=5.0, maximum=90.0),
+        )
+        layouts = (
+            FloorLayout(
+                1,
+                {
+                    "split": "H",
+                    "ratio_hint": 0.1,
+                    "a": {"room": "wc_1"},
+                    "b": {
+                        "split": "V",
+                        "ratio_hint": 0.3,
+                        "a": {"room": "circulation_1"},
+                        "b": {"room": "rear_1"},
+                    },
+                },
+            ),
+        )
+        result = solve_townhouse(_request(shipped_pack, rooms=rooms, layouts=layouts, floors=1))
+        assert result.status in ("pass", "warning"), result.notes
+        wc = next(r for r in result.rooms if r.id == "wc_1")
+        smallest = min(wc.x1_m - wc.x0_m, wc.y1_m - wc.y0_m)
+        # Hoặc bộ giải đã nới nó ra khỏi dạng dải, hoặc vi phạm phải được nêu tên. Không có
+        # kết cục thứ ba, và trước 06/09/2026 kết cục thứ ba chính là cái đã xảy ra.
+        ruled = {v.rule_id for v in result.violations}
+        assert smallest >= 1.2 or "room_min_dimension_wc" in ruled or "aspect_ratio_max_service" in ruled
+
+
 class TestMassing:
     def test_a_setback_pushes_the_building_off_the_boundary(self, pack) -> None:
         """Khoảng lùi của rule pack biệt thự phải hiện ra thành hình bao thu vào thật."""
@@ -449,6 +598,92 @@ class TestMassing:
         assert y1 < 20.0, "hình bao phải thu lại, không chạm mép sau"
         assert not [v for v in result.violations if v.rule_id == "max_density_villa"]
 
+    def test_program_floor_area_shrinks_the_footprint_from_the_back(self, pack) -> None:
+        """Chương trình không gian chọn mặt sàn nhỏ hơn trần xây được thì hình bao phải thu theo.
+
+        Sàn xây được là một GIỚI HẠN, không phải một yêu cầu: một gia đình nhỏ trên lô rộng
+        không cần căn nhà lấp kín phần xây được. Lớp 2 chọn mặt sàn vừa đủ; nếu bộ giải bỏ qua
+        con số đó thì toàn bộ việc thu nhỏ biến mất ngay tại đây, và phần dôi ra phải chui vào
+        một phòng nào đó — đúng cái sai đã sửa ngày 07/09/2026.
+        """
+        rooms = (
+            _room("front_1", "living", 1, 30.0, minimum=14.0, maximum=200.0, daylight=True),
+            _room("stair_1", "stair", 1, 8.0, minimum=4.0, maximum=30.0),
+            _room("rear_1", "kitchen", 1, 20.0, minimum=6.0, maximum=200.0),
+        )
+        layouts = (
+            FloorLayout(
+                1,
+                {
+                    "split": "H",
+                    "a": {"room": "front_1"},
+                    "b": {"split": "V", "a": {"room": "stair_1"}, "b": {"room": "rear_1"}},
+                },
+            ),
+        )
+        base = dict(
+            rooms=rooms,
+            layouts=layouts,
+            floors=1,
+            building_type="nha_pho",
+            site_width_m=8.0,
+            site_depth_m=20.0,
+            open_faces=("front", "back", "left", "right"),
+        )
+        full = solve_townhouse(_request(pack, **base))
+        shrunk = solve_townhouse(
+            _request(pack, **base, target_floor_area_m2=80.0)
+        )
+        assert full.status in ("pass", "warning") and shrunk.status in ("pass", "warning")
+        assert full.footprint_m is not None and shrunk.footprint_m is not None
+        def area(fp: tuple[float, float, float, float]) -> float:
+            return (fp[2] - fp[0]) * (fp[3] - fp[1])
+
+        assert area(shrunk.footprint_m) <= 80.0 + 1e-6
+        assert area(shrunk.footprint_m) < area(full.footprint_m)
+        # Thu từ PHÍA SAU: mặt tiền giữ nguyên, chỉ chiều sâu ngắn lại.
+        assert shrunk.footprint_m[0] == full.footprint_m[0]
+        assert shrunk.footprint_m[2] == full.footprint_m[2]
+        assert shrunk.footprint_m[3] < full.footprint_m[3]
+
+    def test_program_floor_area_never_widens_beyond_the_legal_ceiling(self, pack) -> None:
+        """Con số của chương trình chỉ THU, không bao giờ NỚI.
+
+        Nó đến từ Lớp 2 qua mạng; khoảng lùi và mật độ là quy chuẩn. Cho phép nó nới ra là mở
+        đường cho một chương trình sai (hoặc bị sửa) vượt trần pháp lý mà không có gì chặn.
+        """
+        rooms = (
+            _room("front_1", "living", 1, 40.0, minimum=14.0, maximum=400.0, daylight=True),
+            _room("stair_1", "stair", 1, 8.0, minimum=4.0, maximum=30.0),
+            _room("rear_1", "kitchen", 1, 40.0, minimum=6.0, maximum=400.0),
+        )
+        layouts = (
+            FloorLayout(
+                1,
+                {
+                    "split": "H",
+                    "a": {"room": "front_1"},
+                    "b": {"split": "V", "a": {"room": "stair_1"}, "b": {"room": "rear_1"}},
+                },
+            ),
+        )
+        result = solve_townhouse(
+            _request(
+                pack,
+                rooms=rooms,
+                layouts=layouts,
+                floors=1,
+                building_type="biet_thu",
+                site_width_m=10.0,
+                site_depth_m=20.0,
+                open_faces=("front", "back", "left", "right"),
+                target_floor_area_m2=10_000.0,
+            )
+        )
+        assert result.footprint_m is not None
+        x0, y0, x1, y1 = result.footprint_m
+        assert (x1 - x0) * (y1 - y0) <= 0.6 * 10.0 * 20.0 + 1e-6
+
     def test_density_uses_the_real_lot_area_not_the_buildable_rectangle(self, pack) -> None:
         """Thửa không vuông vắn: ô chữ nhật xây được nhỏ hơn thửa, lấy nó làm mẫu số là phạt oan."""
         rooms = (
@@ -483,7 +718,7 @@ class TestMassing:
 
 
 class TestWarningsAreReportedNotEnforced:
-    def test_a_warning_rule_shows_up_as_a_violation_but_still_solves(self, pack) -> None:
+    def test_a_warning_rule_shows_up_as_a_violation_but_still_solves(self, shipped_pack) -> None:
         """Quy tắc mức cảnh báo không được chặn — nó phải hiện ra trong danh sách vi phạm."""
         # Phòng thờ đặt ở tầng 1 trong khi `altar_room_top_floor` muốn nó ở tầng trên cùng.
         rooms = (
@@ -499,7 +734,7 @@ class TestWarningsAreReportedNotEnforced:
             )
             for level in (1, 2)
         )
-        result = solve_townhouse(_request(pack, rooms=rooms, layouts=layouts, floors=2))
+        result = solve_townhouse(_request(shipped_pack, rooms=rooms, layouts=layouts, floors=2))
 
         assert result.status in ("pass", "warning"), result.notes
         assert "altar_room_top_floor" in {v.rule_id for v in result.violations}
@@ -577,3 +812,65 @@ class TestDeterminism:
         result = solve_townhouse(_request(pack))
         assert result.solve_time_s > 0
         assert result.rule_pack_version
+
+
+class TestCutHints:
+    """`ratio_hint` là GỢI Ý nghiệm, không phải ràng buộc.
+
+    Trước 07/09/2026 trường này là trường chết: hợp đồng có, Lớp 3a điền, bộ giải bỏ qua. Hai
+    bài dưới đây khoá lại hai vế của nó — có tác dụng, và không bao giờ ép được một phương án
+    sai qua cửa.
+    """
+
+    def _one_floor(self, ratio: float):
+        rooms = [
+            RoomSpec(
+                id="living_1",
+                type="living",
+                floor=1,
+                target_area_m2=10.0,
+                min_area_m2=10.0,
+                max_area_m2=200.0,
+            ),
+            RoomSpec(
+                id="circulation_1",
+                type="circulation",
+                floor=1,
+                target_area_m2=10.0,
+                min_area_m2=10.0,
+                max_area_m2=200.0,
+            ),
+        ]
+        layouts = [
+            FloorLayout(
+                level=1,
+                tree={
+                    "split": "H",
+                    "ratio_hint": ratio,
+                    "a": {"room": "living_1"},
+                    "b": {"room": "circulation_1"},
+                },
+            )
+        ]
+        return rooms, layouts
+
+    def test_a_hint_moves_the_answer_when_the_objective_is_indifferent(self, pack) -> None:
+        """Hai phòng cùng diện tích mong muốn và mặt sàn rộng hơn tổng mong muốn: phần dôi ra
+        rơi vào phòng nào cũng cùng một khoản phạt, nên thứ quyết định là gợi ý."""
+        results = []
+        for ratio in (0.3, 0.6):
+            rooms, layouts = self._one_floor(ratio)
+            result = solve_townhouse(_request(pack, rooms=rooms, layouts=layouts, floors=1))
+            assert result.status in ("pass", "warning"), result.notes
+            living = next(r for r in result.rooms if r.id == "living_1")
+            results.append(living.area_m2)
+        assert results[0] < results[1], results
+
+    def test_a_hint_cannot_push_a_room_below_its_minimum(self, pack) -> None:
+        """Gợi ý vô lý vẫn phải cho phương án hợp lệ — nếu không, Lớp 3a lại quyết định hình
+        học, đúng điều nguyên tắc bất biến 2 cấm."""
+        rooms, layouts = self._one_floor(0.01)
+        result = solve_townhouse(_request(pack, rooms=rooms, layouts=layouts, floors=1))
+        assert result.status in ("pass", "warning"), result.notes
+        living = next(r for r in result.rooms if r.id == "living_1")
+        assert living.area_m2 >= 10.0

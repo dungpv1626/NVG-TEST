@@ -29,6 +29,8 @@ from ezdxf.document import Drawing
 from shapely.geometry import Point, Polygon
 
 from design_compute.cad.layers import INSUNITS_TO_METRES, LayerMapping, load_mapping
+from design_compute.cad.sheets import Attrib, Sheet, detect_family, load_families, sheets_to_payload, split_sheets
+from design_compute.cad.text import decode_by_style, load_text_encoding
 
 # Đa giác nhỏ hơn ngưỡng này gần như chắc chắn là ký hiệu, chú thích hay mảnh vụn chứ không
 # phải phòng. Ngưỡng cố ý rộng: thà giữ lại một thứ đáng ngờ và để người xác nhận loại bỏ,
@@ -85,6 +87,12 @@ class ExtractedFloorPlan:
     layers_seen: tuple[str, ...] = ()
     layers_unmapped: tuple[str, ...] = ()
     warnings: tuple[ExtractionWarning, ...] = ()
+    # Bậc 1 của số hoá (14-phuong-an-demo 14.4 V-8): danh mục tờ đọc từ ATTRIB khung tên, họ
+    # quy ước nhận ra được, và số thực thể nằm trong block — thứ trước đây bị bỏ qua im lặng.
+    sheets: tuple[Sheet, ...] = ()
+    title_block_family: str | None = None
+    entities_top: int = 0
+    entities_in_blocks: int = 0
 
     @property
     def total_area_m2(self) -> float:
@@ -104,7 +112,12 @@ class _Collector:
 
     scale: float
     boundaries: list[tuple[str, Polygon]] = field(default_factory=list)
-    labels: list[tuple[str, Point]] = field(default_factory=list)
+    # (kiểu chữ, chuỗi NGUYÊN VĂN, điểm chèn) — giải mã TCVN3 theo kiểu chữ ở bước sau.
+    labels: list[tuple[str, str, Point]] = field(default_factory=list)
+    # ATTRIB của mọi INSERT (kiểu chữ, thẻ, chuỗi, x, y, tên khối) — khung tên nằm ở đây.
+    attribs: list[tuple[str, str, str, float, float, str]] = field(default_factory=list)
+    entities_top: int = 0
+    entities_in_blocks: int = 0
     columns: list[tuple[float, float]] = field(default_factory=list)
     site: Polygon | None = None
     layers: dict[str, None] = field(default_factory=dict)
@@ -166,18 +179,56 @@ def _insert_point_of(entity: Any) -> tuple[float, float] | None:
     return None
 
 
+def _walk(entities: Any, depth: int = 0):
+    """Duyệt modelspace VÀ đi vào block (`virtual_entities`), tới ba tầng lồng nhau.
+
+    83–93 % hình học của hồ sơ thật nằm trong block (13-ho-so-thuc-te 13.6 (1)); chỉ duyệt
+    modelspace là nhìn thấy một phần sáu bản vẽ mà không có lỗi nào báo.
+    """
+    for entity in entities:
+        yield entity, depth
+        if entity.dxftype() == "INSERT" and depth < 3:
+            try:
+                nested = list(entity.virtual_entities())
+            except Exception:  # noqa: BLE001 — block hỏng thì bỏ block đó, không bỏ cả tệp
+                nested = []
+            yield from _walk(nested, depth + 1)
+
+
 def _collect(doc: Drawing, mapping: LayerMapping, scale: float) -> _Collector:
-    """Quét một lượt qua modelspace, phân loại entity theo vai trò của lớp."""
+    """Quét modelspace kèm block, phân loại entity theo vai trò của lớp."""
     acc = _Collector(scale=scale)
 
-    for entity in doc.modelspace():
+    for entity, depth in _walk(doc.modelspace()):
         layer = str(entity.dxf.get("layer", "0"))
         acc.layers[layer] = None
+        kind = entity.dxftype()
+        if depth == 0:
+            acc.entities_top += 1
+        else:
+            acc.entities_in_blocks += 1
+
+        # Khung tên: ATTRIB của INSERT — mã tờ, tên tờ, tỷ lệ, ngày đều nằm ở đây, không ở TEXT.
+        if kind == "INSERT":
+            origin = entity.dxf.get("insert", None)
+            for attrib in getattr(entity, "attribs", []) or []:
+                text = str(attrib.dxf.get("text", "") or "").strip()
+                if not text or origin is None:
+                    continue
+                acc.attribs.append(
+                    (
+                        str(attrib.dxf.get("style", "") or ""),
+                        str(attrib.dxf.get("tag", "") or ""),
+                        text,
+                        float(origin[0]),
+                        float(origin[1]),
+                        str(entity.dxf.get("name", "") or ""),
+                    )
+                )
+
         role = mapping.role_of(layer)
         if role is None:
             continue
-
-        kind = entity.dxftype()
 
         if role in ("room_boundary", "site_boundary") and kind in ("LWPOLYLINE", "POLYLINE"):
             points = _points_of(entity)
@@ -214,7 +265,8 @@ def _collect(doc: Drawing, mapping: LayerMapping, scale: float) -> _Collector:
             text = _text_of(entity)
             location = _insert_point_of(entity)
             if text and location is not None:
-                acc.labels.append((text, Point(location[0] * scale, location[1] * scale)))
+                style = str(entity.dxf.get("style", "") or "")
+                acc.labels.append((style, text, Point(location[0] * scale, location[1] * scale)))
 
         elif role == "structural_column":
             if kind in ("LWPOLYLINE", "POLYLINE"):
@@ -223,7 +275,9 @@ def _collect(doc: Drawing, mapping: LayerMapping, scale: float) -> _Collector:
                     centre = Polygon([(x * scale, y * scale) for x, y in points]).centroid
                     acc.columns.append((round(centre.x, 4), round(centre.y, 4)))
             elif kind in ("CIRCLE", "INSERT"):
-                location = entity.dxf.get("center", None) or entity.dxf.get("insert", None)
+                # Hỏi đúng thuộc tính theo loại: ezdxf ném lỗi khi hỏi `center` của INSERT — lộ
+                # ra trên hồ sơ thật, nơi cột kết cấu là INSERT chứ không phải CIRCLE.
+                location = entity.dxf.get("center" if kind == "CIRCLE" else "insert", None)
                 if location is not None:
                     acc.columns.append((round(float(location[0]) * scale, 4), round(float(location[1]) * scale, 4)))
 
@@ -240,7 +294,13 @@ def _match_labels(acc: _Collector) -> tuple[list[ExtractedRoom], list[str]]:
     assigned: dict[int, tuple[str, str]] = {}
     leftover: list[str] = []
 
-    for text, point in acc.labels:
+    # Giải mã TCVN3 theo KIỂU CHỮ, dùng cả nhãn lẫn ATTRIB làm bằng chứng cho kiểu.
+    enc = load_text_encoding()
+    rows = [(style, text) for style, text, _ in acc.labels] + [(a[0], a[2]) for a in acc.attribs]
+    decoded = decode_by_style(rows, enc)
+    labels = [(decoded[i], point) for i, (_, _, point) in enumerate(acc.labels)]
+
+    for text, point in labels:
         placed = False
         for index, (_, polygon) in enumerate(acc.boundaries):
             if index in assigned:
@@ -309,6 +369,25 @@ def extract_floor_plan(dxf_path: Path, *, mapping: LayerMapping | None = None) -
 
     rooms, leftover = _match_labels(acc)
 
+    # Danh mục tờ từ ATTRIB khung tên — tất định, theo họ quy ước nhận ra được.
+    enc = load_text_encoding()
+    attrib_rows = [(a[0], a[2]) for a in acc.attribs]
+    attrib_text = decode_by_style(attrib_rows, enc) if attrib_rows else []
+    attribs = [
+        Attrib(tag=a[1], text=attrib_text[i], x=a[3], y=a[4], block=a[5])
+        for i, a in enumerate(acc.attribs)
+    ]
+    family = detect_family(attribs, load_families())
+    sheets = split_sheets(attribs, family, scale=scale) if family else []
+    if acc.attribs and not family:
+        acc.warnings.append(
+            ExtractionWarning(
+                "title_block_unknown",
+                f"tệp có {len(acc.attribs)} thuộc tính khối nhưng không khớp họ khung tên nào trong "
+                "kb/title_block.yaml — chưa tách được tờ. Bổ sung họ mới vào tệp đó.",
+            )
+        )
+
     if assumed and rooms:
         acc.warnings.append(
             ExtractionWarning(
@@ -340,6 +419,10 @@ def extract_floor_plan(dxf_path: Path, *, mapping: LayerMapping | None = None) -
         layers_seen=tuple(layers),
         layers_unmapped=mapping.unmapped(layers),
         warnings=tuple(acc.warnings),
+        sheets=tuple(sheets),
+        title_block_family=family.name if family else None,
+        entities_top=acc.entities_top,
+        entities_in_blocks=acc.entities_in_blocks,
     )
 
 
@@ -392,6 +475,9 @@ def to_payload(plan: ExtractedFloorPlan) -> dict[str, Any]:
         "layers_seen": list(plan.layers_seen),
         "layers_unmapped": list(plan.layers_unmapped),
         "warnings": [{"code": w.code, "detail": w.detail} for w in plan.warnings],
+        "sheets": sheets_to_payload(list(plan.sheets)),
+        "title_block_family": plan.title_block_family,
+        "entity_counts": {"modelspace": plan.entities_top, "in_blocks": plan.entities_in_blocks},
     }
 
 
@@ -428,4 +514,19 @@ def from_payload(payload: dict[str, Any]) -> ExtractedFloorPlan:
         warnings=tuple(
             ExtractionWarning(w["code"], w["detail"]) for w in payload.get("warnings") or ()
         ),
+        sheets=tuple(
+            Sheet(
+                code=str(s["code"]),
+                name=s.get("name"),
+                scale=s.get("scale"),
+                discipline=s.get("discipline"),
+                date=s.get("date"),
+                x_m=float((s.get("origin_m") or [0, 0])[0]),
+                y_m=float((s.get("origin_m") or [0, 0])[1]),
+            )
+            for s in payload.get("sheets") or ()
+        ),
+        title_block_family=payload.get("title_block_family"),
+        entities_top=int((payload.get("entity_counts") or {}).get("modelspace", 0)),
+        entities_in_blocks=int((payload.get("entity_counts") or {}).get("in_blocks", 0)),
     )

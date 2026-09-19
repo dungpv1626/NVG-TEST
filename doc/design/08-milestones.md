@@ -7,6 +7,58 @@ xác định "xong", không phải lịch.
 
 ---
 
+## Thứ tự ưu tiên do Haan chốt (05/09/2026) — đọc trước bảng mốc
+
+Sau khi có hai bộ hồ sơ thật, mục tiêu cuối được phát biểu lại: **thiết kế được TOÀN BỘ các
+loại bản vẽ trong hồ sơ**, không chỉ mặt bằng. Kèm theo là thứ tự làm:
+
+1. **Phần cơ bản trước**: đầu bài, khảo sát hiện trạng. Đây là đầu vào của mọi thứ phía sau;
+   làm sai ở đây thì mọi bản vẽ sinh ra đều sai theo mà không có gì báo.
+2. **Bản vẽ dễ trước**: sketch, phối cảnh, 2D.
+3. **Điện nước làm sau cùng** — nhưng **chắc chắn làm**, không phải "nếu còn thời gian".
+
+Ba điều này **đổi thứ tự của bảng mốc bên dưới**, và đổi theo hướng khác hẳn bản gốc:
+
+- **Phối cảnh chuyển từ khó sang dễ.** Bản gốc xếp nó ở Mốc 6 vì giả định engine phải tự sở
+  hữu bộ dựng ảnh. Hồ sơ thật cho thấy **NVG đã dùng một công cụ dựng ảnh AI trong sản xuất**
+  (`11-design-flow.md` mục 11.5, chú thích 05/09), và **Haan chốt giai đoạn dev/test dùng tạm
+  Gemini API**. Việc của engine chỉ là **cấp liệu**: một ảnh khối trắng từ mô hình 3D. Gemini
+  nhận ảnh + chữ chứ không nhận điều kiện hoá depth/normal, nên còn nhẹ hơn dự tính — không
+  cần bộ bản đồ điều kiện, và hợp đồng `render-request` không phải sửa (`depth_png`/`edge_png`
+  vốn đã tuỳ chọn). Tuyến `layer5_render` đã khai ở `config/models.yaml`.
+
+  ⚠️ **Nhưng đo được 05/09/2026: khoá gói miễn phí KHÔNG có hạn mức sinh ảnh** — hai mô hình
+  ảnh đều trả 429 trong khi mô hình chữ gọi ngay sau đó vẫn OK. Nên tuyến để `enabled: false`,
+  cùng khuôn với `layer3_intent_hard`. **Chạy được thì phải nâng gói trả phí.** Số đo đầy đủ:
+  `13-ho-so-thuc-te.md` 13.13b. Rủi ro đi kèm — độ bám hình học của Gemini yếu hơn ControlNet,
+  nên nghiệm thu tuyến này đo "ảnh có đúng khối không", không đo "ảnh có đẹp không" (13.13c).
+- **Sketch và khối 3D lên sớm.** Đùn khối từ `FloorPlan` bằng `trimesh` → glTF; bản gốc đã xếp
+  phần này vào Mốc 5 ("khối 3D đơn giản, phần tối thiểu của Layer 5a kéo lên sớm"). Giữ đúng
+  chỗ đó, và nó là đầu vào cho phối cảnh nên càng phải làm sớm.
+- **Điện nước lùi xuống cuối, nhưng có tên trong kế hoạch.** Mốc 6c-2. Không xoá, không để ngỏ.
+
+> ⚠️ **Một điều không đi tắt được.** "Bản vẽ 2D dễ" vẫn cần **bộ chú thích và khung tờ** —
+> chuỗi kích thước, bong bóng trục, cung quay cửa, bậc thang, khung tên khổ A3. Tám yếu tố này
+> đã đặc tả ở `12-ux-ui.md` 12.8 nhưng **chưa Mốc nào nhận sở hữu**, và mã hiện không có yếu tố
+> nào — trong toàn kho mã không tồn tại một thực thể `DIMENSION` nào, trong khi `DIMENSION` là
+> loại thực thể nhiều nhất trong bản vẽ thật.
+>
+> Không có bộ chú thích thì **mọi** tờ 2D đều dừng ở mức sơ đồ, kể cả tờ đơn giản nhất như
+> "mặt bằng định vị cửa" (vốn chỉ là ghi kích thước lên mặt bằng đã có). Nên trong nhóm "bản vẽ
+> dễ", **bộ chú thích là việc phải làm trước** — không phải vì nó khó, mà vì nó là điều kiện
+> cần. Xem vướng mắc **V-9**.
+
+Thứ tự thi hành suy ra từ ba điều trên, chi tiết ở `13-ho-so-thuc-te.md` mục 13.12:
+
+```
+gỡ kẹt pipeline (V-10) → khảo sát + đầu bài đầy đủ → mô hình đứng
+   → khối 3D và phối cảnh (cấp liệu cho công cụ NVG đang dùng)
+   → bộ chú thích + khung tờ → bộ mã cấu kiện → phủ hết bản vẽ 2D của KT
+   → phôi tờ KC → phôi tờ DN → phát hiện xung đột liên bộ môn
+```
+
+---
+
 # GIAI ĐOẠN 1 — Khung xương + Layer 1, 2 và lõi CP-SAT nhà phố
 
 Mục tiêu: dựng phần khung ở mức hoàn thiện nhất dựa trên những gì đã rõ, để hạn chế phải
@@ -19,7 +71,7 @@ hiện ở Mốc 3.
 
 | # | Việc | Definition of Done |
 |---|---|---|
-| 0.1 | Đọc thử 5 file `.dwg` cũ qua công cụ chuyển đổi ODA (Open Design Alliance) và thư viện `ezdxf`, chạy trong container | Trích được đa giác ranh phòng và nhãn phòng; kiến trúc sư xác nhận đúng trên ít nhất 4 trên 5 file |
+| 0.1 | Đọc thử 5 file `.dwg` cũ qua công cụ chuyển đổi ODA (Open Design Alliance) và thư viện `ezdxf`, chạy trong container | ~~Trích được đa giác ranh phòng và nhãn phòng; KTS xác nhận đúng trên ít nhất 4 trên 5 file~~ → **đổi 05/09/2026**, xem chú thích ngay dưới bảng |
 | 0.2 | Model CP-SAT nhỏ: một căn 5×18, 4 tầng, giải liên tầng, **chạy trong Cloudflare Container** | Có nghiệm hợp lệ trong dưới 60 giây với `num_search_workers=1`; khi ép ràng buộc mâu thuẫn thì tập ràng buộc xung đột trả về đọc hiểu được |
 | 0.3 | Viết 20 rule đầu tiên theo `07-rule-pack.md` | Kiến trúc sư đọc hiểu và tự đề xuất thêm ít nhất 5 rule |
 
@@ -28,6 +80,27 @@ hiện ở Mốc 3.
 > 0.2 là phép đo quyết định về hạ tầng. Nếu nửa vCPU quá chậm, chuyển container sang
 > VPS — vì container đã stateless nên chỉ là đổi chỗ deploy.
 > 0.1 thất bại thì kế hoạch Knowledge Base phải thiết kế lại.
+
+> ⚠️ **Điều kiện ra của 0.1 đã đổi, 05/09/2026 — sau khi có hồ sơ thật.**
+>
+> Hai bộ hồ sơ hoàn chỉnh (265 tờ, ba bộ môn) đã về và đã kiểm kê. Kết quả: **bản vẽ NVG
+> không có lớp ranh phòng**, kể cả bản vẽ kiến trúc — NVG đặt tên lớp theo độ đậm nét khi
+> in, không theo vật thể. Nên điều kiện ra cũ **không với tới được ở lượt đầu và đang đo sai
+> thứ**: nó đo một thứ hồ sơ không chứa.
+>
+> Thay bằng bốn phần, mỗi phần một ngưỡng riêng:
+>
+> - (a) **danh mục tờ** đúng ≥95% trên cả hai hồ sơ (mã tờ, tên tờ, tỷ lệ), KTS xác nhận —
+>   lấy từ ATTRIB khung tên, không cần một phép tính hình học nào;
+> - (b) **lưới trục** lấy được trên ≥90% tờ mặt bằng;
+> - (c) **danh mục cửa và cửa sổ** lấy được ≥90%;
+> - (d) **đa giác phòng** dựng từ đồ thị tim tường trên ≥60% tờ mặt bằng KT, KTS xác nhận.
+>
+> Đa giác phòng vẫn là đích, nhưng thôi làm cổng chặn. Chi tiết và số đo:
+> `13-ho-so-thuc-te.md` mục 13.6, 13.10, 13.12. Việc phải làm: vướng mắc **V-8**.
+>
+> Câu "0.1 thất bại thì kế hoạch Knowledge Base phải thiết kế lại" ở trên **đã ứng nghiệm** —
+> phần trích xuất phải viết lại, không phải bổ sung.
 
 ## Mốc 1 — Nền tảng dùng chung
 

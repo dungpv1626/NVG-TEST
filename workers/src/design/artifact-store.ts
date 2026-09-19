@@ -19,6 +19,10 @@ export interface ArtifactStore {
   put(key: string, payload: string): Promise<string>;
   /** Đọc payload theo URI đầy đủ. */
   get(uri: string): Promise<string>;
+  /** Tên tệp NGAY trong một thư mục (`prefix` không có dấu `/` cuối) — không đệ quy. */
+  list(prefix: string): Promise<string[]>;
+  /** URI của một khoá — cùng dạng `put` trả về, không cần ghi. */
+  uriOf(key: string): string;
 }
 
 /** Tách `supabase://design-artifacts/abc.json` thành `['supabase', 'design-artifacts/abc.json']`. */
@@ -92,6 +96,22 @@ export class SupabaseArtifactStore implements ArtifactStore {
     if (!res.ok) throw new Error(`Không đọc được artifact (${res.status}).`);
     return res.text();
   }
+
+  async list(prefix: string): Promise<string[]> {
+    const res = await fetch(`${this.env.SUPABASE_URL}/storage/v1/object/list/${BUCKET}`, {
+      method: 'POST',
+      headers: { ...this.headers(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prefix, limit: 1000, offset: 0 }),
+    });
+    if (!res.ok) throw new Error(`Không liệt kê được kho artifact (${res.status}).`);
+    const rows = (await res.json()) as { name?: string; id?: string | null }[];
+    // Thư mục con trả về với `id: null` — chỉ lấy tệp.
+    return rows.filter((row) => row.name && row.id).map((row) => row.name!);
+  }
+
+  uriOf(key: string): string {
+    return `${this.scheme}://${BUCKET}/${key}`;
+  }
 }
 
 /**
@@ -118,6 +138,15 @@ export class R2ArtifactStore implements ArtifactStore {
     const object = await this.bucket.get(key);
     if (!object) throw new Error('Không tìm thấy artifact trong kho.');
     return object.text();
+  }
+
+  async list(prefix: string): Promise<string[]> {
+    const listed = await this.bucket.list({ prefix: `${prefix}/`, delimiter: '/' });
+    return listed.objects.map((object) => object.key.slice(prefix.length + 1));
+  }
+
+  uriOf(key: string): string {
+    return `${this.scheme}://${BUCKET}/${key}`;
   }
 }
 

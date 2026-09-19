@@ -1,0 +1,173 @@
+# Lời dẫn cho tuyến phối cảnh (`layer5_render`, TK-16) — DỮ LIỆU, không viết trong mã.
+#
+# Mô hình nhận ẢNH KHỐI (chụp từ trình xem ba chiều) + lời dẫn, không nhận điều kiện hoá
+# depth/normal (13-ho-so-thuc-te 13.13c). Nên lời dẫn phải nói rõ điều quan trọng nhất:
+# GIỮ ĐÚNG KHỐI — số tầng, số nhịp cửa, vị trí ban công, tỉ lệ đặc rỗng. Ảnh đẹp mà lệch khối
+# còn tệ hơn không có ảnh, vì khách chốt phương án dựa vào nó (điều kiện ra Mốc 5).
+#
+# Phong cách theo `style` của đầu bài (design-brief.schema.json). Thiếu thì dùng `hien_dai`.
+# Thêm phong cách là thêm một mục ở đây; không sửa Worker.
+#
+# ── NGỮ CẢNH THỬA ĐẤT: mục `context` bên dưới ─────────────────────────────────────────────
+# Ảnh khối là một khối đứng một mình trên nền lưới — nó KHÔNG nói được rằng hai bên đã có nhà
+# xây sát, mặt trước là hẻm 2 m hay đường lớn. Thiếu vế đó thì mô hình mặc định dựng một công
+# trình đứng tự do và thường cho nó HAI mặt tiền, tức một lô góc — sai hẳn với nhà phố kẹp giữa
+# hai nhà hàng xóm (Haan phát hiện 06/09/2026 khi xem ảnh đầu tiên).
+#
+# Câu ngữ cảnh dựng bằng MÃ, tất định, từ `site.adjacent` + `site.access_sides` + kích thước lô
+# của chính đầu bài — không hỏi mô hình ngôn ngữ, không lấy chữ nguyên văn của khách (giữ hạng
+# dữ liệu 3, xem config/models.yaml).
+#
+# ── BA KHUNG HÌNH: mục `views` bên dưới ───────────────────────────────────────────────────
+# Mỗi khung hình khai `camera` — ảnh khối chụp từ góc nào — và phần lời dẫn riêng về ánh sáng.
+# `eye_level` là khung nhìn thẳng mặt tiền, `street_level` là góc nghiêng nhìn từ vỉa hè. Tên
+# lấy đúng bộ từ vựng `camera` của `contracts/render-request.schema.json`, không đặt bộ thứ hai.
+#
+# ⚠️ LỜI DẪN VIẾT BẰNG TIẾNG ANH — CÓ CHỦ ĐÍCH, và đây là ngoại lệ có bằng chứng của quy tắc
+# "100% tiếng Việt" (CLAUDE.md 4.1). Quy tắc đó nói về chữ NGƯỜI DÙNG ĐỌC; các trường `vi` và
+# `watermark` bên dưới — đúng phần hiện lên màn hình — vẫn là tiếng Việt.
+#
+# Đo ngày 06/09/2026, hai lời gọi thật cùng một ảnh vào, cùng một yêu cầu "đổi sang phong cách
+# Đông Dương: tường vàng đất, cửa chớp gỗ xanh":
+#   · lời dẫn TIẾNG VIỆT → ảnh ra gần như không đổi, mặt đứng vẫn trắng, không có cửa chớp.
+#     Mô hình không báo lỗi; nó chỉ lặng lẽ bỏ qua yêu cầu.
+#   · lời dẫn TIẾNG ANH  → mặt đứng chuyển vàng, cửa chớp xanh, khối và vị trí cửa giữ nguyên.
+# Bộ mã hoá văn bản của các mô hình sinh ảnh đang dùng đều huấn luyện trên tiếng Anh. Viết tiếng
+# Việt ở đây không làm hỏng ra mặt — nó làm tuyến phối cảnh trả về ảnh khối được tô lại, và
+# không ai biết vì sao. Phép đo trên đo bằng FLUX Kontext; đổi mô hình thì đo lại, đừng suy.
+
+version: '3.0.0'
+
+system: >-
+  Transform this architectural massing model into a photorealistic architectural visualization.
+  The reference image is the source of truth for building height, number of floors, overall
+  proportions, footprint, roof geometry, opening positions and camera composition — preserve all
+  of them exactly. Do not add floors. Do not remove floors. Do not change the building height or
+  proportions. Do not add projecting volumes that are not in the reference. Only add facade
+  design, materials, glazing, balconies, doors, lighting, vegetation, street surroundings and
+  realistic textures. Professional architectural photography, eye-level three-quarter view,
+  realistic daylight, realistic shadows, high detail. No people, no text, no signage, no
+  watermark, no logo.
+
+styles:
+  hien_dai:
+    vi: Hiện đại
+    prompt: >-
+      Contemporary style: flat rendered facade in white and light grey, warm timber sun-shading
+      louvres over the large windows, black aluminium window frames, glass balustrades, flat
+      roof with a slim parapet. Soft late-afternoon daylight, clear sky, urban pavement with
+      street trees.
+  tan_co_dien:
+    vi: Tân cổ điển
+    prompt: >-
+      Light neoclassical style: slim moulded architraves around the windows, pilasters, turned
+      balusters on the balconies, mansard or pitched tiled roof, cream painted walls, timber
+      entrance door. Soft even daylight.
+  indochine:
+    vi: Đông Dương
+    prompt: >-
+      French Indochine style: ochre yellow walls, green timber louvred shutters, encaustic
+      cement tiles, clay tiled roof, timber louvre screens, tropical planting. Warm late
+      afternoon sunlight.
+  mai_thai:
+    vi: Mái Thái
+    prompt: >-
+      Vietnamese "mai Thai" style: steeply pitched hipped roof clad in dark red or brown
+      profiled clay tiles with wide overhanging eaves, cream or beige rendered walls, white
+      trimmed window surrounds, a covered entrance porch with slender columns, low garden wall
+      with metal gate. Bright daylight, clear sky.
+  toi_gian:
+    vi: Tối giản
+    prompt: >-
+      Minimalist style: unbroken white or off-white rendered planes, very few openings placed
+      deliberately, deep window reveals, no mouldings and no decorative trim, flat roof with a
+      sharp thin edge, a single band of dark framing. Soft diffuse daylight, long clean
+      shadows, restrained planting.
+  nhiet_doi:
+    vi: Nhiệt đới
+    prompt: >-
+      Tropical modern style: deep cantilevered eaves and horizontal sun-shading fins, perforated
+      breeze-block screens, exposed fair-faced concrete with warm timber slats, wide sliding
+      glass doors, dense green planting spilling over the balconies and roof edge. Warm humid
+      daylight, dappled shade.
+  dia_trung_hai:
+    vi: Địa Trung Hải
+    prompt: >-
+      Mediterranean style: thick whitewashed or sand coloured lime-rendered walls, low pitched
+      roof in terracotta barrel tiles, arched openings and arcaded loggia, dark timber shutters
+      and wrought iron balustrades, terracotta paving. Strong warm sunlight, deep shadows,
+      olive and bougainvillea planting.
+  co_dien:
+    vi: Cổ điển
+    prompt: >-
+      Classical style, richer and more formal than neoclassical: strictly symmetrical facade,
+      full-height engaged columns with moulded capitals, heavy cornice and entablature, a
+      pedimented entrance reached by a wide stone stair, stone balustrades, tall arched windows
+      with carved surrounds, mansard roof. Even bright daylight.
+  bac_au:
+    vi: Bắc Âu
+    prompt: >-
+      Scandinavian style: simple gabled volume with no eaves overhang, pale grey or white
+      vertical timber cladding, large black framed windows in a regular rhythm, warm pale
+      timber entrance door and soffits, minimal detailing. Cool soft northern daylight, birch
+      and grass planting.
+
+# Ba khung hình dựng cho mỗi phương án. Thứ tự ở đây là thứ tự hiện trên màn hình.
+views:
+  - id: ngay
+    vi: Toàn cảnh ban ngày
+    camera: eye_level
+    prompt: >-
+      Bright clear midday daylight, high sun, crisp shadows on the pavement, blue sky with a few
+      light clouds.
+  - id: dem
+    vi: Toàn cảnh ban đêm
+    camera: eye_level
+    prompt: >-
+      Night scene after dusk, deep blue sky, warm interior lights glowing behind the windows,
+      facade uplighting, street lamps and wet asphalt reflections. Keep the same viewpoint and
+      the same building as the daytime view.
+  - id: goc_nghieng
+    vi: Góc nghiêng
+    camera: street_level
+    prompt: >-
+      Late afternoon golden light seen from the pavement at an oblique angle, long soft shadows,
+      warm sunlight raking across the facade.
+
+# Từ vựng dựng câu ngữ cảnh. Mọi mã của `site.adjacent` trong biểu mẫu Đầu bài phải có mặt ở
+# `adjacent` — có kiểm thử đối chiếu với `kb/site_context.yaml`, nơi giữ vế "mặt này có thoáng
+# không". Hai tệp giữ hai câu trả lời khác nhau cho cùng một mã, nên lệch nhau là lỗi.
+context:
+  building_type:
+    nha_pho: a Vietnamese urban row house (townhouse) in a dense street
+    biet_thu: a detached Vietnamese villa standing free on its own plot
+    nha_vuon: a Vietnamese garden house on a spacious green plot
+  sides:
+    front: In front of the building
+    back: Behind the building
+    left: On the left-hand side
+    right: On the right-hand side
+  adjacent:
+    nha_hang_xom: >-
+      stands an existing neighbouring house built hard against this wall: a blind party wall,
+      no windows, no gap, no setback
+    hem_2m: runs a narrow 2 m service alley
+    hem_3m: runs a 3 m alley
+    duong_lon: runs a main street with traffic
+    dat_trong: lies a vacant plot
+    ao_ho: lies a pond or canal
+  # Chưa khai hiện trạng một mặt thì KHÔNG bịa ra gì cho mặt đó — im lặng đúng hơn là đoán.
+  # (Vế mặc định cho việc lấy sáng nằm ở `kb/site_context.yaml`, không phải ở đây.)
+  #
+  # Câu chốt khi cả hai mặt bên đều bị che: đây chính là câu vá lỗi "hai mặt tiền".
+  single_frontage: >-
+    This building has exactly ONE street-facing facade. Both side walls are blind party walls
+    concealed by the adjoining houses and must not be visible as designed elevations. Do not
+    render a corner building. Do not open windows, balconies or glazing on the side walls.
+  # Câu chốt khi có mặt bên thoáng — vẫn phải nói rõ để mô hình không tự thêm mặt tiền thứ ba.
+  extra_frontage: >-
+    Only the faces described above are open. Every other wall is a blind party wall against a
+    neighbouring building.
+
+# Nhãn do MÃ chèn lên ảnh trước khi hiển thị (01-overview 1.4). Không tắt được từ giao diện.
+watermark: 'Ảnh tham khảo ý tưởng — chưa phải phương án thi công'

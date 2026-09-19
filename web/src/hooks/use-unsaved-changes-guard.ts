@@ -29,6 +29,31 @@ import { CONFIRMS } from '@nvg/shared';
  * `navigate()` thì chạy ngay trong cùng lượt — không có nó, người dùng vừa bấm Lưu xong lại bị
  * hỏi "dữ liệu chưa lưu sẽ mất", đúng lúc dữ liệu vừa được lưu xong.
  */
+/**
+ * Lần điều hướng này có RỜI khỏi biểu mẫu không.
+ *
+ * Cố ý bỏ qua phần lớn `search`: biểu mẫu nhiều bước đổi bước bằng tham số URL (Webapp Flow
+ * 4.4), và chặn ở đó là hỏi "dữ liệu sẽ mất" giữa chừng chính việc người dùng đang làm —
+ * trong khi họ có rời trang đâu.
+ *
+ * Nhưng KHÔNG bỏ qua `tab`. Màn hình chi tiết dùng cùng một đường dẫn cho mọi tab và mọi màn
+ * hình con (`/tk/du-an/<id>?tab=…`), nên nút «← Tổng quan» của trình soạn thảo Đầu bài rời
+ * khỏi biểu mẫu mà chỉ đổi đúng tham số đó. So mỗi `pathname` thì nó lọt qua hàng rào và xoá
+ * sạch những gì vừa gõ, không hỏi một câu — đúng thứ "KHÔNG bao giờ để mất dữ liệu đang
+ * nhập" (Webapp Flow 6.3) tồn tại để chặn.
+ *
+ * Một tham số, không phải cả chuỗi: bộ lọc, phân trang, bước của wizard đều nằm trong
+ * `search` và không cái nào là rời biểu mẫu.
+ */
+function leavesForm(
+  current: { pathname: string; search: string },
+  next: { pathname: string; search: string },
+): boolean {
+  if (current.pathname !== next.pathname) return true;
+  const tabOf = (search: string) => new URLSearchParams(search).get('tab');
+  return tabOf(current.search) !== tabOf(next.search);
+}
+
 export function useUnsavedChangesGuard(dirty: boolean): () => void {
   // Đọc qua `ref` chứ không đọc thẳng `dirty`: hàm quyết định chặn được router gọi ngoài chu
   // kỳ vẽ của React, nên nó phải nhìn thấy giá trị mới nhất chứ không phải giá trị đóng băng
@@ -44,10 +69,7 @@ export function useUnsavedChangesGuard(dirty: boolean): () => void {
 
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
-      // CHỈ so đường dẫn, cố ý bỏ qua `search`: biểu mẫu nhiều bước đổi bước bằng tham số URL
-      // (Webapp Flow 4.4), và chặn ở đó là hỏi "dữ liệu sẽ mất" giữa chừng chính việc người
-      // dùng đang làm — trong khi họ có rời trang đâu.
-      active.current && currentLocation.pathname !== nextLocation.pathname,
+      active.current && leavesForm(currentLocation, nextLocation),
   );
 
   useEffect(() => {

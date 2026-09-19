@@ -1,0 +1,396 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+#  THƯỚC CHẤM MẶT BẰNG CÔNG NĂNG — trọng số và công thức
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+#  Phiên bản thước: score_version 1 (T27)
+#  Nguồn:           bộ đo trên hồ sơ thật của NVG, 12/09/2026
+#                   /home/haan/Documents/Doc/NVG/design/mat_bang_cong_nang
+#  Cơ sở dữ liệu:   2 dự án NVO, 6 mặt bằng độc lập (P1 nhà vườn 2 tầng,
+#                   P2 nhà phố 5 tầng). n tối đa 6, n theo DỰ ÁN tối đa 2.
+#
+#  ── TỆP NÀY GIỮ GÌ, VÀ KHÔNG GIỮ GÌ ──────────────────────────────────────────
+#
+#  GIỮ: trọng số nhóm, công thức, ngưỡng «đạt» và «trừ hết» của từng tiêu chí, số
+#  mẫu `n`, và nhãn [ĐO]/[CHUNG].
+#
+#  KHÔNG GIỮ: ngưỡng theo MÃ PHÒNG. Kích thước tối thiểu và tỷ lệ dài/rộng tối đa
+#  của từng loại phòng đã nằm ở `rules/nvg-experience.yaml` và
+#  `rules/nvg-measured.yaml`; bộ chấm tra theo `predicate` + `target` ở đó và
+#  KHÔNG chép số sang đây. Chép sang là tạo bản thứ hai sẽ lệch — đúng bài học
+#  tối 10/09/2026, khi trần `strategy` của hợp đồng (200) lệch khỏi ý đồ bố cục
+#  thật (241–301) vì không ai đối chiếu hai tệp dữ liệu với nhau.
+#
+#  ⚠️ Ranh giới dễ hỏng ở T20: hai gói quy tắc MẶC ĐỊNH TẮT CẢ HAI, nhưng bộ chấm
+#  vẫn phải chấm được B1/B2 khi kỹ sư không tích gì — hình dáng phòng không phải
+#  thứ bật tắt bằng ô tích. Phân vai: bộ chấm LUÔN đọc ngưỡng kích thước từ tệp
+#  quy tắc; ô tích chỉ quyết định hai việc KHÁC — có tiêm vào lời dẫn hay không,
+#  và có hiện thành cảnh báo thói quen hay không. Cùng một con số, hai người đọc.
+#
+#  ── ĐIỂM KHÔNG PHẢI ĐIỂM CHO THIẾT KẾ ────────────────────────────────────────
+#
+#  Nó đo đúng những gì hình học đo được. Một mặt bằng hay vẫn có thể 70 điểm, và
+#  một mặt bằng vô hồn vẫn có thể 90. Nó dùng để XẾP HẠNG ứng viên và CHỈ CHỖ
+#  YẾU, không bao giờ thay bước kỹ sư xem bằng mắt — và theo T35 thì điểm KHÔNG
+#  gác cổng xuất DXF theo cả hai chiều: điểm cao không tự mở, điểm thấp không
+#  chặn.
+#
+#  ── «CHƯA ĐỦ DỮ LIỆU» KHÔNG PHẢI 0 ───────────────────────────────────────────
+#
+#  Tiêu chí thiếu đầu vào trả về RỖNG, không trả 0, và trọng số của nó KHÔNG được
+#  chia lại cho các nhóm còn lại. Điểm tổng vì vậy luôn đi kèm `scored_weight` —
+#  «72 trên 85 phần trọng số đã chấm được», không phải «85 điểm». Hiện 0 đọc như
+#  «vi phạm hết», không đọc như «chưa đo» (CLAUDE.md 5.2).
+
+version: '2026.09.1'
+
+# Đổi công thức hay ngưỡng thì TĂNG số này. Không có nó thì bảng lịch sử so hai
+# model bằng hai cái thước khác nhau mà không ai biết (T27).
+score_version: 1
+
+co_so_du_lieu: '2 dự án NVO, 6 mặt bằng độc lập — mọi ngưỡng [ĐO] là chỉ dấu, chưa phải chuẩn'
+
+# Ngưỡng NHẬN phương án của luồng tự động, % điểm trên phần trọng số chấm được (T53, 16/09/2026 — Haan:
+# «nên để ngưỡng 65/100, sau đó có một ô chat để kỹ sư đưa vào yêu cầu của họ sau khi review bản vẽ»).
+# Qua cổng mà dưới ngưỡng thì dùng lượt sửa còn lại gửi mô hình các tiêu chí mất điểm nhất; hết lượt thì
+# lưu phương án điểm cao nhất và nói rõ là dưới ngưỡng. Không phải chuẩn nghề — là chỗ dừng hợp lý để
+# giao cho kỹ sư sửa tiếp bằng tay. Vắng = không có ngưỡng.
+accept_percent: 65
+
+# ── Trọng số nhóm ──────────────────────────────────────────────────────────────
+#
+# Y NGUYÊN bộ đo, không tự chỉnh (mặc định số 4 của phương án). Hai chỗ đáng để ý,
+# vì chúng không phải thứ tôi nghĩ ra được:
+#   · C nặng nhất (30), GẤP BA E (10). Tôi đặt C = 20 và E = 15. Hồ sơ thật nói
+#     ngược: giao thông là nơi mặt bằng sống hay chết, còn «dựng được» thì khung
+#     bê tông cốt thép đã lo phần lớn.
+#   · Không có nhóm nào cho quy chuẩn. Quy đổi một điều khoản pháp quy thành điểm
+#     là tuyên bố có thể vi phạm nếu chỗ khác bù lại (T29) — và sau T30 thì nhánh
+#     AI không kiểm quy chuẩn nào.
+groups:
+  A:
+    vi: 'Đúng chương trình'
+    weight: 25
+  B:
+    vi: 'Hình dáng phòng'
+    weight: 20
+  C:
+    vi: 'Giao thông'
+    weight: 30
+  D:
+    vi: 'Mặt thoáng'
+    weight: 15
+  E:
+    vi: 'Dựng được'
+    weight: 10
+
+# Trong một nhóm, các tiêu chí CHẤM ĐƯỢC chia đều trọng số. Bộ đo chỉ cho trọng số
+# NHÓM, không cho trọng số từng tiêu chí — nên đây là lựa chọn của team, nhãn
+# [CHUNG], và đổi được bằng cách khai `weight` cho từng tiêu chí ở dưới.
+within_group: equal
+
+# ── Năm kiểu thang điểm ────────────────────────────────────────────────────────
+#
+#   lower_better   giá trị ≤ pass → đủ điểm; ≥ zero → 0; giữa thì nội suy
+#   higher_better  giá trị ≥ pass → đủ điểm; ≤ zero → 0
+#   count          đếm phần tử vi phạm: ≤ pass → đủ điểm; ≥ zero → 0
+#   boolean        1 hoặc 0, không có giữa
+#   band           trong [low, high] → đủ điểm; ngoài [hard_low, hard_high] → 0;
+#                  khoảng giữa → NỬA điểm, KHÔNG nội suy (xem C2)
+
+criteria:
+  # ── A. Đúng chương trình ────────────────────────────────────────────────────
+  - code: A1
+    group: A
+    vi: 'Lệch diện tích so với yêu cầu của chương trình không gian'
+    giai_thich: 'Bình quân có trọng số theo diện tích. Phòng ghép (`also`) so với TỔNG diện tích yêu cầu của các mã nó phục vụ.'
+    kind: lower_better
+    pass: 0.10
+    zero: 0.30
+    n: 0
+    label: 'CHUNG'
+    # n = 0 vì nó so với YÊU CẦU CỦA KHÁCH, mà hồ sơ đã xây không còn giữ bản yêu
+    # cầu gốc — chỉ NVO trả lời được, bằng cách đối chiếu hợp đồng với bản vẽ cuối.
+
+  - code: A2
+    group: A
+    vi: 'Phòng đặt đúng tầng chương trình đã định'
+    kind: higher_better
+    pass: 1.0
+    zero: 0.7
+    n: 0
+    label: 'CHUNG'
+    # CỔNG DỮ LIỆU ĐÃ BẢO ĐẢM, nên tiêu chí này KHÔNG tính vào điểm.
+    #
+    # `room_wrong_level` của `ai/plan-check.ts` là lỗi CHẶN: phòng đặt sai tầng thì
+    # mặt bằng không bao giờ tới được bước chấm. Nên A2 luôn bằng 1,0 trên mọi bản
+    # được chấm — nó không phân biệt được gì, và cho nó 1/4 của 25 điểm là tặng
+    # 6,25 điểm không đo gì cả.
+    #
+    # Vì sao GIỮ dòng này thay vì xoá: bộ đo viết cho việc ĐỌC một bản vẽ có sẵn,
+    # và ở đó phòng sai tầng là chuyện xảy ra thật. Xoá khỏi tệp thì lần sau ai đó
+    # đối chiếu với bộ đo sẽ tưởng là bỏ sót. Giữ lại kèm lý do là cách nói «đã
+    # xét, và đây là chỗ nó thuộc về» (T24: cổng và điểm là hai thứ khác nhau).
+    enforced_by_gate: room_wrong_level
+
+  - code: A3
+    group: A
+    vi: 'Phòng thờ ở tầng cao nhất có người ở, không dưới khu vệ sinh và không chung tường với khu vệ sinh'
+    kind: boolean
+    n: 2
+    label: 'ĐO'
+
+  - code: A4
+    group: A
+    vi: 'Tầng nào có phòng ngủ thì tầng đó có khu vệ sinh'
+    kind: higher_better
+    pass: 1.0
+    zero: 0.99
+    n: 3
+    label: 'ĐO'
+    # `zero: 0.99` của bộ đo làm tiêu chí này thành nhị phân trên thực tế: nhà 5
+    # tầng thiếu một khu vệ sinh cho ra 0,8, đã dưới 0,99. Giữ nguyên con số của bộ
+    # đo thay vì viết `boolean` cho gọn — để dòng này còn đối chiếu được với nguồn.
+
+  # Hai tiêu chí định mức nghề thêm 16/09/2026 (T48). Haan chốt: định mức `kb/space_norms.yaml` CHỈ
+  # trừ điểm, không chặn — chặn vẫn chỉ có mức đầu bài khách khai.
+  - code: A5
+    group: A
+    vi: 'Số phòng nhỏ hơn mức tối thiểu của nghề cho loại ấy'
+    kind: count
+    pass: 0
+    zero: 2
+    n: 0
+    label: 'CHUNG mức 0; trừ hết ở 2 phòng'
+
+  - code: A6
+    group: A
+    vi: 'Số phòng lớn hơn mức tối đa của nghề cho loại ấy'
+    kind: count
+    pass: 0
+    zero: 2
+    n: 0
+    label: 'CHUNG mức 0; trừ hết ở 2 phòng'
+
+  # ── B. Hình dáng phòng ──────────────────────────────────────────────────────
+  - code: B1
+    group: B
+    vi: 'Số phòng có cạnh ngắn dưới mức tối thiểu của loại phòng'
+    giai_thich: 'Ngưỡng lấy từ `rules/` theo `predicate: min_dimension` và `target` = mã phòng. KHÔNG chép số vào tệp này.'
+    kind: count
+    pass: 0
+    zero: 2
+    n: 5
+    label: 'ĐO ngưỡng theo mã phòng; CHUNG mức trừ'
+
+  - code: B2
+    group: B
+    vi: 'Số phòng vượt tỷ lệ dài/rộng tối đa của loại phòng'
+    giai_thich: 'Ngưỡng lấy từ `rules/` theo `predicate: aspect_ratio_max`.'
+    kind: count
+    pass: 0
+    zero: 2
+    n: 5
+    label: 'ĐO ngưỡng theo mã phòng; CHUNG mức trừ'
+
+  - code: B4
+    group: B
+    vi: 'Chiều cao bậc thang nằm trong khoảng xây được'
+    giai_thich: 'Chiều cao bậc = chiều cao tầng ÷ số bậc. Khoảng lấy từ hai thang đo thật: P1 ≈ 171 mm, P2 ≈ 156 mm.'
+    kind: band
+    low: 0.150
+    high: 0.180
+    hard_low: 0.140
+    hard_high: 0.195
+    n: 2
+    label: 'ĐO'
+    # ⚠️ Bộ đo đòi THÊM một vế nữa: `2h + b` trong 0,57–0,64 m, với `b` là mặt bậc.
+    # Hợp đồng mặt bằng KHÔNG mang mặt bậc, và suy nó từ chữ nhật ô thang cộng số vế
+    # là ba tầng phỏng đoán chồng lên nhau (vế nào dài bao nhiêu, chiếu nghỉ chiếm
+    # bao nhiêu, bậc quạt có không). Nên vế ấy hiện «Chưa đủ dữ liệu», và câu hỏi
+    # cho Haan là có thêm một trường `tread_cm` vào hợp đồng hay không — xem mục
+    # «Câu hỏi chờ Haan» của TIEN_DO_THIET_KE.html.
+
+  # B5 (tỷ lệ phòng kê được bộ đồ tối thiểu) CỐ Ý chưa có trong danh sách này.
+  # Nó cần `kb/furniture.yaml` của T36, mà kích thước đồ đạc hiện là cỡ thông dụng
+  # nhãn [CHUNG], n = 0. Vẽ hộ bằng số phỏng đoán thì vô hại; TRỪ ĐIỂM bằng số
+  # phỏng đoán thì không (mặc định số 10 của phương án).
+  # ── C. Giao thông ───────────────────────────────────────────────────────────
+  - code: C1
+    group: C
+    vi: 'Số phòng chỉ tới được bằng cách đi xuyên một phòng ngủ khác'
+    kind: count
+    pass: 0
+    zero: 1
+    n: 3
+    label: 'ĐO'
+    # Khu vệ sinh khép kín KHÔNG tính: `ensuite_of` của chương trình không gian nói
+    # rõ chỗ đi xuyên phòng ấy là hợp lệ.
+
+  - code: C2
+    group: C
+    vi: 'Tỷ lệ diện tích giao thông trên sàn lọt lòng'
+    giai_thich: '(thang + lõi + sảnh + hành lang) ÷ tổng diện tích phòng của tầng.'
+    kind: band
+    low: 0.18
+    high: 0.36
+    hard_low: 0.12
+    hard_high: 0.42
+    by_building_type:
+      nha_vuon:
+        low: 0.18
+        high: 0.25
+    n: 6
+    label: 'ĐO khoảng đạt; CHUNG ngưỡng trừ hết'
+    # BA MỨC, cố ý KHÔNG nội suy tuyến tính. Khoảng đạt rộng 0,18 trong khi sai số
+    # do chỗ cắt ranh giới mặt bằng mở là ±0,10 — tức sai số hơn NỬA bề rộng
+    # khoảng. Nên tiêu chí này chỉ dùng được để bắt ngoại lệ THÔ (dưới 0,12 là
+    # không có chỗ đi, trên 0,42 là ném tiền vào hành lang), không dùng được làm
+    # thang điểm mượt. Một đường nội suy trên một phép đo như thế là vờ như đo
+    # tinh hơn thực tế.
+
+  - code: C3
+    group: C
+    vi: 'Số phòng phải đi qua từ lối vào tới chân thang'
+    kind: count
+    pass: 0
+    zero: 2
+    n: 2
+    label: 'ĐO mức 0; CHUNG mức 2'
+
+  - code: C4
+    group: C
+    vi: 'Bề rộng lọt lòng nhỏ nhất của hành lang, mét'
+    kind: higher_better
+    pass: 1.1
+    zero: 0.9
+    n: 3
+    label: 'ĐO 1,1; CHUNG 0,9'
+
+  - code: C5
+    group: C
+    vi: 'Nhà có mặt bằng bán hàng thì có lối vào tới thang không đi qua chỗ bán hàng'
+    kind: boolean
+    n: 1
+    label: 'ĐO'
+    # Chỉ chấm khi mặt bằng CÓ `shop`. Không có thì «Chưa đủ dữ liệu», không phải 0.
+
+  # Ba tiêu chí giao thông thêm 16/09/2026 (T48) sau khi Haan chấm lượt đo 58d9ff66 «giao thông bất
+  # tiện»: bộ chấm cũ chỉ biết «có đi tới được không» và «mấy phòng tới chân thang», nên một tầng bắt
+  # người ta đi từ phòng khách vòng qua sảnh ngoài rồi xuyên gara mới tới WC chung vẫn đủ điểm.
+  # Ngưỡng là SUY LUẬN nghề (n = 0), sửa ở đây khi đo được trên hồ sơ thật.
+  - code: C6
+    group: C
+    vi: 'Số cửa từ chỗ sinh hoạt chung tới WC chung xa nhất'
+    kind: count
+    pass: 1
+    zero: 3
+    n: 0
+    label: 'CHUNG mức 1; trừ hết ở mức 3'
+
+  - code: C7
+    group: C
+    vi: 'Quãng đường đi từ chỗ sinh hoạt chung tới WC chung xa nhất, mét'
+    kind: lower_better
+    pass: 8
+    zero: 20
+    n: 0
+    label: 'CHUNG 8 m; trừ hết ở 20 m'
+
+  - code: C8
+    group: C
+    vi: 'Chiều dài hành lang trên mỗi phòng nó phục vụ, mét'
+    kind: lower_better
+    pass: 2.5
+    zero: 6
+    n: 0
+    label: 'CHUNG 2,5 m; trừ hết ở 6 m'
+
+  # ── D. Mặt thoáng ───────────────────────────────────────────────────────────
+  - code: D1
+    group: D
+    vi: 'Tỷ lệ phòng ở có cửa sổ mở ra mặt thoáng'
+    giai_thich: 'Chỉ tính cửa sổ trên cạnh hình bao `open` — cửa sổ trên tường ranh không phải mặt thoáng.'
+    kind: higher_better
+    pass: 1.0
+    zero: 0.7
+    rooms: habitable
+    by_building_type:
+      # Nhà phố cho phòng ngủ PHỤ và bếp lấy sáng gián tiếp — đo thật: 2/7 phòng ngủ
+      # của P2 chỉ có cửa sổ ra hành lang, và đó là nhà đã xây, đã duyệt. Nên chỉ
+      # phòng khách và phòng ngủ chính bị đòi mặt thoáng, và thiếu một trong hai là
+      # trừ hết.
+      nha_pho:
+        rooms: living_and_master
+        pass: 1.0
+        zero: 0.99
+    n: 5
+    label: 'ĐO'
+
+  # ── E. Dựng được ────────────────────────────────────────────────────────────
+  - code: E2
+    group: E
+    vi: 'Tỷ lệ khu vệ sinh từ tầng 2 trở lên nằm gần khu vệ sinh tầng dưới hoặc hộp kỹ thuật'
+    giai_thich: 'Khoảng cách tâm tới tâm ≤ 1,5 m.'
+    kind: higher_better
+    pass: 1.0
+    zero: 0.5
+    khoang_cach_m: 1.5
+    n: 5
+    label: 'ĐO 1,0; CHUNG 0,5'
+
+  - code: E4
+    group: E
+    vi: 'Hộp kỹ thuật liên tục qua các tầng'
+    giai_thich: 'Lệch tâm giữa hai tầng liền nhau ≤ 0,15 m.'
+    kind: boolean
+    lech_m: 0.15
+    n: 5
+    label: 'ĐO (1 dự án)'
+
+# ── Độ khớp Ý ĐỊNH khi bộ giải chọn cây (T43, 14/09/2026) ─────────────────────────
+#
+# KHÔNG phải tiêu chí của điểm. Bộ giải `ai/arrange/` dựng nhiều cây từ cùng một ý định
+# bố cục mô hình khai, cho qua cổng, rồi chọn theo:
+#   tổng = điểm chuẩn hoá về 0–100 trên phần trọng số chấm được + blend × 100 × độ khớp
+#   độ khớp = zone × (phòng đúng vùng) + relationship × (quan hệ đạt) + street × (phòng ra mặt đường)
+# Cả sáu con số là lựa chọn của team, nhãn [CHUNG], n = 0 — chỉnh ở đây, không sửa mã.
+intent_fit:
+  zone: 0.5
+  relationship: 0.3
+  street: 0.2
+  near_m: 6
+  far_m: 8
+  blend: 0.3
+
+# ── Bốn tiêu chí đã BỎ, và vì sao ─────────────────────────────────────────────
+#
+# Giữ danh sách này trong tệp để không ai dựng lại chúng bằng thiện chí. Cả bốn là
+# của tôi, và cả bốn bị hồ sơ ĐÃ XÂY phủ định — ba trong bốn cái nghe rất hợp lý.
+bo_khoi:
+  - code: E1
+    vi: 'Tường tầng trên trùng tuyến tầng dưới'
+    ly_do: 'Đo được 0–1% tường trong trùng tầng dưới trên CẢ HAI công trình khung bê tông cốt thép đã xây. Thưởng điểm cho nó là trừ điểm đúng những nhà đã xây và đã được duyệt.'
+  - code: E3
+    vi: 'Tổng chiều dài tường trên mỗi mét vuông'
+    ly_do: '0,00–0,35 m/m², biến thiên theo CHỨC NĂNG TẦNG, không theo chất lượng.'
+  - code: B3
+    vi: 'Tỷ lệ phòng vụn'
+    ly_do: 'Phòng nhỏ trên hồ sơ đều có chủ đích, và không có định nghĩa hình học nào tách «vụn» khỏi «gọn».'
+  - code: D2
+    vi: 'Bề rộng mặt thoáng trên diện tích phòng'
+    ly_do: '0,08–0,34 m/m² với sai số đo cửa ±0,15 m — sai số LỚN HƠN khả năng phân biệt. Chờ đo lại trên DWG, n ≥ 20 phòng.'
+
+# ── Không đo được, và đó là kết luận chứ không phải việc còn nợ ───────────────
+khong_do_duoc:
+  - muc: 'Lượng sáng và thông gió thực tế'
+    ly_do: 'Phụ thuộc hướng, chiều cao cửa, che chắn. Toạ độ không đủ.'
+  - muc: 'Phong thuỷ — hướng bếp, bếp đối diện WC, bếp kẹp giữa chậu rửa và tủ lạnh'
+    ly_do: 'Tập quán, không có mẫu phản chứng hay xác nhận. Chấm máy sẽ trừ oan. Bếp đối diện WC cần dò cửa đối cửa; «hai thuỷ» cần vị trí đồ đạc (T36 chưa có). Riêng «cầu thang đâm thẳng cửa chính» đã TÁCH RA 16/09/2026 thành quy tắc kinh nghiệm tuỳ chọn `stair_not_facing_entry` (`rules/nvg-experience.yaml`): đo được bằng hình học cửa + ô thang, và chỉ cảnh báo khi kỹ sư tích gói kinh nghiệm — không vào điểm.'
+  - muc: 'Hợp nếp sống gia chủ'
+    ly_do: 'Cần phỏng vấn.'
+  - muc: 'Lối đi quanh nội thất, cánh cửa va nhau'
+    ly_do: 'Cần bộ đồ nội thất (T36) và cần hiệu chuẩn kích thước đồ.'
+  - muc: 'Khả thi kết cấu — khối nhô, tường không dầm đỡ'
+    ly_do: 'Việc của kỹ sư kết cấu. Nhánh AI không sinh kết cấu (CLAUDE.md 8.2 điểm 9).'
+  - muc: 'Thẩm mỹ, cảm nhận không gian'
+    ly_do: 'Cảm thụ. Đây đúng là phần bước kỹ sư xem bằng mắt giữ lại cho mình (T35).'

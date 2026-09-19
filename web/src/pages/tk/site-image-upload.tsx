@@ -15,6 +15,7 @@ import {
   useExtractSiteBoundary,
   type SiteBoundaryExtractionResult,
 } from '@/hooks/use-site-boundary-extraction';
+import { AiUsageLine } from './ai/ai-usage';
 
 interface Props {
   projectId: string;
@@ -61,6 +62,8 @@ export function SiteImageUpload({ projectId, onExtract }: Props) {
       </Button>
       {extract.isPending && <p className="text-fg-subtle">Đang đọc ảnh — có thể mất 15–30 giây.</p>}
       {error && <p className="text-status-overdue">{error}</p>}
+      {/* Mô hình đọc ảnh là một lượt gọi AI — nói ra tốn bao nhiêu ngay cạnh nút (13/09/2026). */}
+      {extract.data && <AiUsageLine usage={extract.data.usage} />}
     </div>
   );
 }

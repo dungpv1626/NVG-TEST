@@ -11,6 +11,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { BRIEF_FORM, checkBriefConsistency, type DesignBriefDraft } from '@nvg/shared/design';
 
 /** Dùng khi tenant chưa cấu hình ngưỡng — bằng đúng giá trị seed của migration 0095. */
 const FALLBACK_KEY = 'brief_completeness_min';
@@ -64,6 +65,22 @@ export function gateLayer2(briefPayload: unknown, threshold: number | null): Gat
       missingFields,
       message:
         'Chưa cấu hình mức đầy đủ tối thiểu của đầu bài. Quản trị hệ thống bổ sung cấu hình trước khi dựng phương án tự động.',
+    };
+  }
+
+  // Đủ điểm chưa đủ: đầu bài tự nói ngược chính nó thì mọi bước sau đều xây trên một bên của
+  // mâu thuẫn mà không ai chọn (13/09/2026 — ví dụ phòng ông bà khép kín ở tầng 1 theo gia đình
+  // nhưng ở tầng 2 theo danh sách phòng). Chỉ chặn mức NGHIÊM TRỌNG; cảnh báo vẫn cho chạy.
+  const serious = checkBriefConsistency(briefPayload as DesignBriefDraft, BRIEF_FORM).filter(
+    (issue) => issue.severity === 'nghiem_trong',
+  );
+  if (serious.length) {
+    return {
+      allowed: false,
+      score,
+      threshold,
+      missingFields,
+      message: `Đầu bài còn ${serious.length} mâu thuẫn nghiêm trọng, chưa dựng được phương án tự động: ${serious.map((i) => i.message).join(' ')}`,
     };
   }
 

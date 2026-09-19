@@ -231,6 +231,24 @@ export const kbRecordSchema = z
         'Những chỗ trích xuất không chắc chắn. Đi kèm bản ghi thay vì chỉ nằm trong nhật ký, vì người xác nhận cần thấy chúng đúng lúc đang xem bản ghi.',
       )
       .optional(),
+    /** Danh mục tờ của bộ hồ sơ gốc (chép từ cad-extraction.sheets, gộp mọi tệp). Để tra cứu và để engine học cách tái tạo SheetSet; không phải hình học. */
+    sheets: z
+      .array(
+        z
+          .object({
+            source_file: z.string().nullable().optional(),
+            code: z.string(),
+            name: z.string().nullable().optional(),
+            scale: z.string().nullable().optional(),
+            discipline: z.string().nullable().optional(),
+            date: z.string().nullable().optional(),
+          })
+          .strict(),
+      )
+      .describe(
+        'Danh mục tờ của bộ hồ sơ gốc (chép từ cad-extraction.sheets, gộp mọi tệp). Để tra cứu và để engine học cách tái tạo SheetSet; không phải hình học.',
+      )
+      .optional(),
   })
   .strict()
   .describe(

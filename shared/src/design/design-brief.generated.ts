@@ -141,6 +141,59 @@ export const designBriefSchema = z
           .nullable()
           .describe('Mật độ xây dựng tối đa, tỉ lệ 0..1. null = chưa biết, lấy theo rule pack.')
           .optional(),
+        /** Mặt đặt lối vào CHÍNH của người (cửa chính). Phải là một mặt tiếp cận được (`access_sides`). null = chưa quyết, kiến trúc sư chọn. */
+        main_entrance_side: z
+          .union([
+            z.literal('front'),
+            z.literal('back'),
+            z.literal('left'),
+            z.literal('right'),
+            z.literal(null),
+          ])
+          .nullable()
+          .describe(
+            'Mặt đặt lối vào CHÍNH của người (cửa chính). Phải là một mặt tiếp cận được (`access_sides`). null = chưa quyết, kiến trúc sư chọn.',
+          )
+          .optional(),
+        /** Mặt đặt cổng xe / cửa chỗ để xe. Có thể khác mặt lối vào chính (ví dụ ô tô vào từ đường lớn, người vào từ hẻm). null = chưa quyết hoặc không có xe. */
+        vehicle_entrance_side: z
+          .union([
+            z.literal('front'),
+            z.literal('back'),
+            z.literal('left'),
+            z.literal('right'),
+            z.literal(null),
+          ])
+          .nullable()
+          .describe(
+            'Mặt đặt cổng xe / cửa chỗ để xe. Có thể khác mặt lối vào chính (ví dụ ô tô vào từ đường lớn, người vào từ hẻm). null = chưa quyết hoặc không có xe.',
+          )
+          .optional(),
+        /** Tường trên cạnh giáp nhà hàng xóm là tường CHUNG hay tường RIÊNG — quyết định của kỹ sư theo từng khách hàng (Haan, 12/09/2026). null = chưa xác định. Chỉ có nghĩa ở cạnh `adjacent` là nhà hàng xóm. */
+        boundary_walls: z
+          .object({
+            front: z
+              .union([z.literal('chung'), z.literal('rieng'), z.literal(null)])
+              .nullable()
+              .optional(),
+            back: z
+              .union([z.literal('chung'), z.literal('rieng'), z.literal(null)])
+              .nullable()
+              .optional(),
+            left: z
+              .union([z.literal('chung'), z.literal('rieng'), z.literal(null)])
+              .nullable()
+              .optional(),
+            right: z
+              .union([z.literal('chung'), z.literal('rieng'), z.literal(null)])
+              .nullable()
+              .optional(),
+          })
+          .strict()
+          .describe(
+            'Tường trên cạnh giáp nhà hàng xóm là tường CHUNG hay tường RIÊNG — quyết định của kỹ sư theo từng khách hàng (Haan, 12/09/2026). null = chưa xác định. Chỉ có nghĩa ở cạnh `adjacent` là nhà hàng xóm.',
+          )
+          .optional(),
         legal_docs_available: z.boolean().optional(),
       })
       .strict()
@@ -154,16 +207,37 @@ export const designBriefSchema = z
           .object({
             role: z.enum(['ong_ba', 'vo_chong', 'con', 'khach', 'nguoi_giup_viec']),
             count: z.number().int().gte(0).lte(20),
+            /** Ghim phòng ngủ của nhóm thành viên này vào đúng tầng này. Số tầng THẬT, không phải nguyện vọng tương đối: biểu mẫu dựng danh sách chọn từ chính `floors`, nên người khai không chọn được một tầng không tồn tại. Ghim vượt quá `floors` (vì số tầng giảm sau khi đã khai) bị bỏ kèm cảnh báo, không làm hỏng lượt soạn. `null`/vắng mặt = để Lớp 2 tự xếp. */
+            floor: z
+              .number()
+              .int()
+              .gte(1)
+              .nullable()
+              .describe(
+                'Ghim phòng ngủ của nhóm thành viên này vào đúng tầng này. Số tầng THẬT, không phải nguyện vọng tương đối: biểu mẫu dựng danh sách chọn từ chính `floors`, nên người khai không chọn được một tầng không tồn tại. Ghim vượt quá `floors` (vì số tầng giảm sau khi đã khai) bị bỏ kèm cảnh báo, không làm hỏng lượt soạn. `null`/vắng mặt = để Lớp 2 tự xếp.',
+              )
+              .optional(),
+            /** CÁCH KHAI CŨ — nguyện vọng tầng tương đối. Vẫn đọc được để các đầu bài đã lưu không mất câu trả lời, nhưng biểu mẫu không sinh thêm giá trị mới: "tầng giữa" của một căn hai tầng không trỏ vào tầng nào, và nó dùng một bộ từ vựng khác hẳn `required_spaces[].floor` cho cùng một khái niệm. `floor` thắng khi cả hai cùng có. */
             floor_pref: z
               .union([z.literal('low'), z.literal('mid'), z.literal('top'), z.literal(null)])
               .nullable()
+              .describe(
+                'CÁCH KHAI CŨ — nguyện vọng tầng tương đối. Vẫn đọc được để các đầu bài đã lưu không mất câu trả lời, nhưng biểu mẫu không sinh thêm giá trị mới: "tầng giữa" của một căn hai tầng không trỏ vào tầng nào, và nó dùng một bộ từ vựng khác hẳn `required_spaces[].floor` cho cùng một khái niệm. `floor` thắng khi cả hai cùng có.',
+              )
               .optional(),
             needs: z.array(z.string()).optional(),
+            /** Phòng ngủ của thành viên này KHÉP KÍN — khu vệ sinh nằm bên trong phòng, không mở ra hành lang. Lớp 2 sinh thêm một `wc` mang `enclosed_in` trỏ về phòng đó, và khu vệ sinh này KHÔNG tính vào định mức wc chung của tầng. Trước 06/09/2026 điều này khai bằng chuỗi `"wc"` trong `needs`, nhưng `wc` thuộc nhóm Lớp 2 tự suy nên chuỗi đó bị bỏ qua hoàn toàn — biểu mẫu có ô chọn mà chọn hay không đều ra cùng một chương trình. */
+            ensuite: z
+              .boolean()
+              .describe(
+                'Phòng ngủ của thành viên này KHÉP KÍN — khu vệ sinh nằm bên trong phòng, không mở ra hành lang. Lớp 2 sinh thêm một `wc` mang `enclosed_in` trỏ về phòng đó, và khu vệ sinh này KHÔNG tính vào định mức wc chung của tầng. Trước 06/09/2026 điều này khai bằng chuỗi `"wc"` trong `needs`, nhưng `wc` thuộc nhóm Lớp 2 tự suy nên chuỗi đó bị bỏ qua hoàn toàn — biểu mẫu có ô chọn mà chọn hay không đều ra cùng một chương trình.',
+              )
+              .optional(),
           })
           .strict(),
       )
       .optional(),
-    /** Không gian bắt buộc có, mỗi phần tử một loại. "Có sân trong hay không" khai ở đây bằng mã `courtyard`; VỊ TRÍ các sân khai ở `massing.yards`. */
+    /** Không gian bắt buộc có. MỘT PHẦN TỬ = MỘT PHÒNG, và cùng một mã được lặp lại nhiều lần khi cần ghim từng phòng vào tầng riêng hoặc cho từng phòng một diện tích riêng — trước 06/09/2026 mỗi phần tử là một LOẠI, nên một căn có bảy phòng ngủ chỉ ghim được chung một dòng. Phòng ngủ vẫn suy từ `family`; các phần tử `bedroom`/`master_bedroom` khai tường minh ở đây GHI ĐÈ lên bấy nhiêu phòng đầu tiên trong số đó, không cộng thêm. "Có sân trong hay không" khai ở đây bằng mã `courtyard`; VỊ TRÍ các sân khai ở `massing.yards`. */
     required_spaces: z
       .array(
         z
@@ -184,11 +258,66 @@ export const designBriefSchema = z
                 'Ghim cứng vào đúng tầng này. `null`/vắng mặt = để Lớp 2 tự xếp theo nguyện vọng và cân tải (mặc định, hành vi hiện tại).',
               )
               .optional(),
+            /** Diện tích TỐI THIỂU của không gian này, m² — phòng được lớn hơn, không được nhỏ hơn (Haan, 13/09/2026). Không phải diện tích chốt cứng. Tổng các mức tối thiểu phải vừa phần sàn xây được sau khoảng lùi, sân và mật độ — bộ kiểm đầu bài đối chiếu. Vắng mặt = để thiết kế tự định. */
+            area_m2: z
+              .number()
+              .lte(1000)
+              .gt(0)
+              .nullable()
+              .describe(
+                'Diện tích TỐI THIỂU của không gian này, m² — phòng được lớn hơn, không được nhỏ hơn (Haan, 13/09/2026). Không phải diện tích chốt cứng. Tổng các mức tối thiểu phải vừa phần sàn xây được sau khoảng lùi, sân và mật độ — bộ kiểm đầu bài đối chiếu. Vắng mặt = để thiết kế tự định.',
+              )
+              .optional(),
+            /** CHỈ có nghĩa với `bedroom`/`master_bedroom`: phòng ngủ này KHÉP KÍN — khu vệ sinh nằm bên trong, không mở ra hành lang và không tính vào định mức wc chung của tầng. Sinh ra vì một dòng phòng ngủ khai tường minh GHI ĐÈ lên một phòng suy từ `family`: trước 07/09/2026 phần ghi đè bỏ luôn khu vệ sinh khép kín của phòng bị thay, im lặng — nên vừa ghim được tầng vừa mất một khu vệ sinh. Vắng mặt/`null` = lấy theo `family[].ensuite` của phòng bị ghi đè, nên đầu bài cũ giữ nguyên hành vi. */
+            ensuite: z
+              .boolean()
+              .nullable()
+              .describe(
+                'CHỈ có nghĩa với `bedroom`/`master_bedroom`: phòng ngủ này KHÉP KÍN — khu vệ sinh nằm bên trong, không mở ra hành lang và không tính vào định mức wc chung của tầng. Sinh ra vì một dòng phòng ngủ khai tường minh GHI ĐÈ lên một phòng suy từ `family`: trước 07/09/2026 phần ghi đè bỏ luôn khu vệ sinh khép kín của phòng bị thay, im lặng — nên vừa ghim được tầng vừa mất một khu vệ sinh. Vắng mặt/`null` = lấy theo `family[].ensuite` của phòng bị ghi đè, nên đầu bài cũ giữ nguyên hành vi.',
+              )
+              .optional(),
+            /** Tiện ích bổ sung khách yêu cầu cho RIÊNG phòng này, viết bằng lời ("bồn tắm nằm", "quầy bar nhỏ", "cửa sổ nhìn ra sân"). Engine KHÔNG đọc: đây là ghi chú cho kiến trúc sư, đi theo artifact để nó không rơi lại vào Zalo. Cố ý KHÔNG quy về mã phòng — một tiện ích không phải một không gian, và bịa ra một mã cho nó là đưa cái bồn tắm vào cây chia không gian. */
+            amenities: z
+              .string()
+              .max(500)
+              .nullable()
+              .describe(
+                'Tiện ích bổ sung khách yêu cầu cho RIÊNG phòng này, viết bằng lời ("bồn tắm nằm", "quầy bar nhỏ", "cửa sổ nhìn ra sân"). Engine KHÔNG đọc: đây là ghi chú cho kiến trúc sư, đi theo artifact để nó không rơi lại vào Zalo. Cố ý KHÔNG quy về mã phòng — một tiện ích không phải một không gian, và bịa ra một mã cho nó là đưa cái bồn tắm vào cây chia không gian.',
+              )
+              .optional(),
           })
           .strict(),
       )
       .describe(
-        'Không gian bắt buộc có, mỗi phần tử một loại. "Có sân trong hay không" khai ở đây bằng mã `courtyard`; VỊ TRÍ các sân khai ở `massing.yards`.',
+        'Không gian bắt buộc có. MỘT PHẦN TỬ = MỘT PHÒNG, và cùng một mã được lặp lại nhiều lần khi cần ghim từng phòng vào tầng riêng hoặc cho từng phòng một diện tích riêng — trước 06/09/2026 mỗi phần tử là một LOẠI, nên một căn có bảy phòng ngủ chỉ ghim được chung một dòng. Phòng ngủ vẫn suy từ `family`; các phần tử `bedroom`/`master_bedroom` khai tường minh ở đây GHI ĐÈ lên bấy nhiêu phòng đầu tiên trong số đó, không cộng thêm. "Có sân trong hay không" khai ở đây bằng mã `courtyard`; VỊ TRÍ các sân khai ở `massing.yards`.',
+      )
+      .optional(),
+    /** Số xe CẦN CHỖ ĐỖ — thay cho ô chữ tự do «để ô tô, 2 xe máy». Diện tích chỗ để xe suy từ đây theo `kb/brief_fidelity.yaml`. */
+    parking: z
+      .object({
+        /** Số ô tô cần chỗ đỗ trong nhà. */
+        cars: z
+          .number()
+          .int()
+          .gte(0)
+          .lte(10)
+          .nullable()
+          .describe('Số ô tô cần chỗ đỗ trong nhà.')
+          .optional(),
+        /** Số xe máy, xe máy điện, xe đạp điện. */
+        motorbikes: z
+          .number()
+          .int()
+          .gte(0)
+          .lte(30)
+          .nullable()
+          .describe('Số xe máy, xe máy điện, xe đạp điện.')
+          .optional(),
+      })
+      .strict()
+      .nullable()
+      .describe(
+        'Số xe CẦN CHỖ ĐỖ — thay cho ô chữ tự do «để ô tô, 2 xe máy». Diện tích chỗ để xe suy từ đây theo `kb/brief_fidelity.yaml`.',
       )
       .optional(),
     /** Ý ĐỒ về tổ hợp khối, không phải hình học đã giải. Nhà phố là trường hợp một cánh nhà, khoảng lùi bằng không (04-layer3-floorplan) nên phần này để trống; với biệt thự và nhà vườn, lô rộng không tự ràng buộc như nhà phố nên đây là nguồn thu hẹp lời giải chính (01-overview 1.2). Mọi trường ở đây là LỰA CHỌN RỜI RẠC — bộ giải mới là nơi gán số đo (nguyên tắc bất biến 2). */
@@ -238,6 +367,20 @@ export const designBriefSchema = z
             'Tổ chức sân vườn — sân nằm ở đâu so với khối nhà. Khác `required_spaces`: ở đó khai CÓ sân, ở đây khai sân NẰM ĐÂU.',
           )
           .optional(),
+        /** Khoảng sân MONG MUỐN theo từng mặt, mét, đo từ RANH ĐẤT tới mặt ngoài khối nhà. Khác `site.setback_required_m` (quy hoạch bắt buộc): đây là ý muốn của gia chủ. Phần đất xây được lấy mức LỚN HƠN của hai số trên mỗi mặt. */
+        yard_depth_m: z
+          .object({
+            front: z.number().gte(0).optional(),
+            back: z.number().gte(0).optional(),
+            left: z.number().gte(0).optional(),
+            right: z.number().gte(0).optional(),
+          })
+          .strict()
+          .nullable()
+          .describe(
+            'Khoảng sân MONG MUỐN theo từng mặt, mét, đo từ RANH ĐẤT tới mặt ngoài khối nhà. Khác `site.setback_required_m` (quy hoạch bắt buộc): đây là ý muốn của gia chủ. Phần đất xây được lấy mức LỚN HƠN của hai số trên mỗi mặt.',
+          )
+          .optional(),
         /** Quan hệ trong nhà với sân vườn (01-overview 1.2). Mở tối đa = nhiều cửa kính lớn nhìn ra sân; kín đáo = ưu tiên riêng tư với bên ngoài. */
         indoor_outdoor: z
           .union([
@@ -263,6 +406,12 @@ export const designBriefSchema = z
         z.literal('hien_dai'),
         z.literal('tan_co_dien'),
         z.literal('indochine'),
+        z.literal('mai_thai'),
+        z.literal('toi_gian'),
+        z.literal('nhiet_doi'),
+        z.literal('dia_trung_hai'),
+        z.literal('co_dien'),
+        z.literal('bac_au'),
         z.literal(null),
       ])
       .nullable()

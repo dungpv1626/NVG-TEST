@@ -21,8 +21,12 @@ import { ARTIFACT_ID_PATTERN, artifactId } from '@nvg/shared/design';
 import { ArtifactRepository, type ArtifactScope } from '../artifacts';
 import { HttpComputeBackend } from '../compute-backend';
 import type { DesignEnv } from '../env';
-import { solveFloorPlan, stubArchModel, layoutIntent, stubRenderResult } from '../workflows/steps';
+import { solveFloorPlan, buildArchModel, layoutIntent, stubRenderResult } from '../workflows/steps';
 import { buildSpaceProgram } from '../program/engine';
+import { chooseVariant, generateVariants, listVariants } from '../layout/variants';
+import { parseSiteContext } from '../kb/site-context';
+import { parseVocabulary, roomGroups } from '../kb/vocabulary';
+import { testSiteContextYaml, testVocabularyYaml } from './program-fixtures';
 import { testNorms, testRulePack } from './program-fixtures';
 
 const computeUrl = process.env.DESIGN_COMPUTE_URL;
@@ -126,6 +130,7 @@ describeE2e('Pipeline khung xương — đầu bài tới ảnh phối cảnh', 
       intentRef: intentArtifact.id,
       program: program.payload,
       site: { width_m: 5, depth_m: 18 },
+      buildingType: 'nha_pho',
       locality: 'hung_yen',
       timeBudgetS: 30,
     });
@@ -141,7 +146,7 @@ describeE2e('Pipeline khung xương — đầu bài tới ảnh phối cảnh', 
       params: { locality: 'hung_yen', timeBudgetS: 30 },
     });
 
-    const arch = stubArchModel(solved.payload, planArtifact.id);
+    const arch = buildArchModel(solved.payload, planArtifact.id);
     const archArtifact = await repo.write({
       scope,
       kind: 'arch_model',
@@ -224,6 +229,7 @@ describeE2e('Pipeline khung xương — đầu bài tới ảnh phối cảnh', 
       intentRef: `sha256:${'b'.repeat(64)}`,
       program: impossible,
       site: { width_m: 5, depth_m: 18 },
+      buildingType: 'nha_pho',
       locality: 'hung_yen',
       timeBudgetS: 20,
     });
@@ -233,4 +239,100 @@ describeE2e('Pipeline khung xương — đầu bài tới ảnh phối cảnh', 
     expect(report.human_message).toMatch(/không thể đồng thời/i);
     expect(report.conflict_set.length).toBeGreaterThan(0);
   });
+});
+
+describeE2e('Đường chạy đồng bộ của Lớp 3 — trên kho artifact và Container thật (V-10)', () => {
+  it('sinh ba phương án, liệt kê theo lineage, chọn phương án khác', async () => {
+    const env: DesignEnv = {
+      SUPABASE_URL: supabaseUrl!,
+      SUPABASE_SERVICE_ROLE_KEY: serviceKey!,
+      DESIGN_COMPUTE_URL: computeUrl,
+    };
+    const repo = new ArtifactRepository(env);
+    const admin = createClient(supabaseUrl!, serviceKey!, { auth: { persistSession: false } });
+    const tenant = await admin.from('tenants').select('id').eq('code', 'nvg').single();
+    const company = await admin.from('companies').select('id').eq('code', 'NVO').single();
+    const project = await admin
+      .from('design_projects')
+      .insert({
+        company_id: company.data!.id,
+        code: `NVO-TK-2090-${Math.floor(Math.random() * 9000 + 1000)}`,
+        name: `${TEST_PREFIX} Ba phương án mặt bằng`,
+        stage: 'dau_bai',
+      })
+      .select('id')
+      .single();
+    if (project.error) throw new Error(project.error.message);
+
+    const scope: ArtifactScope = {
+      tenantId: tenant.data!.id,
+      companyId: company.data!.id,
+      projectId: project.data.id,
+      discipline: 'kien_truc',
+      actorId: null,
+    };
+    const brief = {
+      schema_version: '1.0.0',
+      project_id: project.data.id,
+      building_type: 'nha_pho',
+      locality: 'hung_yen',
+      site: { width_m: 5, depth_m: 18 },
+      floors: 3,
+      family: [
+        { role: 'vo_chong', count: 2 },
+        { role: 'con', count: 2 },
+      ],
+    };
+    const briefArtifact = await repo.write({ scope, kind: 'design_brief', payload: brief });
+    const program = buildSpaceProgram({
+      brief: brief as never,
+      briefRef: briefArtifact.id,
+      rules: testRulePack(),
+      norms: testNorms(),
+    });
+    await repo.write({
+      scope,
+      kind: 'space_program',
+      payload: program.payload,
+      inputs: [briefArtifact.id],
+      step: 'layer2_program',
+      params: { stub: true },
+    });
+
+    const vocabulary = parseVocabulary(testVocabularyYaml());
+    const viByType: Record<string, string> = {};
+    for (const t of vocabulary.types) viByType[t.code] = t.vi;
+    const ctx = {
+      repo,
+      compute: new HttpComputeBackend(computeUrl!),
+      scope,
+      siteContext: parseSiteContext(testSiteContextYaml()),
+      viByType,
+      groups: roomGroups(vocabulary),
+    };
+
+    const outcome = await generateVariants(ctx, { timeBudgetS: 20 });
+    expect(outcome.results.map((r) => r.variantId)).toEqual(['A', 'B', 'C']);
+    const feasible = outcome.results.filter((r) => r.kind === 'floor_plan');
+    expect(feasible.length, JSON.stringify(outcome.results)).toBeGreaterThan(0);
+    expect(outcome.headArtifactId).toBe(feasible[0]!.artifactId);
+
+    const listing = await listVariants(ctx);
+    expect(listing.variants).toHaveLength(3);
+    const head = listing.variants.find((v) => v.isHead)!;
+    expect(head.summary!.levels.map((l) => l.height_m)).toEqual([3.6, 3.6, 3.9]);
+    expect(head.summary!.total_area_m2).toBeGreaterThan(0);
+
+    // Sinh lại: không giải lại, không đổi bản đang chọn.
+    const again = await generateVariants(ctx, { timeBudgetS: 20 });
+    expect(again.results.every((r) => r.reused)).toBe(true);
+
+    const other = listing.variants.find((v) => v.status === 'ok' && !v.isHead);
+    if (other) {
+      await chooseVariant(ctx, other.artifactId);
+      expect((await listVariants(ctx)).variants.find((v) => v.isHead)?.artifactId).toBe(
+        other.artifactId,
+      );
+    }
+  }, 120_000);
 });

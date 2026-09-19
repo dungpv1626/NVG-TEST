@@ -31,10 +31,23 @@ import {
 } from '@nvg/shared/design';
 import type { ComputeBackend } from '../compute-backend';
 import { parseArtifact } from '../contracts';
-import { buildLayoutIntent, type LayoutVariant } from '../layout/intent';
-import type { Face } from '../layout/site-context';
+import {
+  buildLayoutIntent,
+  type BuildIntentArgs,
+  type FaceNeed,
+  type LayoutVariant,
+  type MinSide,
+  type Plate,
+} from '../layout/intent';
+import type { Face } from '../kb/site-context';
 
 const SCHEMA_VERSION = '1.0.0';
+// Dự phòng khi mặt bằng cũ chưa mang cao độ hay cửa chưa mang chiều cao — cùng giá trị với
+// kb/construction_norms.yaml, nhưng đường chính là đọc từ FloorPlan.
+const DEFAULT_STOREY_M = 3.6;
+const DEFAULT_DOOR_H = 2.2;
+const DEFAULT_WINDOW_H = 1.6;
+const DEFAULT_PARAPET_M = 0.9;
 
 export interface StepResult<T> {
   payload: T;
@@ -54,7 +67,19 @@ export interface StepResult<T> {
 export function layoutIntent(
   program: SpaceProgram,
   programRef: string,
-  options: { variant?: LayoutVariant; openFaces?: readonly Face[] } = {},
+  options: {
+    variant?: LayoutVariant;
+    openFaces?: readonly Face[];
+    accessFaces?: readonly Face[];
+    /** Tra `requires_face` theo loại phòng — gói quy tắc do lớp gọi cấp, tệp này không tự nạp. */
+    faceOf?: FaceNeed;
+    /** Mặt sàn dùng chung — Lớp 3a dùng để chọn khung mẫu, không để gán toạ độ. */
+    plate?: Plate;
+    /** Tra `min_dimension` theo loại phòng — cùng nguồn với `faceOf`. */
+    minSideOf?: MinSide;
+    /** Ý đồ khối nhà của đầu bài — xem `BuildIntentArgs.massing`. */
+    massing?: BuildIntentArgs['massing'];
+  } = {},
 ): StepResult<LayoutIntent> {
   return {
     stub: false,
@@ -65,6 +90,11 @@ export function layoutIntent(
         programRef,
         variant: options.variant,
         openFaces: options.openFaces,
+        accessFaces: options.accessFaces,
+        faceOf: options.faceOf,
+        plate: options.plate,
+        minSideOf: options.minSideOf,
+        massing: options.massing,
       }),
     ),
   };
@@ -90,6 +120,12 @@ export async function solveFloorPlan(
      * cách riêng, và bộ giải nhận một mảnh đất khác mảnh đất Lớp 2 đã soạn chương trình.
      */
     site: DesignBrief['site'];
+    /**
+     * Loại hình công trình — quyết định tập quy tắc bộ giải áp dụng (`applies_to` trong
+     * `rules/base/50-massing.yaml`). Bắt buộc: bỏ trống thì Container rơi về `"nha_pho"`
+     * và giải biệt thự bằng luật nhà phố mà không báo gì (V-23).
+     */
+    buildingType: DesignBrief['building_type'];
     locality: string;
     timeBudgetS: number;
     /**
@@ -130,6 +166,7 @@ export async function solveFloorPlan(
       setback_required_m: args.site.setback_required_m,
       max_density: args.site.max_density ?? null,
     },
+    building_type: args.buildingType,
     rule_pack: { locality: args.locality },
     time_budget_s: args.timeBudgetS,
     labels: args.labels,
@@ -152,30 +189,123 @@ export async function solveFloorPlan(
 }
 
 /**
- * Layer 4 — mô hình kiến trúc tham số.
+ * Layer 4 — mô hình kiến trúc tham số, bản TẤT ĐỊNH cho khối sơ bộ (Mốc 5, 11-design-flow 11.4b).
  *
- * STUB: bản thật gọi mô hình ngôn ngữ chọn tham số mặt đứng theo phong cách, rồi Container
- * dựng mặt cắt và bảng thống kê (Mốc 6).
+ * Không còn là stub: khối theo cao độ tầng thật của `FloorPlan.levels[].height_m` (đọc từ chuẩn
+ * cấu tạo, không phải hằng số), lỗ mở mặt đứng lấy từ các lỗ mở nằm trên tường ngoài, mái bằng
+ * có lan can. Phần mô hình ngôn ngữ chọn tham số mặt đứng theo phong cách (TK-14) đến sau và chỉ
+ * BỔ SUNG vào cấu trúc này, không thay nó.
+ *
+ * Nguyên tắc bất biến 2 vẫn đúng: mọi con số ở đây là chép từ hình học đã giải, không có số nào
+ * được "sáng tác" tại chỗ.
  */
-export function stubArchModel(plan: FloorPlan, planRef: string): StepResult<ArchModel> {
+/**
+ * Hình bao công trình `[x0, y0, x1, y1]` trong hệ toạ độ thửa.
+ *
+ * Bộ giải đã tính sẵn và `FloorPlan.footprint_m` chở sang — không suy lại, vì suy lại là bản
+ * thực thi thứ hai của cùng một phép và nó sẽ lệch.
+ *
+ * Đường lùi chỉ dành cho artifact tạo TRƯỚC 07/09/2026, lúc hợp đồng chưa có trường này:
+ * lấy hộp bao của toàn bộ tường. Artifact là bất biến nên chúng còn nằm đó mãi, và đọc chúng
+ * bằng ranh thửa sẽ cho ra đúng lỗi vừa sửa. Không có tường nào thì mới quay về ranh thửa —
+ * lúc đó chẳng có lỗ mở nào để phân loại, nên chọn gì cũng như nhau.
+ */
+function footprintOf(plan: FloorPlan): [number, number, number, number] {
+  const declared = plan.footprint_m;
+  if (declared && declared.length === 4) {
+    return [declared[0]!, declared[1]!, declared[2]!, declared[3]!];
+  }
+
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const level of plan.levels) {
+    for (const wall of level.walls ?? []) {
+      for (const [px, py] of [wall.a, wall.b]) {
+        minX = Math.min(minX, px ?? 0);
+        minY = Math.min(minY, py ?? 0);
+        maxX = Math.max(maxX, px ?? 0);
+        maxY = Math.max(maxY, py ?? 0);
+      }
+    }
+  }
+  if (!Number.isFinite(minX)) return [0, 0, plan.site.width_m, plan.site.depth_m];
+  return [minX, minY, maxX, maxY];
+}
+
+export function buildArchModel(plan: FloorPlan, planRef: string): StepResult<ArchModel> {
   let base = 0;
   const levels = plan.levels.map((level) => {
-    const height = level.height_m ?? 3.4;
+    const height = level.height_m ?? DEFAULT_STOREY_M;
     const row = { level: level.level, extrude_from_m: base, extrude_to_m: base + height };
     base += height;
     return row;
   });
 
+  const eps = 1e-6;
+  // Mặt ngoài đo theo HÌNH BAO CÔNG TRÌNH, không theo ranh thửa.
+  //
+  // Toạ độ phòng và tường là toạ độ tuyệt đối trong thửa, còn khối thì thụt vào theo khoảng
+  // lùi. So với `plan.site` là so với một đường mà không tường nào chạm tới: nhà phố (lùi 0)
+  // vẫn đúng nên lỗi không bao giờ lộ ra ở đề bài demo, còn mọi biệt thự có khoảng lùi thật
+  // thì trả về bốn mảng lỗ mở RỖNG — mất sạch cửa trên phối cảnh và khối ba chiều (V-22).
+  const [x0, y0, x1, y1] = footprintOf(plan);
+  type FacadeOpening = NonNullable<NonNullable<ArchModel['facades']>[number]['openings']>[number];
+  const facades: Record<'front' | 'back' | 'left' | 'right', FacadeOpening[]> = {
+    front: [],
+    back: [],
+    left: [],
+    right: [],
+  };
+  for (const level of plan.levels) {
+    const walls = new Map((level.walls ?? []).map((w) => [w.id, w]));
+    for (const opening of level.openings ?? []) {
+      const wall = walls.get(opening.wall);
+      if (!wall) continue;
+      const ax = wall.a[0] ?? 0;
+      const ay = wall.a[1] ?? 0;
+      const bx = wall.b[0] ?? 0;
+      const by = wall.b[1] ?? 0;
+      const vertical = Math.abs(bx - ax) < eps;
+      let direction: keyof typeof facades | null = null;
+      if (vertical && Math.abs(ax - x0) < eps) direction = 'left';
+      else if (vertical && Math.abs(ax - x1) < eps) direction = 'right';
+      else if (!vertical && Math.abs(ay - y0) < eps) direction = 'front';
+      else if (!vertical && Math.abs(ay - y1) < eps) direction = 'back';
+      if (!direction) continue;
+      const origin = vertical ? Math.min(ay, by) : Math.min(ax, bx);
+      const kind = opening.kind === 'opening' ? 'opening' : opening.kind;
+      facades[direction].push({
+        level: level.level,
+        x_m: origin + opening.offset_m,
+        w_m: opening.width_m,
+        h_m: opening.height_m ?? (kind === 'door' ? DEFAULT_DOOR_H : DEFAULT_WINDOW_H),
+        sill_m: kind === 'door' ? 0 : (opening.sill_m ?? null),
+        kind,
+      });
+    }
+  }
+
+  // Mặt cắt A-A dọc qua lõi thang (cùng vị trí với ký hiệu trên tờ mặt bằng).
+  const stair = plan.levels[0]?.rooms.find((r) => r.type === 'stair' || r.type === 'core');
+  const stairX = stair
+    ? stair.polygon.reduce((s, p) => s + (p[0] ?? 0), 0) / stair.polygon.length
+    : (x0 + x1) / 2;
+
   return {
-    stub: true,
+    stub: false,
     payload: parseArtifact('arch_model', {
       schema_version: SCHEMA_VERSION,
       floorplan_ref: planRef,
       style: null,
       massing: { levels },
-      roof: { kind: 'flat', parapet_h_m: 0.9 },
-      facades: [],
-      sections: [],
+      roof: { kind: 'flat', parapet_h_m: DEFAULT_PARAPET_M },
+      facades: (['front', 'back', 'left', 'right'] as const).map((direction) => ({
+        direction,
+        openings: facades[direction],
+      })),
+      sections: [{ id: 'A', plane: { axis: 'x', at_m: Math.round(stairX * 1000) / 1000 } }],
     }),
   };
 }

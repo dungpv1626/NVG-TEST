@@ -1,0 +1,824 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nvg.vn/contracts/ai-floor-plan.schema.json",
+  "title": "AiFloorPlan",
+  "description": "Mặt bằng của NHÁNH AI — toàn bộ NỘI DUNG bản vẽ dưới dạng dữ liệu, một artifact cho cả phương án (mọi tầng).\n\nQuyết định T15 (09/09/2026 — Haan): «AI thiết kế, chương trình cầm bút». Mô hình khai từng đoạn tường kèm bề dày, từng cửa và cửa sổ kèm vị trí và chiều mở, thang, tên phòng và diện tích; bộ vẽ tất định trong Worker (`ai/draw/`) đặt lên giấy. Thay cho phương án cũ (T14) để mô hình tự viết chuỗi SVG — đo thật 09/09 cho ra bản phác không cửa, không chuỗi kích thước, vách không bề dày.\n\nVì sao dữ liệu chứ không phải tệp vẽ: dữ liệu KIỂM ĐƯỢC. Thiếu cửa, cửa đặt ngoài tường, tường không bao kín phòng, diện tích khai lệch chữ nhật — máy bắt được và yêu cầu mô hình sửa. Một tệp SVG thì chỉ đếm được ký tự.\n\nĐƠN VỊ: xăng-ti-mét, không phải mét, trên lưới nửa centimet. Mô hình khai SỐ NGUYÊN (lời dẫn nói thẳng), còn nửa centimet dành cho chương trình — tim vách 11 cm giữa hai phòng rơi vào x,5. Không có số thực tự do: hai lượt gọi cùng đầu vào phải cho cùng mã băm artifact. Xem `$defs.cm`. Gốc toạ độ ở góc TRƯỚC-TRÁI lô đất, `x` sang phải dọc mặt tiền, `y` vào sâu.\n\nKHÔNG khai chuỗi kích thước: bộ vẽ suy từ chính toạ độ tường. Bắt mô hình khai lại là thêm ~30% token và thêm một cách sai mới — một chuỗi kích thước cộng không ra tổng là bản vẽ không kiến trúc sư nào tin.\n\nKHÔNG khai cửa phục vụ phòng nào: máy suy từ hình học (điểm giữa lỗ mở lùi vào mỗi bên nửa bề dày tường rơi vào phòng nào).\n\nKết quả là ĐỀ XUẤT: không thành `floor_plan` chuẩn, không qua Container, không lên hồ sơ phát hành.\n\nTừ T37 (13/09/2026) mô hình KHÔNG khai toạ độ nào của tầng ngoài nhát cắt của cây chia (`levels[].tree`); tường, phòng, cửa, cửa sổ và thang trong artifact đều do chương trình suy từ cây (`ai/tree/`). Artifact chỉ được ghi khi mọi tầng đã qua cổng kiểm (T39).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "program_ref",
+    "variant_id",
+    "variant_label",
+    "levels",
+    "rationale",
+    "generator"
+  ],
+  "properties": {
+    "schema_version": {
+      "$ref": "#/$defs/semver"
+    },
+    "program_ref": {
+      "$ref": "#/$defs/artifact_ref",
+      "description": "Chương trình không gian (`ai_space_program`) mà mặt bằng bám theo. Worker điền."
+    },
+    "variant_id": {
+      "type": "string",
+      "pattern": "^AI-[A-Z]$",
+      "description": "Mã phương án: AI-A, AI-B, AI-C. Worker điền theo ý đồ bố cục đã gửi, không hỏi mô hình — ba lượt gọi song song sẽ đặt trùng nhau."
+    },
+    "variant_label": {
+      "type": "string",
+      "maxLength": 120,
+      "description": "Tên phương án bằng tiếng Việt, mô tả CẤU TRÚC («Lõi thang giữa, bếp thông phòng ăn»), không phải số."
+    },
+    "strategy": {
+      "type": ["string", "null"],
+      "maxLength": 600,
+      "description": "Ý đồ bố cục Worker đã gửi kèm, giữ lại NGUYÊN VĂN để đọc artifact biết phương án này theo hướng nào. Trần 600 chứ không phải 200: con số 200 là một phỏng đoán, và ba ý đồ thật ở `kb/ai_design_prompts.yaml` dài 241–301 ký tự — nên MỌI lượt ghi đều bị từ chối, sau khi đã trả tiền hai lượt gọi mô hình (đo 11/09/2026). Ý đồ bố cục là DỮ LIỆU sẽ dài ra theo mỗi lần chỉnh lời dẫn, nên trần phải có chỗ thở, và có phép thử đối chiếu hai nguồn với nhau."
+    },
+    "north_deg": {
+      "type": "number",
+      "minimum": 0,
+      "exclusiveMaximum": 360,
+      "description": "Góc của hướng bắc so với trục +y của bản vẽ, độ, cùng chiều kim đồng hồ. Worker suy từ hướng nhà trong đầu bài — mô hình không biết hướng và không được hỏi."
+    },
+    "levels": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 12,
+      "items": {
+        "$ref": "#/$defs/level"
+      }
+    },
+    "rationale": {
+      "type": "string",
+      "maxLength": 1500,
+      "description": "Vì sao bố cục như vậy, tiếng Việt, 2–5 câu."
+    },
+    "generator": {
+      "$ref": "#/$defs/generator"
+    },
+    "score": {
+      "$ref": "#/$defs/score"
+    },
+    "house_intent": {
+      "type": ["object", "null"],
+      "additionalProperties": true,
+      "description": "Ý định cả nhà mô hình khai (ai-house-intent, đã đánh mã type_n, có `sketches`) mà phương án này xếp từ đó (T53). Lượt sửa bố cục theo yêu cầu kỹ sư gửi lại nó làm `<previous_intent>`. Vắng = artifact đúc trước T53."
+    }
+  },
+  "$defs": {
+    "semver": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "artifact_ref": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "space_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$"
+    },
+    "elem_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$",
+      "maxLength": 24
+    },
+    "cm": {
+      "type": "number",
+      "multipleOf": 0.5,
+      "description": "Xăng-ti-mét, lưới nửa centimet. Toạ độ đo từ góc trước-trái lô đất. Khai SỐ NGUYÊN.",
+      "$comment": "Vì sao là lưới NỬA centimet chứ không phải số nguyên — lý lẽ cho người đọc hợp đồng, cố ý KHÔNG nằm ở `description`. `description` được `llm/schema-dialect.ts` nội suy vào MỌI chỗ dùng `$ref` (10 chỗ trong tệp này) và gửi cho mô hình ở mỗi lượt gọi, nên một đoạn văn 682 ký tự ở đây tốn ≈6.100 ký tự thừa một lượt. `$comment` nằm trong `META_KEYS` nên bị lược cho cả ba nhà cung cấp.\n\nMô hình khai số nguyên và không cần gì mịn hơn. Nửa centimet tồn tại vì CHƯƠNG TRÌNH cần: vách ngăn của NVG dày 11 cm (đo được trên hồ sơ thật, `kb/construction_norms.yaml`), nên tim vách giữa hai phòng có mặt trong ở toạ độ nguyên luôn rơi vào x,5. Bắt số nguyên ở đây thì `draw/derive-walls.ts` (T19) sinh ra artifact mà chính hợp đồng từ chối — và nó bị từ chối lúc GHI, sau khi đã trả tiền cho lượt gọi.\n\nNửa centimet vẫn là số biểu diễn CHÍNH XÁC trong nhị phân, nên hai lượt cùng đầu vào vẫn cho cùng mã băm artifact — đó là lý do ban đầu của việc cấm số thực, và nó còn nguyên."
+    },
+    "point": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "$ref": "#/$defs/cm"
+      },
+      "description": "[x, y] tính bằng cm."
+    },
+    "rect": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "$ref": "#/$defs/cm"
+      },
+      "description": "[x0, y0, x1, y1] cm, với x1 > x0 và y1 > y0."
+    },
+    "level": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level", "name", "h", "outline", "walls", "rooms"],
+      "properties": {
+        "level": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Số tầng, 1 là tầng trệt."
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 40,
+          "description": "Tên tầng in trên tờ vẽ, tiếng Việt: «Tầng 1», «Tầng lửng», «Tầng mái»."
+        },
+        "h": {
+          "$ref": "#/$defs/cm",
+          "description": "Chiều cao tầng (sàn tới sàn), cm. Quy ước cấu tạo gợi ý nằm ở kb/construction_norms.yaml và được gửi kèm lời dẫn."
+        },
+        "outline": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 24,
+          "items": {
+            "$ref": "#/$defs/point"
+          },
+          "description": "Hình bao khối xây của tầng, đa giác kín ngầm (điểm cuối tự nối điểm đầu). Nằm trong hình bao xây được mà lời dẫn đưa ra."
+        },
+        "outline_faces": {
+          "type": "array",
+          "maxItems": 24,
+          "items": {
+            "type": "string",
+            "enum": ["open", "boundary", "unknown"]
+          },
+          "description": "Thuộc tính MẶT của từng cạnh hình bao, cùng thứ tự và cùng số lượng với `outline` — cạnh i nối điểm i với điểm i+1, cạnh cuối nối về điểm đầu. open = giáp ngoài trời, lấy được sáng và gió · boundary = giáp nhà hàng xóm hoặc ranh đất, KHÔNG phải mặt thoáng · unknown = chưa suy được. WORKER ĐIỀN từ hiện trạng bốn phía của đầu bài; mô hình không khai.",
+          "$comment": "Vì sao trường này tồn tại, và vì sao nó ở ĐẦU VÀO chứ không ở đầu ra của mô hình.\n\nHợp đồng chỉ có `walls[].k ∈ {e,p,r}`, trong đó `e` gộp cả tường giáp ngoài trời lẫn tường trên ranh đất. Hệ quả đo được 12/09/2026: phép đối chiếu mặt thoáng ĐẾM một cửa sổ trên tường ranh là mặt thoáng hợp lệ — một cửa sổ không thể tồn tại — và nó hỏng IM LẶNG, không lỗi, không cảnh báo.\n\nChỗ sửa không phải ở mô hình: hiện trạng bốn phía là KHẢO SÁT (`site.adjacent` + `kb/site_context.yaml`), tức dữ liệu đã có trước khi gọi mô hình. Hỏi mô hình là trả tiền để nó đoán lại thứ ta đã biết, và thêm một cách sai mới.\n\n`boundary` cố ý KHÔNG nói tường chung hay tường riêng. Haan chốt 12/09/2026: chung hay riêng là quyết định của KỸ SƯ cho từng khách hàng, nên nó không suy được từ hiện trạng và chưa có ô nhập nào. Khai ba giá trị trong đó một giá trị gộp hai khả năng là nói đúng phần biết được; thêm `party_wall`/`private_wall` lúc này là điền hộ một lựa chọn của người khác (CLAUDE.md 5.2)."
+        },
+        "walls": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "a", "b", "t", "k"],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/elem_id"
+              },
+              "a": {
+                "$ref": "#/$defs/point",
+                "description": "Đầu tường, trên TIM tường."
+              },
+              "b": {
+                "$ref": "#/$defs/point",
+                "description": "Cuối tường, trên TIM tường."
+              },
+              "t": {
+                "$ref": "#/$defs/cm",
+                "description": "Bề dày tường, cm, đối xứng qua tim. Bề dày thường dùng của NVG nằm ở kb/construction_norms.yaml."
+              },
+              "k": {
+                "type": "string",
+                "enum": ["e", "p", "r"],
+                "description": "e = tường bao (giáp ngoài trời hoặc giếng trời) · p = vách ngăn trong nhà · r = lan can ban công, sân thượng."
+              }
+            }
+          }
+        },
+        "rooms": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 60,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "type", "rect", "area_m2"],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/space_id",
+                "description": "Mã LẤY TỪ chương trình không gian (`ai_space_program.spaces[].id`). Không đặt mã mới, không bỏ phòng nào."
+              },
+              "type": {
+                "$ref": "#/$defs/space_id"
+              },
+              "rect": {
+                "$ref": "#/$defs/rect",
+                "description": "Kích thước LỌT LÒNG của phòng — mặt trong tường tới mặt trong tường. Nhờ vậy cảnh báo kích thước tối thiểu so thẳng với ngưỡng quy chuẩn mà không phải trừ bề dày."
+              },
+              "area_m2": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Diện tích phòng, m². Khai để đối chiếu với chữ nhật và với chương trình không gian; lệch quá 10% hoặc 1 m² là lỗi phải sửa."
+              },
+              "also": {
+                "type": "array",
+                "maxItems": 4,
+                "items": {
+                  "$ref": "#/$defs/space_id"
+                },
+                "description": "Mã phòng KHÁC mà chính chữ nhật này cũng phục vụ — khai khi chương trình không gian có hai phòng mà bố cục gộp làm một không gian mở (bếp + ăn, khách + thờ). Diện tích yêu cầu khi đối chiếu là TỔNG của phòng chính và các mã ở đây.",
+                "$comment": "Vì sao cần trường này, đo trên hồ sơ thật 12/09/2026 (`mat_bang_cong_nang/phong_do_duoc.csv`): 3 trong 6 mặt bằng của hai dự án NVO có phòng ghép — «BẾP ĂN» (kitchen|dining), «PHÒNG KHÁCH + THỜ» (living|altar_room), «PHÒNG BẾP» gộp ăn. Không có `also` thì chỉ còn hai đường, và cả hai đều sai: mô hình bỏ một mã phòng, nên `room_missing` CHẶN; hoặc nó dựng một vách không tồn tại để có đủ phòng, tức bố cục bị hợp đồng bóp méo.\n\nĐây cũng là thứ tiêu chí A1 và A3 của bộ chấm cần: A1 so diện tích theo yêu cầu và phải chia phần ghép theo từng chức năng; A3 hỏi bàn thờ nằm đâu, mà trên hồ sơ thật bàn thờ nằm TRONG phòng khách."
+              },
+              "parts": {
+                "type": "array",
+                "maxItems": 5,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["id", "type", "rect", "area_m2"],
+                  "properties": {
+                    "id": {
+                      "$ref": "#/$defs/space_id"
+                    },
+                    "type": {
+                      "$ref": "#/$defs/space_id"
+                    },
+                    "rect": {
+                      "$ref": "#/$defs/rect",
+                      "description": "Phần chữ nhật của phòng ghép mà khu này chiếm — RANH MỀM, không có tường."
+                    },
+                    "area_m2": {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    }
+                  }
+                },
+                "description": "Các khu của một không gian mở, để tờ vẽ ghi tên từng khu. Chỉ có ở phòng mang `also`.",
+                "$comment": "Haan chấm lượt đo 58d9ff66 (16/09/2026): ô gộp khách + ăn + bếp 86,8 m² chỉ ghi mỗi chữ «PHÒNG KHÁCH», người đọc không hiểu đó là ba khu. Haan: «nếu gộp thì trên hình vẫn phải có chi tiết phân cách mềm giữa các khu vực, phải cho người đọc hiểu được».\n\nChia là việc của chương trình (`ai/plan-geometry.ts`), theo tỉ lệ diện tích mục tiêu của từng phòng trong chương trình không gian — KHÔNG hỏi mô hình, và KHÔNG sinh tường: `walls[]` không có đoạn nào ở ranh này, `area_m2` của phòng giữ nguyên tổng. Bộ vẽ ghi nhãn từng khu và một nét đứt ở ranh; tờ vẽ nói rõ đó là ranh mềm.\n\nTUỲ CHỌN: artifact đúc trước 16/09/2026 không có trường này, mọi chỗ đọc phải chịu được nó vắng."
+              },
+              "label": {
+                "type": ["string", "null"],
+                "maxLength": 40,
+                "description": "Chữ in trong phòng, tiếng Việt. Rỗng thì bộ vẽ tự lấy nhãn từ kb/room_vocabulary.yaml — chỉ khai khi cần tên khác («Phòng ngủ ông bà»)."
+              }
+            }
+          }
+        },
+        "doors": {
+          "type": "array",
+          "maxItems": 120,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "wall", "at", "w", "kind"],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/elem_id"
+              },
+              "wall": {
+                "$ref": "#/$defs/elem_id",
+                "description": "Mã đoạn tường chứa cửa."
+              },
+              "at": {
+                "$ref": "#/$defs/cm",
+                "description": "Khoảng cách từ đầu `a` của tường tới MÉP GẦN của lỗ cửa, cm."
+              },
+              "w": {
+                "$ref": "#/$defs/cm",
+                "description": "Bề rộng lỗ cửa thông thuỷ, cm."
+              },
+              "hinge": {
+                "type": ["string", "null"],
+                "enum": ["a", "b", null],
+                "description": "Bản lề ở phía đầu `a` hay đầu `b` của tường. Rỗng với cửa trượt và ô thông không cánh."
+              },
+              "side": {
+                "type": ["string", "null"],
+                "enum": ["l", "r", null],
+                "description": "Cánh mở về bên trái hay bên phải khi đứng ở `a` nhìn về `b`."
+              },
+              "kind": {
+                "type": "string",
+                "enum": ["single", "double", "sliding", "garage", "gate", "opening"],
+                "description": "single = cửa một cánh · double = hai cánh · sliding = cửa trượt · garage = cửa để xe · gate = cổng · opening = ô thông không cánh."
+              }
+            }
+          }
+        },
+        "windows": {
+          "type": "array",
+          "maxItems": 160,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "wall", "at", "w"],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/elem_id"
+              },
+              "wall": {
+                "$ref": "#/$defs/elem_id"
+              },
+              "at": {
+                "$ref": "#/$defs/cm"
+              },
+              "w": {
+                "$ref": "#/$defs/cm"
+              },
+              "sill": {
+                "$ref": "#/$defs/cm",
+                "description": "Cao độ bệ cửa sổ so với mặt sàn tầng, cm."
+              },
+              "h": {
+                "$ref": "#/$defs/cm",
+                "description": "Chiều cao ô cửa sổ, cm."
+              }
+            }
+          }
+        },
+        "stairs": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "rect", "up"],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/elem_id"
+              },
+              "rect": {
+                "$ref": "#/$defs/rect"
+              },
+              "up": {
+                "type": "string",
+                "enum": ["+x", "-x", "+y", "-y"],
+                "description": "Chiều đi LÊN của vế thang đầu tiên."
+              },
+              "flights": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3
+              },
+              "treads": {
+                "type": "integer",
+                "minimum": 2,
+                "maximum": 40,
+                "description": "Tổng số bậc trong ô thang này."
+              }
+            }
+          }
+        },
+        "voids": {
+          "type": "array",
+          "maxItems": 12,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "kind", "rect"],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/elem_id"
+              },
+              "kind": {
+                "type": "string",
+                "enum": ["light_well", "courtyard", "atrium", "void"],
+                "description": "light_well = giếng trời · courtyard = sân trong · atrium = thông tầng · void = ô trống trên thang."
+              },
+              "rect": {
+                "$ref": "#/$defs/rect"
+              }
+            }
+          }
+        },
+        "tree": {
+          "$ref": "#/$defs/tree"
+        },
+        "intent": {
+          "$ref": "#/$defs/intent"
+        },
+        "arrange": {
+          "$ref": "#/$defs/arrange"
+        }
+      }
+    },
+    "intent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rooms", "relationships", "entry_room", "garage_room"],
+      "description": "Ý định bố cục mô hình đã khai cho tầng này (T43), SAU khi chương trình chuẩn hoá (vùng mặc định, bỏ quan hệ trỏ phòng lạ). TUỲ CHỌN: artifact đúc trước 14/09/2026 không có.",
+      "$comment": "Cùng cấu trúc với `contracts/ai-plan-intent.schema.json` trừ `variant_label` và `rationale` (đã có chỗ ở gốc artifact). `contracts-parity.test.ts` canh hai bản khớp nhau.",
+      "properties": {
+        "rooms": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 40,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "zone", "street_facing"],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/tree_id"
+              },
+              "zone": {
+                "$ref": "#/$defs/zone"
+              },
+              "street_facing": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "relationships": {
+          "type": "array",
+          "maxItems": 30,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["a", "b", "kind"],
+            "properties": {
+              "a": {
+                "$ref": "#/$defs/tree_id"
+              },
+              "b": {
+                "$ref": "#/$defs/tree_id"
+              },
+              "kind": {
+                "type": "string",
+                "enum": ["adjacent", "near", "far", "open"]
+              }
+            }
+          }
+        },
+        "entry_room": {
+          "type": ["string", "null"],
+          "pattern": "^[a-z0-9_]+$",
+          "maxLength": 32
+        },
+        "garage_room": {
+          "type": ["string", "null"],
+          "pattern": "^[a-z0-9_]+$",
+          "maxLength": 32
+        }
+      }
+    },
+    "zone": {
+      "type": "string",
+      "enum": [
+        "front_left",
+        "front",
+        "front_right",
+        "left",
+        "center",
+        "right",
+        "back_left",
+        "back",
+        "back_right"
+      ]
+    },
+    "arrange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidates", "passed", "intent_fit", "parti"],
+      "description": "Bộ giải đã chọn cây của tầng này ra sao (T43): dựng bao nhiêu ứng viên, bao nhiêu qua cổng, cây được chọn khớp ý định bao nhiêu. TUỲ CHỌN.",
+      "properties": {
+        "candidates": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Số cây ứng viên đã dựng được."
+        },
+        "passed": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Số ứng viên qua cổng kiểm."
+        },
+        "intent_fit": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Độ khớp ý định của cây được chọn: vùng, quan hệ, mặt tiền."
+        },
+        "parti": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "Khoá bộ khung của cây được chọn — để truy vết, không hiển thị."
+        },
+        "relaxed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4,
+          "description": "Vòng nới đã phải dùng (0 = không nới)."
+        }
+      }
+    },
+    "tree": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["footprint", "nodes", "also", "doors", "stair", "no_window"],
+      "description": "Cây chia của tầng này — mọi toạ độ của tầng suy ra từ đây. T37: mô hình khai; từ T43 (14/09/2026): bộ giải `ai/arrange/` dựng từ ý định. TUỲ CHỌN: artifact đúc trước 13/09/2026 không có.",
+      "$comment": "Cùng cấu trúc với `contracts/ai-plan-tree.schema.json` trừ `variant_label` và `rationale` (hai trường ấy đã có chỗ ở gốc artifact). `contracts-parity.test.ts` canh hai bản khớp nhau. Lưu cây trong artifact vì nó là NGUỒN của hình học: đọc một tầng có phòng hẹp bất thường mà không có cây thì không trả lời được «mô hình cắt ở đâu, hay chương trình lùi sai».",
+      "properties": {
+        "footprint": {
+          "$ref": "#/$defs/rect"
+        },
+        "nodes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 59,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "cut", "at", "a", "b"],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/tree_id"
+              },
+              "cut": {
+                "type": "string",
+                "enum": ["x", "y"]
+              },
+              "at": {
+                "$ref": "#/$defs/cm"
+              },
+              "a": {
+                "$ref": "#/$defs/tree_id"
+              },
+              "b": {
+                "$ref": "#/$defs/tree_id"
+              }
+            }
+          }
+        },
+        "also": {
+          "type": "array",
+          "maxItems": 6,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["room", "with"],
+            "properties": {
+              "room": {
+                "$ref": "#/$defs/tree_id"
+              },
+              "with": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 2,
+                "items": {
+                  "$ref": "#/$defs/tree_id"
+                }
+              }
+            }
+          }
+        },
+        "doors": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 60,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["a", "b", "kind"],
+            "properties": {
+              "a": {
+                "$ref": "#/$defs/tree_id"
+              },
+              "b": {
+                "$ref": "#/$defs/tree_id"
+              },
+              "kind": {
+                "type": "string",
+                "enum": ["single", "double", "sliding", "garage", "gate", "opening"]
+              },
+              "full": {
+                "type": ["boolean", "null"]
+              },
+              "place": {
+                "type": ["string", "null"],
+                "enum": ["start", "middle", "end", null]
+              }
+            }
+          }
+        },
+        "stair": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["room", "up"],
+          "properties": {
+            "room": {
+              "$ref": "#/$defs/tree_id"
+            },
+            "up": {
+              "type": "string",
+              "enum": ["+x", "-x", "+y", "-y"]
+            }
+          }
+        },
+        "no_window": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "$ref": "#/$defs/tree_id"
+          }
+        }
+      }
+    },
+    "tree_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$",
+      "maxLength": 32
+    },
+    "generator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "provider", "model", "route", "prompt_version"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["ai"]
+        },
+        "provider": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "model": {
+          "type": "string",
+          "maxLength": 96
+        },
+        "route": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "prompt_version": {
+          "type": "string",
+          "maxLength": 16
+        },
+        "repaired": {
+          "type": "boolean",
+          "description": "Có ít nhất một lượt gọi thứ hai. Từ T39 (13/09/2026) nghĩa là đã LẤY MẪU LẠI ít nhất một tầng — không còn lượt vá bản cũ; tầng nào thì xem `resampled_levels`."
+        },
+        "layout": {
+          "type": "string",
+          "enum": ["tree", "intent"],
+          "description": "tree = mô hình khai cây chia theo từng tầng, chương trình gán số (T37) · intent = mô hình khai ý định bố cục, chương trình dựng cây chia (T43). Vắng = artifact đúc trước 13/09/2026, mô hình khai chữ nhật phòng."
+        },
+        "resampled_levels": {
+          "type": "array",
+          "maxItems": 12,
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": "Tầng đã phải lấy mẫu lại vì lượt đầu không qua cổng kiểm (T39)."
+        },
+        "walls_derived": {
+          "type": "boolean",
+          "description": "Tường trong artifact này do CHƯƠNG TRÌNH suy từ chữ nhật phòng, không phải mô hình khai (T19): sau một lượt sửa mà tường vẫn không bao kín phòng thì suy hộ để tờ vẽ vẫn dùng được. Bật cờ này thì tờ vẽ và màn hình phải nói ra."
+        },
+        "edit": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["instruction", "base_ref", "ops"],
+          "properties": {
+            "instruction": {
+              "type": "string",
+              "maxLength": 2000,
+              "description": "Nguyên văn yêu cầu kỹ sư gõ vào ô «Yêu cầu sửa»."
+            },
+            "base_ref": {
+              "type": "string",
+              "maxLength": 80,
+              "description": "Mã artifact mặt bằng được sửa."
+            },
+            "ops": {
+              "type": "array",
+              "maxItems": 40,
+              "items": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "description": "Thao tác đã áp (ai-plan-edit)."
+            }
+          },
+          "description": "Có mặt khi phương án này là bản SỬA của một phương án khác theo yêu cầu kỹ sư (T53)."
+        }
+      }
+    },
+    "score": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "score_version",
+        "points",
+        "scored_weight",
+        "reasoned_weight",
+        "groups",
+        "criteria"
+      ],
+      "description": "Điểm chất lượng do CHƯƠNG TRÌNH chấm (`ai/plan-score.ts`), không hỏi mô hình. TUỲ CHỌN: artifact đúc trước 12/09/2026 không có trường này và vẫn phải đọc lại được.",
+      "$comment": "Vì sao điểm nằm TRONG payload chứ không thành cột riêng của `design_artifact`: bảng ấy bất biến và khoá chính là mã băm nội dung (CLAUDE.md 8.8 điểm 1), nên một cột điểm sửa được là một đường sửa kết quả chấm mà không đổi mã băm. Đặt trong payload thì điểm đi cùng đúng bản vẽ nó chấm, và không có đường nào tách hai thứ ra.\\n\\nĐánh đổi đã biết: đổi thước chấm (tăng `score_version`) KHÔNG chấm lại được artifact cũ mà không đúc lại — mà đúc lại nghĩa là gọi mô hình lần nữa, tức tiền thật. Vì vậy bảng lịch sử so model PHẢI hiện `score_version` của từng dòng; hai dòng khác phiên bản thước là hai con số không so được với nhau (T27).\\n\\nĐiểm KHÔNG gác cổng xuất DXF theo cả hai chiều: điểm cao không tự mở, điểm thấp không chặn. Chỉ một dòng duyệt của kỹ sư mới mở (T35).",
+      "properties": {
+        "score_version": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Phiên bản THƯỚC chấm (`kb/plan_quality.yaml`), không phải phiên bản mặt bằng."
+        },
+        "points": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Điểm tuyệt đối. Đọc PHẢI kèm `scored_weight`: 72 trên 85 phần trọng số chấm được, không phải 72/100."
+        },
+        "scored_weight": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Tổng trọng số thật sự chấm được. Dưới 100 nghĩa là có tiêu chí thiếu đầu vào; phần thiếu KHÔNG được chia lại cho tiêu chí khác."
+        },
+        "reasoned_weight": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Phần trọng số đã chấm mà dựa trên ngưỡng CHƯA AI ĐO (`n = 0`). Màn hình phải nói ra (T31)."
+        },
+        "groups": {
+          "type": "array",
+          "maxItems": 12,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code", "weight", "scored_weight", "points"],
+            "properties": {
+              "code": {
+                "type": "string",
+                "maxLength": 8
+              },
+              "weight": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "scored_weight": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "points": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              }
+            }
+          }
+        },
+        "criteria": {
+          "type": "array",
+          "maxItems": 40,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code", "group", "weight", "n"],
+            "properties": {
+              "code": {
+                "type": "string",
+                "maxLength": 8
+              },
+              "group": {
+                "type": "string",
+                "maxLength": 8
+              },
+              "value": {
+                "type": ["number", "null"],
+                "description": "Giá trị đo được, đơn vị theo tiêu chí. Rỗng = chưa chấm được."
+              },
+              "score": {
+                "type": ["number", "null"],
+                "minimum": 0,
+                "maximum": 1
+              },
+              "weight": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100,
+                "description": "Trọng số DANH NGHĨA. Tiêu chí thiếu dữ liệu vẫn mang trọng số của nó, chỉ không cộng vào điểm."
+              },
+              "n": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Số mẫu đã đo. 0 = ngưỡng hoàn toàn là suy luận."
+              },
+              "label": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "not_scored": {
+                "type": ["string", "null"],
+                "enum": ["gate", "thieu_du_lieu", null],
+                "description": "gate = cổng dữ liệu đã bảo đảm nên không phải tiêu chí chấm điểm · thieu_du_lieu = phương án này không có đầu vào."
+              },
+              "why": {
+                "type": ["string", "null"],
+                "maxLength": 240,
+                "description": "Câu tiếng Việt nói vì sao không chấm được — hiện THAY cho con số, không hiện 0."
+              },
+              "refs": {
+                "type": "array",
+                "maxItems": 60,
+                "items": {
+                  "$ref": "#/$defs/space_id"
+                },
+                "description": "Phần tử bị trừ điểm. Dùng cho màn hình VÀ cho ghi chú «tránh những chỗ này» của lượt lấy mẫu sau (T25)."
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

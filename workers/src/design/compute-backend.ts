@@ -44,6 +44,17 @@ export interface SolveRequest {
     setback_required_m?: Record<string, number>;
     max_density?: number | null;
   };
+  /**
+   * Loại hình công trình — chọn TẬP QUY TẮC bộ giải áp dụng.
+   *
+   * Bắt buộc, cố ý không cho tuỳ chọn: phía Container có mặc định `"nha_pho"`
+   * (`service.py`), nên trường này vắng mặt KHÔNG gây lỗi — nó lặng lẽ giải mọi biệt thự
+   * bằng luật nhà phố. Đúng như đã xảy ra cho tới 07/09/2026 (V-23): biệt thự vừa mất
+   * `setback_front_villa` 3 m và `max_density_villa` 0,6, vừa nhận nhầm khoảng lùi 0 và mật
+   * độ 1,0 của nhà phố — tức được phép phủ kín lô, trong khi Lớp 2 vẫn áp đúng. Hai lớp bất
+   * đồng về cùng một khu đất và không có gì báo.
+   */
+  building_type: string;
   rule_pack: { locality: string; version?: string };
   time_budget_s: number;
   /**
@@ -111,11 +122,37 @@ export interface ExportDxfRequest {
   floor_plan: unknown;
   level: number;
   title_block: DxfTitleBlock;
+  /** Mã không gian → nhãn tiếng Việt (`spaceLabels`). Container không tự tra `kb/`. */
+  labels?: Record<string, string>;
+  /** Nhóm mã phòng (`group_targets`) — để đa giác phòng mang `data-group` cho CSS tô màu. */
+  groups?: Record<string, string[]>;
+  /** Mã tờ theo họ `kt/NN`; rỗng thì Container đặt theo số tầng. */
+  sheet_code?: string;
+}
+
+export interface SchedulesRequest {
+  floor_plan: unknown;
+  floorplan_ref: string;
+  labels?: Record<string, string>;
+  title?: string;
+}
+
+/**
+ * Kết quả kiểm tra sống của lớp tính toán.
+ *
+ * `solverVersion` là dấu vân của mã hình học + chuẩn cấu tạo + rule pack trong ảnh Docker
+ * (`compute/src/design_compute/version.py`). Nó phải nằm trong khoá bộ nhớ đệm của bước giải:
+ * thiếu nó, sửa xong mã hình học rồi dựng lại ảnh vẫn nhận về đúng mặt bằng cũ, không lỗi và
+ * không cảnh báo. Rỗng nghĩa là Container không nói ra được — khi đó KHÔNG dùng lại kết quả cũ.
+ */
+export interface ComputeHealth {
+  reachable: boolean;
+  solverVersion: string | null;
 }
 
 export interface ComputeBackend {
   readonly name: string;
-  health(): Promise<boolean>;
+  health(): Promise<ComputeHealth>;
   solve(request: SolveRequest): Promise<SolveResponse>;
   /**
    * Xuất một tầng của mặt bằng ra DXF. MỘT CHIỀU — không có đường nhập ngược (CLAUDE.md 8.7).
@@ -124,6 +161,20 @@ export interface ComputeBackend {
    * không có chỗ nào để tệp nằm lại chờ ai tới lấy.
    */
   exportDxf(request: ExportDxfRequest): Promise<ArrayBuffer>;
+  /**
+   * CÙNG tờ bản vẽ đó dạng SVG để trình duyệt hiển thị — Container dựng từ một `SheetModel`
+   * duy nhất cho cả DXF lẫn SVG (bất biến #5: trình duyệt không dựng hình).
+   */
+  exportSvg(request: ExportDxfRequest): Promise<string>;
+  /** Khối ba chiều sơ bộ (glTF nhị phân) đùn từ mặt bằng — trình duyệt chỉ xem. */
+  exportGlb(request: {
+    floor_plan: unknown;
+    groups?: Record<string, string[]>;
+  }): Promise<ArrayBuffer>;
+  /** Bảng thống kê cửa · cửa sổ · diện tích · khối lượng sơ bộ — tính lại từ mặt bằng (TK-17). */
+  schedules(request: SchedulesRequest): Promise<unknown>;
+  /** Cùng bảng đó dạng XLSX để bàn giao. */
+  exportXlsx(request: SchedulesRequest): Promise<ArrayBuffer>;
   /** Bước 1 số hoá — trích hình học từ một bản vẽ `.dxf`/`.dwg`. */
   extract(file: CadFile): Promise<{ status: 'ok'; extraction: unknown }>;
   /** Bước 2 số hoá — kiểm tra chéo và lắp bản ghi Knowledge Base. */
@@ -167,12 +218,16 @@ export class HttpComputeBackend implements ComputeBackend {
     return (await res.json()) as T;
   }
 
-  async health(): Promise<boolean> {
+  async health(): Promise<ComputeHealth> {
     try {
-      await this.call<{ ok: boolean }>('/health', undefined, 5_000);
-      return true;
+      const body = await this.call<{ ok: boolean; solver_version?: string }>(
+        '/health',
+        undefined,
+        5_000,
+      );
+      return { reachable: true, solverVersion: body.solver_version ?? null };
     } catch {
-      return false;
+      return { reachable: false, solverVersion: null };
     }
   }
 
@@ -221,10 +276,41 @@ export class HttpComputeBackend implements ComputeBackend {
     return this.call<KbRecordResponse>('/kb/record', request);
   }
 
+  async exportSvg(request: ExportDxfRequest): Promise<string> {
+    const res = await this.exportCall('/export/svg', request);
+    return await res.text();
+  }
+
   async exportDxf(request: ExportDxfRequest): Promise<ArrayBuffer> {
+    const res = await this.exportCall('/export/dxf', request);
+    return await res.arrayBuffer();
+  }
+
+  async exportGlb(request: {
+    floor_plan: unknown;
+    groups?: Record<string, string[]>;
+  }): Promise<ArrayBuffer> {
+    const res = await this.exportCall('/export/glb', request);
+    return await res.arrayBuffer();
+  }
+
+  async schedules(request: SchedulesRequest): Promise<unknown> {
+    const res = await this.exportCall('/schedules', request);
+    return await res.json();
+  }
+
+  async exportXlsx(request: SchedulesRequest): Promise<ArrayBuffer> {
+    const res = await this.exportCall('/export/xlsx', request);
+    return await res.arrayBuffer();
+  }
+
+  private async exportCall(
+    path: string,
+    request: ExportDxfRequest | SchedulesRequest | { floor_plan: unknown },
+  ): Promise<Response> {
     let res: Response;
     try {
-      res = await fetch(`${this.baseUrl}/export/dxf`, {
+      res = await fetch(`${this.baseUrl}${path}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(request),
@@ -238,7 +324,7 @@ export class HttpComputeBackend implements ComputeBackend {
       if (res.status >= 500) throw new ComputeUnavailable(`máy chủ trả ${res.status}. ${detail}`);
       throw new Error(`Không xuất được bản vẽ (${res.status}). ${detail}`);
     }
-    return await res.arrayBuffer();
+    return res;
   }
 }
 
@@ -252,8 +338,8 @@ export class HttpComputeBackend implements ComputeBackend {
 export class UnconfiguredComputeBackend implements ComputeBackend {
   readonly name = 'unconfigured';
 
-  async health(): Promise<boolean> {
-    return false;
+  async health(): Promise<ComputeHealth> {
+    return { reachable: false, solverVersion: null };
   }
 
   async solve(): Promise<SolveResponse> {
@@ -269,6 +355,22 @@ export class UnconfiguredComputeBackend implements ComputeBackend {
   }
 
   async exportDxf(): Promise<never> {
+    throw this.unavailable();
+  }
+
+  async exportSvg(): Promise<never> {
+    throw this.unavailable();
+  }
+
+  async schedules(): Promise<never> {
+    throw this.unavailable();
+  }
+
+  async exportGlb(): Promise<never> {
+    throw this.unavailable();
+  }
+
+  async exportXlsx(): Promise<never> {
     throw this.unavailable();
   }
 

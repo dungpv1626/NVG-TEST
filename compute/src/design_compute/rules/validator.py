@@ -64,7 +64,7 @@ def validate_rule(rule: Rule) -> list[ValidationIssue]:
             f"dẫn văn bản quy phạm pháp luật ({rule.source!r}) nhưng chỉ cảnh báo. Một yêu "
             "cầu bắt buộc mà không chặn phát hành là từ bỏ phần kiểm soát pháp lý."
         )
-    if not rule.is_legal and not rule.is_experience:
+    if not rule.is_legal and not rule.is_experience and not rule.is_structural:
         warn(
             f"nguồn {rule.source!r} không khớp tiền tố văn bản quy phạm pháp luật nào, cũng "
             "không đúng chuỗi 'kinh nghiệm NVG'. Không phân loại được, nên thẻ ràng buộc "

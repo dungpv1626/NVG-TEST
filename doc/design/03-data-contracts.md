@@ -438,8 +438,12 @@ Bộ hồ sơ hoàn chỉnh = tập hợp các lần publish của cả ba bộ 
 trước khi cho phát hành ra ngoài.
 
 **Bắt buộc:**
-- Tên file theo quy ước sẵn có của NVG: `NVO026_NhaAnhA_KT_MatBang_V03_11082026`.
+- Tên file theo quy ước `NVO026_NhaAnhA_KT_MatBang_V03_11082026`.
   Số phiên bản do hệ tài liệu cấp, không phải module tự đặt.
+
+  > ⚠️ **Sửa 05/09/2026 sau khi đối chiếu hai hồ sơ thật.** Câu gốc ghi đây là "quy ước sẵn có của
+  > NVG". **Không phải** — hồ sơ thật không dùng quy ước này. Nó là quy ước **mới, cho bản
+  > vẽ hệ thống xuất ra**; đừng dùng nó để đọc hồ sơ cũ. Xem `13-ho-so-thuc-te.md` 13.8.
 - Mỗi tài liệu publish ra giữ tham chiếu ngược về `artifact_ids` — để sau này truy được
   "bản vẽ này sinh ra từ đầu bài nào".
 - Publish là **một chiều**. Sửa tài liệu trong hệ tài liệu không đẩy ngược vào artifact.

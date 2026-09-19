@@ -36,14 +36,36 @@ class ConstructionNorms:
     partition_m: float
     door_width_m: float
     door_height_m: float
+    wc_door_width_m: float
+    wc_door_height_m: float
     entrance_width_m: float
     entrance_height_m: float
+    entrance_share: float
+    entrance_max_width_m: float
     window_height_m: float
     window_sill_m: float
     window_share: float
     window_min_m: float
     window_max_m: float
+    wc_window_width_m: float
+    wc_window_height_m: float
+    wc_window_sill_m: float
     no_window_types: frozenset[str]
+    # Cao độ tầng — đọc từ mặt cắt hồ sơ thật (HS-01). Tầng trên cùng cao hơn các tầng còn
+    # lại, nên là hai số chứ không phải một. Đây là chỗ duy nhất giữ con số này: bộ giải không
+    # có biến chiều cao, còn `FloorPlan.levels[].height_m` mang nó ra cho khối 3D và mặt cắt.
+    storey_height_m: float
+    top_storey_height_m: float
+    # Lan can của ban công, lô gia, sân thượng. Cạnh giáp mặt thoáng của chúng không phải
+    # tường, nên khối ba chiều cần biết dựng nó cao bao nhiêu và dày bao nhiêu.
+    railing_h_m: float
+    railing_thickness_m: float
+    # Vật liệu mặc định cho bảng thống kê cửa (`schedule_defaults`) — chỉ là giá trị mồi.
+    schedule_materials: dict[str, str]
+
+    def storey_height(self, level: int, top_level: int) -> float:
+        """Chiều cao của một tầng, biết tầng nào là tầng trên cùng."""
+        return self.top_storey_height_m if level == top_level else self.storey_height_m
 
 
 def _number(source: dict[str, Any], *path: str) -> float:
@@ -73,14 +95,26 @@ def parse_construction_norms(text: str) -> ConstructionNorms:
         partition_m=_number(raw, "walls", "partition_m"),
         door_width_m=_number(raw, "openings", "door", "width_m"),
         door_height_m=_number(raw, "openings", "door", "height_m"),
+        wc_door_width_m=_number(raw, "openings", "wc_door", "width_m"),
+        wc_door_height_m=_number(raw, "openings", "wc_door", "height_m"),
         entrance_width_m=_number(raw, "openings", "entrance", "width_m"),
         entrance_height_m=_number(raw, "openings", "entrance", "height_m"),
+        entrance_share=_number(raw, "openings", "entrance", "share_of_wall"),
+        entrance_max_width_m=_number(raw, "openings", "entrance", "max_width_m"),
         window_height_m=_number(raw, "openings", "window", "height_m"),
         window_sill_m=_number(raw, "openings", "window", "sill_m"),
         window_share=_number(raw, "openings", "window", "share_of_wall"),
         window_min_m=_number(raw, "openings", "window", "min_width_m"),
         window_max_m=_number(raw, "openings", "window", "max_width_m"),
+        wc_window_width_m=_number(raw, "openings", "wc_window", "width_m"),
+        wc_window_height_m=_number(raw, "openings", "wc_window", "height_m"),
+        wc_window_sill_m=_number(raw, "openings", "wc_window", "sill_m"),
         no_window_types=frozenset(str(t) for t in (raw.get("no_window_types") or [])),
+        storey_height_m=_number(raw, "levels", "storey_height_m"),
+        top_storey_height_m=_number(raw, "levels", "top_storey_height_m"),
+        railing_h_m=_number(raw, "outdoor", "railing_h_m"),
+        railing_thickness_m=_number(raw, "outdoor", "railing_thickness_m"),
+        schedule_materials={str(k): str(v) for k, v in (raw.get("schedule_defaults") or {}).items()},
     )
 
 

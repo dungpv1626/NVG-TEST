@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nvg.vn/contracts/ai-image-set.schema.json",
+  "title": "AiImageSet",
+  "description": "Bộ ảnh phối cảnh của NHÁNH AI — năm góc bắt buộc cùng MỘT ngôi nhà, cộng khối trục đo tuỳ chọn (T16, 09/09/2026).\n\nCỐ Ý KHÔNG dùng lại `render-result` của bộ giải: hợp đồng kia là đầu ra Lớp 5 (`variant` là số nguyên, không có khái niệm ảnh neo, không ghi ảnh nào dựng từ ảnh nào) và phải xoá được cùng bộ giải.\n\nCách giữ năm ảnh cùng một ngôi nhà: ảnh CHÍNH DIỆN BAN NGÀY dựng trước từ tờ mặt đứng, gọi là ẢNH NEO (`anchor: true`). Bốn góc còn lại dựng ảnh→ảnh với ảnh neo và tờ mặt đứng làm tham chiếu, kèm cùng một đoạn mô tả vật liệu sinh từ ý tưởng mặt đứng. `source_refs` ghi lại đúng những gì đã gửi, để đọc artifact biết ảnh nào dẫn xuất từ ảnh nào.\n\nGóc nào hỏng thì ghi vào `missing` kèm lý do — KHÔNG lặng lẽ trả về ít ảnh hơn.\n\nẢnh lưu trong bucket `design-renders`, `uri` dạng `supabase://` hoặc `r2://`; trình duyệt đọc qua endpoint có kiểm quyền, không đọc thẳng kho.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "facade_ref", "plan_ref", "images", "generator"],
+  "properties": {
+    "schema_version": { "$ref": "#/$defs/semver" },
+    "facade_ref": { "$ref": "#/$defs/artifact_ref" },
+    "plan_ref": { "$ref": "#/$defs/artifact_ref" },
+    "images": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["view", "uri", "mime", "anchor", "watermark_applied"],
+        "properties": {
+          "view": { "$ref": "#/$defs/view" },
+          "uri": {
+            "type": "string",
+            "pattern": "^(r2|supabase)://.+",
+            "description": "Vị trí tệp ảnh trong kho nhị phân."
+          },
+          "mime": { "type": "string", "enum": ["image/png", "image/jpeg", "image/webp"] },
+          "width": { "type": ["integer", "null"], "minimum": 1 },
+          "height": { "type": ["integer", "null"], "minimum": 1 },
+          "anchor": {
+            "type": "boolean",
+            "description": "Đây là ảnh NEO mà các góc khác dựng theo. Đúng một ảnh trong bộ mang cờ này."
+          },
+          "watermark_applied": {
+            "type": "boolean",
+            "const": false,
+            "description": "Luôn `false` ở phiên bản này, CỐ Ý. Byte lưu trong kho chưa đóng dấu: Worker không có canvas, và đóng dấu bằng Container thì phá tính độc lập của nhánh AI. Nhãn cảnh báo do mã nguồn chèn vào phản hồi API, trình duyệt in lên ảnh khi hiển thị và khi tải về. Khai `const false` để không ai đặt `true` khi chưa có bước đóng dấu thật."
+          },
+          "source_refs": {
+            "type": "array",
+            "maxItems": 6,
+            "items": { "type": "string" },
+            "description": "URI những ảnh đã gửi làm tham chiếu cho lượt dựng này, đúng thứ tự đã gửi."
+          },
+          "provider": { "type": "string", "maxLength": 32 },
+          "model": { "type": "string", "maxLength": 96 },
+          "prompt_version": { "type": "string", "maxLength": 16 },
+          "latency_ms": { "type": ["integer", "null"], "minimum": 0 }
+        }
+      }
+    },
+    "missing": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["view", "reason"],
+        "properties": {
+          "view": { "$ref": "#/$defs/view" },
+          "reason": {
+            "type": "string",
+            "maxLength": 300,
+            "description": "Vì sao góc này không có ảnh, tiếng Việt, đọc được cho người dùng."
+          }
+        }
+      }
+    },
+    "generator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "provider", "model", "route", "prompt_version"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["ai"] },
+        "provider": { "type": "string", "maxLength": 32 },
+        "model": { "type": "string", "maxLength": 96 },
+        "route": { "type": "string", "maxLength": 64 },
+        "prompt_version": { "type": "string", "maxLength": 16 }
+      }
+    }
+  },
+  "$defs": {
+    "semver": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "artifact_ref": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "view": {
+      "type": "string",
+      "enum": ["front_day", "front_night", "gate_close", "balcony_close", "oblique", "axonometric"],
+      "description": "front_day = chính diện ban ngày (ảnh neo) · front_night = chính diện ban đêm · gate_close = cận cảnh cổng tầng trệt · balcony_close = cận cảnh ban công tầng 2 · oblique = góc nghiêng · axonometric = khối trục đo (tuỳ chọn)."
+    }
+  }
+}

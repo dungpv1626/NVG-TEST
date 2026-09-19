@@ -21,9 +21,10 @@
  */
 
 import { History } from 'lucide-react';
-import { useMemo, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
-import { Link, useLocation, useSearchParams } from 'react-router-dom';
+import { useMemo, type ReactNode } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { formatDeadline, type StatusGroup } from '@nvg/shared';
+import { useDetailTabs } from '@/components/entity/use-detail-tabs';
 import { Breadcrumb, type Crumb } from '@/components/layout/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/states';
@@ -95,7 +96,6 @@ export function EntityDetail({
   historyContent,
   related = [],
 }: EntityDetailProps) {
-  const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
 
   // Đường đi thực tế thắng breadcrumb mặc định khi có — xem ghi chú đầu file.
@@ -112,52 +112,7 @@ export function EntityDetail({
     [tabs, historyContent],
   );
 
-  const activeId = searchParams.get('tab') ?? allTabs[0]?.id ?? '';
-  const active = allTabs.find((t) => t.id === activeId) ?? allTabs[0];
-
-  /**
-   * Điều hướng bằng phím mũi tên giữa các tab — bắt buộc của mẫu ARIA tablist.
-   *
-   * Gán `role="tab"` là nói với trình đọc màn hình "đây là bộ tab", và người dùng bàn phím sẽ
-   * lập tức thử phím mũi tên. Khai vai trò mà không cài hành vi thì tệ hơn không khai: người
-   * dùng bấm mũi tên, không có gì xảy ra, và họ không biết mình làm sai hay màn hình hỏng.
-   *
-   * Chọn kiểu KÍCH HOẠT TỰ ĐỘNG (mũi tên là đổi tab luôn) vì `selectTab` dùng `replace` nên
-   * không đẩy thêm mục vào lịch sử trình duyệt — người dùng lướt qua các tab bằng mũi tên xong
-   * bấm Back vẫn về thẳng màn hình Danh sách.
-   */
-  function onTabKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>) {
-    const index = allTabs.findIndex((t) => t.id === active?.id);
-    if (index < 0) return;
-
-    const target =
-      event.key === 'ArrowRight'
-        ? (index + 1) % allTabs.length
-        : event.key === 'ArrowLeft'
-          ? (index - 1 + allTabs.length) % allTabs.length
-          : event.key === 'Home'
-            ? 0
-            : event.key === 'End'
-              ? allTabs.length - 1
-              : -1;
-
-    if (target < 0) return;
-    event.preventDefault();
-    const next = allTabs[target];
-    if (!next) return;
-    selectTab(next.id);
-    // Con trỏ bàn phím phải đi theo tab vừa chọn, nếu không lần bấm mũi tên kế tiếp
-    // lại tính từ tab cũ.
-    document.getElementById(`tab-${next.id}`)?.focus();
-  }
-
-  function selectTab(id: string) {
-    const next = new URLSearchParams(searchParams);
-    next.set('tab', id);
-    // `replace` để nút Back của trình duyệt quay về màn hình Danh sách,
-    // không phải lùi qua từng tab đã xem.
-    setSearchParams(next, { replace: true });
-  }
+  const { active, selectTab, onTabKeyDown } = useDetailTabs(allTabs);
 
   return (
     <div className="flex gap-6">
@@ -272,7 +227,13 @@ export function EntityDetail({
  * trang trên màn hình hẹp. Màn hình hẹp mà ẩn hẳn là mất luôn đường đi sang module khác —
  * mà "không quá 3 cú nhấp tới một hồ sơ" (Webapp Flow 1.3) tính cả trên điện thoại.
  */
-function RelatedGroups({ related, from }: { related: RelatedGroup[]; from: BreadcrumbFrom }) {
+export function RelatedGroups({
+  related,
+  from,
+}: {
+  related: RelatedGroup[];
+  from: BreadcrumbFrom;
+}) {
   return (
     <>
       {related.map((group) => (

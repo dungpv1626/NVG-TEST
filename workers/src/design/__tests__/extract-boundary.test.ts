@@ -16,9 +16,18 @@ import { LlmCallFailed } from '../llm/gemini';
 function fakeLlm(response: Record<string, unknown> | Error) {
   const generateJson = vi.fn(async (_route: string, _dataClass: number, _options: unknown) => {
     if (response instanceof Error) throw response;
-    return response;
+    return {
+      value: response,
+      provider: 'gemini',
+      model: 'gemini-2.5-flash',
+      usage: { inputTokens: 1800, outputTokens: 420 },
+      latencyMs: 900,
+    };
   });
-  return { client: { generateJson } as unknown as GeminiClient, generateJson };
+  return {
+    client: { generateJsonWithUsage: generateJson } as unknown as GeminiClient,
+    generateJson,
+  };
 }
 
 function edge(over: Partial<Record<string, unknown>> = {}) {
@@ -67,6 +76,13 @@ describe('extractSiteBoundary', () => {
     expect(result.boundaryM[0]).toEqual([0, 0]);
     expect(result.closureErrorM).toBeCloseTo(0, 6);
     expect(result.warnings).toEqual([]);
+    // Số đo của lượt gọi đi kèm kết quả — để ghi nhật ký chi phí và hiện lên màn hình.
+    expect(result.call).toEqual({
+      provider: 'gemini',
+      model: 'gemini-2.5-flash',
+      usage: { inputTokens: 1800, outputTokens: 420 },
+      latencyMs: 900,
+    });
   });
 
   it('đầu ra sai hợp đồng (thiếu trường bắt buộc) thì ném ContractError', async () => {

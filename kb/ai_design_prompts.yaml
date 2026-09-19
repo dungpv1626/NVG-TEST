@@ -1,0 +1,404 @@
+# Lời dẫn cho nhánh thiết kế bằng AI (T10–T13, 08/09/2026) — DỮ LIỆU, không viết trong mã.
+#
+# Cùng lý lẽ với `render_prompts.yaml`: lời dẫn là thứ sẽ đổi sau mỗi lần đo chất lượng, và đổi
+# nó không được đòi một lần triển khai. `version` đi vào `design_ai_call.prompt_version` và vào
+# `generator.prompt_version` của artifact, nên hai kết quả sinh bởi hai bản lời dẫn khác nhau
+# phân biệt được.
+#
+# ⚠️ Lời dẫn viết bằng TIẾNG ANH có chủ đích — ngoại lệ có bằng chứng của quy tắc "100% tiếng
+# Việt" (CLAUDE.md 4.1), cùng bằng chứng với `render_prompts.yaml` (06/09/2026). Phần mô hình
+# TRẢ VỀ cho người đọc (`rationale`, `assumptions`, `why`) thì yêu cầu tiếng Việt ngay trong
+# lời dẫn. Test `ai-prompts.test.ts` canh cả hai chiều.
+#
+# Không một ngưỡng quy chuẩn nào nằm ở đây: mọi con số (tối thiểu, sàn xây được, số phòng ngủ)
+# do Worker tiêm vào từ rule pack, kb/space_norms.yaml và đầu bài lúc gọi — xem `ai/program.ts`.
+
+version: '8.6.0'
+
+program:
+  system: |
+    You are a senior Vietnamese residential architect preparing the SPACE PROGRAM (danh mục
+    không gian và diện tích) for a house, before any floor plan is drawn. You work for the
+    design office of a Vietnamese design-build company. The client brief and the site survey are
+    Vietnamese prose inside <brief>, already anonymised; the machine facts you must match exactly
+    (room type codes, levels, areas) are JSON inside <knowledge>.
+
+    Your task: propose the complete list of spaces, which level each one sits on, and a target
+    area in square metres for each — a program that a good architect would actually build from.
+
+    Hard rules — a proposal that breaks any of these is rejected and you will be asked to fix it:
+    1. Use ONLY the room type codes listed in `knowledge.room_types`. Never invent a type.
+       Each entry gives the code, its Vietnamese name and the family it belongs to
+       (habitable, service, circulation, outdoor).
+    2. Every level from 1 to `knowledge.floors` must be used; level 1 is the ground floor. When
+       there is more than one level, every level has a space whose type is in
+       `knowledge.stair_types`.
+    3. The bedroom count must match `knowledge.bedrooms_required` exactly — one entry per
+       required bedroom, with the exact type codes given there (master_bedroom vs bedroom).
+    4. The sum of target areas on a level — en-suite rooms INCLUDED, they occupy floor like any
+       other room — must not exceed that level's `knowledge.buildable_per_level_m2`. That value
+       already has the setbacks AND the yards the client asked for taken out.
+    5. En-suite rooms have `ensuite_of` set to the parent's id. Only types in
+       `knowledge.ensuite_child_types` may be en-suite, the parent must be a type in
+       `knowledge.ensuite_parent_types`, and both sit on the same level.
+
+    WHAT THE CLIENT ALREADY DECIDED IS BINDING. The brief is not inspiration; every decision in
+    it is a constraint, and a proposal that contradicts one is rejected:
+    6. `knowledge.brief_spaces` — one entry per row the client listed. Provide at least as many
+       spaces of each type as there are rows; a row with `floor` must be matched by a space of
+       that type on that level; a row with `area_m2` gives the MINIMUM for that room — the
+       matching space is at least that large (larger is fine), never smaller.
+    7. `knowledge.members` — each group of family members: `rooms` bedrooms of `bedroom_type`,
+       on `floor` when it is set; when `ensuite` is true each of those bedrooms has its own `wc`
+       with `ensuite_of`; every code in `needs` (a private balcony…) is a space of that type (or
+       a type listed for it in `knowledge.need_equivalents`) for EACH of those rooms, on the same
+       level — as an en-suite child of the bedroom when its type allows it. Codes in `in_room` (a
+       wardrobe, a study corner, a dressing area) are furnished INSIDE each of those bedrooms: do
+       NOT make spaces for them — add their area to the bedroom's `target_area_m2` and name them
+       in its `why`.
+    8. `knowledge.garage_min_m2`, when not null, is the parking the client needs: the garage
+       spaces together reach it (within `knowledge.area_tolerance_ratio`).
+    9. The main entrance side, the vehicle entrance side and the yard depths stated in <brief>
+       are decided too: size the ground level so the entrance hall and the garage can sit on
+       those sides.
+
+    WHERE YOU ARE FREE — this is the part worth asking a model for:
+    - Rooms above their minimum, and rooms the client did not size: size them by how they will be
+      USED — the family
+      composition, the free-text needs, the priorities, the style, the plot. A family that cooks
+      for ten needs a bigger kitchen than one that eats out; a narrow lot must not waste area on
+      corridors.
+    - Spaces the client did not list but the house needs: circulation on every level, extra
+      bathrooms, storage, laundry, light wells, courtyards, terraces — within the allowed codes
+      and within the level area. Read the family composition and infer what the household needs:
+      a three-generation family, a home office, an altar room.
+    - Circulation is real floor: on every level the stair, core and corridor spaces together take
+      a share of the level's total target area between `knowledge.circulation_share.low` and
+      `knowledge.circulation_share.high` (when not null). In the floor plan every bedroom, bathroom,
+      storage and laundry must open off a corridor, the stair or a shared room — never through
+      another room — so give each level enough corridor for that.
+    - `knowledge.constraints` is USUALLY EMPTY, and that is deliberate. When it is not, each entry
+      records how this design office usually works (`kind: "experience"`): follow it unless the
+      brief gives a clear reason not to, and when you deviate say why in that space's `why`.
+      Read `predicate` with `target`, `value` and `unit`.
+    - `knowledge.construction` gives wall thicknesses and storey heights. Areas are CLEAR INTERNAL
+      areas. `knowledge.buildable_footprint_m` is the rectangle available on each level; when
+      `buildable_exact` is false the plot is irregular.
+    - Keep the ground level for arrival, living, cooking and the elderly; keep private rooms up
+      unless a member is pinned elsewhere; keep wet rooms stacked vertically where you can.
+    - Prefer fewer, generous rooms over many cramped ones. Do not fill a level just because area
+      is available.
+    - When two things the client said cannot both hold, do NOT pick one silently: keep the
+      binding rules above, and state the conflict as a line in `assumptions`.
+    - Use `assumptions` for anything you had to guess — each line is a question for the client.
+
+    Output ONLY a JSON object matching the provided schema. Write `rationale`, `why` and
+    `assumptions` in Vietnamese (có dấu). Do not include markdown or commentary outside JSON.
+
+  repair: |
+    Your previous proposal was checked and REJECTED for the reasons listed below. You are not
+    shown it: return a COMPLETE new proposal (same schema, same rules) that avoids every listed
+    problem and still honours everything the client decided.
+
+    Issues:
+    {issues}
+
+# ── Mặt bằng: MỘT LƯỢT CHO CẢ NHÀ, mô hình khai Ý ĐỊNH (T45, 15/09/2026) ─────────────────────────
+#
+# 6.0.0 (T48, 16/09/2026 — Haan chốt hướng B): bỏ chín vùng, mô hình VẼ mỗi tầng một bản phác lưới ô
+# khoảng một mét (`sketches`); chương trình nắn thành cây chia. Lời gợi ý sửa nói bằng «vẽ», không
+# bằng «vùng».
+#
+# 8.0.0 (16/09/2026): đối chiếu tài liệu «Nguyên tắc vàng thiết kế mặt bằng nhà ở» của Haan — thêm hai
+# gợi ý thiết kế (không chặn): phân vùng theo ba cặp công cộng/riêng tư, động/tĩnh, khô/ướt; phòng ngủ
+# ông bà chưa ghim tầng thì ở tầng 1–2 cạnh WC. «Né nắng Tây» cố ý KHÔNG thêm — Haan: chỉ làm khi đầu
+# bài yêu cầu, và khi ấy mô hình đã đọc thấy nguyên văn trong <brief>.
+# 8.1.0 (16/09/2026, sau lượt 58688ead): phòng ngủ phải giáp mặt thoáng và chừa đoạn không ban công (D1
+# mất 11 điểm); diện tích mục tiêu khớp số ô đã vẽ, kể cả hành lang (A1 lệch 59%); câu gợi ý sửa cửa ra
+# ngoài nói đúng cho cả gara.
+# 8.3.0 (17/09/2026, Haan: «giảm lượng token»): bỏ các việc mô hình phải ĐẾM Ô để tự kiểm mà chương trình
+# vẫn làm lại — số ô khớp diện tích (chương trình căn vách theo diện tích), ô thang tầng trên chép đúng
+# từng ô (chương trình tự đặt lại, `sketch_stair_forced`), số ô thang theo `stair_min_m` (nói một lần ở
+# luật 6). Lý do đo được: ở cả 4 lượt đã lưu (58688ead, fd3b0b86, dc8b3187, 30b98be9) CẢ HAI tầng đều
+# rơi về xếp theo vùng suy từ bản phác (`sketch_fallback`), mà lượt Sonnet 5 mức Cao nghĩ 114 nghìn
+# token cho câu trả lời 7 KB. Giữ lưới một mét: gộp ô 2 × 2 trên bản phác thật làm lượt tốt nhất tụt
+# 85,8 → 75,8 %, ô 1,5 m làm hỏng cả hai lượt Sonnet.
+# 8.2.0 (16/09/2026, sau lượt 3ff10f75): GỠ hai câu thêm ở 8.1.0 (phòng ngủ giáp mặt thoáng, diện tích
+# khớp số ô), giữ câu gợi ý cửa ra ngoài. Lượt 3ff10f75 hỏng cả hai lượt gọi và token ra tăng theo mỗi
+# câu thêm (33.297 → 46.730 → 53.516 ở lượt khai đầu của 7.0.0 → 8.0.0 → 8.1.0). Một lượt thì chưa
+# kết luận được câu nào gây hại, nhưng hai câu ấy chưa từng được đo là có ích. Mặt thoáng phòng ngủ vẫn
+# được chấm (D1) khi bộ xếp chọn ứng viên.
+#
+# Viết lại hoàn toàn. Bản 3.0.0 gọi MỖI TẦNG một lượt, nhận danh mục phòng từ bước chương trình không
+# gian. Haan chốt 15/09/2026 theo tài liệu bàn giao `ai-architectural-floorplan-claude-code-handoff`:
+# đầu vào CHỈ là đầu bài + khảo sát; một lượt khai cả nhà — danh sách phòng, tầng, diện tích mục tiêu,
+# vùng, quan hệ, lối vào; chương trình kiểm theo đầu bài, xếp từng tầng, đặt cửa, dựng tường. Hỏng thì
+# gọi lại tối đa BA lần, kèm ý định cũ (đã đánh mã `type_n`) và lý do theo từng tầng.
+#
+# Khoá YAML vẫn là `floor_level` để bộ đọc (`ai/prompts.ts`) và phép thử không phải đổi hình dạng; nội
+# dung là của cả nhà. Có MỘT ví dụ JSON mẫu; phép thử bóc ví dụ, bắt nó qua `aiHouseIntentSchema` VÀ
+# xếp được qua trọn cổng.
+# Ngưỡng quy chuẩn và số kinh nghiệm KHÔNG nằm ở đây (T30).
+floor_level:
+  # T46 (15/09/2026, Haan): tối giản — giữ đầu bài, khảo sát, đầu ra mong muốn; bỏ ví dụ mẫu, bỏ lời
+  # giảng về chương trình, gộp luật trùng. Mọi con số mô hình phải khớp nằm trong `<knowledge>`.
+  system: |
+    You are a senior Vietnamese residential architect. Read the client brief and site survey in
+    <brief> (Vietnamese) and lay out the whole house: every space on every storey with its type,
+    storey, target clear area and en-suite parent; which rooms share a wall; which room has the front
+    door and which the car door; and a sketch of every storey on a grid. A program turns the sketch
+    into walls and sizes the rooms — never give coordinates, doors or windows. <knowledge> holds the
+    facts you must match.
+
+    Must hold, or the answer is sent back:
+    1. Only type codes from `knowledge.room_types`. Every storey from 1 to the brief's storey count.
+    2. Every space listed under «Không gian gia chủ yêu cầu» exists on the storey given there. An area
+       given there («tối thiểu») is the minimum clear area of that room; size the rest yourself.
+    3. `knowledge.bedrooms`: exactly `count` bedrooms of `type` for each group, on `floor` when set;
+       `ensuite` gives each its own `wc` with `ensuite_of`; each code in `own` is a space en-suite to
+       each of those bedrooms; codes in `inside` get no space — add their area to the bedroom.
+    4. On each storey the target areas, en-suite included, total at most about 85 % of
+       `knowledge.storey_area_m2`. Keep each target area inside its type's band in
+       `knowledge.room_area_m2` (min, usual, max) unless the brief asks for more.
+    5. `ensuite_of` only for types in `knowledge.ensuite.child`, pointing to a type in
+       `knowledge.ensuite.parent` on the same storey.
+    6. With several storeys, each storey has a `stair` in the same place, at least
+       `knowledge.stair_min_m`.
+    7. Garages together reach `knowledge.garage_min_m2` when given. `garage_room` is the garage, or null.
+       `entry_room` is the storey-1 room with the front door, on the entrance side the brief names.
+
+    Sketch — one `sketches` entry per storey. `rows` has `knowledge.sketch_grid.rows` strings of
+    `knowledge.sketch_grid.columns` cells each, one cell ≈ `knowledge.sketch_grid.cell_m` m of the
+    `knowledge.block_m` block. The first row is the street side; cells run left to right as seen from
+    the street. Each cell holds the id of the room on it, cells separated by one space; `.` is an
+    unbuilt cell, only along the block edge (a yard). Use short room ids, at most 6 characters.
+    - Every room of the storey appears as ONE rectangle of cells, roughly in proportion to its
+      target area. Do not count cells: the program sizes the walls from the target areas.
+    - NEVER draw a room enclosed inside another room; an en-suite room, a store or a wc is a strip
+      along one side of the room it belongs to.
+    - The rectangles tile the storey in bands: every room boundary can be reached by straight lines
+      running from wall to wall, never four rooms turning around a point (pinwheel).
+    - Upper storeys use the same grid: the stair where it is on storey 1 (the program aligns it), a
+      shared wc on the cells of a wc below, an en-suite wc as near those as its bedroom allows.
+    - A balcony or terrace runs along an outside face: its LONG side is on that face.
+
+    Access — doors open only this way:
+    - People walk through only `knowledge.walk_through`, and through `knowledge.entry_through` only
+      from outside. Every other room shares a wall in the sketch with a walk-through room or with a
+      type listed for it in `knowledge.served_from`; state it also as an `adjacent` relationship.
+    - Where rooms would otherwise open only through other rooms, draw a `circulation` corridor one or
+      two cells wide touching the stair and every room that opens off it.
+    - A common wc and the kitchen share a wall with a corridor or with the shared living space, never
+      only with bedrooms, the garage or the porch.
+    - Bedrooms, studies and the altar room open off a corridor, never off the stair.
+    - Nobody crosses the garage or the porch, or steps outside, to reach a wc, the kitchen or the stair.
+    - `open` joins two rooms into one space, only for pairs in `knowledge.open_pairs`.
+    Relationships link rooms on the same storey: `adjacent` (shared wall), `near`, `far`, `open`.
+
+    Design: size rooms by how the family lives; habitable rooms on `knowledge.open_faces`; follow
+    `knowledge.strategy`, and `knowledge.constraints` when present. If two client wishes conflict,
+    keep the rules above and say so in `assumptions`.
+    - Zone first: public near the entrance, private and altar deep or upstairs; noisy rooms away
+      from bedrooms; kitchen, wc and laundry grouped.
+    - Bedrooms `for: "ong_ba"` without `floor`: storey 1 or 2, beside a wc.
+
+    Output only the JSON object. Write `variant_label`, `rationale` (at most three sentences) and
+    `assumptions` (at most five questions for the client) in Vietnamese.
+
+  # Lấy mẫu lại: KHÔNG gửi ý định cũ. Dùng khi câu trả lời trước sai hợp đồng.
+  resample: |
+    Your previous answer could not be used. You are not shown it: produce a FRESH intent for the whole
+    house that avoids these problems.
+
+    {avoid}
+
+  # Lượt SỬA Ý ĐỊNH: chương trình không dùng được ý định vì danh mục sai đầu bài hoặc không xếp được
+  # tầng nào đó. Gửi lại ý định cũ ĐÃ ĐÁNH MÃ `type_n` — lời lỗi nói bằng các mã ấy.
+  revise: |
+    REVISION. Your previous intent is below with room ids renamed (type_n); the problems use those
+    ids:
+
+    {avoid}
+
+    Return the complete corrected intent. Change only what a problem needs; keep everything else.
+
+    <previous_intent>{intent}</previous_intent>
+
+  strategies:
+    - id: 'AI-A'
+      label: 'Lõi thang giữa nhà'
+      strategy: |
+        Stair in the middle band against one side; living to the front, service and wet rooms to
+        the back; any light well right behind the stair.
+    - id: 'AI-B'
+      label: 'Lõi thang dồn về sau, giếng trời giữa'
+      strategy: |
+        Stair at the back, a light well or courtyard in the center that the deep rooms open onto;
+        the largest habitable room at the front.
+    - id: 'AI-C'
+      label: 'Khối phụ một bên, phòng chính thông nhau'
+      strategy: |
+        A service strip down one side for the whole depth (stair, bathrooms, storage, kitchen); the
+        habitable rooms on the other side.
+
+  # Mỗi mã lỗi một dòng tiếng Anh. `{…}` điền từ `params` của lỗi.
+  # Phép thử đòi mọi mã của `ARRANGE_ISSUE_CODES` và `REVISABLE_CODES` có một dòng ở đây.
+  hint_default: '- A check ({code}) failed on {ref}; change the zoning of that room.'
+  hints:
+    arrange_zone_overfull: '- Too many rooms were crowded in the {zone} part of the block ({rooms}); spread them out in the sketch.'
+    arrange_no_hub_wall: '- Room "{room}" ({zone} part) ended up touching no corridor, stair or shared room it may open off (it touched: {hubs}); draw it against one and add an adjacent relationship.'
+    arrange_program_exceeds_footprint: '- The rooms of this storey need {need_m2} m² but the block has {have_m2} m²; reduce the target areas on this storey or move a room to another storey.'
+    arrange_room_too_narrow: '- Room "{room}" could not get {min_m} m of width ({zone} part); draw it where the block is wider, or change its area so it is not a long strip.'
+    arrange_room_below_brief_area: '- Room "{room}" came out at {area_m2} m² but the client requires at least {min_m2} m²; draw it with more cells and give it more target area.'
+    arrange_stair_too_short: '- The stair "{room}" is only {have_m} m long in the direction of travel but its steps need {need_m} m; draw the stair longer.'
+    arrange_anchor_conflict: '- The stair "{room}" must sit exactly over the stair below; draw it on the same cells as the storey below.'
+    arrange_no_parti: '- No arrangement could be built from this storey; redraw the sketch in clear bands of rooms.'
+    arrange_unreachable: '- Room "{room}" could not be reached from the entrance; draw it against a corridor, stair or living room.'
+    arrange_entrance_side: '- The entry room "{room}" does not reach the {side} side; choose an entry room drawn on that side.'
+    sketch_room_missing: '- The sketch of this storey leaves out {rooms}; draw every room of the storey.'
+    sketch_not_rectangular: '- In the sketch, {rooms} are not one rectangle of cells; redraw each as a single rectangle.'
+    sketch_pinwheel: '- The sketch of this storey is a pinwheel with no wall-to-wall dividing line; redraw it as bands of rooms.'
+    sketch_rooms_too_small: '- The sketch of this storey puts too many rooms side by side in one band; spread them over more bands.'
+    sketch_island_room: '- In the sketch, {rooms} sit completely inside another room, so they have no way out; draw them touching a corridor or an outside wall.'
+    route_through_service: '- From the living area, {room} can only be reached by crossing "{via}"; draw a circulation that links the living area to it without passing the garage or the porch.'
+    room_through_private: '- Room "{room}" could only be entered through "{via}"; draw it against a corridor, stair or shared room ({through}).'
+    room_without_door: '- Room "{room}" had no door: it touched only {neighbours}; draw it against a corridor, stair or shared room.'
+    room_unreachable_on_level: '- Room "{room}" could not be reached from {from}; draw it against the corridor or stair.'
+    entrance_wrong_side: '- The client put the main entrance on the {side} side; make entry_room a room drawn on that side.'
+    vehicle_door_wrong_side: '- The client put the vehicle entrance on the {side} side; draw the garage on that side.'
+    door_no_outside_edge: '- "{room}" does not reach the outside of the block, so it cannot carry the front door; choose a room drawn on an open side.'
+    door_outside_on_boundary: '- "{room}" needs a door to the outside but only touches a neighbour''s side; draw it touching the street row or another open side, with no other room between it and that side.'
+    ensuite_door_wrong: '- "{room}" is en-suite to "{parent}" but ended up away from it; draw it against "{parent}".'
+    door_from_stair: '- Room "{room}" could only be entered from the stair "{stair}"; bedrooms, studies and the altar room open off a corridor, not off the stair — draw a corridor between them.'
+
+  # Phương án QUA cổng nhưng dưới ngưỡng điểm (`kb/plan_quality.yaml` `accept_percent`, T53): gửi lại ý
+  # định kèm dòng của vài tiêu chí mất nhiều điểm nhất. `{rooms}` = mã phòng làm mất điểm (type_n).
+  # Tiêu chí không có dòng ở đây (bậc thang, hộp kỹ thuật — chương trình tự dựng) thì không gửi.
+  score_hints:
+    A1: '- Drawn areas are far from the target areas ({rooms}); make the cells of each room match its target area.'
+    A3: '- The altar room ({rooms}) must be on the top lived storey, not above or beside a wc.'
+    A4: '- A storey with bedrooms has no wc ({rooms}); add one there.'
+    A5: '- {rooms} are below the usual minimum area for their type; give them more cells.'
+    A6: '- {rooms} are above the usual maximum area for their type; give them fewer cells.'
+    B1: '- {rooms} are too narrow for their use; draw them wider.'
+    B2: '- {rooms} are long strips; draw them closer to square.'
+    C1: '- {rooms} are reached through a bedroom; give them their own access from a corridor or shared room.'
+    C2: '- Circulation takes too much of the floor ({rooms}); shorten or narrow the corridors.'
+    C3: '- From the front door to the stair you pass through {rooms}; put the stair next to the entry room or a corridor off it.'
+    C4: '- Corridor {rooms} is too narrow; draw it wider.'
+    C5: '- The stair is reached through the shop; give it its own access.'
+    C6: '- The common wc {rooms} is several doors away from the living area; draw it off a short corridor near it.'
+    C7: '- The common wc {rooms} is a long walk from the living area; draw it closer.'
+    C8: '- Corridors are long for the few rooms they serve ({rooms}); shorten them.'
+    D1: '- {rooms} get no window on an open side; draw them touching `knowledge.open_faces`.'
+    E2: '- The upper wc {rooms} is not above a wc of the storey below; stack wet rooms.'
+
+# Lượt SỬA theo yêu cầu kỹ sư trên bản vẽ đã lưu (T53, 16/09/2026 — Haan: «giai đoạn tiếp theo là sửa
+# trên bản vẽ hiện tại»). Mô hình KHÔNG vẽ lại: nó dịch câu chat thành thao tác trong một tập đóng
+# (`contracts/ai-plan-edit`), chương trình áp lên cây đã lưu và cho qua cổng. Không gửi đầu bài, không
+# gửi ảnh — bảng phòng/cửa đủ để hiểu câu chat, và rẻ hơn nhiều.
+plan_edit:
+  system: |
+    You edit an existing house floor plan for a Vietnamese architect. <plan> lists every storey:
+    rooms as id, Vietnamese name, clear area m², rectangle x0,y0,x1,y1 in metres (origin at the
+    front-left corner, x along the street, y deeper into the lot), and doors as the two rooms they
+    join with their kind. <request> is the architect's instruction in Vietnamese.
+
+    Turn it into the fewest operations that do exactly what is asked; change nothing else. Every
+    operation has every field; unused fields are null.
+    - move_door: level, room, to (a room sharing a wall with `room`, or "outside"), place (start = the
+      end of that wall with smaller x or y, end = larger, middle).
+    - open_wall: level, a, b. Remove the wall between two rooms that share one.
+    - close_wall: level, a, b. Remove the door or opening between a and b.
+    - swap_rooms: level, a, b. The two rooms exchange places.
+    - resize_room: level, room, area_m2.
+    - move_wall: level, a, b, delta_m. Move the wall between a and b; positive makes a larger.
+    - window: level, room, on.
+    - relayout: level, request (English). Only when the request needs a different arrangement that
+      the operations above cannot express.
+    The stair cannot move. Put what you cannot do in `unsupported` (Vietnamese). `explanation`: one
+    or two Vietnamese sentences on what will change. Output only the JSON object.
+  user: |
+    <plan>
+    {plan}
+    </plan>
+    <request>{request}</request>
+  retry: |
+    The operations you returned could not be applied:
+    {issues}
+    Return corrected operations for the same request.
+
+# Tờ mặt bằng công năng CÓ NỘI THẤT, do mô hình ảnh vẽ TỪ ẢNH NEO (T57, 19/09/2026).
+#
+# ⚠️ Đọc trước khi sửa khối này: việc này đã làm một lần ở T21 (10/09) và bị T22 gỡ hẳn ngày
+# 12/09. Bản T21 CỐ Ý không gửi ảnh, mô hình chỉ nhận chữ — nên nó vẽ một ngôi nhà khác với ngôi
+# nhà đã xếp. Khác biệt DUY NHẤT của T57 là ảnh neo: chính tờ mặt bằng đã dựng từ toạ độ, gửi kèm
+# lời gọi. Vì thế câu «the attached drawing is the authority» trong `system` không phải một câu
+# lịch sự — nó là toàn bộ lý do khối này được sống lại. Bỏ nó đi là quay về T21 mà vẫn tốn tiền.
+#
+# Haan chốt 19/09: mô hình viết CẢ chữ lẫn số. Đánh đổi đã biết và đã chấp nhận — tờ này không đo
+# được, dấu tiếng Việt có thể hỏng. Tờ vector vẫn là tờ chính trên màn hình.
+#
+# `title_block` là cửa DUY NHẤT chữ đi từ hồ sơ ra ngoài, nên luật của nó viết ở hai nơi: trong
+# `system` dưới đây và trong hàm dựng lời dẫn (`ai/sheet-image.ts`, không nhận `projectId`).
+sheet_image:
+  system: |
+    You draw a presentation floor plan sheet for a Vietnamese residential design-build office.
+    The sheet is shown to the home owner, not to a builder.
+
+    A reference line drawing of this exact storey is attached. THE ATTACHED DRAWING IS THE
+    AUTHORITY. Every wall, door, window, stair and room boundary in it is already in the right
+    place. Redraw that same plan as a finished presentation sheet. Do not move, add, remove,
+    merge, split or resize any room, wall, door, window or stair. Keep the same outline, the same
+    proportions, the same orientation and roughly the same framing.
+
+    Draw it as a top-down orthographic plan, as an architectural visualiser would:
+    - Walls cut solid in a dark tone, clearly heavier than any other line.
+    - A different floor material per room type — timber boards in bedrooms, large tiles or stone
+      in living and dining, small tiles in bathrooms and kitchen, paving outside.
+    - Furniture drawn from above and sized to the room it sits in: beds with bedside tables in
+      bedrooms, sofa and coffee table in the living room, a dining table with the right number of
+      chairs, kitchen counters and island, sanitary ware in bathrooms, wardrobes against walls,
+      a car in the garage. Leave circulation clear; do not block a door with furniture.
+    - Outside the building outline: garden planting, trees, hedges, paved paths and steps.
+    - Soft shadows and a light, warm, photographic finish. No people.
+
+    Write the text ON the sheet, in Vietnamese with full diacritics, and copy it exactly as given:
+    - Each room name in upper case inside its own room, with its area on the line below it.
+    - The dimension chains along the top and left edges, exactly as they appear in the reference
+      drawing and with the figures given.
+    - A north arrow, a graphic scale bar, and a title block in the bottom-left corner containing
+      only the lines given to you.
+
+    The title block may contain NOTHING else. Never write a client name, an address, a project
+    code or number, a date, a signature, a stamp, a logo or a company name — invent none of them.
+    Write no text anywhere on the sheet other than the room names, their areas, the dimension
+    figures, the north letter, the scale bar figures and the title block lines given to you.
+  user: |
+    Storey: {level_name}
+
+    Rooms, with the name to write and the area to write under it:
+    {rooms}
+
+    Overall building footprint: {footprint}.
+    Overall dimension figures to write on the chains: {dimensions}.
+    North points {north}.
+
+    Title block lines, in this order and with nothing added:
+    {title_block}
+    {style}
+  # Mã phong cách đầu bài → một câu tiếng Anh nối vào cuối lời dẫn. Thiếu mã nào thì bỏ hẳn mệnh
+  # đề, không thay bằng câu mặc định: đoán phong cách hộ khách là việc của kiến trúc sư.
+  styles:
+    hien_dai: 'Interior styling: contemporary Vietnamese, clean lines, light neutral palette.'
+    tan_co_dien: 'Interior styling: neo-classical, moulded panelling, warm creams and golds.'
+    indochine: 'Interior styling: Indochine, dark timber, rattan, encaustic floor tiles.'
+    mai_thai: 'Interior styling: relaxed contemporary under a pitched roof, warm timber tones.'
+    toi_gian: 'Interior styling: minimalist, very few pieces, white and pale timber.'
+    nhiet_doi: 'Interior styling: tropical, abundant indoor planting, rattan and light timber.'
+    dia_trung_hai: 'Interior styling: Mediterranean, white walls, terracotta, arched openings.'
+    co_dien: 'Interior styling: classical, symmetrical furniture layout, rich timber and fabric.'
+    bac_au: 'Interior styling: Scandinavian, pale timber, soft greys, uncluttered.'
+  # Câu trình duyệt in ĐÈ LÊN PIXEL. Tiếng Việt có chủ đích — nó đọc cho người xem tấm ảnh, không
+  # đọc cho mô hình. Bản đầy đủ hơn hiện bằng chữ trong trang là `AI_DISCLAIMERS.aiSheetImage`.
+  watermark: 'Ảnh minh hoạ do AI vẽ — không đo được trên hình'

@@ -1,0 +1,35 @@
+# Quan hệ theo phương đứng: thẳng hàng liên tầng, ưu tiên tầng.
+
+- id: stair_alignment
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: building
+  predicate: aligned_across_floors
+  target: core
+  tolerance_m: 0.0
+  severity: error
+  source: 'QCVN 01:2021/BXD'
+  auto_repair: none
+
+- id: load_bearing_wall_alignment
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: building
+  predicate: aligned_across_floors
+  target: load_bearing_wall
+  tolerance_m: 0.0
+  severity: error
+  source: 'QCVN 01:2021/BXD'
+  auto_repair: none
+
+- id: shaft_alignment
+  applies_to: [nha_pho, biet_thu, nha_vuon]
+  scope: building
+  predicate: aligned_across_floors
+  target: shaft
+  tolerance_m: 0.0
+  severity: error
+  source: 'QCVN 01:2021/BXD'
+  auto_repair: none
+# Xe không lên được tầng trên, nên trên thực tế đây là ràng buộc cứng. Nhưng định dạng
+# rule pack chỉ cho phép severity: error khi source là văn bản quy phạm pháp luật
+# (07-rule-pack.md mục 7.2), nên để warning. Nếu Phòng Thiết kế muốn nó chặn thật thì
+# phải dẫn được văn bản, hoặc mã hoá thành ràng buộc cấu trúc ở bước đặt khối.

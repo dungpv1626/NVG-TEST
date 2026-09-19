@@ -9,7 +9,21 @@
   "properties": {
     "schema_version": { "$ref": "#/$defs/semver" },
     "floorplan_ref": { "$ref": "#/$defs/artifact_ref" },
-    "style": { "type": ["string", "null"], "enum": ["hien_dai", "tan_co_dien", "indochine", null] },
+    "style": {
+      "type": ["string", "null"],
+      "enum": [
+        "hien_dai",
+        "tan_co_dien",
+        "indochine",
+        "mai_thai",
+        "toi_gian",
+        "nhiet_doi",
+        "dia_trung_hai",
+        "co_dien",
+        "bac_au",
+        null
+      ]
+    },
     "style_template_version": { "type": ["string", "null"] },
     "massing": {
       "type": "object",

@@ -45,6 +45,12 @@ const PAGE_STYLE = `
   dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 0 0 20px; }
   dt { font-size: 11px; color: #44546F; }
   dd { margin: 2px 0 0; font-size: 13px; }
+  .block { margin: 0 0 12px; }
+  .block p { margin: 2px 0 0; white-space: pre-wrap; }
+  .photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .photos figure { margin: 0; break-inside: avoid; }
+  .photos img { width: 100%; height: 150px; object-fit: cover; border: 1px solid #DCDFE4; }
+  .photos figcaption { font-size: 10px; color: #44546F; margin-top: 2px; word-break: break-word; }
   @media print {
     body { margin: 0.5cm; }
   }
@@ -75,6 +81,47 @@ ${bodyHtml}
   win.document.close();
   win.onload = () => {
     win.focus();
-    win.print();
+    void printWhenImagesReady(win);
   };
+}
+
+/**
+ * Chờ ảnh tải xong rồi mới gọi in.
+ *
+ * `window.onload` của một tài liệu dựng bằng `document.write` KHÔNG bảo đảm ảnh đã về: biên
+ * bản khảo sát nhúng ảnh hiện trạng bằng đường ký tạm của Supabase Storage, và in ngay lúc
+ * onload cho ra một tệp PDF toàn khung ảnh trống. Không có lỗi nào nổ ra — người dùng chỉ
+ * nhận một bản in thiếu đúng thứ họ cần nhất.
+ *
+ * Có hạn chờ: ảnh hỏng hoặc mạng chết thì vẫn in phần chữ, vì một bản in thiếu ảnh còn hơn
+ * một cửa sổ đứng im không nói gì. Báo cáo không có ảnh thì `images` rỗng và hàm in ngay.
+ */
+const IMAGE_WAIT_MS = 15_000;
+
+function printWhenImagesReady(win: Window): void {
+  const pending = Array.from(win.document.images).filter((img) => !img.complete);
+  // Không có ảnh nào phải chờ thì in NGAY trong cùng lượt gọi, không lùi sang microtask:
+  // `window.print()` phải nằm trong ngăn xếp của thao tác người dùng để trình duyệt không
+  // coi là cửa sổ tự bật hộp thoại.
+  if (pending.length === 0) {
+    win.print();
+    return;
+  }
+
+  void Promise.race([
+    Promise.all(
+      pending.map(
+        (img) =>
+          new Promise<void>((resolve) => {
+            // `error` cũng resolve: một ảnh hỏng không được giữ bản in lại.
+            img.addEventListener('load', () => resolve(), { once: true });
+            img.addEventListener('error', () => resolve(), { once: true });
+          }),
+      ),
+    ),
+    new Promise<void>((resolve) => win.setTimeout(resolve, IMAGE_WAIT_MS)),
+    // Cửa sổ có thể đã bị đóng trong lúc chờ.
+  ]).then(() => {
+    if (!win.closed) win.print();
+  });
 }

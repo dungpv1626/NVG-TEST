@@ -1,0 +1,249 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nvg.vn/contracts/ai-facade-concept.schema.json",
+  "title": "AiFacadeConcept",
+  "description": "Ý tưởng mặt đứng của NHÁNH AI — bước trung gian giữa mặt bằng và bộ ảnh phối cảnh (T16, 09/09/2026).\n\nVì sao cần bước này. Đầu bài KHÔNG có trường nào về mái, vật liệu, màu, cổng hay ban công — đo ngày 09/09: cả hợp đồng `design-brief` chỉ có `style` (một trong chín) và một ô ghi chú tự do. Đưa thẳng chừng đó cho mô hình ảnh thì năm tấm ảnh ra năm ngôi nhà khác nhau. Ở đây mô hình phải NÓI RA nó định làm mặt đứng thế nào, kiến trúc sư sửa được, rồi mới trả tiền dựng ảnh.\n\nRanh giới: mô hình chỉ TRANG TRÍ. `openings_front` do Worker suy từ chính tường bao mặt trước của mặt bằng và là dữ liệu KHOÁ — mô hình không được dời, thêm hay bớt cửa sổ. Muốn đổi lỗ mở thì sửa mặt bằng rồi chạy lại. Nhờ ràng buộc đó, mặt bằng, mặt đứng và ảnh nói cùng một chuyện.\n\nMã vật liệu, mái, cổng, lan can lấy từ kb/facade_vocabulary.yaml — mỗi mã có nhãn tiếng Việt cho giao diện và một cụm tiếng Anh để ghép vào lời dẫn ảnh. Quy ước là dữ liệu, không viết vào mã nguồn.\n\nĐơn vị: xăng-ti-mét nguyên, như `ai-floor-plan`. Toạ độ trong `elevation` là hệ hai chiều của mặt đứng: `x` chạy ngang mặt tiền (cùng gốc với `x` của mặt bằng), `z` là cao độ tính từ cốt vỉa hè ±0.000.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "plan_ref",
+    "style",
+    "roof",
+    "materials",
+    "palette",
+    "openings_front",
+    "elevation",
+    "rationale",
+    "generator"
+  ],
+  "properties": {
+    "schema_version": { "$ref": "#/$defs/semver" },
+    "plan_ref": {
+      "$ref": "#/$defs/artifact_ref",
+      "description": "Mặt bằng (`ai_floor_plan`) mà mặt đứng này dựng theo. Worker điền."
+    },
+    "style": {
+      "type": "string",
+      "enum": [
+        "hien_dai",
+        "tan_co_dien",
+        "indochine",
+        "mai_thai",
+        "toi_gian",
+        "nhiet_doi",
+        "dia_trung_hai",
+        "co_dien",
+        "bac_au"
+      ],
+      "description": "Phong cách, cùng bộ mã với đầu bài."
+    },
+    "roof": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "material", "colour"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["flat", "hip", "gable", "thai", "mansard", "mixed"],
+          "description": "flat = mái bằng · hip = mái tứ giác · gable = mái hai dốc · thai = mái Thái · mansard = mái mansard · mixed = hỗn hợp."
+        },
+        "pitch_deg": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 60,
+          "description": "Độ dốc mái, độ. Rỗng với mái bằng."
+        },
+        "material": { "$ref": "#/$defs/code" },
+        "colour": { "$ref": "#/$defs/code" }
+      }
+    },
+    "materials": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["where", "material", "colour"],
+        "properties": {
+          "where": {
+            "type": "string",
+            "enum": ["base", "body", "accent", "trim", "railing", "gate", "fence"],
+            "description": "base = phần đế · body = thân nhà · accent = mảng nhấn · trim = chỉ, phào, khung · railing = lan can · gate = cổng · fence = tường rào."
+          },
+          "material": { "$ref": "#/$defs/code" },
+          "colour": { "$ref": "#/$defs/code" },
+          "finish": { "type": ["string", "null"], "maxLength": 60 }
+        }
+      }
+    },
+    "palette": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primary_hex", "secondary_hex"],
+      "description": "Ba màu chủ đạo dạng mã hex — để giao diện hiện ô màu sửa được, và để lời dẫn ảnh nói màu chính xác thay vì «be nhạt».",
+      "properties": {
+        "primary_hex": { "$ref": "#/$defs/hex" },
+        "secondary_hex": { "$ref": "#/$defs/hex" },
+        "accent_hex": { "anyOf": [{ "$ref": "#/$defs/hex" }, { "type": "null" }] }
+      }
+    },
+    "gate": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string", "enum": ["swing", "sliding", "folding", "none"] },
+        "w": { "$ref": "#/$defs/cm" },
+        "h": { "$ref": "#/$defs/cm" },
+        "material": { "anyOf": [{ "$ref": "#/$defs/code" }, { "type": "null" }] },
+        "colour": { "anyOf": [{ "$ref": "#/$defs/code" }, { "type": "null" }] }
+      }
+    },
+    "fence": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["h"],
+      "properties": {
+        "h": { "$ref": "#/$defs/cm" },
+        "material": { "anyOf": [{ "$ref": "#/$defs/code" }, { "type": "null" }] },
+        "colour": { "anyOf": [{ "$ref": "#/$defs/code" }, { "type": "null" }] }
+      }
+    },
+    "balconies": {
+      "type": "array",
+      "maxItems": 24,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["level", "x0", "x1", "depth"],
+        "properties": {
+          "level": { "type": "integer", "minimum": 1 },
+          "x0": { "$ref": "#/$defs/cm" },
+          "x1": { "$ref": "#/$defs/cm" },
+          "depth": { "$ref": "#/$defs/cm", "description": "Độ vươn ra khỏi mặt tường, cm." },
+          "railing": { "anyOf": [{ "$ref": "#/$defs/code" }, { "type": "null" }] }
+        }
+      }
+    },
+    "openings_front": {
+      "type": "array",
+      "maxItems": 80,
+      "description": "Lỗ mở trên mặt tiền — WORKER SUY từ cửa và cửa sổ nằm trên tường bao mặt trước của mặt bằng. Dữ liệu KHOÁ: mô hình nhận để vẽ cho đúng, không được sửa. Đây là thứ buộc mặt đứng khớp mặt bằng.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["level", "x", "w", "sill", "h", "kind"],
+        "properties": {
+          "level": { "type": "integer", "minimum": 1 },
+          "x": { "$ref": "#/$defs/cm" },
+          "w": { "$ref": "#/$defs/cm" },
+          "sill": { "$ref": "#/$defs/cm", "description": "Cao độ bệ so với sàn tầng đó, cm." },
+          "h": { "$ref": "#/$defs/cm" },
+          "kind": { "type": "string", "enum": ["door", "window", "garage", "gate", "opening"] }
+        }
+      }
+    },
+    "elevation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["face", "width", "levels"],
+      "description": "Dữ liệu vẽ tờ mặt đứng. Khung (bề rộng, cao độ từng tầng) do Worker suy từ mặt bằng; mô hình thêm đường mái và các mảng trang trí.",
+      "properties": {
+        "face": {
+          "type": "string",
+          "enum": ["front"],
+          "description": "Mặt đang vẽ. Giai đoạn 1 chỉ mặt trước; enum một giá trị là chỗ nối cho mặt bên và mặt sau ở giai đoạn 2."
+        },
+        "width": { "$ref": "#/$defs/cm", "description": "Bề rộng mặt tiền, cm." },
+        "levels": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["level", "z", "h"],
+            "properties": {
+              "level": { "type": "integer", "minimum": 1 },
+              "z": {
+                "$ref": "#/$defs/cm",
+                "description": "Cao độ mặt sàn hoàn thiện so với ±0.000."
+              },
+              "h": { "$ref": "#/$defs/cm" }
+            }
+          }
+        },
+        "parapet": {
+          "anyOf": [{ "$ref": "#/$defs/cm" }, { "type": "null" }],
+          "description": "Chiều cao tường chắn mái so với sàn mái, cm. Rỗng khi không có."
+        },
+        "roof_outline": {
+          "type": "array",
+          "maxItems": 24,
+          "items": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": { "$ref": "#/$defs/cm" }
+          },
+          "description": "Đường bao mái nhìn từ mặt trước, các điểm [x, z] nối liên tiếp."
+        },
+        "elements": {
+          "type": "array",
+          "maxItems": 40,
+          "description": "Mảng trang trí trên mặt đứng: ô văng, cột, mảng ốp, lam, bồn cây. Không phải lỗ mở.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "rect"],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": ["canopy", "column", "cladding", "louvre", "planter", "cornice"]
+              },
+              "rect": {
+                "type": "array",
+                "minItems": 4,
+                "maxItems": 4,
+                "items": { "$ref": "#/$defs/cm" },
+                "description": "[x0, z0, x1, z1] cm."
+              },
+              "material_ref": {
+                "type": ["integer", "null"],
+                "minimum": 0,
+                "description": "Chỉ số trong mảng `materials`. Rỗng thì lấy vật liệu của thân nhà."
+              }
+            }
+          }
+        }
+      }
+    },
+    "rationale": { "type": "string", "maxLength": 1500 },
+    "generator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "provider", "model", "route", "prompt_version"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["ai"] },
+        "provider": { "type": "string", "maxLength": 32 },
+        "model": { "type": "string", "maxLength": 96 },
+        "route": { "type": "string", "maxLength": 64 },
+        "prompt_version": { "type": "string", "maxLength": 16 },
+        "repaired": { "type": "boolean" },
+        "edited_by_user": {
+          "type": "boolean",
+          "description": "Kiến trúc sư đã sửa ý tưởng này. Bản sửa là artifact MỚI (artifact bất biến), nối lineage bằng bước `ai_facade_edit`."
+        }
+      }
+    }
+  },
+  "$defs": {
+    "semver": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "artifact_ref": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "code": { "type": "string", "pattern": "^[a-z0-9_]+$", "maxLength": 40 },
+    "hex": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+    "cm": { "type": "integer" }
+  }
+}

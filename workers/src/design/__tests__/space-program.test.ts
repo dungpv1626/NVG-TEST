@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { artifactId, canonicalJson, type DesignBrief } from '@nvg/shared/design';
 import { parseArtifact } from '../contracts';
 import { buildSpaceProgram, ProgramError } from '../program/engine';
+import { parseRuleFile, RulePack } from '../rules/rule-pack';
 import { bandFor, parseSpaceNorms, SpaceNormsError } from '../program/norms';
 import { RoomAreaPriors } from '../program/priors';
 import { parseVocabulary, VocabularyIndex } from '../kb/vocabulary';
@@ -43,6 +44,212 @@ function brief(overrides: Partial<DesignBrief> = {}): DesignBrief {
 
 const build = (b: DesignBrief = brief()) =>
   buildSpaceProgram({ brief: b, briefRef: REF, rules, norms });
+
+describe('Ghim tầng cho phòng ngủ của một nhóm thành viên', () => {
+  it('ghim vào đúng tầng đã khai, không để bước cân tải đẩy đi chỗ khác', () => {
+    const { payload } = build(
+      brief({
+        floors: 3,
+        family: [
+          { role: 'vo_chong', count: 2, floor: 3 },
+          { role: 'ong_ba', count: 2, floor: 1 },
+        ],
+      } as Partial<DesignBrief>),
+    );
+    expect(payload.spaces.find((s) => s.type === 'master_bedroom')?.floor).toBe(3);
+    expect(payload.spaces.find((s) => s.type === 'bedroom')?.floor).toBe(1);
+  });
+
+  it('khu vệ sinh khép kín đi THEO tầng đã ghim của phòng mẹ', () => {
+    const { payload } = build(
+      brief({
+        floors: 3,
+        family: [{ role: 'vo_chong', count: 2, floor: 3, ensuite: true }],
+      } as Partial<DesignBrief>),
+    );
+    const master = payload.spaces.find((s) => s.type === 'master_bedroom')!;
+    const inside = payload.spaces.find((s) => s.enclosed_in === master.id)!;
+    expect(master.floor).toBe(3);
+    expect(inside.floor).toBe(3);
+  });
+
+  it('ghim vượt số tầng: bỏ ghim, cảnh báo bằng nhãn tiếng Việt, KHÔNG mất phòng', () => {
+    // Hạ số tầng sau khi đã ghim là chuyện thường gặp. Mất luôn phòng ngủ vì một con số quá
+    // hạn là hỏng nặng hơn nhiều so với việc xếp nó vào tầng khác.
+    const result = build(
+      brief({
+        floors: 2,
+        family: [{ role: 'vo_chong', count: 2, floor: 5 }],
+      } as Partial<DesignBrief>),
+    );
+    expect(result.warnings.some((w) => w.includes('Phòng ngủ chính') && w.includes('tầng 5'))).toBe(
+      true,
+    );
+    const master = result.payload.spaces.find((s) => s.type === 'master_bedroom');
+    expect(master).toBeDefined();
+    expect(master!.floor).toBeLessThanOrEqual(2);
+  });
+
+  it('`floor` thắng `floor_pref` khi đầu bài cũ còn mang cả hai', () => {
+    const { payload } = build(
+      brief({
+        floors: 3,
+        family: [{ role: 'vo_chong', count: 2, floor: 1, floor_pref: 'top' }],
+      } as Partial<DesignBrief>),
+    );
+    expect(payload.spaces.find((s) => s.type === 'master_bedroom')?.floor).toBe(1);
+  });
+});
+
+describe('Phòng ngủ khép kín', () => {
+  const ensuiteBrief = () =>
+    brief({
+      family: [
+        { role: 'vo_chong', count: 2, ensuite: true },
+        { role: 'con', count: 2 },
+      ],
+    } as Partial<DesignBrief>);
+
+  it('sinh một khu vệ sinh nằm TRONG phòng ngủ, cùng tầng với nó', () => {
+    const { payload } = build(ensuiteBrief());
+    const enclosed = payload.spaces.filter((s) => s.enclosed_in);
+    expect(enclosed).toHaveLength(1);
+
+    const child = enclosed[0]!;
+    const parent = payload.spaces.find((s) => s.id === child.enclosed_in);
+    expect(child.type).toBe('wc');
+    expect(parent?.type).toBe('master_bedroom');
+    // Tầng của nó là HỆ QUẢ, không phải lựa chọn. Để bước cân tải tự chọn thì sớm muộn có một
+    // phòng ngủ tầng hai với khu vệ sinh riêng nằm ở tầng một.
+    expect(child.floor).toBe(parent?.floor);
+  });
+
+  it('khu vệ sinh khép kín không đòi mặt thoáng và phải KỀ phòng mẹ', () => {
+    const { payload } = build(ensuiteBrief());
+    const child = payload.spaces.find((s) => s.enclosed_in)!;
+
+    // Nó lấy sáng và gió qua chính phòng mẹ; đòi nó tự có mặt thoáng là ép một lỗ mở ra ngoài
+    // mà nhà thật không làm.
+    expect(child.needs_daylight).toBe(false);
+    expect(child.needs_facade).toBe(false);
+
+    const pair = (payload.adjacency ?? []).find(
+      (a) =>
+        a.kind === 'adjacent' &&
+        [a.a, a.b].includes(child.id) &&
+        [a.a, a.b].includes(child.enclosed_in!),
+    );
+    expect(pair?.weight).toBe(1);
+  });
+
+  it('dòng phòng ngủ khai tường minh GHI ĐÈ mà vẫn giữ khu vệ sinh khép kín', () => {
+    // Hồi quy có thật, và nó hỏng im lặng: phần ghi đè chỉ đếm số dòng rồi bỏ qua phòng bị
+    // đứng thay, kéo theo bỏ luôn khối `wc` gắn kèm. Không lỗi, không cảnh báo — chỉ là căn
+    // nhà thiếu một khu vệ sinh. Vô hại chừng nào hiếm ai khai tường minh phòng ngủ; từ
+    // 07/09/2026 biểu mẫu tự sinh MỌI dòng phòng ngủ nên nó sẽ đúng ở mọi hồ sơ.
+    const { payload } = build(
+      brief({
+        family: [{ role: 'vo_chong', count: 2, ensuite: true }],
+        required_spaces: [{ type: 'master_bedroom', floor: 2, ensuite: true }],
+      } as Partial<DesignBrief>),
+    );
+
+    const beds = payload.spaces.filter((s) => s.type === 'master_bedroom');
+    expect(beds).toHaveLength(1); // ghi đè, KHÔNG cộng thêm
+    expect(beds[0]!.floor).toBe(2); // ghim của dòng khai tường minh vẫn có hiệu lực
+
+    const enclosed = payload.spaces.filter((s) => s.enclosed_in);
+    expect(enclosed).toHaveLength(1);
+    expect(enclosed[0]!.enclosed_in).toBe(beds[0]!.id);
+  });
+
+  it('dòng khai tường minh KHÔNG nói gì về khép kín thì lấy theo Thành viên gia đình', () => {
+    // Đầu bài lưu trước 07/09/2026 không có trường `ensuite` trên dòng không gian. Bỏ qua
+    // vế này là làm mất khu vệ sinh của chính những hồ sơ cũ đó.
+    const { payload } = build(
+      brief({
+        family: [{ role: 'vo_chong', count: 2, ensuite: true }],
+        required_spaces: [{ type: 'master_bedroom', floor: 2 }],
+      } as Partial<DesignBrief>),
+    );
+    expect(payload.spaces.filter((s) => s.enclosed_in)).toHaveLength(1);
+  });
+
+  it('dòng khai tường minh nói KHÔNG khép kín thì thắng câu trả lời của gia đình', () => {
+    const { payload } = build(
+      brief({
+        family: [{ role: 'vo_chong', count: 2, ensuite: true }],
+        required_spaces: [{ type: 'master_bedroom', floor: 2, ensuite: false }],
+      } as Partial<DesignBrief>),
+    );
+    expect(payload.spaces.filter((s) => s.enclosed_in)).toHaveLength(0);
+  });
+
+  it('KHÔNG đếm hai lần: phòng khép kín không kéo theo một khu vệ sinh chung', () => {
+    // Đây là chỗ hỏng im lặng nhất của tính năng: chương trình vẫn hợp lệ, bộ giải vẫn giải
+    // được, chỉ là căn nhà thừa đúng bằng số phòng khép kín một khu vệ sinh mà không ai đặt.
+    const plain = build().payload.spaces.filter((s) => s.type === 'wc' && !s.enclosed_in).length;
+    const withEnsuite = build(ensuiteBrief()).payload.spaces.filter(
+      (s) => s.type === 'wc' && !s.enclosed_in,
+    ).length;
+    expect(withEnsuite).toBeLessThanOrEqual(plain);
+  });
+});
+
+describe('Không gian khai tường minh — một phần tử là một PHÒNG', () => {
+  it('cùng một mã lặp lại thì ra bấy nhiêu phòng, ghim tầng riêng từng cái', () => {
+    // Dùng `laundry` chứ không phải `study`: `study` nằm trong danh sách không gian bổ sung
+    // (`allocation.fillers`) nên tầng nào còn trống sẽ được thêm một cái nữa, và bài test sẽ
+    // đếm cả phần engine tự thêm.
+    const { payload } = build(
+      brief({
+        floors: 3,
+        family: [],
+        required_spaces: [
+          { type: 'laundry', floor: 1 },
+          { type: 'laundry', floor: 3 },
+        ],
+      }),
+    );
+    const rooms = payload.spaces.filter((s) => s.type === 'laundry');
+    expect(rooms).toHaveLength(2);
+    expect(rooms.map((r) => r.floor).sort()).toEqual([1, 3]);
+  });
+
+  it('diện tích khách khai thành TỐI THIỂU, nhưng KHÔNG kéo tối thiểu quy chuẩn xuống', () => {
+    const { payload } = build(
+      brief({
+        family: [],
+        required_spaces: [
+          { type: 'laundry', area_m2: 24 },
+          { type: 'wc', area_m2: 0.5 },
+        ],
+      }),
+    );
+    const wanted = payload.spaces.find((s) => s.type === 'laundry')!;
+    expect(wanted.min_area_m2).toBe(24);
+    expect(wanted.min_source).toBe('brief');
+    expect(wanted.target_area_m2!).toBeGreaterThanOrEqual(24);
+
+    // 0,5 m² là con số khách nói ra, và nó thua quy chuẩn. Diện tích tối thiểu không thương
+    // lượng được, kể cả khi người khai muốn nhỏ hơn.
+    const wc = payload.spaces.find((s) => s.type === 'wc')!;
+    expect(wc.target_area_m2).toBeGreaterThanOrEqual(wc.min_area_m2!);
+    expect(wc.min_source).not.toBe('brief');
+  });
+
+  it('phòng ngủ khai tường minh GHI ĐÈ phần suy từ gia đình, không cộng thêm', () => {
+    const base = build(brief({ required_spaces: [] })).payload.spaces.filter(
+      (s) => s.type === 'bedroom',
+    ).length;
+    const pinned = build(
+      brief({ required_spaces: [{ type: 'bedroom', floor: 1 }] }),
+    ).payload.spaces.filter((s) => s.type === 'bedroom');
+
+    expect(pinned).toHaveLength(base);
+    expect(pinned.some((r) => r.floor === 1)).toBe(true);
+  });
+});
 
 describe('Chuẩn diện tích — tệp dữ liệu', () => {
   it('phủ được MỌI mã phòng của từ vựng', () => {
@@ -94,7 +301,7 @@ derived:
   stair: { per_core: 1 }
 adjacency_weight: { error: 1, warning: 0.6 }
 spaces:
-  living: { min_m2: 10, target_m2: 20, max_m2: 40, priority: 1, floor: ground, daylight: true, facade: true, ventilation: true }
+  living: { min_m2: 10, target_m2: 20, max_m2: 40, priority: 1, weight: 3, floor: ground, daylight: true, facade: true, ventilation: true }
 `;
     // Lô 20 m rơi ra ngoài mọi dải → hệ số nhân thành undefined → diện tích thành NaN, và
     // sai kiểu đó chỉ lộ ra ở tận bản vẽ.
@@ -160,6 +367,39 @@ describe('Soạn chương trình không gian', () => {
     expect([...floors].sort()).toEqual([1, 2, 3, 4]);
   });
 
+  it('phòng thả nổi dồn vào tầng đang dùng trước khi mở tầng mới; tầng trống được bổ sung (V-11)', () => {
+    // Ba thế hệ, bốn phòng ngủ, bốn tầng: trước đây mỗi tầng một phòng ngủ và tầng nào cũng
+    // trống 40 % — bộ giải phải phình vệ sinh hay mở thông tầng để lấp. Nay hai phòng ngủ ở
+    // chung một tầng khi còn chỗ, và không tầng nào dưới ngưỡng bổ sung.
+    const program = build(
+      brief({
+        floors: 4,
+        family: [
+          { role: 'ong_ba', count: 2 },
+          { role: 'vo_chong', count: 2 },
+          { role: 'con', count: 2 },
+        ],
+        required_spaces: [
+          { type: 'altar_room', floor: 4 },
+          { type: 'garage', floor: 1 },
+        ],
+      }),
+    ).payload;
+    const bedroomsByFloor = new Map<number, number>();
+    for (const s of program.spaces) {
+      if (s.type === 'bedroom' || s.type === 'master_bedroom') {
+        bedroomsByFloor.set(s.floor, (bedroomsByFloor.get(s.floor) ?? 0) + 1);
+      }
+    }
+    expect(Math.max(...bedroomsByFloor.values())).toBeGreaterThanOrEqual(2);
+    for (const allocation of program.floor_allocation ?? []) {
+      const ratio = (allocation.allocated_area_m2 ?? 0) / (allocation.usable_area_m2 ?? 1);
+      expect(ratio, `tầng ${allocation.floor} còn trống quá`).toBeGreaterThanOrEqual(
+        norms.allocation.filler_below_ratio - 1e-9,
+      );
+    }
+  });
+
   it('diện tích đã phân bổ mỗi tầng khớp tổng diện tích mong muốn của tầng đó', () => {
     const program = build().payload;
     for (const allocation of program.floor_allocation ?? []) {
@@ -194,7 +434,8 @@ describe('Soạn chương trình không gian', () => {
 
   it('ghim vào tầng không tồn tại: bỏ ghim, cảnh báo, không mất không gian', () => {
     const result = build(brief({ required_spaces: [{ type: 'garage', floor: 99 }], floors: 3 }));
-    expect(result.warnings.some((w) => w.includes('garage') && w.includes('99'))).toBe(true);
+    // Nhãn tiếng Việt trong câu cảnh báo, không phải mã máy `garage` (CLAUDE.md 4.1).
+    expect(result.warnings.some((w) => w.includes('Để xe') && w.includes('99'))).toBe(true);
     const garage = result.payload.spaces.find((s) => s.type === 'garage');
     expect(garage).toBeDefined();
     expect(garage!.floor).toBeGreaterThanOrEqual(1);
@@ -203,15 +444,38 @@ describe('Soạn chương trình không gian', () => {
 });
 
 describe('Ba nguồn tri thức, đúng thứ tự ưu tiên', () => {
-  it('diện tích tối thiểu của quy chuẩn THẮNG chuẩn nghề nghiệp', () => {
-    // Hạ chuẩn nghề xuống dưới quy chuẩn: kết quả phải vẫn là con số của quy chuẩn.
+  it('diện tích tối thiểu của GÓI QUY TẮC thắng chuẩn nghề khi gói có khai', () => {
+    // Gói hiện hành không còn quy chuẩn (13/09/2026); dựng một gói có `min_area` để giữ phép
+    // thử cho CƠ CHẾ: hạ chuẩn nghề xuống dưới số của gói thì số của gói vẫn thắng.
+    const pack = new RulePack(
+      parseRuleFile(
+        [
+          '- id: test_min_area_bedroom',
+          '  applies_to: [nha_pho]',
+          '  scope: room',
+          '  predicate: min_area',
+          '  target: bedroom',
+          '  value_m2: 9',
+          '  severity: warning',
+          "  source: 'kinh nghiệm NVG'",
+          '  auto_repair: none',
+        ].join('\n'),
+        'test',
+      ),
+      false,
+    );
     const loosened = structuredClone(norms);
     loosened.spaces.bedroom!.min_m2 = 4;
     loosened.spaces.bedroom!.target_m2 = 14;
-    const program = buildSpaceProgram({ brief: brief(), briefRef: REF, rules, norms: loosened });
+    const program = buildSpaceProgram({
+      brief: brief(),
+      briefRef: REF,
+      rules: pack,
+      norms: loosened,
+    });
     const bedroom = program.payload.spaces.find((s) => s.type === 'bedroom');
-    expect(bedroom?.min_area_m2).toBe(rules.minArea('nha_pho', 'bedroom'));
-    expect(rules.minArea('nha_pho', 'bedroom')).toBe(9);
+    expect(pack.minArea('nha_pho', 'bedroom')).toBe(9);
+    expect(bedroom?.min_area_m2).toBe(9);
   });
 
   it('thống kê thực nghiệm THẮNG chuẩn nghề nghiệp khi có', () => {
@@ -277,7 +541,7 @@ describe('Ép vừa diện tích sàn', () => {
         site: { width_m: 20, depth_m: 20, max_density: 0.5, setback_required_m: {} },
       }),
     );
-    expect(villa.payload.floor_allocation?.[0]?.usable_area_m2).toBe(200);
+    expect(villa.payload.floor_allocation?.[0]?.buildable_area_m2).toBe(200);
   });
 
   it('khoảng lùi lớn hơn lô thì dừng ngay, kèm câu giải thích', () => {
@@ -403,17 +667,22 @@ describe('Tất định', () => {
   });
 
   /**
-   * Diện tích sàn dùng được của một tầng, đọc thẳng từ `floor_allocation`.
+   * TRẦN xây được của một tầng — sau khoảng lùi và mật độ, trước khi engine chọn dùng bao
+   * nhiêu. Đây là con số ba phép đo dưới đây thật sự nhắm tới.
    *
-   * Đây là con số engine THỰC SỰ dùng làm ràng buộc, nên nó là thước đo đúng. Hai thước đo
-   * đã thử và loại:
-   *  · tổng `target_area_m2` — bộ ép vừa co theo nhu cầu phòng, nên thấp hơn sàn ở mọi
-   *    trường hợp; phép so "ít hơn" vẫn xanh dù bề rộng lấy sai.
+   * ⚠️ Từ 07/09/2026 phải đọc `buildable_area_m2`, KHÔNG đọc `usable_area_m2` nữa:
+   * `usable_area_m2` nay là mặt sàn engine CHỌN DÙNG, và nó nhỏ hơn trần bất cứ khi nào
+   * chương trình không cần hết chỗ. Đọc nhầm trường thì ba phép đo dưới đây đo nhu cầu của
+   * đầu bài mẫu chứ không đo phép tính khoảng lùi/mật độ mà chúng sinh ra để canh.
+   *
+   * Hai thước đo khác đã thử và loại:
+   *  · tổng `target_area_m2` — co theo nhu cầu phòng, nên thấp hơn sàn ở mọi trường hợp;
+   *    phép so "ít hơn" vẫn xanh dù bề rộng lấy sai.
    *  · tổng `max_area_m2` — các phòng cạnh tranh nhau nên tổng này VƯỢT sàn ở tầng đông
    *    phòng; nó là sàn dưới của độ phủ, không phải trần.
    */
   const usable = (result: ReturnType<typeof build>, floor: number): number =>
-    (result.payload.floor_allocation ?? []).find((f) => f.floor === floor)?.usable_area_m2 ?? 0;
+    (result.payload.floor_allocation ?? []).find((f) => f.floor === floor)?.buildable_area_m2 ?? 0;
 
   it('thửa hình thang: sàn tính trên phần đất HẸP, không trên hình bao', () => {
     // Mặt tiền 6 m, mặt hậu 4 m, sâu 20 m. Ô chữ nhật xây được là 4 × 20 = 80 m²; hình bao
@@ -438,7 +707,7 @@ describe('Tất định', () => {
   });
 
   it('trần mật độ tính trên diện tích THẬT của thửa, không trên hình bao', () => {
-    // Biệt thự: gói nền cho trần mật độ 0,6 và khoảng lùi trước 3 m. Thửa hình thang mặt
+    // Biệt thự, đầu bài khai mật độ 0,6 và khoảng lùi trước 3 m. Thửa hình thang mặt
     // tiền 12 m, mặt hậu 8 m, sâu 20 m:
     //  · ô chữ nhật xây được 8 × (20 − 3) = 136 m²;
     //  · diện tích THẬT (12+8)/2 × 20 = 200 m² → trần 120 m² → **trần mật độ chặn**;
@@ -447,7 +716,14 @@ describe('Tất định', () => {
     const villa = brief({
       building_type: 'biet_thu',
       floors: 2,
-      site: { width_m: 12, depth_m: 20, shape: 'hinh_thang', rear_width_m: 8 },
+      site: {
+        width_m: 12,
+        depth_m: 20,
+        shape: 'hinh_thang',
+        rear_width_m: 8,
+        max_density: 0.6,
+        setback_required_m: { front: 3 },
+      },
     });
     expect(usable(build(villa), 1)).toBe(120);
   });
@@ -457,17 +733,16 @@ describe('Tất định', () => {
     expect(result.warnings.some((w) => w.includes('ho_boi_trong_nha'))).toBe(true);
   });
 
-  it('địa phương chưa có gói riêng vẫn chạy đủ quy chuẩn quốc gia, và KHÔNG cảnh báo', () => {
-    // Khoảng lùi và mật độ là QCVN — quy chuẩn quốc gia — nên chúng nằm ở gói nền. Tỉnh
-    // chưa có văn bản riêng vì thế không phải một tình trạng đáng cảnh báo: kết quả vẫn
-    // đúng quy chuẩn. Cảnh báo nổ ở mọi lần chạy là cảnh báo bị bỏ qua, và khi ấy cái
-    // cảnh báo thật đứng cạnh nó cũng chịu chung số phận.
+  it('địa phương chưa có gói riêng vẫn chạy, KHÔNG cảnh báo, và KHÔNG tự ép số quy chuẩn nào', () => {
+    // Từ 13/09/2026 bộ giải không còn gói quy chuẩn: khoảng lùi và mật độ chỉ đến từ đầu bài.
+    // Tỉnh chưa có văn bản riêng không phải tình trạng đáng cảnh báo — cảnh báo nổ ở mọi lần
+    // chạy là cảnh báo bị bỏ qua.
     //
     // Chế độ đã chạy vẫn ghi lại được — `runLayer2` đặt vào `params.rule_pack_locality`.
     const pack = testRulePack('ha_noi');
     expect(pack.localityMissing, 'chưa tỉnh nào có gói riêng').toBe(true);
-    expect(pack.maxDensity('biet_thu'), 'trần mật độ phải đến từ gói nền').toBe(0.6);
-    expect(pack.setbacks('biet_thu').front, 'khoảng lùi phải đến từ gói nền').toBe(3);
+    expect(pack.maxDensity('biet_thu'), 'gói không còn trần mật độ').toBeNull();
+    expect(pack.setbacks('biet_thu').front ?? 0, 'gói không còn khoảng lùi').toBe(0);
 
     const elsewhere = buildSpaceProgram({
       brief: brief({ locality: 'ha_noi' }),
@@ -505,10 +780,179 @@ describe('Đọc nhu cầu viết bằng lời', () => {
       fileURLToPath(new URL('../../../../config/models.yaml', import.meta.url)),
       'utf-8',
     );
-    const llm = new GeminiClient(new ModelRouter(parseModelConfig(modelsYaml), 'khoa-gia-lap'));
+    const llm = new GeminiClient(
+      new ModelRouter(parseModelConfig(modelsYaml), { gemini: 'khoa-gia-lap' }),
+    );
     const result = await resolveNeeds(['cần một phòng xông hơi ở tầng áp mái'], vocabulary, llm);
 
     expect(result.unresolved).toHaveLength(1);
     expect(result.notes[0]).toMatch(/dữ liệu nhạy cảm/);
+  });
+});
+
+describe('Phòng ngủ ghi rõ phòng của ai (13/09/2026)', () => {
+  it('mỗi phòng ngủ suy từ gia đình mang vai trò và số người; khép kín mang theo chủ phòng', () => {
+    const { payload } = build(
+      brief({
+        floors: 2,
+        site: { width_m: 12, depth_m: 20 },
+        family: [
+          { role: 'ong_ba', count: 2, ensuite: true },
+          { role: 'vo_chong', count: 2 },
+          { role: 'con', count: 2 },
+        ],
+      }),
+    );
+    const occupants = payload.spaces
+      .filter((s) => s.type === 'bedroom' || s.type === 'master_bedroom')
+      .map((s) => s.occupant);
+    expect(occupants).toHaveLength(4);
+    expect(occupants).toEqual(
+      expect.arrayContaining([
+        'Con 1 · 1 người',
+        'Con 2 · 1 người',
+        'Ông bà · 2 người',
+        'Vợ chồng · 2 người',
+      ]),
+    );
+    const ensuite = payload.spaces.find((s) => s.enclosed_in);
+    expect(ensuite?.occupant).toBe('khép kín — Ông bà · 2 người');
+  });
+
+  it('dòng phòng ngủ khai tường minh đứng thay phòng suy diễn vẫn nhận đúng chủ phòng', () => {
+    const { payload } = build(
+      brief({
+        family: [{ role: 'con', count: 1 }],
+        required_spaces: [{ type: 'bedroom', floor: 2 }],
+      }),
+    );
+    const bed = payload.spaces.find((s) => s.type === 'bedroom')!;
+    expect(bed.floor).toBe(2);
+    expect(bed.occupant).toBe('Con · 1 người');
+  });
+});
+
+describe('Giải thích con số «sàn mỗi tầng» (13/09/2026)', () => {
+  it('kể đủ các bước, và các bước cộng lại ra đúng con số trên bảng', () => {
+    const result = build(
+      brief({
+        building_type: 'biet_thu',
+        site: { width_m: 15, depth_m: 20, max_density: 0.6, setback_required_m: { front: 3 } },
+        floors: 2,
+      }),
+    );
+    const e = result.plateExplanation;
+    const usable = result.payload.floor_allocation![0]!.usable_area_m2!;
+
+    expect(e.site).toMatchObject({ widthM: 15, depthM: 20 });
+    // Bộ giải không còn gói quy chuẩn (13/09/2026): mật độ đang áp là đúng số đầu bài khai.
+    expect(e.densityRule).toBeNull();
+    expect(e.densityDeclared).toBe(0.6);
+    expect(e.maxDensity).toBe(0.6);
+    expect(e.setbacks.front).toBe(3);
+    expect(e.afterSetbacks.widthM).toBeCloseTo(
+      e.rect.widthM - e.setbacks.left - e.setbacks.right,
+      6,
+    );
+    expect(e.afterSetbacks.depthM).toBeCloseTo(
+      e.rect.depthM - e.setbacks.front - e.setbacks.back,
+      6,
+    );
+    expect(e.buildableM2).toBeCloseTo(
+      Math.min(e.afterSetbacks.areaM2, e.byDensityM2 ?? Number.POSITIVE_INFINITY),
+      6,
+    );
+    expect(e.evenShareM2).toBeCloseTo(e.roomDemandM2 / e.floors / (1 - e.circulationRatio), 6);
+    expect(Math.round(e.plateM2 * 10) / 10).toBeCloseTo(usable, 1);
+    // Con số cuối là min(xây được, max(chia đều, tầng nặng nhất)) — và nói ra vế nào quyết.
+    const need = Math.max(e.evenShareM2, e.heaviest?.plateM2 ?? 0);
+    expect(e.plateM2).toBeCloseTo(Math.min(e.buildableM2, need), 6);
+    expect(e.limitedBy).toBe(
+      need > e.buildableM2
+        ? 'buildable'
+        : (e.heaviest?.plateM2 ?? 0) >= e.evenShareM2
+          ? 'heaviest_floor'
+          : 'even_share',
+    );
+  });
+});
+
+describe('Tiện ích trong phòng ngủ gộp vào phòng, không tách dòng (13/09/2026)', () => {
+  const withNeeds = () =>
+    brief({
+      floors: 2,
+      site: { width_m: 12, depth_m: 20 },
+      family: [
+        { role: 'ong_ba', count: 2, needs: ['closet'] },
+        { role: 'con', count: 2, needs: ['study_area', 'balcony'] },
+      ],
+    });
+
+  it('tủ đồ, góc học tập nằm trong phòng của đúng nhóm; ban công vẫn là không gian riêng', () => {
+    // Đi qua đúng đường của `run.ts`: mã nhu cầu thường vào `extraSpaces`, mã `in_bedroom` thì không.
+    const b = withNeeds();
+    const extra = (b.family ?? [])
+      .flatMap((m) => m.needs ?? [])
+      .filter((code) => !norms.in_bedroom.includes(code));
+    const { payload } = buildSpaceProgram({
+      brief: b,
+      briefRef: REF,
+      rules,
+      norms,
+      extraSpaces: extra,
+    });
+
+    expect(payload.spaces.some((s) => s.type === 'closet' || s.type === 'study_area')).toBe(false);
+    expect(payload.spaces.some((s) => s.type === 'balcony')).toBe(true);
+
+    const ongBa = payload.spaces.find((s) => s.occupant?.startsWith('Ông bà'))!;
+    expect(ongBa.includes).toEqual(['closet']);
+    const con = payload.spaces.filter((s) => s.occupant?.startsWith('Con'));
+    expect(con).toHaveLength(2);
+    for (const room of con) expect(room.includes).toEqual(['study_area']);
+  });
+
+  it('diện tích tối thiểu của tiện ích cộng vào phòng', () => {
+    const plain = build(
+      brief({
+        floors: 2,
+        site: { width_m: 12, depth_m: 20 },
+        family: [{ role: 'ong_ba', count: 2 }],
+      }),
+    );
+    const withCloset = build(
+      brief({
+        floors: 2,
+        site: { width_m: 12, depth_m: 20 },
+        family: [{ role: 'ong_ba', count: 2, needs: ['closet'] }],
+      }),
+    );
+    const min = (p: typeof plain) =>
+      p.payload.spaces.find((s) => s.occupant?.startsWith('Ông bà'))!.min_area_m2;
+    expect(min(withCloset) - min(plain)).toBeCloseTo(norms.spaces.closet!.min_m2, 6);
+  });
+});
+
+describe('Khoảng sân mong muốn trừ vào sàn xây được (13/09/2026)', () => {
+  it('mặt nào sân sâu hơn khoảng lùi thì sân quyết — cùng phép với dòng tổng ở Đầu bài', () => {
+    const base = brief({
+      building_type: 'biet_thu',
+      site: { width_m: 15, depth_m: 20 },
+      floors: 2,
+    });
+    const withYard = {
+      ...base,
+      massing: {
+        ...(base.massing ?? {}),
+        yard_depth_m: { left: 2 },
+      },
+    } as unknown as DesignBrief;
+    const a = build(base).plateExplanation;
+    const b = build(withYard).plateExplanation;
+    expect(b.yards.left).toBe(2);
+    expect(b.afterSetbacks.widthM).toBeCloseTo(
+      a.afterSetbacks.widthM - Math.max(0, 2 - a.setbacks.left),
+      6,
+    );
   });
 });

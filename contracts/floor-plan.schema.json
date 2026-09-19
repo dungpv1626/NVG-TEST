@@ -14,8 +14,12 @@
     "constraint_report"
   ],
   "properties": {
-    "schema_version": { "$ref": "#/$defs/semver" },
-    "intent_ref": { "$ref": "#/$defs/artifact_ref" },
+    "schema_version": {
+      "$ref": "#/$defs/semver"
+    },
+    "intent_ref": {
+      "$ref": "#/$defs/artifact_ref"
+    },
     "rule_pack_version": {
       "type": "string",
       "minLength": 1,
@@ -26,16 +30,43 @@
       "additionalProperties": false,
       "required": ["width_m", "depth_m"],
       "properties": {
-        "width_m": { "type": "number", "exclusiveMinimum": 0 },
-        "depth_m": { "type": "number", "exclusiveMinimum": 0 }
-      }
+        "width_m": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "depth_m": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      },
+      "description": "Ô chữ nhật xây được của THỬA ĐẤT. KHÔNG phải hình bao công trình — xem `footprint_m`."
+    },
+    "footprint_m": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "number",
+        "minimum": 0
+      },
+      "description": "Hình bao công trình trong hệ toạ độ thửa: [x0, y0, x1, y1]. Bằng `site` khi khoảng lùi bốn phía đều bằng không (nhà phố); thụt vào khi có khoảng lùi (biệt thự). Phòng và tường mang toạ độ TUYỆT ĐỐI trong thửa, nên nơi nào cần biết cạnh nào là mặt ngoài phải so với ô này chứ không so với `site` — so nhầm thì mọi mặt đứng của biệt thự trả về rỗng mà không có lỗi nào (V-22). Vắng mặt ở artifact tạo trước 07/09/2026; nơi đọc phải lùi về hộp bao của tường."
     },
     "structural_grid": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "axes_x_m": { "type": "array", "items": { "type": "number" } },
-        "axes_y_m": { "type": "array", "items": { "type": "number" } }
+        "axes_x_m": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        "axes_y_m": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        }
       },
       "description": "Lưới trục do hệ thống ĐỀ XUẤT — kỹ sư kết cấu quyết định (CLAUDE.md 8.7)."
     },
@@ -47,8 +78,15 @@
         "additionalProperties": false,
         "required": ["level", "rooms"],
         "properties": {
-          "level": { "type": "integer", "minimum": 1, "maximum": 12 },
-          "height_m": { "type": "number", "exclusiveMinimum": 0 },
+          "level": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12
+          },
+          "height_m": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
           "rooms": {
             "type": "array",
             "items": {
@@ -56,12 +94,28 @@
               "additionalProperties": false,
               "required": ["id", "type", "polygon", "area_m2"],
               "properties": {
-                "id": { "type": "string", "pattern": "^[a-z0-9_]+$" },
-                "type": { "type": "string", "minLength": 1 },
-                "wing": { "type": ["string", "null"], "pattern": "^W[0-9]+$" },
-                "polygon": { "$ref": "#/$defs/polygon" },
-                "area_m2": { "type": "number", "minimum": 0 },
-                "has_daylight": { "type": "boolean" }
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_]+$"
+                },
+                "type": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "wing": {
+                  "type": ["string", "null"],
+                  "pattern": "^W[0-9]+$"
+                },
+                "polygon": {
+                  "$ref": "#/$defs/polygon"
+                },
+                "area_m2": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "has_daylight": {
+                  "type": "boolean"
+                }
               }
             }
           },
@@ -72,9 +126,16 @@
               "additionalProperties": false,
               "required": ["kind", "polygon"],
               "properties": {
-                "id": { "type": "string" },
-                "kind": { "type": "string", "enum": ["lightwell", "courtyard", "atrium"] },
-                "polygon": { "$ref": "#/$defs/polygon" }
+                "id": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": ["lightwell", "courtyard", "atrium"]
+                },
+                "polygon": {
+                  "$ref": "#/$defs/polygon"
+                }
               }
             }
           },
@@ -85,11 +146,22 @@
               "additionalProperties": false,
               "required": ["id", "a", "b"],
               "properties": {
-                "id": { "type": "string" },
-                "a": { "$ref": "#/$defs/point" },
-                "b": { "$ref": "#/$defs/point" },
-                "thickness_m": { "type": "number", "exclusiveMinimum": 0 },
-                "load_bearing": { "type": "boolean" }
+                "id": {
+                  "type": "string"
+                },
+                "a": {
+                  "$ref": "#/$defs/point"
+                },
+                "b": {
+                  "$ref": "#/$defs/point"
+                },
+                "thickness_m": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "load_bearing": {
+                  "type": "boolean"
+                }
               },
               "description": "Ngữ nghĩa IFC — IfcWall (02-architecture 2.7b)."
             }
@@ -101,13 +173,32 @@
               "additionalProperties": false,
               "required": ["id", "wall", "kind", "offset_m", "width_m"],
               "properties": {
-                "id": { "type": "string" },
-                "wall": { "type": "string" },
-                "kind": { "type": "string", "enum": ["door", "window", "opening"] },
-                "offset_m": { "type": "number", "minimum": 0 },
-                "width_m": { "type": "number", "exclusiveMinimum": 0 },
-                "height_m": { "type": ["number", "null"], "exclusiveMinimum": 0 },
-                "sill_m": { "type": ["number", "null"], "minimum": 0 }
+                "id": {
+                  "type": "string"
+                },
+                "wall": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": ["door", "window", "opening"]
+                },
+                "offset_m": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "width_m": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "height_m": {
+                  "type": ["number", "null"],
+                  "exclusiveMinimum": 0
+                },
+                "sill_m": {
+                  "type": ["number", "null"],
+                  "minimum": 0
+                }
               },
               "description": "Ngữ nghĩa IFC — IfcDoor / IfcWindow."
             }
@@ -122,9 +213,20 @@
         "additionalProperties": false,
         "required": ["id", "polygon", "levels"],
         "properties": {
-          "id": { "type": "string", "pattern": "^C[0-9]+$" },
-          "polygon": { "$ref": "#/$defs/polygon" },
-          "levels": { "type": "array", "items": { "type": "integer", "minimum": 1 } }
+          "id": {
+            "type": "string",
+            "pattern": "^C[0-9]+$"
+          },
+          "polygon": {
+            "$ref": "#/$defs/polygon"
+          },
+          "levels": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
         }
       },
       "description": "Lõi dùng chung giữa các tầng: cùng một đa giác cho mọi tầng trong danh sách."
@@ -134,7 +236,10 @@
       "additionalProperties": false,
       "required": ["status"],
       "properties": {
-        "status": { "type": "string", "enum": ["pass", "warning", "infeasible"] },
+        "status": {
+          "type": "string",
+          "enum": ["pass", "warning", "infeasible"]
+        },
         "violations": {
           "type": "array",
           "items": {
@@ -142,24 +247,79 @@
             "additionalProperties": false,
             "required": ["rule_id", "severity", "message"],
             "properties": {
-              "rule_id": { "type": "string" },
-              "severity": { "type": "string", "enum": ["error", "warning"] },
-              "message": { "type": "string" },
-              "involved": { "type": "array", "items": { "type": "string" } }
+              "rule_id": {
+                "type": "string"
+              },
+              "severity": {
+                "type": "string",
+                "enum": ["error", "warning"]
+              },
+              "message": {
+                "type": "string"
+              },
+              "involved": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
             }
           }
+        }
+      }
+    },
+    "generator": {
+      "type": ["object", "null"],
+      "description": "Nguồn sinh artifact — nhánh AI (T10) ghi để truy vết: kind 'ai' kèm nhà cung cấp, mô hình, tuyến, phiên bản lời dẫn và lý do mô hình đưa ra. Vắng hoặc 'solver' = nhánh tất định. Trường tuỳ chọn, thêm 08/09/2026; artifact cũ không có vẫn hợp lệ.",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["solver", "ai"]
+        },
+        "provider": {
+          "type": ["string", "null"]
+        },
+        "model": {
+          "type": ["string", "null"]
+        },
+        "route": {
+          "type": ["string", "null"]
+        },
+        "prompt_version": {
+          "type": ["string", "null"]
+        },
+        "rationale": {
+          "type": ["string", "null"],
+          "maxLength": 2000
         }
       }
     }
   },
   "$defs": {
-    "semver": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
-    "artifact_ref": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
-    "point": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "number" } },
+    "semver": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "artifact_ref": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "point": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "number"
+      }
+    },
     "polygon": {
       "type": "array",
       "minItems": 3,
-      "items": { "$ref": "#/$defs/point" },
+      "items": {
+        "$ref": "#/$defs/point"
+      },
       "description": "Đỉnh theo chiều kim đồng hồ, KHÔNG lặp đỉnh đầu ở cuối (03-data-contracts 3.4)."
     }
   }

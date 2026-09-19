@@ -163,6 +163,27 @@ export class ArtifactRepository {
     if (error) throw new Error(error.message);
   }
 
+  /**
+   * Gỡ con trỏ "bản đang hiệu lực" khi nó đang trỏ đúng artifact này — dùng khi kỹ sư xoá phương án
+   * ấy khỏi danh sách (18/09/2026). Bảng `design_head` cố ý không mở DELETE cho trình duyệt, nên
+   * việc này đi bằng khoá dịch vụ như mọi lần ghi khác của kho artifact.
+   */
+  async clearHead(
+    projectId: string,
+    discipline: ArtifactDiscipline,
+    kind: ArtifactKind,
+    id: string,
+  ): Promise<void> {
+    const { error } = await this.db
+      .from('design_head')
+      .delete()
+      .eq('project_id', projectId)
+      .eq('discipline', discipline)
+      .eq('kind', kind)
+      .eq('artifact_id', id);
+    if (error) throw new Error(error.message);
+  }
+
   /** Bản đang hiệu lực của một loại artifact, kèm payload đã kiểm hợp đồng. */
   async head(
     projectId: string,
@@ -203,6 +224,95 @@ export class ArtifactRepository {
       .maybeSingle();
     if (error) throw new Error(error.message);
     return (data?.to_id as string | undefined) ?? null;
+  }
+
+  /**
+   * Đọc một artifact theo mã băm, kèm payload đã kiểm hợp đồng.
+   *
+   * Kiểm `projectId` ngay tại đây chứ không để lớp gọi tự so: một mã băm là danh tính toàn
+   * cục, và tuyến "chọn phương án" nhận mã từ trình duyệt — không kiểm thì một mã hợp lệ của
+   * dự án khác cũng đặt được làm bản hiệu lực của dự án này.
+   */
+  async get(
+    id: string,
+    projectId: string,
+  ): Promise<{ id: string; kind: ArtifactKind; payload: unknown; createdAt: string } | null> {
+    const { data, error } = await this.db
+      .from('design_artifact')
+      .select('id, kind, payload_uri, created_at')
+      .eq('id', id)
+      .eq('project_id', projectId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) return null;
+    const kind = data.kind as ArtifactKind;
+    const payload = parseArtifact(
+      kind,
+      JSON.parse(await this.store.get(data.payload_uri as string)),
+    );
+    return { id: data.id as string, kind, payload, createdAt: data.created_at as string };
+  }
+
+  /** Mọi artifact một loại của dự án, mới nhất trước — để liệt kê các đợt phương án. */
+  async listKind(
+    projectId: string,
+    discipline: ArtifactDiscipline,
+    kind: ArtifactKind,
+    limit = 10,
+  ): Promise<Array<{ id: string; createdAt: string }>> {
+    const { data, error } = await this.db
+      .from('design_artifact')
+      .select('id, created_at')
+      .eq('project_id', projectId)
+      .eq('discipline', discipline)
+      .eq('kind', kind)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((r) => ({ id: r.id as string, createdAt: r.created_at as string }));
+  }
+
+  /** Mọi artifact mà một bước đã sinh ra TỪ một artifact đầu vào — chiều xuôi của `lineage`. */
+  /**
+   * Đích của các cạnh lineage, MỚI NHẤT TRƯỚC, kèm loại — nhưng KHÔNG nạp payload.
+   *
+   * Khác `edgesFrom` ở đúng chỗ quyết định: nó cho lớp gọi chọn được artifact nào đáng đọc
+   * TRƯỚC KHI trả tiền một lượt đọc kho. `get()` là một truy vấn CSDL cộng một lượt tải tệp
+   * từ kho đối tượng, nên một bước sinh ra nhiều artifact (vẽ lại một tầng nhiều lần) sẽ biến
+   * mỗi lần mở màn hình thành hàng chục lượt đi mạng — và con số ấy lớn dần theo thói quen
+   * dùng, không có gì báo.
+   */
+  async edgeTargets(
+    fromId: string,
+    step: PipelineStep,
+  ): Promise<Array<{ id: string; kind: ArtifactKind; createdAt: string }>> {
+    const ids = await this.edgesFrom(fromId, step);
+    if (ids.length === 0) return [];
+    // HAI truy vấn thường, cố ý KHÔNG dùng quan hệ nhúng của PostgREST: `design_artifact_edge`
+    // có hai khoá ngoại cùng trỏ `design_artifact` (`from_id` và `to_id`), nên câu nhúng phải
+    // gọi đích danh tên ràng buộc do Postgres TỰ đặt. Tên ấy không có trong migration nào —
+    // dựa vào nó là dựa vào một quy ước đặt tên ngầm của nền tảng.
+    const { data, error } = await this.db
+      .from('design_artifact')
+      .select('id, kind, created_at')
+      .in('id', ids)
+      .order('created_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((row) => ({
+      id: row.id as string,
+      kind: row.kind as ArtifactKind,
+      createdAt: row.created_at as string,
+    }));
+  }
+
+  async edgesFrom(fromId: string, step: PipelineStep): Promise<string[]> {
+    const { data, error } = await this.db
+      .from('design_artifact_edge')
+      .select('to_id')
+      .eq('from_id', fromId)
+      .eq('step', step);
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((r) => r.to_id as string);
   }
 
   /** Đường đi ngược từ một artifact về mọi input trực tiếp — nền của "vì sao ra bản này". */

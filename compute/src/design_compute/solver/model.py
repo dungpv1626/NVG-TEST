@@ -23,7 +23,8 @@ tự thẳng hàng, tầng nào chia khác thì tách ra — và chỗ tách ra 
 Vị từ đã mã hoá
 ---------------
 `min_dimension` · `min_area` · `max_area` · `aspect_ratio_max` · `requires_daylight` ·
-`requires_access` · `adjacency` · `aligned_across_floors` · `setback` · `max_density`.
+`requires_access` · `requires_face` · `adjacency` · `aligned_across_floors` · `setback` ·
+`max_density`.
 `module_multiple` đúng theo cấu trúc vì bộ giải làm việc bằng số module nguyên.
 `floor_preference` do Lớp 2 quyết định (phòng nào ở tầng nào) nên bộ giải chỉ KIỂM, xem
 `evaluate.py`.
@@ -106,6 +107,9 @@ class RoomSpec:
     # bảng từ vựng (CLAUDE.md 8.7) — nhưng câu thông báo phải đọc được, nên nhãn đi kèm đầu
     # vào thay vì để Container tự tra.
     label: str | None = None
+    # Mã phòng MẸ khi phòng này nằm LỌT bên trong một phòng khác (khu vệ sinh của phòng ngủ
+    # khép kín). Lối vào đi qua phòng mẹ, không qua hành lang — xem `_apply_access`.
+    enclosed_in: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -153,6 +157,18 @@ class SolveRequest:
     # giữa nó và rule pack — không bao giờ nới ra.
     setback_override_m: dict[str, float] = field(default_factory=dict)
     max_density_override: float | None = None
+    # Mặt sàn mỗi tầng mà CHƯƠNG TRÌNH KHÔNG GIAN chọn dùng (`floor_allocation.usable_area_m2`).
+    #
+    # Vì sao bộ giải phải biết con số này: sàn xây được là một GIỚI HẠN, không phải một yêu
+    # cầu. Lớp 2 chọn mặt sàn vừa đủ cho chương trình — một gia đình bốn người trên lô
+    # 20 × 30 m không cần căn nhà 360 m²/tầng. Không gửi con số đó sang thì bộ giải vẫn chia
+    # HẾT phần xây được, và toàn bộ việc thu nhỏ ở Lớp 2 biến mất ngay ở Lớp 3: phần dôi ra
+    # phải chui vào một phòng nào đó, đúng cái đã sửa.
+    #
+    # `None` = không thu nhỏ (hành vi cũ). Thu từ PHÍA SAU, giữ nguyên mặt tiền — cùng cách
+    # trần mật độ thu, và cùng lý do: mặt tiền là bề rộng thửa, không đổi được; phần dôi ra
+    # phía sau thành sân.
+    target_floor_area_m2: float | None = None
     # Bao nhiêu tầng cây được coi là KẾT CẤU CHÍNH.
     #
     # Đường cắt ở tầng nông là tuyến tường chịu lực chạy suốt chiều cao nhà — chúng dùng chung
@@ -377,6 +393,18 @@ class _Builder:
         self.floor_paths: dict[int, dict[str, dict[str, Any]]] = {}
         self.soft_terms: list[tuple[int, cp_model.IntVar]] = []
         self.shared_cuts: dict[tuple[str, str], cp_model.IntVar] = {}
+        # Gợi ý nghiệm cho từng đường cắt, suy từ `ratio_hint` của `LayoutIntent`.
+        #
+        # Trước đây `ratio_hint` là trường CHẾT: hợp đồng có, Lớp 3a điền, và bộ giải bỏ qua
+        # hoàn toàn. Với mặt bằng mười ba phòng thì đó là mất mát thật — đo trên
+        # NVO-TK-2026-2737 ngày 07/09/2026, bộ giải khoá vào một nghiệm đặt 88 m² cho dải chỉ
+        # cần 65 m², và không thoát ra kể cả khi cho 90 giây (kết quả ở 25 giây và 90 giây
+        # giống hệt nhau tới từng centimet).
+        #
+        # Gợi ý KHÔNG phải ràng buộc: CP-SAT dùng nó làm điểm xuất phát rồi tự sửa nếu không
+        # thoả. Nên nó không mở thêm quyền cho Lớp 3a quyết định hình học — nguyên tắc bất
+        # biến 2 vẫn nguyên: một gợi ý sai chỉ làm chậm, không làm sai.
+        self.cut_hints: dict[str, tuple[cp_model.IntVar, int]] = {}
         self._adjacency_cache: dict[tuple[str, str], cp_model.IntVar] = {}
         self._pack_rules = request.rule_pack.for_building_type(request.building_type)
 
@@ -460,6 +488,21 @@ class _Builder:
             elif y1 - y0 > max_depth:
                 y1 = y0 + max_depth
 
+        # Mặt sàn chương trình chọn dùng — thu thêm từ phía sau, KHÔNG BAO GIỜ nới ra.
+        #
+        # Vế "không nới ra" là phần quan trọng: con số này đến từ Lớp 2 qua mạng, còn khoảng
+        # lùi và mật độ là quy chuẩn. Cho phép nó nới là mở đường cho một chương trình sai
+        # (hoặc bị sửa) vượt trần pháp lý mà không có gì chặn.
+        wanted = self.req.target_floor_area_m2
+        if wanted is not None and wanted > 0:
+            width = x1 - x0
+            if width > 0:
+                depth = m2_to_units2_floor(wanted) // width
+                # Không thu xuống dưới một mức tối thiểu vô lý: thà giữ nguyên còn hơn trả về
+                # một hình bao không đặt nổi phòng nào.
+                if 0 < depth < y1 - y0:
+                    y1 = y0 + depth
+
         return x0, x1, y0, y1
 
     # -- cây chia không gian -----------------------------------------------------------
@@ -493,11 +536,16 @@ class _Builder:
                 self.m.NewConstant(fx1),
                 self.m.NewConstant(fy0),
                 self.m.NewConstant(fy1),
+                (fx0, fx1, fy0, fy1),
             )
+
+        for cut, value in self.cut_hints.values():
+            self.m.AddHint(cut, value)
 
         self._align_cores()
         self._apply_daylight()
         self._apply_access()
+        self._apply_face()
         self._apply_adjacency()
 
         if self.soft_terms:
@@ -506,7 +554,9 @@ class _Builder:
     def _leaf_key(self, level: int, leaf: layout_tree.Leaf) -> str:
         return leaf.ref if leaf.kind == "room" else f"void_{level}_{leaf.path or 'root'}"
 
-    def _cut_var(self, level: int, path: str, axis: str, lo, hi) -> cp_model.IntVar:
+    def _cut_var(
+        self, level: int, path: str, axis: str, lo, hi, hint: int | None = None
+    ) -> cp_model.IntVar:
         """Đường cắt tại `path`. Dùng chung giữa các tầng khi cấu trúc cho phép."""
         upper = self.W if axis == "V" else self.D
         if self.aligned.get(path) == axis:
@@ -519,9 +569,29 @@ class _Builder:
             cut = self.m.NewIntVar(0, upper, f"cut::L{level}::{path or 'root'}::{axis}")
         self.m.Add(cut >= lo)
         self.m.Add(cut <= hi)
+        # Một đường cắt dùng chung nhận gợi ý của tầng ĐẦU TIÊN gặp; CP-SAT chỉ nhận mỗi biến
+        # một giá trị gợi ý, và gán hai lần là lỗi chứ không phải ghi đè.
+        if hint is not None and 0 <= hint <= upper:
+            self.cut_hints.setdefault(cut.Name(), (cut, hint))
         return cut
 
-    def _build_node(self, level: int, node: dict[str, Any], path: str, x0, x1, y0, y1) -> None:
+    def _build_node(
+        self,
+        level: int,
+        node: dict[str, Any],
+        path: str,
+        x0,
+        x1,
+        y0,
+        y1,
+        box: tuple[int, int, int, int] | None = None,
+    ) -> None:
+        """Dựng một nút của cây.
+
+        `box` là ô chữ nhật GỢI Ý (x0, x1, y0, y1) tính bằng đơn vị nguyên, suy từ
+        `ratio_hint` dọc đường đi. Nó không tham gia ràng buộc nào — chỉ để `_cut_var` biết
+        đề nghị CP-SAT bắt đầu từ đâu.
+        """
         if "room" in node:
             self._place_room(level, str(node["room"]), path, x0, x1, y0, y1)
             return
@@ -530,14 +600,30 @@ class _Builder:
             return
 
         axis = node["split"]
+        ratio = node.get("ratio_hint")
+        bx0, bx1, by0, by1 = box if box else (0, 0, 0, 0)
         if axis == "H":
-            cut = self._cut_var(level, path, axis, y0, y1)
-            self._build_node(level, node["a"], path + "a", x0, x1, y0, cut)
-            self._build_node(level, node["b"], path + "b", x0, x1, cut, y1)
+            hint = None
+            if box and isinstance(ratio, (int, float)) and 0 < ratio < 1:
+                hint = by0 + int(round((by1 - by0) * float(ratio)))
+            cut = self._cut_var(level, path, axis, y0, y1, hint)
+            self._build_node(
+                level, node["a"], path + "a", x0, x1, y0, cut, (bx0, bx1, by0, hint) if hint else None
+            )
+            self._build_node(
+                level, node["b"], path + "b", x0, x1, cut, y1, (bx0, bx1, hint, by1) if hint else None
+            )
         else:
-            cut = self._cut_var(level, path, axis, x0, x1)
-            self._build_node(level, node["a"], path + "a", x0, cut, y0, y1)
-            self._build_node(level, node["b"], path + "b", cut, x1, y0, y1)
+            hint = None
+            if box and isinstance(ratio, (int, float)) and 0 < ratio < 1:
+                hint = bx0 + int(round((bx1 - bx0) * float(ratio)))
+            cut = self._cut_var(level, path, axis, x0, x1, hint)
+            self._build_node(
+                level, node["a"], path + "a", x0, cut, y0, y1, (bx0, hint, by0, by1) if hint else None
+            )
+            self._build_node(
+                level, node["b"], path + "b", cut, x1, y0, y1, (hint, bx1, by0, by1) if hint else None
+            )
 
     def _place_void(self, level: int, kind: str, path: str, x0, x1, y0, y1) -> None:
         key = f"void_{level}_{path or 'root'}"
@@ -557,6 +643,27 @@ class _Builder:
             lit = self._assume(self._entry(corridor[1], key))
             self.m.Add(rect.w >= units).OnlyEnforceIf(lit)
             self.m.Add(rect.h >= units).OnlyEnforceIf(lit)
+
+        # Và cận TRÊN, tra theo chính LOẠI khoảng rỗng (`lightwell`, `atrium`, `courtyard`).
+        #
+        # Không có nó thì khoảng rỗng là thứ duy nhất trong mô hình không mang chi phí nào:
+        # không diện tích mong muốn, không cận trên, không phạt. Cây chia lấp kín mặt sàn, nên
+        # mọi mét vuông không phòng nào mong muốn đổ hết vào đây — đo được trên bản vẽ demo
+        # 06/09/2026: giếng trời 33 m² và 37 m² trên sàn 90 m².
+        #
+        # Là KHOẢN PHẠT chứ không phải ràng buộc cứng, cùng lý do với cận trên của phòng: mặt
+        # sàn phải chia hết, nên một cận trên cứng ở đây biến mọi tầng rộng hơn chương trình
+        # thành vô nghiệm.
+        cap = threshold_for_target(
+            _scoped(rules_for(self.req.rule_pack, self.req.building_type, "max_area"), "floor"),
+            kind,
+            "value_m2",
+            self.req.room_groups,
+        )
+        if cap is not None:
+            over = self.m.NewIntVar(0, self.W * self.D, f"soft::void_over::{key}")
+            self.m.Add(over >= rect.area - m2_to_units2_floor(cap[0]))
+            self._soft(_W_OVER_MAX_AREA, over)
 
     def _place_room(self, level: int, room_id: str, path: str, x0, x1, y0, y1) -> None:
         room = self.rooms_by_id.get(room_id)
@@ -813,6 +920,35 @@ class _Builder:
                 self.m.Add(miss == 1 - lit)
                 self._soft(_W_ADJACENCY, miss)
 
+    def _apply_face(self) -> None:
+        """`requires_face` — phòng phải tiếp giáp mặt vào được, hoặc mặt thoáng.
+
+        Đây là ràng buộc CẤU TRÚC thuần: `room_faces` suy từ cây chia, không phụ thuộc toạ độ.
+        Nên chỉ có hai kết cục, và cả hai đều biết TRƯỚC khi giải — thoả, hoặc không đời nào
+        thoả. Không có gì cho bộ giải xoay xở.
+
+        Vì vậy mức `warning` cố ý KHÔNG thêm gì vào mô hình: một khoản phạt hằng số cộng vào
+        hàm mục tiêu không đổi được nghiệm nào, chỉ làm mọi nghiệm cùng xấu đi một lượng bằng
+        nhau. Vi phạm vẫn hiện ra đầy đủ, do `evaluate.py` đo trên nghiệm. Chỗ thật sự sửa
+        được là Lớp 3a — xếp phòng vào dải giáp đúng mặt ngay từ ý đồ bố cục.
+        """
+        rules = _scoped(
+            rules_for(self.req.rule_pack, self.req.building_type, "requires_face"), "floor"
+        )
+        if not rules:
+            return
+        for room_id in self.room_rects:
+            room = self.rooms_by_id[room_id]
+            rule = _rule_for_room(rules, room, self.req.room_groups)
+            if rule is None or rule.severity is not Severity.ERROR:
+                continue
+            which = str(rule.params.get("face", "open"))
+            if which == "access" and room.floor != 1:
+                continue
+            wanted = set(self.req.access_faces if which == "access" else self.req.open_faces)
+            if not (self.room_faces.get(room_id, frozenset()) & wanted):
+                self._fail(rule, room_id)
+
     def _apply_access(self) -> None:
         """Mọi phòng phải có lối vào: giáp một không gian giao thông, hoặc giáp lối vào nhà."""
         rules = _scoped(
@@ -838,12 +974,19 @@ class _Builder:
                 faces = self.room_faces.get(room_id, frozenset())
                 if level == 1 and faces & access_faces:
                     continue
-                if not circulation:
+                # Phòng khép kín vào qua phòng MẸ, không qua hành lang. Bỏ vế này thì mọi
+                # phòng ngủ khép kín đều vô nghiệm: khu vệ sinh bên trong không chạm hành lang
+                # nào, và đó chính là điều làm nó khép kín.
+                reachable = circulation
+                if room.enclosed_in and room.enclosed_in in self.room_rects:
+                    reachable = [room.enclosed_in]
+
+                if not reachable:
                     self._fail(rule, room_id)
                     continue
-                if any(self._certainly_adjacent(level, room_id, other) for other in circulation):
+                if any(self._certainly_adjacent(level, room_id, other) for other in reachable):
                     continue
-                options = [self._adjacent(room_id, other) for other in circulation]
+                options = [self._adjacent(room_id, other) for other in reachable]
                 if rule.severity is Severity.ERROR:
                     lit = self._assume(self._entry(rule, room_id))
                     self.m.AddBoolOr(options).OnlyEnforceIf(lit)

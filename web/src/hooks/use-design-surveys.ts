@@ -58,6 +58,74 @@ export interface NewDesignSurveyInput {
   notes: string | null;
 }
 
+/**
+ * Sửa một biên bản đã ghi.
+ *
+ * KHÔNG đụng `surveyed_at`: đó là mốc ĐI ĐO, không phải mốc gõ máy. Sửa nội dung vì gõ nhầm
+ * không làm buổi khảo sát xảy ra vào lúc khác. Muốn ghi một lần đo MỚI thì lập biên bản mới.
+ *
+ * Ai sửa được là do policy `design_surveys_update` quyết (Mẫu B — người đi đo hoặc người
+ * chịu trách nhiệm dự án), không phải do màn hình này.
+ */
+export function useUpdateDesignSurvey() {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    void,
+    Error,
+    { surveyId: string } & Omit<NewDesignSurveyInput, 'projectId' | 'companyId' | 'surveyedBy'>
+  >({
+    mutationFn: async (input) => {
+      const { error } = await supabase
+        .from('design_surveys')
+        .update({
+          land_width: input.landWidth,
+          land_depth: input.landDepth,
+          land_area: input.landArea,
+          orientation: input.orientation,
+          measurement_notes: input.measurementNotes,
+          surrounding_notes: input.surroundingNotes,
+          usage_notes: input.usageNotes,
+          notes: input.notes,
+        })
+        .eq('id', input.surveyId)
+        .select('id')
+        .single();
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['design_surveys'] });
+    },
+  });
+}
+
+/**
+ * Gỡ một biên bản khảo sát — xoá MỀM, qua HÀM chứ không UPDATE thẳng.
+ *
+ * UPDATE thẳng KHÔNG chạy được: policy SELECT loại dòng đã xoá, mà PostgREST luôn đọc lại
+ * dòng sau khi UPDATE — nên câu lệnh đặt `deleted_at` bị chính policy SELECT từ chối và
+ * người dùng nhận một câu lỗi quyền hoàn toàn sai chỗ. Cùng lý do đã dựng
+ * `hide_design_survey_photo` (migration 0119); hàm cho biên bản là `hide_design_survey`
+ * (migration 0120) và kiểm đúng điều kiện Mẫu B mà policy UPDATE kiểm.
+ *
+ * Không có đường xoá cứng. Số đo đã dùng để thiết kế vẫn truy được về sau
+ * (`design_briefs.site_source_survey_id` vẫn trỏ tới dòng này), và ảnh đính kèm không bị
+ * xoá — chúng chỉ thôi hiện cùng biên bản.
+ */
+export function useRemoveDesignSurvey() {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, { surveyId: string }>({
+    mutationFn: async ({ surveyId }) => {
+      const { error } = await supabase.rpc('hide_design_survey', { p_survey_id: surveyId });
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['design_surveys'] });
+    },
+  });
+}
+
 export function useCreateDesignSurvey() {
   const queryClient = useQueryClient();
 
