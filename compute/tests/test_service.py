@@ -27,8 +27,13 @@ EXPECTED_CONTRACTS = {
     "ai-facade-concept",
     "ai-floor-plan",
     "ai-floor-plan-proposal",
+    # Bốn hợp đồng của luồng một lượt cho cả nhà (T45–T57) — cũng không đi qua Container.
+    "ai-house-intent",
     "ai-image-set",
+    "ai-plan-edit",
+    "ai-plan-intent",
     "ai-plan-rooms",
+    "ai-plan-sheet-image",
     "ai-plan-tree",
     "ai-space-program",
     "ai-space-program-proposal",
