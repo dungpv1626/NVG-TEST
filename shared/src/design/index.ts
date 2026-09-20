@@ -20,8 +20,6 @@ export * from './brief-form-data';
 export * from './brief-completeness';
 export * from './bedroom-sync';
 export * from './site-geometry';
-export * from './compare';
-export * from './program-edits';
 export * from './site-boundary-from-edges';
 export * from './site-boundary-from-coordinates';
 
@@ -57,21 +55,19 @@ export const DOC_DISCIPLINE_MAP: Readonly<Record<'KT' | 'KC' | 'DN', ArtifactDis
  */
 export const ARTIFACT_KINDS = [
   'design_brief',
-  'space_program',
-  'layout_intent',
-  'floor_plan',
-  'infeasibility_report',
-  'arch_model',
-  'schedules',
-  'render_result',
   // ── Nhánh AI ─────────────────────────────────────────────────────────────
-  // CỐ Ý là những loại RIÊNG, không dùng lại loại của bộ giải. Nhánh AI phải sống được sau
-  // khi bộ giải bị xoá (T15–T19, 09/09/2026), nên nó không được mượn hợp đồng nào của bộ giải;
-  // và gọi mặt bằng của nó là `floor_plan` thì mọi thứ hạ nguồn — bản vẽ, khối ba chiều, thống
-  // kê, phát hành — đọc được nó và sẽ hỏng theo một cách khó lần.
+  // Bộ giải nội bộ đã gỡ (T58, 19/09/2026). Các loại của nó (`space_program`, `layout_intent`,
+  // `floor_plan`, `infeasibility_report`, `arch_model`, `schedules`, `render_result`) vẫn được
+  // ràng buộc CHECK của CSDL cho phép để dòng cũ còn nguyên, nhưng không mã nào ghi hay đọc nữa.
   'ai_space_program',
   'ai_floor_plan',
   'ai_facade_concept',
+  // Phiếu yêu cầu mặt đứng do KỸ SƯ điền (T59 Đợt F2) — không do mô hình sinh, không có cạnh lineage
+  // đi vào; ý tưởng mặt đứng trỏ về nó. Sửa phiếu = artifact mới + đổi head, như mọi artifact.
+  'ai_facade_brief',
+  // Ảnh mặt đứng CÓ VẬT LIỆU do mô hình ảnh vẽ từ ảnh neo (T59 Đợt E) — tấm trình khách, không thay
+  // tờ vector; về sau là ảnh neo của bước Phối cảnh.
+  'ai_facade_image',
   'ai_image_set',
   // Tờ mặt bằng công năng CÓ NỘI THẤT do MÔ HÌNH ẢNH vẽ từ ẢNH NEO (T57, 19/09/2026) — một
   // artifact một tầng. Nó KHÔNG thay `ai_floor_plan`: dữ liệu vẫn là nguồn đo diện tích và
@@ -87,18 +83,15 @@ export const ARTIFACT_KINDS = [
 export type ArtifactKind = (typeof ARTIFACT_KINDS)[number];
 
 /**
- * Năm bước của Workflow điều phối (02-architecture 2.5).
+ * Các bước sinh artifact, ghi vào lineage.
  *
  * Tên bước đi thẳng vào cột `step` của `design_artifact_edge`, nên đổi tên bước là đổi
  * dữ liệu lineage đã ghi — coi như một phần hợp đồng, không đặt lại tuỳ hứng.
  */
 export const PIPELINE_STEPS = [
+  // Xác nhận đầu bài (`POST /design/brief/confirm`). Bốn bước `layer2…layer5` của bộ giải đã gỡ
+  // cùng bộ giải (T58); cạnh lineage cũ mang tên đó vẫn nằm nguyên trong CSDL.
   'layer1_brief',
-  'layer2_program',
-  'layer3a_intent',
-  'layer3b_solve',
-  'layer4_arch',
-  'layer5_render',
   // ── Nhánh AI ─────────────────────────────────────────────────────────────
   // Bốn bước nối nhau: đầu bài → chương trình → mặt bằng → mặt đứng → bộ ảnh. Kiểm máy và
   // cảnh báo quy chuẩn KHÔNG phải bước: chúng tính lại lúc đọc, không sinh artifact.
@@ -112,6 +105,8 @@ export const PIPELINE_STEPS = [
   // Vẽ tờ mặt bằng có nội thất bằng mô hình ảnh (T57). Nối từ `ai_floor_plan`, KHÔNG nối từ
   // `ai_facade_*`: tờ mặt bằng không đi qua ý tưởng mặt đứng.
   'ai_plan_sheet',
+  // Vẽ ảnh mặt đứng có vật liệu (T59 Đợt E). Nối từ `ai_facade_concept`.
+  'ai_facade_image_draw',
 ] as const;
 
 export type PipelineStep = (typeof PIPELINE_STEPS)[number];
@@ -119,17 +114,13 @@ export type PipelineStep = (typeof PIPELINE_STEPS)[number];
 /** Artifact mà mỗi bước sinh ra khi thành công. */
 export const STEP_OUTPUT_KIND: Readonly<Record<PipelineStep, ArtifactKind>> = {
   layer1_brief: 'design_brief',
-  layer2_program: 'space_program',
-  layer3a_intent: 'layout_intent',
-  layer3b_solve: 'floor_plan',
-  layer4_arch: 'arch_model',
-  layer5_render: 'render_result',
   ai_program_propose: 'ai_space_program',
   ai_plan_propose: 'ai_floor_plan',
   ai_facade_propose: 'ai_facade_concept',
   ai_facade_edit: 'ai_facade_concept',
   ai_image_render: 'ai_image_set',
   ai_plan_sheet: 'ai_plan_sheet_image',
+  ai_facade_image_draw: 'ai_facade_image',
 };
 
 // ---------------------------------------------------------------------------
@@ -296,6 +287,13 @@ export const AI_DISCLAIMERS = {
    * GẶP nhất. Có phép thử canh hai chuỗi khớp nhau.
    */
   aiSheetImageStamp: 'Ảnh minh hoạ do AI vẽ — không đo được trên hình',
+  /**
+   * Ảnh mặt đứng có vật liệu (T59 Đợt E) — cùng hai lớp như ảnh mặt bằng: câu dài bằng chữ trong
+   * trang, câu ngắn in lên pixel. Vật liệu và màu trên ảnh là hình dung, không phải mẫu vật liệu.
+   */
+  aiFacadeImage:
+    'Ảnh minh hoạ do AI vẽ — màu và vật liệu là hình dung, không phải mẫu thật; kích thước không đo được trên hình. Số đúng ở tờ mặt đứng vector.',
+  aiFacadeImageStamp: 'Ảnh minh hoạ do AI vẽ — không đo được, màu chỉ để hình dung',
 } as const;
 
 // ---------------------------------------------------------------------------

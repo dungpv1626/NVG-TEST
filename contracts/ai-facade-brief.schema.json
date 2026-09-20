@@ -1,0 +1,213 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nvg.vn/contracts/ai-facade-brief.schema.json",
+  "title": "AiFacadeBrief",
+  "description": "Phiếu yêu cầu mặt đứng do KỸ SƯ điền trên màn hình bước Mặt đứng (T59, 19/09/2026 — Haan: «thêm tính năng khảo sát riêng cho phần này … để kỹ sư điền yêu cầu vào»).\n\nMục nào có giá trị là yêu cầu BẮT BUỘC: chương trình áp thẳng vào ý tưởng mặt đứng (`ai/facade/merge.ts`), không trông vào việc mô hình nhớ làm theo. Mục `null` nghĩa là «để AI đề xuất». Mã vật liệu, màu, kiểu cửa… lấy từ `kb/facade_vocabulary.yaml`; Worker kiểm mã có trong danh mục lúc lưu.\n\nKích thước cửa: chỉ có CHIỀU CAO. Bề rộng là của mặt bằng (lỗ mở KHOÁ, T16) — muốn đổi thì sửa mặt bằng.\n\nĐơn vị: xăng-ti-mét nguyên, độ.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "saved_at",
+    "plan_ref",
+    "style",
+    "ground_raise_cm",
+    "roof",
+    "palette",
+    "surfaces",
+    "main_door",
+    "side_door",
+    "window",
+    "garage_door",
+    "balcony",
+    "gate",
+    "fence",
+    "decorations",
+    "notes"
+  ],
+  "properties": {
+    "schema_version": { "$ref": "#/$defs/semver" },
+    "saved_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Thời điểm máy chủ nhận phiếu, ISO 8601. Máy chủ đặt, không tin trình duyệt. Có hai việc: màn hình ghi «Đã lưu lúc …», và hai hồ sơ khác nhau cùng điền một phiếu giống hệt vẫn ra hai artifact khác nhau — mã artifact là băm NỘI DUNG, trùng nội dung là trùng mã (xem `ArtifactRepository.write`)."
+    },
+    "plan_ref": {
+      "anyOf": [{ "$ref": "#/$defs/artifact_ref" }, { "type": "null" }],
+      "description": "Phương án mặt bằng đang hiệu lực lúc lưu phiếu — để màn hình nhắc khi kỹ sư đã đổi phương án."
+    },
+    "style": {
+      "type": ["string", "null"],
+      "enum": [
+        "hien_dai",
+        "tan_co_dien",
+        "indochine",
+        "mai_thai",
+        "toi_gian",
+        "nhiet_doi",
+        "dia_trung_hai",
+        "co_dien",
+        "bac_au",
+        null
+      ]
+    },
+    "ground_raise_cm": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "maximum": 300,
+      "description": "Cốt sàn tầng 1 cao hơn vỉa hè bao nhiêu. Rỗng thì lấy mặc định của kb/construction_norms.yaml."
+    },
+    "roof": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "material", "colour", "pitch_deg", "parapet_cm"],
+      "properties": {
+        "type": {
+          "type": ["string", "null"],
+          "enum": ["flat", "hip", "gable", "thai", "japanese", "mansard", "mixed", null]
+        },
+        "material": { "$ref": "#/$defs/code_or_null" },
+        "colour": { "$ref": "#/$defs/code_or_null" },
+        "pitch_deg": { "type": ["integer", "null"], "minimum": 0, "maximum": 60 },
+        "parapet_cm": { "type": ["integer", "null"], "minimum": 0, "maximum": 300 }
+      }
+    },
+    "palette": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primary", "secondary", "accent"],
+      "description": "Ba màu chủ đạo, mã trong nhóm `colours` của danh mục.",
+      "properties": {
+        "primary": { "$ref": "#/$defs/code_or_null" },
+        "secondary": { "$ref": "#/$defs/code_or_null" },
+        "accent": { "$ref": "#/$defs/code_or_null" }
+      }
+    },
+    "surfaces": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["body", "base", "accent", "trim"],
+      "description": "Vật liệu + màu từng vùng mặt tiền: thân nhà, phần đế, mảng nhấn, chỉ/phào/khung.",
+      "properties": {
+        "body": { "$ref": "#/$defs/finish" },
+        "base": { "$ref": "#/$defs/finish" },
+        "accent": { "$ref": "#/$defs/finish" },
+        "trim": { "$ref": "#/$defs/finish" }
+      }
+    },
+    "main_door": { "$ref": "#/$defs/door" },
+    "side_door": { "$ref": "#/$defs/door" },
+    "window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["material", "colour", "glass"],
+      "properties": {
+        "material": { "$ref": "#/$defs/code_or_null" },
+        "colour": { "$ref": "#/$defs/code_or_null" },
+        "glass": { "$ref": "#/$defs/code_or_null" }
+      }
+    },
+    "garage_door": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "material", "colour"],
+      "properties": {
+        "type": { "$ref": "#/$defs/code_or_null" },
+        "material": { "$ref": "#/$defs/code_or_null" },
+        "colour": { "$ref": "#/$defs/code_or_null" }
+      }
+    },
+    "balcony": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["railing", "colour"],
+      "properties": {
+        "railing": { "$ref": "#/$defs/code_or_null" },
+        "colour": { "$ref": "#/$defs/code_or_null" }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["wanted", "type", "material", "colour", "h_cm"],
+      "description": "Chỉ có nghĩa khi nhà có sân trước.",
+      "properties": {
+        "wanted": {
+          "type": ["boolean", "null"],
+          "description": "true = có cổng, false = không làm cổng, null = để AI đề xuất."
+        },
+        "type": { "type": ["string", "null"], "enum": ["swing", "sliding", "folding", null] },
+        "material": { "$ref": "#/$defs/code_or_null" },
+        "colour": { "$ref": "#/$defs/code_or_null" },
+        "h_cm": { "type": ["integer", "null"], "minimum": 0, "maximum": 1000 }
+      }
+    },
+    "fence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "material", "colour", "h_cm"],
+      "properties": {
+        "type": { "$ref": "#/$defs/code_or_null" },
+        "material": { "$ref": "#/$defs/code_or_null" },
+        "colour": { "$ref": "#/$defs/code_or_null" },
+        "h_cm": { "type": ["integer", "null"], "minimum": 0, "maximum": 1000 }
+      }
+    },
+    "decorations": {
+      "type": "array",
+      "maxItems": 6,
+      "description": "Chi tiết trang trí kỹ sư muốn có trên mặt tiền. Rỗng = để AI đề xuất.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "canopy",
+          "column",
+          "cladding",
+          "louvre",
+          "planter",
+          "cornice",
+          "eaves_band",
+          "finial",
+          "reveal"
+        ]
+      }
+    },
+    "notes": {
+      "type": ["string", "null"],
+      "maxLength": 1000,
+      "description": "Ghi chú tự do của kỹ sư — gửi cho mô hình, nên màn hình nhắc không ghi danh tính khách."
+    }
+  },
+  "$defs": {
+    "semver": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "artifact_ref": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "code_or_null": { "type": ["string", "null"], "pattern": "^[a-z0-9_]+$", "maxLength": 40 },
+    "finish": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["material", "colour"],
+      "properties": {
+        "material": { "$ref": "#/$defs/code_or_null" },
+        "colour": { "$ref": "#/$defs/code_or_null" }
+      }
+    },
+    "door": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["material", "colour", "type", "h_cm"],
+      "properties": {
+        "material": { "$ref": "#/$defs/code_or_null" },
+        "colour": { "$ref": "#/$defs/code_or_null" },
+        "type": {
+          "$ref": "#/$defs/code_or_null",
+          "description": "Kiểu mở, mã trong nhóm `door_types`."
+        },
+        "h_cm": {
+          "type": ["integer", "null"],
+          "minimum": 150,
+          "maximum": 600,
+          "description": "Chiều cao lọt lòng. Bề rộng lấy từ mặt bằng."
+        }
+      }
+    }
+  }
+}

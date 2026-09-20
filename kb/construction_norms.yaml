@@ -45,6 +45,18 @@ levels:
   storey_height_m: 3.6
   top_storey_height_m: 3.9
 
+# ── Mặt đứng (T59, 19/09/2026) ─────────────────────────────────────────────────────────
+# Mặt bằng không mang hai số này, nên tờ mặt đứng lấy ở đây. ±0.000 là mặt sàn hoàn thiện tầng 1
+# (quy ước HS-01); cốt vỉa hè nằm dưới nó một khoảng `ground_floor_raise_m`.
+# ĐO 20/09/2026 trên 6 hồ sơ NVG (`kb/facade_experience.yaml`), Haan duyệt cùng ngày:
+# · nền: 0,45 m là mức thường gặp (3/6 hồ sơ; khoảng đo được 0,15–0,75) → giữ nguyên;
+# · tường chắn mái: đo được 0,8–0,9 m (n = 2) → hạ từ 1,1 xuống 0,9.
+# n vẫn dưới 15, nên đây là CHỈ DẤU. Chỉ quyết định tờ vẽ TRÔNG thế nào; kỹ sư điền số khác ở
+# phiếu yêu cầu thì số của phiếu thắng.
+facade:
+  ground_floor_raise_m: 0.45
+  parapet_height_m: 0.9
+
 # ── Thang (T37, 13/09/2026) ────────────────────────────────────────────────────────────
 # Nhánh AI không hỏi mô hình số bậc: chương trình tính `treads = round(chiều cao tầng / cao bậc)`.
 # Hỏi mô hình thì nó phải làm đúng phép chia ấy, và lượt 13/09/2026 cho thấy mỗi phép số học giao

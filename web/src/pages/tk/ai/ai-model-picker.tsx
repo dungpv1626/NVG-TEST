@@ -1,7 +1,7 @@
 /**
  * Ô chọn «Cách lập» cho nhánh AI (T10): Bộ giải nội bộ hay AI, và AI thì model nào.
  *
- * Dùng chung cho ba chỗ: Chương trình không gian, Phương án, Bộ ảnh. Danh mục lấy từ
+ * Dùng chung cho các bước của AI Design: Mặt bằng, Bộ ảnh. Danh mục lấy từ
  * `GET /design/ai/models` — nhãn và tên tuyến là DỮ LIỆU trong `config/models.yaml`, màn hình
  * không biết tên mô hình nào. Tuyến chưa bấm được (thiếu khoá, đang tắt) vẫn hiện nhưng MỜ kèm
  * lý do, để người dùng biết tính năng có tồn tại và vì sao chưa dùng được (AFD 6.5).

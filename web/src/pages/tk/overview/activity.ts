@@ -6,7 +6,7 @@
  * panel rỗng vĩnh viễn, và không có gì báo cho biết vì sao.
  *
  * Thay vào đó ghép từ chính những bản ghi kiến trúc sư đã đọc được ở các tab khác: phiên bản
- * bản vẽ đã phát hành, yêu cầu thay đổi, đầu bài, và đợt sinh phương án. Bốn nguồn này đã có
+ * bản vẽ đã phát hành, yêu cầu thay đổi, đầu bài, và phương án mặt bằng AI Design đã lưu. Bốn nguồn này đã có
  * trong bộ nhớ đệm khi mở màn hình, nên panel không tốn thêm lượt gọi nào.
  *
  * Hàm thuần để kiểm thử được: không hook, không ngày giờ hiện tại.
@@ -19,7 +19,7 @@ export interface ActivityItem {
   /** Ai làm và lúc nào. Không rõ người thì bỏ vế đó, không ghi "Không rõ". */
   meta: string;
   at: string;
-  tone: 'brief' | 'variant' | 'version' | 'change';
+  tone: 'brief' | 'plan' | 'version' | 'change';
 }
 
 export interface ActivityInput {
@@ -29,7 +29,7 @@ export interface ActivityInput {
     created_at: string;
     author: { full_name: string } | null;
   }[];
-  generations: { programArtifactId: string; createdAt: string; count: number }[];
+  aiPlans: { artifactId: string; createdAt: string }[];
   versions: {
     id: string;
     title: string;
@@ -65,14 +65,14 @@ export function recentActivity(
       tone: 'brief',
     });
   }
-  for (const g of input.generations) {
+  for (const p of input.aiPlans) {
     items.push({
-      id: `gen-${g.programArtifactId}`,
-      text: `Sinh ${g.count} phương án kiến trúc từ chương trình không gian`,
-      // Đợt sinh là việc của hệ thống, không gắn với một người — nói đúng như vậy.
-      meta: stamp('Bộ giải mặt bằng', g.createdAt, formatWhen),
-      at: g.createdAt,
-      tone: 'variant',
+      id: `plan-${p.artifactId}`,
+      text: 'Lưu một phương án mặt bằng',
+      // Phương án do AI dựng, không gắn với một người — nói đúng như vậy.
+      meta: stamp('AI Design', p.createdAt, formatWhen),
+      at: p.createdAt,
+      tone: 'plan',
     });
   }
   for (const v of input.versions) {

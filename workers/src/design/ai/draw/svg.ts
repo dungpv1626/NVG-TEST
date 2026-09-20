@@ -141,6 +141,15 @@ export const CLS = {
   textSheetTitle: 'tt',
   textBlockLabel: 'tbl',
   textFooter: 'tf',
+  // Tờ mặt đứng (T59).
+  ground: 'gr',
+  elevationOutline: 'eo',
+  floorLine: 'fln',
+  levelMark: 'lm',
+  element: 'el',
+  /** Cổng và tường rào — đứng TRƯỚC nhà, nét đứt để không đọc nhầm thành một phần mặt tiền. */
+  frontFence: 'ff',
+  textLevelMark: 'tlm',
 } as const;
 
 /** Khối `<style>` của tờ vẽ, sinh từ `kb/sheet_style.yaml`. */
@@ -190,5 +199,12 @@ export function sheetCss(style: SheetStyle): string {
     text(CLS.textSheetTitle, t.sheet_title, c.ink, 'font-weight:700;'),
     text(CLS.textBlockLabel, t.block_label, c.dim, 'text-anchor:start;'),
     text(CLS.textFooter, t.footer, c.dim, 'text-anchor:start;'),
+    stroke(CLS.ground, c.ink, w.ground),
+    stroke(CLS.elevationOutline, c.ink, w.elevation_outline, 'stroke-linejoin:round;'),
+    stroke(CLS.floorLine, c.hairline, w.floor_line, 'stroke-dasharray:3 1.5;'),
+    stroke(CLS.levelMark, c.ink, w.level_mark),
+    `.${CLS.element}{fill:${c.element_fill};stroke:${c.hairline};stroke-width:${num(w.element)}}`,
+    stroke(CLS.frontFence, c.hairline, w.railing, 'stroke-dasharray:3 1.5;'),
+    text(CLS.textLevelMark, t.dim, c.ink, 'text-anchor:start;'),
   ].join('');
 }

@@ -111,6 +111,9 @@ const PURPOSE_VI: Record<string, string> = {
   plan_house: 'Mặt bằng — AI khai cả nhà',
   plan_house_revise: 'Mặt bằng — AI sửa ý định cả nhà',
   plan_house_edit: 'Mặt bằng — sửa theo yêu cầu kỹ sư',
+  facade: 'Mặt đứng — AI đề xuất ý tưởng',
+  facade_revise: 'Mặt đứng — AI sửa ý tưởng',
+  facade_image: 'Mặt đứng — ảnh có vật liệu (ảnh)',
   plan_level: 'Mặt bằng — xếp một tầng (luồng trước 15/09/2026)',
   plan_level_resample: 'Mặt bằng — xếp lại / sửa một tầng (luồng trước 15/09/2026)',
 };

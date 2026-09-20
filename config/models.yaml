@@ -70,50 +70,7 @@ billing:
 #     đầu ra dưới đây đều cần.
 
 routes:
-  layer1_brief:
-    provider: gemini
-    model: gemini-2.5-flash
-    pricing: { input_per_1m_usd: 0.3, output_per_1m_usd: 2.5 }
-    max_data_class: 3
-    enabled: true
-    purpose: Kiểm tra đầy đủ và nhất quán của đầu bài, chấm completeness_score.
-
-  layer2_program:
-    provider: gemini
-    model: gemini-2.5-flash
-    pricing: { input_per_1m_usd: 0.3, output_per_1m_usd: 2.5 }
-    max_data_class: 3
-    enabled: true
-    purpose: Sinh chương trình không gian từ đầu bài + thống kê thực nghiệm.
-
-  layer3_intent:
-    provider: gemini
-    model: gemini-2.5-flash
-    pricing: { input_per_1m_usd: 0.3, output_per_1m_usd: 2.5 }
-    max_data_class: 3
-    enabled: true
-    purpose: Sinh cây chia không gian (LayoutIntent). KHÔNG sinh toạ độ hay kích thước.
-
-  # Đầu ra dự phòng khi `layer3_intent` sinh ra cấu trúc không hợp lệ nhiều lần liên tiếp.
-  #
-  # ⚠️ ĐANG TẮT, và đây là trạng thái ĐÚNG chứ không phải việc còn bỏ dở: khoá gói miễn phí
-  # không có hạn mức cho nhóm `pro` (điểm 2 ở trên). Để `enabled: true` thì lần dự phòng nào
-  # cũng ăn 429 — tức là thay một lỗi đọc được ("sinh sai cấu trúc") bằng một lỗi khó hiểu
-  # ("hết hạn mức"). Bật lại đúng lúc nâng gói, không sớm hơn.
-  layer3_intent_hard:
-    provider: gemini
-    model: gemini-3.1-pro-preview
-    max_data_class: 3
-    enabled: false
-    purpose: Phương án khó — nhiều cánh, đất không vuông vắn.
-
-  layer4_facade:
-    provider: gemini
-    model: gemini-2.5-flash
-    pricing: { input_per_1m_usd: 0.3, output_per_1m_usd: 2.5 }
-    max_data_class: 3
-    enabled: true
-    purpose: Chọn tham số mặt đứng theo phong cách.
+  # Tuyến `layer1_brief`…`layer5_render` của bộ giải nội bộ đã gỡ cùng bộ giải (T58, 19/09/2026).
 
   kb_label_normalize:
     provider: gemini
@@ -143,61 +100,12 @@ routes:
     enabled: true
     purpose: Đọc ảnh trích lục/sổ đỏ thành danh sách cạnh có cấu trúc để dựng ranh giới thửa đất.
 
-  # Sinh ảnh phối cảnh từ ảnh khối — Lớp 5, đi qua interface `RenderBackend`.
-  #
-  # ✅ **Tuyến này đặt `max_data_class: 3` mà KHÔNG phải nới lỏng gì** — khác hẳn
-  # `site_boundary_extract`. Chính bảng hạng ở đầu tệp đã xếp "ảnh khối, bản đồ độ sâu, mô tả
-  # phong cách" vào hạng 3. Kiến trúc đã lường trước đúng trường hợp này.
-  #
-  # ⚠️ Nhưng điều đó CHỈ đúng nếu ảnh gửi đi là ảnh khối thuần hình học. Ba thứ kéo nó lên
-  # hạng nhạy cảm hơn và phải bị lược bỏ trước khi gửi:
-  #   · chuỗi kích thước hoặc cao độ hiện trên ảnh   → hạng 2 ("mặt bằng kích thước thật")
-  #   · tên phòng, tên chủ đầu tư, mã hồ sơ, khung tên → hạng 1
-  #   · đoạn mô tả lấy nguyên văn từ đầu bài           → hạng 1
-  # Mô tả phong cách gửi kèm phải là từ vựng phong cách ("nhà lô hiện đại, mặt tiền 5 m, ba
-  # tầng"), KHÔNG phải chữ của khách. Lớp gọi khai `dataClass` CỨNG bằng 3 và không nhận số
-  # này từ bên ngoài — cùng khuôn với `site/extract-boundary.ts`.
-  #
-  # ── Đã thử ba nhà cung cấp, ghi lại để không đi lại đường cũ ──────────────────────────────
-  #
-  # · **Gemini — LOẠI.** Lời gọi thật 05 và 06/09/2026: cả ba mô hình sinh ảnh trả nguyên văn
-  #   `Quota exceeded … generate_content_free_tier_requests, limit: 0`. `limit: 0` nghĩa là gói
-  #   miễn phí không cấp một lượt sinh ảnh nào; chờ sang ngày mai không đổi được gì.
-  # · **Hugging Face — LOẠI.** Chạy được (`FLUX.1-Kontext-dev` qua đối tác `fal-ai`, ~9 giây,
-  #   bám khối tốt) nhưng hạn mức miễn phí chỉ khoảng 0,10 đô một tháng: bốn lần gọi để đo là
-  #   hết sạch. Quá ít để dùng trong lúc phát triển.
-  # · **Pollinations — ĐANG DÙNG** (06/09/2026, Haan chốt). Mô hình `kontext` trên đường
-  #   `POST /v1/images/edits`, ~18,5 giây cho ảnh 1024×1024, bám khối rất sát trên ảnh thật.
-  #
-  # ⚠️ **Phải là đường ẢNH → ẢNH (`/v1/images/edits`).** Pollinations còn có `GET /image/{prompt}`
-  # rẻ hơn, nhưng đó là CHỮ → ẢNH: nó dựng một ngôi nhà khác chứ không dựng ngôi nhà bộ giải vừa
-  # xếp, tức phá nguyên tắc bất biến 1 (CLAUDE.md 8.2). Không đổi sang đường đó dù rẻ hơn.
-  #
-  # `model` ở đây đóng đúng vai trò của một biến môi trường `POLLINATIONS_IMAGE_MODEL`, nhưng
-  # nằm trong tệp có phiên bản và có chú thích — đổi mô hình là sửa một dòng, không sửa mã.
-  # Danh sách mô hình dùng được lấy ở `GET /v1/models`; chọn mô hình có `image` trong
-  # `input_modalities` VÀ `/v1/images/edits` trong `supported_endpoints`. Đừng đoán tên.
-  #
-  # ⚠️ Pollinations KHÔNG có cam kết không-lưu-trữ, nên `max_data_class: 3` giữ nguyên và KHÔNG
-  # được hạ. Ảnh gửi đi phải là ảnh khối trần.
-  #
-  # ⚠️ Theo PRD mục 5.1, tính năng AI là phụ trợ tuỳ chọn — hết hạn mức KHÔNG được chặn luồng
-  # chính. Khi tuyến này lỗi, màn hình giữ ảnh khối kèm nhãn cảnh báo, không trả lỗi ra người
-  # dùng.
-  #
-  # ⚠️ Độ bám hình học của mô hình sinh ảnh vẫn không tuyệt đối — ảnh có thể đẹp mà lệch khối.
-  # Đó là lý do nhãn "Ảnh tham khảo ý tưởng — chưa phải phương án thi công" (01-overview 1.4)
-  # do MÃ chèn lên ảnh, không phụ thuộc người dùng nhớ bật.
-  layer5_render:
-    provider: pollinations
-    model: kontext
-    label: Pollinations (miễn phí, chỉ ảnh khối)
-    endpoint: https://gen.pollinations.ai/v1/images/edits
-    max_data_class: 3
-    enabled: true
-    purpose:
-      Sinh ảnh phối cảnh tham khảo TỪ ảnh khối ba chiều (ảnh → ảnh, không phải chữ → ảnh). Dev
-      và test dùng Pollinations — xem chú thích trên về hai nhà cung cấp đã loại.
+  # ── Nhà cung cấp ảnh đã thử (tuyến phối cảnh cũ của bộ giải, gỡ ở T58) ─────────────────
+  # · Gemini — loại: gói miễn phí trả `limit: 0` cho mọi mô hình sinh ảnh (05–06/09/2026).
+  # · Hugging Face — loại: hạn mức miễn phí ~0,10 đô một tháng, bốn lượt đo là hết.
+  # · Pollinations — dùng được: `kontext` trên `POST /v1/images/edits` (ảnh → ảnh), ~18,5 giây
+  #   cho ảnh 1024×1024. Không có cam kết không-lưu-trữ nên chỉ nhận dữ liệu hạng 3. Client
+  #   `llm/pollinations.ts` vẫn giữ: đổi `provider` của một tuyến ảnh sang `pollinations` là dùng.
 
   # Nhúng phần chú giải của kiến trúc sư để truy hồi ba tầng (06-knowledge-base 6.3).
   #
@@ -234,7 +142,7 @@ routes:
   # ảnh thật (Đợt 4 mới đo giây và USD mỗi ảnh).
   #
   # Địa chỉ HTTP khai tường minh vì mỗi nhà cung cấp một gốc và mỗi việc một đường
-  # (`/v1/responses` cho chữ, `/v1/images/edits` cho ảnh) — cùng lý lẽ với `layer5_render`.
+  # (`/v1/responses` cho chữ, `/v1/images/edits` cho ảnh).
 
   ai_text_openai:
     provider: openai

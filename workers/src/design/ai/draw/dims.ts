@@ -87,7 +87,7 @@ function stations(
  * giấy); hàng dọc nằm BÊN TRÁI. Cả hai là quy ước đọc bản vẽ, không phải lựa chọn thẩm mỹ:
  * người đọc tìm kích thước tổng ở ngoài cùng.
  */
-function chain(
+export function chain(
   values: readonly number[],
   axis: 'x' | 'y',
   bbox: Rect,

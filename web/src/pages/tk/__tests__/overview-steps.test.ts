@@ -1,5 +1,5 @@
 /**
- * Dải bảy bước và dòng hoạt động — hai phép suy thuần, kiểm rời khỏi React.
+ * Dải sáu bước và dòng hoạt động — hai phép suy thuần, kiểm rời khỏi React.
  *
  * Chỗ đáng canh nhất không phải "bước nào xong" mà là **thứ tự đọc được**: dải chỉ có nghĩa
  * khi đọc một mạch từ trái sang phải, nên không được có bước "xong" nằm sau một bước "chưa mở".
@@ -12,26 +12,18 @@ import { recentActivity } from '../overview/activity';
 const EMPTY: StepInput = {
   brief: null,
   surveyCount: 0,
-  program: null,
-  feasibleVariants: 0,
+  aiPlanCount: 0,
+  aiPlanChosen: false,
   disciplinePercents: [],
   hasEstimate: false,
   customerApproved: false,
 };
 
-describe('Dải bảy bước của quy trình thiết kế', () => {
-  it('hồ sơ trống: bước đầu đang chạy, sáu bước sau chưa mở', () => {
+describe('Dải sáu bước của quy trình thiết kế', () => {
+  it('hồ sơ trống: bước đầu đang chạy, năm bước sau chưa mở', () => {
     const steps = designSteps(EMPTY);
-    expect(steps).toHaveLength(7);
-    expect(steps.map((s) => s.state)).toEqual([
-      'run',
-      'todo',
-      'todo',
-      'todo',
-      'todo',
-      'todo',
-      'todo',
-    ]);
+    expect(steps).toHaveLength(6);
+    expect(steps.map((s) => s.state)).toEqual(['run', 'todo', 'todo', 'todo', 'todo', 'todo']);
   });
 
   it('bước chưa mở KHÔNG mang con số của chính nó', () => {
@@ -42,12 +34,13 @@ describe('Dải bảy bước của quy trình thiết kế', () => {
   });
 
   it('không có bước "xong" nào nằm sau một bước "chưa mở"', () => {
-    // Dự án nhảy cóc: đã có phương án nhưng chưa chốt chương trình không gian.
+    // Dự án nhảy cóc: đã có dự toán nhưng chưa chọn phương án mặt bằng AI.
     const steps = designSteps({
       ...EMPTY,
       brief: { confirmed: true, completeness: 0.95 },
       surveyCount: 3,
-      feasibleVariants: 3,
+      aiPlanCount: 3,
+      hasEstimate: true,
     });
     const order = steps.map((s) => s.state);
     expect(order.indexOf('todo')).toBeGreaterThan(order.lastIndexOf('done'));
@@ -63,12 +56,12 @@ describe('Dải bảy bước của quy trình thiết kế', () => {
     expect(designSteps(EMPTY)[0]!.note).toBe('');
   });
 
-  it('đủ cả bảy thì không bước nào đang chạy', () => {
+  it('đủ cả sáu thì không bước nào đang chạy', () => {
     const steps = designSteps({
       brief: { confirmed: true, completeness: 1 },
       surveyCount: 1,
-      program: { committed: true, spaceCount: 24 },
-      feasibleVariants: 3,
+      aiPlanCount: 3,
+      aiPlanChosen: true,
       disciplinePercents: [100, 100, 100],
       hasEstimate: true,
       customerApproved: true,
@@ -81,8 +74,7 @@ describe('Dải bảy bước của quy trình thiết kế', () => {
     expect(tabs).toEqual([
       'dau-bai',
       'khao-sat',
-      'chuong-trinh-khong-gian',
-      'phuong-an',
+      'thiet-ke-ai',
       'ho-so-ky-thuat',
       'du-toan',
       'phien-ban',
@@ -104,7 +96,7 @@ describe('Hoạt động gần đây', () => {
             author: { full_name: 'Đỗ Văn K' },
           },
         ],
-        generations: [{ programArtifactId: 'g1', createdAt: '2026-09-04T10:00:00Z', count: 3 }],
+        aiPlans: [{ artifactId: 'sha256:p1', createdAt: '2026-09-04T10:00:00Z' }],
         versions: [
           {
             id: 'v1',
@@ -125,7 +117,7 @@ describe('Hoạt động gần đây', () => {
       },
       when,
     );
-    expect(items.map((i) => i.tone)).toEqual(['version', 'variant', 'change', 'brief']);
+    expect(items.map((i) => i.tone)).toEqual(['version', 'plan', 'change', 'brief']);
     expect(items[0]!.meta).toBe('Nguyễn Lâm · 2026-09-05');
   });
 
@@ -133,7 +125,7 @@ describe('Hoạt động gần đây', () => {
     const items = recentActivity(
       {
         briefs: [],
-        generations: [],
+        aiPlans: [],
         versions: [{ id: 'v1', title: 'Nháp', published_at: null, publisher: null }],
         changes: [],
       },
@@ -146,7 +138,7 @@ describe('Hoạt động gần đây', () => {
     const items = recentActivity(
       {
         briefs: [{ id: 'b1', version: 1, created_at: '2026-09-01T00:00:00Z', author: null }],
-        generations: [],
+        aiPlans: [],
         versions: [],
         changes: [],
       },

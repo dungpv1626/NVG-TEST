@@ -398,6 +398,11 @@
       <h2>1. Đang ở đâu</h2>
       <div class="card">
         <p>
+          <b>19/09/2026 — bộ giải nội bộ đã gỡ hẳn (T58).</b> Thiết kế tự động chỉ còn nhánh AI,
+          trên giao diện tên <b>«AI Design»</b>; Container <code>compute/</code> chỉ còn số hoá hồ
+          sơ cũ. Đoạn dưới đây và mục 3 mô tả phương án demo của bộ giải — nay là lịch sử.
+        </p>
+        <p>
           <b>Phương án ra demo đã thi hành trọn</b> (<code>doc/design/14-phuong-an-demo.md</code>,
           Haan chốt 06/09/2026): bảy bước, mười cảnh, và <b>bài Playwright mười cảnh xanh</b> trên
           máy phát triển — đó là điều kiện "demo xong" của phương án. <b>Cả bảy bước xong</b>: Lớp 3
@@ -1623,6 +1628,236 @@
             </tr>
           </thead>
           <tbody>
+            <tr>
+              <td class="num">20/09</td>
+              <td>T59 — rà soát bước Mặt đứng trước khi commit, sửa 8 lỗi</td>
+              <td class="xs">
+                · Hai lượt rà soát độc lập (tuyến API + lưu trữ; hình học + bản vẽ). Đã sửa, mỗi lỗi
+                kèm một phép thử canh — phép thử cũ không bắt được lỗi nào trong số này.<br />
+                · <b>Chuỗi kích thước in sai số</b>: trạm sát mép bị gộp làm mất mép hình, mặt tiền
+                4.000 mm in ra tổng 3.970 mm. Nay ép trạm cuối bằng mép, như
+                <code>dims.ts</code> vẫn làm.<br />
+                · <b>Mảng trang trí trên mái dốc luôn bị loại</b>: trần lấy nhầm là đỉnh tường chắn
+                mái. Kỹ sư yêu cầu «chóp trang trí» trên nhà mái Nhật thì đốt hết lượt gọi tính tiền
+                rồi vẫn hỏng. Nay mái dốc lấy trần của mái.<br />
+                · <b>Phiếu của hai hồ sơ trùng mã băm</b>: mã artifact là băm nội dung, hai hồ sơ
+                chưa chọn mặt bằng cùng điền một phiếu giống hệt ra chung một mã → head của hồ sơ
+                sau trỏ sang artifact hồ sơ trước, phiếu trông như chưa lưu và lượt chạy hỏng. Nay
+                phiếu mang <code>saved_at</code> do máy chủ đặt, và kho artifact dừng có lỗi rõ ràng
+                khi gặp mã trùng của hồ sơ khác thay vì dùng lại lặng lẽ.<br />
+                · <b>Cửa chính chọn nhầm ở nhà phố</b>: mặt tiền tầng 1 chỉ có cửa cuốn thì cửa ra
+                ban công tầng 2 bị coi là cửa chính. Nay cửa chính phải ở tầng thấp nhất của nhà.<br />
+                · Chiều cao cửa trong phiếu bị kẹp theo chiều cao tầng (phiếu cho tới 600 cm, cửa
+                cao hơn tầng vẽ xuyên sàn tầng trên); số đo của phiếu kiểm theo khoảng dựng được
+                ngay lúc lưu; mái dốc không còn giữ tường chắn mái của mô hình.<br />
+                · Lời dẫn: bỏ yêu cầu cổng, rào khi nhà sát ranh mặt tiền (trước đó gửi hai câu
+                ngược nhau trong cùng một lượt tính tiền); ghi chú của kỹ sư đi qua bộ lược danh
+                tính (số điện thoại, email, mã hồ sơ).<br />
+                · <b>CHƯA sửa, để Đợt D</b>: DXF mặt đứng mất nét đứt (nét đứt khai trong CSS, bộ
+                đổi chỉ đọc thuộc tính) và cổng, rào nằm chung lớp tường nhà; màu lan can kỹ sư điền
+                bị bỏ khi mô hình không khai vùng lan can; tuyến
+                <code>GET /facade/vocabulary</code> chỉ kiểm có header chứ chưa xác thực; bảng vật
+                liệu quá 16 dòng thì rơi mất dòng cuối trên tờ A3.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">20/09</td>
+              <td>T59 — đo 7 tờ mặt đứng của hồ sơ thật, sửa số mồi theo hồ sơ</td>
+              <td class="xs">
+                · Đọc 7 tờ mặt đứng DXF của 6 công trình NVO đã phát hành (3 nhà mái Nhật, 3 nhà mái
+                bằng 2–5 tầng): kích thước, cao độ, ghi chú vật liệu, cộng ảnh dựng lại từng tờ để
+                đọc bố cục. Kết quả ở <code>kb/facade_experience.yaml</code> — n = 6, dưới ngưỡng 15
+                nên là CHỈ DẤU, không phải định mức; chưa mã nào đọc tệp này.<br />
+                · Haan duyệt, đã sửa ba số: mái Nhật <b>dốc 20° → 30°</b> (cả ba hồ sơ mái Nhật đều
+                30–32°, hai tờ ghi thẳng «30°»), mái đua mái Nhật <b>90 → 60 cm</b>, tường chắn mái
+                <b>1,1 → 0,9 m</b>. Cốt nền 0,45 m giữ nguyên — trùng mức thường gặp (3/6 hồ sơ,
+                khoảng đo được 0,15–0,75).<br />
+                · Danh mục thêm: <code>eaves_band</code> diềm mái, <code>finial</code> chóp trang
+                trí, <code>reveal</code> ron chỉ âm (nới enum ba hợp đồng mặt đứng, sinh lại Zod),
+                sơn hiệu ứng giả bê tông, nhôm vân gỗ; lời dẫn lên 8.10.0.<br />
+                · Kiểm: 867 phép thử Worker thiết kế, 79 phép thử web của bước AI, kiểm kiểu, 22 hợp
+                đồng — xanh. Ảnh chụp tờ mặt đứng cập nhật theo tường chắn mái mới (+12.000).<br />
+                · Chưa làm: cửa đầu vòm và sảnh mái dốc có cột — bộ vẽ chưa dựng được; đỉnh cửa
+                chính thẳng hàng đỉnh cửa sổ (4/6 hồ sơ) mới ghi thành thói quen, chưa thành luật.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">20/09</td>
+              <td>T59 Đợt E — ảnh mặt đứng có vật liệu (mô hình ảnh vẽ từ ảnh neo)</td>
+              <td class="xs">
+                · Panel «Ảnh mặt đứng có vật liệu» ngay dưới tờ mặt đứng vector: chọn model ảnh, bấm
+                vẽ, chi phí lượt vừa chạy, hỏi lại khi vẽ lại nhiều lần, không cho vẽ khi mặt đứng
+                dựng theo phương án mặt bằng cũ. Nhãn hai lớp: dấu in lên ảnh + câu «màu và vật liệu
+                là hình dung, không đo được» bằng chữ; tải về là bản có nhãn.<br />
+                · Cùng khuôn T57: ảnh neo = tờ mặt đứng vector không khung tên (1536 × 1024 trên hồ
+                sơ demo), rasterise ở trình duyệt; máy chủ dựng lại và đối chiếu cỡ khung; lời gọi
+                mang đúng một ảnh; dữ liệu hạng 2; ghi nhật ký chi phí (<code>facade_image</code>).
+                Lời dẫn
+                <code>facade_image</code> (bản 8.9.0) ghép vật liệu, mã màu hex, mái, cổng, rào từ ý
+                tưởng đã lưu, và dặn KHÔNG viết chữ lên ảnh.<br />
+                · Artifact <code>ai_facade_image</code>, bước
+                <code>ai_facade_image_draw</code> (migration 0129 — đã chạy, kiểm lại ràng buộc
+                thật); không đặt head.<br />
+                · Kiểm: 867 phép thử Worker thiết kế, 417 phép thử web, pytest hợp đồng Container
+                (22 hợp đồng) — xanh. Chrome: panel hiện đúng, ảnh neo tải được và không có khung
+                tên.
+                <b>Chưa vẽ tấm nào qua API thật.</b>
+              </td>
+            </tr>
+            <tr>
+              <td class="num">20/09</td>
+              <td>T59 Đợt F2 — phiếu yêu cầu mặt đứng của kỹ sư; lượt chạy thật đầu tiên</td>
+              <td class="xs">
+                Haan yêu cầu một phiếu khảo sát riêng ở đầu màn hình Mặt đứng để kỹ sư điền.<br />
+                · <b>Phiếu</b> (<code>web/src/pages/tk/ai/ai-facade-brief-form.tsx</code>): phong
+                cách, cốt nền, mái (thêm <b>mái Nhật</b>), ba màu, vật liệu 4 vùng mặt tiền, cửa
+                chính và cửa phụ (vật liệu, màu, kiểu mở, <b>chiều cao</b> — bề rộng chỉ đọc từ mặt
+                bằng), cửa sổ (khung, kính), cửa để xe, ban công, cổng và rào (ẩn khi nhà sát ranh),
+                trang trí mong muốn, ghi chú. Mọi ô chọn mặc định «Để AI đề xuất»; màu kèm mã hex;
+                nháp giữ trong trình duyệt, hỏi trước khi rời trang; bấm «Dựng ý tưởng» thì phiếu
+                được lưu trước.<br />
+                · <b>Mục đã điền là bắt buộc</b>: hàm ghép áp thẳng (mái, vật liệu, màu, lan can,
+                cổng, rào, chiều cao cửa, cốt nền, kiểu cửa) — không tốn lượt gọi lại. Chỉ trang trí
+                đã chọn và «có cổng» mới bắt mô hình làm lại. Bảng ý tưởng ghi từng dòng «theo yêu
+                cầu kỹ sư» hay «AI đề xuất».<br />
+                · <b>Lưu thành artifact</b> <code>ai_facade_brief</code> (migration 0128 nới ràng
+                buộc loại — đã chạy, kiểm lại bằng truy vấn thật); ý tưởng mặt đứng trỏ về bản phiếu
+                nó theo. Lời dẫn bản 8.8.0 thêm khối <code>&lt;requirements&gt;</code>.<br />
+                · <b>Lượt chạy thật đầu tiên</b> (19/09/2026 23:22, trên «Biệt thự nhà vườn (demo)»,
+                Gemini 3.1 Pro, trước khi có phiếu): 1.310 token vào, 2.131 token ra, qua phép kiểm
+                ngay lượt đầu, đã lưu. Tờ vẽ từ ý tưởng thật đọc tốt; lượt này làm lộ hai chỗ đã
+                sửa: tường rào nét liền cắt ngang cửa chính (nay nét đứt), và bảng ý tưởng lặp tên
+                «Ô văng» / trùng nhãn «Cổng».<br />
+                · Kiểm: 859 phép thử Worker thiết kế, 414 phép thử web, pytest hợp đồng Container
+                (21 hợp đồng) — xanh. Chrome: điền, lưu, tải lại trang thấy phiếu còn (không gọi
+                AI).
+              </td>
+            </tr>
+            <tr>
+              <td class="num">19/09</td>
+              <td>T59 Đợt F — màn hình bước «2. Mặt đứng»</td>
+              <td class="xs">
+                · <b>Màn hình</b> (<code>web/src/pages/tk/ai/ai-facade-step.tsx</code>): chọn model
+                và mức suy nghĩ, nút «Dựng ý tưởng mặt đứng» kèm câu nói rõ lượt gọi tính tiền, tiến
+                độ, theo dõi trực tiếp, chi phí lượt chạy, lý do nguyên văn khi ý tưởng không qua
+                kiểm; bảng ý tưởng (mái, vật liệu từng vùng, cổng, rào, mảng trang trí, số lỗ mở/ban
+                công lấy từ mặt bằng), ô màu luôn kèm mã hex bằng chữ; tờ mặt đứng qua
+                <code>&lt;img&gt;</code> kèm tỷ lệ, tải SVG và DXF.<br />
+                · <b>Mặt bằng đổi sau khi dựng mặt đứng</b>: dải cảnh báo «dựng theo phương án mặt
+                bằng cũ», chip «Theo phương án cũ» trên dải bước; bước Mặt đứng không tính là xong
+                và bước Phối cảnh chờ với lý do ấy.<br />
+                · Tải tờ SVG tách thành hook dùng chung cho mặt bằng và mặt đứng.<br />
+                · Kiểm: 7 phép thử web mới, 407 phép thử web xanh. Chrome: trên «Biệt thự nhà vườn
+                (demo)» (chưa chọn phương án) bước Mặt đứng hiện đúng «Chưa chọn phương án mặt
+                bằng…». Các trạng thái có dữ liệu chờ lượt chạy thật đầu tiên.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">19/09</td>
+              <td>T59 Đợt C — lượt gọi AI ý tưởng mặt đứng, lượt chạy nền, tuyến API</td>
+              <td class="xs">
+                · <b>Lời dẫn</b> mục <code>facade</code> trong
+                <code>kb/ai_design_prompts.yaml</code> (bản 8.7.0): gửi phần đầu bài nói về mặt
+                ngoài (phong cách, ghi chú vật liệu khách đưa — đã lược danh tính, hạng 2), khung
+                mặt đứng với lỗ mở và ban công ghi LOCKED, và danh mục mã. Không gửi cả mặt bằng.<br />
+                · <b>Phép kiểm</b> (<code>ai/facade/check.ts</code>): mã phải có trong danh mục,
+                mảng trang trí trong khung và không đè lỗ mở (trừ ô văng, lam), cổng/rào/tường chắn
+                mái trong giới hạn dựng được, có vật liệu thân nhà, có kiểu lan can khi có ban công.
+                Hỏng thì gọi lại MỘT lượt kèm lý do (tối đa 2 lượt), vẫn hỏng thì không lưu. Cổng,
+                rào khai thừa trên nhà sát ranh KHÔNG bắt gọi lại — hàm ghép tự bỏ.<br />
+                · <b>Lượt chạy nền</b>: nhánh <code>facade</code> trong Workflow nhánh AI, mỗi lượt
+                gọi một bước, lượt nào cũng ghi nhật ký chi phí (<code>facade</code> /
+                <code>facade_revise</code>), bảng theo dõi trực tiếp và nút «Dừng» dùng chung với
+                mặt bằng. Artifact <code>ai_facade_concept</code> trỏ phương án mặt bằng đã chọn lúc
+                bấm, đặt head. Không cần migration (CSDL đã cho phép bước này từ 0123).<br />
+                · <b>Tuyến</b> (<code>ai/facade-routes.ts</code>): <code>POST /facade/runs</code> —
+                chặn khi chưa chọn phương án mặt bằng, khi đang có lượt chạy; đọc
+                <code>/facade/:id</code> (JSON có bảng vật liệu đã dịch nhãn), <code>/sheet</code>,
+                <code>/dxf</code>, <code>/anchor</code>. <code>/state</code> thêm
+                <code>facadePlanRef</code> để màn hình biết mặt đứng có khớp mặt bằng đang hiệu
+                lực.<br />
+                · Kiểm: 16 phép thử mới với mô hình giả (lời dẫn mang đúng lỗ mở, bắt mảng đè cửa,
+                mã lạ, lượt gọi lại giữ nguyên phần đầu cho bộ nhớ đệm, nhật ký «ok»/«rejected»,
+                bước ghi đúng hợp đồng); 837 phép thử Worker thiết kế và 400 phép thử web xanh.
+                <b>Chưa chạy lượt nào qua API thật.</b>
+              </td>
+            </tr>
+            <tr>
+              <td class="num">19/09</td>
+              <td>T59 Đợt B — tờ mặt đứng SVG, ảnh neo và DXF (chưa gọi AI)</td>
+              <td class="xs">
+                · <b>Tờ mặt đứng mặt tiền</b> (<code>ai/draw/elevation-sheet.ts</code>) cùng bộ vẽ
+                với mặt bằng: cốt đất, khối nhà từng tầng, lỗ mở KHOÁ từ mặt bằng (đố cửa sổ, cửa
+                hai cánh, nan cửa cuốn), mảng trang trí, lan can, tường chắn mái hoặc đường mái dốc,
+                cổng và rào khi có sân trước; ký hiệu cao độ -0.450 / ±0.000 / +3.600…; chuỗi kích
+                thước dọc theo cao độ và ngang theo lỗ mở tầng 1. Vật liệu từng vùng in thành ô
+                trong cột khung tên bằng chữ tiếng Việt — tờ là bản vẽ đơn sắc đo được.<br />
+                · <b>Đường mái</b> chương trình tự dựng theo kiểu mái và độ dốc (hai dốc = tam giác,
+                tứ giác / Thái / mansard = hình thang), chặn độ cao đỉnh theo
+                <code>kb/facade_vocabulary.yaml</code>.<br />
+                · <b>Ảnh neo</b> không khung tên, đệm về khung ảnh chuẩn — phần đệm khung tách khỏi
+                ảnh neo mặt bằng để dùng chung. <b>DXF</b> đi qua cùng bộ chuyển SVG→DXF; mảng trang
+                trí vào lớp hatch, tên lớp từ <code>kb/layer_mapping.yaml</code>.<br />
+                · <b>Sửa bộ sinh hợp đồng</b>: <code>anyOf</code> trước đây ra
+                <code>z.unknown()</code> — cổng, rào, màu nhấn trông như có hợp đồng mà không kiểm
+                gì; nay ra <code>.nullable()</code> đúng kiểu. Chỉ hai hợp đồng mặt đứng dùng
+                <code>anyOf</code>.<br />
+                · Kiểm: 16 phép thử mới (ảnh chụp vàng hai tờ, đủ lỗ mở, cao độ, chuỗi cộng đúng
+                tổng, ảnh neo không khung tên, DXF), 82 phép thử bộ vẽ / DXF / ảnh neo / hợp đồng
+                xanh; năm ảnh chụp vàng mặt bằng chỉ đổi khối CSS (thêm lớp mặt đứng).
+              </td>
+            </tr>
+            <tr>
+              <td class="num">19/09</td>
+              <td>T59 Đợt A — khung mặt đứng suy từ mặt bằng (bước «2. Mặt đứng», chưa gọi AI)</td>
+              <td class="xs">
+                Haan chốt phạm vi bước Mặt đứng: chỉ mặt tiền; ra tờ SVG, DXF, bảng ý tưởng (mái,
+                vật liệu, màu, cổng, rào, ban công) và ảnh có vật liệu; mỗi lượt một ý tưởng; sửa
+                bằng ô yêu cầu; đổi mặt bằng thì mặt đứng cũ giữ lại kèm nhãn «dựng theo phương án
+                cũ». Kế hoạch bảy đợt A–G.<br />
+                · <b>Khung KHOÁ</b> (<code>ai/facade/frame.ts</code>): cao độ từng tầng cộng dồn từ
+                mặt bằng, ±0.000 là sàn tầng 1; lỗ mở lấy đúng những cái nhìn thấy từ đường — kể cả
+                cửa ra ban công lùi sau lan can, bỏ cửa sổ giếng trời; ban công lấy từ lan can mặt
+                trước.<br />
+                · <b>Hợp đồng</b>: <code>ai-facade-concept</code> đổi đơn vị sang lưới nửa centimet
+                (như mặt bằng), thêm <code>ground_z</code> và mép trái/phải từng tầng; hợp đồng mới
+                <code>ai-facade-proposal</code> cho phần mô hình khai.<br />
+                · <b>Danh mục mới</b> <code>kb/facade_vocabulary.yaml</code> — 7 vật liệu mái, 20
+                vật liệu, 14 màu, 7 lan can, bản đầu do Claude soạn, <b>chờ Haan duyệt</b>.<br />
+                · Kiểm: 11 phép thử khung trên hai mặt bằng mẫu, <code>tsc -b</code>,
+                <code>contracts:check</code> (20 tệp), pytest hợp đồng Container.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">19/09</td>
+              <td>T58 — gỡ hẳn bộ giải nội bộ; «Thiết kế AI» đổi tên «AI Design»</td>
+              <td class="xs">
+                Haan quyết xoá mục «Chương trình không gian» và «AI phương án kiến trúc».<br />
+                · <b>Giao diện</b>: bỏ hai tab, hai thẻ Tổng quan, sáu màn hình của bộ giải và thư
+                viện <code>three</code> (gói tải trước giảm từ ~2,98 MB xuống ~2,13 MB). Dải tiến
+                trình còn sáu bước — «Không gian» và «Phương án» gộp thành bước «AI Design», xong
+                khi đã chọn một phương án mặt bằng. «Hoạt động gần đây» lấy phương án AI đã lưu.<br />
+                · <b>Tab AI Design còn ba bước</b> (Mặt bằng → Mặt đứng → Phối cảnh): bước «Chương
+                trình không gian» của nhánh AI cũng gỡ khỏi giao diện vì mặt bằng không đọc nó nữa
+                (T45); thẻ AI Design đứng trước thẻ Hồ sơ kỹ thuật ở Tổng quan.<br />
+                · <b>Phương án KTS tải lên (TK-03) giữ nguyên</b>, chuyển vào tab «Phiên bản bản vẽ»
+                cùng ba bộ môn kỹ thuật.<br />
+                · <b>Worker</b>: xoá <code>program/</code>, <code>layout/</code>,
+                <code>render/</code>, Workflow <code>DESIGN_PIPELINE</code>, các tuyến
+                <code>/program/*</code>, <code>/floor-plan/*</code>, <code>/render*</code>,
+                <code>/publish</code>, tuyến mô hình <code>layer1…layer5</code>, gói
+                <code>rules/structure/</code>, mười hợp đồng chỉ bộ giải dùng. Giữ
+                <code>/brief/confirm</code>, ranh giới thửa đất, số hoá, kho tri thức.<br />
+                · <b>Container giữ, chỉ còn số hoá</b> (<code>/extract</code>,
+                <code>/kb/record</code>): bỏ ortools, trimesh, openpyxl; dựng lại ảnh và chạy thử
+                <code>/extract</code> trên một tệp DXF — ra phòng, ba đường của bộ giải trả 404.<br />
+                · <b>Không migration, không xoá dữ liệu</b>: artifact cũ của bộ giải còn nguyên
+                trong CSDL.<br />
+                · Kiểm: <code>tsc -b</code>, <code>contracts:check</code> (19 tệp), 404 vitest web,
+                1.097 vitest logic, 87 pytest Container — đều xanh.
+                <code>ai-independence.test.ts</code> nay canh bộ giải không được tạo lại.
+              </td>
+            </tr>
             <tr>
               <td class="num">19/09</td>
               <td>
@@ -4944,6 +5179,24 @@
             </tr>
           </thead>
           <tbody>
+            <tr>
+              <td class="num">Q-48</td>
+              <td>
+                <b>Hai số mồi của tờ mặt đứng</b> (T59, 19/09/2026), chưa đo trên hồ sơ thật:
+                <b>cốt vỉa hè thấp hơn sàn tầng 1 là 0,45 m</b> và
+                <b>tường chắn mái mặc định cao 1,1 m</b> (<code>kb/construction_norms.yaml</code>
+                mục <code>facade</code>). Cùng lúc cần Haan duyệt danh mục mái, vật liệu, màu, lan
+                can trong <code>kb/facade_vocabulary.yaml</code> và năm giới hạn dựng được ở cuối
+                tệp đó; ba số vẽ mái dốc (<code>roof_defaults</code>: đua 60 cm, dốc 30°, bờ nóc 40
+                %). Số mái Nhật, tường chắn mái và cốt nền <b>đã đo và đã chốt 20/09/2026</b> trên 7
+                tờ mặt đứng của 6 hồ sơ NVG (<code>kb/facade_experience.yaml</code>): mái Nhật 20° →
+                <b>30°</b>, đua 90 → 60 cm, tường chắn mái 1,1 → <b>0,9 m</b>, cốt nền giữ 0,45 m.
+                Phần còn chờ Haan là danh mục, gồm các nhóm mới của phiếu yêu cầu: vật liệu cửa,
+                kiểu mở cửa, loại kính, kiểu cửa để xe, kiểu tường rào. Đều là dữ liệu, sửa tệp là
+                đổi — không chặn việc làm tiếp.
+              </td>
+              <td class="num">Trước khi trình khách tờ mặt đứng</td>
+            </tr>
             <tr>
               <td class="num">Q-47</td>
               <td>

@@ -61,6 +61,24 @@ export interface AiPrompts {
     styles: Record<string, string>;
     watermark: string;
   };
+  /**
+   * Ý tưởng mặt đứng mặt tiền (T59). `user` có `{brief}`, `{frame}`, `{requirements}`, `{codes}`; `retry` có `{issues}` —
+   * nối vào khi ý tưởng lượt trước không qua phép kiểm.
+   */
+  facade: { system: string; user: string; retry: string };
+  /**
+   * Ảnh mặt đứng có vật liệu từ ảnh neo (T59 Đợt E). `user` có bảy chỗ điền `FACADE_IMAGE_SLOTS`;
+   * `watermark` là câu tiếng Việt in đè lên ảnh.
+   */
+  facadeImage: {
+    system: string;
+    user: string;
+    /** Mã phong cách → cụm tiếng Anh cho mặt ngoài. */
+    styles: Record<string, string>;
+    /** Mã kiểu mái → cụm tiếng Anh. */
+    roofs: Record<string, string>;
+    watermark: string;
+  };
 }
 
 /**
@@ -77,6 +95,20 @@ const SHEET_IMAGE_SLOTS = [
   '{north}',
   '{title_block}',
   '{style}',
+] as const;
+
+/**
+ * Bảy chỗ điền bắt buộc của `facade_image.user` — kiểm lúc NẠP, vì thiếu một chỗ chỉ lộ ra sau khi đã
+ * trả tiền một tấm ảnh (vẽ thiếu vật liệu hay thiếu cổng mà vẫn ra ảnh).
+ */
+const FACADE_IMAGE_SLOTS = [
+  '{style}',
+  '{roof}',
+  '{materials}',
+  '{palette}',
+  '{railing}',
+  '{gate_fence}',
+  '{elements}',
 ] as const;
 
 /** Một ý đồ bố cục: mã phương án, nhãn tiếng Việt cho màn hình, câu tiếng Anh cho lời dẫn. */
@@ -154,6 +186,21 @@ export function parseAiPrompts(raw: unknown): AiPrompts {
     );
   }
   const sheetImage = parseSheetImage((doc as { sheet_image?: unknown }).sheet_image);
+  const facade = (doc as { facade?: Record<string, unknown> }).facade;
+  if (
+    !facade ||
+    typeof facade.system !== 'string' ||
+    typeof facade.user !== 'string' ||
+    typeof facade.retry !== 'string' ||
+    !['{brief}', '{frame}', '{requirements}', '{codes}'].every((slot) =>
+      (facade.user as string).includes(slot),
+    ) ||
+    !facade.retry.includes('{issues}')
+  ) {
+    throw new AiPromptsError(
+      'kb/ai_design_prompts.yaml thiếu `facade.system`, `facade.user` (có `{brief}`, `{frame}`, `{requirements}`, `{codes}`) hoặc `facade.retry` (có `{issues}`).',
+    );
+  }
   const strategies = parseStrategies(floorLevel.strategies);
   return {
     version: doc.version,
@@ -169,6 +216,8 @@ export function parseAiPrompts(raw: unknown): AiPrompts {
     },
     planEdit: { system: planEdit.system, user: planEdit.user, retry: planEdit.retry },
     sheetImage,
+    facade: { system: facade.system, user: facade.user, retry: facade.retry },
+    facadeImage: parseFacadeImage((doc as { facade_image?: unknown }).facade_image),
   };
 }
 
@@ -207,6 +256,42 @@ function parseSheetImage(raw: unknown): AiPrompts['sheetImage'] {
     system: block.system,
     user: block.user,
     styles: styles as Record<string, string>,
+    watermark: block.watermark,
+  };
+}
+
+function parseFacadeImage(raw: unknown): AiPrompts['facadeImage'] {
+  const block = raw as Record<string, unknown> | undefined;
+  if (
+    !block ||
+    typeof block.system !== 'string' ||
+    typeof block.user !== 'string' ||
+    typeof block.watermark !== 'string'
+  ) {
+    throw new AiPromptsError(
+      'kb/ai_design_prompts.yaml thiếu `facade_image.system`, `facade_image.user` hoặc `facade_image.watermark`.',
+    );
+  }
+  const missing = FACADE_IMAGE_SLOTS.filter((slot) => !(block.user as string).includes(slot));
+  if (missing.length) {
+    throw new AiPromptsError(`\`facade_image.user\` thiếu chỗ điền ${missing.join(', ')}.`);
+  }
+  const table = (key: 'styles' | 'roofs'): Record<string, string> => {
+    const value = block[key] ?? {};
+    if (
+      typeof value !== 'object' ||
+      value === null ||
+      Object.values(value).some((line) => typeof line !== 'string')
+    ) {
+      throw new AiPromptsError(`\`facade_image.${key}\` phải là bảng mã → một dòng chữ.`);
+    }
+    return value as Record<string, string>;
+  };
+  return {
+    system: block.system,
+    user: block.user,
+    styles: table('styles'),
+    roofs: table('roofs'),
     watermark: block.watermark,
   };
 }

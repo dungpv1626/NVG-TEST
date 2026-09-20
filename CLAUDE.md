@@ -4,7 +4,7 @@
 > gốc trong `doc/` (mã tài liệu + số mục). Cần chi tiết thì **đọc tài liệu gốc**.
 >
 > Tách ra tệp riêng cho gọn: **`doc/VAN_DE_CON_MO.md`** (câu hỏi chờ NVG) ·
-> **`doc/design/QUYET_DINH_AI.md`** (nhật ký quyết định T1→T57 của module Thiết kế AI).
+> **`doc/design/QUYET_DINH_AI.md`** (nhật ký quyết định T1→T59 của module Thiết kế AI).
 
 ---
 
@@ -137,6 +137,7 @@ Thực thể tham chiếu xuyên module — **liên kết, KHÔNG sao chép**: `
 
 - **TypeScript xuyên suốt**; type và Zod dùng chung qua `shared/`.
 - **Giao diện: tiếng Việt có dấu 100%** (PRD 6, CGD 4.1). Code, tên bảng/cột/biến: tiếng Anh.
+  Ngoại lệ có chủ đích duy nhất: tên mục **«AI Design»** của module Thiết kế (Haan chọn, T58).
 - **"100%" gồm cả chữ do TRÌNH DUYỆT tự sinh** — theo ngôn ngữ trình duyệt, không theo `lang`, grep không ra:
   - ràng buộc biểu mẫu ("Please fill out this field") → `setCustomValidity`, đã gom trong `Input` (`web/src/lib/validation-message.ts`)
   - `<input type="date">` → dùng `DateInput`
@@ -369,34 +370,33 @@ Hàng rào riêng của module; nơi nào mục này im lặng thì áp mục 1�
   `doc/design/README.md` TRƯỚC**: 11 đính chính chỗ tài liệu mô tả sai hiện trạng (Đ7–Đ11 đối chiếu hồ
   sơ thật, sai nặng hơn) + bảng ánh xạ sang bảng/enum đang chạy.
 - Đụng số hoá hồ sơ cũ hoặc bộ xuất CAD → đọc **`doc/design/13-ho-so-thuc-te.md`**.
-- Nhật ký quyết định T1→T57: **`doc/design/QUYET_DINH_AI.md`** (thêm quyết định mới vào cuối tệp đó,
+- Nhật ký quyết định T1→T59: **`doc/design/QUYET_DINH_AI.md`** (thêm quyết định mới vào cuối tệp đó,
   không vào đây).
-- **Hiện trạng chung** (T10, 8.5b cũ): bộ giải CP-SAT nội bộ **không đạt qua thử nghiệm thực tế**;
-  nhánh AI là bắt buộc và khi nó làm tốt thì **bộ giải nội bộ sẽ bị xoá**. Vì thế hai nhánh **không được
-  liên quan gì đến nhau**.
+- **Hiện trạng chung** (T58, 19/09/2026): **bộ giải CP-SAT nội bộ đã gỡ hẳn** (T10 ghi nó không đạt qua
+  thử nghiệm thực tế). Thiết kế tự động chỉ còn nhánh AI — trên giao diện tên **«AI Design»** (ngoại lệ tiếng
+  Anh có chủ đích với 4.1, Haan chọn). Container `compute/` chỉ còn **số hoá hồ sơ cũ**. Artifact cũ của bộ
+  giải vẫn nằm trong CSDL (bất biến), không mã nào đọc. `ai-independence.test.ts` canh bộ giải không được
+  tạo lại lặng lẽ.
 
-### 8.2 Chín nguyên tắc bất biến (của bộ giải nội bộ)
+### 8.2 Nguyên tắc bất biến còn áp dụng
 
-1. Không bước nào đi thẳng từ chữ sang ảnh — mọi ảnh dẫn xuất từ hình học đã giải.
-2. Mô hình ngôn ngữ không sinh toạ độ/kích thước; nó sinh _cấu trúc_, bộ giải gán số.
-3. Mọi ranh giới giữa các lớp có JSON Schema trong `contracts/` — không có hợp đồng thì dừng và hỏi.
-4. Quy tắc kiến trúc là dữ liệu (rule pack YAML), không hard-code ngưỡng ở đâu cả.
-5. Một nguồn hình học: Container sinh glTF, trình duyệt chỉ đọc.
-6. Artifact bất biến, băm nội dung, có lineage. Sửa = artifact mới + đổi `design_head`.
-7. Mọi bảng của module mang `tenant_id`.
-8. Mọi artifact và tài liệu mang `discipline`.
-9. Engine không tự sinh/tự phát hành nội dung kết cấu, điện nước, PCCC; kỹ sư có chứng chỉ ký. Mỗi lần
-   phát hành đúng **một** bộ môn.
+1. Mọi ranh giới giữa hai runtime có JSON Schema trong `contracts/` — không có hợp đồng thì dừng và hỏi.
+2. Quy tắc kiến trúc là dữ liệu (rule pack YAML), không hard-code ngưỡng ở đâu cả.
+3. Artifact bất biến, băm nội dung, có lineage. Sửa = artifact mới + đổi `design_head`.
+4. Mọi bảng của module mang `tenant_id`.
+5. Mọi artifact và tài liệu mang `discipline`.
+6. Không tự sinh/tự phát hành nội dung kết cấu, điện nước, PCCC; kỹ sư có chứng chỉ ký. Mỗi lần phát hành
+   đúng **một** bộ môn.
 
-### 8.3 Nhánh AI — ngoại lệ có kiểm soát và hiện trạng
+### 8.3 Nhánh AI («AI Design») — hiện trạng
 
-Nhánh AI là **dòng riêng** (T14): đầu vào chỉ đầu bài + khảo sát; kết quả là **đề xuất**, không bao giờ
-thành `floor_plan` chuẩn, không đi qua Container, không vào hồ sơ phát hành. Hiện trạng:
+Nhánh AI (T14): đầu vào chỉ đầu bài + khảo sát; kết quả là **đề xuất**, không đi qua Container, không vào
+hồ sơ phát hành. Hiện trạng:
 
 - **Một lượt gọi cho cả nhà** (T45, hợp đồng `contracts/ai-house-intent`): mô hình khai phòng, diện tích
   mục tiêu, quan hệ, lối vào, và **vẽ bản phác lưới ô ~1 m mỗi tầng** (T48). Chương trình
   (`workers/src/design/ai/arrange/`, `ai/tree/`) nắn bản phác, **gán mọi toạ độ**, đặt cửa/cửa sổ/số bậc
-  (T40), cho qua cổng. Đây là chỗ nới nguyên tắc 2: bản phác là toạ độ thô, mọi số vẫn do chương trình.
+  (T40), cho qua cổng. Bản phác là toạ độ thô; mọi số trên bản vẽ vẫn do chương trình gán.
 - **Cổng hỏng thì không lưu** (T39). Chỉ gọi lại mô hình cho lỗi **ngữ nghĩa** (`REVISABLE_CODES`), tối
   đa `HOUSE_REVISIONS_MAX`; lỗi hình học thì bộ xếp tự thử rồi dừng. Tầng 1 hỏng vì cửa ra ngoài → chương
   trình thử đổi phòng mang cửa chính trước khi gọi lại (T51).
@@ -411,31 +411,31 @@ thành `floor_plan` chuẩn, không đi qua Container, không vào hồ sơ phá
   cụ thể → sửa bằng ô yêu cầu, **đừng biến thành luật** (Haan, T52).
 - **Không kiểm quy chuẩn xây dựng** (T30, T42): `rules/base/` đã xoá. Nhánh AI đọc `rules/nvg-experience.yaml`
   - `rules/nvg-measured.yaml` theo lựa chọn của kỹ sư, chỉ để đối chiếu SAU. Màn hình phải nói rõ «Không
-    kiểm quy chuẩn xây dựng…» (câu do mã chèn). Bộ giải đọc `rules/structure/` + `rules/nvg-experience.yaml`;
-    khoảng lùi/mật độ chỉ lấy từ đầu bài.
+    kiểm quy chuẩn xây dựng…» (câu do mã chèn). Khoảng lùi/mật độ chỉ lấy từ đầu bài.
 - **Tờ vẽ chính là SVG vector tất định** (`ai/draw/`) — T21 (tờ do mô hình ảnh vẽ) đã bị T22 gỡ. Chữ do mô
   hình sinh là nội dung không tin được: thoát ký tự khi dựng SVG, hiển thị qua `<img>`.
-- **Xuất DXF bằng TypeScript trong Worker** (T47, `ai/dxf/`), đổi từ chính tờ SVG — ngoại lệ duy nhất của
-  «CAD chỉ ở Container». Một chiều.
+- **Xuất DXF bằng TypeScript trong Worker** (T47, `ai/dxf/`), đổi từ chính tờ SVG. Một chiều.
 - **Ảnh mặt bằng có nội thất** (T57): mô hình ảnh vẽ từ **ảnh neo** (`ai/draw/anchor.ts`, không khung tên),
   panel riêng dưới tờ vector — **tờ vector vẫn là tờ chính**. Nhãn hai lớp: in lên pixel + chữ trong trang.
   Phép thử canh `images` có đúng một phần tử.
+- **Mặt đứng mặt tiền** (T59): khung, lỗ mở, ban công suy từ phương án mặt bằng đã chọn và KHOÁ; mô
+  hình chỉ chọn mái, vật liệu, màu, cổng, rào, trang trí trong `kb/facade_vocabulary.yaml`. Phiếu yêu cầu
+  của kỹ sư (`ai_facade_brief`) là bắt buộc — hàm ghép áp thẳng mục đã điền; bề rộng cửa là của mặt bằng.
 - Dữ liệu gửi nhà cung cấp: **đầy đủ trừ danh tính** → hạng 2 (T12); khung tên mang mã hồ sơ là hạng 1, không gửi.
 
-> **Ranh giới độc lập có KIỂM THỬ canh**: `workers/src/design/__tests__/ai-independence.test.ts` đỏ khi
-> `design/ai/**`, `design/rules/**`, `web/src/pages/tk/ai/**` import sang `program/`, `layout/`, `render/`,
-> `compute-backend`, `workflows/steps`, `design-pipeline` hay panel/hook bộ giải — và ngược lại. Nhánh AI
-> được dùng hạ tầng chung: `auth-scope`, `artifacts`, `llm/`, `rules/`, `kb/`, `brief/anonymise`, `shared/`.
-> `design/rules/` KHÔNG thuộc bộ giải.
+> **Ranh giới có KIỂM THỬ canh**: `workers/src/design/__tests__/ai-independence.test.ts` đỏ khi nhánh AI
+> import `compute-backend` hay `use-design-projects`, và khi bất kỳ đường, tệp hay hợp đồng nào của bộ giải
+> đã gỡ xuất hiện lại. Nhánh AI được dùng hạ tầng chung: `auth-scope`, `artifacts`, `llm/`, `rules/`, `kb/`,
+> `brief/`, `shared/`.
 
 ### 8.4 Hai runtime
 
-|          | **Worker (TypeScript)**                                   | **Container (Python)**                             |
-| -------- | --------------------------------------------------------- | -------------------------------------------------- |
-| Chạy gì  | Giao diện, API, gọi mô hình ngôn ngữ, artifact, điều phối | CP-SAT, hình học, CAD, mô hình 3D (bộ giải nội bộ) |
-| Gọi nhau | Worker → Container qua HTTP                               | **Không gọi ngược** Worker                         |
+|          | **Worker (TypeScript)**                                   | **Container (Python)**                                    |
+| -------- | --------------------------------------------------------- | --------------------------------------------------------- |
+| Chạy gì  | Giao diện, API, gọi mô hình ngôn ngữ, artifact, điều phối | Số hoá hồ sơ cũ: `/extract` (DWG/DXF), `/kb/record` (T58) |
+| Gọi nhau | Worker → Container qua HTTP                               | **Không gọi ngược** Worker                                |
 
-Đừng gọi mô hình ngôn ngữ từ Container; đừng cài thư viện hình học phía TypeScript. Container không giữ
+Đừng gọi mô hình ngôn ngữ từ Container. Container không giữ
 trạng thái, không dùng API đặc thù Cloudflare. Giai đoạn dev: gói Cloudflare Free → `compute/` chạy
 **Docker tại chỗ**, Worker gọi `localhost:8080` qua `ComputeBackend` (T3). Containers cần Workers Paid,
 gọi qua Durable Object binding (`getContainer(env.DESIGN_COMPUTE, id)`), có hạng tới `standard-4`.
@@ -454,16 +454,13 @@ gọi qua Durable Object binding (`getContainer(env.DESIGN_COMPUTE, id)`), có h
 
 ### 8.6 Ranh giới khi viết mã
 
-- Cấm hard-code ngưỡng quy tắc (có test grep canh). `compute/solver/` cấm import phần gọi mô hình ngôn ngữ.
-- Vị từ hình học của bộ giải cài **một nơi: Container**; Worker chỉ đọc rule pack để hiển thị.
+- Cấm hard-code ngưỡng quy tắc (có test grep canh).
 - DXF **một chiều** — không có và sẽ không có endpoint nhập ngược CAD.
 - **Quy ước lớp bản vẽ là dữ liệu** (`kb/layer_mapping.yaml`) — cấm viết tên lớp vào mã. Trình trích xuất
   trả `layers_unmapped`, tách bạch với lớp cố ý bỏ qua (`ignore`).
 - Container **không** quy chuẩn hoá nhãn phòng (`"PN2"` → `bedroom` là việc của Worker).
 - Không tạo lại thứ đã có: `design_projects`, `customers`, `users`, `documents` + `document_versions`.
-- Nhãn cảnh báo do mã chèn, không tắt được từ giao diện: phối cảnh _"Ảnh tham khảo ý tưởng — chưa phải
-  phương án thi công"_; khối lượng _"Khối lượng sơ bộ — không dùng làm căn cứ ký hợp đồng"_; lưới trục đề
-  xuất _"Đề xuất — kỹ sư kết cấu quyết định"_.
+- Nhãn cảnh báo do mã chèn, không tắt được từ giao diện (`AI_DISCLAIMERS` trong `@nvg/shared/design`).
 
 ### 8.7 Quy ước dữ liệu của module
 
@@ -473,16 +470,12 @@ gọi qua Durable Object binding (`getContainer(env.DESIGN_COMPUTE, id)`), có h
    policy nào đọc tới còn tệ hơn không khai.
 3. RLS gói trong `rls_design_readable` / `rls_design_writable`, dựng trên quyền Module TK — không bảng nào chép lại điều kiện.
 4. Phạm vi tenant suy từ `companies.tenant_id`; `auth_tenant_ids()` cố ý không dùng `auth_sees_all_companies()`.
-5. Chỉ đường cắt **kết cấu chính** (`structural_depth`) dùng chung giữa các tầng; lõi thang có ràng buộc riêng `stair_alignment`.
-6. Cây chia lấp kín mặt sàn; muốn để trống thì khai lá `void`. `max_area` là khoản phạt.
-7. **`rules/` quyết định hợp lệ; `kb/` quyết định bản vẽ trông thế nào** — đừng trộn. Trước khi ghi số vào
+5. **`rules/` quyết định hợp lệ; `kb/` quyết định bản vẽ trông thế nào** — đừng trộn. Trước khi ghi số vào
    `kb/`: từ vựng/quy ước thì n = 1 đủ; định mức/phân bố cần **15 công trình** (`priors.min_samples`) — hiện chưa đủ.
-8. **Bản vẽ NVG không có đa giác phòng trên lớp riêng**: tên lớp theo độ đậm nét khi in (`NV-Thay`,
+6. **Bản vẽ NVG không có đa giác phòng trên lớp riêng**: tên lớp theo độ đậm nét khi in (`NV-Thay`,
    `NV-Khuat`…), đa giác phòng phải dựng từ đồ thị tim tường. Trình trích xuất **phải** đi vào block
    (`virtual_entities()`), **phải** đọc `ATTRIB`, và một tệp DXF là trọn hồ sơ một bộ môn (22–73 tờ). Ba
    chỗ này hỏng im lặng — chỉ phát hiện bằng đối chiếu bản vẽ thật.
-
-Container `POST /solve`: **vô nghiệm trả 200** kèm `InfeasibilityReport`; chỉ 422 (sai hợp đồng) và 503 (hết giờ) là lỗi.
 
 ### 8.8 Theo dõi tiến độ — bắt buộc
 

@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nvg.vn/contracts/ai-facade-image.schema.json",
+  "title": "AiFacadeImage",
+  "description": "Ảnh MẶT ĐỨNG MẶT TIỀN CÓ VẬT LIỆU do MÔ HÌNH ẢNH vẽ TỪ ẢNH NEO (T59 Đợt E, 20/09/2026).\n\nTấm trình khách: vật liệu, màu, mái, cổng, cây cối — vẽ lại đúng tờ mặt đứng vector đã dựng từ toạ độ (ảnh neo, không khung tên). Nó KHÔNG thay tờ vector: tờ vector vẫn là tờ chính, đo được, xuất DXF. Cùng khuôn với `ai-plan-sheet-image` (T57), khác ở chỗ trỏ ý tưởng mặt đứng và không có số tầng.\n\n`anchor` BẮT BUỘC: không có ảnh neo thì mô hình vẽ một ngôi nhà khác — đúng bài học T21.\n\nVề sau là ẢNH NEO cho bước Phối cảnh (T16): ảnh chính diện ban ngày, bốn góc còn lại dựng ảnh→ảnh từ nó.\n\nMỘT artifact = MỘT tấm. Không đặt head: vẽ lại là chuyện bình thường, tấm mới nhất chọn lúc đọc theo cạnh lineage `ai_facade_image_draw`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "facade_ref",
+    "uri",
+    "mime",
+    "anchor",
+    "watermark_applied",
+    "generator"
+  ],
+  "properties": {
+    "schema_version": {
+      "$ref": "#/$defs/semver"
+    },
+    "facade_ref": {
+      "$ref": "#/$defs/artifact_ref",
+      "description": "Ý tưởng mặt đứng (`ai_facade_concept`) mà tấm này vẽ theo. Cũng là cạnh lineage `ai_facade_image_draw`."
+    },
+    "uri": {
+      "type": "string",
+      "pattern": "^(r2|supabase)://.+",
+      "description": "Vị trí tệp ảnh trong kho nhị phân."
+    },
+    "mime": {
+      "type": "string",
+      "enum": ["image/png", "image/jpeg", "image/webp"]
+    },
+    "width": {
+      "type": ["integer", "null"],
+      "minimum": 1
+    },
+    "height": {
+      "type": ["integer", "null"],
+      "minimum": 1
+    },
+    "anchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "sha256", "bytes", "mime"],
+      "description": "Ảnh neo đã gửi kèm — khác biệt cốt lõi giữa hợp đồng này và bản T21 đã bị gỡ.\n\nGhi lại ở đây vì đây là dấu vết DUY NHẤT truy được cho một đầu vào mà máy chủ không kiểm được: Worker không có canvas nên không rasterise được tờ SVG, byte PNG do TRÌNH DUYỆT gửi lên, và không có cách nào chứng minh tấm nhận về đúng là tờ máy chủ vừa phát ra. `sha256` là chỗ bám để sau này trả lời «hai tờ này vẽ từ cùng một ảnh neo không».",
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": ["client_raster"],
+          "description": "Ai rasterise tờ SVG. Hiện chỉ có `client_raster` (trình duyệt). Chừa chỗ cho `worker_raster` nếu sau này máy chủ tự dựng được ảnh."
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "mime": {
+          "type": "string",
+          "enum": ["image/png", "image/jpeg", "image/webp"]
+        }
+      }
+    },
+    "watermark_applied": {
+      "type": "boolean",
+      "const": false,
+      "description": "Luôn `false`, CỐ Ý — cùng quyết định với `ai-plan-sheet-image`: byte trong kho CHƯA đóng dấu, trình duyệt in nhãn khi hiển thị và khi tải về."
+    },
+    "prompt_excerpt": {
+      "type": ["string", "null"],
+      "maxLength": 1200,
+      "description": "Trích đoạn lời dẫn ĐÃ GHÉP đã gửi đi. Cần cho việc đọc lại: cùng một mặt bằng vẽ hai lần ra hai tờ khác nhau, nên biết đã mô tả thế nào là cách duy nhất hiểu vì sao tờ này ra như vậy."
+    },
+    "generator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "provider", "model", "route", "prompt_version"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["ai"]
+        },
+        "provider": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "model": {
+          "type": "string",
+          "maxLength": 96
+        },
+        "route": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "prompt_version": {
+          "type": "string",
+          "maxLength": 16
+        },
+        "latency_ms": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "$defs": {
+    "semver": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "artifact_ref": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

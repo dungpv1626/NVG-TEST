@@ -84,6 +84,12 @@ line_mm:
   dim_line: 0.13 # đường và gióng của chuỗi kích thước
   dim_tick: 0.25 # gạch chéo 45° đầu mút
   north: 0.35
+  # ── Tờ mặt đứng (T59) ──
+  ground: 0.7 # đường cốt đất — nét đậm nhất tờ mặt đứng
+  elevation_outline: 0.5 # đường bao khối nhà, tường chắn mái, đường mái
+  floor_line: 0.13 # vạch sàn từng tầng trên mặt đứng
+  level_mark: 0.18 # ký hiệu cao độ ±0.000
+  element: 0.13 # viền mảng trang trí (ốp, ô văng, lam, cột)
 
 # Cỡ chữ, mm giấy (chiều cao chữ hoa danh nghĩa). Cỡ nhỏ nhất đọc được khi in A3 là ~1,8 mm.
 text_mm:
@@ -119,6 +125,7 @@ colour:
   # thì không. Đây là khác biệt lớn nhất giữa một tờ bản vẽ và một sơ đồ khối.
   wall_fill: '#FFFFFF'
   void_fill: '#DCDFE4' # ô thông tầng, giếng trời
+  element_fill: '#EEF0F2' # mảng trang trí trên mặt đứng — nền nhạt, vật liệu thật ghi bằng chữ
   paper: '#FFFFFF'
 
 # Chuỗi kích thước.

@@ -14,6 +14,7 @@ export const DXF_ROLES = [
   'room_label',
   'soft_divider',
   'wall',
+  'hatch',
   'door',
   'window',
   'stair',

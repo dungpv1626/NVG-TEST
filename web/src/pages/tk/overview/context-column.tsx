@@ -10,6 +10,7 @@ import { Link } from 'react-router-dom';
 import { DESIGN_DISCIPLINE_LABELS, formatDate, formatDateTime } from '@nvg/shared';
 import { RelatedGroups, type RelatedGroup } from '@/components/entity/entity-detail';
 import { Skeleton } from '@/components/ui/states';
+import { useAiDesignState } from '@/hooks/use-ai-design';
 import { useContractForSource } from '@/hooks/use-contracts';
 import {
   useChangeRequests,
@@ -17,7 +18,6 @@ import {
   useDesignSync,
   useDesignVersions,
   useDisciplineTasks,
-  useFloorPlanVariants,
   type DesignProjectDetailRecord,
 } from '@/hooks/use-design-projects';
 import { cn } from '@/lib/utils';
@@ -26,7 +26,7 @@ import { GroupLabel, NotYet, Panel } from '../tk-ui';
 
 const DOT: Record<string, string> = {
   brief: 'bg-tk-bl-fg',
-  variant: 'bg-tk-pu-solid',
+  plan: 'bg-tk-pu-solid',
   version: 'bg-tk-acc',
   change: 'bg-tk-am-fg',
 };
@@ -158,30 +158,14 @@ function ActivityPanel({ project }: { project: DesignProjectDetailRecord }) {
   const briefs = useDesignBriefs(project.id);
   const versions = useDesignVersions(project.id);
   const changes = useChangeRequests(project.id);
-  const variants = useFloorPlanVariants(project.id);
+  const ai = useAiDesignState(project.id);
 
   const loading = briefs.isLoading || versions.isLoading || changes.isLoading;
-  const generations = [
-    ...(variants.data
-      ? [
-          {
-            programArtifactId: variants.data.programArtifactId,
-            createdAt: variants.data.variants[0]?.createdAt ?? '',
-            count: variants.data.variants.length,
-          },
-        ]
-      : []),
-    ...(variants.data?.previous ?? []).map((g) => ({
-      programArtifactId: g.programArtifactId,
-      createdAt: g.createdAt,
-      count: g.variants.length,
-    })),
-  ].filter((g) => g.createdAt && g.count > 0);
 
   const items = recentActivity(
     {
       briefs: briefs.data ?? [],
-      generations,
+      aiPlans: ai.data?.plans ?? [],
       versions: versions.data ?? [],
       changes: changes.data ?? [],
     },

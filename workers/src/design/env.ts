@@ -45,7 +45,7 @@ export interface DesignEnv {
   GEMINI_PAID_API_KEY?: string;
 
   /**
-   * Địa chỉ Container tính toán khi chạy bằng Docker tại chỗ (gói Cloudflare Free chưa có
+   * Địa chỉ Container số hoá hồ sơ cũ khi chạy bằng Docker tại chỗ (gói Cloudflare Free chưa có
    * Containers — quyết định T3). Khi nâng gói thì đổi sang binding Durable Object, chỗ đổi
    * nằm đúng một tệp: `compute-backend.ts`.
    */
@@ -67,20 +67,10 @@ export interface DesignEnv {
   DIGITISE_PIPELINE?: Workflow;
 
   /**
-   * Workflow điều phối pipeline thiết kế đầy đủ (`workflows/design-pipeline.ts`).
-   *
-   * Đường chạy DEMO không đi qua đây: Lớp 3 giải trong mili-giây nên tuyến đồng bộ
-   * `/floor-plan/generate` gọi thẳng các hàm bước. Workflow giữ lại cho việc chạy nền dài
-   * (số hoá hàng loạt, sinh lại toàn bộ dự án) — xem `doc/design/14-phuong-an-demo.md` 14.6(a).
-   */
-  DESIGN_PIPELINE?: Workflow;
-
-  /**
    * Workflow của NHÁNH AI (`workflows/ai-design.ts`) — một instance cho một giai đoạn.
    *
-   * Tách khỏi `DESIGN_PIPELINE` vì nó thuộc dòng khác: nhánh AI thay thế bộ giải (T15), và ngày
-   * dọn bộ giải thì binding kia ra đi cùng. Không bật được (chạy ngoài runtime Workers) thì tuyến
-   * khởi động trả 503 kèm lý do, không âm thầm chạy đồng bộ.
+   * Không bật được (chạy ngoài runtime Workers) thì tuyến khởi động trả 503 kèm lý do, không âm
+   * thầm chạy đồng bộ.
    */
   AI_DESIGN_PIPELINE?: Workflow;
 }

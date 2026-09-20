@@ -52,6 +52,8 @@ export interface ConstructionNorms {
   /** Loại phòng không mở cửa sổ ra ngoài (thang, kho kỹ thuật, để xe…). */
   no_window_types: string[];
   outdoor: { railing_h_m: number; railing_thickness_m: number };
+  /** Cốt vỉa hè và tường chắn mái mặc định cho tờ mặt đứng (T59) — vắng thì bước mặt đứng không dựng được khung. */
+  facade?: { ground_floor_raise_m: number; parapet_height_m: number };
   /** Hành lang bộ giải ý định tự dựng (T43) — số tham khảo; vắng thì bộ giải dùng cửa đi + lề. */
   circulation?: { corridor_clear_m: number };
   /**
@@ -139,8 +141,22 @@ export function parseConstructionNorms(yamlText: string): ConstructionNorms {
     },
     no_window_types: raw.no_window_types ?? [],
     outdoor: raw.outdoor!,
+    ...(raw.facade ? { facade: parseFacade(raw.facade) } : {}),
     ...(raw.circulation ? { circulation: raw.circulation } : {}),
     ...(raw.usable ? { usable: parseUsable(raw.usable) } : {}),
+  };
+}
+
+function parseFacade(raw: unknown): NonNullable<ConstructionNorms['facade']> {
+  const value = raw as Record<string, unknown>;
+  for (const key of ['ground_floor_raise_m', 'parapet_height_m']) {
+    if (typeof value[key] !== 'number' || !((value[key] as number) >= 0)) {
+      throw new ConstructionNormsError(`"facade.${key}" phải là số không âm`);
+    }
+  }
+  return {
+    ground_floor_raise_m: value.ground_floor_raise_m as number,
+    parapet_height_m: value.parapet_height_m as number,
   };
 }
 

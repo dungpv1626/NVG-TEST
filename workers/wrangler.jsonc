@@ -40,15 +40,11 @@
   "rules": [{ "type": "Text", "globs": ["**/*.yaml"], "fallthrough": true }],
 
   /**
-   * Điều phối pipeline thiết kế (doc/design/02-architecture.md 2.5). Workflows có trên CẢ
-   * gói Free lẫn Paid nên phần này bật được ngay, khác Containers ở dưới.
+   * Workflows có trên CẢ gói Free lẫn Paid nên phần này bật được ngay, khác Containers ở dưới.
+   * Workflow `nvg-design-pipeline` của bộ giải nội bộ đã gỡ (T58) — gỡ binding và lớp cùng một
+   * lần deploy; Workflow không cần khối `migrations` như Durable Object.
    */
   "workflows": [
-    {
-      "name": "nvg-design-pipeline",
-      "binding": "DESIGN_PIPELINE",
-      "class_name": "DesignPipeline",
-    },
     {
       // Số hoá hồ sơ cũ (Mốc 3) — mỗi tệp một bước, chạy lại riêng tệp lỗi được.
       "name": "nvg-digitise-pipeline",

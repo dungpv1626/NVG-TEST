@@ -13,7 +13,6 @@ import {
   HttpComputeBackend,
   UnconfiguredComputeBackend,
 } from '../compute-backend';
-import { solveFloorPlan } from '../workflows/steps';
 
 const BASE = 'http://localhost:8080';
 
@@ -161,79 +160,8 @@ describe('lắp bản ghi Knowledge Base', () => {
 describe('chưa cấu hình Container', () => {
   it('mọi lời gọi đều báo cách khắc phục, không im lặng trả dữ liệu giả', async () => {
     const backend = new UnconfiguredComputeBackend();
-    for (const call of [
-      () => backend.extract(),
-      () => backend.buildKbRecord(),
-      () => backend.solve(),
-    ]) {
+    for (const call of [() => backend.extract(), () => backend.buildKbRecord()]) {
       await expect(call()).rejects.toThrow('DESIGN_COMPUTE_URL');
     }
-  });
-});
-
-/**
- * Kích thước khu đất gửi sang bộ giải.
- *
- * Đây là chỗ hai lớp dễ nói khác nhau nhất mà không lỗi nào nổ ra: Lớp 2 soạn chương trình
- * trên ô chữ nhật xây được, còn nếu Lớp 3b nhận kích thước thô của thửa thì nó xếp phòng
- * trên một mảnh đất rộng hơn — lời giải vẫn hợp lệ theo mọi ràng buộc, và tràn qua ranh giới.
- *
- * Kiểm ở đây thay vì ở `pipeline-e2e`: phép thử này chạy trong vài mili giây và không cần
- * Docker, nên nó chạy ở mọi lượt, kể cả lượt không ai dựng container.
- */
-describe('khu đất gửi sang bộ giải', () => {
-  const args = (site: unknown) =>
-    ({
-      intent: { schema_version: '1.0.0' },
-      intentRef: `sha256:${'a'.repeat(64)}`,
-      program: { schema_version: '1.0.0' },
-      site,
-      locality: 'hung_yen',
-      timeBudgetS: 30,
-    }) as never;
-
-  /**
-   * Bắt lấy KÍCH THƯỚC ô chữ nhật đã gửi đi rồi dừng — không cần Container thật.
-   *
-   * Chỉ giữ hai cạnh: phần còn lại của `site` (diện tích thật, mặt thoáng, khoảng lùi) là
-   * dữ liệu đi kèm, còn thứ phép thử này canh là chỗ hai lớp dễ nói khác nhau nhất.
-   */
-  async function sentSite(site: unknown): Promise<{ width_m: number; depth_m: number }> {
-    let captured: { width_m: number; depth_m: number } | null = null;
-    const backend = {
-      solve: (request: { site: { width_m: number; depth_m: number } }) => {
-        captured = { width_m: request.site.width_m, depth_m: request.site.depth_m };
-        throw new ComputeUnavailable('dừng ở đây');
-      },
-    };
-    await expect(solveFloorPlan(backend as never, args(site))).rejects.toThrow(ComputeUnavailable);
-    return captured!;
-  }
-
-  it('thửa chữ nhật gửi nguyên kích thước', async () => {
-    expect(await sentSite({ width_m: 5, depth_m: 18 })).toEqual({ width_m: 5, depth_m: 18 });
-  });
-
-  it('thửa hình thang gửi cạnh HẸP, không gửi mặt tiền', async () => {
-    expect(
-      await sentSite({ width_m: 6, depth_m: 20, shape: 'hinh_thang', rear_width_m: 4 }),
-    ).toEqual({ width_m: 4, depth_m: 20 });
-  });
-
-  it('thửa đa giác gửi ô chữ nhật nội tiếp, không gửi hình bao', async () => {
-    const sent = await sentSite({
-      width_m: 8,
-      depth_m: 16,
-      shape: 'da_giac',
-      boundary_m: [
-        [0, 0],
-        [8, 0],
-        [8, 12],
-        [4, 16],
-        [0, 12],
-      ],
-    });
-    expect(sent.width_m * sent.depth_m).toBeLessThan(8 * 16);
-    expect(sent.width_m).toBeGreaterThan(0);
   });
 });

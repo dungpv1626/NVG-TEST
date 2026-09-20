@@ -38,6 +38,7 @@ import { nationalRulePack, nvgExperiencePack } from '../rules/rule-pack-data';
 import { recordAiCall, usageSummary, withAiCall, type AiCallUsage } from './call-log';
 import { createArtifactStore } from '../artifact-store';
 import { planAnchor, planSheet } from './draw';
+import { facadeApp } from './facade-routes';
 import { planDxf } from './dxf';
 import {
   formatPromptText,
@@ -87,6 +88,9 @@ import type {
 } from '@nvg/shared/design';
 
 export const aiApp = new Hono<{ Bindings: DesignEnv }>();
+
+// Bước «2. Mặt đứng» (T59) — tuyến ở tệp riêng.
+aiApp.route('/facade', facadeApp);
 
 /** Bộ môn duy nhất nhánh AI sinh ra ở giai đoạn 1 — kiến trúc. */
 const DISCIPLINE = 'kien_truc' as const;
@@ -240,6 +244,9 @@ aiApp.get('/state/:projectId', async (c) => {
     // cho những dòng mốc có từ trước.
     planHeadArtifactId: headId && !hidden.has(headId) ? headId : null,
     facadeArtifactId: facade?.id ?? null,
+    // Mặt bằng mà mặt đứng hiện hành dựng theo (T59). Khác `planHeadArtifactId` nghĩa là kỹ sư đã đổi
+    // phương án sau khi dựng mặt đứng — màn hình gắn nhãn «dựng theo phương án cũ».
+    facadePlanRef: (facade?.payload as { plan_ref?: string } | undefined)?.plan_ref ?? null,
     imageSetArtifactId: images?.id ?? null,
     runs: latest,
     roomLabels: roomLabels(),

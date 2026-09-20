@@ -19,11 +19,11 @@ export const DESIGN_HELP = {
   workspace: {
     title: 'Trang dự án thiết kế',
     steps: [
-      'Đi lần lượt bảy bước ở dải Tiến trình thiết kế; bước sau cần bước trước đã xong.',
+      'Đi lần lượt sáu bước ở dải Tiến trình thiết kế; bước sau cần bước trước đã xong.',
       'Bấm một thẻ trong Bộ công cụ thiết kế để mở bước đó; bấm Tổng quan để quay lại.',
       'Ba tab trên cùng dành cho hồ sơ đã phát hành, yêu cầu thay đổi và lịch sử.',
     ],
-    note: 'Mọi kết quả do engine sinh đều ở trạng thái đề xuất cho tới khi người có thẩm quyền phát hành.',
+    note: 'Mọi kết quả do AI sinh đều ở trạng thái đề xuất cho tới khi người có thẩm quyền phát hành.',
   },
   brief: {
     title: 'Đầu bài thiết kế',
@@ -42,57 +42,5 @@ export const DESIGN_HELP = {
       'Ghi rõ số nào đo tại chỗ, số nào lấy theo trích lục.',
     ],
     note: 'Ranh giới thửa quyết định toàn bộ phương án; sai ở đây thì mọi bước sau sai theo.',
-  },
-  program: {
-    title: 'Chương trình không gian',
-    steps: [
-      'Soát tối thiểu, đề xuất, tối đa của từng không gian — dưới mỗi số ghi rõ ai quyết.',
-      'Sửa ô Đề xuất nếu cần (không dưới tối thiểu), đọc cảnh báo, rồi mới chốt.',
-      'Bấm Chốt chương trình không gian để các bước sau dùng bản này.',
-    ],
-    note: 'Chưa chốt thì chưa dựng được phương án. Đầu bài đổi thì phải chốt lại.',
-  },
-  variants: {
-    title: 'Phương án kiến trúc',
-    steps: [
-      'So sánh các phương án bằng bảng phía trên: số phòng ngủ, tỷ lệ giao thông, tầng đặt phòng thờ.',
-      'Mở từng phương án để xem bản vẽ, khối ba chiều và bảng thống kê.',
-      'Bấm Chọn phương án này để đặt bản đang hiệu lực cho các bước sau.',
-    ],
-    note: 'Phương án không xếp được nghĩa là các yêu cầu mâu thuẫn nhau. Sửa đầu bài hoặc chương trình không gian rồi dựng lại — phần mềm không tự nới yêu cầu nào.',
-  },
-  sheet: {
-    title: 'Bản vẽ mặt bằng',
-    steps: [
-      'Chọn tầng để xem mặt bằng tương ứng.',
-      'Đối chiếu chuỗi kích thước và lưới trục trước khi tải về.',
-      'Tải DXF để mở bằng AutoCAD và chỉnh tiếp.',
-    ],
-    note: 'Phương án sơ bộ, chưa phải hồ sơ thi công. Lưới trục là đề xuất của hệ thống — kỹ sư kết cấu quyết định.',
-  },
-  massing: {
-    title: 'Khối ba chiều',
-    steps: [
-      'Kéo chuột để xoay, lăn chuột để phóng to thu nhỏ.',
-      'Kiểm tra chiều cao tầng, lối vào và các mặt thoáng.',
-      'Bấm Chụp ảnh khối khi đã có góc nhìn ưng ý — ảnh đó dùng cho phần phối cảnh.',
-    ],
-    note: 'Khối chưa thể hiện vật liệu và mặt đứng; không dùng thay bản vẽ.',
-  },
-  schedules: {
-    title: 'Bảng thống kê',
-    steps: [
-      'Soát số lượng cửa đi, cửa sổ và diện tích sàn từng tầng.',
-      'Tải XLSX để chuyển sang bộ phận dự toán.',
-    ],
-    note: 'Khối lượng sơ bộ — không dùng làm căn cứ ký hợp đồng.',
-  },
-  render: {
-    title: 'Phối cảnh tham khảo',
-    steps: [
-      'Chụp ảnh khối ở mục Khối ba chiều trước.',
-      'Bấm Dựng ảnh phối cảnh để có ảnh trình khách hàng.',
-    ],
-    note: 'Ảnh chỉ trả lời câu hỏi thẩm mỹ, không thay mặt bằng. Nhãn cảnh báo in thẳng lên ảnh và không gỡ được.',
   },
 } as const satisfies Record<string, SectionGuide>;

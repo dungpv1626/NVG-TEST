@@ -56,7 +56,12 @@ export type LineKey =
   | 'void'
   | 'dim_line'
   | 'dim_tick'
-  | 'north';
+  | 'north'
+  | 'ground'
+  | 'elevation_outline'
+  | 'floor_line'
+  | 'level_mark'
+  | 'element';
 
 export type TextKey =
   | 'sheet_title'
@@ -70,7 +75,8 @@ export type TextKey =
   | 'north'
   | 'footer';
 
-export type ColourKey = 'ink' | 'hairline' | 'dim' | 'wall_fill' | 'void_fill' | 'paper';
+export type ColourKey =
+  'ink' | 'hairline' | 'dim' | 'wall_fill' | 'void_fill' | 'element_fill' | 'paper';
 
 const LINE_KEYS: LineKey[] = [
   'frame',
@@ -88,6 +94,11 @@ const LINE_KEYS: LineKey[] = [
   'dim_line',
   'dim_tick',
   'north',
+  'ground',
+  'elevation_outline',
+  'floor_line',
+  'level_mark',
+  'element',
 ];
 
 const TEXT_KEYS: TextKey[] = [
@@ -103,7 +114,15 @@ const TEXT_KEYS: TextKey[] = [
   'footer',
 ];
 
-const COLOUR_KEYS: ColourKey[] = ['ink', 'hairline', 'dim', 'wall_fill', 'void_fill', 'paper'];
+const COLOUR_KEYS: ColourKey[] = [
+  'ink',
+  'hairline',
+  'dim',
+  'wall_fill',
+  'void_fill',
+  'element_fill',
+  'paper',
+];
 
 export class SheetStyleError extends Error {
   readonly retryable = false;

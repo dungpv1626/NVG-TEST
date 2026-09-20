@@ -29,6 +29,10 @@ export interface TitleBlockContent {
   /** Tên tầng, nguyên văn mô hình khai — được escape khi đặt lên tờ vẽ. */
   levelName: string;
   scale: number;
+  /** Ô «Hạng mục» — mặc định là tờ mặt bằng; tờ mặt đứng truyền tên của nó (T59). */
+  category?: string;
+  /** Ô thêm dưới bốn ô chuẩn — tờ mặt đứng ghi vật liệu từng vùng ở đây (T59). */
+  extra?: ReadonlyArray<{ label: string; value: string }>;
 }
 
 /** Bọc toàn bộ nội dung vào một tài liệu SVG hoàn chỉnh, kèm nền giấy. */
@@ -77,9 +81,10 @@ export function renderTitleBlock(
 
   const cells: Array<{ label: string; value: string; big?: boolean }> = [
     { label: 'Tên bản vẽ', value: content.levelName, big: true },
-    { label: 'Hạng mục', value: 'Kiến trúc — mặt bằng công năng' },
+    { label: 'Hạng mục', value: content.category ?? 'Kiến trúc — mặt bằng công năng' },
     { label: 'Tỷ lệ', value: `1:${content.scale}` },
     { label: 'Đơn vị', value: 'Kích thước ghi bằng mi-li-mét' },
+    ...(content.extra ?? []),
   ];
 
   const out: string[] = [
@@ -125,10 +130,15 @@ export function renderTitleBlock(
 }
 
 /** Tên bản vẽ, in đậm và căn giữa ngay dưới hình — đúng chỗ hồ sơ thật đặt nó. */
-export function renderSheetTitle(area: DrawArea, style: SheetStyle, levelName: string): string {
+export function renderSheetTitle(
+  area: DrawArea,
+  style: SheetStyle,
+  levelName: string,
+  prefix = 'Mặt bằng công năng',
+): string {
   const band: Rect = area.titleBand;
   const y = band.y0 + style.sheet_title.gap_mm * 0.5 + style.text_mm.sheet_title / 2;
-  return textEl(`Mặt bằng công năng — ${levelName}`, {
+  return textEl(`${prefix} — ${levelName}`, {
     x: (band.x0 + band.x1) / 2,
     y,
     class: CLS.textSheetTitle,

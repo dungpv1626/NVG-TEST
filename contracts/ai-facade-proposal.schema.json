@@ -1,0 +1,272 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nvg.vn/contracts/ai-facade-proposal.schema.json",
+  "title": "AiFacadeProposal",
+  "$comment": "Phần MÔ HÌNH KHAI của ý tưởng mặt đứng (T59, 19/09/2026). Worker ghép nó với khung suy từ mặt bằng (bề rộng, cao độ từng tầng, lỗ mở mặt trước, ban công — dữ liệu KHOÁ) thành artifact `ai_facade_concept`. Tách hợp đồng vì mô hình không được khai lại thứ Worker đã biết: một lỗ mở do mô hình chép lại là một lỗ mở có thể chép sai.\n\nMọi trường đều BẮT BUỘC, trường không dùng để `null`: chế độ `strict` của OpenAI ép như vậy (cùng lý do với `ai-plan-edit`).\n\nMã vật liệu, màu, mái, lan can phải có trong `kb/facade_vocabulary.yaml` — hợp đồng chỉ kiểm HÌNH DẠNG mã, Worker kiểm mã có trong danh mục (`ai/facade/check.ts`). Toạ độ là xăng-ti-mét NGUYÊN trong hệ mặt đứng mà lời dẫn đưa ra: `x` cùng gốc với mặt bằng, `z` tính từ ±0.000 = sàn tầng 1.\n\n`description` là lời dặn gửi cho mô hình (bộ chuyển phương ngữ chỉ lược `$comment`), nên viết tiếng Anh, ngắn.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "style",
+    "roof",
+    "materials",
+    "palette",
+    "gate",
+    "fence",
+    "balcony_railing",
+    "parapet",
+    "roof_outline",
+    "elements",
+    "rationale"
+  ],
+  "properties": {
+    "style": {
+      "type": "string",
+      "enum": [
+        "hien_dai",
+        "tan_co_dien",
+        "indochine",
+        "mai_thai",
+        "toi_gian",
+        "nhiet_doi",
+        "dia_trung_hai",
+        "co_dien",
+        "bac_au"
+      ],
+      "description": "Keep the brief's style unless the brief leaves it empty."
+    },
+    "roof": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "pitch_deg", "material", "colour"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["flat", "hip", "gable", "thai", "japanese", "mansard", "mixed"]
+        },
+        "pitch_deg": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "maximum": 60,
+          "description": "Null for a flat roof."
+        },
+        "material": {
+          "$ref": "#/$defs/code"
+        },
+        "colour": {
+          "$ref": "#/$defs/code"
+        }
+      }
+    },
+    "materials": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["where", "material", "colour", "finish"],
+        "properties": {
+          "where": {
+            "type": "string",
+            "enum": [
+              "base",
+              "body",
+              "accent",
+              "trim",
+              "railing",
+              "gate",
+              "fence",
+              "main_door",
+              "side_door",
+              "window",
+              "garage_door"
+            ]
+          },
+          "material": {
+            "$ref": "#/$defs/code"
+          },
+          "colour": {
+            "$ref": "#/$defs/code"
+          },
+          "finish": {
+            "type": ["string", "null"],
+            "maxLength": 60,
+            "description": "Short Vietnamese note, e.g. «sơn mờ», «đá băm»."
+          }
+        }
+      }
+    },
+    "palette": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primary_hex", "secondary_hex", "accent_hex"],
+      "properties": {
+        "primary_hex": {
+          "$ref": "#/$defs/hex"
+        },
+        "secondary_hex": {
+          "$ref": "#/$defs/hex"
+        },
+        "accent_hex": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/hex"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "gate": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "w", "h", "material", "colour"],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["swing", "sliding", "folding"]
+            },
+            "w": {
+              "type": "integer",
+              "description": "Gate width, cm."
+            },
+            "h": {
+              "type": "integer",
+              "description": "Gate height, cm."
+            },
+            "material": {
+              "$ref": "#/$defs/code"
+            },
+            "colour": {
+              "$ref": "#/$defs/code"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Null when the house has no front yard or no gate."
+    },
+    "fence": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["h", "material", "colour"],
+          "properties": {
+            "h": {
+              "type": "integer",
+              "description": "Fence height, cm."
+            },
+            "material": {
+              "$ref": "#/$defs/code"
+            },
+            "colour": {
+              "$ref": "#/$defs/code"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Null when the house has no front yard or no fence."
+    },
+    "balcony_railing": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/code"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Railing code for every balcony listed as LOCKED. Null only when there is none."
+    },
+    "parapet": {
+      "type": ["integer", "null"],
+      "description": "Parapet height above the roof slab, cm. Null when the roof has none."
+    },
+    "roof_outline": {
+      "anyOf": [
+        {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 24,
+          "items": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "integer"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Roof silhouette seen from the street as [x, z] points. Null lets the program draw it from type and pitch; give it only for a mixed roof."
+    },
+    "elements": {
+      "type": "array",
+      "maxItems": 40,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "rect", "material_ref"],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "canopy",
+              "column",
+              "cladding",
+              "louvre",
+              "planter",
+              "cornice",
+              "eaves_band",
+              "finial",
+              "reveal"
+            ]
+          },
+          "rect": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "items": {
+              "type": "integer"
+            },
+            "description": "[x0, z0, x1, z1] cm, inside the facade frame. Only canopy and louvre may cover an opening."
+          },
+          "material_ref": {
+            "type": ["integer", "null"],
+            "minimum": 0,
+            "description": "Index into materials; null means the body material."
+          }
+        }
+      }
+    },
+    "rationale": {
+      "type": "string",
+      "maxLength": 1500,
+      "description": "Vietnamese, why this facade suits the brief."
+    }
+  },
+  "$defs": {
+    "code": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$",
+      "maxLength": 40
+    },
+    "hex": {
+      "type": "string",
+      "pattern": "^#[0-9a-fA-F]{6}$"
+    }
+  }
+}
