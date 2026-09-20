@@ -1820,7 +1820,7 @@ async function workflowDead(workflow: Workflow, instanceId: string): Promise<str
     const state = await instance.status();
     if (state.status === 'errored') {
       return typeof state.error === 'string' && state.error
-        ? `Luồng chạy nền dừng vì lỗi: ${state.error}`
+        ? `Luồng chạy nền dừng vì lỗi: ${String(state.error)}`
         : 'Luồng chạy nền dừng vì lỗi.';
     }
     if (state.status === 'terminated') return 'Luồng chạy nền đã bị dừng.';

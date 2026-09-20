@@ -28,7 +28,7 @@
      * `_redirects` bên Pages. Đừng dựa vào mã trạng thái để phát hiện thiếu tài sản; kiểm bằng
      * `ls web/dist/assets` sau khi build.
      */
-    "not_found_handling": "single-page-application"
+    "not_found_handling": "single-page-application",
   },
 
   /**
@@ -45,5 +45,5 @@
   "preview_urls": false,
 
   /** Nhật ký Workers — cần để đọc lỗi thật khi có người báo sự cố. */
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
 }

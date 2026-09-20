@@ -125,7 +125,7 @@ export function DesignCreatePage() {
 
       setDirty(false);
       releaseUnsavedGuard();
-      navigate(`/tk/du-an/${created.id}`, { replace: true });
+      void navigate(`/tk/du-an/${created.id}`, { replace: true });
     } catch (e) {
       setError(toUserMessage(e, 'create'));
     }
@@ -134,7 +134,7 @@ export function DesignCreatePage() {
   function handleCancel() {
     // KHÔNG hỏi ở đây: `useUnsavedChangesGuard` đã chặn mọi lần chuyển trang, kể cả
     // lần này. Hỏi thêm một lần nữa là bắt người dùng xác nhận hai lần cho một việc.
-    navigate('/tk/du-an');
+    void navigate('/tk/du-an');
   }
 
   // Chế độ gộp "Toàn NVG" KHÔNG ghi được: NVG là mã tổng hợp toàn tập đoàn, không phải pháp

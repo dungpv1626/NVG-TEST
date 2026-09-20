@@ -320,13 +320,17 @@ export const estimateItems = pgTable(
     description: text('description').notNull(),
     unit: varchar('unit', { length: 32 }),
     quantity: numeric('quantity', { precision: 18, scale: 3 }).notNull().default('0'),
-    unitPrice: money('unit_price').notNull().default(sql`0`),
+    unitPrice: money('unit_price')
+      .notNull()
+      .default(sql`0`),
 
     /**
      * Thành tiền. Cố ý LƯU LẠI thay vì luôn tính `quantity * unit_price`: dự toán đã duyệt
      * phải đọc lại đúng con số tại thời điểm duyệt, kể cả khi quy tắc làm tròn đổi về sau.
      */
-    amount: money('amount').notNull().default(sql`0`),
+    amount: money('amount')
+      .notNull()
+      .default(sql`0`),
 
     notes: text('notes'),
 
@@ -418,15 +422,21 @@ export const projectBudgets = pgTable(
     costCode: varchar('cost_code', { length: 64 }).notNull(),
     name: text('name').notNull(),
 
-    budgetedAmount: money('budgeted_amount').notNull().default(sql`0`),
+    budgetedAmount: money('budgeted_amount')
+      .notNull()
+      .default(sql`0`),
 
     /**
      * Đã phát sinh thực tế. Module TC/MH/KT cập nhật khi có chứng từ; ở Giai đoạn 1 luôn là 0.
      */
-    actualAmount: money('actual_amount').notNull().default(sql`0`),
+    actualAmount: money('actual_amount')
+      .notNull()
+      .default(sql`0`),
 
     /** Đã cam kết (đơn hàng đã ký nhưng chưa nhận hoá đơn) — TC-05 cần để cảnh báo sớm. */
-    committedAmount: money('committed_amount').notNull().default(sql`0`),
+    committedAmount: money('committed_amount')
+      .notNull()
+      .default(sql`0`),
 
     notes: text('notes'),
 

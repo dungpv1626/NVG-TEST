@@ -10,7 +10,7 @@
 
 import { useState } from 'react';
 import type { StatusGroup, SupplierClass } from '@nvg/shared';
-import { MODULE_EMPTY_STATES, SUPPLIER_CLASS_LABELS, SUPPLIER_CRITERIA } from '@nvg/shared';
+import { SUPPLIER_CLASS_LABELS, SUPPLIER_CRITERIA } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { EntityTable, type EntityRow } from '@/components/entity/entity-table';
 import { Button } from '@/components/ui/button';

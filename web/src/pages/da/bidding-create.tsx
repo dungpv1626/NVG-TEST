@@ -126,7 +126,7 @@ export function BiddingCreatePage() {
 
       setDirty(false);
       releaseUnsavedGuard();
-      navigate(`/da/goi-thau/${created.id}`, { replace: true });
+      void navigate(`/da/goi-thau/${created.id}`, { replace: true });
     } catch (e) {
       setError(toUserMessage(e, 'create'));
     }
@@ -135,7 +135,7 @@ export function BiddingCreatePage() {
   function handleCancel() {
     // KHÔNG hỏi ở đây: `useUnsavedChangesGuard` đã chặn mọi lần chuyển trang, kể cả
     // lần này. Hỏi thêm một lần nữa là bắt người dùng xác nhận hai lần cho một việc.
-    navigate('/da/goi-thau');
+    void navigate('/da/goi-thau');
   }
 
   // Chế độ gộp "Toàn NVG" KHÔNG ghi được: NVG là mã tổng hợp toàn tập đoàn, không phải pháp

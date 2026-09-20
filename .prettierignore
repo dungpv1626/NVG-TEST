@@ -9,3 +9,7 @@ doc
 # Tệp do drizzle-kit sinh ra, không viết tay. Định dạng lại chúng làm mọi lần
 # `drizzle-kit generate` sau đó sinh ra một diff khổng lồ không liên quan nghiệp vụ.
 db/migrations
+
+# Dữ liệu GHI LẠI từ lượt chạy thật (lời gọi mô hình, phương án đã sinh), không phải mã viết tay.
+# Giữ nguyên byte như lúc nhận về; định dạng lại là sửa bằng chứng.
+workers/src/design/__tests__/fixtures

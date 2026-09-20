@@ -38,11 +38,6 @@ export interface ModuleMeta {
   readonly shortLabel: string;
   readonly description: string;
   readonly phase: Phase;
-  /**
-   * `true` = yêu cầu ở mức ĐỊNH HƯỚNG vì bộ phận liên quan chưa có khảo sát trực tiếp
-   * (PRD Mục 1.2 và Mục 10). Không coi là yêu cầu đã chốt.
-   */
-  readonly directionalOnly?: boolean;
 }
 
 export const MODULES: Readonly<Record<ModuleCode, ModuleMeta>> = {
@@ -89,7 +84,6 @@ export const MODULES: Readonly<Record<ModuleCode, ModuleMeta>> = {
     shortLabel: 'Thi công',
     description: 'Công trình, nhật ký công trường, nghiệm thu, nhà thầu phụ, bảo hành.',
     phase: 2,
-    directionalOnly: true,
   },
   MH: {
     code: 'MH',
@@ -126,7 +120,6 @@ export const MODULES: Readonly<Record<ModuleCode, ModuleMeta>> = {
     shortLabel: 'Sản xuất',
     description: 'Lệnh sản xuất, tiêu hao nguyên liệu, tài sản giàn giáo cho thuê (NVS).',
     phase: 2,
-    directionalOnly: true,
   },
   NEN: {
     code: 'NEN',

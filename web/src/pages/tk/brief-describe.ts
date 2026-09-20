@@ -28,8 +28,6 @@ import {
   type FloorPref,
 } from '@nvg/shared/design';
 
-const EM_DASH = '—';
-
 /** Một nhóm thành viên, đã đọc thành chữ tiếng Việt — dùng chung cho màn hình và bản in. */
 export interface FamilyRow {
   /** Vai trò, đã tra nhãn. */

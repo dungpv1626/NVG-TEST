@@ -112,9 +112,12 @@ export const constructionSites = pgTable(
 
     /**
      * Tiến độ tổng, đơn vị phần trăm.
-     * ⚠️ SUY LUẬN: chưa khảo sát nên chưa biết công trường đo tiến độ theo khối lượng hay
-     * theo đầu việc. Hiện là con số do chỉ huy trưởng tự đánh giá và ghi lại, KHÔNG tự tính
-     * từ nhật ký — tự tính khi chưa biết cách đo là tạo ra một con số không ai bảo vệ được.
+     * ⚠️ SUY LUẬN MỘT PHẦN. Khảo sát (02/09/2026) đã cho biết công trường đo theo **hạng
+     * mục/đầu việc**, xác nhận bằng **khối lượng hoàn thành đã nghiệm thu** (chưa nghiệm thu
+     * thì chưa tính). Còn thiếu hai thứ (câu hỏi #10): mức chi tiết của kế hoạch tiến độ và
+     * AI là người cập nhật %. Vì vậy đây vẫn là con số do chỉ huy trưởng tự đánh giá và ghi
+     * lại, KHÔNG tự tính từ nhật ký — tự tính khi chưa chốt đủ là tạo ra một con số không ai
+     * bảo vệ được.
      */
     progressPercent: numeric('progress_percent', { precision: 5, scale: 2 }),
 

@@ -22,7 +22,7 @@
 
 import { classifyHttpFault, classifyNetworkFault } from './provider-faults';
 import type { DataClass } from '@nvg/shared/design';
-import { LlmCallFailed, type GenerateImagePart } from './gemini';
+import { LlmCallFailed } from './gemini';
 import { ALLOWED_IMAGE_INPUT, decodeBase64, extensionFor, sniffMime } from './image-bytes';
 import type { ModelRouter, ResolvedRoute } from './router';
 import { schemaFor } from './schema-dialect';

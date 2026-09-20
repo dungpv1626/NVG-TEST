@@ -18,7 +18,6 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
 import type { AiFloorPlan } from '@nvg/shared/design';
-import { load } from 'js-yaml';
 import { describe, expect, it } from 'vitest';
 import { parseSheetStyle, SheetStyleError } from '../ai/draw/style';
 import { renderPlanSheet, PlanSheetError } from '../ai/draw/plan-sheet';

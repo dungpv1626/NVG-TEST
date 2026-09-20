@@ -26,7 +26,6 @@
 
 import type {
   AiFloorPlan,
-  AiFloorPlanLevel,
   AiPlanIntent,
   AiPlanRoomsLevel,
   AiPlanTree,
@@ -68,15 +67,7 @@ import {
   type PackLeaf,
   type PenaltyWeights,
 } from './pack';
-import {
-  emitNodes,
-  leaves,
-  pinLeaf,
-  sharedEdge,
-  type Axis,
-  type Placed,
-  type Side,
-} from './placed';
+import { emitNodes, leaves, pinLeaf, type Axis, type Placed, type Side } from './placed';
 import {
   copySketch,
   forceSketchRect,

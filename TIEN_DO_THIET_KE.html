@@ -1630,6 +1630,39 @@
           <tbody>
             <tr>
               <td class="num">20/09</td>
+              <td>Hạ tầng kiểm: eslint chạy thật, GitHub Actions, bằng chứng đột biến</td>
+              <td class="xs">
+                · <b>eslint chưa từng chạy được</b>: <code>package.json</code> khai
+                <code>"lint": "eslint ."</code> mà kho không có eslint lẫn tệp cấu hình — mỗi lần
+                gọi ra đúng một dòng «eslint: not found». Nay có <code>eslint.config.js</code> chọn
+                luật theo tiêu chí bắt LỖI chứ không bắt cách viết (định dạng đã có prettier). Chạy
+                lần đầu ra 534 chỗ, đã xử lý hết.<br />
+                · Lỗi thật eslint tìm ra: nút «Ngừng giao dịch / Đặt làm nhà cung cấp chính» ở Chi
+                tiết nhà cung cấp dựng xong mà không bao giờ hiện ra màn hình; hai hook quyền gọi
+                sau <code>||</code> nên hook thứ hai bị bỏ qua khi hook đầu trả true (React gán nhầm
+                state); <code>rentalAgreementDisplayStatus</code> nhận tham số ngày rồi so với đồng
+                hồ thật, nên bài kiểm truyền ngày giả không kiểm được gì; mất phiên đăng nhập lúc
+                mạng hỏng thì màn hình treo ở khung xương vĩnh viễn.<br />
+                · Hai luật phải TẮT kèm lý do trong tệp cấu hình:
+                <code>no-unnecessary-type-assertion</code> (sai ở đúng chỗ hay kêu nhất —
+                <code>res.json()</code> và <code>step.do()</code>; để máy tự sửa 244 chỗ thì
+                <code>tsc</code> đỏ ngay) và <code>no-base-to-string</code>.<br />
+                · <b>GitHub Actions</b> <code>.github/workflows/kiem.yml</code>: định dạng, luật,
+                kiểu, hợp đồng và 1.606 phép thử chạy trên máy sạch mỗi lần đẩy nhánh hoặc mở PR. Cố
+                ý KHÔNG chạy phép thử <code>db/</code> — chúng nối vào Supabase thật và xoá cứng dữ
+                liệu theo tiền tố <code>[TEST]</code>.<br />
+                · Dựng CI lộ ra một chỗ hỏng im lặng: <code>scrollIntoView</code> không có trong
+                jsdom nên vitest thoát mã 1 vì «Unhandled Errors» trong khi dòng tổng kết vẫn ghi đủ
+                bài xanh. Đã vá ở <code>web/src/test/setup.ts</code>.<br />
+                · <b>Bằng chứng đột biến</b> <code>npm run mutation-proof</code>: cài 11 lỗi thật
+                vào mã nguồn rồi đòi bộ kiểm phải đỏ. Lượt đầu <b>8/11</b> — ba đột biến phân quyền
+                SỐNG SÓT: không có quyền vẫn trả true, bỏ hẳn lọc pháp nhân, kho artifact dùng lại
+                dòng của hồ sơ khác. Đã tách <code>canDo</code> thành hàm thuần và viết hai tệp phép
+                thử mới; chạy lại <b>11/11</b>.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">20/09</td>
               <td>T59 — rà soát bước Mặt đứng trước khi commit, sửa 8 lỗi</td>
               <td class="xs">
                 · Hai lượt rà soát độc lập (tuyến API + lưu trữ; hình học + bản vẽ). Đã sửa, mỗi lỗi

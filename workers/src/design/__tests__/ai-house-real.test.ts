@@ -20,7 +20,7 @@ import { evaluateHouse, planContext, programGenerator, type PlanContextInput } f
 import { parseAiPrompts } from '../ai/prompts';
 import { NO_RULE_PACKS, selectedRulePack } from '../ai/rule-packs';
 import { parseBriefFidelity } from '../kb/brief-fidelity';
-import { parseConstructionNorms, usableMaxAspect, usableMinSide } from '../kb/construction';
+import { parseConstructionNorms } from '../kb/construction';
 import { parseSiteContext } from '../kb/site-context';
 import { briefMinimums, type HouseIntent } from '../ai/house';
 import {

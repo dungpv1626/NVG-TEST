@@ -395,9 +395,10 @@ const router = createBrowserRouter(
           <Route path="ns/tuyen-dung" element={<RecruitmentPage />} />
         </Route>
 
-        {/* SX — sản xuất và cho thuê giàn giáo (SX-01 → SX-03, định hướng — PRD Mục 10).
-                  Cho thuê giàn giáo (SX-03) đứng trước vì đã đủ thông tin triển khai; lệnh
-                  sản xuất (SX-01) còn "cần xác nhận thêm". */}
+        {/* SX — sản xuất và cho thuê giàn giáo. Số hiệu ở đây là SX-01 → SX-03 CŨ, không
+                  trùng SX-01 → SX-22 của PRD v1.4. Cho thuê giàn giáo (SX-03 cũ) đứng trước
+                  vì đã đủ thông tin triển khai; lệnh sản xuất (SX-01 cũ) mới ở mức khung,
+                  phần còn lại chặn bởi dữ liệu — câu hỏi #28 của BUILD_PLAN.md. */}
         <Route element={<ModuleGuard module="SX" />}>
           <Route path="sx/tai-san-cho-thue" element={<RentalAgreementListPage />} />
           <Route path="sx/tai-san-cho-thue/:id" element={<RentalAgreementDetailPage />} />

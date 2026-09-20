@@ -206,9 +206,15 @@
       <header>
         <h1>Tiến độ phát triển — Hệ thống Quản trị Nhà Việt Group</h1>
         <p class="xs muted">
-          Cập nhật: <strong>05/09/2026</strong> · Chi tiết đầy đủ: <code>BUILD_PLAN.md</code> · Ràng
-          buộc/quyết định: <code>CLAUDE.md</code> §6 · Module Thiết kế AI có file riêng:
+          Cập nhật: <strong>20/09/2026</strong> · Chi tiết đầy đủ: <code>BUILD_PLAN.md</code> · Ràng
+          buộc/quyết định: <code>CLAUDE.md</code> §6 · Câu hỏi chờ NVG:
+          <code>doc/VAN_DE_CON_MO.md</code> · Module Thiết kế AI có file riêng:
           <code>TIEN_DO_THIET_KE.html</code>
+        </p>
+        <p class="xs muted">
+          Phần quản trị hệ thống (11 module ngoài Thiết kế AI) chạm lần cuối
+          <strong>05/09/2026</strong>
+          — toàn bộ công việc từ 10/09 tới nay thuộc nhánh Thiết kế AI.
         </p>
       </header>
 
@@ -239,9 +245,9 @@
         </p>
         <div class="stats">
           <div class="stat"><b>12/12</b><span class="xs muted">module đã dựng</span></div>
-          <div class="stat"><b>118</b><span class="xs muted">migration</span></div>
-          <div class="stat"><b>1.134</b><span class="xs muted">kiểm thử tự động</span></div>
-          <div class="stat"><b>104</b><span class="xs muted">bảng CSDL</span></div>
+          <div class="stat"><b>130</b><span class="xs muted">migration</span></div>
+          <div class="stat"><b>2.068</b><span class="xs muted">kiểm thử tự động</span></div>
+          <div class="stat"><b>108</b><span class="xs muted">bảng CSDL</span></div>
         </div>
       </section>
 
@@ -364,8 +370,8 @@
             <tr>
               <td><strong>P5</strong> AI thiết kế sơ bộ</td>
               <td>
-                TK-10 → TK-17 — đã qua Mốc 5 (bộ giải mặt bằng CP-SAT, xuất DXF). Tiến độ chi tiết ở
-                <code>TIEN_DO_THIET_KE.html</code>
+                TK-10 → TK-17 — bộ giải nội bộ đã gỡ hẳn, thiết kế tự động nay chỉ còn nhánh AI («AI
+                Design»). Tiến độ chi tiết ở <code>TIEN_DO_THIET_KE.html</code>
               </td>
               <td><span class="pill s-progress">Đang làm</span></td>
             </tr>
@@ -621,16 +627,18 @@
       <h2>Kiểm thử tự động</h2>
       <div class="card">
         <div class="stats" style="margin-top: 0">
-          <div class="stat"><b>1.134</b><span class="xs muted">tổng số</span></div>
+          <div class="stat"><b>2.068</b><span class="xs muted">tổng số</span></div>
           <div class="stat">
-            <b>234</b><span class="xs muted">giao diện — chạy ~9 giây, không chạm mạng</span>
+            <b>417</b><span class="xs muted">giao diện — chạy ~20 giây, không chạm mạng</span>
           </div>
           <div class="stat">
-            <b>900</b><span class="xs muted">nghiệp vụ, phân quyền &amp; engine thiết kế</span>
+            <b>1.651</b><span class="xs muted">nghiệp vụ, phân quyền &amp; engine thiết kế</span>
           </div>
           <div class="stat">
             <b style="color: var(--done)">xanh</b
-            ><span class="xs muted">xác nhận 05/09/2026, chạy từng tệp</span>
+            ><span class="xs muted"
+              >giao diện xác nhận 20/09/2026; phần chạm CSDL chạy từng tệp</span
+            >
           </div>
         </div>
         <p class="xs muted" style="margin-top: 12px">
@@ -763,10 +771,12 @@
       <h2>Câu hỏi cần Nhà Việt Group trả lời</h2>
       <div class="card">
         <p class="xs muted">
-          Danh sách đầy đủ ở <code>CLAUDE.md</code> §6.6 — đây là các mục ưu tiên cao nhất. Bộ tài
-          liệu 05/09/2026 đã trả lời ba dòng cũ (giá thuê nội bộ, nơi giữ định mức, catalogue — đánh
-          dấu <s>gạch ngang</s> bên dưới) và mở ra bảy dòng mới, phần lớn là tham số cấu hình
-          <strong>cố ý để RỖNG</strong> chờ Ban Giám đốc quyết, không phải chỗ code còn thiếu.
+          Danh sách đầy đủ ở <code>doc/VAN_DE_CON_MO.md</code>, đánh mã <code>#N</code> theo bảng
+          «Quyết định còn cần Haan chốt» của <code>BUILD_PLAN.md</code> — đây là các mục ưu tiên cao
+          nhất. Bộ tài liệu 05/09/2026 đã trả lời ba dòng cũ (giá thuê nội bộ, nơi giữ định mức,
+          catalogue — đánh dấu <s>gạch ngang</s> bên dưới) và mở ra bảy dòng mới, phần lớn là tham
+          số cấu hình <strong>cố ý để RỖNG</strong> chờ Ban Giám đốc quyết, không phải chỗ code còn
+          thiếu.
         </p>
         <div class="tablewrap" style="box-shadow: none; border: 0">
           <table>

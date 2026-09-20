@@ -93,8 +93,8 @@ export function BudgetPanel({ siteId }: { siteId: string }) {
           </div>
         </dl>
         <p className="mt-3 text-xs text-fg-subtle">
-          Chi phí đã phát sinh và đã cam kết do Mua hàng, Kho và Kế toán cập nhật khi có chứng
-          từ. Ở bản hiện tại các cột đó còn bằng 0 vì ba phân hệ này thuộc Giai đoạn 2.
+          Chi phí đã phát sinh và đã cam kết do Mua hàng, Kho và Kế toán cập nhật khi có chứng từ. Ở
+          bản hiện tại các cột đó còn bằng 0 vì ba phân hệ này thuộc Giai đoạn 2.
         </p>
       </section>
 
@@ -105,12 +105,24 @@ export function BudgetPanel({ siteId }: { siteId: string }) {
           </caption>
           <thead>
             <tr className="border-b border-border text-left text-xs text-fg-subtle">
-              <th scope="col" className="px-3 py-2 font-medium">Mã chi phí</th>
-              <th scope="col" className="px-3 py-2 font-medium">Nhóm</th>
-              <th scope="col" className="px-3 py-2 text-right font-medium">Ngân sách</th>
-              <th scope="col" className="px-3 py-2 text-right font-medium">Đã phát sinh</th>
-              <th scope="col" className="px-3 py-2 text-right font-medium">Đã cam kết</th>
-              <th scope="col" className="px-3 py-2 text-right font-medium">Còn được chi</th>
+              <th scope="col" className="px-3 py-2 font-medium">
+                Mã chi phí
+              </th>
+              <th scope="col" className="px-3 py-2 font-medium">
+                Nhóm
+              </th>
+              <th scope="col" className="px-3 py-2 text-right font-medium">
+                Ngân sách
+              </th>
+              <th scope="col" className="px-3 py-2 text-right font-medium">
+                Đã phát sinh
+              </th>
+              <th scope="col" className="px-3 py-2 text-right font-medium">
+                Đã cam kết
+              </th>
+              <th scope="col" className="px-3 py-2 text-right font-medium">
+                Còn được chi
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -150,10 +162,7 @@ export function BudgetPanel({ siteId }: { siteId: string }) {
                       {warn && <AlertTriangle className="size-4 shrink-0" aria-hidden />}
                       {formatCurrency(line.remaining)}
                       {warn && (
-                        <span className="sr-only">
-                          {' '}
-                          — {BUDGET_HEALTH_META[line.health].label}
-                        </span>
+                        <span className="sr-only"> — {BUDGET_HEALTH_META[line.health].label}</span>
                       )}
                     </span>
                   </td>

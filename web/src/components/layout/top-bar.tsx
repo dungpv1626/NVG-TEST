@@ -96,7 +96,7 @@ function GlobalSearchBox({ tk }: { tk: boolean }) {
   }, []);
 
   function selectResult(path: string) {
-    navigate(path);
+    void navigate(path);
     setIsOpen(false);
     setRawQuery('');
     setTerm('');

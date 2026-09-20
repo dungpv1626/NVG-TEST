@@ -44,7 +44,7 @@ function FormScreen({ withRelease = true }: { withRelease?: boolean } = {}) {
         onClick={() => {
           setDirty(false);
           if (withRelease) release();
-          navigate('/crm/co-hoi/da-luu', { replace: true });
+          void navigate('/crm/co-hoi/da-luu', { replace: true });
         }}
       >
         Lưu

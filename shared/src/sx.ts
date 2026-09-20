@@ -1,12 +1,13 @@
 /**
  * Hằng số và kiểu dữ liệu dùng chung cho Module SX — Sản xuất và Cho thuê giàn giáo (NVS).
  *
- * Nguồn: PRD SX-01 → SX-03, Backend Schema 4.12.
+ * Nguồn: PRD SX-01 → SX-03 (số CŨ — KHÔNG trùng SX-01 → SX-22 của PRD v1.4), Backend
+ * Schema 4.12.
  *
- * ⚠️ SX-01 (lệnh sản xuất) và SX-02 (giá thành) ghi "cần xác nhận thêm" ngay trong PRD —
- * Xưởng sản xuất giàn giáo chưa có khảo sát trực tiếp (PRD Mục 10, CLAUDE.md 5.6). Ở đây chỉ
- * dựng khung tối thiểu (lệnh sản xuất + tiêu hao nguyên liệu), KHÔNG có công thức giá thành
- * hay năng suất tổ sản xuất — những thứ đó cần dữ liệu khảo sát mới định nghĩa đúng được.
+ * ⚠️ SX-01 (lệnh sản xuất) và SX-02 (giá thành) theo số cũ mới ở mức khung tối thiểu (lệnh
+ * sản xuất + tiêu hao nguyên liệu), KHÔNG có công thức giá thành hay năng suất tổ sản xuất.
+ * Phiếu khảo sát Xưởng đã có (02/09/2026) nhưng để trống đúng các ô cần cho phần này, kèm
+ * câu "không nên ước lượng một con số để điền" — xem câu hỏi #28 của `BUILD_PLAN.md`.
  *
  * SX-03 (tài sản cho thuê) đã đủ thông tin nên triển khai đầy đủ, liên kết chặt với Module
  * KHO (KHO-06 vòng đời giàn giáo) và Module CRM (CRM-11 khách thuê).
@@ -65,7 +66,7 @@ export function rentalAgreementDisplayStatus(
 ): StatusGroup {
   if (status === 'dang_thue' && expectedEndDate) {
     const due = new Date(expectedEndDate);
-    if (!Number.isNaN(due.getTime()) && due.getTime() < Date.now()) return 'overdue';
+    if (!Number.isNaN(due.getTime()) && due.getTime() < today.getTime()) return 'overdue';
   }
   return RENTAL_AGREEMENT_STATUS_META[status].statusGroup;
 }

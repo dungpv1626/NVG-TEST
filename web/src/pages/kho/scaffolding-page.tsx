@@ -76,7 +76,9 @@ export function ScaffoldingPage() {
   const [eventType, setEventType] = useState<ScaffoldingEventType>('sua_chua');
   const [pageError, setPageError] = useState<string | null>(null);
 
-  const assets = data ?? [];
+  // Không viết thẳng `data ?? []`: mảng rỗng mới mỗi lần dựng làm `useMemo` bên dưới tính lại
+  // sau MỌI lần dựng, tức là không còn là bộ nhớ đệm nữa.
+  const assets = useMemo(() => data ?? [], [data]);
 
   const totals = useMemo(() => {
     let usable = 0;

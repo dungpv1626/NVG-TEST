@@ -1,11 +1,12 @@
 /**
  * Truy vấn và thao tác trên công trình thi công (Module TC).
  *
- * Nguồn: PRD TC-01 → TC-08, Backend Schema 4.6, Webapp Flow 3.4.
+ * Nguồn: PRD TC-01 → TC-08 (phạm vi cũ), Backend Schema 4.6, Webapp Flow 3.4.
  *
- * ⚠️ Module ĐỊNH HƯỚNG (PRD Mục 10) — chưa khảo sát Chỉ huy – Giám sát công trường. Giao
- * diện cố ý giữ ở mức đủ chạy trọn luồng, không dựng sâu: thứ dựng sâu dựa trên phỏng đoán
- * là thứ phải gỡ đi sau khi có khảo sát.
+ * ⚠️ Giao diện ở đây mới phủ phạm vi CŨ, đủ chạy trọn luồng chứ không dựng sâu. Phiếu khảo
+ * sát Chỉ huy – Giám sát công trường đã có (02/09/2026) và PRD v1.4 mở phạm vi thành
+ * TC-01 → TC-20; phần còn thiếu ghi ở `BUILD_PLAN.md` mục 6.1, 6.2, 6.5. Ngân sách thao tác
+ * hiện trường là tiêu chí nghiệm thu: cập nhật hằng ngày ≤ 10–20 phút, mục tiêu 5–10.
  *
  * Bốn thao tác đi qua hàm CSDL chứ không UPDATE thẳng, vì mỗi cái có điều kiện riêng mà
  * trình duyệt không được phép bỏ qua: mở công trình (hợp đồng phải đã ký), chuyển bước

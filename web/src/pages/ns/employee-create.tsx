@@ -73,7 +73,7 @@ export function EmployeeCreatePage() {
         salaryType,
         baseSalary: baseSalary || null,
       });
-      navigate(`/ns/nhan-su/${id}`, { replace: true });
+      void navigate(`/ns/nhan-su/${id}`, { replace: true });
     } catch (e) {
       setPageError(toUserMessage(e, 'create'));
     }

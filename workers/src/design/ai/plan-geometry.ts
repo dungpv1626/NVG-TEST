@@ -29,7 +29,6 @@ import type { PlanIssue } from './plan-check';
 
 type ProposalLevel = AiPlanRooms['levels'][number];
 type ProposalDoor = NonNullable<ProposalLevel['doors']>[number];
-type ProposalWindow = NonNullable<ProposalLevel['windows']>[number];
 export type Edge = ProposalDoor['edge'];
 type ArtifactDoor = NonNullable<AiFloorPlanLevel['doors']>[number];
 type ArtifactWindow = NonNullable<AiFloorPlanLevel['windows']>[number];

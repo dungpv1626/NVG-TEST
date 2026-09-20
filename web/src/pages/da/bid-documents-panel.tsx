@@ -39,9 +39,11 @@ export function BidDocumentsPanel({
   const submitBid = useSubmitBid();
 
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState<{ category: BidDocumentCategory; name: string; required: boolean }>(
-    { category: 'phap_ly', name: '', required: true },
-  );
+  const [form, setForm] = useState<{
+    category: BidDocumentCategory;
+    name: string;
+    required: boolean;
+  }>({ category: 'phap_ly', name: '', required: true });
 
   const missing = (documents ?? []).filter((d) => d.is_required && !d.submitted_at).length;
 
@@ -144,7 +146,10 @@ export function BidDocumentsPanel({
       )}
 
       {!readOnly && !submittedAt && (
-        <form onSubmit={addDocument} className="rounded-lg border border-border bg-surface p-4 shadow-card">
+        <form
+          onSubmit={addDocument}
+          className="rounded-lg border border-border bg-surface p-4 shadow-card"
+        >
           <p className="mb-3 font-medium">Thêm đầu mục hồ sơ</p>
           <div className="grid gap-3 sm:grid-cols-3">
             <Field label="Nhóm hồ sơ">
@@ -164,7 +169,10 @@ export function BidDocumentsPanel({
             </Field>
 
             <Field label="Tên đầu mục" required>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              <Input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+              />
             </Field>
 
             <Field label="Bắt buộc">
@@ -179,7 +187,12 @@ export function BidDocumentsPanel({
             </Field>
           </div>
 
-          <Button type="submit" variant="secondary" className="mt-3" disabled={saveDocument.isPending}>
+          <Button
+            type="submit"
+            variant="secondary"
+            className="mt-3"
+            disabled={saveDocument.isPending}
+          >
             {saveDocument.isPending ? 'Đang lưu…' : BUTTONS.save}
           </Button>
         </form>

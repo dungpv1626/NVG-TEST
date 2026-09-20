@@ -6,7 +6,16 @@
  * `opportunities` và các bảng còn lại thuộc Phase 2A.
  */
 
-import { date, index, pgTable, text, timestamp, uniqueIndex, uuid, varchar } from 'drizzle-orm/pg-core';
+import {
+  date,
+  index,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+  varchar,
+} from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { auditColumns } from './_audit';
 import {
@@ -286,7 +295,10 @@ export const complaints = pgTable(
      * KHÔNG đặt khoá ngoại được trên phần tử mảng — người dùng bị xoá sẽ để lại id mồ côi;
      * giao diện hiển thị "Không rõ" thay vì vỡ.
      */
-    collaboratorIds: uuid('collaborator_ids').array().notNull().default(sql`'{}'::uuid[]`),
+    collaboratorIds: uuid('collaborator_ids')
+      .array()
+      .notNull()
+      .default(sql`'{}'::uuid[]`),
 
     /** Hạn phản hồi (CRM-08). */
     responseDueDate: date('response_due_date'),

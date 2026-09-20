@@ -236,8 +236,10 @@ export class DxfDocument {
       ys.push(p[1] - pad, p[1] + pad);
     };
     for (const e of this.entities) {
-      if (e.kind === 'line') (add(e.a), add(e.b));
-      else if (e.kind === 'polyline') e.points.forEach((p) => add(p));
+      if (e.kind === 'line') {
+        add(e.a);
+        add(e.b);
+      } else if (e.kind === 'polyline') e.points.forEach((p) => add(p));
       else if (e.kind === 'text') add(e.at, e.height);
       else add(e.centre, e.r);
     }
@@ -259,6 +261,8 @@ function fmt(value: number): string {
  */
 export function sanitiseText(text: string): string {
   let out = '';
+  // Dải ký tự điều khiển ở đây là CHỦ ĐÍCH: tệp DXF không mang được chúng.
+  // eslint-disable-next-line no-control-regex
   for (const char of text.replace(/[ -]/g, ' ').trim()) {
     const code = char.codePointAt(0)!;
     if (char === '\\') out += '/';

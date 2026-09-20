@@ -60,13 +60,27 @@ export function SitePurchaseRequestPanel({
         <table className="w-full min-w-[44rem] text-left">
           <thead className="border-b border-border text-fg-muted">
             <tr>
-              <th scope="col" className="py-2 pr-4 font-medium">Mã</th>
-              <th scope="col" className="py-2 pr-4 font-medium">Nội dung</th>
-              <th scope="col" className="py-2 pr-4 font-medium">Mã chi phí</th>
-              <th scope="col" className="py-2 pr-4 font-medium">Cần trước ngày</th>
-              <th scope="col" className="py-2 pr-4 text-right font-medium">Giá trị ước tính</th>
-              <th scope="col" className="py-2 pr-4 font-medium">Bước</th>
-              <th scope="col" className="py-2 font-medium">Trạng thái</th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                Mã
+              </th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                Nội dung
+              </th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                Mã chi phí
+              </th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                Cần trước ngày
+              </th>
+              <th scope="col" className="py-2 pr-4 text-right font-medium">
+                Giá trị ước tính
+              </th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                Bước
+              </th>
+              <th scope="col" className="py-2 font-medium">
+                Trạng thái
+              </th>
             </tr>
           </thead>
           <tbody>

@@ -15,13 +15,7 @@
 
 import { useState } from 'react';
 import { CalendarClock, ClipboardCheck } from 'lucide-react';
-import {
-  BUTTONS,
-  formatDateTime,
-  fromNvgInput,
-  toNvgDateInput,
-  toNvgTimeInput,
-} from '@nvg/shared';
+import { BUTTONS, formatDateTime, fromNvgInput, toNvgDateInput, toNvgTimeInput } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -270,9 +264,7 @@ function SurveyCard({
             </div>
             <div className="text-xs text-fg-subtle">
               Người khảo sát: {survey.surveyor?.full_name ?? EM_DASH}
-              {done && survey.scheduled_at && (
-                <> · Hẹn lúc {formatDateTime(survey.scheduled_at)}</>
-              )}
+              {done && survey.scheduled_at && <> · Hẹn lúc {formatDateTime(survey.scheduled_at)}</>}
             </div>
           </div>
         </div>

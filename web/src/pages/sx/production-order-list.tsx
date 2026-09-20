@@ -1,10 +1,12 @@
 /**
  * Lệnh sản xuất (SX-01) — mẫu bố cục Danh sách (Webapp Flow 4.2).
  *
- * ⚠️ PRD ghi thẳng "cần xác nhận thêm" — Xưởng sản xuất giàn giáo NVS chưa có khảo sát trực
- * tiếp (PRD Mục 10, CLAUDE.md 5.6). Màn hình này CỐ Ý dừng ở mức khung tối thiểu: tên sản
- * phẩm, số lượng, trạng thái. KHÔNG có định mức tiêu hao chuẩn, kế hoạch sản xuất theo tổ hay
- * công thức giá thành — những thứ đó cần dữ liệu khảo sát mới định nghĩa đúng được.
+ * ⚠️ Màn hình này CỐ Ý dừng ở mức khung tối thiểu: tên sản phẩm, số lượng, trạng thái. KHÔNG
+ * có định mức tiêu hao chuẩn, kế hoạch sản xuất theo tổ hay công thức giá thành. Phiếu khảo
+ * sát Xưởng đã có (02/09/2026) nhưng để trống đúng bốn ô cần cho phần này — bộ định mức hiện
+ * hành, tỷ lệ lỗi, sản lượng/tháng, phân loại bán – cho thuê từng mã — và ghi thẳng "không
+ * nên ước lượng một con số để điền" (câu hỏi #28 của `BUILD_PLAN.md`). Phần còn thiếu ghi ở
+ * `BUILD_PLAN.md` mục 6.6. Số hiệu SX ở đây là số CŨ, không trùng SX-01 → SX-22 của PRD v1.4.
  */
 
 import { useState } from 'react';

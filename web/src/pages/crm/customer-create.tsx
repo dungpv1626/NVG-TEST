@@ -89,7 +89,7 @@ export function CustomerCreatePage() {
 
       setDirty(false);
       releaseUnsavedGuard();
-      navigate(`/crm/khach-hang/${created.id}`, { replace: true });
+      void navigate(`/crm/khach-hang/${created.id}`, { replace: true });
     } catch (e) {
       setError(toUserMessage(e, 'create'));
     }
@@ -98,7 +98,7 @@ export function CustomerCreatePage() {
   function handleCancel() {
     // KHÔNG hỏi ở đây: `useUnsavedChangesGuard` đã chặn mọi lần chuyển trang, kể cả
     // lần này. Hỏi thêm một lần nữa là bắt người dùng xác nhận hai lần cho một việc.
-    navigate('/crm/khach-hang');
+    void navigate('/crm/khach-hang');
   }
 
   if (!canCreate) {

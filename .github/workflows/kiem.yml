@@ -1,0 +1,72 @@
+# Kiểm tự động mỗi lần đẩy nhánh hoặc mở PR (20/09/2026).
+#
+# Trước hôm nay kho KHÔNG có workflow nào: mọi con số trong phần «Kiểm» của PR là do người chạy ở
+# máy rồi chép vào, không ai đối chiếu được. Workflow này chạy lại đúng bốn lệnh ấy trên máy sạch.
+#
+# CỐ Ý KHÔNG chạy phép thử trong `db/`: chúng nối vào CSDL Supabase thật (một project dùng chung
+# cho máy phát triển và bản chạy thử công khai), đăng nhập bằng tài khoản mồi và XOÁ CỨNG dữ liệu
+# theo tiền tố `[TEST]`. Chạy trên máy chủ CI nghĩa là đưa khoá CSDL thật lên đó và để mỗi lần đẩy
+# nhánh động vào dữ liệu của bản công khai. Chúng chạy ở máy, có người ngồi cạnh.
+# Phép thử `web/e2e` (Playwright) cũng không chạy ở đây: cần trình duyệt và một bản dựng đang chạy.
+
+name: Kiểm
+
+on:
+  # Chỉ `main` ở nhánh push: nhánh làm việc đã được `pull_request` phủ, mà hai sự kiện cho ra hai
+  # `github.ref` khác nhau nên `concurrency` không huỷ chéo được — đẩy lên nhánh đang có PR mở sẽ
+  # chạy hai lượt song song.
+  push:
+    branches: [main]
+  pull_request:
+
+# Đẩy tiếp lên cùng một nhánh thì huỷ lượt đang chạy dở — không xếp hàng chờ kết quả đã cũ.
+concurrency:
+  group: kiem-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  kiem:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      # Ba biến VITE_ phải có GIÁ TRỊ GIẢ: `web/src/lib/supabase.ts` và `design-api.ts` ném lỗi
+      # ngay lúc nạp mô-đun khi thiếu, nên thiếu chúng là 82 bài kiểm web đỏ mà không liên quan
+      # gì tới thay đổi trong PR. Đây là địa chỉ không tồn tại — bài kiểm không gọi mạng.
+      VITE_SUPABASE_URL: https://example.supabase.co
+      VITE_SUPABASE_ANON_KEY: khoa-gia-cho-ci
+      VITE_DESIGN_API_URL: https://example.invalid
+      # ĐỂ RỖNG CÓ CHỦ ĐÍCH, đừng thay bằng khoá thật. `vitest.config.ts` khai `globalSetup` ở cấp
+      # cấu hình, nên `cleanupTestData()` chạy với MỌI lượt vitest kể cả khi bộ lọc đã loại hết
+      # bài kiểm `db/` — và hàm ấy XOÁ CỨNG trên CSDL dùng chung với bản chạy thử công khai. Nó
+      # chỉ chịu đứng yên vì hai biến này rỗng (`db/src/__tests__/helpers.ts`).
+      SUPABASE_URL: ''
+      SUPABASE_ANON_KEY: ''
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Định dạng
+        run: npx prettier --check .
+
+      - name: Luật mã nguồn
+        run: npm run lint
+
+      - name: Kiểu
+        run: npm run typecheck
+
+      - name: Hợp đồng dữ liệu khớp mã sinh ra
+        run: npm run contracts:check
+
+      # Ba đường dẫn ở cuối là bộ lọc: `--exclude 'db/**'` KHÔNG ăn vì `include` của project
+      # «logic» đã gom cả `db/**` (thử ngày 20/09/2026, phép thử db vẫn chạy). Lọc theo đường dẫn
+      # thì chắc: 1.599 bài của `shared/`, `workers/` và `web/`.
+      - name: Phép thử
+        run: npx vitest run --project logic --project web shared/ workers/ web/src

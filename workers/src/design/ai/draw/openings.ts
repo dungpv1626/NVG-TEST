@@ -10,7 +10,7 @@
  */
 
 import type { AiFloorPlanLevel } from '@nvg/shared/design';
-import { along, addVec, bboxOfPoints, type Interval, type Pt, type Rect } from './geometry';
+import { along, addVec, bboxOfPoints, type Interval, type Rect } from './geometry';
 import { DrawNotes } from './notes';
 import { arcPath, CLS, polylinePath, tag } from './svg';
 import type { Paper } from './units';
@@ -20,7 +20,6 @@ import type { WallGeom, WallHoles } from './walls';
 const SHUTTER_DASH = '2 1.5';
 
 type Door = NonNullable<AiFloorPlanLevel['doors']>[number];
-type Window = NonNullable<AiFloorPlanLevel['windows']>[number];
 
 export interface OpeningsResult {
   /** Lỗ mở theo từng bức tường — đầu vào của `renderWalls`. */

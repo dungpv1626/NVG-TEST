@@ -63,7 +63,7 @@ describe('Thửa hình thang — dạng không đều phổ biến nhất', () =
       [g.buildable.xM + g.buildable.widthM, g.buildable.yM + g.buildable.depthM],
       [g.buildable.xM, g.buildable.yM + g.buildable.depthM],
     ] as Point[]) {
-      expect(pointInPolygon(corner, g.boundary), `góc ${corner}`).toBe(true);
+      expect(pointInPolygon(corner, g.boundary), `góc ${corner.join(', ')}`).toBe(true);
     }
   });
 
@@ -119,7 +119,7 @@ describe('Thửa đa giác', () => {
       [xM + widthM, yM + depthM],
       [xM, yM + depthM],
     ] as Point[]) {
-      expect(pointInPolygon(corner, g.boundary), `góc ${corner}`).toBe(true);
+      expect(pointInPolygon(corner, g.boundary), `góc ${corner.join(', ')}`).toBe(true);
     }
     expect(g.exact, 'đa giác: kết quả an toàn nhưng có thể chưa lớn nhất').toBe(false);
   });

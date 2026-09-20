@@ -47,10 +47,10 @@ export function useComplaints(options: { customerId?: string } = {}) {
   return useQuery<ComplaintRecord[], Error>({
     queryKey: ['complaints', scope.companyId, options.customerId ?? null],
     queryFn: async () => {
-      let q = withCompanyScope(
-        supabase.from('complaints').select(COMPLAINT_SELECT),
-        scope,
-      ).is('deleted_at', null);
+      let q = withCompanyScope(supabase.from('complaints').select(COMPLAINT_SELECT), scope).is(
+        'deleted_at',
+        null,
+      );
 
       if (options.customerId) q = q.eq('customer_id', options.customerId);
 

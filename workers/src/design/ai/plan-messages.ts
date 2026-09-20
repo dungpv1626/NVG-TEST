@@ -44,7 +44,7 @@ export class RuleMessages {
       }
       return String(value);
     });
-    return missing ? `Phương án lệch quy tắc ${ruleId} (thiếu tham số ${missing}).` : text;
+    return missing ? `Phương án lệch quy tắc ${ruleId} (thiếu tham số ${String(missing)}).` : text;
   }
 }
 

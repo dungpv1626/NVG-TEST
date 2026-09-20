@@ -784,7 +784,12 @@ export function useCreatePurchaseOrder() {
   return useMutation<
     string,
     Error,
-    { quotationId: string; requestId: string; promisedDate?: string | null; contractNumber?: string }
+    {
+      quotationId: string;
+      requestId: string;
+      promisedDate?: string | null;
+      contractNumber?: string;
+    }
   >({
     mutationFn: async (input) => {
       const { data, error } = await supabase.rpc('create_purchase_order', {
@@ -830,7 +835,11 @@ export function useUpdatePurchaseOrder() {
     Error,
     {
       id: string;
-      changes: Partial<{ promised_date: string | null; contract_number: string | null; notes: string | null }>;
+      changes: Partial<{
+        promised_date: string | null;
+        contract_number: string | null;
+        notes: string | null;
+      }>;
     }
   >({
     mutationFn: async ({ id, changes }) => {
