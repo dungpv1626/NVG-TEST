@@ -62,7 +62,6 @@ export function renderRoomLabels(
   }
 
   for (const zone of labelZones(rooms)) {
-    const room = zone.room;
     const rect = zone.rect;
     const boxW = paper.len(rectWidth(rect)) * (1 - SIDE_PADDING * 2);
     const boxH = paper.len(rectHeight(rect)) * (1 - SIDE_PADDING * 2);

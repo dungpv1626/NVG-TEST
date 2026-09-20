@@ -17,7 +17,6 @@ import {
   PAYMENT_METHOD_LABELS,
   RECEIVABLE_DIRECTION_LABELS,
   formatCurrency,
-  formatDate,
   receivableAging,
   receivableDisplayStatus,
   toMoney,

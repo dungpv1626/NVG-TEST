@@ -213,6 +213,16 @@ Thực thể tham chiếu xuyên module — **liên kết, KHÔNG sao chép**: `
 
 - Luôn kèm `npx tsc -b` và `npx prettier --check <tệp đã đổi>`. `npm test` đầy đủ (~100 giây) chỉ khi
   Haan yêu cầu hoặc trước commit lớn.
+- **`npm run lint` (eslint) chạy được từ 20/09/2026** — trước đó khai trong `package.json` mà không có
+  eslint trong kho, gọi ra «eslint: not found». Luật chọn để bắt LỖI, không bắt cách viết; hai luật
+  tắt có ghi lý do trong `eslint.config.js`. **Đừng tắt thêm luật để cho xanh** — tắt thì ghi lý do
+  ngay tại chỗ, kèm ca hỏng đã đo.
+- **CI**: `.github/workflows/kiem.yml` chạy định dạng, luật, kiểu, hợp đồng và 1.606 phép thử trên
+  mỗi PR. Cố ý KHÔNG chạy `db/` (chạm Supabase thật, xoá cứng theo tiền tố `[TEST]`).
+- **`npm run mutation-proof`**: cài 11 lỗi thật vào mã nguồn rồi đòi bộ kiểm phải ĐỎ. Số bài kiểm
+  không chứng minh bộ kiểm có tác dụng — 20/09/2026 có tám lỗi thật lọt qua 867 bài kiểm đang xanh.
+  Thêm hàng rào mới (quyền, riêng tư, tiền gọi mô hình, số đo bản vẽ) thì thêm một đột biến cho nó.
+  Khoảng trống đã biết: RLS và ràng buộc trong CSDL KHÔNG được chứng minh ở đây.
 - Test `db/` đỏ: chạy lại đúng tệp trước (rate limit Supabase Auth gây báo động giả) — vẫn đỏ cùng chỗ là lỗi thật.
 
 ---

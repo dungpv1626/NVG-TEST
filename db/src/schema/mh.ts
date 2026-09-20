@@ -16,10 +16,12 @@
  * ⚠️ CỐ Ý CHƯA làm ở bước này, không phải quên:
  *   - MH-09 bảng giá khung/thỏa thuận nguyên tắc — cần biết NVG thỏa thuận theo tháng hay
  *     quý và cơ chế điều chỉnh giá, hiện chưa có dữ liệu.
- *   - MH-10 quy cách kỹ thuật nguyên liệu NVS (mác thép, dung sai) — thuộc Module SX, và
- *     Xưởng giàn giáo chưa có khảo sát trực tiếp (PRD Mục 10).
- *   - Tồn kho: `deliveries` mới dừng ở ghi nhận giao nhận. Việc cộng vào tồn thuộc Module
- *     KHO (Phase 3C) — MH-07 nói "tự cập nhật tồn kho", nhưng chưa có bảng tồn để cập nhật.
+ *   - MH-10 quy cách kỹ thuật nguyên liệu NVS (mác thép, dung sai) — bảng `material_specs`
+ *     thuộc đợt 6.2 của `BUILD_PLAN.md`, chưa dựng.
+ *
+ * MH-07 "tự cập nhật tồn kho" nay đã nối: `deliveries` chỉ ghi nhận giao nhận, việc cộng vào
+ * tồn đi qua `receive_from_delivery` của Module KHO (migration `0039`), một phiếu giao nhận
+ * chỉ nhập kho một lần.
  */
 
 import {
@@ -178,7 +180,9 @@ export const purchaseRequests = pgTable(
      * Đây là con số đem đối chiếu hạn mức phê duyệt (MH-02 ↔ NEN-02), chốt lại tại thời
      * điểm gửi phê duyệt để hạn mức không đổi giữa chừng khi ai đó sửa dòng.
      */
-    estimatedValue: money('estimated_value').notNull().default(sql`0`),
+    estimatedValue: money('estimated_value')
+      .notNull()
+      .default(sql`0`),
 
     requestedBy: uuid('requested_by').references(() => users.id, { onDelete: 'set null' }),
     submittedAt: timestamp('submitted_at', { withTimezone: true }),
@@ -196,7 +200,9 @@ export const purchaseRequests = pgTable(
     index('purchase_requests_list_idx').on(t.companyId, t.stage, t.neededDate),
     index('purchase_requests_site_idx').on(t.constructionSiteId),
     index('purchase_requests_bidding_idx').on(t.biddingProjectId),
-    uniqueIndex('purchase_requests_code').on(t.code).where(sql`${t.code} IS NOT NULL`),
+    uniqueIndex('purchase_requests_code')
+      .on(t.code)
+      .where(sql`${t.code} IS NOT NULL`),
   ],
 );
 
@@ -222,7 +228,9 @@ export const purchaseRequestItems = pgTable(
     quantity: numeric('quantity', { precision: 18, scale: 3 }).notNull().default('0'),
 
     /** Đơn giá ước tính do người đề nghị điền, để tính giá trị đối chiếu hạn mức. */
-    estimatedUnitPrice: money('estimated_unit_price').notNull().default(sql`0`),
+    estimatedUnitPrice: money('estimated_unit_price')
+      .notNull()
+      .default(sql`0`),
 
     notes: text('notes'),
 
@@ -267,7 +275,9 @@ export const quotations = pgTable(
     /** Tỷ lệ hao hụt dự kiến, điểm cơ bản. */
     wastageRateBp: integer('wastage_rate_bp').notNull().default(0),
 
-    shippingFee: money('shipping_fee').notNull().default(sql`0`),
+    shippingFee: money('shipping_fee')
+      .notNull()
+      .default(sql`0`),
 
     deliveryDays: integer('delivery_days'),
     paymentTermDays: integer('payment_term_days'),
@@ -321,7 +331,9 @@ export const quotationItems = pgTable(
     specification: text('specification'),
     unit: varchar('unit', { length: 32 }).notNull(),
     quantity: numeric('quantity', { precision: 18, scale: 3 }).notNull().default('0'),
-    unitPrice: money('unit_price').notNull().default(sql`0`),
+    unitPrice: money('unit_price')
+      .notNull()
+      .default(sql`0`),
 
     notes: text('notes'),
 
@@ -364,10 +376,14 @@ export const purchaseOrders = pgTable(
     contractNumber: varchar('contract_number', { length: 64 }),
 
     /** Tổng giá trị đơn hàng đã chuẩn hóa (gồm hao hụt, thuế, vận chuyển), đồng. */
-    totalValue: money('total_value').notNull().default(sql`0`),
+    totalValue: money('total_value')
+      .notNull()
+      .default(sql`0`),
 
     /** Phần đã cộng vào `project_budgets.committed_amount` — để hoàn lại đúng khi hủy đơn. */
-    committedToBudget: money('committed_to_budget').notNull().default(sql`0`),
+    committedToBudget: money('committed_to_budget')
+      .notNull()
+      .default(sql`0`),
 
     closedReason: text('closed_reason'),
     notes: text('notes'),
@@ -379,7 +395,9 @@ export const purchaseOrders = pgTable(
     index('purchase_orders_list_idx').on(t.companyId, t.stage, t.promisedDate),
     index('purchase_orders_request_idx').on(t.purchaseRequestId),
     index('purchase_orders_supplier_idx').on(t.supplierId),
-    uniqueIndex('purchase_orders_code').on(t.code).where(sql`${t.code} IS NOT NULL`),
+    uniqueIndex('purchase_orders_code')
+      .on(t.code)
+      .where(sql`${t.code} IS NOT NULL`),
   ],
 );
 
@@ -399,7 +417,9 @@ export const purchaseOrderItems = pgTable(
     unit: varchar('unit', { length: 32 }).notNull(),
 
     quantity: numeric('quantity', { precision: 18, scale: 3 }).notNull().default('0'),
-    unitPrice: money('unit_price').notNull().default(sql`0`),
+    unitPrice: money('unit_price')
+      .notNull()
+      .default(sql`0`),
 
     /**
      * Số lượng đã nhận cộng dồn qua các đợt giao. Cố ý LƯU LẠI thay vì luôn cộng từ
@@ -462,7 +482,9 @@ export const deliveries = pgTable(
   },
   (t) => [
     index('deliveries_order_idx').on(t.purchaseOrderId, t.deliveredDate),
-    uniqueIndex('deliveries_code').on(t.code).where(sql`${t.code} IS NOT NULL`),
+    uniqueIndex('deliveries_code')
+      .on(t.code)
+      .where(sql`${t.code} IS NOT NULL`),
   ],
 );
 

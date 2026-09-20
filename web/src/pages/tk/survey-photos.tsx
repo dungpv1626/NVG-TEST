@@ -99,7 +99,7 @@ export function SurveyPhotos({
             >
               {photo.mime_type.startsWith('video/') ? (
                 photo.url ? (
-                  // eslint-disable-next-line jsx-a11y/media-has-caption -- video hiện trạng không có lời thoại
+                  // Video hiện trạng không có lời thoại nên không kèm phụ đề.
                   <video src={photo.url} controls className="aspect-square w-full object-cover" />
                 ) : (
                   <div className="aspect-square bg-surface-sunken" />

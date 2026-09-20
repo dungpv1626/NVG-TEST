@@ -46,3 +46,16 @@ if (typeof HTMLInputElement !== 'undefined' && !HTMLInputElement.prototype.showP
     /* jsdom không vẽ được bảng lịch thật; test chỉ cần lệnh này tồn tại và không ném lỗi. */
   };
 }
+
+/**
+ * jsdom cũng chưa có `Element.scrollIntoView`.
+ *
+ * Thiếu nó, `brief-panel.tsx` gọi trong `requestAnimationFrame` nên lỗi rơi RA NGOÀI bài kiểm:
+ * vitest báo «Unhandled Errors», thoát mã 1, mà dòng tổng kết vẫn ghi đủ bài xanh. Ai chỉ đọc
+ * dòng tổng kết sẽ tưởng mọi thứ ổn — đúng cái bẫy đã làm bảng kiểm trước đây báo sai.
+ */
+if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = function scrollIntoView() {
+    /* Không có khung nhìn thật để cuộn; bài kiểm chỉ cần lệnh này tồn tại. */
+  };
+}

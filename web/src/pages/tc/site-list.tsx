@@ -124,7 +124,8 @@ export function SiteListPage() {
             key: 'progress',
             header: 'Tiến độ',
             numeric: true,
-            // Tiến độ do chỉ huy trưởng tự đánh giá, chưa có khảo sát về cách đo (TC-02) —
+            // Tiến độ do chỉ huy trưởng tự đánh giá: khảo sát đã cho biết đo theo hạng mục
+            // và khối lượng đã nghiệm thu, nhưng chưa chốt ai cập nhật % (câu hỏi #10) —
             // nên hiện đúng con số đã ghi, không tự suy ra từ nhật ký.
             render: (r) =>
               r.progress ? `${Number(r.progress)}%` : <span className="text-fg-subtle">—</span>,

@@ -50,7 +50,7 @@ export function DraftContractButton({
     setError(null);
     try {
       const contractId = await createContract.mutateAsync({ sourceType, sourceId, type });
-      navigate(`/hd/hop-dong/${contractId}`);
+      void navigate(`/hd/hop-dong/${contractId}`);
     } catch (e) {
       setError(toUserMessage(e, 'create'));
     }

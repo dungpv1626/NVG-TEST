@@ -26,11 +26,7 @@ export function PlaceholderPage({ moduleCode }: { moduleCode: ModuleCode }) {
         )}
       >
         <p className="font-medium">Phân hệ này đang được xây dựng.</p>
-        <p className="mt-1 text-fg-subtle">
-          Dự kiến hoàn thành ở Giai đoạn {meta.phase}.
-          {meta.directionalOnly &&
-            ' Yêu cầu hiện ở mức định hướng, chờ bổ sung dữ liệu khảo sát trực tiếp.'}
-        </p>
+        <p className="mt-1 text-fg-subtle">Dự kiến hoàn thành ở Giai đoạn {meta.phase}.</p>
       </div>
     </>
   );

@@ -276,18 +276,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let active = true;
 
     // Khôi phục phiên đã lưu trước, rồi lắng nghe thay đổi.
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!active) return;
-      setSession(data.session);
-      if (data.session) setProfile(await loadProfile(data.session.user.id));
-      if (active) setLoading(false);
-    });
+    // `catch` không phải cho đẹp: hỏng mạng lúc này mà không bắt thì `loading` ở lại `true` mãi và
+    // người dùng nhìn khung xương trống, không có cả nút thử lại. Coi như chưa đăng nhập thì họ
+    // thấy màn hình đăng nhập và làm tiếp được.
+    supabase.auth
+      .getSession()
+      .then(async ({ data }) => {
+        if (!active) return;
+        setSession(data.session);
+        if (data.session) setProfile(await loadProfile(data.session.user.id));
+        if (active) setLoading(false);
+      })
+      .catch(() => {
+        if (!active) return;
+        // Đặt lại session luôn: `setSession` đã chạy trước `await loadProfile`, nên rơi ở bước sau
+        // để lại phiên có mà hồ sơ rỗng — màn hình khi ấy nói «Tài khoản chưa được gán quyền»,
+        // sai hẳn nguyên nhân và người dùng không làm gì được với câu đó.
+        setSession(null);
+        setLoading(false);
+      });
 
     const { data: sub } = supabase.auth.onAuthStateChange(async (_event, next) => {
       if (!active) return;
       setSession(next);
-      setProfile(next ? await loadProfile(next.user.id) : null);
-      setLoading(false);
+      try {
+        setProfile(next ? await loadProfile(next.user.id) : null);
+      } finally {
+        // `finally`, không phải dòng thẳng: `loadProfile` ném ở đây thì `loading` kẹt `true` mãi
+        // và người dùng nhìn khung xương trống — cùng lỗi với nhánh khôi phục phiên ở trên.
+        if (active) setLoading(false);
+      }
     });
 
     return () => {
@@ -365,13 +383,25 @@ export function useAuth(): AuthState {
   return ctx;
 }
 
-/** Kiểm tra quyền trên một module — dùng để ẩn menu và nút (Webapp Flow 6.5). */
-export function useCan(
+export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'approve';
+
+/**
+ * Phần QUYẾT ĐỊNH của `useCan`, tách ra thành hàm thuần để kiểm được.
+ *
+ * Tách ngày 20/09/2026 sau một lượt đo đột biến: cài lỗi «không có quyền trên phân hệ thì trả
+ * TRUE» vào đây mà 1.599 bài kiểm vẫn xanh, vì mọi bài kiểm giao diện đều thay cả mô-đun
+ * `@/lib/auth` bằng bản giả — không bài nào chạy qua đoạn này. Hàm nằm ngoài hook thì kiểm thẳng
+ * được, không phải dựng cả cây React.
+ *
+ * Không có dòng quyền cho phân hệ nghĩa là KHÔNG được xem. Mặc định phải là từ chối: thiếu cấu
+ * hình thì người dùng thấy ít đi, không phải nhiều hơn.
+ */
+export function canDo(
+  permissions: readonly ModulePermission[] | undefined,
   moduleCode: ModuleCode,
-  action: 'view' | 'create' | 'edit' | 'delete' | 'approve' = 'view',
+  action: PermissionAction,
 ): boolean {
-  const { profile } = useAuth();
-  const p = profile?.permissions.find((x) => x.moduleCode === moduleCode);
+  const p = permissions?.find((x) => x.moduleCode === moduleCode);
   if (!p) return false;
   switch (action) {
     case 'view':
@@ -385,6 +415,12 @@ export function useCan(
     case 'approve':
       return p.canApprove;
   }
+}
+
+/** Kiểm tra quyền trên một module — dùng để ẩn menu và nút (Webapp Flow 6.5). */
+export function useCan(moduleCode: ModuleCode, action: PermissionAction = 'view'): boolean {
+  const { profile } = useAuth();
+  return canDo(profile?.permissions, moduleCode, action);
 }
 
 /**

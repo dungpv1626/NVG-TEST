@@ -1,16 +1,15 @@
 /**
  * Module TC — Thi công và Ngân sách công trình: hàng rào phân quyền và điều kiện nghiệp vụ.
  *
- * Nguồn: PRD TC-01 → TC-08, Backend Schema 4.6, Tech Stack 3.6.
+ * Nguồn: PRD TC-01 → TC-08 (phạm vi cũ), Backend Schema 4.6, Tech Stack 3.6.
  *
- * ⚠️ Module ĐỊNH HƯỚNG (PRD Mục 10) — nhưng "định hướng" nói về việc CÔNG TRƯỜNG LÀM VIỆC
- * THẾ NÀO, không phải về phân quyền. Ranh giới dữ liệu giữa ba pháp nhân, quyền xem phân hệ
- * và việc nghiệm thu là căn cứ thu tiền đều đã chốt ở tài liệu khác, nên vẫn phải có test.
+ * Bài kiểm ở đây phủ phạm vi TC CŨ. Phần TC-09 → TC-20 của PRD v1.4 chưa dựng nên chưa có
+ * bài kiểm tương ứng — xem `BUILD_PLAN.md` mục 6.1, 6.2, 6.5.
  *
  * Chạy trên CSDL DEV thật, cần đã chạy `npm run db:seed`.
  */
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   ACCOUNTS,

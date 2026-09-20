@@ -50,7 +50,7 @@ function StocktakeDetail({
   const close = useCloseStocktake();
   const [counts, setCounts] = useState<Record<string, string>>({});
 
-  const items = data ?? [];
+  const items = useMemo(() => data ?? [], [data]);
   const isCounting = status === 'dang_kiem';
 
   const merged = useMemo(

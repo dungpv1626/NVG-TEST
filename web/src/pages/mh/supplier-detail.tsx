@@ -22,6 +22,7 @@ import {
   formatDateTime,
 } from '@nvg/shared';
 import { DetailFields, EntityDetail, RecordNotFound } from '@/components/entity/entity-detail';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -44,6 +45,9 @@ export function SupplierDetailPage() {
   const { data: orders } = useOrdersOfSupplier(id);
   const save = useSaveSupplier();
   const [actionError, setActionError] = useState<string | null>(null);
+  const [stopping, setStopping] = useState(false);
+  const [reason, setReason] = useState('');
+  const [reasonError, setReasonError] = useState<string | null>(null);
 
   if (isLoading) return <CardGridSkeleton count={3} />;
   if (error) return <ErrorState message={toUserMessage(error)} />;
@@ -70,18 +74,31 @@ export function SupplierDetailPage() {
   }
 
   function changeClass(next: SupplierClass) {
+    // Ngừng giao dịch phải nêu lý do, và hỏi bằng hộp thoại RIÊNG chứ không `window.prompt`: nút
+    // của hộp gốc là «OK/Cancel» theo ngôn ngữ trình duyệt, không ép sang tiếng Việt được
+    // (CLAUDE.md 4.1), mà đây là việc ghi vào hồ sơ nhà cung cấp.
     if (next === 'ngung_giao_dich') {
-      const reason = window.prompt('Lý do ngừng giao dịch với nhà cung cấp này:');
-      if (reason === null || reason.trim() === '') return;
-      void run(() =>
-        save.mutateAsync({
-          id: supplier.id,
-          values: { supplier_class: next, suspended_reason: reason.trim() },
-        }),
-      );
+      setReason('');
+      setReasonError(null);
+      setStopping(true);
       return;
     }
     void run(() => save.mutateAsync({ id: supplier.id, values: { supplier_class: next } }));
+  }
+
+  function confirmStop() {
+    const trimmed = reason.trim();
+    if (!trimmed) {
+      setReasonError('Nhập lý do ngừng giao dịch trước khi xác nhận.');
+      return;
+    }
+    setStopping(false);
+    void run(() =>
+      save.mutateAsync({
+        id: supplier.id,
+        values: { supplier_class: 'ngung_giao_dich', suspended_reason: trimmed },
+      }),
+    );
   }
 
   async function saveRatings(event: React.FormEvent<HTMLFormElement>) {
@@ -119,6 +136,37 @@ export function SupplierDetailPage() {
 
   return (
     <>
+      {stopping && (
+        <ConfirmDialog
+          title="Ngừng giao dịch với nhà cung cấp này?"
+          confirmLabel="Ngừng giao dịch"
+          danger
+          pending={save.isPending}
+          onCancel={() => setStopping(false)}
+          onConfirm={confirmStop}
+        >
+          <p className="mb-3">
+            Nhà cung cấp chuyển sang nhóm Ngừng giao dịch và không chọn được ở đơn mua hàng mới. Đơn
+            đang chạy không đổi. Mở lại được sau.
+          </p>
+          <Field label="Lý do ngừng giao dịch" required>
+            <Input
+              value={reason}
+              onChange={(e) => {
+                setReason(e.target.value);
+                if (reasonError) setReasonError(null);
+              }}
+              placeholder="Ví dụ: giao trễ nhiều lần, chất lượng không đạt"
+            />
+          </Field>
+          {reasonError && (
+            <p role="alert" className="mt-2 text-status-overdue">
+              {reasonError}
+            </p>
+          )}
+        </ConfirmDialog>
+      )}
+
       {actionError && (
         <p
           role="alert"
@@ -138,6 +186,7 @@ export function SupplierDetailPage() {
         code={supplier.code}
         status={isStopped ? 'completed' : 'in_progress'}
         responsiblePerson={supplier.contact_person}
+        actions={actions}
         tabs={[
           {
             id: 'danh-gia',

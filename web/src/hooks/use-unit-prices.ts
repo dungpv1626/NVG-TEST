@@ -38,10 +38,12 @@ export function useUnitPrices() {
     queryKey: ['unit_prices', scope.companyId],
     queryFn: async () => {
       const { data, error } = await withCompanyScope(
-        supabase.from('unit_prices').select(
-          'id, company_id, item_code, name, unit, cost_group, price, source, supplier_name, ' +
-            'effective_date, applied_project_ref, notes',
-        ),
+        supabase
+          .from('unit_prices')
+          .select(
+            'id, company_id, item_code, name, unit, cost_group, price, source, supplier_name, ' +
+              'effective_date, applied_project_ref, notes',
+          ),
         scope,
       )
         .is('deleted_at', null)

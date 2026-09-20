@@ -20,34 +20,19 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, ChevronLeft, ChevronRight, FileDown, History, Ruler } from 'lucide-react';
-import { formatCurrency, formatDateTime, formatNumber } from '@nvg/shared';
+import { formatDateTime } from '@nvg/shared';
 import {
-  ACCESS_SIDES,
   BRIEF_FORM,
   checkBriefConsistency,
-  FAMILY_ROLE_LABEL,
-  FLOOR_PREF_LABEL,
-  DERIVED_NEED_CODES,
-  ROOM_LABEL,
   briefAreaBudget,
-  bedroomTypeFor,
-  bedroomsFor,
-  bedroomOwnerLabels,
-  displayNumber,
-  isBedroomType,
   isFieldVisible,
   scoreBrief,
   setAtPath,
   syncBedroomRows,
   withDerivedSiteDimensions,
-  SIDE_LABEL,
-  siteGeometry,
   valueAtPath,
   visibleFields,
-  type BriefFormField,
   type DesignBriefDraft,
-  type FamilyRole,
-  type FloorPref,
 } from '@nvg/shared/design';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/states';

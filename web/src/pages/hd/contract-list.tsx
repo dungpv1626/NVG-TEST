@@ -48,10 +48,7 @@ export function ContractListPage() {
 
   return (
     <>
-      <PageHeader
-        title="Hợp đồng"
-        breadcrumbs={[{ label: 'Hợp đồng' }]}
-      />
+      <PageHeader title="Hợp đồng" breadcrumbs={[{ label: 'Hợp đồng' }]} />
 
       <EntityTable<ContractRow>
         rows={rows}

@@ -20,7 +20,7 @@
  */
 
 import { ChevronLeft } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import {
   BUTTONS,
@@ -100,7 +100,7 @@ export function ApprovalInbox({
   const [submitting, setSubmitting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const list = items ?? [];
+  const list = useMemo(() => items ?? [], [items]);
   const selected = list.find((i) => i.id === selectedId) ?? list[0];
 
   // Giữ con trỏ ở hồ sơ hợp lệ khi danh sách thay đổi (ví dụ vừa duyệt xong một hồ sơ).

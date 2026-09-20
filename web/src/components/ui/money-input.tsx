@@ -66,19 +66,6 @@ function submittable(raw: string): string {
   return /\d/.test(raw) ? raw : '';
 }
 
-/** Vị trí ký tự nằm ngay sau chữ số thứ `n` của chuỗi đã chèn dấu chấm. */
-function caretAfterDigits(grouped: string, n: number): number {
-  if (n <= 0) return grouped.startsWith('-') ? 1 : 0;
-  let seen = 0;
-  for (let i = 0; i < grouped.length; i += 1) {
-    if (grouped[i]! >= '0' && grouped[i]! <= '9') {
-      seen += 1;
-      if (seen === n) return i + 1;
-    }
-  }
-  return grouped.length;
-}
-
 export function MoneyInput({
   value,
   defaultValue,

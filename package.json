@@ -18,9 +18,10 @@
     "dev:workers": "npm run dev --workspace=workers",
     "build": "npm run build --workspace=shared && npm run build --workspace=db && npm run build --workspace=web",
     "typecheck": "tsc -b --pretty",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
     "test": "vitest run",
+    "mutation-proof": "tsx scripts/mutation-proof.ts",
     "test:web": "vitest run --project web",
     "contracts:gen": "node scripts/contracts-gen.mjs",
     "contracts:check": "node scripts/contracts-gen.mjs --check",
@@ -35,13 +36,18 @@
     "test:e2e": "playwright test"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@playwright/test": "^1.56.1",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.13.1",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
     "js-yaml": "^4.3.2",
     "json-schema-to-zod": "^2.8.1",
     "prettier": "^3.4.2",
+    "tsx": "^4.23.13",
     "typescript": "^5.7.3",
+    "typescript-eslint": "^8.70.0",
     "vitest": "^3.0.5",
     "wrangler": "^4.126.0"
   }

@@ -55,7 +55,6 @@ import {
   type AiPlanIssue,
   type AiPlanLevelView,
   type AiPlanZone,
-  type AiModelOption,
   type AiPlanReview,
   type AiRulePackChoice,
   type ReasoningEffort,

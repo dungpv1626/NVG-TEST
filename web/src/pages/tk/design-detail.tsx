@@ -13,9 +13,8 @@
  */
 
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
-  BUTTONS,
   DESIGN_DISCIPLINES,
   DESIGN_STAGE_META,
   designDisplayStatus,
@@ -171,7 +170,9 @@ export function DesignDetailPage() {
               void run(
                 () => handover.mutateAsync({ projectId: project.id }),
                 (notified) =>
-                  setNotice(`Đã bàn giao hồ sơ thi công và thông báo cho ${notified} người.`),
+                  setNotice(
+                    `Đã bàn giao hồ sơ thi công và thông báo cho ${String(notified)} người.`,
+                  ),
               )
             }
           >

@@ -107,7 +107,13 @@ export function VersionPanel({
         changeReason: form.changeReason.trim() || null,
         notes: form.notes.trim() || null,
       });
-      setForm({ discipline: disciplines[0]!, title: '', fileName: '', changeReason: '', notes: '' });
+      setForm({
+        discipline: disciplines[0]!,
+        title: '',
+        fileName: '',
+        changeReason: '',
+        notes: '',
+      });
       setAdding(false);
     } catch (e) {
       setError(toUserMessage(e, 'create'));
@@ -250,7 +256,15 @@ function VersionCard({
   publishing,
 }: {
   version: DesignVersionRecord;
-  reviews: { id: string; reviewer_type: DesignReviewerType; decision: DesignReviewDecision; reviewer_name: string | null; comments: string; reviewed_at: string; recorder: { full_name: string } | null }[];
+  reviews: {
+    id: string;
+    reviewer_type: DesignReviewerType;
+    decision: DesignReviewDecision;
+    reviewer_name: string | null;
+    comments: string;
+    reviewed_at: string;
+    recorder: { full_name: string } | null;
+  }[];
   readOnly: boolean;
   onPublish: () => void;
   publishing: boolean;
@@ -299,9 +313,7 @@ function VersionCard({
         <span className="font-medium">
           {DESIGN_DISCIPLINE_LABELS[version.discipline]} — phiên bản {version.version}
         </span>
-        {version.is_current_version && published && (
-          <StatusLozenge status="completed" />
-        )}
+        {version.is_current_version && published && <StatusLozenge status="completed" />}
         {!published && <StatusLozenge status="draft" />}
         {version.customer_approved_at && (
           <span className="inline-flex items-center gap-1 text-status-completed">
@@ -340,7 +352,11 @@ function VersionCard({
       )}
 
       {reviewing && (
-        <form onSubmit={submitReview} noValidate className="mt-3 space-y-3 border-t border-border pt-3">
+        <form
+          onSubmit={submitReview}
+          noValidate
+          className="mt-3 space-y-3 border-t border-border pt-3"
+        >
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Người góp ý">
               <select

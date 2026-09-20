@@ -19,7 +19,17 @@
  * RLS: Mẫu C (Backend Schema 3.3) — chỉ hiện với người đề nghị và người có hạn mức đủ duyệt.
  */
 
-import { boolean, index, integer, pgTable, text, timestamp, uniqueIndex, uuid, varchar } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  index,
+  integer,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+  varchar,
+} from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { auditColumns } from './_audit';
 import { approvalDecisionEnum, approvalSubjectEnum, statusGroupEnum } from './_enums';

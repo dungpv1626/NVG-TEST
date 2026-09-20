@@ -27,7 +27,7 @@ import { useState } from 'react';
 import { displayDateToIso, isoDateToDisplay, toNvgDateInput } from '@nvg/shared';
 import { CalendarPopover } from '@/components/ui/calendar-popover';
 import { Input } from '@/components/ui/input';
-import { countDigits, useMaskedText } from '@/components/ui/use-masked-text';
+import { useMaskedText } from '@/components/ui/use-masked-text';
 import { cn } from '@/lib/utils';
 
 export interface DateInputProps {

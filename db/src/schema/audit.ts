@@ -10,7 +10,7 @@
  * SECURITY DEFINER hoặc trigger, để người dùng không tự tạo/sửa dấu vết của mình.
  */
 
-import { index, jsonb, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
+import { index, jsonb, pgTable, text, uuid, varchar } from 'drizzle-orm/pg-core';
 import { primaryId, timestampColumns } from './_helpers';
 import { optionalCompanyScoped } from './_scoped';
 import { users } from './users';

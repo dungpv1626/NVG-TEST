@@ -74,7 +74,11 @@ export function EmployeeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { profile } = useAuth();
   const canEdit = useCan('NS', 'edit');
-  const canSeeSalary = useCan('NS', 'view') || useCan('KT', 'view');
+  // Hai hook phải chạy ở MỌI lần dựng: viết `useCan(…) || useCan(…)` thì hook thứ hai bị bỏ qua
+  // khi hook đầu trả true, thứ tự hook đổi giữa hai lần dựng và React gán nhầm state.
+  const canSeeNs = useCan('NS', 'view');
+  const canSeeKt = useCan('KT', 'view');
+  const canSeeSalary = canSeeNs || canSeeKt;
 
   const { data: employee, isLoading, error } = useEmployee(id);
   const { data: contracts } = useEmploymentContracts(id);

@@ -42,7 +42,7 @@ describe('complaintDisplayStatus', () => {
     const groups = ['draft', 'pending_approval', 'in_progress', 'completed', 'overdue'];
     for (const status of groups) {
       const result = complaintDisplayStatus(
-        status as (typeof groups)[number] & Parameters<typeof complaintDisplayStatus>[0],
+        status as Parameters<typeof complaintDisplayStatus>[0],
         '2026-01-01',
         now,
       );

@@ -14,7 +14,7 @@
  * "3,6 m"). Hình học nội bộ tính bằng cm; đổi ở đây, một chỗ.
  */
 
-import { toRect, type Rect } from './geometry';
+import { type Rect } from './geometry';
 import { CLS, num, polylinePath, tag, textEl } from './svg';
 import type { SheetStyle } from './style';
 import type { Paper } from './units';

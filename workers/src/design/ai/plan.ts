@@ -42,7 +42,6 @@ import {
   aiHouseIntentSchema,
   type AiBriefDigest,
   type AiFloorPlan,
-  type AiHouseIntent,
   type AiPlanIntent,
   type AiPlanRooms,
   type AiPlanRoomsLevel,

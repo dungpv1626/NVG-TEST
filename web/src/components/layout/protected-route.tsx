@@ -59,8 +59,8 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
         >
           <h1 className="mb-2 font-semibold">Tài khoản chưa được gán quyền</h1>
           <p className="text-fg-subtle">
-            Tài khoản đã đăng nhập nhưng chưa được gán vào pháp nhân nào. Liên hệ quản trị hệ
-            thống để được cấp quyền truy cập.
+            Tài khoản đã đăng nhập nhưng chưa được gán vào pháp nhân nào. Liên hệ quản trị hệ thống
+            để được cấp quyền truy cập.
           </p>
         </div>
       </div>

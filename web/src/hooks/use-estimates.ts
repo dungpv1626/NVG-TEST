@@ -22,9 +22,7 @@ import { supabase } from '@/lib/supabase';
  * riêng. Một bản sao nghĩa là hai công thức tính thành tiền, và tới lúc sửa quy tắc làm tròn
  * thì chỉ một bên được sửa.
  */
-export type EstimateParent =
-  | { kind: 'bidding'; id: string }
-  | { kind: 'design'; id: string };
+export type EstimateParent = { kind: 'bidding'; id: string } | { kind: 'design'; id: string };
 
 /** Tên cột khoá ngoại tương ứng — dùng cho cả truy vấn lẫn khi ghi. */
 function parentColumn(parent: EstimateParent): 'bidding_project_id' | 'design_project_id' {
@@ -374,7 +372,14 @@ export function useSaveBidDocument() {
   return useMutation<
     void,
     Error,
-    | { mode: 'create'; projectId: string; companyId: string; category: string; name: string; isRequired: boolean }
+    | {
+        mode: 'create';
+        projectId: string;
+        companyId: string;
+        category: string;
+        name: string;
+        isRequired: boolean;
+      }
     | { mode: 'toggle'; id: string; submitted: boolean }
   >({
     mutationFn: async (input) => {

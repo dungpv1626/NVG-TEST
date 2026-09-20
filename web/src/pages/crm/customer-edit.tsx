@@ -120,7 +120,7 @@ export function CustomerEditPage() {
       await updateCustomer.mutateAsync({ id, changes: customerPayload(form) });
       setDirty(false);
       releaseUnsavedGuard();
-      navigate(detailPath, { replace: true });
+      void navigate(detailPath, { replace: true });
     } catch (e) {
       setSaveError(toUserMessage(e, 'edit'));
     }
@@ -129,7 +129,7 @@ export function CustomerEditPage() {
   function handleCancel() {
     // KHÔNG hỏi ở đây: `useUnsavedChangesGuard` đã chặn mọi lần chuyển trang, kể cả
     // lần này. Hỏi thêm một lần nữa là bắt người dùng xác nhận hai lần cho một việc.
-    navigate(detailPath);
+    void navigate(detailPath);
   }
 
   if (isLoading) return <CardGridSkeleton count={2} />;

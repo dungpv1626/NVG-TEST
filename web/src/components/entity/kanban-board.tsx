@@ -120,7 +120,9 @@ export function KanbanBoard({
   }
 
   return (
-    <div className={cn('flex gap-3 overflow-x-auto pb-2', moving && 'pointer-events-none opacity-70')}>
+    <div
+      className={cn('flex gap-3 overflow-x-auto pb-2', moving && 'pointer-events-none opacity-70')}
+    >
       {columns.map((column) => {
         const columnCards = list.filter((c) => c.columnId === column.id);
         const total = columnCards.reduce(
@@ -196,7 +198,9 @@ export function KanbanBoard({
                     )}
                     <div className="mt-1.5 flex items-center justify-between gap-2 text-xs text-fg-subtle">
                       <span className="truncate">{card.responsiblePerson ?? 'Chưa phân công'}</span>
-                      {card.deadline && <span className="shrink-0">{formatDeadline(card.deadline)}</span>}
+                      {card.deadline && (
+                        <span className="shrink-0">{formatDeadline(card.deadline)}</span>
+                      )}
                     </div>
                   </div>
                 </li>

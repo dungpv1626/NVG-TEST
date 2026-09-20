@@ -1,17 +1,23 @@
 /**
  * Module SX — Sản xuất và Cho thuê giàn giáo (Backend Schema Mục 4.12).
- * Giai đoạn 2 — mức cơ bản, ĐỊNH HƯỚNG, chưa có khảo sát trực tiếp Xưởng sản xuất giàn giáo
- * (PRD Mục 10, CLAUDE.md 5.6).
+ * Giai đoạn 2. Phiếu khảo sát Xưởng sản xuất giàn giáo ĐÃ CÓ (02/09/2026), nằm ở
+ * `doc/khao-sat/HoSo_KhaoSat_NVG_full.md` — module không còn ở mức ĐỊNH HƯỚNG.
+ *
+ * ⚠️ Số hiệu SX đã đánh lại ở PRD v1.4: SX-01 → SX-03 CŨ (dùng trong tệp này) KHÔNG trùng
+ * SX-01 → SX-22 MỚI. Bốn bảng dưới đây phủ lõi phạm vi CŨ; phần còn thiếu ghi ở
+ * `BUILD_PLAN.md` mục 6.4 (vòng đời tài sản cho thuê) và 6.6 (sản xuất, giá thành).
  *
  * Backend Schema 4.12 liệt kê 3 bảng; ở đây có 4. `rental_agreement_items` là bảng dòng của
  * `rental_agreements` — SX-03 đòi biết doanh thu/hiệu suất "theo NHÓM tài sản" (từng mã vật
  * tư), mà một hợp đồng thuê thường gồm nhiều loại giàn giáo cùng lúc, giống cách `deliveries`
  * (MH) và `stock_movements` (KHO) đều tách bảng dòng.
  *
- * ⚠️ SX-01 (`production_orders`) và SX-02 (giá thành) PRD ghi thẳng "cần xác nhận thêm" —
- * bảng dựng ở đây chỉ có phần khung BSD 4.12 liệt kê (lệnh + tiêu hao nguyên liệu), KHÔNG có
- * định mức, năng suất tổ sản xuất hay công thức giá thành thực tế. Không coi là yêu cầu đã
- * chốt (CLAUDE.md 5.6) — hỏi lại Haan trước khi mở rộng.
+ * ⚠️ SX-01 (`production_orders`) và SX-02 (giá thành) theo số CŨ mới có phần khung mà
+ * BSD 4.12 liệt kê (lệnh + tiêu hao nguyên liệu), KHÔNG có định mức, năng suất tổ sản xuất
+ * hay công thức giá thành thực tế. Nay chặn bởi DỮ LIỆU chứ không phải bởi khảo sát: phiếu
+ * để trống tỷ lệ lỗi, bộ định mức hiện hành, sản lượng/tháng và phân loại bán – cho thuê
+ * từng mã, và ghi thẳng "không nên ước lượng một con số để điền" (câu hỏi #28 của
+ * `BUILD_PLAN.md`). Hỏi lại Haan trước khi mở rộng.
  *
  * SX-03 (`rental_agreements`) đã đủ thông tin (PRD SX-03 mô tả rõ) nên triển khai đầy đủ:
  * xuất/thu hồi giàn giáo đi qua hàm nghiệp vụ, di chuyển đúng lô giữa kho và bên thuê, liên

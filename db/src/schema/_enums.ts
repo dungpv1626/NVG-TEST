@@ -179,9 +179,9 @@ export const amendmentStageEnum = pgEnum('amendment_stage', AMENDMENT_STAGES);
 /**
  * Module TC — Thi công và Ngân sách công trình.
  *
- * ⚠️ Toàn bộ enum dưới đây thuộc module ĐỊNH HƯỚNG (PRD Mục 10): Chỉ huy – Giám sát công
- * trường chưa có khảo sát trực tiếp. Giá trị là đề xuất của đội triển khai, xem lý do từng
- * danh sách ở `@nvg/shared/tc`.
+ * ⚠️ Enum dưới đây phủ phạm vi TC CŨ (TC-01 → TC-08). Phiếu khảo sát Chỉ huy – Giám sát công
+ * trường đã có (02/09/2026); chỗ nào khảo sát không trả lời vẫn giữ dấu `SUY LUẬN`. Xem lý
+ * do từng danh sách ở `@nvg/shared/tc`.
  */
 
 /** Vòng đời một công trình — SUY LUẬN từ trình tự TC-01 → TC-07. */
@@ -381,11 +381,12 @@ export const laborWorkerStatusEnum = pgEnum('labor_worker_status', LABOR_WORKER_
 /**
  * Module SX — Sản xuất và Cho thuê giàn giáo (Backend Schema 4.12).
  *
- * Định hướng — chưa có khảo sát trực tiếp Xưởng sản xuất giàn giáo (PRD Mục 10). Lý do từng
- * giá trị xem `@nvg/shared/sx`.
+ * Phủ phạm vi SX CŨ (SX-01 → SX-03), không trùng SX-01 → SX-22 của PRD v1.4. Phiếu khảo sát
+ * Xưởng đã có (02/09/2026); phần còn thiếu chặn bởi dữ liệu, xem câu hỏi #28 của
+ * `BUILD_PLAN.md`. Lý do từng giá trị xem `@nvg/shared/sx`.
  */
 
-/** Vòng đời một lệnh sản xuất — PRD SX-01 (cần xác nhận thêm). */
+/** Vòng đời một lệnh sản xuất — PRD SX-01 theo số cũ, mới ở mức khung. */
 export const productionOrderStatusEnum = pgEnum(
   'production_order_status',
   PRODUCTION_ORDER_STATUSES,

@@ -201,21 +201,23 @@ export function useSubmitContractApproval() {
 export function useSignContract() {
   const queryClient = useQueryClient();
 
-  return useMutation<void, Error, { contractId: string; contractNumber: string; signedDate: string }>(
-    {
-      mutationFn: async ({ contractId, contractNumber, signedDate }) => {
-        const { error } = await supabase.rpc('sign_contract', {
-          p_contract_id: contractId,
-          p_contract_number: contractNumber,
-          p_signed_date: signedDate || null,
-        });
-        if (error) throw error;
-      },
-      onSuccess: () => {
-        void queryClient.invalidateQueries({ queryKey: ['contracts'] });
-      },
+  return useMutation<
+    void,
+    Error,
+    { contractId: string; contractNumber: string; signedDate: string }
+  >({
+    mutationFn: async ({ contractId, contractNumber, signedDate }) => {
+      const { error } = await supabase.rpc('sign_contract', {
+        p_contract_id: contractId,
+        p_contract_number: contractNumber,
+        p_signed_date: signedDate || null,
+      });
+      if (error) throw error;
     },
-  );
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['contracts'] });
+    },
+  });
 }
 
 /** Quyết toán hoặc hủy hợp đồng. Hủy thì CSDL bắt buộc nêu nguyên nhân. */

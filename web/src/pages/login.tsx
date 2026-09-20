@@ -60,91 +60,91 @@ export function LoginPage() {
           được" — nói thẳng thay vì để người dùng nghi ngờ mật khẩu của mình. */}
       <OfflineBar />
       <div className="flex flex-1 items-center justify-center p-4">
-      <div
-        className={cn(
-          'w-full max-w-sm rounded-lg border border-border',
-          'bg-surface p-6 shadow-card',
-        )}
-      >
-        <div className="mb-6">
-          <h1 className="text-lg font-semibold">Hệ thống Quản trị NVG</h1>
-          <p className="mt-1 text-fg-subtle">Đăng nhập để tiếp tục.</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-          <div className="space-y-1.5">
-            <label htmlFor="email" className="block font-medium">
-              Email
-            </label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="username"
-              autoFocus
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              aria-invalid={Boolean(error) || undefined}
-            />
+        <div
+          className={cn(
+            'w-full max-w-sm rounded-lg border border-border',
+            'bg-surface p-6 shadow-card',
+          )}
+        >
+          <div className="mb-6">
+            <h1 className="text-lg font-semibold">Hệ thống Quản trị NVG</h1>
+            <p className="mt-1 text-fg-subtle">Đăng nhập để tiếp tục.</p>
           </div>
 
-          <div className="space-y-1.5">
-            <label htmlFor="password" className="block font-medium">
-              Mật khẩu
-            </label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              aria-invalid={Boolean(error) || undefined}
-            />
-          </div>
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+            <div className="space-y-1.5">
+              <label htmlFor="email" className="block font-medium">
+                Email
+              </label>
+              <Input
+                id="email"
+                type="email"
+                autoComplete="username"
+                autoFocus
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                aria-invalid={Boolean(error) || undefined}
+              />
+            </div>
 
-          {error && (
-            <p
-              role="alert"
-              className={cn(
-                'rounded-sm bg-status-overdue-bg px-3 py-2',
-                'text-status-overdue',
-              )}
-            >
-              {error}
-            </p>
-          )}
+            <div className="space-y-1.5">
+              <label htmlFor="password" className="block font-medium">
+                Mật khẩu
+              </label>
+              <Input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                aria-invalid={Boolean(error) || undefined}
+              />
+            </div>
 
-          {notice && (
-            <p
-              role="status"
-              className={cn(
-                'rounded-sm bg-status-progress-bg px-3 py-2',
-                'text-status-progress',
-              )}
-            >
-              {notice}
-            </p>
-          )}
+            {error && (
+              <p
+                role="alert"
+                className={cn('rounded-sm bg-status-overdue-bg px-3 py-2', 'text-status-overdue')}
+              >
+                {error}
+              </p>
+            )}
 
-          {/* Hành động chính DUY NHẤT trên màn hình này — dùng màu thương hiệu
+            {notice && (
+              <p
+                role="status"
+                className={cn('rounded-sm bg-status-progress-bg px-3 py-2', 'text-status-progress')}
+              >
+                {notice}
+              </p>
+            )}
+
+            {/* Hành động chính DUY NHẤT trên màn hình này — dùng màu thương hiệu
               (Content Guidelines 6.3). */}
-          <Button type="submit" variant="primary" size="lg" className="w-full" disabled={submitting}>
-            {submitting ? 'Đang đăng nhập…' : 'Đăng nhập'}
-          </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              className="w-full"
+              disabled={submitting}
+            >
+              {submitting ? 'Đang đăng nhập…' : 'Đăng nhập'}
+            </Button>
 
-          <Button
-            type="button"
-            variant="link"
-            size="sm"
-            className="w-full"
-            onClick={() => void handleForgotPassword()}
-          >
-            Quên mật khẩu
-          </Button>
-        </form>
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              className="w-full"
+              onClick={() => void handleForgotPassword()}
+            >
+              Quên mật khẩu
+            </Button>
+          </form>
 
-        <p className="mt-6 text-center text-xs text-fg-subtle">
-          Tài khoản do quản trị hệ thống cấp. Liên hệ quản trị hệ thống nếu chưa có tài khoản.
-        </p>
+          <p className="mt-6 text-center text-xs text-fg-subtle">
+            Tài khoản do quản trị hệ thống cấp. Liên hệ quản trị hệ thống nếu chưa có tài khoản.
+          </p>
         </div>
       </div>
     </div>

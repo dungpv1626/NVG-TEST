@@ -47,5 +47,5 @@ export function useCompanyLookup(
   enabled = true,
 ): (companyId: string | null | undefined) => CompanyRecord | null {
   const { data } = useCompanies(enabled);
-  return (companyId) => (companyId ? (data ?? []).find((c) => c.id === companyId) ?? null : null);
+  return (companyId) => (companyId ? ((data ?? []).find((c) => c.id === companyId) ?? null) : null);
 }

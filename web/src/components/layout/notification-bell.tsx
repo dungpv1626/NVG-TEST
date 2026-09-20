@@ -47,7 +47,7 @@ export function NotificationBell() {
   function openNotification(id: string, readAt: string | null, actionUrl: string) {
     if (!readAt) markRead.mutate(id);
     setIsOpen(false);
-    navigate(actionUrl);
+    void navigate(actionUrl);
   }
 
   return (

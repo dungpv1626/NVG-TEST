@@ -12,7 +12,7 @@
  */
 
 import { Hono } from 'hono';
-import { artifactId, BRIEF_FORM } from '@nvg/shared/design';
+import { BRIEF_FORM } from '@nvg/shared/design';
 import { ContractError } from './contracts';
 import { createComputeBackend } from './compute-backend';
 import { DataClassViolation, ModelNotConfigured } from './llm/router';

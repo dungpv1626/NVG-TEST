@@ -613,6 +613,9 @@ vết về chứng từ gốc.
 Giữ nguyên số thứ tự vì mã nguồn và các mục trên trỏ tới "câu hỏi N". Các số **12, 21, 22, 27 đã chốt**
 nên đã bỏ khỏi bảng (xem git nếu cần nội dung cũ).
 
+> **Bản đầy đủ — kèm lý do, hiện trạng và các câu chưa từng được đánh số — ở `doc/VAN_DE_CON_MO.md`.**
+> Bảng dưới đây là bản rút gọn dùng chung số. Chốt xong một câu thì sửa ở cả hai nơi.
+
 - **#1** **KHO-09 offline-first** làm thật hay online-first + `client_generated_id`? — 3C
 - **#2** **Phần mềm kế toán** chính thức (KT-08) — 3D
 - **#3** **`unit_prices` dùng chung** DA/TK/MH hay NVO cần bảng riêng? (BSD 5) — 2B

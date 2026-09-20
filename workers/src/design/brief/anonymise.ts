@@ -81,7 +81,7 @@ const REDACTED = '[đã lược]';
  *    Việt gọi tên trong câu, và cũng là cách địa chỉ/hướng KHÔNG bao giờ được gọi.
  */
 const HONORIFICS =
-  '(?:anh|chị|ông|bà|cô|chú|bác|cậu|mợ|dì|thím|em|cháu|cụ|thầy|cô giáo|vợ|chồng|gia đình|nhà|khách|chủ nhà|a\/c|mr|mrs|ms)';
+  '(?:anh|chị|ông|bà|cô|chú|bác|cậu|mợ|dì|thím|em|cháu|cụ|thầy|cô giáo|vợ|chồng|gia đình|nhà|khách|chủ nhà|a/c|mr|mrs|ms)';
 
 export function scrubIdentity(
   text: string,

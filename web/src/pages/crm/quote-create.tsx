@@ -95,7 +95,7 @@ export function QuoteCreatePage() {
       });
       setDirty(false);
       releaseUnsavedGuard();
-      navigate(backToQuotes, { replace: true });
+      void navigate(backToQuotes, { replace: true });
     } catch (err) {
       setFormError(toUserMessage(err, 'create'));
     }
@@ -104,7 +104,7 @@ export function QuoteCreatePage() {
   function handleCancel() {
     // KHÔNG hỏi ở đây: `useUnsavedChangesGuard` đã chặn mọi lần chuyển trang, kể cả
     // lần này. Hỏi thêm một lần nữa là bắt người dùng xác nhận hai lần cho một việc.
-    navigate(backToQuotes);
+    void navigate(backToQuotes);
   }
 
   const breadcrumbs = [

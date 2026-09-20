@@ -1,15 +1,19 @@
 /**
  * Hằng số nghiệp vụ Module TC — Thi công và Ngân sách công trình.
  *
- * Nguồn: PRD TC-01 → TC-08, Backend Schema 4.6, Webapp Flow 3.4 và 7.
+ * Nguồn: PRD TC-01 → TC-08 (phạm vi cũ), Backend Schema 4.6, Webapp Flow 3.4 và 7.
  *
- * ⚠️ MODULE ĐỊNH HƯỚNG. PRD Mục 1.2 và Mục 10 ghi rõ: bộ phận Chỉ huy – Giám sát công
- * trường (NVC/NVO) CHƯA có phiếu khảo sát trực tiếp; toàn bộ yêu cầu TC được tổng hợp gián
- * tiếp từ Ban Giám đốc, Kinh doanh và Dự toán – Kỹ thuật. Mọi danh sách giá trị trong file
- * này là ĐỀ XUẤT của đội triển khai, không phải yêu cầu đã chốt.
+ * Phiếu khảo sát Chỉ huy – Giám sát công trường ĐÃ CÓ (02/09/2026), nằm ở
+ * `doc/khao-sat/HoSo_KhaoSat_NVG_full.md` — module không còn ở mức ĐỊNH HƯỚNG. Bốn giả
+ * định cũ đã được thay bằng câu trả lời thật ở migration `0105`/`0106`.
  *
- * Chỗ nào là suy luận gián tiếp đều được đánh dấu `SUY LUẬN` kèm căn cứ, để khi có dữ liệu
- * khảo sát thật thì biết chính xác phải rà lại cái gì — thay vì phải đọc lại cả module.
+ * ⚠️ Hai điều còn đúng:
+ * 1. PRD v1.4 mở phạm vi TC thành TC-01 → TC-20. Hằng số trong tệp này mới phủ phạm vi CŨ;
+ *    phần còn thiếu ghi ở `BUILD_PLAN.md` mục 6.1, 6.2, 6.5.
+ * 2. Chỗ khảo sát KHÔNG trả lời vẫn được đánh dấu `SUY LUẬN` kèm căn cứ, để biết chính xác
+ *    phải rà lại cái gì khi NVG chốt — thay vì phải đọc lại cả module. Ba con số của TC
+ *    (cửa sổ sửa nhật ký, ngưỡng cảnh báo ngân sách, thang đánh giá tổ đội) đã chuyển thành
+ *    tham số cấu hình ở migration `0112`, nhưng vẫn là giả định chưa ai xác nhận.
  */
 
 import { toMoney } from './format';

@@ -5,11 +5,11 @@ Hệ thống quản trị nội bộ cho ba pháp nhân **NVC** (nhà xưởng c
 
 ## Tài liệu
 
-| Loại | Vị trí |
-|---|---|
-| Tài liệu nghiệp vụ chính thức (6 tài liệu) | `doc/` |
-| Quy ước, ràng buộc, quyết định kỹ thuật | [`CLAUDE.md`](./CLAUDE.md) |
-| Kế hoạch triển khai theo phase | [`BUILD_PLAN.md`](./BUILD_PLAN.md) |
+| Loại                                               | Vị trí                                                 |
+| -------------------------------------------------- | ------------------------------------------------------ |
+| Tài liệu nghiệp vụ chính thức (6 tài liệu)         | `doc/`                                                 |
+| Quy ước, ràng buộc, quyết định kỹ thuật            | [`CLAUDE.md`](./CLAUDE.md)                             |
+| Kế hoạch triển khai theo phase                     | [`BUILD_PLAN.md`](./BUILD_PLAN.md)                     |
 | Tiến độ hiện tại — đã xong gì, đang làm gì, còn gì | [`TIEN_DO.html`](./TIEN_DO.html) (mở bằng trình duyệt) |
 
 Đọc tài liệu `.docx` trong `doc/`:
@@ -41,13 +41,13 @@ npm run dev:workers     # chạy API (cửa sổ khác)
 
 ## Lệnh thường dùng
 
-| Lệnh | Việc |
-|---|---|
-| `npm run typecheck` | Kiểm tra kiểu toàn bộ workspace |
-| `npm test` | Chạy test (unit + RLS) |
-| `npm run db:generate` | Sinh migration từ thay đổi schema |
-| `npm run db:studio` | Mở Drizzle Studio xem dữ liệu |
-| `npm run format` | Định dạng mã nguồn |
+| Lệnh                                               | Việc                                               |
+| -------------------------------------------------- | -------------------------------------------------- |
+| `npm run typecheck`                                | Kiểm tra kiểu toàn bộ workspace                    |
+| `npm test`                                         | Chạy test (unit + RLS)                             |
+| `npm run db:generate`                              | Sinh migration từ thay đổi schema                  |
+| `npm run db:studio`                                | Mở Drizzle Studio xem dữ liệu                      |
+| `npm run format`                                   | Định dạng mã nguồn                                 |
 | `npm run build && npm run preview --workspace=web` | Thử bản PWA thật (service worker tắt ở chế độ dev) |
 
 ## Dùng trên điện thoại
