@@ -114,7 +114,7 @@ export async function runScheduledScans(env: Env): Promise<Record<string, number
   return results;
 }
 
-export { AiDesignPipeline, DesignPipeline, DigitisePipeline } from './design';
+export { AiDesignPipeline, DigitisePipeline } from './design';
 
 export default {
   fetch: app.fetch,

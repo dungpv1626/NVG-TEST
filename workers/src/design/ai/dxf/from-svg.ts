@@ -51,6 +51,15 @@ const ROLE_OF_CLASS: Record<string, DxfRole | null> = {
   [CLS.textArea]: 'room_label',
   [CLS.north]: 'annotation',
   [CLS.textNorth]: 'annotation',
+  // Tờ mặt đứng (T59): khối nhà và cốt đất là nét tường, mảng trang trí là lớp hatch, ký hiệu cao
+  // độ và vạch sàn là ký hiệu.
+  [CLS.ground]: 'wall',
+  [CLS.elevationOutline]: 'wall',
+  [CLS.element]: 'hatch',
+  [CLS.frontFence]: 'wall',
+  [CLS.floorLine]: 'annotation',
+  [CLS.levelMark]: 'annotation',
+  [CLS.textLevelMark]: 'annotation',
 };
 
 /** Cỡ chữ mặc định theo lớp CSS — cùng bảng `sheetCss` dùng. */

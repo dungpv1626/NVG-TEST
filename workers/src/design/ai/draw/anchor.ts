@@ -22,7 +22,9 @@
 import type { AiFloorPlan } from '@nvg/shared/design';
 import { DrawNotes, type DrawNote } from './notes';
 import { PlanSheetError, levelBounds, renderPlanBody, type PlanSheetOptions } from './plan-sheet';
+import type { Rect } from './geometry';
 import { el, num, sheetCss, tag } from './svg';
+import type { SheetStyle } from './style';
 import { chooseLayout, mmPerCm, type Paper } from './units';
 
 /**
@@ -66,8 +68,8 @@ const EDGE_CLEAR_MM = 6;
  * bị cắt nếu lề hẹp hơn. Đặt đều bốn cạnh chứ không chỉ hai cạnh có chuỗi: viền trắng đều làm mô
  * hình ảnh dễ giữ đúng khung hơn, và phần thừa chỉ là vài chục điểm ảnh.
  */
-function anchorPadMm(options: PlanSheetOptions): number {
-  const { dim, text_mm } = options.style;
+function anchorPadMm(style: SheetStyle): number {
+  const { dim, text_mm } = style;
   return dim.first_offset_mm + dim.row_gap_mm + text_mm.dim + dim.text_gap_mm + EDGE_CLEAR_MM;
 }
 
@@ -94,27 +96,23 @@ function frameFor(contentW: number, contentH: number): (typeof ANCHOR_FRAMES)[nu
   return best;
 }
 
-export function renderPlanAnchor(
-  plan: AiFloorPlan,
-  levelNumber: number,
-  options: PlanSheetOptions,
-): PlanAnchorResult {
-  const level = plan.levels.find((item) => item.level === levelNumber);
-  if (!level) {
-    throw new PlanSheetError(`Phương án này không có tầng ${levelNumber}.`);
-  }
+export interface AnchorPaper {
+  paper: Paper;
+  /** Hộp nhìn của ảnh neo, mm giấy. */
+  viewW: number;
+  viewH: number;
+  frame: (typeof ANCHOR_FRAMES)[number];
+}
 
-  const notes = new DrawNotes();
-  const bbox = levelBounds(level);
-  // Lấy lại ĐÚNG tỷ lệ của tờ A3, dù ảnh neo không dùng khổ giấy ấy. Tỷ lệ quyết định cỡ chữ so
-  // với hình, nên giữ nguyên thì ảnh neo có cùng độ đặc/thưa với tờ kiến trúc sư đang xem —
-  // và con số «1:60» gửi trong lời dẫn khớp với thứ mô hình nhìn thấy.
-  const { scale } = chooseLayout(bbox, options.style);
+/**
+ * Bộ đổi toạ độ của một ảnh neo: hình ở tỷ lệ `scale`, đệm lề đều bốn cạnh, căn giữa khung ảnh chuẩn
+ * gần nhất. Dùng chung cho ảnh neo mặt bằng và mặt đứng (T59) — hai ảnh neo, một cách đệm khung.
+ */
+export function anchorPaper(bbox: Rect, scale: number, style: SheetStyle): AnchorPaper {
   const k = mmPerCm(scale);
-
   const drawnW = (bbox.x1 - bbox.x0) * k;
   const drawnH = (bbox.y1 - bbox.y0) * k;
-  const pad = anchorPadMm(options);
+  const pad = anchorPadMm(style);
   const frame = frameFor(drawnW + 2 * pad, drawnH + 2 * pad);
 
   // Số điểm ảnh trên mỗi mm giấy: chiều nào chật hơn thì chiều ấy quyết định. Nhờ vậy lề thật
@@ -137,25 +135,56 @@ export function renderPlanAnchor(
     len: (cm) => cm * k,
     u: (unit) => [unit[0], -unit[1]],
   };
+  return { paper, viewW, viewH, frame };
+}
 
-  const svg = el(
+/**
+ * Vỏ SVG của một ảnh neo: cỡ điểm ảnh trần, nền trắng tuyệt đối, rồi thân hình.
+ */
+export function anchorSvg(anchor: AnchorPaper, style: SheetStyle, body: string): string {
+  return el(
     'svg',
     {
       xmlns: 'http://www.w3.org/2000/svg',
-      viewBox: `0 0 ${num(viewW)} ${num(viewH)}`,
+      viewBox: `0 0 ${num(anchor.viewW)} ${num(anchor.viewH)}`,
       // Số TRẦN, không hậu tố — khác `svgDocument` vốn khai `mm`. Ảnh neo đi vào `<img>` rồi lên
       // canvas, mà canvas cần cỡ điểm ảnh nội tại; khai `mm` thì mỗi trình duyệt quy đổi một kiểu
       // và tấm PNG ra không đúng khung chuẩn nữa.
-      width: num(frame.widthPx),
-      height: num(frame.heightPx),
+      width: num(anchor.frame.widthPx),
+      height: num(anchor.frame.heightPx),
     },
     [
-      el('style', {}, sheetCss(options.style)),
+      el('style', {}, sheetCss(style)),
       // Trắng TUYỆT ĐỐI, không lấy `style.colour.paper`: quy ước trình bày cho phép giấy ngả kem,
       // và mô hình ảnh sẽ chép lại đúng cái nền ngà ấy ra tờ trình khách.
-      tag('rect', { x: 0, y: 0, width: viewW, height: viewH, fill: '#ffffff' }),
-      renderPlanBody(plan, level, paper, options, notes),
+      tag('rect', { x: 0, y: 0, width: anchor.viewW, height: anchor.viewH, fill: '#ffffff' }),
+      body,
     ],
+  );
+}
+
+export function renderPlanAnchor(
+  plan: AiFloorPlan,
+  levelNumber: number,
+  options: PlanSheetOptions,
+): PlanAnchorResult {
+  const level = plan.levels.find((item) => item.level === levelNumber);
+  if (!level) {
+    throw new PlanSheetError(`Phương án này không có tầng ${levelNumber}.`);
+  }
+
+  const notes = new DrawNotes();
+  const bbox = levelBounds(level);
+  // Lấy lại ĐÚNG tỷ lệ của tờ A3, dù ảnh neo không dùng khổ giấy ấy. Tỷ lệ quyết định cỡ chữ so
+  // với hình, nên giữ nguyên thì ảnh neo có cùng độ đặc/thưa với tờ kiến trúc sư đang xem —
+  // và con số «1:60» gửi trong lời dẫn khớp với thứ mô hình nhìn thấy.
+  const { scale } = chooseLayout(bbox, options.style);
+  const { paper, viewW, viewH, frame } = anchorPaper(bbox, scale, options.style);
+
+  const svg = anchorSvg(
+    { paper, viewW, viewH, frame },
+    options.style,
+    renderPlanBody(plan, level, paper, options, notes),
   );
 
   return {

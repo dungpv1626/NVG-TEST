@@ -95,7 +95,7 @@ export function renderPlanDxf(plan: AiFloorPlan, options: PlanDxfOptions): PlanD
  * đây rồi lật lại ở `svgToDxf` là để các hàm vẽ nhận đúng quy ước y-xuống chúng vẫn dùng cho tờ SVG
  * (chiều quét cung cửa, chữ quay dọc).
  */
-function modelPaper(): Paper {
+export function modelPaper(): Paper {
   const k = mmPerCm(DXF_SCALE);
   const x = (cmX: number) => cmX * k;
   const y = (cmY: number) => -cmY * k;

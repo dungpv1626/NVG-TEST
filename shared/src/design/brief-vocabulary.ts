@@ -41,9 +41,7 @@ export const BUILDING_TYPE_LABEL: Readonly<Record<DesignBriefBuildingType, strin
 /**
  * Phong cách kiến trúc — chín cái phổ biến trong nhà ở dân dụng Việt Nam.
  *
- * Đây là danh sách để CHỌN, không phải danh sách đầy đủ của ngành: mỗi mã thêm vào đây phải
- * có một mục tương ứng trong `kb/render_prompts.yaml`, nếu không tuyến phối cảnh lặng lẽ lùi
- * về `hien_dai` và khách nhận một ảnh không đúng thứ vừa chọn.
+ * Đây là danh sách để CHỌN, không phải danh sách đầy đủ của ngành.
  *
  * Thứ tự ở đây là thứ tự hiện trên biểu mẫu: ba cái NVO làm nhiều nhất trước.
  */

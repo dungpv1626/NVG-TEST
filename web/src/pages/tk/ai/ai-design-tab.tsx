@@ -1,10 +1,8 @@
 /**
- * Tab «Thiết kế AI» — dải bốn bước nối nhau của nhánh AI (T17, 09/09/2026).
+ * Tab «AI Design» — dải ba bước nối nhau của nhánh AI (T17, 09/09/2026; bộ giải nội bộ gỡ ở T58).
  *
- * Vì sao là một tab RIÊNG chứ không phải một ô chọn trong hai tab của bộ giải: nhánh AI thay
- * thế bộ giải, và khi nó làm tốt thì bộ giải bị xoá. Trộn hai nhánh vào cùng màn hình thì mỗi
- * con số hiện ra không rõ của bên nào, và ngày dọn phải gỡ từng khối ra khỏi panel của bên kia.
- * Ở đây, xoá bộ giải là xoá hai tab của nó — tab này đứng nguyên.
+ * Bước «Chương trình không gian» đã gỡ khỏi dải (19/09/2026): mặt bằng đọc đầu bài + khảo sát,
+ * không đọc chương trình không gian (T45), nên bước ấy không còn là đầu vào của bước nào.
  *
  * Dải bước là thứ quan trọng nhất của màn hình: mỗi bước ăn kết quả của bước trước, nên người
  * dùng phải thấy ngay mình đang ở đâu và bước nào còn thiếu. Bước chưa đủ điều kiện thì MỜ kèm
@@ -20,10 +18,10 @@ import { toUserMessage } from '@/hooks/use-error-message';
 import { Chip, Panel } from '../tk-ui';
 import { AiCallLedger } from './ai-usage';
 import { cn } from '@/lib/utils';
+import { AiFacadeStep, facadeIsStale, STALE_FACADE } from './ai-facade-step';
 import { AiPlanStep } from './ai-plan-step';
-import { AiProgramStep } from './ai-program-step';
 
-type StepId = 'chuong-trinh' | 'mat-bang' | 'mat-dung' | 'phoi-canh';
+type StepId = 'mat-bang' | 'mat-dung' | 'phoi-canh';
 
 interface StepMeta {
   id: StepId;
@@ -34,23 +32,18 @@ interface StepMeta {
 
 const STEPS: StepMeta[] = [
   {
-    id: 'chuong-trinh',
-    label: '1. Chương trình không gian',
-    hint: 'AI đề xuất danh mục phòng, tầng và diện tích từ đầu bài và khảo sát.',
-  },
-  {
     id: 'mat-bang',
-    label: '2. Mặt bằng từng tầng',
+    label: '1. Mặt bằng từng tầng',
     hint: 'AI khai nội dung bản vẽ; chương trình dựng tờ mặt bằng theo đúng dữ liệu đó.',
   },
   {
     id: 'mat-dung',
-    label: '3. Mặt đứng',
+    label: '2. Mặt đứng',
     hint: 'Ý tưởng mái, vật liệu, màu, cổng và ban công — sửa được trước khi dựng ảnh.',
   },
   {
     id: 'phoi-canh',
-    label: '4. Phối cảnh',
+    label: '3. Phối cảnh',
     hint: 'Năm ảnh cùng một ngôi nhà, dựng từ tờ mặt đứng đã duyệt.',
   },
 ];
@@ -60,17 +53,10 @@ function statusOf(
   step: StepId,
   state: AiDesignState,
 ): { done: boolean; running: boolean; blocked: string | null; count: number } {
-  const run = (stage: 'program' | 'plan' | 'facade' | 'images') =>
+  const run = (stage: 'plan' | 'facade' | 'images') =>
     state.runs[stage]?.status === 'running' || state.runs[stage]?.status === 'queued';
 
   switch (step) {
-    case 'chuong-trinh':
-      return {
-        done: Boolean(state.program),
-        running: run('program'),
-        blocked: state.briefArtifactId ? null : 'Cần xác nhận đầu bài trước.',
-        count: state.program ? state.program.payload.spaces.length : 0,
-      };
     case 'mat-bang':
       return {
         done: state.plans.length > 0,
@@ -81,7 +67,8 @@ function statusOf(
       };
     case 'mat-dung':
       return {
-        done: Boolean(state.facadeArtifactId),
+        // Mặt đứng dựng theo phương án cũ (T59) chưa tính là xong: cửa trên tờ ấy của nhà khác.
+        done: Boolean(state.facadeArtifactId) && !facadeIsStale(state),
         running: run('facade'),
         // Có phương án là chưa đủ: phải có phương án được CHỌN. Mặt đứng dựng theo đúng một mặt
         // bằng, và chọn bản nào là quyết định của người (PRD 2.3).
@@ -92,7 +79,11 @@ function statusOf(
       return {
         done: Boolean(state.imageSetArtifactId),
         running: run('images'),
-        blocked: state.facadeArtifactId ? null : 'Cần ý tưởng mặt đứng trước.',
+        blocked: !state.facadeArtifactId
+          ? 'Cần ý tưởng mặt đứng trước.'
+          : facadeIsStale(state)
+            ? STALE_FACADE
+            : null,
         count: 0,
       };
   }
@@ -106,7 +97,7 @@ export function AiDesignTab({
   readOnly: boolean;
 }): React.ReactElement {
   const state = useAiDesignState(projectId);
-  const [open, setOpen] = useState<StepId>('chuong-trinh');
+  const [open, setOpen] = useState<StepId>('mat-bang');
 
   if (state.isLoading) {
     return (
@@ -141,10 +132,10 @@ export function AiDesignTab({
         aside={<Chip tone="mute">Bản phác tham khảo — không đi vào hồ sơ phát hành</Chip>}
       >
         <p className="text-fg-subtle">
-          Bốn bước nối nhau, mỗi bước dùng kết quả của bước trước. Kết quả do mô hình đề xuất, kiến
+          Ba bước nối nhau, mỗi bước dùng kết quả của bước trước. Kết quả do mô hình đề xuất, kiến
           trúc sư xem lại và quyết định.
         </p>
-        <ol className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <ol className="mt-3 grid gap-2 sm:grid-cols-3">
           {STEPS.map((step) => {
             const s = statusOf(step.id, data);
             return (
@@ -165,6 +156,8 @@ export function AiDesignTab({
                     {/* Trạng thái luôn kèm CHỮ, không chỉ màu (CGD 6.8). */}
                     {s.running ? (
                       <Chip tone="bl">Đang chạy</Chip>
+                    ) : step.id === 'mat-dung' && facadeIsStale(data) ? (
+                      <Chip tone="am">Theo phương án cũ</Chip>
                     ) : s.done ? (
                       <Chip tone="gr">{s.count ? `Có ${s.count}` : 'Đã có'}</Chip>
                     ) : s.blocked ? (
@@ -185,13 +178,13 @@ export function AiDesignTab({
 
       <div>
         <p className="mb-3 text-fg-subtle">{active.hint}</p>
-        {open === 'chuong-trinh' && (
-          <AiProgramStep projectId={projectId} readOnly={readOnly} state={data} />
-        )}
         {open === 'mat-bang' && (
           <AiPlanStep projectId={projectId} readOnly={readOnly} state={data} />
         )}
-        {open !== 'chuong-trinh' && open !== 'mat-bang' && (
+        {open === 'mat-dung' && (
+          <AiFacadeStep projectId={projectId} readOnly={readOnly} state={data} />
+        )}
+        {open === 'phoi-canh' && (
           <Panel title={active.label}>
             {/* Đúng câu của CLAUDE.md 5.2: chưa có thì nói chưa có, không hiện số 0 hay ô rỗng
                 trông như đã chạy xong. */}

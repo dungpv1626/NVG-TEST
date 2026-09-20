@@ -28,40 +28,6 @@ templates:
   max_density: 'Mật độ xây dựng {actual}, vượt mức tối đa {required}.'
   module_multiple: 'Kích thước {actual} m không phải bội số của module {required} m.'
 
-# Mẫu câu ghép khi nhiều quy tắc cùng nằm trong một tập mâu thuẫn.
-#
-# Khi bộ giải VÔ NGHIỆM thì không có phương án nào, nên không có `{actual}` để điền — mẫu câu
-# vi phạm ở trên không dùng được. Tập mâu thuẫn cần diễn đạt YÊU CẦU chứ không phải vi phạm:
-# "không thể đồng thời có hành lang rộng ≥ 0,9 m và phòng ngủ chính ≥ 14 m²".
-combined:
-  prefix: 'Trên {constraint} không thể đồng thời có:'
-  separator: ', '
-  suffix: '.'
-  fallback_constraint: 'khu đất và số tầng đã cho'
-
-# Yêu cầu ở dạng cụm danh từ, tra theo rule_id rồi mới tới predicate.
-requirements:
-  corridor_min_width: 'hành lang rộng tối thiểu {required} m'
-  stair_min_width: 'vế thang rộng tối thiểu {required} m'
-  room_min_dimension_bedroom: 'phòng ngủ có cạnh nhỏ nhất {required} m'
-  min_area: '{target} tối thiểu {required} m²'
-  max_area: '{target} không quá {required} m²'
-  lightwell_max_area: 'giếng trời không quá {required} m²'
-  min_dimension: '{target} có cạnh nhỏ nhất {required} m'
-  aspect_ratio_max: '{target} có tỉ lệ dài trên rộng không quá {required}'
-  requires_daylight: '{target} tiếp giáp mặt thoáng'
-  requires_access: '{target} có lối vào'
-  requires_face: '{target} tiếp giáp đúng mặt của công trình'
-  garage_on_access_face: 'chỗ để xe giáp mặt vào được'
-  outdoor_on_open_face: 'không gian ngoài trời giáp mặt thoáng'
-  adjacency: '{target} đúng quan hệ vị trí đã đặt'
-  floor_preference: '{target} ở đúng tầng ưu tiên'
-  stair_faces_entry: 'cầu thang không nằm thẳng trục cửa chính'
-  aligned_across_floors: '{target} thẳng hàng giữa các tầng'
-  setback: 'khoảng lùi tối thiểu {required} m'
-  max_density: 'mật độ xây dựng không quá {required}'
-  module_multiple: 'kích thước là bội số {required} m'
-
 # Nhãn nguồn quy tắc, hiển thị trên thẻ ràng buộc để kiến trúc sư biết ngay
 # vi phạm này chặn phát hành hay bỏ qua được.
 source_labels:

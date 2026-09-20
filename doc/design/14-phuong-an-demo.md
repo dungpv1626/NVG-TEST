@@ -1,5 +1,8 @@
 # 14 — Phương án ra bản demo: đơn giản hoá, tự gỡ vướng mắc
 
+> ⚠️ **LỊCH SỬ — bộ giải nội bộ mà phương án này dựng demo đã gỡ hẳn (T58, 19/09/2026).** Sáu trong
+> mười cảnh (3–9) không còn; bài Playwright chỉ còn các cảnh không thuộc bộ giải.
+>
 > **Trạng thái: ĐÃ CHỐT (Haan, 06/09/2026) — đã thi hành đủ bảy bước trong cùng ngày.**
 > Tài liệu này THAY mục 13.12 làm thứ tự thi hành; kết quả từng bước ghi ở
 > `TIEN_DO_THIET_KE.html` mục 3. Điều kiện "demo xong" ở 14.2 đã đạt: bài Playwright mười cảnh

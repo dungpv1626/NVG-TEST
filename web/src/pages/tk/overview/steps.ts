@@ -1,5 +1,5 @@
 /**
- * Dải tiến trình bảy bước của Trang dự án thiết kế (bản mẫu §5.5a).
+ * Dải tiến trình sáu bước của Trang dự án thiết kế (bản mẫu §5.5a).
  *
  * ⚠️ Đây KHÔNG phải một cỗ máy trạng thái thứ hai. `design_projects.stage` vẫn là thẩm quyền
  * duy nhất về bước nghiệp vụ — nó hiện thành nhãn trạng thái trên header và chỉ đổi qua
@@ -8,7 +8,7 @@
  * ghi, không ai đặt tay được.
  *
  * Hai câu hỏi đó lệch nhau là chuyện bình thường và có ích: một dự án đang ở bước "Hồ sơ kỹ
- * thuật" vẫn có thể chưa chốt chương trình không gian, và dải này nói ra điều đó.
+ * thuật" vẫn có thể chưa chọn phương án mặt bằng AI, và dải này nói ra điều đó.
  *
  * Bước ĐANG CHẠY là bước chưa xong đầu tiên; mọi bước sau nó là chưa mở. Không có bước nào
  * "xong" nằm sau một bước "chưa mở" — đọc dải là đọc một mạch từ trái sang phải.
@@ -31,10 +31,10 @@ export interface StepInput {
   brief: { confirmed: boolean; completeness: number | null } | null;
   /** Số biên bản khảo sát hiện trạng. */
   surveyCount: number;
-  /** Chương trình không gian đã chốt (`space_program` head) và số không gian. */
-  program: { committed: boolean; spaceCount: number } | null;
-  /** Số phương án KHẢ THI đã sinh (phương án vô nghiệm không tính là sản phẩm). */
-  feasibleVariants: number;
+  /** Số phương án mặt bằng nhánh AI đã lưu (chỉ phương án qua cổng mới được lưu — T39). */
+  aiPlanCount: number;
+  /** Đã chọn một phương án mặt bằng AI chưa (`design_head` của nhánh AI). */
+  aiPlanChosen: boolean;
   /** Tiến độ ba bộ môn, đơn vị phần trăm; rỗng khi chưa lập việc nào. */
   disciplinePercents: number[];
   /** Đã có bản dự toán nào chưa. */
@@ -50,7 +50,6 @@ function percent(value: number): string {
 
 export function designSteps(input: StepInput): DesignStep[] {
   const briefDone = input.brief?.confirmed === true;
-  const programDone = input.program?.committed === true;
   const disciplineAvg =
     input.disciplinePercents.length > 0
       ? input.disciplinePercents.reduce((a, b) => a + b, 0) / input.disciplinePercents.length
@@ -74,17 +73,10 @@ export function designSteps(input: StepInput): DesignStep[] {
       tab: 'khao-sat',
     },
     {
-      id: 'khong-gian',
-      label: 'Không gian',
-      note:
-        input.program && input.program.spaceCount > 0 ? `${input.program.spaceCount} phòng` : '',
-      tab: 'chuong-trinh-khong-gian',
-    },
-    {
-      id: 'phuong-an',
-      label: 'Phương án',
-      note: input.feasibleVariants > 0 ? `${input.feasibleVariants} phương án` : '',
-      tab: 'phuong-an',
+      id: 'ai-design',
+      label: 'AI Design',
+      note: input.aiPlanCount > 0 ? `${input.aiPlanCount} phương án` : '',
+      tab: 'thiet-ke-ai',
     },
     {
       id: 'ho-so-ky-thuat',
@@ -99,8 +91,7 @@ export function designSteps(input: StepInput): DesignStep[] {
   const done = [
     briefDone,
     input.surveyCount > 0,
-    programDone,
-    input.feasibleVariants > 0,
+    input.aiPlanChosen,
     disciplineAvg === 100,
     input.hasEstimate,
     input.customerApproved,

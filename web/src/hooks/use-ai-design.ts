@@ -10,6 +10,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import type { AiFacadeBrief } from '@nvg/shared/design';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DesignApiError, designApi, designApiFile } from '@/lib/design-api';
 import { toUserMessage } from '@/hooks/use-error-message';
@@ -263,6 +264,11 @@ export interface AiDesignState {
   /** Phương án đã CHỌN. Rỗng khi đã có phương án nhưng chưa ai chọn — bước mặt đứng chờ cái này. */
   planHeadArtifactId: string | null;
   facadeArtifactId: string | null;
+  /**
+   * Mặt bằng mà mặt đứng hiện hành dựng theo (T59). Khác `planHeadArtifactId` = kỹ sư đã đổi phương án
+   * sau khi dựng mặt đứng; mặt đứng cũ vẫn giữ, gắn nhãn «dựng theo phương án cũ».
+   */
+  facadePlanRef?: string | null;
   imageSetArtifactId: string | null;
   runs: Partial<Record<AiStage, AiRunView>>;
   roomLabels: Record<string, string>;
@@ -568,6 +574,19 @@ export function useAiPlanSheet(
   artifactId: string | null,
   level: number,
 ): AiPlanSheetState {
+  return useSheetBlob(
+    projectId && artifactId
+      ? `/design/ai/plan/${projectId}/sheet?artifactId=${encodeURIComponent(artifactId)}&level=${level}`
+      : null,
+    'Không dựng được tờ mặt bằng.',
+  );
+}
+
+/**
+ * Tải một tờ vẽ SVG thành `blob:` kèm tỷ lệ và hướng giấy máy chủ đã chọn — dùng chung cho tờ mặt
+ * bằng và tờ mặt đứng (T59). Xem ghi chú của `useAiPlanSheet` về `<img>` và việc thu hồi blob.
+ */
+function useSheetBlob(path: string | null, fallbackError: string): AiPlanSheetState {
   const [state, setState] = useState<AiPlanSheetState>({
     url: null,
     scale: null,
@@ -577,7 +596,7 @@ export function useAiPlanSheet(
   });
 
   useEffect(() => {
-    if (!projectId || !artifactId) {
+    if (!path) {
       setState({ url: null, scale: null, orientation: null, loading: false, error: null });
       return;
     }
@@ -585,9 +604,7 @@ export function useAiPlanSheet(
     let objectUrl: string | null = null;
     setState({ url: null, scale: null, orientation: null, loading: true, error: null });
 
-    void designApiFile(
-      `/design/ai/plan/${projectId}/sheet?artifactId=${encodeURIComponent(artifactId)}&level=${level}`,
-    )
+    void designApiFile(path)
       .then(async (response) => {
         const blob = await response.blob();
         if (cancelled) return;
@@ -608,7 +625,7 @@ export function useAiPlanSheet(
           scale: null,
           orientation: null,
           loading: false,
-          error: error instanceof Error ? error.message : 'Không dựng được tờ mặt bằng.',
+          error: error instanceof Error ? error.message : fallbackError,
         });
       });
 
@@ -616,9 +633,242 @@ export function useAiPlanSheet(
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [projectId, artifactId, level]);
+  }, [path, fallbackError]);
 
   return state;
+}
+
+// ---------------------------------------------------------------------------
+// Bước 2 — mặt đứng (T59)
+// ---------------------------------------------------------------------------
+
+/** Ý tưởng mặt đứng như `GET /design/ai/facade/:projectId` trả — nhãn đã dịch ở máy chủ. */
+export interface AiFacadeView {
+  artifactId: string;
+  createdAt: string;
+  /** Phương án mặt bằng mà mặt đứng này dựng theo. */
+  planRef: string;
+  style: string;
+  /**
+   * Bảng vật liệu: mái, từng vùng, kiểu cửa, lan can — nhãn tiếng Việt từ danh mục. `fromBrief` = dòng
+   * kỹ sư đã chọn trong phiếu yêu cầu (chương trình áp thẳng); còn lại là AI đề xuất.
+   */
+  legend: Array<{ key: string; label: string; value: string; fromBrief?: boolean }>;
+  /** Phiếu yêu cầu mà ý tưởng này theo — rỗng khi dựng trước khi có phiếu. */
+  briefRef?: string | null;
+  palette: { primary_hex: string; secondary_hex: string; accent_hex?: string | null };
+  roofType: string;
+  pitchDeg: number | null;
+  gate: { type: string; w: number | null; h: number | null } | null;
+  fenceH: number | null;
+  openings: number;
+  balconies: number;
+  elements: string[];
+  rationale: string;
+  generator: { provider: string; model: string; route: string; repaired?: boolean };
+}
+
+export function useAiFacade(projectId: string, artifactId: string | null) {
+  return useQuery<AiFacadeView, Error>({
+    queryKey: ['ai_facade', projectId, artifactId],
+    queryFn: () =>
+      designApi<AiFacadeView>(
+        `/design/ai/facade/${projectId}?artifactId=${encodeURIComponent(artifactId!)}`,
+      ),
+    enabled: Boolean(projectId && artifactId),
+  });
+}
+
+/** Tờ mặt đứng mặt tiền, dạng ảnh — cùng cách với tờ mặt bằng (qua `<img src=blob:>`). */
+export function useAiFacadeSheet(projectId: string, artifactId: string | null): AiPlanSheetState {
+  return useSheetBlob(
+    projectId && artifactId
+      ? `/design/ai/facade/${projectId}/sheet?artifactId=${encodeURIComponent(artifactId)}`
+      : null,
+    'Không dựng được tờ mặt đứng.',
+  );
+}
+
+// ── Ảnh mặt đứng có vật liệu (T59 Đợt E) ──────────────────────────────────────────────────────
+
+/**
+ * Ảnh mặt đứng có vật liệu đã vẽ (nếu có) cho một ý tưởng — cùng khuôn `useAiPlanSheetImage`: blob phải
+ * thu hồi, 404 là «chưa vẽ» chứ không phải lỗi, mọi mã khác phải nói ra (tránh trả tiền vẽ lại một
+ * tấm đã có).
+ */
+export function useAiFacadeImage(
+  projectId: string,
+  artifactId: string | null,
+  reloadKey: number,
+): AiPlanSheetImageState {
+  const [state, setState] = useState<AiPlanSheetImageState>({
+    url: null,
+    loading: false,
+    error: null,
+  });
+
+  useEffect(() => {
+    if (!projectId || !artifactId) {
+      setState({ url: null, loading: false, error: null });
+      return;
+    }
+    let cancelled = false;
+    let objectUrl: string | null = null;
+    setState({ url: null, loading: true, error: null });
+    void designApiFile(
+      `/design/ai/facade/${projectId}/image?artifactId=${encodeURIComponent(artifactId)}`,
+    )
+      .then(async (response) => {
+        const blob = await response.blob();
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setState({ url: objectUrl, loading: false, error: null });
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        const status = error instanceof DesignApiError ? error.status : undefined;
+        if (status === 404) {
+          setState({ url: null, loading: false, error: null });
+          return;
+        }
+        setState({ url: null, loading: false, error: toUserMessage(error) });
+      });
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [projectId, artifactId, reloadKey]);
+
+  return state;
+}
+
+export interface DrawnFacadeImage {
+  imageArtifactId: string;
+  mime: string;
+  /** Câu in ĐÈ LÊN PIXEL — do máy chủ đưa (`kb/`). */
+  watermark: string;
+  promptVersion: string;
+  usage: AiCallUsage | null;
+}
+
+/**
+ * Vẽ ảnh mặt đứng có vật liệu: tải ảnh neo (không khung tên), rasterise ở trình duyệt, gửi lên máy
+ * chủ. Cùng khuôn `useDrawAiPlanSheetImage`. ⚠️ Lượt này TIÊU TIỀN THẬT.
+ */
+export function useDrawAiFacadeImage() {
+  return useMutation<
+    DrawnFacadeImage,
+    Error,
+    { projectId: string; artifactId: string; route: string }
+  >({
+    mutationFn: async ({ projectId, artifactId, route }) => {
+      const response = await designApiFile(
+        `/design/ai/facade/${projectId}/anchor?artifactId=${encodeURIComponent(artifactId)}`,
+        // Bỏ qua bộ đệm: tấm này đi thẳng ra nhà cung cấp và tốn tiền.
+        true,
+      );
+      const width = Number(response.headers.get('X-Anchor-Width'));
+      const height = Number(response.headers.get('X-Anchor-Height'));
+      if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+        throw new Error('Máy chủ không khai cỡ ảnh neo. Mở lại trang rồi thử lại.');
+      }
+      const url = URL.createObjectURL(await response.blob());
+      try {
+        const anchorBase64 = await svgUrlToPngBase64(url, width, height);
+        return await designApi<DrawnFacadeImage>(`/design/ai/facade/${projectId}/image`, {
+          artifactId,
+          route,
+          anchorBase64,
+        });
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    },
+  });
+}
+
+// ── Phiếu yêu cầu mặt đứng của kỹ sư (T59 Đợt F2) ─────────────────────────────────────────────
+
+export interface FacadeOption {
+  code: string;
+  label: string;
+}
+
+/** Danh mục cho các ô chọn của phiếu — đọc từ `kb/facade_vocabulary.yaml` qua Worker. */
+export interface FacadeVocabularyView {
+  roofTypes: FacadeOption[];
+  roofMaterials: FacadeOption[];
+  materials: FacadeOption[];
+  colours: Array<FacadeOption & { hex: string }>;
+  railings: FacadeOption[];
+  doorMaterials: FacadeOption[];
+  doorTypes: FacadeOption[];
+  glassTypes: FacadeOption[];
+  garageDoorTypes: FacadeOption[];
+  fenceTypes: FacadeOption[];
+  gateTypes: FacadeOption[];
+  elements: FacadeOption[];
+  /** Giá trị dùng khi kỹ sư để trống — hiện làm chữ gợi ý. */
+  defaults: {
+    groundRaiseCm: number | null;
+    parapetCm: number | null;
+    doorHeightCm: number | null;
+  };
+}
+
+export function useFacadeVocabulary() {
+  return useQuery<FacadeVocabularyView, Error>({
+    queryKey: ['ai_facade_vocabulary'],
+    queryFn: () => designApi<FacadeVocabularyView>('/design/ai/facade/vocabulary'),
+    staleTime: 10 * 60_000,
+  });
+}
+
+/** Phiếu hiện hành + những gì phiếu cần biết từ mặt bằng đang chọn (bề rộng cửa chỉ đọc). */
+export interface FacadeBriefState {
+  artifactId: string | null;
+  savedAt: string | null;
+  brief: AiFacadeBrief | null;
+  plan: {
+    artifactId: string;
+    mainDoorW: number | null;
+    sideDoorWs: number[];
+    garageW: number | null;
+    frontYard: boolean;
+    balconies: number;
+  } | null;
+}
+
+export function useFacadeBrief(projectId: string) {
+  return useQuery<FacadeBriefState, Error>({
+    queryKey: ['ai_facade_brief', projectId],
+    queryFn: () => designApi<FacadeBriefState>(`/design/ai/facade/brief/${projectId}`),
+    enabled: Boolean(projectId),
+  });
+}
+
+/** Lưu phiếu — một bản mới mỗi lần lưu. Không gọi AI. */
+export function useSaveFacadeBrief() {
+  const queryClient = useQueryClient();
+  return useMutation<{ artifactId: string }, Error, { projectId: string; brief: AiFacadeBrief }>({
+    mutationFn: ({ projectId, brief }) =>
+      designApi<{ artifactId: string }>(`/design/ai/facade/brief/${projectId}`, { brief }),
+    onSuccess: (_out, { projectId }) => {
+      void queryClient.invalidateQueries({ queryKey: ['ai_facade_brief', projectId] });
+    },
+  });
+}
+
+/** Tải mặt đứng dạng DXF — xuất một chiều. */
+export function useDownloadAiFacadeDxf() {
+  return useMutation<void, Error, { projectId: string; artifactId: string }>({
+    mutationFn: async ({ projectId, artifactId }) => {
+      const response = await designApiFile(
+        `/design/ai/facade/${encodeURIComponent(projectId)}/dxf?artifactId=${encodeURIComponent(artifactId)}`,
+      );
+      await saveResponse(response, 'mat-dung-ai.dxf');
+    },
+  });
 }
 
 export interface AiPlanSheetImageState {

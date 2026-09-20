@@ -5,28 +5,13 @@
  * chạy, nên tệp dữ liệu phải nhúng vào bản dựng dưới dạng văn bản (`wrangler.jsonc`, mục
  * `rules` kiểu `Text`).
  *
- * Hệ quả: **danh sách địa phương phải khai tường minh ở đây**. Thêm một tỉnh là thêm thư mục
- * `rules/locality/<tỉnh>/` VÀ một dòng trong `LOCALITY_FILES`. Không có cách nào duyệt thư
- * mục lúc chạy, và một `import` động theo biến sẽ không được esbuild gói vào.
+ * Hệ quả: **mọi tệp quy tắc phải import tường minh ở đây**. Không có cách nào duyệt thư mục lúc
+ * chạy, và một `import` động theo biến sẽ không được esbuild gói vào.
  */
 
-import structureMeta from '../../../../rules/structure/00-meta.yaml';
-import structureLayout from '../../../../rules/structure/10-layout.yaml';
 import nvgExperience from '../../../../rules/nvg-experience.yaml';
 import nvgMeasured from '../../../../rules/nvg-measured.yaml';
 import { mergePacks, parseRuleFile, RulePack, type Rule } from './rule-pack';
-
-/**
- * Nguyên lý bố cục của bộ giải — thang, hộp kỹ thuật thẳng hàng; phòng nào cũng có lối vào.
- *
- * Thay gói quy chuẩn `rules/base/` từ 13/09/2026 (Haan: «bỏ quy chuẩn VN đi», cho toàn bộ bộ
- * giải). Không còn ngưỡng pháp quy nào: khoảng lùi và mật độ lấy từ đầu bài, diện tích tối
- * thiểu từ đầu bài và chuẩn nghề.
- */
-const STRUCTURE_FILES: Array<[string, string]> = [
-  ['rules/structure/00-meta.yaml', structureMeta as unknown as string],
-  ['rules/structure/10-layout.yaml', structureLayout as unknown as string],
-];
 
 /**
  * Kinh nghiệm nghề của NVG — KHÔNG phải quy chuẩn, và đó là toàn bộ lý do nó ở tệp riêng.
@@ -43,48 +28,25 @@ const NVG_FILES: Array<[string, string]> = [
 /**
  * Ngưỡng ĐO ĐƯỢC trên hồ sơ thật — chỉ NHÁNH AI đọc, bộ giải KHÔNG.
  *
- * Thêm 12/09/2026. Vì sao không gộp vào `NVG_FILES`: danh sách ấy được `rulePackFor()` gộp với
- * `BASE_FILES` cho BỘ GIẢI, nên mọi quy tắc thêm vào đó đổi luôn khâu chia diện tích của bộ giải.
+ * Thêm 12/09/2026, tách khỏi `NVG_FILES` vì khi ấy `NVG_FILES` còn được bộ giải nội bộ đọc và
+ * mọi quy tắc thêm vào đó đổi luôn khâu chia diện tích của bộ giải.
  *
  * Đo được hậu quả khi thử gộp: `room_min_area_wc: 3.0` (đo trên 5 khu vệ sinh thật, khoảng
  * 3,1–4,5 m²) nâng mức tối thiểu của bộ giải từ 2,4 m² lên 3,0, và trên lô nhà phố 3,5 × 12 m thì
  * +0,6 m² mỗi WC đẩy thang bộ xuống đúng mức sàn 4 m² — `program-plausibility.test.ts` đỏ 4 phép
  * thử. Phép đo không sai; lô ấy chật thật. Nhưng **re-tune bộ giải là quyết định riêng có nghiệm
  * thu riêng**, không phải hệ quả phụ của một đợt sửa gói quy tắc nhánh AI — nhất là khi bộ giải
- * đã nằm trong diện xoá và T10 đòi 1.211 phép thử của nó đứng yên.
- *
- * Đây là cùng một nước đi đã làm T30 thành MỘT chỗ đổi: hai đường đọc tách nhau thì đổi một bên
- * không kéo bên kia. Ngày xoá bộ giải, gộp hai tệp này lại là việc mười giây.
+ * đã nằm trong diện xoá và T10 đòi 1.211 phép thử của nó đứng yên. Bộ giải đã gỡ (T58); hai tệp
+ * vẫn tách vì một bên là kinh nghiệm, một bên là số đo.
  */
 const NVG_MEASURED_FILES: Array<[string, string]> = [
   ['rules/nvg-measured.yaml', nvgMeasured as unknown as string],
 ];
 
-/**
- * Khoá là giá trị `locality` của đầu bài (`hung_yen`), không phải tên thư mục.
- *
- * **Rỗng là trạng thái đúng hiện nay**, không phải chỗ bỏ dở: NVG chưa nhận được văn bản quy
- * hoạch riêng của tỉnh nào, nên mọi con số đang dùng đều là QCVN 01:2021/BXD và nằm ở gói
- * nền. Xem `rules/locality/README.md` — tạo một gói chép lại đúng số của quy chuẩn quốc gia
- * là tạo bản sao thứ hai của cùng con số, và bản sao đó sẽ không đổi khi quy chuẩn đổi.
- */
-const LOCALITY_FILES: Record<string, Array<[string, string]>> = {};
-
 function parseAll(files: Array<[string, string]>): Rule[] {
   return files.flatMap(([origin, text]) => parseRuleFile(text, origin));
 }
 
-const cache = new Map<string, RulePack>();
-
-/**
- * Gói quy tắc đã gộp cho một địa phương, dùng lại giữa các request trong cùng isolate.
- *
- * Địa phương chưa có pack riêng KHÔNG phải lỗi, và cũng KHÔNG phải cảnh báo: gói nền đã
- * mang đủ khoảng lùi và mật độ theo QCVN 01:2021/BXD, nên kết quả vẫn đúng quy chuẩn quốc
- * gia. `localityMissing` đi theo gói để lớp trên GHI LẠI chế độ đã dùng
- * (`params.rule_pack_locality`) và hiển thị thành một dòng thông tin — không phải một cảnh
- * báo. Cảnh báo nổ ở mọi lần chạy là cảnh báo bị bỏ qua.
- */
 /**
  * Gói quy tắc PHÁP QUY của nhánh AI — **cố ý RỖNG** từ 12/09/2026 (T30, Haan quyết).
  *
@@ -106,7 +68,7 @@ const cache = new Map<string, RulePack>();
  * chứng chỉ hành nghề ký, không phải của engine.
  *
  * ✅ **13/09/2026: `rules/base/` đã xoá khỏi repo**, và bộ giải nội bộ cũng thôi đọc quy chuẩn
- * (Haan quyết). Ba ràng buộc bố cục thật sự cần giữ chuyển sang `rules/structure/`.
+ * (Haan quyết). Bộ giải cùng gói `rules/structure/` của nó đã gỡ ở T58.
  *
  * Điều kiện để BAO GIỜ thêm lại một quy tắc pháp quy (T34): số hiệu văn bản **+ số mục** +
  * cách đã kiểm + hiệu lực từ/đến, **và bản văn bản phải có trong repo**. Thiếu một trong bốn
@@ -134,21 +96,3 @@ export function nvgExperiencePack(): RulePack {
 }
 
 let experienceCache: RulePack | undefined;
-
-export function rulePackFor(locality: string): RulePack {
-  const cached = cache.get(locality);
-  if (cached) return cached;
-
-  const localityFiles = LOCALITY_FILES[locality];
-  // Bộ giải nội bộ nhận nguyên lý bố cục + kinh nghiệm nghề NVG. KHÔNG còn gói quy chuẩn
-  // (13/09/2026) — xem `STRUCTURE_FILES`.
-  const pack = new RulePack(
-    mergePacks(
-      mergePacks(parseAll(STRUCTURE_FILES), parseAll(NVG_FILES)),
-      localityFiles ? parseAll(localityFiles) : [],
-    ),
-    localityFiles === undefined,
-  );
-  cache.set(locality, pack);
-  return pack;
-}

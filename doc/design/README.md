@@ -11,6 +11,12 @@ TK-10→TK-17 trước khi tài liệu đặc tả nằm trong repo và đã đ�
 > `CLAUDE-design.md` là file `CLAUDE.md` của bộ tài liệu gốc, đổi tên để không lẫn với
 > `CLAUDE.md` ở gốc repo. Nội dung giữ nguyên.
 
+> ⚠️ **Bộ giải nội bộ đã gỡ hẳn (T58, 19/09/2026).** Mọi đoạn trong bộ tài liệu này mô tả Lớp 2 → Lớp 5
+> tất định (chương trình không gian, cây chia `LayoutIntent`, CP-SAT, `FloorPlan`, khối glTF, bảng thống
+> kê, phối cảnh từ ảnh khối) chỉ còn là lịch sử — mã, hợp đồng và giao diện của chúng không còn trong
+> repo. Thiết kế tự động nay là nhánh AI («AI Design» trên giao diện, `doc/design/QUYET_DINH_AI.md`);
+> Container `compute/` chỉ còn số hoá hồ sơ cũ (mục 6 Knowledge Base vẫn đúng).
+
 ## Thứ tự ưu tiên khi mâu thuẫn
 
 ```

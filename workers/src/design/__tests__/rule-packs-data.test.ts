@@ -88,31 +88,12 @@ describe('nhánh AI KHÔNG kiểm pháp quy (T30)', () => {
     const body = src.slice(src.indexOf('export function nationalRulePack'));
     const end = body.indexOf('\n}');
     expect(body.slice(0, end)).toContain('new RulePack([], false)');
-    expect(body.slice(0, end)).not.toContain('STRUCTURE_FILES');
   });
 
-  it('bộ giải cũng KHÔNG còn đọc quy chuẩn (13/09/2026) — chỉ nguyên lý bố cục + kinh nghiệm NVG', () => {
-    // Haan: «bỏ quy chuẩn VN đi», cho toàn bộ bộ giải. `rules/base/` đã xoá; ba ràng buộc bố cục
-    // (thang, hộp kỹ thuật thẳng hàng; phòng nào cũng có lối vào) sống ở `rules/structure/`.
+  it('không còn tệp nào nạp `rules/base/` hay `rules/structure/` (T30, T58)', () => {
     const src = readFileSync(new URL('../rules/rule-pack-data.ts', import.meta.url), 'utf8');
     // Soát DÒNG IMPORT, không soát chữ: chú thích vẫn được nhắc tới lịch sử của gói cũ.
-    expect(src).not.toMatch(/from '[^']*rules\/base\//);
-    expect(src).toContain('STRUCTURE_FILES');
-    const structure = read('rules/structure/10-layout.yaml');
-    for (const id of ['stair_alignment', 'shaft_alignment', 'every_room_requires_access']) {
-      expect(structure).toContain(`id: ${id}`);
-    }
-    // Không một ngưỡng pháp quy nào lọt sang gói bố cục.
-    for (const predicate of [
-      'setback',
-      'max_density',
-      'min_area',
-      'min_dimension',
-      'requires_daylight',
-    ]) {
-      expect(structure).not.toContain(`predicate: ${predicate}`);
-    }
-    expect(structure).not.toContain('QCVN');
+    expect(src).not.toMatch(/from '[^']*rules\/(base|structure)\//);
   });
 
   it('tích «quy chuẩn quốc gia» không ra quy tắc nào — ô tích đã gỡ, trường chỉ còn để đọc lịch sử', () => {
@@ -171,19 +152,9 @@ describe('xuất xứ của mỗi con số phải đọc được bằng máy', 
   });
 });
 
-describe('gói ĐO ĐƯỢC không được chạm vào bộ giải (12/09/2026)', () => {
-  // Chuyện đã xảy ra thật: `room_min_area_wc: 3.0` gộp vào `nvg-experience.yaml` nâng mức tối
-  // thiểu của khu vệ sinh trong khâu chia diện tích của BỘ GIẢI từ 2,4 lên 3,0, và trên lô nhà
-  // phố 3,5 × 12 m thì thang bộ tụt xuống mức sàn — 4 phép thử `program-plausibility` đỏ. Phép
-  // đo không sai; lô ấy chật thật. Nhưng re-tune bộ giải là quyết định riêng, không phải hệ quả
-  // phụ của một đợt sửa gói quy tắc nhánh AI.
-  it('`rulePackFor` (đường của BỘ GIẢI) không nhắc tới gói đo được', () => {
-    const src = readFileSync(new URL('../rules/rule-pack-data.ts', import.meta.url), 'utf8');
-    const fn = src.slice(src.indexOf('export function rulePackFor'));
-    const body = fn.slice(0, fn.indexOf('\n}'));
-    expect(body).not.toContain('NVG_MEASURED_FILES');
-  });
-
+describe('gói ĐO ĐƯỢC tách khỏi gói kinh nghiệm (12/09/2026)', () => {
+  // Tách ra khi bộ giải nội bộ còn đọc `nvg-experience.yaml` (bộ giải gỡ ở T58). Vẫn tách: một bên
+  // là kinh nghiệm nghề, một bên là số đo trên hồ sơ thật.
   it('ngưỡng diện tích WC đo được nằm ở gói RIÊNG, không ở tệp dùng chung', () => {
     expect(measuredOnly.rules.map((r) => r.id)).toContain('room_min_area_wc');
     const shared = parseRuleFile(

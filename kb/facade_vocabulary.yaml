@@ -1,0 +1,194 @@
+# Danh mục mặt đứng của nhánh AI — mái, vật liệu, màu, lan can (T59, 19/09/2026).
+#
+# ⚠️ BẢN ĐẦU DO CLAUDE SOẠN 19/09/2026, CHỜ HAAN DUYỆT. Danh mục lấy theo vật liệu thường gặp ở
+# nhà ở dân dụng Việt Nam. Sửa tệp này là đổi danh mục — không có mã nào viết trong mã nguồn.
+#
+# 20/09/2026: đối chiếu 7 tờ mặt đứng của 6 hồ sơ NVG đã phát hành — kết quả đo ở
+# `kb/facade_experience.yaml`. Haan duyệt và đã sửa theo hồ sơ: số mái Nhật (`roof_defaults`),
+# ba mảng trang trí mới, sơn giả bê tông, nhôm vân gỗ. Phần còn lại vẫn là bản Claude soạn.
+#
+# ── Dùng vào đâu ─────────────────────────────────────────────────────────────────────────
+# · Lời dẫn mặt đứng liệt kê MÃ trong tệp này; mô hình chỉ được chọn mã có ở đây. Mã lạ thì
+#   Worker trả về cho mô hình sửa một lượt (`ai/facade/check.ts`), vẫn lạ thì không lưu.
+# · `label_vi` hiện trên bảng ý tưởng ở giao diện.
+# · `prompt_en` ghép vào lời dẫn ảnh mặt đứng (Đợt E) — nói với mô hình ảnh bằng cụm từ nó hiểu.
+# · `hex` của màu chỉ là màu MỒI cho ô màu; màu thật của phương án nằm ở `palette`.
+#
+# Đây là `kb/` (bản vẽ trông thế nào), không phải `rules/` (phương án có hợp lệ không).
+
+version: '0.1.0'
+
+roof_materials:
+  btct_chong_tham:
+    { label_vi: 'Sàn mái bê tông chống thấm', prompt_en: 'waterproofed flat concrete roof slab' }
+  ngoi_mau: { label_vi: 'Ngói màu xi măng', prompt_en: 'coloured concrete roof tiles' }
+  ngoi_dat_nung: { label_vi: 'Ngói đất nung', prompt_en: 'terracotta clay roof tiles' }
+  ngoi_phang: { label_vi: 'Ngói phẳng', prompt_en: 'flat interlocking roof tiles' }
+  ngoi_am_duong:
+    { label_vi: 'Ngói âm dương', prompt_en: 'traditional Vietnamese yin-yang clay tiles' }
+  ton_song: { label_vi: 'Tôn sóng', prompt_en: 'corrugated metal roofing' }
+  ton_giat_cap: { label_vi: 'Tôn giả ngói', prompt_en: 'tile-effect metal roofing sheets' }
+
+materials:
+  son_nuoc: { label_vi: 'Sơn nước ngoại thất', prompt_en: 'smooth exterior paint on render' }
+  son_gia_da: { label_vi: 'Sơn giả đá', prompt_en: 'stone-effect textured paint' }
+  da_granite: { label_vi: 'Đá granite', prompt_en: 'granite stone cladding' }
+  da_ong: { label_vi: 'Đá ong', prompt_en: 'laterite stone cladding' }
+  da_cham: { label_vi: 'Đá chẻ ốp', prompt_en: 'split-face natural stone cladding' }
+  da_rua: { label_vi: 'Đá rửa', prompt_en: 'exposed aggregate washed stone finish' }
+  gach_the: { label_vi: 'Gạch thẻ trần', prompt_en: 'exposed red face brick' }
+  gach_op_gom: { label_vi: 'Gạch ốp gốm', prompt_en: 'ceramic facade tiles' }
+  be_tong_tran: { label_vi: 'Bê tông trần', prompt_en: 'fair-faced exposed concrete' }
+  son_hieu_ung_be_tong:
+    { label_vi: 'Sơn hiệu ứng giả bê tông', prompt_en: 'concrete-effect textured paint' }
+  go_tu_nhien: { label_vi: 'Gỗ tự nhiên', prompt_en: 'natural timber' }
+  go_nhua: { label_vi: 'Gỗ nhựa composite', prompt_en: 'wood-plastic composite boards' }
+  lam_nhom: { label_vi: 'Lam nhôm', prompt_en: 'aluminium louvre fins' }
+  nhom_van_go: { label_vi: 'Nhôm vân gỗ', prompt_en: 'wood-grain finish aluminium' }
+  tam_alu: { label_vi: 'Tấm ốp nhôm alu', prompt_en: 'aluminium composite panels' }
+  nhom_kinh: { label_vi: 'Nhôm kính', prompt_en: 'aluminium-framed glazing' }
+  kinh_cuong_luc: { label_vi: 'Kính cường lực', prompt_en: 'frameless tempered glass' }
+  thep_son_tinh_dien: { label_vi: 'Thép sơn tĩnh điện', prompt_en: 'powder-coated steel' }
+  sat_my_thuat: { label_vi: 'Sắt mỹ thuật', prompt_en: 'ornamental wrought iron' }
+  inox: { label_vi: 'Inox', prompt_en: 'brushed stainless steel' }
+  phao_chi: { label_vi: 'Phào chỉ', prompt_en: 'moulded cornices and trims' }
+  gach_hoa_gio: { label_vi: 'Gạch hoa gió', prompt_en: 'Vietnamese decorative breeze blocks' }
+
+colours:
+  trang: { label_vi: 'Trắng', prompt_en: 'white', hex: '#F5F5F2' }
+  trang_kem: { label_vi: 'Trắng kem', prompt_en: 'cream white', hex: '#F1EAD8' }
+  be: { label_vi: 'Be', prompt_en: 'beige', hex: '#D9C8A9' }
+  xam_nhat: { label_vi: 'Xám nhạt', prompt_en: 'light grey', hex: '#C9CBCB' }
+  xam_dam: { label_vi: 'Xám đậm', prompt_en: 'charcoal grey', hex: '#4A4D50' }
+  den: { label_vi: 'Đen', prompt_en: 'black', hex: '#1F2022' }
+  nau_go: { label_vi: 'Nâu gỗ', prompt_en: 'warm wood brown', hex: '#8A5A3B' }
+  nau_dam: { label_vi: 'Nâu đậm', prompt_en: 'dark brown', hex: '#4E3526' }
+  do_ngoi: { label_vi: 'Đỏ ngói', prompt_en: 'terracotta red', hex: '#A8482F' }
+  xanh_reu: { label_vi: 'Xanh rêu', prompt_en: 'moss green', hex: '#5E6B45' }
+  xanh_ngoc: { label_vi: 'Xanh ngọc', prompt_en: 'jade green', hex: '#5E9C8F' }
+  vang_dat: { label_vi: 'Vàng đất', prompt_en: 'ochre yellow', hex: '#C9A04E' }
+  ghi_bac: { label_vi: 'Ghi bạc', prompt_en: 'silver grey', hex: '#A7ABAE' }
+  tu_nhien:
+    { label_vi: 'Màu tự nhiên của vật liệu', prompt_en: 'natural material colour', hex: '#B9A58A' }
+
+railings:
+  kinh_cuong_luc: { label_vi: 'Lan can kính cường lực', prompt_en: 'frameless glass balustrade' }
+  sat_hop: { label_vi: 'Lan can sắt hộp song đứng', prompt_en: 'vertical square steel bar railing' }
+  sat_my_thuat: { label_vi: 'Lan can sắt mỹ thuật', prompt_en: 'ornamental wrought iron railing' }
+  inox_kinh:
+    {
+      label_vi: 'Lan can inox tay vịn gỗ',
+      prompt_en: 'stainless steel railing with timber handrail',
+    }
+  xay_dac: { label_vi: 'Lan can xây đặc', prompt_en: 'solid rendered parapet balustrade' }
+  con_tien: { label_vi: 'Lan can con tiện', prompt_en: 'classical baluster railing' }
+  lam_go: { label_vi: 'Lan can lam gỗ', prompt_en: 'timber slat railing' }
+
+# ── Cửa (phiếu yêu cầu mặt đứng, T59 Đợt F2) ─────────────────────────────────────────────
+# Vật liệu khung cửa đi, cửa sổ, cửa để xe. Tách khỏi `materials` (vật liệu bề mặt tường) để ô chọn
+# của phiếu chỉ hiện thứ làm được cửa.
+door_materials:
+  nhom_kinh_he: { label_vi: 'Nhôm kính hệ (Xingfa…)', prompt_en: 'aluminium-framed glass' }
+  nhom_son_tinh_dien: { label_vi: 'Nhôm sơn tĩnh điện', prompt_en: 'powder-coated aluminium' }
+  go_tu_nhien: { label_vi: 'Gỗ tự nhiên', prompt_en: 'solid timber' }
+  thep_van_go: { label_vi: 'Thép vân gỗ', prompt_en: 'wood-grain steel' }
+  sat_my_thuat: { label_vi: 'Sắt mỹ thuật', prompt_en: 'ornamental wrought iron' }
+  nhua_loi_thep: { label_vi: 'Nhựa lõi thép', prompt_en: 'uPVC with steel core' }
+  kinh_cuong_luc: { label_vi: 'Kính cường lực không khung', prompt_en: 'frameless tempered glass' }
+  nhom_cuon: { label_vi: 'Nhôm cửa cuốn', prompt_en: 'aluminium roller shutter slats' }
+
+# Kiểu mở cửa đi. `leaves` quyết định bộ vẽ chia mấy cánh trên tờ mặt đứng: số cánh, hoặc
+# `folding` (xếp — nhiều cánh hẹp), `sliding` (lùa — hai cánh chồng mép).
+door_types:
+  mot_canh: { label_vi: '1 cánh mở quay', prompt_en: 'single swing door', leaves: 1 }
+  hai_canh: { label_vi: '2 cánh mở quay', prompt_en: 'double swing doors', leaves: 2 }
+  bon_canh:
+    {
+      label_vi: '4 cánh (2 cố định, 2 mở)',
+      prompt_en: 'four-panel door, two fixed side panels',
+      leaves: 4,
+    }
+  xep_truot: { label_vi: 'Cửa xếp trượt', prompt_en: 'folding sliding door', leaves: folding }
+  lua: { label_vi: 'Cửa lùa', prompt_en: 'sliding door', leaves: sliding }
+
+glass_types:
+  trong: { label_vi: 'Kính trong', prompt_en: 'clear glass' }
+  mo: { label_vi: 'Kính mờ', prompt_en: 'frosted glass' }
+  phan_quang: { label_vi: 'Kính phản quang', prompt_en: 'reflective glass' }
+  mau_tra: { label_vi: 'Kính màu trà', prompt_en: 'bronze-tinted glass' }
+
+garage_door_types:
+  cuon: { label_vi: 'Cửa cuốn', prompt_en: 'roller shutter garage door' }
+  xep: { label_vi: 'Cửa xếp', prompt_en: 'folding garage door' }
+  mo_quay: { label_vi: 'Cửa mở quay', prompt_en: 'swing garage doors' }
+  truot: { label_vi: 'Cửa trượt', prompt_en: 'sliding garage door' }
+
+fence_types:
+  xay_dac: { label_vi: 'Xây đặc', prompt_en: 'solid rendered boundary wall' }
+  xay_song_sat:
+    { label_vi: 'Chân xây, trên song sắt', prompt_en: 'low masonry wall with steel bars above' }
+  sat_thep: { label_vi: 'Sắt / thép toàn bộ', prompt_en: 'steel bar fence' }
+
+# Nhãn tiếng Việt cho các mã mà hợp đồng đã khai sẵn (không phải danh mục chọn thêm).
+roof_types:
+  flat: 'Mái bằng'
+  hip: 'Mái tứ giác'
+  gable: 'Mái hai dốc'
+  thai: 'Mái Thái'
+  japanese: 'Mái Nhật'
+  mansard: 'Mái mansard'
+  mixed: 'Mái hỗn hợp'
+gate_types:
+  swing: 'Cổng mở quay'
+  sliding: 'Cổng trượt'
+  folding: 'Cổng xếp'
+zones:
+  base: 'Phần đế'
+  body: 'Thân nhà'
+  accent: 'Mảng nhấn'
+  trim: 'Chỉ, phào, khung'
+  railing: 'Lan can'
+  gate: 'Cổng'
+  fence: 'Tường rào'
+  main_door: 'Cửa chính'
+  side_door: 'Cửa phụ, cửa ra ban công'
+  window: 'Khung cửa sổ'
+  garage_door: 'Cửa để xe'
+elements:
+  canopy: 'Ô văng'
+  column: 'Cột'
+  cladding: 'Mảng ốp'
+  louvre: 'Lam'
+  planter: 'Bồn cây'
+  cornice: 'Phào'
+  # Ba mảng dưới đây thấy trên hồ sơ thật 20/09/2026 (`kb/facade_experience.yaml`).
+  eaves_band: 'Diềm mái' # dải ngang dưới mép mái dốc, sơn khác màu thân — 3/3 hồ sơ mái Nhật
+  finial: 'Chóp trang trí' # chóp trên đỉnh mái và đầu bờ nóc
+  reveal: 'Ron chỉ âm' # rãnh ngang âm tường, 15–30 mm
+
+# Giới hạn DỰNG ĐƯỢC, không phải quy chuẩn: con số ngoài khoảng này không vẽ nổi thành một cái cổng,
+# bức rào hay tường chắn mái (cổng cao 20 m, rào âm). SỐ THAM KHẢO, chờ Haan duyệt cùng danh mục.
+limits:
+  gate_h_cm: [150, 400]
+  fence_h_cm: [60, 300]
+  parapet_cm: [0, 200]
+  # Mái dốc nhìn từ đường: đỉnh mái không vượt quá mức này tính từ sàn mái — chặn đường mái vẽ
+  # vọt lên trời khi mô hình khai độ dốc lớn trên nhà rộng.
+  roof_rise_max_cm: 600
+  # Mái được đua ra khỏi mép khối xây tối đa bao nhiêu mỗi bên.
+  roof_overhang_max_cm: 120
+
+# Đường mái chương trình tự dựng khi mô hình không khai `roof_outline` (mọi kiểu trừ mái hỗn hợp).
+# Nhìn từ đường: mái hai dốc là tam giác (đầu hồi quay ra đường), mái tứ giác / Thái / mansard là
+# hình thang với bờ nóc chiếm `hip_ridge_share` bề rộng mái. SỐ MỒI, chờ Haan duyệt.
+roof_defaults:
+  overhang_cm: 60
+  pitch_deg: 30
+  hip_ridge_share: 0.4
+  # Mái Nhật: mái tứ giác, bờ nóc ngắn, mái đua rộng, dưới mép mái có dải diềm.
+  # ĐO 20/09/2026 trên 3 hồ sơ mái Nhật của NVG (`kb/facade_experience.yaml`): cả ba đều 30–32°
+  # (hai tờ ghi thẳng «30°»), mái đua 50–75 cm. Số mồi cũ (20°, 90 cm) vẽ ra mái thoải hơn nhà
+  # NVG vẫn làm, nên đổi. n = 3, vẫn là chỉ dấu chứ không phải định mức.
+  japanese:
+    pitch_deg: 30
+    overhang_cm: 60

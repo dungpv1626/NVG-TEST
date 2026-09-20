@@ -10,38 +10,26 @@
 
 import type { z } from 'zod';
 import {
+  aiFacadeBriefSchema,
   aiFacadeConceptSchema,
+  aiFacadeImageSchema,
   aiFloorPlanProposalSchema,
   aiFloorPlanSchema,
   aiImageSetSchema,
   aiPlanSheetImageSchema,
   aiSpaceProgramSchema,
-  archModelSchema,
   designBriefSchema,
-  floorPlanSchema,
-  infeasibilityReportSchema,
-  layoutIntentSchema,
-  publishRequestSchema,
-  renderRequestSchema,
-  renderResultSchema,
-  schedulesSchema,
-  spaceProgramSchema,
   type ArtifactKind,
 } from '@nvg/shared/design';
 
 /** Schema tương ứng với từng loại artifact — dùng khi ghi và khi đọc lại từ kho. */
 export const ARTIFACT_SCHEMAS = {
   design_brief: designBriefSchema,
-  space_program: spaceProgramSchema,
-  layout_intent: layoutIntentSchema,
-  floor_plan: floorPlanSchema,
-  infeasibility_report: infeasibilityReportSchema,
-  arch_model: archModelSchema,
-  schedules: schedulesSchema,
-  render_result: renderResultSchema,
   ai_space_program: aiSpaceProgramSchema,
   ai_floor_plan: aiFloorPlanSchema,
   ai_facade_concept: aiFacadeConceptSchema,
+  ai_facade_brief: aiFacadeBriefSchema,
+  ai_facade_image: aiFacadeImageSchema,
   ai_image_set: aiImageSetSchema,
   ai_plan_sheet_image: aiPlanSheetImageSchema,
   // Loại cũ của nhánh AI (T14, mô hình tự viết chuỗi SVG). Đường mã sinh ra nó đã gỡ ngày
@@ -49,11 +37,6 @@ export const ARTIFACT_SCHEMAS = {
   // bất biến, thứ đã ghi thì không được biến thành không đọc nổi.
   ai_plan_proposal: aiFloorPlanProposalSchema,
 } as const satisfies Record<ArtifactKind, z.ZodTypeAny>;
-
-export const REQUEST_SCHEMAS = {
-  render_request: renderRequestSchema,
-  publish_request: publishRequestSchema,
-} as const;
 
 /**
  * Lỗi hợp đồng dữ liệu — KHÔNG thử lại.
@@ -87,17 +70,6 @@ export function parseArtifact<K extends ArtifactKind>(
   payload: unknown,
 ): z.infer<(typeof ARTIFACT_SCHEMAS)[K]> {
   const schema: z.ZodTypeAny = ARTIFACT_SCHEMAS[kind];
-  const result = schema.safeParse(payload);
-  if (!result.success) throw new ContractError(kind, result.error.issues);
-  return result.data;
-}
-
-/** Kiểm tra một yêu cầu gửi tới lớp ngoài (render, phát hành). */
-export function parseRequest<K extends keyof typeof REQUEST_SCHEMAS>(
-  kind: K,
-  payload: unknown,
-): z.infer<(typeof REQUEST_SCHEMAS)[K]> {
-  const schema: z.ZodTypeAny = REQUEST_SCHEMAS[kind];
   const result = schema.safeParse(payload);
   if (!result.success) throw new ContractError(kind, result.error.issues);
   return result.data;

@@ -1,6 +1,6 @@
 /**
  * Chi tiết Dự án thiết kế — "Hồ sơ 360°" (Webapp Flow 4.3), hành trình 3.3: Đầu bài → Khảo
- * sát → Phương án → Hồ sơ kỹ thuật → Phiên bản bản vẽ → Dự toán → Yêu cầu thay đổi, và nút
+ * sát → AI Design → Hồ sơ kỹ thuật → Phiên bản bản vẽ → Dự toán → Yêu cầu thay đổi, và nút
  * Bàn giao thi công ở header.
  *
  * Các tab là những KHÍA CẠNH của cùng một hồ sơ, không phải các trang riêng — nên chúng dùng
@@ -16,8 +16,8 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   BUTTONS,
+  DESIGN_DISCIPLINES,
   DESIGN_STAGE_META,
-  TECHNICAL_DISCIPLINES,
   designDisplayStatus,
   formatDate,
   formatDateTime,
@@ -45,14 +45,11 @@ import { OverviewPanel } from './overview/overview-panel';
 import { BriefPanel } from './brief-panel';
 import { ChangeRequestPanel } from './change-request-panel';
 import { DisciplinePanel } from './discipline-panel';
-import { ProgramPanel } from './program-panel';
 import { SurveyPanel } from './survey-panel';
-import { VariantsPanel } from './variants-panel';
 import { AiDesignTab } from './ai/ai-design-tab';
 import { VersionPanel } from './version-panel';
 
 const EM_DASH = '—';
-const CONCEPT_DISCIPLINES = ['phuong_an'] as const;
 
 export function DesignDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -252,7 +249,7 @@ export function DesignDetailPage() {
             id: 'dau-bai',
             label: 'Đầu bài thiết kế',
             subtitle:
-              'Chuẩn hoá yêu cầu khách hàng thành dữ liệu có cấu trúc cho Lớp 1 của engine.',
+              'Chuẩn hoá yêu cầu khách hàng thành dữ liệu có cấu trúc làm đầu vào thiết kế.',
             content: (
               <BriefPanel
                 projectId={project.id}
@@ -277,37 +274,10 @@ export function DesignDetailPage() {
             ),
           },
           {
-            id: 'chuong-trinh-khong-gian',
-            label: 'Chương trình không gian',
-            subtitle:
-              'Danh sách phòng, diện tích và tầng — kết quả Lớp 2, chốt trước khi sinh phương án.',
-            content: <ProgramPanel projectId={project.id} readOnly={readOnly} />,
-          },
-          {
-            id: 'phuong-an',
-            label: 'Phương án kiến trúc',
-            subtitle:
-              'Phương án do bộ giải sinh, bản vẽ, khối ba chiều, thống kê và phối cảnh tham khảo.',
-            content: (
-              <div className="space-y-8">
-                {/* Phương án do engine sinh (TK-12) đứng trước; bên dưới là các bản phương án
-                    tải lên theo cơ chế phiên bản của TK-03 — hai nguồn, cùng một tab. */}
-                <VariantsPanel projectId={project.id} readOnly={readOnly} />
-                <VersionPanel
-                  projectId={project.id}
-                  companyId={project.company_id}
-                  disciplines={CONCEPT_DISCIPLINES}
-                  readOnly={readOnly}
-                  emptyMessage="Chưa có bản phương án nào tải lên. Thêm phương án rồi phát hành để gửi khách hàng xem và ghi nhận góp ý."
-                />
-              </div>
-            ),
-          },
-          {
             id: 'thiet-ke-ai',
-            label: 'Thiết kế AI',
+            label: 'AI Design',
             subtitle:
-              'Chương trình không gian → mặt bằng từng tầng → mặt đứng → phối cảnh, do AI đề xuất. Kết quả là bản phác tham khảo, không đi vào hồ sơ phát hành.',
+              'Mặt bằng từng tầng → mặt đứng → phối cảnh, do AI đề xuất. Kết quả là bản phác tham khảo, không đi vào hồ sơ phát hành.',
             content: <AiDesignTab projectId={project.id} readOnly={readOnly} />,
           },
           {
@@ -329,9 +299,10 @@ export function DesignDetailPage() {
               <VersionPanel
                 projectId={project.id}
                 companyId={project.company_id}
-                disciplines={TECHNICAL_DISCIPLINES}
+                // Gồm cả bản phương án KTS tải lên (TK-03) lẫn bản vẽ kỹ thuật (T58).
+                disciplines={DESIGN_DISCIPLINES}
                 readOnly={readOnly}
-                emptyMessage="Chưa có bản vẽ kỹ thuật nào. Mỗi bộ môn phát hành bản vẽ riêng; hệ thống tự thông báo cho các bên liên quan."
+                emptyMessage="Chưa có bản phương án hay bản vẽ kỹ thuật nào. Mỗi bộ môn phát hành bản riêng; hệ thống tự thông báo cho các bên liên quan."
               />
             ),
           },

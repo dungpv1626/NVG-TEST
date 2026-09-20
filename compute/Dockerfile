@@ -1,7 +1,7 @@
-# Lõi tính toán module Thiết kế AI.
+# Container số hoá hồ sơ cũ của module Thiết kế (bộ giải nội bộ đã gỡ ở T58).
 #
 # Bối cảnh build là GỐC REPO, không phải compute/ — vì image cần cả bộ cài ODA ở
-# kb/vendor/ lẫn rule pack ở rules/:
+# kb/vendor/ lẫn hợp đồng ở contracts/:
 #     docker build -f compute/Dockerfile -t nvg-design-compute .
 #
 # Linux/amd64: Cloudflare Containers chỉ chạy kiến trúc này. Khai tường minh để build trên
@@ -55,14 +55,8 @@ WORKDIR /app
 # Cài phụ thuộc trước, mã nguồn sau: sửa mã nguồn không làm mất lớp cache phụ thuộc.
 COPY compute/pyproject.toml /app/
 RUN pip install --no-cache-dir \
-        "ortools>=9.11" \
         "shapely>=2.0" \
         "ezdxf>=1.3" \
-        "openpyxl>=3.1" \
-        "trimesh>=4.4" \
-        "mapbox-earcut>=1.0" \
-        "numpy>=1.26" \
-        "scipy>=1.13" \
         "pydantic>=2.9" \
         "pyyaml>=6.0" \
         "jsonschema>=4.23" \
@@ -77,14 +71,9 @@ COPY compute/src/ /app/src/
 COPY compute/tests/ /app/tests/
 COPY compute/bench/ /app/bench/
 
-# Rule pack là DỮ LIỆU, đọc lúc chạy. Đưa vào image để container không giữ trạng thái và
-# không phải tải về từ đâu cả — đĩa của container bị xoá sạch sau mỗi lần chạy.
-COPY rules/ /app/rules/
-
-# Bảng ánh xạ lớp bản vẽ và chuẩn cấu tạo cũng là DỮ LIỆU. Chỉ chép đúng hai tệp này,
-# KHÔNG chép cả kb/: hai thư mục con còn lại chứa hồ sơ khách hàng và bộ cài ~100MB.
+# Bảng ánh xạ lớp bản vẽ, bảng mã chữ và khung tên là DỮ LIỆU đọc lúc chạy. Chỉ chép đúng các
+# tệp này, KHÔNG chép cả kb/: hai thư mục con còn lại chứa hồ sơ khách hàng và bộ cài ~100MB.
 COPY kb/layer_mapping.yaml /app/kb/layer_mapping.yaml
-COPY kb/construction_norms.yaml /app/kb/construction_norms.yaml
 COPY kb/text_encoding.yaml /app/kb/text_encoding.yaml
 COPY kb/title_block.yaml /app/kb/title_block.yaml
 
@@ -93,10 +82,8 @@ COPY kb/title_block.yaml /app/kb/title_block.yaml
 COPY contracts/ /app/contracts/
 
 ENV PYTHONPATH=/app/src \
-    NVG_RULES_ROOT=/app/rules \
     NVG_CONTRACTS_ROOT=/app/contracts \
     NVG_LAYER_MAPPING=/app/kb/layer_mapping.yaml \
-    NVG_CONSTRUCTION_NORMS=/app/kb/construction_norms.yaml \
     NVG_TEXT_ENCODING=/app/kb/text_encoding.yaml \
     NVG_TITLE_BLOCK=/app/kb/title_block.yaml \
     XDG_RUNTIME_DIR=/tmp/runtime-root

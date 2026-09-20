@@ -6,7 +6,7 @@
  *  2. **Thẻ công cụ phải trỏ đúng màn hình con.** Trỏ sai thì thẻ vẫn bấm được, vẫn mở ra một
  *     màn hình có thật, và không ai để ý cho tới lúc dùng thật.
  *
- * Phần suy trạng thái bảy bước kiểm riêng ở `steps.test.ts` — nó là hàm thuần, không cần DOM.
+ * Phần suy trạng thái sáu bước kiểm riêng ở `overview-steps.test.ts` — nó là hàm thuần, không cần DOM.
  */
 
 import { describe, expect, it, vi } from 'vitest';
@@ -19,13 +19,11 @@ vi.mock('@/hooks/use-design-projects', () => ({
   useDesignBriefs: () => empty,
   useDesignVersions: () => empty,
   useDisciplineTasks: () => empty,
-  useFloorPlanVariants: () => empty,
-  useSpaceProgram: () => empty,
   useChangeRequests: () => empty,
   useDesignSync: () => empty,
   useDesignProjects: () => empty,
-  useGenerateFloorPlans: () => ({ mutate: () => {}, isPending: false, error: null }),
 }));
+vi.mock('@/hooks/use-ai-design', () => ({ useAiDesignState: () => empty }));
 vi.mock('@/hooks/use-design-surveys', () => ({ useDesignSurveys: () => empty }));
 vi.mock('@/hooks/use-survey-photos', () => ({ useSurveyPhotos: () => empty }));
 vi.mock('@/hooks/use-estimates', () => ({ useEstimates: () => empty }));
@@ -61,7 +59,7 @@ function panel() {
 }
 
 describe('Tab Tổng quan của dự án thiết kế', () => {
-  it('năm thẻ công cụ đều có mặt và trỏ đúng màn hình con', () => {
+  it('bốn thẻ công cụ đều có mặt và trỏ đúng màn hình con', () => {
     panel();
     // Tìm TRONG khu thẻ công cụ, không trên cả trang: dải tiến trình cũng có liên kết trùng
     // tên với thẻ (cùng bước, cùng đích), nên tìm trên cả trang sẽ bắt được hai phần tử.
@@ -69,10 +67,8 @@ describe('Tab Tổng quan của dự án thiết kế', () => {
     const expected: [string, string][] = [
       ['Đầu bài thiết kế', '?tab=dau-bai'],
       ['Khảo sát hiện trạng', '?tab=khao-sat'],
-      ['Chương trình không gian', '?tab=chuong-trinh-khong-gian'],
-      ['AI phương án kiến trúc', '?tab=phuong-an'],
-      // Thẻ thứ sáu phải mở màn hình BA BỘ MÔN, không phải phần xuất tệp của bước Phương án —
-      // đó chính là chỗ tên thẻ và nội dung từng chỏi nhau (06/09/2026).
+      ['AI Design', '?tab=thiet-ke-ai'],
+      // Thẻ này phải mở màn hình BA BỘ MÔN (TK-04).
       ['Hồ sơ kỹ thuật', '?tab=ho-so-ky-thuat'],
     ];
     for (const [name, href] of expected) {
@@ -87,16 +83,16 @@ describe('Tab Tổng quan của dự án thiết kế', () => {
     const { container } = panel();
     expect(screen.getByText(/Chưa lập đầu bài/)).toBeInTheDocument();
     expect(screen.getByText(/Chưa có biên bản khảo sát nào/)).toBeInTheDocument();
-    expect(screen.getByText(/Chưa sinh phương án nào/)).toBeInTheDocument();
+    expect(screen.getByText(/Chưa có phương án mặt bằng nào/)).toBeInTheDocument();
     expect(screen.getByText(/Chưa phân công bộ môn nào/)).toBeInTheDocument();
     // Không một chỗ nào trên trang được hiện con số 0 đứng một mình.
     expect(container.textContent).not.toMatch(/(^|[^\d])0($|[^\d%])/);
   });
 
-  it('dải tiến trình có đủ bảy bước và bước nào cũng mở được', () => {
+  it('dải tiến trình có đủ sáu bước và bước nào cũng mở được', () => {
     panel();
-    const track = screen.getByRole('list', { name: 'Bảy bước của quy trình thiết kế' });
-    expect(within(track).getAllByRole('link')).toHaveLength(7);
+    const track = screen.getByRole('list', { name: 'Sáu bước của quy trình thiết kế' });
+    expect(within(track).getAllByRole('link')).toHaveLength(6);
   });
 
   it('thông tin dự án lấy từ hồ sơ thật, khách hàng bấm được', () => {

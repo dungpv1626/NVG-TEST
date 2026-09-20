@@ -43,25 +43,7 @@ function backend(overrides: Partial<ComputeBackend> = {}): ComputeBackend {
   return {
     name: 'gia-lap',
     async health() {
-      return { reachable: true, solverVersion: 'test-solver' };
-    },
-    async solve() {
-      throw new Error('không dùng');
-    },
-    async exportDxf() {
-      throw new Error('không dùng');
-    },
-    async exportSvg() {
-      throw new Error('không dùng');
-    },
-    async schedules() {
-      throw new Error('không dùng');
-    },
-    async exportGlb() {
-      throw new Error('không dùng');
-    },
-    async exportXlsx() {
-      throw new Error('không dùng');
+      return { reachable: true };
     },
     async extract() {
       return { status: 'ok', extraction: { rooms: [] } };

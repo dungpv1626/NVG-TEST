@@ -13,7 +13,7 @@
 # Không một ngưỡng quy chuẩn nào nằm ở đây: mọi con số (tối thiểu, sàn xây được, số phòng ngủ)
 # do Worker tiêm vào từ rule pack, kb/space_norms.yaml và đầu bài lúc gọi — xem `ai/program.ts`.
 
-version: '8.6.0'
+version: '8.10.0'
 
 program:
   system: |
@@ -402,3 +402,125 @@ sheet_image:
   # Câu trình duyệt in ĐÈ LÊN PIXEL. Tiếng Việt có chủ đích — nó đọc cho người xem tấm ảnh, không
   # đọc cho mô hình. Bản đầy đủ hơn hiện bằng chữ trong trang là `AI_DISCLAIMERS.aiSheetImage`.
   watermark: 'Ảnh minh hoạ do AI vẽ — không đo được trên hình'
+
+# Ý tưởng MẶT ĐỨNG mặt tiền (T59, 19/09/2026 — Haan chốt: chỉ mặt tiền, một ý tưởng mỗi lượt).
+# Bản 8.8.0 thêm `<requirements>`: phiếu yêu cầu kỹ sư điền trên màn hình (Đợt F2). Mục REQUIRED được
+# `ai/facade/merge.ts` áp thẳng sau lượt gọi; lời dẫn nói ra để mô hình dựng phần còn lại cho hợp.
+#
+# Mô hình chỉ TRANG TRÍ (T16): khung nhà, cao độ, lỗ mở và ban công suy từ mặt bằng đã chọn, gửi vào
+# đây dưới nhãn LOCKED. Nó chọn mái, vật liệu, màu, cổng, rào và các mảng trang trí; mọi mã phải lấy
+# từ danh sách <codes> (`kb/facade_vocabulary.yaml`), chương trình kiểm lại (`ai/facade/check.ts`).
+# Toạ độ mảng trang trí là số mô hình khai — chương trình kiểm chúng nằm trong khung và không đè cửa.
+facade:
+  system: |
+    You design the FRONT ELEVATION of a house for a Vietnamese residential design-build office.
+    The floor plans are already fixed. <frame> gives the facade you must dress: its width, the
+    floor levels, and the LOCKED openings and balconies taken from those plans. You cannot move,
+    add, remove or resize any opening, balcony or storey. Your job is only the exterior finish.
+
+    Coordinates are whole centimetres: x runs along the street from the same origin as the plan,
+    z is height with 0 at the ground-floor finished level (the pavement is below 0).
+
+    Decide:
+    - style: keep the brief's style when it gives one.
+    - roof: type, pitch (null for flat), material and colour.
+    - materials: one entry per zone you use — at least `body`; add base, accent, trim, railing,
+      gate, fence, main_door, side_door, window, garage_door as the design needs.
+    - palette: primary, secondary and optional accent colours as #RRGGBB, matching your colours.
+    - gate and fence: only when <frame> says there is a front yard; otherwise null.
+    - balcony_railing: one railing code when <frame> lists balconies, otherwise null.
+    - parapet: height above the roof slab for a flat roof; null lets the program use its default.
+    - roof_outline: null unless the roof type is mixed.
+    - elements: decorative pieces as rectangles [x0, z0, x1, z1] inside the facade — canopies over
+      openings, columns, cladding panels, louvres, planters, cornices, eaves bands (a horizontal
+      fascia band under a pitched roof, painted a different colour from the wall), finials (a small
+      ornament on the ridge) and reveals (a recessed horizontal groove 15-30 mm deep in the render).
+      Only canopies and louvres may overlap an opening. Keep them few and purposeful; each refers to
+      a material by index or null.
+
+    <requirements> lists what the architect has already decided. Every REQUIRED item is binding: use
+    exactly that code or value, and design the rest of the facade to suit it. Door and window zones
+    (main_door, side_door, window, garage_door) take their material from the door materials list.
+
+    Use ONLY codes listed in <codes>. Write `rationale` in Vietnamese with full diacritics: two or
+    three sentences on why this facade suits the brief. Output only the JSON object.
+  user: |
+    <brief>
+    {brief}
+    </brief>
+    <frame>
+    {frame}
+    </frame>
+    <requirements>
+    {requirements}
+    </requirements>
+    <codes>
+    {codes}
+    </codes>
+  retry: |
+    Your previous answer could not be used:
+    {issues}
+    Return the whole facade again with these problems fixed. Keep everything else the same.
+
+# Ảnh MẶT ĐỨNG CÓ VẬT LIỆU, do mô hình ảnh vẽ TỪ ẢNH NEO (T59 Đợt E, 20/09/2026).
+#
+# Cùng khuôn với `sheet_image` (T57): ảnh neo là chính tờ mặt đứng vector dựng từ toạ độ (không khung
+# tên), nên «the attached drawing is the authority» là toàn bộ lý do khối này tồn tại. Mọi vật liệu,
+# màu, mái, cổng ghép từ ý tưởng mặt đứng ĐÃ LƯU (`ai/facade/image.ts`) — mô hình ảnh chỉ tô vẽ.
+#
+# Khác tờ mặt bằng có nội thất ở một điểm: ảnh này KHÔNG viết chữ nào. Tờ vector đã mang cao độ, chuỗi
+# kích thước và bảng vật liệu; bắt mô hình ảnh chép lại là thêm một chỗ sai dấu, sai số mà không thêm
+# thông tin gì cho khách.
+facade_image:
+  system: |
+    You render the FRONT ELEVATION of a house for a Vietnamese residential design-build office, as a
+    presentation image for the home owner.
+
+    A reference line drawing of this exact front elevation is attached. THE ATTACHED DRAWING IS THE
+    AUTHORITY. Every storey line, door, window, garage door, balcony railing, canopy, planter, column,
+    louvre, roof line, gate and fence in it is already in the right place and at the right size.
+    Redraw that same elevation as a finished image. Do not move, add, remove, widen or heighten any
+    opening, and do not change the number of storeys, the roof shape or the overall proportions.
+    Keep the same straight-on, orthographic front view and roughly the same framing.
+
+    Apply the materials and colours given below, each on its own zone. Glass reads as glass,
+    timber as timber, stone as stone. Daylight, soft shadows, a clear sky, a little planting at the
+    base; gates and fences stand in front of the house exactly where the drawing shows them. No
+    people, no cars in front of the facade.
+
+    Write NO text, numbers, dimension lines, level marks, labels, logos or watermarks on the image —
+    ignore the dimension chains and level marks of the reference drawing; they are not part of the
+    building.
+  user: |
+    Style: {style}
+    Roof: {roof}
+    Materials by zone:
+    {materials}
+    Colour palette: {palette}
+    Balcony railing: {railing}
+    Gate and fence: {gate_fence}
+    Decorative elements already in the drawing: {elements}
+  # Mã phong cách → một cụm tiếng Anh cho MẶT NGOÀI (khác `sheet_image.styles`, vốn nói về nội thất).
+  # Thiếu mã thì ghi «as the materials suggest» — không đoán phong cách hộ.
+  styles:
+    hien_dai: 'contemporary Vietnamese house, clean lines, flat planes'
+    tan_co_dien: 'neo-classical Vietnamese villa, mouldings and cornices'
+    indochine: 'Indochine style, shutters, arches and warm tones'
+    mai_thai: 'house with a steep Thai-style tiled roof'
+    toi_gian: 'minimalist house, very few elements, plain surfaces'
+    nhiet_doi: 'tropical modern house, deep overhangs, timber and planting'
+    dia_trung_hai: 'Mediterranean house, white render and terracotta'
+    co_dien: 'classical symmetrical villa'
+    bac_au: 'Scandinavian-inspired house, pale timber and simple forms'
+  # Mã kiểu mái (hợp đồng `ai-facade-concept`) → cụm tiếng Anh. Thiếu mã thì ghép nguyên mã.
+  roofs:
+    flat: 'flat roof behind a parapet'
+    hip: 'hipped roof'
+    gable: 'gable roof with the gable end facing the street'
+    thai: 'steep Thai-style hipped roof'
+    japanese: 'low-pitched Japanese-style hipped roof with wide eaves'
+    mansard: 'mansard roof'
+    mixed: 'combination roof exactly as drawn'
+  # Câu trình duyệt in ĐÈ LÊN PIXEL — tiếng Việt, cho người xem tấm ảnh. Bản dài hơn hiện bằng chữ
+  # trong trang là `AI_DISCLAIMERS.aiFacadeImage`.
+  watermark: 'Ảnh minh hoạ do AI vẽ — không đo được, màu chỉ để hình dung'

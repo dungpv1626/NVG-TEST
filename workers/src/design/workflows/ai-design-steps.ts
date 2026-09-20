@@ -101,6 +101,17 @@ export interface AiDesignParams {
    * một phương án — của bản gốc.
    */
   edit?: { baseArtifactId: string; instruction: string } | null;
+  /**
+   * Phương án mặt bằng ĐANG HIỆU LỰC lúc bấm — bước mặt đứng dựng theo đúng bản này (T59). Chốt ở tuyến
+   * khởi động chứ không đọc head lúc chạy: kỹ sư đổi phương án giữa chừng thì mặt đứng vẫn nói về
+   * ngôi nhà họ đã bấm chạy.
+   */
+  planRef?: string | null;
+  /**
+   * Phiếu yêu cầu mặt đứng của kỹ sư (`ai_facade_brief`, T59 Đợt F2) chốt lúc bấm — rỗng khi chưa điền.
+   * Chốt mã ở tuyến khởi động vì cùng lý do với `planRef`: sửa phiếu giữa chừng không đổi lượt đang chạy.
+   */
+  facadeBriefRef?: string | null;
 }
 
 export interface PlanStepDeps {

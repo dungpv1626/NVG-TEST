@@ -775,7 +775,7 @@
               "label": "Bắc Âu"
             }
           ],
-          "note": "Mỗi phong cách ở đây có một lời dẫn riêng trong kb/render_prompts.yaml — thêm mã mà quên lời dẫn thì ảnh phối cảnh lặng lẽ lùi về Hiện đại."
+          "note": "Danh sách để chọn, không phải danh sách đầy đủ của ngành — ba phong cách NVO làm nhiều nhất đứng trước."
         },
         {
           "path": "legacy.functional_needs",

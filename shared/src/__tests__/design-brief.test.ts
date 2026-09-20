@@ -142,31 +142,6 @@ describe('Cấu hình biểu mẫu Đầu bài', () => {
     }
   });
 
-  it('mọi gói quy tắc địa phương đều chọn được từ biểu mẫu', () => {
-    // Chiều ràng buộc đã ĐỔI ngày 29/08/2026, và chiều mới mới là chiều bắt được lỗi thật.
-    //
-    // Trước đây biểu mẫu chỉ có một địa phương nên "mỗi lựa chọn phải có một gói" là kiểm
-    // được. Từ khi danh sách mở ra đủ 34 đơn vị hành chính, ràng buộc đó đòi 34 gói quy
-    // tắc — mà tạo một gói chép lại đúng số của quy chuẩn quốc gia là tạo bản sao thứ hai
-    // của cùng con số, không phải một quy định địa phương.
-    //
-    // Chiều còn lại thì vẫn hỏng thật được: một gói nằm trong `rules/locality/` mà không
-    // lựa chọn nào sinh ra được giá trị `locality` ấy là một gói KHÔNG BAO GIỜ chạy. Nó
-    // trông như đã cấu hình xong, không có lỗi nào nổ ra, và mọi hồ sơ ở tỉnh đó âm thầm
-    // chạy bằng gói nền.
-    const field = allFields.find((f) => f.path === 'locality')!;
-    const selectable = new Set(
-      (field.options ?? []).map((option) => option.value.replace(/_/g, '-')),
-    );
-    const packs = readdirSync(root('rules/locality'), { withFileTypes: true })
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => entry.name);
-
-    for (const pack of packs) {
-      expect(selectable, `gói quy tắc không ai chọn tới được: ${pack}`).toContain(pack);
-    }
-  });
-
   it('danh sách địa phương là 34 đơn vị hành chính, mã viết đúng quy ước', () => {
     const field = allFields.find((f) => f.path === 'locality')!;
     const options = (field.options ?? []).filter((option) => !option.retired);

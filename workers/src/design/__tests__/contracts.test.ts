@@ -2,7 +2,8 @@
  * Hợp đồng dữ liệu và tính idempotent của mã băm artifact.
  *
  * Chạy hoàn toàn trong bộ nhớ, không chạm CSDL — đây là phần kiểm thử phải nhanh vì nó chạy
- * mỗi lần sửa `contracts/`.
+ * mỗi lần sửa `contracts/`. Các ca của bộ giải nội bộ (bước pipeline, mặt bằng, phát hành) đã gỡ
+ * cùng bộ giải (T58).
  */
 
 import { describe, expect, it } from 'vitest';
@@ -14,15 +15,7 @@ import {
   publishCapability,
   writeCapability,
 } from '@nvg/shared/design';
-import { ContractError, parseArtifact, parseRequest } from '../contracts';
-import { buildArchModel, layoutIntent, stubRenderResult } from '../workflows/steps';
-import { buildSpaceProgram } from '../program/engine';
-import { testNorms, testRulePack } from './program-fixtures';
-
-const program1 = () =>
-  buildSpaceProgram({ brief: BRIEF, briefRef: REF, rules: testRulePack(), norms: testNorms() });
-
-const REF = `sha256:${'a'.repeat(64)}`;
+import { ContractError, parseArtifact } from '../contracts';
 
 const BRIEF = {
   schema_version: '1.0.0',
@@ -78,73 +71,6 @@ describe('Kiểm tra ở ranh giới', () => {
     );
   });
 
-  it('từ chối nút cây lai giữa hai dạng', () => {
-    // Cây chia đệ quy không sinh được khe hở hay chồng lấn — nhưng chỉ khi mỗi nút đúng MỘT
-    // dạng. Nút lai phá đúng tính chất đó.
-    expect(() =>
-      parseArtifact('layout_intent', {
-        schema_version: '1.0.0',
-        program_ref: REF,
-        variant_id: 'A',
-        massing: { wings: [{ id: 'W1' }] },
-        cores: [{ id: 'C1', wing: 'W1' }],
-        floors: [
-          {
-            level: 1,
-            wings: [
-              {
-                wing_id: 'W1',
-                tree: { split: 'H', room: 'x', a: { room: 'a' }, b: { room: 'b' } },
-              },
-            ],
-          },
-        ],
-      }),
-    ).toThrow(ContractError);
-  });
-
-  it('từ chối mặt bằng thiếu phiên bản rule pack', () => {
-    expect(() =>
-      parseArtifact('floor_plan', {
-        schema_version: '1.0.0',
-        intent_ref: REF,
-        site: { width_m: 5, depth_m: 18 },
-        levels: [{ level: 1, rooms: [] }],
-        constraint_report: { status: 'pass' },
-      }),
-    ).toThrow(/rule_pack_version/);
-  });
-
-  it('từ chối phát hành gộp nhiều bộ môn', () => {
-    // Hợp đồng chỉ nhận MỘT giá trị `discipline`. Ký gộp là không kiểm được ai chịu trách
-    // nhiệm phần nào (03-data-contracts 3.8b).
-    expect(() =>
-      parseRequest('publish_request', {
-        schema_version: '1.0.0',
-        tenant_id: '11111111-1111-4111-8111-111111111111',
-        project_id: '22222222-2222-4222-8222-222222222222',
-        artifact_ids: { floor_plan: REF },
-        discipline: ['kien_truc', 'ket_cau'],
-        documents: [{ kind: 'dxf', name: 'MatBang', uri: 'supabase://x/y.dxf' }],
-        signed_by: '33333333-3333-4333-8333-333333333333',
-      }),
-    ).toThrow(ContractError);
-  });
-
-  it('từ chối phát hành không có artifact nguồn', () => {
-    expect(() =>
-      parseRequest('publish_request', {
-        schema_version: '1.0.0',
-        tenant_id: '11111111-1111-4111-8111-111111111111',
-        project_id: '22222222-2222-4222-8222-222222222222',
-        artifact_ids: {},
-        discipline: 'kien_truc',
-        documents: [{ kind: 'dxf', name: 'MatBang', uri: 'supabase://x/y.dxf' }],
-        signed_by: '33333333-3333-4333-8333-333333333333',
-      }),
-    ).toThrow(ContractError);
-  });
-
   it('lỗi hợp đồng tự khai là không đáng thử lại', () => {
     // Workflow đọc cờ này để không đốt bốn lần thử vào một lỗi cấu trúc.
     try {
@@ -154,40 +80,6 @@ describe('Kiểm tra ở ranh giới', () => {
       return;
     }
     throw new Error('Lẽ ra phải ném lỗi hợp đồng.');
-  });
-});
-
-describe('Các bước của pipeline', () => {
-  it('mọi bước sinh ra dữ liệu ĐÚNG hợp đồng', () => {
-    const program = program1();
-    const intent = layoutIntent(program.payload, REF);
-    const plan = parseArtifact('floor_plan', {
-      schema_version: '1.0.0',
-      intent_ref: REF,
-      rule_pack_version: '2026.08.1',
-      site: { width_m: 5, depth_m: 18 },
-      levels: [{ level: 1, height_m: 3.4, rooms: [] }],
-      constraint_report: { status: 'pass' },
-    });
-    const arch = buildArchModel(plan, REF);
-
-    expect(intent.payload.floors).toHaveLength(3);
-    expect(arch.payload.massing.levels[0]?.extrude_to_m).toBeCloseTo(3.4);
-  });
-
-  it('stub sinh ảnh trả danh sách RỖNG, không trả ảnh giả', () => {
-    // Ảnh giả đã đóng dấu sẽ lẫn được với ảnh thật; không có ảnh thì không có gì để lẫn.
-    expect(stubRenderResult().payload.images).toHaveLength(0);
-  });
-
-  it('Lớp 3a không sinh toạ độ hay kích thước', () => {
-    // Nguyên tắc bất biến số 2 áp dụng cho MỌI thứ đứng ở vị trí của mô hình ngôn ngữ,
-    // kể cả khi chỗ đó đang là mã nguồn tất định.
-    const program = program1();
-    const json = JSON.stringify(layoutIntent(program.payload, REF).payload);
-    for (const forbidden of ['x_m', 'y_m', 'polygon', 'area_m2', 'width_m']) {
-      expect(json).not.toContain(forbidden);
-    }
   });
 });
 

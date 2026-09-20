@@ -10,7 +10,7 @@
  *     bộ engine mà chưa từng bị kiểm quy chuẩn nào, và không có lỗi nào nổ ra.
  */
 
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
 import { load as parseYaml } from 'js-yaml';
 import { describe, expect, it, vi } from 'vitest';
@@ -42,49 +42,19 @@ describe('Từ vựng phòng', () => {
     const groups = new Set(Object.keys(vocabulary.group_targets ?? {}));
     const codes = new Set(vocabulary.types.map((t) => t.code));
 
-    // Đích thứ ba, hợp lệ nhưng không phải mã phòng: LOẠI KHOẢNG RỖNG. Giếng trời không phải
-    // một phòng nên nó không có trong từ vựng, nhưng quy tắc vẫn nhắm được tới nó
-    // (`lightwell_max_area`). Đọc từ chính hợp đồng thay vì gõ tay, cùng lý do với vòng lặp
-    // gói địa phương ngay dưới đây.
-    const intentSchema = JSON.parse(
-      readFileSync(root('contracts/layout-intent.schema.json'), 'utf8'),
-    ) as { $defs?: Record<string, unknown> };
-    const voidKinds = new Set(
-      JSON.stringify(intentSchema)
-        .match(/"lightwell"|"courtyard"|"atrium"/g)
-        ?.map((m) => m.replaceAll('"', '')) ?? [],
-    );
-    expect(voidKinds.size).toBe(3);
-
-    // Duyệt gói nền CỘNG mọi gói địa phương đang có, thay vì liệt kê tay: gói địa phương
-    // sinh ra khi tỉnh gửi văn bản quy hoạch, và người thêm gói đó không có lý do gì để nhớ
-    // quay lại sửa danh sách trong một tệp kiểm thử.
-    const localityRoot = root('rules/locality');
-    const localityDirs = readdirSync(localityRoot, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => `rules/locality/${entry.name}`);
-
+    // Hai gói quy tắc còn được đọc (nhánh AI). Gói bố cục và gói địa phương của bộ giải nội
+    // bộ đã gỡ cùng bộ giải (T58).
     const targets = new Set<string>();
-    for (const dir of ['rules/structure', ...localityDirs]) {
-      let files: string[];
-      try {
-        files = readdirSync(root(dir)).filter((f) => f.endsWith('.yaml'));
-      } catch {
-        continue;
-      }
-      for (const file of files) {
-        const rules = parseYaml(readFileSync(root(`${dir}/${file}`), 'utf8'));
-        for (const rule of Array.isArray(rules) ? rules : []) {
-          const target = (rule as { target?: string }).target;
-          if (target) targets.add(target);
-        }
+    for (const file of ['rules/nvg-experience.yaml', 'rules/nvg-measured.yaml']) {
+      const rules = parseYaml(readFileSync(root(file), 'utf8'));
+      for (const rule of Array.isArray(rules) ? rules : []) {
+        const target = (rule as { target?: string }).target;
+        if (target) targets.add(target);
       }
     }
 
     expect(targets.size).toBeGreaterThan(0);
-    const missing = [...targets].filter(
-      (t) => !codes.has(t) && !groups.has(t) && !voidKinds.has(t),
-    );
+    const missing = [...targets].filter((t) => !codes.has(t) && !groups.has(t));
     expect(missing).toEqual([]);
   });
 

@@ -1,0 +1,329 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+#  KINH NGHIỆM MẶT ĐỨNG TỪ HỒ SƠ THẬT CỦA NHÀ VIỆT GROUP — KHÔNG PHẢI ĐỊNH MỨC
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+#  Đo 20/09/2026 trên 7 tờ mặt đứng DXF của 6 công trình NVO đã phát hành (T59).
+#  Chỉ ghi chi tiết CHÍNH: hình khối, cao độ, bề rộng mặt tiền, cửa chính, cửa sổ, lan
+#  can, mái, vật liệu. Bỏ qua kích thước chi tiết nhỏ (phào, ron, bậc) trừ khi nó là
+#  một thói quen lặp lại giữa các hồ sơ.
+#
+#  ⚠️ n = 6 công trình, dưới ngưỡng 15 của `priors.min_samples` (CLAUDE.md 8.7.5).
+#     Mọi con số ở đây là CHỈ DẤU (thói quen vẽ của NVG), không phải định mức; không
+#     được dùng để loại phương án (T49, T52). Từ vựng/quy ước (loại mái, vật liệu,
+#     thói quen bố cục) thì n = 1 đã đủ để đưa vào danh mục.
+#
+#  ⚠️ CHƯA MÃ NÀO ĐỌC TỆP NÀY. Nó là nguồn để Haan duyệt rồi chép số sang nơi mã đọc:
+#     `kb/facade_vocabulary.yaml` (`roof_defaults`, danh mục) và
+#     `kb/construction_norms.yaml` (`facade`). Xem mục `doi_chieu_so_moi` cuối tệp.
+#
+#  Cách đo: ezdxf đọc kích thước (DIMENSION), cao độ (chữ ±0.000, +3.600…), ghi chú
+#  vật liệu; dựng ảnh từng tờ để đọc bố cục. Độ dốc mái đo thêm bằng góc của các nét
+#  xiên dài > 1,5 m. Số nào không có kích thước ghi trên bản vẽ mà phải ước từ hình
+#  thì đánh dấu `uoc_tu_hinh: true`.
+#
+#  Đơn vị: mm (như bản vẽ gốc). Cao độ tính từ ±0.000 = mặt sàn tầng 1.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+version: '0.1.0'
+do_ngay: '20/09/2026'
+
+# ── Nguồn ─────────────────────────────────────────────────────────────────────────
+# Đường dẫn tương đối từ `~/Documents/Doc/NVG/hồ sơ/`. Tên chủ nhà chỉ để truy nguồn
+# trong máy — KHÔNG đưa vào lời dẫn gửi nhà cung cấp mô hình (T12).
+nguon:
+  - id: M1
+    loai: 'Nhà phố liền kề trong ngõ, 3 tầng, hiện đại, mái bằng'
+    to: 'HoSoTapHop Gui Sep/2026.09.17CHỊ CHUNG (…)/KT09-11 - MẶT ĐỨNG.dxf'
+    ty_le: '1/80'
+  - id: M2
+    loai: 'Nhà 2 tầng mái Nhật, có sảnh cột'
+    to: 'HoSoTapHop Gui Sep/Anh Thuần - Thái Thụy (Mái Nhật 2 tầng)/…/KT09-12 - MẶT ĐỨNG.dxf'
+    ty_le: '1/60'
+  - id: M3
+    loai: 'Nhà 1 tầng mái Nhật, lô liền kề'
+    to: 'HoSoTapHop Gui Sep/ANH TÂM - HƯNG HÀ (Liền Kề Mái Nhật)/…/KT08-10 - MẶT ĐỨNG.dxf'
+    ty_le: '1/80'
+  - id: M4
+    loai: 'Nhà vườn 1 tầng mái Nhật, hiên cột, sảnh mái dốc'
+    to: 'HoSoTapHop Gui Sep/AnhDuy - Quỳnh Phụ (Mái Nhật Sân Vườn)/…/KT07-10 - MẶT ĐỨNG.dxf'
+    ty_le: '1/60'
+  - id: M5
+    loai: 'Nhà 2 tầng hiện đại, mái bằng'
+    to: 'Hồ sơ Mạnh - An Bình/…/KT07-08 - MẶT ĐỨNG.dxf'
+    ty_le: '1/60'
+  - id: M6
+    loai: 'Nhà lô liền kề 5 tầng + tum, hiện đại'
+    to: 'Hồ sơ Duong TL 0831/…/KT15 - MẶT ĐỨNG TRỤC A-B.dxf (+ KT16 trục B-A)'
+    ty_le: '1:70'
+
+# ── 1. Hình khối và cao độ ───────────────────────────────────────────────────────
+# Cao tầng = khoảng cách hai cốt sàn; `nen` = sàn tầng 1 cao hơn sân/vỉa hè.
+hinh_khoi:
+  - {
+      id: M1,
+      so_tang: 3,
+      rong_mat_tien: 8000,
+      nen: 150,
+      cao_tang: [3600, 3300, 3300],
+      dinh: '+10.200 sàn mái, tum + bể nước phía trên',
+    }
+  - {
+      id: M2,
+      so_tang: 2,
+      rong_mat_tien: 10100,
+      nen: 750,
+      cao_tang: [3900, 3900],
+      dinh: 'diềm mái +7.800, bờ nóc +10.635',
+    }
+  - {
+      id: M3,
+      so_tang: 1,
+      rong_mat_tien: 5760,
+      nen: 450,
+      cao_tang: [3600],
+      dinh: 'sàn mái BTCT +3.900, mái vì kèo thép lợp ngói phía trên',
+    }
+  - {
+      id: M4,
+      so_tang: 1,
+      rong_mat_tien: 14000,
+      nen: 450,
+      cao_tang: [2920],
+      dinh: 'mái hiên +2.920, diềm mái chính +3.720, nóc +6.330',
+    }
+  - {
+      id: M5,
+      so_tang: 2,
+      rong_mat_tien: 8000,
+      nen: 450,
+      cao_tang: [3600, 3600],
+      dinh: 'sàn mái +7.200, tường chắn mái 900',
+    }
+  - {
+      id: M6,
+      so_tang: 5,
+      rong_mat_tien: 5000,
+      nen: 300,
+      cao_tang: [3900, 3600, 3600, 3600, 3600],
+      dinh: 'tum 2.100, tổng cao 20.700',
+    }
+
+tom_tat_hinh_khoi:
+  nen_mm:
+    {
+      thuong_gap: 450,
+      khoang: [150, 750],
+      n: 6,
+      ghi_chu: '3/6 hồ sơ 450. Nhà trong ngõ 150, nhà vườn có sảnh 750.',
+    }
+  cao_tang_1_mm:
+    {
+      thuong_gap: 3600,
+      khoang: [2920, 3900],
+      n: 6,
+      ghi_chu: '2.920 là nhà vườn 1 tầng có hiên; nhà phố 3.600–3.900.',
+    }
+  cao_tang_tren_mm: { thuong_gap: 3600, khoang: [3300, 3900], n: 4 }
+  tuong_chan_mai_mm:
+    {
+      thuong_gap: 900,
+      khoang: [800, 900],
+      n: 2,
+      ghi_chu: 'M5 ghi 750 + gờ 50 + đan 100 = 900; M1 đọc từ hình ~800 kèm mái đua 200.',
+      uoc_tu_hinh: 'M1',
+    }
+
+# ── 2. Mái ─────────────────────────────────────────────────────────────────────────
+mai:
+  mai_nhat:
+    # Ba hồ sơ mái Nhật đều ghi hoặc đo ra ~30°. Đây KHÔNG phải mái dốc thấp.
+    do_doc_deg:
+      {
+        thuong_gap: 30,
+        khoang: [30, 32],
+        n: 3,
+        ghi_chu: 'M2 và M3 ghi thẳng «30°» trên bản vẽ; M4 đo 2.610 / 4.400 ≈ 30,7°.',
+      }
+    mai_dua_mm:
+      {
+        khoang: [500, 750],
+        n: 3,
+        ghi_chu: 'M2: 600 + diềm 50; M3: 500 + 50; M4 ~750 ngoài cột hiên.',
+        uoc_tu_hinh: 'M4',
+      }
+    diem_mai_mm:
+      ghi_chu: 'Dưới mép mái luôn có một dải diềm/gờ ngang chạy quanh nhà, sơn khác màu thân.'
+      M2: 650
+      M3: 400 # 230 + 170
+      M4: 800
+    hinh_dang: 'Mái tứ giác (hip), bờ nóc ngắn; nhà lớn ghép hai khối mái cao thấp (M2) hoặc mái chính + mái hiên thấp hơn (M4).'
+    chi_tiet_lap_lai:
+      - 'Sảnh trước là mái dốc hai mái (tam giác) cùng độ dốc 30°, đỡ bằng cột (M2, M4).'
+      - 'Chóp trang trí trên đỉnh và đầu bờ nóc (M2, M4).'
+    vat_lieu:
+      ['ngói 2 sóng ghi xám (M2)', 'tôn giả ngói (M4)', 'vì kèo thép lợp ngói trên sàn BTCT (M3)']
+  mai_bang:
+    ghi_chu: 'M1, M5, M6: sàn mái BTCT, tường chắn mái có phào đỉnh; M1 có mái đua 200 + gờ ngắt nước; M6 có mái kính phía trước tum.'
+
+# ── 3. Cửa chính tầng 1 ───────────────────────────────────────────────────────────
+# Bề rộng = lọt khuôn cả bộ cửa; bộ có ô kính cố định hai bên/phía trên thì ghi riêng.
+cua_chinh:
+  - {
+      id: M1,
+      rong: 2000,
+      cao: 2800,
+      kieu: 'nhiều cánh, cạnh cửa cuốn gara 3.700 × 2.800',
+      uoc_tu_hinh: 'kiểu cánh',
+    }
+  - {
+      id: M2,
+      rong: 2830,
+      cao: 2850,
+      kieu: '2 cánh gỗ tự nhiên + ô kính hai bên + ô fix trên, khung bo dày đen',
+    }
+  - { id: M3, rong: 900, cao: 2800, kieu: '1 cánh (nhà 1 tầng mặt tiền 5,76 m)' }
+  - {
+      id: M4,
+      rong: 2000,
+      cao: 2350,
+      kieu: '2 cánh, dưới sảnh mái dốc, hai bên chậu cây',
+      uoc_tu_hinh: true,
+    }
+  - { id: M5, rong: 2700, cao: 2400, kieu: '4 cánh, phào bo cửa 100×50' }
+  - { id: M6, rong: 3800, cao: 3000, kieu: '4 cánh + dải fix 500 phía trên, đầu vòm R500' }
+tom_tat_cua_chinh:
+  cao_mm:
+    {
+      thuong_gap: 2800,
+      khoang: [2350, 3000],
+      n: 6,
+      ghi_chu: 'Không tính ô fix phía trên. Nhà 1 tầng thấp tầng thì cửa thấp theo (M4).',
+    }
+  rong_mm:
+    {
+      khoang: [900, 3800],
+      n: 6,
+      ghi_chu: 'Nhà phố hẹp vẫn dùng cửa 4 cánh chiếm gần trọn bề ngang (M6: 3.800 / 4.780).',
+    }
+  thoi_quen:
+    - 'Đỉnh cửa chính thẳng hàng với đỉnh cửa sổ cùng tầng (một cao độ lanh tô) — thấy ở M2, M3, M4, M5.'
+    - 'Cửa chính luôn nằm trên trục đối xứng của sảnh/khối giữa khi nhà có sảnh (M2, M4).'
+    - 'Cửa gara là cửa cuốn, cao bằng cửa chính (M1).'
+
+# ── 4. Cửa sổ và cửa tầng trên ───────────────────────────────────────────────────
+cua_so:
+  - {
+      id: M1,
+      kich_thuoc:
+        ['2.200 × 2.000 (cửa ra ban công)', '800 × 1.700', '500 × 1.900 (lật chữ A, tầng 1)'],
+    }
+  - {
+      id: M2,
+      kich_thuoc:
+        [
+          '800 × 1.930 (1 cánh + fix trên)',
+          '1.550 × 1.930 (2 cánh + fix trên)',
+          'cửa đi tầng 2: 1.550 × 2.080, 2.100 × 2.830 (3 ô)',
+        ],
+      bau_cua: 900,
+    }
+  - { id: M3, kich_thuoc: ['1.200 × 1.900'], bau_cua: 900 }
+  - { id: M4, kich_thuoc: ['~2.000 × 1.650 (3 cánh)'], bau_cua: 700, uoc_tu_hinh: 'bề rộng' }
+  - {
+      id: M5,
+      kich_thuoc: ['1.600 × 1.500', '1.200 × 1.500', 'cửa ra ban công 1.600 × 2.400'],
+      bau_cua: 900,
+    }
+  - {
+      id: M6,
+      kich_thuoc:
+        [
+          '1.010 × 2.200–2.800 (đầu vòm R300–R345)',
+          'cửa ra ban công 2.350–2.650 rộng, 2.100–2.800 cao',
+        ],
+    }
+tom_tat_cua_so:
+  bau_cua_mm: { thuong_gap: 900, khoang: [700, 1000], n: 4 }
+  cao_mm: { khoang: [1500, 1930], n: 5 }
+  dinh_cua_mm: { khoang: [2350, 2830], n: 4, ghi_chu: 'bậu + cao; trùng đỉnh cửa chính.' }
+  thoi_quen:
+    - 'Cửa sổ 2 cánh mở quay là mặc định; nhà mái Nhật hay thêm ô fix phía trên.'
+    - 'Nhà phố nhiều tầng: mỗi tầng một cửa lớn ra ban công chiếm ~½–⅔ bề ngang + một cửa sổ hẹp.'
+
+# ── 5. Ban công, lan can ─────────────────────────────────────────────────────────
+lan_can:
+  cao_mm:
+    {
+      thuong_gap: 900,
+      khoang: [800, 900],
+      n: 4,
+      ghi_chu: 'M1: 900 tầng 2, 700 trên gờ 200 ở tầng 3; M5: 900; M6: 800–900.',
+    }
+  kieu:
+    - 'kính cường lực + tay vịn inox (M1, M6)'
+    - 'song đứng thép hộp, tay vịn thép (M3, M5)'
+  thoi_quen:
+    - 'Nhà phố: ban công mỗi tầng, lan can kính; tầng trên cùng có khung lô gia lõm vào (M1).'
+    - 'Nhà mái Nhật 2 tầng (M2) không có ban công đua ra mặt tiền — cửa tầng 2 là cửa kính lớn.'
+    - 'Bồn cây xây trên ban công (M1).'
+
+# ── 6. Vật liệu và màu ──────────────────────────────────────────────────────────
+vat_lieu:
+  than_nha:
+    [
+      'sơn trắng / trắng sứ (M1, M3, M5, M6)',
+      'sơn xám, ghi, ghi xám (M1, M3, M4, M5)',
+      'sơn nâu đất (M2)',
+      'sơn hiệu ứng giả bê tông (M6)',
+    ]
+  chan_tuong_tang_1:
+    [
+      'ốp đá đen vân mây / đá tự nhiên đen (M2, M4, M5)',
+      'ốp đá mẫu chỉ định cả mảng tầng 1 (M1)',
+      'gạch giả đá (M4)',
+      'gạch ốp chân tường (M2)',
+      'granite đen cho bậc tam cấp (M2, M6)',
+    ]
+  mang_nhan:
+    ['ốp nhựa giả gỗ (M1)', 'cột nhôm vân gỗ 150×100 (M5)', 'ốp đá granite theo phối cảnh (M6)']
+  thoi_quen:
+    - 'Phối hai màu: thân sáng (trắng) + mảng/khung xám hoặc ghi. Chỉ M2 dùng màu ấm (nâu đất) cho nhà mái Nhật.'
+    - 'Tầng 1 hoặc chân tường luôn ốp vật liệu tối/nặng hơn phần trên (5/6 hồ sơ).'
+    - 'Nhiều tờ ghi «màu sắc xem phối cảnh 3D» — màu chốt ở phối cảnh, tờ mặt đứng chỉ ghi tên vật liệu.'
+
+# ── 7. Chi tiết trang trí lặp lại ────────────────────────────────────────────────
+trang_tri:
+  - 'Phào chỉ ngang ở mép sàn mỗi tầng: 50×20, 100×50, 150×100 (M1, M5, M6).'
+  - 'Phào bo quanh cửa 100×50 (M5).'
+  - 'Ron/chỉ âm ngang trên tường: 15 mm (M5), 25×10 cách nhau ~730 (M4), 30×20 (M1).'
+  - 'Gờ ngắt nước dưới mái đua và ô văng (M1).'
+  - 'Khung bao (viền 300) ôm tầng trên cùng thành một «hộp» nhấn (M1).'
+  - 'Cột trang trí / lam đứng ở một cạnh mặt tiền (M5); hệ lam che nắng trên sảnh (M3).'
+  - 'Ô tròn trang trí R700 trên tường đầu hồi (M3).'
+  - 'Đầu cửa vòm cho nhà phố tân cổ điển-hiện đại (M6).'
+  - 'Giàn bê tông trang trí (pergola) ở mép mái (M2).'
+
+# ── 8. Đối chiếu với số MỒI mà mã đang đọc ──────────────────────────────────────
+# Chưa sửa gì — chờ Haan duyệt (Q-48). Hai dòng đầu lệch rõ so với hồ sơ thật.
+doi_chieu_so_moi:
+  - noi: 'kb/facade_vocabulary.yaml › roof_defaults.japanese.pitch_deg'
+    dang_dung: 20
+    ho_so: '30 (n = 3, cả ba đều 30–32°)'
+    de_xuat: 30
+  - noi: 'kb/facade_vocabulary.yaml › roof_defaults.japanese.overhang_cm'
+    dang_dung: 90
+    ho_so: '50–75 cm'
+    de_xuat: 60
+  - noi: 'kb/construction_norms.yaml › facade.parapet_height_m'
+    dang_dung: 1.1
+    ho_so: '0,8–0,9 m (n = 2)'
+    de_xuat: 0.9
+  - noi: 'kb/construction_norms.yaml › facade.ground_floor_raise_m'
+    dang_dung: 0.45
+    ho_so: '0,45 thường gặp (3/6), khoảng 0,15–0,75'
+    de_xuat: 'giữ 0.45'
+  - noi: 'kb/facade_vocabulary.yaml (danh mục)'
+    ghi_chu: >-
+      Hồ sơ có mà danh mục chưa có: dải diềm mái dưới mép mái Nhật, chóp trang trí đỉnh mái,
+      sảnh mái dốc có cột, cửa đầu vòm, ron chỉ âm ngang, sơn giả bê tông, ốp nhựa/nhôm vân
+      gỗ, lan can song đứng thép hộp.

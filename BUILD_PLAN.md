@@ -395,8 +395,9 @@ DA-11 (Gemini đọc bản vẽ) · TK-09 (thư viện thiết kế) · NS-02 (k
 # PHASE 5 — AI Preliminary Design Engine (TK-10 → TK-17)
 
 > **Trạng thái thật và vướng mắc: `TIEN_DO_THIET_KE.html`.** Hàng rào và quyết định: `CLAUDE.md` mục 8,
-> `doc/design/README.md`. Mục này chỉ giữ khung mốc của **bộ giải nội bộ**; từ khi Haan quyết bộ giải AI
-> thay thế bộ giải nội bộ (CLAUDE.md 8.5b), phần lớn việc mới diễn ra ở nhánh AI và không ghi ở đây.
+> `doc/design/README.md`. Mục này chỉ giữ khung mốc của **bộ giải nội bộ** — **đã gỡ hẳn ở T58
+> (19/09/2026)**, các mốc 4–9 dưới đây là lịch sử. Thiết kế tự động nay là nhánh AI («AI Design»); Mốc 3
+> (số hoá + Knowledge Base) vẫn còn hiệu lực vì Container `compute/` giữ lại cho số hoá.
 
 Hai runtime: Worker (TypeScript — giao diện, API, mô hình ngôn ngữ, artifact, điều phối) và Container
 (Python — CP-SAT, hình học, CAD, ba chiều). Năm lớp, mỗi lớp là hàm thuần `(artifact vào, cấu hình) → artifact ra`:

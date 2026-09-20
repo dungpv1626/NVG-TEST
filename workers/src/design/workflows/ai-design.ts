@@ -68,6 +68,17 @@ import {
   type PlanVariant,
 } from '../ai/plan';
 import { roomVocabulary as vocabularyIndex } from '../kb/vocabulary-data';
+import { facadeVocabulary } from '../kb/facade-vocabulary-data';
+import {
+  FACADE_CALLS_MAX,
+  facadeStepId,
+  facadeStepLabel,
+  proposeFacadeStep,
+  writeFacadeStep,
+  type FacadeProposeOutcome,
+  type FacadeStepDeps,
+  type FacadeWriteOutcome,
+} from './ai-facade-steps';
 
 /** Lượt sửa theo yêu cầu kỹ sư gọi mô hình tối đa bấy nhiêu lần: một lần, cộng một lần kèm lý do cổng. */
 const EDIT_CALLS_MAX = 4;
@@ -181,38 +192,27 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
       promptStore: createArtifactStore(this.env),
     };
 
+    if (params.stage === 'facade') {
+      return this.runFacade(step, params, {
+        client,
+        prompts: deps.prompts,
+        construction: deps.construction,
+        outdoor: deps.groups.outdoor,
+        vocab: facadeVocabulary(),
+        repo,
+        ...(publicRoute?.pricing ? { pricing: publicRoute.pricing } : {}),
+        provider: deps.provider,
+        model: deps.model,
+        ...(deps.promptStore ? { promptStore: deps.promptStore } : {}),
+      });
+    }
     if (params.stage !== 'plan') {
       const message = `Giai đoạn "${params.stage}" chưa mở.`;
       await finishRun(repo.db, params.runId, { status: 'failed', error: message });
       throw new NonRetryableError(message);
     }
 
-    // Bảng theo dõi trực tiếp + nút «Dừng» (13/09/2026). Một vòng 2 giây ghi bảng xuống dòng lượt
-    // chạy và đọc xem kỹ sư đã bấm «Dừng» chưa; bấm rồi thì huỷ mọi lời gọi đang bay.
-    const board = new LivePlanBoard(
-      {
-        model: publicRoute?.model ?? params.textRoute,
-        route: params.textRoute,
-        effort: params.reasoningEffort ?? null,
-      },
-      publicRoute?.pricing,
-      router.isBilled(router.providerOf(params.textRoute) ?? ''),
-    );
-    let ticking = false;
-    const tick = async () => {
-      if (ticking) return;
-      ticking = true;
-      try {
-        if (!board.signal.aborted && (await runCancelled(repo.db, params.runId))) board.cancel();
-        await writeRunPartial(repo.db, params.runId, 'live', board.snapshot());
-      } catch {
-        // Theo dõi hỏng không được làm hỏng lượt chạy.
-      } finally {
-        ticking = false;
-      }
-    };
-    const timer = setInterval(() => void tick(), LIVE_TICK_MS);
-
+    const { board, stop } = this.startLive(params, repo);
     // Ba phương án chạy SONG SONG: mỗi phương án là một lượt gọi độc lập, và chờ tuần tự thì
     // người dùng chờ gấp ba. `allSettled` vì một phương án hỏng không được giết hai phương án
     // kia — hai bản vẽ dùng được vẫn hơn không có gì.
@@ -226,7 +226,7 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
         ),
       );
     } finally {
-      clearInterval(timer);
+      stop();
     }
     if (board.signal.aborted) {
       await finishRun(repo.db, params.runId, {
@@ -264,6 +264,115 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
       partial: { plans, live: board.snapshot() },
     });
     return result;
+  }
+
+  /**
+   * Bảng theo dõi trực tiếp + nút «Dừng» (13/09/2026). Một vòng 2 giây ghi bảng xuống dòng lượt chạy và
+   * đọc xem kỹ sư đã bấm «Dừng» chưa; bấm rồi thì huỷ mọi lời gọi đang bay. Dùng chung cho mặt bằng và
+   * mặt đứng (T59).
+   */
+  private startLive(
+    params: AiDesignParams,
+    repo: ArtifactRepository,
+  ): { board: LivePlanBoard; stop: () => void } {
+    const router = modelRouter(this.env);
+    const publicRoute = router.publicRoutes().find((route) => route.route === params.textRoute);
+    const board = new LivePlanBoard(
+      {
+        model: publicRoute?.model ?? params.textRoute,
+        route: params.textRoute,
+        effort: params.reasoningEffort ?? null,
+      },
+      publicRoute?.pricing,
+      router.isBilled(router.providerOf(params.textRoute) ?? ''),
+    );
+    let ticking = false;
+    const tick = async () => {
+      if (ticking) return;
+      ticking = true;
+      try {
+        if (!board.signal.aborted && (await runCancelled(repo.db, params.runId))) board.cancel();
+        await writeRunPartial(repo.db, params.runId, 'live', board.snapshot());
+      } catch {
+        // Theo dõi hỏng không được làm hỏng lượt chạy.
+      } finally {
+        ticking = false;
+      }
+    };
+    const timer = setInterval(() => void tick(), LIVE_TICK_MS);
+    return { board, stop: () => clearInterval(timer) };
+  }
+
+  /**
+   * Ý tưởng mặt đứng (T59): AI đề xuất → chương trình kiểm → (AI sửa kèm lý do) → ghép khung KHOÁ và
+   * lưu. Tối đa `FACADE_CALLS_MAX` lượt gọi. Hết lượt mà vẫn hỏng thì KHÔNG đúc artifact.
+   */
+  private async runFacade(step: WorkflowStep, params: AiDesignParams, deps: FacadeStepDeps) {
+    const db = deps.repo.db;
+    const { board, stop } = this.startLive(params, deps.repo);
+    let issues: string[] = [];
+    try {
+      for (let round = 1; round <= FACADE_CALLS_MAX; round += 1) {
+        if (board.signal.aborted) throw new NonRetryableError(RUN_CANCELLED);
+        const id = facadeStepId('propose', round);
+        const label = facadeStepLabel(round);
+        await markStep(db, params.runId, id, 'running', { label });
+        const hooks = (): LevelLiveHooks => {
+          board.begin(id, label);
+          return {
+            onProgress: (progress: CallProgress) => board.progress(id, progress),
+            signal: board.signal,
+            onLogged: (logged) => board.finish(id, logged),
+          };
+        };
+        const retry = round > 1 ? issues : null;
+        const proposal = (await step.do(id, MODEL_STEP, () =>
+          once(
+            () =>
+              proposeFacadeStep(deps, params, round, retry, hooks()).finally(() => board.drop(id)),
+            board.signal,
+          ),
+        )) as FacadeProposeOutcome;
+
+        if (proposal.proposalJson) {
+          await markStep(db, params.runId, id, 'done');
+          const writeId = facadeStepId('write');
+          await markStep(db, params.runId, writeId, 'running');
+          const written = (await step.do(writeId, () =>
+            writeFacadeStep(deps, params, proposal.proposalJson!, proposal.call, round),
+          )) as FacadeWriteOutcome;
+          await markStep(db, params.runId, writeId, 'done');
+          await finishRun(db, params.runId, {
+            status: 'done',
+            result: written,
+            partial: { live: board.snapshot() },
+          });
+          return written;
+        }
+        await markStep(db, params.runId, id, 'failed');
+        issues = proposal.issues;
+      }
+    } catch (error) {
+      const cancelled = board.signal.aborted;
+      await finishRun(db, params.runId, {
+        status: 'failed',
+        error: cancelled ? RUN_CANCELLED : userFacing(error),
+        partial: { live: board.snapshot() },
+      });
+      if (cancelled) return null;
+      throw error;
+    } finally {
+      stop();
+    }
+
+    // Hết lượt mà ý tưởng vẫn không dùng được: lượt chạy HỎNG kèm lý do nguyên văn phép kiểm.
+    await finishRun(db, params.runId, {
+      status: 'failed',
+      error: `AI chưa đưa ra được ý tưởng mặt đứng dùng được sau ${FACADE_CALLS_MAX} lượt. ${issues.slice(0, 3).join(' ')}`,
+      result: { issues },
+      partial: { live: board.snapshot() },
+    });
+    return null;
   }
 
   /**

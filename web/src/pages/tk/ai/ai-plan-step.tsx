@@ -65,7 +65,7 @@ import { Chip, Panel } from '../tk-ui';
 import { AiModePicker, ReasoningEffortPicker, useAiChoice } from './ai-model-picker';
 import { AiRunUsage } from './ai-usage';
 import { PlanScorePanel } from './ai-plan-score';
-import { RulePackPicker } from './ai-program-step';
+import { RulePackPicker } from './ai-rule-pack-picker';
 import { AiRunProgress } from './ai-run-progress';
 import { AiPlanLive } from './ai-live-call';
 import { PlanEditPanel } from './ai-plan-edit';

@@ -1,7 +1,7 @@
 /**
  * Tab Tổng quan của Trang dự án thiết kế (bản mẫu §5.5).
  *
- * Đây là bộ điều phối, không tự vẽ gì: dải tiến trình · sáu thẻ công cụ · thông tin dự án ·
+ * Đây là bộ điều phối, không tự vẽ gì: dải tiến trình · bốn thẻ công cụ · thông tin dự án ·
  * cột phải · dự án gần đây. Mỗi khối tự nạp dữ liệu của mình và tự bày khung chờ, nên một
  * truy vấn chậm không giữ cả trang lại.
  *
@@ -13,10 +13,9 @@ import {
   useDesignBriefs,
   useDesignVersions,
   useDisciplineTasks,
-  useFloorPlanVariants,
-  useSpaceProgram,
   type DesignProjectDetailRecord,
 } from '@/hooks/use-design-projects';
+import { useAiDesignState } from '@/hooks/use-ai-design';
 import { useDesignSurveys } from '@/hooks/use-design-surveys';
 import { useEstimates } from '@/hooks/use-estimates';
 import { ContextColumn } from './context-column';
@@ -24,14 +23,7 @@ import { ProgressTrack } from './progress-track';
 import { ProjectFacts } from './project-facts';
 import { RecentProjects } from './recent-projects';
 import { designSteps } from './steps';
-import {
-  AiDesignCard,
-  BriefCard,
-  ExportCard,
-  ProgramCard,
-  SurveyCard,
-  VariantsCard,
-} from './tool-cards';
+import { AiDesignCard, BriefCard, ExportCard, SurveyCard } from './tool-cards';
 
 export function OverviewPanel({
   project,
@@ -50,22 +42,12 @@ export function OverviewPanel({
       <div className="grid min-w-0 gap-4">
         <ProgressTrack steps={steps} basePath={basePath} />
 
-        {/* Tối đa BA thẻ một hàng — Haan chốt 06/09/2026, thay bản `auto-fit` trước đó.
-            `auto-fit minmax(292px,1fr)` của bản mẫu cho ra bốn cột ở màn hình rộng, và khi đó
-            thẻ hẹp tới mức bảng bốn hàng của Chương trình không gian phải nén số liệu.
-            Hai cột thì ngược lại: ở màn 1850px mỗi thẻ nở tới ~680px, ruột loãng và trang dài
-            gấp đôi. Ba là mức giữa, và trùng với cách bản mẫu tự bày ở khổ màn hình của nó.
-            Ở `xl` (1280px) mỗi thẻ vẫn rộng ~290px, tức vẫn trên mức tối thiểu 292px của §5.5b. */}
-        <section
-          aria-label="Bộ công cụ thiết kế"
-          className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3"
-        >
+        {/* Bốn thẻ, lưới hai cột (T58 gỡ hai thẻ bộ giải; ba cột sẽ để một thẻ lẻ hàng). */}
+        <section aria-label="Bộ công cụ thiết kế" className="grid gap-3.5 sm:grid-cols-2">
           <BriefCard projectId={project.id} basePath={basePath} />
           <SurveyCard projectId={project.id} basePath={basePath} />
-          <ProgramCard projectId={project.id} basePath={basePath} />
-          <VariantsCard projectId={project.id} basePath={basePath} readOnly={readOnly} />
-          <ExportCard projectId={project.id} basePath={basePath} />
           <AiDesignCard projectId={project.id} basePath={basePath} />
+          <ExportCard projectId={project.id} basePath={basePath} />
         </section>
 
         <ProjectFacts project={project} readOnly={readOnly} onSaveNotes={onSaveNotes} />
@@ -84,8 +66,7 @@ export function OverviewPanel({
 function useDesignStepStates(project: DesignProjectDetailRecord) {
   const briefs = useDesignBriefs(project.id);
   const surveys = useDesignSurveys(project.id);
-  const program = useSpaceProgram(project.id);
-  const variants = useFloorPlanVariants(project.id);
+  const ai = useAiDesignState(project.id);
   const tasks = useDisciplineTasks(project.id);
   const versions = useDesignVersions(project.id);
   const estimates = useEstimates({ kind: 'design', id: project.id });
@@ -100,13 +81,8 @@ function useDesignStepStates(project: DesignProjectDetailRecord) {
         }
       : null,
     surveyCount: surveys.data?.length ?? 0,
-    program: program.data
-      ? {
-          committed: program.data.matchesHead && program.data.headArtifactId !== null,
-          spaceCount: program.data.program.spaces.length,
-        }
-      : null,
-    feasibleVariants: (variants.data?.variants ?? []).filter((v) => v.status === 'ok').length,
+    aiPlanCount: ai.data?.plans.length ?? 0,
+    aiPlanChosen: Boolean(ai.data?.planHeadArtifactId),
     disciplinePercents: (tasks.data ?? []).map((t) => t.progress_percent),
     // Hai bước cuối đọc từ CHÍNH nguồn mà màn hình con của chúng dùng, không đoán theo `stage`.
     hasEstimate: (estimates.data ?? []).length > 0,

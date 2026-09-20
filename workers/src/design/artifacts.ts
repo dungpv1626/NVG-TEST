@@ -91,10 +91,20 @@ export class ArtifactRepository {
 
     const existing = await this.db
       .from('design_artifact')
-      .select('id, payload_uri')
+      .select('id, payload_uri, project_id')
       .eq('id', id)
       .maybeSingle();
     if (existing.error) throw new Error(existing.error.message);
+    // Mã artifact là băm NỘI DUNG, nên hai hồ sơ có cùng nội dung sẽ ra cùng mã — và dòng đã có
+    // mang `project_id` của hồ sơ kia. Dùng lại nó là đặt `design_head` của hồ sơ này trỏ sang
+    // artifact của hồ sơ khác: `get(id, projectId)` trả null, phiếu trông như chưa lưu, lượt chạy
+    // báo «không tìm thấy». Chính sách RLS `design_head_insert` cấm đúng điều này, nhưng kho ghi
+    // bằng `service_role` nên đi lọt. Dừng ở đây, báo ra, còn hơn hỏng lặng lẽ.
+    if (existing.data && (existing.data.project_id as string) !== scope.projectId) {
+      throw new Error(
+        'Nội dung này đã được lưu ở một hồ sơ thiết kế khác. Thêm một chi tiết khác biệt rồi lưu lại.',
+      );
+    }
 
     let payloadUri: string;
     let reused = false;

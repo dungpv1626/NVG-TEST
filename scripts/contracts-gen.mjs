@@ -157,6 +157,17 @@ function regexLiteral(pattern) {
  * "được phép rỗng". Cả hai quy về `.nullable()` của zod.
  */
 function splitNullable(s) {
+  // `anyOf: [X, {type: null}]` — cách duy nhất khai một `$ref` hay một đối tượng «được phép rỗng»
+  // mà chế độ `strict` của OpenAI nhận. Trước 19/09/2026 bộ sinh không đọc `anyOf` và trả
+  // `z.unknown()`: trường trông như có hợp đồng mà không kiểm gì (T59).
+  if (Array.isArray(s.anyOf)) {
+    const rest = s.anyOf.filter((o) => o?.type !== 'null');
+    if (rest.length < s.anyOf.length) {
+      const { anyOf: _drop, ...outer } = s;
+      const inner = rest.length === 1 ? rest[0] : { anyOf: rest };
+      return [{ ...inner, ...(outer.description ? { description: outer.description } : {}) }, true];
+    }
+  }
   if (Array.isArray(s.type) && s.type.includes('null')) {
     const rest = s.type.filter((t) => t !== 'null');
     return [{ ...s, type: rest.length === 1 ? rest[0] : rest }, true];
@@ -207,8 +218,8 @@ function zodCore(s, ctx, indent) {
 
   if (s.const !== undefined) return `z.literal(${JSON.stringify(s.const)})`;
 
-  if (Array.isArray(s.oneOf)) {
-    const parts = s.oneOf.map((o) => zodExpr(o, ctx, indent + '  '));
+  if (Array.isArray(s.oneOf) || Array.isArray(s.anyOf)) {
+    const parts = (s.oneOf ?? s.anyOf).map((o) => zodExpr(o, ctx, indent + '  '));
     return `z.union([\n${parts.map((p) => `${indent}  ${p},`).join('\n')}\n${indent}])`;
   }
 
@@ -288,8 +299,8 @@ function tsType(s, defs, indent = '') {
 
 function tsCore(s, defs, indent) {
   if (s.const !== undefined) return JSON.stringify(s.const);
-  if (Array.isArray(s.oneOf)) {
-    return s.oneOf.map((o) => `(${tsType(o, defs, indent)})`).join(' | ');
+  if (Array.isArray(s.oneOf) || Array.isArray(s.anyOf)) {
+    return (s.oneOf ?? s.anyOf).map((o) => `(${tsType(o, defs, indent)})`).join(' | ');
   }
   if (Array.isArray(s.enum)) return s.enum.map((v) => JSON.stringify(v)).join(' | ');
   if (Array.isArray(s.type))
