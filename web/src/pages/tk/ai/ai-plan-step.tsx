@@ -69,6 +69,7 @@ import { AiRunProgress } from './ai-run-progress';
 import { AiPlanLive } from './ai-live-call';
 import { PlanEditPanel } from './ai-plan-edit';
 import { PlanSheetImagePanel } from './ai-plan-sheet-image';
+import { SheetSizeControl, sheetWidthStyle, useSheetSize } from './sheet-size';
 
 /** Kết quả một lượt chạy giai đoạn mặt bằng, đúng hình dạng Workflow ghi vào `design_ai_run`. */
 interface PlanRunResult {
@@ -554,6 +555,7 @@ function PlanDetail({
 }): React.ReactElement {
   const current = review.levels.find((item) => item.level === level) ?? review.levels[0];
   const levelOptions = review.levels.map((item) => String(item.level));
+  const sheetSize = useSheetSize();
 
   return (
     <>
@@ -644,6 +646,8 @@ function PlanDetail({
               }
             />
           )}
+          {/* Cỡ xem áp cho CẢ tờ vector ở đây lẫn ảnh có nội thất bên dưới. */}
+          <SheetSizeControl />
         </div>
 
         {sheet.loading && <Skeleton className="h-96 w-full" />}
@@ -653,6 +657,7 @@ function PlanDetail({
           <img
             src={sheet.url}
             alt={`Tờ mặt bằng ${current?.name ?? `tầng ${level}`}`}
+            style={sheetWidthStyle(sheetSize)}
             className="w-full rounded-md border border-tk-line bg-white"
           />
         )}

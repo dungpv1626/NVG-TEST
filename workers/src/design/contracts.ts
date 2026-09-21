@@ -13,6 +13,7 @@ import {
   aiFacadeBriefSchema,
   aiFacadeConceptSchema,
   aiFacadeImageSchema,
+  aiFacadeReviewSchema,
   aiFloorPlanProposalSchema,
   aiFloorPlanSchema,
   aiImageSetSchema,
@@ -30,6 +31,7 @@ export const ARTIFACT_SCHEMAS = {
   ai_facade_concept: aiFacadeConceptSchema,
   ai_facade_brief: aiFacadeBriefSchema,
   ai_facade_image: aiFacadeImageSchema,
+  ai_facade_review: aiFacadeReviewSchema,
   ai_image_set: aiImageSetSchema,
   ai_plan_sheet_image: aiPlanSheetImageSchema,
   // Loại cũ của nhánh AI (T14, mô hình tự viết chuỗi SVG). Đường mã sinh ra nó đã gỡ ngày

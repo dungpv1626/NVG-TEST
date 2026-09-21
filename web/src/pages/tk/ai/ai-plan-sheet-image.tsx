@@ -40,23 +40,20 @@ import { stampWatermark } from '@/lib/watermark';
 import { Chip, Panel } from '../tk-ui';
 import { AiModePicker, useAiChoice } from './ai-model-picker';
 import { AiUsageLine } from './ai-usage';
+import { sheetMaxPx, useSheetSize } from './sheet-size';
 
 /** Vẽ lại quá số lần này cho cùng một tầng thì hỏi lại — mỗi lần là 0,067–0,19 USD. */
 const ASK_AGAIN_AFTER = 2;
 
 /**
- * Bề ngang tối đa của khung xem «Vừa», tính bằng điểm ảnh CSS.
+ * Khung xem đi theo cỡ chọn ở tờ vector bên trên (`sheet-size.tsx`) — trước 20/09/2026 panel này
+ * có bộ chọn «Vừa · Cỡ gốc» RIÊNG, nên trên cùng màn hình có hai nút «Vừa» nghĩa khác nhau.
  *
- * Mô hình trả ảnh cỡ 1024–1536 px. Trên màn hình rộng, khung panel rộng hơn thế, nên `w-full`
- * KÉO GIÃN ảnh lên quá cỡ gốc — chữ trên tờ nhoè ra mà không thêm một chi tiết nào. Hai mức xem
- * dưới đây đều bị chặn trên bằng cỡ gốc (`natural.width`), nên không bao giờ phóng to quá thật:
- * đó mới là chỗ «nét hơn» đến từ, không phải từ việc thu nhỏ.
+ * Nhưng cỡ ấy còn bị chặn thêm bằng cỡ GỐC của tấm ảnh. Mô hình trả ảnh cỡ 1024–1536 px; khung
+ * panel trên màn hình rộng còn rộng hơn thế, nên `w-full` KÉO GIÃN ảnh lên quá cỡ gốc — chữ trên
+ * tờ nhoè ra mà không thêm một chi tiết nào. Đó mới là chỗ «nét hơn» đến từ, không phải từ việc
+ * thu nhỏ. Tờ vector không cần chặn này: SVG phóng bao nhiêu cũng sắc nét.
  */
-const COMPACT_PX = 720;
-
-type ViewSize = 'compact' | 'native';
-const VIEW_SIZES: readonly ViewSize[] = ['compact', 'native'];
-const VIEW_SIZE_LABEL: Record<ViewSize, string> = { compact: 'Vừa', native: 'Cỡ gốc' };
 
 export function PlanSheetImagePanel({
   review,
@@ -88,7 +85,7 @@ export function PlanSheetImagePanel({
   const drawLevel = current?.level ?? level;
   const levelName = current?.name ?? `Tầng ${drawLevel}`;
 
-  const [view, setView] = useState<ViewSize>('compact');
+  const size = useSheetSize();
   /** Cỡ thật của tấm ảnh, đọc khi trình duyệt giải mã xong — để không bao giờ phóng quá cỡ ấy. */
   const [natural, setNatural] = useState<{ width: number; height: number } | null>(null);
 
@@ -139,9 +136,12 @@ export function PlanSheetImagePanel({
   };
 
   const busy = draw.isPending;
+  const capPx = sheetMaxPx(size);
   const maxWidth = natural
-    ? `${view === 'compact' ? Math.min(natural.width, COMPACT_PX) : natural.width}px`
-    : undefined;
+    ? `${capPx === null ? natural.width : Math.min(natural.width, capPx)}px`
+    : capPx === null
+      ? undefined
+      : `${capPx}px`;
 
   return (
     <Panel
@@ -209,12 +209,6 @@ export function PlanSheetImagePanel({
       {!busy && stamped && (
         <>
           <div className="mb-2 flex flex-wrap items-center gap-3">
-            <SegmentedControl
-              options={VIEW_SIZES}
-              value={view}
-              onChange={setView}
-              getLabel={(size) => VIEW_SIZE_LABEL[size]}
-            />
             {natural && (
               <span className="text-xs text-fg-subtle">
                 Ảnh gốc {natural.width} × {natural.height} điểm ảnh — khung xem không phóng quá cỡ

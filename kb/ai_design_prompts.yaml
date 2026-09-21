@@ -13,7 +13,7 @@
 # Không một ngưỡng quy chuẩn nào nằm ở đây: mọi con số (tối thiểu, sàn xây được, số phòng ngủ)
 # do Worker tiêm vào từ rule pack, kb/space_norms.yaml và đầu bài lúc gọi — xem `ai/program.ts`.
 
-version: '8.10.0'
+version: '8.15.0'
 
 program:
   system: |
@@ -365,8 +365,11 @@ sheet_image:
 
     Write the text ON the sheet, in Vietnamese with full diacritics, and copy it exactly as given:
     - Each room name in upper case inside its own room, with its area on the line below it.
-    - The dimension chains along the top and left edges, exactly as they appear in the reference
-      drawing and with the figures given.
+    - The dimension chains along the top and left edges, drawn exactly where they appear in the
+      reference drawing. Copy each figure from the reference drawing itself. If a figure there is
+      not legible to you, draw that segment WITHOUT a number — never make a number up. The two
+      overall figures given below are the totals each chain must add up to; use them to check
+      yourself, and write them on the outermost chain.
     - A north arrow, a graphic scale bar, and a title block in the bottom-left corner containing
       only the lines given to you.
 
@@ -377,7 +380,9 @@ sheet_image:
   user: |
     Storey: {level_name}
 
-    Rooms, with the name to write and the area to write under it:
+    Rooms, with the name to write, the area to write under it, and the real size of the room —
+    the furniture you draw in each room must fit that size, at the same scale as the rest of the
+    sheet:
     {rooms}
 
     Overall building footprint: {footprint}.
@@ -431,12 +436,16 @@ facade:
     - balcony_railing: one railing code when <frame> lists balconies, otherwise null.
     - parapet: height above the roof slab for a flat roof; null lets the program use its default.
     - roof_outline: null unless the roof type is mixed.
-    - elements: decorative pieces as rectangles [x0, z0, x1, z1] inside the facade — canopies over
-      openings, columns, cladding panels, louvres, planters, cornices, eaves bands (a horizontal
-      fascia band under a pitched roof, painted a different colour from the wall), finials (a small
-      ornament on the ridge) and reveals (a recessed horizontal groove 15-30 mm deep in the render).
-      Only canopies and louvres may overlap an opening. Keep them few and purposeful; each refers to
-      a material by index or null.
+    - elements: decorative pieces inside the facade, each given as the rectangle [x0, z0, x1, z1]
+      that BOUNDS it — canopies over openings, columns, cladding panels, louvres, planters,
+      cornices, eaves bands (a horizontal fascia band under a pitched roof, painted a different
+      colour from the wall), finials (a small ornament on the ridge), reveals (a recessed
+      horizontal groove 15-30 mm deep in the render), arches (the head of a doorway: the program
+      draws an arc springing from z0 at both ends to the crown at z1), oculi (a round window: the
+      program draws the largest circle inside the rectangle) and porch_roofs (a gabled roof over
+      the entrance porch: the program draws a triangle with its ridge at the middle of z1 — add
+      `column` pieces under it for the posts). Only canopies, louvres, arches and porch roofs may
+      overlap an opening. Keep them few and purposeful; each refers to a material by index or null.
 
     <requirements> lists what the architect has already decided. Every REQUIRED item is binding: use
     exactly that code or value, and design the rest of the facade to suit it. Door and window zones
@@ -461,6 +470,14 @@ facade:
     Your previous answer could not be used:
     {issues}
     Return the whole facade again with these problems fixed. Keep everything else the same.
+  # Lượt gọi lại vì ĐIỂM, không vì lỗi (T63). Câu trả lời trước HỢP LỆ — nó chỉ chưa giống thói quen
+  # vẽ đo được trên hồ sơ thật. Phải nói khác `retry`: bảo mô hình rằng nó «không dùng được» trong
+  # khi nó dùng được là dạy sai, và lượt sau nó sẽ đổi cả những thứ đang đúng.
+  retry_habits: |
+    Your previous answer was valid, but it did not match how this design office usually draws:
+    {issues}
+    Return the whole facade again, changing ONLY what these notes ask for. Keep every other choice
+    exactly as it was.
 
 # Ảnh MẶT ĐỨNG CÓ VẬT LIỆU, do mô hình ảnh vẽ TỪ ẢNH NEO (T59 Đợt E, 20/09/2026).
 #
@@ -485,8 +502,13 @@ facade_image:
 
     Apply the materials and colours given below, each on its own zone. Glass reads as glass,
     timber as timber, stone as stone. Daylight, soft shadows, a clear sky, a little planting at the
-    base; gates and fences stand in front of the house exactly where the drawing shows them. No
-    people, no cars in front of the facade.
+    base. No people, no cars in front of the facade.
+
+    THE FENCE MUST NOT RUN ACROSS ANY ENTRANCE. Where the drawing leaves a gap in the fence line in
+    front of the front door or the garage door, leave that gap open in your image too: a car has to
+    be able to drive into the garage and a person has to be able to walk to the front door. Gates and
+    fences stand in front of the house exactly where the drawing shows them, at the same widths — a
+    gate that is drawn in front of the garage stays in front of the garage.
 
     Write NO text, numbers, dimension lines, level marks, labels, logos or watermarks on the image —
     ignore the dimension chains and level marks of the reference drawing; they are not part of the
@@ -524,3 +546,193 @@ facade_image:
   # Câu trình duyệt in ĐÈ LÊN PIXEL — tiếng Việt, cho người xem tấm ảnh. Bản dài hơn hiện bằng chữ
   # trong trang là `AI_DISCLAIMERS.aiFacadeImage`.
   watermark: 'Ảnh minh hoạ do AI vẽ — không đo được, màu chỉ để hình dung'
+
+# ── Bộ ảnh phối cảnh (T67, 20/09/2026) ────────────────────────────────────────────────────────
+#
+# Năm góc cùng MỘT ngôi nhà. Cách giữ chúng cùng một nhà là ẢNH NEO, không phải lời dẫn: góc
+# `front_day` vẽ từ tờ mặt đứng vector, bốn góc còn lại cầm chính tấm `front_day` làm tham chiếu.
+# Hai góc `oblique` và `aerial` nhận thêm tờ mặt bằng mái, vì tờ mặt đứng không có chiều sâu.
+#
+# Lời dẫn ở đây chỉ làm ba việc: nói góc máy, nói ánh sáng, và nhắc lại vật liệu. Vật liệu KHÔNG
+# viết ở đây — nó sinh từ `ai_facade_concept` qua `facadeLook()`, dùng chung với `facade_image`.
+# Hai bản mô tả song song là đường chắc chắn dẫn tới hai bộ ảnh lệch màu.
+perspective:
+  system: |
+    You produce presentation renders of a single-family house for a Vietnamese residential
+    design-build office. The client will look at these images to decide whether to sign.
+
+    REFERENCE IMAGES ARE THE AUTHORITY. Every image attached to this request shows the exact
+    house you must draw. Match it: the number of storeys, the width and depth of the building,
+    the roof shape, the position and size of every door, window, garage door and balcony, the
+    gate and the fence. Do not move, add, remove, widen or heighten any opening. Do not invent
+    an extra storey, an extra wing or a different roof.
+
+    Where a line drawing is attached, it is a measured drawing, not a style reference: take the
+    geometry from it and the materials and colours from the text below. Where a finished render
+    is attached, it is the same house already approved: keep its materials, colours and
+    proportions exactly, and only change the camera and the light as instructed.
+
+    THE FENCE MUST NOT RUN ACROSS ANY ENTRANCE. A car has to be able to drive into the garage
+    and a person has to be able to walk to the front door.
+
+    Photographic quality, believable materials and light. Write NO text, numbers, dimensions,
+    labels, logos or watermarks anywhere on the image.
+  # Khuôn chung. `{view}`, `{camera}`, `{lighting}`, `{life}` đổi theo góc; phần còn lại giống
+  # nhau ở cả năm góc, và đó là chủ đích — năm tấm phải là một ngôi nhà.
+  user: |
+    Shot: {view}
+    Camera: {camera}
+    Light: {lighting}
+    The house: {house}
+    The plot and what is around it: {site}
+    Style: {style}
+    Roof: {roof}
+    Materials by zone:
+    {materials}
+    Colour palette: {palette}
+    Balcony railing: {railing}
+    Gate and fence: {gate_fence}
+    Decorative elements already on the building: {elements}
+    People and vehicles: {life}
+  # Chiều dài thật của phương tiện, mét — dùng để nói HỆ QUẢ của khoảng sân, không phải để vẽ xe.
+  #
+  # Sân trước sâu 3 m thì ngắn hơn một thân ô tô, nên chiếc xe chỉ có thể nằm trong gara hoặc
+  # ngoài đường. Không nói ra điều đó thì mô hình dựng cảnh xe đỗ ngang sân cho sinh động, và
+  # người xem đo ngay được là sân phải rộng gấp ba lần con số trong đầu bài (lỗi thật 20/09/2026).
+  scale:
+    car_length_m: 4.5
+    motorbike_length_m: 2.0
+    # Câu hệ quả, `{yard}` là chiều sâu sân trước tính bằng mét.
+    yard_shorter_than_car: >-
+      The front yard is only {yard} m deep — shorter than a car — so no car may be parked in it:
+      any car is either inside the garage or out in the street. Motorbikes may stand across it.
+    yard_shorter_than_motorbike: >-
+      The front yard is only {yard} m deep — it is a doorstep, not a parking court. No car and no
+      motorbike stands in it; vehicles are in the garage or in the street.
+    no_yard: >-
+      The building stands on the front boundary line, right at the pavement. There is no front yard
+      at all: no gate, no fence, no parked vehicle between the facade and the street.
+  # Mỗi góc: nhãn tiếng Việt cho màn hình, câu tả góc máy, câu tả ánh sáng.
+  #
+  # `label_vi` là chỗ DUY NHẤT đặt tên tiếng Việt cho góc — màn hình đọc từ đây qua Worker, không
+  # viết cứng danh sách nào (cùng lối với danh mục mặt đứng ở `facade_vocabulary.yaml`).
+  views:
+    front_day:
+      label_vi: 'Mặt tiền ban ngày'
+      shot: 'the house seen straight on from the street in the morning'
+      sun_time: 'morning'
+      camera: |
+        Straight on from the street, camera at eye level on the far pavement, the whole house and
+        the full width of the front boundary in frame, a strip of pavement and road along the
+        bottom. Very slight perspective only — the facade reads almost flat, as in the drawing.
+      lighting: |
+        Clear morning light a couple of hours after sunrise, {sun}, soft shadows under the eaves
+        and balconies, blue sky with a few light clouds.
+    front_night:
+      label_vi: 'Mặt tiền buổi tối'
+      shot: 'the same straight-on street view, after dark'
+      camera: |
+        The same straight-on view from the street as the reference render, same distance, same
+        framing. Nothing about the building changes.
+      lighting: |
+        After dark, deep blue evening sky. Warm light inside the rooms showing through the
+        windows and the glass of the front door, downlights washing the facade and the entrance,
+        the house number area and the gate lit. Street lighting outside. Materials keep the same
+        colours as the daytime render, read under warm light.
+    oblique:
+      label_vi: 'Góc nghiêng'
+      shot: 'a three-quarter view of the house from the street'
+      sun_time: 'morning'
+      camera: |
+        Three-quarter view from the street, camera at eye level, moved about 35 degrees to one
+        side so that the front and one side wall are both visible. The whole building and the
+        front boundary stay in frame. Use the attached roof plan to get the depth of the house
+        and which way the side wall runs — the house is {depth_note}.
+      lighting: |
+        Same clear morning light as the daytime render, {sun}, soft shadows.
+    aerial:
+      label_vi: 'Toàn cảnh từ trên cao'
+      shot: 'the house and its whole plot seen from above'
+      sun_time: 'midday'
+      camera: |
+        From above and in front, the camera tilted down about 55 degrees, looking at the front
+        and one side of the house. The whole plot is in frame: the building, the roof, the front
+        yard, the gate and the fence line, and the road in front. The attached roof plan shows
+        the exact footprint, the roof and where the gate and the fence sit — match it.
+      lighting: |
+        Midday to early afternoon light, {sun}, short shadows, roof surfaces clearly lit.
+    gate_close:
+      label_vi: 'Cận cảnh cổng và cửa chính'
+      shot: 'a close view of the gate and the front entrance'
+      sun_time: 'afternoon'
+      camera: |
+        Close view from the pavement of the gate and the ground-floor entrance behind it, taken
+        slightly off to one side. The frame holds the gate, the path to the front door, the front
+        door itself and the bottom of the first floor above it. The upper storeys are cropped.
+      lighting: |
+        Warm late-afternoon light, {sun}, long soft shadows across the paving.
+    balcony_close:
+      label_vi: 'Cận cảnh ban công tầng 2'
+      shot: 'a close view of the second-floor balcony'
+      sun_time: 'afternoon'
+      camera: |
+        Close view of the second-floor balcony, camera raised to about the balcony floor level
+        and slightly to one side. The frame holds the balcony, its railing, the doors opening
+        onto it and a little of the wall above and below. The ground floor is cropped.
+      lighting: |
+        Warm late-afternoon light, {sun}, long soft shadows.
+    axonometric:
+      label_vi: 'Khối trục đo'
+      shot: 'a parallel-projection massing view of the house'
+      camera: |
+        Parallel projection of the whole building seen from above one corner, no perspective
+        convergence, the plot shown as a flat plane under it.
+      lighting: 'Even, shadowless studio light.'
+  # Hai câu cho ô tắt/bật người và xe. Cây cối KHÔNG nằm ở đây — ảnh không có cây thì không ra
+  # ảnh trình khách, nên cây luôn có ở cả hai câu.
+  life:
+    on: |
+      Planting along the boundary and by the entrance. {vehicles} parked inside the plot, clear
+      of the garage opening and not blocking the front door. One or two people going about their
+      business on the pavement, small in frame, faces not in focus.
+    off: |
+      Planting along the boundary and by the entrance. No people anywhere, no cars, no
+      motorbikes, no bicycles — inside the plot or on the street.
+    # Dùng thay `on` khi sân trước NGẮN HƠN một thân xe. Câu `on` bảo «đỗ trong thửa», và với sân
+    # 3 m thì mô hình nới sân ra cho vừa chiếc xe thay vì bỏ chiếc xe đi (lỗi thật 20/09/2026).
+    on_tight_yard: >-
+      Planting along the boundary and by the entrance. The front yard is too short to park a car
+      across it, so any car stands in the street at the kerb or sits half inside the open garage;
+      motorbikes may stand in the yard. Vehicles in the picture: {vehicles}. One or two people
+      going about their business on the pavement, small in frame, faces not in focus.
+  # Câu tả số xe khi ô người-xe đang bật. `{cars}` và `{motorbikes}` do chương trình điền từ đầu
+  # bài; không khai xe nào thì dùng `none`.
+  vehicles:
+    cars: '{cars} car{s}'
+    motorbikes: '{motorbikes} motorbike{s}'
+    none: 'A car'
+  # Loại công trình → một cụm tiếng Anh. Quyết định nhà đứng một mình hay kẹp giữa hai nhà khác.
+  building_types:
+    nha_pho: 'Vietnamese row house on a narrow street plot'
+    biet_thu: 'detached villa standing free on its plot'
+    nha_vuon: 'garden house standing free with planting around it'
+  # Hiện trạng một phía thửa đất → một cụm tiếng Anh. Mã phải khớp `kb/site_context.yaml`; thiếu
+  # mã thì phía ấy KHÔNG được nhắc trong lời dẫn (không đoán hộ).
+  neighbours:
+    nha_hang_xom: 'a neighbouring house built right up to the boundary'
+    hem_2m: 'a narrow 2 m lane'
+    hem_3m: 'a 3 m lane'
+    duong_lon: 'a main road'
+    dat_trong: 'an empty plot'
+    ao_ho: 'a pond'
+  # Hướng nhà (mã `B`, `BD`, `D`… của đầu bài) → câu tả nắng chiếu vào đâu. Thiếu hướng thì dùng
+  # `unknown`: nói ánh sáng chung, KHÔNG đoán một hướng nắng.
+  sun:
+    front: 'the sun in front of the house, lighting the facade straight on'
+    left: 'the sun coming from the left, raking across the facade'
+    right: 'the sun coming from the right, raking across the facade'
+    back: 'the sun behind the house, the facade in soft open shade'
+    unknown: 'the sun placed so the whole facade is evenly lit'
+  # Câu trình duyệt in ĐÈ LÊN PIXEL. Bản dài hơn hiện bằng chữ trong trang là
+  # `AI_DISCLAIMERS.aiImageSet`.
+  watermark: 'Ảnh phối cảnh do AI dựng — không đo được, vật liệu và màu chỉ để hình dung'

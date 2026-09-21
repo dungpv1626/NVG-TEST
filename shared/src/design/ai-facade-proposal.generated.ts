@@ -138,14 +138,17 @@ export const aiFacadeProposalSchema = z
               'eaves_band',
               'finial',
               'reveal',
+              'arch',
+              'oculus',
+              'porch_roof',
             ]),
-            /** [x0, z0, x1, z1] cm, inside the facade frame. Only canopy and louvre may cover an opening. */
+            /** [x0, z0, x1, z1] cm, inside the facade frame. The program draws the shape; the rectangle is always its bounding box. arch: the band above a door, drawn as an arc springing from z0 at both ends up to the crown at z1. oculus: a round window, drawn as the largest circle inside the rectangle. porch_roof: a gabled porch roof, drawn as a triangle with its ridge at the middle of z1. Only canopy, louvre, arch and porch_roof may cover an opening. */
             rect: z
               .array(z.number().int())
               .min(4)
               .max(4)
               .describe(
-                '[x0, z0, x1, z1] cm, inside the facade frame. Only canopy and louvre may cover an opening.',
+                '[x0, z0, x1, z1] cm, inside the facade frame. The program draws the shape; the rectangle is always its bounding box. arch: the band above a door, drawn as an arc springing from z0 at both ends up to the crown at z1. oculus: a round window, drawn as the largest circle inside the rectangle. porch_roof: a gabled porch roof, drawn as a triangle with its ridge at the middle of z1. Only canopy, louvre, arch and porch_roof may cover an opening.',
               ),
             /** Index into materials; null means the body material. */
             material_ref: z

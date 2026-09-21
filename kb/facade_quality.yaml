@@ -1,0 +1,281 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+#  THƯỚC CHẤM MẶT ĐỨNG — «giống cách NVG vẽ đến đâu»
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+#  Phiên bản thước: score_version 3 (T63, T65 — 20/09/2026)
+#  Nguồn:           `kb/facade_experience.yaml` — 7 tờ mặt đứng DXF của 6 công
+#                   trình NVO đã phát hành, đo 20/09/2026.
+#
+#  Haan (20/09/2026): «cần cải tiến để bản vẽ mặt đứng đạt được tối thiểu 80% so
+#  với bản vẽ từ hồ sơ thật của NVG». Tệp này là ĐỊNH NGHĨA của con số 80% ấy:
+#  80 % trọng số đã chấm được của các tiêu chí dưới đây.
+#
+#  ── BỐN ĐIỀU PHẢI ĐỌC TRƯỚC KHI TIN CON SỐ ───────────────────────────────────
+#
+#  1. **n = 6 công trình, dưới ngưỡng 15 của `priors.min_samples`** (CLAUDE.md
+#     8.7.5). Mọi ngưỡng `[ĐO]` ở đây là CHỈ DẤU — thói quen vẽ của phòng thiết kế
+#     NVG trên sáu ngôi nhà — không phải định mức nghề. Điểm thấp KHÔNG loại một
+#     phương án (T49, T52); nó chỉ trừ điểm và chỉ chỗ yếu.
+#  2. **Trọng số là LỰA CHỌN, không phải số đo.** Hồ sơ thật nói được tần suất
+#     («5/6 hồ sơ ốp chân tường tối màu») nhưng không nói được mảng nào quan trọng
+#     hơn mảng nào. Mọi `weight` dưới đây mang nhãn [CHUNG] và sửa được.
+#  3. **Điểm không phải điểm cho thiết kế.** Nó đo đúng những gì dữ liệu mặt đứng
+#     đo được: mái, vật liệu, màu, cao độ lanh tô, chi tiết. Một mặt đứng đẹp vẫn
+#     có thể 70, một mặt đứng nhạt nhẽo vẫn có thể 90.
+#  4. **«Chưa chấm được» KHÔNG phải 0**, và có HAI kiểu, trọng số xử lý ngược nhau:
+#     · **Không áp dụng** (`chi_khi` không đúng — tiêu chí mái Nhật trên nhà mái
+#       bằng): ra khỏi phép chia hẳn, trọng số 0, phần của nó chia cho các tiêu chí
+#       còn lại CÙNG NHÓM. Giữ lại phần của nó thì nhà mái bằng vĩnh viễn không
+#       vượt quá 1/3 nhóm Mái — phạt một ngôi nhà vì nó không phải kiểu nhà khác.
+#     · **Thiếu đầu vào** (không biết chiều cao lan can): tiêu chí VẪN giữ phần
+#       trọng số của mình, chỉ là phần ấy không vào `scored_weight`. Chia lại cho
+#       tiêu chí khác là vờ như đã đo đủ.
+#     Vì vậy điểm luôn đi kèm `scored_weight`, và đọc là «72 trên 90 phần trọng số
+#     chấm được», không phải «72/100».
+#     ⚠️ Xếp nhầm một chuyện BÌNH THƯỜNG vào «thiếu đầu vào» là lặng lẽ co mẫu số.
+#     Haan (20/09/2026): «việc có cửa sổ ở mặt tiền là không bắt buộc, có nhà cần
+#     có, có nhà không». Nên mặt tiền không cửa sổ là KHÔNG ÁP DỤNG (C1, C3), y như
+#     nhà phố lấy cửa để xe làm lối vào là nhà không có cửa chính (C2) — không phải
+#     nhà thiếu số đo. Để ở nhánh «thiếu đầu vào» thì một ngôi nhà hợp lệ vĩnh viễn
+#     chỉ chấm được 1/3 nhóm Cửa.
+#
+#  ── AI QUYẾT hay CHƯƠNG TRÌNH QUYẾT ──────────────────────────────────────────
+#
+#  `do_ai: false` nghĩa là tiêu chí ấy KHÔNG do mô hình quyết: nó đến từ phương án
+#  mặt bằng, từ phiếu yêu cầu của kỹ sư, hoặc từ `kb/construction_norms.yaml`.
+#  Vòng tự sửa KHÔNG gửi những tiêu chí ấy cho mô hình — bắt mô hình sửa thứ nó
+#  không cầm là đốt một lượt gọi tính tiền để nhận lại đúng câu trả lời cũ.
+#  Chúng vẫn được chấm và vẫn hiện trên màn hình: chỗ hỏng nằm ở chương trình thì
+#  phải thấy được, không được giấu.
+
+version: '2026.09.3'
+
+# Đổi công thức hay ngưỡng thì TĂNG số này — không có nó thì hai bản mặt đứng được
+# so bằng hai cái thước khác nhau mà không ai biết (bài học T27).
+#   1 → 2 (20/09/2026): C1, C2, C3 nhận `chi_khi`. Mặt tiền không cửa sổ hoặc không
+#   cửa chính đổi từ «thiếu đầu vào» sang «không áp dụng», nên MẪU SỐ của cùng một
+#   bản vẽ đổi. Hai lượt chấm khác `score_version` không đem so thẳng với nhau được.
+#   2 → 3 (20/09/2026, cùng ngày): R1 nhận `chi_khi: balcony`. Nhà KHÔNG CÓ ban công
+#   nào vẫn đang bị trừ điểm «lan can ban công cao 80–90 cm» — và đó là chỗ duy nhất
+#   hồ sơ demo mất điểm. Bản chấm tay đầu tiên đã lưu dưới thước 2 (điểm máy 95%), nên
+#   đây phải là một số MỚI: để nguyên số 2 là hai cái thước khác nhau cùng mang một tên.
+score_version: 3
+
+co_so_du_lieu: '6 công trình NVO, 7 tờ mặt đứng — mọi ngưỡng [ĐO] là chỉ dấu, chưa phải chuẩn'
+
+# Ngưỡng NHẬN, % trên phần trọng số chấm được. Haan chốt 80 (20/09/2026). Dưới ngưỡng
+# mà còn lượt sửa thì gọi lại mô hình kèm các tiêu chí `do_ai: true` mất điểm nhất;
+# hết lượt thì vẫn LƯU và nói rõ là dưới ngưỡng — điểm không gác cổng.
+accept_percent: 80
+
+# ── Trọng số nhóm — [CHUNG], không phải số đo ─────────────────────────────────
+groups:
+  M:
+    vi: 'Mái'
+    weight: 20
+  V:
+    vi: 'Vật liệu và màu'
+    weight: 30
+  C:
+    vi: 'Cửa và cao độ lanh tô'
+    weight: 25
+  T:
+    vi: 'Chi tiết trang trí'
+    weight: 15
+  R:
+    vi: 'Lan can'
+    weight: 10
+
+# Trong một nhóm, các tiêu chí CHẤM ĐƯỢC chia đều trọng số nhóm.
+within_group: equal
+
+# Thang điểm dùng lại đúng năm kiểu của `kb/plan_quality.yaml` (`boolean`, `band`,
+# `lower_better`, `higher_better`, `count`) — một bộ công thức, hai cái thước.
+
+criteria:
+  # ── M. Mái ──────────────────────────────────────────────────────────────────
+  - code: M1
+    group: M
+    vi: 'Mái Nhật dốc 30–32°'
+    giai_thich: 'M2 và M3 ghi thẳng «30°» trên bản vẽ; M4 đo 2.610 / 4.400 ≈ 30,7°. Không có nhà mái Nhật nào của NVG dốc thấp.'
+    kind: band
+    low: 30
+    high: 32
+    hard_low: 25
+    hard_high: 38
+    chi_khi: roof_japanese
+    n: 3
+    label: 'ĐO'
+
+  - code: M2
+    group: M
+    vi: 'Mái Nhật có dải diềm mái dưới mép mái'
+    giai_thich: 'Cả ba hồ sơ mái Nhật đều có một dải ngang dưới mép mái chạy quanh nhà, sơn khác màu thân (400, 650, 800 mm).'
+    kind: boolean
+    chi_khi: roof_japanese
+    n: 3
+    label: 'ĐO'
+
+  - code: M3
+    group: M
+    vi: 'Mái bằng: tường chắn mái 80–90 cm'
+    giai_thich: 'M5 ghi 750 + gờ 50 + đan 100 = 900; M1 đọc từ hình ~800 kèm mái đua 200.'
+    kind: band
+    low: 80
+    high: 90
+    hard_low: 60
+    hard_high: 130
+    chi_khi: roof_flat
+    n: 2
+    label: 'ĐO'
+
+  # ── V. Vật liệu và màu ──────────────────────────────────────────────────────
+  - code: V1
+    group: V
+    vi: 'Phần đế tối màu hơn thân nhà'
+    giai_thich: '«Tầng 1 hoặc chân tường luôn ốp vật liệu tối/nặng hơn phần trên» — 5/6 hồ sơ. Đo bằng độ sáng cảm nhận L* của hai mã màu trong danh mục.'
+    kind: boolean
+    params:
+      # Đơn vị L* (0 đen – 100 trắng). Hai màu sát nhau quá thì «tối hơn» không đọc ra được bằng
+      # mắt. 12 là bước nhỏ hơn mọi cặp thật trong hồ sơ: trắng 96,5 / ghi bạc 69,8 cách 27; ghi
+      # bạc / xám đậm 32,6 cách 37.
+      chenh_lech_do_sang_toi_thieu: 12
+    n: 6
+    label: 'ĐO'
+
+  - code: V2
+    group: V
+    vi: 'Phần đế dùng vật liệu ỐP, không phải sơn'
+    giai_thich: 'Đá đen vân mây, đá tự nhiên, granite, gạch giả đá — M1, M2, M4, M5, M6. Danh mục đánh dấu vật liệu ốp bằng `op: true`.'
+    kind: boolean
+    n: 6
+    label: 'ĐO'
+
+  - code: V3
+    group: V
+    vi: 'Thân nhà dùng màu sáng'
+    giai_thich: 'Trắng, trắng sứ, ghi sáng ở M1, M3, M5, M6; M4 ghi xám. Chỉ M2 (mái Nhật) dùng nâu đất — nên đây là thói quen mạnh chứ không tuyệt đối.'
+    kind: boolean
+    params:
+      # Độ sáng CẢM NHẬN L* (CIELAB), 0 đen – 100 trắng. Tính trên chính bảng màu của danh mục:
+      #   trắng 96,5 · trắng kem 92,8 · be 81,3 · xám nhạt 81,5 · ghi bạc 69,8
+      #   nâu gỗ 42,8 · xanh rêu 43,2 · xám đậm 32,6 · nâu đậm 24,7 · đen 12,2
+      # Khe hở tự nhiên nằm giữa 69,8 và 43,2, nên 60 tách đúng nhóm thân nhà của hồ sơ thật
+      # (trắng, trắng sứ, ghi sáng — M1, M3, M4, M5, M6) khỏi nhóm màu ấm/tối (nâu đất của M2).
+      do_sang_toi_thieu: 60
+    n: 6
+    label: 'ĐO'
+
+  - code: V4
+    group: V
+    vi: 'Không quá ba màu trên bảng màu mặt tiền'
+    giai_thich: '«Phối hai màu: thân sáng + mảng/khung xám hoặc ghi». Đếm số mã màu khác nhau trong bảng màu.'
+    kind: count
+    pass: 3
+    zero: 5
+    n: 6
+    label: 'ĐO'
+
+  # ── C. Cửa và cao độ lanh tô ────────────────────────────────────────────────
+  - code: C1
+    group: C
+    vi: 'Đỉnh cửa chính thẳng hàng đỉnh cửa sổ cùng tầng'
+    giai_thich: 'Một cao độ lanh tô cho cả tầng — thấy ở M2, M3, M4, M5. Sai số cho phép 5 cm.'
+    kind: boolean
+    params:
+      sai_so_cm: 5
+    chi_khi: main_door_window
+    do_ai: false
+    n: 6
+    label: 'ĐO'
+
+  - code: C2
+    group: C
+    vi: 'Cửa chính cao 235–300 cm'
+    giai_thich: 'n = 6, thường gặp 280. Nhà một tầng thấp tầng thì cửa thấp theo (M4: 235).'
+    kind: band
+    low: 235
+    high: 300
+    hard_low: 200
+    hard_high: 360
+    chi_khi: main_door
+    do_ai: false
+    n: 6
+    label: 'ĐO'
+
+  - code: C3
+    group: C
+    vi: 'Bậu cửa sổ 70–100 cm'
+    giai_thich: 'n = 4, thường gặp 90. M4 dùng 70 cho nhà vườn một tầng.'
+    kind: band
+    low: 70
+    high: 100
+    hard_low: 40
+    hard_high: 140
+    chi_khi: front_window
+    do_ai: false
+    n: 4
+    label: 'ĐO'
+
+  # ── T. Chi tiết trang trí ───────────────────────────────────────────────────
+  - code: T1
+    group: T
+    vi: 'Có phào chỉ ngang ở mép sàn'
+    giai_thich: 'Phào chỉ ngang ở mép sàn mỗi tầng 50×20, 100×50, 150×100 — M1, M5, M6 (nhà nhiều tầng).'
+    kind: boolean
+    n: 6
+    label: 'ĐO'
+
+  - code: T2
+    group: T
+    vi: 'Mái Nhật có chóp trang trí'
+    giai_thich: 'Chóp trên đỉnh mái và đầu bờ nóc — M2, M4 (2/3 hồ sơ mái Nhật).'
+    kind: boolean
+    chi_khi: roof_japanese
+    n: 3
+    label: 'ĐO'
+
+  - code: T3
+    group: T
+    vi: 'Mặt tiền không để trơn — có ít nhất hai mảng trang trí'
+    giai_thich: 'Mọi tờ trong hồ sơ đều có từ hai chi tiết trở lên (ô văng, lam, phào, bồn cây, cột, ốp). Ngưỡng hai là [CHUNG].'
+    kind: higher_better
+    pass: 2
+    zero: 0
+    n: 0
+    label: 'CHUNG'
+
+  # ── R. Lan can ──────────────────────────────────────────────────────────────
+  - code: R1
+    group: R
+    vi: 'Lan can ban công cao 80–90 cm'
+    giai_thich: 'M1: 900 tầng 2, 700 trên gờ 200 ở tầng 3; M5: 900; M6: 800–900. Chiều cao này do `kb/construction_norms.yaml` đặt, không do mô hình chọn.'
+    kind: band
+    low: 80
+    high: 90
+    hard_low: 70
+    hard_high: 120
+    chi_khi: balcony
+    do_ai: false
+    n: 4
+    label: 'ĐO'
+
+# ── Đo được trên hồ sơ nhưng CHƯA thành tiêu chí ───────────────────────────────
+#
+# Giữ danh sách này để lần sau không ai dựng lại chúng bằng thiện chí rồi phát hiện
+# vì sao chúng không nằm được ở trên.
+chua_cham_duoc:
+  - muc: 'Sảnh trước là mái dốc hai mái có cột (M2, M4); cửa đầu vòm (M6); ô tròn trang trí R700 (M3)'
+    ly_do: |
+      Bộ vẽ ĐÃ dựng được từ 20/09/2026 — thêm `porch_roof`, `arch`, `oculus` vào danh mục mảng
+      trang trí, hình do chương trình tính từ khung bao (T15). Nhưng vẫn không thành tiêu chí
+      chấm: sảnh mái dốc thấy ở 2/6 hồ sơ, vòm và ô tròn mỗi thứ 1/6 — đó là lựa chọn của từng
+      ngôi nhà, không phải thói quen của phòng thiết kế. Trừ điểm một mặt tiền hiện đại vì nó
+      không có vòm là bịa ra một chuẩn mà hồ sơ không nói. Chúng vẫn được tính vào T3 («mặt tiền
+      không để trơn»), tức có thì được ghi nhận, không có thì không bị phạt riêng.
+  - muc: 'Cửa chính nằm trên trục đối xứng của sảnh (M2, M4)'
+    ly_do: 'Vị trí cửa là của phương án mặt bằng (T16, lỗ mở KHOÁ) — mặt đứng không dời được, và mặt bằng chưa có khái niệm sảnh.'
+  - muc: 'Ron chỉ âm ngang cách nhau ~730 mm (M4), khung bao ôm tầng trên cùng (M1)'
+    ly_do: 'Danh mục đã có `reveal`, nhưng chưa đo đủ để nói khoảng cách nào là thói quen — n = 1 mỗi kiểu.'
+  - muc: 'Màu sơn cụ thể'
+    ly_do: 'Nhiều tờ ghi «màu sắc xem phối cảnh 3D» — tờ mặt đứng của NVG chỉ chốt VẬT LIỆU, màu chốt ở bước phối cảnh.'

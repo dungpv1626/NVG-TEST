@@ -8,7 +8,12 @@
  *  · thứ chương trình không tự làm được (trang trí, có cổng) thì phép kiểm bắt mô hình làm lại.
  */
 
-import { aiFacadeBriefSchema, aiFacadeConceptSchema, type AiFacadeBrief } from '@nvg/shared/design';
+import {
+  aiFacadeBriefSchema,
+  aiFacadeConceptSchema,
+  type AiFacadeBrief,
+  type AiFacadeProposal,
+} from '@nvg/shared/design';
 import { describe, expect, it } from 'vitest';
 import { renderElevationSheet } from '../ai/draw/elevation-sheet';
 import { parseSheetStyle } from '../ai/draw/style';
@@ -18,6 +23,8 @@ import {
   facadeRequirementsText,
 } from '../ai/facade/brief';
 import { checkFacade } from '../ai/facade/check';
+import { parseFacadeQuality } from '../ai/facade/quality';
+import { scoreFacade } from '../ai/facade/score';
 import { briefKeys, facadeLegend } from '../ai/facade/describe';
 import { facadeFrame, mainDoorOf } from '../ai/facade/frame';
 import { mergeFacade } from '../ai/facade/merge';
@@ -65,6 +72,14 @@ describe('Hợp đồng và danh mục của phiếu', () => {
     );
     expect(issues.join(' ')).toMatch(/Cửa chính — vật liệu: mã «vang_ron»/);
     expect(issues.join(' ')).toMatch(/tim_than/);
+  });
+
+  it('phiếu lưu TRƯỚC khi có khoá `saved_at` vẫn đọc lại được', () => {
+    // Artifact là BẤT BIẾN (8.2 nguyên tắc 3): thêm một mục bắt buộc vào hợp đồng đang dùng biến mọi
+    // dòng đã ghi thành không đọc nổi. Đã xảy ra thật 20/09/2026 — hai phiếu lưu hôm trước làm màn
+    // hình Mặt đứng đỏ với «Dữ liệu không đúng hợp đồng "ai_facade_brief": saved_at — Required».
+    const { saved_at: _cu, ...truoc } = emptyFacadeBrief();
+    expect(aiFacadeBriefSchema.safeParse(truoc).success).toBe(true);
   });
 
   it('chiều cao cửa ngoài khoảng dựng được bị hợp đồng từ chối', () => {
@@ -254,6 +269,73 @@ describe('Phép kiểm theo phiếu — chỉ thứ chương trình không tự 
   });
 });
 
+/*
+ * Haan, 20/09/2026: «bản vẽ mặt bằng vẽ phòng để xe ở bên phải nhưng bản vẽ mặt đứng thì không có
+ * lối vào phòng để xe cho ô tô… hai bản vẽ không được phép mâu thuẫn nhau».
+ *
+ * Đây là luật CỨNG chứ không phải thói quen nghề (T49 cho phép chặn khi «không đi được»): xe không
+ * vào nổi phòng để xe là hai tờ vẽ của cùng một ngôi nhà nói ngược nhau.
+ */
+describe('Đồng bộ với mặt bằng — lối vào phải đi được (T64)', () => {
+  // Nhà phố có cửa để xe trên mặt tiền; lùi khối nhà để có sân trước, không thì cổng và rào bị bỏ.
+  const yard = facadeFrame(shiftBack(TOWNHOUSE_PLAN, 400), norms, outdoor);
+  const garage = yard.openings.find((o) => o.kind === 'garage');
+  const withFence = (over: Partial<AiFacadeProposal>): AiFacadeProposal => ({
+    ...TOWNHOUSE_PROPOSAL,
+    fence: { material: 'son_nuoc', colour: 'trang', h: 160 },
+    ...over,
+  });
+
+  it('mặt bằng có cửa để xe mà ý tưởng chỉ có rào, không cổng: bắt làm lại', () => {
+    expect(garage).toBeDefined();
+    const issues = checkFacade(withFence({ gate: null }), yard, facadeVocab, null);
+    expect(issues.join(' ')).toMatch(/không có cổng — không có lối vào nhà/);
+  });
+
+  it('cổng hẹp hơn cửa để xe: nói thẳng là ô tô không vào được', () => {
+    const issues = checkFacade(
+      withFence({
+        gate: {
+          type: 'swing',
+          material: 'thep_son_tinh_dien',
+          colour: 'den',
+          w: Math.max(1, garage!.w - 50),
+          h: 180,
+        },
+      }),
+      yard,
+      facadeVocab,
+      null,
+    );
+    expect(issues.join(' ')).toMatch(/ô tô không vào được phòng để xe/);
+  });
+
+  it('cổng đủ rộng thì không bắt lỗi gì về lối vào', () => {
+    const issues = checkFacade(
+      withFence({
+        gate: {
+          type: 'swing',
+          material: 'thep_son_tinh_dien',
+          colour: 'den',
+          w: garage!.w + 40,
+          h: 180,
+        },
+      }),
+      yard,
+      facadeVocab,
+      null,
+    );
+    expect(issues.join(' ')).not.toMatch(/lối vào|ô tô/);
+  });
+
+  it('nhà sát ranh mặt tiền (không sân trước) thì không kiểm cổng rào', () => {
+    const noYard = facadeFrame(TOWNHOUSE_PLAN, norms, outdoor);
+    expect(noYard.frontYard).toBe(false);
+    const issues = checkFacade(withFence({ gate: null }), noYard, facadeVocab, null);
+    expect(issues.join(' ')).not.toMatch(/lối vào/);
+  });
+});
+
 describe('Số đo của phiếu — kiểm lúc LƯU vì nó đi thẳng vào khung', () => {
   it('số ngoài khoảng dựng được bị bắt, nói rõ khoảng', () => {
     const issues = checkFacadeBriefCodes(
@@ -364,5 +446,108 @@ describe('Bộ vẽ theo kiểu cửa của phiếu', () => {
     }).svg;
     // Cửa cuốn mặc định: 5 nan; mở quay: 1 nét.
     expect(leafLines(plain) - leafLines(swing)).toBe(4);
+  });
+});
+
+/*
+ * Lỗi đã xảy ra thật (20/09/2026): kỹ sư tick 7 ô «Chi tiết trang trí», phiếu bị từ chối bằng câu
+ * «Phiếu yêu cầu chưa đúng. Kiểm tra lại các ô đã điền» — không nói ô nào. Nguyên nhân: hợp đồng
+ * chặn `maxItems: 6`, đặt khi danh mục còn 9 mã, và không gì buộc hai con số ấy đi cùng nhau.
+ *
+ * Đây là kiểu hỏng của một CON SỐ VIẾT TAY nằm cách xa thứ nó nói về: thêm mã vào danh mục thì
+ * biểu mẫu hiện thêm ô tick, còn trần thì đứng yên. Phép thử này buộc chúng đi cùng.
+ */
+describe('Danh mục trang trí và hợp đồng phiếu phải đi cùng nhau', () => {
+  const schema = JSON.parse(read('contracts/ai-facade-brief.schema.json')) as {
+    properties: { decorations: { maxItems: number; items: { enum: string[] } } };
+  };
+  const kinds = Object.keys(facadeVocab.elements);
+
+  it('mã trong hợp đồng đúng bằng mã trong danh mục', () => {
+    expect([...schema.properties.decorations.items.enum].sort()).toEqual([...kinds].sort());
+  });
+
+  it('tick HẾT mọi ô vẫn lưu được — trần không được thấp hơn số mã', () => {
+    expect(schema.properties.decorations.maxItems).toBeGreaterThanOrEqual(kinds.length);
+    const full = { ...emptyFacadeBrief(), decorations: kinds };
+    expect(aiFacadeBriefSchema.safeParse(full).success).toBe(true);
+  });
+});
+
+/*
+ * Mục khảo sát LAN CAN (20/09/2026 — Haan: «thêm 1 mục khảo sát cho lan can: vật liệu, chiều cao»).
+ *
+ * Chiều cao lan can là số duy nhất của nhóm Lan can mà thước chấm đo (R1), và nó do CHƯƠNG TRÌNH
+ * đặt — trước đây chỉ lấy từ `kb/construction_norms.yaml`, nên một hồ sơ muốn khác là không có
+ * đường nào. Bộ này canh chỗ dễ hỏng nhất: tờ vẽ và điểm phải đọc CÙNG một con số.
+ */
+describe('Lan can: vật liệu và chiều cao lấy từ phiếu', () => {
+  const quality = parseFacadeQuality(read('kb/facade_quality.yaml'));
+  const frame = facadeFrame(shiftBack(VILLA_PLAN, 500), norms, outdoor);
+  const conceptWith = (brief: AiFacadeBrief | null) =>
+    mergeFacade(
+      frame,
+      VILLA_PROPOSAL,
+      facadeVocab,
+      { planRef: PLAN_REF, generator: GENERATOR },
+      brief,
+    );
+
+  const briefWith = (over: Partial<AiFacadeBrief['balcony']>): AiFacadeBrief => {
+    const b = emptyFacadeBrief();
+    return { ...b, balcony: { ...b.balcony, ...over } };
+  };
+
+  it('phiếu trống thì ý tưởng không khai chiều cao — mọi nơi lùi về quy ước cấu tạo', () => {
+    expect(conceptWith(null).elevation.railing_h_cm ?? null).toBeNull();
+  });
+
+  it('kỹ sư điền 90 cm thì ý tưởng mang đúng 90, và tờ vẽ dựng lan can cao 90', () => {
+    const concept = conceptWith(briefWith({ h_cm: 90 }));
+    expect(concept.elevation.railing_h_cm).toBe(90);
+    expect(aiFacadeConceptSchema.safeParse(concept).success).toBe(true);
+
+    // Đo trên chính tờ vẽ: mảng lan can cao bao nhiêu đơn vị giấy ở 90 so với ở 110.
+    const railingHeight = (h: number) => {
+      const svg = renderElevationSheet(concept, {
+        style: parseSheetStyle(read('kb/sheet_style.yaml')),
+        railingHeightCm: h,
+      }).svg;
+      const m = /<rect x="[\d.]+" y="[\d.]+" width="[\d.]+" height="([\d.]+)"[^>]*class="rl"/.exec(
+        svg,
+      );
+      return m ? Number(m[1]) : null;
+    };
+    const low = railingHeight(90);
+    const high = railingHeight(110);
+    expect(low).not.toBeNull();
+    expect(low!).toBeLessThan(high!);
+  });
+
+  it('thước chấm đo đúng con số của phiếu: 90 đạt, 110 chỉ đạt một phần', () => {
+    const concept = conceptWith(briefWith({ h_cm: 90 }));
+    const score = (h: number | null) =>
+      scoreFacade({ concept, quality, vocab: facadeVocab, railingCm: h }).criteria.find(
+        (c) => c.code === 'R1',
+      )!;
+    expect(score(concept.elevation.railing_h_cm ?? null).score).toBe(1);
+    expect(score(110).score).toBe(0.5);
+  });
+
+  it('vật liệu lan can của phiếu ghi đè vùng `railing` của mô hình', () => {
+    const concept = conceptWith(briefWith({ material: 'sat_my_thuat', colour: 'den' }));
+    const zone = concept.materials.find((m) => m.where === 'railing');
+    expect(zone?.material).toBe('sat_my_thuat');
+    expect(zone?.colour).toBe('den');
+  });
+
+  it('mã vật liệu lạ bị bắt ngay lúc lưu phiếu', () => {
+    const issues = checkFacadeBriefCodes(briefWith({ material: 'khong_co_that' }), facadeVocab);
+    expect(issues.join(' ')).toMatch(/Vật liệu lan can/);
+  });
+
+  it('chiều cao lan can KHÔNG đi vào khối yêu cầu gửi mô hình — bộ vẽ đặt số ấy', () => {
+    const text = facadeRequirementsText(briefWith({ h_cm: 90 }), facadeVocab, undefined);
+    expect(text).not.toMatch(/\b90\b/);
   });
 });

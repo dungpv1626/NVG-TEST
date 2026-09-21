@@ -13,14 +13,18 @@
  */
 
 import { useEffect, useState } from 'react';
-import { AlertTriangle, Sparkles } from 'lucide-react';
+import { AlertTriangle, Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Skeleton } from '@/components/ui/states';
+import { formatDateTime } from '@nvg/shared';
 import {
   useAiFacade,
   useAiFacadeSheet,
   useAiRun,
+  useChooseAiFacade,
   useDownloadAiFacadeDxf,
+  useHideAiFacade,
   useInvalidateAiDesign,
   useStartAiRun,
   type AiDesignState,
@@ -35,6 +39,8 @@ import { AiPlanLive } from './ai-live-call';
 import { AiRunUsage } from './ai-usage';
 import { FacadeBriefForm, useFacadeBriefController } from './ai-facade-brief-form';
 import { FacadeImagePanel } from './ai-facade-image';
+import { FacadeScorePanel } from './ai-facade-score';
+import { SheetSizeControl, sheetWidthStyle, useSheetSize } from './sheet-size';
 
 /** Mặt đứng hiện hành dựng theo một phương án mặt bằng KHÁC bản đang hiệu lực. */
 export function facadeIsStale(state: AiDesignState): boolean {
@@ -64,6 +70,13 @@ export function AiFacadeStep({
   // Phiếu yêu cầu của kỹ sư (Đợt F2) — trạng thái ở đây vì nút chạy phải lưu phiếu trước khi chạy.
   const brief = useFacadeBriefController(projectId);
   const run = useAiRun(runId, 2000);
+  // Bản đang MỞ để xem — mặc định là bản hiệu lực. Tách khỏi mốc để kỹ sư mở lại bản cũ mà so mà
+  // không phải đổi mốc: đổi mốc là đổi thứ bước Phối cảnh và ảnh mặt đứng đọc.
+  const [open, setOpen] = useState<string | null>(null);
+  const choose = useChooseAiFacade();
+  const hide = useHideAiFacade();
+  /** Bản đang chờ xác nhận xoá khỏi dải — `null` = không hỏi gì. */
+  const [askHide, setAskHide] = useState<{ artifactId: string; name: string } | null>(null);
   const invalidate = useInvalidateAiDesign();
   const running = run.data?.status === 'queued' || run.data?.status === 'running';
 
@@ -74,6 +87,11 @@ export function AiFacadeStep({
 
   const blocked = !state.planHeadArtifactId;
   const stale = facadeIsStale(state);
+  const versions = state.facades ?? [];
+  // Mốc thắng khi chưa ai bấm chọn bản nào, và cũng khi bản đang mở vừa bị xoá khỏi dải.
+  const shown =
+    (open && versions.some((v) => v.artifactId === open) ? open : null) ?? state.facadeArtifactId;
+  const shownIsHead = shown === state.facadeArtifactId;
   const failedIssues =
     run.data?.status === 'failed'
       ? ((run.data.result as { issues?: string[] } | null)?.issues ?? [])
@@ -187,11 +205,105 @@ export function AiFacadeStep({
         </Panel>
       )}
 
-      {state.facadeArtifactId && (
+      {/* Dải các bản đã dựng (20/09/2026). Một lượt chạy mới KHÔNG còn đẩy bản cũ ra khỏi tầm mắt:
+          artifact vốn bất biến nên bản cũ chưa bao giờ mất, chỉ là màn hình không có đường mở lại. */}
+      {versions.length > 1 && (
+        <Panel title="Các bản mặt đứng đã dựng">
+          <ul className="flex flex-wrap gap-2">
+            {versions.map((version, index) => {
+              const isOpen = version.artifactId === shown;
+              const isHead = version.artifactId === state.facadeArtifactId;
+              const name = `Bản ${versions.length - index}`;
+              return (
+                <li key={version.artifactId} className="flex items-stretch">
+                  <button
+                    type="button"
+                    aria-pressed={isOpen}
+                    onClick={() => setOpen(version.artifactId)}
+                    className={
+                      isOpen
+                        ? 'rounded-l-md border border-tk-bl-line bg-tk-bl-bg px-3 py-2 text-left'
+                        : 'rounded-l-md border border-tk-line bg-tk-panel px-3 py-2 text-left'
+                    }
+                  >
+                    <span className="block font-medium">{name}</span>
+                    <span className="block text-xs text-tk-t3">
+                      {formatDateTime(version.createdAt)}
+                    </span>
+                    {isHead && <Chip tone="gr">Đang hiệu lực</Chip>}
+                  </button>
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      onClick={() => setAskHide({ artifactId: version.artifactId, name })}
+                      aria-label={`Xoá ${name} khỏi danh sách`}
+                      title="Xoá khỏi danh sách"
+                      className="rounded-r-md border border-l-0 border-tk-line bg-tk-panel px-2 text-fg-subtle hover:text-status-overdue"
+                    >
+                      <X className="h-4 w-4" aria-hidden />
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          {!readOnly && !shownIsHead && (
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  void choose
+                    .mutateAsync({ projectId, artifactId: shown! })
+                    .then(() => setOpen(null))
+                    .catch(() => undefined)
+                }
+                disabled={choose.isPending}
+              >
+                {choose.isPending ? 'Đang lưu…' : 'Chọn bản này làm bản hiệu lực'}
+              </Button>
+              <p className="text-fg-subtle">
+                Bản hiệu lực là bản mà ảnh mặt đứng và bước Phối cảnh dựng theo.
+              </p>
+            </div>
+          )}
+          {choose.isError && (
+            <p className="mt-2 text-status-overdue">{toUserMessage(choose.error)}</p>
+          )}
+          {hide.isError && <p className="mt-2 text-status-overdue">{toUserMessage(hide.error)}</p>}
+        </Panel>
+      )}
+
+      {askHide && (
+        <ConfirmDialog
+          title={`Xoá ${askHide.name} khỏi danh sách?`}
+          confirmLabel="Xoá khỏi danh sách"
+          cancelLabel="Không xoá"
+          onCancel={() => setAskHide(null)}
+          onConfirm={() => {
+            hide.mutate({ projectId, artifactId: askHide.artifactId });
+            if (askHide.artifactId === open) setOpen(null);
+            setAskHide(null);
+          }}
+        >
+          <p>
+            Bản mặt đứng thôi hiện ở đây. Dữ liệu vẫn còn trong hồ sơ, nên tờ vẽ đã tải, ảnh dựng từ
+            nó và nhật ký chi phí của lượt gọi vẫn truy được.
+          </p>
+          {askHide.artifactId === state.facadeArtifactId && (
+            <p className="mt-1">
+              Đây đang là bản hiệu lực — xoá xong bước Phối cảnh cần chọn lại một bản mặt đứng.
+            </p>
+          )}
+        </ConfirmDialog>
+      )}
+
+      {shown && (
         <FacadeDetail
           projectId={projectId}
-          artifactId={state.facadeArtifactId}
-          stale={stale}
+          artifactId={shown}
+          /* Nhãn «phương án mặt bằng cũ» chỉ đo được cho bản HIỆU LỰC: `/state` trả `plan_ref` của
+             riêng bản ấy. Bản cũ mở ra để so thì không khẳng định gì về chuyện đó. */
+          stale={shownIsHead && stale}
           readOnly={readOnly}
         />
       )}
@@ -213,6 +325,7 @@ function FacadeDetail({
   const facade = useAiFacade(projectId, artifactId);
   const sheet = useAiFacadeSheet(projectId, artifactId);
   const dxf = useDownloadAiFacadeDxf();
+  const sheetSize = useSheetSize();
 
   return (
     <>
@@ -230,6 +343,17 @@ function FacadeDetail({
       {facade.isLoading && <Skeleton className="h-40 w-full" />}
       {facade.isError && <p className="text-status-overdue">{toUserMessage(facade.error)}</p>}
       {facade.data && <FacadeIdea view={facade.data} />}
+      {/* Điểm nằm SAU bảng ý tưởng, trước tờ vẽ: đọc bản vẽ khai gì rồi mới đọc con số. Đặt con số
+          lên đầu làm nó đọc như lời phán cuối cùng — cùng lý do panel điểm của bước Mặt bằng. */}
+      {facade.data?.score && (
+        <FacadeScorePanel
+          score={facade.data.score}
+          review={facade.data.review}
+          projectId={projectId}
+          artifactId={artifactId}
+          readOnly={readOnly}
+        />
+      )}
 
       <Panel
         title="Tờ mặt đứng"
@@ -262,10 +386,15 @@ function FacadeDetail({
         )}
         {sheet.loading && <Skeleton className="h-96 w-full" />}
         {sheet.error && <p className="text-status-overdue">{sheet.error}</p>}
+        {/* Cỡ xem áp cho CẢ tờ vector ở đây lẫn ảnh có vật liệu bên dưới. */}
+        <div className="mb-3 flex flex-wrap items-center gap-3">
+          <SheetSizeControl />
+        </div>
         {sheet.url && (
           <img
             src={sheet.url}
             alt="Tờ mặt đứng mặt tiền"
+            style={sheetWidthStyle(sheetSize)}
             className="w-full rounded-md border border-tk-line bg-white"
           />
         )}

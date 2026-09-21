@@ -272,9 +272,11 @@ export const DEFAULT_APPROVAL_LIMITS: readonly ApprovalLimitSeed[] = [
 
   // Yêu cầu tuyển dụng (NS-02) — không gắn giá trị tiền.
   //
-  // ⚠️ GIẢ ĐỊNH CẦN NVG XÁC NHẬN: NS-02 chỉ ghi "trưởng đơn vị gửi yêu cầu → phê duyệt" mà
-  // không nói ai duyệt. Tạm đặt Tổng Giám đốc, vì tăng biên chế là quyết định ngân sách của
-  // cả công ty chứ không phải của một phòng. Khi NVG ban hành quy chế, sửa trong Quản trị
-  // hệ thống — KHÔNG sửa file này.
-  { role: 'TGD', subject: 'recruitment_position', maxAmount: null, step: 1 },
+  // ĐÃ CHỐT 20/09/2026 (Haan): **Hành chính – Nhân sự** duyệt, không phải Tổng Giám đốc như
+  // giả định trước đó. Trưởng đơn vị gửi yêu cầu, HCNS là nơi duyệt và triển khai tuyển.
+  //
+  // ⚠️ Hệ quả kiểm soát cần biết: hệ thống KHÔNG chặn người tự duyệt yêu cầu của chính mình,
+  // nên nếu chính HCNS là người gửi thì HCNS duyệt được. Muốn Tổng Giám đốc giữ bước cuối thì
+  // thêm một dòng bước 2 trong Quản trị hệ thống — KHÔNG sửa file này.
+  { role: 'NS', subject: 'recruitment_position', maxAmount: null, step: 1 },
 ] as const;

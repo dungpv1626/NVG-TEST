@@ -1,0 +1,42 @@
+graph TD
+  classDef nen fill:#1F5F4B,stroke:#1F5F4B,color:#FFFFFF;
+  classDef gd1 fill:#EAF1EE,stroke:#1F5F4B;
+  classDef gd2 fill:#FFFFFF,stroke:#52606D;
+  classDef gd3 fill:#FFF6E0,stroke:#D9A441;
+
+  NEN["<b>NEN — Nền tảng</b><br/>pháp nhân · người dùng · vai trò · quyền<br/>phê duyệt · tham số · nhật ký · thông báo"]:::nen
+
+  subgraph GD1["Giai đoạn 1 — Thương mại"]
+    direction LR
+    CRM["<b>CRM</b><br/>cơ hội · báo giá"]:::gd1
+    DA["<b>DA</b><br/>gói thầu · dự toán"]:::gd1
+    TK["<b>TK</b><br/>hồ sơ thiết kế"]:::gd1
+    HD["<b>HD</b><br/>hợp đồng"]:::gd1
+    CRM --> DA --> HD
+    CRM --> TK --> HD
+  end
+
+  subgraph GD2["Giai đoạn 2 — Vận hành và tài chính"]
+    direction LR
+    TC["<b>TC</b><br/>công trình · ngân sách"]:::gd2
+    MH["<b>MH</b><br/>mua hàng"]:::gd2
+    KHO["<b>KHO</b><br/>tồn kho"]:::gd2
+    KT["<b>KT</b><br/>công nợ · thanh toán"]:::gd2
+    NS["<b>NS</b><br/>nhân sự · chấm công"]:::gd2
+    SX["<b>SX</b><br/>sản xuất · cho thuê"]:::gd2
+    TC --> MH --> KHO
+    TC --> KT
+    NS --> TC
+    SX --> KHO
+  end
+
+  subgraph GD3["Tổng hợp"]
+    direction LR
+    BC["<b>BC</b> — Báo cáo<br/>không có bảng riêng"]:::gd3
+    TKAI["<b>TK-AI</b> — Thiết kế AI<br/>runtime riêng · ADR-001"]:::gd3
+  end
+
+  NEN -->|"quyền · phê duyệt · tham số cho MỌI phân hệ"| GD1
+  HD --> TC
+  KT --> BC
+  TK --> TKAI

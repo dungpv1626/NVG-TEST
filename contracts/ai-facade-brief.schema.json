@@ -7,7 +7,6 @@
   "additionalProperties": false,
   "required": [
     "schema_version",
-    "saved_at",
     "plan_ref",
     "style",
     "ground_raise_cm",
@@ -29,7 +28,7 @@
     "saved_at": {
       "type": "string",
       "format": "date-time",
-      "description": "Thời điểm máy chủ nhận phiếu, ISO 8601. Máy chủ đặt, không tin trình duyệt. Có hai việc: màn hình ghi «Đã lưu lúc …», và hai hồ sơ khác nhau cùng điền một phiếu giống hệt vẫn ra hai artifact khác nhau — mã artifact là băm NỘI DUNG, trùng nội dung là trùng mã (xem `ArtifactRepository.write`)."
+      "description": "Thời điểm máy chủ nhận phiếu, ISO 8601. Máy chủ đặt, không tin trình duyệt. Có hai việc: màn hình ghi «Đã lưu lúc …», và hai hồ sơ khác nhau cùng điền một phiếu giống hệt vẫn ra hai artifact khác nhau — mã artifact là băm NỘI DUNG, trùng nội dung là trùng mã (xem `ArtifactRepository.write`).\n\nCỐ Ý KHÔNG bắt buộc: phiếu lưu trước ngày 20/09/2026 không có khoá này, mà artifact là BẤT BIẾN — thêm một mục bắt buộc vào hợp đồng đã dùng là biến những thứ đã ghi thành không đọc nổi (đã xảy ra: màn hình Mặt đứng báo «saved_at — Required»). Máy chủ luôn đặt khoá này khi ghi, nên phiếu mới luôn có."
     },
     "plan_ref": {
       "anyOf": [{ "$ref": "#/$defs/artifact_ref" }, { "type": "null" }],
@@ -119,10 +118,24 @@
     "balcony": {
       "type": "object",
       "additionalProperties": false,
+      "description": "Lan can ban công. Chỉ hỏi khi phương án mặt bằng có ban công ra mặt trước.\n\n`material` và `h_cm` thêm ngày 20/09/2026 (Haan: «thêm 1 mục khảo sát cho lan can: vật liệu, chiều cao»). CỐ Ý KHÔNG bắt buộc: phiếu lưu trước ngày ấy không có hai khoá này, mà artifact là BẤT BIẾN — thêm một mục bắt buộc vào hợp đồng đã dùng là biến những thứ đã ghi thành không đọc nổi (đã xảy ra với `saved_at`).",
       "required": ["railing", "colour"],
       "properties": {
-        "railing": { "$ref": "#/$defs/code_or_null" },
-        "colour": { "$ref": "#/$defs/code_or_null" }
+        "railing": {
+          "$ref": "#/$defs/code_or_null",
+          "description": "Kiểu lan can, mã trong nhóm `railings`."
+        },
+        "colour": { "$ref": "#/$defs/code_or_null" },
+        "material": {
+          "$ref": "#/$defs/code_or_null",
+          "description": "Vật liệu lan can, mã trong nhóm `materials`."
+        },
+        "h_cm": {
+          "type": ["integer", "null"],
+          "minimum": 60,
+          "maximum": 160,
+          "description": "Chiều cao lan can tính từ mặt sàn ban công, cm. Rỗng thì chương trình dùng `kb/construction_norms.yaml` mục `outdoor.railing_h_m`.\n\nSố này KHÔNG đi qua mô hình: bộ vẽ đặt nó, và thước chấm đo đúng nó (tiêu chí R1, `do_ai: false`). Khoảng 60–160 là giới hạn DỰNG ĐƯỢC, không phải quy chuẩn — hồ sơ NVG đo được 80–90."
+        }
       }
     },
     "gate": {
@@ -154,8 +167,9 @@
     },
     "decorations": {
       "type": "array",
-      "maxItems": 6,
-      "description": "Chi tiết trang trí kỹ sư muốn có trên mặt tiền. Rỗng = để AI đề xuất.",
+      "maxItems": 12,
+      "uniqueItems": true,
+      "description": "Chi tiết trang trí kỹ sư muốn có trên mặt tiền. Rỗng = để AI đề xuất.\n\nTrần bằng ĐÚNG số mã trong danh sách — tick hết mọi ô vẫn phải lưu được. Trần cũ là 6, đặt khi danh mục còn 9 mã: kỹ sư tick 7 ô thì phiếu bị từ chối bằng một câu chung chung, không nói ô nào (xảy ra thật 20/09/2026). Một phép thử canh hai con số này đi cùng `kb/facade_vocabulary.yaml`.",
       "items": {
         "type": "string",
         "enum": [
@@ -167,7 +181,10 @@
           "cornice",
           "eaves_band",
           "finial",
-          "reveal"
+          "reveal",
+          "arch",
+          "oculus",
+          "porch_roof"
         ]
       }
     },

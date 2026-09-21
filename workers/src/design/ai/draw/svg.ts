@@ -149,6 +149,14 @@ export const CLS = {
   element: 'el',
   /** Cổng và tường rào — đứng TRƯỚC nhà, nét đứt để không đọc nhầm thành một phần mặt tiền. */
   frontFence: 'ff',
+  // Tờ mặt bằng mái (T67).
+  roofBlock: 'rb',
+  roofEdge: 're',
+  roofBelow: 'rw',
+  roofArrow: 'ra',
+  roofLot: 'rlot',
+  /** Vạch lối vào trên mặt tiền — TÔ ĐẶC, vì nét viền cùng bề dày với tường thì không thấy gì. */
+  roofEntrance: 'rn',
   textLevelMark: 'tlm',
 } as const;
 
@@ -206,5 +214,19 @@ export function sheetCss(style: SheetStyle): string {
     `.${CLS.element}{fill:${c.element_fill};stroke:${c.hairline};stroke-width:${num(w.element)}}`,
     stroke(CLS.frontFence, c.hairline, w.railing, 'stroke-dasharray:3 1.5;'),
     text(CLS.textLevelMark, t.dim, c.ink, 'text-anchor:start;'),
+    // Tờ mặt bằng mái (T67): khối nhà đậm nhất, mái nhạt hơn, tầng dưới nhạt nhất.
+    stroke(CLS.roofBlock, c.ink, w.roof_block),
+    stroke(CLS.roofEdge, c.ink, w.roof_edge),
+    stroke(CLS.roofBelow, c.hairline, w.roof_below),
+    stroke(CLS.roofArrow, c.ink, w.roof_arrow),
+    // Nét ĐỨT: quy ước ranh đất của bản vẽ, và là thứ giữ cho mô hình ảnh không đọc nhầm ranh
+    // thành hình bao một ngôi nhà thứ hai — nét liền cùng màu thì hai hình không phân biệt được
+    // bằng mắt (thấy khi soát tờ dựng đầu T68).
+    //
+    // ⚠️ Tên lớp là `rlot`, KHÔNG phải `rl`: `rl` đã là lan can (`CLS.railing`) trên tờ mặt đứng.
+    // Bản đầu dùng `rl` và luật sau đè luật trước, nên lan can của MỌI tờ mặt đứng bỗng thành nét
+    // đứt — bộ kiểm không bắt được vì ảnh chụp vàng vẫn khớp về hình, chỉ khác CSS.
+    stroke(CLS.roofLot, c.hairline, w.roof_lot, 'stroke-dasharray:6 3;'),
+    `.${CLS.roofEntrance}{fill:${c.ink};stroke:none}`,
   ].join('');
 }

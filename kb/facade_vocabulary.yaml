@@ -29,15 +29,18 @@ roof_materials:
   ton_song: { label_vi: 'Tôn sóng', prompt_en: 'corrugated metal roofing' }
   ton_giat_cap: { label_vi: 'Tôn giả ngói', prompt_en: 'tile-effect metal roofing sheets' }
 
+# `op: true` = vật liệu ỐP (đá, gạch, tấm), khác với sơn phủ lên tường trát. Đánh dấu ở đây chứ
+# không suy từ tên mã trong mã nguồn: thước chấm mặt đứng hỏi «phần đế có ốp không» (tiêu chí V2,
+# `kb/facade_quality.yaml`) — 5/6 hồ sơ thật ốp đá hoặc gạch ở chân tường, không nhà nào chỉ sơn.
 materials:
   son_nuoc: { label_vi: 'Sơn nước ngoại thất', prompt_en: 'smooth exterior paint on render' }
   son_gia_da: { label_vi: 'Sơn giả đá', prompt_en: 'stone-effect textured paint' }
-  da_granite: { label_vi: 'Đá granite', prompt_en: 'granite stone cladding' }
-  da_ong: { label_vi: 'Đá ong', prompt_en: 'laterite stone cladding' }
-  da_cham: { label_vi: 'Đá chẻ ốp', prompt_en: 'split-face natural stone cladding' }
-  da_rua: { label_vi: 'Đá rửa', prompt_en: 'exposed aggregate washed stone finish' }
-  gach_the: { label_vi: 'Gạch thẻ trần', prompt_en: 'exposed red face brick' }
-  gach_op_gom: { label_vi: 'Gạch ốp gốm', prompt_en: 'ceramic facade tiles' }
+  da_granite: { label_vi: 'Đá granite', prompt_en: 'granite stone cladding', op: true }
+  da_ong: { label_vi: 'Đá ong', prompt_en: 'laterite stone cladding', op: true }
+  da_cham: { label_vi: 'Đá chẻ ốp', prompt_en: 'split-face natural stone cladding', op: true }
+  da_rua: { label_vi: 'Đá rửa', prompt_en: 'exposed aggregate washed stone finish', op: true }
+  gach_the: { label_vi: 'Gạch thẻ trần', prompt_en: 'exposed red face brick', op: true }
+  gach_op_gom: { label_vi: 'Gạch ốp gốm', prompt_en: 'ceramic facade tiles', op: true }
   be_tong_tran: { label_vi: 'Bê tông trần', prompt_en: 'fair-faced exposed concrete' }
   son_hieu_ung_be_tong:
     { label_vi: 'Sơn hiệu ứng giả bê tông', prompt_en: 'concrete-effect textured paint' }
@@ -165,6 +168,12 @@ elements:
   eaves_band: 'Diềm mái' # dải ngang dưới mép mái dốc, sơn khác màu thân — 3/3 hồ sơ mái Nhật
   finial: 'Chóp trang trí' # chóp trên đỉnh mái và đầu bờ nóc
   reveal: 'Ron chỉ âm' # rãnh ngang âm tường, 15–30 mm
+  # Ba mảng dưới đây bổ sung 20/09/2026 (T63) vì hồ sơ thật CÓ mà bộ vẽ chưa dựng nổi — chấm một
+  # thứ không vẽ được thì điểm không bao giờ lên. Chúng là hình CONG hoặc XIÊN, nên `rect` chỉ là
+  # khung bao: hình thật do `ai/draw/elevation-sheet.ts` dựng, mô hình không đặt nét nào (T15).
+  arch: 'Vòm đầu cửa' # M6 — cung nối hai đầu, đỉnh ở giữa mép trên khung bao
+  oculus: 'Ô tròn trang trí' # M3 — ô tròn R700; đường tròn lớn nhất nằm trong khung bao
+  porch_roof: 'Mái sảnh' # M2, M4 — sảnh trước mái dốc; tam giác, nóc ở giữa mép trên
 
 # Giới hạn DỰNG ĐƯỢC, không phải quy chuẩn: con số ngoài khoảng này không vẽ nổi thành một cái cổng,
 # bức rào hay tường chắn mái (cổng cao 20 m, rào âm). SỐ THAM KHẢO, chờ Haan duyệt cùng danh mục.

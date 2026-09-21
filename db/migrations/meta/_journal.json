@@ -911,6 +911,20 @@
       "when": 1789369200000,
       "tag": "0129_tk_ai_anh_mat_dung",
       "breakpoints": true
+    },
+    {
+      "idx": 130,
+      "version": "7",
+      "when": 1789372800000,
+      "tag": "0130_nguoi_duyet_tuyen_dung",
+      "breakpoints": true
+    },
+    {
+      "idx": 131,
+      "version": "7",
+      "when": 1789376400000,
+      "tag": "0131_tk_ai_ky_su_cham_lai",
+      "breakpoints": true
     }
   ]
 }

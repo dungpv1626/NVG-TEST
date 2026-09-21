@@ -1,0 +1,20 @@
+sequenceDiagram
+  autonumber
+  participant NG as Người đề nghị
+  participant FE as Giao diện (SPA)
+  participant PR as PostgREST
+  participant DB as PostgreSQL + RLS
+  participant ND as Người duyệt
+
+  NG->>FE: Gửi phê duyệt một hồ sơ
+  FE->>PR: gọi hàm submit_approval
+  PR->>DB: tạo approvals: chủ đề · pháp nhân · số tiền
+  DB-->>DB: báo cho người có hạn mức
+  ND->>FE: Mở Hộp thư Phê duyệt
+  FE->>PR: đọc danh sách chờ duyệt
+  PR->>DB: RLS lọc bằng rls_can_approve()
+  DB-->>FE: chỉ hồ sơ trong hạn mức
+  ND->>FE: Phê duyệt
+  FE->>PR: gọi hàm decide_approval
+  PR->>DB: ghi quyết định · đổi trạng thái hồ sơ
+  DB-->>NG: thông báo kết quả

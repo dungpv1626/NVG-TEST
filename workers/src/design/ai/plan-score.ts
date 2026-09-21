@@ -34,7 +34,12 @@ import {
   toRect,
   type Rect,
 } from './draw/geometry';
-import { criterionFor, type CriterionSpec, type PlanQuality } from './plan-quality';
+import {
+  criterionFor,
+  type CriterionSpec,
+  type PlanQuality,
+  type ScoreScale,
+} from './plan-quality';
 import { planGraph, reachableFrom, roomsBetween, type PlanGraph } from './plan-check';
 import { roomsWithDaylight } from './rule-warnings';
 
@@ -247,7 +252,7 @@ function measureAll(input: PlanScoreInput): Map<string, CriterionScore> {
 }
 
 /** Giá trị đo được → 0…1 theo kiểu thang điểm của tiêu chí. */
-export function scoreOf(spec: CriterionSpec, value: number): number {
+export function scoreOf(spec: ScoreScale, value: number): number {
   switch (spec.kind) {
     case 'boolean':
       return value >= 1 ? 1 : 0;

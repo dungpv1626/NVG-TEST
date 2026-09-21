@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithApp } from '@/test/render';
 
@@ -21,6 +21,8 @@ const state = vi.hoisted(() => ({
   run: null as unknown,
   start: vi.fn((_input: unknown) => Promise.resolve({ runId: 'r1' })),
   dxf: vi.fn((_input: unknown) => undefined),
+  chooseFacade: vi.fn((_input: unknown) => Promise.resolve({ artifactId: '' })),
+  hideFacade: vi.fn((_input: unknown) => undefined),
 }));
 
 vi.mock('@/hooks/use-ai-design', () => ({
@@ -108,6 +110,19 @@ vi.mock('@/hooks/use-ai-design', () => ({
     error: null,
   }),
   useAiRun: () => ({ data: state.run }),
+  // Dải các bản mặt đứng (20/09/2026) — hai nút này chỉ bấm khi có từ hai bản trở lên.
+  useChooseAiFacade: () => ({
+    mutateAsync: state.chooseFacade,
+    isPending: false,
+    isError: false,
+    error: null,
+  }),
+  useHideAiFacade: () => ({
+    mutate: state.hideFacade,
+    isPending: false,
+    isError: false,
+    error: null,
+  }),
   useStartAiRun: () => ({ mutateAsync: state.start, isPending: false, isError: false }),
   useInvalidateAiDesign: () => vi.fn(),
   useAiCallLog: () => ({ data: [], isLoading: false, isError: false, error: null }),
@@ -215,6 +230,71 @@ describe('Bước mặt đứng', () => {
     expect(screen.getByText('Theo phương án cũ')).toBeInTheDocument();
     expect(screen.getByText('Mặt đứng đang dựng theo phương án mặt bằng cũ.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Dựng lại ý tưởng mặt đứng' })).toBeInTheDocument();
+  });
+
+  /*
+   * Haan, 20/09/2026: «khi tạo bản vẽ mới thì không lưu lại bản vẽ cũ để so sánh → chưa tốt».
+   * Artifact vốn BẤT BIẾN nên bản cũ chưa bao giờ mất — thiếu là ở màn hình: `/state` chỉ trả mốc
+   * hiệu lực, nên không có đường nào mở lại bản trước.
+   */
+  const FACADE_OLD = `sha256:${'e'.repeat(64)}`;
+  const twoVersions = {
+    facades: [
+      { artifactId: FACADE, createdAt: '2026-09-20T03:00:00Z' },
+      { artifactId: FACADE_OLD, createdAt: '2026-09-19T03:00:00Z' },
+    ],
+  };
+
+  it('một bản thì KHÔNG hiện dải chọn — dải chỉ có nghĩa khi có cái để so', () => {
+    renderWithApp(
+      <AiFacadeStep
+        projectId="p1"
+        readOnly={false}
+        state={designState({ facades: [{ artifactId: FACADE, createdAt: '' }] })}
+      />,
+    );
+    expect(screen.queryByRole('heading', { name: 'Các bản mặt đứng đã dựng' })).toBeNull();
+  });
+
+  it('hai bản: mở được bản cũ, bản hiệu lực có nhãn, và chọn lại gửi đúng mã', async () => {
+    renderWithApp(
+      <AiFacadeStep projectId="p1" readOnly={false} state={designState(twoVersions)} />,
+    );
+    const panel = screen
+      .getByRole('heading', { name: 'Các bản mặt đứng đã dựng' })
+      .closest('section')!;
+    // Bản mới nhất đứng đầu và đang hiệu lực; chưa bấm gì thì không có nút chọn lại.
+    expect(within(panel).getByText('Đang hiệu lực')).toBeInTheDocument();
+    expect(within(panel).queryByRole('button', { name: /Chọn bản này/ })).toBeNull();
+
+    await userEvent.click(within(panel).getByRole('button', { name: /^Bản 1/ }));
+    const choose = within(panel).getByRole('button', { name: /Chọn bản này/ });
+    await userEvent.click(choose);
+    expect(state.chooseFacade).toHaveBeenCalledWith({ projectId: 'p1', artifactId: FACADE_OLD });
+  });
+
+  it('xoá một bản khỏi dải thì HỎI LẠI, và nói rõ dữ liệu vẫn còn', async () => {
+    renderWithApp(
+      <AiFacadeStep projectId="p1" readOnly={false} state={designState(twoVersions)} />,
+    );
+    const panel = screen
+      .getByRole('heading', { name: 'Các bản mặt đứng đã dựng' })
+      .closest('section')!;
+    await userEvent.click(within(panel).getByRole('button', { name: /Xoá Bản 1 khỏi danh sách/ }));
+    expect(state.hideFacade).not.toHaveBeenCalled();
+    expect(screen.getByText(/Dữ liệu vẫn còn trong hồ sơ/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Xoá khỏi danh sách' }));
+    expect(state.hideFacade).toHaveBeenCalledWith({ projectId: 'p1', artifactId: FACADE_OLD });
+  });
+
+  it('chỉ xem: không có nút xoá, không có nút chọn lại', () => {
+    renderWithApp(<AiFacadeStep projectId="p1" readOnly state={designState(twoVersions)} />);
+    const panel = screen
+      .getByRole('heading', { name: 'Các bản mặt đứng đã dựng' })
+      .closest('section')!;
+    expect(within(panel).queryByRole('button', { name: /Xoá/ })).toBeNull();
+    expect(within(panel).queryByRole('button', { name: /Chọn bản này/ })).toBeNull();
   });
 
   it('lượt chạy hỏng vì ý tưởng không qua kiểm: liệt kê lý do nguyên văn', () => {

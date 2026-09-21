@@ -18,13 +18,25 @@ import { renderFacadeDxf } from '../dxf/facade-dxf';
 import { layerExport } from '../dxf/layers-data';
 import { facadeLegend } from './describe';
 
+/**
+ * Chiều cao lan can dùng để VẼ và để CHẤM: phiếu yêu cầu của kỹ sư thắng, rồi tới quy ước cấu tạo.
+ *
+ * Một hàm cho cả bốn chỗ đọc (tờ SVG, DXF, ảnh neo, thước chấm) — bốn bản sao của phép ưu tiên này
+ * là bốn cơ hội để tờ vẽ và điểm nói hai con số khác nhau về cùng một cái lan can.
+ */
+export function railingCmOf(concept: AiFacadeConcept): number {
+  return (
+    concept.elevation.railing_h_cm ?? Math.round(constructionNorms().outdoor.railing_h_m * 100)
+  );
+}
+
 function options(concept: AiFacadeConcept): ElevationOptions {
   const vocab = facadeVocabulary();
   const leaves = (code: string | null | undefined) =>
     code ? (vocab.doorTypes[code]?.leaves ?? null) : null;
   return {
     style: sheetStyle(),
-    railingHeightCm: Math.round(constructionNorms().outdoor.railing_h_m * 100),
+    railingHeightCm: railingCmOf(concept),
     legend: facadeLegend(concept, vocab),
     openingStyles: {
       main: leaves(concept.openings_style?.main_door_type),

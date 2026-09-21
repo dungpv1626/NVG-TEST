@@ -15,10 +15,12 @@
  * Giá là GIÁ NIÊM YẾT trong `config/models.yaml`, chưa gồm thuế — nói rõ ngay cạnh con số.
  */
 
+import { useState } from 'react';
 import { formatDateTime, formatNumber } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/states';
 import {
+  AI_CALL_LOG_LIMIT,
   useAiCallLog,
   useAiCallPrompts,
   useAiModels,
@@ -186,7 +188,10 @@ export function AiRunUsage({
   /** Rỗng khi lượt chạy chưa xong. */
   endedAt: string | null;
 }): React.ReactElement | null {
-  const log = useAiCallLog(projectId, { live: endedAt === null });
+  // Trần RIÊNG, cao hơn trần của nhật ký: dòng này cộng tiền của MỘT lượt chạy, mà một lượt xếp
+  // mặt bằng ba phương án nhà năm tầng đã quá 25 lượt gọi. Cắt ở 25 thì con số tiền thiếu mà không
+  // có gì báo — đúng loại sai lặng lẽ mà một dòng tổng không được phép mắc.
+  const log = useAiCallLog(projectId, { live: endedAt === null, limit: 200 });
   const models = useAiModels();
   const free = new Set(models.data?.freeProviders ?? []);
   const from = Date.parse(startedAt);
@@ -258,6 +263,10 @@ function LedgerTable({
   onExport: (callId: string) => void;
   exporting: string | null;
 }): React.ReactElement {
+  // Mặc định hiện 12 dòng, mở ra xem hết số đã nạp (Haan, 20/09/2026). Nhật ký nằm cuối một trang
+  // vốn đã dài; 12 dòng đủ thấy lượt vừa chạy mà không đẩy mọi thứ khác ra khỏi tầm mắt.
+  const [all, setAll] = useState(false);
+  const shown = all ? rows : rows.slice(0, LEDGER_PREVIEW);
   const costs = rows.map((r) => rowCost(r, free));
   const totalIn = rows.reduce((a, r) => a + (r.input_tokens ?? 0), 0);
   const totalOut = rows.reduce((a, r) => a + (r.output_tokens ?? 0), 0);
@@ -270,7 +279,7 @@ function LedgerTable({
   return (
     <>
       <p className="text-fg-subtle">
-        {formatNumber(rows.length, 0)} lượt · {formatNumber(totalIn, 0)} token vào ·{' '}
+        {formatNumber(rows.length, 0)} lượt gần nhất · {formatNumber(totalIn, 0)} token vào ·{' '}
         {formatNumber(totalOut, 0)} token ra · Tiền thật{' '}
         <span className="font-medium text-fg">≈ {formatUsd(totalCost)}</span> · Theo giá niêm yết ≈{' '}
         {formatUsd(totalList)}
@@ -278,7 +287,8 @@ function LedgerTable({
       </p>
       <p className="mt-1 text-xs text-fg-subtle">
         Giá niêm yết của nhà cung cấp, chưa gồm thuế. Lượt bị bác hay lỗi giữa chừng vẫn bị tính
-        tiền phần đã sinh.
+        tiền phần đã sinh. Bảng chỉ nạp {formatNumber(AI_CALL_LOG_LIMIT, 0)} lượt gần nhất — dòng cũ
+        hơn vẫn còn đủ trong cơ sở dữ liệu, không bị xoá.
       </p>
       <div className="mt-3 overflow-x-auto rounded border border-border">
         <table className="w-full min-w-[48rem] border-collapse text-sm">
@@ -296,7 +306,7 @@ function LedgerTable({
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, i) => {
+            {shown.map((row, i) => {
               const c = costs[i]!;
               return (
                 <tr key={row.id} className="border-b border-border last:border-0">
@@ -349,6 +359,16 @@ function LedgerTable({
           </tbody>
         </table>
       </div>
+      {rows.length > LEDGER_PREVIEW && (
+        <Button variant="secondary" className="mt-3" onClick={() => setAll((v) => !v)}>
+          {all
+            ? `Thu gọn còn ${formatNumber(LEDGER_PREVIEW, 0)} lượt`
+            : `Xem tất cả ${formatNumber(rows.length, 0)} lượt`}
+        </Button>
+      )}
     </>
   );
 }
+
+/** Số dòng hiện sẵn trước khi bấm mở rộng. */
+const LEDGER_PREVIEW = 12;

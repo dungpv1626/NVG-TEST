@@ -30,9 +30,13 @@ describe('CORS — header tuỳ chỉnh phải được khai lộ', () => {
   const entry = read('../../index.ts');
   const exposed = /exposeHeaders:\s*\[([^\]]*)\]/s.exec(entry)?.[1] ?? '';
 
-  it('mọi header tuỳ chỉnh của tuyến nhánh AI đều nằm trong `exposeHeaders`', () => {
-    const set = customHeadersSetIn(read('../ai/routes.ts'));
-    expect(set.length, 'tuyến nhánh AI phải đặt ít nhất một header tuỳ chỉnh').toBeGreaterThan(0);
+  // Quét CẢ BA tệp tuyến của nhánh AI, không riêng `routes.ts`. Tuyến tách ra tệp mới (mặt đứng
+  // T59, phối cảnh T67) là đúng lúc một header mới lọt khỏi tầm phép thử này mà vẫn xanh.
+  const ROUTE_FILES = ['../ai/routes.ts', '../ai/facade-routes.ts', '../ai/perspective-routes.ts'];
+
+  it.each(ROUTE_FILES)('mọi header tuỳ chỉnh của %s đều nằm trong `exposeHeaders`', (file) => {
+    const set = customHeadersSetIn(read(file));
+    expect(set.length, `${file} phải đặt ít nhất một header tuỳ chỉnh`).toBeGreaterThan(0);
     for (const header of set) {
       expect(exposed, `thiếu ${header} trong exposeHeaders`).toContain(`'${header}'`);
     }

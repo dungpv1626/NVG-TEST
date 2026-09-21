@@ -946,7 +946,16 @@ describeDb('NS — nghỉ phép, tài sản, nghỉ việc (NS-05, NS-08, NS-11)
     expect(Number(counts.get(workshop.data as string)?.n)).toBe(ONBOARDING_CHECKLIST.length);
   });
 
-  it('yêu cầu tuyển dụng đi qua đúng Hộp thư Phê duyệt, và Tổng Giám đốc duyệt được (NS-02)', async () => {
+  /**
+   * Haan chốt 20/09/2026: **Hành chính – Nhân sự duyệt** yêu cầu tuyển dụng (migration 0130),
+   * thay giả định cũ "Tổng Giám đốc duyệt". Trưởng đơn vị gửi, HCNS duyệt và triển khai tuyển.
+   *
+   * Phép thử vì vậy canh đúng chiều ngược với bản cũ: HCNS duyệt được, Tổng Giám đốc **không**
+   * — vì `approval_limits` không còn dòng nào cho vai trò TGĐ ở chủ đề này. Đây là hệ quả cố ý
+   * của cấu hình, không phải lỗi phân quyền: muốn TGĐ giữ bước cuối thì thêm một dòng bước 2
+   * trong Quản trị hệ thống.
+   */
+  it('yêu cầu tuyển dụng đi qua đúng Hộp thư Phê duyệt, và Hành chính – Nhân sự duyệt được (NS-02)', async () => {
     const { data: position, error: insertError } = await hcns
       .from('recruitment_positions')
       .insert({
@@ -965,15 +974,15 @@ describeDb('NS — nghỉ phép, tài sản, nghỉ việc (NS-05, NS-08, NS-11)
     });
     expect(error).toBeNull();
 
-    // Hành chính – Nhân sự KHÔNG tự duyệt yêu cầu tuyển của mình: hạn mức thuộc Tổng Giám đốc.
-    const selfApprove = await hcns.rpc('decide_approval', {
+    // Tổng Giám đốc không còn giữ bước này — không có dòng hạn mức nào cho chủ đề tuyển dụng.
+    const tgdApprove = await tgd.rpc('decide_approval', {
       p_approval_id: approvalId,
       p_decision: 'approved',
       p_note: null,
     });
-    expect(selfApprove.error).not.toBeNull();
+    expect(tgdApprove.error).not.toBeNull();
 
-    const decided = await tgd.rpc('decide_approval', {
+    const decided = await hcns.rpc('decide_approval', {
       p_approval_id: approvalId,
       p_decision: 'approved',
       p_note: null,

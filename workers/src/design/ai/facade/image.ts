@@ -31,15 +31,54 @@ export interface FacadeImagePrompt {
   prompt: string;
 }
 
+/**
+ * Ngôi nhà TRÔNG NHƯ THẾ NÀO, nói bằng tiếng Anh — bảy cụm rút từ ý tưởng mặt đứng đã lưu.
+ *
+ * Tách riêng vì bước Phối cảnh (T67) cần đúng bảy cụm ấy: năm góc phối cảnh và tờ ảnh mặt đứng
+ * phải mô tả CÙNG một ngôi nhà bằng CÙNG một cách. Hai bản mô tả song song là đường chắc chắn dẫn
+ * tới hai bộ ảnh lệch màu mà không ai giải thích được vì sao.
+ */
+export interface FacadeLook {
+  style: string;
+  roof: string;
+  /** Vật liệu từng vùng, mỗi vùng một dòng `- zone: material, colour`, kèm kiểu cửa đã chọn. */
+  materials: string;
+  palette: string;
+  railing: string;
+  gateFence: string;
+  elements: string;
+}
+
 const phrase = (table: Record<string, VocabEntry>, code: unknown): string =>
   typeof code === 'string' ? (table[code]?.prompt_en ?? code.replace(/_/g, ' ')) : '';
 
-/** Ghép lời dẫn gửi cho mô hình ảnh từ ý tưởng mặt đứng đã lưu. */
-export function facadeImagePrompt(
+/** Bảy cụm mô tả mặt ngoài — dùng chung cho tờ ảnh mặt đứng và cả năm góc phối cảnh. */
+/** Centimet của hợp đồng → mét của lời dẫn, một chữ số thập phân, bỏ số 0 thừa. */
+function metres(cm: number): string {
+  return String(Math.round(cm / 10) / 10);
+}
+
+/**
+ * « 3.6 m wide, 1.8 m high» — và khai được số nào thì nói số ấy.
+ *
+ * Trước T68 điều kiện là `gate.w && gate.h`, nên thiếu MỘT trong hai là mất CẢ HAI: hợp đồng chỉ
+ * bắt buộc `type`, và một cái cổng không có số đo nào trong lời dẫn thì mô hình vẽ cổng to bằng
+ * cả mặt tiền. Đơn vị đổi sang MÉT cho khớp phần còn lại — cùng một lời dẫn mà chỗ nói cm chỗ
+ * nói m là mời mô hình đọc nhầm một bậc mười.
+ */
+function sizeText(w: number | null | undefined, h: number | null | undefined): string {
+  const parts = [
+    typeof w === 'number' ? `${metres(w)} m wide` : null,
+    typeof h === 'number' ? `${metres(h)} m high` : null,
+  ].filter(Boolean);
+  return parts.length ? ` ${parts.join(', ')}` : '';
+}
+
+export function facadeLook(
   concept: AiFacadeConcept,
   vocab: FacadeVocabulary,
   prompts: AiPrompts,
-): FacadeImagePrompt {
+): FacadeLook {
   const block = prompts.facadeImage;
   const colour = (code: unknown) => phrase(vocab.colours, code);
 
@@ -82,10 +121,10 @@ export function facadeImagePrompt(
     gate || fence
       ? [
           gate
-            ? `${gate.type} gate${gate.w && gate.h ? ` ${gate.w} cm wide, ${gate.h} cm high` : ''} in ${phrase(vocab.materials, gate.material)}, ${colour(gate.colour)}`
+            ? `${gate.type} gate${sizeText(gate.w, gate.h)} in ${phrase(vocab.materials, gate.material)}, ${colour(gate.colour)}`
             : null,
           fence
-            ? `${fence.h} cm fence${fence.type ? ` (${phrase(vocab.fenceTypes, fence.type)})` : ''} in ${phrase(vocab.materials, fence.material)}, ${colour(fence.colour)}`
+            ? `${metres(fence.h)} m high fence${fence.type ? ` (${phrase(vocab.fenceTypes, fence.type)})` : ''} in ${phrase(vocab.materials, fence.material)}, ${colour(fence.colour)}`
             : null,
         ]
           .filter(Boolean)
@@ -101,15 +140,42 @@ export function facadeImagePrompt(
     : 'none';
 
   return {
-    system: block.system,
-    prompt: fill(block.user, {
-      style: block.styles[concept.style] ?? 'as the materials suggest',
-      roof,
-      materials: [materials, ...openingNotes.map((note) => `- ${note}`)].join('\n'),
-      palette,
-      railing: railing ? phrase(vocab.railings, railing) : 'none',
-      gate_fence: gateFence,
-      elements,
+    style: block.styles[concept.style] ?? 'as the materials suggest',
+    roof,
+    materials: [materials, ...openingNotes.map((note) => `- ${note}`)].join('\n'),
+    palette,
+    // Kèm CHIỀU CAO. `railing_h_cm` được `merge.ts` cất công chép từ phiếu kỹ sư vào artifact để
+    // «bộ vẽ, DXF, ảnh neo và thước chấm đọc cùng một chỗ», nhưng trước T68 lời dẫn ảnh chỉ lấy
+    // mã KIỂU — và góc `balcony_close` thì lan can chiếm nửa khung hình.
+    railing: railing
+      ? `${phrase(vocab.railings, railing)}${
+          typeof concept.elevation.railing_h_cm === 'number'
+            ? `, ${metres(concept.elevation.railing_h_cm)} m high`
+            : ''
+        }`
+      : 'none',
+    gateFence,
+    elements,
+  };
+}
+
+/** Ghép lời dẫn gửi cho mô hình ảnh từ ý tưởng mặt đứng đã lưu. */
+export function facadeImagePrompt(
+  concept: AiFacadeConcept,
+  vocab: FacadeVocabulary,
+  prompts: AiPrompts,
+): FacadeImagePrompt {
+  const look = facadeLook(concept, vocab, prompts);
+  return {
+    system: prompts.facadeImage.system,
+    prompt: fill(prompts.facadeImage.user, {
+      style: look.style,
+      roof: look.roof,
+      materials: look.materials,
+      palette: look.palette,
+      railing: look.railing,
+      gate_fence: look.gateFence,
+      elements: look.elements,
     }).trimEnd(),
   };
 }

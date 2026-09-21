@@ -90,6 +90,17 @@ line_mm:
   floor_line: 0.13 # vạch sàn từng tầng trên mặt đứng
   level_mark: 0.18 # ký hiệu cao độ ±0.000
   element: 0.13 # viền mảng trang trí (ốp, ô văng, lam, cột)
+  # ── Tờ mặt bằng mái, ảnh neo của bước Phối cảnh (T67) ──
+  # Thứ hạng ở đây NGƯỢC với tờ mặt bằng: khối nhà là thứ phải đọc ra trước, mái là lớp phủ lên
+  # nó, còn tầng dưới chỉ để thấy chỗ lùi vào. Mượn nét của tờ khác thì thứ hạng đảo ngược mà
+  # không ai thấy — đã xảy ra: mái 0,5 đè lên khối 0,25 ở bản dựng đầu.
+  roof_block: 0.6 # hình bao khối tầng trên cùng — nét đậm nhất tờ này
+  roof_edge: 0.3 # mép mái đua, đường nóc, đường xiên
+  roof_below: 0.15 # hình bao các tầng dưới
+  roof_arrow: 0.4 # mũi tên chỉ hướng đường
+  # Ranh thửa: mảnh hơn khối nhà nhưng đậm hơn tầng dưới — nó là đường bao ngoài cùng, phải
+  # đọc được là ranh chứ không đọc nhầm thành một khối nhà thứ hai (T68).
+  roof_lot: 0.25 # ranh thửa đất trên tờ mặt bằng mái
 
 # Cỡ chữ, mm giấy (chiều cao chữ hoa danh nghĩa). Cỡ nhỏ nhất đọc được khi in A3 là ~1,8 mm.
 text_mm:

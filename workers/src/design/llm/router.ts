@@ -33,6 +33,15 @@ export interface ModelRoute {
    * giao diện không hiện tuyến đó.
    */
   label?: string;
+  /**
+   * Ba trường CHỈ để hiện trên ô chọn model (T60): tên ngắn trên thẻ, nhãn phân loại, và một câu
+   * mô tả. Tách khỏi `label` vì `label` là một dòng gộp («GPT-5 (OpenAI) — chất lượng cao») dùng
+   * cho ô chọn cũ và nhật ký; cắt chuỗi ấy ra ba mảnh trong mã nguồn là đoán, và đoán sai lặng lẽ
+   * khi ai đó sửa nhãn.
+   */
+  short?: string;
+  tag?: string;
+  blurb?: string;
   pricing?: RoutePricing;
   /**
    * Hạng dữ liệu NHẠY CẢM NHẤT mà đầu ra này được phép nhận.
@@ -135,6 +144,8 @@ export interface ModelConfig {
    * Theo nhà cung cấp chứ không theo tuyến: tiền bám vào khoá.
    */
   billing?: { free_providers?: string[] };
+  /** Tên nhà cung cấp hiện trên ô chọn model. Thiếu thì giao diện hiện chính mã nhà cung cấp. */
+  providers?: Record<string, { label?: string }>;
   routes: Record<string, ModelRoute>;
 }
 
@@ -144,6 +155,12 @@ export interface PublicRoute {
   provider: string;
   model: string;
   label: string;
+  /** Tên nhà cung cấp để gom nhóm trên ô chọn — mã nhà cung cấp khi cấu hình chưa khai tên. */
+  providerLabel: string;
+  /** Tên ngắn, nhãn phân loại và câu mô tả cho thẻ model. Rỗng khi cấu hình chưa khai. */
+  short: string | null;
+  tag: string | null;
+  blurb: string | null;
   maxDataClass: DataClass;
   enabled: boolean;
   hasKey: boolean;
@@ -285,6 +302,10 @@ export class ModelRouter {
       provider: r.provider,
       model: r.model,
       label: r.label ?? r.model,
+      providerLabel: this.config.providers?.[r.provider]?.label ?? r.provider,
+      short: r.short ?? null,
+      tag: r.tag ?? null,
+      blurb: r.blurb ?? null,
       maxDataClass: r.max_data_class,
       enabled: r.enabled,
       hasKey: Boolean(this.apiKeys[r.provider]),

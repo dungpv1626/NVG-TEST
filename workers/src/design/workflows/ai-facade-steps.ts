@@ -21,6 +21,8 @@ import { recordAiCall, type AiCallOutcome, type PromptSink } from '../ai/call-lo
 import { callFacadeModel } from '../ai/facade/propose';
 import { facadeFrame } from '../ai/facade/frame';
 import { mergeFacade } from '../ai/facade/merge';
+import type { FacadeQuality } from '../ai/facade/quality';
+import { facadeFixable, scoreFacade, type FacadeScore } from '../ai/facade/score';
 import type { PlanCallRecord } from '../ai/plan';
 import { recordingClient } from '../ai/prompt-record';
 import type { AiPrompts } from '../ai/prompts';
@@ -40,6 +42,12 @@ export interface FacadeStepDeps {
   /** Nhóm `outdoor` của `kb/room_vocabulary.yaml` — ban công, sân thượng. */
   outdoor: ReadonlySet<string>;
   vocab: FacadeVocabulary;
+  /**
+   * Thước chấm mặt đứng (T63). Truyền VÀO chứ không `import` tệp `-data`: mô-đun này nằm trong
+   * đường nhập của bộ kiểm, mà Vitest không nạp được `.yaml` — đó là lý do mọi tệp kb của module
+   * chia đôi thành phần phân tích và phần nạp tệp.
+   */
+  quality: FacadeQuality;
   repo: ArtifactRepository;
   pricing?: RoutePricing;
   provider: string;
@@ -68,6 +76,13 @@ export interface FacadeProposeOutcome {
   proposalJson: string | null;
   issues: string[];
   call: PlanCallRecord;
+  /**
+   * Điểm «giống cách NVG vẽ đến đâu» (T63) — chỉ có khi ý tưởng đã qua cổng. Chấm ở đây chứ không
+   * ở bước ghi: nó quyết định có gọi lại mô hình hay không, mà gọi lại thì không được ghi gì.
+   */
+  score?: FacadeScore;
+  /** Lý do mất điểm mà MÔ HÌNH sửa được, tiếng Việt — đầu vào lượt gọi lại vì điểm. */
+  habitIssues?: string[];
 }
 
 /** Mặt bằng mà lượt chạy dựng mặt đứng theo — đọc lại mỗi bước, rẻ và tất định. */
@@ -103,6 +118,7 @@ export async function proposeFacadeStep(
   round: number,
   retryIssues: readonly string[] | null,
   live?: LevelLiveHooks,
+  retryKind: 'gate' | 'habits' = 'gate',
 ): Promise<FacadeProposeOutcome> {
   const brief = await briefOf(deps, params);
   const frame = facadeFrame(await planOf(deps, params), deps.construction, deps.outdoor, brief);
@@ -122,6 +138,7 @@ export async function proposeFacadeStep(
       vocab: deps.vocab,
       brief,
       retryIssues,
+      retryKind,
       ...(params.reasoningEffort ? { reasoningEffort: params.reasoningEffort } : {}),
       ...(live ? { onProgress: live.onProgress, signal: live.signal } : {}),
     });
@@ -156,12 +173,51 @@ export async function proposeFacadeStep(
   };
   const callId = await logCall(deps, params, purpose, logged);
   live?.onLogged({ callId, ...logged });
+  if (!attempt.proposal) {
+    return { proposalJson: null, issues: attempt.issues, call: attempt.call };
+  }
+
+  // Chấm ngay trên ý tưởng vừa qua cổng: ghép khung + ý tưởng là phép thuần, không chạm mạng và
+  // không chạm kho, nên chấm trước khi quyết định ghi hay gọi lại là rẻ.
+  const merged = mergeFacade(
+    frame,
+    attempt.proposal,
+    deps.vocab,
+    { planRef: params.planRef!, briefRef: params.facadeBriefRef ?? null, generator: PROBE },
+    brief,
+  );
+  const score = scoreFacade({
+    concept: merged,
+    quality: deps.quality,
+    vocab: deps.vocab,
+    // Phiếu của kỹ sư thắng quy ước cấu tạo — cùng phép ưu tiên với `railingCmOf` của bộ vẽ. Ở đây
+    // không gọi hàm ấy được vì nó đọc tệp kb qua mô-đun `-data` (Vitest không nạp YAML).
+    railingCm:
+      merged.elevation.railing_h_cm ?? Math.round(deps.construction.outdoor.railing_h_m * 100),
+  });
+
   return {
-    proposalJson: attempt.proposal ? JSON.stringify(attempt.proposal) : null,
+    proposalJson: JSON.stringify(attempt.proposal),
     issues: attempt.issues,
     call: attempt.call,
+    score,
+    habitIssues: facadeFixable(score).map(
+      (c) => `${c.vi}${c.giaiThich ? ` — ${c.giaiThich}` : ''}`,
+    ),
   };
 }
+
+/**
+ * Nguồn gốc GIẢ chỉ để chấm điểm: phép chấm không đọc `generator`, và bản ghép ở đây không bao giờ
+ * được lưu — bản lưu do `writeFacadeStep` ghép lại với nguồn gốc thật.
+ */
+const PROBE = {
+  kind: 'ai',
+  provider: 'probe',
+  model: 'probe',
+  route: 'probe',
+  prompt_version: '0',
+} as const;
 
 export interface FacadeWriteOutcome {
   artifactId: string;

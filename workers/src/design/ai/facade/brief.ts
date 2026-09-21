@@ -13,6 +13,63 @@ import { scrubIdentity } from '../../brief/anonymise';
 
 export const FACADE_BRIEF_SCHEMA_VERSION = '1.0.0';
 
+/**
+ * Tên tiếng Việt của từng mục trong phiếu — để câu lỗi nói ĐƯỢC mục nào hỏng.
+ *
+ * Trước 20/09/2026 câu lỗi duy nhất là «Phiếu yêu cầu chưa đúng. Kiểm tra lại các ô đã điền»: đúng
+ * nhưng vô dụng, phiếu có mười bốn mục. Xảy ra thật khi kỹ sư tick 7 ô trang trí trong lúc hợp đồng
+ * chặn ở 6 — không có cách nào đoán ra từ màn hình (CGD 5.5: lỗi phải nói việc gì hỏng và cần làm gì).
+ */
+const BRIEF_FIELD_VI: Readonly<Record<string, string>> = {
+  style: 'Phong cách',
+  ground_raise_cm: 'Cốt sàn tầng 1 so với vỉa hè',
+  roof: 'Mái',
+  palette: 'Màu sơn',
+  surfaces: 'Vật liệu mặt tiền',
+  main_door: 'Cửa chính',
+  side_door: 'Cửa phụ, cửa ra ban công',
+  window: 'Cửa sổ',
+  garage_door: 'Cửa để xe',
+  balcony: 'Lan can ban công',
+  railing: 'Lan can',
+  gate: 'Cổng',
+  fence: 'Tường rào',
+  decorations: 'Chi tiết trang trí mong muốn',
+  notes: 'Ghi chú',
+};
+
+/**
+ * Một lỗi hợp đồng của phiếu, viết thành câu tiếng Việt.
+ *
+ * Chữ của Zod là tiếng Anh và nói theo ngôn ngữ kiểu dữ liệu («Array must contain at most 6
+ * element(s)»), nên KHÔNG đem thẳng lên màn hình (CLAUDE.md 4.1). Ở đây đổi sang lý do người đọc
+ * hiểu; loại lỗi lạ thì nói mục nào hỏng chứ không im.
+ */
+export function facadeBriefIssueText(issue: {
+  path: PropertyKey[];
+  code: string;
+  message: string;
+  maximum?: number | bigint;
+  minimum?: number | bigint;
+}): string {
+  const field = String(issue.path[0] ?? '');
+  const label = BRIEF_FIELD_VI[field] ?? field;
+  const sub = issue.path.length > 1 ? ` (${issue.path.slice(1).join('.')})` : '';
+  switch (issue.code) {
+    case 'too_big':
+      return `${label}${sub}: chọn quá nhiều, tối đa ${String(issue.maximum ?? '')} mục.`;
+    case 'too_small':
+      return `${label}${sub}: giá trị nhỏ hơn mức cho phép${issue.minimum === undefined ? '' : ` (${String(issue.minimum)})`}.`;
+    case 'invalid_enum_value':
+    case 'invalid_literal':
+      return `${label}${sub}: giá trị không có trong danh mục.`;
+    case 'invalid_type':
+      return `${label}${sub}: chưa điền hoặc sai kiểu dữ liệu.`;
+    default:
+      return `${label}${sub}: giá trị không hợp lệ.`;
+  }
+}
+
 /** Phiếu trống — mọi mục «để AI đề xuất». */
 export function emptyFacadeBrief(savedAt = new Date(0).toISOString()): AiFacadeBrief {
   const finish = () => ({ material: null, colour: null });
@@ -30,7 +87,7 @@ export function emptyFacadeBrief(savedAt = new Date(0).toISOString()): AiFacadeB
     side_door: door(),
     window: { material: null, colour: null, glass: null },
     garage_door: { type: null, material: null, colour: null },
-    balcony: { railing: null, colour: null },
+    balcony: { railing: null, colour: null, material: null, h_cm: null },
     gate: { wanted: null, type: null, material: null, colour: null, h_cm: null },
     fence: { type: null, material: null, colour: null, h_cm: null },
     decorations: [],
@@ -74,6 +131,7 @@ export function checkFacadeBriefCodes(brief: AiFacadeBrief, vocab: FacadeVocabul
   code(vocab.doorMaterials, brief.garage_door.material, 'Cửa để xe — vật liệu');
   code(vocab.colours, brief.garage_door.colour, 'Cửa để xe — màu');
   code(vocab.railings, brief.balcony.railing, 'Lan can ban công');
+  code(vocab.materials, brief.balcony.material, 'Vật liệu lan can');
   code(vocab.colours, brief.balcony.colour, 'Màu lan can');
   code(vocab.materials, brief.gate.material, 'Vật liệu cổng');
   code(vocab.colours, brief.gate.colour, 'Màu cổng');
@@ -152,7 +210,10 @@ export function facadeRequirementsText(
   need('garage door material', phrase(vocab.doorMaterials, brief.garage_door.material));
   need('garage door colour', phrase(vocab.colours, brief.garage_door.colour));
   need('balcony railing', phrase(vocab.railings, brief.balcony.railing));
+  need('railing material', phrase(vocab.materials, brief.balcony.material ?? null));
   need('railing colour', phrase(vocab.colours, brief.balcony.colour));
+  // Chiều cao lan can KHÔNG vào khối yêu cầu: bộ vẽ đặt số ấy, mô hình không vẽ nét nào của lan
+  // can (T15). Gửi đi là tiêu chữ cho một thứ mô hình không cầm.
   // Nhà sát ranh mặt tiền: khung đã nói «gate and fence must be null», nên khai thêm yêu cầu cổng
   // là gửi đi hai câu ngược nhau trong cùng một lời gọi tính tiền. `mergeFacade` cũng bỏ cổng ở
   // trường hợp này — màn hình phải nói rõ thay vì để lời dẫn tự mâu thuẫn.

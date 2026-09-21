@@ -1,0 +1,18 @@
+sequenceDiagram
+  autonumber
+  participant CHT as Chỉ huy trưởng
+  participant FE as Giao diện (SPA)
+  participant PR as PostgREST
+  participant DB as PostgreSQL + RLS
+
+  CHT->>FE: Mở danh sách công trình
+  FE->>PR: đọc construction_sites — KHÔNG kèm bộ lọc
+  PR->>DB: truy vấn kèm thẻ đăng nhập
+  DB-->>DB: policy mẫu E: user_site_assignments
+  DB-->>FE: chỉ công trình được phân công
+  Note over DB,FE: Quên phân công thì THẤY ÍT ĐI
+  CHT->>FE: Mở ngân sách công trình
+  FE->>PR: đọc cột chi phí (nhóm nhạy cảm)
+  PR->>DB: cột qua hàm SECURITY DEFINER
+  DB-->>DB: rls_sees_sensitive('cost')
+  DB-->>FE: số thật — ngoại lệ: không ghi nhật ký

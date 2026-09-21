@@ -71,6 +71,49 @@ describe('tờ mặt đứng — ảnh chụp vàng', () => {
   }
 });
 
+/*
+ * Haan, 20/09/2026: «bản vẽ mặt bằng vẽ phòng để xe (có ô tô) ở bên phải nhưng bản vẽ mặt đứng thì
+ * không có lối vào phòng để xe cho ô tô… hai bản vẽ không được phép mâu thuẫn nhau».
+ *
+ * Trước T64 bộ vẽ chỉ chừa chỗ cho CỔNG, nên nhà có cả cửa chính lẫn cửa để xe thì cổng đứng trước
+ * một cái và hàng rào bịt kín cái còn lại. Đây không phải chuyện thẩm mỹ: một lối vào không đi được
+ * là hai tờ vẽ của cùng một ngôi nhà nói ngược nhau.
+ */
+describe('tờ mặt đứng — hàng rào không bịt lối vào (T64)', () => {
+  /** Khoảng [x0, x1] của mọi mảng rào/cổng trên tờ, theo đơn vị giấy. */
+  const fenceRuns = (svg: string): Array<[number, number]> =>
+    [...svg.matchAll(/<rect x="([\d.]+)" y="[\d.]+" width="([\d.]+)"[^>]*class="ff"/g)].map(
+      (m) => [Number(m[1]), Number(m[1]) + Number(m[2])] as [number, number],
+    );
+
+  it('không mảng rào nào cắt ngang cửa chính hay cửa để xe', () => {
+    for (const concept of [TOWNHOUSE_FACADE, VILLA_FACADE]) {
+      const svg = renderElevationSheet(concept, optionsFor(concept)).svg;
+      // Mảng CỔNG được vẽ trước mọi mảng rào (`gateAndFence`), và nó được phép trùm lên lối mở —
+      // mặt đứng là hình chiếu phẳng, cổng đứng trước nhà thì che thứ sau nó là đúng. Chỉ hàng RÀO
+      // mới là thứ bịt đường.
+      const runs = fenceRuns(svg).slice(concept.gate ? 1 : 0);
+      if (runs.length === 0) continue;
+      // Đổi toạ độ lỗ mở sang đơn vị giấy bằng chính hai mốc mà tờ vẽ dùng: mép trái và mép phải
+      // của khối tầng dưới cùng. Không chép công thức tỷ lệ của bộ vẽ sang đây.
+      const first = concept.elevation.levels[0]!;
+      const body = svg.match(/<rect x="([\d.]+)" y="[\d.]+" width="([\d.]+)"[^>]*class="eo"/)!;
+      const px0 = Number(body[1]);
+      const scale = Number(body[2]) / (first.x1 - first.x0);
+      const toPaper = (x: number) => px0 + (x - first.x0) * scale;
+
+      for (const o of concept.openings_front) {
+        if (o.level !== first.level || (o.kind !== 'door' && o.kind !== 'garage')) continue;
+        const a = toPaper(o.x);
+        const b = toPaper(o.x + o.w);
+        for (const [ra, rb] of runs) {
+          expect(rb > a + 0.01 && ra < b - 0.01).toBe(false);
+        }
+      }
+    }
+  });
+});
+
 describe('tờ mặt đứng — hình học', () => {
   const sheet = renderElevationSheet(TOWNHOUSE_FACADE, optionsFor(TOWNHOUSE_FACADE)).svg;
 
@@ -182,6 +225,79 @@ describe('đường mái tự dựng', () => {
       generator: TOWNHOUSE_FACADE.generator,
     });
     expect(concept.openings_front).toEqual(frame.openings);
+  });
+});
+
+/*
+ * Ba hình của hồ sơ thật mà bộ vẽ trước đây không dựng nổi (T63, 20/09/2026): vòm đầu cửa (M6),
+ * ô tròn trang trí R700 (M3), sảnh trước mái dốc (M2, M4). Chúng từng nằm trong `chua_cham_duoc`
+ * của thước chấm vì đúng lý do ấy.
+ *
+ * Phép thử đo HÌNH HỌC chứ không đếm thẻ: một cái vòm vẽ sai bán kính vẫn là một thẻ `path` có chữ
+ * `A` trong đó. Cả ba đặt chung một bề rộng 200 cm để quy đổi ra giấy dùng chung một thước.
+ */
+describe('mảng trang trí có hình riêng — vòm, ô tròn, mái sảnh (T63)', () => {
+  const W = 200;
+  const concept = {
+    ...TOWNHOUSE_FACADE,
+    elevation: {
+      ...TOWNHOUSE_FACADE.elevation,
+      elements: [
+        // Vòm nửa tròn: độ vồng đúng nửa bề rộng.
+        { kind: 'arch', rect: [150, 250, 150 + W, 350], material_ref: null },
+        // Vòm cung: độ vồng bằng một phần tư bề rộng, bán kính phải LỚN hơn nửa dây cung.
+        { kind: 'arch', rect: [150, 500, 150 + W, 550], material_ref: null },
+        // Khung bao CỐ Ý không vuông: 200 × 160. Cạnh ngắn phải quyết định đường kính.
+        { kind: 'oculus', rect: [50, 600, 50 + W, 760], material_ref: null },
+        { kind: 'porch_roof', rect: [0, 900, W, 1000], material_ref: null },
+      ],
+    },
+  } as typeof TOWNHOUSE_FACADE;
+
+  const svg = renderElevationSheet(concept, optionsFor(concept)).svg;
+  const arcs = [...svg.matchAll(/<path class="el" d="M ([\d.-]+) ([\d.-]+) A ([\d.-]+) /g)];
+
+  it('ý tưởng mang ba hình mới vẫn qua được hợp đồng', () => {
+    expect(aiFacadeConceptSchema.safeParse(concept).success).toBe(true);
+  });
+
+  it('vòm nửa tròn có bán kính đúng nửa dây cung; vòm cung thì lớn hơn', () => {
+    expect(arcs).toHaveLength(2);
+    const [half, segment] = arcs;
+    // Dây cung trên giấy = bề rộng 200 cm quy đổi; suy ra từ chính hai đầu cung của vòm nửa tròn.
+    const chord = 2 * Number(half![3]);
+    expect(Number(segment![3])).toBeGreaterThan(chord / 2);
+    // Vòm cung độ vồng w/4: r = (w²/4 + h²) / 2h = (10000 + 2500) / 100 = 125 cm = 0,625 dây cung.
+    expect(Number(segment![3]) / chord).toBeCloseTo(0.625, 3);
+  });
+
+  it('ô tròn là đường tròn lớn nhất VỪA trong khung bao, không phải hình bầu dục', () => {
+    const circle = /<circle cx="([\d.-]+)" cy="([\d.-]+)" r="([\d.-]+)" class="el"/.exec(svg);
+    expect(circle).not.toBeNull();
+    // Khung bao 200 × 160 → bán kính 80 cm = 0,4 lần dây cung 200 cm của vòm nửa tròn.
+    const chord = 2 * Number(arcs[0]![3]);
+    expect(Number(circle![3]) / chord).toBeCloseTo(0.4, 3);
+  });
+
+  it('mái sảnh là tam giác khép kín, nóc ở giữa', () => {
+    const tri =
+      /<path class="el" d="M ([\d.-]+) ([\d.-]+) L ([\d.-]+) ([\d.-]+) L ([\d.-]+) ([\d.-]+) Z"/.exec(
+        svg,
+      );
+    expect(tri).not.toBeNull();
+    const [x0, , xTop, , x1] = [1, 2, 3, 4, 5, 6].map((i) => Number(tri![i]));
+    expect(xTop).toBeCloseTo((x0! + x1!) / 2, 3);
+    // Nóc phải CAO hơn hai chân: trên giấy, cao hơn nghĩa là y nhỏ hơn.
+    expect(Number(tri![4])).toBeLessThan(Number(tri![2]));
+  });
+
+  it('tệp DXF giữ đủ cung và đường tròn, cùng lớp hatch với mảng trang trí khác', () => {
+    const dxf = renderFacadeDxf(concept, { ...optionsFor(concept), layers });
+    // DXF R12 xuống dòng bằng CRLF.
+    expect(dxf).toContain('\r\nARC\r\n');
+    expect(dxf).toContain('\r\nCIRCLE\r\n');
+    // Không rơi ra lớp mặc định 0: mất lớp là tệp CAD không in đúng nét.
+    expect(dxf.split('\r\nCIRCLE\r\n')[1]).toContain(layers.hatch.layer);
   });
 });
 

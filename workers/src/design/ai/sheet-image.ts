@@ -119,6 +119,10 @@ function titleBlock(level: AiFloorPlan['levels'][number], scale: number): string
  *
  * Không gian mở chia khu (`parts`) kê từng khu MỘT DÒNG, đúng cách tờ vector ghi nhãn: một ô bếp
  * + ăn + khách mà chỉ ghi «PHÒNG KHÁCH» thì người đọc hiểu là một phòng khách khổng lồ (T49).
+ *
+ * Kèm KÍCH THƯỚC ô chứ không chỉ diện tích (T68). Lời dẫn hệ thống đòi «nội thất vẽ vừa với căn
+ * phòng nó nằm trong», mà 12 m² có thể là 3×4 m hay 2×6 m — cái giường đôi 1,6 m vẽ vào phòng
+ * rộng 2 m là sai tỉ lệ đúng họ lỗi đã đo ở ảnh phối cảnh.
  */
 function roomLines(level: AiFloorPlan['levels'][number], labels: Record<string, string>): string {
   const nameOf = (type: string, label?: string | null): string =>
@@ -129,11 +133,22 @@ function roomLines(level: AiFloorPlan['levels'][number], labels: Record<string, 
       if (parts.length > 1) {
         // `parts[]` cố ý KHÔNG có `label` trong hợp đồng: nhãn của một khu suy từ `type`, vì khu
         // không phải phòng nên mô hình không được đặt tên riêng cho nó.
-        return parts.map((part) => `- ${nameOf(part.type)} — ${trimZero(part.area_m2)} m²`);
+        return parts.map(
+          (part) => `- ${nameOf(part.type)} — ${trimZero(part.area_m2)} m²${sizeOf(part.rect)}`,
+        );
       }
-      return [`- ${nameOf(room.type, room.label)} — ${trimZero(room.area_m2)} m²`];
+      return [
+        `- ${nameOf(room.type, room.label)} — ${trimZero(room.area_m2)} m²${sizeOf(room.rect)}`,
+      ];
     })
     .join('\n');
+}
+
+/** «, 3.2 × 4.1 m» — rỗng khi hợp đồng không có ô chữ nhật của phòng ấy. */
+function sizeOf(rect: readonly number[] | null | undefined): string {
+  if (!rect || rect.length < 4) return '';
+  const [x0, y0, x1, y1] = rect as [number, number, number, number];
+  return `, ${trimZero(Math.abs(x1 - x0) / 100)} × ${trimZero(Math.abs(y1 - y0) / 100)} m`;
 }
 
 /**

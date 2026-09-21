@@ -63,13 +63,18 @@ export type AiFacadeBriefDoor = z.infer<typeof aiFacadeBriefDoorSchema>;
 export const aiFacadeBriefSchema = z
   .object({
     schema_version: aiFacadeBriefSemverSchema,
-    /** Thời điểm máy chủ nhận phiếu, ISO 8601. Máy chủ đặt, không tin trình duyệt. Có hai việc: màn hình ghi «Đã lưu lúc …», và hai hồ sơ khác nhau cùng điền một phiếu giống hệt vẫn ra hai artifact khác nhau — mã artifact là băm NỘI DUNG, trùng nội dung là trùng mã (xem `ArtifactRepository.write`). */
+    /**
+     * Thời điểm máy chủ nhận phiếu, ISO 8601. Máy chủ đặt, không tin trình duyệt. Có hai việc: màn hình ghi «Đã lưu lúc …», và hai hồ sơ khác nhau cùng điền một phiếu giống hệt vẫn ra hai artifact khác nhau — mã artifact là băm NỘI DUNG, trùng nội dung là trùng mã (xem `ArtifactRepository.write`).
+     *
+     * CỐ Ý KHÔNG bắt buộc: phiếu lưu trước ngày 20/09/2026 không có khoá này, mà artifact là BẤT BIẾN — thêm một mục bắt buộc vào hợp đồng đã dùng là biến những thứ đã ghi thành không đọc nổi (đã xảy ra: màn hình Mặt đứng báo «saved_at — Required»). Máy chủ luôn đặt khoá này khi ghi, nên phiếu mới luôn có.
+     */
     saved_at: z
       .string()
       .datetime({ offset: true })
       .describe(
-        'Thời điểm máy chủ nhận phiếu, ISO 8601. Máy chủ đặt, không tin trình duyệt. Có hai việc: màn hình ghi «Đã lưu lúc …», và hai hồ sơ khác nhau cùng điền một phiếu giống hệt vẫn ra hai artifact khác nhau — mã artifact là băm NỘI DUNG, trùng nội dung là trùng mã (xem `ArtifactRepository.write`).',
-      ),
+        'Thời điểm máy chủ nhận phiếu, ISO 8601. Máy chủ đặt, không tin trình duyệt. Có hai việc: màn hình ghi «Đã lưu lúc …», và hai hồ sơ khác nhau cùng điền một phiếu giống hệt vẫn ra hai artifact khác nhau — mã artifact là băm NỘI DUNG, trùng nội dung là trùng mã (xem `ArtifactRepository.write`).\n\nCỐ Ý KHÔNG bắt buộc: phiếu lưu trước ngày 20/09/2026 không có khoá này, mà artifact là BẤT BIẾN — thêm một mục bắt buộc vào hợp đồng đã dùng là biến những thứ đã ghi thành không đọc nổi (đã xảy ra: màn hình Mặt đứng báo «saved_at — Required»). Máy chủ luôn đặt khoá này khi ghi, nên phiếu mới luôn có.',
+      )
+      .optional(),
     /** Phương án mặt bằng đang hiệu lực lúc lưu phiếu — để màn hình nhắc khi kỹ sư đã đổi phương án. */
     plan_ref: aiFacadeBriefArtifactRefSchema
       .nullable()
@@ -155,12 +160,40 @@ export const aiFacadeBriefSchema = z
         colour: aiFacadeBriefCodeOrNullSchema,
       })
       .strict(),
+    /**
+     * Lan can ban công. Chỉ hỏi khi phương án mặt bằng có ban công ra mặt trước.
+     *
+     * `material` và `h_cm` thêm ngày 20/09/2026 (Haan: «thêm 1 mục khảo sát cho lan can: vật liệu, chiều cao»). CỐ Ý KHÔNG bắt buộc: phiếu lưu trước ngày ấy không có hai khoá này, mà artifact là BẤT BIẾN — thêm một mục bắt buộc vào hợp đồng đã dùng là biến những thứ đã ghi thành không đọc nổi (đã xảy ra với `saved_at`).
+     */
     balcony: z
       .object({
-        railing: aiFacadeBriefCodeOrNullSchema,
+        /** Kiểu lan can, mã trong nhóm `railings`. */
+        railing: aiFacadeBriefCodeOrNullSchema.describe('Kiểu lan can, mã trong nhóm `railings`.'),
         colour: aiFacadeBriefCodeOrNullSchema,
+        /** Vật liệu lan can, mã trong nhóm `materials`. */
+        material: aiFacadeBriefCodeOrNullSchema
+          .describe('Vật liệu lan can, mã trong nhóm `materials`.')
+          .optional(),
+        /**
+         * Chiều cao lan can tính từ mặt sàn ban công, cm. Rỗng thì chương trình dùng `kb/construction_norms.yaml` mục `outdoor.railing_h_m`.
+         *
+         * Số này KHÔNG đi qua mô hình: bộ vẽ đặt nó, và thước chấm đo đúng nó (tiêu chí R1, `do_ai: false`). Khoảng 60–160 là giới hạn DỰNG ĐƯỢC, không phải quy chuẩn — hồ sơ NVG đo được 80–90.
+         */
+        h_cm: z
+          .number()
+          .int()
+          .gte(60)
+          .lte(160)
+          .nullable()
+          .describe(
+            'Chiều cao lan can tính từ mặt sàn ban công, cm. Rỗng thì chương trình dùng `kb/construction_norms.yaml` mục `outdoor.railing_h_m`.\n\nSố này KHÔNG đi qua mô hình: bộ vẽ đặt nó, và thước chấm đo đúng nó (tiêu chí R1, `do_ai: false`). Khoảng 60–160 là giới hạn DỰNG ĐƯỢC, không phải quy chuẩn — hồ sơ NVG đo được 80–90.',
+          )
+          .optional(),
       })
-      .strict(),
+      .strict()
+      .describe(
+        'Lan can ban công. Chỉ hỏi khi phương án mặt bằng có ban công ra mặt trước.\n\n`material` và `h_cm` thêm ngày 20/09/2026 (Haan: «thêm 1 mục khảo sát cho lan can: vật liệu, chiều cao»). CỐ Ý KHÔNG bắt buộc: phiếu lưu trước ngày ấy không có hai khoá này, mà artifact là BẤT BIẾN — thêm một mục bắt buộc vào hợp đồng đã dùng là biến những thứ đã ghi thành không đọc nổi (đã xảy ra với `saved_at`).',
+      ),
     /** Chỉ có nghĩa khi nhà có sân trước. */
     gate: z
       .object({
@@ -186,7 +219,11 @@ export const aiFacadeBriefSchema = z
         h_cm: z.number().int().gte(0).lte(1000).nullable(),
       })
       .strict(),
-    /** Chi tiết trang trí kỹ sư muốn có trên mặt tiền. Rỗng = để AI đề xuất. */
+    /**
+     * Chi tiết trang trí kỹ sư muốn có trên mặt tiền. Rỗng = để AI đề xuất.
+     *
+     * Trần bằng ĐÚNG số mã trong danh sách — tick hết mọi ô vẫn phải lưu được. Trần cũ là 6, đặt khi danh mục còn 9 mã: kỹ sư tick 7 ô thì phiếu bị từ chối bằng một câu chung chung, không nói ô nào (xảy ra thật 20/09/2026). Một phép thử canh hai con số này đi cùng `kb/facade_vocabulary.yaml`.
+     */
     decorations: z
       .array(
         z.enum([
@@ -199,10 +236,15 @@ export const aiFacadeBriefSchema = z
           'eaves_band',
           'finial',
           'reveal',
+          'arch',
+          'oculus',
+          'porch_roof',
         ]),
       )
-      .max(6)
-      .describe('Chi tiết trang trí kỹ sư muốn có trên mặt tiền. Rỗng = để AI đề xuất.'),
+      .max(12)
+      .describe(
+        'Chi tiết trang trí kỹ sư muốn có trên mặt tiền. Rỗng = để AI đề xuất.\n\nTrần bằng ĐÚNG số mã trong danh sách — tick hết mọi ô vẫn phải lưu được. Trần cũ là 6, đặt khi danh mục còn 9 mã: kỹ sư tick 7 ô thì phiếu bị từ chối bằng một câu chung chung, không nói ô nào (xảy ra thật 20/09/2026). Một phép thử canh hai con số này đi cùng `kb/facade_vocabulary.yaml`.',
+      ),
     /** Ghi chú tự do của kỹ sư — gửi cho mô hình, nên màn hình nhắc không ghi danh tính khách. */
     notes: z
       .string()

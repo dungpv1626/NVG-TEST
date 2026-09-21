@@ -29,13 +29,24 @@ import { mergeAllowed, passageRules, roomGroups, zoneDefaults } from '../kb/voca
 import { briefFidelity } from '../kb/brief-fidelity-data';
 import { roomVocabulary } from '../kb/vocabulary-data';
 import { roomLabels } from '../auth-scope';
-import { modelRouter, textClientFor } from '../llm/factory';
+import { imageClientFor, modelRouter, textClientFor } from '../llm/factory';
 import { nationalRulePack, nvgExperiencePack } from '../rules/rule-pack-data';
 import { aiPrompts } from '../ai/prompts-data';
 import { selectedRulePack } from '../ai/rule-packs';
 import { finishRun, markStep, RUN_CANCELLED, runCancelled, writeRunPartial } from '../ai/runs';
 import { LivePlanBoard } from '../ai/live-plan';
+import { createRenderStore } from '../render-store';
+import { perspectivePlan } from '../ai/perspective/views';
+import type { DrawnView } from '../ai/perspective/assemble';
+import {
+  drawViewStep,
+  perspectiveStepId,
+  writeImageSetStep,
+  PERSPECTIVE_WRITE_STEP,
+  type PerspectiveStepDeps,
+} from './ai-perspective-steps';
 import type { CallProgress } from '../llm/text-client';
+import type { AiFacadeConcept } from '@nvg/shared/design';
 import {
   applyEditStep,
   arrangeHouseStep,
@@ -69,6 +80,7 @@ import {
 } from '../ai/plan';
 import { roomVocabulary as vocabularyIndex } from '../kb/vocabulary-data';
 import { facadeVocabulary } from '../kb/facade-vocabulary-data';
+import { facadeQuality } from '../ai/facade/quality-data';
 import {
   FACADE_CALLS_MAX,
   facadeStepId,
@@ -144,6 +156,13 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
     const params = event.payload;
     const repo = new ArtifactRepository(this.env);
 
+    // Rẽ TRƯỚC phép kiểm khoá model chữ bên dưới: lượt phối cảnh không gọi model chữ nào, nên đòi
+    // nó có khoá là dựng một điều kiện giả — và điều kiện giả ấy sẽ chặn đúng lúc kho chỉ còn cấu
+    // hình khoá ảnh.
+    if (params.stage === 'images') {
+      return this.runPerspective(step, params, repo);
+    }
+
     const client = textClientFor(this.env, params.textRoute);
     if (!client) {
       // Khoá biến mất giữa lúc khởi động và lúc Workflow nhận việc: thử lại không đổi được gì.
@@ -199,6 +218,7 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
         construction: deps.construction,
         outdoor: deps.groups.outdoor,
         vocab: facadeVocabulary(),
+        quality: facadeQuality(),
         repo,
         ...(publicRoute?.pricing ? { pricing: publicRoute.pricing } : {}),
         provider: deps.provider,
@@ -206,8 +226,12 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
         ...(deps.promptStore ? { promptStore: deps.promptStore } : {}),
       });
     }
-    if (params.stage !== 'plan') {
-      const message = `Giai đoạn "${params.stage}" chưa mở.`;
+    // Ba giai đoạn nay phủ hết kiểu, nên TypeScript thu `params.stage` về `never` ở đây. Phép chặn
+    // vẫn giữ và vẫn thật: params của Workflow tới từ JSON đã lưu trong CSDL, nên một dòng cũ hay
+    // một giai đoạn vừa gỡ vẫn mang được giá trị mà kiểu không biết. Ép kiểu chỉ để nói ra điều ấy.
+    const stage = params.stage as string;
+    if (stage !== 'plan') {
+      const message = `Giai đoạn "${stage}" chưa mở.`;
       await finishRun(repo.db, params.runId, { status: 'failed', error: message });
       throw new NonRetryableError(message);
     }
@@ -311,6 +335,14 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
     const db = deps.repo.db;
     const { board, stop } = this.startLive(params, deps.repo);
     let issues: string[] = [];
+    /**
+     * Ý tưởng TỐT NHẤT đã qua cổng nhưng chưa đạt ngưỡng điểm (T63).
+     *
+     * Lượt sửa vì điểm có thể ra bản TỆ HƠN — mô hình sửa chỗ này làm hỏng chỗ khác. Giữ bản điểm
+     * cao nhất rồi lưu nó ở cuối, thay vì lưu bản cuối cùng: kỹ sư trả tiền cho hai lượt gọi thì
+     * phải được bản tốt hơn trong hai, không phải bản mới hơn.
+     */
+    let best: { outcome: FacadeProposeOutcome; round: number } | null = null;
     try {
       for (let round = 1; round <= FACADE_CALLS_MAX; round += 1) {
         if (board.signal.aborted) throw new NonRetryableError(RUN_CANCELLED);
@@ -325,26 +357,50 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
             onLogged: (logged) => board.finish(id, logged),
           };
         };
+        // Lượt trước qua cổng nhưng dưới ngưỡng điểm thì gọi lại vì ĐIỂM, không vì lỗi — lời dẫn
+        // khác hẳn, xem `facade.retry_habits`.
+        const retryKind = best ? 'habits' : 'gate';
         const retry = round > 1 ? issues : null;
         const proposal = (await step.do(id, MODEL_STEP, () =>
           once(
             () =>
-              proposeFacadeStep(deps, params, round, retry, hooks()).finally(() => board.drop(id)),
+              proposeFacadeStep(deps, params, round, retry, hooks(), retryKind).finally(() =>
+                board.drop(id),
+              ),
             board.signal,
           ),
         )) as FacadeProposeOutcome;
 
         if (proposal.proposalJson) {
           await markStep(db, params.runId, id, 'done');
+          const percent = proposal.score?.percent ?? null;
+          const accept = proposal.score?.acceptPercent ?? null;
+          const better = (percent ?? -1) > (best?.outcome.score?.percent ?? -1);
+          if (better) best = { outcome: proposal, round };
+          const reached = percent === null || accept === null || percent >= accept;
+          // Đủ điểm, hoặc hết lượt: lưu bản TỐT NHẤT. Chưa đủ mà còn lượt: gọi lại kèm đúng những
+          // tiêu chí mất điểm mà mô hình sửa được.
+          if (!reached && round < FACADE_CALLS_MAX) {
+            issues = proposal.habitIssues ?? [];
+            continue;
+          }
+          const chosen = best!;
           const writeId = facadeStepId('write');
           await markStep(db, params.runId, writeId, 'running');
           const written = (await step.do(writeId, () =>
-            writeFacadeStep(deps, params, proposal.proposalJson!, proposal.call, round),
+            writeFacadeStep(
+              deps,
+              params,
+              chosen.outcome.proposalJson!,
+              chosen.outcome.call,
+              chosen.round,
+            ),
           )) as FacadeWriteOutcome;
           await markStep(db, params.runId, writeId, 'done');
           await finishRun(db, params.runId, {
             status: 'done',
-            result: written,
+            // Điểm đi kèm kết quả lượt chạy để màn hình nói được «đã dùng lượt sửa vì điểm».
+            result: { ...written, score: chosen.outcome.score ?? null },
             partial: { live: board.snapshot() },
           });
           return written;
@@ -365,6 +421,24 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
       stop();
     }
 
+    // Lượt sửa vì điểm HỎNG ở cổng, nhưng lượt trước đã có một ý tưởng dùng được: lưu bản ấy.
+    // Vứt nó đi là bắt kỹ sư trả tiền lần nữa cho thứ đã có trong tay — và lượt sửa chỉ được gọi
+    // khi bản trước đã qua cổng, nên trường hợp này không hiếm.
+    if (best) {
+      const writeId = facadeStepId('write');
+      await markStep(db, params.runId, writeId, 'running');
+      const written = (await step.do(writeId, () =>
+        writeFacadeStep(deps, params, best!.outcome.proposalJson!, best!.outcome.call, best!.round),
+      )) as FacadeWriteOutcome;
+      await markStep(db, params.runId, writeId, 'done');
+      await finishRun(db, params.runId, {
+        status: 'done',
+        result: { ...written, score: best.outcome.score ?? null, issues },
+        partial: { live: board.snapshot() },
+      });
+      return written;
+    }
+
     // Hết lượt mà ý tưởng vẫn không dùng được: lượt chạy HỎNG kèm lý do nguyên văn phép kiểm.
     await finishRun(db, params.runId, {
       status: 'failed',
@@ -373,6 +447,138 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
       partial: { live: board.snapshot() },
     });
     return null;
+  }
+
+  /**
+   * Thăm dò nút «Dừng» trong lúc một lời gọi đang bay, và huỷ nó khi kỹ sư bấm.
+   *
+   * Tách khỏi `startLive`: bảng theo dõi trực tiếp dựng quanh luồng token của model CHỮ, còn ở đây
+   * chỉ cần đúng một việc — đọc cờ huỷ mỗi hai giây rồi bật `AbortSignal`. Nhịp khớp với nhịp hỏi
+   * của màn hình, nên người bấm thấy kết quả trong khoảng thời gian họ chờ đợi.
+   */
+  private watchCancel(
+    db: ArtifactRepository['db'],
+    runId: string,
+  ): { signal: AbortSignal; done: () => void } {
+    const controller = new AbortController();
+    const timer = setInterval(() => {
+      void runCancelled(db, runId)
+        .then((cancelled) => {
+          if (cancelled) controller.abort();
+          // Đồng thời ĐẬP NHỊP. Vế này quan trọng ngang vế trên: không có nhịp thì một instance
+          // chết phải đợi `RUN_STALE_MS` (hơn hai tiếng) mới bị tuyên bố hỏng, và suốt thời gian
+          // ấy nó chặn luôn lượt sau. Có nhịp thì `GET /runs/:id` gọi nó là hỏng sau ba phút.
+          return writeRunPartial(db, runId, 'heartbeat', { at: new Date().toISOString() });
+        })
+        // Hỏi hỏng KHÔNG được giết lượt chạy: mất mạng một nhịp không phải là kỹ sư bấm dừng.
+        .catch(() => undefined);
+    }, LIVE_TICK_MS);
+    return { signal: controller.signal, done: () => clearInterval(timer) };
+  }
+
+  /**
+   * Bộ ảnh phối cảnh (T67): vẽ `front_day` từ tờ mặt đứng, rồi bốn góc còn lại ảnh→ảnh từ chính tấm
+   * ấy, rồi đúc một artifact mang cả bộ.
+   *
+   * ── Hai chỗ khác hai giai đoạn trước, và cả hai là cố ý ───────────────────────────────────
+   * 1. **Không có bảng theo dõi trực tiếp.** `LivePlanBoard` dựng quanh luồng token của model CHỮ;
+   *    model ảnh không phát token dọc đường, nên một bảng trống nhấp nháy chỉ là tiếng ồn. Tiến độ
+   *    đi qua `markStep`, mỗi góc một dòng — đủ để màn hình nói đang vẽ góc nào.
+   * 2. **`front_day` hỏng thì DỪNG cả bộ; góc khác hỏng thì ghi vào `missing[]` và đi tiếp.** Bốn
+   *    góc sau cầm tấm ban ngày làm gốc màu, nên không có nó thì vẽ tiếp là trả tiền cho bốn ngôi
+   *    nhà khác nhau (T21). Còn một góc phụ hỏng thì bốn tấm dùng được vẫn hơn không có gì — cùng
+   *    lý lẽ với `allSettled` của ba phương án mặt bằng.
+   */
+  private async runPerspective(
+    step: WorkflowStep,
+    params: AiDesignParams,
+    repo: ArtifactRepository,
+  ) {
+    const db = repo.db;
+    const route = params.imageRoute ?? '';
+    const client = imageClientFor(this.env, route);
+    if (!client) {
+      const message = 'Chưa cấu hình khoá API cho model vẽ ảnh đã chọn.';
+      await finishRun(db, params.runId, { status: 'failed', error: message });
+      throw new NonRetryableError(message);
+    }
+    const router = modelRouter(this.env);
+    const publicRoute = router.publicRoutes().find((r) => r.route === route);
+    const prompts = aiPrompts();
+    const deps: PerspectiveStepDeps = {
+      client,
+      prompts,
+      vocab: facadeVocabulary(),
+      repo,
+      store: createRenderStore(this.env),
+      ...(publicRoute?.pricing ? { pricing: publicRoute.pricing } : {}),
+      provider: router.providerOf(route) ?? 'unknown',
+      model: publicRoute?.model ?? 'unknown',
+    };
+
+    const facade = params.facadeRef ? await repo.get(params.facadeRef, params.projectId) : null;
+    if (!facade || facade.kind !== 'ai_facade_concept') {
+      const message = 'Không tìm thấy ý tưởng mặt đứng mà bộ ảnh dựng theo.';
+      await finishRun(db, params.runId, { status: 'failed', error: message });
+      throw new NonRetryableError(message);
+    }
+    const anchors = params.anchors ?? [];
+    const plan = perspectivePlan(
+      facade.payload as AiFacadeConcept,
+      anchors.map((a) => a.kind),
+    );
+
+    const drawn: DrawnView[] = [];
+    const missing = [...plan.skipped];
+    for (const viewStep of plan.steps) {
+      if (await runCancelled(db, params.runId)) {
+        await finishRun(db, params.runId, { status: 'failed', error: RUN_CANCELLED });
+        return null;
+      }
+      const id = perspectiveStepId(viewStep.view);
+      const label = `Vẽ ${(prompts.perspective.views[viewStep.view]?.labelVi ?? viewStep.view).toLocaleLowerCase('vi')}`;
+      await markStep(db, params.runId, id, 'running', { label });
+      // `drawn` chụp lại ở đây: `step.do` có thể chạy lại, và nó phải thấy đúng danh sách của lần đầu.
+      const sources = [...drawn];
+      // Một lượt vẽ ảnh kéo tới bốn phút và KHÔNG phát tiến độ dọc đường, nên nút «Dừng» phải cắt
+      // được chính lời gọi ấy. Chỉ hỏi giữa hai góc là bắt kỹ sư nhìn thanh chờ quay thêm bốn phút
+      // sau khi đã bấm dừng (Haan, 20/09/2026).
+      const stop = this.watchCancel(db, params.runId);
+      let image: DrawnView;
+      try {
+        image = (await step.do(id, MODEL_STEP, () =>
+          once(
+            () => drawViewStep(deps, params, viewStep, anchors, sources, stop.signal),
+            stop.signal,
+          ),
+        )) as DrawnView;
+      } catch (error) {
+        await markStep(db, params.runId, id, 'failed');
+        if (stop.signal.aborted) {
+          await finishRun(db, params.runId, { status: 'failed', error: RUN_CANCELLED });
+          return null;
+        }
+        if (viewStep.view === 'front_day') {
+          const message = `Không vẽ được ảnh mặt tiền ban ngày, nên cả bộ dừng: ${userFacing(error)}`;
+          await finishRun(db, params.runId, { status: 'failed', error: message });
+          throw new NonRetryableError(message);
+        }
+        missing.push({ view: viewStep.view, reason: userFacing(error) });
+        continue;
+      } finally {
+        stop.done();
+      }
+      drawn.push(image);
+      await markStep(db, params.runId, id, 'done');
+    }
+
+    await markStep(db, params.runId, PERSPECTIVE_WRITE_STEP, 'running');
+    const written = await step.do(PERSPECTIVE_WRITE_STEP, () =>
+      writeImageSetStep(deps, params, anchors, drawn, missing),
+    );
+    await markStep(db, params.runId, PERSPECTIVE_WRITE_STEP, 'done');
+    await finishRun(db, params.runId, { status: 'done', result: { ...written, missing } });
+    return written;
   }
 
   /**

@@ -367,6 +367,17 @@
           ],
           "description": "Chiều cao tường chắn mái so với sàn mái, cm. Rỗng khi không có."
         },
+        "railing_h_cm": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/cm"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Chiều cao lan can ban công, cm — CHÉP TỪ PHIẾU yêu cầu của kỹ sư, mô hình không khai. Rỗng (và ở mọi ý tưởng dựng trước 20/09/2026) thì bộ vẽ và thước chấm dùng `kb/construction_norms.yaml` mục `outdoor.railing_h_m`.\n\nĐể ở đây chứ không đọc lại phiếu lúc vẽ: tờ SVG, tệp DXF, ảnh neo và thước chấm phải cùng một con số, và một lượt đọc phiếu thêm cho mỗi lần dựng tờ là một lượt đi kho không cần thiết."
+        },
         "roof_outline": {
           "type": "array",
           "maxItems": 24,
@@ -383,7 +394,7 @@
         "elements": {
           "type": "array",
           "maxItems": 40,
-          "description": "Mảng trang trí trên mặt đứng: ô văng, cột, mảng ốp, lam, bồn cây. Không phải lỗ mở.",
+          "description": "Mảng trang trí trên mặt đứng: ô văng, cột, mảng ốp, lam, bồn cây, vòm đầu cửa, ô tròn, mái sảnh. Không phải lỗ mở. `rect` luôn là KHUNG BAO; hình thật do bộ vẽ dựng (vòm là cung, ô tròn là đường tròn, mái sảnh là tam giác).",
           "items": {
             "type": "object",
             "additionalProperties": false,
@@ -400,7 +411,10 @@
                   "cornice",
                   "eaves_band",
                   "finial",
-                  "reveal"
+                  "reveal",
+                  "arch",
+                  "oculus",
+                  "porch_roof"
                 ]
               },
               "rect": {

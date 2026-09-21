@@ -11,8 +11,9 @@
  *
  * ── Thứ tự chồng lớp ───────────────────────────────────────────────────────────────────
  * đường cốt đất → khối nhà → vạch sàn → lỗ mở → mảng trang trí → lan can → mái → cổng, rào →
- * ký hiệu cao độ → chuỗi kích thước. Mảng trang trí tô nền nhạt nên phải vẽ SAU lỗ mở: chỉ ô văng
- * và lam được phép đè lên cửa (`ai/facade/check.ts`), và lam đè lên cửa sổ là đúng hình thật.
+ * ký hiệu cao độ → chuỗi kích thước. Mảng trang trí tô nền nhạt nên phải vẽ SAU lỗ mở: chỉ ô văng,
+ * lam, vòm đầu cửa và mái sảnh được phép đè lên cửa (`ai/facade/check.ts`), và lam đè lên cửa sổ là
+ * đúng hình thật.
  * Cổng và rào vẽ NÉT ĐỨT, không tô — chúng đứng trước nhà: tô đặc thì che mất tầng 1, còn nét liền
  * thì đọc thành một vạch ngang cắt qua cửa chính (thấy trên lượt chạy thật đầu tiên, 19/09/2026).
  *
@@ -33,7 +34,7 @@ import {
 } from './sheet';
 import { mainDoorOf } from '../facade/frame';
 import { anchorPaper, anchorSvg } from './anchor';
-import { CLS, polylinePath, tag, textEl } from './svg';
+import { arcPath, CLS, polylinePath, tag, textEl } from './svg';
 import type { Orientation, SheetStyle } from './style';
 import { chooseLayout, mmPerCm, paperFor, type Paper } from './units';
 
@@ -210,10 +211,9 @@ export function renderElevationBody(
     );
   }
 
-  // Mảng trang trí.
+  // Mảng trang trí. Hầu hết là chữ nhật; ba loại có hình riêng (`elementShape`).
   for (const element of elevation.elements ?? []) {
-    const [x0 = 0, z0 = 0, x1 = 0, z1 = 0] = element.rect;
-    parts.push(rect(x0, z0, x1, z1, CLS.element));
+    parts.push(...elementShape(element, rect, path, paper));
   }
 
   // Lan can ban công: khung + tay vịn giữa. Kiểu lan can ghi bằng chữ, không vẽ hoa văn.
@@ -378,6 +378,71 @@ function stations(values: readonly number[]): number[] {
 type RectFn = (x0: number, z0: number, x1: number, z1: number, cls: string) => string;
 type PathFn = (points: Pt[], cls: string, close?: boolean) => string;
 
+type FacadeElement = NonNullable<AiFacadeConcept['elevation']['elements']>[number];
+
+/**
+ * Một mảng trang trí. Phần lớn là chữ nhật, nhưng hồ sơ thật của NVG có ba hình KHÔNG chữ nhật mà
+ * bộ vẽ trước đây không dựng nổi (T63, 20/09/2026): vòm đầu cửa (M6), ô tròn trang trí R700 (M3),
+ * sảnh trước mái dốc (M2, M4). Chúng nằm trong `chua_cham_duoc` của thước chấm đúng vì lý do ấy —
+ * chấm một thứ bộ vẽ không vẽ được thì điểm không bao giờ lên được.
+ *
+ * Mô hình vẫn chỉ khai KHUNG BAO; cung, đường tròn và đường nóc do hàm này tính (T15). Nhờ vậy tờ
+ * SVG, ảnh neo và tệp DXF ra cùng một hình — cả ba đi qua `renderElevationBody`, và bộ đổi DXF đã
+ * biết đọc cung `A` lẫn thẻ `circle` (`dxf/from-svg.ts`).
+ */
+function elementShape(element: FacadeElement, rect: RectFn, path: PathFn, paper: Paper): string[] {
+  const [x0 = 0, z0 = 0, x1 = 0, z1 = 0] = element.rect;
+  const w = x1 - x0;
+  const rise = z1 - z0;
+  // Khung bao lép thì không có hình nào để vẽ. Cổng dữ liệu đã bắt `x1 > x0 && z1 > z0`, nhưng bộ
+  // vẽ không được phép tin vào đó: một artifact cũ vẫn đọc lại qua đây.
+  if (w <= 0 || rise <= 0) return [];
+
+  switch (element.kind) {
+    case 'arch': {
+      /*
+       * Vòm đầu cửa: cung đi từ hai chân ở z0 lên đỉnh giữa ở z1. Bán kính suy từ dây cung `w` và
+       * độ vồng `rise` — độ vồng đúng nửa bề rộng cho vòm nửa tròn, nhỏ hơn cho vòm cung, nên một
+       * công thức lo cả hai kiểu của hồ sơ. Tâm nằm THẤP hơn đỉnh đúng `r`.
+       */
+      const r = (w * w) / 4 / (2 * rise) + rise / 2;
+      return [
+        tag('path', {
+          class: CLS.element,
+          d: arcPath(
+            paper.p([x0, z0]),
+            paper.p([x1, z0]),
+            paper.p([x0 + w / 2, z1 - r]),
+            paper.len(r),
+          ),
+        }),
+      ];
+    }
+    case 'oculus': {
+      // Đường tròn LỚN NHẤT nằm trong khung bao — khung bao không vuông thì cạnh ngắn quyết định,
+      // chứ không kéo méo thành hình bầu dục.
+      const [cx, cy] = paper.p([(x0 + x1) / 2, (z0 + z1) / 2]);
+      return [tag('circle', { cx, cy, r: paper.len(Math.min(w, rise) / 2), class: CLS.element })];
+    }
+    case 'porch_roof':
+      // Sảnh mái dốc nhìn từ đường: tam giác, nóc ở giữa mép trên, đáy là đường mái đua. Cột sảnh
+      // là mảng `column` riêng — mô hình đặt, vì vị trí cột là lựa chọn thiết kế.
+      return [
+        path(
+          [
+            [x0, z0],
+            [x0 + w / 2, z1],
+            [x1, z0],
+          ],
+          CLS.element,
+          true,
+        ),
+      ];
+    default:
+      return [rect(x0, z0, x1, z1, CLS.element)];
+  }
+}
+
 /** Kiểu chia cánh của cửa đi: số cánh, xếp nhiều cánh hẹp, hoặc lùa (hai cánh chồng mép). */
 export type DoorLeaves = number | 'folding' | 'sliding';
 /** Kiểu cửa để xe theo danh mục — quyết định nét bên trong ô cửa. */
@@ -470,6 +535,17 @@ function gateAndFence(
   const out: string[] = [];
   const ground = concept.elevation.ground_z;
   const gate = concept.gate;
+  /**
+   * Lối vào trên mặt tiền tầng dưới cùng: cửa chính và cửa để xe.
+   *
+   * Hàng rào KHÔNG được cắt ngang bất kỳ cái nào (T64, 20/09/2026). Trước đó bộ vẽ chỉ chừa chỗ
+   * cho CỔNG, nên nhà có cả cửa chính lẫn cửa để xe thì cổng đứng trước một cái và rào bịt kín cái
+   * còn lại — hai tờ vẽ của cùng một ngôi nhà nói ngược nhau, và Haan bắt được trên ảnh phối cảnh.
+   */
+  const entrances = concept.openings_front
+    .filter((o) => o.level === first.level && (o.kind === 'door' || o.kind === 'garage'))
+    .map((o) => [o.x, o.x + o.w] as [number, number]);
+
   let gateSpan: [number, number] | null = null;
   if (gate && gate.type !== 'none' && gate.w && gate.h) {
     const ground1 = concept.openings_front.filter((o) => o.level === first.level);
@@ -477,19 +553,27 @@ function gateAndFence(
       ground1.find((o) => o.kind === 'garage' || o.kind === 'gate') ??
       [...ground1].filter((o) => o.kind === 'door').sort((a, b) => b.w - a.w)[0];
     const centre = anchor ? anchor.x + anchor.w / 2 : (first.x0 + first.x1) / 2;
-    // Chạm mép khối nhà thì dời vào trong, giữ đủ bề rộng cổng mô hình khai.
-    const x0 = Math.max(first.x0, Math.min(centre - gate.w / 2, first.x1 - gate.w));
-    gateSpan = [x0, Math.min(first.x1, x0 + gate.w)];
+    // Cổng phải phủ HẾT lối vào nó đứng trước — cổng hẹp hơn cửa để xe thì xe không lọt. Phép kiểm
+    // đã bắt chỗ này, nhưng bộ vẽ vẫn nới cho khớp: toạ độ là việc của chương trình (T15).
+    const width = Math.max(gate.w, anchor ? anchor.w : 0);
+    const x0 = Math.max(first.x0, Math.min(centre - width / 2, first.x1 - width));
+    gateSpan = [x0, Math.min(first.x1, x0 + width)];
     out.push(rect(gateSpan[0], ground, gateSpan[1], ground + gate.h, CLS.frontFence));
   }
   const fence = concept.fence;
   if (fence && fence.h > 0) {
-    const runs: Array<[number, number]> = gateSpan
-      ? [
-          [first.x0, gateSpan[0]],
-          [gateSpan[1], first.x1],
-        ]
-      : [[first.x0, first.x1]];
+    // Trừ dần: bắt đầu bằng cả bề ngang, khoét chỗ của cổng rồi khoét chỗ của từng lối vào còn lại.
+    let runs: Array<[number, number]> = [[first.x0, first.x1]];
+    for (const [ha, hb] of [...(gateSpan ? [gateSpan] : []), ...entrances]) {
+      runs = runs.flatMap(([a, b]) =>
+        hb <= a || ha >= b
+          ? [[a, b] as [number, number]]
+          : ([
+              ...(ha > a ? [[a, ha] as [number, number]] : []),
+              ...(hb < b ? [[hb, b] as [number, number]] : []),
+            ] as Array<[number, number]>),
+      );
+    }
     for (const [a, b] of runs) {
       if (b - a > 1) out.push(rect(a, ground, b, ground + fence.h, CLS.frontFence));
     }
