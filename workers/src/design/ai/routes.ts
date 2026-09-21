@@ -39,6 +39,7 @@ import { recordAiCall, usageSummary, withAiCall, type AiCallUsage } from './call
 import { createArtifactStore } from '../artifact-store';
 import { planAnchor, planSheet } from './draw';
 import { facadeApp } from './facade-routes';
+import { perspectiveApp } from './perspective-routes';
 import { planDxf } from './dxf';
 import {
   formatPromptText,
@@ -89,8 +90,9 @@ import type {
 
 export const aiApp = new Hono<{ Bindings: DesignEnv }>();
 
-// Bước «2. Mặt đứng» (T59) — tuyến ở tệp riêng.
+// Bước «2. Mặt đứng» (T59) và «3. Phối cảnh» (T67) — tuyến ở tệp riêng.
 aiApp.route('/facade', facadeApp);
+aiApp.route('/perspective', perspectiveApp);
 
 /** Bộ môn duy nhất nhánh AI sinh ra ở giai đoạn 1 — kiến trúc. */
 const DISCIPLINE = 'kien_truc' as const;
@@ -176,7 +178,7 @@ aiApp.get('/state/:projectId', async (c) => {
   if (denied) return c.json({ error: denied.error }, denied.status);
 
   const repo = new ArtifactRepository(c.env);
-  const [brief, program, facade, images, plans] = await Promise.all([
+  const [brief, program, facade, images, plans, facades, imageSets] = await Promise.all([
     repo.head(projectId, DISCIPLINE, 'design_brief'),
     repo.head(projectId, DISCIPLINE, 'ai_space_program'),
     repo.head(projectId, DISCIPLINE, 'ai_facade_concept'),
@@ -184,6 +186,13 @@ aiApp.get('/state/:projectId', async (c) => {
     // Lấy dư rồi mới bỏ phần đã ẩn: xoá một phương án khỏi danh sách không được làm mất chỗ của
     // những phương án cũ hơn còn dùng.
     repo.listKind(projectId, DISCIPLINE, 'ai_floor_plan', 30),
+    // Mọi ý tưởng mặt đứng đã đúc (20/09/2026, Haan: «tạo bản vẽ mới thì không lưu lại bản cũ để so
+    // sánh → chưa tốt»). Artifact vốn đã bất biến nên bản cũ CHƯA BAO GIỜ mất — thiếu là ở đây: tuyến
+    // này chỉ trả mốc hiệu lực, nên màn hình không có cách nào mở lại bản trước.
+    repo.listKind(projectId, DISCIPLINE, 'ai_facade_concept', 30),
+    // Mọi bộ ảnh phối cảnh đã đúc (T67 Đợt C) — cùng lý do với dải mặt đứng ở trên: artifact vốn
+    // bất biến nên bộ cũ chưa bao giờ mất, thiếu là ở chỗ tuyến này chỉ trả mốc hiệu lực.
+    repo.listKind(projectId, DISCIPLINE, 'ai_image_set', 30),
   ]);
 
   // Phương án kỹ sư đã xoá khỏi danh sách (`design_artifact_hidden`). Đọc dưới phiên người gọi:
@@ -195,6 +204,8 @@ aiApp.get('/state/:projectId', async (c) => {
     .eq('discipline', DISCIPLINE);
   const hidden = new Set((hiddenRows.data ?? []).map((row) => row.artifact_id as string));
   const visiblePlans = plans.filter((p) => !hidden.has(p.id)).slice(0, 12);
+  const visibleFacades = facades.filter((f) => !hidden.has(f.id)).slice(0, 12);
+  const visibleImageSets = imageSets.filter((s) => !hidden.has(s.id)).slice(0, 12);
 
   // Phương án mặt bằng ĐANG HIỆU LỰC. Đọc thẳng `design_head` thay vì `repo.head`: ở đây chỉ
   // cần mã, còn `repo.head` kéo cả payload từ kho về để rồi bỏ đi.
@@ -244,10 +255,17 @@ aiApp.get('/state/:projectId', async (c) => {
     // cho những dòng mốc có từ trước.
     planHeadArtifactId: headId && !hidden.has(headId) ? headId : null,
     facadeArtifactId: facade?.id ?? null,
+    // Các bản mặt đứng còn hiện, mới nhất trước — để kỹ sư mở lại bản cũ mà so.
+    facades: visibleFacades.map((f) => ({ artifactId: f.id, createdAt: f.createdAt })),
     // Mặt bằng mà mặt đứng hiện hành dựng theo (T59). Khác `planHeadArtifactId` nghĩa là kỹ sư đã đổi
     // phương án sau khi dựng mặt đứng — màn hình gắn nhãn «dựng theo phương án cũ».
     facadePlanRef: (facade?.payload as { plan_ref?: string } | undefined)?.plan_ref ?? null,
     imageSetArtifactId: images?.id ?? null,
+    // Các bộ ảnh còn hiện, mới nhất trước — để kỹ sư mở lại bộ cũ mà so.
+    imageSets: visibleImageSets.map((s) => ({ artifactId: s.id, createdAt: s.createdAt })),
+    // Mặt đứng mà bộ ảnh hiện hành dựng theo. Khác `facadeArtifactId` nghĩa là kỹ sư đã dựng lại
+    // mặt đứng sau khi có bộ ảnh — màn hình gắn nhãn «dựng theo mặt đứng cũ».
+    imageSetFacadeRef: (images?.payload as { facade_ref?: string } | undefined)?.facade_ref ?? null,
     runs: latest,
     roomLabels: roomLabels(),
   });
@@ -1776,10 +1794,13 @@ aiApp.get('/runs/:id', async (c) => {
       workflowId && c.env.AI_DESIGN_PIPELINE
         ? await workflowDead(c.env.AI_DESIGN_PIPELINE, workflowId)
         : null;
-    // Dòng có nhịp tim (bảng theo dõi trực tiếp ghi mỗi 2 giây) thì ba phút im lặng là đủ biết.
-    const heartbeat = Boolean(
-      (row.data.progress as { partial?: { live?: unknown } } | null)?.partial?.live,
-    );
+    // Dòng có nhịp tim thì ba phút im lặng là đủ biết. Hai dạng nhịp, vì hai loại lượt chạy khác
+    // nhau: `live` là bảng theo dõi trực tiếp của bước gọi model CHỮ (token, thời gian, nút Dừng);
+    // `heartbeat` là nhịp trần của lượt vẽ ẢNH, nơi không có token nào chảy ra để mà hiện (T67).
+    // Thiếu vế thứ hai thì một lượt phối cảnh chết phải đợi `RUN_STALE_MS` — hơn hai tiếng — mới
+    // được tuyên bố là hỏng, và suốt hai tiếng ấy nó chặn luôn lượt sau. Đã xảy ra thật 20/09/2026.
+    const partial = (row.data.progress as { partial?: Record<string, unknown> } | null)?.partial;
+    const heartbeat = Boolean(partial?.live ?? partial?.heartbeat);
     const stalled = runStalled(
       row.data.updated_at as string | null,
       Date.now(),

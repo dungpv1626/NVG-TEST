@@ -65,7 +65,7 @@ export interface AiPrompts {
    * Ý tưởng mặt đứng mặt tiền (T59). `user` có `{brief}`, `{frame}`, `{requirements}`, `{codes}`; `retry` có `{issues}` —
    * nối vào khi ý tưởng lượt trước không qua phép kiểm.
    */
-  facade: { system: string; user: string; retry: string };
+  facade: { system: string; user: string; retry: string; retryHabits: string };
   /**
    * Ảnh mặt đứng có vật liệu từ ảnh neo (T59 Đợt E). `user` có bảy chỗ điền `FACADE_IMAGE_SLOTS`;
    * `watermark` là câu tiếng Việt in đè lên ảnh.
@@ -79,6 +79,55 @@ export interface AiPrompts {
     roofs: Record<string, string>;
     watermark: string;
   };
+  /**
+   * Bộ ảnh phối cảnh (T67). `user` có mười ba chỗ điền `PERSPECTIVE_SLOTS`; `views` phải đủ BẢY góc
+   * của hợp đồng `ai-image-set` — thiếu một góc chỉ lộ ra khi lượt chạy tới đúng góc ấy, tức sau khi
+   * đã trả tiền cho những góc trước nó.
+   */
+  perspective: {
+    system: string;
+    user: string;
+    views: Record<string, PerspectiveView>;
+    /** Câu cho ô bật/tắt người và xe. `onTightYard` dùng khi sân trước ngắn hơn một thân xe. */
+    life: { on: string; off: string; onTightYard: string };
+    /** Cụm tả số xe khi ô người-xe đang bật; `none` dùng khi đầu bài không khai xe nào. */
+    vehicles: { cars: string; motorbikes: string; none: string };
+    /** Mã loại công trình (`nha_pho`…) → cụm tiếng Anh. */
+    buildingTypes: Record<string, string>;
+    /** Mã hiện trạng một phía (`kb/site_context.yaml`) → cụm tiếng Anh. */
+    neighbours: Record<string, string>;
+    /** `front`/`left`/`right`/`back`/`unknown` → câu tả nắng. */
+    sun: Record<string, string>;
+    /**
+     * Chiều dài thật của phương tiện và ba câu hệ quả của khoảng sân (T68).
+     *
+     * Đặt ở dữ liệu chứ không viết cứng trong mã: đây là số đo vật lý dùng để so sánh, và
+     * CLAUDE.md 8.6 cấm chôn ngưỡng vào mã.
+     */
+    scale: {
+      carLengthM: number;
+      motorbikeLengthM: number;
+      yardShorterThanCar: string;
+      yardShorterThanMotorbike: string;
+      noYard: string;
+    };
+    watermark: string;
+  };
+}
+
+/** Một góc chụp: nhãn tiếng Việt cho màn hình, câu tả góc máy, câu tả ánh sáng. */
+export interface PerspectiveView {
+  /** Nhãn tiếng Việt cho màn hình — chỗ DUY NHẤT đặt tên góc, màn hình không viết cứng danh sách. */
+  labelVi: string;
+  /** Cụm tiếng Anh một dòng tả tấm ảnh, điền vào `{view}` của lời dẫn. */
+  shot: string;
+  camera: string;
+  lighting: string;
+  /**
+   * Giờ chụp — chỉ có ở góc nào câu ánh sáng của nó dùng `{sun}`. Nắng đến từ đâu suy từ hướng
+   * nhà CỘNG giờ này; cùng ngôi nhà chụp sáng và chụp chiều thì nắng đổi bên.
+   */
+  sunTime: 'morning' | 'midday' | 'afternoon' | null;
 }
 
 /**
@@ -109,6 +158,42 @@ const FACADE_IMAGE_SLOTS = [
   '{railing}',
   '{gate_fence}',
   '{elements}',
+] as const;
+
+/**
+ * Mười ba chỗ điền bắt buộc của `perspective.user` — kiểm lúc NẠP, cùng lý do với hai khối ảnh
+ * trên: thiếu một chỗ thì lời dẫn vẫn hợp lệ, mô hình vẫn vẽ, chỉ là vẽ sai góc hoặc mất vật liệu,
+ * và chuyện ấy chỉ lộ ra sau khi đã trả tiền.
+ */
+const PERSPECTIVE_SLOTS = [
+  '{view}',
+  '{camera}',
+  '{lighting}',
+  '{house}',
+  '{site}',
+  '{style}',
+  '{roof}',
+  '{materials}',
+  '{palette}',
+  '{railing}',
+  '{gate_fence}',
+  '{elements}',
+  '{life}',
+] as const;
+
+/**
+ * Bảy góc của hợp đồng `ai-image-set`. Khai lại ở đây thay vì `import` enum sinh ra: tệp này là
+ * phần THUẦN nạp được bằng Vitest, và danh sách góc là thứ phải khớp hợp đồng — có phép thử canh
+ * hai bên không lệch nhau, đó mới là chỗ bắt lỗi đúng.
+ */
+const PERSPECTIVE_VIEWS = [
+  'front_day',
+  'front_night',
+  'gate_close',
+  'balcony_close',
+  'oblique',
+  'aerial',
+  'axonometric',
 ] as const;
 
 /** Một ý đồ bố cục: mã phương án, nhãn tiếng Việt cho màn hình, câu tiếng Anh cho lời dẫn. */
@@ -195,10 +280,12 @@ export function parseAiPrompts(raw: unknown): AiPrompts {
     !['{brief}', '{frame}', '{requirements}', '{codes}'].every((slot) =>
       (facade.user as string).includes(slot),
     ) ||
-    !facade.retry.includes('{issues}')
+    !facade.retry.includes('{issues}') ||
+    typeof facade.retry_habits !== 'string' ||
+    !facade.retry_habits.includes('{issues}')
   ) {
     throw new AiPromptsError(
-      'kb/ai_design_prompts.yaml thiếu `facade.system`, `facade.user` (có `{brief}`, `{frame}`, `{requirements}`, `{codes}`) hoặc `facade.retry` (có `{issues}`).',
+      'kb/ai_design_prompts.yaml thiếu `facade.system`, `facade.user` (có `{brief}`, `{frame}`, `{requirements}`, `{codes}`), `facade.retry` hoặc `facade.retry_habits` (cả hai phải có `{issues}`).',
     );
   }
   const strategies = parseStrategies(floorLevel.strategies);
@@ -216,8 +303,190 @@ export function parseAiPrompts(raw: unknown): AiPrompts {
     },
     planEdit: { system: planEdit.system, user: planEdit.user, retry: planEdit.retry },
     sheetImage,
-    facade: { system: facade.system, user: facade.user, retry: facade.retry },
+    facade: {
+      system: facade.system,
+      user: facade.user,
+      retry: facade.retry,
+      retryHabits: facade.retry_habits as string,
+    },
     facadeImage: parseFacadeImage((doc as { facade_image?: unknown }).facade_image),
+    perspective: parsePerspective((doc as { perspective?: unknown }).perspective),
+  };
+}
+
+/**
+ * Khối lời dẫn của bộ ảnh phối cảnh — kiểm đủ chỗ điền, đủ bảy góc, và đủ ba bảng tra.
+ *
+ * `neighbours` được phép thiếu một mã của `kb/site_context.yaml`: khi ấy phía đó không được nhắc
+ * trong lời dẫn, và «không nhắc» là câu trả lời đúng — đoán hộ hiện trạng một phía thửa đất là
+ * cách nhanh nhất để ra một tấm ảnh có nhà hàng xóm không tồn tại.
+ */
+function parsePerspective(raw: unknown): AiPrompts['perspective'] {
+  const block = raw as Record<string, unknown> | undefined;
+  if (
+    !block ||
+    typeof block !== 'object' ||
+    typeof block.system !== 'string' ||
+    typeof block.user !== 'string' ||
+    typeof block.watermark !== 'string'
+  ) {
+    throw new AiPromptsError(
+      'kb/ai_design_prompts.yaml thiếu `perspective.system`, `perspective.user` hoặc `perspective.watermark`.',
+    );
+  }
+  const rawScale = block.scale as
+    | Partial<{
+        car_length_m: number;
+        motorbike_length_m: number;
+        yard_shorter_than_car: string;
+        yard_shorter_than_motorbike: string;
+        no_yard: string;
+      }>
+    | undefined;
+  if (
+    !rawScale ||
+    typeof rawScale.car_length_m !== 'number' ||
+    typeof rawScale.motorbike_length_m !== 'number' ||
+    typeof rawScale.yard_shorter_than_car !== 'string' ||
+    typeof rawScale.yard_shorter_than_motorbike !== 'string' ||
+    typeof rawScale.no_yard !== 'string'
+  ) {
+    throw new AiPromptsError(
+      'kb/ai_design_prompts.yaml thiếu `perspective.scale` (car_length_m, motorbike_length_m và ba câu hệ quả).',
+    );
+  }
+  // Câu hệ quả không có `{yard}` thì chiều sâu sân không đi tới lời dẫn — đúng lỗi T68 đang sửa,
+  // nên chặn ngay lúc nạp thay vì để nó im lặng quay lại.
+  for (const [name, text] of [
+    ['yard_shorter_than_car', rawScale.yard_shorter_than_car],
+    ['yard_shorter_than_motorbike', rawScale.yard_shorter_than_motorbike],
+  ] as const) {
+    if (!text.includes('{yard}')) {
+      throw new AiPromptsError(`\`perspective.scale.${name}\` phải có chỗ điền {yard}.`);
+    }
+  }
+
+  const missing = PERSPECTIVE_SLOTS.filter((slot) => !(block.user as string).includes(slot));
+  if (missing.length) {
+    throw new AiPromptsError(`\`perspective.user\` thiếu chỗ điền ${missing.join(', ')}.`);
+  }
+
+  const views = block.views;
+  if (!views || typeof views !== 'object') {
+    throw new AiPromptsError('kb/ai_design_prompts.yaml thiếu `perspective.views`.');
+  }
+  const parsedViews: Record<string, PerspectiveView> = {};
+  for (const view of PERSPECTIVE_VIEWS) {
+    const entry = (views as Record<string, unknown>)[view] as Partial<{
+      label_vi: string;
+      shot: string;
+      camera: string;
+      lighting: string;
+      sun_time: string;
+    }>;
+    if (
+      !entry ||
+      typeof entry.label_vi !== 'string' ||
+      typeof entry.shot !== 'string' ||
+      typeof entry.camera !== 'string' ||
+      typeof entry.lighting !== 'string'
+    ) {
+      throw new AiPromptsError(
+        `\`perspective.views.${view}\` phải có đủ \`label_vi\`, \`shot\`, \`camera\`, \`lighting\`.`,
+      );
+    }
+    // Hai chiều phải khớp nhau, và kiểm cả hai: câu ánh sáng dùng `{sun}` mà không khai giờ thì
+    // chỗ điền ấy rơi về chuỗi rỗng (câu cụt); khai giờ mà câu không dùng `{sun}` thì giờ ấy
+    // không đi tới đâu, tức một dòng cấu hình trông như có tác dụng mà không có.
+    const needsSun = entry.lighting.includes('{sun}');
+    const sunTime = entry.sun_time ?? null;
+    if (needsSun !== (sunTime !== null)) {
+      throw new AiPromptsError(
+        needsSun
+          ? `\`perspective.views.${view}.lighting\` dùng \`{sun}\` nên phải khai \`sun_time\`.`
+          : `\`perspective.views.${view}\` khai \`sun_time\` nhưng câu \`lighting\` không dùng \`{sun}\`.`,
+      );
+    }
+    if (sunTime !== null && !['morning', 'midday', 'afternoon'].includes(sunTime)) {
+      throw new AiPromptsError(
+        `\`perspective.views.${view}.sun_time\` phải là morning, midday hoặc afternoon (đang là "${sunTime}").`,
+      );
+    }
+    parsedViews[view] = {
+      labelVi: entry.label_vi,
+      shot: entry.shot,
+      camera: entry.camera,
+      lighting: entry.lighting,
+      sunTime: sunTime as PerspectiveView['sunTime'],
+    };
+  }
+
+  const life = block.life as
+    Partial<{ on: string; off: string; on_tight_yard: string }> | undefined;
+  if (
+    !life ||
+    typeof life.on !== 'string' ||
+    typeof life.off !== 'string' ||
+    typeof life.on_tight_yard !== 'string' ||
+    !life.on.includes('{vehicles}') ||
+    !life.on_tight_yard.includes('{vehicles}')
+  ) {
+    throw new AiPromptsError(
+      '`perspective.life` phải có đủ `on` và `on_tight_yard` (cả hai chứa `{vehicles}`) và `off`.',
+    );
+  }
+  const vehicles = block.vehicles as
+    Partial<{ cars: string; motorbikes: string; none: string }> | undefined;
+  if (
+    !vehicles ||
+    typeof vehicles.cars !== 'string' ||
+    typeof vehicles.motorbikes !== 'string' ||
+    typeof vehicles.none !== 'string' ||
+    !vehicles.cars.includes('{cars}') ||
+    !vehicles.motorbikes.includes('{motorbikes}')
+  ) {
+    throw new AiPromptsError(
+      '`perspective.vehicles` phải có `cars` (chứa `{cars}`), `motorbikes` (chứa `{motorbikes}`) và `none`.',
+    );
+  }
+
+  const table = (key: 'building_types' | 'neighbours' | 'sun'): Record<string, string> => {
+    const value = block[key] ?? {};
+    if (
+      typeof value !== 'object' ||
+      value === null ||
+      Object.values(value).some((line) => typeof line !== 'string')
+    ) {
+      throw new AiPromptsError(`\`perspective.${key}\` phải là bảng mã → một dòng chữ.`);
+    }
+    return value as Record<string, string>;
+  };
+  const sun = table('sun');
+  // `unknown` là đường lùi khi đầu bài không khai hướng. Thiếu nó thì lời dẫn rơi về chuỗi rỗng,
+  // tức câu «Light:» cụt — mô hình tự chọn nắng, và mỗi góc chọn một kiểu.
+  if (!sun.unknown) {
+    throw new AiPromptsError(
+      '`perspective.sun` phải có mã `unknown` cho đầu bài không khai hướng.',
+    );
+  }
+
+  return {
+    system: block.system,
+    user: block.user,
+    views: parsedViews,
+    life: { on: life.on, off: life.off, onTightYard: life.on_tight_yard },
+    vehicles: { cars: vehicles.cars, motorbikes: vehicles.motorbikes, none: vehicles.none },
+    buildingTypes: table('building_types'),
+    neighbours: table('neighbours'),
+    sun,
+    scale: {
+      carLengthM: rawScale.car_length_m,
+      motorbikeLengthM: rawScale.motorbike_length_m,
+      yardShorterThanCar: rawScale.yard_shorter_than_car,
+      yardShorterThanMotorbike: rawScale.yard_shorter_than_motorbike,
+      noYard: rawScale.no_yard,
+    },
+    watermark: block.watermark,
   };
 }
 

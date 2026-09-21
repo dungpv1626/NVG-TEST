@@ -68,6 +68,9 @@ export const ARTIFACT_KINDS = [
   // Ảnh mặt đứng CÓ VẬT LIỆU do mô hình ảnh vẽ từ ảnh neo (T59 Đợt E) — tấm trình khách, không thay
   // tờ vector; về sau là ảnh neo của bước Phối cảnh.
   'ai_facade_image',
+  // KỸ SƯ chấm lại một bản mặt đứng trên đúng bảng tiêu chí của máy (T63). Loại artifact duy nhất
+  // do NGƯỜI tạo nội dung — chấm lại lần nữa là artifact mới, bản cũ còn nguyên.
+  'ai_facade_review',
   'ai_image_set',
   // Tờ mặt bằng công năng CÓ NỘI THẤT do MÔ HÌNH ẢNH vẽ từ ẢNH NEO (T57, 19/09/2026) — một
   // artifact một tầng. Nó KHÔNG thay `ai_floor_plan`: dữ liệu vẫn là nguồn đo diện tích và
@@ -107,6 +110,9 @@ export const PIPELINE_STEPS = [
   'ai_plan_sheet',
   // Vẽ ảnh mặt đứng có vật liệu (T59 Đợt E). Nối từ `ai_facade_concept`.
   'ai_facade_image_draw',
+  // Kỹ sư chấm lại (T63). Bước DUY NHẤT do người làm, và cạnh lineage là cách duy nhất tìm được
+  // «bản chấm của đúng bản vẽ này» mà không phải đọc payload của từng bản chấm trong hồ sơ.
+  'ai_facade_review',
 ] as const;
 
 export type PipelineStep = (typeof PIPELINE_STEPS)[number];
@@ -121,6 +127,7 @@ export const STEP_OUTPUT_KIND: Readonly<Record<PipelineStep, ArtifactKind>> = {
   ai_image_render: 'ai_image_set',
   ai_plan_sheet: 'ai_plan_sheet_image',
   ai_facade_image_draw: 'ai_facade_image',
+  ai_facade_review: 'ai_facade_review',
 };
 
 // ---------------------------------------------------------------------------
@@ -294,6 +301,17 @@ export const AI_DISCLAIMERS = {
   aiFacadeImage:
     'Ảnh minh hoạ do AI vẽ — màu và vật liệu là hình dung, không phải mẫu thật; kích thước không đo được trên hình. Số đúng ở tờ mặt đứng vector.',
   aiFacadeImageStamp: 'Ảnh minh hoạ do AI vẽ — không đo được, màu chỉ để hình dung',
+  /**
+   * Bộ ảnh phối cảnh (T67) — cùng hai lớp như hai loại ảnh trên.
+   *
+   * Câu dài nói thêm một thứ mà hai loại kia không phải nói: đây là NĂM tấm của cùng một ngôi
+   * nhà, dựng nối nhau từ tấm ban ngày, nên chúng giống nhau về vật liệu chứ không phải năm lần
+   * đo độc lập. Người xem cầm bộ ảnh đi so với bản vẽ cần biết điều ấy trước khi tin một chi
+   * tiết chỉ xuất hiện ở một tấm.
+   */
+  aiImageSet:
+    'Ảnh phối cảnh do AI dựng — vật liệu, màu, cây cối, xe và người chỉ để hình dung; kích thước không đo được trên hình. Cả bộ dựng nối nhau từ tấm mặt tiền ban ngày, nên chi tiết chỉ có ở một tấm chưa chắc có thật. Số đúng ở tờ mặt bằng và tờ mặt đứng vector.',
+  aiImageSetStamp: 'Ảnh phối cảnh do AI dựng — không đo được, vật liệu và màu chỉ để hình dung',
 } as const;
 
 // ---------------------------------------------------------------------------

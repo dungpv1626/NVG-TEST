@@ -112,6 +112,27 @@ export interface AiDesignParams {
    * Chốt mã ở tuyến khởi động vì cùng lý do với `planRef`: sửa phiếu giữa chừng không đổi lượt đang chạy.
    */
   facadeBriefRef?: string | null;
+  /**
+   * Ý tưởng mặt đứng mà bộ ảnh phối cảnh dựng theo (T67) — chốt lúc bấm, cùng lý do với `planRef`.
+   */
+  facadeRef?: string | null;
+  /**
+   * Tuyến model VẼ ẢNH. Tách hẳn khỏi `textRoute`: hai giai đoạn trước gọi model chữ, giai đoạn này
+   * gọi model ảnh, và trộn chung một trường là mở đường cho một lượt ảnh đi nhầm sang tuyến chữ —
+   * lỗi ấy chỉ lộ ra ở phản hồi của nhà cung cấp, tức sau khi đã tính tiền.
+   */
+  imageRoute?: string | null;
+  /** Ô của kỹ sư: cho phép mô hình thêm người, ô tô, xe máy vào ảnh (T67, Haan chốt). */
+  peopleAndVehicles?: boolean;
+  /**
+   * Tờ neo vector TRÌNH DUYỆT đã rasterise và gửi lên, đã cất vào kho trước khi mở lượt chạy.
+   *
+   * Vì sao đi qua kho chứ không đi thẳng trong params: Worker không có canvas nên tờ neo phải do
+   * trình duyệt dựng, mà Workflow thì không hỏi trình duyệt được. Tuyến khởi động nhận byte, dựng
+   * lại tờ ở máy chủ để đối chiếu cỡ khung, cất vào kho, rồi chỉ truyền URI — params của Workflow
+   * không phải chỗ để mang vài megabyte ảnh.
+   */
+  anchors?: Array<{ kind: 'elevation' | 'roof_plan'; uri: string; sha256: string; bytes: number }>;
 }
 
 export interface PlanStepDeps {

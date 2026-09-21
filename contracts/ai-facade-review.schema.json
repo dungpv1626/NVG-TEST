@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nvg.vn/contracts/ai-facade-review.schema.json",
+  "title": "AiFacadeReview",
+  "description": "KỸ SƯ CHẤM LẠI một bản mặt đứng, trên đúng bảng tiêu chí mà máy vừa chấm (T63, 20/09/2026 — Haan chọn «Máy chấm + kỹ sư chấm lại»).\n\nVì sao phải lưu thành artifact chứ không phải một cột trong bảng: điểm máy tính LẠI mỗi lần đọc (thước đo còn lớn lên theo số hồ sơ đã đo), còn điểm người thì không được phép đổi sau lưng ai. Hai con số ấy chỉ so được với nhau khi bản chấm tay mang theo `facade_ref` (chấm bản vẽ NÀO) và `score_version` (bằng cái thước nào) — thiếu một trong hai thì «kỹ sư chấm 70» là một câu không kiểm chứng được.\n\nĐây KHÔNG phải phê duyệt. Kết quả AI vẫn là nháp cho tới khi người có thẩm quyền duyệt qua đúng luồng phê duyệt (PRD 2.3); vì vậy hợp đồng này cố ý không có ô «đạt / không đạt» nào — chỉ có điểm từng tiêu chí và lời của kỹ sư.\n\nArtifact bất biến: chấm lại lần nữa là một artifact MỚI, bản cũ còn nguyên để truy.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "facade_ref", "score_version", "reviewed_at", "criteria", "note"],
+  "properties": {
+    "schema_version": { "$ref": "#/$defs/semver" },
+    "facade_ref": {
+      "$ref": "#/$defs/artifact_ref",
+      "description": "Bản mặt đứng được chấm. Bắt buộc — một bản chấm không gắn với bản vẽ nào thì không nói lên điều gì."
+    },
+    "score_version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "`score_version` của `kb/facade_quality.yaml` lúc chấm. Thước đổi thì màn hình phải nói bản chấm này dựng trên thước cũ, đừng lặng lẽ trộn hai thang điểm."
+    },
+    "machine_percent": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Điểm MÁY tại thời điểm chấm tay, để về sau còn đối chiếu hai bên lệch nhau ở đâu. `null` khi máy chưa chấm được gì."
+    },
+    "reviewed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Máy chủ đặt, không tin trình duyệt. Cũng để hai lần chấm giống hệt nhau vẫn ra hai artifact khác nhau — mã artifact là băm NỘI DUNG."
+    },
+    "reviewed_by": {
+      "type": ["string", "null"],
+      "description": "`users.id` của kỹ sư đã chấm. Máy chủ đặt."
+    },
+    "criteria": {
+      "type": "array",
+      "maxItems": 40,
+      "description": "Chỉ những tiêu chí kỹ sư ĐÃ chấm. Tiêu chí không có ở đây nghĩa là «để nguyên điểm máy» — khác hẳn với chấm 0.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "score", "note"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^[A-Z][0-9]{1,2}$",
+            "description": "Mã tiêu chí trong `kb/facade_quality.yaml`."
+          },
+          "score": {
+            "type": ["number", "null"],
+            "enum": [0, 0.5, 1, null],
+            "description": "Điểm kỹ sư cho tiêu chí này: 1 đạt, 0,5 đạt một phần, 0 chưa đạt. `null` = kỹ sư cũng không chấm được, chỉ để lại ghi chú."
+          },
+          "note": {
+            "type": ["string", "null"],
+            "maxLength": 300,
+            "description": "Vì sao chấm khác máy. Tiếng Việt."
+          }
+        }
+      }
+    },
+    "note": {
+      "type": ["string", "null"],
+      "maxLength": 1500,
+      "description": "Nhận xét chung của kỹ sư về bản mặt đứng. Tiếng Việt."
+    }
+  },
+  "$defs": {
+    "semver": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "artifact_ref": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  }
+}

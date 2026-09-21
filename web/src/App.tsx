@@ -14,7 +14,6 @@ import {
   Route,
   RouterProvider,
 } from 'react-router-dom';
-import { MODULE_CODES, type ModuleCode } from '@nvg/shared';
 import { AppShell } from '@/components/layout/app-shell';
 import { ModuleGuard } from '@/components/layout/module-guard';
 import { ProtectedRoute } from '@/components/layout/protected-route';
@@ -33,11 +32,24 @@ import { LoginPage } from '@/pages/login';
 const DashboardPage = lazy(() =>
   import('@/pages/dashboard').then((m) => ({ default: m.DashboardPage })),
 );
-const PlaceholderPage = lazy(() =>
-  import('@/pages/placeholder').then((m) => ({ default: m.PlaceholderPage })),
-);
 const DesignShowcasePage = lazy(() =>
   import('@/pages/nen/design-showcase').then((m) => ({ default: m.DesignShowcasePage })),
+);
+const UserAdminPage = lazy(() =>
+  import('@/pages/nen/user-admin-page').then((m) => ({ default: m.UserAdminPage })),
+);
+const ParameterPage = lazy(() =>
+  import('@/pages/nen/parameter-page').then((m) => ({ default: m.ParameterPage })),
+);
+const ApprovalLimitPage = lazy(() =>
+  import('@/pages/nen/approval-limit-page').then((m) => ({ default: m.ApprovalLimitPage })),
+);
+const SlaPage = lazy(() => import('@/pages/nen/sla-page').then((m) => ({ default: m.SlaPage })));
+const SiteAssignmentPage = lazy(() =>
+  import('@/pages/nen/site-assignment-page').then((m) => ({ default: m.SiteAssignmentPage })),
+);
+const AuditLogPage = lazy(() =>
+  import('@/pages/nen/audit-log-page').then((m) => ({ default: m.AuditLogPage })),
 );
 const ApprovalInboxPage = lazy(() =>
   import('@/pages/phe-duyet/approval-inbox-page').then((m) => ({ default: m.ApprovalInboxPage })),
@@ -236,19 +248,6 @@ const queryClient = new QueryClient({
   },
 });
 
-/** Đường dẫn của từng module — khớp `MODULE_ROUTES` trong sidebar. */
-const MODULE_PATHS: Record<Exclude<ModuleCode, 'BC' | 'CRM' | 'DA'>, string> = {
-  TK: 'tk/du-an',
-  HD: 'hd/hop-dong',
-  TC: 'tc/cong-trinh',
-  MH: 'mh/de-nghi-mua',
-  KHO: 'kho/ton-kho',
-  KT: 'kt/de-nghi-thanh-toan',
-  NS: 'ns/nhan-su',
-  SX: 'sx/tai-san-cho-thue',
-  NEN: 'nen/quan-tri',
-};
-
 /**
  * Dùng ROUTER DỮ LIỆU (`createBrowserRouter`), không phải `<BrowserRouter>`.
  *
@@ -412,33 +411,21 @@ const router = createBrowserRouter(
                   hạn mức phê duyệt của vai trò (Mẫu RLS C). */}
         <Route path="viec-can-lam" element={<ApprovalInboxPage />} />
 
-        {/* Trang trưng bày thành phần giao diện — công cụ nội bộ của đội triển khai. */}
+        {/* NEN — Quản trị hệ thống. Mọi giá trị cấu hình của NEN-02, NEN-07 và NEN-12 phải
+                  sửa được TẠI ĐÂY: tài liệu nhiều chỗ hứa "quản trị viên sửa sau", mà lời hứa đó
+                  chỉ có nghĩa khi có màn hình. Trước đợt này các bảng đó chỉ sửa được bằng SQL.
+
+                  `nen/giao-dien` là trang trưng bày thành phần giao diện — công cụ nội bộ của
+                  đội triển khai, cố ý KHÔNG nằm trong thanh điều hướng phụ của phân hệ. */}
         <Route element={<ModuleGuard module="NEN" />}>
+          <Route path="nen/quan-tri" element={<UserAdminPage />} />
+          <Route path="nen/tham-so" element={<ParameterPage />} />
+          <Route path="nen/han-muc" element={<ApprovalLimitPage />} />
+          <Route path="nen/thoi-han" element={<SlaPage />} />
+          <Route path="nen/phan-cong" element={<SiteAssignmentPage />} />
+          <Route path="nen/nhat-ky" element={<AuditLogPage />} />
           <Route path="nen/giao-dien" element={<DesignShowcasePage />} />
         </Route>
-        {MODULE_CODES.filter(
-          (
-            c,
-          ): c is Exclude<
-            ModuleCode,
-            'BC' | 'CRM' | 'DA' | 'TK' | 'HD' | 'TC' | 'MH' | 'KHO' | 'KT' | 'NS' | 'SX'
-          > =>
-            c !== 'BC' &&
-            c !== 'CRM' &&
-            c !== 'DA' &&
-            c !== 'TK' &&
-            c !== 'HD' &&
-            c !== 'TC' &&
-            c !== 'MH' &&
-            c !== 'KHO' &&
-            c !== 'KT' &&
-            c !== 'NS' &&
-            c !== 'SX',
-        ).map((code) => (
-          <Route key={code} element={<ModuleGuard module={code} />}>
-            <Route path={MODULE_PATHS[code]} element={<PlaceholderPage moduleCode={code} />} />
-          </Route>
-        ))}
       </Route>
 
       <Route path="/" element={<Navigate to="/dashboard" replace />} />

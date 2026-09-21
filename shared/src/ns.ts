@@ -285,10 +285,11 @@ export const ATTENDANCE_KIND_LABELS: Readonly<Record<AttendanceKind, string>> = 
 /**
  * Số giờ của một ngày công đủ.
  *
- * ⚠️ SUY LUẬN — tài liệu không nêu. 8 giờ theo Bộ luật Lao động 2019 Điều 105. Dùng để quy
- * giờ ra ngày công khi tổng hợp; **cần NVG xác nhận** vì xưởng có thể tính theo ca 12 giờ.
- * Khảo sát Xưởng (02/09/2026) xác nhận có máy chấm công nhưng để trống cách tính lương, nên
- * chưa loại trừ được ca 12 giờ.
+ * ĐÃ CHỐT 20/09/2026 (Haan): **8 giờ**, đúng Bộ luật Lao động 2019 Điều 105 — không còn là suy
+ * luận. Dùng để quy giờ ra ngày công khi tổng hợp.
+ *
+ * Phần TÍNH LƯƠNG từ số công (NS-06, `payroll_rules`, `piece_rates`) Haan tạm hoãn trong giai
+ * đoạn này, nên con số 8 giờ hiện chỉ ảnh hưởng tới bảng công, chưa ảnh hưởng tới tiền.
  *
  * Từ NEN-12, giá trị THẬT nằm ở tham số `hours_per_workday` trong `system_parameters` và do
  * CSDL áp dụng khi chốt kỳ (`consolidate_timesheets` — migration 0112). Hằng số này còn lại chỉ

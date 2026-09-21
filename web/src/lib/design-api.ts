@@ -29,9 +29,20 @@ export class DesignApiError extends Error {
    */
   readonly status?: number;
 
-  constructor(message: string, status?: number) {
+  /**
+   * Danh sách mục hỏng do Worker trả kèm, đã viết bằng tiếng Việt.
+   *
+   * Bản trước VỨT BỎ danh sách này: màn hình chỉ còn câu tổng «Phiếu yêu cầu chưa đúng. Kiểm tra
+   * lại các ô đã điền», trong khi phiếu có mười bốn mục. Xảy ra thật ngày 20/09/2026 và không có
+   * cách nào đoán ra từ màn hình. Worker chỉ đưa câu tiếng Việt vào đây — chữ của thư viện kiểm
+   * kiểu (tiếng Anh, nói theo ngôn ngữ kiểu dữ liệu) được đổi ở phía Worker, không lên đây.
+   */
+  readonly issues?: readonly string[];
+
+  constructor(message: string, status?: number, issues?: readonly string[]) {
     super(message);
     this.status = status;
+    if (issues?.length) this.issues = issues;
   }
 }
 
@@ -117,13 +128,17 @@ export async function designApiUpload<T>(path: string, form: FormData): Promise<
 }
 
 async function parseResponse<T>(response: Response): Promise<T> {
-  const payload = (await response.json().catch(() => ({}))) as { error?: string };
+  const payload = (await response.json().catch(() => ({}))) as {
+    error?: string;
+    issues?: string[];
+  };
   if (!response.ok) {
     // Không hiện mã HTTP cho người dùng (CGD 5.5) — Worker đã trả sẵn câu tiếng Việt. Mã vẫn đi
     // theo lỗi để mã nguồn phân biệt được các loại hỏng; nó không lên màn hình.
     throw new DesignApiError(
       payload.error ?? 'Không thực hiện được thao tác. Thử lại sau ít phút.',
       response.status,
+      payload.issues,
     );
   }
   return payload as T;

@@ -1,0 +1,28 @@
+graph TD
+  classDef edge fill:#EAF1EE,stroke:#1F5F4B;
+  classDef data fill:#F6F8F7,stroke:#52606D;
+  classDef local fill:#FFF6E0,stroke:#D9A441,stroke-dasharray:4 3;
+
+  NET(["Internet — trình duyệt và điện thoại"])
+
+  subgraph CF["Cloudflare (mạng biên)"]
+    W1["Worker <b>nvg</b><br/>Static Assets — tệp tĩnh của SPA<br/>not_found_handling: single-page-application"]:::edge
+    W2["Worker <b>nvg-api</b><br/>Hono · /design<br/>Cron Trigger cho tác vụ nền"]:::edge
+  end
+
+  subgraph SB["Supabase — project awaiwegmuykhctnysvou"]
+    PG[("PostgreSQL<br/>108 bảng · RLS · 131 migration")]:::data
+    AU["Auth"]:::data
+    ST["Storage"]:::data
+  end
+
+  DK["Docker tại máy phát triển<br/>container compute (Python)"]:::local
+
+  NET --> W1
+  NET --> W2
+  NET --> AU
+  W1 -.->|"tải xong, trình duyệt gọi thẳng"| PG
+  W2 --> PG
+  W2 --> DK
+  AU --> PG
+  ST --- PG

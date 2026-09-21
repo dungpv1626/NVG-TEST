@@ -263,6 +263,17 @@ export const aiFacadeConceptSchema = z
           .nullable()
           .describe('Chiều cao tường chắn mái so với sàn mái, cm. Rỗng khi không có.')
           .optional(),
+        /**
+         * Chiều cao lan can ban công, cm — CHÉP TỪ PHIẾU yêu cầu của kỹ sư, mô hình không khai. Rỗng (và ở mọi ý tưởng dựng trước 20/09/2026) thì bộ vẽ và thước chấm dùng `kb/construction_norms.yaml` mục `outdoor.railing_h_m`.
+         *
+         * Để ở đây chứ không đọc lại phiếu lúc vẽ: tờ SVG, tệp DXF, ảnh neo và thước chấm phải cùng một con số, và một lượt đọc phiếu thêm cho mỗi lần dựng tờ là một lượt đi kho không cần thiết.
+         */
+        railing_h_cm: aiFacadeConceptCmSchema
+          .nullable()
+          .describe(
+            'Chiều cao lan can ban công, cm — CHÉP TỪ PHIẾU yêu cầu của kỹ sư, mô hình không khai. Rỗng (và ở mọi ý tưởng dựng trước 20/09/2026) thì bộ vẽ và thước chấm dùng `kb/construction_norms.yaml` mục `outdoor.railing_h_m`.\n\nĐể ở đây chứ không đọc lại phiếu lúc vẽ: tờ SVG, tệp DXF, ảnh neo và thước chấm phải cùng một con số, và một lượt đọc phiếu thêm cho mỗi lần dựng tờ là một lượt đi kho không cần thiết.',
+          )
+          .optional(),
         /** Đường bao mái nhìn từ mặt trước, các điểm [x, z] nối liên tiếp. Worker dựng từ `roof.type` + `roof.pitch_deg` khi mô hình không khai; khai thì Worker kiểm nằm trong khung. */
         roof_outline: z
           .array(z.array(aiFacadeConceptCmSchema).min(2).max(2))
@@ -271,7 +282,7 @@ export const aiFacadeConceptSchema = z
             'Đường bao mái nhìn từ mặt trước, các điểm [x, z] nối liên tiếp. Worker dựng từ `roof.type` + `roof.pitch_deg` khi mô hình không khai; khai thì Worker kiểm nằm trong khung.',
           )
           .optional(),
-        /** Mảng trang trí trên mặt đứng: ô văng, cột, mảng ốp, lam, bồn cây. Không phải lỗ mở. */
+        /** Mảng trang trí trên mặt đứng: ô văng, cột, mảng ốp, lam, bồn cây, vòm đầu cửa, ô tròn, mái sảnh. Không phải lỗ mở. `rect` luôn là KHUNG BAO; hình thật do bộ vẽ dựng (vòm là cung, ô tròn là đường tròn, mái sảnh là tam giác). */
         elements: z
           .array(
             z
@@ -286,6 +297,9 @@ export const aiFacadeConceptSchema = z
                   'eaves_band',
                   'finial',
                   'reveal',
+                  'arch',
+                  'oculus',
+                  'porch_roof',
                 ]),
                 /** [x0, z0, x1, z1] cm. */
                 rect: z
@@ -306,7 +320,7 @@ export const aiFacadeConceptSchema = z
           )
           .max(40)
           .describe(
-            'Mảng trang trí trên mặt đứng: ô văng, cột, mảng ốp, lam, bồn cây. Không phải lỗ mở.',
+            'Mảng trang trí trên mặt đứng: ô văng, cột, mảng ốp, lam, bồn cây, vòm đầu cửa, ô tròn, mái sảnh. Không phải lỗ mở. `rect` luôn là KHUNG BAO; hình thật do bộ vẽ dựng (vòm là cung, ô tròn là đường tròn, mái sảnh là tam giác).',
           )
           .optional(),
       })

@@ -95,6 +95,12 @@ export interface FacadeCallInput {
   brief?: AiFacadeBrief | null;
   /** Lượt gọi lại: lý do lượt trước không dùng được (tiếng Việt, nguyên văn phép kiểm). */
   retryIssues?: readonly string[] | null;
+  /**
+   * Lượt gọi lại vì ĐIỂM chứ không vì lỗi (T63) — câu trả lời trước hợp lệ, chỉ chưa giống thói
+   * quen vẽ của NVG. Dùng lời dẫn khác: bảo mô hình rằng nó «không dùng được» trong khi nó dùng
+   * được là dạy sai, và lượt sau nó sẽ đổi cả những thứ đang đúng.
+   */
+  retryKind?: 'gate' | 'habits';
   reasoningEffort?: ReasoningEffort;
   onProgress?: StructuredCallOptions['onProgress'];
   signal?: AbortSignal;
@@ -120,8 +126,9 @@ export async function callFacadeModel(call: FacadeCallInput): Promise<FacadeAtte
     .replace('{codes}', () => facadeCodes(call.vocab));
   // Phần gọi lại nối vào CUỐI thân lời gọi: lời dẫn hệ thống và phần đầu giữ nguyên từng byte, nên
   // nhà cung cấp đọc lại từ bộ nhớ đệm (cùng cách với `callHouseModel`).
+  const retryTemplate = call.retryKind === 'habits' ? facade.retryHabits : facade.retry;
   const retry = call.retryIssues?.length
-    ? `\n\n${facade.retry.replace('{issues}', () => call.retryIssues!.map((i) => `- ${i}`).join('\n'))}`
+    ? `\n\n${retryTemplate.replace('{issues}', () => call.retryIssues!.map((i) => `- ${i}`).join('\n'))}`
     : '';
 
   // Không truyền trần token: tuyến trong `config/models.yaml` là van DUY NHẤT (`text-client.ts`).

@@ -205,6 +205,23 @@ describe('Tờ mặt bằng — tờ SVG tất định là tờ CHÍNH (T22, 12/
     );
   });
 
+  // Haan, 20/09/2026: «có thêm option xem các bản vẽ output với kích thước vừa, hiện tại đang quá
+  // lớn». Trước đó tờ vẽ luôn kéo kín bề ngang panel — trên màn hình 1920 là gần 1.400 px, phải
+  // cuộn dọc mới xem hết một tờ A3 ngang.
+  it('cỡ xem mặc định là «Vừa»; chọn «Tràn khung» thì bỏ chặn bề ngang', async () => {
+    state.review = review();
+    show();
+    const sheet = screen.getByRole('img', { name: /Tờ mặt bằng Tầng 1/ });
+    expect(sheet.style.maxWidth).toBe('720px');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Tràn khung' }));
+    expect(sheet.style.maxWidth).toBe('');
+
+    // Trả lại mặc định: kho cỡ xem nằm ở mức mô-đun nên sống qua các phép thử sau trong tệp này.
+    await userEvent.click(screen.getByRole('button', { name: 'Vừa' }));
+    expect(sheet.style.maxWidth).toBe('720px');
+  });
+
   it('nút tải là SVG, không phải PNG', () => {
     state.review = review();
     show();
@@ -240,7 +257,9 @@ describe('Tờ mặt bằng — tờ SVG tất định là tờ CHÍNH (T22, 12/
     // hiện tên ấy thì không đối chiếu được tấm ảnh trên màn hình với dòng tiền trong nhật ký.
     state.review = review();
     show();
-    expect(screen.getAllByRole('option', { name: /gpt-image-x/ }).length).toBeGreaterThan(0);
+    // Từ 20/09/2026 ô chọn là thẻ chứ không còn `<select>`: tên model phải đọc được NGAY ở hàng
+    // tóm tắt, không phải mở danh sách ra mới thấy.
+    expect(screen.getAllByText(/gpt-image-x/).length).toBeGreaterThan(0);
   });
 
   it('vẽ được ảnh cho TẦNG KHÁC tầng đang xem, tờ vector không rời chỗ (19/09/2026)', async () => {

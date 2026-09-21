@@ -17,8 +17,13 @@ import type { AiFacadeBrief, AiFacadeProposal } from '@nvg/shared/design';
 import type { FacadeVocabulary, Range } from '../../kb/facade-vocabulary';
 import type { FacadeFrame } from './frame';
 
-/** Mảng trang trí được phép đè lên lỗ mở — ô văng che trên cửa, lam che trước cửa sổ. */
-const MAY_COVER_OPENINGS = new Set(['canopy', 'louvre']);
+/**
+ * Mảng trang trí được phép đè lên lỗ mở — ô văng che trên cửa, lam che trước cửa sổ, vòm ôm đầu
+ * cửa, mái sảnh đứng trước cửa chính. Bốn thứ này đứng TRƯỚC hoặc TRÊN lỗ mở trong đời thật, nên
+ * chồng hình không phải là mặt đứng nói khác mặt bằng. Cột thì không: một cây cột giữa cửa là bịt
+ * lối đi, đúng loại mâu thuẫn T64 phải chặn.
+ */
+const MAY_COVER_OPENINGS = new Set(['canopy', 'louvre', 'arch', 'porch_roof']);
 /** Vùng cửa lấy vật liệu từ nhóm `door_materials`, không phải vật liệu bề mặt tường. */
 const DOOR_ZONES = new Set(['main_door', 'side_door', 'window', 'garage_door']);
 
@@ -98,6 +103,40 @@ export function checkFacade(
     }
   }
   if (fence) within(fence.h, vocab.limits.fence_h_cm, 'Tường rào cao');
+
+  /*
+   * ĐỒNG BỘ VỚI MẶT BẰNG (T64, 20/09/2026 — Haan: «bản vẽ mặt bằng vẽ phòng để xe ở bên phải nhưng
+   * bản vẽ mặt đứng thì không có lối vào phòng để xe cho ô tô… hai bản vẽ không được phép mâu thuẫn
+   * nhau»).
+   *
+   * Đây là luật CỨNG, không phải thói quen nghề: lối vào không đi được thì ngôi nhà không dùng
+   * được, đúng loại «không đi được» mà T49 cho phép chặn. Rào chắn trước cửa chính hay cửa để xe là
+   * một mâu thuẫn giữa hai tờ của CÙNG một ngôi nhà, không phải một lựa chọn thẩm mỹ.
+   *
+   * Cổng thì bộ vẽ tự đặt đúng chỗ (T15 — mọi toạ độ do chương trình gán), nên chỗ duy nhất mô hình
+   * làm hỏng được là BỀ RỘNG: cổng hẹp hơn cửa để xe thì xe không lọt.
+   */
+  if (fence) {
+    const ground = frame.levels[0];
+    const entrances = frame.openings.filter(
+      (o) => ground && o.level === ground.level && (o.kind === 'door' || o.kind === 'garage'),
+    );
+    const widest = entrances.reduce<(typeof entrances)[number] | null>(
+      (best, o) => (best === null || o.w > best.w ? o : best),
+      null,
+    );
+    if (widest && !gate) {
+      issues.push(
+        `Mặt tiền có ${widest.kind === 'garage' ? 'cửa để xe' : 'cửa chính'} rộng ${widest.w} cm nhưng ý tưởng có tường rào mà không có cổng — không có lối vào nhà.`,
+      );
+    }
+    const carEntrance = entrances.find((o) => o.kind === 'garage');
+    if (gate && carEntrance && gate.w < carEntrance.w) {
+      issues.push(
+        `Cổng rộng ${gate.w} cm, hẹp hơn cửa để xe ${carEntrance.w} cm của mặt bằng — ô tô không vào được phòng để xe.`,
+      );
+    }
+  }
   if (gate) {
     code(vocab.materials, gate.material, 'Vật liệu cổng');
     code(vocab.colours, gate.colour, 'Màu cổng');
@@ -140,7 +179,7 @@ export function checkFacade(
       const hit = openings.find((r) => x0 < r.x1 && x1 > r.x0 && z0 < r.z1 && z1 > r.z0);
       if (hit) {
         issues.push(
-          `${where} đè lên lỗ mở tầng ${hit.o.level} (x ${hit.x0}–${hit.x1}, z ${hit.z0}–${hit.z1}). Chỉ ô văng và lam được đè lên cửa.`,
+          `${where} đè lên lỗ mở tầng ${hit.o.level} (x ${hit.x0}–${hit.x1}, z ${hit.z0}–${hit.z1}). Chỉ ô văng, lam, vòm đầu cửa và mái sảnh được đè lên cửa.`,
         );
       }
     }

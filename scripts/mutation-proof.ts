@@ -24,14 +24,17 @@ import { join } from 'node:path';
  * `[TEST]`, nên không được chạy đi chạy lại hàng chục lượt. Hệ quả phải nhớ: RLS và mọi ràng buộc
  * nằm trong CSDL KHÔNG được chứng minh ở đây. Đó là khoảng trống lớn nhất của tệp này.
  *
- * ⚠️ Script GHI ĐÈ `workers/src/**` 11 lượt. Đang có `wrangler dev` chạy thì mỗi lượt là một lần
- * nạp lại Worker với mã đã cài lỗi — dừng nó trước khi chạy.
+ * ⚠️⚠️ Script GHI ĐÈ `workers/src/**` MỘT LƯỢT CHO MỖI ĐỘT BIẾN — nay 23 lượt. Đang có
+ * `wrangler dev` chạy thì mỗi lượt là một lần nạp lại Worker với mã đã cài lỗi, và nạp lại GIẾT
+ * instance Workflow đang bay của Haan. Đã xảy ra thật ba lần (11/09, 13/09, 20/09). Kiểm
+ * `ps aux | grep wrangler` và `SELECT status FROM design_ai_run ORDER BY created_at DESC LIMIT 1`
+ * TRƯỚC KHI CHẠY.
  *
  * AN TOÀN: tệp gốc đọc vào bộ nhớ và ghi trả lại trong `finally`, kể cả khi bấm Ctrl+C. Trước và
  * sau khi chạy, script băm toàn bộ mã nguồn và báo lỗi nếu hai bản băm khác nhau.
  */
 
-type Axis = 'phân quyền' | 'riêng tư' | 'tiền' | 'bản vẽ';
+type Axis = 'phân quyền' | 'riêng tư' | 'tiền' | 'tiền gọi mô hình' | 'bản vẽ' | 'số đo';
 
 type Mutation = {
   id: string;
@@ -138,6 +141,104 @@ const MUTATIONS: Mutation[] = [
     bug: 'Chuỗi kích thước bỏ mất mép hình — tờ mặt đứng in ra tổng nhỏ hơn bề rộng thật',
     find: '  if (out.length > 0 && max !== undefined) out[out.length - 1] = max;',
     replace: '  if (false) out[out.length - 1] = max!;',
+  },
+  {
+    id: 'M12',
+    axis: 'tiền gọi mô hình',
+    file: 'workers/src/design/ai/facade/score.ts',
+    bug: 'Vòng tự sửa gửi cả tiêu chí do CHƯƠNG TRÌNH quyết cho mô hình — mỗi lượt sửa là tiền thật, và mô hình không sửa nổi cao độ lanh tô hay chiều cao lan can vì nó không cầm những số ấy (T63)',
+    find: '    .filter((c) => c.doAi && c.score !== null && c.score < 1)',
+    replace: '    .filter((c) => c.score !== null && c.score < 1)',
+  },
+  {
+    id: 'M13',
+    axis: 'bản vẽ',
+    file: 'workers/src/design/ai/facade/review.ts',
+    bug: 'Tiêu chí kỹ sư KHÔNG chấm bị tính là chấm 0 — «tôi không có ý kiến» thành «tôi chấm trượt», và bảng điểm vẫn ra một con số trông bình thường (T63)',
+    find: '    if (!row) return c;',
+    replace: '    if (!row) return { ...c, score: 0 };',
+  },
+  {
+    id: 'M14',
+    axis: 'bản vẽ',
+    file: 'workers/src/design/ai/facade/score.ts',
+    bug: 'Mặt tiền KHÔNG CÓ cửa sổ bị xếp thành «thiếu đầu vào» — mẫu số của điểm co lại vì một chuyện bình thường (Haan, 20/09/2026: có nhà cần có cửa sổ, có nhà không)',
+    find: '      return windowsOn(concept, refLevel(concept)).length > 0 || KHONG_CUA_SO;',
+    replace: '      return true;',
+  },
+  {
+    id: 'M15',
+    axis: 'bản vẽ',
+    file: 'workers/src/design/ai/facade/merge.ts',
+    bug: 'Chiều cao lan can kỹ sư điền trong phiếu bị bỏ — tờ vẽ dựng theo quy ước cấu tạo, còn thước chấm đo đúng con số ấy, nên điểm nói về một cái lan can không có trên giấy (T65)',
+    find: '      railing_h_cm: brief?.balcony.h_cm ?? null,',
+    replace: '      railing_h_cm: null,',
+  },
+
+  // ── Phối cảnh (T67) ───────────────────────────────────────────────────────────────────
+  {
+    id: 'M16',
+    axis: 'tiền',
+    file: 'workers/src/design/ai/perspective/views.ts',
+    bug: 'Góc nghiêng và toàn cảnh chạy khi CHƯA có tờ mặt bằng mái — trả tiền hai lượt để mô hình đoán chiều sâu nhà, và ảnh mâu thuẫn với mặt bằng (T65)',
+    find: "    if (has.has('roof_plan')) {",
+    replace: '    if (true) {',
+  },
+  {
+    id: 'M18',
+    axis: 'bản vẽ',
+    file: 'workers/src/design/ai/draw/roof-plan.ts',
+    bug: 'Vạch lối vào trên tờ mặt bằng mái vẽ bằng nét mảnh TRÙNG bề dày tường — hai cửa biến mất khỏi tờ neo, mô hình không biết xe vào phía nào, và tờ vẽ vẫn trông bình thường (đã dựng sai đúng như vậy ở bản đầu)',
+    find: '        class: CLS.roofEntrance,',
+    replace: '        class: CLS.roofBelow,',
+  },
+  {
+    id: 'M19',
+    axis: 'bản vẽ',
+    file: 'workers/src/design/ai/perspective/views.ts',
+    bug: 'Cho phép vẽ lại LẺ tấm mặt tiền ban ngày — bốn góc kia vẫn dựng theo tấm cũ, nên bộ năm ảnh giao khách là của HAI ngôi nhà, và không có gì trên màn hình nói ra (T67 Đợt C)',
+    find: '  return view === SET_ANCHOR_VIEW',
+    replace: '  return false',
+  },
+  {
+    id: 'M23',
+    axis: 'số đo',
+    file: 'workers/src/design/ai/draw/svg.ts',
+    bug: 'Ranh thửa mượn tên lớp CSS của lan can — luật sau đè luật trước, lan can của MỌI tờ mặt đứng thành nét đứt sai quy ước, và ảnh chụp vàng không bắt được vì hình y nguyên, chỉ CSS khác (đã xảy ra thật khi dựng T68)',
+    find: "  roofLot: 'rlot',",
+    replace: "  roofLot: 'rl',",
+  },
+  {
+    id: 'M22',
+    axis: 'số đo',
+    file: 'workers/src/design/ai/perspective/prompt.ts',
+    bug: 'Lời dẫn nói chiều sâu sân nhưng KHÔNG nói hệ quả — vẫn xin «một chiếc ô tô cho sinh động» trong cái sân 3 m ngắn hơn thân xe, nên mô hình nới sân ra cho vừa chiếc xe (đúng tấm ảnh Haan đo được 20/09/2026)',
+    find: '    ctx.yard !== null && ctx.yard.frontM > 0 && ctx.yard.frontM < block.scale.carLengthM;',
+    replace: '    false as boolean;',
+  },
+  {
+    id: 'M21',
+    axis: 'số đo',
+    file: 'workers/src/design/ai/perspective/context.ts',
+    bug: 'Khoảng sân thu về một bit có-hay-không thay vì số đo bốn mặt — đầu bài khai sân trước 3 m, ảnh phối cảnh vẽ 8–10 m, sai rõ tới mức một thân ô tô đã hơn 4 m mà sân vẫn thừa (Haan, 20/09/2026)',
+    find: '    yard: yardOf(plan, lot),',
+    replace: '    yard: lot ? { frontM: 0, backM: 0, leftM: 0, rightM: 0 } : null,',
+  },
+  {
+    id: 'M20',
+    axis: 'tiền',
+    file: 'workers/src/design/workflows/ai-perspective-steps.ts',
+    bug: 'Nút «Dừng» không cắt được lời gọi đang bay — màn hình nói «đang dừng» trong khi lượt vẽ vẫn chạy hết bốn phút và vẫn tính tiền, và không có gì đỏ ở đâu (Haan, 20/09/2026: «cứ chạy mãi… thêm nút stop»)',
+    find: '      ...(signal ? { signal } : {}),',
+    replace: '      ...(false as boolean ? { signal } : {}),',
+  },
+  {
+    id: 'M17',
+    axis: 'riêng tư',
+    file: 'workers/src/design/ai/perspective/prompt.ts',
+    bug: 'Hiện trạng một phía KHÔNG khai vẫn được nói ra — lời dẫn bịa ra nhà hàng xóm hoặc đất trống không tồn tại, và người xem tin ngay vì nó nằm trong ảnh chứ không nằm trong chữ',
+    find: '      const phrase = code ? table[code] : undefined;',
+    replace: "      const phrase = code ? table[code] : 'an empty plot';",
   },
 ];
 

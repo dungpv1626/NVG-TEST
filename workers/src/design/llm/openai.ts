@@ -246,6 +246,7 @@ export class OpenAiClient implements TextModelClient, AiImageClient {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model: route.model, prompt, n: 1 }),
         timeoutMs: IMAGE_TIMEOUT_MS,
+        ...('signal' in options && options.signal ? { cancel: options.signal } : {}),
         what: 'dịch vụ sinh ảnh',
       });
     } else {
@@ -264,6 +265,7 @@ export class OpenAiClient implements TextModelClient, AiImageClient {
         headers: {},
         body: form,
         timeoutMs: IMAGE_TIMEOUT_MS,
+        ...('signal' in options && options.signal ? { cancel: options.signal } : {}),
         what: 'dịch vụ sinh ảnh',
       });
     }

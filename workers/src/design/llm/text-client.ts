@@ -97,6 +97,14 @@ export interface AiImageOptions {
   prompt: string;
   /** Ảnh vào — ảnh khối, tờ mặt bằng, ảnh trực giao… Rỗng chỉ với loại ảnh chữ → ảnh. */
   images: GenerateImagePart[];
+  /**
+   * Tín hiệu huỷ của nút «Dừng» (20/09/2026).
+   *
+   * Không có nó thì bấm Dừng giữa một lượt vẽ chỉ có tác dụng ở góc SAU — lượt đang bay vẫn chạy
+   * hết bốn phút và vẫn tính tiền, trong khi màn hình đã nói «đang dừng». Thiếu đường này là lý do
+   * bước Phối cảnh không có nút Dừng dùng được cho tới hôm nay.
+   */
+  signal?: AbortSignal;
 }
 
 export interface AiImageResult {

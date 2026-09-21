@@ -353,6 +353,34 @@ Thuật ngữ CGD 4.4, ngày giờ, lỗi qua `toUserMessage`, thư viện 5.1�
 - ⚠️ Chống nhàm cảnh báo (CGD 3.4): không lặp lại thông báo đã xử lý, chỉ gửi đúng người.
 - Mẫu `NOTIFICATIONS.debtDue` giả định "đến hạn ngày X" — không khớp cách quét công nợ diễn đạt.
 
+### 4G. Màn hình Quản trị hệ thống (NEN) — ✅ xong
+
+Trước đợt này `/nen/quan-tri` là màn hình **placeholder duy nhất còn lại của cả hệ thống**, và nó
+lại là trang mặc định của vai trò ADMIN. Hệ quả: `approval_limits`, `system_parameters`,
+`sla_definitions`, `roles`, `audit_logs`, `user_site_assignments` chỉ sửa được bằng SQL tay — trong
+khi tài liệu nhiều chỗ hứa "quản trị viên sửa sau" và NEN-12 nói thẳng "do quản trị viên cấu hình".
+
+Sáu màn hình, dùng `web/src/hooks/use-admin.ts`: Người dùng · Tham số hệ thống (+ lịch sử) · Hạn mức
+phê duyệt · Thời hạn xử lý · Phân công công trường · Nhật ký. Gọi thẳng Supabase — policy ghi đã có
+sẵn, **không thêm migration, không thêm endpoint**.
+
+- ⚠️ **Nhúng `users` qua PostgREST phải nêu tên khoá ngoại.** Gần như mọi bảng có ≥2 cột trỏ về
+  `users` (`created_by`, `updated_by`, cộng cột nghiệp vụ). Thiếu tên khoá thì PostgREST trả **300
+  Multiple Choices**, `supabase-js` KHÔNG coi đó là lỗi, và màn hình vẽ ra trạng thái rỗng đọc y hệt
+  "chưa có dữ liệu". Đã gặp thật ở màn hình Người dùng. Canh bằng
+  `web/src/hooks/__tests__/postgrest-embeds.test.ts`.
+- ⚠️ Số hiện trên giao diện phải qua `formatNumber` — `String(0.9)` cho ra `0.9`, sai dấu thập phân
+  tiếng Việt (CGD 4.3).
+- ⚠️ Nhật ký ghi **tên bảng số nhiều** (`construction_sites`), khác `ENTITY_TYPE_LABELS` của Top Bar
+  khoá theo tên số ít do `global_search` sinh ra. Hai bộ khoá, cố ý hai bảng tra.
+- 🔒 Năm tham số cố ý để RỖNG vẫn rỗng. Màn hình hiện **"Chưa cấu hình"**, và xóa giá trị về rỗng là
+  thao tác hợp lệ — đã kiểm chứng cả hai chiều trên CSDL thật.
+- **Chờ Haan:** ma trận `permissions` chỉ cấp NEN cho **ADMIN**, nhưng RLS cho **TGĐ/CFO/BGĐ** ghi
+  `system_parameters`/`sla_definitions` và đọc `audit_logs`. Họ có quyền trong CSDL mà không có menu
+  để dùng. Mở NEN cho ba vai trò đó là quyết định phân quyền, không phải lỗi kỹ thuật.
+
+`web/src/pages/placeholder.tsx` và `MODULE_PATHS` đã gỡ hẳn — **không còn màn hình placeholder nào**.
+
 ### 4E. Kiểm thử & triển khai
 
 - ⏳ 3 Golden Path E2E (Playwright) xanh ổn định
@@ -611,17 +639,17 @@ vết về chứng từ gốc.
 # Quyết định còn cần Haan chốt
 
 Giữ nguyên số thứ tự vì mã nguồn và các mục trên trỏ tới "câu hỏi N". Các số **12, 21, 22, 27 đã chốt**
-nên đã bỏ khỏi bảng (xem git nếu cần nội dung cũ).
+nên đã bỏ khỏi bảng (xem git nếu cần nội dung cũ). Đợt trả lời **20/09/2026** chốt thêm **#5, #17, #18,
+#19** và hoãn **#2, #6, #26, #28** — chi tiết ở `doc/VAN_DE_CON_MO.md`.
 
 > **Bản đầy đủ — kèm lý do, hiện trạng và các câu chưa từng được đánh số — ở `doc/VAN_DE_CON_MO.md`.**
 > Bảng dưới đây là bản rút gọn dùng chung số. Chốt xong một câu thì sửa ở cả hai nơi.
 
 - **#1** **KHO-09 offline-first** làm thật hay online-first + `client_generated_id`? — 3C
-- **#2** **Phần mềm kế toán** chính thức (KT-08) — 3D
+- **#2** ⏸ **TẠM HOÃN 20/09/2026** — phần mềm kế toán chính thức (KT-08), chưa cần trong demo — 3D
 - **#3** **`unit_prices` dùng chung** DA/TK/MH hay NVO cần bảng riêng? (BSD 5) — 2B
-- **#4** **Quy tắc mã hoá** dự án/công trình/vật tư/hợp đồng — 2A
-- **#5** **Hạn mức phê duyệt** chính thức theo vai trò × loại nghiệp vụ — 0.2
-- **#6** **Công thức lương** NS-06 — 3E
+- **#4** **Quy tắc mã hoá** dự án/công trình/vật tư/hợp đồng — **đề xuất đã viết, chờ Haan duyệt: `doc/BO_MA.md`** — 2A
+- **#6** ⏸ **TẠM HOÃN 20/09/2026** — công thức lương NS-06; số ngày công vẫn chạy, chưa quy ra tiền — 3E
 - **#7** **Đầu mối hỗ trợ kỹ thuật** (mẫu lỗi CGD 5.5) — 4C
 - **#8** **Một hợp đồng mở được nhiều công trình không?** Hiện chặn ở một — 3A (đổi bằng một tham số)
 - **#9** **Ba con số suy luận của TC**: 24 giờ sửa nhật ký · cảnh báo ngân sách 90% · thang tổ đội 1–5 — 3A (đã là tham số)
@@ -631,15 +659,12 @@ nên đã bỏ khỏi bảng (xem git nếu cần nội dung cũ).
 - **#14** **Hàng từ kho chung xuất cho công trình ghi chi phí lúc nào?** Hiện không về được ngân sách công trình nào — quyết định kế toán — 3C
 - **#15** **Ngưỡng tồn lâu 90 ngày** — 3C
 - **#16** **Kho tự duyệt chênh lệch kiểm kê tới 10 triệu** — vừa đếm vừa duyệt là kiểm soát yếu — 3C (cấu hình `approval_limits`)
-- **#17** **Trưởng đơn vị xác nhận công khối VĂN PHÒNG là ai?** (công trường, xưởng đã chốt) — 3E (`confirm_timesheet_period`)
-- **#18** **Một ngày công bao nhiêu giờ?** Đang 8 giờ — 3E (`HOURS_PER_WORKDAY` + SQL, có test đối chiếu)
-- **#19** **Ai duyệt yêu cầu tuyển dụng?** Đang TGĐ — 3E (cấu hình `approval_limits`)
 - **#20** **Kế toán đọc hồ sơ nhân sự tới đâu?** — 3E (`rls_employee_readable`)
 - **#23** **Bảng `tasks` — bỏ hẳn hay dùng thật?** — 1.4
 - **#24** **`move_site_stage` có nên báo khi chuyển bước, cho ai?** Hiện không báo ở bước nào — 3A (chưa vá)
 - **#25** **Dòng dự toán chi tiết có được dùng nhóm `chi_phi_chung`/`du_phong`/`loi_nhuan` không?** Phần mất tiền đã vá (0080), còn câu hỏi UX — 2B
-- **#26** **Giao thêm giữa kỳ tính tiền từ ngày nào?** Cần bảng đợt giao — chặn phần còn lại của SX-03 cũ / SX-16
-- **#28** **Catalogue + định mức + tỷ lệ lỗi + thất thoát/năm**: Catalogue (Phụ lục D) thiếu sản lượng/tháng và phân loại bán/cho thuê từng mã; định mức do trưởng bộ phận sản xuất giữ, chưa có bộ hiện hành; tỷ lệ lỗi và thất thoát trống — **"không nên ước lượng"** — 6.6
+- **#26** ⏸ **TẠM HOÃN 20/09/2026** — giao thêm giữa kỳ tính tiền từ ngày nào; cần bảng đợt giao, chưa cần trong demo — SX-16
+- **#28** ⏸ **TẠM HOÃN 20/09/2026** — catalogue + định mức + tỷ lệ lỗi + thất thoát/năm: Catalogue (Phụ lục D) thiếu sản lượng/tháng và phân loại bán/cho thuê từng mã; định mức do trưởng bộ phận sản xuất giữ, chưa có bộ hiện hành; tỷ lệ lỗi và thất thoát trống — **"không nên ước lượng"** — 6.6
 - **#29** **Hồ sơ công trường nào bắt buộc giữ bản giấy có chữ ký gốc?** — chặn thiết kế màn hình nghiệm thu và nhật ký TC
 - **#30** **Thời hạn cam kết phản hồi của từng phòng ban** (`sla_definitions`, đang RỖNG) — ⛔ tiên quyết của 6.2 (TC-10)
 - **#31** **Bảng giá bồi thường giàn giáo thiếu – hỏng** (`compensation_price_table`, đang RỖNG) — 6.4 (SX-19)
@@ -649,3 +674,13 @@ nên đã bỏ khỏi bảng (xem git nếu cần nội dung cũ).
 - **#35** **Địa chỉ xưởng chính NVS** — Catalogue ghi hai địa chỉ (Xã Tây Sơn / Xã Vũ Sơn); "Thái Bình" nay là **Hưng Yên** — ⛔ chặn KHO-01
 - **#36** **Catalogue phát hành 2022** còn đúng không, chứng chỉ kiểm định còn hiệu lực không — 6.6 (SX-01, SX-13)
 - **#37** **Tổ trưởng sản xuất** (vai trò thứ 15, AFD v1.1 2.3) chưa tạo — chờ SX cụm C — 6.6
+
+## Đã chốt trong đợt 20/09/2026
+
+- **#5 hạn mức phê duyệt** — dùng đúng bộ mức đội triển khai đề xuất (22 dòng, 11 loại nghiệp vụ trong
+  `approval_limits`); chạy thật rồi quản trị viên sửa ở `/nen/han-muc`, không triển khai lại.
+- **#17 xác nhận công khối văn phòng** — Hành chính – Nhân sự. Trùng thứ mã đang làm, không phải sửa gì.
+- **#18 một ngày công** — 8 giờ, ca 12 giờ đã loại trừ. Phần tính lương hoãn (#6).
+- **#19 duyệt yêu cầu tuyển dụng** — Hành chính – Nhân sự, thay giả định TGĐ cũ. Migration `0130` đổi
+  một dòng dữ liệu; `DEFAULT_APPROVAL_LIMITS` và phép thử NS đã cập nhật. ⚠️ Hệ thống không chặn tự
+  duyệt hồ sơ của chính mình — muốn TGĐ giữ bước cuối thì thêm một dòng bước 2.

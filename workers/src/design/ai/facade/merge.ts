@@ -79,7 +79,10 @@ export function mergeFacade(
     applyFinish(materials, 'side_door', brief.side_door);
     applyFinish(materials, 'window', brief.window);
     applyFinish(materials, 'garage_door', brief.garage_door);
-    applyFinish(materials, 'railing', { material: null, colour: brief.balcony.colour });
+    applyFinish(materials, 'railing', {
+      material: brief.balcony.material ?? null,
+      colour: brief.balcony.colour,
+    });
     applyFinish(materials, 'gate', brief.gate);
     applyFinish(materials, 'fence', brief.fence);
   }
@@ -140,6 +143,9 @@ export function mergeFacade(
       ground_z: frame.groundZ,
       levels: frame.levels.map((l) => ({ ...l })),
       parapet: parapet ?? null,
+      // Chiều cao lan can của phiếu chép thẳng vào ý tưởng — bộ vẽ, DXF, ảnh neo và thước chấm
+      // đọc CÙNG một chỗ. Rỗng thì mọi nơi lùi về `kb/construction_norms.yaml`.
+      railing_h_cm: brief?.balcony.h_cm ?? null,
       ...(roofOutline ? { roof_outline: roofOutline } : {}),
       elements: proposal.elements.map((e) => ({
         kind: e.kind,

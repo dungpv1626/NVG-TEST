@@ -24,6 +24,7 @@ import { stampWatermark } from '@/lib/watermark';
 import { Chip, Panel } from '../tk-ui';
 import { AiModePicker, useAiChoice } from './ai-model-picker';
 import { AiUsageLine } from './ai-usage';
+import { sheetWidthStyle, useSheetSize } from './sheet-size';
 
 /** Vẽ lại quá số lần này trong một phiên thì hỏi lại — mỗi lần là một lượt gọi tính tiền. */
 const ASK_AGAIN_AFTER = 2;
@@ -47,6 +48,8 @@ export function FacadeImagePanel({
   const [drawn, setDrawn] = useState(0);
   const [asking, setAsking] = useState(false);
   const shown = useAiFacadeImage(projectId, artifactId, reloadKey);
+  // Đi theo cỡ xem chọn ở tờ vector ngay trên, không có bộ chọn riêng: hai tấm nằm cùng màn hình.
+  const sheetSize = useSheetSize();
 
   const [stamped, setStamped] = useState<{ url: string; stamped: boolean } | null>(null);
   useEffect(() => {
@@ -129,6 +132,7 @@ export function FacadeImagePanel({
           <img
             src={stamped.url}
             alt="Ảnh mặt đứng có vật liệu"
+            style={sheetWidthStyle(sheetSize)}
             className="w-full rounded-md border border-tk-line bg-white"
           />
           {/* Lớp nhãn thứ hai, bằng CHỮ — ở lại cả khi canvas hỏng. */}

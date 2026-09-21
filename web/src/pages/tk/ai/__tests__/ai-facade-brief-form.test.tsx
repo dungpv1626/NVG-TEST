@@ -21,6 +21,8 @@ const state = vi.hoisted(() => ({
   save: vi.fn((_input: unknown) => Promise.resolve({ artifactId: 'sha256:x' })),
 }));
 
+import { DesignApiError } from '@/lib/design-api';
+
 const option = (code: string, label: string) => ({ code, label });
 
 vi.mock('@/hooks/use-ai-design', () => ({
@@ -43,7 +45,7 @@ vi.mock('@/hooks/use-ai-design', () => ({
       fenceTypes: [option('xay_dac', 'Xây đặc')],
       gateTypes: [option('sliding', 'Cổng trượt')],
       elements: [option('canopy', 'Ô văng'), option('planter', 'Bồn cây')],
-      defaults: { groundRaiseCm: 45, parapetCm: 110, doorHeightCm: 250 },
+      defaults: { groundRaiseCm: 45, parapetCm: 110, doorHeightCm: 250, railingHCm: 110 },
     },
   }),
   useFacadeBrief: () => ({ isLoading: false, error: null, data: state.saved }),
@@ -137,11 +139,63 @@ describe('Phiếu yêu cầu mặt đứng', () => {
     renderWithApp(<Harness />);
     expect(screen.getByText(/không có sân trước/)).toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: 'Kiểu cổng' })).toBeNull();
-    expect(screen.queryByRole('combobox', { name: 'Kiểu lan can' })).toBeNull();
+  });
+
+  /*
+   * Haan 20/09/2026: «chưa thấy khảo sát cho lan can». Nhóm ấy vốn bị ẩn khi phương án mặt bằng
+   * chưa có ban công — và ẩn LẶNG LẼ, không một dòng nói vì sao. Nhóm cổng bên cạnh cũng ẩn theo
+   * điều kiện nhưng có nói lý do; chỗ này thì không, nên nó đọc như một mục bị thiếu.
+   */
+  it('mặt bằng chưa có ban công: nhóm lan can VẪN hiện, kèm lý do', () => {
+    state.saved = savedState({ plan: { ...savedState().plan, balconies: 0 } });
+    renderWithApp(<Harness />);
+    expect(screen.getByRole('combobox', { name: 'Kiểu lan can' })).toBeInTheDocument();
+    expect(screen.getByText(/chưa có ban công nào ra mặt trước/)).toBeInTheDocument();
   });
 
   it('ô ghi chú nhắc không ghi danh tính khách — nội dung đi tới nhà cung cấp mô hình', () => {
     renderWithApp(<Harness />);
     expect(screen.getByText(/không ghi tên khách, số điện thoại, địa chỉ/)).toBeInTheDocument();
+  });
+
+  /*
+   * Haan 20/09/2026: «thêm 1 mục khảo sát cho lan can: vật liệu, chiều cao».
+   *
+   * Chiều cao lan can là số duy nhất của nhóm Lan can mà thước chấm đo (R1) và nó do chương trình
+   * đặt, nên ô này là đường duy nhất để một hồ sơ dùng số khác quy ước cấu tạo.
+   */
+  it('mục lan can có vật liệu và chiều cao; để trống thì gợi ý số của quy ước cấu tạo', async () => {
+    renderWithApp(<Harness />);
+    const height = screen.getByRole('textbox', { name: 'Chiều cao lan can (cm)' });
+    expect(height).toHaveAttribute('placeholder', expect.stringContaining('110'));
+
+    await userEvent.selectOptions(
+      screen.getByRole('combobox', { name: 'Vật liệu lan can' }),
+      'son_nuoc',
+    );
+    await userEvent.type(height, '90');
+    await userEvent.click(screen.getByRole('button', { name: 'Lưu yêu cầu' }));
+
+    const sent = (state.save.mock.calls[0]![0] as { brief: AiFacadeBrief }).brief;
+    expect(sent.balcony.material).toBe('son_nuoc');
+    expect(sent.balcony.h_cm).toBe(90);
+  });
+
+  /*
+   * Lỗi đã xảy ra thật: phiếu bị từ chối với đúng một câu «Phiếu yêu cầu chưa đúng. Kiểm tra lại
+   * các ô đã điền» — phiếu có mười bốn mục, câu ấy không dẫn tới đâu. Danh sách mục hỏng do Worker
+   * trả về từng bị lớp gọi VỨT BỎ.
+   */
+  it('lưu hỏng thì hiện ĐÚNG mục nào hỏng, không chỉ một câu chung', async () => {
+    state.save.mockRejectedValueOnce(
+      new DesignApiError('Phiếu yêu cầu chưa đúng nên chưa lưu được.', 400, [
+        'Chi tiết trang trí mong muốn: chọn quá nhiều, tối đa 12 mục.',
+      ]),
+    );
+    renderWithApp(<Harness />);
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Loại mái' }), 'flat');
+    await userEvent.click(screen.getByRole('button', { name: 'Lưu yêu cầu' }));
+
+    expect(await screen.findByText(/Chi tiết trang trí mong muốn: chọn quá nhiều/)).toBeVisible();
   });
 });

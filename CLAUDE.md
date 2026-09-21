@@ -492,3 +492,9 @@ gọi qua Durable Object binding (`getContainer(env.DESIGN_COMPUTE, id)`), có h
 Tiến độ module ở **`TIEN_DO_THIET_KE.html`** (tách khỏi `TIEN_DO.html`). **Xong việc nào cập nhật ngay.**
 Vướng mắc ghi ngay lúc gặp, đủ bốn ý: ở đâu, đã thử gì, đang chặn gì, cần gì để gỡ. Câu hỏi cho Haan ghi
 vào phần "Câu hỏi chờ Haan" của file đó.
+
+**Giữ tờ đó dưới ~120 KB** (20/09/2026 nó đã phình tới **460 KB / 5.971 dòng** — mở chậm, không ai đọc
+hết, và tốn **~115.000 token** mỗi lần một phiên phải đọc nó). Ba quy tắc chống phình: mục «Đã làm» chỉ
+giữ **hai ngày gần nhất**, cũ hơn đẩy sang **`TIEN_DO_THIET_KE_LUU.html`**; vướng mắc đã gỡ chuyển sang
+tờ lưu trữ ngay; phần nói về thứ **đã bị xoá khỏi mã** thì **xoá hẳn** — `doc/design/QUYET_DINH_AI.md`
+và lịch sử git đã giữ. Cập nhật hai tờ này bằng lệnh chèn ở shell, **đừng `Read` cả tệp**.

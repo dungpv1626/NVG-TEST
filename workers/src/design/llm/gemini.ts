@@ -310,7 +310,12 @@ export class GeminiClient implements TextModelClient, AiImageClient {
       generationConfig: { responseModalities: ['IMAGE'] },
     };
     const started = Date.now();
-    const data = await this.call<GeminiGenerateResponse>(route, 'generateContent', body);
+    const data = await this.call<GeminiGenerateResponse>(
+      route,
+      'generateContent',
+      body,
+      'signal' in options ? options.signal : undefined,
+    );
     const part = data.candidates?.[0]?.content?.parts?.find((p) => p.inlineData?.data);
     if (!part?.inlineData?.data) {
       const reason = data.candidates?.[0]?.finishReason ?? 'không rõ';

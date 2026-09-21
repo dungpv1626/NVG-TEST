@@ -29,11 +29,24 @@ describe('Lời dẫn ảnh mặt đứng', () => {
 
   it('nhà có sân trước: cổng và rào đi vào lời dẫn kèm kích thước và vật liệu', () => {
     const { prompt } = facadeImagePrompt(VILLA_FACADE, facadeVocab, prompts);
-    expect(prompt).toMatch(
-      /sliding gate 360 cm wide, 180 cm high in ornamental wrought iron, black/,
-    );
-    expect(prompt).toMatch(/160 cm fence/);
+    // MÉT, không phải cm (T68): cùng một lời dẫn mà chỗ nói cm chỗ nói m là mời mô hình đọc
+    // nhầm một bậc mười — khối nhà đã nói bằng mét từ đầu.
+    expect(prompt).toMatch(/sliding gate 3.6 m wide, 1.8 m high in ornamental wrought iron, black/);
+    expect(prompt).toMatch(/1.6 m high fence/);
+    expect(prompt).not.toMatch(/\d+ cm/);
     expect(prompt).toContain(prompts.facadeImage.roofs.thai!);
+  });
+
+  it('thiếu MỘT trong hai số đo cổng thì vẫn nói số còn lại, không mất cả hai', () => {
+    // Hợp đồng chỉ bắt buộc `gate.type`. Điều kiện cũ là `gate.w && gate.h`, nên khai thiếu chiều
+    // cao là mất luôn bề rộng — và một cái cổng không có số đo nào thì mô hình vẽ nó to bằng cả
+    // mặt tiền.
+    const noHeight = {
+      ...VILLA_FACADE,
+      gate: { ...VILLA_FACADE.gate!, h: undefined },
+    } as typeof VILLA_FACADE;
+    const { prompt } = facadeImagePrompt(noHeight, facadeVocab, prompts);
+    expect(prompt).toMatch(/gate 3.6 m wide/);
   });
 
   it('không còn chỗ điền nào sót lại, và không viết chữ lên ảnh', () => {

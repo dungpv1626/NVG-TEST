@@ -19,6 +19,7 @@ import { Chip, Panel } from '../tk-ui';
 import { AiCallLedger } from './ai-usage';
 import { cn } from '@/lib/utils';
 import { AiFacadeStep, facadeIsStale, STALE_FACADE } from './ai-facade-step';
+import { AiPerspectiveStep } from './ai-perspective-step';
 import { AiPlanStep } from './ai-plan-step';
 
 type StepId = 'mat-bang' | 'mat-dung' | 'phoi-canh';
@@ -44,7 +45,7 @@ const STEPS: StepMeta[] = [
   {
     id: 'phoi-canh',
     label: '3. Phối cảnh',
-    hint: 'Năm ảnh cùng một ngôi nhà, dựng từ tờ mặt đứng đã duyệt.',
+    hint: 'Năm ảnh cùng một ngôi nhà, dựng từ tờ mặt đứng và tờ mặt bằng mái.',
   },
 ];
 
@@ -185,11 +186,7 @@ export function AiDesignTab({
           <AiFacadeStep projectId={projectId} readOnly={readOnly} state={data} />
         )}
         {open === 'phoi-canh' && (
-          <Panel title={active.label}>
-            {/* Đúng câu của CLAUDE.md 5.2: chưa có thì nói chưa có, không hiện số 0 hay ô rỗng
-                trông như đã chạy xong. */}
-            <p className="text-fg-subtle">Bước này chưa mở. Đang làm — sẽ có ở đợt tiếp theo.</p>
-          </Panel>
+          <AiPerspectiveStep projectId={projectId} readOnly={readOnly} state={data} />
         )}
       </div>
 

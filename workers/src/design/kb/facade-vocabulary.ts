@@ -18,6 +18,16 @@ export interface ColourEntry extends VocabEntry {
   hex: string;
 }
 
+export interface MaterialEntry extends VocabEntry {
+  /**
+   * Vật liệu ỐP (đá, gạch, tấm), khác với sơn phủ lên tường trát. Vắng = không phải vật liệu ốp.
+   *
+   * Thước chấm mặt đứng hỏi «phần đế có ốp không» (V2) — đánh dấu là DỮ LIỆU trong
+   * `kb/facade_vocabulary.yaml`, không suy từ tên mã trong mã nguồn.
+   */
+  op?: boolean;
+}
+
 /** Khoảng [thấp, cao] cm. */
 export type Range = readonly [number, number];
 
@@ -34,7 +44,7 @@ export interface FacadeVocabulary {
   garageDoorTypes: Record<string, VocabEntry>;
   fenceTypes: Record<string, VocabEntry>;
   roofMaterials: Record<string, VocabEntry>;
-  materials: Record<string, VocabEntry>;
+  materials: Record<string, MaterialEntry>;
   colours: Record<string, ColourEntry>;
   railings: Record<string, VocabEntry>;
   /** Nhãn tiếng Việt cho mã hợp đồng đã khai sẵn (kiểu mái, kiểu cổng, vùng, mảng trang trí). */

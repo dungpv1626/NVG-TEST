@@ -112,7 +112,7 @@ export function briefKeys(brief: AiFacadeBrief | null): Set<string> {
   if (any(brief.side_door.material, brief.side_door.colour)) keys.add('side_door');
   if (any(brief.window.material, brief.window.colour)) keys.add('window');
   if (any(brief.garage_door.material, brief.garage_door.colour)) keys.add('garage_door');
-  if (any(brief.balcony.colour)) keys.add('railing');
+  if (any(brief.balcony.colour) || any(brief.balcony.material)) keys.add('railing');
   if (any(brief.balcony.railing)) keys.add('railing_type');
   if (any(brief.gate.material, brief.gate.colour)) keys.add('gate');
   if (any(brief.fence.material, brief.fence.colour)) keys.add('fence');

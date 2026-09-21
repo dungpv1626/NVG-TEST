@@ -7,17 +7,16 @@
 > **Mã `#N`** là số của bảng «Quyết định còn cần Haan chốt» trong `BUILD_PLAN.md` — **mã nguồn trỏ
 > theo số này** ("câu hỏi N"), nên đừng đánh lại số. Dòng nào chưa từng được đánh số thì ghi
 > `(chưa có mã)`. Đây là danh sách ĐẦY ĐỦ; `BUILD_PLAN.md` giữ bản rút gọn cùng số.
+>
+> **Haan chốt 20/09/2026:** câu nào chưa được trả lời thì **tạm hoãn — chưa cần có trong bản demo**.
+> Các dòng đã hoãn gom ở mục «Tạm hoãn» phía dưới, không xoá để lúc mở lại không phải dựng lại từ đầu.
 
 ## Còn mở
 
 ### Tích hợp, mã hoá, đơn giá
 
-- **#2 — Phần mềm kế toán chính thức** để tích hợp (MISA SME / AMIS / Fast?)
-  → Chưa thiết kế được payload endpoint `/api/export/accounting-software` (KT-08). Cột `posted_at`/`posted_reference` đã sẵn
-- **#5 — Hạn mức phê duyệt chính thức** theo cấp/loại nghiệp vụ
-  → Đang dùng mức tạm 10 triệu/50 triệu của PRD NEN-02; dữ liệu `approval_limits` phải cấu hình được
-- **#4 — Bộ mã vật tư / công trình / nhà cung cấp** thống nhất
-  → NVG chưa có; sẽ tự tạo mẫu trước go-live từng giai đoạn. **Cần trước khi nhập liệu thật**
+- **#4 — Bộ mã vật tư / công trình / nhà cung cấp** thống nhất — **ĐÃ CÓ BẢN ĐỀ XUẤT 20/09/2026, chờ Haan duyệt**
+  → Haan giao đội triển khai tự đề xuất. Bản đề xuất đầy đủ: **`doc/BO_MA.md`** — công trình `NVC-CT-2026-0001`, vật tư `THEP-ONG-D49X2.0` (theo KHO-02), nhà cung cấp `NCC-00001`. Nguyên tắc nền: bảng giao dịch mang pháp nhân, **bảng dùng chung thì không** (`materials`/`suppliers`/`customers` không có `company_id`). Chưa áp vào mã nguồn; mục 6 của tài liệu đó liệt kê đúng những gì sẽ đổi khi duyệt, kèm ba câu hỏi ngắn cần Haan xác nhận
 - **#3 — `unit_prices` dùng chung DA/TK/MH?**
   → Cần xác nhận NVO có cần bảng đơn giá riêng không (BSD 5). Đang triển khai DÙNG CHUNG, tách sẵn theo `company_id`
 
@@ -34,16 +33,9 @@
 
 ### Nhân sự, chấm công, phê duyệt
 
-- **#6 — Cơ chế lương/thưởng chi tiết** từng công ty/nhóm nhân sự
-  → Chưa cấu hình được NS-06. Đã có sẵn HÌNH THỨC trả lương và số công đã chốt; thiếu đúng phần công thức (`payroll_rules`, `piece_rates`)
-- **#17 — Ai xác nhận bảng chấm công từng khối** (NS-04) — **hai trong ba khối đã CHỐT 02/09/2026**
-  → Công trường → chỉ huy trưởng (`approve` trên TC) và xưởng → Phó Giám đốc (`approve` trên SX) nay là NGUYÊN VĂN khảo sát, không còn suy luận. Khối **văn phòng** vẫn là suy luận (`approve` trên NS), cùng gốc với "trưởng đơn vị" của KT-01. Ánh xạ khối → phân hệ nằm ở hàm `timesheet_block_module`
-- **#18 — Một ngày công bằng mấy giờ** (NS-04) — khảo sát Xưởng KHÔNG trả lời
-  → Vẫn lấy **8 giờ** (Bộ luật Lao động 2019 Điều 105). Phiếu để trống cả hình thức chấm công (`[máy chấm công/bảng giấy]`) lẫn cách tính lương (`[ngày công/thời gian/sản phẩm]`), nên chưa loại trừ được ca 12 giờ. Sửa ở `HOURS_PER_WORKDAY` (`@nvg/shared/ns`) **và** hàm `consolidate_timesheets` — có test đối chiếu hai bản
-- **#19 — Ai duyệt yêu cầu tuyển dụng** (NS-02)
-  → Đang đặt Tổng Giám đốc, vì tăng biên chế là quyết định ngân sách của cả công ty. Đổi bằng cấu hình `approval_limits`, không sửa mã
-- **(chưa có mã) — "Trưởng đơn vị" ở bước 1 của luồng duyệt chi (KT-01) là AI** — Haan xác nhận 27/08/2026: chưa có thông tin, chờ khảo sát đầy đủ
-  → Đang SUY LUẬN: người có quyền `approve` trên module phát sinh khoản chi (`payment_requests.origin_module`). Kéo theo: vai trò TC/MH/KHO được cấp `approve` trên chính phân hệ của mình. Khi Module NS có cây tổ chức, thay điều kiện trong hàm `rls_payment_step_actor` — không phải sửa chỗ nào khác
+- **(chưa có mã) — "Trưởng đơn vị" ở bước 1 của luồng duyệt chi (KT-01) là AI** — Haan hỏi lại cho rõ 20/09/2026, **câu hỏi viết lại bên dưới**
+  → **Tình huống cụ thể:** một đề nghị thanh toán 30 triệu trả nhà cung cấp thép, phát sinh từ đơn mua hàng của công trình X thuộc NVC. Luồng KT-01 là *trưởng đơn vị → kế toán → CFO/TGĐ*. **Ai ký ở ô "trưởng đơn vị"?** Bốn khả năng: (a) chỉ huy trưởng công trình X · (b) trưởng phòng Mua hàng — phòng lập đơn · (c) trưởng phòng Thi công — phòng quản lý công trình · (d) giám đốc pháp nhân NVC. **Câu hỏi thứ hai:** luôn là một người cho mọi khoản chi, hay đổi theo nơi phát sinh (công trường / xưởng / văn phòng)?
+  → **Mã đang chạy phương án (b)**: người có quyền `approve` trên chính phân hệ phát sinh khoản chi (`payment_requests.origin_module`) — chi từ đơn mua hàng thì Mua hàng ký, chi từ công trình thì Thi công ký. Kéo theo: vai trò TC/MH/KHO được cấp `approve` trên phân hệ của mình. Đổi câu trả lời chỉ phải sửa điều kiện trong hàm `rls_payment_step_actor`, không lan sang chỗ khác
 - **#37 — Vai trò thứ 15 "Tổ trưởng sản xuất"** (AFD v1.1 mục 2.3) chưa tạo
   → Chờ đợt SX cụm C
 
@@ -75,8 +67,6 @@
 
 ### Báo cáo
 
-- **(chưa có mã) — Đo "hiệu suất nhân sự/tổ đội/nhà cung cấp"** (BC-03 phần 4) đo bằng gì
-  → CỐ Ý CHƯA làm — TC chưa có bảng phân công tổ đội, MH chưa có sổ đánh giá nhà cung cấp. Khảo sát công trường đã cho ĐƠN VỊ ĐO của tổ đội: **khối lượng hoàn thành × đơn giá hợp đồng**, kỹ thuật hiện trường đo bóc, chỉ huy trưởng kiểm tra trước khi chuyển Kế toán. Ba phần đầu của BC-03 đã xong ở `db/migrations/0059_bc_sales_effectiveness.sql`
 - **#34 — Số bản ghi tối thiểu để hiện một chỉ số** thay vì "Chưa đủ dữ liệu" (BSD v1.1 Mục 5)
   → Chưa xác định. Tham số `min_samples_for_metric`, hiện để RỖNG — cố ý không hard-code trong truy vấn báo cáo
 
@@ -84,6 +74,8 @@
 
 - **#23 — Bảng `tasks` — bỏ hẳn hay dùng thật?**
   → Có sẵn từ Phase 0 (BUILD_PLAN 1.4), chưa từng được ghi/đọc ở bất kỳ đâu. Trung tâm Thông báo (bảng `notifications`) đã lên hình ở Phase 3G — nút chuông Top Bar giờ đọc thật, đánh dấu đã đọc, điều hướng tới `action_url`. "Việc cần làm" vẫn chỉ là Hộp thư Phê duyệt (`usePendingApprovals`); việc không gắn phê duyệt (vd. nhắc giấy tờ sắp hết hạn) hiện chỉ sinh `notification` một chiều, không có nơi "xử lý xong thì biến mất" đúng AFD 5.4
+- **(chưa có mã) — Bảng `audit_logs` chưa có nguồn ghi nào, nối vào đâu?**
+  → Đo trên CSDL thật 20/09/2026: `sensitive_access_logs` có 2.434 dòng, `audit_logs` có **0**, và không một hàm nào trong CSDL chứa lệnh ghi vào bảng đó (chú thích ở migration `0049` nói `adjust_timesheet` ghi vào đây — đối chiếu lại thì không đúng). Cùng nhóm với bảng `tasks` (#23): có bảng, có RLS, chưa ai dùng. Lịch sử hiện nằm rải ở bảng lịch sử riêng của từng loại hồ sơ, nên tra "hôm qua ai sửa gì" phải mở từng hồ sơ — đúng thứ NEN-03 muốn tránh. Cần Haan quyết nghiệp vụ nào ghi vào đây trước khi nối
 - **(chưa có mã) — "Hồ sơ thiếu chứng từ" (NEN-04) nghĩa là gì**
   → Áp cho loại hồ sơ nào (đề nghị chi đã trả nhưng thiếu hoá đơn? đơn hàng đã nhận nhưng thiếu phiếu giao nhận?), thiếu CỘT dữ liệu nào, bao lâu thì nhắc, nhắc ai. **Chưa rõ thì chưa viết được migration** — đây là loại cảnh báo thứ 5 của tác vụ nền
 - **(chưa có mã) — Nhắc công nợ "sắp đến hạn" báo trước mấy ngày**
@@ -95,12 +87,6 @@
 
 ### Xưởng (NVS)
 
-- **#28 — Xưởng: tỷ lệ lỗi và giá trị thất thoát/hư hỏng hằng năm**
-  → Phiếu ghi thẳng "Không nên ước lượng một con số để điền vì đây là dữ liệu quan trọng cho quản trị tài sản và định giá cho thuê". **KHÔNG tự điền số mặc định** — cần kiểm kê và đối chiếu 12 tháng gần nhất. Đến khi có, mọi chỉ số liên quan hiện **"Chưa đủ dữ liệu"** (5.2). Ngưỡng cho phép là việc khác, xem #32
-- **#28 — Sản lượng/tháng và phân loại bán hay cho thuê cho TỪNG mã sản phẩm**
-  → Catalogue (Phụ lục D) **không có** hai thông tin này. Chặn SX-01 (phân loại mục đích khai thác), SX-06 (kế hoạch theo năng lực thật) và BC-04
-- **#26 — Xưởng: giao thêm giữa kỳ trong cùng một hợp đồng thuê**
-  → Thu hồi nhiều đợt đã làm (migration 0106). Giao thêm thì CHƯA: mỗi đợt giao có ngày bắt đầu tính thuê riêng nên cần bảng đợt giao, không nhét thêm vào `rental_agreement_items` được. Cần biết NVG tính từ ngày giao của từng đợt hay từ ngày ký hợp đồng
 - **#32 — Ngưỡng tỷ lệ lỗi sản xuất cho phép** (SX-12)
   → Theo nhóm sản phẩm / giai đoạn / lô, biến động. Tham số `defect_rate_threshold`, hiện để RỖNG
 - **#31 — Bảng giá bồi thường giàn giáo thiếu – hỏng theo mã** (SX-19)
@@ -122,6 +108,23 @@
   → Chưa chốt; phương án đang cân nhắc là **chụp ảnh có gắn thời gian và vị trí**. Cần quyết định trước khi xây phần chấm công khối công trường. Thực chất chỉ cần khoanh 1 trong 4 lựa chọn đang để trống ở phiếu khảo sát công trường (bảng giấy / Excel / Zalo / máy chấm công)
 - **#30 — Thời hạn cam kết phản hồi của từng phòng ban** (PRD v1.4 Mục 10)
   → Cần BGĐ quyết. **Không có tham số này thì cơ chế cảnh báo quá hạn TC-10 không có căn cứ để chạy** — nguyên văn PRD. Bảng `sla_definitions` đã dựng và **cố ý để RỖNG**: nạp sẵn một con số sẽ tạo đồng hồ đếm ngược trông như đã cam kết, và người duyệt bị gắn nhãn quá hạn theo thời hạn chưa ai ký
+
+## Tạm hoãn — chưa cần có trong bản demo (Haan chốt 20/09/2026)
+
+Không phải câu hỏi đã trả lời, mà là câu hỏi **chưa tới lượt**. Giữ nguyên ở đây để lúc mở lại không
+phải dựng lại từ đầu. Chỗ nào trong mã phụ thuộc thì vẫn hiện **"Chưa đủ dữ liệu"**, không điền số
+mặc định (5.2).
+
+- **#2 — Phần mềm kế toán chính thức** để tích hợp (MISA SME / AMIS / Fast?)
+  → Chưa thiết kế được payload endpoint `/api/export/accounting-software` (KT-08). Cột `posted_at`/`posted_reference` đã sẵn, nên khi chốt phần mềm thì chỉ thêm bộ chuyển đổi, không đụng cấu trúc bảng
+- **#6 — Cơ chế lương/thưởng chi tiết** từng công ty/nhóm nhân sự (NS-06)
+  → Đã có HÌNH THỨC trả lương và số công; thiếu đúng phần công thức (`payroll_rules`, `piece_rates`). Haan hoãn **toàn bộ phần tính lương** trong giai đoạn này. Số ngày công vẫn chạy và vẫn đúng — chỉ chưa quy ra tiền
+- **(chưa có mã) — Đo "hiệu suất nhân sự/tổ đội/nhà cung cấp"** (BC-03 phần 4)
+  → Haan: chưa cần làm ngay. Khảo sát công trường đã cho sẵn ĐƠN VỊ ĐO của tổ đội khi mở lại: **khối lượng hoàn thành × đơn giá hợp đồng**, kỹ thuật hiện trường đo bóc, chỉ huy trưởng kiểm tra trước khi chuyển Kế toán. Ba phần đầu của BC-03 đã xong (`db/migrations/0059_bc_sales_effectiveness.sql`)
+- **#28 — Bốn ô trống của Xưởng**: catalogue sản phẩm giàn giáo (sản lượng/tháng + phân loại bán hay cho thuê từng mã) · bộ định mức vật tư hiện hành · tỷ lệ lỗi bình quân · giá trị thất thoát 12 tháng
+  → Haan: hoãn, chưa cần có trong demo. Đây là việc **kiểm kê thật**, không trả lời trong một buổi; phiếu khảo sát ghi thẳng "không nên ước lượng một con số để điền". Chặn SX cụm A/B/C/E và BC-04 khi mở lại
+- **#26 — Xưởng: giao thêm giữa kỳ trong cùng một hợp đồng thuê**
+  → Haan: hoãn, chưa cần có trong demo. Thu hồi nhiều đợt **đã làm** (migration 0106). Giao thêm thì chưa: mỗi đợt giao có ngày bắt đầu tính thuê riêng nên cần bảng đợt giao, không nhét thêm vào `rental_agreement_items` được
 
 ## Mâu thuẫn tài liệu chờ Haan xử lý
 
@@ -150,3 +153,11 @@ doanh NVS đang phải dùng chung vai trò `SX` (CLAUDE.md 6.5 mục 6).
   → QĐ-5: định mức nằm trên **các file trên máy tính công ty và bản giấy**, do **trưởng bộ phận sản xuất** nắm giữ, và **giá biến động liên tục**. Việc số hoá là hạng mục chuẩn hoá dữ liệu **bắt buộc trước khi vận hành** SX-07. Vẫn cần chính bộ định mức hiện hành — xem #28
 - ~~**Xưởng — công trình nội bộ có tính giá thuê nội bộ không**~~ — **ĐÃ CHỐT 05/09/2026**
   → **QĐ-6: việc GHI NHẬN là BẮT BUỘC.** Công trình nội bộ phải lập chứng từ đầy đủ như khách ngoài (SX-21) và ghi nhận giá trị theo giá thuê nội bộ; có thể không phát sinh thanh toán thật giữa các đơn vị, nhưng số liệu phải có để phân bổ đúng chi phí công trình. **Mức giá** do BGĐ quyết — tham số `internal_rental_price`, hiện để RỖNG. `rental_agreements.is_internal` đánh dấu; **báo cáo hợp nhất toàn NVG phải LOẠI TRỪ** các giao dịch này để không đếm hai lần doanh thu
+- ~~**#5 — Hạn mức phê duyệt chính thức theo vai trò/loại nghiệp vụ**~~ — **ĐÃ CHỐT 20/09/2026**
+  → Haan: dùng đúng bộ mức đội triển khai đề xuất, chạy thật rồi quản trị viên sửa. Bộ đang chạy: **22 dòng, 11 loại nghiệp vụ** trong `approval_limits` (nguồn `DEFAULT_APPROVAL_LIMITS` ở `@nvg/shared/roles`) — đề nghị chi 10 triệu (KT) → 200 triệu (CFO) → không giới hạn (TGĐ); đề nghị mua cùng bậc; hợp đồng 200 triệu (DA_ĐT) → TGĐ; dự toán và báo giá 500 triệu → TGĐ; chênh lệch kiểm kê 10 triệu (Kho) → CFO. Sửa trên màn hình **Hạn mức phê duyệt** (`/nen/han-muc`), không phải triển khai lại
+- ~~**#17 — Ai xác nhận bảng chấm công khối VĂN PHÒNG**~~ (NS-04) — **ĐÃ CHỐT 20/09/2026**
+  → Haan: **Hành chính – Nhân sự**. Trùng đúng thứ mã đang làm (`timesheet_block_module` trả `NS` cho khối văn phòng), nên không phải sửa gì — chỉ hết là suy luận. Hai khối kia đã chốt 02/09/2026: công trường → chỉ huy trưởng (`approve` trên TC), xưởng → Phó Giám đốc (`approve` trên SX)
+- ~~**#18 — Một ngày công bằng mấy giờ**~~ (NS-04) — **ĐÃ CHỐT 20/09/2026**
+  → Haan: **8 giờ**, đúng Bộ luật Lao động 2019 Điều 105 — ca 12 giờ đã được loại trừ. Giá trị thật nằm ở tham số `hours_per_workday` (`system_parameters`, sửa được ở `/nen/tham-so`); `HOURS_PER_WORKDAY` ở `@nvg/shared/ns` chỉ là giá trị dự phòng khi tham số chưa cấu hình. Phần **tính lương** từ số công thì hoãn — xem #6
+- ~~**#19 — Ai duyệt yêu cầu tuyển dụng**~~ (NS-02) — **ĐÃ CHỐT 20/09/2026**
+  → Haan: **Hành chính – Nhân sự**, không phải Tổng Giám đốc như giả định cũ. Đã đổi bằng **migration `0130`** (một dòng dữ liệu trong `approval_limits`, không đụng hàm nào) và cập nhật `DEFAULT_APPROVAL_LIMITS`. ⚠️ Hệ quả kiểm soát: hệ thống **không chặn người tự duyệt hồ sơ của chính mình**, nên yêu cầu do chính HCNS lập thì HCNS duyệt được. Muốn TGĐ giữ bước cuối thì thêm một dòng bước 2 ở `/nen/han-muc`

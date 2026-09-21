@@ -1,0 +1,26 @@
+graph TD
+  classDef nguoi fill:#FFF6E0,stroke:#D9A441,stroke-width:1px;
+  classDef hethong fill:#1F5F4B,stroke:#1F5F4B,color:#FFFFFF,stroke-width:1px;
+  classDef ngoai fill:#F6F8F7,stroke:#C9D2CE,stroke-dasharray:4 3;
+
+  VP["Khối văn phòng<br/>Kinh doanh · Dự án · Mua hàng<br/>Kế toán · Nhân sự"]:::nguoi
+  CT["Công trường<br/>Chỉ huy trưởng · Kỹ thuật<br/>(điện thoại)"]:::nguoi
+  XU["Xưởng NVS<br/>Sản xuất · Cho thuê<br/>(điện thoại)"]:::nguoi
+  BGD["Ban Giám đốc<br/>Phê duyệt · Báo cáo"]:::nguoi
+
+  SYS["<b>Hệ thống quản trị NVG</b><br/>12 phân hệ · 3 pháp nhân + Back Office"]:::hethong
+
+  SUPA["Supabase<br/>PostgreSQL · Auth · Storage"]:::ngoai
+  LLM["Mô hình ngôn ngữ và ảnh<br/>(chỉ phân hệ Thiết kế AI)"]:::ngoai
+  KT["Phần mềm kế toán chính thức<br/>TBD — chưa chọn"]:::ngoai
+  MAIL["Dịch vụ thư điện tử<br/>TBD — chờ khoá API"]:::ngoai
+
+  VP --> SYS
+  CT --> SYS
+  XU --> SYS
+  BGD --> SYS
+
+  SYS --> SUPA
+  SYS --> LLM
+  SYS -.-> KT
+  SYS -.-> MAIL

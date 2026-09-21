@@ -29,9 +29,11 @@ import {
   VILLA_PROPOSAL,
 } from './ai-facade-fixtures';
 import { TOWNHOUSE_PLAN, VILLA_PLAN } from './ai-plan-fixtures';
-import { FAKE_CALL, loadRun, prompts } from './ai-real-context';
+import { FAKE_CALL, loadRun, prompts, read } from './ai-real-context';
+import { parseFacadeQuality } from '../ai/facade/quality';
 
 const frame = facadeFrame(TOWNHOUSE_PLAN, norms, outdoor);
+const facadeQuality = parseFacadeQuality(read('kb/facade_quality.yaml'));
 const digest = loadRun('58688ead').digest;
 
 const withElement = (element: AiFacadeProposal['elements'][number]): AiFacadeProposal => ({
@@ -278,6 +280,9 @@ function stepDeps(answer: unknown) {
     construction: norms,
     outdoor,
     vocab: facadeVocab,
+    // Thước chấm điểm (T63): bước đề xuất chấm ngay trên ý tưởng vừa qua cổng để biết có cần gọi
+    // lại vì ĐIỂM không, nên phép thử phải cấp thước thật.
+    quality: facadeQuality,
     repo,
     provider: 'fake',
     model: 'fake-1',

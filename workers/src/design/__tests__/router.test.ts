@@ -34,9 +34,10 @@ describe('config/models.yaml', () => {
       'ai_text_anthropic_fast',
       'ai_text_gemini',
       'ai_text_gemini_fast',
-      'ai_text_gemini_free',
       'ai_text_openai',
+      'ai_text_openai_deep',
       'ai_text_openai_fast',
+      'ai_text_openai_top',
       'kb_label_normalize',
       'kb_rationale_embed',
       'site_boundary_extract',
@@ -62,6 +63,10 @@ describe('config/models.yaml', () => {
    * tuyến `ai_text_*`/`ai_image_*` gọi API TRẢ PHÍ của OpenAI, Google, Anthropic — cả ba cam kết
    * không huấn luyện trên dữ liệu gửi qua API. Chúng nhận đầu bài đã LƯỢC DANH TÍNH
    * (`brief/anonymise.ts`), và test dưới canh chúng không tụt xuống 1.
+   *
+   * Từ 20/09/2026 KHÔNG tuyến `ai_*` nào chạy khoá miễn phí nữa (`ai_text_gemini_free` đã gỡ theo
+   * yêu cầu của Haan). Hàng rào `isPaidAiRoute` dưới đây GIỮ NGUYÊN: nó canh cho lần sau, khi có
+   * người thêm lại một tuyến khoá miễn phí và quên đặt nó ở hạng 3.
    */
   const TAM_THOI_HANG_2 = new Set(['site_boundary_extract']);
   const isAiRoute = (name: string) => /^ai_(text|image)_/.test(name);

@@ -16,6 +16,7 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock('@/hooks/use-ai-design', () => ({
+  AI_CALL_LOG_LIMIT: 25,
   useAiCallLog: () => ({ data: state.rows, isLoading: false, isError: false, error: null }),
   useAiCallPrompts: () => ({ data: state.prompts }),
   useDownloadAiCallPrompt: () => ({
@@ -141,7 +142,9 @@ describe('AiCallLedger', () => {
     ];
     render(<AiCallLedger projectId="p1" />);
 
-    expect(screen.getByText(/3 lượt · 24.000 token vào · 36.000 token ra/)).toHaveTextContent(
+    expect(
+      screen.getByText(/3 lượt gần nhất · 24.000 token vào · 36.000 token ra/),
+    ).toHaveTextContent(
       'Tiền thật ≈ 0,13 USD · Theo giá niêm yết ≈ 0,131 USD · 1 lượt chưa tính được tiền, chưa cộng',
     );
     expect(screen.getByText('0 USD (≈ 0,001 USD nếu trả phí)')).toBeInTheDocument();
@@ -165,6 +168,38 @@ describe('AiCallLedger', () => {
     expect(state.download).toHaveBeenCalledWith({ projectId: 'p1', callId: 'call-new' });
     expect(screen.getByText('Không lưu')).toBeInTheDocument();
     state.prompts = new Set();
+  });
+
+  /*
+   * Haan, 20/09/2026: «chỉ hiển thị 12 lần gần nhất, đồng thời chỉ giữ lại 25 lượt gọi gần nhất
+   * thôi, muốn xem toàn bộ 25 lượt thì có nút expand».
+   */
+  it('hiện 12 dòng, có nút mở ra xem hết — và dòng tổng cộng CẢ 20 lượt, không chỉ 12', () => {
+    state.rows = Array.from({ length: 20 }, (_, i) =>
+      row({ id: `call-${i}`, input_tokens: 1_000, output_tokens: 2_000, cost_usd: 0.1 }),
+    );
+    render(<AiCallLedger projectId="p1" />);
+    expect(screen.getAllByText('gpt-5')).toHaveLength(12);
+    // Dòng tổng phải nói về cả 20 lượt đã nạp: một dòng tiền cộng thiếu là sai lặng lẽ.
+    expect(screen.getByText(/20 lượt gần nhất · 20.000 token vào/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Xem tất cả 20 lượt' }));
+    expect(screen.getAllByText('gpt-5')).toHaveLength(20);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Thu gọn còn 12 lượt' }));
+    expect(screen.getAllByText('gpt-5')).toHaveLength(12);
+  });
+
+  it('ít hơn 12 lượt thì không có nút mở rộng', () => {
+    state.rows = [row({ id: 'call-1' }), row({ id: 'call-2' })];
+    render(<AiCallLedger projectId="p1" />);
+    expect(screen.queryByRole('button', { name: /Xem tất cả/ })).toBeNull();
+  });
+
+  it('nói rõ bảng chỉ nạp 25 lượt gần nhất và dòng cũ KHÔNG bị xoá', () => {
+    state.rows = [row({ id: 'call-1' })];
+    render(<AiCallLedger projectId="p1" />);
+    expect(screen.getByText(/25 lượt gần nhất — dòng cũ hơn vẫn còn đủ/)).toBeInTheDocument();
   });
 
   it('chưa có lượt nào thì nói rõ, không hiện bảng rỗng', () => {

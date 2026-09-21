@@ -13,6 +13,12 @@ export interface AiModelOption {
   route: string;
   provider: string;
   label: string;
+  /** Tên nhà cung cấp để gom nhóm trên ô chọn (`config/models.yaml` mục `providers`). */
+  providerLabel: string;
+  /** Tên ngắn, nhãn phân loại, câu mô tả cho thẻ model. `null` khi cấu hình chưa khai. */
+  short: string | null;
+  tag: string | null;
+  blurb: string | null;
   model: string;
   /** Hạng dữ liệu nhạy cảm nhất tuyến nhận — 2 cho tuyến trả phí, 3 cho Pollinations. */
   maxDataClass: DataClass;
@@ -60,6 +66,10 @@ function option(route: PublicRoute): AiModelOption {
     route: route.route,
     provider: route.provider,
     label: route.label,
+    providerLabel: route.providerLabel,
+    short: route.short,
+    tag: route.tag,
+    blurb: route.blurb,
     model: route.model,
     maxDataClass: route.maxDataClass,
     enabled: reason === null,

@@ -26,6 +26,7 @@ import {
   type FacadeOption,
   type FacadeVocabularyView,
 } from '@/hooks/use-ai-design';
+import { DesignApiError } from '@/lib/design-api';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard';
 import { Chip, Panel } from '../tk-ui';
@@ -96,6 +97,8 @@ export interface FacadeBriefController {
   save: () => Promise<boolean>;
   saving: boolean;
   saveError: string | null;
+  /** Mục nào hỏng — Worker trả kèm, đã là tiếng Việt. Rỗng khi lỗi không thuộc về một mục nào. */
+  saveIssues: readonly string[];
   saved: FacadeBriefState | undefined;
 }
 
@@ -108,6 +111,7 @@ export function useFacadeBriefController(projectId: string): FacadeBriefControll
   const saveBrief = useSaveFacadeBrief();
   const [draft, setDraftState] = useState<AiFacadeBrief | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveIssues, setSaveIssues] = useState<readonly string[]>([]);
 
   // Nạp lần đầu: nháp trong trình duyệt (nếu có) thắng bản trên máy chủ — đó là thứ kỹ sư đang gõ dở.
   useEffect(() => {
@@ -126,12 +130,15 @@ export function useFacadeBriefController(projectId: string): FacadeBriefControll
 
   const save = async () => {
     setSaveError(null);
+    setSaveIssues([]);
     try {
       await saveBrief.mutateAsync({ projectId, brief: current });
       writeDraft(projectId, null);
       return true;
     } catch (error) {
       setSaveError(toUserMessage(error));
+      // Câu tổng không đủ để sửa: phiếu có mười bốn mục. Danh sách mục hỏng đi kèm lỗi.
+      setSaveIssues(error instanceof DesignApiError ? (error.issues ?? []) : []);
       return false;
     }
   };
@@ -145,6 +152,7 @@ export function useFacadeBriefController(projectId: string): FacadeBriefControll
     save,
     saving: saveBrief.isPending,
     saveError,
+    saveIssues,
     saved: saved.data,
   };
 }
@@ -374,22 +382,47 @@ export function FacadeBriefForm({
           />
         </Group>
 
-        {(plan === null || plan.balconies > 0) && (
-          <Group title="Ban công">
-            <Select
-              label="Kiểu lan can"
-              value={draft.balcony.railing}
-              options={vocab.data.railings}
-              onChange={(v) => set((b) => (b.balcony.railing = v))}
-            />
-            <ColourSelect
-              label="Màu lan can"
-              value={draft.balcony.colour}
-              colours={vocab.data.colours}
-              onChange={(v) => set((b) => (b.balcony.colour = v))}
-            />
-          </Group>
-        )}
+        {/* Nhóm này LUÔN hiện, kể cả khi phương án mặt bằng chưa có ban công nào ra mặt trước.
+            Bản trước ẩn hẳn nó, và ẩn LẶNG LẼ — kỹ sư mở phiếu ra không thấy mục lan can đâu mà
+            cũng không biết vì sao (Haan báo 20/09/2026). Nhóm cổng và tường rào bên dưới cũng bị
+            ẩn theo điều kiện, nhưng nó NÓI ra lý do; chỗ này thì không. */}
+        <Group title="Lan can ban công">
+          {plan !== null && plan.balconies === 0 && (
+            <p className="text-fg-subtle sm:col-span-2">
+              Phương án mặt bằng đang chọn chưa có ban công nào ra mặt trước, nên mặt đứng chưa có
+              lan can để vẽ. Điền sẵn ở đây vẫn được — các ô này áp dụng ngay khi mặt bằng có ban
+              công.
+            </p>
+          )}
+          <Select
+            label="Kiểu lan can"
+            value={draft.balcony.railing}
+            options={vocab.data.railings}
+            onChange={(v) => set((b) => (b.balcony.railing = v))}
+          />
+          <Select
+            label="Vật liệu lan can"
+            value={draft.balcony.material ?? null}
+            options={vocab.data.materials}
+            onChange={(v) => set((b) => (b.balcony.material = v))}
+          />
+          <ColourSelect
+            label="Màu lan can"
+            value={draft.balcony.colour}
+            colours={vocab.data.colours}
+            onChange={(v) => set((b) => (b.balcony.colour = v))}
+          />
+          {/* Chiều cao lan can là số DUY NHẤT của nhóm Lan can mà thước chấm đo (tiêu chí R1), và
+                nó do chương trình đặt chứ không do mô hình chọn — nên điền ở đây là cách duy nhất
+                đổi nó cho một hồ sơ. Mặc định 110 cm của quy ước cấu tạo đang lệch 80–90 cm đo được
+                trên hồ sơ thật (chờ Haan quyết, Q-48). */}
+          <NumberField
+            label="Chiều cao lan can (cm)"
+            value={draft.balcony.h_cm ?? null}
+            fallback={vocab.data.defaults.railingHCm}
+            onChange={(v) => set((b) => (b.balcony.h_cm = v))}
+          />
+        </Group>
 
         {plan?.frontYard === false ? (
           <p className="px-1 text-fg-subtle">
@@ -522,7 +555,18 @@ export function FacadeBriefForm({
           </span>
         </div>
       )}
-      {controller.saveError && <p className="mt-2 text-status-overdue">{controller.saveError}</p>}
+      {controller.saveError && (
+        <div className="mt-2 text-status-overdue">
+          <p>{controller.saveError}</p>
+          {controller.saveIssues.length > 0 && (
+            <ul className="mt-1 list-disc pl-5">
+              {controller.saveIssues.map((issue) => (
+                <li key={issue}>{issue}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </Panel>
   );
 }

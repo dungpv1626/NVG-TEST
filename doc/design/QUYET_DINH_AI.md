@@ -362,7 +362,183 @@ Tường mô hình khai sai sau **một lượt sửa** → **chương trình su
 
 **Lý do / đánh đổi:** Mặt đứng phải nói cùng một ngôi nhà với mặt bằng, nên mọi thứ đo được lấy từ mặt bằng, không hỏi mô hình. Đánh đổi đã biết: mặt đứng là hình chiếu phẳng (cửa sau ban công và cửa trên tường mặt tiền cùng một mặt phẳng); ban công chưa đua ra khỏi khối (Q-46); danh mục vật liệu chờ Haan duyệt (Q-48) — riêng số mái Nhật, tường chắn mái và cốt nền đã đo trên hồ sơ thật và chốt ngày 20/09/2026, xem (i).
 
+## T60
+
+**Ô chọn model dạng thẻ: chọn nhà cung cấp trước, rồi chọn model** (20/09/2026, Haan gửi mẫu giao diện và yêu cầu áp cho cả model ngôn ngữ lẫn model ảnh). (a) Ô cũ là một `<select>` một dòng gộp ba thứ («Gemini 3.1 Pro (Google) — chất lượng cao · gemini-3.1-pro-preview»), và model đắt nhất trông y hệt model rẻ nhất — trong khi hai đầu danh sách chênh nhau hơn hai mươi lần tiền. Ô mới (`web/src/pages/tk/ai/ai-model-cards.tsx`) có hai tầng: hàng thẻ nhà cung cấp, rồi danh sách thẻ model của nhà cung cấp ấy, mỗi thẻ mang tên ngắn, nhãn phân loại, một câu mô tả, **tên model thật** và **giá niêm yết**. (b) **Mặc định THU GỌN**, chỉ hiện model đang chọn — ô này nằm ngay trên nút tiêu tiền, mở sẵn cả danh sách thì nút chính bị đẩy khỏi tầm nhìn. (c) Chữ trên thẻ là **DỮ LIỆU** trong `config/models.yaml`: mỗi tuyến `ai_*` thêm `short`, `tag`, `blurb`; thêm mục `providers` ánh xạ mã nhà cung cấp sang tên hiện trên màn hình. Không cắt chuỗi `label` ra ba mảnh trong mã — cắt chuỗi là đoán, và đoán sai lặng lẽ khi ai đó sửa nhãn. `gemini` và `gemini_paid` để **hai thẻ riêng** vì chúng là hai khoá khác nhau, và khác biệt ấy đúng là thứ người dùng cần biết: gói miễn phí có thể bị dùng để huấn luyện. (d) Ba ràng buộc của ô cũ giữ nguyên: tên model thật luôn đọc được kể cả khi thu gọn (nhật ký `design_ai_call` ghi theo tên model); tuyến chưa dùng được vẫn liệt kê, mờ kèm lý do, không bấm được (AFD 6.5); giá niêm yết hiện trước khi bấm, chưa khai giá thì nói chưa có chứ không để trống.
+
+**Lý do / đánh đổi:** giá đọc trên chính thẻ chứ không chỉ ở dòng ghi chú dưới ô — người chọn model là người tiêu tiền, và con số phải nằm cạnh thứ họ đang cân nhắc. Đổi lại, ô chiếm nhiều chỗ hơn khi mở, và câu mô tả từng model là chữ viết tay trong cấu hình: nó mô tả **bậc và giá** theo cấu hình khai, không phải kết quả đo chất lượng — chưa có phép đo nào so chất lượng các model trên việc của NVG.
+
+## T61
+
+**Làm mới danh sách model chữ của OpenAI; thêm quy trình kiểm bản mới** (20/09/2026, Haan phát hiện: «tôi thấy GPT có nhiều model mới, tại sao chúng ta không sử dụng?»). (a) **Chẩn đoán:** hai tuyến chữ OpenAI đang chạy `gpt-5` và `gpt-5-mini` — cả hai ra **05/08/2025, cũ 13 tháng**; trong khoảng đó OpenAI đã ra 5.1 → 5.6 và `gpt-6-astra`. Lọt vì quy trình chỉ hỏi «model này gọi được không» (kiểm 08/09/2026: gọi được, ghi ✔) mà không bao giờ hỏi «có bản mới hơn chưa» — **một model cũ không bao giờ tự báo rằng nó cũ**. Model ảnh thì đúng bản mới nhất, chỉ vì Đợt E hôm 19/09 vừa phải đi tra lại danh sách. (b) **Đo:** `GET /v1/models` ba nhà cung cấp (0 token, 0 USD) — Google đã là bản mới nhất (`gemini-3.1-pro-preview` vẫn là Pro mới nhất, `gemini-3.8-flash` là Flash mới nhất), Anthropic gần như mới nhất (chỉ `claude-fable-5-1` ngày 28/08/2026 là mới hơn `claude-opus-5`), OpenAI lệch 13 tháng. Rồi **bốn lượt gọi rỗng** qua đúng đường mã thật đi (`/v1/responses`, lược đồ `strict`, `store: false`, `reasoning.effort: low`), tổng **0,00206 USD**: cả bốn trả đúng `{"ok":true}`, nhận `reasoning.effort`, nghĩ 0 token, 1,1–2,7 giây. (c) **Thay:** `gpt-5-mini` → **`gpt-5.6-luna`** (vừa mới hơn vừa **rẻ hơn**: 0,20/1,20 so với 0,25/2 — rẻ hơn 40% ở phần đắt nhất); `gpt-5` → **`gpt-5.6-terra`** (2/12). **Thêm** hai bậc cao KHÔNG đặt mặc định: `ai_text_openai_deep` = `gpt-5.6-sol` (4/20) và `ai_text_openai_top` = `gpt-6-astra` (10/50). Mặc định toàn cục vẫn là Gemini 3.1 Pro. (d) **Quy trình mới, ghi thành chú thích ngay đầu tuyến trong `config/models.yaml`:** mỗi lần đụng tệp ấy, gọi `GET /v1/models` của nhà cung cấp TRƯỚC (không tốn token, không tốn tiền) rồi mới sửa. (e) **Gỡ tuyến gói miễn phí của Google** (`ai_text_gemini_free`, `gemini-2.5-flash`, hạng 3 — Haan: «bỏ gói miễn phí của Google đi, chúng ta sẽ không dùng đến nó»). Nó vào danh sách 13/09/2026 cho bước đề xuất mức ưu tiên diện tích ở màn hình Chương trình không gian, mà bước ấy đã gỡ khỏi giao diện cùng T58 — tuyến còn lại là một lựa chọn không nối vào việc gì. Sau khi gỡ, **không tuyến `ai_*` nào còn chạy khoá miễn phí**: mọi thứ trong ô chọn model đều là API trả phí có cam kết không huấn luyện (hạng 2), và ô chọn còn ba thẻ nhà cung cấp thay vì bốn. Khoá `GEMINI_API_KEY` vẫn dùng cho `kb_label_normalize`, `kb_rationale_embed`, `site_boundary_extract` (đường số hoá hồ sơ cũ, không nằm trong ô chọn), nên `gemini` còn nguyên trong `billing.free_providers`. Hàng rào `isPaidAiRoute` trong `router.test.ts` **giữ nguyên** dù hiện không có tuyến nào để canh: nó canh cho lần sau, khi có người thêm lại một tuyến khoá miễn phí và quên đặt nó ở hạng 3.
+
+**Lý do / đánh đổi:** chưa có phép đo nào so **chất lượng bố cục** giữa các bậc trên việc thật của NVG, nên `blurb` của từng thẻ chỉ nói giá và ngày ra, không nói hay dở — và hai bậc cao không được đặt mặc định. Một lượt xếp mặt bằng thật để so chất lượng là khoản tiền riêng, xin phép riêng. Con số đo 13/09/2026 về token nghĩ (`max_output_tokens: 0`) là của `gpt-5`, **chưa đo lại** trên Terra — chú thích trong cấu hình nói rõ điều đó thay vì để người đọc tưởng số ấy còn đúng. Chưa thêm `claude-fable-5-1` (10/50) vì nó cùng bậc giá với Astra và chưa ai hỏi tới.
+
+## T62
+
+**Giữ lại mọi bản mặt đứng đã dựng, mở lại được để so** (20/09/2026, Haan: «khi tạo bản vẽ mới thì không lưu lại bản vẽ cũ để so sánh → chưa tốt. Cần lưu lại bản cũ để so sánh, có thể xoá đi khi không cần nữa»). (a) **Dữ liệu chưa bao giờ mất**: artifact là bất biến (8.2 nguyên tắc 3), mỗi lượt chạy đúc một `ai_facade_concept` mới. Chỗ thiếu nằm ở tuyến `/ai/state/:projectId` — nó chỉ trả `facadeArtifactId` (mốc hiệu lực), nên màn hình không có đường nào mở lại bản trước. Hồ sơ demo có sẵn **bốn** bản đã dựng mà không bản nào xem lại được. (b) `/state` nay trả thêm `facades` (mới nhất trước, bỏ bản đã ẩn, tối đa 12); màn hình có dải chọn như bước Mặt bằng: mỗi bản một thẻ kèm **ngày giờ dựng**, nhãn «Đang hiệu lực», nút × để thôi hiện. (c) Hai tuyến mới: `POST /facade/choose` (đặt lại mốc — đường QUAY LẠI, để không phải trả tiền một lượt chạy nữa cho thứ mình đã có) và `POST /facade/hide` (thôi hiện, cùng khuôn `/ai/plan/hide`: bảng `design_artifact_hidden`, bỏ dòng thì bản ấy trở lại, bản đang hiệu lực thì gỡ luôn mốc). (d) **Tách «bản đang MỞ» khỏi «bản HIỆU LỰC»**: mở bản cũ ra xem không đổi thứ mà ảnh mặt đứng và bước Phối cảnh dựng theo; muốn đổi thì bấm nút riêng. Nhãn «dựng theo phương án mặt bằng cũ» chỉ gắn cho bản hiệu lực, vì `/state` chỉ trả `plan_ref` của riêng bản ấy.
+
+**Lý do / đánh đổi:** dải chỉ hiện khi có **từ hai bản trở lên** — một bản thì dải không nói thêm gì mà chiếm chỗ ngay trên tờ vẽ. Tên thẻ là «Bản 1…n» theo thứ tự dựng chứ không phải mã băm: kỹ sư so hai bản bằng mắt, không bằng mã. Chưa có: so hai tờ vẽ **cạnh nhau** trên cùng màn hình (hiện phải bấm qua lại), và chưa có ghi chú để kỹ sư đánh dấu vì sao thích bản nào.
+
+## T63
+
+**Thước chấm mặt đứng và vòng tự sửa theo điểm** (20/09/2026, Haan: «cần cải tiến để bản vẽ mặt đứng đạt được tối thiểu 80% so với bản vẽ từ hồ sơ thật của NVG»; chọn cách đo «máy chấm + kỹ sư chấm lại», phạm vi «cả thước đo lẫn bổ sung bộ vẽ»). (a) **Trước đó mặt đứng chỉ có CỔNG, không có ĐIỂM**: `check.ts` trả đạt/không đạt (mã có trong danh mục, số trong khoảng dựng được), còn câu «giống cách NVG vẽ đến đâu» thì không ai hỏi. Và `kb/facade_experience.yaml` — toàn bộ phần đo được trên 7 tờ hồ sơ thật — **chưa mã nào đọc**; chỉ ba con số của nó được chép tay vào danh mục và quy ước cấu tạo hôm trước. (b) **`kb/facade_quality.yaml`** là định nghĩa của con số 80%: 13 tiêu chí, 5 nhóm (Mái 20, Vật liệu và màu 30, Cửa 25, Trang trí 15, Lan can 10), ngưỡng `accept_percent: 80`. Mỗi tiêu chí mang `n` và nhãn `[ĐO]`/`[CHUNG]` ra tới màn hình — trọng số là LỰA CHỌN, hồ sơ chỉ nói được tần suất. (c) **Hai kiểu «chưa chấm được», trọng số xử lý ngược nhau**: *không áp dụng* (tiêu chí mái Nhật trên nhà mái bằng) ra khỏi phép chia hẳn — giữ phần của nó là phạt một ngôi nhà vì nó không phải kiểu nhà khác; *thiếu đầu vào* vẫn giữ phần trọng số nhưng phần ấy không vào `scored_weight`. (d) **`do_ai: false`** đánh dấu tiêu chí KHÔNG do mô hình quyết (cao độ lanh tô, chiều cao cửa, lan can — đến từ mặt bằng, phiếu yêu cầu, quy ước cấu tạo). Vòng tự sửa không bao giờ gửi chúng cho mô hình; một đột biến (`M12`) canh điều đó, vì mỗi lượt gọi là tiền thật. (e) **Vòng tự sửa**: qua cổng mà dưới 80% thì gọi lại kèm ĐÚNG những tiêu chí mất điểm mà mô hình sửa được, bằng lời dẫn RIÊNG (`facade.retry_habits`, prompts 8.11.0) — bảo mô hình rằng câu trả lời hợp lệ của nó «không dùng được» là dạy sai, lượt sau nó đổi cả những thứ đang đúng. Giữ bản ĐIỂM CAO NHẤT chứ không phải bản mới nhất; lượt sửa hỏng ở cổng thì vẫn lưu bản trước đó. (f) **Điểm chấm lúc ĐỌC, không lưu vào artifact**: thước còn lớn lên theo số hồ sơ đo được, một con số đóng băng trong artifact bất biến sẽ nói dối ngay lần đầu thước đổi.
+
+**Lỗi đã bắt được ngay trong lượt chấm đầu tiên, ghi lại vì nó là bài học về cách ĐO:** bộ chấm bản đầu dùng *relative luminance* Y của sRGB cho hai tiêu chí màu. Sai. «Ghi bạc» #A7ABAE có Y = 0,40 nên bị xếp vào nhóm màu TỐI, trong khi bốn trong sáu hồ sơ NVG dùng đúng loại ghi sáng ấy cho thân nhà — **cái thước chấm trượt chính những bản vẽ nó được dựng từ đó**. Đã đổi sang **L\*** của CIELAB (độ sáng cảm nhận): ghi bạc L\* = 69,8, nâu đất 42,8, trắng 96,5 — khe hở tự nhiên nằm giữa 69,8 và 43,2 nên ngưỡng 60 tách đúng nhóm của hồ sơ. Điểm bản demo nhảy từ 85% lên **94%** sau khi sửa phép đo, và con số 85% trước đó là con số SAI chứ không phải bản vẽ kém.
+
+**Số đo đầu tiên** (bản mặt đứng «Biệt thự nhà vườn (demo)» dựng 20/09 bằng `gpt-5.6-terra`): **94%** trên 83,3 phần trọng số chấm được. Mất điểm duy nhất ở **R1 — lan can**: bộ vẽ dùng 110 cm, hồ sơ thật 80–90 cm (n = 4). **Chưa tự sửa** — 1,1 m là con số quen của quy chuẩn lan can nhà cao tầng, hạ nó theo sáu ngôi nhà thấp tầng là việc của người ký bản vẽ (ghi vào `doi_chieu_so_moi` của `kb/facade_experience.yaml`, chờ Haan). Ba tiêu chí không chấm được trên hồ sơ này: hai tiêu chí mái Nhật (nhà mái bằng) và C1/C3 (mặt tiền không có cửa sổ nào cùng tầng với cửa chính) — chỗ sau đáng soi lại ở bước dựng khung.
+
+**Còn lại của đợt này:** kỹ sư chấm lại trên cùng bảng tiêu chí (Haan chọn «máy chấm + kỹ sư chấm lại»), và bổ sung bộ vẽ những hình hồ sơ có mà bộ vẽ chưa dựng được — sảnh mái dốc có cột, cửa đầu vòm, ô tròn trang trí. Chừng nào bộ vẽ chưa dựng nổi thì chấm chúng cũng vô nghĩa, nên chúng nằm ở mục `chua_cham_duoc` của thước kèm lý do.
+
+## T64
+
+**Hàng rào không được bịt lối vào; nhật ký gọi AI nạp 25 lượt, hiện 12** (20/09/2026, Haan: «bản vẽ mặt bằng vẽ phòng để xe (có ô tô) ở bên phải nhưng bản vẽ mặt đứng thì không có lối vào phòng để xe cho ô tô… hai bản vẽ không được phép mâu thuẫn nhau»). (a) **Chẩn đoán trên chính tờ vẽ**, không trên ảnh: bộ vẽ chỉ chừa chỗ cho CỔNG, nên nhà có cả cửa chính lẫn cửa để xe thì cổng đứng trước một cái và hàng rào chạy liền qua cái còn lại. Trên hồ sơ demo: cổng 360 cm phủ đúng cửa để xe, còn hàng rào cắt ngang cửa chính — không có lối cho người đi bộ. Ảnh phối cảnh chỉ làm chỗ sai ấy dễ thấy hơn. (b) **Luật CỨNG, không phải thói quen nghề.** T49 cho phép chặn khi «không dựng được / không đi được», và lối vào bị bịt đúng là «không đi được» — đây là hai tờ vẽ của CÙNG một ngôi nhà nói ngược nhau, không phải một lựa chọn thẩm mỹ. `check.ts` thêm hai lỗi chặn: có lối vào mà chỉ có rào không cổng; và cổng hẹp hơn cửa để xe («ô tô không vào được phòng để xe»). (c) **Bộ vẽ tự lo phần toạ độ** (T15): hàng rào dựng bằng phép trừ — cả bề ngang, khoét chỗ cổng, rồi khoét chỗ TỪNG lối vào còn lại; cổng nới rộng cho phủ hết lối vào nó đứng trước. (d) **Lời dẫn ảnh** (prompts 8.12.0) nói thẳng: chỗ nào tờ vẽ chừa khoảng trống trên hàng rào thì ảnh cũng phải chừa — xe phải vào được gara, người phải đi được tới cửa chính. (e) **Nhật ký gọi AI**: nạp 25 lượt gần nhất thay vì 500, hiện 12 dòng, nút «Xem tất cả 25 lượt» mở hết. Dòng tổng cộng CẢ 25 lượt chứ không chỉ 12 — một dòng tiền cộng thiếu là sai lặng lẽ. Dòng đếm tiền của TỪNG LƯỢT CHẠY giữ trần riêng 200: một lượt xếp mặt bằng ba phương án nhà năm tầng đã quá 25 lượt gọi.
+
+**Lý do / đánh đổi:** «Chỉ giữ 25 lượt» được hiểu là giới hạn ĐỌC, không phải xoá — `design_ai_call` là sổ tiền, và màn hình nói rõ «dòng cũ hơn vẫn còn đủ trong cơ sở dữ liệu, không bị xoá». Cắt bớt trên màn hình thì xem lại được; xoá dòng thì không, nên tôi không tự xoá. Phép thử canh hàng rào đã kiểm là KHÔNG vô dụng: bỏ phép trừ lối vào ra thì nó đỏ. Còn một chỗ mặt đứng vẫn chưa nói hết mặt bằng — mặt tiền hồ sơ demo không có cửa sổ nào cùng tầng với cửa chính (hai tiêu chí C1, C3 của thước chấm không chấm được); đó là câu hỏi cho bước dựng KHUNG, chưa trả lời.
+
+## T65
+
+**Kỹ sư chấm lại; ba hình của hồ sơ thật nay vẽ được; cửa sổ mặt tiền là tuỳ ngôi nhà** (20/09/2026 — Haan: «việc có cửa sổ ở mặt tiền là không bắt buộc, có nhà cần có, có nhà không», và làm nốt hai việc còn lại của T63).
+
+(a) **Cửa sổ mặt tiền không bắt buộc ⇒ C1 và C3 là KHÔNG ÁP DỤNG, không phải «thiếu đầu vào».** Hai nhánh ấy xử lý trọng số ngược nhau (T63c), nên xếp nhầm là lặng lẽ co MẪU SỐ của điểm: một ngôi nhà hợp lệ vĩnh viễn chỉ chấm được 1/3 nhóm Cửa, con số vẫn ra bình thường và không ai thấy nó đang nói về một phần nhỏ hơn của ngôi nhà. Thước nhận ba điều kiện mới — `main_door`, `front_window`, `main_door_window` — và nhà phố lấy cửa để xe làm lối vào cũng thành «không có cửa chính», không phải «thiếu số đo». Tầng đem đo là **tầng có cửa chính**, không phải tầng thấp nhất: nhà phố mẫu để tầng trệt chỉ có cửa để xe, đo tầng thấp nhất là kết tội nó không có cửa sổ một cách oan uổng. `score_version` 1 → **2**: cùng một bản vẽ nay có mẫu số khác, hai lượt chấm khác phiên bản thước không đem so thẳng được. Điểm hồ sơ demo 94% → **95%** (nhóm Cửa từ 8,3 phần lên đủ 25).
+
+(b) **Kỹ sư chấm lại** (`contracts/ai-facade-review.schema.json`, migration 0131, loại artifact `ai_facade_review`). Bốn ranh giới: **không chấm KHÔNG PHẢI chấm 0** — tiêu chí bỏ qua giữ nguyên điểm máy, nên bảng rỗng bằng đúng «đồng ý với máy» (đột biến `M13` canh); **kỹ sư chấm được chỗ máy bỏ trống** — phần trọng số ấy quay lại mẫu số, và đó mới là giá trị lớn nhất của việc chấm tay, không phải chuyện sửa vài con số máy đã có; **tiêu chí không áp dụng có trọng số 0** nên màn hình KHÔNG mời chấm nó — một ô nhập không dịch chuyển con số nào là lời nói dối im lặng; **không phải phê duyệt** — hợp đồng cố ý không có ô «đạt / không đạt», kết quả AI vẫn là nháp tới khi duyệt qua đúng luồng (PRD 2.3). Bản chấm mang `facade_ref` và `score_version`: thiếu một trong hai thì «kỹ sư chấm 70» là câu không kiểm chứng được. Tìm bản chấm của đúng bản vẽ nào đi qua **cạnh lineage** (`edgeTargets`), không lọc payload — một hồ sơ dùng lâu có hàng chục bản chấm, đọc hết để tìm bản mới nhất là chuỗi lượt đi kho lớn dần theo thói quen dùng, không gì báo. Đây là loại artifact ĐẦU TIÊN mà nội dung do NGƯỜI viết.
+
+(c) **Bổ sung bộ vẽ ba hình hồ sơ có mà bộ vẽ chưa dựng nổi**: `arch` (vòm đầu cửa — M6), `oculus` (ô tròn R700 — M3), `porch_roof` (sảnh trước mái dốc — M2, M4). Mô hình vẫn chỉ khai KHUNG BAO; cung, đường tròn và đường nóc do chương trình tính (T15) — bán kính vòm suy từ dây cung và độ vồng nên một công thức lo cả vòm nửa tròn lẫn vòm cung. Tờ SVG, ảnh neo và DXF ra cùng hình vì cả ba đi qua `renderElevationBody`, và bộ đổi DXF vốn đã đọc được cung `A` lẫn thẻ `circle`. Vòm và mái sảnh được phép đè lên lỗ mở (chúng đứng TRƯỚC hoặc TRÊN cửa trong đời thật); **cột thì không** — một cây cột giữa cửa là bịt lối đi, đúng loại mâu thuẫn T64 phải chặn. **Không thành tiêu chí chấm**: sảnh 2/6 hồ sơ, vòm và ô tròn mỗi thứ 1/6 — đó là lựa chọn của từng ngôi nhà, không phải thói quen phòng thiết kế; trừ điểm một mặt tiền hiện đại vì nó không có vòm là bịa ra một chuẩn hồ sơ không nói. Chúng vẫn tính vào T3 («mặt tiền không để trơn»).
+
+**Một lỗi thật bắt được khi làm việc này, và hàng rào dựng cho nó:** hai nút «Chọn bản này» và «Thôi hiện» của bước Mặt đứng (T62) gọi `/design/facade/…` trong khi tuyến nằm ở `/design/ai/facade/…`. Lệch đúng một đoạn đường dẫn, và **không một phép thử nào đỏ**: phép thử giao diện mock cả tầng gọi mạng, phép thử Worker gọi thẳng vào hàm xử lý, nên không bên nào nối hai đầu. Trên màn hình nó cũng không hỏng ở chỗ dễ thấy — cả trang vẫn dựng, chỉ một dòng đỏ nhỏ khi bấm. Đã sửa, và thêm `web/src/hooks/__tests__/design-api-paths.test.ts`: đọc thẳng mã nguồn, dựng bảng tuyến Hono từ các lần `route()` rồi đối chiếu mọi đường dẫn `designApi` của giao diện. Kiểm là không vô dụng: đặt lại đường dẫn cũ thì nó đỏ đúng dòng ấy.
+
+## T66
+
+**Mục khảo sát lan can; và ba lỗi đo lộ ra khi làm nó** (20/09/2026 — Haan: «thêm 1 mục khảo sát cho lan can: vật liệu, chiều cao», kèm ảnh chụp lỗi «Phiếu yêu cầu chưa đúng. Kiểm tra lại các ô đã điền»).
+
+(a) **Mục «Lan can ban công»** của phiếu nay có bốn ô: kiểu, **vật liệu**, màu, **chiều cao (cm)**. Chiều cao là số duy nhất của nhóm Lan can mà thước chấm đo (R1) và nó do CHƯƠNG TRÌNH đặt, trước đây chỉ lấy từ `kb/construction_norms.yaml` — nghĩa là một hồ sơ muốn khác 110 cm thì không có đường nào ngoài sửa quy ước cho cả kho. Số ấy chép thẳng vào `elevation.railing_h_cm` của ý tưởng, nên tờ SVG, tệp DXF, ảnh neo và thước chấm đọc CÙNG một chỗ; hàm `railingCmOf` là nơi duy nhất viết phép ưu tiên «phiếu thắng quy ước». Chiều cao KHÔNG vào khối yêu cầu gửi mô hình: bộ vẽ đặt nó, gửi đi là tiêu chữ cho thứ mô hình không cầm. Cả hai khoá mới **không bắt buộc** trong hợp đồng — phiếu lưu trước hôm nay không có chúng, và artifact là bất biến (bài học `saved_at`).
+
+(b) **Lỗi Haan gặp: `maxItems: 6` của `decorations`.** Kỹ sư tick 7 ô trang trí, phiếu bị từ chối. Trần 6 đặt khi danh mục còn 9 mã; danh mục nay 12 mã và không gì buộc hai con số đi cùng nhau — kiểu hỏng của một **số viết tay nằm cách xa thứ nó nói về**: thêm mã vào danh mục thì biểu mẫu hiện thêm ô tick, còn trần thì đứng yên. Trần lên 12, và một phép thử đọc cả `kb/facade_vocabulary.yaml` lẫn hợp đồng buộc chúng đi cùng («tick HẾT mọi ô vẫn phải lưu được»).
+
+(c) **Câu lỗi không dẫn tới đâu.** Worker vốn trả kèm danh sách mục hỏng, nhưng lớp gọi của trình duyệt **vứt bỏ** nó, nên màn hình chỉ còn một câu cho một phiếu mười bốn mục. Nay `DesignApiError` chở `issues` và biểu mẫu liệt kê ra. Chữ của thư viện kiểm kiểu là tiếng Anh và nói theo ngôn ngữ kiểu dữ liệu («Array must contain at most 6 element(s)») nên KHÔNG lên màn hình: Worker đổi sang câu tiếng Việt nói tên mục và lý do (`facadeBriefIssueText`), đúng cấu trúc «việc gì không làm được + cần làm gì» (CGD 5.5).
+
+(d) **Lỗi đo lộ ra khi đặt ô chiều cao: nhà KHÔNG CÓ ban công vẫn bị trừ điểm lan can.** Hồ sơ demo không có ban công nào — và R1 chính là chỗ duy nhất nó mất điểm. Tệ hơn: biểu mẫu ẩn mục lan can đúng ở ngôi nhà ấy (không ban công thì không hỏi), nên kỹ sư không có đường nào sửa con số bị trừ. Cùng một họ với chuyện cửa sổ ở T65: đây là thứ ngôi nhà KHÔNG CÓ, không phải thứ chưa đo được. R1 nhận `chi_khi: balcony`; điểm hồ sơ demo **95% → 100%**, đọc là «90 trên 90 phần trọng số chấm được».
+
+(e) **Nhóm «Lan can ban công» LUÔN hiện.** Haan mở phiếu ra không thấy mục lan can đâu: nó bị ẩn khi phương án mặt bằng chưa có ban công nào ra mặt trước — và ẩn LẶNG LẼ. Nhóm cổng và tường rào bên cạnh cũng ẩn theo điều kiện nhưng NÓI ra lý do («nhà sát ranh mặt tiền, không có sân trước»); chỗ này thì không, nên nó đọc như một mục bị thiếu chứ không phải một mục không áp dụng. Nay nhóm luôn hiện, và khi mặt bằng chưa có ban công thì có một dòng nói đúng điều đó kèm «điền sẵn vẫn được».
+
+**`score_version` 2 → 3 ngay trong ngày.** Bản chấm tay đầu tiên đã lưu dưới thước 2 (ghi kèm «điểm máy 95%»), nên sửa R1 phải là một số MỚI — để nguyên số 2 là hai cái thước khác nhau cùng mang một tên, và không ai phát hiện được. Màn hình nay gọi bản chấm ấy là «dựng trên bản thước cũ», đã xem thật.
+
 ---
+
+## T67
+
+**Bước «3. Phối cảnh» — Đợt A: khung dữ liệu, lời dẫn, ba góc đầu** (20/09/2026, Haan chốt bốn điểm trước khi viết dòng nào).
+
+(a) **Bốn quyết định Haan chọn:** ảnh neo mức **B1** — góc nghiêng và toàn cảnh sẽ nhận thêm tờ **mặt bằng mái** dựng từ toạ độ (Đợt B), không làm khối trục đo 3D cho tới khi đo xong; ảnh **cận cảnh do CHƯƠNG TRÌNH chọn** (có ban công thì chụp ban công, không thì chụp cổng và cửa) — câu trả lời đã nằm trong ý tưởng mặt đứng, hỏi mô hình là trả tiền để nó đoán lại thứ ta đã biết; **người và xe có, kỹ sư tắt được** bằng một ô tích, số xe lấy theo `parking` của đầu bài, cây cối KHÔNG chịu ô ấy; **chưa cho phép lượt gọi thật nào** — viết xong toàn bộ đường vẽ, kiểm bằng client giả, đọc lời dẫn bằng mắt, rồi mới xin phép đo.
+
+(b) **Chuỗi năm góc, nối nhau chứ không độc lập.** `front_day` vẽ từ tờ mặt đứng vector (ảnh neo, không khung tên) và là **ảnh neo của cả bộ**; `front_night`, cận cảnh, `oblique`, `aerial` đều cầm chính tấm ấy làm gốc màu và vật liệu. Đó là cách duy nhất đã có bằng chứng để năm tấm là một ngôi nhà (T21 → T57). Hỏng `front_day` thì **cả bộ dừng**; góc phụ hỏng thì ghi vào `missing[]` kèm lý do tiếng Việt và đi tiếp — bốn tấm dùng được vẫn hơn không có gì.
+
+(c) **Tờ mặt đứng không có chiều sâu, và đó là ranh giới của Đợt A.** Ba góc nhìn thẳng đủ dữ liệu; `oblique` và `aerial` thì không — chiều sâu nhà, hình mái nhìn từ trên, vị trí gara so với sân là thứ mô hình sẽ bịa, và bịa xong thì mâu thuẫn với mặt bằng (đúng họ lỗi T65). Nên hai góc ấy **đòi tờ mặt bằng mái**, chưa có thì không chạy, và lý do nằm trong `missing[]` chứ không lặng lẽ biến mất.
+
+(d) **Lời dẫn đọc TẬP TRƯỜNG TRẮNG, không đọc thẳng đầu bài** (`ai/perspective/context.ts`). Giữ: loại công trình, số tầng, ba kích thước, lối vào trái–giữa–phải, có sân trước không, hiện trạng ba phía, hướng nhà, số xe. Bỏ: danh sách phòng từng tầng, nhân khẩu, `required_spaces`, ưu tiên, ba đoạn chữ tự do — không chữ nào đổi được vẻ ngoài ngôi nhà, mà chúng thì dài, và nhiễu trong lời dẫn ảnh không ra lỗi, nó ra một tấm hơi khác ý mà không ai chỉ được tại chỗ nào. Chặn bằng **cấu trúc** (kiểu trả về không có trường ấy) cộng một phép thử đánh dấu đầu bài bằng chuỗi lạ rồi đòi chúng không xuất hiện.
+
+(e) **Vật liệu nói bằng MỘT bản mô tả.** Tách `facadeLook()` ra khỏi `ai/facade/image.ts` để tờ ảnh mặt đứng và cả năm góc dùng chung. Hai bản mô tả song song là đường chắc chắn dẫn tới hai bộ ảnh lệch màu mà không ai giải thích được vì sao.
+
+(f) **Hướng nắng suy từ hướng nhà CỘNG giờ chụp**, không phải một bảng tra cố định. Cùng ngôi nhà hướng nam: ảnh sáng nắng bên **phải**, ảnh cận cảnh buổi chiều nắng bên **trái**. Mỗi góc khai `sun_time` trong `kb/`, và bản nạp kiểm **hai chiều** — câu ánh sáng dùng `{sun}` mà không khai giờ, hoặc khai giờ mà câu không dùng `{sun}`, đều chặn lúc nạp. Đầu bài không khai hướng thì nói ánh sáng chung, KHÔNG đoán một hướng rồi dựng bóng đổ sai suốt cả bộ.
+
+(g) **Chạy nền qua Workflow, một góc một bước** (`workflows/ai-perspective-steps.ts`). Năm lượt nối nhau quá dài cho một request. Vướng: Worker không có canvas nên tờ neo phải do **trình duyệt** rasterise, mà Workflow thì không hỏi trình duyệt được — nên tuyến khởi động nhận byte, **dựng lại tờ ở máy chủ và đối chiếu cỡ khung**, cất vào `render-store`, rồi chỉ truyền URI vào params. Băm `sha256` của byte trình duyệt gửi lên ghi vào `anchors[]` của artifact: đó là dấu vết truy được duy nhất cho một đầu vào máy chủ không kiểm được.
+
+(h) **KHÔNG chấm điểm bộ ảnh.** Mặt bằng có `plan_quality`, mặt đứng có `facade_quality`; ảnh thì không có thước nào đo được, và bịa ra một con số là tệ hơn không có. Chỗ chống đỡ là nhãn **hai lớp** (`AI_DISCLAIMERS.aiImageSet` bằng chữ trong trang + dấu in lên pixel) cộng câu nói rõ cả bộ dựng nối nhau từ tấm ban ngày — nên một chi tiết chỉ có ở một tấm chưa chắc có thật.
+
+(i) **Không migration.** `kind: ai_image_set` và `step: ai_image_render` đã mở từ 0129. Hợp đồng `ai-image-set` (viết sẵn từ T16) nới: thêm góc `aerial`, thêm `anchors[]`, `options.people_and_vehicles`, `prompt_excerpt` từng góc. Lời dẫn lên **8.14.0**. Hai đột biến mới canh hai hàng rào đắt nhất: M16 (hai góc chạy khi chưa có tờ mái) và M17 (hiện trạng không khai vẫn bị nói ra).
+
+**Đợt B — tờ mặt bằng mái, hai góc còn lại mở** (20/09/2026).
+
+(j) **Tờ neo thứ hai** (`ai/draw/roof-plan.ts`): hình bao từng tầng, mái theo kiểu mái (mái bằng có tường chắn; mái dốc có mép mái đua, đường nóc và bốn đường xiên), ban công nét đứt, vạch lối vào tô đặc trên mặt tiền, và một MŨI TÊN chỉ hướng đường. Tuyến `GET /perspective/:projectId/roof-anchor` phát tờ ra; `POST /runs` dựng lại bằng CÙNG hàm rồi đối chiếu cỡ khung. Mái đua và độ dài nóc đọc từ `kb/facade_vocabulary.yaml` (`overhang_cm`, `hip_ridge_share`) — cùng chỗ tờ mặt đứng đọc.
+
+(k) **Ba thứ tờ này CỐ Ý không vẽ**: ranh thửa, hàng rào, cổng (khoảng lùi không có trong hai artifact, vẽ là bịa một con số — CLAUDE.md 5.2); chữ (lời dẫn nói «Write NO text», mà mô hình ảnh chép lại chữ nó thấy); chuỗi kích thước (số đo đi trong lời dẫn). Hướng đường nói bằng mũi tên, không bằng một dải kẻ — dải kẻ đọc nhầm thành tường hay ranh đất được.
+
+(l) **Ba lỗi CHỈ lộ ra khi mở tờ vẽ ra nhìn**, bộ kiểm khi ấy đang xanh — đúng cảnh báo của CLAUDE.md 8.7 điểm 6. **Một**: vạch lối vào vẽ bằng nét lớp `opening`, cùng 0,25 mm với nét tường nó nằm đè lên, nên hai cửa của biệt thự mẫu **không nhìn thấy được** — mà đó chính là thứ quyết định ảnh góc nghiêng có đúng phía gara hay không. Nay vẽ bằng hình TÔ ĐẶC đặt ngay ngoài mặt tiền. **Hai**: mượn nét của tờ mặt đứng nên mái 0,5 mm đè lên khối nhà 0,25 mm — thứ hạng đảo ngược. Nay có bốn nét riêng trong `kb/sheet_style.yaml` (`roof_block` 0,6 > `roof_edge` 0,3 > `roof_below` 0,15). **Ba**: mũi tên chỉ **ra xa** ngôi nhà, vì hai cánh đầu mũi đặt cứng «phía trên mũi» trong khi bộ đổi toạ độ lật trục y (mặt tiền nằm ở ĐÁY tờ). Nay cánh suy từ chính vector đuôi → mũi. Cả ba khoá lại bằng phép thử; thêm đột biến **M18** cho lỗi thứ nhất.
+
+(m) Năm ảnh chụp vàng của hai tờ mặt bằng và hai tờ mặt đứng đổi đúng **218 ký tự** — năm dòng CSS mới nối vào khối `<style>` dùng chung, không một nét vẽ nào khác. Đã đối chiếu từng tệp trước khi cập nhật. Phép thử CORS nay quét **cả ba** tệp tuyến của nhánh AI, không riêng `routes.ts`: tuyến tách ra tệp mới là đúng lúc một header lọt khỏi tầm nó mà vẫn xanh.
+
+**Đợt C — giữ lại mọi bộ đã dựng, và vẽ lại ĐÚNG MỘT góc** (20/09/2026).
+
+(n) **Dải chọn bộ cũ**, cùng khuôn bước Mặt đứng (T64): `/state` trả thêm `imageSets` (mới nhất trước, bỏ bản đã ẩn, tối đa 12) và `imageSetFacadeRef`; hai tuyến `POST /perspective/choose` (đặt lại mốc — đường QUAY LẠI, để không phải trả tiền một lượt chạy nữa cho thứ mình đã có) và `POST /perspective/hide` (thôi hiện, bảng `design_artifact_hidden`, bộ đang hiệu lực thì gỡ luôn mốc). **Tách «bộ đang MỞ» khỏi «bộ HIỆU LỰC»**: mở bộ cũ ra xem không đổi thứ đang hiệu lực.
+
+(o) **Vẽ lại một góc tốn ĐÚNG MỘT lượt.** Artifact bất biến nên không sửa tại chỗ được, nhưng mã artifact là mã băm NỘI DUNG và bốn góc kia giữ nguyên `uri` — nên bộ mới chỉ trả tiền cho tấm vừa vẽ, byte của bốn tấm kia không sinh lại. Tuyến `POST /perspective/redraw` **đồng bộ** (một lượt gọi thì giữ được kết nối) và **không cần tờ neo mới**: mọi thứ cần đã nằm trong kho từ lượt chạy trước, kể cả `anchors[]`. Lựa chọn người-xe đọc từ chính artifact cũ — một tấm vẽ lại không được lặng lẽ đổi từ «không có người» sang «có người».
+
+(p) **`front_day` KHÔNG vẽ lại lẻ được, và đó là ràng buộc chứ không phải thiếu sót.** Bốn góc còn lại dựng ảnh→ảnh TỪ CHÍNH tấm ban ngày; thay nó mà giữ bốn tấm kia là giao cho khách một bộ năm ảnh của HAI ngôi nhà — đúng thứ cả bước này sinh ra để tránh. Phép từ chối nằm ở hàm thuần `redrawAloneRefusal()` chứ không ở tuyến, nên kiểm được; màn hình **nói lý do** ở chỗ đáng lẽ là nút, không ẩn nút đi (ẩn thì người dùng đi tìm và câu «vì sao» không nằm ở đâu cả). Mốc `SET_ANCHOR_VIEW` gom về một chỗ — `assemble.ts` đặt cờ `anchor` theo nó, `views.ts` xếp nó chạy đầu, tuyến từ chối theo nó; có phép thử canh ba chỗ không lệch.
+
+(q) Thêm **M19** (cho phép vẽ lại lẻ tấm gốc) — bị bắt. Tổng **19 đột biến**, **46 phép thử** cho bước Phối cảnh.
+
+**Đợt D — nút «Dừng», và ba chỗ hỏng lộ ra từ lượt chạy thật đầu tiên** (20/09/2026, Haan: «tôi tự gọi 1 lần nhưng cứ chạy mãi… thêm nút stop để phòng những case như này»).
+
+(r) **Nguyên nhân lượt ấy treo là do sửa mã Worker trong lúc nó đang bay.** `wrangler dev` chạy suốt phiên; mỗi lần ghi một tệp `workers/src/**` là một lần nạp lại và **giết instance Workflow**, để lại dòng `design_ai_run` kẹt ở `running`. Đúng ca đã ghi trong memory `khong-sua-worker-khi-dang-chay-nen.md` và đã quên kiểm. Nhưng nó lộ ra ba chỗ hỏng thật, và cả ba đều đáng sửa.
+
+(s) **Bước Phối cảnh không có nút Dừng.** Nút của hai bước trước nằm trong `ai-live-call.tsx`, gắn với bảng theo dõi trực tiếp — mà lượt vẽ ảnh cố ý không có bảng ấy (model ảnh không phát token dọc đường). Nay có nút riêng cạnh dải tiến độ. Tuyến `/runs/:id/cancel` đặt THẲNG trạng thái nên nó gỡ được cả dòng thây ma, không cần instance còn sống.
+
+(t) **Tín hiệu huỷ không đi tới lời gọi ảnh.** `AiImageOptions` không có `signal`, nên bấm Dừng giữa một lượt vẽ chỉ có tác dụng ở góc SAU: lượt đang bay vẫn chạy hết bốn phút và vẫn tính tiền, trong khi màn hình đã nói «đang dừng». Nay `signal` xuyên từ Workflow → `drawViewStep` → cả hai client (OpenAI truyền vào `cancel` của `fetch`, Gemini truyền vào `call` vốn đã nhận sẵn mà chưa ai dùng). Lượt bị dừng ghi `error_code: 'cancelled'`, không phải tên lỗi của runtime.
+
+(u) **Lượt phối cảnh chết phải đợi HƠN HAI TIẾNG mới được tuyên bố là hỏng.** `GET /runs/:id` đã có sẵn phép bắt thây ma: dòng CÓ NHỊP TIM thì ba phút im lặng là đủ, dòng không có nhịp thì dùng `RUN_STALE_MS` = 125 phút. Bảng theo dõi trực tiếp là thứ đập nhịp, mà lượt vẽ ảnh không có nó — nên nó rơi vào nhánh 125 phút, và suốt 125 phút ấy `activeRun` chặn luôn lượt sau. Nay vòng thăm dò nút Dừng ĐỒNG THỜI đập nhịp (`partial.heartbeat`), và phép bắt thây ma nhận cả hai dạng nhịp. Một lượt chết nay tự nói là hỏng sau **ba phút**.
+
+(v) Thêm **M20** (tín hiệu Dừng không tới lời gọi) — bị bắt. Tổng **20 đột biến**, **47 phép thử** cho bước Phối cảnh.
+
+**Chưa làm:** nút tải CẢ BỘ một lần (hiện tải từng tấm); và **chưa có lượt chạy thật nào đi tới kết quả** — lượt duy nhất Haan bấm bị chính việc sửa mã giết giữa chừng.
+
+---
+
+## T68
+
+**Trung thực kích thước xuyên cả chuỗi — số đo phải đi tới lời dẫn ảnh bằng SỐ** (20/09/2026,
+Haan báo lỗi trên lượt chạy thật đầu tiên của bước Phối cảnh).
+
+**Lỗi đo được:** đầu bài khai `massing.yard_depth_m.front = 3`. Tấm `aerial` của lượt
+`c990c1e5` vẽ sân trước **8–10 m** — sai tới mức nhìn là thấy, vì một thân ô tô đã hơn 4 m mà
+sân vẫn còn thừa. Haan: _«hoàn toàn sai về mặt logic mà ai cũng có thể nhận ra»_, và đặt mức
+nghiệm thu: ảnh phối cảnh và ảnh nội thất **không cần đúng 100% kích thước, nhưng phải đúng
+logic thông thường và đạt ít nhất 90% so với kích thước thật**.
+
+**Nguyên nhân:** con số 3 m đi được tới bước mặt bằng (`ai/buildable.ts` lấy mức lớn hơn giữa
+khoảng lùi quy hoạch và sân mong muốn, đẩy khối nhà lùi đúng 3 m — mặt bằng ĐÚNG) rồi chết ở ba
+chỗ liên tiếp: `facade/frame.ts` tính `minFrontY` rồi trả ra `frontYard: minFrontY > 0` (số →
+một bit); `perspective/context.ts` không lấy lại số mà **suy ngược** từ «ý tưởng có cổng
+không»; `perspective/prompt.ts` viết «there is a front yard between the gate and the front
+door», không một con số nào. Tờ neo mặt bằng mái thì **cố ý không vẽ ranh thửa**, với lý do đã
+ghi trong mã: _«khoảng lùi không có trong `ai_floor_plan` lẫn `ai_facade_concept`, muốn vẽ thì
+phải bịa»_ — lý do ấy SAI: gốc toạ độ mặt bằng là góc trước-trái thửa, nên hình bao đã nằm đúng
+chỗ của nó, chỉ thiếu đường bao ngoài.
+
+**Một lượt rà soát riêng tìm ra 12 chỗ cùng bệnh**, không phải một. Nặng nhất ngoài ca trên:
+bề rộng cửa chính và cửa gara thu về `left|centre|right`; ban công thu về `hasBalcony: boolean`;
+`railing_h_cm` có trong artifact mà lời dẫn không đọc; chiều cao TỪNG tầng mất, chỉ còn tổng;
+ảnh mặt bằng nội thất chỉ nhận diện tích m² chứ không nhận kích thước phòng, trong khi lời dẫn
+lại ra lệnh «vẽ nội thất vừa với căn phòng»; và tệ nhất, lời dẫn bảo mô hình chép «các con số đã
+cho» lên chuỗi kích thước nhiều đoạn trong khi chỉ đưa cho nó hai số tổng — tức **mời nó bịa số
+rồi in lên tờ đưa khách**.
+
+**Đã sửa:**
+
+1. `PerspectiveContext` mang số thật: `lot {widthM, depthM}`, `yard {frontM, backM, leftM,
+   rightM}` đo thẳng từ toạ độ mặt bằng, `mainDoorWidthM`, `garageWidthM`, `balconies[]`,
+   `railingHM`, `levelHeightsM[]`, `stepUpM`. Thiếu kích thước thửa thì cả cụm là `null` và lời
+   dẫn **không nói gì về sân** — không đoán.
+2. Lời dẫn nói **số VÀ hệ quả**. Số một mình không đủ: nói «sân 3 m» rồi vẫn xin «một chiếc ô tô
+   cho sinh động» là ra đúng tấm ảnh đã hỏng. `kb` giữ chiều dài xe thật (4,5 m / 2,0 m) và ba
+   câu hệ quả; sân ngắn hơn thân xe thì câu người-xe đổi sang bản «xe đứng ngoài đường hoặc
+   trong gara».
+3. **Tờ neo mặt bằng mái vẽ ranh thửa**, lấy từ `siteGeometry(brief.site).boundary` — đa giác
+   THẬT, mọi hình dạng thửa. Ràng buộc bằng HÌNH, không chỉ bằng chữ. Nét **đứt** theo quy ước
+   ranh đất: bản dựng đầu vẽ nét liền cùng màu và soát bằng mắt thấy ngay là ranh với khối nhà
+   không phân biệt được — mô hình sẽ đọc ranh thành một ngôi nhà 15×20.
+4. Cổng, rào, lan can nói bằng **mét** như phần còn lại (trước đó cm, lẫn lộn hai đơn vị trong
+   cùng một lời dẫn). Điều kiện `gate.w && gate.h` sửa thành từng số một — hợp đồng chỉ bắt buộc
+   `type`, nên thiếu một là mất cả hai.
+5. Ảnh mặt bằng nội thất nhận **kích thước từng phòng**, và lời dẫn chuỗi kích thước đổi thành
+   «chép số từ chính bản vẽ đính kèm; đoạn nào không đọc được thì vẽ KHÔNG có số — không bao giờ
+   bịa một con số».
+
+**Một lỗi tự gây trong lúc sửa, đáng ghi:** lớp CSS của ranh thửa đặt là `rl`, trùng `railing`.
+Luật sau đè luật trước nên lan can của MỌI tờ mặt đứng thành nét đứt — và **ảnh chụp vàng không
+bắt được**, vì hình y nguyên, chỉ CSS khác. Nay tên là `rlot`, và có một phép thử canh mọi tên
+lớp trong `CLS` không trùng nhau. Đột biến M23 canh chỗ này, M21 canh số đo sân, M22 canh câu
+hệ quả.
 
 ## Phụ lục — bảng «Ngoại lệ có kiểm soát» cũ của CLAUDE.md 8.2 (đã lỗi thời một phần: T21 bị T22 gỡ, quy chuẩn bị T30/T42 gỡ)
 

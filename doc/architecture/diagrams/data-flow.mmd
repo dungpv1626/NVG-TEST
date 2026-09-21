@@ -1,0 +1,30 @@
+graph TD
+  classDef ht fill:#EAF1EE,stroke:#1F5F4B;
+  classDef gd fill:#FFFFFF,stroke:#52606D;
+  classDef tien fill:#FFF6E0,stroke:#D9A441;
+
+  KH["Khách hàng<br/><i>dùng chung 3 pháp nhân</i>"]:::ht
+  CH["Cơ hội kinh doanh"]:::gd
+  GT["Gói thầu / Dự án thiết kế"]:::gd
+  HD["Hợp đồng"]:::gd
+  CT["<b>Công trình</b><br/><i>trục của giai đoạn thi công</i>"]:::ht
+  NS["Ngân sách công trình"]:::gd
+
+  DN["Đề nghị mua vật tư"]:::gd
+  DH["Đơn đặt hàng"]:::gd
+  NK["Nhập kho"]:::gd
+  XK["Xuất cho công trình"]:::gd
+  NCC["Nhà cung cấp<br/><i>dùng chung</i>"]:::ht
+  VT["Danh mục vật tư<br/><i>dùng chung</i>"]:::ht
+
+  NT["Nghiệm thu khối lượng"]:::gd
+  TT["Đề nghị thanh toán"]:::tien
+  TH["Thu tiền"]:::tien
+  LL["Lãi lỗ công trình"]:::tien
+
+  KH --> CH --> GT --> HD --> CT --> NS
+  CT --> DN --> DH --> NK --> XK --> NS
+  NCC --> DH
+  VT --> DN
+  CT --> NT --> TT --> TH --> LL
+  NS --> LL

@@ -25,6 +25,12 @@ export interface AiModelOption {
   route: string;
   provider: string;
   label: string;
+  /** Tên nhà cung cấp để gom nhóm thẻ model. Vắng ở máy chủ cũ — khi ấy dùng `provider`. */
+  providerLabel?: string;
+  /** Tên ngắn, nhãn phân loại, câu mô tả cho thẻ. Vắng ở máy chủ cũ hoặc cấu hình chưa khai. */
+  short?: string | null;
+  tag?: string | null;
+  blurb?: string | null;
   model: string;
   maxDataClass: number;
   enabled: boolean;
@@ -92,15 +98,24 @@ export interface AiCallLogRow {
 }
 
 /**
- * Nhật ký lượt gọi AI của MỘT hồ sơ — gọi thẳng Supabase (CLAUDE.md 3.1): chỉ đọc một bảng,
- * quyền đã có RLS (`rls_design_readable`). Mới nhất lên đầu; giới hạn 500 dòng để một hồ sơ
- * chạy thử nhiều lần không kéo cả bảng về trình duyệt.
+ * Số lượt gọi AI gần nhất mà nhật ký của hồ sơ nạp về (Haan, 20/09/2026: «chỉ giữ lại 25 lượt gọi
+ * gần nhất thôi»).
+ *
+ * ⚠️ Đây là giới hạn ĐỌC, không phải xoá: `design_ai_call` là sổ tiền, và mọi dòng vẫn nằm nguyên
+ * trong CSDL. Cắt bớt trên màn hình thì xem lại được; xoá dòng thì không.
  */
-export function useAiCallLog(projectId: string, options: { live?: boolean } = {}) {
+export const AI_CALL_LOG_LIMIT = 25;
+
+/**
+ * Nhật ký lượt gọi AI của MỘT hồ sơ — gọi thẳng Supabase (CLAUDE.md 3.1): chỉ đọc một bảng,
+ * quyền đã có RLS (`rls_design_readable`). Mới nhất lên đầu.
+ */
+export function useAiCallLog(projectId: string, options: { live?: boolean; limit?: number } = {}) {
+  const limit = options.limit ?? AI_CALL_LOG_LIMIT;
   return useQuery<AiCallLogRow[], Error>({
     // Lượt chạy nền ghi từng dòng khi từng tầng xong — hỏi lại để con số chạy theo tiến độ.
     refetchInterval: options.live ? 5_000 : false,
-    queryKey: ['design_ai_call', projectId],
+    queryKey: ['design_ai_call', projectId, limit],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('design_ai_call')
@@ -109,7 +124,7 @@ export function useAiCallLog(projectId: string, options: { live?: boolean } = {}
         )
         .eq('project_id', projectId)
         .order('created_at', { ascending: false })
-        .limit(500);
+        .limit(limit);
       if (error) throw new Error(error.message);
       return (data ?? []) as AiCallLogRow[];
     },
@@ -265,11 +280,20 @@ export interface AiDesignState {
   planHeadArtifactId: string | null;
   facadeArtifactId: string | null;
   /**
+   * Mọi bản mặt đứng còn hiện, mới nhất trước (20/09/2026). Vắng ở máy chủ cũ — khi ấy màn hình chỉ
+   * có bản hiệu lực, đúng như trước.
+   */
+  facades?: Array<{ artifactId: string; createdAt: string }>;
+  /**
    * Mặt bằng mà mặt đứng hiện hành dựng theo (T59). Khác `planHeadArtifactId` = kỹ sư đã đổi phương án
    * sau khi dựng mặt đứng; mặt đứng cũ vẫn giữ, gắn nhãn «dựng theo phương án cũ».
    */
   facadePlanRef?: string | null;
   imageSetArtifactId: string | null;
+  /** Các bộ ảnh phối cảnh còn hiện, mới nhất trước (T67 Đợt C). */
+  imageSets?: Array<{ artifactId: string; createdAt: string }>;
+  /** Mặt đứng mà bộ ảnh hiện hành dựng theo — khác bản hiệu lực thì bộ ảnh đã cũ. */
+  imageSetFacadeRef?: string | null;
   runs: Partial<Record<AiStage, AiRunView>>;
   roomLabels: Record<string, string>;
 }
@@ -666,6 +690,55 @@ export interface AiFacadeView {
   elements: string[];
   rationale: string;
   generator: { provider: string; model: string; route: string; repaired?: boolean };
+  /**
+   * Điểm «giống cách NVG vẽ đến đâu» (T63). Vắng ở máy chủ cũ và ở bản mặt đứng dựng trước khi có
+   * thước — khi ấy màn hình không hiện panel điểm, không hiện 0.
+   */
+  score?: AiFacadeScore;
+  /** Bản KỸ SƯ CHẤM LẠI gần nhất của đúng bản vẽ này (T63). `null` khi chưa ai chấm. */
+  review?: AiFacadeReviewView | null;
+}
+
+/** Bảng điểm kỹ sư chấm tay, kèm điểm đã áp bảng ấy (`ai/facade/review.ts`). */
+export interface AiFacadeReviewView {
+  artifactId: string;
+  reviewedAt: string;
+  note: string | null;
+  machinePercent: number | null;
+  criteria: Array<{ code: string; score: number | null; note: string | null }>;
+  score: AiFacadeScore & {
+    /** Mã tiêu chí kỹ sư đã chấm; và trong số đó, những mã chấm KHÁC máy. */
+    reviewed: string[];
+    changed: string[];
+    /** Bảng chấm dựng trên bản thước cũ — hai thang điểm không so thẳng được. */
+    staleRuler: boolean;
+  };
+}
+
+/** Điểm mặt đứng — cùng hình dạng `FacadeScore` của Worker (`ai/facade/score.ts`). */
+export interface AiFacadeScore {
+  scoreVersion: number;
+  coSoDuLieu: string;
+  points: number;
+  scoredWeight: number;
+  /** % trên phần chấm được — con số đem so với `acceptPercent`. */
+  percent: number | null;
+  acceptPercent: number | null;
+  groups: Array<{ code: string; vi: string; weight: number; scoredWeight: number; points: number }>;
+  criteria: Array<{
+    code: string;
+    group: string;
+    vi: string;
+    giaiThich: string | null;
+    value: number | null;
+    score: number | null;
+    weight: number;
+    n: number;
+    label: string;
+    /** Mô hình quyết được tiêu chí này không — `false` = do mặt bằng, phiếu, hoặc quy ước cấu tạo. */
+    doAi: boolean;
+    why: string | null;
+  }>;
 }
 
 export function useAiFacade(projectId: string, artifactId: string | null) {
@@ -813,6 +886,8 @@ export interface FacadeVocabularyView {
     groundRaiseCm: number | null;
     parapetCm: number | null;
     doorHeightCm: number | null;
+    /** Chiều cao lan can của quy ước cấu tạo — gợi ý khi kỹ sư để trống. */
+    railingHCm: number | null;
   };
 }
 
@@ -1010,6 +1085,69 @@ export function useChooseAiPlan() {
 }
 
 /**
+ * Chọn lại một bản mặt đứng làm bản hiệu lực (20/09/2026).
+ *
+ * Lượt chạy mới tự đặt mốc, nên tuyến này là đường QUAY LẠI: dựng bản thứ hai rồi thấy bản đầu đẹp
+ * hơn thì chọn lại, không phải trả tiền một lượt chạy nữa để có thứ mình đã có.
+ */
+export function useChooseAiFacade() {
+  const queryClient = useQueryClient();
+  return useMutation<{ artifactId: string }, Error, { projectId: string; artifactId: string }>({
+    mutationFn: (body) => designApi<{ artifactId: string }>('/design/ai/facade/choose', body),
+    onSuccess: (_data, variables) =>
+      void queryClient.invalidateQueries({
+        queryKey: ['ai_design_state', variables.projectId],
+      }),
+  });
+}
+
+/**
+ * KỸ SƯ CHẤM LẠI một bản mặt đứng (T63) — không gọi mô hình, không tốn tiền.
+ *
+ * Tiêu chí KHÔNG gửi lên nghĩa là «để nguyên điểm máy», khác hẳn chấm 0 — nên phía gọi chỉ đưa
+ * những tiêu chí kỹ sư thật sự đã chấm.
+ */
+export function useSaveFacadeReview() {
+  const queryClient = useQueryClient();
+  return useMutation<
+    { artifactId: string },
+    Error,
+    {
+      projectId: string;
+      artifactId: string;
+      review: {
+        criteria: Array<{ code: string; score: number | null; note: string | null }>;
+        note: string | null;
+      };
+    }
+  >({
+    mutationFn: ({ projectId, ...body }) =>
+      designApi<{ artifactId: string }>(`/design/ai/facade/review/${projectId}`, body),
+    onSuccess: (_data, variables) =>
+      void queryClient.invalidateQueries({
+        queryKey: ['ai_facade', variables.projectId, variables.artifactId],
+      }),
+  });
+}
+
+/** Xoá một bản mặt đứng khỏi dải chọn — THÔI HIỆN, cùng khuôn với `useHideAiPlan`. */
+export function useHideAiFacade() {
+  const queryClient = useQueryClient();
+  return useMutation<
+    { artifactId: string; hidden: boolean },
+    Error,
+    { projectId: string; artifactId: string; hidden?: boolean }
+  >({
+    mutationFn: (body) =>
+      designApi<{ artifactId: string; hidden: boolean }>('/design/ai/facade/hide', body),
+    onSuccess: (_data, variables) =>
+      void queryClient.invalidateQueries({
+        queryKey: ['ai_design_state', variables.projectId],
+      }),
+  });
+}
+
+/**
  * Xoá một phương án khỏi dải chọn — THÔI HIỆN, không xoá dữ liệu (18/09/2026).
  *
  * `hidden: false` đưa phương án trở lại; màn hình chưa dùng đường ấy, nhưng tuyến có sẵn nên một
@@ -1028,5 +1166,196 @@ export function useHideAiPlan() {
       void queryClient.invalidateQueries({
         queryKey: ['ai_design_state', variables.projectId],
       }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Bước 3 — phối cảnh (T67)
+// ---------------------------------------------------------------------------
+
+export interface AiImageSetImage {
+  view: string;
+  /** Nhãn tiếng Việt của góc — do Worker đọc từ `kb/`, màn hình không viết cứng danh sách. */
+  label: string;
+  anchor: boolean;
+  width: number | null;
+  height: number | null;
+}
+
+export interface AiImageSetView {
+  artifactId: string;
+  createdAt: string;
+  facadeRef: string;
+  planRef: string;
+  peopleAndVehicles: boolean | null;
+  images: AiImageSetImage[];
+  /** Góc không vẽ được, kèm lý do tiếng Việt — KHÔNG lặng lẽ hiện ít ảnh hơn. */
+  missing: Array<{ view: string; label: string; reason: string }>;
+  /** Câu in ĐÈ LÊN PIXEL — do máy chủ đưa (`kb/`). */
+  watermark: string;
+}
+
+export function useAiImageSet(projectId: string, artifactId: string | null) {
+  return useQuery<AiImageSetView, Error>({
+    queryKey: ['ai_image_set', projectId, artifactId],
+    queryFn: () =>
+      designApi<AiImageSetView>(
+        `/design/ai/perspective/${projectId}?artifactId=${encodeURIComponent(artifactId!)}`,
+      ),
+    enabled: Boolean(projectId && artifactId),
+  });
+}
+
+/** Byte của MỘT góc, tải qua tuyến có kiểm quyền — kho không đọc thẳng được. */
+export function useAiImageSetView(
+  projectId: string,
+  artifactId: string | null,
+  view: string | null,
+): AiPlanSheetImageState {
+  const [state, setState] = useState<AiPlanSheetImageState>({
+    url: null,
+    loading: false,
+    error: null,
+  });
+
+  useEffect(() => {
+    if (!projectId || !artifactId || !view) {
+      setState({ url: null, loading: false, error: null });
+      return;
+    }
+    let cancelled = false;
+    let objectUrl: string | null = null;
+    setState({ url: null, loading: true, error: null });
+    void designApiFile(
+      `/design/ai/perspective/${projectId}/view/${encodeURIComponent(view)}?artifactId=${encodeURIComponent(artifactId)}`,
+    )
+      .then(async (response) => {
+        const blob = await response.blob();
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setState({ url: objectUrl, loading: false, error: null });
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        const status = error instanceof DesignApiError ? error.status : undefined;
+        if (status === 404) {
+          setState({ url: null, loading: false, error: null });
+          return;
+        }
+        setState({ url: null, loading: false, error: toUserMessage(error) });
+      });
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [projectId, artifactId, view]);
+
+  return state;
+}
+
+/**
+ * Tải một tờ neo SVG rồi đổi sang PNG base64.
+ *
+ * Cỡ ảnh lấy từ HEADER máy chủ khai, KHÔNG từ `naturalWidth`: máy chủ sẽ dựng lại đúng tờ ấy và
+ * đối chiếu cỡ khung, nên hai bên phải nói cùng một con số. Đoán sai ở đây thì lượt chạy bị từ
+ * chối — may là từ chối, vì nếu lọt qua thì mô hình nhận một tờ đã bị bóp.
+ */
+async function rasteriseAnchor(path: string): Promise<string> {
+  // Bỏ qua bộ đệm: tấm này đi thẳng ra nhà cung cấp và tốn tiền.
+  const response = await designApiFile(path, true);
+  const width = Number(response.headers.get('X-Anchor-Width'));
+  const height = Number(response.headers.get('X-Anchor-Height'));
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    throw new Error('Máy chủ không khai cỡ ảnh neo. Mở lại trang rồi thử lại.');
+  }
+  const url = URL.createObjectURL(await response.blob());
+  try {
+    return await svgUrlToPngBase64(url, width, height);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+/**
+ * Khởi động lượt dựng bộ ảnh phối cảnh.
+ *
+ * Khác `useStartAiRun`: tờ neo phải rasterise ở TRÌNH DUYỆT trước (Worker không có canvas), nên
+ * hook tải HAI tờ — mặt đứng (không khung tên) và mặt bằng mái — đổi sang PNG, rồi mới gửi. Tờ mái
+ * là thứ giữ cho góc nghiêng và góc trên cao đúng chiều sâu nhà; thiếu nó thì hai góc ấy không
+ * chạy. ⚠️ Lượt này TIÊU TIỀN THẬT — mỗi góc một lượt gọi.
+ */
+export function useStartPerspectiveRun() {
+  return useMutation<
+    { runId: string; views: string[]; skipped: Array<{ view: string; reason: string }> },
+    Error,
+    { projectId: string; artifactId: string; route: string; peopleAndVehicles: boolean }
+  >({
+    mutationFn: async ({ projectId, artifactId, route, peopleAndVehicles }) => {
+      const anchors = [
+        {
+          kind: 'elevation',
+          base64: await rasteriseAnchor(
+            `/design/ai/facade/${projectId}/anchor?artifactId=${encodeURIComponent(artifactId)}`,
+          ),
+        },
+        {
+          kind: 'roof_plan',
+          base64: await rasteriseAnchor(
+            `/design/ai/perspective/${projectId}/roof-anchor?artifactId=${encodeURIComponent(artifactId)}`,
+          ),
+        },
+      ];
+      return await designApi(`/design/ai/perspective/runs`, {
+        projectId,
+        artifactId,
+        route,
+        peopleAndVehicles,
+        anchors,
+      });
+    },
+  });
+}
+
+/** Chọn một bộ ảnh làm bộ hiệu lực — đường QUAY LẠI, không phải trả tiền lượt chạy nữa. */
+export function useChooseAiImageSet() {
+  const queryClient = useQueryClient();
+  return useMutation<{ artifactId: string }, Error, { projectId: string; artifactId: string }>({
+    mutationFn: (body) => designApi<{ artifactId: string }>('/design/ai/perspective/choose', body),
+    onSuccess: (_data, variables) =>
+      void queryClient.invalidateQueries({ queryKey: ['ai_design_state', variables.projectId] }),
+  });
+}
+
+/** Thôi hiện một bộ ảnh trong dải chọn — KHÔNG xoá dữ liệu. */
+export function useHideAiImageSet() {
+  const queryClient = useQueryClient();
+  return useMutation<
+    { artifactId: string; hidden: boolean },
+    Error,
+    { projectId: string; artifactId: string; hidden?: boolean }
+  >({
+    mutationFn: (body) =>
+      designApi<{ artifactId: string; hidden: boolean }>('/design/ai/perspective/hide', body),
+    onSuccess: (_data, variables) =>
+      void queryClient.invalidateQueries({ queryKey: ['ai_design_state', variables.projectId] }),
+  });
+}
+
+/**
+ * Vẽ lại ĐÚNG MỘT góc. ⚠️ Một lượt gọi tính tiền — nhưng chỉ một, bốn tấm kia giữ nguyên byte cũ.
+ *
+ * `front_day` không đi đường này: nó là tấm gốc của cả bộ, máy chủ từ chối kèm lý do.
+ */
+export function useRedrawPerspectiveView() {
+  const queryClient = useQueryClient();
+  return useMutation<
+    { artifactId: string; view: string },
+    Error,
+    { projectId: string; artifactId: string; view: string; route: string }
+  >({
+    mutationFn: (body) =>
+      designApi<{ artifactId: string; view: string }>('/design/ai/perspective/redraw', body),
+    onSuccess: (_data, variables) =>
+      void queryClient.invalidateQueries({ queryKey: ['ai_design_state', variables.projectId] }),
   });
 }

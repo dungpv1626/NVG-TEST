@@ -322,6 +322,15 @@ doi_chieu_so_moi:
     dang_dung: 0.45
     ho_so: '0,45 thường gặp (3/6), khoảng 0,15–0,75'
     de_xuat: 'giữ 0.45'
+  - noi: 'kb/construction_norms.yaml › outdoor.railing_h_m'
+    dang_dung: 1.1
+    ho_so: '0,8–0,9 m (n = 4: M1 900/700, M5 900, M6 800–900)'
+    de_xuat: 'CHỜ HAAN — chưa sửa'
+    ghi_chu: >-
+      Phát hiện 20/09/2026 khi thước chấm mặt đứng (T63) chấm bản demo: tiêu chí R1 trượt vì bộ vẽ
+      dùng 110 cm. KHÔNG tự sửa như ba số kia: 1,1 m là con số quen thuộc của quy chuẩn lan can nhà
+      cao tầng, còn 0,8–0,9 là thứ NVG vẽ thật trên nhà thấp tầng. Hạ một con số an toàn theo sáu
+      ngôi nhà là việc của người ký bản vẽ, không phải của mã.
   - noi: 'kb/facade_vocabulary.yaml (danh mục)'
     ghi_chu: >-
       Hồ sơ có mà danh mục chưa có: dải diềm mái dưới mép mái Nhật, chóp trang trí đỉnh mái,

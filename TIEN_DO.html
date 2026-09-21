@@ -212,9 +212,9 @@
           <code>TIEN_DO_THIET_KE.html</code>
         </p>
         <p class="xs muted">
-          Phần quản trị hệ thống (11 module ngoài Thiết kế AI) chạm lần cuối
-          <strong>05/09/2026</strong>
-          — toàn bộ công việc từ 10/09 tới nay thuộc nhánh Thiết kế AI.
+          Phần quản trị hệ thống: đợt v1.4 gần nhất là <strong>05/09/2026</strong>; từ 10/09 tới
+          19/09 toàn bộ công việc thuộc nhánh Thiết kế AI; ngày <strong>20/09</strong> quay lại dựng
+          màn hình Quản trị hệ thống (xem mục «Đã xong» bên dưới).
         </p>
       </header>
 
@@ -246,7 +246,7 @@
         <div class="stats">
           <div class="stat"><b>12/12</b><span class="xs muted">module đã dựng</span></div>
           <div class="stat"><b>130</b><span class="xs muted">migration</span></div>
-          <div class="stat"><b>2.068</b><span class="xs muted">kiểm thử tự động</span></div>
+          <div class="stat"><b>2.090</b><span class="xs muted">kiểm thử tự động</span></div>
           <div class="stat"><b>108</b><span class="xs muted">bảng CSDL</span></div>
         </div>
       </section>
@@ -401,6 +401,17 @@
               chuyển tháng lịch chọn ngày, nút Pipeline/Danh sách)
             </li>
             <li>Xuất báo cáo — xác nhận không lộ dữ liệu nhạy cảm</li>
+            <li>
+              <strong>Màn hình Quản trị hệ thống</strong> (20/09) — trước đợt này
+              <code>/nen/quan-tri</code> là màn hình trống duy nhất còn lại, mà lại là trang mặc
+              định của vai trò Quản trị viên: hạn mức phê duyệt, tham số hệ thống, thời hạn xử lý,
+              phân công công trường và nhật ký đều chỉ sửa được bằng lệnh SQL. Nay có sáu màn hình
+              thật. Tham số chưa có giá trị hiện <strong>“Chưa cấu hình”</strong>, và xóa giá trị về
+              rỗng là thao tác hợp lệ — năm tham số cố ý để trống vẫn để trống. Một lỗi đáng nhớ tìm
+              ra khi chạy thử: nhúng bảng <code>users</code> qua PostgREST mà không nêu tên khoá
+              ngoại thì máy chủ trả 300 và thư viện KHÔNG coi là lỗi — danh sách có đủ tài khoản vẫn
+              hiện ra “chưa có tài khoản nào”, không một dòng lỗi nào. Đã có bài kiểm chống tái phát
+            </li>
             <li>
               <strong>Bản vẽ đang có hiệu lực ở công trường</strong> (04/09) — tab
               <em>Hồ sơ – Bản vẽ</em> ở Chi tiết Công trình, dùng lại kho hồ sơ có phiên bản sẵn có
@@ -627,9 +638,9 @@
       <h2>Kiểm thử tự động</h2>
       <div class="card">
         <div class="stats" style="margin-top: 0">
-          <div class="stat"><b>2.068</b><span class="xs muted">tổng số</span></div>
+          <div class="stat"><b>2.090</b><span class="xs muted">tổng số</span></div>
           <div class="stat">
-            <b>417</b><span class="xs muted">giao diện — chạy ~20 giây, không chạm mạng</span>
+            <b>439</b><span class="xs muted">giao diện — chạy ~21 giây, không chạm mạng</span>
           </div>
           <div class="stat">
             <b>1.651</b><span class="xs muted">nghiệp vụ, phân quyền &amp; engine thiết kế</span>

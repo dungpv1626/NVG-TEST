@@ -1,0 +1,21 @@
+sequenceDiagram
+  autonumber
+  participant KS as Kỹ sư thiết kế
+  participant FE as Giao diện (SPA)
+  participant WK as Worker nvg-api
+  participant LLM as Mô hình ngôn ngữ
+  participant DB as PostgreSQL
+
+  KS->>FE: Nhập đầu bài thiết kế
+  FE->>WK: POST /design/... kèm thẻ đăng nhập
+  WK->>WK: kiểm hợp đồng JSON
+  WK->>LLM: một lượt gọi — đã bỏ danh tính
+  LLM-->>WK: khai phòng + bản phác lưới ô
+  WK->>WK: gán MỌI toạ độ · chấm điểm · cổng kiểm
+  alt Qua cổng kiểm
+    WK->>DB: lưu artifact bất biến — mã băm nội dung
+    WK-->>FE: tờ vẽ SVG tất định
+  else Hỏng cổng kiểm
+    WK-->>FE: không lưu, nêu lý do
+  end
+  Note over FE: Kết quả là ĐỀ XUẤT, không tự phát hành

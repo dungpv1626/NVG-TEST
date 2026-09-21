@@ -19,21 +19,28 @@ export class PlanQualityError extends Error {
 /** Năm kiểu thang điểm — xem phần «Năm kiểu thang điểm» của tệp YAML. */
 export type ScoreKind = 'lower_better' | 'higher_better' | 'count' | 'boolean' | 'band';
 
-export interface CriterionSpec {
-  code: string;
-  group: string;
-  vi: string;
-  giaiThich?: string;
+/**
+ * Phần của một tiêu chí mà công thức cho điểm CẦN — và chỉ phần ấy.
+ *
+ * Tách ra để thước chấm MẶT ĐỨNG (`ai/facade/quality.ts`) dùng lại đúng một bộ công thức
+ * (`scoreOf`) mà không phải mang theo những trường chỉ mặt bằng mới có (`byBuildingType`,
+ * `rooms`). Viết lại công thức cho thước thứ hai là tạo bản thứ hai sẽ lệch.
+ */
+export interface ScoreScale {
   kind: ScoreKind;
-  /** Ngưỡng ĐẠT của `lower_better` / `higher_better` / `count`. */
   pass?: number;
-  /** Ngưỡng TRỪ HẾT của ba kiểu trên. */
   zero?: number;
-  /** Bốn mốc của `band`. */
   low?: number;
   high?: number;
   hardLow?: number;
   hardHigh?: number;
+}
+
+export interface CriterionSpec extends ScoreScale {
+  code: string;
+  group: string;
+  vi: string;
+  giaiThich?: string;
   /** Tập phòng mà tiêu chí đo trên — hiện chỉ D1 dùng. */
   rooms?: string;
   /** Tham số riêng của tiêu chí, vẫn là dữ liệu: `khoang_cach_m`, `lech_m`. */

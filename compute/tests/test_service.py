@@ -25,6 +25,7 @@ EXPECTED_CONTRACTS = {
     "ai-facade-concept",
     "ai-facade-image",
     "ai-facade-proposal",
+    "ai-facade-review",
     "ai-floor-plan",
     "ai-floor-plan-proposal",
     "ai-house-intent",

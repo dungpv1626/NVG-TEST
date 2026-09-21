@@ -51,6 +51,18 @@
 
 version: '1.3.0'
 
+# Tên nhà cung cấp hiện trên ô chọn model (T60, 20/09/2026 — Haan gửi mẫu giao diện chọn theo nhà
+# cung cấp rồi mới chọn model). `gemini` và `gemini_paid` là HAI nhà cung cấp ở đây vì chúng dùng
+# hai khoá khác nhau (xem ghi chú «chính sách bám vào KHOÁ» ở đầu tệp) — trên màn hình cũng để hai
+# thẻ riêng, vì gói miễn phí và gói trả phí khác nhau đúng ở chỗ người dùng cần biết: dữ liệu gửi
+# đi có thể bị dùng để huấn luyện hay không.
+providers:
+  openai: { label: 'OpenAI' }
+  anthropic: { label: 'Anthropic' }
+  gemini_paid: { label: 'Google' }
+  gemini: { label: 'Google (gói miễn phí)' }
+  pollinations: { label: 'Pollinations' }
+
 billing:
   # Khoá của hai nhà cung cấp này không phát sinh hoá đơn: `gemini` là khoá gói miễn phí
   # (`GEMINI_API_KEY`, T8), Pollinations không thu tiền. Theo NHÀ CUNG CẤP chứ không theo tuyến,
@@ -146,14 +158,28 @@ routes:
 
   ai_text_openai:
     provider: openai
-    model: gpt-5
-    label: GPT-5 (OpenAI) — chất lượng cao
+    # ⚠️ Trước 20/09/2026 tuyến này chạy `gpt-5` — model ra ngày 05/08/2025, tức đã CŨ 13 THÁNG.
+    # Nó lọt vì quy trình chỉ hỏi «model này gọi được không» (kiểm 08/09/2026: gọi được, ghi ✔) mà
+    # không bao giờ hỏi «có bản mới hơn chưa» — một model cũ thì không bao giờ tự báo rằng nó cũ.
+    # Haan phát hiện bằng cách nhìn ô chọn model của một dự án khác. Từ nay: mỗi lần đụng tệp này,
+    # gọi `GET /v1/models` của nhà cung cấp trước (không tốn token, không tốn tiền) rồi hãy sửa.
+    model: gpt-5.6-terra
+    label: GPT-5.6 Terra (OpenAI) — cân bằng
+    short: 'GPT-5.6 Terra'
+    tag: 'Cân bằng'
+    blurb: 'Bậc giữa của OpenAI, ra 23/06/2026. Đắt hơn Luna mười lần, rẻ hơn Astra năm lần.'
     endpoint: https://api.openai.com/v1/responses
     max_data_class: 2
     enabled: true
     purpose: Nhánh AI — chương trình không gian và mặt bằng đề xuất (văn bản có lược đồ).
-    pricing: { input_per_1m_usd: 1.25, output_per_1m_usd: 10 }
-    # ── Đo THẬT 13/09/2026, ghi lại vì nó quyết định hai dòng cấu hình phía dưới ──────────
+    pricing: { input_per_1m_usd: 2, output_per_1m_usd: 12 }
+    # ✔ Kiểm bằng lời gọi RỖNG ngày 20/09/2026, đúng đường mã thật đi (`/v1/responses`, lược đồ
+    # `strict`, `store: false`, `reasoning.effort: low`): 1.166 ms · vào 50 / ra 15 · nghĩ 0 token
+    # · trả đúng `{"ok":true}` · 0,00028 USD.
+    #
+    # ── Đo THẬT 13/09/2026 TRÊN `gpt-5` (model cũ của tuyến này) ──────────────────────────
+    # Giữ lại vì nó giải thích hai dòng `max_output_tokens`/`request_timeout_s` dưới đây; các con
+    # số là của gpt-5, CHƯA đo lại trên Terra.
     #
     # Một lượt xếp mặt bằng cho biệt thự 26 phòng: tiêu HẾT 32.000 token đầu ra (trần do
     # `PLAN_OUTPUT_TOKENS` ở `ai/plan.ts` xin) mà vẫn bị cắt giữa chừng, và cũng vượt hạn chờ
@@ -180,17 +206,61 @@ routes:
   # Bậc tiết kiệm. Đơn giá ba tuyến `_fast` đối chiếu bảng giá chính thức ngày 13/09/2026 (Q-36).
   ai_text_openai_fast:
     provider: openai
-    model: gpt-5-mini
-    label: GPT-5 mini (OpenAI) — nhanh, rẻ hơn
+    # Đổi 20/09/2026: `gpt-5-mini` (05/08/2025) → `gpt-5.6-luna` (23/06/2026). Vừa mới hơn vừa
+    # RẺ HƠN — 0,20 so với 0,25 token vào, 1,20 so với 2 token ra, tức rẻ hơn 40% ở phần đắt nhất.
+    # ✔ Lời gọi rỗng 20/09/2026: 2.674 ms · vào 50 / ra 15 · nghĩ 0 · `{"ok":true}` · 0,00003 USD.
+    model: gpt-5.6-luna
+    label: GPT-5.6 Luna (OpenAI) — nhanh, rẻ nhất
+    short: 'GPT-5.6 Luna'
+    tag: 'Nhanh, rẻ nhất'
+    blurb: 'Bậc rẻ nhất trong danh sách. Hợp đầu bài đơn giản, hoặc khi cần thử nhiều lượt trước khi chốt.'
     endpoint: https://api.openai.com/v1/responses
     max_data_class: 2
     enabled: true
     purpose: Nhánh AI — bậc tiết kiệm cho đầu bài đơn giản hoặc khi thử nhiều lượt.
-    pricing: { input_per_1m_usd: 0.25, output_per_1m_usd: 2 }
+    pricing: { input_per_1m_usd: 0.2, output_per_1m_usd: 1.2 }
     # ⚠️ ĐO 13/09/2026 — Haan cho phép một lượt đo luồng theo tầng (T38) «không giới hạn token».
     # `0` = không gửi trần nào. Sau lượt đo thay bằng số đo được cộng biên an toàn.
     # ⚠️ TẠM ĐO 13/09/2026 — Haan: «tạm thời bỏ trần giới hạn token để test… bỏ trần giới hạn thời
     # gian». `0` = không đặt trần / không đặt hạn chờ. Trả lại sau đợt đo.
+    max_output_tokens: 0
+    request_timeout_s: 0
+
+  # ── Hai bậc CAO của OpenAI, thêm 20/09/2026 ─────────────────────────────────────────────
+  #
+  # Không đặt mặc định và không thay tuyến nào: chúng đắt gấp 2 và gấp 5 lần bậc cân bằng, nên
+  # phải là lựa chọn có chủ ý của người trả tiền. Chưa có phép đo nào so chất lượng bố cục giữa
+  # các bậc trên việc thật của NVG — `blurb` dưới đây chỉ nói giá và ngày ra, không nói hay dở.
+
+  ai_text_openai_deep:
+    provider: openai
+    model: gpt-5.6-sol
+    label: GPT-5.6 Sol (OpenAI) — suy luận sâu
+    short: 'GPT-5.6 Sol'
+    tag: 'Suy luận sâu'
+    blurb: 'Bậc suy luận sâu của OpenAI, ra 23/06/2026. Gấp đôi Terra ở cả token vào lẫn ra.'
+    endpoint: https://api.openai.com/v1/responses
+    max_data_class: 2
+    enabled: true
+    purpose: Nhánh AI — đầu bài nhiều ràng buộc chồng nhau, khi bậc cân bằng đã bị bác nhiều lượt.
+    pricing: { input_per_1m_usd: 4, output_per_1m_usd: 20 }
+    # ✔ Lời gọi rỗng 20/09/2026: 1.712 ms · vào 50 / ra 15 · nghĩ 0 · `{"ok":true}` · 0,00050 USD.
+    max_output_tokens: 0
+    request_timeout_s: 0
+
+  ai_text_openai_top:
+    provider: openai
+    model: gpt-6-astra
+    label: GPT-6 Astra (OpenAI) — bậc cao nhất
+    short: 'GPT-6 Astra'
+    tag: 'Bậc cao nhất'
+    blurb: 'Model mới nhất của OpenAI, ra 27/08/2026. Đắt nhất danh sách: token ra gấp bốn lần Terra.'
+    endpoint: https://api.openai.com/v1/responses
+    max_data_class: 2
+    enabled: true
+    purpose: Nhánh AI — lượt chốt phương án, khi đã chấp nhận trả gấp bốn lần cho một lượt gọi.
+    pricing: { input_per_1m_usd: 10, output_per_1m_usd: 50 }
+    # ✔ Lời gọi rỗng 20/09/2026: 1.473 ms · vào 50 / ra 15 · nghĩ 0 · `{"ok":true}` · 0,00125 USD.
     max_output_tokens: 0
     request_timeout_s: 0
 
@@ -201,6 +271,9 @@ routes:
     # xác nhận được bằng một lời gọi thật.
     model: gemini-3.1-pro-preview
     label: Gemini 3.1 Pro (Google) — chất lượng cao
+    short: 'Gemini 3.1 Pro'
+    tag: 'Chất lượng cao'
+    blurb: 'Bậc Pro của Google. Nghĩ lâu hơn nên chậm hơn, giá vào rẻ hơn OpenAI bậc cao.'
     max_data_class: 2
     enabled: true
     purpose: Nhánh AI — chương trình không gian và mặt bằng đề xuất (văn bản có lược đồ).
@@ -223,6 +296,9 @@ routes:
     provider: gemini_paid
     model: gemini-3.8-flash
     label: Gemini 3.8 Flash (Google) — nhanh, rẻ hơn
+    short: 'Gemini 3.8 Flash'
+    tag: 'Nhanh, rẻ hơn'
+    blurb: 'Bậc tiết kiệm của Google. Đang theo giá ưu đãi tới 31/12/2026.'
     max_data_class: 2
     enabled: true
     purpose: Nhánh AI — bậc tiết kiệm cho đầu bài đơn giản hoặc khi thử nhiều lượt.
@@ -239,26 +315,24 @@ routes:
     max_output_tokens: 0
     request_timeout_s: 0
 
-  # Bậc MIỄN PHÍ cho những bước chỉ gửi dữ liệu ĐÃ ẨN DANH (hạng 3) — hiện là đề xuất mức ưu tiên
-  # diện tích ở màn hình Chương trình không gian. Cùng khoá gói miễn phí với các tuyến `layer*`,
-  # nên `max_data_class: 3`: ô chọn model mờ nó đi ở mọi bước gửi đầu bài hạng 2.
-  ai_text_gemini_free:
-    provider: gemini
-    model: gemini-2.5-flash
-    label: Gemini 2.5 Flash (gói miễn phí) — chỉ dữ liệu đã ẩn danh
-    max_data_class: 3
-    enabled: true
-    purpose: Bước chỉ gửi bản tóm tắt đã ẩn danh — đề xuất mức ưu tiên diện tích (Lớp 2a).
-    pricing: { input_per_1m_usd: 0.3, output_per_1m_usd: 2.5 }
-    # ⚠️ TẠM ĐO 13/09/2026 — Haan: «tạm thời bỏ trần giới hạn token để test… bỏ trần giới hạn thời
-    # gian». `0` = không đặt trần / không đặt hạn chờ. Trả lại sau đợt đo.
-    max_output_tokens: 0
-    request_timeout_s: 0
+  # ⚠️ Tuyến `ai_text_gemini_free` (khoá gói MIỄN PHÍ của Google, `gemini-2.5-flash`, hạng 3) đã GỠ
+  # ngày 20/09/2026 — Haan: «bỏ gói miễn phí của Google đi, chúng ta sẽ không dùng đến nó». Nó vào
+  # danh sách ngày 13/09/2026 cho bước đề xuất mức ưu tiên diện tích ở màn hình Chương trình không
+  # gian; bước ấy đã gỡ khỏi giao diện cùng T58, nên tuyến này không còn chỗ dùng. Sau khi gỡ,
+  # KHÔNG tuyến `ai_*` nào còn chạy khoá miễn phí: mọi thứ trong ô chọn model đều là API trả phí có
+  # cam kết không huấn luyện (hạng 2).
+  #
+  # Khoá `GEMINI_API_KEY` VẪN dùng cho `kb_label_normalize`, `kb_rationale_embed` và
+  # `site_boundary_extract` — đường số hoá hồ sơ cũ, không nằm trong ô chọn model — nên `gemini`
+  # còn nguyên trong `billing.free_providers` để nhật ký tính đúng tiền thật bằng 0 cho chúng.
 
   ai_text_anthropic:
     provider: anthropic
     model: claude-opus-5
     label: Claude Opus 5 (Anthropic) — chất lượng cao
+    short: 'Claude Opus 5'
+    tag: 'Chất lượng cao'
+    blurb: 'Bậc cao nhất của Anthropic, và đắt nhất trong danh sách. Bám yêu cầu dài, nhiều điều kiện.'
     endpoint: https://api.anthropic.com/v1/messages
     max_data_class: 2
     enabled: true
@@ -279,6 +353,9 @@ routes:
     provider: anthropic
     model: claude-sonnet-5
     label: Claude Sonnet 5 (Anthropic) — nhanh, rẻ hơn
+    short: 'Claude Sonnet 5'
+    tag: 'Nhanh, rẻ hơn'
+    blurb: 'Bậc tiết kiệm của Anthropic. Giá bằng khoảng hai phần năm Opus.'
     endpoint: https://api.anthropic.com/v1/messages
     max_data_class: 2
     enabled: true
@@ -325,6 +402,9 @@ routes:
     provider: openai
     model: gpt-image-2
     label: GPT Image 2 (OpenAI) — rẻ nhất của OpenAI
+    short: 'GPT Image 2'
+    tag: 'Rẻ nhất của OpenAI'
+    blurb: 'Bậc cũ, giữ lại làm mức rẻ. Bám ảnh neo kém hơn hai bậc 2.5.'
     # HAI địa chỉ, vì OpenAI tách làm hai đầu ra khác hẳn nhau. `endpoint` là đường CHỮ → ẢNH
     # (JSON, không nhận ảnh vào) — đây là đường tờ mặt bằng của T21 đi, vì nó không có ảnh neo.
     # `endpoint_edit` là đường ẢNH → ẢNH (multipart, bắt buộc có ảnh vào) — đường tờ mặt bằng có
@@ -342,6 +422,9 @@ routes:
     provider: openai
     model: gpt-image-2.5-sunburst
     label: GPT Image 2.5 Sunburst (OpenAI) — bám ảnh gốc sát nhất
+    short: 'GPT Image 2.5 Sunburst'
+    tag: 'Bám hình sát nhất'
+    blurb: 'Vẽ lại từ ảnh neo mà giữ đúng hình. Dùng cho tờ mặt bằng có nội thất, nơi sai hình là sai bản vẽ.'
     endpoint: https://api.openai.com/v1/images/generations
     endpoint_edit: https://api.openai.com/v1/images/edits
     max_data_class: 2
@@ -354,6 +437,9 @@ routes:
     provider: openai
     model: gpt-image-2.5-flare
     label: GPT Image 2.5 Flare (OpenAI) — nhanh
+    short: 'GPT Image 2.5 Flare'
+    tag: 'Nhanh'
+    blurb: 'Đổi độ bám hình lấy tốc độ. Hợp phối cảnh và nội thất, không hợp tờ phải đúng hình.'
     endpoint: https://api.openai.com/v1/images/generations
     endpoint_edit: https://api.openai.com/v1/images/edits
     max_data_class: 2
@@ -366,6 +452,9 @@ routes:
     provider: gemini_paid
     model: gemini-3.1-flash-image
     label: Gemini 3.1 Flash Image (Google)
+    short: 'Gemini 3.1 Flash Image'
+    tag: 'Cân bằng'
+    blurb: 'Bậc thường của Google cho ảnh: mặt bằng có nội thất, phối cảnh, mặt đứng, mặt cắt.'
     max_data_class: 2
     enabled: true
     purpose: Nhánh AI — mặt bằng có nội thất, phối cảnh, nội thất, mặt đứng, mặt cắt.
@@ -382,6 +471,9 @@ routes:
     provider: gemini_paid
     model: gemini-3-pro-image
     label: Gemini 3 Pro Image (Google) — chất lượng cao
+    short: 'Gemini 3 Pro Image'
+    tag: 'Chất lượng cao'
+    blurb: 'Chữ và số in trên hình ít sai nhất. Dùng cho tờ đưa khách xem.'
     max_data_class: 2
     enabled: true
     purpose: Nhánh AI — tờ trình khách cần chữ và số trên hình ít sai nhất.
@@ -392,6 +484,9 @@ routes:
     provider: gemini_paid
     model: gemini-3.1-flash-lite-image
     label: Gemini 3.1 Flash Lite Image (Google) — rẻ nhất
+    short: 'Gemini 3.1 Flash Lite Image'
+    tag: 'Rẻ nhất'
+    blurb: 'Vẽ thử nhiều lần cho rẻ, rồi chốt lại bằng một tuyến đắt hơn.'
     max_data_class: 2
     enabled: true
     purpose: Nhánh AI — vẽ thử nhiều lần cho rẻ trước khi chốt bằng một tuyến đắt hơn.

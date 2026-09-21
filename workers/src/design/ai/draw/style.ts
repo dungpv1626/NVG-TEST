@@ -61,8 +61,12 @@ export type LineKey =
   | 'elevation_outline'
   | 'floor_line'
   | 'level_mark'
-  | 'element';
-
+  | 'element'
+  | 'roof_block'
+  | 'roof_edge'
+  | 'roof_below'
+  | 'roof_arrow'
+  | 'roof_lot';
 export type TextKey =
   | 'sheet_title'
   | 'level_name'
@@ -99,6 +103,11 @@ const LINE_KEYS: LineKey[] = [
   'floor_line',
   'level_mark',
   'element',
+  'roof_block',
+  'roof_edge',
+  'roof_below',
+  'roof_arrow',
+  'roof_lot',
 ];
 
 const TEXT_KEYS: TextKey[] = [

@@ -189,6 +189,9 @@ describe('sheet_image — tờ mặt bằng có nội thất (T57)', () => {
     // tuỳ lúc xem — và bản trong `shared` là bản đi kèm tấm tải về.
     expect(prompts.sheetImage.watermark).toBe(AI_DISCLAIMERS.aiSheetImageStamp);
     expect(AI_DISCLAIMERS.aiSheetImageStamp).toMatch(/không đo được/);
+    expect(prompts.facadeImage.watermark).toBe(AI_DISCLAIMERS.aiFacadeImageStamp);
+    expect(prompts.perspective.watermark).toBe(AI_DISCLAIMERS.aiImageSetStamp);
+    expect(AI_DISCLAIMERS.aiImageSetStamp).toMatch(/không đo được/);
   });
 
   it('nói ra rằng ảnh đính kèm là hình học có thẩm quyền — khác biệt duy nhất với T21', () => {

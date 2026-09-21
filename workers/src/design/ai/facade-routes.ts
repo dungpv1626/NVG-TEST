@@ -12,9 +12,11 @@
 import { Hono, type Context } from 'hono';
 import {
   aiFacadeBriefSchema,
+  aiFacadeReviewSchema,
   type AiFacadeBrief,
   type AiFacadeConcept,
   type AiFacadeImage,
+  type AiFacadeReview,
   type AiFloorPlan,
   type DesignBrief,
 } from '@nvg/shared/design';
@@ -31,6 +33,9 @@ import { AI_DIGEST_DATA_CLASS, anonymiseForAi } from '../brief/anonymise';
 import type { DesignEnv } from '../env';
 import { constructionNorms } from '../kb/construction-data';
 import { facadeVocabulary } from '../kb/facade-vocabulary-data';
+import { facadeQuality } from './facade/quality-data';
+import { scoreFacade, type FacadeScore } from './facade/score';
+import { applyFacadeReview, FACADE_REVIEW_SCHEMA_VERSION } from './facade/review';
 import { roomGroups } from '../kb/vocabulary';
 import { roomVocabulary } from '../kb/vocabulary-data';
 import { imageClientFor, modelRouter, textClientFor } from '../llm/factory';
@@ -41,10 +46,14 @@ import { REASONING_EFFORTS, type ReasoningEffort } from '../llm/text-client';
 import { facadeStepSpecs } from '../workflows/ai-facade-steps';
 import type { AiDesignParams } from '../workflows/ai-design-steps';
 import { ElevationSheetError } from './draw/elevation-sheet';
-import { checkFacadeBriefCodes, FACADE_BRIEF_SCHEMA_VERSION } from './facade/brief';
+import {
+  checkFacadeBriefCodes,
+  facadeBriefIssueText,
+  FACADE_BRIEF_SCHEMA_VERSION,
+} from './facade/brief';
 import { briefKeys, facadeLegend } from './facade/describe';
 import { facadeFrame, mainDoorOf } from './facade/frame';
-import { facadeAnchor, facadeDxf, facadeSheet } from './facade';
+import { facadeAnchor, facadeDxf, facadeSheet, railingCmOf } from './facade';
 import { usageSummary, withAiCall } from './call-log';
 import { assembleFacadeImage, facadeImageCallOptions, facadeImagePrompt } from './facade/image';
 import { aiModelCatalogue, isSelectableRoute } from './models';
@@ -150,6 +159,7 @@ facadeApp.get('/vocabulary', (c) => {
       groundRaiseCm: norms.facade ? Math.round(norms.facade.ground_floor_raise_m * 100) : null,
       parapetCm: norms.facade ? Math.round(norms.facade.parapet_height_m * 100) : null,
       doorHeightCm: Math.round((norms.openings.entrance?.height_m ?? 0) * 100) || null,
+      railingHCm: Math.round(norms.outdoor.railing_h_m * 100) || null,
     },
   });
 });
@@ -235,10 +245,8 @@ facadeApp.post('/brief/:projectId', async (c) => {
   if (!parsed.success) {
     return c.json(
       {
-        error: 'Phiếu yêu cầu chưa đúng. Kiểm tra lại các ô đã điền.',
-        issues: parsed.error.issues
-          .slice(0, 10)
-          .map((issue) => `${issue.path.join('.')}: ${issue.message}`),
+        error: 'Phiếu yêu cầu chưa đúng nên chưa lưu được. Sửa những mục dưới đây rồi lưu lại.',
+        issues: parsed.error.issues.slice(0, 10).map(facadeBriefIssueText),
       },
       400,
     );
@@ -273,6 +281,15 @@ facadeApp.get('/:projectId', async (c) => {
   const fromBrief = briefKeys(
     briefArtifact?.kind === 'ai_facade_brief' ? (briefArtifact.payload as AiFacadeBrief) : null,
   );
+  // Điểm «giống cách NVG vẽ đến đâu» (T63). Chấm lúc ĐỌC chứ không lưu vào artifact: thước đo còn
+  // đang lớn lên theo số hồ sơ đã đo, và một con số đóng băng trong artifact sẽ nói dối ngay lần
+  // đầu thước đổi. Artifact bất biến, điểm thì không.
+  const score = scoreFacade({
+    concept,
+    quality: facadeQuality(),
+    vocab,
+    railingCm: railingCmOf(concept),
+  });
   return c.json({
     artifactId: read.artifactId,
     createdAt: read.createdAt,
@@ -300,7 +317,120 @@ facadeApp.get('/:projectId', async (c) => {
     elements: (concept.elevation.elements ?? []).map((e) => vocab.elements[e.kind] ?? e.kind),
     rationale: concept.rationale,
     generator: concept.generator,
+    score,
+    // Bản KỸ SƯ CHẤM LẠI gần nhất của ĐÚNG bản vẽ này (T63). Tìm qua cạnh lineage chứ không lọc
+    // payload: `edgeTargets` trả mã và thời điểm mà không phải tải payload của từng bản chấm cũ.
+    review: await latestReview(c, read.artifactId, score),
   });
+});
+
+/**
+ * Bản chấm tay gần nhất của một bản mặt đứng, kèm điểm đã áp bản chấm ấy. `null` khi chưa ai chấm.
+ *
+ * Chỉ đọc payload của BẢN MỚI NHẤT. Mỗi lần chấm lại là một artifact mới, nên một hồ sơ dùng lâu
+ * sẽ có hàng chục bản; đọc hết để tìm bản mới nhất là một chuỗi lượt đi kho lớn dần theo thói quen
+ * dùng, không có gì báo.
+ */
+async function latestReview(
+  c: Ctx,
+  facadeId: string,
+  score: FacadeScore,
+): Promise<Record<string, unknown> | null> {
+  const repo = new ArtifactRepository(c.env);
+  const targets = await repo.edgeTargets(facadeId, 'ai_facade_review');
+  const latest = targets.find((t) => t.kind === 'ai_facade_review');
+  if (!latest) return null;
+  const artifact = await repo.get(latest.id, c.req.param('projectId') ?? '');
+  if (!artifact || artifact.kind !== 'ai_facade_review') return null;
+  const review = artifact.payload as AiFacadeReview;
+  return {
+    artifactId: artifact.id,
+    reviewedAt: review.reviewed_at,
+    note: review.note,
+    criteria: review.criteria,
+    machinePercent: review.machine_percent,
+    score: applyFacadeReview(score, review, facadeQuality()),
+  };
+}
+
+/**
+ * KỸ SƯ CHẤM LẠI một bản mặt đứng (T63) — KHÔNG gọi mô hình, không tốn tiền.
+ *
+ * Ghi thành artifact mới nối cạnh `ai_facade_review` từ chính bản vẽ được chấm, và KHÔNG đặt head:
+ * «đang hiệu lực» của bộ môn kiến trúc là bản MẶT ĐỨNG, không phải bảng điểm của nó.
+ */
+facadeApp.post('/review/:projectId', async (c) => {
+  const token = bearer(c.req.header('Authorization'));
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+  const projectId = c.req.param('projectId');
+  const db = await asUser(c.env, token);
+  const scope = await projectScope(db, projectId);
+  if (!scope) return c.json({ error: PROJECT_NOT_VISIBLE }, 404);
+  const denied = await denyUnlessWritable(db, scope.tenantId, projectId);
+  if (denied) return c.json({ error: denied.error }, denied.status);
+
+  const body = (await c.req.json()) as { artifactId?: string; review?: unknown };
+  if (!body.artifactId) return c.json({ error: 'Chưa chọn bản mặt đứng nào để chấm.' }, 400);
+
+  const repo = new ArtifactRepository(c.env);
+  const facade = await repo.get(body.artifactId, projectId);
+  if (!facade || facade.kind !== 'ai_facade_concept') return c.json({ error: NOT_FOUND }, 404);
+
+  // Máy chấm lại NGAY TẠI ĐÂY, không nhận con số từ trình duyệt: `machine_percent` là mốc để về
+  // sau đối chiếu người với máy, nên nó phải là điểm máy thật của đúng bản vẽ này.
+  const quality = facadeQuality();
+  const reviewed = facade.payload as AiFacadeConcept;
+  const machine = scoreFacade({
+    concept: reviewed,
+    quality,
+    vocab: facadeVocabulary(),
+    railingCm: railingCmOf(reviewed),
+  });
+  const known = new Set(quality.criteria.map((criterion) => criterion.code));
+
+  const parsed = aiFacadeReviewSchema.safeParse({
+    ...(body.review as Record<string, unknown> | undefined),
+    schema_version: FACADE_REVIEW_SCHEMA_VERSION,
+    facade_ref: facade.id,
+    score_version: quality.scoreVersion,
+    machine_percent: machine.percent,
+    reviewed_at: new Date().toISOString(),
+    reviewed_by: scope.actorId,
+  });
+  if (!parsed.success) {
+    return c.json(
+      {
+        error: 'Bảng chấm chưa đúng. Kiểm tra lại các ô đã điền.',
+        issues: parsed.error.issues
+          .slice(0, 10)
+          .map((issue) => `${issue.path.join('.')}: ${issue.message}`),
+      },
+      400,
+    );
+  }
+  const unknown = parsed.data.criteria.filter((row) => !known.has(row.code)).map((r) => r.code);
+  if (unknown.length) {
+    return c.json(
+      { error: 'Bảng chấm có tiêu chí không có trong thước đo.', issues: unknown },
+      400,
+    );
+  }
+
+  const written = await repo.write({
+    scope: {
+      tenantId: scope.tenantId,
+      companyId: scope.companyId,
+      projectId,
+      discipline: DISCIPLINE,
+      actorId: scope.actorId,
+    },
+    kind: 'ai_facade_review',
+    payload: parsed.data,
+    inputs: [facade.id],
+    step: 'ai_facade_review',
+    setHead: false,
+  });
+  return c.json({ artifactId: written.id });
 });
 
 /** Tờ mặt đứng SVG. Cache ngắn, không `immutable`: tờ phụ thuộc cả mã bộ vẽ lẫn kb (xem `/plan/sheet`). */
@@ -353,6 +483,108 @@ facadeApp.get('/:projectId/anchor', async (c) => {
       'X-Anchor-Height': String(anchor.heightPx),
     },
   });
+});
+
+/**
+ * Chọn một bản mặt đứng làm BẢN HIỆU LỰC (20/09/2026).
+ *
+ * Mỗi lượt chạy đúc một artifact mới và đặt luôn mốc, nên bản mới nhất mặc nhiên hiệu lực. Tuyến này
+ * là đường quay lại: dựng xong bản thứ hai mà thấy bản đầu đẹp hơn thì chọn lại, không phải chạy lại
+ * một lượt tính tiền để có thứ mình đã có.
+ *
+ * Mốc quyết định thứ đi tiếp: ảnh mặt đứng và bước Phối cảnh đọc `design_head`, không đọc «bản mới
+ * nhất».
+ */
+facadeApp.post('/choose', async (c) => {
+  const token = bearer(c.req.header('Authorization'));
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+  const body = (await c.req.json()) as { projectId?: string; artifactId?: string };
+  if (!body.projectId) return c.json({ error: 'Thiếu mã hồ sơ thiết kế.' }, 400);
+  if (!body.artifactId) return c.json({ error: 'Chưa chọn bản mặt đứng nào.' }, 400);
+
+  const db = await asUser(c.env, token);
+  const scope = await projectScope(db, body.projectId);
+  if (!scope) return c.json({ error: PROJECT_NOT_VISIBLE }, 404);
+  const denied = await denyUnlessWritable(db, scope.tenantId, body.projectId);
+  if (denied) return c.json({ error: denied.error }, denied.status);
+
+  const repo = new ArtifactRepository(c.env);
+  // `repo.get` tự kiểm artifact thuộc đúng hồ sơ: mã băm là danh tính toàn cục, và mã này đến từ
+  // trình duyệt.
+  const artifact = await repo.get(body.artifactId, body.projectId);
+  if (!artifact || artifact.kind !== 'ai_facade_concept') {
+    return c.json({ error: 'Không tìm thấy bản mặt đứng này trong hồ sơ.' }, 404);
+  }
+  await repo.setHead(
+    {
+      tenantId: scope.tenantId,
+      companyId: scope.companyId,
+      projectId: body.projectId,
+      discipline: DISCIPLINE,
+      actorId: scope.actorId,
+    },
+    'ai_facade_concept',
+    artifact.id,
+  );
+  return c.json({ artifactId: artifact.id });
+});
+
+/**
+ * «Xoá» một bản mặt đứng khỏi dải chọn — THÔI HIỆN, không xoá dữ liệu.
+ *
+ * Cùng khuôn với `/ai/plan/hide`: artifact bất biến và có lineage (CLAUDE.md 8.2 nguyên tắc 3), nên
+ * tờ vẽ đã tải, ảnh dựng từ nó và nhật ký chi phí vẫn đọc được. Bỏ dòng đánh dấu thì bản ấy trở lại.
+ *
+ * Bản ĐANG HIỆU LỰC thì gỡ luôn mốc: để lại một mốc trỏ vào thứ màn hình không còn hiện là cách chắc
+ * chắn nhất làm bước Phối cảnh đọc nhầm mặt đứng.
+ */
+facadeApp.post('/hide', async (c) => {
+  const token = bearer(c.req.header('Authorization'));
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+  const body = (await c.req.json()) as {
+    projectId?: string;
+    artifactId?: string;
+    hidden?: boolean;
+  };
+  if (!body.projectId) return c.json({ error: 'Thiếu mã hồ sơ thiết kế.' }, 400);
+  if (!body.artifactId) return c.json({ error: 'Chưa chọn bản mặt đứng nào.' }, 400);
+  const hidden = body.hidden !== false;
+
+  const db = await asUser(c.env, token);
+  const scope = await projectScope(db, body.projectId);
+  if (!scope) return c.json({ error: PROJECT_NOT_VISIBLE }, 404);
+  const denied = await denyUnlessWritable(db, scope.tenantId, body.projectId);
+  if (denied) return c.json({ error: denied.error }, denied.status);
+
+  const repo = new ArtifactRepository(c.env);
+  const artifact = await repo.get(body.artifactId, body.projectId);
+  if (!artifact || artifact.kind !== 'ai_facade_concept') {
+    return c.json({ error: 'Không tìm thấy bản mặt đứng này trong hồ sơ.' }, 404);
+  }
+
+  if (!hidden) {
+    const { error } = await db
+      .from('design_artifact_hidden')
+      .delete()
+      .eq('artifact_id', artifact.id);
+    if (error) return c.json({ error: 'Không đưa lại được bản mặt đứng vào danh sách.' }, 500);
+    return c.json({ artifactId: artifact.id, hidden: false });
+  }
+
+  const { error } = await db.from('design_artifact_hidden').upsert(
+    {
+      artifact_id: artifact.id,
+      tenant_id: scope.tenantId,
+      project_id: body.projectId,
+      discipline: DISCIPLINE,
+      hidden_by: scope.actorId,
+    },
+    { onConflict: 'artifact_id' },
+  );
+  if (error) return c.json({ error: 'Không xoá được bản mặt đứng khỏi danh sách.' }, 500);
+
+  await repo.clearHead(body.projectId, DISCIPLINE, 'ai_facade_concept', artifact.id);
+  return c.json({ artifactId: artifact.id, hidden: true });
 });
 
 /**
