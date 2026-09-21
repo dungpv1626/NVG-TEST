@@ -1,12 +1,12 @@
 {
-  "_doc": "Cấu hình biểu mẫu Đầu bài thiết kế (Lớp 1 — TK-10). ĐÂY LÀ DỮ LIỆU: logic hiện/ẩn, nhãn, thứ tự và trọng số chấm điểm đều nằm ở tệp này, KHÔNG viết cứng trong brief-panel.tsx. Đường dẫn `path` trỏ vào payload DesignBrief (contracts/design-brief.schema.json); riêng tiền tố `legacy.` trỏ vào năm cột chữ tự do của bảng design_briefs có từ TK-01. Mã trong `required_spaces` và `family[].needs` phải nằm trong kb/room_vocabulary.yaml — có kiểm thử canh. ── Đợt 21/09/2026 (khảo sát chi tiết): thêm sáu mục — Gia chủ và tín ngưỡng, Nếp sinh hoạt, Lưu trữ, Thang và lối vào, Ban công, Kỹ thuật và dự trù — cùng tám trường khu đất và ô tuổi trong Thành viên gia đình. Trọng số của gần hết các trường mới là 0 CÓ CHỦ Ý: `completeness_score` là cổng chặn Lớp 2, nên nó chỉ được đo những thứ THIẾU THÌ KHÔNG DỰNG NỔI mặt bằng. Mười một trường mới mang trọng số 1 là những trường đổi hẳn bố cục (thang máy, bậc tam cấp, tín ngưỡng, kinh doanh tại nhà, nếp nấu ăn, người đi lại khó khăn, lưu trữ, ban công, mặt nắng, mặt gió, mức hoàn thiện). Cộng lại tổng trọng số nhà phố lên 50 — một đầu bài trả lời hết phần cũ vẫn đạt 0,78, trên ngưỡng 0,7, nên đợt này KHÔNG chặn hồ sơ nào đang chạy. Quản trị viên đổi được trọng số ở màn hình «Biểu mẫu đầu bài» mà không cần sửa tệp này.",
-  "version": "1.1.0",
+  "_doc": "Cấu hình biểu mẫu Đầu bài thiết kế (Lớp 1 — TK-10). ĐÂY LÀ DỮ LIỆU: logic hiện/ẩn, nhãn, thứ tự và trọng số chấm điểm đều nằm ở tệp này, KHÔNG viết cứng trong brief-panel.tsx. Đường dẫn `path` trỏ vào payload DesignBrief (contracts/design-brief.schema.json); riêng tiền tố `legacy.` trỏ vào năm cột chữ tự do của bảng design_briefs có từ TK-01. Mã trong `required_spaces` và `family[].needs` phải nằm trong kb/room_vocabulary.yaml — có kiểm thử canh. ── Đợt 21/09/2026 (khảo sát chi tiết): thêm sáu mục — Gia chủ và tín ngưỡng, Nếp sinh hoạt, Lưu trữ, Thang và lối vào, Ban công, Kỹ thuật và dự trù — cùng tám trường khu đất và ô tuổi trong Thành viên gia đình. Trọng số của gần hết các trường mới là 0 CÓ CHỦ Ý: `completeness_score` là cổng chặn Lớp 2, nên nó chỉ được đo những thứ THIẾU THÌ KHÔNG DỰNG NỔI mặt bằng. Mười một trường mới mang trọng số 1 là những trường đổi hẳn bố cục (thang máy, bậc tam cấp, tín ngưỡng, kinh doanh tại nhà, nếp nấu ăn, người đi lại khó khăn, lưu trữ, ban công, mặt nắng, mặt gió, mức hoàn thiện). Cộng lại tổng trọng số nhà phố lên 50 — một đầu bài trả lời hết phần cũ vẫn đạt 0,78, trên ngưỡng 0,7, nên đợt này KHÔNG chặn hồ sơ nào đang chạy. Quản trị viên đổi được trọng số ở màn hình «Biểu mẫu đầu bài» mà không cần sửa tệp này. ── Gộp còn SÁU mục cùng ngày (Haan: «12 mục là quá dài»): mười hai mục là mười hai lần bấm «Tiếp», và phần lớn chúng chỉ có vài câu. Gộp theo CÂU HỎI CỦA NGƯỜI KHAI chứ không theo nhóm dữ liệu: gia chủ, tín ngưỡng và nếp sinh hoạt là một mạch trò chuyện; thang, lối vào, ban công và phong cách đều là chuyện hình khối nhìn từ ngoài. Không trường nào thêm, bớt hay đổi. Riêng nhóm tổ chức khối nhà trước đây ẩn cả MỤC với nhà phố, nay điều kiện ấy nằm ở TỪNG TRƯỜNG — mục mới còn chứa thang và ban công, thứ nhà phố nào cũng có.",
+  "version": "1.2.0",
   "consistency": {},
   "sections": [
     {
-      "id": "loai_hinh",
-      "title": "Loại hình và quy mô",
-      "hint": "Ba câu quyết định phần còn lại của bảng khảo sát: loại hình chọn bộ quy tắc, số tầng mở ra các cột ghim tầng ở những bước sau.",
+      "id": "cong_trinh_khu_dat",
+      "title": "Công trình và khu đất",
+      "hint": "Loại hình, quy mô và mọi thứ đo được trên thửa đất: kích thước, cao độ, hướng nắng hướng gió, hiện trạng bốn phía.",
       "fields": [
         {
           "path": "building_type",
@@ -226,13 +226,7 @@
           "max": 12,
           "hint": "Số tầng SÀN, tính cả tầng trệt. Tum thang và sân thượng không tính là một tầng; tầng lửng thì tính.",
           "note": "Đặt ở bước đầu vì nó gác cột «Tầng» của cả phần Gia đình lẫn bảng Không gian — hai cột đó chỉ hiện khi số tầng lớn hơn 1. Khai muộn thì người điền từ trên xuống đã đi qua chúng lúc còn ẩn."
-        }
-      ]
-    },
-    {
-      "id": "khu_dat",
-      "title": "Khu đất",
-      "fields": [
+        },
         {
           "path": "site.shape",
           "label": "Hình thửa đất",
@@ -711,8 +705,9 @@
       ]
     },
     {
-      "id": "quy_mo",
-      "title": "Thành viên gia đình",
+      "id": "gia_dinh",
+      "title": "Gia đình và nếp sinh hoạt",
+      "hint": "Ai ở trong nhà, tin điều gì, và dùng nhà thế nào. Phần này trả lời câu mà số phòng không nói ra.",
       "fields": [
         {
           "path": "family",
@@ -749,15 +744,7 @@
             }
           ],
           "note": "Mã trong `needs` lấy từ kb/room_vocabulary.yaml — mã lạ sẽ đi qua cả engine mà không rule nào nhắm tới. \"Khu vệ sinh riêng\" KHÔNG còn ở đây: nó là quan hệ khép kín giữa hai phòng, không phải một phòng nữa, nên khai bằng ô «Phòng ngủ khép kín». Ô «Tủ đồ, kho riêng» tách làm hai (07/09/2026): `closet` là hốc tủ, `dressing_room` là phòng đi vào được. Kho chung của cả nhà vẫn khai ở «Không gian bắt buộc có», không phải ở đây."
-        }
-      ],
-      "hint": "Ai sẽ ở, bao nhiêu người, ở tầng nào. Số phòng ngủ suy thẳng từ đây."
-    },
-    {
-      "id": "gia_chu",
-      "title": "Gia chủ, tín ngưỡng và kinh doanh tại nhà",
-      "hint": "Tín ngưỡng quyết không gian thờ; kinh doanh tại nhà quyết cả mặt bằng tầng trệt và lối vào.",
-      "fields": [
+        },
         {
           "path": "household.occupation",
           "label": "Ngành nghề của gia chủ",
@@ -1067,14 +1054,7 @@
               }
             ]
           }
-        }
-      ]
-    },
-    {
-      "id": "sinh_hoat",
-      "title": "Nếp sinh hoạt",
-      "hint": "Phần trả lời câu «nhà này được dùng thế nào» — thứ mà số phòng không nói ra.",
-      "fields": [
+        },
         {
           "path": "lifestyle.cooking",
           "label": "Nếp nấu ăn",
@@ -1295,8 +1275,9 @@
       ]
     },
     {
-      "id": "khong_gian",
-      "title": "Không gian và phong cách",
+      "id": "cong_nang",
+      "title": "Công năng và lưu trữ",
+      "hint": "Nhà cần những không gian nào, để bao nhiêu xe, và cất giữ những gì.",
       "fields": [
         {
           "path": "required_spaces",
@@ -1466,52 +1447,6 @@
           ]
         },
         {
-          "path": "style",
-          "label": "Phong cách kiến trúc",
-          "control": "choice",
-          "weight": 1,
-          "hint": "Chỉ dẫn hướng cho ảnh phối cảnh, không đổi mặt bằng. Chưa chốt được thì để trống — bước phối cảnh vẫn chọn lại được.",
-          "options": [
-            {
-              "value": "hien_dai",
-              "label": "Hiện đại"
-            },
-            {
-              "value": "tan_co_dien",
-              "label": "Tân cổ điển"
-            },
-            {
-              "value": "indochine",
-              "label": "Đông Dương"
-            },
-            {
-              "value": "mai_thai",
-              "label": "Mái Thái"
-            },
-            {
-              "value": "toi_gian",
-              "label": "Tối giản"
-            },
-            {
-              "value": "nhiet_doi",
-              "label": "Nhiệt đới"
-            },
-            {
-              "value": "dia_trung_hai",
-              "label": "Địa Trung Hải"
-            },
-            {
-              "value": "co_dien",
-              "label": "Cổ điển"
-            },
-            {
-              "value": "bac_au",
-              "label": "Bắc Âu"
-            }
-          ],
-          "note": "Danh sách để chọn, không phải danh sách đầy đủ của ngành — ba phong cách NVO làm nhiều nhất đứng trước."
-        },
-        {
           "path": "legacy.functional_needs",
           "label": "Ghi chú thêm về công năng",
           "control": "textarea",
@@ -1519,20 +1454,6 @@
           "hint": "Những yêu cầu công năng mà bảng không gian ở trên chưa diễn đạt hết.",
           "note": "Nhãn đã đổi so với TK-01: nhu cầu công năng chính nay khai có cấu trúc ở phần Gia đình và Không gian. Giữ câu hỏi cũ ở đây là bắt nhập hai lần."
         },
-        {
-          "path": "legacy.style_note",
-          "label": "Ghi chú thêm về phong cách",
-          "control": "textarea",
-          "weight": 0,
-          "hint": "Vật liệu, màu sắc, công trình tham chiếu khách đưa."
-        }
-      ]
-    },
-    {
-      "id": "luu_tru",
-      "title": "Nhu cầu lưu trữ",
-      "hint": "Phần lớn chỗ cất không phải một phòng — là tủ âm, gầm thang, hốc tường — nhưng vẫn phải được tính diện tích từ đầu.",
-      "fields": [
         {
           "path": "storage.level",
           "label": "Lượng đồ cần cất giữ",
@@ -1615,10 +1536,182 @@
       ]
     },
     {
-      "id": "giao_thong_dung",
-      "title": "Thang, lối vào và cao độ nền",
-      "hint": "Nhóm câu hỏi nhỏ nhưng bỏ sót thì sai từ mặt cắt đến mặt đứng.",
+      "id": "khoi_nha",
+      "title": "Khối nhà, thang và mặt ngoài",
+      "hint": "Tổ chức khối và sân (biệt thự, nhà vườn), thang bộ và thang máy, lối vào và cao độ nền, ban công, phong cách kiến trúc.",
       "fields": [
+        {
+          "path": "massing.wings_preferred",
+          "label": "Số cánh nhà mong muốn",
+          "control": "choice",
+          "weight": 2,
+          "hint": "Một cánh là khối nhà liền; hai cánh là hai khối nối nhau bằng sảnh hoặc hành lang, tách được khu sinh hoạt khỏi khu ngủ nhưng tốn diện tích giao thông hơn.",
+          "value_type": "number",
+          "options": [
+            {
+              "value": "1",
+              "label": "Một cánh"
+            },
+            {
+              "value": "2",
+              "label": "Hai cánh"
+            },
+            {
+              "value": "3",
+              "label": "Ba cánh"
+            }
+          ],
+          "when": {
+            "field": "building_type",
+            "in": ["biet_thu", "nha_vuon"]
+          },
+          "note": "Chỉ hỏi với biệt thự và nhà vườn — điều kiện này trước 21/09/2026 nằm ở cấp mục."
+        },
+        {
+          "path": "massing.footprint_shape",
+          "label": "Hình bao khối nhà",
+          "control": "choice",
+          "weight": 2,
+          "hint": "Hình L, U hay T chỉ có nghĩa khi có từ hai cánh nhà trở lên.",
+          "options": [
+            {
+              "value": "chu_nhat",
+              "label": "Chữ nhật"
+            },
+            {
+              "value": "L",
+              "label": "Hình chữ L"
+            },
+            {
+              "value": "U",
+              "label": "Hình chữ U"
+            },
+            {
+              "value": "T",
+              "label": "Hình chữ T"
+            }
+          ],
+          "when": {
+            "field": "building_type",
+            "in": ["biet_thu", "nha_vuon"]
+          },
+          "note": "Chỉ hỏi với biệt thự và nhà vườn — điều kiện này trước 21/09/2026 nằm ở cấp mục."
+        },
+        {
+          "path": "massing.cores_preferred",
+          "label": "Số lõi thang",
+          "control": "choice",
+          "weight": 1,
+          "hint": "Lõi thang là trục thang bộ đi suốt các tầng. Hai lõi cho phép tách lối đi của ông bà hoặc người giúp việc khỏi lối sinh hoạt chung, đổi lại mất thêm diện tích ở mọi tầng.",
+          "value_type": "number",
+          "options": [
+            {
+              "value": "1",
+              "label": "Một lõi"
+            },
+            {
+              "value": "2",
+              "label": "Hai lõi"
+            }
+          ],
+          "note": "Giá trị 2 hiện đang bị kẹp về 1 ở Lớp 2 kèm cảnh báo — bộ giải chưa đặt được hai lõi tách rời (V-21). Yêu cầu vẫn được lưu lại. Chỉ hỏi với biệt thự và nhà vườn — điều kiện này trước 21/09/2026 nằm ở cấp mục.",
+          "when": {
+            "field": "building_type",
+            "in": ["biet_thu", "nha_vuon"]
+          }
+        },
+        {
+          "path": "massing.service_core",
+          "label": "Thang phụ hoặc lối dịch vụ riêng",
+          "control": "tristate",
+          "weight": 1,
+          "hint": "Lối đi riêng cho bếp và người giúp việc, không đi qua khu vực tiếp khách.",
+          "options": [
+            {
+              "value": "true",
+              "label": "Có"
+            },
+            {
+              "value": "false",
+              "label": "Không"
+            }
+          ],
+          "when": {
+            "field": "building_type",
+            "in": ["biet_thu", "nha_vuon"]
+          },
+          "note": "Chỉ hỏi với biệt thự và nhà vườn — điều kiện này trước 21/09/2026 nằm ở cấp mục."
+        },
+        {
+          "path": "massing.yards",
+          "label": "Sân nằm ở đâu",
+          "control": "multi",
+          "weight": 2,
+          "hint": "Khai CÓ sân ở phần Không gian bắt buộc; ở đây khai sân nằm đâu so với khối nhà.",
+          "options": [
+            {
+              "value": "san_truoc",
+              "label": "Sân trước"
+            },
+            {
+              "value": "san_ben",
+              "label": "Sân bên"
+            },
+            {
+              "value": "san_trong",
+              "label": "Sân trong"
+            },
+            {
+              "value": "san_sau",
+              "label": "Sân sau"
+            }
+          ],
+          "when": {
+            "field": "building_type",
+            "in": ["biet_thu", "nha_vuon"]
+          },
+          "note": "Chỉ hỏi với biệt thự và nhà vườn — điều kiện này trước 21/09/2026 nằm ở cấp mục."
+        },
+        {
+          "path": "massing.yard_depth_m",
+          "label": "Chiều sâu sân mong muốn — tính từ ranh đất tới tường nhà",
+          "control": "sides",
+          "unit": "m",
+          "weight": 2,
+          "optional": true,
+          "hint": "Điền KHOẢNG CÁCH theo mét, không phải diện tích: «Bên trái 3» là chừa dải sân rộng 3 m dọc bên trái. 0 hoặc để trống là không chừa sân ở mặt đó. Mỗi mặt lấy số LỚN HƠN giữa ô này và khoảng lùi quy hoạch — nên số nhỏ hơn khoảng lùi không có tác dụng.",
+          "note": "Thêm 13/09/2026 sau lượt chạy thật chiếm trọn bề ngang lô 15 m dù đầu bài đòi sân bên. Phần đất xây được lấy mức LỚN HƠN giữa số này và khoảng lùi quy hoạch. Chỉ hỏi với biệt thự và nhà vườn — điều kiện này trước 21/09/2026 nằm ở cấp mục.",
+          "when": {
+            "field": "building_type",
+            "in": ["biet_thu", "nha_vuon"]
+          }
+        },
+        {
+          "path": "massing.indoor_outdoor",
+          "label": "Quan hệ trong nhà với sân vườn",
+          "control": "choice",
+          "weight": 2,
+          "hint": "Mở tối đa: nhiều cửa lớn ra sân, sáng và thoáng, kém riêng tư và nắng hắt nhiều hơn. Kín đáo: cửa nhỏ hơn, mát và riêng tư, đổi lại tối hơn.",
+          "options": [
+            {
+              "value": "mo_toi_da",
+              "label": "Mở tối đa ra sân"
+            },
+            {
+              "value": "can_bang",
+              "label": "Cân bằng"
+            },
+            {
+              "value": "kin_dao",
+              "label": "Kín đáo, ưu tiên riêng tư"
+            }
+          ],
+          "when": {
+            "field": "building_type",
+            "in": ["biet_thu", "nha_vuon"]
+          },
+          "note": "Chỉ hỏi với biệt thự và nhà vườn — điều kiện này trước 21/09/2026 nằm ở cấp mục."
+        },
         {
           "path": "vertical.elevator",
           "label": "Thang máy",
@@ -1777,13 +1870,7 @@
               "label": "Không"
             }
           ]
-        }
-      ]
-    },
-    {
-      "id": "ban_cong",
-      "title": "Ban công",
-      "fields": [
+        },
         {
           "path": "balconies.scope",
           "label": "Ban công làm tới đâu",
@@ -1958,164 +2045,66 @@
               }
             ]
           }
-        }
-      ]
-    },
-    {
-      "id": "to_chuc",
-      "title": "Tổ chức khối nhà",
-      "hint": "Ý đồ về hình khối, không phải kích thước — bộ giải mới là nơi gán số đo. Nhà phố không hỏi phần này: nó luôn là một cánh nhà lấp kín lô.",
-      "when": {
-        "field": "building_type",
-        "in": ["biet_thu", "nha_vuon"]
-      },
-      "note": "Cả nhóm ẩn với nhà phố. Đây là nguồn thu hẹp lời giải chính của biệt thự: lô rộng không tự ràng buộc như nhà phố nên phần thu hẹp phải đến từ thông tin (01-overview 1.2).",
-      "fields": [
-        {
-          "path": "massing.wings_preferred",
-          "label": "Số cánh nhà mong muốn",
-          "control": "choice",
-          "weight": 2,
-          "hint": "Một cánh là khối nhà liền; hai cánh là hai khối nối nhau bằng sảnh hoặc hành lang, tách được khu sinh hoạt khỏi khu ngủ nhưng tốn diện tích giao thông hơn.",
-          "value_type": "number",
-          "options": [
-            {
-              "value": "1",
-              "label": "Một cánh"
-            },
-            {
-              "value": "2",
-              "label": "Hai cánh"
-            },
-            {
-              "value": "3",
-              "label": "Ba cánh"
-            }
-          ]
         },
         {
-          "path": "massing.footprint_shape",
-          "label": "Hình bao khối nhà",
-          "control": "choice",
-          "weight": 2,
-          "hint": "Hình L, U hay T chỉ có nghĩa khi có từ hai cánh nhà trở lên.",
-          "options": [
-            {
-              "value": "chu_nhat",
-              "label": "Chữ nhật"
-            },
-            {
-              "value": "L",
-              "label": "Hình chữ L"
-            },
-            {
-              "value": "U",
-              "label": "Hình chữ U"
-            },
-            {
-              "value": "T",
-              "label": "Hình chữ T"
-            }
-          ]
-        },
-        {
-          "path": "massing.cores_preferred",
-          "label": "Số lõi thang",
+          "path": "style",
+          "label": "Phong cách kiến trúc",
           "control": "choice",
           "weight": 1,
-          "hint": "Lõi thang là trục thang bộ đi suốt các tầng. Hai lõi cho phép tách lối đi của ông bà hoặc người giúp việc khỏi lối sinh hoạt chung, đổi lại mất thêm diện tích ở mọi tầng.",
-          "value_type": "number",
+          "hint": "Chỉ dẫn hướng cho ảnh phối cảnh, không đổi mặt bằng. Chưa chốt được thì để trống — bước phối cảnh vẫn chọn lại được.",
           "options": [
             {
-              "value": "1",
-              "label": "Một lõi"
+              "value": "hien_dai",
+              "label": "Hiện đại"
             },
             {
-              "value": "2",
-              "label": "Hai lõi"
+              "value": "tan_co_dien",
+              "label": "Tân cổ điển"
+            },
+            {
+              "value": "indochine",
+              "label": "Đông Dương"
+            },
+            {
+              "value": "mai_thai",
+              "label": "Mái Thái"
+            },
+            {
+              "value": "toi_gian",
+              "label": "Tối giản"
+            },
+            {
+              "value": "nhiet_doi",
+              "label": "Nhiệt đới"
+            },
+            {
+              "value": "dia_trung_hai",
+              "label": "Địa Trung Hải"
+            },
+            {
+              "value": "co_dien",
+              "label": "Cổ điển"
+            },
+            {
+              "value": "bac_au",
+              "label": "Bắc Âu"
             }
           ],
-          "note": "Giá trị 2 hiện đang bị kẹp về 1 ở Lớp 2 kèm cảnh báo — bộ giải chưa đặt được hai lõi tách rời (V-21). Yêu cầu vẫn được lưu lại."
+          "note": "Danh sách để chọn, không phải danh sách đầy đủ của ngành — ba phong cách NVO làm nhiều nhất đứng trước."
         },
         {
-          "path": "massing.service_core",
-          "label": "Thang phụ hoặc lối dịch vụ riêng",
-          "control": "tristate",
-          "weight": 1,
-          "hint": "Lối đi riêng cho bếp và người giúp việc, không đi qua khu vực tiếp khách.",
-          "options": [
-            {
-              "value": "true",
-              "label": "Có"
-            },
-            {
-              "value": "false",
-              "label": "Không"
-            }
-          ]
-        },
-        {
-          "path": "massing.yards",
-          "label": "Sân nằm ở đâu",
-          "control": "multi",
-          "weight": 2,
-          "hint": "Khai CÓ sân ở phần Không gian bắt buộc; ở đây khai sân nằm đâu so với khối nhà.",
-          "options": [
-            {
-              "value": "san_truoc",
-              "label": "Sân trước"
-            },
-            {
-              "value": "san_ben",
-              "label": "Sân bên"
-            },
-            {
-              "value": "san_trong",
-              "label": "Sân trong"
-            },
-            {
-              "value": "san_sau",
-              "label": "Sân sau"
-            }
-          ]
-        },
-        {
-          "path": "massing.yard_depth_m",
-          "label": "Chiều sâu sân mong muốn — tính từ ranh đất tới tường nhà",
-          "control": "sides",
-          "unit": "m",
-          "weight": 2,
-          "optional": true,
-          "hint": "Điền KHOẢNG CÁCH theo mét, không phải diện tích: «Bên trái 3» là chừa dải sân rộng 3 m dọc bên trái. 0 hoặc để trống là không chừa sân ở mặt đó. Mỗi mặt lấy số LỚN HƠN giữa ô này và khoảng lùi quy hoạch — nên số nhỏ hơn khoảng lùi không có tác dụng.",
-          "note": "Thêm 13/09/2026 sau lượt chạy thật chiếm trọn bề ngang lô 15 m dù đầu bài đòi sân bên. Phần đất xây được lấy mức LỚN HƠN giữa số này và khoảng lùi quy hoạch."
-        },
-        {
-          "path": "massing.indoor_outdoor",
-          "label": "Quan hệ trong nhà với sân vườn",
-          "control": "choice",
-          "weight": 2,
-          "hint": "Mở tối đa: nhiều cửa lớn ra sân, sáng và thoáng, kém riêng tư và nắng hắt nhiều hơn. Kín đáo: cửa nhỏ hơn, mát và riêng tư, đổi lại tối hơn.",
-          "options": [
-            {
-              "value": "mo_toi_da",
-              "label": "Mở tối đa ra sân"
-            },
-            {
-              "value": "can_bang",
-              "label": "Cân bằng"
-            },
-            {
-              "value": "kin_dao",
-              "label": "Kín đáo, ưu tiên riêng tư"
-            }
-          ]
+          "path": "legacy.style_note",
+          "label": "Ghi chú thêm về phong cách",
+          "control": "textarea",
+          "weight": 0,
+          "hint": "Vật liệu, màu sắc, công trình tham chiếu khách đưa."
         }
       ]
     },
     {
       "id": "ky_thuat",
-      "title": "Kỹ thuật và dự trù tương lai",
-      "hint": "Chỉ hỏi những thứ chiếm chỗ hoặc nhìn thấy được — phần còn lại của điện nước là việc của bộ môn, không phải của đầu bài.",
+      "title": "Kỹ thuật và dự trù",
+      "hint": "Chỉ những thứ kỹ thuật CHIẾM CHỖ hoặc NHÌN THẤY ĐƯỢC, cộng phần dự trù cho sau này — phần còn lại của điện nước là việc của bộ môn, không phải của đầu bài.",
       "fields": [
         {
           "path": "systems.water_storage",

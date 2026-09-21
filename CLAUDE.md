@@ -440,10 +440,14 @@ hồ sơ phát hành. Hiện trạng:
 - **Mặt đứng mặt tiền** (T59): khung, lỗ mở, ban công suy từ phương án mặt bằng đã chọn và KHOÁ; mô
   hình chỉ chọn mái, vật liệu, màu, cổng, rào, trang trí trong `kb/facade_vocabulary.yaml`. Phiếu yêu cầu
   của kỹ sư (`ai_facade_brief`) là bắt buộc — hàm ghép áp thẳng mục đã điền; bề rộng cửa là của mặt bằng.
-- **Đầu bài là đầu vào duy nhất, nên nó hỏi kỹ** (T62, 21/09/2026): 12 mục — khu đất (kèm cao độ
-  đường/đất, mặt nắng gắt, mặt đón gió, bề rộng đường, ngập, nhà liền kề), gia đình kèm **tuổi**,
-  gia chủ và tín ngưỡng, nếp sinh hoạt, không gian, lưu trữ, thang và lối vào (thang máy: làm ngay
-  / **chừa chỗ**), ban công (kể cả **đua ra ngoài ranh**), khối nhà, kỹ thuật và dự trù, ưu tiên.
+- **Đầu bài là đầu vào duy nhất, nên nó hỏi kỹ** (T62, 21/09/2026): 98 câu trong **SÁU mục** —
+  Công trình và khu đất (kèm cao độ đường/đất, mặt nắng gắt, mặt đón gió, bề rộng đường, ngập,
+  nhà liền kề) · Gia đình và nếp sinh hoạt (kèm **tuổi**, tín ngưỡng, kinh doanh tại nhà) ·
+  Công năng và lưu trữ · Khối nhà, thang và mặt ngoài (thang máy: làm ngay / **chừa chỗ**; ban
+  công **đua ra ngoài ranh**) · Kỹ thuật và dự trù · Ưu tiên, ngân sách và người quyết định.
+  **Sáu mục là số đã chốt** (Haan, 21/09/2026: «12 mục là quá dài») — thêm nhóm câu hỏi mới thì
+  xếp vào một trong sáu, đừng mở mục thứ bảy. Số bước KHÔNG đổi theo loại hình: nhóm tổ chức
+  khối nhà ẩn theo TỪNG TRƯỜNG, không ẩn cả mục.
   Trường mới gần hết mang **trọng số 0** — `completeness_score` là cổng chặn Lớp 2, chỉ đo thứ
   thiếu thì không dựng nổi mặt bằng. Phong thuỷ vào đầu bài dưới dạng **câu ràng buộc người đã
   quyết**, không phải ngày sinh để máy luận (PRD 2.3).

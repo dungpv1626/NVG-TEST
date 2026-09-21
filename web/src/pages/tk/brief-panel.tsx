@@ -478,7 +478,13 @@ export function BriefPanel({
           >
             <h3 className="font-semibold">{step.section.title}</h3>
             {step.section.hint && <p className="mt-0.5 text-fg-subtle">{step.section.hint}</p>}
-            {step.section.id === 'khu_dat' ? (
+            {/*
+              Bản vẽ thửa đất và nút chép số đo đi theo TRƯỜNG kích thước lô, không theo MÃ
+              MỤC. Gộp mục hay đổi tên mục là việc của `brief-form.json`, và nó không được
+              làm biến mất bản vẽ một cách lặng lẽ — đúng chỗ đợt gộp 12 mục còn 6 (21/09/2026)
+              suýt hỏng.
+            */}
+            {step.fields.some((v) => v.field.path === 'site.width_m') ? (
               <div className="mt-3 grid gap-4 md:grid-cols-[minmax(0,1fr)_16rem]">
                 <div className="space-y-4">{fieldsOf(step.fields)}</div>
                 <div className="md:sticky md:top-4 md:self-start">
@@ -489,7 +495,7 @@ export function BriefPanel({
               <div className="mt-3 space-y-4">{fieldsOf(step.fields)}</div>
             )}
 
-            {step.section.id === 'khu_dat' && survey && (
+            {step.fields.some((v) => v.field.path === 'site.width_m') && survey && (
               <Button variant="secondary" className="mt-3" onClick={copyFromSurvey}>
                 <Ruler className="size-4" />
                 Lấy theo biên bản khảo sát {formatDateTime(survey.surveyed_at ?? survey.created_at)}

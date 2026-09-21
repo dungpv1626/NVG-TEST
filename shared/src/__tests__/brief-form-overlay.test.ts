@@ -66,13 +66,13 @@ describe('Ghép lớp phủ', () => {
       version: 1,
       sections: [
         {
-          id: 'khu_dat',
+          id: 'cong_trinh_khu_dat',
           title: 'Khu đất và hiện trạng',
           fields: [{ path: 'site.orientation', label: 'Hướng mặt tiền', weight: 4 }],
         },
       ],
     });
-    const section = merged.sections.find((s) => s.id === 'khu_dat')!;
+    const section = merged.sections.find((s) => s.id === 'cong_trinh_khu_dat')!;
     expect(section.title).toBe('Khu đất và hiện trạng');
     const field = section.fields.find((f) => f.path === 'site.orientation')!;
     expect(field.label).toBe('Hướng mặt tiền');
@@ -85,14 +85,14 @@ describe('Ghép lớp phủ', () => {
   it('ẩn được câu hỏi thường, KHÔNG ẩn được câu hỏi bắt buộc của hợp đồng', () => {
     const hideStyle = applyBriefFormOverlay(BRIEF_FORM, {
       version: 1,
-      sections: [{ id: 'khong_gian', fields: [{ path: 'style', hidden: true }] }],
+      sections: [{ id: 'khoi_nha', fields: [{ path: 'style', hidden: true }] }],
     });
     expect(hideStyle.sections.flatMap((s) => s.fields).some((f) => f.path === 'style')).toBe(false);
 
     expect(() =>
       applyBriefFormOverlay(BRIEF_FORM, {
         version: 1,
-        sections: [{ id: 'khu_dat', fields: [{ path: 'site.width_m', hidden: true }] }],
+        sections: [{ id: 'cong_trinh_khu_dat', fields: [{ path: 'site.width_m', hidden: true }] }],
       }),
     ).toThrow(/bắt buộc/);
   });
@@ -101,7 +101,7 @@ describe('Ghép lớp phủ', () => {
     expect(() =>
       applyBriefFormOverlay(BRIEF_FORM, {
         version: 1,
-        sections: [{ id: 'loai_hinh', fields: [{ path: 'floors', weight: 0 }] }],
+        sections: [{ id: 'cong_trinh_khu_dat', fields: [{ path: 'floors', weight: 0 }] }],
       }),
     ).toThrow(/bắt buộc/);
   });
@@ -119,7 +119,7 @@ describe('Ghép lớp phủ', () => {
       version: 1,
       sections: [
         {
-          id: 'loai_hinh',
+          id: 'cong_trinh_khu_dat',
           fields: [
             { path: 'building_type', options: [{ value: 'nha_pho', label: 'Nhà ống mặt phố' }] },
           ],
@@ -136,7 +136,7 @@ describe('Ghép lớp phủ', () => {
         version: 1,
         sections: [
           {
-            id: 'loai_hinh',
+            id: 'cong_trinh_khu_dat',
             fields: [{ path: 'building_type', options: [{ value: 'nha_go', label: 'Nhà gỗ' }] }],
           },
         ],
@@ -157,7 +157,7 @@ describe('Câu hỏi tự thêm', () => {
     version: 1,
     sections: [
       {
-        id: 'sinh_hoat',
+        id: 'gia_dinh',
         fields: [
           {
             path: 'custom.bep_phu_ngoai_troi',
@@ -197,7 +197,7 @@ describe('Câu hỏi tự thêm', () => {
         version: 1,
         sections: [
           {
-            id: 'sinh_hoat',
+            id: 'gia_dinh',
             fields: [{ path: 'Bếp Phụ', label: 'Bếp phụ', custom: { control: 'text' } }],
           },
         ],
@@ -211,7 +211,7 @@ describe('Câu hỏi tự thêm', () => {
         version: 1,
         sections: [
           {
-            id: 'sinh_hoat',
+            id: 'gia_dinh',
             fields: [{ path: 'custom.mau_son', label: 'Màu sơn', custom: { control: 'choice' } }],
           },
         ],

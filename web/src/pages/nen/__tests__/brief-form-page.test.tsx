@@ -64,8 +64,8 @@ describe('Biểu mẫu đầu bài', () => {
   it('liệt kê các mục của biểu mẫu gốc', async () => {
     await open();
     expect(screen.getByRole('heading', { name: 'Biểu mẫu đầu bài' })).toBeTruthy();
-    expect(screen.getByDisplayValue('Khu đất')).toBeTruthy();
-    expect(screen.getByDisplayValue('Nếp sinh hoạt')).toBeTruthy();
+    expect(screen.getByDisplayValue('Công trình và khu đất')).toBeTruthy();
+    expect(screen.getByDisplayValue('Gia đình và nếp sinh hoạt')).toBeTruthy();
   });
 
   it('câu hỏi bắt buộc của hợp đồng KHÔNG có nút ẩn', async () => {
@@ -111,7 +111,7 @@ describe('Biểu mẫu đầu bài', () => {
     state.capability = false;
     await open();
     expect(screen.getByText(/chỉ xem được cấu hình này/)).toBeTruthy();
-    expect(screen.getByDisplayValue('Khu đất').hasAttribute('disabled')).toBe(true);
+    expect(screen.getByDisplayValue('Công trình và khu đất').hasAttribute('disabled')).toBe(true);
     expect(screen.getByRole('button', { name: 'Lưu biểu mẫu' }).hasAttribute('disabled')).toBe(
       true,
     );
