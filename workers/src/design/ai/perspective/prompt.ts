@@ -195,15 +195,10 @@ function siteText(
  *
  * Không biết kích thước thửa thì KHÔNG nói gì về sân — một câu đoán ở đây in thẳng thành hình.
  */
-function yardText(
-  ctx: PerspectiveContext,
-  scale: AiPrompts['perspective']['scale'],
-): string[] {
+function yardText(ctx: PerspectiveContext, scale: AiPrompts['perspective']['scale']): string[] {
   const yard = ctx.yard;
   if (!yard) return [];
-  const lot = ctx.lot
-    ? [`The plot is ${ctx.lot.widthM} m wide and ${ctx.lot.depthM} m deep.`]
-    : [];
+  const lot = ctx.lot ? [`The plot is ${ctx.lot.widthM} m wide and ${ctx.lot.depthM} m deep.`] : [];
   if (yard.frontM <= 0) return [...lot, scale.noYard.trim()];
 
   const sides = [
