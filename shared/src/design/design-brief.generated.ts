@@ -1190,6 +1190,20 @@ export const designBriefSchema = z
         'Mức hoàn thiện mong muốn. Đi cùng `budget_range_vnd`: cùng một khoảng tiền, mức hoàn thiện cao hơn nghĩa là diện tích phải nhỏ lại — bộ soát mâu thuẫn đối chiếu hai ô này với nhau.',
       )
       .optional(),
+    /**
+     * Câu trả lời cho những câu hỏi do QUẢN TRỊ VIÊN tự thêm vào biểu mẫu khảo sát (màn hình «Biểu mẫu đầu bài»). Khoá là mã câu hỏi (`^[a-z0-9_]+$`), giá trị là câu trả lời.
+     *
+     * Vì sao có một ô mở giữa một hợp đồng `additionalProperties: false`: NVG còn học ra câu hỏi mới sau mỗi công trình, và bắt mỗi câu hỏi mới phải đi qua một lần sửa hợp đồng + sinh lại Zod + phát hành lại hai Worker là cách chắc chắn để câu hỏi ấy không bao giờ được thêm.
+     *
+     * Đổi lại, giá trị ở đây là CHỮ và SỐ THUẦN, không phải cấu trúc: engine KHÔNG đọc chúng, và không rule nào nhắm tới chúng. Chúng đi vào văn xuôi gửi mô hình kèm nhãn câu hỏi, đúng chỗ lời gia chủ vẫn đi. Một câu hỏi cần ràng buộc THẬT lên hình học (một tầng, một diện tích, một mặt của lô) thì phải là một trường có tên trong hợp đồng này — không phải một mục tự thêm.
+     */
+    custom: z
+      .record(z.string(), z.union([z.string(), z.number(), z.boolean()]).nullable())
+      .nullable()
+      .describe(
+        'Câu trả lời cho những câu hỏi do QUẢN TRỊ VIÊN tự thêm vào biểu mẫu khảo sát (màn hình «Biểu mẫu đầu bài»). Khoá là mã câu hỏi (`^[a-z0-9_]+$`), giá trị là câu trả lời.\n\nVì sao có một ô mở giữa một hợp đồng `additionalProperties: false`: NVG còn học ra câu hỏi mới sau mỗi công trình, và bắt mỗi câu hỏi mới phải đi qua một lần sửa hợp đồng + sinh lại Zod + phát hành lại hai Worker là cách chắc chắn để câu hỏi ấy không bao giờ được thêm.\n\nĐổi lại, giá trị ở đây là CHỮ và SỐ THUẦN, không phải cấu trúc: engine KHÔNG đọc chúng, và không rule nào nhắm tới chúng. Chúng đi vào văn xuôi gửi mô hình kèm nhãn câu hỏi, đúng chỗ lời gia chủ vẫn đi. Một câu hỏi cần ràng buộc THẬT lên hình học (một tầng, một diện tích, một mặt của lô) thì phải là một trường có tên trong hợp đồng này — không phải một mục tự thêm.',
+      )
+      .optional(),
   })
   .strict()
   .describe('Đầu bài thiết kế — output Layer 1. Nguồn: doc/design/03-data-contracts.md mục 3.1.');

@@ -22,7 +22,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, ChevronLeft, ChevronRight, FileDown, History, Ruler } from 'lucide-react';
 import { formatDateTime } from '@nvg/shared';
 import {
-  BRIEF_FORM,
   checkBriefConsistency,
   briefAreaBudget,
   isFieldVisible,
@@ -39,6 +38,7 @@ import { EmptyState } from '@/components/ui/states';
 import {
   useConfirmBriefArtifact,
   useDesignBriefs,
+  useBriefFormConfig,
   useDesignSetting,
   useSaveBriefDraft,
   useSaveDesignBrief,
@@ -106,6 +106,12 @@ export function BriefPanel({
   const { data: briefs, isLoading } = useDesignBriefs(projectId);
   const { data: surveys } = useDesignSurveys(projectId);
   const { data: thresholdRaw } = useDesignSetting('brief_completeness_min');
+  /**
+   * Cấu hình biểu mẫu HIỆU LỰC — bản gốc cộng phần quản trị viên đã sửa ở «Biểu mẫu đầu bài».
+   * Mọi chỗ trong tệp này đọc `form` chứ không đọc `form`: chấm điểm, soát mâu thuẫn,
+   * chia bước và bản in phải cùng nhìn một bộ câu hỏi.
+   */
+  const { config: form } = useBriefFormConfig();
 
   const saveNewVersion = useSaveDesignBrief();
   const saveDraft = useSaveBriefDraft();
@@ -169,7 +175,10 @@ export function BriefPanel({
 
   useUnsavedChangesGuard(editing && dirty);
 
-  const score = useMemo(() => scoreBrief(draft, BRIEF_FORM), [draft]);
+  // `form` nằm trong danh sách phụ thuộc: cấu hình biểu mẫu đổi giữa chừng khi quản trị viên
+  // vừa lưu lớp phủ và lượt đọc `design_setting` về sau bản vẽ đầu tiên. Bỏ nó ra thì màn hình
+  // giữ nguyên bộ câu hỏi cũ cho tới lần gõ tiếp theo — và điểm độ đầy đủ chấm theo bộ cũ.
+  const score = useMemo(() => scoreBrief(draft, form), [draft, form]);
   /**
    * Bản MỚI NHẤT của những gì `persist()` cần — đọc qua ref, không qua closure.
    *
@@ -179,8 +188,8 @@ export function BriefPanel({
   const latest = useRef({ draft, legacy, surveyId, changeReason, draftBriefId });
   latest.current = { draft, legacy, surveyId, changeReason, draftBriefId };
   const areaBudget = useMemo(() => briefAreaBudget(draft), [draft]);
-  const issues = useMemo(() => checkBriefConsistency(draft, BRIEF_FORM, legacy), [draft, legacy]);
-  const shown = useMemo(() => visibleFields(BRIEF_FORM, draft), [draft]);
+  const issues = useMemo(() => checkBriefConsistency(draft, form, legacy), [draft, legacy, form]);
+  const shown = useMemo(() => visibleFields(form, draft), [draft, form]);
   const threshold = typeof thresholdRaw === 'number' ? thresholdRaw : null;
 
   /** Bản đã xác nhận là bất biến — sửa nó nghĩa là lập phiên bản mới. */
@@ -257,6 +266,7 @@ export function BriefPanel({
       score,
       issues,
       threshold,
+      config: form,
     });
   }
 
@@ -288,7 +298,7 @@ export function BriefPanel({
     // Che các biến cùng tên của component một cách có chủ ý: trong hàm này chỉ được đọc bản
     // mới nhất (xem `latest`), không đọc bản closure của lần render đã gọi hàm.
     const { draft, legacy, surveyId, changeReason, draftBriefId } = latest.current;
-    const score = scoreBrief(draft, BRIEF_FORM);
+    const score = scoreBrief(draft, form);
 
     // Điểm ghi vào payload để cột sinh trong CSDL có giá trị hiển thị ngay. Con số quyết
     // định Lớp 2 thì Worker tự tính lại khi xác nhận — cái này chỉ để lọc và hiện.
@@ -378,7 +388,7 @@ export function BriefPanel({
     // Bước = MỤC đang có ít nhất một ô hiện ra. Không khai riêng danh sách bước trong cấu
     // hình: khai hai lần thì thêm một mục mà quên thêm bước sẽ làm mục đó biến mất khỏi biểu
     // mẫu mà không có gì báo. Nhà phố ẩn hẳn mục «Tổ chức khối nhà» nên còn năm bước.
-    const steps = BRIEF_FORM.sections
+    const steps = form.sections
       .map((section) => ({
         section,
         fields: shown.filter((v) => v.section.id === section.id),
@@ -391,13 +401,13 @@ export function BriefPanel({
     // Bước đang xem biến mất (đang ở «Tổ chức khối nhà» rồi đổi sang nhà phố) thì đi tới bước
     // còn lại GẦN NHẤT theo thứ tự cấu hình, không quay về bước 1: mất chỗ đứng giữa một biểu
     // mẫu sáu bước là thứ người dùng phải trả giá cho một cú bấm ở bước khác.
-    const order = BRIEF_FORM.sections.findIndex((section) => section.id === stepId);
+    const order = form.sections.findIndex((section) => section.id === stepId);
     const index = Math.max(
       0,
       steps.findIndex((step) => step.section.id === stepId) !== -1
         ? steps.findIndex((step) => step.section.id === stepId)
         : steps.findIndex(
-            (step) => BRIEF_FORM.sections.findIndex((s) => s.id === step.section.id) >= order,
+            (step) => form.sections.findIndex((s) => s.id === step.section.id) >= order,
           ),
     );
     const step = steps[index];
@@ -678,7 +688,7 @@ export function BriefPanel({
               hiện ở chế độ xem của một hồ sơ nhà phố, dù chỉ hiện dấu gạch ngang. Một danh
               sách trường trống kéo dài làm người đọc tưởng hồ sơ còn thiếu.
             */}
-            {BRIEF_FORM.sections.flatMap((section) =>
+            {form.sections.flatMap((section) =>
               section.fields
                 .filter(
                   (field) =>

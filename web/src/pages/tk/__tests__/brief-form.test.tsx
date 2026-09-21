@@ -38,13 +38,25 @@ vi.mock('@/hooks/use-design-surveys', () => ({
   useDesignSurveys: () => ({ data: state.surveys, isLoading: false }),
 }));
 
-vi.mock('@/hooks/use-design-projects', () => ({
-  useDesignBriefs: () => ({ data: state.briefs, isLoading: false }),
-  useDesignSetting: () => ({ data: 0.7 }),
-  useSaveDesignBrief: () => ({ mutateAsync: state.saveNewVersion, isPending: false }),
-  useSaveBriefDraft: () => ({ mutateAsync: state.saveDraft, isPending: false }),
-  useConfirmBriefArtifact: () => ({ mutateAsync: state.confirmBrief, isPending: false }),
-}));
+// Nhà máy mock là ASYNC để nhập được `BRIEF_FORM`: `vi.mock` bị nâng lên đầu tệp, nên một
+// tham chiếu tới biến nhập ở đầu tệp sẽ đọc trước khi nó kịp khởi tạo.
+vi.mock('@/hooks/use-design-projects', async () => {
+  const { BRIEF_FORM } = await import('@nvg/shared/design');
+  return {
+    useDesignBriefs: () => ({ data: state.briefs, isLoading: false }),
+    useDesignSetting: () => ({ data: 0.7 }),
+    // Không có lớp phủ của quản trị viên: biểu mẫu chạy trên bản gốc, đúng như tenant chưa sửa gì.
+    useBriefFormConfig: () => ({
+      config: BRIEF_FORM,
+      overlay: null,
+      broken: false,
+      isLoading: false,
+    }),
+    useSaveDesignBrief: () => ({ mutateAsync: state.saveNewVersion, isPending: false }),
+    useSaveBriefDraft: () => ({ mutateAsync: state.saveDraft, isPending: false }),
+    useConfirmBriefArtifact: () => ({ mutateAsync: state.confirmBrief, isPending: false }),
+  };
+});
 
 function brief(over: Record<string, unknown> = {}) {
   return {

@@ -370,6 +370,16 @@ export function briefNarrative(digest: AiBriefDigest, options: NarrativeOptions)
     section('Mức hoàn thiện', [`${label('finishing_level', digest.finishing_level)}.`]);
   }
 
+  // ── Câu hỏi quản trị viên tự thêm ──────────────────────────────────────────────────────
+  //
+  // Đứng SAU các mục có tên và TRƯỚC lời gia chủ: chúng là câu hỏi của NVG chứ không phải lời
+  // gia chủ, nhưng chúng cũng không thuộc mục nào đã khai — nhét vào một mục có sẵn là nói dối
+  // về nguồn gốc của câu trả lời.
+  section(
+    'Khảo sát bổ sung',
+    (digest.custom ?? []).map((answer) => `${answer.label}: ${answer.value}`),
+  );
+
   // ── Lời gia chủ, nguyên văn ────────────────────────────────────────────────────────────
   const free = digest.free_text ?? {};
   section('Lời gia chủ (nguyên văn)', [

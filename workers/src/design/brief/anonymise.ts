@@ -26,7 +26,9 @@
 
 import {
   aiBriefDigestSchema,
+  customAnswers,
   type AiBriefDigest,
+  type BriefFormConfig,
   type DataClass,
   type DesignBrief,
 } from '@nvg/shared/design';
@@ -66,6 +68,14 @@ export interface AnonymiseInput {
    * địa chỉ đã biết. Lấy từ `customers` và `decision_maker`, không đoán.
    */
   identities?: readonly (string | null | undefined)[];
+  /**
+   * Cấu hình biểu mẫu HIỆU LỰC của tenant — chỉ dùng để đọc NHÃN của câu hỏi tự thêm.
+   *
+   * Vắng mặt thì bản gửi đi không mang câu hỏi tự thêm nào. Đó là hành vi đúng chứ không phải
+   * thiếu sót: không có cấu hình thì không biết câu hỏi tên gì, mà gửi `bep_phu = co` cho mô
+   * hình là gửi một cặp ký tự nó không giải mã được — tốn token, không thêm thông tin.
+   */
+  formConfig?: BriefFormConfig;
 }
 
 const REDACTED = '[đã lược]';
@@ -319,6 +329,14 @@ export function anonymiseForAi(input: AnonymiseInput): AiBriefDigest {
         }
       : null,
     finishing_level: brief.finishing_level ?? null,
+    // Câu hỏi quản trị viên tự thêm. Nhãn lấy từ cấu hình hiệu lực; câu trả lời là chữ tự do
+    // nên đi qua bộ lược danh tính, cùng đường với bốn ô chữ tự do cũ.
+    custom: input.formConfig
+      ? customAnswers(input.formConfig, brief.custom ?? null).map((answer) => ({
+          label: answer.label,
+          value: scrubIdentity(answer.value, identities),
+        }))
+      : null,
     style: brief.style ?? null,
     priorities: [...(brief.priorities ?? [])],
     free_text: {

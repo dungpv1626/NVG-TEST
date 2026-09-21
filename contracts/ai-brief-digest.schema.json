@@ -688,6 +688,26 @@
     "finishing_level": {
       "type": ["string", "null"],
       "enum": ["co_ban", "kha", "cao_cap", null]
+    },
+    "custom": {
+      "type": ["array", "null"],
+      "maxItems": 60,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["label", "value"],
+        "properties": {
+          "label": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "value": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        }
+      },
+      "description": "Câu hỏi quản trị viên tự thêm, kèm NHÃN đã đọc ra chữ. Đi thành cặp nhãn–câu trả lời chứ không phải khoá–giá trị: bên nhận không có tệp cấu hình của NVG, nên `bep_phu_2` không nói gì cả. Câu trả lời đã qua bộ lược danh tính."
     }
   },
   "$defs": {

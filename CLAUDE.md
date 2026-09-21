@@ -440,6 +440,20 @@ hồ sơ phát hành. Hiện trạng:
 - **Mặt đứng mặt tiền** (T59): khung, lỗ mở, ban công suy từ phương án mặt bằng đã chọn và KHOÁ; mô
   hình chỉ chọn mái, vật liệu, màu, cổng, rào, trang trí trong `kb/facade_vocabulary.yaml`. Phiếu yêu cầu
   của kỹ sư (`ai_facade_brief`) là bắt buộc — hàm ghép áp thẳng mục đã điền; bề rộng cửa là của mặt bằng.
+- **Đầu bài là đầu vào duy nhất, nên nó hỏi kỹ** (T62, 21/09/2026): 12 mục — khu đất (kèm cao độ
+  đường/đất, mặt nắng gắt, mặt đón gió, bề rộng đường, ngập, nhà liền kề), gia đình kèm **tuổi**,
+  gia chủ và tín ngưỡng, nếp sinh hoạt, không gian, lưu trữ, thang và lối vào (thang máy: làm ngay
+  / **chừa chỗ**), ban công (kể cả **đua ra ngoài ranh**), khối nhà, kỹ thuật và dự trù, ưu tiên.
+  Trường mới gần hết mang **trọng số 0** — `completeness_score` là cổng chặn Lớp 2, chỉ đo thứ
+  thiếu thì không dựng nổi mặt bằng. Phong thuỷ vào đầu bài dưới dạng **câu ràng buộc người đã
+  quyết**, không phải ngày sinh để máy luận (PRD 2.3).
+- **Quản trị viên sửa được mục khảo sát** (T63): lớp phủ lên `brief-form.json`, lưu ở
+  `design_setting.brief_form_overlay`, ghi qua `POST /design/brief/form`. Sửa nhãn/gợi ý/trọng
+  số/thứ tự, ẩn, và thêm câu hỏi ở ô mở `custom.*`. **Không** sửa được kiểu điều khiển, đơn vị,
+  giá trị lựa chọn; năm trường hợp đồng bắt buộc khoá hẳn; câu hỏi có sẵn chỉ ẩn, không xoá.
+  Câu hỏi tự thêm tới mô hình dạng nhãn–câu trả lời và **không ràng buộc hình học**. Cả `web/` lẫn
+  `workers/` phải đọc cấu hình HIỆU LỰC (`useBriefFormConfig`, `readEffectiveBriefForm`), không
+  nhập thẳng `BRIEF_FORM` — hai bên chấm điểm lệch nhau là con số sai đi vào artifact bất biến.
 - Dữ liệu gửi nhà cung cấp: **đầy đủ trừ danh tính** → hạng 2 (T12); khung tên mang mã hồ sơ là hạng 1, không gửi.
 
 > **Ranh giới có KIỂM THỬ canh**: `workers/src/design/__tests__/ai-independence.test.ts` đỏ khi nhánh AI

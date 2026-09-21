@@ -530,6 +530,43 @@
           <tbody>
             <tr>
               <td class="num">21/09</td>
+              <td>T62–T63 — Đầu bài hỏi chi tiết hơn, và quản trị viên sửa được mục khảo sát</td>
+              <td class="xs">
+                · <b>Đặt bài của Haan:</b> «khảo sát càng chi tiết, output đưa ra càng đúng với mong
+                muốn», kèm danh sách câu hỏi muốn có.<br />
+                · <b>Hợp đồng 1.4.0 → 1.5.0</b>, chỉ THÊM trường tuỳ chọn: tám trường khu đất (cao
+                độ tim đường, cao độ đất, mặt nắng gắt, mặt đón gió, bề rộng đường, nguy cơ ngập,
+                hiện trạng xây dựng, số tầng nhà liền kề) · <code>family[].ages</code> ·
+                <code>household</code> (ngành nghề, tín ngưỡng, nơi thờ, phong thuỷ, kiêng kỵ, kinh
+                doanh tại nhà) · <code>lifestyle</code> (11 câu về nếp sinh hoạt) ·
+                <code>storage</code> · <code>vertical</code> (thang máy: làm ngay / chừa chỗ /
+                không) · <code>entrance</code> (cốt nền, bậc tam cấp, dốc dắt xe) ·
+                <code>balconies</code> (mặt, phạm vi, đua ra ngoài ranh, độ vươn) ·
+                <code>systems</code> · <code>future</code> · <code>finishing_level</code> · cỡ ô tô
+                và sạc điện. Biểu mẫu 6 → 12 mục.<br />
+                · <b>Trọng số gần hết là 0 có chủ ý</b> — điểm độ đầy đủ là cổng chặn Lớp 2, chỉ đo
+                thứ thiếu thì không dựng nổi mặt bằng. Tổng nhà phố 39 → 50, đầu bài trả lời hết
+                phần cũ vẫn đạt 0,78 &gt; ngưỡng 0,7, <b>không chặn hồ sơ nào đang chạy</b>.<br />
+                · Dữ liệu mới tới mô hình qua đúng đường cũ: <code>ai-brief-digest</code> 1.1.0 →
+                1.2.0 rồi văn xuôi; mọi ô chữ tự do mới đi qua bộ lược danh tính. Cao độ nói bằng
+                CHÊNH LỆCH, không nói trị tuyệt đối.<br />
+                · <b>Soát mâu thuẫn thêm 9 phép</b>, toàn số học hoặc hai câu trả lời chỏi nhau —
+                không có ngưỡng quy chuẩn nào. Lời khuyên nghề cố ý không vào đây (Haan, T52).<br />
+                · <b>Màn hình «Biểu mẫu đầu bài»</b> (<code>/nen/bieu-mau-dau-bai</code>): thêm, sửa
+                nhãn/gợi ý/trọng số, ẩn, đổi thứ tự mục. Cơ chế là <b>lớp phủ</b> lên cấu hình gốc,
+                lưu ở <code>design_setting.brief_form_overlay</code>, ghi qua
+                <code>POST /design/brief/form</code> (kiểm hợp lệ trước khi ghi). Năm trường hợp
+                đồng bắt buộc khoá hẳn; câu hỏi có sẵn chỉ ẩn được, không xoá — ẩn giữ câu trả lời
+                đã lưu. Câu hỏi tự thêm nằm ở ô mở <code>custom.*</code>, tới mô hình dưới dạng
+                nhãn–câu trả lời, <b>không ràng buộc hình học</b>.<br />
+                · <b>Đã kiểm:</b> 1.312 phép logic + 473 phép giao diện xanh, <code>tsc -b</code> và
+                <code>eslint</code> sạch, thêm đột biến M24 canh việc ẩn nhầm trường bắt buộc.
+                <b>Chưa đo:</b> chưa có lượt chạy thật nào so phương án trước–sau (tốn tiền gọi mô
+                hình, xin phép riêng).
+              </td>
+            </tr>
+            <tr>
+              <td class="num">21/09</td>
               <td>T69 — hai Worker lệch phiên bản: tab «AI Design» đỏ trên bản chạy thử</td>
               <td class="xs">
                 · <b>Lỗi Haan bắt trên bản công khai.</b> Không phải lỗi sinh dữ liệu mà là lỗi

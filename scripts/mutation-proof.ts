@@ -73,6 +73,15 @@ const MUTATIONS: Mutation[] = [
     replace: '    if (false) {',
   },
 
+  {
+    id: 'M24',
+    axis: 'phân quyền',
+    file: 'shared/src/design/brief-form-overlay.ts',
+    bug: 'Quản trị viên ẩn được câu hỏi BẮT BUỘC của hợp đồng (số tầng, bề rộng lô) — biểu mẫu vẫn chạy, chỉ ngắn đi, rồi MỌI đầu bài mới sau đó không chốt được và không màn hình nào nói vì sao',
+    find: '      if (LOCKED_PATHS.includes(field.path)) {',
+    replace: '      if (false) {',
+  },
+
   // ── Riêng tư: cái gì rời khỏi máy chủ ─────────────────────────────────────────────────
   {
     id: 'M04',

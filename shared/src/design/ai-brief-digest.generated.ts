@@ -552,6 +552,22 @@ export const aiBriefDigestSchema = z
       .union([z.literal('co_ban'), z.literal('kha'), z.literal('cao_cap'), z.literal(null)])
       .nullable()
       .optional(),
+    /** Câu hỏi quản trị viên tự thêm, kèm NHÃN đã đọc ra chữ. Đi thành cặp nhãn–câu trả lời chứ không phải khoá–giá trị: bên nhận không có tệp cấu hình của NVG, nên `bep_phu_2` không nói gì cả. Câu trả lời đã qua bộ lược danh tính. */
+    custom: z
+      .array(
+        z
+          .object({
+            label: z.string().max(200),
+            value: z.string().max(1000),
+          })
+          .strict(),
+      )
+      .max(60)
+      .nullable()
+      .describe(
+        'Câu hỏi quản trị viên tự thêm, kèm NHÃN đã đọc ra chữ. Đi thành cặp nhãn–câu trả lời chứ không phải khoá–giá trị: bên nhận không có tệp cấu hình của NVG, nên `bep_phu_2` không nói gì cả. Câu trả lời đã qua bộ lược danh tính.',
+      )
+      .optional(),
   })
   .strict()
   .describe(
