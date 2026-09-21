@@ -318,10 +318,19 @@ Nghiệm thu đo bằng **người thật dùng, dữ liệu đúng, báo cáo �
 - Đích theo tài liệu: 3 môi trường, mỗi cái một project Supabase; nhánh `main` = production, `staging`,
   feature branch. Một người triển khai → không cần duyệt PR nhiều người; **Haan tự kiểm bản preview** là
   kiểm soát chất lượng duy nhất (IPD 5.2).
-- **Frontend = Worker `nvg` (Static Assets)**, cấu hình `web/wrangler.jsonc`, deploy `npm run deploy:web`.
+- **Frontend = Worker `nvg` (Static Assets)**, cấu hình `web/wrangler.jsonc`; API = Worker `nvg-api`,
+  cấu hình `workers/wrangler.jsonc`. **Phát hành bằng `npm run deploy`** — API TRƯỚC, giao diện SAU.
   - ⚠️ **KHÔNG BAO GIỜ kèm `--env production`** — sinh ra Worker thứ hai `nvg-production`, `nvg` thật giữ bản cũ.
   - SPA phải có `assets.not_found_handling: "single-page-application"`, thiếu thì đường dẫn sâu ra 404.
   - `wrangler deploy` không nạp `.env`; đừng dùng `--secrets-file` với `.env` gốc (có `service_role`, mật khẩu CSDL).
+  - ⚠️ **Đừng phát hành một mình `deploy:web`.** Artifact của Module Thiết kế là bất biến và bị kiểm hợp
+    đồng **cả khi ĐỌC LẠI**, nên một bản `nvg-api` cũ hơn hợp đồng đã ghi ra artifact sẽ không đọc nổi
+    chính kho của mình. Xảy ra thật 21/09/2026: giao diện dựng 20/09, API tải lên 19/09 → cả tab «AI
+    Design» đỏ với câu lỗi kiểm kiểu, nút «Thử lại» vô nghĩa vì chỗ hỏng nằm ở lượt đọc.
+    Hàng rào: cả hai bên nhúng `CONTRACTS_FINGERPRINT` (băm `contracts/`, sinh cùng `contracts:gen`),
+    Worker trả ở header `X-NVG-Contracts`, giao diện đối chiếu và hiện dải báo. Kiểm sau khi deploy:
+    `curl -s https://nvg-api.tests99.workers.dev/design/health` — trường `contracts` phải khớp
+    `CONTRACTS_FINGERPRINT` trong `shared/src/design/index.generated.ts`.
 
 ### 6.4 Phân vai Claude Code ↔ Haan (IPD 4)
 

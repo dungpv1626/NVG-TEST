@@ -25,7 +25,7 @@
  * `EntityDetail` — một hành vi, hai lớp áo.
  */
 
-import { ArrowLeft, ArrowRight, History } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ArrowRight, History } from 'lucide-react';
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { formatDeadline, type StatusGroup } from '@nvg/shared';
@@ -37,6 +37,7 @@ import {
 import { useDetailTabs } from '@/components/entity/use-detail-tabs';
 import { Breadcrumb, type Crumb } from '@/components/layout/breadcrumb';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
+import { useDesignVersionSkew, VERSION_SKEW_MESSAGE } from '@/lib/design-version';
 import { cn } from '@/lib/utils';
 import { useTkTheme } from './tk-theme';
 
@@ -272,6 +273,8 @@ function WorkspaceBody({
           )}
         </header>
 
+        <VersionSkewNotice />
+
         {/* ── Nội dung ───────────────────────────────────────────────────────── */}
         {sub ? (
           <section aria-labelledby="tieu-de-man-hinh-con" className="px-4 pt-5 pb-7 lg:px-6">
@@ -353,6 +356,37 @@ function WorkspaceBody({
         )}
       </div>
     </>
+  );
+}
+
+/**
+ * Dải báo giao diện và dịch vụ thiết kế đang chạy hai phiên bản hợp đồng dữ liệu khác nhau.
+ *
+ * Đặt ngay dưới header của cả vỏ màn hình, không trong một bước cụ thể: lệch phiên bản ảnh
+ * hưởng mọi bước, và thứ nó thay thế là một câu lỗi kiểm kiểu bằng tiếng Anh nằm giữa bước
+ * đang mở, không nói được nguyên nhân lẫn người xử lý (21/09/2026 — xem `design-version.ts`).
+ *
+ * Không phải `alert`: chuyện này không đòi người dùng phản ứng ngay, nó giải thích vì sao một
+ * số bản ghi không mở được. `status` để trình đọc màn hình đọc khi rảnh, không cắt ngang.
+ */
+function VersionSkewNotice(): React.ReactElement | null {
+  const skew = useDesignVersionSkew();
+  if (!skew) return null;
+  return (
+    <div
+      role="status"
+      className="mx-4 mt-4 flex items-start gap-2 rounded-lg border border-tk-am-line bg-tk-am-bg px-3 py-2.5 text-tk-am-fg2 lg:mx-6"
+    >
+      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-tk-am-fg" aria-hidden />
+      <p className="text-xs leading-relaxed">
+        {VERSION_SKEW_MESSAGE}{' '}
+        {/* Hai mã cho Quản trị hệ thống đối chiếu — không có chúng thì câu trên không kiểm
+            chứng được, và người nhận tin báo không biết bên nào cũ hơn. */}
+        <span className="text-tk-t2">
+          Giao diện {skew.ui} · dịch vụ {skew.api}.
+        </span>
+      </p>
+    </div>
   );
 }
 

@@ -60,8 +60,13 @@ app.use(
     // dừng trước khi gọi mô hình. Có phép thử canh danh sách này khớp với header các tuyến
     // thật sự đặt (`cors-expose.test.ts`), vì đây là loại lệch mà không mã nào ở hai phía nhìn
     // thấy được.
+    //
+    // `X-NVG-Contracts`: dấu vân tay hợp đồng dữ liệu của bản dựng (T69). Giao diện đối chiếu
+    // với bản của chính nó để phát hiện hai bên chạy lệch phiên bản; không khai ở đây thì phép
+    // đối chiếu luôn đọc ra `null` và im lặng bỏ qua — đúng thứ nó sinh ra để bắt.
     exposeHeaders: [
       'Content-Disposition',
+      'X-NVG-Contracts',
       'X-Sheet-Scale',
       'X-Sheet-Orientation',
       'X-Anchor-Width',

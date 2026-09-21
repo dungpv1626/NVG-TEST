@@ -529,6 +529,32 @@
           </thead>
           <tbody>
             <tr>
+              <td class="num">21/09</td>
+              <td>T69 — hai Worker lệch phiên bản: tab «AI Design» đỏ trên bản chạy thử</td>
+              <td class="xs">
+                · <b>Lỗi Haan bắt trên bản công khai.</b> Không phải lỗi sinh dữ liệu mà là lỗi
+                <b>ĐỌC</b>: <code>ArtifactRepository.head()</code> kiểm hợp đồng cả khi đọc lại từ
+                kho, nên <code>nvg-api</code> tải lên 19/09 không đọc nổi artifact
+                <code>ai_facade_concept</code> do bản mã 20/09 ghi ra (<code>where</code> có
+                <code>main_door</code>…, <code>levels[]</code> có <code>x0/x1</code>). Giao diện lại
+                phát hành 20/09 → bản công khai chạy giao diện mới với API cũ hơn một ngày. Một
+                project Supabase dùng chung là thứ đưa artifact mới vào kho của bản công khai.<br />
+                · <b>Đã sửa:</b> phát hành lại cả hai Worker (đã kiểm: năm artifact hiệu lực của hồ
+                sơ đều đọc được, <code>/design/health</code> trả
+                <code>contracts: 27c8c586581c</code> khớp bản dựng giao diện) ·
+                <code>npm run deploy</code> phát hành API trước, giao diện sau ·
+                <code>CONTRACTS_FINGERPRINT</code> băm <code>contracts/</code>, Worker trả ở header
+                <code>X-NVG-Contracts</code>, giao diện đối chiếu và hiện dải báo ·
+                <code>ContractError</code> tách <code>read</code> khỏi <code>write</code>, hỏng lúc
+                đọc nói về phiên bản dịch vụ thay vì đổ cho dữ liệu.<br />
+                · <b>Còn treo:</b> gốc thật là một project Supabase dùng chung (<code
+                  >BUILD_PLAN.md</code
+                >
+                4E) — hai Worker khớp nhau vẫn không chặn được việc chạy bản mã mới ở máy rồi ghi
+                artifact bản công khai không hiểu.
+              </td>
+            </tr>
+            <tr>
               <td class="num">20/09</td>
               <td>T68 — trung thực kích thước xuyên cả chuỗi (sân trước 3 m vẽ thành 8–10 m)</td>
               <td class="xs">
@@ -962,256 +988,12 @@
               </td>
             </tr>
             <tr>
-              <td class="num">19/09</td>
-              <td>T59 Đợt F — màn hình bước «2. Mặt đứng»</td>
+              <td class="num">≤19/09</td>
+              <td>90 việc trước đó</td>
               <td class="xs">
-                · <b>Màn hình</b> (<code>web/src/pages/tk/ai/ai-facade-step.tsx</code>): chọn model
-                và mức suy nghĩ, nút «Dựng ý tưởng mặt đứng» kèm câu nói rõ lượt gọi tính tiền, tiến
-                độ, theo dõi trực tiếp, chi phí lượt chạy, lý do nguyên văn khi ý tưởng không qua
-                kiểm; bảng ý tưởng (mái, vật liệu từng vùng, cổng, rào, mảng trang trí, số lỗ mở/ban
-                công lấy từ mặt bằng), ô màu luôn kèm mã hex bằng chữ; tờ mặt đứng qua
-                <code>&lt;img&gt;</code> kèm tỷ lệ, tải SVG và DXF.<br />
-                · <b>Mặt bằng đổi sau khi dựng mặt đứng</b>: dải cảnh báo «dựng theo phương án mặt
-                bằng cũ», chip «Theo phương án cũ» trên dải bước; bước Mặt đứng không tính là xong
-                và bước Phối cảnh chờ với lý do ấy.<br />
-                · Tải tờ SVG tách thành hook dùng chung cho mặt bằng và mặt đứng.<br />
-                · Kiểm: 7 phép thử web mới, 407 phép thử web xanh. Chrome: trên «Biệt thự nhà vườn
-                (demo)» (chưa chọn phương án) bước Mặt đứng hiện đúng «Chưa chọn phương án mặt
-                bằng…». Các trạng thái có dữ liệu chờ lượt chạy thật đầu tiên.
-              </td>
-            </tr>
-            <tr>
-              <td class="num">19/09</td>
-              <td>T59 Đợt C — lượt gọi AI ý tưởng mặt đứng, lượt chạy nền, tuyến API</td>
-              <td class="xs">
-                · <b>Lời dẫn</b> mục <code>facade</code> trong
-                <code>kb/ai_design_prompts.yaml</code> (bản 8.7.0): gửi phần đầu bài nói về mặt
-                ngoài (phong cách, ghi chú vật liệu khách đưa — đã lược danh tính, hạng 2), khung
-                mặt đứng với lỗ mở và ban công ghi LOCKED, và danh mục mã. Không gửi cả mặt bằng.<br />
-                · <b>Phép kiểm</b> (<code>ai/facade/check.ts</code>): mã phải có trong danh mục,
-                mảng trang trí trong khung và không đè lỗ mở (trừ ô văng, lam), cổng/rào/tường chắn
-                mái trong giới hạn dựng được, có vật liệu thân nhà, có kiểu lan can khi có ban công.
-                Hỏng thì gọi lại MỘT lượt kèm lý do (tối đa 2 lượt), vẫn hỏng thì không lưu. Cổng,
-                rào khai thừa trên nhà sát ranh KHÔNG bắt gọi lại — hàm ghép tự bỏ.<br />
-                · <b>Lượt chạy nền</b>: nhánh <code>facade</code> trong Workflow nhánh AI, mỗi lượt
-                gọi một bước, lượt nào cũng ghi nhật ký chi phí (<code>facade</code> /
-                <code>facade_revise</code>), bảng theo dõi trực tiếp và nút «Dừng» dùng chung với
-                mặt bằng. Artifact <code>ai_facade_concept</code> trỏ phương án mặt bằng đã chọn lúc
-                bấm, đặt head. Không cần migration (CSDL đã cho phép bước này từ 0123).<br />
-                · <b>Tuyến</b> (<code>ai/facade-routes.ts</code>): <code>POST /facade/runs</code> —
-                chặn khi chưa chọn phương án mặt bằng, khi đang có lượt chạy; đọc
-                <code>/facade/:id</code> (JSON có bảng vật liệu đã dịch nhãn), <code>/sheet</code>,
-                <code>/dxf</code>, <code>/anchor</code>. <code>/state</code> thêm
-                <code>facadePlanRef</code> để màn hình biết mặt đứng có khớp mặt bằng đang hiệu
-                lực.<br />
-                · Kiểm: 16 phép thử mới với mô hình giả (lời dẫn mang đúng lỗ mở, bắt mảng đè cửa,
-                mã lạ, lượt gọi lại giữ nguyên phần đầu cho bộ nhớ đệm, nhật ký «ok»/«rejected»,
-                bước ghi đúng hợp đồng); 837 phép thử Worker thiết kế và 400 phép thử web xanh.
-                <b>Chưa chạy lượt nào qua API thật.</b>
-              </td>
-            </tr>
-            <tr>
-              <td class="num">19/09</td>
-              <td>T59 Đợt B — tờ mặt đứng SVG, ảnh neo và DXF (chưa gọi AI)</td>
-              <td class="xs">
-                · <b>Tờ mặt đứng mặt tiền</b> (<code>ai/draw/elevation-sheet.ts</code>) cùng bộ vẽ
-                với mặt bằng: cốt đất, khối nhà từng tầng, lỗ mở KHOÁ từ mặt bằng (đố cửa sổ, cửa
-                hai cánh, nan cửa cuốn), mảng trang trí, lan can, tường chắn mái hoặc đường mái dốc,
-                cổng và rào khi có sân trước; ký hiệu cao độ -0.450 / ±0.000 / +3.600…; chuỗi kích
-                thước dọc theo cao độ và ngang theo lỗ mở tầng 1. Vật liệu từng vùng in thành ô
-                trong cột khung tên bằng chữ tiếng Việt — tờ là bản vẽ đơn sắc đo được.<br />
-                · <b>Đường mái</b> chương trình tự dựng theo kiểu mái và độ dốc (hai dốc = tam giác,
-                tứ giác / Thái / mansard = hình thang), chặn độ cao đỉnh theo
-                <code>kb/facade_vocabulary.yaml</code>.<br />
-                · <b>Ảnh neo</b> không khung tên, đệm về khung ảnh chuẩn — phần đệm khung tách khỏi
-                ảnh neo mặt bằng để dùng chung. <b>DXF</b> đi qua cùng bộ chuyển SVG→DXF; mảng trang
-                trí vào lớp hatch, tên lớp từ <code>kb/layer_mapping.yaml</code>.<br />
-                · <b>Sửa bộ sinh hợp đồng</b>: <code>anyOf</code> trước đây ra
-                <code>z.unknown()</code> — cổng, rào, màu nhấn trông như có hợp đồng mà không kiểm
-                gì; nay ra <code>.nullable()</code> đúng kiểu. Chỉ hai hợp đồng mặt đứng dùng
-                <code>anyOf</code>.<br />
-                · Kiểm: 16 phép thử mới (ảnh chụp vàng hai tờ, đủ lỗ mở, cao độ, chuỗi cộng đúng
-                tổng, ảnh neo không khung tên, DXF), 82 phép thử bộ vẽ / DXF / ảnh neo / hợp đồng
-                xanh; năm ảnh chụp vàng mặt bằng chỉ đổi khối CSS (thêm lớp mặt đứng).
-              </td>
-            </tr>
-            <tr>
-              <td class="num">19/09</td>
-              <td>T59 Đợt A — khung mặt đứng suy từ mặt bằng (bước «2. Mặt đứng», chưa gọi AI)</td>
-              <td class="xs">
-                Haan chốt phạm vi bước Mặt đứng: chỉ mặt tiền; ra tờ SVG, DXF, bảng ý tưởng (mái,
-                vật liệu, màu, cổng, rào, ban công) và ảnh có vật liệu; mỗi lượt một ý tưởng; sửa
-                bằng ô yêu cầu; đổi mặt bằng thì mặt đứng cũ giữ lại kèm nhãn «dựng theo phương án
-                cũ». Kế hoạch bảy đợt A–G.<br />
-                · <b>Khung KHOÁ</b> (<code>ai/facade/frame.ts</code>): cao độ từng tầng cộng dồn từ
-                mặt bằng, ±0.000 là sàn tầng 1; lỗ mở lấy đúng những cái nhìn thấy từ đường — kể cả
-                cửa ra ban công lùi sau lan can, bỏ cửa sổ giếng trời; ban công lấy từ lan can mặt
-                trước.<br />
-                · <b>Hợp đồng</b>: <code>ai-facade-concept</code> đổi đơn vị sang lưới nửa centimet
-                (như mặt bằng), thêm <code>ground_z</code> và mép trái/phải từng tầng; hợp đồng mới
-                <code>ai-facade-proposal</code> cho phần mô hình khai.<br />
-                · <b>Danh mục mới</b> <code>kb/facade_vocabulary.yaml</code> — 7 vật liệu mái, 20
-                vật liệu, 14 màu, 7 lan can, bản đầu do Claude soạn, <b>chờ Haan duyệt</b>.<br />
-                · Kiểm: 11 phép thử khung trên hai mặt bằng mẫu, <code>tsc -b</code>,
-                <code>contracts:check</code> (20 tệp), pytest hợp đồng Container.
-              </td>
-            </tr>
-            <tr>
-              <td class="num">19/09</td>
-              <td>T58 — gỡ hẳn bộ giải nội bộ; «Thiết kế AI» đổi tên «AI Design»</td>
-              <td class="xs">
-                Haan quyết xoá mục «Chương trình không gian» và «AI phương án kiến trúc».<br />
-                · <b>Giao diện</b>: bỏ hai tab, hai thẻ Tổng quan, sáu màn hình của bộ giải và thư
-                viện <code>three</code> (gói tải trước giảm từ ~2,98 MB xuống ~2,13 MB). Dải tiến
-                trình còn sáu bước — «Không gian» và «Phương án» gộp thành bước «AI Design», xong
-                khi đã chọn một phương án mặt bằng. «Hoạt động gần đây» lấy phương án AI đã lưu.<br />
-                · <b>Tab AI Design còn ba bước</b> (Mặt bằng → Mặt đứng → Phối cảnh): bước «Chương
-                trình không gian» của nhánh AI cũng gỡ khỏi giao diện vì mặt bằng không đọc nó nữa
-                (T45); thẻ AI Design đứng trước thẻ Hồ sơ kỹ thuật ở Tổng quan.<br />
-                · <b>Phương án KTS tải lên (TK-03) giữ nguyên</b>, chuyển vào tab «Phiên bản bản vẽ»
-                cùng ba bộ môn kỹ thuật.<br />
-                · <b>Worker</b>: xoá <code>program/</code>, <code>layout/</code>,
-                <code>render/</code>, Workflow <code>DESIGN_PIPELINE</code>, các tuyến
-                <code>/program/*</code>, <code>/floor-plan/*</code>, <code>/render*</code>,
-                <code>/publish</code>, tuyến mô hình <code>layer1…layer5</code>, gói
-                <code>rules/structure/</code>, mười hợp đồng chỉ bộ giải dùng. Giữ
-                <code>/brief/confirm</code>, ranh giới thửa đất, số hoá, kho tri thức.<br />
-                · <b>Container giữ, chỉ còn số hoá</b> (<code>/extract</code>,
-                <code>/kb/record</code>): bỏ ortools, trimesh, openpyxl; dựng lại ảnh và chạy thử
-                <code>/extract</code> trên một tệp DXF — ra phòng, ba đường của bộ giải trả 404.<br />
-                · <b>Không migration, không xoá dữ liệu</b>: artifact cũ của bộ giải còn nguyên
-                trong CSDL.<br />
-                · Kiểm: <code>tsc -b</code>, <code>contracts:check</code> (19 tệp), 404 vitest web,
-                1.097 vitest logic, 87 pytest Container — đều xanh.
-                <code>ai-independence.test.ts</code> nay canh bộ giải không được tạo lại.
-              </td>
-            </tr>
-            <tr>
-              <td class="num">19/09</td>
-              <td>
-                T57b — sáu tuyến ảnh có tên mô hình thật, chọn tầng để vẽ, khung xem không kéo giãn
-              </td>
-              <td class="xs">
-                Ba việc Haan nêu sau khi dùng thử màn hình T57.<br />
-                · <b>Ô chọn model ghi rõ TÊN MÔ HÌNH</b> — lấy thẳng từ
-                <code>config/models.yaml</code> (<code>modelLine</code>), không gõ vào giao diện,
-                nên không bao giờ lệch với mô hình thật sự được gọi. Cần vì nhật ký
-                <code>design_ai_call</code> ghi theo tên mô hình: không hiện ở đây thì không đối
-                chiếu được tấm ảnh với dòng tiền.<br />
-                · <b>Sáu tuyến ảnh thay vì hai</b>, tên lấy từ hai lượt LIỆT KÊ THẬT ngày 19/09
-                (Haan cho phép, 0 USD, không sinh ảnh): OpenAI thấy 10 mô hình ảnh — ba mô hình hiện
-                hành là <code>gpt-image-2</code>, <code>gpt-image-2.5-flare</code>,
-                <code>gpt-image-2.5-sunburst</code>, và kiểu <code>ImageModel</code> trong tài liệu
-                nhận cả ba ở <code>/v1/images/edits</code>; Gemini thấy 6 mô hình ảnh, bỏ
-                <code>gemini-2.5-flash-image</code> (ngừng chạy 02/10/2026) và hai bản
-                <code>-preview</code>. Tài liệu OpenAI nói thẳng «Sunburst cho luồng cần độ chính
-                xác khi SỬA ảnh, Flare cho sinh ảnh nhanh» — việc của T57 là loại thứ nhất.<br />
-                · ⚠️ <b>Giá mỗi ảnh của OpenAI sai gấp hơn sáu lần và đã sửa.</b> Hãng tính theo
-                TOKEN (<code>gpt-image-2</code>: 4,00 USD/1M token ảnh vào, 15,00 USD/1M token ra),
-                còn cấu hình khai phẳng 0,19 USD. Lượt thật đã ghi trong
-                <code>design_ai_call</code> (2.353 token vào, 1.372 token ra) ra <b>0,030 USD</b>,
-                không phải 0,190. Nghĩa là hai lượt đo hôm nay tốn ≈ <b>0,097 USD</b> chứ không phải
-                0,257 — cột <code>cost_usd</code> của ba dòng đã ghi vẫn giữ số cũ vì nhật ký là bất
-                biến. Gemini thì ngược lại: giá công bố 0,067 USD/ảnh 1K, nhưng token ra đo được
-                (2.247 và 2.922) nhân 60,00 USD/1M ra 0,135–0,175 USD. Giữ giá công bố, ghi rõ chỗ
-                chưa khớp trong cấu hình — chỉ hoá đơn mới phân xử được.<br />
-                · <b>Chọn tầng ngay trong panel ảnh</b>: vẽ ảnh tầng 2 không còn bắt rời tờ vector
-                tầng 1 đang đọc. Ô chọn đi theo tầng đang xem cho tới khi kỹ sư tự đổi.<br />
-                · <b>Khung xem không kéo giãn quá cỡ gốc</b> (Haan hỏi «giảm kích thước hiển thị để
-                tăng độ nét được không»). Đúng ra là được, nhưng không phải vì thu nhỏ: ảnh mô hình
-                trả về rộng 1024–1536 px, còn khung panel trên màn hình rộng thì rộng hơn thế, nên
-                <code>w-full</code> PHÓNG ảnh lên và chữ nhoè ra mà không thêm một điểm ảnh nào. Nay
-                bề ngang chặn trên bằng cỡ gốc, thêm hai mức xem «Vừa» (720 px) / «Cỡ gốc» và một
-                dòng nói cỡ thật là bao nhiêu. Muốn nét THẬT thì phải xin mô hình vẽ ảnh lớn hơn
-                (Gemini 2K 0,101 · 4K 0,151 USD) — Haan chốt <b>chưa cần, giữ 1K</b>.<br />
-                Kiểm: 987 phép thử trong <code>workers/src/design/__tests__</code> + 432 phép thử
-                giao diện xanh; hai phép thử mới (tên mô hình có mặt trong ô chọn; vẽ được tầng khác
-                tầng đang xem mà tờ vector không rời chỗ).
-              </td>
-            </tr>
-            <tr>
-              <td class="num">19/09</td>
-              <td>T57 — ảnh mặt bằng công năng có nội thất, mô hình ảnh vẽ từ ẢNH NEO</td>
-              <td class="xs">
-                Haan: sau khi có mặt bằng từng tầng thì cần một tấm trình khách — tường tô đậm, đồ
-                đạc từng phòng, vật liệu sàn, cây cối quanh nhà, khung tên tiếng Việt.<br />
-                ⚠️ <b>KHÔNG đảo T22.</b> Tờ SVG vector vẫn là tờ CHÍNH, vẫn hiện mặc định, vẫn là
-                thứ đo được và xuất DXF. Tấm ảnh ở panel RIÊNG bên dưới, cùng vai trò với ảnh phối
-                cảnh. Ranh giới ấy có phép thử canh trong <code>ai-plan-step.test.tsx</code>.<br />
-                · <b>Ảnh neo</b> — khác biệt DUY NHẤT với T21: bản cũ cố ý chỉ gửi chữ nên mô hình
-                vẽ một ngôi nhà khác. <code>ai/draw/anchor.ts</code> dựng tờ chỉ phần hình (dùng lại
-                <code>renderPlanBody</code>, đúng hàm tờ A3 và DXF đang dùng), nền trắng, đệm về một
-                trong ba khung chuẩn 1024×1024 / 1536×1024 / 1024×1536. Tuyến RIÊNG
-                <code>GET /plan/:id/anchor</code>, không phải tham số của <code>/sheet</code>: quên
-                một tham số là lặng lẽ gửi tờ A3 có khung tên ra ngoài.<br />
-                · <b>Không khung tên</b>, bảo đảm bằng cấu trúc chứ không bằng cờ — khung tên mang
-                mã hồ sơ là dữ liệu hạng 1, tuyến ảnh chỉ nhận tới hạng 2.<br />
-                · <b>Rasterise ở TRÌNH DUYỆT</b> (<code>web/src/lib/rasterise.ts</code>) vì Worker
-                không có canvas và repo không có resvg/sharp/satori.<br />
-                · <code>POST /plan/:id/sheet-image</code> ghép lời dẫn từ dữ liệu THẬT (tên phòng
-                tiếng Việt, m², kích thước mm, hướng bắc, bốn dòng khung tên, phong cách lấy theo
-                lineage), gửi kèm <b>đúng một</b> ảnh neo, lưu qua <code>render-store</code>, đúc
-                artifact <code>ai_plan_sheet_image</code>. Lời dẫn 8.6.0, migration 0127 mở lại
-                <code>kind</code> + <code>step</code> mà 0125 đã đóng.<br />
-                · <b>Nhãn hai lớp</b>: <code>stampWatermark</code> in lên pixel +
-                <code>AI_DISCLAIMERS.aiSheetImage</code> bằng chữ trong trang.<br />
-                <b>Haan chốt mô hình viết cả chữ lẫn số</b>, nên tờ ảnh KHÔNG đo được: dấu tiếng
-                Việt có thể hỏng, số mét vuông trên hình có thể lệch bảng diện tích. Đó là lý do
-                nhãn hai lớp là bắt buộc và thẻ tờ vector phải ở ngay cạnh.<br />
-                Kiểm: 30 phép thử mới, soát ảnh neo bằng mắt trên hai fixture (không khung tên, nền
-                trắng, 1024×1536 px, chuỗi kích thước không chạm mép).<br />
-                <b>ĐO THẬT 19/09</b> trên «Biệt thự nhà vườn (demo)», tầng 1, hai lượt
-                <b>0,257 USD</b>: <code>gemini-3.1-flash-image</code> 22,6 giây / 0,067 USD và
-                <code>gpt-image-2</code> 39,3 giây / 0,190 USD. <b>Cả hai bám ảnh neo</b> — dựng lại
-                đúng bố cục, chuỗi kích thước chép đúng (13000 = 220+5440+2450+1800+3090+220), có
-                nội thất, vật liệu sàn, xe, cây cối, hoa gió, thước tỉ lệ và khung tên; dấu tiếng
-                Việt sống sót ở cả hai. Khác nhau ở phần SỐ:
-                <b>GPT Image chép đúng mọi diện tích</b> (28,9 · 6,9 · 5,7 · 4,2 · 18,1 · 15,8 ·
-                10,8 · 13,1 · 16,6 · 55,1 · 27,1 m²), còn Gemini ghi nhầm hai khu vệ sinh thành cùng
-                5,7 m² — đúng kiểu sai mà nhãn hai lớp sinh ra để phòng.<br />
-                Lượt đo bắt thêm <b>ba lỗi im lặng</b>, đã sửa cùng ngày: (1) header
-                <code>X-Anchor-*</code> chưa khai trong <code>exposeHeaders</code> của CORS — nay có
-                phép thử canh hai danh sách khỏi lệch (<code>cors-expose.test.ts</code>); (2) tuyến
-                <code>/sheet-image</code> khai <code>max-age=300</code> trong khi nó trỏ tới «tấm
-                MỚI NHẤT» — một con trỏ ĐỔI ĐƯỢC — nên vẽ lại bằng model khác xong, màn hình hiện
-                LẠI tấm cũ (695 KB thay vì 2,48 MB) mà không dấu hiệu nào; nay
-                <code>no-cache</code> + <code>ETag</code>; (3) ảnh neo nay tải bỏ qua bộ đệm, vì nó
-                là đầu vào của một lượt tính tiền và phải khớp mã máy chủ hiện tại.
-              </td>
-            </tr>
-            <tr>
-              <td class="num">19/09</td>
-              <td>T56 — ép khu vệ sinh tầng trên chồng trục khu vệ sinh tầng dưới (Q-B)</td>
-              <td class="xs">
-                Haan chốt «dời vách tầng trên». Làm ba mức, từ ngoài vào trong:<br />
-                · <b>Vùng</b>: khu vệ sinh CHUNG ở tầng trên nhận vùng của khu vệ sinh tầng dưới
-                (<code>arrange/intent.ts</code>, ghi chú <code>intent_wet_zone_forced</code>). Phòng
-                khép kín không đụng tới — vùng của nó là vùng phòng mẹ, kéo đi là phòng ngủ mất khu
-                vệ sinh riêng.<br />
-                · <b>Phạt tăng dần theo khoảng cách</b> thay cho bậc có/không
-                (<code>arrange/pack.ts</code>). Bậc thang không cho bộ xếp lý do nào để kéo phòng từ
-                4 m xuống 2 m: nó thấy «vẫn chưa chồng» ở cả hai chỗ — đó là lý do nâng trọng số 1 →
-                5 hôm qua không đổi ca nào.<br />
-                · <b>Bản phác thứ hai</b> (<code>copySketch</code> + <code>stackWetRooms</code>): ô
-                khu vệ sinh ép đúng ô tầng dưới, đi qua cổng <b>cùng</b> bản gốc, bản nào ra mặt
-                bằng điểm cao hơn thì thắng — nên việc ép không bao giờ làm mất một phương án. Ba
-                điều kiện để bản ép không hỏng ngay từ lưới ô: phòng khép kín còn chung vách với
-                phòng mẹ, không tụt dưới sàn đầu bài khai, không phòng nào bị lấy hết ô.<br />
-                · Lời dẫn <b>8.5.0</b>: ô khu vệ sinh chung nằm trên đúng ô tầng dưới; khép kín thì
-                gần nhất mà phòng ngủ cho phép.<br />
-                <b>Đo trên lượt thật đã ghi</b>: khu vệ sinh chung tầng 2 xích lại gần —
-                <code>58688ead</code> 9,31 → 4,04 m, <code>fd3b0b86</code> 9,95 → 5,69 m; điểm giữ
-                70,3 % và 71,2 → 71,1 %. <b>E2 vẫn 0</b> ở mọi bản đã lưu — hai chỗ chặn còn lại ghi
-                ở mục «Vướng mắc» (V-30, V-31).<br />
-                1.269 phép thử thiết kế + shared và 428 phép thử giao diện xanh; bảy phép thử mới.
-              </td>
-            </tr>
-            <tr>
-              <td class="num">≤18/09</td>
-              <td>82 việc trước đó</td>
-              <td class="xs">
-                Đã tách sang <a href="TIEN_DO_THIET_KE_LUU.html">tờ lưu trữ</a> ngày 20/09/2026 — tờ
-                này từng nặng 460&nbsp;KB, mở chậm và không ai đọc hết. Quyết định còn hiệu lực ở
+                Đã tách sang <a href="TIEN_DO_THIET_KE_LUU.html">tờ lưu trữ</a> (đợt đầu 20/09/2026,
+                tám việc ngày 19/09 chuyển tiếp 21/09/2026) — tờ này từng nặng 460&nbsp;KB, mở chậm
+                và không ai đọc hết. Quyết định còn hiệu lực ở
                 <code>doc/design/QUYET_DINH_AI.md</code>.
               </td>
             </tr>

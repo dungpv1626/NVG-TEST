@@ -10,6 +10,7 @@
  * cho việc RLS đã đủ sức làm.
  */
 
+import { noteContractsHeader, VERSION_SKEW_MESSAGE } from './design-version';
 import { supabase } from './supabase';
 
 /**
@@ -127,7 +128,21 @@ export async function designApiUpload<T>(path: string, form: FormData): Promise<
   return parseResponse<T>(response);
 }
 
+/** Câu chung khi Worker không kèm lời giải thích nào. */
+const GENERIC_FAILURE = 'Không thực hiện được thao tác. Thử lại sau ít phút.';
+
+/**
+ * Ghi nhận dấu vân tay hợp đồng ở phản hồi; trả về việc nó có lệch với bản giao diện không.
+ *
+ * Header phải nằm trong `exposeHeaders` của CORS phía Worker; thiếu khai thì `get` trả `null`
+ * mà không có lỗi nào (`cors-expose.test.ts` canh phía kia).
+ */
+function contractsSkewed(response: Response): boolean {
+  return noteContractsHeader(response.headers.get('X-NVG-Contracts'));
+}
+
 async function parseResponse<T>(response: Response): Promise<T> {
+  const skewed = contractsSkewed(response);
   const payload = (await response.json().catch(() => ({}))) as {
     error?: string;
     issues?: string[];
@@ -135,8 +150,12 @@ async function parseResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     // Không hiện mã HTTP cho người dùng (CGD 5.5) — Worker đã trả sẵn câu tiếng Việt. Mã vẫn đi
     // theo lỗi để mã nguồn phân biệt được các loại hỏng; nó không lên màn hình.
+    //
+    // Khi hai bên lệch phiên bản thì câu của Worker nói đúng chỗ hỏng nhưng sai NGUYÊN NHÂN:
+    // «dữ liệu không đúng hợp đồng» dẫn người đọc đi sửa dữ liệu, trong khi dữ liệu không sai.
+    // Ở đây biết thêm một điều Worker không biết — bản giao diện đang chạy — nên nói ra được.
     throw new DesignApiError(
-      payload.error ?? 'Không thực hiện được thao tác. Thử lại sau ít phút.',
+      skewed ? VERSION_SKEW_MESSAGE : (payload.error ?? GENERIC_FAILURE),
       response.status,
       payload.issues,
     );
@@ -179,10 +198,11 @@ export async function designApiFile(
   } catch {
     throw new DesignApiError(UNREACHABLE_MESSAGE);
   }
+  const skewed = contractsSkewed(response);
   if (!response.ok) {
     const payload = (await response.json().catch(() => ({}))) as { error?: string };
     throw new DesignApiError(
-      payload.error ?? 'Không thực hiện được thao tác. Thử lại sau ít phút.',
+      skewed ? VERSION_SKEW_MESSAGE : (payload.error ?? GENERIC_FAILURE),
       response.status,
     );
   }

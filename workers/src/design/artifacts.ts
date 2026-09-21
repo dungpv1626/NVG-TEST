@@ -212,7 +212,7 @@ export class ArtifactRepository {
 
     const uri = (data as unknown as { design_artifact: { payload_uri: string } }).design_artifact
       .payload_uri;
-    const payload = parseArtifact(kind, JSON.parse(await this.store.get(uri)));
+    const payload = parseArtifact(kind, JSON.parse(await this.store.get(uri)), 'read');
     return { id: data.artifact_id as string, payload };
   }
 
@@ -259,6 +259,7 @@ export class ArtifactRepository {
     const payload = parseArtifact(
       kind,
       JSON.parse(await this.store.get(data.payload_uri as string)),
+      'read',
     );
     return { id: data.id as string, kind, payload, createdAt: data.created_at as string };
   }

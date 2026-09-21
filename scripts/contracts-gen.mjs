@@ -24,6 +24,7 @@
  */
 
 import { readFileSync, readdirSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, basename } from 'node:path';
 import * as prettier from 'prettier';
@@ -494,6 +495,28 @@ for (const file of files) {
 
 outputs.set(join(OUT_DIR, 'kb.generated.ts'), await format(generateKbMirror()));
 
+/*
+ * Dấu vân tay của TOÀN BỘ `contracts/` — băm tên tệp + nội dung từng tệp, theo thứ tự tên.
+ *
+ * Vì sao cần: artifact là bất biến và được kiểm hợp đồng CẢ KHI ĐỌC LẠI
+ * (`ArtifactRepository.head`). Nên một bản Worker cũ hơn hợp đồng đã ghi ra artifact sẽ không
+ * đọc nổi chính kho của mình, và màn hình chỉ nói «Dữ liệu không đúng hợp đồng» — đúng chữ
+ * nhưng sai hướng, vì chẳng có gì hỏng ngoài việc hai bên chạy hai phiên bản. Đã xảy ra thật
+ * ngày 21/09/2026: giao diện `nvg` dựng 20/09 gọi `nvg-api` tải lên 19/09.
+ *
+ * Giao diện và Worker cùng nhúng hằng số này lúc dựng, Worker trả nó trong header mỗi phản
+ * hồi, giao diện đối chiếu. Băm NỘI DUNG chứ không lấy mã commit: thứ đang hỏi là «hai bên có
+ * cùng hợp đồng không», mà hai bản dựng từ hai commit khác nhau vẫn có thể cùng hợp đồng —
+ * báo động cho mỗi lần commit là cách chắc chắn để người dùng học cách bỏ qua báo động.
+ */
+const fingerprint = createHash('sha256');
+for (const file of files) {
+  fingerprint.update(file);
+  fingerprint.update('\0');
+  fingerprint.update(readFileSync(join(SRC_DIR, file)));
+  fingerprint.update('\0');
+}
+
 // Tệp gom — nơi duy nhất web/ và workers/ import vào.
 const barrel = `/**
  * SINH TỰ ĐỘNG — KHÔNG SỬA TAY. Xem \`scripts/contracts-gen.mjs\`.
@@ -501,6 +524,16 @@ const barrel = `/**
 
 ${files.map((f) => `export * from './${basename(f, '.schema.json')}.generated';`).join('\n')}
 export * from './kb.generated';
+
+/**
+ * Dấu vân tay của thư mục \`contracts/\` mà bản dựng này mang theo.
+ *
+ * Giao diện và Worker cùng nhúng hằng số này lúc dựng; Worker trả nó ở header
+ * \`X-NVG-Contracts\`, giao diện đối chiếu với bản của mình. Lệch nghĩa là hai bên đang chạy
+ * hai phiên bản hợp đồng dữ liệu khác nhau — nói thẳng điều đó còn hơn để người dùng đọc một
+ * câu lỗi kiểm kiểu không dẫn tới đâu.
+ */
+export const CONTRACTS_FINGERPRINT = '${fingerprint.digest('hex').slice(0, 12)}';
 `;
 outputs.set(join(OUT_DIR, 'index.generated.ts'), await format(barrel));
 
