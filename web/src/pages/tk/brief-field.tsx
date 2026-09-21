@@ -35,6 +35,7 @@ import {
   type BriefFormField,
 } from '@nvg/shared/design';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { MoneyInput } from '@/components/ui/money-input';
@@ -170,10 +171,18 @@ function Chip({
   active,
   label,
   rank,
+  muted = false,
   onClick,
 }: {
   active: boolean;
   label: string;
+  /**
+   * Vẽ mờ và viền đứt — lựa chọn còn đó nhưng chưa dùng được.
+   *
+   * KHÔNG dùng `disabled`: nút tắt thì bấm vào không có gì xảy ra, và người dùng không bao giờ
+   * biết vì sao. Ở đây nút vẫn bấm được, và cú bấm mở ra câu trả lời.
+   */
+  muted?: boolean;
   /**
    * Thứ hạng của lựa chọn này, bắt đầu từ 1. Chỉ dùng cho `multi` có `ordered`.
    *
@@ -192,7 +201,9 @@ function Chip({
         'inline-flex min-h-10 items-center gap-1.5 rounded-full border px-3',
         active
           ? 'border-brand bg-brand-subtle font-semibold text-brand'
-          : 'border-border text-fg-subtle',
+          : muted
+            ? 'border-dashed border-border text-fg-subtle opacity-60'
+            : 'border-border text-fg-subtle',
       )}
     >
       {rank !== undefined && (
@@ -235,6 +246,68 @@ function floorOptions(floors: number, current: number | null | undefined) {
       ))}
       {stale !== null && (
         <option value={stale}>{`Tầng ${stale} — công trình chỉ có ${floors} tầng`}</option>
+      )}
+    </>
+  );
+}
+
+/**
+ * Ô chọn ĐÚNG MỘT giá trị, vẽ bằng chip.
+ *
+ * Đứng riêng để dùng được `useState` cho hộp thoại «tạm thời chưa hỗ trợ» — cùng lý do với
+ * `AddSpaceRow`: `BriefControl` rẽ nhánh trong một `switch`, không gọi hook trong đó được.
+ *
+ * Lựa chọn mang `unavailable` trong `brief-form.json` vẫn HIỆN và vẫn bấm được; bấm thì nói ra
+ * vì sao thay vì im lặng không ăn. Câu nói ra nằm ở CẤU HÌNH, không viết cứng ở đây: hôm nay là
+ * đa giác không đều, mai có thể là thứ khác, và người sửa câu ấy không nhất thiết biết
+ * TypeScript.
+ */
+function ChoiceControl({
+  field,
+  value,
+  onChange,
+}: {
+  field: BriefFormField;
+  value: unknown;
+  onChange: (next: unknown) => void;
+}) {
+  const [blocked, setBlocked] = useState<{ label: string; message: string } | null>(null);
+
+  return (
+    <>
+      <div className="flex flex-wrap gap-2">
+        {(field.options ?? []).map((option) => {
+          const active = matchesChoice(field, value, option.value);
+          // Hồ sơ ĐANG mang giá trị ấy thì không chặn — chặn nó là biến một câu trả lời đã lưu
+          // thành thứ không sửa được, và người dùng mắc kẹt không bỏ chọn nổi.
+          const unavailable = !active && option.unavailable ? option.unavailable : null;
+          return (
+            <Chip
+              key={option.value}
+              label={option.label}
+              active={active}
+              muted={Boolean(unavailable)}
+              // Bấm lại lựa chọn đang chọn để bỏ chọn — không có nút "xoá" riêng cho từng ô.
+              onClick={() =>
+                unavailable
+                  ? setBlocked({ label: option.label, message: unavailable })
+                  : onChange(active ? undefined : toChoiceValue(field, option.value))
+              }
+            />
+          );
+        })}
+      </div>
+      {blocked && (
+        <ConfirmDialog
+          title={blocked.label}
+          confirmLabel="Đã hiểu"
+          cancelLabel={null}
+          className="border-tk-line bg-tk-panel text-tk-tx"
+          onConfirm={() => setBlocked(null)}
+          onCancel={() => setBlocked(null)}
+        >
+          <p>{blocked.message}</p>
+        </ConfirmDialog>
       )}
     </>
   );
@@ -419,25 +492,7 @@ function BriefControl({
     }
 
     case 'choice':
-      return (
-        <div className="flex flex-wrap gap-2">
-          {(field.options ?? []).map((option) => (
-            <Chip
-              key={option.value}
-              label={option.label}
-              active={matchesChoice(field, value, option.value)}
-              // Bấm lại lựa chọn đang chọn để bỏ chọn — không có nút "xoá" riêng cho từng ô.
-              onClick={() =>
-                onChange(
-                  matchesChoice(field, value, option.value)
-                    ? undefined
-                    : toChoiceValue(field, option.value),
-                )
-              }
-            />
-          ))}
-        </div>
-      );
+      return <ChoiceControl field={field} value={value} onChange={onChange} />;
 
     case 'select': {
       // Giá trị đã hết hiệu lực (đơn vị hành chính cũ) không nằm trong danh sách chọn —

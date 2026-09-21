@@ -476,7 +476,7 @@ describe('Hình thửa đất', () => {
     expect(field.value).toBe('4,25');
   });
 
-  it('chọn Hình thang thì hỏi mặt hậu, chọn Đa giác thì hỏi ranh giới', async () => {
+  it('chọn Hình thang thì hỏi mặt hậu', async () => {
     state.briefs = [brief()];
     state.surveys = [];
     await openForm('Công trình và khu đất');
@@ -485,12 +485,70 @@ describe('Hình thửa đất', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Hình thang' }));
     expect(await screen.findByLabelText('Chiều rộng mặt hậu')).toBeTruthy();
     expect(screen.queryAllByText('Ranh giới thửa đất')).toHaveLength(0);
+  });
 
+  it('bấm «Đa giác không đều» thì NÓI RA là chưa hỗ trợ, không im lặng và không đổi hình thửa', async () => {
+    // Haan tắt tạm nhánh đa giác (22/09/2026). Cách tắt sai mà ai cũng làm: `disabled` — nút
+    // xám, bấm không có gì xảy ra, người dùng bấm ba lần rồi đi hỏi. Hoặc giấu hẳn lựa chọn,
+    // và người từng dùng nó đi tìm không thấy. Ở đây nút vẫn bấm được và cú bấm trả lời.
+    state.briefs = [brief()];
+    state.surveys = [];
+    await openForm('Công trình và khu đất');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Hình thang' }));
     await userEvent.click(screen.getByRole('button', { name: 'Đa giác không đều' }));
-    expect(await screen.findAllByText('Ranh giới thửa đất')).not.toHaveLength(0);
-    // Đa giác thì hai ô kích thước không còn nghĩa — ranh giới đã nói đủ.
-    expect(screen.queryByLabelText('Chiều rộng mặt hậu')).toBeNull();
-    expect(screen.queryByLabelText('Chiều rộng mặt tiền')).toBeNull();
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/tạm thời chưa hỗ trợ/i)).toBeTruthy();
+    // Một lời báo thì chỉ cần MỘT nút — «Huỷ» và «Đã hiểu» cùng đóng hộp, cùng không làm gì.
+    expect(within(dialog).getAllByRole('button')).toHaveLength(1);
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Đã hiểu' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    // Hình thửa đất KHÔNG đổi, và ô toạ độ ranh giới không mở ra.
+    expect(screen.getByRole('button', { name: 'Hình thang' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    expect(
+      screen.getByRole('button', { name: 'Đa giác không đều' }).getAttribute('aria-pressed'),
+    ).toBe('false');
+    expect(screen.queryAllByText('Ranh giới thửa đất')).toHaveLength(0);
+  });
+
+  it('đầu bài ĐÃ LƯU theo đa giác vẫn sửa được — khoá lựa chọn không khoá hồ sơ cũ', async () => {
+    // Chặn cả những hồ sơ đang mang giá trị ấy là biến một câu trả lời đã lưu thành thứ không
+    // sửa được: người dùng không bỏ chọn nổi, và cũng không mở được bảng toạ độ để xem lại.
+    state.briefs = [
+      brief({
+        structured: {
+          building_type: 'nha_pho',
+          floors: 3,
+          site: {
+            shape: 'da_giac',
+            width_m: 5,
+            depth_m: 18,
+            boundary_m: [
+              [0, 0],
+              [5, 0],
+              [5, 18],
+              [0, 18],
+            ],
+          },
+        },
+      }),
+    ];
+    state.surveys = [];
+    await openForm('Công trình và khu đất');
+
+    expect(
+      screen.getByRole('button', { name: 'Đa giác không đều' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+    expect(screen.queryAllByText('Ranh giới thửa đất')).not.toHaveLength(0);
+
+    // Bỏ chọn được, không hộp thoại nào chặn.
+    await userEvent.click(screen.getByRole('button', { name: 'Đa giác không đều' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('hình thang thiếu mặt hậu thì nói ra ngay, không chờ tới lúc lưu', async () => {

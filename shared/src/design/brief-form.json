@@ -246,7 +246,8 @@
             {
               "value": "da_giac",
               "label": "Đa giác không đều",
-              "note": "Tứ giác, ngũ giác… phải nhập từng đỉnh"
+              "note": "Tứ giác, ngũ giác… phải nhập từng đỉnh",
+              "unavailable": "Mục này tạm thời chưa hỗ trợ. Vui lòng thử lại sau — tạm thời khai thửa đất theo hình chữ nhật hoặc hình thang."
             }
           ],
           "note": "Vắng mặt = chữ nhật, để đầu bài cũ đọc lên vẫn đúng."
