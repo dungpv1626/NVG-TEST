@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://nvg.vn/contracts/ai-brief-digest.schema.json",
   "title": "AiBriefDigest",
-  "description": "Bản đầu bài + khảo sát GỬI CHO mô hình của nhà cung cấp ngoài (nhánh AI, T12). Đây là DANH SÁCH CHO PHÉP: additionalProperties=false ở mọi cấp, nên một trường mới thêm vào design-brief không tự đi ra mạng. Cố ý KHÔNG có: project_id, project_code, budget_range_vnd, decision_maker, legal_docs, completeness_score. Chữ tự do đi qua sau khi lược danh tính (scrubIdentity). Hạng dữ liệu 2.",
+  "description": "Bản đầu bài + khảo sát GỬI CHO mô hình của nhà cung cấp ngoài (nhánh AI, T12). Đây là DANH SÁCH CHO PHÉP: additionalProperties=false ở mọi cấp, nên một trường mới thêm vào design-brief không tự đi ra mạng. Cố ý KHÔNG có: project_id, project_code, budget_range_vnd, decision_maker, household.owner_birth_year (không tồn tại — tuổi khai theo `family[].ages`), legal_docs, completeness_score. Chữ tự do đi qua sau khi lược danh tính (scrubIdentity). Hạng dữ liệu 2.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -140,6 +140,71 @@
               "enum": ["chung", "rieng", null]
             }
           }
+        },
+        "road_level_m": {
+          "type": ["number", "null"],
+          "minimum": -10,
+          "maximum": 200
+        },
+        "land_level_m": {
+          "type": ["number", "null"],
+          "minimum": -10,
+          "maximum": 200
+        },
+        "harsh_sun_sides": {
+          "type": ["array", "null"],
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["front", "back", "left", "right"]
+          }
+        },
+        "cool_wind_sides": {
+          "type": ["array", "null"],
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["front", "back", "left", "right"]
+          }
+        },
+        "road_width_m": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 60
+        },
+        "flood_risk": {
+          "type": ["string", "null"],
+          "enum": ["khong", "thinh_thoang", "thuong_xuyen", null]
+        },
+        "existing_structure": {
+          "type": ["string", "null"],
+          "enum": ["dat_trong", "nha_cu_pha_do", "nha_cu_cai_tao", "mong_cu_giu_lai", null]
+        },
+        "neighbour_floors": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "front": {
+              "type": ["integer", "null"],
+              "minimum": 0,
+              "maximum": 30
+            },
+            "back": {
+              "type": ["integer", "null"],
+              "minimum": 0,
+              "maximum": 30
+            },
+            "left": {
+              "type": ["integer", "null"],
+              "minimum": 0,
+              "maximum": 30
+            },
+            "right": {
+              "type": ["integer", "null"],
+              "minimum": 0,
+              "maximum": 30
+            }
+          }
         }
       }
     },
@@ -173,6 +238,15 @@
           },
           "ensuite": {
             "type": ["boolean", "null"]
+          },
+          "ages": {
+            "type": ["array", "null"],
+            "maxItems": 20,
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 120
+            }
           }
         }
       }
@@ -259,6 +333,13 @@
         },
         "motorbikes": {
           "type": ["integer", "null"]
+        },
+        "car_size": {
+          "type": ["string", "null"],
+          "enum": ["gam_thap", "gam_cao", "ban_tai", "xe_7_cho", null]
+        },
+        "ev_charging": {
+          "type": ["boolean", "null"]
         }
       }
     },
@@ -332,6 +413,281 @@
           "type": ["string", "null"]
         }
       }
+    },
+    "household": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "occupation": {
+          "type": ["string", "null"],
+          "maxLength": 200
+        },
+        "religion": {
+          "type": ["string", "null"],
+          "enum": ["tho_cung_to_tien", "phat_giao", "cong_giao", "tin_lanh", "khac", "khong", null]
+        },
+        "altar_arrangement": {
+          "type": ["string", "null"],
+          "enum": ["phong_tho_rieng", "chung_phong_khach", "tren_san_thuong", "khong_co", null]
+        },
+        "altar_floor": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "maximum": 12
+        },
+        "feng_shui": {
+          "type": ["string", "null"],
+          "enum": ["khong_xem", "co_xem", "co_thay_rieng", null]
+        },
+        "feng_shui_notes": {
+          "type": ["string", "null"],
+          "maxLength": 1000
+        },
+        "taboos": {
+          "type": ["string", "null"],
+          "maxLength": 1000
+        },
+        "home_business": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "type": ["string", "null"],
+              "enum": [
+                "khong",
+                "van_phong_tai_nha",
+                "cua_hang_mat_tien",
+                "kho_hang",
+                "luu_tru_cho_thue",
+                "san_xuat_nho",
+                null
+              ]
+            },
+            "floor_count": {
+              "type": ["integer", "null"],
+              "minimum": 1,
+              "maximum": 12
+            },
+            "separate_entrance": {
+              "type": ["boolean", "null"]
+            },
+            "customer_wc": {
+              "type": ["boolean", "null"]
+            },
+            "staff_count": {
+              "type": ["integer", "null"],
+              "minimum": 0,
+              "maximum": 50
+            },
+            "note": {
+              "type": ["string", "null"],
+              "maxLength": 1000
+            }
+          }
+        }
+      }
+    },
+    "lifestyle": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "cooking": {
+          "type": ["string", "null"],
+          "enum": ["nau_nhieu_chien_xao", "nau_hang_ngay_don_gian", "it_nau", null]
+        },
+        "second_kitchen": {
+          "type": ["boolean", "null"]
+        },
+        "dining_place": {
+          "type": ["string", "null"],
+          "enum": ["ban_an_rieng", "quay_bep", "linh_hoat", null]
+        },
+        "guests": {
+          "type": ["string", "null"],
+          "enum": ["thuong_xuyen", "thinh_thoang", "it", null]
+        },
+        "overnight_guests": {
+          "type": ["boolean", "null"]
+        },
+        "work_from_home": {
+          "type": ["boolean", "null"]
+        },
+        "night_shift": {
+          "type": ["boolean", "null"]
+        },
+        "reduced_mobility": {
+          "type": ["boolean", "null"]
+        },
+        "drying": {
+          "type": ["string", "null"],
+          "enum": ["phoi_nang_ngoai_troi", "may_say_trong_nha", "ca_hai", null]
+        },
+        "pets": {
+          "type": ["string", "null"],
+          "enum": ["khong", "cho", "meo", "cho_va_meo", "khac", null]
+        },
+        "daily_rhythm": {
+          "type": ["string", "null"],
+          "maxLength": 1000
+        }
+      }
+    },
+    "storage": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "level": {
+          "type": ["string", "null"],
+          "enum": ["it", "vua", "nhieu", null]
+        },
+        "items": {
+          "type": ["array", "null"],
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "kho_chung",
+              "kho_thuc_pham",
+              "tu_am_tuong",
+              "do_theo_mua",
+              "hanh_ly",
+              "tai_lieu",
+              "dung_cu_sua_chua",
+              "do_the_thao",
+              "ham_ruou",
+              "do_tho_cung"
+            ]
+          }
+        },
+        "note": {
+          "type": ["string", "null"],
+          "maxLength": 1000
+        }
+      }
+    },
+    "vertical": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "elevator": {
+          "type": ["string", "null"],
+          "enum": ["khong", "lam_ngay", "chua_cho", null]
+        },
+        "elevator_capacity": {
+          "type": ["string", "null"],
+          "enum": ["nho_350kg", "vua_450kg", "lon_630kg", null]
+        },
+        "elevator_position": {
+          "type": ["string", "null"],
+          "enum": ["canh_thang_bo", "rieng_biet", "chua_quyet", null]
+        },
+        "stair_type": {
+          "type": ["string", "null"],
+          "enum": ["thang_ho", "thang_kin", "chua_quyet", null]
+        }
+      }
+    },
+    "entrance": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "floor_above_road_m": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 3
+        },
+        "steps_from_yard": {
+          "type": ["boolean", "null"]
+        },
+        "step_count": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "maximum": 8
+        },
+        "vehicle_ramp": {
+          "type": ["boolean", "null"]
+        }
+      }
+    },
+    "balconies": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "sides": {
+          "type": ["array", "null"],
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["front", "back", "left", "right"]
+          }
+        },
+        "scope": {
+          "type": ["string", "null"],
+          "enum": ["moi_tang", "chi_mat_tien", "theo_tung_phong", "khong_co", null]
+        },
+        "projection_over_boundary": {
+          "type": ["boolean", "null"]
+        },
+        "projection_m": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 3
+        },
+        "drying_balcony": {
+          "type": ["boolean", "null"]
+        },
+        "note": {
+          "type": ["string", "null"],
+          "maxLength": 1000
+        }
+      }
+    },
+    "systems": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "water_storage": {
+          "type": ["array", "null"],
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["be_ngam", "bon_mai", "may_bom_tang_ap"]
+          }
+        },
+        "solar_water": {
+          "type": ["boolean", "null"]
+        },
+        "aircon_outdoor": {
+          "type": ["string", "null"],
+          "enum": ["hop_ky_thuat", "ban_cong_phu", "san_thuong", "chua_quyet", null]
+        },
+        "note": {
+          "type": ["string", "null"],
+          "maxLength": 1000
+        }
+      }
+    },
+    "future": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "expansion": {
+          "type": ["string", "null"],
+          "enum": ["khong", "nang_them_tang", "xay_them_phia_sau", null]
+        },
+        "expansion_floors": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "maximum": 6
+        },
+        "phasing": {
+          "type": ["boolean", "null"]
+        }
+      }
+    },
+    "finishing_level": {
+      "type": ["string", "null"],
+      "enum": ["co_ban", "kha", "cao_cap", null]
     }
   },
   "$defs": {

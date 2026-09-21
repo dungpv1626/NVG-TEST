@@ -1,6 +1,6 @@
 {
-  "_doc": "Cấu hình biểu mẫu Đầu bài thiết kế (Lớp 1 — TK-10). ĐÂY LÀ DỮ LIỆU: logic hiện/ẩn, nhãn, thứ tự và trọng số chấm điểm đều nằm ở tệp này, KHÔNG viết cứng trong brief-panel.tsx. Đường dẫn `path` trỏ vào payload DesignBrief (contracts/design-brief.schema.json); riêng tiền tố `legacy.` trỏ vào năm cột chữ tự do của bảng design_briefs có từ TK-01. Mã trong `required_spaces` và `family[].needs` phải nằm trong kb/room_vocabulary.yaml — có kiểm thử canh.",
-  "version": "1.0.0",
+  "_doc": "Cấu hình biểu mẫu Đầu bài thiết kế (Lớp 1 — TK-10). ĐÂY LÀ DỮ LIỆU: logic hiện/ẩn, nhãn, thứ tự và trọng số chấm điểm đều nằm ở tệp này, KHÔNG viết cứng trong brief-panel.tsx. Đường dẫn `path` trỏ vào payload DesignBrief (contracts/design-brief.schema.json); riêng tiền tố `legacy.` trỏ vào năm cột chữ tự do của bảng design_briefs có từ TK-01. Mã trong `required_spaces` và `family[].needs` phải nằm trong kb/room_vocabulary.yaml — có kiểm thử canh. ── Đợt 21/09/2026 (khảo sát chi tiết): thêm sáu mục — Gia chủ và tín ngưỡng, Nếp sinh hoạt, Lưu trữ, Thang và lối vào, Ban công, Kỹ thuật và dự trù — cùng tám trường khu đất và ô tuổi trong Thành viên gia đình. Trọng số của gần hết các trường mới là 0 CÓ CHỦ Ý: `completeness_score` là cổng chặn Lớp 2, nên nó chỉ được đo những thứ THIẾU THÌ KHÔNG DỰNG NỔI mặt bằng. Mười một trường mới mang trọng số 1 là những trường đổi hẳn bố cục (thang máy, bậc tam cấp, tín ngưỡng, kinh doanh tại nhà, nếp nấu ăn, người đi lại khó khăn, lưu trữ, ban công, mặt nắng, mặt gió, mức hoàn thiện). Cộng lại tổng trọng số nhà phố lên 50 — một đầu bài trả lời hết phần cũ vẫn đạt 0,78, trên ngưỡng 0,7, nên đợt này KHÔNG chặn hồ sơ nào đang chạy. Quản trị viên đổi được trọng số ở màn hình «Biểu mẫu đầu bài» mà không cần sửa tệp này.",
+  "version": "1.1.0",
   "consistency": {},
   "sections": [
     {
@@ -327,6 +327,29 @@
           "hint": "Không dùng để tính toán — dùng để đối chiếu với diện tích suy ra từ số đo. Lệch quá 5% thì hệ thống hỏi lại."
         },
         {
+          "path": "site.road_level_m",
+          "label": "Cao độ tim đường",
+          "control": "number",
+          "weight": 0,
+          "optional": true,
+          "unit": "m",
+          "hint": "Đọc theo mốc chuẩn mà người đo đã chọn. Chỉ cần đúng khi ô «Cao độ khu đất» bên dưới đo theo CÙNG mốc — phần mềm chỉ dùng chênh lệch giữa hai số.",
+          "min": -10,
+          "max": 200,
+          "note": "Cặp cao độ đường và cao độ đất là yêu cầu của Haan 21/09/2026: đây là số quyết cốt nền, bậc tam cấp và hướng thoát nước."
+        },
+        {
+          "path": "site.land_level_m",
+          "label": "Cao độ khu đất",
+          "control": "number",
+          "weight": 0,
+          "optional": true,
+          "unit": "m",
+          "hint": "Cao độ mặt đất tự nhiên của thửa, cùng mốc với cao độ đường. Đất thấp hơn đường thì phải tôn nền và tính lại thoát nước.",
+          "min": -10,
+          "max": 200
+        },
+        {
           "path": "site.orientation",
           "label": "Hướng nhà",
           "control": "choice",
@@ -368,6 +391,58 @@
           ]
         },
         {
+          "path": "site.harsh_sun_sides",
+          "label": "Mặt chịu nắng gắt",
+          "control": "multi",
+          "weight": 1,
+          "optional": true,
+          "hint": "Mặt nào bị nắng chiều chiếu thẳng, kéo dài. Chọn theo thực địa chứ không suy từ hướng la bàn: nhà hàng xóm cao tầng có thể che hẳn mặt tây.",
+          "options": [
+            {
+              "value": "front",
+              "label": "Mặt trước"
+            },
+            {
+              "value": "back",
+              "label": "Mặt sau"
+            },
+            {
+              "value": "left",
+              "label": "Bên trái"
+            },
+            {
+              "value": "right",
+              "label": "Bên phải"
+            }
+          ]
+        },
+        {
+          "path": "site.cool_wind_sides",
+          "label": "Mặt đón gió mát",
+          "control": "multi",
+          "weight": 1,
+          "optional": true,
+          "hint": "Mặt đón gió mát chủ đạo. Quyết hướng mở cửa sổ, chỗ đặt giếng trời và sân trong.",
+          "options": [
+            {
+              "value": "front",
+              "label": "Mặt trước"
+            },
+            {
+              "value": "back",
+              "label": "Mặt sau"
+            },
+            {
+              "value": "left",
+              "label": "Bên trái"
+            },
+            {
+              "value": "right",
+              "label": "Bên phải"
+            }
+          ]
+        },
+        {
           "path": "site.access_sides",
           "label": "Mặt tiếp cận được",
           "control": "multi",
@@ -391,6 +466,17 @@
               "label": "Bên phải"
             }
           ]
+        },
+        {
+          "path": "site.road_width_m",
+          "label": "Bề rộng đường trước nhà",
+          "control": "number",
+          "weight": 0,
+          "optional": true,
+          "unit": "m",
+          "hint": "Đo lòng đường hoặc hẻm trước nhà. Quyết ô tô có vào tới cửa không, xe bê tông có vào được không, và ở nhiều địa phương còn quyết số tầng được phép.",
+          "min": 0,
+          "max": 60
         },
         {
           "path": "site.main_entrance_side",
@@ -477,6 +563,15 @@
           ]
         },
         {
+          "path": "site.neighbour_floors",
+          "label": "Số tầng nhà liền kề",
+          "control": "sides",
+          "weight": 0,
+          "optional": true,
+          "unit": "tầng",
+          "hint": "Nhà bên cao hơn nhiều thì mặt đó coi như mất nắng và mất gió cả năm. Để trống ở mặt không có nhà."
+        },
+        {
           "path": "site.boundary_walls",
           "label": "Tường giáp nhà hàng xóm",
           "control": "sides",
@@ -545,6 +640,56 @@
           ]
         },
         {
+          "path": "site.flood_risk",
+          "label": "Nguy cơ ngập",
+          "control": "choice",
+          "weight": 0,
+          "optional": true,
+          "hint": "Có ngập thì cốt nền, chỗ để xe và ổ cắm điện tầng trệt đều phải tính lại.",
+          "options": [
+            {
+              "value": "khong",
+              "label": "Không ngập"
+            },
+            {
+              "value": "thinh_thoang",
+              "label": "Thỉnh thoảng",
+              "note": "Vài lần một năm"
+            },
+            {
+              "value": "thuong_xuyen",
+              "label": "Thường xuyên",
+              "note": "Mỗi mùa mưa"
+            }
+          ]
+        },
+        {
+          "path": "site.existing_structure",
+          "label": "Hiện trạng xây dựng trên đất",
+          "control": "choice",
+          "weight": 0,
+          "optional": true,
+          "hint": "Cải tạo hoặc giữ móng cũ là ràng buộc rất mạnh — lưới cột và móng không dời được, nên phải biết trước khi dựng mặt bằng.",
+          "options": [
+            {
+              "value": "dat_trong",
+              "label": "Đất trống"
+            },
+            {
+              "value": "nha_cu_pha_do",
+              "label": "Có nhà cũ, phá dỡ"
+            },
+            {
+              "value": "nha_cu_cai_tao",
+              "label": "Có nhà cũ, cải tạo"
+            },
+            {
+              "value": "mong_cu_giu_lai",
+              "label": "Giữ lại móng cũ"
+            }
+          ]
+        },
+        {
           "path": "legacy.legal_documents",
           "label": "Hồ sơ pháp lý hiện có",
           "control": "textarea",
@@ -607,6 +752,547 @@
         }
       ],
       "hint": "Ai sẽ ở, bao nhiêu người, ở tầng nào. Số phòng ngủ suy thẳng từ đây."
+    },
+    {
+      "id": "gia_chu",
+      "title": "Gia chủ, tín ngưỡng và kinh doanh tại nhà",
+      "hint": "Tín ngưỡng quyết không gian thờ; kinh doanh tại nhà quyết cả mặt bằng tầng trệt và lối vào.",
+      "fields": [
+        {
+          "path": "household.occupation",
+          "label": "Ngành nghề của gia chủ",
+          "control": "text",
+          "weight": 0,
+          "optional": true,
+          "hint": "Để biết nhịp sinh hoạt và nhu cầu không gian làm việc. Không dùng để phân loại khách.",
+          "placeholder": "Ví dụ: bác sĩ, kinh doanh vật liệu xây dựng"
+        },
+        {
+          "path": "household.religion",
+          "label": "Tín ngưỡng của gia đình",
+          "control": "choice",
+          "weight": 1,
+          "hint": "Quyết định không gian thờ: phòng thờ riêng, bàn thờ gắn tường phòng khách, hay không dành chỗ. Phần mềm chỉ dành CHỖ, không suy ra nghi lễ hay hướng đặt.",
+          "options": [
+            {
+              "value": "tho_cung_to_tien",
+              "label": "Thờ cúng tổ tiên"
+            },
+            {
+              "value": "phat_giao",
+              "label": "Phật giáo"
+            },
+            {
+              "value": "cong_giao",
+              "label": "Công giáo"
+            },
+            {
+              "value": "tin_lanh",
+              "label": "Tin lành"
+            },
+            {
+              "value": "khac",
+              "label": "Khác"
+            },
+            {
+              "value": "khong",
+              "label": "Không thờ cúng"
+            }
+          ]
+        },
+        {
+          "path": "household.altar_arrangement",
+          "label": "Nơi thờ bố trí thế nào",
+          "control": "choice",
+          "weight": 0,
+          "optional": true,
+          "hint": "«Phòng thờ riêng» sinh một phòng thật có diện tích; «chung với phòng khách» là một khu trong phòng khách.",
+          "options": [
+            {
+              "value": "phong_tho_rieng",
+              "label": "Phòng thờ riêng"
+            },
+            {
+              "value": "chung_phong_khach",
+              "label": "Chung với phòng khách"
+            },
+            {
+              "value": "tren_san_thuong",
+              "label": "Gian thờ trên tầng mái"
+            },
+            {
+              "value": "khong_co",
+              "label": "Không có nơi thờ"
+            }
+          ],
+          "when": {
+            "all": [
+              {
+                "field": "household.religion",
+                "filled": true
+              },
+              {
+                "not": {
+                  "field": "household.religion",
+                  "equals": "khong"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "path": "household.altar_floor",
+          "label": "Tầng đặt nơi thờ",
+          "control": "number",
+          "weight": 0,
+          "optional": true,
+          "unit": "tầng",
+          "hint": "Để trống là để kiến trúc sư đề xuất.",
+          "min": 1,
+          "max": 12,
+          "when": {
+            "field": "household.altar_arrangement",
+            "in": ["phong_tho_rieng", "tren_san_thuong"]
+          }
+        },
+        {
+          "path": "household.feng_shui",
+          "label": "Gia đình có xem phong thuỷ không",
+          "control": "choice",
+          "weight": 0,
+          "optional": true,
+          "hint": "Phần mềm không tự luận phong thuỷ. Mọi ràng buộc phải do người quyết và ghi vào ô bên dưới.",
+          "options": [
+            {
+              "value": "khong_xem",
+              "label": "Không xem"
+            },
+            {
+              "value": "co_xem",
+              "label": "Có xem"
+            },
+            {
+              "value": "co_thay_rieng",
+              "label": "Đã có thầy riêng",
+              "note": "Sẽ đưa yêu cầu cụ thể"
+            }
+          ]
+        },
+        {
+          "path": "household.feng_shui_notes",
+          "label": "Yêu cầu phong thuỷ cụ thể",
+          "control": "textarea",
+          "weight": 0,
+          "optional": true,
+          "hint": "Ghi thành câu ràng buộc dùng được. Viết chung chung thì không ràng buộc được gì.",
+          "placeholder": "Ví dụ: cửa chính không đối cửa sau; bếp không nhìn thẳng cửa chính; hướng tốt Đông Nam",
+          "when": {
+            "field": "household.feng_shui",
+            "in": ["co_xem", "co_thay_rieng"]
+          }
+        },
+        {
+          "path": "household.taboos",
+          "label": "Điều kiêng kỵ khác",
+          "control": "textarea",
+          "weight": 0,
+          "optional": true,
+          "hint": "Tách khỏi phong thuỷ vì nhiều gia đình có kiêng kỵ mà không xem phong thuỷ.",
+          "placeholder": "Ví dụ: khu vệ sinh không nằm trên bàn thờ; không phòng nào mở cửa thẳng ra cầu thang"
+        },
+        {
+          "path": "household.home_business.mode",
+          "label": "Có kết hợp kinh doanh tại nhà không",
+          "control": "choice",
+          "weight": 1,
+          "hint": "Nhà ở có cửa hàng không phải nhà ở thêm một phòng — đó là hai luồng người phải tách nhau.",
+          "options": [
+            {
+              "value": "khong",
+              "label": "Không, thuần ở"
+            },
+            {
+              "value": "van_phong_tai_nha",
+              "label": "Văn phòng tại nhà"
+            },
+            {
+              "value": "cua_hang_mat_tien",
+              "label": "Cửa hàng mặt tiền"
+            },
+            {
+              "value": "kho_hang",
+              "label": "Kho hàng"
+            },
+            {
+              "value": "luu_tru_cho_thue",
+              "label": "Lưu trú, cho thuê"
+            },
+            {
+              "value": "san_xuat_nho",
+              "label": "Sản xuất nhỏ"
+            }
+          ]
+        },
+        {
+          "path": "household.home_business.floor_count",
+          "label": "Số tầng dành cho kinh doanh",
+          "control": "number",
+          "weight": 0,
+          "optional": true,
+          "unit": "tầng",
+          "hint": "Tính từ tầng 1 lên.",
+          "min": 1,
+          "max": 12,
+          "when": {
+            "all": [
+              {
+                "field": "household.home_business.mode",
+                "filled": true
+              },
+              {
+                "not": {
+                  "field": "household.home_business.mode",
+                  "equals": "khong"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "path": "household.home_business.separate_entrance",
+          "label": "Lối vào riêng cho khách",
+          "control": "tristate",
+          "weight": 0,
+          "optional": true,
+          "hint": "Câu hỏi quyết định nhất của nhóm này: có thì mặt tiền phải chừa hai cửa và luồng đi trong nhà chia đôi.",
+          "options": [
+            {
+              "value": "true",
+              "label": "Có"
+            },
+            {
+              "value": "false",
+              "label": "Không"
+            }
+          ],
+          "when": {
+            "all": [
+              {
+                "field": "household.home_business.mode",
+                "filled": true
+              },
+              {
+                "not": {
+                  "field": "household.home_business.mode",
+                  "equals": "khong"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "path": "household.home_business.customer_wc",
+          "label": "Khu vệ sinh riêng cho khách",
+          "control": "tristate",
+          "weight": 0,
+          "optional": true,
+          "options": [
+            {
+              "value": "true",
+              "label": "Có"
+            },
+            {
+              "value": "false",
+              "label": "Không"
+            }
+          ],
+          "when": {
+            "all": [
+              {
+                "field": "household.home_business.mode",
+                "filled": true
+              },
+              {
+                "not": {
+                  "field": "household.home_business.mode",
+                  "equals": "khong"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "path": "household.home_business.staff_count",
+          "label": "Số người làm việc tại nhà",
+          "control": "number",
+          "weight": 0,
+          "optional": true,
+          "unit": "người",
+          "hint": "Kể cả gia chủ.",
+          "min": 0,
+          "max": 50,
+          "when": {
+            "all": [
+              {
+                "field": "household.home_business.mode",
+                "filled": true
+              },
+              {
+                "not": {
+                  "field": "household.home_business.mode",
+                  "equals": "khong"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "path": "household.home_business.note",
+          "label": "Ghi chú về hoạt động kinh doanh",
+          "control": "textarea",
+          "weight": 0,
+          "optional": true,
+          "placeholder": "Mặt hàng, giờ mở cửa, xe giao hàng, tiếng ồn, mùi",
+          "when": {
+            "all": [
+              {
+                "field": "household.home_business.mode",
+                "filled": true
+              },
+              {
+                "not": {
+                  "field": "household.home_business.mode",
+                  "equals": "khong"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sinh_hoat",
+      "title": "Nếp sinh hoạt",
+      "hint": "Phần trả lời câu «nhà này được dùng thế nào» — thứ mà số phòng không nói ra.",
+      "fields": [
+        {
+          "path": "lifestyle.cooking",
+          "label": "Nếp nấu ăn",
+          "control": "choice",
+          "weight": 1,
+          "hint": "Bếp Việt chiên xào nhiều mùi thì không nên mở thông phòng khách, dù phong cách đang chuộng.",
+          "options": [
+            {
+              "value": "nau_nhieu_chien_xao",
+              "label": "Nấu nhiều, chiên xào",
+              "note": "Bếp phải kín hoặc có bếp phụ"
+            },
+            {
+              "value": "nau_hang_ngay_don_gian",
+              "label": "Nấu hằng ngày, đơn giản"
+            },
+            {
+              "value": "it_nau",
+              "label": "Ít nấu",
+              "note": "Bếp mở là hợp lý"
+            }
+          ]
+        },
+        {
+          "path": "lifestyle.second_kitchen",
+          "label": "Cần bếp phụ tách riêng",
+          "control": "tristate",
+          "weight": 0,
+          "optional": true,
+          "hint": "Bếp Việt tách khỏi bếp đẹp.",
+          "options": [
+            {
+              "value": "true",
+              "label": "Có"
+            },
+            {
+              "value": "false",
+              "label": "Không"
+            }
+          ]
+        },
+        {
+          "path": "lifestyle.dining_place",
+          "label": "Cả nhà ăn ở đâu",
+          "control": "choice",
+          "weight": 0,
+          "optional": true,
+          "hint": "Quyết phòng ăn có là một phòng thật hay chỉ là quầy kề bếp.",
+          "options": [
+            {
+              "value": "ban_an_rieng",
+              "label": "Bàn ăn riêng"
+            },
+            {
+              "value": "quay_bep",
+              "label": "Quầy kề bếp"
+            },
+            {
+              "value": "linh_hoat",
+              "label": "Linh hoạt"
+            }
+          ]
+        },
+        {
+          "path": "lifestyle.guests",
+          "label": "Tần suất tiếp khách",
+          "control": "choice",
+          "weight": 0,
+          "optional": true,
+          "hint": "Tiếp khách thường xuyên kéo theo phòng khách rộng hơn và một khu vệ sinh khách ở tầng trệt.",
+          "options": [
+            {
+              "value": "thuong_xuyen",
+              "label": "Thường xuyên"
+            },
+            {
+              "value": "thinh_thoang",
+              "label": "Thỉnh thoảng"
+            },
+            {
+              "value": "it",
+              "label": "Ít"
+            }
+          ]
+        },
+        {
+          "path": "lifestyle.overnight_guests",
+          "label": "Có khách ở lại qua đêm",
+          "control": "tristate",
+          "weight": 0,
+          "optional": true,
+          "hint": "Có thì cần một phòng ngủ khách thật, không phải sofa phòng khách.",
+          "options": [
+            {
+              "value": "true",
+              "label": "Có"
+            },
+            {
+              "value": "false",
+              "label": "Không"
+            }
+          ]
+        },
+        {
+          "path": "lifestyle.work_from_home",
+          "label": "Có người làm việc tại nhà",
+          "control": "tristate",
+          "weight": 0,
+          "optional": true,
+          "hint": "Kéo theo phòng làm việc yên tĩnh, tách khỏi khu sinh hoạt chung.",
+          "options": [
+            {
+              "value": "true",
+              "label": "Có"
+            },
+            {
+              "value": "false",
+              "label": "Không"
+            }
+          ]
+        },
+        {
+          "path": "lifestyle.night_shift",
+          "label": "Có người làm ca đêm, ngủ ban ngày",
+          "control": "tristate",
+          "weight": 0,
+          "optional": true,
+          "hint": "Phòng ngủ phải tránh mặt ồn và tránh nằm cạnh bếp hay phòng khách.",
+          "options": [
+            {
+              "value": "true",
+              "label": "Có"
+            },
+            {
+              "value": "false",
+              "label": "Không"
+            }
+          ]
+        },
+        {
+          "path": "lifestyle.reduced_mobility",
+          "label": "Có người đi lại khó khăn",
+          "control": "tristate",
+          "weight": 1,
+          "hint": "Người dùng gậy hoặc xe lăn. Trả lời «Có» là ràng buộc cứng: một phòng ngủ và một khu vệ sinh ở tầng trệt, hạn chế bậc, cửa và hành lang đủ rộng.",
+          "options": [
+            {
+              "value": "true",
+              "label": "Có"
+            },
+            {
+              "value": "false",
+              "label": "Không"
+            }
+          ]
+        },
+        {
+          "path": "lifestyle.drying",
+          "label": "Cách phơi đồ",
+          "control": "choice",
+          "weight": 0,
+          "optional": true,
+          "hint": "Phơi nắng đòi một sân hoặc ban công có nắng thật và kín đáo với hàng xóm — chỗ này bị bỏ quên thì quần áo cuối cùng phơi ở mặt tiền.",
+          "options": [
+            {
+              "value": "phoi_nang_ngoai_troi",
+              "label": "Phơi nắng ngoài trời"
+            },
+            {
+              "value": "may_say_trong_nha",
+              "label": "Máy sấy trong nhà"
+            },
+            {
+              "value": "ca_hai",
+              "label": "Cả hai"
+            }
+          ]
+        },
+        {
+          "path": "lifestyle.pets",
+          "label": "Thú nuôi trong nhà",
+          "control": "choice",
+          "weight": 0,
+          "optional": true,
+          "hint": "Kéo theo chỗ tắm và chỗ ở cho thú, cửa sân, và vật liệu sàn.",
+          "options": [
+            {
+              "value": "khong",
+              "label": "Không"
+            },
+            {
+              "value": "cho",
+              "label": "Chó"
+            },
+            {
+              "value": "meo",
+              "label": "Mèo"
+            },
+            {
+              "value": "cho_va_meo",
+              "label": "Chó và mèo"
+            },
+            {
+              "value": "khac",
+              "label": "Khác"
+            }
+          ]
+        },
+        {
+          "path": "lifestyle.daily_rhythm",
+          "label": "Nếp sinh hoạt hằng ngày",
+          "control": "textarea",
+          "weight": 0,
+          "optional": true,
+          "hint": "Ô này đi nguyên văn tới mô hình, không tóm tắt. Viết càng cụ thể thì phương án càng sát nếp nhà.",
+          "placeholder": "Giờ giấc, ai dậy sớm, buổi tối cả nhà quây quần ở đâu, cuối tuần dùng nhà thế nào"
+        }
+      ]
     },
     {
       "id": "khong_gian",
@@ -732,6 +1418,54 @@
           "hint": "Gồm xe máy, xe máy điện, xe đạp điện."
         },
         {
+          "path": "parking.car_size",
+          "label": "Cỡ ô tô lớn nhất",
+          "control": "choice",
+          "weight": 0,
+          "optional": true,
+          "hint": "Chỗ đỗ cho xe gầm thấp và cho xe bán tải chênh nhau gần một mét chiều dài và cả chiều cao cửa.",
+          "options": [
+            {
+              "value": "gam_thap",
+              "label": "Xe gầm thấp"
+            },
+            {
+              "value": "gam_cao",
+              "label": "Xe gầm cao"
+            },
+            {
+              "value": "xe_7_cho",
+              "label": "Xe 7 chỗ"
+            },
+            {
+              "value": "ban_tai",
+              "label": "Xe bán tải"
+            }
+          ],
+          "when": {
+            "field": "parking.cars",
+            "filled": true
+          }
+        },
+        {
+          "path": "parking.ev_charging",
+          "label": "Sạc xe điện trong nhà",
+          "control": "tristate",
+          "weight": 0,
+          "optional": true,
+          "hint": "Có thì cần một tuyến điện riêng và một vị trí ổ sạc cố định ở chỗ để xe.",
+          "options": [
+            {
+              "value": "true",
+              "label": "Có"
+            },
+            {
+              "value": "false",
+              "label": "Không"
+            }
+          ]
+        },
+        {
           "path": "style",
           "label": "Phong cách kiến trúc",
           "control": "choice",
@@ -791,6 +1525,439 @@
           "control": "textarea",
           "weight": 0,
           "hint": "Vật liệu, màu sắc, công trình tham chiếu khách đưa."
+        }
+      ]
+    },
+    {
+      "id": "luu_tru",
+      "title": "Nhu cầu lưu trữ",
+      "hint": "Phần lớn chỗ cất không phải một phòng — là tủ âm, gầm thang, hốc tường — nhưng vẫn phải được tính diện tích từ đầu.",
+      "fields": [
+        {
+          "path": "storage.level",
+          "label": "Lượng đồ cần cất giữ",
+          "control": "choice",
+          "weight": 1,
+          "hint": "«Nhiều» nghĩa là chỗ chứa phải được tính như một không gian thật, không phải phần còn thừa sau khi xếp xong các phòng.",
+          "options": [
+            {
+              "value": "it",
+              "label": "Ít"
+            },
+            {
+              "value": "vua",
+              "label": "Vừa"
+            },
+            {
+              "value": "nhieu",
+              "label": "Nhiều"
+            }
+          ]
+        },
+        {
+          "path": "storage.items",
+          "label": "Những thứ cần chỗ cất",
+          "control": "multi",
+          "weight": 0,
+          "optional": true,
+          "hint": "Khai ra từng loại thì chỗ chứa đặt đúng chỗ: đồ theo mùa cất trên cao, thực phẩm kề bếp, dụng cụ kề chỗ để xe.",
+          "options": [
+            {
+              "value": "kho_chung",
+              "label": "Kho chung"
+            },
+            {
+              "value": "kho_thuc_pham",
+              "label": "Kho thực phẩm"
+            },
+            {
+              "value": "tu_am_tuong",
+              "label": "Tủ âm tường"
+            },
+            {
+              "value": "do_theo_mua",
+              "label": "Đồ theo mùa"
+            },
+            {
+              "value": "hanh_ly",
+              "label": "Hành lý, vali"
+            },
+            {
+              "value": "tai_lieu",
+              "label": "Tài liệu, sách"
+            },
+            {
+              "value": "dung_cu_sua_chua",
+              "label": "Dụng cụ sửa chữa"
+            },
+            {
+              "value": "do_the_thao",
+              "label": "Đồ thể thao"
+            },
+            {
+              "value": "ham_ruou",
+              "label": "Hầm rượu"
+            },
+            {
+              "value": "do_tho_cung",
+              "label": "Đồ thờ cúng"
+            }
+          ]
+        },
+        {
+          "path": "storage.note",
+          "label": "Ghi chú thêm về lưu trữ",
+          "control": "textarea",
+          "weight": 0,
+          "optional": true,
+          "placeholder": "Món đồ khổ lớn, bộ sưu tập, hàng hoá kinh doanh"
+        }
+      ]
+    },
+    {
+      "id": "giao_thong_dung",
+      "title": "Thang, lối vào và cao độ nền",
+      "hint": "Nhóm câu hỏi nhỏ nhưng bỏ sót thì sai từ mặt cắt đến mặt đứng.",
+      "fields": [
+        {
+          "path": "vertical.elevator",
+          "label": "Thang máy",
+          "control": "choice",
+          "weight": 1,
+          "hint": "«Chừa chỗ làm sau» không phải là «không làm»: ô thang, móng, hố PIT và lỗ sàn phải chừa ngay lúc này, bỏ qua thì sau không lắp được.",
+          "options": [
+            {
+              "value": "khong",
+              "label": "Không làm"
+            },
+            {
+              "value": "lam_ngay",
+              "label": "Làm ngay"
+            },
+            {
+              "value": "chua_cho",
+              "label": "Chừa chỗ làm sau",
+              "note": "Vẫn chiếm ô thang, móng và hố PIT phải chừa ngay"
+            }
+          ]
+        },
+        {
+          "path": "vertical.elevator_capacity",
+          "label": "Tải trọng thang máy",
+          "control": "choice",
+          "weight": 0,
+          "optional": true,
+          "hint": "Quyết kích thước hố thang.",
+          "options": [
+            {
+              "value": "nho_350kg",
+              "label": "350 kg"
+            },
+            {
+              "value": "vua_450kg",
+              "label": "450 kg"
+            },
+            {
+              "value": "lon_630kg",
+              "label": "630 kg"
+            }
+          ],
+          "when": {
+            "field": "vertical.elevator",
+            "in": ["lam_ngay", "chua_cho"]
+          }
+        },
+        {
+          "path": "vertical.elevator_position",
+          "label": "Thang máy đặt ở đâu",
+          "control": "choice",
+          "weight": 0,
+          "optional": true,
+          "hint": "Đặt cạnh thang bộ thì gọn lõi và rẻ hệ thống; tách riêng thì tiện cho người già ở phòng xa thang bộ.",
+          "options": [
+            {
+              "value": "canh_thang_bo",
+              "label": "Cạnh thang bộ"
+            },
+            {
+              "value": "rieng_biet",
+              "label": "Tách riêng"
+            },
+            {
+              "value": "chua_quyet",
+              "label": "Chưa quyết"
+            }
+          ],
+          "when": {
+            "field": "vertical.elevator",
+            "in": ["lam_ngay", "chua_cho"]
+          }
+        },
+        {
+          "path": "vertical.stair_type",
+          "label": "Kiểu thang bộ",
+          "control": "choice",
+          "weight": 0,
+          "optional": true,
+          "hint": "Lựa chọn của gia chủ, không phải của phần mềm — và nó đổi hẳn cách tổ chức khu giữa nhà.",
+          "options": [
+            {
+              "value": "thang_ho",
+              "label": "Thang hở",
+              "note": "Thông tầng, lấy sáng"
+            },
+            {
+              "value": "thang_kin",
+              "label": "Thang kín",
+              "note": "Giữ điều hoà, kín tiếng"
+            },
+            {
+              "value": "chua_quyet",
+              "label": "Chưa quyết"
+            }
+          ]
+        },
+        {
+          "path": "entrance.floor_above_road_m",
+          "label": "Cốt nền tầng 1 cao hơn tim đường",
+          "control": "number",
+          "weight": 0,
+          "optional": true,
+          "unit": "m",
+          "hint": "Số này quyết số bậc tam cấp, độ dốc dắt xe và việc nước mưa chảy vào nhà hay chảy ra đường.",
+          "min": 0,
+          "max": 3
+        },
+        {
+          "path": "entrance.steps_from_yard",
+          "label": "Có bậc tam cấp từ sân lên nhà",
+          "control": "tristate",
+          "weight": 1,
+          "hint": "«Không» nghĩa là sân và nền nhà cùng cao độ, hoặc nối bằng dốc thoải — cách duy nhất cho xe lăn và xe máy đi thẳng vào.",
+          "options": [
+            {
+              "value": "true",
+              "label": "Có"
+            },
+            {
+              "value": "false",
+              "label": "Không"
+            }
+          ]
+        },
+        {
+          "path": "entrance.step_count",
+          "label": "Số bậc tam cấp",
+          "control": "number",
+          "weight": 0,
+          "optional": true,
+          "unit": "bậc",
+          "hint": "Chỉ điền khi gia chủ muốn một con số cụ thể. Để trống thì suy từ chênh cao.",
+          "min": 1,
+          "max": 8,
+          "when": {
+            "field": "entrance.steps_from_yard",
+            "equals": true
+          }
+        },
+        {
+          "path": "entrance.vehicle_ramp",
+          "label": "Có dốc dắt xe lên sân",
+          "control": "tristate",
+          "weight": 0,
+          "optional": true,
+          "hint": "Dốc ăn chiều dài sân: chênh cao 0,45 m cần khoảng 2,5–3 m dốc.",
+          "options": [
+            {
+              "value": "true",
+              "label": "Có"
+            },
+            {
+              "value": "false",
+              "label": "Không"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ban_cong",
+      "title": "Ban công",
+      "fields": [
+        {
+          "path": "balconies.scope",
+          "label": "Ban công làm tới đâu",
+          "control": "choice",
+          "weight": 1,
+          "hint": "Ban công là thuộc tính của mặt nhà theo tầng, không phải một phòng — nên khai ở đây chứ không ở danh sách không gian.",
+          "options": [
+            {
+              "value": "moi_tang",
+              "label": "Mọi tầng trên"
+            },
+            {
+              "value": "chi_mat_tien",
+              "label": "Chỉ mặt tiền"
+            },
+            {
+              "value": "theo_tung_phong",
+              "label": "Theo từng phòng chỉ định"
+            },
+            {
+              "value": "khong_co",
+              "label": "Không làm ban công"
+            }
+          ]
+        },
+        {
+          "path": "balconies.sides",
+          "label": "Ban công đặt ở mặt nào",
+          "control": "multi",
+          "weight": 0,
+          "optional": true,
+          "options": [
+            {
+              "value": "front",
+              "label": "Mặt trước"
+            },
+            {
+              "value": "back",
+              "label": "Mặt sau"
+            },
+            {
+              "value": "left",
+              "label": "Bên trái"
+            },
+            {
+              "value": "right",
+              "label": "Bên phải"
+            }
+          ],
+          "when": {
+            "all": [
+              {
+                "field": "balconies.scope",
+                "filled": true
+              },
+              {
+                "not": {
+                  "field": "balconies.scope",
+                  "equals": "khong_co"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "path": "balconies.projection_over_boundary",
+          "label": "Ban công đua ra ngoài ranh đất",
+          "control": "tristate",
+          "weight": 0,
+          "optional": true,
+          "hint": "Câu hỏi pháp lý trước khi là câu hỏi hình khối: nhiều địa phương chỉ cho đua khi đường đủ rộng và chỉ tới một độ vươn nhất định. Trả lời «Không» thì ban công nằm trọn trong phần đất xây được.",
+          "options": [
+            {
+              "value": "true",
+              "label": "Có"
+            },
+            {
+              "value": "false",
+              "label": "Không"
+            }
+          ],
+          "when": {
+            "all": [
+              {
+                "field": "balconies.scope",
+                "filled": true
+              },
+              {
+                "not": {
+                  "field": "balconies.scope",
+                  "equals": "khong_co"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "path": "balconies.projection_m",
+          "label": "Độ vươn của ban công",
+          "control": "number",
+          "weight": 0,
+          "optional": true,
+          "unit": "m",
+          "hint": "Tính từ mặt tường. Để trống thì lấy theo thông lệ của phương án.",
+          "min": 0,
+          "max": 3,
+          "when": {
+            "all": [
+              {
+                "field": "balconies.scope",
+                "filled": true
+              },
+              {
+                "not": {
+                  "field": "balconies.scope",
+                  "equals": "khong_co"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "path": "balconies.drying_balcony",
+          "label": "Có ban công phơi riêng phía sau",
+          "control": "tristate",
+          "weight": 0,
+          "optional": true,
+          "hint": "Tách chỗ phơi khỏi ban công mặt tiền.",
+          "options": [
+            {
+              "value": "true",
+              "label": "Có"
+            },
+            {
+              "value": "false",
+              "label": "Không"
+            }
+          ],
+          "when": {
+            "all": [
+              {
+                "field": "balconies.scope",
+                "filled": true
+              },
+              {
+                "not": {
+                  "field": "balconies.scope",
+                  "equals": "khong_co"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "path": "balconies.note",
+          "label": "Ghi chú thêm về ban công",
+          "control": "textarea",
+          "weight": 0,
+          "optional": true,
+          "placeholder": "Lan can kính hay xây, trồng cây, che mưa, làm lam",
+          "when": {
+            "all": [
+              {
+                "field": "balconies.scope",
+                "filled": true
+              },
+              {
+                "not": {
+                  "field": "balconies.scope",
+                  "equals": "khong_co"
+                }
+              }
+            ]
+          }
         }
       ]
     },
@@ -946,6 +2113,141 @@
       ]
     },
     {
+      "id": "ky_thuat",
+      "title": "Kỹ thuật và dự trù tương lai",
+      "hint": "Chỉ hỏi những thứ chiếm chỗ hoặc nhìn thấy được — phần còn lại của điện nước là việc của bộ môn, không phải của đầu bài.",
+      "fields": [
+        {
+          "path": "systems.water_storage",
+          "label": "Cách trữ nước",
+          "control": "multi",
+          "weight": 0,
+          "optional": true,
+          "hint": "Bể ngầm ăn chỗ dưới sân hoặc dưới chỗ để xe; bồn mái đổi hẳn hình mái. Cả hai phải có chỗ từ đầu.",
+          "options": [
+            {
+              "value": "be_ngam",
+              "label": "Bể ngầm"
+            },
+            {
+              "value": "bon_mai",
+              "label": "Bồn trên mái"
+            },
+            {
+              "value": "may_bom_tang_ap",
+              "label": "Máy bơm tăng áp"
+            }
+          ]
+        },
+        {
+          "path": "systems.solar_water",
+          "label": "Bình nước nóng năng lượng mặt trời",
+          "control": "tristate",
+          "weight": 0,
+          "optional": true,
+          "hint": "Tấm thu nằm ngay trên mái và nhìn thấy từ đường, nên đây là việc của mặt đứng chứ không chỉ của điện nước.",
+          "options": [
+            {
+              "value": "true",
+              "label": "Có"
+            },
+            {
+              "value": "false",
+              "label": "Không"
+            }
+          ]
+        },
+        {
+          "path": "systems.aircon_outdoor",
+          "label": "Cục nóng điều hoà đặt ở đâu",
+          "control": "choice",
+          "weight": 0,
+          "optional": true,
+          "hint": "Câu hỏi bị bỏ qua nhiều nhất và để lại hậu quả dễ thấy nhất: một dãy cục nóng treo trên mặt tiền vừa hoàn thiện.",
+          "options": [
+            {
+              "value": "hop_ky_thuat",
+              "label": "Hộp kỹ thuật"
+            },
+            {
+              "value": "ban_cong_phu",
+              "label": "Ban công phụ"
+            },
+            {
+              "value": "san_thuong",
+              "label": "Sân thượng"
+            },
+            {
+              "value": "chua_quyet",
+              "label": "Chưa quyết"
+            }
+          ]
+        },
+        {
+          "path": "systems.note",
+          "label": "Ghi chú thêm về hệ thống kỹ thuật",
+          "control": "textarea",
+          "weight": 0,
+          "optional": true,
+          "placeholder": "Điện dự phòng, điện mặt trời, lọc nước, camera, mạng"
+        },
+        {
+          "path": "future.expansion",
+          "label": "Dự trù mở rộng sau này",
+          "control": "choice",
+          "weight": 0,
+          "optional": true,
+          "hint": "Nâng thêm tầng bắt móng, cột và thang phải tính cho số tầng tương lai ngay từ bây giờ — quyết định này không lùi lại được sau khi đổ móng.",
+          "options": [
+            {
+              "value": "khong",
+              "label": "Không"
+            },
+            {
+              "value": "nang_them_tang",
+              "label": "Nâng thêm tầng"
+            },
+            {
+              "value": "xay_them_phia_sau",
+              "label": "Xây thêm phía sau"
+            }
+          ]
+        },
+        {
+          "path": "future.expansion_floors",
+          "label": "Số tầng dự kiến nâng thêm",
+          "control": "number",
+          "weight": 0,
+          "optional": true,
+          "unit": "tầng",
+          "min": 1,
+          "max": 6,
+          "when": {
+            "field": "future.expansion",
+            "equals": "nang_them_tang"
+          }
+        },
+        {
+          "path": "future.phasing",
+          "label": "Xây theo giai đoạn",
+          "control": "tristate",
+          "weight": 0,
+          "optional": true,
+          "hint": "Hoàn thiện một phần trước, phần còn lại sau.",
+          "options": [
+            {
+              "value": "true",
+              "label": "Có"
+            },
+            {
+              "value": "false",
+              "label": "Không"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "uu_tien",
       "title": "Ưu tiên, ngân sách và người quyết định",
       "hint": "Phần quyết định engine chọn phương án nào trong số các phương án hợp lệ.",
@@ -997,6 +2299,27 @@
             {
               "value": "quiet_bedrooms",
               "label": "Phòng ngủ tránh mặt đường ồn"
+            }
+          ]
+        },
+        {
+          "path": "finishing_level",
+          "label": "Mức hoàn thiện mong muốn",
+          "control": "choice",
+          "weight": 1,
+          "hint": "Cùng một khoảng ngân sách, mức hoàn thiện cao hơn nghĩa là diện tích phải nhỏ lại. Bộ soát mâu thuẫn đối chiếu ô này với khoảng ngân sách.",
+          "options": [
+            {
+              "value": "co_ban",
+              "label": "Cơ bản"
+            },
+            {
+              "value": "kha",
+              "label": "Khá"
+            },
+            {
+              "value": "cao_cap",
+              "label": "Cao cấp"
             }
           ]
         },

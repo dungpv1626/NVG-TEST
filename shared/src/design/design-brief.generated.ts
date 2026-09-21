@@ -195,6 +195,125 @@ export const designBriefSchema = z
           )
           .optional(),
         legal_docs_available: z.boolean().optional(),
+        /** **Cao độ tim đường** trước nhà, mét, đọc theo MỐC CHUẨN mà người đo đã chọn (cốt quốc gia, hay mốc tự đặt của khu dân cư). Chỉ có nghĩa khi `land_level_m` đo theo CÙNG mốc: phần mềm chỉ dùng HIỆU của hai số, không dùng trị tuyệt đối. Đường cao hơn đất là nguyên nhân số một phải tôn nền và bơm thoát nước ngược. */
+        road_level_m: z
+          .number()
+          .gte(-10)
+          .lte(200)
+          .nullable()
+          .describe(
+            '**Cao độ tim đường** trước nhà, mét, đọc theo MỐC CHUẨN mà người đo đã chọn (cốt quốc gia, hay mốc tự đặt của khu dân cư). Chỉ có nghĩa khi `land_level_m` đo theo CÙNG mốc: phần mềm chỉ dùng HIỆU của hai số, không dùng trị tuyệt đối. Đường cao hơn đất là nguyên nhân số một phải tôn nền và bơm thoát nước ngược.',
+          )
+          .optional(),
+        /** **Cao độ mặt đất tự nhiên của thửa**, mét, cùng mốc với `road_level_m`. Hiệu `land_level_m - road_level_m` quyết cốt nền tầng 1, số bậc tam cấp, dốc dắt xe và hướng thoát nước — xem `entrance`. */
+        land_level_m: z
+          .number()
+          .gte(-10)
+          .lte(200)
+          .nullable()
+          .describe(
+            '**Cao độ mặt đất tự nhiên của thửa**, mét, cùng mốc với `road_level_m`. Hiệu `land_level_m - road_level_m` quyết cốt nền tầng 1, số bậc tam cấp, dốc dắt xe và hướng thoát nước — xem `entrance`.',
+          )
+          .optional(),
+        /** **Mặt chịu nắng gắt** (nắng chiều tây, nắng trực xạ kéo dài) — theo bốn mặt của thửa, không theo la bàn. Hướng la bàn đã có ở `orientation`; cái phần mềm cần biết để đặt phòng, che nắng và chọn lam là nắng đập vào MẶT NÀO của lô. Hai thứ không luôn suy ra nhau: nhà hàng xóm cao tầng có thể che hẳn mặt tây. */
+        harsh_sun_sides: z
+          .array(z.enum(['front', 'back', 'left', 'right']))
+          .nullable()
+          .describe(
+            '**Mặt chịu nắng gắt** (nắng chiều tây, nắng trực xạ kéo dài) — theo bốn mặt của thửa, không theo la bàn. Hướng la bàn đã có ở `orientation`; cái phần mềm cần biết để đặt phòng, che nắng và chọn lam là nắng đập vào MẶT NÀO của lô. Hai thứ không luôn suy ra nhau: nhà hàng xóm cao tầng có thể che hẳn mặt tây.',
+          )
+          .optional(),
+        /** **Mặt đón gió mát chủ đạo** — theo bốn mặt của thửa. Quyết hướng mở cửa sổ, vị trí giếng trời và chỗ đặt sân trong. Gió nóng tây nam hay gió lùa từ hẻm hẹp KHÔNG khai ở đây; ghi vào ghi chú hiện trạng. */
+        cool_wind_sides: z
+          .array(z.enum(['front', 'back', 'left', 'right']))
+          .nullable()
+          .describe(
+            '**Mặt đón gió mát chủ đạo** — theo bốn mặt của thửa. Quyết hướng mở cửa sổ, vị trí giếng trời và chỗ đặt sân trong. Gió nóng tây nam hay gió lùa từ hẻm hẹp KHÔNG khai ở đây; ghi vào ghi chú hiện trạng.',
+          )
+          .optional(),
+        /** **Bề rộng đường hoặc hẻm trước nhà**, mét. Quyết ba thứ rất thực tế: ô tô có vào tới cửa được không, xe bê tông và xe cẩu có vào được không, và nhiều địa phương lấy bề rộng đường làm căn cứ cho chiều cao và số tầng được phép. */
+        road_width_m: z
+          .number()
+          .gte(0)
+          .lte(60)
+          .nullable()
+          .describe(
+            '**Bề rộng đường hoặc hẻm trước nhà**, mét. Quyết ba thứ rất thực tế: ô tô có vào tới cửa được không, xe bê tông và xe cẩu có vào được không, và nhiều địa phương lấy bề rộng đường làm căn cứ cho chiều cao và số tầng được phép.',
+          )
+          .optional(),
+        /** Khu đất có bị ngập khi mưa lớn hoặc triều cường không. `thinh_thoang` = vài lần một năm; `thuong_xuyen` = mỗi mùa mưa. Có ngập thì cốt nền, chỗ để xe, ổ cắm điện tầng trệt và hướng thoát nước đều phải tính lại — đây là thứ hỏi lúc khảo sát thì rẻ, phát hiện lúc thi công thì đắt. */
+        flood_risk: z
+          .union([
+            z.literal('khong'),
+            z.literal('thinh_thoang'),
+            z.literal('thuong_xuyen'),
+            z.literal(null),
+          ])
+          .nullable()
+          .describe(
+            'Khu đất có bị ngập khi mưa lớn hoặc triều cường không. `thinh_thoang` = vài lần một năm; `thuong_xuyen` = mỗi mùa mưa. Có ngập thì cốt nền, chỗ để xe, ổ cắm điện tầng trệt và hướng thoát nước đều phải tính lại — đây là thứ hỏi lúc khảo sát thì rẻ, phát hiện lúc thi công thì đắt.',
+          )
+          .optional(),
+        /** Hiện trạng xây dựng trên thửa. `nha_cu_cai_tao` và `mong_cu_giu_lai` ràng buộc phương án rất mạnh — lưới cột và móng cũ không dời được — nên phải biết TRƯỚC khi dựng mặt bằng, không phải sau. */
+        existing_structure: z
+          .union([
+            z.literal('dat_trong'),
+            z.literal('nha_cu_pha_do'),
+            z.literal('nha_cu_cai_tao'),
+            z.literal('mong_cu_giu_lai'),
+            z.literal(null),
+          ])
+          .nullable()
+          .describe(
+            'Hiện trạng xây dựng trên thửa. `nha_cu_cai_tao` và `mong_cu_giu_lai` ràng buộc phương án rất mạnh — lưới cột và móng cũ không dời được — nên phải biết TRƯỚC khi dựng mặt bằng, không phải sau.',
+          )
+          .optional(),
+        /** Số tầng của công trình liền kề từng mặt. Nhà bên cao hơn nhiều thì mặt đó coi như mất nắng và mất gió cả năm — ảnh hưởng chỗ đặt giếng trời, sân trong và phòng ngủ mạnh hơn cả hướng la bàn. */
+        neighbour_floors: z
+          .object({
+            /** Số tầng nhà liền kề mặt front. 0 = đất trống. */
+            front: z
+              .number()
+              .int()
+              .gte(0)
+              .lte(30)
+              .nullable()
+              .describe('Số tầng nhà liền kề mặt front. 0 = đất trống.')
+              .optional(),
+            /** Số tầng nhà liền kề mặt back. 0 = đất trống. */
+            back: z
+              .number()
+              .int()
+              .gte(0)
+              .lte(30)
+              .nullable()
+              .describe('Số tầng nhà liền kề mặt back. 0 = đất trống.')
+              .optional(),
+            /** Số tầng nhà liền kề mặt left. 0 = đất trống. */
+            left: z
+              .number()
+              .int()
+              .gte(0)
+              .lte(30)
+              .nullable()
+              .describe('Số tầng nhà liền kề mặt left. 0 = đất trống.')
+              .optional(),
+            /** Số tầng nhà liền kề mặt right. 0 = đất trống. */
+            right: z
+              .number()
+              .int()
+              .gte(0)
+              .lte(30)
+              .nullable()
+              .describe('Số tầng nhà liền kề mặt right. 0 = đất trống.')
+              .optional(),
+          })
+          .strict()
+          .nullable()
+          .describe(
+            'Số tầng của công trình liền kề từng mặt. Nhà bên cao hơn nhiều thì mặt đó coi như mất nắng và mất gió cả năm — ảnh hưởng chỗ đặt giếng trời, sân trong và phòng ngủ mạnh hơn cả hướng la bàn.',
+          )
+          .optional(),
       })
       .strict()
       .describe(
@@ -231,6 +350,15 @@ export const designBriefSchema = z
               .boolean()
               .describe(
                 'Phòng ngủ của thành viên này KHÉP KÍN — khu vệ sinh nằm bên trong phòng, không mở ra hành lang. Lớp 2 sinh thêm một `wc` mang `enclosed_in` trỏ về phòng đó, và khu vệ sinh này KHÔNG tính vào định mức wc chung của tầng. Trước 06/09/2026 điều này khai bằng chuỗi `"wc"` trong `needs`, nhưng `wc` thuộc nhóm Lớp 2 tự suy nên chuỗi đó bị bỏ qua hoàn toàn — biểu mẫu có ô chọn mà chọn hay không đều ra cùng một chương trình.',
+              )
+              .optional(),
+            /** Tuổi từng người trong nhóm, năm. Cố ý là TUỔI chứ không phải năm sinh: tuổi là thứ quyết định không gian (trẻ dưới 6 ngủ cùng bố mẹ, trẻ đi học cần góc học, người trên 70 nên ở tầng trệt và tránh bậc), còn năm sinh là dữ liệu định danh và còn kéo theo chuyện cung mệnh — thứ phần mềm không được tự quyết (PRD 2.3). Số phần tử nên bằng `count`; lệch thì bộ soát mâu thuẫn hỏi lại chứ không chặn. */
+            ages: z
+              .array(z.number().int().gte(0).lte(120))
+              .max(20)
+              .nullable()
+              .describe(
+                'Tuổi từng người trong nhóm, năm. Cố ý là TUỔI chứ không phải năm sinh: tuổi là thứ quyết định không gian (trẻ dưới 6 ngủ cùng bố mẹ, trẻ đi học cần góc học, người trên 70 nên ở tầng trệt và tránh bậc), còn năm sinh là dữ liệu định danh và còn kéo theo chuyện cung mệnh — thứ phần mềm không được tự quyết (PRD 2.3). Số phần tử nên bằng `count`; lệch thì bộ soát mâu thuẫn hỏi lại chứ không chặn.',
               )
               .optional(),
           })
@@ -312,6 +440,28 @@ export const designBriefSchema = z
           .lte(30)
           .nullable()
           .describe('Số xe máy, xe máy điện, xe đạp điện.')
+          .optional(),
+        /** Cỡ ô tô lớn nhất cần đỗ. Chỗ đỗ cho xe gầm thấp và cho xe bán tải chênh nhau gần một mét chiều dài và cả chiều cao cửa — một ô «có ô tô» duy nhất không đủ để chừa đúng chỗ. */
+        car_size: z
+          .union([
+            z.literal('gam_thap'),
+            z.literal('gam_cao'),
+            z.literal('ban_tai'),
+            z.literal('xe_7_cho'),
+            z.literal(null),
+          ])
+          .nullable()
+          .describe(
+            'Cỡ ô tô lớn nhất cần đỗ. Chỗ đỗ cho xe gầm thấp và cho xe bán tải chênh nhau gần một mét chiều dài và cả chiều cao cửa — một ô «có ô tô» duy nhất không đủ để chừa đúng chỗ.',
+          )
+          .optional(),
+        /** Có sạc xe điện trong nhà không — kéo theo một tuyến điện riêng và một vị trí ổ sạc cố định ở chỗ để xe. */
+        ev_charging: z
+          .boolean()
+          .nullable()
+          .describe(
+            'Có sạc xe điện trong nhà không — kéo theo một tuyến điện riêng và một vị trí ổ sạc cố định ở chỗ để xe.',
+          )
           .optional(),
       })
       .strict()
@@ -447,6 +597,599 @@ export const designBriefSchema = z
       .describe('Ngưỡng cho phép chạy Layer 2 nằm trong config, KHÔNG hard-code ở đây.')
       .optional(),
     missing_fields: z.array(z.string()).optional(),
+    /** Gia chủ: nghề nghiệp, tín ngưỡng, và việc có kết hợp kinh doanh tại nhà hay không. */
+    household: z
+      .object({
+        /** Ngành nghề của gia chủ, viết bằng lời. Không phải để phần mềm phân loại — để kiến trúc sư biết nhịp sinh hoạt và nhu cầu không gian làm việc. Đi qua bộ lược danh tính trước khi gửi mô hình. */
+        occupation: z
+          .string()
+          .max(200)
+          .nullable()
+          .describe(
+            'Ngành nghề của gia chủ, viết bằng lời. Không phải để phần mềm phân loại — để kiến trúc sư biết nhịp sinh hoạt và nhu cầu không gian làm việc. Đi qua bộ lược danh tính trước khi gửi mô hình.',
+          )
+          .optional(),
+        /** Tín ngưỡng của gia đình — quyết định KHÔNG GIAN THỜ: bàn thờ gia tiên cần phòng riêng hoặc vị trí trang trọng ở tầng trên; bàn thờ Chúa thường gắn tường phòng khách; không thờ thì không dành chỗ. Đây là dữ liệu để dành CHỖ, phần mềm không suy ra nghi lễ hay hướng đặt. */
+        religion: z
+          .union([
+            z.literal('tho_cung_to_tien'),
+            z.literal('phat_giao'),
+            z.literal('cong_giao'),
+            z.literal('tin_lanh'),
+            z.literal('khac'),
+            z.literal('khong'),
+            z.literal(null),
+          ])
+          .nullable()
+          .describe(
+            'Tín ngưỡng của gia đình — quyết định KHÔNG GIAN THỜ: bàn thờ gia tiên cần phòng riêng hoặc vị trí trang trọng ở tầng trên; bàn thờ Chúa thường gắn tường phòng khách; không thờ thì không dành chỗ. Đây là dữ liệu để dành CHỖ, phần mềm không suy ra nghi lễ hay hướng đặt.',
+          )
+          .optional(),
+        /** Cách bố trí nơi thờ. `phong_tho_rieng` sinh một phòng thật có diện tích; `chung_phong_khach` là một khu trong phòng khách (từ vựng phòng cho phép ghép `living` với `altar_room`); `tren_san_thuong` là gian thờ trên tầng mái. */
+        altar_arrangement: z
+          .union([
+            z.literal('phong_tho_rieng'),
+            z.literal('chung_phong_khach'),
+            z.literal('tren_san_thuong'),
+            z.literal('khong_co'),
+            z.literal(null),
+          ])
+          .nullable()
+          .describe(
+            'Cách bố trí nơi thờ. `phong_tho_rieng` sinh một phòng thật có diện tích; `chung_phong_khach` là một khu trong phòng khách (từ vựng phòng cho phép ghép `living` với `altar_room`); `tren_san_thuong` là gian thờ trên tầng mái.',
+          )
+          .optional(),
+        /** Tầng đặt nơi thờ, nếu gia chủ đã quyết. Để trống là để kiến trúc sư đề xuất. */
+        altar_floor: z
+          .number()
+          .int()
+          .gte(1)
+          .lte(12)
+          .nullable()
+          .describe('Tầng đặt nơi thờ, nếu gia chủ đã quyết. Để trống là để kiến trúc sư đề xuất.')
+          .optional(),
+        /** Gia đình có xem phong thuỷ không. `co_thay_rieng` = đã có thầy và sẽ đưa yêu cầu cụ thể — khi ấy mọi ràng buộc phải ghi vào `feng_shui_notes`, phần mềm KHÔNG tự luận. Ranh giới PRD 2.3: hệ thống không tự quyết nội dung chuyên môn, và cung mệnh không phải việc của máy. */
+        feng_shui: z
+          .union([
+            z.literal('khong_xem'),
+            z.literal('co_xem'),
+            z.literal('co_thay_rieng'),
+            z.literal(null),
+          ])
+          .nullable()
+          .describe(
+            'Gia đình có xem phong thuỷ không. `co_thay_rieng` = đã có thầy và sẽ đưa yêu cầu cụ thể — khi ấy mọi ràng buộc phải ghi vào `feng_shui_notes`, phần mềm KHÔNG tự luận. Ranh giới PRD 2.3: hệ thống không tự quyết nội dung chuyên môn, và cung mệnh không phải việc của máy.',
+          )
+          .optional(),
+        /** Yêu cầu phong thuỷ ĐÃ ĐƯỢC NGƯỜI quyết, ghi thành câu ràng buộc dùng được: «cửa chính không đối cửa sau», «bếp không nhìn thẳng cửa chính», «hướng tốt: Đông Nam». Ô này là nơi duy nhất phong thuỷ đi vào phương án — viết lời chung chung thì không ràng buộc được gì. */
+        feng_shui_notes: z
+          .string()
+          .max(1000)
+          .nullable()
+          .describe(
+            'Yêu cầu phong thuỷ ĐÃ ĐƯỢC NGƯỜI quyết, ghi thành câu ràng buộc dùng được: «cửa chính không đối cửa sau», «bếp không nhìn thẳng cửa chính», «hướng tốt: Đông Nam». Ô này là nơi duy nhất phong thuỷ đi vào phương án — viết lời chung chung thì không ràng buộc được gì.',
+          )
+          .optional(),
+        /** Điều kiêng kỵ khác của gia đình: «khu vệ sinh không nằm trên bàn thờ», «không có phòng nào cửa mở thẳng ra cầu thang», «tránh số tầng 4». Tách khỏi `feng_shui_notes` vì nhiều gia đình có kiêng kỵ mà không xem phong thuỷ. */
+        taboos: z
+          .string()
+          .max(1000)
+          .nullable()
+          .describe(
+            'Điều kiêng kỵ khác của gia đình: «khu vệ sinh không nằm trên bàn thờ», «không có phòng nào cửa mở thẳng ra cầu thang», «tránh số tầng 4». Tách khỏi `feng_shui_notes` vì nhiều gia đình có kiêng kỵ mà không xem phong thuỷ.',
+          )
+          .optional(),
+        /** Kết hợp kinh doanh tại nhà — thứ đổi hẳn mặt bằng tầng trệt và cả lối vào. Nhà ở có cửa hàng KHÔNG phải nhà ở thêm một phòng: nó là hai luồng người phải tách nhau. */
+        home_business: z
+          .object({
+            /** Hình thức kinh doanh tại nhà. `khong` = thuần ở. */
+            mode: z
+              .union([
+                z.literal('khong'),
+                z.literal('van_phong_tai_nha'),
+                z.literal('cua_hang_mat_tien'),
+                z.literal('kho_hang'),
+                z.literal('luu_tru_cho_thue'),
+                z.literal('san_xuat_nho'),
+                z.literal(null),
+              ])
+              .nullable()
+              .describe('Hình thức kinh doanh tại nhà. `khong` = thuần ở.')
+              .optional(),
+            /** Số tầng dành cho kinh doanh, tính từ tầng 1 lên. Cố ý là SỐ LƯỢNG chứ không phải danh sách tầng: cửa hàng và văn phòng tại nhà luôn chiếm các tầng dưới liền nhau — chừa một tầng kinh doanh kẹp giữa hai tầng ở là bố cục không ai làm, và một ô số thì biểu mẫu nào cũng nhập được. */
+            floor_count: z
+              .number()
+              .int()
+              .gte(1)
+              .lte(12)
+              .nullable()
+              .describe(
+                'Số tầng dành cho kinh doanh, tính từ tầng 1 lên. Cố ý là SỐ LƯỢNG chứ không phải danh sách tầng: cửa hàng và văn phòng tại nhà luôn chiếm các tầng dưới liền nhau — chừa một tầng kinh doanh kẹp giữa hai tầng ở là bố cục không ai làm, và một ô số thì biểu mẫu nào cũng nhập được.',
+              )
+              .optional(),
+            /** Có lối vào riêng cho khách, tách khỏi lối sinh hoạt của gia đình không. Đây là câu hỏi quyết định nhất của nhóm này: có thì mặt tiền phải chừa hai cửa và luồng đi trong nhà chia đôi. */
+            separate_entrance: z
+              .boolean()
+              .nullable()
+              .describe(
+                'Có lối vào riêng cho khách, tách khỏi lối sinh hoạt của gia đình không. Đây là câu hỏi quyết định nhất của nhóm này: có thì mặt tiền phải chừa hai cửa và luồng đi trong nhà chia đôi.',
+              )
+              .optional(),
+            /** Có khu vệ sinh riêng cho khách không — khách dùng chung WC gia đình là điều gia chủ thường chỉ nhận ra khi đã xây xong. */
+            customer_wc: z
+              .boolean()
+              .nullable()
+              .describe(
+                'Có khu vệ sinh riêng cho khách không — khách dùng chung WC gia đình là điều gia chủ thường chỉ nhận ra khi đã xây xong.',
+              )
+              .optional(),
+            /** Số người làm việc tại nhà, kể cả gia chủ. Quyết diện tích và số chỗ vệ sinh. */
+            staff_count: z
+              .number()
+              .int()
+              .gte(0)
+              .lte(50)
+              .nullable()
+              .describe(
+                'Số người làm việc tại nhà, kể cả gia chủ. Quyết diện tích và số chỗ vệ sinh.',
+              )
+              .optional(),
+            /** Ghi chú thêm về hoạt động kinh doanh: mặt hàng, giờ mở cửa, xe giao hàng, tiếng ồn, mùi. */
+            note: z
+              .string()
+              .max(1000)
+              .nullable()
+              .describe(
+                'Ghi chú thêm về hoạt động kinh doanh: mặt hàng, giờ mở cửa, xe giao hàng, tiếng ồn, mùi.',
+              )
+              .optional(),
+          })
+          .strict()
+          .nullable()
+          .describe(
+            'Kết hợp kinh doanh tại nhà — thứ đổi hẳn mặt bằng tầng trệt và cả lối vào. Nhà ở có cửa hàng KHÔNG phải nhà ở thêm một phòng: nó là hai luồng người phải tách nhau.',
+          )
+          .optional(),
+      })
+      .strict()
+      .nullable()
+      .describe(
+        'Gia chủ: nghề nghiệp, tín ngưỡng, và việc có kết hợp kinh doanh tại nhà hay không.',
+      )
+      .optional(),
+    /** Thói quen sinh hoạt của gia đình — phần trả lời câu «nhà này được dùng thế nào», thứ mà số phòng không nói ra. */
+    lifestyle: z
+      .object({
+        /** Nếp nấu ăn. `nau_nhieu_chien_xao` là bếp Việt đúng nghĩa: chiên xào nhiều dầu mỡ, nhiều mùi — bếp phải KÍN hoặc có bếp phụ, và không nên mở thông phòng khách dù phong cách đang chuộng. `it_nau` thì bếp mở là hợp lý. */
+        cooking: z
+          .union([
+            z.literal('nau_nhieu_chien_xao'),
+            z.literal('nau_hang_ngay_don_gian'),
+            z.literal('it_nau'),
+            z.literal(null),
+          ])
+          .nullable()
+          .describe(
+            'Nếp nấu ăn. `nau_nhieu_chien_xao` là bếp Việt đúng nghĩa: chiên xào nhiều dầu mỡ, nhiều mùi — bếp phải KÍN hoặc có bếp phụ, và không nên mở thông phòng khách dù phong cách đang chuộng. `it_nau` thì bếp mở là hợp lý.',
+          )
+          .optional(),
+        /** Có cần bếp phụ (bếp Việt) tách khỏi bếp đẹp không. */
+        second_kitchen: z
+          .boolean()
+          .nullable()
+          .describe('Có cần bếp phụ (bếp Việt) tách khỏi bếp đẹp không.')
+          .optional(),
+        /** Cả nhà ăn ở đâu. Quyết phòng ăn có là một phòng thật hay chỉ là quầy kề bếp. */
+        dining_place: z
+          .union([
+            z.literal('ban_an_rieng'),
+            z.literal('quay_bep'),
+            z.literal('linh_hoat'),
+            z.literal(null),
+          ])
+          .nullable()
+          .describe('Cả nhà ăn ở đâu. Quyết phòng ăn có là một phòng thật hay chỉ là quầy kề bếp.')
+          .optional(),
+        /** Tần suất tiếp khách. Tiếp khách thường xuyên kéo theo phòng khách rộng hơn, một khu vệ sinh khách ở tầng trệt, và chỗ để xe cho khách. */
+        guests: z
+          .union([
+            z.literal('thuong_xuyen'),
+            z.literal('thinh_thoang'),
+            z.literal('it'),
+            z.literal(null),
+          ])
+          .nullable()
+          .describe(
+            'Tần suất tiếp khách. Tiếp khách thường xuyên kéo theo phòng khách rộng hơn, một khu vệ sinh khách ở tầng trệt, và chỗ để xe cho khách.',
+          )
+          .optional(),
+        /** Có khách ở lại qua đêm không — nếu có thì cần một phòng ngủ khách thật, không phải sofa phòng khách. */
+        overnight_guests: z
+          .boolean()
+          .nullable()
+          .describe(
+            'Có khách ở lại qua đêm không — nếu có thì cần một phòng ngủ khách thật, không phải sofa phòng khách.',
+          )
+          .optional(),
+        /** Có người làm việc tại nhà thường xuyên không — kéo theo phòng làm việc yên tĩnh, tách khỏi khu sinh hoạt chung. */
+        work_from_home: z
+          .boolean()
+          .nullable()
+          .describe(
+            'Có người làm việc tại nhà thường xuyên không — kéo theo phòng làm việc yên tĩnh, tách khỏi khu sinh hoạt chung.',
+          )
+          .optional(),
+        /** Có người làm ca đêm, ngủ ban ngày không — phòng ngủ phải tránh mặt ồn và tránh nằm cạnh bếp hay phòng khách. */
+        night_shift: z
+          .boolean()
+          .nullable()
+          .describe(
+            'Có người làm ca đêm, ngủ ban ngày không — phòng ngủ phải tránh mặt ồn và tránh nằm cạnh bếp hay phòng khách.',
+          )
+          .optional(),
+        /** Có người đi lại khó khăn, dùng gậy hoặc xe lăn không. Trả lời «có» là ràng buộc cứng lên phương án: một phòng ngủ và một khu vệ sinh ở tầng trệt, hạn chế bậc, cửa và hành lang đủ rộng — không phải tiện nghi thêm. */
+        reduced_mobility: z
+          .boolean()
+          .nullable()
+          .describe(
+            'Có người đi lại khó khăn, dùng gậy hoặc xe lăn không. Trả lời «có» là ràng buộc cứng lên phương án: một phòng ngủ và một khu vệ sinh ở tầng trệt, hạn chế bậc, cửa và hành lang đủ rộng — không phải tiện nghi thêm.',
+          )
+          .optional(),
+        /** Cách phơi đồ. Phơi nắng ngoài trời đòi một sân hoặc ban công phơi có nắng thật và kín đáo với hàng xóm — chỗ này bị bỏ quên thì quần áo cuối cùng phơi ở mặt tiền. */
+        drying: z
+          .union([
+            z.literal('phoi_nang_ngoai_troi'),
+            z.literal('may_say_trong_nha'),
+            z.literal('ca_hai'),
+            z.literal(null),
+          ])
+          .nullable()
+          .describe(
+            'Cách phơi đồ. Phơi nắng ngoài trời đòi một sân hoặc ban công phơi có nắng thật và kín đáo với hàng xóm — chỗ này bị bỏ quên thì quần áo cuối cùng phơi ở mặt tiền.',
+          )
+          .optional(),
+        /** Thú nuôi trong nhà. Kéo theo chỗ tắm và chỗ ở cho thú, cửa sân, và vật liệu sàn. */
+        pets: z
+          .union([
+            z.literal('khong'),
+            z.literal('cho'),
+            z.literal('meo'),
+            z.literal('cho_va_meo'),
+            z.literal('khac'),
+            z.literal(null),
+          ])
+          .nullable()
+          .describe(
+            'Thú nuôi trong nhà. Kéo theo chỗ tắm và chỗ ở cho thú, cửa sân, và vật liệu sàn.',
+          )
+          .optional(),
+        /** Nếp sinh hoạt hằng ngày viết bằng lời: giờ giấc, ai dậy sớm, cả nhà quây quần ở đâu buổi tối, cuối tuần dùng nhà thế nào. Đây là ô giàu ý nhất của cả đầu bài — đi NGUYÊN VĂN tới mô hình, không tóm tắt. */
+        daily_rhythm: z
+          .string()
+          .max(1000)
+          .nullable()
+          .describe(
+            'Nếp sinh hoạt hằng ngày viết bằng lời: giờ giấc, ai dậy sớm, cả nhà quây quần ở đâu buổi tối, cuối tuần dùng nhà thế nào. Đây là ô giàu ý nhất của cả đầu bài — đi NGUYÊN VĂN tới mô hình, không tóm tắt.',
+          )
+          .optional(),
+      })
+      .strict()
+      .nullable()
+      .describe(
+        'Thói quen sinh hoạt của gia đình — phần trả lời câu «nhà này được dùng thế nào», thứ mà số phòng không nói ra.',
+      )
+      .optional(),
+    /** Nhu cầu lưu trữ. Tách riêng khỏi `required_spaces` vì phần lớn chỗ cất KHÔNG phải một phòng — là tủ âm, gầm thang, hốc tường — nhưng vẫn phải được tính diện tích từ đầu. */
+    storage: z
+      .object({
+        /** Lượng đồ cần cất giữ nói chung. `nhieu` nghĩa là chỗ chứa phải được tính như một không gian thật, không phải phần còn thừa sau khi xếp xong các phòng. */
+        level: z
+          .union([z.literal('it'), z.literal('vua'), z.literal('nhieu'), z.literal(null)])
+          .nullable()
+          .describe(
+            'Lượng đồ cần cất giữ nói chung. `nhieu` nghĩa là chỗ chứa phải được tính như một không gian thật, không phải phần còn thừa sau khi xếp xong các phòng.',
+          )
+          .optional(),
+        /** Những thứ cụ thể cần chỗ cất. Khai ra từng loại thì chỗ chứa đặt đúng chỗ: đồ theo mùa cất trên cao, thực phẩm kề bếp, dụng cụ sửa chữa kề chỗ để xe. */
+        items: z
+          .array(
+            z.enum([
+              'kho_chung',
+              'kho_thuc_pham',
+              'tu_am_tuong',
+              'do_theo_mua',
+              'hanh_ly',
+              'tai_lieu',
+              'dung_cu_sua_chua',
+              'do_the_thao',
+              'ham_ruou',
+              'do_tho_cung',
+            ]),
+          )
+          .nullable()
+          .describe(
+            'Những thứ cụ thể cần chỗ cất. Khai ra từng loại thì chỗ chứa đặt đúng chỗ: đồ theo mùa cất trên cao, thực phẩm kề bếp, dụng cụ sửa chữa kề chỗ để xe.',
+          )
+          .optional(),
+        /** Ghi chú thêm về nhu cầu lưu trữ: món đồ khổ lớn, bộ sưu tập, hàng hoá kinh doanh. */
+        note: z
+          .string()
+          .max(1000)
+          .nullable()
+          .describe(
+            'Ghi chú thêm về nhu cầu lưu trữ: món đồ khổ lớn, bộ sưu tập, hàng hoá kinh doanh.',
+          )
+          .optional(),
+      })
+      .strict()
+      .nullable()
+      .describe(
+        'Nhu cầu lưu trữ. Tách riêng khỏi `required_spaces` vì phần lớn chỗ cất KHÔNG phải một phòng — là tủ âm, gầm thang, hốc tường — nhưng vẫn phải được tính diện tích từ đầu.',
+      )
+      .optional(),
+    /** Giao thông đứng: thang bộ và thang máy. */
+    vertical: z
+      .object({
+        /** Thang máy gia đình. Ba câu trả lời thật sự khác nhau về mặt bằng: `lam_ngay` sinh một ô thang máy có cửa và có phòng kỹ thuật; `chua_cho` vẫn chiếm đúng ô ấy nhưng tạm dùng làm kho hoặc giếng trời, và móng, hố PIT, lỗ sàn phải chừa ngay lúc này — bỏ qua thì sau không lắp được; `khong` thì không chừa gì. */
+        elevator: z
+          .union([
+            z.literal('khong'),
+            z.literal('lam_ngay'),
+            z.literal('chua_cho'),
+            z.literal(null),
+          ])
+          .nullable()
+          .describe(
+            'Thang máy gia đình. Ba câu trả lời thật sự khác nhau về mặt bằng: `lam_ngay` sinh một ô thang máy có cửa và có phòng kỹ thuật; `chua_cho` vẫn chiếm đúng ô ấy nhưng tạm dùng làm kho hoặc giếng trời, và móng, hố PIT, lỗ sàn phải chừa ngay lúc này — bỏ qua thì sau không lắp được; `khong` thì không chừa gì.',
+          )
+          .optional(),
+        /** Tải trọng thang máy, quyết kích thước hố thang. Số đo cụ thể lấy từ `kb/construction_norms.yaml`, không viết vào đầu bài — hãng thang đổi thì đổi ở một chỗ. */
+        elevator_capacity: z
+          .union([
+            z.literal('nho_350kg'),
+            z.literal('vua_450kg'),
+            z.literal('lon_630kg'),
+            z.literal(null),
+          ])
+          .nullable()
+          .describe(
+            'Tải trọng thang máy, quyết kích thước hố thang. Số đo cụ thể lấy từ `kb/construction_norms.yaml`, không viết vào đầu bài — hãng thang đổi thì đổi ở một chỗ.',
+          )
+          .optional(),
+        /** Thang máy đặt cạnh thang bộ thành một lõi, hay tách riêng. Đặt cạnh thì gọn lõi và rẻ hệ thống; tách riêng thì tiện cho người già ở phòng xa thang bộ. */
+        elevator_position: z
+          .union([
+            z.literal('canh_thang_bo'),
+            z.literal('rieng_biet'),
+            z.literal('chua_quyet'),
+            z.literal(null),
+          ])
+          .nullable()
+          .describe(
+            'Thang máy đặt cạnh thang bộ thành một lõi, hay tách riêng. Đặt cạnh thì gọn lõi và rẻ hệ thống; tách riêng thì tiện cho người già ở phòng xa thang bộ.',
+          )
+          .optional(),
+        /** Thang bộ hở (thông tầng, lấy sáng, ăn diện tích) hay kín (giữ điều hoà, kín tiếng, gọn). Đây là lựa chọn của gia chủ chứ không phải của phần mềm, và nó đổi hẳn cách tổ chức khu giữa nhà. */
+        stair_type: z
+          .union([
+            z.literal('thang_ho'),
+            z.literal('thang_kin'),
+            z.literal('chua_quyet'),
+            z.literal(null),
+          ])
+          .nullable()
+          .describe(
+            'Thang bộ hở (thông tầng, lấy sáng, ăn diện tích) hay kín (giữ điều hoà, kín tiếng, gọn). Đây là lựa chọn của gia chủ chứ không phải của phần mềm, và nó đổi hẳn cách tổ chức khu giữa nhà.',
+          )
+          .optional(),
+      })
+      .strict()
+      .nullable()
+      .describe('Giao thông đứng: thang bộ và thang máy.')
+      .optional(),
+    /** Lối vào và cao độ nền — nhóm câu hỏi nhỏ nhưng bỏ sót thì sai từ mặt cắt đến mặt đứng. */
+    entrance: z
+      .object({
+        /** **Cốt nền tầng 1 cao hơn tim đường bao nhiêu mét.** Số này, chứ không phải cao độ tuyệt đối, là thứ quyết số bậc tam cấp, độ dốc dắt xe và việc nước mưa chảy vào nhà hay chảy ra đường. Để trống thì suy tạm từ `site.land_level_m - site.road_level_m`, nhưng đó là cao độ ĐẤT chứ chưa phải cốt nền. */
+        floor_above_road_m: z
+          .number()
+          .gte(0)
+          .lte(3)
+          .nullable()
+          .describe(
+            '**Cốt nền tầng 1 cao hơn tim đường bao nhiêu mét.** Số này, chứ không phải cao độ tuyệt đối, là thứ quyết số bậc tam cấp, độ dốc dắt xe và việc nước mưa chảy vào nhà hay chảy ra đường. Để trống thì suy tạm từ `site.land_level_m - site.road_level_m`, nhưng đó là cao độ ĐẤT chứ chưa phải cốt nền.',
+          )
+          .optional(),
+        /** Có bậc tam cấp từ sân lên nền nhà không. «Không» nghĩa là sân và nền nhà cùng cao độ, hoặc nối bằng dốc thoải — cách duy nhất cho xe lăn và xe máy đi thẳng vào. */
+        steps_from_yard: z
+          .boolean()
+          .nullable()
+          .describe(
+            'Có bậc tam cấp từ sân lên nền nhà không. «Không» nghĩa là sân và nền nhà cùng cao độ, hoặc nối bằng dốc thoải — cách duy nhất cho xe lăn và xe máy đi thẳng vào.',
+          )
+          .optional(),
+        /** Số bậc tam cấp, nếu gia chủ đã muốn một con số cụ thể (nhiều gia đình kiêng số bậc). Để trống thì suy từ chênh cao. */
+        step_count: z
+          .number()
+          .int()
+          .gte(1)
+          .lte(8)
+          .nullable()
+          .describe(
+            'Số bậc tam cấp, nếu gia chủ đã muốn một con số cụ thể (nhiều gia đình kiêng số bậc). Để trống thì suy từ chênh cao.',
+          )
+          .optional(),
+        /** Có dốc dắt xe từ sân lên chỗ để xe không. Dốc ăn chiều dài sân: chênh cao 0,45 m cần khoảng 2,5–3 m dốc — chỗ này không tính từ đầu thì cổng mở ra là đã hết sân. */
+        vehicle_ramp: z
+          .boolean()
+          .nullable()
+          .describe(
+            'Có dốc dắt xe từ sân lên chỗ để xe không. Dốc ăn chiều dài sân: chênh cao 0,45 m cần khoảng 2,5–3 m dốc — chỗ này không tính từ đầu thì cổng mở ra là đã hết sân.',
+          )
+          .optional(),
+      })
+      .strict()
+      .nullable()
+      .describe(
+        'Lối vào và cao độ nền — nhóm câu hỏi nhỏ nhưng bỏ sót thì sai từ mặt cắt đến mặt đứng.',
+      )
+      .optional(),
+    /** Ban công — vị trí, phạm vi và độ vươn. Khai ở đây chứ không ở `required_spaces` vì ban công là một THUỘC TÍNH của mặt nhà theo tầng, không phải một phòng đứng riêng trong chương trình không gian. */
+    balconies: z
+      .object({
+        /** Ban công đặt ở mặt nào của nhà: trước, sau, hông trái, hông phải. */
+        sides: z
+          .array(z.enum(['front', 'back', 'left', 'right']))
+          .nullable()
+          .describe('Ban công đặt ở mặt nào của nhà: trước, sau, hông trái, hông phải.')
+          .optional(),
+        /** Ban công làm tới đâu: mọi tầng trên, chỉ mặt tiền, hay chỉ ở những phòng gia chủ chỉ định. */
+        scope: z
+          .union([
+            z.literal('moi_tang'),
+            z.literal('chi_mat_tien'),
+            z.literal('theo_tung_phong'),
+            z.literal('khong_co'),
+            z.literal(null),
+          ])
+          .nullable()
+          .describe(
+            'Ban công làm tới đâu: mọi tầng trên, chỉ mặt tiền, hay chỉ ở những phòng gia chủ chỉ định.',
+          )
+          .optional(),
+        /** Ban công có ĐUA RA NGOÀI ranh đất (nhô qua chỉ giới xây dựng, ra trên vỉa hè hoặc trên khoảng lùi) không. Đây là câu hỏi pháp lý trước khi là câu hỏi hình khối: nhiều địa phương chỉ cho đua khi đường đủ rộng và chỉ tới một độ vươn nhất định. Trả lời «không» thì ban công nằm trọn trong phần đất xây được, và diện tích sàn phải tính lại. */
+        projection_over_boundary: z
+          .boolean()
+          .nullable()
+          .describe(
+            'Ban công có ĐUA RA NGOÀI ranh đất (nhô qua chỉ giới xây dựng, ra trên vỉa hè hoặc trên khoảng lùi) không. Đây là câu hỏi pháp lý trước khi là câu hỏi hình khối: nhiều địa phương chỉ cho đua khi đường đủ rộng và chỉ tới một độ vươn nhất định. Trả lời «không» thì ban công nằm trọn trong phần đất xây được, và diện tích sàn phải tính lại.',
+          )
+          .optional(),
+        /** Độ vươn của ban công tính từ mặt tường, mét. Để trống thì lấy theo thông lệ của phương án. */
+        projection_m: z
+          .number()
+          .gte(0)
+          .lte(3)
+          .nullable()
+          .describe(
+            'Độ vươn của ban công tính từ mặt tường, mét. Để trống thì lấy theo thông lệ của phương án.',
+          )
+          .optional(),
+        /** Có ban công phơi riêng phía sau không — tách chỗ phơi khỏi ban công mặt tiền. */
+        drying_balcony: z
+          .boolean()
+          .nullable()
+          .describe('Có ban công phơi riêng phía sau không — tách chỗ phơi khỏi ban công mặt tiền.')
+          .optional(),
+        /** Ghi chú thêm về ban công: lan can kính hay xây, trồng cây, che mưa, làm lam. */
+        note: z
+          .string()
+          .max(1000)
+          .nullable()
+          .describe('Ghi chú thêm về ban công: lan can kính hay xây, trồng cây, che mưa, làm lam.')
+          .optional(),
+      })
+      .strict()
+      .nullable()
+      .describe(
+        'Ban công — vị trí, phạm vi và độ vươn. Khai ở đây chứ không ở `required_spaces` vì ban công là một THUỘC TÍNH của mặt nhà theo tầng, không phải một phòng đứng riêng trong chương trình không gian.',
+      )
+      .optional(),
+    /** Hệ thống kỹ thuật có ảnh hưởng tới MẶT BẰNG và MẶT ĐỨNG. Cố ý chỉ hỏi những thứ chiếm chỗ hoặc nhìn thấy được — phần còn lại của điện nước là việc của bộ môn, không phải của đầu bài. */
+    systems: z
+      .object({
+        /** Cách trữ nước. Bể ngầm ăn chỗ dưới sân hoặc dưới chỗ để xe; bồn mái ăn chỗ và đổi hẳn hình mái — cả hai phải có chỗ từ đầu chứ không gắn thêm sau. */
+        water_storage: z
+          .array(z.enum(['be_ngam', 'bon_mai', 'may_bom_tang_ap']))
+          .nullable()
+          .describe(
+            'Cách trữ nước. Bể ngầm ăn chỗ dưới sân hoặc dưới chỗ để xe; bồn mái ăn chỗ và đổi hẳn hình mái — cả hai phải có chỗ từ đầu chứ không gắn thêm sau.',
+          )
+          .optional(),
+        /** Có bình nước nóng năng lượng mặt trời trên mái không — khối tấm thu nằm ngay trên mái và nhìn thấy từ đường, nên nó là việc của mặt đứng chứ không chỉ của điện nước. */
+        solar_water: z
+          .boolean()
+          .nullable()
+          .describe(
+            'Có bình nước nóng năng lượng mặt trời trên mái không — khối tấm thu nằm ngay trên mái và nhìn thấy từ đường, nên nó là việc của mặt đứng chứ không chỉ của điện nước.',
+          )
+          .optional(),
+        /** Cục nóng điều hoà đặt ở đâu. Câu hỏi này bị bỏ qua nhiều nhất và để lại hậu quả dễ thấy nhất: một dãy cục nóng treo trên mặt tiền vừa hoàn thiện. */
+        aircon_outdoor: z
+          .union([
+            z.literal('hop_ky_thuat'),
+            z.literal('ban_cong_phu'),
+            z.literal('san_thuong'),
+            z.literal('chua_quyet'),
+            z.literal(null),
+          ])
+          .nullable()
+          .describe(
+            'Cục nóng điều hoà đặt ở đâu. Câu hỏi này bị bỏ qua nhiều nhất và để lại hậu quả dễ thấy nhất: một dãy cục nóng treo trên mặt tiền vừa hoàn thiện.',
+          )
+          .optional(),
+        /** Ghi chú thêm về hệ thống kỹ thuật: điện dự phòng, điện mặt trời, lọc nước, camera, mạng. */
+        note: z
+          .string()
+          .max(1000)
+          .nullable()
+          .describe(
+            'Ghi chú thêm về hệ thống kỹ thuật: điện dự phòng, điện mặt trời, lọc nước, camera, mạng.',
+          )
+          .optional(),
+      })
+      .strict()
+      .nullable()
+      .describe(
+        'Hệ thống kỹ thuật có ảnh hưởng tới MẶT BẰNG và MẶT ĐỨNG. Cố ý chỉ hỏi những thứ chiếm chỗ hoặc nhìn thấy được — phần còn lại của điện nước là việc của bộ môn, không phải của đầu bài.',
+      )
+      .optional(),
+    /** Dự trù tương lai — hỏi vào lúc còn sửa được là đầu bài, hỏi sau khi đổ móng là phá đi làm lại. */
+    future: z
+      .object({
+        /** Dự trù mở rộng sau này. `nang_them_tang` bắt móng, cột và thang phải tính cho số tầng tương lai ngay từ bây giờ — quyết định này không lùi lại được sau khi đổ móng. */
+        expansion: z
+          .union([
+            z.literal('khong'),
+            z.literal('nang_them_tang'),
+            z.literal('xay_them_phia_sau'),
+            z.literal(null),
+          ])
+          .nullable()
+          .describe(
+            'Dự trù mở rộng sau này. `nang_them_tang` bắt móng, cột và thang phải tính cho số tầng tương lai ngay từ bây giờ — quyết định này không lùi lại được sau khi đổ móng.',
+          )
+          .optional(),
+        /** Số tầng dự kiến nâng thêm. */
+        expansion_floors: z
+          .number()
+          .int()
+          .gte(1)
+          .lte(6)
+          .nullable()
+          .describe('Số tầng dự kiến nâng thêm.')
+          .optional(),
+        /** Có xây theo giai đoạn không (hoàn thiện một phần trước, phần còn lại sau). */
+        phasing: z
+          .boolean()
+          .nullable()
+          .describe('Có xây theo giai đoạn không (hoàn thiện một phần trước, phần còn lại sau).')
+          .optional(),
+      })
+      .strict()
+      .nullable()
+      .describe(
+        'Dự trù tương lai — hỏi vào lúc còn sửa được là đầu bài, hỏi sau khi đổ móng là phá đi làm lại.',
+      )
+      .optional(),
+    /** Mức hoàn thiện mong muốn. Đi cùng `budget_range_vnd`: cùng một khoảng tiền, mức hoàn thiện cao hơn nghĩa là diện tích phải nhỏ lại — bộ soát mâu thuẫn đối chiếu hai ô này với nhau. */
+    finishing_level: z
+      .union([z.literal('co_ban'), z.literal('kha'), z.literal('cao_cap'), z.literal(null)])
+      .nullable()
+      .describe(
+        'Mức hoàn thiện mong muốn. Đi cùng `budget_range_vnd`: cùng một khoảng tiền, mức hoàn thiện cao hơn nghĩa là diện tích phải nhỏ lại — bộ soát mâu thuẫn đối chiếu hai ô này với nhau.',
+      )
+      .optional(),
   })
   .strict()
   .describe('Đầu bài thiết kế — output Layer 1. Nguồn: doc/design/03-data-contracts.md mục 3.1.');

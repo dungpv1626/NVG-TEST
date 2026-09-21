@@ -1017,7 +1017,13 @@ describe('Đơn vị và thứ hạng — hai chỗ màn hình nói khác dữ l
 });
 
 describe('Biểu mẫu chia bước', () => {
-  it('nhà phố đi năm bước, biệt thự sáu — bước khối nhà chỉ có ở biệt thự', async () => {
+  /**
+   * Số bước = số mục ĐANG HIỆN của `brief-form.json`, và nó tăng theo mỗi đợt mở rộng khảo sát
+   * (11 cho nhà phố từ 21/09/2026). Con số cụ thể không phải điều phép thử này canh — nó canh
+   * đúng MỘT điều: mục «Tổ chức khối nhà» chỉ ra mặt với biệt thự và nhà vườn, và biệt thự
+   * luôn nhiều hơn nhà phố đúng một bước.
+   */
+  it('biệt thự nhiều hơn nhà phố đúng một bước — bước khối nhà chỉ có ở biệt thự', async () => {
     state.briefs = [brief()];
     state.surveys = [];
     await openForm();
@@ -1027,11 +1033,11 @@ describe('Biểu mẫu chia bước', () => {
         .getAllByRole('button')
         .map((b) => b.textContent);
 
-    expect(titles()).toHaveLength(5);
+    const townhouseSteps = titles().length;
     expect(titles().join('|')).not.toContain('Tổ chức khối nhà');
 
     await userEvent.click(screen.getByRole('button', { name: 'Biệt thự' }));
-    expect(titles()).toHaveLength(6);
+    expect(titles()).toHaveLength(townhouseSteps + 1);
     expect(titles().join('|')).toContain('Tổ chức khối nhà');
   });
 

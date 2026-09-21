@@ -172,7 +172,7 @@ describe('trường đầu bài 1.4.0 đi tới mô hình (13/09/2026)', () => {
       right: 'chung',
     });
     expect(digest.massing?.yard_depth_m).toEqual({ left: 3 });
-    expect(digest.parking).toEqual({ cars: 1, motorbikes: 2 });
+    expect(digest.parking).toEqual({ cars: 1, motorbikes: 2, car_size: null, ev_charging: null });
   });
 
   it('đầu bài cũ không có các trường ấy vẫn dựng được bản gửi', () => {

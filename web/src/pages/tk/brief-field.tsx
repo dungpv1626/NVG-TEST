@@ -884,6 +884,23 @@ function BriefControl({
                       <option value="ensuite">Phòng ngủ khép kín</option>
                     </select>
                   )}
+                  {/*
+                    Tuổi gõ thành MỘT ô chữ ngăn bằng dấu phẩy, không phải mỗi người một ô.
+
+                    Một ô số cho mỗi người thì dòng «Con · 3 người» thành bốn ô nhảy ra nhảy
+                    vào theo số người, và người khai phải bấm bốn lần cho một câu trả lời họ
+                    đọc ra trong hai giây. Ô chữ nhận cả «70, 68» lẫn «70 68»; chữ không đọc
+                    được thì BỎ QUA chứ không chặn — đây là ô tuỳ chọn, chặn nó là chặn cả
+                    dòng thành viên.
+                  */}
+                  <Input
+                    inputMode="numeric"
+                    aria-label="Tuổi từng người"
+                    placeholder="Tuổi, ví dụ 70, 68"
+                    className="w-40"
+                    value={(member.ages ?? []).join(', ')}
+                    onChange={(e) => update(index, { ages: parseAges(e.target.value) })}
+                  />
                   <Button variant="subtle" onClick={() => onChange(dropAt(members, index))}>
                     Bỏ dòng
                   </Button>
@@ -1096,6 +1113,23 @@ function SitePreview({ points }: { points: [number, number][] }) {
   );
 }
 
+/**
+ * Đọc ô tuổi: «70, 68» hay «70 68» → `[70, 68]`.
+ *
+ * Bỏ qua phần không đọc được thay vì trả `undefined` cho cả ô — người dùng đang gõ dở
+ * «70, » thì phần đã gõ vẫn phải giữ, nếu không con số vừa nhập biến mất dưới tay họ.
+ * Trả `undefined` khi không còn số nào, để khoá `ages` bị XOÁ khỏi payload chứ không nằm lại
+ * dưới dạng mảng rỗng (hợp đồng nhận khoá vắng mặt, không nhận mảng rỗng vô nghĩa).
+ */
+function parseAges(raw: string): number[] | undefined {
+  const ages = raw
+    .split(/[,;\s]+/)
+    .map((part) => Number(part))
+    .filter((n) => Number.isFinite(n) && n >= 0 && n <= 120)
+    .map((n) => Math.floor(n));
+  return ages.length ? ages : undefined;
+}
+
 interface FamilyMember {
   role: string;
   count: number;
@@ -1105,6 +1139,11 @@ interface FamilyMember {
   floor_pref?: string | null;
   /** Phòng ngủ của nhóm này có khu vệ sinh riêng không. */
   ensuite?: boolean | null;
+  /**
+   * Tuổi từng người trong nhóm. Cố ý là TUỔI, không phải năm sinh — xem hợp đồng
+   * `design-brief.schema.json`, trường `family[].ages`.
+   */
+  ages?: number[] | null;
   needs?: string[];
 }
 

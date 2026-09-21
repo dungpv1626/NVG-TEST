@@ -34,7 +34,7 @@ import {
 /** Bản gửi đi là hạng 2 — mặt bằng kích thước thật, đã lược danh tính. */
 export const AI_DIGEST_DATA_CLASS: DataClass = 2;
 
-const DIGEST_SCHEMA_VERSION = '1.1.0';
+const DIGEST_SCHEMA_VERSION = '1.2.0';
 
 /** Năm cột chữ tự do của `design_briefs`; `legal_documents` cố ý không đi. */
 export interface BriefFreeText {
@@ -176,6 +176,21 @@ export function anonymiseForAi(input: AnonymiseInput): AiBriefDigest {
             right: site.boundary_walls.right ?? null,
           }
         : null,
+      road_level_m: site.road_level_m ?? null,
+      land_level_m: site.land_level_m ?? null,
+      harsh_sun_sides: site.harsh_sun_sides ? [...site.harsh_sun_sides] : null,
+      cool_wind_sides: site.cool_wind_sides ? [...site.cool_wind_sides] : null,
+      road_width_m: site.road_width_m ?? null,
+      flood_risk: site.flood_risk ?? null,
+      existing_structure: site.existing_structure ?? null,
+      neighbour_floors: site.neighbour_floors
+        ? {
+            front: site.neighbour_floors.front ?? null,
+            back: site.neighbour_floors.back ?? null,
+            left: site.neighbour_floors.left ?? null,
+            right: site.neighbour_floors.right ?? null,
+          }
+        : null,
     },
     family: (brief.family ?? []).map((m) => ({
       role: m.role,
@@ -185,6 +200,7 @@ export function anonymiseForAi(input: AnonymiseInput): AiBriefDigest {
       // Nhu cầu là MÃ (`study`, `balcony`…) nhưng đầu bài cũ từng lưu cả chữ tự do ở đây.
       needs: (m.needs ?? []).map((n) => scrubIdentity(n, identities)),
       ensuite: m.ensuite ?? null,
+      ages: m.ages ? [...m.ages] : null,
     })),
     required_spaces: (brief.required_spaces ?? []).map((s) => ({
       type: s.type,
@@ -209,8 +225,100 @@ export function anonymiseForAi(input: AnonymiseInput): AiBriefDigest {
         }
       : null,
     parking: brief.parking
-      ? { cars: brief.parking.cars ?? null, motorbikes: brief.parking.motorbikes ?? null }
+      ? {
+          cars: brief.parking.cars ?? null,
+          motorbikes: brief.parking.motorbikes ?? null,
+          car_size: brief.parking.car_size ?? null,
+          ev_charging: brief.parking.ev_charging ?? null,
+        }
       : null,
+    household: brief.household
+      ? {
+          // Ngành nghề, yêu cầu phong thuỷ, kiêng kỵ và ghi chú kinh doanh là CHỮ TỰ DO của
+          // gia chủ — đi qua bộ lược danh tính đúng như bốn ô chữ tự do cũ, không có ngoại lệ.
+          occupation: scrubOrNull(brief.household.occupation, identities),
+          religion: brief.household.religion ?? null,
+          altar_arrangement: brief.household.altar_arrangement ?? null,
+          altar_floor: brief.household.altar_floor ?? null,
+          feng_shui: brief.household.feng_shui ?? null,
+          feng_shui_notes: scrubOrNull(brief.household.feng_shui_notes, identities),
+          taboos: scrubOrNull(brief.household.taboos, identities),
+          home_business: brief.household.home_business
+            ? {
+                mode: brief.household.home_business.mode ?? null,
+                floor_count: brief.household.home_business.floor_count ?? null,
+                separate_entrance: brief.household.home_business.separate_entrance ?? null,
+                customer_wc: brief.household.home_business.customer_wc ?? null,
+                staff_count: brief.household.home_business.staff_count ?? null,
+                note: scrubOrNull(brief.household.home_business.note, identities),
+              }
+            : null,
+        }
+      : null,
+    lifestyle: brief.lifestyle
+      ? {
+          cooking: brief.lifestyle.cooking ?? null,
+          second_kitchen: brief.lifestyle.second_kitchen ?? null,
+          dining_place: brief.lifestyle.dining_place ?? null,
+          guests: brief.lifestyle.guests ?? null,
+          overnight_guests: brief.lifestyle.overnight_guests ?? null,
+          work_from_home: brief.lifestyle.work_from_home ?? null,
+          night_shift: brief.lifestyle.night_shift ?? null,
+          reduced_mobility: brief.lifestyle.reduced_mobility ?? null,
+          drying: brief.lifestyle.drying ?? null,
+          pets: brief.lifestyle.pets ?? null,
+          daily_rhythm: scrubOrNull(brief.lifestyle.daily_rhythm, identities),
+        }
+      : null,
+    storage: brief.storage
+      ? {
+          level: brief.storage.level ?? null,
+          items: brief.storage.items ? [...brief.storage.items] : null,
+          note: scrubOrNull(brief.storage.note, identities),
+        }
+      : null,
+    vertical: brief.vertical
+      ? {
+          elevator: brief.vertical.elevator ?? null,
+          elevator_capacity: brief.vertical.elevator_capacity ?? null,
+          elevator_position: brief.vertical.elevator_position ?? null,
+          stair_type: brief.vertical.stair_type ?? null,
+        }
+      : null,
+    entrance: brief.entrance
+      ? {
+          floor_above_road_m: brief.entrance.floor_above_road_m ?? null,
+          steps_from_yard: brief.entrance.steps_from_yard ?? null,
+          step_count: brief.entrance.step_count ?? null,
+          vehicle_ramp: brief.entrance.vehicle_ramp ?? null,
+        }
+      : null,
+    balconies: brief.balconies
+      ? {
+          sides: brief.balconies.sides ? [...brief.balconies.sides] : null,
+          scope: brief.balconies.scope ?? null,
+          projection_over_boundary: brief.balconies.projection_over_boundary ?? null,
+          projection_m: brief.balconies.projection_m ?? null,
+          drying_balcony: brief.balconies.drying_balcony ?? null,
+          note: scrubOrNull(brief.balconies.note, identities),
+        }
+      : null,
+    systems: brief.systems
+      ? {
+          water_storage: brief.systems.water_storage ? [...brief.systems.water_storage] : null,
+          solar_water: brief.systems.solar_water ?? null,
+          aircon_outdoor: brief.systems.aircon_outdoor ?? null,
+          note: scrubOrNull(brief.systems.note, identities),
+        }
+      : null,
+    future: brief.future
+      ? {
+          expansion: brief.future.expansion ?? null,
+          expansion_floors: brief.future.expansion_floors ?? null,
+          phasing: brief.future.phasing ?? null,
+        }
+      : null,
+    finishing_level: brief.finishing_level ?? null,
     style: brief.style ?? null,
     priorities: [...(brief.priorities ?? [])],
     free_text: {
