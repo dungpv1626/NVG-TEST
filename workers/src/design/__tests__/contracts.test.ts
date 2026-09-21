@@ -71,6 +71,28 @@ describe('Kiểm tra ở ranh giới', () => {
     );
   });
 
+  it('hỏng lúc ĐỌC nói về phiên bản dịch vụ, không đổ cho dữ liệu', () => {
+    /*
+     * Hai hướng hỏng khác hẳn nhau. Ghi hỏng là dữ liệu vừa dựng ra sai — người dùng làm lại
+     * được. Đọc hỏng thì dữ liệu KHÔNG sai: nó viết theo một phiên bản hợp đồng khác, artifact
+     * lại bất biến nên không sửa tại chỗ được, và «Thử lại» bao nhiêu lần cũng ra đúng kết quả
+     * đó. Xảy ra thật 21/09/2026 trên bản công khai (`nvg-api` tải lên 19/09 đọc artifact do
+     * bản mã 20/09 ghi ra): màn hình đổ lỗi cho dữ liệu và không nói ai xử lý được.
+     */
+    try {
+      parseArtifact('design_brief', {}, 'read');
+    } catch (error) {
+      const contract = error as ContractError;
+      expect(contract.message).toContain('Quản trị hệ thống');
+      expect(contract.message).not.toContain('hợp đồng "design_brief"');
+      // Danh sách mục hỏng vẫn phải giữ được — nó là thứ duy nhất chỉ ra hợp đồng nào lệch.
+      expect(contract.detail).toContain('design_brief');
+      expect(contract.issues.length).toBeGreaterThan(0);
+      return;
+    }
+    throw new Error('Lẽ ra phải ném lỗi hợp đồng.');
+  });
+
   it('lỗi hợp đồng tự khai là không đáng thử lại', () => {
     // Workflow đọc cờ này để không đốt bốn lần thử vào một lỗi cấu trúc.
     try {

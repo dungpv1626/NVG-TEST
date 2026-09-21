@@ -53,9 +53,33 @@ export class ContractError extends Error {
   constructor(
     readonly kind: string,
     readonly issues: z.ZodIssue[],
+    /**
+     * `read` = bản ghi ĐÃ CÓ trong kho không khớp lược đồ của bản dựng đang chạy.
+     *
+     * Hai hướng khác hẳn nhau nên không được nói cùng một câu. Ghi hỏng là dữ liệu vừa dựng
+     * ra sai — người dùng làm lại được. Đọc hỏng thì dữ liệu KHÔNG sai: nó viết theo một
+     * phiên bản hợp đồng khác, artifact lại bất biến nên không sửa tại chỗ được, và bấm
+     * «Thử lại» bao nhiêu lần cũng ra đúng kết quả đó. Việc phải làm là phát hành lại dịch
+     * vụ, mà chỉ Quản trị hệ thống làm được (CGD 5.5 — lỗi phải nói ai xử lý được).
+     *
+     * Xảy ra thật 21/09/2026: `nvg-api` tải lên 19/09 đọc artifact `ai_facade_concept` do bản
+     * mã 20/09 ghi ra, và cả tab «AI Design» đỏ với một câu lỗi kiểm kiểu bằng tiếng Anh.
+     */
+    readonly origin: 'read' | 'write' = 'write',
   ) {
-    super(`Dữ liệu không đúng hợp đồng "${kind}": ${describeIssues(issues)}`);
+    super(
+      origin === 'read'
+        ? 'Bản ghi này được tạo bằng một phiên bản dịch vụ thiết kế mới hơn bản đang chạy, ' +
+            'nên bản đang chạy không đọc được. Báo Quản trị hệ thống phát hành lại dịch vụ thiết kế; ' +
+            'các phần khác của hồ sơ vẫn dùng được bình thường.'
+        : `Dữ liệu không đúng hợp đồng "${kind}": ${describeIssues(issues)}`,
+    );
     this.name = 'ContractError';
+  }
+
+  /** Chi tiết kỹ thuật — chỉ để ghi log, không đưa lên màn hình (CGD 5.5). */
+  get detail(): string {
+    return `hợp đồng "${this.kind}" (${this.origin}): ${describeIssues(this.issues)}`;
   }
 }
 
@@ -66,13 +90,19 @@ function describeIssues(issues: z.ZodIssue[]): string {
     .join('; ');
 }
 
-/** Kiểm tra payload của một artifact. Ném `ContractError` nếu sai. */
+/**
+ * Kiểm tra payload của một artifact. Ném `ContractError` nếu sai.
+ *
+ * `origin` mặc định là `write` vì phần lớn chỗ gọi là lúc ĐÚC artifact. Chỗ đọc lại từ kho
+ * (`ArtifactRepository.head`/`get`) phải truyền `'read'` — xem chú thích ở `ContractError`.
+ */
 export function parseArtifact<K extends ArtifactKind>(
   kind: K,
   payload: unknown,
+  origin: 'read' | 'write' = 'write',
 ): z.infer<(typeof ARTIFACT_SCHEMAS)[K]> {
   const schema: z.ZodTypeAny = ARTIFACT_SCHEMAS[kind];
   const result = schema.safeParse(payload);
-  if (!result.success) throw new ContractError(kind, result.error.issues);
+  if (!result.success) throw new ContractError(kind, result.error.issues, origin);
   return result.data;
 }

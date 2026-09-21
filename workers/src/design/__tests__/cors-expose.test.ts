@@ -52,4 +52,14 @@ describe('CORS — header tuỳ chỉnh phải được khai lộ', () => {
       expect(exposed).toContain(`'${header}'`);
     }
   });
+
+  /*
+   * `X-NVG-Contracts` không do một tuyến nào đặt mà do middleware của `design/index.ts` gắn vào
+   * MỌI phản hồi, nên phép quét tuyến ở trên không nhìn thấy nó. Kiểm riêng: quên khai thì giao
+   * diện đọc ra `null`, coi như «chưa đo được» và im lặng — đúng thứ nó sinh ra để bắt.
+   */
+  it('khai dấu vân tay hợp đồng — thứ middleware gắn vào mọi phản hồi', () => {
+    expect(read('../index.ts')).toContain("c.header('X-NVG-Contracts'");
+    expect(exposed).toContain("'X-NVG-Contracts'");
+  });
 });

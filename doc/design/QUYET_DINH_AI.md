@@ -579,3 +579,50 @@ vẫn nhận cả hai gộp lại nên hành vi không đổi.
 Gói `rules/locality/` KHÔNG dùng ở nhánh AI: quy định riêng của một tỉnh không phải thứ để
 cảnh báo trên một đề xuất tham khảo, và hiện chưa tỉnh nào có gói.
 
+
+---
+
+## T69
+
+**Hai Worker phải phát hành cùng nhau, và phải tự báo khi lệch** (21/09/2026, Haan báo lỗi trên
+bản chạy thử công khai).
+
+**Lỗi đo được:** mở tab «AI Design» của hồ sơ `c815a6e6` trên `nvg.tests99.workers.dev` ra một
+khối chữ đỏ: `Dữ liệu không đúng hợp đồng "ai_facade_concept": materials.4.where — Invalid enum
+value. Expected 'base' | 'body' | … received 'main_door'; … elevation.levels.0 — Unrecognized
+key(s) in object: 'x0', 'x1'`, kèm nút «Thử lại».
+
+**Nguyên nhân — KHÔNG phải lỗi sinh dữ liệu, mà là lỗi ĐỌC.** `ArtifactRepository.head()` gọi
+`parseArtifact` cả khi đọc lại từ kho, nên một bản Worker cũ hơn hợp đồng đã ghi ra artifact thì
+không đọc nổi chính kho của mình. Ba điều kiện cộng lại:
+
+1. Artifact đang là bản hiệu lực (`sha256:ff38e870…`) ghi 20/09 15:10 từ máy phát triển chạy mã
+   sau T59: `materials[].where` có `main_door`/`side_door`/`window`/`garage_door`, và
+   `elevation.levels[]` có `x0`/`x1` (khung do Worker suy từ mặt bằng).
+2. Worker `nvg-api` công khai tải lên **19/09 16:15** — trước cả `adf044e`. Hợp đồng ở bản đó:
+   `where` chỉ 7 giá trị, `levels` chỉ `level/z/h` kèm `additionalProperties: false`. Kiểm chứng:
+   `GET /design/ai/facade/vocabulary` trên bản đó trả 404.
+3. Máy phát triển và bản chạy thử **dùng chung một project Supabase** (CLAUDE.md 6.3), nên mỗi
+   lượt chạy thử ở máy ghi thẳng artifact vào kho của bản công khai.
+
+Giao diện `nvg` lại được phát hành 20/09 11:28, tức **sau** T59. Bản công khai chạy giao diện mới
+với API cũ hơn một ngày, và không có gì báo.
+
+**Đã sửa:**
+
+1. `npm run deploy` phát hành **cả hai** Worker, API trước giao diện sau. Thứ tự đó có lý do: API
+   mới hơn giao diện thì vẫn đọc được mọi thứ; ngược lại là đúng cảnh hôm nay.
+2. `CONTRACTS_FINGERPRINT` — băm nội dung `contracts/`, sinh cùng `npm run contracts:gen`. Cả hai
+   bên nhúng lúc dựng; Worker trả ở header `X-NVG-Contracts` mọi phản hồi (đã thêm vào
+   `exposeHeaders`, `cors-expose.test.ts` canh); giao diện đối chiếu và hiện dải báo ở vỏ màn hình
+   thiết kế. Băm **nội dung** chứ không lấy mã commit: câu hỏi là «hai bên có cùng hợp đồng
+   không», mà báo động cho mỗi lần commit là cách chắc chắn để người dùng học cách bỏ qua báo động.
+   Chỉ BÁO, không chặn — khoá cả module vì một dòng mô tả trong JSON Schema thì hại hơn lợi.
+3. `ContractError` phân biệt `read` với `write`. Hỏng lúc đọc không còn đổ cho dữ liệu: dữ liệu
+   không sai, nó viết theo phiên bản hợp đồng khác, artifact bất biến nên không sửa tại chỗ được,
+   và «Thử lại» bao nhiêu lần cũng ra đúng kết quả đó. Câu mới nói việc phải làm và ai làm được
+   (CGD 5.5). Danh sách mục hỏng chuyển sang `error.detail`, chỉ vào log.
+
+**Còn treo:** gốc thật vẫn là một project Supabase dùng chung. Kể cả hai Worker luôn khớp nhau,
+chỉ cần chạy một bản mã mới ở máy là bản công khai lại đọc phải artifact nó không hiểu. Việc tách
+môi trường đã ghi ở `BUILD_PLAN.md` 4E — chưa làm, chờ Haan.

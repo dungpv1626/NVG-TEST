@@ -12,7 +12,7 @@
  */
 
 import { Hono } from 'hono';
-import { BRIEF_FORM } from '@nvg/shared/design';
+import { BRIEF_FORM, CONTRACTS_FINGERPRINT } from '@nvg/shared/design';
 import { ContractError } from './contracts';
 import { createComputeBackend } from './compute-backend';
 import { DataClassViolation, ModelNotConfigured } from './llm/router';
@@ -31,6 +31,24 @@ import { asUser, denyUnlessWritable, projectScope, DESIGN_WRITE_DENIED } from '.
 import type { DesignEnv } from './env';
 
 export const designApp = new Hono<{ Bindings: DesignEnv }>();
+
+/**
+ * Gắn dấu vân tay hợp đồng dữ liệu của bản dựng này vào MỌI phản hồi.
+ *
+ * Vì sao: artifact bất biến và được kiểm hợp đồng cả khi ĐỌC LẠI (`ArtifactRepository.head`).
+ * Một bản Worker cũ hơn hợp đồng đã ghi ra artifact sẽ không đọc nổi chính kho của mình, và
+ * người dùng chỉ thấy một câu lỗi kiểm kiểu không dẫn tới đâu. Xảy ra thật ngày 21/09/2026:
+ * giao diện `nvg` dựng 20/09 gọi `nvg-api` tải lên 19/09, tab «AI Design» đỏ hoàn toàn trong
+ * khi không có gì hỏng ngoài việc hai bên lệch phiên bản.
+ *
+ * Đặt SAU `next()` để phủ cả phản hồi lỗi và phản hồi tệp (SVG, DXF) — đúng những lúc giao
+ * diện cần biết nhất. Header phải nằm trong `exposeHeaders` của CORS ở `workers/src/index.ts`,
+ * nếu không trình duyệt đọc ra `null` mà không báo lỗi gì (`cors-expose.test.ts` canh).
+ */
+designApp.use('*', async (c, next) => {
+  await next();
+  c.header('X-NVG-Contracts', CONTRACTS_FINGERPRINT);
+});
 
 /**
  * Nhánh AI có bộ tuyến RIÊNG dưới `/design/ai`, trong một tệp không import gì của bộ giải.
@@ -53,6 +71,9 @@ designApp.get('/health', async (c) => {
     module: 'design',
     compute: { backend: compute.name, ...(await compute.health()) },
     models: { version: modelRouter(c.env).version },
+    // Cùng giá trị với header `X-NVG-Contracts`. Có trong thân phản hồi để kiểm bằng `curl`
+    // sau khi phát hành mà không cần mở trình duyệt.
+    contracts: CONTRACTS_FINGERPRINT,
   });
 });
 
@@ -526,6 +547,9 @@ designApp.onError((error, c) => {
   console.error('design:', error);
 
   if (error instanceof ContractError) {
+    // Câu cho người dùng không còn kèm danh sách mục hỏng khi lỗi đến từ lúc ĐỌC — ghi riêng
+    // vào log, nếu không thì mất luôn thứ duy nhất chỉ ra hợp đồng nào đã lệch.
+    console.error('design: lỗi hợp đồng —', error.detail);
     return c.json({ error: error.message, retryable: false }, 422);
   }
   if (error instanceof DataClassViolation) {

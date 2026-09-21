@@ -24,3 +24,13 @@ export * from './design-brief.generated';
 export * from './kb-record.generated';
 export * from './site-boundary-extraction.generated';
 export * from './kb.generated';
+
+/**
+ * Dấu vân tay của thư mục `contracts/` mà bản dựng này mang theo.
+ *
+ * Giao diện và Worker cùng nhúng hằng số này lúc dựng; Worker trả nó ở header
+ * `X-NVG-Contracts`, giao diện đối chiếu với bản của mình. Lệch nghĩa là hai bên đang chạy
+ * hai phiên bản hợp đồng dữ liệu khác nhau — nói thẳng điều đó còn hơn để người dùng đọc một
+ * câu lỗi kiểm kiểu không dẫn tới đâu.
+ */
+export const CONTRACTS_FINGERPRINT = '27c8c586581c';
