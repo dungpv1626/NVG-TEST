@@ -22,7 +22,7 @@
 #  Mỗi quy tắc BẮT BUỘC khai `n` = số mặt bằng đỡ cho con số ấy:
 #    · `n: 0`       — chưa ai đo. Mặc định của team, chưa có kiến trúc sư soát.
 #    · `n: 1…6`     — đo trên hồ sơ thật, kèm `khoang_quan_sat` và `n_du_an`.
-#  Hiện: **15 quy tắc có số đo**, 16 quy tắc `n: 0`.
+#  Hiện: **16 quy tắc có số đo**, 15 quy tắc `n: 0`.
 #
 #  ⚠️ n tối đa là 6 và n theo dự án tối đa là 2. CLAUDE.md 8.8 điểm 7 đòi **n ≥ 15**
 #     mới được gọi là ĐỊNH MỨC. Nên mọi con số ở đây là CHỈ DẤU, và T31 buộc hiện
@@ -45,6 +45,12 @@
 #  Nguồn số đo: 2 dự án NVO đã xây, 6 mặt bằng độc lập (P1 nhà vườn 2 tầng 03/2026;
 #  P2 liền kề 5 tầng 08/2026). Phân tích đầy đủ ở
 #  `~/Documents/Doc/NVG/design/mat_bang_cong_nang/`.
+#
+#  22/09/2026 — thêm 4 hồ sơ nữa (HS-03…HS-06), đo 10 tờ mặt bằng. Đợt ấy tập trung vào
+#  CẦU THANG, BẬC TAM CẤP và CỐT CAO ĐỘ, nên chỉ một quy tắc ở đây đổi (`stair_not_facing_entry`,
+#  n: 0 → 2). Diện tích và bề rộng phòng KHÔNG đổi: bốn hồ sơ mới chỉ có nhãn diện tích ghi sẵn,
+#  còn mọi con số trong tệp này đo TỪ ĐA GIÁC. Trộn hai cách đo là làm hỏng chính khoảng quan sát
+#  đã có. Báo cáo: `doc/design/13-ho-so-thuc-te.md` mục 13.16.
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # ── KÍCH THƯỚC TỐI THIỂU — bề rộng lọt lòng nhỏ nhất của phòng ────────────────
@@ -336,6 +342,11 @@
 # Haan chốt chỉ lấy ý này trong ba ý phong thuỷ: nó đo được bằng hình học cửa + ô thang
 # (`ai/rule-warnings.ts#stairsFacingEntry`). «Bếp đối diện WC» và «bếp kẹp giữa hai thuỷ» vẫn không
 # đo — xem `kb/plan_quality.yaml` mục `khong_do_duoc`.
+#
+# 22/09/2026 — ĐỐI CHIẾU HỒ SƠ THẬT, n: 0 → 2 (doc/design 13.16.1). Hai hồ sơ nhiều tầng của đợt
+# đo mới đều KHÔNG đặt thang đối diện cửa chính: HS-03 (liền kề trong ngõ) đặt thang ở góc trong
+# cùng, chạy ngang nhà, xa cửa cuốn và cửa đi ở mặt tiền; HS-06 (mái Nhật hai tầng) đặt thang ở
+# dải sau, vuông góc với trục sảnh chính. Quy tắc này ra đời từ một tài liệu, nay có số đo đỡ.
 - id: stair_not_facing_entry
   applies_to: [nha_pho, biet_thu, nha_vuon]
   scope: floor
@@ -343,7 +354,9 @@
   target: stair
   severity: warning
   source: 'kinh nghiệm NVG'
-  n: 0
+  n: 2
+  n_du_an: 2
+  khoang_quan_sat: 'HS-03 thang ở góc trong cùng · HS-06 thang ở dải sau — không hồ sơ nào đối diện cửa chính'
   auto_repair: none
 
 # ── CHIẾU SÁNG VÀ THÔNG GIÓ ───────────────────────────────────────────────────
