@@ -12,7 +12,13 @@
  */
 
 import { Hono } from 'hono';
-import { BRIEF_FORM, CONTRACTS_FINGERPRINT } from '@nvg/shared/design';
+import {
+  applyBriefFormOverlay,
+  BRIEF_FORM,
+  BRIEF_FORM_OVERLAY_KEY,
+  CONTRACTS_FINGERPRINT,
+  readBriefFormOverlay,
+} from '@nvg/shared/design';
 import { ContractError } from './contracts';
 import { createComputeBackend } from './compute-backend';
 import { DataClassViolation, ModelNotConfigured } from './llm/router';
@@ -21,6 +27,7 @@ import { aiApp } from './ai/routes';
 import { LlmCallFailed } from './llm/gemini';
 import { ArtifactRepository } from './artifacts';
 import { buildBriefPayload } from './brief/payload';
+import { readEffectiveBriefForm } from './brief/form-config';
 import { recordAiCall, usageSummary } from './ai/call-log';
 import { retrieveFewShots } from './kb/retrieve';
 import { embeddingText, withheldFields, type RationalePayload } from './kb/rationale';
@@ -150,6 +157,93 @@ designApp.post('/kb/digitise', async (c) => {
 });
 
 /**
+ * Lưu lớp phủ cấu hình biểu mẫu Đầu bài của tenant (màn hình «Biểu mẫu đầu bài»).
+ *
+ * Vì sao là endpoint Workers chứ không phải một lệnh `upsert` thẳng từ trình duyệt
+ * (CLAUDE.md 3.1): hai lý do, cả hai thuộc nhóm (c) «quy tắc phức tạp hơn RLS».
+ *
+ *  1. **Kiểm trước khi ghi.** Lớp phủ hỏng nằm trong CSDL thì biểu mẫu Đầu bài của CẢ tenant
+ *     lùi về bản gốc — im lặng, và không ai biết vì sao câu hỏi vừa thêm không hiện ra.
+ *     `applyBriefFormOverlay` chạy ở đây, trước khi ghi, và trả câu tiếng Việt nói rõ chỗ sai.
+ *  2. **Tenant không nằm trong tay trình duyệt.** `design_setting` khoá chính là
+ *     `(tenant_id, key)`; một lệnh `upsert` từ trình duyệt phải tự đoán `tenant_id`, mà RLS
+ *     chỉ kiểm nó có hợp lệ hay không, không nói nó là cái nào.
+ *
+ * Quyền GHI vẫn do RLS quyết (`design.settings.write`) — Worker dùng token của chính người
+ * gọi, không dùng `service_role`. Không chép lại điều kiện quyền ở đây.
+ *
+ * `POST` chứ không `PUT` cho đồng bộ với mọi tuyến khác của module: lớp gọi `designApi` của
+ * trình duyệt chỉ biết GET (không thân) và POST (có thân) — thêm một động từ thứ ba chỉ cho
+ * một tuyến là thêm một nhánh trong lớp gọi mà không ai được lợi.
+ */
+designApp.post('/brief/form', async (c) => {
+  const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+
+  const body = (await c.req.json()) as { overlay?: unknown };
+  const db = await asUser(c.env, token);
+
+  const tenants = await db.rpc('auth_tenant_ids');
+  const tenantId = (tenants.data as string[] | null)?.[0];
+  if (tenants.error || !tenantId) {
+    return c.json({ error: 'Không xác định được phạm vi dữ liệu của tài khoản.' }, 403);
+  }
+
+  // Lớp phủ rỗng = «trả biểu mẫu về bản gốc». Xoá hàng thay vì ghi một lớp phủ trống: hàng
+  // trống vẫn là một lớp phủ, và lần sau đọc lên sẽ che mất bản gốc nếu hình dạng lớp phủ đổi.
+  const overlay = readBriefFormOverlay(body.overlay);
+  if (body.overlay && !overlay) {
+    return c.json(
+      { error: 'Cấu hình biểu mẫu gửi lên không đúng hình dạng. Tải lại màn hình rồi thử lại.' },
+      400,
+    );
+  }
+
+  if (overlay) {
+    try {
+      applyBriefFormOverlay(BRIEF_FORM, overlay);
+    } catch (error) {
+      return c.json({ error: (error as Error).message }, 400);
+    }
+  }
+
+  const saved = overlay
+    ? await db
+        .from('design_setting')
+        .upsert(
+          {
+            tenant_id: tenantId,
+            key: BRIEF_FORM_OVERLAY_KEY,
+            value: overlay,
+            description: 'Lớp phủ biểu mẫu Đầu bài do quản trị viên sửa.',
+          },
+          { onConflict: 'tenant_id,key' },
+        )
+        .select('key')
+        .maybeSingle()
+    : await db
+        .from('design_setting')
+        .delete()
+        .eq('tenant_id', tenantId)
+        .eq('key', BRIEF_FORM_OVERLAY_KEY)
+        .select('key')
+        .maybeSingle();
+
+  if (saved.error) {
+    // RLS từ chối thì nói AI xử lý được, không hiện mã lỗi (CGD 5.5).
+    return c.json(
+      {
+        error:
+          'Tài khoản không được sửa cấu hình biểu mẫu đầu bài. Quản trị hệ thống hoặc Trưởng phòng Thiết kế thực hiện được việc này.',
+      },
+      403,
+    );
+  }
+
+  return c.json({ ok: true });
+});
+
+/**
  * Xác nhận đầu bài — đúc artifact `design_brief` bất biến.
  *
  * Vì sao đây là endpoint Workers chứ không phải một lệnh Supabase (CLAUDE.md 3.1): nó ghi
@@ -225,10 +319,17 @@ designApp.post('/brief/confirm', async (c) => {
   if (denied) return c.json({ error: denied.error }, denied.status);
 
   const actor = await db.rpc('auth_user_id');
+
+  // Cấu hình biểu mẫu HIỆU LỰC của tenant — trọng số và câu hỏi tự thêm của quản trị viên.
+  // Chấm điểm theo bản gốc trong khi người dùng điền bản đã sửa là hai con số khác nhau về
+  // cùng một đầu bài, mà con số đi vào artifact thì bất biến.
+  const form = await readEffectiveBriefForm(db, company.data.tenant_id as string);
+
   const built = buildBriefPayload({
     structured: row.structured,
     projectId: row.design_project_id,
     projectCode: row.project.code,
+    config: form.config,
   });
 
   // Đúc artifact TRƯỚC khi đánh dấu xác nhận: hợp đồng thiếu trường bắt buộc thì dừng ở đây
@@ -245,7 +346,11 @@ designApp.post('/brief/confirm', async (c) => {
     kind: 'design_brief',
     payload: built.payload,
     step: 'layer1_brief',
-    params: { form_config_version: BRIEF_FORM.version },
+    params: {
+      form_config_version: form.config.version,
+      // Đúc bằng bản gốc dù tenant có lớp phủ: ghi lại để về sau tra ra được, thay vì đoán.
+      form_overlay: form.overlayApplied ? 'applied' : form.fellBack ? 'fallback' : 'none',
+    },
     setHead: true,
   });
 

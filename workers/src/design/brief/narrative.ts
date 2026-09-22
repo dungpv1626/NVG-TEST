@@ -44,6 +44,17 @@ export function briefNarrative(digest: AiBriefDigest, options: NarrativeOptions)
     value ? label('site.access_sides', value).toLowerCase() : '';
   const metres = (value: number | null | undefined) =>
     typeof value === 'number' ? `${formatNumber(value)} m` : '';
+  /**
+   * Câu trả lời có/không viết thành chữ.
+   *
+   * `null` và `undefined` trả chuỗi rỗng chứ KHÔNG trả «không»: chưa hỏi và trả lời «không»
+   * là hai chuyện khác nhau, và gộp lại thì mô hình đọc được một câu khẳng định mà gia chủ
+   * chưa từng nói.
+   */
+  const yesNo = (value: boolean | null | undefined) =>
+    value === true ? 'có' : value === false ? 'không' : '';
+  const faces = (values: readonly string[] | null | undefined) =>
+    values?.length ? values.map(face).join(', ') : '';
 
   const sections: string[] = [];
   const section = (title: string, lines: (string | null | undefined | false)[]) => {
@@ -74,6 +85,10 @@ export function briefNarrative(digest: AiBriefDigest, options: NarrativeOptions)
     const value = site.boundary_walls?.[f];
     return value ? `${face(f)}: ${label('site.boundary_walls', value).toLowerCase()}` : null;
   }).filter(Boolean);
+  const neighbours = FACES.map((f) => {
+    const value = site.neighbour_floors?.[f];
+    return typeof value === 'number' && value > 0 ? `${face(f)} ${value} tầng` : null;
+  }).filter(Boolean);
   section('Khu đất', [
     `Mặt tiền rộng ${metres(site.width_m)}, sâu ${metres(site.depth_m)}${
       site.shape ? ` — ${label('site.shape', site.shape).toLowerCase()}` : ''
@@ -91,6 +106,19 @@ export function briefNarrative(digest: AiBriefDigest, options: NarrativeOptions)
     site.main_entrance_side ? `Lối vào chính đặt ở ${face(site.main_entrance_side)}.` : null,
     site.vehicle_entrance_side ? `Lối xe vào ở ${face(site.vehicle_entrance_side)}.` : null,
     walls.length ? `Tường ranh — ${walls.join('; ')}.` : null,
+    typeof site.road_width_m === 'number'
+      ? `Đường trước nhà rộng ${metres(site.road_width_m)}.`
+      : null,
+    levelLine(site),
+    faces(site.harsh_sun_sides) ? `Mặt chịu nắng gắt: ${faces(site.harsh_sun_sides)}.` : null,
+    faces(site.cool_wind_sides) ? `Mặt đón gió mát: ${faces(site.cool_wind_sides)}.` : null,
+    neighbours.length ? `Nhà liền kề: ${neighbours.join('; ')}.` : null,
+    site.flood_risk && site.flood_risk !== 'khong'
+      ? `Khu đất bị ngập ${label('site.flood_risk', site.flood_risk).toLowerCase()}.`
+      : null,
+    site.existing_structure && site.existing_structure !== 'dat_trong'
+      ? `Hiện trạng: ${label('site.existing_structure', site.existing_structure).toLowerCase()}.`
+      : null,
   ]);
 
   // ── Gia đình ────────────────────────────────────────────────────────────────────────────
@@ -107,6 +135,7 @@ export function briefNarrative(digest: AiBriefDigest, options: NarrativeOptions)
           const pref = FLOOR_PREF_LABEL[member.floor_pref as keyof typeof FLOOR_PREF_LABEL];
           if (pref) parts.push(`muốn ở ${pref.toLowerCase()}`);
         }
+        if (member.ages?.length) parts.push(`tuổi ${member.ages.join(', ')}`);
         if (member.ensuite) parts.push('phòng ngủ khép kín');
         if (member.needs?.length) {
           const needs = member.needs.map((need) =>
@@ -174,10 +203,181 @@ export function briefNarrative(digest: AiBriefDigest, options: NarrativeOptions)
       : null,
   ]);
 
+  // ── Gia chủ, tín ngưỡng, kinh doanh tại nhà ────────────────────────────────────────────
+  const household = digest.household;
+  const business = household?.home_business;
+  section('Gia chủ và tín ngưỡng', [
+    household?.occupation ? `Ngành nghề: ${household.occupation}.` : null,
+    household?.religion
+      ? `Tín ngưỡng: ${label('household.religion', household.religion).toLowerCase()}.`
+      : null,
+    household?.altar_arrangement
+      ? `Nơi thờ: ${label('household.altar_arrangement', household.altar_arrangement).toLowerCase()}${
+          typeof household.altar_floor === 'number' ? `, đặt ở tầng ${household.altar_floor}` : ''
+        }.`
+      : null,
+    household?.feng_shui
+      ? `Phong thuỷ: ${label('household.feng_shui', household.feng_shui).toLowerCase()}.`
+      : null,
+    household?.feng_shui_notes ? `Yêu cầu phong thuỷ: ${household.feng_shui_notes}` : null,
+    household?.taboos ? `Kiêng kỵ: ${household.taboos}` : null,
+  ]);
+
+  section('Kinh doanh tại nhà', [
+    business?.mode && business.mode !== 'khong'
+      ? `Hình thức: ${label('household.home_business.mode', business.mode).toLowerCase()}${
+          typeof business.floor_count === 'number'
+            ? `, chiếm ${business.floor_count} tầng dưới`
+            : ''
+        }.`
+      : null,
+    business?.mode && business.mode !== 'khong' && yesNo(business.separate_entrance)
+      ? `Lối vào riêng cho khách: ${yesNo(business.separate_entrance)}.`
+      : null,
+    business?.mode && business.mode !== 'khong' && yesNo(business.customer_wc)
+      ? `Khu vệ sinh riêng cho khách: ${yesNo(business.customer_wc)}.`
+      : null,
+    typeof business?.staff_count === 'number' && business.staff_count > 0
+      ? `${business.staff_count} người làm việc tại nhà.`
+      : null,
+    business?.note ? `Ghi chú: ${business.note}` : null,
+  ]);
+
+  // ── Nếp sinh hoạt ─────────────────────────────────────────────────────────────────────
+  const life = digest.lifestyle;
+  section('Nếp sinh hoạt', [
+    life?.cooking ? `Nấu ăn: ${label('lifestyle.cooking', life.cooking).toLowerCase()}.` : null,
+    yesNo(life?.second_kitchen) ? `Cần bếp phụ tách riêng: ${yesNo(life?.second_kitchen)}.` : null,
+    life?.dining_place
+      ? `Chỗ ăn: ${label('lifestyle.dining_place', life.dining_place).toLowerCase()}.`
+      : null,
+    life?.guests ? `Tiếp khách ${label('lifestyle.guests', life.guests).toLowerCase()}.` : null,
+    yesNo(life?.overnight_guests) ? `Khách ở lại qua đêm: ${yesNo(life?.overnight_guests)}.` : null,
+    yesNo(life?.work_from_home) ? `Làm việc tại nhà: ${yesNo(life?.work_from_home)}.` : null,
+    yesNo(life?.night_shift)
+      ? `Có người làm ca đêm, ngủ ban ngày: ${yesNo(life?.night_shift)}.`
+      : null,
+    life?.reduced_mobility === true
+      ? 'Trong nhà có người đi lại khó khăn: cần một phòng ngủ và một khu vệ sinh ở tầng trệt, hạn chế bậc, cửa và hành lang đủ rộng.'
+      : null,
+    life?.drying ? `Phơi đồ: ${label('lifestyle.drying', life.drying).toLowerCase()}.` : null,
+    life?.pets && life.pets !== 'khong'
+      ? `Thú nuôi: ${label('lifestyle.pets', life.pets).toLowerCase()}.`
+      : null,
+    life?.daily_rhythm ? `Nếp hằng ngày: ${life.daily_rhythm}` : null,
+  ]);
+
+  // ── Lưu trữ ───────────────────────────────────────────────────────────────────────────
+  const storage = digest.storage;
+  section('Nhu cầu lưu trữ', [
+    storage?.level
+      ? `Lượng đồ cần cất: ${label('storage.level', storage.level).toLowerCase()}.`
+      : null,
+    storage?.items?.length
+      ? `Cần chỗ cho: ${storage.items.map((i) => label('storage.items', i).toLowerCase()).join(', ')}.`
+      : null,
+    storage?.note ? `Ghi chú: ${storage.note}` : null,
+  ]);
+
+  // ── Thang, lối vào, cao độ nền ────────────────────────────────────────────────────────
+  const vertical = digest.vertical;
+  const entrance = digest.entrance;
+  section('Thang, lối vào và cao độ nền', [
+    vertical?.elevator && vertical.elevator !== 'khong'
+      ? `Thang máy: ${label('vertical.elevator', vertical.elevator).toLowerCase()}${
+          vertical.elevator_capacity
+            ? `, tải ${label('vertical.elevator_capacity', vertical.elevator_capacity)}`
+            : ''
+        }${
+          vertical.elevator_position && vertical.elevator_position !== 'chua_quyet'
+            ? `, đặt ${label('vertical.elevator_position', vertical.elevator_position).toLowerCase()}`
+            : ''
+        }. Ô thang máy phải chừa đủ chỗ ngay ở phương án này, kể cả khi lắp sau.`
+      : vertical?.elevator === 'khong'
+        ? 'Không làm thang máy.'
+        : null,
+    vertical?.stair_type && vertical.stair_type !== 'chua_quyet'
+      ? `Thang bộ: ${label('vertical.stair_type', vertical.stair_type).toLowerCase()}.`
+      : null,
+    typeof entrance?.floor_above_road_m === 'number'
+      ? `Cốt nền tầng 1 cao hơn tim đường ${metres(entrance.floor_above_road_m)}.`
+      : null,
+    yesNo(entrance?.steps_from_yard)
+      ? `Bậc tam cấp từ sân lên nhà: ${yesNo(entrance?.steps_from_yard)}${
+          typeof entrance?.step_count === 'number' ? `, ${entrance.step_count} bậc` : ''
+        }.`
+      : null,
+    yesNo(entrance?.vehicle_ramp) ? `Dốc dắt xe lên sân: ${yesNo(entrance?.vehicle_ramp)}.` : null,
+  ]);
+
+  // ── Ban công ──────────────────────────────────────────────────────────────────────────
+  const balconies = digest.balconies;
+  section('Ban công', [
+    balconies?.scope
+      ? `Phạm vi: ${label('balconies.scope', balconies.scope).toLowerCase()}.`
+      : null,
+    faces(balconies?.sides) ? `Đặt ở: ${faces(balconies?.sides)}.` : null,
+    balconies?.projection_over_boundary === true
+      ? `Ban công ĐUA RA NGOÀI ranh đất${
+          typeof balconies.projection_m === 'number'
+            ? `, vươn ${metres(balconies.projection_m)}`
+            : ''
+        }.`
+      : balconies?.projection_over_boundary === false
+        ? `Ban công KHÔNG đua ra ngoài ranh đất — nằm trọn trong phần đất xây được${
+            typeof balconies.projection_m === 'number'
+              ? `, vươn ${metres(balconies.projection_m)}`
+              : ''
+          }.`
+        : null,
+    yesNo(balconies?.drying_balcony)
+      ? `Ban công phơi riêng phía sau: ${yesNo(balconies?.drying_balcony)}.`
+      : null,
+    balconies?.note ? `Ghi chú: ${balconies.note}` : null,
+  ]);
+
+  // ── Kỹ thuật và dự trù ────────────────────────────────────────────────────────────────
+  const systems = digest.systems;
+  const future = digest.future;
+  section('Kỹ thuật và dự trù tương lai', [
+    systems?.water_storage?.length
+      ? `Trữ nước: ${systems.water_storage.map((w) => label('systems.water_storage', w).toLowerCase()).join(', ')}.`
+      : null,
+    yesNo(systems?.solar_water)
+      ? `Bình nước nóng năng lượng mặt trời trên mái: ${yesNo(systems?.solar_water)}.`
+      : null,
+    systems?.aircon_outdoor && systems.aircon_outdoor !== 'chua_quyet'
+      ? `Cục nóng điều hoà đặt ở ${label('systems.aircon_outdoor', systems.aircon_outdoor).toLowerCase()}.`
+      : null,
+    systems?.note ? `Ghi chú kỹ thuật: ${systems.note}` : null,
+    future?.expansion && future.expansion !== 'khong'
+      ? `Dự trù: ${label('future.expansion', future.expansion).toLowerCase()}${
+          typeof future.expansion_floors === 'number'
+            ? `, thêm ${future.expansion_floors} tầng`
+            : ''
+        }.`
+      : null,
+    yesNo(future?.phasing) ? `Xây theo giai đoạn: ${yesNo(future?.phasing)}.` : null,
+  ]);
+
   // ── Ưu tiên ───────────────────────────────────────────────────────────────────────────
   section(
     'Ưu tiên của gia chủ (theo thứ tự)',
     (digest.priorities ?? []).map((p, i) => `${i + 1}. ${label('priorities', p)}.`),
+  );
+
+  if (digest.finishing_level) {
+    section('Mức hoàn thiện', [`${label('finishing_level', digest.finishing_level)}.`]);
+  }
+
+  // ── Câu hỏi quản trị viên tự thêm ──────────────────────────────────────────────────────
+  //
+  // Đứng SAU các mục có tên và TRƯỚC lời gia chủ: chúng là câu hỏi của NVG chứ không phải lời
+  // gia chủ, nhưng chúng cũng không thuộc mục nào đã khai — nhét vào một mục có sẵn là nói dối
+  // về nguồn gốc của câu trả lời.
+  section(
+    'Khảo sát bổ sung',
+    (digest.custom ?? []).map((answer) => `${answer.label}: ${answer.value}`),
   );
 
   // ── Lời gia chủ, nguyên văn ────────────────────────────────────────────────────────────
@@ -225,6 +425,28 @@ export function knowledgeOf<T = unknown>(body: string): T {
   const match = /<knowledge>([\s\S]*?)<\/knowledge>/.exec(body);
   if (!match) throw new Error('Thân lời gọi không có <knowledge>.');
   return JSON.parse(match[1]!) as T;
+}
+
+/**
+ * Cao độ đường và cao độ đất — nói bằng CHÊNH LỆCH, không nói trị tuyệt đối.
+ *
+ * Hai con số đo theo mốc chuẩn của người khảo sát (cốt quốc gia, hay một mốc tự đặt), nên
+ * riêng chúng không mang thông tin nào mô hình dùng được: «cốt +7,25 m» chỉ có nghĩa khi biết
+ * mốc. Cái quyết cốt nền, số bậc tam cấp và hướng thoát nước là ĐẤT CAO HƠN hay THẤP HƠN
+ * đường bao nhiêu — nên văn xuôi chỉ nói đúng điều đó.
+ *
+ * Thiếu một trong hai thì không suy ra được gì; im lặng, không đoán.
+ */
+function levelLine(site: AiBriefDigest['site']): string | null {
+  const road = site.road_level_m;
+  const land = site.land_level_m;
+  if (typeof road !== 'number' || typeof land !== 'number') return null;
+  const diff = Math.round((land - road) * 100) / 100;
+  if (diff === 0) return 'Đất ngang bằng cao độ đường.';
+  const rounded = formatNumber(Math.abs(diff));
+  return diff > 0
+    ? `Đất cao hơn tim đường ${rounded} m.`
+    : `Đất THẤP hơn tim đường ${rounded} m — phải tôn nền và tính lại thoát nước.`;
 }
 
 function formatNumber(value: number): string {

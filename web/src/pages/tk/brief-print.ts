@@ -19,9 +19,9 @@
 
 import { formatDateTime, formatNumber } from '@nvg/shared';
 import {
-  BRIEF_FORM,
   valueAtPath,
   visibleFields,
+  type BriefFormConfig,
   type BriefFormField,
   type DesignBriefDraft,
   type checkBriefConsistency,
@@ -44,6 +44,14 @@ export interface BriefPrintInput {
   score: ReturnType<typeof scoreBrief>;
   issues: ReturnType<typeof checkBriefConsistency>;
   threshold: number | null;
+  /**
+   * Cấu hình biểu mẫu HIỆU LỰC — truyền vào chứ không nhập thẳng `config`.
+   *
+   * Bản in phải liệt kê ĐÚNG bộ câu hỏi người dùng vừa nhìn thấy. In theo bản gốc trong khi
+   * màn hình vẽ theo bản quản trị viên đã sửa nghĩa là bản in có những câu không ai được hỏi,
+   * và thiếu những câu vừa trả lời — mà đó đúng là tờ giấy cầm ra gặp khách.
+   */
+  config: BriefFormConfig;
 }
 
 function row(label: string, value: string | null): string {
@@ -56,11 +64,11 @@ function row(label: string, value: string | null): string {
  * Trên màn hình nó là bảng bốn cột; ép nó thành `Phòng khách · Tầng 1 · 24 m²; Bếp · …` là
  * bắt người đọc tự tách lại, và đó đúng là thứ họ cầm ra công trường để đối chiếu.
  */
-function spacesTable(draft: DesignBriefDraft, floors: number): string {
+function spacesTable(draft: DesignBriefDraft, floors: number, config: BriefFormConfig): string {
   const items = draft.required_spaces ?? [];
   if (items.length === 0) return `<p class="muted">Chưa khai không gian nào.</p>`;
 
-  const field = BRIEF_FORM.sections
+  const field = config.sections
     .flatMap((section) => section.fields)
     .find((f) => f.path === 'required_spaces');
   const labelOf = (type: string) =>
@@ -144,8 +152,8 @@ function familyTable(draft: DesignBriefDraft, field: BriefFormField): string {
 }
 
 export function printBrief(input: BriefPrintInput): void {
-  const { draft, legacy, score, issues } = input;
-  const shown = visibleFields(BRIEF_FORM, draft);
+  const { draft, legacy, score, issues, config } = input;
+  const shown = visibleFields(config, draft);
   const floors = draft.floors ?? 1;
 
   const valueOf = (field: BriefFormField): string | null =>
@@ -155,13 +163,13 @@ export function printBrief(input: BriefPrintInput): void {
 
   // Từng bước một mục, ĐÚNG thứ tự trên màn hình — người đọc bản in và người điền biểu mẫu
   // phải đi qua cùng một trình tự thì mới đối chiếu được với nhau.
-  const sections = BRIEF_FORM.sections
+  const sections = config.sections
     .map((section) => {
       const fields = shown.filter((v) => v.section.id === section.id).map((v) => v.field);
       if (fields.length === 0) return '';
       // Hai trường có cấu trúc riêng — in thành BẢNG, không ép vào một ô của bảng dữ kiện.
       const asTable: Record<string, (field: BriefFormField) => string> = {
-        required_spaces: () => spacesTable(draft, floors),
+        required_spaces: () => spacesTable(draft, floors, config),
         family: (field) => familyTable(draft, field),
       };
       const plain = fields.filter((f) => !asTable[f.path]);

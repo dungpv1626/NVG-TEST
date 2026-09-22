@@ -38,6 +38,9 @@ const DesignShowcasePage = lazy(() =>
 const UserAdminPage = lazy(() =>
   import('@/pages/nen/user-admin-page').then((m) => ({ default: m.UserAdminPage })),
 );
+const BriefFormAdminPage = lazy(() =>
+  import('@/pages/nen/brief-form-page').then((m) => ({ default: m.BriefFormAdminPage })),
+);
 const ParameterPage = lazy(() =>
   import('@/pages/nen/parameter-page').then((m) => ({ default: m.ParameterPage })),
 );
@@ -422,6 +425,7 @@ const router = createBrowserRouter(
           <Route path="nen/tham-so" element={<ParameterPage />} />
           <Route path="nen/han-muc" element={<ApprovalLimitPage />} />
           <Route path="nen/thoi-han" element={<SlaPage />} />
+          <Route path="nen/bieu-mau-dau-bai" element={<BriefFormAdminPage />} />
           <Route path="nen/phan-cong" element={<SiteAssignmentPage />} />
           <Route path="nen/nhat-ky" element={<AuditLogPage />} />
           <Route path="nen/giao-dien" element={<DesignShowcasePage />} />

@@ -31,6 +31,16 @@ do_duoc:
     MỘT công trình. Đủ để BÁC một con số sai, chưa đủ để dựng phân bố. Ngưỡng thống kê là
     15 công trình (`kb/space_norms.yaml`, mục `priors.min_samples`).
 
+do_duoc_2:
+  ngay: '2026-09-22'
+  ho_so: 'HS-03 liền kề trong ngõ 3 tầng · HS-04 mái Nhật sân vườn 1 tầng · HS-05 liền kề mái Nhật 1 tầng · HS-06 mái Nhật 2 tầng'
+  to: '10 tờ mặt bằng (công năng, nội thất, kiến trúc, mái, tổng thể); bảng thống kê cửa của HS-04'
+  bao_cao: 'doc/design/13-ho-so-thuc-te.md mục 13.16'
+  canh_bao: >-
+    Bốn công trình, nâng kho lên 6 (7 nếu tính bộ chưa giải nén). VẪN dưới ngưỡng 15, nên mọi
+    con số ở đây là CHỈ DẤU, không phải định mức. Đợt này KHÔNG đổi một giá trị nào — chỉ đổi
+    mức tin cậy và nới khoảng quan sát đã ghi. Xem 13.16 để biết chỗ nào hai đợt nói khác nhau.
+
 walls:
   # Xác nhận trên hồ sơ thật: ghi chú kết cấu có cả "GỜ CHÂN TƯỜNG 110" lẫn "… 220",
   # đúng cặp bề dày mà tệp này vẫn giả định.
@@ -42,8 +52,16 @@ levels:
   # Đọc từ cao độ ghi trên mặt cắt HS-01: +0.000 · +3.600 · +7.200 · +10.800 · +14.700 · +18.400.
   # Bốn tầng đầu đúng 3,6 m. Tầng trên cùng cao hơn (3,9 m rồi 3,7 m) — đừng lấy một con số
   # duy nhất áp cho mọi tầng.
+  #
+  # 22/09/2026 nới khoảng: HS-03 tầng 1 cao 3.600 rồi tầng 2 chỉ 3.300 (±0.000 · +3.600 · +6.900);
+  # HS-06 tầng 1 cao 3.900. Khoảng thật của NVG là 3,3 – 3,9 m, và TẦNG 1 CAO HƠN tầng trên khi
+  # tầng 1 có gara hoặc mặt tiền kinh doanh — ngược chiều với HS-01 (tầng trên cùng cao hơn).
   storey_height_m: 3.6
   top_storey_height_m: 3.9
+  # Đo thêm, CHƯA khai thành khoá vì chưa có nơi đọc (mặt bằng engine sinh ra là một mặt phẳng,
+  # chưa mang cốt từng khu): sàn khu vệ sinh LUÔN thấp hơn sàn phòng 30–100 mm — HS-03 giữ đúng
+  # −0,050 ở cả ba tầng (−0.050 · +3.550 · +6.850); ban công và sân giặt phơi thấp hơn 30 mm
+  # (HS-06: +3.870 so với +3.900).
 
 # ── Mặt đứng (T59, 19/09/2026) ─────────────────────────────────────────────────────────
 # Mặt bằng không mang hai số này, nên tờ mặt đứng lấy ở đây. ±0.000 là mặt sàn hoàn thiện tầng 1
@@ -53,6 +71,10 @@ levels:
 # · tường chắn mái: đo được 0,8–0,9 m (n = 2) → hạ từ 1,1 xuống 0,9.
 # n vẫn dưới 15, nên đây là CHỈ DẤU. Chỉ quyết định tờ vẽ TRÔNG thế nào; kỹ sư điền số khác ở
 # phiếu yêu cầu thì số của phiếu thắng.
+#
+# 22/09/2026, ba hồ sơ mới có sân: HS-04 và HS-05 đúng 0,45; HS-06 nền cao hơn sân 0,75 và cao hơn
+# ĐƯỜNG 0,85 (bảng chú giải cốt của tờ tổng thể ghi thẳng: ±0.000 nền · −0.750 sân · −0.850 đường).
+# 0,45 được XÁC NHẬN là mức thường gặp; cận trên của khoảng đo được nâng từ 0,75 lên 0,85.
 facade:
   ground_floor_raise_m: 0.45
   parapet_height_m: 0.9
@@ -66,17 +88,53 @@ facade:
 # trên hai hồ sơ NVO (`kt/` mặt cắt thang): P1 nhà vườn h ≈ 171 mm (21 bậc / 3,6 m), P2 nhà phố
 # h ≈ 156 mm. Chương trình chỉ dùng số này để VẼ số bậc; không cổng kiểm nào chặn một phương án
 # vì nó. Kiến trúc sư đổi được theo từng công trình.
+#
+# ── ĐỐI CHIẾU 22/09/2026, bốn hồ sơ mới (doc/design 13.16.1) ──────────────────────────
+# Đo bốn vế thang thật: HS-03 (liền kề trong ngõ, ba tầng vẽ giống hệt nhau) và HS-06 (mái Nhật
+# hai tầng). Kết quả đổi mức tin cậy của hai con số dưới đây, KHÔNG đổi giá trị:
+#
+#   mặt bậc   250 mm trên CẢ BỐN vế, không lệch một milimet
+#   vế rộng   900 (HS-03) · 1.000 (HS-06) — cộng với 0,83 của P2 thì khoảng thật là 0,83–1,00
+#   khe giữa  200 mm với lan can dày 100 đặt trong khe (HS-03) · 500 mm, lỗ thông thuỷ 380 (HS-06)
+#   ô thang   3.200 × 2.000 (HS-03, kể cả chỗ quay) · 2.500 × 3.470 lọt lòng (HS-06)
+#   số bậc    19 mỗi tầng ở HS-03 = 6 vế lên + 2 BẬC QUẠT + 11 vế xuống — quay bằng bậc quạt,
+#             KHÔNG có chiếu nghỉ vuông. Đây là cách ăn gian chỗ trên lô hẹp.
+#   cổ bậc    180 (3.600/20) và 165 (3.300/20) suy từ cốt cao độ — không tờ mặt bằng nào ghi số
+#
+# ⚠️ Bộ vẽ hiện rải đều số bậc trên chiều dài ô thang, nên MẶT BẬC là hệ quả của ô thang dài bao
+#    nhiêu. Hồ sơ thật làm NGƯỢC LẠI: giữ mặt bậc 250, để chiều dài vế chạy theo. Sửa chỗ này là
+#    re-tune bộ vẽ, có nghiệm thu riêng — xem 13.16.7.
 stairs:
+  # Đo được: P1 171 · P2 156 · HS-03 180 rồi 165. 0,17 nằm giữa khoảng 156–180.
   riser_m: 0.17
   # Ô thang rộng ngang từ mức này thì vẽ HAI vế (chữ U), hẹp hơn thì một vế. Hai vế cần hai lối
   # lên + khe giữa; vế P2 hẹp nhất đo được 0,83 m nên hai vế cần tối thiểu ~1,6–1,7 m.
+  # Giữ 1,6 là mức DỰNG ĐƯỢC: ô thang hai vế NVG thật sự làm rộng hơn nhiều (2,00 và 2,50 m).
   two_flights_min_width_m: 1.6
   # Bề sâu mặt bậc nhỏ nhất bộ giải ý định chấp nhận khi kiểm ô thang ĐỦ DÀI cho số bậc (15/09/2026,
   # Haan duyệt; Q-45d). Khác `riser_m` ở trên (chỉ để vẽ): đây là điều kiện DỰNG, cùng lý lẽ với mục
   # `usable` — ô thang ngắn hơn số bậc × bề sâu bậc + chiếu nghỉ thì không xây nổi cái thang ấy, bộ vẽ
-  # chỉ ép dẹt bậc lại. SỐ THAM KHẢO, chọn ở mức thấp của thang nhà ở; chiếu nghỉ sâu tối thiểu bằng
-  # bề rộng một vế. Kiến trúc sư đổi được.
+  # chỉ ép dẹt bậc lại. Chiếu nghỉ sâu tối thiểu bằng bề rộng một vế. Kiến trúc sư đổi được.
+  #
+  # 22/09/2026: THÔI là số phỏng đoán. Ghi chú cũ nói «chọn ở mức thấp của thang nhà ở» — sai:
+  # 0,25 chính là con số NVG vẽ, giống nhau trên cả bốn vế thang đo được.
   going_m: 0.25
+
+# ── Bậc ở lối vào (bậc tam cấp) — ĐO 22/09/2026, CHƯA CÓ NƠI ĐỌC ──────────────────────
+# Ghi ở đây để không mất, và khai thẳng là chưa nối: hợp đồng `ai-architectural-floorplan` không
+# có đối tượng nào cho bậc ở lối vào, nên engine đang vẽ cửa chính mở thẳng ra sân. Thêm nó là
+# sửa hợp đồng + lời dẫn + bộ vẽ + phép thử (Q-33), không phải hệ quả phụ của một đợt đo.
+#
+#   HS-04  chênh 430 mm (−0.450 → −0.020) · 3 bậc · mặt 300–350 · rộng 2.220 · hai bên có má 780
+#   HS-05  chênh 450 mm (−0.450 → ±0.000) · 3 bậc · mặt 300      · rộng 1.090 · bậc đánh số 1 2 3
+#   HS-06  chênh 730 mm (−0.750 → −0.020) · 5 bậc · mặt 300      · rộng 3.110, gọn giữa hai cột hiên
+#
+# Quy tắc rút ra: MẶT BẬC GIỮ 300; SỐ BẬC = chênh cốt ÷ ~150, làm tròn lên. «Tam cấp» là tên gọi,
+# không phải số bậc — HS-06 có năm bậc. Phải có cốt sân mới vẽ được bậc.
+#
+# CỐ Ý để dạng ghi chú chứ không khai thành khoá YAML: một khoá `entry_steps:` nằm cạnh `stairs:`
+# trông như đang có hiệu lực, trong khi không dòng mã nào đọc nó (CLAUDE.md 8.7 điểm 2). Ngày nào
+# hợp đồng có đối tượng bậc lối vào thì chuyển ba con số này thành khoá thật.
 
 # Hành lang bộ giải ý định tự dựng thành dải (T43, 14/09/2026) — bề rộng LỌT LÒNG mong muốn.
 #
@@ -115,6 +173,12 @@ usable:
     storage: 0.8
     balcony: 0.9
     garage: 2.4
+    # Giếng thang máy (T65, 22/09/2026). Diện tích không thôi thì chưa đủ: 2,2 m² vẫn dựng được
+    # một khe 0,5 × 4,4 m, đúng loại hình mà cây chia hay cắt ra.
+    # ⚠️ PHẢI khớp `demands.elevator.shaft_min_side_m` của `kb/brief_fidelity.yaml` — chỗ này ép
+    # lúc XẾP, chỗ kia BÁC ở cổng, và hai con số lệch nhau thì bộ xếp dựng ra thứ cổng không nhận.
+    # Có phép thử canh hai bên bằng nhau.
+    elevator: 1.4
   garage_with_car_m: 2.8
   # Tỉ lệ dài/rộng LỌT LÒNG tối đa của phòng ở. Cạnh ngắn đạt mức vẫn chưa đủ: phát lại lượt 9cce001a
   # sau khi thêm `min_side_m` ra phòng ngủ 2,85 × 16,56 m (47 m², chương trình 15 m²) — kê được giường
@@ -165,12 +229,14 @@ openings:
 
   # Cửa phòng ngủ / phòng trong nhà. 900x2200 là con số ĐO ĐƯỢC (mã d4, 6 bộ,
   # nhựa composite vân gỗ, 1 cánh mở quay) — trùng đúng giá trị vẫn giả định trước đó.
+  # HS-04 (22/09/2026) khai 940 x 2220 và 810 x 2220 → khoảng thật 810–940 x 2200–2220.
   door:
     width_m: 0.9
     height_m: 2.2
 
   # Cửa vệ sinh HẸP HƠN cửa phòng: đo được 700x2100 (DW1) và 750x2200 (DW2).
   # Trước đây mô hình chỉ có MỘT bề rộng cửa cho mọi phòng — đó là chỗ sai.
+  # HS-04 khai D4 750 x 2220, bệ −0.100 → XÁC NHẬN cả bề rộng lẫn việc sàn WC hạ thấp.
   wc_door:
     width_m: 0.75
     height_m: 2.2
@@ -213,7 +279,7 @@ openings:
 # không phải "không cần cửa sổ" mà là "cạnh giáp mặt thoáng của nó KHÔNG phải tường". Cạnh đó
 # là lan can, và khối ba chiều dựng nó thành lan can — một ô cửa sổ đặt vào đấy sẽ khoét lỗ
 # giữa lan can.
-no_window_types: [stair, core, technical, garage, balcony, terrace]
+no_window_types: [stair, core, elevator, technical, garage, balcony, terrace]
 
 # ── Không gian ngoài trời ──────────────────────────────────────────────────────────────
 # Cạnh giáp mặt thoáng của ban công, lô gia, sân thượng dựng thành LAN CAN, không phải tường:

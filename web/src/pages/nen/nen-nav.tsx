@@ -14,6 +14,7 @@ const ITEMS = [
   { to: '/nen/tham-so', label: 'Tham số hệ thống' },
   { to: '/nen/han-muc', label: 'Hạn mức phê duyệt' },
   { to: '/nen/thoi-han', label: 'Thời hạn xử lý' },
+  { to: '/nen/bieu-mau-dau-bai', label: 'Biểu mẫu đầu bài' },
   { to: '/nen/phan-cong', label: 'Phân công công trường' },
   { to: '/nen/nhat-ky', label: 'Nhật ký' },
 ];

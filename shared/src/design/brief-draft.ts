@@ -49,5 +49,14 @@ export type DesignBriefDraft = z.infer<typeof designBriefDraftSchema>;
  * `site.boundary_walls`, `massing.yard_depth_m` và `parking`. Vẫn chỉ THÊM trường tuỳ chọn. Vì
  * sao: lượt chạy thật 13/09/2026 chiếm trọn bề ngang lô dù đầu bài đòi sân bên — đầu bài nói sân
  * NẰM ĐÂU mà không nói RỘNG BAO NHIÊU, và không nói lối vào, lối xe ở mặt nào.
+ *
+ * `1.5.0` (21/09/2026): đợt «khảo sát chi tiết» — thêm `household` (nghề nghiệp, tín ngưỡng,
+ * kinh doanh tại nhà), `lifestyle` (nếp sinh hoạt), `storage`, `vertical` (thang bộ, thang máy),
+ * `entrance` (cao độ nền, bậc tam cấp), `balconies`, `systems`, `future`, `finishing_level`,
+ * `family[].ages`, `parking.car_size`/`ev_charging`, và tám trường khu đất: cao độ đường và cao
+ * độ đất, mặt nắng gắt, mặt đón gió, bề rộng đường, nguy cơ ngập, hiện trạng xây dựng, số tầng
+ * nhà liền kề. Vẫn chỉ THÊM trường tuỳ chọn: mọi bản ghi `1.0.0`–`1.4.0` đọc nguyên vẹn, và một
+ * đầu bài không trả lời câu nào trong số này vẫn chốt được — điểm độ đầy đủ thấp hơn, đúng ý
+ * nghĩa của nó (yêu cầu của Haan 21/09/2026: khảo sát càng chi tiết, phương án càng sát mong muốn).
  */
-export const BRIEF_SCHEMA_VERSION = '1.4.0';
+export const BRIEF_SCHEMA_VERSION = '1.5.0';

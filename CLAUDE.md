@@ -4,7 +4,7 @@
 > gốc trong `doc/` (mã tài liệu + số mục). Cần chi tiết thì **đọc tài liệu gốc**.
 >
 > Tách ra tệp riêng cho gọn: **`doc/VAN_DE_CON_MO.md`** (câu hỏi chờ NVG) ·
-> **`doc/design/QUYET_DINH_AI.md`** (nhật ký quyết định T1→T59 của module Thiết kế AI).
+> **`doc/design/QUYET_DINH_AI.md`** (nhật ký quyết định T1→T65 của module Thiết kế AI).
 
 ---
 
@@ -219,7 +219,7 @@ Thực thể tham chiếu xuyên module — **liên kết, KHÔNG sao chép**: `
   ngay tại chỗ, kèm ca hỏng đã đo.
 - **CI**: `.github/workflows/kiem.yml` chạy định dạng, luật, kiểu, hợp đồng và 1.606 phép thử trên
   mỗi PR. Cố ý KHÔNG chạy `db/` (chạm Supabase thật, xoá cứng theo tiền tố `[TEST]`).
-- **`npm run mutation-proof`**: cài 11 lỗi thật vào mã nguồn rồi đòi bộ kiểm phải ĐỎ. Số bài kiểm
+- **`npm run mutation-proof`**: cài 28 lỗi thật vào mã nguồn rồi đòi bộ kiểm phải ĐỎ. Số bài kiểm
   không chứng minh bộ kiểm có tác dụng — 20/09/2026 có tám lỗi thật lọt qua 867 bài kiểm đang xanh.
   Thêm hàng rào mới (quyền, riêng tư, tiền gọi mô hình, số đo bản vẽ) thì thêm một đột biến cho nó.
   Khoảng trống đã biết: RLS và ràng buộc trong CSDL KHÔNG được chứng minh ở đây.
@@ -389,7 +389,7 @@ Hàng rào riêng của module; nơi nào mục này im lặng thì áp mục 1�
   `doc/design/README.md` TRƯỚC**: 11 đính chính chỗ tài liệu mô tả sai hiện trạng (Đ7–Đ11 đối chiếu hồ
   sơ thật, sai nặng hơn) + bảng ánh xạ sang bảng/enum đang chạy.
 - Đụng số hoá hồ sơ cũ hoặc bộ xuất CAD → đọc **`doc/design/13-ho-so-thuc-te.md`**.
-- Nhật ký quyết định T1→T59: **`doc/design/QUYET_DINH_AI.md`** (thêm quyết định mới vào cuối tệp đó,
+- Nhật ký quyết định T1→T65: **`doc/design/QUYET_DINH_AI.md`** (thêm quyết định mới vào cuối tệp đó,
   không vào đây).
 - **Hiện trạng chung** (T58, 19/09/2026): **bộ giải CP-SAT nội bộ đã gỡ hẳn** (T10 ghi nó không đạt qua
   thử nghiệm thực tế). Thiết kế tự động chỉ còn nhánh AI — trên giao diện tên **«AI Design»** (ngoại lệ tiếng
@@ -440,6 +440,37 @@ hồ sơ phát hành. Hiện trạng:
 - **Mặt đứng mặt tiền** (T59): khung, lỗ mở, ban công suy từ phương án mặt bằng đã chọn và KHOÁ; mô
   hình chỉ chọn mái, vật liệu, màu, cổng, rào, trang trí trong `kb/facade_vocabulary.yaml`. Phiếu yêu cầu
   của kỹ sư (`ai_facade_brief`) là bắt buộc — hàm ghép áp thẳng mục đã điền; bề rộng cửa là của mặt bằng.
+- **Đầu bài là đầu vào duy nhất, nên nó hỏi kỹ** (T62, 21/09/2026): 98 câu trong **SÁU mục** —
+  Công trình và khu đất (kèm cao độ đường/đất, mặt nắng gắt, mặt đón gió, bề rộng đường, ngập,
+  nhà liền kề) · Gia đình và nếp sinh hoạt (kèm **tuổi**, tín ngưỡng, kinh doanh tại nhà) ·
+  Công năng và lưu trữ · Khối nhà, thang và mặt ngoài (thang máy: làm ngay / **chừa chỗ**; ban
+  công **đua ra ngoài ranh**) · Kỹ thuật và dự trù · Ưu tiên, ngân sách và người quyết định.
+  **Sáu mục là số đã chốt** (Haan, 21/09/2026: «12 mục là quá dài») — thêm nhóm câu hỏi mới thì
+  xếp vào một trong sáu, đừng mở mục thứ bảy. Số bước KHÔNG đổi theo loại hình: nhóm tổ chức
+  khối nhà ẩn theo TỪNG TRƯỜNG, không ẩn cả mục.
+  Trường mới gần hết mang **trọng số 0** — `completeness_score` là cổng chặn Lớp 2, chỉ đo thứ
+  thiếu thì không dựng nổi mặt bằng. Phong thuỷ vào đầu bài dưới dạng **câu ràng buộc người đã
+  quyết**, không phải ngày sinh để máy luận (PRD 2.3).
+- **Quản trị viên sửa được mục khảo sát** (T63): lớp phủ lên `brief-form.json`, lưu ở
+  `design_setting.brief_form_overlay`, ghi qua `POST /design/brief/form`. Sửa nhãn/gợi ý/trọng
+  số/thứ tự, ẩn, và thêm câu hỏi ở ô mở `custom.*`. **Không** sửa được kiểu điều khiển, đơn vị,
+  giá trị lựa chọn; năm trường hợp đồng bắt buộc khoá hẳn; câu hỏi có sẵn chỉ ẩn, không xoá.
+  Câu hỏi tự thêm tới mô hình dạng nhãn–câu trả lời và **không ràng buộc hình học**. Cả `web/` lẫn
+  `workers/` phải đọc cấu hình HIỆU LỰC (`useBriefFormConfig`, `readEffectiveBriefForm`), không
+  nhập thẳng `BRIEF_FORM` — hai bên chấm điểm lệch nhau là con số sai đi vào artifact bất biến.
+- **Đầu bài đã khai là ràng buộc KIỂM ĐƯỢC, không chỉ là câu văn** (T65, 22/09/2026, Haan: «mặt
+  bằng phải theo sát yêu cầu đầu bài, không được làm thiếu hoặc sai»). Bảng `demands` trong
+  `kb/brief_fidelity.yaml` nói «gia chủ trả lời X thì mặt bằng phải có Y»; `ai/brief-demands.ts`
+  suy ra tất định, `ai/program.ts` bác đề xuất thiếu, `ai/plan-demands.ts` kiểm phần chỉ thấy
+  được khi đã có toạ độ. **Thang máy** có mã phòng riêng `elevator` (tách khỏi `core`) và phải
+  CHỒNG KHÍT mọi tầng — kể cả lựa chọn «chừa chỗ lắp sau», vì chừa lệch tầng thì không phải chừa
+  chỗ. **Ban công** đúng mặt đầu bài khai; phần **đua ra ngoài ranh** nới ô ngay trong cây chia
+  (`tree/balcony-projection.ts`), TRƯỚC khi dựng hình bao và đặt lỗ mở.
+  Ba ranh giới không được phá: **chỉ suy từ câu ĐÃ trả lời** (không `?? false` — «chưa hỏi» khác
+  «trả lời không»); **thiếu số thì không bịa** (khai đua ranh mà không khai mấy mét thì giữ trong
+  ranh và nói ra); **lời gia chủ thì bác được, suy đoán nghề chỉ cảnh báo** (cờ `blocking` ở tệp
+  dữ liệu, T52). Thêm nhóm đòi hỏi mới thì thêm dòng vào YAML **và** nhánh trong `matchDemand` —
+  có phép thử canh hai bên không lệch.
 - Dữ liệu gửi nhà cung cấp: **đầy đủ trừ danh tính** → hạng 2 (T12); khung tên mang mã hồ sơ là hạng 1, không gửi.
 
 > **Ranh giới có KIỂM THỬ canh**: `workers/src/design/__tests__/ai-independence.test.ts` đỏ khi nhánh AI

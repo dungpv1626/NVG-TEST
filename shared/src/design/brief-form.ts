@@ -134,6 +134,18 @@ const optionSchema = z.object({
    * Không khai thì ô để trống — thà không gợi ý còn hơn gợi ý sai.
    */
   placeholder: z.string().optional(),
+  /**
+   * Lựa chọn CÒN HIỆN nhưng tạm thời chưa dùng được — chuỗi này là câu nói ra khi bấm vào.
+   *
+   * Khác hẳn `retired` (đã bỏ hẳn, chỉ hiện khi hồ sơ đang mang nó): ở đây tính năng vẫn nằm
+   * trong kế hoạch, chỉ chưa chạy. Nên KHÔNG giấu lựa chọn đi — giấu thì người dùng đi tìm nó
+   * và không hiểu vì sao mất; hiện mà bấm không ăn gì thì còn tệ hơn. Hiện, bấm được, và NÓI
+   * RA vì sao.
+   *
+   * Hồ sơ đang mang đúng giá trị ấy thì không bị chặn: chặn nó là biến một câu trả lời đã lưu
+   * thành thứ không sửa được.
+   */
+  unavailable: z.string().optional(),
   note: z.string().optional(),
 });
 

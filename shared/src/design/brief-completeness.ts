@@ -360,7 +360,173 @@ export function checkBriefConsistency(
     });
   }
 
+  found.push(...checkSurveyDetail(draft));
+
   return found;
+}
+
+// ---------------------------------------------------------------------------
+// Mâu thuẫn trong các nhóm khảo sát chi tiết — thêm 21/09/2026
+// ---------------------------------------------------------------------------
+
+/**
+ * Đối chiếu các nhóm khảo sát mới VỚI CHÍNH ĐẦU BÀI — không có một ngưỡng quy chuẩn nào.
+ *
+ * Mọi phép ở đây là số học hoặc là hai câu trả lời của cùng một người nói ngược nhau. Thứ
+ * KHÔNG nằm ở đây, có chủ ý: lời khuyên nghề. «Nấu chiên xào nhiều mà không có bếp phụ» là
+ * một nhận định hay, nhưng nó không phải mâu thuẫn — nó là ý kiến, và ý kiến chạy qua đường
+ * chấm điểm phương án (`kb/plan_quality.yaml`), không qua đường cảnh báo đầu bài. Trộn hai
+ * thứ là dạy người dùng bỏ qua cảnh báo (Haan, T52).
+ */
+function checkSurveyDetail(draft: DesignBriefDraft): BriefIssue[] {
+  const out: BriefIssue[] = [];
+  const site = draft.site;
+  const life = draft.lifestyle;
+  const entrance = draft.entrance;
+  const vertical = draft.vertical;
+  const household = draft.household;
+  const balconies = draft.balconies;
+  const floors = draft.floors;
+
+  // --- Tuổi khai không khớp số người ----------------------------------------
+  // Gộp thành MỘT cảnh báo cho cả biểu mẫu: một dòng cho mỗi nhóm thành viên thì bảng cảnh
+  // báo dài hơn chính câu trả lời, và người dùng cuộn qua hết.
+  const ageMismatch = (draft.family ?? []).filter(
+    (m) => m.ages?.length && typeof m.count === 'number' && m.ages.length !== m.count,
+  ).length;
+  if (ageMismatch > 0) {
+    out.push({
+      code: 'tuoi_lech_so_nguoi',
+      severity: 'canh_bao',
+      message: `${ageMismatch} nhóm thành viên đang khai số tuổi khác số người. Bổ sung cho đủ hoặc sửa lại số người.`,
+      paths: ['family'],
+    });
+  }
+
+  // --- Cao độ: đất thấp hơn đường, và cốt nền thấp hơn đất ------------------
+  const road = site?.road_level_m;
+  const land = site?.land_level_m;
+  if (typeof road === 'number' && typeof land === 'number') {
+    if (land < road) {
+      out.push({
+        code: 'dat_thap_hon_duong',
+        severity: 'canh_bao',
+        message:
+          'Khu đất đang thấp hơn tim đường. Phải tôn nền và tính lại hướng thoát nước — ghi rõ cốt nền tầng 1 ở mục Thang, lối vào và cao độ nền.',
+        paths: ['site.land_level_m', 'site.road_level_m', 'entrance.floor_above_road_m'],
+      });
+    }
+    const aboveRoad = entrance?.floor_above_road_m;
+    if (typeof aboveRoad === 'number' && land > road && aboveRoad < land - road) {
+      out.push({
+        code: 'cot_nen_thap_hon_dat',
+        severity: 'canh_bao',
+        message:
+          'Cốt nền tầng 1 đang thấp hơn mặt đất tự nhiên của thửa — nghĩa là phải hạ nền, không phải tôn nền. Xác nhận lại hai con số cao độ.',
+        paths: ['entrance.floor_above_road_m', 'site.land_level_m'],
+      });
+    }
+  }
+
+  // --- Thang máy cho nhà một tầng -------------------------------------------
+  if (vertical?.elevator && vertical.elevator !== 'khong' && floors === 1) {
+    out.push({
+      code: 'thang_may_nha_mot_tang',
+      severity: 'canh_bao',
+      message: 'Công trình một tầng mà vẫn khai thang máy. Bỏ thang máy hoặc sửa lại số tầng.',
+      paths: ['vertical.elevator', 'floors'],
+    });
+  }
+
+  // --- Có người đi lại khó khăn mà lối vào vẫn là bậc -----------------------
+  if (
+    life?.reduced_mobility === true &&
+    entrance?.steps_from_yard === true &&
+    entrance?.vehicle_ramp !== true
+  ) {
+    out.push({
+      code: 'di_lai_kho_khan_con_bac',
+      severity: 'canh_bao',
+      message:
+        'Đầu bài khai có người đi lại khó khăn nhưng lối vào chỉ có bậc tam cấp, không có dốc. Bổ sung dốc ở lối vào hoặc xác nhận lại.',
+      paths: ['lifestyle.reduced_mobility', 'entrance.steps_from_yard', 'entrance.vehicle_ramp'],
+    });
+  }
+
+  // --- Có tín ngưỡng mà lại khai không có nơi thờ ---------------------------
+  if (
+    household?.religion &&
+    household.religion !== 'khong' &&
+    household.altar_arrangement === 'khong_co'
+  ) {
+    out.push({
+      code: 'tin_nguong_khong_co_noi_tho',
+      severity: 'canh_bao',
+      message:
+        'Đầu bài khai gia đình có thờ cúng nhưng lại chọn «không có nơi thờ». Chọn lại cách bố trí nơi thờ hoặc sửa mục tín ngưỡng.',
+      paths: ['household.religion', 'household.altar_arrangement'],
+    });
+  }
+
+  // --- Tầng đặt nơi thờ vượt số tầng ----------------------------------------
+  if (
+    typeof household?.altar_floor === 'number' &&
+    typeof floors === 'number' &&
+    household.altar_floor > floors
+  ) {
+    out.push({
+      code: 'tang_tho_khong_ton_tai',
+      severity: 'canh_bao',
+      message:
+        'Nơi thờ đang ghim vào tầng không tồn tại trong công trình. Sửa lại tầng hoặc tăng số tầng.',
+      paths: ['household.altar_floor', 'floors'],
+    });
+  }
+
+  // --- Số tầng kinh doanh vượt số tầng công trình ---------------------------
+  const business = household?.home_business;
+  if (
+    typeof business?.floor_count === 'number' &&
+    typeof floors === 'number' &&
+    business.floor_count > floors
+  ) {
+    out.push({
+      code: 'tang_kinh_doanh_vuot_so_tang',
+      severity: 'nghiem_trong',
+      message:
+        'Số tầng dành cho kinh doanh đang lớn hơn số tầng của công trình. Sửa một trong hai con số.',
+      paths: ['household.home_business.floor_count', 'floors'],
+    });
+  }
+
+  // --- Ban công đua ra ngoài ranh mà chưa biết đường rộng bao nhiêu ---------
+  // Không phải phép kiểm quy chuẩn (ở đây không có ngưỡng nào): chỉ là đầu bài đang khẳng
+  // định một điều mà chính nó chưa có đủ dữ kiện để khẳng định.
+  if (balconies?.projection_over_boundary === true && typeof site?.road_width_m !== 'number') {
+    out.push({
+      code: 'ban_cong_dua_ranh_chua_ro_duong',
+      severity: 'canh_bao',
+      message:
+        'Đầu bài khai ban công đua ra ngoài ranh đất nhưng chưa ghi bề rộng đường trước nhà — chưa đủ căn cứ để chốt. Bổ sung bề rộng đường.',
+      paths: ['balconies.projection_over_boundary', 'site.road_width_m'],
+    });
+  }
+
+  // --- Khai không làm ban công nhưng vẫn chọn mặt đặt ban công --------------
+  if (
+    balconies?.scope === 'khong_co' &&
+    (balconies.sides?.length || balconies.drying_balcony === true)
+  ) {
+    out.push({
+      code: 'ban_cong_noi_khong_ma_van_khai',
+      severity: 'canh_bao',
+      message:
+        'Đầu bài chọn «không làm ban công» nhưng vẫn khai mặt đặt ban công hoặc ban công phơi. Bỏ một trong hai.',
+      paths: ['balconies.scope', 'balconies.sides'],
+    });
+  }
+
+  return out;
 }
 
 // ---------------------------------------------------------------------------

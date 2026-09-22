@@ -29,7 +29,10 @@ export interface SnapTarget {
   /** Mã lá phải bám mốc. */
   leaf: string;
   anchor: Rect;
-  code: Extract<TreeIssueCode, 'stair_not_at_anchor' | 'light_well_not_at_anchor'>;
+  code: Extract<
+    TreeIssueCode,
+    'stair_not_at_anchor' | 'light_well_not_at_anchor' | 'elevator_not_at_anchor'
+  >;
   label: string;
 }
 

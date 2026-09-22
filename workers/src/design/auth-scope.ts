@@ -14,6 +14,7 @@
 
 import type { DesignBrief } from '@nvg/shared/design';
 import type { AnonymiseInput } from './brief/anonymise';
+import { readEffectiveBriefForm } from './brief/form-config';
 import { roomVocabulary } from './kb/vocabulary-data';
 import type { DesignEnv } from './env';
 
@@ -189,10 +190,15 @@ export async function aiDigestInputs(
   const customer = (
     project.data as { customer?: { name?: string; phone?: string; address?: string } | null } | null
   )?.customer;
+  // Cấu hình biểu mẫu hiệu lực — chỉ để đọc nhãn câu hỏi quản trị viên tự thêm. Đọc ở ĐÂY chứ
+  // không ở từng tuyến AI: sáu tuyến cùng gọi hàm này, và một bản sao ở mỗi tuyến là sáu chỗ
+  // quên như nhau.
+  const form = await readEffectiveBriefForm(db);
   return {
     brief,
     freeText,
     survey,
     identities: [customer?.name, customer?.phone, customer?.address],
+    formConfig: form.config,
   };
 }

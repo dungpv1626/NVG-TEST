@@ -35,6 +35,7 @@ import {
   type BriefFormField,
 } from '@nvg/shared/design';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { MoneyInput } from '@/components/ui/money-input';
@@ -170,10 +171,18 @@ function Chip({
   active,
   label,
   rank,
+  muted = false,
   onClick,
 }: {
   active: boolean;
   label: string;
+  /**
+   * Vẽ mờ và viền đứt — lựa chọn còn đó nhưng chưa dùng được.
+   *
+   * KHÔNG dùng `disabled`: nút tắt thì bấm vào không có gì xảy ra, và người dùng không bao giờ
+   * biết vì sao. Ở đây nút vẫn bấm được, và cú bấm mở ra câu trả lời.
+   */
+  muted?: boolean;
   /**
    * Thứ hạng của lựa chọn này, bắt đầu từ 1. Chỉ dùng cho `multi` có `ordered`.
    *
@@ -192,7 +201,9 @@ function Chip({
         'inline-flex min-h-10 items-center gap-1.5 rounded-full border px-3',
         active
           ? 'border-brand bg-brand-subtle font-semibold text-brand'
-          : 'border-border text-fg-subtle',
+          : muted
+            ? 'border-dashed border-border text-fg-subtle opacity-60'
+            : 'border-border text-fg-subtle',
       )}
     >
       {rank !== undefined && (
@@ -235,6 +246,68 @@ function floorOptions(floors: number, current: number | null | undefined) {
       ))}
       {stale !== null && (
         <option value={stale}>{`Tầng ${stale} — công trình chỉ có ${floors} tầng`}</option>
+      )}
+    </>
+  );
+}
+
+/**
+ * Ô chọn ĐÚNG MỘT giá trị, vẽ bằng chip.
+ *
+ * Đứng riêng để dùng được `useState` cho hộp thoại «tạm thời chưa hỗ trợ» — cùng lý do với
+ * `AddSpaceRow`: `BriefControl` rẽ nhánh trong một `switch`, không gọi hook trong đó được.
+ *
+ * Lựa chọn mang `unavailable` trong `brief-form.json` vẫn HIỆN và vẫn bấm được; bấm thì nói ra
+ * vì sao thay vì im lặng không ăn. Câu nói ra nằm ở CẤU HÌNH, không viết cứng ở đây: hôm nay là
+ * đa giác không đều, mai có thể là thứ khác, và người sửa câu ấy không nhất thiết biết
+ * TypeScript.
+ */
+function ChoiceControl({
+  field,
+  value,
+  onChange,
+}: {
+  field: BriefFormField;
+  value: unknown;
+  onChange: (next: unknown) => void;
+}) {
+  const [blocked, setBlocked] = useState<{ label: string; message: string } | null>(null);
+
+  return (
+    <>
+      <div className="flex flex-wrap gap-2">
+        {(field.options ?? []).map((option) => {
+          const active = matchesChoice(field, value, option.value);
+          // Hồ sơ ĐANG mang giá trị ấy thì không chặn — chặn nó là biến một câu trả lời đã lưu
+          // thành thứ không sửa được, và người dùng mắc kẹt không bỏ chọn nổi.
+          const unavailable = !active && option.unavailable ? option.unavailable : null;
+          return (
+            <Chip
+              key={option.value}
+              label={option.label}
+              active={active}
+              muted={Boolean(unavailable)}
+              // Bấm lại lựa chọn đang chọn để bỏ chọn — không có nút "xoá" riêng cho từng ô.
+              onClick={() =>
+                unavailable
+                  ? setBlocked({ label: option.label, message: unavailable })
+                  : onChange(active ? undefined : toChoiceValue(field, option.value))
+              }
+            />
+          );
+        })}
+      </div>
+      {blocked && (
+        <ConfirmDialog
+          title={blocked.label}
+          confirmLabel="Đã hiểu"
+          cancelLabel={null}
+          className="border-tk-line bg-tk-panel text-tk-tx"
+          onConfirm={() => setBlocked(null)}
+          onCancel={() => setBlocked(null)}
+        >
+          <p>{blocked.message}</p>
+        </ConfirmDialog>
       )}
     </>
   );
@@ -419,25 +492,7 @@ function BriefControl({
     }
 
     case 'choice':
-      return (
-        <div className="flex flex-wrap gap-2">
-          {(field.options ?? []).map((option) => (
-            <Chip
-              key={option.value}
-              label={option.label}
-              active={matchesChoice(field, value, option.value)}
-              // Bấm lại lựa chọn đang chọn để bỏ chọn — không có nút "xoá" riêng cho từng ô.
-              onClick={() =>
-                onChange(
-                  matchesChoice(field, value, option.value)
-                    ? undefined
-                    : toChoiceValue(field, option.value),
-                )
-              }
-            />
-          ))}
-        </div>
-      );
+      return <ChoiceControl field={field} value={value} onChange={onChange} />;
 
     case 'select': {
       // Giá trị đã hết hiệu lực (đơn vị hành chính cũ) không nằm trong danh sách chọn —
@@ -884,6 +939,23 @@ function BriefControl({
                       <option value="ensuite">Phòng ngủ khép kín</option>
                     </select>
                   )}
+                  {/*
+                    Tuổi gõ thành MỘT ô chữ ngăn bằng dấu phẩy, không phải mỗi người một ô.
+
+                    Một ô số cho mỗi người thì dòng «Con · 3 người» thành bốn ô nhảy ra nhảy
+                    vào theo số người, và người khai phải bấm bốn lần cho một câu trả lời họ
+                    đọc ra trong hai giây. Ô chữ nhận cả «70, 68» lẫn «70 68»; chữ không đọc
+                    được thì BỎ QUA chứ không chặn — đây là ô tuỳ chọn, chặn nó là chặn cả
+                    dòng thành viên.
+                  */}
+                  <Input
+                    inputMode="numeric"
+                    aria-label="Tuổi từng người"
+                    placeholder="Tuổi, ví dụ 70, 68"
+                    className="w-40"
+                    value={(member.ages ?? []).join(', ')}
+                    onChange={(e) => update(index, { ages: parseAges(e.target.value) })}
+                  />
                   <Button variant="subtle" onClick={() => onChange(dropAt(members, index))}>
                     Bỏ dòng
                   </Button>
@@ -1096,6 +1168,23 @@ function SitePreview({ points }: { points: [number, number][] }) {
   );
 }
 
+/**
+ * Đọc ô tuổi: «70, 68» hay «70 68» → `[70, 68]`.
+ *
+ * Bỏ qua phần không đọc được thay vì trả `undefined` cho cả ô — người dùng đang gõ dở
+ * «70, » thì phần đã gõ vẫn phải giữ, nếu không con số vừa nhập biến mất dưới tay họ.
+ * Trả `undefined` khi không còn số nào, để khoá `ages` bị XOÁ khỏi payload chứ không nằm lại
+ * dưới dạng mảng rỗng (hợp đồng nhận khoá vắng mặt, không nhận mảng rỗng vô nghĩa).
+ */
+function parseAges(raw: string): number[] | undefined {
+  const ages = raw
+    .split(/[,;\s]+/)
+    .map((part) => Number(part))
+    .filter((n) => Number.isFinite(n) && n >= 0 && n <= 120)
+    .map((n) => Math.floor(n));
+  return ages.length ? ages : undefined;
+}
+
 interface FamilyMember {
   role: string;
   count: number;
@@ -1105,6 +1194,11 @@ interface FamilyMember {
   floor_pref?: string | null;
   /** Phòng ngủ của nhóm này có khu vệ sinh riêng không. */
   ensuite?: boolean | null;
+  /**
+   * Tuổi từng người trong nhóm. Cố ý là TUỔI, không phải năm sinh — xem hợp đồng
+   * `design-brief.schema.json`, trường `family[].ages`.
+   */
+  ages?: number[] | null;
   needs?: string[];
 }
 

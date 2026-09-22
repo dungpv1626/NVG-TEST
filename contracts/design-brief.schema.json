@@ -161,6 +161,83 @@
         },
         "legal_docs_available": {
           "type": "boolean"
+        },
+        "road_level_m": {
+          "type": ["number", "null"],
+          "minimum": -10,
+          "maximum": 200,
+          "description": "**Cao độ tim đường** trước nhà, mét, đọc theo MỐC CHUẨN mà người đo đã chọn (cốt quốc gia, hay mốc tự đặt của khu dân cư). Chỉ có nghĩa khi `land_level_m` đo theo CÙNG mốc: phần mềm chỉ dùng HIỆU của hai số, không dùng trị tuyệt đối. Đường cao hơn đất là nguyên nhân số một phải tôn nền và bơm thoát nước ngược."
+        },
+        "land_level_m": {
+          "type": ["number", "null"],
+          "minimum": -10,
+          "maximum": 200,
+          "description": "**Cao độ mặt đất tự nhiên của thửa**, mét, cùng mốc với `road_level_m`. Hiệu `land_level_m - road_level_m` quyết cốt nền tầng 1, số bậc tam cấp, dốc dắt xe và hướng thoát nước — xem `entrance`."
+        },
+        "harsh_sun_sides": {
+          "type": ["array", "null"],
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["front", "back", "left", "right"]
+          },
+          "description": "**Mặt chịu nắng gắt** (nắng chiều tây, nắng trực xạ kéo dài) — theo bốn mặt của thửa, không theo la bàn. Hướng la bàn đã có ở `orientation`; cái phần mềm cần biết để đặt phòng, che nắng và chọn lam là nắng đập vào MẶT NÀO của lô. Hai thứ không luôn suy ra nhau: nhà hàng xóm cao tầng có thể che hẳn mặt tây."
+        },
+        "cool_wind_sides": {
+          "type": ["array", "null"],
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["front", "back", "left", "right"]
+          },
+          "description": "**Mặt đón gió mát chủ đạo** — theo bốn mặt của thửa. Quyết hướng mở cửa sổ, vị trí giếng trời và chỗ đặt sân trong. Gió nóng tây nam hay gió lùa từ hẻm hẹp KHÔNG khai ở đây; ghi vào ghi chú hiện trạng."
+        },
+        "road_width_m": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 60,
+          "description": "**Bề rộng đường hoặc hẻm trước nhà**, mét. Quyết ba thứ rất thực tế: ô tô có vào tới cửa được không, xe bê tông và xe cẩu có vào được không, và nhiều địa phương lấy bề rộng đường làm căn cứ cho chiều cao và số tầng được phép."
+        },
+        "flood_risk": {
+          "type": ["string", "null"],
+          "enum": ["khong", "thinh_thoang", "thuong_xuyen", null],
+          "description": "Khu đất có bị ngập khi mưa lớn hoặc triều cường không. `thinh_thoang` = vài lần một năm; `thuong_xuyen` = mỗi mùa mưa. Có ngập thì cốt nền, chỗ để xe, ổ cắm điện tầng trệt và hướng thoát nước đều phải tính lại — đây là thứ hỏi lúc khảo sát thì rẻ, phát hiện lúc thi công thì đắt."
+        },
+        "existing_structure": {
+          "type": ["string", "null"],
+          "enum": ["dat_trong", "nha_cu_pha_do", "nha_cu_cai_tao", "mong_cu_giu_lai", null],
+          "description": "Hiện trạng xây dựng trên thửa. `nha_cu_cai_tao` và `mong_cu_giu_lai` ràng buộc phương án rất mạnh — lưới cột và móng cũ không dời được — nên phải biết TRƯỚC khi dựng mặt bằng, không phải sau."
+        },
+        "neighbour_floors": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "description": "Số tầng của công trình liền kề từng mặt. Nhà bên cao hơn nhiều thì mặt đó coi như mất nắng và mất gió cả năm — ảnh hưởng chỗ đặt giếng trời, sân trong và phòng ngủ mạnh hơn cả hướng la bàn.",
+          "properties": {
+            "front": {
+              "type": ["integer", "null"],
+              "minimum": 0,
+              "maximum": 30,
+              "description": "Số tầng nhà liền kề mặt front. 0 = đất trống."
+            },
+            "back": {
+              "type": ["integer", "null"],
+              "minimum": 0,
+              "maximum": 30,
+              "description": "Số tầng nhà liền kề mặt back. 0 = đất trống."
+            },
+            "left": {
+              "type": ["integer", "null"],
+              "minimum": 0,
+              "maximum": 30,
+              "description": "Số tầng nhà liền kề mặt left. 0 = đất trống."
+            },
+            "right": {
+              "type": ["integer", "null"],
+              "minimum": 0,
+              "maximum": 30,
+              "description": "Số tầng nhà liền kề mặt right. 0 = đất trống."
+            }
+          }
         }
       },
       "description": "Thửa đất trong hệ toạ độ CỤC BỘ: trục x chạy dọc mặt tiền, trục y đi vào chiều sâu, gốc ở góc trước-trái, đường nằm ở y = 0. Mọi kích thước dưới đây đọc trong hệ đó."
@@ -205,6 +282,16 @@
           "ensuite": {
             "type": "boolean",
             "description": "Phòng ngủ của thành viên này KHÉP KÍN — khu vệ sinh nằm bên trong phòng, không mở ra hành lang. Lớp 2 sinh thêm một `wc` mang `enclosed_in` trỏ về phòng đó, và khu vệ sinh này KHÔNG tính vào định mức wc chung của tầng. Trước 06/09/2026 điều này khai bằng chuỗi `\"wc\"` trong `needs`, nhưng `wc` thuộc nhóm Lớp 2 tự suy nên chuỗi đó bị bỏ qua hoàn toàn — biểu mẫu có ô chọn mà chọn hay không đều ra cùng một chương trình."
+          },
+          "ages": {
+            "type": ["array", "null"],
+            "maxItems": 20,
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 120
+            },
+            "description": "Tuổi từng người trong nhóm, năm. Cố ý là TUỔI chứ không phải năm sinh: tuổi là thứ quyết định không gian (trẻ dưới 6 ngủ cùng bố mẹ, trẻ đi học cần góc học, người trên 70 nên ở tầng trệt và tránh bậc), còn năm sinh là dữ liệu định danh và còn kéo theo chuyện cung mệnh — thứ phần mềm không được tự quyết (PRD 2.3). Số phần tử nên bằng `count`; lệch thì bộ soát mâu thuẫn hỏi lại chứ không chặn."
           }
         }
       }
@@ -259,6 +346,15 @@
           "minimum": 0,
           "maximum": 30,
           "description": "Số xe máy, xe máy điện, xe đạp điện."
+        },
+        "car_size": {
+          "type": ["string", "null"],
+          "enum": ["gam_thap", "gam_cao", "ban_tai", "xe_7_cho", null],
+          "description": "Cỡ ô tô lớn nhất cần đỗ. Chỗ đỗ cho xe gầm thấp và cho xe bán tải chênh nhau gần một mét chiều dài và cả chiều cao cửa — một ô «có ô tô» duy nhất không đủ để chừa đúng chỗ."
+        },
+        "ev_charging": {
+          "type": ["boolean", "null"],
+          "description": "Có sạc xe điện trong nhà không — kéo theo một tuyến điện riêng và một vị trí ổ sạc cố định ở chỗ để xe."
         }
       },
       "description": "Số xe CẦN CHỖ ĐỖ — thay cho ô chữ tự do «để ô tô, 2 xe máy». Diện tích chỗ để xe suy từ đây theo `kb/brief_fidelity.yaml`."
@@ -383,6 +479,346 @@
       "items": {
         "type": "string"
       }
+    },
+    "household": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "Gia chủ: nghề nghiệp, tín ngưỡng, và việc có kết hợp kinh doanh tại nhà hay không.",
+      "properties": {
+        "occupation": {
+          "type": ["string", "null"],
+          "maxLength": 200,
+          "description": "Ngành nghề của gia chủ, viết bằng lời. Không phải để phần mềm phân loại — để kiến trúc sư biết nhịp sinh hoạt và nhu cầu không gian làm việc. Đi qua bộ lược danh tính trước khi gửi mô hình."
+        },
+        "religion": {
+          "type": ["string", "null"],
+          "enum": ["tho_cung_to_tien", "phat_giao", "cong_giao", "tin_lanh", "khac", "khong", null],
+          "description": "Tín ngưỡng của gia đình — quyết định KHÔNG GIAN THỜ: bàn thờ gia tiên cần phòng riêng hoặc vị trí trang trọng ở tầng trên; bàn thờ Chúa thường gắn tường phòng khách; không thờ thì không dành chỗ. Đây là dữ liệu để dành CHỖ, phần mềm không suy ra nghi lễ hay hướng đặt."
+        },
+        "altar_arrangement": {
+          "type": ["string", "null"],
+          "enum": ["phong_tho_rieng", "chung_phong_khach", "tren_san_thuong", "khong_co", null],
+          "description": "Cách bố trí nơi thờ. `phong_tho_rieng` sinh một phòng thật có diện tích; `chung_phong_khach` là một khu trong phòng khách (từ vựng phòng cho phép ghép `living` với `altar_room`); `tren_san_thuong` là gian thờ trên tầng mái."
+        },
+        "altar_floor": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "maximum": 12,
+          "description": "Tầng đặt nơi thờ, nếu gia chủ đã quyết. Để trống là để kiến trúc sư đề xuất."
+        },
+        "feng_shui": {
+          "type": ["string", "null"],
+          "enum": ["khong_xem", "co_xem", "co_thay_rieng", null],
+          "description": "Gia đình có xem phong thuỷ không. `co_thay_rieng` = đã có thầy và sẽ đưa yêu cầu cụ thể — khi ấy mọi ràng buộc phải ghi vào `feng_shui_notes`, phần mềm KHÔNG tự luận. Ranh giới PRD 2.3: hệ thống không tự quyết nội dung chuyên môn, và cung mệnh không phải việc của máy."
+        },
+        "feng_shui_notes": {
+          "type": ["string", "null"],
+          "maxLength": 1000,
+          "description": "Yêu cầu phong thuỷ ĐÃ ĐƯỢC NGƯỜI quyết, ghi thành câu ràng buộc dùng được: «cửa chính không đối cửa sau», «bếp không nhìn thẳng cửa chính», «hướng tốt: Đông Nam». Ô này là nơi duy nhất phong thuỷ đi vào phương án — viết lời chung chung thì không ràng buộc được gì."
+        },
+        "taboos": {
+          "type": ["string", "null"],
+          "maxLength": 1000,
+          "description": "Điều kiêng kỵ khác của gia đình: «khu vệ sinh không nằm trên bàn thờ», «không có phòng nào cửa mở thẳng ra cầu thang», «tránh số tầng 4». Tách khỏi `feng_shui_notes` vì nhiều gia đình có kiêng kỵ mà không xem phong thuỷ."
+        },
+        "home_business": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "description": "Kết hợp kinh doanh tại nhà — thứ đổi hẳn mặt bằng tầng trệt và cả lối vào. Nhà ở có cửa hàng KHÔNG phải nhà ở thêm một phòng: nó là hai luồng người phải tách nhau.",
+          "properties": {
+            "mode": {
+              "type": ["string", "null"],
+              "enum": [
+                "khong",
+                "van_phong_tai_nha",
+                "cua_hang_mat_tien",
+                "kho_hang",
+                "luu_tru_cho_thue",
+                "san_xuat_nho",
+                null
+              ],
+              "description": "Hình thức kinh doanh tại nhà. `khong` = thuần ở."
+            },
+            "floor_count": {
+              "type": ["integer", "null"],
+              "minimum": 1,
+              "maximum": 12,
+              "description": "Số tầng dành cho kinh doanh, tính từ tầng 1 lên. Cố ý là SỐ LƯỢNG chứ không phải danh sách tầng: cửa hàng và văn phòng tại nhà luôn chiếm các tầng dưới liền nhau — chừa một tầng kinh doanh kẹp giữa hai tầng ở là bố cục không ai làm, và một ô số thì biểu mẫu nào cũng nhập được."
+            },
+            "separate_entrance": {
+              "type": ["boolean", "null"],
+              "description": "Có lối vào riêng cho khách, tách khỏi lối sinh hoạt của gia đình không. Đây là câu hỏi quyết định nhất của nhóm này: có thì mặt tiền phải chừa hai cửa và luồng đi trong nhà chia đôi."
+            },
+            "customer_wc": {
+              "type": ["boolean", "null"],
+              "description": "Có khu vệ sinh riêng cho khách không — khách dùng chung WC gia đình là điều gia chủ thường chỉ nhận ra khi đã xây xong."
+            },
+            "staff_count": {
+              "type": ["integer", "null"],
+              "minimum": 0,
+              "maximum": 50,
+              "description": "Số người làm việc tại nhà, kể cả gia chủ. Quyết diện tích và số chỗ vệ sinh."
+            },
+            "note": {
+              "type": ["string", "null"],
+              "maxLength": 1000,
+              "description": "Ghi chú thêm về hoạt động kinh doanh: mặt hàng, giờ mở cửa, xe giao hàng, tiếng ồn, mùi."
+            }
+          }
+        }
+      }
+    },
+    "lifestyle": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "Thói quen sinh hoạt của gia đình — phần trả lời câu «nhà này được dùng thế nào», thứ mà số phòng không nói ra.",
+      "properties": {
+        "cooking": {
+          "type": ["string", "null"],
+          "enum": ["nau_nhieu_chien_xao", "nau_hang_ngay_don_gian", "it_nau", null],
+          "description": "Nếp nấu ăn. `nau_nhieu_chien_xao` là bếp Việt đúng nghĩa: chiên xào nhiều dầu mỡ, nhiều mùi — bếp phải KÍN hoặc có bếp phụ, và không nên mở thông phòng khách dù phong cách đang chuộng. `it_nau` thì bếp mở là hợp lý."
+        },
+        "second_kitchen": {
+          "type": ["boolean", "null"],
+          "description": "Có cần bếp phụ (bếp Việt) tách khỏi bếp đẹp không."
+        },
+        "dining_place": {
+          "type": ["string", "null"],
+          "enum": ["ban_an_rieng", "quay_bep", "linh_hoat", null],
+          "description": "Cả nhà ăn ở đâu. Quyết phòng ăn có là một phòng thật hay chỉ là quầy kề bếp."
+        },
+        "guests": {
+          "type": ["string", "null"],
+          "enum": ["thuong_xuyen", "thinh_thoang", "it", null],
+          "description": "Tần suất tiếp khách. Tiếp khách thường xuyên kéo theo phòng khách rộng hơn, một khu vệ sinh khách ở tầng trệt, và chỗ để xe cho khách."
+        },
+        "overnight_guests": {
+          "type": ["boolean", "null"],
+          "description": "Có khách ở lại qua đêm không — nếu có thì cần một phòng ngủ khách thật, không phải sofa phòng khách."
+        },
+        "work_from_home": {
+          "type": ["boolean", "null"],
+          "description": "Có người làm việc tại nhà thường xuyên không — kéo theo phòng làm việc yên tĩnh, tách khỏi khu sinh hoạt chung."
+        },
+        "night_shift": {
+          "type": ["boolean", "null"],
+          "description": "Có người làm ca đêm, ngủ ban ngày không — phòng ngủ phải tránh mặt ồn và tránh nằm cạnh bếp hay phòng khách."
+        },
+        "reduced_mobility": {
+          "type": ["boolean", "null"],
+          "description": "Có người đi lại khó khăn, dùng gậy hoặc xe lăn không. Trả lời «có» là ràng buộc cứng lên phương án: một phòng ngủ và một khu vệ sinh ở tầng trệt, hạn chế bậc, cửa và hành lang đủ rộng — không phải tiện nghi thêm."
+        },
+        "drying": {
+          "type": ["string", "null"],
+          "enum": ["phoi_nang_ngoai_troi", "may_say_trong_nha", "ca_hai", null],
+          "description": "Cách phơi đồ. Phơi nắng ngoài trời đòi một sân hoặc ban công phơi có nắng thật và kín đáo với hàng xóm — chỗ này bị bỏ quên thì quần áo cuối cùng phơi ở mặt tiền."
+        },
+        "pets": {
+          "type": ["string", "null"],
+          "enum": ["khong", "cho", "meo", "cho_va_meo", "khac", null],
+          "description": "Thú nuôi trong nhà. Kéo theo chỗ tắm và chỗ ở cho thú, cửa sân, và vật liệu sàn."
+        },
+        "daily_rhythm": {
+          "type": ["string", "null"],
+          "maxLength": 1000,
+          "description": "Nếp sinh hoạt hằng ngày viết bằng lời: giờ giấc, ai dậy sớm, cả nhà quây quần ở đâu buổi tối, cuối tuần dùng nhà thế nào. Đây là ô giàu ý nhất của cả đầu bài — đi NGUYÊN VĂN tới mô hình, không tóm tắt."
+        }
+      }
+    },
+    "storage": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "Nhu cầu lưu trữ. Tách riêng khỏi `required_spaces` vì phần lớn chỗ cất KHÔNG phải một phòng — là tủ âm, gầm thang, hốc tường — nhưng vẫn phải được tính diện tích từ đầu.",
+      "properties": {
+        "level": {
+          "type": ["string", "null"],
+          "enum": ["it", "vua", "nhieu", null],
+          "description": "Lượng đồ cần cất giữ nói chung. `nhieu` nghĩa là chỗ chứa phải được tính như một không gian thật, không phải phần còn thừa sau khi xếp xong các phòng."
+        },
+        "items": {
+          "type": ["array", "null"],
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "kho_chung",
+              "kho_thuc_pham",
+              "tu_am_tuong",
+              "do_theo_mua",
+              "hanh_ly",
+              "tai_lieu",
+              "dung_cu_sua_chua",
+              "do_the_thao",
+              "ham_ruou",
+              "do_tho_cung"
+            ]
+          },
+          "description": "Những thứ cụ thể cần chỗ cất. Khai ra từng loại thì chỗ chứa đặt đúng chỗ: đồ theo mùa cất trên cao, thực phẩm kề bếp, dụng cụ sửa chữa kề chỗ để xe."
+        },
+        "note": {
+          "type": ["string", "null"],
+          "maxLength": 1000,
+          "description": "Ghi chú thêm về nhu cầu lưu trữ: món đồ khổ lớn, bộ sưu tập, hàng hoá kinh doanh."
+        }
+      }
+    },
+    "vertical": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "Giao thông đứng: thang bộ và thang máy.",
+      "properties": {
+        "elevator": {
+          "type": ["string", "null"],
+          "enum": ["khong", "lam_ngay", "chua_cho", null],
+          "description": "Thang máy gia đình. Ba câu trả lời thật sự khác nhau về mặt bằng: `lam_ngay` sinh một ô thang máy có cửa và có phòng kỹ thuật; `chua_cho` vẫn chiếm đúng ô ấy nhưng tạm dùng làm kho hoặc giếng trời, và móng, hố PIT, lỗ sàn phải chừa ngay lúc này — bỏ qua thì sau không lắp được; `khong` thì không chừa gì."
+        },
+        "elevator_capacity": {
+          "type": ["string", "null"],
+          "enum": ["nho_350kg", "vua_450kg", "lon_630kg", null],
+          "description": "Tải trọng thang máy, quyết kích thước hố thang. Số đo cụ thể lấy từ `kb/construction_norms.yaml`, không viết vào đầu bài — hãng thang đổi thì đổi ở một chỗ."
+        },
+        "elevator_position": {
+          "type": ["string", "null"],
+          "enum": ["canh_thang_bo", "rieng_biet", "chua_quyet", null],
+          "description": "Thang máy đặt cạnh thang bộ thành một lõi, hay tách riêng. Đặt cạnh thì gọn lõi và rẻ hệ thống; tách riêng thì tiện cho người già ở phòng xa thang bộ."
+        },
+        "stair_type": {
+          "type": ["string", "null"],
+          "enum": ["thang_ho", "thang_kin", "chua_quyet", null],
+          "description": "Thang bộ hở (thông tầng, lấy sáng, ăn diện tích) hay kín (giữ điều hoà, kín tiếng, gọn). Đây là lựa chọn của gia chủ chứ không phải của phần mềm, và nó đổi hẳn cách tổ chức khu giữa nhà."
+        }
+      }
+    },
+    "entrance": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "Lối vào và cao độ nền — nhóm câu hỏi nhỏ nhưng bỏ sót thì sai từ mặt cắt đến mặt đứng.",
+      "properties": {
+        "floor_above_road_m": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 3,
+          "description": "**Cốt nền tầng 1 cao hơn tim đường bao nhiêu mét.** Số này, chứ không phải cao độ tuyệt đối, là thứ quyết số bậc tam cấp, độ dốc dắt xe và việc nước mưa chảy vào nhà hay chảy ra đường. Để trống thì suy tạm từ `site.land_level_m - site.road_level_m`, nhưng đó là cao độ ĐẤT chứ chưa phải cốt nền."
+        },
+        "steps_from_yard": {
+          "type": ["boolean", "null"],
+          "description": "Có bậc tam cấp từ sân lên nền nhà không. «Không» nghĩa là sân và nền nhà cùng cao độ, hoặc nối bằng dốc thoải — cách duy nhất cho xe lăn và xe máy đi thẳng vào."
+        },
+        "step_count": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "maximum": 8,
+          "description": "Số bậc tam cấp, nếu gia chủ đã muốn một con số cụ thể (nhiều gia đình kiêng số bậc). Để trống thì suy từ chênh cao."
+        },
+        "vehicle_ramp": {
+          "type": ["boolean", "null"],
+          "description": "Có dốc dắt xe từ sân lên chỗ để xe không. Dốc ăn chiều dài sân: chênh cao 0,45 m cần khoảng 2,5–3 m dốc — chỗ này không tính từ đầu thì cổng mở ra là đã hết sân."
+        }
+      }
+    },
+    "balconies": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "Ban công — vị trí, phạm vi và độ vươn. Khai ở đây chứ không ở `required_spaces` vì ban công là một THUỘC TÍNH của mặt nhà theo tầng, không phải một phòng đứng riêng trong chương trình không gian.",
+      "properties": {
+        "sides": {
+          "type": ["array", "null"],
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["front", "back", "left", "right"]
+          },
+          "description": "Ban công đặt ở mặt nào của nhà: trước, sau, hông trái, hông phải."
+        },
+        "scope": {
+          "type": ["string", "null"],
+          "enum": ["moi_tang", "chi_mat_tien", "theo_tung_phong", "khong_co", null],
+          "description": "Ban công làm tới đâu: mọi tầng trên, chỉ mặt tiền, hay chỉ ở những phòng gia chủ chỉ định."
+        },
+        "projection_over_boundary": {
+          "type": ["boolean", "null"],
+          "description": "Ban công có ĐUA RA NGOÀI ranh đất (nhô qua chỉ giới xây dựng, ra trên vỉa hè hoặc trên khoảng lùi) không. Đây là câu hỏi pháp lý trước khi là câu hỏi hình khối: nhiều địa phương chỉ cho đua khi đường đủ rộng và chỉ tới một độ vươn nhất định. Trả lời «không» thì ban công nằm trọn trong phần đất xây được, và diện tích sàn phải tính lại."
+        },
+        "projection_m": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 3,
+          "description": "Độ vươn của ban công tính từ mặt tường, mét. Để trống thì lấy theo thông lệ của phương án."
+        },
+        "drying_balcony": {
+          "type": ["boolean", "null"],
+          "description": "Có ban công phơi riêng phía sau không — tách chỗ phơi khỏi ban công mặt tiền."
+        },
+        "note": {
+          "type": ["string", "null"],
+          "maxLength": 1000,
+          "description": "Ghi chú thêm về ban công: lan can kính hay xây, trồng cây, che mưa, làm lam."
+        }
+      }
+    },
+    "systems": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "Hệ thống kỹ thuật có ảnh hưởng tới MẶT BẰNG và MẶT ĐỨNG. Cố ý chỉ hỏi những thứ chiếm chỗ hoặc nhìn thấy được — phần còn lại của điện nước là việc của bộ môn, không phải của đầu bài.",
+      "properties": {
+        "water_storage": {
+          "type": ["array", "null"],
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["be_ngam", "bon_mai", "may_bom_tang_ap"]
+          },
+          "description": "Cách trữ nước. Bể ngầm ăn chỗ dưới sân hoặc dưới chỗ để xe; bồn mái ăn chỗ và đổi hẳn hình mái — cả hai phải có chỗ từ đầu chứ không gắn thêm sau."
+        },
+        "solar_water": {
+          "type": ["boolean", "null"],
+          "description": "Có bình nước nóng năng lượng mặt trời trên mái không — khối tấm thu nằm ngay trên mái và nhìn thấy từ đường, nên nó là việc của mặt đứng chứ không chỉ của điện nước."
+        },
+        "aircon_outdoor": {
+          "type": ["string", "null"],
+          "enum": ["hop_ky_thuat", "ban_cong_phu", "san_thuong", "chua_quyet", null],
+          "description": "Cục nóng điều hoà đặt ở đâu. Câu hỏi này bị bỏ qua nhiều nhất và để lại hậu quả dễ thấy nhất: một dãy cục nóng treo trên mặt tiền vừa hoàn thiện."
+        },
+        "note": {
+          "type": ["string", "null"],
+          "maxLength": 1000,
+          "description": "Ghi chú thêm về hệ thống kỹ thuật: điện dự phòng, điện mặt trời, lọc nước, camera, mạng."
+        }
+      }
+    },
+    "future": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "Dự trù tương lai — hỏi vào lúc còn sửa được là đầu bài, hỏi sau khi đổ móng là phá đi làm lại.",
+      "properties": {
+        "expansion": {
+          "type": ["string", "null"],
+          "enum": ["khong", "nang_them_tang", "xay_them_phia_sau", null],
+          "description": "Dự trù mở rộng sau này. `nang_them_tang` bắt móng, cột và thang phải tính cho số tầng tương lai ngay từ bây giờ — quyết định này không lùi lại được sau khi đổ móng."
+        },
+        "expansion_floors": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "maximum": 6,
+          "description": "Số tầng dự kiến nâng thêm."
+        },
+        "phasing": {
+          "type": ["boolean", "null"],
+          "description": "Có xây theo giai đoạn không (hoàn thiện một phần trước, phần còn lại sau)."
+        }
+      }
+    },
+    "finishing_level": {
+      "type": ["string", "null"],
+      "enum": ["co_ban", "kha", "cao_cap", null],
+      "description": "Mức hoàn thiện mong muốn. Đi cùng `budget_range_vnd`: cùng một khoảng tiền, mức hoàn thiện cao hơn nghĩa là diện tích phải nhỏ lại — bộ soát mâu thuẫn đối chiếu hai ô này với nhau."
+    },
+    "custom": {
+      "type": ["object", "null"],
+      "additionalProperties": {
+        "type": ["string", "number", "boolean", "null"]
+      },
+      "description": "Câu trả lời cho những câu hỏi do QUẢN TRỊ VIÊN tự thêm vào biểu mẫu khảo sát (màn hình «Biểu mẫu đầu bài»). Khoá là mã câu hỏi (`^[a-z0-9_]+$`), giá trị là câu trả lời.\n\nVì sao có một ô mở giữa một hợp đồng `additionalProperties: false`: NVG còn học ra câu hỏi mới sau mỗi công trình, và bắt mỗi câu hỏi mới phải đi qua một lần sửa hợp đồng + sinh lại Zod + phát hành lại hai Worker là cách chắc chắn để câu hỏi ấy không bao giờ được thêm.\n\nĐổi lại, giá trị ở đây là CHỮ và SỐ THUẦN, không phải cấu trúc: engine KHÔNG đọc chúng, và không rule nào nhắm tới chúng. Chúng đi vào văn xuôi gửi mô hình kèm nhãn câu hỏi, đúng chỗ lời gia chủ vẫn đi. Một câu hỏi cần ràng buộc THẬT lên hình học (một tầng, một diện tích, một mặt của lô) thì phải là một trường có tên trong hợp đồng này — không phải một mục tự thêm."
     }
   },
   "$defs": {

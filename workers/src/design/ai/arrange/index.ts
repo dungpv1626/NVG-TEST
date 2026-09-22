@@ -38,6 +38,7 @@ import type { RulePack } from '../../rules/rule-pack';
 import type { Rect } from '../draw/geometry';
 import type { DrawNote } from '../draw/notes';
 import { outlineFaces } from '../outline-faces';
+import type { BalconyDemand } from '../brief-demands';
 import type { PlanIssue } from '../plan-check';
 import { levelFromRooms } from '../plan-geometry';
 import type { PlanQuality } from '../plan-quality';
@@ -94,6 +95,8 @@ export interface ArrangeInput {
   accessFaces: readonly Face[];
   entrances: { main: Face | null; vehicle: Face | null };
   anchors: LevelAnchors | null;
+  /** Yêu cầu ban công của đầu bài (T65) — dùng cho phần đua ra ngoài ranh. */
+  balcony?: BalconyDemand | null;
   zoneDefaults: ZoneDefaults;
   /** Loại phòng giao thông đứng có thang (`kb/brief_fidelity.yaml` mục `stair_types`). */
   stairTypes: readonly string[];
@@ -348,6 +351,9 @@ function intentFor(
           ),
           wetRooms: input.anchors.wetRooms.map((wc) =>
             effectiveZoneOfRect(input.anchors!.footprint, wc),
+          ),
+          elevators: (input.anchors.elevators ?? []).map((lift) =>
+            effectiveZoneOfRect(input.anchors!.footprint, lift),
           ),
         }
       : null,
@@ -1625,6 +1631,7 @@ function gate(input: ArrangeInput, tree: AiPlanTree, resize: boolean): LevelLayo
     accessFaces: input.accessFaces,
     anchors: input.anchors,
     entrances: input.entrances,
+    balcony: input.balcony ?? null,
     ...(resize && minSideM ? { minSideM } : {}),
   });
   if (!layout.level) return layout;

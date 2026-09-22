@@ -10,7 +10,7 @@
 # còn là yêu cầu của gia chủ nữa», và số chỗ đỗ là SỐ THAM KHẢO (Haan, 13/09/2026: «số liệu từ hồ
 # sơ mang tính tham khảo, không ép buộc») — sửa ở đây, không phải sửa mã.
 
-version: '1.0.0'
+version: '1.1.0'
 
 # Diện tích phòng đầu bài khai là mức TỐI THIỂU (Haan, 13/09/2026) — không dùng sai số: nhỏ hơn là
 # bác, lớn hơn là tự do. Sai số dưới đây chỉ còn áp cho CHỖ ĐỂ XE so với số xe, vì diện tích mỗi xe
@@ -45,3 +45,172 @@ in_bedroom_types: [study, study_area, closet, dressing_room]
 # khép kín (`study_area`), không phải một phòng làm việc riêng cho mỗi người.
 need_equivalents:
   study: [study, study_area]
+
+# ══ ĐÒI HỎI SUY TỪ ĐẦU BÀI (T65, 22/09/2026) ═══════════════════════════════════════════
+#
+# Haan: «mặt bằng phải theo sát yêu cầu đầu bài, không được làm thiếu hoặc sai so với đầu bài».
+#
+# Từ T62 đầu bài hỏi 98 câu, nhưng chỉ BA nhóm cũ từng thành ràng buộc kiểm được: danh sách
+# không gian, thành phần gia đình, số xe. Chín nhóm trường mới — thang máy, ban công, lối vào,
+# lưu trữ, nếp sinh hoạt, tín ngưỡng, kỹ thuật, dự trù — chỉ tới mô hình dưới dạng CÂU VĂN trong
+# `brief/narrative.ts`. Câu văn thì mô hình bỏ qua được mà không ai biết: không có phép kiểm nào
+# hỏi lại, nên một đầu bài khai «làm thang máy ngay» vẫn ra mặt bằng không có thang máy và vẫn
+# qua cổng, vẫn được chấm điểm, vẫn đúc thành artifact bất biến.
+#
+# Bảng dưới đây biến chúng thành đòi hỏi tất định. Mã đọc bảng này ở `ai/brief-demands.ts`;
+# ở đây chỉ có SỐ và CỜ, không có logic.
+#
+# ⚠️ Chỉ suy từ câu ĐÃ TRẢ LỜI. Trường bỏ trống không sinh đòi hỏi nào — «chưa hỏi» khác «trả
+# lời không» (cùng lẽ với `yesNo()` của `brief/narrative.ts`), và đoán hộ gia chủ đúng là thứ
+# T41 cấm.
+#
+# ⚠️ `blocking: true` nghĩa là BÁC PHƯƠNG ÁN và tốn thêm một lượt gọi mô hình. Chỉ đặt cho thứ
+# gia chủ TỰ KHAI thành một không gian hay một con số. Suy đoán nghề nghiệp thì `blocking:
+# false`: nó thành cảnh báo trên màn hình, không loại phương án (Haan, T52 — «chỗ bất hợp lý của
+# một bản vẽ cụ thể thì sửa bằng ô yêu cầu, đừng biến thành luật»).
+demands:
+  # ── Thang máy ────────────────────────────────────────────────────────────────────────
+  # `vertical.elevator`: `lam_ngay` làm ngay · `chua_cho` chừa chỗ lắp sau · `khong` không làm.
+  #
+  # Hai giá trị đầu đều đòi MỘT Ô CHỒNG KHÍT QUA MỌI TẦNG, cùng kích thước, cùng vị trí — khác
+  # nhau ở chỗ ô ấy hôm nay có cabin hay còn để trống. Chừa chỗ mà chừa lệch tầng thì không phải
+  # chừa chỗ: sau này đục sàn vẫn không có giếng thẳng.
+  elevator:
+    # Mã phòng RIÊNG, tách khỏi `core` ngày 22/09/2026 — xem ghi chú ở `kb/room_vocabulary.yaml`.
+    space_type: elevator
+    # Diện tích giếng thang tối thiểu theo tải, m². CẢ GIẾNG (lọt lòng vách giếng), chưa gồm
+    # chiếu tới đứng chờ trước cửa — chỗ đứng chờ là hành lang, đã tính ở nơi khác.
+    #
+    # ⚠️ NGUỒN: quy cách cabin thang máy gia đình của nhà sản xuất, KHÔNG phải số đo từ hồ sơ
+    # NVG — `priors.min_samples` chưa đủ và chưa có hồ sơ NVG nào có thang máy. Đây là mức SÀN
+    # để bác một «lõi thang» 0,8 m² không lọt nổi cabin nào, không phải kích thước thiết kế.
+    # Có số đo thật thì sửa ở đây. Câu hỏi đang chờ Haan xác nhận.
+    shaft_m2:
+      nho_350kg: 2.2
+      vua_450kg: 2.5
+      lon_630kg: 3.2
+    # Dùng khi đầu bài khai có thang máy mà chưa chọn tải.
+    shaft_m2_unknown: 2.5
+    # Cạnh ngắn nhất của giếng, m. Chỉ có diện tích là chưa đủ: 2,2 m² vẫn dựng được một khe
+    # 0,5 × 4,4 m, đúng loại hình cây chia hay cắt ra. Cố ý KHÔNG khai vào
+    # `usable.min_side_m.core` của `kb/construction_norms.yaml`: mã `core` còn dùng cho lõi
+    # THANG BỘ, và ép lõi thang bộ rộng tối thiểu 1,4 m là bác những mặt bằng đang đúng.
+    shaft_min_side_m: 1.4
+    # Nhãn của ô khi gia chủ mới chỉ CHỪA CHỖ — nhãn này đi vào bản vẽ, nên phải nói đúng sự
+    # thật: hôm nay nó là một ô trống, không phải một cái thang máy.
+    reserved_label: 'Ô chừa thang máy (lắp sau)'
+
+  # ── Ban công ─────────────────────────────────────────────────────────────────────────
+  # `balconies.scope`: `moi_tang` · `chi_mat_tien` · `theo_tung_phong` · `khong_co`.
+  # `balconies.sides`: mặt nào có ban công — front / back / left / right.
+  balcony:
+    space_type: balcony
+    # Ban công đòi từ tầng này trở lên. Tầng 1 «ban công» là sân hay hiên, không phải ban công.
+    from_level: 2
+    # Loại không gian ngoài trời tính là chỗ phơi nắng được.
+    drying_types: [balcony, terrace]
+    # Bề sâu tối thiểu KHÔNG khai ở đây — đã có `usable.min_side_m.balcony` của
+    # `kb/construction_norms.yaml`, và hai chỗ cùng một con số là hai chỗ sẽ lệch nhau.
+    #
+    # Mức đua ra ngoài ranh cũng KHÔNG khai ở đây: nó lấy thẳng `balconies.projection_m` của
+    # đầu bài. Gia chủ khai đua mà không khai đua bao nhiêu thì KHÔNG dựng mặc định — mặt bằng
+    # giữ ban công trong ranh và nói ra là đầu bài còn thiếu số (`ban_cong_dua_ranh_chua_ro_duong`
+    # của `brief-completeness.ts` đã hỏi đúng câu ấy).
+
+  # ── Chỗ để xe theo CỠ xe ─────────────────────────────────────────────────────────────
+  # `parking.car_size`. Vắng thì dùng `parking.car_m2` ở đầu tệp như trước.
+  # Vẫn là SỐ THAM KHẢO như cả mục `parking` (Haan, 13/09/2026) — nới bởi `area_tolerance_ratio`.
+  car_m2_by_size:
+    gam_thap: 15
+    gam_cao: 16.5
+    xe_7_cho: 17
+    ban_tai: 18
+
+  # ── Câu trả lời nào đòi không gian nào ───────────────────────────────────────────────
+  #
+  # Mỗi dòng: gia chủ trả lời thế này thì mặt bằng phải có không gian kia. `any_of` nghĩa là một
+  # trong các loại ấy là đủ — đừng ép đúng một mã khi hai mã cùng đáp ứng được.
+  #
+  # `blocking: true` chỉ dành cho câu gia chủ tự khai thành một không gian. So sánh hai dòng
+  # cuối để thấy ranh giới: «bếp phụ» là gia chủ nói thẳng cần thêm một cái bếp — bác được;
+  # «nấu nhiều chiên xào» là nghề nghiệp suy ra nên có bếp kín — cảnh báo thôi.
+  spaces:
+    - code: phong_tho_rieng
+      answer: 'household.altar_arrangement = phong_tho_rieng'
+      any_of: [altar_room]
+      blocking: true
+      say: 'Đầu bài khai thờ cúng ở phòng thờ riêng'
+    - code: tho_san_thuong
+      answer: 'household.altar_arrangement = tren_san_thuong'
+      any_of: [altar_room, terrace]
+      blocking: true
+      say: 'Đầu bài khai thờ cúng trên sân thượng'
+    - code: kinh_doanh_tai_nha
+      answer: 'household.home_business.mode ∈ {cua_hang_mat_tien, san_xuat_nho, kho_hang}'
+      any_of: [shop, storage]
+      blocking: true
+      say: 'Đầu bài khai có kinh doanh tại nhà'
+    - code: van_phong_tai_nha
+      answer: 'household.home_business.mode = van_phong_tai_nha'
+      any_of: [study, shop]
+      blocking: true
+      say: 'Đầu bài khai làm văn phòng tại nhà'
+    - code: wc_cho_khach
+      answer: 'household.home_business.customer_wc = true'
+      any_of: [wc]
+      blocking: true
+      say: 'Đầu bài khai cần khu vệ sinh cho khách'
+    - code: bep_phu
+      answer: 'lifestyle.second_kitchen = true'
+      any_of: [kitchen]
+      count: 2
+      blocking: true
+      say: 'Đầu bài khai có bếp phụ'
+    - code: kho_do_nhieu
+      answer: 'storage.level = nhieu'
+      any_of: [storage]
+      blocking: true
+      say: 'Đầu bài khai nhu cầu lưu trữ nhiều'
+    - code: hop_ky_thuat_cuc_nong
+      answer: 'systems.aircon_outdoor = hop_ky_thuat'
+      any_of: [shaft, technical]
+      blocking: true
+      say: 'Đầu bài khai đặt cục nóng điều hoà trong hộp kỹ thuật'
+    - code: cho_phoi_ngoai_troi
+      answer: 'lifestyle.drying ∈ {phoi_nang_ngoai_troi, ca_hai}'
+      any_of: [balcony, terrace, courtyard]
+      blocking: true
+      say: 'Đầu bài khai phơi đồ ngoài trời'
+    - code: bon_nuoc_mai
+      answer: 'systems.water_storage ∋ bon_mai'
+      any_of: [terrace]
+      blocking: false
+      say: 'Đầu bài khai có bồn nước trên mái — cần chỗ đặt và lối lên'
+    - code: bep_kin_chien_xao
+      answer: 'lifestyle.cooking = nau_nhieu_chien_xao'
+      any_of: [kitchen]
+      blocking: false
+      say: 'Đầu bài khai nấu nhiều chiên xào — bếp nên kín và có mặt thoáng thoát mùi'
+    - code: khach_o_lai
+      answer: 'lifestyle.overnight_guests = true'
+      any_of: [bedroom, study]
+      blocking: false
+      say: 'Đầu bài khai có khách ở lại qua đêm — nên có một phòng dùng được để ngủ'
+    - code: lam_viec_tai_nha
+      answer: 'lifestyle.work_from_home = true'
+      any_of: [study, study_area]
+      blocking: false
+      say: 'Đầu bài khai có làm việc tại nhà'
+
+  # ── Cảnh báo suy từ đầu bài, KHÔNG bác phương án ─────────────────────────────────────
+  # Nghề nghiệp, không phải lời gia chủ. Chúng hiện lên màn hình cạnh mặt bằng để kiến trúc sư
+  # quyết, đúng ranh giới T49/T52.
+  warnings:
+    # Người đi lại khó khăn mà nhà nhiều tầng lại không thang máy.
+    di_lai_kho_khan_khong_thang_may: true
+    # Người đi lại khó khăn mà lối vào còn bậc tam cấp và không có dốc.
+    di_lai_kho_khan_con_bac: true
+    # Dự trù nâng thêm tầng thì thang bộ phải lên được tới sân thượng.
+    du_tru_nang_tang_thang_khong_len_mai: true
+    # Nền nhà thấp hơn mặt đường ở nơi từng ngập.
+    nen_thap_hon_duong_noi_ngap: true
