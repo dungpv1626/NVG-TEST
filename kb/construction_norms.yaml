@@ -115,6 +115,12 @@ usable:
     storage: 0.8
     balcony: 0.9
     garage: 2.4
+    # Giếng thang máy (T65, 22/09/2026). Diện tích không thôi thì chưa đủ: 2,2 m² vẫn dựng được
+    # một khe 0,5 × 4,4 m, đúng loại hình mà cây chia hay cắt ra.
+    # ⚠️ PHẢI khớp `demands.elevator.shaft_min_side_m` của `kb/brief_fidelity.yaml` — chỗ này ép
+    # lúc XẾP, chỗ kia BÁC ở cổng, và hai con số lệch nhau thì bộ xếp dựng ra thứ cổng không nhận.
+    # Có phép thử canh hai bên bằng nhau.
+    elevator: 1.4
   garage_with_car_m: 2.8
   # Tỉ lệ dài/rộng LỌT LÒNG tối đa của phòng ở. Cạnh ngắn đạt mức vẫn chưa đủ: phát lại lượt 9cce001a
   # sau khi thêm `min_side_m` ra phòng ngủ 2,85 × 16,56 m (47 m², chương trình 15 m²) — kê được giường
@@ -213,7 +219,7 @@ openings:
 # không phải "không cần cửa sổ" mà là "cạnh giáp mặt thoáng của nó KHÔNG phải tường". Cạnh đó
 # là lan can, và khối ba chiều dựng nó thành lan can — một ô cửa sổ đặt vào đấy sẽ khoét lỗ
 # giữa lan can.
-no_window_types: [stair, core, technical, garage, balcony, terrace]
+no_window_types: [stair, core, elevator, technical, garage, balcony, terrace]
 
 # ── Không gian ngoài trời ──────────────────────────────────────────────────────────────
 # Cạnh giáp mặt thoáng của ban công, lô gia, sân thượng dựng thành LAN CAN, không phải tường:

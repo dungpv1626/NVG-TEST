@@ -47,6 +47,13 @@ import {
   type Rect,
 } from './draw/geometry';
 import { prepareWalls, type WallGeom } from './draw/walls';
+import type { BalconyDemand, DemandedSpace, ElevatorDemand } from './brief-demands';
+import {
+  allowedBox,
+  checkBalconyDemand,
+  checkElevatorStack,
+  checkSoftDemands,
+} from './plan-demands';
 
 /** Sai lệch cho phép khi hỏi "mặt tường này có trùng cạnh phòng không". */
 export const EDGE_TOLERANCE_CM = 1;
@@ -96,6 +103,22 @@ export interface PlanCheckResult {
   findings: PlanIssue[];
 }
 
+/**
+ * Phần đòi hỏi của đầu bài mà cổng mặt bằng kiểm được — thứ chỉ hiện ra khi đã có TOẠ ĐỘ (T65).
+ *
+ * Bước chương trình không gian đã kiểm «có hay không có» và «đủ mấy cái» (`ai/program.ts`). Còn
+ * «chồng khít không», «nằm ở mặt nào», «đua ra bao xa» thì chỉ ở đây mới trả lời được.
+ */
+export interface PlanDemands {
+  elevator: ElevatorDemand | null;
+  balcony: BalconyDemand | null;
+  /**
+   * Bảng «câu trả lời nào đòi không gian nào». Ở đây chỉ dùng phần MỀM (`blocking: false`) —
+   * phần cứng đã bị bác từ cổng chương trình không gian, nhắc lại là hai dòng nói cùng một chuyện.
+   */
+  spaces: readonly DemandedSpace[];
+}
+
 export interface PlanCheckInput {
   plan: AiFloorPlan;
   /** Chương trình không gian mà mặt bằng phải bám theo — nguồn của danh sách phòng. */
@@ -121,6 +144,11 @@ export interface PlanCheckInput {
    * Mặc định `true`.
    */
   crossLevel?: boolean;
+  /**
+   * Yêu cầu gia chủ đã khai ở đầu bài (T65). Vắng = không kiểm phần ấy, đúng hành vi trước T65 —
+   * mốc đúc cũ đọc lại vẫn phải qua được cổng.
+   */
+  demands?: PlanDemands | null;
 }
 
 export function checkPlan(input: PlanCheckInput): PlanCheckResult {
@@ -135,6 +163,11 @@ export function checkPlan(input: PlanCheckInput): PlanCheckResult {
   }
   if (input.crossLevel !== false) {
     checkStairs(input.plan, add);
+    // Hai phép kiểm của T65 xét CẢ NHÀ: «mọi tầng đều có» và «ở mặt nào» không trả lời được khi
+    // chỉ cầm một tầng lẻ, nên chúng đi cùng nhóm liên tầng với thang và đường đi.
+    checkElevatorStack(input.plan, input.demands?.elevator ?? null, add);
+    checkBalconyDemand(input.plan, input.demands?.balcony ?? null, add);
+    checkSoftDemands(input.plan, input.demands?.spaces ?? [], add);
     checkReachability(input, add);
   }
 
@@ -300,13 +333,26 @@ function checkRoomRects(
         room.id,
       );
     }
-    if (input.buildable && !rectContainsRect(input.buildable, rect, EDGE_TOLERANCE_CM)) {
-      add(
-        'blocking',
-        'room_outside_buildable',
-        `Phòng "${room.id}" ở ${where} nằm ngoài phần đất được phép xây theo đầu bài.`,
-        room.id,
+    if (input.buildable) {
+      // Ban công ĐUA RA NGOÀI RANH là thứ gia chủ tự khai, nên nó không phải lỗi — nhưng chỉ ban
+      // công, chỉ ở mặt đã khai, và chỉ xa đúng mức đã khai. Phòng khác ra ngoài vẫn là lỗi, và
+      // ban công đua quá mức cũng vậy: nới vô điều kiện thì phép kiểm này mất hết tác dụng.
+      const box = allowedBox(
+        input.buildable,
+        input.demands?.balcony ?? null,
+        room.type,
+        level.level,
       );
+      if (!rectContainsRect(box, rect, EDGE_TOLERANCE_CM)) {
+        add(
+          'blocking',
+          'room_outside_buildable',
+          box === input.buildable
+            ? `Phòng "${room.id}" ở ${where} nằm ngoài phần đất được phép xây theo đầu bài.`
+            : `Ban công "${room.id}" ở ${where} đua ra xa hơn mức đầu bài khai.`,
+          room.id,
+        );
+      }
     }
 
     const measured = rectArea(rect) / 10_000;

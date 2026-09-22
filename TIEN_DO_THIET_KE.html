@@ -529,6 +529,35 @@
           </thead>
           <tbody>
             <tr>
+              <td class="num">22/09</td>
+              <td>T65 — Mặt bằng bám đầu bài: thang máy, ban công, và chín nhóm câu hỏi của T62</td>
+              <td class="xs">
+                · <b>Đặt bài của Haan:</b> «mặt bằng phải theo sát yêu cầu đầu bài, không được làm
+                thiếu hoặc sai so với đầu bài», kèm thang máy, ban công mặt tiền, ban công đua ra
+                ngoài.<br />
+                · <b>Chỗ hỏng:</b> T62 hỏi 98 câu nhưng cổng bám đầu bài chỉ đọc BA nhóm cũ. Chín
+                nhóm mới chỉ tới mô hình dưới dạng câu văn — một đầu bài khai «làm thang máy ngay»
+                vẫn ra mặt bằng không có thang máy, vẫn qua cổng, vẫn đúc thành artifact bất
+                biến.<br />
+                · <b>Bảng <code>demands</code></b> trong <code>kb/brief_fidelity.yaml</code>: «trả
+                lời X thì mặt bằng phải có Y», cờ <code>blocking</code> quyết định thiếu thì bác hay
+                chỉ nhắc. Lời gia chủ tự khai thì bác được; suy đoán nghề chỉ cảnh báo (T52).<br />
+                · <b>Mã phòng <code>elevator</code> riêng</b>, tách khỏi <code>core</code> — trước
+                đó <code>core</code> mang cả bí danh THANG MAY nên cổng nhận nhầm lõi thang bộ là đã
+                đủ. Ô thang máy bám mốc tầng dưới như giếng trời;
+                <b>lựa chọn «chừa chỗ lắp sau» đòi y hệt</b>, chỉ khác là bản vẽ ghi «Ô chừa thang
+                máy (lắp sau)».<br />
+                · <b>Ban công đua ra ngoài ranh</b> nới ô ngay trong cây chia, TRƯỚC khi dựng hình
+                bao và đặt lỗ mở — nhờ vậy hình bao, lan can và cửa tự khớp. Khai có đua mà chưa
+                khai mấy mét thì <b>không bịa số</b>: giữ trong ranh và nói ra là đầu bài còn
+                thiếu.<br />
+                · <b>Kiểm:</b> 27 phép mới, 4 đột biến mới (M25–M28) canh «chưa hỏi» không thành
+                «có», giếng thang lệch tầng, ban công sai mặt, và ban công đua khi chưa có số.<br />
+                · <b>Chờ Haan:</b> kích thước giếng thang máy lấy từ quy cách cabin nhà sản xuất,
+                chưa đối chiếu hồ sơ NVG nào — xem vướng mắc V-33.
+              </td>
+            </tr>
+            <tr>
               <td class="num">21/09</td>
               <td>T62–T63 — Đầu bài hỏi chi tiết hơn, và quản trị viên sửa được mục khảo sát</td>
               <td class="xs">
@@ -1045,6 +1074,33 @@
 
       <!-- ============ 5. VƯỚNG MẮC ============ -->
       <h2>5. Vướng mắc đang mở</h2>
+      <div class="flag block">
+        <h3>V-33 · Kích thước giếng thang máy chưa có số đo từ hồ sơ NVG — 22/09/2026</h3>
+        <p class="kv">
+          <b>Gặp ở đâu:</b> làm T65. Cổng mặt bằng nay bác một «thang máy» quá nhỏ, nên nó cần một
+          mức sàn. Mức đang dùng — <b>2,2 / 2,5 / 3,2 m²</b> theo tải 350 / 450 / 630 kg, cạnh ngắn
+          <b>1,4 m</b> — lấy từ quy cách cabin thang máy gia đình của nhà sản xuất.
+        </p>
+        <p class="kv">
+          <b>Đã thử gì:</b> tra <code>kb/</code> và hai bộ hồ sơ NVG đã số hoá.
+          <b>Không hồ sơ nào có thang máy</b>, nên ngưỡng 15 công trình của
+          <code>priors.min_samples</code> không áp dụng được — không phải «chưa đủ mẫu», mà là
+          <b>không có mẫu nào</b>.
+        </p>
+        <p class="kv">
+          <b>Đang chặn gì:</b> chưa chặn gì. Con số chỉ là mức SÀN để bác một ô 0,8 m² không lọt nổi
+          cabin, không phải kích thước thiết kế — đặt thấp thì cổng lỏng, không làm hỏng phương án
+          nào. Rủi ro thật nằm ở chiều ngược lại: đặt cao quá thì bác oan một mặt bằng đúng.
+        </p>
+        <p class="kv">
+          <b>Cần gì để gỡ:</b> Haan xác nhận NVG thường dùng thang máy tải nào và giếng bao nhiêu,
+          hoặc một hồ sơ đã xây có thang máy để đo. Sửa ở <b>hai</b> chỗ và chúng phải bằng nhau:
+          <code>demands.elevator</code> của <code>kb/brief_fidelity.yaml</code> (bác ở cổng) và
+          <code>usable.min_side_m.elevator</code> của <code>kb/construction_norms.yaml</code> (ép
+          lúc xếp). Có phép thử canh hai con số không lệch, nên sửa một chỗ mà quên chỗ kia thì đỏ
+          ngay trên máy.
+        </p>
+      </div>
       <div class="flag block">
         <h3>
           V-32 · Máy chủ không rasterise được tờ SVG, nên ảnh neo phải đi qua trình duyệt —

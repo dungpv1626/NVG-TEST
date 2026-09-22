@@ -39,6 +39,7 @@ export const ROOM_LABEL: Readonly<Record<string, string>> = {
   wc: 'Khu vệ sinh',
   stair: 'Thang bộ',
   core: 'Lõi thang',
+  elevator: 'Thang máy',
   circulation: 'Giao thông',
   garage: 'Để xe',
   altar_room: 'Phòng thờ',

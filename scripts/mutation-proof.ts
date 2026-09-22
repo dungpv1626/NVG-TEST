@@ -82,6 +82,40 @@ const MUTATIONS: Mutation[] = [
     replace: '      if (false) {',
   },
 
+  // ── Bám đầu bài: cái gia chủ đã khai có thật sự vào mặt bằng không (T65) ─────────────
+  {
+    id: 'M25',
+    axis: 'bám đầu bài',
+    file: 'workers/src/design/ai/brief-demands.ts',
+    bug: 'Trường đầu bài BỎ TRỐNG cũng bị hiểu là «có» — mọi hồ sơ chưa điền hết bị bác vì những thứ gia chủ chưa từng nói, và chỗ hỏng nằm ở đúng ranh giới «chưa hỏi khác trả lời không»',
+    find: '      return lifestyle?.second_kitchen === true ? { level: null } : null;',
+    replace: '      return lifestyle?.second_kitchen !== false ? { level: null } : null;',
+  },
+  {
+    id: 'M26',
+    axis: 'bám đầu bài',
+    file: 'workers/src/design/ai/plan-demands.ts',
+    bug: 'Giếng thang máy lệch tầng vẫn qua cổng — cabin không có đường thẳng để chạy, và với lựa chọn «chừa chỗ lắp sau» thì cái chỗ đã chừa là vô dụng',
+    find: '      if (shift > ELEVATOR_ALIGN_CM) {',
+    replace: '      if (false) {',
+  },
+  {
+    id: 'M27',
+    axis: 'bám đầu bài',
+    file: 'workers/src/design/ai/plan-demands.ts',
+    bug: 'Ban công ra mặt nào cũng được dù gia chủ khai CHỈ mặt tiền — số lượng vẫn đủ nên không phép kiểm nào khác lên tiếng',
+    find: '  for (const side of balcony.forbiddenSides) {',
+    replace: '  for (const side of [] as typeof balcony.forbiddenSides) {',
+  },
+  {
+    id: 'M28',
+    axis: 'bám đầu bài',
+    file: 'workers/src/design/ai/tree/balcony-projection.ts',
+    bug: 'Ban công đua ra ngoài ranh dù đầu bài chưa khai đua bao nhiêu mét — chương trình tự bịa một con số rồi vẽ nó lên bản vẽ kỹ thuật',
+    find: '  if (cm <= 0) return { cells: [...input.cells], projected: [] };',
+    replace: '  const _unused = cm;',
+  },
+
   // ── Riêng tư: cái gì rời khỏi máy chủ ─────────────────────────────────────────────────
   {
     id: 'M04',

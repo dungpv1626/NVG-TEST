@@ -78,7 +78,13 @@ export interface IntentContext {
    * thang và giếng trời phải chồng KHÍT; khu vệ sinh chỉ cần cùng vùng để trục ống nước còn thẳng
    * được (Q-B, 18/09/2026), vị trí trong vùng do bộ xếp quyết bằng khoản phạt `wet`.
    */
-  anchorZones?: { stair: Zone | null; lightWells: Zone[]; wetRooms?: Zone[] } | null;
+  anchorZones?: {
+    stair: Zone | null;
+    lightWells: Zone[];
+    wetRooms?: Zone[];
+    /** Vùng ô thang máy tầng dưới — tầng trên phải chồng khít, nên phải cùng vùng. */
+    elevators?: Zone[];
+  } | null;
   /** Loại phòng nào là khu vệ sinh — dùng cho việc ép vùng ở trên. */
   isWet?: (type: string) => boolean;
   /** Số phòng tối đa một vùng nhận được — theo lưới hiệu dụng của hình bao. */
@@ -100,6 +106,8 @@ const MERGE_GROUP_MAX = 3;
 /** Cùng trần `also` của hợp đồng cây. */
 const MERGES_MAX = 6;
 const LIGHT_WELL = 'light_well';
+/** Ô thang máy — bám vùng của tầng dưới y như giếng trời (T65). */
+const ELEVATOR = 'elevator';
 
 /** Loại phòng ưu tiên mang cửa chính khi ý định bỏ trống — theo thứ tự. */
 const ENTRY_PREFERENCE = ['porch', 'circulation', 'living', 'dining', 'core', 'garage'];
@@ -181,13 +189,16 @@ export function normaliseIntent(raw: AiPlanIntent, ctx: IntentContext): LevelInt
   if (ctx.anchorZones) {
     const same = ctx.sameZone ?? ((a: Zone, b: Zone) => a === b);
     const wells = [...ctx.anchorZones.lightWells];
+    const lifts = [...(ctx.anchorZones.elevators ?? [])];
     for (const room of rooms) {
       const forced =
         room.type === 'stair'
           ? ctx.anchorZones.stair
           : room.type === LIGHT_WELL
             ? (wells.shift() ?? null)
-            : null;
+            : room.type === ELEVATOR
+              ? (lifts.shift() ?? null)
+              : null;
       if (forced && !same(forced, room.zone)) {
         notes.add(
           'intent_anchor_zone_forced',

@@ -51,6 +51,7 @@ export const TREE_ISSUE_CODES = [
   'stair_room_unknown',
   'stair_not_at_anchor',
   'light_well_not_at_anchor',
+  'elevator_not_at_anchor',
   'snap_collapsed_cell',
 ] as const;
 

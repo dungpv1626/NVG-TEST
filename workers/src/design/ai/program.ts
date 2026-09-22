@@ -57,6 +57,7 @@ import type {
   TextModelClient,
 } from '../llm/text-client';
 import { buildableFromDigest, type BuildableBox } from './buildable';
+import { briefDemands, sideWord, type BriefDemands } from './brief-demands';
 import { injectableRules, type InjectedRule } from './rule-packs';
 import type { RulePack } from '../rules/rule-pack';
 import type { AiPrompts } from './prompts';
@@ -225,7 +226,21 @@ export interface ProgramKnowledge {
    * một nhà vườn (khoảng đạt 18–25%) và mặt bằng mất nửa điểm C2 trước khi được vẽ.
    */
   circulation_share: { low: number; high: number } | null;
+  /**
+   * Yêu cầu gia chủ ĐÃ KHAI ở chín nhóm câu hỏi thêm từ T62 (`ai/brief-demands.ts`, T65).
+   *
+   * Đi vào lời dẫn như `brief_spaces` và `members`: mô hình cần con số kiểm được, không chỉ câu
+   * văn. Và đi vào `checkProposal` — không có phép kiểm thì câu nào mô hình bỏ qua cũng không ai
+   * biết, đúng chỗ hỏng mà T65 sửa.
+   *
+   * Cố ý KHÔNG mang `warnings`: đó là nhắc cho kiến trúc sư đọc, không phải việc của mô hình, và
+   * gửi đi chỉ tốn token lẫn làm loãng phần mệnh lệnh.
+   */
+  brief_demands: ModelDemands;
 }
+
+/** Phần đòi hỏi gửi cho mô hình và dùng để kiểm — `BriefDemands` bỏ mục `warnings`. */
+export type ModelDemands = Omit<BriefDemands, 'warnings'>;
 
 export function programKnowledge(input: {
   digest: AiBriefDigest;
@@ -238,6 +253,11 @@ export function programKnowledge(input: {
   quality?: PlanQuality;
 }): ProgramKnowledge {
   const { digest, vocabulary, labels, buildable } = input;
+
+  // Một nguồn duy nhất cho cả lời dẫn lẫn bộ kiểm: hàm THUẦN, nên gọi ở đây rồi mang theo trong
+  // `knowledge` là đủ — không có chỗ nào tính lại và lệch đi.
+  const { warnings: _warnings, ...demands } = briefDemands(digest, input.fidelity);
+  const { spaces, elevator, balcony, garageMinM2, lines } = demands;
 
   const inBedroom = new Set(input.fidelity.inBedroomTypes);
   const bedrooms = new Map<string, number>();
@@ -294,7 +314,7 @@ export function programKnowledge(input: {
         ],
         in_room: [...new Set((member.needs ?? []).filter((need) => inBedroom.has(need)))],
       })),
-    garage_min_m2: garageMinimum(digest, input.fidelity),
+    garage_min_m2: demands.garageMinM2,
     area_tolerance_ratio: input.fidelity.areaToleranceRatio,
     ensuite_child_types: input.fidelity.ensuiteChildTypes,
     ensuite_parent_types: input.fidelity.ensuiteParentTypes,
@@ -308,6 +328,7 @@ export function programKnowledge(input: {
     construction: forModel(input.construction),
     constraints: injectableRules(input.rules, digest.building_type, PROGRAM_PREDICATES),
     circulation_share: circulationShare(input.quality, digest.building_type),
+    brief_demands: { spaces, elevator, balcony, garageMinM2, lines },
   };
 }
 
@@ -336,14 +357,6 @@ function circulationShare(
 
 /** Nhu cầu mà hệ thống TỰ SUY (phòng ngủ, khu vệ sinh) — không kiểm như một nhu cầu riêng. */
 const DERIVED_NEEDS: ReadonlySet<string> = new Set(DERIVED_NEED_CODES);
-
-/** Diện tích chỗ để xe tối thiểu, m², suy từ số xe đầu bài khai. */
-function garageMinimum(digest: AiBriefDigest, fidelity: BriefFidelity): number | null {
-  const cars = digest.parking?.cars ?? 0;
-  const bikes = digest.parking?.motorbikes ?? 0;
-  if (cars + bikes <= 0) return null;
-  return round1(cars * fidelity.parking.carM2 + bikes * fidelity.parking.motorbikeM2);
-}
 
 /**
  * Kiểm nghiệp vụ trên đề xuất đã qua Zod. Trả danh sách lỗi tiếng Việt, rỗng = đạt.
@@ -542,6 +555,12 @@ export function checkProposal(
     }
   }
 
+  // ── Bám đầu bài: chín nhóm câu hỏi thêm từ T62 (T65) ──────────────────────────────────
+  //
+  // Mọi phép kiểm dưới đây chỉ chạy khi đầu bài ĐÃ TRẢ LỜI câu tương ứng — `brief-demands.ts` đã
+  // lọc, nên ở đây một mục có mặt nghĩa là gia chủ đã nói ra.
+  issues.push(...demandIssues(proposal, knowledge, name));
+
   // ── Bám đầu bài: chỗ để xe đủ số xe ────────────────────────────────────────────────────
   if (knowledge.garage_min_m2 !== null) {
     const garages = proposal.spaces.filter((s) => s.type === 'garage');
@@ -553,6 +572,94 @@ export function checkProposal(
         `Chỗ để xe ${round1(area)} m² không đủ cho số xe đầu bài khai (cần khoảng ${knowledge.garage_min_m2} m²).`,
       );
     }
+  }
+
+  return issues;
+}
+
+/**
+ * Kiểm phần đòi hỏi suy từ đầu bài (T65) — thang máy, ban công, và bảng `demands.spaces`.
+ *
+ * Tách ra khỏi `checkProposal` vì nó đã dài; ranh giới là «phần T62 hỏi thêm».
+ */
+function demandIssues(
+  proposal: AiSpaceProgramProposal,
+  knowledge: ProgramKnowledge,
+  name: (code: string) => string,
+): string[] {
+  const issues: string[] = [];
+  const demands = knowledge.brief_demands;
+
+  // ── Thang máy: mọi tầng một ô, đủ rộng ───────────────────────────────────────────────
+  //
+  // Kiểm TỪNG TẦNG chứ không đếm tổng: một toà nhà có đủ số ô mà dồn hết vào hai tầng thì không
+  // phải là có thang máy. Chồng khít là việc của cổng mặt bằng — ở bước này chưa có toạ độ.
+  const lift = demands.elevator;
+  if (lift) {
+    const missing: number[] = [];
+    const tooSmall: number[] = [];
+    for (let level = 1; level <= knowledge.floors; level += 1) {
+      const onLevel = proposal.spaces.filter((s) => s.type === lift.type && s.level === level);
+      if (!onLevel.length) {
+        missing.push(level);
+        continue;
+      }
+      if (!onLevel.some((s) => round1(s.target_area_m2) >= lift.minAreaM2)) tooSmall.push(level);
+    }
+    const word = lift.mode === 'lam_ngay' ? 'làm thang máy' : 'chừa chỗ lắp thang máy sau';
+    if (missing.length) {
+      issues.push(
+        `Đầu bài khai ${word} nhưng tầng ${missing.join(', ')} không có ${name(lift.type)} — giếng thang phải xuyên suốt mọi tầng.`,
+      );
+    }
+    if (tooSmall.length) {
+      issues.push(
+        `${name(lift.type)} ở tầng ${tooSmall.join(', ')} nhỏ hơn ${lift.minAreaM2} m² — không lọt cabin nào theo tải đầu bài khai.`,
+      );
+    }
+  }
+
+  // ── Ban công ─────────────────────────────────────────────────────────────────────────
+  const balcony = demands.balcony;
+  if (balcony) {
+    const all = proposal.spaces.filter((s) => s.type === balcony.type);
+    if (balcony.forbidden && all.length) {
+      issues.push(
+        `Gia chủ khai KHÔNG làm ban công, đề xuất vẫn có ${all.length} ${name(balcony.type)} — bỏ đi.`,
+      );
+    }
+    if (!balcony.forbidden) {
+      const bare = balcony.levels.filter((level) => !all.some((s) => s.level === level));
+      if (bare.length) {
+        issues.push(
+          `Đầu bài khai ban công ở mọi tầng, tầng ${bare.join(', ')} chưa có ${name(balcony.type)}.`,
+        );
+      }
+      if (balcony.sides.length && !all.length) {
+        issues.push(
+          `Đầu bài khai ban công ở ${balcony.sides.map(sideWord).join(', ')}, đề xuất không có ${name(balcony.type)} nào.`,
+        );
+      }
+    }
+  }
+
+  // ── Bảng «câu trả lời nào đòi không gian nào» ─────────────────────────────────────────
+  //
+  // Dòng `blocking: false` CỐ Ý không sinh lỗi ở đây: chúng là suy đoán nghề, đi đường cảnh báo
+  // (`rule-warnings.ts`). Bác một phương án vì một suy đoán là đúng thứ Haan đã cho gỡ ở T52.
+  for (const demand of demands.spaces) {
+    if (!demand.blocking) continue;
+    const have = proposal.spaces.filter(
+      (s) => demand.anyOf.includes(s.type) && (demand.level === null || s.level === demand.level),
+    ).length;
+    if (have >= demand.count) continue;
+    const what = demand.anyOf.map(name).join(' hoặc ');
+    const where = demand.level === null ? '' : ` ở tầng ${demand.level}`;
+    issues.push(
+      demand.count > 1
+        ? `${demand.say} — cần ${demand.count} ${what}${where}, đề xuất có ${have}.`
+        : `${demand.say} — phương án thiếu ${what}${where}.`,
+    );
   }
 
   return issues;

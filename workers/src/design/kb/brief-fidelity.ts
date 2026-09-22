@@ -19,6 +19,55 @@ export interface BriefFidelity {
   needEquivalents: Record<string, string[]>;
   /** Tiện ích nằm TRONG phòng ngủ — gộp vào phòng, không thành không gian riêng. */
   inBedroomTypes: string[];
+  /** Đòi hỏi suy từ những câu đầu bài ĐÃ trả lời (T65) — xem `demands:` của tệp YAML. */
+  demands: BriefDemandSpec;
+}
+
+/**
+ * Phần `demands:` của `kb/brief_fidelity.yaml` — SỐ và CỜ, không có logic.
+ *
+ * Logic «câu trả lời nào sinh đòi hỏi nào» nằm ở `ai/brief-demands.ts`; ở đây chỉ là những con
+ * số mà logic ấy đọc. Tách như vậy vì con số đổi theo hồ sơ và theo gia chủ, còn logic thì không.
+ */
+export interface BriefDemandSpec {
+  elevator: {
+    spaceType: string;
+    /** Diện tích giếng tối thiểu theo mã tải của đầu bài. */
+    shaftM2: Record<string, number>;
+    /** Dùng khi đầu bài khai có thang máy mà chưa chọn tải. */
+    shaftM2Unknown: number;
+    /** Cạnh ngắn nhất của giếng, m — diện tích thôi thì vẫn dựng được một khe dài. */
+    shaftMinSideM: number;
+    /** Nhãn của ô khi gia chủ mới chỉ CHỪA CHỖ, chưa lắp. */
+    reservedLabel: string;
+  };
+  balcony: {
+    spaceType: string;
+    /** Ban công chỉ tính từ tầng này trở lên — tầng 1 là sân hay hiên. */
+    fromLevel: number;
+    /** Loại không gian tính là chỗ phơi nắng được. */
+    dryingTypes: string[];
+  };
+  /** Diện tích một chỗ đỗ ô tô theo CỠ xe đầu bài khai; vắng cỡ thì dùng `parking.carM2`. */
+  carM2BySize: Record<string, number>;
+  /** Câu trả lời nào đòi không gian nào. `code` là thứ mã nguồn tra, `answer`/`say` là để người đọc. */
+  spaces: BriefDemandSpace[];
+  /** Cảnh báo nào được bật. Vắng khoá = tắt; không có mục nào là mặc định hợp lệ. */
+  warnings: Record<string, boolean>;
+}
+
+export interface BriefDemandSpace {
+  code: string;
+  /** Điều kiện, viết cho NGƯỜI đọc — mã nguồn tra theo `code`, không phân tích chuỗi này. */
+  answer: string;
+  /** Một trong các loại này là đủ. */
+  anyOf: string[];
+  /** Số không gian tối thiểu; vắng = 1. */
+  count: number;
+  /** `true` = bác phương án; `false` = chỉ cảnh báo (T52). */
+  blocking: boolean;
+  /** Câu nói ra khi thiếu — mở đầu của thông điệp lỗi. */
+  say: string;
 }
 
 export class BriefFidelityError extends Error {
@@ -54,6 +103,7 @@ export function parseBriefFidelity(yamlText: string): BriefFidelity {
     ensuiteParentTypes: list('ensuite_parent_types'),
     stairTypes: list('stair_types'),
     inBedroomTypes: raw.in_bedroom_types === undefined ? [] : list('in_bedroom_types'),
+    demands: parseDemands(raw.demands),
     needEquivalents: Object.fromEntries(
       Object.entries((raw.need_equivalents ?? {}) as Record<string, unknown>).map(
         ([need, types]) => {
@@ -64,5 +114,108 @@ export function parseBriefFidelity(yamlText: string): BriefFidelity {
         },
       ),
     ),
+  };
+}
+
+/**
+ * Phần `demands:` — vắng hẳn là hợp lệ và có nghĩa «không đòi gì thêm».
+ *
+ * Vì sao chịu được khi vắng: một bản `kb/` cũ hơn mã nguồn vẫn phải chạy được. Vắng thì nhánh AI
+ * quay về đúng hành vi trước T65 — bám đầu bài ở ba nhóm cũ — thay vì ném lỗi và chặn cả lượt
+ * chạy. Khai SAI thì vẫn ném: khai sai là lỗi người sửa tệp, khác hẳn với chưa khai.
+ */
+function parseDemands(raw: unknown): BriefDemandSpec {
+  const empty: BriefDemandSpec = {
+    elevator: {
+      spaceType: 'core',
+      shaftM2: {},
+      shaftM2Unknown: 0,
+      shaftMinSideM: 0,
+      reservedLabel: '',
+    },
+    balcony: { spaceType: 'balcony', fromLevel: 2, dryingTypes: [] },
+    carM2BySize: {},
+    spaces: [],
+    warnings: {},
+  };
+  if (raw === undefined || raw === null) return empty;
+  if (typeof raw !== 'object') throw new BriefFidelityError('`demands` phải là một mục');
+  const d = raw as Record<string, unknown>;
+
+  const numberMap = (value: unknown, where: string): Record<string, number> => {
+    if (value === undefined || value === null) return {};
+    if (typeof value !== 'object') throw new BriefFidelityError(`\`${where}\` phải là một mục`);
+    const out: Record<string, number> = {};
+    for (const [key, raw2] of Object.entries(value as Record<string, unknown>)) {
+      if (typeof raw2 !== 'number' || raw2 <= 0) {
+        throw new BriefFidelityError(`\`${where}.${key}\` phải là số dương`);
+      }
+      out[key] = raw2;
+    }
+    return out;
+  };
+  const codes = (value: unknown, where: string): string[] => {
+    if (value === undefined || value === null) return [];
+    if (!Array.isArray(value) || value.some((v) => typeof v !== 'string')) {
+      throw new BriefFidelityError(`\`${where}\` phải là danh sách mã phòng`);
+    }
+    return value as string[];
+  };
+
+  const lift = (d.elevator ?? {}) as Record<string, unknown>;
+  const balcony = (d.balcony ?? {}) as Record<string, unknown>;
+  const spacesRaw = d.spaces === undefined || d.spaces === null ? [] : d.spaces;
+  if (!Array.isArray(spacesRaw)) throw new BriefFidelityError('`demands.spaces` phải là danh sách');
+
+  const spaces: BriefDemandSpace[] = spacesRaw.map((row, index) => {
+    const r = row as Record<string, unknown>;
+    const at = `demands.spaces[${index}]`;
+    if (typeof r.code !== 'string' || !r.code) {
+      throw new BriefFidelityError(`\`${at}.code\` phải là chuỗi không rỗng`);
+    }
+    const anyOf = codes(r.any_of, `${at}.any_of`);
+    if (!anyOf.length) throw new BriefFidelityError(`\`${at}.any_of\` không được rỗng`);
+    if (typeof r.blocking !== 'boolean') {
+      // Cố ý KHÔNG có mặc định: quên khai cờ này là quên trả lời câu «thiếu thì bác hay chỉ
+      // nhắc», và đoán hộ thì hoặc là bác oan, hoặc là im lặng bỏ qua yêu cầu của gia chủ.
+      throw new BriefFidelityError(`\`${at}.blocking\` phải khai rõ true hay false`);
+    }
+    if (r.count !== undefined && (typeof r.count !== 'number' || r.count < 1)) {
+      throw new BriefFidelityError(`\`${at}.count\` phải là số nguyên từ 1`);
+    }
+    return {
+      code: r.code,
+      answer: typeof r.answer === 'string' ? r.answer : '',
+      anyOf,
+      count: typeof r.count === 'number' ? r.count : 1,
+      blocking: r.blocking,
+      say: typeof r.say === 'string' ? r.say : '',
+    };
+  });
+
+  const warnings: Record<string, boolean> = {};
+  for (const [key, value] of Object.entries((d.warnings ?? {}) as Record<string, unknown>)) {
+    if (typeof value !== 'boolean') {
+      throw new BriefFidelityError(`\`demands.warnings.${key}\` phải là true hay false`);
+    }
+    warnings[key] = value;
+  }
+
+  return {
+    elevator: {
+      spaceType: typeof lift.space_type === 'string' ? lift.space_type : 'core',
+      shaftM2: numberMap(lift.shaft_m2, 'demands.elevator.shaft_m2'),
+      shaftM2Unknown: typeof lift.shaft_m2_unknown === 'number' ? lift.shaft_m2_unknown : 0,
+      shaftMinSideM: typeof lift.shaft_min_side_m === 'number' ? lift.shaft_min_side_m : 0,
+      reservedLabel: typeof lift.reserved_label === 'string' ? lift.reserved_label : '',
+    },
+    balcony: {
+      spaceType: typeof balcony.space_type === 'string' ? balcony.space_type : 'balcony',
+      fromLevel: typeof balcony.from_level === 'number' ? balcony.from_level : 2,
+      dryingTypes: codes(balcony.drying_types, 'demands.balcony.drying_types'),
+    },
+    carM2BySize: numberMap(d.car_m2_by_size, 'demands.car_m2_by_size'),
+    spaces,
+    warnings,
   };
 }

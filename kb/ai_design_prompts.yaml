@@ -13,7 +13,7 @@
 # Không một ngưỡng quy chuẩn nào nằm ở đây: mọi con số (tối thiểu, sàn xây được, số phòng ngủ)
 # do Worker tiêm vào từ rule pack, kb/space_norms.yaml và đầu bài lúc gọi — xem `ai/program.ts`.
 
-version: '8.15.0'
+version: '8.16.0'
 
 program:
   system: |
@@ -61,6 +61,18 @@ program:
     9. The main entrance side, the vehicle entrance side and the yard depths stated in <brief>
        are decided too: size the ground level so the entrance hall and the garage can sit on
        those sides.
+    10. `knowledge.brief_demands` carries the answers the client gave to the detailed survey —
+       the lift, the balconies, the altar, the home business, the second kitchen, the storage.
+       `lines` states each one in Vietnamese; obey every line. The structured parts are checked
+       mechanically, so read them too:
+       - `elevator`, when not null, means EVERY level from 1 to `knowledge.floors` carries one
+         space of that `type`, each at least `minAreaM2`. This holds for `mode: chua_cho` as
+         well — reserving a lift shaft means reserving it on every level, aligned, or there is
+         no straight shaft to fit a lift into later. Say so in that space's `why`.
+       - `balcony.levels` lists levels that must each carry a balcony; `balcony.sides` names the
+         faces the client wants one on; `balcony.forbidden` means propose none at all.
+       - every entry of `spaces` with `blocking: true` needs `count` spaces whose type is one of
+         `any_of`, on `level` when it is set.
 
     WHERE YOU ARE FREE — this is the part worth asking a model for:
     - Rooms above their minimum, and rooms the client did not size: size them by how they will be
