@@ -219,7 +219,7 @@ Thực thể tham chiếu xuyên module — **liên kết, KHÔNG sao chép**: `
   ngay tại chỗ, kèm ca hỏng đã đo.
 - **CI**: `.github/workflows/kiem.yml` chạy định dạng, luật, kiểu, hợp đồng và 1.606 phép thử trên
   mỗi PR. Cố ý KHÔNG chạy `db/` (chạm Supabase thật, xoá cứng theo tiền tố `[TEST]`).
-- **`npm run mutation-proof`**: cài 28 lỗi thật vào mã nguồn rồi đòi bộ kiểm phải ĐỎ. Số bài kiểm
+- **`npm run mutation-proof`**: cài 29 lỗi thật vào mã nguồn rồi đòi bộ kiểm phải ĐỎ. Số bài kiểm
   không chứng minh bộ kiểm có tác dụng — 20/09/2026 có tám lỗi thật lọt qua 867 bài kiểm đang xanh.
   Thêm hàng rào mới (quyền, riêng tư, tiền gọi mô hình, số đo bản vẽ) thì thêm một đột biến cho nó.
   Khoảng trống đã biết: RLS và ràng buộc trong CSDL KHÔNG được chứng minh ở đây.
@@ -323,6 +323,11 @@ Nghiệm thu đo bằng **người thật dùng, dữ liệu đúng, báo cáo �
   - ⚠️ **KHÔNG BAO GIỜ kèm `--env production`** — sinh ra Worker thứ hai `nvg-production`, `nvg` thật giữ bản cũ.
   - SPA phải có `assets.not_found_handling: "single-page-application"`, thiếu thì đường dẫn sâu ra 404.
   - `wrangler deploy` không nạp `.env`; đừng dùng `--secrets-file` với `.env` gốc (có `service_role`, mật khẩu CSDL).
+  - **Biến `VITE_*` bị đóng cứng vào bundle lúc build.** `.env` là cấu hình MÁY (API = `localhost:8788`);
+    bản phát hành lấy địa chỉ công khai từ **`.env.production`** (có commit, đè `.env`). Build production
+    DỪNG nếu biến nào rỗng hoặc trỏ về máy (`web/src/lib/build-env.ts`, đột biến M29). Lỗi thật
+    06/09→23/09/2026: bản public gọi `localhost:8788`, «AI Design» chỉ chạy trên máy đang mở `wrangler dev`.
+    Thêm biến `VITE_` mới: khai ở `define` **và** `REQUIRED_BUILD_ENV` (có phép thử canh hai bên khớp).
   - ⚠️ **Đừng phát hành một mình `deploy:web`.** Artifact của Module Thiết kế là bất biến và bị kiểm hợp
     đồng **cả khi ĐỌC LẠI**, nên một bản `nvg-api` cũ hơn hợp đồng đã ghi ra artifact sẽ không đọc nổi
     chính kho của mình. Xảy ra thật 21/09/2026: giao diện dựng 20/09, API tải lên 19/09 → cả tab «AI

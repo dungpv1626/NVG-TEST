@@ -34,7 +34,8 @@ import { join } from 'node:path';
  * sau khi chạy, script băm toàn bộ mã nguồn và báo lỗi nếu hai bản băm khác nhau.
  */
 
-type Axis = 'phân quyền' | 'riêng tư' | 'tiền' | 'tiền gọi mô hình' | 'bản vẽ' | 'số đo';
+type Axis =
+  'phân quyền' | 'riêng tư' | 'tiền' | 'tiền gọi mô hình' | 'bản vẽ' | 'số đo' | 'phát hành';
 
 type Mutation = {
   id: string;
@@ -283,6 +284,15 @@ const MUTATIONS: Mutation[] = [
     find: '      const phrase = code ? table[code] : undefined;',
     replace: "      const phrase = code ? table[code] : 'an empty plot';",
   },
+  // ── Phát hành: bản public dùng được trên máy người dùng ───────────────────────────────
+  {
+    id: 'M29',
+    axis: 'phát hành',
+    file: 'web/src/lib/build-env.ts',
+    bug: 'Bản phát hành đóng gói địa chỉ API trỏ về máy phát triển (localhost:8788) — build và deploy xanh, tab «AI Design» chỉ chạy trên máy đang mở wrangler dev, mọi máy khác báo «Dịch vụ thiết kế đang không phản hồi» (xảy ra thật 06/09 → 23/09/2026)',
+    find: '    if (isMachineLocal(url.hostname)) {',
+    replace: '    if (false as boolean) {',
+  },
 ];
 
 /** Thư mục mã nguồn được băm trước và sau khi chạy. `db/` không đụng tới nên không băm. */
@@ -450,7 +460,7 @@ const byAxis = (axis: Axis) => {
 console.log(
   `\nKết quả: ${killed.length}/${outcomes.length} đột biến bị bộ kiểm bắt ` +
     `(phân quyền ${byAxis('phân quyền')} · riêng tư ${byAxis('riêng tư')} · ` +
-    `tiền ${byAxis('tiền')} · bản vẽ ${byAxis('bản vẽ')}).`,
+    `tiền ${byAxis('tiền')} · bản vẽ ${byAxis('bản vẽ')} · phát hành ${byAxis('phát hành')}).`,
 );
 console.log('Mã nguồn đã được khôi phục nguyên vẹn (băm mã nguồn trước = sau).');
 if (survived.length) {

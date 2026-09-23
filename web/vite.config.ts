@@ -3,16 +3,30 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig, loadEnv } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import { productionEnvProblems } from './src/lib/build-env';
 
 /**
  * Tech Stack Mục 2.1: SPA tĩnh, KHÔNG dùng Server-Side Rendering —
  * đây là ứng dụng quản trị nội bộ, không cần SEO; toàn bộ trang tĩnh phục vụ
  * qua CDN của Cloudflare Pages, không cần máy chủ Node.js riêng để render.
  */
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ command, mode }) => {
   // Biến môi trường nằm ở GỐC repo (một .env dùng chung cho cả workspace),
-  // không phải trong web/.
+  // không phải trong web/. Bản phát hành đọc thêm `.env.production`, đè lên `.env`.
   const env = loadEnv(mode, fileURLToPath(new URL('..', import.meta.url)), 'VITE_');
+
+  // Giá trị `VITE_*` bị đóng cứng vào bundle — sai là hỏng trên máy người dùng trong khi build
+  // vẫn xanh. Dừng ngay ở đây thay vì phát hành (xem đầu `build-env.ts`).
+  if (command === 'build' && mode === 'production') {
+    const problems = productionEnvProblems(env);
+    if (problems.length) {
+      throw new Error(
+        `Không dựng bản phát hành: biến môi trường sai.\n  - ${problems.join('\n  - ')}\n` +
+          'Sửa trong .env.production (hoặc build variables của Workers Builds). ' +
+          'Cần bản trỏ về máy để gỡ lỗi thì dựng bằng `vite build --mode development`.',
+      );
+    }
+  }
 
   return {
     plugins: [
