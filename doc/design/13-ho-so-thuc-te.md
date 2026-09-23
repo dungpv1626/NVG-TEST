@@ -1,7 +1,13 @@
-# 13 — Hồ sơ thật của NVG: đối chiếu tài liệu với hai bộ hồ sơ hoàn chỉnh
+# 13 — Hồ sơ thật của NVG: đối chiếu tài liệu với hồ sơ đã bàn giao
 
 Ngày 05/09/2026, NVG bàn giao **hai bộ hồ sơ thiết kế hoàn chỉnh**. Đây đúng là thứ mà Mốc 0.1
 và vướng mắc V-1 đang chờ — chốt chặn "chưa từng gặp một bản vẽ NVG nào" đã được gỡ.
+
+Ngày 22/09/2026 NVG bàn giao thêm **năm bộ nữa**. Mục 13.1 → 13.15 giữ nguyên là báo cáo về hai
+bộ đầu (gọi là HS-01, HS-02); **mục 13.16** ghi đợt đo bốn bộ mới (HS-03 → HS-06), tập trung vào
+cầu thang, bậc tam cấp và cốt cao độ. Chỗ nào hai đợt nói khác nhau, mục 13.16 ghi rõ là **khác
+nhau** chứ không đè lên — hai công trình làm khác nhau là chuyện thường, và biết chúng khác nhau
+có giá trị hơn một con số gộp.
 
 File này là **dữ liệu, không phải đặc tả**: nó ghi hồ sơ thật chứa gì, đo được bằng cách nào, và
 chỗ nào bộ tài liệu `doc/design/` cùng mã nguồn đang dựa trên giả định sai. Khi nó mâu thuẫn với
@@ -863,7 +869,7 @@ trông vững mà thật ra là suy diễn từ hai căn nhà.
 | Tầng | Ví dụ | Cần bao nhiêu hồ sơ | Hai hồ sơ này |
 |---|---|---|---|
 | **Từ vựng và quy ước** — tất định | nhãn phòng, tên lớp, mẫu khung tên, bảng mã chữ, danh mục tờ, quy cách cửa | **n = 1 đã đủ** — thấy một lần nghĩa là nó có thật | **Đủ. Đã rút, xem dưới** |
-| **Định mức và phân bố** — thống kê | diện tích phòng theo bề rộng lô, tỉ lệ đặc rỗng, năng suất | `kb/space_norms.yaml` tự khai `priors.min_samples: 15` | **Không đủ** |
+| **Định mức và phân bố** — thống kê | diện tích phòng theo bề rộng lô, tỉ lệ đặc rỗng, năng suất | `kb/space_norms.yaml` khai `priors.min_samples: 5` (Haan hạ từ 15, 23/09/2026 — Q-49) | **Hai hồ sơ: không đủ. Kho 7 bộ hiện nay: đủ** |
 | **Cặp mẫu đầu bài → phương án** | thứ duy nhất làm few-shot prompt thật | vài chục | **Không tồn tại trong kho** (13.3) |
 
 **Haan trả lời 06/09/2026, và câu trả lời đóng một tầng lại rồi mở tầng kia ra:**
@@ -875,6 +881,9 @@ trông vững mà thật ra là suy diễn từ hai căn nhà.
   vai, từ "nên soát" thành đường DUY NHẤT** để những con số đó thôi là phỏng đoán.
   ⚠️ Đừng hạ `priors.min_samples` xuống cho khớp số hồ sơ đang có. Hạ xuống 2 thì phân bố tính
   ra từ hai căn nhà, và nó sẽ trông y hệt một con số đã được kiểm chứng.
+  **Cập nhật 23/09/2026 (Q-49):** Haan hạ ngưỡng xuống **5**, sau khi kho lên 7 bộ. Cảnh báo
+  trên vẫn đúng và cố ý giữ nguyên ở đây — nó là cái giá phải trả, không phải cái đã biến mất.
+  Hai điều kiện đi kèm quyết định ấy nằm ở chú thích `priors` trong `kb/space_norms.yaml`.
 - **Q-28 — CÓ, từ dự án tới sẽ ghi lại bản vẽ giai đoạn phương án.** Tầng ba bắt đầu tích luỹ
   từ đây. Còn một chi tiết phải chốt trong cách ghi: bản phương án lưu **kèm đầu bài của chính
   nó**, nếu không thì chỉ là thêm một bản vẽ rời và cặp mẫu vẫn không hình thành.
@@ -961,3 +970,255 @@ văn** từ hồ sơ thật chứ không phải ví dụ tự nghĩ. `165 passed
 
 Nên chỉ số trung thực là **1 / 18**, không phải 1 / 47. Con số 47 vẫn cần có mặt, vì nó là thứ
 trả lời câu "một bộ hồ sơ đầy đủ gồm những gì".
+
+---
+
+## 13.16 Đợt đo 22/09/2026 — bốn hồ sơ mới: cầu thang, bậc tam cấp, cốt cao độ
+
+Haan gửi thêm **năm bộ hồ sơ** (thư mục `HoSoTapHop Gui Sep`), chỉ định đọc **10 tờ mặt bằng**
+của bốn bộ. Câu hỏi đặt ra không phải "hồ sơ chứa gì" nữa — mục 13.1→13.15 đã trả lời — mà là
+**"NVG bố trí cầu thang thế nào, xử lý bậc tam cấp thế nào"**, để tờ vẽ engine sinh ra giống hồ
+sơ thật hơn.
+
+> ⚠️ **Q-27 đã hết đúng.** Mục 13.15 ghi "sẽ KHÔNG có thêm hồ sơ trong giai đoạn demo" (Haan,
+> 06/09/2026). Tính cả đợt này, kho đã có **7 bộ** (2 cũ + 5 mới; 2 trong 5 còn nén `.rar`).
+> **Trả lời Q-49 ngày 23/09/2026:** Haan hạ `priors.min_samples` **15 → 5** (cách A — hạ thẳng,
+> không nới biên độ theo n). Kho 7 bộ vượt ngưỡng, nên **tầng "định mức và phân bố" nay MỞ**.
+> Vượt ngưỡng chỉ mở tầng ấy, không nâng số rút ra thành định mức: chúng vào điểm và cảnh báo,
+> không loại phương án (T52). Số ở mục `spaces` vẫn phải do kiến trúc sư NVG ấn định (Q-18).
+
+### Bốn hồ sơ và mã dùng trong `kb/`
+
+| Mã | Loại hình | Tầng | Kích thước nhà | Tờ đã đọc |
+|---|---|---|---|---|
+| **HS-03** | liền kề trong ngõ | 3 | 8.000 × 7.940 | MB nội thất T1/T2/T3 · MB công năng mái |
+| **HS-04** | mái Nhật sân vườn | 1 | 14.000 × 9.100 | MB công năng · MB kiến trúc |
+| **HS-05** | liền kề mái Nhật | 1 | 23.500 × 5.000 | MB công năng T1 · MB mái bê tông |
+| **HS-06** | mái Nhật 2 tầng | 2 | 12.450 × 8.000 (T1) / 9.200 (T2) | MB tổng thể · MB KT T1 · MB KT T2 · MB KT mái |
+
+Tên chủ đầu tư và địa chỉ **không** vào repo (ranh giới hạng 1, mục 13.15). Bốn mã trên là thứ
+duy nhất được viết vào `kb/` và `rules/`.
+
+### 13.16.1 Cầu thang — hai kiểu, cùng một mặt bậc
+
+**Mặt bậc 250 mm, không sai một milimet nào**, trên cả bốn vế thang đo được (HS-03 ba tầng vẽ
+giống hệt nhau, HS-06 một). Đây là con số chắc nhất của cả đợt: `kb/construction_norms.yaml`
+đang khai `stairs.going_m: 0.25` kèm ghi chú "SỐ THAM KHẢO, chọn ở mức thấp của thang nhà ở" —
+ghi chú ấy nay sai, **0,25 chính là con số NVG vẽ**.
+
+**HS-03 — thang hai vế chữ U, quay bằng BẬC QUẠT, không có chiếu nghỉ vuông**
+
+| | |
+|---|---|
+| mặt bậc | **250** |
+| bề rộng một vế | **900** |
+| khe giữa hai vế | **200**, trong khe đặt **lan can dày 100** |
+| ô thang kể cả chỗ quay | **3.200 × 2.000** |
+| số bậc mỗi tầng | **19** = 6 (vế lên) + **2 bậc quạt** + 11 (vế xuống) |
+| cổ bậc suy từ chênh cốt | **180** (T1→T2, 3.600/20) · **165** (T2→T3, 3.300/20) |
+
+Hai bậc quạt vẽ bằng các nét toả ra từ điểm trong của chỗ quay tới tường, dải quạt rộng đúng
+bằng bề rộng vế (900). Đây là cách ăn gian chỗ trên lô hẹp: một chiếu nghỉ vuông 900 × 2.000 sẽ
+ăn thêm ~900 mm chiều dài ô thang.
+
+**Bậc được ĐÁNH SỐ trên mặt bằng, 1…19.** Chữ số cao 78 (nhãn phòng 130, nhãn diện tích 86, cốt
+cao độ 110 trên cùng tờ). Dãy số vế lên đặt ngoài mép vế 132 mm, dãy vế xuống ngoài 56 mm; hai
+số bậc quạt xếp **dọc** ở đầu quay. Engine hiện **không** đánh số bậc.
+
+**HS-06 — thang hai vế song song, khe rộng**
+
+| | |
+|---|---|
+| mặt bậc | **250** |
+| bề rộng một vế | **1.000** |
+| khe giữa hai vế | **500** (lỗ thông thuỷ 380 + hai mép 60) |
+| ô thang lọt lòng | **2.500 × 3.470** |
+| tường quanh ô thang | **110** |
+
+Quy ước vẽ của HS-06, đọc thẳng từ lớp:
+
+- vế đang lên vẽ **nét thấy** (`NV-NetThay`), phần vế phía trên mặt cắt vẽ **nét đứt**
+  (`NV-NetDut`); hai phần cắt nhau bằng **đường cắt gãy chéo hình chữ Z**;
+- **tay vịn** vẽ liền một nét chạy dọc mép vế, đầu xuất phát **cuộn tròn** (trụ cuộn) — đây là
+  dấu duy nhất trên mặt bằng nói bậc số 1 nằm đầu nào;
+- **ô thang mở thông 2.500 mm với phòng khách**, ba mặt còn lại kín. Không phòng ở nào lấy cửa
+  từ ô thang — xác nhận `stair_not_facing_entry` và luật cứng "phòng ở không lấy cửa từ ô thang".
+
+**Vị trí thang so với lối vào — cả hai hồ sơ đều KHÔNG đặt thang đối diện cửa chính.**
+HS-03 đặt thang ở góc trong cùng bên phải, chạy ngang nhà, xa cửa cuốn và cửa đi ở mặt tiền.
+HS-06 đặt thang ở dải sau, vuông góc với trục sảnh chính ở đầu hồi tây. Quy tắc
+`stair_not_facing_entry` trong `rules/nvg-experience.yaml` đang mang `n: 0` — nay **n = 2**.
+
+### 13.16.2 Bậc tam cấp — "tam cấp" là tên gọi, không phải số bậc
+
+| | HS-04 | HS-05 | HS-06 |
+|---|---|---|---|
+| chênh cốt sân → nền | 430 (−0.450 → −0.020) | 450 (−0.450 → ±0.000) | **730** (−0.750 → −0.020) |
+| số bậc | 3 | 3 | **5** |
+| mặt bậc | 300–350 | **300** | **300** |
+| cổ bậc suy ra | ~143 | **150** | **146** |
+| bề rộng lối lên | 2.220 | 1.090 | 3.110 |
+
+Quy tắc rút ra: **mặt bậc giữ 300; số bậc = chênh cốt ÷ ~150, làm tròn lên.** Không có hồ sơ nào
+ghi cổ bậc bằng số trên mặt bằng — nó chỉ suy được từ cốt cao độ chia số bậc, nên **phải có cốt
+mới vẽ được bậc**.
+
+Chi tiết đi kèm:
+
+- **HS-05 đánh số bậc 1 2 3 ngay trên mặt bằng**, chữ cao 101 — cùng thói quen với HS-03.
+- **HS-06: bậc nằm gọn giữa hai cột hiên 220 × 220** (đế 440 × 440) đặt đúng nút trục; bề rộng
+  bậc bằng khoảng thông thuỷ giữa hai cột, không phải bề rộng cửa.
+- **HS-04: hai bên bậc có má/bồn rộng 780**, bậc chỉ chiếm phần giữa.
+- HS-04 và HS-05 mỗi nhà có **hai** cụm bậc: một ở lối vào chính, một ở cửa bếp/sân sau.
+
+### 13.16.3 Cốt cao độ — HS-06 có bảng chú giải tường minh
+
+Tờ mặt bằng tổng thể HS-06 in hẳn mục "GHI CHÚ CỐT CAO ĐỘ", nguyên văn:
+
+> ±0.000 = **cốt nền nhà hoàn thiện** · −0.750 = **sân bê tông sau khi đã lát gạch** ·
+> −0.850 = **đường**
+
+Tức **sân cao hơn đường 100; nền cao hơn sân 750; nền cao hơn đường 850**. Gộp cả bốn hồ sơ:
+
+| Chỗ | Cốt so với ±0.000 | Thấy ở |
+|---|---|---|
+| đường | −0.850 | HS-06 |
+| sân trước / sân sau | **−0.450 … −0.750** | HS-04, HS-05, HS-06 |
+| sân sau (bậc trung gian) | −0.300 | HS-05 |
+| thềm / hiên | **−0.020** | HS-04, HS-06 |
+| khu vệ sinh | **−0.050** … −0.100 | HS-03, HS-05 / HS-04 |
+| ban công, sân giặt phơi | **−0.030** so với sàn tầng | HS-06 (+3.870 vs +3.900) |
+
+Hai con số chốt lại được:
+
+- **Sàn WC luôn thấp hơn sàn phòng**, 30–100 mm. HS-03 giữ đúng −0,050 ở cả ba tầng
+  (−0.050 · +3.550 · +6.850 so với ±0.000 · +3.600 · +6.900).
+- `facade.ground_floor_raise_m: 0.45` **được xác nhận là mức thường gặp** (HS-04 và HS-05 đúng
+  0,45); cận trên của khoảng đo được nâng từ 0,75 lên **0,85** nhờ HS-06.
+
+**Chiều cao tầng** mở rộng khoảng đã ghi ở `levels`: HS-03 tầng 1 **3.600** rồi tầng 2 **3.300**;
+HS-06 tầng 1 **3.900**. Nên khoảng đo được của NVG là **3,3 – 3,9 m**, và tầng 1 cao hơn tầng
+trên khi tầng 1 có gara hoặc mặt tiền kinh doanh.
+
+### 13.16.4 Lỗ mở — bảng thống kê cửa HS-04
+
+HS-04 có bảng thống kê cửa đủ ký hiệu, kích thước và **cao độ bệ**:
+
+| Ký hiệu | Kích thước | Bệ | Là gì |
+|---|---|---|---|
+| D1 | **2.350 × 2.350** | ±0.000 | cửa chính |
+| D2, D3 | **940 × 2.220** | ±0.000 | cửa phòng ngủ |
+| — | 810 × 2.220 | ±0.000 | cửa phòng phụ |
+| D4 | **750 × 2.220** | −0.100 | cửa vệ sinh |
+| S1 | 2.150 × 1.650 | **+0.700** | cửa sổ phòng |
+| S2 | 1.650 × 1.650 | **+0.700** | cửa sổ phòng |
+| S3 | **700 × 500** | **+1.800** | cửa sổ vệ sinh |
+
+Điều đáng giá nhất không nằm ở kích thước mà ở **sự thẳng hàng**: 0,700 + 1,650 = **+2,350**, đúng
+mép trên cửa chính. Tức **mép trên cửa sổ và cửa chính trùng cao độ +2,35 m**, còn cửa phòng thấp
+hơn (+2,22). Đây là thứ chỉ hồ sơ thật nói được, và nó quyết định mặt đứng trông có ngay ngắn không.
+
+Đối chiếu với `kb/construction_norms.yaml` (dựng từ HS-01):
+
+| Mục | Đang khai | HS-04 | Kết luận |
+|---|---|---|---|
+| cửa phòng | 900 × 2.200 | 940 × 2.220 | gần đúng; khoảng thật 900–940 × 2.200–2.220 |
+| cửa vệ sinh | 750 × 2.200 | 750 × 2.220 | **xác nhận** |
+| cửa sổ vệ sinh, bệ | +1.800 | +1.800 | **xác nhận** (cỡ thì khác: 600×600 vs 700×500) |
+| cửa chính, cao | 2.500 (hẹp nhất đo được) | **2.350** | HS-04 thấp hơn cận dưới đang khai |
+| cửa sổ, cao | 1.600 | 1.650 (HS-04) · 1.200 (HS-03, HS-05) | khoảng thật **1.200–1.650** |
+| bệ cửa sổ | **+0.900** | **+0.700** | ⚠️ **hai hồ sơ hai mức, chưa hoà giải** |
+
+Bệ cửa sổ là chỗ lệch thật sự: HS-01 đo +0,900 trên mặt cắt, HS-04 khai +0,700 trên bảng thống
+kê. Không phải sai số đo — hai công trình làm khác nhau. **Không sửa giá trị đang khai**; cần
+Phòng Thiết kế cho biết mức mặc định (Q-50).
+
+HS-03 và HS-05 dùng chung một quy cách cửa sổ ghi bằng chữ: **1.200 × 1.200, "cửa sổ khung sắt –
+pa-nô kính – 2 cánh"**. HS-03 dùng **cửa cuốn** cho gara.
+
+### 13.16.5 Tường, cột, mái
+
+**Tường.** Đếm giá trị DIMENSION do chính người vẽ ghi: HS-03 có **110 lặp 103 lần** trên 450 kích
+thước (220 lặp 34 lần), HS-05 có 110 lặp 8/30. **110 là bề dày mặc định**, 220 dành cho tường bao
+và tường chung. Ngược lại HS-04 (nhà vườn một tầng) dùng 220 nhiều hơn 110 (15 so với 6) — tường
+bao chiếm phần lớn chu vi khi nhà chỉ một tầng và trải rộng. Xác nhận cặp
+`walls.exterior_m: 0.22` / `partition_m: 0.11`. Cột **220 × 220**.
+
+**Mái bằng bê tông.** Độ dốc ghi **I = 1 %** (HS-03, trên cả mái nhà lẫn mái tầng), thu về phễu.
+Trên mái HS-03 có **téc nước**, **thái dương năng**, và **ba ô kính lấy sáng** — một ô nằm đúng
+trên ô thang. Mặt bằng tầng 2 HS-03 ghi **"thông tầng"**.
+
+**Mái Nhật (HS-06).** Mái 13.820 × 10.570 phủ nhà 12.450 × 9.200 → **đua 600 mm ở hai cạnh, 770 mm
+ở hai cạnh kia**. Ban công tầng 2 **đua 1.200 mm** ra ngoài trục Y3. Trên tờ mái có dãy kích thước
+**418** lặp 11 lần (khoảng cách lớp lợp hoặc xà gồ) — **không tờ nào ghi chữ xác nhận nó là gì,
+nên không suy**. **Không tờ nào ghi độ dốc mái Nhật.**
+
+**Tổng thể (HS-06).** Nhà đặt sát góc sau–phải lô 24.300 × 15.700. Ba dòng ghi chú đáng giữ:
+**"khe thoáng để lại 700"** ở mặt giáp ranh · **"cốt sân hiện trạng giữ nguyên"** · hàng rào thoáng
+ở mặt đường.
+
+### 13.16.6 Bố cục — ba kiểu mặt bằng, ba cách khác hẳn nhau
+
+- **HS-03, liền kề trong ngõ 8 × 7,94, ba tầng.** Tầng 1: **ĐỂ XE** (cửa cuốn) chiếm nửa mặt tiền
+  + P.KHÁCH & BẾP 16 m² + P.NGỦ 01 11 m² + WC 4,2 m². Tầng 2–3 mỗi tầng ba phòng ngủ
+  (11 / 12,8 / 13 m²) + WC 4,2 m² + ban công. **WC chồng khít cả ba tầng, ngay cạnh thang**; thang
+  ở góc trong cùng, chạy ngang nhà.
+- **HS-05, liền kề mái Nhật 23,5 × 5,0, một tầng.** Tuyến tính suốt chiều sâu: sân sau – WC –
+  P.BẾP & ĂN 15,5 m² – WC – ba P.NGỦ 11,5 m² mỗi phòng – P.KHÁCH 19 m² – hiên trước.
+- **HS-04, mái Nhật sân vườn 14 × 9,1, một tầng.** Bếp và WC dồn về một đầu hồi, phòng thờ ở giữa
+  giáp mặt sau, ba phòng ngủ ở đầu kia, phòng khách ở giữa mở ra **hiên có hai cột** phía trước.
+
+Diện tích trên đây đọc từ **nhãn ghi trên bản vẽ**, không phải tính từ đa giác. Không dùng chúng
+để sửa `rules/nvg-measured.yaml` — tệp ấy khai rõ "tính từ đa giác, KHÔNG từ nhãn", và trộn hai
+cách đo vào một khoảng quan sát là làm hỏng chính con số đã có. Muốn nâng `n` của các quy tắc
+diện tích thì phải dựng lại đa giác phòng từ đồ thị tim tường cho bốn hồ sơ này — việc riêng.
+
+### 13.16.7 Ba chỗ engine đang vẽ khác hồ sơ thật
+
+1. **Mặt bậc bị kéo giãn.** `draw/stairs.ts` rải đều `treads` bậc trên chiều dài ô thang
+   (`distance = flightLength * step / stepCount`), nên mặt bậc là **hệ quả** của ô thang dài bao
+   nhiêu. Hồ sơ thật làm ngược: **giữ mặt bậc 250 và để chiều dài vế chạy theo**. Hệ quả là một ô
+   thang hơi ngắn vẫn ra tờ vẽ "đẹp" với bậc sâu 190, còn ngoài đời thì không xây được như vậy —
+   `stair-fit.ts` có bắt việc này, nhưng chỉ khi `going_m` được khai.
+2. **Không có bậc tam cấp.** Hợp đồng `ai-architectural-floorplan` không có đối tượng nào cho bậc
+   ở lối vào, nên tờ vẽ engine sinh ra có cửa chính mở thẳng ra sân mà không có bậc — trong khi
+   **cả ba hồ sơ có sân đều chênh 430–730 mm**. Thêm nó là sửa hợp đồng + lời dẫn + bộ vẽ +
+   phép thử, tức một đợt việc riêng, không phải hệ quả phụ của đợt đo này (Q-51).
+3. **Không đánh số bậc.** Hai trong bốn hồ sơ đánh số bậc trên mặt bằng. Đây là việc thuần bộ vẽ,
+   rẻ, và không đụng hợp đồng.
+
+### 13.16.8 Cái KHÔNG tìm thấy
+
+- **`QUY CHUẨN NHÀ VIỆT ONE.docx`** nằm cùng thư mục hồ sơ là quy chuẩn **quy trình và chất
+  lượng** (15 quy tắc nghề, 10 chuẩn thương hiệu, trình tự 18 bước vận hành công trình). Nó
+  **không chứa một kích thước hình học nào** — không cầu thang, không bậc, không cốt. Đừng tìm
+  chuẩn vẽ ở đó. Nội dung của nó thuộc về mô-đun TC/HD, không thuộc `kb/`.
+- Không tờ mặt bằng nào ghi **cổ bậc** bằng số.
+- Không tờ nào ghi **độ dốc mái Nhật**.
+- Tờ `MB KIẾN TRÚC – TẦNG 2` của HS-06 **mất hẳn lớp tường**: 3.064 thực thể mà không có
+  `NV-Tuong` lẫn `NV-NetThay` nào, chỉ còn nội thất, ghi chú và trục. Đây là hỏng của bước
+  **tách tờ**, không phải của hồ sơ gốc — cùng loại rủi ro với mục 13.6 (9). Ai đo lại phải
+  đối chiếu với tệp DXF hợp nhất chứ không chỉ tệp `- tach`.
+
+### 13.16.9 Cách đo — để kiểm lại được
+
+Cùng nguyên tắc với mục 13.14: một báo cáo không kiểm lại được thì chỉ là lời khẳng định. Đợt này
+đo bằng `ezdxf` ở ngoài repo (hồ sơ là dữ liệu hạng 1), ba bước:
+
+1. **Duyệt ĐỆ QUY vào block.** Bung một tầng `INSERT` là chưa đủ: bậc thang của HS-06 nằm trong
+   block lồng block, và lượt đo đầu trả về đúng bốn bức tường mà không có bậc nào. Mục 13.6 (1)
+   nói "83 % hình học nằm trong block" — nó còn nằm **sâu** hơn một tầng.
+2. **Dò chùm bậc bằng hình học, không bằng tên lớp.** Gom các đoạn thẳng song song theo offset,
+   tìm dãy liên tiếp cách đều 170–470 mm và chồng lấn nhau theo phương song song. Lớp `NV-Thang`
+   gần như không tồn tại — NVG đặt tên lớp theo **độ đậm nét** (mục 13.6 (3)), nên tên lớp không
+   dùng để tìm thang được. Cách này tìm đúng cả bậc thang lẫn bậc tam cấp, và nhận luôn cả **hàng
+   trong bảng chú giải** (bước 411 mm) — phải loại bằng vị trí.
+3. **Kết xuất ra PNG rồi đọc bằng mắt** (`ezdxf.addons.drawing`, backend matplotlib) để xác nhận
+   thứ vừa đo là cái mình nghĩ. Ba lần trong đợt này con số nói một đằng và hình nói một nẻo; hình
+   đúng cả ba lần.
+
+⚠️ **Một cái bẫy mới của bảng mã chữ.** Hàm giải mã TCVN3 ở mục 13.14 áp **vô điều kiện** thì làm
+hỏng chuỗi vốn đã là Unicode: `chính` thành `chớnh`, `mái` thành `mõi`, vì `í` (U+00ED = 237) trùng
+mã byte với `ớ` trong bảng TCVN3. Phải kiểm trước: chuỗi mang ký tự ngoài Latin-1 (`ả` U+1EA3) thì
+**đã là Unicode, không giải mã nữa**. `compute/src/design_compute/cad/text.py` làm đúng việc này
+bằng `looks_tcvn3()` theo **kiểu chữ**; công cụ đo ngoài repo thì không, và đã dính.

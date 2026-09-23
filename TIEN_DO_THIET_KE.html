@@ -529,6 +529,131 @@
           </thead>
           <tbody>
             <tr>
+              <td class="num">22/09</td>
+              <td>Đo bốn hồ sơ mới — cầu thang, bậc tam cấp, cốt cao độ</td>
+              <td class="xs">
+                · <b>Đặt bài của Haan:</b> «đọc và phân tích các bản vẽ mặt bằng công năng sau, và
+                bổ sung vào kinh nghiệm nghề của Nhà Việt group… cần học sâu hơn nữa: ví dụ như cầu
+                thang bố trí như nào, bậc tam cấp xử lý như nào».<br />
+                · <b>Nguồn:</b> 10 tờ mặt bằng của bốn bộ hồ sơ mới (HS-03 liền kề trong ngõ 3 tầng
+                · HS-04 mái Nhật sân vườn · HS-05 liền kề mái Nhật · HS-06 mái Nhật 2 tầng). Báo cáo
+                đầy đủ: <code>doc/design/13-ho-so-thuc-te.md</code> mục <b>13.16</b>.<br />
+                · <b>Con số chắc nhất:</b> <b>mặt bậc 250 mm trên cả bốn vế thang</b>, không lệch
+                một milimet. <code>construction_norms.stairs.going_m: 0.25</code> đang khai kèm ghi
+                chú «SỐ THAM KHẢO, chọn ở mức thấp» — ghi chú ấy nay sai, 0,25 chính là con số NVG
+                vẽ.<br />
+                · <b>Hai kiểu thang:</b> HS-03 hai vế chữ U quay bằng <b>BẬC QUẠT</b> (không chiếu
+                nghỉ vuông), vế rộng 900, khe 200 có lan can dày 100 đặt trong khe, ô thang 3.200 ×
+                2.000, <b>19 bậc/tầng</b> = 6 + 2 quạt + 11, và bậc được
+                <b>đánh số 1…19 ngay trên mặt bằng</b>. HS-06 hai vế song song, vế rộng 1.000, khe
+                500 (lỗ thông 380), ô thang lọt lòng 2.500 × 3.470, vế lên nét thấy / vế trên nét
+                đứt, cắt bằng đường gãy chữ Z, tay vịn đầu <b>cuộn tròn</b> đánh dấu bậc số 1.<br />
+                · <b>Bậc tam cấp — «tam cấp» là TÊN GỌI, không phải số bậc:</b> HS-06 có
+                <b>năm</b> bậc. Quy tắc thật: <b>mặt bậc giữ 300, số bậc = chênh cốt ÷ ~150</b>. Đo
+                được chênh 430 / 450 / 730 mm → 3 / 3 / 5 bậc. Phải có cốt sân mới vẽ được bậc.<br />
+                · <b>Cốt cao độ:</b> HS-06 in hẳn bảng chú giải — ±0.000 nền hoàn thiện · −0.750 sân
+                bê tông đã lát gạch · −0.850 đường. Sàn WC <b>luôn</b> thấp hơn sàn phòng 30–100 mm;
+                ban công thấp hơn 30. Chiều cao tầng nới thành <b>3,3 – 3,9 m</b>, và tầng 1 CAO HƠN
+                tầng trên khi có gara — ngược chiều với HS-01.<br />
+                · <b>Đã sửa:</b> <code>rules/nvg-experience.yaml</code> quy tắc
+                <code>stair_not_facing_entry</code> <b>n: 0 → 2</b> (cả hai hồ sơ nhiều tầng đều
+                không đặt thang đối diện cửa chính — quy tắc này ra đời từ một tài liệu, nay có số
+                đo đỡ). <code>kb/construction_norms.yaml</code> thêm mục <code>do_duoc_2</code> và
+                ghi chứng cứ mới vào <code>stairs</code>, <code>levels</code>, <code>facade</code>,
+                <code>openings</code>. <code>rules/nvg-measured.yaml</code> ghi thêm hai vế thang đo
+                được vào chỗ «cố ý để trống».<br />
+                · <b>KHÔNG đổi một giá trị nào.</b> Mọi con số cũ vẫn nằm trong khoảng đo được; đổi
+                giá trị là re-tune bộ vẽ, có nghiệm thu riêng (cùng lý lẽ đã ghi ở đầu
+                <code>nvg-measured.yaml</code>). Diện tích phòng của bốn hồ sơ mới cũng KHÔNG dùng
+                để nâng <code>n</code>: chúng là nhãn ghi sẵn, còn tệp ấy đo từ đa giác — trộn hai
+                cách đo là làm hỏng khoảng quan sát đã có.<br />
+                · <b>Ba chỗ engine đang vẽ khác hồ sơ thật</b> (13.16.7): (1) bộ vẽ rải đều bậc trên
+                chiều dài ô thang nên mặt bậc là hệ quả, hồ sơ thật giữ mặt bậc 250 và để vế dài
+                theo; (2) <b>không có bậc tam cấp</b> — hợp đồng không có đối tượng nào cho nó, nên
+                cửa chính mở thẳng ra sân trong khi cả ba hồ sơ có sân đều chênh 430–730 mm; (3)
+                không đánh số bậc. → Q-51.<br />
+                · <b>Bẫy mới của bảng mã chữ:</b> giải mã TCVN3 vô điều kiện làm hỏng chuỗi vốn đã
+                Unicode (<code>chính</code> → <code>chớnh</code>, vì <code>í</code> U+00ED trùng mã
+                byte với <code>ớ</code>). Mã trong repo làm đúng nhờ <code>looks_tcvn3()</code> theo
+                KIỂU CHỮ; công cụ đo ngoài repo thì không và đã dính.<br />
+                · <b>Đã đọc và loại:</b> <code>QUY CHUẨN NHÀ VIỆT ONE.docx</code> đi kèm hồ sơ là
+                quy chuẩn <b>quy trình và chất lượng</b>, không chứa một kích thước hình học nào —
+                nội dung thuộc TC/HD, không thuộc <code>kb/</code>.<br />
+                · <b>Test:</b> 1.021 phép thử của <code>workers/src/design/</code> xanh.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">22/09</td>
+              <td>T65 — Mặt bằng bám đầu bài: thang máy, ban công, và chín nhóm câu hỏi của T62</td>
+              <td class="xs">
+                · <b>Đặt bài của Haan:</b> «mặt bằng phải theo sát yêu cầu đầu bài, không được làm
+                thiếu hoặc sai so với đầu bài», kèm thang máy, ban công mặt tiền, ban công đua ra
+                ngoài.<br />
+                · <b>Chỗ hỏng:</b> T62 hỏi 98 câu nhưng cổng bám đầu bài chỉ đọc BA nhóm cũ. Chín
+                nhóm mới chỉ tới mô hình dưới dạng câu văn — một đầu bài khai «làm thang máy ngay»
+                vẫn ra mặt bằng không có thang máy, vẫn qua cổng, vẫn đúc thành artifact bất
+                biến.<br />
+                · <b>Bảng <code>demands</code></b> trong <code>kb/brief_fidelity.yaml</code>: «trả
+                lời X thì mặt bằng phải có Y», cờ <code>blocking</code> quyết định thiếu thì bác hay
+                chỉ nhắc. Lời gia chủ tự khai thì bác được; suy đoán nghề chỉ cảnh báo (T52).<br />
+                · <b>Mã phòng <code>elevator</code> riêng</b>, tách khỏi <code>core</code> — trước
+                đó <code>core</code> mang cả bí danh THANG MAY nên cổng nhận nhầm lõi thang bộ là đã
+                đủ. Ô thang máy bám mốc tầng dưới như giếng trời;
+                <b>lựa chọn «chừa chỗ lắp sau» đòi y hệt</b>, chỉ khác là bản vẽ ghi «Ô chừa thang
+                máy (lắp sau)».<br />
+                · <b>Ban công đua ra ngoài ranh</b> nới ô ngay trong cây chia, TRƯỚC khi dựng hình
+                bao và đặt lỗ mở — nhờ vậy hình bao, lan can và cửa tự khớp. Khai có đua mà chưa
+                khai mấy mét thì <b>không bịa số</b>: giữ trong ranh và nói ra là đầu bài còn
+                thiếu.<br />
+                · <b>Kiểm:</b> 27 phép mới, 4 đột biến mới (M25–M28) canh «chưa hỏi» không thành
+                «có», giếng thang lệch tầng, ban công sai mặt, và ban công đua khi chưa có số.<br />
+                · <b>Chờ Haan:</b> kích thước giếng thang máy lấy từ quy cách cabin nhà sản xuất,
+                chưa đối chiếu hồ sơ NVG nào — xem vướng mắc V-33.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">21/09</td>
+              <td>T62–T63 — Đầu bài hỏi chi tiết hơn, và quản trị viên sửa được mục khảo sát</td>
+              <td class="xs">
+                · <b>Đặt bài của Haan:</b> «khảo sát càng chi tiết, output đưa ra càng đúng với mong
+                muốn», kèm danh sách câu hỏi muốn có.<br />
+                · <b>Hợp đồng 1.4.0 → 1.5.0</b>, chỉ THÊM trường tuỳ chọn: tám trường khu đất (cao
+                độ tim đường, cao độ đất, mặt nắng gắt, mặt đón gió, bề rộng đường, nguy cơ ngập,
+                hiện trạng xây dựng, số tầng nhà liền kề) · <code>family[].ages</code> ·
+                <code>household</code> (ngành nghề, tín ngưỡng, nơi thờ, phong thuỷ, kiêng kỵ, kinh
+                doanh tại nhà) · <code>lifestyle</code> (11 câu về nếp sinh hoạt) ·
+                <code>storage</code> · <code>vertical</code> (thang máy: làm ngay / chừa chỗ /
+                không) · <code>entrance</code> (cốt nền, bậc tam cấp, dốc dắt xe) ·
+                <code>balconies</code> (mặt, phạm vi, đua ra ngoài ranh, độ vươn) ·
+                <code>systems</code> · <code>future</code> · <code>finishing_level</code> · cỡ ô tô
+                và sạc điện. <b>Biểu mẫu vẫn SÁU mục</b> — dựng thành 12 rồi Haan cho gộp lại ngay
+                trong ngày («12 mục là quá dài»): Công trình và khu đất (28 câu) · Gia đình và nếp
+                sinh hoạt (25) · Công năng và lưu trữ (9) · Khối nhà, thang và mặt ngoài (23) · Kỹ
+                thuật và dự trù (7) · Ưu tiên, ngân sách và người quyết định (6). Nhóm tổ chức khối
+                nhà nay ẩn theo TỪNG TRƯỜNG thay vì ẩn cả mục, nên số bước không đổi theo loại
+                hình.<br />
+                · <b>Trọng số gần hết là 0 có chủ ý</b> — điểm độ đầy đủ là cổng chặn Lớp 2, chỉ đo
+                thứ thiếu thì không dựng nổi mặt bằng. Tổng nhà phố 39 → 50, đầu bài trả lời hết
+                phần cũ vẫn đạt 0,78 &gt; ngưỡng 0,7, <b>không chặn hồ sơ nào đang chạy</b>.<br />
+                · Dữ liệu mới tới mô hình qua đúng đường cũ: <code>ai-brief-digest</code> 1.1.0 →
+                1.2.0 rồi văn xuôi; mọi ô chữ tự do mới đi qua bộ lược danh tính. Cao độ nói bằng
+                CHÊNH LỆCH, không nói trị tuyệt đối.<br />
+                · <b>Soát mâu thuẫn thêm 9 phép</b>, toàn số học hoặc hai câu trả lời chỏi nhau —
+                không có ngưỡng quy chuẩn nào. Lời khuyên nghề cố ý không vào đây (Haan, T52).<br />
+                · <b>Màn hình «Biểu mẫu đầu bài»</b> (<code>/nen/bieu-mau-dau-bai</code>): thêm, sửa
+                nhãn/gợi ý/trọng số, ẩn, đổi thứ tự mục. Cơ chế là <b>lớp phủ</b> lên cấu hình gốc,
+                lưu ở <code>design_setting.brief_form_overlay</code>, ghi qua
+                <code>POST /design/brief/form</code> (kiểm hợp lệ trước khi ghi). Năm trường hợp
+                đồng bắt buộc khoá hẳn; câu hỏi có sẵn chỉ ẩn được, không xoá — ẩn giữ câu trả lời
+                đã lưu. Câu hỏi tự thêm nằm ở ô mở <code>custom.*</code>, tới mô hình dưới dạng
+                nhãn–câu trả lời, <b>không ràng buộc hình học</b>.<br />
+                · <b>Đã kiểm:</b> 1.312 phép logic + 473 phép giao diện xanh, <code>tsc -b</code> và
+                <code>eslint</code> sạch, thêm đột biến M24 canh việc ẩn nhầm trường bắt buộc.
+                <b>Chưa đo:</b> chưa có lượt chạy thật nào so phương án trước–sau (tốn tiền gọi mô
+                hình, xin phép riêng).
+              </td>
+            </tr>
+            <tr>
               <td class="num">21/09</td>
               <td>T69 — hai Worker lệch phiên bản: tab «AI Design» đỏ trên bản chạy thử</td>
               <td class="xs">
@@ -554,455 +679,39 @@
                 artifact bản công khai không hiểu.
               </td>
             </tr>
-            <tr>
-              <td class="num">20/09</td>
-              <td>T68 — trung thực kích thước xuyên cả chuỗi (sân trước 3 m vẽ thành 8–10 m)</td>
-              <td class="xs">
-                · <b>Lỗi Haan bắt trên lượt chạy thật.</b> Đầu bài khai
-                <code>yard_depth_m.front = 3</code>; tấm nhìn từ trên cao vẽ sân 8–10 m. Con số đi
-                tới mặt bằng thì đúng (<code>ai/buildable.ts</code> đẩy khối nhà lùi đúng 3 m), rồi
-                chết ở ba chỗ liên tiếp: <code>facade/frame.ts</code> tính
-                <code>minFrontY</code> rồi trả ra <code>frontYard: boolean</code>;
-                <code>perspective/context.ts</code> suy ngược từ «ý tưởng có cổng không»;
-                <code>prompt.ts</code> viết «there is a front yard», không một con số nào.<br />
-                · Một lượt rà soát riêng tìm ra <b>12 chỗ cùng bệnh</b>: bề rộng cửa chính và cửa
-                gara thu về trái/giữa/phải · ban công thu về một bit · <code>railing_h_cm</code> có
-                trong artifact mà lời dẫn không đọc · chiều cao TỪNG tầng mất, chỉ còn tổng · ảnh
-                mặt bằng nội thất chỉ nhận m² chứ không nhận kích thước phòng, trong khi lời dẫn lại
-                đòi «vẽ nội thất vừa với căn phòng» · và lời dẫn bảo mô hình chép «các con số đã
-                cho» lên chuỗi kích thước nhiều đoạn trong khi chỉ đưa hai số tổng —
-                <b>mời nó bịa số rồi in lên tờ đưa khách</b>.<br />
-                · Sửa: ngữ cảnh mang số thật (thửa, sân bốn mặt, bề rộng lỗ mở, ban công, lan can,
-                chiều cao từng tầng, bậc tam cấp); lời dẫn nói số <b>và hệ quả</b> («sân 3 m ngắn
-                hơn thân xe — không xe nào đỗ trong sân»), chiều dài xe để ở <code>kb</code>;
-                <b>tờ neo mặt bằng mái vẽ ranh thửa</b> lấy từ
-                <code>siteGeometry().boundary</code> — ràng buộc bằng HÌNH, nét đứt theo quy ước
-                ranh đất; cổng, rào, lan can đổi sang mét.<br />
-                · <b>Một lỗi tự gây, đáng ghi:</b> lớp CSS ranh thửa đặt là <code>rl</code>, trùng
-                lan can — luật sau đè luật trước nên lan can của MỌI tờ mặt đứng thành nét đứt, và
-                <b>ảnh chụp vàng không bắt được</b> vì hình y nguyên, chỉ CSS khác. Nay có phép thử
-                canh mọi tên lớp trong <code>CLS</code> không trùng nhau.<br />
-                · Ba đột biến mới M21 (số đo sân), M22 (câu hệ quả), M23 (trùng tên lớp) — chạy
-                thật, cả ba bị bắt. Tổng 23/23.
-              </td>
-            </tr>
-            <tr>
-              <td class="num">20/09</td>
-              <td>Hạ tầng kiểm: eslint chạy thật, GitHub Actions, bằng chứng đột biến</td>
-              <td class="xs">
-                · <b>eslint chưa từng chạy được</b>: <code>package.json</code> khai
-                <code>"lint": "eslint ."</code> mà kho không có eslint lẫn tệp cấu hình — mỗi lần
-                gọi ra đúng một dòng «eslint: not found». Nay có <code>eslint.config.js</code> chọn
-                luật theo tiêu chí bắt LỖI chứ không bắt cách viết (định dạng đã có prettier). Chạy
-                lần đầu ra 534 chỗ, đã xử lý hết.<br />
-                · Lỗi thật eslint tìm ra: nút «Ngừng giao dịch / Đặt làm nhà cung cấp chính» ở Chi
-                tiết nhà cung cấp dựng xong mà không bao giờ hiện ra màn hình; hai hook quyền gọi
-                sau <code>||</code> nên hook thứ hai bị bỏ qua khi hook đầu trả true (React gán nhầm
-                state); <code>rentalAgreementDisplayStatus</code> nhận tham số ngày rồi so với đồng
-                hồ thật, nên bài kiểm truyền ngày giả không kiểm được gì; mất phiên đăng nhập lúc
-                mạng hỏng thì màn hình treo ở khung xương vĩnh viễn.<br />
-                · Hai luật phải TẮT kèm lý do trong tệp cấu hình:
-                <code>no-unnecessary-type-assertion</code> (sai ở đúng chỗ hay kêu nhất —
-                <code>res.json()</code> và <code>step.do()</code>; để máy tự sửa 244 chỗ thì
-                <code>tsc</code> đỏ ngay) và <code>no-base-to-string</code>.<br />
-                · <b>GitHub Actions</b> <code>.github/workflows/kiem.yml</code>: định dạng, luật,
-                kiểu, hợp đồng và 1.606 phép thử chạy trên máy sạch mỗi lần đẩy nhánh hoặc mở PR. Cố
-                ý KHÔNG chạy phép thử <code>db/</code> — chúng nối vào Supabase thật và xoá cứng dữ
-                liệu theo tiền tố <code>[TEST]</code>.<br />
-                · Dựng CI lộ ra một chỗ hỏng im lặng: <code>scrollIntoView</code> không có trong
-                jsdom nên vitest thoát mã 1 vì «Unhandled Errors» trong khi dòng tổng kết vẫn ghi đủ
-                bài xanh. Đã vá ở <code>web/src/test/setup.ts</code>.<br />
-                · <b>Bằng chứng đột biến</b> <code>npm run mutation-proof</code>: cài 11 lỗi thật
-                vào mã nguồn rồi đòi bộ kiểm phải đỏ. Lượt đầu <b>8/11</b> — ba đột biến phân quyền
-                SỐNG SÓT: không có quyền vẫn trả true, bỏ hẳn lọc pháp nhân, kho artifact dùng lại
-                dòng của hồ sơ khác. Đã tách <code>canDo</code> thành hàm thuần và viết hai tệp phép
-                thử mới; chạy lại <b>11/11</b>.
-              </td>
-            </tr>
-            <tr>
-              <td class="num">20/09</td>
-              <td>T67 — bước «3. Phối cảnh», Đợt A: khung dữ liệu, lời dẫn, ba góc đầu</td>
-              <td class="xs">
-                · Haan chốt bốn điểm trước khi viết dòng nào: ảnh neo mức <b>B1</b> (Đợt B thêm tờ
-                <b>mặt bằng mái</b>, không làm khối trục đo 3D cho tới khi đo xong) · ảnh cận cảnh
-                do <b>chương trình chọn</b> theo có ban công hay không ·
-                <b>người và xe có, tắt được</b> bằng một ô tích, số xe theo đầu bài ·
-                <b>chưa cho phép lượt gọi thật nào</b>.<br />
-                · <b>Chuỗi năm góc nối nhau</b>: <code>front_day</code> vẽ từ tờ mặt đứng vector và
-                là ảnh neo của cả bộ; bốn góc còn lại cầm chính tấm ấy. Hỏng
-                <code>front_day</code> thì cả bộ DỪNG; góc phụ hỏng thì ghi vào
-                <code>missing[]</code> kèm lý do tiếng Việt.<br />
-                · <b>Ranh giới của Đợt A</b>: tờ mặt đứng không có chiều sâu, nên
-                <code>oblique</code> và <code>aerial</code> đòi tờ mặt bằng mái — chưa có thì KHÔNG
-                chạy. Vẽ liều là để mô hình bịa chiều sâu nhà rồi mâu thuẫn với mặt bằng (họ lỗi
-                T65).<br />
-                · <b>Lời dẫn đọc tập trường trắng</b>, không đọc thẳng đầu bài: giữ hình khối, lối
-                vào, hiện trạng ba phía, hướng nhà, số xe; bỏ danh sách phòng, nhân khẩu, ưu tiên,
-                ba đoạn chữ tự do. Chặn bằng CẤU TRÚC cộng một phép thử đánh dấu đầu bài bằng chuỗi
-                lạ rồi đòi chúng không xuất hiện.<br />
-                · <b>Hướng nắng suy từ hướng nhà CỘNG giờ chụp</b>, không phải bảng tra cố định:
-                cùng nhà hướng nam thì ảnh sáng nắng bên phải, ảnh chiều nắng bên trái. Bản nạp kiểm
-                hai chiều <code>sun_time</code> ↔ <code>{sun}</code>.<br />
-                · <b>Chạy nền, một góc một bước</b>. Worker không có canvas nên tờ neo do trình
-                duyệt rasterise; tuyến khởi động dựng lại tờ ở máy chủ, <b>đối chiếu cỡ khung</b>,
-                cất vào kho rồi chỉ truyền URI. Băm <code>sha256</code> ghi vào artifact — dấu vết
-                duy nhất cho một đầu vào máy chủ không kiểm được.<br />
-                · <b>KHÔNG chấm điểm bộ ảnh</b>: không có thước nào đo được một tấm ảnh, bịa ra một
-                con số là tệ hơn không có. Chống đỡ bằng nhãn hai lớp.<br />
-                · Không migration (<code>ai_image_set</code> đã mở từ 0129). Lời dẫn <b>8.14.0</b>.
-                <b>32 phép thử mới</b>; hai đột biến mới <b>M16</b> (hai góc chạy khi chưa có tờ
-                mái) và <b>M17</b> (hiện trạng không khai vẫn bị nói ra) — cả hai bị bắt.<br />
-                · <b>Đợt B — tờ mặt bằng mái, hai góc còn lại mở</b>: hình bao từng tầng, mái theo
-                kiểu mái, ban công nét đứt, vạch lối vào tô đặc, mũi tên chỉ hướng đường. CỐ Ý không
-                vẽ ranh thửa, hàng rào, chữ hay chuỗi kích thước.<br />
-                · <b>Ba lỗi chỉ lộ ra khi MỞ TỜ VẼ RA NHÌN</b>, bộ kiểm khi ấy đang xanh: vạch lối
-                vào cùng bề dày nét tường nên <b>không nhìn thấy được</b> (mà đó là thứ quyết định
-                ảnh góc nghiêng đúng phía gara hay không) · mái 0,5 mm đè lên khối nhà 0,25 mm, thứ
-                hạng nét đảo ngược · mũi tên chỉ <b>ra xa</b> nhà vì cánh đầu mũi đặt cứng theo trục
-                màn hình trong khi bộ đổi toạ độ lật trục y. Cả ba đã khoá bằng phép thử, thêm đột
-                biến <b>M18</b>.<br />
-                · Năm ảnh chụp vàng đổi đúng <b>218 ký tự</b> — năm dòng CSS mới, không một nét vẽ
-                nào khác; đã đối chiếu từng tệp. Phép thử CORS nay quét cả ba tệp tuyến.<br />
-                · <b>Đợt C — giữ lại mọi bộ đã dựng, vẽ lại ĐÚNG MỘT góc</b>: dải chọn bộ cũ kèm
-                ngày giờ, nút «Chọn bộ này làm bộ hiệu lực» và nút × thôi hiện — cùng khuôn bước Mặt
-                đứng. Tách «bộ đang MỞ» khỏi «bộ HIỆU LỰC».<br />
-                · <b>Vẽ lại một góc tốn đúng MỘT lượt</b>: artifact bất biến nên đúc bộ mới, nhưng
-                bốn góc kia giữ nguyên <code>uri</code> nên byte không sinh lại. Tuyến đồng bộ,
-                không cần tờ neo mới — mọi thứ đã nằm trong kho từ lượt chạy trước.<br />
-                · <b><code>front_day</code> KHÔNG vẽ lại lẻ được</b>: bốn góc kia dựng theo nó, thay
-                nó mà giữ chúng là giao cho khách một bộ của HAI ngôi nhà. Màn hình
-                <b>nói lý do</b> ở chỗ đáng lẽ là nút, không ẩn nút đi.<br />
-                · Thêm đột biến <b>M19</b> (cho phép vẽ lại lẻ tấm gốc) — bị bắt. Tổng 19 đột biến,
-                46 phép thử cho bước Phối cảnh.<br />
-                · <b>Đợt D — nút «Dừng», từ lượt chạy thật đầu tiên</b> (Haan: «tôi tự gọi 1 lần
-                nhưng cứ chạy mãi… thêm nút stop»).
-                <b>Nguyên nhân treo là do sửa mã Worker trong lúc lượt đang bay</b>:
-                <code>wrangler dev</code> nạp lại là giết instance Workflow, để lại dòng kẹt ở «đang
-                chạy» — đúng ca đã ghi trong memory và đã quên kiểm. Nhưng nó lộ ra ba chỗ hỏng
-                thật.<br />
-                · <b>Không có nút Dừng</b>: nút của hai bước trước gắn với bảng theo dõi trực tiếp,
-                mà lượt vẽ ảnh cố ý không có bảng ấy. Nay có nút riêng; tuyến huỷ đặt thẳng trạng
-                thái nên gỡ được cả dòng thây ma.<br />
-                · <b>Tín hiệu huỷ không đi tới lời gọi ảnh</b>: bấm Dừng chỉ có tác dụng ở góc SAU,
-                lượt đang bay vẫn chạy hết bốn phút và vẫn tính tiền. Nay <code>signal</code> xuyên
-                từ Workflow tới cả hai client.<br />
-                · <b>Lượt chết phải đợi hơn HAI TIẾNG mới bị tuyên bố hỏng</b>: phép bắt thây ma chỉ
-                nhận nhịp tim của bảng theo dõi trực tiếp, mà lượt ảnh không có. Nay vòng thăm dò
-                nút Dừng đồng thời đập nhịp — chết là biết sau <b>ba phút</b>.<br />
-                · Thêm đột biến <b>M20</b> — bị bắt. Tổng 20 đột biến, 47 phép thử.<br />
-                · <b>Chưa làm</b>: nút tải cả bộ một lần. Và
-                <b>chưa có lượt chạy thật nào đi tới kết quả</b> — lượt duy nhất Haan bấm bị chính
-                việc sửa mã giết giữa chừng.
-              </td>
-            </tr>
-            <tr>
-              <td class="num">20/09</td>
-              <td>T66 — mục khảo sát lan can; ba lỗi đo lộ ra khi làm nó</td>
-              <td class="xs">
-                · Haan: «thêm 1 mục khảo sát cho lan can: vật liệu, chiều cao». Nhóm «Lan can ban
-                công» nay có kiểu, <b>vật liệu</b>, màu, <b>chiều cao</b>. Chiều cao chép vào
-                <code>elevation.railing_h_cm</code> để tờ SVG, DXF, ảnh neo và thước chấm đọc cùng
-                một chỗ; hai khoá mới <b>không bắt buộc</b> (phiếu cũ vẫn đọc được).<br />
-                · <b>Lỗi Haan gặp</b>: phiếu tick 7 ô trang trí bị từ chối vì hợp đồng chặn
-                <code>maxItems: 6</code> — trần đặt khi danh mục còn 9 mã, nay 12. Đã nâng trần và
-                thêm phép thử buộc trần đi cùng danh mục.<br />
-                · <b>Câu lỗi không dẫn tới đâu</b>: Worker vốn trả danh sách mục hỏng nhưng lớp gọi
-                VỨT BỎ. Nay hiện đúng mục nào hỏng, bằng tiếng Việt do Worker dịch (chữ của thư viện
-                kiểm kiểu là tiếng Anh, không lên màn hình).<br />
-                · <b>Lỗi đo lộ ra khi làm ô chiều cao</b>: nhà KHÔNG CÓ ban công vẫn bị trừ điểm
-                «lan can ban công 80–90 cm» — đúng chỗ duy nhất hồ sơ demo mất điểm, mà biểu mẫu lại
-                ẩn mục lan can ở chính ngôi nhà đó. R1 nhận <code>chi_khi: balcony</code>; demo 95%
-                → <b>100%</b>. <code>score_version</code> 2 → 3 ngay trong ngày vì bản chấm tay đầu
-                tiên đã lưu dưới thước 2.<br />
-                · Haan: «chưa thấy khảo sát cho lan can» — nhóm ấy bị ẩn khi mặt bằng chưa có ban
-                công, và ẩn <b>lặng lẽ</b>. Nhóm cổng bên cạnh cũng ẩn theo điều kiện nhưng nói lý
-                do; chỗ này thì không, nên đọc như một mục bị thiếu. Nay luôn hiện, kèm dòng nói rõ
-                khi mặt bằng chưa có ban công.
-              </td>
-            </tr>
-            <tr>
-              <td class="num">20/09</td>
-              <td>
-                T65 — kỹ sư chấm lại; vòm, ô tròn, mái sảnh vẽ được; cửa sổ mặt tiền là tuỳ nhà
-              </td>
-              <td class="xs">
-                · Haan: «việc có cửa sổ ở mặt tiền là không bắt buộc, có nhà cần có, có nhà không».
-                Nên C1 và C3 đổi sang <b>KHÔNG ÁP DỤNG</b>, không phải «thiếu đầu vào» — xếp nhầm là
-                lặng lẽ co MẪU SỐ: nhà hợp lệ vĩnh viễn chỉ chấm được 1/3 nhóm Cửa mà con số vẫn ra
-                bình thường. Tầng đem đo là <b>tầng có cửa chính</b>, không phải tầng thấp nhất (nhà
-                phố để tầng trệt chỉ có cửa để xe). <code>score_version</code> 1 → 2; điểm hồ sơ
-                demo 94% → <b>95%</b>.<br />
-                · <b>Kỹ sư chấm lại</b> — hợp đồng <code>ai-facade-review</code>, migration 0131,
-                loại artifact đầu tiên do NGƯỜI viết nội dung. Không chấm ≠ chấm 0 (bảng rỗng = đồng
-                ý với máy); kỹ sư chấm được chỗ máy bỏ trống thì phần trọng số ấy quay lại mẫu số;
-                tiêu chí không áp dụng có trọng số 0 nên màn hình không mời chấm;
-                <b>không phải phê duyệt</b> — hợp đồng cố ý không có ô «đạt / không đạt».<br />
-                · <b>Bộ vẽ thêm ba hình của hồ sơ thật</b>: vòm đầu cửa, ô tròn R700, sảnh mái dốc.
-                Mô hình chỉ khai khung bao, chương trình tính cung và đường nóc (T15). Không thành
-                tiêu chí chấm: 2/6 và 1/6 hồ sơ là lựa chọn từng nhà, không phải thói quen nghề.<br />
-                · <b>Lỗi thật bắt được</b>: hai nút «Chọn bản này» / «Thôi hiện» (T62) gọi
-                <code>/design/facade/…</code> trong khi tuyến ở <code>/design/ai/facade/…</code> —
-                không phép thử nào đỏ, vì test giao diện mock mạng còn test Worker gọi thẳng hàm. Đã
-                sửa và thêm bài kiểm đọc mã nguồn đối chiếu mọi đường dẫn với bảng tuyến Hono.
-              </td>
-            </tr>
-            <tr>
-              <td class="num">20/09</td>
-              <td>T64 — hàng rào bịt lối vào gara; nhật ký gọi AI nạp 25, hiện 12</td>
-              <td class="xs">
-                · Haan bắt trên ảnh phối cảnh: mặt bằng có phòng để xe mà mặt đứng không có lối vào
-                cho ô tô. Đo trên chính tờ vector: bộ vẽ chỉ chừa chỗ cho CỔNG, nên nhà có cả cửa
-                chính lẫn cửa để xe thì cổng đứng trước một cái và
-                <b>hàng rào chạy liền qua cái còn lại</b>. Hồ sơ demo: cổng 360 cm phủ đúng cửa để
-                xe, rào cắt ngang cửa chính.<br />
-                · <b>Luật CỨNG</b> (T49 cho phép chặn khi «không đi được»): thêm hai lỗi chặn — có
-                lối vào mà chỉ có rào không cổng; cổng hẹp hơn cửa để xe. Bộ vẽ dựng hàng rào bằng
-                phép trừ: khoét chỗ cổng rồi khoét chỗ từng lối vào. Lời dẫn ảnh (8.12.0) nói thẳng
-                điều ấy cho mô hình ảnh.<br />
-                · <b>Nhật ký gọi AI</b>: nạp 25 lượt gần nhất thay vì 500, hiện 12 dòng, nút «Xem
-                tất cả». Dòng tổng cộng cả 25, không chỉ 12. Dòng đếm tiền của từng lượt chạy giữ
-                trần riêng 200 — một lượt xếp mặt bằng đã quá 25 lượt gọi.<br />
-                · «Chỉ giữ 25» hiểu là giới hạn ĐỌC, <b>không xoá</b>: đây là sổ tiền, màn hình nói
-                rõ dòng cũ vẫn còn đủ trong CSDL.
-              </td>
-            </tr>
-            <tr>
-              <td class="num">20/09</td>
-              <td>T63 — thước chấm mặt đứng, vòng tự sửa theo điểm; bản demo đạt 94%</td>
-              <td class="xs">
-                · Haan hỏi ba câu và giao một mục tiêu. Trả lời đo được: mặt đứng
-                <b>đã có cổng nhưng chưa có điểm</b>; <code>kb/facade_experience.yaml</code> (toàn
-                bộ phần đo trên 7 tờ hồ sơ thật) <b>chưa mã nào đọc</b> — chỉ ba con số của nó được
-                chép tay vào danh mục hôm trước.<br />
-                · <code>kb/facade_quality.yaml</code> là <b>định nghĩa của con số 80%</b>: 13 tiêu
-                chí, 5 nhóm, ngưỡng 80% trên phần trọng số chấm được. Mỗi tiêu chí mang
-                <code>n</code> và nhãn [ĐO]/[CHUNG] ra tới màn hình.<br />
-                · <b>Vòng tự sửa</b>: qua cổng mà dưới ngưỡng thì gọi lại kèm đúng tiêu chí mất
-                điểm, bằng lời dẫn RIÊNG (<code>retry_habits</code>) — câu trả lời trước hợp lệ, chỉ
-                chưa giống thói quen. Giữ bản điểm cao nhất, không phải bản mới nhất. Tiêu chí do
-                CHƯƠNG TRÌNH quyết không bao giờ gửi cho mô hình (đột biến M12 canh).<br />
-                · <b>Lỗi bắt được ngay lượt chấm đầu</b>: phép đo màu dùng relative luminance Y nên
-                «ghi bạc» bị chấm là màu tối — cái thước chấm trượt chính bản vẽ nó dựng từ đó. Đổi
-                sang L* của CIELAB; điểm nhảy 85% → <b>94%</b>, và 85% là con số SAI.<br />
-                · <b>Số đo đầu tiên</b>: bản demo dựng bằng gpt-5.6-terra đạt <b>94%</b>. Mất điểm
-                duy nhất ở lan can — bộ vẽ dùng 110 cm, hồ sơ thật 80–90 cm.
-                <b>Chưa tự sửa, chờ Haan</b>: 1,1 m là con số quen của quy chuẩn lan can nhà cao
-                tầng.<br />
-                · Còn lại: kỹ sư chấm lại trên cùng bảng tiêu chí; bổ sung bộ vẽ (sảnh mái dốc có
-                cột, cửa đầu vòm, ô tròn trang trí).
-              </td>
-            </tr>
-            <tr>
-              <td class="num">20/09</td>
-              <td>T62 — giữ lại mọi bản mặt đứng đã dựng, mở lại được để so</td>
-              <td class="xs">
-                · Haan: «tạo bản vẽ mới thì không lưu lại bản cũ để so sánh → chưa tốt». Dữ liệu
-                <b>chưa bao giờ mất</b> — artifact bất biến, mỗi lượt chạy đúc một bản mới. Chỗ
-                thiếu ở tuyến <code>/ai/state</code>: nó chỉ trả mốc hiệu lực, nên màn hình không có
-                đường mở lại bản trước. Hồ sơ demo có sẵn <b>bốn</b> bản mà không bản nào xem
-                được.<br />
-                · Nay có dải chọn như bước Mặt bằng: mỗi bản một thẻ kèm ngày giờ dựng, nhãn «Đang
-                hiệu lực», nút × để thôi hiện (không xoá dữ liệu, bỏ dòng đánh dấu thì bản ấy trở
-                lại). Hai tuyến mới <code>POST /facade/choose</code> và
-                <code>POST /facade/hide</code>.<br />
-                · <b>Bản đang MỞ tách khỏi bản HIỆU LỰC</b>: mở bản cũ ra xem không đổi thứ mà ảnh
-                mặt đứng và bước Phối cảnh dựng theo; muốn đổi thì bấm nút riêng.<br />
-                · Chưa có: so hai tờ vẽ <b>cạnh nhau</b> trên cùng màn hình (hiện phải bấm qua lại),
-                và ô ghi chú để kỹ sư đánh dấu vì sao thích bản nào.
-              </td>
-            </tr>
-            <tr>
-              <td class="num">20/09</td>
-              <td>T61 — model chữ của OpenAI cũ 13 tháng, đã làm mới</td>
-              <td class="xs">
-                · Haan hỏi vì sao không dùng các model GPT mới. Đo ra: hai tuyến chữ OpenAI đang
-                chạy <code>gpt-5</code> và <code>gpt-5-mini</code>, <b>cả hai ra 05/08/2025</b> —
-                trong 13 tháng đó OpenAI đã ra 5.1 → 5.6 và <code>gpt-6-astra</code>.<br />
-                · <b>Vì sao lọt:</b> quy trình chỉ hỏi «model này gọi được không» (kiểm 08/09: gọi
-                được, ghi ✔), không bao giờ hỏi «có bản mới hơn chưa». Một model cũ không tự báo
-                rằng nó cũ. Model ẢNH thì đúng bản mới nhất, chỉ vì Đợt E hôm qua vừa phải tra lại
-                danh sách.<br />
-                · Đo <code>GET /v1/models</code> ba nhà cung cấp (0 USD): Google đã mới nhất,
-                Anthropic gần như mới nhất, chỉ OpenAI lệch. Bốn lượt gọi rỗng qua đúng đường mã
-                thật đi: <b>0,00206 USD</b>, cả bốn trả đúng lược đồ, nghĩ 0 token.<br />
-                · Thay <code>gpt-5-mini</code> → <code>gpt-5.6-luna</code> (vừa mới hơn vừa
-                <b>rẻ hơn 40%</b> ở token ra), <code>gpt-5</code> → <code>gpt-5.6-terra</code>; thêm
-                hai bậc cao <code>gpt-5.6-sol</code> và <code>gpt-6-astra</code>, không đặt mặc
-                định. Quy trình mới ghi ngay trong cấu hình: đụng
-                <code>config/models.yaml</code> thì gọi <code>GET /v1/models</code> trước.<br />
-                · <b>Gỡ tuyến gói miễn phí của Google</b> (<code>ai_text_gemini_free</code>) theo
-                yêu cầu của Haan. Nó thêm ngày 13/09 cho bước đề xuất mức ưu tiên diện tích, mà bước
-                ấy đã gỡ khỏi giao diện cùng T58. Nay không tuyến <code>ai_*</code> nào chạy khoá
-                miễn phí nữa — mọi model trong ô chọn đều là API trả phí có cam kết không huấn
-                luyện; ô chọn còn ba thẻ nhà cung cấp. Khoá miễn phí vẫn dùng cho đường số hoá hồ sơ
-                cũ, nên <code>billing.free_providers</code> giữ nguyên.
-              </td>
-            </tr>
-            <tr>
-              <td class="num">20/09</td>
-              <td>T60 — ô chọn model dạng thẻ, chọn nhà cung cấp trước</td>
-              <td class="xs">
-                · Haan gửi mẫu giao diện chọn theo nhà cung cấp, yêu cầu áp cho cả model ngôn ngữ
-                lẫn model ảnh. Ô cũ là một <code>&lt;select&gt;</code> gộp ba thứ trong một dòng, và
-                model đắt nhất trông y hệt model rẻ nhất — trong khi hai đầu danh sách chênh nhau
-                hơn hai mươi lần tiền.<br />
-                · Ô mới hai tầng: hàng thẻ nhà cung cấp, rồi thẻ model của nhà cung cấp ấy — mỗi thẻ
-                có tên ngắn, nhãn phân loại, một câu mô tả, <b>tên model thật</b> và
-                <b>giá niêm yết</b>. Mặc định thu gọn, chỉ hiện model đang chọn: ô này nằm ngay trên
-                nút tiêu tiền.<br />
-                · Chữ trên thẻ là DỮ LIỆU trong <code>config/models.yaml</code> (mỗi tuyến thêm
-                <code>short</code>, <code>tag</code>, <code>blurb</code>; thêm mục
-                <code>providers</code>), không cắt chuỗi <code>label</code> trong mã.
-                <code>gemini</code> và <code>gemini_paid</code> để hai thẻ riêng vì chúng là hai
-                khoá khác nhau — gói miễn phí có thể bị dùng để huấn luyện.<br />
-                · Ba ràng buộc cũ giữ nguyên và có phép thử canh: tên model thật đọc được cả khi thu
-                gọn, tuyến chưa dùng được vẫn liệt kê kèm lý do và không bấm được, giá hiện trước
-                khi bấm.
-              </td>
-            </tr>
-            <tr>
-              <td class="num">20/09</td>
-              <td>T59 — phiếu cũ không đọc lại được; thêm cỡ xem tờ vẽ</td>
-              <td class="xs">
-                · <b>Hợp đồng mới làm hỏng dữ liệu đã ghi.</b> Khoá <code>saved_at</code> thêm ở
-                lượt rà soát sáng nay được đặt là BẮT BUỘC, nên hai phiếu lưu hôm 19/09 không đọc
-                lại được: màn hình Mặt đứng dừng ở «Dữ liệu không đúng hợp đồng
-                <code>ai_facade_brief</code>: saved_at — Required». Artifact là bất biến (8.2 điểm
-                3), không sửa lại được dòng đã ghi. Nay khoá ấy <b>không bắt buộc</b>; máy chủ vẫn
-                luôn đặt khi lưu, còn chuyện trùng mã băm giữa hai hồ sơ do rào chắn
-                <code>project_id</code> trong <code>artifacts.ts</code> lo. Thêm phép thử đọc lại
-                phiếu thiếu khoá, đã kiểm nó đỏ khi đặt lại thành bắt buộc.<br />
-                · <b>Cỡ xem tờ vẽ</b> (Haan: «bản vẽ output hiện tại đang quá lớn»). Tờ vẽ trước đây
-                luôn kéo kín bề ngang panel — trên màn hình 1920 là gần 1.400 px, phải cuộn dọc mới
-                xem hết một tờ A3 ngang. Nay có «Cỡ xem: Vừa · Lớn · Tràn khung» (720 · 1.080 ·
-                không chặn), mặc định <b>Vừa</b>, nhớ theo máy trong <code>localStorage</code>. Một
-                lựa chọn dùng chung cho mọi tờ trong bước: tờ vector và ảnh mô hình vẽ nằm cạnh nhau
-                nên đổi cỡ một cái mà cái kia giữ nguyên thì không so sánh được. Bộ chọn «Vừa · Cỡ
-                gốc» riêng của panel ảnh mặt bằng đã gộp vào đây — trước đó cùng màn hình có hai nút
-                «Vừa» nghĩa khác nhau. Khung xem ảnh vẫn chặn thêm bằng cỡ gốc để chữ không nhoè.
-              </td>
-            </tr>
-            <tr>
-              <td class="num">20/09</td>
-              <td>T59 — rà soát bước Mặt đứng trước khi commit, sửa 8 lỗi</td>
-              <td class="xs">
-                · Hai lượt rà soát độc lập (tuyến API + lưu trữ; hình học + bản vẽ). Đã sửa, mỗi lỗi
-                kèm một phép thử canh — phép thử cũ không bắt được lỗi nào trong số này.<br />
-                · <b>Chuỗi kích thước in sai số</b>: trạm sát mép bị gộp làm mất mép hình, mặt tiền
-                4.000 mm in ra tổng 3.970 mm. Nay ép trạm cuối bằng mép, như
-                <code>dims.ts</code> vẫn làm.<br />
-                · <b>Mảng trang trí trên mái dốc luôn bị loại</b>: trần lấy nhầm là đỉnh tường chắn
-                mái. Kỹ sư yêu cầu «chóp trang trí» trên nhà mái Nhật thì đốt hết lượt gọi tính tiền
-                rồi vẫn hỏng. Nay mái dốc lấy trần của mái.<br />
-                · <b>Phiếu của hai hồ sơ trùng mã băm</b>: mã artifact là băm nội dung, hai hồ sơ
-                chưa chọn mặt bằng cùng điền một phiếu giống hệt ra chung một mã → head của hồ sơ
-                sau trỏ sang artifact hồ sơ trước, phiếu trông như chưa lưu và lượt chạy hỏng. Nay
-                phiếu mang <code>saved_at</code> do máy chủ đặt, và kho artifact dừng có lỗi rõ ràng
-                khi gặp mã trùng của hồ sơ khác thay vì dùng lại lặng lẽ.<br />
-                · <b>Cửa chính chọn nhầm ở nhà phố</b>: mặt tiền tầng 1 chỉ có cửa cuốn thì cửa ra
-                ban công tầng 2 bị coi là cửa chính. Nay cửa chính phải ở tầng thấp nhất của nhà.<br />
-                · Chiều cao cửa trong phiếu bị kẹp theo chiều cao tầng (phiếu cho tới 600 cm, cửa
-                cao hơn tầng vẽ xuyên sàn tầng trên); số đo của phiếu kiểm theo khoảng dựng được
-                ngay lúc lưu; mái dốc không còn giữ tường chắn mái của mô hình.<br />
-                · Lời dẫn: bỏ yêu cầu cổng, rào khi nhà sát ranh mặt tiền (trước đó gửi hai câu
-                ngược nhau trong cùng một lượt tính tiền); ghi chú của kỹ sư đi qua bộ lược danh
-                tính (số điện thoại, email, mã hồ sơ).<br />
-                · <b>CHƯA sửa, để Đợt D</b>: DXF mặt đứng mất nét đứt (nét đứt khai trong CSS, bộ
-                đổi chỉ đọc thuộc tính) và cổng, rào nằm chung lớp tường nhà; màu lan can kỹ sư điền
-                bị bỏ khi mô hình không khai vùng lan can; tuyến
-                <code>GET /facade/vocabulary</code> chỉ kiểm có header chứ chưa xác thực; bảng vật
-                liệu quá 16 dòng thì rơi mất dòng cuối trên tờ A3.
-              </td>
-            </tr>
-            <tr>
-              <td class="num">20/09</td>
-              <td>T59 — đo 7 tờ mặt đứng của hồ sơ thật, sửa số mồi theo hồ sơ</td>
-              <td class="xs">
-                · Đọc 7 tờ mặt đứng DXF của 6 công trình NVO đã phát hành (3 nhà mái Nhật, 3 nhà mái
-                bằng 2–5 tầng): kích thước, cao độ, ghi chú vật liệu, cộng ảnh dựng lại từng tờ để
-                đọc bố cục. Kết quả ở <code>kb/facade_experience.yaml</code> — n = 6, dưới ngưỡng 15
-                nên là CHỈ DẤU, không phải định mức; chưa mã nào đọc tệp này.<br />
-                · Haan duyệt, đã sửa ba số: mái Nhật <b>dốc 20° → 30°</b> (cả ba hồ sơ mái Nhật đều
-                30–32°, hai tờ ghi thẳng «30°»), mái đua mái Nhật <b>90 → 60 cm</b>, tường chắn mái
-                <b>1,1 → 0,9 m</b>. Cốt nền 0,45 m giữ nguyên — trùng mức thường gặp (3/6 hồ sơ,
-                khoảng đo được 0,15–0,75).<br />
-                · Danh mục thêm: <code>eaves_band</code> diềm mái, <code>finial</code> chóp trang
-                trí, <code>reveal</code> ron chỉ âm (nới enum ba hợp đồng mặt đứng, sinh lại Zod),
-                sơn hiệu ứng giả bê tông, nhôm vân gỗ; lời dẫn lên 8.10.0.<br />
-                · Kiểm: 867 phép thử Worker thiết kế, 79 phép thử web của bước AI, kiểm kiểu, 22 hợp
-                đồng — xanh. Ảnh chụp tờ mặt đứng cập nhật theo tường chắn mái mới (+12.000).<br />
-                · Chưa làm: cửa đầu vòm và sảnh mái dốc có cột — bộ vẽ chưa dựng được; đỉnh cửa
-                chính thẳng hàng đỉnh cửa sổ (4/6 hồ sơ) mới ghi thành thói quen, chưa thành luật.
-              </td>
-            </tr>
-            <tr>
-              <td class="num">20/09</td>
-              <td>T59 Đợt E — ảnh mặt đứng có vật liệu (mô hình ảnh vẽ từ ảnh neo)</td>
-              <td class="xs">
-                · Panel «Ảnh mặt đứng có vật liệu» ngay dưới tờ mặt đứng vector: chọn model ảnh, bấm
-                vẽ, chi phí lượt vừa chạy, hỏi lại khi vẽ lại nhiều lần, không cho vẽ khi mặt đứng
-                dựng theo phương án mặt bằng cũ. Nhãn hai lớp: dấu in lên ảnh + câu «màu và vật liệu
-                là hình dung, không đo được» bằng chữ; tải về là bản có nhãn.<br />
-                · Cùng khuôn T57: ảnh neo = tờ mặt đứng vector không khung tên (1536 × 1024 trên hồ
-                sơ demo), rasterise ở trình duyệt; máy chủ dựng lại và đối chiếu cỡ khung; lời gọi
-                mang đúng một ảnh; dữ liệu hạng 2; ghi nhật ký chi phí (<code>facade_image</code>).
-                Lời dẫn
-                <code>facade_image</code> (bản 8.9.0) ghép vật liệu, mã màu hex, mái, cổng, rào từ ý
-                tưởng đã lưu, và dặn KHÔNG viết chữ lên ảnh.<br />
-                · Artifact <code>ai_facade_image</code>, bước
-                <code>ai_facade_image_draw</code> (migration 0129 — đã chạy, kiểm lại ràng buộc
-                thật); không đặt head.<br />
-                · Kiểm: 867 phép thử Worker thiết kế, 417 phép thử web, pytest hợp đồng Container
-                (22 hợp đồng) — xanh. Chrome: panel hiện đúng, ảnh neo tải được và không có khung
-                tên.
-                <b>Chưa vẽ tấm nào qua API thật.</b>
-              </td>
-            </tr>
-            <tr>
-              <td class="num">20/09</td>
-              <td>T59 Đợt F2 — phiếu yêu cầu mặt đứng của kỹ sư; lượt chạy thật đầu tiên</td>
-              <td class="xs">
-                Haan yêu cầu một phiếu khảo sát riêng ở đầu màn hình Mặt đứng để kỹ sư điền.<br />
-                · <b>Phiếu</b> (<code>web/src/pages/tk/ai/ai-facade-brief-form.tsx</code>): phong
-                cách, cốt nền, mái (thêm <b>mái Nhật</b>), ba màu, vật liệu 4 vùng mặt tiền, cửa
-                chính và cửa phụ (vật liệu, màu, kiểu mở, <b>chiều cao</b> — bề rộng chỉ đọc từ mặt
-                bằng), cửa sổ (khung, kính), cửa để xe, ban công, cổng và rào (ẩn khi nhà sát ranh),
-                trang trí mong muốn, ghi chú. Mọi ô chọn mặc định «Để AI đề xuất»; màu kèm mã hex;
-                nháp giữ trong trình duyệt, hỏi trước khi rời trang; bấm «Dựng ý tưởng» thì phiếu
-                được lưu trước.<br />
-                · <b>Mục đã điền là bắt buộc</b>: hàm ghép áp thẳng (mái, vật liệu, màu, lan can,
-                cổng, rào, chiều cao cửa, cốt nền, kiểu cửa) — không tốn lượt gọi lại. Chỉ trang trí
-                đã chọn và «có cổng» mới bắt mô hình làm lại. Bảng ý tưởng ghi từng dòng «theo yêu
-                cầu kỹ sư» hay «AI đề xuất».<br />
-                · <b>Lưu thành artifact</b> <code>ai_facade_brief</code> (migration 0128 nới ràng
-                buộc loại — đã chạy, kiểm lại bằng truy vấn thật); ý tưởng mặt đứng trỏ về bản phiếu
-                nó theo. Lời dẫn bản 8.8.0 thêm khối <code>&lt;requirements&gt;</code>.<br />
-                · <b>Lượt chạy thật đầu tiên</b> (19/09/2026 23:22, trên «Biệt thự nhà vườn (demo)»,
-                Gemini 3.1 Pro, trước khi có phiếu): 1.310 token vào, 2.131 token ra, qua phép kiểm
-                ngay lượt đầu, đã lưu. Tờ vẽ từ ý tưởng thật đọc tốt; lượt này làm lộ hai chỗ đã
-                sửa: tường rào nét liền cắt ngang cửa chính (nay nét đứt), và bảng ý tưởng lặp tên
-                «Ô văng» / trùng nhãn «Cổng».<br />
-                · Kiểm: 859 phép thử Worker thiết kế, 414 phép thử web, pytest hợp đồng Container
-                (21 hợp đồng) — xanh. Chrome: điền, lưu, tải lại trang thấy phiếu còn (không gọi
-                AI).
-              </td>
-            </tr>
-            <tr>
-              <td class="num">≤19/09</td>
-              <td>90 việc trước đó</td>
-              <td class="xs">
-                Đã tách sang <a href="TIEN_DO_THIET_KE_LUU.html">tờ lưu trữ</a> (đợt đầu 20/09/2026,
-                tám việc ngày 19/09 chuyển tiếp 21/09/2026) — tờ này từng nặng 460&nbsp;KB, mở chậm
-                và không ai đọc hết. Quyết định còn hiệu lực ở
-                <code>doc/design/QUYET_DINH_AI.md</code>.
-              </td>
-            </tr>
           </tbody>
         </table>
       </div>
 
       <!-- ============ 5. VƯỚNG MẮC ============ -->
       <h2>5. Vướng mắc đang mở</h2>
+      <div class="flag block">
+        <h3>V-33 · Kích thước giếng thang máy chưa có số đo từ hồ sơ NVG — 22/09/2026</h3>
+        <p class="kv">
+          <b>Gặp ở đâu:</b> làm T65. Cổng mặt bằng nay bác một «thang máy» quá nhỏ, nên nó cần một
+          mức sàn. Mức đang dùng — <b>2,2 / 2,5 / 3,2 m²</b> theo tải 350 / 450 / 630 kg, cạnh ngắn
+          <b>1,4 m</b> — lấy từ quy cách cabin thang máy gia đình của nhà sản xuất.
+        </p>
+        <p class="kv">
+          <b>Đã thử gì:</b> tra <code>kb/</code> và hai bộ hồ sơ NVG đã số hoá.
+          <b>Không hồ sơ nào có thang máy</b>, nên ngưỡng 15 công trình của
+          <code>priors.min_samples</code> không áp dụng được — không phải «chưa đủ mẫu», mà là
+          <b>không có mẫu nào</b>.
+        </p>
+        <p class="kv">
+          <b>Đang chặn gì:</b> chưa chặn gì. Con số chỉ là mức SÀN để bác một ô 0,8 m² không lọt nổi
+          cabin, không phải kích thước thiết kế — đặt thấp thì cổng lỏng, không làm hỏng phương án
+          nào. Rủi ro thật nằm ở chiều ngược lại: đặt cao quá thì bác oan một mặt bằng đúng.
+        </p>
+        <p class="kv">
+          <b>Cần gì để gỡ:</b> Haan xác nhận NVG thường dùng thang máy tải nào và giếng bao nhiêu,
+          hoặc một hồ sơ đã xây có thang máy để đo. Sửa ở <b>hai</b> chỗ và chúng phải bằng nhau:
+          <code>demands.elevator</code> của <code>kb/brief_fidelity.yaml</code> (bác ở cổng) và
+          <code>usable.min_side_m.elevator</code> của <code>kb/construction_norms.yaml</code> (ép
+          lúc xếp). Có phép thử canh hai con số không lệch, nên sửa một chỗ mà quên chỗ kia thì đỏ
+          ngay trên máy.
+        </p>
+      </div>
       <div class="flag block">
         <h3>
           V-32 · Máy chủ không rasterise được tờ SVG, nên ảnh neo phải đi qua trình duyệt —
@@ -1637,10 +1346,92 @@
       </p>
 
       <div class="flag">
+        <h3>
+          Q-49 <s>đóng</s> · Kho hồ sơ lên 7 bộ — hạ ngưỡng thống kê không? — trả lời 23/09/2026
+        </h3>
+        <p class="kv">
+          <b>Haan trả lời 23/09/2026 — cách A</b> Hạ <code>priors.min_samples</code> <b>15 → 5</b>,
+          hạ thẳng, không nới biên độ theo <code>n</code>. Kho 7 bộ vượt ngưỡng nên tầng «định mức
+          và phân bố» <b>MỞ</b>. Đã sửa: <code>kb/space_norms.yaml</code> (lên 1.2.0) và sáu chỗ
+          khác từng viết «dưới ngưỡng 15». Quyết định ghi ở <b>T66</b>.
+        </p>
+        <p class="kv">
+          <b>Hai điều kiện đi kèm, đừng gỡ</b> (a) Số thống kê rút ở mức <code>n</code> này chỉ vào
+          <b>điểm và cảnh báo</b>, không loại phương án (T52). (b) Số ở mục <code>spaces</code> vẫn
+          phải do kiến trúc sư NVG ấn định (Q-18) — 7 hồ sơ không thay được việc đó. Cảnh báo cũ ở
+          mục 13.15 («đừng hạ ngưỡng cho khớp số hồ sơ đang có») cố ý giữ nguyên: nó là cái giá đã
+          biết, không phải cái đã biến mất.
+        </p>
+        <p class="kv">
+          <b>Chưa đổi hành vi chạy</b> Không dòng TypeScript nào đọc
+          <code>priors.min_samples</code>; nơi duy nhất dùng là hàm
+          <code>kb_room_area_stats</code> (migration 0102), nhận qua tham số, và
+          <b>chưa có lớp gọi nào</b>. Hạ ngưỡng hôm nay không đổi con số nào trên bản vẽ — nó mở
+          đường cho lúc nối hook thống kê vào.
+        </p>
+        <p class="kv">
+          <b>Chuyện gì đổi trước đó</b> Q-27 (06/09/2026) trả lời «giai đoạn demo không xin thêm
+          được hồ sơ, tận dụng hai bộ đã có». Ngày 22/09 Haan gửi thêm <b>năm bộ</b>; kho nay có
+          <b>7 bộ</b> (2 còn nén <code>.rar</code>, 1 bộ biệt thự hiện đại chưa đọc).
+        </p>
+        <p class="kv">
+          <b>Cái ĐỔI</b> Lý do đóng chuyển từ «không bao giờ có thêm» thành <b>«chưa đủ»</b>. Nên
+          câu hỏi Q-18 (kiến trúc sư ấn định chuẩn diện tích) thôi là <i>đường duy nhất</i> và quay
+          lại thành <i>đường nhanh nhất</i>.
+        </p>
+        <p class="kv">
+          <b>Cần Haan quyết</b> (a) Còn bao nhiêu hồ sơ nữa NVG gửi được? Nếu tới được 15 thì đo từ
+          dữ liệu là khả thi. (b) Có nên bỏ công
+          <b>dựng lại đa giác phòng từ đồ thị tim tường</b> cho 4 hồ sơ mới để nâng
+          <code>n</code> của các quy tắc diện tích trong <code>nvg-measured.yaml</code> không? Đợt
+          này cố ý KHÔNG dùng nhãn diện tích ghi sẵn để nâng <code>n</code> — trộn hai cách đo là
+          làm hỏng khoảng quan sát đã có.
+        </p>
+      </div>
+
+      <div class="flag">
+        <h3>Q-50 · Bệ cửa sổ: hai hồ sơ hai mức, lấy mức nào? — 22/09/2026</h3>
+        <p class="kv">
+          HS-01 đo <b>+0.900</b> trên mặt cắt; HS-04 khai <b>+0.700</b> trên bảng thống kê cửa.
+          Không phải sai số đo — hai công trình làm khác nhau.
+          <code>kb/construction_norms.yaml</code> đang giữ <b>0.9</b>, chưa sửa.
+        </p>
+        <p class="kv">
+          <b>Vì sao đáng hỏi</b> HS-04 cho thấy một quy luật đẹp: bệ 0,700 + cửa sổ cao 1,650 =
+          <b>+2,350</b>, đúng mép trên cửa chính. Tức mép trên lỗ mở thẳng hàng. Với bệ 0,900 thì
+          phải chọn chiều cao cửa sổ khác để giữ được sự thẳng hàng ấy. Đây là thứ quyết định mặt
+          đứng trông có ngay ngắn không, nên không tự chọn.
+        </p>
+      </div>
+
+      <div class="flag">
+        <h3>Q-51 · Có thêm bậc tam cấp vào tờ vẽ không? — 22/09/2026</h3>
+        <p class="kv">
+          <b>Hiện trạng</b> Hợp đồng <code>ai-architectural-floorplan</code> không có đối tượng nào
+          cho bậc ở lối vào, nên tờ vẽ engine sinh ra có cửa chính mở thẳng ra sân — trong khi
+          <b>cả ba hồ sơ có sân đều chênh 430–730 mm</b>. Số liệu đã sẵn: mặt bậc 300, cổ bậc ~150,
+          số bậc = chênh cốt ÷ 150.
+        </p>
+        <p class="kv">
+          <b>Giá phải trả</b> Sửa hợp đồng + lời dẫn + bộ vẽ + phép thử. Và nó cần một dữ kiện đầu
+          bài mà T62 <b>đã hỏi</b> (cao độ đường, cao độ đất) nhưng mặt bằng chưa mang cốt từng khu
+          — hiện mặt bằng engine sinh ra là một mặt phẳng.
+        </p>
+        <p class="kv">
+          <b>Hai việc nhỏ hơn, tách ra được</b> (a) <b>đánh số bậc thang</b> trên mặt bằng — hai
+          trong bốn hồ sơ làm vậy, thuần bộ vẽ, không đụng hợp đồng; (b)
+          <b>giữ mặt bậc 250 và để chiều dài vế chạy theo</b> thay vì rải đều bậc trên ô thang — đây
+          là re-tune bộ vẽ, có nghiệm thu riêng.
+        </p>
+      </div>
+
+      <div class="flag">
         <h3>Q-27 và Q-28 · Trả lời 06/09/2026 — và hệ quả</h3>
         <p class="kv">
           <b>Q-27</b> Giai đoạn demo <b>không xin thêm được hồ sơ</b>: bản thiết kế là thông tin
           nhạy cảm, khách hàng hạn chế cung cấp. Tận dụng hai bộ đã có.
+          <b class="warn">⚠️ Hết đúng từ 22/09/2026</b> — Haan gửi thêm năm bộ; kho nay có 7. Xem
+          <b>Q-49</b> ở trên.
         </p>
         <p class="kv">
           <b>Q-28</b> <b>Có</b> — từ dự án tới sẽ ghi lại bản vẽ giai đoạn phương án.

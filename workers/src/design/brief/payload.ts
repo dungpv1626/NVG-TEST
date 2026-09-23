@@ -24,6 +24,7 @@ import {
   fieldByPath,
   scoreBrief,
   checkBriefConsistency,
+  type BriefFormConfig,
   type BriefIssue,
 } from '@nvg/shared/design';
 
@@ -34,6 +35,14 @@ export interface BriefPayloadInput {
   projectId: string;
   /** `design_projects.code`, ví dụ `NVO-TK-2026-0001`. Chỉ để đọc. */
   projectCode: string;
+  /**
+   * Cấu hình biểu mẫu HIỆU LỰC của tenant (bản gốc + lớp phủ quản trị viên).
+   *
+   * Bắt buộc truyền vào chứ không tự đọc `BRIEF_FORM`: chấm điểm theo một cấu hình khác cấu
+   * hình người dùng vừa điền là cách im lặng nhất để cổng Lớp 2 nói một con số không ai thấy.
+   * Vắng mặt thì lùi về bản gốc — đúng hành vi của tenant chưa sửa gì.
+   */
+  config?: BriefFormConfig;
 }
 
 export interface BriefPayloadResult {
@@ -68,8 +77,9 @@ export function buildBriefPayload(input: BriefPayloadInput): BriefPayloadResult 
   }
 
   const draft = parsed.data;
-  const score = scoreBrief(draft, BRIEF_FORM);
-  const issues = checkBriefConsistency(draft, BRIEF_FORM);
+  const config = input.config ?? BRIEF_FORM;
+  const score = scoreBrief(draft, config);
+  const issues = checkBriefConsistency(draft, config);
 
   const payload = {
     ...draft,
@@ -94,7 +104,7 @@ export function buildBriefPayload(input: BriefPayloadInput): BriefPayloadResult 
       ...new Set(
         complete.error.issues.map((issue) => {
           const path = issue.path.join('.');
-          return fieldByPath(BRIEF_FORM, path)?.label ?? path;
+          return fieldByPath(config, path)?.label ?? path;
         }),
       ),
     ];

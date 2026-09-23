@@ -7,6 +7,7 @@
  * Đặt các quy tắc đó ở trình duyệt thì gọi thẳng PostgREST là đi vòng qua được.
  */
 
+import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   DesignDiscipline,
@@ -17,10 +18,20 @@ import type {
   DisciplineTaskStatus,
   MoneyValue,
 } from '@nvg/shared';
-import type { DesignBriefDraft } from '@nvg/shared/design';
+import {
+  applyBriefFormOverlay,
+  BRIEF_FORM,
+  BRIEF_FORM_OVERLAY_KEY,
+  readBriefFormOverlay,
+  type BriefFormConfig,
+  type BriefFormOverlay,
+  type DesignBriefDraft,
+  type DesignCapability,
+} from '@nvg/shared/design';
 import { designApi } from '@/lib/design-api';
 import { useCompanyScope, withCompanyScope } from '@/lib/company-scope';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/auth';
 
 export interface DesignProjectRecord {
   id: string;
@@ -383,6 +394,91 @@ export function useDesignSetting(key: string) {
         .maybeSingle();
       if (error) throw new Error(error.message);
       return data?.value ?? null;
+    },
+  });
+}
+
+/**
+ * Quyền CHUỖI của Module Thiết kế mà tài khoản đang có (`role_capabilities`).
+ *
+ * Tách khỏi `permissions` (ma trận vai trò × module) vì hai cơ chế trả lời hai câu hỏi khác
+ * nhau và cố ý không gộp — `doc/design/02-architecture.md` 2.8, CLAUDE.md 8.5 T6. Ma trận nói
+ * «vai trò này sửa được hồ sơ TK nói chung»; quyền chuỗi nói «người này được sửa CẤU HÌNH của
+ * module», một việc khác hẳn.
+ *
+ * Dùng để ẨN nút, không phải để chặn: chặn nằm ở RLS (CLAUDE.md 5.4 — ẩn chứ không hiện rồi
+ * báo lỗi).
+ */
+export function useDesignCapabilities(): { has: (capability: DesignCapability) => boolean } {
+  const { profile } = useAuth();
+  const roleCodes = useMemo(
+    () => [...new Set((profile?.assignments ?? []).map((a) => a.roleCode))],
+    [profile],
+  );
+  const { data } = useQuery<string[], Error>({
+    queryKey: ['role_capabilities', roleCodes],
+    enabled: roleCodes.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('role_capabilities')
+        .select('capability, roles!inner(code)')
+        .in('roles.code', roleCodes);
+      if (error) throw new Error(error.message);
+      return (data ?? []).map((row) => (row as { capability: string }).capability);
+    },
+  });
+  const set = useMemo(() => new Set(data ?? []), [data]);
+  return { has: (capability: DesignCapability) => set.has(capability) };
+}
+
+/**
+ * Cấu hình biểu mẫu Đầu bài HIỆU LỰC = bản gốc trong mã nguồn + lớp phủ của quản trị viên.
+ *
+ * ⚠️ Mọi màn hình đụng tới Đầu bài phải gọi hàm này thay vì nhập thẳng `BRIEF_FORM`. Một màn
+ * hình vẽ theo bản gốc còn màn hình khác vẽ theo bản đã sửa thì cùng một hồ sơ hiện ra hai bộ
+ * câu hỏi khác nhau, và điểm độ đầy đủ ở hai chỗ nói hai con số.
+ *
+ * Lớp phủ hỏng KHÔNG làm trắng màn hình: lùi về bản gốc và bật cờ `broken` để màn hình quản
+ * trị nói ra — chỗ duy nhất sửa được nó.
+ */
+export function useBriefFormConfig(): {
+  config: BriefFormConfig;
+  overlay: BriefFormOverlay | null;
+  broken: boolean;
+  isLoading: boolean;
+} {
+  const { data, isLoading } = useDesignSetting(BRIEF_FORM_OVERLAY_KEY);
+  return useMemo(() => {
+    const overlay = readBriefFormOverlay(data);
+    if (!data) return { config: BRIEF_FORM, overlay: null, broken: false, isLoading };
+    if (!overlay) return { config: BRIEF_FORM, overlay: null, broken: true, isLoading };
+    try {
+      return {
+        config: applyBriefFormOverlay(BRIEF_FORM, overlay),
+        overlay,
+        broken: false,
+        isLoading,
+      };
+    } catch {
+      return { config: BRIEF_FORM, overlay, broken: true, isLoading };
+    }
+  }, [data, isLoading]);
+}
+
+/**
+ * Lưu lớp phủ — qua Workers, không `upsert` thẳng.
+ *
+ * Lý do ở `workers/src/design/index.ts`, tuyến `POST /design/brief/form`: kiểm hợp lệ TRƯỚC khi
+ * ghi, và `tenant_id` không nằm trong tay trình duyệt.
+ */
+export function useSaveBriefFormOverlay() {
+  const queryClient = useQueryClient();
+  return useMutation<{ ok: boolean }, Error, { overlay: BriefFormOverlay | null }>({
+    mutationFn: ({ overlay }) => designApi<{ ok: boolean }>('/design/brief/form', { overlay }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ['design_setting', BRIEF_FORM_OVERLAY_KEY],
+      });
     },
   });
 }

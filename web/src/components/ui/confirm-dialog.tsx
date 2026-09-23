@@ -29,7 +29,13 @@ export function ConfirmDialog({
   /** Hệ quả của thao tác — nói rõ cái gì mất, cái gì còn. */
   children: ReactNode;
   confirmLabel: string;
-  cancelLabel?: string;
+  /**
+   * `null` = KHÔNG có nút thứ hai — hộp chỉ để báo một tin, không có gì để huỷ.
+   *
+   * Hai nút cho một lời báo là bắt người đọc chọn giữa hai thứ giống hệt nhau: «Huỷ» và
+   * «Đã hiểu» cùng đóng hộp và cùng không làm gì. Bấm ra ngoài và Esc vẫn đóng như thường.
+   */
+  cancelLabel?: string | null;
   pending?: boolean;
   /** Việc không hoàn tác được: nút chính màu đỏ (CGD 4.5). */
   danger?: boolean;
@@ -82,9 +88,11 @@ export function ConfirmDialog({
         </h2>
         <div className="mt-2 text-sm opacity-80">{children}</div>
         <div className="mt-4 flex justify-end gap-2">
-          <Button variant="subtle" onClick={onCancel} disabled={pending}>
-            {cancelLabel}
-          </Button>
+          {cancelLabel !== null && (
+            <Button variant="subtle" onClick={onCancel} disabled={pending}>
+              {cancelLabel}
+            </Button>
+          )}
           <Button
             ref={confirmRef}
             variant={danger ? 'danger' : 'primary'}

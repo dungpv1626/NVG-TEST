@@ -30,6 +30,8 @@ import { innerRects } from './insets';
 import { treeIssue } from './issues';
 import { placeOpenings } from './openings';
 import { outlineOf } from './outline';
+import { projectBalconyCells } from './balcony-projection';
+import type { BalconyDemand, Side } from '../brief-demands';
 import { resizeTree } from './sizing';
 import { snapToAnchors, type SnapTarget } from './snap';
 import { stairFlights, stairTreads } from './stair-fit';
@@ -44,10 +46,34 @@ export { MIN_CELL_CM } from './cells';
  */
 const LIGHT_WELL = 'light_well';
 
+/** Tên mặt để viết ghi chú — bản gọn của `sideWord`, chỉ dùng trong tệp này. */
+const SIDE_WORDS: Record<Side, string> = {
+  front: 'mặt trước',
+  back: 'mặt sau',
+  left: 'mặt bên trái',
+  right: 'mặt bên phải',
+};
+
+/**
+ * Giếng thang máy (T65, 22/09/2026) — bám mốc tầng dưới y như giếng trời.
+ *
+ * Cùng một lẽ: cả hai là ô xuyên suốt chiều cao nhà. Giếng trời lệch tầng thì hở sàn, giếng thang
+ * máy lệch tầng thì không có đường thẳng cho cabin chạy — và với lựa chọn «chừa chỗ lắp sau» thì
+ * chừa lệch nhau nghĩa là chưa chừa gì cả.
+ */
+const ELEVATOR = 'elevator';
+
 /** Mốc một tầng để lại cho các tầng trên, theo TIM tường. */
 export interface LevelAnchors {
   stair: Rect | null;
   lightWells: Rect[];
+  /**
+   * Ô thang máy của tầng — tầng trên phải chồng khít.
+   *
+   * Tuỳ chọn vì mốc đúc trước 22/09/2026 không có trường này, và một hồ sơ cũ đọc lại vẫn phải
+   * dựng được: vắng thì không bám mốc, đúng hành vi trước T65.
+   */
+  elevators?: Rect[];
   /** Ô WC của tầng — chỉ là GỢI Ý xếp chồng khu ướt trong lời dẫn, không kiểm. */
   wetRooms: Rect[];
   footprint: Rect;
@@ -89,6 +115,13 @@ export interface LevelLayoutInput {
   relax?: ReadonlySet<string>;
   /** Mặt lối vào chính và lối xe đầu bài khai; vắng = chương trình tự chọn. */
   entrances?: { main: Face | null; vehicle: Face | null };
+  /**
+   * Yêu cầu ban công của đầu bài (T65) — chỉ dùng cho phần ĐUA RA NGOÀI RANH.
+   *
+   * Vắng = không ô nào nhô ra, đúng hành vi trước T65. Phần «đúng mặt, đúng tầng» kiểm ở cổng
+   * mặt bằng khi đã ghép đủ tầng, không ở đây.
+   */
+  balcony?: BalconyDemand | null;
   /**
    * Cạnh ngắn tối thiểu lọt lòng theo loại phòng, m (gói kinh nghiệm, `min_dimension`). Có mặt thì
    * chương trình thử CĂN LẠI vị trí vách theo diện tích yêu cầu (`sizing.ts`); vắng thì giữ nguyên
@@ -143,7 +176,9 @@ export function layoutLevel(input: LevelLayoutInput): LevelLayout {
         stairAnchor !== null &&
         input.groups.vertical.has(type) &&
         overlapArea(cell.rect, stairAnchor) > OVERLAP_TOLERANCE_CM2;
-      if (type === LIGHT_WELL || onStair || cell.id === base.stair?.room) pinned.add(cell.id);
+      if (type === LIGHT_WELL || type === ELEVATOR || onStair || cell.id === base.stair?.room) {
+        pinned.add(cell.id);
+      }
     }
   }
   const fit = (layout: LevelLayout) => areaFit(layout.level!, input);
@@ -423,6 +458,18 @@ function layoutOnce(input: LevelLayoutInput): LevelLayout {
         });
       }
     }
+    for (const cell of cells) {
+      if (typeOfSpace.get(cell.id) !== ELEVATOR) continue;
+      const anchor = nearest(cell.rect, input.anchors.elevators ?? []);
+      if (anchor) {
+        targets.push({
+          leaf: cell.id,
+          anchor,
+          code: 'elevator_not_at_anchor',
+          label: 'Ô thang máy',
+        });
+      }
+    }
     const snapped = snapToAnchors(walkInput, cells, targets, notes);
     if (snapped.issues.length) return fail(snapped.issues);
     cells = snapped.cells;
@@ -438,6 +485,24 @@ function layoutOnce(input: LevelLayoutInput): LevelLayout {
         },
       };
     }
+  }
+
+  // ── Ban công đua ra ngoài ranh ─────────────────────────────────────────────────────────
+  // Phải đứng TRƯỚC `innerRects` và `outlineOf`: hình bao, lan can và lỗ mở đều suy từ ô, nên nới
+  // ở đây thì ba thứ ấy tự khớp. Xem đầu `tree/balcony-projection.ts`.
+  const jutting = projectBalconyCells({
+    cells,
+    typeOf: typeOfSpace,
+    balcony: input.balcony ?? null,
+    level,
+    footprint,
+  });
+  cells = jutting.cells;
+  for (const jut of jutting.projected) {
+    notes.add(
+      'balcony_projected',
+      `Ban công "${jut.id}" ${where} đua ra ngoài ranh nhà ${jut.cm} cm ở ${SIDE_WORDS[jut.side]}, theo đúng mức đầu bài khai.`,
+    );
   }
 
   // ── Lọt lòng, hình bao, lỗ mở ──────────────────────────────────────────────────────────
@@ -537,6 +602,7 @@ function layoutOnce(input: LevelLayoutInput): LevelLayout {
     anchors: {
       stair: stairRoom ? (cells.find((c) => c.id === stairRoom)?.rect ?? null) : null,
       lightWells: cells.filter((c) => typeOfSpace.get(c.id) === LIGHT_WELL).map((c) => c.rect),
+      elevators: cells.filter((c) => typeOfSpace.get(c.id) === ELEVATOR).map((c) => c.rect),
       wetRooms: cells
         .filter((c) =>
           construction.openingRules.wc_door_types.includes(typeOfSpace.get(c.id) ?? ''),

@@ -38,13 +38,25 @@ vi.mock('@/hooks/use-design-surveys', () => ({
   useDesignSurveys: () => ({ data: state.surveys, isLoading: false }),
 }));
 
-vi.mock('@/hooks/use-design-projects', () => ({
-  useDesignBriefs: () => ({ data: state.briefs, isLoading: false }),
-  useDesignSetting: () => ({ data: 0.7 }),
-  useSaveDesignBrief: () => ({ mutateAsync: state.saveNewVersion, isPending: false }),
-  useSaveBriefDraft: () => ({ mutateAsync: state.saveDraft, isPending: false }),
-  useConfirmBriefArtifact: () => ({ mutateAsync: state.confirmBrief, isPending: false }),
-}));
+// Nhà máy mock là ASYNC để nhập được `BRIEF_FORM`: `vi.mock` bị nâng lên đầu tệp, nên một
+// tham chiếu tới biến nhập ở đầu tệp sẽ đọc trước khi nó kịp khởi tạo.
+vi.mock('@/hooks/use-design-projects', async () => {
+  const { BRIEF_FORM } = await import('@nvg/shared/design');
+  return {
+    useDesignBriefs: () => ({ data: state.briefs, isLoading: false }),
+    useDesignSetting: () => ({ data: 0.7 }),
+    // Không có lớp phủ của quản trị viên: biểu mẫu chạy trên bản gốc, đúng như tenant chưa sửa gì.
+    useBriefFormConfig: () => ({
+      config: BRIEF_FORM,
+      overlay: null,
+      broken: false,
+      isLoading: false,
+    }),
+    useSaveDesignBrief: () => ({ mutateAsync: state.saveNewVersion, isPending: false }),
+    useSaveBriefDraft: () => ({ mutateAsync: state.saveDraft, isPending: false }),
+    useConfirmBriefArtifact: () => ({ mutateAsync: state.confirmBrief, isPending: false }),
+  };
+});
 
 function brief(over: Record<string, unknown> = {}) {
   return {
@@ -96,8 +108,8 @@ async function openForm(step?: string) {
   return view;
 }
 
-/** Đi tới một bước qua thanh tiến trình. Tách riêng cho bài phải đổi loại hình TRƯỚC — bước
- *  «Tổ chức khối nhà» chỉ tồn tại sau khi đã chọn Biệt thự. */
+/** Đi tới một bước qua thanh tiến trình. Tách riêng cho bài phải đổi loại hình TRƯỚC — nhóm
+ *  câu hỏi tổ chức khối nhà chỉ hiện sau khi đã chọn Biệt thự. */
 beforeEach(() => {
   state.saveDraft.mockClear();
   state.saveNewVersion.mockClear();
@@ -123,10 +135,19 @@ describe('Phân nhánh theo loại hình đi từ cấu hình ra DOM', () => {
   it('nhà phố KHÔNG hỏi tổ chức khối nhà', async () => {
     // Nhà phố theo mô hình của engine luôn là một cánh nhà lấp kín lô — hỏi số cánh nhà là
     // hỏi một câu chỉ có một đáp án.
+    //
+    // Từ 21/09/2026 đây là phép thử trên TỪNG CÂU chứ không trên cả bước: mười hai mục đã gộp
+    // còn sáu, và nhóm tổ chức khối nhà nay nằm chung bước với thang, ban công và phong cách —
+    // thứ nhà phố nào cũng có. Điều kiện ẩn chuyển xuống từng trường, nên phải hỏi từng trường.
     state.briefs = [brief()];
     state.surveys = [];
     await openForm();
-    expect(screen.queryByText('Tổ chức khối nhà')).toBeNull();
+    expect(screen.queryByText('Số cánh nhà mong muốn')).toBeNull();
+    expect(screen.queryByText('Sân nằm ở đâu')).toBeNull();
+    // Cùng bước ấy, câu hỏi KHÔNG thuộc nhóm biệt thự vẫn phải còn.
+    await goToStep('Khối nhà, thang và mặt ngoài');
+    expect(screen.getAllByText('Thang máy')).not.toHaveLength(0);
+    expect(screen.getAllByText('Ban công làm tới đâu')).not.toHaveLength(0);
   });
 
   it('biệt thự hỏi số cánh nhà, số lõi thang và tổ chức sân', async () => {
@@ -135,8 +156,7 @@ describe('Phân nhánh theo loại hình đi từ cấu hình ra DOM', () => {
     await openForm();
     await userEvent.click(screen.getByRole('button', { name: 'Biệt thự' }));
 
-    expect(await screen.findByText('Tổ chức khối nhà')).toBeTruthy();
-    expect(screen.getAllByText('Số cánh nhà mong muốn')).not.toHaveLength(0);
+    expect(await screen.findByText('Số cánh nhà mong muốn')).toBeTruthy();
     expect(screen.getAllByText('Số lõi thang')).not.toHaveLength(0);
     expect(screen.getAllByText('Sân nằm ở đâu')).not.toHaveLength(0);
   });
@@ -148,7 +168,7 @@ describe('Phân nhánh theo loại hình đi từ cấu hình ra DOM', () => {
     state.surveys = [];
     await openForm();
     await userEvent.click(screen.getByRole('button', { name: 'Biệt thự' }));
-    await goToStep('Tổ chức khối nhà');
+    await goToStep('Khối nhà, thang và mặt ngoài');
     await userEvent.click(await screen.findByRole('button', { name: 'Hai cánh' }));
 
     // Chọn xong thì nút phải ở trạng thái đã chọn — nếu ghi sai kiểu, phép so sánh ngược lại
@@ -234,7 +254,7 @@ describe('Không gõ lại số đã có ở khảo sát', () => {
         created_at: '2026-08-02T00:00:00Z',
       },
     ];
-    await openForm('Khu đất');
+    await openForm('Công trình và khu đất');
     expect(await screen.findByRole('button', { name: /Lấy theo biên bản khảo sát/ })).toBeTruthy();
   });
 
@@ -346,7 +366,7 @@ describe('Vùng bấm cho ngón tay', () => {
   it('mọi nút lựa chọn trong biểu mẫu đạt tối thiểu 40px', async () => {
     state.briefs = [brief()];
     state.surveys = [];
-    const { container } = await openForm('Không gian và phong cách');
+    const { container } = await openForm('Công năng và lưu trữ');
 
     const chips = [...container.querySelectorAll('button[aria-pressed]')];
     expect(chips.length).toBeGreaterThan(5);
@@ -443,7 +463,7 @@ describe('Hình thửa đất', () => {
     // thửa rộng 35 m. Mà kích thước thửa đất thì gần như luôn lẻ.
     state.briefs = [brief()];
     state.surveys = [];
-    await openForm('Khu đất');
+    await openForm('Công trình và khu đất');
 
     const field = screen.getByLabelText('Chiều rộng mặt tiền') as HTMLInputElement;
     await userEvent.clear(field);
@@ -456,27 +476,85 @@ describe('Hình thửa đất', () => {
     expect(field.value).toBe('4,25');
   });
 
-  it('chọn Hình thang thì hỏi mặt hậu, chọn Đa giác thì hỏi ranh giới', async () => {
+  it('chọn Hình thang thì hỏi mặt hậu', async () => {
     state.briefs = [brief()];
     state.surveys = [];
-    await openForm('Khu đất');
+    await openForm('Công trình và khu đất');
 
     expect(screen.queryByLabelText('Chiều rộng mặt hậu')).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: 'Hình thang' }));
     expect(await screen.findByLabelText('Chiều rộng mặt hậu')).toBeTruthy();
     expect(screen.queryAllByText('Ranh giới thửa đất')).toHaveLength(0);
+  });
 
+  it('bấm «Đa giác không đều» thì NÓI RA là chưa hỗ trợ, không im lặng và không đổi hình thửa', async () => {
+    // Haan tắt tạm nhánh đa giác (22/09/2026). Cách tắt sai mà ai cũng làm: `disabled` — nút
+    // xám, bấm không có gì xảy ra, người dùng bấm ba lần rồi đi hỏi. Hoặc giấu hẳn lựa chọn,
+    // và người từng dùng nó đi tìm không thấy. Ở đây nút vẫn bấm được và cú bấm trả lời.
+    state.briefs = [brief()];
+    state.surveys = [];
+    await openForm('Công trình và khu đất');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Hình thang' }));
     await userEvent.click(screen.getByRole('button', { name: 'Đa giác không đều' }));
-    expect(await screen.findAllByText('Ranh giới thửa đất')).not.toHaveLength(0);
-    // Đa giác thì hai ô kích thước không còn nghĩa — ranh giới đã nói đủ.
-    expect(screen.queryByLabelText('Chiều rộng mặt hậu')).toBeNull();
-    expect(screen.queryByLabelText('Chiều rộng mặt tiền')).toBeNull();
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/tạm thời chưa hỗ trợ/i)).toBeTruthy();
+    // Một lời báo thì chỉ cần MỘT nút — «Huỷ» và «Đã hiểu» cùng đóng hộp, cùng không làm gì.
+    expect(within(dialog).getAllByRole('button')).toHaveLength(1);
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Đã hiểu' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    // Hình thửa đất KHÔNG đổi, và ô toạ độ ranh giới không mở ra.
+    expect(screen.getByRole('button', { name: 'Hình thang' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    expect(
+      screen.getByRole('button', { name: 'Đa giác không đều' }).getAttribute('aria-pressed'),
+    ).toBe('false');
+    expect(screen.queryAllByText('Ranh giới thửa đất')).toHaveLength(0);
+  });
+
+  it('đầu bài ĐÃ LƯU theo đa giác vẫn sửa được — khoá lựa chọn không khoá hồ sơ cũ', async () => {
+    // Chặn cả những hồ sơ đang mang giá trị ấy là biến một câu trả lời đã lưu thành thứ không
+    // sửa được: người dùng không bỏ chọn nổi, và cũng không mở được bảng toạ độ để xem lại.
+    state.briefs = [
+      brief({
+        structured: {
+          building_type: 'nha_pho',
+          floors: 3,
+          site: {
+            shape: 'da_giac',
+            width_m: 5,
+            depth_m: 18,
+            boundary_m: [
+              [0, 0],
+              [5, 0],
+              [5, 18],
+              [0, 18],
+            ],
+          },
+        },
+      }),
+    ];
+    state.surveys = [];
+    await openForm('Công trình và khu đất');
+
+    expect(
+      screen.getByRole('button', { name: 'Đa giác không đều' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+    expect(screen.queryAllByText('Ranh giới thửa đất')).not.toHaveLength(0);
+
+    // Bỏ chọn được, không hộp thoại nào chặn.
+    await userEvent.click(screen.getByRole('button', { name: 'Đa giác không đều' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('hình thang thiếu mặt hậu thì nói ra ngay, không chờ tới lúc lưu', async () => {
     state.briefs = [brief()];
     state.surveys = [];
-    await openForm('Khu đất');
+    await openForm('Công trình và khu đất');
     await userEvent.click(screen.getByRole('button', { name: 'Hình thang' }));
 
     expect(
@@ -493,7 +571,7 @@ describe('Không gian bắt buộc — mỗi dòng một phòng', () => {
   it('chọn không gian thì hiện ô ghim tầng, mặc định để hệ thống tự xếp', async () => {
     state.briefs = [brief()]; // floors: 3
     state.surveys = [];
-    await openForm('Không gian và phong cách');
+    await openForm('Công năng và lưu trữ');
 
     expect(screen.queryByLabelText('Tầng — Chỗ để xe')).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: 'Chỗ để xe' }));
@@ -505,7 +583,7 @@ describe('Không gian bắt buộc — mỗi dòng một phòng', () => {
   it('ghim vào một tầng cụ thể thì ô ghi đúng giá trị đó', async () => {
     state.briefs = [brief()];
     state.surveys = [];
-    await openForm('Không gian và phong cách');
+    await openForm('Công năng và lưu trữ');
     await userEvent.click(screen.getByRole('button', { name: 'Chỗ để xe' }));
 
     const select = (await screen.findByLabelText('Tầng — Chỗ để xe')) as HTMLSelectElement;
@@ -516,7 +594,7 @@ describe('Không gian bắt buộc — mỗi dòng một phòng', () => {
   it('bỏ chọn không gian thì mất luôn dòng của nó', async () => {
     state.briefs = [brief()];
     state.surveys = [];
-    await openForm('Không gian và phong cách');
+    await openForm('Công năng và lưu trữ');
     const chip = screen.getByRole('button', { name: 'Chỗ để xe' });
     await userEvent.click(chip);
     await screen.findByLabelText('Tầng — Chỗ để xe');
@@ -530,7 +608,7 @@ describe('Không gian bắt buộc — mỗi dòng một phòng', () => {
     // bảy phòng ngủ trước đây chỉ khai được một dòng, và mọi thứ khai ở đó áp cho cả bảy.
     state.briefs = [brief()];
     state.surveys = [];
-    await openForm('Không gian và phong cách');
+    await openForm('Công năng và lưu trữ');
     await userEvent.click(screen.getByRole('button', { name: 'Phòng làm việc' }));
 
     // Thêm phòng thứ hai bằng ô ở CUỐI danh sách, không phải bằng một nút lặp trên từng dòng.
@@ -552,7 +630,7 @@ describe('Không gian bắt buộc — mỗi dòng một phòng', () => {
   it('ô chọn loại phòng KHÔNG đề xuất phòng ngủ — phòng ngủ khai ở phần gia đình', async () => {
     state.briefs = [brief()];
     state.surveys = [];
-    await openForm('Không gian và phong cách');
+    await openForm('Công năng và lưu trữ');
 
     const picker = (await screen.findByLabelText('Loại phòng cần thêm')) as HTMLSelectElement;
     const labels = [...picker.options].map((o) => o.textContent);
@@ -564,7 +642,7 @@ describe('Không gian bắt buộc — mỗi dòng một phòng', () => {
   it('nhập được diện tích mong muốn cho từng phòng, dấu thập phân không bị nuốt', async () => {
     state.briefs = [brief()];
     state.surveys = [];
-    await openForm('Không gian và phong cách');
+    await openForm('Công năng và lưu trữ');
     await userEvent.click(screen.getByRole('button', { name: 'Chỗ để xe' }));
 
     const area = (await screen.findByLabelText(
@@ -589,7 +667,7 @@ describe('Không gian bắt buộc — mỗi dòng một phòng', () => {
       }),
     ];
     state.surveys = [];
-    await openForm('Không gian và phong cách');
+    await openForm('Công năng và lưu trữ');
 
     const line = (await screen.findByText(/Tổng diện tích tối thiểu đã khai:/)).closest('p')!;
     expect(line.textContent).toContain('110 m²');
@@ -600,7 +678,7 @@ describe('Không gian bắt buộc — mỗi dòng một phòng', () => {
   it('nhà một tầng thì không hiện ô ghim tầng — nhưng vẫn nhập được diện tích', async () => {
     state.briefs = [brief({ structured: { building_type: 'nha_pho', floors: 1 } })];
     state.surveys = [];
-    await openForm('Không gian và phong cách');
+    await openForm('Công năng và lưu trữ');
     await userEvent.click(screen.getByRole('button', { name: 'Chỗ để xe' }));
 
     expect(screen.queryByLabelText('Tầng — Chỗ để xe')).toBeNull();
@@ -625,7 +703,7 @@ describe('Không gian bắt buộc — mỗi dòng một phòng', () => {
       }),
     ];
     state.surveys = [];
-    await openForm('Thành viên gia đình');
+    await openForm('Gia đình và nếp sinh hoạt');
 
     expect(screen.queryByRole('button', { name: 'Khu vệ sinh riêng' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Phòng ngủ khép kín' })).toBeNull();
@@ -655,7 +733,7 @@ describe('Không gian bắt buộc — mỗi dòng một phòng', () => {
       }),
     ];
     state.surveys = [];
-    await openForm('Thành viên gia đình');
+    await openForm('Gia đình và nếp sinh hoạt');
 
     const select = (await screen.findByLabelText('Loại phòng ngủ')) as HTMLSelectElement;
     expect(select.value).toBe('ensuite');
@@ -722,7 +800,7 @@ describe('Số tầng dẫn dắt mọi ô chọn tầng bên dưới', () => {
     // mà "tầng giữa" của một căn hai tầng không trỏ vào tầng nào.
     state.briefs = [withFamily(2)];
     state.surveys = [];
-    await openForm('Thành viên gia đình');
+    await openForm('Gia đình và nếp sinh hoạt');
 
     const selects = (await screen.findAllByLabelText('Tầng')) as HTMLSelectElement[];
     const labels = [...selects[0]!.options].map((o) => o.textContent);
@@ -742,7 +820,7 @@ describe('Số tầng dẫn dắt mọi ô chọn tầng bên dưới', () => {
     // khai đi tìm chúng ở danh sách không gian bên dưới và không thấy.
     state.briefs = [withFamily(2)];
     state.surveys = [];
-    await openForm('Thành viên gia đình');
+    await openForm('Gia đình và nếp sinh hoạt');
 
     expect(await screen.findByText('Cần 1 phòng ngủ.')).toBeTruthy();
     expect(screen.getByText('Cần 2 phòng ngủ.')).toBeTruthy();
@@ -771,7 +849,7 @@ describe('Bấm vào khoảng trống KHÔNG được đổi lựa chọn', () =
   it('bấm nhãn, chú thích và phần trống của hàng nút đều không tắt lựa chọn nào', async () => {
     state.briefs = [brief({ structured: filled })];
     state.surveys = [];
-    await openForm('Khu đất');
+    await openForm('Công trình và khu đất');
 
     const pressed = () =>
       screen
@@ -794,7 +872,7 @@ describe('Bấm vào khoảng trống KHÔNG được đổi lựa chọn', () =
     // của trình duyệt.
     state.briefs = [brief({ structured: filled })];
     state.surveys = [];
-    const { container } = await openForm('Khu đất');
+    const { container } = await openForm('Công trình và khu đất');
 
     const legend = [...container.querySelectorAll('legend')].find(
       (el) => el.textContent === 'Mặt tiếp cận được',
@@ -812,7 +890,7 @@ describe('Nhu cầu riêng của nhóm thành viên', () => {
       brief({ structured: { ...brief().structured, family: [{ role: 'con', count: 1 }] } }),
     ];
     state.surveys = [];
-    await openForm('Thành viên gia đình');
+    await openForm('Gia đình và nếp sinh hoạt');
 
     expect(screen.getByRole('button', { name: 'Tủ đồ' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Phòng thay đồ riêng' })).toBeTruthy();
@@ -864,7 +942,7 @@ describe('Phòng ngủ tự sinh từ Thành viên gia đình', () => {
     // đặt tầng và diện tích (Haan bắt được 07/09/2026).
     state.briefs = [brief({ structured: withFamily })];
     state.surveys = [];
-    await openForm('Không gian và phong cách');
+    await openForm('Công năng và lưu trữ');
 
     expect(screen.getByText('Phòng ngủ chính (vợ chồng) · khép kín')).toBeTruthy();
     expect(screen.getByText('Phòng ngủ (con 1) · riêng')).toBeTruthy();
@@ -880,7 +958,7 @@ describe('Phòng ngủ tự sinh từ Thành viên gia đình', () => {
       }),
     ];
     state.surveys = [];
-    await openForm('Không gian và phong cách');
+    await openForm('Công năng và lưu trữ');
     expect(screen.getByText('Phòng ngủ (ông bà) · riêng')).toBeTruthy();
   });
 
@@ -890,15 +968,15 @@ describe('Phòng ngủ tự sinh từ Thành viên gia đình', () => {
     // Hai đầu của phép đồng bộ nay nằm ở HAI bước khác nhau: số người ở bước Gia đình, dòng
     // phòng ngủ ở bước Không gian. Đó chính là lý do bài này đáng giữ — sửa một bên rồi đi
     // sang bên kia là đúng cách người dùng thật sự dùng biểu mẫu.
-    await openForm('Không gian và phong cách');
+    await openForm('Công năng và lưu trữ');
     const before = screen.getAllByText(/^Phòng ngủ \(con \d+\) · riêng$/).length;
 
-    await goToStep('Thành viên gia đình');
+    await goToStep('Gia đình và nếp sinh hoạt');
     const counts = screen.getAllByLabelText('Số người');
     await userEvent.clear(counts[1]!);
     await userEvent.type(counts[1]!, '3');
 
-    await goToStep('Không gian và phong cách');
+    await goToStep('Công năng và lưu trữ');
     expect(screen.getAllByText(/^Phòng ngủ \(con \d+\) · riêng$/).length).toBe(before + 1);
   });
 
@@ -907,7 +985,7 @@ describe('Phòng ngủ tự sinh từ Thành viên gia đình', () => {
     // lần lặp cùng một câu, mà vẫn không nói được vì sao chúng khác các dòng kia.
     state.briefs = [brief({ structured: withFamily })];
     state.surveys = [];
-    const { container } = await openForm('Không gian và phong cách');
+    const { container } = await openForm('Công năng và lưu trữ');
 
     expect(screen.getByText('Phòng ngủ', { selector: 'span.font-medium' })).toBeTruthy();
     expect(screen.getByText('Không gian khác')).toBeTruthy();
@@ -923,7 +1001,7 @@ describe('Phòng ngủ tự sinh từ Thành viên gia đình', () => {
       }),
     ];
     state.surveys = [];
-    await openForm('Không gian và phong cách');
+    await openForm('Công năng và lưu trữ');
 
     expect(screen.getByLabelText('Tiện ích bổ sung — Chỗ để xe')).toHaveAttribute(
       'placeholder',
@@ -938,7 +1016,7 @@ describe('Phòng ngủ tự sinh từ Thành viên gia đình', () => {
   it('đơn vị m² nói MỘT lần ở tiêu đề cột, không lặp mỗi dòng', async () => {
     state.briefs = [brief({ structured: withFamily })];
     state.surveys = [];
-    const { container } = await openForm('Không gian và phong cách');
+    const { container } = await openForm('Công năng và lưu trữ');
 
     expect(screen.getByText('Diện tích tối thiểu (m²)')).toBeTruthy();
     // Mười tám lần chữ `m²` xếp thành một cột không thêm thông tin nào mà lấy mất chỗ của ô
@@ -950,7 +1028,7 @@ describe('Phòng ngủ tự sinh từ Thành viên gia đình', () => {
   it('dòng phòng ngủ KHÔNG có nút gỡ — bấm xong nó quay lại ngay', async () => {
     state.briefs = [brief({ structured: withFamily })];
     state.surveys = [];
-    await openForm('Không gian và phong cách');
+    await openForm('Công năng và lưu trữ');
 
     expect(screen.queryByRole('button', { name: /Bỏ Phòng ngủ/ })).toBeNull();
     // Phòng không phải phòng ngủ thì vẫn gỡ được — nếu không, phép kiểm trên đúng vì lý do sai.
@@ -960,7 +1038,7 @@ describe('Phòng ngủ tự sinh từ Thành viên gia đình', () => {
   it('mỗi phòng có ô tiện ích bổ sung riêng, ghi vào đúng dòng', async () => {
     state.briefs = [brief({ structured: withFamily })];
     state.surveys = [];
-    await openForm('Không gian và phong cách');
+    await openForm('Công năng và lưu trữ');
 
     const box = screen.getByLabelText('Tiện ích bổ sung — Phòng ngủ chính (vợ chồng) · khép kín');
     await userEvent.type(box, 'bồn tắm nằm');
@@ -980,7 +1058,7 @@ describe('Đơn vị và thứ hạng — hai chỗ màn hình nói khác dữ l
     state.briefs = [
       brief({ structured: { building_type: 'biet_thu', site: { width_m: 20, depth_m: 25 } } }),
     ];
-    await openForm('Khu đất');
+    await openForm('Công trình và khu đất');
 
     const input = screen.getByLabelText('Mật độ xây dựng tối đa');
     await userEvent.type(input, '60');
@@ -1017,7 +1095,15 @@ describe('Đơn vị và thứ hạng — hai chỗ màn hình nói khác dữ l
 });
 
 describe('Biểu mẫu chia bước', () => {
-  it('nhà phố đi năm bước, biệt thự sáu — bước khối nhà chỉ có ở biệt thự', async () => {
+  /**
+   * SÁU bước cho mọi loại hình (Haan, 21/09/2026: «12 mục là quá dài»).
+   *
+   * Phép thử canh hai điều, và cả hai đều là quyết định chứ không phải con số ngẫu nhiên:
+   * số bước KHÔNG đổi theo loại hình — đổi từ nhà phố sang biệt thự không được làm thanh tiến
+   * trình dài ra, vì thanh ấy là chỗ người dùng ước lượng còn bao xa; và bước «Khối nhà, thang
+   * và mặt ngoài» có mặt với CẢ HAI, vì thang với ban công thì nhà phố nào cũng có.
+   */
+  it('sáu bước cho cả nhà phố lẫn biệt thự — đổi loại hình không làm dài thêm', async () => {
     state.briefs = [brief()];
     state.surveys = [];
     await openForm();
@@ -1027,28 +1113,36 @@ describe('Biểu mẫu chia bước', () => {
         .getAllByRole('button')
         .map((b) => b.textContent);
 
-    expect(titles()).toHaveLength(5);
-    expect(titles().join('|')).not.toContain('Tổ chức khối nhà');
+    expect(titles()).toHaveLength(6);
+    expect(titles().join('|')).toContain('Khối nhà, thang và mặt ngoài');
 
     await userEvent.click(screen.getByRole('button', { name: 'Biệt thự' }));
     expect(titles()).toHaveLength(6);
-    expect(titles().join('|')).toContain('Tổ chức khối nhà');
+    expect(titles().join('|')).toContain('Khối nhà, thang và mặt ngoài');
   });
 
   it('đổi loại hình KHÔNG đẩy người dùng sang bước khác cái đang xem', async () => {
-    // Bước giữ theo MÃ mục chứ không theo số thứ tự. Giữ theo số thì bỏ đi một bước ở giữa
-    // sẽ làm màn hình nhảy sang một mục khác hẳn, ngay giữa lúc đang gõ.
+    // Bước giữ theo MÃ mục chứ không theo số thứ tự.
+    //
+    // Trước 21/09/2026, đổi sang nhà phố làm BIẾN MẤT hẳn bước «Tổ chức khối nhà», và bài này
+    // canh cú rơi ấy. Sau khi gộp mười hai mục còn sáu thì không bước nào biến mất theo loại
+    // hình nữa — nhóm tổ chức khối nhà chỉ là mấy câu ẩn đi trong một bước vẫn còn. Nên bài
+    // canh điều mạnh hơn và đúng hơn với người dùng: đổi một ô ở bước đầu KHÔNG được làm màn
+    // hình nhảy khỏi bước đang mở.
+    //
+    // (Cú rơi cũ vẫn còn đường xảy ra — quản trị viên ẩn hết câu của một bước — nhưng dựng
+    // được cảnh ấy thì phải có lớp phủ, và đó là việc của bộ kiểm lớp phủ.)
     state.briefs = [brief({ structured: { building_type: 'biet_thu', floors: 2 } })];
     state.surveys = [];
-    await openForm('Tổ chức khối nhà');
+    await openForm('Khối nhà, thang và mặt ngoài');
 
-    // Đổi loại hình ở bước đầu, rồi quay lại: bước vừa xem đã biến mất khỏi biểu mẫu.
-    await goToStep('Loại hình');
+    await goToStep('Công trình và khu đất');
     await userEvent.click(screen.getByRole('button', { name: 'Nhà phố' }));
+    expect(screen.getByRole('heading', { name: /^Công trình/ })).toBeTruthy();
 
-    // Đi tới bước còn lại GẦN NHẤT theo thứ tự cấu hình, không rơi về bước 1.
-    await goToStep('Ưu tiên');
-    expect(screen.getByRole('heading', { name: /^Ưu tiên/ })).toBeTruthy();
+    // Bước cũ vẫn còn nguyên, và quay lại được.
+    await goToStep('Khối nhà, thang và mặt ngoài');
+    expect(screen.getByRole('heading', { name: /^Khối nhà/ })).toBeTruthy();
   });
 
   it('dữ liệu đã gõ còn nguyên sau khi đi qua lại giữa các bước', async () => {
@@ -1056,14 +1150,14 @@ describe('Biểu mẫu chia bước', () => {
     // liệu khi đổi bước là thứ chỉ phát hiện được bằng tay.
     state.briefs = [brief()];
     state.surveys = [];
-    await openForm('Khu đất');
+    await openForm('Công trình và khu đất');
 
     const depth = screen.getByLabelText(/^Chiều sâu lô đất/);
     await userEvent.clear(depth);
     await userEvent.type(depth, '21,5');
 
-    await goToStep('Thành viên gia đình');
-    await goToStep('Khu đất');
+    await goToStep('Gia đình và nếp sinh hoạt');
+    await goToStep('Công trình và khu đất');
 
     // Kiểm GIÁ TRỊ, không kiểm chuỗi: đổi bước làm ô nhập dựng lại, nên nó hiện con số đã lưu
     // (`21.5`) chứ không phải nguyên văn vừa gõ (`21,5`). Cùng hành vi với lúc mở lại hồ sơ.
@@ -1078,7 +1172,9 @@ describe('Biểu mẫu chia bước', () => {
     await openForm();
 
     const bar = screen.getByRole('navigation', { name: 'Các bước của đầu bài' });
-    expect(within(bar).getByRole('button', { name: /^Khu đất.*thiếu \d+/ })).toBeTruthy();
+    expect(
+      within(bar).getByRole('button', { name: /^Công trình và khu đất.*thiếu \d+/ }),
+    ).toBeTruthy();
   });
 
   it('bấm một mục trong «Còn thiếu» thì chuyển sang đúng bước chứa nó', async () => {
@@ -1089,13 +1185,13 @@ describe('Biểu mẫu chia bước', () => {
     await openForm();
 
     await userEvent.click(screen.getByRole('link', { name: /Phong cách kiến trúc/ }));
-    expect(screen.getByRole('heading', { name: /^Không gian/ })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /^Khối nhà/ })).toBeTruthy();
   });
 
   it('lưu nháp được ở bước giữa, không bắt đi hết mới được lưu', async () => {
     state.briefs = [brief()];
     state.surveys = [];
-    await openForm('Khu đất');
+    await openForm('Công trình và khu đất');
 
     expect(screen.getByRole('button', { name: 'Lưu nháp' })).toBeTruthy();
     expect(screen.getByRole('button', { name: /^Tiếp/ })).toBeTruthy();
@@ -1115,7 +1211,7 @@ describe('Tự lưu và báo trạng thái', () => {
     // chừng là mất sạch những gì đã gõ ở các bước trước (Webapp Flow 6.3).
     state.briefs = [brief()];
     state.surveys = [];
-    await openForm('Khu đất');
+    await openForm('Công trình và khu đất');
 
     const width = screen.getByLabelText(/^Chiều rộng mặt tiền/);
     await userEvent.clear(width);
@@ -1135,7 +1231,7 @@ describe('Tự lưu và báo trạng thái', () => {
     state.surveys = [];
     await openForm();
 
-    await goToStep('Khu đất');
+    await goToStep('Công trình và khu đất');
     expect(state.saveDraft).not.toHaveBeenCalled();
   });
 
@@ -1145,7 +1241,7 @@ describe('Tự lưu và báo trạng thái', () => {
     // mất hẳn nghĩa.
     state.briefs = [brief({ confirmed_at: '2026-09-01T00:00:00Z' })];
     state.surveys = [];
-    await openForm('Khu đất');
+    await openForm('Công trình và khu đất');
 
     const width = screen.getByLabelText(/^Chiều rộng mặt tiền/);
     await userEvent.clear(width);
@@ -1162,7 +1258,7 @@ describe('Tự lưu và báo trạng thái', () => {
     // chỗ nào nêu được. Một ngõ cụt kín.
     state.briefs = [brief({ confirmed_at: '2026-09-01T00:00:00Z' })];
     state.surveys = [];
-    await openForm('Khu đất');
+    await openForm('Công trình và khu đất');
 
     expect(screen.getByRole('heading', { name: 'Nguyên nhân điều chỉnh' })).toBeTruthy();
     // Và nút không được tự xưng là «Lưu nháp»: bản đã xác nhận không có nháp.
@@ -1213,7 +1309,7 @@ describe('Không mất phần vừa gõ', () => {
           release = () => resolve(undefined);
         }),
     );
-    await openForm('Khu đất');
+    await openForm('Công trình và khu đất');
 
     const width = screen.getByLabelText(/^Chiều rộng mặt tiền/);
     await userEvent.clear(width);
@@ -1233,7 +1329,7 @@ describe('Không mất phần vừa gõ', () => {
     // «Lưu» là mất cả buổi khai (AFD 6.3). Hộp tự dựng, không `window.confirm`.
     state.briefs = [brief()];
     state.surveys = [];
-    await openForm('Khu đất');
+    await openForm('Công trình và khu đất');
 
     const width = screen.getByLabelText(/^Chiều rộng mặt tiền/);
     await userEvent.clear(width);
@@ -1257,7 +1353,7 @@ describe('Không mất phần vừa gõ', () => {
   it('chưa sửa gì thì «Hủy» đóng ngay, không hỏi thừa', async () => {
     state.briefs = [brief()];
     state.surveys = [];
-    await openForm('Khu đất');
+    await openForm('Công trình và khu đất');
     await userEvent.click(screen.getByRole('button', { name: 'Hủy' }));
     expect(screen.queryByRole('alertdialog')).toBeNull();
     expect(screen.queryByLabelText(/^Chiều rộng mặt tiền/)).toBeNull();
@@ -1271,7 +1367,7 @@ describe('Ô số không được nhận rồi vứt đi', () => {
     // state của chính ô nhập, nên không có cách nào nhận ra.
     state.briefs = [brief()];
     state.surveys = [];
-    await openForm('Khu đất');
+    await openForm('Công trình và khu đất');
 
     const depth = screen.getByLabelText(/^Chiều sâu lô đất/);
     await userEvent.clear(depth);
@@ -1289,7 +1385,7 @@ describe('Ô số không được nhận rồi vứt đi', () => {
     state.surveys = [];
     await openForm();
 
-    const floors = screen.getByLabelText(/^Số tầng/);
+    const floors = screen.getByLabelText('Số tầng');
     await userEvent.clear(floors);
     await userEvent.type(floors, '0');
 
@@ -1304,7 +1400,7 @@ describe('Ô số không được nhận rồi vứt đi', () => {
   it('số hợp lệ thì KHÔNG kêu — kể cả lúc đang gõ dở dấu thập phân', async () => {
     state.briefs = [brief()];
     state.surveys = [];
-    await openForm('Khu đất');
+    await openForm('Công trình và khu đất');
 
     const depth = screen.getByLabelText(/^Chiều sâu lô đất/);
     await userEvent.clear(depth);

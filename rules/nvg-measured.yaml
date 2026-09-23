@@ -156,6 +156,21 @@
 #    có trong `rules/base/` với nguồn QCVN không kèm số mục, và đã gỡ cùng cả gói pháp quy
 #    (T30, 12/09/2026). Cần Phòng Thiết kế cho một con số — xem mục 9 của phương án.
 #
+#    22/09/2026 — thêm số đo, VẪN để trống. Bốn hồ sơ mới cho hai vế nữa: HS-03 (liền kề trong
+#    ngõ, ba tầng vẽ giống hệt nhau) vế rộng **0,90**; HS-06 (mái Nhật hai tầng) vế rộng **1,00**.
+#    Khoảng đo được nay là 0,83 · 0,90 · 1,00 trên 4 dự án — phân bố rõ hơn nhưng **cận dưới
+#    không nhúc nhích**, nên thế lưỡng nan vẫn y nguyên: đặt ngưỡng 0,9 là báo vi phạm trên chính
+#    thang NVG đã xây. Câu hỏi cho Phòng Thiết kế không phải «rộng bao nhiêu» mà «0,83 m là ngoại
+#    lệ chấp nhận được hay là chỗ đáng cảnh báo».
+#
+#    Đo kèm trong cùng đợt, ghi ở đây cho khỏi mất (chi tiết: `doc/design/13-ho-so-thuc-te.md`
+#    mục 13.16.1) — KHÔNG khai thành quy tắc vì cả hai mẫu đều là thang HAI VẾ, mà `applies_to`
+#    chỉ phân biệt được loại hình chứ không phân biệt số vế; khai ra thì mọi thang một vế đều
+#    bị bắt oan:
+#      ô thang 2 vế   3.200 × 2.000 (HS-03, kể cả ô bậc quạt) · 2.500 × 3.470 lọt lòng (HS-06)
+#      khe giữa 2 vế  200 mm, trong khe đặt lan can dày 100 (HS-03) · 500 mm, lỗ thông 380 (HS-06)
+#      mặt bậc        250 mm trên CẢ BỐN vế — con số chắc nhất của đợt đo
+#
 # 2. BẾP + ĂN GỘP. Hai mẫu đo được (3,585 và 4,49 m; 15,3 và 21,5 m²) đều là bếp GỘP với phòng
 #    ăn, nên KHÔNG áp cho bếp riêng. `room_min_dimension_kitchen` 1,8 m giữ nguyên cho bếp riêng.
 #    Quy tắc cho phòng ghép chỉ khai được sau khi hợp đồng có `also` (đợt C) — khai trước thì nó

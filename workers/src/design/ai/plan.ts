@@ -73,6 +73,8 @@ import {
 } from './arrange';
 import { SPLIT_MIN_CM } from './arrange/grid';
 import { buildableFromDigest, type BuildableBox } from './buildable';
+import { briefDemands, type BriefDemands } from './brief-demands';
+import { labelReservedShaft } from './plan-demands';
 import type { Rect } from './draw/geometry';
 import type { DrawNote } from './draw/notes';
 import {
@@ -248,6 +250,13 @@ export interface PlanContext {
   narrative: string;
   /** Tri thức ĐẦY ĐỦ — bộ kiểm danh mục đọc nó. Không gửi nguyên cho mô hình. */
   knowledge: HouseKnowledge;
+  /**
+   * Đòi hỏi suy từ đầu bài (T65), KÈM `warnings` — cổng mặt bằng và màn hình đều đọc từ đây.
+   *
+   * `knowledge.brief_demands` mang đúng phần ấy trừ `warnings`, vì nó đi vào lời dẫn. Hai chỗ
+   * không lệch nhau được: `briefDemands` là hàm THUẦN, cùng đầu bài thì cùng kết quả.
+   */
+  demands: BriefDemands;
   /** Phần tri thức GỬI cho mô hình — giống hệt nhau ở mọi lượt, để bộ nhớ đệm của nhà cung cấp đọc lại. */
   modelKnowledge: HouseModelKnowledge;
   /** Lược đồ gửi cho mô hình: hợp đồng `ai-house-intent`. */
@@ -480,6 +489,7 @@ export function modelConstraints(
 
 export function planContext(input: PlanContextInput): PlanContext {
   const buildable = buildableFromDigest(input.digest);
+  const demands = briefDemands(input.digest, input.fidelity);
   const buildableCm = buildableRectCm(buildable);
   const faces = siteFaces(input.digest.site, input.siteContext);
   const accessFaces = input.digest.site.main_entrance_side
@@ -531,6 +541,7 @@ export function planContext(input: PlanContextInput): PlanContext {
   return {
     buildable,
     buildableCm,
+    demands,
     northDeg: northDegFor(input.digest.site.orientation),
     openFaces: faces.open,
     accessFaces,
@@ -711,6 +722,7 @@ export function arrangeFor(
     isTop: level === context.levels[context.levels.length - 1],
     program,
     buildableCm: context.buildableCm,
+    balcony: context.demands.balcony,
     construction: input.construction,
     groups: input.groups,
     mergeAllowed: input.mergeAllowed,
@@ -849,15 +861,18 @@ export function assemblePlan(input: PlanAssembleInput): AssembledPlan {
     issues.push(...geometry.issues);
     notes.push(...geometry.notes);
     // Không gian mở chia thành khu để tờ vẽ ghi tên từng khu (T48) — nhãn đọc, không phải tường.
-    const rooms = withMergedParts(
-      geometry.level.rooms,
-      (id) => {
-        const space = input.program.spaces.find((entry) => entry.id === id);
-        return space ? { type: space.type, target: space.target_area_m2 } : null;
-      },
-      input.groups.passage
-        ? { cooking: input.groups.passage.cooking, quiet: input.groups.passage.quiet }
-        : undefined,
+    const rooms = labelReservedShaft(
+      withMergedParts(
+        geometry.level.rooms,
+        (id) => {
+          const space = input.program.spaces.find((entry) => entry.id === id);
+          return space ? { type: space.type, target: space.target_area_m2 } : null;
+        },
+        input.groups.passage
+          ? { cooking: input.groups.passage.cooking, quiet: input.groups.passage.quiet }
+          : undefined,
+      ),
+      input.context.demands.elevator,
     );
     return {
       ...geometry.level,
@@ -937,6 +952,11 @@ export function finalisePlan(input: PlanAssembleInput): PlanFinal {
     buildable: input.context.buildableCm,
     doorExemptTypes: input.groups.noDoorRequired,
     verticalTypes: input.groups.vertical,
+    demands: {
+      elevator: input.context.demands.elevator,
+      balcony: input.context.demands.balcony,
+      spaces: input.context.demands.spaces,
+    },
   });
   const score = scorePlan({
     plan: assembled.payload,
@@ -949,10 +969,17 @@ export function finalisePlan(input: PlanAssembleInput): PlanFinal {
     passage: input.groups.passage ?? null,
     areaNorms: input.areaNorms ?? null,
   });
+  // Nhắc nghề suy từ đầu bài (T65) đi cùng đường với ghi chú của bộ vẽ: chúng hiện cạnh mặt bằng
+  // để kiến trúc sư quyết, và KHÔNG bao giờ chặn — đó là ranh giới T52.
+  const briefNotes: DrawNote[] = input.context.demands.warnings.map((message) => ({
+    code: 'brief_demand_warning',
+    message,
+  }));
+
   return {
     payload: { ...assembled.payload, score: scoreForArtifact(score) },
     check: { ...check, blocking: [...assembled.issues, ...check.blocking] },
-    notes: assembled.notes,
+    notes: [...assembled.notes, ...briefNotes],
     wallsDerived: true,
     score,
   };
