@@ -869,7 +869,7 @@ trông vững mà thật ra là suy diễn từ hai căn nhà.
 | Tầng | Ví dụ | Cần bao nhiêu hồ sơ | Hai hồ sơ này |
 |---|---|---|---|
 | **Từ vựng và quy ước** — tất định | nhãn phòng, tên lớp, mẫu khung tên, bảng mã chữ, danh mục tờ, quy cách cửa | **n = 1 đã đủ** — thấy một lần nghĩa là nó có thật | **Đủ. Đã rút, xem dưới** |
-| **Định mức và phân bố** — thống kê | diện tích phòng theo bề rộng lô, tỉ lệ đặc rỗng, năng suất | `kb/space_norms.yaml` tự khai `priors.min_samples: 15` | **Không đủ** |
+| **Định mức và phân bố** — thống kê | diện tích phòng theo bề rộng lô, tỉ lệ đặc rỗng, năng suất | `kb/space_norms.yaml` khai `priors.min_samples: 5` (Haan hạ từ 15, 23/09/2026 — Q-49) | **Hai hồ sơ: không đủ. Kho 7 bộ hiện nay: đủ** |
 | **Cặp mẫu đầu bài → phương án** | thứ duy nhất làm few-shot prompt thật | vài chục | **Không tồn tại trong kho** (13.3) |
 
 **Haan trả lời 06/09/2026, và câu trả lời đóng một tầng lại rồi mở tầng kia ra:**
@@ -881,6 +881,9 @@ trông vững mà thật ra là suy diễn từ hai căn nhà.
   vai, từ "nên soát" thành đường DUY NHẤT** để những con số đó thôi là phỏng đoán.
   ⚠️ Đừng hạ `priors.min_samples` xuống cho khớp số hồ sơ đang có. Hạ xuống 2 thì phân bố tính
   ra từ hai căn nhà, và nó sẽ trông y hệt một con số đã được kiểm chứng.
+  **Cập nhật 23/09/2026 (Q-49):** Haan hạ ngưỡng xuống **5**, sau khi kho lên 7 bộ. Cảnh báo
+  trên vẫn đúng và cố ý giữ nguyên ở đây — nó là cái giá phải trả, không phải cái đã biến mất.
+  Hai điều kiện đi kèm quyết định ấy nằm ở chú thích `priors` trong `kb/space_norms.yaml`.
 - **Q-28 — CÓ, từ dự án tới sẽ ghi lại bản vẽ giai đoạn phương án.** Tầng ba bắt đầu tích luỹ
   từ đây. Còn một chi tiết phải chốt trong cách ghi: bản phương án lưu **kèm đầu bài của chính
   nó**, nếu không thì chỉ là thêm một bản vẽ rời và cặp mẫu vẫn không hình thành.
@@ -979,8 +982,10 @@ sơ thật hơn.
 
 > ⚠️ **Q-27 đã hết đúng.** Mục 13.15 ghi "sẽ KHÔNG có thêm hồ sơ trong giai đoạn demo" (Haan,
 > 06/09/2026). Tính cả đợt này, kho đã có **7 bộ** (2 cũ + 5 mới; 2 trong 5 còn nén `.rar`).
-> Ngưỡng `priors.min_samples: 15` vẫn chưa đạt, nên **tầng "định mức và phân bố" vẫn đóng** —
-> nhưng lý do đổi từ "không bao giờ có thêm" thành "chưa đủ". Xem câu hỏi Q-31 cuối mục này.
+> **Trả lời Q-49 ngày 23/09/2026:** Haan hạ `priors.min_samples` **15 → 5** (cách A — hạ thẳng,
+> không nới biên độ theo n). Kho 7 bộ vượt ngưỡng, nên **tầng "định mức và phân bố" nay MỞ**.
+> Vượt ngưỡng chỉ mở tầng ấy, không nâng số rút ra thành định mức: chúng vào điểm và cảnh báo,
+> không loại phương án (T52). Số ở mục `spaces` vẫn phải do kiến trúc sư NVG ấn định (Q-18).
 
 ### Bốn hồ sơ và mã dùng trong `kb/`
 
@@ -1126,7 +1131,7 @@ hơn (+2,22). Đây là thứ chỉ hồ sơ thật nói được, và nó quy�
 
 Bệ cửa sổ là chỗ lệch thật sự: HS-01 đo +0,900 trên mặt cắt, HS-04 khai +0,700 trên bảng thống
 kê. Không phải sai số đo — hai công trình làm khác nhau. **Không sửa giá trị đang khai**; cần
-Phòng Thiết kế cho biết mức mặc định (Q-32).
+Phòng Thiết kế cho biết mức mặc định (Q-50).
 
 HS-03 và HS-05 dùng chung một quy cách cửa sổ ghi bằng chữ: **1.200 × 1.200, "cửa sổ khung sắt –
 pa-nô kính – 2 cánh"**. HS-03 dùng **cửa cuốn** cho gara.
@@ -1178,7 +1183,7 @@ diện tích thì phải dựng lại đa giác phòng từ đồ thị tim tư�
 2. **Không có bậc tam cấp.** Hợp đồng `ai-architectural-floorplan` không có đối tượng nào cho bậc
    ở lối vào, nên tờ vẽ engine sinh ra có cửa chính mở thẳng ra sân mà không có bậc — trong khi
    **cả ba hồ sơ có sân đều chênh 430–730 mm**. Thêm nó là sửa hợp đồng + lời dẫn + bộ vẽ +
-   phép thử, tức một đợt việc riêng, không phải hệ quả phụ của đợt đo này (Q-33).
+   phép thử, tức một đợt việc riêng, không phải hệ quả phụ của đợt đo này (Q-51).
 3. **Không đánh số bậc.** Hai trong bốn hồ sơ đánh số bậc trên mặt bằng. Đây là việc thuần bộ vẽ,
    rẻ, và không đụng hợp đồng.
 

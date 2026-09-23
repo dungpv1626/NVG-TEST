@@ -28,8 +28,8 @@ do_duoc:
   ho_so: 'HS-01 — nhà phố 5 tầng + phòng KTTM (52 tờ kiến trúc)'
   to: 'kt/51 thống kê cửa; kt/42–kt/50 chi tiết cửa; cao độ đọc từ mặt cắt'
   canh_bao: >-
-    MỘT công trình. Đủ để BÁC một con số sai, chưa đủ để dựng phân bố. Ngưỡng thống kê là
-    15 công trình (`kb/space_norms.yaml`, mục `priors.min_samples`).
+    MỘT công trình. Đủ để BÁC một con số sai, chưa đủ để dựng phân bố. Ngưỡng thống kê ở
+    `kb/space_norms.yaml` (`priors.min_samples`) — Haan hạ 15 → 5 ngày 23/09/2026 (Q-49).
 
 do_duoc_2:
   ngay: '2026-09-22'
@@ -37,9 +37,11 @@ do_duoc_2:
   to: '10 tờ mặt bằng (công năng, nội thất, kiến trúc, mái, tổng thể); bảng thống kê cửa của HS-04'
   bao_cao: 'doc/design/13-ho-so-thuc-te.md mục 13.16'
   canh_bao: >-
-    Bốn công trình, nâng kho lên 6 (7 nếu tính bộ chưa giải nén). VẪN dưới ngưỡng 15, nên mọi
-    con số ở đây là CHỈ DẤU, không phải định mức. Đợt này KHÔNG đổi một giá trị nào — chỉ đổi
-    mức tin cậy và nới khoảng quan sát đã ghi. Xem 13.16 để biết chỗ nào hai đợt nói khác nhau.
+    Bốn công trình, nâng kho lên 6 (7 nếu tính bộ chưa giải nén). Ngưỡng nay là 5 (Q-49,
+    23/09/2026) nên kho ĐÃ vượt — nhưng vượt ngưỡng chỉ MỞ tầng thống kê, không nâng các con
+    số ở đây lên thành định mức: chúng vẫn là CHỈ DẤU và vẫn không được loại phương án (T52).
+    Đợt này KHÔNG đổi một giá trị nào — chỉ đổi mức tin cậy và nới khoảng quan sát đã ghi.
+    Xem 13.16 để biết chỗ nào hai đợt nói khác nhau.
 
 walls:
   # Xác nhận trên hồ sơ thật: ghi chú kết cấu có cả "GỜ CHÂN TƯỜNG 110" lẫn "… 220",
@@ -123,7 +125,7 @@ stairs:
 # ── Bậc ở lối vào (bậc tam cấp) — ĐO 22/09/2026, CHƯA CÓ NƠI ĐỌC ──────────────────────
 # Ghi ở đây để không mất, và khai thẳng là chưa nối: hợp đồng `ai-architectural-floorplan` không
 # có đối tượng nào cho bậc ở lối vào, nên engine đang vẽ cửa chính mở thẳng ra sân. Thêm nó là
-# sửa hợp đồng + lời dẫn + bộ vẽ + phép thử (Q-33), không phải hệ quả phụ của một đợt đo.
+# sửa hợp đồng + lời dẫn + bộ vẽ + phép thử (Q-51), không phải hệ quả phụ của một đợt đo.
 #
 #   HS-04  chênh 430 mm (−0.450 → −0.020) · 3 bậc · mặt 300–350 · rộng 2.220 · hai bên có má 780
 #   HS-05  chênh 450 mm (−0.450 → ±0.000) · 3 bậc · mặt 300      · rộng 1.090 · bậc đánh số 1 2 3

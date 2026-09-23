@@ -7,10 +7,11 @@
 #  can, mái, vật liệu. Bỏ qua kích thước chi tiết nhỏ (phào, ron, bậc) trừ khi nó là
 #  một thói quen lặp lại giữa các hồ sơ.
 #
-#  ⚠️ n = 6 công trình, dưới ngưỡng 15 của `priors.min_samples` (CLAUDE.md 8.7.5).
-#     Mọi con số ở đây là CHỈ DẤU (thói quen vẽ của NVG), không phải định mức; không
-#     được dùng để loại phương án (T49, T52). Từ vựng/quy ước (loại mái, vật liệu,
-#     thói quen bố cục) thì n = 1 đã đủ để đưa vào danh mục.
+#  ⚠️ n = 6 công trình. Ngưỡng `priors.min_samples` nay là 5 (Q-49, 23/09/2026), nên n
+#     này đã vượt — nhưng vượt ngưỡng chỉ MỞ tầng thống kê. Mọi con số ở đây vẫn là CHỈ
+#     DẤU (thói quen vẽ của NVG), không phải định mức; không được dùng để loại phương án
+#     (T49, T52). Từ vựng/quy ước (loại mái, vật liệu, thói quen bố cục) thì n = 1 đã đủ
+#     để đưa vào danh mục.
 #
 #  ⚠️ CHƯA MÃ NÀO ĐỌC TỆP NÀY. Nó là nguồn để Haan duyệt rồi chép số sang nơi mã đọc:
 #     `kb/facade_vocabulary.yaml` (`roof_defaults`, danh mục) và

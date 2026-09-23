@@ -82,7 +82,8 @@ demands:
     # chiếu tới đứng chờ trước cửa — chỗ đứng chờ là hành lang, đã tính ở nơi khác.
     #
     # ⚠️ NGUỒN: quy cách cabin thang máy gia đình của nhà sản xuất, KHÔNG phải số đo từ hồ sơ
-    # NVG — `priors.min_samples` chưa đủ và chưa có hồ sơ NVG nào có thang máy. Đây là mức SÀN
+    # NVG — chưa hồ sơ NVG nào có thang máy, nên `priors.min_samples` (nay là 5) không áp dụng
+    # được: không phải «chưa đủ mẫu» mà là KHÔNG CÓ mẫu nào. Đây là mức SÀN
     # để bác một «lõi thang» 0,8 m² không lọt nổi cabin nào, không phải kích thước thiết kế.
     # Có số đo thật thì sửa ở đây. Câu hỏi đang chờ Haan xác nhận.
     shaft_m2:

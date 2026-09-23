@@ -4,7 +4,7 @@
 > gốc trong `doc/` (mã tài liệu + số mục). Cần chi tiết thì **đọc tài liệu gốc**.
 >
 > Tách ra tệp riêng cho gọn: **`doc/VAN_DE_CON_MO.md`** (câu hỏi chờ NVG) ·
-> **`doc/design/QUYET_DINH_AI.md`** (nhật ký quyết định T1→T65 của module Thiết kế AI).
+> **`doc/design/QUYET_DINH_AI.md`** (nhật ký quyết định T1→T66 của module Thiết kế AI).
 
 ---
 
@@ -389,7 +389,7 @@ Hàng rào riêng của module; nơi nào mục này im lặng thì áp mục 1�
   `doc/design/README.md` TRƯỚC**: 11 đính chính chỗ tài liệu mô tả sai hiện trạng (Đ7–Đ11 đối chiếu hồ
   sơ thật, sai nặng hơn) + bảng ánh xạ sang bảng/enum đang chạy.
 - Đụng số hoá hồ sơ cũ hoặc bộ xuất CAD → đọc **`doc/design/13-ho-so-thuc-te.md`**.
-- Nhật ký quyết định T1→T65: **`doc/design/QUYET_DINH_AI.md`** (thêm quyết định mới vào cuối tệp đó,
+- Nhật ký quyết định T1→T66: **`doc/design/QUYET_DINH_AI.md`** (thêm quyết định mới vào cuối tệp đó,
   không vào đây).
 - **Hiện trạng chung** (T58, 19/09/2026): **bộ giải CP-SAT nội bộ đã gỡ hẳn** (T10 ghi nó không đạt qua
   thử nghiệm thực tế). Thiết kế tự động chỉ còn nhánh AI — trên giao diện tên **«AI Design»** (ngoại lệ tiếng
@@ -521,7 +521,9 @@ gọi qua Durable Object binding (`getContainer(env.DESIGN_COMPUTE, id)`), có h
 3. RLS gói trong `rls_design_readable` / `rls_design_writable`, dựng trên quyền Module TK — không bảng nào chép lại điều kiện.
 4. Phạm vi tenant suy từ `companies.tenant_id`; `auth_tenant_ids()` cố ý không dùng `auth_sees_all_companies()`.
 5. **`rules/` quyết định hợp lệ; `kb/` quyết định bản vẽ trông thế nào** — đừng trộn. Trước khi ghi số vào
-   `kb/`: từ vựng/quy ước thì n = 1 đủ; định mức/phân bố cần **15 công trình** (`priors.min_samples`) — hiện chưa đủ.
+   `kb/`: từ vựng/quy ước thì n = 1 đủ; định mức/phân bố cần **5 công trình** (`priors.min_samples`,
+   Haan hạ 15 → 5 ngày 23/09/2026, Q-49) — kho nay có 7 bộ nên tầng này đã mở. Vượt ngưỡng chỉ MỞ
+   tầng thống kê: số rút ra ở n nhỏ vẫn chỉ vào điểm và cảnh báo, **không loại phương án** (T52).
 6. **Bản vẽ NVG không có đa giác phòng trên lớp riêng**: tên lớp theo độ đậm nét khi in (`NV-Thay`,
    `NV-Khuat`…), đa giác phòng phải dựng từ đồ thị tim tường. Trình trích xuất **phải** đi vào block
    (`virtual_entities()`), **phải** đọc `ATTRIB`, và một tệp DXF là trọn hồ sơ một bộ môn (22–73 tờ). Ba

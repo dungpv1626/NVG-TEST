@@ -12,10 +12,11 @@
 #
 #  ── BỐN ĐIỀU PHẢI ĐỌC TRƯỚC KHI TIN CON SỐ ───────────────────────────────────
 #
-#  1. **n = 6 công trình, dưới ngưỡng 15 của `priors.min_samples`** (CLAUDE.md
-#     8.7.5). Mọi ngưỡng `[ĐO]` ở đây là CHỈ DẤU — thói quen vẽ của phòng thiết kế
-#     NVG trên sáu ngôi nhà — không phải định mức nghề. Điểm thấp KHÔNG loại một
-#     phương án (T49, T52); nó chỉ trừ điểm và chỉ chỗ yếu.
+#  1. **n = 6 công trình.** Ngưỡng `priors.min_samples` nay là 5 (Haan hạ 15 → 5
+#     ngày 23/09/2026, Q-49), nên n này đã vượt — nhưng vượt ngưỡng chỉ MỞ tầng
+#     thống kê, không biến sáu ngôi nhà thành định mức nghề. Mọi ngưỡng `[ĐO]` ở
+#     đây vẫn là CHỈ DẤU — thói quen vẽ của phòng thiết kế NVG. Điểm thấp KHÔNG
+#     loại một phương án (T49, T52); nó chỉ trừ điểm và chỉ chỗ yếu.
 #  2. **Trọng số là LỰA CHỌN, không phải số đo.** Hồ sơ thật nói được tần suất
 #     («5/6 hồ sơ ốp chân tường tối màu») nhưng không nói được mảng nào quan trọng
 #     hơn mảng nào. Mọi `weight` dưới đây mang nhãn [CHUNG] và sửa được.

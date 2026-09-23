@@ -571,7 +571,7 @@
                 chiều dài ô thang nên mặt bậc là hệ quả, hồ sơ thật giữ mặt bậc 250 và để vế dài
                 theo; (2) <b>không có bậc tam cấp</b> — hợp đồng không có đối tượng nào cho nó, nên
                 cửa chính mở thẳng ra sân trong khi cả ba hồ sơ có sân đều chênh 430–730 mm; (3)
-                không đánh số bậc. → Q-33.<br />
+                không đánh số bậc. → Q-51.<br />
                 · <b>Bẫy mới của bảng mã chữ:</b> giải mã TCVN3 vô điều kiện làm hỏng chuỗi vốn đã
                 Unicode (<code>chính</code> → <code>chớnh</code>, vì <code>í</code> U+00ED trùng mã
                 byte với <code>ớ</code>). Mã trong repo làm đúng nhờ <code>looks_tcvn3()</code> theo
@@ -1346,16 +1346,33 @@
       </p>
 
       <div class="flag">
-        <h3>Q-31 · Q-27 đã hết đúng — kho hồ sơ nay có 7 bộ, xử lý thế nào? — 22/09/2026</h3>
+        <h3>
+          Q-49 <s>đóng</s> · Kho hồ sơ lên 7 bộ — hạ ngưỡng thống kê không? — trả lời 23/09/2026
+        </h3>
         <p class="kv">
-          <b>Chuyện gì đổi</b> Q-27 (06/09/2026) trả lời «giai đoạn demo không xin thêm được hồ sơ,
-          tận dụng hai bộ đã có». Ngày 22/09 Haan gửi thêm <b>năm bộ</b>; kho nay có <b>7 bộ</b> (2
-          còn nén <code>.rar</code>, 1 bộ biệt thự hiện đại chưa đọc).
+          <b>Haan trả lời 23/09/2026 — cách A</b> Hạ <code>priors.min_samples</code> <b>15 → 5</b>,
+          hạ thẳng, không nới biên độ theo <code>n</code>. Kho 7 bộ vượt ngưỡng nên tầng «định mức
+          và phân bố» <b>MỞ</b>. Đã sửa: <code>kb/space_norms.yaml</code> (lên 1.2.0) và sáu chỗ
+          khác từng viết «dưới ngưỡng 15». Quyết định ghi ở <b>T66</b>.
         </p>
         <p class="kv">
-          <b>Cái KHÔNG đổi</b> Ngưỡng <code>priors.min_samples: 15</code> vẫn chưa đạt, nên tầng
-          «định mức và phân bố» vẫn đóng và hook thống kê vẫn trả rỗng.
-          <b>Đừng hạ ngưỡng xuống cho khớp 7</b> — lý lẽ ở mục 13.15 giữ nguyên.
+          <b>Hai điều kiện đi kèm, đừng gỡ</b> (a) Số thống kê rút ở mức <code>n</code> này chỉ vào
+          <b>điểm và cảnh báo</b>, không loại phương án (T52). (b) Số ở mục <code>spaces</code> vẫn
+          phải do kiến trúc sư NVG ấn định (Q-18) — 7 hồ sơ không thay được việc đó. Cảnh báo cũ ở
+          mục 13.15 («đừng hạ ngưỡng cho khớp số hồ sơ đang có») cố ý giữ nguyên: nó là cái giá đã
+          biết, không phải cái đã biến mất.
+        </p>
+        <p class="kv">
+          <b>Chưa đổi hành vi chạy</b> Không dòng TypeScript nào đọc
+          <code>priors.min_samples</code>; nơi duy nhất dùng là hàm
+          <code>kb_room_area_stats</code> (migration 0102), nhận qua tham số, và
+          <b>chưa có lớp gọi nào</b>. Hạ ngưỡng hôm nay không đổi con số nào trên bản vẽ — nó mở
+          đường cho lúc nối hook thống kê vào.
+        </p>
+        <p class="kv">
+          <b>Chuyện gì đổi trước đó</b> Q-27 (06/09/2026) trả lời «giai đoạn demo không xin thêm
+          được hồ sơ, tận dụng hai bộ đã có». Ngày 22/09 Haan gửi thêm <b>năm bộ</b>; kho nay có
+          <b>7 bộ</b> (2 còn nén <code>.rar</code>, 1 bộ biệt thự hiện đại chưa đọc).
         </p>
         <p class="kv">
           <b>Cái ĐỔI</b> Lý do đóng chuyển từ «không bao giờ có thêm» thành <b>«chưa đủ»</b>. Nên
@@ -1373,7 +1390,7 @@
       </div>
 
       <div class="flag">
-        <h3>Q-32 · Bệ cửa sổ: hai hồ sơ hai mức, lấy mức nào? — 22/09/2026</h3>
+        <h3>Q-50 · Bệ cửa sổ: hai hồ sơ hai mức, lấy mức nào? — 22/09/2026</h3>
         <p class="kv">
           HS-01 đo <b>+0.900</b> trên mặt cắt; HS-04 khai <b>+0.700</b> trên bảng thống kê cửa.
           Không phải sai số đo — hai công trình làm khác nhau.
@@ -1388,7 +1405,7 @@
       </div>
 
       <div class="flag">
-        <h3>Q-33 · Có thêm bậc tam cấp vào tờ vẽ không? — 22/09/2026</h3>
+        <h3>Q-51 · Có thêm bậc tam cấp vào tờ vẽ không? — 22/09/2026</h3>
         <p class="kv">
           <b>Hiện trạng</b> Hợp đồng <code>ai-architectural-floorplan</code> không có đối tượng nào
           cho bậc ở lối vào, nên tờ vẽ engine sinh ra có cửa chính mở thẳng ra sân — trong khi
@@ -1414,7 +1431,7 @@
           <b>Q-27</b> Giai đoạn demo <b>không xin thêm được hồ sơ</b>: bản thiết kế là thông tin
           nhạy cảm, khách hàng hạn chế cung cấp. Tận dụng hai bộ đã có.
           <b class="warn">⚠️ Hết đúng từ 22/09/2026</b> — Haan gửi thêm năm bộ; kho nay có 7. Xem
-          <b>Q-31</b> ở trên.
+          <b>Q-49</b> ở trên.
         </p>
         <p class="kv">
           <b>Q-28</b> <b>Có</b> — từ dự án tới sẽ ghi lại bản vẽ giai đoạn phương án.
