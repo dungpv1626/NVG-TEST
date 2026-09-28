@@ -1,0 +1,12 @@
+erDiagram
+  tenants ||--o{ design_artifact : "phạm vi khách thuê"
+  design_projects ||--o{ design_artifact : "kết quả từng bước"
+  design_artifact ||--o{ design_artifact_edge : "vết xuất xứ"
+  design_artifact ||--o{ design_head : "bản đang hiệu lực"
+  design_projects ||--o{ design_head : "trỏ bản hiệu lực"
+  design_projects ||--o{ design_publication : "hồ sơ phát hành"
+  design_projects ||--o{ design_project_assignment : "phân công bộ môn"
+  design_projects ||--o{ design_ai_call : "nhật ký gọi mô hình"
+  design_artifact ||--o{ design_ai_call : "kết quả lượt gọi"
+  design_projects ||--o{ kb_record : "hồ sơ cũ đã số hoá"
+  tenants ||--o{ design_setting : "cấu hình riêng"

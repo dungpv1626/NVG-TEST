@@ -1,0 +1,19 @@
+flowchart TB
+  NEN["NEN — Nền tảng dùng chung<br/>pháp nhân · người dùng · phân quyền · phê duyệt · tham số · kho hồ sơ · nhắc việc"]
+  subgraph KD["Kinh doanh và thiết kế"]
+    direction TB
+    CRM["CRM — Khách hàng, cơ hội"] ~~~ DA["DA — Dự án, đấu thầu"] ~~~ TK["TK — Thiết kế, gồm AI Design"] ~~~ HD["HD — Hợp đồng"]
+  end
+  subgraph VH["Vận hành"]
+    direction TB
+    TC["TC — Thi công, hiện trường"] ~~~ SX["SX — Sản xuất, cho thuê giàn giáo"] ~~~ MH["MH — Mua hàng, vật tư"] ~~~ KHO["KHO — Kho đa địa điểm"]
+  end
+  subgraph BO["Back Office"]
+    direction TB
+    KT["KT — Kế toán, tài chính"] ~~~ NS["NS — Nhân sự, hành chính"]
+  end
+  BC["BC — Báo cáo và Dashboard điều hành cho Ban Giám đốc"]
+  NEN --> KD & VH & BO
+  KD & VH & BO --> BC
+  style BC fill:#1F5F4B,color:#FFFFFF,stroke:#1F5F4B
+  style NEN fill:#1F5F4B,color:#FFFFFF,stroke:#1F5F4B

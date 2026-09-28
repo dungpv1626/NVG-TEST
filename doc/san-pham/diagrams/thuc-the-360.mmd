@@ -1,0 +1,22 @@
+flowchart TB
+  CTY["Pháp nhân<br/>(NVC · NVO · NVS · NVG)"]
+  USER["Người dùng"]
+  KH["Khách hàng"]
+  CH["Cơ hội kinh doanh"]
+  DA["Dự án / Gói thầu"]
+  TK["Dự án thiết kế"]
+  HD["Hợp đồng"]
+  CT["Công trình"]
+  KH --> CH
+  CH --> DA
+  CH --> TK
+  DA --> HD
+  TK --> HD
+  HD --> CT
+  CTY -.- KH
+  CTY -.- HD
+  USER -.- CH
+  classDef chung fill:#FFF6E0,stroke:#D9A441;
+  classDef gd fill:#EAF1EE,stroke:#1F5F4B;
+  class CTY,USER,KH chung
+  class CH,DA,TK,HD,CT gd

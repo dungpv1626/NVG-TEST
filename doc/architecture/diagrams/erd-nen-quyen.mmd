@@ -1,0 +1,11 @@
+erDiagram
+  tenants ||--o{ companies : "chứa"
+  companies ||--o{ user_companies : "gán"
+  users ||--o{ user_companies : "gán"
+  roles ||--o{ user_companies : "vai trò"
+  roles ||--o{ permissions : "quyền theo phân hệ"
+  roles ||--o{ role_capabilities : "năng lực chuỗi"
+  roles ||--o{ approval_limits : "hạn mức duyệt"
+  roles ||--o{ sla_definitions : "hạn xử lý"
+  users ||--o{ user_site_assignments : "phân công"
+  construction_sites ||--o{ user_site_assignments : "phạm vi"

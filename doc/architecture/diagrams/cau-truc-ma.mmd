@@ -1,0 +1,23 @@
+flowchart TB
+  subgraph CHAY["Chạy trên máy người dùng và mạng biên"]
+    direction LR
+    WEB["<b>web/</b><br/>Giao diện React<br/>màn hình theo phân hệ"]
+    WK["<b>workers/</b><br/>API tự viết<br/>chỉ /design + tác vụ nền"]
+  end
+  SH["<b>shared/</b> — dùng chung hai bên<br/>Zod schema · type · hằng số nghiệp vụ"]
+  DB["<b>db/</b> — nguồn duy nhất của lược đồ<br/>Drizzle schema + migration + RLS"]
+  subgraph TKAI["Chỉ phân hệ Thiết kế AI"]
+    direction LR
+    CON["<b>contracts/</b><br/>JSON Schema ranh giới"]
+    RUL["<b>rules/</b> · <b>kb/</b><br/>quy tắc và tri thức dạng dữ liệu"]
+    CMP["<b>compute/</b><br/>container số hoá hồ sơ cũ"]
+  end
+  WEB --- SH
+  WK --- SH
+  WEB --> DB
+  WK --> DB
+  CON --> SH
+  WK --- RUL
+  WK --> CMP
+  style SH fill:#FFF6E0,stroke:#D9A441
+  style DB fill:#1F5F4B,color:#FFFFFF,stroke:#1F5F4B

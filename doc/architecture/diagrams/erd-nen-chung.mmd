@@ -1,0 +1,8 @@
+erDiagram
+  approvals ||--o{ approval_decisions : "từng bước"
+  documents ||--o{ document_versions : "phiên bản"
+  system_parameters ||--o{ system_parameter_history : "lịch sử"
+  notifications }o--|| users : "gửi tới"
+  tasks }o--|| users : "giao cho"
+  audit_logs }o--|| users : "ai thao tác"
+  sensitive_access_logs }o--|| users : "ai xem"

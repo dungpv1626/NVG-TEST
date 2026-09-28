@@ -1,0 +1,8 @@
+erDiagram
+  production_orders ||--o{ material_consumption : "tiêu hao nguyên liệu"
+  materials ||--o{ material_consumption : "mã nguyên liệu"
+  customers ||--o{ rental_agreements : "khách thuê"
+  construction_sites ||--o{ rental_agreements : "công trình nội bộ"
+  rental_agreements ||--o{ rental_agreement_items : "dòng cho thuê"
+  materials ||--o{ rental_agreement_items : "mã sản phẩm"
+  scaffolding_assets }o--|| materials : "tài sản theo mã"

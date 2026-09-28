@@ -10,13 +10,13 @@ graph TD
     W2["Worker <b>nvg-api</b><br/>Hono · /design<br/>Cron Trigger cho tác vụ nền"]:::edge
   end
 
-  subgraph SB["Supabase — project awaiwegmuykhctnysvou"]
-    PG[("PostgreSQL<br/>108 bảng · RLS · 131 migration")]:::data
+  subgraph SB["Supabase — một project riêng cho mỗi môi trường"]
+    PG[("PostgreSQL<br/>RLS là hàng rào quyền<br/>cấu trúc bảng do migration trong mã nguồn")]:::data
     AU["Auth"]:::data
     ST["Storage"]:::data
   end
 
-  DK["Docker tại máy phát triển<br/>container compute (Python)"]:::local
+  DK["Container số hoá hồ sơ cũ (Python)<br/>dịch vụ riêng, không giữ trạng thái"]:::local
 
   NET --> W1
   NET --> W2

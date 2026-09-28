@@ -1,0 +1,17 @@
+flowchart LR
+  subgraph HIEN["Hiện tại — dữ liệu phân tán"]
+    direction TB
+    X1["Excel của từng người"]
+    X2["Nhóm Zalo công việc"]
+    X3["Google Drive, email"]
+    X4["Sổ giấy tại công trường, xưởng"]
+  end
+  subgraph MOI["Sau khi có hệ thống — một nguồn dữ liệu"]
+    direction TB
+    N1["Nhập một lần tại nơi phát sinh"]
+    N2["Một cơ sở dữ liệu chung cho 3 pháp nhân"]
+    N3["Phê duyệt, nhắc việc, lịch sử trên cùng hệ thống"]
+    N4["Báo cáo tự tổng hợp cho Ban Giám đốc"]
+    N1 --> N2 --> N3 --> N4
+  end
+  HIEN == "chuyển đổi" ==> MOI

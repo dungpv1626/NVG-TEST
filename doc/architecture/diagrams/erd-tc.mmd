@@ -1,0 +1,11 @@
+erDiagram
+  contracts ||--o{ construction_sites : "mở công trình"
+  bidding_projects ||--o{ construction_sites : "mở công trình"
+  design_projects ||--o{ construction_sites : "mở công trình"
+  construction_sites ||--o{ site_logs : "nhật ký ngày"
+  construction_sites ||--o{ acceptance_records : "nghiệm thu"
+  construction_sites ||--o{ subcontractors : "tổ đội, thầu phụ"
+  construction_sites ||--o{ warranties : "bảo hành"
+  contracts ||--o{ subcontractors : "hợp đồng khoán"
+  subcontractors ||--o{ warranties : "chịu trách nhiệm"
+  warranties ||--o{ warranty_claims : "phản ánh sau bàn giao"

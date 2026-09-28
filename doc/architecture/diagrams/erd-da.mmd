@@ -1,0 +1,11 @@
+erDiagram
+  opportunities ||--o{ bidding_projects : "chuyển thành"
+  bidding_projects ||--o{ boq_items : "khối lượng"
+  bidding_projects ||--o{ estimates : "dự toán"
+  bidding_projects ||--o{ bid_documents : "hồ sơ thầu"
+  bidding_projects ||--o{ project_budgets : "ngân sách"
+  estimates ||--o{ estimate_items : "dòng dự toán"
+  estimates ||--o{ project_budgets : "chuyển thành"
+  boq_items ||--o{ estimate_items : "gắn khối lượng"
+  unit_prices ||--o{ estimate_items : "đơn giá áp dụng"
+  documents ||--o{ boq_items : "bản vẽ nguồn"

@@ -1,0 +1,11 @@
+erDiagram
+  opportunities ||--o{ design_projects : "chuyển thành"
+  design_projects ||--o{ design_surveys : "khảo sát"
+  design_projects ||--o{ design_briefs : "đầu bài"
+  design_projects ||--o{ design_versions : "phiên bản bản vẽ"
+  design_projects ||--o{ design_discipline_tasks : "việc theo bộ môn"
+  design_projects ||--o{ change_requests : "yêu cầu thay đổi"
+  design_surveys ||--o{ design_survey_photos : "ảnh"
+  design_surveys ||--o{ design_briefs : "căn cứ"
+  design_versions ||--o{ design_reviews : "vòng góp ý"
+  documents ||--o{ design_versions : "tệp bản vẽ"
