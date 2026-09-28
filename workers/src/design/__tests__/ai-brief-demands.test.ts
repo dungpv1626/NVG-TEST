@@ -26,6 +26,7 @@ import { briefDemands, matchDemand } from '../ai/brief-demands';
 import {
   allowedBox,
   checkBalconyDemand,
+  checkElevatorLayout,
   checkElevatorStack,
   checkSoftDemands,
   labelReservedShaft,
@@ -85,25 +86,35 @@ describe('trường bỏ trống KHÔNG sinh đòi hỏi', () => {
 // ── 2. Thang máy ────────────────────────────────────────────────────────────────────────
 
 describe('thang máy', () => {
-  it('làm ngay: một ô ở mọi tầng, diện tích theo tải đầu bài khai', () => {
+  it('làm ngay: một ô ở mọi tầng, đúng kích thước giếng gia chủ khai theo hãng thang', () => {
     const d = demandsOf({
-      vertical: { elevator: 'lam_ngay', elevator_capacity: 'lon_630kg' },
+      vertical: {
+        elevator: 'lam_ngay',
+        elevator_capacity: 'lon_630kg',
+        elevator_shaft_width_m: 1.6,
+        elevator_shaft_depth_m: 1.5,
+      },
     });
     expect(d.elevator).toMatchObject({
       mode: 'lam_ngay',
       type: 'elevator',
-      minAreaM2: rawFidelity.demands.elevator.shaft_m2.lon_630kg,
+      minAreaM2: 2.4,
+      minSideM: 1.5,
       reservedLabel: null,
     });
     expect(d.lines.join(' ')).toContain('CHỒNG KHÍT');
+    expect(d.lines.join(' ')).toContain('1.6 × 1.5 m');
   });
 
   it('chừa chỗ lắp sau: vẫn đòi đủ ô và vẫn chồng khít, nhưng mang nhãn ô chừa', () => {
     const d = demandsOf({ vertical: { elevator: 'chua_cho' } });
     expect(d.elevator?.mode).toBe('chua_cho');
     expect(d.elevator?.reservedLabel).toBe(rawFidelity.demands.elevator.reserved_label);
-    // Chưa chọn tải thì dùng mức mặc định của tệp dữ liệu, không phải 0.
-    expect(d.elevator?.minAreaM2).toBe(rawFidelity.demands.elevator.shaft_m2_unknown);
+    // Chưa khai kích thước giếng thì KHÔNG đoán theo tải (Haan 25/09/2026): bỏ phép đo cỡ, nói ra.
+    // Đầu bài mới không tới được đây — `thang_may_thieu_kich_thuoc` chặn ở cổng trước khi gọi mô hình.
+    expect(d.elevator?.minAreaM2).toBeNull();
+    expect(d.elevator?.minSideM).toBeNull();
+    expect(d.warnings.join(' ')).toContain('chưa có kích thước giếng thang');
   });
 
   it('nhà một tầng: không đòi ô nào, nhưng NÓI RA là đã bỏ qua', () => {
@@ -169,6 +180,35 @@ describe('thang máy', () => {
     expect(aligned).toEqual([]);
   });
 
+  it('cổng bác giếng dựng thành DẢI hay to vô lý so với số khai (lượt thật 913bc2ad: 1,6 × 6,45 m)', () => {
+    const lift = demandsOf({
+      vertical: { elevator: 'lam_ngay', elevator_shaft_width_m: 1.3, elevator_shaft_depth_m: 1.4 },
+    }).elevator;
+    expect(lift?.maxAspect).toBe(rawFidelity.demands.elevator.shaft_max_aspect);
+    expect(lift?.maxAreaRatio).toBe(rawFidelity.demands.elevator.shaft_max_area_ratio);
+    const codesOf = (rect: [number, number, number, number]) => {
+      const codes: string[] = [];
+      checkElevatorStack(planWithShaft(rect), lift, (_l, code) => codes.push(code));
+      return codes;
+    };
+    // Dải 1,6 × 6,45 m: dài gấp 4 lần cạnh ngắn, 10 m² cho giếng 1,82 m².
+    expect(codesOf([0, 0, 160, 645])).toContain('elevator_oversized');
+    // 1 × 4 ô như mô hình vẽ: dài quá, và hẹp quá.
+    expect(codesOf([0, 0, 100, 400])).toEqual(
+      expect.arrayContaining(['elevator_oversized', 'elevator_too_narrow']),
+    );
+    // 2 × 2 ô lưới 1 m (4 m² theo tim tường = 2,2 lần số khai) là hình tối thiểu vẽ được: PHẢI qua.
+    expect(codesOf([0, 0, 200, 200])).toEqual([]);
+    // Đúng cỡ khai, và giếng 1,5 × 2 m (tỉ lệ 1,33) cũng qua.
+    expect(codesOf([0, 0, 130, 140])).toEqual([]);
+    expect(codesOf([0, 0, 150, 200])).toEqual([]);
+    // Chưa khai kích thước thì không kiểm được, không bịa.
+    const unsized = demandsOf({ vertical: { elevator: 'lam_ngay' } }).elevator;
+    const codes: string[] = [];
+    checkElevatorStack(planWithShaft([0, 0, 160, 645]), unsized, (_l, code) => codes.push(code));
+    expect(codes).toEqual([]);
+  });
+
   it('bản vẽ ghi «ô chừa», không ghi «thang máy», khi gia chủ mới chừa chỗ', () => {
     const lift = demandsOf({ vertical: { elevator: 'chua_cho' } }).elevator;
     const rooms = labelReservedShaft(
@@ -185,7 +225,120 @@ describe('thang máy', () => {
   });
 });
 
+// ── Kiểu bố trí thang máy (Haan 25/09/2026) ────────────────────────────────────────────
+
+describe('kiểu bố trí thang máy đầu bài khai', () => {
+  const liftOf = (position: string, note?: string) =>
+    demandsOf({
+      floors: 2,
+      vertical: {
+        elevator: 'lam_ngay',
+        elevator_shaft_width_m: 1.6,
+        elevator_shaft_depth_m: 1.6,
+        elevator_position: position,
+        ...(note ? { elevator_layout_note: note } : {}),
+      },
+    } as Partial<DesignBrief>);
+  const codesFor = (position: string, plan: AiFloorPlan) => {
+    const found: string[] = [];
+    checkElevatorLayout(plan, liftOf(position).elevator, (_l, code) => found.push(code));
+    return found;
+  };
+  // Ô thang bộ 200×400 ở x 0–200; hành lang 120 cm ở x 220–340 dọc cả tầng.
+  const stair = { id: 'stair_1', type: 'stair', rect: [0, 0, 200, 400], area_m2: 8 };
+  const hall = {
+    id: 'circulation_1',
+    type: 'circulation',
+    rect: [220, 0, 340, 900],
+    area_m2: 10.8,
+  };
+  const planOf = (lift: number[], extra: object[] = []) =>
+    ({
+      levels: [
+        {
+          level: 1,
+          outline: [],
+          rooms: [
+            stair,
+            hall,
+            { id: 'elevator_1', type: 'elevator', rect: lift, area_m2: 2.56 },
+            ...extra,
+          ],
+        },
+      ],
+    }) as unknown as AiFloorPlan;
+
+  it('câu gửi mô hình nói rõ kiểu bố trí; «khác» mang nguyên lời kiến trúc sư', () => {
+    expect(liftOf('canh_thang_bo').lines.join(' ')).toContain('CẠNH THANG BỘ');
+    expect(liftOf('giua_long_thang_bo').lines.join(' ')).toContain('GIỮA LÒNG THANG BỘ');
+    expect(liftOf('doi_dien_thang_bo').lines.join(' ')).toContain('ĐỐI DIỆN THANG BỘ');
+    expect(liftOf('khac', 'thang máy cuối hành lang').lines.join(' ')).toContain(
+      '«thang máy cuối hành lang»',
+    );
+  });
+
+  it('cạnh thang bộ: chung vách VÀ cùng giáp hành lang thì qua', () => {
+    // Thang máy dưới ô thang, x 0–160 y 420–580: chung vách với thang bộ; hành lang ở x 220 — không chạm.
+    expect(codesFor('canh_thang_bo', planOf([60, 420, 220, 580]))).toEqual([]);
+  });
+
+  it('cạnh thang bộ mà thang máy CHẮN GIỮA thang bộ và hành lang thì bị bác (lượt thật b5202883)', () => {
+    // Hành lang dời sang x 400; thang máy x 220–380 nằm giữa — thang bộ không còn giáp hành lang.
+    const blocked = {
+      levels: [
+        {
+          level: 1,
+          outline: [],
+          rooms: [
+            stair,
+            { ...hall, rect: [400, 0, 520, 900] },
+            { id: 'elevator_1', type: 'elevator', rect: [220, 0, 380, 400], area_m2: 6.4 },
+          ],
+        },
+      ],
+    } as unknown as AiFloorPlan;
+    expect(codesFor('canh_thang_bo', blocked)).toEqual(['elevator_no_common_hall']);
+  });
+
+  it('giữa lòng / cạnh thang bộ mà hai ô không chung vách thì bị bác', () => {
+    const apart = planOf([360, 600, 520, 760]);
+    expect(codesFor('giua_long_thang_bo', apart)).toEqual(['elevator_not_beside_stair']);
+    expect(codesFor('canh_thang_bo', apart)).toContain('elevator_not_beside_stair');
+  });
+
+  it('đối diện thang bộ: hai phía hành lang thì qua; chung vách thì bị bác', () => {
+    expect(codesFor('doi_dien_thang_bo', planOf([360, 0, 520, 160]))).toEqual([]);
+    expect(codesFor('doi_dien_thang_bo', planOf([60, 420, 220, 580]))).toContain(
+      'elevator_not_facing_stair',
+    );
+  });
+
+  it('«kiểu khác» và giá trị cũ không kiểm hình học', () => {
+    const apart = planOf([360, 600, 520, 760]);
+    expect(codesFor('khac', apart)).toEqual([]);
+    expect(codesFor('rieng_biet', apart)).toEqual([]);
+  });
+});
+
 /** Mặt bằng hai tầng, mỗi tầng một ô thang máy 160×160 cm, lệch nhau theo `shift`. */
+/** Một tầng, một giếng thang máy đúng chữ nhật cho trước (cm). */
+function planWithShaft(rect: [number, number, number, number]): AiFloorPlan {
+  return {
+    levels: [
+      {
+        level: 1,
+        outline: [
+          [0, 0],
+          [1200, 0],
+          [1200, 1600],
+          [0, 1600],
+        ],
+        rooms: [{ id: 'lift1', type: 'elevator', rect, area_m2: 0 }],
+      },
+    ],
+  } as unknown as AiFloorPlan;
+}
+
 function planWithLift(shift: [number, number]): AiFloorPlan {
   return {
     levels: shift.map((dx, index) => ({
@@ -347,7 +500,7 @@ describe('ban công đua ra ngoài ranh', () => {
     const out = projectBalconyCells({
       cells: [cell('bal1', { x0: 100, y0: 0, x1: 400, y1: 120 })],
       typeOf,
-      balcony: { ...base, projection: { sides: ['front'], m: 0 } },
+      balcony: { ...base, projection: { front: 0 } },
       level: 2,
       footprint,
     });
@@ -402,6 +555,7 @@ describe('kb và mã nguồn phải nói cùng một thứ', () => {
       'bep_kin_chien_xao',
       'khach_o_lai',
       'lam_viec_tai_nha',
+      'san_trong',
     ]);
     for (const row of fidelity.demands.spaces) {
       expect(handled.has(row.code), `\`${row.code}\` chưa có nhánh trong matchDemand`).toBe(true);
@@ -414,8 +568,10 @@ describe('kb và mã nguồn phải nói cùng một thứ', () => {
     expect(matchDemand('ma_khong_ton_tai', digest)).toBeNull();
   });
 
-  it('cạnh nhỏ nhất của giếng thang khai ở hai tệp kb thì phải bằng nhau', () => {
-    expect(rawNorms.usable.min_side_m.elevator).toBe(rawFidelity.demands.elevator.shaft_min_side_m);
+  it('kích thước giếng thang không còn đoán ở tệp kb nào (Haan 25/09/2026)', () => {
+    expect(rawNorms.usable.min_side_m.elevator).toBeUndefined();
+    expect(rawFidelity.demands.elevator.shaft_m2).toBeUndefined();
+    expect(rawFidelity.demands.elevator.shaft_min_side_m).toBeUndefined();
   });
 
   it('mọi loại phòng bảng đòi hỏi nhắc tới đều có trong từ vựng', () => {
@@ -536,5 +692,42 @@ describe('lời gia chủ thì bác được, suy đoán nghề thì không', ()
     // Không khai cỡ thì vẫn dùng con số chung như trước T65 — không đoán hộ một cỡ xe.
     const unknown = demandsOf({ parking: { cars: 1, motorbikes: 0 } });
     expect(unknown.garageMinM2).toBe(rawFidelity.parking.car_m2);
+  });
+});
+
+// ── T91: mặt bắt buộc / mặt có thể / độ đua từng mặt (Haan 27/09/2026) ───────────────────
+
+describe('ban công theo mặt bắt buộc và mặt có thể (T91)', () => {
+  it('mặt không khai ở hai danh sách thì CẤM; độ đua chỉ ở mặt khai > 0', () => {
+    const b = demandsOf({
+      balconies: {
+        scope: 'theo_tung_phong',
+        required_sides: ['front'],
+        optional_sides: ['left'],
+        projection_by_side: { front: 1.2, left: 0 },
+      },
+    }).balcony!;
+    expect(b.sides).toEqual(['front']);
+    expect(b.optionalSides).toEqual(['left']);
+    expect(b.forbiddenSides).toEqual(['back', 'right']);
+    expect(b.projection).toEqual({ front: 1.2 });
+  });
+
+  it('đầu bài cũ (`sides`) vẫn đọc được: bắt buộc, không suy ra mặt cấm', () => {
+    const b = demandsOf({
+      balconies: { sides: ['front', 'back'], projection_over_boundary: true, projection_m: 1 },
+    }).balcony!;
+    expect(b.sides).toEqual(['front', 'back']);
+    expect(b.forbiddenSides).toEqual([]);
+    expect(b.projection).toEqual({ front: 1, back: 1 });
+  });
+
+  it('mặt có thể có mà không có ban công: không phải lỗi; ban công ở mặt cấm: lỗi', () => {
+    const lines = demandsOf({
+      balconies: { scope: 'theo_tung_phong', required_sides: ['front'], optional_sides: ['left'] },
+    }).lines.join('\n');
+    expect(lines).toMatch(/BẮT BUỘC có ở mặt trước/);
+    expect(lines).toMatch(/CÓ THỂ có ở/);
+    expect(lines).toMatch(/KHÔNG đặt ban công ở/);
   });
 });

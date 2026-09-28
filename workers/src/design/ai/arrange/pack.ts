@@ -58,7 +58,7 @@ export interface PackLeaf {
   role: LeafRole;
   /** Ban công, sân thượng: cạnh DÀI phải nằm trên một mặt thoáng của hình bao. */
   needsOpenFace: boolean;
-  /** Phòng ở, phòng thờ: không lấy cửa từ ô thang (`passage.stair_not_for`) — phải kề hành lang. */
+  /** Phòng không được lấy cửa từ ô thang (ngoài `passage.stair_opens_to`, T74) — phải kề hành lang. */
   noStairDoor: boolean;
   /** Lá phòng mẹ khi đây là phòng khép kín. */
   parent: string | null;
@@ -102,6 +102,8 @@ export interface PenaltyWeights {
   hubLink: number;
   entrance: number;
   wet: number;
+  /** Khu ướt áp mặt tiền (T96). */
+  wetFront: number;
   /**
    * Ô thang tầng có tầng trên chắn TRỌN bề ngang hoặc trọn chiều sâu khối nhà — tầng trên không còn
    * đường đi vòng qua thang (nhà phố 4 m, thang nằm ngang cuối lô: Q-45d, 15/09/2026).
@@ -123,6 +125,7 @@ export const DEFAULT_WEIGHTS: PenaltyWeights = {
   hubLink: 3,
   entrance: 4,
   wet: 1,
+  wetFront: 2,
   stairSpan: 6,
 };
 
@@ -148,7 +151,11 @@ export interface PackEnv {
   /** Tầng này có thang đi LÊN (không phải tầng trên cùng). */
   stairUp: boolean;
   /** Mốc tầng dưới theo tim tường; `null` ở tầng 1. */
-  anchors: { stair: Rect | null; lightWells: Rect[]; wetRooms: Rect[] } | null;
+  anchors: {
+    stair: Rect | null;
+    lightWells: Rect[];
+    wetRooms: Rect[];
+  } | null;
   /**
    * Phần tường trừ khỏi MỖI chiều ô theo tim khi ước lượng sàn đầu bài, cm — bằng một bề dày tường ngoài,
    * mức mất lớn nhất (ô áp tường bao cả hai đầu).
@@ -404,8 +411,51 @@ function placeItem(rect: Rect, item: PackItem, reach: Reach, env: PackEnv): Pack
     return { placed, penalty: evaluate(placed, rect, reach, env) };
   }
 
-  // Phòng khép kín là một dải ở MỘT cạnh của ô, chia dọc dải cho từng phòng con. Thử cả bốn cạnh; cạnh
-  // có đường vào (phía giáp phòng đi xuyên được) để lại cho phòng mẹ mở cửa, nên thử sau cùng.
+  // Ban công khép kín và WC khép kín KHÔNG chung một dải (T96 — lượt 5aba737d: dải chung kéo WC phòng ngủ
+  // chính ra mặt tiền, kẹp giữa hai ban công, ngay trên cửa vào phòng khách). Ban công lấy dải ở mặt
+  // thoáng; phần còn lại của ô nhận dải WC / tủ ở một cạnh khác, và phòng mẹ đứng giữa hai dải.
+  // Hai dải và một dải cùng thử, lấy phạt nhỏ hơn: phòng mẹ không cạnh nào ra mặt thoáng thì dải ban công
+  // riêng thành một dải dài không mặt thoáng (phát lại 5fda70dc: 8,2 lần — luật bắt buộc bác), trong khi dải
+  // chung để ban công ngắn gần vuông, chỉ trừ điểm.
+  const outdoor = item.children.filter((child) => child.needsOpenFace);
+  const inner = item.children.filter((child) => !child.needsOpenFace);
+  const single = placeStrip(rect, item, reach, env, null);
+  if (!outdoor.length || !inner.length) return single;
+  // Chỉ thử dải kép khi dải chung đặt WC / tủ áp MẶT TIỀN (chỗ Haan chỉ): thử ở mọi ô có phòng khép kín
+  // nhân đôi việc tìm cây (phát lại T94 6 s → 28 s, vitest báo «Timeout calling onTaskUpdate»).
+  if (single) {
+    const innerIds = new Set(inner.map((child) => child.id));
+    const onFront = leaves(single.placed).some(
+      (cell) =>
+        innerIds.has(cell.id) && env.openSides.has('y0') && cell.rect.y0 === env.footprint.y0,
+    );
+    if (!onFront) return single;
+  }
+  const outdoorWeight = outdoor.reduce((sum, child) => sum + child.target, 0);
+  const twoStrips = placeStrip(rect, { ...item, children: outdoor }, reach, env, (main) =>
+    placeItem(
+      main,
+      { ...item, children: inner, weight: item.weight - outdoorWeight },
+      narrowReach(reach, rect, main),
+      env,
+    ),
+  );
+  if (!twoStrips) return single;
+  return single && single.penalty < twoStrips.penalty ? single : twoStrips;
+}
+
+/**
+ * Phòng khép kín là một dải ở MỘT cạnh của ô, chia dọc dải cho từng phòng con. Thử cả bốn cạnh; cạnh
+ * có đường vào (phía giáp phòng đi xuyên được) để lại cho phòng mẹ mở cửa, nên thử sau cùng. `placeMain`
+ * dựng phần còn lại của ô (phòng mẹ, có thể kèm dải thứ hai); `null` = phòng mẹ là một lá.
+ */
+function placeStrip(
+  rect: Rect,
+  item: PackItem,
+  reach: Reach,
+  env: PackEnv,
+  placeMain: ((main: Rect) => Packed | null) | null,
+): Packed | null {
   const facing = (side: Side) =>
     reach.sides.has(side) ||
     reach.hubs.some((hub) => sharedEdge(rect, hub) > 0 && touchesSide(rect, hub, side));
@@ -449,7 +499,9 @@ function placeItem(rect: Rect, item: PackItem, reach: Reach, env: PackEnv): Pack
       across,
       item.children.map((child, i) => leaf(child.id, childRects[i]!)),
     );
-    const mainNode = leaf(item.primary.id, main);
+    const mainPacked = placeMain ? placeMain(main) : null;
+    if (placeMain && !mainPacked) continue;
+    const mainNode = mainPacked ? mainPacked.placed : leaf(item.primary.id, main);
     const at = axis === 'x' ? r0.x1 : r0.y1;
     const placed: Placed = {
       kind: 'cut',
@@ -512,6 +564,9 @@ export function evaluate(placed: Placed, region: Rect, reach: Reach, env: PackEn
       l.zoneWeight *
       projectedDistance(env.footprint, zoneOfRect(env.footprint, r), l.zone);
     if (l.street && r.y0 !== env.footprint.y0) penalty += w.street;
+    // Khu ướt quay ra MẶT TIỀN (T96): WC, giặt áp mặt đường là chỗ kiến trúc sư nhà ở Việt Nam tránh —
+    // mặt tiền để phòng khách, phòng ngủ chính, ban công. Cạnh bên và mặt sau thì được (thoáng, thoát mùi).
+    if (l.wet && env.openSides.has('y0') && r.y0 === env.footprint.y0) penalty += w.wetFront;
     // Ban công, lô gia: phải quay CẠNH DÀI ra mặt thoáng (Haan 18/09/2026) — không phải chạm mặt
     // thoáng bằng cạnh nào cũng được. Cùng một luật với cổng `arrange_outdoor_off_face`; ở đây là
     // khoản phạt để bộ xếp chọn đúng chỗ ngay, thay vì để cổng bác cả cây.
@@ -610,7 +665,7 @@ export function evaluate(placed: Placed, region: Rect, reach: Reach, env: PackEn
           entry.leaf &&
           (entry.leaf.role === 'hub' ||
             (l.hostTypes !== null && entry.leaf.types.some((type) => l.hostTypes!.has(type)))) &&
-          // Phòng ở không lấy cửa từ ô thang được (Haan 18/09/2026), nên ô thang không tính là
+          // Chỉ giao thông, khu chung lấy cửa từ ô thang được (T74), nên ô thang không tính là
           // đường vào của nó: phạt ngay ở đây để bộ xếp tìm chỗ kề hành lang, thay vì để cổng bác
           // cả cây rồi rơi sang ứng viên xấu hơn.
           !(l.noStairDoor && entry.leaf.stair) &&

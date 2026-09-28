@@ -105,7 +105,10 @@ describe('Biểu mẫu đầu bài', () => {
     };
     const paths = payload.overlay.sections.flatMap((s) => (s.fields ?? []).map((f) => f.path));
     expect(paths).toContain('custom.co_bep_nuong_ngoai_troi_khong');
-  });
+    // Hạn riêng 15 giây: gõ từng ký tự trên trang dựng cả trăm câu hỏi mất ~1,6 giây khi chạy một mình,
+    // nhưng vượt 5 giây mặc định khi chạy chung với các phép thử bộ xếp nặng CPU của nhóm `logic`
+    // (`npm test`, `mutation-proof`). Đỏ vì HẾT GIỜ, không phải vì biểu mẫu sai — đo 25/09/2026.
+  }, 15_000);
 
   it('không có quyền sửa thì ô nhập khoá và nói ai làm được', async () => {
     state.capability = false;

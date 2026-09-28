@@ -38,6 +38,10 @@ export function houseOf(program: AiSpaceProgram, intents: readonly AiPlanIntent[
 
 export const VILLA_ZONED: HouseIntent = houseOf(VILLA_PROGRAM, VILLA_INTENTS);
 
+// T74 (25/09/2026): ô thang chỉ mở cửa sang giao thông, khu chung, sân thượng, thang máy. Bản phác cũ
+// để WC tầng 1 (cột trái, sau ô thang) và ban công tầng 2 (cột trái, cạnh ô thang) chỉ vào được từ ô
+// thang — nay bị bác. WC tầng 1 dời sang giáp phòng khách, ô thang lấp cột trái; ban công tầng 2 lên
+// mặt trước, giáp phòng ngủ chính.
 export const VILLA_SKETCHES: AiHouseIntent['sketches'] = [
   {
     level: 1,
@@ -48,37 +52,37 @@ export const VILLA_SKETCHES: AiHouseIntent['sketches'] = [
       'garage_1 garage_1 garage_1 garage_1 garage_1 living_1 living_1 living_1 living_1 bedroom_1 bedroom_1 bedroom_1 bedroom_1 bedroom_1 bedroom_1',
       'garage_1 garage_1 garage_1 garage_1 garage_1 living_1 living_1 living_1 living_1 bedroom_1 bedroom_1 bedroom_1 bedroom_1 bedroom_1 bedroom_1',
       'garage_1 garage_1 garage_1 garage_1 garage_1 living_1 living_1 living_1 living_1 bedroom_1 bedroom_1 bedroom_1 bedroom_1 bedroom_1 bedroom_1',
-      'garage_1 garage_1 garage_1 garage_1 garage_1 living_1 living_1 living_1 living_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1',
-      'wc_1 wc_1 stair_1 stair_1 stair_1 living_1 living_1 living_1 living_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1',
-      'wc_1 wc_1 stair_1 stair_1 stair_1 living_1 living_1 living_1 living_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1',
-      'wc_1 wc_1 stair_1 stair_1 stair_1 living_1 living_1 living_1 living_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1',
-      'wc_1 wc_1 stair_1 stair_1 stair_1 living_1 living_1 living_1 living_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1',
-      'wc_1 wc_1 stair_1 stair_1 stair_1 living_1 living_1 living_1 living_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1',
-      'wc_1 wc_1 stair_1 stair_1 stair_1 living_1 living_1 living_1 living_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1',
-      'wc_1 wc_1 stair_1 stair_1 stair_1 living_1 living_1 living_1 living_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1',
-      'wc_1 wc_1 stair_1 stair_1 stair_1 living_1 living_1 living_1 living_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1',
-      'wc_1 wc_1 stair_1 stair_1 stair_1 living_1 living_1 living_1 living_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1',
+      'garage_1 garage_1 garage_1 garage_1 garage_1 living_1 living_1 living_1 living_1 wc_1 wc_1 wc_1 wc_1 wc_1 wc_1',
+      'stair_1 stair_1 stair_1 stair_1 stair_1 living_1 living_1 living_1 living_1 wc_1 wc_1 wc_1 wc_1 wc_1 wc_1',
+      'stair_1 stair_1 stair_1 stair_1 stair_1 living_1 living_1 living_1 living_1 wc_1 wc_1 wc_1 wc_1 wc_1 wc_1',
+      'stair_1 stair_1 stair_1 stair_1 stair_1 living_1 living_1 living_1 living_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1',
+      'stair_1 stair_1 stair_1 stair_1 stair_1 living_1 living_1 living_1 living_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1',
+      'stair_1 stair_1 stair_1 stair_1 stair_1 living_1 living_1 living_1 living_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1',
+      'stair_1 stair_1 stair_1 stair_1 stair_1 living_1 living_1 living_1 living_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1',
+      'stair_1 stair_1 stair_1 stair_1 stair_1 living_1 living_1 living_1 living_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1',
+      'stair_1 stair_1 stair_1 stair_1 stair_1 living_1 living_1 living_1 living_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1',
+      'stair_1 stair_1 stair_1 stair_1 stair_1 living_1 living_1 living_1 living_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1 kitchen_1',
     ],
   },
   {
     level: 2,
     rows: [
+      'balcony_1 balcony_1 balcony_1 balcony_1 circulation_2 circulation_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2',
+      'balcony_1 balcony_1 balcony_1 balcony_1 circulation_2 circulation_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2',
       'master_bedroom_1 master_bedroom_1 master_bedroom_1 master_bedroom_1 circulation_2 circulation_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2',
       'master_bedroom_1 master_bedroom_1 master_bedroom_1 master_bedroom_1 circulation_2 circulation_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2',
       'master_bedroom_1 master_bedroom_1 master_bedroom_1 master_bedroom_1 circulation_2 circulation_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2',
       'master_bedroom_1 master_bedroom_1 master_bedroom_1 master_bedroom_1 circulation_2 circulation_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2',
       'master_bedroom_1 master_bedroom_1 master_bedroom_1 master_bedroom_1 circulation_2 circulation_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2',
-      'master_bedroom_1 master_bedroom_1 master_bedroom_1 master_bedroom_1 circulation_2 circulation_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2',
-      'master_bedroom_1 master_bedroom_1 master_bedroom_1 master_bedroom_1 circulation_2 circulation_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2 bedroom_2',
-      'balcony_1 balcony_1 stair_2 stair_2 circulation_2 circulation_2 wc_2 wc_2 wc_2 wc_2 wc_2 wc_2 wc_2 wc_2 wc_2',
-      'balcony_1 balcony_1 stair_2 stair_2 circulation_2 circulation_2 wc_2 wc_2 wc_2 wc_2 wc_2 wc_2 wc_2 wc_2 wc_2',
-      'balcony_1 balcony_1 stair_2 stair_2 circulation_2 circulation_2 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3',
-      'balcony_1 balcony_1 stair_2 stair_2 circulation_2 circulation_2 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3',
-      'balcony_1 balcony_1 stair_2 stair_2 circulation_2 circulation_2 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3',
-      'balcony_1 balcony_1 stair_2 stair_2 circulation_2 circulation_2 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3',
-      'balcony_1 balcony_1 stair_2 stair_2 circulation_2 circulation_2 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3',
-      'balcony_1 balcony_1 stair_2 stair_2 circulation_2 circulation_2 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3',
-      'balcony_1 balcony_1 stair_2 stair_2 circulation_2 circulation_2 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3',
+      'stair_2 stair_2 stair_2 stair_2 circulation_2 circulation_2 wc_2 wc_2 wc_2 wc_2 wc_2 wc_2 wc_2 wc_2 wc_2',
+      'stair_2 stair_2 stair_2 stair_2 circulation_2 circulation_2 wc_2 wc_2 wc_2 wc_2 wc_2 wc_2 wc_2 wc_2 wc_2',
+      'stair_2 stair_2 stair_2 stair_2 circulation_2 circulation_2 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3',
+      'stair_2 stair_2 stair_2 stair_2 circulation_2 circulation_2 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3',
+      'stair_2 stair_2 stair_2 stair_2 circulation_2 circulation_2 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3',
+      'stair_2 stair_2 stair_2 stair_2 circulation_2 circulation_2 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3',
+      'stair_2 stair_2 stair_2 stair_2 circulation_2 circulation_2 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3',
+      'stair_2 stair_2 stair_2 stair_2 circulation_2 circulation_2 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3',
+      'stair_2 stair_2 stair_2 stair_2 circulation_2 circulation_2 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3 bedroom_3',
     ],
   },
 ];

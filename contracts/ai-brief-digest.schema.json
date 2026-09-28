@@ -577,9 +577,27 @@
           "type": ["string", "null"],
           "enum": ["nho_350kg", "vua_450kg", "lon_630kg", null]
         },
+        "elevator_shaft_width_m": {
+          "type": ["number", "null"]
+        },
+        "elevator_shaft_depth_m": {
+          "type": ["number", "null"]
+        },
         "elevator_position": {
           "type": ["string", "null"],
-          "enum": ["canh_thang_bo", "rieng_biet", "chua_quyet", null]
+          "enum": [
+            "giua_long_thang_bo",
+            "canh_thang_bo",
+            "doi_dien_thang_bo",
+            "khac",
+            "rieng_biet",
+            "chua_quyet",
+            null
+          ]
+        },
+        "elevator_layout_note": {
+          "type": ["string", "null"],
+          "maxLength": 300
         },
         "stair_type": {
           "type": ["string", "null"],
@@ -613,25 +631,73 @@
       "type": ["object", "null"],
       "additionalProperties": false,
       "properties": {
+        "required_sides": {
+          "type": ["array", "null"],
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["front", "back", "left", "right"]
+          },
+          "description": "Mặt BẮT BUỘC có ban công (T91). Thiếu ban công ở mặt này là sai đầu bài — bác phương án."
+        },
+        "optional_sides": {
+          "type": ["array", "null"],
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["front", "back", "left", "right"]
+          },
+          "description": "Mặt CÓ THỂ có ban công (T91) — có hay không đều được. Mặt không nằm trong hai danh sách thì KHÔNG được đặt ban công (khi gia chủ đã khai ít nhất một mặt)."
+        },
+        "projection_by_side": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "front": {
+              "type": ["number", "null"],
+              "minimum": 0,
+              "maximum": 3
+            },
+            "back": {
+              "type": ["number", "null"],
+              "minimum": 0,
+              "maximum": 3
+            },
+            "left": {
+              "type": ["number", "null"],
+              "minimum": 0,
+              "maximum": 3
+            },
+            "right": {
+              "type": ["number", "null"],
+              "minimum": 0,
+              "maximum": 3
+            }
+          },
+          "description": "Độ đua ra ngoài ranh của ban công TỪNG MẶT, mét (T91, Haan 27/09/2026). 0 = không đua — ban công nằm trong diện tích sàn. Trống = chưa trả lời: chương trình giữ ban công trong ranh và nói ra. Đua sang đất nhà khác bị chặn ở bước soát đầu bài; đua ra đường, hẻm, ao hồ chỉ cảnh báo."
+        },
         "sides": {
           "type": ["array", "null"],
           "uniqueItems": true,
           "items": {
             "type": "string",
             "enum": ["front", "back", "left", "right"]
-          }
+          },
+          "description": "CŨ (trước T91): đọc như `required_sides`. Đầu bài mới không ghi trường này."
         },
         "scope": {
           "type": ["string", "null"],
           "enum": ["moi_tang", "chi_mat_tien", "theo_tung_phong", "khong_co", null]
         },
         "projection_over_boundary": {
-          "type": ["boolean", "null"]
+          "type": ["boolean", "null"],
+          "description": "CŨ (trước T91): thay bằng `projection_by_side`; chỉ còn để đọc đầu bài đã lưu."
         },
         "projection_m": {
           "type": ["number", "null"],
           "minimum": 0,
-          "maximum": 3
+          "maximum": 3,
+          "description": "CŨ (trước T91): thay bằng `projection_by_side`; chỉ còn để đọc đầu bài đã lưu."
         },
         "drying_balcony": {
           "type": ["boolean", "null"]

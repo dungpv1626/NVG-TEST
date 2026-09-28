@@ -42,7 +42,7 @@ import { recordingClient } from '../ai/prompt-record';
 import {
   AiPlanRejected,
   callHouseModel,
-  evaluateHouse,
+  evaluateHouseBest,
   finalisePlan,
   planContext,
   programGenerator,
@@ -56,9 +56,11 @@ import {
   type PlanVariant,
   type RetryKind,
 } from '../ai/plan';
+import { groupsBelowFloor } from '../ai/plan-score';
 import type { AiPrompts } from '../ai/prompts';
 import type { PlanIssue } from '../ai/plan-check';
 import type { RoomGroups } from '../ai/tree';
+import type { MandatoryRules } from '../ai/mandatory';
 
 /** Tham số của một instance Workflow — chỉ dữ liệu hạng 2 đã lược danh tính, và chuỗi nhỏ. */
 export interface AiDesignParams {
@@ -153,6 +155,8 @@ export interface PlanStepDeps {
   fidelity: BriefFidelity;
   /** Thước chấm chất lượng — điểm đi vào payload artifact (T27, Đợt C′). */
   quality: PlanQuality;
+  /** Luật bố trí BẮT BUỘC của Haan (T71, `rules/nvg-mandatory.yaml`) — luôn bật. */
+  mandatory: MandatoryRules;
   /** Gói quy tắc bộ chấm đọc: LUÔN kinh nghiệm + đo được, không phụ thuộc ô tích của kỹ sư. */
   scoreRules: RulePack;
   /** Định mức diện tích nghề (`kb/space_norms.yaml`) — chỉ trừ điểm (T48, Haan chốt 16/09/2026). */
@@ -230,6 +234,8 @@ export async function proposeHouse(
   avoid?: readonly string[],
   /** Ý định lượt trước (JSON, đã đánh mã) khi lượt này SỬA nó thay vì khai mới — xem `retryPlan`. */
   previousJson?: string | null,
+  /** Tầng đã qua của lượt gốc — giữ nguyên khi ghép câu trả lời (T86). */
+  keep?: readonly number[],
   /** Bảng theo dõi trực tiếp và nút «Dừng» (13/09/2026). Vắng ở phép thử. */
   live?: LevelLiveHooks,
 ): Promise<ProposeOutcome> {
@@ -252,6 +258,7 @@ export async function proposeHouse(
       context,
       ...(retrying ? { avoid } : {}),
       ...(retrying && previousJson ? { previous: JSON.parse(previousJson) as HouseIntent } : {}),
+      ...(retrying && keep?.length ? { keep } : {}),
       ...(params.reasoningEffort ? { reasoningEffort: params.reasoningEffort } : {}),
       ...(live ? { onProgress: live.onProgress, signal: live.signal } : {}),
     });
@@ -320,6 +327,8 @@ export interface ArrangeOutcome {
   hints: string[];
   /** Ý định đã đánh mã, cho lượt sửa. `null` khi phải lấy mẫu lại. */
   previousJson: string | null;
+  /** Tầng đã qua, lượt sửa giữ nguyên (T86). Vắng ở kết quả Workflow ghi trước T86. */
+  keep?: number[];
   retry: RetryKind;
   /** Điểm khi xếp được (T53) — `null` khi không xếp được. */
   score: HouseScoreSummary | null;
@@ -332,10 +341,12 @@ export function arrangeHouseStep(
   variant: PlanVariant,
   proposal: ProposeOutcome,
   round: number,
+  /** Ý định lượt trước đã gửi mô hình sửa — để nhận ra lượt trả lại y nguyên (`retry: 'unchanged'`). */
+  askedJson: string | null = null,
 ): ArrangeOutcome {
   const intent = proposal.intentJson ? (JSON.parse(proposal.intentJson) as HouseIntent) : null;
   const evaluation = intent
-    ? evaluateHouse(
+    ? evaluateHouseBest(
         contextInput(deps, params, variant),
         contextFor(deps, params, variant),
         intent,
@@ -356,12 +367,14 @@ export function arrangeHouseStep(
       score,
     };
   }
-  const plan = retryPlan({ intent, issues: proposal.issues }, evaluation);
+  const asked = askedJson ? (JSON.parse(askedJson) as HouseIntent) : null;
+  const plan = retryPlan({ intent, issues: proposal.issues }, evaluation, asked);
   return {
     arrangedJson: null,
     rejections: evaluation ? evaluation.rejections : [{ level: 0, messages: proposal.issues }],
     hints: plan.avoid,
     previousJson: plan.previous ? JSON.stringify(plan.previous) : null,
+    ...(plan.kind === 'revise' && plan.keep.length ? { keep: plan.keep } : {}),
     retry: plan.kind,
     score: null,
   };
@@ -389,6 +402,8 @@ export interface WriteOutcome {
   /** % điểm và ngưỡng nhận lúc ghi; `belowThreshold` = hết lượt sửa mà vẫn dưới ngưỡng (T53). */
   percent: number | null;
   acceptPercent: number | null;
+  /** Nhóm của thước dưới sàn nhóm lúc ghi (T96) — rỗng khi không có sàn hay mọi nhóm đạt. */
+  belowGroups: string[];
   belowThreshold: boolean;
 }
 
@@ -496,7 +511,7 @@ export async function writePlan(
         points: final.score.points,
         scoredWeight: final.score.scoredWeight,
       },
-      ...thresholdOf(final.score, deps.quality.acceptPercent),
+      ...thresholdOf(final.score, deps.quality.acceptPercent, deps.quality.acceptGroupFloorPercent),
     },
   };
 }
@@ -520,14 +535,31 @@ export function keepBest(best: BestArranged | null, candidate: BestArranged): Be
 
 /** % điểm, ngưỡng, và có dưới ngưỡng không — cùng cách tính với `scoreSummary`. */
 export function thresholdOf(
-  score: { points: number; scoredWeight: number },
+  score: {
+    points: number;
+    scoredWeight: number;
+    groups?: readonly { code: string; points: number; scoredWeight: number }[];
+  },
   acceptPercent: number | null,
-): { percent: number | null; acceptPercent: number | null; belowThreshold: boolean } {
+  groupFloorPercent: number | null = null,
+): {
+  percent: number | null;
+  acceptPercent: number | null;
+  belowGroups: string[];
+  belowThreshold: boolean;
+} {
   const percent = scorePercent(score);
+  // Sàn nhóm là phần tinh của ngưỡng nhận: không có ngưỡng thì không có sàn.
+  const belowGroups = acceptPercent === null ? [] : groupsBelowFloor(score, groupFloorPercent);
   return {
     percent,
     acceptPercent,
-    belowThreshold: acceptPercent !== null && percent !== null && percent < acceptPercent,
+    belowGroups,
+    // Dưới ngưỡng tổng, HOẶC một nhóm chấm được dưới sàn nhóm (T96): nhóm diện tích không bù được
+    // cho một tầng đi lại tệ.
+    belowThreshold:
+      (acceptPercent !== null && percent !== null && percent < acceptPercent) ||
+      belowGroups.length > 0,
   };
 }
 
@@ -549,6 +581,7 @@ function contextInput(deps: PlanStepDeps, params: AiDesignParams, variant: PlanV
     areaNorms: deps.areaNorms,
     quality: deps.quality,
     roomGroups: deps.roomGroups,
+    mandatory: deps.mandatory,
   };
 }
 
@@ -825,7 +858,7 @@ export async function applyEditStep(
         points: final.score.points,
         scoredWeight: final.score.scoredWeight,
       },
-      ...thresholdOf(final.score, deps.quality.acceptPercent),
+      ...thresholdOf(final.score, deps.quality.acceptPercent, deps.quality.acceptGroupFloorPercent),
     },
   };
 }

@@ -19,6 +19,11 @@ export interface BriefFidelity {
   needEquivalents: Record<string, string[]>;
   /** Tiện ích nằm TRONG phòng ngủ — gộp vào phòng, không thành không gian riêng. */
   inBedroomTypes: string[];
+  /**
+   * Loại không gian mô hình CHỈ được đề xuất khi đầu bài có hỏi tới (T96). Vắng = không giới hạn —
+   * một bản `kb/` cũ hơn mã nguồn vẫn chạy như trước.
+   */
+  onlyWhenAsked: string[];
   /** Đòi hỏi suy từ những câu đầu bài ĐÃ trả lời (T65) — xem `demands:` của tệp YAML. */
   demands: BriefDemandSpec;
 }
@@ -32,14 +37,16 @@ export interface BriefFidelity {
 export interface BriefDemandSpec {
   elevator: {
     spaceType: string;
-    /** Diện tích giếng tối thiểu theo mã tải của đầu bài. */
-    shaftM2: Record<string, number>;
-    /** Dùng khi đầu bài khai có thang máy mà chưa chọn tải. */
-    shaftM2Unknown: number;
-    /** Cạnh ngắn nhất của giếng, m — diện tích thôi thì vẫn dựng được một khe dài. */
-    shaftMinSideM: number;
     /** Nhãn của ô khi gia chủ mới chỉ CHỪA CHỖ, chưa lắp. */
     reservedLabel: string;
+    /** Loại phòng tính là hành lang / sảnh chung khi kiểm kiểu bố trí thang máy. */
+    hallTypes: string[];
+    /** Đoạn vách chung tối thiểu để coi hai ô là «chung vách» / «cùng giáp», m. */
+    layoutMinSharedM: number;
+    /** Cạnh dài giếng tối đa bằng bấy nhiêu lần cạnh ngắn — `0` là không kiểm. */
+    shaftMaxAspect: number;
+    /** Diện tích giếng dựng tối đa bằng bấy nhiêu lần diện tích gia chủ khai — `0` là không kiểm. */
+    shaftMaxAreaRatio: number;
   };
   balcony: {
     spaceType: string;
@@ -103,6 +110,7 @@ export function parseBriefFidelity(yamlText: string): BriefFidelity {
     ensuiteParentTypes: list('ensuite_parent_types'),
     stairTypes: list('stair_types'),
     inBedroomTypes: raw.in_bedroom_types === undefined ? [] : list('in_bedroom_types'),
+    onlyWhenAsked: raw.only_when_asked === undefined ? [] : list('only_when_asked'),
     demands: parseDemands(raw.demands),
     needEquivalents: Object.fromEntries(
       Object.entries((raw.need_equivalents ?? {}) as Record<string, unknown>).map(
@@ -128,10 +136,11 @@ function parseDemands(raw: unknown): BriefDemandSpec {
   const empty: BriefDemandSpec = {
     elevator: {
       spaceType: 'core',
-      shaftM2: {},
-      shaftM2Unknown: 0,
-      shaftMinSideM: 0,
       reservedLabel: '',
+      hallTypes: [],
+      layoutMinSharedM: 0,
+      shaftMaxAspect: 0,
+      shaftMaxAreaRatio: 0,
     },
     balcony: { spaceType: 'balcony', fromLevel: 2, dryingTypes: [] },
     carM2BySize: {},
@@ -204,10 +213,12 @@ function parseDemands(raw: unknown): BriefDemandSpec {
   return {
     elevator: {
       spaceType: typeof lift.space_type === 'string' ? lift.space_type : 'core',
-      shaftM2: numberMap(lift.shaft_m2, 'demands.elevator.shaft_m2'),
-      shaftM2Unknown: typeof lift.shaft_m2_unknown === 'number' ? lift.shaft_m2_unknown : 0,
-      shaftMinSideM: typeof lift.shaft_min_side_m === 'number' ? lift.shaft_min_side_m : 0,
       reservedLabel: typeof lift.reserved_label === 'string' ? lift.reserved_label : '',
+      hallTypes: codes(lift.hall_types, 'demands.elevator.hall_types'),
+      layoutMinSharedM: typeof lift.layout_min_shared_m === 'number' ? lift.layout_min_shared_m : 0,
+      shaftMaxAspect: typeof lift.shaft_max_aspect === 'number' ? lift.shaft_max_aspect : 0,
+      shaftMaxAreaRatio:
+        typeof lift.shaft_max_area_ratio === 'number' ? lift.shaft_max_area_ratio : 0,
     },
     balcony: {
       spaceType: typeof balcony.space_type === 'string' ? balcony.space_type : 'balcony',

@@ -36,6 +36,27 @@ export interface OpeningRules {
   window_priority: string[];
 }
 
+export interface SketchNorms {
+  area_slack_ratio: number;
+  /** Số lần bộ xếp tự nới phòng hụt ô trên bản phác trước khi bỏ bản phác — 0 = tắt (T79). */
+  grow_tries: number;
+  /** Dung sai đo ở cổng sau khi dựng cho sàn đầu bài khai, tỉ lệ — 0 = so thẳng (T82, Haan chọn 3 %). */
+  floor_tolerance_ratio: number;
+}
+
+export interface EntryStepNorms {
+  /** Bề sâu mặt bậc — giữ cố định, số bậc thay đổi theo chênh cốt. */
+  going_m: number;
+  /** Cổ bậc để CHIA chênh cốt ra số bậc (làm tròn lên). */
+  riser_m: number;
+  /** Bề rộng lối lên nhỏ nhất. */
+  width_min_m: number;
+  /** Lối lên rộng hơn lỗ cửa chính bấy nhiêu (cộng cả hai bên). */
+  width_over_door_m: number;
+  /** Trần số bậc — chênh cốt lớn hơn thì không vẽ, nói ra. */
+  max_count: number;
+}
+
 export interface ConstructionNorms {
   version: string;
   walls: { exterior_m: number; load_bearing_m: number; partition_m: number };
@@ -56,6 +77,13 @@ export interface ConstructionNorms {
   facade?: { ground_floor_raise_m: number; parapet_height_m: number };
   /** Hành lang bộ giải ý định tự dựng (T43) — số tham khảo; vắng thì bộ giải dùng cửa đi + lề. */
   circulation?: { corridor_clear_m: number };
+  /**
+   * Bậc ở lối vào (bậc tam cấp, T70) — đo trên HS-04/05/06. Vắng thì mặt bằng không vẽ bậc lối vào,
+   * đúng hành vi trước T70.
+   */
+  entry_steps?: EntryStepNorms;
+  /** Bản phác lưới ô (T73): hụt diện tích đầu bài quá tỉ lệ này thì báo mô hình ngay. */
+  sketch?: SketchNorms;
   /**
    * Cạnh ngắn DÙNG ĐƯỢC theo loại phòng, lọt lòng — điều kiện dựng của bộ giải ý định, KHÔNG phải số
    * kinh nghiệm (V-28). Vắng thì không có điều kiện nào.
@@ -144,6 +172,42 @@ export function parseConstructionNorms(yamlText: string): ConstructionNorms {
     ...(raw.facade ? { facade: parseFacade(raw.facade) } : {}),
     ...(raw.circulation ? { circulation: raw.circulation } : {}),
     ...(raw.usable ? { usable: parseUsable(raw.usable) } : {}),
+    ...(raw.entry_steps ? { entry_steps: parseEntrySteps(raw.entry_steps) } : {}),
+    ...(raw.sketch ? { sketch: parseSketch(raw.sketch) } : {}),
+  };
+}
+
+function parseSketch(raw: unknown): SketchNorms {
+  const ratio = (raw as Record<string, unknown>).area_slack_ratio;
+  if (typeof ratio !== 'number' || !(ratio >= 0 && ratio < 1)) {
+    throw new ConstructionNormsError('"sketch.area_slack_ratio" phải là số trong [0, 1)');
+  }
+  const tries = (raw as Record<string, unknown>).grow_tries ?? 0;
+  if (typeof tries !== 'number' || !Number.isInteger(tries) || tries < 0) {
+    throw new ConstructionNormsError('"sketch.grow_tries" phải là số nguyên không âm');
+  }
+  const tolerance = (raw as Record<string, unknown>).floor_tolerance_ratio ?? 0;
+  if (typeof tolerance !== 'number' || !(tolerance >= 0 && tolerance < 1)) {
+    throw new ConstructionNormsError('"sketch.floor_tolerance_ratio" phải là số trong [0, 1)');
+  }
+  return { area_slack_ratio: ratio, grow_tries: tries, floor_tolerance_ratio: tolerance };
+}
+
+function parseEntrySteps(raw: unknown): EntryStepNorms {
+  const section = raw as Record<string, unknown>;
+  const read = (key: keyof EntryStepNorms): number => {
+    const value = section[key];
+    if (typeof value !== 'number' || !(value > 0)) {
+      throw new ConstructionNormsError(`"entry_steps.${key}" phải là số dương`);
+    }
+    return value;
+  };
+  return {
+    going_m: read('going_m'),
+    riser_m: read('riser_m'),
+    width_min_m: read('width_min_m'),
+    width_over_door_m: read('width_over_door_m'),
+    max_count: Math.floor(read('max_count')),
   };
 }
 

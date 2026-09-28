@@ -16,7 +16,13 @@ import type { AiBriefDigest } from '@nvg/shared/design';
 import { describe, expect, it } from 'vitest';
 import { parseAreaNorms } from '../kb/space-norms';
 import { parsePlanQuality } from '../ai/plan-quality';
-import { evaluateHouse, planContext, programGenerator, type PlanContextInput } from '../ai/plan';
+import {
+  evaluateHouse,
+  planContext,
+  programGenerator,
+  retryPlan,
+  type PlanContextInput,
+} from '../ai/plan';
 import { parseAiPrompts } from '../ai/prompts';
 import { NO_RULE_PACKS, selectedRulePack } from '../ai/rule-packs';
 import { parseBriefFidelity } from '../kb/brief-fidelity';
@@ -78,7 +84,8 @@ function contextInput(digest: AiBriefDigest = run.digest): PlanContextInput {
     variant: { id: 'AI-A', label: 'AI-A', strategy: '' },
     labels: Object.fromEntries(vocabulary.types.map((t) => [t.code, t.vi])),
     vocabulary: new VocabularyIndex(vocabulary),
-    fidelity: parseBriefFidelity(read('kb/brief_fidelity.yaml')),
+    // Lượt ghi trước T96: phát lại kiểm bộ xếp, không kiểm cổng «không bịa thêm» (xem `ai-real-context.ts`).
+    fidelity: { ...parseBriefFidelity(read('kb/brief_fidelity.yaml')), onlyWhenAsked: [] },
     construction: parseConstructionNorms(read('kb/construction_norms.yaml')),
     siteContext: parseSiteContext(read('kb/site_context.yaml')),
     rules: selectedRulePack(NO_RULE_PACKS, { standards: new RulePack([], false), experience }),
@@ -108,8 +115,17 @@ const generator = programGenerator(
   false,
 );
 
-function evaluate(key: string, recorded: RecordedRun = run) {
-  const input = { ...contextInput(recorded.digest), quality, scoreRules, roomGroups: groupsTable };
+function evaluate(key: string, recorded: RecordedRun = run, beforeT73 = false) {
+  const base = contextInput(recorded.digest);
+  // Trước T73: không có phép kiểm bản phác thiếu ô (`construction.sketch`).
+  const { sketch: _t73, ...construction } = base.construction;
+  const input = {
+    ...base,
+    ...(beforeT73 ? { construction } : {}),
+    quality,
+    scoreRules,
+    roomGroups: groupsTable,
+  };
   return evaluateHouse(input, planContext(input), recorded.intents[key]!, generator, prompts);
 }
 
@@ -121,16 +137,21 @@ describe('phát lại lượt đo 5aba737d (T45, V-29)', () => {
       expect(evaluation.ok?.levels).toHaveLength(2);
     });
 
-    it(`${key}: mọi phòng có mức đầu bài đạt mức ấy`, () => {
+    it(`${key}: mọi phòng có mức đầu bài đạt mức ấy (trừ dung sai 3 % của cổng, T82)`, () => {
       const { ok } = evaluate(key);
       const minimums = briefMinimums(run.digest, ok!.program);
+      // Haan 25/09/2026: hụt vài phần trăm sau khi căn vách thì cho qua (`sketch.floor_tolerance_ratio`).
+      const tolerance = contextInput(run.digest).construction.sketch?.floor_tolerance_ratio ?? 0;
+      expect(tolerance).toBeGreaterThan(0);
       for (const arranged of ok!.levels) {
         for (const room of arranged.level.rooms) {
           const need = [room.id, ...(room.also ?? [])].reduce(
             (sum, id) => sum + (minimums.get(id) ?? 0),
             0,
           );
-          expect(Math.round(room.area_m2 * 10) / 10, room.id).toBeGreaterThanOrEqual(need);
+          expect(Math.round(room.area_m2 * 10) / 10, room.id).toBeGreaterThanOrEqual(
+            need * (1 - tolerance),
+          );
         }
       }
     });
@@ -183,7 +204,25 @@ describe('phát lại lượt đo 4a521f52 — lõi thang khai riêng cạnh tha
     });
   }
 
-  for (const key of Object.keys(run4a52.intents)) {
+  // T74 (Haan 25/09/2026): ô thang chỉ mở cửa sang giao thông, khu chung, sân thượng, thang máy. Vòng 2 và 3
+  // của lượt này xếp được tầng 2 CHỈ nhờ giặt phơi / WC lấy cửa từ ô thang — nay bác, và vì chỗ sai là
+  // bố cục nên GỬI LẠI mô hình (`door_from_stair`), không dừng.
+  const LOST_TO_T74: Record<string, RegExp> = {
+    round2: /"laundry_1" ở tầng 2 chỉ giáp ô thang "stair_2"/,
+    round3: /"wc_4" ở tầng 2 chỉ giáp ô thang "stair_2"/,
+  };
+  for (const [key, why] of Object.entries(LOST_TO_T74)) {
+    it(`${key}: T74 bác tầng 2 vì phòng chỉ giáp ô thang, và gửi lại mô hình`, () => {
+      const evaluation = evaluate(key, run4a52);
+      expect(evaluation.rejections.map((rejection) => rejection.level)).toEqual([2]);
+      expect(evaluation.rejections[0]!.messages.join(' ')).toMatch(why);
+      expect(retryPlan({ intent: run4a52.intents[key]!, issues: [] }, evaluation).kind).toBe(
+        'revise',
+      );
+    });
+  }
+
+  for (const key of Object.keys(run4a52.intents).filter((key) => !(key in LOST_TO_T74))) {
     it(`${key}: xếp được trọn hai tầng — trước sửa: ô thang hẹp, rồi tầng 2 dồn phòng vào vùng không chứa nổi sàn đầu bài hoặc quá sâu cho phòng nhỏ`, () => {
       const evaluation = evaluate(key, run4a52);
       expect(evaluation.rejections.flatMap((rejection) => rejection.messages)).toEqual([]);
@@ -193,22 +232,38 @@ describe('phát lại lượt đo 4a521f52 — lõi thang khai riêng cạnh tha
 });
 
 describe('phát lại lượt đo 58688ead — lượt sửa phí vì lỗi cửa ra ngoài', () => {
+  // Cơ chế tự đổi phòng cửa chính (T51) thử trên luật trước T73: từ T73 bản phác của cả bốn lượt bị gửi
+  // lại TRƯỚC khi tới bước đổi cửa chính, vì phòng ngủ 1 vẽ thiếu ô (phép thử cuối tệp này).
   for (const key of Object.keys(run588.intents)) {
     it(`${key}: xếp được ngay, không cần gọi lại mô hình — chương trình tự thử đổi phòng mang cửa chính`, () => {
-      const evaluation = evaluate(key, run588);
+      const evaluation = evaluate(key, run588, true);
       expect(evaluation.rejections.flatMap((rejection) => rejection.messages)).toEqual([]);
       expect(evaluation.ok?.levels).toHaveLength(2);
     });
   }
 
   it('round1: ghi chú nói rõ chương trình đã đổi phòng mang cửa chính', () => {
-    const { ok } = evaluate('round1', run588);
+    const { ok } = evaluate('round1', run588, true);
     const notes = ok!.levels[0]!.notes.map((note) => note.code);
     expect(notes).toContain('entry_room_switched');
   });
 
   it('round4 (mô hình đã tự đổi lối vào): không đổi gì thêm', () => {
-    const { ok } = evaluate('round4', run588);
+    const { ok } = evaluate('round4', run588, true);
     expect(ok!.levels[0]!.notes.map((note) => note.code)).not.toContain('entry_room_switched');
+  });
+
+  it('T73: bản phác vẽ ô thang không chạm phòng đi xuyên nào (và phòng ngủ 1 thiếu ô) → gửi lại mô hình, không để bộ xếp dời bản phác', () => {
+    // Trước T73 bộ xếp bỏ bản phác, chia lại cả tầng cho đủ 25 m² — phương án ra nhưng không còn là
+    // bố cục mô hình vẽ, và mô hình không bao giờ biết mình vẽ thiếu.
+    const evaluation = evaluate('round4', run588);
+    expect(evaluation.ok).toBeNull();
+    // Từ T73 (c) phép kiểm lối vào thấy trước: trên bản phác ô thang chỉ chạm gara, kho, phòng ngủ, WC.
+    // Từ 25/09/2026 nói đúng chỗ hỏng — ô thang bị cô lập — thay vì kể mọi phòng của tầng.
+    expect(evaluation.rejections[0]!.messages.join(' ')).toMatch(
+      /Bản phác tầng 1: ô thang "stair_1" không chạm hành lang/,
+    );
+    expect(evaluation.hints.join(' ')).toMatch(/the stair "stair_1" touches no corridor/);
+    expect(evaluation.hints.join(' ')).not.toMatch(/must KEEP/);
   });
 });

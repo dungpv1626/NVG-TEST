@@ -21,7 +21,7 @@
 # Lỗ chờ phải cộng thêm phần trát hèm. Nhầm hai thứ này thì mọi ô cửa hẹp lại vài centimet
 # — đủ để một hành lang trượt ngưỡng quy chuẩn mà không ai hiểu vì sao.
 
-version: '2.0.0'
+version: '2.2.0'
 
 do_duoc:
   ngay: '2026-09-05'
@@ -122,21 +122,27 @@ stairs:
   # 0,25 chính là con số NVG vẽ, giống nhau trên cả bốn vế thang đo được.
   going_m: 0.25
 
-# ── Bậc ở lối vào (bậc tam cấp) — ĐO 22/09/2026, CHƯA CÓ NƠI ĐỌC ──────────────────────
-# Ghi ở đây để không mất, và khai thẳng là chưa nối: hợp đồng `ai-architectural-floorplan` không
-# có đối tượng nào cho bậc ở lối vào, nên engine đang vẽ cửa chính mở thẳng ra sân. Thêm nó là
-# sửa hợp đồng + lời dẫn + bộ vẽ + phép thử (Q-51), không phải hệ quả phụ của một đợt đo.
+# ── Bậc ở lối vào (bậc tam cấp) — ĐO 22/09/2026, NỐI VÀO MẶT BẰNG 23/09/2026 (T70) ─────────
+# Đọc bởi `workers/src/design/ai/entry-steps.ts`: mặt bằng tầng 1 vẽ bậc ngoài cửa chính khi đầu bài
+# khai chênh cốt nền (hoặc số bậc). Không khai thì KHÔNG vẽ — không đoán cốt nền (CLAUDE.md 5.2).
 #
 #   HS-04  chênh 430 mm (−0.450 → −0.020) · 3 bậc · mặt 300–350 · rộng 2.220 · hai bên có má 780
 #   HS-05  chênh 450 mm (−0.450 → ±0.000) · 3 bậc · mặt 300      · rộng 1.090 · bậc đánh số 1 2 3
 #   HS-06  chênh 730 mm (−0.750 → −0.020) · 5 bậc · mặt 300      · rộng 3.110, gọn giữa hai cột hiên
 #
 # Quy tắc rút ra: MẶT BẬC GIỮ 300; SỐ BẬC = chênh cốt ÷ ~150, làm tròn lên. «Tam cấp» là tên gọi,
-# không phải số bậc — HS-06 có năm bậc. Phải có cốt sân mới vẽ được bậc.
-#
-# CỐ Ý để dạng ghi chú chứ không khai thành khoá YAML: một khoá `entry_steps:` nằm cạnh `stairs:`
-# trông như đang có hiệu lực, trong khi không dòng mã nào đọc nó (CLAUDE.md 8.7 điểm 2). Ngày nào
-# hợp đồng có đối tượng bậc lối vào thì chuyển ba con số này thành khoá thật.
+# không phải số bậc — HS-06 có năm bậc.
+entry_steps:
+  going_m: 0.30 # đo: 300 trên cả ba hồ sơ
+  riser_m: 0.15 # đo: 143 · 150 · 146
+  # Hẹp nhất đo được 1,09 m (HS-05). Lối lên hẹp hơn lỗ cửa là vẽ sai, nên còn cộng thêm dưới đây.
+  width_min_m: 1.1
+  # SỐ THAM KHẢO: hồ sơ không ghi bề rộng cửa cạnh bề rộng bậc nên không suy được tỉ lệ. 0,6 = mỗi
+  # bên chìa 0,3 m, đúng một mặt bậc. Kiến trúc sư sửa được.
+  width_over_door_m: 0.6
+  # Trần của câu hỏi «Số bậc tam cấp» trong đầu bài. Chênh cốt cần nhiều bậc hơn thì không vẽ mà
+  # nói ra: 1,3 m trở lên là việc của một cầu thang ngoài nhà, không phải bậc tam cấp.
+  max_count: 8
 
 # Hành lang bộ giải ý định tự dựng thành dải (T43, 14/09/2026) — bề rộng LỌT LÒNG mong muốn.
 #
@@ -175,12 +181,9 @@ usable:
     storage: 0.8
     balcony: 0.9
     garage: 2.4
-    # Giếng thang máy (T65, 22/09/2026). Diện tích không thôi thì chưa đủ: 2,2 m² vẫn dựng được
-    # một khe 0,5 × 4,4 m, đúng loại hình mà cây chia hay cắt ra.
-    # ⚠️ PHẢI khớp `demands.elevator.shaft_min_side_m` của `kb/brief_fidelity.yaml` — chỗ này ép
-    # lúc XẾP, chỗ kia BÁC ở cổng, và hai con số lệch nhau thì bộ xếp dựng ra thứ cổng không nhận.
-    # Có phép thử canh hai bên bằng nhau.
-    elevator: 1.4
+    # Giếng thang máy KHÔNG khai ở đây (gỡ mức 1,4 m ngày 25/09/2026): cạnh ngắn lấy từ kích thước
+    # giếng gia chủ khai theo hãng thang (`vertical.elevator_shaft_*_m`), cùng số cổng dùng để bác —
+    # `ai/plan.ts` nạp nó vào bộ xếp. Một mức cố định ở đây sẽ bác oan giếng 1,2 m của hãng nhỏ.
   garage_with_car_m: 2.8
   # Tỉ lệ dài/rộng LỌT LÒNG tối đa của phòng ở. Cạnh ngắn đạt mức vẫn chưa đủ: phát lại lượt 9cce001a
   # sau khi thêm `min_side_m` ra phòng ngủ 2,85 × 16,56 m (47 m², chương trình 15 m²) — kê được giường
@@ -260,7 +263,9 @@ openings:
     # Đo được ba cỡ: 690x1600 (1 cánh mở hất) · 1550x1600 (2 cánh lùa) · 1200x1300 (2 cánh
     # lùa). Chiều cao 1,6 m phổ biến hơn 1,5 m của giả định cũ.
     height_m: 1.6
-    # Cao độ bệ cửa +0.900 đọc thẳng từ mặt cắt — xác nhận đúng giả định cũ.
+    # Cao độ bệ cửa +0.900 đọc thẳng từ mặt cắt HS-01. HS-04 khai +0.700 — hai nhà hai mức.
+    # Haan trả lời Q-50 (23/09/2026): «không thể fix cứng, mỗi nhà mỗi khác, tạm thời để 0.9».
+    # Nên đây là MẶC ĐỊNH tạm, không phải quy ước NVG; chưa có ô nào để kỹ sư đổi theo từng nhà.
     sill_m: 0.9
     # Bề rộng lấy theo TỈ LỆ đoạn tường mặt thoáng của phòng, kẹp trong hai cận.
     # Lấy tỉ lệ chứ không lấy một con số cố định: một phòng ngủ 2,4 m và một phòng khách 5 m
@@ -318,3 +323,25 @@ schedule_defaults:
 notes_on_every_sheet:
   - 'trát hèm tất cả cửa'
   - 'kích thước cửa trên bản vẽ là kích thước thông thủy hoàn thiện'
+
+# Bản phác lưới ô của mô hình (T73, 24/09/2026) — mục này BẬT hai phép kiểm bản phác trước khi xếp:
+# phòng không có lối vào ngay trên lưới (không giáp phòng đi xuyên được / phòng phục vụ nó), và phòng
+# đầu bài khai diện tích mà vẽ hụt. Vắng mục này thì không kiểm (phương án lưu trước T73). Phòng đầu bài khai diện tích tối thiểu mà bản phác
+# vẽ hụt QUÁ tỉ lệ này (lọt lòng ước lượng lạc quan: chữ nhật bao các ô trừ một tường ngăn mỗi chiều)
+# thì báo mô hình vẽ lại NGAY, không để bộ xếp bỏ bản phác «cứu» tầng bằng cách chia khác. Hụt trong tỉ
+# lệ này thì bộ xếp tự dời vách trong khung dải là gỡ được.
+# 0,1 là SỐ ĐO trên các lượt thật đã lưu, không phải định mức: hụt 0,4 % (3ff10f75, 24,91 / 25 m²) bộ
+# xếp gỡ được; hụt 13–40 % (17,4 / 20 · 19 / 25 · 26,8 / 45 m²) thì phương án ra hoặc hỏng, hoặc dời
+# ô thang khỏi chỗ mô hình vẽ. Sửa ở đây, không sửa mã.
+sketch:
+  area_slack_ratio: 0.1
+  # Phòng vẽ ĐỦ ô theo tỉ lệ trên mà căn vách vẫn hụt mức đầu bài (ô thang / giếng bên cạnh phải nới,
+  # tường ăn vào…): bộ xếp tự nới phòng ấy thêm MỘT dải ô lấy của phòng kề còn dư diện tích, thử lại,
+  # tối đa bấy nhiêu lần — rồi mới bỏ bản phác. Mỗi lần trước đây tốn một lượt sửa của mô hình
+  # (bedroom_1 14,62 / 15 m² ở 8efa35a6; bedroom_2 12,42 / 15 ở 913bc2ad). 0 = tắt.
+  grow_tries: 3
+  # Dung sai ĐO ở cổng sau khi dựng cây cho sàn đầu bài khai: phòng dựng ra hụt trong tỉ lệ này vẫn qua
+  # (Haan 25/09/2026: «thiếu 8 cm² hoàn toàn có thể bỏ qua», chọn 3 %). Bộ xếp vẫn nhắm đủ sàn; chỉ cổng
+  # tha phần lẻ do căn vách làm tròn. Lượt thật 4198d692: `bedroom_3` 14,92 / 15 m² làm mất ba lượt sửa.
+  # Bản phác vẫn dùng `area_slack_ratio` riêng ở trên.
+  floor_tolerance_ratio: 0.03

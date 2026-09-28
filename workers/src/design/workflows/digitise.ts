@@ -13,6 +13,7 @@
  */
 
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from 'cloudflare:workers';
+import { disposingStep } from './rpc-stub';
 import { NonRetryableError } from 'cloudflare:workflows';
 import { createComputeBackend, type KbRecordResponse } from '../compute-backend';
 import type { DesignEnv } from '../env';
@@ -29,7 +30,9 @@ import {
 } from './digitise-steps';
 
 export class DigitisePipeline extends WorkflowEntrypoint<DesignEnv, DigitiseParams> {
-  override async run(event: WorkflowEvent<DigitiseParams>, step: WorkflowStep) {
+  override async run(event: WorkflowEvent<DigitiseParams>, rpcStep: WorkflowStep) {
+    // Mọi kết quả `step.do` là kết quả RPC — huỷ ngay (T85, `workflows/rpc-stub.ts`).
+    const step = disposingStep(rpcStep);
     const params = event.payload;
     const store = createSourceFileStore(this.env);
     const compute = createComputeBackend(this.env);

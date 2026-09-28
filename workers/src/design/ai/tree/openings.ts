@@ -30,7 +30,7 @@ import {
   properlyReached,
   type PassageInput,
 } from './passage';
-import type { PassageRules } from '../../kb/vocabulary';
+import { opensFromStair, type PassageRules } from '../../kb/vocabulary';
 
 type Edge = AiPlanRoomsDoor['edge'];
 
@@ -334,7 +334,11 @@ export function placeOpenings(input: OpeningsInput): OpeningsResult {
     if (!shared) return false;
     const typeA = input.typeOf.get(a) ?? '';
     const typeB = input.typeOf.get(b) ?? '';
-    const bothCirculation = input.groups.vertical.has(typeA) && input.groups.vertical.has(typeB);
+    const openFlow = input.groups.passage?.openFlow;
+    // Khách / ăn kề lối đi cũng là một không gian (T96, `passage.open_flow`).
+    const bothCirculation =
+      (input.groups.vertical.has(typeA) && input.groups.vertical.has(typeB)) ||
+      (!!openFlow && openFlow.has(typeA) && openFlow.has(typeB));
     const kind = bothCirculation ? 'opening' : 'single';
     const norm = doorNorm(kind, typeA, typeB, narrowDoorTypes, input.construction);
     const minWidth = Math.round(
@@ -395,12 +399,11 @@ export function placeOpenings(input: OpeningsInput): OpeningsResult {
           const rank = hosts.indexOf(input.typeOf.get(neighbour) ?? '');
           if (rank < 0 || !reached.has(neighbour)) continue;
           if (rules && !mayEnter(rules, neighbour, room)) continue;
-          // Không tự mở cửa từ ô thang vào phòng ở / thờ (Haan 18/09/2026): thà để lỗi cổng nói ra
+          // Không tự mở cửa từ ô thang vào phòng ngoài `stair_opens_to` (T74): thà để lỗi cổng nói ra
           // còn hơn thêm một cái cửa mà kiến trúc sư phải xoá.
           if (
-            passage?.stairNotFor?.size &&
             neighbour === input.stairRoom &&
-            [...(input.typesOfLeaf.get(room) ?? [])].some((t) => passage.stairNotFor.has(t))
+            !opensFromStair(passage?.stairOpensTo, input.typesOfLeaf.get(room) ?? [])
           ) {
             continue;
           }
@@ -528,18 +531,18 @@ export function placeOpenings(input: OpeningsInput): OpeningsResult {
         ),
       );
     }
-    // Ô thang chỉ mở cửa sang phòng giao thông hay khu sinh hoạt chung (`passage.stair_opens_to`,
-    // Haan 18/09/2026). Cửa phòng thờ mở thẳng vào vế bậc là chỗ Haan chấm «bất hợp lý» ở lượt
-    // 78be09b4. Chặn và gửi mô hình sửa: chỗ sai là bố cục — phòng ấy phải kề hành lang.
-    const stairNotFor = passage?.stairNotFor;
-    if (input.stairRoom && stairNotFor && stairNotFor.size > 0) {
+    // Ô thang chỉ mở cửa sang phòng giao thông, khu sinh hoạt chung, sân thượng, thang máy
+    // (`passage.stair_opens_to`). T54 (lượt 78be09b4, cửa phòng thờ mở vào vế bậc) chỉ chặn phòng ở;
+    // T74 (Haan 25/09/2026) chặn mọi phòng khác — WC, kho, bếp mở ra bậc cũng không đi được. Chặn và
+    // gửi mô hình sửa: chỗ sai là bố cục — phòng ấy phải kề hành lang.
+    const stairOpensTo = passage?.stairOpensTo;
+    if (input.stairRoom && stairOpensTo && stairOpensTo.size > 0) {
       const stair = input.stairRoom;
       for (const room of [
         ...new Set(links.flatMap(([a, b]) => (a === stair ? [b] : b === stair ? [a] : []))),
       ].sort()) {
         if (room === OUTSIDE) continue;
-        const types = input.typesOfLeaf.get(room) ?? new Set<string>();
-        if (![...types].some((type) => stairNotFor.has(type))) continue;
+        if (opensFromStair(stairOpensTo, input.typesOfLeaf.get(room) ?? [])) continue;
         const message = `Phòng "${room}" ở ${where} lấy cửa thẳng từ ô thang "${stair}" — ô thang là vế bậc, phòng phải vào từ hành lang hay khu sinh hoạt chung.`;
         if (input.relax?.has('door_from_stair')) {
           notes.add('door_from_stair_kept', message);
@@ -549,7 +552,7 @@ export function placeOpenings(input: OpeningsInput): OpeningsResult {
           treeIssue(
             'door_from_stair',
             message,
-            { room, stair, blocked: [...stairNotFor].join(', ') },
+            { room, stair, allowed: [...stairOpensTo].join(', ') },
             room,
           ),
         );

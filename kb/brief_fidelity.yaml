@@ -10,7 +10,15 @@
 # còn là yêu cầu của gia chủ nữa», và số chỗ đỗ là SỐ THAM KHẢO (Haan, 13/09/2026: «số liệu từ hồ
 # sơ mang tính tham khảo, không ép buộc») — sửa ở đây, không phải sửa mã.
 
-version: '1.1.0'
+version: '1.2.0'
+
+# Loại không gian mô hình CHỈ được đề xuất khi đầu bài có hỏi tới (T96, Haan 27/09/2026: «những gì
+# không khai trong đầu bài thì hạn chế bịa thêm vào»). Lượt 4a521f52 tự thêm giếng trời cho một nhà
+# hai tầng có sân vườn rộng — không ai hỏi, và câu dẫn chiến lược cũ còn gợi ý nó. «Có hỏi tới» nghĩa
+# là: một dòng «Không gian gia chủ yêu cầu» mang loại ấy, hoặc một dòng `demands.spaces` dưới đây (bác
+# hay cảnh báo đều tính) có loại ấy trong `any_of`, hoặc đầu bài khai thang máy (loại thang máy).
+# Phòng phụ mà nhà nào cũng cần (hành lang, WC chung, kho, giặt) KHÔNG nằm ở đây — mô hình vẫn tự thêm.
+only_when_asked: [light_well, courtyard, terrace, shop, elevator]
 
 # Diện tích phòng đầu bài khai là mức TỐI THIỂU (Haan, 13/09/2026) — không dùng sai số: nhỏ hơn là
 # bác, lớn hơn là tự do. Sai số dưới đây chỉ còn áp cho CHỖ ĐỂ XE so với số xe, vì diện tích mỗi xe
@@ -78,28 +86,29 @@ demands:
   elevator:
     # Mã phòng RIÊNG, tách khỏi `core` ngày 22/09/2026 — xem ghi chú ở `kb/room_vocabulary.yaml`.
     space_type: elevator
-    # Diện tích giếng thang tối thiểu theo tải, m². CẢ GIẾNG (lọt lòng vách giếng), chưa gồm
-    # chiếu tới đứng chờ trước cửa — chỗ đứng chờ là hành lang, đã tính ở nơi khác.
-    #
-    # ⚠️ NGUỒN: quy cách cabin thang máy gia đình của nhà sản xuất, KHÔNG phải số đo từ hồ sơ
-    # NVG — chưa hồ sơ NVG nào có thang máy, nên `priors.min_samples` (nay là 5) không áp dụng
-    # được: không phải «chưa đủ mẫu» mà là KHÔNG CÓ mẫu nào. Đây là mức SÀN
-    # để bác một «lõi thang» 0,8 m² không lọt nổi cabin nào, không phải kích thước thiết kế.
-    # Có số đo thật thì sửa ở đây. Câu hỏi đang chờ Haan xác nhận.
-    shaft_m2:
-      nho_350kg: 2.2
-      vua_450kg: 2.5
-      lon_630kg: 3.2
-    # Dùng khi đầu bài khai có thang máy mà chưa chọn tải.
-    shaft_m2_unknown: 2.5
-    # Cạnh ngắn nhất của giếng, m. Chỉ có diện tích là chưa đủ: 2,2 m² vẫn dựng được một khe
-    # 0,5 × 4,4 m, đúng loại hình cây chia hay cắt ra. Cố ý KHÔNG khai vào
-    # `usable.min_side_m.core` của `kb/construction_norms.yaml`: mã `core` còn dùng cho lõi
-    # THANG BỘ, và ép lõi thang bộ rộng tối thiểu 1,4 m là bác những mặt bằng đang đúng.
-    shaft_min_side_m: 1.4
+    # Kích thước giếng KHÔNG còn đoán theo tải (bảng 2,2 / 2,5 / 3,2 m² và cạnh 1,4 m đã gỡ, Haan
+    # 25/09/2026: «diện tích thang máy nên yêu cầu điền thông tin ở đầu bài thay vì đoán»). Gia chủ khai
+    # bề rộng × chiều sâu lọt lòng giếng theo hãng thang (`vertical.elevator_shaft_*_m`); thiếu thì đầu
+    # bài báo mâu thuẫn nghiêm trọng `thang_may_thieu_kich_thuoc` và chưa dựng được phương án.
     # Nhãn của ô khi gia chủ mới chỉ CHỪA CHỖ — nhãn này đi vào bản vẽ, nên phải nói đúng sự
     # thật: hôm nay nó là một ô trống, không phải một cái thang máy.
     reserved_label: 'Ô chừa thang máy (lắp sau)'
+    # Loại phòng tính là «hành lang / sảnh chung» khi kiểm KIỂU BỐ TRÍ thang máy đầu bài khai
+    # (`vertical.elevator_position`, Haan 25/09/2026): kiểu «cạnh thang bộ» đòi thang máy và thang bộ
+    # cùng giáp một phòng loại này; kiểu «đối diện» đòi hai ô không chung vách mà cùng giáp một phòng
+    # loại này. Cùng tinh thần `passage.through` của `kb/room_vocabulary.yaml`, trừ ô thang (`core` là
+    # lõi thang bộ, không phải sảnh).
+    hall_types: [circulation, living, dining]
+    # Hai ô «chung vách» / «cùng giáp» khi đoạn vách chung dài ít nhất chừng này, m — đủ một cửa đi 0,8 m.
+    # Là DUNG SAI ĐO để phân biệt «chạm góc» với «chung một mảng tường», không phải định mức.
+    layout_min_shared_m: 0.8
+    # Giếng thang máy TO hay DÀI vô lý so với kích thước gia chủ khai thì bác (lượt chạy thật 913bc2ad,
+    # 25/09/2026: mô hình vẽ giếng 1 × 4 ô cho giếng 1,3 × 1,4 m; bộ xếp căn ra 1,6 × 6,45 m). Một giếng
+    # là một khối gần vuông: cạnh dài không quá `shaft_max_aspect` lần cạnh ngắn, diện tích không quá
+    # `shaft_max_area_ratio` lần diện tích khai. Tỉ lệ diện tích cố ý rộng: bản phác ô 1 m vẽ giếng
+    # 1,3 × 1,4 m thành 2 × 2 ô = 4 m² theo tim tường, tức 2,2 lần — vẫn phải qua. Dài quá mới là lỗi.
+    shaft_max_aspect: 1.6
+    shaft_max_area_ratio: 2.5
 
   # ── Ban công ─────────────────────────────────────────────────────────────────────────
   # `balconies.scope`: `moi_tang` · `chi_mat_tien` · `theo_tung_phong` · `khong_co`.
@@ -202,6 +211,13 @@ demands:
       any_of: [study, study_area]
       blocking: false
       say: 'Đầu bài khai có làm việc tại nhà'
+    # Gia chủ chọn «sân trong» ở khoảng sân — đó là câu duy nhất của đầu bài mở đường cho một sân trong
+    # (`only_when_asked`). Không bác: sân trong có thể là khoảng lùi, không nhất thiết là một ô trong nhà.
+    - code: san_trong
+      answer: 'massing.yards ∋ san_trong'
+      any_of: [courtyard, light_well]
+      blocking: false
+      say: 'Đầu bài khai có sân trong'
 
   # ── Cảnh báo suy từ đầu bài, KHÔNG bác phương án ─────────────────────────────────────
   # Nghề nghiệp, không phải lời gia chủ. Chúng hiện lên màn hình cạnh mặt bằng để kiến trúc sư
@@ -215,3 +231,5 @@ demands:
     du_tru_nang_tang_thang_khong_len_mai: true
     # Nền nhà thấp hơn mặt đường ở nơi từng ngập.
     nen_thap_hon_duong_noi_ngap: true
+    # Khai có bậc tam cấp mà không khai cốt nền lẫn số bậc — mặt bằng không vẽ được bậc (T70).
+    bac_tam_cap_thieu_so: true

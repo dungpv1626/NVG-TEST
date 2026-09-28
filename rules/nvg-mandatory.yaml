@@ -1,0 +1,70 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+#  LUẬT BỐ TRÍ BẮT BUỘC CỦA NVG — Haan đặt 23/09/2026 (T71)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+#  Khác hẳn `nvg-experience.yaml` và `nvg-measured.yaml`:
+#   · LUÔN BẬT — không phụ thuộc ô tích gói quy tắc của kỹ sư (T20).
+#   · `blocking: true` BÁC phương án. Bộ xếp tự thử cách khác; hết cách thì gửi lại mô hình vẽ lại
+#     (tối đa `HOUSE_REVISIONS_MAX` lượt); vẫn không đạt thì KHÔNG ra phương án (Haan chọn).
+#
+#  Đây là ngoại lệ có chủ đích với T52 («luật cứng chỉ khi không dựng được / không đi được»): chính
+#  Haan đặt, nguyên văn:
+#   · «Bếp không được nằm dưới nhà vệ sinh … → bắt buộc.»
+#   · «Phòng thờ ko nằm dưới nhà vệ sinh, ko đối diện hoặc giáp nhà vệ sinh.» (Haan chọn: cả ba chặn.)
+#   · «Ban công phải thoáng: cạnh dài của ban công phải hướng ra mặt ngoài đồng thời là mặt thoáng.»
+#   · WC: «Không bắt buộc WC các tầng phải trùng 100 %, nhưng nên ưu tiên xếp WC và các khu ướt theo
+#     cùng một trục kỹ thuật đứng … chỉ cho phép lệch trục khi cần thiết.» → ƯU TIÊN, không chặn.
+#
+#  Mọi con số dưới đây là dung sai ĐO, không phải định mức. Đơn vị cm / cm².
+#  Mã đọc tệp này: `workers/src/design/ai/mandatory.ts`.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+version: '2026.09.1'
+
+# WC tầng trên chồng lên bếp tầng ngay dưới. «Chồng» = hình chiếu lọt lòng giao nhau quá mức này —
+# cùng mức `rectsOverlap` mà A3 và `wc_separate_from_altar_room` đang dùng: hai phòng cách nhau một
+# bức tường (VILLA: 11 cm) thì KHÔNG chồng.
+kitchen_under_wc:
+  blocking: true
+  overlap_min_cm2: 100
+
+# WC tầng trên chồng lên phòng thờ tầng ngay dưới.
+altar_under_wc:
+  blocking: true
+  overlap_min_cm2: 100
+
+# Phòng thờ và WC cùng tầng chung một bức tường: hai chữ nhật lọt lòng cách nhau không quá bề dày
+# tường dày nhất (40, như `rectsShareEdge`) và chồng nhau theo phương dọc tường ít nhất `overlap_cm`
+# — chạm góc không tính là giáp.
+altar_beside_wc:
+  blocking: true
+  wall_gap_cm: 40
+  overlap_cm: 20
+
+# Phòng thờ ĐỐI DIỆN WC: cửa phòng thờ và cửa WC cùng mở vào một phòng (thường là hành lang), trên
+# hai bức tường song song quay mặt vào nhau, lệch tim không quá `offset_cm`, cách nhau không quá
+# `max_distance_cm`. Đứng ở cửa phòng thờ nhìn thẳng sang là cửa WC.
+altar_facing_wc:
+  blocking: true
+  offset_cm: 60
+  max_distance_cm: 300
+
+# Ban công có ÍT NHẤT một cạnh dài nằm trên mép hình bao là mặt thoáng (`outline_faces: open`).
+# Ban công vuông thì cạnh nào cũng là cạnh dài. Dung sai: chữ nhật lọt lòng nằm lùi vào trong mép
+# hình bao một nửa bề dày lan can / tường — cùng mức `FACE_TOLERANCE_CM` của cổng ban công T65.
+#
+# T91 (Haan 27/09/2026): ban công có từ HAI cạnh trở lên trên mặt thoáng (ban công đua ra ngoài ranh
+# luôn thế — nhô ra có 2–3 mặt thoáng; ban công ở góc nhà cũng thế) thì không xét. Ban công nằm trong
+# sàn: cạnh dài > `long_ratio` lần cạnh ngắn thì BẮT BUỘC cạnh dài quay ra mặt thoáng (CHẶN); gần
+# vuông hơn thế thì không chặn — chỉ cảnh báo, và tiêu chí điểm D3 trừ điểm.
+balcony_on_open_face:
+  blocking: true
+  edge_tolerance_cm: 30
+  long_ratio: 1.5
+
+# WC CHUNG (không khép kín) tầng trên thẳng trục với WC hoặc hộp kỹ thuật tầng ngay dưới. KHÔNG chặn:
+# bộ xếp xếp mọi phương án thẳng trục lên trước mọi phương án lệch, rồi mới tới điểm; phương án chọn
+# mà vẫn lệch thì ghi chú nói rõ WC nào lệch bao nhiêu. «Thẳng trục» = tâm cách tâm không quá
+# `khoang_cach_m` của tiêu chí E2 (`kb/plan_quality.yaml`) — đọc lại số đó, không khai ở hai nơi.
+wc_stack:
+  prefer: true

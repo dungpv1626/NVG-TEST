@@ -41,13 +41,7 @@ export interface BuildableBox {
  */
 export function buildableFromDigest(digest: AiBriefDigest): BuildableBox {
   const site = digest.site;
-  const geometry = siteGeometry({
-    shape: site.shape ?? null,
-    width_m: site.width_m,
-    depth_m: site.depth_m,
-    rear_width_m: site.rear_width_m ?? null,
-    boundary_m: site.boundary_m ?? null,
-  } as Parameters<typeof siteGeometry>[0]);
+  const geometry = geometryOf(digest);
 
   // Mỗi mặt lấy mức LỚN HƠN giữa khoảng lùi quy hoạch và khoảng sân gia chủ muốn (13/09/2026).
   // Trước đó đầu bài đòi sân trước, sân bên, sân sau mà không nói rộng bao nhiêu, nên phần đất
@@ -81,6 +75,31 @@ export function buildableFromDigest(digest: AiBriefDigest): BuildableBox {
     areaM2: round1(widthM * depthM),
     exact: geometry.exact,
   };
+}
+
+/**
+ * Ô chữ nhật của THỬA, chưa trừ khoảng lùi, mét — phần đất bậc tam cấp được phép chìa ra (T70).
+ * Thửa đa giác bất kỳ thì là ô lớn nhất nằm gọn trong thửa: sai về phía ít đất hơn, hướng an toàn.
+ */
+export function lotRectFromDigest(digest: AiBriefDigest): {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+} {
+  const rect = geometryOf(digest).buildable;
+  return { x0: rect.xM, y0: rect.yM, x1: rect.xM + rect.widthM, y1: rect.yM + rect.depthM };
+}
+
+function geometryOf(digest: AiBriefDigest): ReturnType<typeof siteGeometry> {
+  const site = digest.site;
+  return siteGeometry({
+    shape: site.shape ?? null,
+    width_m: site.width_m,
+    depth_m: site.depth_m,
+    rear_width_m: site.rear_width_m ?? null,
+    boundary_m: site.boundary_m ?? null,
+  } as Parameters<typeof siteGeometry>[0]);
 }
 
 function round1(n: number): number {

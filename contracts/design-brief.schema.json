@@ -675,12 +675,37 @@
         "elevator_capacity": {
           "type": ["string", "null"],
           "enum": ["nho_350kg", "vua_450kg", "lon_630kg", null],
-          "description": "Tải trọng thang máy, quyết kích thước hố thang. Số đo cụ thể lấy từ `kb/construction_norms.yaml`, không viết vào đầu bài — hãng thang đổi thì đổi ở một chỗ."
+          "description": "Tải trọng thang máy — thông tin cho kỹ sư và hãng thang. KHÔNG dùng để đoán kích thước giếng: kích thước lấy từ hai trường `elevator_shaft_*_m` (Haan 25/09/2026)."
+        },
+        "elevator_shaft_width_m": {
+          "type": ["number", "null"],
+          "minimum": 0.8,
+          "maximum": 4,
+          "description": "Bề RỘNG lọt lòng giếng thang máy, mét, theo bản vẽ của hãng thang gia chủ chọn. Chương trình không đoán số này (Haan 25/09/2026): khai thang máy mà để trống thì đầu bài bị báo mâu thuẫn nghiêm trọng và chưa dựng được phương án."
+        },
+        "elevator_shaft_depth_m": {
+          "type": ["number", "null"],
+          "minimum": 0.8,
+          "maximum": 4,
+          "description": "Chiều SÂU lọt lòng giếng thang máy, mét (phía cửa cabin là bề rộng). Cùng nguồn và cùng luật với `elevator_shaft_width_m`."
         },
         "elevator_position": {
           "type": ["string", "null"],
-          "enum": ["canh_thang_bo", "rieng_biet", "chua_quyet", null],
-          "description": "Thang máy đặt cạnh thang bộ thành một lõi, hay tách riêng. Đặt cạnh thì gọn lõi và rẻ hệ thống; tách riêng thì tiện cho người già ở phòng xa thang bộ."
+          "enum": [
+            "giua_long_thang_bo",
+            "canh_thang_bo",
+            "doi_dien_thang_bo",
+            "khac",
+            "rieng_biet",
+            "chua_quyet",
+            null
+          ],
+          "description": "Kiểu bố trí thang máy so với thang bộ (Haan 25/09/2026, ba kiểu phổ biến ở Việt Nam): `giua_long_thang_bo` — giếng thang máy dựng ở khoảng trống giữa lòng thang bộ, thang bộ uốn quanh; `canh_thang_bo` — sát nhau trên cùng một mảng tường, cùng mở ra một hành lang; `doi_dien_thang_bo` — hai mặt đối diện, ngăn bởi hành lang / sảnh chờ; `khac` — kiến trúc sư tự mô tả ở `elevator_layout_note`. `rieng_biet`, `chua_quyet` là giá trị cũ, giữ để đọc lại đầu bài đã đúc."
+        },
+        "elevator_layout_note": {
+          "type": ["string", "null"],
+          "maxLength": 300,
+          "description": "Mô tả kiểu bố trí thang máy khi chọn `khac`. Đi tới mô hình dạng câu, không ràng buộc hình học."
         },
         "stair_type": {
           "type": ["string", "null"],
@@ -721,6 +746,51 @@
       "additionalProperties": false,
       "description": "Ban công — vị trí, phạm vi và độ vươn. Khai ở đây chứ không ở `required_spaces` vì ban công là một THUỘC TÍNH của mặt nhà theo tầng, không phải một phòng đứng riêng trong chương trình không gian.",
       "properties": {
+        "required_sides": {
+          "type": ["array", "null"],
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["front", "back", "left", "right"]
+          },
+          "description": "Mặt BẮT BUỘC có ban công (T91). Thiếu ban công ở mặt này là sai đầu bài — bác phương án."
+        },
+        "optional_sides": {
+          "type": ["array", "null"],
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["front", "back", "left", "right"]
+          },
+          "description": "Mặt CÓ THỂ có ban công (T91) — có hay không đều được. Mặt không nằm trong hai danh sách thì KHÔNG được đặt ban công (khi gia chủ đã khai ít nhất một mặt)."
+        },
+        "projection_by_side": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "front": {
+              "type": ["number", "null"],
+              "minimum": 0,
+              "maximum": 3
+            },
+            "back": {
+              "type": ["number", "null"],
+              "minimum": 0,
+              "maximum": 3
+            },
+            "left": {
+              "type": ["number", "null"],
+              "minimum": 0,
+              "maximum": 3
+            },
+            "right": {
+              "type": ["number", "null"],
+              "minimum": 0,
+              "maximum": 3
+            }
+          },
+          "description": "Độ đua ra ngoài ranh của ban công TỪNG MẶT, mét (T91, Haan 27/09/2026). 0 = không đua — ban công nằm trong diện tích sàn. Trống = chưa trả lời: chương trình giữ ban công trong ranh và nói ra. Đua sang đất nhà khác bị chặn ở bước soát đầu bài; đua ra đường, hẻm, ao hồ chỉ cảnh báo."
+        },
         "sides": {
           "type": ["array", "null"],
           "uniqueItems": true,
@@ -728,7 +798,7 @@
             "type": "string",
             "enum": ["front", "back", "left", "right"]
           },
-          "description": "Ban công đặt ở mặt nào của nhà: trước, sau, hông trái, hông phải."
+          "description": "Ban công đặt ở mặt nào của nhà: trước, sau, hông trái, hông phải. CŨ (trước T91): đọc như `required_sides`. Đầu bài mới không ghi trường này."
         },
         "scope": {
           "type": ["string", "null"],
@@ -737,13 +807,13 @@
         },
         "projection_over_boundary": {
           "type": ["boolean", "null"],
-          "description": "Ban công có ĐUA RA NGOÀI ranh đất (nhô qua chỉ giới xây dựng, ra trên vỉa hè hoặc trên khoảng lùi) không. Đây là câu hỏi pháp lý trước khi là câu hỏi hình khối: nhiều địa phương chỉ cho đua khi đường đủ rộng và chỉ tới một độ vươn nhất định. Trả lời «không» thì ban công nằm trọn trong phần đất xây được, và diện tích sàn phải tính lại."
+          "description": "Ban công có ĐUA RA NGOÀI ranh đất (nhô qua chỉ giới xây dựng, ra trên vỉa hè hoặc trên khoảng lùi) không. Đây là câu hỏi pháp lý trước khi là câu hỏi hình khối: nhiều địa phương chỉ cho đua khi đường đủ rộng và chỉ tới một độ vươn nhất định. Trả lời «không» thì ban công nằm trọn trong phần đất xây được, và diện tích sàn phải tính lại. CŨ (trước T91): thay bằng `projection_by_side`; chỉ còn để đọc đầu bài đã lưu."
         },
         "projection_m": {
           "type": ["number", "null"],
           "minimum": 0,
           "maximum": 3,
-          "description": "Độ vươn của ban công tính từ mặt tường, mét. Để trống thì lấy theo thông lệ của phương án."
+          "description": "Độ vươn của ban công tính từ mặt tường, mét. Để trống thì lấy theo thông lệ của phương án. CŨ (trước T91): thay bằng `projection_by_side`; chỉ còn để đọc đầu bài đã lưu."
         },
         "drying_balcony": {
           "type": ["boolean", "null"],

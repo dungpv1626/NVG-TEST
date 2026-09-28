@@ -19,11 +19,12 @@
 import type { AiFloorPlan, AiPlanRoomsLevel, AiPlanTree, AiSpaceProgram } from '@nvg/shared/design';
 import type { ConstructionNorms } from '../../kb/construction';
 import type { Face } from '../../kb/site-context';
+import type { ServiceAnchors } from '../mandatory';
 import { mergeKey, type PassageRules } from '../../kb/vocabulary';
 import { overlapArea, rectContainsRect, toRect, type Rect } from '../draw/geometry';
 import { DrawNotes, type DrawNote } from '../draw/notes';
 import { outlineFaces } from '../outline-faces';
-import { checkPlan, OVERLAP_TOLERANCE_CM2, type PlanIssue } from '../plan-check';
+import { checkPlan, OVERLAP_TOLERANCE_CM2, restateRoomFacts, type PlanIssue } from '../plan-check';
 import { levelFromRooms } from '../plan-geometry';
 import { walkTree, type Cell } from './cells';
 import { innerRects } from './insets';
@@ -74,8 +75,21 @@ export interface LevelAnchors {
    * dựng được: vắng thì không bám mốc, đúng hành vi trước T65.
    */
   elevators?: Rect[];
-  /** Ô WC của tầng — chỉ là GỢI Ý xếp chồng khu ướt trong lời dẫn, không kiểm. */
+  /**
+   * Ô khu ướt (WC, lavabo) của tầng — mốc để tầng trên xếp THẲNG TRỤC: ép vùng, phạt khoảng cách, bản
+   * phác thứ hai, và (T71) bậc xếp hạng đầu tiên của bộ xếp. Không chặn — Haan: «chỉ lệch khi cần».
+   */
   wetRooms: Rect[];
+  /**
+   * Bếp, phòng thờ, WC / hộp kỹ thuật của TẦNG NGAY DƯỚI (T71) — cổng luật bắt buộc của bộ xếp đo theo
+   * đây. Vắng ở tầng 1 và ở mốc đúc trước T71.
+   */
+  service?: ServiceAnchors;
+  /**
+   * Phòng của tầng NGAY DƯỚI (T96): cổng luật bắt buộc chia lại khu của không gian mở tầng dưới theo WC
+   * của chính ứng viên đang xét — khu bếp tránh nằm dưới WC đúng cách tờ vẽ sẽ chia. Vắng = dùng `service`.
+   */
+  belowRooms?: AiPlanRoomsLevel['rooms'];
   footprint: Rect;
   /**
    * Chiều đi lên của vế thang đầu tầng này (T43) — tầng trên dùng lại khi bộ giải ý định dựng cây.
@@ -468,6 +482,18 @@ function layoutOnce(input: LevelLayoutInput): LevelLayout {
           code: 'elevator_not_at_anchor',
           label: 'Ô thang máy',
         });
+      } else if (input.anchors.elevators?.length) {
+        // Không chồng lên giếng nào của tầng dưới — lệch HẲN, không có gì để kéo về. Trước đây ô như
+        // vậy lọt qua tầng này rồi mới hỏng ở cổng cuối, làm hỏng cả lượt (lượt chạy thật 23/09/2026:
+        // lệch 455 cm); bác ở đây thì bộ xếp còn thử được cách khác.
+        return fail([
+          {
+            code: 'elevator_not_at_anchor',
+            level: 'blocking',
+            message: `Ô thang máy "${cell.id}" ở tầng ${level} không nằm trên giếng thang máy tầng dưới — giếng thang phải thẳng suốt.`,
+            ref: cell.id,
+          },
+        ]);
       }
     }
     const snapped = snapToAnchors(walkInput, cells, targets, notes);
@@ -556,6 +582,11 @@ function layoutOnce(input: LevelLayoutInput): LevelLayout {
       up: input.tree.stair.up,
       flights: stairFlights(construction, across),
       treads: stairTreads(construction, h),
+      // Mặt bậc là số NVG giữ cố định (250 trên cả bốn vế đo được, 13.16.1) — tờ vẽ đọc số này
+      // thay vì chia đều ô thang, để ô thang dài hơn cần thì phần dư vào chiếu nghỉ (T70).
+      ...(construction.stairs.going_m !== undefined
+        ? { going: Math.round(construction.stairs.going_m * 100) }
+        : {}),
     });
   }
 
@@ -627,10 +658,13 @@ function safetyNet(
   program: AiSpaceProgram,
 ): { issues: PlanIssue[]; notes: DrawNote[] } {
   const geometry = levelFromRooms(level, input.construction, input.groups.outdoor);
+  // Diện tích và tên phòng do chương trình gán: lệch thì tự ghi lại, như khi ghép cả nhà (`assemblePlan`).
+  const restated = restateRoomFacts(geometry.level.rooms, `tầng ${level.level}`);
   const plan = {
     levels: [
       {
         ...geometry.level,
+        rooms: restated.rooms,
         outline_faces: outlineFaces(
           geometry.level.outline.map(([x, y]) => [x, y] as [number, number]),
           input.openFaces,
@@ -645,6 +679,10 @@ function safetyNet(
     doorExemptTypes: input.groups.noDoorRequired,
     verticalTypes: input.groups.vertical,
     crossLevel: false,
+    // Phần ban công ĐUA RA NGOÀI RANH (T65) đã được nới ngay trong cây (`balcony-projection.ts`), nên
+    // phép «trong phần đất được xây» phải biết mức đua ấy — thiếu dòng này thì mọi ban công đua ra đều
+    // bị bác ở đây (lượt chạy thật 23/09/2026: đầu bài khai đua 1 m, tầng 2 không xếp nổi).
+    demands: { elevator: null, balcony: input.balcony ?? null, spaces: [] },
   });
   return { issues: [...geometry.issues, ...check.blocking], notes: geometry.notes };
 }

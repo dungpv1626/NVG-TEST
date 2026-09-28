@@ -134,6 +134,8 @@ export const CLS = {
   textArea: 'ta',
   textDim: 'td',
   textStair: 'tst',
+  /** Số thứ tự bậc — thang bộ và bậc tam cấp (T70). */
+  textStairNumber: 'tsn',
   textLevel: 'tl',
   textDisclaimer: 'tw',
   textNote: 'ts',
@@ -200,6 +202,7 @@ export function sheetCss(style: SheetStyle): string {
     text(CLS.textArea, t.room_area, c.hairline),
     text(CLS.textDim, t.dim, c.dim),
     text(CLS.textStair, t.dim, c.hairline, 'font-weight:600;'),
+    text(CLS.textStairNumber, t.stair_number, c.hairline),
     text(CLS.textLevel, t.level_name, c.ink, 'font-weight:700;text-anchor:start;'),
     text(CLS.textDisclaimer, t.disclaimer, c.ink, 'font-weight:600;text-anchor:start;'),
     text(CLS.textNote, t.strip_note, c.hairline, 'text-anchor:start;'),

@@ -60,6 +60,7 @@ import { aiModelCatalogue, isSelectableRoute } from './models';
 import { aiPrompts } from './prompts-data';
 import { anchorMime, pngSize } from './sheet-image';
 import { activeRun, attachWorkflow, createRun, finishRun } from './runs';
+import { instanceIdOf } from '../workflows/rpc-stub';
 
 export const facadeApp = new Hono<{ Bindings: DesignEnv }>();
 
@@ -686,8 +687,8 @@ facadeApp.post('/runs', async (c) => {
     facadeBriefRef: facadeBrief?.id ?? null,
   };
   try {
-    const instance = await c.env.AI_DESIGN_PIPELINE.create({ params });
-    await attachWorkflow(repo.db, run.id, instance.id);
+    const instanceId = instanceIdOf(await c.env.AI_DESIGN_PIPELINE.create({ params }));
+    await attachWorkflow(repo.db, run.id, instanceId);
   } catch (error) {
     await finishRun(repo.db, run.id, {
       status: 'failed',

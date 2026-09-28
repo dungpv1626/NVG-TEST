@@ -283,6 +283,8 @@
   auto_repair: none
 
 # XÁC NHẬN 12/09/2026: 0 vi phạm trên 2 hồ sơ — không phòng thờ nào dưới hay chung tường WC.
+# 23/09/2026 (T71): nay còn là luật CHẶN luôn bật ở `nvg-mandatory.yaml` (giáp, đối diện, dưới WC). Giữ
+# ở đây như cảnh báo cho kỹ sư tích gói — không bỏ, không đổi mức.
 - id: wc_separate_from_altar_room
   applies_to: [nha_pho, biet_thu, nha_vuon]
   scope: building
@@ -384,6 +386,8 @@
   n: 0
   auto_repair: none
 
+# 23/09/2026 (T71): với BAN CÔNG nay là luật CHẶN luôn bật ở `nvg-mandatory.yaml`. Giữ cho sân thượng,
+# lô gia — vẫn là cảnh báo.
 - id: outdoor_on_open_face
   applies_to: [nha_pho, biet_thu, nha_vuon]
   scope: floor

@@ -60,8 +60,6 @@ export function projectBalconyCells(input: {
   if (!balcony || !projection || level < balcony.fromLevel) {
     return { cells: [...input.cells], projected: [] };
   }
-  const cm = Math.round(projection.m * 100);
-  if (cm <= 0) return { cells: [...input.cells], projected: [] };
 
   const projected: ProjectionResult['projected'] = [];
   const cells = input.cells.map((cell) => {
@@ -69,8 +67,9 @@ export function projectBalconyCells(input: {
     if (input.typeOf.get(cell.id) !== balcony.type) return cell;
 
     let rect = cell.rect;
-    for (const side of projection.sides) {
-      if (!isFlush(rect, footprint, side)) continue;
+    for (const [side, m] of Object.entries(projection) as [Side, number][]) {
+      const cm = Math.round(m * 100);
+      if (cm <= 0 || !isFlush(rect, footprint, side)) continue;
       rect =
         side === 'front'
           ? { ...rect, y0: rect.y0 - cm }

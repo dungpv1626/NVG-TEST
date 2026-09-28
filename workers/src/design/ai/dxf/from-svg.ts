@@ -42,6 +42,7 @@ const ROLE_OF_CLASS: Record<string, DxfRole | null> = {
   [CLS.stair]: 'stair',
   [CLS.stairArrow]: 'stair',
   [CLS.textStair]: 'stair',
+  [CLS.textStairNumber]: 'stair',
   [CLS.void]: 'void',
   [CLS.dimLine]: 'dimension',
   [CLS.dimTick]: 'dimension',
@@ -72,6 +73,8 @@ function textSize(style: SheetStyle, cls: string): number {
       return t.room_area;
     case CLS.textNorth:
       return t.north;
+    case CLS.textStairNumber:
+      return t.stair_number;
     default:
       return t.dim;
   }

@@ -17,7 +17,7 @@ import {
   type AiSpaceProgram,
 } from '@nvg/shared/design';
 import { describe, expect, it } from 'vitest';
-import { checkPlan, type PlanCheckInput } from '../ai/plan-check';
+import { checkPlan, restateRoomFacts, type PlanCheckInput } from '../ai/plan-check';
 import { parseRuleMessages } from '../ai/plan-messages';
 import { reviewPlanRooms } from '../ai/rule-warnings';
 import { parseRuleFile, RulePack } from '../rules/rule-pack';
@@ -554,10 +554,122 @@ describe('withMergedParts — chia khu của không gian mở (T48)', () => {
     expect(out[0]!.parts!.map((part) => part.id)).toEqual(['living_1', 'dining_1', 'kitchen_1']);
   });
 
+  // T96 (Haan chấm lượt 5fda70dc): «vào phòng khách từ cửa chính đi qua bếp và phòng ăn, rất không
+  // hợp lý» — khu đón khách quay về phía cửa vào, trước cả quy tắc bếp xa phòng yên tĩnh.
+  const receiving = {
+    ...zoning,
+    reception: new Set(['living']),
+    receptionFrom: new Set(['porch', 'garage', 'circulation']),
+  };
+  const deep = { ...room, rect: [0, 300, 600, 1800] as [number, number, number, number] };
+
+  it('sảnh ngoài kề mặt SAU của không gian mở: khu khách dời về phía sảnh, bếp lên đầu', () => {
+    const porch = {
+      id: 'porch_1',
+      type: 'porch',
+      rect: [0, 1800, 600, 2100] as [number, number, number, number],
+      area_m2: 18,
+    };
+    const out = withMergedParts([deep, porch], (id) => targets[id] ?? null, receiving);
+    const parts = out[0]!.parts!;
+    expect(parts[parts.length - 1]!.id).toBe('living_1');
+    expect(parts[parts.length - 1]!.rect[3]).toBe(1800);
+  });
+
+  it('không phòng kề nào là lối vào nhưng không gian chạm mặt đường: khu khách ra mặt đường', () => {
+    const front = { ...room, also: ['dining_1', 'kitchen_1'] };
+    const reversed = (id: string) => targets[id] ?? null;
+    // Mô hình khai bếp trước, khách sau — vẫn phải đảo về khách ở hàng đầu (y = 0).
+    const out = withMergedParts(
+      [{ ...front, id: 'kitchen_1', also: ['dining_1', 'living_1'] }],
+      reversed,
+      receiving,
+    );
+    const parts = out[0]!.parts!;
+    expect(parts[0]!.id).toBe('living_1');
+    expect(parts[0]!.rect[1]).toBe(0);
+  });
+
+  it('sảnh ngoài thắng chỗ để xe: gara kề cạnh bên không làm khu khách quay về phía gara', () => {
+    const porch = {
+      id: 'porch_1',
+      type: 'porch',
+      rect: [0, 1800, 600, 2100] as [number, number, number, number],
+      area_m2: 18,
+    };
+    const garage = {
+      id: 'garage_1',
+      type: 'garage',
+      rect: [600, 300, 1000, 1800] as [number, number, number, number],
+      area_m2: 60,
+    };
+    const out = withMergedParts([deep, porch, garage], (id) => targets[id] ?? null, receiving);
+    const parts = out[0]!.parts!;
+    expect(parts[parts.length - 1]!.id).toBe('living_1');
+  });
+
+  it('WC tầng trên đè lên đầu không gian mở: khu bếp dời khỏi chỗ ấy (luật bắt buộc T71, T96)', () => {
+    const cookFirst = (id: string) => targets[id] ?? null;
+    const out = withMergedParts(
+      [{ ...room, id: 'kitchen_1', also: ['dining_1', 'living_1'] }],
+      cookFirst,
+      { cooking: new Set(['kitchen']), quiet: new Set() },
+      [{ x0: 0, y0: 0, x1: 600, y1: 200 }],
+    );
+    const parts = out[0]!.parts!;
+    expect(parts[0]!.id).not.toBe('kitchen_1');
+  });
+
+  it('có sảnh ngoài kề đúng phía trước: thứ tự mô hình khai đã đúng, không đổi', () => {
+    const porch = {
+      id: 'porch_1',
+      type: 'porch',
+      rect: [0, 0, 600, 300] as [number, number, number, number],
+      area_m2: 18,
+    };
+    const out = withMergedParts([deep, porch], (id) => targets[id] ?? null, receiving);
+    expect(out[0]!.parts!.map((part) => part.id)).toEqual(['living_1', 'dining_1', 'kitchen_1']);
+  });
+
   it('thiếu diện tích mục tiêu của một thành viên thì KHÔNG chia — thà một nhãn chung còn hơn ranh đặt bừa', () => {
     const [out] = withMergedParts([room], (id) =>
       id === 'kitchen_1' ? null : (targets[id] ?? null),
     );
     expect(out!.parts).toBeUndefined();
+  });
+});
+
+describe('diện tích và tên phòng do chương trình gán: tự sửa, không chặn (Haan 25/09/2026)', () => {
+  const room = (id: string, rect: number[], area_m2: number, label: string | null = null) => ({
+    id,
+    type: 'light_well',
+    rect,
+    area_m2,
+    label,
+  });
+
+  it('diện tích lệch chữ nhật quá dung sai thì ghi lại theo số đo, kèm ghi chú', () => {
+    const { rooms, notes } = restateRoomFacts([room('a', [0, 0, 400, 500], 12)], 'tầng 1');
+    expect(rooms[0]!.area_m2).toBe(20);
+    expect(notes.map((note) => note.code)).toEqual(['room_area_restated']);
+  });
+
+  it('lệch trong dung sai thì giữ nguyên, không ghi chú', () => {
+    const { rooms, notes } = restateRoomFacts([room('a', [0, 0, 400, 500], 19.6)], 'tầng 1');
+    expect(rooms[0]!.area_m2).toBe(19.6);
+    expect(notes).toEqual([]);
+  });
+
+  it('hai phòng cùng tầng trùng tên thì đánh số từ phòng thứ hai, không đụng tên đã có', () => {
+    const { rooms, notes } = restateRoomFacts(
+      [
+        room('a', [0, 0, 100, 100], 1, 'Giếng trời'),
+        room('b', [100, 0, 200, 100], 1, 'Giếng trời 2'),
+        room('c', [200, 0, 300, 100], 1, 'giếng  trời'),
+      ],
+      'tầng 1',
+    );
+    expect(rooms.map((r) => r.label)).toEqual(['Giếng trời', 'Giếng trời 2', 'giếng  trời 3']);
+    expect(notes.map((note) => note.code)).toEqual(['room_label_numbered']);
   });
 });

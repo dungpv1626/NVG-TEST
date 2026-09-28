@@ -216,7 +216,7 @@ types:
   # ── HAI MÃ THÊM 12/09/2026 (T32) — rút từ 2 hồ sơ NVO đã xây ──────────────────────────
   #
   # Không phải chuyện làm đẹp từ vựng. Thiếu hai mã này thì hai không gian thật phải xếp vào
-  # `circulation`, và quy tắc `room_min_dimension_circulation` 1,1 m **báo vi phạm trên công
+  # `circulation`, và quy tắc `room_min_dimension_circulation` 1,1 m (nay 1,0, Q-52) **báo vi phạm trên công
   # trình đã xây** — hốc lavabo của P2 rộng đúng 1,05 m. Mã mới là cách bỏ một cảnh báo sai.
 
   - code: porch
@@ -332,7 +332,9 @@ zone_defaults:
 #
 # Là DỮ LIỆU: loại hình nhà và thói quen từng gia chủ khác nhau. Sửa ở đây, không sửa mã.
 passage:
-  through: [circulation, core, stair, living, dining]
+  # Bếp vào `through` (Haan 27/09/2026, T91): khách + ăn + bếp là MỘT khu chung, không cần hành lang
+  # cứng — lối đi nằm ngay trong khu ấy. Phòng giáp bếp mở cửa ra bếp được như ra phòng khách.
+  through: [circulation, core, stair, living, dining, kitchen]
   entry_through: [garage, porch]
   # Loại phòng KHÔNG được nằm trên đường đi hằng ngày (T48, 16/09/2026). Đi qua chúng để tới WC hay
   # xuống bếp là đường vòng: lượt đo 58d9ff66 ra một tầng 1 mà từ phòng khách phải qua sảnh ngoài rồi
@@ -346,14 +348,15 @@ passage:
   # là đường, không phải chỗ ở; lấy chúng làm điểm xuất phát thì một hành lang chỉ vào được từ gara
   # vẫn coi như đạt (đúng chỗ lượt đo 58d9ff66 lọt qua).
   everyday_from: [living, dining]
-  # Loại phòng KHÔNG được mở cửa thẳng từ ô thang (Haan 18/09/2026, chấm lượt 78be09b4: «cửa phòng
-  # thờ mở ra là thang bộ — bất hợp lý»). Ô thang là một vế bậc, không phải sảnh: cánh cửa quét lên
-  # bậc và người bước ra hụt chân. Những phòng này phải vào từ hành lang hay khu sinh hoạt chung.
-  #
-  # Cố ý là danh sách PHỦ ĐỊNH và chỉ gồm phòng ở: WC, kho, giặt phơi vẫn mở từ chiếu nghỉ được —
-  # đó là cách nhà ống Việt Nam vẫn làm, và cấm luôn thì phát lại hai lượt đo thật mất phương án.
-  # Vắng mục này = không kiểm.
-  stair_not_for: [bedroom, master_bedroom, study, study_area, altar_room, shop]
+  # Ô thang chỉ mở cửa sang ĐÚNG những loại phòng dưới đây; mọi phòng khác phải vào từ hành lang hay khu
+  # sinh hoạt chung (Haan 25/09/2026, T74). Ô thang trên bản vẽ là cả khối bậc: chương trình không biết
+  # cửa nằm ở chiếu nghỉ hay giữa vế, nên cửa nào mở từ nó cũng có thể quét lên bậc — Haan: «cửa ở mặt
+  # cầu thang thì đi vào đi ra kiểu gì?». Danh sách KHẲNG ĐỊNH: T54 dùng danh sách phủ định chỉ gồm
+  # phòng ở, để lọt WC, kho, bếp, giặt phơi. Sân thượng (tum thang mở ra mái) và thang máy (sảnh chung
+  # chiếu tới) là hai ngoại lệ Haan chọn. Vắng mục này = không kiểm.
+  # Bếp thêm 27/09/2026 (T91): cùng khu chung với khách và ăn, Haan — «hành lang được hiểu là nằm trong
+  # các không gian chung đó».
+  stair_opens_to: [circulation, core, stair, elevator, living, dining, kitchen, terrace]
   # Trong MỘT không gian mở (khách + ăn + bếp là một phòng), khu nào đặt ở đâu là việc của chương
   # trình. Hai danh sách dưới đây chỉ dùng cho việc ấy: xếp khu NẤU NƯỚNG xa cửa của phòng yên tĩnh
   # nhất có thể (Haan 18/09/2026: «không nên xếp cửa ra vào phòng ngủ ở phía bếp nấu nướng»).
@@ -363,9 +366,20 @@ passage:
   # phòng đã xếp xong — tường, cửa và diện tích không đổi.
   cooking: [kitchen]
   quiet: [bedroom, master_bedroom, altar_room, study, study_area]
+  # Khu ĐÓN KHÁCH của một không gian mở (T96, Haan chấm lượt 5fda70dc: «vào phòng khách từ cửa chính đi
+  # qua bếp và phòng ăn, rất không hợp lý»): khu loại `reception` xếp về phía cửa vào — phía phòng loại
+  # `reception_from` kề không gian ấy (sảnh ngoài, chỗ để xe, hành lang), không có thì phía mặt đường.
+  # Ưu tiên TRƯỚC quy tắc bếp xa phòng yên tĩnh; cũng chỉ đổi thứ tự khu, không đổi tường.
+  reception: [living]
+  reception_from: [porch, garage, circulation]
+  # Hai phòng cùng thuộc nhóm này kề nhau thì nối bằng Ô THÔNG SUỐT VÁCH, không vẽ vách ngăn (T96, Haan
+  # 27/09/2026: «vẽ tường phân cách [khách – lối đi] ở giữa là không cần thiết và làm bí không gian»).
+  # Trước đây chỉ hành lang – hành lang / hành lang – thang được thế (18/09/2026).
+  open_flow: [living, dining, circulation]
   served_from:
     storage: [kitchen, garage]
-    laundry: [kitchen, garage]
+    # Giặt phơi mở từ ban công / sân thượng (Haan 27/09/2026, T91).
+    laundry: [kitchen, garage, balcony, terrace]
     technical: [garage, storage, kitchen]
     wc: [vanity, dressing_room]
     closet: [bedroom, master_bedroom]
@@ -410,6 +424,22 @@ group_targets:
   outdoor:
     vi: Ngoài trời (ban công, sân, giếng trời)
     members: [balcony, terrace, courtyard, light_well, porch]
+  # Hai nhóm cho tiêu chí E5 của thước chấm (T96): khu ƯỚT tầng trên không nên đè lên phòng nhóm
+  # `dry_below` tầng dưới — chỗ tiếp khách, chỗ ăn, chỗ ngủ, chỗ thờ, lối vào, chỗ bán hàng. Bếp và
+  # phòng thờ dưới WC đã là luật bắt buộc (`rules/nvg-mandatory.yaml`); ở đây là phần còn lại, trừ điểm.
+  wet:
+    vi: Khu ướt (vệ sinh, giặt)
+    members: [wc, laundry]
+  dry_below:
+    vi: Không đặt khu ướt lên trên (khách, ăn, bếp, ngủ, thờ, sảnh, bán hàng)
+    members: [living, dining, kitchen, bedroom, master_bedroom, altar_room, porch, shop]
+  # Phòng mà đầu bài có thể quy định HƯỚNG (Haan 28/09/2026: «đầu bài có thể xếp hướng cho phòng thờ
+  # hoặc phòng bếp»). Chương trình không đọc được câu chữ ấy — chỉ mô hình đọc, và thể hiện bằng chỗ đặt
+  # phòng. Nên khi phải xếp lại và NỚI vùng, bộ xếp giữ vùng của các phòng này như lối vào / chỗ để xe
+  # (T100). Không đưa WC vào: giữ vùng WC làm tầng 2 của lượt 5bc280ff không xếp được nữa (mất bản 85,2).
+  keep_zone:
+    vi: Giữ vùng khi xếp lại (bếp, phòng thờ — hướng do đầu bài quy định)
+    members: [kitchen, altar_room]
   # Nhóm này trả lời đúng MỘT câu hỏi của bộ kiểm mặt bằng nhánh AI: phòng nào được phép không
   # có cửa. «Mọi phòng phải có cửa» là phép kiểm CHẶN (`ai/plan-check.ts`), nên danh sách miễn
   # trừ phải là dữ liệu — viết cứng trong mã thì hôm thêm một loại không gian ngoài trời mới, bộ

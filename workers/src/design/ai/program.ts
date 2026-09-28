@@ -237,10 +237,20 @@ export interface ProgramKnowledge {
    * gửi đi chỉ tốn token lẫn làm loãng phần mệnh lệnh.
    */
   brief_demands: ModelDemands;
+  /**
+   * Loại không gian CHỈ được đề xuất khi đầu bài hỏi tới (T96, `kb/brief_fidelity.yaml`). Gửi cho mô
+   * hình để nó khỏi bịa, và `checkProposal` bác nếu nó vẫn bịa — lượt 4a521f52 tự thêm giếng trời cho
+   * một nhà hai tầng có sân vườn, vì câu dẫn cũ còn gợi ý «light wells, courtyards, terraces».
+   */
+  only_when_asked: string[];
 }
 
-/** Phần đòi hỏi gửi cho mô hình và dùng để kiểm — `BriefDemands` bỏ mục `warnings`. */
-export type ModelDemands = Omit<BriefDemands, 'warnings'>;
+/**
+ * Phần đòi hỏi gửi cho mô hình và dùng để kiểm — `BriefDemands` bỏ `warnings` và `entrySteps`.
+ * Bậc tam cấp do chương trình đặt sau khi đã có tường (T70), mô hình không có gì để làm với nó, và
+ * giữ nó ngoài lời dẫn thì lời dẫn — cùng bộ nhớ đệm của nhà cung cấp — không đổi.
+ */
+export type ModelDemands = Omit<BriefDemands, 'warnings' | 'entrySteps'>;
 
 export function programKnowledge(input: {
   digest: AiBriefDigest;
@@ -329,7 +339,21 @@ export function programKnowledge(input: {
     constraints: injectableRules(input.rules, digest.building_type, PROGRAM_PREDICATES),
     circulation_share: circulationShare(input.quality, digest.building_type),
     brief_demands: { spaces, elevator, balcony, garageMinM2, lines },
+    only_when_asked: [...input.fidelity.onlyWhenAsked],
   };
+}
+
+/**
+ * Loại không gian đầu bài CÓ hỏi tới: dòng «Không gian gia chủ yêu cầu», mọi dòng đòi hỏi suy từ câu
+ * đã trả lời (bác hay cảnh báo đều tính — gia chủ đã mở lời), và thang máy khi đầu bài khai (T96).
+ */
+export function askedTypes(knowledge: ProgramKnowledge): Set<string> {
+  const asked = new Set<string>(knowledge.brief_spaces.map((row) => row.type));
+  for (const demand of knowledge.brief_demands.spaces)
+    for (const type of demand.anyOf) asked.add(type);
+  if (knowledge.brief_demands.elevator) asked.add(knowledge.brief_demands.elevator.type);
+  if (knowledge.brief_demands.balcony) asked.add(knowledge.brief_demands.balcony.type);
+  return asked;
 }
 
 /**
@@ -390,6 +414,21 @@ export function checkProposal(
         `${name(s.type)} đặt ở tầng ${s.level} nhưng nhà chỉ có ${knowledge.floors} tầng.`,
       );
     }
+  }
+
+  // ── Không bịa thêm: loại «chỉ khi đầu bài hỏi» mà đầu bài không hỏi thì bác (T96) ──────────
+  const asked = askedTypes(knowledge);
+  const invented = [
+    ...new Set(
+      proposal.spaces
+        .map((s) => s.type)
+        .filter((type) => knowledge.only_when_asked.includes(type) && !asked.has(type)),
+    ),
+  ];
+  for (const type of invented) {
+    issues.push(
+      `Đầu bài không hỏi tới ${name(type)} — không tự thêm không gian gia chủ không yêu cầu; bỏ nó đi.`,
+    );
   }
 
   // ── Khép kín: trỏ vào đâu, loại gì, cùng tầng ─────────────────────────────────────────
@@ -604,7 +643,10 @@ function demandIssues(
         missing.push(level);
         continue;
       }
-      if (!onLevel.some((s) => round1(s.target_area_m2) >= lift.minAreaM2)) tooSmall.push(level);
+      const floor = lift.minAreaM2;
+      if (floor !== null && !onLevel.some((s) => round1(s.target_area_m2) >= floor)) {
+        tooSmall.push(level);
+      }
     }
     const word = lift.mode === 'lam_ngay' ? 'làm thang máy' : 'chừa chỗ lắp thang máy sau';
     if (missing.length) {
@@ -614,7 +656,7 @@ function demandIssues(
     }
     if (tooSmall.length) {
       issues.push(
-        `${name(lift.type)} ở tầng ${tooSmall.join(', ')} nhỏ hơn ${lift.minAreaM2} m² — không lọt cabin nào theo tải đầu bài khai.`,
+        `${name(lift.type)} ở tầng ${tooSmall.join(', ')} nhỏ hơn ${lift.minAreaM2} m² — không lọt giếng thang theo kích thước đầu bài khai.`,
       );
     }
   }
@@ -694,6 +736,47 @@ function areaMismatches(
     );
   });
   return out;
+}
+
+/**
+ * Nâng diện tích MỤC TIÊU mô hình khai lên đúng sàn đầu bài, trước khi kiểm (T91, Haan 27/09/2026 —
+ * «ưu tiên sửa để đạt đúng diện tích tối thiểu»). Con số khai chỉ là mong muốn của mô hình; diện tích
+ * thật đo từ bản phác và vẫn bị kiểm sàn. Trước đây khai 16 thay 17 m² là bác cả vòng ở cổng danh mục —
+ * lỗi thật của bản phác phải chờ thêm một lượt gọi (lượt Sonnet 5 e7caa832 vòng 2, ~1 USD).
+ *
+ * Ghép dòng đầu bài với phòng cùng loại (cùng tầng nếu ghim), lớn với lớn — đúng cách `areaMismatches`
+ * ghép, để phép kiểm sau đó thấy đúng những con số đã nâng.
+ */
+export function liftToBriefFloors(
+  proposal: AiSpaceProgramProposal,
+  knowledge: ProgramKnowledge,
+  labels: Record<string, string>,
+): { proposal: AiSpaceProgramProposal; notes: string[] } {
+  const spaces = proposal.spaces.map((space) => ({ ...space }));
+  const notes: string[] = [];
+  const groups = new Map<string, number[]>();
+  for (const row of knowledge.brief_spaces) {
+    if (typeof row.area_m2 !== 'number') continue;
+    const key = `${row.type}@${row.floor ?? '*'}`;
+    groups.set(key, [...(groups.get(key) ?? []), row.area_m2]);
+  }
+  for (const [key, areas] of groups) {
+    const [type, floorKey] = key.split('@') as [string, string];
+    const floor = floorKey === '*' ? null : Number(floorKey);
+    const minimums = [...areas].sort((a, b) => b - a);
+    const candidates = spaces
+      .filter((space) => space.type === type && (floor === null || space.level === floor))
+      .sort((a, b) => b.target_area_m2 - a.target_area_m2);
+    minimums.forEach((minimum, index) => {
+      const space = candidates[index];
+      if (!space || round1(space.target_area_m2) >= minimum) return;
+      notes.push(
+        `${labels[type] ?? type} tầng ${space.level}: mô hình khai ${round1(space.target_area_m2)} m², dưới mức đầu bài ${minimum} m² — chương trình nâng lên ${minimum} m².`,
+      );
+      space.target_area_m2 = minimum;
+    });
+  }
+  return { proposal: { ...proposal, spaces }, notes };
 }
 
 /** Đổi đề xuất đã đạt kiểm thành artifact `ai_space_program` — điền phần tất định. */

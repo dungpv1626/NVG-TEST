@@ -401,10 +401,49 @@ export const aiFloorPlanLevelSchema = z
               .lte(40)
               .describe('Tổng số bậc trong ô thang này.')
               .optional(),
+            /** Bề sâu mặt bậc, cm — CHƯƠNG TRÌNH điền từ `kb/construction_norms.yaml`. Có mặt thì tờ vẽ giữ đúng mặt bậc này và để chiếu nghỉ nhận phần dư của ô thang (T70); vắng (artifact trước 23/09/2026) thì rải đều bậc trên chiều dài ô thang. */
+            going: z
+              .number()
+              .int()
+              .gte(15)
+              .lte(45)
+              .describe(
+                'Bề sâu mặt bậc, cm — CHƯƠNG TRÌNH điền từ `kb/construction_norms.yaml`. Có mặt thì tờ vẽ giữ đúng mặt bậc này và để chiếu nghỉ nhận phần dư của ô thang (T70); vắng (artifact trước 23/09/2026) thì rải đều bậc trên chiều dài ô thang.',
+              )
+              .optional(),
           })
           .strict(),
       )
       .max(4)
+      .optional(),
+    /** Bậc ở lối vào (bậc tam cấp) ngoài cửa chính, chỉ ở tầng 1 — CHƯƠNG TRÌNH đặt (T70), mô hình không khai. Chỉ có khi đầu bài khai chênh cốt nền hoặc số bậc; không khai thì vắng, không đoán. */
+    entry_steps: z
+      .array(
+        z
+          .object({
+            id: aiFloorPlanElemIdSchema,
+            /** Phần đất bậc chiếm, NGOÀI mặt tường, cm. */
+            rect: aiFloorPlanRectSchema.describe('Phần đất bậc chiếm, NGOÀI mặt tường, cm.'),
+            /** Chiều đi XUỐNG — từ cửa chính ra sân. */
+            down: z
+              .enum(['+x', '-x', '+y', '-y'])
+              .describe('Chiều đi XUỐNG — từ cửa chính ra sân.'),
+            /** Số bậc. Bậc 1 là bậc ngoài cùng, thấp nhất. */
+            risers: z
+              .number()
+              .int()
+              .gte(1)
+              .lte(12)
+              .describe('Số bậc. Bậc 1 là bậc ngoài cùng, thấp nhất.'),
+            /** Bề sâu mặt bậc, cm. */
+            going: z.number().int().gte(15).lte(60).describe('Bề sâu mặt bậc, cm.'),
+          })
+          .strict(),
+      )
+      .max(4)
+      .describe(
+        'Bậc ở lối vào (bậc tam cấp) ngoài cửa chính, chỉ ở tầng 1 — CHƯƠNG TRÌNH đặt (T70), mô hình không khai. Chỉ có khi đầu bài khai chênh cốt nền hoặc số bậc; không khai thì vắng, không đoán.',
+      )
       .optional(),
     voids: z
       .array(

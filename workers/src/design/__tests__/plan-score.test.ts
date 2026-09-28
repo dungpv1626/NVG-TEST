@@ -18,6 +18,7 @@ import { describe, expect, it } from 'vitest';
 import { parseAreaNorms } from '../kb/space-norms';
 import { parsePlanQuality } from '../ai/plan-quality';
 import {
+  groupsBelowFloor,
   scoreForArtifact,
   scoreForScreen,
   scorePlan,
@@ -100,10 +101,16 @@ describe('hình dạng kết quả', () => {
     // số này không nói được gì — đúng điều phương án cấm (5.5 điểm 2).
     // T48 (16/09/2026) thêm A5, A6 vào nhóm A và C6, C7, C8 vào nhóm C, nên trọng số MỖI tiêu chí
     // trong hai nhóm ấy nhỏ đi; tổng chấm được nhích lên vì năm tiêu chí mới đều đo được.
-    expect(result.scoredWeight).toBe(91.25);
-    expect(of(result, 'C5').weight).toBe(3.75);
+    // T91 thêm D3 (ban công quay ra mặt thoáng) vào nhóm D: nhà phố mẫu không có ban công nên nửa trọng
+    // số nhóm D (7,5) không chấm được.
+    // T96: trọng số TRONG nhóm theo `weight` (C1, C9 nặng 2; A3 nặng 2; A6 nhẹ 0,5; E5 nặng 1,5) và
+    // thêm C9, C10, E5. Nhóm C nay 12 phần, C5 = 30/12 = 2,5; nhóm E 3,5 phần, E4 = 10/3,5 ≈ 2,86.
+    expect(result.scoredWeight).toBe(87.14);
+    expect(of(result, 'C5').weight).toBe(2.5);
     expect(of(result, 'C5').score).toBeNull();
-    expect(of(result, 'E4').weight).toBe(5);
+    expect(of(result, 'E4').weight).toBeCloseTo(10 / 3.5, 2);
+    expect(of(result, 'C1').weight).toBeCloseTo(2 * of(result, 'C2').weight, 6);
+    expect(of(result, 'A6').weight).toBeCloseTo(of(result, 'A1').weight / 2, 6);
     expect(result.points).toBeLessThanOrEqual(result.scoredWeight);
   });
 
@@ -120,9 +127,20 @@ describe('hình dạng kết quả', () => {
     // Một người đọc con số tổng mà không biết phần nào dựa trên ngưỡng chưa ai đo sẽ tin nó chắc hơn
     // thực tế (T31). Trước T48 chỉ có A1; nay thêm năm tiêu chí của T48 (định mức nghề và đường đi),
     // ngưỡng của chúng đều là suy luận — nên phần «chưa ai đo» phải TĂNG, và màn hình phải nói ra.
-    expect(result.suyLuanWeight).toBeCloseTo(26.25, 2);
+    // T96 thêm C9, C10, E5 — cả ba cũng là suy luận nghề (n = 0).
+    expect(result.suyLuanWeight).toBeCloseTo(30.65, 2);
     const guessed = result.criteria.filter((entry) => entry.n === 0 && entry.score !== null);
-    expect(guessed.map((entry) => entry.code)).toEqual(['A1', 'A5', 'A6', 'C6', 'C7', 'C8']);
+    expect(guessed.map((entry) => entry.code)).toEqual([
+      'A1',
+      'A5',
+      'A6',
+      'C6',
+      'C7',
+      'C8',
+      'C9',
+      'C10',
+      'E5',
+    ]);
   });
 
   it('trọng số nhóm cộng lại đúng 100, và mỗi nhóm không vượt trọng số của nó', () => {
@@ -199,7 +217,8 @@ describe('biệt thự — bốn mặt thoáng, hành lang giữa', () => {
   it('A3 không chấm được vì phương án không có chỗ thờ nào', () => {
     expect(of(result, 'A3').score).toBeNull();
     expect(of(result, 'A3').khongChamVi).toBe('thieu_du_lieu');
-    expect(of(result, 'A3').weight).toBeCloseTo(5, 2);
+    // A3 nặng 2 trong 5,5 phần của nhóm A (T96): 25 × 2 / 5,5.
+    expect(of(result, 'A3').weight).toBeCloseTo((25 * 2) / 5.5, 2);
   });
 
   it('C3 đủ điểm: cửa chính mở thẳng vào sảnh, sảnh chạm chân thang', () => {
@@ -436,5 +455,82 @@ describe('tiêu chí T48 — đường đi hằng ngày và định mức nghề
     expect(of(result, 'A5').refs).toContain(room.id);
     // Vẫn chỉ là điểm: không có mã lỗi nào ở đây, và phương án vẫn chấm được.
     expect(result.points).toBeGreaterThan(0);
+  });
+});
+
+// T96 (Haan 27/09/2026): ba lỗi nghề mà thước cũ không thấy trên sáu mặt bằng đầu tiên qua ngưỡng — cửa
+// chính đón vào bếp, hành lang chỉ dẫn vào một cái kho, WC phòng ngủ chính đè lên cửa vào phòng khách.
+describe('tiêu chí T96 — cửa chính đón vào đâu, hành lang phục vụ gì, khu ướt đè lên đâu', () => {
+  const villa = () => structuredClone(VILLA_PLAN) as AiFloorPlan;
+
+  it('C9: cửa chính mở vào sảnh, sảnh mở thẳng vào phòng khách → không xuyên phòng nào', () => {
+    const c9 = of(score(VILLA_PLAN, 'biet_thu'), 'C9');
+    expect(c9.value).toBe(0);
+    expect(c9.score).toBe(1);
+  });
+
+  it('C9: cửa khách chuyển sang vách khách–ăn → từ sảnh phải xuyên phòng ăn mới tới khách', () => {
+    const plan = villa();
+    const d1 = plan.levels[0]!.doors!.find((door) => door.id === 'd1')!;
+    // `ph1` là vách giữa phòng khách và phòng ăn; sảnh chỉ còn vào phòng ăn (d2) rồi mới sang khách.
+    d1.wall = 'ph1';
+    d1.at = 200;
+    const c9 = of(score(plan, 'biet_thu'), 'C9');
+    expect(c9.value).toBe(1);
+    expect(c9.score).toBe(0);
+    expect(c9.refs).toEqual(['dining_1']);
+  });
+
+  it('C10: sảnh biệt thự mở vào WC chung và ô thang → phục vụ hai phòng, đủ điểm', () => {
+    const c10 = of(score(VILLA_PLAN, 'biet_thu'), 'C10');
+    expect(c10.value).toBe(0);
+    expect(c10.score).toBe(1);
+  });
+
+  it('C10: bỏ cửa sảnh–thang → sảnh 18 m² chỉ còn dẫn vào một WC, trừ hết', () => {
+    const plan = villa();
+    const level = plan.levels[0]!;
+    level.doors = level.doors!.filter((door) => door.id !== 'd4');
+    const c10 = of(score(plan, 'biet_thu'), 'C10');
+    expect(c10.value).toBe(1);
+    expect(c10.refs).toEqual(['hall_1']);
+  });
+
+  it('E5: WC tầng 2 chồng lên WC tầng 1 → không đè lên phòng nào, đủ điểm', () => {
+    const e5 = of(score(VILLA_PLAN, 'biet_thu'), 'E5');
+    expect(e5.value).toBe(1);
+    expect(e5.refs).toEqual([]);
+  });
+
+  it('E5: dời WC tầng 2 lên trên phòng khách → trừ hết, nêu cả WC lẫn phòng khách bên dưới', () => {
+    const plan = villa();
+    const upper = plan.levels[1]!;
+    const wc = upper.rooms.find((room) => room.id === 'wc_2')!;
+    const master = upper.rooms.find((room) => room.id === 'master_2')!;
+    wc.rect = [22, 192, 478, 400];
+    wc.area_m2 = 9.5;
+    master.rect = [22, 411, 478, 692];
+    master.area_m2 = 12.8;
+    const e5 = of(score(plan, 'biet_thu'), 'E5');
+    expect(e5.value).toBe(0);
+    expect(e5.refs).toEqual(['wc_2', 'living_1']);
+  });
+
+  it('sàn nhóm: nhà phố mẫu hụt hẳn nhóm mặt thoáng, và không có sàn thì không nhóm nào bị nêu', () => {
+    const result = score(TOWNHOUSE_PLAN, 'nha_pho');
+    expect(groupsBelowFloor(result, 40)).toContain('D');
+    expect(groupsBelowFloor(result, null)).toEqual([]);
+    // Nhóm chưa chấm được gì không bị coi là dưới sàn.
+    expect(groupsBelowFloor({ groups: [{ code: 'X', points: 0, scoredWeight: 0 }] }, 40)).toEqual(
+      [],
+    );
+  });
+
+  it('trọng số trong nhóm phải dương — 0 là «không chấm», việc của enforced_by_gate', () => {
+    const text = read('../../../../kb/plan_quality.yaml').replace(
+      /- code: C9\n {4}group: C/,
+      '- code: C9\n    weight: 0\n    group: C',
+    );
+    expect(() => parsePlanQuality(text)).toThrow(/weight/);
   });
 });

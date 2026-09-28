@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Design chấm mặt bằng thế nào</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F2F7F2;
+    --surface: #FFFFFF;
+    --border: #E7EDE7;
+    --border-strong: #9A9485;
+    --fg: #1C1C1A;
+    --fg-subtle: #5A574F;
+    --brand: #2C6E4B;
+    --brand-forest: #17352A;
+    --brand-subtle: #D9F2D4;
+    --mint: #A8E6A1;
+    --mint-ink: #123024;
+    --block: #CA3521;
+    --block-bg: #FCEBE8;
+    --score: #0C66E4;
+    --score-bg: #E6EFFC;
+    --warn: #906C00;
+    --warn-bg: #FBF3DC;
+    --radius: 8px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121815; --surface: #1A221E; --border: #2A3530; --border-strong: #5E6A63;
+      --fg: #E8EDE9; --fg-subtle: #A9B4AD; --brand: #7FCB8F; --brand-forest: #0E1F18;
+      --brand-subtle: #20382A; --mint: #3F6B47; --mint-ink: #E8F7E5;
+      --block: #FF8A7A; --block-bg: #3A1F1B; --score: #86B4FF; --score-bg: #1B2A40;
+      --warn: #E8C15A; --warn-bg: #352C14;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: "Be Vietnam Pro", system-ui, sans-serif; font-size: 15px; line-height: 1.65;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 32px 16px 80px; }
+  header.hero {
+    background: var(--brand-forest); color: #F2F7F2; border-radius: 12px; padding: 32px 28px;
+  }
+  header.hero h1 { margin: 0 0 8px; font-size: 28px; line-height: 1.3; }
+  header.hero p { margin: 0; color: #CFE3D3; max-width: 680px; }
+  header.hero .meta { margin-top: 16px; font-size: 13px; color: #9FC2A8; }
+  nav.toc {
+    display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0 8px;
+  }
+  nav.toc a {
+    text-decoration: none; color: var(--brand); background: var(--surface);
+    border: 1px solid var(--border); border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 500;
+  }
+  nav.toc a:hover { background: var(--brand-subtle); }
+  h2 { font-size: 22px; margin: 48px 0 8px; line-height: 1.35; }
+  h2 .num { color: var(--brand); margin-right: 6px; }
+  h3 { font-size: 17px; margin: 28px 0 8px; }
+  p.lead { color: var(--fg-subtle); margin-top: 0; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px; margin: 14px 0;
+  }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 760px) { .grid3 { grid-template-columns: 1fr; } }
+  .kind { border-top: 4px solid; }
+  .kind.block { border-top-color: var(--block); }
+  .kind.score { border-top-color: var(--score); }
+  .kind.warn { border-top-color: var(--warn); }
+  .kind h3 { margin-top: 0; }
+  .tag {
+    display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 999px;
+    white-space: nowrap;
+  }
+  .tag.block { background: var(--block-bg); color: var(--block); }
+  .tag.score { background: var(--score-bg); color: var(--score); }
+  .tag.warn { background: var(--warn-bg); color: var(--warn); }
+  .tag.retry { background: var(--brand-subtle); color: var(--brand); }
+  .tag.stop { background: var(--border); color: var(--fg-subtle); }
+
+  /* Luồng các bước */
+  ol.flow { list-style: none; padding: 0; margin: 16px 0; counter-reset: s; }
+  ol.flow li {
+    counter-increment: s; position: relative; padding: 14px 16px 14px 60px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px;
+  }
+  ol.flow li::before {
+    content: counter(s); position: absolute; left: 16px; top: 14px; width: 30px; height: 30px;
+    border-radius: 50%; background: var(--brand); color: #fff; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
+  }
+  ol.flow li strong { display: block; }
+  ol.flow li span { color: var(--fg-subtle); font-size: 14px; }
+
+  /* Danh sách luật */
+  ul.rules { list-style: none; padding: 0; margin: 0; }
+  ul.rules li {
+    display: flex; gap: 12px; justify-content: space-between; align-items: flex-start;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+  }
+  ul.rules li:last-child { border-bottom: 0; }
+  ul.rules li .t { flex: 1; }
+  ul.rules li .t small { display: block; color: var(--fg-subtle); font-size: 13px; }
+  .step-label {
+    font-size: 12px; font-weight: 600; letter-spacing: .02em; color: var(--brand); margin-bottom: 2px;
+  }
+
+  /* Bảng */
+  .tbl { width: 100%; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-weight: 600; color: var(--fg-subtle); border-bottom: 1px solid var(--border-strong); font-size: 13px; }
+  td.n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+  /* Thanh trọng số */
+  .bars { display: grid; gap: 10px; }
+  .bar { display: grid; grid-template-columns: 170px 1fr 48px; gap: 12px; align-items: center; }
+  @media (max-width: 560px) { .bar { grid-template-columns: 110px 1fr 40px; font-size: 13px; } }
+  .bar .track { background: var(--border); height: 14px; border-radius: 999px; overflow: hidden; }
+  .bar .fill { background: var(--brand); height: 100%; border-radius: 999px; }
+  .bar .v { font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+
+  .callout {
+    border-left: 4px solid var(--brand); background: var(--brand-subtle); color: var(--fg);
+    padding: 14px 16px; border-radius: 0 var(--radius) var(--radius) 0; margin: 14px 0;
+  }
+  .callout.red { border-left-color: var(--block); background: var(--block-bg); }
+  .big { font-size: 40px; font-weight: 700; color: var(--brand); line-height: 1; }
+
+  details { margin-top: 10px; }
+  details summary {
+    cursor: pointer; color: var(--brand); font-size: 13px; font-weight: 500; padding: 4px 0;
+  }
+  details .codes { font-size: 12.5px; color: var(--fg-subtle); padding: 8px 0 0; }
+  code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; word-break: break-word;
+  }
+  .rank { counter-reset: r; list-style: none; padding: 0; }
+  .rank li { counter-increment: r; padding: 8px 0 8px 40px; position: relative; }
+  .rank li::before {
+    content: counter(r); position: absolute; left: 0; top: 8px; width: 26px; height: 26px; border-radius: 6px;
+    background: var(--mint); color: var(--mint-ink); font-weight: 700; display: flex; align-items: center;
+    justify-content: center; font-size: 13px;
+  }
+  footer { margin-top: 56px; font-size: 13px; color: var(--fg-subtle); border-top: 1px solid var(--border); padding-top: 16px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <h1>AI Design kiểm và chấm mặt bằng như thế nào</h1>
+  <p>Khi AI đề xuất một mặt bằng, chương trình không tin ngay. Mỗi phương án phải đi qua một loạt luật. Tài liệu
+  này giải thích các luật đó bằng lời thường: luật nào loại hẳn phương án, luật nào chỉ trừ điểm, luật nào chỉ nhắc để kỹ sư xem.</p>
+  <div class="meta">Hiện trạng ngày 25/09/2026 · Bản kỹ thuật đầy đủ: <code style="background:transparent;border-color:#3A5A4A;color:#CFE3D3">doc/design/LUAT_CHAN_VA_CHAM_DIEM.md</code></div>
+</header>
+
+<nav class="toc" aria-label="Mục lục">
+  <a href="#ba-loai">Ba loại luật</a>
+  <a href="#hanh-trinh">Hành trình một phương án</a>
+  <a href="#chan">Luật loại phương án</a>
+  <a href="#nvg">Sáu luật riêng của NVG</a>
+  <a href="#diem">Cách chấm điểm</a>
+  <a href="#nhac">Luật chỉ nhắc</a>
+  <a href="#xem-lai">Chỗ cần xem lại</a>
+</nav>
+
+<!-- ═══════════════ 1 ═══════════════ -->
+<h2 id="ba-loai"><span class="num">1</span>Ba loại luật</h2>
+<p class="lead">Có thể hình dung như chấm bài thi: có lỗi bị loại bài, có lỗi bị trừ điểm, và có lời phê bên lề.</p>
+
+<div class="grid3">
+  <div class="card kind block">
+    <span class="tag block">Loại phương án</span>
+    <h3>Luật chặn</h3>
+    <p>Vi phạm là phương án <b>không được lưu</b>. Đây là những lỗi làm nhà không dựng được, không đi lại được, hoặc
+    làm sai điều gia chủ đã nói rõ.</p>
+    <p style="color:var(--fg-subtle);font-size:14px;margin-bottom:0">Ví dụ: phòng không có cửa vào, thiếu phòng thờ khi gia chủ yêu cầu, bếp nằm dưới nhà vệ sinh.</p>
+  </div>
+  <div class="card kind score">
+    <span class="tag score">Trừ điểm</span>
+    <h3>Luật chấm điểm</h3>
+    <p>Không loại phương án, chỉ <b>trừ điểm</b>. Điểm dùng để chọn phương án tốt hơn trong nhiều phương án, và chỉ ra chỗ yếu.</p>
+    <p style="color:var(--fg-subtle);font-size:14px;margin-bottom:0">Ví dụ: hành lang hơi dài, phòng ngủ hơi hẹp, WC tầng trên lệch trục WC tầng dưới.</p>
+  </div>
+  <div class="card kind warn">
+    <span class="tag warn">Chỉ nhắc</span>
+    <h3>Luật cảnh báo</h3>
+    <p>Không loại, không trừ điểm. Chỉ <b>hiện lời nhắc</b> để kỹ sư tự xem và quyết.</p>
+    <p style="color:var(--fg-subtle);font-size:14px;margin-bottom:0">Ví dụ: cầu thang nhìn thẳng ra cửa chính, bếp không giáp phòng ăn.</p>
+  </div>
+</div>
+
+<div class="callout">
+  <b>Nguyên tắc chung:</b> chỉ chặn khi nhà <b>không dựng được</b>, <b>không đi lại được</b>, hoặc <b>sai lời gia chủ</b>.
+  Kinh nghiệm nghề và số đo từ hồ sơ cũ chỉ dùng để trừ điểm hoặc nhắc, không dùng để loại phương án.
+  Ngoại lệ: sáu luật bố trí do anh Haan tự đặt (mục 4) cũng chặn.
+</div>
+
+<!-- ═══════════════ 2 ═══════════════ -->
+<h2 id="hanh-trinh"><span class="num">2</span>Hành trình của một phương án</h2>
+<p class="lead">Phương án đi qua các cửa kiểm theo thứ tự dưới đây. Trượt ở cửa nào thì dừng ở cửa đó.</p>
+
+<ol class="flow">
+  <li><strong>AI lập danh sách phòng</strong><span>Tầng nào có phòng gì, mỗi phòng bao nhiêu m². Chương trình kiểm danh sách có khớp đầu bài không.</span></li>
+  <li><strong>AI vẽ bản phác trên lưới ô vuông khoảng 1 m</strong><span>Giống phác tay trên giấy kẻ ô. Chương trình kiểm bản phác có đủ phòng, đủ to, có lối vào không.</span></li>
+  <li><strong>Chương trình dựng hình thật</strong><span>Từ bản phác, chương trình tự gán toạ độ, tường, cửa đi, cửa sổ, cầu thang. Mọi con số trên bản vẽ đều do chương trình gán, không do AI.</span></li>
+  <li><strong>Kiểm cả ngôi nhà</strong><span>Đủ phòng, đúng tầng, sàn kín, đi được từ cửa ngoài tới mọi phòng, cầu thang chồng khít các tầng.</span></li>
+  <li><strong>Kiểm lại theo đầu bài và luật riêng của NVG</strong><span>Thang máy, ban công đúng mặt, bếp và phòng thờ không nằm dưới WC.</span></li>
+  <li><strong>Chấm điểm và chọn phương án</strong><span>Qua hết các cửa kiểm thì chấm điểm. Đạt từ 65% trở lên là nhận.</span></li>
+</ol>
+
+<div class="card">
+  <h3 style="margin-top:0">Khi phương án bị loại thì sao?</h3>
+  <ul class="rules">
+    <li><div class="t">Lỗi do <b>cách AI bố trí</b> (thiếu phòng, phòng quá nhỏ, ban công sai mặt, bếp dưới WC…)
+      <small>Chương trình gửi lỗi lại cho AI để AI vẽ lại. Tối đa 5 lần gọi lại cho mỗi lượt (từ 25/09/2026, trước là 3). Mỗi lần AI chỉ gửi lại tầng có lỗi để bớt tiền; hai lần liền không tiến thì chương trình sửa tiếp từ bản mới nhất thay vì bản tốt nhất.</small></div>
+      <span class="tag retry">AI vẽ lại</span></li>
+    <li><div class="t">Lỗi do <b>hình học</b> (ô quá hẹp, tường quá ngắn để đặt cửa…)
+      <small>Chương trình đã tự thử mọi cách chia khác trước khi báo. AI không nhìn thấy toạ độ nên gửi lại cũng không sửa được. Lượt chạy dừng.</small></div>
+      <span class="tag stop">Dừng</span></li>
+    <li><div class="t">AI nộp lại y nguyên phần đang sai
+      <small>Dừng sớm để không tốn thêm tiền gọi AI.</small></div>
+      <span class="tag stop">Dừng</span></li>
+  </ul>
+</div>
+
+<!-- ═══════════════ 3 ═══════════════ -->
+<h2 id="chan"><span class="num">3</span>Các luật loại phương án</h2>
+<p class="lead">Nhãn bên phải cho biết khi vi phạm thì AI được vẽ lại hay lượt chạy dừng.</p>
+
+<h3>Bước 0 · Đầu bài không được tự mâu thuẫn</h3>
+<div class="card">
+  <ul class="rules">
+    <li><div class="t">Đầu bài có thang máy thì phải điền kích thước giếng thang (rộng và sâu, theo bản vẽ của hãng thang)
+      <small>Chặn ngay trên đầu bài, trước khi gọi AI, nên không tốn tiền. Cùng loại với các mâu thuẫn nghiêm trọng khác (vd khoảng lùi cộng lại vượt lô đất).</small></div><span class="tag block">Điền đầu bài</span></li>
+  </ul>
+</div>
+
+<h3>Bước 1 · Danh sách phòng phải khớp đầu bài</h3>
+<div class="card">
+  <ul class="rules">
+    <li><div class="t">Có đủ các không gian đầu bài ghi là bắt buộc, đúng số lượng, đúng tầng
+      <small>Diện tích được lệch tối đa 20% so với con số gia chủ khai.</small></div><span class="tag retry">AI làm lại</span></li>
+    <li><div class="t">Số phòng ngủ đúng theo thành phần gia đình
+      <small>Kể cả phòng nào cần WC riêng trong phòng, và nhu cầu riêng của từng thành viên.</small></div><span class="tag retry">AI làm lại</span></li>
+    <li><div class="t">Tổng diện tích mỗi tầng không vượt phần đất được xây
+      <small>Đã trừ khoảng lùi và sân.</small></div><span class="tag retry">AI làm lại</span></li>
+    <li><div class="t">Tầng nào cũng có phòng và có cầu thang (nhà nhiều tầng)</div><span class="tag retry">AI làm lại</span></li>
+    <li><div class="t">WC riêng, phòng thay đồ trong phòng phải thuộc phòng ngủ cùng tầng</div><span class="tag retry">AI làm lại</span></li>
+    <li><div class="t">Đầu bài có thang máy thì tầng nào cũng có ô thang máy, đủ kích thước giếng gia chủ khai
+      <small>Áp dụng cả khi gia chủ chọn «chừa chỗ lắp sau». Kích thước giếng (rộng × sâu) lấy theo bản vẽ của hãng thang, gia chủ điền ở đầu bài.
+      Chương trình không tự đoán theo tải trọng. Để trống thì đầu bài báo lỗi và chưa dựng được phương án (xem bước 0 ở trên).</small></div><span class="tag retry">AI làm lại</span></li>
+    <li><div class="t">Ban công đúng như gia chủ khai: có hay không, tầng nào, mặt nào</div><span class="tag retry">AI làm lại</span></li>
+    <li><div class="t">Có chỗ để xe đủ cho số xe gia chủ khai
+      <small>Khoảng 15 m² cho một ô tô cỡ nhỏ, tới 18 m² cho xe bán tải; 2,5 m² cho một xe máy.</small></div><span class="tag retry">AI làm lại</span></li>
+  </ul>
+</div>
+
+<div class="card">
+  <p style="margin-top:0"><b>Gia chủ trả lời thế này thì nhà phải có không gian tương ứng</b> (loại phương án nếu thiếu):</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Gia chủ trả lời</th><th>Nhà phải có</th></tr></thead>
+    <tbody>
+      <tr><td>Thờ cúng ở phòng thờ riêng</td><td>Phòng thờ</td></tr>
+      <tr><td>Thờ cúng trên sân thượng</td><td>Phòng thờ hoặc sân thượng</td></tr>
+      <tr><td>Kinh doanh tại nhà (cửa hàng, sản xuất nhỏ, kho hàng)</td><td>Cửa hàng hoặc kho</td></tr>
+      <tr><td>Làm văn phòng tại nhà</td><td>Phòng làm việc hoặc cửa hàng</td></tr>
+      <tr><td>Cần WC cho khách</td><td>Một WC</td></tr>
+      <tr><td>Có bếp phụ</td><td>Hai bếp</td></tr>
+      <tr><td>Lưu trữ nhiều</td><td>Kho</td></tr>
+      <tr><td>Đặt cục nóng điều hoà trong hộp kỹ thuật</td><td>Hộp kỹ thuật</td></tr>
+      <tr><td>Phơi đồ ngoài trời</td><td>Ban công, sân thượng hoặc sân</td></tr>
+    </tbody>
+  </table></div>
+  <p style="color:var(--fg-subtle);font-size:14px;margin-bottom:0">Chỉ áp dụng cho câu gia chủ <b>đã trả lời</b>. Câu bỏ trống không đòi hỏi gì.</p>
+</div>
+
+<h3>Bước 2 · Bản phác của AI phải dùng được</h3>
+<div class="card">
+  <ul class="rules">
+    <li><div class="t">Vẽ đủ mọi phòng trong danh sách</div><span class="tag retry">AI vẽ lại</span></li>
+    <li><div class="t">Mỗi phòng là một hình chữ nhật, không nằm lọt hẳn trong phòng khác</div><span class="tag retry">AI vẽ lại</span></li>
+    <li><div class="t">Không xếp kiểu «chong chóng»
+      <small>Phải có ít nhất một đường chia chạy suốt từ mép này sang mép kia của nhà.</small></div><span class="tag retry">AI vẽ lại</span></li>
+    <li><div class="t">Mỗi phòng vẽ đủ số ô cho diện tích gia chủ khai
+      <small>Được thiếu tối đa 10%. Diện tích tối thiểu gia chủ khai là mức sàn không được hụt. Vẽ đủ ô mà dựng ra vẫn hụt một chút thì chương trình tự nới phòng thêm một dải ô lấy của phòng bên còn dư (tối đa 3 lần) trước khi báo AI — từ 25/09/2026. Sau khi dựng xong, hụt dưới 3% so với sàn gia chủ khai thì cho qua (anh Haan chọn 25/09/2026: 14,92 m² so với 15 là được).</small></div><span class="tag retry">AI vẽ lại</span></li>
+    <li><div class="t">Mỗi phòng chạm hành lang hoặc phòng chung nối về cầu thang
+      <small>Đoạn tiếp giáp dài ít nhất 2 ô để đặt được cửa.</small></div><span class="tag retry">AI vẽ lại</span></li>
+    <li><div class="t">Không dồn quá nhiều phòng vào một khu, không vượt diện tích khối nhà</div><span class="tag retry">AI vẽ lại</span></li>
+    <li><div class="t">Phòng có cửa chính, cửa xe phải ra được đúng mặt đầu bài chọn</div><span class="tag retry">AI vẽ lại</span></li>
+    <li><div class="t">Ô cầu thang phải chạm hành lang hoặc phòng chung
+      <small>Ví dụ lỗi đã gặp (lượt 25/09/2026): thang máy nằm chắn giữa cầu thang và hành lang, lên tới tầng 2 là không đi tiếp được. Chương trình chỉ đúng chỗ hỏng cho AI.</small></div><span class="tag retry">AI vẽ lại</span></li>
+    <li><div class="t">Cầu thang, thang máy tầng trên bị đặt lại đúng ô tầng dưới; nếu vì thế một phòng mất hết ô thì nói rõ hàng, cột
+      <small>Ví dụ (lượt 25/09/2026): ô thang máy đặt lại làm mất trọn dải WC tầng 2; trước đây báo nhầm là «AI không vẽ WC».</small></div><span class="tag retry">AI vẽ lại</span></li>
+    <li><div class="t">Bản phác tầng dưới không đạt thì chương trình tự chia lại tầng ấy, nhưng không giấu
+      <small>Tầng trên mà hỏng thì AI được báo cả lỗi của tầng dưới (kèm số ô cần vẽ thêm), và lỗi do ô cầu thang bị dời khi chia lại thì không đổ cho AI. Sửa 25/09/2026.</small></div><span class="tag retry">AI vẽ lại</span></li>
+  </ul>
+</div>
+
+<h3>Bước 3 · Dựng hình thật: phòng phải kê được đồ</h3>
+<div class="card">
+  <p style="margin-top:0">Khi chia ô, mỗi loại phòng có <b>bề rộng tối thiểu để kê được đồ</b> và giới hạn độ dài so với bề rộng (để
+  phòng không thành một dải hẹp). Không đạt thì chương trình thử cách chia khác; hết cách thì dừng.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Loại phòng</th><th class="n">Rộng tối thiểu</th><th class="n">Dài tối đa gấp mấy lần rộng</th></tr></thead>
+    <tbody>
+      <tr><td>Phòng khách</td><td class="n">2,7 m</td><td class="n">3,2</td></tr>
+      <tr><td>Phòng ngủ chính</td><td class="n">2,6 m</td><td class="n">2,5</td></tr>
+      <tr><td>Phòng ngủ</td><td class="n">2,2 m</td><td class="n">2,5</td></tr>
+      <tr><td>Phòng ăn</td><td class="n">2,1 m</td><td class="n">3,2</td></tr>
+      <tr><td>Phòng làm việc, phòng thờ</td><td class="n">1,8 m</td><td class="n">3,0</td></tr>
+      <tr><td>Bếp</td><td class="n">1,5 m</td><td class="n">—</td></tr>
+      <tr><td>Ô thang máy</td><td class="n">theo đầu bài</td><td class="n">—</td></tr>
+      <tr><td>Giặt phơi</td><td class="n">1,0 m</td><td class="n">—</td></tr>
+      <tr><td>WC, ban công</td><td class="n">0,9 m</td><td class="n">WC: 6,0</td></tr>
+      <tr><td>Kho</td><td class="n">0,8 m</td><td class="n">—</td></tr>
+      <tr><td>Chỗ để xe (có ô tô)</td><td class="n">2,4 m (2,8 m)</td><td class="n">—</td></tr>
+      <tr><td>Cầu thang</td><td class="n">—</td><td class="n">4,0</td></tr>
+    </tbody>
+  </table></div>
+  <p style="color:var(--fg-subtle);font-size:14px;margin-bottom:0">Cầu thang tính theo bậc cao 17 cm, mặt bậc 25 cm. Ô thang hai vế cần rộng ít nhất 1,6 m. Hành lang dựng rộng 1,2 m lọt lòng.</p>
+</div>
+
+<div class="card">
+  <p style="margin-top:0"><b>Các luật về cửa và lối đi trong tầng</b></p>
+  <ul class="rules">
+    <li><div class="t">Phòng có cửa chính, cửa xe phải giáp mặt ngoài nhà, không mở ra tường ranh giáp hàng xóm</div><span class="tag retry">AI vẽ lại</span></li>
+    <li><div class="t">Cửa chính và cửa xe nằm đúng mặt đầu bài chọn</div><span class="tag retry">AI vẽ lại</span></li>
+    <li><div class="t">Đường đi hằng ngày không phải xuyên qua gara hay sảnh ngoài
+      <small>Ví dụ: từ phòng khách đi tới WC không được phải đi qua chỗ để xe.</small></div><span class="tag retry">AI vẽ lại</span></li>
+    <li><div class="t">Không phòng nào được mở cửa ra cầu thang, trừ hành lang, sảnh, phòng khách, phòng ăn, sân thượng và thang máy
+      <small>Trên bản vẽ, cầu thang là một ô chữ nhật chứa cả bậc và chiếu nghỉ. Chương trình không biết cửa nằm ở chiếu nghỉ hay giữa vế thang,
+      nên cửa nào mở từ ô thang cũng có thể mở ra bậc. Luật áp cho mọi phòng: phòng ngủ, phòng thờ, WC, kho, bếp, giặt phơi, ban công, gara.
+      Hai ngoại lệ do anh Haan chọn (25/09/2026): sân thượng (cầu thang lên tum rồi mở ra mái) và thang máy (sảnh chung với chiếu tới).
+      Nếu AI phác một phòng chỉ giáp ô cầu thang, AI được yêu cầu phác lại cho phòng giáp hành lang.</small></div><span class="tag retry">AI vẽ lại</span></li>
+    <li><div class="t">Không phải đi xuyên phòng riêng của người khác mới tới được phòng mình</div><span class="tag stop">Dừng</span></li>
+    <li><div class="t">Phòng nào cũng có cửa; bức tường đủ dài để đặt cửa</div><span class="tag stop">Dừng</span></li>
+    <li><div class="t">WC riêng trong phòng phải chung vách với phòng ngủ của nó</div><span class="tag stop">Dừng</span></li>
+    <li><div class="t">Hành lang, cầu thang, WC luôn là ô riêng, không gộp vào phòng khác</div><span class="tag stop">Dừng</span></li>
+    <li><div class="t">Không có khoảng trống bị nhà bao kín ở giữa
+      <small>Chỗ trống giữa nhà phải là giếng trời hoặc lỗ thông tầng. Tầng 1 không có lỗ thông tầng.</small></div><span class="tag stop">Dừng</span></li>
+    <li><div class="t">Cầu thang, thang máy, giếng trời nằm đúng chỗ tầng dưới</div><span class="tag stop">Dừng</span></li>
+  </ul>
+  <details><summary>Mã kỹ thuật của bước này (cho kỹ sư)</summary>
+    <div class="codes"><code>door_no_outside_edge</code> <code>door_outside_on_boundary</code> <code>entrance_wrong_side</code>
+    <code>vehicle_door_wrong_side</code> <code>route_through_service</code> <code>door_from_stair</code> <code>room_through_private</code>
+    <code>room_without_door</code> <code>door_wall_too_short</code> <code>ensuite_door_wrong</code> <code>merge_not_allowed</code>
+    <code>outline_has_hole</code> <code>void_on_ground</code> <code>stair_not_at_anchor</code> <code>elevator_not_at_anchor</code>
+    <code>light_well_not_at_anchor</code> <code>arrange_room_too_narrow</code> <code>arrange_stair_too_short</code>
+    <code>arrange_no_hub_wall</code> · cùng khoảng 20 mã kiểm cấu trúc cây chia (<code>tree_*</code>, <code>cut_*</code>, <code>footprint_*</code>).</div>
+  </details>
+</div>
+
+<h3>Bước 4 · Kiểm cả ngôi nhà</h3>
+<div class="card">
+  <ul class="rules">
+    <li><div class="t">Đủ mọi phòng trong danh sách, đúng tầng, đúng loại, không phòng nào thừa hay trùng</div><span class="tag stop">Dừng</span></li>
+    <li><div class="t">Không phòng nào lấn ra ngoài khối nhà; sàn được phủ kín, không có phần «vô chủ»</div><span class="tag stop">Dừng</span></li>
+    <li><div class="t">Diện tích ghi trên phòng đúng với diện tích đo được
+      <small>Số này do chương trình gán, nên lệch thì chương trình tự ghi lại theo số đo và ghi chú, không loại phương án.</small></div><span class="tag score">Tự sửa</span></li>
+    <li><div class="t">Hai phòng cùng tầng không trùng tên
+      <small>Ví dụ hai giếng trời cùng tên «Giếng trời»: chương trình tự đánh số «Giếng trời 2», không loại phương án.</small></div><span class="tag score">Tự sửa</span></li>
+    <li><div class="t">Tầng 1 có cửa ra ngoài; từ cửa ngoài đi tới được mọi phòng ở mọi tầng</div><span class="tag stop">Dừng</span></li>
+    <li><div class="t">Tầng nào còn tầng trên thì có cầu thang, và cầu thang các tầng chồng khít nhau</div><span class="tag stop">Dừng</span></li>
+  </ul>
+</div>
+
+<h3>Bước 5 · Kiểm lại theo đầu bài trên bản vẽ đã dựng</h3>
+<div class="card">
+  <ul class="rules">
+    <li><div class="t">Thang máy: tầng nào cũng có, không nhỏ hơn giếng gia chủ khai (rộng × sâu theo hãng thang), thẳng một trục qua mọi tầng</div><span class="tag retry">AI vẽ lại</span></li>
+    <li><div class="t">Giếng thang máy là một khối gần vuông đúng cỡ khai, không phải một dải
+      <small>Cạnh dài không quá 1,6 lần cạnh ngắn, diện tích không quá 2,5 lần rộng × sâu đã khai (cho phép vẽ 2 × 2 ô trên lưới 1 m). Ví dụ lỗi 25/09/2026: giếng 1,3 × 1,4 m mà bản vẽ dựng ra 1,6 × 6,45 m. AI cũng được cho biết giếng cần mấy ô mỗi cạnh.</small></div><span class="tag retry">AI vẽ lại</span></li>
+    <li><div class="t">Thang máy đúng kiểu bố trí đầu bài chọn
+      <small>Giữa lòng thang bộ hoặc cạnh thang bộ: hai ô chung một vách. Cạnh thang bộ và đối diện thang bộ: cả hai cùng mở ra một hành lang hoặc sảnh.
+      Đối diện: hai ô không chung vách. «Kiểu khác» thì AI chỉ nhận lời mô tả, chương trình không kiểm được.
+      Lưu ý: bản vẽ chưa thể hiện được thang bộ uốn quanh giếng thang máy, kiểu «giữa lòng» được vẽ thành hai ô liền nhau.</small></div><span class="tag retry">AI vẽ lại</span></li>
+    <li><div class="t">Gia chủ nói không làm ban công mà bản vẽ vẫn có ban công</div><span class="tag retry">AI vẽ lại</span></li>
+    <li><div class="t">Gia chủ muốn ban công ở mọi tầng (từ tầng 2) mà có tầng thiếu</div><span class="tag retry">AI vẽ lại</span></li>
+    <li><div class="t">Ban công không nằm đúng mặt gia chủ chọn, hoặc có ban công ở mặt gia chủ không muốn</div><span class="tag retry">AI vẽ lại</span></li>
+  </ul>
+</div>
+
+<!-- ═══════════════ 4 ═══════════════ -->
+<h2 id="nvg"><span class="num">4</span>Sáu luật bố trí riêng của NVG</h2>
+<p class="lead">Do anh Haan đặt ngày 23/09/2026. Luôn bật, kỹ sư không tắt được. Năm luật đầu loại phương án, luật thứ sáu là ưu tiên.</p>
+
+<div class="card">
+  <ul class="rules">
+    <li><div class="t"><div class="step-label">Luật 1</div>Bếp không nằm dưới nhà vệ sinh của tầng trên
+      <small>Tính là «nằm dưới» khi hai phòng chồng lên nhau từ 100 cm² trở lên. Cách nhau một bức tường thì không tính.</small></div><span class="tag retry">AI vẽ lại</span></li>
+    <li><div class="t"><div class="step-label">Luật 2</div>Phòng thờ không nằm dưới nhà vệ sinh của tầng trên
+      <small>Cùng cách đo như luật 1.</small></div><span class="tag retry">AI vẽ lại</span></li>
+    <li><div class="t"><div class="step-label">Luật 3</div>Phòng thờ không chung tường với nhà vệ sinh
+      <small>Tính là chung tường khi hai phòng cách nhau không quá 40 cm và giáp nhau dọc tường từ 20 cm trở lên. Chạm góc thì không tính.</small></div><span class="tag retry">AI vẽ lại</span></li>
+    <li><div class="t"><div class="step-label">Luật 4</div>Cửa phòng thờ không nhìn thẳng sang cửa nhà vệ sinh
+      <small>Hai cửa cùng mở ra một phòng (thường là hành lang), đối diện nhau, lệch không quá 60 cm, cách không quá 3 m.</small></div><span class="tag retry">AI vẽ lại</span></li>
+    <li><div class="t"><div class="step-label">Luật 5</div>Ban công quay cạnh dài ra mặt thoáng
+      <small>Mặt thoáng là mặt ngoài nhà nhìn ra đường hoặc sân, không phải tường giáp nhà bên.</small></div><span class="tag retry">AI vẽ lại</span></li>
+    <li><div class="t"><div class="step-label">Luật 6</div>Nhà vệ sinh chung các tầng nên thẳng một trục kỹ thuật
+      <small>Tâm WC tầng trên cách tâm WC hoặc hộp kỹ thuật tầng dưới không quá 1,5 m. Không loại phương án, nhưng mọi phương án thẳng trục luôn được xếp trên mọi phương án lệch trục. Phương án được chọn mà vẫn lệch thì ghi rõ WC nào lệch bao nhiêu.</small></div><span class="tag score">Ưu tiên</span></li>
+  </ul>
+</div>
+<p style="color:var(--fg-subtle);font-size:14px">Riêng khi kỹ sư sửa bản vẽ bằng ô yêu cầu: lỗi đã có sẵn trên bản gốc chỉ còn là lời nhắc. Lỗi mới do lần sửa gây ra vẫn loại phương án.</p>
+
+<!-- ═══════════════ 5 ═══════════════ -->
+<h2 id="diem"><span class="num">5</span>Cách chấm điểm</h2>
+<p class="lead">Phương án qua hết các cửa kiểm mới được chấm. Tổng điểm 100, chia cho năm nhóm.</p>
+
+<div class="card">
+  <div class="bars">
+    <div class="bar"><span>Giao thông, đi lại</span><div class="track"><div class="fill" style="width:100%"></div></div><span class="v">30</span></div>
+    <div class="bar"><span>Đúng yêu cầu</span><div class="track"><div class="fill" style="width:83.3%"></div></div><span class="v">25</span></div>
+    <div class="bar"><span>Hình dáng phòng</span><div class="track"><div class="fill" style="width:66.7%"></div></div><span class="v">20</span></div>
+    <div class="bar"><span>Ánh sáng, mặt thoáng</span><div class="track"><div class="fill" style="width:50%"></div></div><span class="v">15</span></div>
+    <div class="bar"><span>Dễ thi công</span><div class="track"><div class="fill" style="width:33.3%"></div></div><span class="v">10</span></div>
+  </div>
+  <p style="color:var(--fg-subtle);font-size:14px;margin-bottom:0">Giao thông nặng nhất vì hồ sơ thật của NVG cho thấy đây là chỗ một mặt bằng «sống hay chết».
+  Trong một nhóm, các tiêu chí chia đều số điểm của nhóm.</p>
+</div>
+
+<div class="grid3">
+  <div class="card" style="text-align:center">
+    <div class="big">65%</div>
+    <p style="margin:8px 0 0">Ngưỡng nhận phương án</p>
+  </div>
+  <div class="card" style="grid-column: span 2">
+    <p style="margin-top:0"><b>Dưới 65% thì sao?</b> Nếu còn lượt, chương trình gửi AI những tiêu chí mất điểm nhiều nhất để AI vẽ lại.
+    Hết lượt thì lưu phương án điểm cao nhất và ghi rõ là dưới ngưỡng. Kỹ sư sửa tiếp bằng ô yêu cầu.</p>
+    <p style="margin-bottom:0"><b>Chưa đo được</b> thì ghi «Chưa đủ dữ liệu», không cho 0 điểm. Phần điểm đó bỏ ra khỏi mẫu số, nên điểm luôn đọc kèm «trên bao nhiêu phần đã chấm được».</p>
+  </div>
+</div>
+
+<h3>Các tiêu chí cụ thể</h3>
+<div class="card">
+  <div class="tbl"><table>
+    <thead><tr><th>Tiêu chí</th><th>Đủ điểm khi</th><th>Mất hết điểm khi</th></tr></thead>
+    <tbody>
+      <tr><td colspan="3" style="font-weight:600;color:var(--brand);background:var(--bg)">Giao thông, đi lại · 30 điểm</td></tr>
+      <tr><td>Phòng phải đi xuyên phòng ngủ khác mới tới được</td><td>Không có</td><td>Có 1 phòng</td></tr>
+      <tr><td>Phần diện tích dành cho đi lại (thang, hành lang, sảnh) so với sàn</td><td>18–36% (nhà vườn 18–25%)</td><td>Dưới 12% hoặc trên 42%</td></tr>
+      <tr><td>Số phòng phải đi qua từ cửa vào tới chân cầu thang</td><td>0</td><td>2</td></tr>
+      <tr><td>Chỗ hẹp nhất của hành lang</td><td>Từ 1,0 m</td><td>0,9 m trở xuống</td></tr>
+      <tr><td>Nhà có cửa hàng: đi từ cửa vào lên thang không phải qua chỗ bán</td><td>Đúng</td><td>Sai</td></tr>
+      <tr><td>Số cửa phải qua từ phòng sinh hoạt chung tới WC chung xa nhất</td><td>1</td><td>3</td></tr>
+      <tr><td>Quãng đường từ phòng sinh hoạt chung tới WC chung xa nhất</td><td>Tới 8 m</td><td>Từ 20 m</td></tr>
+      <tr><td>Chiều dài hành lang cho mỗi phòng nó dẫn tới</td><td>Tới 2,5 m</td><td>Từ 6 m</td></tr>
+
+      <tr><td colspan="3" style="font-weight:600;color:var(--brand);background:var(--bg)">Đúng yêu cầu · 25 điểm</td></tr>
+      <tr><td>Diện tích phòng lệch so với yêu cầu (bình quân)</td><td>Tới 10%</td><td>Từ 30%</td></tr>
+      <tr><td>Phòng thờ ở tầng cao nhất có người ở, không dưới WC, không chung tường WC</td><td>Đúng</td><td>Sai</td></tr>
+      <tr><td>Tầng nào có phòng ngủ thì tầng đó có WC</td><td>Mọi tầng</td><td>Thiếu một tầng</td></tr>
+      <tr><td>Phòng nhỏ hơn mức thông thường của nghề</td><td>Không có</td><td>2 phòng</td></tr>
+      <tr><td>Phòng lớn hơn mức thông thường của nghề</td><td>Không có</td><td>2 phòng</td></tr>
+
+      <tr><td colspan="3" style="font-weight:600;color:var(--brand);background:var(--bg)">Hình dáng phòng · 20 điểm</td></tr>
+      <tr><td>Phòng hẹp hơn mức đo trên hồ sơ NVG (bảng ở mục 6)</td><td>Không có</td><td>2 phòng</td></tr>
+      <tr><td>Phòng dài quá so với bề rộng (bảng ở mục 6)</td><td>Không có</td><td>2 phòng</td></tr>
+      <tr><td>Chiều cao mỗi bậc thang</td><td>15–18 cm</td><td>Dưới 14 hoặc trên 19,5 cm</td></tr>
+
+      <tr><td colspan="3" style="font-weight:600;color:var(--brand);background:var(--bg)">Ánh sáng, mặt thoáng · 15 điểm</td></tr>
+      <tr><td>Phòng ở có cửa sổ ra mặt thoáng
+        <br><small style="color:var(--fg-subtle)">Nhà phố chỉ đòi phòng khách và phòng ngủ chính.</small></td><td>Tất cả</td><td>Dưới 70% (nhà phố: thiếu 1 phòng)</td></tr>
+
+      <tr><td colspan="3" style="font-weight:600;color:var(--brand);background:var(--bg)">Dễ thi công · 10 điểm</td></tr>
+      <tr><td>WC từ tầng 2 trở lên nằm gần WC hoặc hộp kỹ thuật tầng dưới (dưới 1,5 m)</td><td>Tất cả</td><td>Một nửa</td></tr>
+      <tr><td>Hộp kỹ thuật thẳng một trục qua các tầng (lệch dưới 15 cm)</td><td>Đúng</td><td>Sai</td></tr>
+    </tbody>
+  </table></div>
+  <p style="color:var(--fg-subtle);font-size:14px;margin-bottom:0">Giữa hai mốc thì điểm giảm dần. Riêng tỷ lệ diện tích đi lại chỉ có ba mức: đủ, nửa, hoặc 0,
+  vì phép đo này sai số lớn.</p>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0">Khi có nhiều cách chia cho cùng một tầng, chương trình chọn cách nào?</h3>
+  <ol class="rank">
+    <li>Cách có <b>WC thẳng trục</b> với tầng dưới luôn thắng.</li>
+    <li>Tiếp theo, cách giữ <b>cầu thang, thang máy đúng chỗ AI đã phác</b>.</li>
+    <li>Tiếp theo, <b>tổng điểm cao hơn</b>. Tổng gồm điểm chấm ở trên, cộng điểm «giống ý AI» (phòng đúng khu, các phòng cần gần nhau thì gần nhau, phòng cần ra mặt đường thì ra mặt đường), trừ một chút cho mỗi chỗ chương trình phải tự sửa.</li>
+    <li>Nếu vẫn hoà: chọn cách giống ý AI hơn, rồi cách ít phải nắn hơn.</li>
+  </ol>
+</div>
+
+<p style="color:var(--fg-subtle);font-size:14px">Bốn tiêu chí đã từng có nhưng <b>bỏ đi</b> vì nhà thật đã xây của NVG cho kết quả ngược lại:
+tường tầng trên trùng tường tầng dưới, tổng chiều dài tường, phòng «vụn», bề rộng cửa sổ so với diện tích phòng.</p>
+
+<!-- ═══════════════ 6 ═══════════════ -->
+<h2 id="nhac"><span class="num">6</span>Các luật chỉ nhắc</h2>
+<p class="lead">Kỹ sư tích chọn gói nào ở màn hình AI Design thì lời nhắc của gói đó hiện ra, và AI được dặn trước.
+Riêng các mốc bề rộng và độ dài phòng trong bảng dưới luôn được dùng để chấm điểm hình dáng phòng, dù có tích hay không.</p>
+
+<div class="card">
+  <p style="margin-top:0"><b>Kích thước phòng</b> (số đo trên hồ sơ thật NVG hoặc kinh nghiệm)</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Loại phòng</th><th class="n">Rộng tối thiểu</th><th class="n">Diện tích tối thiểu</th><th class="n">Dài tối đa gấp mấy lần rộng</th></tr></thead>
+    <tbody>
+      <tr><td>Phòng khách</td><td class="n">3,5 m</td><td class="n">14 m²</td><td class="n">2,5</td></tr>
+      <tr><td>Phòng ngủ chính</td><td class="n">3,1 m</td><td class="n">14 m²</td><td class="n">2,5</td></tr>
+      <tr><td>Phòng ngủ</td><td class="n">2,35 m</td><td class="n">9 m²</td><td class="n">1,9</td></tr>
+      <tr><td>Bếp</td><td class="n">1,8 m</td><td class="n">—</td><td class="n">3,0</td></tr>
+      <tr><td>Góc làm việc</td><td class="n">1,8 m</td><td class="n">—</td><td class="n">2,5</td></tr>
+      <tr><td>Phòng thay đồ</td><td class="n">1,5 m</td><td class="n">—</td><td class="n">3,0</td></tr>
+      <tr><td>WC</td><td class="n">1,25 m</td><td class="n">3 m²</td><td class="n">2,5</td></tr>
+      <tr><td>Giặt phơi</td><td class="n">1,2 m</td><td class="n">—</td><td class="n">3,0</td></tr>
+      <tr><td>Hành lang</td><td class="n">1,0 m</td><td class="n">—</td><td class="n">—</td></tr>
+      <tr><td>Ban công</td><td class="n">1,0 m</td><td class="n">—</td><td class="n">4,0</td></tr>
+      <tr><td>Tủ âm tường</td><td class="n">0,9 m</td><td class="n">—</td><td class="n">3,0</td></tr>
+      <tr><td>Kho</td><td class="n">0,85 m</td><td class="n">—</td><td class="n">3,0</td></tr>
+      <tr><td>Chỗ để xe</td><td class="n">2,4 m</td><td class="n">—</td><td class="n">3,0</td></tr>
+      <tr><td>Giếng trời</td><td class="n">—</td><td class="n">tối đa 8 m²</td><td class="n">4,0</td></tr>
+    </tbody>
+  </table></div>
+  <p style="color:var(--fg-subtle);font-size:14px;margin-bottom:0">Các mốc này cao hơn mốc «kê được đồ» ở bước 3. Hai bộ số khác nhau có chủ đích:
+  dưới mốc bước 3 là phòng không dùng được (loại), còn dưới mốc ở đây là phòng hẹp hơn nhà NVG thường làm (trừ điểm).</p>
+</div>
+
+<div class="card">
+  <p style="margin-top:0"><b>Cách bố trí</b></p>
+  <ul class="rules">
+    <li><div class="t">Bếp nên giáp phòng ăn</div><span class="tag warn">Nhắc</span></li>
+    <li><div class="t">WC nên tách khỏi bếp và khỏi phòng thờ</div><span class="tag warn">Nhắc</span></li>
+    <li><div class="t">Phòng thờ nên ở tầng cao nhất</div><span class="tag warn">Nhắc</span></li>
+    <li><div class="t">Chỗ để xe nên ở tầng 1, quay ra phía có đường vào</div><span class="tag warn">Nhắc</span></li>
+    <li><div class="t">Cầu thang không nhìn thẳng ra cửa chính</div><span class="tag warn">Nhắc</span></li>
+    <li><div class="t">Bếp nên có cửa sổ thoáng</div><span class="tag warn">Nhắc</span></li>
+    <li><div class="t">Ban công, sân nên quay ra mặt thoáng</div><span class="tag warn">Nhắc</span></li>
+  </ul>
+</div>
+
+<div class="card">
+  <p style="margin-top:0"><b>Nhắc theo câu trả lời của gia chủ</b> (suy đoán theo nghề nên chỉ nhắc, không loại)</p>
+  <ul class="rules">
+    <li><div class="t">Có bồn nước trên mái: cần sân thượng làm chỗ đặt và lối lên</div><span class="tag warn">Nhắc</span></li>
+    <li><div class="t">Nấu nhiều chiên xào: bếp nên kín và có cửa sổ thoát mùi</div><span class="tag warn">Nhắc</span></li>
+    <li><div class="t">Có khách ở lại qua đêm: nên có một phòng ngủ được</div><span class="tag warn">Nhắc</span></li>
+    <li><div class="t">Làm việc tại nhà: nên có phòng hoặc góc làm việc</div><span class="tag warn">Nhắc</span></li>
+    <li><div class="t">Người đi lại khó mà nhà không có thang máy, hoặc vẫn còn bậc</div><span class="tag warn">Nhắc</span></li>
+    <li><div class="t">Dự trù nâng tầng mà cầu thang không lên được mái</div><span class="tag warn">Nhắc</span></li>
+    <li><div class="t">Nền nhà thấp hơn mặt đường ở nơi hay ngập</div><span class="tag warn">Nhắc</span></li>
+    <li><div class="t">Chưa khai đủ số liệu để tính bậc tam cấp</div><span class="tag warn">Nhắc</span></li>
+  </ul>
+</div>
+
+<p style="color:var(--fg-subtle);font-size:14px">Ngoài ra, mỗi khi chương trình tự sửa ý của AI (tự thêm một cửa, bỏ một cửa không đặt được, đưa ban công ra ngoài ranh theo đầu bài…),
+màn hình sẽ ghi chú lại để bản vẽ không khác lời AI mà không ai biết.</p>
+
+<!-- ═══════════════ 7 ═══════════════ -->
+<h2 id="xem-lai"><span class="num">7</span>Chỗ cần xem lại</h2>
+<p class="lead">Phát hiện khi lập danh sách này. Chưa sửa gì, chờ anh Haan quyết.</p>
+
+<div class="callout">
+  <b>Đã sửa 25/09/2026:</b> thang máy và «không làm ban công» nay cho AI vẽ lại thay vì dừng; kích thước giếng thang
+  hỏi ở đầu bài thay vì đoán theo tải; diện tích và tên phòng trùng thì chương trình tự sửa. Cùng ngày: giếng thang máy
+  thành dải bị bác; tầng dưới bị chia lại thì AI được biết.
+</div>
+<div class="card">
+  <ul class="rules">
+    <li><div class="t"><b>Một luật ban công nằm ở ba chỗ với ba mức</b>
+      <small>«Ban công quay ra mặt thoáng» vừa là luật loại phương án (luật 5 của NVG), vừa là ghi chú của bộ xếp, vừa là lời nhắc trong gói kinh nghiệm. Ghi chú trong mã còn nói «chưa chặn», đã cũ.</small></div></li>
+    <li><div class="t"><b>Hành lang có hai mốc bề rộng</b>
+      <small>Chương trình dựng hành lang rộng 1,2 m, nhưng chỉ trừ điểm khi hẹp hơn 1,0 m. Có thể là cố ý, nhưng chưa có chỗ nào ghi lý do.</small></div></li>
+    <li><div class="t"><b>Ghi chú cũ trong mã</b>
+      <small>Một ghi chú còn nhắc tới bộ quy chuẩn đã xoá từ trước. Không ảnh hưởng kết quả.</small></div></li>
+  </ul>
+</div>
+
+<footer>
+  Số liệu lấy từ: <code>rules/nvg-mandatory.yaml</code>, <code>rules/nvg-experience.yaml</code>, <code>rules/nvg-measured.yaml</code>,
+  <code>kb/plan_quality.yaml</code>, <code>kb/brief_fidelity.yaml</code>, <code>kb/construction_norms.yaml</code> và mã trong
+  <code>workers/src/design/ai/</code>. Số trên các tệp này đổi thì tài liệu này cũ đi.
+</footer>
+
+</div>
+</body>
+</html>

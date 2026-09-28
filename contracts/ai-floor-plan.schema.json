@@ -350,6 +350,48 @@
                 "minimum": 2,
                 "maximum": 40,
                 "description": "Tổng số bậc trong ô thang này."
+              },
+              "going": {
+                "type": "integer",
+                "minimum": 15,
+                "maximum": 45,
+                "description": "Bề sâu mặt bậc, cm — CHƯƠNG TRÌNH điền từ `kb/construction_norms.yaml`. Có mặt thì tờ vẽ giữ đúng mặt bậc này và để chiếu nghỉ nhận phần dư của ô thang (T70); vắng (artifact trước 23/09/2026) thì rải đều bậc trên chiều dài ô thang."
+              }
+            }
+          }
+        },
+        "entry_steps": {
+          "type": "array",
+          "maxItems": 4,
+          "description": "Bậc ở lối vào (bậc tam cấp) ngoài cửa chính, chỉ ở tầng 1 — CHƯƠNG TRÌNH đặt (T70), mô hình không khai. Chỉ có khi đầu bài khai chênh cốt nền hoặc số bậc; không khai thì vắng, không đoán.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "rect", "down", "risers", "going"],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/elem_id"
+              },
+              "rect": {
+                "$ref": "#/$defs/rect",
+                "description": "Phần đất bậc chiếm, NGOÀI mặt tường, cm."
+              },
+              "down": {
+                "type": "string",
+                "enum": ["+x", "-x", "+y", "-y"],
+                "description": "Chiều đi XUỐNG — từ cửa chính ra sân."
+              },
+              "risers": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 12,
+                "description": "Số bậc. Bậc 1 là bậc ngoài cùng, thấp nhất."
+              },
+              "going": {
+                "type": "integer",
+                "minimum": 15,
+                "maximum": 60,
+                "description": "Bề sâu mặt bậc, cm."
               }
             }
           }

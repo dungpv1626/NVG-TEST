@@ -209,7 +209,12 @@ describe('cửa cổng tự thêm lúc xếp (`door_added`) được giữ khi s
   it('không thao tác: ra đúng điểm đã lưu', () => {
     const result = apply(real as typeof villa, []);
     expect(result.issues).toEqual([]);
-    expect(result.final!.payload.score!.points).toBe(fixture.plan.score!.points);
+    // Thước 2 (T91) thêm D3, thước 3 (T96) thêm C9, C10, E5: điểm đã lưu 62,17 chấm bằng thước 1. Mọi
+    // tiêu chí thước 1 đã có phải ra y như đã lưu.
+    const saved = new Map(fixture.plan.score!.criteria.map((c) => [c.code, c.score]));
+    for (const c of result.final!.payload.score!.criteria) {
+      if (saved.has(c.code)) expect([c.code, c.score]).toEqual([c.code, saved.get(c.code)]);
+    }
   });
 
   it('đổi chỗ bếp–phòng ăn: thang giữ cửa; lý do còn lại là bố cục thật (bếp chỉ vào được qua gara)', () => {

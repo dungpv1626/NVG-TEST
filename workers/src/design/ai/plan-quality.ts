@@ -47,6 +47,12 @@ export interface CriterionSpec extends ScoreScale {
   params: Record<string, number>;
   /** Số mẫu đã đo. `0` nghĩa là ngưỡng hoàn toàn là suy luận (T31). */
   n: number;
+  /**
+   * Trọng số TƯƠNG ĐỐI trong nhóm (T96): tiêu chí `weight: 2` nặng gấp đôi tiêu chí `weight: 1` cùng
+   * nhóm. Vắng = 1, tức chia đều như trước. Trọng số nhóm vẫn là con số của bộ đo — đây chỉ chia phần
+   * trong nhóm theo tư duy nghề (phòng ngủ phải đi xuyên phòng ngủ khác nặng hơn một hành lang hơi dài).
+   */
+  weight: number;
   /** Nguyên văn nhãn `[ĐO]` / `[CHUNG]` của bộ đo — hiện lên màn hình, không rút gọn. */
   label: string;
   /**
@@ -76,6 +82,12 @@ export interface PlanQuality {
   intentFit: IntentFitWeights;
   /** Ngưỡng nhận phương án, % trên phần chấm được (T53). `null` = không có ngưỡng. */
   acceptPercent: number | null;
+  /**
+   * Sàn theo NHÓM (T96): một nhóm chấm được mà dưới % này thì phương án dưới ngưỡng, dù tổng vượt
+   * `acceptPercent`. Không có sàn thì nhóm diện tích và hình dáng bù được cho một tầng đi lại tệ —
+   * đúng cách sáu mặt bằng đầu tiên lọt qua 65 điểm với D1 = 0, E2 = 0, C7 = 0,24. `null` = không sàn.
+   */
+  acceptGroupFloorPercent: number | null;
 }
 
 /**
@@ -120,6 +132,7 @@ const STRUCTURAL = new Set([
   'rooms',
   'n',
   'label',
+  'weight',
   'enforced_by_gate',
   'by_building_type',
 ]);
@@ -187,15 +200,19 @@ export function parsePlanQuality(yamlText: string): PlanQuality {
     })),
     intentFit: intentFitOf(raw.intent_fit),
     acceptPercent: acceptPercentOf(raw.accept_percent),
+    acceptGroupFloorPercent: acceptPercentOf(
+      raw.accept_group_floor_percent,
+      'accept_group_floor_percent',
+    ),
   };
 }
 
-function acceptPercentOf(raw: unknown): number | null {
+function acceptPercentOf(raw: unknown, key = 'accept_percent'): number | null {
   if (raw === undefined || raw === null) return null;
   const value = Number(raw);
   if (!Number.isFinite(value) || value <= 0 || value > 100) {
     throw new PlanQualityError(
-      `\`accept_percent\` của thước chấm phải trong (0, 100], đang là "${String(raw)}".`,
+      `\`${key}\` của thước chấm phải trong (0, 100], đang là "${String(raw)}".`,
     );
   }
   return value;
@@ -254,6 +271,7 @@ function criterion(
     ...(raw.rooms ? { rooms: String(raw.rooms) } : {}),
     params,
     n: Number(raw.n ?? 0),
+    weight: weightOf(raw.weight, code),
     label: String(raw.label ?? ''),
     ...(raw.enforced_by_gate ? { enforcedByGate: String(raw.enforced_by_gate) } : {}),
     byBuildingType: {},
@@ -270,6 +288,18 @@ function criterion(
 
   requireThresholds(spec);
   return spec;
+}
+
+/** Trọng số trong nhóm: vắng = 1; phải là số dương — 0 là «không chấm», và đó là việc của `enforced_by_gate`. */
+function weightOf(raw: unknown, code: string): number {
+  if (raw === undefined || raw === null) return 1;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new PlanQualityError(
+      `Tiêu chí "${code}" khai \`weight\` phải là số dương, đang là "${String(raw)}".`,
+    );
+  }
+  return value;
 }
 
 function numbers(raw: Record<string, unknown>, where: string): Partial<CriterionSpec> {

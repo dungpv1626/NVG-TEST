@@ -23,6 +23,7 @@ import {
 import { prepareWalls } from '../draw/walls';
 import { doorLinks } from '../plan-check';
 import { layoutLevel, type LevelAnchors } from '../tree';
+import { mandatoryFor, mandatoryKey, mandatoryViolations } from '../mandatory';
 
 export type PlanEditOp = AiPlanEdit['ops'][number];
 
@@ -334,6 +335,7 @@ export function applyPlanEdits(input: EditApplyInput): EditApplyResult {
     ...(contextInput.areaNorms ? { areaNorms: contextInput.areaNorms } : {}),
     roomGroups: contextInput.roomGroups,
     buildingType,
+    relaxMandatory: preExistingViolations(input.base, context, program),
   });
   if (final.check.blocking.length) {
     return {
@@ -487,4 +489,21 @@ function dividingNode(
     current = next ? tree.nodes.find((node) => node.id === next) : undefined;
   }
   return null;
+}
+
+/**
+ * Vi phạm luật bắt buộc (T71) ĐÃ CÓ trong phương án đang lưu — tuyến sửa hạ chúng xuống ghi chú.
+ *
+ * Cùng lẽ `LEGACY_RELAXED`: một phương án đúc trước khi luật ra đời không được biến thành không sửa
+ * nổi, vì kỹ sư đang yêu cầu một chỗ khác. Khác `LEGACY_RELAXED` ở chỗ chỉ tha ĐÚNG những vi phạm có
+ * sẵn (mã + phòng): một thao tác sửa không được tạo ra vi phạm mới.
+ */
+function preExistingViolations(
+  base: AiFloorPlan,
+  context: PlanContext,
+  program: AiSpaceProgram,
+): ReadonlySet<string> {
+  const rules = mandatoryFor(context.mandatory, program);
+  if (!rules) return new Set();
+  return new Set(mandatoryViolations(base.levels, rules).map(mandatoryKey));
 }

@@ -76,6 +76,7 @@ export type TextKey =
   | 'room_name'
   | 'room_area'
   | 'dim'
+  | 'stair_number'
   | 'north'
   | 'footer';
 
@@ -119,6 +120,7 @@ const TEXT_KEYS: TextKey[] = [
   'room_name',
   'room_area',
   'dim',
+  'stair_number',
   'north',
   'footer',
 ];

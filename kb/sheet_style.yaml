@@ -112,6 +112,10 @@ text_mm:
   room_name: 2.4
   room_area: 2.0
   dim: 2.0
+  # Số thứ tự bậc (thang bộ, bậc tam cấp — T70). HS-03 in chữ số cao 78 cạnh nhãn phòng 130, tức
+  # ~0,6 cỡ tên phòng; 0,6 × 2,4 = 1,44 dưới ngưỡng đọc được nên lấy đúng `text_min_mm`. Bậc nào
+  # trên giấy thấp hơn ~1,4 lần cỡ này thì bộ vẽ bỏ số, không in chồng lên nét bậc.
+  stair_number: 1.6
   north: 3.0
   footer: 1.8 # ghi chú chân tờ
 

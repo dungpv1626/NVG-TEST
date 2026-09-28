@@ -36,6 +36,7 @@ import type { DigitiseParams, DigitiseSource } from './workflows/digitise-steps'
 import { aiCallOfError, extractSiteBoundary } from './site/extract-boundary';
 import { asUser, denyUnlessWritable, projectScope, DESIGN_WRITE_DENIED } from './auth-scope';
 import type { DesignEnv } from './env';
+import { instanceIdOf } from './workflows/rpc-stub';
 
 export const designApp = new Hono<{ Bindings: DesignEnv }>();
 
@@ -151,9 +152,9 @@ designApp.post('/kb/digitise', async (c) => {
   }
 
   const params: DigitiseParams = { ...meta, discipline, sources };
-  const run = await c.env.DIGITISE_PIPELINE.create({ params });
+  const runId = instanceIdOf(await c.env.DIGITISE_PIPELINE.create({ params }));
 
-  return c.json({ runId: run.id, sources: stored }, 202);
+  return c.json({ runId, sources: stored }, 202);
 });
 
 /**

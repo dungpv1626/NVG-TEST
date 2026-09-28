@@ -1762,29 +1762,83 @@
           }
         },
         {
+          "path": "vertical.elevator_shaft_width_m",
+          "label": "Giếng thang máy — bề rộng lọt lòng",
+          "control": "number",
+          "weight": 0,
+          "unit": "m",
+          "min": 0.8,
+          "max": 4,
+          "hint": "Lấy theo bản vẽ của hãng thang. Bắt buộc khi có thang máy: chương trình không tự đoán kích thước giếng.",
+          "when": {
+            "field": "vertical.elevator",
+            "in": ["lam_ngay", "chua_cho"]
+          }
+        },
+        {
+          "path": "vertical.elevator_shaft_depth_m",
+          "label": "Giếng thang máy — chiều sâu lọt lòng",
+          "control": "number",
+          "weight": 0,
+          "unit": "m",
+          "min": 0.8,
+          "max": 4,
+          "hint": "Lấy theo bản vẽ của hãng thang. Bắt buộc khi có thang máy.",
+          "when": {
+            "field": "vertical.elevator",
+            "in": ["lam_ngay", "chua_cho"]
+          }
+        },
+        {
           "path": "vertical.elevator_position",
-          "label": "Thang máy đặt ở đâu",
+          "label": "Kiểu bố trí thang máy",
           "control": "choice",
           "weight": 0,
           "optional": true,
-          "hint": "Đặt cạnh thang bộ thì gọn lõi và rẻ hệ thống; tách riêng thì tiện cho người già ở phòng xa thang bộ.",
+          "hint": "Giữa lòng thang bộ: giếng thang máy ở khoảng trống giữa thang bộ, thang bộ uốn quanh — tiết kiệm diện tích nhất, hợp nhà ống. Cạnh thang bộ: sát nhau trên một mảng tường, cùng mở ra một hành lang — hợp nhà ngang từ 4,5–5 m. Đối diện thang bộ: hai bên một hành lang hoặc sảnh chờ — hợp biệt thự, nhà lô góc.",
           "options": [
+            {
+              "value": "giua_long_thang_bo",
+              "label": "Giữa lòng thang bộ"
+            },
             {
               "value": "canh_thang_bo",
               "label": "Cạnh thang bộ"
             },
             {
+              "value": "doi_dien_thang_bo",
+              "label": "Đối diện thang bộ, qua hành lang / sảnh"
+            },
+            {
+              "value": "khac",
+              "label": "Kiểu khác (tự mô tả)"
+            },
+            {
               "value": "rieng_biet",
-              "label": "Tách riêng"
+              "label": "Tách riêng",
+              "retired": true
             },
             {
               "value": "chua_quyet",
-              "label": "Chưa quyết"
+              "label": "Chưa quyết",
+              "retired": true
             }
           ],
           "when": {
             "field": "vertical.elevator",
             "in": ["lam_ngay", "chua_cho"]
+          }
+        },
+        {
+          "path": "vertical.elevator_layout_note",
+          "label": "Mô tả kiểu bố trí thang máy",
+          "control": "textarea",
+          "weight": 0,
+          "hint": "Kiến trúc sư tự mô tả. Câu này tới AI dạng lời dặn, chương trình không kiểm được bằng hình học.",
+          "placeholder": "Ví dụ: thang máy ở cuối hành lang, cửa quay ra sân sau",
+          "when": {
+            "field": "vertical.elevator_position",
+            "equals": "khac"
           }
         },
         {
@@ -1898,11 +1952,12 @@
           ]
         },
         {
-          "path": "balconies.sides",
-          "label": "Ban công đặt ở mặt nào",
+          "path": "balconies.required_sides",
+          "label": "Mặt bắt buộc có ban công",
           "control": "multi",
           "weight": 0,
           "optional": true,
+          "hint": "Mặt nào PHẢI có ban công. Phương án thiếu ban công ở mặt này sẽ bị bác.",
           "options": [
             {
               "value": "front",
@@ -1937,20 +1992,28 @@
           }
         },
         {
-          "path": "balconies.projection_over_boundary",
-          "label": "Ban công đua ra ngoài ranh đất",
-          "control": "tristate",
+          "path": "balconies.optional_sides",
+          "label": "Mặt có thể có ban công",
+          "control": "multi",
           "weight": 0,
           "optional": true,
-          "hint": "Câu hỏi pháp lý trước khi là câu hỏi hình khối: nhiều địa phương chỉ cho đua khi đường đủ rộng và chỉ tới một độ vươn nhất định. Trả lời «Không» thì ban công nằm trọn trong phần đất xây được.",
+          "hint": "Mặt có cũng được, không có cũng được. Mặt không nằm ở câu này lẫn câu trên thì không đặt ban công.",
           "options": [
             {
-              "value": "true",
-              "label": "Có"
+              "value": "front",
+              "label": "Mặt trước"
             },
             {
-              "value": "false",
-              "label": "Không"
+              "value": "back",
+              "label": "Mặt sau"
+            },
+            {
+              "value": "left",
+              "label": "Bên trái"
+            },
+            {
+              "value": "right",
+              "label": "Bên phải"
             }
           ],
           "when": {
@@ -1969,15 +2032,13 @@
           }
         },
         {
-          "path": "balconies.projection_m",
-          "label": "Độ vươn của ban công",
-          "control": "number",
+          "path": "balconies.projection_by_side",
+          "label": "Ban công đua ra khỏi mặt sàn",
+          "control": "sides",
           "weight": 0,
           "optional": true,
           "unit": "m",
-          "hint": "Tính từ mặt tường. Để trống thì lấy theo thông lệ của phương án.",
-          "min": 0,
-          "max": 3,
+          "hint": "Chỉ điền mặt có ban công. 0 = không đua: ban công nằm trong diện tích sàn. Số lớn hơn 0 = đua ra khỏi mặt nhà bấy nhiêu mét, phần đua không tính vào diện tích sàn. Đua quá khoảng lùi thì vượt ranh đất: sang đất nhà khác là không được; ra đường, hẻm thì kiểm quy định địa phương.",
           "when": {
             "all": [
               {

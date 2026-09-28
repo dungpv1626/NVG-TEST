@@ -66,7 +66,8 @@ function contextInput(trace?: (line: string) => void): PlanContextInput {
     variant: { id: 'AI-A', label: 'AI-A', strategy: '' },
     labels: Object.fromEntries(vocabulary.types.map((t) => [t.code, t.vi])),
     vocabulary: new VocabularyIndex(vocabulary),
-    fidelity: parseBriefFidelity(read('kb/brief_fidelity.yaml')),
+    // Lượt ghi trước T96: phát lại kiểm bộ xếp, không kiểm cổng «không bịa thêm» (xem `ai-real-context.ts`).
+    fidelity: { ...parseBriefFidelity(read('kb/brief_fidelity.yaml')), onlyWhenAsked: [] },
     construction: parseConstructionNorms(read('kb/construction_norms.yaml')),
     siteContext: parseSiteContext(read('kb/site_context.yaml')),
     rules: selectedRulePack(NO_RULE_PACKS, { standards: new RulePack([], false), experience }),

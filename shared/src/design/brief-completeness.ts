@@ -23,6 +23,7 @@
  * vào một con số sẽ cho người dùng một điểm thấp mà không biết phải làm gì.
  */
 
+import { BALCONY_SIDES, balconySides, projectionOver, type BalconySide } from './balcony-brief';
 import { formatNumber } from '../format';
 import { bedroomsFor } from './kb.generated';
 import type { DesignBriefDraft } from './brief-draft';
@@ -30,6 +31,7 @@ import {
   isAnswered,
   valueAtPath,
   visibleFields,
+  withoutHiddenAnswers,
   type BriefFormConfig,
   type BriefFormField,
 } from './brief-form';
@@ -152,11 +154,13 @@ export const DERIVED_NEED_CODES: readonly string[] = [...BEDROOM_CODES, 'wc'];
  * nhiễu khiến người dùng học cách bỏ qua mọi cảnh báo, kể cả cảnh báo thật.
  */
 export function checkBriefConsistency(
-  draft: DesignBriefDraft,
+  input: DesignBriefDraft,
   config: BriefFormConfig,
   /** Ô chữ tự do nằm ngoài hợp đồng (cột `legacy.*`) — chỉ dùng để đối chiếu phong cách. */
   legacy: { style_note?: string | null } = {},
 ): BriefIssue[] {
+  // Chỉ soát câu trả lời người dùng đang NHÌN THẤY — xem `withoutHiddenAnswers`.
+  const draft = withoutHiddenAnswers(input, config);
   const found: BriefIssue[] = [];
   const site = draft.site;
   const spaces = draft.required_spaces ?? [];
@@ -232,21 +236,6 @@ export function checkBriefConsistency(
           `Diện tích suy ra từ số đo là ${formatNumber(computed)} m², lệch quá 5% so với ` +
           `${formatNumber(site.area_m2)} m² ghi trên giấy chứng nhận. Kiểm tra lại số đo hoặc hình thửa.`,
         paths: ['site.area_m2', 'site.width_m', 'site.depth_m'],
-      });
-    }
-  }
-
-  // --- Loại hình và khoảng lùi nói ngược nhau -------------------------------
-  // Theo mô hình của engine, nhà phố là trường hợp một cánh nhà với khoảng lùi hai bên bằng
-  // không (04-layer3-floorplan). Đây là ràng buộc của MÔ HÌNH, không phải của quy chuẩn.
-  if (draft.building_type === 'nha_pho' && setback) {
-    if ((setback.left ?? 0) > 0 || (setback.right ?? 0) > 0) {
-      found.push({
-        code: 'nha_pho_co_khoang_lui_ben',
-        severity: 'canh_bao',
-        message:
-          'Nhà phố đang khai có khoảng lùi hai bên. Nếu lô đất thật sự lùi khỏi ranh hai bên thì chọn loại hình Biệt thự.',
-        paths: ['building_type', 'site.setback_required_m'],
       });
     }
   }
@@ -361,6 +350,14 @@ export function checkBriefConsistency(
   }
 
   found.push(...checkSurveyDetail(draft));
+  found.push(...checkCrossAnswers(draft, config));
+
+  // --- Hướng bàn thờ / bếp khai hai nơi, mỗi nơi một hướng ------------------------------
+  // Hướng chỉ vào đầu bài dưới dạng CÂU CHỮ (ghi chú phong thuỷ, kiêng kỵ, ô tiện ích của dòng
+  // không gian) — chương trình không đọc được, mô hình đọc cả hai câu và tự chọn một. Haan
+  // 28/09/2026: báo ngay ở đầu bài để người nhập quyết (đầu bài demo: «bàn thờ hướng đông» ở ghi
+  // chú phong thuỷ, «hướng đông nam» ở dòng phòng thờ).
+  found.push(...orientationConflicts(draft, config));
 
   return found;
 }
@@ -438,6 +435,40 @@ function checkSurveyDetail(draft: DesignBriefDraft): BriefIssue[] {
     });
   }
 
+  // --- Thang máy mà chưa có kích thước giếng --------------------------------
+  // Haan 25/09/2026: kích thước giếng phải do gia chủ khai theo hãng thang, không để chương trình
+  // đoán theo tải. Nghiêm trọng: chặn trước khi gọi mô hình, không tốn tiền cho một phương án mà
+  // giếng thang không lọt cabin thật. Nhà một tầng đã có câu hỏi riêng ở trên.
+  if (
+    (vertical?.elevator === 'lam_ngay' || vertical?.elevator === 'chua_cho') &&
+    floors !== 1 &&
+    (typeof vertical.elevator_shaft_width_m !== 'number' ||
+      typeof vertical.elevator_shaft_depth_m !== 'number')
+  ) {
+    out.push({
+      code: 'thang_may_thieu_kich_thuoc',
+      severity: 'nghiem_trong',
+      message:
+        'Đầu bài có thang máy nhưng chưa điền kích thước giếng thang. Điền bề rộng và chiều sâu lọt lòng theo bản vẽ của hãng thang ở mục «Khối nhà, thang và mặt ngoài».',
+      paths: ['vertical.elevator_shaft_width_m', 'vertical.elevator_shaft_depth_m'],
+    });
+  }
+
+  // --- Kiểu bố trí thang máy «khác» mà chưa mô tả ----------------------------
+  if (
+    (vertical?.elevator === 'lam_ngay' || vertical?.elevator === 'chua_cho') &&
+    vertical.elevator_position === 'khac' &&
+    !vertical.elevator_layout_note?.trim()
+  ) {
+    out.push({
+      code: 'thang_may_kieu_khac_chua_mo_ta',
+      severity: 'canh_bao',
+      message:
+        'Kiểu bố trí thang máy chọn «Kiểu khác» nhưng chưa mô tả. Ghi vài chữ để AI biết đặt thang máy ở đâu so với thang bộ.',
+      paths: ['vertical.elevator_layout_note'],
+    });
+  }
+
   // --- Có người đi lại khó khăn mà lối vào vẫn là bậc -----------------------
   if (
     life?.reduced_mobility === true &&
@@ -499,30 +530,102 @@ function checkSurveyDetail(draft: DesignBriefDraft): BriefIssue[] {
     });
   }
 
-  // --- Ban công đua ra ngoài ranh mà chưa biết đường rộng bao nhiêu ---------
-  // Không phải phép kiểm quy chuẩn (ở đây không có ngưỡng nào): chỉ là đầu bài đang khẳng
-  // định một điều mà chính nó chưa có đủ dữ kiện để khẳng định.
-  if (balconies?.projection_over_boundary === true && typeof site?.road_width_m !== 'number') {
+  // --- Ban công: phần đua VƯỢT RANH ĐẤT từng mặt (T91, sửa 27/09/2026) -------
+  // Độ đua đo từ MẶT NHÀ, mà mặt nhà cách ranh đất một khoảng lùi (số lớn hơn giữa khoảng lùi quy hoạch và
+  // chiều sâu sân mong muốn — cùng quy ước với phép kiểm sân bên dưới). Chỉ phần đua VƯỢT khoảng lùi mới
+  // ra khỏi đất nhà mình (Haan: «phía trước nhà và bên trái nhà còn khoảng lùi rộng chứ không phải là
+  // đường»). Vượt sang đất người khác (nhà hàng xóm, đất trống) là CHẶN; ra đường, hẻm, ao hồ chỉ CẢNH
+  // BÁO. Chưa khai khoảng lùi mặt ấy thì không biết có vượt không — cảnh báo, không chặn.
+  const view = balconySides(balconies);
+  const sideName: Record<BalconySide, string> = {
+    front: 'mặt trước',
+    back: 'mặt sau',
+    left: 'bên trái',
+    right: 'bên phải',
+  };
+  const setbackOf = (side: BalconySide): number | null => {
+    const planned = (
+      site?.setback_required_m as Partial<Record<BalconySide, number>> | undefined
+    )?.[side];
+    const yard = (
+      draft.massing?.yard_depth_m as Partial<Record<BalconySide, number>> | undefined
+    )?.[side];
+    const known = [planned, yard].filter((v): v is number => typeof v === 'number');
+    return known.length ? Math.max(...known) : null;
+  };
+  let towardStreet = false;
+  // Đường dẫn trỏ về Ô trên phiếu (giao diện nhảy tới ô) — đầu bài cũ cũng sửa ở ô mới.
+  const path = 'balconies.projection_by_side';
+  for (const side of BALCONY_SIDES) {
+    const m = view.projection[side];
+    if (typeof m !== 'number' || m <= 0) continue;
+    const setback = setbackOf(side);
+    const over = projectionOver(site?.adjacent?.[side] ?? null);
+    if (setback === null) {
+      if (over === null) continue;
+      out.push({
+        code: 'ban_cong_dua_chua_ro_khoang_lui',
+        severity: 'canh_bao',
+        message: `Ban công ${sideName[side]} đua ${m} m khỏi mặt nhà, nhưng đầu bài chưa khai khoảng lùi ${sideName[side]} — chưa biết ban công có vượt ranh đất không. Bổ sung khoảng lùi mặt này.`,
+        paths: [path, 'site.setback_required_m'],
+      });
+      continue;
+    }
+    const beyond = Math.round((m - setback) * 100) / 100;
+    if (beyond <= 0) continue;
+    if (over === 'private') {
+      out.push({
+        code: 'ban_cong_dua_sang_dat_khac',
+        severity: 'nghiem_trong',
+        message: `Ban công ${sideName[side]} đua ${m} m khỏi mặt nhà, vượt khoảng lùi ${setback} m nên lấn ${beyond} m sang đất của người khác — không được. Giảm độ đua mặt này xuống không quá ${setback} m, hoặc bỏ ban công ở mặt này.`,
+        paths: [path, `site.adjacent.${side}`],
+      });
+    } else if (over === 'public') {
+      towardStreet = true;
+      out.push({
+        code: 'ban_cong_dua_ra_duong',
+        severity: 'canh_bao',
+        message: `Ban công ${sideName[side]} đua ${m} m khỏi mặt nhà, vượt khoảng lùi ${setback} m nên nhô ${beyond} m ra phía trên đường, hẻm hoặc mặt nước — kiểm quy định địa phương về độ vươn ban công trước khi chốt.`,
+        paths: [path, `site.adjacent.${side}`],
+      });
+    }
+  }
+  if (towardStreet && typeof site?.road_width_m !== 'number') {
     out.push({
       code: 'ban_cong_dua_ranh_chua_ro_duong',
       severity: 'canh_bao',
       message:
         'Đầu bài khai ban công đua ra ngoài ranh đất nhưng chưa ghi bề rộng đường trước nhà — chưa đủ căn cứ để chốt. Bổ sung bề rộng đường.',
-      paths: ['balconies.projection_over_boundary', 'site.road_width_m'],
+      paths: ['balconies.projection_by_side', 'site.road_width_m'],
     });
+  }
+  // Độ đua khai cho mặt không có ban công: bị bỏ qua — nói ra để người nhập biết.
+  if (!view.legacy) {
+    const withBalcony = new Set<string>([...view.required, ...view.optional]);
+    for (const side of BALCONY_SIDES) {
+      const m = balconies?.projection_by_side?.[side];
+      if (typeof m === 'number' && m > 0 && !withBalcony.has(side)) {
+        out.push({
+          code: 'ban_cong_dua_mat_khong_co',
+          severity: 'canh_bao',
+          message: `Đầu bài khai độ đua ban công ${sideName[side]} nhưng mặt ấy không nằm trong danh sách mặt có ban công — độ đua này bị bỏ qua. Thêm mặt ấy vào danh sách hoặc xoá độ đua.`,
+          paths: ['balconies.projection_by_side', 'balconies.required_sides'],
+        });
+      }
+    }
   }
 
   // --- Khai không làm ban công nhưng vẫn chọn mặt đặt ban công --------------
   if (
     balconies?.scope === 'khong_co' &&
-    (balconies.sides?.length || balconies.drying_balcony === true)
+    (view.required.length || view.optional.length || balconies.drying_balcony === true)
   ) {
     out.push({
       code: 'ban_cong_noi_khong_ma_van_khai',
       severity: 'canh_bao',
       message:
         'Đầu bài chọn «không làm ban công» nhưng vẫn khai mặt đặt ban công hoặc ban công phơi. Bỏ một trong hai.',
-      paths: ['balconies.scope', 'balconies.sides'],
+      paths: ['balconies.scope', 'balconies.required_sides'],
     });
   }
 
@@ -861,6 +964,296 @@ export function buildablePlateM2(draft: DesignBriefDraft): number | null {
     plate = Math.min(plate, site.max_density * geometry.areaM2);
   }
   return Math.round(plate * 10) / 10;
+}
+
+// ---------------------------------------------------------------------------
+// Hai câu trả lời ở hai mục khác nhau nói ngược nhau — thêm 28/09/2026
+// ---------------------------------------------------------------------------
+
+const SIDE_NAME: Record<'front' | 'back' | 'left' | 'right', string> = {
+  front: 'mặt trước',
+  back: 'mặt sau',
+  left: 'bên trái',
+  right: 'bên phải',
+};
+
+/**
+ * Haan 28/09/2026: «khi đầu bài nhập thông tin mâu thuẫn thì nên có cảnh báo ngay để user sửa, tránh làm
+ * bài toán thêm rắc rối». Cùng nguyên tắc với `checkSurveyDetail`: chỉ HAI CÂU TRẢ LỜI của cùng một người
+ * nói ngược nhau — không phải lời khuyên nghề. Mọi mục ở đây là `canh_bao` trừ chỗ mặt bằng chắc chắn
+ * không dựng được theo cả hai câu.
+ */
+function checkCrossAnswers(draft: DesignBriefDraft, config: BriefFormConfig): BriefIssue[] {
+  const out: BriefIssue[] = [];
+  const site = draft.site;
+  const household = draft.household;
+  const shown = shownOf(draft, config);
+  const spaces = draft.required_spaces ?? [];
+  const label = (path: string) => fieldByPath(config, path)?.label ?? path;
+  const rowsOf = (type: string) => spaces.filter((space) => space.type === type);
+  const adjacent = (side: keyof typeof SIDE_NAME) => site?.adjacent?.[side] ?? null;
+
+  // --- Lối vào / lối xe đặt ở mặt không tiếp cận được ------------------------
+  const access = site?.access_sides ?? [];
+  if (access.length) {
+    for (const [path, what] of [
+      ['site.main_entrance_side', 'Lối vào chính'],
+      ['site.vehicle_entrance_side', 'Lối xe vào'],
+    ] as const) {
+      const side =
+        path === 'site.main_entrance_side' ? site?.main_entrance_side : site?.vehicle_entrance_side;
+      if (side && !access.includes(side)) {
+        out.push({
+          code: 'loi_vao_mat_khong_tiep_can',
+          severity: 'nghiem_trong',
+          message: `${what} đặt ở ${SIDE_NAME[side]}, nhưng «${label('site.access_sides')}» không có ${SIDE_NAME[side]}. Sửa mặt đặt lối vào hoặc bổ sung mặt tiếp cận.`,
+          paths: [path, 'site.access_sides'],
+        });
+      }
+    }
+    // --- Mặt tiếp cận lại giáp nhà hàng xóm ----------------------------------
+    for (const side of access) {
+      if (adjacent(side) === 'nha_hang_xom') {
+        out.push({
+          code: 'tiep_can_mat_giap_nha_xom',
+          severity: 'canh_bao',
+          message: `«${label('site.access_sides')}» có ${SIDE_NAME[side]}, nhưng hiện trạng ${SIDE_NAME[side]} là nhà hàng xóm — không đi vào từ phía ấy được. Sửa một trong hai.`,
+          paths: ['site.access_sides', 'site.adjacent'],
+        });
+      }
+    }
+  }
+
+  // --- Nơi thờ: tín ngưỡng / cách bố trí / dòng phòng thờ / tầng thờ -------------------
+  const altarRows = rowsOf('altar_room');
+  const noRoom =
+    household?.religion === 'khong'
+      ? `«${label('household.religion')}» là không thờ cúng`
+      : shown('household.altar_arrangement', household?.altar_arrangement) === 'khong_co'
+        ? '«Nơi thờ bố trí thế nào» là không có nơi thờ'
+        : shown('household.altar_arrangement', household?.altar_arrangement) === 'chung_phong_khach'
+          ? 'nơi thờ đặt chung phòng khách'
+          : null;
+  if (noRoom && altarRows.length) {
+    out.push({
+      code: 'phong_tho_lech_cach_bo_tri',
+      severity: 'canh_bao',
+      message: `Đầu bài khai ${noRoom}, nhưng «${label('required_spaces')}» vẫn có dòng Phòng thờ. Bỏ dòng ấy hoặc sửa cách bố trí nơi thờ.`,
+      paths: ['household.altar_arrangement', 'required_spaces'],
+    });
+  }
+  const altarFloor = shown('household.altar_floor', household?.altar_floor);
+  if (typeof altarFloor === 'number') {
+    const other = altarRows
+      .map((row) => row.floor)
+      .filter((floor): floor is number => typeof floor === 'number' && floor !== altarFloor);
+    if (other.length) {
+      out.push({
+        code: 'tang_tho_lech_dong_phong_tho',
+        severity: 'canh_bao',
+        message: `«${label('household.altar_floor')}» là tầng ${altarFloor}, nhưng dòng Phòng thờ ghim tầng ${[...new Set(other)].join(', ')}. Chọn một tầng và sửa chỗ còn lại.`,
+        paths: ['household.altar_floor', 'required_spaces'],
+      });
+    }
+  }
+
+  // --- Không xem phong thuỷ mà lại xếp phong thuỷ vào ưu tiên ------------------------
+  if (household?.feng_shui === 'khong_xem' && (draft.priorities ?? []).includes('feng_shui')) {
+    out.push({
+      code: 'khong_xem_phong_thuy_ma_uu_tien',
+      severity: 'canh_bao',
+      message: `«${label('household.feng_shui')}» là không xem, nhưng phong thuỷ lại nằm trong «${label('priorities')}». Sửa một trong hai.`,
+      paths: ['household.feng_shui', 'priorities'],
+    });
+  }
+
+  // --- Không có xe nào mà vẫn đòi chỗ để xe --------------------------------------
+  // Dòng `garage` là «Chỗ để xe» — cả xe máy. Chỉ nói khi CẢ HAI số xe đã khai là 0: «0 ô tô, 2 xe
+  // máy» là nhà phố bình thường, không phải mâu thuẫn.
+  if (draft.parking?.cars === 0 && draft.parking?.motorbikes === 0 && rowsOf('garage').length) {
+    out.push({
+      code: 'co_gara_khong_xe',
+      severity: 'canh_bao',
+      message: `«${label('parking.cars')}» và «${label('parking.motorbikes')}» đều là 0, nhưng «${label('required_spaces')}» có dòng ${rowLabel(config, 'garage')}. Bỏ dòng ấy hoặc sửa số xe.`,
+      paths: ['parking.cars', 'parking.motorbikes', 'required_spaces'],
+    });
+  }
+
+  // --- Không kinh doanh mà vẫn đòi cửa hàng -------------------------------------
+  if (household?.home_business?.mode === 'khong' && rowsOf('shop').length) {
+    out.push({
+      code: 'cua_hang_khong_kinh_doanh',
+      severity: 'canh_bao',
+      message: `«${label('household.home_business.mode')}» là không, nhưng «${label('required_spaces')}» có dòng ${rowLabel(config, 'shop')}. Bỏ dòng ấy hoặc sửa mục kinh doanh.`,
+      paths: ['household.home_business.mode', 'required_spaces'],
+    });
+  }
+
+  // --- Ban công: chỉ mặt tiền mà đòi mặt khác; mặt giáp nhà hàng xóm không lùi ------------
+  const balconies = draft.balconies;
+  // Mặt ban công chỉ hiện khi đã chọn làm ban công; giá trị cũ còn nằm lại sau khi đổi lựa chọn không
+  // được CHẶN «AI Design» bằng một ô người dùng không nhìn thấy để sửa.
+  const view = shown('balconies.required_sides', true)
+    ? balconySides(balconies)
+    : { required: [] as BalconySide[] };
+  if (balconies?.scope === 'chi_mat_tien') {
+    const others = view.required.filter((side) => side !== 'front');
+    if (others.length) {
+      out.push({
+        code: 'ban_cong_chi_mat_tien_lech_mat',
+        severity: 'canh_bao',
+        message: `«${label('balconies.scope')}» là chỉ mặt tiền, nhưng mặt bắt buộc có ban công còn có ${others.map((side) => SIDE_NAME[side]).join(', ')}. Sửa một trong hai.`,
+        paths: ['balconies.scope', 'balconies.required_sides'],
+      });
+    }
+  }
+  if (balconies?.scope !== 'khong_co') {
+    for (const side of view.required) {
+      if (adjacent(side) !== 'nha_hang_xom') continue;
+      const setback = (
+        shown('site.setback_required_m', site?.setback_required_m) as
+          Partial<Record<string, number>> | undefined
+      )?.[side];
+      const yard = (
+        shown('massing.yard_depth_m', draft.massing?.yard_depth_m) as
+          Partial<Record<string, number>> | undefined
+      )?.[side];
+      if ((setback ?? 0) > 0 || (yard ?? 0) > 0) continue;
+      // Nhà phố không có ô khoảng lùi / sân: đừng bảo người nhập khai thứ họ không nhập được.
+      const canDeclare =
+        shown('site.setback_required_m', true) || shown('massing.yard_depth_m', true);
+      out.push({
+        code: 'ban_cong_mat_giap_nha_xom',
+        severity: 'nghiem_trong',
+        message: `Ban công bắt buộc ở ${SIDE_NAME[side]}, nhưng ${SIDE_NAME[side]} giáp nhà hàng xóm${canDeclare ? ' và đầu bài không khai khoảng lùi hay sân ở mặt ấy' : ''} — không có chỗ cho ban công. Bỏ mặt ấy khỏi danh sách${canDeclare ? `, hoặc khai khoảng lùi / sân ${SIDE_NAME[side]}` : ''}.`,
+        paths: ['balconies.required_sides', 'site.adjacent'],
+      });
+    }
+  }
+
+  // --- Có người đi lại khó khăn, nhà nhiều tầng, không thang máy -----------------------
+  // Haan 28/09/2026: «cảnh báo nhẹ, không chặn gì cả» — gia đình có thể xếp người ấy ở tầng 1.
+  if (
+    draft.lifestyle?.reduced_mobility === true &&
+    typeof draft.floors === 'number' &&
+    draft.floors > 1 &&
+    draft.vertical?.elevator === 'khong'
+  ) {
+    out.push({
+      code: 'di_lai_kho_khan_khong_thang_may',
+      severity: 'canh_bao',
+      message: `Gia đình có người đi lại khó khăn, nhà ${draft.floors} tầng nhưng chọn không làm thang máy và không chừa chỗ. Nếu người ấy chỉ ở tầng 1 thì bỏ qua cảnh báo này; nếu không, cân nhắc chừa chỗ thang máy để lắp sau.`,
+      paths: ['lifestyle.reduced_mobility', 'vertical.elevator'],
+    });
+  }
+
+  // --- Cục nóng điều hoà đặt ban công phụ mà không làm ban công --------------------
+  if (draft.systems?.aircon_outdoor === 'ban_cong_phu' && balconies?.scope === 'khong_co') {
+    out.push({
+      code: 'cuc_nong_ban_cong_khong_co',
+      severity: 'canh_bao',
+      message: `«${label('systems.aircon_outdoor')}» là ban công phụ, nhưng «${label('balconies.scope')}» là không làm ban công. Chọn chỗ đặt cục nóng khác hoặc sửa mục ban công.`,
+      paths: ['systems.aircon_outdoor', 'balconies.scope'],
+    });
+  }
+
+  return out;
+}
+
+/** Hướng, dài trước ngắn: «đông nam» phải khớp trước «đông». */
+const DIRECTIONS = ['đông nam', 'đông bắc', 'tây nam', 'tây bắc', 'đông', 'tây', 'nam', 'bắc'];
+const DIRECTION_AFTER_HUONG = new RegExp(`hướng\\s+(${DIRECTIONS.join('|')})(?![\\p{L}])`, 'gu');
+
+/**
+ * Phòng mà đầu bài hay quy định hướng: từ nhận ra nó trong câu chữ tự do (trọn TỪ — «thờ» không khớp
+ * «thời»), và mã dòng không gian.
+ */
+const ORIENTED_ROOMS = [
+  { noun: 'bàn thờ', word: /(?<![\p{L}])thờ(?![\p{L}])/u, type: 'altar_room' },
+  { noun: 'bếp', word: /(?<![\p{L}])bếp(?![\p{L}])/u, type: 'kitchen' },
+] as const;
+
+/** Mọi hướng đứng sau chữ «hướng» trong một đoạn chữ. */
+function directionsIn(text: string): string[] {
+  return [...normaliseText(text).matchAll(DIRECTION_AFTER_HUONG)].map((m) => m[1]!);
+}
+
+/**
+ * Hướng thuộc về phòng nào trong câu chữ tự do: mỗi «hướng X» thuộc phòng được nhắc tới GIỮA nó và chữ
+ * «hướng» đứng trước (hoặc đầu câu). «bàn thờ hướng đông, cửa chính hướng nam» → đông của bàn thờ, nam
+ * không; «bàn thờ, hướng tây» → tây của bàn thờ. Câu tách ở «;», «.» và xuống dòng, KHÔNG ở dấu phẩy.
+ */
+function directionsFor(text: string, word: RegExp): string[] {
+  const out: string[] = [];
+  for (const sentence of normaliseText(text).split(/[;.\n]+/)) {
+    let from = 0;
+    for (const match of sentence.matchAll(DIRECTION_AFTER_HUONG)) {
+      if (word.test(sentence.slice(from, match.index))) out.push(match[1]!);
+      from = match.index! + match[0].length;
+    }
+  }
+  return out;
+}
+
+/** Nhãn một dòng của «Không gian bắt buộc có» theo cấu hình (mã máy nếu không tìm thấy). */
+function rowLabel(config: BriefFormConfig, type: string): string {
+  const option = config.sections
+    .flatMap((section) => section.fields)
+    .find((field) => field.path === 'required_spaces')
+    ?.options?.find((item) => item.value === type);
+  return `«${option?.label ?? type}»`;
+}
+
+/**
+ * Giá trị của một ô CHỈ khi ô ấy đang hiện. Phiếu không xoá giá trị của ô đã bị ẩn (đổi lựa chọn phía
+ * trên), nên phép soát đọc thẳng dữ liệu sẽ cảnh báo — thậm chí chặn — bằng một ô người nhập không nhìn
+ * thấy để sửa. Cùng hàm `visibleFields` bộ chấm độ đầy đủ dùng.
+ */
+function shownOf(draft: DesignBriefDraft, config: BriefFormConfig) {
+  const paths = new Set(visibleFields(config, draft).map(({ field }) => field.path));
+  return <T>(path: string, value: T): T | undefined => (paths.has(path) ? value : undefined);
+}
+
+function orientationConflicts(draft: DesignBriefDraft, config: BriefFormConfig): BriefIssue[] {
+  const household = draft.household;
+  const label = (path: string) => fieldByPath(config, path)?.label ?? path;
+  const shown = shownOf(draft, config);
+  const out: BriefIssue[] = [];
+  for (const room of ORIENTED_ROOMS) {
+    // Nguồn → các hướng khai ở đó. Ô chữ tự do: chỉ đọc MỆNH ĐỀ nhắc tới phòng ấy, để «bàn thờ
+    // hướng đông; cửa chính hướng nam» không thành hai hướng của bàn thờ.
+    const sources: { path: string; where: string; dirs: string[] }[] = [];
+    for (const path of ['household.feng_shui_notes', 'household.taboos'] as const) {
+      const text = shown(
+        path,
+        path === 'household.feng_shui_notes' ? household?.feng_shui_notes : household?.taboos,
+      );
+      if (!text) continue;
+      const dirs = directionsFor(text, room.word);
+      if (dirs.length) sources.push({ path, where: `«${label(path)}»`, dirs });
+    }
+    const rowDirs = (draft.required_spaces ?? [])
+      .filter((space) => space.type === room.type && space.amenities)
+      .flatMap((space) => directionsIn(space.amenities!));
+    if (rowDirs.length) {
+      sources.push({
+        path: 'required_spaces',
+        where: `dòng ${rowLabel(config, room.type)} của «${label('required_spaces')}»`,
+        dirs: rowDirs,
+      });
+    }
+    const distinct = [...new Set(sources.flatMap((source) => source.dirs))];
+    if (distinct.length < 2) continue;
+    out.push({
+      code: 'huong_lech_nhau',
+      severity: 'canh_bao',
+      message: `Đầu bài khai hướng ${room.noun} không thống nhất: ${sources
+        .map((source) => `«${[...new Set(source.dirs)].join(', ')}» ở ${source.where}`)
+        .join('; ')}. Chọn một hướng và sửa chỗ còn lại — phần mềm không tự chọn thay gia chủ.`,
+      paths: [...new Set(sources.map((source) => source.path))],
+    });
+  }
+  return out;
 }
 
 function normaliseText(text: string): string {

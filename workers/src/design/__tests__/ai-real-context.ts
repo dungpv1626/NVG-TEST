@@ -68,13 +68,33 @@ export const FAKE_CALL = {
   latencyMs: 0,
 };
 
-export function realContextInput(digest: AiBriefDigest): PlanContextInput & HouseScoring {
+/**
+ * Lượt ghi trước 25/09/2026 chạy khi đầu bài CHƯA hỏi kích thước giếng thang, và chương trình đoán theo
+ * tải (350 kg → 2,2 m², cạnh 1,4 m). Nay chương trình không đoán nữa (Haan 25/09/2026); để phát lại đúng
+ * tình huống lượt ấy đã gặp, điền giếng 1,4 × 1,6 m (2,24 m²) — chỉ khi đầu bài có thang máy mà thiếu số.
+ */
+function withRecordedShaft(digest: AiBriefDigest): AiBriefDigest {
+  const vertical = digest.vertical;
+  if (!vertical || (vertical.elevator !== 'lam_ngay' && vertical.elevator !== 'chua_cho'))
+    return digest;
+  if (typeof vertical.elevator_shaft_width_m === 'number') return digest;
+  return {
+    ...digest,
+    vertical: { ...vertical, elevator_shaft_width_m: 1.4, elevator_shaft_depth_m: 1.6 },
+  };
+}
+
+export function realContextInput(recorded: AiBriefDigest): PlanContextInput & HouseScoring {
+  const digest = withRecordedShaft(recorded);
   return {
     digest,
     variant: { id: 'AI-A', label: 'AI-A', strategy: '' },
     labels: Object.fromEntries(vocabulary.types.map((t) => [t.code, t.vi])),
     vocabulary: new VocabularyIndex(vocabulary),
-    fidelity: parseBriefFidelity(read('kb/brief_fidelity.yaml')),
+    // Lượt ghi trước T96 (27/09/2026): mô hình còn được gợi ý giếng trời, sân thượng mà đầu bài không hỏi.
+    // Phát lại kiểm BỘ XẾP trên ý định đã ghi, không kiểm cổng «không bịa thêm» — cổng ấy có phép thử riêng
+    // ở `ai-program.test.ts`. Bật lên thì bốn lượt cũ bị bác ngay ở danh mục và không còn gì để phát lại.
+    fidelity: { ...parseBriefFidelity(read('kb/brief_fidelity.yaml')), onlyWhenAsked: [] },
     construction: parseConstructionNorms(read('kb/construction_norms.yaml')),
     siteContext: parseSiteContext(read('kb/site_context.yaml')),
     rules: selectedRulePack(NO_RULE_PACKS, { standards: new RulePack([], false), experience }),
@@ -91,7 +111,9 @@ export function realContextInput(digest: AiBriefDigest): PlanContextInput & Hous
     stairTypes: ['stair', 'core'],
     areaNorms: parseAreaNorms(read('kb/space_norms.yaml')),
     scoreRules,
-    quality,
+    // Thước 3 (T96) thêm sàn theo nhóm; câu trả lời ghi sẵn sinh dưới thước cũ, nên vòng sửa phát lại
+    // giữ ngưỡng tổng như lúc ghi — sàn nhóm có bài riêng ở `ai-design-steps.test.ts`.
+    quality: { ...quality, acceptGroupFloorPercent: null },
     roomGroups: groupsTable,
   };
 }
@@ -105,7 +127,11 @@ export function savedPlan(
   program: AiSpaceProgram;
   input: PlanContextInput & HouseScoring;
 } {
-  const input = realContextInput(run.digest);
+  // Phương án ĐÃ LƯU là bất biến: dựng lại theo luật lúc lưu. Phép kiểm bản phác thiếu ô (T73,
+  // `construction.sketch`) ra đời sau — 58688ead round4 (tầng 1 Haan chấm 16/09/2026) vẽ phòng ngủ 1
+  // thiếu ô mà bộ xếp vẫn dựng đủ 25 m².
+  const { sketch: _t73, ...construction } = realContextInput(run.digest).construction;
+  const input = { ...realContextInput(run.digest), construction };
   const generator = programGenerator(FAKE_CALL, 'ai_text_fake', prompts.version, false);
   const evaluation = evaluateHouse(
     input,

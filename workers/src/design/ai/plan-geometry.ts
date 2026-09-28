@@ -390,6 +390,38 @@ export interface MergedZoning {
   cooking: ReadonlySet<string>;
   /** Phòng yên tĩnh: cửa của nó không nên mở thẳng vào khu nấu nướng. */
   quiet: ReadonlySet<string>;
+  /** Khu đón khách — xếp về phía cửa vào (T96). Vắng = không xét. */
+  reception?: ReadonlySet<string>;
+  /** Phòng kề mà khu đón khách phải quay về (sảnh ngoài, chỗ để xe, hành lang). */
+  receptionFrom?: ReadonlySet<string>;
+}
+
+/** Cách chia khu của không gian mở, đọc từ luật đi lại — MỘT nguồn cho cả tờ vẽ lẫn luật bắt buộc. */
+export function mergedZoning(passage: {
+  cooking: ReadonlySet<string>;
+  quiet: ReadonlySet<string>;
+  reception: ReadonlySet<string>;
+  receptionFrom: ReadonlySet<string>;
+}): MergedZoning {
+  return {
+    cooking: passage.cooking,
+    quiet: passage.quiet,
+    reception: passage.reception,
+    receptionFrom: passage.receptionFrom,
+  };
+}
+
+/** Khu đón khách đặt sai phía cửa vào nặng hơn mọi vách chung bếp – phòng yên tĩnh cộng lại, cm. */
+const RECEPTION_MISPLACED_COST = 1_000_000;
+/** Khu bếp dưới WC tầng trên là luật bắt buộc — nặng hơn cả khu đón khách sai phía. */
+const KITCHEN_UNDER_WET_COST = 10_000_000;
+/** Phần chồng nhỏ hơn chừng này (0,25 m²) là chạm mép, không phải nằm dưới. */
+const WET_ABOVE_MIN_CM2 = 2_500;
+
+function overlapArea(a: Rect, b: Rect): number {
+  const w = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0);
+  const h = Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0);
+  return w > 0 && h > 0 ? w * h : 0;
 }
 
 interface PartEntry {
@@ -412,34 +444,54 @@ function bestPartOrder(
   roomId: string,
   rooms: AiFloorPlanLevel['rooms'],
   zoning: MergedZoning | undefined,
+  avoidAbove: readonly Rect[] = [],
 ): PartEntry[] {
   if (!zoning || parts.length < 2) return [...parts];
   const cooking = parts.filter((part) => zoning.cooking.has(part.meta.type));
-  if (cooking.length === 0 || cooking.length === parts.length) return [...parts];
-  const quiet = rooms
-    .filter((other) => other.id !== roomId && zoning.quiet.has(other.type))
-    .map((other) => toRect(other.rect));
-  if (quiet.length === 0) return [...parts];
+  const quiet =
+    cooking.length === 0 || cooking.length === parts.length
+      ? []
+      : rooms
+          .filter((other) => other.id !== roomId && zoning.quiet.has(other.type))
+          .map((other) => toRect(other.rect));
+  // Khu đón khách (T96): quay về phía phòng loại `receptionFrom` kề không gian này; không có phòng nào
+  // như thế mà không gian chạm mặt đường (hàng đầu của tầng) thì quay ra mặt đường.
+  const reception = zoning.reception ? parts.filter((p) => zoning.reception!.has(p.meta.type)) : [];
+  const anchors: Rect[] =
+    reception.length && reception.length < parts.length
+      ? receptionAnchors(rect, roomId, rooms, zoning)
+      : [];
+  // Khu bếp không nằm dưới WC tầng trên (luật bắt buộc T71): thứ tự khu đổi được là đổi, để không tạo
+  // một vi phạm bắt buộc chỉ vì nhãn (phát lại 4a521f52 vòng 2–3 sau khi khu khách quay về phía sảnh).
+  const wetAbove = cooking.length && cooking.length < parts.length ? avoidAbove : [];
+  if (quiet.length === 0 && anchors.length === 0 && wetAbove.length === 0) return [...parts];
 
   const horizontal = rect.x1 - rect.x0 >= rect.y1 - rect.y0;
   const span = horizontal ? rect.x1 - rect.x0 : rect.y1 - rect.y0;
   const total = parts.reduce((sum, part) => sum + part.meta.target, 0);
 
-  /** Tổng chiều dài vách chung giữa các khu nấu nướng và phòng yên tĩnh, cm. */
+  /** Khu đón khách sai phía (một khoản lớn), cộng chiều dài vách chung bếp – phòng yên tĩnh, cm. */
   const cost = (order: readonly PartEntry[]): number => {
     let cursor = horizontal ? rect.x0 : rect.y0;
     let sum = 0;
+    let received = anchors.length === 0;
     for (const part of order) {
       const end = cursor + (span * part.meta.target) / total;
+      const box: Rect = horizontal
+        ? { ...rect, x0: cursor, x1: end }
+        : { ...rect, y0: cursor, y1: end };
       if (zoning.cooking.has(part.meta.type)) {
-        const box: Rect = horizontal
-          ? { ...rect, x0: cursor, x1: end }
-          : { ...rect, y0: cursor, y1: end };
         for (const other of quiet) sum += sharedEdgeLength(box, other);
+        for (const wet of wetAbove) {
+          if (overlapArea(box, wet) > WET_ABOVE_MIN_CM2) sum += KITCHEN_UNDER_WET_COST;
+        }
+      }
+      if (!received && zoning.reception!.has(part.meta.type)) {
+        received = anchors.some((anchor) => sharedEdgeLength(box, anchor) > 0);
       }
       cursor = end;
     }
-    return sum;
+    return sum + (received ? 0 : RECEPTION_MISPLACED_COST);
   };
 
   let best = [...parts];
@@ -453,6 +505,31 @@ function bestPartOrder(
     }
   }
   return best;
+}
+
+/**
+ * Chỗ khu đón khách phải chạm tới: phòng kề không gian mở thuộc loại ĐẦU TIÊN của `receptionFrom` có mặt
+ * (sảnh ngoài trước, rồi chỗ để xe, rồi hành lang — có sảnh thì gara không còn là lối vào; phát lại 5fda70dc:
+ * gara kề cạnh bên làm mọi thứ tự đều «đã đón», và bếp lại về phía sảnh); không có thì mặt đường (đường y nhỏ
+ * nhất của tầng — hàng đầu bản phác là mặt đường) khi không gian chạm nó.
+ */
+function receptionAnchors(
+  rect: Rect,
+  roomId: string,
+  rooms: AiFloorPlanLevel['rooms'],
+  zoning: MergedZoning,
+): Rect[] {
+  for (const type of zoning.receptionFrom ?? []) {
+    const beside = rooms
+      .filter((other) => other.id !== roomId && other.type === type)
+      .map((other) => toRect(other.rect))
+      .filter((other) => sharedEdgeLength(rect, other) > 0);
+    if (beside.length) return beside;
+  }
+  const front = Math.min(...rooms.map((other) => other.rect[1] ?? Infinity));
+  return Number.isFinite(front) && rect.y0 <= front + 25
+    ? [{ x0: rect.x0, y0: rect.y0, x1: rect.x1, y1: rect.y0 }]
+    : [];
 }
 
 /** Hoán vị, thứ tự tất định. Danh sách khu của một không gian mở nhiều nhất ba phần (`also` kẹp 2). */
@@ -495,6 +572,8 @@ export function withMergedParts(
   rooms: AiFloorPlanLevel['rooms'],
   targetOf: (id: string) => { type: string; target: number } | null,
   zoning?: MergedZoning,
+  /** Chữ nhật khu ướt của tầng NGAY TRÊN — khu bếp tránh nằm dưới chúng (T96). */
+  avoidAbove: readonly Rect[] = [],
 ): AiFloorPlanLevel['rooms'] {
   return rooms.map((room) => {
     const members = [room.id, ...(room.also ?? [])];
@@ -502,7 +581,7 @@ export function withMergedParts(
     const declared = members.map((id) => ({ id, meta: targetOf(id) }));
     if (declared.some((part) => part.meta === null || part.meta.target <= 0)) return room;
     const rect = toRect(room.rect);
-    const parts = bestPartOrder(declared as PartEntry[], rect, room.id, rooms, zoning);
+    const parts = bestPartOrder(declared as PartEntry[], rect, room.id, rooms, zoning, avoidAbove);
     const horizontal = rect.x1 - rect.x0 >= rect.y1 - rect.y0;
     const span = horizontal ? rect.x1 - rect.x0 : rect.y1 - rect.y0;
     const total = parts.reduce((sum, part) => sum + part.meta!.target, 0);

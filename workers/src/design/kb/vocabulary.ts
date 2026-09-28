@@ -41,9 +41,12 @@ export interface RoomVocabulary {
     not_a_route?: string[];
     everyday?: string[];
     everyday_from?: string[];
-    stair_not_for?: string[];
+    stair_opens_to?: string[];
     cooking?: string[];
     quiet?: string[];
+    reception?: string[];
+    reception_from?: string[];
+    open_flow?: string[];
   };
   /** Vùng mặc định khi ý định bố cục bỏ sót một phòng (T43). */
   zone_defaults?: {
@@ -104,12 +107,18 @@ export interface PassageRules {
   everyday: ReadonlySet<string>;
   /** Chỗ xuất phát của đường đi hằng ngày — nơi cả nhà ngồi, không phải hành lang (T48). */
   everydayFrom: ReadonlySet<string>;
-  /** Loại phòng KHÔNG được mở cửa thẳng từ ô thang. Rỗng = không kiểm (Haan 18/09/2026). */
-  stairNotFor: ReadonlySet<string>;
+  /** Loại phòng ĐƯỢC mở cửa thẳng từ ô thang; mọi loại khác thì không. Rỗng = không kiểm (T74). */
+  stairOpensTo: ReadonlySet<string>;
   /** Khu nấu nướng trong một không gian mở — xếp xa cửa phòng yên tĩnh (Haan 18/09/2026). */
   cooking: ReadonlySet<string>;
   /** Phòng yên tĩnh: cửa của nó không nên mở thẳng vào khu nấu nướng. */
   quiet: ReadonlySet<string>;
+  /** Khu đón khách của một không gian mở — xếp về phía cửa vào (T96). */
+  reception: ReadonlySet<string>;
+  /** Loại phòng kề mà khu đón khách phải quay về: sảnh ngoài, chỗ để xe, hành lang (T96). */
+  receptionFrom: ReadonlySet<string>;
+  /** Hai phòng cùng nhóm này kề nhau nối bằng ô thông suốt vách, không vách ngăn (T96). */
+  openFlow: ReadonlySet<string>;
 }
 
 /**
@@ -142,9 +151,12 @@ export function passageRules(vocabulary: RoomVocabulary): PassageRules | null {
     notARoute: checked(raw.not_a_route, 'not_a_route'),
     everyday: checked(raw.everyday, 'everyday'),
     everydayFrom: checked(raw.everyday_from, 'everyday_from'),
-    stairNotFor: checked(raw.stair_not_for, 'stair_not_for'),
+    stairOpensTo: checked(raw.stair_opens_to, 'stair_opens_to'),
     cooking: checked(raw.cooking, 'cooking'),
     quiet: checked(raw.quiet, 'quiet'),
+    reception: checked(raw.reception, 'reception'),
+    receptionFrom: checked(raw.reception_from, 'reception_from'),
+    openFlow: checked(raw.open_flow, 'open_flow'),
   };
 }
 
@@ -274,4 +286,18 @@ export class VocabularyIndex {
     }
     return undefined;
   }
+}
+
+/**
+ * Phòng mang các loại `types` có được lấy cửa thẳng từ ô thang không (`passage.stair_opens_to`, T74).
+ * Ô ghép (`also`) được khi MỘT loại của nó được — khách ghép bếp là không gian chung. Danh sách rỗng
+ * hoặc vắng = không kiểm.
+ */
+export function opensFromStair(
+  allowed: ReadonlySet<string> | null | undefined,
+  types: Iterable<string>,
+): boolean {
+  if (!allowed || allowed.size === 0) return true;
+  for (const type of types) if (allowed.has(type)) return true;
+  return false;
 }

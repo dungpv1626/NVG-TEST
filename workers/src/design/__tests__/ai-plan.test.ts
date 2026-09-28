@@ -131,10 +131,15 @@ const VILLA_BRIEF: DesignBrief = {
   ],
 } as DesignBrief;
 
-/** Nhà phố mẫu: ba phòng ngủ, không phòng ngủ chính. */
+/**
+ * Nhà phố mẫu: ba phòng ngủ, không phòng ngủ chính; hỏi giếng trời vì ý định mẫu vẽ giếng trời (T96). Hỏi
+ * bằng DÒNG không gian — ô «Sân nằm ở đâu» chỉ hiện với biệt thự / nhà vườn, nhà phố không nhập được nó, và
+ * câu trả lời của ô ẩn không đi tới mô hình (rà soát 29/09/2026).
+ */
 const TOWNHOUSE_BRIEF: DesignBrief = {
   ...TOWNHOUSE,
   family: [{ role: 'con', count: 3 }],
+  required_spaces: [...(TOWNHOUSE.required_spaces ?? []), { type: 'light_well' }],
 } as DesignBrief;
 
 type House = 'villa' | 'townhouse';
@@ -192,7 +197,10 @@ function input(client: TextModelClient, house: House = 'villa', brief?: DesignBr
     route: 'ai_text_fake',
     client,
     prompts,
-    quality,
+    // Các bài ở đây đo VÒNG GỌI, không đo thước: tắt sàn nhóm (T96) vì hai nhà mẫu hụt hẳn nhóm mặt
+    // thoáng và nhóm dựng được — có sàn thì mọi bài «một lượt» thành hai lượt. Sàn nhóm có bài riêng ở
+    // `ai-design-steps.test.ts`.
+    quality: { ...quality, acceptGroupFloorPercent: null },
     scoreRules,
     roomGroups: groupsTable,
   };
@@ -474,30 +482,34 @@ describe('Vòng sửa tối đa ba lượt (T45)', () => {
     expect(client.options[1]!.prompt).toMatch(/Thiếu Chỗ để xe|garage/i);
   });
 
-  it('lỗi HÌNH HỌC (hai phòng lớn không vừa khối nhà): dừng sau đúng một lượt, không gọi lại mô hình — tài liệu bàn giao mục 08', async () => {
+  it('phòng hụt mức đầu bài mà cả tầng không còn chỗ bù: ra mặt bằng ngay lượt đầu, kèm cảnh báo sửa đầu bài (T91, Haan 27/09/2026)', async () => {
+    // Trước T91 (Haan chọn 23/09/2026): GỬI LẠI mô hình, tối đa ba lượt. Nay hết chỗ bù thì gọi lại vô
+    // ích — một lời gọi, mặt bằng có cảnh báo để kỹ sư sửa đầu bài.
     const client = fakeClient([VILLA_CRAMMED, VILLA_HOUSE]);
-    const error = await generateAiPlan(input(client, 'villa', crammedBrief(VILLA_BRIEF))).catch(
-      (e: unknown) => e,
-    );
-
-    expect(error).toBeInstanceOf(AiPlanRejected);
+    const result = await generateAiPlan(input(client, 'villa', crammedBrief(VILLA_BRIEF)));
     expect(client.options).toHaveLength(1);
-    const [rejection] = (error as AiPlanRejected).levels;
-    expect(rejection!.level).toBe(1);
-    expect(rejection!.retry).toBe('none');
-    expect(rejection!.attempts).toBe(1);
-    expect(rejection!.messages.join(' ')).toMatch(/chỉ chia được|chỉ rộng|tối thiểu/);
+    expect(result.payload.levels.length).toBeGreaterThan(0);
+    // Cảnh báo «sửa đầu bài» nằm ở ghi chú bước xếp tầng; Workflow gộp nó vào ghi chú cuối — canh ở
+    // `ai-design-steps.test.ts`.
+  });
+
+  // Mỗi lượt một bản KHÁC (diện tích kho đổi): mô hình có sửa, chỉ là sửa không trúng.
+  const noGarage = (extraM2: number): HouseIntent => ({
+    ...VILLA_HOUSE,
+    rooms: VILLA_HOUSE.rooms.map((room) =>
+      room.type === 'garage'
+        ? { ...room, type: 'storage', target_area_m2: room.target_area_m2 + extraM2 }
+        : room,
+    ),
+    garage_room: null,
   });
 
   it(`lỗi NGỮ NGHĨA mãi không sửa được thì BÁC sau ${HOUSE_REVISIONS_MAX} lượt sửa — đúng ${HOUSE_REVISIONS_MAX + 1} lượt gọi`, async () => {
-    const noGarage: HouseIntent = {
-      ...VILLA_HOUSE,
-      rooms: VILLA_HOUSE.rooms.map((room) =>
-        room.type === 'garage' ? { ...room, type: 'storage' } : room,
-      ),
-      garage_room: null,
-    };
-    const client = fakeClient([noGarage, noGarage, noGarage, noGarage, VILLA_HOUSE]);
+    // Đủ `HOUSE_REVISIONS_MAX + 1` bản hỏng KHÁC nhau, rồi mới tới bản đúng — bản đúng không được gọi tới.
+    const client = fakeClient([
+      ...Array.from({ length: HOUSE_REVISIONS_MAX + 1 }, (_, index) => noGarage(index)),
+      VILLA_HOUSE,
+    ]);
     const error = await generateAiPlan(input(client)).catch((e: unknown) => e);
 
     expect(error).toBeInstanceOf(AiPlanRejected);
@@ -507,6 +519,16 @@ describe('Vòng sửa tối đa ba lượt (T45)', () => {
     expect(rejection!.retry).toBe('revise');
     expect(rejection!.attempts).toBe(HOUSE_REVISIONS_MAX + 1);
     for (const call of client.options.slice(1)) expect(call.prompt).toContain('<previous_intent>');
+  });
+
+  it('lượt sửa trả lại Y NGUYÊN ý định vừa được gửi sửa → dừng ngay, không gọi lượt sau (lượt đo 458d9a91)', async () => {
+    const client = fakeClient([noGarage(0), noGarage(0), noGarage(0), noGarage(0), VILLA_HOUSE]);
+    const error = await generateAiPlan(input(client)).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(AiPlanRejected);
+    // Lượt 1 khai, lượt 2 sửa mà trả y nguyên → dừng: hai lượt gọi, không phải bốn.
+    expect(client.options).toHaveLength(2);
+    expect((error as AiPlanRejected).levels[0]!.retry).toBe('unchanged');
   });
 
   it('quyết định gọi lại nằm ở MỘT chỗ: sai hợp đồng → lấy mẫu lại; còn lại → sửa kèm ý định đã đánh mã', () => {
@@ -524,12 +546,45 @@ describe('Vòng sửa tối đa ba lượt (T45)', () => {
     ).toBe('none');
   });
 
+  it('lỗi ban công sai mặt mang mặt vào câu nhắc gửi mô hình (T73)', () => {
+    const [line] = hintsFor(
+      [
+        {
+          code: 'balcony_side_missing',
+          level: 'blocking',
+          message: 'x',
+          params: { side: 'front' },
+        },
+      ],
+      prompts,
+    );
+    expect(line).toContain('balcony on the front side');
+  });
+
   it('chỉ lỗi về danh mục, vùng, diện tích, phòng mang cửa chính được gửi lại; phòng không cửa, ô hẹp, thang ngắn thì không', () => {
     for (const code of [
       'arrange_zone_overfull',
       'arrange_program_exceeds_footprint',
       'entrance_wrong_side',
       'vehicle_door_wrong_side',
+      // Haan chọn 23/09/2026 (lượt chạy thật fad0c0fa): chỗ sai là số ô bản phác vẽ.
+      'arrange_room_below_brief_area',
+      // Haan đồng ý 24/09/2026 (T73): chỗ đặt ban công là bản phác mô hình vẽ.
+      'balcony_side_missing',
+      'balcony_side_not_wanted',
+      'balcony_level_missing',
+      // Haan 25/09/2026: «nên sửa lại thay vì dừng» — chỗ đặt các ô này là bản phác mô hình vẽ.
+      'balcony_not_wanted',
+      'elevator_missing',
+      'elevator_too_small',
+      'elevator_too_narrow',
+      'elevator_not_aligned',
+      'elevator_not_beside_stair',
+      'elevator_not_facing_stair',
+      'elevator_no_common_hall',
+      'sketch_stair_isolated',
+      // T74: phòng chỉ còn ô thang để mở cửa.
+      'door_from_stair',
     ]) {
       expect(isRevisable(code), code).toBe(true);
     }
@@ -538,7 +593,6 @@ describe('Vòng sửa tối đa ba lượt (T45)', () => {
       'room_unreachable_on_level',
       'arrange_room_too_narrow',
       'arrange_stair_too_short',
-      'arrange_room_below_brief_area',
       'arrange_anchor_conflict',
       'ma_moi_chua_xep_loai',
     ]) {
@@ -664,7 +718,9 @@ describe('Nhà ống 4 × 15 m (ví dụ mẫu cũ của lời dẫn)', () => {
         { role: 'vo_chong', count: 2 },
         { role: 'con', count: 1 },
       ],
-      required_spaces: [{ type: 'garage' }],
+      // Ví dụ mẫu vẽ giếng trời sau thang: đầu bài phải có hỏi tới (T96) — bằng dòng không gian, vì nhà
+      // phố không có ô «Sân nằm ở đâu».
+      required_spaces: [{ type: 'garage' }, { type: 'light_well' }],
       parking: { cars: 1 },
     } as unknown as DesignBrief;
     const source = {
@@ -778,10 +834,12 @@ describe('Đường đi hằng ngày không được xuyên gara (T48)', () => {
           ? {
               ...sketch,
               rows: sketch.rows.map((row) =>
-                row.replace(
-                  'wc_1 wc_1 stair_1 stair_1 stair_1',
-                  'stair_1 stair_1 stair_1 wc_1 wc_1',
-                ),
+                row
+                  .replaceAll('wc_1', 'kitchen_1')
+                  .replace(
+                    'stair_1 stair_1 stair_1 stair_1 stair_1',
+                    'stair_1 stair_1 stair_1 wc_1 wc_1',
+                  ),
               ),
             }
           : sketch,
@@ -794,9 +852,11 @@ describe('Đường đi hằng ngày không được xuyên gara (T48)', () => {
     const ground = evaluation.ok?.levels[0];
     const notes = (ground?.notes ?? []).map((note) => `${note.code}: ${note.message}`).join(' ');
     const messages = evaluation.rejections.flatMap((rejection) => rejection.messages).join(' ');
-    expect(`${notes} ${messages}`).toMatch(/đi xuyên "garage_1"/);
+    // Từ T73 (c) phép kiểm bản phác thấy trước: thang chỉ chạm gara, không chạm phòng đi xuyên nào.
+    expect(`${notes} ${messages}`).toMatch(/đi xuyên "garage_1"|không chạm hành lang/);
     if (ground) expect(ground.arrange.parti).not.toMatch(/phac-/);
     // Lỗi NGỮ NGHĨA: mô hình vẽ sai chỗ, nên lượt sửa là đáng tiền.
     expect(isRevisable('route_through_service')).toBe(true);
+    expect(isRevisable('sketch_room_no_access')).toBe(true);
   });
 });

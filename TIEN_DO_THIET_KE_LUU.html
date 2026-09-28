@@ -1524,6 +1524,551 @@
           </thead>
           <tbody>
             <tr>
+              <td class="num">26/09</td>
+              <td>T90 — Lượt Sol 02982bd7: vòng 3 xếp xong cả nhà; câu nhắc chỉ đúng gốc</td>
+              <td class="xs">
+                · GPT-6 Sol: 6 lời gọi, 0,412 USD (tổng 3,776 USD). Vòng 3 xếp xong hai tầng, chỉ
+                hỏng «thiếu ban công mặt sau» — do chương trình chia lại tầng 2 (phòng ngủ chính 19
+                / 25 m²) và dời ban công đi; câu nhắc không nói gốc.<br />
+                · Sửa: lỗi bản phác của tầng bị chia lại đứng đầu câu nhắc khi kiểm cả nhà hỏng (lời
+                dẫn 8.35.0, M69). Chưa commit.<br />
+                · Vướng: lượt Gemini 3.1 Pro de089989 bị Google trả 403 «Your project has been
+                denied access» (không tốn tiền). Khoá
+                <code>GEMINI_PAID_API_KEY</code> có mặt nhưng project Google Cloud bị chặn — cần
+                Haan kiểm tài khoản Google.<br />
+                · Lượt Claude Sonnet 5 e7caa832: 65.770 + 90.845 token ra, 1,605 USD, Haan bấm
+                «Dừng». Tổng chi 25–26/09: 5,381 USD.<br />
+                · Vướng: lượt GPT-6 Sol 6ffe818a — OpenAI báo hết tín dụng («no credits remaining»),
+                không tốn tiền. Cần Haan nạp tín dụng OpenAI để đo tiếp câu nhắc T90.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">26/09</td>
+              <td>T89 — Câu nhắc «phòng hụt sàn» khi không phòng kề nào nhường đủ</td>
+              <td class="xs">
+                · Không phòng kề nào nhường đủ số ô mà giữ mức của nó → câu nhắc bảo xếp lại dải
+                phòng, kể phòng còn dư trong tầng, giữ ô thang (lời dẫn 8.34.0). Phát lại bc504189,
+                011b4adc; đột biến M68.<br />
+                · Lượt Luna 5a142183 (0,050 USD, tổng 3,364 USD): câu nhắc mới tới mô hình ở lời gọi
+                5, mô hình xếp lại dải phòng ngủ, nhưng vòng 6 làm ô thang mất đường ra hành lang.
+                Không ra phương án. Chưa commit.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">26/09</td>
+              <td>T87 — Lượt Luna 81fd3f57; lời bác ở cổng danh mục là bậc tệ nhất</td>
+              <td class="xs">
+                · GPT-5.6 Luna: 6 lời gọi, 0,040 USD (tổng 3,273 USD), runtime sạch — T85 xác nhận,
+                đã gỡ script gdb.<br />
+                · Tầng <code>0</code> vừa là «bác ở cổng danh mục» vừa là «lỗi liên tầng khi đã xếp
+                đủ»; <code>setbackRank</code> coi cả hai là nhẹ nhất nên vòng 2 (đi xa hơn) bị gạt,
+                hai lời gọi phí. Sửa: mã <code>program_brief</code>, đột biến M67, phép thử phát
+                lại.<br />
+                · Lượt Luna thứ hai bc504189: 0,041 USD (tổng 3,314 USD). Vòng 3 chỉ còn một lỗi —
+                <code>bedroom_1</code> 14,91 / 20 m²; bộ nới phòng không có nước đi (phòng kề không
+                cùng bề rộng). T88 «dời đường cắt» đã làm rồi GỠ: phòng khách cũng có sàn đầu bài 45
+                m², không có ô dư; quét 27 lượt thật không cứu thêm vòng nào. Chưa commit.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">26/09</td>
+              <td>T86 — Lượt sửa giữ nguyên tầng đã qua</td>
+              <td class="xs">
+                · Tầng dưới tầng hỏng thấp nhất, xếp đúng bản phác → giữ; phần mô hình vẽ lại cho
+                tầng ấy bị bỏ khi ghép. Câu nhắc <code>revision_kept</code>, lời dẫn 8.33.0.<br />
+                · Phép thử phát lại 4b0268b1; đột biến M63, M64.<br />
+                · Phương án 1 (Haan): tầng qua nhờ chương trình chia lại cũng giữ, bản phác gửi lượt
+                sửa thay bằng cách chia thật (<code>partitionRows</code>, <code>splitMerged</code>);
+                câu nhắc thôi đòi sửa tầng dưới. Phát lại 913bc2ad, dc949b49 khớp; M65, M66; bộ kiểm
+                1.178 xanh. Chưa lượt thật. Chưa commit.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">26/09</td>
+              <td>T85 — Lượt xác nhận dc949b49 không sập; huỷ nốt kết quả <code>step.do</code></td>
+              <td class="xs">
+                · Lượt thật dc949b49: 6 lời gọi, 0,613 USD (tổng 3,233 USD), runtime sống trọn lượt,
+                không ra mặt bằng (tầng 2 lối vào, thang máy lệch giếng).<br />
+                · Cảnh báo RPC vẫn ghi một lần → <code>step</code> trong <code>run()</code> là stub
+                của engine, kết quả <code>step.do</code> chưa huỷ. Sửa:
+                <code>disposingStep</code> bọc ở đầu hai <code>run()</code>, huỷ thêm kết quả
+                <code>status()</code>; phép thử quét mã; đột biến M62.<br />
+                · Mô hình vẽ lại cả hai tầng ở mọi lượt sửa → tầng đã qua hỏng lại. Đề xuất giữ tầng
+                đã qua: chờ Haan. Script gdb đã gỡ (T87). Chưa commit.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">26/09</td>
+              <td>T84 — Root cause runtime sập: stub RPC của Workflow không được huỷ</td>
+              <td class="xs">
+                · Nâng wrangler 4.140.0 rồi chạy lượt thật 0f80cd0b (0,329 USD, tổng 2,620 USD): sập
+                lần ba, nhưng có backtrace gdb — finalizer của stub
+                <code>WorkflowInstance</code> ghi cảnh báo trong lúc V8 dọn rác, inspector lấy stack
+                trace → GC lồng nhau → <code>trap int3</code>.<br />
+                · Sửa: <code>workflows/rpc-stub.ts</code> (<code>instanceIdOf</code>,
+                <code>disposeStub</code>) ở 5 chỗ <code>create()</code> và
+                <code>workflowDead()</code>; phép thử quét mã; đột biến M61. Chưa lượt thật nào xác
+                nhận. Script bọc workerd bằng gdb còn giữ. Chưa commit.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">25/09</td>
+              <td>T83 — Lượt thật e82e3a09: runtime sập lần thứ hai</td>
+              <td class="xs">
+                · 2 lời gọi GPT-6 Sol, 0,227 USD (tổng ngày 2,291 USD);
+                <code>wrangler dev</code> sập ~3 s sau lời gọi vòng 2, kernel ghi
+                <code>workerd trap int3</code>. Không phải bộ xếp treo / tràn bộ nhớ (phát lại dưới
+                trần 96 MB vẫn xong), không phải tiến trình mồ côi.<br />
+                · Chờ Haan: nâng wrangler 4.126 → 4.140 (miniflare đang là bản alpha); tự đánh dấu
+                hỏng lượt treo quá 10 phút. Lượt treo đã đánh dấu tay.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">25/09</td>
+              <td>T82 — Dung sai 3 % ở cổng sau khi dựng cho sàn đầu bài (Haan chọn)</td>
+              <td class="xs">
+                · <code>sketch.floor_tolerance_ratio: 0.03</code> trong
+                <code>kb/construction_norms.yaml</code>; cổng <code>belowBriefArea</code> tha phần
+                hụt trong tỉ lệ ấy. 14,92/15 nay qua; 15,67/17 vẫn bác. Đột biến M60. Chưa commit.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">25/09</td>
+              <td>
+                T81 — Lượt thật 4198d692: ba vòng cuối đã dựng được cây mà bị gạt vì «nhiều lỗi hơn»
+              </td>
+              <td class="xs">
+                · 6 lời gọi GPT-6 Sol, 0,543 USD (tổng ngày 2,064 USD). Vòng 4, 5, 6 gỡ xong lối
+                vào, chỉ còn
+                <code>bedroom_3</code> 14,92/15 và <code>bedroom_5</code> 15,67/17 m² — nhưng bị gạt
+                vì 2 lỗi &gt; 1, mô hình nhận lại câu nhắc cũ ba lần.<br />
+                · Sửa: <code>setbackRank</code> xét giai đoạn (lỗi bản phác tệ hơn lỗi sau khi dựng
+                cây) trước số lỗi; <code>LevelRejection.codes</code>. Phép thử
+                <code>ai-live-4198d692.test.ts</code>, đột biến M59. Chờ Haan: dung sai nhỏ ở cổng
+                cho sàn đầu bài (14,92/15)? Chưa commit.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">25/09</td>
+              <td>T80 — Lượt thật c8cefafc trên 8.32.0: lỗi giảm 4 → 1, rồi runtime sập</td>
+              <td class="xs">
+                · 4 lời gọi GPT-6 Sol, 0,394 USD (tổng ngày 1,521 USD). Vòng 3 chỉ còn
+                <code>laundry_1</code> không lối vào; vòng 4 trả một tầng, ghép đúng nhưng vẽ lại
+                thành chong chóng, bị gạt.<br />
+                · Lời gọi 5 chưa kịp chạy: <code>wrangler dev</code> sập (crash #1, không thông
+                báo). Phát lại cục bộ không treo (1,5 s). Nghi 5 tiến trình <code>workerd</code> cũ
+                sau khi khởi động lại; chưa chứng minh. Lượt treo đã đánh dấu
+                <code>failed</code> tay. Phép thử <code>ai-live-c8cefafc.test.ts</code>.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">25/09</td>
+              <td>T79 — Ba hướng để ra được mặt bằng (Haan đồng ý)</td>
+              <td class="xs">
+                · Bộ xếp tự nới phòng hụt ô trên bản phác (<code>growSketchRoom</code>,
+                <code>sketch.grow_tries</code>) — đo trên ba lượt đã lưu chưa lượt nào nới được
+                (phòng kề cùng cạnh đều sẽ hụt), giữ vì vô hại.<br />
+                · <code>HOUSE_REVISIONS_MAX</code> 3 → 5; lượt sửa chỉ trả tầng có lỗi
+                (<code>mergeRevision</code>), ~75 % tiền một lượt sửa là token ra (~0,05 USD/lượt
+                GPT-6 Sol).<br />
+                · Gửi lại bản tốt nhất hai lần không tiến thì đổi gốc (<code>STALLED_AFTER</code>).
+                Đột biến M56–M58. 1.144 phép thử xanh. Chưa commit, chưa lượt thật trên 8.32.0.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">25/09</td>
+              <td>
+                T78 — Lượt thật 913bc2ad; tầng 1 «được cứu» im lặng, giếng thang máy thành dải
+              </td>
+              <td class="xs">
+                · Lượt 913bc2ad (GPT-6 Sol, 8.30.0, 4 lời gọi, 0,256 USD) không ra phương án: bản
+                phác tầng 1 hỏng vì <code>bedroom_2</code> 12,42 m² &lt; 15; bộ xếp chia lại tầng 1
+                (ô thang dời, giếng thang máy 1,6 × 6,45 m), ép sang tầng 2 xoá <code>wc_4</code>,
+                báo sai «không vẽ wc_4».<br />
+                · Sửa: <code>sketch_core_overlap</code> nói đúng hàng cột; lỗi bản phác tầng dưới đi
+                cùng câu nhắc khi tầng trên hỏng (<code>sketch_below_replaced</code>), lỗi ép mốc do
+                chia lại không gửi mô hình; cổng <code>elevator_oversized</code> (tỉ lệ 1,6, diện
+                tích 2,5 lần, ở <code>kb/brief_fidelity.yaml</code>); <code>min_cells</code> có dòng
+                giếng kèm <code>min_side_cells</code>. Lời dẫn 8.32.0. Đột biến M52–M55. Ghim cứng ô
+                lõi đã thử và bỏ (24 phép thử đỏ). Chưa commit. Tổng tiền 25/09: 1,127 USD.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">25/09</td>
+              <td>T77 — Lượt thật 4b0268b1; báo hết lỗi lối vào trong một lượt</td>
+              <td class="xs">
+                · Lượt 4b0268b1 (GPT-6 Sol, 8.29.0, 4 lời gọi, 0,469 USD) không ra phương án: tầng 2
+                vòng 2 chỉ còn 1 lỗi, nhưng <code>wc_4</code> chỉ giáp ô thang bị giấu tới vòng
+                4.<br />
+                · Sửa: câu nhắc kèm phòng chỉ vào được qua ô thang (<code>{also}</code>,
+                <code>sketch_stair_only</code>); phòng bị nêu lỗi rút khỏi «giữ nguyên». Lời dẫn
+                8.30.0. Đột biến M51. Chưa commit.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">25/09</td>
+              <td>T76 — Lượt thật b5202883; kiểu bố trí thang máy ở đầu bài</td>
+              <td class="xs">
+                · Lượt b5202883 (GPT-6 Sol, 8.28.0, 4 lời gọi, 0,402 USD) không ra phương án: thang
+                máy chắn giữa thang bộ và hành lang tầng 2; câu nhắc kể bảy phòng và dặn giữ nguyên
+                thang máy.<br />
+                · Sửa: <code>sketch_stair_isolated</code> nói đúng chỗ hỏng; lời dẫn 8.29.0.<br />
+                · Đầu bài: «Kiểu bố trí thang máy» — giữa lòng / cạnh / đối diện thang bộ / khác (tự
+                mô tả); ba kiểu đầu kiểm trên mặt bằng, chặn và gửi lại. Đột biến M49, M50. Chưa
+                commit.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">25/09</td>
+              <td>T75 — Bốn lỗi chặn đổi sang tự sửa / gửi lại; giếng thang hỏi ở đầu bài</td>
+              <td class="xs">
+                · Diện tích ghi trên phòng và tên trùng: chương trình tự sửa
+                (<code>restateRoomFacts</code>).<br />
+                · Kích thước giếng thang máy: hai ô mới ở đầu bài (rộng, sâu theo hãng thang); để
+                trống thì mâu thuẫn nghiêm trọng, chặn trước khi gọi mô hình. Gỡ bảng đoán theo tải
+                và mức 1,4 m.<br />
+                · <code>balcony_not_wanted</code>, <code>elevator_*</code> gửi lại mô hình thay vì
+                dừng. Lời dẫn 8.28.0.<br />
+                · Dự án demo phải điền kích thước giếng trước lượt chạy sau. Đột biến M46–M48. Chưa
+                commit.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">25/09</td>
+              <td>T74 — Ô thang chỉ mở cửa sang giao thông, khu chung, sân thượng, thang máy</td>
+              <td class="xs">
+                · Haan: «cửa ở mặt cầu thang thì đi vào đi ra kiểu gì?» — luật T54 chỉ cấm phòng ở,
+                để lọt WC, kho, bếp. Đảo thành danh sách cho phép
+                <code>passage.stair_opens_to</code>; hai ngoại lệ Haan chọn: sân thượng, thang máy.
+                Lời dẫn 8.27.0.<br />
+                · Phòng chỉ còn ô thang để mở cửa → <code>door_from_stair</code> (gửi lại mô hình),
+                không còn là lỗi hình học làm dừng lượt. Không áp ở phép kiểm bản phác (bác oan
+                phòng bộ xếp cứu được).<br />
+                · Phát lại: 9d3cc059 tầng 2 nay QUA (chỉ còn ban công sai mặt); 4a521f52 vòng 2–3
+                mất tầng 2, gửi lại mô hình. Đột biến M45. 1.115 phép thử xanh. Chưa commit, chưa
+                deploy.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">24/09</td>
+              <td>T73 — Nguyên nhân gốc: mô hình vẽ phòng nhỏ hơn mức đầu bài</td>
+              <td class="xs">
+                · Haan hỏi vì sao đầu bài 45 m² mà AI vẽ 26,8 m². Gốc: lời dẫn 8.3.0 dặn mô hình «Do
+                not count cells: the program sizes the walls», nhưng chương trình chỉ căn vách trong
+                khung dải mô hình vẽ. Mô hình khai đúng 45 m² mà vẽ 28 ô, bỏ trống 40 ô làm sân.<br />
+                · Sửa: chương trình tính sẵn số ô tối thiểu (<code>knowledge.min_cells</code>, 45 m²
+                → 49 ô); lời dẫn 8.20.0 bỏ câu «đừng đếm ô»; bản phác hụt quá 10 %
+                (<code>sketch.area_slack_ratio</code>) thì báo mô hình ngay kèm số ô, không để bộ
+                xếp dời ô thang «cứu» tầng. Đột biến M38.<br />
+                · Đo trên ý định đã lưu: một ý định đang ra phương án đổi sang bị gửi lại
+                (fd3b0b86). Phương án đã lưu không đổi. Kiểm: 1.085 phép thử Thiết kế + 235 giao
+                diện TK xanh. Chi tiết quá trình: T73 trong <code>QUYET_DINH_AI.md</code>.<br />
+                · <b>Lượt thật 0c86c0b1</b> (Sol, 4 lời gọi, 0,521 USD): gốc T73 ĐÃ HẾT — phòng
+                khách 49 ô, mọi phòng đủ ô, không ô trống; token ra lượt đầu 7.952 (trước 9.884).
+                Vẫn không ra phương án: mô hình vẽ hành lang 1 ô, bộ xếp nới lên ~1,33 m lấy từ
+                phòng ngủ 1 (24 ô → 19,08 m² &lt; 20), bỏ bản phác tầng 1 và dời ô thang; tầng 2
+                không ép được mốc, phòng không cửa.<br />
+                · Đã sửa (Haan: «sửa theo cả 2»): (a) hành lang tối thiểu
+                <code>corridor_min_cells</code> (2 ô), lời dẫn 8.21.0; (b) tầng 1 giữ ô thang /
+                thang máy đúng chỗ bản phác (<code>sketchCores</code>, M39). Phát lại: Terra
+                458d9a91 nay qua tầng 1; 011b4adc xếp được cả hai tầng. 1.088 phép thử xanh.<br />
+                · Haan đồng ý: lỗi ban công sai mặt / thiếu tầng nay được gửi lại mô hình kèm mặt,
+                tầng (lời dẫn 8.22.0). 1.088 phép thử xanh.<br />
+                · <b>Lượt thật 6c35ed79</b> (Terra, 4 lời gọi, 0,315 USD): tầng 1 QUA cả bốn lượt,
+                đủ ô, hành lang 2 ô. Tầng 2 hỏng: năm phòng không giáp hành lang ngay trên bản phác,
+                mà lỗi ấy không được gửi mô hình. Phụ: lỗi nội bộ <code>tree_child_reused</code> ở
+                10/775 ứng viên.<br />
+                · Đã sửa (Haan: «sửa c và d»): (d) thang máy không còn bị coi là hành lang
+                (<code>corridorIds</code>) — hết <code>tree_child_reused</code>, và bỏ một thành
+                công giả của 011b4adc (M41); (c) kiểm «phòng không có lối vào» ngay trên bản phác và
+                báo mô hình (<code>sketch_room_no_access</code>, lời dẫn 8.23.0, M40). Đo trên ý
+                định đã lưu: không ý định nào đang ra phương án bị chuyển sang bác. 1.092 phép thử
+                xanh.<br />
+                · <b>Lượt thật 8efa35a6</b> (Terra, 4 lời gọi, 0,414 USD): tầng 1 qua cả bốn lượt.
+                Tầng 2: câu nhắc lối vào có tác dụng nhưng mô hình «sửa chỗ này hở chỗ kia» (laundry
+                → wc_4 → phòng thờ → phòng ngủ 5). Sửa báo nhầm hộp kỹ thuật (không cần cửa). 1.095
+                phép thử xanh.<br />
+                · Đã làm (Haan: «làm e và f, thêm GPT-6 Sol»): câu nhắc lối vào kèm phòng đang ổn và
+                dặn giữ (lời dẫn 8.24.0); thêm tuyến GPT-6 Sol (<code>gpt-6-sol</code>, 2 / 10 USD,
+                nửa giá GPT-5.6 Sol). 1.096 phép thử xanh.<br />
+                · <b>Lượt thật 9d3cc059</b> (GPT-6 Sol, 2 lời gọi, 0,188 USD): tầng 1 qua. Tầng 2
+                lượt 2 chia hành lang thành bốn mẩu nối nhau chỉ 1 ô — không đặt được cửa; lỗi hình
+                học nên lượt dừng. Đã làm (g): trước khi xếp bắt phòng / hành lang không chạm đường
+                về ô thang; tầng đã hỏng thì đo tiếp giáp &lt; 2 ô và gửi mô hình — lượt 9d3cc059
+                nay được gửi lại thay vì dừng (lời dẫn 8.25.0, M42). Bỏ bản chặn ngay «&lt; 2 ô» vì
+                báo nhầm tầng từng qua. 1.098 phép thử xanh.<br />
+                · <b>Lượt thật 2ddf782a</b> (GPT-6 Sol, lời dẫn 8.25.0, 4 lời gọi, 0,369 USD): lượt
+                4 xếp được cả hai tầng lần đầu từ T72, hỏng ở cổng cả nhà vì thiếu ban công mặt sau
+                (mô hình bỏ từ lượt 2; lỗi chỉ lộ khi mọi tầng xếp xong).<br />
+                · Đã làm (h): ban công đầu bài khai (tầng, mặt) đo ngay trên bản phác mỗi khi một
+                lượt hỏng, câu nhắc đi cùng lỗi tầng (<code>checkSketchBalconyDemand</code>, M43).
+                Phát lại 2ddf782a: lượt 2–3 nay được nhắc. Lộ thêm ba lượt cũ thiếu ban công mặt
+                trái. 1.106 phép thử xanh. Chưa commit.<br />
+                · <b>Lượt thật 5cd78ef7</b> (GPT-6 Sol, 4 lời gọi, 0,409 USD): lượt 3 chỉ còn phòng
+                thờ không lối vào; lượt 4 vẽ lại cả tầng 2, hỏng năm chỗ mới. Chỗ chặn chính: sửa
+                chỗ này hở chỗ kia, và chương trình luôn sửa tiếp từ lượt mới nhất.<br />
+                · Đã làm (i): lượt sửa đi tiếp từ lượt hỏng nhẹ nhất (<code>revisionBase</code>, cả
+                Workflow lẫn tuyến đồng bộ), kèm dòng nói lần sửa vừa rồi bị gạt; lời dẫn lượt sửa
+                dặn chép nguyên phần không bị nêu lỗi (8.26.0). Đột biến M44. 1.112 phép thử xanh.
+                Chưa commit.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">23/09</td>
+              <td>T72 — Hai lượt chạy thật sau T71 và các chỗ sửa</td>
+              <td class="xs">
+                · <b>Lượt 1 — Sol (fad0c0fa, 1 lời gọi, 0,166 USD):</b> hỏng «ô thang máy tầng 2
+                lệch 152 cm», không do T71. Sửa: ghim ô thang máy theo tầng dưới như thang bộ; cổng
+                từng tầng biết mức ban công đua ra ngoài ranh; ô thang máy lệch hẳn thì hỏng sớm ở
+                tầng; lỗi sửa được của bản phác không bị lỗi hình học che. Haan chọn (a): phòng hụt
+                diện tích đầu bài được gửi lại mô hình (<code>arrange_room_below_brief_area</code>).
+                Đột biến M35.<br />
+                · <b>Lượt 2 — Terra (458d9a91, 4 lời gọi, 0,333 USD):</b> cả bốn hỏng tầng 1 vì
+                <code>porch_1</code> mang cửa chính là hai ô ở góc, gara bao quanh. Mô hình chỉ nhận
+                dòng «vẽ hành lang», nên giữ nguyên hiên; lượt sửa 3 nộp lại nguyên văn lượt 2.<br />
+                · Sửa: dòng gợi ý mới <code>entry_room_boxed_in</code> nói đúng chỗ (phòng cửa chính
+                bị kẹt) và thay dòng hành lang; tầng 1 hỏng vì phòng cửa chính bị kẹt cũng cho
+                chương trình thử đổi phòng cửa chính trước khi gọi lại. Mô hình trả lại y nguyên
+                phần tầng đang hỏng → dừng (<code>retry: 'unchanged'</code>), màn hình nói rõ vì
+                sao. Lời dẫn 8.18.0. Đột biến M36. Trên lượt Terra: tiết kiệm được lượt 4 (0,086
+                USD).<br />
+                · Kiểm: 1.075 phép thử module Thiết kế và 235 phép thử giao diện TK xanh;
+                <code>tsc -b</code> sạch.<br />
+                ·
+                <b>Lượt 3 — Sol sau T72 (4 lời gọi, 0,531 USD, vượt mức báo trước 0,1–0,4):</b> tầng
+                1 QUA (phòng cửa chính là phòng khách). Tầng 2 hỏng cả bốn lượt với ba lỗi: phòng
+                hụt diện tích đầu bài (study_1 7,7 → 8,9 → 10,3 m², cần 13), ô thang máy không trên
+                giếng, một phòng không cửa. Chỉ lỗi diện tích được gửi; câu nhắc «vẽ thêm ô» không
+                nói cần bao nhiêu ô nên mô hình nhích từng chút. Ô thang máy vẽ ĐÚNG cùng ô với tầng
+                1 mà vẫn lệch — nghi bộ xếp mất ghim thang máy khi bỏ bản phác, xếp lại theo vùng.
+                Mô hình có đổi mỗi lượt nên phép dừng sớm đúng là không kích. <br />
+                · Đã sửa (Haan cho): khung khoét mốc tầng trên nay khoét cả ô thang máy (M37); câu
+                nhắc diện tích nói số ô đang vẽ và số ô cần (lời dẫn 8.19.0). Phát lại bốn lượt: hết
+                lỗi thang máy, câu nhắc thành «15 ô → cần ít nhất 19 ô».<br />
+                · <b>Vướng mắc còn mở:</b> bản phác tầng 1 hụt diện tích (phòng khách 28 ô ra 26,8
+                m², cần 45) nhưng bộ xếp cứu tầng 1 bằng cách chia khác và dời ô thang; mô hình
+                không được báo, tầng 2 ghim theo ô thang đã dời nên méo và vẫn hỏng (phòng không
+                cửa). Đã gỡ ở T73 (24/09): báo mô hình khi bản phác hụt quá 10 %.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">23/09</td>
+              <td>T71 — Luật bố trí bắt buộc: khu ướt, bếp, phòng thờ, ban công</td>
+              <td class="xs">
+                · Haan đặt: bếp không dưới WC; phòng thờ không dưới / giáp / đối diện WC; ban công
+                quay cạnh dài ra mặt thoáng — <b>CHẶN</b>. WC chung thẳng trục — <b>ưu tiên</b> (bậc
+                xếp hạng đầu), lệch thì ghi chú lệch bao nhiêu mét. Hết lượt sửa vẫn vi phạm → không
+                ra phương án.<br />
+                · Dữ liệu <code>rules/nvg-mandatory.yaml</code> (luôn bật); đo ở
+                <code>ai/mandatory.ts</code>, dùng chung cho cổng bộ xếp và cổng cuối. Mốc khu ướt /
+                bếp / phòng thờ nay chuyền theo TẦNG NGAY DƯỚI (trước chỉ lấy tầng 1). Năm mã mới
+                được gửi lại mô hình sửa; lời dẫn 8.17.0 thêm ba luật «Must hold».<br />
+                · Tuyến sửa của kỹ sư chỉ tha vi phạm đã có sẵn trong phương án đang lưu.<br />
+                · <b>Đo trên 12 ý định thật đã ghi</b> (không gọi mô hình): 9 nay bị bác, gần hết vì
+                ban công mô hình vẽ lọt giữa nhà hoặc quay cạnh dài vào nhà bên. Đã sửa để lượt bị
+                bác nêu ĐÚNG luật (trước đó báo lỗi phụ, mô hình sẽ sửa sai chỗ). → Q-53.<br />
+                · 25 phép thử mới, đột biến M32–M34 bị bắt; 1.061 phép thử design + 490 web xanh.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">23/09</td>
+              <td>
+                Dựng đa giác phòng cho bốn hồ sơ mới — nâng n của <code>nvg-measured.yaml</code>
+              </td>
+              <td class="xs">
+                · Haan duyệt (Q-49b). Đa giác dựng từ nét tường: nối khe cửa thẳng hàng rồi khép ô,
+                gán loại phòng bằng mắt theo tên / bảng chú giải. Công cụ và bảng từng phòng để
+                ngoài repo
+                (<code>~/Documents/Doc/NVG/design/mat_bang_cong_nang/phong_do_duoc.csv</code>).<br />
+                · Kiểm bằng nhãn: 13 phòng có nhãn, 12 lệch ≤ 9 %; bếp HS-05 lệch vì nhãn tính cả
+                hành lang.<br />
+                · Kho đo được: <b>6 dự án</b>. Phòng ngủ n 3 → 9 mặt bằng (18 phòng), WC 5 → 12,
+                phòng khách 2 → 5, hành lang 3 → 6. <b>Không đổi ngưỡng nào.</b><br />
+                · HS-07 (Anh Tăng) không đo: chỉ có hồ sơ điện nước, tường một nét lẫn đồ đạc. Hai
+                tệp .rar «chưa giải nén» trùng từng byte với P1/P2.<br />
+                · Lộ ra hai ngưỡng báo oan nhà NVG → <b>Q-52</b>. Chi tiết:
+                <code>doc/design/13-ho-so-thuc-te.md</code> 13.17.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">23/09</td>
+              <td>
+                T70 — Bậc tam cấp lên mặt bằng, thang giữ mặt bậc 250, bậc được đánh số (Q-51)
+              </td>
+              <td class="xs">
+                · Haan trả lời Q-51: «làm hết» — cả ba chỗ engine vẽ khác hồ sơ thật (13.16.7).<br />
+                · <b>Mặt bậc:</b> hợp đồng thang thêm <code>going</code> (cm), chương trình điền từ
+                <code>stairs.going_m</code>. Mỗi bậc sâu đúng 250, vế dài theo số bậc, phần dư của ô
+                thang vào chiếu nghỉ. Artifact cũ không có <code>going</code> vẽ như trước.<br />
+                · <b>Đánh số bậc</b> 1…số bậc từ chân vế đầu (thang) và từ bậc ngoài cùng (tam cấp),
+                cỡ 1,6 mm; bậc quá hẹp trên giấy thì bỏ số.<br />
+                · <b>Bậc tam cấp</b> = đối tượng mới <code>entry_steps</code> của tầng 1
+                (<code>ai/entry-steps.ts</code>). Số bậc = số gia chủ khai, không thì cốt nền cao
+                hơn đường ÷ 0,15 làm tròn lên; mặt bậc 0,30; rộng hơn cửa chính 0,6 m. Không khai số
+                thì không vẽ; sân không đủ sâu, cửa mở ra phần khác của nhà, hay quá 8 bậc thì ghi
+                chú, không vẽ lấn ra ngoài thửa. Không chặn phương án, không đổi lời dẫn gửi mô
+                hình.<br />
+                · Hai đột biến M30, M31 — cả hai bị bắt. Test: 1.051 phép thử
+                <code>workers/src/design</code> + 490 phép thử web xanh; ảnh chụp vàng chỉ THÊM số
+                bậc và một dòng CSS.<br />
+                · ⚠️ Hợp đồng đổi → dấu vân tay đổi: phát hành cả hai Worker bằng
+                <code>npm run deploy</code>.<br />
+                · <b>Chưa làm:</b> mặt đứng chưa vẽ bậc; cửa chính mở ra hiên; bậc cửa bếp/sân sau;
+                thang bậc quạt kiểu HS-03.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">22/09</td>
+              <td>Đo bốn hồ sơ mới — cầu thang, bậc tam cấp, cốt cao độ</td>
+              <td class="xs">
+                · <b>Đặt bài của Haan:</b> «đọc và phân tích các bản vẽ mặt bằng công năng sau, và
+                bổ sung vào kinh nghiệm nghề của Nhà Việt group… cần học sâu hơn nữa: ví dụ như cầu
+                thang bố trí như nào, bậc tam cấp xử lý như nào».<br />
+                · <b>Nguồn:</b> 10 tờ mặt bằng của bốn bộ hồ sơ mới (HS-03 liền kề trong ngõ 3 tầng
+                · HS-04 mái Nhật sân vườn · HS-05 liền kề mái Nhật · HS-06 mái Nhật 2 tầng). Báo cáo
+                đầy đủ: <code>doc/design/13-ho-so-thuc-te.md</code> mục <b>13.16</b>.<br />
+                · <b>Con số chắc nhất:</b> <b>mặt bậc 250 mm trên cả bốn vế thang</b>, không lệch
+                một milimet. <code>construction_norms.stairs.going_m: 0.25</code> đang khai kèm ghi
+                chú «SỐ THAM KHẢO, chọn ở mức thấp» — ghi chú ấy nay sai, 0,25 chính là con số NVG
+                vẽ.<br />
+                · <b>Hai kiểu thang:</b> HS-03 hai vế chữ U quay bằng <b>BẬC QUẠT</b> (không chiếu
+                nghỉ vuông), vế rộng 900, khe 200 có lan can dày 100 đặt trong khe, ô thang 3.200 ×
+                2.000, <b>19 bậc/tầng</b> = 6 + 2 quạt + 11, và bậc được
+                <b>đánh số 1…19 ngay trên mặt bằng</b>. HS-06 hai vế song song, vế rộng 1.000, khe
+                500 (lỗ thông 380), ô thang lọt lòng 2.500 × 3.470, vế lên nét thấy / vế trên nét
+                đứt, cắt bằng đường gãy chữ Z, tay vịn đầu <b>cuộn tròn</b> đánh dấu bậc số 1.<br />
+                · <b>Bậc tam cấp — «tam cấp» là TÊN GỌI, không phải số bậc:</b> HS-06 có
+                <b>năm</b> bậc. Quy tắc thật: <b>mặt bậc giữ 300, số bậc = chênh cốt ÷ ~150</b>. Đo
+                được chênh 430 / 450 / 730 mm → 3 / 3 / 5 bậc. Phải có cốt sân mới vẽ được bậc.<br />
+                · <b>Cốt cao độ:</b> HS-06 in hẳn bảng chú giải — ±0.000 nền hoàn thiện · −0.750 sân
+                bê tông đã lát gạch · −0.850 đường. Sàn WC <b>luôn</b> thấp hơn sàn phòng 30–100 mm;
+                ban công thấp hơn 30. Chiều cao tầng nới thành <b>3,3 – 3,9 m</b>, và tầng 1 CAO HƠN
+                tầng trên khi có gara — ngược chiều với HS-01.<br />
+                · <b>Đã sửa:</b> <code>rules/nvg-experience.yaml</code> quy tắc
+                <code>stair_not_facing_entry</code> <b>n: 0 → 2</b> (cả hai hồ sơ nhiều tầng đều
+                không đặt thang đối diện cửa chính — quy tắc này ra đời từ một tài liệu, nay có số
+                đo đỡ). <code>kb/construction_norms.yaml</code> thêm mục <code>do_duoc_2</code> và
+                ghi chứng cứ mới vào <code>stairs</code>, <code>levels</code>, <code>facade</code>,
+                <code>openings</code>. <code>rules/nvg-measured.yaml</code> ghi thêm hai vế thang đo
+                được vào chỗ «cố ý để trống».<br />
+                · <b>KHÔNG đổi một giá trị nào.</b> Mọi con số cũ vẫn nằm trong khoảng đo được; đổi
+                giá trị là re-tune bộ vẽ, có nghiệm thu riêng (cùng lý lẽ đã ghi ở đầu
+                <code>nvg-measured.yaml</code>). Diện tích phòng của bốn hồ sơ mới cũng KHÔNG dùng
+                để nâng <code>n</code>: chúng là nhãn ghi sẵn, còn tệp ấy đo từ đa giác — trộn hai
+                cách đo là làm hỏng khoảng quan sát đã có.<br />
+                · <b>Ba chỗ engine đang vẽ khác hồ sơ thật</b> (13.16.7): (1) bộ vẽ rải đều bậc trên
+                chiều dài ô thang nên mặt bậc là hệ quả, hồ sơ thật giữ mặt bậc 250 và để vế dài
+                theo; (2) <b>không có bậc tam cấp</b> — hợp đồng không có đối tượng nào cho nó, nên
+                cửa chính mở thẳng ra sân trong khi cả ba hồ sơ có sân đều chênh 430–730 mm; (3)
+                không đánh số bậc. → Q-51.<br />
+                · <b>Bẫy mới của bảng mã chữ:</b> giải mã TCVN3 vô điều kiện làm hỏng chuỗi vốn đã
+                Unicode (<code>chính</code> → <code>chớnh</code>, vì <code>í</code> U+00ED trùng mã
+                byte với <code>ớ</code>). Mã trong repo làm đúng nhờ <code>looks_tcvn3()</code> theo
+                KIỂU CHỮ; công cụ đo ngoài repo thì không và đã dính.<br />
+                · <b>Đã đọc và loại:</b> <code>QUY CHUẨN NHÀ VIỆT ONE.docx</code> đi kèm hồ sơ là
+                quy chuẩn <b>quy trình và chất lượng</b>, không chứa một kích thước hình học nào —
+                nội dung thuộc TC/HD, không thuộc <code>kb/</code>.<br />
+                · <b>Test:</b> 1.021 phép thử của <code>workers/src/design/</code> xanh.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">22/09</td>
+              <td>T65 — Mặt bằng bám đầu bài: thang máy, ban công, và chín nhóm câu hỏi của T62</td>
+              <td class="xs">
+                · <b>Đặt bài của Haan:</b> «mặt bằng phải theo sát yêu cầu đầu bài, không được làm
+                thiếu hoặc sai so với đầu bài», kèm thang máy, ban công mặt tiền, ban công đua ra
+                ngoài.<br />
+                · <b>Chỗ hỏng:</b> T62 hỏi 98 câu nhưng cổng bám đầu bài chỉ đọc BA nhóm cũ. Chín
+                nhóm mới chỉ tới mô hình dưới dạng câu văn — một đầu bài khai «làm thang máy ngay»
+                vẫn ra mặt bằng không có thang máy, vẫn qua cổng, vẫn đúc thành artifact bất
+                biến.<br />
+                · <b>Bảng <code>demands</code></b> trong <code>kb/brief_fidelity.yaml</code>: «trả
+                lời X thì mặt bằng phải có Y», cờ <code>blocking</code> quyết định thiếu thì bác hay
+                chỉ nhắc. Lời gia chủ tự khai thì bác được; suy đoán nghề chỉ cảnh báo (T52).<br />
+                · <b>Mã phòng <code>elevator</code> riêng</b>, tách khỏi <code>core</code> — trước
+                đó <code>core</code> mang cả bí danh THANG MAY nên cổng nhận nhầm lõi thang bộ là đã
+                đủ. Ô thang máy bám mốc tầng dưới như giếng trời;
+                <b>lựa chọn «chừa chỗ lắp sau» đòi y hệt</b>, chỉ khác là bản vẽ ghi «Ô chừa thang
+                máy (lắp sau)».<br />
+                · <b>Ban công đua ra ngoài ranh</b> nới ô ngay trong cây chia, TRƯỚC khi dựng hình
+                bao và đặt lỗ mở — nhờ vậy hình bao, lan can và cửa tự khớp. Khai có đua mà chưa
+                khai mấy mét thì <b>không bịa số</b>: giữ trong ranh và nói ra là đầu bài còn
+                thiếu.<br />
+                · <b>Kiểm:</b> 27 phép mới, 4 đột biến mới (M25–M28) canh «chưa hỏi» không thành
+                «có», giếng thang lệch tầng, ban công sai mặt, và ban công đua khi chưa có số.<br />
+                · <b>Chờ Haan:</b> kích thước giếng thang máy lấy từ quy cách cabin nhà sản xuất,
+                chưa đối chiếu hồ sơ NVG nào — xem vướng mắc V-33.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">21/09</td>
+              <td>T62–T63 — Đầu bài hỏi chi tiết hơn, và quản trị viên sửa được mục khảo sát</td>
+              <td class="xs">
+                · <b>Đặt bài của Haan:</b> «khảo sát càng chi tiết, output đưa ra càng đúng với mong
+                muốn», kèm danh sách câu hỏi muốn có.<br />
+                · <b>Hợp đồng 1.4.0 → 1.5.0</b>, chỉ THÊM trường tuỳ chọn: tám trường khu đất (cao
+                độ tim đường, cao độ đất, mặt nắng gắt, mặt đón gió, bề rộng đường, nguy cơ ngập,
+                hiện trạng xây dựng, số tầng nhà liền kề) · <code>family[].ages</code> ·
+                <code>household</code> (ngành nghề, tín ngưỡng, nơi thờ, phong thuỷ, kiêng kỵ, kinh
+                doanh tại nhà) · <code>lifestyle</code> (11 câu về nếp sinh hoạt) ·
+                <code>storage</code> · <code>vertical</code> (thang máy: làm ngay / chừa chỗ /
+                không) · <code>entrance</code> (cốt nền, bậc tam cấp, dốc dắt xe) ·
+                <code>balconies</code> (mặt, phạm vi, đua ra ngoài ranh, độ vươn) ·
+                <code>systems</code> · <code>future</code> · <code>finishing_level</code> · cỡ ô tô
+                và sạc điện. <b>Biểu mẫu vẫn SÁU mục</b> — dựng thành 12 rồi Haan cho gộp lại ngay
+                trong ngày («12 mục là quá dài»): Công trình và khu đất (28 câu) · Gia đình và nếp
+                sinh hoạt (25) · Công năng và lưu trữ (9) · Khối nhà, thang và mặt ngoài (23) · Kỹ
+                thuật và dự trù (7) · Ưu tiên, ngân sách và người quyết định (6). Nhóm tổ chức khối
+                nhà nay ẩn theo TỪNG TRƯỜNG thay vì ẩn cả mục, nên số bước không đổi theo loại
+                hình.<br />
+                · <b>Trọng số gần hết là 0 có chủ ý</b> — điểm độ đầy đủ là cổng chặn Lớp 2, chỉ đo
+                thứ thiếu thì không dựng nổi mặt bằng. Tổng nhà phố 39 → 50, đầu bài trả lời hết
+                phần cũ vẫn đạt 0,78 &gt; ngưỡng 0,7, <b>không chặn hồ sơ nào đang chạy</b>.<br />
+                · Dữ liệu mới tới mô hình qua đúng đường cũ: <code>ai-brief-digest</code> 1.1.0 →
+                1.2.0 rồi văn xuôi; mọi ô chữ tự do mới đi qua bộ lược danh tính. Cao độ nói bằng
+                CHÊNH LỆCH, không nói trị tuyệt đối.<br />
+                · <b>Soát mâu thuẫn thêm 9 phép</b>, toàn số học hoặc hai câu trả lời chỏi nhau —
+                không có ngưỡng quy chuẩn nào. Lời khuyên nghề cố ý không vào đây (Haan, T52).<br />
+                · <b>Màn hình «Biểu mẫu đầu bài»</b> (<code>/nen/bieu-mau-dau-bai</code>): thêm, sửa
+                nhãn/gợi ý/trọng số, ẩn, đổi thứ tự mục. Cơ chế là <b>lớp phủ</b> lên cấu hình gốc,
+                lưu ở <code>design_setting.brief_form_overlay</code>, ghi qua
+                <code>POST /design/brief/form</code> (kiểm hợp lệ trước khi ghi). Năm trường hợp
+                đồng bắt buộc khoá hẳn; câu hỏi có sẵn chỉ ẩn được, không xoá — ẩn giữ câu trả lời
+                đã lưu. Câu hỏi tự thêm nằm ở ô mở <code>custom.*</code>, tới mô hình dưới dạng
+                nhãn–câu trả lời, <b>không ràng buộc hình học</b>.<br />
+                · <b>Đã kiểm:</b> 1.312 phép logic + 473 phép giao diện xanh, <code>tsc -b</code> và
+                <code>eslint</code> sạch, thêm đột biến M24 canh việc ẩn nhầm trường bắt buộc.
+                <b>Chưa đo:</b> chưa có lượt chạy thật nào so phương án trước–sau (tốn tiền gọi mô
+                hình, xin phép riêng).
+              </td>
+            </tr>
+            <tr>
+              <td class="num">21/09</td>
+              <td>T69 — hai Worker lệch phiên bản: tab «AI Design» đỏ trên bản chạy thử</td>
+              <td class="xs">
+                · <b>Lỗi Haan bắt trên bản công khai.</b> Không phải lỗi sinh dữ liệu mà là lỗi
+                <b>ĐỌC</b>: <code>ArtifactRepository.head()</code> kiểm hợp đồng cả khi đọc lại từ
+                kho, nên <code>nvg-api</code> tải lên 19/09 không đọc nổi artifact
+                <code>ai_facade_concept</code> do bản mã 20/09 ghi ra (<code>where</code> có
+                <code>main_door</code>…, <code>levels[]</code> có <code>x0/x1</code>). Giao diện lại
+                phát hành 20/09 → bản công khai chạy giao diện mới với API cũ hơn một ngày. Một
+                project Supabase dùng chung là thứ đưa artifact mới vào kho của bản công khai.<br />
+                · <b>Đã sửa:</b> phát hành lại cả hai Worker (đã kiểm: năm artifact hiệu lực của hồ
+                sơ đều đọc được, <code>/design/health</code> trả
+                <code>contracts: 27c8c586581c</code> khớp bản dựng giao diện) ·
+                <code>npm run deploy</code> phát hành API trước, giao diện sau ·
+                <code>CONTRACTS_FINGERPRINT</code> băm <code>contracts/</code>, Worker trả ở header
+                <code>X-NVG-Contracts</code>, giao diện đối chiếu và hiện dải báo ·
+                <code>ContractError</code> tách <code>read</code> khỏi <code>write</code>, hỏng lúc
+                đọc nói về phiên bản dịch vụ thay vì đổ cho dữ liệu.<br />
+                · <b>Còn treo:</b> gốc thật là một project Supabase dùng chung (<code
+                  >BUILD_PLAN.md</code
+                >
+                4E) — hai Worker khớp nhau vẫn không chặn được việc chạy bản mã mới ở máy rồi ghi
+                artifact bản công khai không hiểu.
+              </td>
+            </tr>
+            <tr>
               <td class="num">20/09</td>
               <td>T68 — trung thực kích thước xuyên cả chuỗi (sân trước 3 m vẽ thành 8–10 m)</td>
               <td class="xs">
@@ -4585,6 +5130,45 @@
       <!-- ============ 5. VƯỚNG MẮC ĐÃ GỠ ============ -->
       <h2>5. Vướng mắc đã gỡ</h2>
       <p class="xs muted-t">Còn mở thì ở <a href="TIEN_DO_THIET_KE.html">tờ chính</a>.</p>
+      <div class="flag block">
+        <h3>
+          V-34 · Tầng «đã qua» hỏng lại ở vòng sau vì chính bản phác chương trình vẽ lại —
+          28/09/2026
+        </h3>
+        <p class="kv">
+          <b>Trạng thái 28/09/2026:</b> <b>đã gỡ</b> (T97, Haan: «oke làm đi») — gộp không còn trùng
+          mã, bản phác vẽ lại phải xếp lại được; phát lại 114 vòng 7 → 8 mặt bằng, chính lượt
+          5584bf0d vòng 2 qua với 66,6 điểm.
+        </p>
+        <p class="kv">
+          <b>Gặp ở đâu:</b> lượt thật 5584bf0d (28/09, GPT-6 Sol, lời dẫn 8.37.0, 3 lời gọi, 0,35
+          USD, THẤT BẠI). Vòng 1: tầng 1 xếp được, tầng 2 hai phòng không có lối vào — đúng việc của
+          mô hình. Vòng 2 và 3 mô hình chỉ sửa tầng 2 như được dặn, nhưng cả hai vòng đều bị bác ở
+          <b>tầng 1</b> — tầng chương trình vừa nói «passed every check and is kept exactly as it
+          is».
+        </p>
+        <p class="kv">
+          <b>Đã thử gì:</b> phát lại ba vòng ghi bằng client giả, ra đúng số phận ấy. Hai nguyên
+          nhân, đều ở chương trình: (a) <code>mergeRevision</code> gộp phòng theo MÃ không theo tầng
+          — mô hình đặt hành lang mới của tầng 2 là <code>circulation_1</code>, trùng mã hành lang
+          tầng 1, nên hành lang tầng 1 bị bỏ và bốn phòng «không có lối vào»; (b)
+          <code>replaceKeptSketches</code> (T86) vẽ lại tầng đã chia thành bản phác 12×16 ô, phòng
+          ngủ 20 m² co còn 18 ô ≈ 15–17 m², vòng sau cổng T92 bác vì dưới sàn đầu bài. Trong 111
+          vòng ghi cũ cũng có hai vòng cùng dấu hiệu (5a142183 v4, dc949b49 v4) — lỗi có từ T86,
+          không do T96.
+        </p>
+        <p class="kv">
+          <b>Đang chặn gì:</b> mọi lượt thật mà tầng 1 bị chương trình chia lại còn tầng 2 cần sửa —
+          tức phần lớn lượt có sửa. Mô hình làm đúng mà lượt vẫn tiêu hết ba vòng.
+        </p>
+        <p class="kv">
+          <b>Cần gì để gỡ:</b> (a) khi gộp, mã của tầng đã khoá là bất khả xâm phạm: phòng mới trùng
+          mã thì đổi sang mã trống (đổi cả trong bản phác và quan hệ của câu trả lời); (b) bản phác
+          vẽ lại phải qua chính cổng soát bản phác và sàn diện tích trước khi thay bản của mô hình,
+          không qua thì giữ bản cũ (bộ xếp tất định nên chia lại vẫn ra cùng kết quả). Chờ Haan gật
+          rồi làm, đo bằng phát lại 111 + 3 vòng.
+        </p>
+      </div>
       <div class="flag block">
         <h3>
           V-29 · Luồng cả nhà (T45) đo thật: tầng 2 biệt thự 15 phòng không dựng được đường vào —

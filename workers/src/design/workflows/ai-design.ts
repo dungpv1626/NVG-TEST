@@ -15,6 +15,7 @@
  */
 
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from 'cloudflare:workers';
+import { disposingStep } from './rpc-stub';
 import { NonRetryableError } from 'cloudflare:workflows';
 import { userFacing } from '../llm/provider-faults';
 import { LlmCallFailed } from '../llm/gemini';
@@ -74,9 +75,11 @@ import {
   AiPlanRejected,
   finalRejections,
   HOUSE_REVISIONS_MAX,
+  STALLED_AFTER,
   type LevelRejection,
   type PlanCallRecord,
   type PlanVariant,
+  revisionBase,
 } from '../ai/plan';
 import { roomVocabulary as vocabularyIndex } from '../kb/vocabulary-data';
 import { facadeVocabulary } from '../kb/facade-vocabulary-data';
@@ -91,6 +94,7 @@ import {
   type FacadeStepDeps,
   type FacadeWriteOutcome,
 } from './ai-facade-steps';
+import { mandatoryRules } from '../ai/mandatory-data';
 
 /** Lượt sửa theo yêu cầu kỹ sư gọi mô hình tối đa bấy nhiêu lần: một lần, cộng một lần kèm lý do cổng. */
 const EDIT_CALLS_MAX = 4;
@@ -152,7 +156,9 @@ async function once<T>(work: () => Promise<T>, signal?: AbortSignal): Promise<T>
 }
 
 export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignParams> {
-  override async run(event: WorkflowEvent<AiDesignParams>, step: WorkflowStep) {
+  override async run(event: WorkflowEvent<AiDesignParams>, rpcStep: WorkflowStep) {
+    // Mọi kết quả `step.do` là kết quả RPC — huỷ ngay (T85, `workflows/rpc-stub.ts`).
+    const step = disposingStep(rpcStep);
     const params = event.payload;
     const repo = new ArtifactRepository(this.env);
 
@@ -196,6 +202,7 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
       vocabulary: vocabularyIndex(),
       fidelity: briefFidelity(),
       quality: planQuality(),
+      mandatory: mandatoryRules(),
       // Bộ chấm LUÔN đọc gói kinh nghiệm + đo được, KHÔNG phụ thuộc ô tích của kỹ sư: hình dáng
       // phòng không phải thứ bật tắt bằng ô tích. Ô tích chỉ quyết định có tiêm vào lời dẫn và có
       // hiện thành cảnh báo hay không — xem phần đầu `kb/plan_quality.yaml`.
@@ -586,7 +593,7 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
    * (T45).
    *
    * Mỗi lượt gọi mô hình là một `step.do` riêng nên Workflow thử lại không bao giờ mua lại thứ đã
-   * mua. Sau lượt sửa thứ ba vẫn không xếp được thì phương án dừng với lý do, KHÔNG đúc artifact:
+   * mua. Sau lượt sửa thứ `HOUSE_REVISIONS_MAX` vẫn không xếp được thì phương án dừng với lý do, KHÔNG đúc artifact:
    * không lưu và không vẽ một mặt bằng mà chương trình đã biết là hỏng.
    */
   private async runVariant(
@@ -614,6 +621,8 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
         }
       : null;
     let best: BestArranged | null = null;
+    let bestFailed: ArrangeOutcome | null = null;
+    let resent = 0;
 
     for (let round = 1; ; round += 1) {
       const id = (phase: HousePhase) => houseStepId(variant.id, phase, round);
@@ -640,6 +649,7 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
               round,
               retry?.hints,
               retry?.previousJson ?? null,
+              retry?.keep,
               hooks(),
             ).finally(() => board.drop(id('propose'))),
           board.signal,
@@ -650,7 +660,7 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
 
       await markStep(db, runId, id('arrange'), 'running', { label: label('arrange') });
       const arranged = (await step.do(id('arrange'), async () =>
-        arrangeHouseStep(deps, params, variant, proposal, round),
+        arrangeHouseStep(deps, params, variant, proposal, round, retry?.previousJson ?? null),
       )) as ArrangeOutcome;
 
       if (arranged.arrangedJson) {
@@ -677,14 +687,26 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
       }
       first ??= arranged.rejections;
       // Chỉ còn lỗi hình học (`retry: 'none'`): bộ dựng hình đã thử hết cách, mô hình không sửa được.
-      if (round > HOUSE_REVISIONS_MAX || arranged.retry === 'none') {
+      // Mô hình trả lại y nguyên phần đang hỏng (`'unchanged'`): gọi nữa là cùng lời dẫn, cùng kết quả.
+      if (
+        round > HOUSE_REVISIONS_MAX ||
+        arranged.retry === 'none' ||
+        arranged.retry === 'unchanged'
+      ) {
         // Một lượt TRƯỚC đã xếp được (dưới ngưỡng), lượt sửa vì điểm thì hỏng: lưu bản đã có.
         if (best) return this.writeBest(step, deps, params, variant, best, calls.length);
         throw new AiPlanRejected(
           finalRejections(arranged.rejections, first, arranged.retry, calls.length),
         );
       }
-      previous = arranged;
+      // Sửa tiếp từ lượt hỏng nhẹ nhất, không phải lượt mới nhất (T73 i, lượt đo 5cd78ef7).
+      const picked: { best: ArrangeOutcome | null; next: ArrangeOutcome } =
+        arranged.retry === 'revise'
+          ? revisionBase(bestFailed, arranged, deps.prompts, resent >= STALLED_AFTER)
+          : { best: bestFailed, next: arranged };
+      resent = picked.best === arranged ? 0 : resent + 1;
+      bestFailed = picked.best;
+      previous = picked.next;
     }
   }
 

@@ -3,7 +3,8 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 #
 #  Gói:       nvg_measured
-#  Phiên bản: 2026.09.1
+#  Phiên bản: 2026.09.2 (23/09/2026: thêm bốn dự án HS-03 → HS-06; Q-52 nới hai ngưỡng — WC
+#             dài/rộng 2,2 → 2,5, hành lang 1,1 → 1,0)
 #  Thêm:      12/09/2026
 #  Số quy tắc: 8, tất cả mức `warning`
 #
@@ -28,12 +29,19 @@
 #  chứng cứ TỐT HƠN. Ngày nào bộ giải được re-tune, đây là chỗ lấy số.
 #
 #  ── n ────────────────────────────────────────────────────────────────────────
-#  Nguồn: 2 dự án NVO đã xây, 6 mặt bằng độc lập (P1 nhà vườn 2 tầng 03/2026;
-#  P2 liền kề 5 tầng 08/2026). Phân tích ở
-#  `~/Documents/Doc/NVG/design/mat_bang_cong_nang/`.
+#  Nguồn: 6 dự án NVO. Đợt 1 (12/09/2026): P1 nhà vườn 2 tầng, P2 liền kề 5 tầng, 6 mặt
+#  bằng. Đợt 2 (23/09/2026): HS-03 liền kề trong ngõ 3 tầng, HS-04 mái Nhật sân vườn 1 tầng,
+#  HS-05 liền kề mái Nhật 1 tầng, HS-06 mái Nhật 2 tầng — 7 mặt bằng. Bảng từng phòng:
+#  `~/Documents/Doc/NVG/design/mat_bang_cong_nang/phong_do_duoc.csv` (ngoài repo, dữ liệu hạng 1).
+#  `n` = số MẶT BẰNG có loại phòng ấy; `n_du_an` = số dự án.
 #
-#  ⚠️ n tối đa 6, n theo dự án tối đa 2. CLAUDE.md 8.8 điểm 7 đòi n ≥ 15 mới là
-#     ĐỊNH MỨC. Mọi con số ở đây là CHỈ DẤU.
+#  Cách đo đợt 2 (`doc/design/13-ho-so-thuc-te.md` 13.17): đa giác phòng DỰNG từ nét tường —
+#  nối khe cửa thẳng hàng rồi khép ô — không lấy nhãn diện tích. Nhãn chỉ dùng để KIỂM: 13 phòng
+#  có nhãn, 12 lệch ≤ 9 %; phòng còn lại (bếp HS-05, −22 %) lệch vì nhãn tính cả đoạn hành lang.
+#  HS-07 (biệt thự Anh Tăng) KHÔNG đo: chỉ có hồ sơ điện nước, tường một nét lẫn đồ đạc.
+#
+#  ⚠️ NVG không còn hồ sơ nào gửi thêm (Haan, 23/09/2026) — n sẽ không tăng nữa. Ngưỡng
+#     thống kê là 5 (Q-49), nhưng mọi con số ở đây vẫn chỉ vào ĐIỂM và CẢNH BÁO (T52).
 #
 #  Chỉ khai những vị từ bộ đối chiếu ĐO ĐƯỢC: `min_dimension`, `min_area`,
 #  `max_area`, `aspect_ratio_max`. Các quan hệ đo được khác (đi xuyên phòng ngủ,
@@ -50,9 +58,9 @@
   value_m: 2.35
   severity: warning
   source: 'đo trên hồ sơ NVG'
-  n: 3
-  n_du_an: 2
-  khoang_quan_sat: '2,39 – 2,71 m (5 phòng)'
+  n: 9
+  n_du_an: 6
+  khoang_quan_sat: '2,39 – 3,67 m (18 phòng)'
   auto_repair: shrink_adjacent
 
 - id: room_min_area_bedroom
@@ -63,9 +71,9 @@
   value_m2: 9.0
   severity: warning
   source: 'đo trên hồ sơ NVG'
-  n: 3
-  n_du_an: 2
-  khoang_quan_sat: '9,1 – 10,6 m² (tính từ đa giác, KHÔNG từ nhãn)'
+  n: 9
+  n_du_an: 6
+  khoang_quan_sat: '9,1 – 13,9 m² (18 phòng, tính từ đa giác, KHÔNG từ nhãn)'
   auto_repair: shrink_adjacent
 
 - id: room_aspect_ratio_max_bedroom
@@ -76,9 +84,9 @@
   value: 1.9
   severity: warning
   source: 'đo trên hồ sơ NVG'
-  n: 3
-  n_du_an: 2
-  khoang_quan_sat: '1,32 – 1,84'
+  n: 9
+  n_du_an: 6
+  khoang_quan_sat: '1,03 – 1,84 (18 phòng)'
   auto_repair: shrink_adjacent
 
 - id: room_min_dimension_master_bedroom
@@ -89,9 +97,9 @@
   value_m: 3.1
   severity: warning
   source: 'đo trên hồ sơ NVG'
-  n: 2
-  n_du_an: 2
-  khoang_quan_sat: '3,12 – 3,66 m'
+  n: 4
+  n_du_an: 4
+  khoang_quan_sat: '3,12 – 3,91 m (4 phòng)'
   auto_repair: shrink_adjacent
 
 - id: room_min_area_wc
@@ -102,9 +110,9 @@
   value_m2: 3.0
   severity: warning
   source: 'đo trên hồ sơ NVG'
-  n: 5
-  n_du_an: 2
-  khoang_quan_sat: '3,1 – 4,5 m²'
+  n: 12
+  n_du_an: 6
+  khoang_quan_sat: '2,98 – 6,49 m² (14 phòng; 2,98 là WC ngoài nhà ở sân sau HS-05)'
   auto_repair: shrink_adjacent
 
 - id: room_aspect_ratio_max_wc
@@ -112,12 +120,14 @@
   scope: floor
   predicate: aspect_ratio_max
   target: wc
-  value: 2.2
+  # 2,2 → 2,5 (Haan duyệt Q-52, 23/09/2026): ba WC của HS-03 là 1,40 × 3,31–3,42 m, lavabo đặt
+  # trong cùng dải — tỉ lệ 2,36–2,44. Ngưỡng 2,2 báo oan chính nhà NVG đã vẽ.
+  value: 2.5
   severity: warning
   source: 'đo trên hồ sơ NVG'
-  n: 5
-  n_du_an: 2
-  khoang_quan_sat: '1,84 – 2,14 (phòng chữ nhật)'
+  n: 12
+  n_du_an: 6
+  khoang_quan_sat: '1,33 – 2,44 (phòng chữ nhật)'
   auto_repair: shrink_adjacent
 
 - id: room_min_dimension_living
@@ -128,9 +138,9 @@
   value_m: 3.5
   severity: warning
   source: 'đo trên hồ sơ NVG'
-  n: 2
-  n_du_an: 2
-  khoang_quan_sat: '3,58 – 4,60 m'
+  n: 5
+  n_du_an: 5
+  khoang_quan_sat: '3,58 – 4,60 m (5 phòng; HS-03 tầng 1 mở liền chỗ để xe, không đo)'
   ghi_chu: 'cả 2 mẫu là phòng khách MỞ THÔNG; đo theo vùng chức năng'
   auto_repair: shrink_adjacent
 
@@ -142,12 +152,13 @@
   scope: floor
   predicate: min_dimension
   target: circulation
-  value_m: 1.1
+  # 1,1 → 1,0 (Haan duyệt Q-52, 23/09/2026): HS-03 và HS-05 làm hành lang đúng 1,00 m lọt lòng.
+  value_m: 1.0
   severity: warning
   source: 'đo trên hồ sơ NVG'
-  n: 3
-  n_du_an: 2
-  khoang_quan_sat: '1,10 – 1,30 m (hành lang)'
+  n: 6
+  n_du_an: 5
+  khoang_quan_sat: '1,00 – 1,30 m (hành lang)'
   auto_repair: shrink_adjacent
 # ── HAI CHỖ CỐ Ý ĐỂ TRỐNG ─────────────────────────────────────────────────────
 #
