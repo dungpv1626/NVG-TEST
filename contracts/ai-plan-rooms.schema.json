@@ -267,6 +267,12 @@
           "minimum": 2,
           "maximum": 40,
           "description": "Tổng số bậc trong ô thang này. Số bậc × chiều cao bậc phải bằng chiều cao tầng."
+        },
+        "going": {
+          "type": "integer",
+          "minimum": 15,
+          "maximum": 45,
+          "description": "Bề sâu mặt bậc, cm — CHƯƠNG TRÌNH điền từ `kb/construction_norms.yaml` (T70)."
         }
       }
     },

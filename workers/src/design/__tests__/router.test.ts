@@ -37,6 +37,7 @@ describe('config/models.yaml', () => {
       'ai_text_openai',
       'ai_text_openai_deep',
       'ai_text_openai_fast',
+      'ai_text_openai_sol6',
       'ai_text_openai_top',
       'kb_label_normalize',
       'kb_rationale_embed',

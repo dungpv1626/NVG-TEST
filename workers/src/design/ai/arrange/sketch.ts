@@ -633,6 +633,18 @@ export function forceSketchRect(sketch: PreparedSketch, id: string, rect: Rect):
   return changed;
 }
 
+/** Ô lưới (0-based, cận trên loại trừ) mà `forceSketchRect` sẽ ép — để câu nhắc nói đúng hàng, cột. */
+export function forcedCellBox(sketch: PreparedSketch, rect: Rect): Box {
+  return cellBox(sketch, rect);
+}
+
+/** Mã các phòng đang có ít nhất một ô trên bản phác. */
+export function sketchIds(sketch: PreparedSketch): Set<string> {
+  const ids = new Set<string>();
+  for (const row of sketch.grid.cells) for (const id of row) if (id) ids.add(id);
+  return ids;
+}
+
 /** Ô lưới mà một chữ nhật theo tim tường phủ — cùng phép làm tròn cho mọi chỗ ép ô. */
 function cellBox(sketch: PreparedSketch, rect: Rect): Box {
   const { grid, footprint } = sketch;
@@ -674,6 +686,69 @@ export interface WetStackInput {
   areaFloor: (id: string) => number | null;
   /** Bề dày tường dùng để ước lọt lòng, cm. */
   wallCm: number;
+}
+
+/**
+ * Nới một phòng thêm MỘT dải ô (một hàng hoặc một cột) lấy của phòng kề (T79). Dải phải là trọn một
+ * hàng / cột của phòng cho, để cả hai vẫn là chữ nhật; phòng cho phải còn ít nhất một hàng / cột.
+ * `spare(other, remainingCells)` trả phần dư của phòng cho sau khi mất dải (chọn phòng dư nhiều nhất),
+ * `null` = không được lấy của phòng ấy (ô lõi, hành lang, phòng sẽ hụt). `null` khi không có dải nào.
+ */
+export function growSketchRoom(
+  sketch: PreparedSketch,
+  id: string,
+  spare: (other: string, remainingCells: number) => number | null,
+): { sketch: PreparedSketch; from: string; cells: number } | null {
+  const { grid } = sketch;
+  const all = boxes(grid);
+  const box = all.get(id);
+  if (!box) return null;
+  const options: { cells: [number, number][]; from: string; score: number }[] = [];
+  const consider = (cells: [number, number][], axis: 'row' | 'col') => {
+    if (!cells.length) return;
+    if (cells.some(([r, c]) => r < 0 || r >= grid.rows || c < 0 || c >= grid.cols)) return;
+    const ids = new Set(cells.map(([r, c]) => grid.cells[r]![c]));
+    if (ids.size !== 1) return;
+    const from = [...ids][0];
+    if (!from || from === id) return;
+    const fb = all.get(from);
+    if (!fb) return;
+    const whole =
+      axis === 'row'
+        ? fb.c0 === box.c0 && fb.c1 === box.c1 && fb.r1 - fb.r0 >= 2
+        : fb.r0 === box.r0 && fb.r1 === box.r1 && fb.c1 - fb.c0 >= 2;
+    if (!whole) return;
+    const remaining = (fb.c1 - fb.c0) * (fb.r1 - fb.r0) - cells.length;
+    const score = spare(from, remaining);
+    if (score === null) return;
+    options.push({ cells, from, score });
+  };
+  const cols: number[] = [];
+  for (let c = box.c0; c < box.c1; c += 1) cols.push(c);
+  const rows: number[] = [];
+  for (let r = box.r0; r < box.r1; r += 1) rows.push(r);
+  consider(
+    cols.map((c) => [box.r0 - 1, c]),
+    'row',
+  );
+  consider(
+    cols.map((c) => [box.r1, c]),
+    'row',
+  );
+  consider(
+    rows.map((r) => [r, box.c0 - 1]),
+    'col',
+  );
+  consider(
+    rows.map((r) => [r, box.c1]),
+    'col',
+  );
+  if (!options.length) return null;
+  options.sort((p, q) => q.score - p.score || p.from.localeCompare(q.from));
+  const pick = options[0]!;
+  const copy = copySketch(sketch);
+  for (const [r, c] of pick.cells) copy.grid.cells[r]![c] = id;
+  return { sketch: copy, from: pick.from, cells: pick.cells.length };
 }
 
 /** Bản sao dùng riêng, để thử một cách chia khác mà không đụng bản gốc. */
@@ -1133,4 +1208,128 @@ function snap(value: number): number {
 
 function round1(value: number): number {
   return Math.round(value * 10) / 10;
+}
+
+/**
+ * Mặt bằng đã chia → hàng bản phác, trên lưới khối nhà `cols × rows` mà mô hình đã vẽ (T86). Dùng khi
+ * chương trình phải CHIA LẠI một tầng (bản phác hỏng) và tầng ấy qua cổng: lượt sửa giữ nguyên tầng đó,
+ * và gửi mô hình đúng cách chia thật thay cho bản phác cũ — tầng trên vẽ theo vị trí thang, thang máy,
+ * khu ướt thật chứ không theo bản phác đã bị bỏ.
+ *
+ * Toạ độ phòng là lòng phòng (mép trong tường), nên giữa hai phòng có khe tường: mỗi ô lấy phòng CHỒNG
+ * LẤN NHIỀU NHẤT, không lấy theo tâm ô (tâm ô rơi vào khe tường thì thành lỗ «.» giữa nhà). Ô không chạm
+ * phòng nào là «.». Phòng không thắng ô nào vẫn được ô chồng lấn nó nhiều nhất, để không phòng nào biến
+ * mất khỏi bản phác.
+ */
+export function partitionRows(
+  rooms: readonly { id: string; rect: readonly number[] }[],
+  block: Rect,
+  cols: number,
+  rows: number,
+): string[] {
+  const w = (block.x1 - block.x0) / cols;
+  const h = (block.y1 - block.y0) / rows;
+  const overlap = (rect: readonly number[], r: number, c: number) => {
+    const x0 = block.x0 + c * w;
+    const y0 = block.y0 + r * h;
+    const dx = Math.min(rect[2]!, x0 + w) - Math.max(rect[0]!, x0);
+    const dy = Math.min(rect[3]!, y0 + h) - Math.max(rect[1]!, y0);
+    return dx > 0 && dy > 0 ? dx * dy : 0;
+  };
+  const cells: string[][] = Array.from({ length: rows }, (_, r) =>
+    Array.from({ length: cols }, (_, c) => {
+      let best = EMPTY;
+      let most = 0;
+      for (const room of rooms) {
+        const area = overlap(room.rect, r, c);
+        if (area > most) {
+          most = area;
+          best = room.id;
+        }
+      }
+      return best;
+    }),
+  );
+  for (const room of rooms) {
+    if (cells.some((row) => row.includes(room.id))) continue;
+    let at: [number, number] | null = null;
+    let most = 0;
+    for (let r = 0; r < rows; r += 1) {
+      for (let c = 0; c < cols; c += 1) {
+        const area = overlap(room.rect, r, c);
+        if (area > most) {
+          most = area;
+          at = [r, c];
+        }
+      }
+    }
+    if (at) cells[at[0]]![at[1]] = room.id;
+  }
+  return cells.map((row) => row.join(' '));
+}
+
+/**
+ * Tách phòng gộp (`also`, ví dụ khách + ăn mở chung) về từng phòng của ý định, dọc cạnh dài, theo tỉ lệ
+ * diện tích mục tiêu — bản phác của mô hình ghi riêng từng phòng, thiếu một mã thì chương trình coi là
+ * «ý định bỏ sót phòng».
+ */
+export function splitMerged(
+  rooms: readonly { id: string; rect: readonly number[]; also?: readonly string[] | null }[],
+  targetOf: (id: string) => number,
+): { id: string; rect: number[] }[] {
+  return rooms.flatMap((room) => {
+    const [x0 = 0, y0 = 0, x1 = 0, y1 = 0] = room.rect;
+    const members = [room.id, ...(room.also ?? [])];
+    if (members.length < 2) return [{ id: room.id, rect: [x0, y0, x1, y1] }];
+    const weights = members.map((id) => Math.max(targetOf(id), 1));
+    const total = weights.reduce((sum, weight) => sum + weight, 0);
+    const horizontal = x1 - x0 >= y1 - y0;
+    let cursor = horizontal ? x0 : y0;
+    return members.map((id, index) => {
+      const end =
+        index === members.length - 1
+          ? horizontal
+            ? x1
+            : y1
+          : cursor + ((horizontal ? x1 - x0 : y1 - y0) * weights[index]!) / total;
+      const rect = horizontal ? [cursor, y0, end, y1] : [x0, cursor, x1, end];
+      cursor = end;
+      return { id, rect };
+    });
+  });
+}
+
+/**
+ * Ô ghi mã ngoài `known` (phòng chương trình tự thêm, ví dụ nhánh hành lang V-29) nhập vào phòng kề nó
+ * — ưu tiên phòng giao thông, rồi phòng kề nhiều ô nhất. Bản phác chỉ được ghi mã phòng của ý định, và
+ * ô «.» giữa nhà là lỗ thủng, không phải chỗ trống.
+ */
+export function absorbUnknown(rows: readonly string[], known: ReadonlySet<string>): string[] {
+  const cells = rows.map((row) => row.split(' '));
+  const unknown = (id: string) => id !== EMPTY && !known.has(id);
+  for (let pass = 0; pass < cells.length * (cells[0]?.length ?? 0); pass += 1) {
+    let changed = false;
+    let left = false;
+    for (let r = 0; r < cells.length; r += 1) {
+      for (let c = 0; c < cells[r]!.length; c += 1) {
+        if (!unknown(cells[r]![c]!)) continue;
+        const near = [
+          cells[r - 1]?.[c],
+          cells[r + 1]?.[c],
+          cells[r]![c - 1],
+          cells[r]![c + 1],
+        ].filter((id): id is string => !!id && known.has(id));
+        if (!near.length) {
+          left = true;
+          continue;
+        }
+        const count = (id: string) => near.filter((item) => item === id).length;
+        const rank = (id: string) => (/^circulation_|^corridor_/.test(id) ? 100 : 0) + count(id);
+        cells[r]![c] = [...near].sort((p, q) => rank(q) - rank(p) || p.localeCompare(q))[0]!;
+        changed = true;
+      }
+    }
+    if (!left || !changed) break;
+  }
+  return cells.map((row) => row.map((id) => (unknown(id) ? EMPTY : id)).join(' '));
 }

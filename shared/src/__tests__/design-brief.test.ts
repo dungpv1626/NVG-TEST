@@ -31,6 +31,7 @@ import {
   visibleFields,
   type BriefFormConfig,
   type DesignBriefDraft,
+  withoutHiddenAnswers,
 } from '../design';
 
 const root = (p: string) => fileURLToPath(new URL(`../../../${p}`, import.meta.url));
@@ -314,12 +315,48 @@ describe('Soát mâu thuẫn', () => {
     expect(checkBriefConsistency({}, BRIEF_FORM)).toEqual([]);
   });
 
+  it('khai thang máy mà chưa có kích thước giếng: NGHIÊM TRỌNG — không đoán theo tải (Haan 25/09/2026)', () => {
+    for (const elevator of ['lam_ngay', 'chua_cho'] as const) {
+      expect(
+        codes({ floors: 3, vertical: { elevator, elevator_capacity: 'vua_450kg' } }),
+      ).toContain('thang_may_thieu_kich_thuoc');
+      expect(
+        codes({
+          floors: 3,
+          vertical: { elevator, elevator_shaft_width_m: 1.5, elevator_shaft_depth_m: 1.6 },
+        }),
+      ).not.toContain('thang_may_thieu_kich_thuoc');
+    }
+    expect(codes({ floors: 3, vertical: { elevator: 'khong' } })).not.toContain(
+      'thang_may_thieu_kich_thuoc',
+    );
+    const found = checkBriefConsistency(
+      { floors: 3, vertical: { elevator: 'lam_ngay' } },
+      BRIEF_FORM,
+    ).find((i) => i.code === 'thang_may_thieu_kich_thuoc');
+    expect(found?.severity).toBe('nghiem_trong');
+  });
+
+  it('kiểu bố trí thang máy «khác» mà chưa mô tả: cảnh báo, không chặn', () => {
+    const vertical = { elevator: 'lam_ngay', elevator_position: 'khac' } as const;
+    expect(codes({ floors: 3, vertical })).toContain('thang_may_kieu_khac_chua_mo_ta');
+    expect(
+      codes({ floors: 3, vertical: { ...vertical, elevator_layout_note: 'cuối hành lang' } }),
+    ).not.toContain('thang_may_kieu_khac_chua_mo_ta');
+  });
+
   it('khoảng lùi nuốt hết lô đất', () => {
     expect(
-      codes({ site: { width_m: 5, depth_m: 18, setback_required_m: { front: 10, back: 10 } } }),
+      codes({
+        building_type: 'biet_thu',
+        site: { width_m: 5, depth_m: 18, setback_required_m: { front: 10, back: 10 } },
+      }),
     ).toContain('khoang_lui_vuot_chieu_sau');
     expect(
-      codes({ site: { width_m: 5, depth_m: 18, setback_required_m: { left: 3, right: 3 } } }),
+      codes({
+        building_type: 'biet_thu',
+        site: { width_m: 5, depth_m: 18, setback_required_m: { left: 3, right: 3 } },
+      }),
     ).toContain('khoang_lui_vuot_be_rong');
   });
 
@@ -379,13 +416,15 @@ describe('Soát mâu thuẫn', () => {
     ).toEqual([]);
   });
 
-  it('nhà phố mà khai khoảng lùi hai bên', () => {
-    expect(
-      codes({
-        building_type: 'nha_pho',
-        site: { width_m: 5, depth_m: 18, setback_required_m: { left: 1 } },
-      }),
-    ).toContain('nha_pho_co_khoang_lui_ben');
+  it('nhà phố: khoảng lùi còn lại từ lúc tạm chọn biệt thự là ô ẨN — bị bỏ, không soát (29/09/2026)', () => {
+    // Trước đây có cảnh báo `nha_pho_co_khoang_lui_ben` cho đúng dữ liệu cũ này. Nay ô ẩn không đi tới
+    // phép soát lẫn bản gửi mô hình (`withoutHiddenAnswers`), nên khoảng lùi cũ không còn tác dụng gì.
+    const found = codes({
+      building_type: 'nha_pho',
+      site: { width_m: 5, depth_m: 18, setback_required_m: { left: 3, right: 3 } },
+    });
+    expect(found).not.toContain('khoang_lui_vuot_be_rong');
+    expect(found).not.toContain('nha_pho_co_khoang_lui_ben');
   });
 
   it('khai người ở mà không suy ra được phòng ngủ nào', () => {
@@ -689,6 +728,7 @@ describe('Chiều sâu sân so với khoảng lùi', () => {
   it('sân không lớn hơn khoảng lùi thì cảnh báo là không có tác dụng — hai số không cộng', () => {
     const issues = checkBriefConsistency(
       {
+        building_type: 'biet_thu',
         site: { width_m: 15, depth_m: 20, setback_required_m: { front: 4 } },
         massing: { yards: ['san_truoc', 'san_ben'], yard_depth_m: { front: 1, left: 2 } },
       },
@@ -743,5 +783,359 @@ describe('Diện tích TỐI THIỂU so với sàn xây được (13/09/2026)', 
     expect(checkBriefConsistency(roomy, BRIEF_FORM).map((i) => i.code)).not.toContain(
       'tong_dien_tich_gan_kin_san',
     );
+  });
+});
+
+describe('Hướng bàn thờ / bếp khai lệch nhau (28/09/2026)', () => {
+  // Haan: báo ngay ở đầu bài để người nhập quyết. Đầu bài demo: «bàn thờ hướng đông» ở ghi chú phong
+  // thuỷ, «hướng đông nam» ở dòng phòng thờ — mô hình đọc cả hai và tự chọn một.
+  const draft = (
+    notes: string | null,
+    rows: { type: string; amenities: string | null }[],
+    taboos: string | null = null,
+  ) =>
+    ({
+      household: { feng_shui: 'co_xem', feng_shui_notes: notes, taboos },
+      required_spaces: rows.map((row) => ({ ...row, floor: null, area_m2: null, ensuite: null })),
+    }) as unknown as DesignBriefDraft;
+  const conflicts = (d: DesignBriefDraft) =>
+    checkBriefConsistency(d, BRIEF_FORM).filter((i) => i.code === 'huong_lech_nhau');
+
+  it('đầu bài demo: «đông» ở ghi chú, «đông nam» ở dòng phòng thờ → một cảnh báo nêu cả hai chỗ', () => {
+    const found = conflicts(
+      draft('bàn thờ hướng đông', [{ type: 'altar_room', amenities: 'hướng đông nam' }]),
+    );
+    expect(found).toHaveLength(1);
+    expect(found[0]!.severity).toBe('canh_bao');
+    expect(found[0]!.message).toMatch(/bàn thờ/);
+    expect(found[0]!.message).toMatch(/«đông» ở «Yêu cầu phong thuỷ cụ thể»/);
+    expect(found[0]!.message).toMatch(/«đông nam» ở dòng «Phòng thờ/);
+    expect(found[0]!.paths).toEqual(['household.feng_shui_notes', 'required_spaces']);
+  });
+
+  it('cùng một hướng ở hai chỗ, viết hoa khác nhau: không cảnh báo', () => {
+    expect(
+      conflicts(
+        draft('Bàn thờ hướng Đông Nam', [{ type: 'altar_room', amenities: 'hướng đông nam' }]),
+      ),
+    ).toEqual([]);
+  });
+
+  it('chỉ đọc mệnh đề nhắc tới bàn thờ — «cửa chính hướng nam» không phải hướng bàn thờ', () => {
+    expect(conflicts(draft('bàn thờ hướng đông; cửa chính hướng nam', []))).toEqual([]);
+  });
+
+  it('bếp: ghi chú kiêng kỵ và dòng bếp khai hai hướng → cảnh báo nói về bếp', () => {
+    const found = conflicts(
+      draft(null, [{ type: 'kitchen', amenities: 'bếp đảo, hướng bắc' }], 'bếp hướng tây'),
+    );
+    expect(found).toHaveLength(1);
+    expect(found[0]!.message).toMatch(/hướng bếp/);
+    expect(found[0]!.paths).toEqual(['household.taboos', 'required_spaces']);
+  });
+
+  it('«thờ» phải là trọn từ — «thời điểm khởi công hướng tây» không phải hướng bàn thờ', () => {
+    const d = draft('thời điểm khởi công hướng tây', [
+      { type: 'altar_room', amenities: 'hướng đông' },
+    ]);
+    expect(conflicts(d)).toEqual([]);
+  });
+
+  it('«bàn thờ, hướng tây» (dấu phẩy) vẫn là hướng bàn thờ; «cửa chính hướng nam» phía sau thì không', () => {
+    const found = conflicts(
+      draft('bàn thờ, hướng tây, cửa chính hướng nam', [
+        { type: 'altar_room', amenities: 'hướng đông' },
+      ]),
+    );
+    expect(found).toHaveLength(1);
+    expect(found[0]!.message).toMatch(/«tây» ở «Yêu cầu phong thuỷ cụ thể»/);
+    expect(found[0]!.message).not.toMatch(/«nam»/);
+  });
+
+  it('không xem phong thuỷ thì ô ghi chú phong thuỷ ẩn — chữ cũ còn lại không sinh cảnh báo', () => {
+    const d = draft('bàn thờ hướng đông', [{ type: 'altar_room', amenities: 'hướng tây' }]);
+    (d.household as { feng_shui: string }).feng_shui = 'khong_xem';
+    expect(conflicts(d)).toEqual([]);
+  });
+
+  it('chữ Unicode tổ hợp (NFD, gõ từ máy Mac) vẫn đọc ra đúng hướng', () => {
+    const notes = 'bàn thờ hướng đông'.normalize('NFD');
+    expect(conflicts(draft(notes, [{ type: 'altar_room', amenities: 'hướng Tây' }]))).toHaveLength(
+      1,
+    );
+  });
+
+  it('biểu mẫu trắng và chỉ một chỗ khai hướng: không cảnh báo', () => {
+    expect(conflicts({} as DesignBriefDraft)).toEqual([]);
+    expect(conflicts(draft('bàn thờ hướng đông', []))).toEqual([]);
+  });
+});
+
+describe('Hai câu trả lời ở hai mục khác nhau nói ngược nhau (28/09/2026)', () => {
+  // Haan: «khi đầu bài nhập thông tin mâu thuẫn thì nên có cảnh báo ngay để user sửa».
+  const has = (d: unknown, code: string) =>
+    checkBriefConsistency(d as DesignBriefDraft, BRIEF_FORM).some((i) => i.code === code);
+  const row = (type: string, floor: number | null = null) => ({
+    type,
+    floor,
+    area_m2: null,
+    ensuite: null,
+    amenities: null,
+  });
+
+  it('lối vào / lối xe đặt ở mặt không tiếp cận được — chặn', () => {
+    const d = { site: { access_sides: ['front'], main_entrance_side: 'left' } };
+    expect(has(d, 'loi_vao_mat_khong_tiep_can')).toBe(true);
+    const found = checkBriefConsistency(d as unknown as DesignBriefDraft, BRIEF_FORM).find(
+      (i) => i.code === 'loi_vao_mat_khong_tiep_can',
+    )!;
+    expect(found.severity).toBe('nghiem_trong');
+    expect(
+      has(
+        { site: { access_sides: ['front', 'left'], main_entrance_side: 'left' } },
+        'loi_vao_mat_khong_tiep_can',
+      ),
+    ).toBe(false);
+    // Chưa khai mặt tiếp cận: đã có cảnh báo riêng, không nổ thêm.
+    expect(has({ site: { main_entrance_side: 'left' } }, 'loi_vao_mat_khong_tiep_can')).toBe(false);
+  });
+
+  it('mặt tiếp cận lại giáp nhà hàng xóm', () => {
+    expect(
+      has(
+        { site: { access_sides: ['right'], adjacent: { right: 'nha_hang_xom' } } },
+        'tiep_can_mat_giap_nha_xom',
+      ),
+    ).toBe(true);
+    expect(
+      has(
+        { site: { access_sides: ['left'], adjacent: { left: 'hem_3m' } } },
+        'tiep_can_mat_giap_nha_xom',
+      ),
+    ).toBe(false);
+  });
+
+  it('không thờ cúng / thờ chung phòng khách mà vẫn có dòng phòng thờ', () => {
+    expect(
+      has(
+        { household: { religion: 'khong' }, required_spaces: [row('altar_room')] },
+        'phong_tho_lech_cach_bo_tri',
+      ),
+    ).toBe(true);
+    expect(
+      has(
+        {
+          household: { religion: 'tho_cung_to_tien', altar_arrangement: 'chung_phong_khach' },
+          required_spaces: [row('altar_room')],
+        },
+        'phong_tho_lech_cach_bo_tri',
+      ),
+    ).toBe(true);
+    expect(
+      has(
+        {
+          household: { religion: 'tho_cung_to_tien', altar_arrangement: 'phong_tho_rieng' },
+          required_spaces: [row('altar_room')],
+        },
+        'phong_tho_lech_cach_bo_tri',
+      ),
+    ).toBe(false);
+  });
+
+  // «Tầng đặt nơi thờ» chỉ hiện khi nơi thờ là phòng riêng / trên sân thượng.
+  const ownRoom = { religion: 'tho_cung_to_tien', altar_arrangement: 'phong_tho_rieng' };
+
+  it('tầng đặt nơi thờ khác tầng của dòng phòng thờ', () => {
+    expect(
+      has(
+        { household: { ...ownRoom, altar_floor: 3 }, required_spaces: [row('altar_room', 2)] },
+        'tang_tho_lech_dong_phong_tho',
+      ),
+    ).toBe(true);
+    expect(
+      has(
+        { household: { ...ownRoom, altar_floor: 2 }, required_spaces: [row('altar_room', 2)] },
+        'tang_tho_lech_dong_phong_tho',
+      ),
+    ).toBe(false);
+    expect(
+      has(
+        { household: { ...ownRoom, altar_floor: 2 }, required_spaces: [row('altar_room')] },
+        'tang_tho_lech_dong_phong_tho',
+      ),
+    ).toBe(false);
+  });
+
+  it('không xem phong thuỷ mà xếp phong thuỷ vào ưu tiên', () => {
+    expect(
+      has(
+        { household: { feng_shui: 'khong_xem' }, priorities: ['feng_shui'] },
+        'khong_xem_phong_thuy_ma_uu_tien',
+      ),
+    ).toBe(true);
+    expect(
+      has(
+        { household: { feng_shui: 'co_xem' }, priorities: ['feng_shui'] },
+        'khong_xem_phong_thuy_ma_uu_tien',
+      ),
+    ).toBe(false);
+  });
+
+  it('0 ô tô VÀ 0 xe máy mà vẫn có dòng «Chỗ để xe»; chưa khai số xe thì không nói', () => {
+    const garage = [row('garage')];
+    expect(
+      has({ parking: { cars: 0, motorbikes: 0 }, required_spaces: garage }, 'co_gara_khong_xe'),
+    ).toBe(true);
+    expect(has({ parking: {}, required_spaces: garage }, 'co_gara_khong_xe')).toBe(false);
+  });
+
+  it('«Chỗ để xe» là cả xe máy: 0 ô tô nhưng 2 xe máy không phải mâu thuẫn (rà soát 29/09/2026)', () => {
+    const garage = [row('garage')];
+    expect(
+      has({ parking: { cars: 0, motorbikes: 2 }, required_spaces: garage }, 'co_gara_khong_xe'),
+    ).toBe(false);
+    expect(has({ parking: { cars: 0 }, required_spaces: garage }, 'co_gara_khong_xe')).toBe(false);
+  });
+
+  it('ô đang ẩn không sinh cảnh báo — phiếu giữ giá trị cũ của ô đã ẩn (rà soát 29/09/2026)', () => {
+    // Chưa chọn «Ban công làm tới đâu» thì ô mặt ban công ẩn: giá trị cũ không được CHẶN «AI Design».
+    const stale = {
+      site: { adjacent: { right: 'nha_hang_xom' } },
+      balconies: { required_sides: ['right'] },
+    };
+    expect(has(stale, 'ban_cong_mat_giap_nha_xom')).toBe(false);
+    // Nơi thờ chung phòng khách thì ô «Tầng đặt nơi thờ» ẩn — tầng cũ không so với dòng phòng thờ.
+    const shared = {
+      household: {
+        religion: 'tho_cung_to_tien',
+        altar_arrangement: 'chung_phong_khach',
+        altar_floor: 3,
+      },
+      required_spaces: [row('altar_room', 2)],
+    };
+    expect(has(shared, 'tang_tho_lech_dong_phong_tho')).toBe(false);
+  });
+
+  it('nhà phố không có ô khoảng lùi / sân: câu chặn không bảo khai thứ không nhập được', () => {
+    const found = checkBriefConsistency(
+      {
+        building_type: 'nha_pho',
+        site: { adjacent: { left: 'nha_hang_xom' } },
+        balconies: { scope: 'moi_tang', required_sides: ['left'] },
+      } as unknown as DesignBriefDraft,
+      BRIEF_FORM,
+    ).find((i) => i.code === 'ban_cong_mat_giap_nha_xom')!;
+    expect(found.severity).toBe('nghiem_trong');
+    expect(found.message).not.toMatch(/khoảng lùi/);
+  });
+
+  it('không kinh doanh mà có dòng cửa hàng', () => {
+    expect(
+      has(
+        { household: { home_business: { mode: 'khong' } }, required_spaces: [row('shop')] },
+        'cua_hang_khong_kinh_doanh',
+      ),
+    ).toBe(true);
+    expect(
+      has(
+        {
+          household: { home_business: { mode: 'cua_hang_mat_tien' } },
+          required_spaces: [row('shop')],
+        },
+        'cua_hang_khong_kinh_doanh',
+      ),
+    ).toBe(false);
+  });
+
+  it('ban công chỉ mặt tiền mà mặt bắt buộc có mặt khác', () => {
+    expect(
+      has(
+        { balconies: { scope: 'chi_mat_tien', required_sides: ['front', 'back'] } },
+        'ban_cong_chi_mat_tien_lech_mat',
+      ),
+    ).toBe(true);
+    expect(
+      has(
+        { balconies: { scope: 'chi_mat_tien', required_sides: ['front'] } },
+        'ban_cong_chi_mat_tien_lech_mat',
+      ),
+    ).toBe(false);
+  });
+
+  it('ban công bắt buộc ở mặt giáp nhà hàng xóm không có khoảng lùi / sân — chặn; có sân thì thôi', () => {
+    // Biệt thự: ô khoảng lùi và chiều sâu sân đang hiện.
+    const base = {
+      building_type: 'biet_thu',
+      site: { adjacent: { right: 'nha_hang_xom' } },
+      balconies: { scope: 'moi_tang', required_sides: ['right'] },
+    };
+    expect(has(base, 'ban_cong_mat_giap_nha_xom')).toBe(true);
+    expect(
+      has({ ...base, massing: { yard_depth_m: { right: 2 } } }, 'ban_cong_mat_giap_nha_xom'),
+    ).toBe(false);
+    expect(
+      has(
+        {
+          ...base,
+          site: { adjacent: { right: 'nha_hang_xom' }, setback_required_m: { right: 1.5 } },
+        },
+        'ban_cong_mat_giap_nha_xom',
+      ),
+    ).toBe(false);
+  });
+
+  it('người đi lại khó khăn, nhà nhiều tầng, không thang máy — chỉ cảnh báo nhẹ', () => {
+    const d = { floors: 2, lifestyle: { reduced_mobility: true }, vertical: { elevator: 'khong' } };
+    const found = checkBriefConsistency(d as unknown as DesignBriefDraft, BRIEF_FORM).find(
+      (i) => i.code === 'di_lai_kho_khan_khong_thang_may',
+    );
+    expect(found?.severity).toBe('canh_bao');
+    expect(
+      has({ ...d, vertical: { elevator: 'chua_cho' } }, 'di_lai_kho_khan_khong_thang_may'),
+    ).toBe(false);
+    expect(has({ ...d, floors: 1 }, 'di_lai_kho_khan_khong_thang_may')).toBe(false);
+  });
+
+  it('cục nóng điều hoà đặt ban công phụ mà không làm ban công', () => {
+    expect(
+      has(
+        { systems: { aircon_outdoor: 'ban_cong_phu' }, balconies: { scope: 'khong_co' } },
+        'cuc_nong_ban_cong_khong_co',
+      ),
+    ).toBe(true);
+    expect(
+      has(
+        { systems: { aircon_outdoor: 'ban_cong_phu' }, balconies: { scope: 'moi_tang' } },
+        'cuc_nong_ban_cong_khong_co',
+      ),
+    ).toBe(false);
+  });
+});
+
+describe('withoutHiddenAnswers — bỏ câu trả lời của ô đang ẩn (29/09/2026)', () => {
+  it('ô ẩn kéo theo ô ẩn: không thờ cúng → bỏ cách bố trí nơi thờ → bỏ luôn tầng thờ', () => {
+    const draft = {
+      household: {
+        religion: 'khong',
+        altar_arrangement: 'phong_tho_rieng',
+        altar_floor: 2,
+        feng_shui: 'khong_xem',
+      },
+    };
+    const pruned = withoutHiddenAnswers(draft, BRIEF_FORM) as typeof draft;
+    expect(pruned.household).toEqual({ religion: 'khong', feng_shui: 'khong_xem' });
+    // Không sửa đối tượng gốc — phiếu vẫn giữ để người dùng đổi lại lựa chọn thì thấy lại câu cũ.
+    expect(draft.household.altar_floor).toBe(2);
+  });
+
+  it('ô đang hiện giữ nguyên; không có gì để bỏ thì trả chính đối tượng cũ', () => {
+    const draft = { building_type: 'biet_thu', site: { setback_required_m: { front: 3 } } };
+    expect(withoutHiddenAnswers(draft, BRIEF_FORM)).toBe(draft);
+  });
+
+  it('`keep` giữ ô ẩn mà chương trình tự dựng (chiều rộng / sâu của thửa đa giác)', () => {
+    const draft = { site: { shape: 'da_giac', width_m: 15, depth_m: 20 } };
+    expect(withoutHiddenAnswers(draft, BRIEF_FORM).site).toEqual({ shape: 'da_giac' });
+    expect(withoutHiddenAnswers(draft, BRIEF_FORM, ['site.width_m', 'site.depth_m'])).toBe(draft);
   });
 });

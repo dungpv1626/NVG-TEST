@@ -24,7 +24,7 @@ import {
   renderTitleBlock,
   svgDocument,
 } from './sheet';
-import { renderStairs, stairTreadZones } from './stairs';
+import { renderEntrySteps, renderStairs, stairTreadZones } from './stairs';
 import { renderNorthArrow } from './symbols';
 import { CLS, polylinePath, tag } from './svg';
 import type { Orientation, SheetStyle } from './style';
@@ -139,6 +139,7 @@ export function renderPlanBody(
     renderWalls(walls, openings.holes, paper),
     openings.svg,
     renderStairs(stairs, paper, style, ownStairs.length === 0),
+    renderEntrySteps(level.entry_steps ?? [], paper, style),
     renderRoomLabels(level.rooms, paper, style, labels, notes, [
       ...doorSwingZones(level, walls),
       ...stairTreadZones(stairs),
@@ -183,6 +184,11 @@ export function levelBounds(level: AiFloorPlanLevel): Rect {
   }
   for (const room of level.rooms) {
     const rect = toRect(room.rect);
+    points.push([rect.x0, rect.y0], [rect.x1, rect.y1]);
+  }
+  // Bậc tam cấp nằm NGOÀI hình bao khối xây (T70) — không tính thì tờ vẽ cắt mất bậc ngoài cùng.
+  for (const step of level.entry_steps ?? []) {
+    const rect = toRect(step.rect);
     points.push([rect.x0, rect.y0], [rect.x1, rect.y1]);
   }
   const bbox = bboxOfPoints(points);

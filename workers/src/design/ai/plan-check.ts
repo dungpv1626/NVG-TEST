@@ -48,9 +48,11 @@ import {
 } from './draw/geometry';
 import { prepareWalls, type WallGeom } from './draw/walls';
 import type { BalconyDemand, DemandedSpace, ElevatorDemand } from './brief-demands';
+import { mandatoryKey, mandatoryViolations, type MandatoryContext } from './mandatory';
 import {
   allowedBox,
   checkBalconyDemand,
+  checkElevatorLayout,
   checkElevatorStack,
   checkSoftDemands,
 } from './plan-demands';
@@ -149,12 +151,29 @@ export interface PlanCheckInput {
    * mốc đúc cũ đọc lại vẫn phải qua được cổng.
    */
   demands?: PlanDemands | null;
+  /**
+   * Luật bố trí BẮT BUỘC của Haan (T71, `rules/nvg-mandatory.yaml`, `ai/mandatory.ts`). Vắng = không
+   * kiểm, đúng hành vi trước T71 — tuyến xem lại artifact cũ cố ý không truyền.
+   */
+  mandatory?: MandatoryContext | null;
+  /**
+   * Vi phạm luật bắt buộc được HẠ xuống ghi chú, khoá `mã|phòng` (tuyến sửa của kỹ sư): chỉ những vi
+   * phạm ĐÃ CÓ trong phương án đang lưu — phương án cũ không thành không sửa nổi vì luật ra đời sau,
+   * nhưng một thao tác sửa không được TẠO vi phạm mới.
+   */
+  relaxMandatory?: ReadonlySet<string>;
 }
 
 export function checkPlan(input: PlanCheckInput): PlanCheckResult {
   const issues: PlanIssue[] = [];
-  const add = (level: IssueLevel, code: string, message: string, ref?: string): void => {
-    issues.push({ code, level, message, ...(ref ? { ref } : {}) });
+  const add = (
+    level: IssueLevel,
+    code: string,
+    message: string,
+    ref?: string,
+    params?: Record<string, string | number>,
+  ): void => {
+    issues.push({ code, level, message, ...(ref ? { ref } : {}), ...(params ? { params } : {}) });
   };
 
   checkAgainstProgram(input, add);
@@ -166,9 +185,17 @@ export function checkPlan(input: PlanCheckInput): PlanCheckResult {
     // Hai phép kiểm của T65 xét CẢ NHÀ: «mọi tầng đều có» và «ở mặt nào» không trả lời được khi
     // chỉ cầm một tầng lẻ, nên chúng đi cùng nhóm liên tầng với thang và đường đi.
     checkElevatorStack(input.plan, input.demands?.elevator ?? null, add);
+    checkElevatorLayout(input.plan, input.demands?.elevator ?? null, add);
     checkBalconyDemand(input.plan, input.demands?.balcony ?? null, add);
     checkSoftDemands(input.plan, input.demands?.spaces ?? [], add);
     checkReachability(input, add);
+    if (input.mandatory) {
+      for (const found of mandatoryViolations(input.plan.levels, input.mandatory)) {
+        const relaxed =
+          found.level === 'blocking' && input.relaxMandatory?.has(mandatoryKey(found));
+        issues.push(relaxed ? { ...found, level: 'finding' } : found);
+      }
+    }
   }
 
   return {
@@ -512,6 +539,65 @@ function checkVerticalElements(level: AiFloorPlanLevel, where: string, add: Add)
 
   for (const stair of level.stairs ?? []) inspect(stair.id, stair.rect, 'stair', 'Ô thang');
   for (const hole of level.voids ?? []) inspect(hole.id, hole.rect, 'void', 'Ô trống');
+}
+
+/**
+ * Diện tích ghi trên phòng và tên phòng là thứ CHƯƠNG TRÌNH gán (mô hình không còn khai toạ độ hay
+ * nhãn từ T37/T48), nên lệch diện tích hay trùng tên là lỗi của chính chương trình — tự sửa, không
+ * chặn phương án (Haan 25/09/2026: «hai phần này có thể sửa dễ dàng, ko nên dừng»):
+ *  · diện tích khai lệch chữ nhật quá dung sai của `room_area_mismatch` → ghi lại theo chữ nhật;
+ *  · hai phòng cùng tầng trùng nhãn (hai giếng trời cùng mang «Giếng trời») → đánh số từ phòng thứ hai.
+ * Chạy TRƯỚC `checkPlan`; hai cổng ấy vẫn giữ làm lưới an toàn cho bản vẽ đọc lại từ kho.
+ */
+export function restateRoomFacts<
+  T extends {
+    id: string;
+    rect: AiFloorPlanLevel['rooms'][number]['rect'];
+    area_m2: number;
+    label?: string | null;
+  },
+>(rooms: readonly T[], where: string): { rooms: T[]; notes: { code: string; message: string }[] } {
+  const notes: { code: string; message: string }[] = [];
+  const key = (label: string) => label.trim().replace(/\s+/g, ' ').toLowerCase();
+  const taken = new Set(
+    rooms
+      .map((room) => room.label?.trim())
+      .filter(Boolean)
+      .map((l) => key(l!)),
+  );
+  const seen = new Map<string, number>();
+  const out = rooms.map((room) => {
+    let next = room;
+    const rect = toRect(room.rect);
+    const measured = rectArea(rect) / 10_000;
+    const gap = Math.abs(measured - room.area_m2);
+    if (measured > 0 && gap > AREA_TOLERANCE_M2 && gap > measured * AREA_TOLERANCE_RATIO) {
+      const area = Math.round(measured * 100) / 100;
+      notes.push({
+        code: 'room_area_restated',
+        message: `Phòng "${room.id}" ở ${where} ghi ${room.area_m2} m², chữ nhật đo được ${area} m² — chương trình ghi lại theo số đo.`,
+      });
+      next = { ...next, area_m2: area };
+    }
+    const label = room.label?.trim();
+    if (label) {
+      const count = (seen.get(key(label)) ?? 0) + 1;
+      seen.set(key(label), count);
+      if (count > 1) {
+        let n = count;
+        while (taken.has(key(`${label} ${n}`))) n += 1;
+        const renamed = `${label} ${n}`;
+        taken.add(key(renamed));
+        notes.push({
+          code: 'room_label_numbered',
+          message: `Ở ${where}, phòng "${room.id}" trùng tên "${label}" với phòng khác — chương trình đổi thành "${renamed}".`,
+        });
+        next = { ...next, label: renamed };
+      }
+    }
+    return next;
+  });
+  return { rooms: out, notes };
 }
 
 /**

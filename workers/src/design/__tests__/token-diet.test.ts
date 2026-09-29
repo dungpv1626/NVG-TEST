@@ -209,7 +209,13 @@ describe('thân lời gọi không mang khoảng trắng thuần', () => {
   it('lời dẫn hệ thống + lược đồ gửi đi có trần (T46)', () => {
     const system = prompts.floorLevel.system;
     // 4.500 → 4.700 (16/09/2026, lời dẫn 8.0.0): hai gợi ý thiết kế từ «Nguyên tắc vàng» (~180 ký tự).
-    expect(system.length, `${system.length} ký tự`).toBeLessThan(4_700);
+    // 4.700 → 4.900 (23/09/2026, lời dẫn 8.17.0, T71): ba luật BẮT BUỘC của Haan (bếp / phòng thờ dưới
+    // WC, phòng thờ giáp / đối diện WC, ban công ra mặt thoáng) — ~120 ký tự sau khi đã rút gọn. Nói
+    // trước rẻ hơn một lượt vẽ lại (0,08–0,23 USD).
+    // 4.900 → 5.000 (28/09/2026, lời dẫn 8.38.0, T99): phòng giặt cũng chồng khu ướt tầng dưới, khu ướt
+    // không đè phòng khách / ăn / ngủ tầng dưới (~70 ký tự). Cả tám mặt bằng phát lại hụt sàn nhóm E vì
+    // đúng chỗ này, và bộ xếp không có cây thứ hai để tự sửa (T98) — chỉ bản phác của mô hình quyết được.
+    expect(system.length, `${system.length} ký tự`).toBeLessThan(5_000);
     expect(system).not.toContain('<example>');
     const schema = JSON.stringify(schemaFor('openai', sent));
     expect(schema.length, `${schema.length} ký tự`).toBeLessThan(3_000);

@@ -26,7 +26,9 @@
 
 import {
   aiBriefDigestSchema,
+  BRIEF_FORM,
   customAnswers,
+  withoutHiddenAnswers,
   type AiBriefDigest,
   type BriefFormConfig,
   type DataClass,
@@ -37,6 +39,9 @@ import {
 export const AI_DIGEST_DATA_CLASS: DataClass = 2;
 
 const DIGEST_SCHEMA_VERSION = '1.2.0';
+
+/** Ô ẩn vẫn giữ giá trị trong bản gửi đi — xem `anonymiseForAi`. */
+const DIGEST_KEEPS = ['site.width_m', 'site.depth_m'] as const;
 
 /** Năm cột chữ tự do của `design_briefs`; `legal_documents` cố ý không đi. */
 export interface BriefFreeText {
@@ -147,7 +152,11 @@ function numberOrNull(value: number | string | null | undefined): number | null 
  * kiểm thử, không phải lúc chạy thật.
  */
 export function anonymiseForAi(input: AnonymiseInput): AiBriefDigest {
-  const { brief } = input;
+  // Câu trả lời của ô ĐANG ẨN không đi tới mô hình và bộ xếp (rà soát 29/09/2026): phiếu không xoá giá
+  // trị khi ô bị ẩn, nên nhà phố từng tạm khai là biệt thự vẫn mang khoảng lùi hai bên vào khối xây dựng
+  // được mà không ai nhìn thấy. Điều kiện ẩn / hiện là của biểu mẫu gốc (lớp phủ của quản trị không sửa
+  // `when`). Chiều rộng / chiều sâu giữ lại: thửa đa giác tự dựng chúng từ đường ranh, hợp đồng bắt buộc.
+  const brief = withoutHiddenAnswers(input.brief, BRIEF_FORM, DIGEST_KEEPS);
   const identities = [...(input.identities ?? []), brief.decision_maker?.name ?? null];
   const site = brief.site;
 
@@ -291,7 +300,10 @@ export function anonymiseForAi(input: AnonymiseInput): AiBriefDigest {
       ? {
           elevator: brief.vertical.elevator ?? null,
           elevator_capacity: brief.vertical.elevator_capacity ?? null,
+          elevator_shaft_width_m: brief.vertical.elevator_shaft_width_m ?? null,
+          elevator_shaft_depth_m: brief.vertical.elevator_shaft_depth_m ?? null,
           elevator_position: brief.vertical.elevator_position ?? null,
+          elevator_layout_note: scrubOrNull(brief.vertical.elevator_layout_note, identities),
           stair_type: brief.vertical.stair_type ?? null,
         }
       : null,
@@ -306,6 +318,15 @@ export function anonymiseForAi(input: AnonymiseInput): AiBriefDigest {
     balconies: brief.balconies
       ? {
           sides: brief.balconies.sides ? [...brief.balconies.sides] : null,
+          required_sides: brief.balconies.required_sides
+            ? [...brief.balconies.required_sides]
+            : null,
+          optional_sides: brief.balconies.optional_sides
+            ? [...brief.balconies.optional_sides]
+            : null,
+          projection_by_side: brief.balconies.projection_by_side
+            ? { ...brief.balconies.projection_by_side }
+            : null,
           scope: brief.balconies.scope ?? null,
           projection_over_boundary: brief.balconies.projection_over_boundary ?? null,
           projection_m: brief.balconies.projection_m ?? null,

@@ -1133,6 +1133,9 @@ Bệ cửa sổ là chỗ lệch thật sự: HS-01 đo +0,900 trên mặt cắt
 kê. Không phải sai số đo — hai công trình làm khác nhau. **Không sửa giá trị đang khai**; cần
 Phòng Thiết kế cho biết mức mặc định (Q-50).
 
+> **Trả lời Q-50 ngày 23/09/2026:** «con số này không thể fix cứng, mỗi nhà mỗi khác, tạm thời để
+> 0.9». Giữ `sill_m: 0.9` làm mặc định tạm; bệ cửa là số theo TỪNG nhà, chưa có chỗ nhập.
+
 HS-03 và HS-05 dùng chung một quy cách cửa sổ ghi bằng chữ: **1.200 × 1.200, "cửa sổ khung sắt –
 pa-nô kính – 2 cánh"**. HS-03 dùng **cửa cuốn** cho gara.
 
@@ -1187,6 +1190,9 @@ diện tích thì phải dựng lại đa giác phòng từ đồ thị tim tư�
 3. **Không đánh số bậc.** Hai trong bốn hồ sơ đánh số bậc trên mặt bằng. Đây là việc thuần bộ vẽ,
    rẻ, và không đụng hợp đồng.
 
+> **Cập nhật 23/09/2026 (Q-51, T70):** cả ba chỗ đã sửa — thang giữ mặt bậc `going`, bậc được
+> đánh số, và bậc tam cấp là đối tượng `entry_steps` của tầng 1 (`workers/src/design/ai/entry-steps.ts`).
+
 ### 13.16.8 Cái KHÔNG tìm thấy
 
 - **`QUY CHUẨN NHÀ VIỆT ONE.docx`** nằm cùng thư mục hồ sơ là quy chuẩn **quy trình và chất
@@ -1222,3 +1228,86 @@ hỏng chuỗi vốn đã là Unicode: `chính` thành `chớnh`, `mái` thành 
 mã byte với `ớ` trong bảng TCVN3. Phải kiểm trước: chuỗi mang ký tự ngoài Latin-1 (`ả` U+1EA3) thì
 **đã là Unicode, không giải mã nữa**. `compute/src/design_compute/cad/text.py` làm đúng việc này
 bằng `looks_tcvn3()` theo **kiểu chữ**; công cụ đo ngoài repo thì không, và đã dính.
+
+## 13.17 Đợt đo 23/09/2026 — dựng đa giác phòng cho bốn hồ sơ mới
+
+Haan hỏi dựng lại đa giác phòng giúp được gì, rồi duyệt làm (23/09/2026). Mục đích: nâng `n` của
+các quy tắc trong `rules/nvg-measured.yaml` bằng số đo **từ đa giác**, cùng cách với đợt 1 — không
+trộn nhãn diện tích ghi sẵn vào (mục 13.16, Q-49). NVG không còn hồ sơ nào gửi thêm, nên đây là
+đợt cuối cùng số liệu có thể tăng.
+
+### 13.17.1 Phạm vi
+
+| Hồ sơ | Tờ đo | Lớp tường | Nhãn phòng |
+|---|---|---|---|
+| HS-03 liền kề trong ngõ, 3 tầng | «mặt bằng nội thất» T1–T3 | `1_CAT`, `11_COT` | tên + diện tích («P. NGỦ 01 (11m2)») |
+| HS-04 mái Nhật sân vườn, 1 tầng | «mặt bằng công năng» | `NV-Tuong`, `NV - Cat`, `NV - BeTong` | **số chú giải** |
+| HS-05 liền kề mái Nhật, 1 tầng | «mặt bằng công năng – tầng 1» | `1_CAT`, `11_COT` | tên + diện tích |
+| HS-06 mái Nhật, 2 tầng | «mặt bằng kiến trúc» T1–T2 (tệp hợp nhất, không dùng tệp `- tach`) | `NV-Tuong`, `NV - Cat`, `NV - BeTong` | **số chú giải**, mỗi tầng một bảng |
+| HS-07 biệt thự Anh Tăng | — | — | **KHÔNG ĐO** |
+
+HS-07 chỉ có hồ sơ **điện nước**: nền kiến trúc in trên lớp `NV - InDN`, tường vẽ **một nét** và
+nằm cùng lớp với sofa, bàn ăn, tủ — bộ dựng chia phòng theo cả đồ đạc. Đo được thì phải đoán loại
+phòng từ đồ đạc và tự vạch ranh, nên bỏ hẳn. Hai tệp `.rar` «chưa giải nén» trong thư mục tập hợp
+(Dương – Trần Lãm, Mạnh – An Bình) trùng TỪNG BYTE với P2/P1 đã đo ở đợt 1 — không phải hồ sơ mới.
+
+### 13.17.2 Cách dựng — để kiểm lại được
+
+Cùng nguyên tắc 13.16.9, `ezdxf` + `shapely` chạy trong image `nvg-design-compute`, công cụ để ngoài
+repo (hồ sơ là dữ liệu hạng 1):
+
+1. Lấy mọi đoạn thẳng trên lớp tường trong khung tờ (duyệt đệ quy vào block), làm tròn về lưới 1 mm.
+2. **Nối khe thẳng hàng.** Ở mỗi đỉnh bậc ≤ 2, bắn tia đi TIẾP theo phương cạnh tới, ≤ 4,6 m; chỉ nối
+   khi tia chạm đúng một ĐỈNH mà từ đó nét tường chạy tiếp cùng phương — tức mép tường bên kia khe
+   cửa, cửa sổ hay ô thông. Nối từ mép tới mép nên phòng khép theo **mặt trong tường** (lọt lòng).
+3. `polygonize`, lấp lỗ (cột, đồ đạc đứng tự do không trừ diện tích), bỏ ô < 1 m² hay cạnh < 0,6 m.
+   Dải trong lòng tường lọt lưới được nhận ra bằng độ phủ hình chữ nhật bao < 0,5.
+4. Xuất hình có số ô, **gán loại phòng bằng mắt** theo tên hoặc bảng chú giải. Số chú giải lẫn cả
+   số đồ đạc (17 tủ quần áo, 18 giường) nên không gán tự động được.
+5. Chỗ phòng không khép (hành lang mở ra ô thang, phòng chữ L) đo **bề rộng lọt lòng bằng tia dò**
+   từ một điểm giữa phòng tới mặt tường hai bên.
+
+**Kiểm bằng nhãn:** 13 phòng có nhãn diện tích; 12 lệch ≤ 9 % (ba phòng ngủ HS-05: đo 11,38 / nhãn
+11,5; P. Khách HS-05: 19,66 / 19; P. Ngủ 05 HS-03: 16,85 / 17). Phòng còn lại — bếp + ăn HS-05, đo
+12,14 / nhãn 15,5 — lệch vì nhãn tính cả đoạn hành lang 1 m trước bếp (~3,4 m²).
+
+### 13.17.3 Kết quả — gộp với đợt 1
+
+| Loại | Phòng | Mặt bằng | Dự án | Cạnh ngắn | Diện tích | Dài / rộng |
+|---|---|---|---|---|---|---|
+| phòng ngủ | 18 | 9 | 6 | 2,39 – 3,67 | 9,1 – 13,9 | 1,03 – 1,84 |
+| phòng ngủ chính | 4 | 4 | 4 | 3,12 – 3,91 | 15,0 – 17,2 | 1,10 – 1,63 |
+| WC | 14 | 12 | 6 | 1,13 – 2,00 | 2,98 – 6,49 | 1,33 – 2,45 |
+| phòng khách | 5 | 5 | 5 | 3,58 – 4,60 | 15,7 – 40,9 | — |
+| hành lang | 6 | 6 | 5 | **1,00** – 1,30 | — | — |
+
+«Phòng ngủ chính» chỉ khi lớn hơn hẳn các phòng ngủ khác cùng nhà (HS-03 P. Ngủ 05, HS-06 P. Ngủ 04 —
+gấp 1,3–1,7 lần). HS-04 có một phòng giường 1800 nhưng ba phòng cùng cỡ, nên xếp phòng ngủ thường.
+
+### 13.17.4 Hai chỗ quy tắc báo oan nhà NVG — Q-52
+
+Không đổi ngưỡng nào trong đợt này, vì ngưỡng vào điểm chấm (`scoreRules`), đổi là đổi phương án nào
+qua được mức 65:
+
+1. **WC dài/rộng ≤ 2,2** — ba WC của HS-03 là 2,36 – 2,44 (1,40 × 3,31–3,42, lavabo đặt trong cùng
+   dải). Đợt 1 khai 2,2 vì cao nhất đo được lúc ấy là 2,14.
+2. **Hành lang ≥ 1,1 m** — HS-03 và HS-05 làm hành lang đúng **1,00 m** lọt lòng.
+
+Đề xuất: 2,2 → 2,5 và 1,1 → 1,0, cùng lẽ «ngưỡng cảnh báo không được bắt oan chính nhà NVG đã xây».
+
+> **Haan duyệt 23/09/2026 — đã sửa.** `room_aspect_ratio_max_wc` 2,5 · `room_min_dimension_circulation`
+> 1,0 m. Kèm theo, tiêu chí chấm **C4** (`kb/plan_quality.yaml`, lên `2026.09.2`) hạ mốc đạt 1,1 → 1,0
+> vì đo CÙNG một thứ — để hai chỗ lệch mốc thì hành lang 1,00 m hết bị cảnh báo mà vẫn bị trừ nửa
+> điểm. Hệ quả đã biết: WC hình thang của P2 (tỉ lệ 2,45) thôi bị trừ ở B2 — cùng mức với WC HS-03,
+> không ngưỡng nào tha cái này mà bắt cái kia; nó vẫn bị trừ ở B1 (cạnh ngắn 1,13 m).
+> `plan-score-calibration.test.ts` ghim lại điều này.
+
+Thêm một điểm lệch nhỏ, không đề xuất sửa: WC **ngoài nhà** ở sân sau HS-05 rộng 2,98 m², dưới
+ngưỡng 3,0 đúng 0,02 m² — là WC phụ, và sai số làm tròn của phép đo cùng cỡ.
+
+### 13.17.5 Cái chưa làm
+
+- Số liệu mới **chỉ nằm trong `rules/nvg-measured.yaml`** (khoảng quan sát, `n`) và bảng ngoài repo.
+  Chưa ghi vào bảng `kb_record` trong CSDL, nên hàm `kb_room_area_stats` (migration `0102`) vẫn chưa có
+  dữ liệu để trả — việc nối hook thống kê (T66 «chưa làm») vẫn còn nguyên.
+- Bếp riêng có đúng một mẫu (HS-04, 2,67 × 3,45) — chưa đủ để khai quy tắc bếp riêng.

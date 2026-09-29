@@ -219,7 +219,7 @@ Thực thể tham chiếu xuyên module — **liên kết, KHÔNG sao chép**: `
   ngay tại chỗ, kèm ca hỏng đã đo.
 - **CI**: `.github/workflows/kiem.yml` chạy định dạng, luật, kiểu, hợp đồng và 1.606 phép thử trên
   mỗi PR. Cố ý KHÔNG chạy `db/` (chạm Supabase thật, xoá cứng theo tiền tố `[TEST]`).
-- **`npm run mutation-proof`**: cài 29 lỗi thật vào mã nguồn rồi đòi bộ kiểm phải ĐỎ. Số bài kiểm
+- **`npm run mutation-proof`**: cài 83 lỗi thật vào mã nguồn rồi đòi bộ kiểm phải ĐỎ. Số bài kiểm
   không chứng minh bộ kiểm có tác dụng — 20/09/2026 có tám lỗi thật lọt qua 867 bài kiểm đang xanh.
   Thêm hàng rào mới (quyền, riêng tư, tiền gọi mô hình, số đo bản vẽ) thì thêm một đột biến cho nó.
   Khoảng trống đã biết: RLS và ràng buộc trong CSDL KHÔNG được chứng minh ở đây.
@@ -424,15 +424,25 @@ hồ sơ phát hành. Hiện trạng:
 - **Cổng hỏng thì không lưu** (T39). Chỉ gọi lại mô hình cho lỗi **ngữ nghĩa** (`REVISABLE_CODES`), tối
   đa `HOUSE_REVISIONS_MAX`; lỗi hình học thì bộ xếp tự thử rồi dừng. Tầng 1 hỏng vì cửa ra ngoài → chương
   trình thử đổi phòng mang cửa chính trước khi gọi lại (T51).
-- **Ngưỡng 65 điểm** (`kb/plan_quality.yaml` `accept_percent`), dưới ngưỡng dùng lượt sửa còn lại; sau đó
-  kỹ sư **sửa trên bản vẽ bằng ô yêu cầu** → mô hình trả thao tác trong tập đóng `contracts/ai-plan-edit`,
-  chương trình áp lên cây đã lưu (T53, `ai/edit/`).
+- **Ngưỡng 65 điểm** (`kb/plan_quality.yaml` `accept_percent`) **và sàn 40 % cho từng nhóm**
+  (`accept_group_floor_percent`, T96 — nhóm diện tích không bù được cho một tầng đi lại tệ); dưới ngưỡng
+  dùng lượt sửa còn lại; sau đó kỹ sư **sửa trên bản vẽ bằng ô yêu cầu** → mô hình trả thao tác trong tập
+  đóng `contracts/ai-plan-edit`, chương trình áp lên cây đã lưu (T53, `ai/edit/`). Thước chấm là **tư duy
+  nghề, không phải luật**: trọng số trong nhóm khai ở từng tiêu chí (`weight`), ba tiêu chí T96 đo đúng
+  ba lỗi Haan chỉ trên mặt bằng thật — cửa chính đón vào đâu (C9), hành lang phục vụ mấy phòng (C10), khu
+  ướt đè lên chỗ tiếp khách / ngủ / lối vào tầng dưới (E5).
 - **Đầu bài đã khai là ràng buộc**, phần không khai mới là chỗ sáng tạo (T41, `brief/gate.ts`); diện tích
-  tối thiểu đầu bài khai là sàn cứng.
+  tối thiểu đầu bài khai là sàn cứng. Chiều ngược lại (T96, Haan: «không khai trong đầu bài thì hạn chế bịa
+  thêm»): loại trong `only_when_asked` của `kb/brief_fidelity.yaml` (giếng trời, sân trong, sân thượng, cửa
+  hàng, thang máy) chỉ được đề xuất khi đầu bài có hỏi tới — cổng danh mục bác, câu dẫn không gợi ý.
 - **Luật cứng chỉ khi không dựng được / không đi được** (đường đi hằng ngày không xuyên gara/sảnh ngoài,
-  phòng ở không lấy cửa từ ô thang, không đi xuyên phòng riêng, cạnh dùng được). **Định mức và kinh
+  ô thang chỉ mở cửa sang giao thông / khu chung / sân thượng / thang máy (T74), không đi xuyên phòng riêng, cạnh dùng được). **Định mức và kinh
   nghiệm nghề chỉ trừ điểm/cảnh báo, không loại phương án** (T49, T52–T55). Chỗ bất hợp lý của một bản vẽ
-  cụ thể → sửa bằng ô yêu cầu, **đừng biến thành luật** (Haan, T52).
+  cụ thể → sửa bằng ô yêu cầu, **đừng biến thành luật** (Haan, T52). **Ngoại lệ Haan tự đặt (T71,
+  `rules/nvg-mandatory.yaml`, luôn bật):** bếp / phòng thờ không nằm dưới WC, phòng thờ không giáp /
+  đối diện WC, ban công DÀI (cạnh dài > 1,5 lần cạnh ngắn) trong sàn quay cạnh dài ra mặt thoáng — CHẶN
+  (ban công đua ra không xét, gần vuông chỉ trừ điểm — T91); WC chung thẳng trục là ƯU TIÊN (bậc xếp
+  hạng đầu của bộ xếp), không chặn. Thêm luật vào tệp ấy chỉ khi chính Haan nói «bắt buộc».
 - **Không kiểm quy chuẩn xây dựng** (T30, T42): `rules/base/` đã xoá. Nhánh AI đọc `rules/nvg-experience.yaml`
   - `rules/nvg-measured.yaml` theo lựa chọn của kỹ sư, chỉ để đối chiếu SAU. Màn hình phải nói rõ «Không
     kiểm quy chuẩn xây dựng…» (câu do mã chèn). Khoảng lùi/mật độ chỉ lấy từ đầu bài.
@@ -469,8 +479,16 @@ hồ sơ phát hành. Hiện trạng:
   suy ra tất định, `ai/program.ts` bác đề xuất thiếu, `ai/plan-demands.ts` kiểm phần chỉ thấy
   được khi đã có toạ độ. **Thang máy** có mã phòng riêng `elevator` (tách khỏi `core`) và phải
   CHỒNG KHÍT mọi tầng — kể cả lựa chọn «chừa chỗ lắp sau», vì chừa lệch tầng thì không phải chừa
-  chỗ. **Ban công** đúng mặt đầu bài khai; phần **đua ra ngoài ranh** nới ô ngay trong cây chia
+  chỗ. **Ban công** (T91): mặt BẮT BUỘC phải có, mặt CÓ THỂ tuỳ, mặt khác CẤM; độ đua khai TỪNG mặt,
+  đọc qua một hàm `balconySides` (`shared/src/design/balcony-brief.ts`, đọc được cả đầu bài cũ) —
+  đừng đọc thẳng trường. Phần **đua ra ngoài ranh** nới ô ngay trong cây chia
   (`tree/balcony-projection.ts`), TRƯỚC khi dựng hình bao và đặt lỗ mở.
+  **Bộ xếp có ý niệm công năng (T96):** khu đón khách của không gian mở quay về phía cửa vào
+  (`passage.reception_from`, sảnh trước gara trước hành lang); khách / ăn kề lối đi nối bằng ô thông SUỐT
+  vách (`passage.open_flow`), không vách ngăn; ban công khép kín và WC khép kín không chung một dải; cổng
+  bắt buộc chia lại khu bếp tầng dưới theo WC của chính ứng viên. Đo mọi thay đổi bộ xếp bằng **phát lại
+  114 vòng thật** (mẫu `scratchpad` của phiên T96, đối chứng là cùng mã với thay đổi tắt) — không có lợi
+  đo được thì gỡ.
   Ba ranh giới không được phá: **chỉ suy từ câu ĐÃ trả lời** (không `?? false` — «chưa hỏi» khác
   «trả lời không»); **thiếu số thì không bịa** (khai đua ranh mà không khai mấy mét thì giữ trong
   ranh và nói ra); **lời gia chủ thì bác được, suy đoán nghề chỉ cảnh báo** (cờ `blocking` ở tệp
@@ -516,6 +534,9 @@ gọi qua Durable Object binding (`getContainer(env.DESIGN_COMPUTE, id)`), có h
 - Container **không** quy chuẩn hoá nhãn phòng (`"PN2"` → `bedroom` là việc của Worker).
 - Không tạo lại thứ đã có: `design_projects`, `customers`, `users`, `documents` + `document_versions`.
 - Nhãn cảnh báo do mã chèn, không tắt được từ giao diện (`AI_DISCLAIMERS` trong `@nvg/shared/design`).
+- **Stub RPC nhận từ binding Workflow (`PIPELINE.create()`, `workflow.get()`) phải huỷ** qua
+  `workflows/rpc-stub.ts` (`instanceIdOf`, `disposeStub`). Bỏ rơi cho bộ dọn rác thì `wrangler dev`
+  tự huỷ ngẫu nhiên giữa lượt AI (T84, ba lần 25/09/2026, backtrace gdb). Kết quả `step.do` cũng là kết quả RPC — `run()` bọc `step` bằng `disposingStep` (T85). Phép thử quét mã canh.
 
 ### 8.7 Quy ước dữ liệu của module
 

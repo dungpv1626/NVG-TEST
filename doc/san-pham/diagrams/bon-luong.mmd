@@ -1,0 +1,17 @@
+flowchart LR
+  subgraph L1["1 · Công trình"]
+    direction LR
+    A1["Hợp đồng"] --> A2["Ngân sách"] --> A3["Mua hàng, Kho"] --> A4["Nghiệm thu"] --> A5["Thanh toán"] --> A6["Thu tiền"] --> A7["Lãi/lỗ"]
+  end
+  subgraph L2["2 · Cho thuê giàn giáo"]
+    direction LR
+    B1["Báo giá kiểm tồn"] --> B2["Xuất kho"] --> B3["Giao, giao thêm, trả bớt"] --> B4["Thu hồi, phân loại"] --> B5["Tính tiền thuê, bồi thường"] --> B6["Đối soát, tất toán"]
+  end
+  subgraph L3["3 · Lệnh sản xuất"]
+    direction LR
+    C1["Lệnh có phiên bản"] --> C2["Cấp nguyên liệu theo định mức"] --> C3["Công đoạn"] --> C4["Chất lượng"] --> C5["Nhập kho thành phẩm"] --> C6["Giá thành thực tế"]
+  end
+  subgraph L4["4 · Công trường hằng ngày"]
+    direction LR
+    D1["Nhật ký"] --> D2["Đề nghị vật tư có hạn xử lý"] --> D3["Nghiệm thu theo danh mục kiểm"]
+  end

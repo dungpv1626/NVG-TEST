@@ -943,7 +943,7 @@ export const designBriefSchema = z
             'Thang máy gia đình. Ba câu trả lời thật sự khác nhau về mặt bằng: `lam_ngay` sinh một ô thang máy có cửa và có phòng kỹ thuật; `chua_cho` vẫn chiếm đúng ô ấy nhưng tạm dùng làm kho hoặc giếng trời, và móng, hố PIT, lỗ sàn phải chừa ngay lúc này — bỏ qua thì sau không lắp được; `khong` thì không chừa gì.',
           )
           .optional(),
-        /** Tải trọng thang máy, quyết kích thước hố thang. Số đo cụ thể lấy từ `kb/construction_norms.yaml`, không viết vào đầu bài — hãng thang đổi thì đổi ở một chỗ. */
+        /** Tải trọng thang máy — thông tin cho kỹ sư và hãng thang. KHÔNG dùng để đoán kích thước giếng: kích thước lấy từ hai trường `elevator_shaft_*_m` (Haan 25/09/2026). */
         elevator_capacity: z
           .union([
             z.literal('nho_350kg'),
@@ -953,20 +953,52 @@ export const designBriefSchema = z
           ])
           .nullable()
           .describe(
-            'Tải trọng thang máy, quyết kích thước hố thang. Số đo cụ thể lấy từ `kb/construction_norms.yaml`, không viết vào đầu bài — hãng thang đổi thì đổi ở một chỗ.',
+            'Tải trọng thang máy — thông tin cho kỹ sư và hãng thang. KHÔNG dùng để đoán kích thước giếng: kích thước lấy từ hai trường `elevator_shaft_*_m` (Haan 25/09/2026).',
           )
           .optional(),
-        /** Thang máy đặt cạnh thang bộ thành một lõi, hay tách riêng. Đặt cạnh thì gọn lõi và rẻ hệ thống; tách riêng thì tiện cho người già ở phòng xa thang bộ. */
+        /** Bề RỘNG lọt lòng giếng thang máy, mét, theo bản vẽ của hãng thang gia chủ chọn. Chương trình không đoán số này (Haan 25/09/2026): khai thang máy mà để trống thì đầu bài bị báo mâu thuẫn nghiêm trọng và chưa dựng được phương án. */
+        elevator_shaft_width_m: z
+          .number()
+          .gte(0.8)
+          .lte(4)
+          .nullable()
+          .describe(
+            'Bề RỘNG lọt lòng giếng thang máy, mét, theo bản vẽ của hãng thang gia chủ chọn. Chương trình không đoán số này (Haan 25/09/2026): khai thang máy mà để trống thì đầu bài bị báo mâu thuẫn nghiêm trọng và chưa dựng được phương án.',
+          )
+          .optional(),
+        /** Chiều SÂU lọt lòng giếng thang máy, mét (phía cửa cabin là bề rộng). Cùng nguồn và cùng luật với `elevator_shaft_width_m`. */
+        elevator_shaft_depth_m: z
+          .number()
+          .gte(0.8)
+          .lte(4)
+          .nullable()
+          .describe(
+            'Chiều SÂU lọt lòng giếng thang máy, mét (phía cửa cabin là bề rộng). Cùng nguồn và cùng luật với `elevator_shaft_width_m`.',
+          )
+          .optional(),
+        /** Kiểu bố trí thang máy so với thang bộ (Haan 25/09/2026, ba kiểu phổ biến ở Việt Nam): `giua_long_thang_bo` — giếng thang máy dựng ở khoảng trống giữa lòng thang bộ, thang bộ uốn quanh; `canh_thang_bo` — sát nhau trên cùng một mảng tường, cùng mở ra một hành lang; `doi_dien_thang_bo` — hai mặt đối diện, ngăn bởi hành lang / sảnh chờ; `khac` — kiến trúc sư tự mô tả ở `elevator_layout_note`. `rieng_biet`, `chua_quyet` là giá trị cũ, giữ để đọc lại đầu bài đã đúc. */
         elevator_position: z
           .union([
+            z.literal('giua_long_thang_bo'),
             z.literal('canh_thang_bo'),
+            z.literal('doi_dien_thang_bo'),
+            z.literal('khac'),
             z.literal('rieng_biet'),
             z.literal('chua_quyet'),
             z.literal(null),
           ])
           .nullable()
           .describe(
-            'Thang máy đặt cạnh thang bộ thành một lõi, hay tách riêng. Đặt cạnh thì gọn lõi và rẻ hệ thống; tách riêng thì tiện cho người già ở phòng xa thang bộ.',
+            'Kiểu bố trí thang máy so với thang bộ (Haan 25/09/2026, ba kiểu phổ biến ở Việt Nam): `giua_long_thang_bo` — giếng thang máy dựng ở khoảng trống giữa lòng thang bộ, thang bộ uốn quanh; `canh_thang_bo` — sát nhau trên cùng một mảng tường, cùng mở ra một hành lang; `doi_dien_thang_bo` — hai mặt đối diện, ngăn bởi hành lang / sảnh chờ; `khac` — kiến trúc sư tự mô tả ở `elevator_layout_note`. `rieng_biet`, `chua_quyet` là giá trị cũ, giữ để đọc lại đầu bài đã đúc.',
+          )
+          .optional(),
+        /** Mô tả kiểu bố trí thang máy khi chọn `khac`. Đi tới mô hình dạng câu, không ràng buộc hình học. */
+        elevator_layout_note: z
+          .string()
+          .max(300)
+          .nullable()
+          .describe(
+            'Mô tả kiểu bố trí thang máy khi chọn `khac`. Đi tới mô hình dạng câu, không ràng buộc hình học.',
           )
           .optional(),
         /** Thang bộ hở (thông tầng, lấy sáng, ăn diện tích) hay kín (giữ điều hoà, kín tiếng, gọn). Đây là lựa chọn của gia chủ chứ không phải của phần mềm, và nó đổi hẳn cách tổ chức khu giữa nhà. */
@@ -1037,11 +1069,43 @@ export const designBriefSchema = z
     /** Ban công — vị trí, phạm vi và độ vươn. Khai ở đây chứ không ở `required_spaces` vì ban công là một THUỘC TÍNH của mặt nhà theo tầng, không phải một phòng đứng riêng trong chương trình không gian. */
     balconies: z
       .object({
-        /** Ban công đặt ở mặt nào của nhà: trước, sau, hông trái, hông phải. */
+        /** Mặt BẮT BUỘC có ban công (T91). Thiếu ban công ở mặt này là sai đầu bài — bác phương án. */
+        required_sides: z
+          .array(z.enum(['front', 'back', 'left', 'right']))
+          .nullable()
+          .describe(
+            'Mặt BẮT BUỘC có ban công (T91). Thiếu ban công ở mặt này là sai đầu bài — bác phương án.',
+          )
+          .optional(),
+        /** Mặt CÓ THỂ có ban công (T91) — có hay không đều được. Mặt không nằm trong hai danh sách thì KHÔNG được đặt ban công (khi gia chủ đã khai ít nhất một mặt). */
+        optional_sides: z
+          .array(z.enum(['front', 'back', 'left', 'right']))
+          .nullable()
+          .describe(
+            'Mặt CÓ THỂ có ban công (T91) — có hay không đều được. Mặt không nằm trong hai danh sách thì KHÔNG được đặt ban công (khi gia chủ đã khai ít nhất một mặt).',
+          )
+          .optional(),
+        /** Độ đua ra ngoài ranh của ban công TỪNG MẶT, mét (T91, Haan 27/09/2026). 0 = không đua — ban công nằm trong diện tích sàn. Trống = chưa trả lời: chương trình giữ ban công trong ranh và nói ra. Đua sang đất nhà khác bị chặn ở bước soát đầu bài; đua ra đường, hẻm, ao hồ chỉ cảnh báo. */
+        projection_by_side: z
+          .object({
+            front: z.number().gte(0).lte(3).nullable().optional(),
+            back: z.number().gte(0).lte(3).nullable().optional(),
+            left: z.number().gte(0).lte(3).nullable().optional(),
+            right: z.number().gte(0).lte(3).nullable().optional(),
+          })
+          .strict()
+          .nullable()
+          .describe(
+            'Độ đua ra ngoài ranh của ban công TỪNG MẶT, mét (T91, Haan 27/09/2026). 0 = không đua — ban công nằm trong diện tích sàn. Trống = chưa trả lời: chương trình giữ ban công trong ranh và nói ra. Đua sang đất nhà khác bị chặn ở bước soát đầu bài; đua ra đường, hẻm, ao hồ chỉ cảnh báo.',
+          )
+          .optional(),
+        /** Ban công đặt ở mặt nào của nhà: trước, sau, hông trái, hông phải. CŨ (trước T91): đọc như `required_sides`. Đầu bài mới không ghi trường này. */
         sides: z
           .array(z.enum(['front', 'back', 'left', 'right']))
           .nullable()
-          .describe('Ban công đặt ở mặt nào của nhà: trước, sau, hông trái, hông phải.')
+          .describe(
+            'Ban công đặt ở mặt nào của nhà: trước, sau, hông trái, hông phải. CŨ (trước T91): đọc như `required_sides`. Đầu bài mới không ghi trường này.',
+          )
           .optional(),
         /** Ban công làm tới đâu: mọi tầng trên, chỉ mặt tiền, hay chỉ ở những phòng gia chủ chỉ định. */
         scope: z
@@ -1057,22 +1121,22 @@ export const designBriefSchema = z
             'Ban công làm tới đâu: mọi tầng trên, chỉ mặt tiền, hay chỉ ở những phòng gia chủ chỉ định.',
           )
           .optional(),
-        /** Ban công có ĐUA RA NGOÀI ranh đất (nhô qua chỉ giới xây dựng, ra trên vỉa hè hoặc trên khoảng lùi) không. Đây là câu hỏi pháp lý trước khi là câu hỏi hình khối: nhiều địa phương chỉ cho đua khi đường đủ rộng và chỉ tới một độ vươn nhất định. Trả lời «không» thì ban công nằm trọn trong phần đất xây được, và diện tích sàn phải tính lại. */
+        /** Ban công có ĐUA RA NGOÀI ranh đất (nhô qua chỉ giới xây dựng, ra trên vỉa hè hoặc trên khoảng lùi) không. Đây là câu hỏi pháp lý trước khi là câu hỏi hình khối: nhiều địa phương chỉ cho đua khi đường đủ rộng và chỉ tới một độ vươn nhất định. Trả lời «không» thì ban công nằm trọn trong phần đất xây được, và diện tích sàn phải tính lại. CŨ (trước T91): thay bằng `projection_by_side`; chỉ còn để đọc đầu bài đã lưu. */
         projection_over_boundary: z
           .boolean()
           .nullable()
           .describe(
-            'Ban công có ĐUA RA NGOÀI ranh đất (nhô qua chỉ giới xây dựng, ra trên vỉa hè hoặc trên khoảng lùi) không. Đây là câu hỏi pháp lý trước khi là câu hỏi hình khối: nhiều địa phương chỉ cho đua khi đường đủ rộng và chỉ tới một độ vươn nhất định. Trả lời «không» thì ban công nằm trọn trong phần đất xây được, và diện tích sàn phải tính lại.',
+            'Ban công có ĐUA RA NGOÀI ranh đất (nhô qua chỉ giới xây dựng, ra trên vỉa hè hoặc trên khoảng lùi) không. Đây là câu hỏi pháp lý trước khi là câu hỏi hình khối: nhiều địa phương chỉ cho đua khi đường đủ rộng và chỉ tới một độ vươn nhất định. Trả lời «không» thì ban công nằm trọn trong phần đất xây được, và diện tích sàn phải tính lại. CŨ (trước T91): thay bằng `projection_by_side`; chỉ còn để đọc đầu bài đã lưu.',
           )
           .optional(),
-        /** Độ vươn của ban công tính từ mặt tường, mét. Để trống thì lấy theo thông lệ của phương án. */
+        /** Độ vươn của ban công tính từ mặt tường, mét. Để trống thì lấy theo thông lệ của phương án. CŨ (trước T91): thay bằng `projection_by_side`; chỉ còn để đọc đầu bài đã lưu. */
         projection_m: z
           .number()
           .gte(0)
           .lte(3)
           .nullable()
           .describe(
-            'Độ vươn của ban công tính từ mặt tường, mét. Để trống thì lấy theo thông lệ của phương án.',
+            'Độ vươn của ban công tính từ mặt tường, mét. Để trống thì lấy theo thông lệ của phương án. CŨ (trước T91): thay bằng `projection_by_side`; chỉ còn để đọc đầu bài đã lưu.',
           )
           .optional(),
         /** Có ban công phơi riêng phía sau không — tách chỗ phơi khỏi ban công mặt tiền. */

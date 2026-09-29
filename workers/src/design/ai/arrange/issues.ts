@@ -13,6 +13,7 @@
  * giới hạn đồ đạc, không phải kinh nghiệm (V-28).
  */
 
+import { MANDATORY_CODES } from '../mandatory';
 import type { PlanIssue } from '../plan-check';
 
 export const ARRANGE_ISSUE_CODES = [
@@ -32,6 +33,14 @@ export const ARRANGE_ISSUE_CODES = [
   'sketch_pinwheel',
   'sketch_rooms_too_small',
   'sketch_island_room',
+  // Phòng không giáp phòng giao thông / phòng phục vụ nó ngay trên bản phác (T73, lượt đo 6c35ed79).
+  'sketch_room_no_access',
+  // Ô thang không chạm hành lang / phòng chung nào — cả tầng mất lối vào (lượt b5202883, 25/09/2026).
+  'sketch_stair_isolated',
+  // Phòng chỉ vào được qua ô thang trên bản phác — chỉ đi kèm khi tầng đã hỏng vì lý do khác.
+  'sketch_stair_only',
+  // Ép ô thang / thang máy về ô tầng dưới đã dựng xoá trọn một phòng (lượt thật 913bc2ad).
+  'sketch_core_overlap',
 ] as const;
 
 export type ArrangeIssueCode = (typeof ARRANGE_ISSUE_CODES)[number];
@@ -103,6 +112,35 @@ export const REVISABLE_CODES: ReadonlySet<string> = new Set([
   'sketch_pinwheel',
   'sketch_rooms_too_small',
   'sketch_island_room',
+  'sketch_room_no_access',
+  'sketch_stair_isolated',
+  'sketch_stair_only',
+  'sketch_core_overlap',
+  // Phòng hụt diện tích tối thiểu đầu bài khai (Haan chọn 23/09/2026, sau lượt chạy thật fad0c0fa):
+  // bản phác vẽ master 16 ô cho mức 25 m² — chỗ sai là số ô mô hình vẽ, nên mô hình sửa được. Trước đó
+  // mã này là lỗi hình học và lượt chạy dừng ngay, mô hình không bao giờ được biết phải vẽ to hơn.
+  'arrange_room_below_brief_area',
+  // Ban công sai mặt / thiếu tầng so với đầu bài (T65 kiểm, Haan cho gửi lại 24/09/2026): chỗ đặt ban
+  // công là bản phác mô hình vẽ. Lượt 011b4adc (sau T73) xếp được cả hai tầng rồi DỪNG ở đây.
+  'balcony_side_missing',
+  'balcony_side_not_wanted',
+  'balcony_level_missing',
+  // Gia chủ khai KHÔNG làm ban công mà bản vẽ vẫn có, và bốn lỗi giếng thang máy (thiếu tầng, nhỏ, hẹp,
+  // lệch trục): chỗ đặt các ô ấy là bản phác mô hình vẽ — sửa được, không dừng (Haan 25/09/2026).
+  'balcony_not_wanted',
+  'elevator_missing',
+  // Giếng dựng dài / to vô lý so với số gia chủ khai (lượt thật 913bc2ad): mô hình vẽ giếng thành dải.
+  'elevator_oversized',
+  'elevator_too_small',
+  'elevator_too_narrow',
+  'elevator_not_aligned',
+  // Kiểu bố trí thang máy đầu bài khai (cạnh / giữa lòng / đối diện thang bộ, Haan 25/09/2026).
+  'elevator_not_beside_stair',
+  'elevator_not_facing_stair',
+  'elevator_no_common_hall',
+  // Luật bố trí BẮT BUỘC của Haan (T71): bếp / phòng thờ dưới WC, phòng thờ giáp / đối diện WC, ban
+  // công quay lưng vào nhà bên — chỗ đặt phòng là bố cục mô hình vẽ, nên mô hình sửa được.
+  ...MANDATORY_CODES,
 ]);
 
 /** Lỗi này mô hình sửa được bằng cách đổi ý định không. */

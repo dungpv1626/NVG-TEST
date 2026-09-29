@@ -17,6 +17,8 @@
  */
 
 import {
+  BALCONY_SIDES,
+  balconySides,
   BRIEF_FORM,
   FAMILY_ROLE_LABEL,
   fieldByPath,
@@ -289,9 +291,13 @@ export function briefNarrative(digest: AiBriefDigest, options: NarrativeOptions)
             ? `, tải ${label('vertical.elevator_capacity', vertical.elevator_capacity)}`
             : ''
         }${
-          vertical.elevator_position && vertical.elevator_position !== 'chua_quyet'
-            ? `, đặt ${label('vertical.elevator_position', vertical.elevator_position).toLowerCase()}`
-            : ''
+          vertical.elevator_position === 'khac'
+            ? vertical.elevator_layout_note?.trim()
+              ? `, bố trí: ${vertical.elevator_layout_note.trim()}`
+              : ''
+            : vertical.elevator_position && vertical.elevator_position !== 'chua_quyet'
+              ? `, bố trí ${label('vertical.elevator_position', vertical.elevator_position).toLowerCase()}`
+              : ''
         }. Ô thang máy phải chừa đủ chỗ ngay ở phương án này, kể cả khi lắp sau.`
       : vertical?.elevator === 'khong'
         ? 'Không làm thang máy.'
@@ -312,24 +318,26 @@ export function briefNarrative(digest: AiBriefDigest, options: NarrativeOptions)
 
   // ── Ban công ──────────────────────────────────────────────────────────────────────────
   const balconies = digest.balconies;
+  const view = balconySides(balconies);
   section('Ban công', [
     balconies?.scope
       ? `Phạm vi: ${label('balconies.scope', balconies.scope).toLowerCase()}.`
       : null,
-    faces(balconies?.sides) ? `Đặt ở: ${faces(balconies?.sides)}.` : null,
-    balconies?.projection_over_boundary === true
-      ? `Ban công ĐUA RA NGOÀI ranh đất${
-          typeof balconies.projection_m === 'number'
-            ? `, vươn ${metres(balconies.projection_m)}`
-            : ''
-        }.`
-      : balconies?.projection_over_boundary === false
-        ? `Ban công KHÔNG đua ra ngoài ranh đất — nằm trọn trong phần đất xây được${
-            typeof balconies.projection_m === 'number'
-              ? `, vươn ${metres(balconies.projection_m)}`
-              : ''
-          }.`
-        : null,
+    faces(view.required) ? `Mặt BẮT BUỘC có ban công: ${faces(view.required)}.` : null,
+    faces(view.optional)
+      ? `Mặt CÓ THỂ có ban công (có hay không đều được): ${faces(view.optional)}.`
+      : null,
+    view.required.length || view.optional.length
+      ? 'Mặt không nêu ở trên thì KHÔNG đặt ban công.'
+      : null,
+    ...BALCONY_SIDES.filter((side) => side in view.projection).map((side) => {
+      const m = view.projection[side];
+      return typeof m === 'number' && m > 0
+        ? `Ban công ${faces([side])} ĐUA RA NGOÀI ranh đất ${metres(m)} — phần đua nằm ngoài diện tích sàn.`
+        : m === 0
+          ? `Ban công ${faces([side])} KHÔNG đua — nằm trong diện tích sàn.`
+          : null;
+    }),
     yesNo(balconies?.drying_balcony)
       ? `Ban công phơi riêng phía sau: ${yesNo(balconies?.drying_balcony)}.`
       : null,

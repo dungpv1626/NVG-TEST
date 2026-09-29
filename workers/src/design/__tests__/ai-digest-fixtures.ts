@@ -55,6 +55,10 @@ export const VILLA: DesignBrief = {
     { type: 'garage' },
     { type: 'altar_room' },
   ],
+  // «Sân trong» là câu đầu bài mở đường cho giếng trời (T96, `only_when_asked`): ý định biệt thự mẫu
+  // vẽ giếng trời, nên đầu bài mẫu phải có hỏi tới nó. Nhà phố mẫu cố ý KHÔNG khai (bài kiểm văn xuôi
+  // và đòi hỏi cần một đầu bài chưa trả lời gì); bài nào ghép nó với ý định có giếng trời thì tự khai.
+  massing: { yards: ['san_trong'] },
 } as DesignBrief;
 
 export function digestOf(brief: DesignBrief): AiBriefDigest {

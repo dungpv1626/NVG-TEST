@@ -49,7 +49,7 @@
 # cấp nào không tính tiền thì khai ở `billing.free_providers`; `design_ai_call.cost_usd` luôn
 # ghi giá niêm yết, còn số tiền THẬT = 0 khi `provider` nằm trong danh sách đó.
 
-version: '1.3.0'
+version: '1.4.0'
 
 # Tên nhà cung cấp hiện trên ô chọn model (T60, 20/09/2026 — Haan gửi mẫu giao diện chọn theo nhà
 # cung cấp rồi mới chọn model). `gemini` và `gemini_paid` là HAI nhà cung cấp ở đây vì chúng dùng
@@ -245,6 +245,25 @@ routes:
     purpose: Nhánh AI — đầu bài nhiều ràng buộc chồng nhau, khi bậc cân bằng đã bị bác nhiều lượt.
     pricing: { input_per_1m_usd: 4, output_per_1m_usd: 20 }
     # ✔ Lời gọi rỗng 20/09/2026: 1.712 ms · vào 50 / ra 15 · nghĩ 0 · `{"ok":true}` · 0,00050 USD.
+    max_output_tokens: 0
+    request_timeout_s: 0
+
+  # Thêm 24/09/2026 theo yêu cầu Haan («thêm option chạy với model gpt 6 Sol, loại này rẻ hơn gpt 5.6
+  # sol»). Mã `gpt-6-sol` kiểm bằng `GET /v1/models` cùng ngày (không tốn token): có trong danh sách
+  # của khoá này. Đơn giá đối chiếu bảng giá chính thức developers.openai.com/api/docs/pricing cùng ngày:
+  # 2 / 10 USD — nửa giá GPT-5.6 Sol, token ra rẻ hơn cả Terra (12). CHƯA có lời gọi nào chạy thật.
+  ai_text_openai_sol6:
+    provider: openai
+    model: gpt-6-sol
+    label: GPT-6 Sol (OpenAI) — suy luận sâu, thế hệ 6
+    short: 'GPT-6 Sol'
+    tag: 'Suy luận sâu'
+    blurb: 'Bậc suy luận sâu thế hệ 6 của OpenAI. Nửa giá GPT-5.6 Sol; token ra rẻ hơn cả Terra.'
+    endpoint: https://api.openai.com/v1/responses
+    max_data_class: 2
+    enabled: true
+    purpose: Nhánh AI — suy luận sâu với giá thấp hơn GPT-5.6 Sol.
+    pricing: { input_per_1m_usd: 2, output_per_1m_usd: 10 }
     max_output_tokens: 0
     request_timeout_s: 0
 

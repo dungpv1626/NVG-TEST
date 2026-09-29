@@ -43,6 +43,7 @@ import {
   type AiDesignParams,
   type PlanStepDeps,
 } from '../workflows/ai-design-steps';
+import type { HouseIntent } from '../ai/house';
 import { digestOf, TOWNHOUSE, VILLA } from './ai-digest-fixtures';
 import { crammedBrief, VILLA_CRAMMED, VILLA_HOUSE } from './ai-house-fixtures';
 import { TOWNHOUSE_INTENTS } from './ai-intent-fixtures';
@@ -263,6 +264,38 @@ describe('lượt sửa gửi ý định cũ; lấy mẫu lại thì không', ()
   });
 });
 
+describe('lượt sửa giữ tầng đã qua (T86)', () => {
+  it('`keep` đi tới bước ghép: tầng giữ lấy từ ý định cũ dù câu trả lời vẽ lại nó', async () => {
+    const { deps } = depsWith(answering(VILLA_HOUSE));
+    // Ý định cũ khác câu trả lời ở bản phác tầng 1 — dấu để nhận ra bên nào thắng.
+    const previous = structuredClone(VILLA_HOUSE) as HouseIntent;
+    const sketch = previous.sketches!.find((item) => item.level === 1)!;
+    sketch.rows = [...sketch.rows].reverse();
+    const kept = await proposeHouse(
+      deps,
+      PARAMS,
+      VARIANT,
+      2,
+      ['- fix it'],
+      JSON.stringify(previous),
+      [1],
+    );
+    const merged = JSON.parse(kept.intentJson!) as HouseIntent;
+    expect(merged.sketches!.find((item) => item.level === 1)).toEqual(sketch);
+    const replaced = await proposeHouse(
+      deps,
+      PARAMS,
+      VARIANT,
+      2,
+      ['- fix it'],
+      JSON.stringify(previous),
+    );
+    expect(
+      (JSON.parse(replaced.intentJson!) as HouseIntent).sketches!.find((item) => item.level === 1),
+    ).not.toEqual(sketch);
+  });
+});
+
 describe('bước kiểm và xếp cả nhà', () => {
   it('ý định đúng: có danh mục và mọi tầng, không gọi lại', () => {
     const { deps } = depsWith(answering(null));
@@ -292,9 +325,10 @@ describe('bước kiểm và xếp cả nhà', () => {
 
   it('xếp được nhưng dưới ngưỡng 65 (T53): gọi sửa kèm tiêu chí mất điểm, gửi lại ý định đã đánh mã', () => {
     const { deps } = depsWith(answering(null));
-    const threshold = (acceptPercent: number) =>
+    // Bài này đo NGƯỠNG TỔNG, nên tắt sàn nhóm (T96) — biệt thự mẫu hụt hẳn nhóm D và E.
+    const threshold = (acceptPercent: number, acceptGroupFloorPercent: number | null = null) =>
       arrangeHouseStep(
-        { ...deps, quality: { ...deps.quality, acceptPercent } },
+        { ...deps, quality: { ...deps.quality, acceptPercent, acceptGroupFloorPercent } },
         PARAMS,
         VARIANT,
         { intentJson: JSON.stringify(VILLA_HOUSE), issues: [], call: CALL },
@@ -313,6 +347,24 @@ describe('bước kiểm và xếp cả nhà', () => {
     expect(passed.previousJson).toBeNull();
   });
 
+  it('qua ngưỡng tổng mà một nhóm dưới sàn nhóm (T96): vẫn gọi sửa, câu nhắc lấy từ đúng nhóm ấy', () => {
+    const { deps } = depsWith(answering(null));
+    const run = (acceptGroupFloorPercent: number | null) =>
+      arrangeHouseStep(
+        { ...deps, quality: { ...deps.quality, acceptPercent: 1, acceptGroupFloorPercent } },
+        PARAMS,
+        VARIANT,
+        { intentJson: JSON.stringify(VILLA_HOUSE), issues: [], call: CALL },
+        1,
+      );
+    expect(run(null).retry).toBe('none');
+    // Biệt thự mẫu: nhóm D (mặt thoáng) và E (dựng được) chấm 0 — dưới mọi sàn dương.
+    const floored = run(40);
+    expect(floored.retry).toBe('revise');
+    expect(floored.hints.length).toBeGreaterThan(0);
+    for (const hint of floored.hints) expect(hint).toMatch(/window|open side|wet|wc/i);
+  });
+
   it('câu trả lời sai hợp đồng: lấy mẫu lại với ghi chú tiếng Anh, không kèm ý định cũ', () => {
     const { deps } = depsWith(answering(null));
     const step = arrangeHouseStep(
@@ -329,7 +381,7 @@ describe('bước kiểm và xếp cả nhà', () => {
     expect(step.hints.join('\n')).toMatch(/did not match the schema/);
   });
 
-  it('diện tích vượt sàn xây được: GỌI LẠI để sửa — diện tích nay là của mô hình (T45)', () => {
+  it('diện tích khai vượt sàn xây được: chương trình tự chia lại mục tiêu rồi xếp (T94; trước: gọi lại mô hình, T45)', () => {
     const tooBig = {
       ...VILLA_HOUSE,
       rooms: VILLA_HOUSE.rooms.map((room) =>
@@ -344,13 +396,19 @@ describe('bước kiểm và xếp cả nhà', () => {
       { intentJson: JSON.stringify(tooBig), issues: [], call: CALL },
       1,
     );
-    expect(step.arrangedJson).toBeNull();
-    expect(step.retry).toBe('revise');
-    expect(step.rejections[0]!.messages.join(' ')).toMatch(/vượt sàn xây được/);
-    expect(step.previousJson).toContain('"rooms"');
+    // T94: chương trình tự chia lại diện tích mục tiêu (về mức tối thiểu của từng loại phòng) trước khi bác
+    // — con số mô hình khai vượt sàn không còn làm hỏng cả vòng. Biến thể được dùng thì ghi chú nói ra.
+    expect(step.arrangedJson).not.toBeNull();
+    const arranged = JSON.parse(step.arrangedJson!) as {
+      levels: { notes: { code: string; message: string }[] }[];
+    };
+    const notes = arranged.levels.flatMap((level) => level.notes);
+    expect(notes.some((note) => note.code === 'plan_variant')).toBe(true);
   });
 
-  it('chỉ còn lỗi hình học (hai phòng lớn không vừa khối nhà): KHÔNG gọi lại — không ghi chú, không gửi ý định cũ', () => {
+  it('phòng hụt mức đầu bài mà cả tầng không còn chỗ bù (hai phòng lớn không vừa khối nhà): VẪN ra mặt bằng, kèm cảnh báo sửa đầu bài — Haan 27/09/2026 (T91)', () => {
+    // Trước T91 (Haan chọn 23/09/2026) đây là GỬI LẠI mô hình. Nay: còn phòng dư thì vẫn gửi lại; hết
+    // chỗ bù thì gọi lại không đổi được gì — lập mặt bằng, tha sàn cho phòng ấy, và nói ra.
     const { deps } = depsWith(answering(null));
     const step = arrangeHouseStep(
       deps,
@@ -359,11 +417,46 @@ describe('bước kiểm và xếp cả nhà', () => {
       { intentJson: JSON.stringify(VILLA_CRAMMED), issues: [], call: CALL },
       1,
     );
-    expect(step.arrangedJson).toBeNull();
-    expect(step.retry).toBe('none');
-    expect(step.hints).toEqual([]);
-    expect(step.previousJson).toBeNull();
-    expect(step.rejections[0]!.messages.join(' ')).toMatch(/chỉ chia được|chỉ rộng|tối thiểu/);
+    expect(step.arrangedJson).not.toBeNull();
+    const arranged = JSON.parse(step.arrangedJson!) as {
+      levels: { notes: { code: string; message: string }[] }[];
+    };
+    const warned = arranged.levels
+      .flatMap((level) => level.notes)
+      .filter((n) => n.code === 'brief_area_unreachable');
+    expect(warned.length).toBeGreaterThan(0);
+    expect(warned[0]!.message).toMatch(/đề nghị sửa đầu bài/);
+  });
+
+  it('lượt sửa trả lại Y NGUYÊN ý định lượt trước ở tầng hỏng: `unchanged`, Workflow không gọi thêm (lượt đo 458d9a91)', () => {
+    // Sai danh mục (thiếu chỗ để xe) — biến thể của chương trình không gỡ được, nên phải gửi lại mô hình.
+    const noGarage = {
+      ...VILLA_HOUSE,
+      rooms: VILLA_HOUSE.rooms.map((room) =>
+        room.type === 'garage' ? { ...room, type: 'storage' } : room,
+      ),
+      garage_room: null,
+    };
+    const { deps } = depsWith(answering(null));
+    const first = arrangeHouseStep(
+      deps,
+      PARAMS,
+      VARIANT,
+      { intentJson: JSON.stringify(noGarage), issues: [], call: CALL },
+      1,
+    );
+    expect(first.retry).toBe('revise');
+    // Mô hình trả lại đúng ý định đã được gửi.
+    const again = arrangeHouseStep(
+      deps,
+      PARAMS,
+      VARIANT,
+      { intentJson: first.previousJson!, issues: [], call: CALL },
+      2,
+      first.previousJson,
+    );
+    expect(again.retry).toBe('unchanged');
+    expect(again.hints).toEqual([]);
   });
 });
 
@@ -399,8 +492,10 @@ describe('bước ghi', () => {
     expect(payload.house_intent).toHaveProperty('sketches');
     if ('written' in result) {
       expect(result.written.acceptPercent).toBe(65);
+      // Dưới ngưỡng tổng, hoặc một nhóm dưới sàn nhóm (T96) — cả hai đều được nói ra.
       expect(result.written.belowThreshold).toBe(
-        result.written.percent !== null && result.written.percent < 65,
+        (result.written.percent !== null && result.written.percent < 65) ||
+          result.written.belowGroups.length > 0,
       );
     }
     for (const level of payload.levels) {
@@ -413,7 +508,12 @@ describe('bước ghi', () => {
   it('thang hai tầng không chồng khít: KHÔNG đúc artifact nào, trả lý do', async () => {
     // Nhà phố 3 tầng: tầng 2 xếp với một mốc SAI — ô thang dời lên 1 m — như thể bước truyền mốc nhận
     // nhầm mốc. Bộ giải một tầng không thấy gì; chỉ cổng liên tầng lúc ghi mới thấy hai vế lệch.
-    const brief = { ...TOWNHOUSE, family: [{ role: 'con', count: 3 }] } as DesignBrief;
+    // Sân trong: ý định nhà phố mẫu vẽ giếng trời, đầu bài phải có hỏi tới (T96).
+    const brief = {
+      ...TOWNHOUSE,
+      family: [{ role: 'con', count: 3 }],
+      massing: { yards: ['san_trong'] },
+    } as DesignBrief;
     const params: AiDesignParams = { ...PARAMS, digest: digestOf(brief) };
     const { deps, recorded } = depsWith(answering(null));
     const source = {

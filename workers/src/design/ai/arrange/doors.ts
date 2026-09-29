@@ -17,6 +17,7 @@
  * `arrange_no_hub_wall`, và ứng viên đứng sau những ứng viên không có lý do nào.
  */
 
+import { opensFromStair } from '../../kb/vocabulary';
 import type { AiPlanTree } from '@nvg/shared/design';
 import type { Rect } from '../draw/geometry';
 import type { PlanIssue } from '../plan-check';
@@ -44,8 +45,13 @@ export interface DoorsInput {
   stairIds: ReadonlySet<string>;
   /** Loại phòng thuộc nhóm giao thông — hai phòng cùng nhóm nối nhau bằng ô thông, không cánh. */
   circulation: ReadonlySet<string>;
-  /** Loại phòng KHÔNG được mở cửa thẳng từ ô thang (`passage.stair_not_for`). `null` = không kiểm. */
-  stairNotFor: ReadonlySet<string> | null;
+  /**
+   * Hai phòng cùng nhóm này kề nhau thì ô thông chạy SUỐT vách chung — không vẽ vách ngăn giữa phòng
+   * khách và lối đi (`passage.open_flow`, T96). Vắng = chỉ ô thông rộng cửa như trước.
+   */
+  openFlow?: ReadonlySet<string> | null;
+  /** Loại phòng ĐƯỢC mở cửa thẳng từ ô thang (`passage.stair_opens_to`, T74). `null` = không kiểm. */
+  stairOpensTo: ReadonlySet<string> | null;
   /**
    * Tầng 1: hình bao và cạnh của mặt lối vào chính. Phòng mang cửa chính không chạm cạnh ấy mà một sảnh
    * ngoài kề nó chạm thì cửa chính mở ở sảnh (lượt 58688ead: bản phác vẽ sảnh suốt trước phòng khách).
@@ -70,11 +76,11 @@ export function deriveDoors(input: DoorsInput): DoorsResult {
   const reasons: PlanIssue[] = [];
   const reached = new Set<string>();
 
-  const add = (a: string, b: string, kind: Door['kind']) => {
+  const add = (a: string, b: string, kind: Door['kind'], full = false) => {
     const key = b === 'outside' ? `${a}|outside` : [a, b].sort().join('|');
     if (seen.has(key)) return;
     seen.add(key);
-    doors.push({ a, b, kind });
+    doors.push({ a, b, kind, ...(full ? { full: true } : {}) });
   };
   const shared = (a: string, b: string) => {
     const ra = rect.get(a);
@@ -121,11 +127,15 @@ export function deriveDoors(input: DoorsInput): DoorsResult {
   const bothCirculation = (a: string, b: string) =>
     (leafById.get(a)?.types ?? []).some((type) => input.circulation.has(type)) &&
     (leafById.get(b)?.types ?? []).some((type) => input.circulation.has(type));
-  /** Phòng ở không lấy cửa thẳng từ ô thang (`passage.stair_not_for`) — phải vào từ hành lang. */
-  const mayOpenFromStair = (host: string, room: string) => {
-    if (!input.stairNotFor || !input.stairIds.has(host)) return true;
-    return !(leafById.get(room)?.types ?? []).some((type) => input.stairNotFor!.has(type));
-  };
+  /** Khách / ăn kề lối đi: một không gian, ô thông suốt vách, không vách ngăn (T96). */
+  const bothOpenFlow = (a: string, b: string) =>
+    !!input.openFlow &&
+    (leafById.get(a)?.types ?? []).some((type) => input.openFlow!.has(type)) &&
+    (leafById.get(b)?.types ?? []).some((type) => input.openFlow!.has(type));
+  /** Ô thang chỉ mở cửa sang giao thông, khu chung (`passage.stair_opens_to`, T74). */
+  const mayOpenFromStair = (host: string, room: string) =>
+    !input.stairIds.has(host) ||
+    opensFromStair(input.stairOpensTo, leafById.get(room)?.types ?? []);
   const isOpening = (a: string, b: string) =>
     intent.openings.some(([p, q]) => (p === a && q === b) || (p === b && q === a));
 
@@ -177,7 +187,12 @@ export function deriveDoors(input: DoorsInput): DoorsResult {
           p.localeCompare(q),
       )) {
       // Từ chỗ để xe / sảnh ngoài chỉ vào được phòng đi xuyên được — `passage.entry_through`.
-      add(current, next, currentIsHub ? 'opening' : 'single');
+      add(
+        current,
+        next,
+        currentIsHub ? 'opening' : 'single',
+        currentIsHub && bothOpenFlow(current, next),
+      );
       reached.add(next);
       queue.push(next);
     }
@@ -225,6 +240,22 @@ export function deriveDoors(input: DoorsInput): DoorsResult {
   for (const room of deadEnds) {
     if (reached.has(room)) continue;
     const touching = neighbours(room);
+    // Chỉ còn ô thang (đã tới được) là chỗ mở cửa, mà loại phòng này không được lấy cửa từ ô thang (T74):
+    // chỗ sai là bố cục mô hình vẽ — báo bằng mã NGỮ NGHĨA để lượt sửa gửi mô hình kê phòng sát hành lang,
+    // thay vì lỗi hình học làm lượt chạy dừng (lượt đo 4a521f52: giặt phơi, WC tầng 2 chỉ giáp ô thang).
+    const stair = touching.find(
+      (id) => reached.has(id) && input.stairIds.has(id) && !mayOpenFromStair(id, room),
+    );
+    if (stair) {
+      reasons.push({
+        code: 'door_from_stair',
+        level: 'blocking',
+        message: `Phòng "${room}" ở ${where} chỉ giáp ô thang "${stair}" — ô thang là vế bậc, phòng phải vào từ hành lang hay khu sinh hoạt chung.`,
+        params: { room, stair },
+        ref: room,
+      });
+      continue;
+    }
     reasons.push(
       arrangeIssue(
         'arrange_no_hub_wall',

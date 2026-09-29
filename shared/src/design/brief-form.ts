@@ -346,6 +346,40 @@ export function isFieldVisible(
   return field.when ? evaluateCondition(field.when, payload) : true;
 }
 
+/**
+ * Bản sao đầu bài đã BỎ câu trả lời của các ô đang ẩn (điều kiện `when` của ô hoặc của mục không thoả).
+ *
+ * Phiếu không xoá giá trị khi một ô bị ẩn vì đổi lựa chọn phía trên (chọn «không làm ban công» sau khi đã
+ * khai độ đua; đổi Biệt thự → Nhà phố sau khi đã khai khoảng lùi). Đọc thẳng dữ liệu thì câu trả lời cũ
+ * người dùng không còn nhìn thấy vẫn sinh cảnh báo — thậm chí CHẶN «AI Design» bằng một ô không sửa được
+ * (rà soát 29/09/2026). Lặp tới khi ổn định: ô ẩn kéo theo ô khác ẩn (tín ngưỡng «không» → ẩn cách bố trí
+ * nơi thờ → ẩn tầng thờ, dù tầng thờ chỉ nhìn cách bố trí).
+ */
+export function withoutHiddenAnswers<T extends object>(
+  payload: T,
+  config: BriefFormConfig,
+  /**
+   * Ô ẩn mà giá trị vẫn phải giữ vì chương trình tự dựng nó, không phải người nhập: chiều rộng / chiều sâu
+   * của thửa đa giác suy từ đường ranh, và hợp đồng `ai-brief-digest` bắt buộc hai số ấy.
+   */
+  keep: readonly string[] = [],
+): T {
+  let current = payload;
+  for (let round = 0; round < 10; round += 1) {
+    let next = current;
+    for (const section of config.sections) {
+      for (const field of section.fields) {
+        if (keep.includes(field.path) || isFieldVisible(field, section, current)) continue;
+        if (valueAtPath(next, field.path) === undefined) continue;
+        next = setAtPath(next, field.path, undefined);
+      }
+    }
+    if (next === current) return current;
+    current = next;
+  }
+  return current;
+}
+
 /** Mọi trường đang hiện, kèm section chứa nó — dùng cho cả vẽ lẫn chấm điểm. */
 export function visibleFields(
   config: BriefFormConfig,

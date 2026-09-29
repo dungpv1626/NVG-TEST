@@ -1,0 +1,10 @@
+erDiagram
+  customers ||--o{ opportunities : "phát sinh"
+  customers ||--o{ complaints : "khiếu nại"
+  customers ||--o{ contracts : "ký"
+  opportunities ||--o{ opportunity_stage_history : "lịch sử bước"
+  opportunities ||--o{ site_surveys : "khảo sát"
+  opportunities ||--o{ quotes : "báo giá"
+  estimates ||--o{ contracts : "làm căn cứ"
+  contracts ||--o{ contract_terms : "điều khoản"
+  contracts ||--o{ contract_amendments : "phụ lục"

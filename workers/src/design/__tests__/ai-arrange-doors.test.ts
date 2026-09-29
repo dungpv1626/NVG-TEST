@@ -66,7 +66,15 @@ function doorsFor(
     stairUp: null,
     stairIds: new Set(),
     circulation: new Set(['circulation', 'stair', 'core']),
-    stairNotFor: new Set(['bedroom', 'master_bedroom', 'study', 'altar_room']),
+    stairOpensTo: new Set([
+      'circulation',
+      'core',
+      'stair',
+      'elevator',
+      'living',
+      'dining',
+      'terrace',
+    ]),
     ...extra,
   }).doors;
 }
@@ -157,5 +165,39 @@ describe('deriveDoors — hành lang nối hành lang, và cửa từ ô thang',
           (door.a === 'altar_room_1' && door.b === 'stair_1'),
       ),
     ).toBe(false);
+  });
+});
+
+/**
+ * T96 (Haan 27/09/2026): «vẽ tường phân cách [phòng khách – lối đi] ở giữa là không cần thiết và làm bí
+ * không gian» — hai phòng cùng nhóm `passage.open_flow` kề nhau nối bằng ô thông SUỐT vách.
+ */
+describe('deriveDoors — khách kề lối đi: ô thông suốt vách, không vách ngăn (T96)', () => {
+  const cells = [
+    { id: 'living_1', rect: { x0: 0, y0: 0, x1: 600, y1: 800 } },
+    { id: 'hall_1', rect: { x0: 0, y0: 800, x1: 600, y1: 1000 } },
+    { id: 'bedroom_1', rect: { x0: 0, y0: 1000, x1: 600, y1: 1400 } },
+  ];
+  const leaves = [
+    leaf('living_1', ['living'], 'hub'),
+    leaf('hall_1', ['circulation'], 'hub'),
+    leaf('bedroom_1', ['bedroom'], 'room'),
+  ];
+
+  it('có `open_flow`: ô thông khách – hành lang mang `full`, cửa phòng ngủ thì không', () => {
+    const doors = doorsFor(cells, leaves, 'living_1', {
+      openFlow: new Set(['living', 'dining', 'circulation']),
+    });
+    expect(doors).toContainEqual({ a: 'living_1', b: 'hall_1', kind: 'opening', full: true });
+    expect(doors.find((d) => d.b === 'bedroom_1')).toEqual({
+      a: 'hall_1',
+      b: 'bedroom_1',
+      kind: 'single',
+    });
+  });
+
+  it('không có `open_flow` (kb cũ): ô thông rộng cửa như trước, không `full`', () => {
+    const doors = doorsFor(cells, leaves, 'living_1');
+    expect(doors).toContainEqual({ a: 'living_1', b: 'hall_1', kind: 'opening' });
   });
 });

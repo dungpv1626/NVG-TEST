@@ -50,6 +50,7 @@ import { perspectivePlan, redrawAloneRefusal, type AnchorKind } from './perspect
 import { aiPrompts } from './prompts-data';
 import { anchorMime, pngSize } from './sheet-image';
 import { activeRun, attachWorkflow, createRun, finishRun } from './runs';
+import { instanceIdOf } from '../workflows/rpc-stub';
 
 export const perspectiveApp = new Hono<{ Bindings: DesignEnv }>();
 
@@ -201,8 +202,8 @@ perspectiveApp.post('/runs', async (c) => {
     anchors: stored,
   };
   try {
-    const instance = await c.env.AI_DESIGN_PIPELINE.create({ params });
-    await attachWorkflow(repo.db, run.id, instance.id);
+    const instanceId = instanceIdOf(await c.env.AI_DESIGN_PIPELINE.create({ params }));
+    await attachWorkflow(repo.db, run.id, instanceId);
   } catch (error) {
     await finishRun(repo.db, run.id, {
       status: 'failed',

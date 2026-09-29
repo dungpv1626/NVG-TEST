@@ -1,0 +1,18 @@
+flowchart LR
+  IN["<b>Đầu bài</b><br/>đã ẩn danh"]
+  M["<b>Mô hình đề xuất</b><br/>phòng · quan hệ<br/>bản phác lưới ô"]
+  P["<b>Chương trình quyết định</b><br/>gán MỌI toạ độ<br/>cửa · cửa sổ · bậc thang"]
+  G{"<b>Cổng kiểm</b><br/>và chấm điểm"}
+  O["<b>Đầu ra</b><br/>tờ vector · tệp bản vẽ<br/>ảnh · mặt đứng"]
+  E["<b>Kỹ sư sửa</b><br/>bằng ô yêu cầu"]
+  X["Không lưu"]
+  IN --> M --> P --> G
+  G -->|đạt| O
+  G -->|"lỗi ngữ nghĩa<br/>còn lượt sửa"| M
+  G -->|"không đạt"| X
+  O --> E
+  E -->|"áp lên cây đã lưu"| P
+  style G fill:#FFF6E0,stroke:#D9A441
+  style X fill:#FFFFFF,stroke:#B04A3F,stroke-dasharray: 4 3
+  style IN fill:#1F5F4B,color:#FFFFFF,stroke:#1F5F4B
+  style O fill:#1F5F4B,color:#FFFFFF,stroke:#1F5F4B

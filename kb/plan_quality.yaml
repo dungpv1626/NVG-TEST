@@ -2,7 +2,9 @@
 #  THƯỚC CHẤM MẶT BẰNG CÔNG NĂNG — trọng số và công thức
 # ═══════════════════════════════════════════════════════════════════════════════
 #
-#  Phiên bản thước: score_version 1 (T27)
+#  Phiên bản thước: score_version 3 (T27; 2 = thêm D3 ban công, T91; 3 = T96: C9 cửa chính
+#                   đón vào đâu, C10 hành lang phục vụ gì, E5 khu ướt đè lên đâu, trọng số
+#                   trong nhóm, sàn theo nhóm)
 #  Nguồn:           bộ đo trên hồ sơ thật của NVG, 12/09/2026
 #                   /home/haan/Documents/Doc/NVG/design/mat_bang_cong_nang
 #  Cơ sở dữ liệu:   2 dự án NVO, 6 mặt bằng độc lập (P1 nhà vườn 2 tầng,
@@ -41,11 +43,11 @@
 #  «72 trên 85 phần trọng số đã chấm được», không phải «85 điểm». Hiện 0 đọc như
 #  «vi phạm hết», không đọc như «chưa đo» (CLAUDE.md 5.2).
 
-version: '2026.09.1'
+version: '2026.09.4'
 
 # Đổi công thức hay ngưỡng thì TĂNG số này. Không có nó thì bảng lịch sử so hai
 # model bằng hai cái thước khác nhau mà không ai biết (T27).
-score_version: 1
+score_version: 3
 
 co_so_du_lieu: '2 dự án NVO, 6 mặt bằng độc lập — mọi ngưỡng [ĐO] là chỉ dấu, chưa phải chuẩn'
 
@@ -55,6 +57,14 @@ co_so_du_lieu: '2 dự án NVO, 6 mặt bằng độc lập — mọi ngưỡng 
 # lưu phương án điểm cao nhất và nói rõ là dưới ngưỡng. Không phải chuẩn nghề — là chỗ dừng hợp lý để
 # giao cho kỹ sư sửa tiếp bằng tay. Vắng = không có ngưỡng.
 accept_percent: 65
+
+# Sàn theo NHÓM (T96, 27/09/2026): một nhóm chấm được mà dưới % này thì phương án coi như dưới ngưỡng,
+# dù tổng vượt 65. Sáu mặt bằng đầu tiên qua ngưỡng đều có D1 = 0, E2 = 0, C7 = 0,24 — nhóm diện tích và
+# hình dáng đã bù cho một tầng đi lại tệ, và Haan xem xong chấm «rất tệ». Kiến trúc sư không cộng bù
+# như thế: một nhà đi lại hỏng thì to đẹp mấy cũng hỏng. Con số 40 là SUY LUẬN (n = 0): thấp hơn 50 để
+# một tiêu chí mất trắng (D1 nhà phố chỉ đo hai phòng) chưa kéo cả nhóm xuống, đủ cao để nhóm mất
+# quá nửa thì phải sửa. Vắng = không có sàn.
+accept_group_floor_percent: 40
 
 # ── Trọng số nhóm ──────────────────────────────────────────────────────────────
 #
@@ -83,10 +93,11 @@ groups:
     vi: 'Dựng được'
     weight: 10
 
-# Trong một nhóm, các tiêu chí CHẤM ĐƯỢC chia đều trọng số. Bộ đo chỉ cho trọng số
-# NHÓM, không cho trọng số từng tiêu chí — nên đây là lựa chọn của team, nhãn
-# [CHUNG], và đổi được bằng cách khai `weight` cho từng tiêu chí ở dưới.
-within_group: equal
+# Trong một nhóm, các tiêu chí CHẤM ĐƯỢC chia trọng số theo `weight` của từng tiêu chí (vắng = 1,
+# tức chia đều). Bộ đo chỉ cho trọng số NHÓM; phần trong nhóm là tư duy nghề, nhãn [CHUNG], và từ T96
+# khai được ở từng tiêu chí: thứ làm hỏng cách ở (đi xuyên phòng ngủ, cửa chính đón vào bếp, phòng thờ
+# cạnh WC) nặng gấp đôi thứ chỉ làm nhà kém tiện (hành lang hơi dài, phòng hơi rộng).
+within_group: weighted
 
 # ── Năm kiểu thang điểm ────────────────────────────────────────────────────────
 #
@@ -138,6 +149,8 @@ criteria:
     kind: boolean
     n: 2
     label: 'ĐO'
+    # Nặng gấp đôi trong nhóm: phòng thờ đặt sai là gia chủ người Việt không nhận nhà (T96).
+    weight: 2
 
   - code: A4
     group: A
@@ -170,6 +183,9 @@ criteria:
     zero: 2
     n: 0
     label: 'CHUNG mức 0; trừ hết ở 2 phòng'
+    # Nhẹ nửa: phòng rộng hơn định mức chưa bao giờ là lý do gia chủ chê (Haan 27/09/2026: «diện tích
+    # không phải là vấn đề lớn», đất rộng thì phòng khách 60 m² là bình thường).
+    weight: 0.5
 
   # ── B. Hình dáng phòng ──────────────────────────────────────────────────────
   - code: B1
@@ -223,6 +239,8 @@ criteria:
     zero: 1
     n: 3
     label: 'ĐO'
+    # Nặng gấp đôi: đi xuyên phòng ngủ người khác là mất riêng tư, không phải kém tiện (T96).
+    weight: 2
     # Khu vệ sinh khép kín KHÔNG tính: `ensuite_of` của chương trình không gian nói
     # rõ chỗ đi xuyên phòng ấy là hợp lệ.
 
@@ -261,10 +279,12 @@ criteria:
     group: C
     vi: 'Bề rộng lọt lòng nhỏ nhất của hành lang, mét'
     kind: higher_better
-    pass: 1.1
+    # 1,1 → 1,0 (23/09/2026, cùng Q-52): HS-03 và HS-05 làm hành lang đúng 1,00 m. Cùng phép đo
+    # với `room_min_dimension_circulation` trong `rules/nvg-measured.yaml` — hai chỗ phải cùng mốc.
+    pass: 1.0
     zero: 0.9
-    n: 3
-    label: 'ĐO 1,1; CHUNG 0,9'
+    n: 6
+    label: 'ĐO 1,0; CHUNG 0,9'
 
   - code: C5
     group: C
@@ -305,6 +325,32 @@ criteria:
     n: 0
     label: 'CHUNG 2,5 m; trừ hết ở 6 m'
 
+  # Ba tiêu chí T96 (27/09/2026) — Haan xem sáu mặt bằng đầu tiên qua ngưỡng và chỉ ra ba lỗi nghề mà
+  # thước không thấy. Viết theo cách kiến trúc sư nhà ở Việt Nam đọc một mặt bằng, và là ĐIỂM, không
+  # phải luật: mỗi cái đều có ngoại lệ hợp lý (nhà phố vào qua gara, sảnh đệm nhỏ, WC chồng WC).
+  - code: C9
+    group: C
+    vi: 'Số phòng phải đi xuyên từ cửa chính tới phòng khách'
+    giai_thich: 'Sảnh, hành lang, chỗ để xe không tính — vào nhà qua gara là nếp nhà phố. Đi qua bếp hay phòng ăn mới tới khách là bố cục ngược: khách bước vào bằng cửa sau. Không tới được phòng khách tính như xa nhất.'
+    kind: count
+    pass: 0
+    zero: 1
+    n: 0
+    label: 'CHUNG mức 0; trừ hết ở 1 phòng'
+    # Nặng gấp đôi: cửa chính đón vào đâu là ấn tượng đầu tiên của cả ngôi nhà (lượt 5fda70dc).
+    weight: 2
+
+  - code: C10
+    group: C
+    vi: 'Số hành lang chỉ mở cửa vào chưa tới hai phòng ngõ cụt'
+    giai_thich: 'Hành lang từ `min_area_m2` trở lên mà chỉ dẫn vào một phòng (kho, một phòng ngủ) là sàn chết — gộp vào phòng ấy thì hơn. Sảnh đệm nhỏ hơn mức ấy không đếm: vài mét vuông giữa gara và bếp là chuyện thường. Ô thang tính là một phòng nó phục vụ.'
+    kind: count
+    pass: 0
+    zero: 1
+    min_area_m2: 4
+    n: 0
+    label: 'CHUNG mức 0; trừ hết ở 1 hành lang'
+
   # ── D. Mặt thoáng ───────────────────────────────────────────────────────────
   - code: D1
     group: D
@@ -326,6 +372,16 @@ criteria:
     n: 5
     label: 'ĐO'
 
+  - code: D3
+    group: D
+    vi: 'Tỷ lệ ban công quay cạnh dài ra mặt thoáng'
+    giai_thich: 'T91 (Haan 27/09/2026): ban công trong sàn, gần vuông (cạnh dài ≤ `long_ratio` của `rules/nvg-mandatory.yaml`) mà không quay cạnh dài ra mặt thoáng thì không chặn, chỉ trừ điểm ở đây. Ban công đua ra ngoài ranh hoặc ở góc nhà (từ hai cạnh thoáng) tính là đạt.'
+    kind: higher_better
+    pass: 1.0
+    zero: 0.5
+    n: 0
+    label: 'CHUNG 1,0; trừ hết ở 0,5'
+
   # ── E. Dựng được ────────────────────────────────────────────────────────────
   - code: E2
     group: E
@@ -346,6 +402,19 @@ criteria:
     lech_m: 0.15
     n: 5
     label: 'ĐO (1 dự án)'
+
+  - code: E5
+    group: E
+    vi: 'Tỷ lệ khu ướt tầng trên không đè lên chỗ tiếp khách, chỗ ăn, chỗ ngủ, chỗ thờ hay lối vào tầng dưới'
+    giai_thich: 'Khu ướt = nhóm `wet` (WC, giặt); phòng bên dưới thuộc nhóm `dry_below` của từ vựng. Một khu ướt «đè» khi phần chồng lên các phòng ấy từ `overlap_ratio` diện tích của nó trở lên. Nếp nghề Việt Nam: ống nước, mùi và tiếng nước không đi qua trần phòng khách hay đầu giường; bếp và phòng thờ dưới WC đã là luật bắt buộc, đây là phần còn lại (lượt 5aba737d: WC phòng ngủ chính ngay trên cửa vào phòng khách).'
+    kind: higher_better
+    pass: 1.0
+    zero: 0.5
+    overlap_ratio: 0.3
+    n: 0
+    label: 'CHUNG 1,0; trừ hết ở 0,5'
+    # Nặng hơn hộp kỹ thuật một chút: gia chủ thấy ngay, còn hộp kỹ thuật là chuyện của bản vẽ kỹ thuật.
+    weight: 1.5
 
 # ── Độ khớp Ý ĐỊNH khi bộ giải chọn cây (T43, 14/09/2026) ─────────────────────────
 #

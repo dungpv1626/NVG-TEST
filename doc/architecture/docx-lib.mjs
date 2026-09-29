@@ -132,11 +132,18 @@ export function bullets(items) {
   );
 }
 
-export function steps(items) {
+/**
+ * Danh sách đánh số.
+ *
+ * `instance` tách bộ đếm: cùng một `reference` mà không đổi `instance` thì danh sách sau **đếm
+ * tiếp** danh sách trước (mục 1–5 rồi mục 6–10), không quay về 1. Nơi gọi phải truyền số tăng dần
+ * cho mỗi danh sách mới.
+ */
+export function steps(items, instance = 0) {
   return items.map(
     (text) =>
       new Paragraph({
-        numbering: { reference: 'danh-so', level: 0 },
+        numbering: { reference: 'danh-so', level: 0, instance },
         spacing: { after: 70, line: 276 },
         children: runs(text),
       }),
@@ -244,6 +251,29 @@ export function pre(lines) {
   });
 }
 
+/**
+ * Bảng hai cột «nhãn — nội dung», không có hàng tiêu đề; cột nhãn tô nền.
+ * Dùng cho khối tóm tắt và thông tin tài liệu, nơi hàng tiêu đề chỉ là chữ thừa.
+ */
+export function kvTable(rows, ratios = [1, 3]) {
+  const total = ratios.reduce((a, b) => a + b, 0);
+  const widths = ratios.map((r) => Math.round((r / total) * CONTENT_WIDTH));
+  widths[widths.length - 1] = CONTENT_WIDTH - widths.slice(0, -1).reduce((a, b) => a + b, 0);
+  const line = { style: BorderStyle.SINGLE, size: 4, color: RULE };
+  return new Table({
+    columnWidths: widths,
+    width: { size: CONTENT_WIDTH, type: WidthType.DXA },
+    borders: { top: line, bottom: line, left: line, right: line, insideHorizontal: line, insideVertical: line },
+    rows: rows.map(
+      (r) =>
+        new TableRow({
+          cantSplit: true,
+          children: r.map((t, i) => cell(t, { header: i === 0, width: widths[i] })),
+        }),
+    ),
+  });
+}
+
 export function pageBreak() {
   return new Paragraph({ children: [new PageBreak()] });
 }
@@ -326,11 +356,21 @@ export function titlePage({ title, subtitle, module: moduleName, version, date, 
   ];
 }
 
-export function buildDocument({ headerText, children }) {
+/**
+ * `updateFields`: Word hỏi cập nhật trường khi mở tệp, nên mục lục tự có số trang — người duyệt
+ * không phải biết mẹo nhấn F9.
+ */
+export function buildDocument({
+  headerText,
+  children,
+  description = 'Tài liệu Kiến trúc Phần mềm',
+  updateFields = false,
+}) {
   return new Document({
+    features: { updateFields },
     creator: 'Nhà Việt Group',
     title: headerText,
-    description: 'Tài liệu Kiến trúc Phần mềm',
+    description,
     numbering: {
       config: [
         {
@@ -418,12 +458,35 @@ export function buildDocument({ headerText, children }) {
   });
 }
 
-export function toc() {
+/**
+ * Mục lục **ghi sẵn nội dung**, không dùng trường của Word.
+ *
+ * Trường `TOC` của Word chỉ là một lệnh: chưa "cập nhật trường" thì trình xem hiện đúng chữ
+ * `TOC \h \o "1-3"`. Tài liệu gửi cho người khác đọc không được phụ thuộc vào việc người đọc
+ * phải biết nhấn F9, nên ở đây liệt kê thẳng các mục. Đánh đổi: không có số trang — bù lại nó
+ * hiển thị đúng ở Word, LibreOffice, Google Docs và cả bản xem trước.
+ *
+ * `entries`: [{ text, level }] với level 1 là mục chính, level 2 là mục con.
+ */
+export function toc(entries = []) {
+  if (entries.length === 0) return [h1('Mục lục')];
   return [
     h1('Mục lục'),
-    new TableOfContents('Mục lục', { hyperlink: true, headingStyleRange: '1-3' }),
-    note(
-      'Mục lục sinh bằng trường của Word. Mở tệp lần đầu, chọn mục lục rồi nhấn F9 để Word điền số trang.',
+    ...entries.map(
+      ({ text, level }) =>
+        new Paragraph({
+          spacing: { after: level === 1 ? 60 : 30, line: 264 },
+          indent: { left: level === 1 ? 0 : 360 },
+          children: [
+            new TextRun({
+              text,
+              font: FONT,
+              size: level === 1 ? 21 : 19,
+              bold: level === 1,
+              color: level === 1 ? INK : '52606D',
+            }),
+          ],
+        }),
     ),
   ];
 }

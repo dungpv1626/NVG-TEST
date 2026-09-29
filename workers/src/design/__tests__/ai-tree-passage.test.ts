@@ -13,6 +13,7 @@ import type { AiFloorPlan, AiPlanTree } from '@nvg/shared/design';
 import { parseConstructionNorms } from '../kb/construction';
 import {
   mergeAllowed,
+  opensFromStair,
   parseVocabulary,
   passageRules,
   roomGroups,
@@ -108,11 +109,12 @@ describe('luật đi xuyên phòng — năm điều của `mayEnter`', () => {
     ...over,
   });
 
-  it('đi xuyên được hành lang và ô bếp ghép phòng ăn; không đi xuyên được bếp riêng, WC, phòng ngủ', () => {
+  it('đi xuyên được hành lang, ô bếp ghép phòng ăn và bếp (T91: khách + ăn + bếp là một khu chung); không đi xuyên được WC, phòng ngủ', () => {
     const input = base();
     expect(mayEnter(input, 'hall', 'bed')).toBe(true);
     expect(mayEnter(input, 'open', 'bed')).toBe(true);
-    expect(mayEnter(input, 'kitchen', 'bed')).toBe(false);
+    // T91 (Haan 27/09/2026): bếp thuộc khu chung — lối đi nằm ngay trong đó, không cần hành lang cứng.
+    expect(mayEnter(input, 'kitchen', 'bed')).toBe(true);
     expect(mayEnter(input, 'wc', 'store')).toBe(false);
     expect(mayEnter(input, 'bed2', 'bed')).toBe(false);
   });
@@ -146,6 +148,22 @@ describe('luật đi xuyên phòng — năm điều của `mayEnter`', () => {
   // Ví dụ mẫu của lời dẫn tầng nay là Ý ĐỊNH (T43), không còn cửa để đo luật đi xuyên trực tiếp:
   // `ai-arrange.test.ts` xếp chính ví dụ ấy và đòi nó qua trọn cổng, gồm cả luật này.
 
+  it('ô thang chỉ mở cửa sang giao thông, khu chung, sân thượng, thang máy (T74, Haan 25/09/2026)', () => {
+    const allowed = passageRules(vocabulary)!.stairOpensTo;
+    expect([...allowed].sort()).toEqual(
+      // T91 thêm bếp: cùng khu chung với khách và ăn.
+      ['circulation', 'core', 'dining', 'elevator', 'kitchen', 'living', 'stair', 'terrace'].sort(),
+    );
+    for (const type of ['wc', 'storage', 'laundry', 'balcony', 'garage', 'bedroom', 'altar_room'])
+      expect(opensFromStair(allowed, [type]), type).toBe(false);
+    for (const type of ['terrace', 'elevator', 'circulation', 'living', 'kitchen'])
+      expect(opensFromStair(allowed, [type]), type).toBe(true);
+    // Ô ghép: khách ghép bếp là không gian chung, mở từ ô thang được.
+    expect(opensFromStair(allowed, ['kitchen', 'living'])).toBe(true);
+    // Vắng mục trong dữ liệu = không kiểm.
+    expect(opensFromStair(new Set(), ['wc'])).toBe(true);
+  });
+
   it('mã phòng lạ trong mục `passage` ném lỗi ngay lúc nạp', () => {
     const broken: RoomVocabulary = { ...vocabulary, passage: { through: ['corridor_typo'] } };
     expect(() => passageRules(broken)).toThrow(/corridor_typo/);
@@ -174,14 +192,23 @@ describe('phát lại cây thật 13/09/2026 — cổng mới không cho qua l�
     );
   });
 
-  it('gpt-5 tầng 2: phòng ngủ 4 qua phòng ngủ 5, phòng làm việc qua phòng ngủ chính → bác; giặt phơi được chuyển lối vào sang hành lang', () => {
+  it('gpt-5 tầng 1: WC lấy cửa thẳng từ ô thang → bác (T74, Haan 25/09/2026: «cửa ở mặt cầu thang thì đi vào đi ra kiểu gì?»)', () => {
     const ground = run(REAL_0913B_GPT5[0]!, 1, null);
+    expect(ground.level).toBeNull();
+    expect(codes(ground)).toEqual(['door_from_stair:wc_2']);
+  });
+
+  it('gpt-5 tầng 2: phòng ngủ 4 qua phòng ngủ 5, phòng làm việc qua phòng ngủ chính → bác; giặt phơi được chuyển lối vào sang hành lang', () => {
+    // Tầng 1 hỏng vì luật T74 (phép thử trên); nới riêng luật ấy để có mốc thang cho tầng 2.
+    const ground = run(REAL_0913B_GPT5[0]!, 1, null, { relax: new Set(['door_from_stair']) });
     expect(ground.level).not.toBeNull();
     const upper = run(REAL_0913B_GPT5[1]!, 2, ground.anchors);
     expect(upper.level).toBeNull();
     expect(codes(upper).sort()).toEqual([
       // Phòng thờ lấy cửa thẳng từ ô thang — luật 18/09/2026, Haan chấm trên lượt 78be09b4.
       'door_from_stair:altar_room_1',
+      // WC cũng không mở ra ô thang (T74) — T54 chỉ chặn phòng ở, nên trước đây lọt.
+      'door_from_stair:wc_4',
       'room_through_private:bedroom_4',
       'room_through_private:study_1',
     ]);
@@ -192,10 +219,10 @@ describe('phát lại cây thật 13/09/2026 — cổng mới không cho qua l�
   });
 
   it('lượt sửa của kỹ sư (`relax`) hạ «cửa từ ô thang» xuống ghi chú — bản vẽ có trước luật vẫn sửa được', () => {
-    const ground = run(REAL_0913B_GPT5[0]!, 1, null);
-    const upper = run(REAL_0913B_GPT5[1]!, 2, ground.anchors, {
-      relax: new Set(['door_from_stair']),
-    });
+    const relax = new Set(['door_from_stair']);
+    const ground = run(REAL_0913B_GPT5[0]!, 1, null, { relax });
+    expect(ground.notes.some((note) => note.code === 'door_from_stair_kept')).toBe(true);
+    const upper = run(REAL_0913B_GPT5[1]!, 2, ground.anchors, { relax });
     expect(codes(upper)).not.toContain('door_from_stair:altar_room_1');
     expect(upper.notes.some((note) => note.code === 'door_from_stair_kept')).toBe(true);
   });

@@ -373,21 +373,25 @@ describe('P1 — nhà vườn đã xây, đã duyệt: thước phải chấm ca
 describe('P2 — liền kề đã xây, đã duyệt: một chỗ bị trừ, và nó giải thích được', () => {
   const type = 'nha_pho';
 
-  it('B1 và B2 — ĐÚNG MỘT phòng bị trừ, cùng một khu vệ sinh hình thang', () => {
+  it('B1 — ĐÚNG MỘT phòng bị trừ, khu vệ sinh hình thang; B2 thôi trừ nó (Q-52)', () => {
     // Dòng CSV: `P2,KT/01,nha_pho,1,WC 1.1,wc,,1.13,2.77,3.1,3.1,-1.0,tuong,khong_ro,hình thang
     // 1.02–1.24`. Phương án đã nói trước chỗ này (5.2b): «chấp nhận WC hình thang P2 KHÔNG đạt —
     // đó là kết luận thật, không phải lỗi của thước». Phép thử ghim nó lại để sau này không ai nới
     // ngưỡng cho nó qua mà không thấy.
     expect(b1(P2, type).map((room) => room.id)).toEqual(['wc_11']);
-    expect(b2(P2, type).map((room) => room.id)).toEqual(['wc_11']);
+    // B2 THÔI bắt WC này từ 23/09/2026 — nới CÓ CHỦ ĐÍCH (Haan duyệt Q-52): ba WC của HS-03 dài
+    // 2,36–2,44 lần bề rộng, nên ngưỡng tỉ lệ WC lên 2,5. WC hình thang này tỉ lệ 2,45 — cùng mức với
+    // HS-03, không có ngưỡng nào tha cái kia mà bắt cái này. Nó vẫn bị trừ ở B1 (cạnh ngắn 1,13 m).
+    expect(b2(P2, type)).toEqual([]);
+    expect(rules.aspectRatioMax(type, 'wc')).toBe(2.5);
     // Một phòng vi phạm trên thang 0 → 2 là NỬA điểm, không phải trừ hết.
     expect(scoreOf(spec('B1', type), 1)).toBe(0.5);
-    expect(scoreOf(spec('B2', type), 1)).toBe(0.5);
+    expect(scoreOf(spec('B2', type), 0)).toBe(1);
   });
 
   it('không phòng nào KHÁC bị trừ — kể cả kho 0,86 m và hốc lavabo 1,05 m', () => {
     // Hai con số này là lý do hai việc của Đợt A′ tồn tại: hạ ngưỡng kho 1,0 → 0,85 theo số đo, và
-    // thêm mã `vanity` để quy tắc `circulation ≥ 1,1 m` không bắt oan hốc lavabo.
+    // thêm mã `vanity` để quy tắc `circulation ≥ 1,1 m` (nay 1,0 — Q-52) không bắt oan hốc lavabo.
     const flagged = new Set(b1(P2, type).map((room) => room.id));
     expect(flagged.has('kho_1')).toBe(false);
     expect(flagged.has('vanity_3')).toBe(false);

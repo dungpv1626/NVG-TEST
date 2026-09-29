@@ -93,7 +93,7 @@ interface PlanRunResult {
       /** Lỗi của lượt đầu khi tầng đã được gọi lần hai (V-26). */
       firstMessages?: string[];
       /** `none` chỉ còn ở lượt chạy trước 15/09/2026: lý do nằm ở diện tích hay khối xây (T43). */
-      retry?: 'revise' | 'resample' | 'none';
+      retry?: 'revise' | 'resample' | 'none' | 'unchanged';
       /** Số lượt gọi mô hình đã dùng khi bác (T45). Vắng ở lượt chạy trước 15/09/2026. */
       attempts?: number;
       /** Chỗ chương trình đã tự sửa ở lượt cuối. */
@@ -357,6 +357,13 @@ export function AiPlanStep({
                           kể cả bỏ bản phác và vùng AI khai, và lỗi ấy không nằm ở thứ AI vẽ nên gọi
                           lại cũng không gỡ được. Chạy lại để AI khai một ý định khác, hoặc giảm bớt
                           yêu cầu diện tích trong đầu bài.
+                        </p>
+                      )}
+                      {reason.retry === 'unchanged' && (
+                        <p className="text-fg-subtle">
+                          Dừng gọi lại mô hình: lượt sửa cuối trả về đúng bố cục của lượt trước ở
+                          tầng đang lỗi, nên gọi thêm chỉ tốn tiền mà ra cùng kết quả. Chạy lại để
+                          AI khai một ý định khác, hoặc chọn mô hình khác.
                         </p>
                       )}
                       <ul className="list-disc pl-5 text-fg-subtle">
@@ -825,8 +832,8 @@ const RELATION_LABEL: Record<'adjacent' | 'near' | 'far' | 'open', string> = {
   open: 'thông với',
 };
 
-function retryLabel(retry: 'revise' | 'resample' | 'none' | undefined): string {
-  return retry === 'revise'
+function retryLabel(retry: 'revise' | 'resample' | 'none' | 'unchanged' | undefined): string {
+  return retry === 'revise' || retry === 'unchanged'
     ? 'Lượt cuối — AI sửa ý định (gửi kèm ý định lượt trước)'
     : 'Lượt cuối — AI khai ý định mới';
 }

@@ -13,6 +13,7 @@ import {
   copySketch,
   fitRows,
   forceSketchRect,
+  growSketchRoom,
   prepareSketch,
   sketchTrees,
   stackWetRooms,
@@ -303,5 +304,41 @@ describe('stackWetRooms — khu vệ sinh tầng trên chồng tầng dưới', 
   it('đã chồng sẵn thì không đổi gì', () => {
     const sketch = prepare(['w a a a', 'a a a a', 'b b b b', 'b b b b'])!;
     expect(stackWetRooms(sketch, base())).toEqual([]);
+  });
+});
+
+describe('growSketchRoom (T79) — nới phòng hụt ô thêm một dải lấy của phòng kề', () => {
+  const rows = ['a a b b b', 'a a b b b', 'c c d d d', 'c c d d d'];
+
+  it('lấy trọn một cột của phòng kề cùng hàng; phòng kề vẫn là chữ nhật', () => {
+    const grown = growSketchRoom(prepare(rows)!, 'a', (other, remaining) =>
+      other === 'b' ? remaining : null,
+    );
+    expect(grown).toMatchObject({ from: 'b', cells: 2 });
+    expect(grown!.sketch.grid.cells.slice(0, 2).map((row) => row.join(' '))).toEqual([
+      'a a a b b',
+      'a a a b b',
+    ]);
+  });
+
+  it('nhiều dải lấy được thì chọn phòng còn dư nhiều nhất', () => {
+    // `d` có thể lấy hàng 2 của `b` (còn 3 ô) hay cột 2 của `c` (còn 2 ô).
+    const grown = growSketchRoom(prepare(rows)!, 'd', (_other, remaining) => remaining);
+    expect(grown).toMatchObject({ from: 'b', cells: 3 });
+  });
+
+  it('không lấy khi dải không phải trọn hàng / cột của phòng kề, hay phòng kề chỉ còn một dải', () => {
+    // `a` lấy hàng 2 phải lấy của cả `c` lẫn `d`; `b` chỉ rộng một cột — không dải nào lấy được.
+    const skew = ['a a a b', 'a a a b', 'c c d d', 'c c d d'];
+    expect(growSketchRoom(prepare(skew)!, 'a', (_o, r) => r)).toBeNull();
+    // `e` chỉ rộng một cột: cho đi là biến mất.
+    const thin = ['a a e', 'a a e', 'a a e', 'a a e'];
+    expect(growSketchRoom(prepare(thin)!, 'a', (_o, r) => r)).toBeNull();
+    // Phòng kề bị chặn (ô lõi, hành lang, sẽ hụt) thì không có dải nào.
+    expect(growSketchRoom(prepare(rows)!, 'a', () => null)).toBeNull();
+    // Bản gốc không bị đụng.
+    const base = prepare(rows)!;
+    growSketchRoom(base, 'a', (_o, r) => r);
+    expect(base.grid.cells[0]!.join(' ')).toBe('a a b b b');
   });
 });

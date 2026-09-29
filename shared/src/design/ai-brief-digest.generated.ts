@@ -453,15 +453,21 @@ export const aiBriefDigestSchema = z
           ])
           .nullable()
           .optional(),
+        elevator_shaft_width_m: z.number().nullable().optional(),
+        elevator_shaft_depth_m: z.number().nullable().optional(),
         elevator_position: z
           .union([
+            z.literal('giua_long_thang_bo'),
             z.literal('canh_thang_bo'),
+            z.literal('doi_dien_thang_bo'),
+            z.literal('khac'),
             z.literal('rieng_biet'),
             z.literal('chua_quyet'),
             z.literal(null),
           ])
           .nullable()
           .optional(),
+        elevator_layout_note: z.string().max(300).nullable().optional(),
         stair_type: z
           .union([
             z.literal('thang_ho'),
@@ -487,9 +493,41 @@ export const aiBriefDigestSchema = z
       .optional(),
     balconies: z
       .object({
+        /** Mặt BẮT BUỘC có ban công (T91). Thiếu ban công ở mặt này là sai đầu bài — bác phương án. */
+        required_sides: z
+          .array(z.enum(['front', 'back', 'left', 'right']))
+          .nullable()
+          .describe(
+            'Mặt BẮT BUỘC có ban công (T91). Thiếu ban công ở mặt này là sai đầu bài — bác phương án.',
+          )
+          .optional(),
+        /** Mặt CÓ THỂ có ban công (T91) — có hay không đều được. Mặt không nằm trong hai danh sách thì KHÔNG được đặt ban công (khi gia chủ đã khai ít nhất một mặt). */
+        optional_sides: z
+          .array(z.enum(['front', 'back', 'left', 'right']))
+          .nullable()
+          .describe(
+            'Mặt CÓ THỂ có ban công (T91) — có hay không đều được. Mặt không nằm trong hai danh sách thì KHÔNG được đặt ban công (khi gia chủ đã khai ít nhất một mặt).',
+          )
+          .optional(),
+        /** Độ đua ra ngoài ranh của ban công TỪNG MẶT, mét (T91, Haan 27/09/2026). 0 = không đua — ban công nằm trong diện tích sàn. Trống = chưa trả lời: chương trình giữ ban công trong ranh và nói ra. Đua sang đất nhà khác bị chặn ở bước soát đầu bài; đua ra đường, hẻm, ao hồ chỉ cảnh báo. */
+        projection_by_side: z
+          .object({
+            front: z.number().gte(0).lte(3).nullable().optional(),
+            back: z.number().gte(0).lte(3).nullable().optional(),
+            left: z.number().gte(0).lte(3).nullable().optional(),
+            right: z.number().gte(0).lte(3).nullable().optional(),
+          })
+          .strict()
+          .nullable()
+          .describe(
+            'Độ đua ra ngoài ranh của ban công TỪNG MẶT, mét (T91, Haan 27/09/2026). 0 = không đua — ban công nằm trong diện tích sàn. Trống = chưa trả lời: chương trình giữ ban công trong ranh và nói ra. Đua sang đất nhà khác bị chặn ở bước soát đầu bài; đua ra đường, hẻm, ao hồ chỉ cảnh báo.',
+          )
+          .optional(),
+        /** CŨ (trước T91): đọc như `required_sides`. Đầu bài mới không ghi trường này. */
         sides: z
           .array(z.enum(['front', 'back', 'left', 'right']))
           .nullable()
+          .describe('CŨ (trước T91): đọc như `required_sides`. Đầu bài mới không ghi trường này.')
           .optional(),
         scope: z
           .union([
@@ -501,8 +539,24 @@ export const aiBriefDigestSchema = z
           ])
           .nullable()
           .optional(),
-        projection_over_boundary: z.boolean().nullable().optional(),
-        projection_m: z.number().gte(0).lte(3).nullable().optional(),
+        /** CŨ (trước T91): thay bằng `projection_by_side`; chỉ còn để đọc đầu bài đã lưu. */
+        projection_over_boundary: z
+          .boolean()
+          .nullable()
+          .describe(
+            'CŨ (trước T91): thay bằng `projection_by_side`; chỉ còn để đọc đầu bài đã lưu.',
+          )
+          .optional(),
+        /** CŨ (trước T91): thay bằng `projection_by_side`; chỉ còn để đọc đầu bài đã lưu. */
+        projection_m: z
+          .number()
+          .gte(0)
+          .lte(3)
+          .nullable()
+          .describe(
+            'CŨ (trước T91): thay bằng `projection_by_side`; chỉ còn để đọc đầu bài đã lưu.',
+          )
+          .optional(),
         drying_balcony: z.boolean().nullable().optional(),
         note: z.string().max(1000).nullable().optional(),
       })

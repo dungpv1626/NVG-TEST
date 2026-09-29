@@ -20,6 +20,7 @@ export * from './brief-form-data';
 export * from './brief-form-overlay';
 export * from './brief-completeness';
 export * from './bedroom-sync';
+export * from './balcony-brief';
 export * from './site-geometry';
 export * from './site-boundary-from-edges';
 export * from './site-boundary-from-coordinates';

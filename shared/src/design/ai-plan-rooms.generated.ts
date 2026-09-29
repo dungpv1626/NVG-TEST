@@ -165,6 +165,14 @@ export const aiPlanRoomsStairSchema = z
       .lte(40)
       .describe('Tổng số bậc trong ô thang này. Số bậc × chiều cao bậc phải bằng chiều cao tầng.')
       .optional(),
+    /** Bề sâu mặt bậc, cm — CHƯƠNG TRÌNH điền từ `kb/construction_norms.yaml` (T70). */
+    going: z
+      .number()
+      .int()
+      .gte(15)
+      .lte(45)
+      .describe('Bề sâu mặt bậc, cm — CHƯƠNG TRÌNH điền từ `kb/construction_norms.yaml` (T70).')
+      .optional(),
   })
   .strict();
 

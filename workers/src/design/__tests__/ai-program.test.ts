@@ -332,6 +332,53 @@ describe('Bộ kiểm đề xuất', () => {
     ]);
   });
 
+  // T96 (Haan 27/09/2026): «những gì không khai trong đầu bài thì hạn chế bịa thêm vào».
+  it('giếng trời, sân trong, sân thượng, cửa hàng, thang máy: đầu bài không hỏi thì bác', () => {
+    expect(fidelity.onlyWhenAsked).toContain('light_well');
+    expect(knowledge.only_when_asked).toEqual(fidelity.onlyWhenAsked);
+    // Đầu bài mẫu có «sân trong» (mở đường cho giếng trời); bỏ nó đi thì giếng trời là bịa.
+    const strict = programKnowledge({
+      digest: { ...digest, massing: { ...digest.massing, yards: [] } },
+      vocabulary,
+      labels,
+      buildable,
+      construction,
+      rules: emptyPack,
+      fidelity,
+    });
+    const bad = goodProposal();
+    bad.spaces.push({ id: 'g1', type: 'light_well', level: 1, target_area_m2: 3 });
+    const issues = checkProposal(bad, strict, labels);
+    expect(issues.filter((i) => /Đầu bài không hỏi tới Giếng trời/.test(i))).toHaveLength(1);
+  });
+
+  it('đầu bài có hỏi (dòng không gian yêu cầu, hoặc câu đã trả lời) thì không bác', () => {
+    const asks = programKnowledge({
+      digest: {
+        ...digest,
+        required_spaces: [...(digest.required_spaces ?? []), { type: 'light_well' }],
+        massing: { ...digest.massing, yards: ['san_trong'] },
+      },
+      vocabulary,
+      labels,
+      buildable,
+      construction,
+      rules: emptyPack,
+      fidelity,
+    });
+    const ok = goodProposal();
+    ok.spaces.push({ id: 'g1', type: 'light_well', level: 1, target_area_m2: 3 });
+    ok.spaces.push({ id: 'g2', type: 'courtyard', level: 1, target_area_m2: 6 });
+    expect(checkProposal(ok, asks, labels).filter((i) => /không hỏi tới/.test(i))).toEqual([]);
+    // Phòng phụ nhà nào cũng cần thì vẫn tự thêm được.
+    const usual = goodProposal();
+    usual.spaces.push({ id: 's1', type: 'storage', level: 1, target_area_m2: 3 });
+    usual.spaces.push({ id: 'h1', type: 'circulation', level: 2, target_area_m2: 8 });
+    expect(checkProposal(usual, knowledge, labels).filter((i) => /không hỏi tới/.test(i))).toEqual(
+      [],
+    );
+  });
+
   it('`ensuite_of` trỏ vào mã không có thì bị bắt', () => {
     const bad = goodProposal();
     bad.spaces.find((s) => s.id === 'a11')!.ensuite_of = 'khong_co';

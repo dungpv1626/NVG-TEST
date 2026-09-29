@@ -42,6 +42,7 @@ import {
 } from './plan-quality';
 import { planGraph, reachableFrom, roomsBetween, type PlanGraph } from './plan-check';
 import { roomsWithDaylight } from './rule-warnings';
+import { BALCONY_PROJECTING_OPEN_SIDES, balconyFaces } from './mandatory';
 
 /** Điểm của một tiêu chí. `value === null` nghĩa là chưa đủ dữ liệu để chấm. */
 export interface CriterionScore {
@@ -132,6 +133,11 @@ export interface PlanScoreInput {
   passage?: PassageRules | null;
   /** Định mức diện tích nghề theo loại phòng (`kb/space_norms.yaml`) — A5, A6. Vắng thì không chấm. */
   areaNorms?: ReadonlyMap<string, { min: number; target: number; max: number }> | null;
+  /**
+   * Luật «ban công quay ra mặt thoáng» (`rules/nvg-mandatory.yaml`, T71/T91) — D3 đo bằng đúng dung sai
+   * và tỉ lệ ấy. Vắng thì D3 «chưa đủ dữ liệu».
+   */
+  balconyFace?: { edgeToleranceCm: number; longRatio: number } | null;
 }
 
 export function scorePlan(input: PlanScoreInput): PlanScore {
@@ -159,7 +165,10 @@ export function scorePlan(input: PlanScoreInput): PlanScore {
     // đó (5.5 điểm 2): «KHÔNG âm thầm chia lại trọng số», và điểm tổng phải nói rõ nó tính trên mấy
     // phần trăm trọng số.
     const inScope = list.filter((entry) => entry.khongChamVi !== 'gate');
-    const each = inScope.length ? group.weight / inScope.length : 0;
+    // Trọng số TƯƠNG ĐỐI trong nhóm (T96, `weight` của từng tiêu chí, vắng = 1): mẫu số vẫn là con số
+    // CỐ ĐỊNH của cái thước — tổng trọng số tương đối của các tiêu chí trong phạm vi chấm.
+    const relative = new Map(input.quality.criteria.map((spec) => [spec.code, spec.weight]));
+    const total = inScope.reduce((sum, entry) => sum + (relative.get(entry.code) ?? 1), 0);
 
     let points = 0;
     let scoredWeight = 0;
@@ -167,6 +176,7 @@ export function scorePlan(input: PlanScoreInput): PlanScore {
       if (entry.khongChamVi === 'gate') {
         entry.weight = 0;
       } else {
+        const each = total > 0 ? (group.weight * (relative.get(entry.code) ?? 1)) / total : 0;
         entry.weight = each;
         if (entry.score !== null) {
           points += entry.score * each;
@@ -198,6 +208,23 @@ export function scorePlan(input: PlanScoreInput): PlanScore {
 
 function round2(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+/**
+ * Nhóm chấm được mà dưới sàn `floorPercent` (T96, `accept_group_floor_percent`). Rỗng khi không có sàn
+ * hoặc mọi nhóm đạt. Nhóm chưa chấm được gì (`scoredWeight` = 0) không xét — «chưa đủ dữ liệu» không
+ * phải 0.
+ */
+export function groupsBelowFloor(
+  score: { groups?: readonly { code: string; points: number; scoredWeight: number }[] },
+  floorPercent: number | null,
+): string[] {
+  if (floorPercent === null || !score.groups) return [];
+  return score.groups
+    .filter(
+      (group) => group.scoredWeight > 0 && (group.points / group.scoredWeight) * 100 < floorPercent,
+    )
+    .map((group) => group.code);
 }
 
 /** Kết quả thô của một phép đo: giá trị, phần tử bị trừ, hoặc lý do không đo được. */
@@ -311,6 +338,7 @@ interface ScoreContext {
   inGroup: (group: string, type: string) => boolean;
   passage: PassageRules | null;
   areaNorms: ReadonlyMap<string, { min: number; target: number; max: number }> | null;
+  balconyFace: { edgeToleranceCm: number; longRatio: number } | null;
 }
 
 function context(input: PlanScoreInput): ScoreContext {
@@ -359,6 +387,7 @@ function context(input: PlanScoreInput): ScoreContext {
     inGroup: (group, type) => groupSets.get(group)?.has(type) ?? false,
     passage: input.passage ?? null,
     areaNorms: input.areaNorms ?? null,
+    balconyFace: input.balconyFace ?? null,
   };
 }
 
@@ -741,6 +770,108 @@ const MEASURES: Record<string, MeasureFn> = {
     return { value: (wanted.length - dark.length) / wanted.length, refs: dark.map((r) => r.id) };
   },
 
+  // T91 (Haan 27/09/2026): ban công nằm trong sàn, gần vuông, không quay cạnh dài ra mặt thoáng — không
+  // chặn, nhưng trừ điểm. Ban công đua ra (ba cạnh thoáng) và ban công có cạnh dài thoáng tính là đạt.
+  D3: (ctx) => {
+    if (!ctx.balconyFace) return { value: null, khongCham: 'Chưa có luật mặt thoáng ban công.' };
+    const all = ctx.levels.flatMap((level) =>
+      balconyFaces(level, ctx.balconyFace!.edgeToleranceCm),
+    );
+    if (all.length === 0) return { value: null, khongCham: 'Không có ban công nào.' };
+    const off = all.filter((b) => b.openSides < BALCONY_PROJECTING_OPEN_SIDES && !b.longOpen);
+    return { value: (all.length - off.length) / all.length, refs: off.map((b) => b.id) };
+  },
+
+  /**
+   * Cửa chính đón vào đâu (T96 — Haan chấm lượt 5fda70dc: «vào phòng khách từ cửa chính đi qua bếp và
+   * phòng ăn, rất không hợp lý»). Đếm số phòng KHÔNG PHẢI lối đi phải xuyên qua từ một cửa ra ngoài tới
+   * phòng khách gần nhất: sảnh, hành lang, chỗ để xe (`entry_through` — nhà phố vào qua gara là thường)
+   * không tính. Không tới được phòng khách thì tính như xa nhất có thể.
+   */
+  C9: (ctx) => {
+    const living = ctx.rooms.filter((room) => room.type === 'living');
+    if (living.length === 0) return { value: null, khongCham: 'Phương án không có phòng khách.' };
+    if (ctx.graph.entries.length === 0) {
+      return { value: null, khongCham: 'Không có cửa nào mở ra ngoài nhà để đo đường từ đó.' };
+    }
+    if (!ctx.passage) return { value: null, khongCham: 'Chưa nạp luật đi lại của từ vựng phòng.' };
+    const free = (id: string) => {
+      const type = ctx.graph.rooms.get(id)?.type ?? '';
+      return (
+        type === 'living' || ctx.inGroup('circulation', type) || ctx.passage!.entryThrough.has(type)
+      );
+    };
+    const walk = cheapestWalk(ctx.graph, ctx.graph.entries, new Set(living.map((r) => r.id)), free);
+    if (!walk) return { value: 9, refs: living.map((room) => room.id) };
+    return { value: walk.cost, refs: walk.crossed };
+  },
+
+  /**
+   * Hành lang phải phục vụ được việc gì (T96 — Haan chấm lượt 4a521f52: «giao thông 10 m² để đi vào
+   * phòng kho 3 m², sao không gộp luôn»). Đếm hành lang từ `min_area_m2` trở lên mà số phòng NGÕ CỤT nó
+   * mở cửa vào (không tính phòng đi xuyên được, chỗ để xe, sảnh ngoài; ô thang có tính) dưới hai. Sảnh
+   * đệm nhỏ dưới mức ấy không đếm — một vài mét vuông giữa gara và bếp là chuyện thường.
+   */
+  C10: (ctx, spec) => {
+    if (!ctx.passage) return { value: null, khongCham: 'Chưa nạp luật đi lại của từ vựng phòng.' };
+    const minArea = spec.params.min_area_m2 ?? 4;
+    const corridors = ctx.rooms.filter(
+      (room) => room.type === 'circulation' && room.areaM2 >= minArea,
+    );
+    if (corridors.length === 0) {
+      return { value: null, khongCham: 'Phương án không có hành lang nào đủ lớn để xét.' };
+    }
+    const passage = ctx.passage;
+    const refs: string[] = [];
+    for (const corridor of corridors) {
+      const served = new Set<string>();
+      for (const door of ctx.graph.doors) {
+        if (door.toOutside || !door.rooms.includes(corridor.id)) continue;
+        for (const other of door.rooms) {
+          if (other === corridor.id) continue;
+          const type = ctx.graph.rooms.get(other)?.type ?? '';
+          const stair = ctx.inGroup('circulation', type) && type !== 'circulation';
+          if (stair || (!passage.through.has(type) && !passage.entryThrough.has(type)))
+            served.add(other);
+        }
+      }
+      if (served.size < 2) refs.push(corridor.id);
+    }
+    return { value: refs.length, refs };
+  },
+
+  /**
+   * Khu ướt tầng trên không đè lên chỗ tiếp khách, chỗ ngủ, lối vào tầng dưới (T96 — Haan chấm lượt
+   * 5aba737d: «khu vệ sinh của phòng chính nằm ngay trên cửa vào phòng khách»). Tỷ lệ khu ướt (nhóm
+   * `wet`) từ tầng 2 mà phần chồng lên phòng nhóm `dry_below` tầng dưới nhỏ hơn `overlap_ratio` diện
+   * tích của nó. Bếp và phòng thờ dưới WC đã là luật bắt buộc; ở đây là phần còn lại — trừ điểm, không chặn.
+   */
+  E5: (ctx, spec) => {
+    const ratio = spec.params.overlap_ratio ?? 0.3;
+    const upper = ctx.rooms.filter(
+      (room) => ctx.inGroup('wet', room.type) && room.level > ctx.levels[0]!.level,
+    );
+    if (upper.length === 0) {
+      return { value: null, khongCham: 'Không có khu ướt nào từ tầng 2 trở lên.' };
+    }
+    const refs: string[] = [];
+    let clean = 0;
+    for (const wet of upper) {
+      const below = (ctx.byLevel.get(wet.level - 1) ?? []).filter((room) =>
+        ctx.inGroup('dry_below', room.type),
+      );
+      const own = Math.max(1, (wet.rect.x1 - wet.rect.x0) * (wet.rect.y1 - wet.rect.y0));
+      const over = below.reduce((sum, room) => sum + overlapArea(wet.rect, room.rect), 0);
+      if (over / own < ratio) clean += 1;
+      else
+        refs.push(
+          wet.id,
+          ...below.filter((room) => overlapArea(wet.rect, room.rect) > 0).map((r) => r.id),
+        );
+    }
+    return { value: clean / upper.length, refs: [...new Set(refs)] };
+  },
+
   E2: (ctx, spec) => {
     const reach = (spec.params.khoang_cach_m ?? 1.5) * 100;
     const upper = ctx.rooms.filter(
@@ -799,6 +930,55 @@ const MEASURES: Record<string, MeasureFn> = {
 
 const width = (r: Rect): number => r.x1 - r.x0;
 const height = (r: Rect): number => r.y1 - r.y0;
+
+function overlapArea(a: Rect, b: Rect): number {
+  const w = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0);
+  const h = Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0);
+  return w > 0 && h > 0 ? w * h : 0;
+}
+
+/**
+ * Đường rẻ nhất từ một trong `from` tới một trong `to`, mỗi phòng đi xuyên tốn 1 trừ phòng `free`
+ * (tốn 0). Trả số phòng phải xuyên và tên chúng; `null` khi không tới được. Tìm kiếm 0–1 BFS, tất định.
+ */
+function cheapestWalk(
+  graph: PlanGraph,
+  from: readonly string[],
+  to: ReadonlySet<string>,
+  free: (id: string) => boolean,
+): { cost: number; crossed: string[] } | null {
+  const cost = new Map<string, number>();
+  const prev = new Map<string, string | null>();
+  const queue: string[] = [];
+  for (const id of from) {
+    // Cửa mở thẳng vào một phòng không phải lối đi (phòng ăn có cửa ra ngoài) thì chính phòng ấy đã
+    // là một phòng phải xuyên.
+    cost.set(id, free(id) || to.has(id) ? 0 : 1);
+    prev.set(id, null);
+    queue.push(id);
+  }
+  while (queue.length) {
+    const id = queue.shift()!;
+    const here = cost.get(id)!;
+    for (const next of [...(graph.neighbours.get(id) ?? [])].sort()) {
+      const step = free(next) || to.has(next) ? 0 : 1;
+      const via = here + step;
+      if (via < (cost.get(next) ?? Infinity)) {
+        cost.set(next, via);
+        prev.set(next, id);
+        if (step === 0) queue.unshift(next);
+        else queue.push(next);
+      }
+    }
+  }
+  const best = [...to].filter((id) => cost.has(id)).sort((p, q) => cost.get(p)! - cost.get(q)!)[0];
+  if (best === undefined) return null;
+  const crossed: string[] = [];
+  for (let at = prev.get(best) ?? null; at !== null; at = prev.get(at) ?? null) {
+    if (!free(at) && !to.has(at)) crossed.unshift(at);
+  }
+  return { cost: cost.get(best)!, crossed };
+}
 
 function centreDistance(a: Rect, b: Rect): number {
   const [ax, ay] = rectCentre(a);

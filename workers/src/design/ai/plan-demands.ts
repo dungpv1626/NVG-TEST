@@ -32,7 +32,14 @@ const SIDE_SLACK_CM = 1;
 /** Mép phòng cách mép nhà dưới chừng này coi như áp sát mặt ấy, cm. */
 const FACE_TOLERANCE_CM = 30;
 
-type Add = (level: 'blocking' | 'finding', code: string, message: string, ref?: string) => void;
+type Add = (
+  level: 'blocking' | 'finding',
+  code: string,
+  message: string,
+  ref?: string,
+  /** Tham số cho dòng gợi ý lượt sửa (`kb/ai_design_prompts.yaml` mục `hints`). */
+  params?: Record<string, string | number>,
+) => void;
 
 /**
  * Hình bao mà một phòng được phép nằm trong.
@@ -53,15 +60,95 @@ export function allowedBox(
   if (!projection || !balcony || roomType !== balcony.type || level < balcony.fromLevel) {
     return buildable;
   }
-  const cm = Math.round(projection.m * 100);
   const box = { ...buildable };
-  for (const side of projection.sides) {
+  for (const [side, m] of Object.entries(projection) as [Side, number][]) {
+    const cm = Math.round(m * 100);
     if (side === 'front') box.y0 -= cm;
     else if (side === 'back') box.y1 += cm;
     else if (side === 'left') box.x0 -= cm;
     else box.x1 += cm;
   }
   return box;
+}
+
+/** Đoạn vách chung của hai chữ nhật lọt lòng cách nhau không quá một bề dày tường, cm; 0 khi không giáp. */
+function sharedWallCm(a: Rect, b: Rect): number {
+  const gap = 40; // khe rộng hơn bức tường dày nhất thì không còn là tường chung (như `rectsShareEdge`)
+  const alongX = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0);
+  const alongY = Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0);
+  if (alongX > 0 && (Math.abs(b.y0 - a.y1) <= gap || Math.abs(a.y0 - b.y1) <= gap)) return alongX;
+  if (alongY > 0 && (Math.abs(b.x0 - a.x1) <= gap || Math.abs(a.x0 - b.x1) <= gap)) return alongY;
+  return 0;
+}
+
+/**
+ * Kiểu bố trí thang máy đầu bài khai (Haan 25/09/2026) — kiểm trên từng tầng có cả ô thang máy lẫn ô
+ * thang bộ. Lời gia chủ nên CHẶN, và chỗ đặt các ô là bản phác mô hình vẽ nên GỬI LẠI được:
+ *  · `giua_long_thang_bo` — ô thang máy chung vách ô thang bộ (một lõi; cửa thang máy mở ra chiếu tới
+ *    được). Lưới chữ nhật không vẽ được thang bộ uốn quanh giếng — tờ vẽ thể hiện là hai ô liền nhau.
+ *  · `canh_thang_bo` — chung vách, VÀ cả hai cùng giáp một hành lang / sảnh: thang máy không chắn giữa
+ *    thang bộ và hành lang (lượt thật b5202883).
+ *  · `doi_dien_thang_bo` — KHÔNG chung vách, cả hai cùng giáp một hành lang / sảnh.
+ * `khac`, `rieng_biet`, chưa quyết: không kiểm hình học.
+ */
+export function checkElevatorLayout(
+  plan: AiFloorPlan,
+  lift: ElevatorDemand | null,
+  add: Add,
+): void {
+  const layout = lift?.position;
+  if (
+    !lift ||
+    !layout ||
+    !['giua_long_thang_bo', 'canh_thang_bo', 'doi_dien_thang_bo'].includes(layout)
+  ) {
+    return;
+  }
+  const min = lift.layoutMinSharedM * 100;
+  const halls = new Set(lift.hallTypes);
+  const stairTypes = new Set(lift.stairTypes);
+  for (const level of plan.levels) {
+    const cabin = level.rooms.find((room) => room.type === lift.type);
+    const stair = level.rooms.find((room) => stairTypes.has(room.type));
+    if (!cabin || !stair) continue;
+    const e = toRect(cabin.rect);
+    const s = toRect(stair.rect);
+    const beside = sharedWallCm(e, s) >= min;
+    const common = level.rooms.some(
+      (room) =>
+        halls.has(room.type) &&
+        sharedWallCm(toRect(room.rect), e) >= min &&
+        sharedWallCm(toRect(room.rect), s) >= min,
+    );
+    const params = { room: cabin.id, stair: stair.id, level: level.level };
+    if ((layout === 'giua_long_thang_bo' || layout === 'canh_thang_bo') && !beside) {
+      add(
+        'blocking',
+        'elevator_not_beside_stair',
+        `Đầu bài khai thang máy ${layout === 'canh_thang_bo' ? 'cạnh' : 'giữa lòng'} thang bộ, nhưng ở tầng ${level.level} ô thang máy "${cabin.id}" không chung vách với ô thang bộ "${stair.id}".`,
+        cabin.id,
+        params,
+      );
+    }
+    if (layout === 'doi_dien_thang_bo' && beside) {
+      add(
+        'blocking',
+        'elevator_not_facing_stair',
+        `Đầu bài khai thang máy đối diện thang bộ qua hành lang / sảnh, nhưng ở tầng ${level.level} ô thang máy "${cabin.id}" chung vách với ô thang bộ "${stair.id}".`,
+        cabin.id,
+        params,
+      );
+    }
+    if ((layout === 'canh_thang_bo' || layout === 'doi_dien_thang_bo') && !common) {
+      add(
+        'blocking',
+        'elevator_no_common_hall',
+        `Đầu bài khai thang máy ${layout === 'canh_thang_bo' ? 'cạnh' : 'đối diện'} thang bộ, nhưng ở tầng ${level.level} ô thang máy "${cabin.id}" và ô thang bộ "${stair.id}" không cùng giáp một hành lang / sảnh chung — hai cửa phải mở ra cùng một chỗ.`,
+        cabin.id,
+        params,
+      );
+    }
+  }
 }
 
 /**
@@ -84,26 +171,54 @@ export function checkElevatorStack(plan: AiFloorPlan, lift: ElevatorDemand | nul
         'blocking',
         'elevator_missing',
         `Đầu bài khai ${word} nhưng tầng ${level.level} không có ô thang máy — giếng thang phải xuyên suốt mọi tầng.`,
+        undefined,
+        { level: level.level },
       );
       continue;
     }
     const rect = toRect(first.rect);
     const areaM2 = rectArea(rect) / 10_000;
     const sideCm = Math.min(rect.x1 - rect.x0, rect.y1 - rect.y0);
-    if (areaM2 + AREA_SLACK_M2 < lift.minAreaM2) {
+    if (lift.minAreaM2 !== null && areaM2 + AREA_SLACK_M2 < lift.minAreaM2) {
       add(
         'blocking',
         'elevator_too_small',
-        `Ô thang máy tầng ${level.level} rộng ${areaM2.toFixed(1)} m², nhỏ hơn mức ${lift.minAreaM2} m² của tải đầu bài khai.`,
+        `Ô thang máy tầng ${level.level} rộng ${areaM2.toFixed(1)} m², nhỏ hơn giếng ${lift.minAreaM2} m² đầu bài khai theo hãng thang.`,
         first.id,
+        { room: first.id, level: level.level, need: lift.minAreaM2 },
       );
     }
-    if (sideCm + SIDE_SLACK_CM < lift.minSideM * 100) {
+    if (lift.minSideM !== null && sideCm + SIDE_SLACK_CM < lift.minSideM * 100) {
       add(
         'blocking',
         'elevator_too_narrow',
         `Ô thang máy tầng ${level.level} có cạnh ngắn ${Math.round(sideCm)} cm, hẹp hơn ${Math.round(lift.minSideM * 100)} cm — không lọt cabin.`,
         first.id,
+        { room: first.id, level: level.level, need: Math.round(lift.minSideM * 100) },
+      );
+    }
+    // Giếng dài / to vô lý so với số khai (lượt thật 913bc2ad: 1,6 × 6,45 m cho giếng 1,3 × 1,4 m). Chỉ
+    // kiểm khi đầu bài có số và tệp dữ liệu bật giới hạn; ô vẽ đúng số khai luôn qua.
+    const longCm = Math.max(rect.x1 - rect.x0, rect.y1 - rect.y0);
+    const tooLong = lift.maxAspect > 0 && longCm > sideCm * lift.maxAspect + SIDE_SLACK_CM;
+    const tooBig =
+      lift.maxAreaRatio > 0 &&
+      lift.minAreaM2 !== null &&
+      areaM2 > lift.minAreaM2 * lift.maxAreaRatio + AREA_SLACK_M2;
+    if (lift.shaftWidthM !== null && lift.shaftDepthM !== null && (tooLong || tooBig)) {
+      add(
+        'blocking',
+        'elevator_oversized',
+        `Ô thang máy tầng ${level.level} dựng ${Math.round(sideCm)} × ${Math.round(longCm)} cm — giếng gia chủ khai chỉ ${lift.shaftWidthM} × ${lift.shaftDepthM} m, ô phải là một khối gần vuông đúng cỡ ấy, không phải một dải.`,
+        first.id,
+        {
+          room: first.id,
+          level: level.level,
+          short_cm: Math.round(sideCm),
+          long_cm: Math.round(longCm),
+          width_m: lift.shaftWidthM,
+          depth_m: lift.shaftDepthM,
+        },
       );
     }
     if (reference) {
@@ -119,6 +234,7 @@ export function checkElevatorStack(plan: AiFloorPlan, lift: ElevatorDemand | nul
           'elevator_not_aligned',
           `Ô thang máy tầng ${level.level} lệch ${Math.round(shift)} cm so với tầng ${reference.level} — giếng thang phải thẳng suốt, cabin không đi chéo được.`,
           first.id,
+          { room: first.id, level: level.level, below: reference.level },
         );
       }
     }
@@ -146,6 +262,7 @@ export function checkBalconyDemand(
         'balcony_not_wanted',
         `Gia chủ khai KHÔNG làm ban công, mặt bằng vẫn có ${found.length} ban công.`,
         found[0]?.room.id,
+        { rooms: found.map((entry) => `"${entry.room.id}"`).join(', ') },
       );
     }
     return;
@@ -157,6 +274,8 @@ export function checkBalconyDemand(
         'blocking',
         'balcony_level_missing',
         `Đầu bài khai ban công ở mọi tầng, tầng ${want} không có ban công nào.`,
+        undefined,
+        { level: want },
       );
     }
   }
@@ -170,6 +289,8 @@ export function checkBalconyDemand(
         found.length
           ? `Đầu bài khai ban công ở ${sideWord(side)}, mặt bằng có ban công nhưng không cái nào nằm ở mặt ấy.`
           : `Đầu bài khai ban công ở ${sideWord(side)}, mặt bằng không có ban công nào.`,
+        undefined,
+        { side },
       );
     }
   }
@@ -180,11 +301,113 @@ export function checkBalconyDemand(
       add(
         'blocking',
         'balcony_side_not_wanted',
-        `Gia chủ khai ban công CHỈ ở mặt tiền, mặt bằng có ban công "${bad.room.id}" ở ${sideWord(side)} tầng ${bad.level.level}.`,
+        `Gia chủ không cho đặt ban công ở ${sideWord(side)}, mặt bằng có ban công "${bad.room.id}" ở mặt ấy, tầng ${bad.level.level}.`,
         bad.room.id,
+        { room: bad.room.id, side, level: bad.level.level },
       );
     }
   }
+}
+
+/**
+ * Ban công đầu bài khai, đo ngay trên BẢN PHÁC (T73 h) — cùng ba phép kiểm như `checkBalconyDemand`,
+ * cùng mã và tham số, nên cùng dòng gợi ý.
+ *
+ * Lượt đo 2ddf782a (24/09/2026, gpt-6-sol): lượt 1 vẽ hai ban công (trước, sau); lượt 2 vẽ lại hành
+ * lang tầng 2 và bỏ mất ban công mặt sau. `checkBalconyDemand` chỉ chạy khi MỌI tầng đã xếp xong,
+ * nên lượt 2 và 3 (hỏng vì hành lang) không nhắc gì về ban công; tới lượt 4 xếp được cả hai tầng thì
+ * lỗi mới lộ, và hết lượt sửa. Phép kiểm này chạy mỗi khi một lượt hỏng, để câu nhắc ban công đi
+ * cùng các câu nhắc khác.
+ *
+ * Mặt đo theo khung ô ĐÃ XÂY của từng tầng (bỏ ô `.`), như `touchesSide` đo theo hình bao của tầng:
+ * dòng đầu là mặt đường (`front`), cột đầu là bên trái nhìn từ đường. Thiếu bản phác của một tầng
+ * cần xét thì không kết luận gì — không đoán.
+ */
+export function checkSketchBalconyDemand(
+  balcony: BalconyDemand | null,
+  rooms: readonly { id: string; type: string; level: number }[],
+  sketches: ReadonlyMap<number, readonly string[] | null>,
+  add: Add,
+): void {
+  if (!balcony || balcony.forbidden) return;
+  const upper = [...sketches.entries()].filter(([level]) => level >= balcony.fromLevel);
+  if (!upper.length || upper.some(([, rows]) => !rows)) return;
+  const typeOf = new Map(rooms.map((room) => [room.id, room.type]));
+  const found: { id: string; level: number; sides: Set<Side> }[] = [];
+  for (const [level, rows] of upper) {
+    const grid = rows!.map((row) => row.trim().split(/\s+/));
+    const built = emptyBox();
+    const boxes = new Map<string, CellBox>();
+    grid.forEach((cells, r) =>
+      cells.forEach((cell, c) => {
+        if (/^\.+$/.test(cell)) return;
+        const own = boxes.get(cell) ?? emptyBox();
+        boxes.set(cell, own);
+        growBox(built, r, c);
+        growBox(own, r, c);
+      }),
+    );
+    for (const [id, own] of boxes) {
+      if (typeOf.get(id) !== balcony.type) continue;
+      const sides = new Set<Side>();
+      if (own.r0 === built.r0) sides.add('front');
+      if (own.r1 === built.r1) sides.add('back');
+      if (own.c0 === built.c0) sides.add('left');
+      if (own.c1 === built.c1) sides.add('right');
+      found.push({ id, level, sides });
+    }
+  }
+
+  for (const want of balcony.levels) {
+    if (!sketches.has(want) || found.some((entry) => entry.level === want)) continue;
+    add(
+      'blocking',
+      'balcony_level_missing',
+      `Bản phác: đầu bài khai ban công ở mọi tầng, tầng ${want} không có ban công nào.`,
+      undefined,
+      { level: want },
+    );
+  }
+  for (const side of balcony.sides) {
+    if (found.some((entry) => entry.sides.has(side))) continue;
+    add(
+      'blocking',
+      'balcony_side_missing',
+      `Bản phác: đầu bài khai ban công ở ${sideWord(side)}, ${found.length ? 'không ban công nào nằm ở mặt ấy' : 'bản phác không có ban công nào'}.`,
+      undefined,
+      { side },
+    );
+  }
+  for (const side of balcony.forbiddenSides) {
+    const bad = found.find((entry) => entry.sides.has(side));
+    if (!bad) continue;
+    add(
+      'blocking',
+      'balcony_side_not_wanted',
+      `Bản phác: gia chủ không cho đặt ban công ở ${sideWord(side)}, ban công "${bad.id}" ở mặt ấy, tầng ${bad.level}.`,
+      bad.id,
+      { room: bad.id, side, level: bad.level },
+    );
+  }
+}
+
+/** Khung ô (dòng, cột) bao một nhóm ô bản phác. */
+interface CellBox {
+  r0: number;
+  c0: number;
+  r1: number;
+  c1: number;
+}
+
+function emptyBox(): CellBox {
+  return { r0: Infinity, c0: Infinity, r1: -Infinity, c1: -Infinity };
+}
+
+function growBox(box: CellBox, r: number, c: number): void {
+  box.r0 = Math.min(box.r0, r);
+  box.c0 = Math.min(box.c0, c);
+  box.r1 = Math.max(box.r1, r);
+  box.c1 = Math.max(box.c1, c);
 }
 
 /**

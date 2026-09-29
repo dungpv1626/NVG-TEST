@@ -87,6 +87,7 @@ import type {
   AiSpaceProgram,
   DesignBrief,
 } from '@nvg/shared/design';
+import { disposeStub, instanceIdOf } from '../workflows/rpc-stub';
 
 export const aiApp = new Hono<{ Bindings: DesignEnv }>();
 
@@ -1451,8 +1452,8 @@ aiApp.post('/plan/runs', async (c) => {
   };
 
   try {
-    const instance = await c.env.AI_DESIGN_PIPELINE.create({ params });
-    await attachWorkflow(repo.db, run.id, instance.id);
+    const instanceId = instanceIdOf(await c.env.AI_DESIGN_PIPELINE.create({ params }));
+    await attachWorkflow(repo.db, run.id, instanceId);
   } catch (error) {
     // Dòng tiến độ đã mở mà instance không mở được: chốt nó lại ngay, nếu không màn hình sẽ
     // hiện một lượt chạy «đang chờ» vĩnh viễn và chặn luôn lượt sau (điều kiện 409 ở trên).
@@ -1607,8 +1608,8 @@ aiApp.post('/plan/edit', async (c) => {
     edit: { baseArtifactId: body.artifactId, instruction },
   };
   try {
-    const instance = await c.env.AI_DESIGN_PIPELINE.create({ params });
-    await attachWorkflow(repo.db, run.id, instance.id);
+    const instanceId = instanceIdOf(await c.env.AI_DESIGN_PIPELINE.create({ params }));
+    await attachWorkflow(repo.db, run.id, instanceId);
   } catch (error) {
     await finishRun(repo.db, run.id, {
       status: 'failed',
@@ -1836,9 +1837,13 @@ aiApp.get('/runs/:id', async (c) => {
  * lượt chạy đang tốt thành «hỏng», vì dấu hỏng là chốt và không tự mở lại.
  */
 async function workflowDead(workflow: Workflow, instanceId: string): Promise<string | null> {
+  // Màn hình hỏi tuyến này mỗi vài giây khi lượt đang chạy: stub `get()` không huỷ thì mỗi lần hỏi để
+  // lại một stub cho bộ dọn rác — chính chuỗi làm `wrangler dev` sập (T84, xem `workflows/rpc-stub.ts`).
+  let instance: WorkflowInstance | null = null;
+  let state: InstanceStatus | null = null;
   try {
-    const instance = await workflow.get(instanceId);
-    const state = await instance.status();
+    instance = await workflow.get(instanceId);
+    state = await instance.status();
     if (state.status === 'errored') {
       return typeof state.error === 'string' && state.error
         ? `Luồng chạy nền dừng vì lỗi: ${String(state.error)}`
@@ -1848,6 +1853,10 @@ async function workflowDead(workflow: Workflow, instanceId: string): Promise<str
     return null;
   } catch {
     return null;
+  } finally {
+    // Kết quả `status()` cũng là kết quả RPC (T85).
+    disposeStub(state);
+    disposeStub(instance);
   }
 }
 

@@ -34,7 +34,7 @@
  * số hoặc đến từ chính đầu bài, hoặc từ `kb/brief_fidelity.yaml`.
  */
 
-import type { AiBriefDigest } from '@nvg/shared/design';
+import { balconySides, type AiBriefDigest } from '@nvg/shared/design';
 import type { BriefFidelity } from '../kb/brief-fidelity';
 
 /** Mặt của thửa đất — cùng tập với `site.main_entrance_side` của đầu bài. */
@@ -63,18 +63,43 @@ export interface ElevatorDemand {
   /** `lam_ngay` lắp luôn · `chua_cho` chừa sẵn giếng để lắp sau. */
   mode: 'lam_ngay' | 'chua_cho';
   type: string;
-  /** Diện tích giếng tối thiểu, m². */
-  minAreaM2: number;
-  /** Cạnh ngắn nhất của giếng, m. */
-  minSideM: number;
+  /**
+   * Diện tích giếng tối thiểu, m² = rộng × sâu gia chủ khai theo hãng thang. `null` khi đầu bài chưa
+   * khai (chỉ gặp ở đầu bài cũ — đầu bài mới bị cổng chặn trước): không đoán, bỏ phép đo cỡ.
+   */
+  minAreaM2: number | null;
+  /** Cạnh ngắn nhất của giếng, m = số nhỏ hơn trong hai kích thước khai. `null` như trên. */
+  minSideM: number | null;
+  /** Bề rộng × chiều sâu lọt lòng giếng gia chủ khai, m — `null` khi chưa khai. */
+  shaftWidthM: number | null;
+  shaftDepthM: number | null;
+  /**
+   * Giếng dựng được phép dài / to tối đa bao nhiêu so với số khai (`kb/brief_fidelity.yaml`
+   * `shaft_max_aspect`, `shaft_max_area_ratio`) — `0` là không kiểm. Lượt thật 913bc2ad: giếng 1,3 × 1,4
+   * m mà mặt bằng dựng ra 1,6 × 6,45 m.
+   */
+  maxAspect: number;
+  maxAreaRatio: number;
   /**
    * Nhãn ghi lên bản vẽ khi mới chừa chỗ — `null` khi lắp ngay.
    *
    * Vẽ một ô trống rồi ghi «thang máy» lên đó là nói sai trên một tờ bản vẽ kỹ thuật.
    */
   reservedLabel: string | null;
-  /** `canh_thang_bo` · `rieng_biet` · `null` khi gia chủ chưa quyết. */
+  /**
+   * Kiểu bố trí so với thang bộ: `giua_long_thang_bo` · `canh_thang_bo` · `doi_dien_thang_bo` ·
+   * `khac` · `rieng_biet` (cũ) · `null` khi chưa quyết. Ba kiểu đầu kiểm được trên mặt bằng
+   * (`checkElevatorLayout`); `khac` chỉ tới mô hình dạng câu (`layoutNote`).
+   */
   position: string | null;
+  /** Mô tả của kiến trúc sư khi chọn `khac`. */
+  layoutNote: string | null;
+  /** Loại phòng tính là hành lang / sảnh chung (`kb/brief_fidelity.yaml`). */
+  hallTypes: readonly string[];
+  /** Đoạn vách chung tối thiểu, m — `kb/brief_fidelity.yaml` `layout_min_shared_m`. */
+  layoutMinSharedM: number;
+  /** Loại phòng là ô thang bộ (`kb/brief_fidelity.yaml` `stair_types`). */
+  stairTypes: readonly string[];
 }
 
 /** Ban công — `null` khi đầu bài chưa khai gì về ban công. */
@@ -84,17 +109,23 @@ export interface BalconyDemand {
   fromLevel: number;
   /** Gia chủ khai KHÔNG làm ban công: có ban công trong đề xuất là sai đầu bài. */
   forbidden: boolean;
-  /** Mặt phải có ban công. Rỗng = đầu bài không ghim mặt nào. */
+  /** Mặt BẮT BUỘC có ban công. Rỗng = đầu bài không ghim mặt nào. */
   sides: readonly Side[];
+  /** Mặt CÓ THỂ có ban công (T91) — có hay không đều được. */
+  optionalSides: readonly Side[];
   /**
-   * Mặt KHÔNG được có ban công — chỉ điền khi gia chủ khai «chỉ mặt tiền»: đó là một câu phủ
-   * định thật sự, khác hẳn với khai `sides` mà bỏ sót một mặt.
+   * Mặt KHÔNG được có ban công: «chỉ mặt tiền», hoặc (T91, Haan 27/09/2026) mọi mặt không nằm trong
+   * `sides` lẫn `optionalSides` khi đầu bài MỚI đã khai ít nhất một mặt. Đầu bài cũ (chỉ có `sides`)
+   * thì không suy ra mặt cấm: khi ấy bỏ sót một mặt chỉ là chưa nhắc tới.
    */
   forbiddenSides: readonly Side[];
   /** Tầng phải có ít nhất một ban công. Rỗng = không ghim tầng nào. */
   levels: readonly number[];
-  /** Được phép đua ra ngoài ranh bao nhiêu mét, trên những mặt nào. `null` = không được đua. */
-  projection: { sides: readonly Side[]; m: number } | null;
+  /**
+   * Độ đua ra ngoài ranh từng mặt, mét (T91 — mỗi mặt một số). Chỉ mặt đua (> 0) có mặt trong bảng.
+   * `null` = không mặt nào đua.
+   */
+  projection: Readonly<Partial<Record<Side, number>>> | null;
   /**
    * Gia chủ khai CÓ đua ra ngoài ranh nhưng không khai đua bao nhiêu.
    *
@@ -105,10 +136,25 @@ export interface BalconyDemand {
   projectionDistanceMissing: boolean;
 }
 
+/**
+ * Bậc tam cấp ngoài cửa chính (T70) — `null` khi đầu bài không cho đủ số để vẽ.
+ *
+ * Hai nguồn, gia chủ khai thẳng thì thắng: `step_count` (nhiều nhà kiêng số bậc), rồi mới đến chênh
+ * cốt nền chia cho cổ bậc. Không có số nào thì KHÔNG vẽ: cốt nền là thứ khảo sát đo, không đoán được,
+ * và một dãy bậc bịa ra trên bản vẽ kỹ thuật tệ hơn một chỗ trống có ghi chú (CLAUDE.md 5.2).
+ */
+export interface EntryStepsDemand {
+  /** Số bậc gia chủ khai; `null` = suy từ chênh cốt. */
+  count: number | null;
+  /** Cốt nền tầng 1 cao hơn tim đường, m; `null` khi không khai. */
+  dropM: number | null;
+}
+
 export interface BriefDemands {
   spaces: readonly DemandedSpace[];
   elevator: ElevatorDemand | null;
   balcony: BalconyDemand | null;
+  entrySteps: EntryStepsDemand | null;
   /** Diện tích chỗ để xe tối thiểu, m² — đã tính theo CỠ xe. `null` khi đầu bài không khai xe. */
   garageMinM2: number | null;
   /** Câu gửi mô hình, mỗi dòng một yêu cầu gia chủ đã khai. */
@@ -128,14 +174,36 @@ export function briefDemands(digest: AiBriefDigest, fidelity: BriefFidelity): Br
   const lines: string[] = [];
   const warnings: string[] = [];
 
-  const elevator = elevatorDemand(digest, spec, lines, warnings);
+  const elevator = elevatorDemand(digest, spec, lines, warnings, fidelity.stairTypes);
   const balcony = balconyDemand(digest, spec, lines, warnings);
   const spaces = demandedSpaces(digest, spec, lines);
   const garageMinM2 = garageMinimum(digest, fidelity);
 
+  const entrySteps = entryStepsDemand(digest, spec, warnings);
+
   otherWarnings(digest, spec, elevator, warnings);
 
-  return { spaces, elevator, balcony, garageMinM2, lines, warnings };
+  return { spaces, elevator, balcony, entrySteps, garageMinM2, lines, warnings };
+}
+
+/** Bậc tam cấp — chỉ suy từ câu đã trả lời; «không có bậc» là câu trả lời, không phải chỗ trống. */
+export function entryStepsDemand(
+  digest: AiBriefDigest,
+  spec: BriefFidelity['demands'],
+  warnings: string[],
+): EntryStepsDemand | null {
+  const entrance = digest.entrance;
+  if (!entrance || entrance.steps_from_yard === false) return null;
+  const count = typeof entrance.step_count === 'number' ? entrance.step_count : null;
+  const dropM =
+    typeof entrance.floor_above_road_m === 'number' ? entrance.floor_above_road_m : null;
+  if (count !== null || (dropM !== null && dropM > 0)) return { count, dropM };
+  if (entrance.steps_from_yard === true && spec.warnings.bac_tam_cap_thieu_so === true) {
+    warnings.push(
+      'Đầu bài khai có bậc tam cấp nhưng chưa khai cốt nền cao hơn đường bao nhiêu, cũng chưa khai số bậc — mặt bằng chưa vẽ bậc.',
+    );
+  }
+  return null;
 }
 
 // ── Thang máy ──────────────────────────────────────────────────────────────────────────
@@ -145,6 +213,7 @@ function elevatorDemand(
   spec: BriefFidelity['demands'],
   lines: string[],
   warnings: string[],
+  stairTypes: readonly string[],
 ): ElevatorDemand | null {
   const vertical = digest.vertical;
   const answer = vertical?.elevator;
@@ -157,31 +226,58 @@ function elevatorDemand(
     return null;
   }
 
-  const capacity = vertical?.elevator_capacity ?? null;
-  const byCapacity = capacity === null ? undefined : spec.elevator.shaftM2[capacity];
-  const minAreaM2 = byCapacity ?? spec.elevator.shaftM2Unknown;
+  // Kích thước giếng lấy đúng số gia chủ khai theo hãng thang — không đoán theo tải (Haan 25/09/2026).
+  const width = vertical?.elevator_shaft_width_m ?? null;
+  const depth = vertical?.elevator_shaft_depth_m ?? null;
+  const sized = typeof width === 'number' && typeof depth === 'number';
+  const minAreaM2 = sized ? Math.round(width * depth * 100) / 100 : null;
+  const minSideM = sized ? Math.min(width, depth) : null;
+  if (!sized) {
+    warnings.push(
+      'Đầu bài khai thang máy nhưng chưa có kích thước giếng thang — chưa kiểm được ô thang máy có lọt cabin không.',
+    );
+  }
+  const size = sized
+    ? `tối thiểu ${minAreaM2} m², cạnh ngắn ít nhất ${minSideM} m (giếng ${width} × ${depth} m theo hãng thang)`
+    : 'kích thước theo hãng thang (đầu bài chưa khai)';
   const position = vertical?.elevator_position ?? null;
 
+  const layoutNote = vertical?.elevator_layout_note?.trim() || null;
+  // Kiểu bố trí đầu bài khai là RÀNG BUỘC — ba kiểu đầu kiểm được trên mặt bằng (Haan 25/09/2026).
   const where =
-    position === 'canh_thang_bo'
-      ? ' đặt cạnh thang bộ'
-      : position === 'rieng_biet'
-        ? ' đặt tách khỏi thang bộ'
-        : '';
+    position === 'giua_long_thang_bo'
+      ? '. Kiểu bố trí: GIỮA LÒNG THANG BỘ — ô thang máy giáp ô thang bộ thành một lõi (thang bộ uốn quanh giếng thang máy), cửa thang máy mở ra chiếu tới của thang bộ hoặc hành lang'
+      : position === 'canh_thang_bo'
+        ? '. Kiểu bố trí: CẠNH THANG BỘ — ô thang máy chung vách với ô thang bộ, và cả hai cùng giáp một hành lang / sảnh chung; thang máy không bao giờ chắn giữa thang bộ và hành lang'
+        : position === 'doi_dien_thang_bo'
+          ? '. Kiểu bố trí: ĐỐI DIỆN THANG BỘ — ô thang máy và ô thang bộ không chung vách, nằm hai phía của cùng một hành lang / sảnh chờ, cả hai cùng giáp phòng ấy'
+          : position === 'khac' && layoutNote
+            ? `. Kiểu bố trí theo mô tả của kiến trúc sư: «${layoutNote}»`
+            : position === 'rieng_biet'
+              ? ' đặt tách khỏi thang bộ'
+              : '';
 
   lines.push(
     answer === 'lam_ngay'
-      ? `Thang máy làm ngay: mọi tầng phải có một ô «${spec.elevator.spaceType}» tối thiểu ${minAreaM2} m², cạnh ngắn ít nhất ${spec.elevator.shaftMinSideM} m, CHỒNG KHÍT nhau qua các tầng${where}.`
-      : `Chừa chỗ lắp thang máy sau: mọi tầng phải có một ô «${spec.elevator.spaceType}» tối thiểu ${minAreaM2} m², cạnh ngắn ít nhất ${spec.elevator.shaftMinSideM} m, CHỒNG KHÍT nhau qua các tầng${where}. Chừa lệch tầng thì không phải chừa chỗ — sau này không có giếng thẳng để lắp.`,
+      ? `Thang máy làm ngay: mọi tầng phải có một ô «${spec.elevator.spaceType}» ${size}, CHỒNG KHÍT nhau qua các tầng${where}.`
+      : `Chừa chỗ lắp thang máy sau: mọi tầng phải có một ô «${spec.elevator.spaceType}» ${size}, CHỒNG KHÍT nhau qua các tầng${where}. Chừa lệch tầng thì không phải chừa chỗ — sau này không có giếng thẳng để lắp.`,
   );
 
   return {
     mode: answer,
     type: spec.elevator.spaceType,
     minAreaM2,
-    minSideM: spec.elevator.shaftMinSideM,
+    minSideM,
+    shaftWidthM: sized ? width : null,
+    shaftDepthM: sized ? depth : null,
+    maxAspect: spec.elevator.shaftMaxAspect,
+    maxAreaRatio: spec.elevator.shaftMaxAreaRatio,
     reservedLabel: answer === 'chua_cho' ? spec.elevator.reservedLabel || null : null,
     position: position === 'chua_quyet' ? null : position,
+    layoutNote,
+    hallTypes: spec.elevator.hallTypes,
+    layoutMinSharedM: spec.elevator.layoutMinSharedM,
+    stairTypes,
   };
 }
 
@@ -196,8 +292,15 @@ function balconyDemand(
   const b = digest.balconies;
   if (!b) return null;
   const scope = b.scope ?? null;
-  const declaredSides = (b.sides ?? []).filter((s): s is Side => SIDES.includes(s as Side));
-  if (scope === null && declaredSides.length === 0 && b.projection_over_boundary == null) {
+  const view = balconySides(b);
+  const anyProjection = Object.values(view.projection).some((m) => typeof m === 'number');
+  if (
+    scope === null &&
+    view.required.length === 0 &&
+    view.optional.length === 0 &&
+    !anyProjection &&
+    b.projection_over_boundary == null
+  ) {
     return null;
   }
 
@@ -210,6 +313,7 @@ function balconyDemand(
       fromLevel: spec.balcony.fromLevel,
       forbidden: true,
       sides: [],
+      optionalSides: [],
       forbiddenSides: SIDES,
       levels: [],
       projection: null,
@@ -217,11 +321,18 @@ function balconyDemand(
     };
   }
 
-  // «Chỉ mặt tiền» là câu PHỦ ĐỊNH với ba mặt còn lại, nên nó sinh `forbiddenSides`. Khai `sides`
-  // mà bỏ sót một mặt thì không: đó chỉ là chưa nhắc tới, và ép thành cấm là bịa ra một yêu cầu.
+  // «Chỉ mặt tiền» là câu PHỦ ĐỊNH với ba mặt còn lại. Đầu bài mới (T91) khai rõ mặt bắt buộc và mặt
+  // có thể: mặt còn lại là cấm (Haan 27/09/2026). Đầu bài cũ chỉ có `sides`: bỏ sót một mặt chỉ là
+  // chưa nhắc tới, ép thành cấm là bịa ra một yêu cầu.
   const frontOnly = scope === 'chi_mat_tien';
-  const sides: Side[] = frontOnly ? ['front'] : [...new Set(declaredSides)];
-  const forbiddenSides: Side[] = frontOnly ? SIDES.filter((s) => s !== 'front') : [];
+  const sides: Side[] = frontOnly ? ['front'] : view.required;
+  const optionalSides: Side[] = frontOnly ? [] : view.optional;
+  const declared = new Set<Side>([...sides, ...optionalSides]);
+  const forbiddenSides: Side[] = frontOnly
+    ? SIDES.filter((s) => s !== 'front')
+    : !view.legacy && declared.size
+      ? SIDES.filter((s) => !declared.has(s))
+      : [];
 
   const upper: number[] = [];
   for (let level = spec.balcony.fromLevel; level <= digest.floors; level += 1) upper.push(level);
@@ -229,21 +340,26 @@ function balconyDemand(
   // phòng — cả hai chỉ cần có ban công ở đâu đó trên các tầng trên.
   const levels = scope === 'moi_tang' ? upper : [];
 
-  const projectionM = typeof b.projection_m === 'number' ? b.projection_m : null;
-  const wantsProjection = b.projection_over_boundary === true;
-  const projectionDistanceMissing = wantsProjection && (projectionM === null || projectionM <= 0);
-  const projectionSides: Side[] = sides.length ? sides : ['front'];
-  const projection =
-    wantsProjection && projectionM !== null && projectionM > 0
-      ? { sides: projectionSides, m: projectionM }
-      : null;
+  // Độ đua từng mặt. Mặt có ban công mà chưa trả lời độ đua: không bịa số — giữ trong ranh và nói ra
+  // (chỉ nói khi gia chủ có ý đua: đầu bài cũ khai «có đua» mà thiếu số).
+  const projectionBySide: Partial<Record<Side, number>> = {};
+  for (const side of SIDES) {
+    const m = view.projection[side];
+    if (typeof m === 'number' && m > 0 && !forbiddenSides.includes(side))
+      projectionBySide[side] = m;
+  }
+  const projection = Object.keys(projectionBySide).length ? projectionBySide : null;
+  const projectionDistanceMissing =
+    view.legacy && b.projection_over_boundary === true && projection === null;
 
   if (sides.length) {
-    lines.push(
-      `Ban công phải có ở ${sides.map(sideWord).join(', ')}${
-        forbiddenSides.length ? ' và CHỈ ở đó' : ''
-      }.`,
-    );
+    lines.push(`Ban công BẮT BUỘC có ở ${sides.map(sideWord).join(', ')}.`);
+  }
+  if (optionalSides.length) {
+    lines.push(`Ban công CÓ THỂ có ở ${optionalSides.map(sideWord).join(', ')} (không bắt buộc).`);
+  }
+  if (forbiddenSides.length) {
+    lines.push(`KHÔNG đặt ban công ở ${forbiddenSides.map(sideWord).join(', ')}.`);
   }
   if (levels.length) {
     lines.push(`Mỗi tầng từ tầng ${spec.balcony.fromLevel} trở lên phải có ban công.`);
@@ -251,12 +367,15 @@ function balconyDemand(
   if (b.drying_balcony === true) {
     lines.push('Phải có một ban công dành cho giặt phơi, tách khỏi ban công mặt tiền.');
   }
-  if (projection) {
-    lines.push(
-      `Ban công ${projection.sides.map(sideWord).join(', ')} được đua ra ngoài ranh nhà ${projection.m} m — phần đua ấy nằm NGOÀI hình bao xây được, và chỉ ban công mới được đua.`,
-    );
-  } else if (wantsProjection) {
-    lines.push('Ban công KHÔNG được vượt ra ngoài ranh nhà.');
+  for (const side of SIDES) {
+    const m = projectionBySide[side];
+    if (m !== undefined) {
+      lines.push(
+        `Ban công ${sideWord(side)} được đua ra ngoài ranh nhà ${m} m — phần đua ấy nằm NGOÀI hình bao xây được, không tốn diện tích sàn.`,
+      );
+    } else if (declared.has(side) && view.projection[side] === 0) {
+      lines.push(`Ban công ${sideWord(side)} KHÔNG đua — nằm trong diện tích sàn.`);
+    }
   }
   if (projectionDistanceMissing) {
     warnings.push(
@@ -269,6 +388,7 @@ function balconyDemand(
     fromLevel: spec.balcony.fromLevel,
     forbidden: false,
     sides,
+    optionalSides,
     forbiddenSides,
     levels,
     projection,
@@ -373,6 +493,8 @@ export function matchDemand(code: string, digest: AiBriefDigest): { level: numbe
       return lifestyle?.overnight_guests === true ? { level: null } : null;
     case 'lam_viec_tai_nha':
       return lifestyle?.work_from_home === true ? { level: null } : null;
+    case 'san_trong':
+      return (digest.massing?.yards ?? []).includes('san_trong') ? { level: null } : null;
     default:
       // Dòng mới trong tệp dữ liệu mà chưa có nhánh ở đây: bỏ qua, KHÔNG ném lỗi. Một dòng thừa
       // không được phép làm hỏng cả lượt chạy. Phép thử canh ở trên bắt việc này trên máy, trước
