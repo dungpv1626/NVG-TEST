@@ -19,6 +19,7 @@ const state = vi.hoisted(() => ({
   can: {} as Record<string, Record<string, boolean>>,
   opportunities: [] as unknown[],
   contracts: [] as unknown[],
+  purchaseRequests: [] as unknown[],
   approvals: [] as unknown[],
   cashFlow: [] as unknown[],
   receivables: [] as unknown[],
@@ -69,6 +70,9 @@ vi.mock('@/hooks/use-opportunities', () => ({
 vi.mock('@/hooks/use-contracts', () => ({
   useContracts: () => ({ data: state.contracts, isLoading: false }),
 }));
+vi.mock('@/hooks/use-purchasing', () => ({
+  usePurchaseRequests: () => ({ data: state.purchaseRequests, isLoading: false }),
+}));
 vi.mock('@/hooks/use-bidding-projects', () => ({
   useBiddingProjects: () => ({ data: [], isLoading: false }),
 }));
@@ -105,6 +109,7 @@ beforeEach(() => {
   state.financeDays = [];
   state.opportunities = [];
   state.contracts = [];
+  state.purchaseRequests = [];
   state.approvals = [];
   state.cashFlow = [];
   state.receivables = [];
@@ -442,5 +447,35 @@ describe('Dashboard — thẻ Quá hạn gộp cả rủi ro ngoài 4 module g�
     renderWithApp(<DashboardPage />, { route: '/dashboard' });
 
     expect(screen.queryByText(/vượt ngân sách/)).not.toBeInTheDocument();
+  });
+});
+
+describe('Dashboard — thẻ Đề nghị mua cho Mua hàng', () => {
+  it('đếm đề nghị đã duyệt mà chưa lập đơn đặt hàng — việc đang chờ Mua hàng', () => {
+    grantView('MH');
+    const now = new Date().toISOString();
+    const req = (stage: string) => ({
+      stage,
+      needed_date: null,
+      estimated_value: '1000000',
+      created_at: now,
+    });
+    state.purchaseRequests = [
+      req('da_duyet'),
+      req('da_duyet'),
+      req('cho_duyet'),
+      req('hoan_thanh'),
+    ];
+    renderWithApp(<DashboardPage />, { route: '/dashboard?ky=nam-nay' });
+
+    expect(screen.getByText('Đề nghị mua')).toBeInTheDocument();
+    expect(screen.getByText('Đã duyệt, chờ lập đơn đặt hàng')).toBeInTheDocument();
+    expect(screen.getByText('2 đề nghị')).toBeInTheDocument();
+  });
+
+  it('vai trò không xem được Mua hàng thì không có thẻ', () => {
+    grantView('CRM');
+    renderWithApp(<DashboardPage />, { route: '/dashboard' });
+    expect(screen.queryByText('Đề nghị mua')).toBeNull();
   });
 });

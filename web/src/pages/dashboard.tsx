@@ -36,6 +36,7 @@ import {
   Percent,
   Receipt,
   Scale,
+  ShoppingCart,
   TrendingUp,
   Users,
   Wallet,
@@ -52,6 +53,7 @@ import {
   STATUS_GROUPS,
   biddingDisplayStatus,
   contractDisplayStatus,
+  purchaseRequestDisplayStatus,
   conversionRate,
   countByStatus,
   dashboardGreeting,
@@ -81,6 +83,7 @@ import { useCashFlow, useReceivables } from '@/hooks/use-accounting';
 import { usePendingApprovals } from '@/hooks/use-approvals';
 import { useBiddingProjects } from '@/hooks/use-bidding-projects';
 import { useContracts } from '@/hooks/use-contracts';
+import { usePurchaseRequests } from '@/hooks/use-purchasing';
 import { useDesignProjects } from '@/hooks/use-design-projects';
 import { useTimesheets } from '@/hooks/use-hr';
 import { useOpportunities } from '@/hooks/use-opportunities';
@@ -114,6 +117,7 @@ const MODULE_KPI_ICON: Record<string, { icon: LucideIcon; well: string }> = {
   DA: { icon: FileText, well: 'bg-tint-amber-bg text-tint-amber' },
   TK: { icon: Compass, well: 'bg-tint-teal-bg text-tint-teal' },
   HD: { icon: FileSignature, well: 'bg-tint-forest-bg text-brand' },
+  MH: { icon: ShoppingCart, well: 'bg-tint-teal-bg text-tint-teal' },
 };
 
 export function DashboardPage() {
@@ -141,6 +145,7 @@ export function DashboardPage() {
   const canViewKt = useCan('KT');
   const canViewSx = useCan('SX');
   const canViewNs = useCan('NS');
+  const canViewMh = useCan('MH');
   // Xem được PHÂN HỆ chưa đủ để xem SỐ TIỀN: thẻ tài chính và lãi/lỗ theo nhóm vai trò mà CSDL
   // cho xem, không theo quyền mở phân hệ (xem `useSensitiveAccess`).
   const { data: access } = useSensitiveAccess();
@@ -151,6 +156,7 @@ export function DashboardPage() {
   const biddingProjects = useBiddingProjects({ enabled: canViewDa });
   const designProjects = useDesignProjects({ enabled: canViewTk });
   const contracts = useContracts({ enabled: canViewHd });
+  const purchaseRequests = usePurchaseRequests({ enabled: canViewMh });
 
   // Cùng nguồn dữ liệu với Hộp thư Phê duyệt và huy hiệu trên thanh trên cùng — ba chỗ hiển
   // thị cùng một con số thì phải đọc từ cùng một truy vấn, nếu không sẽ có lúc lệch nhau.
@@ -207,6 +213,18 @@ export function DashboardPage() {
       createdAt: c.created_at,
     }))
     .filter(inPeriod);
+
+  const purchaseRecords: MetricRecord[] = (purchaseRequests.data ?? [])
+    .map((r) => ({
+      status: purchaseRequestDisplayStatus(r.stage, r.needed_date),
+      value: r.estimated_value,
+      createdAt: r.created_at,
+    }))
+    .filter(inPeriod);
+  // Việc của Mua hàng bắt đầu khi đề nghị được duyệt: đã duyệt mà chưa đặt hàng là hàng đang chờ.
+  const awaitingOrder = (purchaseRequests.data ?? []).filter(
+    (r) => r.stage === 'da_duyet' && isWithinPeriod(r.created_at, period),
+  ).length;
 
   // Tỷ lệ chuyển đổi tính trên TOÀN BỘ cơ hội trong kỳ, kể cả cơ hội đã mất — bỏ cơ hội mất
   // ra khỏi mẫu số thì tỷ lệ luôn đẹp và không còn nói lên điều gì (PRD CRM-09).
@@ -273,6 +291,20 @@ export function DashboardPage() {
       records: contractRecords,
       isLoading: contracts.isLoading,
       highlights: [{ label: 'Giá trị đã ký trong kỳ', text: formatCurrency(signedContractValue) }],
+    },
+    canViewMh && {
+      key: 'MH',
+      title: 'Đề nghị mua',
+      hint: 'Đề nghị mua lập trong kỳ, theo trạng thái xử lý',
+      basePath: '/mh/de-nghi-mua',
+      records: purchaseRecords,
+      isLoading: purchaseRequests.isLoading,
+      highlights: [
+        {
+          label: 'Đã duyệt, chờ lập đơn đặt hàng',
+          text: `${awaitingOrder} đề nghị`,
+        },
+      ],
     },
   ].filter(Boolean) as ModuleMetric[];
 
