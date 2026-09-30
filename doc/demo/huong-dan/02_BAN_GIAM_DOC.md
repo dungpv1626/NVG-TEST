@@ -23,6 +23,7 @@ Hệ thống Phần mềm Quản trị Nhà Việt Group · theo dõi, phê duy�
 | Xem tình hình chung: chờ duyệt, quá hạn, dòng tiền, công nợ, cơ hội, hợp đồng | **Dashboard** | Mỗi sáng |
 | Duyệt hoặc từ chối hồ sơ vượt hạn mức cấp dưới | **Việc cần làm** (Hộp thư phê duyệt) | Khi có thông báo |
 | Xem lãi/lỗ từng công trình, truy ngược tới chứng từ | **Lãi/lỗ theo công trình** | Hằng tuần, hoặc khi cần |
+| Xem doanh thu, thu, chi theo tháng / quý / năm bằng biểu đồ, xuất Excel / PDF | **Tổng quan tài chính** | Hằng tuần, hằng tháng |
 | Xem hiệu quả kinh doanh: nguồn khách, phễu bán hàng, tỷ lệ trúng thầu | **Hiệu quả kinh doanh** | Hằng tháng |
 | Theo dõi công trường: đề nghị vật tư đang kẹt ở đâu | **Theo dõi đề nghị** | Khi cần |
 | Quyết định thời hạn xử lý và hạn mức phê duyệt | Quản trị viên nhập theo quyết định của Ban Giám đốc | Khi thay đổi quy chế |
@@ -39,32 +40,43 @@ Lựa chọn được giữ khi chuyển giữa các màn hình.
 
 ## 3. Dashboard mỗi sáng
 
-Trang đầu tiên sau khi đăng nhập. Mỗi thẻ là một nhóm chỉ số; **bấm vào thẻ** để mở danh sách đã
-lọc sẵn. Hàng nút **Kỳ báo cáo** (Tháng này · Quý này · Năm nay · Tất cả) đổi khoảng thời gian cho
-các thẻ.
+Trang đầu tiên sau khi đăng nhập. Hàng nút **Kỳ báo cáo** (Tháng này · Quý này · Năm nay · Tất cả)
+đổi khoảng thời gian cho mọi số liệu bên dưới.
 
-![Dashboard](anh/bgd/01-dashboard.png)
+**Phần trên — Tổng quan tài chính** (chỉ hiện với Ban Giám đốc, Giám đốc Tài chính, Kế toán):
 
-**Hình 1.** Dashboard của Tổng Giám đốc, đang xem Toàn NVG, kỳ Năm nay.
+- **Bốn ô chỉ số**: Doanh thu · Đã thu · Đã chi · Dòng tiền ròng (thu − chi). Mỗi ô ghi số rút gọn
+  («1,3 tỷ»), số đầy đủ ngay dưới, và **so với kỳ trước cùng độ dài** — ví dụ 9 ngày đầu tháng này
+  so với 9 ngày đầu tháng trước. Kỳ trước chưa có dữ liệu thì ghi «Chưa có kỳ trước để so sánh»,
+  không tự dựng phần trăm.
+- **Doanh thu và tiền đã thu**, **Thu – chi**: biểu đồ cột theo kỳ; nút **Tháng / Quý / Năm** trên
+  mỗi biểu đồ đổi cách chia. Rê chuột (hoặc chạm) vào cột để xem số đầy đủ.
+- **Công nợ phải thu theo tuổi nợ** và **Lãi/lỗ thực tế theo công trình**: số tại thời điểm xem,
+  bấm liên kết dưới mỗi khung để mở màn hình chi tiết.
+
+![Dashboard — tổng quan tài chính](anh/bgd/01-dashboard.png)
+
+**Hình 1.** Dashboard của Tổng Giám đốc: bốn ô chỉ số và hai biểu đồ theo kỳ.
+
+**Phần dưới — các thẻ vận hành.** Bấm vào thẻ để mở danh sách đã lọc sẵn.
+
+![Dashboard — các thẻ vận hành](anh/bgd/02-dashboard-duoi.png)
+
+**Hình 2.** Các thẻ vận hành: chờ duyệt, quá hạn, dòng tiền dự kiến, công nợ, giàn giáo, chấm công, cơ hội.
 
 | Thẻ | Cho biết |
 | --- | --- |
 | **Chờ phê duyệt** | Số hồ sơ nằm trong hạn mức của vai trò đang chờ duyệt, và tổng giá trị |
 | **Quá hạn** | Hồ sơ vượt thời hạn xử lý, công nợ quá hạn thu, phê duyệt bị để lâu — gộp mọi phân hệ |
-| **Lãi/lỗ theo công trình** | Lối vào báo cáo lãi/lỗ |
-| **Dòng tiền** | Số dư cuối kỳ dự kiến: số dư đầu kỳ Kế toán đã lập, cộng thu, trừ chi, trừ khoản đã duyệt chưa chi |
+| **Dòng tiền** | Số dư cuối kỳ **dự kiến**: số dư đầu kỳ Kế toán đã lập, cộng thu, trừ chi, trừ khoản đã duyệt chưa chi |
 | **Công nợ phải thu** | Phần khách hàng **còn** phải trả, không tính phần đã thu |
 | **Giàn giáo đang cho thuê** | Số hợp đồng cho thuê chưa thu hồi xong |
 | **Chấm công đã chốt** | Bảng công tháng đã chuyển sang Kế toán hay chưa |
 | **Cơ hội kinh doanh · Gói thầu · Dự án thiết kế · Hợp đồng** | Hồ sơ lập trong kỳ, theo trạng thái; giá trị đang theo đuổi và đã ký |
 
-![Dashboard phần dưới](anh/bgd/02-dashboard-duoi.png)
-
-**Hình 2.** Phần dưới Dashboard: cơ hội, gói thầu, dự án thiết kế, hợp đồng trong kỳ.
-
-> Thẻ ghi **«Chưa đủ dữ liệu»** nghĩa là nguồn số liệu chưa có — ví dụ Kế toán chưa lập kế hoạch
-> dòng tiền cho kỳ đang xem. Hệ thống cố ý không hiện «0» trong trường hợp này: con số 0 sẽ đọc như
-> một số liệu thật.
+> Chỗ ghi **«Chưa đủ dữ liệu»** nghĩa là nguồn số liệu chưa có — ví dụ Kế toán chưa lập kế hoạch
+> dòng tiền cho kỳ đang xem, hoặc kỳ đó chưa có phát sinh. Hệ thống cố ý không hiện «0» trong
+> trường hợp này: con số 0 sẽ đọc như một số liệu thật.
 
 ## 4. Hộp thư phê duyệt
 
@@ -87,13 +99,35 @@ bấm thẻ **Chờ phê duyệt** trên Dashboard.
 > hồ sơ vượt mức đó mới tới Tổng Giám đốc. Tổng Giám đốc vẫn thấy hồ sơ đang ở cấp dưới trong Hộp
 > thư. Mỗi lần duyệt, từ chối đều ghi lại người, thời điểm và ý kiến.
 
-## 5. Lãi/lỗ theo công trình
+## 5. Tổng quan tài chính
+
+**Báo cáo & Dashboard → Tổng quan tài chính** (hoặc «Xem đầy đủ và xuất báo cáo →» trên Dashboard):
+cùng các biểu đồ với Dashboard nhưng khổ lớn, cộng thêm:
+
+- **Bảng số theo kỳ** ngay dưới mỗi biểu đồ: doanh thu, hợp đồng ký mới, đã thu, đã chi, dòng tiền
+  ròng — đọc được khi in.
+- **Theo pháp nhân** khi đang xem Toàn NVG.
+- **Xuất Excel** (số theo tháng) và **Xuất PDF**.
+
+![Tổng quan tài chính](anh/bgd/04-tong-quan-tai-chinh.png)
+
+**Hình 4.** Tổng quan tài chính: bốn ô chỉ số, biểu đồ doanh thu và tiền đã thu.
+
+![Tổng quan tài chính — phần dưới](anh/bgd/04-tong-quan-tai-chinh-duoi.png)
+
+**Hình 5.** Thu – chi kèm bảng số theo kỳ; công nợ theo tuổi nợ; lãi/lỗ theo công trình.
+
+> Mọi con số theo **ngày nghiệp vụ**: doanh thu theo ngày nghiệm thu với chủ đầu tư, tiền thu theo
+> ngày thu, tiền chi theo ngày chi — không theo ngày nhập liệu. Nhập bù hôm nay cho việc tháng trước
+> thì số rơi vào tháng trước.
+
+## 6. Lãi/lỗ theo công trình
 
 **Báo cáo & Dashboard → Lãi/lỗ theo công trình**, hoặc bấm thẻ **Lãi/lỗ theo công trình**.
 
 ![Báo cáo lãi/lỗ](anh/bgd/05-lai-lo.png)
 
-**Hình 4.** Báo cáo lãi/lỗ theo công trình.
+**Hình 6.** Báo cáo lãi/lỗ theo công trình.
 
 | Cột | Cách tính |
 | --- | --- |
@@ -109,14 +143,14 @@ sách, đã phát sinh, đã cam kết, còn được chi.
 
 ![Ngân sách công trình](anh/bgd/06-lai-lo-chi-tiet.png)
 
-**Hình 5.** Tab Ngân sách của công trình — từng mã chi phí.
+**Hình 7.** Tab Ngân sách của công trình — từng mã chi phí.
 
 Nút **Xuất Excel** và **Xuất PDF** ở góc trên xuất đúng số liệu đang hiện trên màn hình.
 
 > Số lãi/lỗ, giá vốn chỉ hiện với vai trò được phép xem, và mỗi lượt xem được ghi lại. Người không
 > có quyền không thấy thẻ và không mở được báo cáo.
 
-## 6. Hiệu quả kinh doanh
+## 7. Hiệu quả kinh doanh
 
 Tab **Hiệu quả kinh doanh** cạnh báo cáo lãi/lỗ: theo pháp nhân (số cơ hội, đã ký, tỷ lệ chuyển
 đổi, tỷ lệ trúng thầu), theo nguồn khách, và phễu bán hàng theo giai đoạn hiện tại. Chỗ chưa có đủ
@@ -124,9 +158,9 @@ hồ sơ ghi **«Chưa có dữ liệu»** thay vì 0 %.
 
 ![Hiệu quả kinh doanh](anh/bgd/07-hieu-qua-kinh-doanh.png)
 
-**Hình 6.** Hiệu quả kinh doanh: theo pháp nhân, theo nguồn khách, phễu bán hàng.
+**Hình 8.** Hiệu quả kinh doanh: theo pháp nhân, theo nguồn khách, phễu bán hàng.
 
-## 7. Theo dõi công trường
+## 8. Theo dõi công trường
 
 **Thi công & Ngân sách → Công trình → Theo dõi đề nghị**, chọn **Tất cả công trình**: mọi đề nghị
 vật tư từ công trường, đang ở bước nào, **ai đang giữ**, đã chờ bao lâu, còn bao lâu tới hạn xử lý.
@@ -134,12 +168,12 @@ vật tư từ công trường, đang ở bước nào, **ai đang giữ**, đã
 
 ![Theo dõi đề nghị](anh/bgd/08-theo-doi-de-nghi.png)
 
-**Hình 7.** Theo dõi đề nghị, tất cả công trình.
+**Hình 9.** Theo dõi đề nghị, tất cả công trình.
 
 Trong trang từng công trình, tab **Điểm danh** cho xem ảnh điểm danh của nhân sự theo ngày (bằng
 chứng có mặt; chưa liên kết bảng chấm công).
 
-## 8. Thời hạn xử lý và hạn mức phê duyệt
+## 9. Thời hạn xử lý và hạn mức phê duyệt
 
 Hai bảng quy định cách hồ sơ chạy trong hệ thống. **Ban Giám đốc quyết định con số; Quản trị viên
 nhập** ở phân hệ Quản trị hệ thống. Không cần sửa phần mềm khi quy chế thay đổi.
@@ -151,13 +185,13 @@ nhập** ở phân hệ Quản trị hệ thống. Không cần sửa phần m�
 
 ![Thời hạn xử lý](anh/bgd/09-thoi-han.png)
 
-**Hình 8.** Thời hạn xử lý (màn hình của Quản trị viên). Hai mức trong bản demo là mức tạm.
+**Hình 10.** Thời hạn xử lý (màn hình của Quản trị viên). Hai mức trong bản demo là mức tạm.
 
 ![Hạn mức phê duyệt](anh/bgd/10-han-muc.png)
 
-**Hình 9.** Hạn mức phê duyệt (màn hình của Quản trị viên) — mức tạm theo tài liệu, chờ quy chế chính thức.
+**Hình 11.** Hạn mức phê duyệt (màn hình của Quản trị viên) — mức tạm theo tài liệu, chờ quy chế chính thức.
 
-## 9. Câu hỏi thường gặp
+## 10. Câu hỏi thường gặp
 
 | Câu hỏi | Trả lời |
 | --- | --- |
