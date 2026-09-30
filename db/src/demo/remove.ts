@@ -11,6 +11,7 @@
 
 import { createConnection } from '../client';
 import { NVC_OPPORTUNITY } from './scenario-nvc';
+import { DEMO_CASH_FLOW_PERIOD } from './scenario-cash-flow';
 import { DEMO_LOT_MATERIALS, NVS_FIRST_RENTAL_CUSTOMER, demoLotCode } from './scenario-nvs';
 
 export const DEMO_CUSTOMERS = [
@@ -169,6 +170,13 @@ export async function removeDemoData(): Promise<Record<string, number>> {
       await del(
         'hợp đồng thuê',
         tx`DELETE FROM rental_agreements WHERE id IN (SELECT id FROM g_rentals)`,
+      );
+      await del(
+        'kế hoạch dòng tiền',
+        tx`DELETE FROM cash_flow_plans
+        WHERE period_start = ${DEMO_CASH_FLOW_PERIOD.start} AND construction_site_id IS NULL
+          AND balance_note LIKE ${'Số dư tài khoản công ty ngày 01/09/2026%'}
+          AND created_by IN (SELECT id FROM users WHERE email LIKE ${SEED_ACCOUNT_DOMAIN})`,
       );
       await del('nhà cung cấp', tx`DELETE FROM suppliers WHERE id IN (SELECT id FROM g_suppliers)`);
       await del('khách hàng', tx`DELETE FROM customers WHERE id IN (SELECT id FROM g_customers)`);

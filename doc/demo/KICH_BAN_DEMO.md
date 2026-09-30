@@ -39,7 +39,7 @@ Ba điều người xem phải mang về:
 **Một giờ trước:**
 
 - [ ] Mạng: wifi phòng họp + điểm phát di động dự phòng.
-- [ ] Mở sẵn các thẻ trình duyệt, mỗi vai trò một cửa sổ ẩn danh riêng: Tổng Giám đốc · Giám đốc Tài chính · Mua hàng · Kho.
+- [ ] Mở sẵn các thẻ trình duyệt, mỗi vai trò một cửa sổ ẩn danh riêng: Tổng Giám đốc · Giám đốc Tài chính · Mua hàng · Kho · Quản trị viên.
 - [ ] Phóng chữ trình duyệt 125% cho máy chiếu.
 - [ ] Tắt thông báo hệ điều hành trên máy trình diễn.
 
@@ -82,14 +82,15 @@ nghị mà là **hỏi lại**: gửi đề nghị vật tư rồi không biết
 | Bước | Thiết bị · vai trò | Thao tác | Nói |
 | --- | --- | --- | --- |
 | 1 | Điện thoại · CHT | Mở công trình; chỉ nút «Chụp ảnh hiện trường» ở đầu trang | «Chỉ huy trưởng chỉ thấy công trình được giao. Nút chụp ảnh luôn ngay trên cùng.» |
-| 2 | Điện thoại · CHT | Chụp **trực tiếp** 1–2 ảnh trong phòng họp, gõ một dòng, Lưu | «Nhật ký có ảnh, không cần gửi Zalo song song.» |
-| 3 | Điện thoại · CHT | Thanh dưới → Theo dõi đề nghị | «Ba đề nghị: một đã về kho, một chờ duyệt, một chờ mua. Ai đang giữ, chờ bao lâu, quá hạn chưa.» |
-| 4 | Điện thoại · CHT | Chỉ đề nghị xi măng: «Quá hạn», người giữ là Giám đốc Tài chính | «Hạn xử lý do Ban Giám đốc khai — không phải phần mềm tự đặt.» |
-| 5 | Điện thoại · CHT | Bấm **Thúc** | «Không cần gọi điện. Lần nhắc được ghi lại, không nhắc dồn được.» |
-| 6 | Máy tính · Giám đốc Tài chính | Chuông thông báo → Hộp thư Phê duyệt → Duyệt | «Người giữ nhận ngay, bấm là vào đúng hồ sơ.» |
-| 7 | Điện thoại · CHT | Kéo làm mới Theo dõi đề nghị | «Đã chuyển sang Mua hàng — công trường thấy ngay, không ai phải báo.» |
-| 8 | Điện thoại · CHT | Nghiệm thu → «Nghiệm thu cốt thép trước khi đổ bê tông» → chấm mục, chụp ảnh mục bắt buộc → Lập biên bản | «Mỗi mục kiểm có ảnh. Biên bản đã ký không sửa được — cần đính chính thì lập biên bản điều chỉnh.» |
-| 9 | Máy tính · Tổng Giám đốc | Nền tảng → Thời hạn xử lý; Nền tảng → Hạn mức phê duyệt | «Thời hạn và hạn mức — lãnh đạo tự sửa, không cần gọi người viết phần mềm.» |
+| 2 | Điện thoại · CHT | Thanh dưới → **Điểm danh** → chụp trực tiếp, cho phép vị trí → Gửi điểm danh | «Thay ảnh Timemark gửi Zalo: giờ, ngày, công trình, người in lên ảnh; giờ là giờ máy chủ. Chưa nối với chấm công — màn hình nói rõ điều đó.» |
+| 3 | Điện thoại · CHT | Chụp **trực tiếp** 1–2 ảnh trong phòng họp, gõ một dòng, Lưu | «Nhật ký có ảnh, không cần gửi Zalo song song.» |
+| 4 | Điện thoại · CHT | Thanh dưới → Theo dõi đề nghị | «Ba đề nghị: một đã về kho, một chờ duyệt, một chờ mua. Ai đang giữ, chờ bao lâu, quá hạn chưa.» |
+| 5 | Điện thoại · CHT | Chỉ đề nghị xi măng: «Quá hạn», người giữ là Giám đốc Tài chính | «Hạn xử lý do Ban Giám đốc khai — không phải phần mềm tự đặt.» |
+| 6 | Điện thoại · CHT | Bấm **Thúc** | «Không cần gọi điện. Lần nhắc được ghi lại, không nhắc dồn được.» |
+| 7 | Máy tính · Giám đốc Tài chính | Chuông thông báo → Hộp thư Phê duyệt → Duyệt | «Người giữ nhận ngay, bấm là vào đúng hồ sơ.» |
+| 8 | Điện thoại · CHT | Kéo làm mới Theo dõi đề nghị | «Đã chuyển sang Mua hàng — công trường thấy ngay, không ai phải báo.» |
+| 9 | Điện thoại · CHT | Nghiệm thu → «Nghiệm thu cốt thép trước khi đổ bê tông» → chấm mục, chụp ảnh mục bắt buộc → Lập biên bản | «Mỗi mục kiểm có ảnh. Biên bản đã ký không sửa được — cần đính chính thì lập biên bản điều chỉnh.» |
+| 10 | Máy tính · Quản trị viên | Quản trị hệ thống → Thời hạn xử lý; → Hạn mức phê duyệt | «Thời hạn và hạn mức do Ban Giám đốc quyết, quản trị viên nhập trên màn hình — không cần sửa phần mềm.» |
 
 **Đường lui:** mạng điện thoại chập chờn → dùng Chrome trên máy tính thu cỡ điện thoại; ảnh tải chậm →
 bỏ qua bước 2, dùng nhật ký đã có ảnh.

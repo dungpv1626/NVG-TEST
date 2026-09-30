@@ -288,6 +288,15 @@ export function DashboardPage() {
   const cashFlowRows = cashFlow.data ?? [];
   const cashFlowTotal = sumMoney(cashFlowRows.map((r) => r.closing_balance));
   const cashFlowShortfallCount = cashFlowRows.filter((r) => toMoney(r.closing_balance) < 0n).length;
+  // Số dư cuối kỳ chỉ có nghĩa khi Kế toán đã lập kế hoạch dòng tiền (số dư đầu kỳ, thu chi dự
+  // kiến) cho kỳ này. Chưa có kế hoạch nào thì hàm vẫn trả một dòng mỗi pháp nhân, toàn số 0 —
+  // hiện «0 đồng» là một con số không có thật (CLAUDE.md 5.2).
+  const cashFlowHasPlan = cashFlowRows.some(
+    (r) =>
+      toMoney(r.opening_balance) !== 0n ||
+      toMoney(r.planned_in) !== 0n ||
+      toMoney(r.planned_out) !== 0n,
+  );
 
   // Chỉ đếm khoản CÒN NỢ (chưa thu hết), đúng vế "phần CÒN LẠI" mà bảng tuổi nợ dùng — cộng
   // theo giá trị gốc sẽ báo một khoản nợ xấu không tồn tại (CLAUDE.md 3.4).
@@ -492,8 +501,8 @@ export function DashboardPage() {
           >
             {cashFlow.isLoading ? (
               <div className="h-8 w-24 animate-pulse rounded-sm bg-surface-hover" />
-            ) : cashFlowRows.length === 0 ? (
-              <KpiEmptyBlock label="Chưa có số liệu dòng tiền." />
+            ) : cashFlowRows.length === 0 || !cashFlowHasPlan ? (
+              <KpiEmptyBlock label="Chưa đủ dữ liệu — Kế toán chưa lập kế hoạch dòng tiền cho kỳ này." />
             ) : (
               <Link to="/kt/dong-tien" className="mt-auto block hover:underline">
                 <span
@@ -731,9 +740,9 @@ function DataCompletenessNote() {
       <div className="min-w-0">
         <h2 className="text-md font-bold tracking-tight">Phần chưa có trên Dashboard</h2>
         <p className="mt-1 max-w-3xl text-xs leading-relaxed text-fg-subtle">
-          Tồn kho vật tư, hiệu quả kinh doanh (nguồn khách, phễu bán hàng, tỷ lệ trúng thầu) và báo
-          cáo tổng hợp toàn NVG truy ngược xuống từng pháp nhân/phòng ban chưa có trên Dashboard.
-          Các chỉ số đang hiển thị lấy trực tiếp từ hồ sơ nghiệp vụ, không phải số liệu mẫu.
+          Tồn kho vật tư và báo cáo tổng hợp toàn NVG truy ngược xuống từng pháp nhân/phòng ban chưa
+          có trên Dashboard. Các chỉ số đang hiển thị lấy trực tiếp từ hồ sơ nghiệp vụ, không phải
+          số liệu mẫu.
         </p>
       </div>
     </section>

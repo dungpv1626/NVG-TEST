@@ -93,8 +93,8 @@ export function BudgetPanel({ siteId }: { siteId: string }) {
           </div>
         </dl>
         <p className="mt-3 text-xs text-fg-subtle">
-          Chi phí đã phát sinh và đã cam kết do Mua hàng, Kho và Kế toán cập nhật khi có chứng từ. Ở
-          bản hiện tại các cột đó còn bằng 0 vì ba phân hệ này thuộc Giai đoạn 2.
+          Đã phát sinh và đã cam kết cập nhật tự động từ chứng từ của Mua hàng, Kho và Kế toán —
+          không nhập tay ở đây.
         </p>
       </section>
 

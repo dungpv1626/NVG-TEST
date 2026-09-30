@@ -79,7 +79,7 @@ Mật khẩu chung của tài khoản demo: xem `db/src/seed/data.ts` (`SEED_PAS
 | D-06 | Chỉ huy trưởng | Bấm «Thúc» đề nghị xi măng | Báo đã thúc; nút đổi thành giờ thúc lại được; «Đã thúc 1 lần» | | |
 | D-07 | Giám đốc Tài chính | Chuông thông báo | Có thông báo «Công trường … thúc đề nghị …», bấm dẫn tới Hộp thư | | |
 | D-08 | Mua hàng | Mở đề nghị cốp pha (đã duyệt) | Dòng «Công trường đã thúc» nếu đã thúc; danh sách đề nghị có cột Công trình | | |
-| D-09 | Tổng Giám đốc | Khai thời hạn «duyệt đề nghị mua» ở Nền tảng → Thời hạn xử lý | Trên máy chỉ huy trưởng, đề nghị chờ duyệt hiện Hạn xử lý thay cho «Chưa có thời hạn cam kết» | | |
+| D-09 | Quản trị viên | Sửa thời hạn «duyệt đề nghị mua» ở Quản trị hệ thống → Thời hạn xử lý (Tổng Giám đốc không mở được màn hình này) | Trên máy chỉ huy trưởng, đề nghị chờ duyệt hiện Hạn xử lý thay cho «Chưa có thời hạn cam kết» | | |
 | D-10 | Chỉ huy trưởng | Nghiệm thu → chọn «Nghiệm thu cốt thép trước khi đổ bê tông» | Bốn mục, ba nút chữ mỗi mục, nút chụp ảnh ở mục cần ảnh | | |
 | D-11 | Chỉ huy trưởng | Lập biên bản thiếu ảnh mục bắt buộc | Báo mục nào thiếu ảnh, KHÔNG lập biên bản | | |
 | D-12 | Chỉ huy trưởng | Có mục «Không đạt» mà trống ô Tồn tại | Báo phải ghi tồn tại | | |

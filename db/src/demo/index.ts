@@ -12,6 +12,7 @@
 
 import { DB_TARGET, DEMO_PROJECT_REF } from '../env';
 import { compactSequences, removeDemoData } from './remove';
+import { loadCashFlow } from './scenario-cash-flow';
 import { loadChecklists } from './scenario-checklists';
 import { loadNvc } from './scenario-nvc';
 import { loadNvs } from './scenario-nvs';
@@ -20,6 +21,7 @@ const SCENARIOS = {
   nvc: { label: 'NVC — nhà xưởng, cơ hội tới lãi/lỗ, một ngày công trường', run: loadNvc },
   nvs: { label: 'NVS — cho thuê giàn giáo', run: loadNvs },
   nt: { label: 'Danh mục kiểm tra nghiệm thu ví dụ (NVC)', run: loadChecklists },
+  dt: { label: 'Kế hoạch dòng tiền tháng 9 (NVC)', run: loadCashFlow },
 } as const;
 
 type ScenarioKey = keyof typeof SCENARIOS;

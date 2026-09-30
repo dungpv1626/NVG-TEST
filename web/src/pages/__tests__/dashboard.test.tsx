@@ -248,13 +248,30 @@ describe('Dashboard — bốn thẻ KT/SX/NS lấp phần BC-01 còn thiếu', (
   it('thẻ Dòng tiền cộng số dư cuối kỳ của mọi pháp nhân và nêu số pháp nhân thiếu hụt', () => {
     grantView('KT');
     state.cashFlow = [
-      { company_id: 'nvc-id', closing_balance: '500000000' },
-      { company_id: 'nvo-id', closing_balance: '-200000000' },
+      { company_id: 'nvc-id', opening_balance: '400000000', closing_balance: '500000000' },
+      { company_id: 'nvo-id', opening_balance: '0', closing_balance: '-200000000' },
     ];
     renderWithApp(<DashboardPage />, { route: '/dashboard' });
 
     expect(screen.getByText('300.000.000 đồng')).toBeInTheDocument();
     expect(screen.getByText('1 pháp nhân dự kiến thiếu hụt')).toBeInTheDocument();
+  });
+
+  it('chưa có kế hoạch dòng tiền thì thẻ Dòng tiền nói «Chưa đủ dữ liệu», không hiện 0 đồng', () => {
+    grantView('KT');
+    state.cashFlow = [
+      {
+        company_id: 'nvc-id',
+        opening_balance: '0',
+        planned_in: '0',
+        planned_out: '0',
+        closing_balance: '0',
+      },
+    ];
+    renderWithApp(<DashboardPage />, { route: '/dashboard' });
+
+    expect(screen.getByText(/Kế toán chưa lập kế hoạch dòng tiền/)).toBeInTheDocument();
+    expect(screen.queryByText('0 đồng')).not.toBeInTheDocument();
   });
 
   it('thẻ Công nợ phải thu chỉ cộng phần CÒN LẠI, bỏ khoản đã thu hết', () => {
