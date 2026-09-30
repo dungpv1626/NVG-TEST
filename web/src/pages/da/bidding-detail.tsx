@@ -18,6 +18,7 @@ import {
 } from '@nvg/shared';
 import { DetailFields, EntityDetail, RecordNotFound } from '@/components/entity/entity-detail';
 import { Button } from '@/components/ui/button';
+import { usePromptDialog } from '@/components/ui/prompt-dialog';
 import { CardGridSkeleton, ErrorState } from '@/components/ui/states';
 import {
   useBiddingProject,
@@ -37,6 +38,7 @@ import { BudgetPanel } from './budget-panel';
 const EM_DASH = '—';
 
 export function BiddingDetailPage() {
+  const promptDialog = usePromptDialog();
   const { id } = useParams<{ id: string }>();
   const { profile } = useAuth();
   const canEdit = useCan('DA', 'edit');
@@ -74,13 +76,18 @@ export function BiddingDetailPage() {
     }
   }
 
-  function recordResultWithReason(won: boolean) {
+  async function recordResultWithReason(won: boolean) {
     if (won) {
       void run(() => recordResult.mutateAsync({ projectId: project.id, won: true }));
       return;
     }
     // DA-08 yêu cầu ghi nguyên nhân; hỏi ngay tại chỗ thay vì để CSDL báo lỗi rồi mới hỏi.
-    const reason = window.prompt('Nguyên nhân trượt thầu:');
+    const reason = await promptDialog.ask({
+      title: 'Ghi nhận trượt thầu',
+      label: 'Nguyên nhân trượt thầu',
+      placeholder: 'Giá cao hơn đối thủ, thiếu năng lực kinh nghiệm…',
+      confirmLabel: 'Ghi nhận trượt thầu',
+    });
     if (reason === null) return;
     void run(() =>
       recordResult.mutateAsync({ projectId: project.id, won: false, reason: reason.trim() }),
@@ -113,6 +120,7 @@ export function BiddingDetailPage() {
 
   return (
     <>
+      {promptDialog.dialog}
       {actionError && (
         <p
           role="alert"

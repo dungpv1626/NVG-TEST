@@ -26,6 +26,7 @@ import {
   formatDate,
 } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
+import { usePromptDialog } from '@/components/ui/prompt-dialog';
 import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -62,6 +63,7 @@ export function QuotationPanel({
   /** Đề nghị đang ở bước nhận báo giá (đã duyệt / đang mua). */
   isOpenForQuotes: boolean;
 }) {
+  const promptDialog = usePromptDialog();
   const { data: quotations, isLoading, error } = useQuotations(requestId);
   const { data: requestItems } = usePurchaseRequestItems(requestId);
   const { data: suppliers } = useSuppliers();
@@ -130,10 +132,15 @@ export function QuotationPanel({
     setPanelError(null);
     let reason: string | null = null;
     if (!isLowest) {
-      reason = window.prompt(
-        'Báo giá này không phải báo giá có tổng chi phí thấp nhất. Nêu căn cứ chọn (tiến độ giao, bảo hành, điều kiện thanh toán, chất lượng đã kiểm chứng):',
-      );
-      if (reason === null || reason.trim() === '') return;
+      reason = await promptDialog.ask({
+        title: 'Chọn báo giá không rẻ nhất?',
+        label: 'Căn cứ chọn',
+        detail:
+          'Báo giá này không phải báo giá có tổng chi phí thấp nhất. Căn cứ được lưu cùng hồ sơ để người duyệt và Kế toán đọc lại.',
+        placeholder: 'Tiến độ giao, bảo hành, điều kiện thanh toán, chất lượng đã kiểm chứng…',
+        confirmLabel: 'Chọn nhà cung cấp này',
+      });
+      if (reason === null) return;
     }
     try {
       await selectQuotation.mutateAsync({
@@ -148,6 +155,7 @@ export function QuotationPanel({
 
   return (
     <div className="space-y-4">
+      {promptDialog.dialog}
       {panelError && (
         <p role="alert" className="rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
           {panelError}

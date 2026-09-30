@@ -26,6 +26,7 @@ import { BoqPanel } from '@/components/estimate/boq-panel';
 import { EstimatePanel } from '@/components/estimate/estimate-panel';
 import { DetailFields, RecordNotFound } from '@/components/entity/entity-detail';
 import { Button } from '@/components/ui/button';
+import { usePromptDialog } from '@/components/ui/prompt-dialog';
 import { SectionHelp } from '@/components/ui/section-help';
 import { CardGridSkeleton, ErrorState } from '@/components/ui/states';
 import { useContractForSource } from '@/hooks/use-contracts';
@@ -51,6 +52,7 @@ import { VersionPanel } from './version-panel';
 const EM_DASH = '—';
 
 export function DesignDetailPage() {
+  const promptDialog = usePromptDialog();
   const { id } = useParams<{ id: string }>();
   const { profile } = useAuth();
   const canEdit = useCan('TK', 'edit');
@@ -92,8 +94,13 @@ export function DesignDetailPage() {
     }
   }
 
-  function stopDesign() {
-    const reason = window.prompt('Nguyên nhân dừng thiết kế:');
+  async function stopDesign() {
+    const reason = await promptDialog.ask({
+      title: 'Dừng thiết kế?',
+      label: 'Nguyên nhân dừng',
+      confirmLabel: 'Dừng thiết kế',
+      danger: true,
+    });
     if (reason === null) return;
     void run(() =>
       moveStage.mutateAsync({
@@ -188,6 +195,7 @@ export function DesignDetailPage() {
 
   return (
     <>
+      {promptDialog.dialog}
       {notice && (
         <p className="mb-3 rounded-sm bg-status-completed-bg px-3 py-2 text-status-completed">
           {notice}

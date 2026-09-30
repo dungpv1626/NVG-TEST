@@ -307,6 +307,14 @@ describe('Không để trình duyệt tự sinh chữ tiếng Anh', () => {
     expect(offenders).toEqual([]);
   });
 
+  it('không màn hình nào hỏi bằng `window.prompt` — phải dùng `usePromptDialog`', () => {
+    // Nút của hộp gốc là «OK/Cancel» theo tiếng của trình duyệt; 20 chỗ đã thay 30/09/2026.
+    const offenders = allPageSources()
+      .filter(({ code }) => /window\.prompt\(/.test(code))
+      .map(({ file }) => file);
+    expect(offenders).toEqual([]);
+  });
+
   it('chốt dịch lời thoại ràng buộc được gắn ngay khi ứng dụng khởi động', () => {
     // Thiếu dòng này thì mọi ô `required` ngoài `Input` lại báo tiếng Anh.
     expect(source('main.tsx')).toContain('installVietnameseValidation()');

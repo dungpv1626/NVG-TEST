@@ -16,6 +16,7 @@ import { formatDateTime, formatNumber, stocktakeStatusMeta, summarizeStocktake }
 import { PageHeader } from '@/components/layout/app-shell';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
 import { Button } from '@/components/ui/button';
+import { usePromptDialog } from '@/components/ui/prompt-dialog';
 import { Field } from '@/components/ui/field';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
 import {
@@ -43,6 +44,7 @@ function StocktakeDetail({
   status: StocktakeStatus;
   onError: (message: string | null) => void;
 }) {
+  const promptDialog = usePromptDialog();
   const canEdit = useCan('KHO', 'edit');
   const { data, isLoading } = useStocktakeItems(stocktakeId);
   const saveCount = useSaveStocktakeCount();
@@ -115,10 +117,13 @@ function StocktakeDetail({
   }
 
   async function requestApproval() {
-    const reason = window.prompt(
-      'Nguyên nhân chênh lệch (hao hụt bốc xếp, thất thoát, đếm sót lần trước…):',
-    );
-    if (reason === null || reason.trim() === '') return;
+    const reason = await promptDialog.ask({
+      title: 'Gửi phê duyệt chênh lệch kiểm kê',
+      label: 'Nguyên nhân chênh lệch',
+      placeholder: 'Hao hụt bốc xếp, thất thoát, đếm sót lần trước…',
+      confirmLabel: 'Gửi phê duyệt',
+    });
+    if (reason === null) return;
     onError(null);
     try {
       await saveCount.mutateAsync({
@@ -136,6 +141,7 @@ function StocktakeDetail({
 
   return (
     <div className="space-y-3">
+      {promptDialog.dialog}
       <p className="text-fg-muted">
         Đã đếm {summary.countedLines}/{summary.totalLines} vật tư · {summary.varianceLines} dòng
         lệch
@@ -262,6 +268,7 @@ function StocktakeDetail({
 }
 
 export function StocktakePage() {
+  const promptDialog = usePromptDialog();
   const canEdit = useCan('KHO', 'edit');
   const { data: warehouses } = useWarehouses();
   const { data, isLoading, error } = useStocktakes();
@@ -290,8 +297,13 @@ export function StocktakePage() {
   }
 
   async function cancelStocktake(id: string) {
-    const reason = window.prompt('Lý do hủy đợt kiểm kê:');
-    if (reason === null || reason.trim() === '') return;
+    const reason = await promptDialog.ask({
+      title: 'Hủy đợt kiểm kê?',
+      label: 'Lý do hủy',
+      confirmLabel: 'Hủy đợt kiểm kê',
+      danger: true,
+    });
+    if (reason === null) return;
     setPageError(null);
     try {
       await cancel.mutateAsync({ stocktakeId: id, reason: reason.trim() });
@@ -302,6 +314,7 @@ export function StocktakePage() {
 
   return (
     <>
+      {promptDialog.dialog}
       <KhoNav />
       <PageHeader
         title="Kiểm kê"

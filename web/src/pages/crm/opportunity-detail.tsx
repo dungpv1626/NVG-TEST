@@ -24,6 +24,7 @@ import {
 import { DraftContractButton } from '@/components/contract/draft-contract-button';
 import { DetailFields, EntityDetail, RecordNotFound } from '@/components/entity/entity-detail';
 import { Button } from '@/components/ui/button';
+import { usePromptDialog } from '@/components/ui/prompt-dialog';
 import { CardGridSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
 import { useContractForSource } from '@/hooks/use-contracts';
@@ -49,6 +50,7 @@ interface CustomerFull {
 }
 
 export function OpportunityDetailPage() {
+  const promptDialog = usePromptDialog();
   const { id } = useParams<{ id: string }>();
   const canEditModule = useCan('CRM', 'edit');
 
@@ -89,9 +91,13 @@ export function OpportunityDetailPage() {
     setMoveError(null);
     let lostReason: string | undefined;
     if (toStage === 'mat_co_hoi') {
-      const input = window.prompt('Nguyên nhân mất cơ hội (bắt buộc):');
-      if (input === null || !input.trim()) return;
-      lostReason = input.trim();
+      const input = await promptDialog.ask({
+        title: 'Chuyển sang Mất cơ hội?',
+        label: 'Nguyên nhân mất cơ hội',
+        confirmLabel: 'Ghi nhận mất cơ hội',
+      });
+      if (input === null) return;
+      lostReason = input;
     }
     try {
       await moveStage.mutateAsync({ opportunityId: data!.id, toStage, lostReason });
@@ -109,6 +115,7 @@ export function OpportunityDetailPage() {
 
   return (
     <>
+      {promptDialog.dialog}
       {moveError && (
         <p
           role="alert"

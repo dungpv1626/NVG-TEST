@@ -19,6 +19,7 @@ import {
   RecordNotFound,
 } from '@/components/entity/entity-detail';
 import { Button } from '@/components/ui/button';
+import { usePromptDialog } from '@/components/ui/prompt-dialog';
 import { DateInput } from '@/components/ui/date-input';
 import { CardGridSkeleton, ErrorState } from '@/components/ui/states';
 import {
@@ -35,6 +36,7 @@ import { DeliveryPanel } from './delivery-panel';
 const EM_DASH = '—';
 
 export function PurchaseOrderDetailPage() {
+  const promptDialog = usePromptDialog();
   const { id } = useParams<{ id: string }>();
   const canWork = useCan('MH', 'edit');
   const canReceive = useCan('KHO', 'edit') || canWork;
@@ -71,10 +73,15 @@ export function PurchaseOrderDetailPage() {
     }
   }
 
-  function cancelOrder() {
-    const reason = window.prompt('Lý do hủy đơn đặt hàng:');
-    if (reason === null || reason.trim() === '') return;
-    void run(() => cancel.mutateAsync({ orderId: order.id, reason: reason.trim() }));
+  async function cancelOrder() {
+    const reason = await promptDialog.ask({
+      title: 'Hủy đơn đặt hàng?',
+      label: 'Lý do hủy',
+      confirmLabel: 'Hủy đơn đặt hàng',
+      danger: true,
+    });
+    if (reason === null) return;
+    void run(() => cancel.mutateAsync({ orderId: order.id, reason }));
   }
 
   const actions =
@@ -116,6 +123,7 @@ export function PurchaseOrderDetailPage() {
 
   return (
     <>
+      {promptDialog.dialog}
       {actionError && (
         <p
           role="alert"

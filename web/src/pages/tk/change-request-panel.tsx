@@ -21,6 +21,7 @@ import {
   type ChangeRequestStatus,
 } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
+import { usePromptDialog } from '@/components/ui/prompt-dialog';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { MoneyInput } from '@/components/ui/money-input';
@@ -42,6 +43,7 @@ export function ChangeRequestPanel({
   /** Quyền sửa module TK. KHÁC "hồ sơ còn mở": ghi yêu cầu thay đổi vẫn được sau bàn giao. */
   canEdit: boolean;
 }) {
+  const promptDialog = usePromptDialog();
   const { profile } = useAuth();
   const { data: requests } = useChangeRequests(projectId);
   const save = useSaveChangeRequest();
@@ -112,13 +114,14 @@ export function ChangeRequestPanel({
     // Không thực hiện thì phải nói vì sao — người yêu cầu có quyền biết lý do bị từ chối.
     let decisionNotes: string | null = null;
     if (status === 'tu_choi') {
-      const reason = window.prompt('Lý do không thực hiện yêu cầu thay đổi này:');
+      const reason = await promptDialog.ask({
+        title: 'Không thực hiện yêu cầu thay đổi?',
+        label: 'Lý do không thực hiện',
+        detail: 'Người yêu cầu đọc được lý do này.',
+        confirmLabel: 'Không thực hiện',
+      });
       if (reason === null) return;
-      if (!reason.trim()) {
-        setError('Vui lòng nêu lý do không thực hiện.');
-        return;
-      }
-      decisionNotes = reason.trim();
+      decisionNotes = reason;
     }
 
     try {
@@ -140,6 +143,7 @@ export function ChangeRequestPanel({
 
   return (
     <div className="space-y-4">
+      {promptDialog.dialog}
       {error && (
         <p role="alert" className="rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
           {error}

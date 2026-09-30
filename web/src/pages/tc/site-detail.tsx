@@ -21,6 +21,7 @@ import {
 } from '@nvg/shared';
 import { DetailFields, EntityDetail, RecordNotFound } from '@/components/entity/entity-detail';
 import { Button } from '@/components/ui/button';
+import { usePromptDialog } from '@/components/ui/prompt-dialog';
 import { CardGridSkeleton, ErrorState } from '@/components/ui/states';
 import {
   useAcceptanceRecords,
@@ -52,6 +53,7 @@ const NEXT_STAGE: Partial<Record<SiteStage, { stage: SiteStage; label: string }>
 };
 
 export function SiteDetailPage() {
+  const promptDialog = usePromptDialog();
   const { id } = useParams<{ id: string }>();
   const canEdit = useCan('TC', 'edit');
 
@@ -89,12 +91,14 @@ export function SiteDetailPage() {
     }
   }
 
-  function pause() {
-    const reason = window.prompt('Nguyên nhân tạm dừng thi công:');
+  async function pause() {
+    const reason = await promptDialog.ask({
+      title: 'Tạm dừng thi công?',
+      label: 'Nguyên nhân tạm dừng',
+      confirmLabel: 'Tạm dừng thi công',
+    });
     if (reason === null) return;
-    void run(() =>
-      moveStage.mutateAsync({ siteId: site.id, stage: 'tam_dung', reason: reason.trim() }),
-    );
+    void run(() => moveStage.mutateAsync({ siteId: site.id, stage: 'tam_dung', reason }));
   }
 
   const actions = readOnly ? undefined : (
@@ -131,6 +135,7 @@ export function SiteDetailPage() {
 
   return (
     <>
+      {promptDialog.dialog}
       {actionError && (
         <p
           role="alert"

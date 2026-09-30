@@ -20,6 +20,7 @@ import {
   type AmendmentStage,
 } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
+import { usePromptDialog } from '@/components/ui/prompt-dialog';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { MoneyInput } from '@/components/ui/money-input';
@@ -254,6 +255,7 @@ export function AmendmentPanel({
 }
 
 function AmendmentCard({ amendment, readOnly }: { amendment: AmendmentRecord; readOnly: boolean }) {
+  const promptDialog = usePromptDialog();
   const markQuoteSent = useMarkAmendmentQuoteSent();
   const submitApproval = useSubmitAmendmentApproval();
   const confirmByCustomer = useConfirmAmendmentByCustomer();
@@ -273,12 +275,14 @@ function AmendmentCard({ amendment, readOnly }: { amendment: AmendmentRecord; re
     }
   }
 
-  function confirmCustomer() {
-    const name = window.prompt('Tên người xác nhận phía khách hàng:');
+  async function confirmCustomer() {
+    const name = await promptDialog.ask({
+      title: 'Khách hàng đã xác nhận phát sinh',
+      label: 'Tên người xác nhận phía khách hàng',
+      confirmLabel: 'Ghi nhận xác nhận',
+    });
     if (name === null) return;
-    void run(() =>
-      confirmByCustomer.mutateAsync({ amendmentId: amendment.id, confirmedBy: name.trim() }),
-    );
+    void run(() => confirmByCustomer.mutateAsync({ amendmentId: amendment.id, confirmedBy: name }));
   }
 
   /**
@@ -345,6 +349,7 @@ function AmendmentCard({ amendment, readOnly }: { amendment: AmendmentRecord; re
 
   return (
     <li className="rounded-lg border border-border bg-surface p-4 shadow-card">
+      {promptDialog.dialog}
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-medium">{amendment.title}</span>
         <StatusLozenge status={meta.statusGroup} />

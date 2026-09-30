@@ -22,6 +22,7 @@ export function ConfirmDialog({
   pending = false,
   danger = false,
   className,
+  focusConfirm = true,
   onConfirm,
   onCancel,
 }: {
@@ -41,22 +42,28 @@ export function ConfirmDialog({
   danger?: boolean;
   /** Lớp của tấm hộp — trang `/tk/*` truyền bộ token riêng của nó vào đây. */
   className?: string;
+  /** `false` khi hộp có ô nhập — con trỏ vào ô, không vào nút chính. */
+  focusConfirm?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }): React.ReactElement {
   const confirmRef = useRef<HTMLButtonElement>(null);
-  const openerRef = useRef<Element | null>(null);
+  // Ghi nút đã bấm NGAY lúc dựng: tới lượt effect thì ô nhập `autoFocus` đã giành con trỏ.
+  const openerRef = useRef<Element | null>(
+    typeof document === 'undefined' ? null : document.activeElement,
+  );
 
   useEffect(() => {
-    openerRef.current = document.activeElement;
-    confirmRef.current?.focus();
+    const opener = openerRef.current;
+    if (focusConfirm) confirmRef.current?.focus();
     const previous = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = previous;
-      const opener = openerRef.current;
       if (opener instanceof HTMLElement && document.contains(opener)) opener.focus();
     };
+    // Chỉ chạy lúc mở hộp: `focusConfirm` không đổi trong đời một hộp thoại.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

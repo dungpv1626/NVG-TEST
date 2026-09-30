@@ -22,9 +22,11 @@ import {
   formatDate,
   formatDateTime,
   summarizeContractValue,
+  toNvgDateInput,
 } from '@nvg/shared';
 import { DetailFields, EntityDetail, RecordNotFound } from '@/components/entity/entity-detail';
 import { Button } from '@/components/ui/button';
+import { usePromptDialog } from '@/components/ui/prompt-dialog';
 import { CardGridSkeleton, ErrorState } from '@/components/ui/states';
 import {
   useCloseContract,
@@ -43,6 +45,7 @@ import { TermsPanel } from './terms-panel';
 const EM_DASH = '—';
 
 export function ContractDetailPage() {
+  const promptDialog = usePromptDialog();
   const { id } = useParams<{ id: string }>();
   const canEdit = useCan('HD', 'edit');
 
@@ -103,29 +106,39 @@ export function ContractDetailPage() {
     }
   }
 
-  function sign() {
-    const number = window.prompt('Số hợp đồng theo văn bản đã ký:');
+  async function sign() {
+    const number = await promptDialog.ask({
+      title: 'Ghi nhận hợp đồng đã ký',
+      label: 'Số hợp đồng theo văn bản đã ký',
+      confirmLabel: 'Tiếp tục',
+    });
     if (number === null) return;
-    const signedDate = window.prompt(
-      'Ngày ký (dạng yyyy-mm-dd):',
-      new Date().toISOString().slice(0, 10),
-    );
+    const signedDate = await promptDialog.ask({
+      title: 'Ghi nhận hợp đồng đã ký',
+      label: 'Ngày ký',
+      type: 'date',
+      defaultValue: toNvgDateInput(new Date()),
+      confirmLabel: 'Ghi nhận đã ký',
+    });
     if (signedDate === null) return;
     void run(() =>
       signContract.mutateAsync({
         contractId: contract.id,
-        contractNumber: number.trim(),
-        signedDate: signedDate.trim(),
+        contractNumber: number,
+        signedDate,
       }),
     );
   }
 
-  function cancel() {
-    const reason = window.prompt('Nguyên nhân hủy hợp đồng:');
+  async function cancel() {
+    const reason = await promptDialog.ask({
+      title: 'Hủy hợp đồng?',
+      label: 'Nguyên nhân hủy',
+      confirmLabel: 'Hủy hợp đồng',
+      danger: true,
+    });
     if (reason === null) return;
-    void run(() =>
-      closeContract.mutateAsync({ contractId: contract.id, stage: 'huy', reason: reason.trim() }),
-    );
+    void run(() => closeContract.mutateAsync({ contractId: contract.id, stage: 'huy', reason }));
   }
 
   const actions = readOnly ? undefined : (
@@ -175,6 +188,7 @@ export function ContractDetailPage() {
 
   return (
     <>
+      {promptDialog.dialog}
       {actionError && (
         <p
           role="alert"
