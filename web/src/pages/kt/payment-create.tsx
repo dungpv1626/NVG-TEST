@@ -53,6 +53,9 @@ function PaymentRequestForm({ order }: { order: PurchaseOrderDetailRecord | null
     order ? 'thanh_toan' : ((params.get('loai') as PaymentRequestType) ?? 'thanh_toan'),
   );
   const [amount, setAmount] = useState(order ? String(order.total_value) : '');
+  // Ô điều khiển, không `defaultValue`: danh mục nhà cung cấp tải SAU khi ô đã dựng, và
+  // `defaultValue` chỉ áp lúc dựng — nhà cung cấp của đơn hàng sẽ không được chọn.
+  const [supplierId, setSupplierId] = useState(order?.supplier_id ?? '');
   const [formError, setFormError] = useState<string | null>(null);
 
   const { data: suppliers } = useSuppliers();
@@ -227,7 +230,8 @@ function PaymentRequestForm({ order }: { order: PurchaseOrderDetailRecord | null
               <Field label="Nhà cung cấp" hint="Để trống nếu bên nhận chưa có trong danh mục.">
                 <select
                   name="supplier_id"
-                  defaultValue={order?.supplier_id ?? ''}
+                  value={supplierId}
+                  onChange={(e) => setSupplierId(e.target.value)}
                   className={SELECT_CLASS}
                 >
                   <option value="">Không chọn từ danh mục</option>

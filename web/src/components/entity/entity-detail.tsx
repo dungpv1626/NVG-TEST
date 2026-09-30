@@ -115,7 +115,9 @@ export function EntityDetail({
   const { active, selectTab, onTabKeyDown } = useDetailTabs(allTabs);
 
   return (
-    <div className="flex gap-6">
+    // Có gì đứng TRƯỚC khung này (dải bước duyệt, thông báo lỗi, «Đề nghị bị từ chối…») thì
+    // bù đúng phần margin âm của header — nếu không header kéo lên đè mất nửa dưới thứ đó.
+    <div className="flex gap-6 [&:not(:first-child)]:pt-4 lg:[&:not(:first-child)]:pt-6">
       <div className="min-w-0 flex-1">
         {/* Header cố định khi cuộn (Webapp Flow 4.3) — CHỈ trên máy tính. Trên điện thoại, tên,
             nút và thanh tab dính lại chiếm gần nửa màn hình (ảnh chụp hướng dẫn 30/09/2026), chỗ
