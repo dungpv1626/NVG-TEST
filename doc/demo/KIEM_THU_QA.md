@@ -53,7 +53,7 @@ Mật khẩu chung của tài khoản demo: xem `db/src/seed/data.ts` (`SEED_PAS
 | B-05 | Kế toán | Hồ sơ nhân sự | Xem được lương khi bấm; không thấy căn cước, sức khoẻ | | |
 | B-06 | Mua hàng | Chi tiết công trình | Thấy tên công trình, KHÔNG mở được nhật ký, ngân sách | | |
 | B-07 | Kinh doanh NVC | Chọn pháp nhân NVO | Không có — chỉ pháp nhân của mình | | |
-| B-08 | Tổng Giám đốc | Chọn «Toàn NVG» | Danh sách gộp đủ ba pháp nhân, có cột Pháp nhân, không rỗng | | |
+| B-08 | Tổng Giám đốc | Chọn «NVG Group» | Danh sách gộp đủ ba pháp nhân, có cột Pháp nhân, không rỗng | | |
 | B-09 | Tổng Giám đốc | Mở Quản trị hệ thống | Chỉ có hai tab Hạn mức phê duyệt, Thời hạn xử lý; sửa được; gõ thẳng `/nen/quan-tri` thì bị chặn | | |
 | B-10 | Giám đốc Tài chính | Tìm mục Quản trị hệ thống; gõ thẳng `/nen/han-muc` | Không có mục trên thanh bên; đường dẫn gõ tay bị chặn, nói rõ ai xử lý được | | |
 

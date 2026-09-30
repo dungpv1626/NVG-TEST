@@ -55,6 +55,7 @@ import {
   conversionRate,
   countByStatus,
   dashboardGreeting,
+  greetingAddress,
   designDisplayStatus,
   formatCurrency,
   formatPercent,
@@ -62,7 +63,6 @@ import {
   isStalePendingApproval,
   isWithinPeriod,
   periodStartDate,
-  shortNameFromFullName,
   statusLabel,
   sumMoney,
   toMoney,
@@ -362,9 +362,15 @@ export function DashboardPage() {
     profile?.scopeCompanies.find((c) => c.companyId === scope.companyId) ??
     profile?.scopeCompanies[0];
 
-  // Lời chào cá nhân hoá bằng TÊN là NGOẠI LỆ DUY NHẤT của quy tắc không dùng đại từ
-  // nhân xưng (Content Guidelines 4.2) — dùng tên, không dùng anh/chị.
-  const greeting = dashboardGreeting(shortNameFromFullName(profile?.fullName));
+  // Lời chào cá nhân hoá là NGOẠI LỆ DUY NHẤT của quy tắc không dùng đại từ nhân xưng
+  // (Content Guidelines 4.2): cấp quản lý chào bằng chức danh, còn lại bằng tên.
+  const greeting = dashboardGreeting(
+    greetingAddress(
+      profile?.jobTitle,
+      (profile?.assignments ?? []).map((a) => a.roleCode),
+      profile?.fullName,
+    ),
+  );
 
   return (
     <>

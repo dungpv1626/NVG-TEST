@@ -1,6 +1,6 @@
 /**
  * Tab «Tổng quan tài chính» của phân hệ Báo cáo — cùng các biểu đồ với Dashboard, khổ lớn hơn,
- * kèm bảng số dưới mỗi biểu đồ, cơ cấu theo pháp nhân khi xem Toàn NVG, và xuất Excel / PDF.
+ * kèm bảng số dưới mỗi biểu đồ, cơ cấu theo pháp nhân khi xem NVG Group, và xuất Excel / PDF.
  *
  * Quyền: như thẻ Dòng tiền — vai trò không xem được tài chính thấy câu nói rõ ai xem được, không
  * thấy biểu đồ rỗng (CSDL cũng từ chối `finance_daily` cho vai trò đó).

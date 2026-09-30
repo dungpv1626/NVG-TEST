@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest';
 import { buildScopeCompanies, type CompanyCatalogRow, type CompanyRow } from '../auth';
 
 const CATALOG: CompanyCatalogRow[] = [
-  { id: 'nvg', code: 'NVG', short_name: 'Toàn NVG', display_order: 0 },
+  { id: 'nvg', code: 'NVG', short_name: 'NVG Group', display_order: 0 },
   { id: 'nvc', code: 'NVC', short_name: 'Nhà Việt Cons', display_order: 1 },
   { id: 'nvs', code: 'NVS', short_name: 'Nhà Việt Steel', display_order: 2 },
   { id: 'nvo', code: 'NVO', short_name: 'Nhà Việt One', display_order: 3 },

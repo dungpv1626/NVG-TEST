@@ -32,7 +32,7 @@ Hệ thống Phần mềm Quản trị Nhà Việt Group · theo dõi, phê duy�
 
 Ô chọn ở **góc trên bên trái** quyết định số liệu của pháp nhân nào hiện trên mọi màn hình:
 
-- **Toàn NVG** — gộp số liệu cả Nhà Việt Cons, Nhà Việt Steel, Nhà Việt One. Danh sách có thêm cột
+- **NVG Group** — gộp số liệu cả Nhà Việt Cons, Nhà Việt Steel, Nhà Việt One. Danh sách có thêm cột
   **Pháp nhân** để phân biệt. Dashboard hiện dòng nhắc «Đang gộp số liệu mọi pháp nhân».
 - Chọn **một pháp nhân** để xem riêng số liệu công ty đó.
 
@@ -106,7 +106,7 @@ cùng các biểu đồ với Dashboard nhưng khổ lớn, cộng thêm:
 
 - **Bảng số theo kỳ** ngay dưới mỗi biểu đồ: doanh thu, hợp đồng ký mới, đã thu, đã chi, dòng tiền
   ròng — đọc được khi in.
-- **Theo pháp nhân** khi đang xem Toàn NVG.
+- **Theo pháp nhân** khi đang xem NVG Group.
 - **Xuất Excel** (số theo tháng) và **Xuất PDF**.
 
 ![Tổng quan tài chính](anh/bgd/04-tong-quan-tai-chinh.png)
