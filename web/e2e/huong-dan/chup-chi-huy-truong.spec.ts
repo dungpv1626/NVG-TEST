@@ -23,6 +23,9 @@ test.use({
   deviceScaleFactor: 2,
   isMobile: true,
   hasTouch: true,
+  // Vị trí giả gần KCN Phố Nối A — ảnh điểm danh mẫu có dòng vị trí như trên điện thoại thật.
+  geolocation: { latitude: 20.9725, longitude: 106.0523, accuracy: 18 },
+  permissions: ['geolocation'],
 });
 
 async function shot(page: Page, name: string, { keepHelp = false } = {}): Promise<void> {
@@ -54,6 +57,19 @@ test('chụp màn hình Chỉ huy trưởng', async ({ page }) => {
 
   await page.goto(`${siteUrl}?tab=nhat-ky`);
   await shot(page, '04-nhat-ky');
+
+  // Điểm danh: chỉ chụp màn xem trước, KHÔNG bấm «Gửi điểm danh».
+  await page.goto(`${siteUrl}?tab=diem-danh`);
+  await shot(page, '05-diem-danh');
+  await page
+    .getByTestId('chup-anh-diem-danh')
+    .setInputFiles('web/e2e/huong-dan/anh-mau-cong-truong.jpg');
+  const send = page.getByRole('button', { name: 'Gửi điểm danh' });
+  await expect(send).toBeVisible({ timeout: 15_000 });
+  await page
+    .getByRole('img', { name: 'Ảnh điểm danh vừa chụp' })
+    .evaluate((el) => el.scrollIntoView({ block: 'start' }));
+  await page.screenshot({ path: `${OUT}/05-diem-danh-xem-truoc.png` });
 
   await page.goto(`/mh/de-nghi-mua/tao-moi?cong-trinh=${siteId}`);
   await shot(page, '06-de-nghi-vat-tu');

@@ -974,6 +974,13 @@
       "when": 1789401600000,
       "tag": "0138_sua_theo_ra_soat",
       "breakpoints": true
+    },
+    {
+      "idx": 139,
+      "version": "7",
+      "when": 1789405200000,
+      "tag": "0139_tc_diem_danh",
+      "breakpoints": true
     }
   ]
 }

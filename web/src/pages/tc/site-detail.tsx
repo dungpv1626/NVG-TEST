@@ -36,6 +36,7 @@ import { BudgetPanel } from './budget-panel';
 import { SiteDocumentPanel } from './document-panel';
 import { SiteLogPanel } from './site-log-panel';
 import { SitePurchaseRequestPanel } from './purchase-request-panel';
+import { SiteCheckInPanel } from './site-check-in-panel';
 import { SiteQuickActions } from './site-quick-actions';
 import { SubcontractorPanel } from './subcontractor-panel';
 import { WarrantyPanel } from './warranty-panel';
@@ -158,6 +159,18 @@ export function SiteDetailPage() {
             badge: logs?.length || undefined,
             content: (
               <SiteLogPanel siteId={site.id} companyId={site.company_id} readOnly={readOnly} />
+            ),
+          },
+          {
+            id: 'diem-danh',
+            label: 'Điểm danh',
+            content: (
+              <SiteCheckInPanel
+                siteId={site.id}
+                siteCode={site.code}
+                siteName={site.name}
+                readOnly={readOnly}
+              />
             ),
           },
           {

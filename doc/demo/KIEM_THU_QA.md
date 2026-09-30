@@ -85,6 +85,11 @@ Mật khẩu chung của tài khoản demo: xem `db/src/seed/data.ts` (`SEED_PAS
 | D-12 | Chỉ huy trưởng | Có mục «Không đạt» mà trống ô Tồn tại | Báo phải ghi tồn tại | | |
 | D-13 | Chỉ huy trưởng | Lập đủ, lưu | Biên bản hiện kết quả từng mục kèm ảnh; không có nút sửa | | |
 | D-14 | Chỉ huy trưởng | Cả luồng D-01→D-06 bấm giờ | Dưới 10 phút (ngân sách thao tác hiện trường, PRD Mục 6) | | |
+| D-15 | Chỉ huy trưởng (điện thoại) | Thanh thao tác → «Điểm danh» | Tab Điểm danh; câu «chưa liên kết với bảng chấm công» ở đầu tab; nút «Chụp ảnh điểm danh» | | |
+| D-16 | Chỉ huy trưởng (điện thoại) | Chụp ảnh, cho phép vị trí, Gửi điểm danh | Ảnh có dải «Điểm danh · giờ» + thứ ngày, công trình, tên, vị trí; danh sách có lượt mới, «Xem vị trí trên bản đồ» mở đúng chỗ | | |
+| D-17 | Chỉ huy trưởng (điện thoại) | Từ chối quyền vị trí rồi điểm danh | Vẫn gửi được; ảnh và danh sách ghi «Không có vị trí — điện thoại không cho phép lấy vị trí» | | |
+| D-18 | Chỉ huy trưởng | Tìm nút sửa / xoá một lượt điểm danh | Không có | | |
+| D-19 | Trưởng phòng Thi công | Mở tab Điểm danh của công trình | Thấy lượt điểm danh của chỉ huy trưởng, nhóm theo ngày, giờ là giờ máy chủ | | |
 
 ## E. Mua hàng và Kho
 

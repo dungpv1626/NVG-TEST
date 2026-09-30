@@ -139,6 +139,14 @@ export async function removeDemoData(): Promise<Record<string, number>> {
         tx`DELETE FROM purchase_requests WHERE id IN (SELECT id FROM g_prs)`,
       );
       await del('kho', tx`DELETE FROM warehouses WHERE id IN (SELECT id FROM g_warehouses)`);
+      // Điểm danh bất biến (0139): tắt trigger chặn xoá CHỈ cho câu này rồi bật lại ngay —
+      // để replica suốt giao dịch là tắt luôn trigger khoá ngoại của các câu xoá sau.
+      await tx`SET LOCAL session_replication_role = replica`;
+      await del(
+        'điểm danh',
+        tx`DELETE FROM site_check_ins WHERE construction_site_id IN (SELECT id FROM g_sites)`,
+      );
+      await tx`SET LOCAL session_replication_role = origin`;
       await del(
         'công trình',
         tx`DELETE FROM construction_sites WHERE id IN (SELECT id FROM g_sites)`,

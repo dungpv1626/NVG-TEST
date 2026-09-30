@@ -18,10 +18,11 @@ Hệ thống Phần mềm Quản trị Nhà Việt Group · công việc hằng 
 
 ## 1. Chỉ huy trưởng làm gì trên hệ thống
 
-Bốn việc hằng ngày, theo đúng thứ tự trên thanh thao tác nhanh của công trình:
+Năm việc hằng ngày, theo đúng thứ tự trên thanh thao tác nhanh của công trình:
 
 | Việc | Khi nào | Ai nhận kết quả |
 | --- | --- | --- |
+| **Điểm danh** bằng ảnh | Khi tới công trường | Trưởng phòng Thi công xem lại theo ngày |
 | **Ghi nhật ký** kèm ảnh hiện trường | Mỗi ngày, cuối ca hoặc khi có sự việc | Trưởng phòng Thi công, Ban Giám đốc xem ngay |
 | **Gửi đề nghị vật tư** | Khi cần vật tư về công trường | Người có hạn mức phê duyệt, sau đó Mua hàng |
 | **Theo dõi đề nghị** và **Thúc** | Khi hàng chưa về, hoặc hồ sơ nằm lâu ở một bước | Người đang giữ đề nghị nhận thông báo |
@@ -64,10 +65,37 @@ hoàn thành và tình trạng ngân sách.
 
 **Hình 3.** Danh sách công trình — chỉ gồm công trình được phân công.
 
-## 4. Ghi nhật ký hằng ngày kèm ảnh
+## 4. Điểm danh khi tới công trường
 
-Công trình mở ở tab **Nhật ký**. Phía dưới màn hình luôn có thanh thao tác nhanh ba nút: **Ghi
-nhật ký · Đề nghị vật tư · Theo dõi đề nghị**.
+Điểm danh là một ảnh chụp tại công trường, có in sẵn **giờ, ngày, công trình, tên người điểm
+danh và vị trí** lên ảnh — thay cho ảnh Timemark gửi qua Zalo.
+
+> **Điểm danh chưa liên kết với bảng chấm công.** Ảnh điểm danh chỉ là bằng chứng có mặt tại
+> công trường; công vẫn chấm theo cách đang áp dụng. Câu nhắc này luôn hiện ở đầu tab Điểm danh.
+
+1. Mở công trình, bấm **Điểm danh** trên thanh thao tác nhanh (hoặc tab **Điểm danh**).
+2. Bấm **Chụp ảnh điểm danh** — điện thoại mở máy ảnh. Lần đầu, điện thoại hỏi quyền lấy vị trí:
+   chọn **Cho phép**. Không cho phép thì vẫn điểm danh được, bản ghi ghi rõ là không có vị trí.
+3. Xem lại ảnh: dải **Điểm danh** in ở góc dưới. Thêm **Ghi chú** nếu cần.
+4. Bấm **Gửi điểm danh**. Ảnh không đạt thì bấm **Chụp lại**.
+
+![Tab Điểm danh](anh/cht/05-diem-danh.png)
+
+**Hình 4.** Tab Điểm danh — câu nhắc «chưa liên kết với bảng chấm công» luôn ở đầu tab.
+
+![Xem lại ảnh trước khi gửi](anh/cht/05-diem-danh-xem-truoc.png)
+
+**Hình 5.** Xem lại ảnh điểm danh trước khi gửi: giờ, ngày, công trình, người, vị trí.
+
+> Giờ chính thức là **giờ máy chủ nhận điểm danh**, không phải giờ trên điện thoại; hai giờ lệch
+> nhau quá 10 phút thì danh sách ghi rõ cả hai. Mỗi người chỉ điểm danh cho **chính mình**, và chỉ
+> ở công trình được phân công. Điểm danh đã gửi **không sửa, không xoá** được. Vị trí chỉ lấy đúng
+> lúc bấm điểm danh, không theo dõi liên tục.
+
+## 5. Ghi nhật ký hằng ngày kèm ảnh
+
+Công trình mở ở tab **Nhật ký**. Phía dưới màn hình luôn có thanh thao tác nhanh bốn nút:
+**Điểm danh · Ghi nhật ký · Đề nghị vật tư · Theo dõi đề nghị**.
 
 1. Bấm **Chụp ảnh hiện trường** — điện thoại mở máy ảnh. Chụp bao nhiêu ảnh tuỳ ý; ảnh hiện ngay
    dưới nút, chụp nhầm thì bấm nút bỏ ở góc ảnh.
@@ -79,14 +107,14 @@ nhật ký · Đề nghị vật tư · Theo dõi đề nghị**.
 
 ![Tab Nhật ký](anh/cht/04-nhat-ky.png)
 
-**Hình 4.** Ghi nhật ký. Thanh thao tác nhanh nằm cố định phía dưới.
+**Hình 6.** Ghi nhật ký. Thanh thao tác nhanh nằm cố định phía dưới.
 
 > Nội dung đang gõ **không mất** khi lỡ chuyển sang màn hình khác trong cùng phiên — quay lại tab
 > Nhật ký là thấy lại. Nhật ký đã lưu **không sửa trên màn hình**, vì nhật ký là căn cứ truy vết:
 > ghi nhầm thì ghi một mục mới để đính chính. Ảnh lưu theo công trình; chỉ người được xem công
 > trình đó mới mở được ảnh.
 
-## 5. Gửi đề nghị vật tư
+## 6. Gửi đề nghị vật tư
 
 1. Bấm **Đề nghị vật tư** trên thanh thao tác nhanh. Biểu mẫu mở sẵn với công trình đang xem.
 2. Điền **Nội dung đề nghị** — ví dụ: «Thép hình cho phần khung tầng 2».
@@ -100,17 +128,17 @@ nhật ký · Đề nghị vật tư · Theo dõi đề nghị**.
 
 ![Biểu mẫu đề nghị vật tư](anh/cht/06-de-nghi-vat-tu.png)
 
-**Hình 5.** Lập đề nghị vật tư — công trình đã điền sẵn.
+**Hình 7.** Lập đề nghị vật tư — công trình đã điền sẵn.
 
 ![Chi tiết một đề nghị](anh/cht/12-chi-tiet-de-nghi.png)
 
-**Hình 6.** Trang chi tiết đề nghị: mặt hàng, báo giá, đơn hàng và trạng thái.
+**Hình 8.** Trang chi tiết đề nghị: mặt hàng, báo giá, đơn hàng và trạng thái.
 
 > Đề nghị đi tới **đúng người có hạn mức** phê duyệt giá trị đó — hệ thống tự chọn theo bảng hạn
 > mức của công ty, không cần gửi tay cho ai. Giá trị ước tính càng sát thực tế thì đề nghị càng
 > tới đúng người ngay lần đầu.
 
-## 6. Theo dõi đề nghị và nhắc người đang giữ
+## 7. Theo dõi đề nghị và nhắc người đang giữ
 
 Hai chỗ xem:
 
@@ -130,7 +158,7 @@ Mỗi thẻ trả lời ngay ba câu hỏi mà trước đây phải gọi đi�
 
 ![Theo dõi đề nghị](anh/cht/08-theo-doi-de-nghi.png)
 
-**Hình 7.** Theo dõi đề nghị: bước, người giữ, thời gian chờ, hạn xử lý.
+**Hình 9.** Theo dõi đề nghị: bước, người giữ, thời gian chờ, hạn xử lý.
 
 **Thúc** — khi đề nghị nằm lâu ở một bước:
 
@@ -142,7 +170,7 @@ Mỗi thẻ trả lời ngay ba câu hỏi mà trước đây phải gọi đi�
 > này); nút ghi rõ giờ thúc lại được. Đề nghị còn ở bản nháp thì chưa có ai ở văn phòng để thúc —
 > hãy **Gửi phê duyệt** trước.
 
-## 7. Nghiệm thu theo danh mục kiểm tra
+## 8. Nghiệm thu theo danh mục kiểm tra
 
 1. Mở công trình → tab **Nghiệm thu** → **Lập biên bản nghiệm thu**.
 2. Chọn **Loại nghiệm thu**. **Nghiệm thu nội bộ** không báo Kế toán thu tiền. **Nghiệm thu với
@@ -158,17 +186,17 @@ Mỗi thẻ trả lời ngay ba câu hỏi mà trước đây phải gọi đi�
 
 ![Tab Nghiệm thu](anh/cht/09-nghiem-thu.png)
 
-**Hình 8.** Tab Nghiệm thu — biên bản đã lập của công trình.
+**Hình 10.** Tab Nghiệm thu — biên bản đã lập của công trình.
 
 ![Chấm danh mục kiểm tra](anh/cht/11-cham-danh-muc.png)
 
-**Hình 9.** Chấm từng mục: Đạt · Không đạt · Không áp dụng, kèm ảnh ở mục cần ảnh.
+**Hình 11.** Chấm từng mục: Đạt · Không đạt · Không áp dụng, kèm ảnh ở mục cần ảnh.
 
 > **Biên bản đã lập không sửa được** — kể cả kết quả từng mục và ảnh đính kèm. Lập sai thì dùng
 > **Hủy biên bản**, ghi nguyên nhân, rồi lập biên bản mới; biên bản đã huỷ vẫn được giữ lại để
 > truy vết.
 
-## 8. Câu hỏi thường gặp
+## 9. Câu hỏi thường gặp
 
 | Câu hỏi | Trả lời |
 | --- | --- |
@@ -178,4 +206,6 @@ Mỗi thẻ trả lời ngay ba câu hỏi mà trước đây phải gọi đi�
 | Ghi nhầm nhật ký? | Ghi một mục mới để đính chính; nhật ký đã lưu không sửa trên màn hình. |
 | Không lưu được biên bản nghiệm thu? | Kiểm tra: mục **Cần ảnh** đã có ảnh chưa; có mục **Không đạt** thì đã ghi tồn tại cần khắc phục chưa. Thông báo lỗi nói rõ mục nào còn thiếu. |
 | Mất sóng giữa chừng? | Nội dung nhật ký đang gõ được giữ lại trong phiên. Bấm **Lưu** lại khi có sóng. Ứng dụng chưa hỗ trợ ghi khi hoàn toàn không có mạng. |
+| Điểm danh có thay cho chấm công không? | **Chưa.** Điểm danh chỉ lưu bằng chứng có mặt; công vẫn chấm theo cách đang áp dụng. Liên kết với bảng chấm công sẽ làm cùng đợt chấm công văn phòng và xưởng. |
+| Điểm danh ở nơi không có tín hiệu định vị? | Vẫn điểm danh được; bản ghi ghi «Không có vị trí». Điểm danh dựa trên sự trung thực của người điểm danh. |
 | Ảnh lớn có tải lên được không? | Mỗi ảnh tối đa 20 MB — ảnh chụp từ điện thoại đều nằm trong giới hạn này. |
