@@ -59,7 +59,10 @@ test('chụp màn hình Kế toán', async ({ page }) => {
 
   // Đơn thép đã giao đủ → tab Chứng từ → Lập đề nghị thanh toán (không lưu).
   await page.goto('/mh/don-hang');
-  await page.getByRole('link', { name: /Thép hình H200/ }).first().click();
+  await page
+    .getByRole('link', { name: /Thép hình H200/ })
+    .first()
+    .click();
   await page.waitForURL(/mh\/don-hang\/[0-9a-f-]{36}/);
   await page.goto(`${page.url().split('?')[0]}?tab=chung-tu`);
   await shot(page, '06-chung-tu-don-hang');

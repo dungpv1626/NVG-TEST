@@ -72,7 +72,10 @@ test('chụp màn hình Mua hàng', async ({ page }) => {
 
   await page.goto('/mh/don-hang');
   await shot(page, '09-don-hang');
-  await page.getByRole('link', { name: /DH-2026-0001|Thép hình H200/ }).first().click();
+  await page
+    .getByRole('link', { name: /DH-2026-0001|Thép hình H200/ })
+    .first()
+    .click();
   await page.waitForURL(/mh\/don-hang\/[0-9a-f-]{36}/);
   const order = page.url().split('?')[0]!;
   await shot(page, '10-giao-nhan');
@@ -81,7 +84,10 @@ test('chụp màn hình Mua hàng', async ({ page }) => {
 
   await page.goto('/mh/nha-cung-cap');
   await shot(page, '12-nha-cung-cap');
-  await page.getByRole('link', { name: /Thép Đại Phát/ }).first().click();
+  await page
+    .getByRole('link', { name: /Thép Đại Phát/ })
+    .first()
+    .click();
   await page.waitForURL(/mh\/nha-cung-cap\/[0-9a-f-]{36}/);
   await expect(page.getByRole('heading', { name: /Thép Đại Phát/ })).toBeVisible();
   await shot(page, '13-danh-gia-ncc');
