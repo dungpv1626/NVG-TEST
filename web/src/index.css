@@ -76,6 +76,16 @@
      status-draft/status-completed bên dưới: hai hệ màu độc lập, tránh học nhầm. */
   --color-chart-neutral: #9baaa1;
   --color-chart-positive: #3e8b5e;
+  /* Chuỗi của biểu đồ (Dashboard, Tổng quan tài chính) — dựng từ dải rừng / bạc hà / teal / xám
+     lục của thương hiệu, CỐ TÌNH tránh sắc của 6 màu trạng thái (xanh dương Đang xử lý, vàng Chờ
+     duyệt, đỏ Quá hạn, tím Tranh chấp, lục Hoàn thành — DESIGN_SYSTEM §2.1, §2.6): một cột biểu
+     đồ tô đỏ sẽ đọc như «quá hạn». Thứ tự dùng: 1 chuỗi chính, 2 chuỗi đi cặp, 3 chuỗi thứ ba,
+     4 khoản chi / so sánh, 5 nền cột và kỳ trước. */
+  --color-chart-1: #2c6e4b; /* rừng — chuỗi chính (doanh thu, thu tiền) */
+  --color-chart-2: #86c9a4; /* bạc hà đậm — chuỗi đi cặp */
+  --color-chart-3: #2e7c72; /* teal — chuỗi thứ ba, đường dòng tiền ròng */
+  --color-chart-4: #8a9a91; /* xám lục — khoản chi, chuỗi so sánh */
+  --color-chart-5: #d5e0d8; /* xám lục nhạt — nền thanh, kỳ trước */
   /* Màu tint cho ô icon của từng loại thẻ KPI trên Dashboard (KpiCard) — trang trí, không phải
      màu trạng thái hay thương hiệu. "Hoàn thành"/"Cơ hội" tái dùng brand/brand-subtle vì cùng
      tông rừng/mint đã có; chỉ hai cặp amber/teal dưới đây là mới. */

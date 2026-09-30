@@ -13,6 +13,7 @@
     "./terminology": "./src/terminology.ts",
     "./content": "./src/content.ts",
     "./codes": "./src/codes.ts",
+    "./bc-series": "./src/bc-series.ts",
     "./design": "./src/design/index.ts"
   },
   "scripts": {

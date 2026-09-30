@@ -101,3 +101,11 @@ export function PillBadge({
     </span>
   );
 }
+
+/**
+ * Kiểu chữ DUY NHẤT cho con số chính của một thẻ chỉ số.
+ *
+ * Haan 30/09/2026: số `text-3xl font-extrabold` quá to, «không đẹp» — đưa về cỡ vừa. DESIGN_SYSTEM
+ * §3: `text-2xl` là cỡ số lớn của Dashboard. Gom về một chỗ để lần sau đổi một lần cho mọi thẻ.
+ */
+export const KPI_VALUE_CLASS = 'text-2xl font-semibold tracking-tight tabular-nums';

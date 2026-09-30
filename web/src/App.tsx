@@ -236,6 +236,9 @@ const ProductionOrderDetailPage = lazy(() =>
     default: m.ProductionOrderDetailPage,
   })),
 );
+const FinanceOverviewPage = lazy(() =>
+  import('@/pages/bc/finance-overview-page').then((m) => ({ default: m.FinanceOverviewPage })),
+);
 const ProfitLossReportPage = lazy(() =>
   import('@/pages/bc/profit-loss').then((m) => ({ default: m.ProfitLossReportPage })),
 );
@@ -282,6 +285,9 @@ const router = createBrowserRouter(
           {/* BC-02 — báo cáo lãi/lỗ. Quyền XEM số liệu thật (Mẫu D `profit`) được CSDL chặn
                     thêm một lớp nữa bên trong hàm `project_profit_loss`; `ModuleGuard` chỉ chặn
                     việc mở màn hình cho vai trò không có `BC: view`. */}
+          {/* Tổng quan tài chính bằng biểu đồ (BC-01). Quyền xem số tài chính kiểm thêm trong
+                    trang và trong hàm `finance_daily` (0140). */}
+          <Route path="bc/tong-quan" element={<FinanceOverviewPage />} />
           <Route path="bc/lai-lo" element={<ProfitLossReportPage />} />
           {/* BC-03 — hiệu quả kinh doanh. KHÔNG phải Mẫu D: nguồn khách/giai đoạn
                     pipeline/kết quả đấu thầu không phải giá vốn/lương/lợi nhuận. */}

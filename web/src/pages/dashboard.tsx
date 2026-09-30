@@ -74,7 +74,7 @@ import {
 import { PageHeader } from '@/components/layout/app-shell';
 import { PERIOD_FILTER_PARAM, listPathFiltered } from '@/components/entity/entity-table';
 import { Button } from '@/components/ui/button';
-import { KpiCard, KpiEmptyBlock, PillBadge } from '@/components/ui/kpi-card';
+import { KPI_VALUE_CLASS, KpiCard, KpiEmptyBlock, PillBadge } from '@/components/ui/kpi-card';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
 import { useCashFlow, useReceivables } from '@/hooks/use-accounting';
@@ -90,6 +90,7 @@ import { useAuth, useCan } from '@/lib/auth';
 import { useCompanyScope } from '@/lib/company-scope';
 import { cn } from '@/lib/utils';
 import { APP_HELP } from '@/lib/help-texts';
+import { FinanceOverviewSection } from '@/pages/bc/finance-overview';
 import { useSensitiveAccess } from '@/hooks/use-sensitive-access';
 
 /** Mốc xa nhất khi kỳ đang chọn là "Tất cả" — dòng tiền cần một mốc bắt đầu thật, không phải null. */
@@ -238,9 +239,6 @@ export function DashboardPage() {
       basePath: '/crm/co-hoi',
       records: opportunityRecords,
       isLoading: opportunities.isLoading,
-      // Thẻ có nhiều chỉ số phụ nhất — số liệu chính dùng cỡ hero (34px/800) để nổi bật, giống
-      // đúng vai trò "thẻ chi tiết nhất" của nó trong bản demo tham chiếu.
-      hero: true,
       highlights: [
         { label: 'Giá trị đang theo đuổi', text: formatCurrency(pipelineValue) },
         {
@@ -407,6 +405,12 @@ export function DashboardPage() {
         )}
       </div>
 
+      {canSeeFinance && (
+        // Tổng quan tài chính bằng biểu đồ (Haan 30/09/2026) — chỉ vai trò xem được tài chính;
+        // vai trò khác giữ Dashboard vận hành bên dưới.
+        <FinanceOverviewSection period={period} canSeeProfit={canSeeProfit} className="mb-6" />
+      )}
+
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <KpiCard
           title="Chờ phê duyệt"
@@ -420,9 +424,7 @@ export function DashboardPage() {
           ) : (
             <Link to="/viec-can-lam" className="mt-auto block hover:underline">
               <span className="flex items-baseline gap-2">
-                <span className="text-3xl font-extrabold tracking-tight tabular-nums">
-                  {pendingCount}
-                </span>
+                <span className={KPI_VALUE_CLASS}>{pendingCount}</span>
                 <StatusLozenge status="pending_approval" />
               </span>
               {pendingValue > 0n && (
@@ -445,9 +447,7 @@ export function DashboardPage() {
           ) : (
             <div className="mt-auto">
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-extrabold tracking-tight tabular-nums text-status-overdue">
-                  {overdueTotal}
-                </span>
+                <span className={cn(KPI_VALUE_CLASS, 'text-status-overdue')}>{overdueTotal}</span>
                 <StatusLozenge status="overdue" />
               </div>
               <ul className="mt-2 space-y-1 text-xs">
@@ -505,12 +505,7 @@ export function DashboardPage() {
               <KpiEmptyBlock label="Chưa đủ dữ liệu — Kế toán chưa lập kế hoạch dòng tiền cho kỳ này." />
             ) : (
               <Link to="/kt/dong-tien" className="mt-auto block hover:underline">
-                <span
-                  className={cn(
-                    'text-3xl font-extrabold tracking-tight tabular-nums',
-                    cashFlowTotal < 0n && 'text-status-overdue',
-                  )}
-                >
+                <span className={cn(KPI_VALUE_CLASS, cashFlowTotal < 0n && 'text-status-overdue')}>
                   {formatCurrency(cashFlowTotal)}
                 </span>
                 {cashFlowShortfallCount > 0 && (
@@ -536,9 +531,7 @@ export function DashboardPage() {
               <KpiEmptyBlock label="Không còn khoản nào phải thu." />
             ) : (
               <Link to="/kt/cong-no" className="mt-auto block hover:underline">
-                <span className="text-3xl font-extrabold tracking-tight tabular-nums">
-                  {formatCurrency(receivableRemainingTotal)}
-                </span>
+                <span className={KPI_VALUE_CLASS}>{formatCurrency(receivableRemainingTotal)}</span>
                 {receivableOverdueCount > 0 && (
                   <span className="mt-1 flex items-center gap-1.5 text-xs text-status-overdue">
                     {receivableOverdueCount} khoản đã quá hạn
@@ -565,9 +558,7 @@ export function DashboardPage() {
                 to="/sx/tai-san-cho-thue"
                 className="mt-auto flex items-baseline gap-2 hover:underline"
               >
-                <span className="text-3xl font-extrabold tracking-tight tabular-nums">
-                  {activeRentals.length}
-                </span>
+                <span className={KPI_VALUE_CLASS}>{activeRentals.length}</span>
                 <span className="text-xs font-medium text-fg-subtle">hợp đồng</span>
               </Link>
             )}
@@ -590,9 +581,7 @@ export function DashboardPage() {
                 to="/ns/cham-cong"
                 className="mt-auto flex items-baseline gap-2 hover:underline"
               >
-                <span className="text-3xl font-extrabold tracking-tight tabular-nums">
-                  {closedTimesheetCount}
-                </span>
+                <span className={KPI_VALUE_CLASS}>{closedTimesheetCount}</span>
                 <span className="text-xs font-medium text-fg-subtle">nhân sự</span>
               </Link>
             )}
@@ -619,8 +608,6 @@ interface ModuleMetric {
   isLoading: boolean;
   /** Chỉ số riêng của module, đặt dưới phần đếm theo trạng thái. */
   highlights: { label: string; text: string }[];
-  /** Thẻ nhiều chỉ số phụ nhất — số liệu chính dùng cỡ hero (34px/800). */
-  hero?: boolean;
 }
 
 /**
@@ -652,16 +639,7 @@ function ModuleCard({ metric, period }: { metric: ModuleMetric; period: Dashboar
             to={listPathFiltered(metric.basePath, { period })}
             className="flex items-baseline gap-2 hover:underline"
           >
-            <span
-              className={cn(
-                'font-extrabold tracking-tight tabular-nums',
-                metric.hero
-                  ? 'text-(length:--text-hero) leading-(--text-hero--line-height)'
-                  : 'text-3xl',
-              )}
-            >
-              {metric.records.length}
-            </span>
+            <span className={KPI_VALUE_CLASS}>{metric.records.length}</span>
             <span className="text-xs font-medium text-fg-subtle">hồ sơ</span>
           </Link>
 

@@ -981,6 +981,13 @@
       "when": 1789405200000,
       "tag": "0139_tc_diem_danh",
       "breakpoints": true
+    },
+    {
+      "idx": 140,
+      "version": "7",
+      "when": 1789408800000,
+      "tag": "0140_bc_chuoi_tai_chinh",
+      "breakpoints": true
     }
   ]
 }

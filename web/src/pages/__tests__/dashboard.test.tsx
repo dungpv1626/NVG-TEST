@@ -10,6 +10,7 @@
  */
 
 import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { toNvgDateInput } from '@nvg/shared';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithApp } from '@/test/render';
@@ -24,6 +25,7 @@ const state = vi.hoisted(() => ({
   rentals: [] as unknown[],
   timesheets: [] as unknown[],
   sitesBudgetStatus: [] as unknown[],
+  financeDays: [] as unknown[],
   access: { profit: true, finance: true },
 }));
 
@@ -76,6 +78,7 @@ vi.mock('@/hooks/use-design-projects', () => ({
 vi.mock('@/hooks/use-accounting', () => ({
   useCashFlow: () => ({ data: state.cashFlow, isLoading: false }),
   useReceivables: () => ({ data: state.receivables, isLoading: false }),
+  useAgingBuckets: () => ({ data: [], isLoading: false }),
 }));
 vi.mock('@/hooks/use-sx', () => ({
   useRentalAgreements: () => ({ data: state.rentals, isLoading: false }),
@@ -88,6 +91,8 @@ vi.mock('@/hooks/use-sensitive-access', () => ({
 }));
 vi.mock('@/hooks/use-reports', () => ({
   useSitesBudgetStatus: () => ({ data: state.sitesBudgetStatus, isLoading: false, error: null }),
+  useFinanceDaily: () => ({ data: state.financeDays, isLoading: false }),
+  useProfitLossReport: () => ({ data: [], isLoading: false }),
 }));
 
 const { DashboardPage } = await import('../dashboard');
@@ -97,6 +102,7 @@ const THIS_YEAR = new Date().getFullYear();
 beforeEach(() => {
   state.can = {};
   state.access = { profit: true, finance: true };
+  state.financeDays = [];
   state.opportunities = [];
   state.contracts = [];
   state.approvals = [];
@@ -232,6 +238,49 @@ describe('Dashboard — bốn thẻ KT/SX/NS lấp phần BC-01 còn thiếu', (
     expect(screen.queryByText('Công nợ phải thu')).not.toBeInTheDocument();
     expect(screen.queryByText('Giàn giáo đang cho thuê')).not.toBeInTheDocument();
     expect(screen.queryByText('Chấm công đã chốt')).not.toBeInTheDocument();
+  });
+
+  it('vai trò xem được tài chính thấy phần tổng quan: số cỡ vừa và so với kỳ trước', () => {
+    grantView('KT', 'BC');
+    // Ngày theo giờ Việt Nam; «năm trước» = cùng ngày cùng tháng, luôn nằm trong kỳ so sánh.
+    const today = toNvgDateInput(new Date());
+    const lastYear = `${Number(today.slice(0, 4)) - 1}${today.slice(4)}`;
+    state.financeDays = [
+      {
+        day: today,
+        company_id: 'nvc-id',
+        revenue_accepted: '1300000000',
+        rental_revenue: '0',
+        contracts_signed: '0',
+        collected: '800000000',
+        paid_out: '420000000',
+      },
+      {
+        day: lastYear,
+        company_id: 'nvc-id',
+        revenue_accepted: '0',
+        rental_revenue: '0',
+        contracts_signed: '0',
+        collected: '400000000',
+        paid_out: '0',
+      },
+    ];
+    renderWithApp(<DashboardPage />, { route: '/dashboard' });
+
+    const section = screen.getByRole('region', { name: 'Tổng quan tài chính' });
+    expect(section).toHaveTextContent('1,3 tỷ');
+    expect(section).toHaveTextContent('1.300.000.000 đồng');
+    // Kỳ trước (cùng kỳ năm ngoái) có thu 400 triệu → năm nay 800 triệu = tăng 100 %.
+    expect(section).toHaveTextContent('Tăng 100% so với kỳ trước');
+    // Doanh thu kỳ trước bằng 0 → không bịa phần trăm.
+    expect(section).toHaveTextContent('Chưa có kỳ trước để so sánh');
+  });
+
+  it('vai trò không xem được tài chính KHÔNG có phần tổng quan tài chính', () => {
+    grantView('KT', 'BC');
+    state.access = { profit: false, finance: false };
+    renderWithApp(<DashboardPage />, { route: '/dashboard' });
+    expect(screen.queryByRole('region', { name: 'Tổng quan tài chính' })).toBeNull();
   });
 
   it('xem được phân hệ KT nhưng KHÔNG được xem tài chính (chỉ huy trưởng) thì không hiện thẻ tiền', () => {

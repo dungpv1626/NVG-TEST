@@ -7,7 +7,10 @@
  */
 
 import { NavLink } from 'react-router-dom';
+import { useSensitiveAccess } from '@/hooks/use-sensitive-access';
 import { cn } from '@/lib/utils';
+
+const FINANCE_ITEM = { to: '/bc/tong-quan', label: 'Tổng quan tài chính' };
 
 const ITEMS = [
   { to: '/bc/lai-lo', label: 'Lãi/lỗ theo công trình' },
@@ -15,9 +18,12 @@ const ITEMS = [
 ];
 
 export function BcNav() {
+  // Ẩn mục khi không có quyền xem tài chính — không hiện rồi báo chặn (CLAUDE.md 5.4).
+  const access = useSensitiveAccess();
+  const items = access.data?.finance ? [FINANCE_ITEM, ...ITEMS] : ITEMS;
   return (
     <nav className="mb-4 flex gap-1 border-b border-border" aria-label="Màn hình trong phân hệ">
-      {ITEMS.map((item) => (
+      {items.map((item) => (
         <NavLink
           key={item.to}
           to={item.to}

@@ -137,6 +137,16 @@ export const APP_HELP = {
     ],
     note: 'Doanh thu thực tế ghi theo giá trị đã nghiệm thu với chủ đầu tư, không theo cả hợp đồng.',
   },
+  financeOverview: {
+    autoOpenKey: 'bc.tong-quan',
+    title: 'Tổng quan tài chính',
+    steps: [
+      'Chọn kỳ báo cáo; bốn ô đầu so với kỳ trước cùng độ dài.',
+      'Mỗi biểu đồ đổi được Tháng, Quý, Năm; bảng số nằm ngay dưới.',
+      'Bấm Xuất Excel hoặc Xuất PDF để gửi số liệu theo tháng.',
+    ],
+    note: 'Doanh thu ghi theo ngày nghiệm thu với chủ đầu tư, không theo ngày nhập liệu.',
+  },
   employees: {
     autoOpenKey: 'ns.nhan-su',
     title: 'Hồ sơ nhân sự',

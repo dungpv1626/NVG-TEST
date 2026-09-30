@@ -40,6 +40,12 @@ test('chụp màn hình Ban Giám đốc', async ({ page, browser }) => {
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${OUT}/02-dashboard-duoi.png` });
 
+  await page.goto('/bc/tong-quan');
+  await shot(page, '04-tong-quan-tai-chinh');
+  await page.mouse.wheel(0, 800);
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: `${OUT}/04-tong-quan-tai-chinh-duoi.png` });
+
   await page.goto('/viec-can-lam');
   await shot(page, '03-hop-thu-phe-duyet');
 
