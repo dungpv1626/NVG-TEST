@@ -39,7 +39,7 @@ Ba điều người xem phải mang về:
 **Một giờ trước:**
 
 - [ ] Mạng: wifi phòng họp + điểm phát di động dự phòng.
-- [ ] Mở sẵn các thẻ trình duyệt, mỗi vai trò một cửa sổ ẩn danh riêng: Tổng Giám đốc · Giám đốc Tài chính · Mua hàng · Kho · Quản trị viên.
+- [ ] Mở sẵn các thẻ trình duyệt, mỗi vai trò một cửa sổ ẩn danh riêng: Tổng Giám đốc · Giám đốc Tài chính · Mua hàng · Kho.
 - [ ] Phóng chữ trình duyệt 125% cho máy chiếu.
 - [ ] Tắt thông báo hệ điều hành trên máy trình diễn.
 
@@ -90,7 +90,7 @@ nghị mà là **hỏi lại**: gửi đề nghị vật tư rồi không biết
 | 7 | Máy tính · Giám đốc Tài chính | Chuông thông báo → Hộp thư Phê duyệt → Duyệt | «Người giữ nhận ngay, bấm là vào đúng hồ sơ.» |
 | 8 | Điện thoại · CHT | Kéo làm mới Theo dõi đề nghị | «Đã chuyển sang Mua hàng — công trường thấy ngay, không ai phải báo.» |
 | 9 | Điện thoại · CHT | Nghiệm thu → «Nghiệm thu cốt thép trước khi đổ bê tông» → chấm mục, chụp ảnh mục bắt buộc → Lập biên bản | «Mỗi mục kiểm có ảnh. Biên bản đã ký không sửa được — cần đính chính thì lập biên bản điều chỉnh.» |
-| 10 | Máy tính · Quản trị viên | Quản trị hệ thống → Thời hạn xử lý; → Hạn mức phê duyệt | «Thời hạn và hạn mức do Ban Giám đốc quyết, quản trị viên nhập trên màn hình — không cần sửa phần mềm.» |
+| 10 | Máy tính · Tổng Giám đốc | Quản trị hệ thống → Thời hạn xử lý; → Hạn mức phê duyệt → Chỉnh sửa | «Thời hạn và hạn mức — Tổng Giám đốc tự sửa trên màn hình, không cần gọi người viết phần mềm. Chỉ Tổng Giám đốc sửa được.» |
 
 **Đường lui:** mạng điện thoại chập chờn → dùng Chrome trên máy tính thu cỡ điện thoại; ảnh tải chậm →
 bỏ qua bước 2, dùng nhật ký đã có ảnh.

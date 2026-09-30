@@ -15,7 +15,7 @@ import {
   RouterProvider,
 } from 'react-router-dom';
 import { AppShell } from '@/components/layout/app-shell';
-import { ModuleGuard } from '@/components/layout/module-guard';
+import { ApprovalRulesGuard, ModuleGuard } from '@/components/layout/module-guard';
 import { ProtectedRoute } from '@/components/layout/protected-route';
 import { AuthProvider } from '@/lib/auth';
 import { LoginPage } from '@/pages/login';
@@ -430,11 +430,14 @@ const router = createBrowserRouter(
 
                   `nen/giao-dien` là trang trưng bày thành phần giao diện — công cụ nội bộ của
                   đội triển khai, cố ý KHÔNG nằm trong thanh điều hướng phụ của phân hệ. */}
+        {/* Hạn mức và thời hạn: Quản trị viên và Tổng Giám đốc (0141, Haan 30/09/2026). */}
+        <Route element={<ApprovalRulesGuard />}>
+          <Route path="nen/han-muc" element={<ApprovalLimitPage />} />
+          <Route path="nen/thoi-han" element={<SlaPage />} />
+        </Route>
         <Route element={<ModuleGuard module="NEN" />}>
           <Route path="nen/quan-tri" element={<UserAdminPage />} />
           <Route path="nen/tham-so" element={<ParameterPage />} />
-          <Route path="nen/han-muc" element={<ApprovalLimitPage />} />
-          <Route path="nen/thoi-han" element={<SlaPage />} />
           <Route path="nen/bieu-mau-dau-bai" element={<BriefFormAdminPage />} />
           <Route path="nen/phan-cong" element={<SiteAssignmentPage />} />
           <Route path="nen/nhat-ky" element={<AuditLogPage />} />

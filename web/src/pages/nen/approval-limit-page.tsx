@@ -37,7 +37,7 @@ import {
   type ApprovalLimitRecord,
 } from '@/hooks/use-admin';
 import { useCompanyLookup } from '@/hooks/use-companies';
-import { useCan } from '@/lib/auth';
+import { useManagesApprovalRules } from '@/components/layout/module-nav';
 import { NenNav } from './nen-nav';
 
 function subjectLabel(subject: string): string {
@@ -45,7 +45,8 @@ function subjectLabel(subject: string): string {
 }
 
 export function ApprovalLimitPage() {
-  const canEdit = useCan('NEN', 'edit');
+  // Cùng nhóm với chính sách CSDL (0141): Quản trị viên và Tổng Giám đốc.
+  const canEdit = useManagesApprovalRules();
   const { data, isLoading, error, refetch } = useApprovalLimits();
   const lookupCompany = useCompanyLookup();
   const saveLimit = useSaveApprovalLimit();

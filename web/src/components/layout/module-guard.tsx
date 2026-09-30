@@ -19,7 +19,7 @@ import { BUTTONS, ERRORS, MODULES, type ModuleCode } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { BlockedNotice } from '@/components/ui/states';
-import { useCanViewModule } from './module-nav';
+import { useCanViewModule, useManagesApprovalRules } from './module-nav';
 
 export function ModuleGuard({ module }: { module: ModuleCode }) {
   const canView = useCanViewModule(module);
@@ -44,4 +44,15 @@ export function ModuleGuard({ module }: { module: ModuleCode }) {
       />
     </>
   );
+}
+
+/**
+ * Chặn cho hai màn hình Hạn mức phê duyệt và Thời hạn xử lý: mở cho người xem được Quản trị hệ
+ * thống, và cho Tổng Giám đốc (migration 0141). Các màn hình Quản trị khác vẫn dùng `ModuleGuard`.
+ */
+export function ApprovalRulesGuard() {
+  const managesRules = useManagesApprovalRules();
+  const canViewNen = useCanViewModule('NEN');
+  if (canViewNen || managesRules) return <Outlet />;
+  return <ModuleGuard module="NEN" />;
 }

@@ -26,7 +26,7 @@ Hệ thống Phần mềm Quản trị Nhà Việt Group · theo dõi, phê duy�
 | Xem doanh thu, thu, chi theo tháng / quý / năm bằng biểu đồ, xuất Excel / PDF | **Tổng quan tài chính** | Hằng tuần, hằng tháng |
 | Xem hiệu quả kinh doanh: nguồn khách, phễu bán hàng, tỷ lệ trúng thầu | **Hiệu quả kinh doanh** | Hằng tháng |
 | Theo dõi công trường: đề nghị vật tư đang kẹt ở đâu | **Theo dõi đề nghị** | Khi cần |
-| Quyết định thời hạn xử lý và hạn mức phê duyệt | Quản trị viên nhập theo quyết định của Ban Giám đốc | Khi thay đổi quy chế |
+| Sửa thời hạn xử lý và hạn mức phê duyệt | **Quản trị hệ thống** → Hạn mức phê duyệt / Thời hạn xử lý (chỉ Tổng Giám đốc) | Khi thay đổi quy chế |
 
 ## 2. Chọn pháp nhân: từng công ty hay toàn NVG
 
@@ -175,8 +175,10 @@ chứng có mặt; chưa liên kết bảng chấm công).
 
 ## 9. Thời hạn xử lý và hạn mức phê duyệt
 
-Hai bảng quy định cách hồ sơ chạy trong hệ thống. **Ban Giám đốc quyết định con số; Quản trị viên
-nhập** ở phân hệ Quản trị hệ thống. Không cần sửa phần mềm khi quy chế thay đổi.
+Hai bảng quy định cách hồ sơ chạy trong hệ thống. **Tổng Giám đốc tự sửa** ở mục **Quản trị hệ
+thống** trên thanh bên — mục này với Tổng Giám đốc chỉ có hai màn hình đó; người dùng, tham số và
+các màn hình quản trị khác vẫn do Quản trị viên phụ trách. Không cần sửa phần mềm khi quy chế thay
+đổi. Giám đốc Tài chính và các thành viên Ban Giám đốc khác xem được hạn mức nhưng không sửa.
 
 - **Thời hạn xử lý** — mỗi loại đề nghị phải được xử lý trong bao lâu. Đồng hồ hạn xử lý trên Hộp
   thư phê duyệt, trên màn hình Theo dõi đề nghị của công trường, và cảnh báo quá hạn đều đọc bảng
@@ -185,11 +187,11 @@ nhập** ở phân hệ Quản trị hệ thống. Không cần sửa phần m�
 
 ![Thời hạn xử lý](anh/bgd/09-thoi-han.png)
 
-**Hình 10.** Thời hạn xử lý (màn hình của Quản trị viên). Hai mức trong bản demo là mức tạm.
+**Hình 10.** Thời hạn xử lý — bấm Chỉnh sửa để đổi số giờ. Hai mức trong bản demo là mức tạm.
 
 ![Hạn mức phê duyệt](anh/bgd/10-han-muc.png)
 
-**Hình 11.** Hạn mức phê duyệt (màn hình của Quản trị viên) — mức tạm theo tài liệu, chờ quy chế chính thức.
+**Hình 11.** Hạn mức phê duyệt — mức tạm theo tài liệu, chờ quy chế chính thức; bấm Chỉnh sửa trên từng dòng.
 
 ## 10. Câu hỏi thường gặp
 
@@ -198,6 +200,6 @@ nhập** ở phân hệ Quản trị hệ thống. Không cần sửa phần m�
 | Vì sao thẻ ghi «Chưa đủ dữ liệu» chứ không ghi 0? | Nguồn số liệu chưa có (ví dụ chưa có kế hoạch dòng tiền kỳ này). Hiện 0 sẽ đọc nhầm thành số liệu thật. |
 | Số liệu trên Dashboard có ai tổng hợp tay không? | Không. Mọi con số cộng thẳng từ chứng từ các bộ phận đã nhập. |
 | Một hồ sơ không có trong Hộp thư của tôi? | Hồ sơ đang ở bước của vai trò khác, hoặc đã được xử lý. Mở Theo dõi đề nghị hoặc tìm theo mã ở ô tìm kiếm để xem đang ai giữ. |
-| Tôi muốn đổi thời hạn xử lý hoặc hạn mức duyệt? | Quyết định con số, rồi nhờ Quản trị viên nhập ở Quản trị hệ thống. |
+| Tôi muốn đổi thời hạn xử lý hoặc hạn mức duyệt? | Mở **Quản trị hệ thống** trên thanh bên → Hạn mức phê duyệt hoặc Thời hạn xử lý → **Chỉnh sửa**. Chỉ tài khoản Tổng Giám đốc sửa được. |
 | Lãi thực tế khác lãi dự kiến nhiều? | Lãi thực tế chỉ tính phần **đã nghiệm thu** với chủ đầu tư; công trình đang thi công dở thì hai số khác nhau là bình thường. Bấm tên công trình để xem từng mã chi phí so với ngân sách. |
 | Xem trên điện thoại được không? | Được — Dashboard và Hộp thư phê duyệt có bố cục điện thoại. Báo cáo nhiều cột dễ đọc hơn trên máy tính. |

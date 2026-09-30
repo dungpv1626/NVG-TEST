@@ -31,12 +31,13 @@ import { Link } from 'react-router-dom';
 import { MODULES } from '@nvg/shared';
 import { cn } from '@/lib/utils';
 import { CompanySwitcher } from './company-switcher';
-import { MODULE_ICONS, MODULE_ROUTES, useActiveModule, useVisibleModules } from './module-nav';
+import { MODULE_ICONS, useActiveModule, useModuleRoutes, useVisibleModules } from './module-nav';
 import { useTkScope } from './tk-chrome';
 import { useSidebarCollapsed } from './use-sidebar-collapsed';
 
 export function Sidebar() {
   const visible = useVisibleModules();
+  const moduleRoutes = useModuleRoutes();
   const activeModule = useActiveModule();
   const { collapsed, toggle } = useSidebarCollapsed();
   // Trong Module Thiết kế, thanh này mặc bảng màu tối CỐ ĐỊNH của bản mẫu (§4.3) — tối ở cả
@@ -108,7 +109,7 @@ export function Sidebar() {
             return (
               <li key={code}>
                 <Link
-                  to={MODULE_ROUTES[code]}
+                  to={moduleRoutes[code]}
                   aria-current={isActive ? 'page' : undefined}
                   className={cn(
                     'flex rounded-md',

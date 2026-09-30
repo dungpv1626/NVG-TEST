@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
-import { MODULE_CODES, type ModuleCode } from '@nvg/shared';
+import { MODULE_CODES, type ModuleCode, type RoleCode } from '@nvg/shared';
 import { useAuth } from '@/lib/auth';
 
 /** Một khái niệm luôn dùng đúng một icon xuyên suốt hệ thống (Content Guidelines 6.6). */
@@ -65,9 +65,39 @@ export const MODULE_ROUTES: Record<ModuleCode, string> = {
  */
 export function useVisibleModules(): ModuleCode[] {
   const { profile } = useAuth();
-  return MODULE_CODES.filter((code) =>
-    profile?.permissions.some((p) => p.moduleCode === code && p.canView),
+  const managesRules = useManagesApprovalRules();
+  return MODULE_CODES.filter(
+    (code) =>
+      profile?.permissions?.some((p) => p.moduleCode === code && p.canView) ||
+      // Tổng Giám đốc thấy mục Quản trị hệ thống, chỉ với hai màn hình hạn mức / thời hạn.
+      (code === 'NEN' && managesRules),
   );
+}
+
+/**
+ * Vai trò được SỬA hạn mức phê duyệt và thời hạn xử lý — cùng nhóm với chính sách CSDL
+ * (migration 0141: `auth_has_role('ADMIN', 'TGD')`). Haan 30/09/2026: «chỉ TGĐ» — Giám đốc Tài
+ * chính và các thành viên Ban Giám đốc khác không sửa. Sửa nhóm này thì sửa cả migration.
+ */
+export const APPROVAL_RULE_EDITOR_ROLES: readonly RoleCode[] = ['ADMIN', 'TGD'];
+
+/** Hai màn hình Quản trị mà Tổng Giám đốc mở được; các màn hình Quản trị khác vẫn chỉ ADMIN. */
+export const APPROVAL_RULE_PATHS = ['/nen/han-muc', '/nen/thoi-han'] as const;
+
+export function useManagesApprovalRules(): boolean {
+  const { profile } = useAuth();
+  return (
+    profile?.assignments?.some((a) => APPROVAL_RULE_EDITOR_ROLES.includes(a.roleCode)) ?? false
+  );
+}
+
+/**
+ * Đường vào của từng module trên thanh bên / thanh dưới. Người chỉ quản lý hạn mức (Tổng Giám
+ * đốc) vào thẳng màn hình Hạn mức — trang đầu mặc định của Quản trị là Người dùng, họ không mở được.
+ */
+export function useModuleRoutes(): Record<ModuleCode, string> {
+  const canViewNen = useCanViewModule('NEN');
+  return canViewNen ? MODULE_ROUTES : { ...MODULE_ROUTES, NEN: APPROVAL_RULE_PATHS[0] };
 }
 
 /**
@@ -80,7 +110,7 @@ export function useVisibleModules(): ModuleCode[] {
  */
 export function useCanViewModule(code: ModuleCode): boolean {
   const { profile } = useAuth();
-  return profile?.permissions.some((p) => p.moduleCode === code && p.canView) ?? false;
+  return profile?.permissions?.some((p) => p.moduleCode === code && p.canView) ?? false;
 }
 
 /**

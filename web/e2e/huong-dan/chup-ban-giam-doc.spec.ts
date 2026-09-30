@@ -26,7 +26,7 @@ async function shot(page: Page, name: string, { keepHelp = false } = {}): Promis
   await page.screenshot({ path: `${OUT}/${name}.png` });
 }
 
-test('chụp màn hình Ban Giám đốc', async ({ page, browser }) => {
+test('chụp màn hình Ban Giám đốc', async ({ page }) => {
   test.setTimeout(180_000);
   await page.goto('/dang-nhap');
   await page.locator('#email').fill(EMAIL);
@@ -65,18 +65,9 @@ test('chụp màn hình Ban Giám đốc', async ({ page, browser }) => {
   await page.getByRole('button', { name: 'Tất cả công trình' }).click();
   await shot(page, '08-theo-doi-de-nghi');
 
-  // Thời hạn và hạn mức: Ban Giám đốc quyết, Quản trị viên nhập — màn hình thuộc phân hệ
-  // Quản trị hệ thống, tài khoản Tổng Giám đốc không mở được.
-  const adminContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-  const admin = await adminContext.newPage();
-  await admin.goto('/dang-nhap');
-  await admin.locator('#email').fill('admin@nhavietgroup.test');
-  await admin.locator('#password').fill(SEED_PASSWORD);
-  await admin.getByRole('button', { name: 'Đăng nhập' }).click();
-  await expect(admin).not.toHaveURL(/dang-nhap/);
-  await admin.goto('/nen/thoi-han');
-  await shot(admin, '09-thoi-han');
-  await admin.goto('/nen/han-muc');
-  await shot(admin, '10-han-muc');
-  await adminContext.close();
+  // Thời hạn và hạn mức: Tổng Giám đốc tự sửa (0141, Haan 30/09/2026).
+  await page.goto('/nen/thoi-han');
+  await shot(page, '09-thoi-han');
+  await page.goto('/nen/han-muc');
+  await shot(page, '10-han-muc');
 });
