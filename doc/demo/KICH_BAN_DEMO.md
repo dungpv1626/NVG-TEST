@@ -106,8 +106,8 @@ theo dõi bằng Excel và sổ tay.
 
 | Bước | Thao tác | Nói |
 | --- | --- | --- |
-| 1 | Tài sản cho thuê → danh sách hợp đồng | «Hai công trình đang thuê.» |
-| 2 | Mở hợp đồng Đông Đô | «Đã trả một phần — tiền thuê tính theo ngày thuê thật của từng đợt trả, không tính tay.» |
+| 1 | Sản xuất & Cho thuê → Cho thuê giàn giáo | «Hai công trình đang thuê.» |
+| 2 | Mở hợp đồng Đông Đô | «Đã trả một phần — cột Còn ở khách cho biết khách còn giữ bao nhiêu; tiền thuê tính theo ngày thuê thật của từng đợt trả, không tính tay.» |
 | 3 | Kho → Giàn giáo | «Lô tại kho, lô đang cho thuê, lô hỏng chờ sửa — tách riêng, truy được từng sự kiện.» |
 
 **Nói thật phần chưa có:** sổ tài sản giàn giáo theo thời điểm, giao thêm giữa kỳ, biên bản thu hồi

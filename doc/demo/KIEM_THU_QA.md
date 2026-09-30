@@ -123,6 +123,7 @@ Mật khẩu chung của tài khoản demo: xem `db/src/seed/data.ts` (`SEED_PAS
 | G-02 | Kho | Mở hợp đồng Đông Đô | Đã trả một phần; doanh thu theo ngày thuê của đợt trả; số còn đang thuê đúng | | |
 | G-03 | Kho | Thu hồi thêm một đợt | Ghi đạt / hư hỏng / mất; không trả vượt số đang thuê | | |
 | G-04 | Kho | Giàn giáo | Lô tại kho, lô đang cho thuê, lô hỏng chờ sửa tách riêng | | |
+| G-05 | Xưởng NVS | Hợp đồng Đông Đô | Cột «Còn ở khách»: giáo nêm 246, mâm sàn 120, kích U 300; «Tiền thuê đã chốt (các đợt đã trả)» 7.149.600 đồng | | |
 
 ## H. Dashboard và báo cáo
 
@@ -181,3 +182,5 @@ Phát hiện khi chụp ảnh cho hướng dẫn sử dụng; tester kiểm lạ
 | L-15 | Đơn đặt hàng → Chứng từ | Kế toán phải lập tay đề nghị thanh toán, không gắn mã đơn → ghi đã chi làm công trình bị cộng chi phí hai lần | Nút «Lập đề nghị thanh toán» gắn mã đơn, điền sẵn; phép thử CSDL | |
 | L-16 | Thanh tab mọi phân hệ (điện thoại) | 7 tab Kho co lại, chữ đè nhau | Tab không co, thanh cuộn ngang; phép thử canh | |
 | L-17 | Đơn hàng → Giao nhận (vai trò Kho) | Đợt đã nhập kho vẫn hiện nút Nhập kho, bấm mới báo lỗi | Hiện mã phiếu nhập thay cho nút | |
+| L-18 | Mọi trang chi tiết (máy tính) | Cuộn xuống: đầu trang dính cách mép trên 24px, nội dung cuộn qua lộ ra phía trên | Đầu trang dính sát mép trên | |
+| L-19 | Chi tiết hợp đồng thuê giàn giáo | Không có số còn ở khách; «Tổng tiền thuê» đọc như tiền thuê cả hợp đồng | Cột «Còn ở khách»; nhãn «Tiền thuê đã chốt (các đợt đã trả)» | |
