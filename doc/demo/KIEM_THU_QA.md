@@ -124,6 +124,7 @@ Mật khẩu chung của tài khoản demo: xem `db/src/seed/data.ts` (`SEED_PAS
 | G-03 | Kho | Thu hồi thêm một đợt | Ghi đạt / hư hỏng / mất; không trả vượt số đang thuê | | |
 | G-04 | Kho | Giàn giáo | Lô tại kho, lô đang cho thuê, lô hỏng chờ sửa tách riêng | | |
 | G-05 | Xưởng NVS | Hợp đồng Đông Đô | Cột «Còn ở khách»: giáo nêm 246, mâm sàn 120, kích U 300; «Tiền thuê đã chốt (các đợt đã trả)» 7.149.600 đồng | | |
+| G-06 | Tổng Giám đốc | Báo cáo → Tổng quan tài chính, kỳ Tháng này | Doanh thu tháng 9 có 7.149.600 đồng tiền thuê Đông Đô ngày 27/09 dù hợp đồng chưa trả hết | | |
 
 ## H. Dashboard và báo cáo
 
