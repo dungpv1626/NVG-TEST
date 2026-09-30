@@ -94,6 +94,8 @@ export const PROTECTED_TABLES = [
   'sla_definitions',
   'user_site_assignments',
   'request_reminders',
+  'acceptance_checklists',
+  'acceptance_checklist_results',
 ] as const;
 
 /** Mã lỗi Postgres cho "insufficient_privilege" — RLS chặn thành công. */
@@ -182,6 +184,7 @@ export async function cleanupTestData(): Promise<void> {
     await sql`DELETE FROM purchase_orders WHERE purchase_request_id IN (
       SELECT id FROM purchase_requests WHERE title LIKE ${TEST_PREFIX + '%'}
     )`;
+    await sql`DELETE FROM acceptance_checklists WHERE name LIKE ${TEST_PREFIX + '%'}`;
     // Lịch sử «Thúc» trỏ tới đề nghị theo kiểu đa hình, không có khoá ngoại tới nó (0134).
     await sql`DELETE FROM request_reminders WHERE entity_type = 'purchase_requests' AND entity_id IN (
       SELECT id FROM purchase_requests WHERE title LIKE ${TEST_PREFIX + '%'}

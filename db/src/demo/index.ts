@@ -12,12 +12,14 @@
 
 import { DB_TARGET, DEMO_PROJECT_REF } from '../env';
 import { compactSequences, removeDemoData } from './remove';
+import { loadChecklists } from './scenario-checklists';
 import { loadNvc } from './scenario-nvc';
 import { loadNvs } from './scenario-nvs';
 
 const SCENARIOS = {
   nvc: { label: 'NVC — nhà xưởng, cơ hội tới lãi/lỗ, một ngày công trường', run: loadNvc },
   nvs: { label: 'NVS — cho thuê giàn giáo', run: loadNvs },
+  nt: { label: 'Danh mục kiểm tra nghiệm thu ví dụ (NVC)', run: loadChecklists },
 } as const;
 
 type ScenarioKey = keyof typeof SCENARIOS;

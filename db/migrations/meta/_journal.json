@@ -953,6 +953,13 @@
       "when": 1789390800000,
       "tag": "0135_tc_anh_cong_truong",
       "breakpoints": true
+    },
+    {
+      "idx": 136,
+      "version": "7",
+      "when": 1789394400000,
+      "tag": "0136_tc_nghiem_thu_checklist",
+      "breakpoints": true
     }
   ]
 }

@@ -36,6 +36,49 @@ import {
   useSubcontractors,
 } from '@/hooks/use-construction-sites';
 import { toUserMessage } from '@/hooks/use-error-message';
+import {
+  CHECKLIST_RESULT_LABELS,
+  useAcceptanceChecklists,
+  useChecklistResults,
+  useRecordAcceptanceWithChecklist,
+} from '@/hooks/use-acceptance-checklists';
+import { uploadConstructionPhotos } from '@/hooks/use-site-photos';
+import {
+  AcceptanceChecklistField,
+  missingAnswers,
+  type ChecklistAnswers,
+} from './acceptance-checklist-field';
+import { PhotoStrip } from './site-photo-picker';
+
+/** Kết quả từng mục của một biên bản đã ký — chỉ đọc. */
+function ChecklistResults({ acceptanceId }: { acceptanceId: string }) {
+  const { data } = useChecklistResults(acceptanceId);
+  if (!data || data.length === 0) return null;
+  return (
+    <ol className="mt-3 space-y-2 border-t border-border pt-3">
+      {data.map((row) => (
+        <li key={row.id}>
+          <p>
+            {row.position}. {row.item_label} —{' '}
+            <strong
+              className={
+                row.result === 'khong_dat'
+                  ? 'text-status-overdue'
+                  : row.result === 'dat'
+                    ? 'text-status-completed'
+                    : 'text-fg-subtle'
+              }
+            >
+              {CHECKLIST_RESULT_LABELS[row.result]}
+            </strong>
+            {row.note && <span className="text-fg-subtle"> · {row.note}</span>}
+          </p>
+          <PhotoStrip paths={row.photo_paths} />
+        </li>
+      ))}
+    </ol>
+  );
+}
 
 const TODAY = () => new Date().toISOString().slice(0, 10);
 
@@ -43,6 +86,11 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
   const { data: records } = useAcceptanceRecords(siteId);
   const { data: crews } = useSubcontractors(siteId);
   const recordAcceptance = useRecordAcceptance();
+  const recordWithChecklist = useRecordAcceptanceWithChecklist();
+  const { data: checklists } = useAcceptanceChecklists();
+  const [checklistId, setChecklistId] = useState('');
+  const [answers, setAnswers] = useState<ChecklistAnswers>({});
+  const [saving, setSaving] = useState(false);
   const cancelAcceptance = useCancelAcceptance();
 
   const [adding, setAdding] = useState(false);
@@ -72,6 +120,8 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
       counterpartSignedBy: '',
       outstandingIssues: '',
     });
+    setChecklistId('');
+    setAnswers({});
     setError(null);
     setAdding(true);
   }
@@ -83,7 +133,46 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
       setError('Vui lòng nhập giai đoạn hoặc hạng mục được nghiệm thu.');
       return;
     }
+    const checklist = (checklists ?? []).find((c) => c.id === checklistId);
+    if (checklist) {
+      const missing = missingAnswers(checklist.items, answers);
+      if (missing.length > 0) {
+        setError(`Chưa chấm đủ, hoặc thiếu ảnh bắt buộc: ${missing.join('; ')}.`);
+        return;
+      }
+    }
+    setSaving(true);
     try {
+      if (checklist) {
+        // Ảnh tải TRƯỚC, biên bản ghi SAU — biên bản đã ký không bao giờ trỏ vào ảnh chưa có.
+        const results = [];
+        for (const item of checklist.items) {
+          const a = answers[item.key]!;
+          const photoPaths =
+            a.files.length > 0 ? await uploadConstructionPhotos(siteId, 'nghiem-thu', a.files) : [];
+          results.push({
+            key: item.key,
+            result: a.result!,
+            note: a.note.trim() || null,
+            photo_paths: photoPaths,
+          });
+        }
+        await recordWithChecklist.mutateAsync({
+          siteId,
+          acceptanceType: form.acceptanceType,
+          stageName: form.stageName.trim(),
+          checklistId: checklist.id,
+          results,
+          scope: form.scope.trim() || null,
+          value: form.value || null,
+          acceptedDate: form.acceptedDate || null,
+          subcontractorId: form.subcontractorId || null,
+          counterpartSignedBy: form.counterpartSignedBy.trim() || null,
+          outstandingIssues: form.outstandingIssues.trim() || null,
+        });
+        setAdding(false);
+        return;
+      }
       await recordAcceptance.mutateAsync({
         siteId,
         acceptanceType: form.acceptanceType,
@@ -98,6 +187,8 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
       setAdding(false);
     } catch (e) {
       setError(toUserMessage(e, 'create'));
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -166,6 +257,41 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
               />
             </Field>
 
+            <Field
+              label="Danh mục kiểm tra"
+              className="sm:col-span-2"
+              hint="Chấm từng mục và chụp ảnh ngay tại hiện trường; kết quả đi cùng biên bản đã ký."
+            >
+              <select
+                value={checklistId}
+                onChange={(e) => {
+                  setChecklistId(e.target.value);
+                  setAnswers({});
+                }}
+                className="h-10 w-full rounded-sm border border-border bg-surface px-3"
+              >
+                <option value="">Không dùng danh mục kiểm tra</option>
+                {(checklists ?? [])
+                  .filter((c) => !c.acceptance_type || c.acceptance_type === form.acceptanceType)
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+              </select>
+            </Field>
+
+            {checklistId && (
+              <div className="sm:col-span-2">
+                <AcceptanceChecklistField
+                  items={(checklists ?? []).find((c) => c.id === checklistId)?.items ?? []}
+                  answers={answers}
+                  onChange={setAnswers}
+                  disabled={saving}
+                />
+              </div>
+            )}
+
             <Field label="Khối lượng nghiệm thu" className="sm:col-span-2">
               <textarea
                 value={form.scope}
@@ -229,8 +355,8 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
           </div>
 
           <div className="mt-3 flex gap-2">
-            <Button type="submit" variant="primary" disabled={recordAcceptance.isPending}>
-              Lập biên bản
+            <Button type="submit" variant="primary" disabled={saving}>
+              {saving ? 'Đang lưu…' : 'Lập biên bản'}
             </Button>
             <Button type="button" variant="secondary" onClick={() => setAdding(false)}>
               {BUTTONS.cancel}
@@ -267,6 +393,8 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
                   Tồn tại cần khắc phục: {r.outstanding_issues}
                 </p>
               )}
+
+              <ChecklistResults acceptanceId={r.id} />
 
               {r.cancel_reason && (
                 <p className="mt-2 text-status-overdue">Đã hủy: {r.cancel_reason}</p>
