@@ -182,7 +182,7 @@ export function SiteLogPanel({
 
             <Field
               label="Quân số có mặt"
-              hint="Chấm công khối công trường lấy lại con số này, không nhập lại (NS-04)."
+              hint="Chấm công khối công trường lấy lại con số này, không nhập lại."
             >
               <Input
                 value={form.workforceCount}

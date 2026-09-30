@@ -206,7 +206,7 @@ export function ComplaintCreatePage() {
             <Field
               label="Nội dung khách phản ánh"
               required
-              hint="Ghi đúng lời khách. Không thêm nhận xét cảm tính hay suy đoán (PRD Mục 2.2)."
+              hint="Ghi đúng lời khách. Không thêm nhận xét cảm tính hay suy đoán."
               className="sm:col-span-2"
             >
               <textarea

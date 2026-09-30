@@ -101,3 +101,12 @@ export function PillBadge({
     </span>
   );
 }
+
+/**
+ * Kiểu chữ DUY NHẤT cho con số chính của một thẻ chỉ số — mọi thẻ Dashboard, ô chỉ số tài chính.
+ *
+ * Haan 30/09/2026, hai lần: `text-3xl font-extrabold` (30px) rồi `text-2xl` (24px) vẫn to; cần
+ * «nổi bật nhưng cân đối». 20px đậm vừa: vẫn là chữ lớn nhất trong thẻ (tiêu đề thẻ 16px, nhãn
+ * 12px) nhưng không lấn tiêu đề. Đổi ở đây là đổi cho mọi thẻ.
+ */
+export const KPI_VALUE_CLASS = 'text-xl font-semibold tracking-tight tabular-nums';

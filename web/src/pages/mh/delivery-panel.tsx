@@ -25,6 +25,7 @@ import {
   useDeliveries,
   usePurchaseOrderItems,
   useRecordDelivery,
+  type DeliveryRecord,
   type PurchaseOrderItemRecord,
 } from '@/hooks/use-purchasing';
 import { useReceiveFromDelivery, useWarehouses } from '@/hooks/use-warehouse';
@@ -224,30 +225,36 @@ export function DeliveryPanel({
                     {delivery.invoice_number ? ` · Hóa đơn ${delivery.invoice_number}` : ''}
                     {delivery.has_quality_certificate ? ' · Có CO/CQ' : ''}
                   </p>
-                  {canStock && (
-                    <div className="mt-2 flex flex-wrap items-end gap-2">
-                      <Field label="Kho nhận" className="min-w-56">
-                        <select
-                          value={stockWarehouseId}
-                          onChange={(e) => setStockWarehouseId(e.target.value)}
-                          className="h-9 w-full rounded-sm border border-border-strong bg-surface px-3"
+                  {stockedCode(delivery) !== null ? (
+                    <p className="mt-2 text-fg-muted">
+                      Đã nhập kho theo phiếu {stockedCode(delivery) || EM_DASH}.
+                    </p>
+                  ) : (
+                    canStock && (
+                      <div className="mt-2 flex flex-wrap items-end gap-2">
+                        <Field label="Kho nhận" className="min-w-56">
+                          <select
+                            value={stockWarehouseId}
+                            onChange={(e) => setStockWarehouseId(e.target.value)}
+                            className="h-9 w-full rounded-sm border border-border-strong bg-surface px-3"
+                          >
+                            <option value="">Chọn kho</option>
+                            {(warehouses ?? []).map((w) => (
+                              <option key={w.id} value={w.id}>
+                                {w.name}
+                              </option>
+                            ))}
+                          </select>
+                        </Field>
+                        <Button
+                          variant="secondary"
+                          disabled={receiveToStock.isPending}
+                          onClick={() => void receiveToWarehouse(delivery.id)}
                         >
-                          <option value="">Chọn kho</option>
-                          {(warehouses ?? []).map((w) => (
-                            <option key={w.id} value={w.id}>
-                              {w.name}
-                            </option>
-                          ))}
-                        </select>
-                      </Field>
-                      <Button
-                        variant="secondary"
-                        disabled={receiveToStock.isPending}
-                        onClick={() => void receiveToWarehouse(delivery.id)}
-                      >
-                        Nhập kho theo phiếu này
-                      </Button>
-                    </div>
+                          Nhập kho theo phiếu này
+                        </Button>
+                      </div>
+                    )
                   )}
                   {delivery.items
                     .filter((i) => Number(i.quantity_issue) > 0)
@@ -360,4 +367,12 @@ export function DeliveryPanel({
       )}
     </div>
   );
+}
+
+/** Mã phiếu nhập kho của đợt giao; `null` khi đợt này chưa nhập kho. */
+function stockedCode(delivery: DeliveryRecord): string | null {
+  const stockIn = (delivery.stock_ins ?? []).find(
+    (m) => m.movement_type === 'nhap' && m.deleted_at === null,
+  );
+  return stockIn ? (stockIn.code ?? '') : null;
 }

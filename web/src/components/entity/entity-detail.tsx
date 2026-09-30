@@ -115,14 +115,18 @@ export function EntityDetail({
   const { active, selectTab, onTabKeyDown } = useDetailTabs(allTabs);
 
   return (
-    <div className="flex gap-6">
+    // Có gì đứng TRƯỚC khung này (dải bước duyệt, thông báo lỗi, «Đề nghị bị từ chối…») thì
+    // bù đúng phần margin âm của header — nếu không header kéo lên đè mất nửa dưới thứ đó.
+    <div className="flex gap-6 [&:not(:first-child)]:pt-4 lg:[&:not(:first-child)]:pt-6">
       <div className="min-w-0 flex-1">
-        {/* Header cố định khi cuộn (Webapp Flow 4.3). */}
+        {/* Header cố định khi cuộn (Webapp Flow 4.3) — CHỈ trên máy tính. Trên điện thoại, tên,
+            nút và thanh tab dính lại chiếm gần nửa màn hình (ảnh chụp hướng dẫn 30/09/2026), chỗ
+            còn lại cho ô nhập nhật ký chỉ vài dòng; ở đó header cuộn đi cùng nội dung. */}
         {/* Margin âm phải khớp ĐÚNG padding của <main> (p-4, lg:p-6): lệch một nấc là
             header thò ra ngoài mép và cả trang cuộn ngang được. */}
         <div
           className={cn(
-            'sticky top-0 z-10 mb-4 bg-surface',
+            'z-10 mb-4 bg-surface lg:sticky lg:top-0',
             '-mx-4 -mt-4 px-4 pt-4',
             'lg:-mx-6 lg:-mt-6 lg:mb-6 lg:px-6 lg:pt-6',
           )}
@@ -138,7 +142,9 @@ export function EntityDetail({
                   Người chịu trách nhiệm:{' '}
                   <span className="text-fg">{responsiblePerson ?? 'Chưa phân công'}</span>
                 </span>
-                {deadline && (
+                {/* Hồ sơ đã xong thì thời hạn không còn là việc phải làm — «Còn 5 ngày» trên một
+                    đơn đã giao đủ đọc như còn nợ việc. */}
+                {deadline && status !== 'completed' && (
                   <span className={cn(status === 'overdue' && 'font-medium text-status-overdue')}>
                     {formatDeadline(deadline)}
                   </span>

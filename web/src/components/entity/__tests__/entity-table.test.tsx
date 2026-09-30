@@ -257,3 +257,19 @@ describe('listPathFiltered', () => {
     expect(listPathFiltered('/hd/hop-dong', {})).toBe('/hd/hop-dong');
   });
 });
+
+describe('EntityTable — thời hạn của hồ sơ đã xong', () => {
+  it('hồ sơ Hoàn thành không đếm «Còn N ngày» — thời hạn không còn là việc phải làm', () => {
+    const future = new Date(Date.now() + 5 * 86_400_000).toISOString().slice(0, 10);
+    const rows: EntityRow[] = [
+      { ...ROWS[0]!, id: 'a', title: 'Đơn đã giao đủ', status: 'completed', deadline: future },
+      { ...ROWS[0]!, id: 'b', title: 'Đơn đang giao', status: 'in_progress', deadline: future },
+    ];
+    renderWithApp(table({ rows }), { route: '/hd/hop-dong' });
+
+    const done = inTable().getByText('Đơn đã giao đủ').closest('tr')!;
+    const open = inTable().getByText('Đơn đang giao').closest('tr')!;
+    expect(within(done).queryByText(/Còn \d+ ngày/)).toBeNull();
+    expect(within(open).getByText(/Còn \d+ ngày/)).toBeInTheDocument();
+  });
+});

@@ -138,6 +138,7 @@ describeDb('TC-10 — theo dõi đề nghị từ công trường và «Thúc»'
   let vanPhong: SupabaseClient; // TC — toàn pháp nhân
   let muaHang: SupabaseClient;
   let chiHuyId: string;
+  let pausedSla: Record<string, unknown>[] = [];
   let requestA: string; // CHT gửi, đang chờ duyệt
   let requestB: string; // văn phòng gửi cho công trình B
   let draftA: string; // CHT lập, chưa gửi
@@ -152,11 +153,23 @@ describeDb('TC-10 — theo dõi đề nghị từ công trường và «Thúc»'
     requestB = await createSiteRequest(vanPhong, fixture, fixture.siteB, true);
     draftA = await createSiteRequest(chiHuy, fixture, fixture.siteA, false);
     await setNudgeInterval(4);
+    // Ca «chưa khai thời hạn» cần bảng thời hạn trống cho hai loại này. CSDL dùng chung có thể
+    // đã khai sẵn (dữ liệu demo) — tạm gỡ nguyên dòng, chèn lại y nguyên (cả id) ở afterAll.
+    pausedSla = await withSql(
+      (sql) => sql<Record<string, unknown>[]>`
+        DELETE FROM sla_definitions
+        WHERE request_type IN ('purchase_request', 'purchase_ordering')
+          AND label NOT LIKE ${TEST_PREFIX + '%'}
+        RETURNING *`,
+    ).then((rows) => [...rows]);
   });
 
   afterAll(async () => {
     await setNudgeInterval(4);
     await withSql((sql) => sql`DELETE FROM sla_definitions WHERE label LIKE ${TEST_PREFIX + '%'}`);
+    if (pausedSla.length > 0) {
+      await withSql((sql) => sql`INSERT INTO sla_definitions ${sql(pausedSla)}`);
+    }
   });
 
   it('CHT thấy đề nghị công trình được giao, KHÔNG thấy công trình khác — cả ở bảng gốc', async () => {

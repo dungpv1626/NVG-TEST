@@ -19,11 +19,16 @@ import { renderWithApp } from '@/test/render';
 vi.mock('@/components/layout/company-switcher', () => ({
   CompanySwitcher: () => <div>Bộ chọn pháp nhân</div>,
 }));
-vi.mock('@/components/layout/module-nav', async (original) => ({
-  ...(await original<typeof import('@/components/layout/module-nav')>()),
-  useVisibleModules: () => ['BC', 'TK'],
-  useActiveModule: () => 'TK',
-}));
+vi.mock('@/components/layout/module-nav', async (original) => {
+  const actual = await original<typeof import('@/components/layout/module-nav')>();
+  const MODULE_ROUTES_FOR_TEST = actual.MODULE_ROUTES;
+  return {
+    ...actual,
+    useVisibleModules: () => ['BC', 'TK'],
+    useModuleRoutes: () => MODULE_ROUTES_FOR_TEST,
+    useActiveModule: () => 'TK',
+  };
+});
 // Thanh trạng thái kết nối gọi `virtual:pwa-register/react` — module ảo của Vite, không có
 // trong môi trường kiểm thử và cũng không liên quan gì tới phạm vi vỏ.
 vi.mock('@/components/layout/pwa-status', () => ({

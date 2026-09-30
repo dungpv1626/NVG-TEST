@@ -19,6 +19,7 @@ import {
 } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
+import { usePromptDialog } from '@/components/ui/prompt-dialog';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { CardGridSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
@@ -49,6 +50,7 @@ function monthRange(periodCode: string): { start: string; end: string } | null {
 }
 
 export function AccountingPeriodPage() {
+  const promptDialog = usePromptDialog();
   const canCreate = useCan('KT', 'create');
   const canApprove = useCan('KT', 'approve');
   const scope = useCompanyScope();
@@ -103,8 +105,14 @@ export function AccountingPeriodPage() {
   }
 
   async function reopenPeriod(id: string) {
-    const reason = window.prompt('Nguyên nhân mở lại kỳ đã khóa:');
-    if (reason === null || reason.trim() === '') return;
+    const reason = await promptDialog.ask({
+      title: 'Mở lại kỳ kế toán đã khóa?',
+      label: 'Nguyên nhân mở lại',
+      detail: 'Chứng từ trong kỳ sửa được trở lại. Nguyên nhân được ghi vào lịch sử của kỳ.',
+      confirmLabel: 'Mở lại kỳ',
+      danger: true,
+    });
+    if (reason === null) return;
     setPageError(null);
     setNotice(null);
     try {
@@ -116,6 +124,7 @@ export function AccountingPeriodPage() {
 
   return (
     <>
+      {promptDialog.dialog}
       <KtNav />
       <PageHeader
         title="Kỳ kế toán"

@@ -11,7 +11,13 @@
 
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { PURCHASE_ORDER_STAGE_META, formatCurrency, formatDate, formatDateTime } from '@nvg/shared';
+import {
+  PAYMENT_REQUEST_STAGE_META,
+  PURCHASE_ORDER_STAGE_META,
+  formatCurrency,
+  formatDate,
+  formatDateTime,
+} from '@nvg/shared';
 import {
   DetailFields,
   EntityDetail,
@@ -19,6 +25,7 @@ import {
   RecordNotFound,
 } from '@/components/entity/entity-detail';
 import { Button } from '@/components/ui/button';
+import { usePromptDialog } from '@/components/ui/prompt-dialog';
 import { DateInput } from '@/components/ui/date-input';
 import { CardGridSkeleton, ErrorState } from '@/components/ui/states';
 import {
@@ -28,6 +35,7 @@ import {
   usePurchaseRequest,
   useUpdatePurchaseOrder,
 } from '@/hooks/use-purchasing';
+import { usePaymentRequestsForOrder } from '@/hooks/use-accounting';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useCan } from '@/lib/auth';
 import { DeliveryPanel } from './delivery-panel';
@@ -35,13 +43,17 @@ import { DeliveryPanel } from './delivery-panel';
 const EM_DASH = '—';
 
 export function PurchaseOrderDetailPage() {
+  const promptDialog = usePromptDialog();
   const { id } = useParams<{ id: string }>();
   const canWork = useCan('MH', 'edit');
   const canReceive = useCan('KHO', 'edit') || canWork;
+  const canViewKt = useCan('KT');
+  const canCreatePayment = useCan('KT', 'create');
 
   const { data, isLoading, error } = usePurchaseOrder(id);
   const { data: deliveries } = useDeliveries(id);
   const { data: request } = usePurchaseRequest(data?.purchase_request_id);
+  const { data: payments } = usePaymentRequestsForOrder(id, canViewKt);
   const cancel = useCancelPurchaseOrder();
   const update = useUpdatePurchaseOrder();
   const [actionError, setActionError] = useState<string | null>(null);
@@ -71,10 +83,15 @@ export function PurchaseOrderDetailPage() {
     }
   }
 
-  function cancelOrder() {
-    const reason = window.prompt('Lý do hủy đơn đặt hàng:');
-    if (reason === null || reason.trim() === '') return;
-    void run(() => cancel.mutateAsync({ orderId: order.id, reason: reason.trim() }));
+  async function cancelOrder() {
+    const reason = await promptDialog.ask({
+      title: 'Hủy đơn đặt hàng?',
+      label: 'Lý do hủy',
+      confirmLabel: 'Hủy đơn đặt hàng',
+      danger: true,
+    });
+    if (reason === null) return;
+    void run(() => cancel.mutateAsync({ orderId: order.id, reason }));
   }
 
   const actions =
@@ -116,6 +133,7 @@ export function PurchaseOrderDetailPage() {
 
   return (
     <>
+      {promptDialog.dialog}
       {actionError && (
         <p
           role="alert"
@@ -157,8 +175,8 @@ export function PurchaseOrderDetailPage() {
             content: (
               <div className="space-y-4">
                 <p className="text-fg-muted">
-                  Bộ chứng từ để Kế toán lập đề nghị thanh toán (MH-08). Kế toán mở thẳng từ đây,
-                  không nhập lại số liệu đã có.
+                  Bộ chứng từ để Kế toán lập đề nghị thanh toán. Kế toán mở thẳng từ đây, không nhập
+                  lại số liệu đã có.
                 </p>
                 <ul className="space-y-2">
                   <li className="rounded-lg border border-border bg-surface px-4 py-3">
@@ -206,6 +224,41 @@ export function PurchaseOrderDetailPage() {
                   <p className="rounded-lg border border-border bg-surface-sunken px-4 py-3">
                     Đơn hàng đã nhận đủ. Kế toán đã nhận thông báo để lập đề nghị thanh toán.
                   </p>
+                )}
+                {canViewKt && (
+                  <div className="space-y-2">
+                    <h3 className="font-medium">Đề nghị thanh toán cho đơn này</h3>
+                    {(payments ?? []).length === 0 ? (
+                      <p className="text-fg-muted">Chưa lập đề nghị thanh toán nào.</p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {(payments ?? []).map((p) => (
+                          <li
+                            key={p.id}
+                            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface px-4 py-3"
+                          >
+                            <div>
+                              <p className="font-medium">{p.code ?? 'Đề nghị chi'}</p>
+                              <p className="text-fg-muted">
+                                {PAYMENT_REQUEST_STAGE_META[p.stage].label} ·{' '}
+                                {formatCurrency(p.amount)}
+                              </p>
+                            </div>
+                            <Button variant="secondary" asChild>
+                              <Link to={`/kt/de-nghi-thanh-toan/${p.id}`}>Mở đề nghị</Link>
+                            </Button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {canCreatePayment && order.stage !== 'huy' && order.stage !== 'nhap' && (
+                      <Button variant="primary" asChild>
+                        <Link to={`/kt/de-nghi-thanh-toan/tao-moi?don-hang=${order.id}`}>
+                          Lập đề nghị thanh toán
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
                 )}
               </div>
             ),

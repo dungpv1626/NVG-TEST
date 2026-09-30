@@ -42,7 +42,7 @@ import {
   type SlaRecord,
 } from '@/hooks/use-admin';
 import { useCompanies, useCompanyLookup } from '@/hooks/use-companies';
-import { useCan } from '@/lib/auth';
+import { useManagesApprovalRules } from '@/components/layout/module-nav';
 import { NenNav } from './nen-nav';
 
 /**
@@ -67,7 +67,8 @@ function describeHours(hours: number): string {
 }
 
 export function SlaPage() {
-  const canEdit = useCan('NEN', 'edit');
+  // Cùng nhóm với chính sách CSDL (0141): Quản trị viên và Tổng Giám đốc.
+  const canEdit = useManagesApprovalRules();
   const { data, isLoading, error, refetch } = useSlaDefinitions();
   const { data: roles } = useRoles();
   const { data: companies } = useCompanies();

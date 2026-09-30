@@ -148,7 +148,7 @@ export function UserAdminPage() {
           onCancel={() => setPending(null)}
         >
           {pending.is_active
-            ? `${pending.full_name} sẽ không đăng nhập được nữa. Hồ sơ, lịch sử thao tác và nhật ký của tài khoản này được giữ nguyên (NEN-10). Bàn giao công việc đang xử lý cho người kế nhiệm trước khi ngừng.`
+            ? `${pending.full_name} sẽ không đăng nhập được nữa. Hồ sơ, lịch sử thao tác và nhật ký của tài khoản này được giữ nguyên. Bàn giao công việc đang xử lý cho người kế nhiệm trước khi ngừng.`
             : `${pending.full_name} sẽ đăng nhập lại được với đúng các vai trò đã gán trước đây.`}
         </ConfirmDialog>
       )}

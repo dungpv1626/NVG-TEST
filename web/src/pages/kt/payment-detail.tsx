@@ -33,6 +33,7 @@ import {
   type RelatedGroup,
 } from '@/components/entity/entity-detail';
 import { Button } from '@/components/ui/button';
+import { usePromptDialog } from '@/components/ui/prompt-dialog';
 import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -64,6 +65,7 @@ const FLOW: { stage: string; label: string }[] = [
 ];
 
 export function PaymentRequestDetailPage() {
+  const promptDialog = usePromptDialog();
   const { id } = useParams<{ id: string }>();
   const { profile } = useAuth();
   const canWorkKt = useCan('KT', 'edit');
@@ -115,18 +117,25 @@ export function PaymentRequestDetailPage() {
     }
   }
 
-  function rejectStep() {
-    const note = window.prompt('Lý do trả lại hồ sơ cho người đề nghị:');
-    if (note === null || note.trim() === '') return;
-    void run(() =>
-      advance.mutateAsync({ requestId: request.id, decision: 'rejected', note: note.trim() }),
-    );
+  async function rejectStep() {
+    const note = await promptDialog.ask({
+      title: 'Trả lại hồ sơ cho người đề nghị?',
+      label: 'Lý do trả lại',
+      confirmLabel: 'Trả lại',
+    });
+    if (note === null) return;
+    void run(() => advance.mutateAsync({ requestId: request.id, decision: 'rejected', note }));
   }
 
-  function cancelRequest() {
-    const reason = window.prompt('Lý do hủy đề nghị chi:');
-    if (reason === null || reason.trim() === '') return;
-    void run(() => cancel.mutateAsync({ requestId: request.id, reason: reason.trim() }));
+  async function cancelRequest() {
+    const reason = await promptDialog.ask({
+      title: 'Hủy đề nghị chi?',
+      label: 'Lý do hủy',
+      confirmLabel: 'Hủy đề nghị chi',
+      danger: true,
+    });
+    if (reason === null) return;
+    void run(() => cancel.mutateAsync({ requestId: request.id, reason }));
   }
 
   async function pay(event: React.FormEvent<HTMLFormElement>) {
@@ -143,10 +152,15 @@ export function PaymentRequestDetailPage() {
     });
   }
 
-  function markPosted() {
-    const reference = window.prompt('Số chứng từ bên phần mềm kế toán (bỏ trống nếu chưa có):');
+  async function markPosted() {
+    const reference = await promptDialog.ask({
+      title: 'Đánh dấu đã hạch toán',
+      label: 'Số chứng từ bên phần mềm kế toán',
+      required: false,
+      confirmLabel: 'Đánh dấu đã hạch toán',
+    });
     if (reference === null) return;
-    void run(() => post.mutateAsync({ requestId: request.id, reference: reference.trim() }));
+    void run(() => post.mutateAsync({ requestId: request.id, reference }));
   }
 
   const actions = meta.isTerminal ? undefined : (
@@ -234,6 +248,7 @@ export function PaymentRequestDetailPage() {
 
   return (
     <>
+      {promptDialog.dialog}
       <KtNav />
 
       {actionError && (

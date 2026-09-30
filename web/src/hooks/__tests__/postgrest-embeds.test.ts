@@ -23,6 +23,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { REQUEST_DETAIL_SELECT, REQUEST_LIST_SELECT } from '@/hooks/use-purchasing';
 
 const ROOTS = ['web/src/hooks', 'web/src/pages', 'web/src/components'];
 
@@ -74,5 +75,22 @@ describe('Nhúng bảng users qua PostgREST', () => {
     }
 
     expect(offenders).toEqual([]);
+  });
+});
+
+/**
+ * Một truy vấn nhúng cùng một tên (`site:…`) hai lần thì PostgREST trả 400 «table name … specified
+ * more than once» cho CẢ truy vấn. Lỗi thật 30/09/2026: danh sách đề nghị mua thêm `site(code)`
+ * vào chuỗi cột dùng chung, chi tiết nối thêm `site(id, code, name)` → mọi trang chi tiết hỏng.
+ */
+describe('Mỗi tên nhúng xuất hiện một lần trong một truy vấn', () => {
+  const aliases = (select: string) => [...select.matchAll(/(\w+):\w+!/g)].map((m) => m[1]);
+
+  it.each([
+    ['danh sách đề nghị mua', REQUEST_LIST_SELECT],
+    ['chi tiết đề nghị mua', REQUEST_DETAIL_SELECT],
+  ])('%s', (_name, select) => {
+    const names = aliases(select);
+    expect(names.filter((n, i) => names.indexOf(n) !== i)).toEqual([]);
   });
 });

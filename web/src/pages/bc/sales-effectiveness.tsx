@@ -69,7 +69,7 @@ function exportCsv(
   const lines: string[] = [];
 
   if (byCompany.length > 0) {
-    lines.push('Theo pháp nhân — BC-07');
+    lines.push('Theo pháp nhân');
     lines.push(
       csvLine([
         'Pháp nhân',
@@ -142,7 +142,7 @@ function printPdf(
   const byCompanyTable =
     byCompany.length === 0
       ? ''
-      : `<h2>Theo pháp nhân — BC-07</h2>
+      : `<h2>Theo pháp nhân</h2>
         <table>
           <thead><tr>
             <th>Pháp nhân</th>
@@ -402,7 +402,7 @@ function CompanyBreakdownSection({ rows }: { rows: CompanyBreakdownRow[] }) {
 
   return (
     <section className="overflow-x-auto rounded-lg border border-border bg-surface shadow-card">
-      <h2 className="border-b border-border px-3 py-2.5 font-medium">Theo pháp nhân — BC-07</h2>
+      <h2 className="border-b border-border px-3 py-2.5 font-medium">Theo pháp nhân</h2>
       <table className="w-full min-w-[36rem] border-collapse">
         <caption className="sr-only">Hiệu quả kinh doanh gộp theo pháp nhân</caption>
         <thead>
@@ -463,7 +463,7 @@ export function SalesEffectivenessPage() {
     <>
       <PageHeader
         title="Hiệu quả kinh doanh"
-        description="Nguồn khách, phễu bán hàng, tỷ lệ trúng thầu và nguyên nhân trượt thầu — BC-03"
+        description="Nguồn khách, phễu bán hàng, tỷ lệ trúng thầu và nguyên nhân trượt thầu"
         breadcrumbs={[{ label: 'Dashboard', to: '/dashboard' }, { label: 'Hiệu quả kinh doanh' }]}
         actions={
           hasAnyData && (

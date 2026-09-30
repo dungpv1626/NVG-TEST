@@ -59,7 +59,7 @@ export const COMPANY_SEED: CompanySeed[] = [
   {
     code: 'NVG',
     legalName: 'Nhà Việt Group',
-    shortName: 'Toàn NVG',
+    shortName: 'NVG Group',
     taxCode: null,
     address: null,
     legalRepresentative: null,

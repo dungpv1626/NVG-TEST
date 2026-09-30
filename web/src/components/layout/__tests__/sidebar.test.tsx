@@ -18,11 +18,16 @@ vi.mock('@/components/layout/company-switcher', () => ({
     <div>{compact ? 'Bộ chọn gọn' : 'Bộ chọn đầy đủ'}</div>
   ),
 }));
-vi.mock('@/components/layout/module-nav', async (original) => ({
-  ...(await original<typeof import('@/components/layout/module-nav')>()),
-  useVisibleModules: () => ['BC', 'CRM', 'TK'],
-  useActiveModule: () => 'TK',
-}));
+vi.mock('@/components/layout/module-nav', async (original) => {
+  const actual = await original<typeof import('@/components/layout/module-nav')>();
+  const MODULE_ROUTES_FOR_TEST = actual.MODULE_ROUTES;
+  return {
+    ...actual,
+    useVisibleModules: () => ['BC', 'CRM', 'TK'],
+    useModuleRoutes: () => MODULE_ROUTES_FOR_TEST,
+    useActiveModule: () => 'TK',
+  };
+});
 
 const { Sidebar } = await import('../sidebar');
 

@@ -92,77 +92,117 @@ export function RequestItemPanel({
       {items.length === 0 ? (
         <EmptyState message="Chưa có mặt hàng nào trong đề nghị. Thêm ít nhất một dòng — không có dòng nào thì không gửi phê duyệt được." />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[48rem] text-left">
-            <thead className="border-b border-border text-fg-muted">
-              <tr>
-                <th scope="col" className="py-2 pr-4 font-medium">
-                  Mã vật tư
-                </th>
-                <th scope="col" className="py-2 pr-4 font-medium">
-                  Tên hàng
-                </th>
-                <th scope="col" className="py-2 pr-4 font-medium">
-                  Quy cách
-                </th>
-                <th scope="col" className="py-2 pr-4 text-right font-medium">
-                  Số lượng
-                </th>
-                <th scope="col" className="py-2 pr-4 font-medium">
-                  Đơn vị
-                </th>
-                <th scope="col" className="py-2 pr-4 text-right font-medium">
-                  Đơn giá ước tính
-                </th>
-                <th scope="col" className="py-2 text-right font-medium">
-                  Thành tiền
-                </th>
-                {!readOnly && (
-                  <th scope="col" className="py-2 pl-4 font-medium">
-                    Thao tác
-                  </th>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => (
-                <tr key={item.id} className="border-b border-border last:border-0">
-                  <td className="py-2 pr-4">{item.item_code ?? EM_DASH}</td>
-                  <td className="py-2 pr-4">{item.name}</td>
-                  <td className="py-2 pr-4 text-fg-muted">{item.specification ?? EM_DASH}</td>
-                  <td className="py-2 pr-4 text-right tabular-nums">
-                    {formatNumber(Number(item.quantity))}
-                  </td>
-                  <td className="py-2 pr-4">{item.unit}</td>
-                  <td className="py-2 pr-4 text-right tabular-nums">
+        <>
+          {/* Điện thoại: thẻ từng mặt hàng. Bảng 8 cột thu vào 390px phải cuộn ngang, và cột
+            Thành tiền — cột quan trọng nhất — luôn nằm ngoài màn hình. */}
+          <ul className="space-y-2 sm:hidden" aria-label="Mặt hàng">
+            {items.map((item) => (
+              <li key={item.id} className="rounded-md border border-border p-3">
+                <p className="font-medium">{item.name}</p>
+                <p className="text-xs text-fg-subtle">
+                  {[item.item_code, item.specification].filter(Boolean).join(' · ') || EM_DASH}
+                </p>
+                <p className="mt-1 flex flex-wrap justify-between gap-x-3 tabular-nums">
+                  <span className="text-fg-subtle">
+                    {formatNumber(Number(item.quantity))} {item.unit} ×{' '}
                     {formatCurrency(item.estimated_unit_price)}
-                  </td>
-                  <td className="py-2 text-right tabular-nums">
+                  </span>
+                  <span className="font-semibold">
                     {formatCurrency(
                       BigInt(Math.round(Number(item.quantity) * Number(item.estimated_unit_price))),
                     )}
-                  </td>
+                  </span>
+                </p>
+                {!readOnly && (
+                  <Button
+                    variant="subtle"
+                    className="mt-1 -ml-3"
+                    onClick={() => void remove(item.id)}
+                  >
+                    Xóa dòng
+                  </Button>
+                )}
+              </li>
+            ))}
+            <li className="flex justify-between gap-3 border-t border-border-strong pt-2 font-semibold">
+              <span>Giá trị ước tính</span>
+              <span className="tabular-nums">{formatCurrency(total)}</span>
+            </li>
+          </ul>
+          <div className="hidden overflow-x-auto sm:block">
+            <table className="w-full min-w-[48rem] text-left">
+              <thead className="border-b border-border text-fg-muted">
+                <tr>
+                  <th scope="col" className="py-2 pr-4 font-medium">
+                    Mã vật tư
+                  </th>
+                  <th scope="col" className="py-2 pr-4 font-medium">
+                    Tên hàng
+                  </th>
+                  <th scope="col" className="py-2 pr-4 font-medium">
+                    Quy cách
+                  </th>
+                  <th scope="col" className="py-2 pr-4 text-right font-medium">
+                    Số lượng
+                  </th>
+                  <th scope="col" className="py-2 pr-4 font-medium">
+                    Đơn vị
+                  </th>
+                  <th scope="col" className="py-2 pr-4 text-right font-medium">
+                    Đơn giá ước tính
+                  </th>
+                  <th scope="col" className="py-2 text-right font-medium">
+                    Thành tiền
+                  </th>
                   {!readOnly && (
-                    <td className="py-2 pl-4">
-                      <Button variant="subtle" onClick={() => void remove(item.id)}>
-                        Xóa dòng
-                      </Button>
-                    </td>
+                    <th scope="col" className="py-2 pl-4 font-medium">
+                      Thao tác
+                    </th>
                   )}
                 </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr className="border-t border-border-strong font-semibold">
-                <td className="py-2 pr-4" colSpan={6}>
-                  Giá trị ước tính — con số đối chiếu hạn mức phê duyệt
-                </td>
-                <td className="py-2 text-right tabular-nums">{formatCurrency(total)}</td>
-                {!readOnly && <td />}
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {items.map((item) => (
+                  <tr key={item.id} className="border-b border-border last:border-0">
+                    <td className="py-2 pr-4">{item.item_code ?? EM_DASH}</td>
+                    <td className="py-2 pr-4">{item.name}</td>
+                    <td className="py-2 pr-4 text-fg-muted">{item.specification ?? EM_DASH}</td>
+                    <td className="py-2 pr-4 text-right tabular-nums">
+                      {formatNumber(Number(item.quantity))}
+                    </td>
+                    <td className="py-2 pr-4">{item.unit}</td>
+                    <td className="py-2 pr-4 text-right tabular-nums">
+                      {formatCurrency(item.estimated_unit_price)}
+                    </td>
+                    <td className="py-2 text-right tabular-nums">
+                      {formatCurrency(
+                        BigInt(
+                          Math.round(Number(item.quantity) * Number(item.estimated_unit_price)),
+                        ),
+                      )}
+                    </td>
+                    {!readOnly && (
+                      <td className="py-2 pl-4">
+                        <Button variant="subtle" onClick={() => void remove(item.id)}>
+                          Xóa dòng
+                        </Button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t border-border-strong font-semibold">
+                  <td className="py-2 pr-4" colSpan={6}>
+                    Giá trị ước tính — con số đối chiếu hạn mức phê duyệt
+                  </td>
+                  <td className="py-2 text-right tabular-nums">{formatCurrency(total)}</td>
+                  {!readOnly && <td />}
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </>
       )}
 
       {!readOnly && (

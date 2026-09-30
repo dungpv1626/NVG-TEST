@@ -307,6 +307,39 @@ describe('Không để trình duyệt tự sinh chữ tiếng Anh', () => {
     expect(offenders).toEqual([]);
   });
 
+  it('không màn hình nào hỏi bằng `window.prompt` — phải dùng `usePromptDialog`', () => {
+    // Nút của hộp gốc là «OK/Cancel» theo tiếng của trình duyệt; 20 chỗ đã thay 30/09/2026.
+    const offenders = allPageSources()
+      .filter(({ code }) => /window\.prompt\(/.test(code))
+      .map(({ file }) => file);
+    expect(offenders).toEqual([]);
+  });
+
+  it('gợi ý / mô tả trên màn hình không để lộ mã tài liệu nội bộ («MH-08», «PRD Mục 2.2»)', () => {
+    // Người dùng NVG không có PRD trong tay; mã yêu cầu thuộc về chú thích mã nguồn.
+    const code = String.raw`(?:PRD|(?:NEN|CRM|DA|TK|HD|TC|MH|KHO|KT|NS|BC|SX)-\d{2})`;
+    const visible = new RegExp(`(?:hint|description|title)="[^"]*${code}[^"]*"`);
+    const offenders = allPageSources()
+      .filter(({ code: src }) => visible.test(src))
+      .map(({ file }) => file);
+    expect(offenders).toEqual([]);
+  });
+
+  it('thanh tab của phân hệ cuộn ngang được và mục tab không co — chữ không đè nhau trên điện thoại', () => {
+    // Lỗi thật 30/09/2026: 7 tab Kho trên khổ 390px co lại, «Quét mã» đè «Tồn kho».
+    const navs = allPageSources().filter(
+      ({ file }) => /-nav\.tsx$/.test(file) && !file.includes('/tk/'),
+    );
+    expect(navs.length).toBeGreaterThan(5);
+    const offenders = navs
+      .filter(
+        ({ code }) =>
+          !code.includes('overflow-x-auto') || !code.includes('shrink-0 whitespace-nowrap'),
+      )
+      .map(({ file }) => file);
+    expect(offenders).toEqual([]);
+  });
+
   it('chốt dịch lời thoại ràng buộc được gắn ngay khi ứng dụng khởi động', () => {
     // Thiếu dòng này thì mọi ô `required` ngoài `Input` lại báo tiếng Anh.
     expect(source('main.tsx')).toContain('installVietnameseValidation()');

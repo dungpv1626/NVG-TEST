@@ -183,7 +183,7 @@ export function QuoteCreatePage() {
 
           <Field
             label="Mức giảm giá"
-            hint="Khác 0 thì báo giá phải qua phê duyệt của Tổng Giám đốc (CRM-05)."
+            hint="Khác 0 thì báo giá phải qua phê duyệt của Tổng Giám đốc."
           >
             <MoneyInput
               value={form.discountAmount}

@@ -166,7 +166,7 @@ export const COMPANIES: Readonly<Record<CompanyCode, CompanyMeta>> = {
   },
   NVG: {
     code: 'NVG',
-    shortName: 'Toàn NVG',
+    shortName: 'NVG Group',
     description: 'Mã tổng hợp toàn tập đoàn — chỉ dùng cho báo cáo, không phát sinh giao dịch.',
     isTransactional: false,
   },

@@ -10,6 +10,7 @@
  */
 
 import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { toNvgDateInput } from '@nvg/shared';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithApp } from '@/test/render';
@@ -18,12 +19,14 @@ const state = vi.hoisted(() => ({
   can: {} as Record<string, Record<string, boolean>>,
   opportunities: [] as unknown[],
   contracts: [] as unknown[],
+  purchaseRequests: [] as unknown[],
   approvals: [] as unknown[],
   cashFlow: [] as unknown[],
   receivables: [] as unknown[],
   rentals: [] as unknown[],
   timesheets: [] as unknown[],
   sitesBudgetStatus: [] as unknown[],
+  financeDays: [] as unknown[],
   access: { profit: true, finance: true },
 }));
 
@@ -67,6 +70,9 @@ vi.mock('@/hooks/use-opportunities', () => ({
 vi.mock('@/hooks/use-contracts', () => ({
   useContracts: () => ({ data: state.contracts, isLoading: false }),
 }));
+vi.mock('@/hooks/use-purchasing', () => ({
+  usePurchaseRequests: () => ({ data: state.purchaseRequests, isLoading: false }),
+}));
 vi.mock('@/hooks/use-bidding-projects', () => ({
   useBiddingProjects: () => ({ data: [], isLoading: false }),
 }));
@@ -76,6 +82,7 @@ vi.mock('@/hooks/use-design-projects', () => ({
 vi.mock('@/hooks/use-accounting', () => ({
   useCashFlow: () => ({ data: state.cashFlow, isLoading: false }),
   useReceivables: () => ({ data: state.receivables, isLoading: false }),
+  useAgingBuckets: () => ({ data: [], isLoading: false }),
 }));
 vi.mock('@/hooks/use-sx', () => ({
   useRentalAgreements: () => ({ data: state.rentals, isLoading: false }),
@@ -88,6 +95,8 @@ vi.mock('@/hooks/use-sensitive-access', () => ({
 }));
 vi.mock('@/hooks/use-reports', () => ({
   useSitesBudgetStatus: () => ({ data: state.sitesBudgetStatus, isLoading: false, error: null }),
+  useFinanceDaily: () => ({ data: state.financeDays, isLoading: false }),
+  useProfitLossReport: () => ({ data: [], isLoading: false }),
 }));
 
 const { DashboardPage } = await import('../dashboard');
@@ -97,8 +106,10 @@ const THIS_YEAR = new Date().getFullYear();
 beforeEach(() => {
   state.can = {};
   state.access = { profit: true, finance: true };
+  state.financeDays = [];
   state.opportunities = [];
   state.contracts = [];
+  state.purchaseRequests = [];
   state.approvals = [];
   state.cashFlow = [];
   state.receivables = [];
@@ -187,7 +198,7 @@ describe('Dashboard — nói thật về dữ liệu (PRD BC-06)', () => {
   it('liệt kê thẳng phần chỉ số CHƯA có, thay vì dựng thẻ rỗng', () => {
     grantView('CRM');
     renderWithApp(<DashboardPage />, { route: '/dashboard' });
-    expect(screen.getByText('Phần chưa có trên Dashboard')).toBeInTheDocument();
+    expect(screen.getByText('Nguồn số liệu')).toBeInTheDocument();
     expect(screen.getByText(/Tồn kho vật tư/)).toBeInTheDocument();
   });
 
@@ -234,6 +245,49 @@ describe('Dashboard — bốn thẻ KT/SX/NS lấp phần BC-01 còn thiếu', (
     expect(screen.queryByText('Chấm công đã chốt')).not.toBeInTheDocument();
   });
 
+  it('vai trò xem được tài chính thấy phần tổng quan: số cỡ vừa và so với kỳ trước', () => {
+    grantView('KT', 'BC');
+    // Ngày theo giờ Việt Nam; «năm trước» = cùng ngày cùng tháng, luôn nằm trong kỳ so sánh.
+    const today = toNvgDateInput(new Date());
+    const lastYear = `${Number(today.slice(0, 4)) - 1}${today.slice(4)}`;
+    state.financeDays = [
+      {
+        day: today,
+        company_id: 'nvc-id',
+        revenue_accepted: '1300000000',
+        rental_revenue: '0',
+        contracts_signed: '0',
+        collected: '800000000',
+        paid_out: '420000000',
+      },
+      {
+        day: lastYear,
+        company_id: 'nvc-id',
+        revenue_accepted: '0',
+        rental_revenue: '0',
+        contracts_signed: '0',
+        collected: '400000000',
+        paid_out: '0',
+      },
+    ];
+    renderWithApp(<DashboardPage />, { route: '/dashboard' });
+
+    const section = screen.getByRole('region', { name: 'Tổng quan tài chính' });
+    expect(section).toHaveTextContent('1,3 tỷ');
+    expect(section).toHaveTextContent('1.300.000.000 đồng');
+    // Kỳ trước (cùng kỳ năm ngoái) có thu 400 triệu → năm nay 800 triệu = tăng 100 %.
+    expect(section).toHaveTextContent('Tăng 100% so với kỳ trước');
+    // Doanh thu kỳ trước bằng 0 → không bịa phần trăm.
+    expect(section).toHaveTextContent('Chưa có kỳ trước để so sánh');
+  });
+
+  it('vai trò không xem được tài chính KHÔNG có phần tổng quan tài chính', () => {
+    grantView('KT', 'BC');
+    state.access = { profit: false, finance: false };
+    renderWithApp(<DashboardPage />, { route: '/dashboard' });
+    expect(screen.queryByRole('region', { name: 'Tổng quan tài chính' })).toBeNull();
+  });
+
   it('xem được phân hệ KT nhưng KHÔNG được xem tài chính (chỉ huy trưởng) thì không hiện thẻ tiền', () => {
     // Nếu vẫn hiện, RLS đã lọc hết dữ liệu nên thẻ nói «0 đồng» và «Không còn khoản nào phải
     // thu» — sai sự thật, không phải thiếu quyền.
@@ -248,13 +302,30 @@ describe('Dashboard — bốn thẻ KT/SX/NS lấp phần BC-01 còn thiếu', (
   it('thẻ Dòng tiền cộng số dư cuối kỳ của mọi pháp nhân và nêu số pháp nhân thiếu hụt', () => {
     grantView('KT');
     state.cashFlow = [
-      { company_id: 'nvc-id', closing_balance: '500000000' },
-      { company_id: 'nvo-id', closing_balance: '-200000000' },
+      { company_id: 'nvc-id', opening_balance: '400000000', closing_balance: '500000000' },
+      { company_id: 'nvo-id', opening_balance: '0', closing_balance: '-200000000' },
     ];
     renderWithApp(<DashboardPage />, { route: '/dashboard' });
 
     expect(screen.getByText('300.000.000 đồng')).toBeInTheDocument();
     expect(screen.getByText('1 pháp nhân dự kiến thiếu hụt')).toBeInTheDocument();
+  });
+
+  it('chưa có kế hoạch dòng tiền thì thẻ Dòng tiền nói «Chưa đủ dữ liệu», không hiện 0 đồng', () => {
+    grantView('KT');
+    state.cashFlow = [
+      {
+        company_id: 'nvc-id',
+        opening_balance: '0',
+        planned_in: '0',
+        planned_out: '0',
+        closing_balance: '0',
+      },
+    ];
+    renderWithApp(<DashboardPage />, { route: '/dashboard' });
+
+    expect(screen.getByText(/Kế toán chưa lập kế hoạch dòng tiền/)).toBeInTheDocument();
+    expect(screen.queryByText('0 đồng')).not.toBeInTheDocument();
   });
 
   it('thẻ Công nợ phải thu chỉ cộng phần CÒN LẠI, bỏ khoản đã thu hết', () => {
@@ -376,5 +447,35 @@ describe('Dashboard — thẻ Quá hạn gộp cả rủi ro ngoài 4 module g�
     renderWithApp(<DashboardPage />, { route: '/dashboard' });
 
     expect(screen.queryByText(/vượt ngân sách/)).not.toBeInTheDocument();
+  });
+});
+
+describe('Dashboard — thẻ Đề nghị mua cho Mua hàng', () => {
+  it('đếm đề nghị đã duyệt mà chưa lập đơn đặt hàng — việc đang chờ Mua hàng', () => {
+    grantView('MH');
+    const now = new Date().toISOString();
+    const req = (stage: string) => ({
+      stage,
+      needed_date: null,
+      estimated_value: '1000000',
+      created_at: now,
+    });
+    state.purchaseRequests = [
+      req('da_duyet'),
+      req('da_duyet'),
+      req('cho_duyet'),
+      req('hoan_thanh'),
+    ];
+    renderWithApp(<DashboardPage />, { route: '/dashboard?ky=nam-nay' });
+
+    expect(screen.getByText('Đề nghị mua')).toBeInTheDocument();
+    expect(screen.getByText('Đã duyệt, chờ lập đơn đặt hàng')).toBeInTheDocument();
+    expect(screen.getByText('2 đề nghị')).toBeInTheDocument();
+  });
+
+  it('vai trò không xem được Mua hàng thì không có thẻ', () => {
+    grantView('CRM');
+    renderWithApp(<DashboardPage />, { route: '/dashboard' });
+    expect(screen.queryByText('Đề nghị mua')).toBeNull();
   });
 });

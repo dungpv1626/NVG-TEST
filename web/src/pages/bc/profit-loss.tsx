@@ -162,7 +162,7 @@ export function ProfitLossReportPage() {
       <PageHeader
         help={APP_HELP.profitLoss}
         title="Báo cáo lãi/lỗ theo công trình"
-        description="Doanh thu hợp đồng so với chi phí đã phát sinh và đã cam kết — BC-02"
+        description="Doanh thu hợp đồng so với chi phí đã phát sinh và đã cam kết"
         breadcrumbs={[
           { label: 'Dashboard', to: '/dashboard' },
           { label: 'Lãi/lỗ theo công trình' },

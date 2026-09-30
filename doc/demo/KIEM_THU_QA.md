@@ -53,7 +53,9 @@ Mật khẩu chung của tài khoản demo: xem `db/src/seed/data.ts` (`SEED_PAS
 | B-05 | Kế toán | Hồ sơ nhân sự | Xem được lương khi bấm; không thấy căn cước, sức khoẻ | | |
 | B-06 | Mua hàng | Chi tiết công trình | Thấy tên công trình, KHÔNG mở được nhật ký, ngân sách | | |
 | B-07 | Kinh doanh NVC | Chọn pháp nhân NVO | Không có — chỉ pháp nhân của mình | | |
-| B-08 | Tổng Giám đốc | Chọn «Toàn NVG» | Danh sách gộp đủ ba pháp nhân, có cột Pháp nhân, không rỗng | | |
+| B-08 | Tổng Giám đốc | Chọn «NVG Group» | Danh sách gộp đủ ba pháp nhân, có cột Pháp nhân, không rỗng | | |
+| B-09 | Tổng Giám đốc | Mở Quản trị hệ thống | Chỉ có hai tab Hạn mức phê duyệt, Thời hạn xử lý; sửa được; gõ thẳng `/nen/quan-tri` thì bị chặn | | |
+| B-10 | Giám đốc Tài chính | Tìm mục Quản trị hệ thống; gõ thẳng `/nen/han-muc` | Không có mục trên thanh bên; đường dẫn gõ tay bị chặn, nói rõ ai xử lý được | | |
 
 ## C. NVC — nhà xưởng từ cơ hội tới lãi/lỗ
 
@@ -79,12 +81,17 @@ Mật khẩu chung của tài khoản demo: xem `db/src/seed/data.ts` (`SEED_PAS
 | D-06 | Chỉ huy trưởng | Bấm «Thúc» đề nghị xi măng | Báo đã thúc; nút đổi thành giờ thúc lại được; «Đã thúc 1 lần» | | |
 | D-07 | Giám đốc Tài chính | Chuông thông báo | Có thông báo «Công trường … thúc đề nghị …», bấm dẫn tới Hộp thư | | |
 | D-08 | Mua hàng | Mở đề nghị cốp pha (đã duyệt) | Dòng «Công trường đã thúc» nếu đã thúc; danh sách đề nghị có cột Công trình | | |
-| D-09 | Tổng Giám đốc | Khai thời hạn «duyệt đề nghị mua» ở Nền tảng → Thời hạn xử lý | Trên máy chỉ huy trưởng, đề nghị chờ duyệt hiện Hạn xử lý thay cho «Chưa có thời hạn cam kết» | | |
+| D-09 | Tổng Giám đốc | Sửa thời hạn «duyệt đề nghị mua» ở Quản trị hệ thống → Thời hạn xử lý | Trên máy chỉ huy trưởng, đề nghị chờ duyệt hiện Hạn xử lý thay cho «Chưa có thời hạn cam kết» | | |
 | D-10 | Chỉ huy trưởng | Nghiệm thu → chọn «Nghiệm thu cốt thép trước khi đổ bê tông» | Bốn mục, ba nút chữ mỗi mục, nút chụp ảnh ở mục cần ảnh | | |
 | D-11 | Chỉ huy trưởng | Lập biên bản thiếu ảnh mục bắt buộc | Báo mục nào thiếu ảnh, KHÔNG lập biên bản | | |
 | D-12 | Chỉ huy trưởng | Có mục «Không đạt» mà trống ô Tồn tại | Báo phải ghi tồn tại | | |
 | D-13 | Chỉ huy trưởng | Lập đủ, lưu | Biên bản hiện kết quả từng mục kèm ảnh; không có nút sửa | | |
 | D-14 | Chỉ huy trưởng | Cả luồng D-01→D-06 bấm giờ | Dưới 10 phút (ngân sách thao tác hiện trường, PRD Mục 6) | | |
+| D-15 | Chỉ huy trưởng (điện thoại) | Thanh thao tác → «Điểm danh» | Tab Điểm danh; câu «chưa liên kết với bảng chấm công» ở đầu tab; nút «Chụp ảnh điểm danh» | | |
+| D-16 | Chỉ huy trưởng (điện thoại) | Chụp ảnh, cho phép vị trí, Gửi điểm danh | Ảnh có dải «Điểm danh · giờ» + thứ ngày, công trình, tên, vị trí; danh sách có lượt mới, «Xem vị trí trên bản đồ» mở đúng chỗ | | |
+| D-17 | Chỉ huy trưởng (điện thoại) | Từ chối quyền vị trí rồi điểm danh | Vẫn gửi được; ảnh và danh sách ghi «Không có vị trí — điện thoại không cho phép lấy vị trí» | | |
+| D-18 | Chỉ huy trưởng | Tìm nút sửa / xoá một lượt điểm danh | Không có | | |
+| D-19 | Trưởng phòng Thi công | Mở tab Điểm danh của công trình | Thấy lượt điểm danh của chỉ huy trưởng, nhóm theo ngày, giờ là giờ máy chủ | | |
 
 ## E. Mua hàng và Kho
 
@@ -93,6 +100,9 @@ Mật khẩu chung của tài khoản demo: xem `db/src/seed/data.ts` (`SEED_PAS
 | E-01 | Mua hàng | Mở đề nghị thép hình (hoàn thành) | Hai báo giá, so sánh; chọn nhà giá cao hơn có ghi căn cứ; đơn hàng; giao nhận | | |
 | E-02 | Kho | Tồn kho kho công trình Phố Nối A | Thép H200: nhập 18.000 kg, xuất 12.000 kg, còn 6.000 kg | | |
 | E-03 | Kho | Chứng từ kho | Phiếu nhập truy về phiếu giao nhận và đơn hàng | | |
+| E-04 | Kho | Đơn hàng thép → tab Giao nhận | Đợt giao đã nhập kho ghi «Đã nhập kho theo phiếu NVC-PN-2026-0001», không còn nút Nhập kho | | |
+| E-05 | Kho (điện thoại) | Quét mã `THEP-HINH-H200` | Tồn 6.000 kg ở kho Phố Nối A; thanh tab trên cùng cuộn ngang, chữ không đè nhau | | |
+| E-06 | Kho | Nhà Việt Steel → Giàn giáo | Cho thuê được 2.596; hỏng chờ sửa 4; Lập biên bản bắt buộc nguyên nhân | | |
 
 ## F. Kế toán và phê duyệt
 
@@ -101,6 +111,7 @@ Mật khẩu chung của tài khoản demo: xem `db/src/seed/data.ts` (`SEED_PAS
 | F-01 | Kế toán | Đề nghị thanh toán | Đợt 1 tổ đội Hùng Cường đã chi; đợt 2 đang ở bước Tài chính kiểm | | |
 | F-02 | Giám đốc Tài chính | Duyệt bước kiểm đợt 2 | Hồ sơ sang Hộp thư phê duyệt đúng hạn mức | | |
 | F-03 | Kế toán | Công nợ phải thu | Hưng Thịnh: 1,3 tỷ, đã thu 800 triệu, còn 500 triệu | | |
+| F-04 | Kế toán | Đơn hàng thép (đã giao đủ) → tab Chứng từ → **Lập đề nghị thanh toán** | Biểu mẫu điền sẵn nội dung, 421.740.000 đồng, Thép Đại Phát, bộ phận Mua hàng; lưu xong đơn hàng liệt kê đề nghị vừa lập. Ghi đã chi: chi phí thực tế của mã VAT_TU KHÔNG tăng thêm (đã tính lúc nhận hàng) | | |
 | F-04 | Tổng Giám đốc | Hộp thư Phê duyệt | Có hồ sơ chờ; duyệt xong hồ sơ biến khỏi hộp thư | | |
 | F-05 | Người lập đề nghị | Tự duyệt hồ sơ của mình | Không có nút / bị từ chối | | |
 
@@ -146,3 +157,27 @@ Mật khẩu chung của tài khoản demo: xem `db/src/seed/data.ts` (`SEED_PAS
 
 **Tổng kết:** số ca Đạt / Không đạt / Bỏ qua, danh sách lỗi đã sửa, lỗi còn mở và cách tránh trong buổi
 demo — ghi vào cuối tệp này sau lượt chạy.
+
+## Lỗi hiển thị đã sửa
+
+Phát hiện khi chụp ảnh cho hướng dẫn sử dụng; tester kiểm lại trên bản demo sau lần phát hành kế tiếp.
+
+| Mã | Màn hình | Lỗi | Đã sửa | Đạt |
+| --- | --- | --- | --- | --- |
+| L-01 | Mọi màn hình chính (điện thoại) | Bảng «Hướng dẫn» tự mở bị cắt ra ngoài mép trái | Trên điện thoại bảng nằm ngang màn hình, cách hai mép 16px | |
+| L-02 | Chi tiết đề nghị mua (mọi vai trò) | Báo «Có lỗi xảy ra» — truy vấn nhúng công trình hai lần | Tách truy vấn danh sách / chi tiết; phép thử canh | |
+| L-03 | Dashboard | Thẻ Dòng tiền hiện «0 đồng» khi chưa có kế hoạch dòng tiền | Hiện «Chưa đủ dữ liệu — Kế toán chưa lập kế hoạch dòng tiền cho kỳ này» | |
+| L-04 | Dashboard, Ngân sách công trình | Câu chữ lỗi thời («hiệu quả kinh doanh chưa có», «các cột còn bằng 0 vì thuộc Giai đoạn 2») | Viết lại đúng hiện trạng | |
+| L-05 | Dashboard | Số chỉ số quá to (`text-3xl font-extrabold`) | Cỡ vừa `text-xl font-semibold` (20px), một chỗ khai báo | |
+| L-06 | Chi tiết công trình (điện thoại) | Phần đầu trang dính chiếm gần nửa màn hình | Chỉ dính trên máy tính; điện thoại cuộn đi cùng nội dung | |
+| L-07 | Chi tiết đề nghị mua (điện thoại) | Bảng mặt hàng 8 cột phải cuộn ngang, cột Thành tiền khuất | Thẻ từng mặt hàng trên điện thoại | |
+| L-08 | Thanh thao tác nhanh công trường | Nhãn xuống dòng lệch trái | Canh giữa, giãn dòng gọn | |
+| L-09 | Hủy đề nghị / đơn hàng, trượt thầu, mất cơ hội, mở lại kỳ… (20 thao tác) | Hộp hỏi lý do của trình duyệt: nút OK/Cancel tiếng Anh, ngày ký phải gõ yyyy-mm-dd | Hộp thoại tiếng Việt nói rõ hệ quả, báo trống tại chỗ, ô ngày dd/mm/yyyy | |
+| L-10 | Chi tiết đề nghị mua → Báo giá | Bảng so sánh 12 cột phải cuộn ngang, cột Trạng thái và nút chọn khuất | Mỗi nhà cung cấp một cột, tiêu chí theo dòng; nhà đã chọn tô nền | |
+| L-11 | Chi tiết và danh sách mọi hồ sơ | Hồ sơ Hoàn thành vẫn ghi «Còn N ngày» | Hồ sơ hoàn thành không đếm thời hạn | |
+| L-12 | Dashboard Mua hàng | Không có thẻ nào về mua hàng | Thẻ Đề nghị mua, dòng «Đã duyệt, chờ lập đơn đặt hàng» | |
+| L-13 | Báo cáo, nhà cung cấp, biểu mẫu | Chữ hiển thị lộ mã tài liệu nội bộ («— BC-01», «(MH-08)», «PRD Mục 2.2») | Gỡ; phép thử canh | |
+| L-14 | Chi tiết đề nghị chi, chi tiết hồ sơ có thông báo phía trên | Phần đầu trang đè mất nửa dưới dải bước duyệt / thông báo | Đầu trang chừa đúng chỗ cho phần phía trên | |
+| L-15 | Đơn đặt hàng → Chứng từ | Kế toán phải lập tay đề nghị thanh toán, không gắn mã đơn → ghi đã chi làm công trình bị cộng chi phí hai lần | Nút «Lập đề nghị thanh toán» gắn mã đơn, điền sẵn; phép thử CSDL | |
+| L-16 | Thanh tab mọi phân hệ (điện thoại) | 7 tab Kho co lại, chữ đè nhau | Tab không co, thanh cuộn ngang; phép thử canh | |
+| L-17 | Đơn hàng → Giao nhận (vai trò Kho) | Đợt đã nhập kho vẫn hiện nút Nhập kho, bấm mới báo lỗi | Hiện mã phiếu nhập thay cho nút | |

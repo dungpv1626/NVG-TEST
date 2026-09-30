@@ -36,6 +36,7 @@ import {
   Percent,
   Receipt,
   Scale,
+  ShoppingCart,
   TrendingUp,
   Users,
   Wallet,
@@ -52,9 +53,11 @@ import {
   STATUS_GROUPS,
   biddingDisplayStatus,
   contractDisplayStatus,
+  purchaseRequestDisplayStatus,
   conversionRate,
   countByStatus,
   dashboardGreeting,
+  greetingAddress,
   designDisplayStatus,
   formatCurrency,
   formatPercent,
@@ -62,7 +65,6 @@ import {
   isStalePendingApproval,
   isWithinPeriod,
   periodStartDate,
-  shortNameFromFullName,
   statusLabel,
   sumMoney,
   toMoney,
@@ -74,13 +76,14 @@ import {
 import { PageHeader } from '@/components/layout/app-shell';
 import { PERIOD_FILTER_PARAM, listPathFiltered } from '@/components/entity/entity-table';
 import { Button } from '@/components/ui/button';
-import { KpiCard, KpiEmptyBlock, PillBadge } from '@/components/ui/kpi-card';
+import { KPI_VALUE_CLASS, KpiCard, KpiEmptyBlock, PillBadge } from '@/components/ui/kpi-card';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
 import { useCashFlow, useReceivables } from '@/hooks/use-accounting';
 import { usePendingApprovals } from '@/hooks/use-approvals';
 import { useBiddingProjects } from '@/hooks/use-bidding-projects';
 import { useContracts } from '@/hooks/use-contracts';
+import { usePurchaseRequests } from '@/hooks/use-purchasing';
 import { useDesignProjects } from '@/hooks/use-design-projects';
 import { useTimesheets } from '@/hooks/use-hr';
 import { useOpportunities } from '@/hooks/use-opportunities';
@@ -90,6 +93,7 @@ import { useAuth, useCan } from '@/lib/auth';
 import { useCompanyScope } from '@/lib/company-scope';
 import { cn } from '@/lib/utils';
 import { APP_HELP } from '@/lib/help-texts';
+import { FinanceOverviewSection } from '@/pages/bc/finance-overview';
 import { useSensitiveAccess } from '@/hooks/use-sensitive-access';
 
 /** Mốc xa nhất khi kỳ đang chọn là "Tất cả" — dòng tiền cần một mốc bắt đầu thật, không phải null. */
@@ -113,6 +117,7 @@ const MODULE_KPI_ICON: Record<string, { icon: LucideIcon; well: string }> = {
   DA: { icon: FileText, well: 'bg-tint-amber-bg text-tint-amber' },
   TK: { icon: Compass, well: 'bg-tint-teal-bg text-tint-teal' },
   HD: { icon: FileSignature, well: 'bg-tint-forest-bg text-brand' },
+  MH: { icon: ShoppingCart, well: 'bg-tint-teal-bg text-tint-teal' },
 };
 
 export function DashboardPage() {
@@ -140,6 +145,7 @@ export function DashboardPage() {
   const canViewKt = useCan('KT');
   const canViewSx = useCan('SX');
   const canViewNs = useCan('NS');
+  const canViewMh = useCan('MH');
   // Xem được PHÂN HỆ chưa đủ để xem SỐ TIỀN: thẻ tài chính và lãi/lỗ theo nhóm vai trò mà CSDL
   // cho xem, không theo quyền mở phân hệ (xem `useSensitiveAccess`).
   const { data: access } = useSensitiveAccess();
@@ -150,6 +156,7 @@ export function DashboardPage() {
   const biddingProjects = useBiddingProjects({ enabled: canViewDa });
   const designProjects = useDesignProjects({ enabled: canViewTk });
   const contracts = useContracts({ enabled: canViewHd });
+  const purchaseRequests = usePurchaseRequests({ enabled: canViewMh });
 
   // Cùng nguồn dữ liệu với Hộp thư Phê duyệt và huy hiệu trên thanh trên cùng — ba chỗ hiển
   // thị cùng một con số thì phải đọc từ cùng một truy vấn, nếu không sẽ có lúc lệch nhau.
@@ -207,6 +214,18 @@ export function DashboardPage() {
     }))
     .filter(inPeriod);
 
+  const purchaseRecords: MetricRecord[] = (purchaseRequests.data ?? [])
+    .map((r) => ({
+      status: purchaseRequestDisplayStatus(r.stage, r.needed_date),
+      value: r.estimated_value,
+      createdAt: r.created_at,
+    }))
+    .filter(inPeriod);
+  // Việc của Mua hàng bắt đầu khi đề nghị được duyệt: đã duyệt mà chưa đặt hàng là hàng đang chờ.
+  const awaitingOrder = (purchaseRequests.data ?? []).filter(
+    (r) => r.stage === 'da_duyet' && isWithinPeriod(r.created_at, period),
+  ).length;
+
   // Tỷ lệ chuyển đổi tính trên TOÀN BỘ cơ hội trong kỳ, kể cả cơ hội đã mất — bỏ cơ hội mất
   // ra khỏi mẫu số thì tỷ lệ luôn đẹp và không còn nói lên điều gì (PRD CRM-09).
   const wonOpportunities = (opportunities.data ?? []).filter(
@@ -238,9 +257,6 @@ export function DashboardPage() {
       basePath: '/crm/co-hoi',
       records: opportunityRecords,
       isLoading: opportunities.isLoading,
-      // Thẻ có nhiều chỉ số phụ nhất — số liệu chính dùng cỡ hero (34px/800) để nổi bật, giống
-      // đúng vai trò "thẻ chi tiết nhất" của nó trong bản demo tham chiếu.
-      hero: true,
       highlights: [
         { label: 'Giá trị đang theo đuổi', text: formatCurrency(pipelineValue) },
         {
@@ -276,6 +292,20 @@ export function DashboardPage() {
       isLoading: contracts.isLoading,
       highlights: [{ label: 'Giá trị đã ký trong kỳ', text: formatCurrency(signedContractValue) }],
     },
+    canViewMh && {
+      key: 'MH',
+      title: 'Đề nghị mua',
+      hint: 'Đề nghị mua lập trong kỳ, theo trạng thái xử lý',
+      basePath: '/mh/de-nghi-mua',
+      records: purchaseRecords,
+      isLoading: purchaseRequests.isLoading,
+      highlights: [
+        {
+          label: 'Đã duyệt, chờ lập đơn đặt hàng',
+          text: `${awaitingOrder} đề nghị`,
+        },
+      ],
+    },
   ].filter(Boolean) as ModuleMetric[];
 
   const pendingCount = pendingApprovals?.length ?? 0;
@@ -288,6 +318,15 @@ export function DashboardPage() {
   const cashFlowRows = cashFlow.data ?? [];
   const cashFlowTotal = sumMoney(cashFlowRows.map((r) => r.closing_balance));
   const cashFlowShortfallCount = cashFlowRows.filter((r) => toMoney(r.closing_balance) < 0n).length;
+  // Số dư cuối kỳ chỉ có nghĩa khi Kế toán đã lập kế hoạch dòng tiền (số dư đầu kỳ, thu chi dự
+  // kiến) cho kỳ này. Chưa có kế hoạch nào thì hàm vẫn trả một dòng mỗi pháp nhân, toàn số 0 —
+  // hiện «0 đồng» là một con số không có thật (CLAUDE.md 5.2).
+  const cashFlowHasPlan = cashFlowRows.some(
+    (r) =>
+      toMoney(r.opening_balance) !== 0n ||
+      toMoney(r.planned_in) !== 0n ||
+      toMoney(r.planned_out) !== 0n,
+  );
 
   // Chỉ đếm khoản CÒN NỢ (chưa thu hết), đúng vế "phần CÒN LẠI" mà bảng tuổi nợ dùng — cộng
   // theo giá trị gốc sẽ báo một khoản nợ xấu không tồn tại (CLAUDE.md 3.4).
@@ -355,9 +394,15 @@ export function DashboardPage() {
     profile?.scopeCompanies.find((c) => c.companyId === scope.companyId) ??
     profile?.scopeCompanies[0];
 
-  // Lời chào cá nhân hoá bằng TÊN là NGOẠI LỆ DUY NHẤT của quy tắc không dùng đại từ
-  // nhân xưng (Content Guidelines 4.2) — dùng tên, không dùng anh/chị.
-  const greeting = dashboardGreeting(shortNameFromFullName(profile?.fullName));
+  // Lời chào cá nhân hoá là NGOẠI LỆ DUY NHẤT của quy tắc không dùng đại từ nhân xưng
+  // (Content Guidelines 4.2): cấp quản lý chào bằng chức danh, còn lại bằng tên.
+  const greeting = dashboardGreeting(
+    greetingAddress(
+      profile?.jobTitle,
+      (profile?.assignments ?? []).map((a) => a.roleCode),
+      profile?.fullName,
+    ),
+  );
 
   return (
     <>
@@ -398,6 +443,12 @@ export function DashboardPage() {
         )}
       </div>
 
+      {canSeeFinance && (
+        // Tổng quan tài chính bằng biểu đồ (Haan 30/09/2026) — chỉ vai trò xem được tài chính;
+        // vai trò khác giữ Dashboard vận hành bên dưới.
+        <FinanceOverviewSection period={period} canSeeProfit={canSeeProfit} className="mb-6" />
+      )}
+
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <KpiCard
           title="Chờ phê duyệt"
@@ -411,9 +462,7 @@ export function DashboardPage() {
           ) : (
             <Link to="/viec-can-lam" className="mt-auto block hover:underline">
               <span className="flex items-baseline gap-2">
-                <span className="text-3xl font-extrabold tracking-tight tabular-nums">
-                  {pendingCount}
-                </span>
+                <span className={KPI_VALUE_CLASS}>{pendingCount}</span>
                 <StatusLozenge status="pending_approval" />
               </span>
               {pendingValue > 0n && (
@@ -436,9 +485,7 @@ export function DashboardPage() {
           ) : (
             <div className="mt-auto">
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-extrabold tracking-tight tabular-nums text-status-overdue">
-                  {overdueTotal}
-                </span>
+                <span className={cn(KPI_VALUE_CLASS, 'text-status-overdue')}>{overdueTotal}</span>
                 <StatusLozenge status="overdue" />
               </div>
               <ul className="mt-2 space-y-1 text-xs">
@@ -492,16 +539,11 @@ export function DashboardPage() {
           >
             {cashFlow.isLoading ? (
               <div className="h-8 w-24 animate-pulse rounded-sm bg-surface-hover" />
-            ) : cashFlowRows.length === 0 ? (
-              <KpiEmptyBlock label="Chưa có số liệu dòng tiền." />
+            ) : cashFlowRows.length === 0 || !cashFlowHasPlan ? (
+              <KpiEmptyBlock label="Chưa đủ dữ liệu — Kế toán chưa lập kế hoạch dòng tiền cho kỳ này." />
             ) : (
               <Link to="/kt/dong-tien" className="mt-auto block hover:underline">
-                <span
-                  className={cn(
-                    'text-3xl font-extrabold tracking-tight tabular-nums',
-                    cashFlowTotal < 0n && 'text-status-overdue',
-                  )}
-                >
+                <span className={cn(KPI_VALUE_CLASS, cashFlowTotal < 0n && 'text-status-overdue')}>
                   {formatCurrency(cashFlowTotal)}
                 </span>
                 {cashFlowShortfallCount > 0 && (
@@ -527,9 +569,7 @@ export function DashboardPage() {
               <KpiEmptyBlock label="Không còn khoản nào phải thu." />
             ) : (
               <Link to="/kt/cong-no" className="mt-auto block hover:underline">
-                <span className="text-3xl font-extrabold tracking-tight tabular-nums">
-                  {formatCurrency(receivableRemainingTotal)}
-                </span>
+                <span className={KPI_VALUE_CLASS}>{formatCurrency(receivableRemainingTotal)}</span>
                 {receivableOverdueCount > 0 && (
                   <span className="mt-1 flex items-center gap-1.5 text-xs text-status-overdue">
                     {receivableOverdueCount} khoản đã quá hạn
@@ -556,9 +596,7 @@ export function DashboardPage() {
                 to="/sx/tai-san-cho-thue"
                 className="mt-auto flex items-baseline gap-2 hover:underline"
               >
-                <span className="text-3xl font-extrabold tracking-tight tabular-nums">
-                  {activeRentals.length}
-                </span>
+                <span className={KPI_VALUE_CLASS}>{activeRentals.length}</span>
                 <span className="text-xs font-medium text-fg-subtle">hợp đồng</span>
               </Link>
             )}
@@ -581,9 +619,7 @@ export function DashboardPage() {
                 to="/ns/cham-cong"
                 className="mt-auto flex items-baseline gap-2 hover:underline"
               >
-                <span className="text-3xl font-extrabold tracking-tight tabular-nums">
-                  {closedTimesheetCount}
-                </span>
+                <span className={KPI_VALUE_CLASS}>{closedTimesheetCount}</span>
                 <span className="text-xs font-medium text-fg-subtle">nhân sự</span>
               </Link>
             )}
@@ -610,8 +646,6 @@ interface ModuleMetric {
   isLoading: boolean;
   /** Chỉ số riêng của module, đặt dưới phần đếm theo trạng thái. */
   highlights: { label: string; text: string }[];
-  /** Thẻ nhiều chỉ số phụ nhất — số liệu chính dùng cỡ hero (34px/800). */
-  hero?: boolean;
 }
 
 /**
@@ -643,16 +677,7 @@ function ModuleCard({ metric, period }: { metric: ModuleMetric; period: Dashboar
             to={listPathFiltered(metric.basePath, { period })}
             className="flex items-baseline gap-2 hover:underline"
           >
-            <span
-              className={cn(
-                'font-extrabold tracking-tight tabular-nums',
-                metric.hero
-                  ? 'text-(length:--text-hero) leading-(--text-hero--line-height)'
-                  : 'text-3xl',
-              )}
-            >
-              {metric.records.length}
-            </span>
+            <span className={KPI_VALUE_CLASS}>{metric.records.length}</span>
             <span className="text-xs font-medium text-fg-subtle">hồ sơ</span>
           </Link>
 
@@ -729,11 +754,11 @@ function DataCompletenessNote() {
         <Info className="size-4" aria-hidden />
       </span>
       <div className="min-w-0">
-        <h2 className="text-md font-bold tracking-tight">Phần chưa có trên Dashboard</h2>
+        <h2 className="text-md font-bold tracking-tight">Nguồn số liệu</h2>
         <p className="mt-1 max-w-3xl text-xs leading-relaxed text-fg-subtle">
-          Tồn kho vật tư, hiệu quả kinh doanh (nguồn khách, phễu bán hàng, tỷ lệ trúng thầu) và báo
-          cáo tổng hợp toàn NVG truy ngược xuống từng pháp nhân/phòng ban chưa có trên Dashboard.
-          Các chỉ số đang hiển thị lấy trực tiếp từ hồ sơ nghiệp vụ, không phải số liệu mẫu.
+          Mọi chỉ số trên Dashboard lấy trực tiếp từ hồ sơ nghiệp vụ, không phải số liệu mẫu. Tồn
+          kho vật tư xem ở phân hệ Kho; báo cáo NVG Group tách theo phòng ban chưa có trên
+          Dashboard.
         </p>
       </div>
     </section>

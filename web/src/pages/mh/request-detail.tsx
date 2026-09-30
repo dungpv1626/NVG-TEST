@@ -27,6 +27,7 @@ import {
   RecordNotFound,
 } from '@/components/entity/entity-detail';
 import { Button } from '@/components/ui/button';
+import { usePromptDialog } from '@/components/ui/prompt-dialog';
 import { CardGridSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
 import {
   useCancelPurchaseRequest,
@@ -46,6 +47,7 @@ import { RequestItemPanel } from './request-item-panel';
 const EM_DASH = '—';
 
 export function PurchaseRequestDetailPage() {
+  const promptDialog = usePromptDialog();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const canWork = useCan('MH', 'edit');
@@ -88,10 +90,16 @@ export function PurchaseRequestDetailPage() {
     }
   }
 
-  function cancelRequest() {
-    const reason = window.prompt('Lý do hủy đề nghị mua:');
-    if (reason === null || reason.trim() === '') return;
-    void run(() => cancel.mutateAsync({ requestId: request.id, reason: reason.trim() }));
+  async function cancelRequest() {
+    const reason = await promptDialog.ask({
+      title: 'Hủy đề nghị mua?',
+      label: 'Lý do hủy',
+      detail: 'Đề nghị chuyển sang Đã hủy và không lập đơn đặt hàng được nữa.',
+      confirmLabel: 'Hủy đề nghị',
+      danger: true,
+    });
+    if (reason === null) return;
+    void run(() => cancel.mutateAsync({ requestId: request.id, reason }));
   }
 
   async function order() {
@@ -155,6 +163,7 @@ export function PurchaseRequestDetailPage() {
 
   return (
     <>
+      {promptDialog.dialog}
       {actionError && (
         <p
           role="alert"

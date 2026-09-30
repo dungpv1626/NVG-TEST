@@ -22,9 +22,9 @@ import { MODULES, type ModuleCode } from '@nvg/shared';
 import { cn } from '@/lib/utils';
 import {
   MODULE_ICONS,
-  MODULE_ROUTES,
   splitBottomNav,
   useActiveModule,
+  useModuleRoutes,
   useVisibleModules,
 } from './module-nav';
 
@@ -33,6 +33,7 @@ const ITEM_CLASS =
 
 export function BottomNav() {
   const visible = useVisibleModules();
+  const moduleRoutes = useModuleRoutes();
   const activeModule = useActiveModule();
   const [sheetOpen, setSheetOpen] = useState(false);
   const location = useLocation();
@@ -72,7 +73,7 @@ export function BottomNav() {
           return (
             <NavLink
               key={code}
-              to={MODULE_ROUTES[code]}
+              to={moduleRoutes[code]}
               aria-current={activeModule === code ? 'page' : undefined}
               className={cn(
                 ITEM_CLASS,
@@ -113,6 +114,7 @@ function MoreSheet({
   activeModule: ModuleCode | null;
   onClose: () => void;
 }) {
+  const moduleRoutes = useModuleRoutes();
   return (
     <div
       className="fixed inset-0 z-40 flex flex-col justify-end bg-fg/30 lg:hidden"
@@ -148,7 +150,7 @@ function MoreSheet({
             return (
               <li key={code}>
                 <NavLink
-                  to={MODULE_ROUTES[code]}
+                  to={moduleRoutes[code]}
                   aria-current={activeModule === code ? 'page' : undefined}
                   className={cn(
                     'flex min-h-20 flex-col items-center justify-center gap-1.5 rounded-md',

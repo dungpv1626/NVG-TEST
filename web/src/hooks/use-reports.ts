@@ -17,6 +17,7 @@ import type {
   OpportunityStage,
   SiteStage,
 } from '@nvg/shared';
+import type { FinanceDay } from '@nvg/shared/bc-series';
 import { useCompanyScope } from '@/lib/company-scope';
 import { supabase } from '@/lib/supabase';
 
@@ -174,6 +175,31 @@ export function useBiddingOutcomes(enabled = true) {
         lostReason: r.lost_reason,
         biddingCount: Number(r.bidding_count),
       }));
+    },
+    enabled: scope.isReady && enabled,
+  });
+}
+
+/**
+ * Tổng tài chính theo ngày nghiệp vụ (`finance_daily`, migration 0140) cho biểu đồ Dashboard và
+ * tab Tổng quan tài chính. Gom tháng / quý / năm và so kỳ trước ở `@nvg/shared/bc-series`.
+ *
+ * `enabled` do màn hình quyết định: vai trò không xem được tài chính bị CSDL từ chối (ném lỗi),
+ * nên chỉ gọi khi `rls_sees_finance` đã trả `true` (`useSensitiveAccess`).
+ */
+export function useFinanceDaily(from: string, to: string, enabled = true) {
+  const scope = useCompanyScope();
+
+  return useQuery<FinanceDay[], Error>({
+    queryKey: ['reports', 'finance-daily', scope.companyId, from, to],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('finance_daily', {
+        p_from: from,
+        p_to: to,
+        p_company_id: scope.isAggregate ? null : (scope.companyId ?? null),
+      });
+      if (error) throw error;
+      return (data ?? []) as unknown as FinanceDay[];
     },
     enabled: scope.isReady && enabled,
   });

@@ -67,6 +67,31 @@ hiệu là cặp **rừng (forest) & bạc hà (mint)** (Haan chốt, thay Brand
 
 **Vẫn DUY NHẤT một hành động chính mỗi màn hình.**
 
+### 2.5 Biểu đồ — dải thương hiệu, không đụng màu trạng thái
+
+Dashboard của Ban Giám đốc và tab «Tổng quan tài chính» (Haan, 30/09/2026). Thư viện: Recharts
+(TSD 1.4), bọc trong `web/src/components/charts/` — **không gọi Recharts thẳng từ trang**.
+
+| Token             | Mã        | Dùng cho                                |
+| ----------------- | --------- | --------------------------------------- |
+| `--color-chart-1` | `#2C6E4B` | chuỗi chính (doanh thu)                 |
+| `--color-chart-2` | `#86C9A4` | chuỗi đi cặp (tiền đã thu)              |
+| `--color-chart-3` | `#2E7C72` | chuỗi thứ ba, đường dòng tiền ròng      |
+| `--color-chart-4` | `#8A9A91` | khoản chi, chuỗi so sánh, công trình lỗ |
+| `--color-chart-5` | `#D5E0D8` | nền thanh, kỳ trước                     |
+
+- **Không tô chuỗi biểu đồ bằng 6 màu trạng thái** (§2.1): cột đỏ đọc như «quá hạn». Lỗ, nợ quá hạn
+  phân biệt bằng CHỮ («Lỗ 120 triệu», «Quá hạn 31 – 60 ngày»), màu chỉ phụ.
+- So kỳ trước dùng mũi tên + chữ («Tăng 23% so với kỳ trước») bằng mực trung tính: tăng tốt hay xấu
+  tuỳ chỉ số (chi tiền tăng là xấu).
+- Số chính của ô chỉ số: `KPI_VALUE_CLASS` (`text-xl font-semibold`, 20px — Haan chốt 30/09/2026) — cỡ vừa, rút gọn «2,6 tỷ» và
+  ghi đủ «2.600.000.000 đồng» ngay dưới.
+- Trục tiền dùng bước tròn 1–2–5 (`niceMoneyTicks`), vạch 0 ghi «0».
+- Kỳ chưa có phát sinh: «Chưa đủ dữ liệu», không vẽ trục trống với cột 0; chuỗi bắt đầu từ kỳ có
+  phát sinh đầu tiên.
+- Mỗi biểu đồ có chú thích bằng chữ và câu tóm tắt cho trình đọc màn hình; tắt hoạt ảnh khi
+  `prefers-reduced-motion`.
+
 ---
 
 ## 3. Chữ (thay CGD 6.4)

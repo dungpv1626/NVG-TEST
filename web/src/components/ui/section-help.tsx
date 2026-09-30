@@ -139,10 +139,14 @@ export function SectionHelp({
           role="dialog"
           aria-label={`Hướng dẫn: ${title}`}
           className={cn(
-            'absolute top-8 z-30 w-80 max-w-[calc(100vw-2rem)] rounded border',
-            // Nút có chữ nằm ở hàng nút góc phải màn hình; neo bảng bên trái thì nó tràn khỏi
-            // mép phải cửa sổ.
-            triggerLabel ? 'right-0 top-12' : 'left-0',
+            'z-30 rounded border',
+            // Nút có chữ nằm ở hàng nút góc phải màn hình máy tính; neo bảng bên trái thì nó tràn
+            // khỏi mép phải cửa sổ. Trên điện thoại cùng nút đó lại nằm sát mép TRÁI, nên neo phải
+            // làm bảng tràn khỏi mép trái (ảnh chụp hướng dẫn 30/09/2026) — ở đó bảng thành một
+            // tấm ngang màn hình, cách hai mép 16px, không phụ thuộc vị trí nút.
+            triggerLabel
+              ? 'fixed inset-x-4 top-20 sm:absolute sm:inset-x-auto sm:right-0 sm:top-12 sm:w-80'
+              : 'absolute left-0 top-8 w-80 max-w-[calc(100vw-2rem)]',
             'border-border bg-surface p-3 shadow-overlay',
           )}
         >

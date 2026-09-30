@@ -96,6 +96,7 @@ export const PROTECTED_TABLES = [
   'request_reminders',
   'acceptance_checklists',
   'acceptance_checklist_results',
+  'site_check_ins',
 ] as const;
 
 /** Mã lỗi Postgres cho "insufficient_privilege" — RLS chặn thành công. */
@@ -196,6 +197,14 @@ export async function cleanupTestData(): Promise<void> {
     // (khoá ngoại CASCADE). Phải đứng TRƯỚC hợp đồng và gói thầu: khoá ngoại của công
     // trình tới hai hồ sơ đó là `ON DELETE SET NULL`, mà cột nguồn của công trình bị guard
     // chặn sửa — xoá công trình trước thì không còn dây nào để CSDL phải dọn.
+    // Điểm danh là bằng chứng bất biến (0139) và không CASCADE theo công trình: gỡ trước, tắt
+    // riêng trigger chặn xoá — chỉ trong câu lệnh này (replica cũng tắt trigger khoá ngoại).
+    await sql.begin(async (tx) => {
+      await tx`SET LOCAL session_replication_role = replica`;
+      await tx`DELETE FROM site_check_ins WHERE construction_site_id IN (
+        SELECT id FROM construction_sites WHERE name LIKE ${'%' + TEST_PREFIX + '%'}
+      )`;
+    });
     await sql`DELETE FROM construction_sites WHERE name LIKE ${'%' + TEST_PREFIX + '%'}`;
     // Xoá hợp đồng kéo theo điều khoản và phát sinh (khoá ngoại CASCADE).
     await sql`DELETE FROM contracts WHERE title LIKE ${TEST_PREFIX + '%'}`;

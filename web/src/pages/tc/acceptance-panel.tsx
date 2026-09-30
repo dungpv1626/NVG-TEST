@@ -23,6 +23,7 @@ import {
   type AcceptanceType,
 } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
+import { usePromptDialog } from '@/components/ui/prompt-dialog';
 import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -83,6 +84,7 @@ function ChecklistResults({ acceptanceId }: { acceptanceId: string }) {
 const TODAY = () => new Date().toISOString().slice(0, 10);
 
 export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly: boolean }) {
+  const promptDialog = usePromptDialog();
   const { data: records } = useAcceptanceRecords(siteId);
   const { data: crews } = useSubcontractors(siteId);
   const recordAcceptance = useRecordAcceptance();
@@ -193,7 +195,12 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
   }
 
   async function cancel(acceptanceId: string) {
-    const reason = window.prompt('Nguyên nhân hủy biên bản nghiệm thu:');
+    const reason = await promptDialog.ask({
+      title: 'Hủy biên bản nghiệm thu?',
+      label: 'Nguyên nhân hủy',
+      confirmLabel: 'Hủy biên bản',
+      danger: true,
+    });
     if (reason === null) return;
     setError(null);
     try {
@@ -205,6 +212,7 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
 
   return (
     <div className="space-y-4">
+      {promptDialog.dialog}
       {error && (
         <p role="alert" className="rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
           {error}

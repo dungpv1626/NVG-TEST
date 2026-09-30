@@ -24,8 +24,10 @@ import {
   SUPPLIER_CLASS_LABELS,
   formatCurrency,
   formatDate,
+  type MoneyValue,
 } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
+import { usePromptDialog } from '@/components/ui/prompt-dialog';
 import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -62,6 +64,7 @@ export function QuotationPanel({
   /** Đề nghị đang ở bước nhận báo giá (đã duyệt / đang mua). */
   isOpenForQuotes: boolean;
 }) {
+  const promptDialog = usePromptDialog();
   const { data: quotations, isLoading, error } = useQuotations(requestId);
   const { data: requestItems } = usePurchaseRequestItems(requestId);
   const { data: suppliers } = useSuppliers();
@@ -130,10 +133,15 @@ export function QuotationPanel({
     setPanelError(null);
     let reason: string | null = null;
     if (!isLowest) {
-      reason = window.prompt(
-        'Báo giá này không phải báo giá có tổng chi phí thấp nhất. Nêu căn cứ chọn (tiến độ giao, bảo hành, điều kiện thanh toán, chất lượng đã kiểm chứng):',
-      );
-      if (reason === null || reason.trim() === '') return;
+      reason = await promptDialog.ask({
+        title: 'Chọn báo giá không rẻ nhất?',
+        label: 'Căn cứ chọn',
+        detail:
+          'Báo giá này không phải báo giá có tổng chi phí thấp nhất. Căn cứ được lưu cùng hồ sơ để người duyệt và Kế toán đọc lại.',
+        placeholder: 'Tiến độ giao, bảo hành, điều kiện thanh toán, chất lượng đã kiểm chứng…',
+        confirmLabel: 'Chọn nhà cung cấp này',
+      });
+      if (reason === null) return;
     }
     try {
       await selectQuotation.mutateAsync({
@@ -148,6 +156,7 @@ export function QuotationPanel({
 
   return (
     <div className="space-y-4">
+      {promptDialog.dialog}
       {panelError && (
         <p role="alert" className="rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
           {panelError}
@@ -175,144 +184,12 @@ export function QuotationPanel({
       ) : comparison.isLoading ? (
         <TableSkeleton rows={3} columns={8} />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[60rem] text-left">
-            <caption className="sr-only">
-              Bảng so sánh báo giá đã chuẩn hóa theo tổng chi phí và điều kiện giao hàng
-            </caption>
-            <thead className="border-b border-border text-fg-muted">
-              <tr>
-                <th scope="col" className="py-2 pr-4 font-medium">
-                  Nhà cung cấp
-                </th>
-                <th scope="col" className="py-2 pr-4 text-right font-medium">
-                  Tiền hàng
-                </th>
-                <th scope="col" className="py-2 pr-4 text-right font-medium">
-                  Hao hụt
-                </th>
-                <th scope="col" className="py-2 pr-4 text-right font-medium">
-                  Thuế
-                </th>
-                <th scope="col" className="py-2 pr-4 text-right font-medium">
-                  Vận chuyển
-                </th>
-                <th scope="col" className="py-2 pr-4 text-right font-medium">
-                  Tổng chi phí
-                </th>
-                <th scope="col" className="py-2 pr-4 text-right font-medium">
-                  Chênh lệch
-                </th>
-                <th scope="col" className="py-2 pr-4 font-medium">
-                  Giao
-                </th>
-                <th scope="col" className="py-2 pr-4 font-medium">
-                  Thanh toán
-                </th>
-                <th scope="col" className="py-2 pr-4 font-medium">
-                  Bảo hành
-                </th>
-                <th scope="col" className="py-2 font-medium">
-                  Trạng thái
-                </th>
-                {canWork && (
-                  <th scope="col" className="py-2 pl-4 font-medium">
-                    Thao tác
-                  </th>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {(comparison.data ?? []).map((row) => {
-                const isLowest = row.cost_rank === 1;
-                const isChosen = row.status === 'duoc_chon';
-                return (
-                  <tr
-                    key={row.quotation_id}
-                    className={`border-b border-border last:border-0 ${isChosen ? 'bg-surface-sunken' : ''}`}
-                  >
-                    <td className="py-2 pr-4">
-                      <span className="font-medium">{row.supplier_name}</span>
-                      <span className="block text-xs text-fg-subtle">
-                        {SUPPLIER_CLASS_LABELS[row.supplier_class]}
-                        {row.quoted_date ? ` · Báo giá ${formatDate(row.quoted_date)}` : ''}
-                      </span>
-                    </td>
-                    <td className="py-2 pr-4 text-right tabular-nums">
-                      {formatCurrency(row.goods_subtotal)}
-                    </td>
-                    <td className="py-2 pr-4 text-right tabular-nums">
-                      {formatCurrency(row.wastage_amount)}
-                    </td>
-                    <td className="py-2 pr-4 text-right tabular-nums">
-                      {formatCurrency(row.tax_amount)}
-                    </td>
-                    <td className="py-2 pr-4 text-right tabular-nums">
-                      {formatCurrency(row.shipping_fee)}
-                    </td>
-                    <td className="py-2 pr-4 text-right font-semibold tabular-nums">
-                      {formatCurrency(row.landed_total)}
-                      {isLowest && (
-                        <span className="block text-xs font-normal text-fg-subtle">
-                          Tổng chi phí thấp nhất
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-2 pr-4 text-right tabular-nums">
-                      {isLowest ? EM_DASH : `+${formatCurrency(row.cost_gap_vs_lowest)}`}
-                    </td>
-                    <td className="py-2 pr-4 whitespace-nowrap">
-                      {row.delivery_days != null ? (
-                        <span className="inline-flex items-center gap-1">
-                          <Truck className="size-4 shrink-0 text-fg-subtle" aria-hidden />
-                          {row.delivery_days} ngày
-                        </span>
-                      ) : (
-                        EM_DASH
-                      )}
-                    </td>
-                    <td className="py-2 pr-4 whitespace-nowrap">
-                      {row.payment_term_days != null ? `${row.payment_term_days} ngày` : EM_DASH}
-                    </td>
-                    <td className="py-2 pr-4 whitespace-nowrap">
-                      {row.warranty_months != null ? (
-                        <span className="inline-flex items-center gap-1">
-                          <ShieldCheck className="size-4 shrink-0 text-fg-subtle" aria-hidden />
-                          {row.warranty_months} tháng
-                        </span>
-                      ) : (
-                        EM_DASH
-                      )}
-                    </td>
-                    <td className="py-2">
-                      {isChosen ? (
-                        <span className="inline-flex items-center gap-1 font-semibold text-status-completed">
-                          <Check className="size-4 shrink-0" aria-hidden />
-                          {QUOTATION_STATUS_LABELS.duoc_chon}
-                        </span>
-                      ) : (
-                        <span className="text-fg-muted">{QUOTATION_STATUS_LABELS[row.status]}</span>
-                      )}
-                    </td>
-                    {canWork && (
-                      <td className="py-2 pl-4">
-                        {!selected && isOpenForQuotes && (
-                          <Button
-                            variant="secondary"
-                            disabled={selectQuotation.isPending}
-                            onClick={() => void choose(row.quotation_id, isLowest)}
-                          >
-                            Chọn nhà cung cấp này
-                          </Button>
-                        )}
-                      </td>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <QuotationComparisonTable
+          rows={comparison.data ?? []}
+          canChoose={canWork && isOpenForQuotes && !selected}
+          choosing={selectQuotation.isPending}
+          onChoose={(id, isLowest) => void choose(id, isLowest)}
+        />
       )}
 
       {selected?.selection_reason && (
@@ -415,6 +292,176 @@ export function QuotationPanel({
           )}
         </>
       )}
+    </div>
+  );
+}
+
+type ComparisonRow = NonNullable<ReturnType<typeof useQuotationComparison>['data']>[number];
+
+/**
+ * Bảng so sánh XOAY NGANG: mỗi nhà cung cấp một cột, mỗi tiêu chí một dòng — đúng cách bảng so
+ * sánh báo giá được lập trên Excel ở phòng Mua hàng, và vừa khổ màn hình với 2–4 báo giá. Bảng
+ * cũ (mỗi báo giá một dòng, 12 cột) phải cuộn ngang ở khổ 1440, cột Trạng thái và nút chọn
+ * nằm khuất bên phải — đúng hai thứ người mua cần nhìn.
+ *
+ * Nhóm tiền quy về một mặt bằng và xếp hạng theo TỔNG CHI PHÍ; nhóm rủi ro (giao, được nợ, bảo
+ * hành) để nguyên, không quy thành tiền — quy đổi được thì phần mềm đã ngầm chọn hộ (PRD MH-04).
+ */
+function QuotationComparisonTable({
+  rows,
+  canChoose,
+  choosing,
+  onChoose,
+}: {
+  rows: readonly ComparisonRow[];
+  canChoose: boolean;
+  choosing: boolean;
+  onChoose: (quotationId: string, isLowest: boolean) => void;
+}) {
+  const money = (label: string, pick: (r: ComparisonRow) => MoneyValue) => ({
+    label,
+    render: (r: ComparisonRow) => formatCurrency(pick(r)),
+    numeric: true,
+  });
+  const lines: {
+    label: string;
+    render: (r: ComparisonRow) => React.ReactNode;
+    numeric?: boolean;
+    strong?: boolean;
+  }[] = [
+    money('Tiền hàng', (r) => r.goods_subtotal),
+    money('Hao hụt', (r) => r.wastage_amount),
+    money('Thuế', (r) => r.tax_amount),
+    money('Vận chuyển', (r) => r.shipping_fee),
+    {
+      label: 'Tổng chi phí',
+      numeric: true,
+      strong: true,
+      render: (r) => (
+        <>
+          {formatCurrency(r.landed_total)}
+          {r.cost_rank === 1 && (
+            <span className="block text-xs font-normal text-fg-subtle">Tổng chi phí thấp nhất</span>
+          )}
+        </>
+      ),
+    },
+    {
+      label: 'Chênh lệch so với thấp nhất',
+      numeric: true,
+      render: (r) => (r.cost_rank === 1 ? EM_DASH : `+${formatCurrency(r.cost_gap_vs_lowest)}`),
+    },
+    {
+      label: 'Thời hạn giao',
+      render: (r) =>
+        r.delivery_days != null ? (
+          <span className="inline-flex items-center gap-1">
+            <Truck className="size-4 shrink-0 text-fg-subtle" aria-hidden />
+            {r.delivery_days} ngày
+          </span>
+        ) : (
+          EM_DASH
+        ),
+    },
+    {
+      label: 'Được nợ',
+      render: (r) => (r.payment_term_days != null ? `${r.payment_term_days} ngày` : EM_DASH),
+    },
+    {
+      label: 'Bảo hành',
+      render: (r) =>
+        r.warranty_months != null ? (
+          <span className="inline-flex items-center gap-1">
+            <ShieldCheck className="size-4 shrink-0 text-fg-subtle" aria-hidden />
+            {r.warranty_months} tháng
+          </span>
+        ) : (
+          EM_DASH
+        ),
+    },
+  ];
+  const chosenCell = (r: ComparisonRow) => (r.status === 'duoc_chon' ? 'bg-brand-subtle/60' : '');
+
+  return (
+    <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+      <table
+        className="w-full border-collapse text-left"
+        style={{ minWidth: `${12 + rows.length * 12}rem` }}
+      >
+        <caption className="sr-only">
+          Bảng so sánh báo giá đã chuẩn hóa theo tổng chi phí và điều kiện giao hàng
+        </caption>
+        <thead>
+          <tr className="border-b border-border align-top">
+            <th scope="col" className="w-48 px-4 py-3 text-xs font-medium text-fg-subtle">
+              Tiêu chí
+            </th>
+            {rows.map((r) => (
+              <th
+                key={r.quotation_id}
+                scope="col"
+                className={`px-4 py-3 text-right font-normal ${chosenCell(r)}`}
+              >
+                <span className="block font-semibold">{r.supplier_name}</span>
+                <span className="block text-xs text-fg-subtle">
+                  {SUPPLIER_CLASS_LABELS[r.supplier_class]}
+                  {r.quoted_date ? ` · Báo giá ${formatDate(r.quoted_date)}` : ''}
+                </span>
+                <span className="mt-1 block text-sm">
+                  {r.status === 'duoc_chon' ? (
+                    <span className="inline-flex items-center gap-1 font-semibold text-status-completed">
+                      <Check className="size-4 shrink-0" aria-hidden />
+                      {QUOTATION_STATUS_LABELS.duoc_chon}
+                    </span>
+                  ) : (
+                    <span className="text-fg-muted">{QUOTATION_STATUS_LABELS[r.status]}</span>
+                  )}
+                </span>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {lines.map((line) => (
+            <tr
+              key={line.label}
+              className={`border-b border-border last:border-0 ${line.strong ? 'bg-surface-sunken' : ''}`}
+            >
+              <th scope="row" className="px-4 py-2 font-normal text-fg-muted">
+                {line.label}
+              </th>
+              {rows.map((r) => (
+                <td
+                  key={r.quotation_id}
+                  className={`px-4 py-2 text-right tabular-nums whitespace-nowrap ${
+                    line.strong ? 'font-semibold' : ''
+                  } ${chosenCell(r)}`}
+                >
+                  {line.render(r)}
+                </td>
+              ))}
+            </tr>
+          ))}
+          {canChoose && (
+            <tr>
+              <th scope="row" className="px-4 py-3 font-normal text-fg-muted">
+                <span className="sr-only">Thao tác</span>
+              </th>
+              {rows.map((r) => (
+                <td key={r.quotation_id} className="px-4 py-3 text-right">
+                  <Button
+                    variant="secondary"
+                    disabled={choosing}
+                    onClick={() => onChoose(r.quotation_id, r.cost_rank === 1)}
+                  >
+                    Chọn nhà cung cấp này
+                  </Button>
+                </td>
+              ))}
+            </tr>
+          )}
+        </tbody>
+      </table>
     </div>
   );
 }

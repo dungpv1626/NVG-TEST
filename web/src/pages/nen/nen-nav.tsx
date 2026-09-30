@@ -7,6 +7,7 @@
  */
 
 import { NavLink } from 'react-router-dom';
+import { APPROVAL_RULE_PATHS, useCanViewModule } from '@/components/layout/module-nav';
 import { cn } from '@/lib/utils';
 
 const ITEMS = [
@@ -20,18 +21,23 @@ const ITEMS = [
 ];
 
 export function NenNav() {
+  // Tổng Giám đốc chỉ mở được Hạn mức và Thời hạn — ẩn các tab còn lại, không hiện rồi chặn.
+  const canViewNen = useCanViewModule('NEN');
+  const items = canViewNen
+    ? ITEMS
+    : ITEMS.filter((i) => (APPROVAL_RULE_PATHS as readonly string[]).includes(i.to));
   return (
     <nav
       className="mb-4 flex gap-1 overflow-x-auto border-b border-border"
       aria-label="Màn hình trong phân hệ"
     >
-      {ITEMS.map((item) => (
+      {items.map((item) => (
         <NavLink
           key={item.to}
           to={item.to}
           className={({ isActive }) =>
             cn(
-              '-mb-px whitespace-nowrap border-b-2 px-3 py-2',
+              '-mb-px shrink-0 whitespace-nowrap border-b-2 px-3 py-2',
               isActive
                 ? 'border-brand font-semibold text-brand'
                 : 'border-transparent text-fg-subtle hover:text-fg',

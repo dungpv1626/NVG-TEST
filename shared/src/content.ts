@@ -148,10 +148,58 @@ export const CONFIRMS = {
 
 /**
  * Lời chào Dashboard — NGOẠI LỆ DUY NHẤT được phép cá nhân hoá (Content Guidelines 4.2).
- * Dùng TÊN, KHÔNG dùng đại từ anh/chị (tránh phải đoán giới tính/cấp bậc).
+ * `address` là chức danh (cấp quản lý) hoặc tên gọi — xem `greetingAddress`. KHÔNG dùng đại
+ * từ anh/chị (tránh phải đoán giới tính).
  */
-export function dashboardGreeting(name: string): string {
-  return `Chào ${name}, đây là việc cần làm hôm nay`;
+export function dashboardGreeting(address: string): string {
+  return `Chào ${address}, đây là việc cần làm hôm nay`;
+}
+
+/**
+ * Chức danh cấp quản lý được chào bằng chức danh thay vì tên (Haan 30/09/2026: «Chào Tổng
+ * Giám đốc», tương tự Ban Giám đốc và trưởng phòng; nhân viên, kỹ sư chào thẳng tên).
+ * Thứ tự quan trọng: «Phó Tổng Giám đốc» phải khớp trước «Tổng Giám đốc» và «Giám đốc».
+ * Chỉ lấy phần CẤP BẬC, bỏ đuôi phòng ban — «Trưởng phòng Mua hàng – Vật tư» chào là «Chào
+ * Trưởng phòng», không thành một dòng dài trên điện thoại.
+ */
+const LEADERSHIP_TITLES = [
+  'Phó Tổng Giám đốc',
+  'Tổng Giám đốc',
+  'Phó Giám đốc',
+  'Giám đốc',
+  'Kế toán trưởng',
+  'Phó phòng',
+  'Trưởng phòng',
+] as const;
+
+/** Vai trò cấp lãnh đạo khi hồ sơ chưa ghi chức danh — nhãn vai trò chính là chức danh. */
+const LEADERSHIP_ROLE_TITLES: Readonly<Record<string, string>> = {
+  TGD: 'Tổng Giám đốc',
+  CFO: 'Giám đốc Tài chính',
+};
+
+/**
+ * Cách xưng trong lời chào: chức danh nếu là cấp quản lý (theo `jobTitle`, không có thì theo
+ * vai trò TGD/CFO), còn lại là tên gọi. Chức danh so không phân biệt hoa thường, trả về theo
+ * cách viết chuẩn ở `LEADERSHIP_TITLES` («Tổng Giám đốc», CGD 4.4).
+ */
+export function greetingAddress(
+  jobTitle: string | null | undefined,
+  roleCodes: readonly string[],
+  fullName: string | null | undefined,
+): string {
+  const title = (jobTitle ?? '').trim().replace(/\s+/g, ' ');
+  if (title) {
+    const lower = title.toLocaleLowerCase('vi');
+    const hit = LEADERSHIP_TITLES.find((t) => lower.startsWith(t.toLocaleLowerCase('vi')));
+    // «Giám đốc Tài chính» giữ cả cụm: công ty có nhiều giám đốc, «Chào Giám đốc» không rõ ai.
+    if (hit === 'Giám đốc') return title;
+    if (hit) return hit;
+  } else {
+    const role = roleCodes.find((r) => LEADERSHIP_ROLE_TITLES[r]);
+    if (role) return LEADERSHIP_ROLE_TITLES[role]!;
+  }
+  return shortNameFromFullName(fullName);
 }
 
 /**

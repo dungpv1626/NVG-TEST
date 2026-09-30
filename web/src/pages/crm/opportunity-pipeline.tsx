@@ -25,6 +25,7 @@ import { CrmNav } from './crm-nav';
 import { EntityTable, useCreateActions, type EntityRow } from '@/components/entity/entity-table';
 import { KanbanBoard, type KanbanCard } from '@/components/entity/kanban-board';
 import { Button } from '@/components/ui/button';
+import { usePromptDialog } from '@/components/ui/prompt-dialog';
 import { useMoveStage, useOpportunities, type OpportunityRecord } from '@/hooks/use-opportunities';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useCan } from '@/lib/auth';
@@ -37,6 +38,7 @@ interface OpportunityRow extends EntityRow {
 }
 
 export function OpportunityPipelinePage() {
+  const promptDialog = usePromptDialog();
   const [searchParams, setSearchParams] = useSearchParams();
   const view = searchParams.get('che-do') === 'danh-sach' ? 'danh-sach' : 'kanban';
 
@@ -72,9 +74,13 @@ export function OpportunityPipelinePage() {
 
     let lostReason: string | undefined;
     if (toStage === 'mat_co_hoi') {
-      const input = window.prompt('Nguyên nhân mất cơ hội (bắt buộc):');
-      if (input === null || !input.trim()) return false;
-      lostReason = input.trim();
+      const input = await promptDialog.ask({
+        title: 'Chuyển sang Mất cơ hội?',
+        label: 'Nguyên nhân mất cơ hội',
+        confirmLabel: 'Ghi nhận mất cơ hội',
+      });
+      if (input === null) return false;
+      lostReason = input;
     }
 
     try {
@@ -117,6 +123,7 @@ export function OpportunityPipelinePage() {
 
   return (
     <>
+      {promptDialog.dialog}
       <CrmNav />
       <PageHeader
         title="Cơ hội kinh doanh"

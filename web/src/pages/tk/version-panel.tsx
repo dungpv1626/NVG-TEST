@@ -194,7 +194,7 @@ export function VersionPanel({
                   label="Nguyên nhân điều chỉnh"
                   required
                   className="sm:col-span-2"
-                  hint="Vì sao phải ra bản mới — bắt buộc từ phiên bản thứ hai trở đi (NEN-05)."
+                  hint="Vì sao phải ra bản mới — bắt buộc từ phiên bản thứ hai trở đi."
                 >
                   <textarea
                     value={form.changeReason}

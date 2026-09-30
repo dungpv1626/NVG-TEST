@@ -410,7 +410,7 @@ export function EntityTable<T extends EntityRow>({
                   {/* Hai cột cố định còn lại đi cùng nhau ở chân thẻ. */}
                   <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-fg-subtle">
                     <span>{row.responsiblePerson ?? 'Chưa phân công'}</span>
-                    {row.deadline && (
+                    {row.deadline && row.status !== 'completed' && (
                       <span
                         className={cn(
                           row.status === 'overdue' && 'font-medium text-status-overdue',
@@ -521,7 +521,7 @@ export function EntityTable<T extends EntityRow>({
                     <StatusLozenge status={row.status} />
                   </td>
                   <td className="px-4 py-3">
-                    {row.deadline ? (
+                    {row.deadline && row.status !== 'completed' ? (
                       <span
                         className={cn(
                           row.status === 'overdue' && 'font-medium text-status-overdue',
