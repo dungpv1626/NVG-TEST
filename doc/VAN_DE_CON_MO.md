@@ -15,8 +15,6 @@
 
 ### Tích hợp, mã hoá, đơn giá
 
-- **#4 — Bộ mã vật tư / công trình / nhà cung cấp** thống nhất — **ĐÃ CÓ BẢN ĐỀ XUẤT 20/09/2026, chờ Haan duyệt**
-  → Haan giao đội triển khai tự đề xuất. Bản đề xuất đầy đủ: **`doc/BO_MA.md`** — công trình `NVC-CT-2026-0001`, vật tư `THEP-ONG-D49X2.0` (theo KHO-02), nhà cung cấp `NCC-00001`. Nguyên tắc nền: bảng giao dịch mang pháp nhân, **bảng dùng chung thì không** (`materials`/`suppliers`/`customers` không có `company_id`). Chưa áp vào mã nguồn; mục 6 của tài liệu đó liệt kê đúng những gì sẽ đổi khi duyệt, kèm ba câu hỏi ngắn cần Haan xác nhận
 - **#3 — `unit_prices` dùng chung DA/TK/MH?**
   → Cần xác nhận NVO có cần bảng đơn giá riêng không (BSD 5). Đang triển khai DÙNG CHUNG, tách sẵn theo `company_id`
 
@@ -145,6 +143,8 @@ doanh NVS đang phải dùng chung vai trò `SX` (CLAUDE.md 6.5 mục 6).
 
 ## Đã chốt (giữ để tra cứu)
 
+- ~~**#4 — Bộ mã vật tư / công trình / nhà cung cấp**~~ — **ĐÃ CHỐT VÀ ĐÃ ÁP 30/09/2026**
+  → Haan giao đội triển khai tự chốt, không chờ NVG. **`doc/BO_MA.md`**, migration `0132`: khách hàng `KH-00001` và nhà cung cấp `NCC-00001` (danh mục chung, không pháp nhân), tài sản `NVC-TS-2026-0001`, công trình giữ `NVC-CT-2026-0001`, vật tư theo KHO-02. CSDL cấp mã lúc ghi; người dùng không tự đặt được
 - ~~**Khảo sát Xưởng giàn giáo (NVS) + Chỉ huy công trường**~~ — **ĐÃ CÓ 02/09/2026**
   → Hai phiếu ở `doc/khao-sat/HoSo_KhaoSat_NVG_full.md`. Bốn giả định đã được thay bằng câu trả lời thật (migration 0105/0106). Phần phiếu để trống chuyển thành các dòng **Xưởng** và **Công trường** bên trên
 - ~~**Xưởng — catalogue sản phẩm giàn giáo**~~ — **CÓ MỘT PHẦN 05/09/2026**

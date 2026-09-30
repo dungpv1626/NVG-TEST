@@ -65,8 +65,9 @@ export function SupplierListPage() {
     const form = new FormData(event.currentTarget);
     try {
       await save.mutateAsync({
+        // Không gửi mã: CSDL cấp `NCC-{5 số}` lúc ghi (migration 0132). Nhóm hàng không nằm
+        // trong mã vì một nhà cung cấp bán nhiều nhóm và nhóm đổi được — nó ở cột `category`.
         values: {
-          code: String(form.get('code') ?? '').trim(),
           name: String(form.get('name') ?? '').trim(),
           category: String(form.get('category') ?? '').trim() || null,
           supplier_class: (form.get('supplier_class') as SupplierClass) ?? 'du_phong',
@@ -112,10 +113,12 @@ export function SupplierListPage() {
             </p>
           )}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Field label="Mã nhà cung cấp" required>
-              <Input name="code" required maxLength={40} placeholder="NCC-THEP-001" />
-            </Field>
-            <Field label="Tên nhà cung cấp" required className="lg:col-span-2">
+            <Field
+              label="Tên nhà cung cấp"
+              required
+              hint="Mã nhà cung cấp do hệ thống cấp khi lưu."
+              className="lg:col-span-3"
+            >
               <Input name="name" required />
             </Field>
             <Field label="Nhóm hàng cung cấp" hint="Thép, bê tông, cốp pha, thiết bị điện…">

@@ -979,7 +979,6 @@ export function useCreateAsset() {
     Error,
     {
       companyId: string;
-      code?: string | null;
       name: string;
       serialNumber?: string | null;
       category?: string | null;
@@ -994,7 +993,7 @@ export function useCreateAsset() {
         .from('assets')
         .insert({
           company_id: input.companyId,
-          code: input.code?.trim() || null,
+          // Không gửi mã: CSDL cấp `{PHÁP NHÂN}-TS-{NĂM}-{4 số}` lúc ghi (migration 0132).
           name: input.name.trim(),
           serial_number: input.serialNumber?.trim() || null,
           category: input.category?.trim() || null,
