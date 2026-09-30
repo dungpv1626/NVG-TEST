@@ -63,3 +63,6 @@ kb/out/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+
+# Bản sao lưu CSDL demo trước khi ghi (pg_dump) — có dữ liệu thật của bản công khai.
+/.sao-luu/

@@ -2,14 +2,16 @@
  * Nạp dữ liệu demo — `npm run db:demo-data` (Supabase tại máy) · `npm run db:demo-data:demo`
  * (bản chạy thử / demo trên cloud, bắt buộc kèm `--confirm=<mã project>`).
  *
- * Chỉ CỘNG THÊM, không xoá: kịch bản nào đã có (nhận ra bằng tên hồ sơ gốc) thì bỏ qua. Muốn
- * làm lại từ đầu trên máy: `npx supabase db reset` → `npm run db:migrate && npm run db:seed`.
- * Không có lệnh xoá cho bản demo — cố ý.
+ * Mặc định chỉ CỘNG THÊM: kịch bản nào đã có (nhận ra bằng tên hồ sơ gốc) thì bỏ qua.
+ *   --remove              gỡ đúng dữ liệu do trình nạp tạo (theo gốc, một giao dịch), rồi nạp lại
+ *   --compact-sequences   đưa bộ đếm số thứ tự về số lớn nhất đang dùng trước khi nạp
+ *   --no-load             chỉ gỡ / đưa bộ đếm, không nạp
  *
  * Mọi lượt ghi đi qua đúng hàm nghiệp vụ, bằng đúng tài khoản seed của vai trò đó.
  */
 
 import { DB_TARGET, DEMO_PROJECT_REF } from '../env';
+import { compactSequences, removeDemoData } from './remove';
 import { loadNvc } from './scenario-nvc';
 import { loadNvs } from './scenario-nvs';
 
@@ -37,6 +39,18 @@ async function main() {
       `Nạp lên bản demo phải xác nhận tường minh: thêm --confirm=${DEMO_PROJECT_REF}. Diễn tập trên máy trước.`,
     );
   }
+
+  if (args.includes('--remove')) {
+    const counts = await removeDemoData();
+    const removed = Object.entries(counts).filter(([, n]) => n > 0);
+    console.log('Đã gỡ:', removed.map(([k, n]) => `${k} ${n}`).join(', ') || 'không có gì');
+  }
+  if (args.includes('--compact-sequences')) {
+    console.log(
+      `Đưa bộ đếm số thứ tự về số lớn nhất đang dùng: ${await compactSequences()} bộ đếm.`,
+    );
+  }
+  if (args.includes('--no-load')) return;
 
   for (const [key, scenario] of Object.entries(SCENARIOS) as [
     ScenarioKey,

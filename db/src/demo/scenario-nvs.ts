@@ -9,6 +9,15 @@
 import { ACCOUNTS, check, companyId, day, one, signIn } from './client';
 import { clean } from './names';
 
+/**
+ * Mã lô do trình nạp đặt. Lệnh gỡ nhận lô của trình nạp bằng ĐÚNG mã này (và các lô tách ra
+ * từ nó, mang mã gốc làm tiền tố) — KHÔNG bằng tiền tố chung `NVS-GIANGIAO-`, vì lô người dùng
+ * nhập tay cũng mang tiền tố đó (sự cố 30/09/2026: gỡ nhầm ba lô có sẵn, đã khôi phục).
+ */
+export function demoLotCode(materialCode: string): string {
+  return `NVS-${materialCode}-L2609`;
+}
+
 export const NVS_FIRST_RENTAL_CUSTOMER = clean('Công ty CP Xây dựng Đông Đô');
 
 const MATERIALS = [
@@ -34,6 +43,9 @@ const MATERIALS = [
     rate: 600,
   },
 ] as const;
+
+/** Vật tư mà trình nạp đặt lô — lệnh gỡ dựng mã lô từ đây. */
+export const DEMO_LOT_MATERIALS: readonly string[] = MATERIALS.map((m) => m.code);
 
 export async function loadNvs(): Promise<'created' | 'skipped'> {
   const kho = await signIn(ACCOUNTS.kho);
@@ -75,7 +87,7 @@ export async function loadNvs(): Promise<'created' | 'skipped'> {
       `nhập lô ${m.code}`,
       await kho.from('scaffolding_assets').insert({
         company_id: nvs,
-        asset_code: `NVS-${m.code}-L2609`,
+        asset_code: demoLotCode(m.code),
         material_id: id,
         quantity: m.lot,
         condition: 'con_dung_duoc',
