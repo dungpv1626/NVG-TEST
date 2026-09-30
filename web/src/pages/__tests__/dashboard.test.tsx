@@ -193,7 +193,7 @@ describe('Dashboard — nói thật về dữ liệu (PRD BC-06)', () => {
   it('liệt kê thẳng phần chỉ số CHƯA có, thay vì dựng thẻ rỗng', () => {
     grantView('CRM');
     renderWithApp(<DashboardPage />, { route: '/dashboard' });
-    expect(screen.getByText('Phần chưa có trên Dashboard')).toBeInTheDocument();
+    expect(screen.getByText('Nguồn số liệu')).toBeInTheDocument();
     expect(screen.getByText(/Tồn kho vật tư/)).toBeInTheDocument();
   });
 

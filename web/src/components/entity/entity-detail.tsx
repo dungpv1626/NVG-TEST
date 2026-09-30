@@ -140,7 +140,9 @@ export function EntityDetail({
                   Người chịu trách nhiệm:{' '}
                   <span className="text-fg">{responsiblePerson ?? 'Chưa phân công'}</span>
                 </span>
-                {deadline && (
+                {/* Hồ sơ đã xong thì thời hạn không còn là việc phải làm — «Còn 5 ngày» trên một
+                    đơn đã giao đủ đọc như còn nợ việc. */}
+                {deadline && status !== 'completed' && (
                   <span className={cn(status === 'overdue' && 'font-medium text-status-overdue')}>
                     {formatDeadline(deadline)}
                   </span>

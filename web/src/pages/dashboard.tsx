@@ -722,11 +722,11 @@ function DataCompletenessNote() {
         <Info className="size-4" aria-hidden />
       </span>
       <div className="min-w-0">
-        <h2 className="text-md font-bold tracking-tight">Phần chưa có trên Dashboard</h2>
+        <h2 className="text-md font-bold tracking-tight">Nguồn số liệu</h2>
         <p className="mt-1 max-w-3xl text-xs leading-relaxed text-fg-subtle">
-          Tồn kho vật tư và báo cáo tổng hợp toàn NVG truy ngược xuống từng pháp nhân/phòng ban chưa
-          có trên Dashboard. Các chỉ số đang hiển thị lấy trực tiếp từ hồ sơ nghiệp vụ, không phải
-          số liệu mẫu.
+          Mọi chỉ số trên Dashboard lấy trực tiếp từ hồ sơ nghiệp vụ, không phải số liệu mẫu. Tồn
+          kho vật tư xem ở phân hệ Kho; báo cáo NVG Group tách theo phòng ban chưa có trên
+          Dashboard.
         </p>
       </div>
     </section>
