@@ -116,7 +116,7 @@ Mật khẩu chung của tài khoản demo: xem `db/src/seed/data.ts` (`SEED_PAS
 | F-04 | Tổng Giám đốc | Hộp thư Phê duyệt | Có hồ sơ chờ; duyệt xong hồ sơ biến khỏi hộp thư | | |
 | F-05 | Người lập đề nghị | Tự duyệt hồ sơ của mình | Không có nút / bị từ chối | | |
 | F-07 | Kế toán | Nhà Việt Steel → Kế toán → **Thuê giàn giáo**, nhóm Đang cho thuê | Đông Đô: biên bản đã chốt 7.149.600, đã thành phải thu 7.149.600 (sau khi Xưởng ký G-08), cọc 50.000.000; không có nút tất toán vì khách còn giữ giáo | | |
-| F-08 | Kế toán | Công nợ → Phải thu | Có khoản «Tiền thuê giàn giáo — hợp đồng NVS-HDT-2026-0001, biên bản thu hồi NVS-BBTH-2026-0001», 7.149.600 đồng | | |
+| F-08 | Kế toán | Công nợ → Phải thu | Có khoản «Tiền thuê giàn giáo — hợp đồng NVS-HDT-2026-0001, biên bản thu hồi NVS-BBTH-2026-0002» (mã trên demo), 7.149.600 đồng | | |
 
 ## G. NVS — cho thuê giàn giáo
 
@@ -128,7 +128,7 @@ Mật khẩu chung của tài khoản demo: xem `db/src/seed/data.ts` (`SEED_PAS
 | G-04 | Kho | Giàn giáo | Lô tại kho, lô đang cho thuê, lô hỏng chờ sửa tách riêng | | |
 | G-05 | Xưởng NVS | Hợp đồng Đông Đô | Cột «Còn ở khách»: giáo nêm 246, mâm sàn 120, kích U 300; «Tiền thuê đã chốt (các đợt đã trả)» 7.149.600 đồng | | |
 | G-06 | Tổng Giám đốc | Báo cáo → Tổng quan tài chính, kỳ Tháng này | Doanh thu tháng 9 có 7.149.600 đồng tiền thuê Đông Đô ngày 27/09 dù hợp đồng chưa trả hết | | |
-| G-07 | Xưởng NVS | Hợp đồng Đông Đô → tab **Biên bản thu hồi** | Biên bản NVS-BBTH-2026-0001 ngày 27/09/2026, «Chờ ký hai bên», hai dòng hàng (giáo nêm 150 đạt + 4 hư hỏng, mâm sàn 80), cộng 7.149.600 đồng | | |
+| G-07 | Xưởng NVS | Hợp đồng Đông Đô → tab **Biên bản thu hồi** | Biên bản ngày 27/09/2026 (trên demo mã NVS-BBTH-2026-0002; 0001 là hợp đồng cũ trả hết tháng 2), «Chờ ký hai bên», hai dòng hàng (giáo nêm 150 đạt + 4 hư hỏng, mâm sàn 80), cộng 7.149.600 đồng | | |
 | G-08 | Xưởng NVS (điện thoại) | **Ký biên bản** → ghi người đại diện → hai bên ký bằng ngón tay → Xác nhận | Biên bản «Đã ký hai bên», hiện hai chữ ký, không còn nút ký; Kế toán thấy khoản phải thu (F-08) | | |
 | G-09 | Xưởng NVS | Thu hồi thêm một đợt | Sau khi lưu tự sang tab Biên bản thu hồi, khung ký của biên bản mới mở sẵn | | |
 | G-10 | Xưởng NVS | **In biên bản**; ký bằng **Ảnh biên bản giấy đã ký** | Bản in có bảng hàng và ô ký hai bên; ảnh đính vào hiện trong biên bản đã ký | | |
