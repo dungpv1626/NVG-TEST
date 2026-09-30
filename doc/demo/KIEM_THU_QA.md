@@ -108,6 +108,7 @@ Mật khẩu chung của tài khoản demo: xem `db/src/seed/data.ts` (`SEED_PAS
 | F-01 | Kế toán | Đề nghị thanh toán | Đợt 1 tổ đội Hùng Cường đã chi; đợt 2 đang ở bước Tài chính kiểm | | |
 | F-02 | Giám đốc Tài chính | Duyệt bước kiểm đợt 2 | Hồ sơ sang Hộp thư phê duyệt đúng hạn mức | | |
 | F-03 | Kế toán | Công nợ phải thu | Hưng Thịnh: 1,3 tỷ, đã thu 800 triệu, còn 500 triệu | | |
+| F-04 | Kế toán | Đơn hàng thép (đã giao đủ) → tab Chứng từ → **Lập đề nghị thanh toán** | Biểu mẫu điền sẵn nội dung, 421.740.000 đồng, Thép Đại Phát, bộ phận Mua hàng; lưu xong đơn hàng liệt kê đề nghị vừa lập. Ghi đã chi: chi phí thực tế của mã VAT_TU KHÔNG tăng thêm (đã tính lúc nhận hàng) | | |
 | F-04 | Tổng Giám đốc | Hộp thư Phê duyệt | Có hồ sơ chờ; duyệt xong hồ sơ biến khỏi hộp thư | | |
 | F-05 | Người lập đề nghị | Tự duyệt hồ sơ của mình | Không có nút / bị từ chối | | |
 
@@ -173,3 +174,5 @@ Phát hiện khi chụp ảnh cho hướng dẫn sử dụng; tester kiểm lạ
 | L-11 | Chi tiết và danh sách mọi hồ sơ | Hồ sơ Hoàn thành vẫn ghi «Còn N ngày» | Hồ sơ hoàn thành không đếm thời hạn | |
 | L-12 | Dashboard Mua hàng | Không có thẻ nào về mua hàng | Thẻ Đề nghị mua, dòng «Đã duyệt, chờ lập đơn đặt hàng» | |
 | L-13 | Báo cáo, nhà cung cấp, biểu mẫu | Chữ hiển thị lộ mã tài liệu nội bộ («— BC-01», «(MH-08)», «PRD Mục 2.2») | Gỡ; phép thử canh | |
+| L-14 | Chi tiết đề nghị chi, chi tiết hồ sơ có thông báo phía trên | Phần đầu trang đè mất nửa dưới dải bước duyệt / thông báo | Đầu trang chừa đúng chỗ cho phần phía trên | |
+| L-15 | Đơn đặt hàng → Chứng từ | Kế toán phải lập tay đề nghị thanh toán, không gắn mã đơn → ghi đã chi làm công trình bị cộng chi phí hai lần | Nút «Lập đề nghị thanh toán» gắn mã đơn, điền sẵn; phép thử CSDL | |
