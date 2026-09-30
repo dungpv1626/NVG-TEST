@@ -28,7 +28,7 @@ Hệ thống Phần mềm Quản trị Nhà Việt Group · theo dõi, phê duy�
 | Theo dõi công trường: đề nghị vật tư đang kẹt ở đâu | **Theo dõi đề nghị** | Khi cần |
 | Sửa thời hạn xử lý và hạn mức phê duyệt | **Quản trị hệ thống** → Hạn mức phê duyệt / Thời hạn xử lý (chỉ Tổng Giám đốc) | Khi thay đổi quy chế |
 
-## 2. Chọn pháp nhân: từng công ty hay toàn NVG
+## 2. Chọn pháp nhân: từng công ty hay NVG Group
 
 Ô chọn ở **góc trên bên trái** quyết định số liệu của pháp nhân nào hiện trên mọi màn hình:
 

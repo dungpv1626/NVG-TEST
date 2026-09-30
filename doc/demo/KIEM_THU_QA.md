@@ -164,7 +164,12 @@ Phát hiện khi chụp ảnh cho hướng dẫn sử dụng; tester kiểm lạ
 | L-02 | Chi tiết đề nghị mua (mọi vai trò) | Báo «Có lỗi xảy ra» — truy vấn nhúng công trình hai lần | Tách truy vấn danh sách / chi tiết; phép thử canh | |
 | L-03 | Dashboard | Thẻ Dòng tiền hiện «0 đồng» khi chưa có kế hoạch dòng tiền | Hiện «Chưa đủ dữ liệu — Kế toán chưa lập kế hoạch dòng tiền cho kỳ này» | |
 | L-04 | Dashboard, Ngân sách công trình | Câu chữ lỗi thời («hiệu quả kinh doanh chưa có», «các cột còn bằng 0 vì thuộc Giai đoạn 2») | Viết lại đúng hiện trạng | |
-| L-05 | Dashboard | Số chỉ số quá to (`text-3xl font-extrabold`) | Cỡ vừa `text-2xl font-semibold`, một chỗ khai báo | |
+| L-05 | Dashboard | Số chỉ số quá to (`text-3xl font-extrabold`) | Cỡ vừa `text-xl font-semibold` (20px), một chỗ khai báo | |
 | L-06 | Chi tiết công trình (điện thoại) | Phần đầu trang dính chiếm gần nửa màn hình | Chỉ dính trên máy tính; điện thoại cuộn đi cùng nội dung | |
 | L-07 | Chi tiết đề nghị mua (điện thoại) | Bảng mặt hàng 8 cột phải cuộn ngang, cột Thành tiền khuất | Thẻ từng mặt hàng trên điện thoại | |
 | L-08 | Thanh thao tác nhanh công trường | Nhãn xuống dòng lệch trái | Canh giữa, giãn dòng gọn | |
+| L-09 | Hủy đề nghị / đơn hàng, trượt thầu, mất cơ hội, mở lại kỳ… (20 thao tác) | Hộp hỏi lý do của trình duyệt: nút OK/Cancel tiếng Anh, ngày ký phải gõ yyyy-mm-dd | Hộp thoại tiếng Việt nói rõ hệ quả, báo trống tại chỗ, ô ngày dd/mm/yyyy | |
+| L-10 | Chi tiết đề nghị mua → Báo giá | Bảng so sánh 12 cột phải cuộn ngang, cột Trạng thái và nút chọn khuất | Mỗi nhà cung cấp một cột, tiêu chí theo dòng; nhà đã chọn tô nền | |
+| L-11 | Chi tiết và danh sách mọi hồ sơ | Hồ sơ Hoàn thành vẫn ghi «Còn N ngày» | Hồ sơ hoàn thành không đếm thời hạn | |
+| L-12 | Dashboard Mua hàng | Không có thẻ nào về mua hàng | Thẻ Đề nghị mua, dòng «Đã duyệt, chờ lập đơn đặt hàng» | |
+| L-13 | Báo cáo, nhà cung cấp, biểu mẫu | Chữ hiển thị lộ mã tài liệu nội bộ («— BC-01», «(MH-08)», «PRD Mục 2.2») | Gỡ; phép thử canh | |
