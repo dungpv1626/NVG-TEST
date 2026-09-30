@@ -32,6 +32,13 @@ export const DEMO_WAREHOUSES = ['NVC-KHO-PNA'];
  */
 const DEMO_LOT_PATTERNS = DEMO_LOT_MATERIALS.map((code) => `${demoLotCode(code)}%`);
 
+/**
+ * Gốc danh mục (khách hàng, nhà cung cấp, vật tư) chỉ nhận khi do TÀI KHOẢN SEED tạo — trình nạp
+ * đăng nhập bằng chúng. Nhận theo tên thôi thì một khách hàng thật trùng tên sẽ bị xoá cùng mọi
+ * hợp đồng, công nợ của họ.
+ */
+const SEED_ACCOUNT_DOMAIN = '%@nhavietgroup.test';
+
 export async function removeDemoData(): Promise<Record<string, number>> {
   const { sql } = createConnection();
   const counts: Record<string, number> = {};
@@ -43,9 +50,11 @@ export async function removeDemoData(): Promise<Record<string, number>> {
 
       // --- Tập id theo gốc -----------------------------------------------------------------
       await tx`CREATE TEMP TABLE g_customers ON COMMIT DROP AS
-        SELECT id FROM customers WHERE name = ANY(${DEMO_CUSTOMERS})`;
+        SELECT id FROM customers WHERE name = ANY(${DEMO_CUSTOMERS})
+          AND created_by IN (SELECT id FROM users WHERE email LIKE ${SEED_ACCOUNT_DOMAIN})`;
       await tx`CREATE TEMP TABLE g_suppliers ON COMMIT DROP AS
-        SELECT id FROM suppliers WHERE name = ANY(${DEMO_SUPPLIERS})`;
+        SELECT id FROM suppliers WHERE name = ANY(${DEMO_SUPPLIERS})
+          AND created_by IN (SELECT id FROM users WHERE email LIKE ${SEED_ACCOUNT_DOMAIN})`;
       await tx`CREATE TEMP TABLE g_opps ON COMMIT DROP AS
         SELECT id FROM opportunities WHERE name = ${NVC_OPPORTUNITY}
            OR customer_id IN (SELECT id FROM g_customers)`;
@@ -80,11 +89,16 @@ export async function removeDemoData(): Promise<Record<string, number>> {
       await tx`CREATE TEMP TABLE g_warehouses ON COMMIT DROP AS
         SELECT id FROM warehouses WHERE code = ANY(${DEMO_WAREHOUSES})
            OR construction_site_id IN (SELECT id FROM g_sites)`;
+      await tx`CREATE TEMP TABLE g_accepts ON COMMIT DROP AS
+        SELECT id FROM acceptance_records WHERE construction_site_id IN (SELECT id FROM g_sites)`;
+      await tx`CREATE TEMP TABLE g_deliveries ON COMMIT DROP AS
+        SELECT id FROM deliveries WHERE purchase_order_id IN (SELECT id FROM g_pos)`;
       await tx`CREATE TEMP TABLE g_all ON COMMIT DROP AS
         SELECT id FROM g_opps UNION SELECT id FROM g_bids UNION SELECT id FROM g_contracts
         UNION SELECT id FROM g_sites UNION SELECT id FROM g_prs UNION SELECT id FROM g_pos
         UNION SELECT id FROM g_pays UNION SELECT id FROM g_recv UNION SELECT id FROM g_rentals
-        UNION SELECT id FROM g_estimates`;
+        UNION SELECT id FROM g_estimates UNION SELECT id FROM g_accepts
+        UNION SELECT id FROM g_deliveries`;
 
       // --- Xoá, con trước cha --------------------------------------------------------------
       await del(
@@ -153,6 +167,7 @@ export async function removeDemoData(): Promise<Record<string, number>> {
       await del(
         'vật tư',
         tx`DELETE FROM materials WHERE code = ANY(${DEMO_MATERIALS})
+        AND created_by IN (SELECT id FROM users WHERE email LIKE ${SEED_ACCOUNT_DOMAIN})
         AND NOT EXISTS (SELECT 1 FROM inventory_items i WHERE i.material_id = materials.id)
         AND NOT EXISTS (SELECT 1 FROM scaffolding_assets a WHERE a.material_id = materials.id)`,
       );
@@ -167,8 +182,12 @@ export async function removeDemoData(): Promise<Record<string, number>> {
  * Đưa bộ đếm số thứ tự về đúng số lớn nhất CÒN TỒN TẠI.
  *
  * Bộ kiểm thử từng chạy trên CSDL này tạo rồi xoá cứng hàng nghìn hồ sơ, nên bộ đếm đứng ở
- * «đề nghị mua số 1895» trong khi số hồ sơ thật chỉ vài cái. Chỉ HẠ tới số đang dùng, không
- * bao giờ thấp hơn — mã đã cấp là bất biến và không được cấp trùng.
+ * «đề nghị mua số 1895» trong khi số hồ sơ thật chỉ vài cái. Chỉ HẠ tới số lớn nhất đang có
+ * trong bảng, không thấp hơn — mã đang dùng không bao giờ bị cấp trùng.
+ *
+ * Giới hạn có chủ đích: mã của hồ sơ ĐÃ XOÁ CỨNG sẽ được cấp lại. Chỉ chấp nhận được vì hồ sơ đó
+ * là dữ liệu kiểm thử / demo không còn ai tham chiếu. KHÔNG chạy lệnh này trên CSDL có dữ liệu
+ * thật: mã in trên giấy tờ, gửi qua Zalo vẫn còn ở ngoài hệ thống dù dòng đã xoá.
  */
 export async function compactSequences(): Promise<number> {
   const { sql } = createConnection();

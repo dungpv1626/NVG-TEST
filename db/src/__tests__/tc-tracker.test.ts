@@ -173,6 +173,14 @@ describeDb('TC-10 — theo dõi đề nghị từ công trường và «Thúc»'
     expect(await trackerRow(vanPhong, requestB)).toBeDefined();
   });
 
+  it('vai trò chỉ xem Thi công, không xem Mua hàng (Nhân sự) KHÔNG đọc đề nghị mua qua màn theo dõi', async () => {
+    // Bảng gốc chỉ cho vai trò xem MH; hàm SECURITY DEFINER không được rộng hơn bảng gốc.
+    const nhanSu = await signInAs(ACCOUNTS.nhanSu);
+    expect(await trackerRow(nhanSu, requestA)).toBeUndefined();
+    const { data } = await nhanSu.from('purchase_requests').select('id').eq('id', requestA);
+    expect(data).toEqual([]);
+  });
+
   it('chờ duyệt thì người giữ là người có hạn mức đủ, không gồm chính người gửi', async () => {
     const row = await trackerRow(chiHuy, requestA);
     expect(row!.stage).toBe('cho_duyet');

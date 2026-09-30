@@ -82,6 +82,7 @@ describeDb('TC-13 — nghiệm thu có danh mục kiểm tra (0136)', () => {
       .insert({
         company_id: fixture.companyId,
         name: `${TEST_PREFIX} Nghiệm thu cốt thép ${Date.now()}`,
+        acceptance_type: 'noi_bo',
         items: [
           {
             key: 'kich_thuoc',
@@ -146,6 +147,29 @@ describeDb('TC-13 — nghiệm thu có danh mục kiểm tra (0136)', () => {
       p_results: results([{}, { result: 'khong_dat' }]),
     });
     expect(error!.message).toContain('ghi rõ tồn tại');
+  });
+
+  it('danh mục soạn cho nghiệm thu nội bộ không dùng được cho nghiệm thu với chủ đầu tư', async () => {
+    const { error } = await chiHuy.rpc('record_acceptance_with_checklist', {
+      p_site_id: fixture.siteA,
+      p_acceptance_type: 'khach_hang',
+      p_stage_name: `${TEST_PREFIX} Sai loại danh mục`,
+      p_checklist_id: checklistId,
+      p_results: results(),
+    });
+    expect(error!.message).toContain('loại nghiệm thu khác');
+  });
+
+  it('mục thiếu kết quả bị từ chối bằng câu dễ hiểu, không phải lỗi CSDL', async () => {
+    const { error } = await chiHuy.rpc('record_acceptance_with_checklist', {
+      p_site_id: fixture.siteA,
+      p_acceptance_type: 'noi_bo',
+      p_stage_name: `${TEST_PREFIX} Thiếu kết quả`,
+      p_checklist_id: checklistId,
+      p_results: results([{}, { result: undefined }]),
+    });
+    expect(error).not.toBeNull();
+    expect(error!.message).not.toMatch(/null value|violates/i);
   });
 
   it('ảnh nằm dưới thư mục công trình khác bị từ chối', async () => {
