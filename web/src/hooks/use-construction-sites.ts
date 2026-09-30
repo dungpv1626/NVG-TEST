@@ -128,6 +128,25 @@ export function useSitesOfContract(contractId: string | undefined) {
 }
 
 /**
+ * Hợp đồng đã có công trình chưa — trả lời ĐÚNG cả với vai trò không xem được phân hệ Thi
+ * công (`contract_has_site`, 0144). `useSitesOfContract` rỗng với vai trò đó nên không dùng để
+ * quyết định hiện nút «Mở công trình». `null` = ngoài phạm vi / chưa biết.
+ */
+export function useContractHasSite(contractId: string | undefined) {
+  return useQuery<boolean | null, Error>({
+    queryKey: ['construction-sites', 'has-site', contractId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('contract_has_site', {
+        p_contract_id: contractId!,
+      });
+      if (error) throw new Error(error.message);
+      return (data as boolean | null) ?? null;
+    },
+    enabled: Boolean(contractId),
+  });
+}
+
+/**
  * Mở công trình từ hợp đồng đã ký (TC-01).
  *
  * KHÔNG có hook tạo công trình trắng: công trình phải gắn với hồ sơ sinh ra ngân sách của
