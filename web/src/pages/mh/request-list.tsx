@@ -25,6 +25,7 @@ interface RequestRow extends EntityRow {
   urgencyLabel: string;
   isUrgent: boolean;
   estimatedValue: string;
+  siteCode: string | null;
 }
 
 export function PurchaseRequestListPage() {
@@ -44,6 +45,7 @@ export function PurchaseRequestListPage() {
     urgencyLabel: PURCHASE_URGENCY_LABELS[r.urgency],
     isUrgent: r.urgency === 'gap',
     estimatedValue: r.estimated_value,
+    siteCode: r.site?.code ?? null,
   }));
 
   const { headerAction, emptyAction } = useCreateActions({
@@ -72,6 +74,13 @@ export function PurchaseRequestListPage() {
         emptyMessage={`${MODULE_EMPTY_STATES.MH} Đề nghị mua được lập từ công trường, từ gói thầu đang chuẩn bị, hoặc cho nhu cầu văn phòng.`}
         emptyAction={emptyAction}
         columns={[
+          {
+            key: 'site',
+            header: 'Công trình',
+            // Văn phòng cần biết đề nghị nào từ công trường — đó là đề nghị có người đang chờ
+            // hàng tại hiện trường (TC-09, TC-10).
+            render: (r) => r.siteCode ?? <span className="text-fg-subtle">Văn phòng</span>,
+          },
           { key: 'stage', header: 'Bước', render: (r) => r.stageLabel },
           {
             key: 'urgency',

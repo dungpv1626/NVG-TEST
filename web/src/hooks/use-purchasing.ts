@@ -161,12 +161,15 @@ export interface PurchaseRequestRecord {
   requested_by: string | null;
   created_at: string;
   requester: { full_name: string } | null;
+  /** Công trình gửi đề nghị — rỗng khi là nhu cầu văn phòng. */
+  site?: { code: string } | null;
 }
 
 const REQUEST_SELECT =
   'id, code, company_id, title, stage, urgency, needed_date, estimated_value, ' +
   'construction_site_id, cost_code, cost_group, requested_by, created_at, ' +
-  'requester:users!purchase_requests_requested_by_users_id_fk(full_name)';
+  'requester:users!purchase_requests_requested_by_users_id_fk(full_name), ' +
+  'site:construction_sites!purchase_requests_construction_site_id_construction_sites_id_fk(code)';
 
 export function usePurchaseRequests(options: { enabled?: boolean } = {}) {
   const scope = useCompanyScope();
