@@ -60,4 +60,20 @@ test('chụp màn hình Cho thuê giàn giáo', async ({ page }) => {
 
   await page.goto('/sx/lenh-san-xuat');
   await shot(page, '07-lenh-san-xuat');
+
+  /*
+   * Biên bản thu hồi (0145). Ảnh 08 (chờ ký) và 09 (khung ký) chụp lúc biên bản Đông Đô trên
+   * CSDL máy còn chưa ký; ký là thao tác không hoàn tác được, nên phép chụp này chỉ chụp lại
+   * trạng thái hiện có (10 — đã ký) và KHÔNG bấm ký.
+   */
+  await page.goto('/sx/tai-san-cho-thue');
+  await page
+    .getByRole('link', { name: /Đông Đô|NVS-HDT-2026-0001/ })
+    .first()
+    .click();
+  await page.waitForURL(/tai-san-cho-thue\/[0-9a-f-]{36}/);
+  await page.getByRole('tab', { name: /Biên bản thu hồi/ }).click();
+  await expect(page.getByText(/Biên bản NVS-BBTH/).first()).toBeVisible();
+  await page.waitForTimeout(1500);
+  await page.screenshot({ path: `${OUT}/10-bien-ban-da-ky.png` });
 });

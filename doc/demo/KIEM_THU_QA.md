@@ -102,7 +102,8 @@ Mật khẩu chung của tài khoản demo: xem `db/src/seed/data.ts` (`SEED_PAS
 | E-03 | Kho | Chứng từ kho | Phiếu nhập truy về phiếu giao nhận và đơn hàng | | |
 | E-04 | Kho | Đơn hàng thép → tab Giao nhận | Đợt giao đã nhập kho ghi «Đã nhập kho theo phiếu NVC-PN-2026-0001», không còn nút Nhập kho | | |
 | E-05 | Kho (điện thoại) | Quét mã `THEP-HINH-H200` | Tồn 6.000 kg ở kho Phố Nối A; thanh tab trên cùng cuộn ngang, chữ không đè nhau | | |
-| E-06 | Kho | Nhà Việt Steel → Giàn giáo | Cho thuê được 2.596; hỏng chờ sửa 4; Lập biên bản bắt buộc nguyên nhân | | |
+| E-06 | Kho | Nhà Việt Steel → Giàn giáo | Cho thuê được chỉ tính giáo đang ở kho (1.380 trên dữ liệu máy); hỏng chờ sửa 4; Lập biên bản bắt buộc nguyên nhân | | |
+| E-07 | Kho | Giàn giáo → **Xem sổ tại ngày** | Ghi mốc «Sổ ghi theo ngày từ …»; chọn một ngày đã qua (từ mốc) thì hiện sổ cuối ngày đó, chỉ xem, không có nút Lập biên bản; **Về sổ hiện tại** quay lại | | |
 
 ## F. Kế toán và phê duyệt
 
@@ -111,9 +112,11 @@ Mật khẩu chung của tài khoản demo: xem `db/src/seed/data.ts` (`SEED_PAS
 | F-01 | Kế toán | Đề nghị thanh toán | Đợt 1 tổ đội Hùng Cường đã chi; đợt 2 đang ở bước Tài chính kiểm | | |
 | F-02 | Giám đốc Tài chính | Duyệt bước kiểm đợt 2 | Hồ sơ sang Hộp thư phê duyệt đúng hạn mức | | |
 | F-03 | Kế toán | Công nợ phải thu | Hưng Thịnh: 1,3 tỷ, đã thu 800 triệu, còn 500 triệu | | |
-| F-04 | Kế toán | Đơn hàng thép (đã giao đủ) → tab Chứng từ → **Lập đề nghị thanh toán** | Biểu mẫu điền sẵn nội dung, 421.740.000 đồng, Thép Đại Phát, bộ phận Mua hàng; lưu xong đơn hàng liệt kê đề nghị vừa lập. Ghi đã chi: chi phí thực tế của mã VAT_TU KHÔNG tăng thêm (đã tính lúc nhận hàng) | | |
+| F-06 | Kế toán | Đơn hàng thép (đã giao đủ) → tab Chứng từ → **Lập đề nghị thanh toán** | Biểu mẫu điền sẵn nội dung, 421.740.000 đồng, Thép Đại Phát, bộ phận Mua hàng; lưu xong đơn hàng liệt kê đề nghị vừa lập. Ghi đã chi: chi phí thực tế của mã VAT_TU KHÔNG tăng thêm (đã tính lúc nhận hàng) | | |
 | F-04 | Tổng Giám đốc | Hộp thư Phê duyệt | Có hồ sơ chờ; duyệt xong hồ sơ biến khỏi hộp thư | | |
 | F-05 | Người lập đề nghị | Tự duyệt hồ sơ của mình | Không có nút / bị từ chối | | |
+| F-07 | Kế toán | Nhà Việt Steel → Kế toán → **Thuê giàn giáo**, nhóm Đang cho thuê | Đông Đô: biên bản đã chốt 7.149.600, đã thành phải thu 7.149.600 (sau khi Xưởng ký G-08), cọc 50.000.000; không có nút tất toán vì khách còn giữ giáo | | |
+| F-08 | Kế toán | Công nợ → Phải thu | Có khoản «Tiền thuê giàn giáo — hợp đồng NVS-HDT-2026-0001, biên bản thu hồi NVS-BBTH-2026-0001», 7.149.600 đồng | | |
 
 ## G. NVS — cho thuê giàn giáo
 
@@ -125,6 +128,10 @@ Mật khẩu chung của tài khoản demo: xem `db/src/seed/data.ts` (`SEED_PAS
 | G-04 | Kho | Giàn giáo | Lô tại kho, lô đang cho thuê, lô hỏng chờ sửa tách riêng | | |
 | G-05 | Xưởng NVS | Hợp đồng Đông Đô | Cột «Còn ở khách»: giáo nêm 246, mâm sàn 120, kích U 300; «Tiền thuê đã chốt (các đợt đã trả)» 7.149.600 đồng | | |
 | G-06 | Tổng Giám đốc | Báo cáo → Tổng quan tài chính, kỳ Tháng này | Doanh thu tháng 9 có 7.149.600 đồng tiền thuê Đông Đô ngày 27/09 dù hợp đồng chưa trả hết | | |
+| G-07 | Xưởng NVS | Hợp đồng Đông Đô → tab **Biên bản thu hồi** | Biên bản NVS-BBTH-2026-0001 ngày 27/09/2026, «Chờ ký hai bên», hai dòng hàng (giáo nêm 150 đạt + 4 hư hỏng, mâm sàn 80), cộng 7.149.600 đồng | | |
+| G-08 | Xưởng NVS (điện thoại) | **Ký biên bản** → ghi người đại diện → hai bên ký bằng ngón tay → Xác nhận | Biên bản «Đã ký hai bên», hiện hai chữ ký, không còn nút ký; Kế toán thấy khoản phải thu (F-08) | | |
+| G-09 | Xưởng NVS | Thu hồi thêm một đợt | Sau khi lưu tự sang tab Biên bản thu hồi, khung ký của biên bản mới mở sẵn | | |
+| G-10 | Xưởng NVS | **In biên bản**; ký bằng **Ảnh biên bản giấy đã ký** | Bản in có bảng hàng và ô ký hai bên; ảnh đính vào hiện trong biên bản đã ký | | |
 
 ## H. Dashboard và báo cáo
 
@@ -187,3 +194,7 @@ Phát hiện khi chụp ảnh cho hướng dẫn sử dụng; tester kiểm lạ
 | L-19 | Chi tiết hợp đồng thuê giàn giáo | Không có số còn ở khách; «Tổng tiền thuê» đọc như tiền thuê cả hợp đồng | Cột «Còn ở khách»; nhãn «Tiền thuê đã chốt (các đợt đã trả)» | |
 | L-20 | Chi tiết hợp đồng (vai trò Dự án – Đấu thầu) | Hợp đồng đã có công trình vẫn hiện nút chính «Mở công trình» (vai trò không xem được Thi công) | Hỏi CSDL «đã có công trình chưa» (0144); đã có thì ẩn nút | |
 | L-21 | Chi tiết hợp đồng | «Thời gian thực hiện 06/09/2026 — ?» | «— chưa ghi ngày kết thúc» | |
+| L-22 | Kho → Giàn giáo | «Cho thuê được» cộng cả giáo khách đang giữ (2.596) | Chỉ tính giáo mới / còn dùng được đang ở kho | |
+| L-23 | Kế toán → Công nợ, Thuê giàn giáo | Kế toán không đọc được danh mục khách hàng: tên khách hiện «—» | Nhóm xem tài chính có quyền Kế toán đọc được khách hàng (0145, chỉ đọc) | |
+| L-24 | Kế toán → Ghi nhận thu | Từ 0 giờ tới 7 giờ sáng, chọn ngày hôm nay bị báo «ngày ở tương lai» (CSDL so theo giờ UTC) | So theo ngày giờ Việt Nam (0145) | |
+| L-25 | Nhật ký công trường, nghiệm thu, bảo hành, giao nhận, biên bản giàn giáo, phân công, đơn giá | Từ 0 giờ tới 7 giờ sáng, ô ngày điền sẵn ngày HÔM QUA (lấy theo giờ UTC) | Lấy «hôm nay» theo giờ Việt Nam ở cả 10 chỗ; phép thử canh trong design-rules | |
