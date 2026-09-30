@@ -637,3 +637,361 @@ describeDb('SX — lệnh sản xuất (SX-01, cần xác nhận thêm)', () => 
     expect(error).toBeTruthy();
   });
 });
+
+/** Ảnh PNG 1×1 — đủ làm «chữ ký» cho phép thử tải tệp. */
+const TINY_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+  'base64',
+);
+
+async function uploadSignature(client: SupabaseClient, path: string) {
+  return client.storage
+    .from('rental-return-docs')
+    .upload(path, TINY_PNG, { contentType: 'image/png', upsert: false });
+}
+
+describeDb('SX — biên bản thu hồi ký hai bên, đối soát và tất toán với Kế toán (0145)', () => {
+  let fixture: Fixture;
+  let xuong: SupabaseClient;
+  let ketoan: SupabaseClient;
+
+  beforeAll(async () => {
+    fixture = await seedFixture();
+    xuong = await signInAs(ACCOUNTS.xuongNvs);
+    ketoan = await signInAs(ACCOUNTS.ketoan);
+  });
+
+  async function rentAndReturnAll(deposit: number) {
+    const { data: agreementId, error } = await xuong.rpc('create_rental_agreement', {
+      p_company_id: fixture.nvsCompanyId,
+      p_customer_id: fixture.customerId,
+      p_construction_site_id: null,
+      p_site_address: null,
+      p_start_date: '2026-05-01',
+      p_expected_end_date: '2026-05-31',
+      p_deposit_amount: deposit,
+      p_notes: `${TEST_PREFIX} biên bản thu hồi`,
+      p_items: [{ material_id: fixture.materialGiao, quantity: 10, daily_rate: 1000 }],
+    });
+    expect(error).toBeNull();
+    // 01/05 → 05/05 = 5 ngày × 10 × 1.000 = 50.000 đồng.
+    const returned = await xuong.rpc('return_rental_agreement', {
+      p_rental_agreement_id: agreementId,
+      p_actual_return_date: '2026-05-05',
+      p_items: [
+        {
+          material_id: fixture.materialGiao,
+          quantity_ok: 10,
+          quantity_damaged: 0,
+          quantity_lost: 0,
+          compensation_amount: 0,
+        },
+      ],
+    });
+    expect(returned.error).toBeNull();
+    const { data: rr } = await xuong
+      .from('rental_returns')
+      .select('id, code, signed_at, receivable_id')
+      .eq('rental_agreement_id', agreementId as string)
+      .single();
+    return { agreementId: agreementId as string, rentalReturn: rr! };
+  }
+
+  it('mỗi đợt trả là một biên bản có mã BBTH và dòng hàng của riêng đợt, chờ ký', async () => {
+    const { rentalReturn } = await rentAndReturnAll(0);
+    expect(rentalReturn.code).toMatch(/^NVS-BBTH-2026-\d{4}$/);
+    expect(rentalReturn.signed_at).toBeNull();
+
+    const { data: lines, error } = await xuong
+      .from('rental_return_items')
+      .select('material_id, quantity_ok, rental_days, daily_rate, revenue')
+      .eq('rental_return_id', rentalReturn.id);
+    expect(error).toBeNull();
+    expect(lines).toHaveLength(1);
+    expect(lines![0]!.rental_days).toBe(5);
+    expect(Number(lines![0]!.revenue)).toBe(50_000);
+  });
+
+  it('ký: thiếu chữ ký bị từ chối; tệp phải nằm dưới thư mục của đúng biên bản', async () => {
+    const { rentalReturn } = await rentAndReturnAll(0);
+
+    const missing = await xuong.rpc('sign_rental_return', {
+      p_rental_return_id: rentalReturn.id,
+      p_customer_representative: 'Nguyễn Văn Khách',
+    });
+    expect(missing.error).toBeTruthy();
+
+    // Không tải được tệp vào thư mục của một biên bản khác (không tồn tại).
+    const stray = await uploadSignature(xuong, `${crypto.randomUUID()}/chu-ky-khach/a.png`);
+    expect(stray.error).toBeTruthy();
+
+    // Đường dẫn trỏ vào tệp chưa tải lên thì không ký được.
+    const ghost = await xuong.rpc('sign_rental_return', {
+      p_rental_return_id: rentalReturn.id,
+      p_customer_representative: 'Nguyễn Văn Khách',
+      p_customer_signature_path: `${rentalReturn.id}/chu-ky-khach/khong-co.png`,
+      p_nvg_signature_path: `${rentalReturn.id}/chu-ky-nvg/khong-co.png`,
+    });
+    expect(ghost.error).toBeTruthy();
+  });
+
+  it('ký xong: biên bản khoá, Kế toán nhận đúng một khoản phải thu; Kế toán không ký thay được', async () => {
+    const { agreementId, rentalReturn } = await rentAndReturnAll(0);
+    const customerPath = `${rentalReturn.id}/chu-ky-khach/${crypto.randomUUID()}.png`;
+    const nvgPath = `${rentalReturn.id}/chu-ky-nvg/${crypto.randomUUID()}.png`;
+    expect((await uploadSignature(xuong, customerPath)).error).toBeNull();
+    expect((await uploadSignature(xuong, nvgPath)).error).toBeNull();
+
+    const byAccountant = await ketoan.rpc('sign_rental_return', {
+      p_rental_return_id: rentalReturn.id,
+      p_customer_representative: 'Nguyễn Văn Khách',
+      p_customer_signature_path: customerPath,
+      p_nvg_signature_path: nvgPath,
+    });
+    expect(byAccountant.error).toBeTruthy();
+
+    const signed = await xuong.rpc('sign_rental_return', {
+      p_rental_return_id: rentalReturn.id,
+      p_customer_representative: 'Nguyễn Văn Khách',
+      p_customer_signature_path: customerPath,
+      p_nvg_signature_path: nvgPath,
+    });
+    expect(signed.error).toBeNull();
+
+    const again = await xuong.rpc('sign_rental_return', {
+      p_rental_return_id: rentalReturn.id,
+      p_customer_representative: 'Người khác',
+      p_customer_signature_path: customerPath,
+      p_nvg_signature_path: nvgPath,
+    });
+    expect(again.error).toBeTruthy();
+
+    // Kế toán đọc được hợp đồng thuê và biên bản để đối soát (trước 0145 chỉ SX, CRM).
+    const { data: seen } = await ketoan
+      .from('rental_agreements')
+      .select('id')
+      .eq('id', agreementId);
+    expect(seen).toHaveLength(1);
+    const { data: bb } = await ketoan
+      .from('rental_returns')
+      .select('signed_at, customer_representative, receivable_id')
+      .eq('id', rentalReturn.id)
+      .single();
+    expect(bb!.signed_at).not.toBeNull();
+    expect(bb!.customer_representative).toBe('Nguyễn Văn Khách');
+
+    const { data: receivables } = await ketoan
+      .from('receivables_payables')
+      .select('id, direction, amount, customer_id, rental_return_id')
+      .eq('rental_agreement_id', agreementId);
+    expect(receivables).toHaveLength(1);
+    expect(receivables![0]!.id).toBe(bb!.receivable_id);
+    expect(receivables![0]!.direction).toBe('phai_thu');
+    expect(Number(receivables![0]!.amount)).toBe(50_000);
+    expect(receivables![0]!.customer_id).toBe(fixture.customerId);
+
+    // Không tải thêm tệp vào biên bản đã ký.
+    const late = await uploadSignature(xuong, `${rentalReturn.id}/bien-ban-giay/late.png`);
+    expect(late.error).toBeTruthy();
+
+    // Nội dung đã ký không đổi được, kể cả bằng kết nối trực tiếp (Backend Schema 3.5).
+    const { createConnection } = await import('../client');
+    const { sql } = createConnection();
+    try {
+      await expect(
+        sql`UPDATE rental_returns SET revenue = 1 WHERE id = ${rentalReturn.id}`,
+      ).rejects.toThrow(/đã ký/);
+    } finally {
+      await sql.end();
+    }
+  });
+
+  it('ảnh biên bản giấy đã ký thay được chữ ký trên màn hình', async () => {
+    const { rentalReturn } = await rentAndReturnAll(0);
+    const scan = `${rentalReturn.id}/bien-ban-giay/${crypto.randomUUID()}.png`;
+    expect((await uploadSignature(xuong, scan)).error).toBeNull();
+    const signed = await xuong.rpc('sign_rental_return', {
+      p_rental_return_id: rentalReturn.id,
+      p_customer_representative: 'Trần Thị Bên Thuê',
+      p_paper_scan_path: scan,
+    });
+    expect(signed.error).toBeNull();
+  });
+
+  it('tất toán: chỉ Kế toán, chỉ khi mọi biên bản đã ký; cọc cấn trừ phải thu, cọc thừa thành phải trả', async () => {
+    const { agreementId, rentalReturn } = await rentAndReturnAll(80_000);
+
+    const early = await ketoan.rpc('settle_rental_agreement', {
+      p_rental_agreement_id: agreementId,
+    });
+    expect(early.error?.message).toMatch(/chưa ký/);
+
+    const scan = `${rentalReturn.id}/bien-ban-giay/${crypto.randomUUID()}.png`;
+    expect((await uploadSignature(xuong, scan)).error).toBeNull();
+    expect(
+      (
+        await xuong.rpc('sign_rental_return', {
+          p_rental_return_id: rentalReturn.id,
+          p_customer_representative: 'Trần Thị Bên Thuê',
+          p_paper_scan_path: scan,
+        })
+      ).error,
+    ).toBeNull();
+
+    const byWorkshop = await xuong.rpc('settle_rental_agreement', {
+      p_rental_agreement_id: agreementId,
+    });
+    expect(byWorkshop.error).toBeTruthy();
+
+    const settled = await ketoan.rpc('settle_rental_agreement', {
+      p_rental_agreement_id: agreementId,
+    });
+    expect(settled.error).toBeNull();
+
+    const { data: agreement } = await ketoan
+      .from('rental_agreements')
+      .select('settled_at, settlement_deposit_offset, settlement_refund')
+      .eq('id', agreementId)
+      .single();
+    expect(agreement!.settled_at).not.toBeNull();
+    expect(Number(agreement!.settlement_deposit_offset)).toBe(50_000);
+    expect(Number(agreement!.settlement_refund)).toBe(30_000);
+
+    const { data: rows } = await ketoan
+      .from('receivables_payables')
+      .select('direction, amount, settled_amount')
+      .eq('rental_agreement_id', agreementId)
+      .order('direction');
+    expect(rows!.map((r) => [r.direction, Number(r.amount), Number(r.settled_amount)])).toEqual([
+      ['phai_thu', 50_000, 50_000],
+      ['phai_tra', 30_000, 0],
+    ]);
+
+    const twice = await ketoan.rpc('settle_rental_agreement', {
+      p_rental_agreement_id: agreementId,
+    });
+    expect(twice.error).toBeTruthy();
+
+    // Không tự đánh dấu tất toán bằng một câu UPDATE trần.
+    const { error: forge } = await xuong
+      .from('rental_agreements')
+      .update({ settled_at: new Date().toISOString() })
+      .eq('id', agreementId);
+    expect(forge).toBeTruthy();
+  });
+});
+
+describeDb('Kho — sổ giàn giáo tại một ngày (0146)', () => {
+  let fixture: Fixture;
+  let kho: SupabaseClient;
+
+  beforeAll(async () => {
+    fixture = await seedFixture();
+    kho = await signInAs(ACCOUNTS.kho);
+  });
+
+  interface LedgerRow {
+    material_id: string;
+    location_type: string;
+    condition: string;
+    rental_agreement_code: string | null;
+    quantity: string | number;
+  }
+
+  async function asOf(date: string): Promise<LedgerRow[]> {
+    const { data, error } = await kho.rpc('scaffolding_ledger_as_of', {
+      p_date: date,
+      p_company_id: fixture.nvsCompanyId,
+    });
+    expect(error).toBeNull();
+    return (data ?? []) as LedgerRow[];
+  }
+
+  const sum = (rows: LedgerRow[], pick: (r: LedgerRow) => boolean) =>
+    rows.filter(pick).reduce((s, r) => s + Number(r.quantity), 0);
+
+  it('ngày trước mốc mở sổ bị từ chối, không trả số ước lượng', async () => {
+    const { data: start } = await kho.rpc('scaffolding_ledger_start');
+    const before = new Date(`${start as string}T00:00:00Z`);
+    before.setUTCDate(before.getUTCDate() - 1);
+    const { error } = await kho.rpc('scaffolding_ledger_as_of', {
+      p_date: before.toISOString().slice(0, 10),
+    });
+    expect(error?.message).toMatch(/bắt đầu ghi/);
+  });
+
+  it('xuất cho thuê và thu hồi ghi vào sổ theo ngày nghiệp vụ của chứng từ', async () => {
+    const material = fixture.materialGiao2;
+    const { data: agreementId, error } = await kho.rpc('create_rental_agreement', {
+      p_company_id: fixture.nvsCompanyId,
+      p_customer_id: fixture.customerId,
+      p_construction_site_id: null,
+      p_site_address: null,
+      p_start_date: '2090-01-10',
+      p_expected_end_date: '2090-01-31',
+      p_deposit_amount: 0,
+      p_notes: `${TEST_PREFIX} sổ theo ngày`,
+      p_items: [{ material_id: material, quantity: 5, daily_rate: 1000 }],
+    });
+    expect(error).toBeNull();
+    const { data: agreement } = await kho
+      .from('rental_agreements')
+      .select('code')
+      .eq('id', agreementId as string)
+      .single();
+    const code = agreement!.code as string;
+
+    // Ghi nhận hôm nay nhưng hàng về kho ngày 15/01/2090 — sổ ngày 14 phải còn thấy ở khách.
+    const returned = await kho.rpc('return_rental_agreement', {
+      p_rental_agreement_id: agreementId,
+      p_actual_return_date: '2090-01-15',
+      p_items: [
+        {
+          material_id: material,
+          quantity_ok: 2,
+          quantity_damaged: 1,
+          quantity_lost: 0,
+          compensation_amount: 0,
+        },
+      ],
+    });
+    expect(returned.error).toBeNull();
+
+    const atRenter = (rows: LedgerRow[]) =>
+      sum(rows, (r) => r.rental_agreement_code === code && r.location_type === 'khach_thue');
+    const inStock = (rows: LedgerRow[], condition: string) =>
+      sum(
+        rows,
+        (r) => r.material_id === material && r.location_type === 'kho' && r.condition === condition,
+      );
+
+    const d09 = await asOf('2090-01-09');
+    const d10 = await asOf('2090-01-10');
+    const d14 = await asOf('2090-01-14');
+    const d15 = await asOf('2090-01-15');
+
+    expect(atRenter(d09)).toBe(0);
+    expect(atRenter(d10)).toBe(5);
+    expect(atRenter(d14)).toBe(5);
+    expect(atRenter(d15)).toBe(2);
+
+    const usable = (rows: LedgerRow[]) => inStock(rows, 'con_dung_duoc');
+    expect(usable(d10)).toBe(usable(d09) - 5);
+    expect(usable(d15)).toBe(usable(d14) + 2);
+    expect(inStock(d15, 'hong_cho_sua')).toBe(inStock(d14, 'hong_cho_sua') + 1);
+
+    // Sổ chỉ đọc từ trình duyệt.
+    const { error: forge } = await kho.from('scaffolding_ledger_entries').insert({
+      company_id: fixture.nvsCompanyId,
+      scaffolding_asset_id: crypto.randomUUID(),
+      asset_code: 'X',
+      material_id: material,
+      condition: 'moi',
+      location_type: 'kho',
+      quantity_delta: 1000,
+      effective_date: '2090-01-01',
+      source: 'phat_sinh',
+    });
+    expect(forge).toBeTruthy();
+  });
+});

@@ -802,3 +802,55 @@ export function useRecordScaffoldingEvent() {
     },
   });
 }
+
+/* ========================================================================== *
+ * Sổ giàn giáo tại một ngày — KHO-06, SX-15 (migration 0146)
+ * ========================================================================== */
+
+export interface ScaffoldingLedgerRow {
+  scaffolding_asset_id: string;
+  asset_code: string;
+  company_id: string;
+  material_id: string;
+  material_code: string | null;
+  material_name: string | null;
+  unit: string | null;
+  condition: ScaffoldingCondition;
+  location_type: 'kho' | 'cong_trinh' | 'khach_thue';
+  warehouse_name: string | null;
+  site_code: string | null;
+  site_name: string | null;
+  renter_name: string | null;
+  rental_agreement_code: string | null;
+  quantity: string | number;
+}
+
+/** Ngày bắt đầu ghi sổ theo ngày trên CSDL này — trước ngày đó không có số. */
+export function useScaffoldingLedgerStart() {
+  return useQuery<string, Error>({
+    queryKey: ['scaffolding-ledger', 'start'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('scaffolding_ledger_start');
+      if (error) throw new Error(error.message);
+      return data as string;
+    },
+    staleTime: Infinity,
+  });
+}
+
+export function useScaffoldingLedgerAsOf(date: string | null) {
+  const scope = useCompanyScope();
+
+  return useQuery<ScaffoldingLedgerRow[], Error>({
+    queryKey: ['scaffolding-ledger', date, scope.companyId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('scaffolding_ledger_as_of', {
+        p_date: date,
+        p_company_id: scope.isAggregate ? null : scope.companyId,
+      });
+      if (error) throw error;
+      return (data ?? []) as ScaffoldingLedgerRow[];
+    },
+    enabled: scope.isReady && Boolean(date),
+  });
+}

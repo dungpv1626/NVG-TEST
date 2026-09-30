@@ -2,12 +2,13 @@
  * Chi tiết Hợp đồng cho thuê giàn giáo — "Hồ sơ 360°" (Webapp Flow 4.3), SX-03.
  *
  * Nút hành động chính duy nhất là "Thu hồi" khi hợp đồng đang cho thuê — đúng Backend Schema
- * 4.12 (`POST /rental-agreements/:id/return`): một lần thu hồi phải khai đủ tình trạng trả
- * của MỌI loại giàn giáo trong hợp đồng, `return_rental_agreement` từ chối thẳng nếu thiếu.
+ * 4.12 (`POST /rental-agreements/:id/return`). Mỗi lần thu hồi là một đợt trả và một biên bản
+ * thu hồi (0145): tab «Biên bản thu hồi» mở sẵn khung ký ngay sau khi ghi, vì hai bên thường
+ * đang đứng cạnh nhau ở bãi.
  */
 
 import { useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import {
   formatCurrency,
   formatDate,
@@ -31,7 +32,9 @@ import {
   useUpdateRentalAgreement,
   type RentalReturnItemInput,
 } from '@/hooks/use-sx';
+import { useRentalReturns } from '@/hooks/use-rental-returns';
 import { useCan } from '@/lib/auth';
+import { RentalReturnsPanel } from './rental-returns-panel';
 
 const EM_DASH = '—';
 
@@ -55,6 +58,9 @@ export function RentalAgreementDetailPage() {
   const { data: items } = useRentalAgreementItems(id);
   const updateAgreement = useUpdateRentalAgreement();
   const returnAgreement = useReturnRentalAgreement();
+  const { data: rentalReturns, refetch: refetchReturns } = useRentalReturns(id);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [signingId, setSigningId] = useState<string | null>(null);
 
   const [isReturnFormOpen, setReturnFormOpen] = useState(false);
   const [actualReturnDate, setActualReturnDate] = useState('');
@@ -138,6 +144,16 @@ export function RentalAgreementDetailPage() {
         items: preparedItems,
       });
       setReturnFormOpen(false);
+      // Đợt vừa ghi là một biên bản chờ ký — mở sẵn khung ký ở tab Biên bản thu hồi, vì hai
+      // bên thường đang đứng cạnh nhau ở bãi ngay lúc này.
+      const { data: fresh } = await refetchReturns();
+      const newest = [...(fresh ?? [])]
+        .filter((r) => !r.signed_at)
+        .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+      if (newest) setSigningId(newest.id);
+      const next = new URLSearchParams(searchParams);
+      next.set('tab', 'bien-ban');
+      setSearchParams(next, { replace: true });
     } catch (e) {
       setReturnError(toUserMessage(e, 'edit'));
     }
@@ -153,6 +169,14 @@ export function RentalAgreementDetailPage() {
   }
 
   const isActive = agreement.status === 'dang_thue';
+  const unsignedCount = (rentalReturns ?? []).filter((r) => !r.signed_at).length;
+  const settlementLabel = agreement.settled_at
+    ? `Kế toán đã tất toán ngày ${formatDate(agreement.settled_at)}`
+    : agreement.status === 'da_thu_hoi'
+      ? unsignedCount > 0
+        ? 'Chờ ký đủ biên bản rồi Kế toán mới tất toán'
+        : 'Chờ Kế toán tất toán'
+      : 'Chưa — khách còn giữ giàn giáo';
   const daysSoFar = rentalDaysSoFar(agreement.start_date, agreement.actual_return_date);
 
   return (
@@ -240,6 +264,16 @@ export function RentalAgreementDetailPage() {
                         ? formatCurrency(agreement.total_compensation)
                         : EM_DASH,
                   },
+                  {
+                    label: 'Biên bản thu hồi',
+                    value:
+                      (rentalReturns ?? []).length === 0
+                        ? 'Chưa có đợt trả nào'
+                        : unsignedCount > 0
+                          ? `${unsignedCount} biên bản chờ ký hai bên`
+                          : `${(rentalReturns ?? []).length} biên bản đã ký hai bên`,
+                  },
+                  { label: 'Tất toán', value: settlementLabel },
                 ]}
               />
 
@@ -414,6 +448,19 @@ export function RentalAgreementDetailPage() {
                 />
               </Field>
             </div>
+          ),
+        },
+        {
+          id: 'bien-ban',
+          label: 'Biên bản thu hồi',
+          badge: (rentalReturns ?? []).length || undefined,
+          content: (
+            <RentalReturnsPanel
+              agreement={agreement}
+              canSign={canEdit}
+              signingId={signingId}
+              onSigningChange={setSigningId}
+            />
           ),
         },
       ]}

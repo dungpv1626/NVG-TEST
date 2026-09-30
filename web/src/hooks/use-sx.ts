@@ -35,6 +35,10 @@ export interface RentalAgreementRecord {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  /** Kế toán tất toán (0145): cọc đã cấn trừ, cọc thừa phải hoàn. */
+  settled_at: string | null;
+  settlement_deposit_offset: string | null;
+  settlement_refund: string | null;
   customer: { code: string; name: string } | null;
   site: { code: string; name: string } | null;
   creator: { full_name: string } | null;
@@ -43,7 +47,8 @@ export interface RentalAgreementRecord {
 const RENTAL_AGREEMENT_SELECT =
   'id, code, company_id, customer_id, construction_site_id, site_address, start_date, ' +
   'expected_end_date, actual_return_date, status, deposit_amount, total_revenue, ' +
-  'total_compensation, notes, created_at, updated_at, ' +
+  'total_compensation, notes, created_at, updated_at, settled_at, settlement_deposit_offset, ' +
+  'settlement_refund, ' +
   'customer:customers!rental_agreements_customer_id_customers_id_fk(code, name), ' +
   'site:construction_sites!rental_agreements_construction_site_id_construction_sites_id_fk(code, name), ' +
   'creator:users!rental_agreements_created_by_users_id_fk(full_name)';
@@ -115,11 +120,13 @@ export function useRentalAgreementItems(agreementId: string | undefined) {
   });
 }
 
-function invalidateRentalQueries(queryClient: ReturnType<typeof useQueryClient>) {
+export function invalidateRentalQueries(queryClient: ReturnType<typeof useQueryClient>) {
   void queryClient.invalidateQueries({ queryKey: ['rental-agreements'] });
   void queryClient.invalidateQueries({ queryKey: ['rental-agreement-items'] });
   // Xuất/thu hồi di chuyển lô giàn giáo — màn hình Kho phải thấy tồn mới ngay.
   void queryClient.invalidateQueries({ queryKey: ['scaffolding-assets'] });
+  void queryClient.invalidateQueries({ queryKey: ['scaffolding-ledger'] });
+  void queryClient.invalidateQueries({ queryKey: ['rental-returns'] });
 }
 
 export interface RentalItemInput {

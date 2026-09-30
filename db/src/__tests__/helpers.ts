@@ -98,6 +98,8 @@ export const PROTECTED_TABLES = [
   'acceptance_checklist_results',
   'site_check_ins',
   'rental_returns',
+  'rental_return_items',
+  'scaffolding_ledger_entries',
 ] as const;
 
 /** Mã lỗi Postgres cho "insufficient_privilege" — RLS chặn thành công. */
@@ -172,6 +174,11 @@ export async function cleanupTestData(): Promise<void> {
     // (`rental_agreement_items.material_id` là RESTRICT) và trước khách hàng
     // (`rental_agreements.customer_id` là RESTRICT).
     await sql`DELETE FROM rental_agreements WHERE customer_id IN (
+      SELECT id FROM customers WHERE name LIKE ${TEST_PREFIX + '%'}
+    )`;
+    // Công nợ sinh từ biên bản thu hồi đã ký / tất toán (0145) không mang tiền tố test trong
+    // mô tả; khoá ngoại tới khách hàng là RESTRICT nên phải xoá trước khách hàng.
+    await sql`DELETE FROM receivables_payables WHERE customer_id IN (
       SELECT id FROM customers WHERE name LIKE ${TEST_PREFIX + '%'}
     )`;
     await sql`DELETE FROM production_orders WHERE product LIKE ${TEST_PREFIX + '%'}`;

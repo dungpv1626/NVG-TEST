@@ -186,6 +186,9 @@ const AdvanceListPage = lazy(() =>
 const ReceivablePage = lazy(() =>
   import('@/pages/kt/receivable-page').then((m) => ({ default: m.ReceivablePage })),
 );
+const RentalSettlementPage = lazy(() =>
+  import('@/pages/kt/rental-settlement-page').then((m) => ({ default: m.RentalSettlementPage })),
+);
 const CashFlowPage = lazy(() =>
   import('@/pages/kt/cash-flow-page').then((m) => ({ default: m.CashFlowPage })),
 );
@@ -388,6 +391,7 @@ const router = createBrowserRouter(
           <Route path="kt/de-nghi-thanh-toan/:id" element={<PaymentRequestDetailPage />} />
           <Route path="kt/tam-ung" element={<AdvanceListPage />} />
           <Route path="kt/cong-no" element={<ReceivablePage />} />
+          <Route path="kt/thue-gian-giao" element={<RentalSettlementPage />} />
           <Route path="kt/dong-tien" element={<CashFlowPage />} />
           <Route path="kt/ky-ke-toan" element={<AccountingPeriodPage />} />
         </Route>
