@@ -21,6 +21,7 @@ import {
   formatDate,
   triggersBilling,
   type AcceptanceType,
+  toNvgDateInput,
 } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { usePromptDialog } from '@/components/ui/prompt-dialog';
@@ -81,7 +82,7 @@ function ChecklistResults({ acceptanceId }: { acceptanceId: string }) {
   );
 }
 
-const TODAY = () => new Date().toISOString().slice(0, 10);
+const TODAY = () => toNvgDateInput(new Date());
 
 export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly: boolean }) {
   const promptDialog = usePromptDialog();

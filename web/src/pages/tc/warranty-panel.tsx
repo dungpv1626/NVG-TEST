@@ -19,6 +19,7 @@ import {
   formatDate,
   warrantyDaysLeft,
   type WarrantyClaimStatus,
+  toNvgDateInput,
 } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { DateInput } from '@/components/ui/date-input';
@@ -34,7 +35,7 @@ import {
 } from '@/hooks/use-construction-sites';
 import { toUserMessage } from '@/hooks/use-error-message';
 
-const TODAY = () => new Date().toISOString().slice(0, 10);
+const TODAY = () => toNvgDateInput(new Date());
 
 export function WarrantyPanel({
   siteId,

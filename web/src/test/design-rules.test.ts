@@ -307,6 +307,18 @@ describe('Không để trình duyệt tự sinh chữ tiếng Anh', () => {
     expect(offenders).toEqual([]);
   });
 
+  it('«hôm nay» lấy theo giờ Việt Nam, không cắt chuỗi giờ UTC', () => {
+    // `toISOString().slice(0, 10)` là ngày UTC: từ 0 tới 7 giờ sáng nó vẫn là hôm qua. Lỗi thật
+    // 01/10/2026 lúc 00:40 — ô «Ngày lập» biên bản giàn giáo, ngày nhật ký công trường, ngày
+    // nghiệm thu đều điền sẵn 30/09. Dùng `toNvgDateInput(new Date())`.
+    const offenders = allPageSources()
+      .filter(({ code }) =>
+        /new Date\(\)\.toISOString\(\)\.(?:slice\(0, 10\)|split\('T'\))/.test(code),
+      )
+      .map(({ file }) => file);
+    expect(offenders).toEqual([]);
+  });
+
   it('không màn hình nào hỏi bằng `window.prompt` — phải dùng `usePromptDialog`', () => {
     // Nút của hộp gốc là «OK/Cancel» theo tiếng của trình duyệt; 20 chỗ đã thay 30/09/2026.
     const offenders = allPageSources()

@@ -12,6 +12,7 @@
  *    vượt số đã đặt, chuyển cam kết sang chi phí thực tế).
  */
 
+import { toNvgDateInput } from '@nvg/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   CostGroup,
@@ -602,7 +603,7 @@ export function useSaveQuotation() {
           purchase_request_id: input.requestId,
           supplier_id: input.supplierId,
           status: 'da_nhan',
-          quoted_date: input.quotedDate || new Date().toISOString().slice(0, 10),
+          quoted_date: input.quotedDate || toNvgDateInput(new Date()),
           valid_until: input.validUntil || null,
           tax_rate_bp: input.taxRateBp ?? 0,
           wastage_rate_bp: input.wastageRateBp ?? 0,

@@ -17,7 +17,7 @@
 
 import { Download, Printer } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { BUTTONS, formatCurrency } from '@nvg/shared';
+import { BUTTONS, formatCurrency, toNvgDateInput } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { BlockedNotice, EmptyState, TableSkeleton } from '@/components/ui/states';
@@ -86,7 +86,7 @@ function exportCsv(rows: ProfitLossRow[], companyOf: ReturnType<typeof useCompan
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `bao-cao-lai-lo-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `bao-cao-lai-lo-${toNvgDateInput(new Date())}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }

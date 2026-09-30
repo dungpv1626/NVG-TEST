@@ -18,6 +18,7 @@ import {
   SITE_LOG_TYPE_LABELS,
   formatDate,
   type SiteLogType,
+  toNvgDateInput,
 } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { DateInput } from '@/components/ui/date-input';
@@ -29,7 +30,7 @@ import { toUserMessage } from '@/hooks/use-error-message';
 import { uploadConstructionPhotos } from '@/hooks/use-site-photos';
 import { PhotoStrip, SitePhotoPicker } from './site-photo-picker';
 
-const TODAY = () => new Date().toISOString().slice(0, 10);
+const TODAY = () => toNvgDateInput(new Date());
 
 interface LogDraft {
   logDate: string;

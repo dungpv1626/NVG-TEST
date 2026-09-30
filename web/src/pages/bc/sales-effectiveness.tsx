@@ -44,6 +44,7 @@ import {
   type FunnelStageSummary,
   type OpportunityFunnelRow,
   type SourceSummary,
+  toNvgDateInput,
 } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
@@ -122,7 +123,7 @@ function exportCsv(
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `bao-cao-hieu-qua-kinh-doanh-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `bao-cao-hieu-qua-kinh-doanh-${toNvgDateInput(new Date())}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }

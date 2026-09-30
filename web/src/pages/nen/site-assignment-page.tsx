@@ -18,7 +18,7 @@
  */
 
 import { useState, type FormEvent } from 'react';
-import { BUTTONS, formatDate } from '@nvg/shared';
+import { BUTTONS, formatDate, toNvgDateInput } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { DateInput } from '@/components/ui/date-input';
@@ -37,7 +37,7 @@ import { useConstructionSites } from '@/hooks/use-construction-sites';
 import { useCan } from '@/lib/auth';
 import { NenNav } from './nen-nav';
 
-const HOM_NAY = () => new Date().toISOString().slice(0, 10);
+const HOM_NAY = () => toNvgDateInput(new Date());
 
 export function SiteAssignmentPage() {
   const canEdit = useCan('NEN', 'edit');

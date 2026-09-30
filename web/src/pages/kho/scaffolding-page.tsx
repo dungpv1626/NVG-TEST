@@ -341,10 +341,7 @@ export function ScaffoldingPage() {
                         />
                       </Field>
                       <Field label="Ngày lập">
-                        <DateInput
-                          name="event_date"
-                          defaultValue={new Date().toISOString().slice(0, 10)}
-                        />
+                        <DateInput name="event_date" defaultValue={toNvgDateInput(new Date())} />
                       </Field>
                       {eventType === 'sua_chua' && (
                         <Field label="Tình trạng sau biên bản" required>
