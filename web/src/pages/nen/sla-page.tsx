@@ -45,6 +45,20 @@ import { useCompanies, useCompanyLookup } from '@/hooks/use-companies';
 import { useCan } from '@/lib/auth';
 import { NenNav } from './nen-nav';
 
+/**
+ * Loại việc khai được thời hạn: mọi loại phê duyệt, cộng các bước KHÔNG phải phê duyệt mà
+ * công trường vẫn chờ — hiện có «Mua hàng lập đơn sau khi đề nghị đã duyệt» (TC-10,
+ * `site_request_tracker` đọc loại `purchase_ordering`).
+ */
+type SlaRequestType = ApprovalSubject | 'purchase_ordering';
+
+const SLA_REQUEST_TYPES: readonly SlaRequestType[] = [...APPROVAL_SUBJECTS, 'purchase_ordering'];
+
+function slaTypeLabel(type: string): string {
+  if (type === 'purchase_ordering') return 'Mua hàng lập đơn sau khi đề nghị được duyệt';
+  return APPROVAL_SUBJECT_LABELS[type as ApprovalSubject] ?? type;
+}
+
 /** Giờ → cách đọc của người dùng. 8 giờ là một ngày công (`hours_per_workday`). */
 function describeHours(hours: number): string {
   if (hours < 24) return `${hours} giờ`;
@@ -64,7 +78,7 @@ export function SlaPage() {
   const [showForm, setShowForm] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [form, setForm] = useState({
-    requestType: 'payment_request' as ApprovalSubject,
+    requestType: 'payment_request' as SlaRequestType,
     roleId: '',
     companyId: '',
     hours: '',
@@ -180,10 +194,7 @@ export function SlaPage() {
                 return (
                   <tr key={s.id} className="border-b border-border last:border-b-0">
                     <td className="p-3">
-                      <div>
-                        {APPROVAL_SUBJECT_LABELS[s.request_type as ApprovalSubject] ??
-                          s.request_type}
-                      </div>
+                      <div>{slaTypeLabel(s.request_type)}</div>
                       <div className="text-xs text-fg-subtle">{s.label}</div>
                     </td>
                     <td className="p-3">
@@ -237,13 +248,13 @@ export function SlaPage() {
               <select
                 value={form.requestType}
                 onChange={(e) =>
-                  setForm({ ...form, requestType: e.target.value as ApprovalSubject })
+                  setForm({ ...form, requestType: e.target.value as SlaRequestType })
                 }
                 className="h-10 w-full rounded-sm border border-border bg-surface px-3 sm:h-9"
               >
-                {APPROVAL_SUBJECTS.map((s) => (
+                {SLA_REQUEST_TYPES.map((s) => (
                   <option key={s} value={s}>
-                    {APPROVAL_SUBJECT_LABELS[s]}
+                    {slaTypeLabel(s)}
                   </option>
                 ))}
               </select>

@@ -39,6 +39,7 @@ import {
 } from '@/hooks/use-purchasing';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useCan } from '@/lib/auth';
+import { useRequestReminders } from '@/hooks/use-site-requests';
 import { QuotationPanel } from './quotation-panel';
 import { RequestItemPanel } from './request-item-panel';
 
@@ -264,6 +265,16 @@ export function PurchaseRequestDetailPage() {
                     ),
                   },
                   { label: 'Mã chi phí', value: request.cost_code ?? EM_DASH },
+                  // TC-10: văn phòng thấy công trường đã nhắc bao nhiêu lần — áp lực phải
+                  // hiện ở nơi xử lý, không chỉ ở nơi gửi.
+                  ...(request.site
+                    ? [
+                        {
+                          label: 'Công trường đã thúc',
+                          value: <NudgeSummary requestId={request.id} />,
+                        },
+                      ]
+                    : []),
                   {
                     label: 'Giá trị ước tính',
                     value:
@@ -287,6 +298,18 @@ export function PurchaseRequestDetailPage() {
           },
         ]}
       />
+    </>
+  );
+}
+
+function NudgeSummary({ requestId }: { requestId: string }) {
+  const { data } = useRequestReminders(requestId);
+  if (!data || data.length === 0) return <>Chưa lần nào</>;
+  const last = data[0]!;
+  return (
+    <>
+      {data.length} lần — gần nhất {formatDateTime(last.nudged_at)}
+      {last.nudger ? ` (${last.nudger.full_name})` : ''}
     </>
   );
 }

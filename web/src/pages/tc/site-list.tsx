@@ -15,7 +15,7 @@
  * cột này với vai trò có quyền xem BC (hàm CSDL cũng chặn ở đúng điều kiện đó).
  */
 
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   BUDGET_HEALTH_META,
   MODULE_EMPTY_STATES,
@@ -24,6 +24,7 @@ import {
   type BudgetHealth,
 } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
+import { Button } from '@/components/ui/button';
 import { EntityTable, type EntityRow } from '@/components/entity/entity-table';
 import { useConstructionSites } from '@/hooks/use-construction-sites';
 import { useSitesBudgetStatus } from '@/hooks/use-reports';
@@ -79,6 +80,11 @@ export function SiteListPage() {
       <PageHeader
         title="Công trình"
         breadcrumbs={[{ label: 'Thi công & Ngân sách' }, { label: 'Công trình' }]}
+        actions={
+          <Button variant="secondary" asChild>
+            <Link to="/tc/de-nghi">Theo dõi đề nghị</Link>
+          </Button>
+        }
       />
 
       <EntityTable<SiteRow>

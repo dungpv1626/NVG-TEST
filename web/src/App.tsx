@@ -129,6 +129,9 @@ const SiteListPage = lazy(() =>
 const SiteDetailPage = lazy(() =>
   import('@/pages/tc/site-detail').then((m) => ({ default: m.SiteDetailPage })),
 );
+const SiteRequestsPage = lazy(() =>
+  import('@/pages/tc/site-requests-page').then((m) => ({ default: m.SiteRequestsPage })),
+);
 const PurchaseRequestListPage = lazy(() =>
   import('@/pages/mh/request-list').then((m) => ({ default: m.PurchaseRequestListPage })),
 );
@@ -341,6 +344,7 @@ const router = createBrowserRouter(
         <Route element={<ModuleGuard module="TC" />}>
           <Route path="tc/cong-trinh" element={<SiteListPage />} />
           <Route path="tc/cong-trinh/:id" element={<SiteDetailPage />} />
+          <Route path="tc/de-nghi" element={<SiteRequestsPage />} />
         </Route>
 
         {/* MH — Mua hàng và vật tư (MH-01 → MH-08). Không có màn hình "tạo đơn hàng":
