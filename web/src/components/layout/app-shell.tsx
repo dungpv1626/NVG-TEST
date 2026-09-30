@@ -22,6 +22,8 @@ import { CardGridSkeleton } from '@/components/ui/states';
 import { cn } from '@/lib/utils';
 import { TkThemeProvider, useTkTheme } from '@/pages/tk/tk-theme';
 import { Breadcrumb, type Crumb } from './breadcrumb';
+import { SectionHelp } from '@/components/ui/section-help';
+import type { SectionGuide } from '@/lib/help-texts';
 import { BottomNav } from './bottom-nav';
 import { OfflineBar, PwaPrompts } from './pwa-status';
 import { Sidebar } from './sidebar';
@@ -39,6 +41,11 @@ export interface PageHeaderProps {
    * loạt trang chưa nằm trong phạm vi restyle đợt này.
    */
   size?: 'default' | 'hero';
+  /**
+   * Hướng dẫn ngắn cho CẢ màn hình — nút «Hướng dẫn» cạnh hàng nút hành động, tự mở một lần ở
+   * lần đầu vào (xem `SectionHelp`). Nội dung gom ở `@/lib/help-texts`.
+   */
+  help?: SectionGuide & { autoOpenKey?: string };
 }
 
 /**
@@ -51,6 +58,7 @@ export function PageHeader({
   breadcrumbs = [],
   actions,
   size = 'default',
+  help,
 }: PageHeaderProps) {
   return (
     <div className="mb-4 space-y-2 lg:mb-6">
@@ -71,7 +79,12 @@ export function PageHeader({
           </h1>
           {description && <p className="mt-1 text-fg-subtle">{description}</p>}
         </div>
-        {actions && <div className="flex flex-wrap items-center gap-2 sm:shrink-0">{actions}</div>}
+        {(actions || help) && (
+          <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+            {help && <SectionHelp {...help} triggerLabel="Hướng dẫn" />}
+            {actions}
+          </div>
+        )}
       </div>
     </div>
   );

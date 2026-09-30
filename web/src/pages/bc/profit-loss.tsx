@@ -29,6 +29,7 @@ import { escapeHtml, openPrintReport } from '@/lib/print-report';
 import { cn } from '@/lib/utils';
 import { BcNav } from './bc-nav';
 import { ReportFreshness } from './report-meta';
+import { APP_HELP } from '@/lib/help-texts';
 
 function sum(rows: ProfitLossRow[], key: keyof ProfitLossRow): bigint {
   return rows.reduce((total, r) => {
@@ -159,6 +160,7 @@ export function ProfitLossReportPage() {
   return (
     <>
       <PageHeader
+        help={APP_HELP.profitLoss}
         title="Báo cáo lãi/lỗ theo công trình"
         description="Doanh thu hợp đồng so với chi phí đã phát sinh và đã cam kết — BC-02"
         breadcrumbs={[

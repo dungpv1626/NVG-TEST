@@ -19,6 +19,7 @@ import { PageHeader } from '@/components/layout/app-shell';
 import { EntityTable, type EntityRow } from '@/components/entity/entity-table';
 import { useContracts } from '@/hooks/use-contracts';
 import type { MoneyValue } from '@nvg/shared';
+import { APP_HELP } from '@/lib/help-texts';
 
 interface ContractRow extends EntityRow {
   stageLabel: string;
@@ -48,7 +49,11 @@ export function ContractListPage() {
 
   return (
     <>
-      <PageHeader title="Hợp đồng" breadcrumbs={[{ label: 'Hợp đồng' }]} />
+      <PageHeader
+        help={APP_HELP.contracts}
+        title="Hợp đồng"
+        breadcrumbs={[{ label: 'Hợp đồng' }]}
+      />
 
       <EntityTable<ContractRow>
         rows={rows}

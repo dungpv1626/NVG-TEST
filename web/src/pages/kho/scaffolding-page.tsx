@@ -36,6 +36,7 @@ import {
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useCan } from '@/lib/auth';
 import { KhoNav } from './kho-nav';
+import { APP_HELP } from '@/lib/help-texts';
 
 const EM_DASH = '—';
 
@@ -123,6 +124,7 @@ export function ScaffoldingPage() {
     <>
       <KhoNav />
       <PageHeader
+        help={APP_HELP.scaffolding}
         title="Giàn giáo"
         breadcrumbs={[{ label: 'Kho' }, { label: 'Giàn giáo' }]}
         description="Theo dõi theo lô và theo tình trạng. Tình trạng chỉ đổi qua biên bản."

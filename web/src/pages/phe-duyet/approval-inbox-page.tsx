@@ -24,6 +24,7 @@ import {
   formatDateTime,
   formatDeadline,
 } from '@nvg/shared';
+import { APP_HELP } from '@/lib/help-texts';
 
 /**
  * Đường dẫn tới hồ sơ đầy đủ theo loại hồ sơ nguồn.
@@ -84,6 +85,7 @@ export function ApprovalInboxPage() {
   return (
     <>
       <PageHeader
+        help={APP_HELP.approvalInbox}
         title="Việc cần làm"
         description="Mọi hồ sơ đang chờ phê duyệt, gộp chung từ tất cả module."
         breadcrumbs={[{ label: 'Việc cần làm' }]}

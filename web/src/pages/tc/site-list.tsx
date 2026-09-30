@@ -29,6 +29,7 @@ import { EntityTable, type EntityRow } from '@/components/entity/entity-table';
 import { useConstructionSites } from '@/hooks/use-construction-sites';
 import { useSitesBudgetStatus } from '@/hooks/use-reports';
 import { useCan } from '@/lib/auth';
+import { APP_HELP } from '@/lib/help-texts';
 
 const BUDGET_FILTER_PARAM = 'ngan-sach';
 
@@ -78,6 +79,7 @@ export function SiteListPage() {
   return (
     <>
       <PageHeader
+        help={APP_HELP.sites}
         title="Công trình"
         breadcrumbs={[{ label: 'Thi công & Ngân sách' }, { label: 'Công trình' }]}
         actions={

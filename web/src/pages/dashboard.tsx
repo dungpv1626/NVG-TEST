@@ -89,6 +89,7 @@ import { useRentalAgreements } from '@/hooks/use-sx';
 import { useAuth, useCan } from '@/lib/auth';
 import { useCompanyScope } from '@/lib/company-scope';
 import { cn } from '@/lib/utils';
+import { APP_HELP } from '@/lib/help-texts';
 
 /** Mốc xa nhất khi kỳ đang chọn là "Tất cả" — dòng tiền cần một mốc bắt đầu thật, không phải null. */
 const CASH_FLOW_EPOCH = '2000-01-01';
@@ -355,6 +356,7 @@ export function DashboardPage() {
   return (
     <>
       <PageHeader
+        help={APP_HELP.dashboard}
         title={greeting}
         size="hero"
         description={

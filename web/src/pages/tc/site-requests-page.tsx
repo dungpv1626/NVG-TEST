@@ -10,11 +10,12 @@ import { useState } from 'react';
 import { PageHeader } from '@/components/layout/app-shell';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { RequestTrackerList } from './request-tracker';
+import { APP_HELP } from '@/lib/help-texts';
 
 type Scope = 'cua-toi' | 'tat-ca';
 
 const SCOPE_LABELS: Record<Scope, string> = {
-  'cua-toi': 'Tôi đã gửi',
+  'cua-toi': 'Đề nghị đã gửi',
   'tat-ca': 'Tất cả công trình',
 };
 
@@ -24,6 +25,7 @@ export function SiteRequestsPage() {
   return (
     <>
       <PageHeader
+        help={APP_HELP.siteRequests}
         title="Theo dõi đề nghị"
         breadcrumbs={[
           { label: 'Thi công & Ngân sách' },

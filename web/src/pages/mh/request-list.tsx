@@ -19,6 +19,7 @@ import { EntityTable, useCreateActions, type EntityRow } from '@/components/enti
 import { usePurchaseRequests } from '@/hooks/use-purchasing';
 import { useCan } from '@/lib/auth';
 import { MhNav } from './mh-nav';
+import { APP_HELP } from '@/lib/help-texts';
 
 interface RequestRow extends EntityRow {
   stageLabel: string;
@@ -59,6 +60,7 @@ export function PurchaseRequestListPage() {
     <>
       <MhNav />
       <PageHeader
+        help={APP_HELP.purchaseRequests}
         title="Đề nghị mua"
         breadcrumbs={[{ label: 'Mua hàng – Vật tư' }, { label: 'Đề nghị mua' }]}
         actions={headerAction}
