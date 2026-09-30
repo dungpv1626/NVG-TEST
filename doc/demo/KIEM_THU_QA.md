@@ -185,3 +185,5 @@ Phát hiện khi chụp ảnh cho hướng dẫn sử dụng; tester kiểm lạ
 | L-17 | Đơn hàng → Giao nhận (vai trò Kho) | Đợt đã nhập kho vẫn hiện nút Nhập kho, bấm mới báo lỗi | Hiện mã phiếu nhập thay cho nút | |
 | L-18 | Mọi trang chi tiết (máy tính) | Cuộn xuống: đầu trang dính cách mép trên 24px, nội dung cuộn qua lộ ra phía trên | Đầu trang dính sát mép trên | |
 | L-19 | Chi tiết hợp đồng thuê giàn giáo | Không có số còn ở khách; «Tổng tiền thuê» đọc như tiền thuê cả hợp đồng | Cột «Còn ở khách»; nhãn «Tiền thuê đã chốt (các đợt đã trả)» | |
+| L-20 | Chi tiết hợp đồng (vai trò Dự án – Đấu thầu) | Hợp đồng đã có công trình vẫn hiện nút chính «Mở công trình» (vai trò không xem được Thi công) | Hỏi CSDL «đã có công trình chưa» (0144); đã có thì ẩn nút | |
+| L-21 | Chi tiết hợp đồng | «Thời gian thực hiện 06/09/2026 — ?» | «— chưa ghi ngày kết thúc» | |
