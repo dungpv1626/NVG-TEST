@@ -12,6 +12,7 @@ import {
   formatCurrency,
   formatDate,
   formatDateTime,
+  formatNumber,
   rentalAgreementDisplayStatus,
   rentalDaysSoFar,
 } from '@nvg/shared';
@@ -224,7 +225,9 @@ export function RentalAgreementDetailPage() {
                   { label: 'Số ngày đã thuê', value: `${daysSoFar} ngày` },
                   { label: 'Tiền đặt cọc', value: formatCurrency(agreement.deposit_amount) },
                   {
-                    label: 'Tổng tiền thuê',
+                    // Tiền thuê chỉ chốt ở từng đợt trả (theo số ngày thuê thật của đợt đó).
+                    // Phần còn ở khách chưa có ngày trả nên chưa có tiền — ghi rõ, không tạm tính.
+                    label: 'Tiền thuê đã chốt (các đợt đã trả)',
                     value:
                       agreement.total_revenue !== null
                         ? formatCurrency(agreement.total_revenue)
@@ -252,6 +255,7 @@ export function RentalAgreementDetailPage() {
                         <th className="px-3 py-2 text-right font-medium">Đã trả (đạt)</th>
                         <th className="px-3 py-2 text-right font-medium">Hư hỏng</th>
                         <th className="px-3 py-2 text-right font-medium">Mất</th>
+                        <th className="px-3 py-2 text-right font-medium">Còn ở khách</th>
                         <th className="px-3 py-2 text-right font-medium">Bồi thường</th>
                       </tr>
                     </thead>
@@ -261,13 +265,16 @@ export function RentalAgreementDetailPage() {
                           <td className="px-3 py-2">
                             {it.material?.code} — {it.material?.name}
                           </td>
-                          <td className="px-3 py-2 text-right">
-                            {it.quantity_out} {it.material?.unit}
+                          <td className="whitespace-nowrap px-3 py-2 text-right">
+                            {formatNumber(Number(it.quantity_out))} {it.material?.unit}
                           </td>
                           <td className="px-3 py-2 text-right">{formatCurrency(it.daily_rate)}</td>
                           <td className="px-3 py-2 text-right">{it.quantity_returned_ok}</td>
                           <td className="px-3 py-2 text-right">{it.quantity_damaged}</td>
                           <td className="px-3 py-2 text-right">{it.quantity_lost}</td>
+                          <td className="whitespace-nowrap px-3 py-2 text-right font-semibold">
+                            {formatNumber(remainingAtRenter(it))} {it.material?.unit}
+                          </td>
                           <td className="px-3 py-2 text-right">
                             {formatCurrency(it.compensation_amount)}
                           </td>
@@ -275,7 +282,7 @@ export function RentalAgreementDetailPage() {
                       ))}
                       {(items ?? []).length === 0 && (
                         <tr>
-                          <td colSpan={7} className="px-3 py-4 text-center text-fg-subtle">
+                          <td colSpan={8} className="px-3 py-4 text-center text-fg-subtle">
                             Đang tải…
                           </td>
                         </tr>
@@ -446,5 +453,20 @@ export function RentalAgreementDetailPage() {
         },
       ]}
     />
+  );
+}
+
+/** Số còn nằm ở bên thuê = đã xuất − trả đạt − hư hỏng − mất (hư hỏng đã về kho, mất thì không). */
+function remainingAtRenter(it: {
+  quantity_out: string;
+  quantity_returned_ok: string;
+  quantity_damaged: string;
+  quantity_lost: string;
+}): number {
+  return (
+    Number(it.quantity_out) -
+    Number(it.quantity_returned_ok) -
+    Number(it.quantity_damaged) -
+    Number(it.quantity_lost)
   );
 }
