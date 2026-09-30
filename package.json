@@ -33,6 +33,8 @@
     "db:stop": "supabase stop",
     "db:push": "npm run push --workspace=db",
     "db:seed": "npm run seed --workspace=db",
+    "db:demo-data": "tsx db/src/demo/index.ts",
+    "db:demo-data:demo": "NVG_DB_TARGET=demo tsx db/src/demo/index.ts",
     "db:studio": "npm run studio --workspace=db",
     "deploy": "npm run deploy:workers && npm run deploy:web",
     "deploy:web": "npm run build && wrangler deploy --config web/wrangler.jsonc",

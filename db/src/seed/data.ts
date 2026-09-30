@@ -369,8 +369,8 @@ export const ROLE_CAPABILITY_SEED: Record<string, string[]> = {
  * Mã do CSDL cấp lúc ghi (`KH-{5 số}`, migration 0132).
  */
 export const SAMPLE_CUSTOMER_SEED: { name: string; source: string }[] = [
-  { name: 'Công ty TNHH Thương mại An Phát', source: 'gioi_thieu' },
-  { name: 'Hộ gia đình anh Nguyễn Văn Bình', source: 'website' },
+  { name: 'Công ty TNHH Thương mại An Phát', source: 'Giới thiệu' },
+  { name: 'Hộ gia đình anh Nguyễn Văn Bình', source: 'Website' },
 ];
 
 export interface UserSeed {
