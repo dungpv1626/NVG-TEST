@@ -165,11 +165,25 @@ export interface PurchaseRequestRecord {
   site?: { code: string } | null;
 }
 
-const REQUEST_SELECT =
+/**
+ * Cột chung của danh sách và chi tiết — KHÔNG gồm công trình: mỗi bên nhúng `site` với tập cột
+ * riêng. Nhúng cùng một bảng hai lần trong một truy vấn thì PostgREST từ chối cả truy vấn
+ * («table name … specified more than once») — lỗi thật 30/09/2026: mọi trang chi tiết đề nghị
+ * mua hỏng sau khi danh sách thêm cột «Công trình».
+ */
+const REQUEST_BASE_SELECT =
   'id, code, company_id, title, stage, urgency, needed_date, estimated_value, ' +
   'construction_site_id, cost_code, cost_group, requested_by, created_at, ' +
-  'requester:users!purchase_requests_requested_by_users_id_fk(full_name), ' +
-  'site:construction_sites!purchase_requests_construction_site_id_construction_sites_id_fk(code)';
+  'requester:users!purchase_requests_requested_by_users_id_fk(full_name)';
+
+const SITE_EMBED =
+  'site:construction_sites!purchase_requests_construction_site_id_construction_sites_id_fk';
+
+export const REQUEST_LIST_SELECT = `${REQUEST_BASE_SELECT}, ${SITE_EMBED}(code)`;
+
+export const REQUEST_DETAIL_SELECT =
+  `${REQUEST_BASE_SELECT}, bidding_project_id, delivery_location, submitted_at, approved_at, ` +
+  `closed_reason, notes, updated_at, ${SITE_EMBED}(id, code, name)`;
 
 export function usePurchaseRequests(options: { enabled?: boolean } = {}) {
   const scope = useCompanyScope();
@@ -178,7 +192,7 @@ export function usePurchaseRequests(options: { enabled?: boolean } = {}) {
     queryKey: ['purchase-requests', scope.companyId],
     queryFn: async () => {
       const { data, error } = await withCompanyScope(
-        supabase.from('purchase_requests').select(REQUEST_SELECT),
+        supabase.from('purchase_requests').select(REQUEST_LIST_SELECT),
         scope,
       )
         .is('deleted_at', null)
@@ -207,11 +221,7 @@ export function usePurchaseRequest(id: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('purchase_requests')
-        .select(
-          `${REQUEST_SELECT}, bidding_project_id, delivery_location, submitted_at, approved_at, ` +
-            'closed_reason, notes, updated_at, ' +
-            'site:construction_sites!purchase_requests_construction_site_id_construction_sites_id_fk(id, code, name)',
-        )
+        .select(REQUEST_DETAIL_SELECT)
         .eq('id', id!)
         .is('deleted_at', null)
         .maybeSingle();
@@ -229,7 +239,7 @@ export function useRequestsOfSite(siteId: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('purchase_requests')
-        .select(REQUEST_SELECT)
+        .select(REQUEST_LIST_SELECT)
         .eq('construction_site_id', siteId!)
         .is('deleted_at', null)
         .order('created_at', { ascending: false });
