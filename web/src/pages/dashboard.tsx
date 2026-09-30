@@ -90,6 +90,7 @@ import { useAuth, useCan } from '@/lib/auth';
 import { useCompanyScope } from '@/lib/company-scope';
 import { cn } from '@/lib/utils';
 import { APP_HELP } from '@/lib/help-texts';
+import { useSensitiveAccess } from '@/hooks/use-sensitive-access';
 
 /** Mốc xa nhất khi kỳ đang chọn là "Tất cả" — dòng tiền cần một mốc bắt đầu thật, không phải null. */
 const CASH_FLOW_EPOCH = '2000-01-01';
@@ -139,6 +140,11 @@ export function DashboardPage() {
   const canViewKt = useCan('KT');
   const canViewSx = useCan('SX');
   const canViewNs = useCan('NS');
+  // Xem được PHÂN HỆ chưa đủ để xem SỐ TIỀN: thẻ tài chính và lãi/lỗ theo nhóm vai trò mà CSDL
+  // cho xem, không theo quyền mở phân hệ (xem `useSensitiveAccess`).
+  const { data: access } = useSensitiveAccess();
+  const canSeeFinance = canViewKt && access?.finance === true;
+  const canSeeProfit = canViewBc && access?.profit === true;
 
   const opportunities = useOpportunities({ enabled: canViewCrm });
   const biddingProjects = useBiddingProjects({ enabled: canViewDa });
@@ -154,9 +160,9 @@ export function DashboardPage() {
   // con số không bao giờ nói khác với danh sách nó dẫn tới.
   const today = toNvgDateInput(new Date());
   const cashFlow = useCashFlow(periodStartDate(period) ?? CASH_FLOW_EPOCH, today, {
-    enabled: canViewKt,
+    enabled: canSeeFinance,
   });
-  const receivables = useReceivables('phai_thu', { enabled: canViewKt });
+  const receivables = useReceivables('phai_thu', { enabled: canSeeFinance });
   const rentalAgreements = useRentalAgreements({ enabled: canViewSx });
   const now = new Date();
   const timesheets = useTimesheets(now.getFullYear(), now.getMonth() + 1, undefined, {
@@ -318,7 +324,7 @@ export function DashboardPage() {
     .filter((m) => m.count > 0);
   const overdueRisks = [
     ...overdueByModule,
-    canViewKt &&
+    canSeeFinance &&
       receivableOverdueCount > 0 && {
         key: 'KT-receivables',
         title: 'Công nợ phải thu',
@@ -448,10 +454,10 @@ export function DashboardPage() {
           )}
         </KpiCard>
 
-        {canViewBc && (
+        {canSeeProfit && (
           <KpiCard
             title="Lãi/lỗ theo công trình"
-            hint="Doanh thu hợp đồng so với chi phí đã phát sinh, truy ngược tới chứng từ gốc"
+            hint="Giá trị đã nghiệm thu so với chi phí đã phát sinh, truy ngược tới chứng từ gốc"
             icon={Scale}
             iconWellClassName="bg-tint-teal-bg text-tint-teal"
           >
@@ -477,7 +483,7 @@ export function DashboardPage() {
           </KpiCard>
         )}
 
-        {canViewKt && (
+        {canSeeFinance && (
           <KpiCard
             title="Dòng tiền"
             hint="Số dư cuối kỳ dự kiến, cộng cả khoản đã duyệt chưa chi — từ đầu kỳ báo cáo tới hôm nay"
@@ -508,7 +514,7 @@ export function DashboardPage() {
           </KpiCard>
         )}
 
-        {canViewKt && (
+        {canSeeFinance && (
           <KpiCard
             title="Công nợ phải thu"
             hint="Phần CÒN LẠI của các khoản khách hàng chưa trả hết, không tính giá trị gốc"
