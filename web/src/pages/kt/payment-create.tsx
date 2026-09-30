@@ -11,7 +11,7 @@
 
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { PAYMENT_REQUEST_TYPE_LABELS, PAYMENT_REQUEST_TYPES } from '@nvg/shared';
+import { PAYMENT_REQUEST_TYPE_LABELS, PAYMENT_REQUEST_TYPES, formatCurrency } from '@nvg/shared';
 import type { PaymentRequestType } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
@@ -19,10 +19,14 @@ import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { MoneyInput } from '@/components/ui/money-input';
-import { BlockedNotice } from '@/components/ui/states';
+import { BlockedNotice, CardGridSkeleton } from '@/components/ui/states';
 import { useActiveUsers } from '@/hooks/use-active-users';
 import { useCreatePaymentRequest } from '@/hooks/use-accounting';
-import { useSuppliers } from '@/hooks/use-purchasing';
+import {
+  usePurchaseOrder,
+  useSuppliers,
+  type PurchaseOrderDetailRecord,
+} from '@/hooks/use-purchasing';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useCan } from '@/lib/auth';
 import { useCompanyScope } from '@/lib/company-scope';
@@ -30,6 +34,15 @@ import { useCompanyScope } from '@/lib/company-scope';
 const SELECT_CLASS = 'h-9 w-full rounded-sm border border-border-strong bg-surface px-3';
 
 export function PaymentRequestCreatePage() {
+  const [params] = useSearchParams();
+  // Mở từ tab Chứng từ của đơn đặt hàng (MH-08): biểu mẫu lấy sẵn số liệu của đơn.
+  const orderId = params.get('don-hang') ?? undefined;
+  const order = usePurchaseOrder(orderId);
+  if (orderId && order.isLoading) return <CardGridSkeleton count={2} />;
+  return <PaymentRequestForm key={order.data?.id ?? 'moi'} order={order.data ?? null} />;
+}
+
+function PaymentRequestForm({ order }: { order: PurchaseOrderDetailRecord | null }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const canCreate = useCan('KT', 'create');
@@ -37,9 +50,9 @@ export function PaymentRequestCreatePage() {
   const create = useCreatePaymentRequest();
 
   const [requestType, setRequestType] = useState<PaymentRequestType>(
-    (params.get('loai') as PaymentRequestType) ?? 'thanh_toan',
+    order ? 'thanh_toan' : ((params.get('loai') as PaymentRequestType) ?? 'thanh_toan'),
   );
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState(order ? String(order.total_value) : '');
   const [formError, setFormError] = useState<string | null>(null);
 
   const { data: suppliers } = useSuppliers();
@@ -54,7 +67,8 @@ export function PaymentRequestCreatePage() {
     );
   }
 
-  if (scope.isAggregate || !scope.companyId) {
+  // Khoản trả cho một đơn hàng thuộc pháp nhân của chính đơn đó, không theo bộ chọn phạm vi.
+  if (!order && (scope.isAggregate || !scope.companyId)) {
     return (
       <BlockedNotice
         title="Chọn pháp nhân trước khi lập đề nghị"
@@ -63,7 +77,7 @@ export function PaymentRequestCreatePage() {
     );
   }
 
-  const companyId = scope.companyId;
+  const companyId = order?.company_id ?? scope.companyId!;
   const isAdvance = requestType === 'tam_ung';
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -85,6 +99,7 @@ export function PaymentRequestCreatePage() {
         advanceDueDate: isAdvance ? String(form.get('advance_due_date') ?? '') : null,
         dueDate: String(form.get('due_date') ?? ''),
         notes: String(form.get('notes') ?? ''),
+        purchaseOrderId: order?.id ?? null,
       });
       // Lưu xong đi thẳng vào Chi tiết hồ sơ vừa tạo (Webapp Flow 4.4) — phân bổ chi phí
       // nhập tiếp ở đó vì nó là bảng con chứ không phải một trường của biểu mẫu này.
@@ -115,6 +130,15 @@ export function PaymentRequestCreatePage() {
           </p>
         )}
 
+        {order && (
+          <p className="rounded-lg border border-border bg-surface-sunken px-4 py-3">
+            Thanh toán cho đơn đặt hàng <span className="font-medium">{order.code}</span> —{' '}
+            {order.supplier?.name}, giá trị {formatCurrency(order.total_value)}. Chi phí của đơn đã
+            ghi vào công trình lúc nhận hàng, nên khoản chi này không cộng vào chi phí thực tế lần
+            nữa. Trả nhiều đợt thì sửa số tiền của đợt này.
+          </p>
+        )}
+
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
             label="Loại đề nghị"
@@ -124,6 +148,7 @@ export function PaymentRequestCreatePage() {
             <select
               value={requestType}
               onChange={(e) => setRequestType(e.target.value as PaymentRequestType)}
+              disabled={order !== null}
               className={SELECT_CLASS}
             >
               {PAYMENT_REQUEST_TYPES.map((type) => (
@@ -139,7 +164,11 @@ export function PaymentRequestCreatePage() {
             required
             hint="Quyết định ai là người xác nhận ở bước đầu của luồng duyệt."
           >
-            <select name="origin_module" defaultValue="TC" className={SELECT_CLASS}>
+            <select
+              name="origin_module"
+              defaultValue={order ? 'MH' : 'TC'}
+              className={SELECT_CLASS}
+            >
               <option value="TC">Công trường (Thi công)</option>
               <option value="MH">Mua hàng – Vật tư</option>
               <option value="KHO">Kho</option>
@@ -153,7 +182,14 @@ export function PaymentRequestCreatePage() {
           required
           hint="Ví dụ: Thanh toán đợt 1 tiền thép hình cho Nhà cung cấp A."
         >
-          <Input name="title" required maxLength={200} />
+          <Input
+            name="title"
+            required
+            maxLength={200}
+            defaultValue={
+              order ? `Thanh toán đơn hàng ${order.code ?? ''} — ${order.request?.title ?? ''}` : ''
+            }
+          />
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -189,7 +225,11 @@ export function PaymentRequestCreatePage() {
           ) : (
             <>
               <Field label="Nhà cung cấp" hint="Để trống nếu bên nhận chưa có trong danh mục.">
-                <select name="supplier_id" className={SELECT_CLASS}>
+                <select
+                  name="supplier_id"
+                  defaultValue={order?.supplier_id ?? ''}
+                  className={SELECT_CLASS}
+                >
                   <option value="">Không chọn từ danh mục</option>
                   {(suppliers ?? []).map((s) => (
                     <option key={s.id} value={s.id}>

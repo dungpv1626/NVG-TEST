@@ -101,6 +101,24 @@ export function usePaymentRequests() {
   });
 }
 
+/** Các đề nghị chi đã lập cho một đơn đặt hàng — để Kế toán không lập trùng. */
+export function usePaymentRequestsForOrder(orderId: string | undefined, enabled = true) {
+  return useQuery<PaymentRequestRecord[], Error>({
+    queryKey: ['payment-requests', 'order', orderId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('payment_requests')
+        .select(PAYMENT_SELECT)
+        .eq('purchase_order_id', orderId!)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false });
+      if (error) throw new Error(error.message);
+      return (data ?? []) as unknown as PaymentRequestRecord[];
+    },
+    enabled: Boolean(orderId) && enabled,
+  });
+}
+
 export function usePaymentRequest(id: string | undefined) {
   return useQuery<PaymentRequestRecord | null, Error>({
     queryKey: ['payment-requests', 'one', id],
@@ -131,6 +149,12 @@ export interface NewPaymentRequestInput {
   advanceDueDate?: string | null;
   dueDate?: string | null;
   notes?: string | null;
+  /**
+   * Đơn đặt hàng nguồn (MH-08). BẮT BUỘC gắn khi trả tiền cho một đơn hàng: chi phí của đơn đã
+   * vào ngân sách công trình lúc nhận hàng, và `post_payment_to_budget` chỉ bỏ qua bước cộng
+   * chi phí thực tế khi đề nghị có mang mã đơn — thiếu mã là cộng lần thứ hai.
+   */
+  purchaseOrderId?: string | null;
 }
 
 export function useCreatePaymentRequest() {
@@ -153,6 +177,7 @@ export function useCreatePaymentRequest() {
           advance_due_date: input.advanceDueDate || null,
           due_date: input.dueDate || null,
           notes: input.notes?.trim() || null,
+          purchase_order_id: input.purchaseOrderId || null,
         })
         .select('id')
         .single();

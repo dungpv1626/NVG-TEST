@@ -550,13 +550,16 @@ describeDb('KT — chi tiền, ngân sách và hạch toán (KT-01, KT-05)', () 
     }
 
     const id = await draftRequest({ client: ketoan, fixture, amount: 25_000_000n });
-    const { createConnection: connect } = await import('../client');
-    const { sql: sql2 } = connect();
-    try {
-      await sql2`UPDATE payment_requests SET purchase_order_id = ${orderId} WHERE id = ${id}`;
-    } finally {
-      await sql2.end();
-    }
+    // Gắn mã đơn bằng CHÍNH tài khoản Kế toán, như biểu mẫu «Lập đề nghị thanh toán» từ đơn
+    // hàng làm — RLS phải cho phép, nếu không giao diện gắn không được và chi phí bị cộng hai lần.
+    const linked = await ketoan
+      .from('payment_requests')
+      .update({ purchase_order_id: orderId })
+      .eq('id', id)
+      .select('purchase_order_id')
+      .single();
+    expect(linked.error).toBeNull();
+    expect(linked.data?.purchase_order_id).toBe(orderId);
 
     await approve(id);
     const before = await budgetActual(fixture.budgetLineId);
