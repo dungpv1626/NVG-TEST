@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 
 const ITEM =
   'flex min-h-12 flex-1 flex-col items-center justify-center gap-0.5 rounded-md px-2 py-1.5 ' +
-  'text-xs font-medium text-fg hover:bg-surface-hover';
+  'text-center text-xs leading-tight font-medium text-fg hover:bg-surface-hover';
 
 export function SiteQuickActions({ siteId, readOnly }: { siteId: string; readOnly: boolean }) {
   const canRequest = useCan('MH', 'create');

@@ -151,3 +151,18 @@ Mật khẩu chung của tài khoản demo: xem `db/src/seed/data.ts` (`SEED_PAS
 
 **Tổng kết:** số ca Đạt / Không đạt / Bỏ qua, danh sách lỗi đã sửa, lỗi còn mở và cách tránh trong buổi
 demo — ghi vào cuối tệp này sau lượt chạy.
+
+## Lỗi hiển thị đã sửa
+
+Phát hiện khi chụp ảnh cho hướng dẫn sử dụng; tester kiểm lại trên bản demo sau lần phát hành kế tiếp.
+
+| Mã | Màn hình | Lỗi | Đã sửa | Đạt |
+| --- | --- | --- | --- | --- |
+| L-01 | Mọi màn hình chính (điện thoại) | Bảng «Hướng dẫn» tự mở bị cắt ra ngoài mép trái | Trên điện thoại bảng nằm ngang màn hình, cách hai mép 16px | |
+| L-02 | Chi tiết đề nghị mua (mọi vai trò) | Báo «Có lỗi xảy ra» — truy vấn nhúng công trình hai lần | Tách truy vấn danh sách / chi tiết; phép thử canh | |
+| L-03 | Dashboard | Thẻ Dòng tiền hiện «0 đồng» khi chưa có kế hoạch dòng tiền | Hiện «Chưa đủ dữ liệu — Kế toán chưa lập kế hoạch dòng tiền cho kỳ này» | |
+| L-04 | Dashboard, Ngân sách công trình | Câu chữ lỗi thời («hiệu quả kinh doanh chưa có», «các cột còn bằng 0 vì thuộc Giai đoạn 2») | Viết lại đúng hiện trạng | |
+| L-05 | Dashboard | Số chỉ số quá to (`text-3xl font-extrabold`) | Cỡ vừa `text-2xl font-semibold`, một chỗ khai báo | |
+| L-06 | Chi tiết công trình (điện thoại) | Phần đầu trang dính chiếm gần nửa màn hình | Chỉ dính trên máy tính; điện thoại cuộn đi cùng nội dung | |
+| L-07 | Chi tiết đề nghị mua (điện thoại) | Bảng mặt hàng 8 cột phải cuộn ngang, cột Thành tiền khuất | Thẻ từng mặt hàng trên điện thoại | |
+| L-08 | Thanh thao tác nhanh công trường | Nhãn xuống dòng lệch trái | Canh giữa, giãn dòng gọn | |
