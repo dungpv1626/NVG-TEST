@@ -387,26 +387,24 @@ sẵn, **không thêm migration, không thêm endpoint**.
 - Bộ test RLS đầy đủ xanh
 - Dữ liệu demo thật cho 3 pháp nhân + Back Office
 
-#### ⚠️ Tách môi trường — việc BẮT BUỘC trước go-live, chưa làm
+#### ✅ Tách môi trường — đã làm 30/09/2026 (C-1), khác kế hoạch cũ ở hướng tách
 
-Hiện chỉ có **một** project Supabase (`awaiwegmuykhctnysvou`): máy phát triển và bản chạy thử
-`nvg.tests99.workers.dev` dùng chung. Haan chốt giữ nguyên tới go-live.
+Kế hoạch cũ tạo project cloud thứ hai làm production và giữ project cũ làm dev. Làm thật thì đổi hướng,
+vì hai lý do: tài khoản Supabase đã dùng hết 2 project miễn phí, và bản công khai cần giữ nguyên dữ liệu
+demo cho buổi giới thiệu khách hàng.
 
-**Hạn chót: trước khi NVG nhập dòng dữ liệu thật đầu tiên.** Chưa tách thì `npm test` chạm CSDL bản
-đang chạy — và `cleanupTestData` xoá CỨNG.
+- **Phát triển** → Supabase **tại máy** (`supabase/config.toml`, `npm run db:start`). Mọi test `db/` chạy ở đây.
+- **Chạy thử / demo** → project cloud cũ, giữ nguyên dữ liệu. Migration lên đó chỉ bằng `npm run db:migrate:demo`.
+- **Vận hành** → chưa có; tạo lúc go-live, trên gói Pro (có sao lưu). Việc còn lại khi đó: tạo project,
+  migrate, khởi tạo **không** dùng `db:seed` (seed tự chặn production vì mật khẩu dùng chung), đổi
+  `.env.production` + build variables của trigger production, deploy, kiểm host Supabase trong chunk `auth-*.js`.
 
-1. Tạo project Supabase thứ hai (production). Giữ project cũ làm `dev`.
-2. `npm run db:migrate` rồi `npm run db:seed` lên project mới — **kiểm bằng số bảng thật** trong
-   `information_schema`, đừng tin "Hoàn tất" (bẫy `_journal.json`).
-3. Đổi `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` trong **build variables của trigger production** trên
-   Cloudflare Workers Builds. ⚠️ Phải qua Builds API
-   (`PATCH /accounts/{acct}/builds/triggers/{uuid}/environment_variables`) với token **user-scoped** có quyền
-   `Workers Builds Configuration: Edit` — `wrangler` không làm được, token account-scoped bị từ chối.
-   Trigger preview giữ project dev.
-4. Trỏ `.env` ở máy về project **dev**, rồi xác minh bằng grep host Supabase trong chunk `auth-*.js` của bản
-   đã deploy (không phải `index-*.js`). Biến `VITE_` rỗng làm trắng màn hình mà build vẫn xanh.
+Dựng CSDL từ đầu lần đầu tiên đã lộ ba chỗ trước đây chỉ tồn tại nhờ project cloud được sửa tay:
+event trigger `ensure_rls`, hai bucket Module Thiết kế (→ migration `0133`), và năng lực Module Thiết kế
+do migration chèn lúc bảng vai trò còn rỗng (→ đưa vào seed, `seed-parity.test.ts` canh).
 
-Sau khi tách, "xác nhận sao lưu trước migration production (IPD 5.4)" mới có nghĩa và trở lại bắt buộc.
+Sau khi có môi trường vận hành, "xác nhận sao lưu trước migration production (IPD 5.4)" mới có nghĩa và
+trở lại bắt buộc.
 
 ### 4F. Tính năng phụ (chỉ khi còn thời gian — IPD 4.3)
 

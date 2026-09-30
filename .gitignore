@@ -17,6 +17,9 @@ build/
 .env.local
 .env.*.local
 .dev.vars
+# Cấu hình của bản CHẠY THỬ / DEMO (project cloud) — có khoá service_role và mật khẩu CSDL.
+.env.demo
+.dev.vars.demo
 
 # Logs & cache
 *.log

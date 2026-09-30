@@ -19,13 +19,22 @@ import {
   agingBuckets,
   approvalLimits,
   companies,
+  customers,
   permissions,
+  roleCapabilities,
   roles,
   tenants,
   userCompanies,
   users,
 } from '../schema/index';
-import { COMPANY_SEED, ROLE_SEED, SEED_PASSWORD, USER_SEED } from './data';
+import {
+  COMPANY_SEED,
+  ROLE_CAPABILITY_SEED,
+  SAMPLE_CUSTOMER_SEED,
+  ROLE_SEED,
+  SEED_PASSWORD,
+  USER_SEED,
+} from './data';
 
 function requireEnv(name: string): string {
   const v = process.env[name];
@@ -144,6 +153,18 @@ async function main() {
     const roleRows = await db.select({ id: roles.id, code: roles.code }).from(roles);
     const roleByCode = new Map(roleRows.map((r) => [r.code as string, r.id]));
 
+    // --- Quyền chuỗi Module Thiết kế ----------------------------------------
+    let capabilityCount = 0;
+    for (const [roleCode, caps] of Object.entries(ROLE_CAPABILITY_SEED)) {
+      const roleId = roleByCode.get(roleCode);
+      if (!roleId) continue;
+      for (const capability of caps) {
+        await db.insert(roleCapabilities).values({ roleId, capability }).onConflictDoNothing();
+        capabilityCount++;
+      }
+    }
+    console.log(`Quyền chuỗi Module Thiết kế: ${capabilityCount}`);
+
     // --- Hạn mức phê duyệt -------------------------------------------------
     for (const limit of DEFAULT_APPROVAL_LIMITS) {
       const roleId = roleByCode.get(limit.role);
@@ -241,6 +262,21 @@ async function main() {
       .select({ count: sqlOp<number>`count(*)::int` })
       .from(userCompanies);
     console.log(`Gán vai trò theo pháp nhân: ${assignmentRows[0]?.count ?? 0}`);
+
+    // --- Khách hàng mẫu ------------------------------------------------------
+    // Idempotent theo tên. Mã để trống: trigger cấp `KH-{5 số}` (0132).
+    let customerCreated = 0;
+    for (const c of SAMPLE_CUSTOMER_SEED) {
+      const existing = await db
+        .select({ id: customers.id })
+        .from(customers)
+        .where(sqlOp`${customers.name} = ${c.name}`)
+        .limit(1);
+      if (existing.length > 0) continue;
+      await db.insert(customers).values({ code: '', name: c.name, source: c.source });
+      customerCreated++;
+    }
+    console.log(`Khách hàng mẫu: ${SAMPLE_CUSTOMER_SEED.length} (tạo mới ${customerCreated})`);
     console.log(`\nMật khẩu đăng nhập thử: ${SEED_PASSWORD}`);
   } finally {
     await sql.end();

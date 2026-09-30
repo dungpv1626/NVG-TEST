@@ -10,7 +10,7 @@
  * đổi ngay, còn thông báo và tên dòng ngân sách giữ chữ cũ mãi mãi. Không lỗi nào nổ ra, và
  * người dùng chỉ thấy cùng một thứ được gọi bằng hai tên.
  *
- * Chạy: `npx vitest run --project logic db/src/__tests__/enum-labels.test.ts`
+ * Chạy: `npx vitest run --project db db/src/__tests__/enum-labels.test.ts`
  */
 
 import { describe, expect, it } from 'vitest';

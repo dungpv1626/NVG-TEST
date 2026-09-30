@@ -10,7 +10,7 @@
  *  3. **Chú giải và vector ghi cùng lúc**, nên không lệch nhau được.
  *  4. **Cột lọc mới suy từ payload** — cùng lý lẽ với các cột sinh đã có.
  *
- * Chạy: `npx vitest run --project logic db/src/__tests__/kb-retrieval.test.ts`
+ * Chạy: `npx vitest run --project db db/src/__tests__/kb-retrieval.test.ts`
  */
 
 import { beforeAll, describe, expect, it } from 'vitest';

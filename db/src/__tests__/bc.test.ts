@@ -276,9 +276,12 @@ async function cleanupSalesFixture(): Promise<void> {
   const { createConnection } = await import('../client');
   const { sql } = createConnection();
   try {
-    await sql`DELETE FROM opportunities WHERE name LIKE ${TEST_PREFIX + '%'}`;
-    await sql`DELETE FROM bidding_projects WHERE name LIKE ${TEST_PREFIX + '%'}`;
-    await sql`DELETE FROM customers WHERE name LIKE ${TEST_PREFIX + '%'}`;
+    // Chỉ xoá đúng thứ tệp này tạo. Xoá mọi dòng `[TEST]` thì đụng khách hàng mà tệp khác vừa tạo
+    // và còn công nợ trỏ tới — khoá ngoại chặn, tệp đỏ dù mọi phép thử đều xanh. Phần còn lại do
+    // `cleanupTestData` dọn một lần sau cả bộ, đúng thứ tự khoá ngoại.
+    await sql`DELETE FROM opportunities WHERE code LIKE ${'BCTEST-CH-%'}`;
+    await sql`DELETE FROM bidding_projects WHERE code LIKE ${'BCTEST-GT-%'}`;
+    await sql`DELETE FROM customers WHERE name LIKE ${TEST_PREFIX + ' Khách hàng hiệu quả kinh doanh %'}`;
   } finally {
     await sql.end();
   }

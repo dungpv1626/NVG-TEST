@@ -11,7 +11,7 @@
  *  3. **Một bản ghi cũ lệch định dạng không làm đổ cả truy vấn** — kéo theo Lớp 2 hỏng vì
  *     một hồ sơ số hoá từ năm ngoái.
  *
- * Chạy: `npx vitest run --project logic db/src/__tests__/kb-room-area-stats.test.ts`
+ * Chạy: `npx vitest run --project db db/src/__tests__/kb-room-area-stats.test.ts`
  */
 
 import { beforeAll, describe, expect, it } from 'vitest';

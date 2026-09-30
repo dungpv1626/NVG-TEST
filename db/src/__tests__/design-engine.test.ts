@@ -7,7 +7,7 @@
  * RLS trong Postgres. Kiểm bằng dữ liệu giả chỉ chứng minh mã TypeScript nghĩ gì, không
  * chứng minh CSDL làm gì — mà CSDL mới là nơi duy nhất quyền không vòng qua được.
  *
- * Chạy: `npx vitest run --project logic db/src/__tests__/design-engine.test.ts`
+ * Chạy: `npx vitest run --project db db/src/__tests__/design-engine.test.ts`
  * (cần `npm run db:seed` trước).
  */
 

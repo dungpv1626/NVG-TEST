@@ -10,7 +10,7 @@
  *  2. **Chiều bộ môn của phân quyền.** Người thiết kế có `design.write.kien_truc` nhưng KHÔNG
  *     có `design.write.ket_cau` — ranh giới đó nằm trong policy, không nằm ở tầng ứng dụng.
  *
- * Chạy: `npx vitest run --project logic db/src/__tests__/kb-records.test.ts`
+ * Chạy: `npx vitest run --project db db/src/__tests__/kb-records.test.ts`
  */
 
 import { beforeAll, describe, expect, it } from 'vitest';
