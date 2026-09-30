@@ -260,7 +260,7 @@ export function BiddingCreatePage() {
           <Field
             label="Nội dung cần làm rõ"
             className="sm:col-span-2"
-            hint="Những điểm hồ sơ mời thầu còn thiếu hoặc mâu thuẫn, cần hỏi lại chủ đầu tư (DA-02)."
+            hint="Những điểm hồ sơ mời thầu còn thiếu hoặc mâu thuẫn, cần hỏi lại chủ đầu tư."
           >
             <textarea
               value={form.clarificationNotes}

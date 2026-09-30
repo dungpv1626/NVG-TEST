@@ -219,7 +219,7 @@ export function TermsPanel({
                     />
                   </Field>
 
-                  <Field label="Ngày đến hạn" hint="Nguồn của cảnh báo khoản sắp đến hạn (HD-03).">
+                  <Field label="Ngày đến hạn" hint="Nguồn của cảnh báo khoản sắp đến hạn.">
                     <DateInput
                       value={form.dueDate}
                       onChange={(v) => setForm((f) => ({ ...f, dueDate: v }))}

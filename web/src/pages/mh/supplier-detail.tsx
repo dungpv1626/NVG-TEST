@@ -194,8 +194,8 @@ export function SupplierDetailPage() {
             content: (
               <form onSubmit={(e) => void saveRatings(e)} className="space-y-4">
                 <p className="text-fg-muted">
-                  Tám tiêu chí theo PRD MH-03, chấm từ {SUPPLIER_RATING_SCALE.min} đến{' '}
-                  {SUPPLIER_RATING_SCALE.max}. Để trống nghĩa là chưa đánh giá tiêu chí đó.
+                  Tám tiêu chí chấm từ {SUPPLIER_RATING_SCALE.min} đến {SUPPLIER_RATING_SCALE.max}.
+                  Để trống nghĩa là chưa đánh giá tiêu chí đó.
                 </p>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   {SUPPLIER_CRITERIA.map((criterion) => (

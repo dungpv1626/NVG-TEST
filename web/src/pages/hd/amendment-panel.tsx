@@ -191,7 +191,7 @@ export function AmendmentPanel({
                   <span className="block text-xs text-fg-subtle">
                     Chỉ dùng khi phải làm ngay để bảo đảm an toàn hoặc tránh thiệt hại lớn hơn. Bỏ
                     qua bước xác nhận của khách hàng, nhưng phải ghi rõ người có thẩm quyền đã cho
-                    phép (HD-04).
+                    phép.
                   </span>
                 </span>
               </label>

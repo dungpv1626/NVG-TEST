@@ -182,7 +182,7 @@ export function SubcontractorPanel({
 
             <Field
               label="Người nội bộ chịu trách nhiệm"
-              hint="Để trống thì chỉ huy trưởng công trình chịu trách nhiệm (TC-06)."
+              hint="Để trống thì chỉ huy trưởng công trình chịu trách nhiệm."
             >
               <select
                 value={form.responsibleUserId}

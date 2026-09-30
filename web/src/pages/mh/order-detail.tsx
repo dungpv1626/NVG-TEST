@@ -165,8 +165,8 @@ export function PurchaseOrderDetailPage() {
             content: (
               <div className="space-y-4">
                 <p className="text-fg-muted">
-                  Bộ chứng từ để Kế toán lập đề nghị thanh toán (MH-08). Kế toán mở thẳng từ đây,
-                  không nhập lại số liệu đã có.
+                  Bộ chứng từ để Kế toán lập đề nghị thanh toán. Kế toán mở thẳng từ đây, không nhập
+                  lại số liệu đã có.
                 </p>
                 <ul className="space-y-2">
                   <li className="rounded-lg border border-border bg-surface px-4 py-3">

@@ -315,6 +315,16 @@ describe('Không để trình duyệt tự sinh chữ tiếng Anh', () => {
     expect(offenders).toEqual([]);
   });
 
+  it('gợi ý / mô tả trên màn hình không để lộ mã tài liệu nội bộ («MH-08», «PRD Mục 2.2»)', () => {
+    // Người dùng NVG không có PRD trong tay; mã yêu cầu thuộc về chú thích mã nguồn.
+    const code = String.raw`(?:PRD|(?:NEN|CRM|DA|TK|HD|TC|MH|KHO|KT|NS|BC|SX)-\d{2})`;
+    const visible = new RegExp(`(?:hint|description|title)="[^"]*${code}[^"]*"`);
+    const offenders = allPageSources()
+      .filter(({ code: src }) => visible.test(src))
+      .map(({ file }) => file);
+    expect(offenders).toEqual([]);
+  });
+
   it('chốt dịch lời thoại ràng buộc được gắn ngay khi ứng dụng khởi động', () => {
     // Thiếu dòng này thì mọi ô `required` ngoài `Input` lại báo tiếng Anh.
     expect(source('main.tsx')).toContain('installVietnameseValidation()');

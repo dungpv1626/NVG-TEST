@@ -192,7 +192,7 @@ export function BiddingDetailPage() {
             label: 'Khảo sát',
             content: (
               <div className="rounded-lg border border-border bg-surface p-4 shadow-card">
-                <p className="mb-2 font-medium">Hiện trạng, biện pháp và rủi ro (DA-03)</p>
+                <p className="mb-2 font-medium">Hiện trạng, biện pháp và rủi ro</p>
                 {readOnly ? (
                   <p className="whitespace-pre-wrap">{project.survey_notes ?? EM_DASH}</p>
                 ) : (

@@ -153,7 +153,7 @@ export function FinanceOverviewPage() {
         help={APP_HELP.financeOverview}
         title="Tổng quan tài chính"
         breadcrumbs={[{ label: 'Dashboard', to: '/dashboard' }, { label: 'Tổng quan tài chính' }]}
-        description="Doanh thu, tiền đã thu, đã chi theo tháng / quý / năm và so với kỳ trước — BC-01"
+        description="Doanh thu, tiền đã thu, đã chi theo tháng / quý / năm và so với kỳ trước"
         actions={
           canSeeFinance && days.length > 0 ? (
             <>
