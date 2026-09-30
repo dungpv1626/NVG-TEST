@@ -325,6 +325,21 @@ describe('Không để trình duyệt tự sinh chữ tiếng Anh', () => {
     expect(offenders).toEqual([]);
   });
 
+  it('thanh tab của phân hệ cuộn ngang được và mục tab không co — chữ không đè nhau trên điện thoại', () => {
+    // Lỗi thật 30/09/2026: 7 tab Kho trên khổ 390px co lại, «Quét mã» đè «Tồn kho».
+    const navs = allPageSources().filter(
+      ({ file }) => /-nav\.tsx$/.test(file) && !file.includes('/tk/'),
+    );
+    expect(navs.length).toBeGreaterThan(5);
+    const offenders = navs
+      .filter(
+        ({ code }) =>
+          !code.includes('overflow-x-auto') || !code.includes('shrink-0 whitespace-nowrap'),
+      )
+      .map(({ file }) => file);
+    expect(offenders).toEqual([]);
+  });
+
   it('chốt dịch lời thoại ràng buộc được gắn ngay khi ứng dụng khởi động', () => {
     // Thiếu dòng này thì mọi ô `required` ngoài `Input` lại báo tiếng Anh.
     expect(source('main.tsx')).toContain('installVietnameseValidation()');

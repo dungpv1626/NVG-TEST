@@ -193,7 +193,7 @@ export function ScaffoldingPage() {
                       {formatNumber(Number(asset.quantity))} {asset.material?.unit}
                     </p>
                     <Button variant="secondary" onClick={() => setOpenId(isOpen ? null : asset.id)}>
-                      {isOpen ? 'Thu gọn' : 'Biên bản'}
+                      {isOpen ? 'Thu gọn' : 'Xem biên bản'}
                     </Button>
                     {canEdit && (
                       <Button

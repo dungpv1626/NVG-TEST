@@ -25,7 +25,7 @@ export function SxNav() {
           to={item.to}
           className={({ isActive }) =>
             cn(
-              '-mb-px whitespace-nowrap border-b-2 px-3 py-2',
+              '-mb-px shrink-0 whitespace-nowrap border-b-2 px-3 py-2',
               isActive
                 ? 'border-brand font-semibold text-brand'
                 : 'border-transparent text-fg-subtle hover:text-fg',

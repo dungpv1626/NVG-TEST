@@ -919,6 +919,8 @@ export interface DeliveryRecord {
     issue_type: DeliveryIssueType | null;
     issue_note: string | null;
   }[];
+  /** Phiếu kho gắn với đợt giao; lọc `movement_type = 'nhap'` và chưa xoá ở nơi dùng. */
+  stock_ins: { code: string | null; movement_type: string; deleted_at: string | null }[] | null;
 }
 
 export function useDeliveries(orderId: string | undefined) {
@@ -931,7 +933,9 @@ export function useDeliveries(orderId: string | undefined) {
           'id, code, delivered_date, delivered_by_name, delivery_note_number, invoice_number, ' +
             'has_quality_certificate, notes, created_at, ' +
             'receiver:users!deliveries_received_by_users_id_fk(full_name), ' +
-            'items:delivery_items(id, purchase_order_item_id, quantity_ok, quantity_issue, issue_type, issue_note)',
+            'items:delivery_items(id, purchase_order_item_id, quantity_ok, quantity_issue, issue_type, issue_note), ' +
+            // Phiếu nhập kho đã lập từ đợt giao này — có rồi thì không mời bấm «Nhập kho» nữa.
+            'stock_ins:stock_movements!stock_movements_delivery_id_deliveries_id_fk(code, movement_type, deleted_at)',
         )
         .eq('purchase_order_id', orderId!)
         .is('deleted_at', null)
