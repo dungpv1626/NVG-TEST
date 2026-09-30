@@ -66,6 +66,20 @@ async function seedFixture(): Promise<Fixture> {
          'Lợi nhuận mục tiêu', ${300_000_000}, ${0}, ${0})
     `;
 
+    // Doanh thu tới hiện tại = giá trị ĐÃ NGHIỆM THU với chủ đầu tư, biên bản chưa huỷ (0137).
+    // Biên bản đã huỷ và nghiệm thu nội bộ có mặt để chứng minh chúng KHÔNG được cộng.
+    await sql`
+      INSERT INTO acceptance_records
+        (company_id, construction_site_id, code, acceptance_type, status, stage_name, value, cancel_reason)
+      VALUES
+        (${nvc!.id}, ${site!.id}, ${'BCTEST-NT-1-' + stamp}, 'khach_hang', 'da_nghiem_thu',
+         'Đợt 1 — phần móng', ${400_000_000}, NULL),
+        (${nvc!.id}, ${site!.id}, ${'BCTEST-NT-2-' + stamp}, 'khach_hang', 'huy',
+         'Đợt 1 — lập nhầm', ${100_000_000}, 'Lập nhầm giá trị'),
+        (${nvc!.id}, ${site!.id}, ${'BCTEST-NT-3-' + stamp}, 'noi_bo', 'da_nghiem_thu',
+         'Nghiệm thu nội bộ cốt thép', ${50_000_000}, NULL)
+    `;
+
     return { siteId: site!.id, biddingProjectId: bidding!.id, contractValue: 1_000_000_000 };
   } finally {
     await sql.end();
@@ -122,8 +136,12 @@ describeDb('BC-02 — project_profit_loss (Mẫu D, quyền profit)', () => {
     expect(Number(row!.target_profit)).toBe(300_000_000);
 
     expect(Number(row!.contract_value)).toBe(fixture.contractValue);
-    // Lãi thực tế = doanh thu − chi phí đã phát sinh = 1 tỷ − 250tr.
-    expect(Number(row!.profit_actual)).toBe(750_000_000);
+    // Doanh thu tới hiện tại chỉ cộng nghiệm thu với chủ đầu tư chưa huỷ: 400tr — không cộng
+    // biên bản đã huỷ (100tr) và nghiệm thu nội bộ (50tr).
+    expect(Number(row!.accepted_revenue)).toBe(400_000_000);
+    // Lãi thực tế = đã nghiệm thu − chi phí đã phát sinh = 400tr − 250tr (0137). Công thức cũ
+    // lấy cả giá trị hợp đồng (1 tỷ − 250tr = 750tr) — ghi nhận doanh thu ngay từ ngày đầu.
+    expect(Number(row!.profit_actual)).toBe(150_000_000);
     // Lãi dự kiến khi hoàn thành = doanh thu − (đã phát sinh + đã cam kết + còn lại chưa cam
     // kết) = 1 tỷ − (250tr + 100tr + (700tr − 250tr − 100tr)) = 1 tỷ − 700tr.
     expect(Number(row!.profit_forecast)).toBe(300_000_000);

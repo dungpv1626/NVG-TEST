@@ -29,6 +29,8 @@ export interface ProfitLossRow {
   contract_id: string | null;
   contract_value: MoneyValue | null;
   collected_amount: MoneyValue;
+  /** Doanh thu tới hiện tại: nghiệm thu với chủ đầu tư, biên bản chưa huỷ (0137). */
+  accepted_revenue: MoneyValue;
   budgeted_cost: MoneyValue;
   actual_cost: MoneyValue;
   committed_cost: MoneyValue;
