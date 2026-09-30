@@ -12,6 +12,7 @@ import { CrmNav } from './crm-nav';
 import { EntityTable, useCreateActions, type EntityRow } from '@/components/entity/entity-table';
 import { useEntityList } from '@/hooks/use-entity';
 import { useCan } from '@/lib/auth';
+import { APP_HELP } from '@/lib/help-texts';
 
 interface CustomerRecord {
   id: string;
@@ -69,6 +70,7 @@ export function CustomerListPage() {
     <>
       <CrmNav />
       <PageHeader
+        help={APP_HELP.customers}
         title="Khách hàng"
         breadcrumbs={[{ label: 'Khách hàng & Cơ hội' }, { label: 'Khách hàng' }]}
         // Trạng thái rỗng đã có nút tạo mới; không lặp lại ở header để giữ đúng

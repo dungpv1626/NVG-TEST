@@ -209,7 +209,7 @@ Thực thể tham chiếu xuyên module — **liên kết, KHÔNG sao chép**: `
 | -------------------------------- | ------------------------------------------------------------------- |
 | `web/`, `shared/` phần giao diện | `npx vitest run --project web` (~4 giây)                            |
 | Logic thuần trong `shared/`      | `npx vitest run --project logic shared/src/__tests__/<tệp>.test.ts` |
-| Migration / RLS trong `db/`      | `npx vitest run --project logic db/src/__tests__/<module>.test.ts`  |
+| Migration / RLS trong `db/`      | `npx vitest run --project db db/src/__tests__/<module>.test.ts`     |
 
 - Luôn kèm `npx tsc -b` và `npx prettier --check <tệp đã đổi>`. `npm test` đầy đủ (~100 giây) chỉ khi
   Haan yêu cầu hoặc trước commit lớn.
@@ -218,12 +218,13 @@ Thực thể tham chiếu xuyên module — **liên kết, KHÔNG sao chép**: `
   tắt có ghi lý do trong `eslint.config.js`. **Đừng tắt thêm luật để cho xanh** — tắt thì ghi lý do
   ngay tại chỗ, kèm ca hỏng đã đo.
 - **CI**: `.github/workflows/kiem.yml` chạy định dạng, luật, kiểu, hợp đồng và 1.606 phép thử trên
-  mỗi PR. Cố ý KHÔNG chạy `db/` (chạm Supabase thật, xoá cứng theo tiền tố `[TEST]`).
+  mỗi PR. Chưa chạy `db/` — cần dựng Supabase trong CI (`supabase start`), chưa làm.
 - **`npm run mutation-proof`**: cài 83 lỗi thật vào mã nguồn rồi đòi bộ kiểm phải ĐỎ. Số bài kiểm
   không chứng minh bộ kiểm có tác dụng — 20/09/2026 có tám lỗi thật lọt qua 867 bài kiểm đang xanh.
   Thêm hàng rào mới (quyền, riêng tư, tiền gọi mô hình, số đo bản vẽ) thì thêm một đột biến cho nó.
   Khoảng trống đã biết: RLS và ràng buộc trong CSDL KHÔNG được chứng minh ở đây.
-- Test `db/` đỏ: chạy lại đúng tệp trước (rate limit Supabase Auth gây báo động giả) — vẫn đỏ cùng chỗ là lỗi thật.
+- Nhóm `db` chạy **tuần tự** trên Supabase tại máy (~40 giây cả bộ): 23 tệp dùng chung một CSDL và dọn theo
+  tiền tố, chạy song song thì tệp này xoá dữ liệu tệp kia đang dùng. Đừng thêm cờ song song cho nhóm đó.
 
 ---
 
@@ -309,11 +310,21 @@ Nghiệm thu đo bằng **người thật dùng, dữ liệu đúng, báo cáo �
 
 ### 6.3 Môi trường
 
-> ⚠️ **Hiện chỉ có MỘT project Supabase** (`awaiwegmuykhctnysvou`) dùng chung cho máy phát triển và bản
-> chạy thử công khai `nvg.tests99.workers.dev`. Hệ quả: `npm run db:migrate` ở máy **đổi luôn CSDL bản
-> công khai**; test `db/` chạy trên chính CSDL đó và `cleanupTestData` **xoá cứng** (chỉ theo tiền tố
-> `[TEST]` và `year >= 2090`); dữ liệu demo nạp ở máy hiện luôn trên bản công khai.
-> **Phải tách TRƯỚC khi NVG nhập dòng dữ liệu thật đầu tiên** (`BUILD_PLAN.md` 4E). Đừng tách sớm, đừng quên tách.
+> **Hai môi trường CSDL, tách 30/09/2026 (C-1)** — trước đó máy phát triển ghi thẳng vào CSDL của bản công khai.
+>
+> | Môi trường          | CSDL                                      | Ai dùng                                     | Cấu hình                                                                |
+> | ------------------- | ----------------------------------------- | ------------------------------------------- | ----------------------------------------------------------------------- |
+> | **Phát triển**      | Supabase **tại máy** (Docker, cổng 553xx) | máy, `wrangler dev`, **mọi test `db/`**     | `.env`, `workers/.dev.vars`, `supabase/config.toml`                     |
+> | **Chạy thử / demo** | project cloud `awaiwegmuykhctnysvou`      | `nvg.tests99.workers.dev`, Worker `nvg-api` | `.env.demo` (không commit), `.env.production`, `workers/wrangler.jsonc` |
+> | **Vận hành**        | chưa có — tạo lúc go-live, **gói Pro**    | —                                           | —                                                                       |
+>
+> - Bật / tắt CSDL máy: `npm run db:start` / `npm run db:stop`. Dựng lại từ đầu: `npx supabase db reset` rồi `npm run db:migrate && npm run db:seed`.
+> - **Migration lên bản demo chỉ bằng `npm run db:migrate:demo`**, lúc phát hành, TRƯỚC `npm run deploy`. `db:migrate` thường
+>   luôn chạy trên máy. `db/src/env.ts` chặn cứng: `.env` trỏ vào demo thì lệnh thường dừng, còn **bộ test
+>   `db/` từ chối chạy trên demo kể cả khi gọi tường minh** (phép thử `env-guard.test.ts`).
+> - Dải cổng mặc định 543xx thuộc stack Supabase của dự án khác trên máy — đừng dừng nó.
+> - Dữ liệu người dùng nhập trên bản demo (hồ sơ, lượt AI Design) **không có** trên máy, và ngược lại.
+> - Bản vận hành cần gói Pro: tài khoản đã dùng hết 2 project miễn phí, và gói Free không sao lưu, tự dừng sau 7 ngày.
 
 - Đích theo tài liệu: 3 môi trường, mỗi cái một project Supabase; nhánh `main` = production, `staging`,
   feature branch. Một người triển khai → không cần duyệt PR nhiều người; **Haan tự kiểm bản preview** là

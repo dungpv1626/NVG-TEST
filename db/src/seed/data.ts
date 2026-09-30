@@ -179,7 +179,8 @@ export const ROLE_SEED: RoleSeed[] = [
     description: 'Tìm kiếm, chăm sóc khách hàng, báo giá, bàn giao cơ hội đã chốt.',
     seesAllCompanies: false,
     defaultRoute: '/crm/co-hoi',
-    permissions: { BC: VIEW, CRM: WORK, HD: DRAFT_CONTRACT },
+    // TK: xem — Kinh doanh cần thấy hồ sơ thiết kế để bán hàng (migration 0097).
+    permissions: { BC: VIEW, CRM: WORK, HD: DRAFT_CONTRACT, TK: VIEW },
   },
   {
     code: 'DA_DT',
@@ -311,6 +312,65 @@ export const ROLE_SEED: RoleSeed[] = [
       SX: ALL,
     },
   },
+];
+
+/**
+ * Quyền chuỗi của Module Thiết kế (T6) — chép từ migration 0095.
+ *
+ * Vì sao nằm cả ở seed: migration 0095 chèn năng lực bằng «mọi vai trò có mã X», mà trên một CSDL
+ * MỚI thì migration chạy TRƯỚC seed — bảng vai trò còn rỗng, lệnh chèn 0 dòng và không báo lỗi.
+ * Phát hiện 30/09/2026 khi dựng Supabase tại máy (C-1): cả Module Thiết kế báo «không đủ quyền».
+ * Phép thử `seed-parity.test.ts` canh danh sách này không thiếu năng lực nào migration từng cấp.
+ */
+export const ROLE_CAPABILITY_SEED: Record<string, string[]> = {
+  TKE: [
+    'design.project.all',
+    'design.read.kien_truc',
+    'design.read.ket_cau',
+    'design.read.dien_nuoc',
+    'design.write.kien_truc',
+    'design.publish.kien_truc',
+    'design.settings.write',
+  ],
+  KD: ['design.project.all', 'design.read.kien_truc'],
+  TGD: [
+    'design.project.all',
+    'design.read.kien_truc',
+    'design.read.ket_cau',
+    'design.read.dien_nuoc',
+  ],
+  BGD: [
+    'design.project.all',
+    'design.read.kien_truc',
+    'design.read.ket_cau',
+    'design.read.dien_nuoc',
+  ],
+  CFO: [
+    'design.project.all',
+    'design.read.kien_truc',
+    'design.read.ket_cau',
+    'design.read.dien_nuoc',
+  ],
+  ADMIN: [
+    'design.project.all',
+    'design.read.kien_truc',
+    'design.read.ket_cau',
+    'design.read.dien_nuoc',
+    'design.settings.write',
+  ],
+};
+
+/**
+ * Khách hàng khởi tạo — danh mục dùng chung, nên không gắn pháp nhân.
+ *
+ * Bộ kiểm thử `db/` cần sẵn ít nhất một khách hàng để lập cơ hội và báo giá. Trước khi tách môi
+ * trường (C-1) chúng mượn khách hàng do người dùng nhập tay trên bản demo; trên CSDL sạch thì không
+ * có ai để mượn. Tên KHÔNG mang tiền tố `[TEST]` để bước dọn dữ liệu kiểm thử không xoá mất.
+ * Mã do CSDL cấp lúc ghi (`KH-{5 số}`, migration 0132).
+ */
+export const SAMPLE_CUSTOMER_SEED: { name: string; source: string }[] = [
+  { name: 'Công ty TNHH Thương mại An Phát', source: 'Giới thiệu' },
+  { name: 'Hộ gia đình anh Nguyễn Văn Bình', source: 'Website' },
 ];
 
 export interface UserSeed {

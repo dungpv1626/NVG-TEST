@@ -49,7 +49,6 @@ export function AssetPage() {
   const { data: events } = useAssetEvents(selected ?? undefined);
 
   const [name, setName] = useState('');
-  const [code, setCode] = useState('');
   const [serial, setSerial] = useState('');
   const [value, setValue] = useState('');
 
@@ -74,12 +73,10 @@ export function AssetPage() {
       await create.mutateAsync({
         companyId: scope.companyId,
         name,
-        code: code || null,
         serialNumber: serial || null,
         value: value || null,
       });
       setName('');
-      setCode('');
       setSerial('');
       setValue('');
       setNotice('Đã thêm tài sản vào sổ.');
@@ -124,11 +121,8 @@ export function AssetPage() {
           onSubmit={addAsset}
           className="mb-6 grid gap-4 rounded border border-border bg-bg-subtle p-4 sm:grid-cols-2 lg:grid-cols-4"
         >
-          <Field label="Tên tài sản" required>
+          <Field label="Tên tài sản" required hint="Mã tài sản do hệ thống cấp khi lưu.">
             <Input value={name} onChange={(e) => setName(e.target.value)} required />
-          </Field>
-          <Field label="Mã tài sản">
-            <Input value={code} onChange={(e) => setCode(e.target.value)} />
           </Field>
           <Field label="Số serial">
             <Input value={serial} onChange={(e) => setSerial(e.target.value)} />

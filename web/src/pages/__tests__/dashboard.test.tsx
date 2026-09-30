@@ -24,6 +24,7 @@ const state = vi.hoisted(() => ({
   rentals: [] as unknown[],
   timesheets: [] as unknown[],
   sitesBudgetStatus: [] as unknown[],
+  access: { profit: true, finance: true },
 }));
 
 vi.mock('@/lib/auth', () => ({
@@ -82,6 +83,9 @@ vi.mock('@/hooks/use-sx', () => ({
 vi.mock('@/hooks/use-hr', () => ({
   useTimesheets: () => ({ data: state.timesheets, isLoading: false }),
 }));
+vi.mock('@/hooks/use-sensitive-access', () => ({
+  useSensitiveAccess: () => ({ data: state.access }),
+}));
 vi.mock('@/hooks/use-reports', () => ({
   useSitesBudgetStatus: () => ({ data: state.sitesBudgetStatus, isLoading: false, error: null }),
 }));
@@ -92,6 +96,7 @@ const THIS_YEAR = new Date().getFullYear();
 
 beforeEach(() => {
   state.can = {};
+  state.access = { profit: true, finance: true };
   state.opportunities = [];
   state.contracts = [];
   state.approvals = [];
@@ -227,6 +232,17 @@ describe('Dashboard — bốn thẻ KT/SX/NS lấp phần BC-01 còn thiếu', (
     expect(screen.queryByText('Công nợ phải thu')).not.toBeInTheDocument();
     expect(screen.queryByText('Giàn giáo đang cho thuê')).not.toBeInTheDocument();
     expect(screen.queryByText('Chấm công đã chốt')).not.toBeInTheDocument();
+  });
+
+  it('xem được phân hệ KT nhưng KHÔNG được xem tài chính (chỉ huy trưởng) thì không hiện thẻ tiền', () => {
+    // Nếu vẫn hiện, RLS đã lọc hết dữ liệu nên thẻ nói «0 đồng» và «Không còn khoản nào phải
+    // thu» — sai sự thật, không phải thiếu quyền.
+    grantView('KT', 'BC');
+    state.access = { profit: false, finance: false };
+    renderWithApp(<DashboardPage />, { route: '/dashboard' });
+    expect(screen.queryByText('Dòng tiền')).not.toBeInTheDocument();
+    expect(screen.queryByText('Công nợ phải thu')).not.toBeInTheDocument();
+    expect(screen.queryByText('Lãi/lỗ theo công trình')).not.toBeInTheDocument();
   });
 
   it('thẻ Dòng tiền cộng số dư cuối kỳ của mọi pháp nhân và nêu số pháp nhân thiếu hụt', () => {

@@ -17,6 +17,9 @@ build/
 .env.local
 .env.*.local
 .dev.vars
+# Cấu hình của bản CHẠY THỬ / DEMO (project cloud) — có khoá service_role và mật khẩu CSDL.
+.env.demo
+.dev.vars.demo
 
 # Logs & cache
 *.log
@@ -60,3 +63,6 @@ kb/out/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+
+# Bản sao lưu CSDL demo trước khi ghi (pg_dump) — có dữ liệu thật của bản công khai.
+/.sao-luu/

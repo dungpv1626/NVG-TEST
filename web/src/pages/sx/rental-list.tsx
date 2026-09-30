@@ -36,6 +36,7 @@ import {
 import { useCan } from '@/lib/auth';
 import { useCompanyScope } from '@/lib/company-scope';
 import { SxNav } from './sx-nav';
+import { APP_HELP } from '@/lib/help-texts';
 
 interface RentalRow extends EntityRow {
   statusLabel: string;
@@ -164,6 +165,7 @@ export function RentalAgreementListPage() {
     <>
       <SxNav />
       <PageHeader
+        help={APP_HELP.rentals}
         title="Cho thuê giàn giáo"
         breadcrumbs={[{ label: 'Sản xuất & Cho thuê' }, { label: 'Cho thuê giàn giáo' }]}
         actions={

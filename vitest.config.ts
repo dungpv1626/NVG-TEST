@@ -4,9 +4,12 @@ import { defineConfig } from 'vitest/config';
 /**
  * Hai nhóm test tách hẳn nhau vì chúng có bản chất khác nhau:
  *
- *  - `logic` chạy trên CSDL DEV thật, cần thông tin kết nối Supabase, mất ~90 giây. Đó là cái
- *    giá phải trả để chứng minh phân quyền thật sự đứng vững — test RLS bằng dữ liệu giả không
- *    chứng minh được gì.
+ *  - `db` chạy trên CSDL thật — Supabase TẠI MÁY (`npm run db:start`), không bao giờ là bản demo
+ *    trên cloud (`db/src/env.ts` chặn). Đó là cái giá phải trả để chứng minh phân quyền thật sự
+ *    đứng vững — test RLS bằng dữ liệu giả không chứng minh được gì. Chạy TUẦN TỰ: 23 tệp dùng
+ *    chung một CSDL và dọn dữ liệu theo tiền tố, chạy song song thì tệp này xoá dữ liệu tệp kia
+ *    đang dùng (đo 30/09/2026: song song đỏ 23/480, tuần tự xanh 480/480, ~45 giây).
+ *  - `logic` là logic thuần của `shared/` và `workers/`, không chạm CSDL, chạy song song.
  *  - `web` chạy hoàn toàn trong bộ nhớ, không chạm mạng, xong dưới một giây.
  *
  * Gộp chung thì mỗi lần sửa một dòng CSS cũng phải chờ toàn bộ vòng kiểm tra phân quyền, và máy
@@ -22,8 +25,22 @@ export default defineConfig({
       {
         extends: true,
         test: {
+          name: 'db',
+          include: ['db/**/*.test.ts'],
+          environment: 'node',
+          // `fileParallelism` khai ở cấp project KHÔNG có tác dụng (đo: vẫn xong trong 15 giây và
+          // đỏ như chạy song song). Một tiến trình con duy nhất thì Vitest nhận ở cấp project.
+          pool: 'forks',
+          poolOptions: { forks: { singleFork: true } },
+          testTimeout: 30_000,
+          hookTimeout: 30_000,
+        },
+      },
+      {
+        extends: true,
+        test: {
           name: 'logic',
-          include: ['shared/**/*.test.ts', 'db/**/*.test.ts', 'workers/**/*.test.ts'],
+          include: ['shared/**/*.test.ts', 'workers/**/*.test.ts'],
           environment: 'node',
           /*
            * Hạn 5 giây mặc định của Vitest quá ngắn cho nhóm này.

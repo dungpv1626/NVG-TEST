@@ -29,6 +29,7 @@ import { escapeHtml, openPrintReport } from '@/lib/print-report';
 import { cn } from '@/lib/utils';
 import { BcNav } from './bc-nav';
 import { ReportFreshness } from './report-meta';
+import { APP_HELP } from '@/lib/help-texts';
 
 function sum(rows: ProfitLossRow[], key: keyof ProfitLossRow): bigint {
   return rows.reduce((total, r) => {
@@ -58,7 +59,8 @@ function exportCsv(rows: ProfitLossRow[], companyOf: ReturnType<typeof useCompan
     'Mã công trình',
     'Tên công trình',
     'Pháp nhân',
-    'Doanh thu hợp đồng',
+    'Giá trị hợp đồng',
+    'Đã nghiệm thu',
     'Giá vốn thực tế',
     'Đã cam kết',
     'Lãi/lỗ dự kiến',
@@ -70,6 +72,7 @@ function exportCsv(rows: ProfitLossRow[], companyOf: ReturnType<typeof useCompan
       r.site_name,
       companyOf(r.company_id)?.code ?? '',
       r.contract_value ?? '',
+      r.accepted_revenue,
       r.actual_cost,
       r.committed_cost,
       r.target_profit,
@@ -107,7 +110,8 @@ function printPdf(
 ) {
   const summary = `<dl>
     <div><dt>Số công trình</dt><dd>${rows.length}</dd></div>
-    <div><dt>Doanh thu hợp đồng</dt><dd>${escapeHtml(formatCurrency(sum(rows, 'contract_value')))}</dd></div>
+    <div><dt>Giá trị hợp đồng</dt><dd>${escapeHtml(formatCurrency(sum(rows, 'contract_value')))}</dd></div>
+    <div><dt>Đã nghiệm thu</dt><dd>${escapeHtml(formatCurrency(sum(rows, 'accepted_revenue')))}</dd></div>
     <div><dt>Giá vốn thực tế</dt><dd>${escapeHtml(formatCurrency(sum(rows, 'actual_cost')))}</dd></div>
     <div><dt>Lãi/lỗ dự kiến</dt><dd>${profitHtml(sum(rows, 'target_profit'))}</dd></div>
   </dl>`;
@@ -122,6 +126,7 @@ function printPdf(
         <td>${escapeHtml(r.site_name)}<br /><span class="muted">${escapeHtml(r.site_code)}</span></td>
         ${showCompany ? `<td>${escapeHtml(companyOf(r.company_id)?.code ?? '—')}</td>` : ''}
         <td class="num">${revenue}</td>
+        <td class="num">${escapeHtml(formatCurrency(r.accepted_revenue))}</td>
         <td class="num">${escapeHtml(formatCurrency(r.actual_cost))}</td>
         <td class="num">${escapeHtml(formatCurrency(r.committed_cost))}</td>
         <td class="num">${profitHtml(r.target_profit)}</td>
@@ -134,7 +139,8 @@ function printPdf(
     <thead><tr>
       <th>Công trình</th>
       ${showCompany ? '<th>Pháp nhân</th>' : ''}
-      <th class="num">Doanh thu</th>
+      <th class="num">Giá trị hợp đồng</th>
+      <th class="num">Đã nghiệm thu</th>
       <th class="num">Giá vốn thực tế</th>
       <th class="num">Đã cam kết</th>
       <th class="num">Lãi/lỗ dự kiến</th>
@@ -154,6 +160,7 @@ export function ProfitLossReportPage() {
   return (
     <>
       <PageHeader
+        help={APP_HELP.profitLoss}
         title="Báo cáo lãi/lỗ theo công trình"
         description="Doanh thu hợp đồng so với chi phí đã phát sinh và đã cam kết — BC-02"
         breadcrumbs={[
@@ -194,10 +201,14 @@ export function ProfitLossReportPage() {
 
           <section className="rounded-lg border border-border bg-surface-sunken p-4">
             <p className="mb-3 font-medium">Toàn danh mục ({data.length} công trình)</p>
-            <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
+            <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-5">
               <div>
-                <dt className="text-xs text-fg-subtle">Doanh thu hợp đồng</dt>
+                <dt className="text-xs text-fg-subtle">Giá trị hợp đồng</dt>
                 <dd className="mt-0.5">{formatCurrency(sum(data, 'contract_value'))}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-fg-subtle">Đã nghiệm thu với chủ đầu tư</dt>
+                <dd className="mt-0.5">{formatCurrency(sum(data, 'accepted_revenue'))}</dd>
               </div>
               <div>
                 <dt className="text-xs text-fg-subtle">Giá vốn thực tế</dt>
@@ -232,7 +243,10 @@ export function ProfitLossReportPage() {
                     </th>
                   )}
                   <th scope="col" className="px-3 py-2 text-right font-medium">
-                    Doanh thu
+                    Giá trị hợp đồng
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-right font-medium">
+                    Đã nghiệm thu
                   </th>
                   <th scope="col" className="px-3 py-2 text-right font-medium">
                     Giá vốn thực tế
@@ -274,6 +288,9 @@ export function ProfitLossReportPage() {
                       )}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">
+                      {formatCurrency(row.accepted_revenue)}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">
                       {formatCurrency(row.actual_cost)}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">
@@ -293,9 +310,9 @@ export function ProfitLossReportPage() {
 
           <p className="text-xs text-fg-subtle">
             Lãi/lỗ dự kiến lấy từ bản dự toán đã duyệt lúc lập ngân sách, không đổi theo thời gian.
-            Lãi/lỗ thực tế = doanh thu hợp đồng − chi phí ĐÃ PHÁT SINH tới hiện tại, chưa trừ phần
-            còn phải chi. Bấm vào tên công trình để xem chi tiết từng mã chi phí và truy ngược tới
-            chứng từ gốc.
+            Lãi/lỗ thực tế = giá trị đã nghiệm thu với chủ đầu tư − chi phí ĐÃ PHÁT SINH tới hiện
+            tại — doanh thu ghi theo khối lượng đã nghiệm thu, không theo cả hợp đồng. Bấm vào tên
+            công trình để xem chi tiết từng mã chi phí và truy ngược tới chứng từ gốc.
           </p>
         </div>
       )}

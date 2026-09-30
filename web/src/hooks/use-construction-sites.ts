@@ -281,6 +281,8 @@ export function useCreateSiteLog() {
         content: string;
         workforce_count: number | null;
         weather: string | null;
+        /** Đường dẫn ảnh trong bucket `construction-photos` — đã tải lên trước. */
+        photo_urls?: string[];
       };
     }
   >({

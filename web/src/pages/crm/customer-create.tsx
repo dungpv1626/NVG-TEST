@@ -17,9 +17,7 @@ import { BlockedNotice } from '@/components/ui/states';
 import { useCreateEntity } from '@/hooks/use-entity';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard';
-import { companyCodeOf, useAuth, useCan } from '@/lib/auth';
-import { useCompanyStore } from '@/lib/company-store';
-import { supabase } from '@/lib/supabase';
+import { useAuth, useCan } from '@/lib/auth';
 import {
   CustomerFields,
   EMPTY_CUSTOMER_FORM,
@@ -39,7 +37,6 @@ export function CustomerCreatePage() {
   // Phòng thủ nhiều lớp: nút đã bị ẩn ở màn hình Danh sách, nhưng người dùng vẫn có thể
   // gõ thẳng đường dẫn. Nói rõ lý do thay vì để họ điền xong rồi mới báo lỗi.
   const canCreate = useCan('CRM', 'create');
-  const selectedCompanyId = useCompanyStore((s) => s.selectedCompanyId);
 
   const [form, setForm] = useState<CustomerFormValues>(EMPTY_CUSTOMER_FORM);
   const [error, setError] = useState<string | null>(null);
@@ -69,18 +66,9 @@ export function CustomerCreatePage() {
     }
 
     try {
-      // Mã hồ sơ do CSDL cấp — hai người tạo cùng lúc không thể nhận trùng mã.
-      const companyCode =
-        companyCodeOf(profile, selectedCompanyId) ?? profile?.assignments[0]?.companyCode ?? 'NVG';
-
-      const { data: code, error: codeError } = await supabase.rpc('next_record_code', {
-        p_company_code: companyCode,
-        p_record_type: 'KH',
-      });
-      if (codeError) throw codeError;
-
+      // Không gửi mã: CSDL cấp `KH-{5 số}` lúc ghi (migration 0132). Khách hàng là bảng dùng
+      // chung nên mã không mang pháp nhân.
       const created = await createCustomer.mutateAsync({
-        code,
         ...customerPayload(form),
         // Người tạo nhận trách nhiệm hồ sơ mới. Chuyển giao cho người khác là thao tác
         // riêng ở màn hình Sửa, không phải quyết định lúc đang nhập liệu.

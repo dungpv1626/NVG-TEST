@@ -14,6 +14,7 @@ import { EntityTable, useCreateActions, type EntityRow } from '@/components/enti
 import { useEmployees } from '@/hooks/use-hr';
 import { useCan } from '@/lib/auth';
 import { NsNav } from './ns-nav';
+import { APP_HELP } from '@/lib/help-texts';
 
 interface EmployeeRow extends EntityRow {
   blockLabel: string;
@@ -54,6 +55,7 @@ export function EmployeeListPage() {
     <>
       <NsNav />
       <PageHeader
+        help={APP_HELP.employees}
         title="Hồ sơ nhân sự"
         description="Một hồ sơ duy nhất cho mỗi người, từ lúc nhận việc tới lúc bàn giao."
         breadcrumbs={[{ label: 'Hành chính – Nhân sự' }, { label: 'Hồ sơ nhân sự' }]}

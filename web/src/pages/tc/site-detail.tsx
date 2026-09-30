@@ -36,6 +36,7 @@ import { BudgetPanel } from './budget-panel';
 import { SiteDocumentPanel } from './document-panel';
 import { SiteLogPanel } from './site-log-panel';
 import { SitePurchaseRequestPanel } from './purchase-request-panel';
+import { SiteQuickActions } from './site-quick-actions';
 import { SubcontractorPanel } from './subcontractor-panel';
 import { WarrantyPanel } from './warranty-panel';
 
@@ -175,8 +176,8 @@ export function SiteDetailPage() {
             content: <BudgetPanel siteId={site.id} />,
           },
           {
-            id: 'de-nghi-mua',
-            label: 'Đề nghị mua',
+            id: 'de-nghi',
+            label: 'Đề nghị',
             content: <SitePurchaseRequestPanel siteId={site.id} readOnly={isClosed} />,
           },
           {
@@ -341,6 +342,7 @@ export function SiteDetailPage() {
           },
         ]}
       />
+      <SiteQuickActions siteId={site.id} readOnly={readOnly} />
     </>
   );
 }

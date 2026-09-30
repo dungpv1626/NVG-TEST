@@ -15,7 +15,7 @@
  *     phiên bản cho mỗi lần lưu, và từ bản thứ hai lại bắt buộc nêu lý do.
  *  4. **Hành vi TK-01 cũ không đổi** — điều kiện ra của Mốc 2 là "không module nào hỏng".
  *
- * Chạy: `npx vitest run --project logic db/src/__tests__/design-brief-structured.test.ts`
+ * Chạy: `npx vitest run --project db db/src/__tests__/design-brief-structured.test.ts`
  */
 
 import { beforeAll, describe, expect, it } from 'vitest';

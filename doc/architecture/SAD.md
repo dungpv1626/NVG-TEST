@@ -65,6 +65,7 @@ Những ràng buộc nghiệp vụ định hình kiến trúc. Mỗi yếu tố 
 | Một người triển khai | Sửa một quy tắc chỉ động vào một chỗ | Điều kiện phân quyền gói trong hàm dùng chung |
 | Sai quyền phải bắt được bằng máy | Kiểm thử tự động đăng nhập thật bằng từng vai trò | Phân quyền phải kiểm được từ ngoài, không phụ thuộc giao diện |
 | Giao diện tiếng Việt 100% | Kể cả chữ do trình duyệt tự sinh | Cấm dùng điều khiển gốc tự sinh chữ; có kiểm thử canh |
+| AI là dịch vụ ngoài, có thể sập hoặc quá đắt | Phòng Thiết kế làm trọn việc của mình khi **không có AI** | Nhánh AI tách rời, không nằm trên đường chạy nào của luồng thiết kế thủ công — xem mục 11 |
 
 ---
 
@@ -122,9 +123,10 @@ sung hàng đợi — `TBD`, chờ chọn dịch vụ thư.
 | BC | Báo cáo và Dashboard điều hành | **Không có bảng riêng** |
 | Thiết kế AI | Thiết kế sơ bộ nhà ở bằng AI | Artifact, đầu bài, nhật ký gọi mô hình |
 
-Hai ranh giới cứng: **BC không có bảng riêng** (một nguồn dữ liệu duy nhất, báo cáo đọc từ nơi
-phát sinh), và **Thiết kế AI không ghi vào hồ sơ phát hành** (kết quả AI là đề xuất; người có thẩm
-quyền mới phát hành).
+Ba ranh giới cứng: **BC không có bảng riêng** (một nguồn dữ liệu duy nhất, báo cáo đọc từ nơi
+phát sinh) · **Thiết kế AI không ghi vào hồ sơ phát hành** (kết quả AI là đề xuất; người có thẩm
+quyền mới phát hành) · **Thiết kế AI là phụ trợ tuỳ chọn**, không phải một bước bắt buộc của luồng
+thiết kế (mục 11).
 
 ---
 
@@ -265,9 +267,9 @@ của nhà cung cấp mô hình: khoá bị lộ có thể bị dùng để gọ
 
 | Môi trường | Giao diện | API | Cơ sở dữ liệu |
 | --- | --- | --- | --- |
-| Phát triển | Máy trạm của người viết mã | Chạy cục bộ | Project riêng |
-| Chạy thử | Worker phục vụ tệp tĩnh | Worker API | Project riêng |
-| Vận hành | Worker phục vụ tệp tĩnh | Worker API | Project riêng |
+| Phát triển | Máy trạm của người viết mã | Chạy cục bộ | Nền dữ liệu **chạy ngay trên máy trạm**, dựng từ migration |
+| Chạy thử | Worker phục vụ tệp tĩnh | Worker API | Project cloud riêng — nơi trình diễn cho khách |
+| Vận hành | Worker phục vụ tệp tĩnh | Worker API | Project cloud riêng, **gói có sao lưu tự động** — `TBD-11` |
 
 **Thành phần triển khai độc lập: container số hoá hồ sơ cũ**
 
@@ -282,7 +284,10 @@ Chỗ phải sửa khi đổi giữa hai cách nằm sau **một ranh giới tr�
 
 **Quy tắc triển khai bắt buộc**
 
-1. **Mỗi môi trường một project cơ sở dữ liệu riêng.** Dùng chung một project giữa phát triển và chạy thử là không chấp nhận được: lệnh cập nhật cấu trúc ở máy sẽ đổi luôn dữ liệu bản công khai, và kiểm thử có thể xoá dữ liệu thật.
+1. **Mỗi môi trường một cơ sở dữ liệu riêng.** Dùng chung giữa phát triển và chạy thử là không chấp nhận được: lệnh cập nhật cấu trúc ở máy sẽ đổi luôn dữ liệu bản công khai, và kiểm thử có thể xoá dữ liệu thật.
+   - **Bộ kiểm thử chỉ chạy trên môi trường phát triển**, và điều đó được cưỡng chế bằng mã: kiểm thử trỏ vào môi trường khác thì dừng trước khi mở kết nối, kể cả khi được gọi tường minh.
+   - Cập nhật cấu trúc lên môi trường khác chỉ bằng một lệnh riêng, gọi tường minh lúc phát hành.
+   - **Mọi thứ trên nền dữ liệu phải dựng lại được từ mã nguồn**: cấu trúc bảng, kho tệp, cơ chế tự bật phân quyền, danh mục vai trò. Thứ tạo tay trên bảng điều khiển là thứ môi trường mới sẽ thiếu mà không ai biết.
 2. Phát hành **API trước, giao diện sau** — giao diện mới không được gọi API cũ chưa có hợp đồng tương ứng.
 3. Không thêm tham số môi trường phụ khi phát hành Worker: nó sinh ra một Worker thứ hai trong khi bản thật giữ nguyên bản cũ mà **không báo lỗi**.
 4. Bản dựng giao diện phải **dừng lại nếu biến cấu hình rỗng hoặc trỏ về máy cục bộ**; nếu không, bản phát hành trắng màn hình trong khi quá trình dựng vẫn báo thành công.
@@ -304,6 +309,48 @@ Chỗ phải sửa khi đổi giữa hai cách nằm sau **một ranh giới tr�
 
 Hướng mở rộng khi cần, theo thứ tự: chỉ mục và truy vấn trước, rồi bộ nhớ đệm cho báo cáo nặng,
 sau cùng mới tách dịch vụ. **Quy mô mục tiêu không đòi hỏi mức nào trong ba mức này.**
+
+**Thiết kế AI là phụ trợ tuỳ chọn — quy tắc suy giảm**
+
+Phòng Thiết kế phải làm trọn được việc của mình khi nhánh AI không dùng được, vì bất kỳ lý do nào:
+nhà cung cấp mô hình ngừng phục vụ, hết hạn mức, chi phí vượt mức chi trả, hoặc chủ đầu tư quyết
+định tạm tắt. Đây là **yêu cầu của chủ đầu tư**, không phải suy luận kỹ thuật.
+
+Luồng thiết kế thủ công gồm: hồ sơ dự án thiết kế · đầu bài · khảo sát hiện trạng kèm ảnh · tiến độ
+ba bộ môn · **phiên bản bản vẽ do kiến trúc sư tự làm rồi tải lên** · dự toán · yêu cầu thay đổi ·
+bàn giao thi công. Cả chuỗi này đọc ghi thẳng nền dữ liệu, **không gọi mô hình nào**.
+
+| Hỏng cái gì | Việc mất | Việc vẫn chạy |
+| --- | --- | --- |
+| Nhà cung cấp mô hình ngừng phục vụ, hết hạn mức, hoặc bị tắt vì chi phí | Đề xuất mặt bằng, mặt đứng, phối cảnh; quy nhãn khi số hoá hồ sơ cũ | **Toàn bộ luồng thiết kế thủ công**, kể cả xác nhận đầu bài |
+| Worker API hỏng | Thêm: xác nhận đầu bài thành bản bất biến, và đọc lại kết quả AI cũ | Nhập liệu, khảo sát, tải bản vẽ lên, dự toán, phê duyệt, và mọi module khác |
+| Container số hoá không bật | Số hoá hồ sơ cũ | Mọi thứ còn lại, kể cả nhánh AI |
+
+Ba điều kiện giữ được tính chất này; **phải kiểm lại mỗi lần sửa module Thiết kế**:
+
+1. **Không bước nào của luồng thủ công lấy kết quả AI làm đầu vào bắt buộc.** Bản vẽ phát hành đến từ tệp kiến trúc sư tải lên; kết quả AI là bản phác tham khảo và không đi vào hồ sơ phát hành.
+2. **Nhánh AI nằm gọn trong một tab riêng** của màn hình hồ sơ thiết kế, không phải một bước chắn ngang giữa hai bước khác. Tab chính của màn hình là Tổng quan, Phiên bản bản vẽ và Yêu cầu thay đổi.
+3. **Tắt được bằng cấu hình, không phải bằng sửa mã.** Mỗi tuyến mô hình có công tắc bật/tắt riêng; tuyến tắt hoặc thiếu khoá thì phần AI nói rõ chưa dùng được, các tab khác không đổi hành vi.
+
+**Trần chi tiêu cho lượt gọi mô hình**
+
+Chi phí AI là một rủi ro tiền bạc có thật, nên nó được chặn bằng **ngắt mạch tự động**, không dựa
+vào việc có người để ý kịp. Thiết kế theo đúng nguyên tắc tham số hoá của hệ thống: **cơ chế nằm
+trong mã, con số nằm trong bảng cấu hình**.
+
+| Hạng mục | Thiết kế |
+| --- | --- |
+| Đo bằng gì | Cộng chi phí đã ghi của từng lượt gọi trong kỳ, tách theo **pháp nhân** |
+| Hai ngưỡng | **Ngưỡng cảnh báo** — hiện dải báo, vẫn cho chạy. **Trần** — không nhận lượt chạy mới |
+| Kiểm ở đâu | **Trước khi khởi động một lượt chạy**, không kiểm giữa chừng: cắt ngang một lượt đang chạy là mất tiền đã tiêu mà không có sản phẩm. Lượt đã bắt đầu thì chạy nốt |
+| Chạm trần thì sao | Nhánh AI dừng nhận việc mới; **luồng thiết kế thủ công không đổi hành vi**. Câu báo nói rõ ai nâng được trần |
+| Ai đổi được số | Người có quyền quản trị tham số hệ thống, sửa khi đang chạy, không cần phát hành lại |
+| Chưa cấu hình thì sao | **Không áp trần** — đúng như mọi tham số khác của hệ thống: chưa khai thì hàm đọc trả về rỗng, nơi gọi tự quyết. Đây là trạng thái **có chủ đích** của giai đoạn phát triển và chạy thử |
+
+Một giới hạn phải nói rõ: con số cộng được là **ước tính theo bảng giá đã khai** trong tệp cấu hình
+mô hình tại thời điểm gọi, không phải hoá đơn của nhà cung cấp. Tuyến nào không khai giá thì lượt
+gọi của nó không vào được tổng. Trần này vì thế là hàng rào chặn thiệt hại, **không thay cho việc
+đối chiếu hoá đơn thật**.
 
 ---
 
@@ -327,7 +374,8 @@ sau cùng mới tách dịch vụ. **Quy mô mục tiêu không đòi hỏi mứ
 
 ## 13. Architecture Decisions (Quyết định kiến trúc)
 
-Năm quyết định đầu có tài liệu riêng trong `doc/architecture/adr/`, kèm phương án đã loại.
+Mỗi quyết định có một tài liệu riêng trong `doc/architecture/adr/`, kèm phương án đã loại và
+đánh đổi phải sống chung.
 
 | Mã | Quyết định | Đánh đổi chính |
 | --- | --- | --- |
@@ -336,11 +384,11 @@ Năm quyết định đầu có tài liệu riêng trong `doc/architecture/adr/`
 | ADR-003 | Năm mẫu phân quyền, mỗi bảng đúng một mẫu | Trường hợp lạ phải uốn về một trong năm mẫu |
 | ADR-004 | Đa pháp nhân bằng một cột pháp nhân | Lọc sai một chỗ là lộ dữ liệu chéo pháp nhân |
 | ADR-005 | Cấu hình là dữ liệu, không phải mã | Chưa cấu hình thì màn hình phải xử lý giá trị rỗng |
-| — | Giao diện là ứng dụng một trang trên tệp tĩnh ở mạng biên | Không kết xuất phía máy chủ, không tối ưu tìm kiếm |
-| — | Chứng từ đã ký bất biến, cưỡng chế ở cơ sở dữ liệu | Mọi sửa đổi thành luồng điều chỉnh |
-| — | Tác vụ nền: bộ hẹn giờ gọi hàm trong cơ sở dữ liệu | Khó gỡ lỗi hơn mã TypeScript |
-| — | Ba lớp chặn quyền, chỉ lớp cuối là hàng rào | Quyền khai ở hai nơi, phải giữ đồng bộ |
-| — | Kết quả AI luôn là đề xuất | Không tự động hoá được khâu phát hành hồ sơ |
+| ADR-006 | Giao diện là ứng dụng một trang trên tệp tĩnh ở mạng biên | Không kết xuất phía máy chủ, không tối ưu tìm kiếm |
+| ADR-007 | Chứng từ đã ký bất biến, cưỡng chế ở cơ sở dữ liệu | Mọi sửa đổi thành luồng điều chỉnh |
+| ADR-008 | Tác vụ nền: bộ hẹn giờ gọi hàm trong cơ sở dữ liệu | Khó gỡ lỗi hơn mã TypeScript |
+| ADR-009 | Ba lớp chặn quyền, chỉ lớp cuối là hàng rào | Quyền khai ở hai nơi, phải giữ đồng bộ |
+| ADR-010 | Kết quả AI luôn là đề xuất | Không tự động hoá được khâu phát hành hồ sơ |
 
 ---
 
@@ -363,7 +411,7 @@ Năm quyết định đầu có tài liệu riêng trong `doc/architecture/adr/`
 | Mã | Câu hỏi còn mở | Chặn việc gì |
 | --- | --- | --- |
 | TBD-1 | Thời hạn cam kết phản hồi của từng phòng ban | Cảnh báo quá hạn của công trường |
-| TBD-2 | Bộ mã vật tư, công trình, nhà cung cấp | Nhập liệu thật |
+| TBD-2 | ~~Bộ mã vật tư, công trình, nhà cung cấp~~ — **đã chốt 30/09/2026**, xem `doc/BO_MA.md` | Không còn chặn |
 | TBD-3 | Phần mềm kế toán chính thức để tích hợp | Xuất dữ liệu sang kế toán |
 | TBD-4 | Công thức lương | Tính lương từ bảng công |
 | TBD-5 | Ngoại tuyến thật cho Kho hay chỉ trực tuyến | Thiết kế đồng bộ dữ liệu |
@@ -371,6 +419,8 @@ Năm quyết định đầu có tài liệu riêng trong `doc/architecture/adr/`
 | TBD-7 | Tên miền chính thức, đầu mối hỗ trợ kỹ thuật | Nội dung thông báo lỗi, cấu hình nguồn cho phép |
 | TBD-8 | Mô hình AI chính thức sau thử nghiệm | Chốt hạn mức, chi phí và điều khoản dữ liệu |
 | TBD-9 | Gói dịch vụ mạng biên có hỗ trợ container | Số hoá hồ sơ cũ trên bản vận hành, không qua máy trạm |
+| TBD-10 | Mức trần chi tiêu AI mỗi tháng cho từng pháp nhân, và ngưỡng cảnh báo trước đó | Bật ngắt mạch chi phí; cố ý để rỗng trong lúc phát triển và chạy thử |
+| TBD-11 | Nâng gói nền dữ liệu có sao lưu, tạo môi trường vận hành | Nhập dòng dữ liệu thật đầu tiên — gói miễn phí không sao lưu và tự dừng khi không dùng |
 
 Danh sách đầy đủ kèm hiện trạng: `doc/VAN_DE_CON_MO.md`.
 

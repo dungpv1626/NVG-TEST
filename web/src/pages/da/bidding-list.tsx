@@ -16,6 +16,7 @@ import { EntityTable, useCreateActions, type EntityRow } from '@/components/enti
 import { useBiddingProjects } from '@/hooks/use-bidding-projects';
 import { useCan } from '@/lib/auth';
 import { DaNav } from './da-nav';
+import { APP_HELP } from '@/lib/help-texts';
 
 interface BiddingRow extends EntityRow {
   stageLabel: string;
@@ -53,6 +54,7 @@ export function BiddingListPage() {
     <>
       <DaNav />
       <PageHeader
+        help={APP_HELP.bidding}
         title="Gói thầu"
         breadcrumbs={[{ label: 'Dự án – Đấu thầu' }, { label: 'Gói thầu' }]}
         actions={headerAction}

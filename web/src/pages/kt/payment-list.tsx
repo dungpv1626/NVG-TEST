@@ -22,6 +22,7 @@ import { EntityTable, useCreateActions, type EntityRow } from '@/components/enti
 import { usePaymentRequests } from '@/hooks/use-accounting';
 import { useCan } from '@/lib/auth';
 import { KtNav } from './kt-nav';
+import { APP_HELP } from '@/lib/help-texts';
 
 interface PaymentRow extends EntityRow {
   stageLabel: string;
@@ -80,6 +81,7 @@ export function PaymentRequestListPage() {
     <>
       <KtNav />
       <PageHeader
+        help={APP_HELP.paymentRequests}
         title="Đề nghị chi"
         description="Thanh toán, tạm ứng và hoàn ứng — cùng một luồng duyệt bốn bước."
         breadcrumbs={[{ label: 'Kế toán – Tài chính' }, { label: 'Đề nghị chi' }]}

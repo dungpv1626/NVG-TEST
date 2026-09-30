@@ -171,7 +171,7 @@ bằng cách đọc mã. Vì vậy mỗi ô nhập gốc dễ sinh chữ ngoại
 
 ---
 
-## 5. Xử lý lỗi và thông báo
+## 5. Xử lý lỗi, thông báo và nhật ký
 
 ### 5.1 Nguyên tắc
 
@@ -199,6 +199,37 @@ thông điệp phải phản ánh đúng điều đó.
 Mọi câu chữ giao diện lấy từ `shared/src/content.ts` (nút bấm, lỗi, trạng thái rỗng, xác nhận,
 thông báo) và `shared/src/terminology.ts` (thuật ngữ chuẩn). Trong đó có trạng thái rỗng đặc biệt
 **«Chưa đủ dữ liệu»** — dùng cho chỉ số chưa có dữ liệu thật, thay vì hiện số 0 gây hiểu nhầm.
+
+### 5.4 Nhật ký để điều tra sự cố trên bản vận hành
+
+**Câu cho người dùng và chi tiết cho người điều tra là hai thứ khác nhau.** Bộ bắt lỗi chung của
+Worker trả về trình duyệt đúng một câu nghiệp vụ, đồng thời ghi nguyên văn lỗi kèm phân loại vào
+nhật ký. Không có chiều ngược lại: không đẩy chi tiết kỹ thuật ra trình duyệt cho "dễ tìm lỗi".
+
+Bốn nơi ghi, mỗi nơi trả lời một câu hỏi khác nhau:
+
+| Nơi ghi | Giữ gì | Trả lời câu hỏi |
+| --- | --- | --- |
+| **Nhật ký nền tảng biên** — bật ở cả hai Worker | Từng lượt gọi: đường dẫn, mã trạng thái, thời gian CPU và thời gian thực, ngoại lệ chưa bắt, mọi dòng mã chủ động ghi | Lượt gọi nào hỏng, hỏng ở chỗ nào trong mã |
+| **Nhật ký thao tác** `audit_logs` | Ai, lúc nào, đổi thực thể nào, giá trị trước và sau, lý do | Dữ liệu ra nông nỗi này là do thao tác nào |
+| **Nhật ký truy cập dữ liệu nhạy cảm** `sensitive_access_logs` | Ai xem, xuất hay sửa giá vốn, lợi nhuận, lương | Câu hỏi tra soát nội bộ |
+| **Nhật ký lượt chạy AI** `design_ai_run` · `design_ai_call` | Từng bước của lượt chạy nền; từng lượt gọi mô hình kèm tuyến, mô hình, mục đích, hạng dữ liệu, số token, độ trễ, trạng thái, mã lỗi, chi phí và artifact sinh ra | Lượt thiết kế dừng ở bước nào, vì sao, tốn bao nhiêu |
+
+Ba quy ước làm cho nhật ký dùng được thật:
+
+1. **Mỗi dòng ghi có tiền tố nhận dạng** là tên phân hệ, tên bảng hoặc tên nhà cung cấp, để lọc được trong kho nhật ký gộp chung của cả Worker.
+2. **Ghi nhật ký không được làm hỏng nghiệp vụ.** Ghi nhật ký một lượt gọi mô hình mà hỏng thì chỉ ghi lại chính việc hỏng đó rồi đi tiếp — mất một dòng nhật ký không đáng để mất kết quả đã tính tiền.
+3. **Chi tiết bị lược khỏi câu cho người dùng phải được ghi bù.** Ví dụ lỗi lệch hợp đồng dữ liệu lúc đọc: câu cho người dùng cố ý bỏ danh sách mục hỏng, nên danh sách ấy ghi riêng vào nhật ký — nếu không thì thứ duy nhất chỉ ra hợp đồng nào đã lệch sẽ biến mất.
+
+**Đường điều tra một sự cố**, theo thứ tự: người dùng báo hồ sơ nào và lúc nào → lọc nhật ký nền
+tảng theo khoảng thời gian và đường dẫn, đọc ngoại lệ → nếu là lượt chạy AI thì đối chiếu bảng lượt
+chạy để biết bước nào dừng, rồi bảng lượt gọi để biết lượt nào lỗi → nếu là dữ liệu sai chứ không
+phải lỗi mã thì đọc nhật ký thao tác của chính thực thể đó.
+
+Hai giới hạn đã biết, phải quyết trước khi vận hành thật:
+
+- `TBD` — Nhật ký nền tảng **chỉ giữ trong thời hạn của gói dịch vụ** và không sao lưu ra ngoài. Sự cố phát hiện muộn hơn thời hạn đó chỉ còn ba bảng trong cơ sở dữ liệu để dựng lại.
+- `TBD` — **Chưa có mã theo dấu đi xuyên hệ thống** (một mã sinh ở trình duyệt, đi theo yêu cầu qua Worker xuống cơ sở dữ liệu) và **chưa có nơi thu lỗi phía trình duyệt**. Hệ quả: lỗi làm trắng màn hình chỉ biết được khi người dùng báo, và nối một lượt gọi ở trình duyệt với dòng nhật ký của nó phải làm bằng tay theo thời điểm.
 
 ---
 
@@ -270,31 +301,55 @@ Quy tắc quyết định quyền tách thành **hàm thuần** để kiểm th�
 
 ### 8.1 Nguyên tắc bất biến
 
-1. **Mô hình đề xuất, chương trình quyết định.** Mô hình khai phòng, quan hệ và bản phác thô; **chương trình gán mọi toạ độ**, cửa, cửa sổ, số bậc thang. Không có con số nào trên bản vẽ do mô hình tự đặt.
-2. **Cổng kiểm hỏng thì không lưu.** Chỉ gọi lại mô hình với lỗi ngữ nghĩa và trong giới hạn số lượt; lỗi hình học thì chương trình tự thử rồi dừng.
-3. **Mọi ranh giới có hợp đồng dữ liệu.** Không có hợp đồng thì không được truyền dữ liệu qua ranh giới đó.
-4. **Kết quả là đề xuất.** Không tự phát hành hồ sơ; kỹ sư có chứng chỉ ký, mỗi lần phát hành đúng một bộ môn.
-5. **Ẩn danh trước khi gửi ra ngoài.** Bỏ tên khách hàng, mã hồ sơ, khung tên bản vẽ.
+1. **Nhánh AI là tuỳ chọn.** Không một bước nào của luồng thiết kế thủ công (đầu bài · khảo sát · tiến độ bộ môn · phiên bản bản vẽ tải lên · dự toán · yêu cầu thay đổi · bàn giao) lấy kết quả AI làm đầu vào. Mất nhà cung cấp mô hình là mất phần đề xuất, không mất việc của Phòng Thiết kế.
+2. **Mô hình đề xuất, chương trình quyết định.** Mô hình khai phòng, quan hệ và bản phác thô; **chương trình gán mọi toạ độ**, cửa, cửa sổ, số bậc thang. Không có con số nào trên bản vẽ do mô hình tự đặt.
+3. **Cổng kiểm hỏng thì không lưu.** Chỉ gọi lại mô hình với lỗi ngữ nghĩa và trong giới hạn số lượt; lỗi hình học thì chương trình tự thử rồi dừng.
+4. **Mọi ranh giới có hợp đồng dữ liệu.** Không có hợp đồng thì không được truyền dữ liệu qua ranh giới đó.
+5. **Kết quả là đề xuất.** Không tự phát hành hồ sơ; kỹ sư có chứng chỉ ký, mỗi lần phát hành đúng một bộ môn.
+6. **Ẩn danh trước khi gửi ra ngoài.** Bỏ tên khách hàng, mã hồ sơ, khung tên bản vẽ.
 
 ### 8.2 Các bước xử lý
 
+Đầu vào duy nhất của cả dải là **đầu bài đã xác nhận**. Không có bước lập chương trình không gian
+riêng: mặt bằng đọc thẳng đầu bài và khảo sát.
+
+**Trước khi gọi mô hình — chương trình làm một mình**
+
+| # | Bước | Kết quả |
+| --- | --- | --- |
+| 1 | Kỹ sư điền đầu bài; cổng kiểm đủ điều kiện chặn nếu thiếu thứ không có thì không dựng nổi mặt bằng | Đầu bài bất biến |
+| 2 | Suy ra **đòi hỏi kiểm được** từ câu trả lời, theo bảng dạng dữ liệu ("trả lời X thì mặt bằng phải có Y") | Danh sách ràng buộc tất định |
+| 3 | Lược danh tính | Bản gửi ra ngoài được, hạng dữ liệu 2 |
+
+**Giai đoạn 1 — Mặt bằng từng tầng** (chạy nền, nhiều phương án song song)
+
 | # | Bước | Ai quyết định | Kết quả |
 | --- | --- | --- | --- |
-| 1 | Chốt đầu bài | Kỹ sư điền, hệ thống kiểm đủ | Đầu bài bất biến |
-| 2 | Ẩn danh | Chương trình | Bản tóm tắt gửi được ra ngoài |
-| 3 | Chương trình không gian | Mô hình đề xuất, chương trình bác nếu thiếu so với đầu bài | Danh sách phòng, diện tích, quan hệ |
-| 4 | Ý định cả nhà | Mô hình, **một lượt gọi cho cả nhà** | Khai phòng từng tầng và bản phác lưới ô |
-| 5 | Xếp phòng từng tầng | Chương trình nắn bản phác | Bố cục hợp lệ về hình học |
-| 6 | Cây chia và suy hình học | Chương trình | Toạ độ, tường, lỗ mở, thang |
-| 7 | Cổng kiểm và chấm điểm | Chương trình, theo quy tắc dạng dữ liệu | Đạt, sửa lại, hoặc bỏ |
-| 8 | Vẽ tờ vector | Chương trình, tất định | Tờ bản vẽ |
-| 9 | Xuất tệp bản vẽ | Chương trình | Tệp mở được bằng phần mềm CAD, **một chiều** |
-| 10 | Ảnh minh hoạ, mặt đứng, phối cảnh | Mô hình ảnh, dựng từ ảnh neo | Ảnh kèm nhãn cảnh báo |
-| 11 | Sửa theo yêu cầu kỹ sư | Mô hình chọn trong **tập thao tác đóng**, chương trình áp lên cây đã lưu | Phương án mới, qua lại cùng cổng kiểm |
+| 4 | Ý định cả nhà — **một lượt gọi cho cả nhà** | Mô hình | Khai phòng từng tầng, quan hệ, lối vào, và bản phác lưới ô ~1 m mỗi tầng |
+| 5 | Dựng khung xương rồi xếp phòng | Chương trình | Ô thang đúng mốc, hành lang nối ô thang, phòng lấp vào các túi theo vị trí bản phác — **chương trình gán mọi toạ độ** |
+| 6 | Cây chia và suy hình học | Chương trình | Tường, cửa, cửa sổ, số bậc thang, bậc tam cấp, ban công (kể cả phần đua ra ngoài ranh) |
+| 7 | Cổng kiểm và chấm điểm | Chương trình, theo quy tắc dạng dữ liệu | Đạt · gọi lại mô hình để sửa · hoặc bỏ |
+| 8 | Đúc artifact và chọn phương án tốt nhất trong các lượt | Chương trình chấm, **người chọn** | Bản mặt bằng của hồ sơ |
+| 9 | Sửa theo ô yêu cầu của kỹ sư | Mô hình chọn trong **tập thao tác đóng**, chương trình áp lên cây đã lưu | Phương án mới, qua lại đúng cổng kiểm cũ |
+
+**Giai đoạn 2 — Mặt đứng.** Khung nhà, lỗ mở và ban công **suy từ mặt bằng đã chọn và bị khoá**;
+mô hình chỉ chọn mái, vật liệu, màu, cổng, rào và chi tiết trang trí trong một bộ từ vựng đóng.
+Phiếu yêu cầu của kỹ sư là bắt buộc và được áp thẳng, không qua mô hình.
+
+**Giai đoạn 3 — Phối cảnh.** Năm ảnh của cùng một ngôi nhà, dựng từ tờ mặt đứng và tờ mặt bằng mái;
+**mỗi ảnh một bước riêng** để một ảnh hỏng không kéo theo dựng lại ảnh đã xong.
+
+**Ba quy tắc chi phối cả ba giai đoạn**
+
+- **Tờ vẽ chính là tờ vector tất định** do chương trình dựng. Ảnh do mô hình ảnh sinh ra là phần minh hoạ đi kèm, không phải tờ chính; chữ do mô hình sinh luôn được thoát ký tự trước khi dựng tờ.
+- **Tệp CAD xuất ra đổi từ chính tờ vector**, một chiều: không có và sẽ không có đường nhập ngược.
+- **Luật cứng chỉ chặn khi không dựng được hoặc không đi được**; định mức và kinh nghiệm nghề chỉ trừ điểm và cảnh báo, không loại phương án. Riêng một nhóm ràng buộc do chủ đầu tư đặt là chặn, khai trong tệp quy tắc riêng và luôn bật.
 
 ### 8.3 Điều phối nhiều bước
 
-- Dùng **Workflow** của nền tảng: mỗi giai đoạn một lượt chạy, dừng được giữa các bước để kỹ sư duyệt.
+- Dùng **Workflow** của nền tảng: **một lượt chạy cho một giai đoạn** (mặt bằng · mặt đứng · phối cảnh), vì kiến trúc sư duyệt giữa các giai đoạn. Một lượt chạy suốt cả ba sẽ phải ngủ chờ người bấm, và trong lúc ngủ thì không ai biết nó đang chờ cái gì.
+- **Chạy nền chứ không đồng bộ**: mỗi lượt gọi mô hình mất vài phút, giữ một kết nối mở chừng đó là cách chắc chắn để gặp hết giờ ở tầng mạng và mất kết quả **đã tính tiền**.
+- Trạng thái hiện cho người dùng lấy từ **bảng lượt chạy trong cơ sở dữ liệu**, không đọc thẳng trạng thái của nền tảng: trạng thái kia không biết bước nghiệp vụ nào đang chạy và không đi qua phân quyền.
 - **Mỗi bước gọi mô hình tối đa một lần**, và ghi nhật ký lượt gọi ngay khi gọi — để chi phí luôn truy được.
 - Phần nghiệp vụ tách khỏi lớp điều phối để kiểm thử được mà không cần chạy nền tảng thật.
 
@@ -324,6 +379,80 @@ tệp. Chưa cấu hình thì báo lỗi đọc được, không hỏng âm th�
 - Kho artifact ghi bằng khoá đặc quyền (vượt phân quyền), nên **phải hỏi cơ sở dữ liệu riêng** bằng đúng hàm mà chính sách dùng, trước mỗi lượt đọc và ghi.
 - Từ chối đọc trả **404** (không lộ việc hồ sơ có tồn tại); từ chối ghi trả **403**.
 - Quy tắc giữ khoá mô hình AI: xem mục Bảo mật của tài liệu Kiến trúc — khoá chỉ ở kho bí mật của Worker, trình duyệt không bao giờ gọi thẳng nhà cung cấp, không ghi khoá vào nhật ký.
+
+### 8.7 Quy trình số hoá hồ sơ cũ (container Python)
+
+Đây là con đường duy nhất dữ liệu đi qua Container. Mục đích: biến hồ sơ **đã thi công** thành bản
+ghi trong kho tri thức để nhánh AI đối chiếu. Nó **không** nằm trên đường chạy sinh mặt bằng —
+hỏng hay tắt thì việc thiết kế bằng AI vẫn chạy.
+
+| # | Bước | Chạy ở đâu | Điểm phải giữ |
+| --- | --- | --- | --- |
+| 1 | Nhận cả bộ bản vẽ của **một bộ môn**, mỗi tệp gắn số tầng | Worker | Lưu tệp nguồn xuống kho trước khi làm bất cứ việc gì — trích lại được mà không bắt tải lên lần nữa |
+| 2 | Kiểm quyền ghi kho tri thức | Cơ sở dữ liệu | Hỏi đúng hàm mà chính sách dùng; từ chối phải nói rõ **ai làm được** |
+| 3 | Trích hình học từng tệp | **Container** | **Một tệp một bước** |
+| 4 | Quy nhãn phòng về mã chuẩn | Worker, có gọi mô hình | Bước **riêng**, không gộp vào bước sau; mã phòng người đã xác nhận thắng suy đoán của mô hình |
+| 5 | Lắp bản ghi và kiểm chéo giữa các tờ | **Container** | Trả kèm danh sách phép kiểm đạt · trượt · bỏ qua, không gộp thành một điểm số |
+| 6 | Ghi bản ghi vào kho tri thức | Worker | |
+| 7 | Chú giải "vì sao bố trí thế này" | **Người**, qua giao diện | Năm câu hỏi có sẵn lựa chọn, 10–15 phút một công trình — không bắt kiến trúc sư viết luận |
+
+**Vì sao mỗi tệp một bước.** Nền tảng điều phối lưu kết quả từng bước. Gộp cả mẻ vào một bước thì
+sửa bộ trích xuất xong phải trích lại tất cả, và tệp cuối hỏng sẽ vứt bỏ công của mọi tệp trước.
+Cùng lẽ đó, bước quy nhãn tách riêng vì nó là bước duy nhất của mẻ gọi ra dịch vụ ngoài: gộp vào
+thì một lần bị từ chối sẽ kéo theo gọi mô hình thêm lần nữa dù kết quả cũ vẫn dùng được.
+
+**Hỏng thì không nuốt.** Tệp trích không được đi cùng kết quả kèm tên tệp và lý do — người vận hành
+cần biết phải bổ sung quy ước lớp bản vẽ nào. Nhãn do mô hình suy ra và nhãn không ai quy được cũng
+đi cùng kết quả chứ không chỉ nằm trong nhật ký: người xác nhận cần thấy đúng lúc đang xem bản ghi.
+Không tệp nào trích được thì **dừng hẳn, không thử lại** — thử lại không đổi được gì.
+
+**Bốn đặc điểm của bản vẽ thật quyết định thiết kế bộ trích xuất.** Cả bốn đều hỏng *im lặng*, chỉ
+phát hiện được bằng cách đối chiếu với bản vẽ thật:
+
+1. Bản vẽ **không có đa giác phòng trên lớp riêng** — tên lớp đặt theo độ đậm nét khi in. Đa giác phòng phải dựng từ đồ thị tim tường.
+2. Phải đi **vào trong khối** và đọc cả **thuộc tính chữ**, không chỉ đọc lớp trên cùng.
+3. Một tệp là **trọn hồ sơ một bộ môn**, hàng chục tờ — không phải một tờ một tệp.
+4. **Quy ước lớp bản vẽ là dữ liệu**, khai trong tệp cấu hình; cấm viết tên lớp vào mã. Bộ trích xuất trả riêng danh sách lớp **chưa ánh xạ**, tách bạch với lớp **cố ý bỏ qua**.
+
+**Ranh giới với Container.** Container không giữ trạng thái, không gọi mô hình ngôn ngữ, không gọi
+ngược Worker, và không quy chuẩn hoá nhãn phòng — quy nhãn cần gọi mô hình nên đó là việc của
+Worker. Lỗi mạng và lỗi 5xx là **thử lại được**; lỗi 4xx là dữ liệu đầu vào sai, thử lại vô ích.
+
+`TBD` — Tệp hiện đi qua Worker dưới dạng biểu mẫu nhiều phần, nên Worker phải giữ cả tệp trong bộ
+nhớ và có hạn kích thước. Đích đã chốt là đẩy thẳng lên kho đối tượng; đổi chỗ này là sửa **đúng một
+phương thức**, ranh giới trừu tượng của Container không đổi.
+
+### 8.8 Khi nhánh AI không dùng được
+
+Phân hệ này hỏng theo kiểu **thu hẹp lại**, không kéo theo thứ gì. Cách dựng để giữ được điều đó:
+
+| Chỗ nối | Thiết kế |
+| --- | --- |
+| Vị trí trên màn hình | Một **tab riêng** trong hồ sơ dự án thiết kế, ngang hàng với Đầu bài, Khảo sát, Hồ sơ kỹ thuật, Phiên bản bản vẽ, Dự toán, Yêu cầu thay đổi. Tab chính của màn hình không phải tab này |
+| Chiều phụ thuộc | Nhánh AI **đọc** đầu bài và khảo sát; không có chiều ngược lại. Không bảng nào của luồng thủ công có cột trỏ sang artifact của AI |
+| Đầu ra | Bản phác tham khảo. Bản vẽ phát hành đến từ **tệp kiến trúc sư tải lên**; hai đường đi vào hai nơi khác nhau |
+| Tắt | Công tắc từng tuyến mô hình trong tệp cấu hình; không cấu hình khoá thì tuyến báo chưa dùng được |
+
+**Câu chữ khi hỏng phải nói được hai điều**: việc gì không làm được, và **việc khác vẫn làm được**.
+Ba nhóm nguyên nhân tách bạch vì cách xử lý của người dùng khác nhau: mô hình quá tải (thử lại
+sau) · chưa cấu hình hoặc đã tắt (báo Quản trị hệ thống) · mô hình từ chối chính yêu cầu này (sửa
+đầu bài). Tuyệt đối không hiện mã trạng thái hay nguyên văn lỗi của nhà cung cấp.
+
+**Tiền đã tiêu thì không vứt.** Lượt chạy nền lưu kết quả từng bước, nên hỏng ở bước sau không bắt
+mua lại lượt gọi của bước trước; kết quả từng phần vẫn ghi lại và hiện được. Trượt cổng kiểm thì
+không lưu artifact nhưng **vẫn ghi nhật ký lượt gọi** — chi phí phải truy được kể cả khi không có
+sản phẩm.
+
+**Ngắt mạch theo chi phí.** Nhánh AI tự tắt khi chi tiêu trong kỳ chạm trần, chứ không chờ người để
+ý. Cách dựng:
+
+- **Con số ở bảng tham số hệ thống, không ở trong mã** — trần mỗi tháng cho từng pháp nhân, và ngưỡng cảnh báo trước đó. Đổi được khi đang chạy.
+- **Chưa khai thì không áp trần.** Hàm đọc tham số trả về rỗng khi chưa cấu hình và **cố ý không tự dựng giá trị mặc định**; nơi gọi tự quyết. Đây là hành vi đúng cho giai đoạn phát triển và chạy thử.
+- **Tổng cộng từ nhật ký lượt gọi** đã có sẵn cột chi phí và chỉ mục theo thời gian; không thêm bảng đếm riêng, vì hai nguồn số tiền là hai nguồn để lệch nhau.
+- **Kiểm tại chỗ khởi động lượt chạy**, cùng chỗ với các cổng chặn khác của bước đó — không kiểm giữa chừng. Lượt đã bắt đầu thì chạy nốt.
+- **Chạm trần trả về như một cổng chặn bình thường**: câu nghiệp vụ nói rõ việc gì không làm được và ai nâng được trần, không phải lỗi kỹ thuật. Các tab khác của hồ sơ thiết kế không đổi hành vi.
+- Chi phí cộng được là **ước tính theo bảng giá khai trong tệp cấu hình mô hình** lúc gọi; tuyến không khai giá thì không vào tổng. Đây là hàng rào chặn thiệt hại, không thay cho đối chiếu hoá đơn.
+
 
 ---
 
