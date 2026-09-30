@@ -152,9 +152,12 @@ describe('Dashboard — chỉ hiện thứ vai trò được xem (Webapp Flow 6.
 describe('Dashboard — mỗi con số dẫn tới danh sách đã lọc SẴN ĐÚNG (Webapp Flow 4.1)', () => {
   it('liên kết mang theo CẢ trạng thái lẫn kỳ báo cáo đang xem', () => {
     grantView('CRM');
+    // Hôm nay (giờ Việt Nam) luôn thuộc «Quý này». Ngày cố định tháng 8 từng làm phép thử này
+    // đỏ đúng ngày 01/10/2026 — sang quý 4 là tháng 8 rơi khỏi kỳ.
+    const today = toNvgDateInput(new Date());
     state.opportunities = [
-      { stage: 'khao_sat', estimated_value: '1000', created_at: `${THIS_YEAR}-08-20` },
-      { stage: 'mat_co_hoi', estimated_value: '2000', created_at: `${THIS_YEAR}-08-21` },
+      { stage: 'khao_sat', estimated_value: '1000', created_at: today },
+      { stage: 'mat_co_hoi', estimated_value: '2000', created_at: today },
     ];
     renderWithApp(<DashboardPage />, { route: '/dashboard?ky=quy-nay' });
 
