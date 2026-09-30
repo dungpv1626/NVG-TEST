@@ -37,6 +37,7 @@ import { toUserMessage } from '@/hooks/use-error-message';
 import { useCan } from '@/lib/auth';
 import { KhoNav } from './kho-nav';
 import { APP_HELP } from '@/lib/help-texts';
+import { KPI_VALUE_CLASS } from '@/components/ui/kpi-card';
 
 const EM_DASH = '—';
 
@@ -142,14 +143,14 @@ export function ScaffoldingPage() {
       <section className="mb-4 grid gap-3 sm:grid-cols-2">
         <div className="rounded-lg border border-border bg-surface-sunken p-4">
           <p className="text-xs text-fg-subtle">Cho thuê được</p>
-          <p className="text-2xl font-semibold tabular-nums">{formatNumber(totals.usable)}</p>
+          <p className={KPI_VALUE_CLASS}>{formatNumber(totals.usable)}</p>
           <p className="mt-1 text-xs text-fg-subtle">
             Chỉ gồm hàng mới và còn sử dụng được — con số này mới là con số đem hứa với khách.
           </p>
         </div>
         <div className="rounded-lg border border-border bg-surface-sunken p-4">
           <p className="text-xs text-fg-subtle">Hỏng chờ sửa và chờ thanh lý</p>
-          <p className="text-2xl font-semibold tabular-nums">{formatNumber(totals.unusable)}</p>
+          <p className={KPI_VALUE_CLASS}>{formatNumber(totals.unusable)}</p>
           <p className="mt-1 text-xs text-fg-subtle">
             Vẫn nằm trong sổ tài sản, nhưng không tính vào lượng cho thuê.
           </p>

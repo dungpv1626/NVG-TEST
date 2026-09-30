@@ -84,7 +84,7 @@ Dashboard của Ban Giám đốc và tab «Tổng quan tài chính» (Haan, 30/0
   phân biệt bằng CHỮ («Lỗ 120 triệu», «Quá hạn 31 – 60 ngày»), màu chỉ phụ.
 - So kỳ trước dùng mũi tên + chữ («Tăng 23% so với kỳ trước») bằng mực trung tính: tăng tốt hay xấu
   tuỳ chỉ số (chi tiền tăng là xấu).
-- Số chính của ô chỉ số: `KPI_VALUE_CLASS` (`text-2xl font-semibold`) — cỡ vừa, rút gọn «2,6 tỷ» và
+- Số chính của ô chỉ số: `KPI_VALUE_CLASS` (`text-xl font-semibold`, 20px — Haan chốt 30/09/2026) — cỡ vừa, rút gọn «2,6 tỷ» và
   ghi đủ «2.600.000.000 đồng» ngay dưới.
 - Trục tiền dùng bước tròn 1–2–5 (`niceMoneyTicks`), vạch 0 ghi «0».
 - Kỳ chưa có phát sinh: «Chưa đủ dữ liệu», không vẽ trục trống với cột 0; chuỗi bắt đầu từ kỳ có

@@ -184,8 +184,7 @@ export function DesignShowcasePage() {
         note="Bảy cỡ khai tường minh. Nội dung chính giữ 14px — mật độ thông tin là yêu cầu nghiệp vụ, không phải thứ đem đánh đổi cho thoáng đẹp."
       >
         <div className="space-y-1">
-          <p className="text-3xl font-semibold">30px — số liệu nổi bật</p>
-          <p className="text-2xl font-semibold">24px — số liệu Dashboard</p>
+          <p className="text-xl font-semibold">20px — số liệu thẻ chỉ số (KPI_VALUE_CLASS)</p>
           <p className="text-xl font-semibold">20px — tiêu đề trang</p>
           <p className="text-lg font-semibold">18px — tiêu đề mục</p>
           <p className="text-md font-semibold">16px — tiêu đề thẻ</p>
