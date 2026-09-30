@@ -100,6 +100,9 @@ Mật khẩu chung của tài khoản demo: xem `db/src/seed/data.ts` (`SEED_PAS
 | E-01 | Mua hàng | Mở đề nghị thép hình (hoàn thành) | Hai báo giá, so sánh; chọn nhà giá cao hơn có ghi căn cứ; đơn hàng; giao nhận | | |
 | E-02 | Kho | Tồn kho kho công trình Phố Nối A | Thép H200: nhập 18.000 kg, xuất 12.000 kg, còn 6.000 kg | | |
 | E-03 | Kho | Chứng từ kho | Phiếu nhập truy về phiếu giao nhận và đơn hàng | | |
+| E-04 | Kho | Đơn hàng thép → tab Giao nhận | Đợt giao đã nhập kho ghi «Đã nhập kho theo phiếu NVC-PN-2026-0001», không còn nút Nhập kho | | |
+| E-05 | Kho (điện thoại) | Quét mã `THEP-HINH-H200` | Tồn 6.000 kg ở kho Phố Nối A; thanh tab trên cùng cuộn ngang, chữ không đè nhau | | |
+| E-06 | Kho | Nhà Việt Steel → Giàn giáo | Cho thuê được 2.596; hỏng chờ sửa 4; Lập biên bản bắt buộc nguyên nhân | | |
 
 ## F. Kế toán và phê duyệt
 
@@ -176,3 +179,5 @@ Phát hiện khi chụp ảnh cho hướng dẫn sử dụng; tester kiểm lạ
 | L-13 | Báo cáo, nhà cung cấp, biểu mẫu | Chữ hiển thị lộ mã tài liệu nội bộ («— BC-01», «(MH-08)», «PRD Mục 2.2») | Gỡ; phép thử canh | |
 | L-14 | Chi tiết đề nghị chi, chi tiết hồ sơ có thông báo phía trên | Phần đầu trang đè mất nửa dưới dải bước duyệt / thông báo | Đầu trang chừa đúng chỗ cho phần phía trên | |
 | L-15 | Đơn đặt hàng → Chứng từ | Kế toán phải lập tay đề nghị thanh toán, không gắn mã đơn → ghi đã chi làm công trình bị cộng chi phí hai lần | Nút «Lập đề nghị thanh toán» gắn mã đơn, điền sẵn; phép thử CSDL | |
+| L-16 | Thanh tab mọi phân hệ (điện thoại) | 7 tab Kho co lại, chữ đè nhau | Tab không co, thanh cuộn ngang; phép thử canh | |
+| L-17 | Đơn hàng → Giao nhận (vai trò Kho) | Đợt đã nhập kho vẫn hiện nút Nhập kho, bấm mới báo lỗi | Hiện mã phiếu nhập thay cho nút | |
