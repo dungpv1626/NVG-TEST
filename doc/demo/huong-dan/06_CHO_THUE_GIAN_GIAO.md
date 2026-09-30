@@ -92,7 +92,8 @@ Khách trả giáo (một phần hay toàn bộ): **Thu hồi giàn giáo**.
 Sau khi lưu:
 
 - **Tiền thuê của đợt** = số lượng trả × đơn giá/ngày × số ngày từ ngày bắt đầu thuê tới ngày trả
-  của đợt. Hàng trả sớm không phải trả tiền cho quãng sau khi đã về kho.
+  của đợt. Hàng trả sớm không phải trả tiền cho quãng sau khi đã về kho. Tiền của đợt vào **doanh
+  thu** ở Tổng quan tài chính ngay theo **ngày trả của đợt** — không đợi khách trả hết.
 - Phần **đạt** về kho, gộp vào lô còn dùng được — cho thuê lại được ngay.
 - Phần **hư hỏng** về kho nhưng vào lô **Hỏng, chờ sửa**, kèm biên bản — không tính vào lượng cho
   thuê.
@@ -125,8 +126,6 @@ con số đó.
 
 Nói rõ để không ai tưởng đã làm:
 
-- **Tiền thuê vào báo cáo doanh thu khi hợp đồng thu hồi hết**, ghi vào ngày trả cuối. Đợt trả một
-  phần đã chốt tiền trên hợp đồng nhưng chưa hiện trên biểu đồ doanh thu của Tổng quan tài chính.
 - Giao thêm giáo giữa kỳ vào hợp đồng đang thuê (hiện lập hợp đồng mới).
 - Biên bản thu hồi có chữ ký hai bên; đối soát và tất toán chuyển sang Kế toán.
 - Giá thuê nội bộ giữa các pháp nhân và loại trừ khỏi báo cáo hợp nhất.
@@ -140,4 +139,4 @@ Nói rõ để không ai tưởng đã làm:
 | Khách trả làm nhiều lần? | Mỗi lần trả là một đợt **Thu hồi giàn giáo**; tiền thuê tính riêng theo ngày trả của từng đợt. |
 | Sửa được hợp đồng sau khi lập không? | Không sửa số lượng đã xuất. Xuất thừa thì ghi thu hồi phần thừa (tính tối thiểu 1 ngày thuê). |
 | Giáo khách làm hỏng thì sao? | Ghi ở ô **Hư hỏng** kèm bồi thường; giáo về kho vào lô Hỏng, chờ sửa, có biên bản. |
-| Vì sao tiền thuê của Đông Đô chưa lên biểu đồ doanh thu? | Hợp đồng chưa thu hồi hết — xem mục 8. |
+| Tiền thuê của đợt trả một phần có vào báo cáo không? | Có — vào doanh thu ở Tổng quan tài chính theo ngày trả của đợt đó (Đông Đô: 7.149.600 đồng ngày 27/09/2026). |

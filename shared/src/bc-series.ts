@@ -84,7 +84,7 @@ export interface FinanceDay {
 }
 
 export interface FinanceTotals {
-  /** Doanh thu = nghiệm thu với chủ đầu tư + tiền thuê giàn giáo đã tất toán. */
+  /** Doanh thu = nghiệm thu với chủ đầu tư + tiền thuê giàn giáo chốt ở từng đợt trả (0143). */
   revenue: bigint;
   contractsSigned: bigint;
   collected: bigint;

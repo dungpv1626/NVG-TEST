@@ -97,6 +97,7 @@ export const PROTECTED_TABLES = [
   'acceptance_checklists',
   'acceptance_checklist_results',
   'site_check_ins',
+  'rental_returns',
 ] as const;
 
 /** Mã lỗi Postgres cho "insufficient_privilege" — RLS chặn thành công. */

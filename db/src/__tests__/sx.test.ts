@@ -365,6 +365,20 @@ describeDb('SX — cho thuê giàn giáo: xuất và thu hồi (SX-03)', () => {
     expect(Number(midway!.total_revenue)).toBe(20_000);
     expect(midway!.actual_return_date).toBeNull();
 
+    // 0143: đợt trả một phần ĐÃ vào báo cáo doanh thu theo đúng ngày trả, không đợi trả hết.
+    const { data: financeMidway, error: financeError } = await ketoan.rpc('finance_daily', {
+      p_from: '2026-04-05',
+      p_to: '2026-04-05',
+      p_company_id: fixture.nvsCompanyId,
+    });
+    expect(financeError).toBeNull();
+    const rentalOn = (rows: unknown) =>
+      ((rows ?? []) as { rental_revenue: string | number }[]).reduce(
+        (sum, r) => sum + Number(r.rental_revenue),
+        0,
+      );
+    expect(rentalOn(financeMidway)).toBeGreaterThanOrEqual(20_000);
+
     // Đợt 2 — trả nốt vào 10/04: 10 ngày × (6 × 1000 + 5 × 2000) = 10 × 16.000 = 160.000.
     const second = await kho.rpc('return_rental_agreement', {
       p_rental_agreement_id: agreementId,
@@ -397,6 +411,29 @@ describeDb('SX — cho thuê giàn giáo: xuất và thu hồi (SX-03)', () => {
     expect(Number(closed!.total_revenue)).toBe(180_000);
     expect(Number(closed!.total_compensation)).toBe(300_000);
     expect(closed!.actual_return_date).toBe('2026-04-10');
+
+    // Mỗi đợt một dòng, đúng ngày và đúng tiền của đợt; tổng khớp số cộng dồn trên hợp đồng.
+    const { data: returns, error: returnsError } = await kho
+      .from('rental_returns')
+      .select('return_date, revenue, compensation')
+      .eq('rental_agreement_id', agreementId as string)
+      .order('return_date');
+    expect(returnsError).toBeNull();
+    expect(
+      (returns ?? []).map((r) => [r.return_date, Number(r.revenue), Number(r.compensation)]),
+    ).toEqual([
+      ['2026-04-05', 20_000, 0],
+      ['2026-04-10', 160_000, 300_000],
+    ]);
+
+    // Trình duyệt không tự ghi được đợt trả — chỉ hàm nghiệp vụ.
+    const { error: forgeError } = await kho.from('rental_returns').insert({
+      company_id: fixture.nvsCompanyId,
+      rental_agreement_id: agreementId as string,
+      return_date: '2026-04-11',
+      revenue: 999_999,
+    });
+    expect(forgeError).toBeTruthy();
 
     // Trả thêm sau khi đã đóng thì bị chặn — không cộng thêm tiền thuê vào hợp đồng đã tất toán.
     const extra = await kho.rpc('return_rental_agreement', {
