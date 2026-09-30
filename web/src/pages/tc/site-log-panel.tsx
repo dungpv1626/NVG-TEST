@@ -10,7 +10,7 @@
  * thì ghi một mục mới — đúng cách một quyển nhật ký giấy hoạt động.
  */
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { CalendarDays, Users } from 'lucide-react';
 import {
   BUTTONS,
@@ -26,8 +26,44 @@ import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/states';
 import { useCreateSiteLog, useSiteLogs } from '@/hooks/use-construction-sites';
 import { toUserMessage } from '@/hooks/use-error-message';
+import { uploadConstructionPhotos } from '@/hooks/use-site-photos';
+import { PhotoStrip, SitePhotoPicker } from './site-photo-picker';
 
 const TODAY = () => new Date().toISOString().slice(0, 10);
+
+interface LogDraft {
+  logDate: string;
+  logType: SiteLogType;
+  content: string;
+  workforceCount: string;
+  weather: string;
+}
+
+const EMPTY_DRAFT = (): LogDraft => ({
+  logDate: TODAY(),
+  logType: 'tien_do',
+  content: '',
+  workforceCount: '',
+  weather: '',
+});
+
+/**
+ * Nháp nhật ký theo từng công trình, giữ trong phiên trình duyệt (CLAUDE.md 5.4 — không bao giờ
+ * mất dữ liệu đang nhập). Ở công trường, mất sóng rồi tải lại trang là chuyện hằng ngày. Ảnh
+ * chưa gửi thì không giữ được qua lần tải lại — trình duyệt không cho lưu tệp.
+ */
+function draftKey(siteId: string) {
+  return `nvg.nhat-ky-nhap.${siteId}`;
+}
+
+function readDraft(siteId: string): LogDraft {
+  try {
+    const raw = sessionStorage.getItem(draftKey(siteId));
+    return raw ? { ...EMPTY_DRAFT(), ...(JSON.parse(raw) as Partial<LogDraft>) } : EMPTY_DRAFT();
+  } catch {
+    return EMPTY_DRAFT();
+  }
+}
 
 export function SiteLogPanel({
   siteId,
@@ -42,13 +78,21 @@ export function SiteLogPanel({
   const createLog = useCreateSiteLog();
 
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    logDate: TODAY(),
-    logType: 'tien_do' as SiteLogType,
-    content: '',
-    workforceCount: '',
-    weather: '',
-  });
+  const [form, setForm] = useState<LogDraft>(() => readDraft(siteId));
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    try {
+      if (form.content || form.workforceCount || form.weather) {
+        sessionStorage.setItem(draftKey(siteId), JSON.stringify(form));
+      } else {
+        sessionStorage.removeItem(draftKey(siteId));
+      }
+    } catch {
+      // Trình duyệt chặn bộ nhớ phiên: vẫn ghi được nhật ký, chỉ không giữ nháp.
+    }
+  }, [siteId, form]);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -57,7 +101,11 @@ export function SiteLogPanel({
       setError('Vui lòng nhập nội dung nhật ký.');
       return;
     }
+    setSaving(true);
     try {
+      // Tải ảnh TRƯỚC, ghi nhật ký SAU: nhật ký không bao giờ trỏ vào ảnh chưa có.
+      const photoPaths =
+        photos.length > 0 ? await uploadConstructionPhotos(siteId, 'nhat-ky', photos) : [];
       await createLog.mutateAsync({
         siteId,
         companyId,
@@ -67,17 +115,15 @@ export function SiteLogPanel({
           content: form.content.trim(),
           workforce_count: form.workforceCount ? Number(form.workforceCount) : null,
           weather: form.weather.trim() || null,
+          ...(photoPaths.length > 0 ? { photo_urls: photoPaths } : {}),
         },
       });
-      setForm({
-        logDate: TODAY(),
-        logType: 'tien_do',
-        content: '',
-        workforceCount: '',
-        weather: '',
-      });
+      setForm(EMPTY_DRAFT());
+      setPhotos([]);
     } catch (e) {
       setError(toUserMessage(e, 'create'));
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -96,6 +142,10 @@ export function SiteLogPanel({
           className="rounded-lg border border-border bg-surface p-4 shadow-card"
         >
           <p className="mb-3 font-medium">Ghi nhật ký hôm nay</p>
+
+          <div className="mb-3">
+            <SitePhotoPicker files={photos} onChange={setPhotos} disabled={saving} />
+          </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Nội dung" required className="sm:col-span-2">
@@ -158,8 +208,8 @@ export function SiteLogPanel({
           </p>
 
           <div className="mt-3">
-            <Button type="submit" variant="primary" disabled={createLog.isPending}>
-              {BUTTONS.save}
+            <Button type="submit" variant="primary" disabled={saving}>
+              {saving && photos.length > 0 ? 'Đang tải ảnh…' : BUTTONS.save}
             </Button>
           </div>
         </form>
@@ -187,6 +237,7 @@ export function SiteLogPanel({
                 <span className="ms-auto">{log.author?.full_name ?? 'Không rõ người ghi'}</span>
               </div>
               <p className="whitespace-pre-wrap">{log.content}</p>
+              {log.photo_urls && log.photo_urls.length > 0 && <PhotoStrip paths={log.photo_urls} />}
             </li>
           ))}
         </ol>

@@ -946,6 +946,13 @@
       "when": 1789387200000,
       "tag": "0134_tc_theo_doi_de_nghi",
       "breakpoints": true
+    },
+    {
+      "idx": 135,
+      "version": "7",
+      "when": 1789390800000,
+      "tag": "0135_tc_anh_cong_truong",
+      "breakpoints": true
     }
   ]
 }

@@ -60,7 +60,7 @@ export function nudgeAvailability(
     return {
       visible: true,
       allowed: false,
-      reason: `Đã thúc — thúc lại được sau ${toNvgTimeInput(row.next_nudge_at)}.`,
+      reason: `Thúc lại được sau ${toNvgTimeInput(row.next_nudge_at)}.`,
     };
   }
   return { visible: true, allowed: true, reason: null };

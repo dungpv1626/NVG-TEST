@@ -123,7 +123,7 @@ describe('Theo dõi đề nghị từ công trường — TC-10', () => {
     ];
     renderList();
     expect(screen.queryByRole('button', { name: /^Thúc$/ })).toBeNull();
-    expect(screen.getByText(/thúc lại được sau \d{2}:\d{2}/)).toBeInTheDocument();
+    expect(screen.getByText(/Thúc lại được sau \d{2}:\d{2}/)).toBeInTheDocument();
   });
 });
 
