@@ -146,6 +146,17 @@ Mật khẩu chung của tài khoản demo: xem `db/src/seed/data.ts` (`SEED_PAS
 | K-07 | Nhân sự | **Thêm nhân sự** → lưu | Hồ sơ mới có mã `NVC-NS-2026-…` | | |
 | K-08 | Nhân sự | Việc cần làm → đơn nghỉ Nguyễn Thị Lan | Tiêu đề «… 2 ngày từ 08/10/2026»; Duyệt xong đơn sang «Đã duyệt» | | |
 
+## G3. Trưởng phòng Thi công (NVC)
+
+| Mã | Vai trò | Thao tác | Kỳ vọng | Kết quả | Ghi chú |
+| --- | --- | --- | --- | --- | --- |
+| T-01 | Trưởng phòng Thi công | Đăng nhập | «Chào Trưởng phòng»; thẻ Công trình: 1 đang thi công, vượt ngân sách «Không có» | | |
+| T-02 | Trưởng phòng Thi công | Thi công → **Phân công** → Thêm phân công | Ô chọn người có danh sách người dùng; lưu được; Chỉ huy trưởng thấy công trình vừa phân công | | |
+| T-03 | Trưởng phòng Thi công | **Chấm công công trường** | Chỉ khối công trường; Xem bảng công; gửi xác nhận rồi **Xác nhận số liệu** được | | |
+| T-04 | Trưởng phòng Thi công | **Theo dõi đề nghị** | Mở sẵn «Tất cả công trình», thấy 3 đề nghị của Hưng Thịnh | | |
+| T-05 | Trưởng phòng Thi công | Báo cáo & Dashboard → gõ `/bc/lai-lo` | Báo chặn ngay (không xoay chờ); thanh Báo cáo không có mục Lãi/lỗ | | |
+| T-06 | Trưởng phòng Thi công | Công trình Hưng Thịnh → Ngân sách | Đủ 5 cột tiền trong khung, không bị cắt cột «Còn được chi» | | |
+
 ## H. Dashboard và báo cáo
 
 | Mã | Vai trò | Thao tác | Kỳ vọng | Kết quả | Ghi chú |
@@ -219,3 +230,12 @@ Phát hiện khi chụp ảnh cho hướng dẫn sử dụng; tester kiểm lạ
 | L-31 | Việc cần làm | Đơn nghỉ ghi «2. ngày» | «2 ngày», nửa ngày «1,5 ngày» (0148) | |
 | L-32 | Hồ sơ nhân sự | Nút «Xem mức lương» hiện cho Thi công, Mua hàng, Xưởng rồi bấm mới bị từ chối | Chỉ hiện với vai trò được xem lương | |
 | L-33 | Biểu mẫu Nhân sự | Nút lưu chính là nút viền | Nút chính đậm | |
+| L-34 | Phân công công trường | Chỉ Quản trị hệ thống mở được; Trưởng phòng Thi công không giao được chỉ huy trưởng | Mở cho Trưởng phòng Thi công (đúng quyền CSDL 0115) | |
+| L-35 | Chấm công | Trưởng phòng Thi công không mở được màn hình nên không xác nhận được công khối công trường | Mở màn hình với riêng khối công trường | |
+| L-36 | Dashboard (Thi công) | Không có thẻ nào về công trình | Thẻ Công trình: theo trạng thái, đang thi công, vượt ngân sách | |
+| L-37 | Dashboard (Thi công) | «Chào E» — tài khoản demo mang chức danh Chỉ huy trưởng | «Chào Trưởng phòng» (0149) | |
+| L-38 | Công trình → Ngân sách | Cột «Còn được chi» bị cắt; cột Nhóm lặp tên mã chi phí | Bỏ cột lặp, số tiền không xuống dòng | |
+| L-39 | Công trình → Tổng quan | «30/09/2026 — ?» | «— chưa kết thúc» | |
+| L-40 | Lãi/lỗ (vai trò không xem giá vốn) | Khung chờ quay ~7 giây rồi mới báo chặn; mục vẫn hiện trên thanh Báo cáo | Báo chặn ngay; ẩn mục | |
+| L-41 | Nhật ký công trường | Gợi ý «Chấm công khối công trường lấy lại con số này» — không đúng | Gợi ý đúng: để đối chiếu với bảng chấm công | |
+| L-42 | Theo dõi đề nghị | Trưởng phòng mở ra thấy trống (mặc định «Đề nghị đã gửi») | Mặc định «Tất cả công trình» cho người quản lý | |
