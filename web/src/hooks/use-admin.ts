@@ -23,6 +23,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { CreatedAccount, NewAccountInput } from '@nvg/shared';
 import { supabase } from '@/lib/supabase';
 
 /* ------------------------------------------------------------------ Người dùng và vai trò */
@@ -101,6 +102,49 @@ export function useSetUserActive() {
     mutationFn: async ({ id, isActive }) => {
       const { error } = await supabase.from('users').update({ is_active: isActive }).eq('id', id);
       if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+    },
+  });
+}
+
+/**
+ * Tạo tài khoản mới (0150) — NGOẠI LỆ duy nhất của tệp này đi qua Worker: danh tính đăng nhập
+ * trong Supabase Auth chỉ `service_role` tạo được (`workers/src/admin/`). Worker kiểm quyền
+ * bằng chính phiên của người bấm, nên ở đây chỉ cần gửi token.
+ */
+const API_BASE = (import.meta.env.VITE_DESIGN_API_URL ?? '').replace(/\/+$/, '');
+
+export function useCreateAccount() {
+  const queryClient = useQueryClient();
+  return useMutation<CreatedAccount, Error, NewAccountInput>({
+    mutationFn: async (input) => {
+      if (!API_BASE) {
+        throw new Error(
+          'Không tạo được tài khoản vì ứng dụng chưa cấu hình địa chỉ máy chủ. Báo đội triển khai.',
+        );
+      }
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Phiên đăng nhập đã hết hạn. Đăng nhập lại để tiếp tục.');
+
+      let response: Response;
+      try {
+        response = await fetch(`${API_BASE}/admin/users`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify(input),
+        });
+      } catch {
+        throw new Error('Máy chủ đang không phản hồi. Thử lại sau ít phút.');
+      }
+      const body = (await response.json().catch(() => null)) as
+        (CreatedAccount & { error?: string }) | null;
+      if (!response.ok || !body) {
+        throw new Error(body?.error ?? 'Không tạo được tài khoản. Vui lòng thử lại.');
+      }
+      return body;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });

@@ -5,10 +5,10 @@
  * nhân" — ví dụ nhân sự NVS vừa làm kinh doanh vừa xử lý nghiệp vụ kho. Nên cột vai trò ở
  * đây liệt kê từng cặp pháp nhân – vai trò, không rút gọn thành một vai trò duy nhất.
  *
- * ⚠️ Màn hình này KHÔNG tạo tài khoản mới. Backend Schema 3.1: hệ thống nội bộ, không có
- * luồng tự đăng ký, và một tài khoản cần trước hết một danh tính trong Supabase Auth —
- * việc đó nằm ngoài PostgREST. Tạo tài khoản vẫn qua bộ nạp dữ liệu; ở đây chỉ xem, tra và
- * thu hồi quyền truy cập.
+ * Tạo tài khoản mới (0150): hệ thống nội bộ, không có luồng tự đăng ký (Backend Schema 3.1),
+ * nên Quản trị viên cấp tài khoản tại đây — «Thêm người dùng». Danh tính đăng nhập trong
+ * Supabase Auth nằm ngoài PostgREST nên đi qua Worker (`POST /admin/users`). Thêm vai trò thứ
+ * hai cho một người vẫn qua đội triển khai.
  */
 
 import { useState } from 'react';
@@ -22,6 +22,7 @@ import { useAdminUsers, useSetUserActive, type AdminUser } from '@/hooks/use-adm
 import { useCompanyLookup } from '@/hooks/use-companies';
 import { useCan } from '@/lib/auth';
 import { NenNav } from './nen-nav';
+import { NewAccountForm } from './new-account-form';
 
 interface UserRow extends EntityRow {
   record: AdminUser;
@@ -34,29 +35,37 @@ export function UserAdminPage() {
   const setActive = useSetUserActive();
 
   const [pending, setPending] = useState<AdminUser | null>(null);
+  const [adding, setAdding] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const rows: UserRow[] = (data ?? []).map((u) => ({
     id: u.id,
     code: u.email,
     title: u.full_name,
+    // Không hiện thành cột (`showRecordColumns={false}`) — giữ để ô tìm kiếm tra được chức danh.
     responsiblePerson: u.job_title,
-    // Tài khoản không có vòng đời hồ sơ. Dùng hai nhóm trạng thái sẵn có để trả lời đúng một
-    // câu hỏi người quản trị hỏi: tài khoản này còn vào được hệ thống không.
     status: u.is_active ? 'in_progress' : 'draft',
     deadline: null,
     record: u,
   }));
 
-  function describeRoles(u: AdminUser): string {
-    if (u.user_companies.length === 0) return 'Chưa gán vai trò';
-    return u.user_companies
-      .map((uc) => {
-        const company = lookupCompany(uc.company_id);
-        const roleLabel = uc.role?.label ?? 'Chưa gán vai trò';
-        return company ? `${company.code} · ${roleLabel}` : roleLabel;
-      })
-      .join(' · ');
+  /**
+   * Gom theo vai trò: «Kế toán – Tài chính: NVC, NVS, NVO». Bản trước nối từng cặp bằng cùng
+   * một dấu «·» («NVC · Kế toán · NVS · Kế toán…») nên không đọc ra cặp nào đi với cặp nào.
+   */
+  function describeRoles(u: AdminUser): string[] {
+    if (u.user_companies.length === 0) return ['Chưa gán vai trò'];
+    const byRole = new Map<string, string[]>();
+    for (const uc of u.user_companies) {
+      const roleLabel = uc.role?.label ?? 'Chưa gán vai trò';
+      const code = lookupCompany(uc.company_id)?.code;
+      const list = byRole.get(roleLabel) ?? [];
+      if (code) list.push(code);
+      byRole.set(roleLabel, list);
+    }
+    return [...byRole].map(([role, codes]) =>
+      codes.length ? `${role}: ${codes.join(', ')}` : role,
+    );
   }
 
   async function toggleActive() {
@@ -77,7 +86,16 @@ export function UserAdminPage() {
         title="Người dùng"
         description="Tài khoản, pháp nhân và vai trò được gán. Thu hồi quyền truy cập bằng cách ngừng kích hoạt, không xóa tài khoản."
         breadcrumbs={[{ label: 'Quản trị hệ thống' }, { label: 'Người dùng' }]}
+        actions={
+          canEdit && !adding ? (
+            <Button variant="primary" onClick={() => setAdding(true)}>
+              Thêm người dùng
+            </Button>
+          ) : undefined
+        }
       />
+
+      {adding && <NewAccountForm onDone={() => setAdding(false)} />}
 
       {actionError && (
         <p
@@ -98,12 +116,24 @@ export function UserAdminPage() {
         searchPlaceholder="Tìm theo tên, email hoặc chức danh…"
         showStatusFilter={false}
         sharedAcrossCompanies
-        emptyMessage={EMPTY_STATES.list('tài khoản', 'Nạp dữ liệu')}
+        showRecordColumns={false}
+        emptyMessage={EMPTY_STATES.list('tài khoản', 'Thêm người dùng')}
         columns={[
           {
+            key: 'job',
+            header: 'Chức danh',
+            render: (r) => r.record.job_title ?? '—',
+          },
+          {
             key: 'roles',
-            header: 'Pháp nhân · Vai trò',
-            render: (r) => describeRoles(r.record),
+            header: 'Vai trò: pháp nhân',
+            render: (r) => (
+              <ul>
+                {describeRoles(r.record).map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            ),
           },
           {
             key: 'phone',
@@ -154,7 +184,8 @@ export function UserAdminPage() {
       )}
 
       <p className="mt-3 text-fg-subtle">
-        Tạo tài khoản mới và đổi vai trò hiện thực hiện qua bộ nạp dữ liệu — chưa mở trên giao diện.
+        Mỗi tài khoản mới có một vai trò chính. Thêm vai trò thứ hai hoặc đổi vai trò hiện do đội
+        triển khai thực hiện.
       </p>
     </>
   );

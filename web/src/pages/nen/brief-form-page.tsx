@@ -166,11 +166,12 @@ export function BriefFormAdminPage() {
 
   return (
     <div>
+      <NenNav />
       <PageHeader
         title="Biểu mẫu đầu bài"
         description="Thêm, sửa và ẩn các mục khảo sát của Đầu bài thiết kế. Thay đổi áp dụng ngay cho mọi hồ sơ đang soạn."
+        breadcrumbs={[{ label: 'Quản trị hệ thống' }, { label: 'Biểu mẫu đầu bài' }]}
       />
-      <NenNav />
 
       {broken && (
         <p className="mb-4 rounded border border-status-overdue-border bg-status-overdue-bg p-3 text-status-overdue-fg">

@@ -426,7 +426,7 @@ export const USER_SEED: UserSeed[] = [
   },
   {
     email: 'admin@nhavietgroup.test',
-    fullName: 'Quản trị hệ thống',
+    fullName: 'Phan Văn M',
     jobTitle: 'Quản trị viên',
     department: 'Back Office',
     fromDocs: false,

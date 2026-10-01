@@ -54,7 +54,8 @@ const ACTION_LABELS: Record<string, string> = {
   approve: 'Phê duyệt',
   reject: 'Từ chối',
   view: 'Xem',
-  edit: 'Sửa',
+  // Hai mã cùng nghĩa (hàm ghi nhật ký cũ dùng `update`, hàm mới dùng `edit`) — một nhãn.
+  edit: 'Chỉnh sửa',
 };
 
 /** Nhóm dữ liệu nhạy cảm — bốn nhóm của hàm `rls_sees_sensitive`. */

@@ -1051,6 +1051,20 @@
       "when": 1789441200000,
       "tag": "0149_chuc_danh_truong_phong_thi_cong",
       "breakpoints": true
+    },
+    {
+      "idx": 150,
+      "version": "7",
+      "when": 1789444800000,
+      "tag": "0150_tao_tai_khoan",
+      "breakpoints": true
+    },
+    {
+      "idx": 151,
+      "version": "7",
+      "when": 1789448400000,
+      "tag": "0151_mo_ta_tham_so",
+      "breakpoints": true
     }
   ]
 }

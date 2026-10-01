@@ -9,6 +9,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { createClient } from '@supabase/supabase-js';
+import { adminApp } from './admin';
 import { designApp } from './design';
 import type { DesignEnv } from './design/env';
 
@@ -83,6 +84,7 @@ app.get('/', (c) => c.json({ ok: true, service: 'nvg-api' }));
  * cần lớp Workers trong khi 12 module còn lại gọi thẳng Supabase.
  */
 app.route('/design', designApp);
+app.route('/admin', adminApp);
 
 function serviceClient(env: Env) {
   // service_role vượt RLS — CHỈ dùng ở đây, không bao giờ trong web/ (CLAUDE.md 5.5).

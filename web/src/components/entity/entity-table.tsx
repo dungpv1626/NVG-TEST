@@ -145,6 +145,15 @@ export interface EntityTableProps<T extends EntityRow> {
    */
   sharedAcrossCompanies?: boolean;
 
+  /**
+   * Đặt `false` cho danh mục KHÔNG phải hồ sơ nghiệp vụ (tài khoản người dùng): ba cột cố
+   * định «Người chịu trách nhiệm · Trạng thái · Thời hạn» chỉ có nghĩa với hồ sơ có vòng đời.
+   * Ở danh sách tài khoản chúng hiện chức danh dưới nhãn «Người chịu trách nhiệm», «Đang xử
+   * lý» cho mọi người và một cột gạch ngang — đọc sai cả ba (thấy khi chụp hướng dẫn Quản trị
+   * hệ thống, 01/10/2026). Màn hình tự thêm cột trạng thái riêng của nó.
+   */
+  showRecordColumns?: boolean;
+
   /** Bật chọn nhiều dòng để thao tác hàng loạt (Webapp Flow 4.2). */
   selection?: {
     selectedIds: string[];
@@ -183,6 +192,7 @@ export function EntityTable<T extends EntityRow>({
   filters,
   showStatusFilter = true,
   sharedAcrossCompanies = false,
+  showRecordColumns = true,
   selection,
 }: EntityTableProps<T>) {
   // Bộ lọc lưu trong query string: quay lại từ Chi tiết vẫn giữ nguyên, và đường dẫn
@@ -390,7 +400,7 @@ export function EntityTable<T extends EntityRow>({
                       {row.title}
                     </Link>
                     {/* Trạng thái luôn kèm chữ, không chỉ dựa vào màu (Content Guidelines 6.8). */}
-                    <StatusLozenge status={row.status} />
+                    {showRecordColumns && <StatusLozenge status={row.status} />}
                   </div>
                   <div className="mt-0.5 font-mono text-xs text-fg-subtle">{row.code}</div>
 
@@ -408,18 +418,20 @@ export function EntityTable<T extends EntityRow>({
                   )}
 
                   {/* Hai cột cố định còn lại đi cùng nhau ở chân thẻ. */}
-                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-fg-subtle">
-                    <span>{row.responsiblePerson ?? 'Chưa phân công'}</span>
-                    {row.deadline && row.status !== 'completed' && (
-                      <span
-                        className={cn(
-                          row.status === 'overdue' && 'font-medium text-status-overdue',
-                        )}
-                      >
-                        {formatDeadline(row.deadline)}
-                      </span>
-                    )}
-                  </div>
+                  {showRecordColumns && (
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-fg-subtle">
+                      <span>{row.responsiblePerson ?? 'Chưa phân công'}</span>
+                      {row.deadline && row.status !== 'completed' && (
+                        <span
+                          className={cn(
+                            row.status === 'overdue' && 'font-medium text-status-overdue',
+                          )}
+                        >
+                          {formatDeadline(row.deadline)}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </li>
@@ -461,9 +473,13 @@ export function EntityTable<T extends EntityRow>({
                 </th>
               ))}
               {/* Ba cột cố định — Webapp Flow 1.3. */}
-              <th className="px-4 py-2.5 font-medium">Người chịu trách nhiệm</th>
-              <th className="px-4 py-2.5 font-medium">Trạng thái</th>
-              <th className="px-4 py-2.5 font-medium">Thời hạn</th>
+              {showRecordColumns && (
+                <>
+                  <th className="px-4 py-2.5 font-medium">Người chịu trách nhiệm</th>
+                  <th className="px-4 py-2.5 font-medium">Trạng thái</th>
+                  <th className="px-4 py-2.5 font-medium">Thời hạn</th>
+                </>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -512,27 +528,31 @@ export function EntityTable<T extends EntityRow>({
                       {c.render(row)}
                     </td>
                   ))}
-                  <td className="px-4 py-3">
-                    {row.responsiblePerson ?? (
-                      <span className="text-fg-subtle">Chưa phân công</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusLozenge status={row.status} />
-                  </td>
-                  <td className="px-4 py-3">
-                    {row.deadline && row.status !== 'completed' ? (
-                      <span
-                        className={cn(
-                          row.status === 'overdue' && 'font-medium text-status-overdue',
+                  {showRecordColumns && (
+                    <>
+                      <td className="px-4 py-3">
+                        {row.responsiblePerson ?? (
+                          <span className="text-fg-subtle">Chưa phân công</span>
                         )}
-                      >
-                        {formatDeadline(row.deadline)}
-                      </span>
-                    ) : (
-                      <span className="text-fg-subtle">—</span>
-                    )}
-                  </td>
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusLozenge status={row.status} />
+                      </td>
+                      <td className="px-4 py-3">
+                        {row.deadline && row.status !== 'completed' ? (
+                          <span
+                            className={cn(
+                              row.status === 'overdue' && 'font-medium text-status-overdue',
+                            )}
+                          >
+                            {formatDeadline(row.deadline)}
+                          </span>
+                        ) : (
+                          <span className="text-fg-subtle">—</span>
+                        )}
+                      </td>
+                    </>
+                  )}
                 </tr>
               );
             })}
