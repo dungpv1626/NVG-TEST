@@ -15,7 +15,12 @@ import {
   RouterProvider,
 } from 'react-router-dom';
 import { AppShell } from '@/components/layout/app-shell';
-import { ApprovalRulesGuard, ModuleGuard } from '@/components/layout/module-guard';
+import {
+  ApprovalRulesGuard,
+  ModuleGuard,
+  SiteAssignmentGuard,
+  TimesheetGuard,
+} from '@/components/layout/module-guard';
 import { ProtectedRoute } from '@/components/layout/protected-route';
 import { AuthProvider } from '@/lib/auth';
 import { LoginPage } from '@/pages/login';
@@ -399,12 +404,14 @@ const router = createBrowserRouter(
         {/* NS — hành chính và nhân sự (NS-01 → NS-11). Chấm công ba khối là màn hình nặng
                   nhất: nó gom việc của ba người khác nhau, nên trạng thái từng khối phải đọc
                   được ngay chứ không nằm trong một danh sách phẳng. */}
+        <Route element={<TimesheetGuard />}>
+          <Route path="ns/cham-cong" element={<TimesheetPage />} />
+        </Route>
         <Route element={<ModuleGuard module="NS" />}>
           <Route path="ns/viec-can-xu-ly" element={<HrDashboardPage />} />
           <Route path="ns/nhan-su" element={<EmployeeListPage />} />
           <Route path="ns/nhan-su/tao-moi" element={<EmployeeCreatePage />} />
           <Route path="ns/nhan-su/:id" element={<EmployeeDetailPage />} />
-          <Route path="ns/cham-cong" element={<TimesheetPage />} />
           <Route path="ns/giay-to" element={<HrDocumentPage />} />
           <Route path="ns/tai-san" element={<AssetPage />} />
           <Route path="ns/nghi-phep" element={<LeavePage />} />
@@ -439,11 +446,14 @@ const router = createBrowserRouter(
           <Route path="nen/han-muc" element={<ApprovalLimitPage />} />
           <Route path="nen/thoi-han" element={<SlaPage />} />
         </Route>
+        {/* Phân công công trường: Quản trị viên và Trưởng phòng Thi công (RLS 0115). */}
+        <Route element={<SiteAssignmentGuard />}>
+          <Route path="nen/phan-cong" element={<SiteAssignmentPage />} />
+        </Route>
         <Route element={<ModuleGuard module="NEN" />}>
           <Route path="nen/quan-tri" element={<UserAdminPage />} />
           <Route path="nen/tham-so" element={<ParameterPage />} />
           <Route path="nen/bieu-mau-dau-bai" element={<BriefFormAdminPage />} />
-          <Route path="nen/phan-cong" element={<SiteAssignmentPage />} />
           <Route path="nen/nhat-ky" element={<AuditLogPage />} />
           <Route path="nen/giao-dien" element={<DesignShowcasePage />} />
         </Route>

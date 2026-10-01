@@ -241,8 +241,10 @@ export function SiteDetailPage() {
                       label: 'Kế hoạch',
                       value:
                         site.planned_start_date || site.planned_end_date
-                          ? `${site.planned_start_date ? formatDate(site.planned_start_date) : '?'} — ${
-                              site.planned_end_date ? formatDate(site.planned_end_date) : '?'
+                          ? `${site.planned_start_date ? formatDate(site.planned_start_date) : 'chưa ghi ngày bắt đầu'} — ${
+                              site.planned_end_date
+                                ? formatDate(site.planned_end_date)
+                                : 'chưa ghi ngày kết thúc'
                             }`
                           : EM_DASH,
                     },
@@ -250,8 +252,10 @@ export function SiteDetailPage() {
                       label: 'Thực tế',
                       value:
                         site.actual_start_date || site.actual_end_date
-                          ? `${site.actual_start_date ? formatDate(site.actual_start_date) : '?'} — ${
-                              site.actual_end_date ? formatDate(site.actual_end_date) : '?'
+                          ? `${site.actual_start_date ? formatDate(site.actual_start_date) : 'chưa bắt đầu'} — ${
+                              site.actual_end_date
+                                ? formatDate(site.actual_end_date)
+                                : 'chưa kết thúc'
                             }`
                           : 'Chưa khởi công',
                     },

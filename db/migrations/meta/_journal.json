@@ -1044,6 +1044,13 @@
       "when": 1789437600000,
       "tag": "0148_so_ngay_nghi_trong_tieu_de",
       "breakpoints": true
+    },
+    {
+      "idx": 149,
+      "version": "7",
+      "when": 1789441200000,
+      "tag": "0149_chuc_danh_truong_phong_thi_cong",
+      "breakpoints": true
     }
   ]
 }

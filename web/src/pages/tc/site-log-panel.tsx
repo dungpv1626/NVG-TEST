@@ -183,7 +183,7 @@ export function SiteLogPanel({
 
             <Field
               label="Quân số có mặt"
-              hint="Chấm công khối công trường lấy lại con số này, không nhập lại."
+              hint="Số người làm việc tại công trường trong ngày — để đối chiếu với bảng chấm công khối công trường."
             >
               <Input
                 value={form.workforceCount}

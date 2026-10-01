@@ -8,6 +8,8 @@
 
 import { useState } from 'react';
 import { PageHeader } from '@/components/layout/app-shell';
+import { useManagesSiteAssignments } from '@/components/layout/module-nav';
+import { TcNav } from './tc-nav';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { RequestTrackerList } from './request-tracker';
 import { APP_HELP } from '@/lib/help-texts';
@@ -20,10 +22,14 @@ const SCOPE_LABELS: Record<Scope, string> = {
 };
 
 export function SiteRequestsPage() {
-  const [scope, setScope] = useState<Scope>('cua-toi');
+  // Người quản lý nhiều công trình (Trưởng phòng Thi công) mở màn hình này để xem việc của các
+  // công trường, không phải đề nghị của riêng mình — mặc định «Tất cả công trình».
+  const managesSites = useManagesSiteAssignments();
+  const [scope, setScope] = useState<Scope>(managesSites ? 'tat-ca' : 'cua-toi');
 
   return (
     <>
+      <TcNav />
       <PageHeader
         help={APP_HELP.siteRequests}
         title="Theo dõi đề nghị"

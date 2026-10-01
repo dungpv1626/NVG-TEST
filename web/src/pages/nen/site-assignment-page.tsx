@@ -34,13 +34,19 @@ import {
 } from '@/hooks/use-admin';
 import { useCompanyLookup } from '@/hooks/use-companies';
 import { useConstructionSites } from '@/hooks/use-construction-sites';
+import { useManagesSiteAssignments } from '@/components/layout/module-nav';
 import { useCan } from '@/lib/auth';
+import { TcNav } from '@/pages/tc/tc-nav';
 import { NenNav } from './nen-nav';
 
 const HOM_NAY = () => toNvgDateInput(new Date());
 
 export function SiteAssignmentPage() {
-  const canEdit = useCan('NEN', 'edit');
+  // Quản trị hệ thống, hoặc Trưởng phòng Thi công — người thật sự giao việc ở công trường.
+  const canEditNen = useCan('NEN', 'edit');
+  const canViewNen = useCan('NEN', 'view');
+  const managesSites = useManagesSiteAssignments();
+  const canEdit = canEditNen || managesSites;
   const { data, isLoading, error, refetch } = useSiteAssignments();
   const { data: users } = useAdminUsers();
   const { data: sites } = useConstructionSites();
@@ -91,11 +97,18 @@ export function SiteAssignmentPage() {
 
   return (
     <>
-      <NenNav />
+      {canViewNen ? <NenNav /> : <TcNav />}
       <PageHeader
         title="Phân công công trường"
         description="Người ở hiện trường chỉ thấy dữ liệu của công trình được phân công. Người chịu trách nhiệm công trình đã được tính là phân công sẵn, không cần thêm dòng."
-        breadcrumbs={[{ label: 'Quản trị hệ thống' }, { label: 'Phân công công trường' }]}
+        breadcrumbs={
+          canViewNen
+            ? [{ label: 'Quản trị hệ thống' }, { label: 'Phân công công trường' }]
+            : [
+                { label: 'Thi công & Ngân sách', to: '/tc/cong-trinh' },
+                { label: 'Phân công công trường' },
+              ]
+        }
         actions={
           canEdit ? (
             <Button

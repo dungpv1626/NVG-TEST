@@ -479,8 +479,8 @@ export const USER_SEED: UserSeed[] = [
   {
     email: 'congtruong.nvc@nhavietgroup.test',
     fullName: 'Hoàng Văn E',
-    jobTitle: 'Chỉ huy trưởng',
-    department: 'NVC — Ban công trường 01',
+    jobTitle: 'Trưởng phòng Thi công',
+    department: 'NVC — Phòng Thi công',
     fromDocs: false,
     assignments: [{ company: 'NVC', role: 'TC', isPrimary: true }],
   },
