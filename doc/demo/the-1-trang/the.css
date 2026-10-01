@@ -25,10 +25,10 @@ body {
 .page {
   width: 210mm;
   height: 297mm;
-  padding: 11mm 12mm 9mm;
+  padding: 9mm 12mm 8mm;
   display: flex;
   flex-direction: column;
-  gap: 4.5mm;
+  gap: 4mm;
   overflow: hidden;
 }
 header {
@@ -101,3 +101,11 @@ footer {
   border-top: 1px solid var(--line); padding-top: 2mm;
   display: flex; justify-content: space-between; font-size: 8.5pt; color: var(--muted);
 }
+
+/* Biến thể cho vai trò dùng máy tính: ảnh màn hình ngang nằm dưới, cạnh mục «Gặp vướng». */
+.page.desk .main { flex: 0 0 auto; }
+.page.desk .bottom { margin-top: auto; }
+.bottom { display: grid; grid-template-columns: 96mm 1fr; gap: 5mm; align-items: start; }
+.bottom figure { margin: 0; }
+.bottom img { width: 100%; border: 1px solid var(--line); border-radius: 6px; display: block; }
+.bottom figcaption { font-size: 8.5pt; color: var(--muted); margin-top: 1mm; }

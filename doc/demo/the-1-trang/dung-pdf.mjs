@@ -23,9 +23,21 @@ for (const file of files) {
   const src = resolve(here, file);
   await page.goto(pathToFileURL(src).href, { waitUntil: 'networkidle' });
   await page.evaluate(() => document.fonts.ready);
+  // Đo cả chồng lấn: một khối co lại (flex) thì trang không cao thêm mà chữ đè lên ảnh.
   const overflow = await page.evaluate(() => {
     const el = document.querySelector('.page');
-    return el ? el.scrollHeight - el.clientHeight : 0;
+    if (!el) return 0;
+    let worst = el.scrollHeight - el.clientHeight;
+    for (const block of el.querySelectorAll('.main, .grid, .bottom, footer, aside')) {
+      const over = block.scrollHeight - block.clientHeight;
+      if (over > worst) worst = over;
+    }
+    const blocks = [...el.children];
+    for (let i = 1; i < blocks.length; i++) {
+      const gap = blocks[i].getBoundingClientRect().top - blocks[i - 1].getBoundingClientRect().bottom;
+      if (-gap > worst) worst = -gap;
+    }
+    return Math.round(worst);
   });
   if (overflow > 1) {
     console.error(`${file}: tràn ${overflow}px quá một trang A4.`);
