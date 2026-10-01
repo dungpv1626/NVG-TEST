@@ -133,6 +133,19 @@ Mật khẩu chung của tài khoản demo: xem `db/src/seed/data.ts` (`SEED_PAS
 | G-09 | Xưởng NVS | Thu hồi thêm một đợt | Sau khi lưu tự sang tab Biên bản thu hồi, khung ký của biên bản mới mở sẵn | | |
 | G-10 | Xưởng NVS | **In biên bản**; ký bằng **Ảnh biên bản giấy đã ký** | Bản in có bảng hàng và ô ký hai bên; ảnh đính vào hiện trong biên bản đã ký | | |
 
+## G2. Hành chính – Nhân sự (NVC, cần kịch bản dữ liệu `ns`)
+
+| Mã | Vai trò | Thao tác | Kỳ vọng | Kết quả | Ghi chú |
+| --- | --- | --- | --- | --- | --- |
+| K-01 | Nhân sự | Việc cần xử lý | Giấy khám sức khỏe Võ Văn Nam «Đã hết hạn»; chứng chỉ an toàn Lê Văn Hùng «Còn dưới 30 ngày»; Phạm Minh Thư sắp hết thử việc 10/10 | | |
+| K-02 | Nhân sự | Chấm công tháng 9 | Văn phòng đã xác nhận, công trường đang ghi, xưởng chưa mở; nút chốt khoá, ghi «Còn chờ xác nhận: Công trường, Xưởng sản xuất» | | |
+| K-03 | Nhân sự | Văn phòng → **Xem bảng công** | 02/09 «L», Trần Quốc Bảo 15–16/09 «P», ngày công 23–25; ô không bấm được (đã xác nhận) | | |
+| K-04 | Nhân sự | Công trường → Xem bảng công → bấm ô 26/09 của Lê Văn Hùng → **Nghỉ có phép** → Lưu | Bị từ chối: chưa có đơn nghỉ được duyệt cho ngày đó | | |
+| K-05 | Nhân sự | Hồ sơ Phạm Minh Thư → **Chuyển chính thức** | Tình trạng «Chính thức»; tab Hợp đồng mở sẵn biểu mẫu hợp đồng xác định thời hạn, ô «Kết thúc hợp đồng đang hiệu lực» đã bật | | |
+| K-06 | Nhân sự | Lưu hợp đồng chính thức | Hợp đồng thử việc «Đã kết thúc», hợp đồng mới «Đang hiệu lực» | | |
+| K-07 | Nhân sự | **Thêm nhân sự** → lưu | Hồ sơ mới có mã `NVC-NS-2026-…` | | |
+| K-08 | Nhân sự | Việc cần làm → đơn nghỉ Nguyễn Thị Lan | Tiêu đề «… 2 ngày từ 08/10/2026»; Duyệt xong đơn sang «Đã duyệt» | | |
+
 ## H. Dashboard và báo cáo
 
 | Mã | Vai trò | Thao tác | Kỳ vọng | Kết quả | Ghi chú |
@@ -198,3 +211,11 @@ Phát hiện khi chụp ảnh cho hướng dẫn sử dụng; tester kiểm lạ
 | L-23 | Kế toán → Công nợ, Thuê giàn giáo | Kế toán không đọc được danh mục khách hàng: tên khách hiện «—» | Nhóm xem tài chính có quyền Kế toán đọc được khách hàng (0145, chỉ đọc) | |
 | L-24 | Kế toán → Ghi nhận thu | Từ 0 giờ tới 7 giờ sáng, chọn ngày hôm nay bị báo «ngày ở tương lai» (CSDL so theo giờ UTC) | So theo ngày giờ Việt Nam (0145) | |
 | L-25 | Nhật ký công trường, nghiệm thu, bảo hành, giao nhận, biên bản giàn giáo, phân công, đơn giá | Từ 0 giờ tới 7 giờ sáng, ô ngày điền sẵn ngày HÔM QUA (lấy theo giờ UTC) | Lấy «hôm nay» theo giờ Việt Nam ở cả 10 chỗ; phép thử canh trong design-rules | |
+| L-26 | Hồ sơ nhân sự | Hồ sơ lập từ màn hình không có mã — cột đầu danh sách trống | CSDL cấp mã `…-NS-…` lúc lưu (0147), hồ sơ cũ được cấp bù | |
+| L-27 | Hồ sơ nhân sự | Không sửa được hồ sơ, không chuyển chính thức, không lập hợp đồng lao động trên giao diện | Nút **Sửa hồ sơ**, **Chuyển chính thức**, **Thêm hợp đồng** | |
+| L-28 | Chấm công | Không thấy / không sửa được công từng người | **Xem bảng công**: bảng người × ngày, bấm ô để sửa | |
+| L-29 | Chấm công | Nút chốt đòi đủ ba khối kể cả khối không có ai — Nhà Việt One không bao giờ chốt được | Chỉ đòi khối đã mở kỳ hoặc có người làm việc | |
+| L-30 | Dashboard (Nhân sự) | Thẻ «Chấm công đã chốt» nhìn tháng hiện tại nên gần như luôn «chưa chốt» | Nhìn tháng trước, khớp màn hình Chấm công | |
+| L-31 | Việc cần làm | Đơn nghỉ ghi «2. ngày» | «2 ngày», nửa ngày «1,5 ngày» (0148) | |
+| L-32 | Hồ sơ nhân sự | Nút «Xem mức lương» hiện cho Thi công, Mua hàng, Xưởng rồi bấm mới bị từ chối | Chỉ hiện với vai trò được xem lương | |
+| L-33 | Biểu mẫu Nhân sự | Nút lưu chính là nút viền | Nút chính đậm | |
