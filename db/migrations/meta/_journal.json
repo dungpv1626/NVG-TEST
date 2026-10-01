@@ -1030,6 +1030,20 @@
       "when": 1789430400000,
       "tag": "0146_so_gian_giao_theo_ngay",
       "breakpoints": true
+    },
+    {
+      "idx": 147,
+      "version": "7",
+      "when": 1789434000000,
+      "tag": "0147_ma_ho_so_nhan_su",
+      "breakpoints": true
+    },
+    {
+      "idx": 148,
+      "version": "7",
+      "when": 1789437600000,
+      "tag": "0148_so_ngay_nghi_trong_tieu_de",
+      "breakpoints": true
     }
   ]
 }

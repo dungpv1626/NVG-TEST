@@ -171,10 +171,16 @@ export function DashboardPage() {
   });
   const receivables = useReceivables('phai_thu', { enabled: canSeeFinance });
   const rentalAgreements = useRentalAgreements({ enabled: canViewSx });
+  // Kỳ chấm công đang được chốt là THÁNG TRƯỚC — đầu tháng mới mới chốt công tháng vừa qua,
+  // cùng cách chọn của màn hình Chấm công. Nhìn tháng hiện tại thì thẻ gần như luôn «chưa chốt».
   const now = new Date();
-  const timesheets = useTimesheets(now.getFullYear(), now.getMonth() + 1, undefined, {
-    enabled: canViewNs,
-  });
+  const timesheetPeriod = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const timesheets = useTimesheets(
+    timesheetPeriod.getFullYear(),
+    timesheetPeriod.getMonth() + 1,
+    undefined,
+    { enabled: canViewNs },
+  );
 
   // Nguồn rủi ro "vượt ngân sách" của thẻ Quá hạn (BC-05) — một lượt gọi tổng hợp CẢ công
   // trình (0058_bc_over_budget.sql), không lặp `useSiteBudgetStatus` theo từng site (N+1).
@@ -387,7 +393,7 @@ export function DashboardPage() {
   ].filter(Boolean) as { key: string; title: string; count: number; to: string }[];
   const overdueTotal = overdueRisks.reduce((sum, m) => sum + m.count, 0);
 
-  const timesheetMonthLabel = `${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+  const timesheetMonthLabel = `${String(timesheetPeriod.getMonth() + 1).padStart(2, '0')}/${timesheetPeriod.getFullYear()}`;
   const closedTimesheetCount = timesheets.data?.length ?? 0;
 
   const currentCompany =

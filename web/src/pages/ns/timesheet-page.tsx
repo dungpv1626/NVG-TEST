@@ -5,7 +5,7 @@
  *
  *   1. Tháng này khối nào đã ghi xong, khối nào chưa? → ba thẻ trạng thái ở trên cùng.
  *   2. Ai ghi và ai xác nhận khối đó? → ghi ngay trên thẻ, không bắt tra tài liệu.
- *   3. Chốt được chưa? → nút chốt chỉ bật khi CẢ BA khối đã xác nhận, và khi chưa đủ thì nói
+ *   3. Chốt được chưa? → nút chốt chỉ bật khi MỌI KHỐI CÓ NGƯỜI đã xác nhận, và khi chưa đủ thì nói
  *      rõ còn thiếu khối nào, thay vì báo lỗi sau khi bấm.
  *
  * Chốt xong, số liệu sang Kế toán (NS-05) và không ai sửa được nữa nếu không nêu lý do — hàng
@@ -44,6 +44,7 @@ import { toUserMessage } from '@/hooks/use-error-message';
 import { useCan } from '@/lib/auth';
 import { useCompanyScope } from '@/lib/company-scope';
 import { NsNav } from './ns-nav';
+import { TimesheetGrid } from './timesheet-grid';
 
 /** Kỳ mặc định là THÁNG TRƯỚC: đầu tháng mới là lúc người ta chốt công tháng vừa qua. */
 function defaultPeriod(): { year: number; month: number } {
@@ -76,9 +77,24 @@ export function TimesheetPage() {
   const [workDate, setWorkDate] = useState('');
   const [hours, setHours] = useState('8');
 
+  const [gridBlock, setGridBlock] = useState<WorkBlock | null>(null);
+
   const byBlock = new Map((periods ?? []).map((p) => [p.source_type, p]));
-  const missing = WORK_BLOCKS.filter((b) => byBlock.get(b)?.status !== 'da_xac_nhan');
-  const allClosed = WORK_BLOCKS.every((b) => byBlock.get(b)?.status === 'da_chot');
+  /*
+   * Khối phải xác nhận trước khi chốt = khối ĐÃ MỞ KỲ, hoặc khối có người đang làm việc.
+   * Bản trước đòi đủ cả ba khối kể cả khối không có ai — Nhà Việt One không có xưởng nên không
+   * bao giờ chốt được công (CSDL thì cho chốt). Khối có người mà quên mở kỳ vẫn bị giữ lại.
+   */
+  const activeBlocks = new Set(
+    (employees ?? []).filter((e) => e.status !== 'da_nghi').map((e) => e.block),
+  );
+  const requiredBlocks = WORK_BLOCKS.filter((b) => byBlock.has(b) || activeBlocks.has(b));
+  const missing = requiredBlocks.filter((b) => {
+    const status = byBlock.get(b)?.status;
+    return status !== 'da_xac_nhan' && status !== 'da_chot';
+  });
+  const allClosed =
+    requiredBlocks.length > 0 && requiredBlocks.every((b) => byBlock.get(b)?.status === 'da_chot');
 
   async function run(label: string, action: () => Promise<unknown>) {
     setPageError(null);
@@ -227,6 +243,14 @@ export function TimesheetPage() {
                     </Button>
                   )}
 
+                  {period && (
+                    <Button
+                      variant="secondary"
+                      onClick={() => setGridBlock(gridBlock === block ? null : block)}
+                    >
+                      {gridBlock === block ? 'Đóng bảng công' : 'Xem bảng công'}
+                    </Button>
+                  )}
                   {period?.status === 'dang_ghi' && (
                     <>
                       <Button
@@ -292,6 +316,20 @@ export function TimesheetPage() {
         </div>
       )}
 
+      {gridBlock && byBlock.get(gridBlock) && (
+        <section className="mt-6" aria-label={`Bảng công khối ${WORK_BLOCK_LABELS[gridBlock]}`}>
+          <h2 className="mb-2 font-semibold">
+            Bảng công khối {WORK_BLOCK_LABELS[gridBlock]} — tháng {month}/{year}
+          </h2>
+          <TimesheetGrid
+            period={byBlock.get(gridBlock)!}
+            employees={(employees ?? []).filter(
+              (e) => e.block === gridBlock && e.status !== 'da_nghi',
+            )}
+          />
+        </section>
+      )}
+
       <section className="mt-6 rounded border border-border bg-bg-subtle p-4">
         <h2 className="font-semibold">Chốt kỳ và chuyển Kế toán</h2>
         {allClosed ? (
@@ -301,17 +339,25 @@ export function TimesheetPage() {
         ) : missing.length > 0 ? (
           <p className="mt-1 text-fg-subtle">
             Còn chờ xác nhận: {missing.map((b) => WORK_BLOCK_LABELS[b]).join(', ')}. Chốt được khi
-            cả ba khối đã xác nhận.
+            mọi khối có người làm việc đã xác nhận.
           </p>
         ) : (
           <p className="mt-1 text-fg-subtle">
-            Cả ba khối đã xác nhận. Chốt kỳ để chuyển số liệu sang Kế toán.
+            {requiredBlocks.length === 0
+              ? 'Chưa có khối nào mở kỳ và chưa có nhân sự nào đang làm việc.'
+              : 'Mọi khối đã xác nhận. Chốt kỳ để chuyển số liệu sang Kế toán.'}
           </p>
         )}
 
         <div className="mt-3 flex flex-wrap gap-2">
           <Button
-            disabled={missing.length > 0 || allClosed || !canEdit || !scope.companyId}
+            disabled={
+              requiredBlocks.length === 0 ||
+              missing.length > 0 ||
+              allClosed ||
+              !canEdit ||
+              !scope.companyId
+            }
             onClick={() =>
               void run('Đã chốt kỳ chấm công và chuyển số liệu sang Kế toán.', () =>
                 consolidate.mutateAsync({ companyId: scope.companyId!, year, month }),

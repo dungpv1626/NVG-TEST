@@ -13,7 +13,7 @@
  */
 
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import {
   ASSET_CONDITION_LABELS,
   CHECKLIST_ITEM_GROUP_LABELS,
@@ -34,6 +34,7 @@ import {
 } from '@nvg/shared';
 import { EntityDetail } from '@/components/entity/entity-detail';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { StatusWithLabel } from '@/components/ui/status-lozenge';
@@ -50,10 +51,14 @@ import {
   useStartOnboarding,
   useTimesheets,
   useToggleChecklistItem,
+  useUpdateEmployee,
 } from '@/hooks/use-hr';
 import { toUserMessage } from '@/hooks/use-error-message';
+import { useSensitiveAccess } from '@/hooks/use-sensitive-access';
 import { useAuth, useCan } from '@/lib/auth';
+import { EmploymentContractForm } from './contract-form';
 import { ReminderTag } from './document-page';
+import { EmployeeEditForm } from './employee-edit-form';
 import { NsNav } from './ns-nav';
 
 /** Dòng dữ liệu "nhãn — giá trị" dùng lại trong nhiều tab. */
@@ -74,11 +79,11 @@ export function EmployeeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { profile } = useAuth();
   const canEdit = useCan('NS', 'edit');
-  // Hai hook phải chạy ở MỌI lần dựng: viết `useCan(…) || useCan(…)` thì hook thứ hai bị bỏ qua
-  // khi hook đầu trả true, thứ tự hook đổi giữa hai lần dựng và React gán nhầm state.
-  const canSeeNs = useCan('NS', 'view');
-  const canSeeKt = useCan('KT', 'view');
-  const canSeeSalary = canSeeNs || canSeeKt;
+  // Nút xem lương theo đúng điều kiện CSDL kiểm (`rls_sees_sensitive('salary')`), không theo
+  // quyền mở phân hệ: trước 01/10/2026 ai xem được Kế toán (cả Thi công, Mua hàng, Xưởng) cũng
+  // thấy nút, bấm rồi mới bị từ chối — đúng thứ Webapp Flow 6.5 cấm.
+  const { data: access } = useSensitiveAccess();
+  const canSeeSalary = access?.salary === true;
 
   const { data: employee, isLoading, error } = useEmployee(id);
   const { data: contracts } = useEmploymentContracts(id);
@@ -97,6 +102,11 @@ export function EmployeeDetailPage() {
 
   const [terminationDate, setTerminationDate] = useState('');
   const [pageError, setPageError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [contractForm, setContractForm] = useState<null | 'thu_viec' | 'xac_dinh_han'>(null);
+  const [confirmPromote, setConfirmPromote] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const updateEmployee = useUpdateEmployee();
 
   if (isLoading) return <Skeleton className="h-64" />;
   if (error) return <ErrorState message={toUserMessage(error, 'view')} />;
@@ -105,6 +115,23 @@ export function EmployeeDetailPage() {
   }
 
   const statusMeta = EMPLOYEE_STATUS_META[employee.status];
+  const activeContracts = (contracts ?? []).filter((c) => c.status === 'dang_hieu_luc');
+
+  /** Thử việc xong → chính thức, rồi mở sẵn biểu mẫu hợp đồng chính thức ở tab Hợp đồng. */
+  async function promote() {
+    setPageError(null);
+    try {
+      await updateEmployee.mutateAsync({ id: employee!.id, changes: { status: 'chinh_thuc' } });
+      setConfirmPromote(false);
+      setContractForm('xac_dinh_han');
+      const next = new URLSearchParams(searchParams);
+      next.set('tab', 'hop-dong');
+      setSearchParams(next, { replace: true });
+    } catch (e) {
+      setConfirmPromote(false);
+      setPageError(toUserMessage(e, 'edit'));
+    }
+  }
 
   async function runOffboard() {
     setPageError(null);
@@ -119,8 +146,18 @@ export function EmployeeDetailPage() {
     }
   }
 
-  const profileTab = (
+  const profileTab = editing ? (
+    <EmployeeEditForm employee={employee} onDone={() => setEditing(false)} />
+  ) : (
     <div className="max-w-2xl">
+      {pageError && <ErrorState message={pageError} />}
+      {canEdit && employee.status !== 'da_nghi' && (
+        <div className="mb-3 flex justify-end">
+          <Button variant="secondary" onClick={() => setEditing(true)}>
+            Sửa hồ sơ
+          </Button>
+        </div>
+      )}
       <Row label="Khối làm việc" value={WORK_BLOCK_LABELS[employee.block]} />
       <Row label="Cách chấm công" value={WORK_BLOCK_TIMEKEEPING[employee.block]} />
       <Row label="Chức danh" value={employee.position} />
@@ -181,7 +218,7 @@ export function EmployeeDetailPage() {
     </div>
   );
 
-  const contractTab =
+  const contractList =
     (contracts ?? []).length === 0 ? (
       <EmptyState message="Chưa có hợp đồng lao động nào. Thêm hợp đồng để theo dõi thời hạn và bảo hiểm." />
     ) : (
@@ -207,6 +244,34 @@ export function EmployeeDetailPage() {
         ))}
       </ul>
     );
+
+  const contractTab = (
+    <div className="space-y-4">
+      {canEdit &&
+        employee.status !== 'da_nghi' &&
+        (contractForm ? (
+          <EmploymentContractForm
+            key={contractForm}
+            employee={employee}
+            activeContracts={activeContracts}
+            defaultType={contractForm}
+            onDone={() => setContractForm(null)}
+          />
+        ) : (
+          <div className="flex justify-end">
+            <Button
+              variant="secondary"
+              onClick={() =>
+                setContractForm(employee.status === 'thu_viec' ? 'thu_viec' : 'xac_dinh_han')
+              }
+            >
+              Thêm hợp đồng
+            </Button>
+          </div>
+        ))}
+      {contractList}
+    </div>
+  );
 
   const documentTab =
     (documents ?? []).length === 0 ? (
@@ -415,6 +480,13 @@ export function EmployeeDetailPage() {
         status={statusMeta.group}
         responsiblePerson={employee.manager?.full_name ?? null}
         deadline={employee.status === 'thu_viec' ? employee.probation_end_date : null}
+        actions={
+          canEdit && employee.status === 'thu_viec' ? (
+            <Button variant="primary" onClick={() => setConfirmPromote(true)}>
+              Chuyển chính thức
+            </Button>
+          ) : undefined
+        }
         tabs={[
           { id: 'ho-so', label: 'Hồ sơ', content: profileTab },
           { id: 'hop-dong', label: 'Hợp đồng', content: contractTab, badge: contracts?.length },
@@ -443,6 +515,19 @@ export function EmployeeDetailPage() {
             : []
         }
       />
+      {confirmPromote && (
+        <ConfirmDialog
+          title={`Chuyển ${employee.full_name} sang chính thức`}
+          confirmLabel="Chuyển chính thức"
+          pending={updateEmployee.isPending}
+          onConfirm={() => void promote()}
+          onCancel={() => setConfirmPromote(false)}
+        >
+          Tình trạng đổi thành «Chính thức». Bước tiếp theo, hệ thống mở biểu mẫu hợp đồng chính
+          thức; lưu hợp đồng mới thì hợp đồng thử việc được đánh dấu đã kết thúc. Đánh giá thử việc
+          là quyết định của trưởng bộ phận — phần mềm chỉ ghi lại.
+        </ConfirmDialog>
+      )}
     </>
   );
 }

@@ -87,4 +87,5 @@ export const ACCOUNTS = {
   muaHang: 'muahang@nhavietgroup.test',
   kho: 'kho@nhavietgroup.test',
   ketoan: 'ketoan@nhavietgroup.test',
+  nhanSu: 'nhansu@nhavietgroup.test',
 } as const;

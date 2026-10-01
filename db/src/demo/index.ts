@@ -15,6 +15,7 @@ import { compactSequences, removeDemoData } from './remove';
 import { loadCashFlow } from './scenario-cash-flow';
 import { loadChecklists } from './scenario-checklists';
 import { loadNvc } from './scenario-nvc';
+import { loadNs } from './scenario-ns';
 import { loadNvs } from './scenario-nvs';
 
 const SCENARIOS = {
@@ -22,6 +23,7 @@ const SCENARIOS = {
   nvs: { label: 'NVS — cho thuê giàn giáo', run: loadNvs },
   nt: { label: 'Danh mục kiểm tra nghiệm thu ví dụ (NVC)', run: loadChecklists },
   dt: { label: 'Kế hoạch dòng tiền tháng 9 (NVC)', run: loadCashFlow },
+  ns: { label: 'Hành chính – Nhân sự NVC (hồ sơ, chấm công tháng 9, tuyển dụng)', run: loadNs },
 } as const;
 
 type ScenarioKey = keyof typeof SCENARIOS;

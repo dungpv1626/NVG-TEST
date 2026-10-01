@@ -131,7 +131,7 @@ export function AssetPage() {
             <MoneyInput value={value} onChange={setValue} />
           </Field>
           <div className="flex items-end">
-            <Button type="submit" disabled={create.isPending}>
+            <Button type="submit" variant="primary" disabled={create.isPending}>
               Thêm tài sản
             </Button>
           </div>

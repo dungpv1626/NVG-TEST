@@ -11,7 +11,7 @@
  *  - Danh sách nhân sự KHÔNG có cột lương (PRD NS ranh giới).
  *  - Chi tiết nhân sự không hiện sẵn lương — phải bấm, vì mỗi lượt xem ghi nhật ký (NEN-07).
  *  - Màn hình Chấm công nói rõ CÒN THIẾU KHỐI NÀO thay vì để người dùng bấm rồi mới báo lỗi
- *    (Webapp Flow 6.5) — đúng quy tắc "cả ba khối xác nhận mới chốt được" của NS-04.
+ *    (Webapp Flow 6.5) — mọi khối đã mở kỳ hoặc có người làm việc phải xác nhận mới chốt được.
  *  - Giấy tờ quá hạn hiện nhãn CHỮ, không chỉ hiện màu (CGD 6.8).
  */
 
@@ -23,6 +23,10 @@ import { renderWithApp } from '@/test/render';
 const state = vi.hoisted(() => ({
   salaryRequested: false,
   periods: [] as unknown[],
+}));
+
+vi.mock('@/hooks/use-sensitive-access', () => ({
+  useSensitiveAccess: () => ({ data: { profit: false, finance: false, salary: true } }),
 }));
 
 vi.mock('@/lib/auth', () => ({
@@ -335,7 +339,9 @@ describe('Chín màn hình NS dựng được và nói đúng tiếng Việt', (
     expect(screen.getByRole('heading', { name: 'Công trường' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Xưởng sản xuất' })).toBeInTheDocument();
 
-    expect(screen.getByText(/Còn chờ xác nhận: Công trường, Xưởng sản xuất/)).toBeInTheDocument();
+    // Xưởng không mở kỳ và không có ai làm việc → không bị đòi xác nhận (Nhà Việt One không có
+    // xưởng; bản trước đòi đủ ba khối nên pháp nhân đó không bao giờ chốt được công).
+    expect(screen.getByText(/Còn chờ xác nhận: Công trường\./)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Chốt kỳ chấm công' })).toBeDisabled();
   });
 

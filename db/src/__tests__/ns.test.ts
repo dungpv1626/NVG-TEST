@@ -186,6 +186,22 @@ describeDb('NS — hồ sơ nhân sự và dữ liệu nhạy cảm (NS-01, NEN-
     expect(star.error).not.toBeNull();
   });
 
+  it('hồ sơ lập từ màn hình được CSDL cấp mã NVC-NS-…, mã người dùng gửi lên bị bỏ (0147)', async () => {
+    const { data, error } = await hcns
+      .from('employees')
+      .insert({
+        company_id: fixture.nvcCompanyId,
+        code: 'TU-DAT-MA',
+        full_name: `${TEST_PREFIX} Nhân viên kiểm mã`,
+        position: 'Nhân viên',
+        block: 'van_phong',
+      })
+      .select('code')
+      .single();
+    expect(error).toBeNull();
+    expect(data!.code).toMatch(/^NVC-NS-\d{4}-\d{4}$/);
+  });
+
   it('lương đọc được qua hàm riêng, và mỗi lượt xem để lại dấu vết (NEN-07)', async () => {
     const { data, error } = await hcns.rpc('employee_salary', {
       p_employee_id: fixture.officeEmployeeId,
@@ -712,6 +728,15 @@ describeDb('NS — nghỉ phép, tài sản, nghỉ việc (NS-05, NS-08, NS-11)
       p_leave_id: leaveId,
     });
     expect(error).toBeNull();
+
+    // 0148: số ngày in kiểu Việt — «2 ngày», không «2. ngày».
+    const title = await withSql(async (sql) => {
+      const rows = await sql<{ title: string }[]>`
+        SELECT title FROM approvals WHERE id = ${approvalId as string}
+      `;
+      return rows[0]?.title ?? '';
+    });
+    expect(title).toMatch(/, \d+(,\d+)? ngày từ /);
 
     const decided = await hcns.rpc('decide_approval', {
       p_approval_id: approvalId,

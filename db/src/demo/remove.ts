@@ -12,6 +12,7 @@
 import { createConnection } from '../client';
 import { NVC_OPPORTUNITY } from './scenario-nvc';
 import { DEMO_CASH_FLOW_PERIOD } from './scenario-cash-flow';
+import { NS_DEMO_ASSETS, NS_DEMO_EMPLOYEES, NS_DEMO_POSITION } from './scenario-ns';
 import { DEMO_LOT_MATERIALS, NVS_FIRST_RENTAL_CUSTOMER, demoLotCode } from './scenario-nvs';
 
 export const DEMO_CUSTOMERS = [
@@ -177,6 +178,46 @@ export async function removeDemoData(): Promise<Record<string, number>> {
         WHERE period_start = ${DEMO_CASH_FLOW_PERIOD.start} AND construction_site_id IS NULL
           AND balance_note LIKE ${'Số dư tài khoản công ty ngày 01/09/2026%'}
           AND created_by IN (SELECT id FROM users WHERE email LIKE ${SEED_ACCOUNT_DOMAIN})`,
+      );
+      // --- Hành chính – Nhân sự (kịch bản ns) — hồ sơ do tài khoản seed tạo, đúng tên ---------
+      await tx`CREATE TEMP TABLE g_emps ON COMMIT DROP AS
+        SELECT id FROM employees WHERE full_name = ANY(${[...NS_DEMO_EMPLOYEES]})
+          AND created_by IN (SELECT id FROM users WHERE email LIKE ${SEED_ACCOUNT_DOMAIN})`;
+      await tx`CREATE TEMP TABLE g_positions ON COMMIT DROP AS
+        SELECT id FROM recruitment_positions WHERE title = ${NS_DEMO_POSITION}
+          AND created_by IN (SELECT id FROM users WHERE email LIKE ${SEED_ACCOUNT_DOMAIN})`;
+      await tx`CREATE TEMP TABLE g_hr_assets ON COMMIT DROP AS
+        SELECT id FROM assets WHERE name = ANY(${[...NS_DEMO_ASSETS]})
+          AND created_by IN (SELECT id FROM users WHERE email LIKE ${SEED_ACCOUNT_DOMAIN})`;
+      await del(
+        'phê duyệt nhân sự',
+        tx`DELETE FROM approvals WHERE entity_id IN (
+          SELECT id FROM leave_requests WHERE employee_id IN (SELECT id FROM g_emps)
+          UNION SELECT id FROM g_positions)`,
+      );
+      // Kỳ công chỉ gỡ khi mọi dòng công trong kỳ là của nhân sự demo — kỳ có công người thật
+      // giữ nguyên (chỉ dòng của nhân sự demo bị xoá theo hồ sơ).
+      await tx`CREATE TEMP TABLE g_periods ON COMMIT DROP AS
+        SELECT p.id FROM timesheet_periods p
+         WHERE p.created_by IN (SELECT id FROM users WHERE email LIKE ${SEED_ACCOUNT_DOMAIN})
+           AND EXISTS (SELECT 1 FROM timesheet_entries e WHERE e.timesheet_period_id = p.id
+                        AND e.employee_id IN (SELECT id FROM g_emps))
+           AND NOT EXISTS (SELECT 1 FROM timesheet_entries e WHERE e.timesheet_period_id = p.id
+                        AND e.employee_id NOT IN (SELECT id FROM g_emps))
+           AND NOT EXISTS (SELECT 1 FROM timesheets t WHERE t.timesheet_period_id = p.id)`;
+      await del(
+        'sự kiện tài sản',
+        tx`DELETE FROM asset_events WHERE asset_id IN (SELECT id FROM g_hr_assets)`,
+      );
+      await del('tài sản', tx`DELETE FROM assets WHERE id IN (SELECT id FROM g_hr_assets)`);
+      await del(
+        'ứng viên và yêu cầu tuyển dụng',
+        tx`DELETE FROM recruitment_positions WHERE id IN (SELECT id FROM g_positions)`,
+      );
+      await del('hồ sơ nhân sự', tx`DELETE FROM employees WHERE id IN (SELECT id FROM g_emps)`);
+      await del(
+        'kỳ chấm công',
+        tx`DELETE FROM timesheet_periods WHERE id IN (SELECT id FROM g_periods)`,
       );
       await del('nhà cung cấp', tx`DELETE FROM suppliers WHERE id IN (SELECT id FROM g_suppliers)`);
       await del('khách hàng', tx`DELETE FROM customers WHERE id IN (SELECT id FROM g_customers)`);
