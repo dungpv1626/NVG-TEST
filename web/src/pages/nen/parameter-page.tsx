@@ -42,6 +42,7 @@ import {
 } from '@/hooks/use-admin';
 import { useCan } from '@/lib/auth';
 import { cn } from '@/lib/utils';
+import { useRevealOnOpen } from '@/hooks/use-reveal-on-open';
 import { NenNav } from './nen-nav';
 
 /** Chữ dùng khi một tham số chưa có giá trị. Xem lý do ở đầu tệp. */
@@ -57,6 +58,10 @@ function describeValue(value: unknown, unit: string | null): string {
   if (value === null || value === undefined) return CHUA_CAU_HINH;
   if (typeof value === 'number' || typeof value === 'string' || typeof value === 'boolean') {
     const text = typeof value === 'number' ? formatNumber(value) : String(value);
+    // «0,9 tỷ lệ» đọc không ra; hiện phần trăm, kèm con số thật vì ô sửa nhận đúng con số đó.
+    if (unit === 'tỷ lệ' && typeof value === 'number') {
+      return `${formatNumber(Math.round(value * 10000) / 100)}% (${text})`;
+    }
     return unit ? `${text} ${unit}` : text;
   }
   // Bảng giá, danh sách ngưỡng: nói số mục thay vì đổ cả JSON vào ô hẹp.
@@ -68,13 +73,15 @@ function describeValue(value: unknown, unit: string | null): string {
 function parseValue(raw: string): { ok: true; value: unknown } | { ok: false; message: string } {
   const text = raw.trim();
   if (text === '') return { ok: true, value: null };
+  // Số thập phân gõ theo kiểu Việt Nam («0,9») — JSON chỉ hiểu dấu chấm (CGD 4.3).
+  if (/^-?\d+,\d+$/.test(text)) return { ok: true, value: Number(text.replace(',', '.')) };
   try {
     return { ok: true, value: JSON.parse(text) };
   } catch {
     return {
       ok: false,
       message:
-        'Giá trị chưa đúng định dạng. Số thì gõ thẳng (ví dụ 8). Chữ thì đặt trong dấu nháy kép (ví dụ "cao"). Bảng giá thì dán nguyên khối JSON.',
+        'Giá trị chưa đúng định dạng. Số thì gõ thẳng (ví dụ 8 hoặc 0,9). Chữ thì đặt trong dấu nháy kép (ví dụ "cao"). Bảng giá thì dán nguyên khối JSON.',
     };
   }
 }
@@ -85,6 +92,7 @@ export function ParameterPage() {
   const savePara = useSaveSystemParameter();
 
   const [editing, setEditing] = useState<SystemParameterRecord | null>(null);
+  const editFormRef = useRevealOnOpen<HTMLFormElement>(editing?.id);
   const [historyFor, setHistoryFor] = useState<string | null>(null);
   const [rawValue, setRawValue] = useState('');
   const [effectiveFrom, setEffectiveFrom] = useState('');
@@ -95,7 +103,13 @@ export function ParameterPage() {
   function startEdit(p: SystemParameterRecord) {
     setEditing(p);
     setFormError(null);
-    setRawValue(p.value === null || p.value === undefined ? '' : JSON.stringify(p.value));
+    setRawValue(
+      p.value === null || p.value === undefined
+        ? ''
+        : typeof p.value === 'number'
+          ? String(p.value).replace('.', ',')
+          : JSON.stringify(p.value),
+    );
     setEffectiveFrom(p.effective_from);
   }
 
@@ -208,6 +222,7 @@ export function ParameterPage() {
 
       {editing && (
         <form
+          ref={editFormRef}
           onSubmit={submit}
           className="mt-4 rounded-lg border border-border bg-surface p-4 shadow-card"
         >

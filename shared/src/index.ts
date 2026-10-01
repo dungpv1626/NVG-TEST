@@ -26,3 +26,4 @@ export * from './kho';
 export * from './kt';
 export * from './ns';
 export * from './sx';
+export * from './nen';

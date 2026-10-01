@@ -12,15 +12,17 @@ import { cn } from '@/lib/utils';
 
 const FINANCE_ITEM = { to: '/bc/tong-quan', label: 'Tổng quan tài chính' };
 
-const ITEMS = [
-  { to: '/bc/lai-lo', label: 'Lãi/lỗ theo công trình' },
-  { to: '/bc/hieu-qua-kinh-doanh', label: 'Hiệu quả kinh doanh' },
-];
+const PROFIT_ITEM = { to: '/bc/lai-lo', label: 'Lãi/lỗ theo công trình' };
+const SALES_ITEM = { to: '/bc/hieu-qua-kinh-doanh', label: 'Hiệu quả kinh doanh' };
 
 export function BcNav() {
-  // Ẩn mục khi không có quyền xem tài chính — không hiện rồi báo chặn (CLAUDE.md 5.4).
+  // Ẩn mục khi không có quyền xem tài chính / lợi nhuận — không hiện rồi báo chặn (CLAUDE.md 5.4).
   const access = useSensitiveAccess();
-  const items = access.data?.finance ? [FINANCE_ITEM, ...ITEMS] : ITEMS;
+  const items = [
+    ...(access.data?.finance ? [FINANCE_ITEM] : []),
+    ...(access.data?.profit ? [PROFIT_ITEM] : []),
+    SALES_ITEM,
+  ];
   return (
     <nav
       className="mb-4 flex gap-1 overflow-x-auto border-b border-border"

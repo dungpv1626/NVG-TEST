@@ -222,7 +222,7 @@ export function EmployeeCreatePage() {
         </section>
 
         <div className="flex gap-2">
-          <Button type="submit" disabled={create.isPending}>
+          <Button type="submit" variant="primary" disabled={create.isPending}>
             {create.isPending ? 'Đang lưu…' : 'Lưu hồ sơ'}
           </Button>
           <Button type="button" variant="secondary" onClick={() => navigate('/ns/nhan-su')}>

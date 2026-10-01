@@ -321,12 +321,26 @@ describeDb(
       // --- Bước 10. Mở công trình từ hợp đồng đã ký (TC-01) -------------------------------
       // Đây là mắt xích nối Giai đoạn 1 sang Giai đoạn 2: từ đây trở đi mọi chi phí thực tế
       // đều gắn vào mã công trình, không hạch toán lại thủ công (KT-05).
+      // 0144: Đấu thầu không xem phân hệ Thi công nhưng vẫn phải biết hợp đồng đã có công trình
+      // chưa — nếu không, nút chính «Mở công trình» hiện cả trên hợp đồng đã mở.
+      const before = await dauThau.rpc('contract_has_site', { p_contract_id: contractId });
+      expect(before.error).toBeNull();
+      expect(before.data).toBe(false);
+
       const { data: siteId, error: siteError } = await dauThau.rpc('open_site_from_contract', {
         p_contract_id: contractId,
         p_site_address: 'KCN Long Hậu, Long An',
       });
       check('mở công trình', siteError);
       expect(siteId).toBeTruthy();
+
+      const after = await dauThau.rpc('contract_has_site', { p_contract_id: contractId });
+      expect(after.data).toBe(true);
+      const { data: visibleSites } = await dauThau
+        .from('construction_sites')
+        .select('id')
+        .eq('contract_id', contractId);
+      expect(visibleSites ?? [], 'Đấu thầu không đọc bảng công trình — lý do cần 0144').toEqual([]);
 
       // Ngân sách đã duyệt đi theo công trình, không phải lập lại một bảng Excel ở công trường
       // (vướng mắc khảo sát #7 — "số liệu giữa các bộ phận không khớp nhau").

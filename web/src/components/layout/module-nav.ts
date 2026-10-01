@@ -23,8 +23,8 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
-import { MODULE_CODES, type ModuleCode, type RoleCode } from '@nvg/shared';
-import { useAuth } from '@/lib/auth';
+import { MODULE_CODES, ROLES, type ModuleCode, type RoleCode } from '@nvg/shared';
+import { useAuth, useCan } from '@/lib/auth';
 
 /** Một khái niệm luôn dùng đúng một icon xuyên suốt hệ thống (Content Guidelines 6.6). */
 export const MODULE_ICONS: Record<ModuleCode, LucideIcon> = {
@@ -89,6 +89,30 @@ export function useManagesApprovalRules(): boolean {
   return (
     profile?.assignments?.some((a) => APPROVAL_RULE_EDITOR_ROLES.includes(a.roleCode)) ?? false
   );
+}
+
+/**
+ * Trưởng phòng Thi công phân công người vào công trình — đúng điều kiện RLS của
+ * `user_site_assignments` (0115): sửa được phân hệ Thi công và KHÔNG phải vai trò hiện trường.
+ * Trước 01/10/2026 màn hình chỉ mở cho Quản trị hệ thống, trong khi hướng dẫn Chỉ huy trưởng
+ * dặn «liên hệ Trưởng phòng Thi công để được phân công».
+ */
+export function useManagesSiteAssignments(): boolean {
+  const { profile } = useAuth();
+  const canEditTc = useCan('TC', 'edit');
+  const fieldOnly =
+    (profile?.assignments ?? []).length > 0 &&
+    (profile?.assignments ?? []).every((a) => ROLES[a.roleCode]?.siteScoped === true);
+  return canEditTc && !fieldOnly;
+}
+
+/**
+ * Trưởng phòng Thi công xem, ghi và xác nhận công KHỐI CÔNG TRƯỜNG ở màn hình Chấm công của
+ * phân hệ Nhân sự — CSDL đã cho từ đầu (`timesheet_periods_select`, `confirm_timesheet_period`
+ * theo quyền duyệt Thi công), chỉ đường dẫn bị chặn vì vai trò này không xem được Nhân sự.
+ */
+export function useConfirmsSiteTimesheets(): boolean {
+  return useCan('TC', 'approve');
 }
 
 /**

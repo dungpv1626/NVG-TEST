@@ -26,6 +26,7 @@ const state = vi.hoisted(() => ({
   rentals: [] as unknown[],
   timesheets: [] as unknown[],
   sitesBudgetStatus: [] as unknown[],
+  sites: [] as unknown[],
   financeDays: [] as unknown[],
   access: { profit: true, finance: true },
 }));
@@ -93,6 +94,9 @@ vi.mock('@/hooks/use-hr', () => ({
 vi.mock('@/hooks/use-sensitive-access', () => ({
   useSensitiveAccess: () => ({ data: state.access }),
 }));
+vi.mock('@/hooks/use-construction-sites', () => ({
+  useConstructionSites: () => ({ data: state.sites, isLoading: false }),
+}));
 vi.mock('@/hooks/use-reports', () => ({
   useSitesBudgetStatus: () => ({ data: state.sitesBudgetStatus, isLoading: false, error: null }),
   useFinanceDaily: () => ({ data: state.financeDays, isLoading: false }),
@@ -116,6 +120,7 @@ beforeEach(() => {
   state.rentals = [];
   state.timesheets = [];
   state.sitesBudgetStatus = [];
+  state.sites = [];
 });
 
 function grantView(...modules: string[]) {
@@ -152,9 +157,12 @@ describe('Dashboard — chỉ hiện thứ vai trò được xem (Webapp Flow 6.
 describe('Dashboard — mỗi con số dẫn tới danh sách đã lọc SẴN ĐÚNG (Webapp Flow 4.1)', () => {
   it('liên kết mang theo CẢ trạng thái lẫn kỳ báo cáo đang xem', () => {
     grantView('CRM');
+    // Hôm nay (giờ Việt Nam) luôn thuộc «Quý này». Ngày cố định tháng 8 từng làm phép thử này
+    // đỏ đúng ngày 01/10/2026 — sang quý 4 là tháng 8 rơi khỏi kỳ.
+    const today = toNvgDateInput(new Date());
     state.opportunities = [
-      { stage: 'khao_sat', estimated_value: '1000', created_at: `${THIS_YEAR}-08-20` },
-      { stage: 'mat_co_hoi', estimated_value: '2000', created_at: `${THIS_YEAR}-08-21` },
+      { stage: 'khao_sat', estimated_value: '1000', created_at: today },
+      { stage: 'mat_co_hoi', estimated_value: '2000', created_at: today },
     ];
     renderWithApp(<DashboardPage />, { route: '/dashboard?ky=quy-nay' });
 
@@ -477,5 +485,30 @@ describe('Dashboard — thẻ Đề nghị mua cho Mua hàng', () => {
     grantView('CRM');
     renderWithApp(<DashboardPage />, { route: '/dashboard' });
     expect(screen.queryByText('Đề nghị mua')).toBeNull();
+  });
+});
+
+describe('Dashboard — thẻ Công trình cho Thi công', () => {
+  it('đếm công trình đang thi công và công trình vượt ngân sách', () => {
+    grantView('TC');
+    grantView('BC');
+    const now = new Date().toISOString();
+    state.sites = [
+      { id: 's1', stage: 'dang_thi_cong', planned_end_date: null, created_at: now },
+      { id: 's2', stage: 'dang_thi_cong', planned_end_date: null, created_at: now },
+      { id: 's3', stage: 'chuan_bi', planned_end_date: null, created_at: now },
+    ];
+    state.sitesBudgetStatus = [{ id: 's1', health: 'vuot_ngan_sach' }];
+    renderWithApp(<DashboardPage />, { route: '/dashboard?ky=nam-nay' });
+
+    expect(screen.getByText('Công trình')).toBeInTheDocument();
+    expect(screen.getByText('2 công trình')).toBeInTheDocument();
+    expect(screen.getByText('1 công trình')).toBeInTheDocument();
+  });
+
+  it('vai trò không xem được Thi công thì không có thẻ', () => {
+    grantView('CRM');
+    renderWithApp(<DashboardPage />, { route: '/dashboard' });
+    expect(screen.queryByText('Đang thi công')).toBeNull();
   });
 });

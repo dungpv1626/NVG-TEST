@@ -302,6 +302,12 @@ export function useCreateEmploymentContract() {
       insuranceStatus?: InsuranceStatus;
       insuranceNumber?: string | null;
       notes?: string | null;
+      /**
+       * Hợp đồng đang hiệu lực mà hợp đồng mới thay thế (thử việc → chính thức, gia hạn): đánh
+       * dấu «Đã kết thúc» SAU KHI hợp đồng mới lưu được, để không có lúc nào người lao động
+       * không có hợp đồng nào đang hiệu lực.
+       */
+      replacesContractIds?: string[];
     }
   >({
     mutationFn: async (input) => {
@@ -323,6 +329,13 @@ export function useCreateEmploymentContract() {
         .select('id')
         .single();
       if (error) throw error;
+      if (input.replacesContractIds && input.replacesContractIds.length > 0) {
+        const ended = await supabase
+          .from('employment_contracts')
+          .update({ status: 'da_ket_thuc' })
+          .in('id', input.replacesContractIds);
+        if (ended.error) throw ended.error;
+      }
       return (data as { id: string }).id;
     },
     onSuccess: () => {

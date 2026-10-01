@@ -17,11 +17,12 @@
 
 import { Download, Printer } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { BUTTONS, formatCurrency } from '@nvg/shared';
+import { BUTTONS, formatCurrency, toNvgDateInput } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { BlockedNotice, EmptyState, TableSkeleton } from '@/components/ui/states';
 import { useCompanyLookup } from '@/hooks/use-companies';
+import { useSensitiveAccess } from '@/hooks/use-sensitive-access';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useProfitLossReport, type ProfitLossRow } from '@/hooks/use-reports';
 import { useCompanyScope } from '@/lib/company-scope';
@@ -86,7 +87,7 @@ function exportCsv(rows: ProfitLossRow[], companyOf: ReturnType<typeof useCompan
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `bao-cao-lai-lo-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `bao-cao-lai-lo-${toNvgDateInput(new Date())}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -154,7 +155,14 @@ function printPdf(
 
 export function ProfitLossReportPage() {
   const scope = useCompanyScope();
-  const { data, isLoading, error, dataUpdatedAt } = useProfitLossReport();
+  // Hỏi quyền trước rồi mới gọi báo cáo: gọi thẳng thì CSDL từ chối, React Query thử lại ba
+  // lần và vai trò không có quyền (Thi công, Mua hàng…) nhìn khung chờ quay ~7 giây mới thấy
+  // câu báo chặn (thấy 01/10/2026 khi làm hướng dẫn Trưởng phòng Thi công).
+  const access = useSensitiveAccess();
+  const noProfitAccess = access.data !== undefined && !access.data.profit;
+  const { data, isLoading, error, dataUpdatedAt } = useProfitLossReport(
+    access.data?.profit === true,
+  );
   const companyOf = useCompanyLookup(scope.isAggregate);
 
   return (
@@ -189,7 +197,12 @@ export function ProfitLossReportPage() {
 
       <BcNav />
 
-      {isLoading ? (
+      {noProfitAccess ? (
+        <BlockedNotice
+          title="Không xem được báo cáo này"
+          detail="Lãi/lỗ dùng số liệu giá vốn — chỉ Ban Giám đốc, Giám đốc Tài chính và các vai trò được cấp quyền xem lợi nhuận mới mở được. Liên hệ quản trị hệ thống nếu công việc cần."
+        />
+      ) : isLoading || access.isLoading ? (
         <TableSkeleton rows={6} columns={6} />
       ) : error ? (
         <BlockedNotice title="Không xem được báo cáo này" detail={toUserMessage(error)} />

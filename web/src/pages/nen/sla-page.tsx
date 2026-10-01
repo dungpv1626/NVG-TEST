@@ -43,6 +43,7 @@ import {
 } from '@/hooks/use-admin';
 import { useCompanies, useCompanyLookup } from '@/hooks/use-companies';
 import { useManagesApprovalRules } from '@/components/layout/module-nav';
+import { useRevealOnOpen } from '@/hooks/use-reveal-on-open';
 import { NenNav } from './nen-nav';
 
 /**
@@ -87,6 +88,7 @@ export function SlaPage() {
   });
 
   const [editing, setEditing] = useState<SlaRecord | null>(null);
+  const editFormRef = useRevealOnOpen<HTMLFormElement>(editing?.id);
   const [editHours, setEditHours] = useState('');
 
   async function addSla(e: FormEvent) {
@@ -327,6 +329,7 @@ export function SlaPage() {
 
       {editing && (
         <form
+          ref={editFormRef}
           onSubmit={saveEdit}
           className="mt-4 rounded-lg border border-border bg-surface p-4 shadow-card"
         >

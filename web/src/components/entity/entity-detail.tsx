@@ -123,10 +123,12 @@ export function EntityDetail({
             nút và thanh tab dính lại chiếm gần nửa màn hình (ảnh chụp hướng dẫn 30/09/2026), chỗ
             còn lại cho ô nhập nhật ký chỉ vài dòng; ở đó header cuộn đi cùng nội dung. */}
         {/* Margin âm phải khớp ĐÚNG padding của <main> (p-4, lg:p-6): lệch một nấc là
-            header thò ra ngoài mép và cả trang cuộn ngang được. */}
+            header thò ra ngoài mép và cả trang cuộn ngang được. `top` cũng âm đúng bằng padding
+            trên: `sticky` tính mốc từ mép TRONG phần đệm của <main>, nên `top-0` để hở 24px phía
+            trên và nội dung cuộn qua lộ ra ở khe đó (ảnh chụp hướng dẫn 30/09/2026). */}
         <div
           className={cn(
-            'z-10 mb-4 bg-surface lg:sticky lg:top-0',
+            'z-10 mb-4 bg-surface lg:sticky lg:-top-6',
             '-mx-4 -mt-4 px-4 pt-4',
             'lg:-mx-6 lg:-mt-6 lg:mb-6 lg:px-6 lg:pt-6',
           )}

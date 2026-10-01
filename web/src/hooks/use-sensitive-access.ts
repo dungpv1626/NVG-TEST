@@ -17,18 +17,25 @@ export interface SensitiveAccess {
   profit: boolean;
   /** Được xem dòng tiền, công nợ của cả pháp nhân. */
   finance: boolean;
+  /** Được xem lương (`rls_sees_sensitive('salary')`) — cùng điều kiện `employee_salary` kiểm. */
+  salary: boolean;
 }
 
 export function useSensitiveAccess() {
   return useQuery<SensitiveAccess, Error>({
     queryKey: ['sensitive-access'],
     queryFn: async () => {
-      const [profit, finance] = await Promise.all([
+      const [profit, finance, salary] = await Promise.all([
         supabase.rpc('rls_sees_sensitive', { kind: 'profit' }),
         supabase.rpc('rls_sees_finance'),
+        supabase.rpc('rls_sees_sensitive', { kind: 'salary' }),
       ]);
       // Hỏi không được thì coi như KHÔNG được xem: ẩn nhầm một thẻ còn hơn hiện một con số sai.
-      return { profit: profit.data === true, finance: finance.data === true };
+      return {
+        profit: profit.data === true,
+        finance: finance.data === true,
+        salary: salary.data === true,
+      };
     },
     staleTime: 5 * 60 * 1000,
   });

@@ -36,7 +36,11 @@ import {
   useSubmitContractApproval,
   useUpdateContract,
 } from '@/hooks/use-contracts';
-import { useOpenSiteFromContract, useSitesOfContract } from '@/hooks/use-construction-sites';
+import {
+  useContractHasSite,
+  useOpenSiteFromContract,
+  useSitesOfContract,
+} from '@/hooks/use-construction-sites';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useCan } from '@/lib/auth';
 import { AmendmentPanel } from './amendment-panel';
@@ -52,6 +56,7 @@ export function ContractDetailPage() {
   const { data, isLoading, error } = useContract(id);
   const { data: amendments } = useContractAmendments(id);
   const { data: sites } = useSitesOfContract(id);
+  const { data: hasSite } = useContractHasSite(id);
   const openSite = useOpenSiteFromContract();
   const updateContract = useUpdateContract();
   const submitApproval = useSubmitContractApproval();
@@ -82,8 +87,10 @@ export function ContractDetailPage() {
    * KHÔNG áp dụng cho hợp đồng khoán tổ đội: đó là hợp đồng NVG đi THUÊ, nằm bên trong một
    * công trình đã có chứ không sinh ra công trình mới — CSDL cũng từ chối nếu vẫn gọi.
    */
+  // `hasSite === false` chứ không `!hasSite`: chưa tải xong hoặc ngoài phạm vi (null) thì KHÔNG
+  // mời mở — nút chính hiện nhầm trên hợp đồng đã có công trình là lỗi đã gặp (0144).
   const canOpenSite =
-    contract.stage === 'da_ky' && contract.type !== 'khoan_thau_phu' && (sites ?? []).length === 0;
+    contract.stage === 'da_ky' && contract.type !== 'khoan_thau_phu' && hasSite === false;
 
   // Chỉ cộng phát sinh ĐÃ PHÊ DUYỆT vào giá trị hiện hành: phát sinh đang đề xuất chưa phải
   // là cam kết, cộng sớm thì báo cáo doanh thu chạy trước thực tế (HD-03).
@@ -242,8 +249,10 @@ export function ContractDetailPage() {
                       label: 'Thời gian thực hiện',
                       value:
                         contract.start_date || contract.end_date
-                          ? `${contract.start_date ? formatDate(contract.start_date) : '?'} — ${
-                              contract.end_date ? formatDate(contract.end_date) : '?'
+                          ? `${contract.start_date ? formatDate(contract.start_date) : 'chưa ghi ngày bắt đầu'} — ${
+                              contract.end_date
+                                ? formatDate(contract.end_date)
+                                : 'chưa ghi ngày kết thúc'
                             }`
                           : EM_DASH,
                     },

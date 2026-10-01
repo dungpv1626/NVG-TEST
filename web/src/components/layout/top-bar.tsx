@@ -9,7 +9,7 @@
  */
 
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { CheckSquare, LogOut, Search, User } from 'lucide-react';
+import { CheckSquare, KeyRound, LogOut, Search } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MODULES } from '@nvg/shared';
@@ -18,6 +18,7 @@ import { SEARCH_MIN_LENGTH, useGlobalSearch, type GlobalSearchResult } from '@/h
 import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import { TkThemeToggle } from '@/pages/tk/tk-theme';
+import { ChangePasswordDialog } from './change-password-dialog';
 import { CompanySwitcher } from './company-switcher';
 import { NotificationBell } from './notification-bell';
 import { useTkScope } from './tk-chrome';
@@ -256,6 +257,7 @@ export function TopBar() {
   // hai con số sẽ lệch nhau ngay khi điều kiện lọc đổi ở một bên.
   const { data: pending } = usePendingApprovals();
   const pendingCount = pending?.length ?? 0;
+  const [changingPassword, setChangingPassword] = useState(false);
 
   return (
     <header
@@ -365,9 +367,11 @@ export function TopBar() {
                   'data-highlighted:bg-brand-subtle data-highlighted:text-brand',
                   'data-highlighted:outline data-highlighted:outline-2 data-highlighted:outline-brand',
                 )}
+                // Thay mục «Hồ sơ cá nhân» cũ — mục đó không dẫn tới đâu (01/10/2026).
+                onSelect={() => setChangingPassword(true)}
               >
-                <User className="size-4" />
-                Hồ sơ cá nhân
+                <KeyRound className="size-4" />
+                Đổi mật khẩu
               </DropdownMenu.Item>
               <DropdownMenu.Item
                 onSelect={() => void signOut()}
@@ -393,6 +397,7 @@ export function TopBar() {
           </DropdownMenu.Portal>
         </DropdownMenu.Root>
       </div>
+      {changingPassword && <ChangePasswordDialog onClose={() => setChangingPassword(false)} />}
     </header>
   );
 }

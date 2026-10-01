@@ -38,6 +38,7 @@ import {
 } from '@/hooks/use-admin';
 import { useCompanyLookup } from '@/hooks/use-companies';
 import { useManagesApprovalRules } from '@/components/layout/module-nav';
+import { useRevealOnOpen } from '@/hooks/use-reveal-on-open';
 import { NenNav } from './nen-nav';
 
 function subjectLabel(subject: string): string {
@@ -52,6 +53,7 @@ export function ApprovalLimitPage() {
   const saveLimit = useSaveApprovalLimit();
 
   const [editing, setEditing] = useState<ApprovalLimitRecord | null>(null);
+  const editFormRef = useRevealOnOpen<HTMLFormElement>(editing?.id);
   const [amount, setAmount] = useState('');
   const [unlimited, setUnlimited] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -152,6 +154,7 @@ export function ApprovalLimitPage() {
 
       {editing && (
         <form
+          ref={editFormRef}
           onSubmit={submit}
           className="mt-4 rounded-lg border border-border bg-surface p-4 shadow-card"
         >

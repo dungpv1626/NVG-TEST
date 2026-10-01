@@ -89,3 +89,67 @@ export function rentalDaysSoFar(
   const days = Math.round((startOfDay(end) - startOfDay(start)) / 86_400_000) + 1;
   return Math.max(days, 1);
 }
+
+/* ========================================================================== *
+ * Đối soát và tất toán hợp đồng thuê với Kế toán — migration 0145
+ * ========================================================================== */
+
+export interface RentalSettlementInput {
+  /** Tiền đặt cọc ghi trên hợp đồng thuê. */
+  deposit: number | string;
+  /** Tiền thuê + bồi thường của TỪNG biên bản thu hồi đã chốt. */
+  returns: { amount: number | string; signed: boolean }[];
+  /** Các khoản công nợ phải thu đã sinh từ biên bản đã ký. */
+  receivables: {
+    direction: 'phai_thu' | 'phai_tra';
+    amount: number | string;
+    settled: number | string;
+  }[];
+}
+
+export interface RentalSettlementPreview {
+  /** Tổng tiền của mọi biên bản (đã ký lẫn chưa ký). */
+  billed: number;
+  /** Phần đã thành khoản phải thu bên Kế toán (biên bản đã ký). */
+  receivable: number;
+  collected: number;
+  /** Còn phải thu trước khi cấn trừ cọc. */
+  outstanding: number;
+  unsignedCount: number;
+  /** Tổng biên bản đã ký ≠ tổng phải thu đã sinh — dòng tổng không cân (Webapp Flow 4.9). */
+  mismatch: boolean;
+  /** Tất toán sẽ cấn trừ bao nhiêu tiền cọc. */
+  depositOffset: number;
+  /** Còn phải thu sau khi cấn trừ cọc. */
+  remainingDue: number;
+  /** Cọc thừa phải hoàn cho khách. */
+  refund: number;
+}
+
+/**
+ * Bản soi của `settle_rental_agreement`: cọc cấn trừ vào phần còn phải thu, cọc thừa hoàn khách.
+ * Chỉ để hiện trước cho Kế toán thấy tất toán sẽ ghi gì — con số thật do CSDL tính.
+ */
+export function rentalSettlementPreview(input: RentalSettlementInput): RentalSettlementPreview {
+  const deposit = Math.max(Number(input.deposit) || 0, 0);
+  const billed = input.returns.reduce((s, r) => s + Number(r.amount), 0);
+  const signedTotal = input.returns
+    .filter((r) => r.signed)
+    .reduce((s, r) => s + Number(r.amount), 0);
+  const due = input.receivables.filter((r) => r.direction === 'phai_thu');
+  const receivable = due.reduce((s, r) => s + Number(r.amount), 0);
+  const collected = due.reduce((s, r) => s + Number(r.settled), 0);
+  const outstanding = receivable - collected;
+  const depositOffset = Math.min(deposit, Math.max(outstanding, 0));
+  return {
+    billed,
+    receivable,
+    collected,
+    outstanding,
+    unsignedCount: input.returns.filter((r) => !r.signed).length,
+    mismatch: signedTotal !== receivable,
+    depositOffset,
+    remainingDue: outstanding - depositOffset,
+    refund: deposit - depositOffset,
+  };
+}

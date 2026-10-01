@@ -53,6 +53,9 @@ export function BudgetPanel({ siteId }: { siteId: string }) {
   if (error) return <ErrorState message={toUserMessage(error)} />;
 
   const rows = data ?? [];
+  // Cột «Nhóm» chỉ hiện khi có mã chi phí khác tên nhóm — dữ liệu hiện tại mỗi mã một nhóm cùng
+  // tên, hai cột lặp nhau chỉ đẩy cột «Còn được chi» ra khỏi khung nhìn.
+  const showGroup = rows.some((r) => r.name !== COST_GROUP_LABELS[r.cost_group]);
   if (rows.length === 0) {
     return (
       <EmptyState message="Chưa có ngân sách thi công cho công trình này. Ngân sách được lập từ bản dự toán đã phê duyệt ở gói thầu hoặc dự án thiết kế nguồn — không nhập lại tại công trường." />
@@ -99,7 +102,7 @@ export function BudgetPanel({ siteId }: { siteId: string }) {
       </section>
 
       <div className="overflow-x-auto rounded-lg border border-border bg-surface shadow-card">
-        <table className="w-full min-w-[52rem] border-collapse">
+        <table className="w-full min-w-[40rem] border-collapse">
           <caption className="sr-only">
             Ngân sách so với chi phí thực tế theo từng mã chi phí
           </caption>
@@ -108,9 +111,11 @@ export function BudgetPanel({ siteId }: { siteId: string }) {
               <th scope="col" className="px-3 py-2 font-medium">
                 Mã chi phí
               </th>
-              <th scope="col" className="px-3 py-2 font-medium">
-                Nhóm
-              </th>
+              {showGroup && (
+                <th scope="col" className="px-3 py-2 font-medium">
+                  Nhóm
+                </th>
+              )}
               <th scope="col" className="px-3 py-2 text-right font-medium">
                 Ngân sách
               </th>
@@ -141,17 +146,17 @@ export function BudgetPanel({ siteId }: { siteId: string }) {
                   <th scope="row" className="px-3 py-2 text-left font-normal">
                     {row.name}
                   </th>
-                  <td className="px-3 py-2">{COST_GROUP_LABELS[row.cost_group]}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">
+                  {showGroup && <td className="px-3 py-2">{COST_GROUP_LABELS[row.cost_group]}</td>}
+                  <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">
                     {formatCurrency(row.budgeted_amount)}
                   </td>
-                  <td className="px-3 py-2 text-right tabular-nums">
+                  <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">
                     {formatCurrency(row.actual_amount)}
                   </td>
-                  <td className="px-3 py-2 text-right tabular-nums">
+                  <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">
                     {formatCurrency(row.committed_amount)}
                   </td>
-                  <td className="px-3 py-2 text-right tabular-nums">
+                  <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">
                     {/* Cảnh báo KHÔNG chỉ bằng màu — luôn kèm chữ và biểu tượng
                         (Content Guidelines 6.8). */}
                     <span

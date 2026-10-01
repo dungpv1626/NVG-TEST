@@ -27,6 +27,7 @@ Hệ thống Phần mềm Quản trị Nhà Việt Group · đề nghị chi, c�
 | Ghi nhận đã chi, đánh dấu đã hạch toán | Chi tiết đề nghị chi | Sau khi duyệt / sau khi chuyển sổ |
 | Theo dõi tạm ứng và hạn hoàn ứng | **Tạm ứng** | Hằng tuần |
 | Lập công nợ, ghi nhận thu / trả | **Công nợ** | Khi phát hành hóa đơn, khi tiền về |
+| Đối soát biên bản thu hồi giàn giáo, tất toán hợp đồng thuê | **Thuê giàn giáo** (Nhà Việt Steel) | Khi khách trả hết giàn giáo |
 | Lập kế hoạch dòng tiền kỳ | **Dòng tiền** | Đầu kỳ |
 | Mở, khóa, mở lại kỳ kế toán | **Kỳ kế toán** | Cuối tháng |
 
@@ -176,7 +177,32 @@ chế công nợ).
 
 **Hình 12.** Ghi nhận thu tiền.
 
-## 10. Dòng tiền
+## 10. Thuê giàn giáo — đối soát và tất toán
+
+Chọn **Nhà Việt Steel** ở góc trên bên trái → **Thuê giàn giáo**.
+
+Mỗi lần khách trả giàn giáo, Xưởng lập **biên bản thu hồi** và hai bên ký (trên màn hình hoặc ký
+giấy rồi chụp ảnh). Ký xong, biên bản bị khoá và Kế toán **tự nhận một khoản phải thu** ở
+**Công nợ**: tiền thuê và bồi thường của đợt đó, ghi rõ mã hợp đồng và mã biên bản. Không ai phải
+báo số qua Zalo hay gõ lại.
+
+![Thuê giàn giáo](anh/kt/15-thue-gian-giao.png)
+
+**Hình 13.** Hợp đồng Đông Đô: một biên bản đã ký, 7.149.600 đồng đã thành khoản phải thu.
+
+- Mỗi hợp đồng một dòng: **biên bản đã chốt**, **đã thành phải thu**, **đã thu**, **tiền đặt cọc**,
+  **còn phải thu**. Bấm **Đối soát** để xem từng biên bản: ngày trả, số tiền, đã ký chưa, khoản
+  phải thu tương ứng, đã thu bao nhiêu.
+- Tổng biên bản đã ký phải bằng tổng phải thu đã sinh. Lệch thì dòng đó hiện cảnh báo **Lệch**.
+- Tiền về: ghi nhận thu ở **Công nợ** như mọi khoản khác. Hạn thu để trống cho tới khi Kế toán đặt
+  (điều khoản thanh toán cho thuê chưa chốt).
+- Khách trả hết thì hợp đồng sang nhóm **Chờ tất toán**. Còn biên bản chưa ký thì nút **Tất toán
+  hợp đồng** bị khoá và ghi rõ lý do.
+- **Tất toán hợp đồng**: hệ thống ghi chứng từ **cấn trừ tiền cọc** vào phần còn phải thu. Cọc còn
+  thừa thì lập **khoản phải trả hoàn cọc** cho khách. Cọc không đủ thì phần còn lại vẫn phải thu
+  tiếp. Hộp xác nhận nói trước các con số này; tất toán xong không hoàn tác được.
+
+## 11. Dòng tiền
 
 **Dòng tiền** đặt cạnh nhau cho từng pháp nhân: số dư đầu kỳ, dự kiến thu, công nợ đến hạn thu, dự
 kiến chi, công nợ đến hạn trả, **khoản đã duyệt nhưng chưa chi**, và **số dư cuối kỳ dự kiến**. Chỗ
@@ -184,26 +210,26 @@ kiến chi, công nợ đến hạn trả, **khoản đã duyệt nhưng chưa c
 
 ![Dòng tiền](anh/kt/12-dong-tien.png)
 
-**Hình 13.** Dòng tiền tháng 9 của Nhà Việt Cons.
+**Hình 14.** Dòng tiền tháng 9 của Nhà Việt Cons.
 
 **Lập kế hoạch kỳ**: kỳ, từ ngày – đến ngày, **số dư đầu kỳ** (nhập tay theo sao kê — hệ thống
 không nối ngân hàng điện tử), dự kiến thu, dự kiến chi, nguồn số dư. Chưa lập kế hoạch thì thẻ Dòng
 tiền trên Dashboard ghi «Chưa đủ dữ liệu» thay vì «0 đồng».
 
-## 11. Kỳ kế toán
+## 12. Kỳ kế toán
 
 **Kỳ kế toán** — chốt sổ theo tháng.
 
 ![Kỳ kế toán](anh/kt/13-ky-ke-toan.png)
 
-**Hình 14.** Kỳ kế toán — bản demo chưa mở kỳ nào.
+**Hình 15.** Kỳ kế toán — bản demo chưa mở kỳ nào.
 
 - **Mở kỳ**: gõ năm-tháng, ví dụ `2026-09`.
 - **Khóa kỳ**: sau khi khóa, hệ thống **từ chối mọi khoản chi mang ngày trong kỳ**. Không khóa được
   khi trong kỳ còn khoản đã chi mà chưa hạch toán.
 - **Mở lại kỳ**: bắt buộc ghi nguyên nhân; nguyên nhân và người mở được lưu lại.
 
-## 12. Câu hỏi thường gặp
+## 13. Câu hỏi thường gặp
 
 | Câu hỏi | Trả lời |
 | --- | --- |
@@ -211,5 +237,6 @@ tiền trên Dashboard ghi «Chưa đủ dữ liệu» thay vì «0 đồng».
 | Không thấy nút **Xác nhận**? | Hồ sơ đang ở bước của người khác (xem cột Đang chờ), hoặc chính mình là người đề nghị. |
 | Muốn sửa phân bổ sau khi đã gửi? | Không sửa được. Người ở bước đang giữ **Trả lại**, người đề nghị sửa rồi gửi lại. |
 | Trả tiền cho đơn hàng thì lập ở đâu? | Từ tab **Chứng từ** của đơn hàng — để không ghi chi phí công trình hai lần. |
+| Khoản phải thu tiền thuê giàn giáo từ đâu ra? | Từ biên bản thu hồi Xưởng đã ký với khách — mỗi biên bản một khoản. Biên bản chưa ký thì chưa có khoản phải thu. |
 | Số dư đầu kỳ lấy ở đâu? | Nhập tay theo sao kê ngân hàng. Hệ thống không kết nối ngân hàng điện tử. |
 | Có thay phần mềm kế toán không? | Không. **Đánh dấu đã hạch toán** chỉ ghi nhận khoản chi đã chuyển sang phần mềm kế toán chính thức. |

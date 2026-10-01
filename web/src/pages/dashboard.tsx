@@ -32,6 +32,7 @@ import {
   Compass,
   FileSignature,
   FileText,
+  HardHat,
   Info,
   Percent,
   Receipt,
@@ -54,6 +55,7 @@ import {
   biddingDisplayStatus,
   contractDisplayStatus,
   purchaseRequestDisplayStatus,
+  siteDisplayStatus,
   conversionRate,
   countByStatus,
   dashboardGreeting,
@@ -87,6 +89,7 @@ import { usePurchaseRequests } from '@/hooks/use-purchasing';
 import { useDesignProjects } from '@/hooks/use-design-projects';
 import { useTimesheets } from '@/hooks/use-hr';
 import { useOpportunities } from '@/hooks/use-opportunities';
+import { useConstructionSites } from '@/hooks/use-construction-sites';
 import { useSitesBudgetStatus } from '@/hooks/use-reports';
 import { useRentalAgreements } from '@/hooks/use-sx';
 import { useAuth, useCan } from '@/lib/auth';
@@ -118,6 +121,7 @@ const MODULE_KPI_ICON: Record<string, { icon: LucideIcon; well: string }> = {
   TK: { icon: Compass, well: 'bg-tint-teal-bg text-tint-teal' },
   HD: { icon: FileSignature, well: 'bg-tint-forest-bg text-brand' },
   MH: { icon: ShoppingCart, well: 'bg-tint-teal-bg text-tint-teal' },
+  TC: { icon: HardHat, well: 'bg-tint-amber-bg text-tint-amber' },
 };
 
 export function DashboardPage() {
@@ -146,6 +150,7 @@ export function DashboardPage() {
   const canViewSx = useCan('SX');
   const canViewNs = useCan('NS');
   const canViewMh = useCan('MH');
+  const canViewTc = useCan('TC');
   // Xem được PHÂN HỆ chưa đủ để xem SỐ TIỀN: thẻ tài chính và lãi/lỗ theo nhóm vai trò mà CSDL
   // cho xem, không theo quyền mở phân hệ (xem `useSensitiveAccess`).
   const { data: access } = useSensitiveAccess();
@@ -157,6 +162,7 @@ export function DashboardPage() {
   const designProjects = useDesignProjects({ enabled: canViewTk });
   const contracts = useContracts({ enabled: canViewHd });
   const purchaseRequests = usePurchaseRequests({ enabled: canViewMh });
+  const sites = useConstructionSites({ enabled: canViewTc });
 
   // Cùng nguồn dữ liệu với Hộp thư Phê duyệt và huy hiệu trên thanh trên cùng — ba chỗ hiển
   // thị cùng một con số thì phải đọc từ cùng một truy vấn, nếu không sẽ có lúc lệch nhau.
@@ -171,10 +177,16 @@ export function DashboardPage() {
   });
   const receivables = useReceivables('phai_thu', { enabled: canSeeFinance });
   const rentalAgreements = useRentalAgreements({ enabled: canViewSx });
+  // Kỳ chấm công đang được chốt là THÁNG TRƯỚC — đầu tháng mới mới chốt công tháng vừa qua,
+  // cùng cách chọn của màn hình Chấm công. Nhìn tháng hiện tại thì thẻ gần như luôn «chưa chốt».
   const now = new Date();
-  const timesheets = useTimesheets(now.getFullYear(), now.getMonth() + 1, undefined, {
-    enabled: canViewNs,
-  });
+  const timesheetPeriod = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const timesheets = useTimesheets(
+    timesheetPeriod.getFullYear(),
+    timesheetPeriod.getMonth() + 1,
+    undefined,
+    { enabled: canViewNs },
+  );
 
   // Nguồn rủi ro "vượt ngân sách" của thẻ Quá hạn (BC-05) — một lượt gọi tổng hợp CẢ công
   // trình (0058_bc_over_budget.sql), không lặp `useSiteBudgetStatus` theo từng site (N+1).
@@ -226,6 +238,19 @@ export function DashboardPage() {
     (r) => r.stage === 'da_duyet' && isWithinPeriod(r.created_at, period),
   ).length;
 
+  // Công trình: thẻ đếm theo trạng thái như mọi thẻ module; hai chỉ số riêng là thứ Trưởng phòng
+  // Thi công hỏi mỗi sáng — bao nhiêu công trình đang thi công, bao nhiêu đã vượt ngân sách.
+  const siteRecords: MetricRecord[] = (sites.data ?? [])
+    .map((st) => ({
+      status: siteDisplayStatus(st.stage, st.planned_end_date),
+      value: null,
+      createdAt: st.created_at,
+    }))
+    .filter(inPeriod);
+  const sitesUnderway = (sites.data ?? []).filter(
+    (st) => st.stage === 'dang_thi_cong' && isWithinPeriod(st.created_at, period),
+  ).length;
+
   // Tỷ lệ chuyển đổi tính trên TOÀN BỘ cơ hội trong kỳ, kể cả cơ hội đã mất — bỏ cơ hội mất
   // ra khỏi mẫu số thì tỷ lệ luôn đẹp và không còn nói lên điều gì (PRD CRM-09).
   const wonOpportunities = (opportunities.data ?? []).filter(
@@ -248,6 +273,13 @@ export function DashboardPage() {
       .filter((c) => c.signed_date !== null && isWithinPeriod(c.signed_date, period))
       .map((c) => c.value),
   );
+
+  // Số công trình vượt ngân sách — `health` đã tính sẵn ở CSDL (0071), cùng công thức
+  // summarizeBudget()/BudgetPanel (TC-05). KHÔNG tự tính lại từ ba cột tiền: với vai trò
+  // không xem được giá vốn, ba cột đó là null (Mẫu D) nên tự tính sẽ luôn ra "trong ngân sách".
+  const overBudgetSiteCount = (sitesBudgetStatus.data ?? []).filter(
+    (s) => s.health === 'vuot_ngan_sach',
+  ).length;
 
   const modules: ModuleMetric[] = [
     canViewCrm && {
@@ -306,6 +338,25 @@ export function DashboardPage() {
         },
       ],
     },
+    canViewTc && {
+      key: 'TC',
+      title: 'Công trình',
+      hint: 'Công trình mở trong kỳ, theo trạng thái thi công',
+      basePath: '/tc/cong-trinh',
+      records: siteRecords,
+      isLoading: sites.isLoading,
+      highlights: [
+        { label: 'Đang thi công', text: `${sitesUnderway} công trình` },
+        ...(canViewBc && sitesBudgetStatus.data
+          ? [
+              {
+                label: 'Vượt ngân sách',
+                text: overBudgetSiteCount > 0 ? `${overBudgetSiteCount} công trình` : 'Không có',
+              },
+            ]
+          : []),
+      ],
+    },
   ].filter(Boolean) as ModuleMetric[];
 
   const pendingCount = pendingApprovals?.length ?? 0;
@@ -341,13 +392,6 @@ export function DashboardPage() {
   ).length;
 
   const activeRentals = (rentalAgreements.data ?? []).filter((r) => r.status === 'dang_thue');
-
-  // Số công trình vượt ngân sách — `health` đã tính sẵn ở CSDL (0071), cùng công thức
-  // summarizeBudget()/BudgetPanel (TC-05). KHÔNG tự tính lại từ ba cột tiền: với vai trò
-  // không xem được giá vốn, ba cột đó là null (Mẫu D) nên tự tính sẽ luôn ra "trong ngân sách".
-  const overBudgetSiteCount = (sitesBudgetStatus.data ?? []).filter(
-    (s) => s.health === 'vuot_ngan_sach',
-  ).length;
 
   // Thẻ "Quá hạn" gộp mọi nguồn rủi ro thời hạn về một chỗ (BC-05) — hồ sơ 4 module gốc, công
   // nợ quá hạn thu, phê duyệt bị để lâu, và công trình vượt ngân sách. Đích của mục vượt ngân
@@ -387,7 +431,7 @@ export function DashboardPage() {
   ].filter(Boolean) as { key: string; title: string; count: number; to: string }[];
   const overdueTotal = overdueRisks.reduce((sum, m) => sum + m.count, 0);
 
-  const timesheetMonthLabel = `${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+  const timesheetMonthLabel = `${String(timesheetPeriod.getMonth() + 1).padStart(2, '0')}/${timesheetPeriod.getFullYear()}`;
   const closedTimesheetCount = timesheets.data?.length ?? 0;
 
   const currentCompany =

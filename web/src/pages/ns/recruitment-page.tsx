@@ -178,7 +178,11 @@ export function RecruitmentPage() {
             />
           </Field>
           <div className="flex items-end">
-            <Button type="submit" disabled={createPosition.isPending || submitApproval.isPending}>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={createPosition.isPending || submitApproval.isPending}
+            >
               Gửi phê duyệt
             </Button>
           </div>

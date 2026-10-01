@@ -161,7 +161,7 @@ export function LeavePage() {
           </Field>
 
           <div className="flex items-end">
-            <Button type="submit" disabled={create.isPending || submit.isPending}>
+            <Button type="submit" variant="primary" disabled={create.isPending || submit.isPending}>
               {create.isPending || submit.isPending ? 'Đang gửi…' : 'Gửi phê duyệt'}
             </Button>
           </div>

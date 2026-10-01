@@ -20,6 +20,7 @@ import {
   formatDate,
   formatNumber,
   isUsableScaffolding,
+  toNvgDateInput,
 } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,9 @@ import {
   useRecordScaffoldingEvent,
   useScaffoldingAssets,
   useScaffoldingEvents,
+  useScaffoldingLedgerAsOf,
+  useScaffoldingLedgerStart,
+  type ScaffoldingLedgerRow,
 } from '@/hooks/use-warehouse';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useCan } from '@/lib/auth';
@@ -65,6 +69,49 @@ function EventPanel({ assetId }: { assetId: string }) {
   );
 }
 
+/**
+ * Sổ tại cuối một ngày đã qua — chỉ xem. Số lấy từ sổ phát sinh theo ngày nghiệp vụ của chứng
+ * từ (0146), không phải từ số hiện tại trừ lùi.
+ */
+function LedgerAsOf({ rows }: { rows: ScaffoldingLedgerRow[] }) {
+  if (rows.length === 0) {
+    return <EmptyState message="Cuối ngày này sổ không có lô giàn giáo nào." />;
+  }
+  return (
+    <ul className="space-y-2">
+      {rows.map((row) => {
+        const usable = isUsableScaffolding(row.condition);
+        return (
+          <li
+            key={`${row.scaffolding_asset_id}-${row.condition}-${row.location_type}-${row.rental_agreement_code ?? ''}`}
+            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface px-4 py-3"
+          >
+            <div>
+              <p className="font-medium">
+                {row.material_name ?? EM_DASH}
+                <span className="ml-2 font-mono text-xs text-fg-subtle">{row.asset_code}</span>
+              </p>
+              <p className="text-fg-muted">
+                <span className={usable ? '' : 'font-semibold text-status-overdue'}>
+                  {SCAFFOLDING_CONDITION_LABELS[row.condition]}
+                </span>{' '}
+                · {ASSET_LOCATION_LABELS[row.location_type]}
+                {row.warehouse_name ? ` — ${row.warehouse_name}` : ''}
+                {row.site_code ? ` — ${row.site_code}` : ''}
+                {row.renter_name ? ` — ${row.renter_name}` : ''}
+                {row.rental_agreement_code ? ` (${row.rental_agreement_code})` : ''}
+              </p>
+            </div>
+            <p className="text-lg font-semibold tabular-nums">
+              {formatNumber(Number(row.quantity))} {row.unit}
+            </p>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 export function ScaffoldingPage() {
   const canEdit = useCan('KHO', 'edit');
   const { data, isLoading, error } = useScaffoldingAssets();
@@ -77,6 +124,12 @@ export function ScaffoldingPage() {
   const [formAssetId, setFormAssetId] = useState<string | null>(null);
   const [eventType, setEventType] = useState<ScaffoldingEventType>('sua_chua');
   const [pageError, setPageError] = useState<string | null>(null);
+  // Rỗng = sổ hiện tại. Có ngày = sổ tại cuối ngày đó, chỉ xem.
+  const [asOfDate, setAsOfDate] = useState('');
+  const today = toNvgDateInput(new Date());
+  const isPast = asOfDate !== '' && asOfDate < today;
+  const { data: ledgerStart } = useScaffoldingLedgerStart();
+  const ledger = useScaffoldingLedgerAsOf(isPast ? asOfDate : null);
 
   // Không viết thẳng `data ?? []`: mảng rỗng mới mỗi lần dựng làm `useMemo` bên dưới tính lại
   // sau MỌI lần dựng, tức là không còn là bộ nhớ đệm nữa.
@@ -85,13 +138,17 @@ export function ScaffoldingPage() {
   const totals = useMemo(() => {
     let usable = 0;
     let unusable = 0;
-    for (const a of assets) {
+    const source = isPast ? (ledger.data ?? []) : assets;
+    for (const a of source) {
       const qty = Number(a.quantity);
+      // Hàng đang ở khách thuê hay công trình thì không đem hứa với khách khác được — trước
+      // 01/10/2026 ô này cộng cả giáo đang nằm ở khách.
+      if (a.location_type !== 'kho' && isUsableScaffolding(a.condition)) continue;
       if (isUsableScaffolding(a.condition)) usable += qty;
       else unusable += qty;
     }
     return { usable, unusable };
-  }, [assets]);
+  }, [assets, isPast, ledger.data]);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -140,12 +197,45 @@ export function ScaffoldingPage() {
         </p>
       )}
 
+      <div className="mb-4 flex flex-wrap items-end gap-3">
+        <div className="w-52">
+          <Field
+            label="Xem sổ tại ngày"
+            hint={
+              ledgerStart
+                ? `Sổ ghi theo ngày từ ${formatDate(ledgerStart)}. Để trống là sổ hiện tại.`
+                : 'Để trống là sổ hiện tại.'
+            }
+          >
+            <DateInput
+              value={asOfDate}
+              onChange={setAsOfDate}
+              min={ledgerStart ?? undefined}
+              max={today}
+            />
+          </Field>
+        </div>
+        {asOfDate && (
+          <Button variant="subtle" onClick={() => setAsOfDate('')}>
+            Về sổ hiện tại
+          </Button>
+        )}
+      </div>
+
+      {isPast && (
+        <p className="mb-3 rounded-sm bg-surface-sunken px-3 py-2 text-fg-muted">
+          Sổ tại cuối ngày {formatDate(asOfDate)} — chỉ xem. Số lấy theo ngày của từng chứng từ
+          (ngày giao, ngày trả, ngày biên bản), kể cả chứng từ ghi nhận muộn.
+        </p>
+      )}
+
       <section className="mb-4 grid gap-3 sm:grid-cols-2">
         <div className="rounded-lg border border-border bg-surface-sunken p-4">
           <p className="text-xs text-fg-subtle">Cho thuê được</p>
           <p className={KPI_VALUE_CLASS}>{formatNumber(totals.usable)}</p>
           <p className="mt-1 text-xs text-fg-subtle">
-            Chỉ gồm hàng mới và còn sử dụng được — con số này mới là con số đem hứa với khách.
+            Hàng mới và còn sử dụng được đang nằm ở kho — con số này mới là con số đem hứa với
+            khách.
           </p>
         </div>
         <div className="rounded-lg border border-border bg-surface-sunken p-4">
@@ -157,7 +247,15 @@ export function ScaffoldingPage() {
         </div>
       </section>
 
-      {isLoading ? (
+      {isPast ? (
+        ledger.isLoading ? (
+          <TableSkeleton rows={4} columns={5} />
+        ) : ledger.error ? (
+          <ErrorState message={toUserMessage(ledger.error)} />
+        ) : (
+          <LedgerAsOf rows={ledger.data ?? []} />
+        )
+      ) : isLoading ? (
         <TableSkeleton rows={4} columns={5} />
       ) : error ? (
         <ErrorState message={toUserMessage(error)} />
@@ -243,10 +341,7 @@ export function ScaffoldingPage() {
                         />
                       </Field>
                       <Field label="Ngày lập">
-                        <DateInput
-                          name="event_date"
-                          defaultValue={new Date().toISOString().slice(0, 10)}
-                        />
+                        <DateInput name="event_date" defaultValue={toNvgDateInput(new Date())} />
                       </Field>
                       {eventType === 'sua_chua' && (
                         <Field label="Tình trạng sau biên bản" required>

@@ -145,7 +145,7 @@ export function HrDocumentPage() {
           </Field>
 
           <div className="flex items-end">
-            <Button type="submit" disabled={create.isPending}>
+            <Button type="submit" variant="primary" disabled={create.isPending}>
               Thêm giấy tờ
             </Button>
           </div>

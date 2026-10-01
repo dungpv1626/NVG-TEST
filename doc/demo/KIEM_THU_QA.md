@@ -102,7 +102,8 @@ Mật khẩu chung của tài khoản demo: xem `db/src/seed/data.ts` (`SEED_PAS
 | E-03 | Kho | Chứng từ kho | Phiếu nhập truy về phiếu giao nhận và đơn hàng | | |
 | E-04 | Kho | Đơn hàng thép → tab Giao nhận | Đợt giao đã nhập kho ghi «Đã nhập kho theo phiếu NVC-PN-2026-0001», không còn nút Nhập kho | | |
 | E-05 | Kho (điện thoại) | Quét mã `THEP-HINH-H200` | Tồn 6.000 kg ở kho Phố Nối A; thanh tab trên cùng cuộn ngang, chữ không đè nhau | | |
-| E-06 | Kho | Nhà Việt Steel → Giàn giáo | Cho thuê được 2.596; hỏng chờ sửa 4; Lập biên bản bắt buộc nguyên nhân | | |
+| E-06 | Kho | Nhà Việt Steel → Giàn giáo | Cho thuê được chỉ tính giáo đang ở kho (1.380 trên dữ liệu máy); hỏng chờ sửa 4; Lập biên bản bắt buộc nguyên nhân | | |
+| E-07 | Kho | Giàn giáo → **Xem sổ tại ngày** | Ghi mốc «Sổ ghi theo ngày từ …»; chọn một ngày đã qua (từ mốc) thì hiện sổ cuối ngày đó, chỉ xem, không có nút Lập biên bản; **Về sổ hiện tại** quay lại | | |
 
 ## F. Kế toán và phê duyệt
 
@@ -111,9 +112,11 @@ Mật khẩu chung của tài khoản demo: xem `db/src/seed/data.ts` (`SEED_PAS
 | F-01 | Kế toán | Đề nghị thanh toán | Đợt 1 tổ đội Hùng Cường đã chi; đợt 2 đang ở bước Tài chính kiểm | | |
 | F-02 | Giám đốc Tài chính | Duyệt bước kiểm đợt 2 | Hồ sơ sang Hộp thư phê duyệt đúng hạn mức | | |
 | F-03 | Kế toán | Công nợ phải thu | Hưng Thịnh: 1,3 tỷ, đã thu 800 triệu, còn 500 triệu | | |
-| F-04 | Kế toán | Đơn hàng thép (đã giao đủ) → tab Chứng từ → **Lập đề nghị thanh toán** | Biểu mẫu điền sẵn nội dung, 421.740.000 đồng, Thép Đại Phát, bộ phận Mua hàng; lưu xong đơn hàng liệt kê đề nghị vừa lập. Ghi đã chi: chi phí thực tế của mã VAT_TU KHÔNG tăng thêm (đã tính lúc nhận hàng) | | |
+| F-06 | Kế toán | Đơn hàng thép (đã giao đủ) → tab Chứng từ → **Lập đề nghị thanh toán** | Biểu mẫu điền sẵn nội dung, 421.740.000 đồng, Thép Đại Phát, bộ phận Mua hàng; lưu xong đơn hàng liệt kê đề nghị vừa lập. Ghi đã chi: chi phí thực tế của mã VAT_TU KHÔNG tăng thêm (đã tính lúc nhận hàng) | | |
 | F-04 | Tổng Giám đốc | Hộp thư Phê duyệt | Có hồ sơ chờ; duyệt xong hồ sơ biến khỏi hộp thư | | |
 | F-05 | Người lập đề nghị | Tự duyệt hồ sơ của mình | Không có nút / bị từ chối | | |
+| F-07 | Kế toán | Nhà Việt Steel → Kế toán → **Thuê giàn giáo**, nhóm Đang cho thuê | Đông Đô: biên bản đã chốt 7.149.600, đã thành phải thu 7.149.600 (sau khi Xưởng ký G-08), cọc 50.000.000; không có nút tất toán vì khách còn giữ giáo | | |
+| F-08 | Kế toán | Công nợ → Phải thu | Có khoản «Tiền thuê giàn giáo — hợp đồng NVS-HDT-2026-0001, biên bản thu hồi NVS-BBTH-2026-0002» (mã trên demo), 7.149.600 đồng | | |
 
 ## G. NVS — cho thuê giàn giáo
 
@@ -123,6 +126,51 @@ Mật khẩu chung của tài khoản demo: xem `db/src/seed/data.ts` (`SEED_PAS
 | G-02 | Kho | Mở hợp đồng Đông Đô | Đã trả một phần; doanh thu theo ngày thuê của đợt trả; số còn đang thuê đúng | | |
 | G-03 | Kho | Thu hồi thêm một đợt | Ghi đạt / hư hỏng / mất; không trả vượt số đang thuê | | |
 | G-04 | Kho | Giàn giáo | Lô tại kho, lô đang cho thuê, lô hỏng chờ sửa tách riêng | | |
+| G-05 | Xưởng NVS | Hợp đồng Đông Đô | Cột «Còn ở khách»: giáo nêm 246, mâm sàn 120, kích U 300; «Tiền thuê đã chốt (các đợt đã trả)» 7.149.600 đồng | | |
+| G-06 | Tổng Giám đốc | Báo cáo → Tổng quan tài chính, kỳ Tháng này | Doanh thu tháng 9 có 7.149.600 đồng tiền thuê Đông Đô ngày 27/09 dù hợp đồng chưa trả hết | | |
+| G-07 | Xưởng NVS | Hợp đồng Đông Đô → tab **Biên bản thu hồi** | Biên bản ngày 27/09/2026 (trên demo mã NVS-BBTH-2026-0002; 0001 là hợp đồng cũ trả hết tháng 2), «Chờ ký hai bên», hai dòng hàng (giáo nêm 150 đạt + 4 hư hỏng, mâm sàn 80), cộng 7.149.600 đồng | | |
+| G-08 | Xưởng NVS (điện thoại) | **Ký biên bản** → ghi người đại diện → hai bên ký bằng ngón tay → Xác nhận | Biên bản «Đã ký hai bên», hiện hai chữ ký, không còn nút ký; Kế toán thấy khoản phải thu (F-08) | | |
+| G-09 | Xưởng NVS | Thu hồi thêm một đợt | Sau khi lưu tự sang tab Biên bản thu hồi, khung ký của biên bản mới mở sẵn | | |
+| G-10 | Xưởng NVS | **In biên bản**; ký bằng **Ảnh biên bản giấy đã ký** | Bản in có bảng hàng và ô ký hai bên; ảnh đính vào hiện trong biên bản đã ký | | |
+
+## G2. Hành chính – Nhân sự (NVC, cần kịch bản dữ liệu `ns`)
+
+| Mã | Vai trò | Thao tác | Kỳ vọng | Kết quả | Ghi chú |
+| --- | --- | --- | --- | --- | --- |
+| K-01 | Nhân sự | Việc cần xử lý | Giấy khám sức khỏe Võ Văn Nam «Đã hết hạn»; chứng chỉ an toàn Lê Văn Hùng «Còn dưới 30 ngày»; Phạm Minh Thư sắp hết thử việc 10/10 | | |
+| K-02 | Nhân sự | Chấm công tháng 9 | Văn phòng đã xác nhận, công trường đang ghi, xưởng chưa mở; nút chốt khoá, ghi «Còn chờ xác nhận: Công trường, Xưởng sản xuất» | | |
+| K-03 | Nhân sự | Văn phòng → **Xem bảng công** | 02/09 «L», Trần Quốc Bảo 15–16/09 «P», ngày công 23–25; ô không bấm được (đã xác nhận) | | |
+| K-04 | Nhân sự | Công trường → Xem bảng công → bấm ô 26/09 của Lê Văn Hùng → **Nghỉ có phép** → Lưu | Bị từ chối: chưa có đơn nghỉ được duyệt cho ngày đó | | |
+| K-05 | Nhân sự | Hồ sơ Phạm Minh Thư → **Chuyển chính thức** | Tình trạng «Chính thức»; tab Hợp đồng mở sẵn biểu mẫu hợp đồng xác định thời hạn, ô «Kết thúc hợp đồng đang hiệu lực» đã bật | | |
+| K-06 | Nhân sự | Lưu hợp đồng chính thức | Hợp đồng thử việc «Đã kết thúc», hợp đồng mới «Đang hiệu lực» | | |
+| K-07 | Nhân sự | **Thêm nhân sự** → lưu | Hồ sơ mới có mã `NVC-NS-2026-…` | | |
+| K-08 | Nhân sự | Việc cần làm → đơn nghỉ Nguyễn Thị Lan | Tiêu đề «… 2 ngày từ 08/10/2026»; Duyệt xong đơn sang «Đã duyệt» | | |
+
+## G3. Trưởng phòng Thi công (NVC)
+
+| Mã | Vai trò | Thao tác | Kỳ vọng | Kết quả | Ghi chú |
+| --- | --- | --- | --- | --- | --- |
+| T-01 | Trưởng phòng Thi công | Đăng nhập | «Chào Trưởng phòng»; thẻ Công trình: 1 đang thi công, vượt ngân sách «Không có» | | |
+| T-02 | Trưởng phòng Thi công | Thi công → **Phân công** → Thêm phân công | Ô chọn người có danh sách người dùng; lưu được; Chỉ huy trưởng thấy công trình vừa phân công | | |
+| T-03 | Trưởng phòng Thi công | **Chấm công công trường** | Chỉ khối công trường; Xem bảng công; gửi xác nhận rồi **Xác nhận số liệu** được | | |
+| T-04 | Trưởng phòng Thi công | **Theo dõi đề nghị** | Mở sẵn «Tất cả công trình», thấy 3 đề nghị của Hưng Thịnh | | |
+| T-05 | Trưởng phòng Thi công | Báo cáo & Dashboard → gõ `/bc/lai-lo` | Báo chặn ngay (không xoay chờ); thanh Báo cáo không có mục Lãi/lỗ | | |
+| T-06 | Trưởng phòng Thi công | Công trình Hưng Thịnh → Ngân sách | Đủ 5 cột tiền trong khung, không bị cắt cột «Còn được chi» | | |
+
+## G4. Quản trị hệ thống (cần Worker `nvg-api` đã phát hành bản có `/admin/users`)
+
+| Mã | Vai trò | Thao tác | Kỳ vọng | Kết quả | Ghi chú |
+| --- | --- | --- | --- | --- | --- |
+| Q-01 | Quản trị hệ thống | Dashboard | Lời chào «Chào M, …» (không còn «Chào thống») | | |
+| Q-02 | Quản trị hệ thống | Người dùng | Cột Chức danh, «Vai trò: pháp nhân» gom theo vai trò; không có cột Người chịu trách nhiệm / Trạng thái / Thời hạn | | |
+| Q-03 | Quản trị hệ thống | Người dùng → Thêm người dùng, điền đủ, vai trò Kho, pháp nhân NVC → Tạo tài khoản | Hiện mật khẩu tạm 12 ký tự một lần; dòng mới có trong danh sách | | Ghi lại email đã tạo để Q-05 ngừng truy cập |
+| Q-04 | Tài khoản vừa tạo ở Q-03 | Đăng nhập bằng mật khẩu tạm → tên mình góc trên → Đổi mật khẩu → đăng xuất, đăng nhập bằng mật khẩu mới | Vào được, thấy phân hệ Kho; mật khẩu mới dùng được | | |
+| Q-05 | Quản trị hệ thống | Người dùng → Ngừng truy cập tài khoản Q-03 | Tài khoản đó không đăng nhập được nữa; dòng vẫn còn, «Đã ngừng» | | |
+| Q-06 | Quản trị hệ thống | Thêm người dùng với email đã có (ví dụ `kho@nhavietgroup.test`) | Báo «Email này đã có tài khoản…», không tạo gì | | |
+| Q-07 | Nhân sự | Gõ `/nen/quan-tri` | Bị chặn; không có nút Thêm người dùng | | |
+| Q-08 | Quản trị hệ thống | Tham số hệ thống | Mô tả đọc được, không có tên tệp mã nguồn; ngưỡng ngân sách hiện «90% (0,9)» | | |
+| Q-09 | Quản trị hệ thống | Tham số → Chỉnh sửa dòng đầu | Trang tự cuộn tới biểu mẫu; ô giá trị hiện «0,9». Bấm Hủy, không lưu | | |
+| Q-10 | Quản trị hệ thống | Nhật ký → Truy cập dữ liệu nhạy cảm | Cột Hành vi chỉ có «Xem» / «Chỉnh sửa» (không lẫn «Sửa») | | |
 
 ## H. Dashboard và báo cáo
 
@@ -181,3 +229,38 @@ Phát hiện khi chụp ảnh cho hướng dẫn sử dụng; tester kiểm lạ
 | L-15 | Đơn đặt hàng → Chứng từ | Kế toán phải lập tay đề nghị thanh toán, không gắn mã đơn → ghi đã chi làm công trình bị cộng chi phí hai lần | Nút «Lập đề nghị thanh toán» gắn mã đơn, điền sẵn; phép thử CSDL | |
 | L-16 | Thanh tab mọi phân hệ (điện thoại) | 7 tab Kho co lại, chữ đè nhau | Tab không co, thanh cuộn ngang; phép thử canh | |
 | L-17 | Đơn hàng → Giao nhận (vai trò Kho) | Đợt đã nhập kho vẫn hiện nút Nhập kho, bấm mới báo lỗi | Hiện mã phiếu nhập thay cho nút | |
+| L-18 | Mọi trang chi tiết (máy tính) | Cuộn xuống: đầu trang dính cách mép trên 24px, nội dung cuộn qua lộ ra phía trên | Đầu trang dính sát mép trên | |
+| L-19 | Chi tiết hợp đồng thuê giàn giáo | Không có số còn ở khách; «Tổng tiền thuê» đọc như tiền thuê cả hợp đồng | Cột «Còn ở khách»; nhãn «Tiền thuê đã chốt (các đợt đã trả)» | |
+| L-20 | Chi tiết hợp đồng (vai trò Dự án – Đấu thầu) | Hợp đồng đã có công trình vẫn hiện nút chính «Mở công trình» (vai trò không xem được Thi công) | Hỏi CSDL «đã có công trình chưa» (0144); đã có thì ẩn nút | |
+| L-21 | Chi tiết hợp đồng | «Thời gian thực hiện 06/09/2026 — ?» | «— chưa ghi ngày kết thúc» | |
+| L-22 | Kho → Giàn giáo | «Cho thuê được» cộng cả giáo khách đang giữ (2.596) | Chỉ tính giáo mới / còn dùng được đang ở kho | |
+| L-23 | Kế toán → Công nợ, Thuê giàn giáo | Kế toán không đọc được danh mục khách hàng: tên khách hiện «—» | Nhóm xem tài chính có quyền Kế toán đọc được khách hàng (0145, chỉ đọc) | |
+| L-24 | Kế toán → Ghi nhận thu | Từ 0 giờ tới 7 giờ sáng, chọn ngày hôm nay bị báo «ngày ở tương lai» (CSDL so theo giờ UTC) | So theo ngày giờ Việt Nam (0145) | |
+| L-25 | Nhật ký công trường, nghiệm thu, bảo hành, giao nhận, biên bản giàn giáo, phân công, đơn giá | Từ 0 giờ tới 7 giờ sáng, ô ngày điền sẵn ngày HÔM QUA (lấy theo giờ UTC) | Lấy «hôm nay» theo giờ Việt Nam ở cả 10 chỗ; phép thử canh trong design-rules | |
+| L-26 | Hồ sơ nhân sự | Hồ sơ lập từ màn hình không có mã — cột đầu danh sách trống | CSDL cấp mã `…-NS-…` lúc lưu (0147), hồ sơ cũ được cấp bù | |
+| L-27 | Hồ sơ nhân sự | Không sửa được hồ sơ, không chuyển chính thức, không lập hợp đồng lao động trên giao diện | Nút **Sửa hồ sơ**, **Chuyển chính thức**, **Thêm hợp đồng** | |
+| L-28 | Chấm công | Không thấy / không sửa được công từng người | **Xem bảng công**: bảng người × ngày, bấm ô để sửa | |
+| L-29 | Chấm công | Nút chốt đòi đủ ba khối kể cả khối không có ai — Nhà Việt One không bao giờ chốt được | Chỉ đòi khối đã mở kỳ hoặc có người làm việc | |
+| L-30 | Dashboard (Nhân sự) | Thẻ «Chấm công đã chốt» nhìn tháng hiện tại nên gần như luôn «chưa chốt» | Nhìn tháng trước, khớp màn hình Chấm công | |
+| L-31 | Việc cần làm | Đơn nghỉ ghi «2. ngày» | «2 ngày», nửa ngày «1,5 ngày» (0148) | |
+| L-32 | Hồ sơ nhân sự | Nút «Xem mức lương» hiện cho Thi công, Mua hàng, Xưởng rồi bấm mới bị từ chối | Chỉ hiện với vai trò được xem lương | |
+| L-33 | Biểu mẫu Nhân sự | Nút lưu chính là nút viền | Nút chính đậm | |
+| L-34 | Phân công công trường | Chỉ Quản trị hệ thống mở được; Trưởng phòng Thi công không giao được chỉ huy trưởng | Mở cho Trưởng phòng Thi công (đúng quyền CSDL 0115) | |
+| L-35 | Chấm công | Trưởng phòng Thi công không mở được màn hình nên không xác nhận được công khối công trường | Mở màn hình với riêng khối công trường | |
+| L-36 | Dashboard (Thi công) | Không có thẻ nào về công trình | Thẻ Công trình: theo trạng thái, đang thi công, vượt ngân sách | |
+| L-37 | Dashboard (Thi công) | «Chào E» — tài khoản demo mang chức danh Chỉ huy trưởng | «Chào Trưởng phòng» (0149) | |
+| L-38 | Công trình → Ngân sách | Cột «Còn được chi» bị cắt; cột Nhóm lặp tên mã chi phí | Bỏ cột lặp, số tiền không xuống dòng | |
+| L-39 | Công trình → Tổng quan | «30/09/2026 — ?» | «— chưa kết thúc» | |
+| L-40 | Lãi/lỗ (vai trò không xem giá vốn) | Khung chờ quay ~7 giây rồi mới báo chặn; mục vẫn hiện trên thanh Báo cáo | Báo chặn ngay; ẩn mục | |
+| L-41 | Nhật ký công trường | Gợi ý «Chấm công khối công trường lấy lại con số này» — không đúng | Gợi ý đúng: để đối chiếu với bảng chấm công | |
+| L-42 | Theo dõi đề nghị | Trưởng phòng mở ra thấy trống (mặc định «Đề nghị đã gửi») | Mặc định «Tất cả công trình» cho người quản lý | |
+| L-43 | Dashboard Quản trị | Lời chào «Chào thống» — họ tên tài khoản mẫu là «Quản trị hệ thống» | Tài khoản mẫu mang họ tên người (0150) | |
+| L-44 | Người dùng | Ba cột hồ sơ (Người chịu trách nhiệm = chức danh, «Đang xử lý», «—») vô nghĩa với tài khoản | Bỏ ba cột, thêm cột Chức danh | |
+| L-45 | Người dùng | Vai trò nối bằng cùng một dấu «·», không đọc ra cặp nào | Gom theo vai trò: «Kế toán – Tài chính: NVC, NVS, NVO» | |
+| L-46 | Người dùng | Không tạo được tài khoản trên giao diện | «Thêm người dùng» + mật khẩu tạm một lần (0150) | |
+| L-47 | Menu tài khoản | Mục «Hồ sơ cá nhân» bấm không ra gì; không có chỗ đổi mật khẩu | Thay bằng «Đổi mật khẩu» | |
+| L-48 | Tham số hệ thống | Mô tả lẫn ghi chú kỹ thuật («Khớp … ở shared/src/tc.ts», chữ IN HOA) | Viết lại cho người dùng (0151) | |
+| L-49 | Tham số hệ thống | «0,9 tỷ lệ»; ô sửa đòi dấu chấm «0.9» | «90% (0,9)»; ô sửa nhận «0,85» | |
+| L-50 | Tham số, Hạn mức, Thời hạn | Bấm «Chỉnh sửa» dòng đầu — biểu mẫu mở dưới bảng, ngoài khung nhìn | Tự cuộn tới biểu mẫu, con trỏ vào ô đầu | |
+| L-51 | Nhật ký | Cùng nghĩa mà hai nhãn «Sửa» / «Chỉnh sửa» | Một nhãn «Chỉnh sửa» | |
+| L-52 | Biểu mẫu đầu bài | Thanh mục nằm dưới tiêu đề, khác sáu màn hình cùng phân hệ | Thanh mục trên cùng, có đường dẫn | |

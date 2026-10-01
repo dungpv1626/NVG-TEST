@@ -17,6 +17,7 @@ import {
   formatDate,
   type CostGroup,
   type UnitPriceSource,
+  toNvgDateInput,
 } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { EntityTable, type EntityRow } from '@/components/entity/entity-table';
@@ -60,7 +61,7 @@ export function UnitPriceListPage() {
     price: '',
     source: 'bao_gia_ncc' as UnitPriceSource,
     supplierName: '',
-    effectiveDate: new Date().toISOString().slice(0, 10),
+    effectiveDate: toNvgDateInput(new Date()),
   });
 
   const rows: UnitPriceRow[] = (data ?? []).map((p) => ({

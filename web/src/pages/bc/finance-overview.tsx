@@ -162,7 +162,7 @@ export function RevenueChart({
   return (
     <ChartCard
       title="Doanh thu và tiền đã thu"
-      hint="Doanh thu ghi theo ngày nghiệm thu với chủ đầu tư và ngày tất toán cho thuê; tiền đã thu theo ngày thu."
+      hint="Doanh thu ghi theo ngày nghiệm thu với chủ đầu tư và ngày khách trả giàn giáo (từng đợt); tiền đã thu theo ngày thu."
       bucket={bucket}
       onBucketChange={setBucket}
       isLoading={isLoading}

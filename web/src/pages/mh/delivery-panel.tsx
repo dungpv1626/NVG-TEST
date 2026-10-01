@@ -14,7 +14,13 @@
  */
 
 import { useState } from 'react';
-import { DELIVERY_ISSUE_LABELS, deliveryProgress, formatDate, formatNumber } from '@nvg/shared';
+import {
+  DELIVERY_ISSUE_LABELS,
+  deliveryProgress,
+  formatDate,
+  formatNumber,
+  toNvgDateInput,
+} from '@nvg/shared';
 import type { DeliveryIssueType } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { DateInput } from '@/components/ui/date-input';
@@ -288,7 +294,7 @@ export function DeliveryPanel({
                   <DateInput
                     name="delivered_date"
                     required
-                    defaultValue={new Date().toISOString().slice(0, 10)}
+                    defaultValue={toNvgDateInput(new Date())}
                   />
                 </Field>
                 <Field label="Người giao">

@@ -15,6 +15,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { EntityTable, listPathFiltered, useCreateActions, type EntityRow } from '../entity-table';
+import { toNvgDateInput } from '@nvg/shared';
 import { renderWithApp } from '@/test/render';
 
 // Phạm vi pháp nhân là thứ EntityTable đọc để quyết định có hiện cột "Pháp nhân" hay không.
@@ -101,7 +102,8 @@ describe('EntityTable — bộ lọc trên thanh địa chỉ', () => {
       { ...ROWS[0]!, createdAt: '2000-01-15', title: 'Hợp đồng rất cũ' },
       {
         ...ROWS[1]!,
-        createdAt: new Date().toISOString().slice(0, 10),
+        // Giờ Việt Nam, không UTC: 00:00–07:00 ngày đầu tháng, UTC vẫn là tháng trước.
+        createdAt: toNvgDateInput(new Date()),
         title: 'Hợp đồng tháng này',
       },
     ];

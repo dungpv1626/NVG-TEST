@@ -82,6 +82,7 @@ const adminState = vi.hoisted(() => ({
   assignments: [] as unknown[],
   audits: [] as unknown[],
   sensitives: [] as unknown[],
+  createAccount: vi.fn(),
 }));
 
 vi.mock('@/hooks/use-admin', () => ({
@@ -118,6 +119,7 @@ vi.mock('@/hooks/use-admin', () => ({
     refetch: vi.fn(),
   }),
   useSetUserActive: () => idle,
+  useCreateAccount: () => ({ isPending: false, mutateAsync: adminState.createAccount }),
   useSiteAssignments: () => ({
     data: adminState.assignments,
     isLoading: false,
@@ -214,8 +216,9 @@ describe('Tham số hệ thống — rỗng không được hiện thành 0', ()
 
     renderWithApp(<ParameterPage />);
 
-    expect(screen.getByText('0,9 tỷ lệ')).toBeInTheDocument();
-    expect(screen.queryByText('0.9 tỷ lệ')).not.toBeInTheDocument();
+    // Tỷ lệ hiện thành phần trăm, kèm con số thật (dấu phẩy thập phân) mà ô sửa nhận.
+    expect(screen.getByText('90% (0,9)')).toBeInTheDocument();
+    expect(screen.queryByText(/0\.9/)).not.toBeInTheDocument();
   });
 
   it('tham số có số thật hiện kèm đơn vị', () => {
@@ -238,6 +241,35 @@ describe('Tham số hệ thống — rỗng không được hiện thành 0', ()
     renderWithApp(<ParameterPage />);
 
     expect(screen.getByText('8 giờ')).toBeInTheDocument();
+  });
+
+  it('ô sửa hiện và nhận số thập phân bằng dấu phẩy', async () => {
+    idle.mutateAsync.mockClear();
+    adminState.parameters = [
+      {
+        id: 'p4',
+        param_key: 'budget_warning_threshold',
+        scope_type: 'global',
+        scope_id: null,
+        value: 0.9,
+        unit: 'tỷ lệ',
+        label: 'Ngưỡng cảnh báo sắp vượt ngân sách công trình',
+        description: null,
+        is_sensitive: false,
+        is_active: true,
+        effective_from: '2026-09-05',
+      },
+    ];
+    renderWithApp(<ParameterPage />);
+
+    await userEvent.click(screen.getAllByRole('button', { name: 'Chỉnh sửa' })[0]!);
+    const box = screen.getByLabelText(/Giá trị/);
+    expect(box).toHaveValue('0,9');
+    await userEvent.clear(box);
+    await userEvent.type(box, '0,85');
+    await userEvent.click(screen.getByRole('button', { name: 'Lưu' }));
+
+    expect(idle.mutateAsync).toHaveBeenCalledWith(expect.objectContaining({ value: 0.85 }));
   });
 });
 
@@ -341,9 +373,10 @@ describe('Người dùng — một người giữ nhiều vai trò ở nhiều p
     renderWithApp(<UserAdminPage />);
 
     // Bảng dựng hai bản: thẻ cho điện thoại và bảng cho máy tính (Webapp Flow 4.8).
-    expect(
-      screen.getAllByText('NVS · Xưởng sản xuất – Cho thuê · NVC · Thủ kho').length,
-    ).toBeGreaterThan(0);
+    expect(screen.getAllByText('Xưởng sản xuất – Cho thuê: NVS').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Thủ kho: NVC').length).toBeGreaterThan(0);
+    // Tài khoản không phải hồ sơ: không có cột Người chịu trách nhiệm / Trạng thái / Thời hạn.
+    expect(screen.queryByText('Người chịu trách nhiệm')).not.toBeInTheDocument();
   });
 
   it('tài khoản đã ngừng vẫn còn trong danh sách — thu hồi quyền, không xóa hồ sơ', () => {
@@ -364,6 +397,56 @@ describe('Người dùng — một người giữ nhiều vai trò ở nhiều p
     expect(screen.getAllByText('Lê Văn Cũ').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Đã ngừng').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Chưa gán vai trò').length).toBeGreaterThan(0);
+  });
+});
+
+describe('Người dùng — thêm tài khoản mới (0150)', () => {
+  it('thiếu thông tin thì báo ngay, không gọi máy chủ', async () => {
+    adminState.users = [];
+    adminState.createAccount.mockReset();
+    renderWithApp(<UserAdminPage />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Thêm người dùng' }));
+    await userEvent.type(screen.getByLabelText(/Họ và tên/), 'Trần Thị Mai');
+    await userEvent.click(screen.getByRole('button', { name: 'Tạo tài khoản' }));
+
+    // Ô bắt buộc còn trống: trình duyệt chặn gửi với câu tiếng Việt của `Input`.
+    expect((screen.getByLabelText(/Email đăng nhập/) as HTMLInputElement).validity.valid).toBe(
+      false,
+    );
+    expect(adminState.createAccount).not.toHaveBeenCalled();
+  });
+
+  it('tạo xong hiện mật khẩu tạm một lần, kèm cách chuyển cho người dùng', async () => {
+    adminState.users = [];
+    adminState.createAccount.mockReset();
+    adminState.createAccount.mockResolvedValue({
+      userId: 'u-new',
+      email: 'mai.tran@nhavietgroup.vn',
+      temporaryPassword: 'Kp7mWq3zRt8a',
+    });
+    renderWithApp(<UserAdminPage />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Thêm người dùng' }));
+    await userEvent.type(screen.getByLabelText(/Họ và tên/), 'Trần Thị Mai');
+    await userEvent.type(screen.getByLabelText(/Email đăng nhập/), 'mai.tran@nhavietgroup.vn');
+    await userEvent.selectOptions(screen.getByLabelText(/Pháp nhân/), 'nvc-id');
+    await userEvent.selectOptions(screen.getByLabelText(/^Vai trò/), 'r-mh');
+    await userEvent.click(screen.getByRole('button', { name: 'Tạo tài khoản' }));
+
+    expect(adminState.createAccount).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fullName: 'Trần Thị Mai',
+        email: 'mai.tran@nhavietgroup.vn',
+        companyId: 'nvc-id',
+        roleId: 'r-mh',
+      }),
+    );
+    expect(await screen.findByText('Kp7mWq3zRt8a')).toBeInTheDocument();
+    expect(screen.getByText(/chỉ hiện một lần/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Đóng' }));
+    expect(screen.queryByText('Kp7mWq3zRt8a')).not.toBeInTheDocument();
   });
 });
 

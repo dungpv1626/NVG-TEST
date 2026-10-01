@@ -91,3 +91,19 @@ test('chụp màn hình Kế toán', async ({ page }) => {
   await page.goto('/bc/tong-quan');
   await shot(page, '14-tong-quan-tai-chinh');
 });
+
+test('chụp màn hình Thuê giàn giáo (tất toán)', async ({ page }) => {
+  await page.goto('/dang-nhap');
+  await page.locator('#email').fill(EMAIL);
+  await page.locator('#password').fill(SEED_PASSWORD);
+  await page.getByRole('button', { name: 'Đăng nhập' }).click();
+  await expect(page).not.toHaveURL(/dang-nhap/);
+  // Cho thuê giàn giáo là của Nhà Việt Steel.
+  await page.getByRole('button', { name: 'Chọn pháp nhân' }).click();
+  await page.getByRole('menuitem', { name: /Nhà Việt Steel/ }).click();
+  await page.goto('/kt/thue-gian-giao');
+  await expect(page.getByRole('heading', { name: 'Thuê giàn giáo' })).toBeVisible();
+  await page.getByRole('button', { name: 'Đang cho thuê' }).click();
+  await page.getByRole('button', { name: /Đối soát 1 biên bản/ }).click();
+  await shot(page, '15-thue-gian-giao');
+});

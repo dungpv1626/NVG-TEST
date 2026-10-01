@@ -5,7 +5,7 @@
  *
  *   1. Tháng này khối nào đã ghi xong, khối nào chưa? → ba thẻ trạng thái ở trên cùng.
  *   2. Ai ghi và ai xác nhận khối đó? → ghi ngay trên thẻ, không bắt tra tài liệu.
- *   3. Chốt được chưa? → nút chốt chỉ bật khi CẢ BA khối đã xác nhận, và khi chưa đủ thì nói
+ *   3. Chốt được chưa? → nút chốt chỉ bật khi MỌI KHỐI CÓ NGƯỜI đã xác nhận, và khi chưa đủ thì nói
  *      rõ còn thiếu khối nào, thay vì báo lỗi sau khi bấm.
  *
  * Chốt xong, số liệu sang Kế toán (NS-05) và không ai sửa được nữa nếu không nêu lý do — hàng
@@ -43,7 +43,9 @@ import {
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useCan } from '@/lib/auth';
 import { useCompanyScope } from '@/lib/company-scope';
+import { TcNav } from '@/pages/tc/tc-nav';
 import { NsNav } from './ns-nav';
+import { TimesheetGrid } from './timesheet-grid';
 
 /** Kỳ mặc định là THÁNG TRƯỚC: đầu tháng mới là lúc người ta chốt công tháng vừa qua. */
 function defaultPeriod(): { year: number; month: number } {
@@ -57,11 +59,15 @@ export function TimesheetPage() {
   const canEdit = useCan('NS', 'edit');
   const canApproveNs = useCan('NS', 'approve');
   const canApproveTc = useCan('TC', 'approve');
+  // Thi công vào màn hình này chỉ để ghi và xác nhận KHỐI CÔNG TRƯỜNG (TimesheetGuard): không
+  // thấy khối khác, không có thanh điều hướng Nhân sự, không chốt kỳ.
+  const canViewNs = useCan('NS', 'view');
+  const visibleBlocks = canViewNs ? WORK_BLOCKS : WORK_BLOCKS.filter((b) => b === 'cong_truong');
 
   const [{ year, month }, setPeriod] = useState(defaultPeriod);
   const { data: periods, isLoading, error, refetch } = useTimesheetPeriods(year, month);
   const { data: employees } = useEmployees();
-  const { data: closed } = useTimesheets(year, month);
+  const { data: closed } = useTimesheets(year, month, undefined, { enabled: canViewNs });
 
   const open = useOpenTimesheetPeriod();
   const save = useSaveAttendance();
@@ -76,9 +82,24 @@ export function TimesheetPage() {
   const [workDate, setWorkDate] = useState('');
   const [hours, setHours] = useState('8');
 
+  const [gridBlock, setGridBlock] = useState<WorkBlock | null>(null);
+
   const byBlock = new Map((periods ?? []).map((p) => [p.source_type, p]));
-  const missing = WORK_BLOCKS.filter((b) => byBlock.get(b)?.status !== 'da_xac_nhan');
-  const allClosed = WORK_BLOCKS.every((b) => byBlock.get(b)?.status === 'da_chot');
+  /*
+   * Khối phải xác nhận trước khi chốt = khối ĐÃ MỞ KỲ, hoặc khối có người đang làm việc.
+   * Bản trước đòi đủ cả ba khối kể cả khối không có ai — Nhà Việt One không có xưởng nên không
+   * bao giờ chốt được công (CSDL thì cho chốt). Khối có người mà quên mở kỳ vẫn bị giữ lại.
+   */
+  const activeBlocks = new Set(
+    (employees ?? []).filter((e) => e.status !== 'da_nghi').map((e) => e.block),
+  );
+  const requiredBlocks = WORK_BLOCKS.filter((b) => byBlock.has(b) || activeBlocks.has(b));
+  const missing = requiredBlocks.filter((b) => {
+    const status = byBlock.get(b)?.status;
+    return status !== 'da_xac_nhan' && status !== 'da_chot';
+  });
+  const allClosed =
+    requiredBlocks.length > 0 && requiredBlocks.every((b) => byBlock.get(b)?.status === 'da_chot');
 
   async function run(label: string, action: () => Promise<unknown>) {
     setPageError(null);
@@ -129,11 +150,22 @@ export function TimesheetPage() {
 
   return (
     <>
-      <NsNav />
+      {canViewNs ? <NsNav /> : <TcNav />}
       <PageHeader
-        title="Chấm công 3 khối"
-        description="Văn phòng, công trường và xưởng ghi riêng; Hành chính – Nhân sự tổng hợp và chốt một lần."
-        breadcrumbs={[{ label: 'Hành chính – Nhân sự' }, { label: 'Chấm công' }]}
+        title={canViewNs ? 'Chấm công 3 khối' : 'Chấm công khối công trường'}
+        description={
+          canViewNs
+            ? 'Văn phòng, công trường và xưởng ghi riêng; Hành chính – Nhân sự tổng hợp và chốt một lần.'
+            : 'Chỉ huy trưởng ghi quân số hằng ngày; Trưởng phòng Thi công xác nhận rồi Hành chính – Nhân sự chốt kỳ.'
+        }
+        breadcrumbs={
+          canViewNs
+            ? [{ label: 'Hành chính – Nhân sự' }, { label: 'Chấm công' }]
+            : [
+                { label: 'Thi công & Ngân sách', to: '/tc/cong-trinh' },
+                { label: 'Chấm công khối công trường' },
+              ]
+        }
       />
 
       <div className="mb-4 flex flex-wrap items-end gap-3">
@@ -182,7 +214,7 @@ export function TimesheetPage() {
         <ErrorState message={toUserMessage(error, 'view')} onRetry={() => void refetch()} />
       ) : (
         <div className="grid gap-4 lg:grid-cols-3">
-          {WORK_BLOCKS.map((block) => {
+          {visibleBlocks.map((block) => {
             const period = byBlock.get(block);
             const meta = period ? TIMESHEET_PERIOD_STATUS_META[period.status] : null;
 
@@ -227,6 +259,14 @@ export function TimesheetPage() {
                     </Button>
                   )}
 
+                  {period && (
+                    <Button
+                      variant="secondary"
+                      onClick={() => setGridBlock(gridBlock === block ? null : block)}
+                    >
+                      {gridBlock === block ? 'Đóng bảng công' : 'Xem bảng công'}
+                    </Button>
+                  )}
                   {period?.status === 'dang_ghi' && (
                     <>
                       <Button
@@ -292,87 +332,113 @@ export function TimesheetPage() {
         </div>
       )}
 
-      <section className="mt-6 rounded border border-border bg-bg-subtle p-4">
-        <h2 className="font-semibold">Chốt kỳ và chuyển Kế toán</h2>
-        {allClosed ? (
-          <p className="mt-1 text-fg-subtle">
-            Kỳ tháng {month}/{year} đã chốt. Số liệu đã sẵn sàng để tính lương.
-          </p>
-        ) : missing.length > 0 ? (
-          <p className="mt-1 text-fg-subtle">
-            Còn chờ xác nhận: {missing.map((b) => WORK_BLOCK_LABELS[b]).join(', ')}. Chốt được khi
-            cả ba khối đã xác nhận.
-          </p>
-        ) : (
-          <p className="mt-1 text-fg-subtle">
-            Cả ba khối đã xác nhận. Chốt kỳ để chuyển số liệu sang Kế toán.
-          </p>
-        )}
+      {gridBlock && byBlock.get(gridBlock) && (
+        <section className="mt-6" aria-label={`Bảng công khối ${WORK_BLOCK_LABELS[gridBlock]}`}>
+          <h2 className="mb-2 font-semibold">
+            Bảng công khối {WORK_BLOCK_LABELS[gridBlock]} — tháng {month}/{year}
+          </h2>
+          <TimesheetGrid
+            period={byBlock.get(gridBlock)!}
+            employees={(employees ?? []).filter(
+              (e) => e.block === gridBlock && e.status !== 'da_nghi',
+            )}
+          />
+        </section>
+      )}
 
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Button
-            disabled={missing.length > 0 || allClosed || !canEdit || !scope.companyId}
-            onClick={() =>
-              void run('Đã chốt kỳ chấm công và chuyển số liệu sang Kế toán.', () =>
-                consolidate.mutateAsync({ companyId: scope.companyId!, year, month }),
-              )
-            }
-          >
-            Chốt kỳ chấm công
-          </Button>
+      {canViewNs && (
+        <>
+          <section className="mt-6 rounded border border-border bg-bg-subtle p-4">
+            <h2 className="font-semibold">Chốt kỳ và chuyển Kế toán</h2>
+            {allClosed ? (
+              <p className="mt-1 text-fg-subtle">
+                Kỳ tháng {month}/{year} đã chốt. Số liệu đã sẵn sàng để tính lương.
+              </p>
+            ) : missing.length > 0 ? (
+              <p className="mt-1 text-fg-subtle">
+                Còn chờ xác nhận: {missing.map((b) => WORK_BLOCK_LABELS[b]).join(', ')}. Chốt được
+                khi mọi khối có người làm việc đã xác nhận.
+              </p>
+            ) : (
+              <p className="mt-1 text-fg-subtle">
+                {requiredBlocks.length === 0
+                  ? 'Chưa có khối nào mở kỳ và chưa có nhân sự nào đang làm việc.'
+                  : 'Mọi khối đã xác nhận. Chốt kỳ để chuyển số liệu sang Kế toán.'}
+              </p>
+            )}
 
-          {allClosed && (
-            <Button
-              variant="secondary"
-              onClick={() =>
-                void run('Đã xác nhận nhận số công của kỳ này.', () =>
-                  transfer.mutateAsync({ companyId: scope.companyId!, year, month }),
-                )
-              }
-            >
-              Kế toán xác nhận đã nhận
-            </Button>
-          )}
-        </div>
-      </section>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button
+                disabled={
+                  requiredBlocks.length === 0 ||
+                  missing.length > 0 ||
+                  allClosed ||
+                  !canEdit ||
+                  !scope.companyId
+                }
+                onClick={() =>
+                  void run('Đã chốt kỳ chấm công và chuyển số liệu sang Kế toán.', () =>
+                    consolidate.mutateAsync({ companyId: scope.companyId!, year, month }),
+                  )
+                }
+              >
+                Chốt kỳ chấm công
+              </Button>
 
-      <section className="mt-6">
-        <h2 className="mb-2 font-semibold">Bảng công đã chốt</h2>
-        {(closed ?? []).length === 0 ? (
-          <EmptyState message="Kỳ này chưa chốt nên chưa có bảng công. Chốt kỳ để Kế toán nhận số liệu." />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px]">
-              <thead>
-                <tr className="border-b border-border text-left text-fg-subtle">
-                  <th className="px-3 py-2">Nhân sự</th>
-                  <th className="px-3 py-2">Khối</th>
-                  <th className="px-3 py-2 text-right">Ngày công</th>
-                  <th className="px-3 py-2 text-right">Tăng ca</th>
-                  <th className="px-3 py-2 text-right">Nghỉ phép</th>
-                  <th className="px-3 py-2 text-right">Nghỉ không phép</th>
-                  <th className="px-3 py-2">Kế toán nhận</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(closed ?? []).map((t) => (
-                  <tr key={t.id} className="border-b border-border last:border-b-0">
-                    <td className="px-3 py-2">{t.employee?.full_name ?? '—'}</td>
-                    <td className="px-3 py-2">{WORK_BLOCK_LABELS[t.source_type]}</td>
-                    <td className="px-3 py-2 text-right">{t.workdays}</td>
-                    <td className="px-3 py-2 text-right">{t.overtime_hours}</td>
-                    <td className="px-3 py-2 text-right">{t.leave_days}</td>
-                    <td className="px-3 py-2 text-right">{t.unpaid_absence_days}</td>
-                    <td className="px-3 py-2">
-                      {t.transferred_at ? formatDateTime(t.transferred_at) : 'Chưa'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+              {allClosed && (
+                <Button
+                  variant="secondary"
+                  onClick={() =>
+                    void run('Đã xác nhận nhận số công của kỳ này.', () =>
+                      transfer.mutateAsync({ companyId: scope.companyId!, year, month }),
+                    )
+                  }
+                >
+                  Kế toán xác nhận đã nhận
+                </Button>
+              )}
+            </div>
+          </section>
+
+          <section className="mt-6">
+            <h2 className="mb-2 font-semibold">Bảng công đã chốt</h2>
+            {(closed ?? []).length === 0 ? (
+              <EmptyState message="Kỳ này chưa chốt nên chưa có bảng công. Chốt kỳ để Kế toán nhận số liệu." />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[640px]">
+                  <thead>
+                    <tr className="border-b border-border text-left text-fg-subtle">
+                      <th className="px-3 py-2">Nhân sự</th>
+                      <th className="px-3 py-2">Khối</th>
+                      <th className="px-3 py-2 text-right">Ngày công</th>
+                      <th className="px-3 py-2 text-right">Tăng ca</th>
+                      <th className="px-3 py-2 text-right">Nghỉ phép</th>
+                      <th className="px-3 py-2 text-right">Nghỉ không phép</th>
+                      <th className="px-3 py-2">Kế toán nhận</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(closed ?? []).map((t) => (
+                      <tr key={t.id} className="border-b border-border last:border-b-0">
+                        <td className="px-3 py-2">{t.employee?.full_name ?? '—'}</td>
+                        <td className="px-3 py-2">{WORK_BLOCK_LABELS[t.source_type]}</td>
+                        <td className="px-3 py-2 text-right">{t.workdays}</td>
+                        <td className="px-3 py-2 text-right">{t.overtime_hours}</td>
+                        <td className="px-3 py-2 text-right">{t.leave_days}</td>
+                        <td className="px-3 py-2 text-right">{t.unpaid_absence_days}</td>
+                        <td className="px-3 py-2">
+                          {t.transferred_at ? formatDateTime(t.transferred_at) : 'Chưa'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        </>
+      )}
     </>
   );
 }

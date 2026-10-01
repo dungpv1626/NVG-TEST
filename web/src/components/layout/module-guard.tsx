@@ -19,7 +19,12 @@ import { BUTTONS, ERRORS, MODULES, type ModuleCode } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { BlockedNotice } from '@/components/ui/states';
-import { useCanViewModule, useManagesApprovalRules } from './module-nav';
+import {
+  useCanViewModule,
+  useConfirmsSiteTimesheets,
+  useManagesApprovalRules,
+  useManagesSiteAssignments,
+} from './module-nav';
 
 export function ModuleGuard({ module }: { module: ModuleCode }) {
   const canView = useCanViewModule(module);
@@ -55,4 +60,20 @@ export function ApprovalRulesGuard() {
   const canViewNen = useCanViewModule('NEN');
   if (canViewNen || managesRules) return <Outlet />;
   return <ModuleGuard module="NEN" />;
+}
+
+/** Phân công công trường: Quản trị hệ thống, hoặc Trưởng phòng Thi công (0115). */
+export function SiteAssignmentGuard() {
+  const canViewNen = useCanViewModule('NEN');
+  const manages = useManagesSiteAssignments();
+  if (canViewNen || manages) return <Outlet />;
+  return <ModuleGuard module="NEN" />;
+}
+
+/** Chấm công: Nhân sự, hoặc người xác nhận công khối công trường (Thi công). */
+export function TimesheetGuard() {
+  const canViewNs = useCanViewModule('NS');
+  const confirmsSite = useConfirmsSiteTimesheets();
+  if (canViewNs || confirmsSite) return <Outlet />;
+  return <ModuleGuard module="NS" />;
 }

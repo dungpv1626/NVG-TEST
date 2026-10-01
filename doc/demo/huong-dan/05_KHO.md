@@ -127,8 +127,12 @@ Chọn **Nhà Việt Steel** ở góc trên bên trái → **Giàn giáo**.
 
 **Hình 9.** Giàn giáo theo lô: số lượng, tình trạng, đang ở đâu (tại kho, công trình, khách thuê).
 
-- Hai con số đầu trang: **Cho thuê được** (chỉ hàng mới và còn sử dụng được — con số đem hứa với
-  khách) và **Hỏng chờ sửa và chờ thanh lý** (vẫn trong sổ tài sản nhưng không tính vào lượng cho thuê).
+- Hai con số đầu trang: **Cho thuê được** (hàng mới và còn sử dụng được **đang nằm ở kho** — con
+  số đem hứa với khách; giáo khách đang giữ không tính) và **Hỏng chờ sửa và chờ thanh lý** (vẫn
+  trong sổ tài sản nhưng không tính vào lượng cho thuê).
+- **Xem sổ tại ngày**: chọn một ngày đã qua để xem sổ cuối ngày đó — lô nào ở kho, ở khách nào,
+  bao nhiêu, tình trạng gì. Số theo ngày của chứng từ, kể cả chứng từ ghi muộn. Chỉ để xem; sổ bắt
+  đầu ghi theo ngày từ ngày cài bản cập nhật (màn hình ghi rõ mốc).
 - Tình trạng **chỉ đổi qua biên bản**. **Lập biên bản** trên lô: loại (Sửa chữa · Mất mát · Thanh
   lý), số lượng, ngày, tình trạng sau biên bản, chi phí hoặc bồi thường, **bên chịu trách nhiệm**,
   **nguyên nhân** (bắt buộc — không có nguyên nhân thì không truy được trách nhiệm).
@@ -160,5 +164,6 @@ Giao và thu hồi giàn giáo cho khách thuê làm ở phân hệ **Sản xu�
 | Không lập được phiếu xuất? | Kho đang kiểm kê (tạm dừng nhập xuất), hoặc số xuất lớn hơn tồn. |
 | Quét mã không ra vật tư? | Mã chưa có trong danh mục, hoặc vật tư chưa có tồn ở kho nào của pháp nhân đang chọn. |
 | Nhập giàn giáo bằng phiếu kho được không? | Không. Giàn giáo quản lý theo lô ở màn hình **Giàn giáo**, không vào sổ tồn kho vật tư. |
-| Giàn giáo hỏng có tính vào lượng cho thuê không? | Không. Chỉ hàng mới và còn sử dụng được mới tính. |
+| Giàn giáo hỏng có tính vào lượng cho thuê không? | Không. Chỉ hàng mới và còn sử dụng được, đang ở kho, mới tính. |
+| Muốn biết ngày 15 khách nào đang giữ bao nhiêu giáo? | **Giàn giáo** → **Xem sổ tại ngày**, chọn ngày 15. |
 | Dùng được khi mất mạng không? | Bản demo cần mạng. Bấm lưu lại khi có sóng không tạo phiếu trùng. |
