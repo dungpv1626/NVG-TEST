@@ -157,6 +157,21 @@ Mật khẩu chung của tài khoản demo: xem `db/src/seed/data.ts` (`SEED_PAS
 | T-05 | Trưởng phòng Thi công | Báo cáo & Dashboard → gõ `/bc/lai-lo` | Báo chặn ngay (không xoay chờ); thanh Báo cáo không có mục Lãi/lỗ | | |
 | T-06 | Trưởng phòng Thi công | Công trình Hưng Thịnh → Ngân sách | Đủ 5 cột tiền trong khung, không bị cắt cột «Còn được chi» | | |
 
+## G4. Quản trị hệ thống (cần Worker `nvg-api` đã phát hành bản có `/admin/users`)
+
+| Mã | Vai trò | Thao tác | Kỳ vọng | Kết quả | Ghi chú |
+| --- | --- | --- | --- | --- | --- |
+| Q-01 | Quản trị hệ thống | Dashboard | Lời chào «Chào M, …» (không còn «Chào thống») | | |
+| Q-02 | Quản trị hệ thống | Người dùng | Cột Chức danh, «Vai trò: pháp nhân» gom theo vai trò; không có cột Người chịu trách nhiệm / Trạng thái / Thời hạn | | |
+| Q-03 | Quản trị hệ thống | Người dùng → Thêm người dùng, điền đủ, vai trò Kho, pháp nhân NVC → Tạo tài khoản | Hiện mật khẩu tạm 12 ký tự một lần; dòng mới có trong danh sách | | Ghi lại email đã tạo để Q-05 ngừng truy cập |
+| Q-04 | Tài khoản vừa tạo ở Q-03 | Đăng nhập bằng mật khẩu tạm → tên mình góc trên → Đổi mật khẩu → đăng xuất, đăng nhập bằng mật khẩu mới | Vào được, thấy phân hệ Kho; mật khẩu mới dùng được | | |
+| Q-05 | Quản trị hệ thống | Người dùng → Ngừng truy cập tài khoản Q-03 | Tài khoản đó không đăng nhập được nữa; dòng vẫn còn, «Đã ngừng» | | |
+| Q-06 | Quản trị hệ thống | Thêm người dùng với email đã có (ví dụ `kho@nhavietgroup.test`) | Báo «Email này đã có tài khoản…», không tạo gì | | |
+| Q-07 | Nhân sự | Gõ `/nen/quan-tri` | Bị chặn; không có nút Thêm người dùng | | |
+| Q-08 | Quản trị hệ thống | Tham số hệ thống | Mô tả đọc được, không có tên tệp mã nguồn; ngưỡng ngân sách hiện «90% (0,9)» | | |
+| Q-09 | Quản trị hệ thống | Tham số → Chỉnh sửa dòng đầu | Trang tự cuộn tới biểu mẫu; ô giá trị hiện «0,9». Bấm Hủy, không lưu | | |
+| Q-10 | Quản trị hệ thống | Nhật ký → Truy cập dữ liệu nhạy cảm | Cột Hành vi chỉ có «Xem» / «Chỉnh sửa» (không lẫn «Sửa») | | |
+
 ## H. Dashboard và báo cáo
 
 | Mã | Vai trò | Thao tác | Kỳ vọng | Kết quả | Ghi chú |
@@ -239,3 +254,13 @@ Phát hiện khi chụp ảnh cho hướng dẫn sử dụng; tester kiểm lạ
 | L-40 | Lãi/lỗ (vai trò không xem giá vốn) | Khung chờ quay ~7 giây rồi mới báo chặn; mục vẫn hiện trên thanh Báo cáo | Báo chặn ngay; ẩn mục | |
 | L-41 | Nhật ký công trường | Gợi ý «Chấm công khối công trường lấy lại con số này» — không đúng | Gợi ý đúng: để đối chiếu với bảng chấm công | |
 | L-42 | Theo dõi đề nghị | Trưởng phòng mở ra thấy trống (mặc định «Đề nghị đã gửi») | Mặc định «Tất cả công trình» cho người quản lý | |
+| L-43 | Dashboard Quản trị | Lời chào «Chào thống» — họ tên tài khoản mẫu là «Quản trị hệ thống» | Tài khoản mẫu mang họ tên người (0150) | |
+| L-44 | Người dùng | Ba cột hồ sơ (Người chịu trách nhiệm = chức danh, «Đang xử lý», «—») vô nghĩa với tài khoản | Bỏ ba cột, thêm cột Chức danh | |
+| L-45 | Người dùng | Vai trò nối bằng cùng một dấu «·», không đọc ra cặp nào | Gom theo vai trò: «Kế toán – Tài chính: NVC, NVS, NVO» | |
+| L-46 | Người dùng | Không tạo được tài khoản trên giao diện | «Thêm người dùng» + mật khẩu tạm một lần (0150) | |
+| L-47 | Menu tài khoản | Mục «Hồ sơ cá nhân» bấm không ra gì; không có chỗ đổi mật khẩu | Thay bằng «Đổi mật khẩu» | |
+| L-48 | Tham số hệ thống | Mô tả lẫn ghi chú kỹ thuật («Khớp … ở shared/src/tc.ts», chữ IN HOA) | Viết lại cho người dùng (0151) | |
+| L-49 | Tham số hệ thống | «0,9 tỷ lệ»; ô sửa đòi dấu chấm «0.9» | «90% (0,9)»; ô sửa nhận «0,85» | |
+| L-50 | Tham số, Hạn mức, Thời hạn | Bấm «Chỉnh sửa» dòng đầu — biểu mẫu mở dưới bảng, ngoài khung nhìn | Tự cuộn tới biểu mẫu, con trỏ vào ô đầu | |
+| L-51 | Nhật ký | Cùng nghĩa mà hai nhãn «Sửa» / «Chỉnh sửa» | Một nhãn «Chỉnh sửa» | |
+| L-52 | Biểu mẫu đầu bài | Thanh mục nằm dưới tiêu đề, khác sáu màn hình cùng phân hệ | Thanh mục trên cùng, có đường dẫn | |
