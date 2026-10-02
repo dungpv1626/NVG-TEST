@@ -12,6 +12,8 @@
  * KHÔNG chạm mạng, KHÔNG gọi mô hình.
  */
 
+import { stairNeed } from '../ai/stair-geometry';
+import { stairParamsOf } from '../ai/tree/stair-fit';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
 import type { AiPlanIntent, AiSpaceProgram } from '@nvg/shared/design';
@@ -412,5 +414,66 @@ describe('ban công quay cạnh dài ra mặt thoáng', () => {
       ]),
     );
     expect(notes).toEqual([]);
+  });
+});
+
+/**
+ * Thang theo LOẠI (T105, tài liệu thang bộ): bộ xếp dựng ô thang đủ kích thước của loại, artifact ghi loại để tờ vẽ vẽ
+ * đúng hình, và ô thang mỗi tầng chỉ một lối vào. Biệt thự mẫu 15 × 20 m đủ chỗ cho mọi loại.
+ */
+describe('thang theo loại (T105)', () => {
+  const shapes = ['chu_u', 'chu_u_rong', 'chu_l', 'ba_ve', 'thang_thang'] as const;
+  for (const shape of shapes) {
+    it(`biệt thự, ${shape}: xếp được, ô thang đủ cỡ theo loại, một lối vào mỗi tầng`, () => {
+      const shaped = { ...construction, stairs: { ...construction.stairs, shape } };
+      const first = arrangeLevel({ ...input(VILLA, 0, null), construction: shaped });
+      expect(first.layout?.level, JSON.stringify(first.issues).slice(0, 400)).not.toBeNull();
+      const stair = first.layout!.level!.stairs![0]!;
+      expect(stair.shape).toBe(shape);
+      const params = stairParamsOf(shaped, stair.treads!)!;
+      const [x0, y0, x1, y1] = stair.rect as [number, number, number, number];
+      const alongX = stair.up.endsWith('x');
+      const along = alongX ? x1 - x0 : y1 - y0;
+      const across = alongX ? y1 - y0 : x1 - x0;
+      const need = stairNeed(params);
+      expect(along + 1).toBeGreaterThanOrEqual(need.along);
+      expect(across + 1).toBeGreaterThanOrEqual(need.across);
+      const stairOf = (result: ArrangeResult) =>
+        result.layout!.level!.rooms.find((room) => room.type === 'stair')!.id;
+      const stairRoom = stairOf(first);
+      const doorsOf = (result: ArrangeResult) =>
+        (result.layout?.tree.doors ?? []).filter(
+          (door) => door.a === stairOf(result) || door.b === stairOf(result),
+        );
+
+      expect(doorsOf(first)).toHaveLength(1);
+      // Lối vào ở cạnh SAU LƯNG bậc 1: phòng mở cửa vào thang nằm ngược chiều đi lên của vế đầu.
+      const door = doorsOf(first)[0]!;
+      const host = first.layout!.level!.rooms.find(
+        (room) => room.id === (door.a === stairRoom ? door.b : door.a),
+      )!;
+      const [hx0, hy0, hx1, hy1] = host.rect as [number, number, number, number];
+      const behind =
+        stair.up === '+y'
+          ? hy1 <= y0 + 30
+          : stair.up === '-y'
+            ? hy0 >= y1 - 30
+            : stair.up === '+x'
+              ? hx1 <= x0 + 30
+              : hx0 >= x1 - 30;
+      expect(behind, `${stair.up} từ ${host.id}`).toBe(true);
+      // Tầng 2 (trên cùng): thang đúng mốc, một lối ra.
+      const second = arrangeLevel({
+        ...input(VILLA, 1, first.layout!.anchors),
+        construction: shaped,
+      });
+      expect(second.layout?.level, JSON.stringify(second.issues).slice(0, 400)).not.toBeNull();
+      expect(doorsOf(second)).toHaveLength(1);
+    });
+  }
+
+  it('không truyền loại thang: thang vẫn như cũ, artifact không mang `shape`', () => {
+    const first = arrangeLevel(input(VILLA, 0, null));
+    expect(first.layout!.level!.stairs![0]!.shape).toBeUndefined();
   });
 });

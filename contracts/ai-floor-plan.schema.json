@@ -351,6 +351,29 @@
                 "maximum": 40,
                 "description": "Tổng số bậc trong ô thang này."
               },
+              "shape": {
+                "type": "string",
+                "enum": ["thang_thang", "chu_l", "chu_u", "ba_ve", "chu_u_rong"],
+                "description": "Loại thang (T105, tài liệu thang bộ): thẳng 1 vế có chiếu nghỉ giữa, chữ L, chữ U 2 vế, 3 vế quanh giếng, chữ U chiếu nghỉ rộng — CHƯƠNG TRÌNH điền theo đầu bài. Vắng (artifact trước T105) thì tờ vẽ vẽ vế thẳng song song như cũ."
+              },
+              "flight_width": {
+                "type": "integer",
+                "minimum": 60,
+                "maximum": 200,
+                "description": "Bề rộng vế thông thuỷ, cm — đi cùng `shape`."
+              },
+              "landing": {
+                "type": "integer",
+                "minimum": 60,
+                "maximum": 300,
+                "description": "Chiều sâu chiếu nghỉ, cm — đi cùng `shape`."
+              },
+              "gap": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 200,
+                "description": "Giếng thang giữa hai vế song song, cm — đi cùng `shape`."
+              },
               "going": {
                 "type": "integer",
                 "minimum": 15,

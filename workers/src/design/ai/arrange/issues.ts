@@ -18,6 +18,8 @@ import type { PlanIssue } from '../plan-check';
 
 export const ARRANGE_ISSUE_CODES = [
   'arrange_zone_overfull',
+  'altar_door_behind',
+  'stair_entry_long_side',
   'arrange_no_hub_wall',
   'arrange_program_exceeds_footprint',
   'arrange_room_too_narrow',
@@ -30,7 +32,10 @@ export const ARRANGE_ISSUE_CODES = [
   // Bản phác lưới (T48) không nắn được thành cây — chỉ lên tiếng khi cả tầng không xếp được.
   'sketch_room_missing',
   'sketch_not_rectangular',
+  // Phòng mô hình vẽ không thành một chữ nhật, kèm câu nhắc của một tầng hỏng (fdd486b1) — thông tin, không xếp hạng.
+  'sketch_room_crooked',
   'sketch_pinwheel',
+  'sketch_pinwheel_at',
   'sketch_rooms_too_small',
   'sketch_island_room',
   // Phòng không giáp phòng giao thông / phòng phục vụ nó ngay trên bản phác (T73, lượt đo 6c35ed79).
@@ -105,11 +110,19 @@ export const REVISABLE_CODES: ReadonlySet<string> = new Set([
   // Phòng ở / thờ lấy cửa thẳng từ ô thang (Haan 18/09/2026): phòng ấy phải kề hành lang — bản phác
   // sửa được, chương trình thì không (dời cửa sang vách khác là dời cả phòng).
   'door_from_stair',
+  // Lối lên thang chỉ mở được ở cạnh dài (T105, Haan chấm lượt 25fdc90c: «bậc 1 giáp tường kho, không biết đi
+  // lên thế nào»): đầu ngắn chỗ bậc 1 phải giáp hành lang / khu chung — bản phác đặt phòng quanh thang.
+  'stair_entry_long_side',
+  // Cửa phòng thờ chỉ mở được sau lưng bàn thờ theo hướng gia chủ khai (T106): bản phác đặt phòng thờ sai phía hành lang.
+  'altar_door_behind',
   // Bản phác lưới (T48): chính hình mô hình vẽ — thiếu phòng, phòng không chữ nhật, chong chóng, quá
   // nhiều phòng trên một đường chia. Mô hình thấy lưới của nó nên sửa trúng được.
   'sketch_room_missing',
   'sketch_not_rectangular',
+  // Phòng mô hình vẽ không thành một chữ nhật, kèm câu nhắc của một tầng hỏng (fdd486b1) — thông tin, không xếp hạng.
+  'sketch_room_crooked',
   'sketch_pinwheel',
+  'sketch_pinwheel_at',
   'sketch_rooms_too_small',
   'sketch_island_room',
   'sketch_room_no_access',

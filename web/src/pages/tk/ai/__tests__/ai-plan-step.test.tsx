@@ -489,7 +489,7 @@ describe('Mỗi tầng một lượt, cổng hỏng thì không vẽ (T38, T39)'
     show();
     expect(screen.getByText(/một lượt gọi mô hình cho cả nhà/)).toBeInTheDocument();
     expect(screen.getByText(/không dùng chương trình không gian/)).toBeInTheDocument();
-    expect(screen.getByText(/tối đa ba lần/)).toBeInTheDocument();
+    expect(screen.getByText(/tối đa bốn lần/)).toBeInTheDocument();
     expect(screen.getByText(/diện tích tối\s+thiểu thì phải đạt/)).toBeInTheDocument();
   });
 

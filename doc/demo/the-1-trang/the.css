@@ -1,0 +1,111 @@
+/* Thẻ thao tác một trang — khổ A4 dọc, in ra dán cạnh bàn / gửi kèm điện thoại.
+   Màu và font theo DESIGN_SYSTEM.md: rừng #2C6E4B, rừng đậm #17352A, bạc hà #A8E6A1. */
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap');
+
+@page { size: A4; margin: 0; }
+* { box-sizing: border-box; }
+:root {
+  --forest: #2c6e4b;
+  --forest-dark: #17352a;
+  --mint: #a8e6a1;
+  --mint-soft: #eef8ec;
+  --ink: #1d2a24;
+  --muted: #55655c;
+  --line: #d5e2d7;
+  --warn-bg: #fff6e0;
+  --warn-line: #e9c46a;
+}
+html, body { margin: 0; background: #fff; }
+body {
+  font-family: 'Be Vietnam Pro', system-ui, sans-serif;
+  color: var(--ink);
+  font-size: 10.5pt;
+  line-height: 1.42;
+}
+.page {
+  width: 210mm;
+  height: 297mm;
+  padding: 9mm 12mm 8mm;
+  display: flex;
+  flex-direction: column;
+  gap: 4mm;
+  overflow: hidden;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  border-bottom: 2.5px solid var(--forest);
+  padding-bottom: 3mm;
+}
+header .kicker { color: var(--forest); font-weight: 600; font-size: 9.5pt; letter-spacing: 0.02em; }
+header h1 { margin: 1mm 0 0; font-size: 21pt; line-height: 1.1; color: var(--forest-dark); }
+header .meta { text-align: right; font-size: 9pt; color: var(--muted); }
+header .meta b { color: var(--ink); font-weight: 600; }
+.lead {
+  margin: 0;
+  background: var(--mint-soft);
+  border-left: 4px solid var(--forest);
+  padding: 2.5mm 4mm;
+  font-size: 10.5pt;
+}
+.grid { display: grid; grid-template-columns: 1fr 58mm; gap: 5mm; flex: 1; min-height: 0; }
+.main { display: flex; flex-direction: column; gap: 4mm; min-height: 0; }
+h2 {
+  margin: 0 0 1.5mm;
+  font-size: 11.5pt;
+  color: var(--forest-dark);
+  display: flex;
+  align-items: baseline;
+  gap: 2mm;
+}
+h2 .when { font-size: 9pt; font-weight: 500; color: var(--muted); }
+ol.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 2.2mm; }
+ol.steps > li {
+  display: grid;
+  grid-template-columns: 7mm 1fr;
+  gap: 2.5mm;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 2.2mm 3mm;
+}
+ol.steps .n {
+  width: 7mm; height: 7mm; border-radius: 50%;
+  background: var(--forest); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 10pt;
+}
+ol.steps .t { font-weight: 600; }
+ol.steps .path { color: var(--forest); font-weight: 500; }
+ol.steps p { margin: 0.6mm 0 0; color: var(--muted); font-size: 9.5pt; }
+.btn {
+  display: inline-block; border: 1px solid var(--forest); color: var(--forest);
+  border-radius: 4px; padding: 0 1.4mm; font-weight: 600; font-size: 9pt; line-height: 1.5;
+}
+ul.notes { margin: 0; padding-left: 4.5mm; display: grid; gap: 1mm; font-size: 9.8pt; }
+.help { border-collapse: collapse; width: 100%; font-size: 9.5pt; }
+.help td { border-top: 1px solid var(--line); padding: 1.4mm 2mm 1.4mm 0; vertical-align: top; }
+.help td:first-child { width: 42%; font-weight: 600; }
+.side-help .help td { display: block; width: auto; padding: 0; border: 0; }
+.side-help .help tr { display: block; border-top: 1px solid var(--line); padding: 1.3mm 0; }
+.side-help .help td:first-child { width: auto; }
+aside { display: flex; flex-direction: column; gap: 3mm; min-height: 0; }
+aside figure { margin: 0; }
+aside img { width: 100%; border: 1px solid var(--line); border-radius: 8px; display: block; }
+aside figcaption { font-size: 8.5pt; color: var(--muted); margin-top: 1mm; }
+.warn {
+  background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 6px;
+  padding: 2mm 3mm; font-size: 9.3pt;
+}
+footer {
+  border-top: 1px solid var(--line); padding-top: 2mm;
+  display: flex; justify-content: space-between; font-size: 8.5pt; color: var(--muted);
+}
+
+/* Biến thể cho vai trò dùng máy tính: ảnh màn hình ngang nằm dưới, cạnh mục «Gặp vướng». */
+.page.desk .main { flex: 0 0 auto; }
+.page.desk .bottom { margin-top: auto; }
+.bottom { display: grid; grid-template-columns: 96mm 1fr; gap: 5mm; align-items: start; }
+.bottom figure { margin: 0; }
+.bottom img { width: 100%; border: 1px solid var(--line); border-radius: 6px; display: block; }
+.bottom figcaption { font-size: 8.5pt; color: var(--muted); margin-top: 1mm; }

@@ -28,6 +28,11 @@ export interface SiteContextTable {
   readonly openFaces: Record<string, boolean>;
   readonly defaultOpen: boolean;
   readonly alwaysOpen: readonly Face[];
+  /**
+   * Hiện trạng → khoảng lùi tối thiểu (m) để mặt ấy còn được coi là thoáng (T112). Vắng mã = không
+   * cần khoảng lùi.
+   */
+  readonly minOpenSetbackM: Readonly<Record<string, number>>;
 }
 
 export class SiteContextError extends Error {
@@ -50,11 +55,25 @@ export function parseSiteContext(yamlText: string): SiteContextTable {
   const alwaysOpen = Array.isArray(raw.always_open)
     ? (raw.always_open as unknown[]).filter((f): f is Face => FACES.includes(f as Face))
     : [];
+  const minOpenSetbackM: Record<string, number> = {};
+  const rawMin = raw.min_open_setback_m;
+  if (rawMin !== undefined) {
+    if (!rawMin || typeof rawMin !== 'object') {
+      throw new SiteContextError('Mục min_open_setback_m phải là bảng mã hiện trạng → số mét.');
+    }
+    for (const [code, value] of Object.entries(rawMin as Record<string, unknown>)) {
+      if (typeof value !== 'number' || value < 0) {
+        throw new SiteContextError(`min_open_setback_m.${code} phải là số mét không âm.`);
+      }
+      minOpenSetbackM[code] = value;
+    }
+  }
   return {
     version: String(raw.version ?? ''),
     openFaces: table,
     defaultOpen: raw.default_open === true,
     alwaysOpen,
+    minOpenSetbackM,
   };
 }
 
@@ -70,10 +89,15 @@ export interface SiteFaces {
  *
  * `access_sides` của đầu bài luôn được coi là thoáng: một mặt vào được thì nó giáp đường hoặc
  * ngõ, và không thể vừa đi qua được vừa bị nhà hàng xóm bịt kín.
+ *
+ * `setbacks` (khoảng cách ranh → tường từng mặt): mặt giáp hiện trạng có trong
+ * `min_open_setback_m` mà lùi ít hơn mức ấy thì không thoáng (T112, Haan 01/10/2026) — đất trống
+ * sát tường nhà là đất người khác, sẽ được xây. Không truyền `setbacks` thì không xét.
  */
 export function siteFaces(
   site: { adjacent?: Record<string, string | null>; access_sides?: string[] } | undefined,
   table: SiteContextTable,
+  setbacks?: Partial<Record<Face, number>>,
 ): SiteFaces {
   const access = (site?.access_sides ?? []).filter((f): f is Face => FACES.includes(f as Face));
   const accessFaces = access.length > 0 ? access : (['front'] as Face[]);
@@ -82,6 +106,8 @@ export function siteFaces(
     if (table.alwaysOpen.includes(face) || accessFaces.includes(face)) return true;
     const code = site?.adjacent?.[face];
     if (code == null || code === '') return table.defaultOpen;
+    const minSetback = table.minOpenSetbackM[code];
+    if (setbacks && minSetback !== undefined && (setbacks[face] ?? 0) < minSetback) return false;
     return table.openFaces[code] ?? table.defaultOpen;
   });
 

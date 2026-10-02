@@ -126,6 +126,12 @@ export const CLS = {
   window: 'wn',
   stair: 'st',
   stairArrow: 'sa',
+  /** Bậc / chiếu nghỉ nằm TRÊN mặt cắt ≈ 1,2 m — nét đứt (T105, ký hiệu tài liệu thang bộ). */
+  stairAbove: 'stb',
+  /** Đoạn đường đi phía trên mặt cắt — nét đứt. */
+  stairArrowAbove: 'sab',
+  /** Chấm tròn ở bậc đầu của đường đi. */
+  stairDot: 'sdt',
   void: 'vd',
   dimLine: 'dm',
   dimTick: 'dt',
@@ -194,6 +200,9 @@ export function sheetCss(style: SheetStyle): string {
     stroke(CLS.window, c.hairline, w.window),
     stroke(CLS.stair, c.hairline, w.stair),
     stroke(CLS.stairArrow, c.hairline, w.stair_arrow),
+    stroke(CLS.stairAbove, c.hairline, w.stair, 'stroke-dasharray:1.5 1;'),
+    stroke(CLS.stairArrowAbove, c.hairline, w.stair_arrow, 'stroke-dasharray:1.5 1;'),
+    `.${CLS.stairDot}{fill:${c.hairline};stroke:none}`,
     `.${CLS.void}{stroke:${c.hairline};stroke-width:${num(w.void)};fill:${c.void_fill}}`,
     stroke(CLS.north, c.ink, w.north),
     stroke(CLS.dimLine, c.dim, w.dim_line),

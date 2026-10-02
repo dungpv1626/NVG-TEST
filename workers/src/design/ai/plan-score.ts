@@ -770,6 +770,66 @@ const MEASURES: Record<string, MeasureFn> = {
     return { value: (wanted.length - dark.length) / wanted.length, refs: dark.map((r) => r.id) };
   },
 
+  /**
+   * Phòng ngủ tối hẳn (T105 — Haan chấm lượt 25fdc90c: phòng ngủ 18 m² giữa nhà, giáp tường nhà hàng xóm,
+   * không một cửa sổ). D1 trừ theo TỶ LỆ nên một phòng ngủ tối trong mười phòng ở vẫn qua ngưỡng; đây đếm
+   * phòng ngủ không có cửa sổ ra mặt thoáng và cũng không có cửa ra ban công. Trừ điểm, không chặn.
+   */
+  D2: (ctx, spec) => {
+    if (spec.rooms === 'none') {
+      return {
+        value: null,
+        khongCham: 'Nhà phố: phòng ngủ chính đã xét ở D1, phòng ngủ phụ lấy sáng gián tiếp.',
+      };
+    }
+    const bedrooms = ctx.rooms.filter(
+      (room) => room.type === 'master_bedroom' || room.type === 'bedroom',
+    );
+    if (bedrooms.length === 0) return { value: null, khongCham: 'Không có phòng ngủ nào.' };
+    const lit = new Set<string>();
+    for (const level of ctx.levels) for (const id of roomsWithDaylight(level)) lit.add(id);
+    for (const door of ctx.graph.doors) {
+      if (door.toOutside) continue;
+      const balcony = door.rooms.some((id) => ctx.graph.rooms.get(id)?.type === 'balcony');
+      if (balcony) for (const id of door.rooms) lit.add(id);
+    }
+    const dark = bedrooms.filter((room) => !lit.has(room.id));
+    return { value: dark.length, refs: dark.map((room) => room.id) };
+  },
+
+  /**
+   * Phòng giặt phơi không có chỗ phơi (T107, Haan 30/09/2026: «phòng giặt phơi nên đặt ở nơi có ban công hoặc có cửa
+   * sổ thoáng, hoặc phòng giáp ban công hoặc gần khu sân phơi»). Có chỗ phơi: cửa sổ ra mặt thoáng, hoặc cửa ra / tường
+   * chung từ `min_shared_m` với phòng nhóm `drying` cùng tầng. Trừ điểm, không chặn.
+   */
+  D4: (ctx, spec) => {
+    const laundries = ctx.rooms.filter((room) => room.type === 'laundry');
+    if (laundries.length === 0) return { value: null, khongCham: 'Không có phòng giặt phơi.' };
+    const minShared = (spec.params.min_shared_m ?? 0.9) * 100;
+    const gap = (spec.params.wall_gap_m ?? 0.25) * 100;
+    const ok = new Set<string>();
+    for (const level of ctx.levels) for (const id of roomsWithDaylight(level)) ok.add(id);
+    for (const door of ctx.graph.doors) {
+      if (door.toOutside) continue;
+      const drying = door.rooms.some((id) =>
+        ctx.inGroup('drying', ctx.graph.rooms.get(id)?.type ?? ''),
+      );
+      if (drying) for (const id of door.rooms) ok.add(id);
+    }
+    for (const room of laundries) {
+      if (ok.has(room.id)) continue;
+      const beside = (ctx.byLevel.get(room.level) ?? []).some(
+        (other) =>
+          other.id !== room.id &&
+          ctx.inGroup('drying', other.type) &&
+          sharedWallCm(room.rect, other.rect, gap) >= minShared,
+      );
+      if (beside) ok.add(room.id);
+    }
+    const dry = laundries.filter((room) => !ok.has(room.id));
+    return { value: dry.length, refs: dry.map((room) => room.id) };
+  },
+
   // T91 (Haan 27/09/2026): ban công nằm trong sàn, gần vuông, không quay cạnh dài ra mặt thoáng — không
   // chặn, nhưng trừ điểm. Ban công đua ra (ba cạnh thoáng) và ban công có cạnh dài thoáng tính là đạt.
   D3: (ctx) => {
@@ -804,6 +864,34 @@ const MEASURES: Record<string, MeasureFn> = {
     const walk = cheapestWalk(ctx.graph, ctx.graph.entries, new Set(living.map((r) => r.id)), free);
     if (!walk) return { value: 9, refs: living.map((room) => room.id) };
     return { value: walk.cost, refs: walk.crossed };
+  },
+
+  /**
+   * Từ gara vào nhà (T105 — Haan chấm lượt 25fdc90c: kho nằm giữa gara và phòng khách, «gara chuyển sang giáp
+   * phòng khách như vậy sẽ hợp lý hơn»). Đếm số phòng KHÔNG PHẢI lối đi phải xuyên qua, đi TRONG nhà, từ chỗ để
+   * xe tới phòng khách gần nhất; không tới được (phải vòng ra ngoài) thì tính như xa nhất có thể.
+   */
+  C11: (ctx) => {
+    const garages = ctx.rooms.filter((room) => room.type === 'garage');
+    const living = ctx.rooms.filter((room) => room.type === 'living');
+    if (garages.length === 0 || living.length === 0) {
+      return { value: null, khongCham: 'Phương án không có cả chỗ để xe lẫn phòng khách.' };
+    }
+    if (!ctx.passage) return { value: null, khongCham: 'Chưa nạp luật đi lại của từ vựng phòng.' };
+    const free = (id: string) => {
+      const type = ctx.graph.rooms.get(id)?.type ?? '';
+      return (
+        type === 'living' || ctx.inGroup('circulation', type) || ctx.passage!.entryThrough.has(type)
+      );
+    };
+    const walk = cheapestWalk(
+      ctx.graph,
+      garages.map((room) => room.id),
+      new Set(living.map((room) => room.id)),
+      free,
+    );
+    if (!walk) return { value: 9, refs: garages.map((room) => room.id) };
+    return { value: walk.cost, refs: walk.crossed.length ? walk.crossed : [] };
   },
 
   /**
@@ -1109,4 +1197,17 @@ export interface PlanScoreScreen {
     why: string | null;
     refs: string[];
   }[];
+}
+
+/**
+ * Độ dài đoạn tường chung của hai phòng (chữ nhật LỌT LÒNG), cm — 0 khi không kề nhau. Hai phòng kề nhau cách nhau
+ * một bề dày tường: khe `gap` trở xuống tính là chung tường.
+ */
+function sharedWallCm(a: Rect, b: Rect, gap: number): number {
+  const overlapX = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0);
+  const overlapY = Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0);
+  const near = (d: number) => d >= -1 && d <= gap;
+  if (near(b.x0 - a.x1) || near(a.x0 - b.x1)) return Math.max(0, overlapY);
+  if (near(b.y0 - a.y1) || near(a.y0 - b.y1)) return Math.max(0, overlapX);
+  return 0;
 }

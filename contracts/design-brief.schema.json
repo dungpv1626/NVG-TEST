@@ -587,6 +587,17 @@
           "enum": ["ban_an_rieng", "quay_bep", "linh_hoat", null],
           "description": "Cả nhà ăn ở đâu. Quyết phòng ăn có là một phòng thật hay chỉ là quầy kề bếp."
         },
+        "living_dining_kitchen": {
+          "type": ["string", "null"],
+          "enum": [
+            "lien_thong_ca_ba",
+            "an_bep_lien_khach_rieng",
+            "khach_an_lien_bep_rieng",
+            "tach_rieng",
+            null
+          ],
+          "description": "Phòng khách, phòng ăn, bếp liền thông hay tách riêng (T103). Quyết cặp phòng nào được gộp một không gian, mở thông, bỏ vách — cặp không được liền thì là hai phòng có vách và cửa. Chưa trả lời thì chương trình không ràng buộc."
+        },
         "guests": {
           "type": ["string", "null"],
           "enum": ["thuong_xuyen", "thinh_thoang", "it", null],
@@ -711,6 +722,11 @@
           "type": ["string", "null"],
           "enum": ["thang_ho", "thang_kin", "chua_quyet", null],
           "description": "Thang bộ hở (thông tầng, lấy sáng, ăn diện tích) hay kín (giữ điều hoà, kín tiếng, gọn). Đây là lựa chọn của gia chủ chứ không phải của phần mềm, và nó đổi hẳn cách tổ chức khu giữa nhà."
+        },
+        "stair_shape": {
+          "type": ["string", "null"],
+          "enum": ["thang_thang", "chu_l", "chu_u", "ba_ve", "chu_u_rong", "chua_quyet", null],
+          "description": "Loại thang bộ chính (T105, tài liệu «Các loại thang bộ phổ biến»): thẳng 1 vế có chiếu nghỉ giữa, chữ L, chữ U 2 vế, 3 vế quanh giếng, chữ U chiếu nghỉ rộng. Thang xoắn ốc chỉ làm thang phụ nên không có ở đây. Chưa quyết thì chương trình chọn theo khối nhà."
         }
       }
     },

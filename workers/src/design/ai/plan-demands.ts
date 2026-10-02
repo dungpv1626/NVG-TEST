@@ -242,11 +242,18 @@ export function checkElevatorStack(plan: AiFloorPlan, lift: ElevatorDemand | nul
   }
 }
 
-/** Ban công: đúng tầng, đúng mặt, và không có ở mặt gia chủ đã loại. */
+/**
+ * Ban công: đúng tầng, đúng mặt, và không có ở mặt gia chủ đã loại.
+ *
+ * `longRatio` (T105, Haan chọn A cho Q-57): ban công DÀI (cạnh dài > `longRatio` lần cạnh ngắn) «ở» mặt
+ * mà CẠNH DÀI của nó mở ra — đầu ngắn áp mép ranh là tường đặc, không tính là ban công ở mặt cấm. Ban
+ * công gần vuông vẫn tính mọi mặt nó chạm. Vắng = mọi mặt chạm đều tính (như trước T105).
+ */
 export function checkBalconyDemand(
   plan: AiFloorPlan,
   balcony: BalconyDemand | null,
   add: Add,
+  longRatio: number | null = null,
 ): void {
   if (!balcony) return;
   const found = plan.levels.flatMap((level) =>
@@ -281,22 +288,35 @@ export function checkBalconyDemand(
   }
 
   for (const side of balcony.sides) {
-    const hit = found.some((entry) => touchesSide(entry.level, entry.rect, side));
+    const hit = found.some(
+      (entry) =>
+        touchesSide(entry.level, entry.rect, side) &&
+        !cornerNotAlong(entry.level, entry.rect, side, longRatio),
+    );
     if (!hit) {
+      // Có ban công CHẠM mặt ấy nhưng chỉ là khối góc (T106 không tính): nói đúng điều ấy (T112). Lượt thật
+      // 8eaaee7b vòng 4–5 nhận câu «không ban công nào chạm mặt bên trái» trong khi khối góc `bc1` của chính
+      // nó có chạm — mô hình giữ nguyên bản phác, hết lượt sửa.
+      const corner = found.find((entry) => touchesSide(entry.level, entry.rect, side));
       add(
         'blocking',
         'balcony_side_missing',
-        found.length
-          ? `Đầu bài khai ban công ở ${sideWord(side)}, mặt bằng có ban công nhưng không cái nào nằm ở mặt ấy.`
-          : `Đầu bài khai ban công ở ${sideWord(side)}, mặt bằng không có ban công nào.`,
-        undefined,
-        { side },
+        corner
+          ? `Đầu bài khai ban công ở ${sideWord(side)}; ban công "${corner.room.id}" chỉ chạm mặt ấy ở góc, cạnh dài không nằm trên mặt ấy nên không tính — cần một ban công chạy dọc ${sideWord(side)}.`
+          : found.length
+            ? `Đầu bài khai ban công ở ${sideWord(side)}, mặt bằng có ban công nhưng không cái nào nằm ở mặt ấy.`
+            : `Đầu bài khai ban công ở ${sideWord(side)}, mặt bằng không có ban công nào.`,
+        corner?.room.id,
+        corner ? { side, room: corner.room.id, corner: 1 } : { side },
       );
     }
   }
 
   for (const side of balcony.forbiddenSides) {
-    const bad = found.find((entry) => touchesSide(entry.level, entry.rect, side));
+    const bad = found.find(
+      (entry) =>
+        touchesSide(entry.level, entry.rect, side) && !shortEndOnly(entry.rect, side, longRatio),
+    );
     if (bad) {
       add(
         'blocking',
@@ -328,12 +348,13 @@ export function checkSketchBalconyDemand(
   rooms: readonly { id: string; type: string; level: number }[],
   sketches: ReadonlyMap<number, readonly string[] | null>,
   add: Add,
+  longRatio: number | null = null,
 ): void {
   if (!balcony || balcony.forbidden) return;
   const upper = [...sketches.entries()].filter(([level]) => level >= balcony.fromLevel);
   if (!upper.length || upper.some(([, rows]) => !rows)) return;
   const typeOf = new Map(rooms.map((room) => [room.id, room.type]));
-  const found: { id: string; level: number; sides: Set<Side> }[] = [];
+  const found: { id: string; level: number; sides: Set<Side>; forbiddenHits: Set<Side> }[] = [];
   for (const [level, rows] of upper) {
     const grid = rows!.map((row) => row.trim().split(/\s+/));
     const built = emptyBox();
@@ -354,7 +375,11 @@ export function checkSketchBalconyDemand(
       if (own.r1 === built.r1) sides.add('back');
       if (own.c0 === built.c0) sides.add('left');
       if (own.c1 === built.c1) sides.add('right');
-      found.push({ id, level, sides });
+      const cells = { x0: own.c0, y0: own.r0, x1: own.c1 + 1, y1: own.r1 + 1 };
+      const forbiddenHits = new Set(
+        [...sides].filter((side) => !shortEndOnly(cells, side, longRatio)),
+      );
+      found.push({ id, level, sides, forbiddenHits });
     }
   }
 
@@ -379,7 +404,7 @@ export function checkSketchBalconyDemand(
     );
   }
   for (const side of balcony.forbiddenSides) {
-    const bad = found.find((entry) => entry.sides.has(side));
+    const bad = found.find((entry) => entry.forbiddenHits.has(side));
     if (!bad) continue;
     add(
       'blocking',
@@ -389,6 +414,156 @@ export function checkSketchBalconyDemand(
       { room: bad.id, side, level: bad.level },
     );
   }
+}
+
+/**
+ * Lời KHUYÊN (không bác) về ban công góc trên bản phác (T107): mặt đầu bài bắt buộc mà mọi ban công chạm mặt ấy đều là
+ * khối góc ngắn dọc mặt ấy (cạnh dọc < `longRatio` × cạnh vuông góc, đếm ô) — cổng mặt bằng sẽ bác (T106), nhưng chỉ khi
+ * mọi tầng đã xếp xong, tức một lượt gọi sau (lượt bea4c6fa: vòng 3 vẽ ban công 3 × 3 ô ở góc trước – trái, vòng 4 mới
+ * bị bác). Chỉ dùng khi lượt đã hỏng vì lý do khác; làm lời BÁC ở bản phác thì đổi quỹ đạo 19 phép thử phát lại (T106).
+ */
+export function sketchBalconyCornerAdvice(
+  balcony: BalconyDemand | null,
+  rooms: readonly { id: string; type: string; level: number }[],
+  sketches: ReadonlyMap<number, readonly string[] | null>,
+  longRatio: number | null,
+): { code: string; message: string; params: Record<string, string | number> }[] {
+  if (!balcony || balcony.forbidden || longRatio === null) return [];
+  const typeOf = new Map(rooms.map((room) => [room.id, room.type]));
+  const out: { code: string; message: string; params: Record<string, string | number> }[] = [];
+  for (const side of balcony.sides) {
+    const touching: { id: string; along: number; across: number; corner: boolean }[] = [];
+    for (const [level, rows] of sketches) {
+      if (!rows || level < balcony.fromLevel) continue;
+      const grid = rows.map((row) => row.trim().split(/\s+/));
+      const built = emptyBox();
+      const boxes = new Map<string, CellBox>();
+      grid.forEach((cells, r) =>
+        cells.forEach((cell, c) => {
+          if (/^\.+$/.test(cell)) return;
+          const own = boxes.get(cell) ?? emptyBox();
+          boxes.set(cell, own);
+          growBox(built, r, c);
+          growBox(own, r, c);
+        }),
+      );
+      for (const [id, own] of boxes) {
+        if (typeOf.get(id) !== balcony.type) continue;
+        const at: Record<Side, boolean> = {
+          front: own.r0 === built.r0,
+          back: own.r1 === built.r1,
+          left: own.c0 === built.c0,
+          right: own.c1 === built.c1,
+        };
+        if (!at[side]) continue;
+        const alongX = side === 'front' || side === 'back';
+        const w = own.c1 - own.c0 + 1;
+        const h = own.r1 - own.r0 + 1;
+        touching.push({
+          id,
+          along: alongX ? w : h,
+          across: alongX ? h : w,
+          corner: alongX ? at.left || at.right : at.front || at.back,
+        });
+      }
+    }
+    if (!touching.length) continue;
+    if (touching.some((t) => !t.corner || t.along >= longRatio * t.across)) continue;
+    const first = touching[0]!;
+    out.push({
+      code: 'balcony_side_corner',
+      message: `Bản phác: ban công "${first.id}" chỉ là khối ở góc, không chạy dọc ${sideWord(side)} — mặt bằng sẽ không tính nó cho mặt ấy.`,
+      params: { room: first.id, side, along: first.along, across: first.across },
+    });
+  }
+  return out;
+}
+
+/**
+ * Lỗi ban công theo mặt của cổng MẶT BẰNG có phải chỉ vì chương trình CHIA LẠI tầng không: trên bản phác của
+ * mô hình ban công ấy ĐÃ đúng mặt (chạm mặt đòi / không chạm mặt cấm, cùng phép đo `checkSketchBalconyDemand`)
+ * mà trên mặt bằng nó bị dời HẲN khỏi mặt ấy. Bản phác tự nó đã sai (chỉ chạm bằng đầu ngắn, khối góc ngắn dọc mặt
+ * ấy — T105, T106), hay ban công còn ở mặt ấy mà bị nắn thành khối góc, thì vẫn báo.
+ * `issue.params` như `checkBalconyDemand` đặt; mã khác hoặc thiếu bản phác → `false`.
+ */
+export function balconyMovedByRepartition(
+  issue: { code: string; params?: Record<string, string | number> },
+  plan: AiFloorPlan,
+  balconyType: string,
+  sketches: ReadonlyMap<number, readonly string[] | null>,
+  replaced: ReadonlySet<number>,
+  longRatio: number | null = null,
+): boolean {
+  const onSketch = new Map<string, { level: number; sides: Set<Side>; cells: Rect }>();
+  for (const level of replaced) {
+    const rows = sketches.get(level);
+    if (!rows) continue;
+    const grid = rows.map((row) => row.trim().split(/\s+/));
+    const built = emptyBox();
+    const boxes = new Map<string, CellBox>();
+    grid.forEach((cells, r) =>
+      cells.forEach((cell, c) => {
+        if (/^\.+$/.test(cell)) return;
+        const own = boxes.get(cell) ?? emptyBox();
+        boxes.set(cell, own);
+        growBox(built, r, c);
+        growBox(own, r, c);
+      }),
+    );
+    const planLevel = plan.levels.find((item) => item.level === level);
+    for (const [id, own] of boxes) {
+      if (planLevel?.rooms.find((room) => room.id === id)?.type !== balconyType) continue;
+      const sides = new Set<Side>();
+      if (own.r0 === built.r0) sides.add('front');
+      if (own.r1 === built.r1) sides.add('back');
+      if (own.c0 === built.c0) sides.add('left');
+      if (own.c1 === built.c1) sides.add('right');
+      onSketch.set(id, {
+        level,
+        sides,
+        cells: { x0: own.c0, y0: own.r0, x1: own.c1 + 1, y1: own.r1 + 1 },
+      });
+    }
+  }
+  // Bản phác ĐẠT mặt `side`: chạm mặt ấy, không bằng đầu ngắn (Q-57), không phải khối góc ngắn dọc mặt
+  // ấy (T106) — cùng các luật cổng mặt bằng áp, đo bằng ô.
+  const sketchMeets = (drawn: { sides: Set<Side>; cells: Rect }, side: Side) => {
+    if (!drawn.sides.has(side) || shortEndOnly(drawn.cells, side, longRatio)) return false;
+    if (longRatio === null) return true;
+    const alongX = side === 'front' || side === 'back';
+    const corner = (alongX ? ['left', 'right'] : ['front', 'back']).some((other) =>
+      drawn.sides.has(other as Side),
+    );
+    const along = alongX ? drawn.cells.x1 - drawn.cells.x0 : drawn.cells.y1 - drawn.cells.y0;
+    const across = alongX ? drawn.cells.y1 - drawn.cells.y0 : drawn.cells.x1 - drawn.cells.x0;
+    return !corner || along >= longRatio * across;
+  };
+  const onPlan = (id: string, side: Side) => {
+    for (const level of plan.levels) {
+      const room = level.rooms.find((item) => item.id === id);
+      if (room) return touchesSide(level, toRect(room.rect), side);
+    }
+    return false;
+  };
+  const side = issue.params?.side as Side | undefined;
+  if (issue.code === 'balcony_side_missing' && side) {
+    // Chỉ khi ban công bị DỜI khỏi mặt ấy. Ban công bị nắn thành khối góc mà vẫn ở mặt ấy thì vẫn báo: coi đó là hệ
+    // quả (bản phác đạt, mặt bằng không) làm phát lại 14 → 12 (T107) — T106 cố ý gửi lỗi ban công góc cho mô hình.
+    return [...onSketch].some(([id, drawn]) => sketchMeets(drawn, side) && !onPlan(id, side));
+  }
+  if (issue.code === 'balcony_side_not_wanted' && side) {
+    const id = String(issue.params?.room ?? '');
+    const drawn = onSketch.get(id);
+    return (
+      drawn !== undefined &&
+      !(drawn.sides.has(side) && !shortEndOnly(drawn.cells, side, longRatio)) &&
+      onPlan(id, side)
+    );
+  }
+  if (issue.code === 'balcony_level_missing') {
+    return [...onSketch.values()].some((drawn) => drawn.level === Number(issue.params?.level));
+  }
+  return false;
 }
 
 /** Khung ô (dòng, cột) bao một nhóm ô bản phác. */
@@ -426,6 +601,43 @@ function touchesSide(level: AiFloorPlanLevel, rect: Rect, side: Side): boolean {
   if (side === 'back') return rect.y1 >= box.y1 - FACE_TOLERANCE_CM;
   if (side === 'left') return rect.x0 <= box.x0 + FACE_TOLERANCE_CM;
   return rect.x1 >= box.x1 - FACE_TOLERANCE_CM;
+}
+
+/**
+ * Ban công GÓC (chạm cả mặt `side` lẫn một mặt vuông góc) mà không dài hơn rõ rệt dọc `side` — không tính là ban công
+ * của mặt ấy (T106, Haan chấm lượt f351115d: «ban công mặt trước phải nằm phần lớn ở mặt trước»; khối 2,4 × 2,3 m ở góc
+ * trước – trái đã được tính là ban công mặt trước). `longRatio` như Q-57; vắng = không xét. Chỉ ở cổng MẶT BẰNG: trên
+ * lưới ô bản phác (~0,86 m) quy tắc báo cả ban công bộ xếp còn nắn lại được — thử ở cả hai cổng thì 19 phép thử phát
+ * lại đổi quỹ đạo, phần lớn vì một lỗi cả nhà chen vào vòng vốn chỉ hỏng ở tầng 2.
+ */
+function cornerNotAlong(
+  level: AiFloorPlanLevel,
+  rect: Rect,
+  side: Side,
+  longRatio: number | null,
+): boolean {
+  if (longRatio === null) return false;
+  const alongX = side === 'front' || side === 'back';
+  const perpendicular: Side[] = alongX ? ['left', 'right'] : ['front', 'back'];
+  if (!perpendicular.some((other) => touchesSide(level, rect, other))) return false;
+  const along = alongX ? rect.x1 - rect.x0 : rect.y1 - rect.y0;
+  const across = alongX ? rect.y1 - rect.y0 : rect.x1 - rect.x0;
+  return along < longRatio * across;
+}
+
+/**
+ * Ban công dài chỉ chạm mặt `side` bằng ĐẦU NGẮN (T105, Q-57): mặt ấy vuông góc với cạnh dài. Mặt trước /
+ * sau chạy theo trục x nên đầu ngắn chạm chúng khi ban công dài theo y, và ngược lại.
+ */
+function shortEndOnly(rect: Rect, side: Side, longRatio: number | null): boolean {
+  if (longRatio === null) return false;
+  const w = rect.x1 - rect.x0;
+  const d = rect.y1 - rect.y0;
+  const long = Math.max(w, d);
+  const short = Math.min(w, d);
+  if (short <= 0 || long <= longRatio * short) return false;
+  const alongX = w > d;
+  return side === 'left' || side === 'right' ? alongX : !alongX;
 }
 
 /** Chữ nhật bao của hình bao tầng; `null` khi tầng chưa có hình bao. */

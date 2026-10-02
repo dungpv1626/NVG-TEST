@@ -15,6 +15,7 @@
  */
 
 import type { AiFloorPlanLevel } from '@nvg/shared/design';
+import { stairLayout, type StairLayout, type StairParams } from '../stair-geometry';
 import { addVec, along, bboxOfPoints, toRect, type Pt, type Rect } from './geometry';
 import { CLS, polylinePath, tag, textEl } from './svg';
 import type { SheetStyle } from './style';
@@ -92,7 +93,19 @@ export function renderStairs(
 
   const numbers: string[] = [];
 
+  const shaped = { above: [] as string[], arrowsAbove: [] as string[], dots: [] as string[] };
   for (const stair of stairs) {
+    const layout = shapedLayout(stair);
+    if (layout) {
+      renderShaped(stair, layout, paper, style, arriving, {
+        treads,
+        arrows,
+        labels,
+        numbers,
+        ...shaped,
+      });
+      continue;
+    }
     const rect = toRect(stair.rect);
     const geometry = flightGeometry(stair);
     if (!geometry) continue;
@@ -198,9 +211,178 @@ export function renderStairs(
 
   const parts: string[] = [];
   if (treads.length) parts.push(tag('path', { class: CLS.stair, d: treads.join(' ') }));
+  if (shaped.above.length) {
+    parts.push(tag('path', { class: CLS.stairAbove, d: shaped.above.join(' ') }));
+  }
   if (arrows.length) parts.push(tag('path', { class: CLS.stairArrow, d: arrows.join(' ') }));
+  if (shaped.arrowsAbove.length) {
+    parts.push(tag('path', { class: CLS.stairArrowAbove, d: shaped.arrowsAbove.join(' ') }));
+  }
+  if (shaped.dots.length)
+    parts.push(tag('path', { class: CLS.stairDot, d: shaped.dots.join(' ') }));
   parts.push(...labels, ...numbers);
   return parts.join('');
+}
+
+/** Thông số thang theo loại đọc từ artifact (T105) — `null` khi thang không mang loại (vẽ như cũ). */
+function shapedParams(stair: Stair): StairParams | null {
+  if (!stair.shape || !stair.going || !stair.treads || !stair.flight_width || !stair.landing) {
+    return null;
+  }
+  return {
+    shape: stair.shape,
+    risers: stair.treads,
+    going: stair.going,
+    flightWidth: stair.flight_width,
+    landing: stair.landing,
+    gap: stair.gap ?? 0,
+  };
+}
+
+function shapedLayout(stair: Stair): StairLayout | null {
+  const params = shapedParams(stair);
+  if (!params) return null;
+  const [x0 = 0, y0 = 0, x1 = 0, y1 = 0] = stair.rect as number[];
+  return stairLayout(params, [x0, y0, x1, y1], stair.up);
+}
+
+/**
+ * Bậc nằm ngay DƯỚI mặt cắt ≈ 1,2 m của tầng ≈ 3,6 m (tài liệu thang bộ): một phần ba số cổ bậc. Bậc sau đó và chiếu
+ * nghỉ sau đó vẽ nét đứt.
+ */
+function cutStep(risers: number): number {
+  return Math.max(1, Math.round(risers / 3));
+}
+
+/**
+ * Thang theo LOẠI (T105) — ký hiệu của tài liệu «Các loại thang bộ phổ biến»: mỗi bậc và chiếu nghỉ là một ô có số
+ * (chiếu nghỉ mang số bậc tính tại đó), đường đi chấm tròn ở bậc 1 và MỘT mũi tên liên tục tới bậc cuối, đường cắt gấp
+ * khúc ngang vế ở ≈ 1,2 m. Tầng dưới: phần trên mặt cắt nét đứt. Tầng trên cùng (`arriving`): nhìn từ trên xuống thấy
+ * trọn thang — nét liền, nhãn «XUỐNG».
+ */
+function renderShaped(
+  stair: Stair,
+  layout: StairLayout,
+  paper: Paper,
+  style: SheetStyle,
+  arriving: boolean,
+  out: {
+    treads: string[];
+    arrows: string[];
+    labels: string[];
+    numbers: string[];
+    above: string[];
+    arrowsAbove: string[];
+    dots: string[];
+  },
+): void {
+  const cut = arriving ? Infinity : cutStep(stair.treads ?? 21);
+  const going = stair.going ?? 26;
+  const numbered = going * paper.k >= style.text_mm.stair_number * NUMBER_FIT;
+  for (const piece of layout.pieces) {
+    const d = polylinePath(
+      piece.poly.map((point) => paper.p(point)),
+      true,
+    );
+    (piece.n > cut ? out.above : out.treads).push(d);
+    if (numbered) {
+      const point = paper.p(piece.centre);
+      out.numbers.push(
+        textEl(String(piece.n), { x: point[0], y: point[1], class: CLS.textStairNumber }),
+      );
+    }
+  }
+  if (layout.well) {
+    out.treads.push(
+      polylinePath(
+        layout.well.map((point) => paper.p(point)),
+        true,
+      ),
+    );
+  }
+  // Đường cắt: nét gấp khúc chạy ngang vế ở mép xa của bậc `cut`.
+  const cutPiece = layout.pieces.find((piece) => piece.n === cut && !piece.landing);
+  if (cutPiece) {
+    const [, a, b] = cutPiece.poly as [Pt, Pt, Pt, Pt];
+    const lerp = (t: number): Pt => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+    const back: Pt = [
+      (cutPiece.centre[0] - (a[0] + b[0]) / 2) * 0.8,
+      (cutPiece.centre[1] - (a[1] + b[1]) / 2) * 0.8,
+    ];
+    const shift = (point: Pt, k: number): Pt => [point[0] + back[0] * k, point[1] + back[1] * k];
+    out.treads.push(
+      polylinePath(
+        [a, lerp(0.45), shift(lerp(0.5), 1), shift(lerp(0.55), -1), lerp(0.6), b].map((point) =>
+          paper.p(point),
+        ),
+        false,
+      ),
+    );
+  }
+  // Đường đi: nét liền tới bậc cắt, nét đứt phần trên (tầng dưới); chấm ở bậc 1; mũi tên ở bậc cuối.
+  const path = layout.path;
+  const first = path[0]!;
+  const second = path[1] ?? first;
+  let splitPoint: Pt = second;
+  if (cutPiece && Number.isFinite(cut)) {
+    const dx = second[0] - first[0];
+    const dy = second[1] - first[1];
+    const length2 = dx * dx + dy * dy || 1;
+    const t = Math.max(
+      0,
+      Math.min(
+        1,
+        ((cutPiece.centre[0] - first[0]) * dx + (cutPiece.centre[1] - first[1]) * dy) / length2,
+      ),
+    );
+    splitPoint = [first[0] + dx * t, first[1] + dy * t];
+  }
+  const below = [first, splitPoint];
+  const rest = [splitPoint, ...path.slice(1)];
+  if (arriving) {
+    out.arrows.push(
+      polylinePath(
+        path.map((point) => paper.p(point)),
+        false,
+      ),
+    );
+  } else {
+    out.arrows.push(
+      polylinePath(
+        below.map((point) => paper.p(point)),
+        false,
+      ),
+    );
+    if (rest.length > 1) {
+      out.arrowsAbove.push(
+        polylinePath(
+          rest.map((point) => paper.p(point)),
+          false,
+        ),
+      );
+    }
+  }
+  const tipFrom = path[path.length - 2];
+  const tip = path[path.length - 1];
+  if (tipFrom && tip) {
+    (arriving ? out.arrows : out.arrowsAbove).push(arrowHead(tipFrom, tip, paper, style));
+  }
+  // Chấm tròn ở bậc 1 — đa giác nhỏ tô đặc (bộ xuất DXF chỉ đọc đường path).
+  const dot = paper.p(first);
+  const radius = style.symbol.stair_arrow_head_mm * 0.35;
+  const ring: [number, number][] = Array.from({ length: 8 }, (_, i) => [
+    dot[0] + radius * Math.cos((i * Math.PI) / 4),
+    dot[1] + radius * Math.sin((i * Math.PI) / 4),
+  ]);
+  out.dots.push(polylinePath(ring, true));
+  const label = paper.p(first);
+  out.labels.push(
+    textEl(arriving ? DOWN_LABEL : UP_LABEL, {
+      x: label[0],
+      y: label[1] + style.text_mm.stair_number * 2,
+      class: CLS.textStair,
+    }),
+  );
 }
 
 /**
@@ -293,6 +475,11 @@ function arrowHead(from: Pt, to: Pt, paper: Paper, style: SheetStyle): string {
 export function stairTreadZones(stairs: readonly Stair[]): Rect[] {
   const zones: Rect[] = [];
   for (const stair of stairs) {
+    const layout = shapedLayout(stair);
+    if (layout) {
+      for (const piece of layout.pieces) if (!piece.landing) zones.push(bboxOfPoints(piece.poly));
+      continue;
+    }
     const rect = toRect(stair.rect);
     const flightLength = flightGeometry(stair)?.flightLength ?? 0;
     const points: Pt[] =

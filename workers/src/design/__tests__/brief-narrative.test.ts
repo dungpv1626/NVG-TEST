@@ -113,3 +113,21 @@ describe('thân lời gọi', () => {
     expect(() => knowledgeOf('<brief>x</brief>')).toThrow();
   });
 });
+
+describe('khách – ăn – bếp (T104)', () => {
+  // Lượt thật 894b350d: gia chủ đã trả lời «ăn và bếp liền, phòng khách riêng» mà lời gọi dựng cả nhà không có câu
+  // nào nói ra — dòng đòi hỏi chỉ đi vào lời gọi chương trình không gian, lời gọi cả nhà chỉ đọc văn xuôi này.
+  it('câu trả lời tới được mô hình bằng nhãn tiếng Việt', () => {
+    const digest = digestOf(VILLA);
+    const text = narrate({
+      ...digest,
+      lifestyle: { ...(digest.lifestyle ?? {}), living_dining_kitchen: 'an_bep_lien_khach_rieng' },
+    } as AiBriefDigest);
+    expect(text).toContain('Phòng khách, phòng ăn, bếp: ăn và bếp liền, phòng khách riêng.');
+    expect(text).not.toContain('an_bep_lien_khach_rieng');
+  });
+
+  it('chưa trả lời thì không có dòng', () => {
+    expect(narrate(digestOf(VILLA))).not.toContain('Phòng khách, phòng ăn, bếp');
+  });
+});

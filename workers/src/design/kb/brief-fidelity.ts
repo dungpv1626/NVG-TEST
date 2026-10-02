@@ -19,6 +19,8 @@ export interface BriefFidelity {
   needEquivalents: Record<string, string[]>;
   /** Tiện ích nằm TRONG phòng ngủ — gộp vào phòng, không thành không gian riêng. */
   inBedroomTypes: string[];
+  /** Mã gửi cho mô hình của một tiện ích trong phòng ngủ khi khác mã câu trả lời (T112). */
+  inBedroomAs: Record<string, string>;
   /**
    * Loại không gian mô hình CHỈ được đề xuất khi đầu bài có hỏi tới (T96). Vắng = không giới hạn —
    * một bản `kb/` cũ hơn mã nguồn vẫn chạy như trước.
@@ -61,6 +63,15 @@ export interface BriefDemandSpec {
   spaces: BriefDemandSpace[];
   /** Cảnh báo nào được bật. Vắng khoá = tắt; không có mục nào là mặc định hợp lệ. */
   warnings: Record<string, boolean>;
+  /** Khách – ăn – bếp liền hay tách theo câu trả lời `lifestyle.living_dining_kitchen` (T103). */
+  openPlan: {
+    /** Các cặp loại phòng câu hỏi này quyết định. */
+    scope: [string, string][];
+    /** Câu trả lời → cặp ĐƯỢC liền; cặp trong `scope` không có ở đây là cấm liền. */
+    pairs: Record<string, [string, string][]>;
+    /** Câu trả lời → dòng gửi mô hình. */
+    say: Record<string, string>;
+  };
 }
 
 export interface BriefDemandSpace {
@@ -110,6 +121,14 @@ export function parseBriefFidelity(yamlText: string): BriefFidelity {
     ensuiteParentTypes: list('ensuite_parent_types'),
     stairTypes: list('stair_types'),
     inBedroomTypes: raw.in_bedroom_types === undefined ? [] : list('in_bedroom_types'),
+    inBedroomAs: Object.fromEntries(
+      Object.entries((raw.in_bedroom_as ?? {}) as Record<string, unknown>).map(([need, code]) => {
+        if (typeof code !== 'string') {
+          throw new BriefFidelityError(`\`in_bedroom_as.${need}\` phải là một mã phòng`);
+        }
+        return [need, code];
+      }),
+    ),
     onlyWhenAsked: raw.only_when_asked === undefined ? [] : list('only_when_asked'),
     demands: parseDemands(raw.demands),
     needEquivalents: Object.fromEntries(
@@ -146,6 +165,7 @@ function parseDemands(raw: unknown): BriefDemandSpec {
     carM2BySize: {},
     spaces: [],
     warnings: {},
+    openPlan: { scope: [], pairs: {}, say: {} },
   };
   if (raw === undefined || raw === null) return empty;
   if (typeof raw !== 'object') throw new BriefFidelityError('`demands` phải là một mục');
@@ -210,6 +230,29 @@ function parseDemands(raw: unknown): BriefDemandSpec {
     warnings[key] = value;
   }
 
+  const pairList = (value: unknown, where: string): [string, string][] => {
+    if (value === undefined || value === null) return [];
+    if (!Array.isArray(value)) throw new BriefFidelityError(`\`${where}\` phải là danh sách cặp`);
+    return value.map((pair, i) => {
+      const list = codes(pair, `${where}[${i}]`);
+      if (list.length !== 2)
+        throw new BriefFidelityError(`\`${where}[${i}]\` phải là một cặp mã phòng`);
+      return [list[0]!, list[1]!];
+    });
+  };
+  const open = (d.open_plan ?? {}) as Record<string, unknown>;
+  const openPairs: Record<string, [string, string][]> = {};
+  for (const [answer, list] of Object.entries((open.pairs ?? {}) as Record<string, unknown>)) {
+    openPairs[answer] = pairList(list, `demands.open_plan.pairs.${answer}`);
+  }
+  const openSay: Record<string, string> = {};
+  for (const [answer, line] of Object.entries((open.say ?? {}) as Record<string, unknown>)) {
+    if (typeof line !== 'string') {
+      throw new BriefFidelityError(`\`demands.open_plan.say.${answer}\` phải là chuỗi`);
+    }
+    openSay[answer] = line;
+  }
+
   return {
     elevator: {
       spaceType: typeof lift.space_type === 'string' ? lift.space_type : 'core',
@@ -228,5 +271,10 @@ function parseDemands(raw: unknown): BriefDemandSpec {
     carM2BySize: numberMap(d.car_m2_by_size, 'demands.car_m2_by_size'),
     spaces,
     warnings,
+    openPlan: {
+      scope: pairList(open.scope, 'demands.open_plan.scope'),
+      pairs: openPairs,
+      say: openSay,
+    },
   };
 }

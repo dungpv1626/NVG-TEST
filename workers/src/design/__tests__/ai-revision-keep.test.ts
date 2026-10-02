@@ -166,7 +166,7 @@ describe('tầng giữ đã bị chia lại: gửi cách chia thật làm bản 
   });
 });
 
-describe('phát lại dc949b49 — tầng 1 «qua nhờ chia lại» được giữ và không còn bị đòi sửa', () => {
+describe('phát lại dc949b49 — tầng 1 (T86 giữ tầng; từ T105 tầng 1 hỏng vì lối lên thang)', () => {
   const dc = loadRun('dc949b49');
   const dcInput = { ...realContextInput(dc.digest), mandatory };
   const dcContext = planContext(dcInput);
@@ -175,31 +175,11 @@ describe('phát lại dc949b49 — tầng 1 «qua nhờ chia lại» được gi
   const round1 = dcEvaluate(dc.intents.round1 as HouseIntent);
   const round2 = dcEvaluate(mergeRevision(round1.renamed!, dc.intents.round2 as HouseIntent));
 
-  it('vòng 2: tầng 1 giữ; câu nhắc chỉ về tầng 2 — trước T86 nó đòi sửa tầng 1 và vòng 3 làm hỏng hẳn tầng 1', () => {
-    expect(round2.rejections.map((r) => r.level)).toEqual([2]);
-    expect(round2.settled).toEqual([1]);
-    const hints = round2.hints.join('\n');
-    expect(hints).not.toMatch(/Your sketch of storey 1 failed/);
-    expect(hints).not.toMatch(/Storey 1: Room "technical_1"/);
-    expect(hints).toMatch(/Storey 1 passed every check and is kept/);
-  });
-
-  it('bản phác tầng 1 gửi lượt sửa là cách chia thật: đủ phòng của ý định, không lỗ giữa nhà', () => {
-    const rows = round2.renamed!.sketches!.find((sketch) => sketch.level === 1)!.rows;
-    const ids = new Set(rows.join(' ').split(' '));
-    const ground = round2.renamed!.rooms.filter((room) => room.level === 1).map((room) => room.id);
-    for (const id of ground) expect(ids.has(id), id).toBe(true);
-    // Phòng ăn (gộp vào phòng khách ở mặt bằng) được tách lại.
-    expect(ids.has('dining_1')).toBe(true);
-    // Mỗi hàng: «.» chỉ ở mép (sân), không kẹp giữa hai phòng.
-    for (const row of rows) expect(row).not.toMatch(/[a-z0-9] \. [a-z]/);
-  });
-
-  it('câu trả lời vòng 3 (vẽ lại tầng 1) ghép lên gốc vòng 2: tầng 1 không còn hỏng', () => {
-    const merged = mergeRevision(round2.renamed!, dc.intents.round3 as HouseIntent, round2.settled);
-    const round3 = dcEvaluate(merged);
-    // Trước T86: vòng 3 hỏng ở TẦNG 1 (cửa chính, lối vào) — tầng đã qua bị vẽ lại và hỏng lại.
-    expect(round3.rejections.every((r) => r.level !== 1)).toBe(true);
-    expect(round3.settled).toEqual([1]);
+  // T105: tầng 1 của lượt này chỉ vào thang được từ cạnh dài (qua phòng khách) — nay là lỗi tầng 1, nên dữ liệu
+  // này không còn minh hoạ «tầng 1 qua nhờ chia lại được giữ». Cơ chế T86 có bài đơn vị ở trên
+  // (`settledLevels`, `replaceKeptSketches`); ở đây canh rằng lỗi mới được nói đúng tầng, đúng mã.
+  it('vòng 2: tầng 1 nay hỏng vì lối lên thang chỉ ở cạnh dài (T105)', () => {
+    expect(round2.rejections.map((r) => r.level)).toEqual([1]);
+    expect(round2.rejections[0]!.codes).toContain('stair_entry_long_side');
   });
 });

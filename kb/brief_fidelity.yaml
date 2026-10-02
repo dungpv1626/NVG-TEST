@@ -48,6 +48,14 @@ stair_types: [stair, core]
 # dặn gộp; lỡ tách thì Worker gộp lại vào phòng mẹ trước khi kiểm (`ai/program.ts`).
 in_bedroom_types: [study, study_area, closet, dressing_room]
 
+# Mã của tiện ích TRONG phòng ngủ khi gửi cho mô hình (`knowledge.bedrooms[].inside`), nếu khác mã của
+# câu trả lời (T112, review lời dẫn 01/10/2026). Phiếu lưu «Góc làm việc» bằng mã `study` — trùng mã với
+# «Phòng làm việc» riêng ở danh sách không gian, nên lời dẫn vừa bảo `study` là không gian riêng phải có
+# vừa bảo `study` không thành không gian. Gửi `study_area` cho góc; giá trị phiếu giữ nguyên để đầu bài
+# cũ vẫn đọc được. Cùng tầng đã có phòng làm việc riêng thì góc bỏ hẳn (`ai/program.ts`).
+in_bedroom_as:
+  study: study_area
+
 # Nhu cầu riêng của thành viên được đáp ứng bởi những loại không gian nào. Vắng một mã thì chỉ
 # chính loại đó mới tính. «Góc làm việc» (`study`) trong phòng ngủ thường là một góc học tập
 # khép kín (`study_area`), không phải một phòng làm việc riêng cho mỗi người.
@@ -196,6 +204,14 @@ demands:
       any_of: [terrace]
       blocking: false
       say: 'Đầu bài khai có bồn nước trên mái — cần chỗ đặt và lối lên'
+    # T112 (review lời dẫn 01/10/2026): cục nóng đặt ở sân thượng cũng là gia chủ đã nhắc tới sân
+    # thượng — trước đây `terrace` nằm trong `only_when_asked` mà câu này không mở nó, nên lời dẫn vừa
+    # cấm vừa đòi. Không chặn: đây là suy đoán chỗ đặt thiết bị, không phải gia chủ khai một không gian.
+    - code: cuc_nong_san_thuong
+      answer: 'systems.aircon_outdoor = san_thuong'
+      any_of: [terrace]
+      blocking: false
+      say: 'Đầu bài khai đặt cục nóng điều hoà ở sân thượng — cần sân thượng và lối lên'
     - code: bep_kin_chien_xao
       answer: 'lifestyle.cooking = nau_nhieu_chien_xao'
       any_of: [kitchen]
@@ -222,6 +238,35 @@ demands:
   # ── Cảnh báo suy từ đầu bài, KHÔNG bác phương án ─────────────────────────────────────
   # Nghề nghiệp, không phải lời gia chủ. Chúng hiện lên màn hình cạnh mặt bằng để kiến trúc sư
   # quyết, đúng ranh giới T49/T52.
+  # ── Phòng khách, phòng ăn, bếp: liền hay tách (T103) ───────────────────────────────────────
+  # `lifestyle.living_dining_kitchen`. Haan chấm lượt b1543b8c: «bố trí phòng khách liền phòng bếp liền phòng ăn
+  # chưa hợp lý → hãy làm rõ hơn từ đầu bài». Trước đây mọi phương án được gộp cả ba cặp (`merge_allowed` của
+  # `kb/room_vocabulary.yaml`) mà gia chủ chưa từng được hỏi.
+  #
+  # `pairs`: cặp loại phòng ĐƯỢC liền (gộp một không gian, ô thông, bỏ vách) theo từng câu trả lời. Cặp nào trong
+  # `scope` mà không có trong danh sách của câu trả lời thì CẤM liền: hai phòng riêng, có vách, cửa đi. Chưa trả
+  # lời = không đổi gì (chỉ suy từ câu ĐÃ trả lời). Cặp ngoài `scope` (khách + thờ) không đụng tới.
+  open_plan:
+    scope:
+      - [living, dining]
+      - [kitchen, dining]
+      - [kitchen, living]
+    pairs:
+      lien_thong_ca_ba:
+        - [living, dining]
+        - [kitchen, dining]
+        - [kitchen, living]
+      an_bep_lien_khach_rieng:
+        - [kitchen, dining]
+      khach_an_lien_bep_rieng:
+        - [living, dining]
+      tach_rieng: []
+    say:
+      lien_thong_ca_ba: 'Gia chủ muốn phòng khách, phòng ăn và bếp LIỀN THÔNG thành một không gian.'
+      an_bep_lien_khach_rieng: 'Gia chủ muốn phòng ăn và bếp liền nhau; phòng khách là phòng RIÊNG, có vách ngăn với khu ăn – bếp.'
+      khach_an_lien_bep_rieng: 'Gia chủ muốn phòng khách và phòng ăn liền nhau; bếp là phòng KÍN riêng, có vách và cửa.'
+      tach_rieng: 'Gia chủ muốn phòng khách, phòng ăn và bếp là BA phòng riêng, có vách ngăn — không gộp, không mở thông.'
+
   warnings:
     # Người đi lại khó khăn mà nhà nhiều tầng lại không thang máy.
     di_lai_kho_khan_khong_thang_may: true
@@ -233,3 +278,5 @@ demands:
     nen_thap_hon_duong_noi_ngap: true
     # Khai có bậc tam cấp mà không khai cốt nền lẫn số bậc — mặt bằng không vẽ được bậc (T70).
     bac_tam_cap_thieu_so: true
+    # Gió mát khai ở mặt giáp nhà bên cao bằng hoặc hơn nhà mình — gió mặt ấy gần như bị chặn (T112).
+    gio_mat_bi_nha_ben_chan: true

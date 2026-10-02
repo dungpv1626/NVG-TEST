@@ -397,13 +397,7 @@ export function sketchTrees(input: SketchTreeInput): SketchTrees {
     return {
       trees: [],
       notes,
-      issues: [
-        arrangeIssue(
-          'sketch_pinwheel',
-          `Bản phác ${where} xếp phòng kiểu chong chóng — không có đường chia nào chạy suốt mà không cắt qua phòng.`,
-          {},
-        ),
-      ],
+      issues: [pinwheelIssue(where, grid)],
     };
   }
 
@@ -983,6 +977,87 @@ function guillotine(grid: SketchGrid, box: Box): GridNode | null {
     }
   }
   return null;
+}
+
+/**
+ * Lỗi chong chóng kèm CHỖ (tổng hợp 37 lượt thật 23–30/09/2026: câu cũ không nói chỗ nào, mô hình nhận
+ * cùng câu ba lượt liền và nộp cùng bản vẽ — lượt 6bf43039). Đi như `guillotine` tới vùng con không còn
+ * đường chia sạch nào; trong vùng ấy chọn đường lưới bị ÍT phòng cắt qua nhất và nêu các phòng đó — dời
+ * hoặc cắt chúng là vùng chia được.
+ */
+function pinwheelIssue(where: string, grid: SketchGrid) {
+  const spot = pinwheelSpot(grid, { c0: 0, r0: 0, c1: grid.cols, r1: grid.rows });
+  if (!spot) {
+    return arrangeIssue(
+      'sketch_pinwheel',
+      `Bản phác ${where} xếp phòng kiểu chong chóng — không có đường chia nào chạy suốt mà không cắt qua phòng.`,
+      {},
+    );
+  }
+  const rooms = spot.rooms.map((id) => `"${id}"`).join(', ');
+  const line =
+    spot.axis === 'y'
+      ? `between rows ${spot.k} and ${spot.k + 1}`
+      : `between columns ${spot.k} and ${spot.k + 1}`;
+  const area = `rows ${spot.box.r0 + 1}–${spot.box.r1}, columns ${spot.box.c0 + 1}–${spot.box.c1}`;
+  return arrangeIssue(
+    'sketch_pinwheel_at',
+    `Bản phác ${where} xếp phòng kiểu chong chóng ở vùng hàng ${spot.box.r0 + 1}–${spot.box.r1}, cột ${spot.box.c0 + 1}–${spot.box.c1}: đường chia gần nhất bị ${rooms} cắt qua.`,
+    { area, line, rooms },
+  );
+}
+
+/** Vùng con đầu tiên không có đường chia sạch, và đường bị ít phòng cắt nhất trong vùng ấy. */
+function pinwheelSpot(
+  grid: SketchGrid,
+  box: Box,
+): { box: Box; axis: Axis; k: number; rooms: string[] } | null {
+  const ids = new Set<string>();
+  for (let r = box.r0; r < box.r1; r += 1) {
+    for (let c = box.c0; c < box.c1; c += 1) ids.add(grid.cells[r]![c]!);
+  }
+  if (ids.size === 1) return null;
+  let bestCut: { axis: Axis; k: number; rooms: string[] } | null = null;
+  for (const axis of ['y', 'x'] as const) {
+    const lo = axis === 'y' ? box.r0 : box.c0;
+    const hi = axis === 'y' ? box.r1 : box.c1;
+    for (let k = lo + 1; k < hi; k += 1) {
+      const crossing = crossingRooms(grid, box, axis, k);
+      if (!crossing.length) {
+        const [ba, bb]: [Box, Box] =
+          axis === 'y'
+            ? [
+                { ...box, r1: k },
+                { ...box, r0: k },
+              ]
+            : [
+                { ...box, c1: k },
+                { ...box, c0: k },
+              ];
+        const a = guillotine(grid, ba) ? null : ba;
+        const b = guillotine(grid, bb) ? null : bb;
+        if (!a && !b) return null;
+        return pinwheelSpot(grid, (a ?? b)!);
+      }
+      if (!bestCut || crossing.length < bestCut.rooms.length) {
+        bestCut = { axis, k, rooms: crossing };
+      }
+    }
+  }
+  return bestCut ? { box, ...bestCut } : null;
+}
+
+/** Phòng nằm cả hai bên đường lưới `k` trong vùng. */
+function crossingRooms(grid: SketchGrid, box: Box, axis: Axis, k: number): string[] {
+  const before = new Set<string>();
+  const after = new Set<string>();
+  for (let r = box.r0; r < box.r1; r += 1) {
+    for (let c = box.c0; c < box.c1; c += 1) {
+      const id = grid.cells[r]![c]!;
+      ((axis === 'y' ? r < k : c < k) ? before : after).add(id);
+    }
+  }
+  return [...before].filter((id) => after.has(id)).sort();
 }
 
 /** Đường lưới `k` theo trục không có phòng nào nằm cả hai bên trong vùng. */

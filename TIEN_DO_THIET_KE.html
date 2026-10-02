@@ -499,6 +499,180 @@
               </td>
             </tr>
             <tr>
+              <td>01/10</td>
+              <td>T111 — Hai lượt thật 46d6eff3, fdd486b1 (9.3.0) hỏng: ba lỗi chương trình</td>
+              <td>
+                Mất cửa chính khi đổi mã ngắn; một mã ở hai tầng; mô hình không nghe lỗi phòng chữ L
+                của chính nó (mã sketch_room_crooked). Lời dẫn 9.3.1 giữ khổ lưới. Mức tìm biến thể
+                65 tách khỏi ngưỡng nhận 60. Phát lại 15 → 17, không lùi. Chưa commit.
+              </td>
+            </tr>
+            <tr>
+              <td>01/10</td>
+              <td>T110 — Hạ ngưỡng nhận phương án 65 → 60 điểm</td>
+              <td>Haan yêu cầu. Sàn nhóm 40 % giữ nguyên. Chưa commit.</td>
+            </tr>
+            <tr>
+              <td>30/09</td>
+              <td>T109 — Báo mọi lỗi ngay một lượt (nhắm tối đa 4 lời gọi)</td>
+              <td>
+                · Danh mục sai vẫn soát bản phác mọi tầng: 9/13 vòng hỏng ở danh mục nay kèm lỗi bản
+                phác, 3 vòng tiết kiệm một lời gọi. · Lời khuyên ban công góc sớm. · Lời dẫn 9.3.0.
+                · Tối đa 5 lời gọi (4 lượt sửa). · Chia lại tầng mà ban công sai thì xếp lại với ban
+                công ghim đúng ô bản phác: phát lại 13 → 15 vòng xếp được, không vòng nào lùi;
+                bea4c6fa lẽ ra ra mặt bằng ở lời gọi 5. Đột biến M121–M123. Chưa commit.
+              </td>
+            </tr>
+            <tr>
+              <td>30/09</td>
+              <td>T108 — Giặt phơi có chỗ phơi đồ</td>
+              <td>
+                · Tiêu chí điểm D4: giặt phơi phải có cửa sổ ra mặt thoáng, hoặc cửa / tường chung
+                với ban công, sân thượng, sân. Trừ điểm, không chặn. · Câu nhắc D4 và một ý trong
+                lời dẫn. Thước <code>score_version</code> 4. Đột biến M120. Chưa commit.
+              </td>
+            </tr>
+            <tr>
+              <td>30/09</td>
+              <td>T107 — Tổng hợp 37 lượt thật, đợt 1: câu nhắc và vòng sửa</td>
+              <td>
+                · 37 lượt 23–30/09, 5 ra mặt bằng (14 %), 15,69 USD; lỗi lối vào ở 30/37 lượt, 35 %
+                câu nhắc lặp nguyên văn. · Dừng khi ba lượt liền cùng tập lỗi (kiểu dừng
+                <code>stuck</code>). · Lượt sửa chỉ gửi tầng chưa khoá, mã phòng ngắn. · Bỏ lỗi ban
+                công do chương trình chia lại tầng. · Chong chóng và lối vào nói đúng hàng/cột. ·
+                Ghi token đọc từ bộ nhớ đệm. · Lời dẫn: hành lang là dải chữ nhật, tự kiểm lối vào.
+                · Đợt 3 (tự nối phòng cụt): khung xương 0 ứng viên với biệt thự lõi giữa; thử mở hai
+                hàng 14 = 14, không lợi, đã gỡ — chờ Haan chọn hướng. · Hai lượt thật 9.2.0
+                (bea4c6fa, f1a88ac1; 1,19 USD): cả hai hỏng; lối vào hết sau một lượt sửa, hành lang
+                thành dải thẳng; chặn còn lại là phòng nhỏ vẽ dải mỏng thiếu sàn → chia lại tầng →
+                ban công bắt buộc bị dời. · Thêm <code>min_side_cells</code> cho phòng có sàn đầu
+                bài (M119). Giữ ban công khi chia lại bằng xếp hạng: không lợi, gỡ — cần ghim ban
+                công. Phát lại 14 = 14. Đột biến M115–M118. Lời dẫn 9.2.0. Chưa commit.
+              </td>
+            </tr>
+            <tr>
+              <td>30/09</td>
+              <td>T106 (tiếp) — Lượt thật f351115d: WC chung, hướng bàn thờ, ban công góc</td>
+              <td>
+                · gpt-5.6-terra, 0,570 USD, lưu 81,1 điểm (dưới ngưỡng nhóm E); thang U rộng đúng
+                tài liệu. · WC khép kín không còn đáp ứng dòng WC chung của đầu bài. · Cửa phòng thờ
+                không mở ở vách sau lưng bàn thờ theo hướng gia chủ khai. · Ban công góc chỉ tính
+                cho mặt nó dài hơn rõ rệt. · Phát lại 18 → 14, bốn vòng mất đều là ban công góc. Đột
+                biến M111–M113. Chưa commit.
+              </td>
+            </tr>
+            <tr>
+              <td>30/09</td>
+              <td>T106 — Loại thang bộ theo tài liệu thang bộ</td>
+              <td>
+                · Đầu bài có câu «Loại thang bộ» (U, U chiếu nghỉ rộng, L, thẳng, 3 vế; xoắn ốc bỏ).
+                · Bậc 171 × 260 mm; ô thang suy theo loại, khớp số tài liệu. · Chưa quyết: người già
+                → U rộng, khối &lt; 4 m → thẳng, còn lại U. · Bộ xếp, lối vào thang, tờ vẽ (số bậc,
+                đường cắt, nét đứt, chấm bậc 1, mũi tên LÊN) theo loại. · Phát lại: thang cũ 18/18
+                giữ nguyên; bật loại thang 7 vòng (bản phác cũ vẽ ô thang nhỏ). Đột biến M106–M110.
+                Hợp đồng đổi — phát hành API và giao diện cùng lúc. Chưa commit.
+              </td>
+            </tr>
+            <tr>
+              <td>30/09</td>
+              <td>T105 (tiếp) — Lượt thật 25fdc90c: ô thang không phải lối đi</td>
+              <td>
+                · gpt-5.6-terra, 0,328 USD, lưu 80,7 điểm; Haan chấm bốn chỗ. · Bộ phát lại thiếu
+                <code>tidyHouse</code> như đường thật — đã sửa. · Ô thang là điểm cuối khi loang
+                cửa, một lối mỗi tầng; phòng giao thông không tới được thì báo; lối lên chỉ ở cạnh
+                dài là lỗi <code>stair_entry_long_side</code>. · Khung xương dựng được thang giữa
+                nhà. · Thước: D2 (phòng ngủ tối hẳn), C11 (gara vào phòng khách). Lời dẫn 9.1.0. ·
+                Phát lại 22 → 18/148: các vòng mất đều đi xuyên ô thang. · Chưa gỡ: tầng 2 của
+                25fdc90c (hành lang quanh thang chỉ một ô), hành lang tầng 1 rộng. Đột biến
+                M96–M105. Lượt thật 1330ce12 (0,564 USD) hỏng tầng 2 — câu nhắc nay nói ngay vị trí
+                ô thang tầng trên. Chưa commit.
+              </td>
+            </tr>
+            <tr>
+              <td>30/09</td>
+              <td>T105 — Q-57: ban công «ở» mặt mà cạnh dài mở ra</td>
+              <td>
+                · Haan chọn A: ban công dài (&gt; 1,5 lần) chỉ chạm mặt cấm bằng đầu ngắn thì không
+                tính là ở mặt ấy; gần vuông vẫn tính mọi mặt chạm. Sửa cả cổng mặt bằng lẫn cổng bản
+                phác (<code>plan-demands.ts</code> <code>shortEndOnly</code>, tỷ lệ đọc từ
+                <code>rules/nvg-mandatory.yaml</code>). · Phát lại 144 vòng: 894b350d cả sáu vòng ra
+                mặt bằng 68,2–69,1; 138 vòng khác không đổi. Đột biến M95. Chưa commit.
+              </td>
+            </tr>
+            <tr>
+              <td>30/09</td>
+              <td>T104 (tiếp) — Lượt thật 894b350d (đầu bài trả lời khách – ăn – bếp)</td>
+              <td>
+                · gpt-5.6-sol, 0,795 USD, thất bại: cả sáu vòng chỉ vướng ban công phơi chạm mép
+                phải bằng đầu ngắn (cạnh dài quay ra mặt sau) — tắt riêng phép kiểm ấy thì ra mặt
+                bằng 69,1. Q-57 đã gỡ ở T105. · Câu khách – ăn – bếp chưa tới lời gọi dựng cả nhà —
+                đã thêm vào đầu bài văn xuôi. Chưa commit.
+              </td>
+            </tr>
+            <tr>
+              <td>30/09</td>
+              <td>T104 — Haan chấm lượt b1543b8c: thang, giặt phơi, khách – ăn – bếp, hành lang</td>
+              <td>
+                · Lượt thật b1543b8c (gpt-5.6-terra, 0,619 USD) lưu mặt bằng 69,6 điểm. · Thang: lối
+                vào dời về đầu ngắn giáp hành lang, ô mở ở góc bậc 1 (hết chữ «LÊN» bị tường bít). ·
+                Giặt phơi đổi chỗ với phòng kỹ thuật ra góc cuối (dữ liệu
+                <code>passage.open_face_first</code>). · Câu hỏi mới
+                <code>lifestyle.living_dining_kitchen</code>: liền / tách khách – ăn – bếp, chương
+                trình không gộp cặp gia chủ muốn tách. · Hành lang: Haan chọn hướng (a) + khung 0,9
+                / 1,2 / biệt thự 1,5 m — thu hẹp là biến thể cả nhà, phần dư cho cụm không chứa
+                thang; tầng 1 lượt Terra 2,44 → 1,54 m. · Phát lại 138 vòng: không vòng nào lùi. Đột
+                biến M91–M94. Chưa commit.
+              </td>
+            </tr>
+            <tr>
+              <td>29/09</td>
+              <td>T103 (tiếp) — Lượt thật 7c6de305 (lời dẫn 9.0.0, ban công khai lại theo Q-55)</td>
+              <td>
+                · gpt-5.6-sol, 6 lời gọi, 0,947 USD, thất bại: vòng 4–6 chỉ còn «thiếu ban công mặt
+                trước». · Lời dẫn 9.0.0 có tác dụng: tầng 2 vẽ một trục hành lang liền, phòng hai
+                bên. · Lỗi chương trình: khi chia lại tầng 2, dải WC + ban công của phòng ngủ chính
+                quay vào lòng nhà. Sửa <code>pack.ts</code>: thử hai dải riêng khi ban công bị kẹp.
+                Phát lại: 126 vòng cũ trùng khít, lượt mới 0 → 2 mặt bằng 65,8 điểm (gồm vòng cuối).
+                · Phép thử <code>ai-live-7c6de305.test.ts</code>, đột biến M90. Chưa commit.
+              </td>
+            </tr>
+            <tr>
+              <td>29/09</td>
+              <td>T103 — Ba đòn bẩy sau khung xương: đo, gỡ hai, lời dẫn 9.0.0 chờ lượt thật</td>
+              <td>
+                · Soi vết tầng 2: ô thang nằm ngang (dải lõi sâu 2,05 m), vùng trước sâu 8,35–9,9 m,
+                khung chỉ xếp một hàng phòng. Thử hàng giữa cạnh lõi và hai hàng tự cân (chia hàng +
+                dò chiều sâu): 11 / 126, 0 vòng thêm → gỡ. · Lõi cả nhà (lật gương khi tầng trên
+                hỏng): 0 vòng thêm, còn làm câu lỗi gửi mô hình tả bản phác đã lật → gỡ. · Q-55 mô
+                phỏng đua 1 m mặt trước / trái trên ba lượt: 0 vòng thêm, điểm giảm nhẹ → không đổi
+                mã, vẫn là câu hỏi dữ liệu. · Lời dẫn 9.0.0: hành lang vẽ ngay sau ô thang, trước
+                phòng, một trục liền (thay câu cũ, vẫn dưới trần 5.000 ký tự). Cần một lượt thật
+                (~0,35–0,60 USD) — chờ Haan cho phép. · Chi tiết:
+                <code>QUYET_DINH_AI.md</code> T103. Chưa commit.
+              </td>
+            </tr>
+            <tr>
+              <td>29/09</td>
+              <td>
+                T102 — Khung xương trước: chương trình dựng lõi + hành lang, phòng lấp quanh hành
+                lang (<code>arrange/skeleton.ts</code>,
+                <code>doc/design/THIET_KE_KHUNG_XUONG.md</code>)
+              </td>
+              <td>
+                · Haan: «đưa ra phương án cải tiến, kể cả tái cấu trúc, rồi implement». Lịch sử 87
+                lượt thật: mặt bằng 13 xong / 64 hỏng; phát lại 126 vòng ghi: 10 ra mặt bằng, 73
+                hỏng tầng 2 vì lối vào. · Bản phác hỏng → khung xương: thang / thang máy đúng mốc
+                (khe cạnh thang máy thành sảnh), dải dọc áp lõi, dải ngang trước / sau ở ba chế độ
+                (không / áp lõi / giữa vùng hai hàng), phòng theo vị trí bản phác, WC khép kín một
+                bên phòng mẹ về trục ống nước, ban công đúng mặt đầu bài; mọi lá hành lang là một
+                ngân sách. Lối vào là bất biến khi dựng. · Đo: <b>11 / 126</b> (đối chứng 10), 0
+                lùi; vòng thêm 6bbc6d0e vòng 4 (63,6). Tầng 2 biệt thự demo vẫn kẹt vì chương trình
+                phòng quá dày cho tầng có hành lang (vượt bề ngang 0–30 %) → ba đòn bẩy tiếp: biến
+                thể lõi cả nhà, ban công đua trong đất nhà (Q-55), lời dẫn 9.0. · Phép thử mới
+                <code>ai-arrange-skeleton.test.ts</code>, đột biến M89. Chưa commit.
+              </td>
+            </tr>
+            <tr>
               <td>28/09</td>
               <td>T98 — Hướng (a) của Q-54 (bộ xếp tránh khu ướt đè phòng ở): làm, đo, gỡ</td>
               <td>
@@ -608,6 +782,37 @@
             </tr>
           </thead>
           <tbody>
+            <tr>
+              <td class="num">02/10</td>
+              <td>
+                T112 đợt 2 — lời dẫn 9.4.0: câu theo cờ <code>[[cờ|…]]</code> (thang máy, sân
+                thượng, ông bà chưa ghim tầng), WC khép kín chỉ mở từ phòng mẹ, bếp – WC không chung
+                tường, <code>knowledge.faces</code> (mặt mù / nắng gắt / gió), thứ tự assumptions.
+                Cảnh báo sớm trên đầu bài <code>ban_cong_mat_sat_dat_trong</code> (Q-60).
+              </td>
+              <td>
+                1.760 phép thử logic + 552 web xanh. Chờ Haan deploy và chạy 2 lượt thật trên demo;
+                đối chứng 46d6eff3, fdd486b1 (9.3.0). Chưa commit.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">01/10</td>
+              <td>
+                T112 — Review lời dẫn mặt bằng, đợt 1 (tất định): góc làm việc →
+                <code>study_area</code>, <code>open_pairs</code> theo tầng, bỏ
+                <code>core</code> khỏi luật đi lại, mặt giáp đất trống lùi &lt; 1 m không thoáng,
+                chữ «đua ra ngoài mép nhà», cục nóng ở sân thượng → đòi sân thượng (không chặn),
+                ghép phòng ngủ khép kín đúng dòng đầu bài, cảnh báo gió bị nhà bên chặn, kiểm khả
+                thi 85 % trước lời gọi đầu tiên.
+              </td>
+              <td>
+                19 phép thử mới (<code>ai-review-t112.test.ts</code>), đột biến M124–M126. Phát lại
+                194 vòng: ghép khép kín 17 = 17; mặt thoáng 17 → 12 (lượt ghi vẽ theo mặt sau thoáng
+                — phát lại mặc định tắt,
+                <code>openSetback: true</code> để đo). Đợt 2 (lời dẫn) chờ cho phép chạy thật. Chưa
+                commit.
+              </td>
+            </tr>
             <tr>
               <td class="num">28/09</td>
               <td>
@@ -1398,6 +1603,41 @@
       </p>
 
       <div class="flag">
+        <h3>Q-58 · Phiếu khảo sát: hỏi loại mái và tum thang? — 01/10/2026</h3>
+        <p>
+          Review lời dẫn (P0-04): đầu bài đặt bồn nước, năng lượng mặt trời, cục nóng trên mái mà
+          không nói có tum thang lên mái không. T112 chỉ thêm đòi hỏi sân thượng (không chặn). Có
+          thêm câu «mái bằng có sân thượng / mái bằng không dùng / mái dốc; có tum thang không» vào
+          mục 4 (Khối nhà, thang và mặt ngoài) không? Nếu có tum thì chương trình hiện chưa dựng
+          tầng tum — là một đợt riêng.
+        </p>
+      </div>
+      <div class="flag">
+        <h3>Q-59 · Phiếu khảo sát: vị trí lối vào và lối xe trên mặt? — 01/10/2026</h3>
+        <p>
+          Review lời dẫn (P1-08): phiếu chỉ hỏi MẶT có lối vào / lối xe, không hỏi vị trí trên mặt
+          (trái / giữa / phải), và «Mặt tiếp cận được: trước, trái» đọc được hai nghĩa. Có hỏi thêm
+          vị trí không? Thêm thì cổng kiểm được cửa chính, cửa xe đúng chỗ.
+        </p>
+      </div>
+      <div class="flag">
+        <h3>
+          Q-60 <s>đóng</s> · Giữ mặt thoáng theo khoảng lùi dù phát lại 17 → 12? — trả lời
+          02/10/2026
+        </h3>
+        <p>
+          <b>Haan 02/10/2026:</b> giữ, đã sửa đầu bài demo; báo mâu thuẫn ngay trên đầu bài. Đã làm:
+          cảnh báo <code>ban_cong_mat_sat_dat_trong</code> ở màn hình đầu bài.
+        </p>
+        <p>
+          T112 làm theo lựa chọn của Haan (lùi &lt; 1 m sát đất trống thì không thoáng). Phát lại
+          các lượt ghi mất 5 mặt bằng vì câu trả lời cũ quay ban công / phòng ở ra mặt sau. Đầu bài
+          demo muốn ban công phơi phía sau với tường sau sát ranh — màn hình nay cảnh báo. Đề xuất:
+          giữ, và thêm sân sau ~1,5 m vào đầu bài demo. Bỏ thì xoá dòng
+          <code>dat_trong: 1</code> trong <code>kb/site_context.yaml</code>.
+        </p>
+      </div>
+      <div class="flag">
         <h3>
           Q-49 <s>đóng</s> · Kho hồ sơ lên 7 bộ — hạ ngưỡng thống kê không? — trả lời 23/09/2026
         </h3>
@@ -1457,33 +1697,6 @@
           <b>Cần Haan</b> Cho phép 2–3 lượt «AI Design» thật trên đầu bài demo (mỗi lượt 1–4 lời
           gọi, 0,08–0,23 USD mỗi lời gọi) để đo mô hình có tuân luật mới không và tốn thêm bao nhiêu
           lượt sửa.
-        </p>
-      </div>
-
-      <div class="flag">
-        <h3>
-          Q-54 · Sàn nhóm E chặn cả tám mặt bằng phát lại — sửa bộ xếp, sửa thước E2, hay nới sàn? —
-          28/09/2026
-        </h3>
-        <p class="kv">
-          <b>Hiện trạng</b> Tám mặt bằng phát lại qua 65 điểm nhưng nhóm «Dựng được» chỉ 20 %, dưới
-          sàn 40 % (T96). E4 không chấm được (không bản nào có hộp kỹ thuật), nên nhóm E chỉ còn E2
-          (WC tầng trên chồng WC tầng dưới, đo khoảng cách TÂM ≤ 1,5 m, một nửa đạt = 0 điểm) và E5
-          (khu ướt đè phòng ở). E2 = 0 ở cả tám. Trên lượt thật mỗi bản sẽ tốn thêm lượt sửa (~0,1
-          USD/lượt), trong khi vị trí WC do bộ xếp đặt theo dải.
-        </p>
-        <p class="kv">
-          <b>Ba hướng</b> (a) Bộ xếp ưu tiên đặt WC / giặt tầng trên chồng lên WC / khu phụ tầng
-          dưới — không đổi thước, đo bằng phát lại. (b) Đổi cách đo E2 sang phần chồng nhau (V-30) —
-          sửa THƯỚC, phải đo lại hai hồ sơ hiệu chuẩn. (c) Tạm miễn sàn cho nhóm chỉ còn ít tiêu chí
-          chấm được. Đề xuất: (a) trước, (b) theo quyết định của Haan về V-30.
-        </p>
-        <p class="kv">
-          <b>Cập nhật 28/09 — (a) đã thử và gỡ (T98)</b>: không đổi được bản nào, vì tầng trên chỉ
-          có một cây qua cổng lối vào; vị trí khu ướt do vùng trong ý định của mô hình quyết. Chỉ
-          cần E5 đạt là nhóm E lên 60 %. Còn lại: (d) thêm vào lời dẫn bản phác «phòng giặt cũng
-          chồng khu ướt tầng dưới, khu ướt không đè phòng ở tầng dưới» — phải đo bằng lượt thật
-          (~0,35 USD/lượt GPT-6 Sol); (b); (c).
         </p>
       </div>
 

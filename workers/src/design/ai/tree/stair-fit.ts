@@ -14,6 +14,7 @@
  */
 
 import type { ConstructionNorms } from '../../kb/construction';
+import { stairFits, stairNeed, type StairParams } from '../stair-geometry';
 
 /** Số bậc cao của một tầng cao `storeyCm` — trần 40, sàn 2, như bộ vẽ đọc. */
 export function stairTreads(construction: ConstructionNorms, storeyCm: number): number {
@@ -47,6 +48,60 @@ export function stairRunNeedCm(
   return Math.ceil((perFlight - 1) * goingCm + landing);
 }
 
+/**
+ * Thông số thang theo LOẠI của lượt này (T105) — `null` khi lượt không mang loại thang (dữ liệu, phép thử cũ) hay kho
+ * không có bảng loại: khi ấy mọi hàm dưới đi nhánh cũ (vế thẳng song song theo `two_flights_min_width_m`).
+ */
+export function stairParamsOf(construction: ConstructionNorms, treads: number): StairParams | null {
+  const shape = construction.stairs.shape;
+  const spec = shape ? construction.stairs.shapes?.[shape] : undefined;
+  const going = construction.stairs.going_m;
+  if (!shape || !spec || going === undefined) return null;
+  return {
+    shape,
+    risers: treads,
+    going: going * 100,
+    flightWidth: spec.flight_width_m * 100,
+    landing: spec.landing_m * 100,
+    gap: (spec.gap_m ?? 0) * 100,
+  };
+}
+
+/**
+ * Ô thang nhỏ nhất (lọt lòng, cm) cho tầng thường: `long` × `short` — cạnh dài và cạnh ngắn, không kể chiều nào là
+ * vế đầu (thang L, ba vế gần vuông; bản phác chưa nói thang đi lên hướng nào). `null` khi không kiểm.
+ */
+export function stairMinCm(
+  construction: ConstructionNorms,
+): { long: number; short: number } | null {
+  const treads = stairTreads(construction, Math.round(construction.levels.storey_height_m * 100));
+  const params = stairParamsOf(construction, treads);
+  if (params) {
+    const need = stairNeed(params);
+    return { long: Math.max(need.along, need.across), short: Math.min(need.along, need.across) };
+  }
+  const width = construction.stairs.two_flights_min_width_m * 100;
+  const run = stairRunNeedCm(construction, { flights: 2, treads, acrossCm: width });
+  return run === null ? null : { long: Math.max(run, width), short: Math.min(run, width) };
+}
+
+/** Ô thang `w × h` (lọt lòng) đặt được loại thang của lượt theo ít nhất một chiều — `null` = không có loại. */
+export function stairFitsEither(
+  construction: ConstructionNorms,
+  treads: number,
+  w: number,
+  h: number,
+): { fits: boolean; up: '+x' | '+y'; needAlong: number; needAcross: number } | null {
+  const params = stairParamsOf(construction, treads);
+  if (!params) return null;
+  const need = stairNeed(params);
+  if (stairFits(params, h, w))
+    return { fits: true, up: '+y', needAlong: need.along, needAcross: need.across };
+  if (stairFits(params, w, h))
+    return { fits: true, up: '+x', needAlong: need.along, needAcross: need.across };
+  return { fits: false, up: h >= w ? '+y' : '+x', needAlong: need.along, needAcross: need.across };
+}
+
 /** Ô thang theo hình chữ nhật lọt lòng `rect` và chiều `up` có đủ dài không; `null` = đủ hoặc không kiểm. */
 export function stairShortfall(
   construction: ConstructionNorms,
@@ -56,6 +111,14 @@ export function stairShortfall(
   const alongY = stair.up.endsWith('y');
   const haveCm = alongY ? y1 - y0 : x1 - x0;
   const acrossCm = alongY ? x1 - x0 : y1 - y0;
+  // Thang theo loại (T105): đủ DÀI dọc vế đầu và đủ RỘNG ngang — thiếu chiều nào báo chiều ấy.
+  const params = stairParamsOf(construction, stair.treads);
+  if (params) {
+    const need = stairNeed(params);
+    if (haveCm + 1 < need.along) return { needCm: need.along, haveCm };
+    if (acrossCm + 1 < need.across) return { needCm: need.across, haveCm: acrossCm };
+    return null;
+  }
   const needCm = stairRunNeedCm(construction, {
     flights: stair.flights,
     treads: stair.treads,

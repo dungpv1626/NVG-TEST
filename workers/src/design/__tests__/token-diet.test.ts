@@ -25,7 +25,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { parseAreaNorms } from '../kb/space-norms';
 import { schemaFor, type SchemaProvider } from '../llm/schema-dialect';
-import { housePrompt, planContext, type PlanVariant } from '../ai/plan';
+import { housePrompt, houseSystem, planContext, type PlanVariant } from '../ai/plan';
 import { NO_RULE_PACKS, selectedRulePack } from '../ai/rule-packs';
 import { RulePack } from '../rules/rule-pack';
 import { parseBriefFidelity } from '../kb/brief-fidelity';
@@ -215,7 +215,13 @@ describe('thân lời gọi không mang khoảng trắng thuần', () => {
     // 4.900 → 5.000 (28/09/2026, lời dẫn 8.38.0, T99): phòng giặt cũng chồng khu ướt tầng dưới, khu ướt
     // không đè phòng khách / ăn / ngủ tầng dưới (~70 ký tự). Cả tám mặt bằng phát lại hụt sàn nhóm E vì
     // đúng chỗ này, và bộ xếp không có cây thứ hai để tự sửa (T98) — chỉ bản phác của mô hình quyết được.
-    expect(system.length, `${system.length} ký tự`).toBeLessThan(5_000);
+    // 5.000 → 5.500 (02/10/2026, lời dẫn 9.4.0, T112 — review lời dẫn): đo bản GỬI ĐI dài nhất (mọi cờ
+    // `[[…]]` bật), không đo khuôn. Thêm ~400 ký tự: WC khép kín chỉ mở từ phòng mẹ (P0-02), bếp – WC
+    // không chung tường (P0-06 — câu cũ «grouped» nói ngược luật), `knowledge.faces` (P1-04), thứ tự
+    // assumptions (P1-10). Câu thang máy / sân thượng / ông bà chưa ghim tầng nay chỉ có khi đúng (P2-01).
+    const longest = houseSystem(system, { elevator: true, terrace: true, ong_ba_unset: true });
+    expect(longest.length, `${longest.length} ký tự`).toBeLessThan(5_500);
+    expect(longest).not.toMatch(/\[\[|\]\]/);
     expect(system).not.toContain('<example>');
     const schema = JSON.stringify(schemaFor('openai', sent));
     expect(schema.length, `${schema.length} ký tự`).toBeLessThan(3_000);

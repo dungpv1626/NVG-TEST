@@ -46,7 +46,14 @@ import { scorePlan } from '../plan-score';
 import { clearAreaM2 } from '../sketch-cells';
 import { layoutLevel, type LevelAnchors, type LevelLayout, type RoomGroups } from '../tree';
 import { MIN_CELL_CM } from '../tree/cells';
-import { stairFlights, stairRunNeedCm, stairShortfall, stairTreads } from '../tree/stair-fit';
+import {
+  stairFitsEither,
+  stairFlights,
+  stairMinCm,
+  stairParamsOf,
+  stairShortfall,
+  stairTreads,
+} from '../tree/stair-fit';
 import { deriveDoors } from './doors';
 import { intentFit, type IntentFit } from './fit';
 import { enumerateCarved, enumerateFrames, type FrameCandidate } from './frames';
@@ -70,6 +77,9 @@ import {
   type PenaltyWeights,
 } from './pack';
 import { emitNodes, leaves, pinLeaf, type Axis, type Placed, type Side } from './placed';
+import { trimCorridors } from './corridor-trim';
+import { swapTowardOpenFace } from './open-face';
+import { skeletonCandidates } from './skeleton';
 import {
   copySketch,
   forceSketchRect,
@@ -115,6 +125,18 @@ export interface ArrangeInput {
   construction: ConstructionNorms;
   groups: RoomGroups;
   mergeAllowed: ReadonlySet<string>;
+  /**
+   * Cặp loại phòng gia chủ KHÔNG muốn liền (khoá `a|b` xếp theo chữ cái) — câu khách – ăn – bếp của đầu bài
+   * (T103). Cặp này không gộp, không ô thông, không bỏ vách: hai phòng có vách và cửa. Vắng = không ràng buộc.
+   */
+  openForbidden?: ReadonlySet<string> | null;
+  /** Cạnh phòng thờ mà bàn thờ dựa lưng theo hướng gia chủ khai (T106) — cửa phòng thờ không mở ở đó. */
+  altarBackSide?: 'x0' | 'x1' | 'y0' | 'y1' | null;
+  /**
+   * Thu hẹp hành lang rộng quá khung nghề (T104, `arrange/corridor-trim.ts`). Chỉ bật trong biến thể cả nhà của
+   * `evaluateHouseBest` — cửa của cả tầng suy lại theo hình học mới, nên cái lợi phải đo trên cả nhà.
+   */
+  trimCorridors?: boolean;
   openFaces: readonly Face[];
   accessFaces: readonly Face[];
   entrances: { main: Face | null; vehicle: Face | null };
@@ -132,6 +154,14 @@ export interface ArrangeInput {
    * trái, rồi cả nhà hỏng vì «thiếu ban công mặt sau» mà mô hình đã vẽ.
    */
   sketchBalconySides?: readonly Side[];
+  /**
+   * Ban công ĐỨNG RIÊNG (không khép kín của phòng nào) mà bản phác vẽ chạm một mặt đầu bài BẮT BUỘC, kèm chữ nhật
+   * bản phác (T109). Khung khoét giữ nó đúng ô ấy như ô thang: chia lại tầng không còn dời nó đi. Lượt thật
+   * bea4c6fa: bản phác đặt `bc2` dọc mặt trước; phòng thờ hụt sàn, tầng 2 bị chia lại, `bc2` sang mặt phải cấm.
+   */
+  sketchBalconyPins?: readonly { id: string; rect: Rect }[];
+  /** Lượt xếp lại ghim `sketchBalconyPins` làm ô mốc (T109) — chỉ `retryWithBalconyPins` bật. */
+  pinBalconies?: boolean;
   /**
    * Chỉ SOÁT bản phác (lối vào, sàn đầu bài), không xếp (T92). Dùng cho tầng trên khi tầng dưới đã hỏng:
    * trước đây tầng 1 hỏng thì tầng trên không được soát, mô hình sửa xong tầng 1 mới biết tầng 2 cũng
@@ -217,6 +247,8 @@ export interface ArrangeResult {
   sketchFailure?: PlanIssue[];
   /** Ô lõi mà cách chia lại đã dời khỏi chỗ bản phác tầng 1 vẽ (`movedCores`) — đi cùng `sketchFailure`. */
   coresMoved?: string[];
+  /** Ô lưới bản phác mà ô thang tầng này phải nằm (mốc tầng dưới) — `rows`, `cols` đếm từ 1. */
+  stairCells?: { core: string; rows: string; cols: string };
 }
 
 /**
@@ -244,7 +276,143 @@ const INNER_OPEN = new Set(['light_well', 'courtyard']);
 
 const FACE_SIDE: Record<Face, Side> = { front: 'y0', back: 'y1', left: 'x0', right: 'x1' };
 
+/**
+ * Xếp một tầng. Tầng có mốc ô thang từ tầng dưới thì kết quả kèm ô lưới bản phác mà ô thang phải nằm (T105, lượt
+ * 1330ce12: vòng 4–5 tầng 2 hỏng vì bản phác không khớp ô thang tầng 1 đã dựng, trong khi câu nhắc chỉ nói vị trí ấy
+ * khi mô hình đã vẽ đè lên nó). Lớp gọi đưa vị trí vào câu nhắc của mọi lượt sửa tầng này.
+ */
 export function arrangeLevel(input: ArrangeInput): ArrangeResult {
+  const result = retryWithBalconyPins(input, arrangeLevelCore(input));
+  const cells = stairCellsOf(input);
+  return cells ? { ...result, stairCells: cells } : result;
+}
+
+/**
+ * Tầng xếp được nhưng ban công sai (T109): có ban công chạy dọc mặt gia chủ cấm, hay ban công đứng riêng bản phác vẽ
+ * dọc một mặt bắt buộc thoáng không còn ở mặt ấy — cổng cả nhà chắc chắn bác. Xếp lại tầng với các ban công ấy GHIM
+ * đúng ô bản phác; nhận bản mới chỉ khi nó xếp được và ban công đúng. Chỉ chạy khi bản thường đã sai, nên không đụng
+ * tới ca nào đang đúng. Lượt thật bea4c6fa vòng 5–6: phòng thờ hụt sàn, tầng 2 bị chia lại, ban công mặt trước sang mặt
+ * phải cấm — cả nhà bị bác.
+ */
+function retryWithBalconyPins(input: ArrangeInput, result: ArrangeResult): ArrangeResult {
+  const rooms = result.layout?.level?.rooms;
+  if (
+    !rooms ||
+    input.precheckOnly ||
+    input.pinBalconies ||
+    !input.balcony ||
+    !input.sketch?.length
+  ) {
+    return result;
+  }
+  const spaces = input.program.spaces.filter((space) => space.level === input.level);
+  const sketch = prepareSketch({
+    rows: input.sketch,
+    level: input.level,
+    footprint: input.anchors?.footprint ?? input.buildableCm,
+    known: new Set(spaces.map((space) => space.id)),
+    trim: input.anchors ? 'fit' : 'shrink',
+    streetSides: input.accessFaces.map((face) => FACE_SIDE[face]),
+  });
+  if (!sketch) return result;
+  const pins = sketchBalconyPinsOf(input, sketch);
+  if (!pins.length) return result;
+  const ok = (candidate: AiPlanRoomsLevel['rooms']) =>
+    balconyOffForbidden(input, candidate, sketch.footprint) &&
+    pins.every((pin) => pinKept(input, candidate, pin, sketch.footprint));
+  if (ok(rooms)) return result;
+  const retry = arrangeLevelCore({ ...input, pinBalconies: true });
+  const retried = retry.layout?.level?.rooms;
+  if (!retried || !ok(retried)) return result;
+  return {
+    ...retry,
+    notes: [
+      ...retry.notes,
+      {
+        code: 'balcony_pinned',
+        message: `Tầng ${input.level}: chia lại tầng dời ban công khỏi mặt đầu bài — chương trình xếp lại, giữ ${pins.map((pin) => `"${pin.id}"`).join(', ')} đúng ô bản phác.`,
+      },
+    ],
+  };
+}
+
+/** Ban công ghim còn chạy dọc (các) mặt bắt buộc mà ô bản phác của nó áp. */
+function pinKept(
+  input: ArrangeInput,
+  rooms: AiPlanRoomsLevel['rooms'],
+  pin: { id: string; rect: Rect },
+  footprint: Rect,
+): boolean {
+  const room = rooms.find((r) => r.id === pin.id);
+  if (!room) return false;
+  const tolerance = Math.round(input.construction.walls.exterior_m * 100);
+  const [x0 = 0, y0 = 0, x1 = 0, y1 = 0] = room.rect;
+  const f = footprint;
+  const sidesOf = (r: Rect, tol: number): Side[] => {
+    const wide = r.x1 - r.x0 >= r.y1 - r.y0;
+    const all: [Side, boolean][] = [
+      ['y0', wide && r.y0 - f.y0 <= tol],
+      ['y1', wide && f.y1 - r.y1 <= tol],
+      ['x0', !wide && r.x0 - f.x0 <= tol],
+      ['x1', !wide && f.x1 - r.x1 <= tol],
+    ];
+    return all.filter(([, on]) => on).map(([side]) => side);
+  };
+  const have = sidesOf({ x0, y0, x1, y1 }, tolerance);
+  return sidesOf(pin.rect, 0).every((side) => have.includes(side));
+}
+
+/** Ô lưới bản phác của ô thang tầng dưới đã dựng — cùng phép làm tròn với `sketch_core_overlap`. */
+function stairCellsOf(input: ArrangeInput): ArrangeResult['stairCells'] {
+  const rect = input.anchors?.stair;
+  if (!rect || !input.sketch?.length) return undefined;
+  const spaces = input.program.spaces.filter((space) => space.level === input.level);
+  const core = spaces.find((space) => space.type === 'stair');
+  if (!core) return undefined;
+  const sketch = prepareSketch({
+    rows: input.sketch,
+    level: input.level,
+    footprint: input.anchors?.footprint ?? input.buildableCm,
+    known: new Set(spaces.map((space) => space.id)),
+    trim: 'fit',
+    streetSides: input.accessFaces.map((face) => FACE_SIDE[face]),
+  });
+  if (!sketch) return undefined;
+  const box = forcedCellBox(sketch, rect);
+  return { core: core.id, rows: `${box.r0 + 1}–${box.r1}`, cols: `${box.c0 + 1}–${box.c1}` };
+}
+
+/**
+ * Phòng trên bản phác NGUYÊN VĂN của mô hình mà các ô không lấp kín chữ nhật bao của nó. Đọc thẳng các hàng
+ * mô hình trả, trước mọi bước chương trình tự nắn (lấp ô trống, ép ô thang), để câu nhắc chỉ nêu lỗi của
+ * chính mô hình.
+ */
+export function crookedSketchRooms(rows: readonly string[], known: ReadonlySet<string>): string[] {
+  const boxes = new Map<string, { r0: number; r1: number; c0: number; c1: number; n: number }>();
+  rows.forEach((row, r) =>
+    row
+      .trim()
+      .split(/\s+/)
+      .forEach((id, c) => {
+        if (!known.has(id)) return;
+        const box = boxes.get(id);
+        if (!box) boxes.set(id, { r0: r, r1: r, c0: c, c1: c, n: 1 });
+        else {
+          box.r0 = Math.min(box.r0, r);
+          box.r1 = Math.max(box.r1, r);
+          box.c0 = Math.min(box.c0, c);
+          box.c1 = Math.max(box.c1, c);
+          box.n += 1;
+        }
+      }),
+  );
+  return [...boxes]
+    .filter(([, box]) => (box.r1 - box.r0 + 1) * (box.c1 - box.c0 + 1) !== box.n)
+    .map(([id]) => id)
+    .sort();
+}
+
+function arrangeLevelCore(input: ArrangeInput): ArrangeResult {
   const spaces = input.program.spaces.filter((space) => space.level === input.level);
   let sketch = input.sketch?.length
     ? prepareSketch({
@@ -276,6 +444,8 @@ export function arrangeLevel(input: ArrangeInput): ArrangeResult {
 
   const balconySides = sketch ? sketchBalconySidesOf(input, sketch) : [];
   if (balconySides.length) input = { ...input, sketchBalconySides: balconySides };
+  const pins = sketch ? sketchBalconyPinsOf(input, sketch) : [];
+  if (pins.length) input = { ...input, sketchBalconyPins: pins };
 
   const notes: DrawNote[] = [...missingSketch, ...(sketch?.notes ?? []), ...intent.notes];
   input.trace?.(
@@ -290,6 +460,33 @@ export function arrangeLevel(input: ArrangeInput): ArrangeResult {
     const issues = dedupeIssues([...intent.issues, overflow]);
     return { layout: null, intent, summary: null, issues, notes, revisable: false };
   }
+
+  let bestFailure: { issues: PlanIssue[]; weight: number } | null = null;
+  // Lý do SỬA ĐƯỢC tốt nhất đã gặp — kèm theo khi lý do chọn ở trên là lỗi hình học. Không có nó thì một
+  // ứng viên vòng khung hỏng vì lỗi hình học «thắng» và lượt chạy dừng, dù bản phác chỉ cần vẽ lại
+  // (lượt chạy thật fad0c0fa, 23/09/2026: báo thang máy lệch, im lặng về master vẽ quá nhỏ).
+  let bestRevisable: { issues: PlanIssue[]; weight: number } | null = null;
+  // Lý do nào nói cho mô hình biết: của ứng viên hỏng ÍT nhất. Lọc trước cổng (`filtered`) xếp sau mọi
+  // ứng viên đã tới cổng — nó chỉ nên lên tiếng khi không cây nào đi được tới đó.
+  const remember = (issues: PlanIssue[], filtered = false) => {
+    if (!issues.length) return;
+    // Ứng viên CHỈ vướng luật bắt buộc (T71) là lý do đáng nói nhất: mọi thứ khác đã đạt, và mô hình
+    // phải nghe đúng luật ấy — không thì nó sửa một lỗi phụ của ứng viên khác và vẽ lại y chỗ sai cũ
+    // (đo 23/09/2026 trên 9 ý định thật: câu báo lên không nhắc tới ban công nào).
+    const onlyMandatory = issues.every((issue) => MANDATORY_CODE_SET.has(issue.code));
+    const weight =
+      (onlyMandatory ? 0.5 : issues.length) +
+      (issues.every((issue) => issue.code === 'arrange_anchor_conflict') ? 100 : 0) +
+      (filtered ? 50 : 0);
+    if (!bestFailure || weight < bestFailure.weight) bestFailure = { issues, weight };
+    const revisable = issues.filter((issue) => REVISABLE_CODES.has(issue.code));
+    if (revisable.length && (!bestRevisable || weight < bestRevisable.weight)) {
+      bestRevisable = { issues: revisable, weight };
+    }
+  };
+  // Cây đã hỏng cổng ở vòng trước thì hỏng lại y như vậy: cổng không đọc vòng nới. Không tiêu suất cổng
+  // lần nữa (lượt đo 4a521f52: bốn cây rẻ nhất tầng 2 là CÙNG một mặt bằng qua ba vòng).
+  const failedGeometry = new Set<string>();
 
   // Bản phác vẽ phòng đầu bài khai diện tích THIẾU Ô thì báo ngay (T73), không để bộ xếp bỏ bản phác
   // «cứu» tầng bằng cách chia khác: lượt 011b4adc cứu tầng 1 như thế, dời ô thang, mô hình không được
@@ -329,42 +526,42 @@ export function arrangeLevel(input: ArrangeInput): ArrangeResult {
       adviseShort(input, intent, withSketchCells(shortDrawn, sketch!), sketch!),
       ...(stairOnly ? [stairOnly] : []),
     ]);
+    // Khung xương (T102): bản phác hỏng lối vào / sàn thì chương trình dựng lại theo khung, GIỮ ô lõi đúng
+    // chỗ bản phác — điều T73 lo khi «cứu» bằng chia lại. Lỗi bản phác vẫn đi cùng câu nhắc (`sketchFailure`).
+    if (!input.precheckOnly) {
+      const skeleton = skeletonStage(
+        input,
+        intent,
+        footprints[0]!,
+        sketch,
+        remember,
+        failedGeometry,
+      );
+      if (skeleton.winner) {
+        notes.push(skeletonNote(input.level, skeleton.winner.candidate.key));
+        const result = finish(input, intent, notes, skeleton.winner, {
+          candidates: skeleton.built,
+          passed: skeleton.passed,
+          relaxed: 0,
+        });
+        const moved = result.layout?.level ? movedCores(input, result.layout.level.rooms) : [];
+        return {
+          ...result,
+          sketchFailure: issues.filter((issue) => REVISABLE_CODES.has(issue.code)),
+          ...(moved.length ? { coresMoved: moved } : {}),
+        };
+      }
+    }
     return { layout: null, intent, summary: null, issues, notes, revisable: true };
   }
   if (input.precheckOnly) {
     return { layout: null, intent, summary: null, issues: [], notes, revisable: true };
   }
 
-  let bestFailure: { issues: PlanIssue[]; weight: number } | null = null;
-  // Lý do SỬA ĐƯỢC tốt nhất đã gặp — kèm theo khi lý do chọn ở trên là lỗi hình học. Không có nó thì một
-  // ứng viên vòng khung hỏng vì lỗi hình học «thắng» và lượt chạy dừng, dù bản phác chỉ cần vẽ lại
-  // (lượt chạy thật fad0c0fa, 23/09/2026: báo thang máy lệch, im lặng về master vẽ quá nhỏ).
-  let bestRevisable: { issues: PlanIssue[]; weight: number } | null = null;
-  // Lý do nào nói cho mô hình biết: của ứng viên hỏng ÍT nhất. Lọc trước cổng (`filtered`) xếp sau mọi
-  // ứng viên đã tới cổng — nó chỉ nên lên tiếng khi không cây nào đi được tới đó.
-  const remember = (issues: PlanIssue[], filtered = false) => {
-    if (!issues.length) return;
-    // Ứng viên CHỈ vướng luật bắt buộc (T71) là lý do đáng nói nhất: mọi thứ khác đã đạt, và mô hình
-    // phải nghe đúng luật ấy — không thì nó sửa một lỗi phụ của ứng viên khác và vẽ lại y chỗ sai cũ
-    // (đo 23/09/2026 trên 9 ý định thật: câu báo lên không nhắc tới ban công nào).
-    const onlyMandatory = issues.every((issue) => MANDATORY_CODE_SET.has(issue.code));
-    const weight =
-      (onlyMandatory ? 0.5 : issues.length) +
-      (issues.every((issue) => issue.code === 'arrange_anchor_conflict') ? 100 : 0) +
-      (filtered ? 50 : 0);
-    if (!bestFailure || weight < bestFailure.weight) bestFailure = { issues, weight };
-    const revisable = issues.filter((issue) => REVISABLE_CODES.has(issue.code));
-    if (revisable.length && (!bestRevisable || weight < bestRevisable.weight)) {
-      bestRevisable = { issues: revisable, weight };
-    }
-  };
-  // Cây đã hỏng cổng ở vòng trước thì hỏng lại y như vậy: cổng không đọc vòng nới. Không tiêu suất cổng
-  // lần nữa (lượt đo 4a521f52: bốn cây rẻ nhất tầng 2 là CÙNG một mặt bằng qua ba vòng).
-  const failedGeometry = new Set<string>();
-
   // Bản phác (T48) đi TRƯỚC mọi khung: qua được cổng thì đó là mặt bằng mô hình vẽ, chương trình chỉ căn
   // vách. Không qua thì vùng của bản phác vẫn dẫn các vòng dưới.
   let sketchIssues: PlanIssue[] = [];
+  let crookedFailure: PlanIssue[] = [];
   // Lỗi SỬA ĐƯỢC của bản phác khi tầng này rồi xếp được bằng cách chia lại — xem `ArrangeResult.sketchFailure`.
   let sketchFailure: PlanIssue[] = [];
   let built = 0;
@@ -447,7 +644,28 @@ export function arrangeLevel(input: ArrangeInput): ArrangeResult {
         relaxed: 0,
       });
     }
+    // Phòng mô hình vẽ không thành một chữ nhật: chương trình cắt phần lồi rồi đi tiếp, chỉ ghi chú cho kỹ
+    // sư. Bản phác hỏng thì mô hình phải biết — lượt thật fdd486b1 (01/10/2026): phòng ăn tầng 1 vẽ hình
+    // chữ L, cắt xong mất lối vào, chương trình chia lại tầng; bốn lượt sửa liền chỉ nghe lỗi của cách chia
+    // lại (gara giáp ô thang) và nộp y nguyên tầng 1.
+    const crooked = crookedSketchRooms(
+      input.sketch ?? [],
+      new Set(intent.leaves.map((leaf) => leaf.id)),
+    );
+    const crookedIssue = crooked.length
+      ? [
+          arrangeIssue(
+            'sketch_room_crooked',
+            `Bản phác tầng ${input.level}: phòng ${crooked.map((id) => `"${id}"`).join(', ')} không vẽ thành một chữ nhật ô.`,
+            { rooms: crooked.join(', ') },
+            crooked[0],
+          ),
+        ]
+      : [];
     sketchIssues = drawn.issues;
+    crookedFailure = crookedIssue;
+    // Chỉ khi cả tầng hỏng (`sketchIssues` vào câu nhắc ở cuối): tầng chia lại được thì cắt phần lồi là
+    // việc đã xong, gắn vào `sketchFailure` đổi cách lớp gọi xử lý tầng ấy — phát lại bea4c6fa vòng 5, 6 hỏng lại.
     sketchFailure = dedupeIssues([
       ...drawn.issues,
       ...((bestRevisable as { issues: PlanIssue[] } | null)?.issues ?? []),
@@ -474,6 +692,21 @@ export function arrangeLevel(input: ArrangeInput): ArrangeResult {
       ...(moved.length ? { coresMoved: moved } : {}),
     };
   };
+  // Khung xương (T102): chương trình dựng lõi + hành lang rồi lấp phòng theo vị trí bản phác — lối vào là
+  // bất biến của cách dựng. Đi TRƯỚC các vòng khung cũ, vì các vòng ấy chỉ coi lối vào là khoản phạt mềm.
+  const skeleton = skeletonStage(input, intent, footprints[0]!, sketch, remember, failedGeometry);
+  built += skeleton.built;
+  if (skeleton.winner) {
+    notes.push(skeletonNote(input.level, skeleton.winner.candidate.key));
+    return dropped(
+      finish(input, intent, notes, skeleton.winner, {
+        candidates: built,
+        passed: skeleton.passed,
+        relaxed: 0,
+      }),
+    );
+  }
+
   const rings = runRings(input, intent, footprints, remember, failedGeometry);
   built += rings.built;
   if (rings.winner) {
@@ -553,12 +786,18 @@ export function arrangeLevel(input: ArrangeInput): ArrangeResult {
     sketch && !weak && !failure.some((issue) => issue.code === 'door_from_stair')
       ? sketchNoAccess(input, intent, sketch, 'touch', true)
       : null;
-  const issues = dedupeIssues([
+  const found = [
     ...intent.issues,
     ...sketchIssues,
     ...failure,
     ...(weak ? [weak] : []),
     ...(stairOnly ? [stairOnly] : []),
+  ];
+  // Phòng không chữ nhật chỉ là thông tin THÊM cho câu nhắc của một tầng vốn đã gửi mô hình sửa: tự nó biến
+  // một tầng hỏng hình học thành «sửa được» thì lớp gọi bỏ đường cứu khác (phát lại 5bc280ff vòng 3).
+  const issues = dedupeIssues([
+    ...(found.some((issue) => REVISABLE_CODES.has(issue.code)) ? crookedFailure : []),
+    ...found,
   ]).map((issue) =>
     sketch ? adviseShort(input, intent, withSketchCells(issue, sketch), sketch) : issue,
   );
@@ -717,6 +956,42 @@ function sketchNoAccess(
     } else fine.push(leaf.id);
   }
   const quote = (ids: string[]) => ids.map((id) => `"${id}"`).join(', ');
+  // CHỖ của một phòng không lối vào, bằng ô bản phác (tổng hợp 37 lượt thật 23–30/09/2026: lỗi lối vào có ở
+  // 30/37 lượt, 35 % câu nhắc lặp nguyên văn ở lượt sau): phòng nằm hàng/cột nào, đang giáp những gì, và
+  // hành lang / phòng đi xuyên đã nối về thang gần nhất cách mấy ô — mô hình biết phải kéo cái gì tới đâu.
+  const boxOf = (leafId: string) => {
+    let r0 = rows;
+    let r1 = -1;
+    let c0 = cols;
+    let c1 = -1;
+    cells.forEach((row, r) =>
+      row.forEach((id, c) => {
+        if (leafOf(id) !== leafId) return;
+        r0 = Math.min(r0, r);
+        r1 = Math.max(r1, r);
+        c0 = Math.min(c0, c);
+        c1 = Math.max(c1, c);
+      }),
+    );
+    return r1 < 0 ? null : { r0, r1, c0, c1 };
+  };
+  const span = (a: number, b: number) => (a === b ? `${a + 1}` : `${a + 1}–${b + 1}`);
+  const whereCut = (leafId: string) => {
+    const box = boxOf(leafId);
+    if (!box) return '';
+    const around = touching(intent.leaves.find((leaf) => leaf.id === leafId)!).map((l) => l.id);
+    let nearest: { id: string; gap: number } | null = null;
+    for (const leaf of intent.leaves) {
+      if (!linked.has(leaf.id) || !walk(leaf) || stairLeafIds.has(leaf.id)) continue;
+      const other = boxOf(leaf.id);
+      if (!other) continue;
+      const gap =
+        Math.max(0, other.r0 - box.r1 - 1, box.r0 - other.r1 - 1) +
+        Math.max(0, other.c0 - box.c1 - 1, box.c0 - other.c1 - 1);
+      if (!nearest || gap < nearest.gap) nearest = { id: leaf.id, gap };
+    }
+    return `"${leafId}" (rows ${span(box.r0, box.r1)}, columns ${span(box.c0, box.c1)}) touches ${around.length ? quote(around) : 'nothing'}${nearest ? `; the nearest corridor or shared room reaching the stair is "${nearest.id}", ${nearest.gap === 0 ? 'touching it along less than a door width' : `${nearest.gap} cell${nearest.gap > 1 ? 's' : ''} away`}` : ''}.`;
+  };
   const minCells = Math.ceil(
     ((input.construction.openings.door?.width_m ?? 0.9) * 100 + 2 * marginCm + wallCm) / cellCm -
       1e-9,
@@ -760,7 +1035,16 @@ function sketchNoAccess(
     mode === 'touch'
       ? `Bản phác tầng ${input.level}: ${rooms} không chạm hành lang / phòng sinh hoạt chung nào nối về ô thang — không có lối vào.${alsoVi}`
       : `Bản phác tầng ${input.level}: ${rooms} chỉ chạm đường về ô thang bằng đoạn tường ngắn hơn ${minCells} ô liền — không đủ chỗ đặt cửa.${alsoVi}`,
-    { rooms, keep: fine.length ? quote(fine) : 'none', door_cells: minCells, also },
+    {
+      rooms,
+      keep: fine.length ? quote(fine) : 'none',
+      door_cells: minCells,
+      also,
+      detail: cut
+        .slice(0, 4)
+        .map((id) => whereCut(id))
+        .join(' '),
+    },
     cut[0],
   );
 }
@@ -996,6 +1280,7 @@ function intentFor(
     spaces,
     groups: input.groups,
     mergeAllowed: input.mergeAllowed,
+    openForbidden: input.openForbidden ?? null,
     zoneDefaults: input.zoneDefaults,
     anchorZones: input.anchors
       ? {
@@ -1182,6 +1467,171 @@ function finish(
   };
 }
 
+/** Giếng thang máy tầng 1 cho khung xương: cỡ theo lá (cạnh kỹ thuật, diện tích), áp cạnh ô thang. */
+function shaftBesideStair(
+  drawn: Rect,
+  stair: Rect,
+  footprint: Rect,
+  leaf: PackLeaf,
+  env: PackEnv,
+): Rect {
+  const w = Math.max(MIN_CELL_CM, leaf.techMin);
+  const d = Math.max(
+    w,
+    ceil5((leaf.target * 10_000) / Math.max(1, w - env.floorWallCm) + env.floorWallCm),
+  );
+  const right = stair.x1 + w <= footprint.x1 && drawn.x0 >= stair.x1 - 1;
+  const left = stair.x0 - w >= footprint.x0 && drawn.x1 <= stair.x0 + 1;
+  const x0 = right
+    ? stair.x1
+    : left
+      ? stair.x0 - w
+      : stair.x1 + w <= footprint.x1
+        ? stair.x1
+        : stair.x0 - w;
+  const y0 = Math.min(Math.max(drawn.y0, stair.y0), stair.y1 - d);
+  return { x0, y0: Math.max(footprint.y0, y0), x1: x0 + w, y1: Math.max(footprint.y0, y0) + d };
+}
+
+/** Ghi chú tầng xếp bằng khung xương (T102) — khoá ứng viên nói dạng khung nào. */
+function skeletonNote(level: number, key: string): DrawNote {
+  return {
+    code: 'skeleton_arranged',
+    message: `Tầng ${level}: chương trình dựng lại theo khung xương (${key
+      .split('|')
+      .slice(1)
+      .join(' ')}) — ô thang đúng mốc, hành lang nối ô thang, phòng theo vị trí bản phác.`,
+  };
+}
+
+/**
+ * Khung xương (T102, `./skeleton.ts`) → ứng viên → cổng. Ô thang lấy từ mốc tầng dưới hay ô bản phác tầng 1;
+ * vị trí phòng lấy từ chữ nhật bao các ô bản phác. Không có ô thang cố định thì không dựng.
+ */
+function skeletonStage(
+  input: ArrangeInput,
+  intent: LevelIntent,
+  footprint: Rect,
+  sketch: PreparedSketch | null,
+  remember: (issues: PlanIssue[], filtered?: boolean) => void,
+  failedGeometry: Set<string>,
+): { winner: Ranked | null; passed: number; built: number } {
+  const { env, items, corridorIds, stairIds } = environment(input, intent, footprint, 0);
+  const coreOf = (id: string): Rect | null =>
+    input.sketchCores?.find((core) => core.id === id)?.rect ?? null;
+  const stairLeaf = intent.leaves.find((leaf) => stairIds.has(leaf.id));
+  const stair = input.anchors?.stair ?? (stairLeaf ? coreOf(stairLeaf.id) : null);
+  if (!stair) return { winner: null, passed: 0, built: 0 };
+  const elevators = new Map<string, Rect>();
+  const shafts = [...(input.anchors?.elevators ?? [])];
+  for (const leaf of intent.leaves) {
+    const packLeaf = env.leafById.get(leaf.id);
+    if (!packLeaf?.types.includes('elevator')) continue;
+    const rect = input.anchors ? (shafts.shift() ?? null) : coreOf(leaf.id);
+    if (!rect) continue;
+    // Tầng 1: bản phác hay vẽ giếng thang máy thành dải to (lượt 0c86c0b1: 189 × 389 cm cho giếng 1,4 × 1,6).
+    // Khung xương đặt giếng đúng cỡ đầu bài (cạnh kỹ thuật × sâu đủ diện tích), áp cạnh ô thang, phía có
+    // chỗ trống; phần còn lại của ô bản phác thành sảnh chiếu nghỉ.
+    elevators.set(
+      leaf.id,
+      input.anchors ? rect : shaftBesideStair(rect, stair, footprint, packLeaf, env),
+    );
+  }
+  const lightWells = new Map<string, Rect>();
+  const wells = [...(input.anchors?.lightWells ?? [])];
+  for (const leaf of intent.leaves) {
+    if (!env.leafById.get(leaf.id)?.types.includes('light_well')) continue;
+    const rect = wells.shift();
+    if (rect) lightWells.set(leaf.id, rect);
+  }
+  const boxes = new Map<string, Rect>();
+  if (sketch) {
+    for (const leaf of intent.leaves) {
+      const rect = sketchRectOf(sketch, leaf.id);
+      if (rect) boxes.set(leaf.id, rect);
+    }
+  }
+  const exterior = Math.round(input.construction.walls.exterior_m * 100);
+  const partition = Math.round(input.construction.walls.partition_m * 100);
+  const clear = Math.round(
+    (input.construction.circulation?.corridor_clear_m ??
+      input.construction.openings.door?.width_m ??
+      0.9) * 100,
+  );
+  const corridorType =
+    [...input.groups.vertical]
+      .filter((type) => !input.stairTypes.includes(type) && type !== 'elevator')
+      .sort()[0] ?? 'circulation';
+  const service = input.anchors?.service;
+  const candidates = skeletonCandidates({
+    footprint,
+    level: input.level,
+    env,
+    items,
+    corridorIds,
+    stairIds,
+    stair,
+    elevators,
+    lightWells,
+    boxes,
+    corridorWidth: {
+      edge: ceil5(clear + exterior + partition / 2),
+      inner: ceil5(clear + partition),
+    },
+    corridorType,
+    wetBelow: input.anchors?.wetRooms ?? [],
+    avoidWetOver: service ? [...service.kitchens, ...service.altars].map((zone) => zone.rect) : [],
+    openSides: new Set(input.openFaces.map((face) => FACE_SIDE[face])),
+    balconySides: input.balcony
+      ? {
+          required: input.balcony.sides.map((side) => FACE_SIDE[side]),
+          forbidden: input.balcony.forbiddenSides.map((side) => FACE_SIDE[side]),
+          projection:
+            input.balcony.projection && input.level >= input.balcony.fromLevel
+              ? Object.fromEntries(
+                  Object.entries(input.balcony.projection).map(([side, m]) => [
+                    FACE_SIDE[side as Face],
+                    Math.round((m ?? 0) * 100),
+                  ]),
+                )
+              : {},
+        }
+      : null,
+    program: input.program,
+    ...(input.trace ? { trace: input.trace } : {}),
+  });
+  input.trace?.(`tầng ${input.level} khung xương: ${candidates.length} ứng viên`);
+  const built: Built[] = [];
+  for (const candidate of candidates) {
+    const frameEnv: PackEnv = candidate.leafById ? { ...env, leafById: candidate.leafById } : env;
+    const emitted = emitCandidate(
+      input,
+      intent,
+      footprint,
+      candidate,
+      frameEnv,
+      stairIds,
+      candidate.program,
+    );
+    if (!emitted) continue;
+    if ('issues' in emitted) {
+      remember(emitted.issues, emitted.filtered === true);
+      continue;
+    }
+    built.push(emitted);
+  }
+  built.sort(
+    (p, q) =>
+      p.reasons.length - q.reasons.length || p.penalty - q.penalty || p.key.localeCompare(q.key),
+  );
+  const passed = gateCandidates(input, intent, built, remember, failedGeometry);
+  return {
+    winner: passed.length ? best(passed) : null,
+    passed: passed.length,
+    built: built.length,
+  };
+}
+
 /**
  * Bản phác → cây ứng viên → cổng. `reason` là câu ngắn cho ghi chú khi không cây nào qua; `issues` chỉ
  * có khi bản phác không nắn nổi thành cây (lỗi của chính hình vẽ, mô hình sửa được).
@@ -1233,6 +1683,9 @@ function sketchStage(
     return true;
   };
   if (anchorStair && stairLeaf && forceCore(stairLeaf.id, anchorStair, 'ô thang')) {
+    input.trace?.(
+      `  bản phác tầng ${input.level} sau khi ép ô thang:\n${sketch.grid.cells.map((row) => row.map((id) => id ?? '.').join(' ')).join('\n')}`,
+    );
     notes.push({
       code: 'sketch_stair_forced',
       message: `Bản phác tầng ${input.level} vẽ ô thang "${stairLeaf.id}" lệch ô thang tầng dưới — chương trình đặt lại đúng ô ấy.`,
@@ -1411,11 +1864,10 @@ function sketchMinExtent(
   // Ô thang HAI VẾ, mức hẹp nhất dựng được: rộng theo `two_flights_min_width_m`, dài theo số bậc. Đo
   // theo đúng bề rộng mô hình vẽ thì thang 2 m thành một vế và đòi 5 m dài — bản phác nào cũng hỏng,
   // trong khi bộ xếp vẫn dựng được thang hai vế 2,4 × 3,3 m ở chính chỗ ấy (lượt 58d9ff66).
-  const widthCm = construction.stairs.two_flights_min_width_m * 100;
-  const treads = stairTreads(construction, Math.round(construction.levels.storey_height_m * 100));
-  const run = stairRunNeedCm(construction, { flights: 2, treads, acrossCm: widthCm });
+  // T105: theo LOẠI thang của lượt (U, L, ba vế, thẳng…) — cạnh dài của ô nhận cạnh dài của thang.
+  const min = stairMinCm(construction);
   const alongX = box.w >= box.h;
-  const need = (axis === 'x') === alongX ? (run ?? 0) : widthCm;
+  const need = min ? ((axis === 'x') === alongX ? min.long : min.short) : 0;
   return Math.max(base, ceil5(need + wallCm));
 }
 
@@ -1579,22 +2031,29 @@ function buildCandidates(
   };
   // Tầng trên: khung khoét mốc trước (chắc chắn đúng mốc), khung thường sau (phải ép mốc, hay hỏng).
   const forced = forcedCells(input, items, stairIds, env);
+  // Lượt xếp lại có ghim ban công bắt buộc (T109, `retryWithBalconyPins`): ô mốc cộng ban công đúng ô bản phác.
+  const pinned = input.pinBalconies ? withBalconyPins(input, items, forced) : null;
+  const forcedSets = pinned ? [pinned] : [forced];
   const frames =
     mode === 'tee'
       ? []
       : [
-          ...enumerateCarved(frameInput, forced),
-          ...corridorStrips(
-            input,
-            items,
-            corridorIds,
-            forced,
-            frameInput.corridorWidth.inner,
-          ).flatMap((strip) =>
-            enumerateCarved(frameInput, [...forced, strip]).map((frame) => ({
-              ...frame,
-              key: `${frame.key}|hl${strip.rect.x0},${strip.rect.y0},${strip.rect.x1},${strip.rect.y1}`,
-            })),
+          ...forcedSets.flatMap((set, i) =>
+            [
+              ...enumerateCarved(frameInput, set),
+              ...corridorStrips(
+                input,
+                items,
+                corridorIds,
+                set,
+                frameInput.corridorWidth.inner,
+              ).flatMap((strip) =>
+                enumerateCarved(frameInput, [...set, strip]).map((frame) => ({
+                  ...frame,
+                  key: `${frame.key}|hl${strip.rect.x0},${strip.rect.y0},${strip.rect.x1},${strip.rect.y1}`,
+                })),
+              ),
+            ].map((frame) => (pinned && i === 0 ? { ...frame, key: `pin|${frame.key}` } : frame)),
           ),
           ...enumerateFrames(frameInput),
         ];
@@ -1610,21 +2069,27 @@ function buildCandidates(
   for (const frame of frames) emit(frame, env);
 
   // Hành lang chữ T/L (V-29): dải áp thang + một nhánh vuông góc tới tường bao. Chỉ ở lượt `tee`.
-  const tees =
-    mode === 'tee'
-      ? corridorTees(input, items, corridorIds, forced, env, frameInput.corridorWidth.inner)
-      : [];
-  for (const tee of tees) {
-    const teeEnv: PackEnv = { ...env, leafById: tee.leafById };
-    const teeInput = { ...frameInput, env: teeEnv, corridorIds: tee.corridorIds };
-    const key = [tee.base, ...tee.branches]
-      .map(
-        (cell, i) =>
-          `${i ? 'nh' : 'hl'}${cell.rect.x0},${cell.rect.y0},${cell.rect.x1},${cell.rect.y1}`,
-      )
-      .join('|');
-    for (const frame of enumerateCarved(teeInput, [...forced, tee.base, ...tee.branches])) {
-      emit({ ...frame, key: `${frame.key}|${key}` }, teeEnv, tee.program);
+  for (const [i, set] of forcedSets.entries()) {
+    const tees =
+      mode === 'tee'
+        ? corridorTees(input, items, corridorIds, set, env, frameInput.corridorWidth.inner)
+        : [];
+    for (const tee of tees) {
+      const teeEnv: PackEnv = { ...env, leafById: tee.leafById };
+      const teeInput = { ...frameInput, env: teeEnv, corridorIds: tee.corridorIds };
+      const key = [tee.base, ...tee.branches]
+        .map(
+          (cell, j) =>
+            `${j ? 'nh' : 'hl'}${cell.rect.x0},${cell.rect.y0},${cell.rect.x1},${cell.rect.y1}`,
+        )
+        .join('|');
+      for (const frame of enumerateCarved(teeInput, [...set, tee.base, ...tee.branches])) {
+        emit(
+          { ...frame, key: `${pinned && i === 0 ? 'pin|' : ''}${frame.key}|${key}` },
+          teeEnv,
+          tee.program,
+        );
+      }
     }
   }
   return out;
@@ -1643,10 +2108,53 @@ function emitCandidate(
   stairIds: ReadonlySet<string>,
   program?: AiSpaceProgram,
 ): Built | { issues: PlanIssue[]; filtered?: boolean } | null {
-  const pinned = pinAnchors(input, frame, frameEnv, stairIds);
+  let pinned = pinAnchors(input, frame, frameEnv, stairIds);
   if ('issues' in pinned) {
     input.trace?.(`  ⊘ ${frame.key}: không ép được mốc`);
     return pinned;
+  }
+  // Giặt phơi ra mép thoáng, phòng kỹ thuật / kho vào trong (T103, `passage.open_face_first`).
+  const passage = input.groups.passage;
+  if (passage && passage.openFaceFirst.size && passage.windowlessOk.size) {
+    const turned = swapTowardOpenFace(pinned.placed, {
+      typesOf: (id) => frameEnv.leafById.get(id)?.types ?? [],
+      openFaceFirst: passage.openFaceFirst,
+      windowlessOk: passage.windowlessOk,
+      openSides: frameEnv.openSides,
+      footprint,
+    });
+    if (turned.swapped.length) {
+      input.trace?.(`  ↔ ${frame.key}: ${turned.swapped.map(([p, q]) => `${p}⇄${q}`).join(', ')}`);
+      pinned = { ...pinned, placed: turned.placed };
+    }
+  }
+  // Hành lang rộng quá khung nghề thì thu hẹp, phần dư cho cụm phòng không chứa ô thang (T104).
+  const maxCentre = input.trimCorridors ? corridorMaxCentre(input) : null;
+  if (maxCentre !== null) {
+    const corridorTypes = new Set(
+      [...input.groups.vertical].filter(
+        (type) => !input.stairTypes.includes(type) && type !== 'elevator',
+      ),
+    );
+    const typesOf = (id: string) => frameEnv.leafById.get(id)?.types ?? [];
+    const trimmed = trimCorridors(pinned.placed, {
+      isCorridor: (id) => typesOf(id).some((type) => corridorTypes.has(type)),
+      isFixed: (id) =>
+        stairIds.has(id) ||
+        typesOf(id).some((type) => type === 'elevator' || type === 'light_well'),
+      maxCentre,
+      doorContact: (a, b) => {
+        const la = frameEnv.leafById.get(a);
+        const lb = frameEnv.leafById.get(b);
+        return la && lb ? frameEnv.doorShared(la, lb) : 0;
+      },
+    });
+    if (trimmed.trimmed.length) {
+      input.trace?.(
+        `  ⇥ ${frame.key}: ${trimmed.trimmed.map((t) => `${t.id} ${t.from}→${t.to}`).join(', ')}`,
+      );
+      pinned = { ...pinned, placed: trimmed.placed };
+    }
   }
   const cells = leaves(pinned.placed);
   const unusable =
@@ -1673,7 +2181,13 @@ function emitCandidate(
     stairIds,
     circulation: input.groups.vertical,
     openFlow: input.groups.passage?.openFlow ?? null,
+    openForbidden: input.openForbidden ?? null,
+    altarBackSide: input.altarBackSide ?? null,
     stairOpensTo: input.groups.passage?.stairOpensTo ?? null,
+    stairParams: stairParamsOf(
+      input.construction,
+      stairTreads(input.construction, Math.round(input.construction.levels.storey_height_m * 100)),
+    ),
     mainSide:
       input.level === 1 && input.entrances.main
         ? { footprint, side: FACE_SIDE[input.entrances.main] }
@@ -1782,12 +2296,23 @@ function shortStairCell(
     const w = cell.rect.x1 - cell.rect.x0;
     const h = cell.rect.y1 - cell.rect.y0;
     const treads = stairTreads(input.construction, storeyCm);
-    const short = stairShortfall(input.construction, {
-      rect: [cell.rect.x0, cell.rect.y0, cell.rect.x1, cell.rect.y1],
-      up: h >= w ? '+y' : '+x',
-      flights: stairFlights(input.construction, Math.min(w, h)),
-      treads,
-    });
+    // Thang theo loại (T105): vừa theo MỘT chiều bất kỳ là được — chiều lên do lối vào quyết sau.
+    const shaped = stairFitsEither(input.construction, treads, w, h);
+    const short = shaped
+      ? shaped.fits
+        ? null
+        : stairShortfall(input.construction, {
+            rect: [cell.rect.x0, cell.rect.y0, cell.rect.x1, cell.rect.y1],
+            up: shaped.up,
+            flights: 2,
+            treads,
+          })
+      : stairShortfall(input.construction, {
+          rect: [cell.rect.x0, cell.rect.y0, cell.rect.x1, cell.rect.y1],
+          up: h >= w ? '+y' : '+x',
+          flights: stairFlights(input.construction, Math.min(w, h)),
+          treads,
+        });
     if (!short) continue;
     return arrangeIssue(
       'arrange_stair_too_short',
@@ -1838,6 +2363,69 @@ function forcedCells(
   for (const lift of lifts) {
     const target = shafts.shift();
     if (target) out.push({ key: lift.key, rect: target });
+  }
+  return out;
+}
+
+/** Ô mốc cộng ban công bắt buộc ghim đúng ô bản phác (T109) — `null` khi không có ban công nào để ghim. */
+function withBalconyPins(
+  input: ArrangeInput,
+  items: readonly PackItem[],
+  forced: readonly { key: string; rect: Rect }[],
+): { key: string; rect: Rect }[] | null {
+  const pins: { key: string; rect: Rect }[] = [];
+  for (const pin of input.sketchBalconyPins ?? []) {
+    const item = items.find((it) => it.key === pin.id && it.children.length === 0);
+    if (!item) continue;
+    if ([...forced, ...pins].some((cell) => overlapCm2(cell.rect, pin.rect) > 0)) continue;
+    pins.push({ key: item.key, rect: pin.rect });
+  }
+  return pins.length ? [...forced, ...pins] : null;
+}
+
+function overlapCm2(a: Rect, b: Rect): number {
+  const w = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0);
+  const h = Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0);
+  return w > 0 && h > 0 ? w * h : 0;
+}
+
+/**
+ * Ban công đứng riêng chạm mặt đầu bài bắt buộc trên bản phác, bằng cạnh DÀI (chạm bằng đầu ngắn thì mặt bằng
+ * cũng không tính — Q-57) — `sketchBalconyPins`.
+ */
+function sketchBalconyPinsOf(
+  input: ArrangeInput,
+  sketch: PreparedSketch,
+): { id: string; rect: Rect }[] {
+  const demand = input.balcony;
+  if (!demand || demand.forbidden || input.level < demand.fromLevel || !demand.sides.length) {
+    return [];
+  }
+  // Chỉ mặt bắt buộc mà cũng THOÁNG: ghim ban công dài dọc mặt giáp nhà bên thì luật bắt buộc T71 (ban công dài quay
+  // cạnh dài ra mặt thoáng) bác cả nhà — lượt b1543b8c vòng 6 mất bản thu hẹp hành lang vì thế.
+  const open = new Set(input.openFaces.map((face) => FACE_SIDE[face]));
+  const required = new Set(
+    demand.sides.map((side) => FACE_SIDE[side]).filter((side) => open.has(side)),
+  );
+  if (!required.size) return [];
+  const forbidden = new Set(demand.forbiddenSides.map((side) => FACE_SIDE[side]));
+  const f = sketch.footprint;
+  const out: { id: string; rect: Rect }[] = [];
+  for (const space of input.program.spaces) {
+    if (space.level !== input.level || space.type !== demand.type || space.ensuite_of) continue;
+    const rect = sketchRectOf(sketch, space.id);
+    if (!rect) continue;
+    const wide = rect.x1 - rect.x0 >= rect.y1 - rect.y0;
+    const along: [Side, boolean][] = [
+      ['y0', rect.y0 <= f.y0 && wide],
+      ['y1', rect.y1 >= f.y1 && wide],
+      ['x0', rect.x0 <= f.x0 && !wide],
+      ['x1', rect.x1 >= f.x1 && !wide],
+    ];
+    const sides = along.filter(([, on]) => on).map(([side]) => side);
+    if (!sides.some((side) => required.has(side))) continue;
+    if (sides.some((side) => forbidden.has(side))) continue;
+    out.push({ id: space.id, rect });
   }
   return out;
 }
@@ -2339,12 +2927,10 @@ function environment(
 
 /** Diện tích theo tim tường của ô thang hai vế hẹp nhất cho một tầng thường, m² — 0 khi không kiểm. */
 function stairFloorArea(construction: ConstructionNorms): number {
-  const treads = stairTreads(construction, Math.round(construction.levels.storey_height_m * 100));
-  const widthCm = construction.stairs.two_flights_min_width_m * 100;
-  const run = stairRunNeedCm(construction, { flights: 2, treads, acrossCm: widthCm });
-  if (run === null) return 0;
+  const min = stairMinCm(construction);
+  if (min === null) return 0;
   const wallCm = Math.round(construction.walls.partition_m * 100);
-  return round1(((widthCm + wallCm) * (run + wallCm)) / 10_000);
+  return round1(((min.long + wallCm) * (min.short + wallCm)) / 10_000);
 }
 
 /**
@@ -2352,6 +2938,22 @@ function stairFloorArea(construction: ConstructionNorms): number {
  * diện tích mô hình khai thì một tầng khai sát khối nhà co MỌI phòng theo cùng tỉ lệ, và phòng khai 22 m²
  * cho mức 20 m² rơi xuống dưới sàn trước khi hàm phạt kịp kéo lại (lượt đo 5aba737d, 15/09/2026).
  */
+/**
+ * Bề rộng TỐI ĐA của hành lang theo tim tường, cm (T104): lọt lòng tối đa theo loại nhà (`circulation.
+ * corridor_max_clear_m`), không dưới lọt lòng mong muốn (`corridor_clear_m`), cộng một vách ngăn. `null` khi dữ
+ * liệu không khai — không thu hẹp.
+ */
+function corridorMaxCentre(input: ArrangeInput): number | null {
+  const circulation = input.construction.circulation;
+  const table = circulation?.corridor_max_clear_m;
+  if (!circulation || !table) return null;
+  const type = input.scoring?.buildingType;
+  const max = (type ? table[type] : undefined) ?? table.default;
+  if (typeof max !== 'number') return null;
+  const clear = Math.max(max, circulation.corridor_clear_m);
+  return Math.round(clear * 100) + Math.round(input.construction.walls.partition_m * 100);
+}
+
 function packWeight(leaf: PackLeaf): number {
   return leaf.areaFloor === null
     ? leaf.target
@@ -2420,6 +3022,7 @@ function gate(input: ArrangeInput, tree: AiPlanTree, resize: boolean): LevelLayo
     construction: input.construction,
     groups: input.groups,
     mergeAllowed: input.mergeAllowed,
+    openForbidden: input.openForbidden ?? null,
     openFaces: input.openFaces,
     accessFaces: input.accessFaces,
     anchors: input.anchors,
@@ -2766,6 +3369,36 @@ function balconySidesKept(
     if (footprint.x1 - x1 <= tolerance) touched.add('x1');
   }
   return want.every((side) => touched.has(side));
+}
+
+/**
+ * Không ban công nào chạy DỌC mặt gia chủ cấm (cạnh dài áp mặt ấy; chạm bằng đầu ngắn thì được — Q-57). Phạm là
+ * cổng cả nhà chắc chắn bác (`balcony_side_not_wanted`), nên đây là bậc xếp hạng ĐẦU, trước cả WC thẳng trục (T71
+ * chỉ là ưu tiên). T109, lượt bea4c6fa vòng 5: khung ghim ban công và khung không ghim cùng qua cổng tầng; khung không
+ * ghim có WC thẳng trục nên thắng, và nó đặt ban công dọc mặt phải bị cấm.
+ */
+function balconyOffForbidden(
+  input: ArrangeInput,
+  rooms: AiPlanRoomsLevel['rooms'],
+  footprint: Rect,
+): boolean {
+  const demand = input.balcony;
+  if (!demand || input.level < demand.fromLevel || !demand.forbiddenSides.length) return true;
+  const forbidden = new Set(demand.forbiddenSides.map((side) => FACE_SIDE[side]));
+  const tolerance = Math.round(input.construction.walls.exterior_m * 100);
+  for (const room of rooms) {
+    if (room.type !== demand.type) continue;
+    const [x0 = 0, y0 = 0, x1 = 0, y1 = 0] = room.rect;
+    const wide = x1 - x0 >= y1 - y0;
+    const along: [Side, boolean][] = [
+      ['y0', wide && y0 - footprint.y0 <= tolerance],
+      ['y1', wide && footprint.y1 - y1 <= tolerance],
+      ['x0', !wide && x0 - footprint.x0 <= tolerance],
+      ['x1', !wide && footprint.x1 - x1 <= tolerance],
+    ];
+    if (along.some(([side, on]) => on && forbidden.has(side))) return false;
+  }
+  return true;
 }
 
 /**

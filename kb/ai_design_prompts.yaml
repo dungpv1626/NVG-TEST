@@ -13,7 +13,13 @@
 # Không một ngưỡng quy chuẩn nào nằm ở đây: mọi con số (tối thiểu, sàn xây được, số phòng ngủ)
 # do Worker tiêm vào từ rule pack, kb/space_norms.yaml và đầu bài lúc gọi — xem `ai/program.ts`.
 
-version: '8.38.0'
+# 9.4.1 (02/10/2026, T112): câu nhắc balcony_side_missing_corner (ban công chỉ chạm mặt ở góc); đầu bài nói mỗi mặt bắt buộc một ban công riêng chạy dọc mặt ấy (lượt thật 8eaaee7b kẹt vòng 4–5).
+# 9.4.0 (02/10/2026, T112): review lời dẫn — câu thang máy / sân thượng / ông bà chưa ghim tầng chỉ có khi đúng (`[[cờ|…]]`); WC khép kín chỉ mở từ phòng mẹ; bếp và WC cùng khu kỹ thuật nhưng không chung tường, cửa không đối diện (thay «kitchen and wc grouped», ngược `wc_separate_from_kitchen`); tối thiểu phòng ngủ đã gồm phần `inside`; `knowledge.faces` (mặt mù / nắng gắt / gió mát); assumptions xếp theo tác động, được đề xuất loại `only_when_asked` mà không vẽ.
+# 9.3.1 (01/10/2026, T111): lượt sửa giữ đúng khổ lưới bản phác (lượt thật 46d6eff3 nới 16 → 20 hàng); câu nhắc mới sketch_room_crooked: phòng không chữ nhật trên bản phác của một tầng hỏng (fdd486b1).
+# 9.3.0 (30/09/2026, T108–T109): giặt phơi cạnh ban công / sân thượng / sân / cửa sổ thoáng trong lời dẫn và câu nhắc D4; balcony_side_corner (lời khuyên ban công góc); danh mục sai vẫn soát bản phác. Hai lượt thật bea4c6fa, f1a88ac1 chạy bằng 9.2.0 TRƯỚC các đổi này.
+# 9.2.0 (30/09/2026, T107): hành lang là các dải chữ nhật, hết mâu thuẫn «spine, L, T» với «mỗi phòng một chữ nhật»; bước tự kiểm lối vào trước khi trả lời; lượt sửa gửi tầng chưa khoá với mã ngắn; sketch_pinwheel_at và sketch_room_no_access chỉ chỗ bằng hàng/cột, bỏ đoạn giảng luật lặp.
+# 9.1.0 (30/09/2026, T105): thêm câu nhắc D2 (phòng ngủ tối hẳn) stair_entry_long_side (lối lên thang ở cạnh dài) và C11 (gara vào phòng khách) — lượt 25fdc90c; stair_cells (ô thang tầng trên nói ngay từ lượt sửa đầu) — lượt 1330ce12; loại thang gửi trong dữ liệu `stair_min_m.shape`, không thêm chữ vào lời dẫn (trần T46); altar_door_behind (T106).
+version: '9.4.1'
 
 program:
   system: |
@@ -157,21 +163,23 @@ program:
 floor_level:
   # T46 (15/09/2026, Haan): tối giản — giữ đầu bài, khảo sát, đầu ra mong muốn; bỏ ví dụ mẫu, bỏ lời
   # giảng về chương trình, gộp luật trùng. Mọi con số mô hình phải khớp nằm trong `<knowledge>`.
+  # T112 (9.4.0, review lời dẫn 01/10/2026): `[[cờ|chữ]]` chỉ giữ khi cờ bật — chương trình bỏ câu về thang
+  # máy, sân thượng, ông bà chưa ghim tầng khi đầu bài không có (`houseSystem` trong `ai/plan.ts`; cờ:
+  # `elevator`, `terrace`, `ong_ba_unset`). Câu thừa làm loãng sự chú ý và mời mô hình vẽ thứ không ai hỏi.
   system: |
-    You are a senior Vietnamese residential architect. Read the client brief and site survey in
-    <brief> (Vietnamese) and lay out the whole house: every space on every storey with its type,
-    storey, target clear area and en-suite parent; which rooms share a wall; which room has the front
-    door and which the car door; and a sketch of every storey on a grid. The program sizes rooms and
-    draws walls: give no coordinates, doors or windows. <knowledge> holds the facts you must match.
+    You are a senior Vietnamese residential architect. Read the brief and survey in <brief>
+    (Vietnamese) and lay out the whole house as the schema asks — spaces, shared walls, the front
+    and car doors, and a grid sketch of every storey. The program draws walls, doors and windows.
+    <knowledge> holds the facts you must match.
 
     Must hold, or the answer is sent back:
     1. Only type codes from `knowledge.room_types`; a type in `knowledge.only_when_asked` only when
        the brief asks for it. Every storey 1…N of the brief.
     2. Every space listed under «Không gian gia chủ yêu cầu» exists on the storey given there. An area
-       given there («tối thiểu») is the minimum clear area of that room; size the rest yourself.
+       given there («tối thiểu») is the minimum clear area of that room.
     3. `knowledge.bedrooms`: exactly `count` bedrooms of `type` for each group, on `floor` when set;
        `ensuite` gives each its own `wc` with `ensuite_of`; each code in `own` is a space en-suite to
-       each of those bedrooms; codes in `inside` get no space — add their area to the bedroom.
+       each of those bedrooms; codes in `inside` get no space — the bedroom's brief minimum includes them.
     4. On each storey the target areas, en-suite included, total at most about 85 % of
        `knowledge.storey_area_m2`. Keep each target area inside its type's band in
        `knowledge.room_area_m2` (min, usual, max) unless the brief asks for more.
@@ -181,9 +189,10 @@ floor_level:
        `knowledge.stair_min_m`.
     7. Garages together reach `knowledge.garage_min_m2` when given. `garage_room` is the garage, or
        null. `entry_room` is the storey-1 room with the front door, on the brief's entrance side.
-    8. No `wc` over the cells of a `kitchen` or `altar_room` one storey down.
+    8. No `wc` over the cells of a `kitchen` or `altar_room` one storey down; no wc or laundry over a
+       living, dining or bedroom below.
     9. An `altar_room` never shares a wall with a `wc` nor faces a wc door.
-    10. A `balcony` or terrace has a LONG side on `knowledge.open_faces`.
+    10. A `balcony`[[terrace| or terrace]] has a LONG side on `knowledge.open_faces`.
 
     Sketch — one `sketches` entry per storey. `rows` has `knowledge.sketch_grid.rows` strings of
     `knowledge.sketch_grid.columns` cells each, one cell ≈ `knowledge.sketch_grid.cell_m` m of the
@@ -193,37 +202,45 @@ floor_level:
     most 6 characters.
     - Every room is ONE rectangle of cells; its cells are its area, walls included. A room
       matching a `knowledge.min_cells` row (type, storey) gets at least `cells` cells, and
-      `min_side_cells` per side when given (a lift shaft is a block, not a strip); count them.
+      `min_side_cells` per side when given[[elevator| (a lift shaft is a block, not a strip)]]; count them.
     - NEVER draw a room inside another room; an en-suite room, a store or a wc is a strip along
       one side of the room it belongs to.
-    - The rectangles tile the storey in bands: every room boundary is a straight line running from
-      wall to wall, never four rooms turning around a point (pinwheel).
+    - The rectangles tile the storey in bands split by straight wall-to-wall lines (no pinwheel).
     - Upper storeys use the same grid: the stair where it is on storey 1 (the program aligns it), a
       shared wc or laundry over a wet room or shaft below unless impossible, an en-suite wc as near
-      it as its bedroom allows; no wc or laundry over a living, dining or bedroom below.
+      it as its bedroom allows.
 
     Access — doors open only this way:
     - People walk through only `knowledge.walk_through`, and through `knowledge.entry_through` only
       from outside. Every other room shares a wall with a walk-through room or a type listed for it
       in `knowledge.served_from`, stated as an `adjacent` relationship.
-    - Else draw a `circulation` corridor `knowledge.corridor_min_cells` cells wide touching the stair
-      and every room opening off it; a lift sits beside it, never between stair and corridor.
+    - A room with `ensuite_of` opens only from its parent bedroom.
+    - Else, after the stair, BEFORE rooms, draw the corridor: `circulation` rectangles
+      `knowledge.corridor_min_cells` cells wide; a turn is a second rectangle meeting the first
+      along its full width, never a T or L in one id. It runs along the stair and every room
+      opening off it[[elevator|; a lift sits beside it, never between stair and corridor]].
     - A common wc and the kitchen share a wall with a corridor or the living space.
-    - Only corridors, living/dining, the roof terrace and the elevator open off the stair.
+    - Only corridors[[terrace|, the roof terrace]][[elevator|, the elevator]] and living/dining open off the stair.
     - Nobody crosses the garage or porch, or steps outside, to reach a wc, the kitchen or the stair.
     - `open` joins two rooms into one space, only for pairs in `knowledge.open_pairs`.
     Relationships link rooms on the same storey: `adjacent` (shared wall), `near`, `far`, `open`.
+    Before answering, check every sketch: each room shares 2+ unbroken wall cells with the
+    corridor or a room it may open off; fix any that does not.
 
     Design: size rooms by how the family lives; habitable rooms on `knowledge.open_faces`; follow
-    `knowledge.strategy`, and `knowledge.constraints` when present. Two client wishes conflict: keep
-    the rules above, say so in `assumptions`.
+    `knowledge.strategy`, and `knowledge.constraints` when present. If client wishes conflict, keep the
+    rules; say so in `assumptions`.
     - Zone first: the front door lands in the living room or a hall, never through kitchen or
-      dining; private rooms and altar deep or upstairs; noisy rooms away from bedrooms; kitchen, wc
-      and laundry grouped.
-    - Bedrooms `for: "ong_ba"` without `floor`: storey 1 or 2, beside a wc.
-
-    Output only the JSON object; `variant_label`, `rationale` (≤ 3 sentences) and `assumptions`
-    (≤ 5 questions for the client) in Vietnamese.
+      dining; private rooms and altar deep or upstairs; noisy rooms away from bedrooms; kitchen and
+      wc in one service zone, not sharing a wall, doors not facing; laundry by a balcony, terrace,
+      yard or open-face window.
+    - `knowledge.faces`: stair, wc and storage against a `blind` side, else a `harsh_sun` side;
+      bedrooms and living on an `open` side, with `cool_wind`, not `harsh_sun`.
+    [[ong_ba_unset|- Bedrooms `for: "ong_ba"` without `floor`: storey 1 or 2, by a wc.
+    ]]
+    `variant_label`, `rationale` (≤ 3 sentences) and `assumptions` (≤ 5 questions for the client,
+    unmet brief items first, then by impact; may suggest an unasked `only_when_asked` type, never
+    drawn) in Vietnamese.
 
   # Lấy mẫu lại: KHÔNG gửi ý định cũ. Dùng khi câu trả lời trước sai hợp đồng.
   resample: |
@@ -233,10 +250,11 @@ floor_level:
     {avoid}
 
   # Lượt SỬA Ý ĐỊNH: chương trình không dùng được ý định vì danh mục sai đầu bài hoặc không xếp được
-  # tầng nào đó. Gửi lại ý định cũ ĐÃ ĐÁNH MÃ `type_n` — lời lỗi nói bằng các mã ấy.
+  # tầng nào đó. Gửi lại ý định cũ của CÁC TẦNG CHƯA KHOÁ, phòng mang MÃ NGẮN (`revisionView`) — lời lỗi
+  # nói bằng các mã ấy; tầng đã khoá không gửi.
   revise: |
-    REVISION. Your previous intent is below with room ids renamed (type_n); the problems use those
-    ids:
+    REVISION. Your previous intent is below, for the storeys still to fix, with short room ids; the
+    problems use those ids:
 
     {avoid}
 
@@ -245,6 +263,8 @@ floor_level:
     program keeps them from your previous intent (a problem naming no storey means every storey).
     Change only the rooms a problem names and the cells next to them;
     copy every other sketch row unchanged, and keep every balcony the brief asks for.
+    Every sketch keeps exactly `knowledge.sketch_grid.rows` rows of `knowledge.sketch_grid.columns`
+    cells: room for a corridor comes from neighbouring rooms, never from extra rows or columns.
     Keep `entry_room` and `garage_room`.
     Write `rationale` in one sentence and leave `assumptions` empty unless they changed.
 
@@ -254,8 +274,9 @@ floor_level:
     - id: 'AI-A'
       label: 'Lõi thang giữa nhà'
       strategy: |
-        Stair in the middle band against one side; living to the front, service and wet rooms to
-        the back; a light well, only when the brief asks for one, right behind the stair.
+        Stair in the middle band against one side (a `blind` side when there is one); living to the
+        front, service and wet rooms to the back; a light well, only when the brief asks for one,
+        right behind the stair.
     - id: 'AI-B'
       label: 'Lõi thang dồn về sau, phòng chính phía trước'
       strategy: |
@@ -286,7 +307,9 @@ floor_level:
     arrange_entrance_side: '- The entry room "{room}" does not reach the {side} side; choose an entry room drawn on that side.'
     sketch_room_missing: '- The sketch of this storey leaves out {rooms}; draw every room of the storey.'
     sketch_not_rectangular: '- In the sketch, {rooms} are not one rectangle of cells; redraw each as a single rectangle.'
+    sketch_room_crooked: '- In the sketch, these rooms are not one rectangle of cells: {rooms}. Redraw each as a single rectangle.'
     sketch_pinwheel: '- The sketch of this storey is a pinwheel with no wall-to-wall dividing line; redraw it as bands of rooms.'
+    sketch_pinwheel_at: '- The sketch of this storey has no wall-to-wall dividing line in {area}: the nearest line, {line}, is cut by {rooms}. Make each of those rooms one rectangle that stays on one side of that line (a corridor is one straight band, not a T), so the area splits into bands.'
     sketch_rooms_too_small: '- The sketch of this storey puts too many rooms side by side in one band; spread them over more bands.'
     sketch_island_room: '- In the sketch, {rooms} sit completely inside another room, so they have no way out; draw them touching a corridor or an outside wall.'
     # Không phải mã cổng: chương trình dựng khi phòng mang cửa chính thiếu vách ra ngoài hoặc bị đi
@@ -296,8 +319,9 @@ floor_level:
     sketch_replaced: '- Your sketch of storey {level} failed the checks below, so the program partitioned that storey itself and moved rooms away from where you drew them — the problems after these lines may come from that. Fix storey {level} first so the program can keep your sketch.'
     sketch_below_replaced: '- Your sketch of storey {level} failed the checks below, so the program partitioned that storey itself and fitted storey {above} to that partition, not to your sketch. Fix storey {level} too.'
     sketch_core_overlap: '- "{core}" must sit on exactly sketch rows {rows}, columns {cols} (counting from 1), where the one on the storey below was built; {rooms} is drawn on those cells and vanishes — move it off them, keeping its size.'
+    stair_cells: '- "{core}" is fixed on sketch rows {rows}, columns {cols} (counting from 1), where the stair of the storey below was built: draw it exactly there, and lay the corridor around it at least two cells wide, so every room is reached without crossing the stair.'
     sketch_stair_only: '- In the sketch, {rooms} can only be entered from the stair; only corridors, the living/dining space, the roof terrace and the elevator open off the stair — give each a wall of at least {door_cells} cells on a corridor or shared room.'
-    sketch_room_no_access: '- In the sketch, {rooms} have no way in: each needs a shared wall at least {door_cells} cells long, unbroken, with a corridor, a shared room or a room allowed to serve it (only corridors, the living/dining space, the roof terrace and the elevator may open off the stair) — and every corridor must reach the stair the same way (one continuous corridor, not pieces touching at a corner or along one cell). Run the corridor along them. These rooms have a way in now and must KEEP it after your change: {keep}.{also}'
+    sketch_room_no_access: '- In the sketch, {rooms} have no way in. {detail} Each needs an unbroken shared wall of at least {door_cells} cells with a corridor or shared room that leads to the stair (see Access); run the corridor to it, or move the room onto the corridor. Keep the way in of: {keep}.{also}'
     route_through_service: '- From the living area, {room} can only be reached by crossing "{via}"; draw a circulation that links the living area to it without passing the garage or the porch.'
     room_through_private: '- Room "{room}" could only be entered through "{via}"; draw it against a corridor or shared room ({through}).'
     room_without_door: '- Room "{room}" had no door: it touched only {neighbours}; draw it against a corridor or shared room.'
@@ -308,6 +332,8 @@ floor_level:
     door_outside_on_boundary: '- "{room}" needs a door to the outside but only touches a neighbour''s side; draw it touching the street row or another open side, with no other room between it and that side.'
     ensuite_door_wrong: '- "{room}" is en-suite to "{parent}" but ended up away from it; draw it against "{parent}".'
     door_from_stair: '- Room "{room}" could only be entered from the stair "{stair}"; only corridors, the living/dining space, the roof terrace and the elevator open off the stair; every other room (wc, kitchen and storage included) opens off a corridor — draw a corridor between them.'
+    stair_entry_long_side: '- The stair "{stair}" can only be entered from its long side (from "{host}"), beside the rising flight; put a corridor or the living/hall space across one of its SHORT ends, where the first step starts.'
+    altar_door_behind: '- The altar room "{room}" can only be entered through its wall behind the altar (the altar faces the direction the client gave); put a corridor or shared room on another side of it and open the door there.'
     wc_over_kitchen: '- The wc "{room}" on storey {level} sits over the kitchen "{below}" of the storey below; a kitchen must never be under a wc — move the wc onto the wc stack below, or move the kitchen.'
     wc_over_altar: '- The wc "{room}" on storey {level} sits over the altar room "{below}" of the storey below; an altar room must never be under a wc — move one of them.'
     altar_beside_wc: '- The altar room "{room}" on storey {level} shares a wall with the wc "{wc}"; put another room or the corridor between them.'
@@ -316,6 +342,9 @@ floor_level:
     revision_stalled: '- Your last two corrections did not reduce the problems, so this revision starts from your latest answer instead of the earlier one.'
     revision_setback: '- Your last revision was worse than the intent below ({worse} problems against {better}) and has been set aside. Start again from this intent: fix only the problems listed here, and do not redraw the rest of the storey.'
     balcony_side_missing: '- The client wants a balcony on the {side} side, but none of the balconies touches that side of the storey; draw one with its long side along the {side} edge.'
+    # T112: có ban công chạm mặt ấy nhưng chỉ ở góc (8eaaee7b vòng 4–5 kẹt vì câu trên nói «không cái nào chạm»).
+    balcony_side_missing_corner: '- The client wants a balcony on the {side} side. "{room}" touches that side only at a corner and its long side is not on it, so it does not count there — one corner balcony never covers two sides. Draw a separate balcony with its long side along the {side} edge.'
+    balcony_side_corner: '- On the sketch the only balcony on the {side} side, "{room}", is a {along} × {across}-cell block in the corner; the plan will not count it for the {side} side. Run a balcony along the {side} edge, its long side on that edge.'
     balcony_side_not_wanted: '- The client allows balconies only on the sides listed in the brief, but "{room}" on storey {level} is on the {side} side; move it to an allowed side or drop it.'
     balcony_level_missing: '- The client wants a balcony on every upper storey, but storey {level} has none; draw one on an open face.'
     balcony_not_wanted: '- The client does not want any balcony, but the plan has {rooms}; give that space to the room behind it or leave it unbuilt.'
@@ -349,9 +378,12 @@ floor_level:
     C7: '- The common wc {rooms} is a long walk from the living area; draw it closer.'
     C8: '- Corridors are long for the few rooms they serve ({rooms}); shorten them.'
     D1: '- {rooms} get no window on an open side; draw them touching `knowledge.open_faces`.'
+    D2: '- Bedroom {rooms} has no window and no balcony door at all; move it to touch `knowledge.open_faces`, or swap it with a room that needs no daylight.'
+    D4: '- Laundry {rooms} has nowhere to dry clothes; put it beside a balcony or terrace (sharing a wall or a door), or on `knowledge.open_faces` with a window, or next to a drying yard if the brief has one.'
     E2: '- The upper wc {rooms} is not above a wc or shaft of the storey below; keep wet rooms on one vertical stack.'
     C9: '- From the front door you cross {rooms} before reaching the living room; the front door must open into the living room or a hall.'
     C10: '- Corridor {rooms} leads to a single room; merge it into that room or make it serve several rooms.'
+    C11: '- From the garage you reach the living room only through {rooms} or by going outside; put the garage beside the living room or hall, or on a corridor that leads straight to it.'
     E5: '- The wet rooms {rooms} sit above a living, dining, sleeping or altar room of the storey below; move them over a wet room or a service room.'
 
 # Lượt SỬA theo yêu cầu kỹ sư trên bản vẽ đã lưu (T53, 16/09/2026 — Haan: «giai đoạn tiếp theo là sửa

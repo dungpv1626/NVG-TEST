@@ -35,6 +35,15 @@ export function minSketchCells(areaM2: number, cellM: number, wallM: number): nu
 }
 
 /**
+ * Cạnh NGẮN tối thiểu, bằng ô, của phòng ấy — cùng giả định `ASSUMED_ASPECT` mà `minSketchCells` đếm (T107). Thiếu nó
+ * mô hình vẽ đủ số ô thành dải mỏng và tường ăn hết phần dư: hai lượt thật bea4c6fa, f1a88ac1 vẽ phòng thờ 10 m² thành
+ * 2 × 6 ô (8,99 m²) và 9 ô (8,35 m²), bản phác bị bỏ, tầng 2 chia lại, ban công bắt buộc bị dời.
+ */
+export function minSketchSideCells(areaM2: number, cellM: number, wallM: number): number {
+  return Math.ceil((Math.sqrt(areaM2 / ASSUMED_ASPECT) + wallM) / cellM - 1e-9);
+}
+
+/**
  * Bề ngang tối thiểu của hành lang trên bản phác, tính bằng ô (T73, lượt đo 0c86c0b1). Mô hình vẽ hành
  * lang MỘT ô 1 m trong khi hành lang cần `circulation.corridor_clear_m` lọt lòng; bộ xếp nới hành lang
  * và lấy phần thiếu từ dải phòng bên cạnh — phòng ngủ 1 vẽ 24 ô chỉ còn 19,08 m² (< 20), bản phác tầng

@@ -151,7 +151,7 @@ describe('applyEditStep', () => {
     expect(plan.house_intent).toHaveProperty('sketches');
     if ('written' in result) {
       expect(result.written.notes.map((note) => note.code)).toContain('edit_applied');
-      expect(result.written.acceptPercent).toBe(65);
+      expect(result.written.acceptPercent).toBe(60);
     }
   });
 

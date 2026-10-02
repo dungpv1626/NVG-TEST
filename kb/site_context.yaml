@@ -13,7 +13,7 @@
 # ⚠️ Mọi giá trị `value` của trường `site.adjacent` trong biểu mẫu Đầu bài phải có mặt ở đây.
 # Thiếu một mã thì mặt đó rơi về `default_open`, tức là đoán — có kiểm thử canh chiều này.
 
-version: '1.0.0'
+version: '1.1.0'
 
 # `true` = mặt đó lấy được sáng và gió tự nhiên.
 open_faces:
@@ -31,3 +31,11 @@ default_open: false
 # Mặt luôn được coi là thoáng dù hiện trạng khai gì: đó là mặt tiếp đường, và nếu nó bị bịt
 # thì thửa đất không vào được.
 always_open: [front]
+
+# Khoảng cách tối thiểu (m) từ ranh đất tới tường nhà để mặt giáp hiện trạng này còn tính là thoáng
+# (T112, Haan 01/10/2026: «khoảng lùi < 1 m thì bỏ khỏi open_faces»). Đất trống sát tường là đất người
+# khác — sẽ được xây, và tường sát ranh không mở cửa sổ sang được. Khoảng cách là mức LỚN HƠN giữa
+# khoảng lùi quy hoạch và khoảng sân gia chủ muốn ở mặt ấy. Mã vắng ở đây thì không cần khoảng lùi:
+# đường, hẻm, ao hồ là đất công. Đây là bối cảnh thửa, không phải ngưỡng quy chuẩn (T30, T42).
+min_open_setback_m:
+  dat_trong: 1

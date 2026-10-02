@@ -72,6 +72,8 @@ export interface IntentContext {
   spaces: readonly Space[];
   groups: RoomGroups;
   mergeAllowed: ReadonlySet<string>;
+  /** Cặp loại phòng gia chủ không muốn liền (T103) — quan hệ `open` giữa chúng thành `adjacent`. */
+  openForbidden?: ReadonlySet<string> | null;
   zoneDefaults: ZoneDefaults;
   /**
    * Tầng trên: vùng của ô thang, giếng trời và khu vệ sinh tầng dưới — ép, không hỏi lại mô hình. Ô
@@ -240,7 +242,17 @@ export function normaliseIntent(raw: AiPlanIntent, ctx: IntentContext): LevelInt
       );
       continue;
     }
-    if (rel.kind === 'open') openPairs.push([rel.a, rel.b]);
+    if (
+      rel.kind === 'open' &&
+      ctx.openForbidden?.has(mergeKey(roomById.get(rel.a)!.type, roomById.get(rel.b)!.type))
+    ) {
+      // Gia chủ muốn hai phòng này riêng (T103): giữ chúng kề nhau, không gộp, không mở thông.
+      notes.add(
+        'intent_open_forbidden',
+        `"${rel.a}" và "${rel.b}" ${where}: đầu bài muốn hai phòng này tách riêng — chương trình để hai phòng kề nhau, có vách và cửa, không mở thông.`,
+      );
+      relationPairs.push({ a: rel.a, b: rel.b, kind: 'adjacent' });
+    } else if (rel.kind === 'open') openPairs.push([rel.a, rel.b]);
     else relationPairs.push({ a: rel.a, b: rel.b, kind: rel.kind });
   }
 

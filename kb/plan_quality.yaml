@@ -2,9 +2,10 @@
 #  THƯỚC CHẤM MẶT BẰNG CÔNG NĂNG — trọng số và công thức
 # ═══════════════════════════════════════════════════════════════════════════════
 #
-#  Phiên bản thước: score_version 3 (T27; 2 = thêm D3 ban công, T91; 3 = T96: C9 cửa chính
+#  Phiên bản thước: score_version 4 (T27; 2 = thêm D3 ban công, T91; 3 = T96: C9 cửa chính
 #                   đón vào đâu, C10 hành lang phục vụ gì, E5 khu ướt đè lên đâu, trọng số
-#                   trong nhóm, sàn theo nhóm)
+#                   trong nhóm, sàn theo nhóm; 4 = T105 D2 phòng ngủ tối, C11 gara → khách;
+#                   T107 D4 giặt phơi có chỗ phơi)
 #  Nguồn:           bộ đo trên hồ sơ thật của NVG, 12/09/2026
 #                   /home/haan/Documents/Doc/NVG/design/mat_bang_cong_nang
 #  Cơ sở dữ liệu:   2 dự án NVO, 6 mặt bằng độc lập (P1 nhà vườn 2 tầng,
@@ -47,7 +48,7 @@ version: '2026.09.4'
 
 # Đổi công thức hay ngưỡng thì TĂNG số này. Không có nó thì bảng lịch sử so hai
 # model bằng hai cái thước khác nhau mà không ai biết (T27).
-score_version: 3
+score_version: 4
 
 co_so_du_lieu: '2 dự án NVO, 6 mặt bằng độc lập — mọi ngưỡng [ĐO] là chỉ dấu, chưa phải chuẩn'
 
@@ -56,15 +57,30 @@ co_so_du_lieu: '2 dự án NVO, 6 mặt bằng độc lập — mọi ngưỡng 
 # Qua cổng mà dưới ngưỡng thì dùng lượt sửa còn lại gửi mô hình các tiêu chí mất điểm nhất; hết lượt thì
 # lưu phương án điểm cao nhất và nói rõ là dưới ngưỡng. Không phải chuẩn nghề — là chỗ dừng hợp lý để
 # giao cho kỹ sư sửa tiếp bằng tay. Vắng = không có ngưỡng.
-accept_percent: 65
+# 01/10/2026 — Haan: «hạ ngưỡng điểm xuống 60» (65 → 60).
+accept_percent: 60
 
 # Sàn theo NHÓM (T96, 27/09/2026): một nhóm chấm được mà dưới % này thì phương án coi như dưới ngưỡng,
-# dù tổng vượt 65. Sáu mặt bằng đầu tiên qua ngưỡng đều có D1 = 0, E2 = 0, C7 = 0,24 — nhóm diện tích và
+# dù tổng vượt ngưỡng. Sáu mặt bằng đầu tiên qua ngưỡng đều có D1 = 0, E2 = 0, C7 = 0,24 — nhóm diện tích và
 # hình dáng đã bù cho một tầng đi lại tệ, và Haan xem xong chấm «rất tệ». Kiến trúc sư không cộng bù
 # như thế: một nhà đi lại hỏng thì to đẹp mấy cũng hỏng. Con số 40 là SUY LUẬN (n = 0): thấp hơn 50 để
 # một tiêu chí mất trắng (D1 nhà phố chỉ đo hai phòng) chưa kéo cả nhóm xuống, đủ cao để nhóm mất
 # quá nửa thì phải sửa. Vắng = không có sàn.
 accept_group_floor_percent: 40
+
+# Mức TÌM (01/10/2026, cùng lúc hạ ngưỡng nhận xuống 60): bộ xếp còn thử các biến thể ý định (chia lại diện tích
+# mục tiêu, chèn hành lang) tới khi điểm đạt mức này, dù đã qua ngưỡng nhận. Giữ 65 = đúng mức tìm trước khi hạ
+# ngưỡng: phát lại bea4c6fa vòng 6 ra 61,8 điểm khi dừng ở 60, ra 71,2 khi tìm tới 65. Không đổi số lời gọi mô
+# hình — chỉ thêm thời gian xếp cho phương án 60–65 điểm. Vắng = dừng ngay khi qua ngưỡng nhận.
+variant_search_until_percent: 65
+
+# Kiểm khả thi TRƯỚC khi gọi mô hình (T112, Haan 01/10/2026: «chặn, không gọi mô hình»): một tầng mà phần
+# chắc chắn phải có — số ô tối thiểu các phòng đầu bài khai diện tích, ô thang, WC khép kín — đã vượt % này
+# của sàn xây được thì dừng, báo phòng nào chiếm bao nhiêu, không gọi mô hình (`ai/feasibility.ts`). Phần
+# ấy cố ý đếm thiếu (không hành lang, bếp, WC chung), nên 85 là đúng mức «tổng mục tiêu ≤ ~85 % sàn» của
+# lời dẫn. Đo trên 46 lượt ghi (một đầu bài biệt thự demo, nhiều phiên bản): cao nhất 67 % — không lượt nào
+# bị chặn. Vắng = không kiểm.
+feasibility_max_percent: 85
 
 # ── Trọng số nhóm ──────────────────────────────────────────────────────────────
 #
@@ -340,6 +356,16 @@ criteria:
     # Nặng gấp đôi: cửa chính đón vào đâu là ấn tượng đầu tiên của cả ngôi nhà (lượt 5fda70dc).
     weight: 2
 
+  - code: C11
+    group: C
+    vi: 'Số phòng phải đi xuyên từ chỗ để xe vào phòng khách'
+    giai_thich: 'T105 (Haan chấm lượt 25fdc90c: kho chắn giữa gara và phòng khách, gara chỉ thông ra hành lang phòng ngủ). Đi trong nhà; sảnh, hành lang, chỗ để xe không tính là phòng phải xuyên. Không tới được mà không vòng ra ngoài thì trừ hết.'
+    kind: count
+    pass: 0
+    zero: 2
+    n: 0
+    label: 'CHUNG mức 0; trừ hết ở 2 phòng hoặc phải vòng ra ngoài'
+
   - code: C10
     group: C
     vi: 'Số hành lang chỉ mở cửa vào chưa tới hai phòng ngõ cụt'
@@ -372,6 +398,22 @@ criteria:
     n: 5
     label: 'ĐO'
 
+  - code: D2
+    group: D
+    vi: 'Số phòng ngủ tối hẳn — không cửa sổ ra mặt thoáng, không cửa ra ban công'
+    giai_thich: 'T105 (Haan chấm lượt 25fdc90c: phòng ngủ giữa nhà, giáp nhà hàng xóm, không một cửa sổ). D1 trừ theo tỷ lệ nên một phòng ngủ tối vẫn qua ngưỡng; ở đây trừ hết từ phòng đầu tiên. Không chặn.'
+    kind: count
+    pass: 0
+    zero: 1
+    n: 0
+    label: 'CHUNG mức 0; trừ hết ở 1 phòng'
+    weight: 2
+    by_building_type:
+      # Nhà phố cho phòng ngủ PHỤ lấy sáng gián tiếp (xem D1, hồ sơ P2), còn phòng ngủ chính D1 đã đòi —
+      # D2 không chấm, kẻo một tiêu chí đạt trùng việc làm loãng nhóm D dưới sàn nhóm.
+      nha_pho:
+        rooms: none
+
   - code: D3
     group: D
     vi: 'Tỷ lệ ban công quay cạnh dài ra mặt thoáng'
@@ -381,6 +423,19 @@ criteria:
     zero: 0.5
     n: 0
     label: 'CHUNG 1,0; trừ hết ở 0,5'
+
+  - code: D4
+    group: D
+    vi: 'Số phòng giặt phơi không có chỗ phơi đồ'
+    giai_thich: 'T107 (Haan 30/09/2026: «phòng giặt phơi nên đặt ở nơi có ban công hoặc có cửa sổ thoáng, hoặc phòng giáp ban công hoặc gần khu sân phơi (nếu có) — thì mới tiện cho việc phơi đồ»). Có chỗ phơi = có cửa sổ ra mặt thoáng, hoặc có cửa ra / chung tường từ `min_shared_m` với một phòng nhóm `drying` của từ vựng (ban công, sân thượng, sân). Kinh nghiệm nghề: trừ điểm, không chặn.'
+    kind: count
+    pass: 0
+    zero: 1
+    min_shared_m: 0.9
+    # Phòng lưu theo LỌT LÒNG: hai phòng giáp nhau cách nhau một bề dày tường (tới 0,22 m tường ngoài).
+    wall_gap_m: 0.25
+    n: 0
+    label: 'CHUNG mức 0; trừ hết ở 1 phòng'
 
   # ── E. Dựng được ────────────────────────────────────────────────────────────
   - code: E2

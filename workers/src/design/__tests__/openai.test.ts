@@ -84,7 +84,7 @@ function respond(body: unknown, status = 200) {
 const textReply = (text: string) => ({
   status: 'completed',
   output: [{ type: 'message', content: [{ type: 'output_text', text }] }],
-  usage: { input_tokens: 120, output_tokens: 30 },
+  usage: { input_tokens: 120, output_tokens: 30, input_tokens_details: { cached_tokens: 100 } },
 });
 
 afterEach(() => vi.unstubAllGlobals());
@@ -101,7 +101,9 @@ describe('Văn bản có lược đồ', () => {
 
     expect(out.json).toEqual({ a: 'x' });
     expect(out).toMatchObject({ provider: 'openai', model: 'gpt-test' });
-    expect(out.usage).toEqual({ inputTokens: 120, outputTokens: 30 });
+    expect(out.usage).toMatchObject({ inputTokens: 120, outputTokens: 30 });
+    // Phần đọc từ bộ nhớ đệm — đi vào tệp lời gọi đã lưu để đo (T107).
+    expect(out.usage.cachedInputTokens).toBe(100);
 
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe(TEXT_ENDPOINT);
@@ -196,7 +198,7 @@ describe('Văn bản có lược đồ', () => {
       .complete('ai_text_openai', 2, { system: 's', prompt: 'p', schema: SCHEMA })
       .catch((e: unknown) => e)) as LlmCallFailed;
 
-    expect(err.usage).toEqual({ inputTokens: 12_000, outputTokens: 32_000 });
+    expect(err.usage).toMatchObject({ inputTokens: 12_000, outputTokens: 32_000 });
     expect(err.latencyMs).toBeGreaterThanOrEqual(0);
     expect(err.latencyMs).not.toBeUndefined();
     // Câu lỗi nói luôn phần NGHĨ: «hết 32.000 token» một mình không chỉ ra chỗ vặn.
@@ -483,7 +485,7 @@ describe('Theo dõi trực tiếp, mức suy nghĩ theo lượt, và nút Dừng
     expect(seen[0]).toEqual({ phase: 'thinking', outputChars: 0 });
     expect(seen.at(-1)).toEqual({ phase: 'writing', outputChars: 9 });
     expect(result.json).toEqual({ a: 'x' });
-    expect(result.usage).toEqual({ inputTokens: 1200, outputTokens: 3400 });
+    expect(result.usage).toMatchObject({ inputTokens: 1200, outputTokens: 3400 });
   });
 
   it('mức theo lượt thắng mức của tuyến', async () => {

@@ -186,7 +186,12 @@ export function checkPlan(input: PlanCheckInput): PlanCheckResult {
     // chỉ cầm một tầng lẻ, nên chúng đi cùng nhóm liên tầng với thang và đường đi.
     checkElevatorStack(input.plan, input.demands?.elevator ?? null, add);
     checkElevatorLayout(input.plan, input.demands?.elevator ?? null, add);
-    checkBalconyDemand(input.plan, input.demands?.balcony ?? null, add);
+    checkBalconyDemand(
+      input.plan,
+      input.demands?.balcony ?? null,
+      add,
+      input.mandatory?.rules.balconyOnOpenFace?.longRatio ?? null,
+    );
     checkSoftDemands(input.plan, input.demands?.spaces ?? [], add);
     checkReachability(input, add);
     if (input.mandatory) {

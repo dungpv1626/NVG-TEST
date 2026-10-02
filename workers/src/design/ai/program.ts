@@ -322,7 +322,7 @@ export function programKnowledge(input: {
             (member.needs ?? []).filter((need) => !DERIVED_NEEDS.has(need) && !inBedroom.has(need)),
           ),
         ],
-        in_room: [...new Set((member.needs ?? []).filter((need) => inBedroom.has(need)))],
+        in_room: inRoomCodes(member, digest.required_spaces ?? [], inBedroom, input.fidelity),
       })),
     garage_min_m2: demands.garageMinM2,
     area_tolerance_ratio: input.fidelity.areaToleranceRatio,
@@ -341,6 +341,31 @@ export function programKnowledge(input: {
     brief_demands: { spaces, elevator, balcony, garageMinM2, lines },
     only_when_asked: [...input.fidelity.onlyWhenAsked],
   };
+}
+
+/**
+ * Mã tiện ích TRONG phòng ngủ của một thành viên, theo mã gửi cho mô hình (T112). «Góc làm việc» lưu
+ * bằng mã `study` của phòng làm việc riêng; gửi nguyên mã ấy thì lời dẫn tự mâu thuẫn (luật 2: mọi
+ * không gian đầu bài khai phải có; luật 3: mã trong `inside` không thành không gian). Đổi theo
+ * `in_bedroom_as`, và bỏ hẳn khi cùng tầng đầu bài đã có chính loại phòng ấy làm không gian riêng —
+ * hai chỗ làm việc cho một việc. Thành viên chưa khai tầng thì không bỏ: không biết hai thứ có cùng tầng.
+ */
+function inRoomCodes(
+  member: { needs?: readonly string[] | null; floor?: number | null },
+  spaces: readonly { type: string; floor?: number | null }[],
+  inBedroom: ReadonlySet<string>,
+  fidelity: BriefFidelity,
+): string[] {
+  const codes = new Set<string>();
+  for (const need of member.needs ?? []) {
+    if (!inBedroom.has(need)) continue;
+    const ownRoomSameFloor =
+      typeof member.floor === 'number' &&
+      spaces.some((space) => space.type === need && space.floor === member.floor);
+    if (ownRoomSameFloor) continue;
+    codes.add(fidelity.inBedroomAs[need] ?? need);
+  }
+  return [...codes];
 }
 
 /**
@@ -501,12 +526,20 @@ export function checkProposal(
   for (const [key, group] of groups) {
     const [type, floorKey] = key.split('@') as [string, string];
     const floor = floorKey === '*' ? null : Number(floorKey);
+    // Dòng WC của đầu bài là WC CHUNG (T106, Haan chấm lượt f351115d: «tầng 1 thiếu nhà vệ sinh chung» — đầu bài khai
+    // một WC tầng 1 và một phòng ngủ khép kín, mô hình vẽ đúng một WC, là WC khép kín của phòng ngủ ấy). WC khép kín đã
+    // có đòi hỏi riêng theo phòng ngủ khép kín (bên dưới), nên không đếm vào đây. Ban công gắn phòng ngủ vẫn đếm.
     const candidates = proposal.spaces.filter(
-      (s) => s.type === type && (floor === null || s.level === floor),
+      (s) =>
+        s.type === type &&
+        (floor === null || s.level === floor) &&
+        !(type === 'wc' && s.ensuite_of),
     );
     if (candidates.length === 0) {
       issues.push(
-        `Thiếu ${name(type)}${floor === null ? '' : ` ở tầng ${floor}`} — đầu bài khai đây là không gian phải có.`,
+        type === 'wc'
+          ? `Thiếu ${name(type)} chung${floor === null ? '' : ` ở tầng ${floor}`} — đầu bài khai đây là không gian phải có; khu vệ sinh khép kín của phòng ngủ không tính.`
+          : `Thiếu ${name(type)}${floor === null ? '' : ` ở tầng ${floor}`} — đầu bài khai đây là không gian phải có.`,
       );
       continue;
     }
@@ -548,7 +581,9 @@ export function checkProposal(
     const candidates = proposal.spaces.filter(
       (s) => s.type === type && (floor === null || s.level === floor),
     );
-    issues.push(...areaMismatches(group, candidates, name, floor, type));
+    issues.push(
+      ...areaMismatches(group, candidates, name, floor, type, ensuiteParentIds(proposal.spaces)),
+    );
   }
 
   const needAt = new Map<string, number>();
@@ -714,28 +749,62 @@ function demandIssues(
  * Ghép theo thứ tự diện tích chứ không theo chỉ số, vì mô hình không giữ thứ tự dòng của đầu bài.
  */
 function areaMismatches(
-  rows: { area_m2: number | null }[],
-  candidates: { target_area_m2: number }[],
+  rows: BriefRow[],
+  candidates: { id: string; target_area_m2: number }[],
   name: (code: string) => string,
   floor: number | null,
   type: string,
+  ensuiteIds: ReadonlySet<string> = new Set(),
 ): string[] {
-  const minimums = rows
-    .map((row) => row.area_m2)
-    .filter((area): area is number => typeof area === 'number')
-    .sort((a, b) => b - a);
-  if (!minimums.length) return [];
-  const offered = candidates.map((c) => c.target_area_m2).sort((a, b) => b - a);
   const out: string[] = [];
-  minimums.forEach((minimum, index) => {
-    const got = offered[index];
+  for (const [minimum, candidate] of pairBriefRows(rows, candidates, ensuiteIds)) {
+    const got = candidate?.target_area_m2;
     // Làm tròn tới 0,1 m² như lúc đúc artifact, để 27,95 không bị bác vì mức 28.
-    if (got === undefined || round1(got) >= minimum) return;
+    if (got === undefined || round1(got) >= minimum) continue;
     out.push(
       `${name(type)}${floor === null ? '' : ` tầng ${floor}`}: đầu bài khai tối thiểu ${minimum} m², đề xuất ${round1(got)} m² — nhỏ hơn mức tối thiểu.`,
     );
-  });
+  }
   return out;
+}
+
+type BriefRow = { area_m2: number | null; ensuite?: boolean | null };
+
+/**
+ * Ghép dòng đầu bài có diện tích với phòng đề xuất cùng loại: lớn với lớn. Dòng khai KHÉP KÍN ghép
+ * trước, và ưu tiên phòng có khu vệ sinh khép kín (T112) — trước đây tầng 1 «phòng ngủ 20 m² khép
+ * kín» (ông bà) + «phòng ngủ 15 m²» (giúp việc) ghép theo cỡ thuần, nên WC khép kín gắn vào phòng 15 m²
+ * vẫn qua, và phòng ông bà thành phòng không khép kín. Không dòng nào khai khép kín thì đúng như cũ.
+ */
+function pairBriefRows<C extends { id: string; target_area_m2: number }>(
+  rows: BriefRow[],
+  candidates: C[],
+  ensuiteIds: ReadonlySet<string>,
+): [number, C | undefined][] {
+  const sized = rows
+    .filter(
+      (row): row is { area_m2: number; ensuite?: boolean | null } =>
+        typeof row.area_m2 === 'number',
+    )
+    .sort(
+      (a, b) => Number(b.ensuite === true) - Number(a.ensuite === true) || b.area_m2 - a.area_m2,
+    );
+  const left = [...candidates].sort((a, b) => b.target_area_m2 - a.target_area_m2);
+  return sized.map((row) => {
+    let index = row.ensuite === true ? left.findIndex((c) => ensuiteIds.has(c.id)) : -1;
+    if (index < 0) index = left.length ? 0 : -1;
+    const [taken] = index < 0 ? [undefined] : left.splice(index, 1);
+    return [row.area_m2, taken];
+  });
+}
+
+/** Mã các phòng có khu vệ sinh khép kín (`ensuite_of` của một WC trỏ vào). */
+function ensuiteParentIds(
+  spaces: readonly { type: string; ensuite_of?: string | null }[],
+): Set<string> {
+  return new Set(
+    spaces.flatMap((space) => (space.type === 'wc' && space.ensuite_of ? [space.ensuite_of] : [])),
+  );
 }
 
 /**
@@ -754,21 +823,20 @@ export function liftToBriefFloors(
 ): { proposal: AiSpaceProgramProposal; notes: string[] } {
   const spaces = proposal.spaces.map((space) => ({ ...space }));
   const notes: string[] = [];
-  const groups = new Map<string, number[]>();
+  const groups = new Map<string, BriefRow[]>();
   for (const row of knowledge.brief_spaces) {
     if (typeof row.area_m2 !== 'number') continue;
     const key = `${row.type}@${row.floor ?? '*'}`;
-    groups.set(key, [...(groups.get(key) ?? []), row.area_m2]);
+    groups.set(key, [...(groups.get(key) ?? []), row]);
   }
-  for (const [key, areas] of groups) {
+  const ensuiteIds = ensuiteParentIds(spaces);
+  for (const [key, rows] of groups) {
     const [type, floorKey] = key.split('@') as [string, string];
     const floor = floorKey === '*' ? null : Number(floorKey);
-    const minimums = [...areas].sort((a, b) => b - a);
-    const candidates = spaces
-      .filter((space) => space.type === type && (floor === null || space.level === floor))
-      .sort((a, b) => b.target_area_m2 - a.target_area_m2);
-    minimums.forEach((minimum, index) => {
-      const space = candidates[index];
+    const candidates = spaces.filter(
+      (space) => space.type === type && (floor === null || space.level === floor),
+    );
+    pairBriefRows(rows, candidates, ensuiteIds).forEach(([minimum, space]) => {
       if (!space || round1(space.target_area_m2) >= minimum) return;
       notes.push(
         `${labels[type] ?? type} tầng ${space.level}: mô hình khai ${round1(space.target_area_m2)} m², dưới mức đầu bài ${minimum} m² — chương trình nâng lên ${minimum} m².`,
