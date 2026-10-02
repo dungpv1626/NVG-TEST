@@ -425,11 +425,20 @@ function placeItem(rect: Rect, item: PackItem, reach: Reach, env: PackEnv): Pack
   // nhân đôi việc tìm cây (phát lại T94 6 s → 28 s, vitest báo «Timeout calling onTaskUpdate»).
   if (single) {
     const innerIds = new Set(inner.map((child) => child.id));
+    const outdoorIds = new Set(outdoor.map((child) => child.id));
     const onFront = leaves(single.placed).some(
       (cell) =>
         innerIds.has(cell.id) && env.openSides.has('y0') && cell.rect.y0 === env.footprint.y0,
     );
-    if (!onFront) return single;
+    // Hay dải chung đẩy ban công vào lòng nhà, không cạnh nào ra mặt thoáng (T103 — lượt thật 7c6de305).
+    const enclosed = leaves(single.placed).some(
+      (cell) =>
+        outdoorIds.has(cell.id) &&
+        !(['y0', 'y1', 'x0', 'x1'] as const).some(
+          (side) => env.openSides.has(side) && cell.rect[side] === env.footprint[side],
+        ),
+    );
+    if (!onFront && !enclosed) return single;
   }
   const outdoorWeight = outdoor.reduce((sum, child) => sum + child.target, 0);
   const twoStrips = placeStrip(rect, { ...item, children: outdoor }, reach, env, (main) =>

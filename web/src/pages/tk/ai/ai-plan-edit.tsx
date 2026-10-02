@@ -1,7 +1,7 @@
 /**
  * Ô «Yêu cầu sửa» trên một phương án mặt bằng đã lưu (T53, 16/09/2026).
  *
- * Haan: luồng tự động chỉ cần đạt ngưỡng 65 điểm, rồi «có một ô chat để kĩ sư đưa vào yêu cầu của họ
+ * Haan: luồng tự động chỉ cần đạt ngưỡng 60 điểm (65 tới 01/10/2026), rồi «có một ô chat để kĩ sư đưa vào yêu cầu của họ
  * sau khi review bản vẽ … ấn sửa lại». AI dịch câu yêu cầu thành thao tác (dời cửa, bỏ vách, đổi chỗ,
  * đổi diện tích…), chương trình áp lên chính bản vẽ này và chấm lại. Ba điều màn hình phải nói ra:
  *

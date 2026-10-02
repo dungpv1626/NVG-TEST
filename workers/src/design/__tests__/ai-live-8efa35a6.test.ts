@@ -35,8 +35,9 @@ describe('phát lại lượt chạy thật 8efa35a6', () => {
   it('hộp kỹ thuật (`no_door_required`) không bị báo «không có lối vào»; giặt phơi mở ra ban công được (T91)', () => {
     const message = rounds[0]!.rejections[0]!.messages.join(' ');
     expect(message).not.toMatch(/shaft_1/);
-    // T91 (Haan 27/09/2026): giặt phơi được mở cửa từ ban công — không còn bị báo không lối vào.
-    expect(message).not.toMatch(/"laundry_1"/);
+    // T91 (Haan 27/09/2026): giặt phơi được mở cửa từ ban công — không còn bị báo không lối vào. Từ T105 ô thang
+    // không còn làm lối đi, nên giặt phơi kẹp cạnh thang có thể bị báo «chỉ giáp ô thang» — lỗi khác, đúng.
+    expect(message).not.toMatch(/"laundry_1" ở tầng 2 không có cửa/);
   });
 
   it('mỗi lượt báo đúng phòng không có lối vào trên bản phác', () => {
@@ -51,7 +52,7 @@ describe('phát lại lượt chạy thật 8efa35a6', () => {
     // Lượt 3 báo phòng thờ + laundry; lượt 4 mô hình sửa chúng mà làm hở bedroom_5 — câu nhắc lượt 3
     // khi ấy không hề nhắc tới bedroom_5.
     const hint = rounds[2]!.hints.join(' ');
-    expect(hint).toMatch(/must KEEP it after your change: .*"bedroom_5"/);
-    expect(hint).not.toMatch(/KEEP it.*"altar_room_1"/);
+    expect(hint).toMatch(/Keep the way in of: .*"bedroom_5"/);
+    expect(hint).not.toMatch(/Keep the way in of: .*"altar_room_1"/);
   });
 });

@@ -33,6 +33,7 @@ import {
   type DesignBriefDraft,
   withoutHiddenAnswers,
 } from '../design';
+import { OPEN_FACE_MIN_SETBACK_M } from '../design/brief-completeness';
 
 const root = (p: string) => fileURLToPath(new URL(`../../../${p}`, import.meta.url));
 
@@ -1027,6 +1028,37 @@ describe('Hai câu trả lời ở hai mục khác nhau nói ngược nhau (28/0
     ).find((i) => i.code === 'ban_cong_mat_giap_nha_xom')!;
     expect(found.severity).toBe('nghiem_trong');
     expect(found.message).not.toMatch(/khoảng lùi/);
+  });
+
+  it('ban công quay ra mặt sát đất trống: cảnh báo ngay trên đầu bài (T112, Haan 02/10/2026)', () => {
+    const villa = (backYard: number, balconies: Record<string, unknown>) => ({
+      building_type: 'biet_thu',
+      site: { adjacent: { back: 'dat_trong', right: 'nha_hang_xom' } },
+      massing: { yard_depth_m: { back: backYard } },
+      balconies: { scope: 'theo_tung_phong', ...balconies },
+    });
+    const found = (d: unknown) =>
+      checkBriefConsistency(d as DesignBriefDraft, BRIEF_FORM).find(
+        (i) => i.code === 'ban_cong_mat_sat_dat_trong',
+      );
+    // Đúng đầu bài demo cũ: ban công tuỳ chọn mặt sau + ban công phơi phía sau, tường sau sát ranh.
+    const hit = found(
+      villa(0, { required_sides: ['front'], optional_sides: ['back'], drying_balcony: true }),
+    );
+    expect(hit?.severity).toBe('canh_bao');
+    expect(hit?.message).toMatch(/^Mặt sau giáp đất trống/);
+    expect(hit?.message).toContain('ban công tuỳ chọn, ban công phơi phía sau');
+    // Chừa sân sau đủ thì thôi; không xin ban công ở mặt ấy thì cũng không nói.
+    expect(found(villa(1.5, { optional_sides: ['back'], drying_balcony: true }))).toBeUndefined();
+    expect(found(villa(0, { required_sides: ['front'] }))).toBeUndefined();
+    expect(found(villa(0, { scope: 'khong_co', drying_balcony: true }))).toBeUndefined();
+  });
+
+  it('ngưỡng mặt thoáng của màn hình đầu bài khớp `kb/site_context.yaml`', () => {
+    const kb = parseYaml(readFileSync(root('kb/site_context.yaml'), 'utf8')) as {
+      min_open_setback_m?: Record<string, number>;
+    };
+    expect(OPEN_FACE_MIN_SETBACK_M).toEqual(kb.min_open_setback_m ?? {});
   });
 
   it('không kinh doanh mà có dòng cửa hàng', () => {

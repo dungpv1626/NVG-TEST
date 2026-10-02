@@ -26,6 +26,7 @@ import { briefDemands, matchDemand } from '../ai/brief-demands';
 import {
   allowedBox,
   checkBalconyDemand,
+  checkSketchBalconyDemand,
   checkElevatorLayout,
   checkElevatorStack,
   checkSoftDemands,
@@ -405,6 +406,92 @@ describe('ban công', () => {
   });
 });
 
+// T105 (Q-57, Haan chọn A): ban công DÀI «ở» mặt mà cạnh dài mở ra. Lượt thật 894b350d: ban công phơi 3,9 × 1 m
+// mặt sau, đầu ngắn chạm mép phải (nhà hàng xóm, mặt cấm) — cả sáu vòng bị bác chỉ vì thế.
+describe('ban công chạm mặt cấm bằng đầu ngắn', () => {
+  const base = demandsOf({ balconies: { scope: 'chi_mat_tien' } }).balcony!;
+  const backOnly = {
+    ...base,
+    sides: ['back' as const],
+    forbiddenSides: ['left' as const, 'right' as const],
+  };
+  const LONG_RATIO = 1.5;
+  const codes = (rect: [number, number, number, number], ratio: number | null) => {
+    const found: string[] = [];
+    checkBalconyDemand(planWithBalconyRect(rect), backOnly, (_l, code) => found.push(code), ratio);
+    return found;
+  };
+
+  it('ban công dài mặt sau, đầu ngắn áp mép phải → không tính là ở mặt phải', () => {
+    expect(codes([110, 1700, 500, 1800], LONG_RATIO)).toEqual([]);
+  });
+
+  it('không truyền tỷ lệ thì như trước: chạm mép nào tính mặt đó', () => {
+    expect(codes([110, 1700, 500, 1800], null)).toContain('balcony_side_not_wanted');
+  });
+
+  it('ban công gần vuông ở góc vẫn tính cả hai mặt', () => {
+    expect(codes([300, 1620, 500, 1800], LONG_RATIO)).toContain('balcony_side_not_wanted');
+  });
+
+  it('cạnh dài nằm trên mép phải → ban công mặt phải, bị bác', () => {
+    expect(codes([400, 1410, 500, 1800], LONG_RATIO)).toContain('balcony_side_not_wanted');
+  });
+
+  it('bản phác: cùng cách tính theo ô', () => {
+    const run = (rows: string[]) => {
+      const found: string[] = [];
+      checkSketchBalconyDemand(
+        { ...backOnly, fromLevel: 2, levels: [] },
+        [{ id: 'b', type: 'balcony', level: 2 }],
+        new Map([[2, rows]]),
+        (_l, code) => found.push(code),
+        LONG_RATIO,
+      );
+      return found;
+    };
+    // Bốn ô dọc mép sau, ô cuối chạm mép phải.
+    expect(run(['r r r r r', 'r r r r r', 'r b b b b'])).toEqual([]);
+    // Hai × hai ô ở góc: gần vuông, vẫn ở mặt phải.
+    expect(run(['r r r r r', 'r r r b b', 'r r r b b'])).toContain('balcony_side_not_wanted');
+  });
+});
+
+// T106 (Haan chấm lượt f351115d): ban công mặt trước phải «nằm phần lớn ở mặt trước» — khối vuông ở góc trước – trái
+// không tính là ban công mặt trước.
+describe('ban công góc chỉ tính cho mặt nó dài hơn rõ rệt', () => {
+  const base = demandsOf({ balconies: { scope: 'chi_mat_tien' } }).balcony!;
+  const frontOnly = { ...base, sides: ['front' as const], forbiddenSides: [] };
+  const codes = (rect: [number, number, number, number], ratio: number | null) => {
+    const found: string[] = [];
+    checkBalconyDemand(planWithBalconyRect(rect), frontOnly, (_l, code) => found.push(code), ratio);
+    return found;
+  };
+
+  it('khối 2,4 × 2,3 m ở góc trước – trái → không phải ban công mặt trước', () => {
+    expect(codes([0, 0, 240, 230], 1.5)).toContain('balcony_side_missing');
+  });
+
+  it('ban công dài 3,6 × 1,2 m ở góc trước – trái → vẫn là ban công mặt trước', () => {
+    expect(codes([0, 0, 360, 120], 1.5)).toEqual([]);
+  });
+
+  it('ban công vuông chỉ chạm mặt trước (không ở góc) → vẫn là ban công mặt trước', () => {
+    expect(codes([100, 0, 340, 230], 1.5)).toEqual([]);
+  });
+
+  it('không truyền tỷ lệ thì như trước', () => {
+    expect(codes([0, 0, 240, 230], null)).toEqual([]);
+  });
+});
+
+/** Mặt bằng một tầng (tầng 2) với đúng một ban công ở `rect` (x0, y0, x1, y1). */
+function planWithBalconyRect(rect: [number, number, number, number]): AiFloorPlan {
+  const plan = planWithBalcony(0);
+  plan.levels[0]!.rooms[0]!.rect = rect;
+  return plan;
+}
+
 /** Mặt bằng một tầng (tầng 2) với đúng một ban công, mép trước đặt ở `y0`. */
 function planWithBalcony(y0: number): AiFloorPlan {
   return {
@@ -552,6 +639,7 @@ describe('kb và mã nguồn phải nói cùng một thứ', () => {
       'hop_ky_thuat_cuc_nong',
       'cho_phoi_ngoai_troi',
       'bon_nuoc_mai',
+      'cuc_nong_san_thuong',
       'bep_kin_chien_xao',
       'khach_o_lai',
       'lam_viec_tai_nha',

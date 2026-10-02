@@ -107,7 +107,9 @@ describe('chèn dải hành lang vào đường cắt sạch', () => {
   });
 });
 
-describe('phát lại lượt thật — biến thể ra mặt bằng mà gốc không ra', () => {
+// Trần 90 giây: từ T104 mỗi `evaluateHouseBest` xếp thêm một lần cả nhà (biến thể thu hẹp hành lang), phép thử
+// 5aba737d vòng 1 chạy ~32 giây khi cả bộ kiểm chạy song song — vượt trần mặc định 30 giây.
+describe('phát lại lượt thật — biến thể ra mặt bằng mà gốc không ra', { timeout: 90_000 }, () => {
   const evaluate = (id: string, round: number) => {
     const run = loadRun(id);
     const input = {

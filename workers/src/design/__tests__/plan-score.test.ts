@@ -28,6 +28,7 @@ import {
 import { parseVocabulary, passageRules, roomGroups } from '../kb/vocabulary';
 import { parseRuleFile, RulePack } from '../rules/rule-pack';
 import { TOWNHOUSE_PLAN, VILLA_PLAN } from './ai-plan-fixtures';
+import { roomsWithDaylight } from '../ai/rule-warnings';
 
 const read = (relative: string): string =>
   readFileSync(fileURLToPath(new URL(relative, import.meta.url)), 'utf8');
@@ -105,8 +106,12 @@ describe('hình dạng kết quả', () => {
     // số nhóm D (7,5) không chấm được.
     // T96: trọng số TRONG nhóm theo `weight` (C1, C9 nặng 2; A3 nặng 2; A6 nhẹ 0,5; E5 nặng 1,5) và
     // thêm C9, C10, E5. Nhóm C nay 12 phần, C5 = 30/12 = 2,5; nhóm E 3,5 phần, E4 = 10/3,5 ≈ 2,86.
-    expect(result.scoredWeight).toBe(87.14);
-    expect(of(result, 'C5').weight).toBe(2.5);
+    // T105 thêm C11 (gara vào phòng khách) vào nhóm C và D2 (phòng ngủ tối) vào nhóm D — nhà phố không chấm D2,
+    // nên nửa trọng số nhóm D không chấm được càng lớn.
+    // T107 thêm D4 (giặt phơi có chỗ phơi) — nhà phố mẫu có `laundry_3` nên D4 chấm được, thêm 3 phần.
+    expect(result.scoredWeight).toBe(85.84);
+    // Nhóm C nay 13 phần (thêm C11), C5 = 30/13.
+    expect(of(result, 'C5').weight).toBeCloseTo(30 / 13, 6);
     expect(of(result, 'C5').score).toBeNull();
     expect(of(result, 'E4').weight).toBeCloseTo(10 / 3.5, 2);
     expect(of(result, 'C1').weight).toBeCloseTo(2 * of(result, 'C2').weight, 6);
@@ -128,7 +133,9 @@ describe('hình dạng kết quả', () => {
     // thực tế (T31). Trước T48 chỉ có A1; nay thêm năm tiêu chí của T48 (định mức nghề và đường đi),
     // ngưỡng của chúng đều là suy luận — nên phần «chưa ai đo» phải TĂNG, và màn hình phải nói ra.
     // T96 thêm C9, C10, E5 — cả ba cũng là suy luận nghề (n = 0).
-    expect(result.suyLuanWeight).toBeCloseTo(30.65, 2);
+    // T105 thêm C11 — suy luận nghề (n = 0); D2 không chấm ở nhà phố.
+    // T107 thêm D4 — suy luận nghề (n = 0), 15 / 5 phần nhóm D = 3.
+    expect(result.suyLuanWeight).toBeCloseTo(34.8, 2);
     const guessed = result.criteria.filter((entry) => entry.n === 0 && entry.score !== null);
     expect(guessed.map((entry) => entry.code)).toEqual([
       'A1',
@@ -138,7 +145,9 @@ describe('hình dạng kết quả', () => {
       'C7',
       'C8',
       'C9',
+      'C11',
       'C10',
+      'D4',
       'E5',
     ]);
   });
@@ -518,7 +527,8 @@ describe('tiêu chí T96 — cửa chính đón vào đâu, hành lang phục v�
 
   it('sàn nhóm: nhà phố mẫu hụt hẳn nhóm mặt thoáng, và không có sàn thì không nhóm nào bị nêu', () => {
     const result = score(TOWNHOUSE_PLAN, 'nha_pho');
-    expect(groupsBelowFloor(result, 40)).toContain('D');
+    // Nhóm D còn 50 %: phòng khách không cửa sổ thoáng (D1 = 0), giặt phơi có chỗ phơi (D4 đạt, T107).
+    expect(groupsBelowFloor(result, 60)).toContain('D');
     expect(groupsBelowFloor(result, null)).toEqual([]);
     // Nhóm chưa chấm được gì không bị coi là dưới sàn.
     expect(groupsBelowFloor({ groups: [{ code: 'X', points: 0, scoredWeight: 0 }] }, 40)).toEqual(
@@ -532,5 +542,98 @@ describe('tiêu chí T96 — cửa chính đón vào đâu, hành lang phục v�
       '- code: C9\n    weight: 0\n    group: C',
     );
     expect(() => parsePlanQuality(text)).toThrow(/weight/);
+  });
+});
+
+describe('tiêu chí T105 — phòng ngủ tối hẳn (D2), gara vào phòng khách (C11)', () => {
+  const villa = () => structuredClone(VILLA_PLAN) as AiFloorPlan;
+
+  it('D2: biệt thự mẫu mọi phòng ngủ có cửa sổ → đủ điểm', () => {
+    const d2 = of(score(VILLA_PLAN, 'biet_thu'), 'D2');
+    expect(d2.value).toBe(0);
+    expect(d2.score).toBe(1);
+  });
+
+  it('D2: bỏ mọi cửa sổ của một phòng ngủ biệt thự → trừ hết, chỉ đúng phòng ấy', () => {
+    const plan = villa();
+    const bedroom = plan.levels
+      .flatMap((level) => level.rooms)
+      .find((room) => room.type === 'bedroom')!;
+    for (const level of plan.levels) {
+      const lit = new Set(
+        (level.windows ?? []).filter((w) => {
+          const one = { ...level, windows: [w] };
+          return roomsWithDaylight(one).has(bedroom.id);
+        }),
+      );
+      level.windows = (level.windows ?? []).filter((w) => !lit.has(w));
+    }
+    const d2 = of(score(plan, 'biet_thu'), 'D2');
+    expect(d2.value).toBe(1);
+    expect(d2.score).toBe(0);
+    expect(d2.refs).toEqual([bedroom.id]);
+  });
+
+  it('D2: nhà phố không chấm — phòng ngủ phụ lấy sáng gián tiếp, phòng ngủ chính D1 đã đòi', () => {
+    const d2 = of(score(TOWNHOUSE_PLAN, 'nha_pho'), 'D2');
+    expect(d2.score).toBeNull();
+  });
+
+  // T107 (Haan 30/09/2026): giặt phơi đặt nơi có ban công / cửa sổ thoáng / giáp ban công / gần sân phơi.
+  const townhouse = () => structuredClone(TOWNHOUSE_PLAN) as AiFloorPlan;
+  const dropWindowsOf = (plan: AiFloorPlan, id: string) => {
+    for (const level of plan.levels) {
+      level.windows = (level.windows ?? []).filter(
+        (w) => !roomsWithDaylight({ ...level, windows: [w] }).has(id),
+      );
+    }
+  };
+
+  it('D4: giặt phơi nhà phố mẫu giáp sân thượng → có chỗ phơi, đủ điểm', () => {
+    const d4 = of(score(TOWNHOUSE_PLAN, 'nha_pho'), 'D4');
+    expect(d4.value).toBe(0);
+    expect(d4.score).toBe(1);
+  });
+
+  it('D4: bỏ cửa sổ và cửa ra sân thượng, giặt phơi vẫn GIÁP sân thượng (qua một bề dày tường) → vẫn đạt', () => {
+    const plan = townhouse();
+    dropWindowsOf(plan, 'laundry_3');
+    // `d7`: cửa giặt phơi → sân thượng. Bỏ nó thì chỉ còn đường «chung tường».
+    for (const level of plan.levels) level.doors = (level.doors ?? []).filter((d) => d.id !== 'd7');
+    expect(of(score(plan, 'nha_pho'), 'D4').value).toBe(0);
+  });
+
+  it('D4: bỏ cửa sổ, sân thượng đổi thành kho → không còn chỗ phơi, trừ hết, nêu đúng phòng', () => {
+    const plan = townhouse();
+    dropWindowsOf(plan, 'laundry_3');
+    for (const level of plan.levels) {
+      for (const room of level.rooms) if (room.id === 'terrace_3') room.type = 'storage';
+    }
+    const d4 = of(score(plan, 'nha_pho'), 'D4');
+    expect(d4.value).toBe(1);
+    expect(d4.score).toBe(0);
+    expect(d4.refs).toEqual(['laundry_3']);
+  });
+
+  it('D4: biệt thự không có phòng giặt phơi → không chấm', () => {
+    const plan = villa();
+    for (const level of plan.levels) level.rooms = level.rooms.filter((r) => r.type !== 'laundry');
+    expect(of(score(plan, 'biet_thu'), 'D4').score).toBeNull();
+  });
+
+  it('C11: gara biệt thự mẫu vào thẳng phòng khách / sảnh → không xuyên phòng nào', () => {
+    const c11 = of(score(VILLA_PLAN, 'biet_thu'), 'C11');
+    expect(c11.value).toBe(0);
+    expect(c11.score).toBe(1);
+  });
+
+  it('C11: bỏ ô thông gara – sảnh → vào nhà phải vòng ra ngoài, trừ hết', () => {
+    const plan = villa();
+    const level = plan.levels[0]!;
+    level.doors = level.doors!.filter((door) => door.id !== 'd6');
+    const c11 = of(score(plan, 'biet_thu'), 'C11');
+    expect(c11.value).toBe(9);
+    expect(c11.score).toBe(0);
+    expect(c11.refs).toEqual(['garage_1']);
   });
 });

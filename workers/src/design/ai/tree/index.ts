@@ -35,7 +35,8 @@ import { projectBalconyCells } from './balcony-projection';
 import type { BalconyDemand, Side } from '../brief-demands';
 import { resizeTree } from './sizing';
 import { snapToAnchors, type SnapTarget } from './snap';
-import { stairFlights, stairTreads } from './stair-fit';
+import { shapeFlights } from '../stair-geometry';
+import { stairFlights, stairParamsOf, stairTreads } from './stair-fit';
 
 export { TREE_ISSUE_CODES } from './issues';
 export { SNAP_MAX_CM } from './snap';
@@ -118,6 +119,8 @@ export interface LevelLayoutInput {
   construction: ConstructionNorms;
   groups: RoomGroups;
   mergeAllowed: ReadonlySet<string>;
+  /** Cặp loại phòng gia chủ muốn tách (T103) — xem `ArrangeInput.openForbidden`. */
+  openForbidden?: ReadonlySet<string> | null;
   openFaces: readonly Face[];
   accessFaces: readonly Face[];
   anchors: LevelAnchors | null;
@@ -549,6 +552,7 @@ function layoutOnce(input: LevelLayoutInput): LevelLayout {
     spaces.filter((space) => space.ensuite_of).map((space) => [space.id, space.ensuite_of!]),
   );
   const openings = placeOpenings({
+    openForbidden: input.openForbidden ?? null,
     level,
     cells,
     inner: inset.inner,
@@ -576,12 +580,23 @@ function layoutOnce(input: LevelLayoutInput): LevelLayout {
   if (input.tree.stair) {
     const rect = inset.inner.get(input.tree.stair.room)!;
     const across = input.tree.stair.up.endsWith('y') ? rect.x1 - rect.x0 : rect.y1 - rect.y0;
+    const treads = stairTreads(construction, h);
+    // Loại thang của lượt (T105): tờ vẽ đọc loại và thông số vế từ chính artifact, không từ kho lúc vẽ.
+    const shaped = stairParamsOf(construction, treads);
     stairs.push({
       id: `st${level}`,
       rect: rectArray(rect),
       up: input.tree.stair.up,
-      flights: stairFlights(construction, across),
-      treads: stairTreads(construction, h),
+      flights: shaped ? shapeFlights(shaped.shape) : stairFlights(construction, across),
+      treads,
+      ...(shaped
+        ? {
+            shape: shaped.shape,
+            flight_width: Math.round(shaped.flightWidth),
+            landing: Math.round(shaped.landing),
+            gap: Math.round(shaped.gap),
+          }
+        : {}),
       // Mặt bậc là số NVG giữ cố định (250 trên cả bốn vế đo được, 13.16.1) — tờ vẽ đọc số này
       // thay vì chia đều ô thang, để ô thang dài hơn cần thì phần dư vào chiếu nghỉ (T70).
       ...(construction.stairs.going_m !== undefined

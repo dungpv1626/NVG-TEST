@@ -435,7 +435,7 @@ hồ sơ phát hành. Hiện trạng:
 - **Cổng hỏng thì không lưu** (T39). Chỉ gọi lại mô hình cho lỗi **ngữ nghĩa** (`REVISABLE_CODES`), tối
   đa `HOUSE_REVISIONS_MAX`; lỗi hình học thì bộ xếp tự thử rồi dừng. Tầng 1 hỏng vì cửa ra ngoài → chương
   trình thử đổi phòng mang cửa chính trước khi gọi lại (T51).
-- **Ngưỡng 65 điểm** (`kb/plan_quality.yaml` `accept_percent`) **và sàn 40 % cho từng nhóm**
+- **Ngưỡng 60 điểm** (`kb/plan_quality.yaml` `accept_percent`; 65 tới 01/10/2026) **và sàn 40 % cho từng nhóm**
   (`accept_group_floor_percent`, T96 — nhóm diện tích không bù được cho một tầng đi lại tệ); dưới ngưỡng
   dùng lượt sửa còn lại; sau đó kỹ sư **sửa trên bản vẽ bằng ô yêu cầu** → mô hình trả thao tác trong tập
   đóng `contracts/ai-plan-edit`, chương trình áp lên cây đã lưu (T53, `ai/edit/`). Thước chấm là **tư duy
@@ -494,6 +494,12 @@ hồ sơ phát hành. Hiện trạng:
   đọc qua một hàm `balconySides` (`shared/src/design/balcony-brief.ts`, đọc được cả đầu bài cũ) —
   đừng đọc thẳng trường. Phần **đua ra ngoài ranh** nới ô ngay trong cây chia
   (`tree/balcony-projection.ts`), TRƯỚC khi dựng hình bao và đặt lỗ mở.
+  **Khung xương trước (T102, 29/09/2026, `arrange/skeleton.ts`, `doc/design/THIET_KE_KHUNG_XUONG.md`):** bản
+  phác của mô hình hỏng (lối vào, sàn, cổng) thì chương trình DỰNG lại tầng như kiến trúc sư: ô thang đúng mốc,
+  hành lang nối ô thang (dải ngang trước / sau lõi, dải dọc áp lõi, khe cạnh thang máy thành sảnh), phòng lấp vào
+  các túi theo vị trí bản phác — lối vào là bất biến của cách dựng, không phải phép kiểm sau. Đi TRƯỚC các vòng
+  khung cũ; ghi chú `skeleton_arranged`; lỗi bản phác vẫn theo câu nhắc (T86). Mọi lá hành lang của tầng là MỘT
+  ngân sách: thiếu đoạn thì thêm không gian, thừa lá thì chia đoạn.
   **Bộ xếp có ý niệm công năng (T96):** khu đón khách của không gian mở quay về phía cửa vào
   (`passage.reception_from`, sảnh trước gara trước hành lang); khách / ăn kề lối đi nối bằng ô thông SUỐT
   vách (`passage.open_flow`), không vách ngăn; ban công khép kín và WC khép kín không chung một dải; cổng

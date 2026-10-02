@@ -60,7 +60,7 @@ describe('phát lại lượt chạy thật 011b4adc (luật trước T73)', () 
     // mất; chỗ hỏng thật là bản phác tầng 2, và mô hình được báo đúng chỗ ấy.
     const last = rounds[3]!;
     expect(last.rejections.map((rejection) => rejection.level)).toEqual([2]);
-    expect(last.hints.join(' ')).toMatch(/pinwheel/);
+    expect(last.hints.join(' ')).toMatch(/no wall-to-wall dividing line in rows/);
     expect(retryPlan({ intent: run.intents.round4!, issues: [] }, last).kind).toBe('revise');
   });
 

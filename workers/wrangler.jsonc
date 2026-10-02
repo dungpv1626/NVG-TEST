@@ -33,6 +33,15 @@
   "observability": { "enabled": true },
 
   /**
+   * Trần mỗi lần chạy — CẦN gói Workers Paid (02/10/2026). Gói Free cắt cứng 50 lời gọi ra ngoài và
+   * 10 ms CPU mỗi bước Workflow, không nâng được: «AI Design» trên cloud chết ở bước đầu với «Too many
+   * subrequests» (vòng theo dõi trực tiếp hỏi CSDL mỗi 2 giây trong lúc chờ mô hình), và bước xếp
+   * phòng cần vài giây CPU. `wrangler dev` không áp các trần này, nên mọi lượt trước 02/10 (chạy qua
+   * máy) không lộ ra. Lời gọi ra ngoài để mặc định của Paid (10.000).
+   */
+  "limits": { "cpu_ms": 300000 },
+
+  /**
    * Nạp `config/models.yaml` vào bản dựng dạng VĂN BẢN. Worker không có hệ tệp để đọc lúc
    * chạy, mà tên mô hình thì không được là hằng số trong mã nguồn (doc/design 5.6) — nhúng
    * tệp cấu hình là cách duy nhất thoả cả hai.

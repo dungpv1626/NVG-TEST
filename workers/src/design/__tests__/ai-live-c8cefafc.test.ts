@@ -46,11 +46,11 @@ describe('phát lại lượt chạy thật c8cefafc — lỗi giảm 4 → 1 qu
     expect(hint).toMatch(/Storey 1: Room "bedroom_1" could only be entered from the stair/);
   });
 
-  it('vòng 2 sửa cả tầng 1 và làm `living_1` mất lối vào — tệ hơn vòng 1 (hỏng ở tầng thấp hơn)', () => {
+  // T105: ô thang không còn làm lối đi; bộ xếp dựng lại tầng 1 của vòng 2 và `living_1` có lối vào — vòng 2 nay
+  // chỉ hỏng tầng 2 (trước đó hỏng tầng 1, «tệ hơn» và bị gạt).
+  it('vòng 2 sửa cả tầng 1 — nay tầng 1 qua, chỉ tầng 2 hỏng', () => {
     const round2 = evaluate(mergeRevision(round1.renamed!, run.intents.round2 as HouseIntent));
-    // T92: tầng 1 hỏng thì bản phác tầng trên vẫn được SOÁT cùng lượt — tầng 2 góp lỗi của nó.
-    expect(levelsOf(round2)[0]).toBe(1);
-    expect(round2.rejections[0]!.messages.join(' ')).toContain('"living_1" không chạm hành lang');
+    expect(levelsOf(round2)).toEqual([2]);
   });
 
   it('vòng 3 (gốc vòng 1): chỉ còn `laundry_1` không lối vào', () => {
@@ -113,8 +113,7 @@ describe('phát lại lượt chạy thật c8cefafc — lỗi giảm 4 → 1 qu
     const sentFrom = (call: StructuredCallOptions) =>
       call.prompt.slice(call.prompt.indexOf('<previous_intent>'));
     // Số lỗi đếm cả bản phác tầng trên đã soát (T92), nên chỉ canh câu, không canh con số.
-    expect(options[2]!.prompt).toMatch(/Your last revision was worse .*\d+ problems against \d+/);
-    expect(sentFrom(options[2]!)).toBe(sentFrom(options[1]!));
+    // T105: vòng 2 không còn tệ hơn vòng 1 (xem trên), nên chỉ lời gọi 5 (sau vòng 4 chong chóng) sửa từ bản cũ.
     expect(options[4]!.prompt).toMatch(/Your last revision was worse .*\d+ problems against \d+/);
     expect(sentFrom(options[4]!)).toBe(sentFrom(options[3]!));
   });

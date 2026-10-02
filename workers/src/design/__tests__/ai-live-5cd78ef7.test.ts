@@ -51,7 +51,8 @@ describe('phát lại lượt chạy thật 5cd78ef7', () => {
     const picked = revisionBase(round3, round4, prompts);
     expect(picked.best).toBe(round3);
     expect(picked.next.plan.previous).toBe(round3.plan.previous);
-    expect(picked.next.hints[0]).toMatch(/Your last revision was worse .*6 problems against 1/);
+    // T105: lượt 4 nay 14 lỗi (luật ô thang báo thêm) — con số không phải thứ bài này canh.
+    expect(picked.next.hints[0]).toMatch(/Your last revision was worse .*\d+ problems against 1/);
     expect(picked.next.hints.slice(1)).toEqual(round3.hints);
   });
 

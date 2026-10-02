@@ -665,6 +665,15 @@ describe('Bám đầu bài — sáng tạo nhưng không mâu thuẫn đầu bà
     expect(issuesOf(bad).join(' ')).toMatch(/Thiếu Phòng thờ ở tầng 2/);
   });
 
+  // T106 (Haan chấm lượt f351115d: «tầng 1 thiếu nhà vệ sinh chung») — dòng WC của đầu bài là WC CHUNG.
+  it('dòng WC của đầu bài không được đáp ứng bằng khu vệ sinh khép kín của phòng ngủ', () => {
+    const bad = faithful();
+    bad.spaces = bad.spaces.filter((s) => s.id !== 'w');
+    expect(issuesOf(bad).join(' ')).toMatch(
+      /Thiếu Khu vệ sinh chung — đầu bài khai đây là không gian phải có; khu vệ sinh khép kín của phòng ngủ không tính/,
+    );
+  });
+
   it('thành viên khép kín mà phòng ngủ không có khu vệ sinh khép kín bị bác', () => {
     const bad = faithful();
     bad.spaces.find((s) => s.id === 'b1w')!.ensuite_of = null;
@@ -681,7 +690,8 @@ describe('Bám đầu bài — sáng tạo nhưng không mâu thuẫn đầu bà
 
   it('tủ đồ, góc học tập trong phòng ngủ là TIỆN ÍCH trong phòng, không phải nhu cầu không gian', () => {
     expect(detailed.members).toContainEqual(
-      expect.objectContaining({ role: 'vo_chong', needs: ['balcony'], in_room: ['study'] }),
+      // «Góc làm việc» lưu mã `study`; gửi mô hình bằng mã góc `study_area` (T112).
+      expect.objectContaining({ role: 'vo_chong', needs: ['balcony'], in_room: ['study_area'] }),
     );
     // Không có góc học tập riêng vẫn ĐẠT — nó nằm trong phòng ngủ.
     const noCorner = faithful();

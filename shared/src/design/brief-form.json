@@ -1120,6 +1120,32 @@
           ]
         },
         {
+          "path": "lifestyle.living_dining_kitchen",
+          "label": "Phòng khách, phòng ăn, bếp",
+          "control": "choice",
+          "weight": 0,
+          "optional": true,
+          "hint": "Liền thông thành một không gian hay tách thành phòng riêng có vách. Nấu nhiều chiên xào thường nên để bếp kín.",
+          "options": [
+            {
+              "value": "lien_thong_ca_ba",
+              "label": "Liền thông cả ba"
+            },
+            {
+              "value": "an_bep_lien_khach_rieng",
+              "label": "Ăn và bếp liền, phòng khách riêng"
+            },
+            {
+              "value": "khach_an_lien_bep_rieng",
+              "label": "Khách và ăn liền, bếp kín riêng"
+            },
+            {
+              "value": "tach_rieng",
+              "label": "Ba phòng tách riêng"
+            }
+          ]
+        },
+        {
           "path": "lifestyle.guests",
           "label": "Tần suất tiếp khách",
           "control": "choice",
@@ -1858,6 +1884,45 @@
               "value": "thang_kin",
               "label": "Thang kín",
               "note": "Giữ điều hoà, kín tiếng"
+            },
+            {
+              "value": "chua_quyet",
+              "label": "Chưa quyết"
+            }
+          ]
+        },
+        {
+          "path": "vertical.stair_shape",
+          "label": "Loại thang bộ",
+          "control": "choice",
+          "weight": 0,
+          "optional": true,
+          "hint": "Theo tài liệu «Các loại thang bộ phổ biến». Kích thước ô thang tính cho tầng cao 3,6 m (21 bậc cao 171 mm, rộng 260 mm). Thang xoắn ốc chỉ làm thang phụ nên không có ở đây. Chưa quyết thì phần mềm chọn theo khối nhà.",
+          "options": [
+            {
+              "value": "chu_u",
+              "label": "Chữ U, 2 vế song song",
+              "note": "Gọn nhất, phổ biến nhất ở nhà phố · ô ≈ 2,4 × 3,6 m"
+            },
+            {
+              "value": "chu_u_rong",
+              "label": "Chữ U, chiếu nghỉ rộng",
+              "note": "Chiếu nghỉ sâu 1,5 m, giếng lấy sáng; hợp biệt thự, nhà có người già · ô ≈ 2,8 × 4,1 m"
+            },
+            {
+              "value": "chu_l",
+              "label": "Chữ L, 2 vế vuông góc",
+              "note": "Gầm thang làm kho / WC; hợp nhà phố mặt tiền 4–5 m · ô ≈ 3,4 × 3,7 m"
+            },
+            {
+              "value": "thang_thang",
+              "label": "Thẳng, 1 vế có chiếu nghỉ giữa",
+              "note": "Chiếm ít bề ngang, rất dài; hợp nhà ống hẹp sâu · ô ≈ 1,0 × 5,9 m"
+            },
+            {
+              "value": "ba_ve",
+              "label": "3 vế quanh giếng (chữ C)",
+              "note": "Rút ngắn chiều sâu; hợp nhà vuông, nhà cải tạo · ô ≈ 3,8 × 2,6 m"
             },
             {
               "value": "chua_quyet",

@@ -40,19 +40,12 @@ export interface BuildableBox {
  * chuẩn, nên không tự dựng lại một giá trị mặc định (CLAUDE.md 5.2).
  */
 export function buildableFromDigest(digest: AiBriefDigest): BuildableBox {
-  const site = digest.site;
   const geometry = geometryOf(digest);
 
   // Mỗi mặt lấy mức LỚN HƠN giữa khoảng lùi quy hoạch và khoảng sân gia chủ muốn (13/09/2026).
   // Trước đó đầu bài đòi sân trước, sân bên, sân sau mà không nói rộng bao nhiêu, nên phần đất
   // xây được là cả lô trừ khoảng lùi — và lượt chạy thật phủ kín bề ngang 15 m.
-  const yard = digest.massing?.yard_depth_m ?? {};
-  const take = (side: 'front' | 'back' | 'left' | 'right') =>
-    Math.max(site.setback_required_m?.[side] ?? 0, yard?.[side] ?? 0);
-  const back = take('back');
-  const front = take('front');
-  const left = take('left');
-  const right = take('right');
+  const { back, front, left, right } = setbacksFromDigest(digest);
 
   const rect = geometry.buildable;
   const x0 = rect.xM + left;
@@ -75,6 +68,20 @@ export function buildableFromDigest(digest: AiBriefDigest): BuildableBox {
     areaM2: round1(widthM * depthM),
     exact: geometry.exact,
   };
+}
+
+/**
+ * Khoảng cách từ ranh đất tới tường nhà ở từng mặt, mét: mức LỚN HƠN giữa khoảng lùi quy hoạch và
+ * khoảng sân gia chủ muốn (13/09/2026). Vắng = 0. Một nguồn cho ô xây được và cho mặt thoáng (T112).
+ */
+export function setbacksFromDigest(
+  digest: AiBriefDigest,
+): Record<'front' | 'back' | 'left' | 'right', number> {
+  const site = digest.site;
+  const yard = digest.massing?.yard_depth_m ?? {};
+  const take = (side: 'front' | 'back' | 'left' | 'right') =>
+    Math.max(site.setback_required_m?.[side] ?? 0, yard?.[side] ?? 0);
+  return { front: take('front'), back: take('back'), left: take('left'), right: take('right') };
 }
 
 /**

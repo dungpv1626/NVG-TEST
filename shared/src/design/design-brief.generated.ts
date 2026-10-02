@@ -790,6 +790,20 @@ export const designBriefSchema = z
           .nullable()
           .describe('Cả nhà ăn ở đâu. Quyết phòng ăn có là một phòng thật hay chỉ là quầy kề bếp.')
           .optional(),
+        /** Phòng khách, phòng ăn, bếp liền thông hay tách riêng (T103). Quyết cặp phòng nào được gộp một không gian, mở thông, bỏ vách — cặp không được liền thì là hai phòng có vách và cửa. Chưa trả lời thì chương trình không ràng buộc. */
+        living_dining_kitchen: z
+          .union([
+            z.literal('lien_thong_ca_ba'),
+            z.literal('an_bep_lien_khach_rieng'),
+            z.literal('khach_an_lien_bep_rieng'),
+            z.literal('tach_rieng'),
+            z.literal(null),
+          ])
+          .nullable()
+          .describe(
+            'Phòng khách, phòng ăn, bếp liền thông hay tách riêng (T103). Quyết cặp phòng nào được gộp một không gian, mở thông, bỏ vách — cặp không được liền thì là hai phòng có vách và cửa. Chưa trả lời thì chương trình không ràng buộc.',
+          )
+          .optional(),
         /** Tần suất tiếp khách. Tiếp khách thường xuyên kéo theo phòng khách rộng hơn, một khu vệ sinh khách ở tầng trệt, và chỗ để xe cho khách. */
         guests: z
           .union([
@@ -1012,6 +1026,22 @@ export const designBriefSchema = z
           .nullable()
           .describe(
             'Thang bộ hở (thông tầng, lấy sáng, ăn diện tích) hay kín (giữ điều hoà, kín tiếng, gọn). Đây là lựa chọn của gia chủ chứ không phải của phần mềm, và nó đổi hẳn cách tổ chức khu giữa nhà.',
+          )
+          .optional(),
+        /** Loại thang bộ chính (T105, tài liệu «Các loại thang bộ phổ biến»): thẳng 1 vế có chiếu nghỉ giữa, chữ L, chữ U 2 vế, 3 vế quanh giếng, chữ U chiếu nghỉ rộng. Thang xoắn ốc chỉ làm thang phụ nên không có ở đây. Chưa quyết thì chương trình chọn theo khối nhà. */
+        stair_shape: z
+          .union([
+            z.literal('thang_thang'),
+            z.literal('chu_l'),
+            z.literal('chu_u'),
+            z.literal('ba_ve'),
+            z.literal('chu_u_rong'),
+            z.literal('chua_quyet'),
+            z.literal(null),
+          ])
+          .nullable()
+          .describe(
+            'Loại thang bộ chính (T105, tài liệu «Các loại thang bộ phổ biến»): thẳng 1 vế có chiếu nghỉ giữa, chữ L, chữ U 2 vế, 3 vế quanh giếng, chữ U chiếu nghỉ rộng. Thang xoắn ốc chỉ làm thang phụ nên không có ở đây. Chưa quyết thì chương trình chọn theo khối nhà.',
           )
           .optional(),
       })

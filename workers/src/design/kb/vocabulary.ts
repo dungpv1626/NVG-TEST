@@ -47,6 +47,8 @@ export interface RoomVocabulary {
     reception?: string[];
     reception_from?: string[];
     open_flow?: string[];
+    open_face_first?: string[];
+    windowless_ok?: string[];
   };
   /** Vùng mặc định khi ý định bố cục bỏ sót một phòng (T43). */
   zone_defaults?: {
@@ -119,6 +121,10 @@ export interface PassageRules {
   receptionFrom: ReadonlySet<string>;
   /** Hai phòng cùng nhóm này kề nhau nối bằng ô thông suốt vách, không vách ngăn (T96). */
   openFlow: ReadonlySet<string>;
+  /** Phòng cần mặt thoáng (giặt phơi) — đổi chỗ với phòng `windowlessOk` kề bên đang chiếm mép ngoài (T103). */
+  openFaceFirst: ReadonlySet<string>;
+  /** Phòng không cần mặt thoáng (kỹ thuật, kho) — nhường mép ngoài cho `openFaceFirst` (T103). */
+  windowlessOk: ReadonlySet<string>;
 }
 
 /**
@@ -157,6 +163,8 @@ export function passageRules(vocabulary: RoomVocabulary): PassageRules | null {
     reception: checked(raw.reception, 'reception'),
     receptionFrom: checked(raw.reception_from, 'reception_from'),
     openFlow: checked(raw.open_flow, 'open_flow'),
+    openFaceFirst: checked(raw.open_face_first, 'open_face_first'),
+    windowlessOk: checked(raw.windowless_ok, 'windowless_ok'),
   };
 }
 

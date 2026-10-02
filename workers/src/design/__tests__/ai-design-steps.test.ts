@@ -310,6 +310,8 @@ describe('bước kiểm và xếp cả nhà', () => {
     const house = JSON.parse(step.arrangedJson!) as { program: AiSpaceProgram; levels: unknown[] };
     expect(house.levels).toHaveLength(2);
     expect(house.program.spaces.length).toBe(VILLA_HOUSE.rooms.length);
+    // Loại thang của lượt gắn ở ngữ cảnh workflow (T105): đầu bài chưa chọn, nhà không người già → chữ U.
+    expect(JSON.stringify(house.levels)).toContain('"shape":"chu_u"');
     // Không có ngưỡng điểm thì xếp được là xong.
     const noThreshold = { ...deps, quality: { ...deps.quality, acceptPercent: null } };
     const plain = arrangeHouseStep(
@@ -491,7 +493,7 @@ describe('bước ghi', () => {
     // T53: ý định đầy đủ (có bản phác) nằm trong artifact cho lượt sửa bố cục; kết quả mang % và ngưỡng.
     expect(payload.house_intent).toHaveProperty('sketches');
     if ('written' in result) {
-      expect(result.written.acceptPercent).toBe(65);
+      expect(result.written.acceptPercent).toBe(60);
       // Dưới ngưỡng tổng, hoặc một nhóm dưới sàn nhóm (T96) — cả hai đều được nói ra.
       expect(result.written.belowThreshold).toBe(
         (result.written.percent !== null && result.written.percent < 65) ||

@@ -73,8 +73,8 @@ describe('T73 (g) — tiếp giáp quá ngắn để đặt cửa, nói ra khi t
   it('câu nhắc nêu các mẩu hành lang, đòi đoạn tiếp giáp đủ ô, và dặn giữ phòng đang ổn', () => {
     const hint = round2.hints.join(' ');
     expect(hint).toMatch(/"circulation_3".*have no way in/);
-    expect(hint).toMatch(/at least 2 cells long/);
-    expect(hint).toMatch(/must KEEP it after your change: .*"study_1"/);
+    expect(hint).toMatch(/at least 2 cells with a corridor/);
+    expect(hint).toMatch(/Keep the way in of: .*"study_1"/);
     // (Trước T91 dòng này canh `master_bedroom_1` — chỉ vào được qua ô thang — không nằm trong danh sách
     // giữ. Bếp thành khu đi xuyên đổi cách chia tầng 1 nên phòng ấy nay có lối vào hợp lệ; phép canh
     // «phòng bị nêu lỗi không nằm trong danh sách giữ» còn ở `ai-live-4b0268b1`.)

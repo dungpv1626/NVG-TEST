@@ -73,6 +73,10 @@ export interface CallProgress {
 export interface TokenUsage {
   inputTokens: number | null;
   outputTokens: number | null;
+  /** Phần `inputTokens` đọc từ bộ nhớ đệm của nhà cung cấp — vắng khi nhà cung cấp không báo. */
+  cachedInputTokens?: number | null;
+  /** Phần `outputTokens` là suy nghĩ — vắng khi nhà cung cấp không tách. */
+  reasoningTokens?: number | null;
 }
 
 export interface StructuredCallResult {

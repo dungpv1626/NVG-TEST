@@ -22,6 +22,7 @@ import type {
   StructuredCallOptions,
   StructuredCallResult,
   TextModelClient,
+  TokenUsage,
 } from '../llm/text-client';
 
 export const PROMPT_RECORD_VERSION = 1;
@@ -44,6 +45,8 @@ export interface PromptRecord {
    * ý định cũ), nên không phát lại được đúng lượt cuối.
    */
   output?: unknown;
+  /** Số token nhà cung cấp báo, gồm phần đọc từ bộ nhớ đệm và phần nghĩ khi có. */
+  usage?: TokenUsage;
 }
 
 export function promptRecordOf(
@@ -81,6 +84,7 @@ export function recordingClient(client: TextModelClient): {
         records.push(record);
         const result = await client.complete(routeName, dataClass, options);
         record.output = result.json;
+        record.usage = result.usage;
         return result;
       },
     },

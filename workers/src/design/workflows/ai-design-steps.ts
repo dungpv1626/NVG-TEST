@@ -17,6 +17,7 @@
  * `digitise-steps.ts` đã làm với `extractionJson`.
  */
 
+import { withStairShape } from '../ai/stair-choice';
 import { LlmCallFailed } from '../llm/gemini';
 import type { AiBriefDigest, AiFloorPlan, AiPlanEdit, AiSpaceProgram } from '@nvg/shared/design';
 import { applyPlanEdits } from '../ai/edit/apply';
@@ -39,6 +40,7 @@ import {
 } from '../ai/call-log';
 import type { HouseIntent } from '../ai/house';
 import { recordingClient } from '../ai/prompt-record';
+import { feasibilityIssue } from '../ai/feasibility';
 import {
   AiPlanRejected,
   callHouseModel,
@@ -449,7 +451,7 @@ export async function writePlan(
     route: params.textRoute,
     promptVersion: deps.prompts.version,
     resampledLevels: [...resampledLevels],
-    construction: deps.construction,
+    construction: withStairShape(deps.construction, params.digest),
     groups: deps.groups,
     quality: deps.quality,
     scoreRules: deps.scoreRules,
@@ -570,7 +572,8 @@ function contextInput(deps: PlanStepDeps, params: AiDesignParams, variant: PlanV
     labels: deps.labels,
     vocabulary: deps.vocabulary,
     fidelity: deps.fidelity,
-    construction: deps.construction,
+    // Loại thang của lượt (T105) gắn một lần ở đây — bộ xếp, cổng và bộ vẽ đọc cùng một chỗ.
+    construction: withStairShape(deps.construction, params.digest),
     siteContext: deps.siteContext,
     rules: deps.rules,
     groups: deps.groups,
@@ -583,6 +586,21 @@ function contextInput(deps: PlanStepDeps, params: AiDesignParams, variant: PlanV
     roomGroups: deps.roomGroups,
     mandatory: deps.mandatory,
   };
+}
+
+/** Câu chặn khi đầu bài vượt sàn xây được (T112) — kiểm trước lời gọi mô hình đầu tiên. */
+export function infeasibleBrief(
+  deps: PlanStepDeps,
+  params: AiDesignParams,
+  variant: PlanVariant,
+): string | null {
+  const input = contextInput(deps, params, variant);
+  return feasibilityIssue(
+    planContext(input).knowledge,
+    input.construction.walls.exterior_m,
+    deps.quality,
+    deps.labels,
+  );
 }
 
 function contextFor(deps: PlanStepDeps, params: AiDesignParams, variant: PlanVariant): PlanContext {

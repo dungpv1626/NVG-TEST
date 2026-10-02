@@ -51,6 +51,8 @@ const FACE_VI: Record<Face, string> = {
 
 export interface OpeningsInput {
   level: number;
+  /** Cặp loại phòng gia chủ muốn tách (khoá `a|b`, T103): cửa chương trình thêm là cửa đi, không ô thông. */
+  openForbidden?: ReadonlySet<string> | null;
   cells: readonly Cell[];
   inner: ReadonlyMap<string, Rect>;
   /** Mã phòng → loại phòng, chỉ phòng của tầng này. */
@@ -336,9 +338,12 @@ export function placeOpenings(input: OpeningsInput): OpeningsResult {
     const typeB = input.typeOf.get(b) ?? '';
     const openFlow = input.groups.passage?.openFlow;
     // Khách / ăn kề lối đi cũng là một không gian (T96, `passage.open_flow`).
+    const kept = !!input.openForbidden?.has(
+      typeA < typeB ? `${typeA}|${typeB}` : `${typeB}|${typeA}`,
+    );
     const bothCirculation =
       (input.groups.vertical.has(typeA) && input.groups.vertical.has(typeB)) ||
-      (!!openFlow && openFlow.has(typeA) && openFlow.has(typeB));
+      (!kept && !!openFlow && openFlow.has(typeA) && openFlow.has(typeB));
     const kind = bothCirculation ? 'opening' : 'single';
     const norm = doorNorm(kind, typeA, typeB, narrowDoorTypes, input.construction);
     const minWidth = Math.round(
@@ -404,6 +409,16 @@ export function placeOpenings(input: OpeningsInput): OpeningsResult {
           if (
             neighbour === input.stairRoom &&
             !opensFromStair(passage?.stairOpensTo, input.typesOfLeaf.get(room) ?? [])
+          ) {
+            continue;
+          }
+          // Ô thang không làm cầu nối giữa hai phòng giao thông / sinh hoạt chung (T105): mở thêm lối thứ hai
+          // vào một phòng như thế là biến vế bậc thành lối đi xuyên — lượt 25fdc90c, hành lang sau tầng 2 chỉ
+          // «tới được» qua ô thang. Phòng ngõ cụt (kho cạnh thang, V-26) vẫn mở cửa ra thang như trước.
+          if (
+            neighbour === input.stairRoom &&
+            hosts.includes(input.typeOf.get(room) ?? '') &&
+            links.some(([a, b]) => a === neighbour || b === neighbour)
           ) {
             continue;
           }

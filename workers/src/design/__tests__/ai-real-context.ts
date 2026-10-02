@@ -13,9 +13,11 @@ import {
   finalisePlan,
   planContext,
   programGenerator,
+  tidyHouse,
   type HouseScoring,
   type PlanContextInput,
 } from '../ai/plan';
+import { withStairShape } from '../ai/stair-choice';
 import { parsePlanQuality } from '../ai/plan-quality';
 import { parseAiPrompts } from '../ai/prompts';
 import { NO_RULE_PACKS, selectedRulePack } from '../ai/rule-packs';
@@ -41,10 +43,26 @@ export interface RecordedRun {
   intents: Record<string, HouseIntent>;
 }
 
-export const loadRun = (id: string) =>
-  JSON.parse(read(`workers/src/design/__tests__/fixtures/ai-run-${id}.json`)) as RecordedRun;
+/**
+ * Lượt ghi: ý định là câu trả lời THÔ của mô hình (`ai_calls/<callId>.json` → `output`). Đường chạy thật
+ * chuẩn hoá nó bằng `tidyHouse` trước khi dùng (mã phòng về dạng `loại_n`, cắt chữ vượt trần), nên phát lại
+ * cũng phải làm vậy. Thiếu bước này tới 30/09/2026 (T105): lượt 25fdc90c phát lại hỏng cả bốn vòng trong
+ * khi lượt thật lưu mặt bằng ở vòng 4 — mã phòng khác thì thứ tự xếp và biến thể được chọn khác.
+ */
+export const loadRun = (id: string): RecordedRun => {
+  const run = JSON.parse(
+    read(`workers/src/design/__tests__/fixtures/ai-run-${id}.json`),
+  ) as RecordedRun;
+  return {
+    ...run,
+    intents: Object.fromEntries(
+      Object.entries(run.intents).map(([key, intent]) => [key, tidyHouse(intent) as HouseIntent]),
+    ),
+  };
+};
 
 const quality = parsePlanQuality(read('kb/plan_quality.yaml'));
+const siteContext = parseSiteContext(read('kb/site_context.yaml'));
 const vocabulary = parseVocabulary(read('kb/room_vocabulary.yaml'));
 const groupsTable = roomGroups(vocabulary);
 const experience = new RulePack(
@@ -84,8 +102,25 @@ function withRecordedShaft(digest: AiBriefDigest): AiBriefDigest {
   };
 }
 
-export function realContextInput(recorded: AiBriefDigest): PlanContextInput & HouseScoring {
+export function realContextInput(
+  recorded: AiBriefDigest,
+  /**
+   * Loại thang theo tài liệu (T105). Mặc định TẮT: lượt ghi được mô hình vẽ khi lời dẫn còn báo ô thang cỡ cũ
+   * (1,6 × 3,3 m) — áp cỡ mới thì bản phác cũ hỏng vì ô thang nhỏ, không phải vì bộ xếp. Bật để đo riêng tác động.
+   */
+  options: {
+    stairShape?: boolean;
+    /**
+     * Mặt giáp đất trống lùi dưới mức `min_open_setback_m` thì không thoáng (T112). Mặc định TẮT, cùng lẽ với
+     * loại thang: mọi lượt ghi trước 01/10/2026 được vẽ khi lời dẫn còn báo mặt sau (đất trống, lùi 0 m) là
+     * mặt thoáng. Bật thì phát lại 17 → 12 mặt bằng — câu trả lời cũ đặt ban công / phòng ở quay ra mặt ấy,
+     * không phải bộ xếp kém đi. Bật để đo riêng tác động.
+     */
+    openSetback?: boolean;
+  } = {},
+): PlanContextInput & HouseScoring {
   const digest = withRecordedShaft(recorded);
+  const norms = parseConstructionNorms(read('kb/construction_norms.yaml'));
   return {
     digest,
     variant: { id: 'AI-A', label: 'AI-A', strategy: '' },
@@ -95,8 +130,10 @@ export function realContextInput(recorded: AiBriefDigest): PlanContextInput & Ho
     // Phát lại kiểm BỘ XẾP trên ý định đã ghi, không kiểm cổng «không bịa thêm» — cổng ấy có phép thử riêng
     // ở `ai-program.test.ts`. Bật lên thì bốn lượt cũ bị bác ngay ở danh mục và không còn gì để phát lại.
     fidelity: { ...parseBriefFidelity(read('kb/brief_fidelity.yaml')), onlyWhenAsked: [] },
-    construction: parseConstructionNorms(read('kb/construction_norms.yaml')),
-    siteContext: parseSiteContext(read('kb/site_context.yaml')),
+    construction: options.stairShape
+      ? withStairShape(norms, digest)
+      : { ...norms, stairs: { ...norms.stairs, shape: null } },
+    siteContext: options.openSetback ? siteContext : { ...siteContext, minOpenSetbackM: {} },
     rules: selectedRulePack(NO_RULE_PACKS, { standards: new RulePack([], false), experience }),
     groups: {
       outdoor: new Set(groupsTable.outdoor ?? []),

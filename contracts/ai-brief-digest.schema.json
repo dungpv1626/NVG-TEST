@@ -502,6 +502,16 @@
           "type": ["string", "null"],
           "enum": ["ban_an_rieng", "quay_bep", "linh_hoat", null]
         },
+        "living_dining_kitchen": {
+          "type": ["string", "null"],
+          "enum": [
+            "lien_thong_ca_ba",
+            "an_bep_lien_khach_rieng",
+            "khach_an_lien_bep_rieng",
+            "tach_rieng",
+            null
+          ]
+        },
         "guests": {
           "type": ["string", "null"],
           "enum": ["thuong_xuyen", "thinh_thoang", "it", null]
@@ -602,6 +612,10 @@
         "stair_type": {
           "type": ["string", "null"],
           "enum": ["thang_ho", "thang_kin", "chua_quyet", null]
+        },
+        "stair_shape": {
+          "type": ["string", "null"],
+          "enum": ["thang_thang", "chu_l", "chu_u", "ba_ve", "chu_u_rong", "chua_quyet", null]
         }
       }
     },

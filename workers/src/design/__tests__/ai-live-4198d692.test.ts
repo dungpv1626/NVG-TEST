@@ -70,7 +70,7 @@ describe('phát lại lượt chạy thật 4198d692 — ba vòng cuối đã d�
     expect(revisionBase(round4, round3, prompts).best).toBe(round4);
   });
 
-  it('vòng sửa đồng bộ: tầng 1 giữ từ lời gọi 3 (T86), lời gọi 5 không lặp lại câu nhắc lối vào', async () => {
+  it('vòng sửa đồng bộ: tầng 1 hỏng được khung xương dựng lại (T102), lời gọi 5 giữ tầng 1 và không lặp câu nhắc lối vào', async () => {
     const options: StructuredCallOptions[] = [];
     const answers = [1, 2, 3, 4, 5, 6].map(answer);
     const client = {
@@ -102,13 +102,15 @@ describe('phát lại lượt chạy thật 4198d692 — ba vòng cuối đã d�
     // từ đó. Các câu trả lời ghi sẵn sinh trong ngữ cảnh khác, nên từ đây chỉ canh hướng đi, không canh
     // kết cục.
     expect(options.length).toBeGreaterThanOrEqual(5);
-    for (const call of [2, 3, 4]) {
-      expect(options[call]!.prompt).toMatch(/Storey 1 passed every check and is kept/);
-      expect(options[call]!.prompt).not.toMatch(/Your sketch of storey 1 failed/);
-    }
-    // T96 (thước 3): bộ xếp chọn cây tầng 1 khác lượt ghi (phòng khách trước, hành lang ngang giữa nhà),
-    // nên câu trả lời 4 ghi sẵn — vẽ tầng 2 theo cách chia tầng 1 CŨ — nay ghép lên thành chong chóng, và
-    // lời gọi 5 đúng là phải nói «bản vừa rồi tệ hơn». Trước T96 câu trả lời 4 khớp cách chia cũ và lời
-    // gọi 5 không lặp câu nhắc lối vào; điều đó không còn kiểm được trên câu trả lời ghi sẵn.
+    // T102 (khung xương): tầng 1 của câu trả lời 1 nay được chương trình dựng lại ngay (bản phác hỏng vì
+    // đường đi xuyên gara), tầng 2 xếp được, cả nhà chỉ còn lỗi liên tầng — nên lời gọi 2 nói «bản phác
+    // tầng 1 hỏng, chương trình chia lại» kèm đúng lỗi ấy, và không tầng nào được giữ khi lỗi là lỗi cả nhà
+    // (T86: lỗi tầng 0 có thể cần sửa bất kỳ tầng nào). Tới lời gọi 5, hai lượt sửa không đỡ hơn nên gốc là
+    // câu trả lời mới nhất, tầng 1 của nó qua và được GIỮ — câu nhắc chỉ còn ban công tầng 2.
+    expect(options[1]!.prompt).toMatch(/Your sketch of storey 1 failed/);
+    expect(options[1]!.prompt).toMatch(/Storey 1: From the living area/);
+    expect(options[4]!.prompt).toMatch(/Storey 1 passed every check and is kept/);
+    expect(options[4]!.prompt).not.toMatch(/Your sketch of storey 1 failed/);
+    expect(options[4]!.prompt).not.toMatch(/draw a circulation that links the living area/);
   });
 });

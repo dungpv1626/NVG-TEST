@@ -367,6 +367,16 @@ export const aiBriefDigestSchema = z
           ])
           .nullable()
           .optional(),
+        living_dining_kitchen: z
+          .union([
+            z.literal('lien_thong_ca_ba'),
+            z.literal('an_bep_lien_khach_rieng'),
+            z.literal('khach_an_lien_bep_rieng'),
+            z.literal('tach_rieng'),
+            z.literal(null),
+          ])
+          .nullable()
+          .optional(),
         guests: z
           .union([
             z.literal('thuong_xuyen'),
@@ -472,6 +482,18 @@ export const aiBriefDigestSchema = z
           .union([
             z.literal('thang_ho'),
             z.literal('thang_kin'),
+            z.literal('chua_quyet'),
+            z.literal(null),
+          ])
+          .nullable()
+          .optional(),
+        stair_shape: z
+          .union([
+            z.literal('thang_thang'),
+            z.literal('chu_l'),
+            z.literal('chu_u'),
+            z.literal('ba_ve'),
+            z.literal('chu_u_rong'),
             z.literal('chua_quyet'),
             z.literal(null),
           ])

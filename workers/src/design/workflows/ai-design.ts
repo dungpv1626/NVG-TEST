@@ -58,6 +58,7 @@ import {
   type EditCallOutcome,
   houseStepLabel,
   proposeHouse,
+  infeasibleBrief,
   writePlan,
   writeStepId,
   type AiDesignParams,
@@ -75,7 +76,9 @@ import {
   AiPlanRejected,
   finalRejections,
   HOUSE_REVISIONS_MAX,
+  problemKey,
   STALLED_AFTER,
+  stuckRepeating,
   type LevelRejection,
   type PlanCallRecord,
   type PlanVariant,
@@ -623,6 +626,11 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
     let best: BestArranged | null = null;
     let bestFailed: ArrangeOutcome | null = null;
     let resent = 0;
+    // Tập lỗi từng lượt hỏng — thôi gọi khi `STUCK_AFTER` lượt liền y hệt (`stuckRepeating`).
+    const history: string[] = [];
+    // Đầu bài vượt sàn xây được: không gọi mô hình (T112). Lượt sửa theo yêu cầu kỹ sư đã có mặt bằng.
+    const infeasible = seed ? null : infeasibleBrief(deps, params, variant);
+    if (infeasible) throw new AiPlanRejected([{ level: 0, messages: [infeasible] }]);
 
     for (let round = 1; ; round += 1) {
       const id = (phase: HousePhase) => houseStepId(variant.id, phase, round);
@@ -686,6 +694,7 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
         if (rejection.level > 0) failedLevels.add(rejection.level);
       }
       first ??= arranged.rejections;
+      history.push(problemKey(arranged.rejections));
       // Chỉ còn lỗi hình học (`retry: 'none'`): bộ dựng hình đã thử hết cách, mô hình không sửa được.
       // Mô hình trả lại y nguyên phần đang hỏng (`'unchanged'`): gọi nữa là cùng lời dẫn, cùng kết quả.
       if (
@@ -697,6 +706,12 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
         if (best) return this.writeBest(step, deps, params, variant, best, calls.length);
         throw new AiPlanRejected(
           finalRejections(arranged.rejections, first, arranged.retry, calls.length),
+        );
+      }
+      if (stuckRepeating(history)) {
+        if (best) return this.writeBest(step, deps, params, variant, best, calls.length);
+        throw new AiPlanRejected(
+          finalRejections(arranged.rejections, first, 'stuck', calls.length),
         );
       }
       // Sửa tiếp từ lượt hỏng nhẹ nhất, không phải lượt mới nhất (T73 i, lượt đo 5cd78ef7).

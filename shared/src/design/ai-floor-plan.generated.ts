@@ -401,6 +401,37 @@ export const aiFloorPlanLevelSchema = z
               .lte(40)
               .describe('Tổng số bậc trong ô thang này.')
               .optional(),
+            /** Loại thang (T105, tài liệu thang bộ): thẳng 1 vế có chiếu nghỉ giữa, chữ L, chữ U 2 vế, 3 vế quanh giếng, chữ U chiếu nghỉ rộng — CHƯƠNG TRÌNH điền theo đầu bài. Vắng (artifact trước T105) thì tờ vẽ vẽ vế thẳng song song như cũ. */
+            shape: z
+              .enum(['thang_thang', 'chu_l', 'chu_u', 'ba_ve', 'chu_u_rong'])
+              .describe(
+                'Loại thang (T105, tài liệu thang bộ): thẳng 1 vế có chiếu nghỉ giữa, chữ L, chữ U 2 vế, 3 vế quanh giếng, chữ U chiếu nghỉ rộng — CHƯƠNG TRÌNH điền theo đầu bài. Vắng (artifact trước T105) thì tờ vẽ vẽ vế thẳng song song như cũ.',
+              )
+              .optional(),
+            /** Bề rộng vế thông thuỷ, cm — đi cùng `shape`. */
+            flight_width: z
+              .number()
+              .int()
+              .gte(60)
+              .lte(200)
+              .describe('Bề rộng vế thông thuỷ, cm — đi cùng `shape`.')
+              .optional(),
+            /** Chiều sâu chiếu nghỉ, cm — đi cùng `shape`. */
+            landing: z
+              .number()
+              .int()
+              .gte(60)
+              .lte(300)
+              .describe('Chiều sâu chiếu nghỉ, cm — đi cùng `shape`.')
+              .optional(),
+            /** Giếng thang giữa hai vế song song, cm — đi cùng `shape`. */
+            gap: z
+              .number()
+              .int()
+              .gte(0)
+              .lte(200)
+              .describe('Giếng thang giữa hai vế song song, cm — đi cùng `shape`.')
+              .optional(),
             /** Bề sâu mặt bậc, cm — CHƯƠNG TRÌNH điền từ `kb/construction_norms.yaml`. Có mặt thì tờ vẽ giữ đúng mặt bậc này và để chiếu nghỉ nhận phần dư của ô thang (T70); vắng (artifact trước 23/09/2026) thì rải đều bậc trên chiều dài ô thang. */
             going: z
               .number()

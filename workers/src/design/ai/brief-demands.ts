@@ -154,6 +154,8 @@ export interface BriefDemands {
   spaces: readonly DemandedSpace[];
   elevator: ElevatorDemand | null;
   balcony: BalconyDemand | null;
+  /** Khách – ăn – bếp liền hay tách (T103); vắng / `null` khi gia chủ chưa trả lời. */
+  openPlan?: OpenPlanDemand | null;
   entrySteps: EntryStepsDemand | null;
   /** Diện tích chỗ để xe tối thiểu, m² — đã tính theo CỠ xe. `null` khi đầu bài không khai xe. */
   garageMinM2: number | null;
@@ -180,10 +182,41 @@ export function briefDemands(digest: AiBriefDigest, fidelity: BriefFidelity): Br
   const garageMinM2 = garageMinimum(digest, fidelity);
 
   const entrySteps = entryStepsDemand(digest, spec, warnings);
+  const openPlan = openPlanDemand(digest, spec, lines);
 
   otherWarnings(digest, spec, elevator, warnings);
 
-  return { spaces, elevator, balcony, entrySteps, garageMinM2, lines, warnings };
+  return { spaces, elevator, balcony, openPlan, entrySteps, garageMinM2, lines, warnings };
+}
+
+/** Khách – ăn – bếp: câu trả lời và các cặp loại phòng bị CẤM liền (khoá `a|b` xếp theo chữ cái). */
+export interface OpenPlanDemand {
+  answer: string;
+  forbidden: ReadonlySet<string>;
+}
+
+const pairKey = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`);
+
+/**
+ * Khách – ăn – bếp liền hay tách (T103, `demands.open_plan`). Chỉ suy từ câu ĐÃ trả lời: chưa trả lời, hay
+ * câu trả lời không có trong tệp dữ liệu, thì `null` — chương trình giữ cách gộp cũ.
+ */
+export function openPlanDemand(
+  digest: AiBriefDigest,
+  spec: BriefFidelity['demands'],
+  lines: string[],
+): OpenPlanDemand | null {
+  const answer = digest.lifestyle?.living_dining_kitchen ?? null;
+  if (!answer) return null;
+  const allowed = spec.openPlan.pairs[answer];
+  if (!allowed) return null;
+  const ok = new Set(allowed.map(([a, b]) => pairKey(a, b)));
+  const forbidden = new Set(
+    spec.openPlan.scope.map(([a, b]) => pairKey(a, b)).filter((key) => !ok.has(key)),
+  );
+  const say = spec.openPlan.say[answer];
+  if (say) lines.push(say);
+  return { answer, forbidden };
 }
 
 /** Bậc tam cấp — chỉ suy từ câu đã trả lời; «không có bậc» là câu trả lời, không phải chỗ trống. */
@@ -487,6 +520,8 @@ export function matchDemand(code: string, digest: AiBriefDigest): { level: numbe
       return (digest.systems?.water_storage ?? []).includes('bon_mai')
         ? { level: digest.floors }
         : null;
+    case 'cuc_nong_san_thuong':
+      return digest.systems?.aircon_outdoor === 'san_thuong' ? { level: digest.floors } : null;
     case 'bep_kin_chien_xao':
       return lifestyle?.cooking === 'nau_nhieu_chien_xao' ? { level: null } : null;
     case 'khach_o_lai':
@@ -581,6 +616,23 @@ function otherWarnings(
     warnings.push(
       'Khu đất thấp hơn mặt đường ở nơi đầu bài khai có ngập — cao độ nền và lối vào phải xử lý, mặt bằng chưa nói được việc này.',
     );
+  }
+  if (on('gio_mat_bi_nha_ben_chan')) {
+    // Chỉ khi đầu bài khai đủ cả ba: gió từ mặt ấy, mặt ấy giáp nhà bên, và nhà bên mấy tầng.
+    const blocked = SIDES.filter((side) => {
+      const floors = digest.site.neighbour_floors?.[side];
+      return (
+        (digest.site.cool_wind_sides ?? []).includes(side) &&
+        digest.site.adjacent?.[side] === 'nha_hang_xom' &&
+        typeof floors === 'number' &&
+        floors >= digest.floors
+      );
+    });
+    if (blocked.length) {
+      warnings.push(
+        `Đầu bài khai gió mát từ ${blocked.map(sideWord).join(', ')} nhưng mặt ấy giáp nhà bên cao bằng hoặc hơn nhà này — gió mặt ấy gần như bị chặn, không nên dựa vào nó khi bố trí phòng.`,
+      );
+    }
   }
 }
 

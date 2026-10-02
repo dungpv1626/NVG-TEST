@@ -154,7 +154,9 @@ describe('sketchTrees — nắn thành cây', () => {
   it('chong chóng: không đường chia nào chạy suốt → lý do, không cây', () => {
     const result = trees(['a a b', 'd e b', 'd c c']);
     expect(result.trees).toEqual([]);
-    expect(result.issues.map((issue) => issue.code)).toEqual(['sketch_pinwheel']);
+    expect(result.issues.map((issue) => issue.code)).toEqual(['sketch_pinwheel_at']);
+    // Chỉ CHỖ (tổng hợp 37 lượt thật): đường chia gần nhất và phòng cắt qua nó.
+    expect(result.issues[0]!.params).toMatchObject({ line: 'between rows 1 and 2', rooms: '"b"' });
   });
 
   it('phòng của tầng không có trên bản phác → lý do nêu tên phòng', () => {

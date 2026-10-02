@@ -376,6 +376,12 @@ passage:
   # 27/09/2026: «vẽ tường phân cách [khách – lối đi] ở giữa là không cần thiết và làm bí không gian»).
   # Trước đây chỉ hành lang – hành lang / hành lang – thang được thế (18/09/2026).
   open_flow: [living, dining, circulation]
+  # Phòng CẦN mặt thoáng và phòng KHÔNG cần (T103, Haan chấm lượt b1543b8c: «phòng giặt phơi đổi chỗ cho phòng kĩ
+  # thuật thì hợp lý hơn vì giặt phơi thường để ở cuối → có nhiều không gian thoáng để phơi quần áo»). Hai phòng kề
+  # nhau cùng bề ngang, phòng `open_face_first` nằm trong còn phòng `windowless_ok` chiếm mép ngoài thoáng → chương
+  # trình đổi chỗ hai phòng, mỗi phòng giữ nguyên kích thước. Không bác, không trừ điểm.
+  open_face_first: [laundry]
+  windowless_ok: [technical, storage]
   served_from:
     storage: [kitchen, garage]
     # Giặt phơi mở từ ban công / sân thượng (Haan 27/09/2026, T91).
@@ -424,6 +430,11 @@ group_targets:
   outdoor:
     vi: Ngoài trời (ban công, sân, giếng trời)
     members: [balcony, terrace, courtyard, light_well, porch]
+  # Chỗ phơi đồ cho tiêu chí D4 (T107, Haan 30/09/2026: «phòng giặt phơi nên đặt ở nơi có ban công hoặc có cửa sổ
+  # thoáng, hoặc phòng giáp ban công hoặc gần khu sân phơi»). Giếng trời, hiên không tính: không phơi được.
+  drying:
+    vi: Chỗ phơi đồ (ban công, sân thượng, sân)
+    members: [balcony, terrace, courtyard]
   # Hai nhóm cho tiêu chí E5 của thước chấm (T96): khu ƯỚT tầng trên không nên đè lên phòng nhóm
   # `dry_below` tầng dưới — chỗ tiếp khách, chỗ ăn, chỗ ngủ, chỗ thờ, lối vào, chỗ bán hàng. Bếp và
   # phòng thờ dưới WC đã là luật bắt buộc (`rules/nvg-mandatory.yaml`); ở đây là phần còn lại, trừ điểm.

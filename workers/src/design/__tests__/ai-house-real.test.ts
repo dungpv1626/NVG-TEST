@@ -208,7 +208,8 @@ describe('phát lại lượt đo 4a521f52 — lõi thang khai riêng cạnh tha
   // của lượt này xếp được tầng 2 CHỈ nhờ giặt phơi / WC lấy cửa từ ô thang — nay bác, và vì chỗ sai là
   // bố cục nên GỬI LẠI mô hình (`door_from_stair`), không dừng.
   const LOST_TO_T74: Record<string, RegExp> = {
-    round2: /"laundry_1" ở tầng 2 chỉ giáp ô thang "stair_2"/,
+    // Sau T106 bộ xếp chọn cây khác — phòng bị báo nay có thể là WC, cùng cơ chế.
+    round2: /"(laundry_1|wc_4)" ở tầng 2 chỉ giáp ô thang "stair_2"/,
     round3: /"wc_4" ở tầng 2 chỉ giáp ô thang "stair_2"/,
   };
   for (const [key, why] of Object.entries(LOST_TO_T74)) {

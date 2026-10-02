@@ -1,6 +1,6 @@
 /**
  * Lượt sửa (Haan 25/09/2026, sau ba lượt thật cùng ngày đều hỏng):
- *  · tối đa NĂM lượt sửa (`HOUSE_REVISIONS_MAX`), và để tiết kiệm token RA — phần đắt nhất — lượt sửa
+ *  · tối đa BỐN lượt sửa (`HOUSE_REVISIONS_MAX`, T109 — năm lời gọi cả thảy), và để tiết kiệm token RA — phần đắt nhất — lượt sửa
  *    chỉ trả về các tầng có lỗi, chương trình ghép tầng còn lại từ ý định trước (`mergeRevision`);
  *  · gửi lại bản tốt nhất hai lần liền mà không tiến thì đổi gốc sang bản mới nhất (`revisionBase`,
  *    `stalled`).
@@ -123,8 +123,8 @@ describe('revisionBase — đổi gốc khi đứng yên', () => {
     expect(picked.next.hints.slice(1)).toEqual(['- worse']);
   });
 
-  it('năm lượt sửa, đổi gốc sau hai lần gửi lại', () => {
-    expect(HOUSE_REVISIONS_MAX).toBe(5);
+  it('bốn lượt sửa (tối đa năm lời gọi, Haan 30/09/2026), đổi gốc sau hai lần gửi lại', () => {
+    expect(HOUSE_REVISIONS_MAX).toBe(4);
     expect(STALLED_AFTER).toBe(2);
   });
 });

@@ -28,6 +28,9 @@ import {
   generateAiPlan,
   hintsFor,
   HOUSE_REVISIONS_MAX,
+  problemKey,
+  STUCK_AFTER,
+  stuckRepeating,
   houseIntentJsonSchema,
   northDegFor,
   planContext,
@@ -486,11 +489,25 @@ describe('Vòng sửa tối đa ba lượt (T45)', () => {
     // Trước T91 (Haan chọn 23/09/2026): GỬI LẠI mô hình, tối đa ba lượt. Nay hết chỗ bù thì gọi lại vô
     // ích — một lời gọi, mặt bằng có cảnh báo để kỹ sư sửa đầu bài.
     const client = fakeClient([VILLA_CRAMMED, VILLA_HOUSE]);
-    const result = await generateAiPlan(input(client, 'villa', crammedBrief(VILLA_BRIEF)));
+    // Đầu bài nhồi này vượt mức kiểm khả thi (T112, phần chắc chắn phải có ~92 % sàn tầng 1) — nay bị chặn
+    // trước lời gọi đầu tiên (bài dưới). Tắt kiểm ấy để canh riêng nhánh T91 «xếp được nhưng hụt mức».
+    const crammed = input(client, 'villa', crammedBrief(VILLA_BRIEF));
+    const result = await generateAiPlan({
+      ...crammed,
+      quality: { ...crammed.quality, feasibilityMaxPercent: null },
+    });
     expect(client.options).toHaveLength(1);
     expect(result.payload.levels.length).toBeGreaterThan(0);
     // Cảnh báo «sửa đầu bài» nằm ở ghi chú bước xếp tầng; Workflow gộp nó vào ghi chú cuối — canh ở
     // `ai-design-steps.test.ts`.
+  });
+
+  it('đầu bài vượt sàn xây được: chặn trước lời gọi đầu tiên, không gọi mô hình (T112)', async () => {
+    const client = fakeClient([VILLA_CRAMMED, VILLA_HOUSE]);
+    await expect(generateAiPlan(input(client, 'villa', crammedBrief(VILLA_BRIEF)))).rejects.toThrow(
+      /diện tích yêu cầu vượt sàn xây được: tầng 1/,
+    );
+    expect(client.options).toHaveLength(0);
   });
 
   // Mỗi lượt một bản KHÁC (diện tích kho đổi): mô hình có sửa, chỉ là sửa không trúng.
@@ -504,10 +521,32 @@ describe('Vòng sửa tối đa ba lượt (T45)', () => {
     garage_room: null,
   });
 
+  const noKitchen = (intent: HouseIntent): HouseIntent => {
+    const gone = new Set(intent.rooms.filter((room) => room.type === 'kitchen').map((r) => r.id));
+    return {
+      ...intent,
+      rooms: intent.rooms.filter((room) => !gone.has(room.id)),
+      relationships: intent.relationships.filter((rel) => !gone.has(rel.a) && !gone.has(rel.b)),
+      sketches: (intent.sketches ?? []).map((sketch) => ({
+        ...sketch,
+        rows: sketch.rows.map((row) =>
+          row
+            .split(' ')
+            .map((cell) => (gone.has(cell) ? '.' : cell))
+            .join(' '),
+        ),
+      })),
+    };
+  };
+
   it(`lỗi NGỮ NGHĨA mãi không sửa được thì BÁC sau ${HOUSE_REVISIONS_MAX} lượt sửa — đúng ${HOUSE_REVISIONS_MAX + 1} lượt gọi`, async () => {
     // Đủ `HOUSE_REVISIONS_MAX + 1` bản hỏng KHÁC nhau, rồi mới tới bản đúng — bản đúng không được gọi tới.
+    // Lỗi xen kẽ hai kiểu (thiếu gara / thiếu gara và bếp): không lượt nào lặp ba lần liền cùng tập lỗi,
+    // nên chỉ trần `HOUSE_REVISIONS_MAX` dừng được vòng sửa (`stuckRepeating` canh ở phép thử kế).
     const client = fakeClient([
-      ...Array.from({ length: HOUSE_REVISIONS_MAX + 1 }, (_, index) => noGarage(index)),
+      ...Array.from({ length: HOUSE_REVISIONS_MAX + 1 }, (_, index) =>
+        index % 2 ? noGarage(index) : noKitchen(noGarage(index)),
+      ),
       VILLA_HOUSE,
     ]);
     const error = await generateAiPlan(input(client)).catch((e: unknown) => e);
@@ -519,6 +558,28 @@ describe('Vòng sửa tối đa ba lượt (T45)', () => {
     expect(rejection!.retry).toBe('revise');
     expect(rejection!.attempts).toBe(HOUSE_REVISIONS_MAX + 1);
     for (const call of client.options.slice(1)) expect(call.prompt).toContain('<previous_intent>');
+  });
+
+  it(`${STUCK_AFTER} lượt liền hỏng đúng cùng một tập lỗi → dừng, không tiêu hết lượt sửa (tổng hợp 37 lượt thật 23–30/09/2026)`, async () => {
+    // Mỗi lượt một bản KHÁC (mô hình có sửa) nhưng lỗi y hệt: gọi tiếp là cùng câu nhắc, cùng kết quả.
+    const client = fakeClient([
+      ...Array.from({ length: HOUSE_REVISIONS_MAX + 1 }, (_, index) => noGarage(index)),
+      VILLA_HOUSE,
+    ]);
+    const error = await generateAiPlan(input(client)).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(AiPlanRejected);
+    expect(client.options).toHaveLength(STUCK_AFTER);
+    expect((error as AiPlanRejected).levels[0]!.retry).toBe('stuck');
+  });
+
+  it('dừng khi lặp: đúng BA lượt liền cùng tập lỗi, hai thì chưa (2/5 lượt thật đạt từng lặp hai)', () => {
+    expect(stuckRepeating(['a', 'a'])).toBe(false);
+    expect(stuckRepeating(['a', 'b', 'b'])).toBe(false);
+    expect(stuckRepeating(['b', 'a', 'a', 'a'])).toBe(true);
+    const one = problemKey([{ level: 2, messages: ['x', 'y'] }]);
+    expect(problemKey([{ level: 2, messages: ['y', 'x'] }])).toBe(one);
+    expect(problemKey([{ level: 1, messages: ['y', 'x'] }])).not.toBe(one);
   });
 
   it('lượt sửa trả lại Y NGUYÊN ý định vừa được gửi sửa → dừng ngay, không gọi lượt sau (lượt đo 458d9a91)', async () => {

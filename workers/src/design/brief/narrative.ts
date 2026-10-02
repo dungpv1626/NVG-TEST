@@ -253,6 +253,10 @@ export function briefNarrative(digest: AiBriefDigest, options: NarrativeOptions)
     life?.dining_place
       ? `Chỗ ăn: ${label('lifestyle.dining_place', life.dining_place).toLowerCase()}.`
       : null,
+    // Khách – ăn – bếp liền hay tách (T104): lời gọi dựng cả nhà chỉ đọc đầu bài văn xuôi, không đọc dòng đòi hỏi.
+    life?.living_dining_kitchen
+      ? `Phòng khách, phòng ăn, bếp: ${label('lifestyle.living_dining_kitchen', life.living_dining_kitchen).toLowerCase()}.`
+      : null,
     life?.guests ? `Tiếp khách ${label('lifestyle.guests', life.guests).toLowerCase()}.` : null,
     yesNo(life?.overnight_guests) ? `Khách ở lại qua đêm: ${yesNo(life?.overnight_guests)}.` : null,
     yesNo(life?.work_from_home) ? `Làm việc tại nhà: ${yesNo(life?.work_from_home)}.` : null,
@@ -305,6 +309,9 @@ export function briefNarrative(digest: AiBriefDigest, options: NarrativeOptions)
     vertical?.stair_type && vertical.stair_type !== 'chua_quyet'
       ? `Thang bộ: ${label('vertical.stair_type', vertical.stair_type).toLowerCase()}.`
       : null,
+    vertical?.stair_shape && vertical.stair_shape !== 'chua_quyet'
+      ? `Loại thang bộ: ${label('vertical.stair_shape', vertical.stair_shape).toLowerCase()}.`
+      : null,
     typeof entrance?.floor_above_road_m === 'number'
       ? `Cốt nền tầng 1 cao hơn tim đường ${metres(entrance.floor_above_road_m)}.`
       : null,
@@ -324,6 +331,12 @@ export function briefNarrative(digest: AiBriefDigest, options: NarrativeOptions)
       ? `Phạm vi: ${label('balconies.scope', balconies.scope).toLowerCase()}.`
       : null,
     faces(view.required) ? `Mặt BẮT BUỘC có ban công: ${faces(view.required)}.` : null,
+    // T112 (lượt 8eaaee7b): một khối góc không tính cho mặt mà cạnh dài của nó không nằm trên (T106).
+    view.required.length > 1
+      ? 'Mỗi mặt bắt buộc cần một ban công riêng chạy dọc mặt ấy (cạnh dài nằm trên mặt ấy); một ban công ở góc chỉ tính cho mặt có cạnh dài của nó.'
+      : view.required.length === 1
+        ? 'Ban công ở mặt bắt buộc phải chạy dọc mặt ấy (cạnh dài nằm trên mặt ấy).'
+        : null,
     faces(view.optional)
       ? `Mặt CÓ THỂ có ban công (có hay không đều được): ${faces(view.optional)}.`
       : null,
@@ -332,8 +345,9 @@ export function briefNarrative(digest: AiBriefDigest, options: NarrativeOptions)
       : null,
     ...BALCONY_SIDES.filter((side) => side in view.projection).map((side) => {
       const m = view.projection[side];
+      // «mép nhà», không phải «ranh đất» (T112): độ đua đo từ mặt nhà (T91); chữ cũ đọc thành vượt ranh lô.
       return typeof m === 'number' && m > 0
-        ? `Ban công ${faces([side])} ĐUA RA NGOÀI ranh đất ${metres(m)} — phần đua nằm ngoài diện tích sàn.`
+        ? `Ban công ${faces([side])} ĐUA RA NGOÀI mép nhà ${metres(m)} — phần đua nằm ngoài diện tích sàn.`
         : m === 0
           ? `Ban công ${faces([side])} KHÔNG đua — nằm trong diện tích sàn.`
           : null;

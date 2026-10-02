@@ -7,7 +7,12 @@
 
 import { describe, expect, it } from 'vitest';
 import { briefMinCells, planContext } from '../ai/plan';
-import { clearAreaM2, corridorMinCells, minSketchCells } from '../ai/sketch-cells';
+import {
+  clearAreaM2,
+  corridorMinCells,
+  minSketchCells,
+  minSketchSideCells,
+} from '../ai/sketch-cells';
 import { loadRun, prompts, realContextInput } from './ai-real-context';
 
 const run = loadRun('011b4adc');
@@ -26,6 +31,14 @@ describe('quy đổi diện tích ↔ số ô', () => {
     expect(minSketchCells(45, 1.5, 0.22)).toBe(22);
   });
 
+  it('cạnh ngắn tối thiểu cùng giả định tỉ lệ: đủ số ô VÀ đủ cạnh thì qua (T107)', () => {
+    // Lượt thật bea4c6fa: phòng thờ 10 m² vẽ 2 × 6 ô → 8,99 m² dựng ra, bản phác bị bỏ.
+    expect(minSketchSideCells(10, 1, 0.22)).toBe(3);
+    const cells = minSketchCells(10, 1, 0.22);
+    const side = minSketchSideCells(10, 1, 0.22);
+    expect(clearAreaM2(Math.ceil(cells / side) * 100, side * 100, 11)).toBeGreaterThanOrEqual(10);
+  });
+
   it('vẽ đủ số ô gửi đi thì chắc chắn qua phép kiểm bản phác (tường ngăn, lạc quan)', () => {
     for (const area of [8, 13, 20, 25, 45, 60]) {
       const cells = minSketchCells(area, 1, 0.22);
@@ -40,8 +53,20 @@ describe('quy đổi diện tích ↔ số ô', () => {
 describe('tri thức gửi mô hình', () => {
   it('mỗi phòng đầu bài khai diện tích có một dòng số ô tối thiểu, kể cả chỗ để xe', () => {
     const rows = planContext(input).modelKnowledge.min_cells;
-    expect(rows).toContainEqual({ type: 'living', floor: 1, min_m2: 45, cells: 49 });
-    expect(rows).toContainEqual({ type: 'study', floor: 2, min_m2: 13, cells: 15 });
+    expect(rows).toContainEqual({
+      type: 'living',
+      floor: 1,
+      min_m2: 45,
+      cells: 49,
+      min_side_cells: 5,
+    });
+    expect(rows).toContainEqual({
+      type: 'study',
+      floor: 2,
+      min_m2: 13,
+      cells: 15,
+      min_side_cells: 3,
+    });
     expect(rows.some((row) => row.type === 'garage' && row.floor === null)).toBe(true);
   });
 

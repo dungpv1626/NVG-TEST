@@ -57,6 +57,20 @@ export interface EntryStepNorms {
   max_count: number;
 }
 
+/** Năm loại thang CHÍNH (T105, tài liệu thang bộ) — thang xoắn ốc chỉ làm thang phụ nên không có ở đây. */
+export const STAIR_SHAPES = ['thang_thang', 'chu_l', 'chu_u', 'ba_ve', 'chu_u_rong'] as const;
+export type StairShape = (typeof STAIR_SHAPES)[number];
+
+export interface StairShapeSpec {
+  vi: string;
+  /** Bề rộng vế thông thuỷ, m. */
+  flight_width_m: number;
+  /** Chiều sâu chiếu nghỉ, m — chiếu nghỉ góc (L, ba vế) vuông cạnh bằng bề rộng vế. */
+  landing_m: number;
+  /** Giếng thang giữa hai vế song song, m (U). */
+  gap_m?: number;
+}
+
 export interface ConstructionNorms {
   version: string;
   walls: { exterior_m: number; load_bearing_m: number; partition_m: number };
@@ -67,6 +81,13 @@ export interface ConstructionNorms {
     two_flights_min_width_m: number;
     /** Bề sâu mặt bậc nhỏ nhất — điều kiện dựng ô thang của bộ giải ý định; vắng = không kiểm. */
     going_m?: number;
+    /** Thông số từng loại thang (T105). Vắng = thang cũ (vế thẳng song song theo `two_flights_min_width_m`). */
+    shapes?: Partial<Record<StairShape, StairShapeSpec>>;
+    /**
+     * Loại thang CỦA LƯỢT NÀY — không đọc từ tệp: gắn khi dựng ngữ cảnh từ đầu bài (`withStairShape`). Vắng = thang
+     * cũ; mọi chỗ tính ô thang và bộ vẽ đọc trường này.
+     */
+    shape?: StairShape | null;
   };
   openings: Record<string, OpeningNorm>;
   openingRules: OpeningRules;
@@ -76,7 +97,13 @@ export interface ConstructionNorms {
   /** Cốt vỉa hè và tường chắn mái mặc định cho tờ mặt đứng (T59) — vắng thì bước mặt đứng không dựng được khung. */
   facade?: { ground_floor_raise_m: number; parapet_height_m: number };
   /** Hành lang bộ giải ý định tự dựng (T43) — số tham khảo; vắng thì bộ giải dùng cửa đi + lề. */
-  circulation?: { corridor_clear_m: number };
+  circulation?: {
+    corridor_clear_m: number;
+    /** Lọt lòng tối thiểu của hành lang, m (T104). */
+    corridor_min_clear_m?: number;
+    /** Lọt lòng TỐI ĐA theo loại nhà (`default` cho loại không khai), m — rộng hơn thì thu hẹp (T104). */
+    corridor_max_clear_m?: Record<string, number>;
+  };
   /**
    * Bậc ở lối vào (bậc tam cấp, T70) — đo trên HS-04/05/06. Vắng thì mặt bằng không vẽ bậc lối vào,
    * đúng hành vi trước T70.
@@ -158,7 +185,7 @@ export function parseConstructionNorms(yamlText: string): ConstructionNorms {
     version: String(raw.version ?? '0.0.0'),
     walls: raw.walls!,
     levels: raw.levels!,
-    stairs: raw.stairs!,
+    stairs: parseStairs(raw.stairs!),
     openings: sizes as Record<string, OpeningNorm>,
     openingRules: {
       door_by_kind: door_by_kind as Record<string, string>,
@@ -255,4 +282,27 @@ function parseUsable(raw: unknown): NonNullable<ConstructionNorms['usable']> {
       : {}),
     ...(aspects ? { max_aspect: aspects as Record<string, number> } : {}),
   };
+}
+
+function parseStairs(raw: ConstructionNorms['stairs']): ConstructionNorms['stairs'] {
+  const shapes = raw.shapes;
+  if (shapes === undefined) return raw;
+  for (const [key, spec] of Object.entries(shapes)) {
+    if (!(STAIR_SHAPES as readonly string[]).includes(key)) {
+      throw new ConstructionNormsError(`"stairs.shapes" có loại thang lạ "${key}"`);
+    }
+    const ok = (v: unknown, min: number, max: number) =>
+      typeof v === 'number' && v >= min && v <= max;
+    if (
+      !spec ||
+      typeof spec.vi !== 'string' ||
+      !ok(spec.flight_width_m, 0.6, 2) ||
+      !ok(spec.landing_m, 0.6, 3) ||
+      (spec.gap_m !== undefined && !ok(spec.gap_m, 0, 2))
+    ) {
+      throw new ConstructionNormsError(`"stairs.shapes.${key}" thiếu hoặc sai thông số`);
+    }
+  }
+  const { shape: _ignored, ...rest } = raw;
+  return rest;
 }

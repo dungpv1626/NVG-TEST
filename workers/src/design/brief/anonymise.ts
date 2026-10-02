@@ -279,6 +279,7 @@ export function anonymiseForAi(input: AnonymiseInput): AiBriefDigest {
           cooking: brief.lifestyle.cooking ?? null,
           second_kitchen: brief.lifestyle.second_kitchen ?? null,
           dining_place: brief.lifestyle.dining_place ?? null,
+          living_dining_kitchen: brief.lifestyle.living_dining_kitchen ?? null,
           guests: brief.lifestyle.guests ?? null,
           overnight_guests: brief.lifestyle.overnight_guests ?? null,
           work_from_home: brief.lifestyle.work_from_home ?? null,
@@ -305,6 +306,7 @@ export function anonymiseForAi(input: AnonymiseInput): AiBriefDigest {
           elevator_position: brief.vertical.elevator_position ?? null,
           elevator_layout_note: scrubOrNull(brief.vertical.elevator_layout_note, identities),
           stair_type: brief.vertical.stair_type ?? null,
+          stair_shape: brief.vertical.stair_shape ?? null,
         }
       : null,
     entrance: brief.entrance

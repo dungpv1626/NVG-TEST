@@ -52,37 +52,36 @@ function belowCells(intent: HouseIntent, ground: HouseIntent, id: string): strin
   return out;
 }
 
-describe('phát lại 5bc280ff — mặt bằng 85,2 điểm ở vòng 3', () => {
+describe('phát lại 5bc280ff — vòng 3 (85,4 điểm trước T106)', () => {
   const rounds = replay('5bc280ff', 3);
 
-  it('vòng 1–2 hỏng, vòng 3 xếp được với 85,2 điểm', () => {
+  // T106 (Haan chấm lượt f351115d: «ban công mặt trước phải nằm phần lớn ở mặt trước»): ban công sau 2,2 × 2,4 m ở góc
+  // sau – trái trước đây được tính cho cả mặt trái lẫn mặt sau — nay không cho mặt nào. Mặt bằng 85,4 điểm cũ bị bác ở
+  // kiểm cả nhà; lượt thật sẽ gửi mô hình câu nhắc ban công.
+  it('vòng 1–2 hỏng; vòng 3 mọi tầng xếp được nhưng cả nhà bị bác vì ban công góc', () => {
     expect(rounds[0]!.ok).toBeNull();
     expect(rounds[1]!.ok).toBeNull();
-    expect(rounds[2]!.ok?.score.percent).toBe(85.2);
-  });
-
-  it('phòng giặt tầng 2 nằm trên gara, không đè phòng ở (T99)', () => {
-    const plan = rounds[2]!.ok!;
-    const upper = plan.levels.find((item) => item.level.level === 2)!.level.rooms;
-    const ground = plan.levels.find((item) => item.level.level === 1)!.level.rooms;
-    const laundry = upper.find((room) => room.type === 'laundry')!;
-    const [x0, y0, x1, y1] = laundry.rect as [number, number, number, number];
-    const under = ground.filter((room) => {
-      const [a0, b0, a1, b1] = room.rect as [number, number, number, number];
-      return Math.min(x1, a1) - Math.max(x0, a0) > 50 && Math.min(y1, b1) - Math.max(y0, b0) > 50;
-    });
-    expect(under.map((room) => room.type)).toEqual(['garage']);
+    expect(rounds[2]!.ok).toBeNull();
+    expect(rounds[2]!.rejections.map((rejection) => rejection.level)).toEqual([0]);
+    expect(rounds[2]!.rejections[0]!.messages.join(' ')).toMatch(/ban công ở mặt (bên trái|sau)/);
   });
 });
 
-describe('phát lại 6bbc6d0e — tầng 2 hỏng vì giao thông cả sáu vòng', () => {
+describe('phát lại 6bbc6d0e — tầng 2 hỏng vì giao thông mọi vòng (T105: vòng 4 không còn đi xuyên ô thang)', () => {
   const rounds = replay('6bbc6d0e', 6);
 
-  it('không vòng nào ra mặt bằng; từ vòng 2 chỉ còn tầng 2 hỏng', () => {
-    expect(rounds.every((round) => round.ok === null)).toBe(true);
-    for (const round of rounds.slice(1)) {
-      expect(round.rejections.map((rejection) => rejection.level)).toEqual([2]);
+  it('vòng 1–3 và 5–6 không ra mặt bằng, chỉ tầng 2 hỏng từ vòng 2 (tầng 1 qua nhờ khung xương)', () => {
+    for (const [i, round] of rounds.entries()) {
+      if (i === 3) continue;
+      expect(round.ok, `vòng ${i + 1}`).toBeNull();
+      if (i >= 1) expect(round.rejections.map((rejection) => rejection.level)).toEqual([2]);
     }
+  });
+
+  // T105: mặt bằng khung xương của vòng 4 (63,6 điểm) có phòng chỉ tới được qua ô thang — nay bị bác ở tầng 2.
+  it('vòng 4: tầng 2 bị bác — không còn phòng nào chỉ tới được bằng cách đi xuyên ô thang', () => {
+    expect(rounds[3]!.ok).toBeNull();
+    expect(rounds[3]!.rejections.map((rejection) => rejection.level)).toEqual([2]);
   });
 
   it('câu dặn T99 có tác dụng trên bản phác: mọi WC CHUNG tầng 2 nằm trọn trên ô WC tầng 1', () => {

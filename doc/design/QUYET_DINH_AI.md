@@ -1933,3 +1933,640 @@ thửa đa giác tự dựng chúng và hợp đồng bắt buộc). Soát ba đ
 bản gửi mô hình của chúng không đổi. Gỡ `nha_pho_co_khoang_lui_ben` — ô khoảng lùi luôn ẩn với nhà phố nên phép
 soát ấy chỉ còn bắt dữ liệu cũ, mà dữ liệu cũ nay không đi đâu nữa. Dữ liệu mẫu nhà phố trong `ai-plan.test.ts` hỏi
 giếng trời bằng ô «sân trong» (ô chỉ có ở biệt thự) → đổi sang dòng «Giếng trời» như phiếu thật. Đột biến M87, M88.
+
+## T102 — Khung xương trước: chương trình dựng lõi + hành lang, phòng lấp quanh hành lang (29/09/2026, Haan: «đưa ra phương án cải tiến, kể cả tái cấu trúc, rồi implement»)
+
+**Chẩn đoán** (lịch sử `design_ai_run`: giai đoạn mặt bằng 13 xong / 64 hỏng; từ T48 tới 28/09: 1 / 17; phát lại 35
+lượt ghi, 126 vòng bằng mã hiện tại: **10 vòng ra mặt bằng**, 73 vòng hỏng ở tầng 2, mã hỏng đầu bảng
+`sketch_room_no_access` 59, `room_without_door` 23, `door_from_stair` 21, `sketch_stair_isolated` 18). Góc kiến trúc sư:
+nghề làm LÕI trước (thang, thang máy, trục ống nước, một chỗ cho cả nhà), rồi HÀNH LANG từ chiếu nghỉ (dải ngang trước /
+sau lõi, dải dọc áp lõi, chữ H / T), rồi mới lấp phòng vào các túi quanh hành lang; kích thước sau cùng. Hệ thống bắt mô
+hình làm cả bốn bước cùng lúc trên bảng chữ 12 × 16 ô — bước liên thông là bước nó kém nhất, còn chương trình chỉ kiểm
+rồi bác, cách cứu duy nhất (chia lại theo vùng) mù về giao thông. Bản thiết kế: `doc/design/THIET_KE_KHUNG_XUONG.md`.
+
+**Đã làm** — `workers/src/design/ai/arrange/skeleton.ts` (mới), nối vào `arrangeLevel` (`index.ts`):
+
+- Bản phác của mô hình vẫn đi TRƯỚC; hỏng (lối vào / sàn ở bước soát, hay không qua cổng) thì **khung xương** dựng lại
+  tầng, rồi mới tới các vòng khung cũ. Lỗi bản phác đi cùng câu nhắc (`sketchFailure`, T86 / T90); ghi chú
+  `skeleton_arranged`. Bước soát bản phác (T73) trước đây trả lỗi ngay — nay thử khung xương trước, vì khung GIỮ ô lõi
+  đúng chỗ bản phác (điều T73 lo khi chia lại).
+- Ô cố định: thang (mốc tầng dưới hay ô bản phác tầng 1), thang máy, giếng trời — phải kề thang, xếp thành các cột x liền
+  nhau; khe trong cột (thang máy phủ nửa chiều sâu lõi) thành **sảnh chiếu nghỉ**. Thang máy tầng 1 đặt ĐÚNG CỠ (cạnh kỹ
+  thuật × sâu đủ diện tích) áp cạnh thang, không giữ ô bản phác vẽ to (lượt 0c86c0b1: 189 × 389 cm cho giếng 1,4 × 1,6).
+- Hành lang: dải dọc `V` áp lõi phía trống; dải ngang trước / sau lõi ở ba chế độ `none` / `edge` (áp lõi, phòng một
+  hàng) / `mid` (giữa vùng — hai hàng phòng kẹp hành lang, V xuyên hàng trong; cho vùng sâu 7–9 m trước thang). Mọi lá
+  `circulation` của tầng là MỘT ngân sách: đoạn lớn nhận mã lớn, thiếu thì thêm không gian (như V-29), thừa thì chia đoạn.
+- Phòng: dải trước / sau theo tâm ô bản phác, thứ tự trái → phải; phòng nhỏ (≤ 8 m², không con, không ban công) vào cột
+  phụ trợ áp V; phòng ở dải lõi mà không chứa nổi thì đẩy sang dải gần hơn; dải không chứa nổi thì dời phòng nhỏ nhất
+  vào túi giữa chạm HF / HB rồi thử lại. WC khép kín = dải dọc một bên phòng mẹ, bên gần trục ống nước tầng dưới (không
+  lên bếp / phòng thờ). Ban công: mặt đầu bài BẮT BUỘC trước, rồi mặt bản phác vẽ; áp mặt trước / sau của cột hay mặt bên
+  của cột đầu / cuối; dải trong nhà chỉ cần phần đua chưa bù.
+- Kích thước: bề rộng cột theo tỉ lệ nhu cầu, không dưới cạnh dùng được, tỉ lệ dùng được và **sàn đầu bài đổi ra theo tim
+  với chiều sâu thật của dải** (`needWidth`: lọt lòng ≈ (rộng − tường)(sâu − tường)). Cây ra đi đúng đường
+  `emitCandidate → gateCandidates → best`: cổng, cửa, luật T71, thước 3 giữ nguyên. Tối đa 36 biến thể / tầng.
+- Bất biến lối vào đo ngay trên ô theo tim (phòng cần cửa chạm hành lang / khu chung / phòng mẹ / loại phục vụ ≥ đoạn
+  đặt cửa; ô thang chạm hành lang) — biến thể không đạt bị bỏ trước cổng.
+
+**Đo** (phát lại 35 lượt ghi = 126 vòng, cùng đầu bài biệt thự demo 15 × 20 m, 2 tầng, 24–32 phòng; đối chứng là mã
+trước T102 cùng phiên):
+
+| | Ra mặt bằng | Lùi | Vòng đổi kết quả |
+| --- | --- | --- | --- |
+| Đối chứng | 10 / 126 | — | — |
+| Khung xương | **11 / 126** | **0** | 14 |
+
+Vòng thêm: 6bbc6d0e vòng 4 — tầng 2 dựng theo khung (63,6 điểm, dưới ngưỡng 65 nên lượt thật vẫn xin sửa; tầng 1 của
+lượt ấy qua nhờ khung ngay vòng 1, trước đây hỏng vì kho không chạm hành lang). Tầng 1 thử khung 655 lần, tầng 2 378 lần.
+Phép thử: `ai-arrange-skeleton.test.ts` (nhà phố 4 × 15 không bản phác; biệt thự thang máy kề thang, bản phác hỏng lối
+vào; tất định; mã hành lang thêm), `ai-live-5bc280ff.test.ts` cập nhật vòng 4; đột biến M89 (V về phía tường) kiểm tay:
+5 / 7 bài đỏ.
+
+**Vì sao tầng 2 biệt thự demo vẫn chưa ra** (lý do bỏ biến thể đầu bảng: dải trước không chứa 5.009, dải sau 1.601 — tổng
+bề rộng tối thiểu vượt 12 m khoảng 0–30 %): chương trình phòng tầng 2 ~159 / 192 m² (4 phòng ngủ, học, thờ, 2 WC, giặt, 3
+ban công, thang máy) — đặt lên một tầng có hành lang thật thì mỗi phòng chạy suốt chiều sâu dải, ban công 1,2 m và WC
+khép kín một bên ăn thêm bề ngang; hai hàng (`mid`) không đủ sâu (7 m trước thang cần ≥ 10,4 m). Bản phác mô hình «vừa»
+chỉ vì nó không có hành lang thật (đó là lỗi cổng). Đòn bẩy còn lại, theo thứ tự:
+
+1. **Biến thể lõi cả nhà**: tầng 2 không dựng được với ô thang tầng 1 → thử lại tầng 1 với thang lật sang tường đối diện /
+   lùi sâu hơn (`plan-variants.ts`) — khung xương hiện chỉ dựng khi có ô thang cố định.
+2. **Ban công đua trong đất nhà**: đầu bài demo ghi «mặt trước và mặt trái đua 1 m vì vẫn trong đất nhà mình» nhưng
+   `balconies.projection_over_boundary = false` nên chương trình không đua; đua được thì dải trong nhà còn 0,6 m và dải
+   trước vừa. Cần Haan chốt cách đọc (Q-55).
+3. Lời dẫn 9.0: bảo mô hình chương trình dựng hành lang, bản phác không cần vẽ `circulation` — đo bằng một lượt thật (xin
+   phép riêng).
+
+**Ghép với vòng sửa (T86 / T97).** Tầng dựng bằng khung xương được GIỮ ở lượt sửa như tầng qua nhờ chia lại: bản phác vẽ
+lại lên lưới đưa qua `verify` — trước đây đòi bản vẽ lại tự qua cổng, nay chấp nhận cả khi nó lại phải nhờ khung xương (bộ
+xếp tất định nên về đúng khung ấy). Phát lại 4198d692 (`ai-live-4198d692.test.ts`) đổi quỹ đạo: tầng 1 câu trả lời 1 được
+dựng lại ngay, cả nhà chỉ còn lỗi liên tầng, nên không tầng nào giữ cho tới khi lượt sửa lấy gốc mới (lời gọi 5) — phép
+thử cập nhật theo.
+
+## T103 — Ba đòn bẩy sau khung xương: đo, hai cái gỡ, một cái chờ lượt thật (29/09/2026, Haan: «làm tiếp 3 phần đòn bẩy»)
+
+Ba đòn bẩy ghi cuối T102. Mỗi cái đo bằng phát lại 35 lượt ghi = 126 vòng, đối chứng là mã T102 (11 / 126).
+
+**Chẩn đoán lại tầng 2 trước khi làm** (vết `khung t2` của 21.203 lần dựng): lượt 5584bf0d có ô thang tầng 2 nằm
+NGANG (5,3 × 2,05 m), dải lõi chỉ sâu 2,05 m, vùng trước sâu 8,35–9,9 m. Khung chỉ xếp một hàng phòng mỗi dải, nên 5
+phòng chạy suốt 8,35 m sâu cần ~18 m trên bề ngang 12 m. Hai thử nghiệm theo đúng cách kiến trúc sư sẽ xử:
+
+1. **Hàng giữa** — phòng xếp NGANG cạnh lõi, mỗi phòng mở ra hành lang ngang áp lõi (hành lang hai bên có phòng).
+   Không dựng nổi: dải lõi 2,05 m quá nông cho phòng ngủ (cần 19 m bề ngang).
+2. **Hai hàng tự cân** — chế độ `mid` (hai hàng kẹp hành lang) trước đây chia phòng vào hàng ngoài / trong cứng theo
+   bản phác và chia chiều sâu hai hàng theo trọng số. Thêm: thử mọi cách chia hàng, ít phòng dời nhất trước, và dò
+   chiều sâu hàng ngoài ±3 m quanh tỉ lệ. Dựng được thêm vài tầng 2, nhưng cổng bác (phòng ngủ chính 3,34 × 8,89 m
+   quá dài; hai chốt tỉ lệ thêm vào thì hết bác mà cũng hết ứng viên).
+
+Kết quả: **11 / 126, không vòng nào đổi thành ra mặt bằng**; chỉ đổi lý do hỏng ở 4198d692 vòng 4–6. **Gỡ cả hai**
+(luật T93). Phép thử cho hai chốt tỉ lệ viết xong nhưng gỡ chốt vẫn xanh — không ca nào chạm tới — nên gỡ chốt luôn.
+Giữ lại: câu vết «bên lõi rộng … sâu … không đủ cho …» có số, cho lần soi sau.
+
+**Đòn bẩy 1 — biến thể lõi cả nhà (lật gương trái ↔ phải khi tầng trên hỏng): gỡ.** 11 / 126, 0 vòng thêm, 12 vòng đổi
+lý do hỏng. Thêm một hại ngầm đo được khi đọc lại luồng: câu lỗi gửi mô hình ở lượt sửa tả bản phác ĐÃ LẬT (toạ độ
+«hàng / cột», mặt trái / phải) trong khi mô hình vẽ bản chưa lật — mô hình sẽ sửa sai chỗ. Lật gương không đổi mật độ,
+mà mật độ mới là thứ chặn tầng 2.
+
+**Đòn bẩy 2 — Q-55 (ban công đua 1 m trong đất nhà): không đổi mã.** Mô phỏng câu trả lời «mặt trước và trái đua 1 m,
+mặt sau 0» trên ba lượt có ghi chú ấy (5584bf0d, 6bbc6d0e, 5bc280ff), mặt phải để «có thể» cho khớp nghĩa đầu bài cũ:
+cùng số mặt bằng (3 / 15 vòng), điểm còn giảm (85,2 → 82,8; 63,6 → 58,3). Lưu ý đây là câu trả lời mô hình GHI SẴN, vẽ
+khi chưa biết được đua; lượt thật với đầu bài khai đua sẽ vẽ khác. Q-55 vẫn là câu hỏi DỮ LIỆU cho Haan: phiếu T91 đã
+hỏi độ đua từng mặt, đầu bài demo chỉ cần khai lại — không suy từ ghi chú tự do (ranh giới «chỉ suy từ câu ĐÃ trả lời»).
+Mô tả trường cũ trong `design-brief.schema.json` đã tính «nhô qua chỉ giới xây dựng, trên khoảng lùi» là đua.
+
+**Đòn bẩy 3 — lời dẫn 9.0.0: đổi hướng, chờ lượt thật.** Hướng cũ («chương trình dựng hành lang, mô hình khỏi vẽ») bị số
+đo bác: khung cứu tầng 2 ở 1 / 126 vòng, bỏ hành lang khỏi bản phác thì gần như mọi tầng 2 rơi vào khung và hỏng. Đổi
+thành dạy mô hình đúng trình tự nghề ngay trong bản phác: câu Access về hành lang nay là «sau ô thang, TRƯỚC các phòng,
+vẽ MỘT hành lang (trục, chữ L, chữ T; không mẩu rời) chạm ô thang và mọi phòng mở ra nó». Trần 5.000 ký tự của
+`token-diet.test.ts` giữ nguyên — câu mới thay câu cũ, lời dẫn vẫn dưới 5.000 ký tự. Phát lại không đo được lời dẫn (câu trả lời ghi
+sẵn); cần một lượt thật cả nhà, gpt-6-sol, 0,35–0,60 USD / lượt theo `design_ai_call` 27–28/09 — chờ Haan cho phép.
+
+**Kết luận cho bước sau:** tầng 2 biệt thự demo không kẹt vì bộ xếp thiếu mẹo mà vì ~159 m² phòng (sàn đầu bài là sàn
+cứng) trên 192 m² sàn, ô thang nằm ngang sát sau. Đòn bẩy còn lại nằm ở đầu vào: mô hình đặt ô thang dọc giữa nhà
+(chiến lược AI-A), hay dời một phòng xuống tầng 1 — cả hai là việc của lời dẫn / lượt sửa, đo bằng lượt thật.
+
+### T103 (tiếp) — lượt thật 7c6de305: lời dẫn 9.0.0 + đầu bài khai lại ban công (29/09/2026, Haan tự chạy)
+
+gpt-5.6-sol, 6 lời gọi, 0,947 USD, THẤT BẠI. Đầu bài bản 20: ban công trước / trái BẮT BUỘC đua 1 m, sau CÓ THỂ
+không đua (Q-55 đã khai theo phiếu T91), bỏ thang máy. Tệp ghi: `fixtures/ai-run-7c6de305.json` (digest dựng bằng
+`anonymiseForAi` từ `design_briefs.structured`).
+
+- **Lời dẫn 9.0.0 có tác dụng trên bản phác:** tầng 2 vòng 3 là một trục hành lang liền suốt chiều sâu, phòng hai
+  bên áp trục — bản phác gọn nhất trong 36 lượt ghi. Chưa đủ một lượt để nói tỉ lệ, nhưng đúng hướng.
+- **Chỗ hỏng của mô hình:** tầng 1 vẽ ô thang 5 hàng tới mép sau, tầng 2 vẽ 4 hàng và đặt phòng giặt vào hàng
+  thứ 5; ba lượt sửa (4–6) mô hình không dời được phòng giặt dù câu nhắc chỉ đúng ô.
+- **Chỗ hỏng của chương trình — đã sửa:** bản phác tầng 2 hỏng → chương trình chia lại tầng; phòng ngủ chính mang
+  WC khép kín + ban công, dải chung đặt ở cạnh SAU phòng → ban công kẹp giữa WC và hành lang, không cạnh nào ra
+  ngoài; cổng tầng cho qua (ban công gần vuông chỉ lưu ý), cổng cả nhà bác «thiếu ban công mặt trước». Sửa
+  (`pack.ts` `placeItem`): dải chung làm ban công lọt vào trong thì thử thêm hai dải riêng (ban công ra mặt thoáng)
+  — trước chỉ thử khi WC bị kéo ra mặt tiền (T96).
+- **Đo:** 126 vòng cũ trùng khít (một vòng đổi lý do hỏng, trước sau vẫn hỏng); lượt mới 0 → **2 mặt bằng, 65,8
+  điểm** (vòng 3 và vòng 6 — vòng cuối của lượt thật, tức lượt này sẽ thành công). Ba cách khác thử rồi gỡ: chỉ cho
+  dải có ban công nằm ở cạnh thoáng (cấm cứng: 5aba737d vòng 1 mất mặt bằng), phạt thêm ban công kín (không đủ
+  kéo), cổng chặn ban công không cạnh thoáng (mất 5bc280ff vòng 3, 85,2 điểm); ưu tiên mặt ban công đầu bài khi
+  xếp hạng: 0 đổi → gỡ. Phép thử `ai-live-7c6de305.test.ts` (đỏ khi gỡ bản sửa), đột biến M90.
+
+## T104 — Haan chấm mặt bằng lượt thật b1543b8c: bếp – ăn – khách, hành lang, lối lên thang, giặt phơi (30/09/2026)
+
+Lượt b1543b8c (gpt-5.6-terra, Claude chạy theo lệnh Haan, 0,619 USD) lưu mặt bằng 69,6 điểm. Haan chỉ bốn chỗ.
+Tệp ghi `fixtures/ai-run-b1543b8c.json`; mọi thay đổi đo bằng phát lại 37 lượt (138 vòng), không vòng nào lùi.
+
+1. **Lối lên thang bị tường bít — sửa (`arrange/doors.ts` `stairEntry`).** Cửa vào thang lấy theo thứ tự đi từ lối
+   vào nhà (gặp phòng khách trước) nên nằm giữa CẠNH DÀI; chiều lên tính riêng theo trục nên bậc 1 ở đầu giáp hành
+   lang mà vách phía ấy kín. Nay: có phòng giao thông ở ĐẦU NGẮN thì lối vào dời về đó; chiều lên và đầu vách của ô
+   mở (`place`, có sẵn từ T53) tính cùng nhau theo bảng `ENTRY_BY_SIDE` để ô mở luôn ở góc bậc 1 (tờ vẽ cho vế đầu
+   xuất phát ở góc cố định theo `up`). Phát lại: 0 đổi kết quả, 7c6de305 65,8 → 65,9.
+2. **Giặt phơi nên ở góc cuối — sửa (`arrange/open-face.ts`, dữ liệu `passage.open_face_first` / `windowless_ok`).**
+   Hai phòng kề nhau trong một chuỗi cắt cùng trục (cùng bề ngang), phòng không cần thoáng (kỹ thuật, kho) chạm NHIỀU
+   mặt thoáng hơn phòng giặt → đổi chỗ, mỗi phòng giữ kích thước. Điều kiện ban đầu «phòng giặt không chạm mặt thoáng
+   nào» không bắt ca này — cả hai đã chạm mép trái (hẻm); điều Haan muốn là GÓC. Phát lại: b1543b8c vòng 6 68,2 → 69,7.
+3. **Khách – ăn – bếp liền hay tách — hỏi từ đầu bài.** Phiếu chưa có câu nào; `merge_allowed` cho gộp cả ba cặp
+   với mọi phương án. Thêm `lifestyle.living_dining_kitchen` (hợp đồng `design-brief` + `ai-brief-digest`, mục Gia
+   đình và nếp sinh hoạt, trọng số 0): liền thông cả ba / ăn + bếp liền, khách riêng / khách + ăn liền, bếp kín riêng
+   / tách riêng cả ba. Bảng `demands.open_plan` (`kb/brief_fidelity.yaml`) nói cặp nào được liền; cặp bị cấm thì lời
+   dẫn không liệt kê, quan hệ `open` của mô hình thành `adjacent` (ghi chú `intent_open_forbidden`), cửa là cửa đi —
+   không gộp, không ô thông, không bỏ vách (`passage.open_flow` cũng nhường). Chưa trả lời = như cũ. Phép thử
+   `ai-open-plan.test.ts` (đối chứng + tách riêng) và phần đầu bài của `ai-live-b1543b8c.test.ts`.
+4. **Hành lang tốn diện tích — CHƯA sửa được, gốc đã rõ.** Tầng 1 hành lang 2,44 m theo tim. Gốc: lưới bản phác ~1 m
+   mỗi ô, `corridorMinCells` = ⌈(1,2 lọt lòng + tường) / 1 m⌉ = **2 ô ≈ 2 m** — lời dẫn và phép kiểm bản phác đều đòi
+   thế, mô hình vẽ đúng như bị đòi. Thử giới hạn trọng số căn vách của hành lang = chiều dài bản phác × (1,2 m + một
+   vách): 5bc280ff 85,2 → 87, 0f80cd0b vòng 3 tiến một giai đoạn, NHƯNG mất b1543b8c vòng 6 — phần dư dồn sang cột
+   bên cạnh gồm cả ô thang (4,88 → 5,83 m), tầng 2 chồng theo thang ấy và hỏng ban công. Gỡ (luật «không vòng nào
+   lùi»). Hướng tiếp: phần dư của hành lang không được dồn vào ô thang (thang giữ đúng chiều dài cần), hoặc lưới bản
+   phác mịn hơn cho hành lang — cần Haan chọn.
+
+Đột biến M91 (lối vào thang), M92 (đổi chỗ giặt phơi), M93 (khách – ăn – bếp tách mà vẫn ô thông).
+
+### T104 (tiếp) — Hành lang: Haan chọn hướng (a) và cho khung bề rộng (30/09/2026)
+
+Haan: tối thiểu 900 mm (đoạn giao thông chính không dưới mức này); khuyến nghị 1.000–1.200; hành lang chính 1.200;
+biệt thự 1.200–1.500. «Chọn a. Phần dư hoàn toàn có thể chia cho các phòng bên trái hành lang.»
+
+- **Dữ liệu** `kb/construction_norms.yaml` `circulation`: `corridor_min_clear_m: 0.9`, `corridor_max_clear_m`
+  (`default` 1,2 · `biet_thu` 1,5); `corridor_clear_m` 1,2 giữ nguyên (bề rộng bộ xếp tự dựng, và sàn không thu
+  hẹp dưới nó).
+- **Cách làm** (`arrange/corridor-trim.ts`): hành lang dạng DẢI (dài ≥ 3 lần bề rộng mới) nằm trong một chuỗi cắt
+  chạy ngang bề rộng của nó, rộng quá trần theo loại nhà → dời vách chung với cụm kề KHÔNG chứa thang / thang máy
+  / giếng trời (hai cụm đều tự do thì cụm ở đầu toạ độ nhỏ — bên trái / phía trước); vách trong cụm ấy giãn theo tỉ
+  lệ; phòng chạm đầu ngắn hành lang đủ chỗ mở cửa thì sau khi thu hẹp vẫn phải đủ.
+- **Áp ở đâu — bài học của lần này:** áp thẳng vào mọi ứng viên mất hai mặt bằng (5bc280ff vòng 3 85,2; 7c6de305
+  vòng 6) dù đã chặn mẩu sảnh và đầu ngắn: cửa của cả tầng suy lại theo hình học mới, một phòng ở cụm khác (phòng
+  thờ) mất lối vào. Nên thu hẹp là một BIẾN THỂ CẢ NHÀ trong `evaluateHouseBest`: xếp lại cả nhà với cờ
+  `trimCorridors`, giữ khi qua cổng, có phòng đổi, và điểm không thấp hơn; ghi chú `corridor_trimmed`.
+- **Đo:** phát lại 138 vòng — không vòng nào lùi; 7c6de305 vòng 3 65,9 → 68,9; b1543b8c vòng 6 giữ 69,7 với hành
+  lang tầng 1 2,44 → 1,54 m lọt lòng, phòng ngủ 1 rộng thêm 0,9 m. Thời gian phát lại ~5 → 7,5 phút (một lượt xếp
+  cả nhà thêm mỗi vòng).
+- **Sai số còn lại:** phần thu hẹp làm tròn XUỐNG theo mô-đun 5 cm nên có thể vượt trần một mô-đun (1,54 so với 1,5).
+  Làm tròn lên (1,49) thì một ứng viên tầng 1 KHÁC thắng xếp hạng và hành lang của nó không thu hẹp được (còn 2,19) —
+  bước chọn ứng viên nhạy tới 5 cm; ghi lại để lần sau xét.
+- **Chưa làm:** `corridor_min_clear_m` mới là dữ liệu — cổng chưa báo hành lang dưới 0,9 m (bộ xếp tự dựng 1,2 m nên
+  chưa gặp). Phép thử `ai-live-b1543b8c.test.ts`, đột biến M94.
+
+### T104 (tiếp) — lượt thật 894b350d (30/09/2026, Haan tự chạy, gpt-5.6-sol, đầu bài bản 21)
+
+0,795 USD, THẤT BẠI. Đầu bài đã trả lời khách – ăn – bếp: «ăn và bếp liền, phòng khách riêng». Tệp ghi
+`fixtures/ai-run-894b350d.json`.
+
+- **Câu trả lời mới KHÔNG tới lời gọi dựng cả nhà — sửa.** `open_pairs` gửi đi đã lọc đúng (còn ăn–bếp, khách–thờ),
+  nhưng dòng dặn của `demands.open_plan` chỉ vào lời gọi chương trình không gian; lời gọi dựng cả nhà chỉ đọc đầu bài
+  văn xuôi (`brief/narrative.ts`). Thêm dòng «Phòng khách, phòng ăn, bếp: …» vào mục Nếp sinh hoạt; phép thử ở
+  `brief-narrative.test.ts`.
+- **Chỗ chặn duy nhất: ban công phơi chạm mép phải bằng ĐẦU NGẮN.** Cả sáu vòng mọi tầng đều xếp được; cổng cả nhà
+  bác vì `balcony_3` (3,9 × 1 m, cạnh dài quay ra mặt SAU — mặt «có thể») có đầu ngắn chạm mép PHẢI — mặt không khai
+  nên là mặt cấm (T91), phía giáp nhà hàng xóm. Tắt riêng phép kiểm ấy thì cả sáu vòng ra mặt bằng (69,1 / 63,7).
+  Ba sửa ở bộ xếp (không lấp ô trống sát mặt cấm vào ban công; phạt ban công chạm mặt cấm; đưa vào bậc xếp hạng T92)
+  không đổi vòng nào — gỡ. Chờ Haan (Q-57): ban công chỉ chạm mặt cấm bằng đầu ngắn, cạnh dài quay ra mặt được phép,
+  có tính là «ở mặt cấm» không.
+- Phép thử `ai-plan-variants.test.ts` (phát lại 5aba737d) nâng trần 30 → 90 giây: từ T104 mỗi lượt chọn biến thể xếp
+  thêm một lần cả nhà.
+
+## T105 — Q-57: ban công «ở» mặt mà cạnh dài mở ra; quy ước trái / phải (30/09/2026)
+
+**Ban công chạm mặt cấm bằng đầu ngắn (Haan chọn A cho Q-57).** Lượt thật 894b350d: ban công phơi 3,9 × 1 m, cạnh
+dài ra mặt sau (được phép), đầu ngắn 1 m chạm mép phải (nhà hàng xóm, đầu bài không khai nên là mặt cấm theo T91).
+Cổng cũ tính «chạm mép nào là ở mặt đó» nên bác cả sáu vòng. Nay ban công DÀI (cạnh dài > `long_ratio` = 1,5 lần
+cạnh ngắn, đọc lại số của `balcony_on_open_face` trong `rules/nvg-mandatory.yaml`, không khai lần hai) chỉ tính
+«ở mặt cấm» khi cạnh dài nằm trên mặt ấy: đầu ngắn áp ranh là tường đặc, không mở ra phía đó. Ban công gần vuông
+vẫn tính mọi mặt nó chạm. Áp cho cả cổng mặt bằng (`checkBalconyDemand`) lẫn cổng bản phác
+(`checkSketchBalconyDemand`), cùng hàm `shortEndOnly` trong `ai/plan-demands.ts`. Chỉ đổi phép kiểm mặt CẤM; phép
+kiểm mặt BẮT BUỘC giữ như cũ (luật T71 đã buộc cạnh dài của ban công dài ra mặt thoáng).
+
+Đo: phát lại 144 vòng — 894b350d cả sáu vòng ra mặt bằng 68,2–69,1 điểm; 138 vòng khác không đổi (15 OK như
+trước). Phép thử `ai-brief-demands.test.ts` (bốn ca hình học + bản phác), `ai-live-894b350d.test.ts`; đột biến M95.
+
+**Quy ước trái / phải — đã thống nhất, không đổi.** Trước / sau / trái / phải của đầu bài là **nhìn TỪ ĐƯỜNG VÀO
+nhà** (người đứng ngoài đường, mặt hướng vào nhà), đúng câu gợi ý của mục «Hiện trạng bốn phía». Gốc toạ độ ở
+**góc trước – trái** nhìn từ đường: `x` chạy dọc mặt tiền từ trái sang phải, `y` đi sâu vào lô. Bản vẽ lật trục `y`
+(`draw/units.ts`) nên mặt tiền nằm ở mép DƯỚI tờ giấy, và mép trái tờ giấy chính là bên trái nhìn từ đường. Mặt
+đứng mặt tiền dùng cùng gốc `x`. Bản phác gửi mô hình: dòng đầu là mặt đường, cột đầu là bên trái nhìn từ đường
+(`kb/ai_design_prompts.yaml`); lời dẫn sửa mặt bằng nói gốc «front-left corner».
+
+## T105 (tiếp) — Haan chấm lượt thật 25fdc90c: ô thang không phải lối đi; gara, kho, hành lang (30/09/2026)
+
+Lượt 25fdc90c (gpt-5.6-terra, Claude chạy theo lệnh Haan, 0,328 USD, 4 lời gọi) lưu mặt bằng 80,7 điểm. Haan đánh
+giá cao tầng 2, chỉ bốn chỗ: (1) tầng 2 lên tới bậc 21 là hành lang trước — «đi sang phòng giặt phơi kiểu gì?»;
+(2) tầng 1 bậc 1 giáp tường kho, không biết đi lên thế nào; (3) kho nằm giữa gara và phòng khách — gara nên giáp
+phòng khách; (4) hành lang tầng 1 rộng 1,95 m (tim tường), vượt khung Haan đặt ở T104. Tệp ghi
+`fixtures/ai-run-25fdc90c.json`.
+
+**Bộ phát lại lệch đường thật — sửa (`__tests__/ai-real-context.ts` `loadRun`).** Đường thật chạy `tidyHouse` lên câu
+trả lời của mô hình trước khi dùng (mã phòng về chữ thường); tệp ghi lưu câu trả lời thô, và phát lại không chuẩn
+hoá. Với 37 lượt cũ không lệch gì (mô hình vốn trả chữ thường), nhưng 25fdc90c trả «GAR», «LIV»… nên phát lại hỏng
+cả bốn vòng trong khi lượt thật lưu mặt bằng ở vòng 4. Nay `loadRun` chuẩn hoá — phát lại 25fdc90c vòng 4 ra đúng
+80,7. Đột biến M102.
+
+**Ô thang là vế bậc, không phải lối đi — gốc của (1) và (2).** Bước loang cửa (`arrange/doors.ts`) coi ô thang như
+một phòng giao thông: tầng 2 mở ô thang ra cả hành lang trước lẫn hành lang sau, và bước dựng cửa
+(`tree/openings.ts`) còn tự mở thêm lối thứ hai để «nối» phòng không tới được. Ở sàn tầng, phần ô thang ngoài đầu bậc
+là vế đang lên hay chiếu nghỉ lưng chừng — không bước ngang sang phòng bên kia được. Sửa:
+- Ô thang là ĐIỂM CUỐI khi loang: tới được từ một phòng giao thông, không loang tiếp; ở tầng trên (xuất phát từ thang)
+  chỉ mở MỘT lối, ưu tiên đầu ngắn nơi vế tới (`START_SIDE` theo chiều lên tầng dưới). Ô thông mô hình khai không mở
+  lối thứ hai. Đột biến M96.
+- Phòng giao thông / khu chung không tới được thì báo (`arrange_no_hub_wall`) — trước đây im lặng, cây sai lọt qua bộ
+  xếp rồi bị «chữa» bằng cửa xuyên thang. Đột biến M98.
+- Bước dựng cửa không mở lối thứ hai từ ô thang vào một phòng giao thông / khu chung (phòng ngõ cụt như kho cạnh thang
+  vẫn được, V-26). Đột biến M97.
+- Lối lên chỉ ở cạnh dài (không đầu ngắn nào giáp lối đi, bậc 1 áp tường) là lỗi `stair_entry_long_side` — gửi mô
+  hình sửa được, có câu nhắc. Đột biến M99.
+
+Phát lại (148 vòng): 22 → 17 vòng ra mặt bằng khi chỉ bật luật thang. Năm vòng mất (25fdc90c v4, 5584bf0d v2–v3,
+5fda70dc v1, 6bbc6d0e v4) đều có phòng chỉ tới được bằng cách đi xuyên ô thang — mặt bằng không đi được ngoài thực
+tế, nên giữ luật dù đếm giảm. Lối lên cạnh dài: không mất vòng nào.
+
+**Khung xương cho ô thang đứng giữa nhà (`arrange/skeleton.ts`).** T102 chỉ dựng lõi áp một tường. Nay lõi giữa: dải
+dọc V thử cả hai bên lõi, bên kia thành một cột phòng xếp dọc; khối hai hàng (`mid`) chưa dựng cho trường hợp này.
+Và ở biến thể `stay`, phòng phụ trợ dải lõi không chiếm cột phụ trợ — nhà phố 4 m cần cả dải 1,6 m cạnh thang làm
+hành lang (trước đó phòng sau chỉ tới được qua vế bậc). Cứu lại 5584bf0d v2 (70,1). Đột biến M103, M104.
+Thử và GỠ: trả ô thang vừa rời cho phòng bị ô thang ép đè (`forceSketchRect`) — không cứu vòng nào, 5bc280ff v3 tụt
+85,4 → 61,5. Lượt 25fdc90c tầng 2 vẫn chưa cứu được: sau khi ép thang về đúng ô tầng dưới, bản phác còn hành lang
+vòng qua thang ở hai bên nhưng mỗi dải chỉ một ô (0,86 m), dưới mức hai ô — cần bộ xếp nới dải ấy bằng phần của phòng
+ngủ bên cạnh. Ở lượt thật, vòng 4 này nay bị bác ở tầng 2 và mô hình nhận câu nhắc để vẽ lối đi vòng qua thang.
+
+**D2 — phòng ngủ tối hẳn (`kb/plan_quality.yaml`, trừ điểm, không chặn).** Phòng ngủ 18 m² giữa nhà, giáp nhà hàng
+xóm, không cửa sổ. D1 trừ theo tỷ lệ nên lọt ngưỡng. D2 đếm phòng ngủ không có cửa sổ ra mặt thoáng và không có cửa ra
+ban công; trừ hết từ phòng đầu tiên, nặng 2. Nhà phố không chấm D2 (phòng ngủ phụ lấy sáng gián tiếp — hồ sơ P2 — và
+phòng ngủ chính D1 đã đòi; chấm thì một tiêu chí đạt trùng việc làm loãng nhóm D dưới sàn nhóm). Haan chưa nói «bắt
+buộc» nên không chặn. Câu nhắc D2 trong lời dẫn 9.1.0. Đột biến M100. Phát lại: 7c6de305 v3/v6 và 894b350d v3/v4
+xuống dưới 65 — mặt bằng có phòng ngủ tối, lượt thật sẽ xin sửa.
+
+**C11 — từ gara vào phòng khách (thay cho đổi chỗ kho – gara).** Đổi chỗ riêng hai phòng này không làm được bằng một
+phép đổi: gara ở khối trái, kho ở cột giữa chồng với thang và WC, hai phòng khác chiều sâu; thao tác `swap_rooms` của ô
+yêu cầu đổi ô nên gara 4,9 × 4 m sẽ rơi vào cột rộng 1,74 m. Điều Haan chỉ là nguyên tắc: từ gara phải vào được phòng
+khách / sảnh đường ngắn, trong nhà. C11 đếm số phòng phải đi xuyên từ gara tới phòng khách (sảnh, hành lang, chỗ để xe
+không tính); không tới được mà không vòng ra ngoài thì trừ hết. Câu nhắc C11. Đột biến M101. Phát lại: không đổi số
+vòng; b1543b8c v6 71,2 → 65,4 (gara xa phòng khách).
+
+**Hành lang tầng 1 (4) — chưa gỡ.** Biến thể thu hẹp hành lang (T104) không được chọn ở lượt này; khi luật thang đổi,
+chính ý định đã lưu cũng không qua tầng 2 nên chưa đo riêng được. Để lượt sau.
+
+Lời dẫn 9.0.0 → 9.1.0 (câu nhắc D2, `stair_entry_long_side`, C11). Phát lại cuối: 18/148 vòng (mốc có `tidyHouse`:
+22). Phép thử đổi theo quỹ đạo mới, giữ ý canh: 02982bd7 (T90), 5bc280ff (phòng giặt nay trên phòng ngủ — lùi đã
+biết, chưa kiểm E5 có trừ đúng phòng ấy), 6bbc6d0e v4, 5cd78ef7, 7c6de305, 8efa35a6, c8cefafc, dc949b49 (T86 — cơ chế còn bài đơn vị).
+
+**Lượt thật 1330ce12 (30/09/2026, gpt-5.6-terra, lời dẫn 9.1.0, 0,564 USD, 6 lời gọi) — thất bại ở tầng 2.** Luật ô
+thang chặn đúng: không vòng nào còn đi xuyên ô thang; tầng 1 qua từ vòng 2. Tầng 2 (13 phòng, ~83 % sàn) mỗi vòng
+sửa đúng lỗi được báo mà hở chỗ khác; vòng 4 chỉ còn phòng ngủ 4 vẽ 15,1 / 17 m², vòng 5 phòng thờ 7,4 / 10 m². Tệp
+ghi `fixtures/ai-run-1330ce12.json`. Thử và GỠ cả hai (phát lại 154 vòng, «không lợi đo được thì gỡ»):
+- Nới phòng vẽ thiếu ô bằng một dải của phòng kề (như T79) trước khi bác: không phòng kề nào cùng bề rộng mà còn dư
+  (phòng ngủ 4 kẹp giữa phòng ngủ chính rộng hơn, ô thang và hành lang chạy suốt) — 0 vòng đổi.
+- Cho bộ xếp dựng đúng bố cục bản phác theo diện tích mục tiêu khi lỗi duy nhất là thiếu ô: tầng 1 của lượt này qua
+  ngay vòng 1, nhưng vòng 4–5 tầng 2 vẫn hỏng vì bản phác không khớp ô thang tầng 1 đã dựng; 5584bf0d v2 mất (tầng 1
+  dựng khác nên ô thang khác) — 18 → 17.
+Chỗ chặn thật của vòng 4–5 là bản phác tầng 2 không khớp ô thang tầng 1 đã dựng, không phải diện tích.
+
+**Câu nhắc nói ngay vị trí ô thang tầng trên (Haan chọn hướng 1).** Vòng 4–5 của 1330ce12 bản phác tầng 2 vẽ ô thang
+ở hàng 8–11 trong khi thang tầng 1 dựng ở hàng 6–11 — câu nhắc cũ chỉ nói vị trí ấy (`sketch_core_overlap`) khi mô
+hình đã vẽ phòng khác đè lên ô thang. Nay `arrangeLevel` trả `stairCells` (ô lưới bản phác của mốc thang tầng dưới,
+cùng phép làm tròn với `forcedCellBox`), và câu nhắc của tầng hỏng mở đầu bằng dòng `stair_cells`: thang cố định ở
+hàng…, cột…, vẽ đúng chỗ ấy và kéo hành lang quanh nó rộng ít nhất hai ô. Không đổi cách xếp — phát lại không đổi vòng
+nào (chỉ đo được ở lượt gọi thật). Lời dẫn 9.1.0 (cùng đợt). Phép thử `ai-live-25fdc90c.test.ts` (1330ce12 vòng 4),
+đột biến M105.
+
+## T106 — Loại thang bộ theo tài liệu «Các loại thang bộ phổ biến — ký hiệu mặt bằng» (30/09/2026)
+
+Haan: «bổ sung vào đầu bài các loại thang bộ này để user lựa chọn … khi dựng bản vẽ mặt bằng, phần dựng thang bộ cũng
+nên tuân thủ hình dạng, kích thước theo tài liệu trên» (`doc/design/thang-bo-mat-bang.pdf`). Haan chọn: bỏ thang xoắn ốc
+khỏi thang chính (tài liệu: chỉ làm thang phụ, không làm thang thoát nạn); chưa quyết thì chương trình chọn theo nhà; bậc
+171 × 260 mm theo tài liệu; làm cả năm loại một đợt.
+
+- **Đầu bài:** `vertical.stair_shape` (mục «Khối nhà, thang và mặt ngoài», trọng số 0, không bắt buộc) — chữ U 2 vế,
+  U chiếu nghỉ rộng, chữ L, thẳng 1 vế có chiếu nghỉ giữa, 3 vế quanh giếng, chưa quyết; mỗi lựa chọn ghi ô thang ≈ theo
+  tài liệu. Câu «thang hở / kín» giữ nguyên. Vào bản tóm tắt gửi mô hình và câu văn đầu bài.
+- **Kho (`kb/construction_norms.yaml`):** cổ bậc 0,17 → 0,171, mặt bậc 0,25 → 0,26 (hồ sơ NVG đo 0,25 — ghi lại để
+  truy); bảng `stairs.shapes` (bề rộng vế, chiều sâu chiếu nghỉ, giếng). Ô thang SUY từ số bậc, không ghi cứng: tầng
+  3,6 m ra đúng số tài liệu (U 2,37 × 3,6; U rộng 2,82 × 4,1; L 3,56 × 3,6; ba vế 3,78 × 2,56; thẳng 5,94 — tài liệu đo
+  dọc vế đầu lọt lòng, ngang cả tường). Hình tài liệu dùng vế 1,0 m cho cả U rộng (2 × 1,0 + giếng 0,6 + tường = 2,82).
+- **Hình học một chỗ (`ai/stair-geometry.ts`):** chia bậc (U, L, thẳng 10 + CN + 9; ba vế 6 + CN + 6 + CN + 6), ô lọt
+  lòng tối thiểu theo chiều vế đầu, bố cục vẽ (bậc, chiếu nghỉ mang số, giếng, đường đi), phía bước ra ở tầng trên (U, ba
+  vế: cạnh bậc 1; thẳng: cạnh đối diện; L: cạnh ngang).
+- **Chọn loại (`ai/stair-choice.ts`):** gia chủ chọn thì dùng; chưa quyết — người từ 65 tuổi / đi lại khó khăn → U chiếu
+  nghỉ rộng; khối xây dưới 4 m → thẳng; còn lại chữ U. L và ba vế chỉ khi gia chủ chọn. Gắn vào
+  `construction.stairs.shape` MỘT lần ở cửa vào (`withStairShape` — ngữ cảnh workflow, bước lưu).
+- **Bộ xếp:** ô thang tối thiểu theo loại (`stairMinCm`, `stairFitsEither`); lối vào thang theo loại
+  (`shapedStairEntry`): cạnh mà vế đầu đi ngược lên từ đó thì ô đủ chỗ — U, thẳng chỉ đầu ngắn, L, ba vế theo chiều hợp;
+  không cạnh nào hợp → `stair_entry_long_side`. Tầng trên: lối ra ở phía thang tới.
+- **Hợp đồng:** `stairs[]` thêm `shape`, `flight_width`, `landing`, `gap` — tờ vẽ đọc từ artifact. Artifact cũ không có
+  `shape` vẽ như trước (7 ảnh chụp vàng chỉ đổi CSS).
+- **Tờ vẽ (`draw/stairs.ts`):** ký hiệu tài liệu — mỗi bậc / chiếu nghỉ một ô có số, đường cắt gấp khúc ở bậc ≈ 1/3 số
+  cổ bậc (≈ 1,2 m tầng 3,6 m), phần trên mặt cắt nét đứt (lớp `stb`, `sab`), chấm ở bậc 1 (`sdt`), một mũi tên liền tới
+  bậc cuối; tầng trên cùng nét liền, «XUỐNG». DXF đi theo lớp `stair`.
+- **Mô hình** nhận `stair_min_m` theo loại (cạnh ngắn × cạnh dài, kèm tên loại); không thêm chữ vào lời dẫn (trần T46).
+
+Đo phát lại (154 vòng, mô hình không được gọi): thang cũ với bậc 171 × 260 — 18 vòng, y hệt mốc. Bật loại thang theo tài
+liệu — 7 vòng (mất 12, thêm 1): bản phác cũ vẽ ô thang cho cỡ 1,6 × 3,3 m, ô thang U nay rộng 2,15 m lọt lòng lấn hành
+lang và phòng mô hình vẽ sát nó. Đo đúng phải là lượt gọi thật khi mô hình đã được báo cỡ mới. Phát lại mặc định giữ thang
+cũ (`realContextInput(…, { stairShape: true })` để bật). Phép thử `ai-stair-geometry.test.ts`, `ai-arrange.test.ts`
+(5 loại trên biệt thự mẫu), `ai-arrange-doors.test.ts`, `ai-design-steps.test.ts`; đột biến M106–M110. Hợp đồng đổi —
+API và giao diện phải phát hành CÙNG lúc.
+
+## T106 (tiếp) — Lượt thật f351115d: WC chung tầng 1, hướng bàn thờ, ban công góc (30/09/2026)
+
+Lượt f351115d (gpt-5.6-terra, Claude chạy theo lệnh Haan, lời dẫn 9.1.0, đầu bài bản 22 — thang chữ U chiếu nghỉ rộng,
+0,570 USD, 6 lời gọi) lưu mặt bằng 81,1 điểm, dưới ngưỡng vì nhóm E. Thang đúng tài liệu: ô 2,64 × 4,13 m, vào từ đầu
+ngắn sau lưng bậc 1, tầng 2 một lối ra. Tệp ghi `fixtures/ai-run-f351115d.json` (digest dựng từ đầu bài bản 22). Haan chỉ
+ba chỗ:
+
+1. **«Tầng 1 thiếu phòng nhà vệ sinh chung» — sửa (`ai/program.ts`).** Đầu bài khai dòng «WC tầng 1» và một phòng ngủ tầng 1
+   khép kín; mô hình vẽ đúng một WC — WC khép kín của phòng ngủ ấy — và phép kiểm danh mục đếm nó vào dòng WC. Nay dòng WC
+   của đầu bài chỉ được đáp ứng bằng WC KHÔNG khép kín (WC khép kín đã có đòi hỏi riêng theo phòng ngủ khép kín; ban công gắn
+   phòng ngủ vẫn đếm cho dòng ban công). Đột biến M111.
+2. **«Không có cách đặt bàn thờ quay hướng đông nam — từ cửa đi vào là phía sau bàn thờ» — sửa (`ai/altar-facing.ts`,
+   `arrange/doors.ts`).** Hướng bàn thờ đọc từ lời gia chủ ở ô tiện ích của dòng phòng thờ («hướng đông nam»), không suy
+   đoán; đổi ra vách bàn thờ dựa lưng theo hướng nhà (`site.orientation`: mặt trước H, sau H + 180°, trái H + 90°, phải
+   H + 270°; bảng `BEARINGS` dời sang tệp này). Cửa phòng thờ không mở ở vách ấy; chỉ còn lối đi ở vách ấy thì
+   `altar_door_behind` (sửa được, có câu nhắc). Lời gia chủ nên được chặn (T65). Đột biến M112.
+3. **«Ban công mặt trước phải nằm phần lớn ở mặt trước» — sửa (`ai/plan-demands.ts`).** Ban công GÓC (chạm hai mặt vuông
+   góc) chỉ tính cho mặt nó dài gấp `long_ratio` (1,5, như Q-57) trở lên dọc mặt ấy — khối 2,4 × 2,3 m ở góc trước – trái
+   không còn là ban công mặt trước. Chỉ ở cổng MẶT BẰNG: thử cả cổng bản phác thì trên lưới ô thô (~0,86 m) nó báo cả ban
+   công bộ xếp còn nắn lại được, và 19 phép thử phát lại đổi quỹ đạo — gỡ ở bản phác. Ý «đi ra từ hành lang hoặc phòng
+   ngủ» thì bản này đã đạt (mở từ phòng ngủ chính). Đột biến M113.
+
+Phát lại (154 vòng, thang cũ): 18 → 14. Bốn vòng mất đều vì ban công góc — 5584bf0d v2 (ban công trước 1,0 × 1,7 và sau
+2,1 × 2,2 đều ở góc), 5bc280ff v3 (ban công sau 2,2 × 2,4 ở góc sau – trái, trước tính cho cả trái lẫn sau), b1543b8c v2
+(ban công trước 5,4 × 2,1 trước tính luôn cho mặt trái), 7c6de305 v6 (ban công 2,0 × 8,4 dọc mặt trái chỉ chạm góc trước,
+trước tính luôn cho mặt trước). Đo lại với mã cuối (chỉ cổng mặt bằng): vẫn 14, cùng bốn vòng. WC chung và phòng thờ không mất vòng nào; f351115d nay bị bác ngay vòng 1 vì thiếu WC chung — lượt thật sẽ nhắc mô
+hình từ đầu.
+
+**Lượt thật 2c522a90 (30/09/2026, Haan tự chạy, gpt-5.6-terra, đầu bài bản 22, 0,445 USD, 6 lời gọi) — thất bại.** Từ vòng 2
+cả hai tầng xếp được, vòng nào cũng bị bác ở kiểm cả nhà: thiếu ban công mặt trước / mặt trái. Tệp ghi
+`fixtures/ai-run-2c522a90.json`. Không phải do quy tắc ban công góc (tắt đi vẫn hỏng). Chuỗi thật: ô thang tầng 1 là U chiếu
+nghỉ rộng, rộng 3,05 m (3 ô); mô hình vẫn vẽ cột trái tầng 2 rộng 2 ô (thang 2 ô, phòng làm việc 2 ô < 2,1 m) nên bản phác
+hỏng; khung xương 0 ứng viên; vòng khung NỚI vùng dời phòng ngủ chính ra sau nhà, hai ban công khép kín của nó đi theo — mặt
+trước mất ban công. Câu nhắc `stair_cells` (vị trí ô thang) có từ vòng 2 nhưng mô hình không vẽ lại cột trái.
+Thử và GỠ: giữ vùng (như T100) cho ban công bản phác vẽ ở mặt đầu bài bắt buộc và phòng mẹ của nó — 2c522a90 vòng 2–3 nay hỏng
+vì ban công dài không quay cạnh dài ra mặt thoáng (T71), và 894b350d mất cả sáu vòng (14 → 8). Chỗ chặn thật là bản phác tầng
+trên chưa theo được ô thang to hơn của loại thang mới.
+
+**Số ô ô thang gửi mô hình ngay lời gọi đầu (Haan chọn hướng 1, sau lượt 2c522a90).** Lời gọi đầu vẽ mọi tầng cùng lúc
+nên chưa có ô thang tầng dưới «đã dựng» để báo; trước đây mô hình chỉ nhận `stair_min_m` bằng mét và tự đổi ra ô — lượt
+2c522a90 đổi sai ở tầng 2. Nay `stair_min_m.cells` = số ô [cạnh ngắn, cạnh dài], mỗi cạnh cộng bề dày tường ngoài rồi làm
+tròn lên ô, như giếng thang máy (`briefMinCells`); thang U chiếu nghỉ rộng 3 × 5 ô. Nằm trong dữ liệu gửi kèm, không thêm chữ
+vào lời dẫn (trần T46). Từ lời gọi sửa thứ hai vẫn có `stair_cells` (vị trí ô thang). Phát lại không đo được (câu trả lời
+đã ghi); phép thử `ai-live-25fdc90c.test.ts`, đột biến M114.
+
+## T107 — Tổng hợp 37 lượt thật, nâng cấp ba đợt: đợt 1 câu nhắc và vòng sửa (30/09/2026)
+
+Haan: «tổng hợp từ nhiều lần hỏng để tiến hành nâng cấp toàn diện hơn», rồi «làm lần lượt 3 đợt». Số liệu: 37 lượt thật
+23–30/09 trên bản demo, 5 ra mặt bằng (14 %), 15,69 USD — `PHAN_TICH_THAT_BAI_MAT_BANG.md` mục 9. Đợt 1 (không tốn
+tiền gọi, lời dẫn 9.2.0):
+
+1. **Dừng khi lặp** (`stuckRepeating`, `STUCK_AFTER = 3`, kiểu dừng mới `stuck` cả hai đường chạy + màn hình): ba lượt
+   liền hỏng đúng cùng tập lỗi thì thôi gọi. Đo trên 37 lượt: 2/5 lượt đạt từng lặp HAI lượt rồi mới qua (dừng ở 2 là
+   giết chúng); lặp ba chưa lượt nào qua, xảy ra 14 lần. Đột biến M115.
+2. **Lượt sửa gọn** (`revisionView`, `fromRevisionIds`): chỉ gửi tầng chưa khoá; phòng mang mã ngắn đọc ra loại (`mb1`,
+   `st2` thang, `sd1` phòng làm việc) cả trong ý định lẫn câu nhắc, câu trả lời đổi ngược trước khi ghép. Đo trên
+   6bf43039: phần sửa 9.500 → 4.400 ký tự khi tầng 1 khoá, 9.200 → 6.200 khi không; bản phác trả ra ngắn ~3 lần. M116.
+3. **Lỗi ban công hệ quả không tới mô hình** (`balconyMovedByRepartition`): ban công ĐÃ đúng mặt trên bản phác mà bị
+   dời vì chương trình chia lại tầng thì bỏ khỏi câu nhắc; nếu mọi lỗi cả nhà đều là hệ quả, bác THEO TẦNG có bản phác
+   hỏng để tầng dưới được khoá. Ban công còn nguyên mặt mà vẫn bị bác (ban công góc T106) là lỗi thật. M117.
+4. **Chong chóng chỉ chỗ** (`sketch_pinwheel_at`): vùng con không còn đường chia sạch, đường bị ít phòng cắt nhất và
+   các phòng cắt nó; câu nhắc thêm «hành lang là một dải thẳng, không chữ T». M118.
+5. **Lỗi lối vào chỉ chỗ** (`detail` của `sketch_room_no_access`): phòng nằm hàng/cột nào, đang giáp gì, hành lang
+   nối thang gần nhất cách mấy ô; bỏ đoạn giảng luật ~300 ký tự lặp mỗi câu (luật đã ở mục Access của lời dẫn).
+6. **Đo bộ nhớ đệm**: `cachedInputTokens`, `reasoningTokens` vào tệp lời gọi đã lưu và dòng `[ĐO]`; chưa thành cột.
+
+Đã thử và gỡ: nới câu nhắc ô thang về cỡ tối thiểu — chương trình ép ô thang tầng trên vào hộp ô tầng dưới dựng ra,
+nới câu nhắc thì hàng mô hình vẽ thêm bị xoá. `$comment` của lược đồ vốn đã được lọc trước khi gửi (`schema-dialect`).
+Tác dụng lên mô hình chỉ đo được bằng lượt thật (đợt 2).
+
+**Đợt 2 — lời dẫn (9.2.0).** Lời dẫn tự mâu thuẫn: mục Access cho hành lang «spine, L, T» (một mã, hình không chữ
+nhật), mục Sketch đòi mỗi phòng MỘT chữ nhật và tầng chia dải — gốc của lỗi chong chóng. Nay: hành lang là các dải
+chữ nhật rộng `corridor_min_cells`, chỗ rẽ là dải thứ hai giáp dải đầu suốt bề rộng, không chữ T / L trong một mã; thêm
+bước tự kiểm «mỗi phòng chung ≥ 2 ô tường liền với hành lang hay phòng nó được mở cửa sang». Bù chữ bằng gọn đoạn
+mở đầu (lược đồ đã tả các trường), bỏ «Output only the JSON object» (đầu ra có lược đồ) — 4.996 / 5.000 ký tự. Tác
+dụng chỉ đo được bằng lượt thật.
+
+**Đợt 3 — chương trình tự nối phòng cụt: ĐO, CHƯA ĐƯỢC.** Chương trình ĐÃ có hai đường cứu lỗi lối vào: khoét hành
+lang xuyên phòng (`enumerateCarved`) và khung xương (T102). Phát lại 6bf43039 (fixture mới `ai-run-6bf43039.json`):
+khung xương sinh **0 ứng viên ở mọi tầng mọi vòng**; khoét thì hỏng vì phòng bị khoét hụt sàn đầu bài / thành dải quá
+dài. Gốc của khung rỗng: ô thang biệt thự nằm giữa bề ngang → chế độ hai hàng kẹp hành lang (`mid`) bị tắt
+(`skeleton.ts`, «chưa dựng cho trường hợp này»), nên năm – sáu phòng tầng 2 phải đứng MỘT hàng 12 m. Đã thử mở `mid` cho
+lõi giữa (hàng trong phủ cả phần bên xa lõi): đo riêng, phát lại 14 = 14 — không thêm vòng nào, GỠ. (Lần đo đầu ghi
+14 → 12 là đo lẫn với bản nới của mục 3 bên dưới.)
+
+**Mục 3, bản nới — đã thử, gỡ.** Coi cả ban công «bản phác đạt, mặt bằng bị nắn thành khối góc» là hệ quả (lượt 6bf43039
+vòng 3: ban công 6 × 1 ô dọc mép trước) → phát lại 14 → 12 (mất 7c6de305 vòng 3, b1543b8c vòng 6). Giữ bản hẹp: chỉ
+ban công bị dời HẲN khỏi mặt đã vẽ; ca 6bf43039 vòng 3 vẫn được báo như trước. Vết chạy cho thấy chỗ vướng kế tiếp: dải 1,55 m sau ô thang (ô thang không áp tường sau) bị gán phòng
+giặt + phòng thờ, và hàng trong bên phía V chỉ còn 1,9 m. Muốn đi tiếp phải chọn hướng (chờ Haan): (a) khi dựng tầng 1,
+chương trình kéo ô thang áp tường sau / bên nếu bản phác để dải thừa dưới một phòng; (b) khung xương cho biệt thự lõi
+giữa như một kiểu riêng (hai hàng quanh hành lang chữ U bao lõi) — việc lớn, đo từng bước.
+
+**Đo bằng hai lượt thật (Haan cho phép, 30/09/2026, gpt-5.6-terra, lời dẫn 9.2.0).** bea4c6fa (0,550 USD) và
+f1a88ac1 (0,640 USD): cả hai hỏng sau 6 lời gọi. So với 6bf43039 (9.1.0): phần VÀO lượt sửa 7.600–7.900 → 6.300–7.300
+token; phần RA không đổi (3.800–9.400, phần nghĩ chiếm chủ yếu) — tiền không giảm rõ vì phần ra quyết định. Chất lượng
+bản phác: từ vòng 3 lượt bea4c6fa hành lang là MỘT dải thẳng, mọi phòng áp vào — lỗi lối vào hết sau một lượt sửa (đợt 2
+có tác dụng). Chặn còn lại, cả hai lượt: **phòng nhỏ có sàn đầu bài vẽ thành dải mỏng** (phòng thờ 10 m² vẽ 2 × 6 ô → 8,99
+m², 9 ô → 8,35 m²) → bản phác bị bỏ, tầng 2 chia lại, **ban công bắt buộc bị dời** sang mặt cấm → hỏng cả nhà. Quy tắc
+dừng khi lặp không kích hoạt (câu nhắc mỗi vòng một khác). Fixture `ai-run-bea4c6fa.json`, `ai-run-f1a88ac1.json` (vòng sửa
+trả mã ngắn — bộ phát lại phải `fromRevisionIds`).
+
+Đã thử và gỡ: `belowFloorCell` (lọc cây trước cổng) không áp dung sai 3 % của cổng — sửa cho khớp thì phát lại không
+đổi vòng nào (cổng đo tường thật ra 8,99 m², hụt thật).
+
+**Hai việc sau hai lượt thật (Haan «oke làm đi»).** (1) Số ô MỖI CẠNH cho phòng có sàn đầu bài: `min_cells` thêm
+`min_side_cells` = cạnh ngắn theo cùng giả định tỉ lệ 2 mà `cells` đếm (`minSketchSideCells`; phòng thờ 10 m² → 3 ô, tức
+khối 3 × 4, không phải dải 2 × 6). Lời dẫn đã có câu «`min_side_cells` per side when given», chỉ thêm dữ liệu. Phát lại
+không đo được; đột biến M119. (2) Chương trình giữ ban công bắt buộc khi chia lại tầng: thử cho tiêu chí xếp hạng
+`balconiesKept` biết mặt CẤM — phát lại 14 = 14, năm lượt gần nhất 0 = 0, không đổi vòng nào: trong các phương án chia
+lại không phương án nào còn ban công đúng mặt, nên xếp hạng không cứu được — GỠ. Muốn giữ thật thì ban công bắt buộc phải
+được GHIM vị trí trong bước chia lại như ô thang (bộ khoét liệt kê hàng chục nghìn cách chia, ban công rơi đâu tuỳ) —
+việc lớn, chưa làm.
+
+## T108 — Giặt phơi phải có chỗ phơi đồ (30/09/2026)
+
+Haan: «phòng giặt phơi nên đặt ở nơi có ban công hoặc có cửa sổ thoáng, hoặc phòng giáp ban công hoặc gần khu sân phơi
+(nếu có) — thì mới tiện cho việc phơi đồ». Không nói «bắt buộc» → kinh nghiệm nghề, TRỪ ĐIỂM, không chặn (T52).
+
+- **D4** (`kb/plan_quality.yaml`, nhóm D, kiểu đếm, trừ hết từ phòng đầu tiên): phòng giặt phơi có chỗ phơi khi có cửa
+  sổ ra mặt thoáng, hoặc có cửa ra / tường chung từ `min_shared_m` (0,9 m) với phòng nhóm `drying` của từ vựng (ban
+  công, sân thượng, sân trong — giếng trời, hiên không phơi được). Phòng lưu theo lọt lòng nên «chung tường» tính cả khe
+  một bề dày tường (`wall_gap_m` 0,25). Thước lên `score_version` 4 (gộp cả D2, C11 của T105 vốn quên tăng).
+- Câu nhắc D4 cho lượt sửa; lời dẫn đổi «kitchen, wc and laundry grouped» → «kitchen and wc grouped; laundry by a balcony,
+  terrace, yard or open-face window» (bù chữ bằng gọn câu mở đầu, vẫn 4.996 / 5.000).
+- Đã có từ trước và giữ: giặt phơi mở cửa từ ban công / sân thượng (`served_from`, T91); đổi chỗ giặt phơi với phòng kỹ
+  thuật / kho ra mép thoáng (`open_face_first`, T103).
+- Phép thử `plan-score.test.ts` (bốn ca D4); đột biến M120 (đo chung tường không trừ bề dày tường — sống sót lần đầu vì
+  giặt phơi mẫu có cửa ra sân thượng; phép thử nay bỏ cửa ấy).
+
+## T109 — Nhắm «ra mặt bằng trong tối đa 4 lời gọi»: báo mọi lỗi ngay một lượt (30/09/2026)
+
+Haan: «trước khi chạy tôi muốn tìm cách tối ưu để có thể gen thành công bản vẽ chỉ trong vòng tối đa 4 lần». Lượt bea4c6fa
+dùng 6 lời gọi vì mỗi vòng chỉ lộ MỘT nhóm lỗi: vòng 1 danh mục (thiếu WC chung) — `evaluateHouse` trả về ngay, không
+soát bản phác; vòng 2 mới lộ lối vào tầng 2 (có từ vòng 1); vòng 3 diện tích; vòng 4 ban công (chỉ thấy khi mọi tầng đã
+xếp).
+
+- **Danh mục sai vẫn soát bản phác mọi tầng** (`precheckSketches`, chế độ `precheckOnly` của T92) và ban công trên bản
+  phác; câu nhắc gồm cả hai phần, ý định gửi kèm là bản đã đánh mã. Phát lại toàn kho: 13 vòng hỏng ở danh mục, 9 vòng
+  nay kèm lỗi bản phác, 3 vòng đúng là lỗi vòng sau hỏng — mỗi vòng ấy tiết kiệm một lời gọi. Đột biến M121.
+- **Lời khuyên ban công góc** (`sketchBalconyCornerAdvice`, câu `balcony_side_corner`): mặt bắt buộc mà ban công duy nhất
+  ở mặt ấy là khối góc ngắn thì nhắc sớm, chỉ kèm lượt đã hỏng vì lý do khác (không bác — bác ở bản phác đổi 19 phép thử,
+  T106). Hai lượt thật gần nhất không có ca nào; đột biến M122.
+- Lời dẫn 9.3.0 (hai lượt bea4c6fa, f1a88ac1 chạy bằng 9.2.0 trước các đổi T108–T109).
+- D4 (T108) đổi cách bộ xếp chọn phương án: phát lại 14 → 13 vòng xếp được, số vòng ≥ 65 điểm 12 → 11 (7c6de305 vòng 3
+  lên 65,6; 894b350d vòng 3–4 xuống 64,2 vì giặt phơi giữa nhà không chỗ phơi — đúng điều Haan muốn trừ; f1a88ac1 vòng 3
+  60,3 < 65 mất). Giữ, vì là yêu cầu của Haan.
+
+Còn lại, chưa làm: ghim ban công bắt buộc khi chương trình chia lại tầng (chỗ hỏng cuối của bea4c6fa); trần lượt sửa
+`HOUSE_REVISIONS_MAX` vẫn 5 — hạ về 3 (tối đa 4 lời gọi) chỉ bớt tiền lượt hỏng, không làm lượt nào thành công hơn.
+
+**T109 (tiếp) — Haan «làm b đi, để số lần gọi tối đa là 5».**
+
+- `HOUSE_REVISIONS_MAX` 5 → 4: lượt đầu + bốn lượt sửa = tối đa năm lời gọi mỗi phương án. Câu trên màn hình «tối đa ba
+  lần» (đã lỗi thời) → «tối đa bốn lần».
+- **Ghim ban công bắt buộc khi chia lại tầng** (`retryWithBalconyPins`, `arrange/index.ts`): tầng xếp được mà có ban công
+  chạy dọc mặt gia chủ cấm, hoặc ban công ĐỨNG RIÊNG bản phác vẽ dọc một mặt bắt buộc THOÁNG không còn ở mặt ấy → xếp
+  lại tầng với các ban công ấy làm ô mốc (như ô thang, `enumerateCarved` + dải hành lang + chữ T), nhận bản mới chỉ khi
+  xếp được và ban công đúng; ghi chú `balcony_pinned`. Chỉ chạy khi bản thường đã sai → không đụng ca nào đang đúng.
+  Phát lại: kho thang cũ 13 → **15** vòng xếp được, ≥ 65 điểm 11 → **12**; năm lượt gần nhất (thang theo loại) 0 → **2**
+  (bea4c6fa vòng 5: 65,0; vòng 6: 71,2 — lượt thật lẽ ra ra mặt bằng ở lời gọi thứ năm). Không vòng nào lùi. Đột biến
+  M123.
+- Ba cách đã thử trước khi tới cách trên (đều làm lùi phép thử phát lại, gỡ): (1) luôn ghim → b1543b8c vòng 6 mất cách
+  chia vốn đặt được ban công mặt trái; (2) thêm khung ghim bên cạnh khung thường cùng một suất cổng → chúng chen mất
+  ứng viên thường, b1543b8c mất bản thu hẹp hành lang tầng 1 (T104); (3) bậc xếp hạng «không ban công dọc mặt cấm» đứng
+  đầu → không đủ, vì cổng dừng ở vòng nới đầu có ứng viên qua. Ban công KHÉP KÍN của phòng ngủ (đi cùng phòng mẹ) chưa
+  ghim.
+
+## T110 — Hạ ngưỡng nhận phương án 65 → 60 (01/10/2026)
+
+Haan: «hạ ngưỡng điểm xuống 60». `kb/plan_quality.yaml` `accept_percent: 60`. Sàn nhóm 40 % (T96) giữ
+nguyên, nên một phương án đi lại tệ vẫn bị coi là dưới ngưỡng dù tổng ≥ 60. Phương án 60–65 điểm nay
+được nhận ngay thay vì dùng tiếp lượt sửa — bớt lời gọi, đổi lại kỹ sư nhận bản vẽ điểm thấp hơn để sửa bằng ô yêu cầu.
+
+## T111 — Hai lượt thật đầu tiên với 9.3.0 + ngưỡng 60, và ba lỗi chương trình chúng lộ ra (01/10/2026)
+
+Haan tự chạy hai lượt gpt-5.6-terra trên đầu bài demo (cùng đầu bài bea4c6fa), cả hai hỏng sau 5 lời gọi
+(46d6eff3 ~0,51 USD, fdd486b1 ~0,5 USD). Phát lại cả hai (fixture `ai-run-46d6eff3`, `ai-run-fdd486b1`) cho ra
+đúng lỗi lượt thật, và ba chỗ hỏng thuộc CHƯƠNG TRÌNH, không thuộc mô hình:
+
+1. **Mất cửa chính khi đổi mã ngắn** (46d6eff3): `fromRevisionIds` đổi mã bằng bảng chỉ gồm phòng của tầng
+   gửi đi; `entry_room` / `garage_room` trỏ vào tầng 1 đã khoá nên thành null từ lời gọi 2, tới lời gọi 5 mô hình
+   bị bắt vẽ lại tầng 1 đã qua. Sửa: đưa hai mã ấy vào bảng. Đã THỬ thêm «mô hình bỏ trống thì giữ bản cũ» —
+   phát lại bea4c6fa vòng 5–6 hỏng lại (chương trình tự chọn cửa chính tốt hơn), gỡ.
+2. **Một mã ở hai tầng** (46d6eff3 lời gọi 5: `co4` là hành lang mới ở cả tầng 1 lẫn tầng 2, cổng danh mục bác
+   cả lượt): `splitClashingIds` đổi mã lần khai sau sang mã trống trong bản phác / quan hệ của chính tầng ấy.
+3. **Mô hình không biết lỗi bản phác của chính nó** (fdd486b1): phòng ăn tầng 1 vẽ chữ L, chương trình cắt phần
+   lồi chỉ ghi chú cho kỹ sư, tầng phải chia lại, câu nhắc chỉ nói lỗi của cách chia lại (gara giáp ô thang) — mô
+   hình nộp y nguyên tầng 1 bốn vòng. Sửa: `crookedSketchRooms` đọc bản phác nguyên văn, mã mới
+   `sketch_room_crooked` đứng đầu câu nhắc khi tầng hỏng hẳn VÀ vốn có lỗi sửa được. Hai lần thử trước gây lùi đo
+   được: gắn vào tầng chia lại thành công (bea4c6fa 2 → 0) và dùng mã `sketch_not_rectangular` (bậc tệ
+   `setbackRank` +1000 → 5bc280ff chọn biến thể khác) — nay mã riêng, `setbackRank` bỏ qua.
+
+Thêm: lời dẫn lượt sửa giữ đúng khổ lưới (46d6eff3 nới tầng 2 từ 16 lên 20 hàng → ô nhỏ đi, phòng ngủ hụt sàn,
+câu nhắc ô thang lệch theo). Lời dẫn 9.3.1.
+
+**Ngưỡng 60 làm tụt điểm** (T110): `evaluateHouseBest` thôi thử biến thể khi phương án qua ngưỡng nhận; ở 60,
+bea4c6fa vòng 6 trả bản 61,8 thay vì 71,2. Tách mức TÌM `variant_search_until_percent: 65` (`kb/plan_quality.yaml`)
+khỏi ngưỡng nhận — không thêm lời gọi mô hình, chỉ thêm thời gian xếp cho phương án 60–65 điểm.
+
+Phát lại (so t111): bộ cũ 15 → 17 vòng xếp được, ≥ 65 điểm 12 → 14; bộ năm lượt gần 2 = 2, cùng điểm; không vòng
+nào lùi. Hai lượt mới vẫn hỏng trong phát lại — chỗ sửa chỉ có tác dụng từ lượt sau, khi mô hình nhận câu nhắc đúng.
+
+## T112 — Review lời dẫn mặt bằng (01/10/2026), đợt 1: sửa phần tất định
+
+Haan đưa một bản review lời dẫn `plan_house` 9.3.0 (`~/Documents/Doc/NVG/handoff-floorplan-prompt-review.md`,
+P0-01→P2-04), chấm trên đầu bài biệt thự Hưng Yên 15 × 20 m, ba thế hệ. Đối chiếu từng mục với mã: phần
+đúng là bộ sinh tri thức đưa dữ liệu tự mâu thuẫn cho mô hình. Khoảng nửa đề xuất về schema và validator thì
+chương trình đã có, hoặc trái quyết định đã chốt. Haan chọn: sửa tất định trước, lời dẫn sau (phải chạy thật
+mới đo được); mặt giáp đất người khác lùi **< 1 m** thì không thoáng; vượt sàn thì **chặn, không gọi mô
+hình**; diện tích tối thiểu gia chủ khai **đã gồm** tủ, góc trong phòng.
+
+Đã làm (không đổi lời dẫn, không đổi hợp đồng):
+
+1. **Góc làm việc** (P0-01). Phiếu lưu «Góc làm việc» bằng mã `study`, trùng «Phòng làm việc» riêng → lời dẫn
+   vừa đòi `study` là không gian (luật 2) vừa cấm (luật 3). `kb/brief_fidelity.yaml` `in_bedroom_as: {study:
+   study_area}`; cùng tầng đã có phòng làm việc riêng thì bỏ hẳn khỏi `inside` (`program.ts` `inRoomCodes`).
+2. **`open_pairs` theo tầng** (P0-05): bỏ cặp hai loại đầu bài ghim ở hai tầng khác nhau (phòng thờ tầng 2 –
+   phòng khách tầng 1). Chỉ phần gửi mô hình; bộ xếp vẫn đọc đủ.
+3. **Luật đi lại chỉ nhắc mã đã định nghĩa** (P1-09): `core` không còn trong `walk_through`.
+4. **Mặt thoáng xét khoảng lùi** (P1-05): `kb/site_context.yaml` `min_open_setback_m: {dat_trong: 1}`,
+   khoảng lùi = max(quy hoạch, sân gia chủ muốn) (`buildable.ts` `setbacksFromDigest`). Mặt bắt buộc có ban
+   công hay ban công phơi phía sau mà mặt ấy không thoáng → cảnh báo trên màn hình.
+5. **Chữ ban công đua**: «ĐUA RA NGOÀI ranh đất» → «mép nhà» (`brief/narrative.ts`), đúng nghĩa T91.
+6. **Cục nóng ở sân thượng** → đòi hỏi `cuc_nong_san_thuong` (terrace, không chặn), như `bon_nuoc_mai` (P0-04).
+7. **Phòng ngủ khép kín ghép đúng dòng đầu bài** (P1-01, phía chương trình): ghép dòng «khép kín» với phòng có
+   WC khép kín trước (`pairBriefRows`), cả khi nâng diện tích mục tiêu lẫn khi kiểm. Trước đây WC khép kín gắn
+   phòng giúp việc 15 m² vẫn qua mức 20 m² của phòng ông bà.
+8. **Gió mát bị nhà bên chặn**: cảnh báo `gio_mat_bi_nha_ben_chan` khi gió khai ở mặt giáp nhà bên cao bằng
+   hoặc hơn (P1-04, phần cảnh báo; `faces` gửi mô hình để đợt 2).
+9. **Kiểm khả thi trước lời gọi đầu tiên** (từ P1-07): `ai/feasibility.ts`, mức
+   `kb/plan_quality.yaml` `feasibility_max_percent: 85`. Cộng phần chắc chắn phải có (ô tối thiểu các phòng
+   khai diện tích, ô thang, WC khép kín), cố ý đếm thiếu. Gắn ở cả `runVariant` (Workflow) lẫn
+   `generateAiPlan`. Lượt ghi cao nhất 75 % → không lượt nào bị chặn. Đầu bài nhồi `crammedBrief` (~92 %) nay
+   bị chặn thay vì ra mặt bằng hụt mức kèm cảnh báo (T91) — nhánh T91 vẫn còn cho đầu bài 85 %–sức chứa thật.
+   Đột biến M124–M126.
+
+**Phát lại (194 vòng / 46 lượt ghi, đối chứng cùng mã):** mục 7 bật riêng 17 = 17 mặt bằng, không đổi điểm.
+Mục 4 bật riêng 17 → **12**: 894b350d vòng 1, 2, 5, 6 và 4a521f52 vòng 2 hỏng; năm vòng khác tụt 1–5 điểm. Câu
+trả lời ghi sẵn được vẽ khi lời dẫn báo mặt sau thoáng — mô hình đặt ban công, phòng ở quay ra mặt ấy. Đầu bài
+demo vốn mâu thuẫn: muốn ban công phơi phía sau và cho phép ban công mặt sau trong khi tường sau sát ranh. Giữ
+vì Haan chọn; `realContextInput` mặc định tắt (như `only_when_asked`, loại thang), `openSetback: true` để đo.
+Muốn bỏ: xoá dòng `dat_trong: 1`.
+
+Không làm, kèm lý do: đổi bản phác sang `rect` 0,5 m (T48, viết lại bộ xếp, mất kho phát lại); tính Bát trạch
+(T62); nhịp kết cấu, dốc xe (8.2-6, T30/T42); bỏ `adjacent` / thêm quan hệ `door` (cửa suy từ luật đi lại,
+`adjacent` dùng chọn phòng mở cửa và chấm điểm); trường `cantilever` (chương trình đã suy từ đầu bài, T91);
+cờ phòng giúp việc rộng (lời gia chủ là ràng buộc, T41). WC khép kín không có lối vào (P0-02): chương trình đã
+đúng (`ensuite_of` là cạnh đi lại) — chỉ lời dẫn thiếu câu.
+
+Đợt 2 (lời dẫn 9.4.0, cần chạy thật, chưa làm): ghép luật theo điều kiện (thang máy, sân thượng, ông bà
+chưa có tầng); câu ensuite trong Access; «bếp và WC cùng khu kỹ thuật, không chung tường, cửa không đối
+diện» thay «kitchen and wc grouped»; luật 3 nói tối thiểu đã gồm phần trong phòng; gửi `faces`
+(mù / nắng gắt / gió); assumptions xếp theo tác động, đề xuất loại `only_when_asked` không được vẽ. Đo: 2 lượt
+9.3.1 + 2 lượt 9.4.0 trên đầu bài Hưng Yên (~2 USD) — chờ Haan cho phép.
+
+**T112 (tiếp) — Q-60, Haan 02/10/2026:** giữ mặt thoáng theo khoảng lùi (Haan đã sửa đầu bài demo), và «đưa
+cảnh báo sớm là mâu thuẫn ở đầu bài để người dùng biết mà điều chỉnh». `checkBriefConsistency` thêm
+`ban_cong_mat_sat_dat_trong` (cảnh báo, không chặn): mặt giáp đất trống mà tường cách ranh dưới ngưỡng, lại có
+ban công bắt buộc / tuỳ chọn / ban công phơi phía sau ở mặt ấy. Ngưỡng ở màn hình là
+`OPEN_FACE_MIN_SETBACK_M` (`shared/src/design/brief-completeness.ts`), bản sao của `min_open_setback_m` — phép
+thử canh hai bên khớp. Cảnh báo cạnh mặt bằng (`withClosedBalconyFaces`) vẫn giữ.
+
+**T112 (tiếp) — đầu bài vượt sàn, Haan 02/10/2026:** chốt cách «chặn trước lời gọi đầu tiên» (kiểm khả thi
+85 %, `ai/feasibility.ts`) cho đầu bài vượt mức ấy, thay cho cách T91 «vẫn xếp, ra mặt bằng hụt mức kèm cảnh
+báo» ở vùng này. Nhánh T91 chỉ còn cho đầu bài dưới 85 % mà bộ xếp vẫn hết chỗ.
+
+**T112 đợt 2 — lời dẫn 9.4.0 (02/10/2026), đã làm, chờ Haan chạy thật trên demo (2 lượt, Haan cho phép).**
+`floor_level.system` thêm cú pháp `[[cờ|chữ]]` (`houseSystem`, cờ `elevator` / `terrace` / `ong_ba_unset` trong
+`PlanContext.promptFlags`; cờ lạ thì ném). Đổi: câu thang máy, sân thượng, ông bà chưa ghim tầng chỉ có khi
+đúng (P2-01); «A room with `ensuite_of` opens only from its parent bedroom» (P0-02); bếp và WC «one service zone,
+not sharing a wall, doors not facing» thay «grouped» (P0-06); luật 3 «the bedroom's brief minimum includes
+them» (P1-02); `knowledge.faces` — nhãn `open` / `blind` / `harsh_sun` / `cool_wind` từng mặt (`faceTags`) và một
+câu đặt thang / WC / kho dựa mặt mù, phòng ở về mặt thoáng có gió (P1-04); chiến lược AI-A dựa thang vào mặt
+mù; assumptions xếp theo tác động, được đề xuất loại `only_when_asked` mà không vẽ (P1-06, P1-10); luật 8 gom
+câu «không WC / giặt trên phòng ở» từ phần Sketch (P2-04). Trần lời dẫn T46 5.000 → 5.500 ký tự, nay đo bản gửi
+đi dài nhất (5.395) thay vì khuôn. Phát lại không đo được thay đổi lời dẫn — đối chứng là hai lượt 9.3.0 cùng
+đầu bài (46d6eff3, fdd486b1: cả hai hỏng sau 5 lời gọi).
+
+**T112 (tiếp) — «AI Design» trên Worker cloud, 02/10/2026.** Hai lượt thật đầu tiên của 9.4.0 lộ ra rằng
+nhánh AI chưa từng chạy trên `nvg-api` cloud: (1) `design_ai_run.workflow_id varchar(64)` từ chối mã
+instance mới `cf_` + 64 hex → migration 0152 nới lên 255; (2) gói Workers Free cắt 50 lời gọi ra ngoài và
+10 ms CPU mỗi bước — Workflow chết với «Too many subrequests» ngay sau lời gọi mô hình (5 lời gọi mất,
+~0,5 USD). Mọi lượt trước đó chạy qua `wrangler dev` tại máy, vẫn trỏ CSDL demo từ trước khi tách (C-1).
+Haan chọn nâng Workers Paid; `workers/wrangler.jsonc` thêm `limits.cpu_ms: 300000`.
+
+**T112 (tiếp) — lượt thật 8eaaee7b, lời dẫn 9.4.0 (02/10/2026).** Hỏng sau 5 lời gọi, nhưng gần hơn hai lượt
+9.3.0 cùng đầu bài (46d6eff3, fdd486b1): tầng 1 qua từ vòng 2 (fdd486b1 hỏng tầng 1 cả năm vòng), từ vòng 3 mỗi
+vòng một lỗi. Vòng 4–5 kẹt ở «ban công mặt bên trái»: mô hình vẽ một khối ban công góc trước – trái, tin nó phủ
+cả hai mặt bắt buộc; cổng (T106) không tính khối góc cho mặt không có cạnh dài, mà câu nhắc lại nói «không ban
+công nào chạm mặt ấy» — sai với bản phác mô hình đang nhìn. Sửa (9.4.1): `balcony_side_missing` mang `corner` khi
+có ban công chỉ chạm ở góc, câu nhắc riêng `balcony_side_missing_corner`; đầu bài nói «mỗi mặt bắt buộc một ban
+công riêng chạy dọc mặt ấy». Phép thử `ai-live-8eaaee7b.test.ts`. Một lượt (đồng thời đo 9.4.1) còn lại trong
+hai lượt Haan cho phép.

@@ -970,6 +970,15 @@ export function buildablePlateM2(draft: DesignBriefDraft): number | null {
 // Hai câu trả lời ở hai mục khác nhau nói ngược nhau — thêm 28/09/2026
 // ---------------------------------------------------------------------------
 
+/**
+ * Hiện trạng → khoảng cách ranh → tường tối thiểu (m) để mặt ấy còn là mặt THOÁNG (T112). Bản sao cho màn
+ * hình đầu bài của `min_open_setback_m` trong `kb/site_context.yaml` (Worker đọc tệp ấy khi xếp) — có phép
+ * thử canh hai bên không lệch nhau.
+ */
+export const OPEN_FACE_MIN_SETBACK_M: Readonly<Record<string, number>> = { dat_trong: 1 };
+
+const upperFirst = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
 const SIDE_NAME: Record<'front' | 'back' | 'left' | 'right', string> = {
   front: 'mặt trước',
   back: 'mặt sau',
@@ -1127,6 +1136,52 @@ function checkCrossAnswers(draft: DesignBriefDraft, config: BriefFormConfig): Br
         severity: 'nghiem_trong',
         message: `Ban công bắt buộc ở ${SIDE_NAME[side]}, nhưng ${SIDE_NAME[side]} giáp nhà hàng xóm${canDeclare ? ' và đầu bài không khai khoảng lùi hay sân ở mặt ấy' : ''} — không có chỗ cho ban công. Bỏ mặt ấy khỏi danh sách${canDeclare ? `, hoặc khai khoảng lùi / sân ${SIDE_NAME[side]}` : ''}.`,
         paths: ['balconies.required_sides', 'site.adjacent'],
+      });
+    }
+  }
+
+  // --- Ban công quay ra mặt sát đất trống (T112) ----------------------------------------
+  // Haan 02/10/2026: mâu thuẫn ở đầu bài phải báo NGAY trên đầu bài, đừng để tới lúc ra mặt bằng.
+  // Tường sát đất trống (lùi dưới `OPEN_FACE_MIN_SETBACK_M`) không tính là mặt thoáng — đất bên cạnh là
+  // của người khác, sẽ được xây — nên ban công (bắt buộc, tuỳ chọn, hay ban công phơi phía sau) ở mặt ấy
+  // khó đáp ứng. Chỉ cảnh báo: ban công gần vuông vẫn đặt được, chỉ trừ điểm.
+  if (balconies?.scope !== 'khong_co') {
+    const sides = shown('balconies.required_sides', true)
+      ? balconySides(balconies)
+      : { required: [] as BalconySide[], optional: [] as BalconySide[] };
+    const drying = shown('balconies.drying_balcony', balconies?.drying_balcony) === true;
+    const distance = (side: BalconySide) =>
+      Math.max(
+        (
+          shown('site.setback_required_m', site?.setback_required_m) as
+            Partial<Record<string, number>> | undefined
+        )?.[side] ?? 0,
+        (
+          shown('massing.yard_depth_m', draft.massing?.yard_depth_m) as
+            Partial<Record<string, number>> | undefined
+        )?.[side] ?? 0,
+      );
+    for (const side of BALCONY_SIDES) {
+      const code = adjacent(side);
+      const min = code ? OPEN_FACE_MIN_SETBACK_M[code] : undefined;
+      if (min === undefined || distance(side) >= min) continue;
+      const wishes = [
+        ...(sides.required.includes(side) ? ['ban công bắt buộc'] : []),
+        ...(sides.optional.includes(side) ? ['ban công tuỳ chọn'] : []),
+        ...(side === 'back' && drying ? ['ban công phơi phía sau'] : []),
+      ];
+      if (!wishes.length) continue;
+      out.push({
+        code: 'ban_cong_mat_sat_dat_trong',
+        severity: 'canh_bao',
+        message: `${upperFirst(SIDE_NAME[side])} giáp đất trống mà tường nhà cách ranh dưới ${formatNumber(min)} m — mặt ấy không tính là mặt thoáng (đất bên cạnh sẽ được xây), nên ${wishes.join(', ')} ở mặt ấy khó đáp ứng. Khai sân ${SIDE_NAME[side]} từ ${formatNumber(min)} m trở lên, hoặc chuyển ban công sang mặt thoáng khác.`,
+        paths: [
+          'site.adjacent',
+          'massing.yard_depth_m',
+          ...(sides.required.includes(side) ? ['balconies.required_sides'] : []),
+          ...(sides.optional.includes(side) ? ['balconies.optional_sides'] : []),
+          ...(side === 'back' && drying ? ['balconies.drying_balcony'] : []),
+        ],
       });
     }
   }

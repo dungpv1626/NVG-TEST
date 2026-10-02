@@ -30,23 +30,18 @@ describe('phát lại lượt chạy thật 02982bd7 — «thiếu ban công» l
   ).previous!;
   const round3 = evaluate(mergeRevision(base, run.intents.round3 as HouseIntent));
 
-  it('vòng 3: mọi tầng đã xếp, chỉ hỏng kiểm cả nhà — ban công mặt sau', () => {
+  // T105: ô thang không còn làm lối đi. Ghép thẳng vòng 3 lên gốc vòng 1, thang tầng 2 ép về đúng ô tầng dưới
+  // đè mất dải hành lang mô hình vẽ quanh nó, nên tầng 2 hỏng TRƯỚC khi tới kiểm cả nhà. Cơ chế T90 bài này canh
+  // vẫn vậy: lỗi bản phác của tầng đứng đầu câu nhắc, lượt sau là «sửa» chứ không lấy mẫu lại.
+  it('vòng 3: tầng 2 hỏng vì ô thang ép về đúng ô tầng dưới đè mất hành lang', () => {
     expect(round3.rejections).toHaveLength(1);
-    expect(round3.rejections[0]!.level).toBe(0);
-    // T96: bộ xếp dời ban công sang mép khác (dải ban công tách khỏi dải WC) — thiếu mặt nào không quan trọng,
-    // cơ chế T90 (lỗi bản phác đứng đầu) mới là thứ bài này canh.
-    expect(round3.rejections[0]!.messages.join(' ')).toMatch(
-      /ban công ở mặt (sau|bên trái|bên phải|trước)/,
-    );
-    // Lỗi bản phác tầng 2 (gốc) hiện cho kỹ sư ở ghi chú.
-    expect(round3.rejections[0]!.notes!.join(' ')).toMatch(/"master_bedroom_1" ở tầng 2/);
+    expect(round3.rejections[0]!.level).toBe(2);
+    expect(round3.rejections[0]!.codes).toContain('sketch_core_overlap');
   });
 
-  it('câu nhắc: lỗi bản phác tầng 2 đứng đầu, rồi mới tới ban công', () => {
+  it('câu nhắc: lỗi bản phác tầng 2 đứng đầu, lượt sau là sửa', () => {
     const hints = round3.hints;
-    expect(hints[0]).toMatch(/Your sketch of storey 2 failed the checks below/);
-    expect(hints[1]).toMatch(/Storey 2: Room "master_bedroom_1" came out at 19\.02 m²/);
-    expect(hints.join('\n')).toMatch(/balcony on the (back|left|right|front) side/);
+    expect(hints[0]).toMatch(/Storey 2: "stair_2" must sit on exactly sketch rows/);
     expect(retryPlan({ intent: base, issues: [] }, round3).kind).toBe('revise');
   });
 });

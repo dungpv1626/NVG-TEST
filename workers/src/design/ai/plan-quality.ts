@@ -88,6 +88,16 @@ export interface PlanQuality {
    * đúng cách sáu mặt bằng đầu tiên lọt qua 65 điểm với D1 = 0, E2 = 0, C7 = 0,24. `null` = không sàn.
    */
   acceptGroupFloorPercent: number | null;
+  /**
+   * Bộ xếp còn thử biến thể ý định (chia lại diện tích, chèn hành lang) tới khi điểm đạt mức này, dù đã qua
+   * `acceptPercent`. `null` = dừng ngay khi qua ngưỡng nhận.
+   */
+  variantSearchUntilPercent: number | null;
+  /**
+   * Trần phần sàn chắc chắn phải có của một tầng, % — vượt thì không gọi mô hình (T112,
+   * `ai/feasibility.ts`). `null` = không kiểm.
+   */
+  feasibilityMaxPercent: number | null;
 }
 
 /**
@@ -204,6 +214,11 @@ export function parsePlanQuality(yamlText: string): PlanQuality {
       raw.accept_group_floor_percent,
       'accept_group_floor_percent',
     ),
+    variantSearchUntilPercent: acceptPercentOf(
+      raw.variant_search_until_percent,
+      'variant_search_until_percent',
+    ),
+    feasibilityMaxPercent: acceptPercentOf(raw.feasibility_max_percent, 'feasibility_max_percent'),
   };
 }
 

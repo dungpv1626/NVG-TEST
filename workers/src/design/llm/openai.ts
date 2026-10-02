@@ -55,6 +55,7 @@ interface ResponsesReply {
     input_tokens?: number;
     output_tokens?: number;
     output_tokens_details?: { reasoning_tokens?: number };
+    input_tokens_details?: { cached_tokens?: number };
   };
   error?: { message?: string };
 }
@@ -147,17 +148,22 @@ export class OpenAiClient implements TextModelClient, AiImageClient {
     const usage = {
       inputTokens: tokenCount(reply.usage?.input_tokens),
       outputTokens: tokenCount(reply.usage?.output_tokens),
+      // Phần vào đọc từ bộ nhớ đệm (giá rẻ hơn) và phần NGHĨ — chỉ đi vào tệp lời gọi đã lưu và nhật ký
+      // (tổng hợp 37 lượt thật 23–30/09/2026: chưa biết bộ nhớ đệm ăn bao nhiêu), chưa thành cột CSDL.
+      cachedInputTokens: tokenCount(reply.usage?.input_tokens_details?.cached_tokens),
+      reasoningTokens: tokenCount(reply.usage?.output_tokens_details?.reasoning_tokens),
     };
     // Phần NGHĨ tách khỏi phần VIẾT. Chỉ ghi ra nhật ký, chưa thành cột CSDL: biết con số trước
     // đã, rồi mới quyết có đáng một migration không. Đây là con số trả lời câu «vì sao một lượt
     // gọi mất năm phút» — đo 13/09/2026: câu trả lời JSON của một mặt bằng cỡ này chỉ nặng
     // ~1.500–2.500 token, mà lượt gọi tiêu hết 32.000.
-    const reasoning = tokenCount(reply.usage?.output_tokens_details?.reasoning_tokens);
+    const reasoning = usage.reasoningTokens;
     // LUÔN ghi, kể cả khi nhà cung cấp không tách phần nghĩ: dòng này là nguồn số đo duy nhất khi
     // chưa đọc được bảng `design_ai_call`. Mở đầu bằng `[ĐO]` để lọc ra khỏi nhật ký bằng một
     // lệnh grep.
     console.log(
-      `[ĐO] ${routeName} · ${route.model} · ${latencyMs} ms · vào ${usage.inputTokens ?? '?'} tok · ` +
+      `[ĐO] ${routeName} · ${route.model} · ${latencyMs} ms · vào ${usage.inputTokens ?? '?'} tok ` +
+        `(đệm ${usage.cachedInputTokens ?? '?'}) · ` +
         `ra ${usage.outputTokens ?? '?'} tok (nghĩ ${reasoning ?? '?'}) · ` +
         `trần ${budget === null ? 'KHÔNG ĐẶT' : budget} · trạng thái ${reply.status ?? '?'} · ` +
         `lời dẫn ${options.system.length + options.prompt.length} ký tự · ` +

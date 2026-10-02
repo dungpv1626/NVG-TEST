@@ -93,7 +93,7 @@ interface PlanRunResult {
       /** Lỗi của lượt đầu khi tầng đã được gọi lần hai (V-26). */
       firstMessages?: string[];
       /** `none` chỉ còn ở lượt chạy trước 15/09/2026: lý do nằm ở diện tích hay khối xây (T43). */
-      retry?: 'revise' | 'resample' | 'none' | 'unchanged';
+      retry?: 'revise' | 'resample' | 'none' | 'unchanged' | 'stuck';
       /** Số lượt gọi mô hình đã dùng khi bác (T45). Vắng ở lượt chạy trước 15/09/2026. */
       attempts?: number;
       /** Chỗ chương trình đã tự sửa ở lượt cuối. */
@@ -286,7 +286,7 @@ export function AiPlanStep({
                 tiêu, cạnh phòng nào, cửa chính ở đâu, và phác mỗi tầng trên lưới ô khoảng một mét;
                 chương trình kiểm theo đầu bài, nắn bản phác, căn vách, đặt cửa và dựng tường. Phòng
                 đầu bài có ghi diện tích tối thiểu thì phải đạt mức đó. Không xếp được thì AI được
-                gọi lại để sửa, tối đa ba lần — mỗi lần là một lượt tính tiền. Vẫn không xếp được
+                gọi lại để sửa, tối đa bốn lần — mỗi lần là một lượt tính tiền. Vẫn không xếp được
                 thì phương án được đánh dấu chưa xếp được và không vẽ.
               </p>
             </div>
@@ -364,6 +364,13 @@ export function AiPlanStep({
                           Dừng gọi lại mô hình: lượt sửa cuối trả về đúng bố cục của lượt trước ở
                           tầng đang lỗi, nên gọi thêm chỉ tốn tiền mà ra cùng kết quả. Chạy lại để
                           AI khai một ý định khác, hoặc chọn mô hình khác.
+                        </p>
+                      )}
+                      {reason.retry === 'stuck' && (
+                        <p className="text-fg-subtle">
+                          Dừng gọi lại mô hình: ba lượt liền hỏng đúng cùng những lỗi dưới đây, nên
+                          gọi thêm chỉ tốn tiền. Chạy lại để AI khai một ý định khác, hoặc chọn mô
+                          hình khác.
                         </p>
                       )}
                       <ul className="list-disc pl-5 text-fg-subtle">
@@ -832,8 +839,10 @@ const RELATION_LABEL: Record<'adjacent' | 'near' | 'far' | 'open', string> = {
   open: 'thông với',
 };
 
-function retryLabel(retry: 'revise' | 'resample' | 'none' | 'unchanged' | undefined): string {
-  return retry === 'revise' || retry === 'unchanged'
+function retryLabel(
+  retry: 'revise' | 'resample' | 'none' | 'unchanged' | 'stuck' | undefined,
+): string {
+  return retry === 'revise' || retry === 'unchanged' || retry === 'stuck'
     ? 'Lượt cuối — AI sửa ý định (gửi kèm ý định lượt trước)'
     : 'Lượt cuối — AI khai ý định mới';
 }

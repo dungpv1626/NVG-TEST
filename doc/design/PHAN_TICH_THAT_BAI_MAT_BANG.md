@@ -228,3 +228,38 @@ Diện tích KHÔNG thiếu — nó nằm SAI CHỖ: mô hình phân phần dư 
 phòng ngủ phía sau (chỗ cần hành lang) vẽ sát sàn. Sửa tại chỗ không dời được phần dư; phải BỐ TRÍ LẠI.
 Đây đúng là việc B2 làm: chương trình dựng dải hành lang TRƯỚC, rồi chia phần còn lại cho phòng theo mức
 tối thiểu + phần dư — liên thông và diện tích cùng được bảo đảm bằng cách dựng.
+
+## 8. Hướng B4 — khung xương trước (T102, 29/09/2026)
+
+Sau B1 (gỡ), B2 (dừng bước 1), T94 (6 / 105): chương trình DỰNG lõi + hành lang rồi lấp phòng theo vị trí bản phác — lối
+vào là bất biến của cách dựng. Thiết kế: `THIET_KE_KHUNG_XUONG.md`; kết quả và lý do tầng 2 demo vẫn kẹt (mật độ phòng):
+`QUYET_DINH_AI.md` T102. Phát lại 126 vòng: 10 → 11, 0 lùi.
+
+## 9. Tổng hợp 37 lượt thật 23/09 → 30/09/2026 (bản demo, prompt 8.17 → 9.1)
+
+Nguồn: `design_ai_run` + `design_ai_call` + tệp `ai_calls/*.json` trên bản demo; 43 lượt, 180 lời gọi,
+15,69 USD. Trừ 5 lượt hỏng vì khoá/tín dụng nhà cung cấp và 1 lượt dừng tay: **37 lượt, 5 ra mặt bằng (14 %)**.
+
+**Lỗi cuối cùng của 32 lượt hỏng:** lối vào (phòng / ô thang không chạm hành lang) 11 · ban công sai mặt 5 ·
+diện tích dưới sàn đầu bài 3 · không rõ (lỗi rỗng) 3 · chong chóng 2 · ô thang sai cỡ / không chữ nhật 2 ·
+WC trên bếp 2 · bản phác thiếu phòng 2 · thang máy lệch 1 · cửa ra ngoài 1.
+
+**Lỗi trong 228 dòng câu nhắc vòng sửa** (số lượt có lỗi ấy): lối vào 30 · ban công 24 · diện tích 17 ·
+«sửa không giảm lỗi, quay về bản trước» 21 · bản phác hỏng → chương trình tự chia 7 · ô thang 7 · chong chóng 6.
+**79/228 dòng (35 %) lặp nguyên văn ở vòng kế** — vòng sửa không tiến.
+
+Bốn phát hiện mới (đo trên dữ liệu, không suy đoán):
+1. **Ban công: 30/57 lần báo «không ban công nào chạm mặt X», bản phác của mô hình CÓ ban công ở mép ấy** —
+   bị bác vì chạm bằng đầu ngắn / góc (Q-57, T106), hoặc bị dời khi chương trình tự chia lại. Câu báo nói sai
+   chuyện, mô hình vẽ lại ban công vô ích.
+2. **Diện tích:** dữ liệu gửi mô hình ĐÃ có `min_cells` từng phòng (T73) — mô hình không làm theo (vẽ 12 ô cho
+   mức 12 m² trong khi `min_cells` nói 14). *Đính chính: bản đầu mục này viết «chương trình không gửi số ô» — sai.*
+3. **Câu nhắc ô thang 4 hàng vs dữ liệu 3 × 5 ô** (lượt 6bf43039) có lệch, nhưng KHÔNG phải nguyên nhân hỏng:
+   chương trình ép ô thang tầng trên vào đúng 4 hàng ấy (ô thang tầng 1 dựng ra), câu nhắc nói đúng chỗ bị ép.
+   Đã thử nới câu nhắc về 5 hàng rồi gỡ: hàng thứ năm mô hình vẽ sẽ bị xoá và nhập vào phòng bên, dễ hỏng lối vào.
+4. **Chong chóng không chỉ chỗ.** Mô hình vẽ hành lang chữ T / L có nhánh; câu báo không nói nhánh nào cắt
+   đường chia → ba vòng liền nhận cùng câu, ra cùng bản vẽ.
+
+**Tiền:** phần ra chiếm ~85 % chi phí; ~70 % phần ra là suy nghĩ (TB 7.000 token ra / lời gọi, JSON chỉ ~2.000).
+Câu nhắc vòng sửa ~17.500 ký tự, gấp đôi lời gọi đầu, vì gửi lại cả ý định cũ của CẢ NHÀ với mã dài
+(`master_bedroom_1` thay `MAS1` mô hình tự đặt). Chưa ghi `cached_tokens` nên chưa biết bộ nhớ đệm của OpenAI ăn bao nhiêu.
