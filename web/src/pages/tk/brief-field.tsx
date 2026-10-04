@@ -15,7 +15,7 @@
  * `inputMode`. Có kiểm thử grep canh trong `web/src/test/design-rules.test.ts`.
  */
 
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { Fragment, lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { formatNumber } from '@nvg/shared/format';
 import {
   ACCESS_SIDES,
@@ -26,9 +26,7 @@ import {
   bedroomOwnerLabels,
   bedroomTypeFor,
   bedroomsFor,
-  briefFacadeFromFacadeBrief,
   displayNumber,
-  facadeBriefFromBrief,
   isBedroomType,
   memberWantsEnsuite,
   siteGeometry,
@@ -42,12 +40,18 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { MoneyInput } from '@/components/ui/money-input';
+import { Skeleton } from '@/components/ui/states';
 import { cn } from '@/lib/utils';
 import { SiteImageUpload } from './site-image-upload';
-import { FacadeBriefFields } from './ai/ai-facade-brief-form';
-import { useFacadeVocabulary } from '@/hooks/use-ai-design';
-import { toUserMessage } from '@/hooks/use-error-message';
-import { Skeleton } from '@/components/ui/states';
+
+/**
+ * Ô yêu cầu mặt đứng (T114) nạp LƯỜI: nó kéo theo cả phiếu mặt đứng của AI Design và hook gọi Worker,
+ * mà người khai đầu bài chỉ cần tới ở mục cuối. Nạp tĩnh làm biểu mẫu nặng thêm ở mọi bước — đo được:
+ * phép thử đầu tiên của `brief-form.test.tsx` vượt mốc 5 giây khi chạy cả bộ.
+ */
+const FacadeControl = lazy(() =>
+  import('./brief-facade-control').then((m) => ({ default: m.FacadeControl })),
+);
 import type { SiteBoundaryExtractionResult } from '@/hooks/use-site-boundary-extraction';
 
 // Nhãn lấy TỪ `@nvg/shared/design`, không khai lại ở đây: cùng bộ nhãn còn được dùng ở chế
@@ -838,7 +842,11 @@ function BriefControl({
     }
 
     case 'facade':
-      return <FacadeControl value={value as BriefFacade | null | undefined} onChange={onChange} />;
+      return (
+        <Suspense fallback={<Skeleton className="h-40 w-full" />}>
+          <FacadeControl value={value as BriefFacade | null | undefined} onChange={onChange} />
+        </Suspense>
+      );
 
     case 'polygon':
       return (
@@ -1303,41 +1311,6 @@ function AreaBudgetLine({ budget }: { budget: BriefAreaBudget }) {
       <p className="text-xs">
         Phần còn lại dành cho thang, hành lang, tường và các không gian thiết kế tự thêm.
       </p>
-    </div>
-  );
-}
-
-/**
- * Phần yêu cầu mặt đứng của đầu bài (T114) — cùng bộ ô với bước Mặt đứng của AI Design.
- *
- * Danh sách chọn là danh mục `kb/facade_vocabulary.yaml` do Worker phát; tải hỏng thì nói ra,
- * không vẽ một phiếu rỗng trông như đã tải xong. Ô phong cách bỏ đi vì đầu bài có câu riêng.
- */
-function FacadeControl({
-  value,
-  onChange,
-}: {
-  value: BriefFacade | null | undefined;
-  onChange: (value: unknown) => void;
-}) {
-  const vocab = useFacadeVocabulary();
-  if (vocab.isLoading) return <Skeleton className="h-40 w-full" />;
-  if (vocab.error || !vocab.data) {
-    return (
-      <p className="text-status-overdue">
-        Không tải được danh mục vật liệu và màu mặt đứng. {toUserMessage(vocab.error)}
-      </p>
-    );
-  }
-  return (
-    <div className="space-y-2">
-      <FacadeBriefFields
-        draft={facadeBriefFromBrief(value ?? undefined, null)}
-        onChange={(next) => onChange(briefFacadeFromFacadeBrief(next))}
-        vocab={vocab.data}
-        plan={null}
-        withStyle={false}
-      />
     </div>
   );
 }

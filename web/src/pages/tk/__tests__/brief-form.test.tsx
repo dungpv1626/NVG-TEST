@@ -10,7 +10,7 @@
  * được; và kích thước lệch với biên bản khảo sát thì hiện CẢ HAI con số.
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithApp } from '@/test/render';
@@ -82,6 +82,15 @@ function brief(over: Record<string, unknown> = {}) {
     ...over,
   };
 }
+
+/**
+ * Nạp sẵn biểu mẫu một lần, ngoài hạn 5 giây của từng bài. Lần nạp đầu kéo cả cây module (đầu bài,
+ * khảo sát, hook dùng chung); khi chạy cả bộ song song, bài ĐẦU TIÊN của tệp từng gánh hết phần ấy
+ * và vượt mốc 5 giây (đo 04/10/2026: 5,19 s) dù logic đúng.
+ */
+beforeAll(async () => {
+  await import('../brief-panel');
+}, 30_000);
 
 /**
  * Mở trình soạn thảo, và đi tới đúng BƯỚC cần kiểm.
