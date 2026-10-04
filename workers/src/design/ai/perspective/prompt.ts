@@ -82,7 +82,10 @@ function houseText(ctx: PerspectiveContext, types: Record<string, string>): stri
     `${ctx.storeys}-storey ${kind}`,
     `${ctx.frontWidthM} m wide across the front`,
     `${ctx.depthM} m deep`,
-    `${ctx.heightM} m from the pavement to the top of the parapet`,
+    // Mặt đứng kỹ sư tải lên: chiều cao nằm trên chính bản vẽ gửi kèm (T114 Đợt 4b).
+    ctx.heightM === null
+      ? 'as tall as the attached front elevation drawing shows'
+      : `${ctx.heightM} m from the pavement to the top of the parapet`,
   ];
   // Chiều cao TỪNG tầng, không chỉ tổng: nhà tầng trệt 3,9 m đội hai tầng 3,3 m và nhà ba tầng
   // đều 3,5 m có cùng tổng, và mô hình chia đều — ra một mặt tiền không khớp tờ mặt đứng (T68).

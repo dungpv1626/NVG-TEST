@@ -7,9 +7,42 @@
   "additionalProperties": false,
   "required": ["schema_version", "facade_ref", "plan_ref", "anchors", "images", "generator"],
   "properties": {
-    "schema_version": { "$ref": "#/$defs/semver" },
-    "facade_ref": { "$ref": "#/$defs/artifact_ref" },
-    "plan_ref": { "$ref": "#/$defs/artifact_ref" },
+    "schema_version": {
+      "$ref": "#/$defs/semver"
+    },
+    "facade_ref": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/artifact_ref"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "`null` khi bộ ảnh dựng từ mặt đứng KỸ SƯ tải lên (T114 Đợt 4b) — khi ấy `upload_ref` mang nguồn, khối nhà lấy từ đầu bài. Nới từ bắt buộc thành có thể rỗng: artifact cũ luôn có giá trị nên vẫn đọc được."
+    },
+    "plan_ref": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/artifact_ref"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "`null` khi bộ ảnh dựng từ mặt đứng KỸ SƯ tải lên (T114 Đợt 4b) — khi ấy `upload_ref` mang nguồn, khối nhà lấy từ đầu bài. Nới từ bắt buộc thành có thể rỗng: artifact cũ luôn có giá trị nên vẫn đọc được."
+    },
+    "upload_ref": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/artifact_ref"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Bản vẽ mặt đứng kỹ sư tải lên (`ai_uploaded_drawing`) mà bộ ảnh dựng theo (T114 Đợt 4b). Có thì `facade_ref` và `plan_ref` là `null`. Không bắt buộc: artifact trước T114 không có khoá này."
+    },
     "anchors": {
       "type": "array",
       "maxItems": 4,
@@ -24,10 +57,22 @@
             "enum": ["elevation", "roof_plan"],
             "description": "elevation = tờ mặt đứng vector không khung tên (dựng `front_day`) · roof_plan = tờ mặt bằng mái nhìn thẳng từ trên (dựng `oblique` và `aerial`)."
           },
-          "uri": { "type": "string", "pattern": "^(r2|supabase)://.+" },
-          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-          "bytes": { "type": "integer", "minimum": 1 },
-          "mime": { "type": "string", "enum": ["image/png"] }
+          "uri": {
+            "type": "string",
+            "pattern": "^(r2|supabase)://.+"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "mime": {
+            "type": "string",
+            "enum": ["image/png"]
+          }
         }
       }
     },
@@ -50,15 +95,26 @@
         "additionalProperties": false,
         "required": ["view", "uri", "mime", "anchor", "watermark_applied"],
         "properties": {
-          "view": { "$ref": "#/$defs/view" },
+          "view": {
+            "$ref": "#/$defs/view"
+          },
           "uri": {
             "type": "string",
             "pattern": "^(r2|supabase)://.+",
             "description": "Vị trí tệp ảnh trong kho nhị phân."
           },
-          "mime": { "type": "string", "enum": ["image/png", "image/jpeg", "image/webp"] },
-          "width": { "type": ["integer", "null"], "minimum": 1 },
-          "height": { "type": ["integer", "null"], "minimum": 1 },
+          "mime": {
+            "type": "string",
+            "enum": ["image/png", "image/jpeg", "image/webp"]
+          },
+          "width": {
+            "type": ["integer", "null"],
+            "minimum": 1
+          },
+          "height": {
+            "type": ["integer", "null"],
+            "minimum": 1
+          },
           "anchor": {
             "type": "boolean",
             "description": "Đây là ảnh NEO mà các góc khác dựng theo. Đúng một ảnh trong bộ mang cờ này."
@@ -71,7 +127,9 @@
           "source_refs": {
             "type": "array",
             "maxItems": 6,
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "URI những ảnh đã gửi làm tham chiếu cho lượt dựng này, đúng thứ tự đã gửi."
           },
           "prompt_excerpt": {
@@ -79,10 +137,22 @@
             "maxLength": 1200,
             "description": "Trích đoạn lời dẫn ĐÃ GHÉP của riêng góc này. Mỗi góc một lời dẫn khác nhau, và mô hình ảnh không tất định — biết đã mô tả thế nào là cách duy nhất hiểu vì sao tấm này ra như vậy. Cùng lý do với `ai-facade-image.prompt_excerpt`."
           },
-          "provider": { "type": "string", "maxLength": 32 },
-          "model": { "type": "string", "maxLength": 96 },
-          "prompt_version": { "type": "string", "maxLength": 16 },
-          "latency_ms": { "type": ["integer", "null"], "minimum": 0 }
+          "provider": {
+            "type": "string",
+            "maxLength": 32
+          },
+          "model": {
+            "type": "string",
+            "maxLength": 96
+          },
+          "prompt_version": {
+            "type": "string",
+            "maxLength": 16
+          },
+          "latency_ms": {
+            "type": ["integer", "null"],
+            "minimum": 0
+          }
         }
       }
     },
@@ -94,7 +164,9 @@
         "additionalProperties": false,
         "required": ["view", "reason"],
         "properties": {
-          "view": { "$ref": "#/$defs/view" },
+          "view": {
+            "$ref": "#/$defs/view"
+          },
           "reason": {
             "type": "string",
             "maxLength": 300,
@@ -108,17 +180,38 @@
       "additionalProperties": false,
       "required": ["kind", "provider", "model", "route", "prompt_version"],
       "properties": {
-        "kind": { "type": "string", "enum": ["ai"] },
-        "provider": { "type": "string", "maxLength": 32 },
-        "model": { "type": "string", "maxLength": 96 },
-        "route": { "type": "string", "maxLength": 64 },
-        "prompt_version": { "type": "string", "maxLength": 16 }
+        "kind": {
+          "type": "string",
+          "enum": ["ai"]
+        },
+        "provider": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "model": {
+          "type": "string",
+          "maxLength": 96
+        },
+        "route": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "prompt_version": {
+          "type": "string",
+          "maxLength": 16
+        }
       }
     }
   },
   "$defs": {
-    "semver": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
-    "artifact_ref": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "semver": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "artifact_ref": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
     "view": {
       "type": "string",
       "enum": [

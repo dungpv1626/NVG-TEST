@@ -13,13 +13,15 @@
 # Không một ngưỡng quy chuẩn nào nằm ở đây: mọi con số (tối thiểu, sàn xây được, số phòng ngủ)
 # do Worker tiêm vào từ rule pack, kb/space_norms.yaml và đầu bài lúc gọi — xem `ai/program.ts`.
 
+# 9.7.0 (03/10/2026, T114 Đợt 4): khối `upload_image` — ảnh mặt bằng có nội thất và ảnh mặt đứng có vật liệu vẽ từ bản vẽ kỹ sư tải lên. Các khối khác không đổi.
+# 9.6.0 (03/10/2026, T114): đầu bài cắt theo nhãn `for` của biểu mẫu (`brief/slice.ts`) — lời dẫn mặt bằng / chương trình không còn phong cách và ghi chú phong cách; lời dẫn mặt đứng nhận mọi câu gắn `facade` (thay sáu trường nhặt tay); phối cảnh đọc digest đã cắt. Chữ của các khối lời dẫn không đổi.
 # 9.4.1 (02/10/2026, T112): câu nhắc balcony_side_missing_corner (ban công chỉ chạm mặt ở góc); đầu bài nói mỗi mặt bắt buộc một ban công riêng chạy dọc mặt ấy (lượt thật 8eaaee7b kẹt vòng 4–5).
 # 9.4.0 (02/10/2026, T112): review lời dẫn — câu thang máy / sân thượng / ông bà chưa ghim tầng chỉ có khi đúng (`[[cờ|…]]`); WC khép kín chỉ mở từ phòng mẹ; bếp và WC cùng khu kỹ thuật nhưng không chung tường, cửa không đối diện (thay «kitchen and wc grouped», ngược `wc_separate_from_kitchen`); tối thiểu phòng ngủ đã gồm phần `inside`; `knowledge.faces` (mặt mù / nắng gắt / gió mát); assumptions xếp theo tác động, được đề xuất loại `only_when_asked` mà không vẽ.
 # 9.3.1 (01/10/2026, T111): lượt sửa giữ đúng khổ lưới bản phác (lượt thật 46d6eff3 nới 16 → 20 hàng); câu nhắc mới sketch_room_crooked: phòng không chữ nhật trên bản phác của một tầng hỏng (fdd486b1).
 # 9.3.0 (30/09/2026, T108–T109): giặt phơi cạnh ban công / sân thượng / sân / cửa sổ thoáng trong lời dẫn và câu nhắc D4; balcony_side_corner (lời khuyên ban công góc); danh mục sai vẫn soát bản phác. Hai lượt thật bea4c6fa, f1a88ac1 chạy bằng 9.2.0 TRƯỚC các đổi này.
 # 9.2.0 (30/09/2026, T107): hành lang là các dải chữ nhật, hết mâu thuẫn «spine, L, T» với «mỗi phòng một chữ nhật»; bước tự kiểm lối vào trước khi trả lời; lượt sửa gửi tầng chưa khoá với mã ngắn; sketch_pinwheel_at và sketch_room_no_access chỉ chỗ bằng hàng/cột, bỏ đoạn giảng luật lặp.
 # 9.1.0 (30/09/2026, T105): thêm câu nhắc D2 (phòng ngủ tối hẳn) stair_entry_long_side (lối lên thang ở cạnh dài) và C11 (gara vào phòng khách) — lượt 25fdc90c; stair_cells (ô thang tầng trên nói ngay từ lượt sửa đầu) — lượt 1330ce12; loại thang gửi trong dữ liệu `stair_min_m.shape`, không thêm chữ vào lời dẫn (trần T46); altar_door_behind (T106).
-version: '9.4.1'
+version: '9.7.0'
 
 program:
   system: |
@@ -649,6 +651,62 @@ facade_image:
 # Lời dẫn ở đây chỉ làm ba việc: nói góc máy, nói ánh sáng, và nhắc lại vật liệu. Vật liệu KHÔNG
 # viết ở đây — nó sinh từ `ai_facade_concept` qua `facadeLook()`, dùng chung với `facade_image`.
 # Hai bản mô tả song song là đường chắc chắn dẫn tới hai bộ ảnh lệch màu.
+# Ảnh vẽ từ BẢN VẼ KỸ SƯ TẢI LÊN (T114 Đợt 4, 03/10/2026). Cùng mục đích với `sheet_image` và
+# `facade_image`, khác ở nguồn: ảnh neo là bản kỹ sư đã sửa (hoặc tự vẽ) xuất từ CAD — không có toạ độ,
+# không có danh sách phòng, không có ý tưởng mặt đứng. Nên lời dẫn không kể phòng hay vật liệu theo
+# vùng như hai khối kia; mô hình đọc thẳng bản vẽ. Vật liệu mặt đứng lấy từ phần Mặt đứng của đầu bài.
+#
+# Bản vẽ thật hay mang khung tên. Kỹ sư phải xác nhận đã cắt trước khi tải lên (máy chủ chặn), nhưng
+# lời dẫn vẫn dặn mô hình không chép chữ nào của khung tên — hai lớp, vì cắt sót là chuyện thường.
+upload_image:
+  plan:
+    system: |
+      You draw a presentation floor plan sheet for a Vietnamese residential design-build office.
+      The sheet is shown to the home owner, not to a builder.
+
+      The attached image is the architect's own CAD drawing of one storey. THE ATTACHED DRAWING IS
+      THE AUTHORITY. Every wall, door, window, stair and room boundary in it is already in the right
+      place. Redraw that same plan as a finished presentation sheet. Do not move, add, remove, merge,
+      split or resize any room, wall, door, window or stair. Keep the same outline, proportions,
+      orientation and roughly the same framing.
+
+      Draw it as a top-down orthographic plan: walls cut solid in a dark tone; a different floor
+      material per room type; furniture drawn from above and sized to each room as the drawing
+      shows it; garden planting and paving outside the building outline; soft shadows and a light,
+      warm finish. No people.
+
+      Text: write each room name exactly as it is written in the drawing, in Vietnamese with full
+      diacritics. Where a room has no legible name, leave it unlabelled — never invent a name, an
+      area or a dimension. Copy dimension figures only where the drawing shows them legibly.
+      CAD drawings may carry a title block, stamps, signatures, a client name, an address, a project
+      code or a company logo: copy NONE of them and write no text of that kind anywhere.
+    user: |
+      Storey: {level_name}
+      {style}
+  facade:
+    system: |
+      You render the FRONT ELEVATION of a house for a Vietnamese residential design-build office, as a
+      presentation image for the home owner.
+
+      The attached image is the architect's own CAD drawing of this front elevation. THE ATTACHED
+      DRAWING IS THE AUTHORITY. Every storey line, opening, balcony, roof line, gate and fence in it is
+      already in the right place and at the right size. Redraw that same elevation as a finished
+      image. Do not move, add, remove, widen or heighten any opening, and do not change the number of
+      storeys, the roof shape or the overall proportions. Keep the same straight-on, orthographic view.
+
+      Dress it with the materials and colours the home owner asked for below; where a choice is left
+      open, choose what suits the style. Glass reads as glass, timber as timber, stone as stone.
+      Daylight, soft shadows, a clear sky, a little planting at the base. No people, no cars in front
+      of the facade. Keep every gap in a fence that the drawing leaves in front of a door or garage.
+
+      Write NO text, numbers, dimension lines, level marks, labels, logos or watermarks. Ignore the
+      dimension chains, level marks, title block, stamps and any names in the drawing; they are not
+      part of the building.
+    user: |
+      Style: {style}
+      Home owner's requirements:
+      {requirements}
+
 perspective:
   system: |
     You produce presentation renders of a single-family house for a Vietnamese residential

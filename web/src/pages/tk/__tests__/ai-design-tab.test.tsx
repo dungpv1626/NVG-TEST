@@ -68,6 +68,7 @@ vi.mock('@/hooks/use-ai-design', () => ({
 // Bước mặt bằng có bộ kiểm riêng (`ai/__tests__/ai-plan-step.test.tsx`, kể cả câu «chưa có đầu
 // bài»); ở đây chỉ canh DẢI BƯỚC, nên thay bằng một khối rỗng.
 vi.mock('../ai/ai-plan-step', () => ({ AiPlanStep: () => <div>Bước mặt bằng</div> }));
+vi.mock('../ai/ai-upload-panel', () => ({ AiUploadPanel: () => null }));
 
 const { AiDesignTab } = await import('../ai/ai-design-tab');
 

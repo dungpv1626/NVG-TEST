@@ -922,14 +922,25 @@ export function useFacadeBrief(projectId: string) {
   });
 }
 
-/** Lưu phiếu — một bản mới mỗi lần lưu. Không gọi AI. */
+/**
+ * Lưu yêu cầu mặt đứng — từ T114 là một phiên bản ĐẦU BÀI mới, Worker xác nhận luôn. Không gọi AI.
+ * Làm mới cả danh sách phiên bản đầu bài: bước Đầu bài phải thấy ngay phiên bản vừa sinh.
+ */
 export function useSaveFacadeBrief() {
   const queryClient = useQueryClient();
-  return useMutation<{ artifactId: string }, Error, { projectId: string; brief: AiFacadeBrief }>({
+  return useMutation<
+    { artifactId: string | null; unchanged?: boolean },
+    Error,
+    { projectId: string; brief: AiFacadeBrief }
+  >({
     mutationFn: ({ projectId, brief }) =>
-      designApi<{ artifactId: string }>(`/design/ai/facade/brief/${projectId}`, { brief }),
+      designApi<{ artifactId: string | null; unchanged?: boolean }>(
+        `/design/ai/facade/brief/${projectId}`,
+        { brief },
+      ),
     onSuccess: (_out, { projectId }) => {
       void queryClient.invalidateQueries({ queryKey: ['ai_facade_brief', projectId] });
+      void queryClient.invalidateQueries({ queryKey: ['design_briefs'] });
     },
   });
 }
@@ -1288,9 +1299,22 @@ export function useStartPerspectiveRun() {
   return useMutation<
     { runId: string; views: string[]; skipped: Array<{ view: string; reason: string }> },
     Error,
-    { projectId: string; artifactId: string; route: string; peopleAndVehicles: boolean }
+    | { projectId: string; artifactId: string; route: string; peopleAndVehicles: boolean }
+    | { projectId: string; uploadId: string; route: string; peopleAndVehicles: boolean }
   >({
-    mutationFn: async ({ projectId, artifactId, route, peopleAndVehicles }) => {
+    mutationFn: async (input) => {
+      const { projectId, route, peopleAndVehicles } = input;
+      // Mặt đứng kỹ sư tải lên (T114 Đợt 4b): ảnh neo là chính tệp đã lưu, máy chủ tự đọc — không
+      // rasterise gì ở trình duyệt.
+      if ('uploadId' in input) {
+        return await designApi(`/design/ai/perspective/runs`, {
+          projectId,
+          uploadId: input.uploadId,
+          route,
+          peopleAndVehicles,
+        });
+      }
+      const artifactId = input.artifactId;
       const anchors = [
         {
           kind: 'elevation',
@@ -1358,4 +1382,123 @@ export function useRedrawPerspectiveView() {
     onSuccess: (_data, variables) =>
       void queryClient.invalidateQueries({ queryKey: ['ai_design_state', variables.projectId] }),
   });
+}
+
+// ---------------------------------------------------------------------------
+// Bản vẽ kỹ sư tải lên làm nguồn cho mô hình ảnh (T114 Đợt 4)
+// ---------------------------------------------------------------------------
+
+export type UploadedDrawingKind = 'plan' | 'facade';
+
+export interface UploadedDrawingItem {
+  uploadId: string;
+  createdAt: string;
+  drawing: UploadedDrawingKind;
+  /** Tầng của mặt bằng; `null` với mặt đứng. */
+  level: number | null;
+  note: string | null;
+  width: number;
+  height: number;
+  /** Tấm mới nhất mô hình đã vẽ từ bản này — `null` khi chưa vẽ. */
+  imageArtifactId: string | null;
+}
+
+export function useUploadedDrawings(projectId: string, drawing: UploadedDrawingKind) {
+  return useQuery<{ items: UploadedDrawingItem[] }, Error>({
+    queryKey: ['ai_uploaded_drawings', projectId, drawing],
+    queryFn: () =>
+      designApi<{ items: UploadedDrawingItem[] }>(
+        `/design/ai/uploads/${projectId}?drawing=${drawing}`,
+      ),
+    enabled: Boolean(projectId),
+  });
+}
+
+/** Tải lên một bản đã chuẩn hoá ở trình duyệt (`lib/drawing-upload.ts`). Không gọi AI. */
+export function useUploadDrawing() {
+  const queryClient = useQueryClient();
+  return useMutation<
+    { uploadId: string },
+    Error,
+    {
+      projectId: string;
+      drawing: UploadedDrawingKind;
+      level: number | null;
+      note: string | null;
+      identityCleared: boolean;
+      imageBase64: string;
+    }
+  >({
+    mutationFn: ({ projectId, ...body }) =>
+      designApi<{ uploadId: string }>(`/design/ai/uploads/${projectId}`, body),
+    onSuccess: (_out, { projectId, drawing }) => {
+      void queryClient.invalidateQueries({
+        queryKey: ['ai_uploaded_drawings', projectId, drawing],
+      });
+    },
+  });
+}
+
+/** Vẽ ảnh TỪ một bản đã tải. ⚠️ Tiêu tiền thật — chỗ gọi hiện giá và hỏi lại khi vẽ lại. */
+export function useDrawFromUpload() {
+  const queryClient = useQueryClient();
+  return useMutation<
+    Omit<DrawnSheetImage, 'level'>,
+    Error,
+    { projectId: string; uploadId: string; drawing: UploadedDrawingKind; route: string }
+  >({
+    mutationFn: ({ projectId, uploadId, route }) =>
+      designApi<Omit<DrawnSheetImage, 'level'>>(
+        `/design/ai/uploads/${projectId}/${uploadId}/image`,
+        { route },
+      ),
+    onSuccess: (_out, { projectId, drawing }) => {
+      void queryClient.invalidateQueries({
+        queryKey: ['ai_uploaded_drawings', projectId, drawing],
+      });
+    },
+  });
+}
+
+/**
+ * Một tệp ảnh của Worker (đòi đăng nhập) → địa chỉ `blob:` để đặt vào `<img>`. `path = null` thì
+ * không tải. 404 nghĩa là «chưa có» — không phải lỗi để báo; mã khác thì báo (cùng lý do
+ * `useAiPlanSheetImage`: nuốt hết thì lỗi kho trông y hệt «chưa vẽ»).
+ */
+export function useDesignImage(path: string | null): AiPlanSheetImageState {
+  const [state, setState] = useState<AiPlanSheetImageState>({
+    url: null,
+    loading: false,
+    error: null,
+  });
+  useEffect(() => {
+    if (!path) {
+      setState({ url: null, loading: false, error: null });
+      return;
+    }
+    let cancelled = false;
+    let objectUrl: string | null = null;
+    setState({ url: null, loading: true, error: null });
+    void designApiFile(path)
+      .then(async (response) => {
+        const blob = await response.blob();
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setState({ url: objectUrl, loading: false, error: null });
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        const status = error instanceof DesignApiError ? error.status : undefined;
+        setState({
+          url: null,
+          loading: false,
+          error: status === 404 ? null : toUserMessage(error),
+        });
+      });
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [path]);
+  return state;
 }

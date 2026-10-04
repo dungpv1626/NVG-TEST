@@ -26,15 +26,14 @@ import { geminiClient, modelRouter } from './llm/factory';
 import { aiApp } from './ai/routes';
 import { LlmCallFailed } from './llm/gemini';
 import { ArtifactRepository } from './artifacts';
-import { buildBriefPayload } from './brief/payload';
-import { readEffectiveBriefForm } from './brief/form-config';
+import { confirmBrief } from './brief/confirm';
 import { recordAiCall, usageSummary } from './ai/call-log';
 import { retrieveFewShots } from './kb/retrieve';
 import { embeddingText, withheldFields, type RationalePayload } from './kb/rationale';
 import { createSourceFileStore, type StoredSource } from './source-files';
 import type { DigitiseParams, DigitiseSource } from './workflows/digitise-steps';
 import { aiCallOfError, extractSiteBoundary } from './site/extract-boundary';
-import { asUser, denyUnlessWritable, projectScope, DESIGN_WRITE_DENIED } from './auth-scope';
+import { asUser, projectScope, DESIGN_WRITE_DENIED } from './auth-scope';
 import type { DesignEnv } from './env';
 import { instanceIdOf } from './workflows/rpc-stub';
 
@@ -263,130 +262,10 @@ designApp.post('/brief/confirm', async (c) => {
   if (!body.briefId) return c.json({ error: 'Thiếu mã đầu bài cần xác nhận.' }, 400);
 
   const db = await asUser(c.env, token);
-
-  // Đọc qua RLS: người không được xem đầu bài thì cũng không đúc được artifact từ nó. Không
-  // chép lại điều kiện quyền ở tầng Worker — bản trong CSDL mới là bản không vòng qua được.
-  const brief = await db
-    .from('design_briefs')
-    .select(
-      'id, company_id, design_project_id, structured, confirmed_at, is_current_version, ' +
-        'project:design_projects!design_briefs_design_project_id_design_projects_id_fk(code, company_id)',
-    )
-    .eq('id', body.briefId)
-    .is('deleted_at', null)
-    .maybeSingle();
-
-  if (brief.error) return c.json({ error: 'Không đọc được đầu bài cần xác nhận.' }, 500);
-  if (!brief.data) {
-    return c.json(
-      {
-        error:
-          'Không tìm thấy đầu bài, hoặc tài khoản không được sửa hồ sơ thiết kế này. Người chịu trách nhiệm dự án hoặc Phòng Thiết kế thực hiện được việc này.',
-      },
-      404,
-    );
-  }
-  // Quan hệ lồng làm suy kiểu của thư viện khách rối; khai tường minh hình dạng đã chọn.
-  const row = brief.data as unknown as {
-    company_id: string;
-    design_project_id: string;
-    structured: unknown;
-    confirmed_at: string | null;
-    is_current_version: boolean;
-    project: { code: string; company_id: string };
-  };
-
-  if (!row.is_current_version) {
-    return c.json({ error: 'Chỉ xác nhận được đầu bài đang hiệu lực.' }, 409);
-  }
-  if (row.confirmed_at) {
-    return c.json({ error: 'Đầu bài này đã được xác nhận.' }, 409);
-  }
-
-  // Tenant suy từ pháp nhân, không bắt trình duyệt gửi: phạm vi tenant của một người ĐÃ được
-  // xác định bởi các pháp nhân họ được gán (CLAUDE.md 8.8 điểm 4).
-  const company = await db.from('companies').select('tenant_id').eq('id', row.company_id).single();
-  if (company.error)
-    return c.json({ error: 'Không xác định được phạm vi dữ liệu của hồ sơ.' }, 500);
-
-  // Kiểm quyền GHI trước khi đúc: artifact và `design_head` ghi bằng `service_role`, còn
-  // lệnh UPDATE `design_briefs` ở dưới mới đi qua RLS. Không kiểm ở đây thì người chỉ xem
-  // được vẫn đổi head xong rồi mới bị chặn ở bước cuối — head trỏ vào bản chưa ai ký nhận.
-  const denied = await denyUnlessWritable(
-    db,
-    company.data.tenant_id as string,
-    row.design_project_id,
-  );
-  if (denied) return c.json({ error: denied.error }, denied.status);
-
-  const actor = await db.rpc('auth_user_id');
-
-  // Cấu hình biểu mẫu HIỆU LỰC của tenant — trọng số và câu hỏi tự thêm của quản trị viên.
-  // Chấm điểm theo bản gốc trong khi người dùng điền bản đã sửa là hai con số khác nhau về
-  // cùng một đầu bài, mà con số đi vào artifact thì bất biến.
-  const form = await readEffectiveBriefForm(db, company.data.tenant_id as string);
-
-  const built = buildBriefPayload({
-    structured: row.structured,
-    projectId: row.design_project_id,
-    projectCode: row.project.code,
-    config: form.config,
-  });
-
-  // Đúc artifact TRƯỚC khi đánh dấu xác nhận: hợp đồng thiếu trường bắt buộc thì dừng ở đây
-  // với câu đọc được, và đầu bài vẫn ở trạng thái sửa được.
-  const repo = new ArtifactRepository(c.env);
-  const artifact = await repo.write({
-    scope: {
-      tenantId: company.data.tenant_id as string,
-      companyId: row.company_id,
-      projectId: row.design_project_id,
-      discipline: 'kien_truc',
-      actorId: (actor.data as string | null) ?? null,
-    },
-    kind: 'design_brief',
-    payload: built.payload,
-    step: 'layer1_brief',
-    params: {
-      form_config_version: form.config.version,
-      // Đúc bằng bản gốc dù tenant có lớp phủ: ghi lại để về sau tra ra được, thay vì đoán.
-      form_overlay: form.overlayApplied ? 'applied' : form.fellBack ? 'fallback' : 'none',
-    },
-    setHead: true,
-  });
-
-  // Một lệnh ghi duy nhất: điểm đã tính lại, dấu xác nhận và mã artifact cùng lúc. Tách ra
-  // thì có ngày lệnh thứ hai hỏng và đầu bài mang dấu xác nhận với điểm cũ — mà lúc đó
-  // trigger đóng băng đã có hiệu lực, không sửa lại được nữa.
-  const saved = await db
-    .from('design_briefs')
-    .update({
-      structured: built.payload,
-      confirmed_at: new Date().toISOString(),
-      confirmed_by: (actor.data as string | null) ?? null,
-      artifact_id: artifact.id,
-    })
-    .eq('id', body.briefId)
-    .select('id')
-    .single();
-  if (saved.error) {
-    // Nguyên văn PostgREST là tiếng Anh và có thể mang tên trigger — chỉ ghi log (CGD 5.5).
-    console.error('brief/confirm: không ghi được dấu xác nhận', saved.error);
-    return c.json(
-      {
-        error:
-          'Đã đúc đầu bài nhưng không ghi được dấu xác nhận. Tải lại trang rồi thử lại; nếu vẫn lỗi, báo Quản trị hệ thống.',
-      },
-      500,
-    );
-  }
-
-  return c.json({
-    artifactId: artifact.id,
-    completenessScore: built.completenessScore,
-    missingFields: built.missingFields,
-    issues: built.issues,
-  });
+  const result = await confirmBrief(c.env, db, body.briefId);
+  if (!result.ok) return c.json({ error: result.error }, result.status);
+  const { ok: _ok, ...rest } = result;
+  return c.json(rest);
 });
 
 /**

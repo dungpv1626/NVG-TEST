@@ -35,8 +35,12 @@ export interface PerspectiveContext {
   frontWidthM: number;
   /** Chiều sâu nhà đo từ mặt tiền vào trong, mét. */
   depthM: number;
-  /** Chiều cao từ vỉa hè tới đỉnh tường chắn mái, mét. */
-  heightM: number;
+  /**
+   * Chiều cao từ vỉa hè tới đỉnh tường chắn mái, mét. `null` khi bộ ảnh dựng từ mặt đứng KỸ SƯ tải
+   * lên (T114 Đợt 4b): chiều cao nằm trên chính bản vẽ đó, mô hình đọc từ ảnh (Haan: phối cảnh chỉ
+   * cần đúng tương đối, khoảng 90 %).
+   */
+  heightM: number | null;
   mainDoorSide: Side | null;
   garageSide: Side | null;
   /** Bề rộng cửa chính, mét. Gara 2,4 m và gara 5 m không được ra cùng một câu (T68). */
@@ -288,4 +292,57 @@ function signed(degrees: number): number {
 /** Một chữ số thập phân — cùng cách hồ sơ NVG ghi số đo. */
 function round1(value: number): number {
   return Math.round(value * 10) / 10;
+}
+
+/**
+ * Ngữ cảnh phối cảnh khi mặt đứng là bản KỸ SƯ tải lên (T114 Đợt 4b, 04/10/2026).
+ *
+ * Không có ý tưởng mặt đứng hay phương án mặt bằng AI để đo, nên khối nhà lấy từ ĐẦU BÀI — Haan: «số
+ * tầng nhà và chiều sâu nhà đã có trong đề bài rồi, chiều cao nhà thì sẽ có trong bản vẽ mặt đứng (ảnh
+ * phối cảnh không cần chính xác 100 % về kích thước — chỉ cần tương đối đến 90 %)».
+ *
+ * Khối nhà = thửa trừ sân mong muốn (`massing.yard_depth_m`), thiếu thì trừ khoảng lùi bắt buộc,
+ * thiếu nữa thì coi như sát ranh. Cửa, ban công, chiều cao: để trống — chúng nằm trên bản vẽ gửi kèm.
+ * `digest` phải là bản đã cắt cho phối cảnh (`digestFor(…, 'perspective')`).
+ */
+export function perspectiveContextFromBrief(digest: AiBriefDigest): PerspectiveContext {
+  const width = digest.site.width_m;
+  const depth = digest.site.depth_m;
+  const yardDepth = (digest.massing?.yard_depth_m ?? {}) as Record<string, unknown>;
+  const setback = (digest.site.setback_required_m ?? {}) as Record<string, unknown>;
+  const gap = (side: 'front' | 'back' | 'left' | 'right'): number => {
+    const value = yardDepth[side] ?? setback[side];
+    return typeof value === 'number' && value > 0 ? value : 0;
+  };
+  const yard = {
+    frontM: round1(gap('front')),
+    backM: round1(gap('back')),
+    leftM: round1(gap('left')),
+    rightM: round1(gap('right')),
+  };
+  return {
+    buildingType: digest.building_type,
+    storeys: digest.floors,
+    frontWidthM: round1(Math.max(1, width - yard.leftM - yard.rightM)),
+    depthM: round1(Math.max(1, depth - yard.frontM - yard.backM)),
+    heightM: null,
+    mainDoorSide: null,
+    garageSide: null,
+    mainDoorWidthM: null,
+    garageWidthM: null,
+    balconies: [],
+    railingHM: null,
+    levelHeightsM: [],
+    stepUpM: round1(Math.max(0, digest.entrance?.floor_above_road_m ?? 0)),
+    lot: { widthM: round1(width), depthM: round1(depth) },
+    yard,
+    neighbours: {
+      left: digest.site.adjacent?.left ?? null,
+      right: digest.site.adjacent?.right ?? null,
+      back: digest.site.adjacent?.back ?? null,
+    },
+    orientation: digest.site.orientation ?? null,
+    cars: digest.parking?.cars ?? null,
+    motorbikes: digest.parking?.motorbikes ?? null,
+  };
 }

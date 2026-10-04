@@ -783,6 +783,72 @@
           </thead>
           <tbody>
             <tr>
+              <td class="num">04/10</td>
+              <td>
+                T114 Đợt 4b — bộ ảnh phối cảnh từ mặt đứng kỹ sư tải lên: khối nhà theo đầu bài (số
+                tầng, thửa trừ sân / khoảng lùi), chiều cao mô hình đọc trên bản vẽ, vật liệu theo
+                phần Mặt đứng của đầu bài; đủ năm góc. Bước Phối cảnh chọn nguồn AI / bản tải lên.
+              </td>
+              <td>
+                Phép thử xanh; trên máy: tải mặt đứng mẫu, bước Phối cảnh chọn đúng nguồn. Chưa dựng
+                bộ ảnh thật (trả phí). Chưa commit, chưa deploy.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">03/10</td>
+              <td>
+                T114 Đợt 4a — kỹ sư tải bản vẽ (PNG/JPG/PDF) làm nguồn cho ảnh mặt bằng có nội thất
+                và ảnh mặt đứng có vật liệu: artifact <code>ai_uploaded_drawing</code> (migration
+                0153), tuyến <code>/design/ai/uploads</code>, lời dẫn 9.7.0, cắt lề bỏ khung tên +
+                xác nhận bắt buộc (đột biến M128).
+              </td>
+              <td>
+                Tải lên chạy thật trên máy (xem trước, cắt lề, lưu, đọc lại). Chưa chạy lượt vẽ ảnh
+                thật (trả phí). 4b (phối cảnh từ mặt đứng tải lên) chờ Haan quyết. Chưa commit, chưa
+                deploy.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">03/10</td>
+              <td>
+                T114 Đợt 3 — trang AI Design riêng (<code>/tk/ai-design</code>): bốn bước Đầu bài và
+                khảo sát · Mặt bằng · Mặt đứng · Phối cảnh; tab hồ sơ chỉ còn nút mở. Lưu yêu cầu
+                mặt đứng = phiên bản đầu bài mới tự xác nhận (Haan chốt). Phép thử ranh giới module.
+              </td>
+              <td>
+                Chạy thật trên máy: trang, đầu bài ba phần, route lưu (bắt và sửa lỗi đẻ phiên bản
+                thừa do jsonb). Bước Mặt đứng trên giao diện chưa thử — cần một phương án mặt bằng
+                (lượt AI trả phí). Chưa commit, chưa deploy.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">03/10</td>
+              <td>
+                T114 Đợt 2 — lời dẫn cắt theo nhãn <code>for</code> (<code>brief/slice.ts</code>):
+                mặt bằng không còn phong cách; mặt đứng nhận mọi câu gắn mặt đứng thay sáu trường
+                nhặt tay; phối cảnh đọc digest đã cắt. Lượt mặt đứng theo phần
+                <code>facade</code> của đầu bài, chưa có thì lùi về phiếu cũ. Lời dẫn 9.6.0, đột
+                biến M127.
+              </td>
+              <td>
+                Phép thử xanh. Chưa đo ảnh hưởng chất lượng mặt bằng (cần lượt gọi trả phí). Chưa
+                commit, chưa deploy.
+              </td>
+            </tr>
+            <tr>
+              <td class="num">03/10</td>
+              <td>
+                T114 Đợt 1 — đầu bài ba phần (Chung · Mặt bằng công năng · Mặt đứng), gộp phiếu mặt
+                đứng vào đầu bài thành mục thứ bảy, nhãn <code>for</code> từng câu chọn lời gọi AI.
+                Hợp đồng đầu bài 1.6.0 (<code>facade</code>), biểu mẫu 2.0.0, lớp phủ T63 cũ dời vá
+                theo câu.
+              </td>
+              <td>
+                Phép thử web, đầu bài, lớp phủ, xác nhận xanh. Chưa nối vào lời gọi AI (Đợt 2), bước
+                Mặt đứng còn đọc phiếu riêng (Đợt 3). Chưa commit, chưa deploy.
+              </td>
+            </tr>
+            <tr>
               <td class="num">02/10</td>
               <td>
                 T112 đợt 2 — lời dẫn 9.4.0: câu theo cờ <code>[[cờ|…]]</code> (thang máy, sân
@@ -1618,6 +1684,19 @@
           Review lời dẫn (P1-08): phiếu chỉ hỏi MẶT có lối vào / lối xe, không hỏi vị trí trên mặt
           (trái / giữa / phải), và «Mặt tiếp cận được: trước, trái» đọc được hai nghĩa. Có hỏi thêm
           vị trí không? Thêm thì cổng kiểm được cửa chính, cửa xe đúng chỗ.
+        </p>
+      </div>
+      <div class="flag">
+        <h3>Q-61 <s>đóng</s> · Cốt nền tầng 1 hỏi hai chỗ, khác mốc đo — trả lời 03/10/2026</h3>
+        <p>
+          <b>Haan 03/10/2026:</b> giữ cả hai câu. Và đồng ý đưa Ưu tiên–ngân sách lên đứng thứ hai
+          (phần Chung).
+        </p>
+        <p>
+          Gộp phiếu mặt đứng vào đầu bài (T114) để lộ hai câu cùng nghĩa: «Cốt nền tầng 1 cao hơn
+          tim đường» (m, phần Mặt bằng, mặt bằng dùng) và «Cốt sàn tầng 1 cao hơn vỉa hè» (cm, phần
+          Mặt đứng, khung mặt đứng dùng). Giữ một câu thì phải chọn một mốc đo. Đang giữ cả hai. Gộp
+          về «so với tim đường» rồi suy cao độ so với vỉa hè từ cao độ đường, hay giữ hai câu?
         </p>
       </div>
       <div class="flag">

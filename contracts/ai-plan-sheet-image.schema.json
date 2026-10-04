@@ -16,10 +16,30 @@
     "generator"
   ],
   "properties": {
-    "schema_version": { "$ref": "#/$defs/semver" },
+    "schema_version": {
+      "$ref": "#/$defs/semver"
+    },
     "plan_ref": {
-      "$ref": "#/$defs/artifact_ref",
-      "description": "Mặt bằng mà tờ này vẽ theo. Cũng là cạnh lineage `ai_plan_sheet`."
+      "anyOf": [
+        {
+          "$ref": "#/$defs/artifact_ref"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Mặt bằng mà tờ này vẽ theo. Cũng là cạnh lineage `ai_plan_sheet`.\n\n`null` khi tấm vẽ từ bản KỸ SƯ tải lên (T114 Đợt 4) — khi ấy `upload_ref` mang nguồn. Nới từ bắt buộc thành có thể rỗng: artifact cũ luôn có giá trị nên vẫn đọc được."
+    },
+    "upload_ref": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/artifact_ref"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Bản vẽ kỹ sư tải lên (`ai_uploaded_drawing`) mà tấm này vẽ theo — T114 Đợt 4. Đúng MỘT trong hai: `plan_ref` hoặc `upload_ref`. Cũng là cạnh lineage. Không bắt buộc: artifact trước T114 không có khoá này."
     },
     "level": {
       "type": "integer",
@@ -31,9 +51,18 @@
       "pattern": "^(r2|supabase)://.+",
       "description": "Vị trí tệp ảnh trong kho nhị phân."
     },
-    "mime": { "type": "string", "enum": ["image/png", "image/jpeg", "image/webp"] },
-    "width": { "type": ["integer", "null"], "minimum": 1 },
-    "height": { "type": ["integer", "null"], "minimum": 1 },
+    "mime": {
+      "type": "string",
+      "enum": ["image/png", "image/jpeg", "image/webp"]
+    },
+    "width": {
+      "type": ["integer", "null"],
+      "minimum": 1
+    },
+    "height": {
+      "type": ["integer", "null"],
+      "minimum": 1
+    },
     "anchor": {
       "type": "object",
       "additionalProperties": false,
@@ -42,12 +71,21 @@
       "properties": {
         "source": {
           "type": "string",
-          "enum": ["client_raster"],
-          "description": "Ai rasterise tờ SVG. Hiện chỉ có `client_raster` (trình duyệt). Chừa chỗ cho `worker_raster` nếu sau này máy chủ tự dựng được ảnh."
+          "enum": ["client_raster", "engineer_upload"],
+          "description": "Ai rasterise tờ SVG. Hiện chỉ có `client_raster` (trình duyệt). Chừa chỗ cho `worker_raster` nếu sau này máy chủ tự dựng được ảnh. `engineer_upload` = ảnh neo chính là bản vẽ kỹ sư tải lên (T114 Đợt 4)."
         },
-        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-        "bytes": { "type": "integer", "minimum": 1 },
-        "mime": { "type": "string", "enum": ["image/png", "image/jpeg", "image/webp"] }
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "mime": {
+          "type": "string",
+          "enum": ["image/png", "image/jpeg", "image/webp"]
+        }
       }
     },
     "style_code": {
@@ -70,17 +108,41 @@
       "additionalProperties": false,
       "required": ["kind", "provider", "model", "route", "prompt_version"],
       "properties": {
-        "kind": { "type": "string", "enum": ["ai"] },
-        "provider": { "type": "string", "maxLength": 32 },
-        "model": { "type": "string", "maxLength": 96 },
-        "route": { "type": "string", "maxLength": 64 },
-        "prompt_version": { "type": "string", "maxLength": 16 },
-        "latency_ms": { "type": ["integer", "null"], "minimum": 0 }
+        "kind": {
+          "type": "string",
+          "enum": ["ai"]
+        },
+        "provider": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "model": {
+          "type": "string",
+          "maxLength": 96
+        },
+        "route": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "prompt_version": {
+          "type": "string",
+          "maxLength": 16
+        },
+        "latency_ms": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        }
       }
     }
   },
   "$defs": {
-    "semver": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
-    "artifact_ref": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+    "semver": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "artifact_ref": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
   }
 }

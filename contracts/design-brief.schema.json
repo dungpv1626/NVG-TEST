@@ -899,6 +899,222 @@
       "enum": ["co_ban", "kha", "cao_cap", null],
       "description": "Mức hoàn thiện mong muốn. Đi cùng `budget_range_vnd`: cùng một khoảng tiền, mức hoàn thiện cao hơn nghĩa là diện tích phải nhỏ lại — bộ soát mâu thuẫn đối chiếu hai ô này với nhau."
     },
+    "facade": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "Phần MẶT ĐỨNG của đầu bài (T114, 03/10/2026 — Haan: «gộp toàn bộ khảo sát của thiết kế mặt đứng vào khảo sát đầu bài»). Cùng hình dạng với phiếu `ai-facade-brief` cũ, bỏ ba khoá máy chủ (`schema_version`, `saved_at`, `plan_ref`) và `style` (đầu bài đã có `style` ở cấp trên — một câu hỏi, một chỗ ghi).\n\nMục có giá trị là yêu cầu BẮT BUỘC, mục `null` / thiếu là «để AI đề xuất». Mọi khoá đều KHÔNG bắt buộc: đầu bài lưu dần từng mục, và đầu bài cũ không có phần này.\n\nPhép thử `brief-facade-part.test.ts` canh các mục ở đây trùng với `ai-facade-brief.schema.json`.",
+      "properties": {
+        "ground_raise_cm": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "maximum": 300,
+          "description": "Cốt sàn tầng 1 cao hơn vỉa hè bao nhiêu. Rỗng thì lấy mặc định của kb/construction_norms.yaml."
+        },
+        "roof": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "material", "colour", "pitch_deg", "parapet_cm"],
+          "properties": {
+            "type": {
+              "type": ["string", "null"],
+              "enum": ["flat", "hip", "gable", "thai", "japanese", "mansard", "mixed", null]
+            },
+            "material": {
+              "$ref": "#/$defs/facade_code_or_null"
+            },
+            "colour": {
+              "$ref": "#/$defs/facade_code_or_null"
+            },
+            "pitch_deg": {
+              "type": ["integer", "null"],
+              "minimum": 0,
+              "maximum": 60
+            },
+            "parapet_cm": {
+              "type": ["integer", "null"],
+              "minimum": 0,
+              "maximum": 300
+            }
+          }
+        },
+        "palette": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["primary", "secondary", "accent"],
+          "description": "Ba màu chủ đạo, mã trong nhóm `colours` của danh mục.",
+          "properties": {
+            "primary": {
+              "$ref": "#/$defs/facade_code_or_null"
+            },
+            "secondary": {
+              "$ref": "#/$defs/facade_code_or_null"
+            },
+            "accent": {
+              "$ref": "#/$defs/facade_code_or_null"
+            }
+          }
+        },
+        "surfaces": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["body", "base", "accent", "trim"],
+          "description": "Vật liệu + màu từng vùng mặt tiền: thân nhà, phần đế, mảng nhấn, chỉ/phào/khung.",
+          "properties": {
+            "body": {
+              "$ref": "#/$defs/facade_finish"
+            },
+            "base": {
+              "$ref": "#/$defs/facade_finish"
+            },
+            "accent": {
+              "$ref": "#/$defs/facade_finish"
+            },
+            "trim": {
+              "$ref": "#/$defs/facade_finish"
+            }
+          }
+        },
+        "main_door": {
+          "$ref": "#/$defs/facade_door"
+        },
+        "side_door": {
+          "$ref": "#/$defs/facade_door"
+        },
+        "window": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["material", "colour", "glass"],
+          "properties": {
+            "material": {
+              "$ref": "#/$defs/facade_code_or_null"
+            },
+            "colour": {
+              "$ref": "#/$defs/facade_code_or_null"
+            },
+            "glass": {
+              "$ref": "#/$defs/facade_code_or_null"
+            }
+          }
+        },
+        "garage_door": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "material", "colour"],
+          "properties": {
+            "type": {
+              "$ref": "#/$defs/facade_code_or_null"
+            },
+            "material": {
+              "$ref": "#/$defs/facade_code_or_null"
+            },
+            "colour": {
+              "$ref": "#/$defs/facade_code_or_null"
+            }
+          }
+        },
+        "balcony": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Lan can ban công. Chỉ hỏi khi phương án mặt bằng có ban công ra mặt trước.\n\n`material` và `h_cm` thêm ngày 20/09/2026 (Haan: «thêm 1 mục khảo sát cho lan can: vật liệu, chiều cao»). CỐ Ý KHÔNG bắt buộc: phiếu lưu trước ngày ấy không có hai khoá này, mà artifact là BẤT BIẾN — thêm một mục bắt buộc vào hợp đồng đã dùng là biến những thứ đã ghi thành không đọc nổi (đã xảy ra với `saved_at`).",
+          "required": ["railing", "colour"],
+          "properties": {
+            "railing": {
+              "$ref": "#/$defs/facade_code_or_null",
+              "description": "Kiểu lan can, mã trong nhóm `railings`."
+            },
+            "colour": {
+              "$ref": "#/$defs/facade_code_or_null"
+            },
+            "material": {
+              "$ref": "#/$defs/facade_code_or_null",
+              "description": "Vật liệu lan can, mã trong nhóm `materials`."
+            },
+            "h_cm": {
+              "type": ["integer", "null"],
+              "minimum": 60,
+              "maximum": 160,
+              "description": "Chiều cao lan can tính từ mặt sàn ban công, cm. Rỗng thì chương trình dùng `kb/construction_norms.yaml` mục `outdoor.railing_h_m`.\n\nSố này KHÔNG đi qua mô hình: bộ vẽ đặt nó, và thước chấm đo đúng nó (tiêu chí R1, `do_ai: false`). Khoảng 60–160 là giới hạn DỰNG ĐƯỢC, không phải quy chuẩn — hồ sơ NVG đo được 80–90."
+            }
+          }
+        },
+        "gate": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["wanted", "type", "material", "colour", "h_cm"],
+          "description": "Chỉ có nghĩa khi nhà có sân trước.",
+          "properties": {
+            "wanted": {
+              "type": ["boolean", "null"],
+              "description": "true = có cổng, false = không làm cổng, null = để AI đề xuất."
+            },
+            "type": {
+              "type": ["string", "null"],
+              "enum": ["swing", "sliding", "folding", null]
+            },
+            "material": {
+              "$ref": "#/$defs/facade_code_or_null"
+            },
+            "colour": {
+              "$ref": "#/$defs/facade_code_or_null"
+            },
+            "h_cm": {
+              "type": ["integer", "null"],
+              "minimum": 0,
+              "maximum": 1000
+            }
+          }
+        },
+        "fence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "material", "colour", "h_cm"],
+          "properties": {
+            "type": {
+              "$ref": "#/$defs/facade_code_or_null"
+            },
+            "material": {
+              "$ref": "#/$defs/facade_code_or_null"
+            },
+            "colour": {
+              "$ref": "#/$defs/facade_code_or_null"
+            },
+            "h_cm": {
+              "type": ["integer", "null"],
+              "minimum": 0,
+              "maximum": 1000
+            }
+          }
+        },
+        "decorations": {
+          "type": "array",
+          "maxItems": 12,
+          "uniqueItems": true,
+          "description": "Chi tiết trang trí kỹ sư muốn có trên mặt tiền. Rỗng = để AI đề xuất.\n\nTrần bằng ĐÚNG số mã trong danh sách — tick hết mọi ô vẫn phải lưu được. Trần cũ là 6, đặt khi danh mục còn 9 mã: kỹ sư tick 7 ô thì phiếu bị từ chối bằng một câu chung chung, không nói ô nào (xảy ra thật 20/09/2026). Một phép thử canh hai con số này đi cùng `kb/facade_vocabulary.yaml`.",
+          "items": {
+            "type": "string",
+            "enum": [
+              "canopy",
+              "column",
+              "cladding",
+              "louvre",
+              "planter",
+              "cornice",
+              "eaves_band",
+              "finial",
+              "reveal",
+              "arch",
+              "oculus",
+              "porch_roof"
+            ]
+          }
+        },
+        "notes": {
+          "type": ["string", "null"],
+          "maxLength": 1000,
+          "description": "Ghi chú tự do về mặt đứng — gửi cho mô hình, nên màn hình nhắc không ghi danh tính khách."
+        }
+      }
+    },
     "custom": {
       "type": ["object", "null"],
       "additionalProperties": {
@@ -915,6 +1131,47 @@
     "building_type": {
       "type": "string",
       "enum": ["nha_pho", "biet_thu", "nha_vuon"]
+    },
+    "facade_code_or_null": {
+      "type": ["string", "null"],
+      "pattern": "^[a-z0-9_]+$",
+      "maxLength": 40
+    },
+    "facade_finish": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["material", "colour"],
+      "properties": {
+        "material": {
+          "$ref": "#/$defs/facade_code_or_null"
+        },
+        "colour": {
+          "$ref": "#/$defs/facade_code_or_null"
+        }
+      }
+    },
+    "facade_door": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["material", "colour", "type", "h_cm"],
+      "properties": {
+        "material": {
+          "$ref": "#/$defs/facade_code_or_null"
+        },
+        "colour": {
+          "$ref": "#/$defs/facade_code_or_null"
+        },
+        "type": {
+          "$ref": "#/$defs/facade_code_or_null",
+          "description": "Kiểu mở, mã trong nhóm `door_types`."
+        },
+        "h_cm": {
+          "type": ["integer", "null"],
+          "minimum": 150,
+          "maximum": 600,
+          "description": "Chiều cao lọt lòng. Bề rộng lấy từ mặt bằng."
+        }
+      }
     }
   }
 }

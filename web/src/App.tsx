@@ -116,6 +116,12 @@ const DesignCreatePage = lazy(() =>
 const DesignDetailPage = lazy(() =>
   import('@/pages/tk/design-detail').then((m) => ({ default: m.DesignDetailPage })),
 );
+const AiDesignListPage = lazy(() =>
+  import('@/pages/tk/design-list').then((m) => ({ default: m.AiDesignListPage })),
+);
+const AiDesignPage = lazy(() =>
+  import('@/pages/tk/ai-design-page').then((m) => ({ default: m.AiDesignPage })),
+);
 const KbListPage = lazy(() =>
   import('@/pages/tk/kb-list').then((m) => ({ default: m.KbListPage })),
 );
@@ -341,6 +347,8 @@ const router = createBrowserRouter(
           <Route path="tk/du-an" element={<DesignListPage />} />
           <Route path="tk/du-an/tao-moi" element={<DesignCreatePage />} />
           <Route path="tk/du-an/:id" element={<DesignDetailPage />} />
+          <Route path="tk/ai-design" element={<AiDesignListPage />} />
+          <Route path="tk/ai-design/:id" element={<AiDesignPage />} />
           <Route path="tk/ho-so-cu" element={<KbListPage />} />
           <Route path="tk/ho-so-cu/:id" element={<KbAnnotatePage />} />
         </Route>

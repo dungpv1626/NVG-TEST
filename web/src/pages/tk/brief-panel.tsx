@@ -469,13 +469,22 @@ export function BriefPanel({
     return (
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="space-y-6">
-          <StepBar steps={steps} index={index} missingIn={missingIn} onGo={goTo} />
+          <StepBar
+            parts={form.parts}
+            steps={steps}
+            index={index}
+            missingIn={missingIn}
+            onGo={goTo}
+          />
 
           <section
             key={step.section.id}
             id={`brief-section-${step.section.id}`}
             className="rounded-lg border border-border bg-surface p-4 shadow-card"
           >
+            <p className="text-xs font-medium text-fg-subtle">
+              {form.parts.find((p) => p.id === step.section.part)?.title}
+            </p>
             <h3 className="font-semibold">{step.section.title}</h3>
             {step.section.hint && <p className="mt-0.5 text-fg-subtle">{step.section.hint}</p>}
             {/*
@@ -772,14 +781,20 @@ export function BriefPanel({
  *
  * Số câu còn thiếu chỉ đếm ô BẮT BUỘC: gắn dấu cho một bước chỉ vì còn ô «(tùy chọn)» chưa
  * điền là dạy người dùng bỏ qua chính dấu đó.
+ *
+ * Bước xếp dưới tên PHẦN (T114: Chung · Mặt bằng công năng · Mặt đứng) — người khai thấy
+ * mình đang ở phần nào của cuộc trao đổi. Số bước vẫn đánh liền từ 1, không đánh lại theo phần:
+ * «Bước 2 trên 7» phải là cùng một con số với nút số 2 trên thanh.
  */
 function StepBar({
+  parts,
   steps,
   index,
   missingIn,
   onGo,
 }: {
-  steps: { section: { id: string; title: string } }[];
+  parts: { id: string; title: string }[];
+  steps: { section: { id: string; title: string; part: string } }[];
   index: number;
   missingIn: (sectionId: string) => number;
   onGo: (sectionId: string) => void;
@@ -789,43 +804,56 @@ function StepBar({
       aria-label="Các bước của đầu bài"
       className="rounded-lg border border-border bg-surface p-3 shadow-card"
     >
-      <ol className="flex flex-wrap gap-1">
-        {steps.map((step, i) => {
-          const current = i === index;
-          const missing = missingIn(step.section.id);
+      <div className="space-y-2">
+        {parts.map((part) => {
+          const inPart = steps
+            .map((step, i) => ({ step, i }))
+            .filter(({ step }) => step.section.part === part.id);
+          if (!inPart.length) return null;
           return (
-            <li key={step.section.id}>
-              <button
-                type="button"
-                aria-current={current ? 'step' : undefined}
-                onClick={() => onGo(step.section.id)}
-                className={cn(
-                  'flex min-h-10 items-center gap-2 rounded px-2.5 text-left',
-                  current ? 'bg-brand-subtle font-semibold text-brand' : 'text-fg-subtle',
-                )}
-              >
-                <span
-                  aria-hidden
-                  className={cn(
-                    'inline-flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
-                    current ? 'bg-brand text-white' : 'bg-surface-sunken',
-                  )}
-                >
-                  {i + 1}
-                </span>
-                {step.section.title}
-                {/* Chữ, không phải chỉ một chấm màu: màu không bao giờ là cách truyền đạt
+            <div key={part.id}>
+              <p className="px-2.5 text-xs font-medium text-fg-subtle">{part.title}</p>
+              <ol className="flex flex-wrap gap-1">
+                {inPart.map(({ step, i }) => {
+                  const current = i === index;
+                  const missing = missingIn(step.section.id);
+                  return (
+                    <li key={step.section.id}>
+                      <button
+                        type="button"
+                        aria-current={current ? 'step' : undefined}
+                        onClick={() => onGo(step.section.id)}
+                        className={cn(
+                          'flex min-h-10 items-center gap-2 rounded px-2.5 text-left',
+                          current ? 'bg-brand-subtle font-semibold text-brand' : 'text-fg-subtle',
+                        )}
+                      >
+                        <span
+                          aria-hidden
+                          className={cn(
+                            'inline-flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
+                            current ? 'bg-brand text-white' : 'bg-surface-sunken',
+                          )}
+                        >
+                          {i + 1}
+                        </span>
+                        {step.section.title}
+                        {/* Chữ, không phải chỉ một chấm màu: màu không bao giờ là cách truyền đạt
                     duy nhất (CGD 6.8). */}
-                {missing > 0 && (
-                  <span className="rounded-full bg-status-pending-bg px-1.5 text-xs font-medium text-status-pending">
-                    thiếu {missing}
-                  </span>
-                )}
-              </button>
-            </li>
+                        {missing > 0 && (
+                          <span className="rounded-full bg-status-pending-bg px-1.5 text-xs font-medium text-status-pending">
+                            thiếu {missing}
+                          </span>
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
           );
         })}
-      </ol>
+      </div>
       <p className="mt-1 px-2.5 text-xs text-fg-subtle">
         Bước {index + 1} trên {steps.length}. Lưu nháp được ở bất kỳ bước nào.
       </p>

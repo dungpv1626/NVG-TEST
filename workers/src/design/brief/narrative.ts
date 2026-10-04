@@ -25,6 +25,7 @@ import {
   FLOOR_PREF_LABEL,
   type AiBriefDigest,
 } from '@nvg/shared/design';
+import { digestFor } from './slice';
 
 export interface NarrativeOptions {
   /** Mã phòng → nhãn tiếng Việt (`kb/room_vocabulary.yaml`). */
@@ -34,7 +35,10 @@ export interface NarrativeOptions {
 type Face = 'front' | 'back' | 'left' | 'right';
 const FACES: readonly Face[] = ['front', 'back', 'left', 'right'];
 
-export function briefNarrative(digest: AiBriefDigest, options: NarrativeOptions): string {
+export function briefNarrative(full: AiBriefDigest, options: NarrativeOptions): string {
+  // Lời kể chỉ phục vụ lời gọi MẶT BẰNG và chương trình không gian (T114): câu gắn cho mặt đứng /
+  // phối cảnh (phong cách, ghi chú phong cách…) không đi vào đây.
+  const digest = digestFor(full, 'plan');
   const optionLabel = (path: string, value: string | number | boolean): string | null => {
     const field = fieldByPath(BRIEF_FORM, path);
     return field?.options?.find((o) => String(o.value) === String(value))?.label ?? null;

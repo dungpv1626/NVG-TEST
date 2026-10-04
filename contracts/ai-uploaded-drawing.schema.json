@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nvg.vn/contracts/ai-uploaded-drawing.schema.json",
+  "title": "AiUploadedDrawing",
+  "description": "Bản vẽ KỸ SƯ tải lên làm nguồn cho mô hình ảnh (T114 Đợt 4, 03/10/2026 — Haan: ảnh mặt bằng có nội thất và ảnh mặt đứng có vật liệu «có 2 cách: dựa trên bản vẽ do AI tạo hoặc bản vẽ do kỹ sư chỉnh sửa (hoặc tự tạo)»).\n\nẢnh, không phải DXF (Haan chọn): kỹ sư xuất từ AutoCAD ra PNG/JPG/PDF. Trình duyệt chuẩn hoá về PNG đúng một trong ba khung mô hình ảnh nhận (1024×1024, 1536×1024, 1024×1536) — PDF dựng trang đã chọn, ảnh được đệm nền trắng, không kéo méo. Máy chủ kiểm lại khung.\n\nKHÔNG có toạ độ, phòng hay số đo: chương trình không đọc nét vẽ. Mô hình ảnh đọc trực tiếp; số trên ảnh do mô hình viết lại nên KHÔNG đo được, như mọi ảnh của nhánh AI.\n\n⚠️ Dữ liệu hạng 1: bản vẽ thật thường mang khung tên có tên chủ nhà, địa chỉ, mã hồ sơ (T12). `identity_cleared` là lời xác nhận của người tải lên rằng đã cắt khung tên — máy chủ từ chối khi thiếu; tên tệp gốc cố ý KHÔNG lưu vì hay mang tên khách.\n\nẢnh lưu trong bucket `design-renders`; trình duyệt đọc qua endpoint có kiểm quyền.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "drawing",
+    "level",
+    "uri",
+    "mime",
+    "width",
+    "height",
+    "sha256",
+    "bytes",
+    "identity_cleared"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "drawing": {
+      "type": "string",
+      "enum": ["plan", "facade"],
+      "description": "Mặt bằng một tầng, hay mặt đứng mặt tiền."
+    },
+    "level": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "description": "Tầng của mặt bằng. `null` với mặt đứng."
+    },
+    "uri": { "type": "string", "pattern": "^(r2|supabase)://.+" },
+    "mime": { "type": "string", "enum": ["image/png"] },
+    "width": { "type": "integer", "enum": [1024, 1536] },
+    "height": { "type": "integer", "enum": [1024, 1536] },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "bytes": { "type": "integer", "minimum": 1 },
+    "note": {
+      "type": ["string", "null"],
+      "maxLength": 200,
+      "description": "Ghi chú của kỹ sư để nhận ra bản vẽ trong danh sách («sau khi sửa WC tầng 2»). KHÔNG gửi cho mô hình."
+    },
+    "identity_cleared": {
+      "type": "boolean",
+      "const": true,
+      "description": "Người tải lên xác nhận đã bỏ khung tên và mọi thông tin chủ nhà khỏi ảnh."
+    }
+  }
+}

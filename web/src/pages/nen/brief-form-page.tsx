@@ -131,12 +131,23 @@ export function BriefFormAdminPage() {
     putSection({ ...section, fields: (section.fields ?? []).filter((f) => f.path !== path) });
   }
 
-  /** Thứ tự mục — luôn ghi ĐẦY ĐỦ danh sách id, xem chú thích của `section_order`. */
+  /**
+   * Thứ tự mục — luôn ghi ĐẦY ĐỦ danh sách id, xem chú thích của `section_order`.
+   * Chỉ đổi chỗ TRONG một phần (T114): mục sang phần khác thì cấu hình tự xếp lại theo phần,
+   * và nút bấm trông như không ăn.
+   */
+  function canMove(id: string, delta: number): boolean {
+    const sections = preview.config.sections;
+    const from = sections.findIndex((s) => s.id === id);
+    const to = sections[from + delta];
+    return from !== -1 && to !== undefined && to.part === sections[from]!.part;
+  }
+
   function moveSection(id: string, delta: number) {
     const ids = preview.config.sections.map((s) => s.id);
     const from = ids.indexOf(id);
     const to = from + delta;
-    if (from === -1 || to < 0 || to >= ids.length) return;
+    if (!canMove(id, delta)) return;
     const next = [...ids];
     next.splice(to, 0, ...next.splice(from, 1));
     patch({ ...overlay, section_order: next });
@@ -210,11 +221,14 @@ export function BriefFormAdminPage() {
       )}
 
       <div className="space-y-4">
-        {preview.config.sections.map((section, index) => {
+        {preview.config.sections.map((section) => {
           const sPatch = sectionPatch(section.id);
           const isCustomSection = Boolean(sPatch.custom);
           return (
             <section key={section.id} className="rounded border border-border bg-surface p-4">
+              <p className="mb-1 text-xs font-medium text-fg-subtle">
+                {preview.config.parts.find((p) => p.id === section.part)?.title}
+              </p>
               <div className="flex flex-wrap items-center gap-2">
                 <Input
                   aria-label={`Tên mục ${section.title}`}
@@ -226,7 +240,7 @@ export function BriefFormAdminPage() {
                 <Button
                   variant="subtle"
                   aria-label={`Đưa mục ${section.title} lên trên`}
-                  disabled={!canEdit || index === 0}
+                  disabled={!canEdit || !canMove(section.id, -1)}
                   onClick={() => moveSection(section.id, -1)}
                 >
                   <ChevronUp className="size-4" aria-hidden />
@@ -234,7 +248,7 @@ export function BriefFormAdminPage() {
                 <Button
                   variant="subtle"
                   aria-label={`Đưa mục ${section.title} xuống dưới`}
-                  disabled={!canEdit || index === preview.config.sections.length - 1}
+                  disabled={!canEdit || !canMove(section.id, 1)}
                   onClick={() => moveSection(section.id, 1)}
                 >
                   <ChevronDown className="size-4" aria-hidden />

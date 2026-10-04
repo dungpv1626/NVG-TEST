@@ -14,7 +14,7 @@
  * Tệp thuần: không `fetch`, không kho, không CSDL — kiểm thử được bằng client giả.
  */
 
-import type { AiFacadeConcept, AiFacadeImage } from '@nvg/shared/design';
+import type { AiFacadeBrief, AiFacadeConcept, AiFacadeImage } from '@nvg/shared/design';
 import type { FacadeVocabulary, VocabEntry } from '../../kb/facade-vocabulary';
 import type { GenerateImagePart } from '../../llm/gemini';
 import type { AiImageOptions } from '../../llm/text-client';
@@ -159,6 +159,117 @@ export function facadeLook(
   };
 }
 
+/**
+ * Bảy cụm mô tả mặt ngoài khi mặt đứng là bản KỸ SƯ tải lên (T114 Đợt 4b) — không có ý tưởng mặt
+ * đứng AI, nên lấy từ phần Mặt đứng của đầu bài. Mục chưa chốt nói «theo bản vẽ / hợp phong cách»
+ * thay vì bịa một vật liệu: hình học và chi tiết nằm trên bản vẽ gửi kèm.
+ */
+export function facadeLookFromBrief(
+  brief: AiFacadeBrief | null,
+  vocab: FacadeVocabulary,
+  prompts: AiPrompts,
+): FacadeLook {
+  const block = prompts.facadeImage;
+  const colour = (code: unknown) => phrase(vocab.colours, code);
+  const withColour = (what: string, code: unknown) => (code ? `${what} in ${colour(code)}` : what);
+  if (!brief) {
+    return {
+      style: 'as the attached drawing suggests',
+      roof: 'as drawn',
+      materials: '- as drawn; choose materials that suit the style',
+      palette: 'choose colours that suit the style',
+      railing: 'as drawn',
+      gateFence: 'exactly as drawn on the attached elevation',
+      elements: 'as drawn',
+    };
+  }
+
+  const roof = [
+    brief.roof.type ? (block.roofs[brief.roof.type] ?? `${brief.roof.type} roof`) : 'roof as drawn',
+    brief.roof.pitch_deg ? `about ${brief.roof.pitch_deg} degrees pitch` : null,
+    brief.roof.material
+      ? withColour(phrase(vocab.roofMaterials, brief.roof.material), brief.roof.colour)
+      : brief.roof.colour
+        ? `in ${colour(brief.roof.colour)}`
+        : null,
+  ]
+    .filter(Boolean)
+    .join(', ');
+
+  const zones = [
+    ...(['body', 'base', 'accent', 'trim'] as const).map((zone) => {
+      const finish = brief.surfaces[zone];
+      return finish.material || finish.colour
+        ? `- ${zone}: ${finish.material ? phrase(vocab.materials, finish.material) : 'material to suit'}${finish.colour ? `, ${colour(finish.colour)}` : ''}`
+        : null;
+    }),
+    ...(
+      [
+        ['main door', brief.main_door],
+        ['side door', brief.side_door],
+      ] as const
+    ).map(([zone, door]) =>
+      door.material || door.colour || door.type
+        ? `- ${zone}: ${[
+            door.material ? phrase(vocab.doorMaterials, door.material) : null,
+            door.colour ? colour(door.colour) : null,
+            door.type ? phrase(vocab.doorTypes, door.type) : null,
+          ]
+            .filter(Boolean)
+            .join(', ')}`
+        : null,
+    ),
+    brief.window.material || brief.window.glass
+      ? `- windows: ${[
+          brief.window.material ? phrase(vocab.doorMaterials, brief.window.material) : null,
+          brief.window.colour ? colour(brief.window.colour) : null,
+          brief.window.glass ? phrase(vocab.glassTypes, brief.window.glass) : null,
+        ]
+          .filter(Boolean)
+          .join(', ')}`
+      : null,
+  ].filter(Boolean);
+
+  const palette = [
+    brief.palette.primary ? `primary ${colour(brief.palette.primary)}` : null,
+    brief.palette.secondary ? `secondary ${colour(brief.palette.secondary)}` : null,
+    brief.palette.accent ? `accent ${colour(brief.palette.accent)}` : null,
+  ].filter(Boolean);
+
+  const gateFence = [
+    brief.gate.wanted === false
+      ? 'no gate'
+      : brief.gate.type || brief.gate.material
+        ? withColour(
+            `${brief.gate.type ?? ''} gate${brief.gate.material ? ` in ${phrase(vocab.materials, brief.gate.material)}` : ''}`.trim(),
+            brief.gate.colour,
+          )
+        : null,
+    brief.fence.type || brief.fence.material
+      ? withColour(
+          `fence${brief.fence.type ? ` (${phrase(vocab.fenceTypes, brief.fence.type)})` : ''}${brief.fence.material ? ` in ${phrase(vocab.materials, brief.fence.material)}` : ''}`,
+          brief.fence.colour,
+        )
+      : null,
+  ].filter(Boolean);
+
+  return {
+    style: brief.style
+      ? (block.styles[brief.style] ?? brief.style)
+      : 'as the attached drawing suggests',
+    roof,
+    materials: zones.length ? zones.join('\n') : '- as drawn; choose materials that suit the style',
+    palette: palette.length ? palette.join(', ') : 'choose colours that suit the style',
+    railing: brief.balcony.railing
+      ? `${phrase(vocab.railings, brief.balcony.railing)}${typeof brief.balcony.h_cm === 'number' ? `, ${metres(brief.balcony.h_cm)} m high` : ''}`
+      : 'as drawn',
+    gateFence: gateFence.length
+      ? `${gateFence.join('; ')} — placed exactly as drawn on the attached elevation`
+      : 'exactly as drawn on the attached elevation',
+    elements: brief.decorations.length ? brief.decorations.join(', ') : 'as drawn',
+  };
+}
+
 /** Ghép lời dẫn gửi cho mô hình ảnh từ ý tưởng mặt đứng đã lưu. */
 export function facadeImagePrompt(
   concept: AiFacadeConcept,
@@ -199,7 +310,10 @@ export function facadeImageCallOptions(
 }
 
 export interface AssembleFacadeImageInput {
-  facadeRef: string;
+  /** Ý tưởng mặt đứng AI mà tấm vẽ theo; `null` khi vẽ từ bản kỹ sư tải lên (có `uploadRef`). */
+  facadeRef: string | null;
+  /** Bản vẽ kỹ sư tải lên (T114 Đợt 4). */
+  uploadRef?: string | null;
   uri: string;
   mime: string;
   widthPx: number | null;
@@ -218,12 +332,13 @@ export function assembleFacadeImage(input: AssembleFacadeImageInput): AiFacadeIm
   return {
     schema_version: SCHEMA_VERSION,
     facade_ref: input.facadeRef,
+    ...(input.uploadRef ? { upload_ref: input.uploadRef } : {}),
     uri: input.uri,
     mime: input.mime as AiFacadeImage['mime'],
     width: input.widthPx,
     height: input.heightPx,
     anchor: {
-      source: 'client_raster',
+      source: input.uploadRef ? 'engineer_upload' : 'client_raster',
       sha256: input.anchor.sha256,
       bytes: input.anchor.bytes,
       mime: input.anchor.mime as AiFacadeImage['anchor']['mime'],

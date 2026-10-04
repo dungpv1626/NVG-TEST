@@ -471,9 +471,12 @@ hồ sơ phát hành. Hiện trạng:
   nhà liền kề) · Gia đình và nếp sinh hoạt (kèm **tuổi**, tín ngưỡng, kinh doanh tại nhà) ·
   Công năng và lưu trữ · Khối nhà, thang và mặt ngoài (thang máy: làm ngay / **chừa chỗ**; ban
   công **đua ra ngoài ranh**) · Kỹ thuật và dự trù · Ưu tiên, ngân sách và người quyết định.
-  **Sáu mục là số đã chốt** (Haan, 21/09/2026: «12 mục là quá dài») — thêm nhóm câu hỏi mới thì
-  xếp vào một trong sáu, đừng mở mục thứ bảy. Số bước KHÔNG đổi theo loại hình: nhóm tổ chức
-  khối nhà ẩn theo TỪNG TRƯỜNG, không ẩn cả mục.
+  **Ba PHẦN, bảy mục** (T114, 03/10/2026, thay «sáu mục» của T62): Chung cho cả nhà · Mặt bằng
+  công năng · Mặt đứng; mục thứ bảy `mat_dung` là phiếu mặt đứng T59 gộp vào đầu bài (`facade`).
+  Nhãn **`for`** từng câu quyết định câu ấy đi vào lời gọi AI nào (mặt bằng / mặt đứng / phối
+  cảnh), không khai thì theo phần — thêm câu hỏi mới thì nghĩ luôn nó dùng cho bản vẽ nào. Thêm
+  nhóm câu hỏi thì xếp vào mục có sẵn, đừng mở mục mới («12 mục là quá dài»). Số bước KHÔNG đổi
+  theo loại hình: nhóm tổ chức khối nhà ẩn theo TỪNG TRƯỜNG, không ẩn cả mục.
   Trường mới gần hết mang **trọng số 0** — `completeness_score` là cổng chặn Lớp 2, chỉ đo thứ
   thiếu thì không dựng nổi mặt bằng. Phong thuỷ vào đầu bài dưới dạng **câu ràng buộc người đã
   quyết**, không phải ngày sinh để máy luận (PRD 2.3).

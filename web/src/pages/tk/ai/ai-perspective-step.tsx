@@ -21,6 +21,7 @@ import { AI_DISCLAIMERS } from '@nvg/shared/design';
 import { formatDateTime } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Skeleton } from '@/components/ui/states';
 import {
   useAiImageSet,
@@ -32,6 +33,7 @@ import {
   useInvalidateAiDesign,
   useRedrawPerspectiveView,
   useStartPerspectiveRun,
+  useUploadedDrawings,
   type AiDesignState,
 } from '@/hooks/use-ai-design';
 import { toUserMessage } from '@/hooks/use-error-message';
@@ -87,21 +89,38 @@ export function AiPerspectiveStep({
     state.facadeArtifactId &&
     state.imageSetFacadeRef !== state.facadeArtifactId,
   );
-  const blocked = !state.facadeArtifactId
-    ? 'Chưa có ý tưởng mặt đứng. Mở bước «2. Mặt đứng», dựng một ý tưởng rồi quay lại đây.'
-    : stale
-      ? `${STALE_FACADE} Dựng lại mặt đứng theo phương án đang chọn trước khi vẽ phối cảnh.`
-      : null;
+  // Nguồn mặt đứng (T114 Đợt 4b): ý tưởng AI, hoặc bản vẽ kỹ sư tải lên ở bước Mặt đứng. Mặc định
+  // theo cái đang có — ý tưởng AI trước, vì nó đo được.
+  const uploads = useUploadedDrawings(projectId, 'facade');
+  const uploadItems = uploads.data?.items ?? [];
+  const [source, setSource] = useState<'ai' | 'upload' | null>(null);
+  const activeSource: 'ai' | 'upload' =
+    source ?? (state.facadeArtifactId || !uploadItems.length ? 'ai' : 'upload');
+  const [uploadId, setUploadId] = useState<string | null>(null);
+  const pickedUpload =
+    uploadItems.find((item) => item.uploadId === uploadId) ?? uploadItems[0] ?? null;
+
+  const blocked =
+    activeSource === 'upload'
+      ? pickedUpload
+        ? null
+        : 'Chưa có bản vẽ mặt đứng nào được tải lên. Tải ở cuối bước «Mặt đứng» rồi quay lại đây.'
+      : !state.facadeArtifactId
+        ? 'Chưa có ý tưởng mặt đứng. Mở bước «Mặt đứng», dựng một ý tưởng (hoặc tải bản vẽ của kỹ sư) rồi quay lại đây.'
+        : stale
+          ? `${STALE_FACADE} Dựng lại mặt đứng theo phương án đang chọn trước khi vẽ phối cảnh.`
+          : null;
 
   const onRun = () => {
-    if (!image.choice.route || !state.facadeArtifactId) return;
+    if (!image.choice.route) return;
+    const base = { projectId, route: image.choice.route, peopleAndVehicles: people };
+    const input =
+      activeSource === 'upload'
+        ? pickedUpload && { ...base, uploadId: pickedUpload.uploadId }
+        : state.facadeArtifactId && { ...base, artifactId: state.facadeArtifactId };
+    if (!input) return;
     void start
-      .mutateAsync({
-        projectId,
-        artifactId: state.facadeArtifactId,
-        route: image.choice.route,
-        peopleAndVehicles: people,
-      })
+      .mutateAsync(input)
       .then((out) => setRunId(out.runId))
       .catch(() => undefined);
   };
@@ -128,6 +147,47 @@ export function AiPerspectiveStep({
           nói được nhà sâu bao nhiêu. Nhờ vậy cả bộ là cùng một ngôi nhà. Ảnh chỉ để trình khách —
           số đo đúng nằm ở tờ mặt bằng và tờ mặt đứng.
         </p>
+
+        {!readOnly && (state.facadeArtifactId || uploadItems.length > 0) && (
+          <div className="mb-3 flex flex-wrap items-end gap-3">
+            <div>
+              <p className="mb-1 text-xs font-medium text-fg-subtle">Dựng từ mặt đứng</p>
+              <SegmentedControl
+                options={['ai', 'upload']}
+                value={activeSource}
+                onChange={(value) => setSource(value as 'ai' | 'upload')}
+                getLabel={(value) =>
+                  value === 'ai' ? 'Ý tưởng mặt đứng của AI' : 'Bản vẽ kỹ sư tải lên'
+                }
+                disabled={running}
+              />
+            </div>
+            {activeSource === 'upload' && uploadItems.length > 0 && (
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-fg-subtle">Bản vẽ</span>
+                <select
+                  value={pickedUpload?.uploadId ?? ''}
+                  onChange={(event) => setUploadId(event.target.value)}
+                  disabled={running}
+                  className="min-h-10 rounded border border-border bg-surface px-2"
+                >
+                  {uploadItems.map((item) => (
+                    <option key={item.uploadId} value={item.uploadId}>
+                      {`Tải lên ${formatDateTime(item.createdAt)}${item.note ? ` · ${item.note}` : ''}`}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </div>
+        )}
+        {activeSource === 'upload' && !blocked && (
+          <p className="mb-3 text-fg-subtle">
+            Từ bản vẽ kỹ sư: số tầng, bề rộng và chiều sâu nhà lấy theo đầu bài, chiều cao mô hình
+            đọc trên bản vẽ; vật liệu và màu theo phần Mặt đứng của đầu bài. Kích thước trên ảnh chỉ
+            đúng tương đối.
+          </p>
+        )}
 
         {blocked ? (
           <p className="text-fg-subtle">{blocked}</p>

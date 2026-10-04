@@ -19,6 +19,22 @@ export function sniffMime(dataBase64: string): string {
   return 'image/png';
 }
 
+/**
+ * Byte → base64, theo từng khối.
+ *
+ * `String.fromCharCode(...bytes)` trên một tấm PNG 1–2 MB là hàng triệu đối số trong một lời gọi —
+ * tràn ngăn xếp, và tràn ở đây nghĩa là mất một lượt ĐÃ TRẢ TIỀN chứ không phải một lỗi nhìn thấy
+ * lúc phát triển.
+ */
+export function encodeBase64(bytes: Uint8Array): string {
+  const CHUNK = 0x8000;
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
+}
+
 /** base64 → nhị phân. `atob` có sẵn trong Workers và trong Node từ bản 16. */
 export function decodeBase64(value: string): Uint8Array {
   const binary = atob(value);

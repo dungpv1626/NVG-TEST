@@ -41,8 +41,10 @@ export interface StoredAnchor {
 }
 
 export interface AssembleImageSetInput {
-  facadeRef: string;
-  planRef: string;
+  /** `null` cùng `planRef` khi bộ ảnh dựng từ mặt đứng kỹ sư tải lên (có `uploadRef`). */
+  facadeRef: string | null;
+  planRef: string | null;
+  uploadRef?: string | null;
   anchors: StoredAnchor[];
   drawn: DrawnView[];
   missing: Array<{ view: AiImageSetView; reason: string }>;
@@ -85,6 +87,7 @@ export function assembleImageSet(input: AssembleImageSetInput): AiImageSet {
     schema_version: SCHEMA_VERSION,
     facade_ref: input.facadeRef,
     plan_ref: input.planRef,
+    ...(input.uploadRef ? { upload_ref: input.uploadRef } : {}),
     anchors: input.anchors.map((anchor) => ({
       kind: anchor.kind,
       uri: anchor.uri,

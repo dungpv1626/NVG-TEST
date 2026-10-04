@@ -58,5 +58,8 @@ export type DesignBriefDraft = z.infer<typeof designBriefDraftSchema>;
  * nhà liền kề. Vẫn chỉ THÊM trường tuỳ chọn: mọi bản ghi `1.0.0`–`1.4.0` đọc nguyên vẹn, và một
  * đầu bài không trả lời câu nào trong số này vẫn chốt được — điểm độ đầy đủ thấp hơn, đúng ý
  * nghĩa của nó (yêu cầu của Haan 21/09/2026: khảo sát càng chi tiết, phương án càng sát mong muốn).
+ *
+ * `1.6.0` (03/10/2026, T114): thêm `facade` — phiếu yêu cầu mặt đứng gộp vào đầu bài. Vẫn chỉ
+ * THÊM trường tuỳ chọn; hồ sơ cũ có phiếu ở artifact `ai_facade_brief` riêng vẫn đọc được.
  */
-export const BRIEF_SCHEMA_VERSION = '1.5.0';
+export const BRIEF_SCHEMA_VERSION = '1.6.0';

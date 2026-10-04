@@ -27,6 +27,7 @@ import type { PlanCallRecord } from '../ai/plan';
 import { recordingClient } from '../ai/prompt-record';
 import type { AiPrompts } from '../ai/prompts';
 import type { LevelLiveHooks } from './ai-design-steps';
+import { facadeBriefOfArtifact } from '../ai/facade/brief';
 
 /**
  * Tổng số lượt gọi một lần chạy mặt đứng: lượt đầu, cộng MỘT lượt sửa kèm lý do phép kiểm. Mặt đứng
@@ -102,10 +103,10 @@ async function briefOf(
 ): Promise<AiFacadeBrief | null> {
   if (!params.facadeBriefRef) return null;
   const artifact = await deps.repo.get(params.facadeBriefRef, params.projectId);
-  if (!artifact || artifact.kind !== 'ai_facade_brief') {
-    throw new Error('Không tìm thấy phiếu yêu cầu mặt đứng mà lượt chạy theo.');
-  }
-  return artifact.payload as AiFacadeBrief;
+  // Từ T114 mã này có thể trỏ vào chính đầu bài (phần `facade`), không chỉ phiếu riêng.
+  const brief = facadeBriefOfArtifact(artifact);
+  if (!brief) throw new Error('Không tìm thấy phiếu yêu cầu mặt đứng mà lượt chạy theo.');
+  return brief;
 }
 
 /**

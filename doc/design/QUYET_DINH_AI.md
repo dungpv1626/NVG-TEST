@@ -2570,3 +2570,136 @@ công nào chạm mặt ấy» — sai với bản phác mô hình đang nhìn. 
 có ban công chỉ chạm ở góc, câu nhắc riêng `balcony_side_missing_corner`; đầu bài nói «mỗi mặt bắt buộc một ban
 công riêng chạy dọc mặt ấy». Phép thử `ai-live-8eaaee7b.test.ts`. Một lượt (đồng thời đo 9.4.1) còn lại trong
 hai lượt Haan cho phép.
+
+## T114 — AI Design thành module riêng: đầu bài ba phần, gộp phiếu mặt đứng, nhận bản vẽ kỹ sư tải lên (03/10/2026)
+
+**Khởi nguồn.** Haan (03/10/2026): AI Design là công cụ hỗ trợ phòng thiết kế, làm độc lập, có tính module. Chuỗi việc:
+đầu bài + khảo sát hiện trạng → mặt bằng công năng (ảnh + DXF, kỹ sư lấy về sửa tiếp) → ảnh mặt bằng có nội thất →
+mặt đứng (ảnh + DXF) → ảnh mặt đứng có vật liệu → ảnh phối cảnh. Hai bước ảnh nhận nguồn là bản AI vẽ HOẶC bản kỹ sư
+đã sửa / tự vẽ. «Gộp toàn bộ khảo sát của thiết kế mặt đứng vào khảo sát đầu bài, chia rõ phần chung cho cả nhà, phần
+mặt bằng công năng, phần mặt đứng, để prompt chính xác và không thừa thông tin.» Ảnh phối cảnh chỉ lấy phần cần.
+
+**Haan chốt bốn lựa chọn:** (1) tách mã + trang riêng, vẫn gắn `design_projects` để giữ RLS và artifact; (2) bản vẽ
+tải lên là ảnh PNG/JPG/PDF (không đọc DXF); (3) đầu bài ba phần, gắn nhãn từng câu; (4) phần mặt đứng nằm trong đầu
+bài, để trống thì AI đề xuất, kỹ sư sửa được ngay trước khi dựng mặt đứng — một nguồn dữ liệu.
+
+**Thay một quyết định cũ.** T62 ghi «sáu mục là số đã chốt». Nay biểu mẫu có ba PHẦN và bảy mục: sáu mục cũ giữ
+nguyên `id` (lớp phủ T63 không gãy), mục thứ bảy `mat_dung` là phiếu mặt đứng T59 cộng câu phong cách.
+
+### Đợt 1 — đầu bài ba phần (đã làm)
+
+1. `brief-form.json` 2.0.0: khoá `parts` (Chung cho cả nhà · Mặt bằng công năng · Mặt đứng), mỗi mục khai `part`.
+   Chung = Công trình–khu đất, Ưu tiên–ngân sách (lên đứng thứ hai vì thuộc phần Chung). Mặt bằng = Gia đình, Công
+   năng, Khối nhà–thang–lối vào–ban công, Kỹ thuật. Mặt đứng = `style`, `legacy.style_note`, `facade`.
+2. Nhãn `for` từng câu: lời gọi AI nào thấy câu ấy (`plan` / `facade` / `perspective`). Không khai thì theo phần
+   (`BRIEF_PART_TARGETS`). Khai hẹp lại 27 câu phần Chung chỉ mặt bằng dùng (ranh, khoảng lùi, pháp lý…), khai rộng
+   ra 8 câu phần Mặt bằng mà mặt ngoài cũng cần (sân, quan hệ trong–ngoài, cốt nền, bậc tam cấp, kinh doanh tại nhà,
+   nước nóng mặt trời, cục nóng điều hoà, số ô tô cho phối cảnh). Nhãn chỉ có hiệu lực từ Đợt 2.
+3. Hợp đồng đầu bài 1.6.0 thêm `facade` — cùng hình dạng phiếu `ai-facade-brief`, bỏ khoá máy chủ và `style`. Phép thử
+   `brief-facade-part.test.ts` canh hai bản chép khớp từng mục. Đổi qua lại: `facadeBriefFromBrief`,
+   `briefFacadeFromFacadeBrief` (`shared/src/design/facade-brief-part.ts`); mục thiếu là `null`, không điền mặc định.
+4. Điều khiển `facade` của biểu mẫu dùng lại đúng bộ ô của bước Mặt đứng (`FacadeBriefFields`), danh mục vẫn lấy
+   từ Worker. Thanh bước xếp theo phần. Lớp phủ lưu trước T114: vá của câu đã dời mục được dời theo
+   (`relocateFieldPatches`), thứ tự mục áp trong từng phần; màn hình quản trị chỉ đổi chỗ mục trong cùng phần.
+
+**Còn hở sau Đợt 1:** bước Mặt đứng vẫn đọc phiếu `ai_facade_brief` riêng; phần mặt đứng trong đầu bài chưa đi vào
+lời gọi nào (Đợt 2 nối, Đợt 3 bỏ phiếu riêng). Câu cốt nền hỏi hai chỗ, khác mốc đo — Q-61, Haan giữ cả hai (03/10/2026).
+
+### Đợt 2 — lời dẫn chỉ nhận đúng phần cần (đã làm)
+
+1. `brief/slice.ts`: `digestFor(digest, target)` làm trống mọi câu có nhãn `for` không chứa lời gọi đó (mảng → rỗng,
+   còn lại → `null`); `compactDigest` bỏ ô trống cho lời dẫn dạng JSON. Đây là chỗ DUY NHẤT đọc nhãn. Chỉ áp cho chữ
+   GỬI MÔ HÌNH — bộ kiểm đầu bài, bộ xếp, cổng, thước chấm vẫn đọc digest đầy đủ (T65).
+2. Mặt bằng + chương trình: `briefNarrative` tự cắt `plan` — hết «Phong cách mong muốn» và «Về phong cách».
+3. Mặt đứng: `facadeBrief` thay sáu trường nhặt tay bằng mọi câu gắn `facade` (thêm địa phương, kích thước lô, cao độ,
+   mặt nắng gắt, sân, cốt nền, bậc tam cấp, kinh doanh tại nhà, nước nóng mặt trời, cục nóng, mức hoàn thiện, ưu tiên).
+4. Phối cảnh: `perspectiveContext` nhận digest đã cắt `perspective`. Bộ chọn đã gọn sẵn (kích thước lô, hiện trạng
+   bốn phía, hướng, số xe; phần còn lại lấy từ mặt bằng và ý tưởng mặt đứng) — nay nhãn canh nó không đọc được câu
+   ngoài phần của mình.
+5. Nguồn yêu cầu mặt đứng: `facadeBriefOfArtifact` — đầu bài có phần `facade` thì lượt chạy theo đầu bài
+   (`facadeBriefRef` trỏ vào chính artifact đầu bài, kiểm mã danh mục trước khi chạy), chưa có thì lùi về phiếu
+   `ai_facade_brief` cũ.
+6. Khảo sát hiện trạng chỉ đi vào mặt bằng. Câu hỏi tự thêm: tra phần theo nhãn trong cấu hình; không tra ra thì
+   coi như phần Mặt bằng, đúng chỗ chúng tới trước T114.
+7. Lời dẫn 9.6.0 (chữ các khối lời dẫn không đổi, chỉ đổi phần đầu bài chèn vào). Phép thử `brief-slice.test.ts`,
+   đột biến M127 (bỏ lọc nhãn).
+
+**Không cần làm:** mục «không làm cũ mặt bằng khi chỉ sửa phần mặt đứng» của kế hoạch — không có chỗ nào đánh dấu mặt
+bằng cũ theo đầu bài; dấu cũ chỉ có ở mặt đứng so với phương án mặt bằng đang chọn.
+
+**Chưa đo:** bỏ phong cách khỏi lời dẫn mặt bằng có thể đổi chất lượng mặt bằng. Phát lại 204 vòng ghi không đo được
+(phát lại dùng câu trả lời mô hình đã ghi, không gửi lời dẫn mới); đo thật cần lượt gọi trả phí — chờ Haan cho phép.
+
+### Đợt 3 — trang AI Design riêng, phiếu mặt đứng ghi vào đầu bài (đã làm)
+
+**Haan chốt 03/10/2026:** lưu yêu cầu mặt đứng ở bước Mặt đứng = **tự sinh phiên bản đầu bài + tự xác nhận**.
+
+1. Route `tk/ai-design` (danh sách hồ sơ, cùng bảng với Dự án thiết kế, khác đích dòng) và `tk/ai-design/:id`; mục «AI
+   Design» trên thanh phụ Module TK. Trang chi tiết (`web/src/pages/tk/ai-design-page.tsx`) có dải bốn bước: **Đầu bài
+   và khảo sát** · Mặt bằng · Mặt đứng · Phối cảnh. Chưa có đầu bài đã xác nhận thì mở sẵn bước 1. Tab «AI Design» của
+   trang hồ sơ chỉ còn nút «Mở AI Design» — một công cụ, một chỗ chạy.
+2. Ranh giới module ở web: trang nằm ở `tk/` (được nạp hook Module TK), bước đầu bài đưa vào `AiDesignTab` qua vùng
+   chèn `inputs` — `tk/ai/` không biết đầu bài sửa bằng gì. Phép thử `ai-independence.test.ts` thêm hai luật: nhánh AI
+   phía Worker chỉ import trong `workers/src/design/` + tệp dữ liệu (`contracts/ kb/ rules/ config/`) + gói đã khai;
+   `web/src/pages/tk/ai/` chỉ dùng thành phần giao diện chung và hook của chính nó. Đã thử cài một import cấm → đỏ.
+3. `POST /design/ai/facade/brief/:projectId`: chép đầu bài đang hiệu lực sang phiên bản mới, chỉ đổi `style` và
+   `facade`, nguyên nhân «Kỹ sư sửa yêu cầu mặt đứng ở bước Mặt đứng (AI Design).», rồi xác nhận bằng `confirmBrief`
+   (tách khỏi route `/design/brief/confirm`, `brief/confirm.ts` — hai nơi gọi một hàm). Đầu bài đang có bản NHÁP chưa
+   xác nhận thì từ chối (409): xác nhận ở đây sẽ ký nhận luôn sửa đổi dở dang ở phần khác. Nội dung không đổi thì không
+   sinh phiên bản (`sameJson` — so nội dung, vì jsonb tự xếp lại khoá; bản đầu so chuỗi và đẻ phiên bản thừa, bắt được
+   khi chạy thật trên CSDL máy). Phiếu `ai_facade_brief` không còn ghi mới; bản cũ vẫn đọc được.
+4. `GET /design/ai/facade/brief/:projectId` đọc từ đầu bài đã xác nhận trước, phiếu cũ sau.
+
+**Đã chạy thật trên máy** (Vite 5173 + wrangler dev 8788 + Supabase máy): danh sách, trang chi tiết, bước đầu bài với
+thanh ba phần và mục Mặt đứng (danh mục tải từ Worker), nút ở tab hồ sơ; gọi route lưu ba lần — lần đầu tạo phiên bản 2
+đã xác nhận, gửi y hệt trả `unchanged`, đổi độ dốc mái ra phiên bản mới. Hồ sơ demo TRÊN MÁY nay có phiên bản 2–4 do
+phép kiểm này sinh (phiên bản 3 là bản thừa của lỗi đã sửa). Chưa chạy được bước Mặt đứng trên giao diện: hồ sơ máy chưa
+có phương án mặt bằng, dựng một phương án là lượt gọi AI trả phí.
+
+### Đợt 4a — kỹ sư tải bản vẽ lên làm nguồn ảnh (đã làm)
+
+1. Artifact mới `ai_uploaded_drawing` (`contracts/ai-uploaded-drawing.schema.json`, migration 0153): PNG đúng một
+   trong ba khung mô hình ảnh nhận, `drawing` mặt bằng / mặt đứng, tầng, băm, ghi chú (không gửi mô hình),
+   `identity_cleared: const true`. Tên tệp gốc cố ý không lưu (hay mang tên khách).
+2. Tuyến `/design/ai/uploads` (`ai/upload-routes.ts`, phần thuần ở `ai/upload.ts`): tải lên, liệt kê, đọc tệp, vẽ
+   ảnh từ bản, đọc tấm mới nhất. Ảnh vẽ ra dùng LẠI `ai_plan_sheet_image` / `ai_facade_image` với `upload_ref` (hai
+   hợp đồng nới `plan_ref` / `facade_ref` thành có thể rỗng, `anchor.source` thêm `engineer_upload`) và cùng hai bước
+   lineage. Khác bản AI: ảnh neo do máy chủ tự đọc từ kho, nên biết chắc mô hình nhận tấm nào.
+3. Lời dẫn 9.7.0, khối `upload_image`: không kể phòng (không có toạ độ), tên phòng chép đúng bản vẽ hoặc để trống,
+   không chép khung tên / con dấu / tên khách. Mặt bằng lấy phong cách đầu bài; mặt đứng lấy phần Mặt đứng của đầu bài
+   (cùng khối REQUIRED / để AI chọn của lời dẫn ý tưởng mặt đứng).
+4. Trình duyệt chuẩn hoá (`web/src/lib/drawing-upload.ts`): PNG/JPG giải mã thẳng, PDF dựng trang đã chọn bằng
+   `pdfjs-dist` (nạp khi gặp PDF), cắt lề theo phần trăm để bỏ khung tên, chọn khung theo tỷ lệ, thu vừa + đệm trắng,
+   không kéo méo. XEM TRƯỚC đúng tấm sẽ gửi.
+5. Hàng rào dữ liệu hạng 1 (T12) ba lớp: ô xác nhận trên màn hình (nút khoá khi chưa tick), máy chủ từ chối
+   (`checkUploadRequest`, đột biến M128), hợp đồng `const true`. Ô tệp gốc ẩn sau nút tiếng Việt (CLAUDE.md 4.1).
+6. Giao diện `ai-upload-panel.tsx` ở cuối bước Mặt bằng và bước Mặt đứng, không phụ thuộc bản AI; hỏi lại khi vẽ lại
+   bản đã có ảnh; nhãn hai lớp trên ảnh.
+
+**Đã chạy thật trên máy:** chọn ảnh mặt bằng mẫu có khung tên giả ở cạnh phải → xem trước 1536×1024 → cắt phải 18 % →
+khung tự đổi 1024×1024, khung tên mất → tick → tải lên → hiện trong danh sách, ảnh nguồn đọc lại qua tuyến có kiểm
+quyền. **Chưa chạy lượt vẽ ảnh thật** (trả phí, ~0,03 USD/tấm với GPT Image 2) — chờ Haan cho phép.
+
+### Đợt 4b — phối cảnh từ mặt đứng tải lên (đã làm, 04/10/2026)
+
+**Haan chốt:** cách (a), nhưng không bắt kỹ sư khai thêm — «số tầng nhà và chiều sâu nhà đã có trong đề bài rồi, chiều
+cao nhà thì sẽ có trong bản vẽ mặt đứng (ảnh phối cảnh không cần chính xác 100 % về kích thước — chỉ cần tương đối đến
+90 % là được)».
+
+1. `perspectiveContextFromBrief` (`ai/perspective/context.ts`): số tầng theo đầu bài; khối nhà = thửa trừ sân mong muốn
+   (`massing.yard_depth_m`), thiếu thì trừ khoảng lùi, thiếu nữa thì sát ranh; cốt nền theo đầu bài; chiều cao `null`
+   → lời dẫn nói «as tall as the attached front elevation drawing shows». Cửa, ban công: để trống — nằm trên bản vẽ.
+   Ba câu đầu bài thêm nhãn `perspective` cho việc này: sân mong muốn, khoảng lùi, cốt nền.
+2. `facadeLookFromBrief` (`ai/facade/image.ts`): vật liệu, màu, mái, cổng–rào theo phần Mặt đứng của đầu bài; mục chưa
+   chốt nói «as drawn / to suit the style», không bịa.
+3. `perspectivePlanFromUpload`: đủ năm góc; tấm ban ngày neo vào chính bản vẽ tải lên (máy chủ đọc từ kho), bốn góc kia
+   dựng từ tấm ban ngày. Góc nghiêng và góc trên cao KHÔNG còn bị bỏ vì thiếu tờ mái — chiều sâu có trong lời dẫn, và
+   Haan chấp nhận sai số ~10 %. Cận cảnh: ban công nếu đầu bài bắt buộc ban công mặt trước, không thì cổng.
+4. `POST /perspective/runs` nhận `uploadId` (thay `artifactId` + ảnh neo trình duyệt); `/redraw` đọc `upload_ref` của bộ
+   ảnh. Hợp đồng `ai-image-set`: `facade_ref`, `plan_ref` có thể rỗng, thêm `upload_ref`. Tham số lượt chạy
+   `facadeUploadRef`.
+5. Màn hình bước Phối cảnh: chọn nguồn «Ý tưởng mặt đứng của AI / Bản vẽ kỹ sư tải lên» và chọn bản; mặc định ý tưởng AI
+   nếu có (đo được), không thì bản tải lên.
+
+**Đã chạy thật trên máy:** tải ảnh mặt đứng mẫu ở bước Mặt đứng (khung dọc 1024×1536) → bước Phối cảnh tự chọn bản tải
+lên, hiện đúng bản, nút dựng sẵn sàng. **Chưa bấm dựng** (năm lượt gọi ảnh trả phí) — chờ Haan cho phép.

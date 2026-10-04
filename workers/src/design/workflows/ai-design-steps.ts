@@ -121,6 +121,11 @@ export interface AiDesignParams {
    */
   facadeRef?: string | null;
   /**
+   * Mặt đứng KỸ SƯ tải lên (`ai_uploaded_drawing`) mà bộ ảnh phối cảnh dựng theo (T114 Đợt 4b). Có thì
+   * `facadeRef` và `planRef` rỗng: khối nhà lấy từ đầu bài, vật liệu từ phần Mặt đứng của đầu bài.
+   */
+  facadeUploadRef?: string | null;
+  /**
    * Tuyến model VẼ ẢNH. Tách hẳn khỏi `textRoute`: hai giai đoạn trước gọi model chữ, giai đoạn này
    * gọi model ảnh, và trộn chung một trường là mở đường cho một lượt ảnh đi nhầm sang tuyến chữ —
    * lỗi ấy chỉ lộ ra ở phản hồi của nhà cung cấp, tức sau khi đã tính tiền.

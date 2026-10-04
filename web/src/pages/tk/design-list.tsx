@@ -19,7 +19,19 @@ interface DesignRow extends EntityRow {
 }
 
 export function DesignListPage() {
-  const canCreate = useCan('TK', 'create');
+  return <DesignProjectList mode="project" />;
+}
+
+/**
+ * Danh sách hồ sơ để mở trang AI Design (T114). Cùng bảng với danh sách dự án thiết kế — AI Design
+ * chạy trên hồ sơ có sẵn, không lập hồ sơ riêng — chỉ khác đích của từng dòng.
+ */
+export function AiDesignListPage() {
+  return <DesignProjectList mode="ai" />;
+}
+
+function DesignProjectList({ mode }: { mode: 'project' | 'ai' }) {
+  const canCreate = useCan('TK', 'create') && mode === 'project';
   const { data, isLoading, error, refetch } = useDesignProjects();
 
   const rows: DesignRow[] = (data ?? []).map((p) => ({
@@ -48,17 +60,26 @@ export function DesignListPage() {
     <>
       <TkNav />
       <PageHeader
-        title="Dự án thiết kế"
-        breadcrumbs={[{ label: 'Thiết kế' }, { label: 'Dự án thiết kế' }]}
+        title={mode === 'ai' ? 'AI Design' : 'Dự án thiết kế'}
+        breadcrumbs={[
+          { label: 'Thiết kế' },
+          { label: mode === 'ai' ? 'AI Design' : 'Dự án thiết kế' },
+        ]}
         actions={headerAction}
       />
+      {mode === 'ai' && (
+        <p className="mb-4 text-fg-subtle">
+          Chọn một hồ sơ để làm đầu bài, mặt bằng, mặt đứng và phối cảnh bằng AI. Kết quả là bản
+          phác tham khảo cho phòng thiết kế, không đi vào hồ sơ phát hành.
+        </p>
+      )}
 
       <EntityTable<DesignRow>
         rows={rows}
         isLoading={isLoading}
         error={error}
         onRetry={() => void refetch()}
-        detailPath={(row) => `/tk/du-an/${row.id}`}
+        detailPath={(row) => (mode === 'ai' ? `/tk/ai-design/${row.id}` : `/tk/du-an/${row.id}`)}
         searchPlaceholder="Tìm theo tên, mã hoặc người chịu trách nhiệm…"
         emptyMessage={
           canCreate

@@ -13,7 +13,7 @@
  */
 
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import {
   DESIGN_DISCIPLINES,
   DESIGN_STAGE_META,
@@ -46,7 +46,6 @@ import { BriefPanel } from './brief-panel';
 import { ChangeRequestPanel } from './change-request-panel';
 import { DisciplinePanel } from './discipline-panel';
 import { SurveyPanel } from './survey-panel';
-import { AiDesignTab } from './ai/ai-design-tab';
 import { VersionPanel } from './version-panel';
 
 const EM_DASH = '—';
@@ -287,7 +286,19 @@ export function DesignDetailPage() {
             label: 'AI Design',
             subtitle:
               'Mặt bằng từng tầng → mặt đứng → phối cảnh, do AI đề xuất. Kết quả là bản phác tham khảo, không đi vào hồ sơ phát hành.',
-            content: <AiDesignTab projectId={project.id} readOnly={readOnly} />,
+            // T114: AI Design có trang riêng (đầu bài, khảo sát và ba bước AI ở một chỗ). Tab này chỉ
+            // dẫn sang đó — hai nơi chạy cùng một công cụ thì người dùng không biết kết quả nằm đâu.
+            content: (
+              <div className="rounded-lg border border-border bg-surface p-4">
+                <p className="text-fg-subtle">
+                  AI Design có màn hình riêng: đầu bài và khảo sát, mặt bằng, mặt đứng, phối cảnh
+                  nằm cùng một chỗ.
+                </p>
+                <Button asChild variant="primary" className="mt-3">
+                  <Link to={`/tk/ai-design/${project.id}`}>Mở AI Design</Link>
+                </Button>
+              </div>
+            ),
           },
           {
             id: 'ho-so-ky-thuat',

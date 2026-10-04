@@ -10,7 +10,7 @@
  * được; và kích thước lệch với biên bản khảo sát thì hiện CẢ HAI con số.
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithApp } from '@/test/render';
@@ -84,6 +84,15 @@ function brief(over: Record<string, unknown> = {}) {
 }
 
 /**
+ * Nạp sẵn biểu mẫu một lần, ngoài hạn 5 giây của từng bài. Lần nạp đầu kéo cả cây module (đầu bài,
+ * khảo sát, hook dùng chung); khi chạy cả bộ song song, bài ĐẦU TIÊN của tệp từng gánh hết phần ấy
+ * và vượt mốc 5 giây (đo 04/10/2026: 5,19 s) dù logic đúng.
+ */
+beforeAll(async () => {
+  await import('../brief-panel');
+}, 30_000);
+
+/**
  * Mở trình soạn thảo, và đi tới đúng BƯỚC cần kiểm.
  *
  * Biểu mẫu chia bước từ 07/09/2026 nên chỉ một mục hiện ra mỗi lần. Đi qua thanh tiến trình
@@ -145,7 +154,7 @@ describe('Phân nhánh theo loại hình đi từ cấu hình ra DOM', () => {
     expect(screen.queryByText('Số cánh nhà mong muốn')).toBeNull();
     expect(screen.queryByText('Sân nằm ở đâu')).toBeNull();
     // Cùng bước ấy, câu hỏi KHÔNG thuộc nhóm biệt thự vẫn phải còn.
-    await goToStep('Khối nhà, thang và mặt ngoài');
+    await goToStep('Khối nhà, thang, lối vào và ban công');
     expect(screen.getAllByText('Thang máy')).not.toHaveLength(0);
     expect(screen.getAllByText('Ban công làm tới đâu')).not.toHaveLength(0);
   });
@@ -168,7 +177,7 @@ describe('Phân nhánh theo loại hình đi từ cấu hình ra DOM', () => {
     state.surveys = [];
     await openForm();
     await userEvent.click(screen.getByRole('button', { name: 'Biệt thự' }));
-    await goToStep('Khối nhà, thang và mặt ngoài');
+    await goToStep('Khối nhà, thang, lối vào và ban công');
     await userEvent.click(await screen.findByRole('button', { name: 'Hai cánh' }));
 
     // Chọn xong thì nút phải ở trạng thái đã chọn — nếu ghi sai kiểu, phép so sánh ngược lại
@@ -1096,14 +1105,15 @@ describe('Đơn vị và thứ hạng — hai chỗ màn hình nói khác dữ l
 
 describe('Biểu mẫu chia bước', () => {
   /**
-   * SÁU bước cho mọi loại hình (Haan, 21/09/2026: «12 mục là quá dài»).
+   * BẢY bước cho mọi loại hình: sáu mục của 21/09/2026 (Haan: «12 mục là quá dài») cộng mục
+   * Mặt đứng gộp từ phiếu mặt đứng ở T114 (03/10/2026).
    *
    * Phép thử canh hai điều, và cả hai đều là quyết định chứ không phải con số ngẫu nhiên:
    * số bước KHÔNG đổi theo loại hình — đổi từ nhà phố sang biệt thự không được làm thanh tiến
    * trình dài ra, vì thanh ấy là chỗ người dùng ước lượng còn bao xa; và bước «Khối nhà, thang
    * và mặt ngoài» có mặt với CẢ HAI, vì thang với ban công thì nhà phố nào cũng có.
    */
-  it('sáu bước cho cả nhà phố lẫn biệt thự — đổi loại hình không làm dài thêm', async () => {
+  it('bảy bước cho cả nhà phố lẫn biệt thự — đổi loại hình không làm dài thêm', async () => {
     state.briefs = [brief()];
     state.surveys = [];
     await openForm();
@@ -1113,12 +1123,12 @@ describe('Biểu mẫu chia bước', () => {
         .getAllByRole('button')
         .map((b) => b.textContent);
 
-    expect(titles()).toHaveLength(6);
-    expect(titles().join('|')).toContain('Khối nhà, thang và mặt ngoài');
+    expect(titles()).toHaveLength(7);
+    expect(titles().join('|')).toContain('Khối nhà, thang, lối vào và ban công');
 
     await userEvent.click(screen.getByRole('button', { name: 'Biệt thự' }));
-    expect(titles()).toHaveLength(6);
-    expect(titles().join('|')).toContain('Khối nhà, thang và mặt ngoài');
+    expect(titles()).toHaveLength(7);
+    expect(titles().join('|')).toContain('Khối nhà, thang, lối vào và ban công');
   });
 
   it('đổi loại hình KHÔNG đẩy người dùng sang bước khác cái đang xem', async () => {
@@ -1134,14 +1144,14 @@ describe('Biểu mẫu chia bước', () => {
     // được cảnh ấy thì phải có lớp phủ, và đó là việc của bộ kiểm lớp phủ.)
     state.briefs = [brief({ structured: { building_type: 'biet_thu', floors: 2 } })];
     state.surveys = [];
-    await openForm('Khối nhà, thang và mặt ngoài');
+    await openForm('Khối nhà, thang, lối vào và ban công');
 
     await goToStep('Công trình và khu đất');
     await userEvent.click(screen.getByRole('button', { name: 'Nhà phố' }));
     expect(screen.getByRole('heading', { name: /^Công trình/ })).toBeTruthy();
 
     // Bước cũ vẫn còn nguyên, và quay lại được.
-    await goToStep('Khối nhà, thang và mặt ngoài');
+    await goToStep('Khối nhà, thang, lối vào và ban công');
     expect(screen.getByRole('heading', { name: /^Khối nhà/ })).toBeTruthy();
   });
 
@@ -1185,7 +1195,7 @@ describe('Biểu mẫu chia bước', () => {
     await openForm();
 
     await userEvent.click(screen.getByRole('link', { name: /Phong cách kiến trúc/ }));
-    expect(screen.getByRole('heading', { name: /^Khối nhà/ })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /^Phong cách, vật liệu/ })).toBeTruthy();
   });
 
   it('lưu nháp được ở bước giữa, không bắt đi hết mới được lưu', async () => {

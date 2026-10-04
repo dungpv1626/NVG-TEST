@@ -33,10 +33,23 @@ export type AiPlanSheetImageArtifactRef = z.infer<typeof aiPlanSheetImageArtifac
 export const aiPlanSheetImageSchema = z
   .object({
     schema_version: aiPlanSheetImageSemverSchema,
-    /** Mặt bằng mà tờ này vẽ theo. Cũng là cạnh lineage `ai_plan_sheet`. */
-    plan_ref: aiPlanSheetImageArtifactRefSchema.describe(
-      'Mặt bằng mà tờ này vẽ theo. Cũng là cạnh lineage `ai_plan_sheet`.',
-    ),
+    /**
+     * Mặt bằng mà tờ này vẽ theo. Cũng là cạnh lineage `ai_plan_sheet`.
+     *
+     * `null` khi tấm vẽ từ bản KỸ SƯ tải lên (T114 Đợt 4) — khi ấy `upload_ref` mang nguồn. Nới từ bắt buộc thành có thể rỗng: artifact cũ luôn có giá trị nên vẫn đọc được.
+     */
+    plan_ref: aiPlanSheetImageArtifactRefSchema
+      .nullable()
+      .describe(
+        'Mặt bằng mà tờ này vẽ theo. Cũng là cạnh lineage `ai_plan_sheet`.\n\n`null` khi tấm vẽ từ bản KỸ SƯ tải lên (T114 Đợt 4) — khi ấy `upload_ref` mang nguồn. Nới từ bắt buộc thành có thể rỗng: artifact cũ luôn có giá trị nên vẫn đọc được.',
+      ),
+    /** Bản vẽ kỹ sư tải lên (`ai_uploaded_drawing`) mà tấm này vẽ theo — T114 Đợt 4. Đúng MỘT trong hai: `plan_ref` hoặc `upload_ref`. Cũng là cạnh lineage. Không bắt buộc: artifact trước T114 không có khoá này. */
+    upload_ref: aiPlanSheetImageArtifactRefSchema
+      .nullable()
+      .describe(
+        'Bản vẽ kỹ sư tải lên (`ai_uploaded_drawing`) mà tấm này vẽ theo — T114 Đợt 4. Đúng MỘT trong hai: `plan_ref` hoặc `upload_ref`. Cũng là cạnh lineage. Không bắt buộc: artifact trước T114 không có khoá này.',
+      )
+      .optional(),
     /** Số tầng, đúng giá trị `level` trong `ai_floor_plan`. */
     level: z.number().int().gte(1).describe('Số tầng, đúng giá trị `level` trong `ai_floor_plan`.'),
     /** Vị trí tệp ảnh trong kho nhị phân. */
@@ -54,11 +67,11 @@ export const aiPlanSheetImageSchema = z
      */
     anchor: z
       .object({
-        /** Ai rasterise tờ SVG. Hiện chỉ có `client_raster` (trình duyệt). Chừa chỗ cho `worker_raster` nếu sau này máy chủ tự dựng được ảnh. */
+        /** Ai rasterise tờ SVG. Hiện chỉ có `client_raster` (trình duyệt). Chừa chỗ cho `worker_raster` nếu sau này máy chủ tự dựng được ảnh. `engineer_upload` = ảnh neo chính là bản vẽ kỹ sư tải lên (T114 Đợt 4). */
         source: z
-          .enum(['client_raster'])
+          .enum(['client_raster', 'engineer_upload'])
           .describe(
-            'Ai rasterise tờ SVG. Hiện chỉ có `client_raster` (trình duyệt). Chừa chỗ cho `worker_raster` nếu sau này máy chủ tự dựng được ảnh.',
+            'Ai rasterise tờ SVG. Hiện chỉ có `client_raster` (trình duyệt). Chừa chỗ cho `worker_raster` nếu sau này máy chủ tự dựng được ảnh. `engineer_upload` = ảnh neo chính là bản vẽ kỹ sư tải lên (T114 Đợt 4).',
           ),
         sha256: z.string().regex(/^[0-9a-f]{64}$/),
         bytes: z.number().int().gte(1),

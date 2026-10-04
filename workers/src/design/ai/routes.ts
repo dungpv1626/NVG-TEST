@@ -39,6 +39,7 @@ import { recordAiCall, usageSummary, withAiCall, type AiCallUsage } from './call
 import { createArtifactStore } from '../artifact-store';
 import { planAnchor, planSheet } from './draw';
 import { facadeApp } from './facade-routes';
+import { uploadApp } from './upload-routes';
 import { perspectiveApp } from './perspective-routes';
 import { planDxf } from './dxf';
 import {
@@ -94,6 +95,7 @@ export const aiApp = new Hono<{ Bindings: DesignEnv }>();
 // Bước «2. Mặt đứng» (T59) và «3. Phối cảnh» (T67) — tuyến ở tệp riêng.
 aiApp.route('/facade', facadeApp);
 aiApp.route('/perspective', perspectiveApp);
+aiApp.route('/uploads', uploadApp);
 
 /** Bộ môn duy nhất nhánh AI sinh ra ở giai đoạn 1 — kiến trúc. */
 const DISCIPLINE = 'kien_truc' as const;

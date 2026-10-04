@@ -15,6 +15,42 @@ export const designBriefBuildingTypeSchema = z.enum(['nha_pho', 'biet_thu', 'nha
 
 export type DesignBriefBuildingType = z.infer<typeof designBriefBuildingTypeSchema>;
 
+export const designBriefFacadeCodeOrNullSchema = z
+  .string()
+  .max(40)
+  .regex(/^[a-z0-9_]+$/)
+  .nullable();
+
+export type DesignBriefFacadeCodeOrNull = z.infer<typeof designBriefFacadeCodeOrNullSchema>;
+
+export const designBriefFacadeFinishSchema = z
+  .object({
+    material: designBriefFacadeCodeOrNullSchema,
+    colour: designBriefFacadeCodeOrNullSchema,
+  })
+  .strict();
+
+export type DesignBriefFacadeFinish = z.infer<typeof designBriefFacadeFinishSchema>;
+
+export const designBriefFacadeDoorSchema = z
+  .object({
+    material: designBriefFacadeCodeOrNullSchema,
+    colour: designBriefFacadeCodeOrNullSchema,
+    /** Kiểu mở, mã trong nhóm `door_types`. */
+    type: designBriefFacadeCodeOrNullSchema.describe('Kiểu mở, mã trong nhóm `door_types`.'),
+    /** Chiều cao lọt lòng. Bề rộng lấy từ mặt bằng. */
+    h_cm: z
+      .number()
+      .int()
+      .gte(150)
+      .lte(600)
+      .nullable()
+      .describe('Chiều cao lọt lòng. Bề rộng lấy từ mặt bằng.'),
+  })
+  .strict();
+
+export type DesignBriefFacadeDoor = z.infer<typeof designBriefFacadeDoorSchema>;
+
 /** Đầu bài thiết kế — output Layer 1. Nguồn: doc/design/03-data-contracts.md mục 3.1. */
 export const designBriefSchema = z
   .object({
@@ -1282,6 +1318,200 @@ export const designBriefSchema = z
       .nullable()
       .describe(
         'Mức hoàn thiện mong muốn. Đi cùng `budget_range_vnd`: cùng một khoảng tiền, mức hoàn thiện cao hơn nghĩa là diện tích phải nhỏ lại — bộ soát mâu thuẫn đối chiếu hai ô này với nhau.',
+      )
+      .optional(),
+    /**
+     * Phần MẶT ĐỨNG của đầu bài (T114, 03/10/2026 — Haan: «gộp toàn bộ khảo sát của thiết kế mặt đứng vào khảo sát đầu bài»). Cùng hình dạng với phiếu `ai-facade-brief` cũ, bỏ ba khoá máy chủ (`schema_version`, `saved_at`, `plan_ref`) và `style` (đầu bài đã có `style` ở cấp trên — một câu hỏi, một chỗ ghi).
+     *
+     * Mục có giá trị là yêu cầu BẮT BUỘC, mục `null` / thiếu là «để AI đề xuất». Mọi khoá đều KHÔNG bắt buộc: đầu bài lưu dần từng mục, và đầu bài cũ không có phần này.
+     *
+     * Phép thử `brief-facade-part.test.ts` canh các mục ở đây trùng với `ai-facade-brief.schema.json`.
+     */
+    facade: z
+      .object({
+        /** Cốt sàn tầng 1 cao hơn vỉa hè bao nhiêu. Rỗng thì lấy mặc định của kb/construction_norms.yaml. */
+        ground_raise_cm: z
+          .number()
+          .int()
+          .gte(0)
+          .lte(300)
+          .nullable()
+          .describe(
+            'Cốt sàn tầng 1 cao hơn vỉa hè bao nhiêu. Rỗng thì lấy mặc định của kb/construction_norms.yaml.',
+          )
+          .optional(),
+        roof: z
+          .object({
+            type: z
+              .union([
+                z.literal('flat'),
+                z.literal('hip'),
+                z.literal('gable'),
+                z.literal('thai'),
+                z.literal('japanese'),
+                z.literal('mansard'),
+                z.literal('mixed'),
+                z.literal(null),
+              ])
+              .nullable(),
+            material: designBriefFacadeCodeOrNullSchema,
+            colour: designBriefFacadeCodeOrNullSchema,
+            pitch_deg: z.number().int().gte(0).lte(60).nullable(),
+            parapet_cm: z.number().int().gte(0).lte(300).nullable(),
+          })
+          .strict()
+          .optional(),
+        /** Ba màu chủ đạo, mã trong nhóm `colours` của danh mục. */
+        palette: z
+          .object({
+            primary: designBriefFacadeCodeOrNullSchema,
+            secondary: designBriefFacadeCodeOrNullSchema,
+            accent: designBriefFacadeCodeOrNullSchema,
+          })
+          .strict()
+          .describe('Ba màu chủ đạo, mã trong nhóm `colours` của danh mục.')
+          .optional(),
+        /** Vật liệu + màu từng vùng mặt tiền: thân nhà, phần đế, mảng nhấn, chỉ/phào/khung. */
+        surfaces: z
+          .object({
+            body: designBriefFacadeFinishSchema,
+            base: designBriefFacadeFinishSchema,
+            accent: designBriefFacadeFinishSchema,
+            trim: designBriefFacadeFinishSchema,
+          })
+          .strict()
+          .describe(
+            'Vật liệu + màu từng vùng mặt tiền: thân nhà, phần đế, mảng nhấn, chỉ/phào/khung.',
+          )
+          .optional(),
+        main_door: designBriefFacadeDoorSchema.optional(),
+        side_door: designBriefFacadeDoorSchema.optional(),
+        window: z
+          .object({
+            material: designBriefFacadeCodeOrNullSchema,
+            colour: designBriefFacadeCodeOrNullSchema,
+            glass: designBriefFacadeCodeOrNullSchema,
+          })
+          .strict()
+          .optional(),
+        garage_door: z
+          .object({
+            type: designBriefFacadeCodeOrNullSchema,
+            material: designBriefFacadeCodeOrNullSchema,
+            colour: designBriefFacadeCodeOrNullSchema,
+          })
+          .strict()
+          .optional(),
+        /**
+         * Lan can ban công. Chỉ hỏi khi phương án mặt bằng có ban công ra mặt trước.
+         *
+         * `material` và `h_cm` thêm ngày 20/09/2026 (Haan: «thêm 1 mục khảo sát cho lan can: vật liệu, chiều cao»). CỐ Ý KHÔNG bắt buộc: phiếu lưu trước ngày ấy không có hai khoá này, mà artifact là BẤT BIẾN — thêm một mục bắt buộc vào hợp đồng đã dùng là biến những thứ đã ghi thành không đọc nổi (đã xảy ra với `saved_at`).
+         */
+        balcony: z
+          .object({
+            /** Kiểu lan can, mã trong nhóm `railings`. */
+            railing: designBriefFacadeCodeOrNullSchema.describe(
+              'Kiểu lan can, mã trong nhóm `railings`.',
+            ),
+            colour: designBriefFacadeCodeOrNullSchema,
+            /** Vật liệu lan can, mã trong nhóm `materials`. */
+            material: designBriefFacadeCodeOrNullSchema
+              .describe('Vật liệu lan can, mã trong nhóm `materials`.')
+              .optional(),
+            /**
+             * Chiều cao lan can tính từ mặt sàn ban công, cm. Rỗng thì chương trình dùng `kb/construction_norms.yaml` mục `outdoor.railing_h_m`.
+             *
+             * Số này KHÔNG đi qua mô hình: bộ vẽ đặt nó, và thước chấm đo đúng nó (tiêu chí R1, `do_ai: false`). Khoảng 60–160 là giới hạn DỰNG ĐƯỢC, không phải quy chuẩn — hồ sơ NVG đo được 80–90.
+             */
+            h_cm: z
+              .number()
+              .int()
+              .gte(60)
+              .lte(160)
+              .nullable()
+              .describe(
+                'Chiều cao lan can tính từ mặt sàn ban công, cm. Rỗng thì chương trình dùng `kb/construction_norms.yaml` mục `outdoor.railing_h_m`.\n\nSố này KHÔNG đi qua mô hình: bộ vẽ đặt nó, và thước chấm đo đúng nó (tiêu chí R1, `do_ai: false`). Khoảng 60–160 là giới hạn DỰNG ĐƯỢC, không phải quy chuẩn — hồ sơ NVG đo được 80–90.',
+              )
+              .optional(),
+          })
+          .strict()
+          .describe(
+            'Lan can ban công. Chỉ hỏi khi phương án mặt bằng có ban công ra mặt trước.\n\n`material` và `h_cm` thêm ngày 20/09/2026 (Haan: «thêm 1 mục khảo sát cho lan can: vật liệu, chiều cao»). CỐ Ý KHÔNG bắt buộc: phiếu lưu trước ngày ấy không có hai khoá này, mà artifact là BẤT BIẾN — thêm một mục bắt buộc vào hợp đồng đã dùng là biến những thứ đã ghi thành không đọc nổi (đã xảy ra với `saved_at`).',
+          )
+          .optional(),
+        /** Chỉ có nghĩa khi nhà có sân trước. */
+        gate: z
+          .object({
+            /** true = có cổng, false = không làm cổng, null = để AI đề xuất. */
+            wanted: z
+              .boolean()
+              .nullable()
+              .describe('true = có cổng, false = không làm cổng, null = để AI đề xuất.'),
+            type: z
+              .union([
+                z.literal('swing'),
+                z.literal('sliding'),
+                z.literal('folding'),
+                z.literal(null),
+              ])
+              .nullable(),
+            material: designBriefFacadeCodeOrNullSchema,
+            colour: designBriefFacadeCodeOrNullSchema,
+            h_cm: z.number().int().gte(0).lte(1000).nullable(),
+          })
+          .strict()
+          .describe('Chỉ có nghĩa khi nhà có sân trước.')
+          .optional(),
+        fence: z
+          .object({
+            type: designBriefFacadeCodeOrNullSchema,
+            material: designBriefFacadeCodeOrNullSchema,
+            colour: designBriefFacadeCodeOrNullSchema,
+            h_cm: z.number().int().gte(0).lte(1000).nullable(),
+          })
+          .strict()
+          .optional(),
+        /**
+         * Chi tiết trang trí kỹ sư muốn có trên mặt tiền. Rỗng = để AI đề xuất.
+         *
+         * Trần bằng ĐÚNG số mã trong danh sách — tick hết mọi ô vẫn phải lưu được. Trần cũ là 6, đặt khi danh mục còn 9 mã: kỹ sư tick 7 ô thì phiếu bị từ chối bằng một câu chung chung, không nói ô nào (xảy ra thật 20/09/2026). Một phép thử canh hai con số này đi cùng `kb/facade_vocabulary.yaml`.
+         */
+        decorations: z
+          .array(
+            z.enum([
+              'canopy',
+              'column',
+              'cladding',
+              'louvre',
+              'planter',
+              'cornice',
+              'eaves_band',
+              'finial',
+              'reveal',
+              'arch',
+              'oculus',
+              'porch_roof',
+            ]),
+          )
+          .max(12)
+          .describe(
+            'Chi tiết trang trí kỹ sư muốn có trên mặt tiền. Rỗng = để AI đề xuất.\n\nTrần bằng ĐÚNG số mã trong danh sách — tick hết mọi ô vẫn phải lưu được. Trần cũ là 6, đặt khi danh mục còn 9 mã: kỹ sư tick 7 ô thì phiếu bị từ chối bằng một câu chung chung, không nói ô nào (xảy ra thật 20/09/2026). Một phép thử canh hai con số này đi cùng `kb/facade_vocabulary.yaml`.',
+          )
+          .optional(),
+        /** Ghi chú tự do về mặt đứng — gửi cho mô hình, nên màn hình nhắc không ghi danh tính khách. */
+        notes: z
+          .string()
+          .max(1000)
+          .nullable()
+          .describe(
+            'Ghi chú tự do về mặt đứng — gửi cho mô hình, nên màn hình nhắc không ghi danh tính khách.',
+          )
+          .optional(),
+      })
+      .strict()
+      .nullable()
+      .describe(
+        'Phần MẶT ĐỨNG của đầu bài (T114, 03/10/2026 — Haan: «gộp toàn bộ khảo sát của thiết kế mặt đứng vào khảo sát đầu bài»). Cùng hình dạng với phiếu `ai-facade-brief` cũ, bỏ ba khoá máy chủ (`schema_version`, `saved_at`, `plan_ref`) và `style` (đầu bài đã có `style` ở cấp trên — một câu hỏi, một chỗ ghi).\n\nMục có giá trị là yêu cầu BẮT BUỘC, mục `null` / thiếu là «để AI đề xuất». Mọi khoá đều KHÔNG bắt buộc: đầu bài lưu dần từng mục, và đầu bài cũ không có phần này.\n\nPhép thử `brief-facade-part.test.ts` canh các mục ở đây trùng với `ai-facade-brief.schema.json`.',
       )
       .optional(),
     /**

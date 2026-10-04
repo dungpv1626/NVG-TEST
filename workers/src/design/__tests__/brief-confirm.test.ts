@@ -57,6 +57,14 @@ describe('Dựng payload artifact đầu bài', () => {
     expect(payload.schema_version).toBe(BRIEF_SCHEMA_VERSION);
   });
 
+  it('giữ phần mặt đứng của đầu bài (T114) — không lặng lẽ rơi lúc đúc artifact', () => {
+    const facade = {
+      roof: { type: 'hip' as const, material: null, colour: null, pitch_deg: 30, parapet_cm: null },
+    };
+    const { payload } = build({ ...full, facade });
+    expect(payload.facade).toEqual(facade);
+  });
+
   it('BỎ HẲN điểm do máy khách gửi lên', () => {
     const { payload, completenessScore } = build({ ...full, completeness_score: 0.99 });
     const honest = scoreBrief(full, BRIEF_FORM);

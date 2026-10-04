@@ -220,3 +220,56 @@ describe('Bộ giải nội bộ đã gỡ (T58)', () => {
     expect(offenders).toEqual([]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// AI Design là một module (T114) — chỉ chạm phần còn lại của hệ thống qua cửa đã khai
+// ---------------------------------------------------------------------------
+
+/**
+ * Haan, 03/10/2026: «AI Design làm độc lập, có tính module». Phía Worker, mọi chỗ chạm ERP (hồ sơ,
+ * pháp nhân, khách hàng) đi qua `auth-scope.ts` — nằm trong `workers/src/design/`, nên chỉ cần canh
+ * nhánh AI không với ra ngoài thư mục ấy. Phía web, phần AI không nạp hook của Module TK: đầu bài và
+ * khảo sát được trang `tk/ai-design-page.tsx` đưa vào qua vùng chèn.
+ *
+ * Thêm một đích mới vào hai danh sách dưới là một quyết định về ranh giới module — ghi lý do.
+ */
+describe('AI Design là module, chỉ chạm hệ thống qua cửa đã khai', () => {
+  const posix = (p: string) => p.replace(/\\/g, '/');
+  const resolveFrom = (file: string, target: string) =>
+    posix(join(file, '..', target)).replace(/^\.\//, '');
+
+  it('Worker: nhánh AI chỉ import trong `workers/src/design/`, tệp dữ liệu và gói đã khai', () => {
+    // Tệp dữ liệu ở gốc kho: hợp đồng, tri thức vẽ, gói quy tắc, cấu hình mô hình.
+    const DATA_DIRS = ['contracts/', 'kb/', 'rules/', 'config/'];
+    const PACKAGES = /^(?:@nvg\/shared(?:\/.*)?|hono(?:\/.*)?|zod|js-yaml|@supabase\/supabase-js)$/;
+    const offenders: string[] = [];
+    for (const file of sourcesUnder('workers/src/design/ai')) {
+      if (file.includes('/__tests__/')) continue;
+      for (const target of importsOf(file)) {
+        if (!target.startsWith('.')) {
+          if (!PACKAGES.test(target)) offenders.push(`${file} → ${target}`);
+          continue;
+        }
+        const resolved = resolveFrom(file, target);
+        const ok =
+          resolved.startsWith('workers/src/design/') ||
+          DATA_DIRS.some((dir) => resolved.startsWith(dir));
+        if (!ok) offenders.push(`${file} → ${target}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('Web: phần AI chỉ dùng thành phần giao diện chung và hook của chính nó', () => {
+    const ALLOWED =
+      /^(?:\.\/|\.\.\/tk-ui$|@\/components\/ui\/|@\/hooks\/use-ai-design$|@\/hooks\/use-error-message$|@\/hooks\/use-unsaved-changes-guard$|@\/lib\/|@nvg\/shared(?:\/.*)?$|react$|lucide-react$)/;
+    const offenders: string[] = [];
+    for (const file of sourcesUnder('web/src/pages/tk/ai')) {
+      if (file.includes('/__tests__/')) continue;
+      for (const target of importsOf(file)) {
+        if (!ALLOWED.test(target)) offenders.push(`${file} → ${target}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});
