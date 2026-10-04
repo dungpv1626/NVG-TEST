@@ -21,6 +21,7 @@ export * from './brief-form-overlay';
 export * from './brief-completeness';
 export * from './bedroom-sync';
 export * from './balcony-brief';
+export * from './facade-brief-part';
 export * from './site-geometry';
 export * from './site-boundary-from-edges';
 export * from './site-boundary-from-coordinates';
@@ -80,6 +81,10 @@ export const ARTIFACT_KINDS = [
   // không đo được. Loại này từng ra đời ở T21 rồi bị T22 xoá vì khi ấy KHÔNG có ảnh neo, tức
   // mô hình vẽ một ngôi nhà khác; nay ảnh neo là bắt buộc trong hợp đồng.
   'ai_plan_sheet_image',
+  // Bản vẽ KỸ SƯ tải lên (ảnh mặt bằng một tầng hoặc mặt đứng) làm nguồn cho mô hình ảnh (T114 Đợt 4).
+  // Do người tạo, không có cạnh lineage đi vào; ảnh vẽ từ nó nối cạnh `ai_plan_sheet` /
+  // `ai_facade_image_draw` như khi vẽ từ bản AI.
+  'ai_uploaded_drawing',
   // Mặt bằng theo phương án CŨ (T14): mô hình tự viết chuỗi SVG. Không sinh mới nữa — giữ ở
   // đây để artifact đã đúc còn đọc được, vì artifact là bất biến.
   'ai_plan_proposal',

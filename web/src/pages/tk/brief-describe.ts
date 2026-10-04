@@ -20,9 +20,11 @@ import {
   bedroomOwnerLabels,
   bedroomTypeFor,
   bedroomsFor,
+  countFacadeAnswers,
   displayNumber,
   isBedroomType,
   siteGeometry,
+  type BriefFacade,
   type BriefFormField,
   type FamilyRole,
   type FloorPref,
@@ -113,6 +115,12 @@ export function describeField(
     const found = field.options?.find((option) => String(option.value) === String(raw));
     return found ? found.label : String(raw);
   };
+
+  if (field.control === 'facade') {
+    // Phiếu mặt đứng là mã danh mục (Worker giữ nhãn) — không đổ mã ra màn hình chỉ xem.
+    const n = countFacadeAnswers(value as BriefFacade);
+    return n ? `Đã chốt ${formatNumber(n)} mục, còn lại để AI đề xuất` : null;
+  }
 
   if (field.control === 'money_range') {
     const [low, high] = value as (number | null)[];

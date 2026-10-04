@@ -144,11 +144,77 @@ describe('Ghép lớp phủ', () => {
     ).toThrow(/mã «nha_go»/);
   });
 
-  it('đổi được thứ tự mục', () => {
+  it('đổi được thứ tự mục TRONG một phần, không kéo mục sang phần khác', () => {
     const ids = BRIEF_FORM.sections.map((s) => s.id);
     const reversed = [...ids].reverse();
     const merged = applyBriefFormOverlay(BRIEF_FORM, { version: 1, section_order: reversed });
-    expect(merged.sections.map((s) => s.id)).toEqual(reversed);
+    // Mỗi phần giữ chỗ của nó; trong phần thì theo thứ tự quản trị viên kéo.
+    const expected = BRIEF_FORM.parts.flatMap((part) =>
+      reversed.filter((id) => BRIEF_FORM.sections.find((s) => s.id === id)!.part === part.id),
+    );
+    expect(merged.sections.map((s) => s.id)).toEqual(expected);
+  });
+});
+
+describe('Lớp phủ lưu trước T114 (đầu bài ba phần)', () => {
+  it('vá cho câu đã dời sang mục khác vẫn ăn — không làm rơi cả lớp phủ', () => {
+    // Trước T114 `style` nằm trong `khoi_nha`; lớp phủ cũ vá nhãn của nó dưới mục ấy.
+    const merged = applyBriefFormOverlay(BRIEF_FORM, {
+      version: 1,
+      section_order: [
+        'cong_trinh_khu_dat',
+        'gia_dinh',
+        'cong_nang',
+        'khoi_nha',
+        'ky_thuat',
+        'uu_tien',
+      ],
+      sections: [
+        {
+          id: 'khoi_nha',
+          title: 'Hình khối',
+          fields: [
+            { path: 'style', label: 'Phong cách mong muốn' },
+            { path: 'vertical.elevator', label: 'Thang máy gia đình' },
+          ],
+        },
+      ],
+    });
+    const field = (path: string) =>
+      merged.sections
+        .flatMap((s) => s.fields.map((f) => ({ s, f })))
+        .find((x) => x.f.path === path)!;
+    expect(field('style').s.id).toBe('mat_dung');
+    expect(field('style').f.label).toBe('Phong cách mong muốn');
+    expect(field('vertical.elevator').f.label).toBe('Thang máy gia đình');
+    expect(merged.sections.find((s) => s.id === 'khoi_nha')!.title).toBe('Hình khối');
+  });
+
+  it('mục tự tạo không khai phần thì về phần Mặt bằng; khai thì đứng đúng phần', () => {
+    const custom = (id: string, part?: 'chung' | 'mat_dung') => ({
+      id,
+      custom: true,
+      ...(part ? { part } : {}),
+      title: id,
+      fields: [{ path: `custom.${id}`, label: id, custom: { control: 'text' as const } }],
+    });
+    const merged = applyBriefFormOverlay(BRIEF_FORM, {
+      version: 1,
+      sections: [custom('muc_a'), custom('muc_b', 'mat_dung'), custom('muc_c', 'chung')],
+    });
+    const partOf = (id: string) => merged.sections.find((s) => s.id === id)!.part;
+    expect(partOf('muc_a')).toBe('mat_bang');
+    expect(partOf('muc_b')).toBe('mat_dung');
+    expect(partOf('muc_c')).toBe('chung');
+    // Và cấu hình vẫn qua lược đồ: mục cùng phần đứng liền nhau.
+    const parts = merged.sections.map((s) => s.part);
+    expect(parts).toEqual(
+      [...parts].sort(
+        (a, b) =>
+          ['chung', 'mat_bang', 'mat_dung'].indexOf(a) -
+          ['chung', 'mat_bang', 'mat_dung'].indexOf(b),
+      ),
+    );
   });
 });
 

@@ -7,11 +7,38 @@
  * được toạ độ (chi tiết trang trí, có cổng) mới phải trông vào mô hình — `check.ts` canh chúng.
  */
 
-import type { AiFacadeBrief } from '@nvg/shared/design';
+import {
+  emptyFacadeBrief,
+  FACADE_BRIEF_SCHEMA_VERSION,
+  facadeBriefFromBrief,
+  type AiFacadeBrief,
+  type DesignBrief,
+} from '@nvg/shared/design';
 import type { FacadeVocabulary, VocabEntry } from '../../kb/facade-vocabulary';
 import { scrubIdentity } from '../../brief/anonymise';
 
-export const FACADE_BRIEF_SCHEMA_VERSION = '1.0.0';
+// Phiếu trống và phiên bản hợp đồng nay ở `@nvg/shared/design` (T114) — biểu mẫu đầu bài cũng dựng phiếu.
+export { emptyFacadeBrief, FACADE_BRIEF_SCHEMA_VERSION };
+
+/** Nguyên nhân ghi vào phiên bản đầu bài mà bước Mặt đứng tự sinh (T114). */
+export const FACADE_EDIT_REASON = 'Kỹ sư sửa yêu cầu mặt đứng ở bước Mặt đứng (AI Design).';
+
+/**
+ * Yêu cầu mặt đứng mà một artifact mang (T114) — đầu bài đã xác nhận có phần `facade`, hoặc phiếu
+ * `ai_facade_brief` riêng của hồ sơ trước T114. Mọi chỗ đọc phiếu đi qua đây, để không chỗ nào
+ * quên một trong hai nguồn. `null` = artifact không mang yêu cầu mặt đứng nào.
+ */
+export function facadeBriefOfArtifact(
+  artifact: { kind: string; payload: unknown } | null | undefined,
+): AiFacadeBrief | null {
+  if (!artifact) return null;
+  if (artifact.kind === 'ai_facade_brief') return artifact.payload as AiFacadeBrief;
+  if (artifact.kind === 'design_brief') {
+    const brief = artifact.payload as DesignBrief;
+    return brief.facade ? facadeBriefFromBrief(brief.facade, brief.style) : null;
+  }
+  return null;
+}
 
 /**
  * Tên tiếng Việt của từng mục trong phiếu — để câu lỗi nói ĐƯỢC mục nào hỏng.
@@ -68,31 +95,6 @@ export function facadeBriefIssueText(issue: {
     default:
       return `${label}${sub}: giá trị không hợp lệ.`;
   }
-}
-
-/** Phiếu trống — mọi mục «để AI đề xuất». */
-export function emptyFacadeBrief(savedAt = new Date(0).toISOString()): AiFacadeBrief {
-  const finish = () => ({ material: null, colour: null });
-  const door = () => ({ material: null, colour: null, type: null, h_cm: null });
-  return {
-    saved_at: savedAt,
-    schema_version: FACADE_BRIEF_SCHEMA_VERSION,
-    plan_ref: null,
-    style: null,
-    ground_raise_cm: null,
-    roof: { type: null, material: null, colour: null, pitch_deg: null, parapet_cm: null },
-    palette: { primary: null, secondary: null, accent: null },
-    surfaces: { body: finish(), base: finish(), accent: finish(), trim: finish() },
-    main_door: door(),
-    side_door: door(),
-    window: { material: null, colour: null, glass: null },
-    garage_door: { type: null, material: null, colour: null },
-    balcony: { railing: null, colour: null, material: null, h_cm: null },
-    gate: { wanted: null, type: null, material: null, colour: null, h_cm: null },
-    fence: { type: null, material: null, colour: null, h_cm: null },
-    decorations: [],
-    notes: null,
-  };
 }
 
 /**
@@ -254,4 +256,20 @@ export function facadeRequirementsText(
     out.push(`Architect's notes (Vietnamese, treat as requirements): ${notes}`);
   }
   return out.join('\n');
+}
+
+/** Hai giá trị JSON bằng nhau về nội dung — thứ tự khoá của đối tượng không tính. */
+export function sameJson(a: unknown, b: unknown): boolean {
+  const canonical = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(canonical);
+    if (value && typeof value === 'object') {
+      return Object.fromEntries(
+        Object.keys(value as Record<string, unknown>)
+          .sort()
+          .map((key) => [key, canonical((value as Record<string, unknown>)[key])]),
+      );
+    }
+    return value;
+  };
+  return JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
 }

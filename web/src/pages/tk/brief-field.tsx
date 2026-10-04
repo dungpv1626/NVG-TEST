@@ -26,12 +26,15 @@ import {
   bedroomOwnerLabels,
   bedroomTypeFor,
   bedroomsFor,
+  briefFacadeFromFacadeBrief,
   displayNumber,
+  facadeBriefFromBrief,
   isBedroomType,
   memberWantsEnsuite,
   siteGeometry,
   storedNumber,
   type BriefAreaBudget,
+  type BriefFacade,
   type BriefFormField,
 } from '@nvg/shared/design';
 import { Button } from '@/components/ui/button';
@@ -41,6 +44,10 @@ import { Input } from '@/components/ui/input';
 import { MoneyInput } from '@/components/ui/money-input';
 import { cn } from '@/lib/utils';
 import { SiteImageUpload } from './site-image-upload';
+import { FacadeBriefFields } from './ai/ai-facade-brief-form';
+import { useFacadeVocabulary } from '@/hooks/use-ai-design';
+import { toUserMessage } from '@/hooks/use-error-message';
+import { Skeleton } from '@/components/ui/states';
 import type { SiteBoundaryExtractionResult } from '@/hooks/use-site-boundary-extraction';
 
 // Nhãn lấy TỪ `@nvg/shared/design`, không khai lại ở đây: cùng bộ nhãn còn được dùng ở chế
@@ -65,6 +72,7 @@ const GROUP_CONTROLS = new Set([
   'family',
   'money_range',
   'polygon',
+  'facade',
 ]);
 
 /**
@@ -829,6 +837,9 @@ function BriefControl({
       );
     }
 
+    case 'facade':
+      return <FacadeControl value={value as BriefFacade | null | undefined} onChange={onChange} />;
+
     case 'polygon':
       return (
         <PolygonControl
@@ -1292,6 +1303,41 @@ function AreaBudgetLine({ budget }: { budget: BriefAreaBudget }) {
       <p className="text-xs">
         Phần còn lại dành cho thang, hành lang, tường và các không gian thiết kế tự thêm.
       </p>
+    </div>
+  );
+}
+
+/**
+ * Phần yêu cầu mặt đứng của đầu bài (T114) — cùng bộ ô với bước Mặt đứng của AI Design.
+ *
+ * Danh sách chọn là danh mục `kb/facade_vocabulary.yaml` do Worker phát; tải hỏng thì nói ra,
+ * không vẽ một phiếu rỗng trông như đã tải xong. Ô phong cách bỏ đi vì đầu bài có câu riêng.
+ */
+function FacadeControl({
+  value,
+  onChange,
+}: {
+  value: BriefFacade | null | undefined;
+  onChange: (value: unknown) => void;
+}) {
+  const vocab = useFacadeVocabulary();
+  if (vocab.isLoading) return <Skeleton className="h-40 w-full" />;
+  if (vocab.error || !vocab.data) {
+    return (
+      <p className="text-status-overdue">
+        Không tải được danh mục vật liệu và màu mặt đứng. {toUserMessage(vocab.error)}
+      </p>
+    );
+  }
+  return (
+    <div className="space-y-2">
+      <FacadeBriefFields
+        draft={facadeBriefFromBrief(value ?? undefined, null)}
+        onChange={(next) => onChange(briefFacadeFromFacadeBrief(next))}
+        vocab={vocab.data}
+        plan={null}
+        withStyle={false}
+      />
     </div>
   );
 }

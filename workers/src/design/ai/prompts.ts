@@ -80,6 +80,14 @@ export interface AiPrompts {
     watermark: string;
   };
   /**
+   * Ảnh vẽ từ bản vẽ KỸ SƯ tải lên (T114 Đợt 4). `plan.user` có `{level_name}`, `{style}`;
+   * `facade.user` có `{style}`, `{requirements}`. Câu nhãn cảnh báo dùng chung với hai khối ảnh trên.
+   */
+  uploadImage: {
+    plan: { system: string; user: string };
+    facade: { system: string; user: string };
+  };
+  /**
    * Bộ ảnh phối cảnh (T67). `user` có mười ba chỗ điền `PERSPECTIVE_SLOTS`; `views` phải đủ BẢY góc
    * của hợp đồng `ai-image-set` — thiếu một góc chỉ lộ ra khi lượt chạy tới đúng góc ấy, tức sau khi
    * đã trả tiền cho những góc trước nó.
@@ -310,6 +318,7 @@ export function parseAiPrompts(raw: unknown): AiPrompts {
       retryHabits: facade.retry_habits as string,
     },
     facadeImage: parseFacadeImage((doc as { facade_image?: unknown }).facade_image),
+    uploadImage: parseUploadImage((doc as { upload_image?: unknown }).upload_image),
     perspective: parsePerspective((doc as { perspective?: unknown }).perspective),
   };
 }
@@ -527,6 +536,32 @@ function parseSheetImage(raw: unknown): AiPrompts['sheetImage'] {
     styles: styles as Record<string, string>,
     watermark: block.watermark,
   };
+}
+
+/** Chỗ điền bắt buộc của khối `upload_image` — kiểm lúc NẠP, cùng lý do với hai khối ảnh kia. */
+const UPLOAD_IMAGE_SLOTS = {
+  plan: ['{level_name}', '{style}'],
+  facade: ['{style}', '{requirements}'],
+} as const;
+
+function parseUploadImage(raw: unknown): AiPrompts['uploadImage'] {
+  const block = raw as Record<string, unknown> | undefined;
+  const part = (key: 'plan' | 'facade') => {
+    const sub = block?.[key] as Record<string, unknown> | undefined;
+    if (!sub || typeof sub.system !== 'string' || typeof sub.user !== 'string') {
+      throw new AiPromptsError(
+        `kb/ai_design_prompts.yaml thiếu \`upload_image.${key}.system\` hoặc \`upload_image.${key}.user\`.`,
+      );
+    }
+    const missing = UPLOAD_IMAGE_SLOTS[key].filter((slot) => !(sub.user as string).includes(slot));
+    if (missing.length) {
+      throw new AiPromptsError(
+        `\`upload_image.${key}.user\` thiếu chỗ điền ${missing.join(', ')}.`,
+      );
+    }
+    return { system: sub.system, user: sub.user };
+  };
+  return { plan: part('plan'), facade: part('facade') };
 }
 
 function parseFacadeImage(raw: unknown): AiPrompts['facadeImage'] {

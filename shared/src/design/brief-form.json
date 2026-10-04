@@ -1,10 +1,27 @@
 {
-  "_doc": "Cấu hình biểu mẫu Đầu bài thiết kế (Lớp 1 — TK-10). ĐÂY LÀ DỮ LIỆU: logic hiện/ẩn, nhãn, thứ tự và trọng số chấm điểm đều nằm ở tệp này, KHÔNG viết cứng trong brief-panel.tsx. Đường dẫn `path` trỏ vào payload DesignBrief (contracts/design-brief.schema.json); riêng tiền tố `legacy.` trỏ vào năm cột chữ tự do của bảng design_briefs có từ TK-01. Mã trong `required_spaces` và `family[].needs` phải nằm trong kb/room_vocabulary.yaml — có kiểm thử canh. ── Đợt 21/09/2026 (khảo sát chi tiết): thêm sáu mục — Gia chủ và tín ngưỡng, Nếp sinh hoạt, Lưu trữ, Thang và lối vào, Ban công, Kỹ thuật và dự trù — cùng tám trường khu đất và ô tuổi trong Thành viên gia đình. Trọng số của gần hết các trường mới là 0 CÓ CHỦ Ý: `completeness_score` là cổng chặn Lớp 2, nên nó chỉ được đo những thứ THIẾU THÌ KHÔNG DỰNG NỔI mặt bằng. Mười một trường mới mang trọng số 1 là những trường đổi hẳn bố cục (thang máy, bậc tam cấp, tín ngưỡng, kinh doanh tại nhà, nếp nấu ăn, người đi lại khó khăn, lưu trữ, ban công, mặt nắng, mặt gió, mức hoàn thiện). Cộng lại tổng trọng số nhà phố lên 50 — một đầu bài trả lời hết phần cũ vẫn đạt 0,78, trên ngưỡng 0,7, nên đợt này KHÔNG chặn hồ sơ nào đang chạy. Quản trị viên đổi được trọng số ở màn hình «Biểu mẫu đầu bài» mà không cần sửa tệp này. ── Gộp còn SÁU mục cùng ngày (Haan: «12 mục là quá dài»): mười hai mục là mười hai lần bấm «Tiếp», và phần lớn chúng chỉ có vài câu. Gộp theo CÂU HỎI CỦA NGƯỜI KHAI chứ không theo nhóm dữ liệu: gia chủ, tín ngưỡng và nếp sinh hoạt là một mạch trò chuyện; thang, lối vào, ban công và phong cách đều là chuyện hình khối nhìn từ ngoài. Không trường nào thêm, bớt hay đổi. Riêng nhóm tổ chức khối nhà trước đây ẩn cả MỤC với nhà phố, nay điều kiện ấy nằm ở TỪNG TRƯỜNG — mục mới còn chứa thang và ban công, thứ nhà phố nào cũng có.",
-  "version": "1.2.0",
-  "consistency": {},
+  "_doc": "Cấu hình biểu mẫu Đầu bài thiết kế (Lớp 1 — TK-10). ĐÂY LÀ DỮ LIỆU: logic hiện/ẩn, nhãn, thứ tự và trọng số chấm điểm đều nằm ở tệp này, KHÔNG viết cứng trong brief-panel.tsx. Đường dẫn `path` trỏ vào payload DesignBrief (contracts/design-brief.schema.json); riêng tiền tố `legacy.` trỏ vào năm cột chữ tự do của bảng design_briefs có từ TK-01. Mã trong `required_spaces` và `family[].needs` phải nằm trong kb/room_vocabulary.yaml — có kiểm thử canh. ── Đợt 21/09/2026 (khảo sát chi tiết): thêm sáu mục — Gia chủ và tín ngưỡng, Nếp sinh hoạt, Lưu trữ, Thang và lối vào, Ban công, Kỹ thuật và dự trù — cùng tám trường khu đất và ô tuổi trong Thành viên gia đình. Trọng số của gần hết các trường mới là 0 CÓ CHỦ Ý: `completeness_score` là cổng chặn Lớp 2, nên nó chỉ được đo những thứ THIẾU THÌ KHÔNG DỰNG NỔI mặt bằng. Mười một trường mới mang trọng số 1 là những trường đổi hẳn bố cục (thang máy, bậc tam cấp, tín ngưỡng, kinh doanh tại nhà, nếp nấu ăn, người đi lại khó khăn, lưu trữ, ban công, mặt nắng, mặt gió, mức hoàn thiện). Cộng lại tổng trọng số nhà phố lên 50 — một đầu bài trả lời hết phần cũ vẫn đạt 0,78, trên ngưỡng 0,7, nên đợt này KHÔNG chặn hồ sơ nào đang chạy. Quản trị viên đổi được trọng số ở màn hình «Biểu mẫu đầu bài» mà không cần sửa tệp này. ── Gộp còn SÁU mục cùng ngày (Haan: «12 mục là quá dài»): mười hai mục là mười hai lần bấm «Tiếp», và phần lớn chúng chỉ có vài câu. Gộp theo CÂU HỎI CỦA NGƯỜI KHAI chứ không theo nhóm dữ liệu: gia chủ, tín ngưỡng và nếp sinh hoạt là một mạch trò chuyện; thang, lối vào, ban công và phong cách đều là chuyện hình khối nhìn từ ngoài. Không trường nào thêm, bớt hay đổi. Riêng nhóm tổ chức khối nhà trước đây ẩn cả MỤC với nhà phố, nay điều kiện ấy nằm ở TỪNG TRƯỜNG — mục mới còn chứa thang và ban công, thứ nhà phố nào cũng có. ── Ba PHẦN (T114, 03/10/2026, Haan): đầu bài chia Chung cho cả nhà · Mặt bằng công năng · Mặt đứng, gộp phiếu mặt đứng T59 vào làm mục `mat_dung`. Mục giữ nguyên `id` để lớp phủ của quản trị viên không gãy; Ưu tiên–ngân sách lên đứng sau Công trình–khu đất vì nó thuộc phần Chung. Khoá `for` của từng câu quyết định câu ấy đi vào lời gọi AI nào (mặt bằng / mặt đứng / phối cảnh); không khai thì theo phần chứa nó — xem BRIEF_PART_TARGETS trong brief-form.ts.",
+  "version": "2.0.0",
+  "parts": [
+    {
+      "id": "chung",
+      "title": "Chung cho cả nhà",
+      "hint": "Khu đất, quy mô, ưu tiên và ngân sách — dùng cho mọi bản vẽ."
+    },
+    {
+      "id": "mat_bang",
+      "title": "Mặt bằng công năng",
+      "hint": "Gia đình, nếp sinh hoạt, không gian, khối nhà, thang, ban công và kỹ thuật."
+    },
+    {
+      "id": "mat_dung",
+      "title": "Mặt đứng",
+      "hint": "Phong cách, vật liệu, màu, cửa, lan can, cổng và rào."
+    }
+  ],
   "sections": [
     {
       "id": "cong_trinh_khu_dat",
+      "part": "chung",
       "title": "Công trình và khu đất",
       "hint": "Loại hình, quy mô và mọi thứ đo được trên thửa đất: kích thước, cao độ, hướng nắng hướng gió, hiện trạng bốn phía.",
       "fields": [
@@ -232,6 +249,7 @@
           "label": "Hình thửa đất",
           "control": "choice",
           "weight": 1,
+          "for": ["plan"],
           "hint": "Chọn dạng gần đúng nhất. Phần lớn thửa không vuông vắn là hình thang — mặt tiền và mặt hậu rộng khác nhau.",
           "options": [
             {
@@ -291,6 +309,7 @@
           "control": "number",
           "unit": "m",
           "weight": 2,
+          "for": ["plan"],
           "min": 0.1,
           "max": 500,
           "hint": "Cạnh đối diện mặt tiền. Bộ giải chỉ xếp phòng được trên phần đất chữ nhật, nên nó lấy theo cạnh HẸP hơn trong hai cạnh.",
@@ -304,6 +323,7 @@
           "label": "Ranh giới thửa đất",
           "control": "polygon",
           "weight": 3,
+          "for": ["plan"],
           "hint": "Toạ độ từng đỉnh, đơn vị mét. Trục ngang chạy dọc mặt tiền, trục dọc đi vào chiều sâu; gốc đặt ở góc trước-trái, đường nằm ở 0. Cạnh nối đỉnh 1 với đỉnh 2 là cạnh giáp đường.",
           "when": {
             "field": "site.shape",
@@ -317,6 +337,7 @@
           "control": "number",
           "unit": "m²",
           "weight": 1,
+          "for": ["plan"],
           "min": 0.1,
           "max": 250000,
           "hint": "Không dùng để tính toán — dùng để đối chiếu với diện tích suy ra từ số đo. Lệch quá 5% thì hệ thống hỏi lại."
@@ -326,6 +347,7 @@
           "label": "Cao độ tim đường",
           "control": "number",
           "weight": 0,
+          "for": ["plan", "facade"],
           "optional": true,
           "unit": "m",
           "hint": "Đọc theo mốc chuẩn mà người đo đã chọn. Chỉ cần đúng khi ô «Cao độ khu đất» bên dưới đo theo CÙNG mốc — phần mềm chỉ dùng chênh lệch giữa hai số.",
@@ -338,6 +360,7 @@
           "label": "Cao độ khu đất",
           "control": "number",
           "weight": 0,
+          "for": ["plan", "facade"],
           "optional": true,
           "unit": "m",
           "hint": "Cao độ mặt đất tự nhiên của thửa, cùng mốc với cao độ đường. Đất thấp hơn đường thì phải tôn nền và tính lại thoát nước.",
@@ -390,6 +413,7 @@
           "label": "Mặt chịu nắng gắt",
           "control": "multi",
           "weight": 1,
+          "for": ["plan", "facade"],
           "optional": true,
           "hint": "Mặt nào bị nắng chiều chiếu thẳng, kéo dài. Chọn theo thực địa chứ không suy từ hướng la bàn: nhà hàng xóm cao tầng có thể che hẳn mặt tây.",
           "options": [
@@ -416,6 +440,7 @@
           "label": "Mặt đón gió mát",
           "control": "multi",
           "weight": 1,
+          "for": ["plan"],
           "optional": true,
           "hint": "Mặt đón gió mát chủ đạo. Quyết hướng mở cửa sổ, chỗ đặt giếng trời và sân trong.",
           "options": [
@@ -442,6 +467,7 @@
           "label": "Mặt tiếp cận được",
           "control": "multi",
           "weight": 1,
+          "for": ["plan"],
           "hint": "Mặt nào giáp đường hoặc hẻm, đi vào được.",
           "options": [
             {
@@ -467,6 +493,7 @@
           "label": "Bề rộng đường trước nhà",
           "control": "number",
           "weight": 0,
+          "for": ["plan", "perspective"],
           "optional": true,
           "unit": "m",
           "hint": "Đo lòng đường hoặc hẻm trước nhà. Quyết ô tô có vào tới cửa không, xe bê tông có vào được không, và ở nhiều địa phương còn quyết số tầng được phép.",
@@ -478,6 +505,7 @@
           "label": "Lối vào chính đặt ở mặt nào",
           "control": "choice",
           "weight": 1,
+          "for": ["plan"],
           "hint": "Cửa chính cho người. Phải là một mặt tiếp cận được. Mặt tiền nhìn đẹp nhất chưa chắc là mặt đi vào tiện nhất.",
           "options": [
             {
@@ -503,6 +531,7 @@
           "label": "Lối xe vào đặt ở mặt nào",
           "control": "choice",
           "weight": 1,
+          "for": ["plan"],
           "optional": true,
           "hint": "Cổng xe hoặc cửa chỗ để xe. Có thể khác lối vào chính — ô tô không vào được hẻm dưới 3,5 m. Không có xe thì để trống.",
           "options": [
@@ -529,6 +558,7 @@
           "label": "Hiện trạng bốn phía",
           "control": "sides",
           "weight": 1,
+          "for": ["plan", "perspective"],
           "hint": "Trước, sau, trái, phải nhìn TỪ ĐƯỜNG VÀO. Mặt giáp đất trống, ao hồ hay đường lớn là mặt lấy sáng được; mặt giáp nhà hàng xóm thì không, và bộ giải sẽ không đặt phòng cần sáng vào đó.",
           "options": [
             {
@@ -562,6 +592,7 @@
           "label": "Số tầng nhà liền kề",
           "control": "sides",
           "weight": 0,
+          "for": ["plan", "perspective"],
           "optional": true,
           "unit": "tầng",
           "hint": "Nhà bên cao hơn nhiều thì mặt đó coi như mất nắng và mất gió cả năm. Để trống ở mặt không có nhà."
@@ -571,6 +602,7 @@
           "label": "Tường giáp nhà hàng xóm",
           "control": "sides",
           "weight": 0,
+          "for": ["plan"],
           "optional": true,
           "hint": "Chỉ khai ở mặt giáp nhà hàng xóm: tường CHUNG (dùng chung bức tường ranh) hay tường RIÊNG (xây tường của mình trong ranh đất). Chưa trao đổi với khách thì để «Chưa xác định».",
           "options": [
@@ -591,6 +623,7 @@
           "control": "sides",
           "unit": "m",
           "weight": 2,
+          "for": ["plan", "perspective"],
           "optional": true,
           "hint": "Bộ giải KHÔNG tự áp khoảng lùi theo quy chuẩn — số điền ở đây là số duy nhất nó dùng. Để trống một mặt = xây sát ranh mặt đó.",
           "when": {
@@ -605,6 +638,7 @@
           "control": "number",
           "unit": "%",
           "weight": 1,
+          "for": ["plan"],
           "optional": true,
           "min": 0,
           "max": 100,
@@ -621,6 +655,7 @@
           "label": "Hồ sơ pháp lý khu đất",
           "control": "tristate",
           "weight": 1,
+          "for": ["plan"],
           "hint": "Đã có sổ đỏ hoặc giấy tờ tương đương cho chính thửa này chưa. Trả lời «Đã có» thì hiện thêm ô liệt kê giấy tờ.",
           "optional": true,
           "options": [
@@ -639,6 +674,7 @@
           "label": "Nguy cơ ngập",
           "control": "choice",
           "weight": 0,
+          "for": ["plan"],
           "optional": true,
           "hint": "Có ngập thì cốt nền, chỗ để xe và ổ cắm điện tầng trệt đều phải tính lại.",
           "options": [
@@ -663,6 +699,7 @@
           "label": "Hiện trạng xây dựng trên đất",
           "control": "choice",
           "weight": 0,
+          "for": ["plan"],
           "optional": true,
           "hint": "Cải tạo hoặc giữ móng cũ là ràng buộc rất mạnh — lưới cột và móng không dời được, nên phải biết trước khi dựng mặt bằng.",
           "options": [
@@ -689,6 +726,7 @@
           "label": "Hồ sơ pháp lý hiện có",
           "control": "textarea",
           "weight": 0,
+          "for": ["plan"],
           "hint": "Liệt kê giấy tờ đang có: sổ đỏ, giấy phép xây dựng, bản đồ quy hoạch, trích lục.",
           "when": {
             "field": "site.legal_docs_available",
@@ -701,12 +739,146 @@
           "label": "Ghi chú thêm về hiện trạng",
           "control": "textarea",
           "weight": 0,
+          "for": ["plan"],
           "hint": "Cốt nền, chênh cao so với mặt đường, hạ tầng, công trình cũ còn trên đất. Kích thước và hướng đã khai ở trên."
         }
       ]
     },
     {
+      "id": "uu_tien",
+      "part": "chung",
+      "title": "Ưu tiên, ngân sách và người quyết định",
+      "hint": "Phần quyết định engine chọn phương án nào trong số các phương án hợp lệ.",
+      "fields": [
+        {
+          "path": "priorities",
+          "label": "Thứ tự ưu tiên của gia đình",
+          "control": "multi",
+          "weight": 1,
+          "for": ["plan", "facade"],
+          "ordered": true,
+          "hint": "Chọn theo thứ tự quan trọng giảm dần — số trên mỗi ô là thứ hạng. Bỏ chọn rồi chọn lại để đẩy một mục xuống cuối.",
+          "options": [
+            {
+              "value": "natural_light",
+              "label": "Lấy sáng tự nhiên"
+            },
+            {
+              "value": "natural_ventilation",
+              "label": "Thông gió tự nhiên"
+            },
+            {
+              "value": "feng_shui",
+              "label": "Phong thuỷ"
+            },
+            {
+              "value": "area_efficiency",
+              "label": "Hiệu quả diện tích"
+            },
+            {
+              "value": "privacy",
+              "label": "Riêng tư giữa các thế hệ"
+            },
+            {
+              "value": "low_cost",
+              "label": "Tiết kiệm chi phí"
+            },
+            {
+              "value": "easy_maintenance",
+              "label": "Dễ bảo trì"
+            },
+            {
+              "value": "garden",
+              "label": "Cây xanh, sân vườn"
+            },
+            {
+              "value": "indoor_outdoor",
+              "label": "Gắn kết trong nhà với sân vườn"
+            },
+            {
+              "value": "quiet_bedrooms",
+              "label": "Phòng ngủ tránh mặt đường ồn"
+            }
+          ]
+        },
+        {
+          "path": "finishing_level",
+          "label": "Mức hoàn thiện mong muốn",
+          "control": "choice",
+          "weight": 1,
+          "hint": "Cùng một khoảng ngân sách, mức hoàn thiện cao hơn nghĩa là diện tích phải nhỏ lại. Bộ soát mâu thuẫn đối chiếu ô này với khoảng ngân sách.",
+          "options": [
+            {
+              "value": "co_ban",
+              "label": "Cơ bản"
+            },
+            {
+              "value": "kha",
+              "label": "Khá"
+            },
+            {
+              "value": "cao_cap",
+              "label": "Cao cấp"
+            }
+          ]
+        },
+        {
+          "path": "budget_range_vnd",
+          "label": "Khoảng ngân sách",
+          "control": "money_range",
+          "weight": 1,
+          "for": ["plan", "facade"],
+          "hint": "Đơn vị đồng. Khoảng chứ không phải một con số — ngân sách chốt cứng ở bước sơ bộ thường sai."
+        },
+        {
+          "path": "decision_maker.name",
+          "label": "Người quyết định",
+          "control": "text",
+          "weight": 1,
+          "for": ["plan"],
+          "placeholder": "Họ tên người chốt phương án",
+          "hint": "Người nói câu cuối cùng khi hai ý kiến trong nhà khác nhau. Thiếu thông tin này là nguyên nhân hàng đầu phải sửa phương án nhiều lần."
+        },
+        {
+          "path": "decision_maker.relationship",
+          "label": "Quan hệ của người quyết định",
+          "control": "choice",
+          "weight": 1,
+          "for": ["plan"],
+          "options": [
+            {
+              "value": "chu_nha",
+              "label": "Chủ nhà"
+            },
+            {
+              "value": "vo_chong_chu_nha",
+              "label": "Hai vợ chồng cùng quyết"
+            },
+            {
+              "value": "ong_ba",
+              "label": "Ông bà"
+            },
+            {
+              "value": "nguoi_dai_dien",
+              "label": "Người đại diện được uỷ quyền"
+            }
+          ],
+          "note": "Nhãn lấy từ `DECISION_RELATIONSHIPS` (`shared/src/design/brief-vocabulary.ts`) — bộ này còn dùng ở khảo sát của Kinh doanh. Chép tay sang đây là bộ thứ hai sẽ lệch."
+        },
+        {
+          "path": "legacy.design_task",
+          "label": "Nhiệm vụ thiết kế",
+          "control": "textarea",
+          "weight": 0,
+          "for": ["plan"],
+          "hint": "Phạm vi công việc NVO nhận làm cho công trình này.",
+          "note": "Trọng số 0: đây là ô chữ tự do của TK-01, không nằm trong hợp đồng dữ liệu nên không tính vào độ đầy đủ."
+        }
+      ]
+    },
+    {
       "id": "gia_dinh",
+      "part": "mat_bang",
       "title": "Gia đình và nếp sinh hoạt",
       "hint": "Ai ở trong nhà, tin điều gì, và dùng nhà thế nào. Phần này trả lời câu mà số phòng không nói ra.",
       "fields": [
@@ -893,6 +1065,7 @@
           "label": "Có kết hợp kinh doanh tại nhà không",
           "control": "choice",
           "weight": 1,
+          "for": ["plan", "facade"],
           "hint": "Nhà ở có cửa hàng không phải nhà ở thêm một phòng — đó là hai luồng người phải tách nhau.",
           "options": [
             {
@@ -1303,6 +1476,7 @@
     },
     {
       "id": "cong_nang",
+      "part": "mat_bang",
       "title": "Công năng và lưu trữ",
       "hint": "Nhà cần những không gian nào, để bao nhiêu xe, và cất giữ những gì.",
       "fields": [
@@ -1410,6 +1584,7 @@
           "label": "Số ô tô cần chỗ đỗ",
           "control": "number",
           "weight": 1,
+          "for": ["plan", "perspective"],
           "optional": true,
           "min": 0,
           "max": 10,
@@ -1564,8 +1739,9 @@
     },
     {
       "id": "khoi_nha",
-      "title": "Khối nhà, thang và mặt ngoài",
-      "hint": "Tổ chức khối và sân (biệt thự, nhà vườn), thang bộ và thang máy, lối vào và cao độ nền, ban công, phong cách kiến trúc.",
+      "part": "mat_bang",
+      "title": "Khối nhà, thang, lối vào và ban công",
+      "hint": "Tổ chức khối và sân (biệt thự, nhà vườn), thang bộ và thang máy, lối vào và cao độ nền, ban công.",
       "fields": [
         {
           "path": "massing.wings_preferred",
@@ -1674,6 +1850,7 @@
           "label": "Sân nằm ở đâu",
           "control": "multi",
           "weight": 2,
+          "for": ["plan", "facade", "perspective"],
           "hint": "Khai CÓ sân ở phần Không gian bắt buộc; ở đây khai sân nằm đâu so với khối nhà.",
           "options": [
             {
@@ -1711,13 +1888,15 @@
           "when": {
             "field": "building_type",
             "in": ["biet_thu", "nha_vuon"]
-          }
+          },
+          "for": ["plan", "perspective"]
         },
         {
           "path": "massing.indoor_outdoor",
           "label": "Quan hệ trong nhà với sân vườn",
           "control": "choice",
           "weight": 2,
+          "for": ["plan", "facade"],
           "hint": "Mở tối đa: nhiều cửa lớn ra sân, sáng và thoáng, kém riêng tư và nắng hắt nhiều hơn. Kín đáo: cửa nhỏ hơn, mát và riêng tư, đổi lại tối hơn.",
           "options": [
             {
@@ -1935,6 +2114,7 @@
           "label": "Cốt nền tầng 1 cao hơn tim đường",
           "control": "number",
           "weight": 0,
+          "for": ["plan", "facade", "perspective"],
           "optional": true,
           "unit": "m",
           "hint": "Số này quyết số bậc tam cấp, độ dốc dắt xe và việc nước mưa chảy vào nhà hay chảy ra đường.",
@@ -1946,6 +2126,7 @@
           "label": "Có bậc tam cấp từ sân lên nhà",
           "control": "tristate",
           "weight": 1,
+          "for": ["plan", "facade"],
           "hint": "«Không» nghĩa là sân và nền nhà cùng cao độ, hoặc nối bằng dốc thoải — cách duy nhất cho xe lăn và xe máy đi thẳng vào.",
           "options": [
             {
@@ -2172,64 +2353,12 @@
               }
             ]
           }
-        },
-        {
-          "path": "style",
-          "label": "Phong cách kiến trúc",
-          "control": "choice",
-          "weight": 1,
-          "hint": "Chỉ dẫn hướng cho ảnh phối cảnh, không đổi mặt bằng. Chưa chốt được thì để trống — bước phối cảnh vẫn chọn lại được.",
-          "options": [
-            {
-              "value": "hien_dai",
-              "label": "Hiện đại"
-            },
-            {
-              "value": "tan_co_dien",
-              "label": "Tân cổ điển"
-            },
-            {
-              "value": "indochine",
-              "label": "Đông Dương"
-            },
-            {
-              "value": "mai_thai",
-              "label": "Mái Thái"
-            },
-            {
-              "value": "toi_gian",
-              "label": "Tối giản"
-            },
-            {
-              "value": "nhiet_doi",
-              "label": "Nhiệt đới"
-            },
-            {
-              "value": "dia_trung_hai",
-              "label": "Địa Trung Hải"
-            },
-            {
-              "value": "co_dien",
-              "label": "Cổ điển"
-            },
-            {
-              "value": "bac_au",
-              "label": "Bắc Âu"
-            }
-          ],
-          "note": "Danh sách để chọn, không phải danh sách đầy đủ của ngành — ba phong cách NVO làm nhiều nhất đứng trước."
-        },
-        {
-          "path": "legacy.style_note",
-          "label": "Ghi chú thêm về phong cách",
-          "control": "textarea",
-          "weight": 0,
-          "hint": "Vật liệu, màu sắc, công trình tham chiếu khách đưa."
         }
       ]
     },
     {
       "id": "ky_thuat",
+      "part": "mat_bang",
       "title": "Kỹ thuật và dự trù",
       "hint": "Chỉ những thứ kỹ thuật CHIẾM CHỖ hoặc NHÌN THẤY ĐƯỢC, cộng phần dự trù cho sau này — phần còn lại của điện nước là việc của bộ môn, không phải của đầu bài.",
       "fields": [
@@ -2260,6 +2389,7 @@
           "label": "Bình nước nóng năng lượng mặt trời",
           "control": "tristate",
           "weight": 0,
+          "for": ["plan", "facade"],
           "optional": true,
           "hint": "Tấm thu nằm ngay trên mái và nhìn thấy từ đường, nên đây là việc của mặt đứng chứ không chỉ của điện nước.",
           "options": [
@@ -2278,6 +2408,7 @@
           "label": "Cục nóng điều hoà đặt ở đâu",
           "control": "choice",
           "weight": 0,
+          "for": ["plan", "facade"],
           "optional": true,
           "hint": "Câu hỏi bị bỏ qua nhiều nhất và để lại hậu quả dễ thấy nhất: một dãy cục nóng treo trên mặt tiền vừa hoàn thiện.",
           "options": [
@@ -2364,130 +2495,75 @@
       ]
     },
     {
-      "id": "uu_tien",
-      "title": "Ưu tiên, ngân sách và người quyết định",
-      "hint": "Phần quyết định engine chọn phương án nào trong số các phương án hợp lệ.",
+      "id": "mat_dung",
+      "part": "mat_dung",
+      "title": "Phong cách, vật liệu và mặt ngoài",
+      "hint": "Phong cách, mái, màu, vật liệu mặt tiền, cửa, lan can, cổng và rào. Để trống thì AI đề xuất; kỹ sư sửa phần này được ngay trước khi dựng mặt đứng.",
       "fields": [
         {
-          "path": "priorities",
-          "label": "Thứ tự ưu tiên của gia đình",
-          "control": "multi",
-          "weight": 1,
-          "ordered": true,
-          "hint": "Chọn theo thứ tự quan trọng giảm dần — số trên mỗi ô là thứ hạng. Bỏ chọn rồi chọn lại để đẩy một mục xuống cuối.",
-          "options": [
-            {
-              "value": "natural_light",
-              "label": "Lấy sáng tự nhiên"
-            },
-            {
-              "value": "natural_ventilation",
-              "label": "Thông gió tự nhiên"
-            },
-            {
-              "value": "feng_shui",
-              "label": "Phong thuỷ"
-            },
-            {
-              "value": "area_efficiency",
-              "label": "Hiệu quả diện tích"
-            },
-            {
-              "value": "privacy",
-              "label": "Riêng tư giữa các thế hệ"
-            },
-            {
-              "value": "low_cost",
-              "label": "Tiết kiệm chi phí"
-            },
-            {
-              "value": "easy_maintenance",
-              "label": "Dễ bảo trì"
-            },
-            {
-              "value": "garden",
-              "label": "Cây xanh, sân vườn"
-            },
-            {
-              "value": "indoor_outdoor",
-              "label": "Gắn kết trong nhà với sân vườn"
-            },
-            {
-              "value": "quiet_bedrooms",
-              "label": "Phòng ngủ tránh mặt đường ồn"
-            }
-          ]
-        },
-        {
-          "path": "finishing_level",
-          "label": "Mức hoàn thiện mong muốn",
+          "path": "style",
+          "label": "Phong cách kiến trúc",
           "control": "choice",
           "weight": 1,
-          "hint": "Cùng một khoảng ngân sách, mức hoàn thiện cao hơn nghĩa là diện tích phải nhỏ lại. Bộ soát mâu thuẫn đối chiếu ô này với khoảng ngân sách.",
+          "hint": "Dẫn hướng cho mặt đứng và ảnh phối cảnh, không đổi mặt bằng. Chưa chốt được thì để trống — AI đề xuất, kỹ sư sửa lại được trước khi dựng mặt đứng.",
           "options": [
             {
-              "value": "co_ban",
-              "label": "Cơ bản"
+              "value": "hien_dai",
+              "label": "Hiện đại"
             },
             {
-              "value": "kha",
-              "label": "Khá"
+              "value": "tan_co_dien",
+              "label": "Tân cổ điển"
             },
             {
-              "value": "cao_cap",
-              "label": "Cao cấp"
-            }
-          ]
-        },
-        {
-          "path": "budget_range_vnd",
-          "label": "Khoảng ngân sách",
-          "control": "money_range",
-          "weight": 1,
-          "hint": "Đơn vị đồng. Khoảng chứ không phải một con số — ngân sách chốt cứng ở bước sơ bộ thường sai."
-        },
-        {
-          "path": "decision_maker.name",
-          "label": "Người quyết định",
-          "control": "text",
-          "weight": 1,
-          "placeholder": "Họ tên người chốt phương án",
-          "hint": "Người nói câu cuối cùng khi hai ý kiến trong nhà khác nhau. Thiếu thông tin này là nguyên nhân hàng đầu phải sửa phương án nhiều lần."
-        },
-        {
-          "path": "decision_maker.relationship",
-          "label": "Quan hệ của người quyết định",
-          "control": "choice",
-          "weight": 1,
-          "options": [
-            {
-              "value": "chu_nha",
-              "label": "Chủ nhà"
+              "value": "indochine",
+              "label": "Đông Dương"
             },
             {
-              "value": "vo_chong_chu_nha",
-              "label": "Hai vợ chồng cùng quyết"
+              "value": "mai_thai",
+              "label": "Mái Thái"
             },
             {
-              "value": "ong_ba",
-              "label": "Ông bà"
+              "value": "toi_gian",
+              "label": "Tối giản"
             },
             {
-              "value": "nguoi_dai_dien",
-              "label": "Người đại diện được uỷ quyền"
+              "value": "nhiet_doi",
+              "label": "Nhiệt đới"
+            },
+            {
+              "value": "dia_trung_hai",
+              "label": "Địa Trung Hải"
+            },
+            {
+              "value": "co_dien",
+              "label": "Cổ điển"
+            },
+            {
+              "value": "bac_au",
+              "label": "Bắc Âu"
             }
           ],
-          "note": "Nhãn lấy từ `DECISION_RELATIONSHIPS` (`shared/src/design/brief-vocabulary.ts`) — bộ này còn dùng ở khảo sát của Kinh doanh. Chép tay sang đây là bộ thứ hai sẽ lệch."
+          "note": "Danh sách để chọn, không phải danh sách đầy đủ của ngành — ba phong cách NVO làm nhiều nhất đứng trước."
         },
         {
-          "path": "legacy.design_task",
-          "label": "Nhiệm vụ thiết kế",
+          "path": "legacy.style_note",
+          "label": "Ghi chú thêm về phong cách",
           "control": "textarea",
           "weight": 0,
-          "hint": "Phạm vi công việc NVO nhận làm cho công trình này.",
-          "note": "Trọng số 0: đây là ô chữ tự do của TK-01, không nằm trong hợp đồng dữ liệu nên không tính vào độ đầy đủ."
+          "hint": "Vật liệu, màu sắc, công trình tham chiếu khách đưa."
+        },
+        {
+          "path": "facade",
+          "label": "Yêu cầu mặt đứng",
+          "control": "facade",
+          "weight": 0,
+          "optional": true,
+          "hint": "Mục nào đã chọn thì AI và chương trình phải theo đúng; mục để «Để AI đề xuất» thì AI chọn cho hợp phong cách. Khung nhà, vị trí và bề rộng cửa lấy từ phương án mặt bằng.",
+          "note": "Cả phiếu mặt đứng T59 trong một điều khiển (T114). Danh sách chọn lấy từ kb/facade_vocabulary.yaml qua Worker. Trọng số 0: mặt đứng không phải điều kiện dựng mặt bằng."
         }
       ]
     }
-  ]
+  ],
+  "consistency": {}
 }

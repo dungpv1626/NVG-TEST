@@ -179,7 +179,7 @@ function northText(deg: number): string {
  * chứa chuỗi trông như một chỗ điền khác, và thay nối tiếp thì lần sau sẽ thay tiếp vào chính giá
  * trị vừa đặt.
  */
-function fill(template: string, values: Record<string, string>): string {
+export function fill(template: string, values: Record<string, string>): string {
   return template.replace(/\{([a-z_]+)\}/g, (match, key: string) =>
     key in values ? values[key]! : match,
   );
@@ -244,7 +244,10 @@ export function sheetImageCallOptions(
 }
 
 export interface AssembleSheetImageInput {
-  planRef: string;
+  /** Mặt bằng AI mà tờ vẽ theo; `null` khi vẽ từ bản kỹ sư tải lên (khi ấy có `uploadRef`). */
+  planRef: string | null;
+  /** Bản vẽ kỹ sư tải lên (T114 Đợt 4). */
+  uploadRef?: string | null;
   level: number;
   uri: string;
   mime: string;
@@ -271,6 +274,8 @@ export function assembleSheetImage(input: AssembleSheetImageInput): AiPlanSheetI
   return {
     schema_version: SCHEMA_VERSION,
     plan_ref: input.planRef,
+    // Chỉ ghi khi có: artifact vẽ từ bản AI giữ đúng hình dạng cũ.
+    ...(input.uploadRef ? { upload_ref: input.uploadRef } : {}),
     level: input.level,
     uri: input.uri,
     mime: input.mime as AiPlanSheetImage['mime'],
@@ -280,7 +285,7 @@ export function assembleSheetImage(input: AssembleSheetImageInput): AiPlanSheetI
     // rasterise được). Băm ở đây là dấu vết pháp y duy nhất, và là chỗ bám để sau này trả lời
     // «hai tờ này vẽ từ cùng một ảnh neo không».
     anchor: {
-      source: 'client_raster',
+      source: input.uploadRef ? 'engineer_upload' : 'client_raster',
       sha256: input.anchor.sha256,
       bytes: input.anchor.bytes,
       mime: input.anchor.mime as AiPlanSheetImage['anchor']['mime'],

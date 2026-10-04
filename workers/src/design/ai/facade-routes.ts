@@ -12,8 +12,8 @@
 import { Hono, type Context } from 'hono';
 import {
   aiFacadeBriefSchema,
+  briefFacadeFromFacadeBrief,
   aiFacadeReviewSchema,
-  type AiFacadeBrief,
   type AiFacadeConcept,
   type AiFacadeImage,
   type AiFacadeReview,
@@ -30,6 +30,7 @@ import {
   PROJECT_NOT_VISIBLE,
 } from '../auth-scope';
 import { AI_DIGEST_DATA_CLASS, anonymiseForAi } from '../brief/anonymise';
+import { confirmBrief } from '../brief/confirm';
 import type { DesignEnv } from '../env';
 import { constructionNorms } from '../kb/construction-data';
 import { facadeVocabulary } from '../kb/facade-vocabulary-data';
@@ -48,6 +49,9 @@ import type { AiDesignParams } from '../workflows/ai-design-steps';
 import { ElevationSheetError } from './draw/elevation-sheet';
 import {
   checkFacadeBriefCodes,
+  FACADE_EDIT_REASON,
+  sameJson,
+  facadeBriefOfArtifact,
   facadeBriefIssueText,
   FACADE_BRIEF_SCHEMA_VERSION,
 } from './facade/brief';
@@ -180,13 +184,20 @@ facadeApp.get('/brief/:projectId', async (c) => {
   if (denied) return c.json({ error: denied.error }, denied.status);
 
   const repo = new ArtifactRepository(c.env);
-  const [head, planRef] = await Promise.all([
+  const [designBriefHead, oldHead, planRef] = await Promise.all([
+    repo.head(projectId, DISCIPLINE, 'design_brief'),
     repo.head(projectId, DISCIPLINE, 'ai_facade_brief'),
     planHeadOf(db, projectId),
   ]);
+  // Từ T114 yêu cầu mặt đứng nằm trong đầu bài đã xác nhận; hồ sơ trước T114 còn phiếu riêng.
   // `head` không mang payload — đọc lại dòng artifact để lấy phiếu và thời điểm lưu.
-  const brief = head ? await repo.get(head.id, projectId) : null;
-  const briefPayload = (brief?.payload as AiFacadeBrief | undefined) ?? null;
+  const fromDesignBrief = designBriefHead ? await repo.get(designBriefHead.id, projectId) : null;
+  const brief = facadeBriefOfArtifact(fromDesignBrief)
+    ? fromDesignBrief
+    : oldHead
+      ? await repo.get(oldHead.id, projectId)
+      : null;
+  const briefPayload = facadeBriefOfArtifact(brief);
   let plan: {
     artifactId: string;
     mainDoorW: number | null;
@@ -213,16 +224,23 @@ facadeApp.get('/brief/:projectId', async (c) => {
   }
   return c.json({
     artifactId: brief?.id ?? null,
-    savedAt: briefPayload?.saved_at ?? brief?.createdAt ?? null,
+    savedAt:
+      brief?.kind === 'ai_facade_brief'
+        ? (briefPayload?.saved_at ?? brief.createdAt ?? null)
+        : (brief?.createdAt ?? null),
     brief: briefPayload,
     plan,
   });
 });
 
 /**
- * Lưu phiếu yêu cầu — một artifact MỚI mỗi lần lưu, đặt head. Không gọi AI, không tốn tiền; nhưng đòi
- * quyền GHI như mọi thao tác đổi hồ sơ. Mã ngoài danh mục bị từ chối ở đây, để phiếu hỏng không bao
- * giờ tới được lượt gọi tính tiền.
+ * Lưu yêu cầu mặt đứng từ bước Mặt đứng (T114). Yêu cầu nằm trong ĐẦU BÀI, mà đầu bài đã xác nhận là
+ * bất biến — nên lưu = một phiên bản đầu bài MỚI chép nguyên mọi phần khác, chỉ đổi phong cách và phần
+ * mặt đứng, ghi nguyên nhân, rồi XÁC NHẬN luôn (Haan 03/10/2026: «tự sinh phiên bản + tự xác nhận»).
+ * Lịch sử phiên bản ở tab Đầu bài vẫn đủ. Không gọi AI, không tốn tiền; đòi quyền GHI.
+ *
+ * Đầu bài đang có bản nháp chưa xác nhận thì KHÔNG làm: xác nhận ở đây sẽ ký nhận luôn những sửa đổi
+ * dở dang của người khác ở các phần khác.
  */
 facadeApp.post('/brief/:projectId', async (c) => {
   const token = bearer(c.req.header('Authorization'));
@@ -256,18 +274,88 @@ facadeApp.post('/brief/:projectId', async (c) => {
   if (issues.length) {
     return c.json({ error: 'Phiếu có mục không có trong danh mục.', issues }, 400);
   }
-  const written = await new ArtifactRepository(c.env).write({
-    scope: {
-      tenantId: scope.tenantId,
-      companyId: scope.companyId,
-      projectId,
-      discipline: DISCIPLINE,
-      actorId: scope.actorId,
-    },
-    kind: 'ai_facade_brief',
-    payload: parsed.data,
-  });
-  return c.json({ artifactId: written.id });
+
+  const current = await db
+    .from('design_briefs')
+    .select(
+      'id, company_id, confirmed_at, artifact_id, structured, design_task, functional_needs, ' +
+        'budget_amount, budget_note, style_note, site_condition, legal_documents, site_source_survey_id',
+    )
+    .eq('design_project_id', projectId)
+    .eq('is_current_version', true)
+    .is('deleted_at', null)
+    .maybeSingle();
+  if (current.error) return c.json({ error: 'Không đọc được đầu bài của hồ sơ.' }, 500);
+  const row = current.data as unknown as {
+    company_id: string;
+    confirmed_at: string | null;
+    artifact_id: string | null;
+    structured: Record<string, unknown> | null;
+    design_task: string | null;
+    functional_needs: string | null;
+    budget_amount: number | null;
+    budget_note: string | null;
+    style_note: string | null;
+    site_condition: string | null;
+    legal_documents: string | null;
+    site_source_survey_id: string | null;
+  } | null;
+  if (!row) {
+    return c.json({ error: 'Hồ sơ chưa có đầu bài. Lập và xác nhận đầu bài trước.' }, 409);
+  }
+  if (!row.confirmed_at) {
+    return c.json(
+      {
+        error:
+          'Đầu bài đang có bản nháp chưa xác nhận. Xác nhận đầu bài ở bước Đầu bài trước, hoặc sửa phần mặt đứng ngay trong bản nháp ấy.',
+      },
+      409,
+    );
+  }
+
+  const facade = briefFacadeFromFacadeBrief(parsed.data);
+  const before = row.structured ?? {};
+  if (
+    // So theo NỘI DUNG, không theo chuỗi: cột `structured` là jsonb, CSDL tự xếp lại khoá — so
+    // `JSON.stringify` thì lần gửi y hệt vẫn ra «khác» và đẻ phiên bản thừa (đo thật 03/10/2026).
+    sameJson(before.facade ?? null, facade) &&
+    (before.style ?? null) === parsed.data.style
+  ) {
+    return c.json({ artifactId: row.artifact_id, unchanged: true });
+  }
+
+  const inserted = await db
+    .from('design_briefs')
+    .insert({
+      design_project_id: projectId,
+      company_id: row.company_id,
+      design_task: row.design_task,
+      functional_needs: row.functional_needs,
+      budget_amount: row.budget_amount,
+      budget_note: row.budget_note,
+      style_note: row.style_note,
+      site_condition: row.site_condition,
+      legal_documents: row.legal_documents,
+      site_source_survey_id: row.site_source_survey_id,
+      change_reason: FACADE_EDIT_REASON,
+      structured: { ...before, style: parsed.data.style, facade },
+    })
+    .select('id')
+    .single();
+  if (inserted.error) {
+    console.error('facade/brief: không tạo được phiên bản đầu bài', inserted.error);
+    return c.json({ error: 'Không tạo được phiên bản đầu bài mới. Thử lại sau.' }, 500);
+  }
+  const confirmed = await confirmBrief(c.env, db, (inserted.data as { id: string }).id);
+  if (!confirmed.ok) {
+    return c.json(
+      {
+        error: `Đã tạo phiên bản đầu bài mới nhưng chưa xác nhận được: ${confirmed.error} Mở bước Đầu bài để xem lại.`,
+      },
+      confirmed.status,
+    );
+  }
+  return c.json({ artifactId: confirmed.artifactId });
 });
 
 facadeApp.get('/:projectId', async (c) => {
@@ -279,9 +367,7 @@ facadeApp.get('/:projectId', async (c) => {
   const briefArtifact = concept.brief_ref
     ? await new ArtifactRepository(c.env).get(concept.brief_ref, c.req.param('projectId') ?? '')
     : null;
-  const fromBrief = briefKeys(
-    briefArtifact?.kind === 'ai_facade_brief' ? (briefArtifact.payload as AiFacadeBrief) : null,
-  );
+  const fromBrief = briefKeys(facadeBriefOfArtifact(briefArtifact));
   // Điểm «giống cách NVG vẽ đến đâu» (T63). Chấm lúc ĐỌC chứ không lưu vào artifact: thước đo còn
   // đang lớn lên theo số hồ sơ đã đo, và một con số đóng băng trong artifact sẽ nói dối ngay lần
   // đầu thước đổi. Artifact bất biến, điểm thì không.
@@ -647,8 +733,25 @@ facadeApp.post('/runs', async (c) => {
   if (!planRef) {
     return c.json({ error: 'Cần chọn một phương án mặt bằng trước khi dựng mặt đứng.' }, 409);
   }
-  // Phiếu yêu cầu hiện hành (nếu kỹ sư đã lưu) — chốt mã ở đây, sửa phiếu giữa chừng không đổi lượt này.
-  const facadeBrief = await repo.head(body.projectId, DISCIPLINE, 'ai_facade_brief');
+  // Yêu cầu mặt đứng — chốt mã ở đây, sửa giữa chừng không đổi lượt này. Từ T114 nằm trong đầu bài
+  // (phần `facade`); đầu bài chưa có phần ấy thì dùng phiếu riêng kỹ sư lưu trước T114, nếu có.
+  const briefFacade = facadeBriefOfArtifact({ kind: 'design_brief', payload: brief.payload });
+  if (briefFacade) {
+    const codeIssues = checkFacadeBriefCodes(briefFacade, facadeVocabulary());
+    if (codeIssues.length) {
+      return c.json(
+        {
+          error:
+            'Phần mặt đứng của đầu bài có mục không còn trong danh mục. Sửa lại phần đó trong đầu bài rồi dựng lại.',
+          issues: codeIssues,
+        },
+        409,
+      );
+    }
+  }
+  const facadeBrief = briefFacade
+    ? brief
+    : await repo.head(body.projectId, DISCIPLINE, 'ai_facade_brief');
 
   const running = await activeRun(repo.db, body.projectId, 'facade');
   if (running) {

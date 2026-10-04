@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 
 const ITEMS = [
   { to: '/tk/du-an', label: 'Dự án thiết kế' },
+  { to: '/tk/ai-design', label: 'AI Design' },
   { to: '/tk/ho-so-cu', label: 'Hồ sơ cũ đã số hoá' },
 ];
 

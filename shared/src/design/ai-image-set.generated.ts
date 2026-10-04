@@ -52,8 +52,25 @@ export type AiImageSetView = z.infer<typeof aiImageSetViewSchema>;
 export const aiImageSetSchema = z
   .object({
     schema_version: aiImageSetSemverSchema,
-    facade_ref: aiImageSetArtifactRefSchema,
-    plan_ref: aiImageSetArtifactRefSchema,
+    /** `null` khi bộ ảnh dựng từ mặt đứng KỸ SƯ tải lên (T114 Đợt 4b) — khi ấy `upload_ref` mang nguồn, khối nhà lấy từ đầu bài. Nới từ bắt buộc thành có thể rỗng: artifact cũ luôn có giá trị nên vẫn đọc được. */
+    facade_ref: aiImageSetArtifactRefSchema
+      .nullable()
+      .describe(
+        '`null` khi bộ ảnh dựng từ mặt đứng KỸ SƯ tải lên (T114 Đợt 4b) — khi ấy `upload_ref` mang nguồn, khối nhà lấy từ đầu bài. Nới từ bắt buộc thành có thể rỗng: artifact cũ luôn có giá trị nên vẫn đọc được.',
+      ),
+    /** `null` khi bộ ảnh dựng từ mặt đứng KỸ SƯ tải lên (T114 Đợt 4b) — khi ấy `upload_ref` mang nguồn, khối nhà lấy từ đầu bài. Nới từ bắt buộc thành có thể rỗng: artifact cũ luôn có giá trị nên vẫn đọc được. */
+    plan_ref: aiImageSetArtifactRefSchema
+      .nullable()
+      .describe(
+        '`null` khi bộ ảnh dựng từ mặt đứng KỸ SƯ tải lên (T114 Đợt 4b) — khi ấy `upload_ref` mang nguồn, khối nhà lấy từ đầu bài. Nới từ bắt buộc thành có thể rỗng: artifact cũ luôn có giá trị nên vẫn đọc được.',
+      ),
+    /** Bản vẽ mặt đứng kỹ sư tải lên (`ai_uploaded_drawing`) mà bộ ảnh dựng theo (T114 Đợt 4b). Có thì `facade_ref` và `plan_ref` là `null`. Không bắt buộc: artifact trước T114 không có khoá này. */
+    upload_ref: aiImageSetArtifactRefSchema
+      .nullable()
+      .describe(
+        'Bản vẽ mặt đứng kỹ sư tải lên (`ai_uploaded_drawing`) mà bộ ảnh dựng theo (T114 Đợt 4b). Có thì `facade_ref` và `plan_ref` là `null`. Không bắt buộc: artifact trước T114 không có khoá này.',
+      )
+      .optional(),
     /**
      * Những tờ vector mà TRÌNH DUYỆT đã rasterise và gửi lên cho lượt chạy này.
      *

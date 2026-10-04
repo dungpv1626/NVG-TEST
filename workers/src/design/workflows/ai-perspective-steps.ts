@@ -22,9 +22,15 @@ import type { AiImageClient } from '../llm/text-client';
 import type { RenderStore } from '../render-store';
 import { renderKey } from '../render-store';
 import { recordAiCall, type AiCallOutcome } from '../ai/call-log';
-import { facadeLook } from '../ai/facade/image';
+import { facadeLook, facadeLookFromBrief, type FacadeLook } from '../ai/facade/image';
+import { facadeBriefOfArtifact } from '../ai/facade/brief';
 import { assembleImageSet, type DrawnView, type StoredAnchor } from '../ai/perspective/assemble';
-import { perspectiveContext } from '../ai/perspective/context';
+import {
+  perspectiveContext,
+  perspectiveContextFromBrief,
+  type PerspectiveContext,
+} from '../ai/perspective/context';
+import { digestFor } from '../brief/slice';
 import { perspectivePrompt } from '../ai/perspective/prompt';
 import type { ViewSource, ViewStep } from '../ai/perspective/views';
 import type { AiPrompts } from '../ai/prompts';
@@ -32,6 +38,7 @@ import { pngSize } from '../ai/sheet-image';
 import { AI_DIGEST_DATA_CLASS } from '../brief/anonymise';
 import { LlmCallFailed } from '../llm/gemini';
 import type { AiDesignParams } from './ai-design-steps';
+import { encodeBase64 } from '../llm/image-bytes';
 
 export interface PerspectiveStepDeps {
   client: AiImageClient;
@@ -68,11 +75,24 @@ export function perspectiveStepSpecs(views: readonly AiImageSetView[], labels: A
   ];
 }
 
-/** Hai artifact mà mọi bước đều đọc — đọc lại mỗi bước, rẻ và tất định. */
-async function inputsOf(
+/**
+ * Ngữ cảnh và vật liệu của một lượt — đọc lại mỗi bước, rẻ và tất định.
+ *
+ * Hai nguồn (T114 Đợt 4b): ý tưởng mặt đứng AI + phương án mặt bằng của nó (đo được), hoặc mặt đứng
+ * KỸ SƯ tải lên — khi ấy khối nhà lấy từ đầu bài và vật liệu từ phần Mặt đứng của đầu bài.
+ */
+async function lookAndContext(
   deps: PerspectiveStepDeps,
   params: AiDesignParams,
-): Promise<{ concept: AiFacadeConcept; plan: AiFloorPlan }> {
+): Promise<{ context: PerspectiveContext; look: FacadeLook }> {
+  const digest = digestFor(params.digest, 'perspective');
+  if (params.facadeUploadRef) {
+    const brief = await deps.repo.get(params.briefRef, params.projectId);
+    return {
+      context: perspectiveContextFromBrief(digest),
+      look: facadeLookFromBrief(facadeBriefOfArtifact(brief), deps.vocab, deps.prompts),
+    };
+  }
   if (!params.facadeRef) throw new Error('Lượt chạy phối cảnh thiếu mã ý tưởng mặt đứng.');
   if (!params.planRef) throw new Error('Lượt chạy phối cảnh thiếu mã phương án mặt bằng.');
   const [facade, plan] = await Promise.all([
@@ -85,7 +105,11 @@ async function inputsOf(
   if (!plan || plan.kind !== 'ai_floor_plan') {
     throw new Error('Không tìm thấy phương án mặt bằng mà bộ ảnh dựng theo.');
   }
-  return { concept: facade.payload as AiFacadeConcept, plan: plan.payload as AiFloorPlan };
+  const concept = facade.payload as AiFacadeConcept;
+  return {
+    context: perspectiveContext(digest, plan.payload as AiFloorPlan, concept),
+    look: facadeLook(concept, deps.vocab, deps.prompts),
+  };
 }
 
 /**
@@ -125,11 +149,11 @@ export async function drawViewStep(
   /** Tín hiệu của nút «Dừng» — huỷ CẢ lời gọi đang bay, không chỉ chặn góc sau. */
   signal?: AbortSignal,
 ): Promise<DrawnView> {
-  const { concept, plan } = await inputsOf(deps, params);
+  const { context, look } = await lookAndContext(deps, params);
   const prompt = perspectivePrompt({
     view: step.view,
-    context: perspectiveContext(params.digest, plan, concept),
-    look: facadeLook(concept, deps.vocab, deps.prompts),
+    context,
+    look,
     prompts: deps.prompts,
     peopleAndVehicles: params.peopleAndVehicles ?? true,
   });
@@ -138,7 +162,7 @@ export async function drawViewStep(
   const images: GenerateImagePart[] = [];
   for (const uri of sourceRefs) {
     const image = await deps.store.get(uri);
-    images.push({ mimeType: image.mime, dataBase64: toBase64(new Uint8Array(image.bytes)) });
+    images.push({ mimeType: image.mime, dataBase64: encodeBase64(new Uint8Array(image.bytes)) });
   }
   // Mọi góc phải mang ít nhất một ảnh vào. Mảng rỗng vẫn ra ảnh và vẫn tính tiền — không màn hình
   // nào lộ ra, nên nó phải có lưới ở đây chứ không chỉ trong phép thử của `perspectivePlan`.
@@ -232,22 +256,6 @@ function decodeBase64(data: string): Uint8Array {
   return bytes;
 }
 
-/**
- * Byte → base64, theo từng khối.
- *
- * `String.fromCharCode(...bytes)` trên một tấm PNG 1–2 MB là hàng triệu đối số trong một lời gọi —
- * tràn ngăn xếp, và tràn ở đây nghĩa là mất một lượt ĐÃ TRẢ TIỀN chứ không phải một lỗi nhìn thấy
- * lúc phát triển.
- */
-function toBase64(bytes: Uint8Array): string {
-  const CHUNK = 0x8000;
-  let binary = '';
-  for (let i = 0; i < bytes.length; i += CHUNK) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
-  }
-  return btoa(binary);
-}
-
 /** Ghép cả bộ rồi đúc artifact — đặt head: bộ mới nhất là bộ đang hiệu lực. */
 export async function writeImageSetStep(
   deps: PerspectiveStepDeps,
@@ -257,8 +265,9 @@ export async function writeImageSetStep(
   missing: readonly { view: AiImageSetView; reason: string }[],
 ): Promise<{ artifactId: string; reused: boolean; views: AiImageSetView[] }> {
   const payload = assembleImageSet({
-    facadeRef: params.facadeRef!,
-    planRef: params.planRef!,
+    facadeRef: params.facadeUploadRef ? null : params.facadeRef!,
+    planRef: params.facadeUploadRef ? null : params.planRef!,
+    uploadRef: params.facadeUploadRef ?? null,
     anchors: [...anchors],
     drawn: [...drawn],
     missing: [...missing],
@@ -279,7 +288,9 @@ export async function writeImageSetStep(
     kind: 'ai_image_set',
     payload,
     // Mặt bằng là đầu vào thứ hai: bộ ảnh nói về chiều sâu nhà, thứ chỉ mặt bằng biết.
-    inputs: [params.facadeRef!, params.planRef!],
+    inputs: params.facadeUploadRef
+      ? [params.facadeUploadRef]
+      : [params.facadeRef!, params.planRef!],
     step: 'ai_image_render',
     params: { route: params.imageRoute!, prompt_version: deps.prompts.version },
   });

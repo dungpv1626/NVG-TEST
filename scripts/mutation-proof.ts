@@ -1074,6 +1074,24 @@ const MUTATIONS: Mutation[] = [
     find: '    if (index < 0) index = left.length ? 0 : -1;',
     replace: '    index = left.length ? 0 : -1;',
   },
+  // ── Lời dẫn: đầu bài cắt theo lời gọi (T114) ──────────────────────────────────────────
+  {
+    id: 'M127',
+    axis: 'lời dẫn',
+    file: 'workers/src/design/brief/slice.ts',
+    bug: 'Bỏ lọc nhãn `for` — lời gọi mặt bằng nhận lại phong cách, lời gọi mặt đứng nhận cả gia đình, phòng và khảo sát hiện trạng (Haan 03/10/2026: «không bị thừa thông tin không cần thiết»)',
+    find: '      if (targets.includes(target)) continue;',
+    replace: '      if (targets.length > 0) continue;',
+  },
+  // ── Riêng tư: bản vẽ kỹ sư tải lên (T114 Đợt 4) ──────────────────────────────────────────
+  {
+    id: 'M128',
+    axis: 'riêng tư',
+    file: 'workers/src/design/ai/upload.ts',
+    bug: 'Nhận bản vẽ tải lên khi chưa xác nhận đã bỏ khung tên — tên, địa chỉ chủ nhà trên khung tên đi thẳng tới nhà cung cấp mô hình ảnh (dữ liệu hạng 1, T12)',
+    find: '  if (body.identityCleared !== true) {',
+    replace: '  if (false as boolean) {',
+  },
 ];
 
 /** Thư mục mã nguồn được băm trước và sau khi chạy. `db/` không đụng tới nên không băm. */

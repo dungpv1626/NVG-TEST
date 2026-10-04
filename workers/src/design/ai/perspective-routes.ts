@@ -16,6 +16,7 @@ import type {
   AiFloorPlan,
   AiImageSet,
   AiImageSetView,
+  AiUploadedDrawing,
   DesignBrief,
 } from '@nvg/shared/design';
 import { ArtifactRepository } from '../artifacts';
@@ -46,7 +47,12 @@ import { roofPlanAnchor } from './perspective';
 import { ElevationSheetError } from './draw/elevation-sheet';
 import { PlanSheetError } from './draw/plan-sheet';
 import { aiModelCatalogue, isSelectableRoute } from './models';
-import { perspectivePlan, redrawAloneRefusal, type AnchorKind } from './perspective/views';
+import {
+  perspectivePlan,
+  perspectivePlanFromUpload,
+  redrawAloneRefusal,
+  type AnchorKind,
+} from './perspective/views';
 import { aiPrompts } from './prompts-data';
 import { anchorMime, pngSize } from './sheet-image';
 import { activeRun, attachWorkflow, createRun, finishRun } from './runs';
@@ -85,12 +91,16 @@ perspectiveApp.post('/runs', async (c) => {
   const body = (await c.req.json()) as {
     projectId?: string;
     artifactId?: string;
+    /** Mặt đứng kỹ sư tải lên (T114 Đợt 4b) — thay cho `artifactId` + `anchors`. */
+    uploadId?: string;
     route?: string;
     peopleAndVehicles?: boolean;
     anchors?: Array<{ kind?: string; base64?: string }>;
   };
   if (!body.projectId) return c.json({ error: 'Thiếu mã hồ sơ thiết kế.' }, 400);
-  if (!body.artifactId) return c.json({ error: 'Thiếu mã ý tưởng mặt đứng.' }, 400);
+  if (!body.artifactId && !body.uploadId) {
+    return c.json({ error: 'Thiếu mã ý tưởng mặt đứng hoặc bản vẽ mặt đứng đã tải lên.' }, 400);
+  }
   if (!body.route) return c.json({ error: 'Chưa chọn model vẽ ảnh.' }, 400);
   if (!c.env.AI_DESIGN_PIPELINE) {
     return c.json(
@@ -125,16 +135,6 @@ perspectiveApp.post('/runs', async (c) => {
   if (!brief) {
     return c.json({ error: 'Chưa có đầu bài đã xác nhận. Xác nhận đầu bài trước.' }, 409);
   }
-  const facade = await repo.get(body.artifactId, body.projectId);
-  if (!facade || facade.kind !== 'ai_facade_concept') {
-    return c.json({ error: 'Không tìm thấy ý tưởng mặt đứng này trong hồ sơ.' }, 404);
-  }
-  const concept = facade.payload as AiFacadeConcept;
-  // Mặt bằng lấy từ CHÍNH ý tưởng mặt đứng, không đọc lại mốc hiệu lực: bộ ảnh phải nói về đúng
-  // ngôi nhà mà tờ mặt đứng vẽ. Kỹ sư đổi phương án sau đó thì bước này đã bị chặn ở màn hình bằng
-  // nhãn «dựng theo phương án cũ», và đọc mốc ở đây sẽ lặng lẽ trộn hai ngôi nhà.
-  const planRef = concept.plan_ref;
-
   const running = await activeRun(repo.db, body.projectId, 'images');
   if (running) {
     return c.json(
@@ -146,30 +146,59 @@ perspectiveApp.post('/runs', async (c) => {
     );
   }
 
-  const planArtifact = await repo.get(planRef, body.projectId);
-  if (!planArtifact || planArtifact.kind !== 'ai_floor_plan') {
-    return c.json({ error: 'Không tìm thấy phương án mặt bằng mà mặt đứng dựng theo.' }, 404);
-  }
-  const stored = await storeAnchors(
-    c,
-    body.anchors ?? [],
-    concept,
-    planArtifact.payload as AiFloorPlan,
-    brief.payload as DesignBrief,
-    body.projectId,
-  );
-  if (stored instanceof Response) return stored;
-
-  const prompts = aiPrompts();
-  const plan = perspectivePlan(
-    concept,
-    stored.map((a) => a.kind),
-  );
-
   // Đầu bài đã lược danh tính dựng ở ĐÂY, dưới phiên người bấm (Workflow chỉ có service_role).
   const digest = anonymiseForAi(
     await aiDigestInputs(db, body.projectId, brief.payload as DesignBrief),
   );
+
+  let stored: Array<{ kind: AnchorKind; uri: string; sha256: string; bytes: number }>;
+  let plan: ReturnType<typeof perspectivePlan>;
+  let refs: { planRef: string | null; facadeRef: string | null; facadeUploadRef: string | null };
+  if (body.uploadId) {
+    // Mặt đứng kỹ sư tải lên (T114 Đợt 4b): ảnh neo là CHÍNH tệp đã lưu — máy chủ đọc từ kho, không
+    // nhận lại byte từ trình duyệt. Khối nhà theo đầu bài, vật liệu theo phần Mặt đứng của đầu bài.
+    const upload = await repo.get(body.uploadId, body.projectId);
+    const drawing = upload?.payload as AiUploadedDrawing | undefined;
+    if (!upload || upload.kind !== 'ai_uploaded_drawing' || drawing?.drawing !== 'facade') {
+      return c.json({ error: 'Không tìm thấy bản vẽ mặt đứng đã tải lên này trong hồ sơ.' }, 404);
+    }
+    stored = [
+      { kind: 'elevation', uri: drawing.uri, sha256: drawing.sha256, bytes: drawing.bytes },
+    ];
+    plan = perspectivePlanFromUpload((digest.balconies?.required_sides ?? []).includes('front'));
+    refs = { planRef: null, facadeRef: null, facadeUploadRef: upload.id };
+  } else {
+    const facade = await repo.get(body.artifactId!, body.projectId);
+    if (!facade || facade.kind !== 'ai_facade_concept') {
+      return c.json({ error: 'Không tìm thấy ý tưởng mặt đứng này trong hồ sơ.' }, 404);
+    }
+    const concept = facade.payload as AiFacadeConcept;
+    // Mặt bằng lấy từ CHÍNH ý tưởng mặt đứng, không đọc lại mốc hiệu lực: bộ ảnh phải nói về đúng
+    // ngôi nhà mà tờ mặt đứng vẽ. Kỹ sư đổi phương án sau đó thì bước này đã bị chặn ở màn hình bằng
+    // nhãn «dựng theo phương án cũ», và đọc mốc ở đây sẽ lặng lẽ trộn hai ngôi nhà.
+    const planRef = concept.plan_ref;
+    const planArtifact = await repo.get(planRef, body.projectId);
+    if (!planArtifact || planArtifact.kind !== 'ai_floor_plan') {
+      return c.json({ error: 'Không tìm thấy phương án mặt bằng mà mặt đứng dựng theo.' }, 404);
+    }
+    const anchors = await storeAnchors(
+      c,
+      body.anchors ?? [],
+      concept,
+      planArtifact.payload as AiFloorPlan,
+      brief.payload as DesignBrief,
+      body.projectId,
+    );
+    if (anchors instanceof Response) return anchors;
+    stored = anchors;
+    plan = perspectivePlan(
+      concept,
+      stored.map((a) => a.kind),
+    );
+    refs = { planRef, facadeRef: facade.id, facadeUploadRef: null };
+  }
+
+  const prompts = aiPrompts();
   const runScope = {
     tenantId: scope.tenantId,
     companyId: scope.companyId,
@@ -196,8 +225,7 @@ perspectiveApp.post('/runs', async (c) => {
     digest,
     rulePacks: { standards: false, experience: false },
     variants: [],
-    planRef,
-    facadeRef: facade.id,
+    ...refs,
     peopleAndVehicles: body.peopleAndVehicles !== false,
     anchors: stored,
   };
@@ -448,6 +476,7 @@ perspectiveApp.get('/:projectId', async (c) => {
     createdAt: read.createdAt,
     facadeRef: read.set.facade_ref,
     planRef: read.set.plan_ref,
+    uploadRef: read.set.upload_ref ?? null,
     peopleAndVehicles: read.set.options?.people_and_vehicles ?? null,
     images: read.set.images.map((image) => ({
       view: image.view,
@@ -606,31 +635,34 @@ perspectiveApp.post('/redraw', async (c) => {
   if (!artifact || artifact.kind !== 'ai_image_set') return c.json({ error: NOT_FOUND }, 404);
   const set = artifact.payload as AiImageSet;
 
-  const [facade, brief] = await Promise.all([
-    repo.get(set.facade_ref, body.projectId),
-    repo.head(body.projectId, DISCIPLINE, 'design_brief'),
-  ]);
-  if (!facade || facade.kind !== 'ai_facade_concept') {
-    return c.json({ error: 'Không tìm thấy ý tưởng mặt đứng mà bộ ảnh dựng theo.' }, 404);
-  }
+  const brief = await repo.head(body.projectId, DISCIPLINE, 'design_brief');
   if (!brief) return c.json({ error: 'Chưa có đầu bài đã xác nhận.' }, 409);
-  const concept = facade.payload as AiFacadeConcept;
+  const digest = anonymiseForAi(
+    await aiDigestInputs(gate.db, body.projectId, brief.payload as DesignBrief),
+  );
 
   // Danh sách góc dựng lại từ CHÍNH hàm của lượt chạy, không viết lại: góc nào cầm ảnh nào là một
   // quyết định, và hai bản của nó là hai cơ hội để chúng lệch nhau.
-  const plan = perspectivePlan(
-    concept,
-    set.anchors.map((a) => a.kind),
-  );
+  let plan: ReturnType<typeof perspectivePlan>;
+  if (set.upload_ref) {
+    // Bộ ảnh từ mặt đứng kỹ sư tải lên (T114 Đợt 4b).
+    plan = perspectivePlanFromUpload((digest.balconies?.required_sides ?? []).includes('front'));
+  } else {
+    const facade = set.facade_ref ? await repo.get(set.facade_ref, body.projectId) : null;
+    if (!facade || facade.kind !== 'ai_facade_concept') {
+      return c.json({ error: 'Không tìm thấy ý tưởng mặt đứng mà bộ ảnh dựng theo.' }, 404);
+    }
+    plan = perspectivePlan(
+      facade.payload as AiFacadeConcept,
+      set.anchors.map((a) => a.kind),
+    );
+  }
   const step = plan.steps.find((s) => s.view === body.view);
   if (!step) {
     const skipped = plan.skipped.find((s) => s.view === body.view);
     return c.json({ error: skipped?.reason ?? 'Bộ ảnh này không có góc đó.' }, 409);
   }
 
-  const digest = anonymiseForAi(
-    await aiDigestInputs(gate.db, body.projectId, brief.payload as DesignBrief),
-  );
   const params: AiDesignParams = {
     runId: '',
     tenantId: scope.tenantId,
@@ -647,6 +679,7 @@ perspectiveApp.post('/redraw', async (c) => {
     variants: [],
     planRef: set.plan_ref,
     facadeRef: set.facade_ref,
+    facadeUploadRef: set.upload_ref ?? null,
     // Lựa chọn của LƯỢT CHẠY cũ, đọc từ chính artifact: một tấm vẽ lại không được lặng lẽ đổi từ
     // «không có người» sang «có người» chỉ vì mặc định của tuyến khác thế.
     peopleAndVehicles: set.options?.people_and_vehicles ?? true,

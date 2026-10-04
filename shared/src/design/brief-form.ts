@@ -81,6 +81,11 @@ const conditionSchema: z.ZodType<BriefCondition> = z.lazy(() =>
  * `space_floor` giống `multi` (chip bật/tắt chọn không gian) CỘNG một tầng ghim tuỳ chọn cho
  * từng mục đã chọn — dùng cho `required_spaces`, nơi giá trị là mảng `{type, floor}` chứ
  * không phải mảng chuỗi thuần.
+ *
+ * `facade` là CẢ phần yêu cầu mặt đứng (`DesignBrief.facade`) trong một điều khiển — mái, màu,
+ * vật liệu, cửa, lan can, cổng, rào (T114). Không tách thành mười mấy câu `select` vì danh sách
+ * chọn là danh mục `kb/facade_vocabulary.yaml` do Worker phát, không nằm trong tệp cấu hình này;
+ * chép danh mục vào đây là có hai nguồn cho cùng một bộ mã.
  */
 export const BRIEF_CONTROLS = [
   'text',
@@ -95,6 +100,7 @@ export const BRIEF_CONTROLS = [
   'family',
   'sides',
   'polygon',
+  'facade',
 ] as const;
 export type BriefControl = (typeof BRIEF_CONTROLS)[number];
 
@@ -210,11 +216,50 @@ const fieldSchema = z.object({
    */
   value_type: z.enum(['string', 'number']).optional(),
   when: conditionSchema.optional(),
+  /**
+   * Câu trả lời này đi vào lời gọi AI nào (T114). Không khai thì lấy theo PHẦN chứa mục
+   * (`BRIEF_PART_TARGETS`). Khai khi một câu dùng chéo — hướng nhà cần cho cả mặt bằng lẫn mặt
+   * đứng và phối cảnh, mà nó nằm ở phần Chung.
+   *
+   * Đây là chỗ DUY NHẤT quyết định prompt nào thấy câu nào. Lời gọi mặt bằng nhận phong cách và
+   * vật liệu mặt tiền là thông tin thừa: tốn token và kéo mô hình khỏi việc chính.
+   */
+  for: z
+    .array(z.enum(['plan', 'facade', 'perspective']))
+    .min(1)
+    .optional(),
+  note: z.string().optional(),
+});
+
+/** Ba lời gọi AI dùng đầu bài (T114). */
+export const BRIEF_TARGETS = ['plan', 'facade', 'perspective'] as const;
+export type BriefTarget = (typeof BRIEF_TARGETS)[number];
+
+/**
+ * Ba PHẦN của đầu bài (T114, Haan 03/10/2026): chung cho cả nhà · mặt bằng công năng · mặt đứng.
+ * Phần là lớp nhóm phía trên mục; mục vẫn là đơn vị của biểu mẫu từng bước và của lớp phủ T63.
+ */
+export const BRIEF_PARTS = ['chung', 'mat_bang', 'mat_dung'] as const;
+export type BriefPart = (typeof BRIEF_PARTS)[number];
+
+/** Câu không khai `for` thì đi vào lời gọi của phần chứa nó. */
+export const BRIEF_PART_TARGETS: Record<BriefPart, readonly BriefTarget[]> = {
+  chung: BRIEF_TARGETS,
+  mat_bang: ['plan'],
+  mat_dung: ['facade', 'perspective'],
+};
+
+const partSchema = z.object({
+  id: z.enum(BRIEF_PARTS),
+  title: z.string().min(1),
+  hint: z.string().optional(),
   note: z.string().optional(),
 });
 
 const sectionSchema = z.object({
   id: z.string().min(1),
+  /** Phần chứa mục (T114). Mục của cùng một phần phải đứng liền nhau trong `sections`. */
+  part: z.enum(BRIEF_PARTS),
   title: z.string().min(1),
   hint: z.string().optional(),
   when: conditionSchema.optional(),
@@ -226,6 +271,8 @@ export const briefFormConfigSchema = z
   .object({
     _doc: z.string().optional(),
     version: z.string().regex(/^\d+\.\d+\.\d+$/),
+    /** Thứ tự và tên ba phần. Đủ cả ba, mỗi phần một lần. */
+    parts: z.array(partSchema).length(BRIEF_PARTS.length),
     sections: z.array(sectionSchema).min(1),
     /**
      * Cấu hình của phần soát mâu thuẫn.
@@ -237,11 +284,40 @@ export const briefFormConfigSchema = z
      */
     consistency: z.object({}).strict(),
   })
-  .strict();
+  .strict()
+  .superRefine((form, ctx) => {
+    const partIds = form.parts.map((p) => p.id);
+    if (new Set(partIds).size !== partIds.length) {
+      ctx.addIssue({ code: 'custom', path: ['parts'], message: 'Mỗi phần chỉ khai một lần.' });
+    }
+    // Mục đi theo đúng thứ tự phần, và mục cùng phần đứng liền nhau — biểu mẫu từng bước vẽ
+    // tiêu đề phần khi sang phần mới; mục lạc chỗ thì một phần hiện hai lần.
+    let last = -1;
+    form.sections.forEach((section, i) => {
+      const at = partIds.indexOf(section.part);
+      if (at < last) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['sections', i, 'part'],
+          message: `Mục «${section.id}» đứng sai thứ tự phần.`,
+        });
+      }
+      last = Math.max(last, at);
+    });
+  });
 
 export type BriefFormConfig = z.infer<typeof briefFormConfigSchema>;
 export type BriefFormSection = z.infer<typeof sectionSchema>;
 export type BriefFormField = z.infer<typeof fieldSchema>;
+export type BriefFormPart = z.infer<typeof partSchema>;
+
+/** Câu này đi vào lời gọi AI nào: khai riêng ở câu, không thì theo phần chứa nó. */
+export function fieldTargets(
+  section: Pick<BriefFormSection, 'part'>,
+  field: Pick<BriefFormField, 'for'>,
+): readonly BriefTarget[] {
+  return field.for ?? BRIEF_PART_TARGETS[section.part];
+}
 
 // ---------------------------------------------------------------------------
 // Đọc giá trị và xét điều kiện

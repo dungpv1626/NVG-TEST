@@ -81,6 +81,29 @@ export function closeUpView(concept: AiFacadeConcept): AiImageSetView {
  * dựng được. Hai thứ ấy khác nhau: máy chủ dựng được tờ mặt bằng mái mà trình duyệt không
  * rasterise nổi (canvas hỏng, hết bộ nhớ) thì góc ấy vẫn phải bỏ.
  */
+/**
+ * Danh sách góc khi mặt đứng là bản KỸ SƯ tải lên (T114 Đợt 4b). Không có tờ mặt bằng mái, nhưng
+ * Haan chấp nhận khối nhà theo đầu bài (đúng tương đối ~90 %) — nên góc nghiêng và góc trên cao vẫn
+ * vẽ, dựa vào tấm ban ngày cộng chiều sâu trong lời dẫn. Cận cảnh chọn theo đầu bài: có ban công
+ * bắt buộc ở mặt trước thì cận ban công, không thì cận cổng.
+ */
+export function perspectivePlanFromUpload(frontBalcony: boolean): PerspectivePlan {
+  const fromDay = (view: AiImageSetView): ViewStep => ({
+    view,
+    sources: [{ image: SET_ANCHOR_VIEW }],
+  });
+  return {
+    steps: [
+      { view: SET_ANCHOR_VIEW, sources: [{ anchor: 'elevation' }] },
+      fromDay('front_night'),
+      fromDay(frontBalcony ? 'balcony_close' : 'gate_close'),
+      fromDay('oblique'),
+      fromDay('aerial'),
+    ],
+    skipped: [],
+  };
+}
+
 export function perspectivePlan(
   concept: AiFacadeConcept,
   anchors: readonly AnchorKind[],

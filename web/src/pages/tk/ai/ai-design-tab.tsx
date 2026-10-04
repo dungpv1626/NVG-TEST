@@ -21,8 +21,9 @@ import { cn } from '@/lib/utils';
 import { AiFacadeStep, facadeIsStale, STALE_FACADE } from './ai-facade-step';
 import { AiPerspectiveStep } from './ai-perspective-step';
 import { AiPlanStep } from './ai-plan-step';
+import { AiUploadPanel } from './ai-upload-panel';
 
-type StepId = 'mat-bang' | 'mat-dung' | 'phoi-canh';
+type StepId = 'dau-bai' | 'mat-bang' | 'mat-dung' | 'phoi-canh';
 
 interface StepMeta {
   id: StepId;
@@ -31,20 +32,30 @@ interface StepMeta {
   hint: string;
 }
 
+/**
+ * Bước «Đầu bài và khảo sát» — chỉ có khi nơi dựng tab đưa vào vùng chèn `inputs` (trang AI Design
+ * riêng, T114). Trong trang hồ sơ, đầu bài có tab riêng nên dải giữ ba bước.
+ */
+const INPUT_STEP: StepMeta = {
+  id: 'dau-bai',
+  label: 'Đầu bài và khảo sát',
+  hint: 'Đầu bài ba phần (chung · mặt bằng · mặt đứng) và khảo sát hiện trạng — đầu vào duy nhất của các bước AI. Xác nhận đầu bài rồi mới dựng mặt bằng.',
+};
+
 const STEPS: StepMeta[] = [
   {
     id: 'mat-bang',
-    label: '1. Mặt bằng từng tầng',
+    label: 'Mặt bằng từng tầng',
     hint: 'AI khai nội dung bản vẽ; chương trình dựng tờ mặt bằng theo đúng dữ liệu đó.',
   },
   {
     id: 'mat-dung',
-    label: '2. Mặt đứng',
+    label: 'Mặt đứng',
     hint: 'Ý tưởng mái, vật liệu, màu, cổng và ban công — sửa được trước khi dựng ảnh.',
   },
   {
     id: 'phoi-canh',
-    label: '3. Phối cảnh',
+    label: 'Phối cảnh',
     hint: 'Năm ảnh cùng một ngôi nhà, dựng từ tờ mặt đứng và tờ mặt bằng mái.',
   },
 ];
@@ -58,6 +69,13 @@ function statusOf(
     state.runs[stage]?.status === 'running' || state.runs[stage]?.status === 'queued';
 
   switch (step) {
+    case 'dau-bai':
+      return {
+        done: Boolean(state.briefArtifactId),
+        running: false,
+        blocked: null,
+        count: 0,
+      };
     case 'mat-bang':
       return {
         done: state.plans.length > 0,
@@ -81,7 +99,7 @@ function statusOf(
         done: Boolean(state.imageSetArtifactId),
         running: run('images'),
         blocked: !state.facadeArtifactId
-          ? 'Cần ý tưởng mặt đứng trước.'
+          ? 'Cần ý tưởng mặt đứng (hoặc bản vẽ mặt đứng tải lên) trước.'
           : facadeIsStale(state)
             ? STALE_FACADE
             : null,
@@ -93,12 +111,19 @@ function statusOf(
 export function AiDesignTab({
   projectId,
   readOnly,
+  inputs,
 }: {
   projectId: string;
   readOnly: boolean;
+  /** Màn hình đầu bài + khảo sát, do nơi dựng tab đưa vào. Có thì dải thêm bước đầu tiên. */
+  inputs?: React.ReactNode;
 }): React.ReactElement {
   const state = useAiDesignState(projectId);
-  const [open, setOpen] = useState<StepId>('mat-bang');
+  const steps = inputs ? [INPUT_STEP, ...STEPS] : STEPS;
+  // Chưa có đầu bài đã xác nhận thì mở ngay bước đầu bài — mọi bước sau đều đang chờ nó.
+  const [chosen, setOpen] = useState<StepId | null>(null);
+  const open: StepId =
+    chosen ?? (inputs && state.data && !state.data.briefArtifactId ? 'dau-bai' : 'mat-bang');
 
   if (state.isLoading) {
     return (
@@ -124,7 +149,7 @@ export function AiDesignTab({
   }
 
   const data = state.data;
-  const active = STEPS.find((s) => s.id === open)!;
+  const active = steps.find((s) => s.id === open)!;
 
   return (
     <div className="space-y-6">
@@ -133,11 +158,11 @@ export function AiDesignTab({
         aside={<Chip tone="mute">Bản phác tham khảo — không đi vào hồ sơ phát hành</Chip>}
       >
         <p className="text-fg-subtle">
-          Ba bước nối nhau, mỗi bước dùng kết quả của bước trước. Kết quả do mô hình đề xuất, kiến
+          Các bước nối nhau, mỗi bước dùng kết quả của bước trước. Kết quả do mô hình đề xuất, kiến
           trúc sư xem lại và quyết định.
         </p>
-        <ol className="mt-3 grid gap-2 sm:grid-cols-3">
-          {STEPS.map((step) => {
+        <ol className={cn('mt-3 grid gap-2', inputs ? 'sm:grid-cols-4' : 'sm:grid-cols-3')}>
+          {steps.map((step, index) => {
             const s = statusOf(step.id, data);
             return (
               <li key={step.id}>
@@ -152,13 +177,21 @@ export function AiDesignTab({
                       : 'border-tk-line bg-tk-panel',
                   )}
                 >
-                  <span className="block font-medium">{step.label}</span>
+                  <span className="block font-medium">
+                    {index + 1}. {step.label}
+                  </span>
                   <span className="mt-1 block">
                     {/* Trạng thái luôn kèm CHỮ, không chỉ màu (CGD 6.8). */}
                     {s.running ? (
                       <Chip tone="bl">Đang chạy</Chip>
                     ) : step.id === 'mat-dung' && facadeIsStale(data) ? (
                       <Chip tone="am">Theo phương án cũ</Chip>
+                    ) : step.id === 'dau-bai' ? (
+                      s.done ? (
+                        <Chip tone="gr">Đã xác nhận</Chip>
+                      ) : (
+                        <Chip tone="am">Chưa xác nhận</Chip>
+                      )
                     ) : s.done ? (
                       <Chip tone="gr">{s.count ? `Có ${s.count}` : 'Đã có'}</Chip>
                     ) : s.blocked ? (
@@ -179,11 +212,20 @@ export function AiDesignTab({
 
       <div>
         <p className="mb-3 text-fg-subtle">{active.hint}</p>
+        {open === 'dau-bai' && inputs}
+        {/* Ảnh từ bản vẽ của kỹ sư (T114 Đợt 4) đứng CUỐI mỗi bước và không phụ thuộc bản AI: kỹ
+            sư có thể sửa bản AI trên AutoCAD, hoặc tự vẽ từ đầu. */}
         {open === 'mat-bang' && (
-          <AiPlanStep projectId={projectId} readOnly={readOnly} state={data} />
+          <div className="space-y-6">
+            <AiPlanStep projectId={projectId} readOnly={readOnly} state={data} />
+            <AiUploadPanel projectId={projectId} drawing="plan" readOnly={readOnly} />
+          </div>
         )}
         {open === 'mat-dung' && (
-          <AiFacadeStep projectId={projectId} readOnly={readOnly} state={data} />
+          <div className="space-y-6">
+            <AiFacadeStep projectId={projectId} readOnly={readOnly} state={data} />
+            <AiUploadPanel projectId={projectId} drawing="facade" readOnly={readOnly} />
+          </div>
         )}
         {open === 'phoi-canh' && (
           <AiPerspectiveStep projectId={projectId} readOnly={readOnly} state={data} />

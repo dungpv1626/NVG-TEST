@@ -34,6 +34,7 @@
 
 import { z } from 'zod';
 import {
+  BRIEF_PARTS,
   briefFormConfigSchema,
   type BriefFormConfig,
   type BriefFormField,
@@ -115,6 +116,13 @@ const overlaySectionSchema = z.object({
   hidden: z.boolean().optional(),
   /** Mục do quản trị viên tạo — bản gốc không có `id` này. */
   custom: z.boolean().optional(),
+  /**
+   * Phần chứa mục tự tạo (T114). Mục có sẵn KHÔNG đổi phần được — phần quyết định câu trả lời
+   * đi vào lời gọi AI nào, mà nhãn `for` của câu có sẵn là nhận định nghề nằm ở tệp gốc.
+   * Mục tự tạo không khai thì về phần Mặt bằng: câu hỏi tự thêm trước T114 vốn chỉ đi vào lời
+   * gọi mặt bằng, giữ nguyên chỗ đi của chúng.
+   */
+  part: z.enum(BRIEF_PARTS).optional(),
   fields: z.array(overlayFieldSchema).optional(),
 });
 
@@ -165,6 +173,7 @@ export function applyBriefFormOverlay(
   overlay: BriefFormOverlay | null | undefined,
 ): BriefFormConfig {
   if (!overlay) return base;
+  overlay = relocateFieldPatches(base, overlay);
 
   const patchById = new Map((overlay.sections ?? []).map((s) => [s.id, s]));
   const baseIds = new Set(base.sections.map((s) => s.id));
@@ -189,13 +198,14 @@ export function applyBriefFormOverlay(
     if (!fields.length) continue; // Mục rỗng không vẽ ra — lược đồ gốc đòi tối thiểu một trường.
     sections.push({
       id: patch.id,
+      part: patch.part ?? 'mat_bang',
       title: patch.title ?? patch.id,
       ...(patch.hint ? { hint: patch.hint } : {}),
       fields,
     });
   }
 
-  const ordered = orderSections(sections, overlay.section_order);
+  const ordered = orderSections(sections, overlay.section_order, base);
   const merged: BriefFormConfig = { ...base, sections: ordered };
 
   // Kiểm lại bằng chính lược đồ của cấu hình: lớp phủ không được phép dựng ra một cấu hình mà
@@ -207,6 +217,49 @@ export function applyBriefFormOverlay(
     );
   }
   return parsed.data;
+}
+
+/**
+ * Vá của một trường CÓ SẴN mà nằm dưới mục không còn chứa trường ấy → dời sang mục đang chứa.
+ *
+ * Sinh ra ở T114: `style` rời mục `khoi_nha` sang mục `mat_dung`. Lớp phủ lưu trước đó có vá
+ * nhãn cho `style` dưới `khoi_nha`; không dời thì `mergeSection` coi nó là câu hỏi tự thêm, ném
+ * lỗi, và CẢ lớp phủ bị bỏ — quản trị viên mất mọi thay đổi chỉ vì tệp gốc dời một câu.
+ * Câu `custom.*` không đụng tới: chỗ của nó là chỗ quản trị viên đặt.
+ */
+function relocateFieldPatches(base: BriefFormConfig, overlay: BriefFormOverlay): BriefFormOverlay {
+  const home = new Map<string, string>();
+  for (const section of base.sections) for (const f of section.fields) home.set(f.path, section.id);
+
+  const moved = new Map<string, BriefFormOverlayField[]>();
+  let changed = false;
+  const sections = (overlay.sections ?? []).map((section) => {
+    const keep: BriefFormOverlayField[] = [];
+    for (const field of section.fields ?? []) {
+      const target = home.get(field.path);
+      if (target && target !== section.id) {
+        moved.set(target, [...(moved.get(target) ?? []), field]);
+        changed = true;
+      } else keep.push(field);
+    }
+    return section.fields ? { ...section, fields: keep } : section;
+  });
+  if (!changed) return overlay;
+
+  for (const [target, fields] of moved) {
+    const at = sections.findIndex((s) => s.id === target);
+    if (at === -1) sections.push({ id: target, fields });
+    else {
+      const section = sections[at]!;
+      const own = new Set((section.fields ?? []).map((f) => f.path));
+      // Mục đích đã có vá riêng cho cùng trường thì vá ấy thắng — nó mới hơn bản bị dời.
+      sections[at] = {
+        ...section,
+        fields: [...(section.fields ?? []), ...fields.filter((f) => !own.has(f.path))],
+      };
+    }
+  }
+  return { ...overlay, sections };
 }
 
 function mergeSection(
@@ -339,10 +392,22 @@ function customField(patch: BriefFormOverlayField): BriefFormField {
   };
 }
 
-function orderSections(sections: BriefFormSection[], order: string[] | undefined) {
-  if (!order?.length) return sections;
-  const rank = new Map(order.map((id, i) => [id, i]));
+/**
+ * Xếp mục theo PHẦN trước (thứ tự của `base.parts`), trong cùng phần mới theo `section_order`.
+ * Thứ tự phần là của tệp gốc: lớp phủ v1 lưu thứ tự sáu mục trước T114 — áp nguyên nó thì mục
+ * cùng phần tách rời nhau và cả cấu hình bị bác.
+ */
+function orderSections(
+  sections: BriefFormSection[],
+  order: string[] | undefined,
+  base: BriefFormConfig,
+) {
+  const partRank = new Map(base.parts.map((p, i) => [p.id, i]));
+  const rank = new Map((order ?? []).map((id, i) => [id, i]));
   return [...sections].sort((a, b) => {
+    const pa = partRank.get(a.part) ?? 0;
+    const pb = partRank.get(b.part) ?? 0;
+    if (pa !== pb) return pa - pb;
     const ra = rank.get(a.id) ?? Number.MAX_SAFE_INTEGER;
     const rb = rank.get(b.id) ?? Number.MAX_SAFE_INTEGER;
     if (ra !== rb) return ra - rb;

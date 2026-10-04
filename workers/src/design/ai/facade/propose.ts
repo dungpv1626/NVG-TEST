@@ -25,20 +25,15 @@ import type { AiPrompts } from '../prompts';
 import { facadeRequirementsText } from './brief';
 import { checkFacade } from './check';
 import type { FacadeFrame } from './frame';
+import { compactDigest, digestFor } from '../../brief/slice';
 
 /**
  * Phần đầu bài gửi cho mô hình — chỉ những trường nói về MẶT NGOÀI. Đã lược danh tính từ trước
  * (`anonymiseForAi`); lọc thêm ở đây là để lời dẫn ngắn, không phải để bảo mật.
  */
 export function facadeBrief(digest: AiBriefDigest): string {
-  return JSON.stringify({
-    building_type: digest.building_type,
-    floors: digest.floors,
-    style: digest.style ?? null,
-    style_note: digest.free_text?.style_note ?? null,
-    indoor_outdoor: digest.massing?.indoor_outdoor ?? null,
-    orientation: digest.site.orientation ?? null,
-  });
+  // Câu nào đi vào đây là nhãn `for` của biểu mẫu quyết (T114), không nhặt tay từng trường nữa.
+  return JSON.stringify(compactDigest(digestFor(digest, 'facade')));
 }
 
 /** Khung mặt đứng dạng chữ — mọi dòng lỗ mở và ban công đánh dấu LOCKED. */
