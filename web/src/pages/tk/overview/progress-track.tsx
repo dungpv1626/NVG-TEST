@@ -1,5 +1,5 @@
 /**
- * Dải tiến trình năm bước (bản mẫu §5.5a). Logic suy trạng thái nằm ở `steps.ts` — xem chú
+ * Dải tiến trình sáu bước (bản mẫu §5.5a). Logic suy trạng thái nằm ở `steps.ts` — xem chú
  * thích ở đó về việc vì sao dải này KHÔNG phải cỗ máy trạng thái thứ hai.
  */
 
@@ -40,7 +40,7 @@ export function ProgressTrack({
     >
       <ol
         aria-label="Các bước của quy trình thiết kế"
-        className="grid gap-2 sm:grid-cols-3 lg:grid-cols-5"
+        className="grid gap-2 sm:grid-cols-3 lg:grid-cols-6"
       >
         {steps.map((step) => (
           <li key={step.id}>

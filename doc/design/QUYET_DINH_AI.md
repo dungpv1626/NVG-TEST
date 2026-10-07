@@ -3553,3 +3553,11 @@ nên tăng theo từng ảnh xong.
   cuộn tới dòng tương ứng; ô đích được viền sáng một lúc.
 - Gỡ thêm câu «Có khách ở lại qua đêm» (`lifestyle.overnight_guests`) khỏi biểu mẫu; trường giữ trong hợp đồng,
   `brief-demands` vẫn đọc theo kiểu «chỉ suy từ câu đã trả lời» cho đầu bài cũ.
+
+### T118 (tiếp) — Bước Mặt đứng không bày phiếu yêu cầu (08/10/2026, Haan)
+
+Haan: «tất cả khảo sát nằm ở khảo sát đầu bài, không nằm trong AI Design. AI Design chỉ thừa hưởng khảo sát thôi».
+Gỡ hẳn phiếu «Yêu cầu mặt đứng của kỹ sư» (bản chỉ xem T117) khỏi bước Mặt đứng; khung «Dựng mặt đứng» chỉ còn một
+dòng nguồn «Dựng theo phần Mặt đứng của đầu bài đã xác nhận» kèm liên kết sửa ở đầu bài. Nhãn nguồn trong bảng ý
+tưởng đổi «theo yêu cầu kỹ sư» → «theo đầu bài». Lượt chạy vốn đọc phần `facade` của đầu bài đã xác nhận phía
+Worker, nên không đổi gì ngoài giao diện.

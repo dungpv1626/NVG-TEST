@@ -44,6 +44,7 @@ import { DESIGN_HELP } from './help-texts';
 import { OverviewPanel } from './overview/overview-panel';
 import { BriefPanel } from './brief-panel';
 import { ChangeRequestPanel } from './change-request-panel';
+import { DesignRfiPanel } from './rfi-panel';
 import { DisciplinePanel } from './discipline-panel';
 import { SurveyPanel } from './survey-panel';
 import { VersionPanel } from './version-panel';
@@ -233,7 +234,7 @@ export function DesignDetailPage() {
           ) : null,
         ]}
         actions={actions}
-        primaryTabIds={['tong-quan', 'phien-ban', 'thay-doi']}
+        primaryTabIds={['tong-quan', 'phien-ban', 'thay-doi', 'lam-ro']}
         tabs={[
           {
             id: 'tong-quan',
@@ -306,6 +307,8 @@ export function DesignDetailPage() {
                 // Gồm cả bản phương án KTS tải lên (TK-03) lẫn bản vẽ kỹ thuật (T58).
                 disciplines={DESIGN_DISCIPLINES}
                 readOnly={readOnly}
+                // TK-08 (0154): đã bàn giao vẫn ra được bản điều chỉnh gắn yêu cầu thay đổi đã chấp thuận.
+                revisionOnly={canEdit && project.handed_over_at !== null}
                 emptyMessage="Chưa có bản phương án hay bản vẽ kỹ thuật nào. Mỗi bộ môn phát hành bản riêng; hệ thống tự thông báo cho các bên liên quan."
               />
             ),
@@ -340,6 +343,12 @@ export function DesignDetailPage() {
                 canEdit={canEdit}
               />
             ),
+          },
+          {
+            // TK-08: câu hỏi bản vẽ từ công trường là luồng chính thức, có hạn trả lời (TC-15).
+            id: 'lam-ro',
+            label: 'Yêu cầu làm rõ',
+            content: <DesignRfiPanel projectId={project.id} />,
           },
         ]}
         historyContent={

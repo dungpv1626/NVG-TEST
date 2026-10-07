@@ -16,7 +16,7 @@
  *    tham số cấu hình ở migration `0112`, nhưng vẫn là giả định chưa ai xác nhận.
  */
 
-import { toMoney } from './format';
+import { toMoney, toNvgDateInput } from './format';
 import type { StatusGroup } from './status';
 
 /**
@@ -364,3 +364,38 @@ export const SITE_DOCUMENT_CATEGORY_LABELS: Readonly<Record<SiteDocumentCategory
   ho_so_chat_luong: 'Hồ sơ chất lượng',
   khac: 'Tài liệu khác',
 };
+
+// ---------------------------------------------------------------------------
+// Yêu cầu làm rõ (RFI) — TK-08 / TC-15 (migration 0154)
+// ---------------------------------------------------------------------------
+
+/** Ai phải trả lời. «Chủ đầu tư» là người ngoài hệ thống: công trường chuyển câu hỏi và ghi lại lời đáp. */
+export const RFI_ROUTES = ['thiet_ke', 'du_an', 'chu_dau_tu'] as const;
+export type RfiRoute = (typeof RFI_ROUTES)[number];
+
+export const RFI_ROUTE_LABEL: Readonly<Record<RfiRoute, string>> = {
+  thiet_ke: 'Phòng Thiết kế',
+  du_an: 'Phòng Dự án – Đấu thầu',
+  chu_dau_tu: 'Chủ đầu tư',
+};
+
+export const RFI_STATUSES = ['cho_tra_loi', 'da_tra_loi'] as const;
+export type RfiStatus = (typeof RFI_STATUSES)[number];
+
+export const RFI_STATUS_LABEL: Readonly<Record<RfiStatus, string>> = {
+  cho_tra_loi: 'Chờ trả lời',
+  da_tra_loi: 'Đã trả lời',
+};
+
+/**
+ * Nhãn trạng thái của RFI: đã trả lời → Hoàn thành; chờ trả lời mà qua ngày hạn (giờ Việt Nam) →
+ * Quá hạn; còn lại → Đang xử lý. Hạn là cả NGÀY hạn — trả lời trong ngày đó vẫn đúng hạn.
+ */
+export function rfiDisplayStatus(
+  status: RfiStatus,
+  dueDate: string,
+  today: Date = new Date(),
+): StatusGroup {
+  if (status === 'da_tra_loi') return 'completed';
+  return dueDate < toNvgDateInput(today) ? 'overdue' : 'in_progress';
+}

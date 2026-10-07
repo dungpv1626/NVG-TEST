@@ -13,13 +13,16 @@ import { Link } from 'react-router-dom';
 import { BellRing } from 'lucide-react';
 import {
   PURCHASE_REQUEST_STAGE_META,
+  RFI_STATUS_LABEL,
   formatDate,
   formatDateTime,
   formatDeadline,
   formatWaiting,
   purchaseRequestDisplayStatus,
+  rfiDisplayStatus,
   toNvgTimeInput,
   type PurchaseRequestStage,
+  type RfiStatus,
 } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
@@ -52,7 +55,10 @@ export function nudgeAvailability(
   canAct: boolean,
   now: Date = new Date(),
 ): NudgeAvailability {
-  const officeHolds = row.holder_kind === 'approver' || row.holder_kind === 'purchasing';
+  const officeHolds =
+    row.holder_kind === 'approver' ||
+    row.holder_kind === 'purchasing' ||
+    row.holder_kind === 'answerer';
   if (row.is_closed || !officeHolds || !canAct) {
     return { visible: false, allowed: false, reason: null };
   }
@@ -108,16 +114,21 @@ function RequestCard({
   const [error, setError] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
 
+  // Hai loại dòng (0154): đề nghị mua và yêu cầu làm rõ — khác nhãn bước, đường dẫn, ý nghĩa ngày.
+  const isRfi = row.entity_type === 'rfis';
   const stage = row.stage as PurchaseRequestStage;
   const canAct = row.requested_by === meId || canEditSite;
   const availability = nudgeAvailability(row, canAct);
-  const officeHolds = row.holder_kind === 'approver' || row.holder_kind === 'purchasing';
+  const officeHolds =
+    row.holder_kind === 'approver' ||
+    row.holder_kind === 'purchasing' ||
+    row.holder_kind === 'answerer';
 
   async function onNudge() {
     setNotice(null);
     setError(null);
     try {
-      await nudge.mutateAsync({ entityId: row.entity_id });
+      await nudge.mutateAsync({ entityId: row.entity_id, entityType: row.entity_type });
       setNotice('Đã thúc — người đang giữ đề nghị đã nhận thông báo.');
     } catch (e) {
       setError(toUserMessage(e, 'edit'));
@@ -135,7 +146,7 @@ function RequestCard({
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <Link
-            to={`/mh/de-nghi-mua/${row.entity_id}`}
+            to={isRfi ? `/lam-ro/${row.entity_id}` : `/mh/de-nghi-mua/${row.entity_id}`}
             className="font-medium text-brand underline-offset-4 hover:underline"
           >
             {row.code ?? 'Mở đề nghị'}
@@ -147,16 +158,26 @@ function RequestCard({
             </p>
           )}
         </div>
-        <StatusLozenge status={purchaseRequestDisplayStatus(stage, row.needed_date)} />
+        <StatusLozenge
+          status={
+            isRfi
+              ? rfiDisplayStatus(row.stage as RfiStatus, row.needed_date ?? '')
+              : purchaseRequestDisplayStatus(stage, row.needed_date)
+          }
+        />
       </div>
 
       <dl className="grid gap-1 text-sm sm:grid-cols-2">
-        <Line label="Bước hiện tại">{PURCHASE_REQUEST_STAGE_META[stage].label}</Line>
+        <Line label="Bước hiện tại">
+          {isRfi
+            ? `Yêu cầu làm rõ — ${RFI_STATUS_LABEL[row.stage as RfiStatus]}`
+            : PURCHASE_REQUEST_STAGE_META[stage].label}
+        </Line>
         {holder && <Line label="Đang giữ">{holder}</Line>}
         {!row.is_closed && row.waiting_since && (
           <Line label="Thời gian chờ">{formatWaiting(row.waiting_since)}</Line>
         )}
-        {!row.is_closed && officeHolds && (
+        {!row.is_closed && officeHolds && !isRfi && (
           <Line label="Hạn xử lý">
             {row.due_at ? (
               <strong>{formatDeadline(row.due_at)}</strong>
@@ -165,7 +186,11 @@ function RequestCard({
             )}
           </Line>
         )}
-        {row.needed_date && <Line label="Cần tại công trường">{formatDate(row.needed_date)}</Line>}
+        {row.needed_date && (
+          <Line label={isRfi ? 'Hạn trả lời' : 'Cần tại công trường'}>
+            {formatDate(row.needed_date)}
+          </Line>
+        )}
         {row.promised_date && (
           <Line label="Nhà cung cấp hẹn giao">{formatDate(row.promised_date)}</Line>
         )}

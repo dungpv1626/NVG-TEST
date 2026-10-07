@@ -1,5 +1,10 @@
 /**
- * Dải tiến trình NĂM bước của Trang dự án thiết kế (bản mẫu §5.5a).
+ * Dải tiến trình SÁU bước của Trang dự án thiết kế (bản mẫu §5.5a).
+ *
+ * Thứ tự theo đúng luồng nghiệp vụ (08/10/2026, rà luồng phòng thiết kế): Đầu bài → Khảo sát →
+ * Trình khách (phương án, khách duyệt) → Hồ sơ kỹ thuật → Dự toán → Bàn giao thi công. Trước đó
+ * «Trình khách» đứng CUỐI, sau cả Hồ sơ kỹ thuật và Dự toán — ngược với `move_design_stage` /
+ * `record_design_review`: khách duyệt phương án chính là điều kiện mở Hồ sơ kỹ thuật (TK-03).
  *
  * ⚠️ AI Design KHÔNG là một bước (Haan, 07/10/2026): nó là module độc lập hỗ trợ phòng thiết kế,
  * không nằm trong quy trình. Trước đó dải có bước «AI Design» ở giữa và lấy «đã chọn phương án AI»
@@ -42,6 +47,10 @@ export interface StepInput {
   hasEstimate: boolean;
   /** Đã có phiên bản nào được khách hàng duyệt chưa. */
   customerApproved: boolean;
+  /** Số phương án kiến trúc đã phát hành (gửi khách xem được). */
+  publishedOptions: number;
+  /** Hồ sơ đã bàn giao thi công chưa. */
+  handedOver: boolean;
 }
 
 /** Làm tròn phần trăm để hiện, tránh "94.99999%". */
@@ -74,21 +83,33 @@ export function designSteps(input: StepInput): DesignStep[] {
       tab: 'khao-sat',
     },
     {
+      id: 'trinh-khach',
+      label: 'Trình khách',
+      note: input.customerApproved
+        ? 'khách đã duyệt'
+        : input.publishedOptions > 0
+          ? `${input.publishedOptions} phương án đã phát hành`
+          : '',
+      tab: 'phien-ban',
+    },
+    {
       id: 'ho-so-ky-thuat',
       label: 'Hồ sơ kỹ thuật',
       note: disciplineAvg != null ? percent(disciplineAvg) : '',
       tab: 'ho-so-ky-thuat',
     },
     { id: 'du-toan', label: 'Dự toán', note: '', tab: 'du-toan' },
-    { id: 'trinh-khach', label: 'Trình khách', note: '', tab: 'phien-ban' },
+    // Bàn giao không có màn hình con riêng: điều kiện của nó (đồng bộ ba bộ môn) nằm ở Hồ sơ kỹ thuật.
+    { id: 'ban-giao', label: 'Bàn giao thi công', note: '', tab: 'ho-so-ky-thuat' },
   ];
 
   const done = [
     briefDone,
     input.surveyCount > 0,
+    input.customerApproved,
     disciplineAvg === 100,
     input.hasEstimate,
-    input.customerApproved,
+    input.handedOver,
   ];
 
   // Bước đang chạy = bước chưa xong ĐẦU TIÊN. Mọi bước sau nó là chưa mở, kể cả khi tình cờ

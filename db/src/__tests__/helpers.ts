@@ -94,6 +94,7 @@ export const PROTECTED_TABLES = [
   'sla_definitions',
   'user_site_assignments',
   'request_reminders',
+  'rfis',
   'acceptance_checklists',
   'acceptance_checklist_results',
   'site_check_ins',
@@ -207,6 +208,14 @@ export async function cleanupTestData(): Promise<void> {
     // chặn sửa — xoá công trình trước thì không còn dây nào để CSDL phải dọn.
     // Điểm danh là bằng chứng bất biến (0139) và không CASCADE theo công trình: gỡ trước, tắt
     // riêng trigger chặn xoá — chỉ trong câu lệnh này (replica cũng tắt trigger khoá ngoại).
+    // Yêu cầu làm rõ khoá xoá công trình (ON DELETE RESTRICT, 0154) — gỡ trước, kèm lịch sử thúc.
+    await sql`DELETE FROM request_reminders WHERE entity_type = 'rfis' AND entity_id IN (
+      SELECT r.id FROM rfis r JOIN construction_sites s ON s.id = r.construction_site_id
+       WHERE s.name LIKE ${'%' + TEST_PREFIX + '%'}
+    )`;
+    await sql`DELETE FROM rfis WHERE construction_site_id IN (
+      SELECT id FROM construction_sites WHERE name LIKE ${'%' + TEST_PREFIX + '%'}
+    )`;
     await sql.begin(async (tx) => {
       await tx`SET LOCAL session_replication_role = replica`;
       await tx`DELETE FROM site_check_ins WHERE construction_site_id IN (

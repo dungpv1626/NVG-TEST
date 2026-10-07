@@ -15,13 +15,34 @@ const EMPTY: StepInput = {
   disciplinePercents: [],
   hasEstimate: false,
   customerApproved: false,
+  publishedOptions: 0,
+  handedOver: false,
 };
 
-describe('Dải năm bước của quy trình thiết kế', () => {
-  it('hồ sơ trống: bước đầu đang chạy, bốn bước sau chưa mở', () => {
+describe('Dải sáu bước của quy trình thiết kế', () => {
+  it('hồ sơ trống: bước đầu đang chạy, năm bước sau chưa mở', () => {
     const steps = designSteps(EMPTY);
-    expect(steps).toHaveLength(5);
-    expect(steps.map((s) => s.state)).toEqual(['run', 'todo', 'todo', 'todo', 'todo']);
+    expect(steps).toHaveLength(6);
+    expect(steps.map((s) => s.state)).toEqual(['run', 'todo', 'todo', 'todo', 'todo', 'todo']);
+  });
+
+  it('thứ tự theo luồng nghiệp vụ: khách duyệt phương án TRƯỚC hồ sơ kỹ thuật (08/10/2026)', () => {
+    // Trước đó «Trình khách» đứng cuối — ngược với `record_design_review`: khách duyệt phương án
+    // là thứ mở Hồ sơ kỹ thuật.
+    expect(designSteps(EMPTY).map((s) => s.id)).toEqual([
+      'dau-bai',
+      'khao-sat',
+      'trinh-khach',
+      'ho-so-ky-thuat',
+      'du-toan',
+      'ban-giao',
+    ]);
+  });
+
+  it('Trình khách nói số phương án đã phát hành, rồi «khách đã duyệt»', () => {
+    const base = { ...EMPTY, brief: { confirmed: true, completeness: 1 }, surveyCount: 1 };
+    expect(designSteps({ ...base, publishedOptions: 2 })[2]!.note).toBe('2 phương án đã phát hành');
+    expect(designSteps({ ...base, customerApproved: true })[2]!.note).toBe('khách đã duyệt');
   });
 
   it('bước chưa mở KHÔNG mang con số của chính nó', () => {
@@ -37,12 +58,13 @@ describe('Dải năm bước của quy trình thiết kế', () => {
       ...EMPTY,
       brief: { confirmed: true, completeness: 0.95 },
       surveyCount: 3,
+      customerApproved: true,
       disciplinePercents: [40],
       hasEstimate: true,
     });
     const order = steps.map((s) => s.state);
     expect(order.indexOf('todo')).toBeGreaterThan(order.lastIndexOf('done'));
-    expect(steps[2]!.state).toBe('run');
+    expect(steps[3]!.state).toBe('run');
   });
 
   it('độ đầy đủ đầu bài hiện thành phần trăm tròn, lấy từ số thật', () => {
@@ -54,20 +76,29 @@ describe('Dải năm bước của quy trình thiết kế', () => {
     expect(designSteps(EMPTY)[0]!.note).toBe('');
   });
 
-  it('đủ cả năm thì không bước nào đang chạy', () => {
+  it('đủ cả sáu thì không bước nào đang chạy', () => {
     const steps = designSteps({
       brief: { confirmed: true, completeness: 1 },
       surveyCount: 1,
       disciplinePercents: [100, 100, 100],
       hasEstimate: true,
       customerApproved: true,
+      publishedOptions: 1,
+      handedOver: true,
     });
     expect(steps.every((s) => s.state === 'done')).toBe(true);
   });
 
   it('mỗi bước trỏ tới một màn hình con có thật', () => {
     const tabs = designSteps(EMPTY).map((s) => s.tab);
-    expect(tabs).toEqual(['dau-bai', 'khao-sat', 'ho-so-ky-thuat', 'du-toan', 'phien-ban']);
+    expect(tabs).toEqual([
+      'dau-bai',
+      'khao-sat',
+      'phien-ban',
+      'ho-so-ky-thuat',
+      'du-toan',
+      'ho-so-ky-thuat',
+    ]);
   });
 });
 
@@ -77,6 +108,7 @@ describe('AI Design không là một bước của quy trình (Haan, 07/10/2026)
       ...EMPTY,
       brief: { confirmed: true, completeness: 1 },
       surveyCount: 1,
+      customerApproved: true,
     });
     expect(steps.map((s) => s.label)).not.toContain('AI Design');
     expect(steps.find((s) => s.id === 'ho-so-ky-thuat')!.state).toBe('run');

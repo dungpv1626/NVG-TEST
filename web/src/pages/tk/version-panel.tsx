@@ -30,7 +30,10 @@ import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/states';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
+import { FIELD_BOX, TEXTAREA_BOX } from '@/components/ui/field-box';
+import { cn } from '@/lib/utils';
 import {
+  useChangeRequests,
   useCreateDesignVersion,
   useDesignReviews,
   useDesignVersions,
@@ -45,15 +48,26 @@ export function VersionPanel({
   companyId,
   disciplines,
   readOnly,
+  revisionOnly = false,
   emptyMessage,
 }: {
   projectId: string;
   companyId: string;
   disciplines: readonly DesignDiscipline[];
   readOnly: boolean;
+  /**
+   * Hồ sơ đã bàn giao (TK-08, 0154): chỉ còn đường ra BẢN ĐIỀU CHỈNH bộ môn thi công, gắn với một
+   * yêu cầu thay đổi đã chấp thuận. Phát hành xong thì yêu cầu thành «Đã thực hiện» và công trường
+   * nhận thông báo.
+   */
+  revisionOnly?: boolean;
   emptyMessage: string;
 }) {
   const { data: allVersions } = useDesignVersions(projectId);
+  const { data: changeRequests } = useChangeRequests(revisionOnly ? projectId : undefined);
+  const approvedChanges = (changeRequests ?? []).filter((c) => c.status === 'chap_thuan');
+  const formDisciplines = revisionOnly ? disciplines.filter((d) => d !== 'phuong_an') : disciplines;
+  const canAdd = !readOnly || revisionOnly;
   const createVersion = useCreateDesignVersion();
   const publishVersion = usePublishDesignVersion();
 
@@ -66,11 +80,12 @@ export function VersionPanel({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [form, setForm] = useState({
-    discipline: disciplines[0]!,
+    discipline: formDisciplines[0]!,
     title: '',
     fileName: '',
     changeReason: '',
     notes: '',
+    changeRequestId: '',
   });
 
   const hasPrevious = (discipline: DesignDiscipline) =>
@@ -87,6 +102,10 @@ export function VersionPanel({
     }
     if (!form.fileName.trim()) {
       setError('Vui lòng nhập tên tệp bản vẽ.');
+      return;
+    }
+    if (revisionOnly && !form.changeRequestId) {
+      setError('Vui lòng chọn yêu cầu thay đổi mà bản điều chỉnh này thực hiện.');
       return;
     }
     if (hasPrevious(form.discipline) && !form.changeReason.trim()) {
@@ -106,13 +125,15 @@ export function VersionPanel({
         fileName: form.fileName.trim(),
         changeReason: form.changeReason.trim() || null,
         notes: form.notes.trim() || null,
+        changeRequestId: revisionOnly ? form.changeRequestId : null,
       });
       setForm({
-        discipline: disciplines[0]!,
+        discipline: formDisciplines[0]!,
         title: '',
         fileName: '',
         changeReason: '',
         notes: '',
+        changeRequestId: '',
       });
       setAdding(false);
     } catch (e) {
@@ -146,25 +167,64 @@ export function VersionPanel({
         </p>
       )}
 
-      {!readOnly &&
+      {revisionOnly && (
+        <p className="rounded-sm border border-border bg-surface-sunken px-3 py-2 text-fg-subtle">
+          Hồ sơ đã bàn giao thi công. Chỉ phát hành được bản điều chỉnh kiến trúc, kết cấu, điện
+          nước gắn với một yêu cầu thay đổi đã chấp thuận; công trường nhận thông báo và bản cũ hết
+          hiệu lực.
+        </p>
+      )}
+      {revisionOnly && approvedChanges.length === 0 ? (
+        <p className="text-fg-subtle">
+          Chưa có yêu cầu thay đổi nào ở trạng thái «Chấp thuận». Ghi và chấp thuận ở tab Yêu cầu
+          thay đổi trước.
+        </p>
+      ) : (
+        canAdd &&
         (adding ? (
           <form
             onSubmit={addVersion}
             noValidate
             className="rounded-lg border border-border bg-surface p-4 shadow-card"
           >
-            <p className="mb-4 font-medium">Thêm phiên bản mới</p>
+            <p className="mb-4 font-medium">
+              {revisionOnly ? 'Thêm bản điều chỉnh' : 'Thêm phiên bản mới'}
+            </p>
             <div className="grid gap-4 sm:grid-cols-2">
-              {disciplines.length > 1 && (
+              {revisionOnly && (
+                <Field label="Theo yêu cầu thay đổi" required className="sm:col-span-2">
+                  <select
+                    value={form.changeRequestId}
+                    onChange={(e) => {
+                      const picked = approvedChanges.find((c) => c.id === e.target.value);
+                      setForm((f) => ({
+                        ...f,
+                        changeRequestId: e.target.value,
+                        changeReason: f.changeReason || (picked ? picked.title : ''),
+                      }));
+                    }}
+                    className={cn(FIELD_BOX, 'w-full max-w-xl')}
+                  >
+                    <option value="">— Chọn yêu cầu đã chấp thuận —</option>
+                    {approvedChanges.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.code ? `${c.code} — ` : ''}
+                        {c.title}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              )}
+              {formDisciplines.length > 1 && (
                 <Field label="Bộ môn" required>
                   <select
                     value={form.discipline}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, discipline: e.target.value as DesignDiscipline }))
                     }
-                    className="h-10 w-full rounded-sm border border-border bg-surface px-3 sm:h-9"
+                    className={cn(FIELD_BOX, 'w-full')}
                   >
-                    {disciplines.map((d) => (
+                    {formDisciplines.map((d) => (
                       <option key={d} value={d}>
                         {DESIGN_DISCIPLINE_LABELS[d]}
                       </option>
@@ -200,7 +260,7 @@ export function VersionPanel({
                     value={form.changeReason}
                     onChange={(e) => setForm((f) => ({ ...f, changeReason: e.target.value }))}
                     rows={2}
-                    className="w-full rounded-sm border border-border bg-surface px-3 py-2"
+                    className={TEXTAREA_BOX}
                   />
                 </Field>
               )}
@@ -224,9 +284,10 @@ export function VersionPanel({
           </form>
         ) : (
           <Button variant="secondary" onClick={() => setAdding(true)}>
-            Thêm phiên bản
+            {revisionOnly ? 'Thêm bản điều chỉnh' : 'Thêm phiên bản'}
           </Button>
-        ))}
+        ))
+      )}
 
       {versions.length === 0 ? (
         <EmptyState message={emptyMessage} />
@@ -237,7 +298,8 @@ export function VersionPanel({
               key={version.id}
               version={version}
               reviews={reviewsByVersion?.[version.id] ?? []}
-              readOnly={readOnly}
+              // Sau bàn giao vẫn phát hành được bản nháp điều chỉnh gắn yêu cầu thay đổi (0154).
+              readOnly={readOnly && !(revisionOnly && version.change_request_id !== null)}
               onPublish={() => void publish(version.id)}
               publishing={publishVersion.isPending}
             />
