@@ -17,7 +17,12 @@ import type { AiFloorPlan, AiFloorPlanLevel } from '@nvg/shared/design';
 import { AI_DISCLAIMERS } from '@nvg/shared/design';
 import type { Pt } from '../draw/geometry';
 import { DrawNotes, type DrawNote } from '../draw/notes';
-import { levelBounds, renderPlanBody, type PlanSheetOptions } from '../draw/plan-sheet';
+import {
+  levelBounds,
+  renderPlanBody,
+  roofLevelOf,
+  type PlanSheetOptions,
+} from '../draw/plan-sheet';
 import { mmPerCm, type Paper } from '../draw/units';
 import { svgToDxf } from './from-svg';
 import { DXF_ROLES, type LayerExport } from './layers';
@@ -50,7 +55,12 @@ export function renderPlanDxf(plan: AiFloorPlan, options: PlanDxfOptions): PlanD
   const text = options.style.text_mm;
 
   let offsetX = 0;
-  for (const level of [...plan.levels].sort((a, b) => a.level - b.level)) {
+  // Tờ mái (Haan chốt 04/10/2026) đứng sau tầng trên cùng, như trên màn hình.
+  const roof = plan.roof ? roofLevelOf(plan, plan.roof.level) : null;
+  for (const level of [
+    ...[...plan.levels].sort((a, b) => a.level - b.level),
+    ...(roof ? [roof] : []),
+  ]) {
     const bbox = levelBounds(level);
     // Gốc tầng: góc TRƯỚC-TRÁI hình bao đặt ở (offsetX, 0) — mm thật.
     const origin: Pt = [offsetX - bbox.x0 * 10, -bbox.y0 * 10];

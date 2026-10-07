@@ -5,7 +5,8 @@
 #  Phiên bản thước: score_version 4 (T27; 2 = thêm D3 ban công, T91; 3 = T96: C9 cửa chính
 #                   đón vào đâu, C10 hành lang phục vụ gì, E5 khu ướt đè lên đâu, trọng số
 #                   trong nhóm, sàn theo nhóm; 4 = T105 D2 phòng ngủ tối, C11 gara → khách;
-#                   T107 D4 giặt phơi có chỗ phơi)
+#                   T107 D4 giặt phơi có chỗ phơi; 5 = T113 C12 hành lang rộng quá mức,
+#                   D5 ban công bố trí lệch)
 #  Nguồn:           bộ đo trên hồ sơ thật của NVG, 12/09/2026
 #                   /home/haan/Documents/Doc/NVG/design/mat_bang_cong_nang
 #  Cơ sở dữ liệu:   2 dự án NVO, 6 mặt bằng độc lập (P1 nhà vườn 2 tầng,
@@ -48,7 +49,7 @@ version: '2026.09.4'
 
 # Đổi công thức hay ngưỡng thì TĂNG số này. Không có nó thì bảng lịch sử so hai
 # model bằng hai cái thước khác nhau mà không ai biết (T27).
-score_version: 4
+score_version: 5
 
 co_so_du_lieu: '2 dự án NVO, 6 mặt bằng độc lập — mọi ngưỡng [ĐO] là chỉ dấu, chưa phải chuẩn'
 
@@ -67,6 +68,12 @@ accept_percent: 60
 # một tiêu chí mất trắng (D1 nhà phố chỉ đo hai phòng) chưa kéo cả nhóm xuống, đủ cao để nhóm mất
 # quá nửa thì phải sửa. Vắng = không có sàn.
 accept_group_floor_percent: 40
+
+# Sàn riêng từng nhóm, đè sàn chung (handoff v6 sửa lỗi đợt 3 mục 3.4, Haan duyệt 07/10/2026): nhóm D (mặt thoáng)
+# ≥ 60 % — lượt affaf12b / f0c97c06 qua ngưỡng tổng 63,8 điểm với nhóm E 8 %, phòng làm việc và phòng thờ không một
+# cửa sổ. Nhóm không ghi ở đây dùng sàn chung (E vẫn 40 %). SUY LUẬN (n = 0).
+accept_group_floor_by_group:
+  D: 60
 
 # Mức TÌM (01/10/2026, cùng lúc hạ ngưỡng nhận xuống 60): bộ xếp còn thử các biến thể ý định (chia lại diện tích
 # mục tiêu, chèn hành lang) tới khi điểm đạt mức này, dù đã qua ngưỡng nhận. Giữ 65 = đúng mức tìm trước khi hạ
@@ -270,6 +277,10 @@ criteria:
     hard_low: 0.12
     hard_high: 0.42
     by_building_type:
+      # ⚑ T116 (handoff v6 mục 3.5) — loại nhà ỐNG (`shared/src/design/house-profile.ts`), chồng lên nha_pho.
+      ong:
+        low: 0.15
+        high: 0.30
       nha_vuon:
         low: 0.18
         high: 0.25
@@ -290,6 +301,11 @@ criteria:
     zero: 2
     n: 2
     label: 'ĐO mức 0; CHUNG mức 2'
+    by_building_type:
+      # ⚑ T116 (handoff v6 mục 3.5) — loại nhà ỐNG (`shared/src/design/house-profile.ts`), chồng lên nha_pho.
+      # Nhà ống vào qua gara / sảnh rồi mới tới thang là bình thường: trừ hết ở 3 phòng thay vì 2.
+      ong:
+        zero: 3
 
   - code: C4
     group: C
@@ -301,6 +317,12 @@ criteria:
     zero: 0.9
     n: 6
     label: 'ĐO 1,0; CHUNG 0,9'
+    by_building_type:
+      # ⚑ T116 (handoff v6 mục 3.5) — loại nhà ỐNG (`shared/src/design/house-profile.ts`), chồng lên nha_pho.
+      # Hành lang nhà ống 0,9 m (`by_house_profile.ong.corridor_clear_m`): đạt ở 0,9, trừ hết ở 0,8.
+      ong:
+        pass: 0.9
+        zero: 0.8
 
   - code: C5
     group: C
@@ -377,6 +399,33 @@ criteria:
     n: 0
     label: 'CHUNG mức 0; trừ hết ở 1 hành lang'
 
+  - code: C12
+    group: C
+    vi: 'Bề rộng lọt lòng lớn nhất của hành lang dạng dải, mét'
+    giai_thich: 'T113 (Haan chấm lượt 182665ea: hành lang tầng 1 rộng 2,4 m chạy suốt bề ngang nhà — «thừa và không hợp lý»). Chỉ xét hành lang dài từ `strip_ratio` lần bề rộng; sảnh gần vuông không xét. C2 đo tỷ lệ cả tầng nên dải ấy vẫn lọt khoảng đạt, C4 chỉ đo bề rộng nhỏ nhất.'
+    kind: lower_better
+    pass: 1.5
+    zero: 2.4
+    strip_ratio: 3
+    n: 0
+    label: 'CHUNG 1,5 m; trừ hết ở 2,4 m'
+    weight: 1.5
+
+  - code: C13
+    group: C
+    vi: 'Số phòng ăn không liền bếp'
+    giai_thich: 'T116 (Haan chấm lượt a68c50bb: «với nhà ống thường thì phòng ăn liền với bếp»). Phòng ăn phải chung tường từ `min_shared_m` với bếp cùng tầng; bếp gộp phòng ăn là liền. Trừ điểm, không chặn.'
+    kind: count
+    pass: 0
+    zero: 1
+    min_shared_m: 0.9
+    wall_gap_m: 0.25
+    # Haan nói cho nhà ống — loại nhà khác không chấm.
+    only_profile: ong
+    n: 0
+    label: 'CHUNG mức 0; trừ hết ở 1 phòng ăn'
+    weight: 2
+
   # ── D. Mặt thoáng ───────────────────────────────────────────────────────────
   - code: D1
     group: D
@@ -413,6 +462,12 @@ criteria:
       # D2 không chấm, kẻo một tiêu chí đạt trùng việc làm loãng nhóm D dưới sàn nhóm.
       nha_pho:
         rooms: none
+      # ⚑ T116 tiếp 17 (Haan 07/10/2026) — nhà ống, gia chủ xếp «lấy sáng» trong hai ưu tiên đầu: phòng ngủ thứ hai
+      # trở đi trên một tầng không có mặt thoáng thì KHÔNG chặn nữa (khối 5 m chỉ có mặt tiền + giếng trời), trừ điểm ở
+      # đây. Một phòng tối trừ nửa, hai phòng trừ hết — trừ hết ở phòng đầu tiên thì nhóm D rơi dưới sàn, hoá ra vẫn chặn.
+      ong:
+        rooms: bedrooms
+        zero: 2
 
   - code: D3
     group: D
@@ -423,6 +478,8 @@ criteria:
     zero: 0.5
     n: 0
     label: 'CHUNG 1,0; trừ hết ở 0,5'
+    # T116 (Haan 04/10/2026): ban công dài quay cạnh ngắn ra mặt thoáng không còn bị chặn — trừ điểm NẶNG thay.
+    weight: 2.5
 
   - code: D4
     group: D
@@ -436,6 +493,21 @@ criteria:
     wall_gap_m: 0.25
     n: 0
     label: 'CHUNG mức 0; trừ hết ở 1 phòng'
+    # T116 (Haan chấm lượt a68c50bb: «giặt phơi ưu tiên bố trí gần sân thượng, ban công để thuận tiện phơi đồ»): nặng
+    # gấp đôi trong nhóm.
+    weight: 2
+
+  - code: D5
+    group: D
+    vi: 'Số ban công bố trí lệch: ôm góc chữ L, không bám cạnh phòng mở ra nó, hay sai thứ tự ưu tiên phòng'
+    giai_thich: 'T113 (Haan chấm lượt 182665ea: hai ban công tầng 2 cùng thuộc phòng ngủ chính, ôm góc trước – trái, dải mặt trái chạy quá cạnh phòng 2,2 m — «đúng kiểu làm cho có để tuân thủ đề bài»; chốt 03/10/2026: hạn chế góc chữ L, ban công cân đối, ưu tiên phòng ngủ → phòng phơi đồ → phòng làm việc, bám theo cạnh phòng). Phòng chủ = phòng mở cửa ra ban công; thứ tự ưu tiên là nhóm `balcony_owner_1..3` của từ vựng. Kinh nghiệm nghề: trừ điểm, không chặn.'
+    kind: count
+    pass: 0
+    zero: 2
+    edge_tolerance_m: 0.3
+    n: 0
+    label: 'CHUNG mức 0; trừ hết ở 2 ban công'
+    weight: 2
 
   # ── E. Dựng được ────────────────────────────────────────────────────────────
   - code: E2
@@ -448,6 +520,11 @@ criteria:
     khoang_cach_m: 1.5
     n: 5
     label: 'ĐO 1,0; CHUNG 0,5'
+    by_building_type:
+      # ⚑ T116 (handoff v6 mục 3.5) — loại nhà ỐNG (`shared/src/design/house-profile.ts`), chồng lên nha_pho.
+      # WC lệch trục ở nhà ống là lỗi thi công lớn — nặng gấp 2,5.
+      ong:
+        weight: 2.5
 
   - code: E4
     group: E

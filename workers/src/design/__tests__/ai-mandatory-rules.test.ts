@@ -262,12 +262,15 @@ describe('ban công quay cạnh dài ra mặt thoáng', () => {
     expect(codes([level])).toEqual([]);
   });
 
-  it('chỉ cạnh NGẮN chạm mặt thoáng, cạnh dài chạy dọc tường nhà bên — bác', () => {
+  it('chỉ cạnh NGẮN chạm mặt thoáng, cạnh dài chạy dọc tường nhà bên — lưu ý, KHÔNG chặn (T116: trừ điểm nặng D3)', () => {
     const level = withFaces(
       [room('balcony_2', 'balcony', [11, 11, 130, 389])],
       ['open', 'boundary', 'open', 'boundary'],
     );
     expect(codes([level])).toEqual(['balcony_off_open_face:balcony_2']);
+    expect(mandatoryViolations([level], ctxFor([level])).map((issue) => issue.level)).toEqual([
+      'finding',
+    ]);
   });
 
   it('ban công lọt giữa nhà — bác', () => {
@@ -278,8 +281,8 @@ describe('ban công quay cạnh dài ra mặt thoáng', () => {
     expect(codes([level])).toEqual(['balcony_off_open_face:balcony_2']);
   });
 
-  // T91 (Haan 27/09/2026): chỉ ban công DÀI (cạnh dài > 1,5 lần cạnh ngắn) bị chặn; gần vuông thì chỉ
-  // lưu ý (không chặn) và tiêu chí điểm D3 trừ điểm.
+  // T116 (Haan 04/10/2026, thay T91): CHẶN khi ban công không có cạnh nào ra mặt thoáng — vuông hay dài như nhau;
+  // ban công dài quay cạnh ngắn ra mặt thoáng chỉ lưu ý, tiêu chí D3 trừ điểm nặng.
   const offFace = (w: number, h: number) => {
     const level = withFaces(
       [room('balcony_2', 'balcony', [300, 150, 300 + w, 150 + h])],
@@ -288,12 +291,9 @@ describe('ban công quay cạnh dài ra mặt thoáng', () => {
     return mandatoryViolations([level], ctxFor([level])).map((issue) => issue.level);
   };
 
-  it('ban công trong sàn gần vuông (tỉ lệ ≤ 1,5) không quay ra mặt thoáng — chỉ lưu ý, không chặn', () => {
-    expect(offFace(200, 200)).toEqual(['finding']);
-    expect(offFace(150, 100)).toEqual(['finding']);
-  });
-
-  it('ban công trong sàn dài (tỉ lệ > 1,5) không quay cạnh dài ra mặt thoáng — chặn', () => {
+  it('ban công không có cạnh nào ra mặt thoáng — chặn, gần vuông hay dài như nhau', () => {
+    expect(offFace(200, 200)).toEqual(['blocking']);
+    expect(offFace(150, 100)).toEqual(['blocking']);
     expect(offFace(160, 100)).toEqual(['blocking']);
     expect(rules.balconyOnOpenFace?.longRatio).toBe(1.5);
   });

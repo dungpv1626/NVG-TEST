@@ -1,0 +1,72 @@
+# Đồ đạc và khoảng trống theo loại phòng — gửi kèm lời gọi mặt bằng chế độ hình chữ nhật để mô hình định cỡ phòng
+# theo đồ phải chứa (bàn giao v5 `prompt-mat-bang-v5.md` mục 2 bước 5 và mục 4 `furniture` / `clearances`).
+#
+# ⚠️ Số THAM KHẢO chép từ tài liệu bàn giao, chưa qua kiến trúc sư NVG duyệt. Chỉ để mô hình định cỡ; không phép kiểm
+# nào đọc chúng (T52). Chỉ gửi loại phòng có trong danh mục của ca đang chạy.
+version: '1.0.0'
+
+# Tên đồ → [rộng, sâu] mm; số đơn → một chiều (sâu tủ).
+items:
+  sofa_L: [2800, 1800]
+  armchair: [800, 800]
+  coffee_table: [1200, 700]
+  tv_bench: [2400, 450]
+  dining_4: [1200, 800]
+  dining_6: [1600, 900]
+  dining_8: [2000, 1000]
+  kitchen_run: [4000, 600]
+  fridge_2door: [900, 700]
+  island: [1800, 900]
+  bed_master: [1800, 2000]
+  bed_double: [1600, 2000]
+  bed_single: [1200, 2000]
+  nightstand: [450, 400]
+  wardrobe_depth: 600
+  desk: [1400, 600]
+  toilet: [400, 700]
+  lavabo: [600, 450]
+  shower: [900, 1200]
+  altar_cabinet: [2000, 600]
+  washer: [600, 600]
+  dryer: [600, 600]
+  ironing: [1300, 400]
+
+# Khoảng trống cần trước / quanh đồ, mm.
+clearances:
+  sofa_table: 450
+  dining_chair: 900
+  kitchen_aisle: 1200
+  bed_side: 700
+  bed_foot: 800
+  wardrobe_front: 900
+  desk_chair: 900
+  toilet_front: 600
+  altar_front: 1500
+  car_side: 800
+
+# Loại phòng → đồ và khoảng trống gửi kèm. `dining` lấy bàn theo số người trong nhà (`dining_by_people`).
+by_type:
+  living: { items: [sofa_L, armchair, coffee_table, tv_bench], clearances: [sofa_table] }
+  dining: { items: [], clearances: [dining_chair] }
+  kitchen: { items: [kitchen_run, fridge_2door], clearances: [kitchen_aisle] }
+  master_bedroom:
+    {
+      items: [bed_master, nightstand, wardrobe_depth],
+      clearances: [bed_side, bed_foot, wardrobe_front],
+    }
+  bedroom:
+    {
+      items: [bed_double, bed_single, nightstand, wardrobe_depth],
+      clearances: [bed_side, bed_foot, wardrobe_front],
+    }
+  study: { items: [desk], clearances: [desk_chair] }
+  wc: { items: [toilet, lavabo, shower], clearances: [toilet_front] }
+  altar_room: { items: [altar_cabinet], clearances: [altar_front] }
+  laundry: { items: [washer, dryer, ironing], clearances: [] }
+  garage: { items: [], clearances: [car_side] }
+
+# Số người trong nhà → bàn ăn: lấy mức nhỏ nhất ≥ số người.
+dining_by_people:
+  4: dining_4
+  6: dining_6
+  8: dining_8

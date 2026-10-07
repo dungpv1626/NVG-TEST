@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nvg.vn/contracts/ai-house-layout.schema.json",
+  "title": "AiHouseLayout",
+  "$comment": "Bàn giao v5 `prompt-mat-bang-v5.md` mục 5 (Haan chốt 04/10/2026: cách A; danh mục theo v5, có nới). CẢ NHÀ trong một lượt gọi: mỗi phòng một hình chữ nhật mm `rect` = [x, y, rộng, sâu], bước 100, gốc ở GÓC LÔ trên mép đường, bên trái nhìn từ đường; x dọc mặt tiền, y vào sâu. `level` là chuỗi «1», «2»… hoặc «roof». Loại phòng, phòng mẹ, diện tích mục tiêu KHÔNG khai: chương trình lấy từ danh mục nó cấp (`knowledge.program`, `ai/house-program.ts`) hoặc từ tiền tố mã mô hình tự thêm (`kb/house_program.yaml`). `doors` là các cặp mã nối bằng cửa; `open` là cặp gộp một không gian; `cantilevers` là ban công đua KHÔNG chiếm sàn, dựng theo cạnh ngoài của `from_room`. `garage_room` rỗng khi không có chỗ để xe.\n\nChương trình (`ai/layout.ts`) kiểm và sửa nhẹ rect, đổi ra bản phác lưới 0,5 m rồi đi ĐÚNG bộ xếp hiện có — chương trình vẫn gán mọi toạ độ cuối (T48). Chỉ dùng kiểu object / array / string / integer / enum (tài liệu bàn giao: trung lập giữa ba hãng); `rect` đủ bốn số kiểm bằng mã. `description` gửi cho mô hình nên để trống — lời dặn nằm ở lời dẫn hệ thống (tài liệu mục 5).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "variant_label",
+    "rationale",
+    "design_notes",
+    "assumptions",
+    "rooms",
+    "doors",
+    "open",
+    "cantilevers",
+    "entry_room",
+    "garage_room"
+  ],
+  "properties": {
+    "variant_label": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "rationale": {
+      "type": "string",
+      "maxLength": 1500
+    },
+    "design_notes": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "string",
+        "maxLength": 300
+      }
+    },
+    "assumptions": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "string",
+        "maxLength": 200
+      }
+    },
+    "rooms": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 90,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "level", "rect"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$",
+            "maxLength": 32
+          },
+          "level": {
+            "type": "string",
+            "maxLength": 8
+          },
+          "rect": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    "doors": {
+      "type": "array",
+      "maxItems": 120,
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]+$",
+          "maxLength": 32
+        }
+      }
+    },
+    "open": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]+$",
+          "maxLength": 32
+        }
+      }
+    },
+    "cantilevers": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "from_room", "face", "depth"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$",
+            "maxLength": 32
+          },
+          "from_room": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$",
+            "maxLength": 32
+          },
+          "face": {
+            "type": "string",
+            "enum": ["front", "left", "back", "right"]
+          },
+          "depth": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "entry_room": {
+      "type": "string",
+      "maxLength": 32
+    },
+    "garage_room": {
+      "type": "string",
+      "maxLength": 32
+    }
+  }
+}

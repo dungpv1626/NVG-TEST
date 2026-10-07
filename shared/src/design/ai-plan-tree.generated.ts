@@ -141,6 +141,14 @@ export const aiPlanTreeSchema = z
         room: aiPlanTreeIdSchema.describe('Mã phòng thang (một lá của cây).'),
         /** Chiều đi LÊN của vế đầu tiên. */
         up: z.enum(['+x', '-x', '+y', '-y']).describe('Chiều đi LÊN của vế đầu tiên.'),
+        /** Phòng dưới gầm phần CAO của vế (WC gầm thang, chỉ tầng thấp nhất, thang thẳng — T116). Ô thang và ô ấy cùng là thang khi vẽ, kiểm chiều dài và làm mốc tầng trên; vắng/null = không. */
+        over: z
+          .string()
+          .nullable()
+          .describe(
+            'Phòng dưới gầm phần CAO của vế (WC gầm thang, chỉ tầng thấp nhất, thang thẳng — T116). Ô thang và ô ấy cùng là thang khi vẽ, kiểm chiều dài và làm mốc tầng trên; vắng/null = không.',
+          )
+          .optional(),
       })
       .strict()
       .nullable()

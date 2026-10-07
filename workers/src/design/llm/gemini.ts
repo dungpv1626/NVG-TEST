@@ -20,7 +20,7 @@ import type { DataClass } from '@nvg/shared/design';
 import type { TokenUsage } from './text-client';
 import type { ModelRouter, ResolvedRoute } from './router';
 import { schemaFor } from './schema-dialect';
-import { outputBudget, requestTimeout, type ReasoningEffort } from './text-client';
+import { fullPrompt, outputBudget, requestTimeout, type ReasoningEffort } from './text-client';
 import {
   tokenCount,
   type AiImageClient,
@@ -133,6 +133,8 @@ export class GeminiClient implements TextModelClient, AiImageClient {
     const started = Date.now();
     const { data, text } = await this.structured(route, routeName, {
       ...options,
+      // Không xin bộ nhớ đệm tường minh: đệm ngầm của Gemini 3 chỉ ăn từ 4.096 token (bàn giao v5 T7).
+      prompt: fullPrompt(options),
       schema: schemaFor('gemini', options.schema),
     });
     let json: unknown;

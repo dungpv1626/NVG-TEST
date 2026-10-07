@@ -341,6 +341,12 @@ passage:
   # xuyên gara mới tới WC chung — Haan chấm «giao thông bất tiện». Vào NHÀ qua gara thì vẫn được
   # (`entry_through`), đó là bước đầu tiên từ ngoài vào, không phải đường trong nhà.
   not_a_route: [garage, porch]
+  # Loại phòng ĐƯỢC mang lối vào chính, thêm vào phòng khách / hành lang, theo loại hình (Haan 04/10/2026,
+  # lượt e34f8f58): nhà ống 5 m có gara mặt tiền thì người vào cạnh xe — cửa cuốn kèm cửa đi trên vách gara,
+  # rồi thẳng vào phòng khách phía sau. Không khai thì chương trình và lời dẫn đẩy phòng khách ra mép đường,
+  # gara lùi ra sau khách: xe đi xuyên phòng khách. Biệt thự không khai — có sân, có sảnh, vào qua gara là lạ.
+  entry_room_by_building_type:
+    nha_pho: [garage]
   # Loại phòng người trong nhà dùng hằng ngày: phải tới được từ khu sinh hoạt chung mà không đi xuyên
   # `not_a_route`. WC khép kín của phòng ngủ không tính — nó là phòng riêng của phòng mẹ.
   everyday: [wc, kitchen, dining, stair]
@@ -435,6 +441,18 @@ group_targets:
   drying:
     vi: Chỗ phơi đồ (ban công, sân thượng, sân)
     members: [balcony, terrace, courtyard]
+  # Phòng nên mang ban công, theo thứ tự ưu tiên — tiêu chí D5 (T113, Haan 03/10/2026: «ưu tiên phòng ngủ → phòng
+  # phơi đồ → phòng làm việc»). Ban công thuộc phòng bậc thấp hơn (hay phòng đã có ban công khác) trong khi phòng bậc
+  # cao hơn cùng mặt chưa có thì trừ điểm. Loại không có trong ba nhóm xếp sau cùng.
+  balcony_owner_1:
+    vi: Ưu tiên ban công bậc 1 (phòng ngủ)
+    members: [master_bedroom, bedroom]
+  balcony_owner_2:
+    vi: Ưu tiên ban công bậc 2 (phòng giặt phơi)
+    members: [laundry]
+  balcony_owner_3:
+    vi: Ưu tiên ban công bậc 3 (phòng làm việc)
+    members: [study]
   # Hai nhóm cho tiêu chí E5 của thước chấm (T96): khu ƯỚT tầng trên không nên đè lên phòng nhóm
   # `dry_below` tầng dưới — chỗ tiếp khách, chỗ ăn, chỗ ngủ, chỗ thờ, lối vào, chỗ bán hàng. Bếp và
   # phòng thờ dưới WC đã là luật bắt buộc (`rules/nvg-mandatory.yaml`); ở đây là phần còn lại, trừ điểm.

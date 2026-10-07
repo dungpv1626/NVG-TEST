@@ -12,7 +12,9 @@
 
 import type {
   AiBriefDigest,
+  AiHouseBands,
   AiHouseIntent,
+  AiPlanTree,
   AiPlanIntent,
   AiPlanIntentZone,
   AiSpaceProgram,
@@ -26,13 +28,46 @@ import type {
 export type HouseRoom = AiHouseIntent['rooms'][number] & {
   zone?: AiPlanIntentZone;
   street_facing?: boolean;
+  /**
+   * Hình chữ nhật mô hình khai, mm `[x, y, rộng, sâu]` — chỉ có khi lượt gọi dùng lược đồ hình chữ nhật
+   * (`ai-house-layout`, bàn giao v5). Bộ xếp đọc bản phác suy từ nó; vòng sửa gửi lại chính nó.
+   */
+  rect?: [number, number, number, number];
 };
 
 /** Ý định cả nhà như chương trình đọc: hợp đồng hiện hành, hoặc hợp đồng trước T48 (vùng, không phác). */
 export type HouseIntent = Omit<AiHouseIntent, 'rooms' | 'sketches'> & {
   rooms: HouseRoom[];
   sketches?: AiHouseIntent['sketches'];
+  /**
+   * Khu trên mái mô hình khai (lược đồ hình chữ nhật, `knowledge.roof_level`) — tách khỏi `rooms` vì mái không phải
+   * một tầng để xếp (`ai/roof.ts`). Vắng ở bản phác lưới.
+   */
+  roof?: HouseRoom[];
+  /**
+   * Ban công đua KHÔNG chiếm sàn (lược đồ hình chữ nhật, bàn giao v5 `cantilevers`): dựng ngoài khối theo cạnh ngoài
+   * của `from` ở mặt `face`, sâu `depth_cm` (`tree/index.ts`). Phòng ban công cùng mã nằm trong `rooms` cho danh mục,
+   * nhưng không có ô trên bản phác.
+   */
+  cantilevers?: HouseCantilever[];
+  /** Một dòng tiếng Việt cho mỗi bước mô hình làm (lược đồ hình chữ nhật, bàn giao v5 `design_notes`). */
+  design_notes?: string[];
+  /** Đường v6 (T116): câu trả lời DẢI đã gộp delta — gốc của vòng sửa (`<plan>`). */
+  bands?: AiHouseBands;
+  /**
+   * Đường v6: cây chia ô bộ giải dải dựng, khoá là số tầng dạng chuỗi (ý định đi qua JSON giữa hai bước Workflow —
+   * không dùng `Map`). Có thì bộ xếp chỉ chạy cổng trên cây ấy (`ArrangeInput.bandTree`).
+   */
+  band_trees?: Record<string, AiPlanTree>;
 };
+
+export interface HouseCantilever {
+  id: string;
+  from: string;
+  face: 'front' | 'back' | 'left' | 'right';
+  depth_cm: number;
+  level: number;
+}
 
 /** Trần chữ `rationale` của một tầng trong `ai-plan-intent`. */
 const LEVEL_RATIONALE_MAX = 300;

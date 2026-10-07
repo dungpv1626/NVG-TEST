@@ -107,15 +107,20 @@ describe('chọn loại thang của lượt (`chooseStairShape`)', () => {
     );
   });
 
-  it('chưa quyết: nhà phố khối xây hẹp dưới 4 m → thang thẳng; đủ rộng → chữ U', () => {
+  it('chưa quyết: khối xây hẹp dưới 4 m → thang thẳng; nhà phố đủ rộng → chữ U', () => {
     expect(pick({ ...TOWNHOUSE, site: { width_m: 3.5, depth_m: 18 } } as DesignBrief)).toBe(
       'thang_thang',
     );
-    expect(pick(TOWNHOUSE)).toBe('chu_u');
+    expect(pick({ ...TOWNHOUSE, site: { width_m: 8, depth_m: 18 } } as DesignBrief)).toBe('chu_u');
+  });
+
+  it('chưa quyết, nhà ống: loại thang chiếm ít diện tích nhất vừa khối (T116 — Haan: «diện tích cầu thang tối thiểu»)', () => {
+    // TOWNHOUSE mặt tiền 5 m là nhà ống: thang thẳng 1,0 × 5,94 m (5,9 m²) nhỏ hơn chữ U 2,15 × 3,6 m (7,7 m²).
+    expect(pick(TOWNHOUSE)).toBe('thang_thang');
   });
 
   it('`withStairShape` gắn loại vào `construction.stairs.shape`; kho không có bảng loại thì giữ nguyên', () => {
-    expect(withStairShape(norms, digestOf(TOWNHOUSE)).stairs.shape).toBe('chu_u');
+    expect(withStairShape(norms, digestOf(TOWNHOUSE)).stairs.shape).toBe('thang_thang');
     const bare = { ...norms, stairs: { ...norms.stairs, shapes: undefined } };
     expect(withStairShape(bare, digestOf(TOWNHOUSE)).stairs.shape).toBeUndefined();
   });

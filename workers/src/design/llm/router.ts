@@ -135,6 +135,12 @@ export interface ModelRoute {
    * dài mà không bị client tự huỷ giữa chừng.
    */
   request_timeout_s?: number;
+  /**
+   * Tuyến cho các VÒNG SỬA của lời gọi mặt bằng cả nhà (handoff v6 sửa lỗi đợt 3 mục 4.1, Haan chọn «deep chỉ lời gọi
+   * đầu»): lời gọi đầu chạy tuyến này, vòng sửa — sửa một bộ dải đã có, việc nhỏ — chạy tuyến khai ở đây. Cùng nhà cung
+   * cấp, hạng dữ liệu không chặt hơn (kiểm lúc đọc cấu hình). Vắng = mọi lời gọi chạy chính tuyến này.
+   */
+  revise_route?: string;
 }
 
 export interface ModelConfig {
@@ -214,6 +220,25 @@ export function parseModelConfig(yamlText: string): ModelConfig {
   for (const [name, route] of Object.entries(raw.routes)) {
     if (![1, 2, 3].includes(route.max_data_class)) {
       throw new Error(`Đầu ra "${name}" có max_data_class không hợp lệ: ${route.max_data_class}.`);
+    }
+    if (route.revise_route !== undefined) {
+      const revise = raw.routes[route.revise_route];
+      if (!revise) {
+        throw new Error(
+          `Đầu ra "${name}": revise_route "${route.revise_route}" không có trong routes.`,
+        );
+      }
+      // Cùng client gọi được (khoá theo nhà cung cấp), và vòng sửa không được nhận dữ liệu mà lời gọi đầu được gửi.
+      if (revise.provider !== route.provider) {
+        throw new Error(
+          `Đầu ra "${name}": revise_route "${route.revise_route}" khác nhà cung cấp.`,
+        );
+      }
+      if (revise.max_data_class > route.max_data_class) {
+        throw new Error(
+          `Đầu ra "${name}": revise_route "${route.revise_route}" có hạng dữ liệu chặt hơn (${revise.max_data_class} > ${route.max_data_class}).`,
+        );
+      }
     }
   }
   return raw;
@@ -324,6 +349,11 @@ export class ModelRouter {
   /** Danh sách nhà cung cấp miễn phí — màn hình nhật ký cần để tính tiền thật của dòng cũ. */
   get freeProviders(): string[] {
     return [...(this.config.billing?.free_providers ?? [])];
+  }
+
+  /** Tuyến cho vòng sửa của lời gọi mặt bằng (`revise_route`) — vắng thì chính tuyến ấy. */
+  reviseRouteOf(routeName: string): string {
+    return this.config.routes[routeName]?.revise_route ?? routeName;
   }
 
   /** Giá niêm yết của một tuyến, không kèm khoá. */

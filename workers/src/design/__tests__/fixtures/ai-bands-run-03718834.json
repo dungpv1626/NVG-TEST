@@ -1,0 +1,578 @@
+{
+ "run": "03718834",
+ "route": "ai_text_openai",
+ "model": "gpt-5.6-terra",
+ "pipeline": "v6",
+ "outputs": [
+  {
+   "variant_label": "Phương án B – thang giữa, giếng trời trung tâm",
+   "parti": "Gara và khách ở tầng 1, thang chữ U áp phải giữa nhà kết hợp hành lang–giếng trời; các phòng ngủ lấy sáng từ mặt tiền hoặc giếng trời, khối ướt gom phía phải mặt trước.",
+   "rationale": "Tổ chức thang giữa tạo một lõi giao thông–thông gió xuyên suốt, phù hợp nhà ống ba mặt kín. Phòng bà ở tầng 2 và các phòng ngủ phía trước được ưu tiên ánh sáng tự nhiên; bếp ăn cuối nhà nhận sáng gián tiếp từ giếng trời.",
+   "design_notes": [
+    "Parti: gara mặt tiền, khách phía sau, lõi thang–hành lang–giếng trời ở giữa và khối ướt gom phía phải.",
+    "Tầng 1: gara vào trực tiếp, phòng khách sau gara; sau lõi thang là bếp và ăn liên thông, WC đặt cùng dải ướt phía trước.",
+    "Thang và khối ướt: thang chữ U áp phải tại dải giữa; giếng trời nằm kề hành lang, các WC xếp trên dải ướt phía phải.",
+    "Tầng trên: tầng 2 có phòng bà phía trước và làm việc phía sau; tầng 3 có phòng ngủ chính trước, phòng con trai sau; tầng 4 có phòng con gái trước, phòng thờ và sân thượng về sau.",
+    "Mái: bồn nước–NLMT đặt trên dải ướt, sân phơi về phía mặt tiền nắng, cục nóng đặt cuối mái và cách đầu thang.",
+    "Kiểm tra: gara, khách, bếp và ăn đều nối qua không gian đi lại; phòng ngủ nhận sáng từ mặt tiền hoặc giếng trời; phòng thờ mở từ hành lang và bàn thờ tựa tường phải kín."
+   ],
+   "assumptions": [
+    "Quỹ tầng 1 theo dữ liệu khả thi khoảng 93 m² gross, vượt giới hạn dấu chân 81 m²; gia chủ có chấp thuận tăng diện tích xây dựng tầng 1 hoặc giảm/chuyển một phần công năng tầng 1 không?",
+    "Tầng 4 có đồng thời WC và giặt phơi trong dải ướt hẹp; cần xác nhận có chấp thuận tổ chức hai khoang dịch vụ dùng chung lối tiếp cận từ sảnh thang để bảo đảm mọi không gian đều có cửa vào hợp lệ không?"
+   ],
+   "storeys": [
+    {
+     "level": "1",
+     "bands": [
+      {
+       "depth": 0,
+       "cells": [
+        {
+         "id": "garage_1",
+         "w": 4100,
+         "stack": []
+        },
+        {
+         "id": "wc_1",
+         "w": 900,
+         "stack": []
+        }
+       ]
+      },
+      {
+       "depth": 0,
+       "cells": [
+        {
+         "id": "living_1",
+         "w": 0,
+         "stack": []
+        }
+       ]
+      },
+      {
+       "depth": 4000,
+       "cells": [
+        {
+         "id": "gt_t1",
+         "w": 1500,
+         "stack": []
+        },
+        {
+         "id": "light_well_1",
+         "w": 1000,
+         "stack": []
+        },
+        {
+         "id": "THANG",
+         "w": 2500,
+         "stack": []
+        }
+       ]
+      },
+      {
+       "depth": 0,
+       "cells": [
+        {
+         "id": "gt_t2",
+         "w": 1500,
+         "stack": []
+        },
+        {
+         "id": "kitchen_1",
+         "w": 1500,
+         "stack": []
+        },
+        {
+         "id": "dining_1",
+         "w": 2000,
+         "stack": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "level": "2",
+     "bands": [
+      {
+       "depth": 0,
+       "cells": [
+        {
+         "id": "ngu_ob",
+         "w": 3500,
+         "stack": []
+        },
+        {
+         "id": "",
+         "w": 1500,
+         "stack": [
+          {
+           "id": "wc_ngu_ob",
+           "d": 0
+          },
+          {
+           "id": "wc_2",
+           "d": 0
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "depth": 4000,
+       "cells": [
+        {
+         "id": "gt_t3",
+         "w": 1500,
+         "stack": []
+        },
+        {
+         "id": "hkt_g2",
+         "w": 1000,
+         "stack": []
+        },
+        {
+         "id": "THANG",
+         "w": 2500,
+         "stack": []
+        }
+       ]
+      },
+      {
+       "depth": 0,
+       "cells": [
+        {
+         "id": "gt_t4",
+         "w": 1500,
+         "stack": []
+        },
+        {
+         "id": "study_1",
+         "w": 0,
+         "stack": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "level": "3",
+     "bands": [
+      {
+       "depth": 0,
+       "cells": [
+        {
+         "id": "ngu_vc",
+         "w": 3500,
+         "stack": []
+        },
+        {
+         "id": "wc_ngu_vc",
+         "w": 1500,
+         "stack": []
+        }
+       ]
+      },
+      {
+       "depth": 4000,
+       "cells": [
+        {
+         "id": "gt_t5",
+         "w": 1500,
+         "stack": []
+        },
+        {
+         "id": "hkt_g3",
+         "w": 1000,
+         "stack": []
+        },
+        {
+         "id": "THANG",
+         "w": 2500,
+         "stack": []
+        }
+       ]
+      },
+      {
+       "depth": 0,
+       "cells": [
+        {
+         "id": "gt_t6",
+         "w": 1500,
+         "stack": []
+        },
+        {
+         "id": "ngu_con_1",
+         "w": 0,
+         "stack": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "level": "4",
+     "bands": [
+      {
+       "depth": 0,
+       "cells": [
+        {
+         "id": "ngu_con_2",
+         "w": 3500,
+         "stack": []
+        },
+        {
+         "id": "",
+         "w": 1500,
+         "stack": [
+          {
+           "id": "wc_3",
+           "d": 0
+          },
+          {
+           "id": "laundry_1",
+           "d": 0
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "depth": 4000,
+       "cells": [
+        {
+         "id": "gt_t7",
+         "w": 1500,
+         "stack": []
+        },
+        {
+         "id": "hkt_g4",
+         "w": 1000,
+         "stack": []
+        },
+        {
+         "id": "THANG",
+         "w": 2500,
+         "stack": []
+        }
+       ]
+      },
+      {
+       "depth": 0,
+       "cells": [
+        {
+         "id": "gt_t8",
+         "w": 1500,
+         "stack": []
+        },
+        {
+         "id": "altar_room_1",
+         "w": 0,
+         "stack": []
+        }
+       ]
+      },
+      {
+       "depth": 0,
+       "cells": [
+        {
+         "id": "gt_t9",
+         "w": 1500,
+         "stack": []
+        },
+        {
+         "id": "terrace_1",
+         "w": 0,
+         "stack": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "level": "roof",
+     "bands": [
+      {
+       "depth": 0,
+       "cells": [
+        {
+         "id": "drying_yard",
+         "w": 3500,
+         "stack": []
+        },
+        {
+         "id": "tank_solar",
+         "w": 1500,
+         "stack": []
+        }
+       ]
+      },
+      {
+       "depth": 4000,
+       "cells": [
+        {
+         "id": "gt_mai",
+         "w": 1500,
+         "stack": []
+        },
+        {
+         "id": "hkt_mai",
+         "w": 1000,
+         "stack": []
+        },
+        {
+         "id": "THANG",
+         "w": 2500,
+         "stack": []
+        }
+       ]
+      },
+      {
+       "depth": 0,
+       "cells": [
+        {
+         "id": "terrace",
+         "w": 0,
+         "stack": []
+        },
+        {
+         "id": "ac_yard",
+         "w": 0,
+         "stack": []
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "doors_prefer": [
+    [
+     "garage_1",
+     "living_1"
+    ],
+    [
+     "living_1",
+     "gt_t1"
+    ],
+    [
+     "gt_t2",
+     "kitchen_1"
+    ],
+    [
+     "ngu_ob",
+     "wc_ngu_ob"
+    ],
+    [
+     "ngu_vc",
+     "wc_ngu_vc"
+    ],
+    [
+     "gt_t8",
+     "altar_room_1"
+    ],
+    [
+     "gt_t9",
+     "terrace_1"
+    ]
+   ],
+   "cantilevers": [
+    {
+     "id": "bc_ngu_vc",
+     "from_room": "ngu_vc",
+     "face": "front",
+     "depth": 900
+    }
+   ],
+   "entry_room": "garage_1",
+   "garage_room": "garage_1"
+  },
+  {
+   "storeys": [
+    {
+     "level": "1",
+     "bands": [
+      {
+       "depth": 0,
+       "cells": [
+        {
+         "id": "garage_1",
+         "w": 4100,
+         "stack": []
+        },
+        {
+         "id": "wc_1",
+         "w": 900,
+         "stack": []
+        }
+       ]
+      },
+      {
+       "depth": 0,
+       "cells": [
+        {
+         "id": "living_1",
+         "w": 0,
+         "stack": []
+        }
+       ]
+      },
+      {
+       "depth": 4000,
+       "cells": [
+        {
+         "id": "gt_t1",
+         "w": 1500,
+         "stack": []
+        },
+        {
+         "id": "light_well_1",
+         "w": 1000,
+         "stack": []
+        },
+        {
+         "id": "THANG",
+         "w": 2500,
+         "stack": []
+        }
+       ]
+      },
+      {
+       "depth": 0,
+       "cells": [
+        {
+         "id": "gt_t2",
+         "w": 1500,
+         "stack": []
+        },
+        {
+         "id": "",
+         "w": 3500,
+         "stack": [
+          {
+           "id": "kitchen_1",
+           "d": 0
+          },
+          {
+           "id": "dining_1",
+           "d": 0
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "doors_prefer": [
+    [
+     "gt_t2",
+     "kitchen_1"
+    ],
+    [
+     "gt_t2",
+     "dining_1"
+    ],
+    [
+     "kitchen_1",
+     "dining_1"
+    ]
+   ],
+   "cantilevers_upsert": [],
+   "notes": [
+    "Gộp bếp và phòng ăn theo chiều sâu trong một cột rộng 3,5 m, giữ hành lang 1,5 m bên trái để phòng ăn đủ bề rộng yêu cầu và vẫn liên thông trực tiếp với bếp."
+   ]
+  },
+  {
+   "storeys": [
+    {
+     "level": "1",
+     "bands": [
+      {
+       "depth": 0,
+       "cells": [
+        {
+         "id": "garage_1",
+         "w": 4100,
+         "stack": []
+        },
+        {
+         "id": "wc_1",
+         "w": 900,
+         "stack": []
+        }
+       ]
+      },
+      {
+       "depth": 0,
+       "cells": [
+        {
+         "id": "living_1",
+         "w": 0,
+         "stack": []
+        }
+       ]
+      },
+      {
+       "depth": 4000,
+       "cells": [
+        {
+         "id": "gt_t1",
+         "w": 1500,
+         "stack": []
+        },
+        {
+         "id": "light_well_1",
+         "w": 1000,
+         "stack": []
+        },
+        {
+         "id": "THANG",
+         "w": 2500,
+         "stack": []
+        }
+       ]
+      },
+      {
+       "depth": 0,
+       "cells": [
+        {
+         "id": "gt_t2",
+         "w": 1500,
+         "stack": []
+        },
+        {
+         "id": "",
+         "w": 3500,
+         "stack": [
+          {
+           "id": "kitchen_1",
+           "d": 0
+          },
+          {
+           "id": "dining_1",
+           "d": 0
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "doors_prefer": [
+    [
+     "gt_t2",
+     "kitchen_1"
+    ],
+    [
+     "kitchen_1",
+     "dining_1"
+    ]
+   ],
+   "cantilevers_upsert": [],
+   "notes": [
+    "Gộp bếp và phòng ăn theo chiều sâu trong một khoang rộng 3,5 m cạnh hành lang, tăng đủ bề rộng phòng ăn mà không thay đổi các dải còn lại của tầng 1."
+   ]
+  }
+ ]
+}

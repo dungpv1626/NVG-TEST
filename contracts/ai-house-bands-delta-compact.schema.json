@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nvg.vn/contracts/ai-house-bands-delta-compact.schema.json",
+  "title": "AiHouseBandsDeltaCompact",
+  "$comment": "Vòng sửa đường v6, dạng GỌN của `ai-house-bands-delta` (handoff sửa lỗi đợt 2 mục 4.2). Chỉ trả các TẦNG cần đổi, mỗi tầng trọn danh sách dải mới; tầng không nhắc giữ nguyên.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["storeys", "doors_prefer", "cantilevers_upsert", "notes"],
+  "properties": {
+    "storeys": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["level", "bands"],
+        "properties": {
+          "level": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]?$"
+          },
+          "bands": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 10,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["depth", "cells"],
+              "properties": {
+                "depth": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Chiều sâu LỌT LÒNG mm; 0 = chương trình tính."
+                },
+                "cells": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 8,
+                  "items": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "pattern": "^(THANG|LW|\\.|[a-z0-9_]+)(/(THANG|LW|[a-z0-9_]+))*(:[1-9][0-9]{2,4})?$",
+                    "description": "Một ô, trái sang phải: mã phòng (`knowledge.program` hay tiền tố `knowledge.model_added`), `THANG` = ô thang, `LW` = giếng trời của tầng thấp nhất (chương trình đặt đúng chỗ ở mọi tầng trên), `.` = sân không xây ở mép khối. Ô xếp chồng: các mã nối `/`, phía đường trước (`wc_1/light_well_1`). Bề rộng LỌT LÒNG cố định (mm) sau `:` (`gt_1:900`, `THANG:2500`); không ghi = chương trình tính."
+                  },
+                  "description": "Ô từ trái sang phải nhìn từ đường."
+                }
+              }
+            },
+            "description": "Dải từ mặt đường vào sâu."
+          }
+        }
+      }
+    },
+    "doors_prefer": {
+      "type": "array",
+      "maxItems": 24,
+      "items": {
+        "type": "array",
+        "minItems": 2,
+        "maxItems": 2,
+        "items": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]+$",
+          "maxLength": 32
+        }
+      },
+      "description": "Cặp phòng nên có cửa khi có nhiều chỗ mở — chương trình đặt cửa."
+    },
+    "cantilevers_upsert": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "from_room", "face", "depth"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$",
+            "maxLength": 32
+          },
+          "from_room": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$",
+            "maxLength": 32
+          },
+          "face": {
+            "type": "string",
+            "enum": ["front", "left", "back", "right"]
+          },
+          "depth": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "string",
+        "maxLength": 160
+      }
+    }
+  }
+}

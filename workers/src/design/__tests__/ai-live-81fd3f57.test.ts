@@ -12,7 +12,7 @@
 import { describe, expect, it } from 'vitest';
 import type { HouseIntent } from '../ai/house';
 import { parseMandatoryRules } from '../ai/mandatory';
-import type { StructuredCallOptions } from '../llm/text-client';
+import { fullPrompt, type StructuredCallOptions } from '../llm/text-client';
 import {
   AiPlanRejected,
   evaluateHouse,
@@ -72,7 +72,8 @@ describe('phát lại lượt chạy thật 81fd3f57 — lời bác ở cổng d
     const answers = [1, 2, 3, 4, 5, 6].map(answer);
     const client = {
       async complete(_route: string, _dataClass: unknown, callOptions: StructuredCallOptions) {
-        options.push(callOptions);
+        // Phần riêng của vòng sửa nằm ở `promptTail` (T115) — canh trên thân lời gọi đầy đủ.
+        options.push({ ...callOptions, prompt: fullPrompt(callOptions) });
         return {
           json: answers[options.length - 1],
           provider: 'fake',

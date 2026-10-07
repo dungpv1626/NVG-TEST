@@ -266,7 +266,7 @@ describe('Tri thức tiêm vào lời dẫn', () => {
   it('gửi mô hình không lặp: ngưỡng diện tích gộp vào dải `room_area_m2`, quy tắc chỉ còn phần đọc được', () => {
     const rules = selectedRulePack({ standards: false, experience: true }, PACKS);
     const context = planContext(contextInput('villa', rules));
-    const sent = context.modelKnowledge;
+    const sent = context.modelKnowledge as HouseModelKnowledge;
     const all = context.knowledge.constraints;
     const folded = all.filter(
       (rule) =>
@@ -421,8 +421,12 @@ describe('Một lượt cho cả nhà khi ý định xếp được', () => {
     };
     const { program } = await generateAiPlan(input(fakeClient([temporary])));
     expect(program.spaces.every((space) => /^[a-z_]+_\d+$/.test(space.id))).toBe(true);
+    // So với CÙNG ý định viết bằng mã chuẩn, không so với số trong ý định: biến thể diện tích mục tiêu của bộ xếp
+    // (T94) có thể thắng và chia lại diện tích — từ thước 5 (T113) nó thắng ở biệt thự mẫu. Điều canh ở đây là ĐỔI
+    // MÃ không làm đổi diện tích.
+    const { program: plain } = await generateAiPlan(input(fakeClient([VILLA_HOUSE])));
     expect(program.spaces.find((space) => space.id === 'living_1')?.target_area_m2).toBe(
-      VILLA_HOUSE.rooms.find((room) => room.id === 'living_1')!.target_area_m2,
+      plain.spaces.find((space) => space.id === 'living_1')?.target_area_m2,
     );
   });
 
@@ -459,13 +463,16 @@ describe('Vòng sửa tối đa ba lượt (T45)', () => {
     expect(client.options).toHaveLength(2);
     expect(result.repaired).toBe(true);
     const [firstCall, retry] = client.options;
-    expect(retry!.prompt).toContain('did not match the schema');
-    expect(retry!.prompt).toMatch(/FRESH\s+intent/);
-    expect(retry!.prompt).not.toContain('<previous_intent>');
+    expect(retry!.promptTail).toContain('did not match the schema');
+    expect(retry!.promptTail).toMatch(/FRESH\s+intent/);
+    expect(retry!.promptTail).not.toContain('<previous_intent>');
     // Lời dẫn hệ thống và phần đầu thân lời gọi giữ nguyên từng byte như lượt đầu: nhà cung cấp
     // đọc lại từ bộ nhớ đệm, tính giá token vào đã lưu đệm.
     expect(retry!.system).toBe(firstCall!.system);
-    expect(retry!.prompt.startsWith(firstCall!.prompt)).toBe(true);
+    // Phần riêng của vòng sửa nằm ở khối sau (`promptTail`), cùng khoá đệm.
+    expect(retry!.prompt).toBe(firstCall!.prompt);
+    expect(firstCall!.promptTail).toBeUndefined();
+    expect(retry!.cacheKey).toBe(firstCall!.cacheKey);
   });
 
   it('danh mục sai đầu bài (thiếu chỗ để xe): gửi lại ý định cũ kèm lý do bằng tiếng người đọc được', async () => {
@@ -481,8 +488,8 @@ describe('Vòng sửa tối đa ba lượt (T45)', () => {
 
     expect(client.options).toHaveLength(2);
     expect(result.repaired).toBe(true);
-    expect(client.options[1]!.prompt).toContain('<previous_intent>');
-    expect(client.options[1]!.prompt).toMatch(/Thiếu Chỗ để xe|garage/i);
+    expect(client.options[1]!.promptTail).toContain('<previous_intent>');
+    expect(client.options[1]!.promptTail).toMatch(/Thiếu Chỗ để xe|garage/i);
   });
 
   it('phòng hụt mức đầu bài mà cả tầng không còn chỗ bù: ra mặt bằng ngay lượt đầu, kèm cảnh báo sửa đầu bài (T91, Haan 27/09/2026)', async () => {
@@ -557,7 +564,8 @@ describe('Vòng sửa tối đa ba lượt (T45)', () => {
     expect(rejection!.level).toBe(0);
     expect(rejection!.retry).toBe('revise');
     expect(rejection!.attempts).toBe(HOUSE_REVISIONS_MAX + 1);
-    for (const call of client.options.slice(1)) expect(call.prompt).toContain('<previous_intent>');
+    for (const call of client.options.slice(1))
+      expect(call.promptTail).toContain('<previous_intent>');
   });
 
   it(`${STUCK_AFTER} lượt liền hỏng đúng cùng một tập lỗi → dừng, không tiêu hết lượt sửa (tổng hợp 37 lượt thật 23–30/09/2026)`, async () => {

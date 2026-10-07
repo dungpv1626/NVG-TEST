@@ -48,6 +48,7 @@ function deriveFor(
   leaves: PackLeaf[],
   entryRoom: string | null,
   extra: Partial<DoorsInput> = {},
+  garageRoom: string | null = null,
 ) {
   const intent = {
     level: 1,
@@ -56,7 +57,7 @@ function deriveFor(
     relations: [],
     openings: [],
     entryRoom,
-    garageRoom: null,
+    garageRoom,
     variantLabel: null,
     rationale: '',
     stored: {},
@@ -117,6 +118,50 @@ describe('deriveDoors — sảnh trước phòng mang cửa chính', () => {
       { mainSide: { footprint, side: 'y0' } },
     );
     expect(doors).toContainEqual({ a: 'living_1', b: 'outside', kind: 'double' });
+  });
+});
+
+describe('deriveDoors — gara mang lối vào chính (nhà ống, Haan 04/10/2026)', () => {
+  it('cửa cuốn sát một đầu vách, cửa đi sát đầu kia — hai cửa, không bị khử trùng', () => {
+    // Lượt e34f8f58: khoá khử trùng `phòng|outside` nuốt cửa đi, cổng báo «không có cửa ra ngoài (trừ cửa xe)».
+    const { doors } = deriveFor(
+      [
+        { id: 'garage_1', rect: { x0: 0, y0: 0, x1: 500, y1: 490 } },
+        { id: 'living_1', rect: { x0: 0, y0: 490, x1: 500, y1: 850 } },
+      ],
+      [leaf('garage_1', ['garage'], 'open'), leaf('living_1', ['living'], 'hub')],
+      'garage_1',
+      { garageEntry: true },
+      'garage_1',
+    );
+    expect(doors).toContainEqual({ a: 'garage_1', b: 'outside', kind: 'garage', place: 'start' });
+    expect(doors).toContainEqual({ a: 'garage_1', b: 'outside', kind: 'single', place: 'end' });
+  });
+
+  it('loại hình không khai gara làm lối vào (biệt thự): chỉ cửa cuốn, như trước', () => {
+    const { doors } = deriveFor(
+      [{ id: 'garage_1', rect: { x0: 0, y0: 0, x1: 500, y1: 490 } }],
+      [leaf('garage_1', ['garage'], 'open')],
+      'garage_1',
+      {},
+      'garage_1',
+    );
+    expect(doors.filter((door) => door.b === 'outside')).toEqual([
+      { a: 'garage_1', b: 'outside', kind: 'garage' },
+    ]);
+  });
+
+  it('đầu bài không khai lối vào chính: chỉ cửa cuốn, đặt như cũ', () => {
+    const { doors } = deriveFor(
+      [{ id: 'garage_1', rect: { x0: 0, y0: 0, x1: 500, y1: 490 } }],
+      [leaf('garage_1', ['garage'], 'open')],
+      'garage_1',
+      { mainEntranceDeclared: false, garageEntry: true },
+      'garage_1',
+    );
+    expect(doors.filter((door) => door.b === 'outside')).toEqual([
+      { a: 'garage_1', b: 'outside', kind: 'garage' },
+    ]);
   });
 });
 

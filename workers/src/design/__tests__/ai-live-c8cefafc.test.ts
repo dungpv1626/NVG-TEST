@@ -15,7 +15,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseMandatoryRules } from '../ai/mandatory';
 import type { HouseIntent } from '../ai/house';
-import type { StructuredCallOptions } from '../llm/text-client';
+import { fullPrompt, type StructuredCallOptions } from '../llm/text-client';
 import {
   AiPlanRejected,
   evaluateHouse,
@@ -75,46 +75,52 @@ describe('phát lại lượt chạy thật c8cefafc — lỗi giảm 4 → 1 qu
     expect(round4.rejections[0]!.messages.join(' ')).toContain('chong chóng');
   });
 
-  it('vòng sửa đồng bộ: lời gọi 3 và 5 sửa từ bản vòng 1 và vòng 3 (bản nhẹ nhất), không treo', async () => {
-    const options: StructuredCallOptions[] = [];
-    const answers = [
-      run.intents.round1,
-      run.intents.round2,
-      run.intents.round3,
-      run.intents.round4,
-      run.intents.round4,
-      run.intents.round4,
-    ];
-    const client = {
-      async complete(_route: string, _dataClass: unknown, callOptions: StructuredCallOptions) {
-        options.push(callOptions);
-        return {
-          json: answers[options.length - 1],
-          provider: 'fake',
-          model: 'fake-1',
-          usage: { inputTokens: 1, outputTokens: 1 },
-          latencyMs: 1,
-        };
-      },
-    };
-    const started = Date.now();
-    await expect(
-      generateAiPlan({
-        ...input,
-        briefRef: 'sha256:' + '0'.repeat(64),
-        route: 'ai_text_fake',
-        client,
-        prompts,
-        // Canh cơ chế vòng sửa trên câu trả lời ghi sẵn — không để biến thể T94 đổi kết quả từng vòng.
-        planVariants: false,
-      }),
-    ).rejects.toBeInstanceOf(AiPlanRejected);
-    expect(Date.now() - started).toBeLessThan(30_000);
-    const sentFrom = (call: StructuredCallOptions) =>
-      call.prompt.slice(call.prompt.indexOf('<previous_intent>'));
-    // Số lỗi đếm cả bản phác tầng trên đã soát (T92), nên chỉ canh câu, không canh con số.
-    // T105: vòng 2 không còn tệ hơn vòng 1 (xem trên), nên chỉ lời gọi 5 (sau vòng 4 chong chóng) sửa từ bản cũ.
-    expect(options[4]!.prompt).toMatch(/Your last revision was worse .*\d+ problems against \d+/);
-    expect(sentFrom(options[4]!)).toBe(sentFrom(options[3]!));
-  });
+  it(
+    'vòng sửa đồng bộ: lời gọi 3 và 5 sửa từ bản vòng 1 và vòng 3 (bản nhẹ nhất), không treo',
+    { timeout: 120_000 },
+    async () => {
+      const options: StructuredCallOptions[] = [];
+      const answers = [
+        run.intents.round1,
+        run.intents.round2,
+        run.intents.round3,
+        run.intents.round4,
+        run.intents.round4,
+        run.intents.round4,
+      ];
+      const client = {
+        async complete(_route: string, _dataClass: unknown, callOptions: StructuredCallOptions) {
+          // Phần riêng của vòng sửa nằm ở `promptTail` (T115) — canh trên thân lời gọi đầy đủ.
+          options.push({ ...callOptions, prompt: fullPrompt(callOptions) });
+          return {
+            json: answers[options.length - 1],
+            provider: 'fake',
+            model: 'fake-1',
+            usage: { inputTokens: 1, outputTokens: 1 },
+            latencyMs: 1,
+          };
+        },
+      };
+      const started = Date.now();
+      await expect(
+        generateAiPlan({
+          ...input,
+          briefRef: 'sha256:' + '0'.repeat(64),
+          route: 'ai_text_fake',
+          client,
+          prompts,
+          // Canh cơ chế vòng sửa trên câu trả lời ghi sẵn — không để biến thể T94 đổi kết quả từng vòng.
+          planVariants: false,
+        }),
+      ).rejects.toBeInstanceOf(AiPlanRejected);
+      // 60 s từ T113 (quay lui tầng 1 làm vòng hỏng chậm ~2,7 lần); vẫn bắt được vòng lặp chạy quá số lượt.
+      expect(Date.now() - started).toBeLessThan(60_000);
+      const sentFrom = (call: StructuredCallOptions) =>
+        call.prompt.slice(call.prompt.indexOf('<previous_intent>'));
+      // Số lỗi đếm cả bản phác tầng trên đã soát (T92), nên chỉ canh câu, không canh con số.
+      // T105: vòng 2 không còn tệ hơn vòng 1 (xem trên), nên chỉ lời gọi 5 (sau vòng 4 chong chóng) sửa từ bản cũ.
+      expect(options[4]!.prompt).toMatch(/Your last revision was worse .*\d+ problems against \d+/);
+      expect(sentFrom(options[4]!)).toBe(sentFrom(options[3]!));
+    },
+  );
 });

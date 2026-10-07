@@ -43,6 +43,7 @@ import {
 import { planGraph, reachableFrom, roomsBetween, type PlanGraph } from './plan-check';
 import { roomsWithDaylight } from './rule-warnings';
 import { BALCONY_PROJECTING_OPEN_SIDES, balconyFaces } from './mandatory';
+import { faceAtPoint, type OutlineFace } from './outline-faces';
 
 /** Điểm của một tiêu chí. `value === null` nghĩa là chưa đủ dữ liệu để chấm. */
 export interface CriterionScore {
@@ -115,6 +116,14 @@ export interface PlanScoreInput {
    * đoán loại hình từ hình dạng mặt bằng là thêm một chỗ sai trong khi đầu bài đã khai rõ.
    */
   buildingType: string;
+  /** Loại nhà (T116, `houseProfile`) — lớp ghi đè thứ hai của thước chấm, chồng lên `buildingType`. */
+  houseProfile?: string | null;
+  /**
+   * Cạnh tối thiểu theo loại nhà (`by_house_profile.<loại>` của `kb/construction_norms.yaml`) — B1 đọc trước ngưỡng của
+   * `rules/`. Nhà ống: bảng KTS (hành lang 0,9 m, ban công 0,5 m…) mà bộ giải và cổng đã dùng; thiếu thì B1 trừ điểm
+   * đúng thứ cổng cho qua (T116 tiếp 17).
+   */
+  profileMinSide?: (type: string) => number | null;
   quality: PlanQuality;
   /**
    * Gói quy tắc để tra ngưỡng theo mã phòng (B1, B2).
@@ -167,7 +176,12 @@ export function scorePlan(input: PlanScoreInput): PlanScore {
     const inScope = list.filter((entry) => entry.khongChamVi !== 'gate');
     // Trọng số TƯƠNG ĐỐI trong nhóm (T96, `weight` của từng tiêu chí, vắng = 1): mẫu số vẫn là con số
     // CỐ ĐỊNH của cái thước — tổng trọng số tương đối của các tiêu chí trong phạm vi chấm.
-    const relative = new Map(input.quality.criteria.map((spec) => [spec.code, spec.weight]));
+    const relative = new Map(
+      input.quality.criteria.map((spec) => [
+        spec.code,
+        criterionFor(spec, input.buildingType, input.houseProfile).weight,
+      ]),
+    );
     const total = inScope.reduce((sum, entry) => sum + (relative.get(entry.code) ?? 1), 0);
 
     let points = 0;
@@ -218,12 +232,19 @@ function round2(value: number): number {
 export function groupsBelowFloor(
   score: { groups?: readonly { code: string; points: number; scoredWeight: number }[] },
   floorPercent: number | null,
+  /** Sàn riêng từng nhóm (`accept_group_floor_by_group`), đè sàn chung. */
+  byGroup: Readonly<Record<string, number>> = {},
 ): string[] {
-  if (floorPercent === null || !score.groups) return [];
+  if (!score.groups) return [];
   return score.groups
-    .filter(
-      (group) => group.scoredWeight > 0 && (group.points / group.scoredWeight) * 100 < floorPercent,
-    )
+    .filter((group) => {
+      const floor = byGroup[group.code] ?? floorPercent;
+      return (
+        floor !== null &&
+        group.scoredWeight > 0 &&
+        (group.points / group.scoredWeight) * 100 < floor
+      );
+    })
     .map((group) => group.code);
 }
 
@@ -240,7 +261,7 @@ function measureAll(input: PlanScoreInput): Map<string, CriterionScore> {
   const out = new Map<string, CriterionScore>();
 
   for (const base of input.quality.criteria) {
-    const spec = criterionFor(base, ctx.buildingType);
+    const spec = criterionFor(base, ctx.buildingType, ctx.houseProfile);
     const measure: Measure = spec.enforcedByGate
       ? {
           value: null,
@@ -323,6 +344,8 @@ interface RoomRef {
 interface ScoreContext {
   plan: AiFloorPlan;
   buildingType: string;
+  houseProfile: string | null;
+  profileMinSide: ((type: string) => number | null) | null;
   rules: RulePack;
   groups: Record<string, string[]>;
   rooms: RoomRef[];
@@ -371,6 +394,8 @@ function context(input: PlanScoreInput): ScoreContext {
   return {
     plan: input.plan,
     buildingType: input.buildingType,
+    houseProfile: input.houseProfile ?? null,
+    profileMinSide: input.profileMinSide ?? null,
     rules: input.rules,
     groups: input.groups,
     rooms,
@@ -396,6 +421,17 @@ function context(input: PlanScoreInput): ScoreContext {
 // ---------------------------------------------------------------------------
 
 type MeasureFn = (ctx: ScoreContext, spec: CriterionSpec) => Measure;
+
+/** Chữ nhật bao của hình bao tầng; `null` khi tầng chưa có hình bao. */
+function outlineBox(level: AiFloorPlanLevel): Rect | null {
+  if (!level.outline.length) return null;
+  const xs = level.outline.map(([x = 0]) => x);
+  const ys = level.outline.map(([, y = 0]) => y);
+  return { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
+}
+
+/** Mã loại ban công của từ vựng — cùng mã `mandatory.ts` dùng. */
+const BALCONY_TYPE = 'balcony';
 
 /**
  * Đường đi hằng ngày xa nhất: từ chỗ sinh hoạt chung tới một WC CHUNG, không đi xuyên gara hay sảnh
@@ -565,7 +601,8 @@ const MEASURES: Record<string, MeasureFn> = {
   B1: (ctx) => {
     const refs: string[] = [];
     for (const room of ctx.rooms) {
-      const limit = ctx.rules.minDimension(ctx.buildingType, room.type);
+      const limit =
+        ctx.profileMinSide?.(room.type) ?? ctx.rules.minDimension(ctx.buildingType, room.type);
       if (limit === null) continue;
       const shortest = Math.min(width(room.rect), height(room.rect)) / 100;
       // Dung sai 5 cm: hợp đồng khai cm nguyên, và một phòng hụt 1 cm so ngưỡng không phải chỗ
@@ -617,6 +654,9 @@ const MEASURES: Record<string, MeasureFn> = {
     const refs: string[] = [];
     for (const room of ctx.rooms) {
       if (ctx.inGroup('outdoor', room.type)) continue;
+      // Hộp kỹ thuật, giếng trời… không có cửa (`no_door_required`) — không «tới được» là đúng, không phải lỗi đi lại
+      // (T116 tiếp 18: hộp kỹ thuật sau WC bị C1 trừ trọn).
+      if (ctx.inGroup('no_door_required', room.type)) continue;
       // Khu vệ sinh khép kín đi xuyên phòng cha là HỢP LỆ — chương trình không gian đã nói vậy.
       const parent = ctx.ensuiteOf.get(room.id);
       const forbidden = new Set(
@@ -843,6 +883,121 @@ const MEASURES: Record<string, MeasureFn> = {
   },
 
   /**
+   * Ban công bố trí lệch (T113 — Haan chấm lượt 182665ea: «ban công tầng 2 phân bổ chưa thẩm mỹ, đúng kiểu làm cho có
+   * để tuân thủ đề bài»; chốt 03/10/2026: hạn chế góc chữ L, ban công phải cân đối; ưu tiên phòng ngủ → phòng phơi đồ
+   * → phòng làm việc; ban công bám theo cạnh phòng). Đếm ban công phạm ít nhất một lỗi:
+   *  · GÓC CHỮ L — ôm hai mặt vuông góc ở mép ngoài cùng hình bao mà không dài rõ rệt dọc mặt nào, hoặc chung vách
+   *    với một ban công khác;
+   *  · KHÔNG BÁM CẠNH PHÒNG — dọc mặt nó quay ra, ban công vượt quá cạnh của phòng mở cửa ra nó (phòng chủ) quá
+   *    `edge_tolerance_m`, hoặc không phòng nào mở cửa ra nó;
+   *  · SAI ƯU TIÊN — cùng mặt ấy có phòng bậc ưu tiên cao hơn (`balcony_owner_1..3` của từ vựng) chưa có ban công,
+   *    trong khi ban công này thuộc phòng bậc thấp hơn, hoặc thuộc phòng đã giữ ban công khác.
+   */
+  D5: (ctx, spec) => {
+    const tol = (spec.params.edge_tolerance_m ?? 0.3) * 100;
+    const bad = new Set<string>();
+    let total = 0;
+    const rankOf = (type: string) =>
+      [1, 2, 3].find((n) => ctx.inGroup(`balcony_owner_${n}`, type)) ?? 4;
+    for (const level of ctx.levels) {
+      const rooms = ctx.byLevel.get(level.level) ?? [];
+      const balconies = rooms.filter((room) => room.type === BALCONY_TYPE);
+      if (!balconies.length) continue;
+      total += balconies.length;
+      const faces = (level.outline_faces ?? []) as OutlineFace[];
+      const outline = level.outline.map(([x, y]) => [x, y] as [number, number]);
+      const onOutline = (x: number, y: number) =>
+        faces.length === outline.length && faceAtPoint([x, y], outline, faces, tol) !== null;
+      /** Cạnh nào của chữ nhật nằm trên hình bao: trên (y0), dưới (y1), trái (x0), phải (x1). */
+      const sidesOf = (r: Rect) => {
+        const mx = (r.x0 + r.x1) / 2;
+        const my = (r.y0 + r.y1) / 2;
+        return {
+          y0: onOutline(mx, r.y0),
+          y1: onOutline(mx, r.y1),
+          x0: onOutline(r.x0, my),
+          x1: onOutline(r.x1, my),
+        };
+      };
+      const ownerOf = new Map<string, RoomRef | null>();
+      const owned = new Map<string, number>();
+      for (const balcony of balconies) {
+        const openers = ctx.graph.doors
+          .filter((door) => !door.toOutside && door.rooms.includes(balcony.id))
+          .flatMap((door) => door.rooms.filter((id) => id !== balcony.id))
+          .map((id) => rooms.find((room) => room.id === id))
+          .filter((room): room is RoomRef => !!room && room.type !== BALCONY_TYPE)
+          .sort((a, b) => rankOf(a.type) - rankOf(b.type) || b.areaM2 - a.areaM2);
+        const owner = openers[0] ?? null;
+        ownerOf.set(balcony.id, owner);
+        if (owner) owned.set(owner.id, (owned.get(owner.id) ?? 0) + 1);
+      }
+      for (const balcony of balconies) {
+        const r = balcony.rect;
+        const on = sidesOf(r);
+        // Góc chữ L: ôm hai mặt vuông góc ở MÉP NGOÀI CÙNG của hình bao, hoặc chung vách với ban công khác. Đo theo
+        // mép ngoài cùng chứ không theo mọi cạnh hình bao: đầu ban công đua ra chạm bậc nhô của chính phần đua
+        // (cạnh dài bằng độ đua) không phải là góc nhà.
+        const box = outlineBox(level);
+        const extreme = box && {
+          y0: r.y0 - box.y0 <= tol,
+          y1: box.y1 - r.y1 <= tol,
+          x0: r.x0 - box.x0 <= tol,
+          x1: box.x1 - r.x1 <= tol,
+        };
+        // Ban công DÀI rõ rệt dọc một mặt (cạnh dài > `long_ratio` lần cạnh ngắn, như T106) chạm mặt kia bằng đầu
+        // ngắn thì không ôm góc — dải dọc mặt trước chạy tới sát góc nhà là chuyện thường (lượt máy 0b7e4957).
+        const w = r.x1 - r.x0;
+        const h = r.y1 - r.y0;
+        const longRatio = ctx.balconyFace?.longRatio ?? null;
+        const longOne = longRatio !== null && Math.max(w, h) > longRatio * Math.min(w, h);
+        const corner =
+          !!extreme && (extreme.y0 || extreme.y1) && (extreme.x0 || extreme.x1) && !longOne;
+        const touching = balconies.some(
+          (other) => other.id !== balcony.id && sharedWallCm(r, other.rect, tol) > 0,
+        );
+        // Mặt ban công quay ra: cạnh dài nằm trên hình bao; gần vuông thì cạnh nào cũng được.
+        const wide = r.x1 - r.x0 >= r.y1 - r.y0;
+        const alongX = wide ? on.y0 || on.y1 : !(on.x0 || on.x1);
+        const owner = ownerOf.get(balcony.id) ?? null;
+        let offEdge = !owner;
+        if (owner) {
+          const [b0, b1, o0, o1] = alongX
+            ? [r.x0, r.x1, owner.rect.x0, owner.rect.x1]
+            : [r.y0, r.y1, owner.rect.y0, owner.rect.y1];
+          offEdge = b0 < o0 - tol || b1 > o1 + tol;
+        }
+        // Sai ưu tiên: phòng bậc cao hơn cùng mặt chưa có ban công.
+        const face = alongX
+          ? on.y0
+            ? 'y0'
+            : on.y1
+              ? 'y1'
+              : null
+          : on.x0
+            ? 'x0'
+            : on.x1
+              ? 'x1'
+              : null;
+        const ownerRank = owner ? rankOf(owner.type) : 4;
+        const doubled = !!owner && (owned.get(owner.id) ?? 0) > 1;
+        const outranked =
+          !!face &&
+          rooms.some((room) => {
+            if (room.type === BALCONY_TYPE || owned.has(room.id) || room.id === owner?.id)
+              return false;
+            const rank = rankOf(room.type);
+            if (rank > 3 || !(rank < ownerRank || (doubled && rank <= ownerRank))) return false;
+            return sidesOf(room.rect)[face];
+          });
+        if (corner || touching || offEdge || outranked) bad.add(balcony.id);
+      }
+    }
+    if (total === 0) return { value: null, khongCham: 'Không có ban công nào.' };
+    return { value: bad.size, refs: [...bad] };
+  },
+
+  /**
    * Cửa chính đón vào đâu (T96 — Haan chấm lượt 5fda70dc: «vào phòng khách từ cửa chính đi qua bếp và
    * phòng ăn, rất không hợp lý»). Đếm số phòng KHÔNG PHẢI lối đi phải xuyên qua từ một cửa ra ngoài tới
    * phòng khách gần nhất: sảnh, hành lang, chỗ để xe (`entry_through` — nhà phố vào qua gara là thường)
@@ -926,6 +1081,62 @@ const MEASURES: Record<string, MeasureFn> = {
       if (served.size < 2) refs.push(corridor.id);
     }
     return { value: refs.length, refs };
+  },
+
+  /**
+   * Hành lang rộng quá mức (T113 — Haan chấm lượt 182665ea: «giao thông tầng 1 quá lớn, đang có độ rộng 2,5 m —
+   * thừa và không hợp lý»). C2 đo tỷ lệ cả tầng nên một dải hành lang 2,4 m vẫn lọt khoảng đạt, C4 chỉ đo bề rộng
+   * NHỎ NHẤT. Ở đây: bề rộng lọt lòng LỚN NHẤT của các hành lang dạng DẢI (dài từ `strip_ratio` lần bề rộng);
+   * sảnh gần vuông không xét.
+   */
+  C12: (ctx, spec) => {
+    const ratio = spec.params.strip_ratio ?? 3;
+    let widest = -Infinity;
+    let ref = '';
+    for (const hall of ctx.rooms) {
+      if (hall.type !== 'circulation') continue;
+      const short = Math.min(width(hall.rect), height(hall.rect));
+      const long = Math.max(width(hall.rect), height(hall.rect));
+      if (long < ratio * short || short / 100 <= widest) continue;
+      widest = short / 100;
+      ref = hall.id;
+    }
+    if (!ref) return { value: null, khongCham: 'Phương án không có hành lang dạng dải.' };
+    return { value: Math.round(widest * 100) / 100, refs: [ref] };
+  },
+
+  /**
+   * Phòng ăn không liền bếp (T116 — Haan chấm lượt a68c50bb: «với nhà ống thường thì phòng ăn liền với bếp»). Đếm phòng
+   * ăn mà cùng tầng không có bếp chung tường từ `min_shared_m`; bếp gộp phòng ăn (`also`) là liền. Chỉ loại nhà
+   * `only_profile`. Trừ điểm, không chặn.
+   */
+  C13: (ctx, spec) => {
+    // Haan nói cho NHÀ ỐNG («với nhà ống thường thì phòng ăn liền với bếp») — loại nhà khác không chấm (phát lại hai lượt
+    // nhà phố cũ: phòng ăn tách bếp là bố cục bình thường của chúng).
+    if (spec.onlyProfile && ctx.houseProfile !== spec.onlyProfile) {
+      return { value: null, khongCham: 'Chỉ chấm cho nhà ống.' };
+    }
+    const minShared = (spec.params.min_shared_m ?? 0.9) * 100;
+    const gap = (spec.params.wall_gap_m ?? 0.25) * 100;
+    const typeOfId = new Map(ctx.rooms.map((room) => [room.id, room.type]));
+    const serves = (room: (typeof ctx.rooms)[number], type: string) =>
+      room.type === type || room.also.some((id) => typeOfId.get(id) === type);
+    const dinings = ctx.rooms.filter((room) => room.type === 'dining');
+    if (dinings.length === 0) {
+      return ctx.rooms.some((room) => serves(room, 'dining'))
+        ? { value: 0 }
+        : { value: null, khongCham: 'Không có phòng ăn riêng.' };
+    }
+    const apart = dinings.filter(
+      (dining) =>
+        !(ctx.byLevel.get(dining.level) ?? []).some(
+          (other) =>
+            other.id !== dining.id &&
+            serves(other, 'kitchen') &&
+            sharedWallCm(dining.rect, other.rect, gap) >= minShared,
+        ),
+    );
+    return { value: apart.length, refs: apart.map((room) => room.id) };
   },
 
   /**

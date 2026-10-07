@@ -52,6 +52,10 @@ export interface DemandedSpace {
   count: number;
   /** Tầng bắt buộc; `null` = tầng nào cũng được. */
   level: number | null;
+  /** Chương trình tự thêm mỗi tầng một dòng (`per_storey`, T116). */
+  perStorey?: boolean;
+  /** Diện tích dòng tự thêm, m² (`min_m2`). */
+  minM2?: number;
   /** `true` = bác phương án; `false` = chỉ cảnh báo. */
   blocking: boolean;
   /** Câu mở đầu thông điệp, lấy từ `say` của tệp dữ liệu. */
@@ -461,6 +465,8 @@ function demandedSpaces(
       anyOf: row.anyOf,
       count: row.count,
       level: hit.level,
+      ...(row.perStorey ? { perStorey: true } : {}),
+      ...(row.minM2 !== undefined ? { minM2: row.minM2 } : {}),
       blocking: row.blocking,
       say: row.say,
     });

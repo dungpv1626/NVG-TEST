@@ -1261,6 +1261,7 @@ aiApp.get('/plan/:projectId/review', async (c) => {
   const levels = plan.levels.map((level) => {
     const sheet = planSheet(plan, level.level);
     return {
+      roof: false,
       level: level.level,
       name: level.name,
       scale: sheet.scale,
@@ -1285,6 +1286,33 @@ aiApp.get('/plan/:projectId/review', async (c) => {
       arrange: level.arrange ?? null,
     };
   });
+  // Tờ mái (Haan chốt 04/10/2026): một mục chọn thêm cạnh các tầng, cờ `roof` để màn hình không mời vẽ ảnh nội
+  // thất hay sửa bằng ô yêu cầu trên mái.
+  if (plan.roof) {
+    const sheet = planSheet(plan, plan.roof.level);
+    levels.push({
+      level: plan.roof.level,
+      name: 'Mái',
+      scale: sheet.scale,
+      orientation: sheet.orientation,
+      notes: [
+        ...sheet.notes,
+        ...(plan.roof.notes ?? []).map((message) => ({ code: 'roof_note', message })),
+      ],
+      rooms: plan.roof.zones.length,
+      roomList: plan.roof.zones.map((zone) => ({
+        id: zone.id,
+        type: zone.type,
+        area_m2:
+          Math.round(((zone.rect[2]! - zone.rect[0]!) * (zone.rect[3]! - zone.rect[1]!)) / 1000) /
+          10,
+      })),
+      openSpaces: [],
+      intent: null,
+      arrange: null,
+      roof: true,
+    });
+  }
 
   return c.json({
     artifactId: artifact.id,
@@ -1447,6 +1475,10 @@ aiApp.post('/plan/runs', async (c) => {
     stage: 'plan',
     textRoute: body.route,
     reasoningEffort: planEffort,
+    ...(c.env.AI_PROMPT_PIPELINE === 'v5' || c.env.AI_PROMPT_PIPELINE === 'v6'
+      ? { geometry: 'rect' as const }
+      : {}),
+    ...(c.env.AI_PROMPT_PIPELINE === 'v6' ? { pipeline: 'v6' as const } : {}),
     briefRef: brief.id,
     digest,
     rulePacks: choice,

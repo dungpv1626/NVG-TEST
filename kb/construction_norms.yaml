@@ -114,6 +114,10 @@ stairs:
   # lên + khe giữa; vế P2 hẹp nhất đo được 0,83 m nên hai vế cần tối thiểu ~1,6–1,7 m.
   # Giữ 1,6 là mức DỰNG ĐƯỢC: ô thang hai vế NVG thật sự làm rộng hơn nhiều (2,00 và 2,50 m).
   two_flights_min_width_m: 1.6
+  # Gầm thang dùng được (T116, Haan chấm lượt a68c50bb: «với nhà ống có thể tận dụng gầm cầu thang làm nhà vệ sinh
+  # nhỏ»): phần sàn dưới vế mà MẶT DƯỚI bản thang cao từ mức này (2,0 m thông thuỷ + ~0,2 m bản thang và lớp hoàn
+  # thiện). Chỉ thang thẳng — gầm thang U nằm dưới vế thứ hai, quá thấp ở đầu chiếu nghỉ. ⚑ Số suy luận, chưa đo.
+  under_use_height_m: 2.2
   # Bề sâu mặt bậc nhỏ nhất bộ giải ý định chấp nhận khi kiểm ô thang ĐỦ DÀI cho số bậc (15/09/2026,
   # Haan duyệt; Q-45d). Khác `riser_m` ở trên (chỉ để vẽ): đây là điều kiện DỰNG, cùng lý lẽ với mục
   # `usable` — ô thang ngắn hơn số bậc × bề sâu bậc + chiếu nghỉ thì không xây nổi cái thang ấy, bộ vẽ
@@ -167,6 +171,33 @@ entry_steps:
 #
 # SỐ THAM KHẢO: lấy mức «đạt» của tiêu chí C4 (`kb/plan_quality.yaml`, đo 3 mặt bằng). Bộ giải chỉ
 # dùng nó để vẽ dải hành lang; hẹp hơn hay rộng hơn đều không bị chặn, bộ chấm quyết điểm.
+
+# Số đo cửa / hành lang THEO LOẠI NHÀ (T116, handoff v6 mục 3.3) — đè lên `openings`, `door_margin_m`,
+# `circulation.corridor_clear_m` khi dựng một lượt (`ai/house-profile-norms.ts`). Loại nhà suy từ đầu bài
+# (`shared/src/design/house-profile.ts`) hoặc KTS ghi đè. ⚑ SỐ KHỞI ĐIỂM CỦA HANDOFF, chưa đo trên đủ hồ sơ:
+# chỉ có oracle MR Dương (nhà ống 16,43 × 5 m) xác nhận ỐNG — hành lang thật ~0,95 m lọt lòng, cửa WC trên vách
+# ~0,81 m. Vách tối thiểu để đặt cửa = cửa + 2 × lề: ỐNG 0,9 · PHỐ 1,0 · BT 1,1 (số chung) · VƯỜN 1,0.
+# Loại không khai (bt) = giữ số chung.
+by_house_profile:
+  ong:
+    door_width_m: 0.8
+    wc_door_width_m: 0.7
+    door_margin_m: 0.05
+    corridor_clear_m: 0.9
+    # Ban công nhà ống đua theo lộ giới 0,5–0,9 m (handoff 3.3) — 0,9 m lọt lòng thì không ban công đua nào đạt.
+    # Cạnh tối thiểu LỌT LÒNG nhà ống theo bảng KTS (handoff v6 tổng hợp 3.3; Haan chọn «cả bảng KTS» 06/10/2026, handoff
+    # sửa lỗi đợt 2 mục 1.2) — thay bảng chung 14/09 (2,2 / 2,6 / 2,7 / WC 0,9) cho riêng nhà ống. Giếng trời 1,2 m:
+    # lượt thật 41ffe1e5 lời gọi 3 thử giếng 0,6 m.
+    min_side_m:
+      { balcony: 0.5, bedroom: 2.4, master_bedroom: 2.8, living: 3.0, wc: 1.1, light_well: 1.2 }
+    # WC chung nhà ống tối đa 3 lần bề ngang (Haan chấm lượt a68c50bb, T116: «phòng vệ sinh tầng 1 quá hẹp và dài» —
+    # 0,9 × 5,2 m, tỉ lệ 5,8). Mức chung 6 là do cây chia của bộ xếp cũ; đường dải xếp chồng ô nên dựng được WC gọn.
+    max_aspect: { wc: 3.0 }
+    # ⚑ T116 (PHUONG_AN_V6 2.3): nhà ống sâu hơn 12 m mà không có giếng trời / sân trong → chỉ LƯU Ý (T96 giữ nguyên: không tự vẽ giếng,
+    # giếng trời vẫn chỉ đề xuất khi đầu bài hỏi tới). Số chưa đo — chờ Haan.
+    light_well_advice_depth_m: 12
+  pho: { door_width_m: 0.9, wc_door_width_m: 0.7, door_margin_m: 0.05, corridor_clear_m: 1.0 }
+  vuon: { door_width_m: 0.9, wc_door_width_m: 0.7, door_margin_m: 0.05, corridor_clear_m: 1.2 }
 circulation:
   corridor_clear_m: 1.2
   # Khung bề rộng LỌT LÒNG hành lang (Haan 30/09/2026, T104): tối thiểu 0,9 m (không để đoạn giao thông chính
@@ -174,6 +205,9 @@ circulation:
   # theo loại nhà thì chương trình thu hẹp về mức ấy, phần dư trả cho cụm phòng bên kia hành lang không chứa ô
   # thang / thang máy / giếng trời (`arrange/corridor-trim.ts`) — không bao giờ thu hẹp dưới `corridor_clear_m`.
   corridor_min_clear_m: 0.9
+  # Chỗ nối hai ô hành lang kề nhau (handoff v6 sửa lỗi đợt 3 mục 1 — hành lang là một vùng): ô thông suốt cạnh chung,
+  # không cửa, chỉ cần đủ một người đi qua. SUY LUẬN (n = 0), chờ KTS duyệt.
+  corridor_pass_clear_m: 0.6
   corridor_max_clear_m:
     default: 1.2
     biet_thu: 1.5
@@ -208,6 +242,8 @@ usable:
     storage: 0.8
     balcony: 0.9
     garage: 2.4
+    # T116: hộp kỹ thuật cục nóng ~0,6 × 0,8 m (PHUONG_AN_V6 2.3) — không có dòng này thì bộ giải dải dùng 0,9 m.
+    shaft: 0.6
     # Giếng thang máy KHÔNG khai ở đây (gỡ mức 1,4 m ngày 25/09/2026): cạnh ngắn lấy từ kích thước
     # giếng gia chủ khai theo hãng thang (`vertical.elevator_shaft_*_m`), cùng số cổng dùng để bác —
     # `ai/plan.ts` nạp nó vào bộ xếp. Một mức cố định ở đây sẽ bác oan giếng 1,2 m của hãng nhỏ.

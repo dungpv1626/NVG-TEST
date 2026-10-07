@@ -109,7 +109,8 @@ describe('chèn dải hành lang vào đường cắt sạch', () => {
 
 // Trần 90 giây: từ T104 mỗi `evaluateHouseBest` xếp thêm một lần cả nhà (biến thể thu hẹp hành lang), phép thử
 // 5aba737d vòng 1 chạy ~32 giây khi cả bộ kiểm chạy song song — vượt trần mặc định 30 giây.
-describe('phát lại lượt thật — biến thể ra mặt bằng mà gốc không ra', { timeout: 90_000 }, () => {
+// Trần 240 s (T113): mỗi biến thể nay có thể quay lui tầng 1 khi tầng trên hỏng.
+describe('phát lại lượt thật — biến thể ra mặt bằng mà gốc không ra', { timeout: 240_000 }, () => {
   const evaluate = (id: string, round: number) => {
     const run = loadRun(id);
     const input = {
@@ -147,12 +148,13 @@ describe('phát lại lượt thật — biến thể ra mặt bằng mà gốc 
     expect(variantNote(best)).toMatch(/phòng cùng loại cùng tầng nhận cùng diện tích mục tiêu/);
   });
 
-  it('4a521f52 vòng 1: biến thể diện tích mục tiêu → mặt bằng', () => {
+  it('4a521f52 vòng 1: ra mặt bằng — từ T113 ngay ở ý định gốc (quay lui tầng 1)', () => {
     const { base, best } = evaluate('4a521f52', 1);
-    expect(base.ok).toBeNull();
+    // Trước T113 ý định gốc hỏng ở tầng 2 và chỉ biến thể diện tích mục tiêu ra mặt bằng. Quay lui tầng 1 (thử bản
+    // tầng 1 xếp hạng kế tiếp khi tầng trên hỏng) cho ý định gốc ra mặt bằng luôn, và nó thắng điểm các biến thể.
+    expect(base.ok).not.toBeNull();
     expect(best.ok).not.toBeNull();
-    // Thước T96 đổi thứ hạng: trước là «chia lại theo tỉ lệ», nay «cùng loại cùng mục tiêu» thắng.
-    expect(variantNote(best)).toMatch(/chia lại diện tích mục tiêu|cùng diện tích mục tiêu/);
+    expect(best.ok!.score.percent!).toBeGreaterThanOrEqual(base.ok!.score.percent!);
   });
 
   it('3ff10f75 vòng 1: chèn dải hành lang tầng 1 → tầng 1 qua, lỗi còn ở tầng 2', () => {

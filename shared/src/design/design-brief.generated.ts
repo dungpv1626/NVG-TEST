@@ -69,6 +69,20 @@ export const designBriefSchema = z
       .describe('Mã hồ sơ hiển thị (NVO-TK-2026-0001) — chỉ để đọc, không phải khoá.')
       .optional(),
     building_type: designBriefBuildingTypeSchema,
+    /** KTS ghi đè loại nhà (T116, Haan 04/10/2026). Vắng / null = chương trình tự suy từ khối xây: nhà ống khi bề rộng khối xây ≤ 6 m, sâu ≥ 2 lần bề rộng và giáp nhà hoặc ranh ở ít nhất một mặt bên (`shared/src/design/house-profile.ts`). Loại «kinh doanh» không ghi đè ở đây — suy từ `household.home_business.mode`. */
+    house_profile_override: z
+      .union([
+        z.literal('ong'),
+        z.literal('pho'),
+        z.literal('bt'),
+        z.literal('vuon'),
+        z.literal(null),
+      ])
+      .nullable()
+      .describe(
+        'KTS ghi đè loại nhà (T116, Haan 04/10/2026). Vắng / null = chương trình tự suy từ khối xây: nhà ống khi bề rộng khối xây ≤ 6 m, sâu ≥ 2 lần bề rộng và giáp nhà hoặc ranh ở ít nhất một mặt bên (`shared/src/design/house-profile.ts`). Loại «kinh doanh» không ghi đè ở đây — suy từ `household.home_business.mode`.',
+      )
+      .optional(),
     /** Chọn rule pack địa phương. Giá trị ánh xạ sang thư mục rules/locality/<locality với _ đổi thành ->. */
     locality: z
       .string()

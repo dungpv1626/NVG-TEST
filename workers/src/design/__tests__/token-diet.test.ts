@@ -206,6 +206,24 @@ describe('thân lời gọi không mang khoảng trắng thuần', () => {
     expect(types).not.toContain('core');
   });
 
+  it('loại chỉ-khi-hỏi mà đầu bài không hỏi thì không có tên, dải diện tích hay `served_from` (review 01/10/2026 P2-01)', () => {
+    const k = knowledgeOf<{
+      room_types: Record<string, string>;
+      room_area_m2: Record<string, unknown>;
+      served_from: Record<string, string[]>;
+      only_when_asked: string[];
+    }>(body);
+    expect(k.only_when_asked).toEqual(
+      expect.arrayContaining(['elevator', 'shop', 'light_well', 'courtyard']),
+    );
+    for (const type of ['elevator', 'shop', 'light_well', 'courtyard']) {
+      expect(Object.keys(k.room_types)).not.toContain(type);
+      expect(Object.keys(k.room_area_m2)).not.toContain(type);
+      expect(Object.keys(k.served_from)).not.toContain(type);
+      expect(Object.values(k.served_from).flat()).not.toContain(type);
+    }
+  });
+
   it('lời dẫn hệ thống + lược đồ gửi đi có trần (T46)', () => {
     const system = prompts.floorLevel.system;
     // 4.500 → 4.700 (16/09/2026, lời dẫn 8.0.0): hai gợi ý thiết kế từ «Nguyên tắc vàng» (~180 ký tự).
@@ -225,6 +243,25 @@ describe('thân lời gọi không mang khoảng trắng thuần', () => {
     expect(system).not.toContain('<example>');
     const schema = JSON.stringify(schemaFor('openai', sent));
     expect(schema.length, `${schema.length} ký tự`).toBeLessThan(3_000);
+  });
+
+  it('chế độ hình chữ nhật (bàn giao v5, T115): lời dẫn hệ thống + lược đồ cũng có trần', () => {
+    const layout = prompts.houseLayout!;
+    const longest = houseSystem(layout.system, {
+      elevator: true,
+      terrace: true,
+      ong_ba_unset: true,
+      roof: true,
+    });
+    // 6.300 (04/10/2026, 9.8.0): lời dẫn lưới (~5.400) đổi phần bản phác sang toạ độ mm và thêm đoạn mái (~400).
+    expect(longest.length, `${longest.length} ký tự`).toBeLessThan(6_300);
+    expect(longest).not.toMatch(/\[\[|\]\]|sketch|\bcells?\b/);
+    for (const provider of PROVIDERS) {
+      const size = JSON.stringify(
+        schemaFor(provider, contract('ai-house-layout.schema.json')),
+      ).length;
+      expect(size, `${provider}: ${size} ký tự`).toBeLessThan(2_500);
+    }
   });
 
   it('KHÔNG một toạ độ cm nào rời Worker', () => {

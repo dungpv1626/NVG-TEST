@@ -82,6 +82,10 @@ export interface BriefDemandSpace {
   anyOf: string[];
   /** Số không gian tối thiểu; vắng = 1. */
   count: number;
+  /** Chương trình tự thêm MỖI TẦNG một dòng (hộp kỹ thuật liên tục các tầng, T116). Vắng = một dòng. */
+  perStorey?: boolean;
+  /** Diện tích dòng tự thêm, m² — vắng = không đặt mức. */
+  minM2?: number;
   /** `true` = bác phương án; `false` = chỉ cảnh báo (T52). */
   blocking: boolean;
   /** Câu nói ra khi thiếu — mở đầu của thông điệp lỗi. */
@@ -212,11 +216,19 @@ function parseDemands(raw: unknown): BriefDemandSpec {
     if (r.count !== undefined && (typeof r.count !== 'number' || r.count < 1)) {
       throw new BriefFidelityError(`\`${at}.count\` phải là số nguyên từ 1`);
     }
+    if (r.per_storey !== undefined && typeof r.per_storey !== 'boolean') {
+      throw new BriefFidelityError(`\`${at}.per_storey\` phải là true hay false`);
+    }
+    if (r.min_m2 !== undefined && (typeof r.min_m2 !== 'number' || !(r.min_m2 > 0))) {
+      throw new BriefFidelityError(`\`${at}.min_m2\` phải là số dương`);
+    }
     return {
       code: r.code,
       answer: typeof r.answer === 'string' ? r.answer : '',
       anyOf,
       count: typeof r.count === 'number' ? r.count : 1,
+      ...(r.per_storey === true ? { perStorey: true } : {}),
+      ...(typeof r.min_m2 === 'number' ? { minM2: r.min_m2 } : {}),
       blocking: r.blocking,
       say: typeof r.say === 'string' ? r.say : '',
     };

@@ -57,6 +57,8 @@ altar_facing_wc:
 # luôn thế — nhô ra có 2–3 mặt thoáng; ban công ở góc nhà cũng thế) thì không xét. Ban công nằm trong
 # sàn: cạnh dài > `long_ratio` lần cạnh ngắn thì BẮT BUỘC cạnh dài quay ra mặt thoáng (CHẶN); gần
 # vuông hơn thế thì không chặn — chỉ cảnh báo, và tiêu chí điểm D3 trừ điểm.
+# T116 (Haan 04/10/2026): tách hai mức — CHẶN khi ban công không có cạnh nào ra mặt thoáng; ban công dài
+# (> long_ratio) quay cạnh ngắn ra mặt thoáng chỉ TRỪ ĐIỂM NẶNG (tiêu chí D3, `kb/plan_quality.yaml`).
 balcony_on_open_face:
   blocking: true
   edge_tolerance_cm: 30

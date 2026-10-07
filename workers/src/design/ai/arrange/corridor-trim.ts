@@ -31,7 +31,7 @@ const along = (r: Rect, axis: Axis) => hi(r, axis) - lo(r, axis);
 const across = (r: Rect, axis: Axis) => (axis === 'x' ? r.y1 - r.y0 : r.x1 - r.x0);
 
 /** Giãn một cây con theo trục từ [from, to] sang [nFrom, nTo]; vách bên trong dời theo tỉ lệ, làm tròn mô-đun. */
-function stretch(
+export function stretch(
   node: Placed,
   axis: Axis,
   from: number,

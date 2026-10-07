@@ -18,8 +18,16 @@
  */
 
 import { withStairShape } from '../ai/stair-choice';
+import { withHouseProfile } from '../ai/house-profile-norms';
+import { houseProfile } from '@nvg/shared/design';
 import { LlmCallFailed } from '../llm/gemini';
-import type { AiBriefDigest, AiFloorPlan, AiPlanEdit, AiSpaceProgram } from '@nvg/shared/design';
+import type {
+  AiHouseBands,
+  AiBriefDigest,
+  AiFloorPlan,
+  AiPlanEdit,
+  AiSpaceProgram,
+} from '@nvg/shared/design';
 import { applyPlanEdits } from '../ai/edit/apply';
 import { callEditModel } from '../ai/edit/prompt';
 import { AI_DIGEST_DATA_CLASS } from '../brief/anonymise';
@@ -40,14 +48,21 @@ import {
 } from '../ai/call-log';
 import type { HouseIntent } from '../ai/house';
 import { recordingClient } from '../ai/prompt-record';
-import { feasibilityIssue } from '../ai/feasibility';
 import {
   AiPlanRejected,
   callHouseModel,
+  promptsFor,
   evaluateHouseBest,
   finalisePlan,
   planContext,
+  ANSWER_STAGE_CODE,
+  bandsLightWellHints,
+  bandsProgramIssues,
+  briefInfeasible,
+  houseCallEffort,
   programGenerator,
+  rescueFirstStorey,
+  landStairEnds,
   retryPlan,
   scorePercent,
   type HouseArranged,
@@ -63,6 +78,9 @@ import type { AiPrompts } from '../ai/prompts';
 import type { PlanIssue } from '../ai/plan-check';
 import type { RoomGroups } from '../ai/tree';
 import type { MandatoryRules } from '../ai/mandatory';
+import { buildRoof } from '../ai/roof';
+import type { RoofPlanSpec } from '../kb/roof-plan';
+import type { FurnitureSpec, HouseProgramSpec } from '../kb/house-program';
 
 /** Tham số của một instance Workflow — chỉ dữ liệu hạng 2 đã lược danh tính, và chuỗi nhỏ. */
 export interface AiDesignParams {
@@ -78,6 +96,10 @@ export interface AiDesignParams {
   textRoute: string;
   /** Mức suy nghĩ kỹ sư chọn cho lượt chạy này; vắng = cấu hình tuyến (13/09/2026). */
   reasoningEffort?: ReasoningEffort | null;
+  /** `rect` = mô hình khai hình chữ nhật mm (bàn giao v5, cờ `AI_PROMPT_PIPELINE=v5`); vắng = bản phác lưới. */
+  geometry?: 'rect';
+  /** `v6` = mô hình xếp dải, bộ giải tính kích thước (T116, cờ `AI_PROMPT_PIPELINE=v6`). */
+  pipeline?: 'v6';
   briefRef: string;
   /**
    * Đầu bài đã LƯỢC DANH TÍNH, dựng sẵn ở tuyến khởi động dưới phiên người dùng.
@@ -181,8 +203,18 @@ export interface PlanStepDeps {
   provider: string;
   /** Kho lưu nguyên văn lời gọi (nút «Xuất prompt» ở nhật ký). Vắng thì không lưu. */
   promptStore?: PromptSink;
+  /** Danh mục mái (`kb/roof_plan.yaml`) — có thì mọi phương án mang tờ mái (Haan chốt 04/10/2026). */
+  roofPlan?: RoofPlanSpec;
+  /** Chế độ hình chữ nhật: danh mục phòng và đồ đạc (`kb/house_program.yaml`, `kb/furniture.yaml`). */
+  houseProgram?: HouseProgramSpec;
+  furniture?: FurnitureSpec;
   /** Model theo cấu hình tuyến, cùng lý do với `provider`: lượt hỏng vẫn phải cộng được theo model. */
   model: string;
+  /**
+   * Tuyến của VÒNG SỬA mặt bằng (`revise_route`, handoff đợt 3 mục 4.1) — kèm giá và model để nhật ký ghi đúng.
+   * Vắng = vòng sửa chạy tuyến kỹ sư chọn.
+   */
+  revise?: { route: string; pricing?: RoutePricing; model: string };
 }
 
 /** Pha của một lượt: mô hình khai cả nhà, rồi chương trình kiểm và xếp. */
@@ -225,6 +257,12 @@ export interface ProposeOutcome {
   /** Lỗi cấu trúc của lượt này — rỗng khi `intentJson` có giá trị. */
   issues: string[];
   call: PlanCallRecord;
+  /** Chế độ hình chữ nhật: câu nhắc rect chồng / hở / vượt khối — nối vào vòng sửa nếu phương án chưa đạt. */
+  layoutHints?: string[];
+  /** Đường v6: bộ dải khi bộ giải báo lỗi cấu trúc — vòng sau sửa bộ dải này (T116). */
+  bandsBase?: AiHouseBands;
+  /** Tầng của `bandsBase` đã khoá (tầng 1 chương trình dựng lại). */
+  bandsKeep?: number[];
 }
 
 /**
@@ -257,23 +295,32 @@ export async function proposeHouse(
   const stepStarted = Date.now();
   const recorded = recordingClient(deps.client);
   const request = () => recorded.records[recorded.records.length - 1];
+  const effort = houseCallEffort(params.reasoningEffort, deps.provider, retrying, !!context.bands);
   try {
     const attempt = await callHouseModel({
       client: recorded.client,
-      route: params.textRoute,
+      route: retrying && deps.revise ? deps.revise.route : params.textRoute,
       prompts: deps.prompts,
       context,
       ...(retrying ? { avoid } : {}),
       ...(retrying && previousJson ? { previous: JSON.parse(previousJson) as HouseIntent } : {}),
       ...(retrying && keep?.length ? { keep } : {}),
-      ...(params.reasoningEffort ? { reasoningEffort: params.reasoningEffort } : {}),
+      ...(effort ? { reasoningEffort: effort } : {}),
       ...(live ? { onProgress: live.onProgress, signal: live.signal } : {}),
     });
     outcome = {
       intentJson: attempt.intent ? JSON.stringify(attempt.intent) : null,
       issues: attempt.issues,
       call: attempt.call,
+      ...(attempt.layoutHints?.length ? { layoutHints: attempt.layoutHints } : {}),
+      ...(attempt.bandsBase ? { bandsBase: attempt.bandsBase } : {}),
     };
+    if (attempt.layoutFixes?.length || attempt.layoutHints?.length) {
+      console.log(
+        `[ĐO] ${what} rect: ${attempt.layoutFixes?.length ?? 0} chỗ tự sửa, ` +
+          `${attempt.layoutHints?.length ?? 0} lỗi rect`,
+      );
+    }
   } catch (error) {
     // Lượt gọi hỏng ở tầng mạng hoặc nhà cung cấp: vẫn có thể đã tính tiền, nên vẫn ghi một dòng,
     // lấy số token từ chính lỗi và tên model từ cấu hình tuyến (đo 11/09/2026: 6/6 dòng `failed`
@@ -285,7 +332,7 @@ export async function proposeHouse(
     const cancelled = live?.signal.aborted === true;
     const failed = {
       provider: deps.provider,
-      model: deps.model,
+      model: retrying && deps.revise ? deps.revise.model : deps.model,
       usage: (error instanceof LlmCallFailed && error.usage) || {
         inputTokens: null,
         outputTokens: null,
@@ -351,16 +398,90 @@ export function arrangeHouseStep(
   /** Ý định lượt trước đã gửi mô hình sửa — để nhận ra lượt trả lại y nguyên (`retry: 'unchanged'`). */
   askedJson: string | null = null,
 ): ArrangeOutcome {
-  const intent = proposal.intentJson ? (JSON.parse(proposal.intentJson) as HouseIntent) : null;
-  const evaluation = intent
-    ? evaluateHouseBest(
-        contextInput(deps, params, variant),
-        contextFor(deps, params, variant),
-        intent,
-        programGenerator(proposal.call, params.textRoute, deps.prompts.version, round > 1),
-        deps.prompts,
-      )
-    : null;
+  let intent = proposal.intentJson ? (JSON.parse(proposal.intentJson) as HouseIntent) : null;
+  const context = contextFor(deps, params, variant);
+  const generator = programGenerator(
+    proposal.call,
+    params.textRoute,
+    deps.prompts.version,
+    round > 1,
+  );
+  // Dải tầng 1 không vừa khối: chương trình dựng lại tầng 1 trước khi gửi mô hình sửa (`rescueFirstStorey`).
+  const rescued =
+    !intent && proposal.bandsBase
+      ? rescueFirstStorey(
+          contextInput(deps, params, variant),
+          context,
+          promptsFor(context, deps.prompts),
+          generator,
+          proposal.bandsBase,
+          proposal.call,
+          evaluateHouseBest,
+        )
+      : null;
+  if (rescued) {
+    intent = rescued.attempt.intent;
+    proposal = {
+      ...proposal,
+      intentJson: intent ? JSON.stringify(intent) : null,
+      issues: rescued.evaluation ? [] : rescued.attempt.issues,
+      layoutHints: rescued.attempt.layoutHints ?? [],
+    };
+    delete proposal.bandsBase;
+    // Tầng khác cũng hỏng ở bộ giải: bộ dải đã thay tầng 1 đi mô hình sửa, tầng 1 khoá.
+    if (!rescued.evaluation && rescued.attempt.bandsBase) {
+      proposal.bandsBase = rescued.attempt.bandsBase;
+      proposal.bandsKeep = rescued.attempt.bandsKeep ?? [];
+    }
+    console.log(`[ĐO] ${rescued.attempt.layoutFixes?.[0] ?? 'dựng lại tầng 1'}`);
+  }
+  if (!rescued?.evaluation && !intent && proposal.bandsBase) {
+    // Bộ giải hỏng: cổng danh mục phòng soát luôn trên dải, lỗi đi cùng lỗi hình học (`bandsProgramIssues`).
+    const missing = [
+      ...bandsProgramIssues(contextInput(deps, params, variant), context, proposal.bandsBase),
+      ...bandsLightWellHints(context, proposal.bandsBase, promptsFor(context, deps.prompts)).map(
+        (line) => line.replace(/^- /, ''),
+      ),
+    ];
+    if (missing.length)
+      proposal = { ...proposal, issues: [...proposal.issues, ...missing.map((m) => `- ${m}`)] };
+  }
+  let evaluation = rescued
+    ? rescued.evaluation
+    : intent
+      ? evaluateHouseBest(
+          contextInput(deps, params, variant),
+          context,
+          intent,
+          generator,
+          promptsFor(context, deps.prompts),
+        )
+      : null;
+  // Phòng chỉ ra được ô thang: chương trình thử chèn sảnh đầu thang trước khi gửi mô hình sửa (`landStairEnds`).
+  const landed =
+    evaluation && intent
+      ? landStairEnds(
+          contextInput(deps, params, variant),
+          context,
+          promptsFor(context, deps.prompts),
+          generator,
+          { intent, issues: [], call: proposal.call },
+          evaluation,
+          evaluateHouseBest,
+        )
+      : null;
+  if (landed) {
+    intent = landed.attempt.intent;
+    evaluation = landed.evaluation;
+    proposal = {
+      ...proposal,
+      intentJson: intent ? JSON.stringify(intent) : null,
+      layoutHints: landed.attempt.layoutHints ?? [],
+    };
+    console.log(`[ĐO] ${landed.attempt.layoutFixes?.[0] ?? 'chèn sảnh đầu thang'}`);
+  }
+  // Lỗi rect chương trình không tự sửa (chồng, hở, vượt khối) đứng đầu câu nhắc khi còn vòng sửa.
+  const layoutHints = proposal.layoutHints ?? [];
   if (evaluation?.ok) {
     const score = evaluation.ok.score;
     // Qua cổng mà dưới ngưỡng (T53): lượt sửa kế tiếp nhận dòng tiêu chí mất điểm và ý định đã đánh mã.
@@ -368,22 +489,58 @@ export function arrangeHouseStep(
     return {
       arrangedJson: JSON.stringify(evaluation.ok),
       rejections: [],
-      hints: score.hints,
+      hints: below ? [...layoutHints, ...score.hints] : score.hints,
       previousJson: below ? JSON.stringify(evaluation.ok.intent) : null,
       retry: below ? 'revise' : 'none',
       score,
     };
   }
   const asked = askedJson ? (JSON.parse(askedJson) as HouseIntent) : null;
-  const plan = retryPlan({ intent, issues: proposal.issues }, evaluation, asked);
+  const plan = retryPlan(
+    {
+      intent,
+      issues: proposal.issues,
+      ...(proposal.bandsBase ? { bandsBase: proposal.bandsBase } : {}),
+      ...(proposal.bandsKeep?.length ? { bandsKeep: proposal.bandsKeep } : {}),
+    },
+    evaluation,
+    asked,
+  );
   return {
     arrangedJson: null,
-    rejections: evaluation ? evaluation.rejections : [{ level: 0, messages: proposal.issues }],
-    hints: plan.avoid,
+    rejections: evaluation
+      ? evaluation.rejections
+      : [{ level: 0, messages: proposal.issues, codes: [ANSWER_STAGE_CODE] }],
+    hints: plan.kind === 'revise' ? [...layoutHints, ...plan.avoid] : plan.avoid,
     previousJson: plan.previous ? JSON.stringify(plan.previous) : null,
     ...(plan.kind === 'revise' && plan.keep.length ? { keep: plan.keep } : {}),
     retry: plan.kind,
     score: null,
+  };
+}
+
+/**
+ * Mặt bằng mái của phương án (Haan chốt 04/10/2026) — dựng từ tầng trên cùng đã xếp và khu mái mô hình khai.
+ * Không có danh mục mái thì không có phần `roof` (artifact như trước).
+ */
+function roofOf(
+  context: PlanContext,
+  payload: AiFloorPlan,
+  intent: HouseIntent,
+  deps: PlanStepDeps,
+): { roof?: AiFloorPlan['roof'] } {
+  const top = payload.levels.at(-1);
+  if (!context.roof || !top) return {};
+  return {
+    roof: buildRoof({
+      top,
+      spec: context.roof.spec,
+      required: context.roof.required,
+      modelRooms: intent.roof ?? [],
+      origin: { x: context.buildableCm.x0, y: context.buildableCm.y0 },
+      outdoor: deps.groups.outdoor,
+      wet: new Set(deps.roomGroups.wet ?? []),
+    }),
   };
 }
 
@@ -456,13 +613,14 @@ export async function writePlan(
     route: params.textRoute,
     promptVersion: deps.prompts.version,
     resampledLevels: [...resampledLevels],
-    construction: withStairShape(deps.construction, params.digest),
+    construction: withHouseProfile(withStairShape(deps.construction, params.digest), params.digest),
     groups: deps.groups,
     quality: deps.quality,
     scoreRules: deps.scoreRules,
     areaNorms: deps.areaNorms,
     roomGroups: deps.roomGroups,
     buildingType: params.digest.building_type,
+    houseProfile: houseProfile(params.digest).profile,
   });
   if (final.check.blocking.length) {
     return { rejected: final.check.blocking.map((issue) => issue.message) };
@@ -479,7 +637,12 @@ export async function writePlan(
     params: { route: params.textRoute, prompt_version: deps.prompts.version, variant: variant.id },
     setHead: false,
   });
-  final.payload = { ...final.payload, program_ref: program.id, house_intent: house.intent };
+  final.payload = {
+    ...final.payload,
+    program_ref: program.id,
+    house_intent: house.intent,
+    ...roofOf(context, final.payload, house.intent, deps),
+  };
 
   const artifact = await deps.repo.write({
     scope: scopeOf(params),
@@ -518,7 +681,12 @@ export async function writePlan(
         points: final.score.points,
         scoredWeight: final.score.scoredWeight,
       },
-      ...thresholdOf(final.score, deps.quality.acceptPercent, deps.quality.acceptGroupFloorPercent),
+      ...thresholdOf(
+        final.score,
+        deps.quality.acceptPercent,
+        deps.quality.acceptGroupFloorPercent,
+        deps.quality.acceptGroupFloors,
+      ),
     },
   };
 }
@@ -549,6 +717,7 @@ export function thresholdOf(
   },
   acceptPercent: number | null,
   groupFloorPercent: number | null = null,
+  groupFloors: Readonly<Record<string, number>> = {},
 ): {
   percent: number | null;
   acceptPercent: number | null;
@@ -557,7 +726,8 @@ export function thresholdOf(
 } {
   const percent = scorePercent(score);
   // Sàn nhóm là phần tinh của ngưỡng nhận: không có ngưỡng thì không có sàn.
-  const belowGroups = acceptPercent === null ? [] : groupsBelowFloor(score, groupFloorPercent);
+  const belowGroups =
+    acceptPercent === null ? [] : groupsBelowFloor(score, groupFloorPercent, groupFloors);
   return {
     percent,
     acceptPercent,
@@ -572,13 +742,18 @@ export function thresholdOf(
 
 function contextInput(deps: PlanStepDeps, params: AiDesignParams, variant: PlanVariant) {
   return {
+    ...(params.geometry === 'rect' ? { geometry: 'rect' as const } : {}),
+    ...(params.pipeline === 'v6' ? { pipeline: 'v6' as const } : {}),
+    ...(deps.roofPlan ? { roofPlan: deps.roofPlan } : {}),
+    ...(deps.houseProgram ? { houseProgram: deps.houseProgram } : {}),
+    ...(deps.furniture ? { furniture: deps.furniture } : {}),
     digest: params.digest,
     variant,
     labels: deps.labels,
     vocabulary: deps.vocabulary,
     fidelity: deps.fidelity,
     // Loại thang của lượt (T105) gắn một lần ở đây — bộ xếp, cổng và bộ vẽ đọc cùng một chỗ.
-    construction: withStairShape(deps.construction, params.digest),
+    construction: withHouseProfile(withStairShape(deps.construction, params.digest), params.digest),
     siteContext: deps.siteContext,
     rules: deps.rules,
     groups: deps.groups,
@@ -600,12 +775,7 @@ export function infeasibleBrief(
   variant: PlanVariant,
 ): string | null {
   const input = contextInput(deps, params, variant);
-  return feasibilityIssue(
-    planContext(input).knowledge,
-    input.construction.walls.exterior_m,
-    deps.quality,
-    deps.labels,
-  );
+  return briefInfeasible(input, planContext(input));
 }
 
 function contextFor(deps: PlanStepDeps, params: AiDesignParams, variant: PlanVariant): PlanContext {
@@ -630,11 +800,14 @@ async function logCall(
   outcome: Parameters<typeof recordAiCall>[3],
   purpose?: string,
 ): Promise<string | null> {
+  // Vòng sửa mặt bằng chạy tuyến `revise_route` thì ghi đúng tuyến ấy và giá của nó (lượt sửa theo yêu cầu kỹ sư thì
+  // không — nó có `purpose` riêng và chạy tuyến kỹ sư chọn).
+  const revise = retrying && purpose === undefined ? deps.revise : undefined;
   return recordAiCall(
     deps.repo.db,
     scope,
     {
-      route: params.textRoute,
+      route: revise?.route ?? params.textRoute,
       // Hai việc khác nhau nên hai mã khác nhau: tỷ lệ phương án phải sửa là con số cần đo để biết lời
       // dẫn tốt tới đâu. `plan_level` / `plan_level_resample` là của luồng mỗi-tầng-một-lượt trước
       // 15/09/2026, `plan` / `plan_repair` của luồng trước 13/09/2026 — giữ nguyên ở các dòng cũ.
@@ -643,7 +816,7 @@ async function logCall(
       promptVersion: deps.prompts.version,
     },
     outcome,
-    deps.pricing,
+    revise ? revise.pricing : deps.pricing,
     deps.promptStore,
   );
 }
@@ -837,6 +1010,13 @@ export async function applyEditStep(
     program_ref: programId,
     variant_label: `${(base.plan.variant_label ?? variant.id).replace(/ · sửa \d+$/, '')} · sửa ${editRound(base.plan) + 1}`,
     ...(base.plan.house_intent ? { house_intent: base.plan.house_intent } : {}),
+    // Mái dựng lại theo tầng trên cùng ĐÃ SỬA — khu mái mô hình khai ở bản gốc (nếu có) vẫn là đầu vào.
+    ...roofOf(
+      contextFor(deps, params, variant),
+      final.payload,
+      (base.plan.house_intent ?? { rooms: [] }) as HouseIntent,
+      deps,
+    ),
     generator: {
       ...final.payload.generator,
       edit: { instruction: params.edit!.instruction, base_ref: base.id, ops: edit.ops },
@@ -881,7 +1061,12 @@ export async function applyEditStep(
         points: final.score.points,
         scoredWeight: final.score.scoredWeight,
       },
-      ...thresholdOf(final.score, deps.quality.acceptPercent, deps.quality.acceptGroupFloorPercent),
+      ...thresholdOf(
+        final.score,
+        deps.quality.acceptPercent,
+        deps.quality.acceptGroupFloorPercent,
+        deps.quality.acceptGroupFloors,
+      ),
     },
   };
 }

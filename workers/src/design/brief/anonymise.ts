@@ -163,6 +163,9 @@ export function anonymiseForAi(input: AnonymiseInput): AiBriefDigest {
   const digest = {
     schema_version: DIGEST_SCHEMA_VERSION,
     building_type: brief.building_type,
+    ...(brief.house_profile_override
+      ? { house_profile_override: brief.house_profile_override }
+      : {}),
     locality: brief.locality,
     floors: brief.floors,
     site: {

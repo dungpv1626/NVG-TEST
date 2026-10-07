@@ -73,4 +73,11 @@ export interface DesignEnv {
    * thầm chạy đồng bộ.
    */
   AI_DESIGN_PIPELINE?: Workflow;
+
+  /**
+   * `v5` = lượt mặt bằng mới dùng lược đồ hình chữ nhật (`contracts/ai-house-layout`, bàn giao v5 cách A).
+   * Vắng / giá trị khác = bản phác lưới (T48). Đọc MỘT lần lúc khởi động lượt, ghi vào params — đổi biến
+   * giữa chừng không làm một lượt chạy nửa nọ nửa kia.
+   */
+  AI_PROMPT_PIPELINE?: string;
 }

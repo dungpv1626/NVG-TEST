@@ -189,9 +189,13 @@ demands:
       any_of: [storage]
       blocking: true
       say: 'Đầu bài khai nhu cầu lưu trữ nhiều'
+    # T116 (Haan 04/10/2026): giữ CHẶN, chương trình tự thêm hộp ~0,6 × 0,8 m mỗi tầng, chồng thẳng (đặt cạnh khu ướt
+    # là việc lời dẫn và bộ xếp — dòng này chỉ bảo đảm danh mục có đủ).
     - code: hop_ky_thuat_cuc_nong
       answer: 'systems.aircon_outdoor = hop_ky_thuat'
       any_of: [shaft, technical]
+      per_storey: true
+      min_m2: 0.48
       blocking: true
       say: 'Đầu bài khai đặt cục nóng điều hoà trong hộp kỹ thuật'
     - code: cho_phoi_ngoai_troi

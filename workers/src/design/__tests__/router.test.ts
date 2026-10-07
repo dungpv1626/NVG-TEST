@@ -259,3 +259,25 @@ describe('Lớp chặn hạng dữ liệu', () => {
     expect(() => router.resolve('layer9_khong_ton_tai', 3)).toThrow(ModelNotConfigured);
   });
 });
+
+describe('revise_route — deep chỉ lời gọi đầu (handoff v6 sửa lỗi đợt 3 mục 4.1)', () => {
+  it('tuyến deep sửa bằng Terra; tuyến không khai thì sửa bằng chính nó', () => {
+    const router = new ModelRouter(config);
+    expect(router.reviseRouteOf('ai_text_openai_deep')).toBe('ai_text_openai');
+    expect(router.reviseRouteOf('ai_text_openai')).toBe('ai_text_openai');
+    expect(config.routes.ai_text_openai_deep!.reasoning_effort).toBe('medium');
+  });
+  it('tuyến sửa phải có thật, cùng nhà cung cấp, hạng dữ liệu không chặt hơn', () => {
+    const yaml = (revise: string, extra = '') => `version: x
+routes:
+  a: { provider: openai, model: m, max_data_class: 2, enabled: true, revise_route: ${revise} }
+  b: { provider: openai, model: m, max_data_class: 2, enabled: true }
+  c: { provider: gemini, model: m, max_data_class: 2, enabled: true }
+  d: { provider: openai, model: m, max_data_class: 3, enabled: true }
+${extra}`;
+    expect(() => parseModelConfig(yaml('b'))).not.toThrow();
+    expect(() => parseModelConfig(yaml('zz'))).toThrow(/không có trong routes/);
+    expect(() => parseModelConfig(yaml('c'))).toThrow(/khác nhà cung cấp/);
+    expect(() => parseModelConfig(yaml('d'))).toThrow(/hạng dữ liệu chặt hơn/);
+  });
+});

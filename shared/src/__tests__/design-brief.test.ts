@@ -227,10 +227,12 @@ describe('Chấm độ đầy đủ', () => {
   };
 
   it('trường bị ẩn KHÔNG bao giờ nằm trong danh sách còn thiếu', () => {
-    // Đòi nhà phố khai khoảng lùi là bắt điền một ô không màn hình nào hiện ra.
+    // Đòi nhà phố khai số cánh nhà là bắt điền một ô không màn hình nào hiện ra. Khoảng lùi và mật độ thì nhà
+    // phố có hỏi (Haan 04/10/2026: chủ nhà quyết trong đầu bài — T116).
     const result = scoreBrief(nhaPho, BRIEF_FORM);
-    expect(result.missingFields).not.toContain('site.setback_required_m');
-    expect(result.missingFields).not.toContain('site.max_density');
+    expect(result.missingFields).not.toContain('massing.wings_preferred');
+    expect(result.missingFields).toContain('site.setback_required_m');
+    expect(result.missingFields).toContain('site.max_density');
   });
 
   it('biệt thự hỏi nhiều hơn nhà phố — phân nhánh thật sự chạy', () => {
@@ -424,14 +426,14 @@ describe('Soát mâu thuẫn', () => {
     ).toEqual([]);
   });
 
-  it('nhà phố: khoảng lùi còn lại từ lúc tạm chọn biệt thự là ô ẨN — bị bỏ, không soát (29/09/2026)', () => {
-    // Trước đây có cảnh báo `nha_pho_co_khoang_lui_ben` cho đúng dữ liệu cũ này. Nay ô ẩn không đi tới
-    // phép soát lẫn bản gửi mô hình (`withoutHiddenAnswers`), nên khoảng lùi cũ không còn tác dụng gì.
+  it('nhà phố: khoảng lùi là ô HIỆN (Haan 04/10/2026) — khai vượt bề rộng lô thì soát như mọi loại hình', () => {
+    // 29/09/2026 ô này ẩn với nhà phố nên khoảng lùi bị bỏ, không soát. Nay chủ nhà khai trong đầu bài, nên
+    // lùi hai bên 3 + 3 m trên lô 5 m là mâu thuẫn thật. Cảnh báo riêng `nha_pho_co_khoang_lui_ben` thì đã bỏ.
     const found = codes({
       building_type: 'nha_pho',
       site: { width_m: 5, depth_m: 18, setback_required_m: { left: 3, right: 3 } },
     });
-    expect(found).not.toContain('khoang_lui_vuot_be_rong');
+    expect(found).toContain('khoang_lui_vuot_be_rong');
     expect(found).not.toContain('nha_pho_co_khoang_lui_ben');
   });
 
@@ -1004,7 +1006,7 @@ describe('Hai câu trả lời ở hai mục khác nhau nói ngược nhau (28/0
     expect(has(shared, 'tang_tho_lech_dong_phong_tho')).toBe(false);
   });
 
-  it('nhà phố không có ô khoảng lùi / sân: câu chặn không bảo khai thứ không nhập được', () => {
+  it('nhà phố không có ô sân: câu chặn chỉ bảo khai khoảng lùi, ô nhà phố có', () => {
     const found = checkBriefConsistency(
       {
         building_type: 'nha_pho',
@@ -1014,7 +1016,8 @@ describe('Hai câu trả lời ở hai mục khác nhau nói ngược nhau (28/0
       BRIEF_FORM,
     ).find((i) => i.code === 'ban_cong_mat_giap_nha_xom')!;
     expect(found.severity).toBe('nghiem_trong');
-    expect(found.message).not.toMatch(/khoảng lùi/);
+    expect(found.message).toMatch(/khai khoảng lùi bên trái/);
+    expect(found.message).not.toMatch(/sân/);
   });
 
   it('ban công quay ra mặt sát đất trống: cảnh báo ngay trên đầu bài (T112, Haan 02/10/2026)', () => {

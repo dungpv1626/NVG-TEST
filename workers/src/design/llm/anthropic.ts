@@ -29,6 +29,7 @@ import {
   type StructuredCallOptions,
   type StructuredCallResult,
   type TextModelClient,
+  type TokenUsage,
 } from './text-client';
 
 /** Câu cho người đọc khi hết ngân sách — nêu đúng chỗ vặn, giống `llm/openai.ts`. */
@@ -54,18 +55,41 @@ const TIMEOUT_MS = 300_000;
  */
 const THINKING_SUMMARY = { thinking: { type: 'adaptive', display: 'summarized' } } as const;
 
+/**
+ * Số token Claude báo. `input_tokens` KHÔNG gồm phần đọc / ghi bộ nhớ đệm — cộng lại để «vào» cùng nghĩa
+ * với OpenAI (tổng token vào, phần đệm nằm trong).
+ */
+interface ClaudeUsage {
+  input_tokens?: number;
+  output_tokens?: number;
+  cache_read_input_tokens?: number;
+  cache_creation_input_tokens?: number;
+}
+
+function claudeUsage(u: ClaudeUsage | undefined): TokenUsage {
+  const read = u?.cache_read_input_tokens ?? 0;
+  const written = u?.cache_creation_input_tokens ?? 0;
+  return {
+    inputTokens: tokenCount(
+      u?.input_tokens === undefined ? undefined : u.input_tokens + read + written,
+    ),
+    outputTokens: tokenCount(u?.output_tokens),
+    ...(u?.cache_read_input_tokens !== undefined ? { cachedInputTokens: read } : {}),
+  };
+}
+
 interface StreamEvent {
   type?: string;
-  message?: { usage?: { input_tokens?: number; output_tokens?: number } };
+  message?: { usage?: ClaudeUsage };
   delta?: { type?: string; text?: string; thinking?: string; stop_reason?: string };
-  usage?: { input_tokens?: number; output_tokens?: number };
+  usage?: ClaudeUsage;
   error?: { type?: string; message?: string };
 }
 
 interface MessagesReply {
   content?: { type?: string; text?: string }[];
   stop_reason?: string;
-  usage?: { input_tokens?: number; output_tokens?: number };
+  usage?: ClaudeUsage;
   error?: { type?: string; message?: string };
 }
 
@@ -89,7 +113,14 @@ export class AnthropicClient implements TextModelClient {
       type: 'image',
       source: { type: 'base64', media_type: img.mimeType, data: img.dataBase64 },
     }));
-    content.push({ type: 'text', text: options.prompt });
+    // Điểm ngắt đệm cuối khối `prompt` phủ cả `system` (tiền tố tính từ đầu yêu cầu); vòng sửa nối
+    // phần riêng ở khối SAU nên đọc lại được phần đầu.
+    content.push({
+      type: 'text',
+      text: options.prompt,
+      ...(options.cacheKey ? { cache_control: { type: 'ephemeral' } } : {}),
+    });
+    if (options.promptTail) content.push({ type: 'text', text: options.promptTail });
 
     const body: Record<string, unknown> = {
       model: route.model,
@@ -124,10 +155,7 @@ export class AnthropicClient implements TextModelClient {
     // Số đo lấy NGAY khi có bản trả về, và mọi đường ném lỗi bên dưới mang nó theo — cùng lý lẽ
     // với `llm/openai.ts`: nhà cung cấp tính tiền theo token đã sinh, không theo việc ta đọc được
     // hay không, nên một dòng `failed` ghi 0 token là một khoản chi biến mất khỏi sổ.
-    const usage = {
-      inputTokens: tokenCount(reply.usage?.input_tokens),
-      outputTokens: tokenCount(reply.usage?.output_tokens),
-    };
+    const usage = claudeUsage(reply.usage);
     // Hết `max_tokens` là lỗi TẤT ĐỊNH: cùng ngân sách thì lượt sau cắt đúng chỗ ấy. Trước
     // 13/09/2026 chỗ này khai `retryable = (stop_reason === 'max_tokens')`, tức mua lần thứ hai
     // đúng cái vừa hỏng — đo được trên tuyến OpenAI hôm ấy, và Claude cũng đi đúng đường này.
@@ -209,6 +237,8 @@ export class AnthropicClient implements TextModelClient {
     let thinkingChars = 0;
     let inputTokens: number | undefined;
     let outputTokens: number | undefined;
+    let cacheRead: number | undefined;
+    let cacheWritten: number | undefined;
     let stopReason: string | undefined;
     let ended = false;
     for (;;) {
@@ -235,6 +265,8 @@ export class AnthropicClient implements TextModelClient {
         if (event.type === 'message_start') {
           inputTokens = event.message?.usage?.input_tokens ?? inputTokens;
           outputTokens = event.message?.usage?.output_tokens ?? outputTokens;
+          cacheRead = event.message?.usage?.cache_read_input_tokens ?? cacheRead;
+          cacheWritten = event.message?.usage?.cache_creation_input_tokens ?? cacheWritten;
         } else if (event.type === 'content_block_delta') {
           if (event.delta?.type === 'text_delta' && typeof event.delta.text === 'string') {
             text += event.delta.text;
@@ -280,6 +312,8 @@ export class AnthropicClient implements TextModelClient {
       usage: {
         ...(inputTokens !== undefined ? { input_tokens: inputTokens } : {}),
         ...(outputTokens !== undefined ? { output_tokens: outputTokens } : {}),
+        ...(cacheRead !== undefined ? { cache_read_input_tokens: cacheRead } : {}),
+        ...(cacheWritten !== undefined ? { cache_creation_input_tokens: cacheWritten } : {}),
       },
     };
   }

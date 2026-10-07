@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import type { AiBriefDigest } from '@nvg/shared/design';
 import { feasibilityIssue } from '../ai/feasibility';
-import { faceTags, houseSystem, planContext } from '../ai/plan';
+import { faceTags, houseSystem, planContext, type HouseModelKnowledge } from '../ai/plan';
 import { prompts } from './ai-real-context';
 import { askedTypes, checkProposal, liftToBriefFloors } from '../ai/program';
 import { loadRun, realContextInput } from './ai-real-context';
@@ -21,7 +21,7 @@ function contextOf(digest: AiBriefDigest) {
 }
 
 const { input, context } = contextOf(HUNG_YEN);
-const sent = context.modelKnowledge;
+const sent = context.modelKnowledge as HouseModelKnowledge;
 
 describe('tri thức gửi mô hình không tự mâu thuẫn', () => {
   it('«Góc làm việc» của vợ chồng không mang mã `study` khi tầng 2 đã có phòng làm việc riêng', () => {
@@ -36,7 +36,7 @@ describe('tri thức gửi mô hình không tự mâu thuẫn', () => {
       ...HUNG_YEN,
       required_spaces: HUNG_YEN.required_spaces!.filter((s) => s.type !== 'study'),
     };
-    const couple = contextOf(digest).context.modelKnowledge.bedrooms.find(
+    const couple = (contextOf(digest).context.modelKnowledge as HouseModelKnowledge).bedrooms.find(
       (b) => b.for === 'vo_chong',
     )!;
     expect(couple.inside).toEqual(['study_area']);
@@ -237,7 +237,12 @@ describe('lời dẫn 9.4.0 ghép theo đầu bài', () => {
 
   it('không thang máy thì không có chữ «lift» / «elevator»; không ông bà chưa ghim tầng thì không câu ấy', () => {
     const text = system(context.promptFlags);
-    expect(context.promptFlags).toEqual({ elevator: false, terrace: true, ong_ba_unset: false });
+    expect(context.promptFlags).toEqual({
+      elevator: false,
+      terrace: true,
+      ong_ba_unset: false,
+      roof: false,
+    });
     expect(text).not.toMatch(/elevator|lift/i);
     expect(text).not.toContain('ong_ba');
     expect(text).toContain(

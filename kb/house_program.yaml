@@ -1,0 +1,35 @@
+# Danh mục phòng chương trình cấp cho lời gọi mặt bằng (bàn giao v5 `prompt-mat-bang-v5.md` mục 4 `knowledge.program`).
+#
+# Haan chốt 04/10/2026: «theo v5, có nới» — chương trình dựng danh mục phòng có MÃ từ đầu bài; mô hình dùng đúng các
+# mã ấy, chỉ được tự thêm loại ở `model_added` (hành lang, thang, sảnh, ban công, và WC / kho / hộp kỹ thuật khi cần).
+# Thay T41/T45 ở chế độ hình chữ nhật: mô hình không còn tự khai danh mục.
+version: '1.0.0'
+
+# Đầu bài không nói phòng ngủ nào của ai. Ghép theo TỪNG TẦNG và loại phòng: dòng khép kín với thành viên cần khép kín
+# trước, rồi dòng diện tích lớn cho vai trò đứng trước trong danh sách này.
+bedroom_role_order: [vo_chong, ong_ba, con, khach, nguoi_giup_viec]
+
+# Mã phòng ngủ theo vai trò: `ngu_<mã>`, thêm `_<n>` khi nhóm có nhiều phòng.
+role_codes:
+  ong_ba: ob
+  vo_chong: vc
+  con: con
+  khach: kh
+  nguoi_giup_viec: gv
+
+# Tiền tố mã mô hình được tự thêm → loại phòng. Mã dạng `<tiền tố>` hoặc `<tiền tố>_<gì đó>` (vd `gt_1`, `bc_truoc`).
+model_added:
+  gt: circulation
+  thang: stair
+  sanh: porch
+  bc: balcony
+  wc: wc
+  kho: storage
+  hkt: shaft
+
+# Ước khả thi từng tầng gửi kèm (mục 4 `feasibility`): (Σ diện tích tối thiểu + thang + sảnh thang) × hệ số tường, so
+# với vùng xây được. THAM KHẢO, chờ KTS duyệt.
+feasibility:
+  wall_factor: 1.12
+  hub_m2: 6
+  tight_ratio: 0.95

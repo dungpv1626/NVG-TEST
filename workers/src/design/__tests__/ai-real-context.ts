@@ -4,6 +4,11 @@
  */
 
 import { readFileSync } from 'node:fs';
+import type { AiHouseLayout } from '@nvg/shared/design';
+import type { ProgramRow } from '../ai/house-program';
+import { rectFromSketch } from '../ai/layout';
+import { parseFurniture, parseHouseProgram } from '../kb/house-program';
+import { parseRoofPlan } from '../kb/roof-plan';
 import { load } from 'js-yaml';
 import { fileURLToPath, URL } from 'node:url';
 import type { AiBriefDigest, AiFloorPlan, AiSpaceProgram } from '@nvg/shared/design';
@@ -18,6 +23,7 @@ import {
   type PlanContextInput,
 } from '../ai/plan';
 import { withStairShape } from '../ai/stair-choice';
+import { withHouseProfile } from '../ai/house-profile-norms';
 import { parsePlanQuality } from '../ai/plan-quality';
 import { parseAiPrompts } from '../ai/prompts';
 import { NO_RULE_PACKS, selectedRulePack } from '../ai/rule-packs';
@@ -117,10 +123,32 @@ export function realContextInput(
      * không phải bộ xếp kém đi. Bật để đo riêng tác động.
      */
     openSetback?: boolean;
+    /**
+     * Số đo cửa / hành lang theo loại nhà (T116, `kb/construction_norms.yaml` `by_house_profile`). Mặc định TẮT để
+     * các phép thử lượt ghi giữ đúng tình huống đã gặp; bật để đo tác động bằng phát lại.
+     */
+    houseProfile?: boolean;
+    /**
+     * Cạnh tối thiểu nhà ống TRƯỚC bảng KTS (handoff sửa lỗi đợt 2, 06/10/2026: WC 1,1 · giếng trời 1,2 · ngủ 2,4…). Lượt
+     * ghi trước đó vẽ [giếng trời | THANG | hành lang] trong nhà 5 m — dưới bảng KTS mọi tầng thiếu bề ngang và bộ dựng
+     * lại tầng 1 không còn gì để thử. Bật để kiểm CƠ CHẾ đúng như lúc gặp.
+     */
+    preKtsSides?: boolean;
   } = {},
 ): PlanContextInput & HouseScoring {
   const digest = withRecordedShaft(recorded);
-  const norms = parseConstructionNorms(read('kb/construction_norms.yaml'));
+  const parsed = parseConstructionNorms(read('kb/construction_norms.yaml'));
+  const ong = parsed.by_house_profile?.ong;
+  const norms =
+    options.preKtsSides && ong?.min_side_m
+      ? {
+          ...parsed,
+          by_house_profile: {
+            ...parsed.by_house_profile,
+            ong: { ...ong, min_side_m: { balcony: ong.min_side_m.balcony ?? 0.5 } },
+          },
+        }
+      : parsed;
   return {
     digest,
     variant: { id: 'AI-A', label: 'AI-A', strategy: '' },
@@ -130,9 +158,11 @@ export function realContextInput(
     // Phát lại kiểm BỘ XẾP trên ý định đã ghi, không kiểm cổng «không bịa thêm» — cổng ấy có phép thử riêng
     // ở `ai-program.test.ts`. Bật lên thì bốn lượt cũ bị bác ngay ở danh mục và không còn gì để phát lại.
     fidelity: { ...parseBriefFidelity(read('kb/brief_fidelity.yaml')), onlyWhenAsked: [] },
-    construction: options.stairShape
-      ? withStairShape(norms, digest)
-      : { ...norms, stairs: { ...norms.stairs, shape: null } },
+    construction: ((c) => (options.houseProfile ? withHouseProfile(c, digest) : c))(
+      options.stairShape
+        ? withStairShape(norms, digest)
+        : { ...norms, stairs: { ...norms.stairs, shape: null } },
+    ),
     siteContext: options.openSetback ? siteContext : { ...siteContext, minOpenSetbackM: {} },
     rules: selectedRulePack(NO_RULE_PACKS, { standards: new RulePack([], false), experience }),
     groups: {
@@ -203,3 +233,159 @@ export function savedPlan(
     input,
   };
 }
+
+/**
+ * Ý định ĐÃ GHI (bản phác lưới) → câu trả lời lược đồ hình chữ nhật v5 với mã DANH MỤC — để phát lại lượt cũ qua
+ * đường v5 (bàn giao `prompt-mat-bang-v5.md`). Ghép phòng đã ghi vào dòng danh mục cùng loại, cùng tầng (phòng khép
+ * kín theo phòng mẹ đã ghép); phòng còn lại đặt mã theo tiền tố mô hình được tự thêm; tiện ích trong phòng bỏ.
+ */
+export function layoutFromRecorded(
+  intent: HouseIntent,
+  program: readonly ProgramRow[],
+  block: { x: number; y: number; widthMm: number; depthMm: number },
+): AiHouseLayout {
+  const map = new Map<string, string>();
+  const used = new Set<string>();
+  const rowsOf = (level: number) => intent.sketches?.find((s) => s.level === level)?.rows;
+  const rects = new Map<string, number[]>();
+  for (const room of intent.rooms) {
+    const rows = rowsOf(room.level);
+    const rect = rows ? rectFromSketch(rows, room.id, block) : null;
+    if (rect) rects.set(room.id, [...rect]);
+  }
+  // Phần không gian mở (`open`) bản phác cũ gộp vào phòng bên cạnh, không có ô: lược đồ v5 cho mỗi phần một rect —
+  // tách một phần ba phía sau rect của phòng cùng không gian.
+  for (const rel of intent.relationships.filter((r) => r.kind === 'open')) {
+    const [host, part] = rects.has(rel.a) ? [rel.a, rel.b] : [rel.b, rel.a];
+    const h = rects.get(host);
+    if (!h || rects.has(part)) continue;
+    const cut = Math.round((h[3]! * 2) / 3 / 100) * 100;
+    rects.set(host, [h[0]!, h[1]!, h[2]!, cut]);
+    rects.set(part, [h[0]!, h[1]! + cut, h[2]!, h[3]! - cut]);
+  }
+  // Phòng khép kín (WC riêng…) bản phác cũ vẽ chung ô với phòng mẹ: cắt ở góc phòng mẹ gần tâm khối (phía trong
+  // nhà, xa mặt có cửa sổ) một ô cỡ diện tích mục tiêu, cạnh ≥ 1,2 m.
+  const cx = block.x + block.widthMm / 2;
+  const cy = block.y + block.depthMm / 2;
+  const r100 = (v: number) => Math.round(v / 100) * 100;
+  for (const room of intent.rooms) {
+    const h = room.ensuite_of ? rects.get(room.ensuite_of) : undefined;
+    if (!h || rects.has(room.id)) continue;
+    const [x, y, w, d] = h as [number, number, number, number];
+    const area = Math.max(room.target_area_m2, 2.5) * 1e6;
+    // Cắt dải theo cạnh dài của phòng mẹ để phần còn lại vẫn vuông vắn.
+    if (w >= d) {
+      const cw = Math.min(r100(Math.max(area / d, 1200)), r100(w / 3));
+      const left = x + w / 2 > cx;
+      rects.set(room.id, [left ? x : x + w - cw, y, cw, d]);
+      rects.set(room.ensuite_of!, [left ? x + cw : x, y, w - cw, d]);
+    } else {
+      const cd = Math.min(r100(Math.max(area / w, 1200)), r100(d / 3));
+      const top = y + d / 2 > cy;
+      rects.set(room.id, [x, top ? y : y + d - cd, w, cd]);
+      rects.set(room.ensuite_of!, [x, top ? y + cd : y, w, d - cd]);
+    }
+  }
+  const drawn = intent.rooms.filter((room) => rects.has(room.id));
+  const pick = (row: ProgramRow): HouseIntent['rooms'][number] | undefined => {
+    // Phòng khép kín: ghép theo `ensuite_of` đã ghi, không có thì theo phòng kề phòng mẹ đã ghép.
+    const parentRec = row.parent ? [...map].find(([, to]) => to === row.parent)?.[0] : undefined;
+    const touches = (a: string, b: string) => {
+      const p = rects.get(a);
+      const q = rects.get(b);
+      if (!p || !q) return false;
+      const ox = Math.min(p[0]! + p[2]!, q[0]! + q[2]!) - Math.max(p[0]!, q[0]!);
+      const oy = Math.min(p[1]! + p[3]!, q[1]! + q[3]!) - Math.max(p[1]!, q[1]!);
+      return (ox === 0 && oy > 0) || (oy === 0 && ox > 0);
+    };
+    const want = (room: HouseIntent['rooms'][number]) =>
+      !used.has(room.id) &&
+      room.type === row.type &&
+      (row.level === '' || String(room.level) === row.level) &&
+      (row.parent === null ||
+        (room.ensuite_of !== null
+          ? map.get(room.ensuite_of) === row.parent
+          : parentRec !== undefined && touches(room.id, parentRec)));
+    // Dòng không có phòng mẹ (WC chung…) ưu tiên phòng không khép kín.
+    const owned = (room: HouseIntent['rooms'][number]) =>
+      Number(row.parent === null && room.ensuite_of !== null);
+    // Dòng có phòng con (WC riêng, ban công riêng) ưu tiên phòng bản ghi cũng có phòng con cùng loại, và ngược lại.
+    const kids = (ofRow: boolean, room: HouseIntent['rooms'][number]) =>
+      ofRow
+        ? program.filter((p) => p.parent === row.id).map((p) => p.type)
+        : intent.rooms.filter((r) => r.ensuite_of === room.id).map((r) => r.type);
+    const misfit = (room: HouseIntent['rooms'][number]) => {
+      const want = kids(true, room);
+      const have = kids(false, room);
+      return (
+        want.filter((t) => !have.includes(t)).length + have.filter((t) => !want.includes(t)).length
+      );
+    };
+    return drawn
+      .filter(want)
+      .sort(
+        (a, b) =>
+          owned(a) - owned(b) ||
+          misfit(a) - misfit(b) ||
+          Math.abs(a.target_area_m2 - (row.min_m2 ?? a.target_area_m2)) -
+            Math.abs(b.target_area_m2 - (row.min_m2 ?? b.target_area_m2)) ||
+          b.target_area_m2 - a.target_area_m2,
+      )[0];
+  };
+  for (const row of [...program].sort(
+    (a, b) => Number(a.parent !== null) - Number(b.parent !== null),
+  )) {
+    if (row.level === 'roof') continue;
+    const room = pick(row);
+    if (!room) continue;
+    map.set(room.id, row.id);
+    used.add(room.id);
+  }
+  const prefix: Record<string, string> = {
+    circulation: 'gt',
+    stair: 'thang',
+    core: 'thang',
+    porch: 'sanh',
+    balcony: 'bc',
+    wc: 'wc_x',
+    storage: 'kho',
+    shaft: 'hkt',
+  };
+  const n = new Map<string, number>();
+  for (const room of drawn) {
+    if (map.has(room.id) || !prefix[room.type]) continue;
+    const k = (n.get(room.type) ?? 0) + 1;
+    n.set(room.type, k);
+    map.set(room.id, `${prefix[room.type]}_${k}`);
+  }
+  const to = (id: string | null) => (id && map.has(id) ? map.get(id)! : '');
+  return {
+    variant_label: intent.variant_label,
+    rationale: intent.rationale,
+    design_notes: [],
+    assumptions: intent.assumptions,
+    rooms: drawn
+      .filter((room) => map.has(room.id))
+      .map((room) => ({
+        id: map.get(room.id)!,
+        level: String(room.level),
+        rect: rects.get(room.id)!,
+      })),
+    doors: intent.relationships
+      .filter((rel) => rel.kind === 'adjacent' && map.has(rel.a) && map.has(rel.b))
+      .map((rel) => [map.get(rel.a)!, map.get(rel.b)!]),
+    open: intent.relationships
+      .filter((rel) => rel.kind === 'open' && map.has(rel.a) && map.has(rel.b))
+      .map((rel) => [map.get(rel.a)!, map.get(rel.b)!]),
+    cantilevers: [],
+    entry_room: to(intent.entry_room),
+    garage_room: to(intent.garage_room),
+  };
+}
+
+/** Dữ liệu chế độ hình chữ nhật từ `kb/` — cho phép thử và phát lại (Worker nạp ở `house-program-data.ts`). */
+export const layoutKb = {
+  houseProgram: parseHouseProgram(read('kb/house_program.yaml')),
+  furniture: parseFurniture(read('kb/furniture.yaml')),
+  roofPlan: parseRoofPlan(read('kb/roof_plan.yaml')),
+};

@@ -18,11 +18,12 @@
 
 import { schemaFor, type SchemaProvider } from '../llm/schema-dialect';
 import type { DataClass } from '@nvg/shared/design';
-import type {
-  StructuredCallOptions,
-  StructuredCallResult,
-  TextModelClient,
-  TokenUsage,
+import {
+  fullPrompt,
+  type StructuredCallOptions,
+  type StructuredCallResult,
+  type TextModelClient,
+  type TokenUsage,
 } from '../llm/text-client';
 
 export const PROMPT_RECORD_VERSION = 1;
@@ -59,7 +60,7 @@ export function promptRecordOf(
     route,
     dataClass,
     system: options.system,
-    prompt: options.prompt,
+    prompt: fullPrompt(options),
     schema: options.schema,
     reasoningEffort: options.reasoningEffort ?? null,
     maxOutputTokens: options.maxOutputTokens ?? null,

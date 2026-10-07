@@ -117,7 +117,7 @@ describe('cửa phòng thờ không mở sau lưng bàn thờ', () => {
     expect(result.reasons.map((r) => r.code)).not.toContain('altar_door_behind');
   });
 
-  it('chỉ còn phòng chủ ở vách sau → báo `altar_door_behind`', () => {
+  it('chỉ còn phòng chủ ở vách sau → vẫn mở cửa ở đó, bàn thờ chuyển vách khác (T116), không báo lỗi', () => {
     // Hành lang 2 nằm dưới ô thang, nối hành lang 1; phòng thờ chỉ còn giáp hành lang 1 — ở vách sau.
     const only = cells
       .filter((c) => c.id !== 'hall_2')
@@ -126,7 +126,8 @@ describe('cửa phòng thờ không mở sau lưng bàn thờ', () => {
         rect: { x0: 0, y0: 400, x1: 300, y1: 600 },
       });
     const result = derive(only, 'y1');
-    expect(result.reasons.map((r) => r.code)).toContain('altar_door_behind');
+    expect(result.reasons.map((r) => r.code)).not.toContain('altar_door_behind');
+    expect(result.doors.some((d) => d.a === 'altar_1' || d.b === 'altar_1')).toBe(true);
   });
 
   it('không khai hướng → cửa mở theo thứ tự thường', () => {

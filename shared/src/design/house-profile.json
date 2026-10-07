@@ -1,0 +1,19 @@
+{
+  "_doc": "Cách suy LOẠI NHÀ (profile) từ đầu bài — T116, Haan chốt 04/10/2026. Dữ liệu dùng chung web/ (hiển thị) và workers/ (chọn luật, thông số ở kb/house_profiles.yaml). Nhà ống xét theo KHỐI XÂY (lô trừ khoảng lùi / sân), đủ cả ba điều kiện. Lô góc hẹp vẫn là nhà ống (một mặt bên giáp đường, mặt kia giáp nhà). KTS ghi đè bằng `house_profile_override`.",
+  "ong": {
+    "from_building_types": ["nha_pho"],
+    "max_block_width_m": 6,
+    "min_depth_to_width": 2,
+    "min_closed_sides": 1
+  },
+  "open_adjacent": ["duong_lon", "hem_2m", "hem_3m", "ao_ho"],
+  "by_building_type": { "nha_pho": "pho", "biet_thu": "bt", "nha_vuon": "vuon" },
+  "kd_business_modes": ["cua_hang_mat_tien", "kho_hang", "san_xuat_nho"],
+  "labels": {
+    "ong": "Nhà ống",
+    "pho": "Nhà phố / liền kề",
+    "bt": "Biệt thự",
+    "vuon": "Nhà vườn",
+    "kd": "kết hợp kinh doanh"
+  }
+}

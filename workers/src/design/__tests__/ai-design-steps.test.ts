@@ -15,7 +15,14 @@ import { fileURLToPath, URL } from 'node:url';
 import { load } from 'js-yaml';
 import { describe, expect, it } from 'vitest';
 import { parseAreaNorms } from '../kb/space-norms';
-import type { AiFloorPlan, AiSpaceProgram, DesignBrief } from '@nvg/shared/design';
+import {
+  aiFloorPlanSchema,
+  type AiFloorPlan,
+  type AiSpaceProgram,
+  type DesignBrief,
+} from '@nvg/shared/design';
+import { layoutFromRecorded, layoutKb } from './ai-real-context';
+import { withoutLightWell } from './ai-bands-helpers';
 import type { Rect } from '../ai/draw/geometry';
 import { arrangedLevel, arrangeFor, planContext, type ArrangedLevel } from '../ai/plan';
 import { parsePlanQuality } from '../ai/plan-quality';
@@ -32,7 +39,7 @@ import {
   VocabularyIndex,
   zoneDefaults,
 } from '../kb/vocabulary';
-import type { TextModelClient } from '../llm/text-client';
+import { fullPrompt, type TextModelClient } from '../llm/text-client';
 import {
   arrangeHouseStep,
   houseStepId,
@@ -42,6 +49,7 @@ import {
   writePlan,
   type AiDesignParams,
   type PlanStepDeps,
+  type ProposeOutcome,
 } from '../workflows/ai-design-steps';
 import type { HouseIntent } from '../ai/house';
 import { digestOf, TOWNHOUSE, VILLA } from './ai-digest-fixtures';
@@ -187,6 +195,31 @@ describe('một lượt gọi', () => {
     expect(recorded.inserts.every((row) => row.status === 'ok')).toBe(true);
   });
 
+  it('tuyến khai `revise_route`: lời gọi đầu chạy tuyến đã chọn, vòng sửa chạy tuyến sửa — nhật ký ghi đúng tuyến (handoff đợt 3 mục 4.1)', async () => {
+    const routes: string[] = [];
+    const client: TextModelClient = {
+      async complete(route) {
+        routes.push(route);
+        return {
+          json: VILLA_HOUSE,
+          provider: 'fake',
+          model: 'fake-1',
+          usage: { inputTokens: 10, outputTokens: 20 },
+          latencyMs: 3,
+        };
+      },
+    };
+    const { deps, recorded } = depsWith(client);
+    const withRevise = { ...deps, revise: { route: 'ai_text_fake_terra', model: 'fake-terra' } };
+    await proposeHouse(withRevise, PARAMS, VARIANT, 1);
+    await proposeHouse(withRevise, PARAMS, VARIANT, 2, ['- avoid this']);
+    expect(routes).toEqual(['ai_text_fake', 'ai_text_fake_terra']);
+    expect(recorded.inserts.map((row) => row.route)).toEqual([
+      'ai_text_fake',
+      'ai_text_fake_terra',
+    ]);
+  });
+
   it('câu trả lời sai hợp đồng: ghi `rejected`, không ném — lấy mẫu lại là việc của lớp gọi', async () => {
     const { deps, recorded } = depsWith(answering({ sai: true }));
     const outcome = await proposeHouse(deps, PARAMS, VARIANT, 1);
@@ -199,7 +232,7 @@ describe('một lượt gọi', () => {
     const prompts: string[] = [];
     const client: TextModelClient = {
       async complete(_route, _dc, options) {
-        prompts.push(options.prompt);
+        prompts.push(fullPrompt(options));
         return {
           json: VILLA_HOUSE,
           provider: 'fake',
@@ -243,7 +276,7 @@ describe('lượt sửa gửi ý định cũ; lấy mẫu lại thì không', ()
     const prompts: string[] = [];
     const client: TextModelClient = {
       async complete(_route, _dc, options) {
-        prompts.push(options.prompt);
+        prompts.push(fullPrompt(options));
         return {
           json: VILLA_HOUSE,
           provider: 'fake',
@@ -330,7 +363,15 @@ describe('bước kiểm và xếp cả nhà', () => {
     // Bài này đo NGƯỠNG TỔNG, nên tắt sàn nhóm (T96) — biệt thự mẫu hụt hẳn nhóm D và E.
     const threshold = (acceptPercent: number, acceptGroupFloorPercent: number | null = null) =>
       arrangeHouseStep(
-        { ...deps, quality: { ...deps.quality, acceptPercent, acceptGroupFloorPercent } },
+        {
+          ...deps,
+          quality: {
+            ...deps.quality,
+            acceptPercent,
+            acceptGroupFloorPercent,
+            acceptGroupFloors: {},
+          },
+        },
         PARAMS,
         VARIANT,
         { intentJson: JSON.stringify(VILLA_HOUSE), issues: [], call: CALL },
@@ -353,7 +394,16 @@ describe('bước kiểm và xếp cả nhà', () => {
     const { deps } = depsWith(answering(null));
     const run = (acceptGroupFloorPercent: number | null) =>
       arrangeHouseStep(
-        { ...deps, quality: { ...deps.quality, acceptPercent: 1, acceptGroupFloorPercent } },
+        {
+          ...deps,
+          // Bài này đo sàn CHUNG — tắt sàn riêng từng nhóm (`accept_group_floor_by_group`).
+          quality: {
+            ...deps.quality,
+            acceptPercent: 1,
+            acceptGroupFloorPercent,
+            acceptGroupFloors: {},
+          },
+        },
         PARAMS,
         VARIANT,
         { intentJson: JSON.stringify(VILLA_HOUSE), issues: [], call: CALL },
@@ -379,7 +429,10 @@ describe('bước kiểm và xếp cả nhà', () => {
     expect(step.arrangedJson).toBeNull();
     expect(step.retry).toBe('resample');
     expect(step.previousJson).toBeNull();
-    expect(step.rejections).toEqual([{ level: 0, messages: ['Sai cấu trúc ở rooms: Required'] }]);
+    // Câu trả lời không dùng được mang mã riêng — `setbackRank` xếp nó tệ nhất (lượt thật 822e699d).
+    expect(step.rejections).toEqual([
+      { level: 0, messages: ['Sai cấu trúc ở rooms: Required'], codes: ['answer_unusable'] },
+    ]);
     expect(step.hints.join('\n')).toMatch(/did not match the schema/);
   });
 
@@ -459,6 +512,56 @@ describe('bước kiểm và xếp cả nhà', () => {
     );
     expect(again.retry).toBe('unchanged');
     expect(again.hints).toEqual([]);
+  });
+});
+
+describe('chế độ hình chữ nhật + mái (bàn giao v5, T115)', () => {
+  it('khai rect theo danh mục lời dẫn đưa → xếp → ghi: artifact có phần mái và qua hợp đồng', async () => {
+    const client: TextModelClient = {
+      async complete(_route, _dc, options) {
+        // Câu trả lời giả: ý định mẫu đổi ra rect với MÃ DANH MỤC mà chính <knowledge> của lời gọi đưa.
+        const k = JSON.parse(/<knowledge>(.*)<\/knowledge>/s.exec(options.prompt)![1]!) as {
+          site: { envelope_mm: [number, number, number, number] };
+          program: [string, string, string, string, number | null, string | null][];
+        };
+        const [x0, y0, x1, y1] = k.site.envelope_mm;
+        const program = k.program.map(([id, name, level, type, min, parent]) => ({
+          id,
+          name,
+          level,
+          type,
+          min_m2: min,
+          parent,
+        }));
+        return {
+          json: layoutFromRecorded(VILLA_HOUSE as HouseIntent, program, {
+            x: x0,
+            y: y0,
+            widthMm: x1 - x0,
+            depthMm: y1 - y0,
+          }),
+          provider: 'fake',
+          model: 'fake-1',
+          usage: { inputTokens: 1, outputTokens: 1 },
+          latencyMs: 1,
+        };
+      },
+    };
+    const { deps, recorded } = depsWith(client);
+    const withV5 = { ...deps, ...layoutKb };
+    const params = { ...PARAMS, geometry: 'rect' as const };
+    const proposal = await proposeHouse(withV5, params, VARIANT, 1);
+    expect(proposal.issues).toEqual([]);
+    const step = arrangeHouseStep(withV5, params, VARIANT, proposal, 1);
+    expect(step.rejections, JSON.stringify(step.rejections)).toEqual([]);
+    const result = await writePlan(withV5, params, VARIANT, step.arrangedJson!, CALL, [], 1);
+    expect('written' in result).toBe(true);
+    const plan = (recorded.writes as Array<{ kind: string; payload: unknown }>).find(
+      (write) => write.kind === 'ai_floor_plan',
+    )!.payload as AiFloorPlan;
+    expect(plan.roof?.level).toBe(plan.levels.length + 1);
+    expect(plan.roof?.zones.some((zone) => zone.type === 'terrace')).toBe(true);
+    expect(aiFloorPlanSchema.safeParse(plan).success).toBe(true);
   });
 });
 
@@ -587,5 +690,41 @@ describe('keepBest — giữ bản điểm cao nhất qua các lượt sửa vì
     expect(keepBest(entry(63, 'a'), entry(58, 'b')).arrangedJson).toBe('a');
     expect(keepBest(entry(63, 'a'), entry(63, 'b')).arrangedJson).toBe('a');
     expect(keepBest(entry(null, 'a'), entry(10, 'b')).arrangedJson).toBe('b');
+  });
+});
+
+describe('bước xếp — đường dải v6: dải tầng 1 không vừa khối thì chương trình dựng lại (hướng (a), lượt thật 93d212a2)', () => {
+  const nhaOng = JSON.parse(
+    readFileSync(new URL('./fixtures/ai-digest-nhaong-5x18.json', import.meta.url), 'utf8'),
+  ) as AiDesignParams['digest'];
+  const bands = (
+    JSON.parse(
+      readFileSync(new URL('./fixtures/ai-bands-run-93d212a2.json', import.meta.url), 'utf8'),
+    ) as { outputs: unknown[] }
+  ).outputs[0] as NonNullable<ProposeOutcome['bandsBase']>;
+
+  it('câu trả lời hỏng ở bộ giải (tầng 1) → bước xếp dựng lại tầng 1; lượt sửa không còn lỗi tầng 1', () => {
+    const { deps } = depsWith(answering(null));
+    const v6 = { ...deps, ...layoutKb, mandatory: undefined } as unknown as PlanStepDeps;
+    const step = arrangeHouseStep(
+      v6,
+      { ...PARAMS, digest: nhaOng, geometry: 'rect', pipeline: 'v6' },
+      VARIANT,
+      // Bỏ giếng trời (chỉ ở tầng 1 — luật T116 chặn trước) để thử đúng bộ dựng lại.
+      {
+        intentJson: null,
+        issues: ['- tầng 1 hỏng'],
+        call: CALL,
+        bandsBase: withoutLightWell(bands),
+      },
+      1,
+    );
+    expect(step.retry).toBe('revise');
+    const hints = step.hints.join('\n');
+    // Tầng 1 đã dựng lại (lỗi bộ giải của bản gốc không còn); bỏ giếng trời thì cổng danh mục báo thiếu nó — lỗi ấy đi
+    // mô hình như thường.
+    expect(hints).not.toMatch(/tầng 1 hỏng/);
+    expect(hints).not.toMatch(/Storey 1: /);
+    expect(hints).toMatch(/Thiếu Giếng trời/);
   });
 });

@@ -132,13 +132,13 @@ async function goToStep(step: string) {
 }
 
 describe('Phân nhánh theo loại hình đi từ cấu hình ra DOM', () => {
-  it('nhà phố KHÔNG hỏi khoảng lùi và mật độ', async () => {
+  it('nhà phố hỏi khoảng lùi và mật độ (chủ nhà quyết — Haan 04/10/2026, T116)', async () => {
     state.briefs = [brief()];
     state.surveys = [];
     await openForm();
 
-    expect(screen.queryByText('Khoảng lùi theo quy hoạch')).toBeNull();
-    expect(screen.queryByText('Mật độ xây dựng tối đa')).toBeNull();
+    expect(screen.getAllByText('Khoảng lùi theo quy hoạch')).not.toHaveLength(0);
+    expect(screen.getAllByText('Mật độ xây dựng tối đa')).not.toHaveLength(0);
   });
 
   it('nhà phố KHÔNG hỏi tổ chức khối nhà', async () => {

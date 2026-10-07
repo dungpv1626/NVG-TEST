@@ -15,7 +15,7 @@
 import { describe, expect, it } from 'vitest';
 import type { HouseIntent } from '../ai/house';
 import { parseMandatoryRules } from '../ai/mandatory';
-import type { StructuredCallOptions } from '../llm/text-client';
+import { fullPrompt, type StructuredCallOptions } from '../llm/text-client';
 import {
   AiPlanRejected,
   evaluateHouse,
@@ -70,47 +70,54 @@ describe('phát lại lượt chạy thật 4198d692 — ba vòng cuối đã d�
     expect(revisionBase(round4, round3, prompts).best).toBe(round4);
   });
 
-  it('vòng sửa đồng bộ: tầng 1 hỏng được khung xương dựng lại (T102), lời gọi 5 giữ tầng 1 và không lặp câu nhắc lối vào', async () => {
-    const options: StructuredCallOptions[] = [];
-    const answers = [1, 2, 3, 4, 5, 6].map(answer);
-    const client = {
-      async complete(_route: string, _dataClass: unknown, callOptions: StructuredCallOptions) {
-        options.push(callOptions);
-        return {
-          json: answers[options.length - 1],
-          provider: 'fake',
-          model: 'fake-1',
-          usage: { inputTokens: 1, outputTokens: 1 },
-          latencyMs: 1,
-        };
-      },
-    };
-    await expect(
-      generateAiPlan({
-        ...input,
-        briefRef: 'sha256:' + '0'.repeat(64),
-        route: 'ai_text_fake',
-        client,
-        prompts,
-        // Canh cơ chế vòng sửa trên câu trả lời ghi sẵn — không để biến thể T94 đổi kết quả từng vòng.
-        planVariants: false,
-      }),
-    ).rejects.toBeInstanceOf(AiPlanRejected);
-    // T86: từ lời gọi 3 tầng 1 được GIỮ — bằng chính cách chia thật, vì bản phác tầng 1 của mô hình đã
-    // bị chia lại ở vòng 2. Câu trả lời 4 (mô hình vẽ tầng 2 theo bản phác tầng 1 CŨ) ghép lên tầng 1 ấy
-    // thì cả nhà dựng được, chỉ còn lỗi cả nhà (thang máy/thang bộ, ban công mặt sau) — lời gọi 5 sửa
-    // từ đó. Các câu trả lời ghi sẵn sinh trong ngữ cảnh khác, nên từ đây chỉ canh hướng đi, không canh
-    // kết cục.
-    expect(options.length).toBeGreaterThanOrEqual(5);
-    // T102 (khung xương): tầng 1 của câu trả lời 1 nay được chương trình dựng lại ngay (bản phác hỏng vì
-    // đường đi xuyên gara), tầng 2 xếp được, cả nhà chỉ còn lỗi liên tầng — nên lời gọi 2 nói «bản phác
-    // tầng 1 hỏng, chương trình chia lại» kèm đúng lỗi ấy, và không tầng nào được giữ khi lỗi là lỗi cả nhà
-    // (T86: lỗi tầng 0 có thể cần sửa bất kỳ tầng nào). Tới lời gọi 5, hai lượt sửa không đỡ hơn nên gốc là
-    // câu trả lời mới nhất, tầng 1 của nó qua và được GIỮ — câu nhắc chỉ còn ban công tầng 2.
-    expect(options[1]!.prompt).toMatch(/Your sketch of storey 1 failed/);
-    expect(options[1]!.prompt).toMatch(/Storey 1: From the living area/);
-    expect(options[4]!.prompt).toMatch(/Storey 1 passed every check and is kept/);
-    expect(options[4]!.prompt).not.toMatch(/Your sketch of storey 1 failed/);
-    expect(options[4]!.prompt).not.toMatch(/draw a circulation that links the living area/);
-  });
+  // Trần riêng (T113): quay lui tầng 1 thử thêm hai bản tầng 1 cho mỗi vòng hỏng ở tầng trên — đo 5cd78ef7 một mình:
+  // 8,3 s → 22,5 s. Hạn chung 30 s của nhóm `logic` không còn đủ khi máy bận.
+  it(
+    'vòng sửa đồng bộ: tầng 1 hỏng được khung xương dựng lại (T102), lời gọi 5 giữ tầng 1 và không lặp câu nhắc lối vào',
+    { timeout: 120_000 },
+    async () => {
+      const options: StructuredCallOptions[] = [];
+      const answers = [1, 2, 3, 4, 5, 6].map(answer);
+      const client = {
+        async complete(_route: string, _dataClass: unknown, callOptions: StructuredCallOptions) {
+          // Phần riêng của vòng sửa nằm ở `promptTail` (T115) — canh trên thân lời gọi đầy đủ.
+          options.push({ ...callOptions, prompt: fullPrompt(callOptions) });
+          return {
+            json: answers[options.length - 1],
+            provider: 'fake',
+            model: 'fake-1',
+            usage: { inputTokens: 1, outputTokens: 1 },
+            latencyMs: 1,
+          };
+        },
+      };
+      await expect(
+        generateAiPlan({
+          ...input,
+          briefRef: 'sha256:' + '0'.repeat(64),
+          route: 'ai_text_fake',
+          client,
+          prompts,
+          // Canh cơ chế vòng sửa trên câu trả lời ghi sẵn — không để biến thể T94 đổi kết quả từng vòng.
+          planVariants: false,
+        }),
+      ).rejects.toBeInstanceOf(AiPlanRejected);
+      // T86: từ lời gọi 3 tầng 1 được GIỮ — bằng chính cách chia thật, vì bản phác tầng 1 của mô hình đã
+      // bị chia lại ở vòng 2. Câu trả lời 4 (mô hình vẽ tầng 2 theo bản phác tầng 1 CŨ) ghép lên tầng 1 ấy
+      // thì cả nhà dựng được, chỉ còn lỗi cả nhà (thang máy/thang bộ, ban công mặt sau) — lời gọi 5 sửa
+      // từ đó. Các câu trả lời ghi sẵn sinh trong ngữ cảnh khác, nên từ đây chỉ canh hướng đi, không canh
+      // kết cục.
+      expect(options.length).toBeGreaterThanOrEqual(5);
+      // T102 (khung xương): tầng 1 của câu trả lời 1 nay được chương trình dựng lại ngay (bản phác hỏng vì
+      // đường đi xuyên gara), tầng 2 xếp được, cả nhà chỉ còn lỗi liên tầng — nên lời gọi 2 nói «bản phác
+      // tầng 1 hỏng, chương trình chia lại» kèm đúng lỗi ấy, và không tầng nào được giữ khi lỗi là lỗi cả nhà
+      // (T86: lỗi tầng 0 có thể cần sửa bất kỳ tầng nào). Tới lời gọi 5, hai lượt sửa không đỡ hơn nên gốc là
+      // câu trả lời mới nhất, tầng 1 của nó qua và được GIỮ — câu nhắc chỉ còn ban công tầng 2.
+      expect(options[1]!.prompt).toMatch(/Your sketch of storey 1 failed/);
+      expect(options[1]!.prompt).toMatch(/Storey 1: From the living area/);
+      expect(options[4]!.prompt).toMatch(/Storey 1 passed every check and is kept/);
+      expect(options[4]!.prompt).not.toMatch(/Your sketch of storey 1 failed/);
+      expect(options[4]!.prompt).not.toMatch(/draw a circulation that links the living area/);
+    },
+  );
 });

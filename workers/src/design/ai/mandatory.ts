@@ -433,11 +433,13 @@ export function balconyFaces(
 }
 
 /**
- * Ban công không quay cạnh dài ra mặt thoáng (T71, sửa T91). Ban công ĐUA ra ngoài ranh nhô khỏi mặt
- * nhà nên có ba cạnh thoáng — không xét (`BALCONY_PROJECTING_OPEN_SIDES`). Hai cạnh thoáng chưa đủ:
- * ban công chạy suốt chiều sâu nhà, thoáng ở hai đầu ngắn, vẫn là ban công trong sàn quay cạnh dài vào
- * tường nhà bên; ban công góc nhà thì tự có một cạnh dài thoáng. Ban công dài (> `longRatio`) → theo cờ
- * `blocking` của luật; ban công gần vuông → chỉ cảnh báo (tiêu chí điểm D3 trừ điểm).
+ * Ban công và mặt thoáng (T71, sửa T91, tách hai mức T116 — Haan 04/10/2026). Ban công ĐUA ra ngoài ranh nhô khỏi
+ * mặt nhà nên có ba cạnh thoáng — không xét (`BALCONY_PROJECTING_OPEN_SIDES`).
+ *
+ *  - CHẶN (theo cờ `blocking`): ban công KHÔNG có cạnh nào ra mặt thoáng — toàn giáp ranh / nhà xóm là vô dụng và trái
+ *    luật mở cửa.
+ *  - Chỉ lưu ý, TRỪ ĐIỂM NẶNG ở tiêu chí D3: ban công dài (> `longRatio`) quay cạnh ngắn ra mặt thoáng — lô gia, ban
+ *    công phơi trong sàn vẫn dùng tốt.
  */
 export function balconyViolations(level: AiFloorPlanLevel, ctx: MandatoryContext): PlanIssue[] {
   const rule = ctx.rules.balconyOnOpenFace;
@@ -445,16 +447,19 @@ export function balconyViolations(level: AiFloorPlanLevel, ctx: MandatoryContext
   const out: PlanIssue[] = [];
   for (const b of balconyFaces(level, rule.edgeToleranceCm)) {
     if (b.openSides >= BALCONY_PROJECTING_OPEN_SIDES || b.longOpen) continue;
+    const blind = b.openSides === 0;
     const long = b.ratio > rule.longRatio;
     out.push(
       issue(
         'balcony_off_open_face',
-        long
-          ? `Ban công "${b.id}" ở tầng ${level.level} dài (cạnh dài gấp ${Math.round(b.ratio * 10) / 10} lần cạnh ngắn) mà không quay cạnh dài ra mặt thoáng — ban công dài phải quay cạnh dài ra mặt ngoài thoáng, không ra phía nhà bên cạnh.`
-          : `Ban công "${b.id}" ở tầng ${level.level} không quay cạnh dài ra mặt thoáng — ban công gần vuông nên không chặn, chỉ lưu ý.`,
+        blind
+          ? `Ban công "${b.id}" ở tầng ${level.level} không có cạnh nào ra mặt thoáng — ban công toàn giáp ranh hay nhà bên cạnh thì không dùng được và không mở cửa được.`
+          : long
+            ? `Ban công "${b.id}" ở tầng ${level.level} dài (cạnh dài gấp ${Math.round(b.ratio * 10) / 10} lần cạnh ngắn) mà quay cạnh ngắn ra mặt thoáng — không chặn, trừ điểm.`
+            : `Ban công "${b.id}" ở tầng ${level.level} không quay cạnh dài ra mặt thoáng — ban công gần vuông nên không chặn, chỉ lưu ý.`,
         { room: b.id, level: level.level },
         b.id,
-        long && rule.blocking,
+        blind && rule.blocking,
       ),
     );
   }

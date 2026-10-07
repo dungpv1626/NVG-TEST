@@ -349,6 +349,8 @@ export function checkSketchBalconyDemand(
   sketches: ReadonlyMap<number, readonly string[] | null>,
   add: Add,
   longRatio: number | null = null,
+  /** Ban công đua (chế độ hình chữ nhật) — không có ô bản phác nhưng phủ mặt của nó. */
+  cantilevers: readonly { id: string; face: Side; level: number }[] = [],
 ): void {
   if (!balcony || balcony.forbidden) return;
   const upper = [...sketches.entries()].filter(([level]) => level >= balcony.fromLevel);
@@ -381,6 +383,15 @@ export function checkSketchBalconyDemand(
       );
       found.push({ id, level, sides, forbiddenHits });
     }
+  }
+  for (const c of cantilevers) {
+    if (c.level < balcony.fromLevel) continue;
+    found.push({
+      id: c.id,
+      level: c.level,
+      sides: new Set([c.face]),
+      forbiddenHits: new Set(balcony.forbiddenSides.includes(c.face) ? [c.face] : []),
+    });
   }
 
   for (const want of balcony.levels) {

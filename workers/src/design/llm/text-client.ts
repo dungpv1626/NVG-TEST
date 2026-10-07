@@ -24,6 +24,18 @@ export interface StructuredCallOptions {
   /** Chỉ dẫn hệ thống — vai trò và ràng buộc, KHÔNG chứa dữ liệu của lần gọi này. */
   system: string;
   prompt: string;
+  /**
+   * Phần nối SAU `prompt`, riêng một khối (vòng sửa: «tránh những chỗ này» + ý định trước). Tách ra để
+   * `system` + `prompt` giữ nguyên từng byte giữa lượt đầu và các vòng sửa — nhà cung cấp đọc phần ấy
+   * từ bộ nhớ đệm. Client không tách khối được thì nối `prompt` + hai dòng trống + phần này.
+   */
+  promptTail?: string;
+  /**
+   * Khoá gom các lượt cùng phần đầu (`system` + `prompt`). Có khoá: OpenAI gửi `prompt_cache_key`,
+   * Anthropic đặt điểm ngắt `cache_control` cuối khối `prompt`. Vắng = không xin bộ nhớ đệm tường minh
+   * (ghi đệm của Anthropic đắt hơn đọc thường 25 %, chỉ đáng khi sẽ có lượt sau dùng lại).
+   */
+  cacheKey?: string;
   /** Lược đồ đầu ra, phương ngữ ĐỘC LẬP nhà cung cấp. Client tự đổi. */
   schema: Record<string, unknown>;
   images?: GenerateImagePart[];
@@ -77,6 +89,11 @@ export interface TokenUsage {
   cachedInputTokens?: number | null;
   /** Phần `outputTokens` là suy nghĩ — vắng khi nhà cung cấp không tách. */
   reasoningTokens?: number | null;
+}
+
+/** `prompt` + `promptTail` thành một chuỗi — cho client không tách khối và cho bản ghi đọc lại. */
+export function fullPrompt(options: Pick<StructuredCallOptions, 'prompt' | 'promptTail'>): string {
+  return options.promptTail ? `${options.prompt}\n\n${options.promptTail}` : options.prompt;
 }
 
 export interface StructuredCallResult {

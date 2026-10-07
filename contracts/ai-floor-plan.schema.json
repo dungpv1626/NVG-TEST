@@ -66,6 +66,87 @@
       "type": ["object", "null"],
       "additionalProperties": true,
       "description": "Ý định cả nhà mô hình khai (ai-house-intent, đã đánh mã type_n, có `sketches`) mà phương án này xếp từ đó (T53). Lượt sửa bố cục theo yêu cầu kỹ sư gửi lại nó làm `<previous_intent>`. Vắng = artifact đúc trước T53."
+    },
+    "roof": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["level", "outline", "zones"],
+      "description": "Mặt bằng mái (Haan chốt 04/10/2026: luôn vẽ tầng mái; `kb/roof_plan.yaml`, `ai/roof.ts`). KHÔNG phải một tầng của `levels`: không cửa sổ, không chấm điểm, không vào mặt đứng như một tầng. Toạ độ cm cùng gốc với các tầng. Vắng = artifact đúc trước khi có mái.",
+      "properties": {
+        "level": {
+          "type": "integer",
+          "minimum": 2,
+          "description": "Số thứ tự của mái — tầng trên cùng + 1, chỉ để gọi tên tờ vẽ."
+        },
+        "outline": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 24,
+          "items": {
+            "$ref": "#/$defs/point"
+          },
+          "description": "Đường bao sàn mái — đường bao tầng trên cùng."
+        },
+        "stair_head": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["rect", "stair", "door_side"],
+          "description": "Tum thang: ô thang tầng trên cùng chạy lên mái cộng chiếu tới trước cửa. Vắng ở nhà một tầng.",
+          "properties": {
+            "rect": {
+              "$ref": "#/$defs/rect"
+            },
+            "stair": {
+              "$ref": "#/$defs/rect",
+              "description": "Ô thang bên trong tum — đúng ô thang tầng dưới."
+            },
+            "door_side": {
+              "type": "string",
+              "enum": ["+x", "-x", "+y", "-y"],
+              "description": "Cạnh tum mở cửa ra sân thượng."
+            }
+          }
+        },
+        "zones": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "type", "name", "rect", "placed_by"],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/elem_id"
+              },
+              "type": {
+                "type": "string",
+                "pattern": "^[a-z_]+$",
+                "description": "Mã khu trong `kb/roof_plan.yaml`."
+              },
+              "name": {
+                "type": "string",
+                "maxLength": 80
+              },
+              "rect": {
+                "$ref": "#/$defs/rect"
+              },
+              "placed_by": {
+                "type": "string",
+                "enum": ["model", "program"],
+                "description": "`program` = mô hình không vẽ khu đầu bài đòi, chương trình tự đặt."
+              }
+            }
+          }
+        },
+        "notes": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "string",
+            "maxLength": 300
+          }
+        }
+      }
     }
   },
   "$defs": {
@@ -662,6 +743,9 @@
             "up": {
               "type": "string",
               "enum": ["+x", "-x", "+y", "-y"]
+            },
+            "over": {
+              "type": ["string", "null"]
             }
           }
         },

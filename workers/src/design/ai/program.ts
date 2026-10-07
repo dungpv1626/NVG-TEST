@@ -388,8 +388,22 @@ export function askedTypes(knowledge: ProgramKnowledge): Set<string> {
  */
 function forModel(construction: unknown): unknown {
   if (!construction || typeof construction !== 'object') return construction;
-  const { usable: _usable, ...rest } = construction as Record<string, unknown>;
-  return rest;
+  const {
+    usable: _usable,
+    by_house_profile: profiles,
+    ...rest
+  } = construction as Record<string, unknown>;
+  if (!profiles || typeof profiles !== 'object') return rest;
+  // Cạnh tối thiểu / tỉ lệ theo loại nhà cũng là điều kiện dựng (bảng KTS nhà ống, handoff sửa lỗi đợt 2) — bỏ như `usable`.
+  return {
+    ...rest,
+    by_house_profile: Object.fromEntries(
+      Object.entries(profiles as Record<string, Record<string, unknown>>).map(([key, norms]) => {
+        const { min_side_m: _side, max_aspect: _aspect, ...kept } = norms;
+        return [key, kept];
+      }),
+    ),
+  };
 }
 
 function circulationShare(
@@ -854,6 +868,11 @@ export function programFromProposal(input: {
   generator: AiSpaceProgram['generator'];
   /** Mã phòng của mô hình → loại tiện ích đã gộp vào phòng ấy (`foldInBedroom`). */
   includes?: ReadonlyMap<string, readonly string[]>;
+  /**
+   * Giữ nguyên mã (chế độ hình chữ nhật, bàn giao v5): mã là mã DANH MỤC chương trình cấp, duy nhất và có nghĩa —
+   * đánh lại `type_n` thì vòng sửa gửi mô hình những mã nó không biết.
+   */
+  keepIds?: boolean;
 }): {
   payload: AiSpaceProgram;
   notes: Record<string, string>;
@@ -870,7 +889,7 @@ export function programFromProposal(input: {
   for (const s of ordered) {
     const n = (counters.get(s.type) ?? 0) + 1;
     counters.set(s.type, n);
-    idMap.set(s.id, `${s.type}_${n}`);
+    idMap.set(s.id, input.keepIds ? s.id : `${s.type}_${n}`);
   }
 
   const notes: Record<string, string> = {};

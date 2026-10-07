@@ -27,6 +27,7 @@ import { ALLOWED_IMAGE_INPUT, decodeBase64, extensionFor, sniffMime } from './im
 import type { ModelRouter, ResolvedRoute } from './router';
 import { schemaFor } from './schema-dialect';
 import {
+  fullPrompt,
   outputBudget,
   requestTimeout,
   tokenCount,
@@ -97,12 +98,20 @@ export class OpenAiClient implements TextModelClient, AiImageClient {
       detail: 'high',
     }));
     content.push({ type: 'input_text', text: options.prompt });
+    // Phần nối của vòng sửa là TIN NHẮN RIÊNG, không phải khối chữ thứ hai trong cùng tin nhắn (handoff v6 sửa lỗi
+    // đợt 3 mục 4.2). Lượt thật f0c97c06: ba vòng sửa chung 8.700 ký tự đầu (~4.000 token gồm câu dẫn hệ thống +
+    // lược đồ) mà chỉ trúng đệm 0 / 1.266 / 1.266 token — đúng cỡ câu dẫn + lược đồ; lời gọi 1, trùng TRỌN tin
+    // nhắn với lượt trước, trúng 4.067 / 4.070. Đệm ngắt ở ranh giới tin nhắn nên đuôi khác nhau làm mất cả đầu bài.
+    const input: unknown[] = [{ role: 'user', content }];
+    if (options.promptTail) {
+      input.push({ role: 'user', content: [{ type: 'input_text', text: options.promptTail }] });
+    }
 
     const budget = outputBudget(route.max_output_tokens, options.maxOutputTokens, 16_384);
     const body: Record<string, unknown> = {
       model: route.model,
       instructions: options.system,
-      input: [{ role: 'user', content }],
+      input,
       text: {
         format: {
           type: 'json_schema',
@@ -124,6 +133,8 @@ export class OpenAiClient implements TextModelClient, AiImageClient {
         : {}),
       // Không giữ lại nội dung lời gọi phía nhà cung cấp lâu hơn cần thiết (T12).
       store: false,
+      // OpenAI tự đệm phần đầu ≥ 1.024 token; khoá giúp các vòng sửa cùng phần đầu về cùng máy.
+      ...(options.cacheKey ? { prompt_cache_key: options.cacheKey } : {}),
     };
     if (options.temperature !== undefined) body.temperature = options.temperature;
 
@@ -166,7 +177,7 @@ export class OpenAiClient implements TextModelClient, AiImageClient {
         `(đệm ${usage.cachedInputTokens ?? '?'}) · ` +
         `ra ${usage.outputTokens ?? '?'} tok (nghĩ ${reasoning ?? '?'}) · ` +
         `trần ${budget === null ? 'KHÔNG ĐẶT' : budget} · trạng thái ${reply.status ?? '?'} · ` +
-        `lời dẫn ${options.system.length + options.prompt.length} ký tự · ` +
+        `lời dẫn ${options.system.length + fullPrompt(options).length} ký tự · ` +
         `lược đồ ${JSON.stringify(body.text).length} ký tự`,
     );
 

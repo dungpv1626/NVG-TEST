@@ -122,6 +122,27 @@ describe('Văn bản có lược đồ', () => {
     expect(body).not.toHaveProperty('temperature');
     // Khoá không nằm trong thân.
     expect(init.body as string).not.toContain('sk-test');
+    expect(body).not.toHaveProperty('prompt_cache_key');
+  });
+
+  it('khoá đệm đi vào `prompt_cache_key`; phần nối của vòng sửa là TIN NHẮN thứ hai (đợt 3 mục 4.2)', async () => {
+    const fetchMock = respond(textReply('{"a":"x"}'));
+    await client().complete('ai_text_openai', 2, {
+      system: 'S',
+      prompt: 'Đầu bài.',
+      promptTail: 'Sửa chỗ này.',
+      cacheKey: 'nvg-house-1',
+      schema: SCHEMA,
+    });
+    const body = JSON.parse(
+      (fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body as string,
+    );
+    expect(body.prompt_cache_key).toBe('nvg-house-1');
+    // Đầu bài một tin nhắn, giống từng byte giữa các vòng — đệm ngắt ở ranh giới tin nhắn (lượt f0c97c06).
+    expect(body.input).toEqual([
+      { role: 'user', content: [{ type: 'input_text', text: 'Đầu bài.' }] },
+      { role: 'user', content: [{ type: 'input_text', text: 'Sửa chỗ này.' }] },
+    ]);
   });
 
   it('mô hình từ chối → lỗi KHÔNG thử lại, câu riêng', async () => {

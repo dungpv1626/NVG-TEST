@@ -41,6 +41,8 @@ export interface DoorsInput {
   doorShared: (a: PackLeaf, b: PackLeaf) => number;
   /** Tầng 1: đầu bài có khai mặt lối vào chính không — cần cửa người đi khi cửa chính là gara. */
   mainEntranceDeclared: boolean;
+  /** Gara mang lối vào chính được kèm cửa đi (nhà phố — `ArrangeInput.garageEntry`). Vắng = chỉ cửa cuốn. */
+  garageEntry?: boolean;
   /** Chiều đi lên của thang tầng dưới (tầng trên dùng lại). */
   stairUp: StairUp | null;
   stairIds: ReadonlySet<string>;
@@ -88,11 +90,22 @@ export function deriveDoors(input: DoorsInput): DoorsResult {
   const reasons: PlanIssue[] = [];
   const reached = new Set<string>();
 
-  const add = (a: string, b: string, kind: Door['kind'], full = false) => {
-    const key = b === 'outside' ? `${a}|outside` : [a, b].sort().join('|');
+  const add = (
+    a: string,
+    b: string,
+    kind: Door['kind'],
+    full = false,
+    place: Door['place'] = null,
+  ) => {
+    // Cửa xe và cửa người ra ngoài của cùng một phòng là hai cửa: gara mang lối vào chính có cả hai (nhánh
+    // `entry === garageRoom` bên dưới). Khoá chung từng nuốt cửa đi (lượt e34f8f58, nhà ống 04/10/2026).
+    const key =
+      b === 'outside'
+        ? `${a}|outside|${kind === 'garage' || kind === 'gate' ? 'xe' : 'nguoi'}`
+        : [a, b].sort().join('|');
     if (seen.has(key)) return;
     seen.add(key);
-    doors.push({ a, b, kind, ...(full ? { full: true } : {}) });
+    doors.push({ a, b, kind, ...(full ? { full: true } : {}), ...(place ? { place } : {}) });
   };
   const shared = (a: string, b: string) => {
     const ra = rect.get(a);
@@ -186,8 +199,11 @@ export function deriveDoors(input: DoorsInput): DoorsResult {
     if (entry && leafById.has(entry)) {
       const entryLeaf = leafById.get(entry)!;
       if (entry === intent.garageRoom) {
-        add(entry, 'outside', 'garage');
-        if (input.mainEntranceDeclared) add(entry, 'outside', 'single');
+        // Gara mang lối vào chính (nhà ống, Haan 04/10/2026 — người vào cạnh xe): cửa cuốn sát một đầu vách,
+        // cửa đi sát đầu kia. Đặt giữa thì mặt tiền 5 m còn ~1 m mỗi bên, không bên nào đủ cửa đi.
+        const both = input.mainEntranceDeclared && input.garageEntry === true;
+        add(entry, 'outside', 'garage', false, both ? 'start' : null);
+        if (both) add(entry, 'outside', 'single', false, 'end');
       } else {
         const porch = frontPorch(entry);
         if (porch) {
@@ -284,25 +300,16 @@ export function deriveDoors(input: DoorsInput): DoorsResult {
             sharedEdge(rect.get(q)!, rect.get(room)!) - sharedEdge(rect.get(p)!, rect.get(room)!) ||
             p.localeCompare(q),
         );
-      // Phòng thờ (T106): bỏ phòng chủ nằm ở vách bàn thờ dựa lưng — vào từ đó là đi thẳng tới lưng bàn thờ. Chỉ
-      // còn phòng chủ ở vách ấy thì báo, để bộ xếp thử cây khác hoặc mô hình vẽ lại.
+      // Phòng thờ (T106, sửa T116 — Haan 04/10/2026): ưu tiên phòng chủ KHÔNG nằm ở vách bàn thờ dựa lưng theo hướng
+      // gia chủ chọn. Chỉ còn phòng chủ ở vách ấy thì vẫn mở cửa ở đó và bàn thờ chuyển sang một vách đặc khác — CHẶN
+      // chỉ khi có cửa / lối đi trên chính vách sau lưng bàn thờ, mà vách bàn thờ là vách chương trình chọn, không cố
+      // định. Hướng lệch hướng gia chủ chọn chỉ trừ điểm (chưa có tiêu chí chấm — T116 ghi việc còn mở).
       const altarBack =
         input.altarBackSide && leaf.types.includes('altar_room') ? input.altarBackSide : null;
-      const allowed = altarBack
+      const front = altarBack
         ? hosts.filter((id) => sideOf(rect.get(room)!, rect.get(id)!) !== altarBack)
         : hosts;
-      if (altarBack && hosts.length && !allowed.length) {
-        reasons.push(
-          arrangeIssue(
-            'altar_door_behind',
-            `Phòng thờ "${room}" ở ${where} chỉ mở cửa được từ phía sau lưng bàn thờ (cạnh ${altarBack}) — bàn thờ quay theo hướng gia chủ khai thì người vào đi thẳng tới lưng bàn thờ.`,
-            { room, side: altarBack },
-            room,
-          ),
-        );
-        reached.add(room);
-        continue;
-      }
+      const allowed = front.length ? front : hosts;
       const host = allowed[0];
       if (!host) continue;
       add(host, room, bothCirculation(host, room) ? 'opening' : 'single');
@@ -412,7 +419,7 @@ export function deriveDoors(input: DoorsInput): DoorsResult {
   return { doors, also, stair, reasons };
 }
 
-type StairSide = 'x0' | 'x1' | 'y0' | 'y1';
+export type StairSide = 'x0' | 'x1' | 'y0' | 'y1';
 
 /** Phía của ô thang mà phòng `other` nằm ngay bên kia; `null` khi không chung cạnh. */
 function sideOf(r: Rect, other: Rect): StairSide | null {
@@ -440,6 +447,45 @@ function arrivalSide(up: StairUp, arrival: 'start' | 'end' | 'across'): StairSid
 
 function flip(up: StairUp): StairUp {
   return ({ '+x': '-x', '-x': '+x', '+y': '-y', '-y': '+y' } as const)[up];
+}
+
+/**
+ * Lối vào thang cho một tầng đã có sẵn chữ nhật và cửa (đường dải v6, T116): cùng logic T103 / T105 của bộ xếp — ô mở ở
+ * đầu ngắn, sát bậc 1, chiều lên khớp lối vào. Trước đó đường dải gán cứng `up: '+y'` nên bậc 1 có thể quay vào tường
+ * (Haan chấm lượt a68c50bb: «ngay bậc một là tường chắn thì đi lên kiểu gì»). Sửa `doors` tại chỗ; `null` khi ô thang chưa
+ * có lối vào nào.
+ */
+export function placeStairEntry(
+  id: string,
+  rect: ReadonlyMap<string, Rect>,
+  doors: Door[],
+  isHub: (id: string) => boolean,
+  params: StairParams | null,
+): { up: StairUp; longSide: string | null } | null {
+  const reached = new Set(rect.keys());
+  const shared = (a: string, b: string) => sharedEdge(rect.get(a)!, rect.get(b)!) > 0;
+  return params
+    ? shapedStairEntry(id, rect, doors, reached, isHub, shared, params)
+    : stairEntry(id, rect, doors, reached, isHub, shared);
+}
+
+/**
+ * Các đầu của ô thang phải giáp lối đi ở một tầng TRÊN, khi mọi tầng chung chiều lên `up` của tầng 1: đầu bậc 1 (đi lên
+ * tiếp) và đầu người từ tầng dưới bước ra (`stairArrival`: U — cùng đầu bậc 1; thẳng — đầu đối diện; L — cạnh ngang).
+ */
+export function stairSidesNeeded(up: StairUp, params: StairParams | null): StairSide[] {
+  const arrival = params ? stairArrival(params.shape) : 'start';
+  return [...new Set([START_SIDE[up], arrivalSide(up, arrival)])];
+}
+
+/** Chiều lên của vế đầu khi bậc 1 ở cạnh `side` — cho đường dải. */
+export function stairUpFromSide(side: StairSide): StairUp {
+  return UP_FROM_SIDE[side];
+}
+
+/** Phía của ô thang `r` mà phòng `other` kề vào (`null` khi không chung cạnh) — cho đường dải. */
+export function stairSideOf(r: Rect, other: Rect): StairSide | null {
+  return sideOf(r, other);
 }
 
 /**

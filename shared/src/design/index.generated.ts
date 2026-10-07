@@ -10,7 +10,13 @@ export * from './ai-facade-proposal.generated';
 export * from './ai-facade-review.generated';
 export * from './ai-floor-plan-proposal.generated';
 export * from './ai-floor-plan.generated';
+export * from './ai-house-bands-compact.generated';
+export * from './ai-house-bands-delta-compact.generated';
+export * from './ai-house-bands-delta.generated';
+export * from './ai-house-bands.generated';
 export * from './ai-house-intent.generated';
+export * from './ai-house-layout-delta.generated';
+export * from './ai-house-layout.generated';
 export * from './ai-image-set.generated';
 export * from './ai-plan-edit.generated';
 export * from './ai-plan-intent.generated';
@@ -34,4 +40,4 @@ export * from './kb.generated';
  * hai phiên bản hợp đồng dữ liệu khác nhau — nói thẳng điều đó còn hơn để người dùng đọc một
  * câu lỗi kiểm kiểu không dẫn tới đâu.
  */
-export const CONTRACTS_FINGERPRINT = '3319b31e0f5c';
+export const CONTRACTS_FINGERPRINT = '5e6bfa324d9e';
