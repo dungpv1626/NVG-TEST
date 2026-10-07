@@ -59,7 +59,7 @@ function panel() {
 }
 
 describe('Tab Tổng quan của dự án thiết kế', () => {
-  it('bốn thẻ công cụ đều có mặt và trỏ đúng màn hình con', () => {
+  it('năm thẻ quy trình đều có mặt, trỏ đúng màn hình con — không có AI Design', () => {
     panel();
     // Tìm TRONG khu thẻ công cụ, không trên cả trang: dải tiến trình cũng có liên kết trùng
     // tên với thẻ (cùng bước, cùng đích), nên tìm trên cả trang sẽ bắt được hai phần tử.
@@ -67,9 +67,11 @@ describe('Tab Tổng quan của dự án thiết kế', () => {
     const expected: [string, string][] = [
       ['Đầu bài thiết kế', '?tab=dau-bai'],
       ['Khảo sát hiện trạng', '?tab=khao-sat'],
-      ['AI Design', '?tab=thiet-ke-ai'],
       // Thẻ này phải mở màn hình BA BỘ MÔN (TK-04).
       ['Hồ sơ kỹ thuật', '?tab=ho-so-ky-thuat'],
+      // Hai thẻ ứng với hai bước cuối của dải (07/10/2026).
+      ['Dự toán', '?tab=du-toan'],
+      ['Trình khách', '?tab=phien-ban'],
     ];
     for (const [name, href] of expected) {
       expect(cards.getByRole('link', { name: new RegExp(name) })).toHaveAttribute(
@@ -79,20 +81,35 @@ describe('Tab Tổng quan của dự án thiết kế', () => {
     }
   });
 
+  it('AI Design là CÔNG CỤ HỖ TRỢ tách khỏi lưới quy trình, mở thẳng module riêng', () => {
+    panel();
+    const cards = within(screen.getByRole('region', { name: 'Bộ công cụ thiết kế' }));
+    expect(cards.queryByText('AI Design')).toBeNull();
+    const support = within(screen.getByRole('region', { name: 'Công cụ hỗ trợ' }));
+    expect(support.getByText(/không thuộc quy trình của hồ sơ/)).toBeInTheDocument();
+    expect(support.getByRole('link', { name: /Mở AI Design/ })).toHaveAttribute(
+      'href',
+      '/tk/ai-design/p1',
+    );
+    // Không câu nào đọc như việc hồ sơ còn nợ.
+    expect(screen.queryByText(/chưa chọn phương án/)).toBeNull();
+  });
+
   it('chưa có dữ liệu thì NÓI RA, không hiện số 0', () => {
     const { container } = panel();
     expect(screen.getByText(/Chưa lập đầu bài/)).toBeInTheDocument();
     expect(screen.getByText(/Chưa có biên bản khảo sát nào/)).toBeInTheDocument();
-    expect(screen.getByText(/Chưa có phương án mặt bằng nào/)).toBeInTheDocument();
     expect(screen.getByText(/Chưa phân công bộ môn nào/)).toBeInTheDocument();
+    expect(screen.getByText(/Chưa có bản dự toán nào/)).toBeInTheDocument();
+    expect(screen.getByText(/Chưa phát hành phiên bản bản vẽ nào/)).toBeInTheDocument();
     // Không một chỗ nào trên trang được hiện con số 0 đứng một mình.
     expect(container.textContent).not.toMatch(/(^|[^\d])0($|[^\d%])/);
   });
 
-  it('dải tiến trình có đủ sáu bước và bước nào cũng mở được', () => {
+  it('dải tiến trình có đủ năm bước và bước nào cũng mở được', () => {
     panel();
-    const track = screen.getByRole('list', { name: 'Sáu bước của quy trình thiết kế' });
-    expect(within(track).getAllByRole('link')).toHaveLength(6);
+    const track = screen.getByRole('list', { name: 'Các bước của quy trình thiết kế' });
+    expect(within(track).getAllByRole('link')).toHaveLength(5);
   });
 
   it('thông tin dự án lấy từ hồ sơ thật, khách hàng bấm được', () => {

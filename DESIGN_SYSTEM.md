@@ -154,7 +154,7 @@ chuyển động để giải thích thứ vừa đổi, không để gây chú 
 
 ## 6. Không đổi so với CGD
 
-- Chế độ tối: chưa làm cho 11 module (CGD 6.7); riêng Module Thiết kế có — Mục 7.
+- Chế độ tối: **toàn ứng dụng** từ 07/10/2026 (Haan) — nút ba ô Sáng · Tối · Theo hệ thống ở thanh trên, mặc định theo hệ thống. Bảng màu tối là bảng của Module Thiết kế — Mục 7.2.
 - Lưới bội số 8px · biểu tượng nét đơn sắc Lucide · vùng bấm di động ≥ 40×40px.
 - Trạng thái luôn kèm chữ, không dùng màu làm cách duy nhất truyền đạt (CGD 6.8).
 
@@ -186,6 +186,12 @@ Ba thứ KHÔNG ánh xạ:
 - **Tờ bản vẽ giữ nền giấy trắng** — bản vẽ LÀ giấy, đảo màu là hỏng thứ sẽ in ra.
 
 Đặt kèm `color-scheme: dark` cho thanh cuộn, `<select>`, bảng lịch.
+
+**Từ 07/10/2026 áp cho toàn ứng dụng** (`web/src/lib/theme.tsx`): lựa chọn `sang | toi | he-thong`,
+«theo hệ thống» được giải bằng `matchMedia('(prefers-color-scheme: dark)')` thành một trong hai giá trị
+của thuộc tính — CSS chỉ biết hai trạng thái. Thuộc tính đặt cả trên khung lẫn `<html>` (hộp thoại, menu
+Radix dựng ở `body`). Ánh xạ thêm `brand-forest`, nền `tint-*` và `chart-5` (chữ tối / nền pastel trên
+nền tối). Chữ trên nền `brand` dùng `text-fg-inverse`, không `text-white`.
 
 ### 7.3 Chỗ cố ý lệch khỏi quy tắc chung
 

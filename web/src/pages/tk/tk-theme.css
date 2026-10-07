@@ -15,8 +15,11 @@
  *     (`--color-surface`, `--color-fg`, `--color-brand`…) nằm ở khối thứ hai bên dưới, và sáu
  *     màu trạng thái thì không đụng tới ở cả hai khối.
  *
- *  3. **Không có `prefers-color-scheme`.** Bản mẫu chỉ có hai trạng thái do người dùng chọn.
- *     Thêm "theo hệ thống" là thêm trạng thái thứ ba mà không ai đặc tả cách nó hiện lên nút.
+ *  3. **Không viết `prefers-color-scheme` ở đây.** Từ 07/10/2026 có lựa chọn «theo hệ thống»,
+ *     nhưng nó được GIẢI ở `lib/theme.tsx` thành đúng một trong hai giá trị của thuộc tính —
+ *     CSS chỉ biết hai trạng thái, nên không có bảng màu thứ ba để giữ cho khớp.
+ *
+ * Phạm vi: từ 07/10/2026 áp cho TOÀN ứng dụng (trước đó chỉ Module Thiết kế).
  */
 
 [data-tk-theme='toi'] {
@@ -148,4 +151,12 @@
   --color-brand: var(--color-tk-btn);
   --color-brand-hover: var(--color-tk-btn2);
   --color-brand-subtle: var(--color-tk-acc-dim);
+  /* Thêm 07/10/2026 khi chế độ tối mở ra toàn ứng dụng: `brand-forest` là CHỮ mục đang chọn ở
+     thanh trái sáng và ô icon Dashboard — giữ rừng đậm thì chữ tối nằm trên nền tối. Nền tint
+     pastel của thẻ KPI và nền cột biểu đồ chói giữa màn hình tối nên hạ xuống nền chip. */
+  --color-brand-forest: var(--color-tk-acc);
+  --color-tint-amber-bg: var(--color-tk-chip-mute);
+  --color-tint-teal-bg: var(--color-tk-chip-mute);
+  --color-tint-forest-bg: var(--color-tk-chip-mute);
+  --color-chart-5: var(--color-tk-line2);
 }

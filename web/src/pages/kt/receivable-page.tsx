@@ -176,7 +176,7 @@ export function ReceivablePage() {
             className={cn(
               'rounded-sm px-3 py-1.5',
               direction === value
-                ? 'bg-brand text-white font-semibold'
+                ? 'bg-brand text-fg-inverse font-semibold'
                 : 'bg-surface-sunken text-fg-subtle hover:text-fg',
             )}
           >

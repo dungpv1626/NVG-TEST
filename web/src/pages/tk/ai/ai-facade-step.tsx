@@ -12,8 +12,8 @@
  *  · **Màu luôn kèm chữ** (CGD 6.8): ô màu kèm mã hex và tên vật liệu, không chỉ một ô tô màu.
  */
 
-import { useEffect, useState } from 'react';
-import { AlertTriangle, Sparkles, X } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { AlertTriangle, Building2, Maximize2, Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Skeleton } from '@/components/ui/states';
@@ -35,12 +35,11 @@ import { toUserMessage } from '@/hooks/use-error-message';
 import { Chip, Panel } from '../tk-ui';
 import { AiModePicker, ReasoningEffortPicker, useAiChoice } from './ai-model-picker';
 import { AiRunProgress } from './ai-run-progress';
-import { AiPlanLive } from './ai-live-call';
-import { AiRunUsage } from './ai-usage';
 import { FacadeBriefForm, useFacadeBriefController } from './ai-facade-brief-form';
 import { FacadeImagePanel } from './ai-facade-image';
 import { FacadeScorePanel } from './ai-facade-score';
 import { SheetSizeControl, sheetWidthStyle, useSheetSize } from './sheet-size';
+import { SheetViewer } from './sheet-zoom';
 
 /** Mặt đứng hiện hành dựng theo một phương án mặt bằng KHÁC bản đang hiệu lực. */
 export function facadeIsStale(state: AiDesignState): boolean {
@@ -58,10 +57,13 @@ export function AiFacadeStep({
   projectId,
   readOnly,
   state,
+  briefLink,
 }: {
   projectId: string;
   readOnly: boolean;
   state: AiDesignState;
+  /** Lối sang đầu bài của hồ sơ để sửa phiếu mặt đứng — trang ngoài dựng (`tk/ai/` không nhập router). */
+  briefLink?: React.ReactNode;
 }): React.ReactElement {
   const ai = useAiChoice('text', false);
   const [effort, setEffort] = useState<ReasoningEffort | null>(null);
@@ -112,49 +114,66 @@ export function AiFacadeStep({
       .catch(() => undefined);
   };
 
+  // Hai cột như bước mặt bằng (07/10/2026): trái là phiếu yêu cầu + thiết lập + nút chính, phải là
+  // các bản đã dựng và tờ mặt đứng.
   return (
-    <div className="space-y-4">
-      <FacadeBriefForm controller={brief} readOnly={readOnly} />
-      <Panel
-        title="Mặt đứng mặt tiền"
-        aside={
-          state.facadeArtifactId ? (
-            stale ? (
-              <Chip tone="am">Theo phương án cũ</Chip>
+    <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]">
+      <div className="min-w-0 space-y-4">
+        <Panel
+          title="Dựng mặt đứng"
+          aside={
+            state.facadeArtifactId ? (
+              stale ? (
+                <Chip tone="am">Theo phương án cũ</Chip>
+              ) : (
+                <Chip tone="gr">Đã có</Chip>
+              )
             ) : (
-              <Chip tone="gr">Đã có</Chip>
+              <Chip tone="am">Chưa có</Chip>
             )
+          }
+        >
+          {blocked ? (
+            <p className="text-fg-subtle">
+              Chưa chọn phương án mặt bằng. Mở bước «Mặt bằng từng tầng», chọn một phương án rồi
+              quay lại đây.
+            </p>
           ) : (
-            <Chip tone="am">Chưa có</Chip>
-          )
-        }
-      >
-        {blocked ? (
-          <p className="text-fg-subtle">
-            Chưa chọn phương án mặt bằng. Mở bước «1. Mặt bằng từng tầng», chọn một phương án rồi
-            quay lại đây.
-          </p>
-        ) : (
-          !readOnly && (
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-end gap-3">
-                <AiModePicker
-                  kind="text"
-                  choice={ai.choice}
-                  options={ai.options}
-                  onMode={ai.pickMode}
-                  onRoute={ai.pickRoute}
-                  allowSolver={false}
-                  disabled={running || start.isPending}
-                />
-                <ReasoningEffortPicker
-                  value={effort}
-                  onChange={setEffort}
-                  option={ai.selected}
-                  disabled={running || start.isPending}
-                />
+            !readOnly && (
+              <div className="space-y-4">
+                {/* Model và mức suy nghĩ cùng một hàng, hai ô dạng viên (07/10/2026). */}
+                <div className="flex items-end gap-2 *:first:min-w-0 *:last:shrink-0">
+                  <AiModePicker
+                    kind="text"
+                    choice={ai.choice}
+                    options={ai.options}
+                    onMode={ai.pickMode}
+                    onRoute={ai.pickRoute}
+                    allowSolver={false}
+                    disabled={running || start.isPending}
+                  />
+                  <ReasoningEffortPicker
+                    value={effort}
+                    onChange={setEffort}
+                    option={ai.selected}
+                    disabled={running || start.isPending}
+                  />
+                </div>
+                <details className="text-fg-subtle">
+                  <summary className="cursor-pointer select-none hover:text-fg">
+                    Cách AI dựng mặt đứng
+                  </summary>
+                  <p className="mt-2">
+                    Khung nhà, cao độ các tầng, cửa, cửa sổ và ban công lấy nguyên từ phương án mặt
+                    bằng đang chọn — AI không được dời hay thêm bớt. AI chọn mái, vật liệu, màu,
+                    cổng, tường rào và các mảng trang trí; chương trình kiểm và dựng tờ mặt đứng. Ý
+                    tưởng không dùng được thì AI được gọi lại một lần kèm lý do — lượt ấy cũng tính
+                    tiền.
+                  </p>
+                </details>
                 <Button
                   variant="primary"
+                  className="w-full"
                   onClick={() => void onRun()}
                   disabled={running || start.isPending || brief.saving || !ai.choice.route}
                 >
@@ -165,148 +184,164 @@ export function AiFacadeStep({
                       : 'Dựng ý tưởng mặt đứng'}
                 </Button>
               </div>
-              {/* Lượt gọi TÍNH TIỀN — nói thẳng ra trước khi bấm, như ở bước mặt bằng. */}
-              <p className="text-fg-subtle">
-                Một lượt gọi mô hình cho một ý tưởng, theo phiếu yêu cầu ở trên. Khung nhà, cao độ
-                các tầng, cửa, cửa sổ và ban công lấy nguyên từ phương án mặt bằng đang chọn — AI
-                không được dời hay thêm bớt. AI chọn mái, vật liệu, màu, cổng, tường rào và các mảng
-                trang trí; chương trình kiểm và dựng tờ mặt đứng. Ý tưởng không dùng được thì AI
-                được gọi lại một lần kèm lý do — lượt ấy cũng tính tiền.
+            )
+          )}
+          {start.isError && (
+            <p className="mt-3 text-status-overdue">{toUserMessage(start.error)}</p>
+          )}
+        </Panel>
+
+        {run.data && (
+          <AiRunProgress
+            projectId={projectId}
+            run={run.data}
+            purposePrefix="facade"
+            reportTitle="Báo cáo lượt dựng mặt đứng"
+            reportExtra={
+              failedIssues.length > 0
+                ? ['## Ý tưởng chưa dùng được', '', ...failedIssues.map((i) => `- ${i}`)].join('\n')
+                : undefined
+            }
+            onRetry={readOnly ? undefined : () => void onRun()}
+            retryDisabled={start.isPending || !ai.choice.route}
+            runningLabel="Đang dựng mặt đứng"
+            doneLabel={failedIssues.length > 0 ? 'Ý tưởng chưa dùng được' : 'Đã dựng xong'}
+            failedLabel="Chưa dựng được mặt đứng"
+            readOnly={readOnly}
+          />
+        )}
+        {/* Phiếu yêu cầu mặt đứng là một phần của ĐẦU BÀI hồ sơ — ở đây chỉ xem (Haan, 07/10/2026).
+            Sửa ở đầu bài của hồ sơ thiết kế, mục «Mặt đứng». Đứng SAU khung «Dựng mặt đứng»: phiếu
+            dài vài màn hình, đặt trước thì nút chính bị đẩy xuống tận đáy cột. */}
+        <FacadeBriefForm controller={brief} readOnly />
+        {!readOnly && (
+          <p className="text-fg-subtle">
+            Yêu cầu mặt đứng là một phần của đầu bài, chỉ xem ở đây. {briefLink}
+          </p>
+        )}
+      </div>
+
+      <div className="min-w-0 space-y-4">
+        {!shown && (
+          <div className="grid min-h-[360px] place-items-center rounded-lg border border-dashed border-tk-line2 bg-tk-panel p-8 text-center">
+            <div className="max-w-sm">
+              <Building2 className="mx-auto size-10 text-tk-t3" aria-hidden />
+              <p className="mt-3 font-medium">
+                {running ? 'AI đang dựng mặt đứng' : 'Chưa có mặt đứng'}
+              </p>
+              <p className="mt-1 text-fg-subtle">
+                {running
+                  ? 'Tờ mặt đứng hiện ở đây ngay khi dựng xong.'
+                  : blocked
+                    ? 'Chọn một phương án mặt bằng ở bước trước, rồi quay lại đây.'
+                    : 'Xem lại yêu cầu mặt đứng ở cột bên trái (sửa ở đầu bài), rồi bấm «Dựng ý tưởng mặt đứng».'}
               </p>
             </div>
-          )
+          </div>
         )}
-        {start.isError && <p className="mt-3 text-status-overdue">{toUserMessage(start.error)}</p>}
-      </Panel>
 
-      {run.data && (
-        <AiRunProgress
-          run={run.data}
-          onRetry={readOnly ? undefined : () => void onRun()}
-          retryDisabled={start.isPending || !ai.choice.route}
-        />
-      )}
-      {run.data && <AiPlanLive projectId={projectId} run={run.data} />}
-      {run.data && (
-        <AiRunUsage
-          projectId={projectId}
-          purposePrefix="facade"
-          startedAt={run.data.createdAt}
-          endedAt={running ? null : run.data.updatedAt}
-        />
-      )}
-      {failedIssues.length > 0 && (
-        <Panel title="Ý tưởng chưa dùng được">
-          <ul className="list-disc space-y-1 pl-5 text-fg-subtle">
-            {failedIssues.map((issue) => (
-              <li key={issue}>{issue}</li>
-            ))}
-          </ul>
-        </Panel>
-      )}
-
-      {/* Dải các bản đã dựng (20/09/2026). Một lượt chạy mới KHÔNG còn đẩy bản cũ ra khỏi tầm mắt:
+        {/* Dải các bản đã dựng (20/09/2026). Một lượt chạy mới KHÔNG còn đẩy bản cũ ra khỏi tầm mắt:
           artifact vốn bất biến nên bản cũ chưa bao giờ mất, chỉ là màn hình không có đường mở lại. */}
-      {versions.length > 1 && (
-        <Panel title="Các bản mặt đứng đã dựng">
-          <ul className="flex flex-wrap gap-2">
-            {versions.map((version, index) => {
-              const isOpen = version.artifactId === shown;
-              const isHead = version.artifactId === state.facadeArtifactId;
-              const name = `Bản ${versions.length - index}`;
-              return (
-                <li key={version.artifactId} className="flex items-stretch">
-                  <button
-                    type="button"
-                    aria-pressed={isOpen}
-                    onClick={() => setOpen(version.artifactId)}
-                    className={
-                      isOpen
-                        ? 'rounded-l-md border border-tk-bl-line bg-tk-bl-bg px-3 py-2 text-left'
-                        : 'rounded-l-md border border-tk-line bg-tk-panel px-3 py-2 text-left'
-                    }
-                  >
-                    <span className="block font-medium">{name}</span>
-                    <span className="block text-xs text-tk-t3">
-                      {formatDateTime(version.createdAt)}
-                    </span>
-                    {isHead && <Chip tone="gr">Đang hiệu lực</Chip>}
-                  </button>
-                  {!readOnly && (
+        {versions.length > 1 && (
+          <Panel title="Các bản mặt đứng đã dựng">
+            <ul className="flex flex-wrap gap-2">
+              {versions.map((version, index) => {
+                const isOpen = version.artifactId === shown;
+                const isHead = version.artifactId === state.facadeArtifactId;
+                const name = `Mặt đứng ${versions.length - index}`;
+                return (
+                  <li key={version.artifactId} className="flex items-stretch">
                     <button
                       type="button"
-                      onClick={() => setAskHide({ artifactId: version.artifactId, name })}
-                      aria-label={`Xoá ${name} khỏi danh sách`}
-                      title="Xoá khỏi danh sách"
-                      className="rounded-r-md border border-l-0 border-tk-line bg-tk-panel px-2 text-fg-subtle hover:text-status-overdue"
+                      aria-pressed={isOpen}
+                      onClick={() => setOpen(version.artifactId)}
+                      className={
+                        isOpen
+                          ? 'rounded-l-md border border-tk-bl-line bg-tk-bl-bg px-3 py-2 text-left'
+                          : 'rounded-l-md border border-tk-line bg-tk-panel px-3 py-2 text-left'
+                      }
                     >
-                      <X className="h-4 w-4" aria-hidden />
+                      <span className="block font-medium">{name}</span>
+                      <span className="block text-xs text-tk-t3">
+                        {formatDateTime(version.createdAt)}
+                      </span>
+                      {isHead && <Chip tone="gr">Đang hiệu lực</Chip>}
                     </button>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-          {!readOnly && !shownIsHead && (
-            <div className="mt-3 flex flex-wrap items-center gap-3">
-              <Button
-                variant="secondary"
-                onClick={() =>
-                  void choose
-                    .mutateAsync({ projectId, artifactId: shown! })
-                    .then(() => setOpen(null))
-                    .catch(() => undefined)
-                }
-                disabled={choose.isPending}
-              >
-                {choose.isPending ? 'Đang lưu…' : 'Chọn bản này làm bản hiệu lực'}
-              </Button>
-              <p className="text-fg-subtle">
-                Bản hiệu lực là bản mà ảnh mặt đứng và bước Phối cảnh dựng theo.
-              </p>
-            </div>
-          )}
-          {choose.isError && (
-            <p className="mt-2 text-status-overdue">{toUserMessage(choose.error)}</p>
-          )}
-          {hide.isError && <p className="mt-2 text-status-overdue">{toUserMessage(hide.error)}</p>}
-        </Panel>
-      )}
+                    {!readOnly && (
+                      <button
+                        type="button"
+                        onClick={() => setAskHide({ artifactId: version.artifactId, name })}
+                        aria-label={`Xoá ${name} khỏi danh sách`}
+                        title="Xoá khỏi danh sách"
+                        className="rounded-r-md border border-l-0 border-tk-line bg-tk-panel px-2 text-fg-subtle hover:text-status-overdue"
+                      >
+                        <X className="h-4 w-4" aria-hidden />
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+            {!readOnly && !shownIsHead && (
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <Button
+                  variant="secondary"
+                  onClick={() =>
+                    void choose
+                      .mutateAsync({ projectId, artifactId: shown! })
+                      .then(() => setOpen(null))
+                      .catch(() => undefined)
+                  }
+                  disabled={choose.isPending}
+                >
+                  {choose.isPending ? 'Đang lưu…' : 'Chọn bản này làm bản hiệu lực'}
+                </Button>
+              </div>
+            )}
+            {choose.isError && (
+              <p className="mt-2 text-status-overdue">{toUserMessage(choose.error)}</p>
+            )}
+            {hide.isError && (
+              <p className="mt-2 text-status-overdue">{toUserMessage(hide.error)}</p>
+            )}
+          </Panel>
+        )}
 
-      {askHide && (
-        <ConfirmDialog
-          title={`Xoá ${askHide.name} khỏi danh sách?`}
-          confirmLabel="Xoá khỏi danh sách"
-          cancelLabel="Không xoá"
-          onCancel={() => setAskHide(null)}
-          onConfirm={() => {
-            hide.mutate({ projectId, artifactId: askHide.artifactId });
-            if (askHide.artifactId === open) setOpen(null);
-            setAskHide(null);
-          }}
-        >
-          <p>
-            Bản mặt đứng thôi hiện ở đây. Dữ liệu vẫn còn trong hồ sơ, nên tờ vẽ đã tải, ảnh dựng từ
-            nó và nhật ký chi phí của lượt gọi vẫn truy được.
-          </p>
-          {askHide.artifactId === state.facadeArtifactId && (
-            <p className="mt-1">
-              Đây đang là bản hiệu lực — xoá xong bước Phối cảnh cần chọn lại một bản mặt đứng.
+        {askHide && (
+          <ConfirmDialog
+            title={`Xoá ${askHide.name} khỏi danh sách?`}
+            confirmLabel="Xoá khỏi danh sách"
+            cancelLabel="Không xoá"
+            onCancel={() => setAskHide(null)}
+            onConfirm={() => {
+              hide.mutate({ projectId, artifactId: askHide.artifactId });
+              if (askHide.artifactId === open) setOpen(null);
+              setAskHide(null);
+            }}
+          >
+            <p>
+              Bản mặt đứng thôi hiện ở đây. Dữ liệu vẫn còn trong hồ sơ, nên tờ vẽ đã tải, ảnh dựng
+              từ nó và nhật ký chi phí của lượt gọi vẫn truy được.
             </p>
-          )}
-        </ConfirmDialog>
-      )}
+            {askHide.artifactId === state.facadeArtifactId && (
+              <p className="mt-1">
+                Đây đang là bản hiệu lực — xoá xong bước Phối cảnh cần chọn lại một bản mặt đứng.
+              </p>
+            )}
+          </ConfirmDialog>
+        )}
 
-      {shown && (
-        <FacadeDetail
-          projectId={projectId}
-          artifactId={shown}
-          /* Nhãn «phương án mặt bằng cũ» chỉ đo được cho bản HIỆU LỰC: `/state` trả `plan_ref` của
+        {shown && (
+          <FacadeDetail
+            projectId={projectId}
+            artifactId={shown}
+            /* Nhãn «phương án mặt bằng cũ» chỉ đo được cho bản HIỆU LỰC: `/state` trả `plan_ref` của
              riêng bản ấy. Bản cũ mở ra để so thì không khẳng định gì về chuyện đó. */
-          stale={shownIsHead && stale}
-          readOnly={readOnly}
-        />
-      )}
+            stale={shownIsHead && stale}
+            readOnly={readOnly}
+          />
+        )}
+      </div>
     </div>
   );
 }
@@ -326,6 +361,8 @@ function FacadeDetail({
   const sheet = useAiFacadeSheet(projectId, artifactId);
   const dxf = useDownloadAiFacadeDxf();
   const sheetSize = useSheetSize();
+  const [viewing, setViewing] = useState(false);
+  const closeViewer = useCallback(() => setViewing(false), []);
 
   return (
     <>
@@ -395,13 +432,28 @@ function FacadeDetail({
             src={sheet.url}
             alt="Tờ mặt đứng mặt tiền"
             style={sheetWidthStyle(sheetSize)}
-            className="w-full rounded-md border border-tk-line bg-white"
+            onClick={() => setViewing(true)}
+            className="w-full cursor-zoom-in rounded-md border border-tk-line bg-white"
           />
         )}
-        <p className="mt-3 text-fg-subtle">
-          Tờ vẽ dựng từ toạ độ của mặt bằng và của ý tưởng, nên mọi kích thước trên đây đo được. Tờ
-          đơn sắc — vật liệu và màu ghi bằng chữ ở cột khung tên và ở bảng bên trên.
-        </p>
+        {sheet.url && (
+          <button
+            type="button"
+            onClick={() => setViewing(true)}
+            className="mt-2 inline-flex min-h-10 items-center gap-1.5 rounded-sm border border-tk-line px-3 hover:bg-tk-hover sm:min-h-8"
+          >
+            <Maximize2 className="size-4" aria-hidden />
+            Xem toàn màn hình
+          </button>
+        )}
+        {viewing && sheet.url && (
+          <SheetViewer
+            src={sheet.url}
+            alt="Tờ mặt đứng mặt tiền"
+            title="Tờ mặt đứng mặt tiền"
+            onClose={closeViewer}
+          />
+        )}
       </Panel>
 
       {/* Ảnh có vật liệu (Đợt E) — NGAY DƯỚI tờ vector, không thay nó. */}

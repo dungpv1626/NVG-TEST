@@ -1,10 +1,9 @@
 /**
  * Vỏ riêng của Module Thiết kế — thanh trái tối, thanh trên 60px, nền tối.
  *
- * Haan chốt 06/09/2026: vỏ này **chỉ hiện trong `/tk/*`**, ra module khác trở lại vỏ sáng dùng
- * chung. Đó là một quyết định về phạm vi, và phạm vi thì hỏng lặng lẽ: rò ra ngoài thì 11
- * module còn lại đổi màu mà không ai đụng vào chúng; co lại thì Module Thiết kế mất vỏ mà
- * trang vẫn chạy bình thường. Cả hai đều không có lỗi nào để đọc.
+ * Haan chốt 06/09/2026: vỏ này (thanh 60px, không khe hở) **chỉ hiện trong `/tk/*`**. Riêng
+ * chế độ sáng/tối thì 07/10/2026 mở ra TOÀN ứng dụng, ba lựa chọn Sáng · Tối · Theo hệ thống,
+ * mặc định theo hệ thống (`lib/theme.tsx`).
  *
  * Khẳng định trên `data-tk-theme` chứ không trên tên lớp: đó là thứ DUY NHẤT quyết định bảng
  * màu (`tk-theme.css` đè token theo đúng thuộc tính này). Nút đổi nhãn mà thuộc tính không đổi
@@ -62,22 +61,30 @@ function scope(container: HTMLElement) {
 describe('Vỏ riêng của Module Thiết kế', () => {
   beforeEach(() => window.localStorage.clear());
 
-  it('trong /tk/* thì bật bảng màu riêng, mặc định là chế độ tối', () => {
-    const { container } = shell('/tk/du-an/p1');
-    expect(scope(container)).toHaveAttribute('data-tk-theme', 'toi');
-  });
-
-  it('ngoài /tk/* thì KHÔNG có bảng màu riêng và cũng không có nút chuyển', () => {
+  it('mặc định theo hệ thống: hệ điều hành sáng thì bảng màu sáng, ở mọi module', () => {
     const { container } = shell('/crm/khach-hang');
-    expect(scope(container)).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Tối' })).not.toBeInTheDocument();
+    expect(scope(container)).toHaveAttribute('data-tk-theme', 'sang');
+    expect(screen.getByRole('radio', { name: 'Theo hệ thống' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
   });
 
-  it('nút chuyển đổi THẬT thuộc tính điều khiển bảng màu', async () => {
+  it('nút ba ô đổi THẬT thuộc tính điều khiển bảng màu, cả trên <html>', async () => {
     const { container } = shell('/tk/du-an/p1');
-    await userEvent.click(screen.getByRole('button', { name: 'Tối' }));
+    await userEvent.click(screen.getByRole('radio', { name: 'Tối' }));
+    expect(scope(container)).toHaveAttribute('data-tk-theme', 'toi');
+    // Hộp thoại và menu thả xuống dựng ở `document.body`, ngoài khung — chúng đọc từ `<html>`.
+    expect(document.documentElement).toHaveAttribute('data-tk-theme', 'toi');
+    await userEvent.click(screen.getByRole('radio', { name: 'Sáng' }));
     expect(scope(container)).toHaveAttribute('data-tk-theme', 'sang');
-    expect(screen.getByRole('button', { name: 'Sáng' })).toBeInTheDocument();
+    expect(window.localStorage.getItem('nvg.tk.theme')).toBe('sang');
+  });
+
+  it('lựa chọn cũ hai trạng thái vẫn đọc được', () => {
+    window.localStorage.setItem('nvg.tk.theme', 'toi');
+    const { container } = shell('/crm/khach-hang');
+    expect(scope(container)).toHaveAttribute('data-tk-theme', 'toi');
   });
 
   it('chip nhắc phím tắt chỉ hiện trong Thiết kế, nhưng Ctrl+K chạy ở mọi nơi', async () => {

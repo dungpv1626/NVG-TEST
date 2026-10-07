@@ -1,8 +1,8 @@
 /**
  * Tab Tổng quan của Trang dự án thiết kế (bản mẫu §5.5).
  *
- * Đây là bộ điều phối, không tự vẽ gì: dải tiến trình · bốn thẻ công cụ · thông tin dự án ·
- * cột phải · dự án gần đây. Mỗi khối tự nạp dữ liệu của mình và tự bày khung chờ, nên một
+ * Đây là bộ điều phối, không tự vẽ gì: dải tiến trình · năm thẻ công cụ · thông tin dự án ·
+ * cột phải (kèm lối sang AI Design — công cụ hỗ trợ, không thuộc quy trình) · dự án gần đây. Mỗi khối tự nạp dữ liệu của mình và tự bày khung chờ, nên một
  * truy vấn chậm không giữ cả trang lại.
  *
  * Các khối dùng CHUNG khoá truy vấn với màn hình con tương ứng, nên bấm vào một thẻ là mở ra
@@ -15,7 +15,6 @@ import {
   useDisciplineTasks,
   type DesignProjectDetailRecord,
 } from '@/hooks/use-design-projects';
-import { useAiDesignState } from '@/hooks/use-ai-design';
 import { useDesignSurveys } from '@/hooks/use-design-surveys';
 import { useEstimates } from '@/hooks/use-estimates';
 import { ContextColumn } from './context-column';
@@ -23,7 +22,7 @@ import { ProgressTrack } from './progress-track';
 import { ProjectFacts } from './project-facts';
 import { RecentProjects } from './recent-projects';
 import { designSteps } from './steps';
-import { AiDesignCard, BriefCard, ExportCard, SurveyCard } from './tool-cards';
+import { BriefCard, EstimateCard, ExportCard, PresentCard, SurveyCard } from './tool-cards';
 
 export function OverviewPanel({
   project,
@@ -42,13 +41,30 @@ export function OverviewPanel({
       <div className="grid min-w-0 gap-4">
         <ProgressTrack steps={steps} basePath={basePath} />
 
-        {/* Bốn thẻ, lưới hai cột (T58 gỡ hai thẻ bộ giải; ba cột sẽ để một thẻ lẻ hàng). */}
-        <section aria-label="Bộ công cụ thiết kế" className="grid gap-3.5 sm:grid-cols-2">
-          <BriefCard projectId={project.id} basePath={basePath} />
-          <SurveyCard projectId={project.id} basePath={basePath} />
-          <AiDesignCard projectId={project.id} basePath={basePath} />
-          <ExportCard projectId={project.id} basePath={basePath} />
-        </section>
+        {/* Năm thẻ của QUY TRÌNH, đúng thứ tự dải tiến trình, CÙNG cỡ (Haan, 07/10/2026): ba thẻ
+            một hàng, hàng dưới căn giữa. Cao cố định để hai hàng bằng nhau; ô «chưa có» tự kéo
+            đầy. AI Design không ở đây — nó là công cụ hỗ trợ độc lập, nằm ở cột phải. */}
+        <div className="@container">
+          <section
+            aria-label="Bộ công cụ thiết kế"
+            className="flex flex-wrap justify-center gap-3.5"
+          >
+            {[
+              <BriefCard key="dau-bai" projectId={project.id} basePath={basePath} />,
+              <SurveyCard key="khao-sat" projectId={project.id} basePath={basePath} />,
+              <ExportCard key="ho-so" projectId={project.id} basePath={basePath} />,
+              <EstimateCard key="du-toan" projectId={project.id} basePath={basePath} />,
+              <PresentCard key="trinh-khach" projectId={project.id} basePath={basePath} />,
+            ].map((card) => (
+              <div
+                key={card.key}
+                className="w-full @xl:min-h-64 @xl:w-[calc((100%-0.875rem)/2)] @4xl:w-[calc((100%-1.75rem)/3)]"
+              >
+                {card}
+              </div>
+            ))}
+          </section>
+        </div>
 
         <ProjectFacts project={project} readOnly={readOnly} onSaveNotes={onSaveNotes} />
       </div>
@@ -66,7 +82,6 @@ export function OverviewPanel({
 function useDesignStepStates(project: DesignProjectDetailRecord) {
   const briefs = useDesignBriefs(project.id);
   const surveys = useDesignSurveys(project.id);
-  const ai = useAiDesignState(project.id);
   const tasks = useDisciplineTasks(project.id);
   const versions = useDesignVersions(project.id);
   const estimates = useEstimates({ kind: 'design', id: project.id });
@@ -81,8 +96,6 @@ function useDesignStepStates(project: DesignProjectDetailRecord) {
         }
       : null,
     surveyCount: surveys.data?.length ?? 0,
-    aiPlanCount: ai.data?.plans.length ?? 0,
-    aiPlanChosen: Boolean(ai.data?.planHeadArtifactId),
     disciplinePercents: (tasks.data ?? []).map((t) => t.progress_percent),
     // Hai bước cuối đọc từ CHÍNH nguồn mà màn hình con của chúng dùng, không đoán theo `stage`.
     hasEstimate: (estimates.data ?? []).length > 0,

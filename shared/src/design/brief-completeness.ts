@@ -1066,15 +1066,7 @@ function checkCrossAnswers(draft: DesignBriefDraft, config: BriefFormConfig): Br
     }
   }
 
-  // --- Không xem phong thuỷ mà lại xếp phong thuỷ vào ưu tiên ------------------------
-  if (household?.feng_shui === 'khong_xem' && (draft.priorities ?? []).includes('feng_shui')) {
-    out.push({
-      code: 'khong_xem_phong_thuy_ma_uu_tien',
-      severity: 'canh_bao',
-      message: `«${label('household.feng_shui')}» là không xem, nhưng phong thuỷ lại nằm trong «${label('priorities')}». Sửa một trong hai.`,
-      paths: ['household.feng_shui', 'priorities'],
-    });
-  }
+  // (Quy tắc «không xem phong thuỷ mà lại ưu tiên phong thuỷ» gỡ 07/10/2026 cùng câu hỏi phong thuỷ.)
 
   // --- Không có xe nào mà vẫn đòi chỗ để xe --------------------------------------
   // Dòng `garage` là «Chỗ để xe» — cả xe máy. Chỉ nói khi CẢ HAI số xe đã khai là 0: «0 ô tô, 2 xe

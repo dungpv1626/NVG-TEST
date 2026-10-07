@@ -37,7 +37,7 @@ import {
 } from '@/hooks/use-ai-design';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { stampWatermark } from '@/lib/watermark';
-import { Chip, Panel } from '../tk-ui';
+import { Panel } from '../tk-ui';
 import { AiModePicker, useAiChoice } from './ai-model-picker';
 import { AiUsageLine } from './ai-usage';
 import { sheetMaxPx, useSheetSize } from './sheet-size';
@@ -61,6 +61,7 @@ export function PlanSheetImagePanel({
   projectId,
   readOnly,
   disabled,
+  bare = false,
 }: {
   review: AiPlanReview;
   /** Tầng đang xem ở panel tờ vector — chỉ là giá trị KHỞI ĐẦU cho ô chọn tầng của panel này. */
@@ -69,6 +70,8 @@ export function PlanSheetImagePanel({
   readOnly: boolean;
   /** Đang có lượt chạy khác — không cho bấm chồng lên. */
   disabled: boolean;
+  /** Nhúng trong khung gộp «Ảnh mặt bằng có nội thất» (07/10/2026): không tự vẽ khung. */
+  bare?: boolean;
 }): React.ReactElement {
   const image = useAiChoice('image', false, 2, 'plan-sheet');
   const draw = useDrawAiPlanSheetImage();
@@ -143,16 +146,8 @@ export function PlanSheetImagePanel({
       ? undefined
       : `${capPx}px`;
 
-  return (
-    <Panel
-      title="Ảnh mặt bằng có nội thất"
-      aside={<Chip tone="mute">Ảnh trình khách — không thay tờ vẽ</Chip>}
-    >
-      <p className="mb-3 text-fg-subtle">
-        Mô hình ảnh vẽ lại chính mặt bằng ở trên thành một tấm có đồ đạc, vật liệu sàn và cây cối
-        quanh nhà. Tờ vector ở trên vẫn là bản dùng để đo và để xuất DXF.
-      </p>
-
+  const body = (
+    <>
       {!readOnly && (
         <div className="mb-3 flex flex-wrap items-end gap-3">
           <AiModePicker
@@ -165,7 +160,7 @@ export function PlanSheetImagePanel({
             disabled={busy || disabled}
           />
           {review.levels.length > 1 && (
-            <div>
+            <div className="max-w-full overflow-x-auto">
               <p className="mb-1 text-xs font-medium text-fg-subtle">Tầng vẽ</p>
               <SegmentedControl
                 options={review.levels.map((item) => String(item.level))}
@@ -200,22 +195,11 @@ export function PlanSheetImagePanel({
       {!busy && sheet.error && <p className="mb-3 text-status-overdue">{sheet.error}</p>}
 
       {!busy && !sheet.loading && !sheet.error && !sheet.url && (
-        <p className="text-fg-subtle">
-          {levelName} chưa có ảnh nội thất. Chọn model rồi bấm vẽ — mỗi tấm là một lượt gọi tính
-          tiền.
-        </p>
+        <p className="text-fg-subtle">{levelName} chưa có ảnh nội thất.</p>
       )}
 
       {!busy && stamped && (
         <>
-          <div className="mb-2 flex flex-wrap items-center gap-3">
-            {natural && (
-              <span className="text-xs text-fg-subtle">
-                Ảnh gốc {natural.width} × {natural.height} điểm ảnh — khung xem không phóng quá cỡ
-                đó, nên chữ trên tờ không nhoè. Ảnh tải về luôn là cỡ gốc.
-              </span>
-            )}
-          </div>
           <img
             src={stamped.url}
             alt={`Ảnh mặt bằng có nội thất — ${levelName}`}
@@ -230,7 +214,6 @@ export function PlanSheetImagePanel({
           />
           {/* Lớp nhãn thứ hai, bằng CHỮ. Nó ở lại kể cả khi canvas hỏng, và nó nói điều mà một
               dòng đóng dấu ngắn không nói đủ: tờ này KHÔNG ĐO ĐƯỢC. */}
-          <p className="mt-3 text-status-overdue">{AI_DISCLAIMERS.aiSheetImage}</p>
           {!stamped.stamped && (
             <p className="mt-1 text-status-overdue">
               Trình duyệt không in được nhãn lên ảnh. Tấm này chưa có dấu — đừng gửi đi khi chưa ghi
@@ -266,6 +249,8 @@ export function PlanSheetImagePanel({
           </p>
         </ConfirmDialog>
       )}
-    </Panel>
+    </>
   );
+
+  return bare ? <div>{body}</div> : <Panel title="Ảnh mặt bằng có nội thất">{body}</Panel>;
 }

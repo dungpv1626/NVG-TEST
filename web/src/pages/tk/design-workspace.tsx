@@ -39,7 +39,7 @@ import { Breadcrumb, type Crumb } from '@/components/layout/breadcrumb';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
 import { useDesignVersionSkew, VERSION_SKEW_MESSAGE } from '@/lib/design-version';
 import { cn } from '@/lib/utils';
-import { useTkTheme } from './tk-theme';
+import { useTheme } from '@/lib/theme';
 
 export interface WorkspaceTab {
   /** Định danh trong URL (`?tab=dau-bai`) — tiếng Việt không dấu. */
@@ -56,7 +56,8 @@ export interface DesignWorkspaceProps {
   breadcrumbs: Crumb[];
   title: string;
   code: string;
-  status: StatusGroup;
+  /** Trạng thái nghiệp vụ của hồ sơ. Bỏ trống ở trang AI Design — công cụ hỗ trợ không mang bước quy trình. */
+  status?: StatusGroup;
   /** Dòng thông tin dưới tên, phân cách bằng vạch dọc (bản mẫu §5.4). Bỏ qua phần tử rỗng. */
   meta: ReactNode[];
   deadline?: string | null;
@@ -70,6 +71,11 @@ export interface DesignWorkspaceProps {
   historyContent?: ReactNode;
   /** Hồ sơ liên quan ở module khác (Webapp Flow 5.1). */
   related?: RelatedGroup[];
+  /**
+   * Đầu trang GỌN (07/10/2026, trang AI Design): tên cỡ nhỏ, mã và dòng thông tin cùng hàng, bỏ
+   * thanh tab khi chỉ có một tab — nhường chiều cao cho bản vẽ.
+   */
+  compact?: boolean;
 }
 
 /**
@@ -93,9 +99,10 @@ function WorkspaceBody({
   primaryTabIds,
   historyContent,
   related = [],
+  compact = false,
 }: DesignWorkspaceProps): React.ReactElement {
   const location = useLocation();
-  const { theme } = useTkTheme();
+  const { theme } = useTheme();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const allTabs = useMemo<WorkspaceTab[]>(
@@ -190,17 +197,34 @@ function WorkspaceBody({
           Bọc ngoài đã có `-m-4 lg:-m-6` để nền tràn kín; đây là vế còn lại của cùng phép bù đó.
           Sửa đệm của `<main>` thì phải sửa cả ba chỗ — có test canh trong `tk-chrome.test.tsx`.
         */}
-        <header className="sticky -top-4 z-10 border-b border-tk-line bg-tk-bg px-4 pt-4 lg:-top-6 lg:px-6 lg:pt-6">
+        <header
+          className={cn(
+            'sticky -top-4 z-10 border-b border-tk-line bg-tk-bg px-4 pt-4 lg:-top-6 lg:px-6',
+            compact ? 'pb-3 lg:pt-5' : 'lg:pt-6',
+          )}
+        >
           <Breadcrumb items={crumbs} />
 
-          <div className="mt-3 flex flex-wrap items-end justify-between gap-x-5 gap-y-3">
-            <div className="min-w-0">
+          <div
+            className={cn(
+              'flex flex-wrap items-end justify-between gap-x-5 gap-y-3',
+              compact ? 'mt-1.5' : 'mt-3',
+            )}
+          >
+            <div className={cn('min-w-0', compact && 'flex flex-wrap items-baseline gap-x-4')}>
               <div className="flex flex-wrap items-end gap-x-5 gap-y-2">
-                <h1 className="truncate text-page-title font-semibold tracking-tight">{title}</h1>
+                <h1
+                  className={cn(
+                    'truncate font-semibold tracking-tight',
+                    compact ? 'text-lg' : 'text-page-title',
+                  )}
+                >
+                  {title}
+                </h1>
                 <div className="flex items-center gap-2">
                   {/* Trạng thái nghiệp vụ dùng nhãn CHUNG: sáu màu trạng thái là hàng rào
                         cứng nhất của hệ màu, không có bản riêng cho module nào. */}
-                  <StatusLozenge status={status} />
+                  {status && <StatusLozenge status={status} />}
                   {countdown && (
                     // Đếm ngược KHÔNG phải một trạng thái thứ bảy — nó là thời gian còn lại,
                     // và nhãn trạng thái thật đứng ngay bên trái nên không đọc nhầm được.
@@ -218,7 +242,12 @@ function WorkspaceBody({
                 </div>
               </div>
 
-              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-tk-t2">
+              <div
+                className={cn(
+                  'flex flex-wrap items-center gap-3 text-xs text-tk-t2',
+                  !compact && 'mt-2',
+                )}
+              >
                 <span className="font-mono text-tk-t3">{code}</span>
                 {meta.filter(Boolean).map((item, index) => (
                   // Khoá theo vị trí: các mảnh này là chỗ cố định của header, không phải
@@ -235,7 +264,7 @@ function WorkspaceBody({
           </div>
 
           {/* Thanh tab chỉ thuộc cấp một. Ở màn hình con thì không hiện — xem chú thích đầu tệp. */}
-          {!sub && (
+          {!sub && !(compact && primary.length === 1) && (
             <nav
               role="tablist"
               aria-label="Nội dung hồ sơ thiết kế"
@@ -285,16 +314,14 @@ function WorkspaceBody({
               tiên khi muốn đi tiếp. Nay là một nút có viền và nền, cỡ chữ thân bài.
             */}
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <button type="button" onClick={() => selectTab('tong-quan')} className={NAV_BUTTON}>
-                <ArrowLeft className="size-5" aria-hidden />
-                Tổng quan
-              </button>
+              <OverviewButton onClick={() => selectTab('tong-quan')} />
               <StepNav
                 label="Chuyển bước"
                 prev={prevStep}
                 next={nextStep}
+                index={stepIndex}
+                total={steps.length}
                 onSelect={selectTab}
-                compact
               />
             </div>
             <h2 id="tieu-de-man-hinh-con" className="mt-3 text-lg font-semibold">
@@ -330,26 +357,17 @@ function WorkspaceBody({
                 </aside>
               )}
             </div>
-            {/* Nhắc lại ở cuối: màn hình đầu bài dài vài màn hình, và điểm người dùng muốn đi
-                tiếp là lúc vừa điền xong ô cuối — không phải lúc đang ở đầu trang. */}
-            {(prevStep || nextStep) && (
-              <div className="mt-7 border-t border-tk-line pt-5">
-                <StepNav
-                  label="Chuyển bước — cuối trang"
-                  prev={prevStep}
-                  next={nextStep}
-                  onSelect={selectTab}
-                />
-              </div>
-            )}
+            {/* Cặp nút ở CUỐI trang đã gỡ (Haan, 07/10/2026: «các nút điều hướng đang thừa») — trùng
+                với thanh ở đầu trang; biểu mẫu đầu bài có sẵn thanh «Tiếp» dính đáy riêng. */}
           </section>
         ) : (
           <div
             role="tabpanel"
             id={`panel-${shown?.id ?? ''}`}
-            aria-labelledby={`tab-${shown?.id ?? ''}`}
+            aria-labelledby={compact && primary.length === 1 ? undefined : `tab-${shown?.id ?? ''}`}
+            aria-label={compact && primary.length === 1 ? shown?.label : undefined}
             tabIndex={0}
-            className="px-4 pt-5 pb-7 lg:px-6"
+            className={cn('px-4 pb-7 lg:px-6', compact ? 'pt-4' : 'pt-5')}
           >
             {shown?.content}
           </div>
@@ -390,57 +408,113 @@ function VersionSkewNotice(): React.ReactElement | null {
   );
 }
 
-/** Kiểu nút điều hướng của màn hình con — có viền và nền, cỡ chữ thân bài (xem chú thích nút «Tổng quan»). */
-const NAV_BUTTON =
-  'inline-flex h-10 min-w-0 items-center gap-2 rounded-full border border-tk-line2 bg-tk-card px-4 font-medium text-tk-tx transition-colors duration-(--motion-fast) ease-(--ease-out) hover:border-tk-acc hover:bg-tk-hover hover:text-tk-acc';
-
 /**
- * Cặp nút «bước trước / bước tiếp theo» của màn hình con.
+ * Thanh điều hướng của màn hình con (Haan, 07/10/2026: «hiện đại và mang tính công nghệ»).
  *
- * Viền, không tô nền xanh: màn hình con đã có hành động chính của riêng nó (xác nhận đầu bài,
- * chốt chương trình…) và mỗi màn hình chỉ được MỘT nút chính (CGD 6.3). Bản `compact` ở đầu
- * trang chỉ ghi tên bước trên màn hình rộng — trên điện thoại nó nằm chung dòng với «Tổng quan».
+ * Trái: «Tổng quan» — nút trong suốt, mũi tên nằm trong một ô vuông bo góc, trượt sang trái khi
+ * rê chuột. Phải: MỘT khối điều khiển gộp ba phần — bước trước · bộ đếm «Bước n/m» kèm vạch tiến
+ * trình · bước tiếp theo. Bước tiếp theo tô màu nhấn nhạt (không phải nút chính tô đặc: màn hình
+ * con đã có hành động chính riêng, mỗi màn hình chỉ MỘT nút chính — CGD 6.3).
+ *
+ * Mỗi nút hai dòng: dòng chú nhỏ («Bước trước» / «Tiếp theo») và tên bước — mắt đọc tên bước
+ * trước, không phải đọc hết cả câu «Bước tiếp theo: …». Trên điện thoại chỉ còn biểu tượng cho
+ * bước trước và bộ đếm ẩn đi; tên bước tiếp theo vẫn hiện.
  */
+function OverviewButton({ onClick }: { onClick: () => void }): React.ReactElement {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group inline-flex h-11 items-center gap-2.5 rounded-xl pr-3.5 pl-1.5 font-medium text-tk-tx transition-colors duration-(--motion-fast) ease-(--ease-out) hover:bg-tk-hover"
+    >
+      <span className="grid size-8 place-items-center rounded-lg border border-tk-line2 bg-tk-card shadow-xs transition-[transform,border-color,color] duration-(--motion-fast) ease-(--ease-out) group-hover:-translate-x-0.5 group-hover:border-tk-acc group-hover:text-tk-acc">
+        <ArrowLeft className="size-4" aria-hidden />
+      </span>
+      Tổng quan
+    </button>
+  );
+}
+
+const PAGER_BUTTON =
+  'group flex min-h-11 min-w-0 items-center gap-2.5 rounded-xl px-3 py-1.5 text-left transition-colors duration-(--motion-fast) ease-(--ease-out) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tk-acc';
+
 function StepNav({
   label,
   prev,
   next,
+  index,
+  total,
   onSelect,
-  compact = false,
 }: {
   label: string;
   prev: WorkspaceTab | undefined;
   next: WorkspaceTab | undefined;
+  /** Vị trí bước đang xem, đếm từ 0. */
+  index: number;
+  total: number;
   onSelect: (id: string) => void;
-  compact?: boolean;
 }): React.ReactElement | null {
   if (!prev && !next) return null;
   return (
-    <nav aria-label={label} className="flex min-w-0 flex-wrap items-center gap-2">
+    <nav
+      aria-label={label}
+      className="flex min-w-0 items-stretch gap-1 rounded-2xl border border-tk-line2 bg-tk-card/80 p-1 shadow-xs backdrop-blur"
+    >
       {prev && (
         <button
           type="button"
           onClick={() => onSelect(prev.id)}
-          className={NAV_BUTTON}
+          className={cn(PAGER_BUTTON, 'text-tk-tx hover:bg-tk-hover')}
           aria-label={`Bước trước: ${prev.label}`}
         >
-          <ArrowLeft className="size-5 shrink-0" aria-hidden />
-          <span className={cn('truncate', compact && 'hidden sm:inline')}>
-            {compact ? prev.label : `Bước trước: ${prev.label}`}
+          <ArrowLeft
+            className="size-4 shrink-0 text-tk-t3 transition-transform duration-(--motion-fast) group-hover:-translate-x-0.5 group-hover:text-tk-acc"
+            aria-hidden
+          />
+          <span className="hidden min-w-0 flex-col leading-tight sm:flex">
+            <span className="text-xs text-tk-t3">Bước trước</span>
+            <span className="truncate text-sm font-medium">{prev.label}</span>
           </span>
         </button>
       )}
+
+      {total > 1 && (
+        <span className="hidden flex-col items-center justify-center gap-1.5 border-x border-tk-line px-3 md:flex">
+          <span className="font-mono text-xs text-tk-t3 tabular-nums">
+            Bước <span className="font-semibold text-tk-tx">{index + 1}</span>/{total}
+          </span>
+          <span className="flex items-center gap-1" aria-hidden>
+            {Array.from({ length: total }, (_, i) => (
+              <span
+                key={i}
+                className={cn(
+                  'h-1 rounded-full transition-[width,background-color] duration-(--motion-base)',
+                  i === index
+                    ? 'w-4 bg-tk-acc'
+                    : i < index
+                      ? 'w-1.5 bg-tk-acc/50'
+                      : 'w-1.5 bg-tk-line2',
+                )}
+              />
+            ))}
+          </span>
+        </span>
+      )}
+
       {next && (
         <button
           type="button"
           onClick={() => onSelect(next.id)}
-          className={cn(NAV_BUTTON, !compact && 'ml-auto')}
+          className={cn(PAGER_BUTTON, 'bg-tk-acc-dim text-tk-gr-fg hover:bg-tk-gr-tile')}
           aria-label={`Bước tiếp theo: ${next.label}`}
         >
-          <span className="truncate">
-            {compact ? `Tiếp theo: ${next.label}` : `Bước tiếp theo: ${next.label}`}
+          <span className="flex min-w-0 flex-col leading-tight">
+            <span className="text-xs opacity-80">Tiếp theo</span>
+            <span className="truncate text-sm font-semibold">{next.label}</span>
           </span>
-          <ArrowRight className="size-5 shrink-0" aria-hidden />
+          <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-tk-acc text-tk-card transition-transform duration-(--motion-fast) group-hover:translate-x-0.5">
+            <ArrowRight className="size-4" aria-hidden />
+          </span>
         </button>
       )}
     </nav>

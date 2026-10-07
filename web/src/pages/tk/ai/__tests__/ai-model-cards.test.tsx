@@ -66,11 +66,26 @@ function show(options: AiModelOption[], value: string | null, onChange = vi.fn()
 }
 
 describe('Ô chọn model dạng thẻ', () => {
-  it('thu gọn sẵn, nhưng tên model THẬT và nhà cung cấp vẫn đọc được', () => {
+  it('thu gọn là MỘT nút dạng viên; tên model thật vẫn đọc được qua `title` (07/10/2026)', () => {
     show([OPENAI, OPENAI_FAST], 'ai_text_openai');
-    expect(screen.getByText(/OpenAI · gpt-5$/)).toBeInTheDocument();
-    // Danh sách chưa mở: không thẻ nào trong DOM.
+    const trigger = screen.getByRole('button', { name: /Đổi model/ });
+    expect(trigger).toHaveAttribute('title', 'OpenAI · gpt-5');
+    // Danh sách chưa mở: không bảng nổi, không thẻ nào trong DOM.
+    expect(screen.queryByRole('dialog')).toBeNull();
     expect(screen.queryByRole('radio')).toBeNull();
+  });
+
+  it('bảng nổi đóng khi nhấn Esc hoặc bấm ra ngoài', async () => {
+    show([OPENAI, OPENAI_FAST], 'ai_text_openai');
+    await userEvent.click(screen.getByRole('button', { name: /Đổi model/ }));
+    expect(
+      screen.getByRole('dialog', { name: 'Chọn model AI và nhà cung cấp' }),
+    ).toBeInTheDocument();
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: /Đổi model/ }));
+    await userEvent.click(document.body);
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('mở ra: thẻ của nhà cung cấp đang chọn, có số lượng, giá và câu mô tả', async () => {

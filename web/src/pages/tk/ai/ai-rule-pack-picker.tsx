@@ -5,7 +5,6 @@
  * (19/09/2026): mặt bằng đọc đầu bài + khảo sát, không đọc chương trình không gian (T45).
  */
 
-import { AI_DISCLAIMERS } from '@nvg/shared/design';
 import type { AiRulePackChoice } from '@/hooks/use-ai-design';
 
 /**
@@ -24,7 +23,6 @@ export function RulePackPicker({
   onChange: (next: AiRulePackChoice) => void;
   disabled?: boolean;
 }): React.ReactElement {
-  const none = !value.experience;
   return (
     <fieldset className="rounded-md border border-tk-line p-3">
       <legend className="px-1 font-medium">Quy tắc áp cho lượt này</legend>
@@ -49,12 +47,6 @@ export function RulePackPicker({
           </span>
         </span>
       </label>
-      <p className="mt-2 text-fg-subtle">
-        {none
-          ? 'Chưa chọn gói nào: mô hình thiết kế tự do, và sẽ không có cảnh báo nào.'
-          : 'Gói đã chọn vừa được gửi cho mô hình để làm theo, vừa dùng để đối chiếu kết quả.'}
-      </p>
-      <p className="mt-2 font-medium">{AI_DISCLAIMERS.noCodeCheck}</p>
     </fieldset>
   );
 }

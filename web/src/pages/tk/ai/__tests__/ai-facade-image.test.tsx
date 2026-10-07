@@ -88,13 +88,15 @@ describe('Ảnh mặt đứng có vật liệu', () => {
     expect(screen.getByText(/dựng lại ý tưởng mặt đứng trước khi vẽ ảnh/)).toBeInTheDocument();
   });
 
-  it('tấm đã vẽ luôn kèm nhãn bằng chữ trong trang, và tải về là bản có nhãn', async () => {
+  it('tấm đã vẽ: tải về là bản có nhãn in trên ảnh, không còn câu chú thích trong trang', async () => {
     state.url = 'blob:facade-image';
     renderWithApp(
       <FacadeImagePanel projectId="p1" artifactId={FACADE} readOnly={false} stale={false} />,
     );
     expect(await screen.findByAltText('Ảnh mặt đứng có vật liệu')).toBeInTheDocument();
-    expect(screen.getByText(AI_DISCLAIMERS.aiFacadeImage)).toBeInTheDocument();
+    // 07/10/2026 Haan: bỏ các đoạn chú thích (giá, chi phí, riêng tư, «ảnh AI không đo được»)
+    // khỏi màn hình. Dấu in TRÊN ảnh vẫn giữ.
+    expect(screen.queryByText(AI_DISCLAIMERS.aiFacadeImage)).toBeNull();
     expect(screen.getByRole('link', { name: 'Tải ảnh có nhãn' })).toHaveAttribute(
       'href',
       'blob:facade-image',

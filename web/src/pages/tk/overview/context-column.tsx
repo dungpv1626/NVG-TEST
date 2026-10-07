@@ -10,7 +10,6 @@ import { Link } from 'react-router-dom';
 import { DESIGN_DISCIPLINE_LABELS, formatDate, formatDateTime } from '@nvg/shared';
 import { RelatedGroups, type RelatedGroup } from '@/components/entity/entity-detail';
 import { Skeleton } from '@/components/ui/states';
-import { useAiDesignState } from '@/hooks/use-ai-design';
 import { useContractForSource } from '@/hooks/use-contracts';
 import {
   useChangeRequests,
@@ -22,11 +21,11 @@ import {
 } from '@/hooks/use-design-projects';
 import { cn } from '@/lib/utils';
 import { recentActivity } from './activity';
+import { AiDesignSupportPanel } from './tool-cards';
 import { GroupLabel, NotYet, Panel } from '../tk-ui';
 
 const DOT: Record<string, string> = {
   brief: 'bg-tk-bl-fg',
-  plan: 'bg-tk-pu-solid',
   version: 'bg-tk-acc',
   change: 'bg-tk-am-fg',
 };
@@ -46,6 +45,9 @@ export function ContextColumn({
 }): React.ReactElement {
   return (
     <div className="grid content-start gap-3">
+      {/* Đầu cột cho dễ thấy (Haan, 07/10/2026). Khối riêng, màu riêng, tách khỏi các khối của
+          hồ sơ: AI Design là công cụ hỗ trợ, không thuộc quy trình. */}
+      <AiDesignSupportPanel projectId={project.id} />
       <RelatedPanel project={project} />
       <PeoplePanel project={project} />
       <ActivityPanel project={project} />
@@ -158,14 +160,12 @@ function ActivityPanel({ project }: { project: DesignProjectDetailRecord }) {
   const briefs = useDesignBriefs(project.id);
   const versions = useDesignVersions(project.id);
   const changes = useChangeRequests(project.id);
-  const ai = useAiDesignState(project.id);
 
   const loading = briefs.isLoading || versions.isLoading || changes.isLoading;
 
   const items = recentActivity(
     {
       briefs: briefs.data ?? [],
-      aiPlans: ai.data?.plans ?? [],
       versions: versions.data ?? [],
       changes: changes.data ?? [],
     },

@@ -93,24 +93,25 @@ describe('Vỏ Trang dự án thiết kế', () => {
 
   it('màn hình con có nút sang bước tiếp theo — không phải quay ra Tổng quan', async () => {
     shell('/tk/du-an/p?tab=dau-bai');
-    // Bước đầu: không có bước trước. Nút hiện ở đầu trang VÀ cuối trang (biểu mẫu dài).
+    // Bước đầu: không có bước trước. Chỉ MỘT cặp nút, ở đầu trang (Haan 07/10/2026: cặp ở cuối
+    // trang trùng lặp, đã gỡ).
     expect(screen.queryByRole('button', { name: /Bước trước/ })).toBeNull();
     const nexts = screen.getAllByRole('button', { name: 'Bước tiếp theo: Khảo sát hiện trạng' });
-    expect(nexts).toHaveLength(2);
+    expect(nexts).toHaveLength(1);
 
-    await userEvent.click(nexts[1]!);
+    await userEvent.click(nexts[0]!);
     expect(screen.getByTestId('duong-dan-hien-tai')).toHaveTextContent('/tk/du-an/p?tab=khao-sat');
     expect(screen.getByText('Biên bản khảo sát')).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'Bước trước: Đầu bài thiết kế' })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'Bước trước: Đầu bài thiết kế' })).toHaveLength(1);
     expect(
       screen.getAllByRole('button', { name: 'Bước tiếp theo: Chương trình không gian' }),
-    ).toHaveLength(2);
+    ).toHaveLength(1);
   });
 
   it('bước cuối không có nút đi tiếp', () => {
     shell('/tk/du-an/p?tab=chuong-trinh-khong-gian');
     expect(screen.queryByRole('button', { name: /Bước tiếp theo/ })).toBeNull();
-    expect(screen.getAllByRole('button', { name: /Bước trước: Khảo sát/ })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: /Bước trước: Khảo sát/ })).toHaveLength(1);
   });
 
   it('tab cấp một không có dải chuyển bước', () => {
@@ -155,10 +156,10 @@ describe('Vỏ Trang dự án thiết kế', () => {
   it('tự mang bảng màu riêng kể cả khi dựng ngoài khung ứng dụng', () => {
     // Nút chuyển sáng/tối nằm ở thanh trên của khung (`app-shell`), không ở đây — kiểm ở
     // `layout/__tests__/tk-chrome.test.tsx`. Nhưng vỏ này vẫn phải tự đặt `data-tk-theme` cho
-    // chính nó: đó là thứ DUY NHẤT quyết định bảng màu, và không có nó thì một màn hình dựng
-    // riêng lẻ ra nền tối với chữ của chế độ sáng.
+    // chính nó: đó là thứ DUY NHẤT quyết định bảng màu. Ngoài khung không có bộ cung cấp, nên
+    // nó nhận giá trị mặc định của ngữ cảnh — sáng.
     const { container } = shell();
-    expect(container.querySelector('[data-tk-theme]')).toHaveAttribute('data-tk-theme', 'toi');
+    expect(container.querySelector('[data-tk-theme]')).toHaveAttribute('data-tk-theme', 'sang');
   });
 
   it('trạng thái và hạn hiện bằng CHỮ, không chỉ bằng màu (CGD 6.8)', () => {

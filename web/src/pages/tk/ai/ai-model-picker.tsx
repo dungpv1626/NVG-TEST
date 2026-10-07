@@ -10,6 +10,8 @@
  * lấy từ máy chủ (`design_setting`). `localStorage` có thể ném (trình duyệt chặn) — bọc try.
  */
 
+import { cn } from '@/lib/utils';
+import { ChevronDown } from 'lucide-react';
 import { useEffect, useId, useMemo, useState } from 'react';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { ModelChooser } from './ai-model-cards';
@@ -197,30 +199,42 @@ export function ReasoningEffortPicker({
   const noteId = useId();
   const supported = option?.supportsEffort !== false;
   return (
-    <div className="min-w-40">
+    <div>
       <label htmlFor={id} className="mb-1 block text-xs font-medium text-fg-subtle">
         Mức suy nghĩ
       </label>
-      <select
-        id={id}
-        aria-describedby={noteId}
-        className="min-h-10 w-full rounded border border-border bg-surface px-2"
-        value={supported ? (value ?? '') : ''}
-        disabled={disabled || !supported}
-        onChange={(e) => onChange((e.target.value || null) as ReasoningEffort | null)}
-      >
-        <option value="">Mặc định của model</option>
-        {(Object.keys(EFFORT_LABEL) as ReasoningEffort[]).map((effort) => (
-          <option key={effort} value={effort}>
-            {EFFORT_LABEL[effort]}
-          </option>
-        ))}
-      </select>
-      <p id={noteId} className="mt-1 text-xs text-fg-subtle">
-        {supported
-          ? 'Nghĩ càng nhiều càng chậm và tốn token hơn.'
-          : 'Model này chưa nhận tuỳ chọn mức suy nghĩ.'}
-      </p>
+      {/* Dạng viên, cùng khuôn với nút chọn model đứng bên trái (07/10/2026). Vẫn là `<select>` gốc:
+          danh sách mở ra là của hệ điều hành, chữ trong đó là chữ của ta — không có chữ tự sinh. */}
+      <span className="relative inline-flex">
+        <select
+          id={id}
+          aria-describedby={noteId}
+          className={cn(
+            'min-h-10 cursor-pointer appearance-none rounded-full border border-tk-line2 bg-tk-card py-1.5 pr-8 pl-3 font-semibold sm:min-h-9',
+            'transition-colors duration-(--motion-fast) ease-(--ease-out) hover:bg-tk-hover',
+            'disabled:cursor-not-allowed disabled:opacity-60',
+          )}
+          value={supported ? (value ?? '') : ''}
+          disabled={disabled || !supported}
+          onChange={(e) => onChange((e.target.value || null) as ReasoningEffort | null)}
+        >
+          <option value="">Mặc định</option>
+          {(Object.keys(EFFORT_LABEL) as ReasoningEffort[]).map((effort) => (
+            <option key={effort} value={effort}>
+              {EFFORT_LABEL[effort]}
+            </option>
+          ))}
+        </select>
+        <ChevronDown
+          className="pointer-events-none absolute top-1/2 right-2.5 size-4 -translate-y-1/2 text-tk-t2"
+          aria-hidden
+        />
+      </span>
+      {!supported && (
+        <p id={noteId} className="mt-1 text-xs text-fg-subtle">
+          Model này chưa nhận tuỳ chọn mức suy nghĩ.
+        </p>
+      )}
     </div>
   );
 }

@@ -6,8 +6,11 @@
  * panel rỗng vĩnh viễn, và không có gì báo cho biết vì sao.
  *
  * Thay vào đó ghép từ chính những bản ghi kiến trúc sư đã đọc được ở các tab khác: phiên bản
- * bản vẽ đã phát hành, yêu cầu thay đổi, đầu bài, và phương án mặt bằng AI Design đã lưu. Bốn nguồn này đã có
- * trong bộ nhớ đệm khi mở màn hình, nên panel không tốn thêm lượt gọi nào.
+ * bản vẽ đã phát hành, yêu cầu thay đổi và đầu bài. Ba nguồn này đã có trong bộ nhớ đệm khi mở
+ * màn hình, nên panel không tốn thêm lượt gọi nào.
+ *
+ * Bản phác của AI Design KHÔNG vào đây (Haan, 07/10/2026): AI Design là công cụ hỗ trợ độc lập,
+ * bản phác của nó không phải hoạt động của hồ sơ thiết kế.
  *
  * Hàm thuần để kiểm thử được: không hook, không ngày giờ hiện tại.
  */
@@ -19,7 +22,7 @@ export interface ActivityItem {
   /** Ai làm và lúc nào. Không rõ người thì bỏ vế đó, không ghi "Không rõ". */
   meta: string;
   at: string;
-  tone: 'brief' | 'plan' | 'version' | 'change';
+  tone: 'brief' | 'version' | 'change';
 }
 
 export interface ActivityInput {
@@ -29,7 +32,6 @@ export interface ActivityInput {
     created_at: string;
     author: { full_name: string } | null;
   }[];
-  aiPlans: { artifactId: string; createdAt: string }[];
   versions: {
     id: string;
     title: string;
@@ -63,16 +65,6 @@ export function recentActivity(
       meta: stamp(b.author?.full_name ?? null, b.created_at, formatWhen),
       at: b.created_at,
       tone: 'brief',
-    });
-  }
-  for (const p of input.aiPlans) {
-    items.push({
-      id: `plan-${p.artifactId}`,
-      text: 'Lưu một phương án mặt bằng',
-      // Phương án do AI dựng, không gắn với một người — nói đúng như vậy.
-      meta: stamp('AI Design', p.createdAt, formatWhen),
-      at: p.createdAt,
-      tone: 'plan',
     });
   }
   for (const v of input.versions) {

@@ -164,6 +164,22 @@ export function useDownloadAiCallPrompt() {
 }
 
 /**
+ * Nguyên văn lời gọi của một lượt, dạng chữ — cho báo cáo lượt chạy (07/10/2026). `null` khi lượt
+ * ấy không có bản ghi (lượt trước 13/09/2026) hay máy chủ không trả được: báo cáo ghi «không có»,
+ * không làm hỏng cả tệp vì một lượt.
+ */
+export async function fetchAiCallPrompt(projectId: string, callId: string): Promise<string | null> {
+  try {
+    const response = await designApiFile(
+      `/design/ai/calls/${encodeURIComponent(projectId)}/${encodeURIComponent(callId)}/prompt`,
+    );
+    return await response.text();
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Tải cả phương án mặt bằng dạng DXF (mọi tầng trong một tệp, mm) — để người vẽ dựng tiếp trên CAD.
  * Xuất một chiều: không có đường nạp ngược tệp đã sửa (Q-45a).
  */

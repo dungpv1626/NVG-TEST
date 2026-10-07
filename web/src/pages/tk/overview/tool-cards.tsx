@@ -1,5 +1,6 @@
 /**
- * Bốn thẻ Bộ công cụ thiết kế (bản mẫu §5.5b). Mỗi thẻ là cửa vào một màn hình con và bày sẵn
+ * Năm thẻ Bộ công cụ thiết kế (bản mẫu §5.5b) — một thẻ cho mỗi bước của dải tiến trình: Đầu bài,
+ * Khảo sát, Hồ sơ kỹ thuật, Dự toán, Trình khách (07/10/2026). Mỗi thẻ là cửa vào một màn hình con và bày sẵn
  * con số quan trọng nhất của bước đó, để đọc dải thẻ là biết ngay còn thiếu gì.
  *
  * Mọi con số ở đây đều lấy từ truy vấn thật. Chỗ nào chưa có dữ liệu thì nói "chưa có", KHÔNG
@@ -9,32 +10,62 @@
  * đã nằm sẵn trong bộ nhớ đệm, không phải chờ lần nữa.
  */
 
-import { ClipboardList, FileStack, Scan, Sparkles } from 'lucide-react';
-import { DESIGN_DISCIPLINE_LABELS, formatNumber, TECHNICAL_DISCIPLINES } from '@nvg/shared';
+import { Link } from 'react-router-dom';
+import {
+  ArrowRight,
+  Calculator,
+  ClipboardList,
+  FileStack,
+  Presentation,
+  Scan,
+  Sparkles,
+} from 'lucide-react';
+import {
+  DESIGN_DISCIPLINE_LABELS,
+  formatDate,
+  formatNumber,
+  TECHNICAL_DISCIPLINES,
+} from '@nvg/shared';
 import { BUILDING_TYPE_LABEL, STYLE_LABEL } from '@nvg/shared/design';
 import { Skeleton } from '@/components/ui/states';
+import { StatusLozenge } from '@/components/ui/status-lozenge';
+import { useEstimates } from '@/hooks/use-estimates';
 import { useDesignSurveys } from '@/hooks/use-design-surveys';
 import { useSurveyPhotos } from '@/hooks/use-survey-photos';
 import {
   useDesignBriefs,
   useDesignSync,
+  useDesignVersions,
   useDisciplineTasks,
   type DesignBriefRecord,
 } from '@/hooks/use-design-projects';
 import { useAiDesignState } from '@/hooks/use-ai-design';
-import { CardAction, Chip, FAMILY, NotYet, ToolCard } from '../tk-ui';
+import { Chip, FAMILY, NotYet, ToolCard } from '../tk-ui';
 import { cn } from '@/lib/utils';
 
 const ICON = 'size-[18px]';
 
 function Deep({
   family,
+  empty = false,
   children,
 }: {
   family: keyof typeof FAMILY;
+  /** Ô «chưa có»: kéo đầy phần thân và căn giữa, để năm thẻ cao bằng nhau vẫn cân. */
+  empty?: boolean;
   children: React.ReactNode;
 }): React.ReactElement {
-  return <div className={cn('rounded-md p-3 text-xs', FAMILY[family].deep)}>{children}</div>;
+  return (
+    <div
+      className={cn(
+        'rounded-md p-3 text-xs',
+        FAMILY[family].deep,
+        empty && 'grid flex-1 place-items-center text-center',
+      )}
+    >
+      {children}
+    </div>
+  );
 }
 
 /** Một dòng chờ, cao đúng bằng phần thân thẻ để lưới không nhảy khi dữ liệu về. */
@@ -70,7 +101,7 @@ export function BriefCard({
 function BriefBody({ brief }: { brief: DesignBriefRecord | null }): React.ReactElement {
   if (!brief) {
     return (
-      <Deep family="bl">
+      <Deep family="bl" empty>
         <NotYet>Chưa lập đầu bài. Mở để nhập yêu cầu của khách hàng.</NotYet>
       </Deep>
     );
@@ -161,7 +192,7 @@ export function SurveyCard({
       {loading ? (
         <Waiting />
       ) : (surveys.data?.length ?? 0) === 0 ? (
-        <Deep family="gr">
+        <Deep family="gr" empty>
           <NotYet>Chưa có biên bản khảo sát nào.</NotYet>
         </Deep>
       ) : (
@@ -245,16 +276,11 @@ export function ExportCard({
       title="Hồ sơ kỹ thuật"
       description="Tiến độ ba bộ môn và các hạng mục còn chặn bàn giao thi công."
       to={`${basePath}?tab=ho-so-ky-thuat`}
-      action={
-        <CardAction tone="rd" to={`${basePath}?tab=ho-so-ky-thuat`}>
-          Mở hồ sơ kỹ thuật
-        </CardAction>
-      }
     >
       {tasks.isLoading ? (
         <Waiting />
       ) : (tasks.data?.length ?? 0) === 0 ? (
-        <Deep family="rd">
+        <Deep family="rd" empty>
           <NotYet>Chưa phân công bộ môn nào. Mở để đặt người chịu trách nhiệm từng bộ môn.</NotYet>
         </Deep>
       ) : (
@@ -299,45 +325,164 @@ export function ExportCard({
   );
 }
 
-// ── Thẻ 3: AI Design ──────────────────────────────────────────────────────────
+// ── Thẻ 4: Dự toán ────────────────────────────────────────────────────────────
 
 /**
- * Cửa vào nhánh AI. Tên «AI Design» là ngoại lệ tiếng Anh có chủ đích (Haan, T58). Bày số phương
- * án mặt bằng và đã chọn phương án nào chưa — bước mặt đứng chờ phương án được chọn.
+ * Bản dự toán đang hiệu lực của hồ sơ. KHÔNG bày giá: số tiền dự toán thuộc nhóm cột hạn chế
+ * (Mẫu D) — thẻ chỉ nói có bản nào, phiên bản mấy, trạng thái gì; con số xem trong màn hình con,
+ * nơi quyền theo cột đã lo.
  */
-export function AiDesignCard({
+export function EstimateCard({
   projectId,
   basePath,
 }: {
   projectId: string;
   basePath: string;
 }): React.ReactElement {
-  const state = useAiDesignState(projectId);
+  const estimates = useEstimates({ kind: 'design', id: projectId });
+  const list = estimates.data ?? [];
+  const current = list.find((e) => e.is_current_version) ?? list[0] ?? null;
 
   return (
     <ToolCard
-      family="pu"
-      icon={<Sparkles className={ICON} aria-hidden />}
-      title="AI Design"
-      description="Mặt bằng từng tầng, mặt đứng và phối cảnh do AI đề xuất từ đầu bài và khảo sát."
-      to={`${basePath}?tab=thiet-ke-ai`}
+      family="am"
+      icon={<Calculator className={ICON} aria-hidden />}
+      title="Dự toán"
+      description="Dự toán chi phí xây dựng theo hồ sơ thiết kế, có phiên bản và phê duyệt."
+      to={`${basePath}?tab=du-toan`}
     >
-      {state.isLoading ? (
+      {estimates.isLoading ? (
         <Waiting />
+      ) : !current ? (
+        <Deep family="am" empty>
+          <NotYet>Chưa có bản dự toán nào. Mở để lập dự toán theo hồ sơ thiết kế.</NotYet>
+        </Deep>
       ) : (
-        <Deep family="pu">
-          {state.data && state.data.plans.length > 0 ? (
-            <>
-              {state.data.plans.length} phương án mặt bằng
-              {state.data.planHeadArtifactId
-                ? ' · đã chọn một phương án.'
-                : ' · chưa chọn phương án.'}
-            </>
-          ) : (
-            <NotYet>Chưa có phương án mặt bằng nào. Mở để AI dựng mặt bằng từ đầu bài.</NotYet>
-          )}
+        <Deep family="am">
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-medium text-tk-tx">
+              {current.code} · phiên bản {current.version}
+            </span>
+            <StatusLozenge status={current.status} />
+          </div>
+          <p className="mt-1.5 text-tk-t2">
+            {list.length > 1 ? `${list.length} phiên bản` : 'Một phiên bản'}
+            {current.prepared && ` · lập bởi ${current.prepared.full_name}`}
+            {current.approved_at && ` · phê duyệt ${formatDate(current.approved_at)}`}
+          </p>
         </Deep>
       )}
     </ToolCard>
+  );
+}
+
+// ── Thẻ 5: Trình khách ────────────────────────────────────────────────────────
+
+/**
+ * Họ màu xanh dương, KHÔNG tím: tím là màu của AI Design ngay cột bên — trùng màu đọc như hai thứ
+ * liên quan. Trình khách đọc từ CHÍNH nguồn mà bước «Trình khách» của dải tiến trình dùng: phiên bản bản vẽ
+ * đã phát hành và có `customer_approved_at`.
+ */
+export function PresentCard({
+  projectId,
+  basePath,
+}: {
+  projectId: string;
+  basePath: string;
+}): React.ReactElement {
+  const versions = useDesignVersions(projectId);
+  const list = versions.data ?? [];
+  const published = list.filter((v) => v.published_at !== null);
+  const approved = list
+    .filter((v) => v.customer_approved_at !== null)
+    .sort((a, b) => b.customer_approved_at!.localeCompare(a.customer_approved_at!));
+
+  return (
+    <ToolCard
+      family="bl"
+      icon={<Presentation className={ICON} aria-hidden />}
+      title="Trình khách"
+      description="Phiên bản bản vẽ đã phát hành gửi khách hàng duyệt phương án."
+      to={`${basePath}?tab=phien-ban`}
+    >
+      {versions.isLoading ? (
+        <Waiting />
+      ) : published.length === 0 ? (
+        <Deep family="bl" empty>
+          <NotYet>Chưa phát hành phiên bản bản vẽ nào để trình khách.</NotYet>
+        </Deep>
+      ) : (
+        <Deep family="bl">
+          <ul className="grid gap-1.5">
+            <li className="flex justify-between gap-2">
+              <span className="text-tk-t2">Phiên bản đã phát hành</span>
+              <span className="text-tk-tx">{published.length}</span>
+            </li>
+            <li className="flex justify-between gap-2">
+              <span className="text-tk-t2">Khách hàng đã duyệt</span>
+              <span className="text-tk-tx">
+                {approved.length > 0 ? (
+                  `${approved[0]!.title} · ${formatDate(approved[0]!.customer_approved_at!)}`
+                ) : (
+                  <NotYet>chưa có</NotYet>
+                )}
+              </span>
+            </li>
+          </ul>
+        </Deep>
+      )}
+    </ToolCard>
+  );
+}
+
+// ── Công cụ hỗ trợ: AI Design (KHÔNG thuộc quy trình) ─────────────────────────
+
+/**
+ * Lối sang module AI Design — đặt RIÊNG ở cột phải, không trong lưới các bước quy trình.
+ *
+ * Haan 07/10/2026: AI Design là module độc lập hỗ trợ phòng thiết kế, không nằm trong quy trình
+ * thiết kế. Trước đó nó là thẻ thứ ba giữa Khảo sát và Hồ sơ kỹ thuật, kèm câu «chưa chọn phương
+ * án» — đọc như một việc hồ sơ còn nợ. Ở đây chỉ còn: nó là gì, đã có bao nhiêu bản phác, và lối
+ * mở. Không trạng thái «xong / chưa xong», không lời nhắc phải chọn.
+ */
+export function AiDesignSupportPanel({ projectId }: { projectId: string }): React.ReactElement {
+  const state = useAiDesignState(projectId);
+  const count = state.data?.plans.length ?? 0;
+
+  return (
+    <section aria-label="Công cụ hỗ trợ" className={cn('rounded-lg border p-4', FAMILY.pu.card)}>
+      <h3 className="text-xs font-medium tracking-[0.04em] text-tk-t3 uppercase">Công cụ hỗ trợ</h3>
+      <div className="mt-3 flex items-start gap-3">
+        <span
+          className={cn('grid size-9 shrink-0 place-items-center rounded-md', FAMILY.pu.tile)}
+          aria-hidden
+        >
+          <Sparkles className={ICON} />
+        </span>
+        <div className="min-w-0">
+          <p className="font-semibold">AI Design</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-tk-t2">
+            Công cụ hỗ trợ kỹ sư phác mặt bằng, mặt đứng và phối cảnh bằng AI từ đầu bài. Bản phác
+            chỉ để tham khảo, không thuộc quy trình của hồ sơ.
+          </p>
+          <p className="mt-2 text-xs">
+            {state.isLoading ? (
+              <NotYet>Đang tải…</NotYet>
+            ) : count > 0 ? (
+              `Có ${count} bản phác mặt bằng.`
+            ) : (
+              <NotYet>Chưa dùng cho hồ sơ này.</NotYet>
+            )}
+          </p>
+        </div>
+      </div>
+      <Link
+        to={`/tk/ai-design/${projectId}`}
+        className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-sm bg-tk-pu-solid px-3 font-medium text-white transition-colors hover:bg-tk-pu-solid2"
+      >
+        Mở AI Design
+        <ArrowRight className="size-4" aria-hidden />
+      </Link>
+    </section>
   );
 }

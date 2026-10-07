@@ -16,6 +16,7 @@ import { formatDateTime } from '@nvg/shared';
 import { AI_DISCLAIMERS } from '@nvg/shared/design';
 import { useEffect, useRef, useState } from 'react';
 import { Image as ImageIcon, Upload } from 'lucide-react';
+import { FIELD_BOX } from '@/components/ui/field-box';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
@@ -37,7 +38,7 @@ import {
   type CropPercent,
 } from '@/lib/drawing-upload';
 import { stampWatermark } from '@/lib/watermark';
-import { Chip, Panel } from '../tk-ui';
+import { Panel } from '../tk-ui';
 import { AiModePicker, useAiChoice } from './ai-model-picker';
 import { AiUsageLine } from './ai-usage';
 
@@ -47,7 +48,7 @@ const TEXT: Record<
 > = {
   plan: {
     title: 'Ảnh nội thất từ bản vẽ của kỹ sư',
-    lead: 'Tải mặt bằng một tầng đã sửa trên AutoCAD (hoặc tự vẽ) — PNG, JPG hoặc PDF — để mô hình ảnh vẽ thành tấm có đồ đạc, vật liệu sàn và cây cối. Phong cách lấy theo đầu bài.',
+    lead: 'Tải mặt bằng một tầng (PNG, JPG hoặc PDF) để AI vẽ thành ảnh nội thất.',
     draw: 'Vẽ ảnh nội thất từ bản này',
     stamp: AI_DISCLAIMERS.aiSheetImageStamp,
     disclaimer: AI_DISCLAIMERS.aiSheetImage,
@@ -55,7 +56,7 @@ const TEXT: Record<
   },
   facade: {
     title: 'Ảnh mặt đứng từ bản vẽ của kỹ sư',
-    lead: 'Tải mặt đứng mặt tiền đã sửa trên AutoCAD (hoặc tự vẽ) — PNG, JPG hoặc PDF — để mô hình ảnh vẽ thành tấm có vật liệu và màu. Vật liệu, màu, mái lấy theo phần Mặt đứng của đầu bài.',
+    lead: 'Tải mặt đứng mặt tiền (PNG, JPG hoặc PDF) để AI vẽ thành ảnh có vật liệu và màu.',
     draw: 'Vẽ ảnh mặt đứng từ bản này',
     stamp: AI_DISCLAIMERS.aiFacadeImageStamp,
     disclaimer: AI_DISCLAIMERS.aiFacadeImage,
@@ -75,12 +76,15 @@ export function AiUploadPanel({
   drawing,
   readOnly,
   disabled = false,
+  bare = false,
 }: {
   projectId: string;
   drawing: UploadedDrawingKind;
   readOnly: boolean;
   /** Đang có lượt chạy khác — không cho bấm chồng lên. */
   disabled?: boolean;
+  /** Nhúng trong khung khác (khung gộp «Ảnh mặt bằng có nội thất»): không tự vẽ khung và tiêu đề. */
+  bare?: boolean;
 }): React.ReactElement {
   const text = TEXT[drawing];
   const list = useUploadedDrawings(projectId, drawing);
@@ -98,8 +102,8 @@ export function AiUploadPanel({
       .finally(() => setDrawingId(null));
   };
 
-  return (
-    <Panel title={text.title} aside={<Chip tone="mute">Ảnh trình khách — không đo được</Chip>}>
+  const body = (
+    <>
       <p className="mb-3 text-fg-subtle">{text.lead}</p>
 
       {!readOnly && <UploadForm projectId={projectId} drawing={drawing} />}
@@ -161,8 +165,10 @@ export function AiUploadPanel({
           </p>
         </ConfirmDialog>
       )}
-    </Panel>
+    </>
   );
+
+  return bare ? <div>{body}</div> : <Panel title={text.title}>{body}</Panel>;
 }
 
 function UploadForm({
@@ -274,7 +280,7 @@ function UploadForm({
             <select
               value={page}
               onChange={(event) => setPage(Number(event.target.value))}
-              className="min-h-10 rounded border border-border bg-surface px-2"
+              className={FIELD_BOX}
             >
               {Array.from({ length: pages }, (_, i) => i + 1).map((n) => (
                 <option key={n} value={n}>
@@ -290,7 +296,7 @@ function UploadForm({
             <select
               value={level}
               onChange={(event) => setLevel(Number(event.target.value))}
-              className="min-h-10 rounded border border-border bg-surface px-2"
+              className={FIELD_BOX}
             >
               {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
                 <option key={n} value={n}>
@@ -333,10 +339,7 @@ function UploadForm({
           {previewError && <p className="text-status-overdue">{previewError}</p>}
           {preview && (
             <div>
-              <p className="mb-1 text-xs text-fg-subtle">
-                Xem trước đúng tấm sẽ gửi cho mô hình ({preview.width} × {preview.height} điểm ảnh).
-                Kiểm kỹ không còn khung tên hay chữ nào về chủ nhà.
-              </p>
+              <p className="mb-1 text-xs text-fg-subtle">Xem trước tấm sẽ gửi đi.</p>
               <img
                 src={`data:image/png;base64,${preview.base64}`}
                 alt="Xem trước bản vẽ sẽ tải lên"
@@ -456,9 +459,7 @@ function UploadedItem({
           {(busy || drawn.loading) && <Skeleton className="h-48 w-full" />}
           {drawn.error && <p className="text-status-overdue">{drawn.error}</p>}
           {!busy && !drawn.loading && !item.imageArtifactId && (
-            <p className="text-fg-subtle">
-              Chưa có ảnh. Chọn model rồi bấm vẽ — mỗi tấm là một lượt gọi tính tiền.
-            </p>
+            <p className="text-fg-subtle">Chưa có ảnh.</p>
           )}
           {!busy && stamped && (
             <>
@@ -467,7 +468,6 @@ function UploadedItem({
                 alt={`Ảnh do AI vẽ — ${label}`}
                 className="w-full rounded-md border border-tk-line bg-white"
               />
-              <p className="mt-2 text-status-overdue">{text.disclaimer}</p>
               {!stamped.stamped && (
                 <p className="mt-1 text-status-overdue">
                   Trình duyệt không in được nhãn lên ảnh. Tấm này chưa có dấu — đừng gửi đi khi chưa

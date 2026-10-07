@@ -22,6 +22,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { formatDateTime, formatNumber } from '@nvg/shared';
+import { FIELD_BOX } from '@/components/ui/field-box';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toUserMessage } from '@/hooks/use-error-message';
@@ -233,7 +234,7 @@ export function FacadeScorePanel({
                       <label className="flex items-center gap-2">
                         <span className="text-fg-subtle">Kỹ sư chấm</span>
                         <select
-                          className="min-h-10 rounded border border-border bg-surface px-2"
+                          className={FIELD_BOX}
                           value={row.score}
                           onChange={(event) =>
                             setDraft((d) => ({
@@ -253,7 +254,7 @@ export function FacadeScorePanel({
                         <label className="flex items-center gap-2">
                           <span className="sr-only">Lý do chấm khác máy — {c.code}</span>
                           <input
-                            className="min-h-10 w-full rounded border border-border bg-surface px-2"
+                            className={cn(FIELD_BOX, 'w-full')}
                             placeholder="Vì sao chấm như vậy"
                             maxLength={300}
                             value={row.note}

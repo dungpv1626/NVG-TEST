@@ -34,8 +34,17 @@
  */
 
 import { formatNumber } from '@nvg/shared';
-import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Info, Sparkles, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  AlertTriangle,
+  ChevronRight,
+  Download,
+  Info,
+  LayoutGrid,
+  Maximize2,
+  Sparkles,
+  X,
+} from 'lucide-react';
 import { AI_DISCLAIMERS } from '@nvg/shared/design';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -47,7 +56,6 @@ import {
   useAiRun,
   useChooseAiPlan,
   useDownloadAiPlanDxf,
-  useEditAiPlan,
   useHideAiPlan,
   useInvalidateAiDesign,
   useStartAiRun,
@@ -62,14 +70,13 @@ import {
 import { toUserMessage } from '@/hooks/use-error-message';
 import { Chip, Panel } from '../tk-ui';
 import { AiModePicker, ReasoningEffortPicker, useAiChoice } from './ai-model-picker';
-import { AiRunUsage } from './ai-usage';
-import { PlanScorePanel } from './ai-plan-score';
 import { RulePackPicker } from './ai-rule-pack-picker';
 import { AiRunProgress } from './ai-run-progress';
-import { AiPlanLive } from './ai-live-call';
-import { PlanEditPanel } from './ai-plan-edit';
-import { PlanSheetImagePanel } from './ai-plan-sheet-image';
+import { PlanImagePanel } from './ai-plan-image';
 import { SheetSizeControl, sheetWidthStyle, useSheetSize } from './sheet-size';
+import { fileSlug, numberedNames } from './variant-name';
+import { SheetViewer } from './sheet-zoom';
+import { cn } from '@/lib/utils';
 
 /** Kết quả một lượt chạy giai đoạn mặt bằng, đúng hình dạng Workflow ghi vào `design_ai_run`. */
 interface PlanRunResult {
@@ -128,9 +135,6 @@ export function AiPlanStep({
   const [level, setLevel] = useState(1);
 
   const start = useStartAiRun('plan');
-  const editPlan = useEditAiPlan();
-  /** Lượt chạy đang theo dõi là lượt SỬA — xong thì mở ngay phương án sửa (T53). */
-  const [editRunId, setEditRunId] = useState<string | null>(null);
   // Hỏi mỗi 2 giây để bảng theo dõi trực tiếp (token, thời gian, nút Dừng) chạy theo lượt gọi.
   const run = useAiRun(runId, 2000);
   const choose = useChooseAiPlan();
@@ -150,26 +154,16 @@ export function AiPlanStep({
     if (run.data?.status === 'done' || run.data?.status === 'failed') invalidate(projectId);
   }, [run.data?.status, projectId, invalidate]);
 
-  // Lượt sửa xong: mở bản sửa, đừng để kỹ sư đi tìm nó trong danh sách phương án.
-  const editedId =
-    runId !== null && runId === editRunId && run.data?.status === 'done'
-      ? (runResult?.plans[0]?.artifactId ?? null)
-      : null;
-  useEffect(() => {
-    if (editedId && state.plans.some((plan) => plan.artifactId === editedId)) {
-      setSelected(editedId);
-      setEditRunId(null);
-    }
-  }, [editedId, state.plans]);
-
-  const entries = useMemo(() => {
-    const variantOf = new Map((runResult?.plans ?? []).map((p) => [p.artifactId, p.variantId]));
-    return state.plans.map((plan) => ({
-      artifactId: plan.artifactId,
-      createdAt: plan.createdAt,
-      variantId: variantOf.get(plan.artifactId) ?? null,
-    }));
-  }, [state.plans, runResult]);
+  // «Phương án 1, 2, 3…» theo thứ tự tạo, hiện cũ trước (Haan, 07/10/2026).
+  const names = useMemo(() => numberedNames(state.plans, 'Phương án'), [state.plans]);
+  const entries = useMemo(
+    () =>
+      [...state.plans].sort(
+        (a, b) =>
+          a.createdAt.localeCompare(b.createdAt) || a.artifactId.localeCompare(b.artifactId),
+      ),
+    [state.plans],
+  );
 
   // Phương án đang mở: ưu tiên bản đã chọn, rồi bản mới nhất. Không để rỗng khi đã có kết quả —
   // một màn hình trống trong lúc dữ liệu đã về đọc như là chưa chạy gì.
@@ -179,7 +173,7 @@ export function AiPlanStep({
       return;
     }
     if (!selected || !entries.some((entry) => entry.artifactId === selected)) {
-      setSelected(state.planHeadArtifactId ?? entries[0]!.artifactId);
+      setSelected(state.planHeadArtifactId ?? entries[entries.length - 1]!.artifactId);
     }
   }, [entries, selected, state.planHeadArtifactId]);
 
@@ -190,23 +184,6 @@ export function AiPlanStep({
     : (levels[0]?.level ?? 1);
   const sheet = useAiPlanSheet(projectId, selected, currentLevel);
   const dxf = useDownloadAiPlanDxf();
-
-  const onEdit = (artifactId: string, instruction: string) => {
-    if (!ai.choice.route) return;
-    void editPlan
-      .mutateAsync({
-        projectId,
-        artifactId,
-        instruction,
-        route: ai.choice.route,
-        reasoningEffort: ai.selected?.supportsEffort === false ? null : effort,
-      })
-      .then((out) => {
-        setEditRunId(out.runId);
-        setRunId(out.runId);
-      })
-      .catch(() => undefined);
-  };
 
   const onRun = () => {
     if (!ai.choice.route) return;
@@ -224,27 +201,25 @@ export function AiPlanStep({
       .catch(() => undefined);
   };
 
+  const failedCount = runResult?.failed.length ?? 0;
+  const savedCount = runResult?.plans.length ?? 0;
+
+  // Hai cột (Haan, 07/10/2026 — tham khảo bố cục công cụ thiết kế AI): trái là thiết lập và MỘT
+  // nút chính, phải là bản vẽ. Trước đó là một cột dài, bản vẽ nằm dưới cả màn hình chữ.
   return (
-    <div className="space-y-4">
-      <Panel
-        title="Mặt bằng từng tầng"
-        aside={
-          state.plans.length ? (
-            <Chip tone="gr">{state.plans.length} phương án</Chip>
+    <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(300px,360px)_minmax(0,1fr)]">
+      <div className="min-w-0 space-y-4">
+        <Panel title="Thiết lập mặt bằng">
+          {blocked ? (
+            <p className="text-fg-subtle">
+              Chưa có đầu bài đã xác nhận. Hoàn tất và xác nhận đầu bài trước khi xếp mặt bằng.
+            </p>
+          ) : readOnly ? (
+            <p className="text-fg-subtle">Hồ sơ chỉ xem — không xếp phương án mới.</p>
           ) : (
-            <Chip tone="am">Chưa có</Chip>
-          )
-        }
-      >
-        {blocked ? (
-          <p className="text-fg-subtle">
-            Chưa có đầu bài đã xác nhận. Hoàn tất và xác nhận đầu bài trước khi xếp mặt bằng.
-          </p>
-        ) : (
-          !readOnly && (
-            <div className="space-y-3">
-              <RulePackPicker value={packs} onChange={setPacks} disabled={running} />
-              <div className="flex flex-wrap items-end gap-3">
+            <div className="space-y-4">
+              {/* Model và mức suy nghĩ cùng một hàng, hai ô dạng viên (07/10/2026). */}
+              <div className="flex items-end gap-2 *:first:min-w-0 *:last:shrink-0">
                 <AiModePicker
                   kind="text"
                   choice={ai.choice}
@@ -260,164 +235,92 @@ export function AiPlanStep({
                   option={ai.selected}
                   disabled={running || start.isPending}
                 />
-                <label className="block">
-                  <span className="block text-fg-subtle">Số phương án</span>
-                  <SegmentedControl
-                    options={COUNTS}
-                    value={count}
-                    onChange={setCount}
-                    getLabel={(option) => option}
-                  />
-                </label>
-                <Button
-                  variant="primary"
-                  onClick={onRun}
-                  disabled={running || start.isPending || !ai.choice.route}
-                >
-                  {start.isPending ? 'Đang gửi…' : 'Xếp mặt bằng'}
-                </Button>
               </div>
-              {/* Mỗi phương án là một lượt gọi TÍNH TIỀN, nói thẳng ra trước khi bấm. Không hứa
-                  một con số thời gian cho bước này vì chưa đo (CLAUDE.md 5.2) — chỉ nêu con số
-                  đã đo được ở bước trước để người dùng có mốc so sánh. */}
-              <p className="text-fg-subtle">
-                Mỗi phương án là một lượt gọi mô hình cho cả nhà, chỉ dựa trên đầu bài và khảo sát —
-                không dùng chương trình không gian. AI khai danh sách phòng từng tầng, diện tích mục
-                tiêu, cạnh phòng nào, cửa chính ở đâu, và phác mỗi tầng trên lưới ô khoảng một mét;
-                chương trình kiểm theo đầu bài, nắn bản phác, căn vách, đặt cửa và dựng tường. Phòng
-                đầu bài có ghi diện tích tối thiểu thì phải đạt mức đó. Không xếp được thì AI được
-                gọi lại để sửa, tối đa bốn lần — mỗi lần là một lượt tính tiền. Vẫn không xếp được
-                thì phương án được đánh dấu chưa xếp được và không vẽ.
-              </p>
+              <label className="block">
+                <span className="mb-1 block text-fg-subtle">Số phương án</span>
+                <SegmentedControl
+                  options={COUNTS}
+                  value={count}
+                  onChange={setCount}
+                  getLabel={(option) => option}
+                />
+              </label>
+              <RulePackPicker value={packs} onChange={setPacks} disabled={running} />
+              <details className="text-fg-subtle">
+                <summary className="cursor-pointer select-none hover:text-fg">
+                  Cách AI xếp mặt bằng
+                </summary>
+                <p className="mt-2">
+                  AI chỉ dựa trên đầu bài và khảo sát: khai danh sách phòng từng tầng, diện tích mục
+                  tiêu, quan hệ giữa các phòng, cửa chính, và phác mỗi tầng trên lưới ô khoảng một
+                  mét. Chương trình kiểm theo đầu bài, nắn bản phác, căn vách, đặt cửa và dựng
+                  tường. Phòng đầu bài có ghi diện tích tối thiểu thì phải đạt mức đó. Vẫn không xếp
+                  được sau bốn lần thì phương án không được vẽ.
+                </p>
+              </details>
+              <Button
+                variant="primary"
+                className="w-full"
+                onClick={onRun}
+                disabled={running || start.isPending || !ai.choice.route}
+              >
+                {start.isPending ? 'Đang gửi…' : running ? 'Đang xếp…' : 'Xếp mặt bằng'}
+              </Button>
             </div>
-          )
-        )}
-        {start.isError && <p className="mt-3 text-status-overdue">{toUserMessage(start.error)}</p>}
-      </Panel>
-
-      {run.data && (
-        <AiRunProgress
-          run={run.data}
-          onRetry={readOnly ? undefined : onRun}
-          retryDisabled={start.isPending || !ai.choice.route}
-        />
-      )}
-      {run.data && <AiPlanLive projectId={projectId} run={run.data} />}
-      {run.data && (
-        <AiRunUsage
-          projectId={projectId}
-          purposePrefix="plan_house"
-          startedAt={run.data.createdAt}
-          endedAt={running ? null : run.data.updatedAt}
-        />
-      )}
-
-      {(runResult?.failed.length ?? 0) > 0 && (
-        <Panel title="Phương án chưa xếp được">
-          {/* Phương án hỏng KHÔNG bị nuốt: hai bản dùng được vẫn hơn không có gì, nhưng người
-              dùng phải biết mình đang xem hai trong ba. Và không có tờ vẽ nào cho phương án ấy
-              (T39) — nên lý do theo từng tầng là tất cả những gì người dùng có để quyết chạy lại
-              hay đổi model. */}
-          <ul className="space-y-3">
-            {runResult!.failed.map((item) => (
-              <li key={item.variantId} className="flex items-start gap-2">
-                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-status-overdue" aria-hidden />
-                <div>
-                  <p>
-                    <b>{item.variantId}</b> — {item.error}
-                  </p>
-                  {(item.reasons ?? []).map((reason) => (
-                    <div key={reason.level} className="mt-1">
-                      <p className="font-medium">
-                        {reason.level === 0 ? 'Cả nhà' : `Tầng ${reason.level}`}
-                      </p>
-                      {reason.firstMessages && (
-                        <>
-                          <p className="text-fg-subtle">
-                            Lượt đầu — {reason.firstMessages.length} lỗi:
-                          </p>
-                          <ul className="list-disc pl-5 text-fg-subtle">
-                            {reason.firstMessages.map((message) => (
-                              <li key={message}>{message}</li>
-                            ))}
-                          </ul>
-                          <p className="mt-1 text-fg-subtle">
-                            {retryLabel(reason.retry)} — {reason.messages.length} lỗi:
-                          </p>
-                        </>
-                      )}
-                      {(reason.attempts ?? 0) > 1 && (
-                        <p className="text-fg-subtle">
-                          Đã gọi mô hình {reason.attempts} lượt cho phương án này.
-                        </p>
-                      )}
-                      {reason.retry === 'none' && (
-                        <p className="text-fg-subtle">
-                          Không gọi lại mô hình: lỗi nằm ở hình học — bộ xếp đã thử mọi cách chia,
-                          kể cả bỏ bản phác và vùng AI khai, và lỗi ấy không nằm ở thứ AI vẽ nên gọi
-                          lại cũng không gỡ được. Chạy lại để AI khai một ý định khác, hoặc giảm bớt
-                          yêu cầu diện tích trong đầu bài.
-                        </p>
-                      )}
-                      {reason.retry === 'unchanged' && (
-                        <p className="text-fg-subtle">
-                          Dừng gọi lại mô hình: lượt sửa cuối trả về đúng bố cục của lượt trước ở
-                          tầng đang lỗi, nên gọi thêm chỉ tốn tiền mà ra cùng kết quả. Chạy lại để
-                          AI khai một ý định khác, hoặc chọn mô hình khác.
-                        </p>
-                      )}
-                      {reason.retry === 'stuck' && (
-                        <p className="text-fg-subtle">
-                          Dừng gọi lại mô hình: ba lượt liền hỏng đúng cùng những lỗi dưới đây, nên
-                          gọi thêm chỉ tốn tiền. Chạy lại để AI khai một ý định khác, hoặc chọn mô
-                          hình khác.
-                        </p>
-                      )}
-                      <ul className="list-disc pl-5 text-fg-subtle">
-                        {reason.messages.map((message) => (
-                          <li key={message}>{message}</li>
-                        ))}
-                      </ul>
-                      {(reason.notes?.length ?? 0) > 0 && (
-                        <>
-                          <p className="mt-1 text-fg-subtle">Chương trình đã tự sửa:</p>
-                          <ul className="list-disc pl-5 text-fg-subtle">
-                            {reason.notes!.map((note) => (
-                              <li key={note}>{note}</li>
-                            ))}
-                          </ul>
-                        </>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </li>
-            ))}
-          </ul>
+          )}
+          {start.isError && (
+            <p className="mt-3 text-status-overdue">{toUserMessage(start.error)}</p>
+          )}
         </Panel>
-      )}
 
-      {entries.length > 0 && (
-        <Panel title="Phương án">
-          <ul className="flex flex-wrap gap-2">
+        {run.data && (
+          <AiRunProgress
+            projectId={projectId}
+            run={run.data}
+            purposePrefix="plan_house"
+            reportTitle="Báo cáo lượt xếp mặt bằng"
+            reportExtra={failedVariantsMarkdown(runResult?.failed ?? [])}
+            onRetry={readOnly ? undefined : onRun}
+            retryDisabled={start.isPending || !ai.choice.route}
+            runningLabel="Đang xếp mặt bằng"
+            doneLabel={
+              failedCount > 0
+                ? `Xếp được ${savedCount}/${savedCount + failedCount} phương án`
+                : 'Đã xếp xong'
+            }
+            failedLabel="Chưa xếp được mặt bằng"
+          />
+        )}
+      </div>
+
+      <div className="min-w-0 space-y-4">
+        {entries.length > 0 && (
+          <div
+            role="group"
+            aria-label="Phương án"
+            className="flex flex-wrap items-center gap-2 rounded-lg border border-tk-line bg-tk-panel p-2"
+          >
             {entries.map((entry) => {
               const isOpen = entry.artifactId === selected;
               const isHead = entry.artifactId === state.planHeadArtifactId;
-              const name = entry.variantId ?? `Phương án ${entry.artifactId.slice(7, 13)}`;
+              const name = names.get(entry.artifactId)!;
               return (
-                <li key={entry.artifactId} className="flex items-stretch">
+                <div key={entry.artifactId} className="flex items-stretch">
                   <button
                     type="button"
                     aria-pressed={isOpen}
                     onClick={() => setSelected(entry.artifactId)}
-                    className={
+                    className={cn(
+                      'flex min-h-10 items-center gap-2 rounded-l-md border py-1.5 pr-3 pl-1.5 text-left',
+                      readOnly && 'rounded-r-md',
                       isOpen
-                        ? 'rounded-l-md border border-tk-bl-line bg-tk-bl-bg px-3 py-2 text-left'
-                        : 'rounded-l-md border border-tk-line bg-tk-panel px-3 py-2 text-left'
-                    }
+                        ? 'border-tk-bl-line bg-tk-bl-bg font-medium'
+                        : 'border-transparent hover:bg-tk-hover',
+                    )}
                   >
-                    <span className="block font-medium">{name}</span>
-                    {isHead && <Chip tone="gr">Đang hiệu lực</Chip>}
+                    <PlanThumb projectId={projectId} artifactId={entry.artifactId} />
+                    {name}
+                    {isHead && <Chip tone="gr">Dùng cho mặt đứng</Chip>}
                   </button>
                   {!readOnly && (
                     <button
@@ -425,17 +328,90 @@ export function AiPlanStep({
                       onClick={() => setAskHide({ artifactId: entry.artifactId, name })}
                       aria-label={`Xoá ${name} khỏi danh sách`}
                       title="Xoá khỏi danh sách"
-                      className="rounded-r-md border border-l-0 border-tk-line bg-tk-panel px-2 text-fg-subtle hover:text-status-overdue"
+                      className={cn(
+                        'rounded-r-md border border-l-0 px-2 text-fg-subtle hover:text-status-overdue',
+                        isOpen ? 'border-tk-bl-line bg-tk-bl-bg' : 'border-transparent',
+                      )}
                     >
                       <X className="h-4 w-4" aria-hidden />
                     </button>
                   )}
-                </li>
+                </div>
               );
             })}
-          </ul>
-        </Panel>
-      )}
+          </div>
+        )}
+
+        {entries.length === 0 && !review.isLoading && (
+          <div className="grid min-h-[420px] place-items-center rounded-lg border border-dashed border-tk-line2 bg-tk-panel p-8 text-center">
+            <div className="max-w-sm">
+              <LayoutGrid className="mx-auto size-10 text-tk-t3" aria-hidden />
+              <p className="mt-3 font-medium">
+                {running ? 'AI đang xếp mặt bằng' : 'Chưa có phương án mặt bằng'}
+              </p>
+              <p className="mt-1 text-fg-subtle">
+                {running
+                  ? 'Mỗi phương án mất vài phút. Bản vẽ hiện ở đây ngay khi xếp xong.'
+                  : blocked
+                    ? 'Xác nhận đầu bài ở bước 1, rồi quay lại đây để xếp mặt bằng.'
+                    : 'Chọn mô hình và số phương án ở cột bên trái, rồi bấm «Xếp mặt bằng».'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {entries.length === 0 && !review.isLoading && (
+          <PlanImagePanel
+            projectId={projectId}
+            review={null}
+            level={1}
+            readOnly={readOnly}
+            disabled={running}
+          />
+        )}
+
+        {review.isLoading && <Skeleton className="h-96 w-full" />}
+        {review.isError && (
+          <Panel title="Phương án">
+            <p className="text-status-overdue">{toUserMessage(review.error)}</p>
+          </Panel>
+        )}
+
+        {review.data && (
+          <PlanDetail
+            review={review.data}
+            name={names.get(review.data.artifactId) ?? 'Phương án'}
+            level={currentLevel}
+            onLevel={setLevel}
+            sheet={sheet}
+            readOnly={readOnly}
+            isHead={review.data.artifactId === state.planHeadArtifactId}
+            choosing={choose.isPending}
+            onChoose={() =>
+              void choose
+                .mutateAsync({ projectId, artifactId: review.data!.artifactId })
+                .catch(() => undefined)
+            }
+            chooseError={choose.isError ? toUserMessage(choose.error) : null}
+            downloadingDxf={dxf.isPending}
+            onDownloadDxf={() =>
+              void dxf
+                .mutateAsync({ projectId, artifactId: review.data!.artifactId })
+                .catch(() => undefined)
+            }
+            dxfError={dxf.isError ? toUserMessage(dxf.error) : null}
+            sheetImagePanel={
+              <PlanImagePanel
+                projectId={projectId}
+                review={review.data}
+                level={currentLevel}
+                readOnly={readOnly}
+                disabled={running}
+              />
+            }
+          />
+        )}
+      </div>
 
       {/* Hộp thoại NỔI giữa màn hình (Haan 18/09/2026) — hỏi lại trước khi xoá một phương án khỏi
           dải chọn. Không `window.confirm`: nút của hộp gốc theo tiếng của trình duyệt. */}
@@ -466,7 +442,8 @@ export function AiPlanStep({
           </p>
           {askHide.artifactId === state.planHeadArtifactId && (
             <p className="mt-1">
-              Đây đang là phương án hiệu lực — xoá xong bước mặt đứng cần chọn lại phương án.
+              Đây là phương án đang dùng cho mặt đứng — xoá xong cần chọn lại phương án khác để dựng
+              mặt đứng.
             </p>
           )}
           {hidePlan.isError && (
@@ -474,68 +451,57 @@ export function AiPlanStep({
           )}
         </ConfirmDialog>
       )}
-
-      {review.isLoading && <Skeleton className="h-72 w-full" />}
-      {review.isError && (
-        <Panel title="Phương án">
-          <p className="text-status-overdue">{toUserMessage(review.error)}</p>
-        </Panel>
-      )}
-
-      {review.data && (
-        <PlanDetail
-          review={review.data}
-          level={currentLevel}
-          onLevel={setLevel}
-          sheet={sheet}
-          readOnly={readOnly}
-          isHead={review.data.artifactId === state.planHeadArtifactId}
-          choosing={choose.isPending}
-          onChoose={() =>
-            void choose
-              .mutateAsync({ projectId, artifactId: review.data!.artifactId })
-              .catch(() => undefined)
-          }
-          chooseError={choose.isError ? toUserMessage(choose.error) : null}
-          downloadingDxf={dxf.isPending}
-          onDownloadDxf={() =>
-            void dxf
-              .mutateAsync({ projectId, artifactId: review.data!.artifactId })
-              .catch(() => undefined)
-          }
-          dxfError={dxf.isError ? toUserMessage(dxf.error) : null}
-          sheetImagePanel={
-            <PlanSheetImagePanel
-              review={review.data}
-              level={currentLevel}
-              projectId={projectId}
-              readOnly={readOnly}
-              disabled={running}
-            />
-          }
-          editPanel={
-            <PlanEditPanel
-              review={review.data}
-              level={currentLevel}
-              readOnly={readOnly}
-              disabled={running || !ai.choice.route}
-              pending={editPlan.isPending}
-              error={editPlan.isError ? toUserMessage(editPlan.error) : null}
-              notes={
-                runResult?.plans.find((plan) => plan.artifactId === review.data!.artifactId)
-                  ?.notes ?? []
-              }
-              onSubmit={(instruction) => onEdit(review.data!.artifactId, instruction)}
-            />
-          }
-        />
-      )}
     </div>
   );
 }
 
+/**
+ * Phương án chưa xếp được của lượt chạy, dạng Markdown cho báo cáo tải về (07/10/2026: ẩn khỏi màn
+ * hình). Giữ đủ lý do theo từng tầng — người phát triển cần chúng để quyết chạy lại hay đổi model,
+ * và không có tờ vẽ nào cho phương án ấy (T39).
+ */
+export function failedVariantsMarkdown(failed: PlanRunResult['failed']): string {
+  if (failed.length === 0) return '';
+  const out: string[] = ['## Phương án chưa xếp được', ''];
+  const list = (items: string[]) => items.map((m) => `- ${m}`);
+  for (const item of failed) {
+    out.push(`### ${item.variantId}`, '', item.error, '');
+    for (const reason of item.reasons ?? []) {
+      out.push(`#### ${reason.level === 0 ? 'Cả nhà' : `Tầng ${reason.level}`}`, '');
+      if (reason.firstMessages) {
+        out.push(
+          `Lượt đầu — ${reason.firstMessages.length} lỗi:`,
+          '',
+          ...list(reason.firstMessages),
+          '',
+        );
+        out.push(`${retryLabel(reason.retry)} — ${reason.messages.length} lỗi:`, '');
+      }
+      if ((reason.attempts ?? 0) > 1) out.push(`Đã gọi mô hình ${reason.attempts} lượt.`, '');
+      if (reason.retry === 'none') {
+        out.push(
+          'Không gọi lại mô hình: lỗi còn lại không nằm ở thứ AI khai, nên gọi lại cũng không gỡ được. Chạy lại để AI khai một ý định khác, hoặc giảm bớt yêu cầu diện tích trong đầu bài.',
+          '',
+        );
+      }
+      if (reason.retry === 'unchanged') {
+        out.push('Dừng gọi lại: lượt sửa cuối trả về đúng bố cục lượt trước ở tầng đang lỗi.', '');
+      }
+      if (reason.retry === 'stuck') {
+        out.push('Dừng gọi lại: ba lượt liền hỏng đúng cùng những lỗi dưới đây.', '');
+      }
+      out.push(...list(reason.messages), '');
+      if ((reason.notes?.length ?? 0) > 0) {
+        out.push('Chương trình đã tự sửa:', '', ...list(reason.notes!), '');
+      }
+    }
+  }
+  return out.join('\n');
+}
+
 function PlanDetail({
   review,
+  name,
   level,
   onLevel,
   sheet,
@@ -548,9 +514,10 @@ function PlanDetail({
   onDownloadDxf,
   dxfError,
   sheetImagePanel,
-  editPanel,
 }: {
   review: AiPlanReview;
+  /** Tên hiển thị «Phương án N». */
+  name: string;
   level: number;
   onLevel: (level: number) => void;
   sheet: ReturnType<typeof useAiPlanSheet>;
@@ -562,31 +529,164 @@ function PlanDetail({
   downloadingDxf: boolean;
   onDownloadDxf: () => void;
   dxfError: string | null;
-  /** Ô yêu cầu sửa (T53) — ngay dưới tờ vẽ: xem bản vẽ xong gõ luôn. */
-  /** Panel ảnh nội thất (T57) — nằm NGAY DƯỚI tờ vector, trước ô yêu cầu sửa. */
+  /** Panel ảnh nội thất (T57) — mục gấp ngay dưới tờ vector. */
   sheetImagePanel: React.ReactNode;
-  editPanel: React.ReactNode;
 }): React.ReactElement {
   const current = review.levels.find((item) => item.level === level) ?? review.levels[0];
   const levelOptions = review.levels.map((item) => String(item.level));
   const sheetSize = useSheetSize();
+  const [viewing, setViewing] = useState(false);
+  const closeViewer = useCallback(() => setViewing(false), []);
+  const slug = fileSlug(name);
+  // Điểm và ngưỡng nhận ở đầu tờ vẽ — trước đây nằm trong khung «Yêu cầu sửa» đã gỡ (07/10/2026).
+  const percent =
+    review.score && review.score.scoredWeight > 0
+      ? (review.score.points / review.score.scoredWeight) * 100
+      : null;
+  const threshold = review.acceptPercent ?? null;
+  const passed = percent !== null && threshold !== null ? percent >= threshold : null;
 
+  // Tờ vẽ đứng ĐẦU (Haan, 07/10/2026): người dùng đến bước này để xem bản vẽ. Phần giải thích,
+  // ý định, lỗi và đối chiếu là các mục gấp bên dưới; lỗi chặn tự mở, và panel điểm vẫn đứng SAU
+  // danh sách lỗi (T24).
   return (
     <>
-      <Panel
-        title={review.variantLabel}
-        aside={
-          <Chip tone="mute">
-            {review.variantId}
-            {resampledLabel(review.generator)}
-          </Chip>
-        }
-      >
+      <section className="rounded-lg border border-tk-line bg-tk-panel">
+        <div className="flex flex-wrap items-center gap-3 border-b border-tk-line p-3">
+          <div className="mr-auto flex min-w-0 flex-wrap items-center gap-2">
+            <h2 className="font-semibold">{name}</h2>
+            {isHead && <Chip tone="gr">Dùng cho mặt đứng</Chip>}
+            {percent !== null && (
+              <Chip tone={passed === false ? 'am' : passed ? 'gr' : 'mute'}>
+                Điểm {formatNumber(percent, 1)}%
+                {threshold !== null &&
+                  (passed
+                    ? ` · Đạt ngưỡng ${formatNumber(threshold)}`
+                    : ` · Dưới ngưỡng ${formatNumber(threshold)}`)}
+              </Chip>
+            )}
+            {sheet.scale && (
+              <Chip tone="mute">
+                Tỷ lệ 1:{sheet.scale} · {sheet.orientation === 'portrait' ? 'tờ dọc' : 'tờ ngang'}
+              </Chip>
+            )}
+          </div>
+          {!readOnly && !isHead && (
+            <Button variant="primary" onClick={onChoose} disabled={choosing}>
+              {choosing ? 'Đang lưu…' : 'Dùng để dựng mặt đứng'}
+            </Button>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 p-3 pb-0">
+          {review.levels.length > 1 && (
+            <SegmentedControl
+              options={levelOptions}
+              value={String(level)}
+              onChange={(value) => onLevel(Number(value))}
+              getLabel={(value) =>
+                review.levels.find((item) => String(item.level) === value)?.name ?? `Tầng ${value}`
+              }
+            />
+          )}
+          {/* Cỡ xem áp cho CẢ tờ vector ở đây lẫn ảnh có nội thất bên dưới. */}
+          <SheetSizeControl />
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            {sheet.url && (
+              <button
+                type="button"
+                onClick={() => setViewing(true)}
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-sm border border-tk-line px-3 hover:bg-tk-hover sm:min-h-8"
+              >
+                <Maximize2 className="size-4" aria-hidden />
+                Xem toàn màn hình
+              </button>
+            )}
+            {sheet.url && (
+              <a
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-sm border border-tk-line px-3 hover:bg-tk-hover sm:min-h-8"
+                href={sheet.url}
+                download={`mat-bang-${slug}-tang-${level}.svg`}
+              >
+                <Download className="size-4" aria-hidden />
+                Tải SVG tầng {level}
+              </a>
+            )}
+            <Button variant="secondary" onClick={onDownloadDxf} disabled={downloadingDxf}>
+              <Download className="size-4" aria-hidden />
+              {downloadingDxf ? 'Đang tạo tệp…' : 'Tải DXF cả nhà'}
+            </Button>
+          </div>
+        </div>
+
+        <div className="p-3">
+          {sheet.loading && <Skeleton className="h-96 w-full" />}
+          {sheet.error && <p className="text-status-overdue">{sheet.error}</p>}
+          {sheet.url && (
+            // `<img>` chứ không phải SVG nhúng: xem ghi chú đầu tệp.
+            <img
+              src={sheet.url}
+              alt={`Tờ mặt bằng ${current?.name ?? `tầng ${level}`}`}
+              style={sheetWidthStyle(sheetSize)}
+              onClick={() => setViewing(true)}
+              className="w-full cursor-zoom-in rounded-md border border-tk-line bg-white"
+            />
+          )}
+          {viewing && sheet.url && (
+            <SheetViewer
+              src={sheet.url}
+              alt={`Tờ mặt bằng ${current?.name ?? `tầng ${level}`}`}
+              title={`${name} · ${current?.name ?? `Tầng ${level}`}`}
+              onClose={closeViewer}
+            />
+          )}
+          {chooseError && <p className="mt-2 text-status-overdue">{chooseError}</p>}
+          {dxfError && (
+            <p className="mt-2 text-status-overdue">Không tải được tệp DXF: {dxfError}</p>
+          )}
+          {/* Không gian mở (T48): tờ vẽ ghi mỗi khu một nhãn và ngăn bằng nét đứt; nói lại bằng chữ ở
+              đây để người đọc màn hình không phải soi tờ vẽ mới biết phòng nào là ô gộp. */}
+          {(current?.openSpaces ?? []).map((space) => (
+            <p key={space.id} className="mt-3 text-fg-subtle">
+              Không gian mở:{' '}
+              {space.parts
+                .map(
+                  (part) =>
+                    `${review.roomLabels[part.type] ?? part.type} ${formatNumber(part.area_m2)} m²`,
+                )
+                .join(' · ')}{' '}
+              — ngăn nhau bằng ranh mềm, không có vách.
+            </p>
+          ))}
+          {(current?.notes.length ?? 0) > 0 && (
+            <ul className="mt-3 space-y-1">
+              {/* Chỗ bộ vẽ tự xử lý (kẹp lỗ mở quá khổ, bỏ nhãn phòng quá nhỏ, hạ tỷ lệ). Không
+                  phải lỗi, nhưng im lặng thì người đọc tưởng tờ vẽ nói đủ mọi thứ trong dữ liệu. */}
+              {current!.notes.map((note) => (
+                <li key={note.code} className="text-fg-subtle">
+                  {note.message}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
+
+      {/* Một khung, hai nguồn: tờ vector ở trên hoặc bản vẽ kỹ sư tải lên (07/10/2026). */}
+      {sheetImagePanel}
+
+      <Fold title="Về phương án này">
         <p className="flex items-center gap-2 font-medium">
           <Sparkles className="size-4" aria-hidden />
           {review.generator.provider} · {review.generator.model}
+          {resampledLabel(review.generator)}
         </p>
         <p className="mt-2">{review.rationale}</p>
+        {review.generator.edit && (
+          <p className="mt-2">
+            Bản sửa theo yêu cầu: <q>{review.generator.edit.instruction}</q>
+          </p>
+        )}
         {review.wallsDerived && (
           <p className="mt-3 flex items-start gap-2">
             <Info className="mt-0.5 size-4 shrink-0 text-fg-muted" aria-hidden />
@@ -616,106 +716,12 @@ function PlanDetail({
             )}
           </p>
         )}
-        {!readOnly && (
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <Button variant="primary" onClick={onChoose} disabled={choosing || isHead}>
-              {isHead ? 'Đang hiệu lực' : choosing ? 'Đang lưu…' : 'Chọn phương án này'}
-            </Button>
-            {sheet.url && (
-              <a
-                className="underline"
-                href={sheet.url}
-                download={`mat-bang-${review.variantId}-tang-${level}.svg`}
-              >
-                Tải tờ mặt bằng tầng {level} (SVG)
-              </a>
-            )}
-            <Button variant="secondary" onClick={onDownloadDxf} disabled={downloadingDxf}>
-              {downloadingDxf ? 'Đang tạo tệp…' : 'Tải DXF cả nhà'}
-            </Button>
-          </div>
-        )}
-        {chooseError && <p className="mt-2 text-status-overdue">{chooseError}</p>}
-        {dxfError && <p className="mt-2 text-status-overdue">Không tải được tệp DXF: {dxfError}</p>}
-      </Panel>
-
-      <Panel
-        title="Tờ mặt bằng"
-        aside={
-          sheet.scale ? (
-            <Chip tone="mute">
-              Tỷ lệ 1:{sheet.scale} · {sheet.orientation === 'portrait' ? 'tờ dọc' : 'tờ ngang'}
-            </Chip>
-          ) : undefined
-        }
-      >
-        <div className="mb-3 flex flex-wrap items-center gap-3">
-          {review.levels.length > 1 && (
-            <SegmentedControl
-              options={levelOptions}
-              value={String(level)}
-              onChange={(value) => onLevel(Number(value))}
-              getLabel={(value) =>
-                review.levels.find((item) => String(item.level) === value)?.name ?? `Tầng ${value}`
-              }
-            />
-          )}
-          {/* Cỡ xem áp cho CẢ tờ vector ở đây lẫn ảnh có nội thất bên dưới. */}
-          <SheetSizeControl />
-        </div>
-
-        {sheet.loading && <Skeleton className="h-96 w-full" />}
-        {sheet.error && <p className="text-status-overdue">{sheet.error}</p>}
-        {sheet.url && (
-          // `<img>` chứ không phải SVG nhúng: xem ghi chú đầu tệp.
-          <img
-            src={sheet.url}
-            alt={`Tờ mặt bằng ${current?.name ?? `tầng ${level}`}`}
-            style={sheetWidthStyle(sheetSize)}
-            className="w-full rounded-md border border-tk-line bg-white"
-          />
-        )}
-        <p className="mt-3 text-fg-subtle">
-          {review.generator.layout === 'intent'
-            ? 'Tờ vẽ dựng từ toạ độ chương trình xếp, nên mọi kích thước trên đây đo được.'
-            : 'Tờ vẽ dựng từ chính toạ độ mô hình khai, nên mọi kích thước trên đây đo được.'}
-        </p>
-        {/* Không gian mở (T48): tờ vẽ ghi mỗi khu một nhãn và ngăn bằng nét đứt; nói lại bằng chữ ở
-            đây để người đọc màn hình không phải soi tờ vẽ mới biết phòng nào là ô gộp. */}
-        {(current?.openSpaces ?? []).map((space) => (
-          <p key={space.id} className="mt-3 text-fg-subtle">
-            Không gian mở:{' '}
-            {space.parts
-              .map(
-                (part) =>
-                  `${review.roomLabels[part.type] ?? part.type} ${formatNumber(part.area_m2)} m²`,
-              )
-              .join(' · ')}{' '}
-            — ngăn nhau bằng ranh mềm, không có vách.
-          </p>
-        ))}
-        {(current?.notes.length ?? 0) > 0 && (
-          <ul className="mt-3 space-y-1">
-            {/* Chỗ bộ vẽ tự xử lý (kẹp lỗ mở quá khổ, bỏ nhãn phòng quá nhỏ, hạ tỷ lệ). Không
-                phải lỗi, nhưng im lặng thì người đọc tưởng tờ vẽ nói đủ mọi thứ trong dữ liệu. */}
-            {current!.notes.map((note) => (
-              <li key={note.code} className="text-fg-subtle">
-                {note.message}
-              </li>
-            ))}
-          </ul>
-        )}
-      </Panel>
-
-      {sheetImagePanel}
-
-      {editPanel}
+      </Fold>
 
       {current?.intent && <IntentPanel level={current} labels={review.roomLabels} />}
 
       {/* Thứ tự cố ý: LỖI CHẶN trước, rồi điểm. Một phương án có dữ liệu tự mâu thuẫn thì điểm
-          của nó không nói gì — cổng và điểm là hai tầng kết luận khác nhau (T24), và đặt điểm lên
-          trên thì con số đọc như lời phán cuối cùng. */}
+          của nó không nói gì — cổng và điểm là hai tầng kết luận khác nhau (T24). */}
       <IssueList
         title="Lỗi bộ kiểm máy còn lại"
         issues={review.blocking}
@@ -730,9 +736,10 @@ function PlanDetail({
         empty="Không có chỗ nào đáng ngờ."
       />
 
-      <PlanScorePanel score={review.score} />
+      {/* «Điểm chất lượng» (`PlanScorePanel`) TẠM ẨN theo Haan 07/10/2026 — điểm tổng và ngưỡng vẫn ở
+          chip đầu tờ vẽ. */}
 
-      <Panel title="Đối chiếu thói quen thiết kế">
+      <Fold title="Đối chiếu thói quen thiết kế">
         {/*
          * Tiêu đề KHÔNG còn là «Đối chiếu quy chuẩn» (T30, 12/09/2026): nhánh AI không kiểm quy
          * chuẩn nào nữa, nên để nguyên chữ ấy là nói sai ngay trên nhãn panel. Câu `noCodeCheck`
@@ -769,8 +776,64 @@ function PlanDetail({
           </p>
         )}
         <p className="mt-3 font-medium">{AI_DISCLAIMERS.noCodeCheck}</p>
-      </Panel>
+      </Fold>
     </>
+  );
+}
+
+/**
+ * Ảnh thu nhỏ tầng 1 trên thẻ chọn phương án — so nhanh các phương án mà không phải mở từng cái.
+ * Dùng chính tờ vector (qua `<img>`), không gọi mô hình nào.
+ */
+function PlanThumb({
+  projectId,
+  artifactId,
+}: {
+  projectId: string;
+  artifactId: string;
+}): React.ReactElement {
+  const sheet = useAiPlanSheet(projectId, artifactId, 1);
+  return sheet.url ? (
+    <img
+      src={sheet.url}
+      alt=""
+      className="h-12 w-10 shrink-0 rounded-sm border border-tk-line bg-white object-cover object-left-top"
+    />
+  ) : (
+    <span className="h-12 w-10 shrink-0 rounded-sm bg-tk-chip-mute" aria-hidden />
+  );
+}
+
+/**
+ * Mục gấp được — cùng khung với `Panel` nhưng mặc định đóng, để tờ vẽ không bị đẩy xuống dưới cả
+ * màn hình chữ. Lỗi chặn thì tự mở: thứ cần đọc không được giấu.
+ */
+function Fold({
+  title,
+  aside,
+  defaultOpen = false,
+  children,
+}: {
+  title: string;
+  aside?: React.ReactNode;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}): React.ReactElement {
+  return (
+    <details
+      open={defaultOpen}
+      className="group rounded-lg border border-tk-line bg-tk-panel open:pb-4 [&>summary::-webkit-details-marker]:hidden"
+    >
+      <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 px-4 select-none lg:px-[18px]">
+        <ChevronRight
+          className="size-4 shrink-0 text-tk-t3 transition-transform group-open:rotate-90"
+          aria-hidden
+        />
+        <h2 className="mr-auto font-semibold">{title}</h2>
+        {aside}
+      </summary>
+      <div className="px-4 lg:px-[18px]">{children}</div>
+    </details>
   );
 }
 
@@ -788,8 +851,9 @@ function IssueList({
   note?: string;
 }): React.ReactElement {
   return (
-    <Panel
+    <Fold
       title={title}
+      defaultOpen={tone === 'overdue' && issues.length > 0}
       aside={
         issues.length ? (
           <Chip tone={tone === 'overdue' ? 'rd' : 'am'}>{issues.length}</Chip>
@@ -815,7 +879,7 @@ function IssueList({
           </ul>
         </>
       )}
-    </Panel>
+    </Fold>
   );
 }
 
@@ -872,7 +936,7 @@ function IntentPanel({
     new Intl.NumberFormat('vi-VN', { style: 'percent', maximumFractionDigits: 0 }).format(value);
 
   return (
-    <Panel
+    <Fold
       title="Ý định bố cục của AI"
       aside={arrange ? <Chip tone="mute">Khớp ý đồ {percent(arrange.intent_fit)}</Chip> : undefined}
     >
@@ -920,7 +984,7 @@ function IntentPanel({
           </ul>
         </>
       )}
-    </Panel>
+    </Fold>
   );
 }
 

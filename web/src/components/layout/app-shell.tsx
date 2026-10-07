@@ -20,7 +20,7 @@ import { Suspense, type ReactNode } from 'react';
 import { Outlet } from 'react-router-dom';
 import { CardGridSkeleton } from '@/components/ui/states';
 import { cn } from '@/lib/utils';
-import { TkThemeProvider, useTkTheme } from '@/pages/tk/tk-theme';
+import { ThemeProvider, useTheme } from '@/lib/theme';
 import { Breadcrumb, type Crumb } from './breadcrumb';
 import { SectionHelp } from '@/components/ui/section-help';
 import type { SectionGuide } from '@/lib/help-texts';
@@ -91,33 +91,33 @@ export function PageHeader({
 }
 
 export function AppShell() {
-  // Trạng thái sáng/tối của Module Thiết kế sống ở KHUNG chứ không trong trang, vì thanh
-  // trái và thanh trên cũng đổi màu theo nó — để trong trang thì nút bấm ở một cây React
-  // còn thứ phải đổi màu lại ở cây khác.
+  // Trạng thái sáng/tối sống ở KHUNG chứ không trong trang, vì thanh trái và thanh trên cũng
+  // đổi màu theo nó — để trong trang thì nút bấm ở một cây React còn thứ phải đổi màu lại ở
+  // cây khác.
   return (
-    <TkThemeProvider>
+    <ThemeProvider>
       <ShellBody />
-    </TkThemeProvider>
+    </ThemeProvider>
   );
 }
 
 function ShellBody() {
   const tk = useTkScope();
-  const { theme } = useTkTheme();
+  const { theme } = useTheme();
 
   return (
     // `100dvh` chứ không `100vh`: trên trình duyệt di động, `100vh` tính cả phần thanh địa
     // chỉ tự ẩn/hiện, nên đáy màn hình bị đẩy xuống dưới vùng nhìn thấy và thanh điều hướng
     // dưới nằm ngoài màn hình.
     //
-    // `data-tk-theme` chỉ có mặt trong `/tk/*`. Nó đè bộ token chung (`--color-surface`,
-    // `--color-fg`, `--color-border`…) nên cả khung đổi theo mà không phải viết class có điều
-    // kiện ở từng thành phần — ra module khác thuộc tính biến mất và mọi thứ trở lại như cũ.
+    // `data-tk-theme` có mặt ở MỌI module (từ 07/10/2026, trước đó chỉ `/tk/*`). Nó đè bộ
+    // token chung (`--color-surface`, `--color-fg`, `--color-border`…) nên cả khung đổi theo
+    // mà không phải viết class có điều kiện ở từng thành phần (`lib/theme.tsx`).
     //
     // Trong phạm vi Thiết kế thì bỏ khe hở và bo góc của bố cục "panel nổi": bản mẫu §5.1 xếp
     // ba vùng sát nhau, phân cách bằng đúng một đường viền.
     <div
-      data-tk-theme={tk ? theme : undefined}
+      data-tk-theme={theme}
       className={cn(
         // `text-fg` phải khai Ở ĐÂY, không thể dựa vào `body`. `body` nằm NGOÀI phạm vi
         // `data-tk-theme`, nên `color: var(--color-fg)` của nó đã tính ra màu chữ của chế độ

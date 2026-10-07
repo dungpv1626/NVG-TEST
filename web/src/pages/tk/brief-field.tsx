@@ -34,15 +34,18 @@ import {
   type BriefAreaBudget,
   type BriefFacade,
   type BriefFormField,
+  type BriefIssue,
 } from '@nvg/shared/design';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { MoneyInput } from '@/components/ui/money-input';
+import { FIELD_BOX, TEXTAREA_BOX } from '@/components/ui/field-box';
 import { Skeleton } from '@/components/ui/states';
 import { cn } from '@/lib/utils';
 import { SiteImageUpload } from './site-image-upload';
+import { IssueLine } from './brief-issue';
 
 /**
  * Ô yêu cầu mặt đứng (T114) nạp LƯỜI: nó kéo theo cả phiếu mặt đứng của AI Design và hook gọi Worker,
@@ -99,6 +102,7 @@ function NumberField({
   placeholder,
   min,
   max,
+  className,
   onChange,
 }: {
   value: unknown;
@@ -113,6 +117,8 @@ function NumberField({
    */
   min?: number;
   max?: number;
+  /** Bề rộng khung ô: ô số chỉ chứa vài chữ số, kéo hết bề ngang cột là thừa (Haan, 07/10/2026). */
+  className?: string;
   onChange: (value: number | undefined) => void;
 }) {
   const asNumber = typeof value === 'number' ? value : undefined;
@@ -154,7 +160,7 @@ function NumberField({
   const invalid = unusable || outOfRange;
 
   return (
-    <div className="space-y-1">
+    <div className={cn('space-y-1', className)}>
       <Input
         // `inputMode` mở bàn phím số trên di động mà KHÔNG kéo theo nút tăng/giảm và thông báo
         // `step` tiếng Anh của ô số gốc (CLAUDE.md 4.1).
@@ -163,7 +169,7 @@ function NumberField({
         aria-invalid={invalid || undefined}
         placeholder={placeholder}
         value={text}
-        className={invalid ? 'border-status-overdue' : undefined}
+        className={cn('h-10 tabular-nums', invalid && 'border-status-overdue')}
         onChange={(e) => {
           setText(e.target.value);
           const parsed = parseNumber(e.target.value);
@@ -348,7 +354,7 @@ function AddSpaceRow({
         aria-label="Loại phòng cần thêm"
         value={type}
         onChange={(e) => setType(e.target.value)}
-        className="min-h-10 rounded border border-border bg-surface px-2"
+        className={FIELD_BOX}
       >
         <option value="">— Chọn loại phòng —</option>
         {options.map((option) => (
@@ -375,8 +381,8 @@ export interface BriefFieldProps {
   field: BriefFormField;
   value: unknown;
   onChange: (value: unknown) => void;
-  /** Mã lỗi nhất quán đang chỉ vào trường này — hiện ngay dưới ô. */
-  issues?: string[];
+  /** Câu soát nhất quán đang chỉ vào trường này — hiện ngay dưới ô, tô theo mức. */
+  issues?: Pick<BriefIssue, 'severity' | 'message'>[];
   /** Dự án đang sửa — chỉ trường `site.boundary_m` cần, để gọi được tính năng đọc ảnh trích lục. */
   projectId: string;
   /** Số tầng hiện khai — chỉ trường `required_spaces` (control `space_floor`) cần, để dựng
@@ -425,10 +431,8 @@ export function BriefField({
           areaBudget={areaBudget}
         />
       </Field>
-      {issues.map((message) => (
-        <p key={message} className="mt-1 text-status-overdue">
-          {message}
-        </p>
+      {issues.map((issue) => (
+        <IssueLine key={issue.message} severity={issue.severity} message={issue.message} />
       ))}
     </div>
   );
@@ -451,13 +455,14 @@ function BriefControl({
           value={(value as string) ?? ''}
           placeholder={field.placeholder}
           onChange={(e) => onChange(e.target.value.trim() === '' ? undefined : e.target.value)}
-          className="w-full rounded border border-border bg-surface p-2"
+          className={cn(TEXTAREA_BOX, 'max-w-2xl')}
         />
       );
 
     case 'text':
       return (
         <Input
+          className="h-10 max-w-md"
           value={(value as string) ?? ''}
           placeholder={field.placeholder}
           onChange={(e) => onChange(e.target.value.trim() === '' ? undefined : e.target.value)}
@@ -475,6 +480,7 @@ function BriefControl({
           placeholder={field.placeholder}
           min={field.min}
           max={field.max}
+          className="w-28"
           onChange={(next) => onChange(next === undefined ? undefined : storedNumber(field, next))}
         />
       );
@@ -489,12 +495,14 @@ function BriefControl({
       return (
         <div className="flex flex-wrap items-center gap-2">
           <MoneyInput
+            className="h-10 w-44"
             aria-label={`${field.label} — từ`}
             value={range ? String(range[0]) : ''}
             onChange={setBound(0)}
           />
           <span className="text-fg-subtle">đến</span>
           <MoneyInput
+            className="h-10 w-44"
             aria-label={`${field.label} — đến`}
             value={range ? String(range[1]) : ''}
             onChange={setBound(1)}
@@ -526,7 +534,7 @@ function BriefControl({
           onChange={(e) =>
             onChange(e.target.value === '' ? undefined : toChoiceValue(field, e.target.value))
           }
-          className="h-10 w-full rounded-sm border border-border bg-surface px-3 sm:h-9"
+          className={cn(FIELD_BOX, 'w-full max-w-xs')}
         >
           <option value="">— Chưa chọn —</option>
           {groups.map((group, index) =>
@@ -670,7 +678,7 @@ function BriefControl({
                 onChange={(e) =>
                   patchAt(index, { floor: e.target.value ? Number(e.target.value) : null })
                 }
-                className="min-h-10 w-full rounded border border-border bg-surface px-2"
+                className={cn(FIELD_BOX, 'w-full')}
               >
                 <option value="">Để hệ thống tự xếp</option>
                 {floorOptions(floors, it.floor)}
@@ -704,6 +712,7 @@ function BriefControl({
               xe (Haan bắt được 07/09/2026). Loại chưa khai gợi ý thì để trống.
             */}
             <Input
+              className="h-10"
               aria-label={`Tiện ích bổ sung — ${name}`}
               placeholder={optionOf(it.type)?.placeholder ?? ''}
               maxLength={500}
@@ -804,15 +813,15 @@ function BriefControl({
     case 'sides': {
       const record = (value as Record<string, unknown> | undefined) ?? {};
       return (
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid gap-x-8 gap-y-2 sm:grid-cols-[repeat(2,max-content)]">
           {SIDES.map((side) => (
             <label key={side.key} className="flex items-center gap-2">
-              <span className="w-24 shrink-0 text-fg-subtle">{side.label}</span>
+              <span className="w-20 shrink-0 text-fg-subtle">{side.label}</span>
               {field.options ? (
                 <select
                   value={(record[side.key] as string) ?? ''}
                   onChange={(e) => onChange(setSide(record, side.key, e.target.value || undefined))}
-                  className="min-h-10 w-full rounded border border-border bg-surface px-2"
+                  className={cn(FIELD_BOX, 'w-44')}
                 >
                   {/* Danh sách đóng nên `<select>` là đúng chỗ: chữ trong đó do mình viết,
                       trình duyệt không tự sinh gì thêm. */}
@@ -828,6 +837,7 @@ function BriefControl({
                   <NumberField
                     value={record[side.key]}
                     label={`${field.label} — ${side.label}`}
+                    className="w-24"
                     onChange={(next) => onChange(setSide(record, side.key, next))}
                   />
                   {/* Đơn vị ngay cạnh ô: không có nó thì «Khoảng sân 2» đọc được thành 2 m² —
@@ -883,7 +893,7 @@ function BriefControl({
                     aria-label="Vai trò"
                     value={member.role}
                     onChange={(e) => update(index, { role: e.target.value })}
-                    className="min-h-10 rounded border border-border bg-surface px-2"
+                    className={FIELD_BOX}
                   >
                     {FAMILY_ROLE_OPTIONS.map((role) => (
                       <option key={role.value} value={role.value}>
@@ -894,7 +904,7 @@ function BriefControl({
                   <Input
                     inputMode="numeric"
                     aria-label="Số người"
-                    className="w-20"
+                    className="h-10 w-20"
                     value={String(member.count ?? 0)}
                     onChange={(e) => {
                       // Không đọc được thì giữ số cũ: `Number('2a')` là `NaN`, và `NaN` hiện
@@ -925,7 +935,7 @@ function BriefControl({
                           floor_pref: null,
                         })
                       }
-                      className="min-h-10 rounded border border-border bg-surface px-2"
+                      className={FIELD_BOX}
                     >
                       <option value="">Để hệ thống tự xếp</option>
                       {floorOptions(floors, member.floor)}
@@ -952,7 +962,7 @@ function BriefControl({
                           needs: needs.filter((n) => n !== 'wc'),
                         })
                       }
-                      className="min-h-10 rounded border border-border bg-surface px-2"
+                      className={FIELD_BOX}
                     >
                       <option value="shared">Phòng ngủ riêng</option>
                       <option value="ensuite">Phòng ngủ khép kín</option>
@@ -971,7 +981,7 @@ function BriefControl({
                     inputMode="numeric"
                     aria-label="Tuổi từng người"
                     placeholder="Tuổi, ví dụ 70, 68"
-                    className="w-40"
+                    className="h-10 w-40"
                     value={(member.ages ?? []).join(', ')}
                     onChange={(e) => update(index, { ages: parseAges(e.target.value) })}
                   />

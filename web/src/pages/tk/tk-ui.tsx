@@ -142,7 +142,8 @@ export function ToolCard({
   return (
     <div
       className={cn(
-        'relative flex flex-col gap-3 rounded-lg border p-4',
+        // `h-full`: nơi đặt thẻ quyết định chiều cao (lưới năm thẻ bằng nhau ở Tổng quan).
+        'relative flex h-full flex-col gap-3 rounded-lg border p-4',
         FAMILY[family].card,
         'transition-[transform,box-shadow,filter] duration-(--motion-base) ease-(--ease-out)',
         // `shadow-tk-card` chứ không phải `shadow-overlay`: bộ bóng chung tính cho nền sáng
@@ -169,10 +170,12 @@ export function ToolCard({
             </h3>
             <ArrowRight aria-hidden className={cn('size-4 shrink-0', ARROW[family])} />
           </div>
-          <p className="mt-1 text-xs leading-relaxed text-tk-t2">{description}</p>
+          <p className="mt-1 line-clamp-2 min-h-[2lh] text-xs leading-relaxed text-tk-t2">
+            {description}
+          </p>
         </div>
       </div>
-      {children}
+      {children && <div className="flex min-h-0 flex-1 flex-col gap-2">{children}</div>}
       {action && <div className="relative mt-auto">{action}</div>}
     </div>
   );

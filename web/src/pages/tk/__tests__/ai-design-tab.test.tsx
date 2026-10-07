@@ -19,6 +19,7 @@ import { renderWithApp } from '@/test/render';
 const state = vi.hoisted(() => ({
   design: null as unknown,
   liveRun: null as unknown,
+  facadeUploads: 0,
   cancel: vi.fn(() => Promise.resolve({ stopped: true })),
 }));
 
@@ -31,6 +32,14 @@ vi.mock('@/hooks/use-ai-design', () => ({
     refetch: vi.fn(),
   }),
   useInvalidateAiDesign: () => vi.fn(),
+  useUploadedDrawings: (_projectId: string, drawing: string) => ({
+    data: {
+      items:
+        drawing === 'facade'
+          ? Array.from({ length: state.facadeUploads }, (_, i) => ({ uploadId: `u${i}` }))
+          : [],
+    },
+  }),
   // Nhật ký chi phí: rỗng — phép thử ở đây không nói về tiền (xem `ai-usage.test.tsx`).
   useAiCallLog: () => ({ data: [], isLoading: false, isError: false, error: null }),
   useAiCallPrompts: () => ({ data: new Set() }),
@@ -93,7 +102,7 @@ describe('Dải bước của tab AI Design', () => {
     state.design = designState();
     renderWithApp(<AiDesignTab projectId="p1" readOnly={false} />);
 
-    expect(await screen.findByText('1. Mặt bằng từng tầng')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /^Mặt bằng từng tầng/ })).toBeInTheDocument();
     // Mặt bằng đọc đầu bài + khảo sát, không chờ chương trình không gian (T45, 15/09/2026).
     expect(screen.queryByText('Cần chương trình không gian trước.')).toBeNull();
     expect(screen.getByText('Cần chọn một phương án mặt bằng trước.')).toBeInTheDocument();
@@ -103,7 +112,7 @@ describe('Dải bước của tab AI Design', () => {
     state.design = designState({ briefArtifactId: null });
     renderWithApp(<AiDesignTab projectId="p1" readOnly={false} />);
 
-    expect(await screen.findByText('1. Mặt bằng từng tầng')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /^Mặt bằng từng tầng/ })).toBeInTheDocument();
     expect(screen.getAllByText('Cần xác nhận đầu bài trước.').length).toBeGreaterThan(0);
   });
 
@@ -111,7 +120,7 @@ describe('Dải bước của tab AI Design', () => {
     state.design = designState();
     renderWithApp(<AiDesignTab projectId="p1" readOnly={false} />);
 
-    expect(await screen.findByText('3. Phối cảnh')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /^Phối cảnh/ })).toBeInTheDocument();
     expect(screen.queryByText(/Chương trình không gian/)).toBeNull();
   });
 
@@ -158,8 +167,24 @@ describe('Mặt đứng dựng theo phương án cũ (T59)', () => {
   });
 });
 
+describe('Phối cảnh mở được từ bản vẽ mặt đứng tải lên (T114 Đợt 4b)', () => {
+  it('chưa có ý tưởng mặt đứng AI nhưng đã tải bản vẽ lên: dải bước không báo «Chưa đủ điều kiện»', async () => {
+    state.design = designState({
+      plans: [{ artifactId: REF, createdAt: '' }],
+      planHeadArtifactId: REF,
+    });
+    state.facadeUploads = 1;
+    renderWithApp(<AiDesignTab projectId="p1" readOnly={false} />);
+
+    const step = await screen.findByRole('button', { name: /^Phối cảnh/ });
+    expect(step).not.toHaveTextContent('Chưa đủ điều kiện');
+    expect(screen.queryByText(/Cần ý tưởng mặt đứng/)).toBeNull();
+    state.facadeUploads = 0;
+  });
+});
+
 describe('Ô chọn gói quy tắc', () => {
-  it('tích gói nào thì báo đúng gói đó, và NÓI RA rằng không kiểm quy chuẩn', async () => {
+  it('tích gói nào thì báo đúng gói đó; không còn ô «Quy chuẩn quốc gia»', async () => {
     // T30 gỡ gói pháp quy khỏi nhánh AI, nên điều phải nói ra là hệ thống KHÔNG kiểm quy chuẩn.
     // Im lặng đọc thành «đã kiểm và đạt».
     const { RulePackPicker } = await import('../ai/ai-rule-pack-picker');
@@ -168,11 +193,12 @@ describe('Ô chọn gói quy tắc', () => {
       <RulePackPicker value={{ standards: false, experience: false }} onChange={onChange} />,
     );
 
-    expect(screen.getByText(/Chưa chọn gói nào: mô hình thiết kế tự do/)).toBeInTheDocument();
     expect(screen.getByText(/Không phải luật, bỏ qua được/)).toBeInTheDocument();
     // Ô tích «Quy chuẩn quốc gia» phải KHÔNG còn: một ô tích không bật gì còn tệ hơn không có ô.
     expect(screen.queryByRole('checkbox', { name: /Quy chuẩn quốc gia/ })).toBeNull();
-    expect(screen.getByText(AI_DISCLAIMERS.noCodeCheck)).toBeInTheDocument();
+    // 07/10/2026 Haan: bỏ các đoạn chú thích (giá, chi phí, riêng tư, «ảnh AI không đo được»)
+    // khỏi màn hình. Dấu in TRÊN ảnh vẫn giữ.
+    expect(screen.queryByText(AI_DISCLAIMERS.noCodeCheck)).toBeNull();
 
     await userEvent.click(
       screen.getByRole('checkbox', { name: /Kinh nghiệm nghề Nhà Việt Group/ }),
