@@ -1,5 +1,10 @@
 /**
- * Dải tiến trình sáu bước của Trang dự án thiết kế (bản mẫu §5.5a).
+ * Dải tiến trình NĂM bước của Trang dự án thiết kế (bản mẫu §5.5a).
+ *
+ * ⚠️ AI Design KHÔNG là một bước (Haan, 07/10/2026): nó là module độc lập hỗ trợ phòng thiết kế,
+ * không nằm trong quy trình. Trước đó dải có bước «AI Design» ở giữa và lấy «đã chọn phương án AI»
+ * làm điều kiện xong — nên chưa chạy AI thì Hồ sơ kỹ thuật, Dự toán, Trình khách đều hiện «chưa
+ * mở». Đó là một ràng buộc sai, và nó khiến người đọc tưởng phải đi qua AI mới làm tiếp được.
  *
  * ⚠️ Đây KHÔNG phải một cỗ máy trạng thái thứ hai. `design_projects.stage` vẫn là thẩm quyền
  * duy nhất về bước nghiệp vụ — nó hiện thành nhãn trạng thái trên header và chỉ đổi qua
@@ -8,7 +13,7 @@
  * ghi, không ai đặt tay được.
  *
  * Hai câu hỏi đó lệch nhau là chuyện bình thường và có ích: một dự án đang ở bước "Hồ sơ kỹ
- * thuật" vẫn có thể chưa chọn phương án mặt bằng AI, và dải này nói ra điều đó.
+ * thuật" vẫn có thể chưa có bản dự toán, và dải này nói ra điều đó.
  *
  * Bước ĐANG CHẠY là bước chưa xong đầu tiên; mọi bước sau nó là chưa mở. Không có bước nào
  * "xong" nằm sau một bước "chưa mở" — đọc dải là đọc một mạch từ trái sang phải.
@@ -31,10 +36,6 @@ export interface StepInput {
   brief: { confirmed: boolean; completeness: number | null } | null;
   /** Số biên bản khảo sát hiện trạng. */
   surveyCount: number;
-  /** Số phương án mặt bằng nhánh AI đã lưu (chỉ phương án qua cổng mới được lưu — T39). */
-  aiPlanCount: number;
-  /** Đã chọn một phương án mặt bằng AI chưa (`design_head` của nhánh AI). */
-  aiPlanChosen: boolean;
   /** Tiến độ ba bộ môn, đơn vị phần trăm; rỗng khi chưa lập việc nào. */
   disciplinePercents: number[];
   /** Đã có bản dự toán nào chưa. */
@@ -73,12 +74,6 @@ export function designSteps(input: StepInput): DesignStep[] {
       tab: 'khao-sat',
     },
     {
-      id: 'ai-design',
-      label: 'AI Design',
-      note: input.aiPlanCount > 0 ? `${input.aiPlanCount} phương án` : '',
-      tab: 'thiet-ke-ai',
-    },
-    {
       id: 'ho-so-ky-thuat',
       label: 'Hồ sơ kỹ thuật',
       note: disciplineAvg != null ? percent(disciplineAvg) : '',
@@ -91,7 +86,6 @@ export function designSteps(input: StepInput): DesignStep[] {
   const done = [
     briefDone,
     input.surveyCount > 0,
-    input.aiPlanChosen,
     disciplineAvg === 100,
     input.hasEstimate,
     input.customerApproved,

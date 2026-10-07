@@ -1,5 +1,5 @@
 {
-  "_doc": "Cấu hình biểu mẫu Đầu bài thiết kế (Lớp 1 — TK-10). ĐÂY LÀ DỮ LIỆU: logic hiện/ẩn, nhãn, thứ tự và trọng số chấm điểm đều nằm ở tệp này, KHÔNG viết cứng trong brief-panel.tsx. Đường dẫn `path` trỏ vào payload DesignBrief (contracts/design-brief.schema.json); riêng tiền tố `legacy.` trỏ vào năm cột chữ tự do của bảng design_briefs có từ TK-01. Mã trong `required_spaces` và `family[].needs` phải nằm trong kb/room_vocabulary.yaml — có kiểm thử canh. ── Đợt 21/09/2026 (khảo sát chi tiết): thêm sáu mục — Gia chủ và tín ngưỡng, Nếp sinh hoạt, Lưu trữ, Thang và lối vào, Ban công, Kỹ thuật và dự trù — cùng tám trường khu đất và ô tuổi trong Thành viên gia đình. Trọng số của gần hết các trường mới là 0 CÓ CHỦ Ý: `completeness_score` là cổng chặn Lớp 2, nên nó chỉ được đo những thứ THIẾU THÌ KHÔNG DỰNG NỔI mặt bằng. Mười một trường mới mang trọng số 1 là những trường đổi hẳn bố cục (thang máy, bậc tam cấp, tín ngưỡng, kinh doanh tại nhà, nếp nấu ăn, người đi lại khó khăn, lưu trữ, ban công, mặt nắng, mặt gió, mức hoàn thiện). Cộng lại tổng trọng số nhà phố lên 50 — một đầu bài trả lời hết phần cũ vẫn đạt 0,78, trên ngưỡng 0,7, nên đợt này KHÔNG chặn hồ sơ nào đang chạy. Quản trị viên đổi được trọng số ở màn hình «Biểu mẫu đầu bài» mà không cần sửa tệp này. ── Gộp còn SÁU mục cùng ngày (Haan: «12 mục là quá dài»): mười hai mục là mười hai lần bấm «Tiếp», và phần lớn chúng chỉ có vài câu. Gộp theo CÂU HỎI CỦA NGƯỜI KHAI chứ không theo nhóm dữ liệu: gia chủ, tín ngưỡng và nếp sinh hoạt là một mạch trò chuyện; thang, lối vào, ban công và phong cách đều là chuyện hình khối nhìn từ ngoài. Không trường nào thêm, bớt hay đổi. Riêng nhóm tổ chức khối nhà trước đây ẩn cả MỤC với nhà phố, nay điều kiện ấy nằm ở TỪNG TRƯỜNG — mục mới còn chứa thang và ban công, thứ nhà phố nào cũng có. ── Ba PHẦN (T114, 03/10/2026, Haan): đầu bài chia Chung cho cả nhà · Mặt bằng công năng · Mặt đứng, gộp phiếu mặt đứng T59 vào làm mục `mat_dung`. Mục giữ nguyên `id` để lớp phủ của quản trị viên không gãy; Ưu tiên–ngân sách lên đứng sau Công trình–khu đất vì nó thuộc phần Chung. Khoá `for` của từng câu quyết định câu ấy đi vào lời gọi AI nào (mặt bằng / mặt đứng / phối cảnh); không khai thì theo phần chứa nó — xem BRIEF_PART_TARGETS trong brief-form.ts.",
+  "_doc": "Cấu hình biểu mẫu Đầu bài thiết kế (Lớp 1 — TK-10). ĐÂY LÀ DỮ LIỆU: logic hiện/ẩn, nhãn, thứ tự và trọng số chấm điểm đều nằm ở tệp này, KHÔNG viết cứng trong brief-panel.tsx. Đường dẫn `path` trỏ vào payload DesignBrief (contracts/design-brief.schema.json); riêng tiền tố `legacy.` trỏ vào năm cột chữ tự do của bảng design_briefs có từ TK-01. Mã trong `required_spaces` và `family[].needs` phải nằm trong kb/room_vocabulary.yaml — có kiểm thử canh. ── Đợt 21/09/2026 (khảo sát chi tiết): thêm sáu mục — Gia chủ và tín ngưỡng, Nếp sinh hoạt, Lưu trữ, Thang và lối vào, Ban công, Kỹ thuật và dự trù — cùng tám trường khu đất và ô tuổi trong Thành viên gia đình. Trọng số của gần hết các trường mới là 0 CÓ CHỦ Ý: `completeness_score` là cổng chặn Lớp 2, nên nó chỉ được đo những thứ THIẾU THÌ KHÔNG DỰNG NỔI mặt bằng. Mười một trường mới mang trọng số 1 là những trường đổi hẳn bố cục (thang máy, bậc tam cấp, tín ngưỡng, kinh doanh tại nhà, nếp nấu ăn, người đi lại khó khăn, lưu trữ, ban công, mặt nắng, mặt gió, mức hoàn thiện). Cộng lại tổng trọng số nhà phố lên 50 — một đầu bài trả lời hết phần cũ vẫn đạt 0,78, trên ngưỡng 0,7, nên đợt này KHÔNG chặn hồ sơ nào đang chạy. Quản trị viên đổi được trọng số ở màn hình «Biểu mẫu đầu bài» mà không cần sửa tệp này. ── Gộp còn SÁU mục cùng ngày (Haan: «12 mục là quá dài»): mười hai mục là mười hai lần bấm «Tiếp», và phần lớn chúng chỉ có vài câu. Gộp theo CÂU HỎI CỦA NGƯỜI KHAI chứ không theo nhóm dữ liệu: gia chủ, tín ngưỡng và nếp sinh hoạt là một mạch trò chuyện; thang, lối vào, ban công và phong cách đều là chuyện hình khối nhìn từ ngoài. Không trường nào thêm, bớt hay đổi. Riêng nhóm tổ chức khối nhà trước đây ẩn cả MỤC với nhà phố, nay điều kiện ấy nằm ở TỪNG TRƯỜNG — mục mới còn chứa thang và ban công, thứ nhà phố nào cũng có. ── Ba PHẦN (T114, 03/10/2026, Haan): đầu bài chia Chung cho cả nhà · Mặt bằng công năng · Mặt đứng, gộp phiếu mặt đứng T59 vào làm mục `mat_dung`. Mục giữ nguyên `id` để lớp phủ của quản trị viên không gãy; Ưu tiên–ngân sách lên đứng sau Công trình–khu đất vì nó thuộc phần Chung. Khoá `for` của từng câu quyết định câu ấy đi vào lời gọi AI nào (mặt bằng / mặt đứng / phối cảnh); không khai thì theo phần chứa nó — xem BRIEF_PART_TARGETS trong brief-form.ts. ── 07/10/2026 (Haan): gỡ 10 câu khỏi biểu mẫu — phong thuỷ (+ yêu cầu phong thuỷ cụ thể), nếp nấu ăn, bếp phụ, tần suất tiếp khách, làm việc tại nhà, ca đêm, thú nuôi, quan hệ của người quyết định, những thứ cần chỗ cất; cùng ngày gỡ thêm câu «Có khách ở lại qua đêm». Trường vẫn còn trong hợp đồng `design-brief` để đầu bài cũ đọc được; mã đọc chúng theo kiểu «chỉ suy từ câu đã trả lời».",
   "version": "2.0.0",
   "parts": [
     {
@@ -840,32 +840,6 @@
           "hint": "Người nói câu cuối cùng khi hai ý kiến trong nhà khác nhau. Thiếu thông tin này là nguyên nhân hàng đầu phải sửa phương án nhiều lần."
         },
         {
-          "path": "decision_maker.relationship",
-          "label": "Quan hệ của người quyết định",
-          "control": "choice",
-          "weight": 1,
-          "for": ["plan"],
-          "options": [
-            {
-              "value": "chu_nha",
-              "label": "Chủ nhà"
-            },
-            {
-              "value": "vo_chong_chu_nha",
-              "label": "Hai vợ chồng cùng quyết"
-            },
-            {
-              "value": "ong_ba",
-              "label": "Ông bà"
-            },
-            {
-              "value": "nguoi_dai_dien",
-              "label": "Người đại diện được uỷ quyền"
-            }
-          ],
-          "note": "Nhãn lấy từ `DECISION_RELATIONSHIPS` (`shared/src/design/brief-vocabulary.ts`) — bộ này còn dùng ở khảo sát của Kinh doanh. Chép tay sang đây là bộ thứ hai sẽ lệch."
-        },
-        {
           "path": "legacy.design_task",
           "label": "Nhiệm vụ thiết kế",
           "control": "textarea",
@@ -1016,48 +990,12 @@
           }
         },
         {
-          "path": "household.feng_shui",
-          "label": "Gia đình có xem phong thuỷ không",
-          "control": "choice",
-          "weight": 0,
-          "optional": true,
-          "hint": "Phần mềm không tự luận phong thuỷ. Mọi ràng buộc phải do người quyết và ghi vào ô bên dưới.",
-          "options": [
-            {
-              "value": "khong_xem",
-              "label": "Không xem"
-            },
-            {
-              "value": "co_xem",
-              "label": "Có xem"
-            },
-            {
-              "value": "co_thay_rieng",
-              "label": "Đã có thầy riêng",
-              "note": "Sẽ đưa yêu cầu cụ thể"
-            }
-          ]
-        },
-        {
-          "path": "household.feng_shui_notes",
-          "label": "Yêu cầu phong thuỷ cụ thể",
-          "control": "textarea",
-          "weight": 0,
-          "optional": true,
-          "hint": "Ghi thành câu ràng buộc dùng được. Viết chung chung thì không ràng buộc được gì.",
-          "placeholder": "Ví dụ: cửa chính không đối cửa sau; bếp không nhìn thẳng cửa chính; hướng tốt Đông Nam",
-          "when": {
-            "field": "household.feng_shui",
-            "in": ["co_xem", "co_thay_rieng"]
-          }
-        },
-        {
           "path": "household.taboos",
           "label": "Điều kiêng kỵ khác",
           "control": "textarea",
           "weight": 0,
           "optional": true,
-          "hint": "Tách khỏi phong thuỷ vì nhiều gia đình có kiêng kỵ mà không xem phong thuỷ.",
+          "hint": "Kiêng kỵ hay yêu cầu về hướng, vị trí bàn thờ, bếp, cửa chính… mà gia đình đã quyết. Ghi đúng lời gia chủ.",
           "placeholder": "Ví dụ: khu vệ sinh không nằm trên bàn thờ; không phòng nào mở cửa thẳng ra cầu thang"
         },
         {
@@ -1230,47 +1168,6 @@
           }
         },
         {
-          "path": "lifestyle.cooking",
-          "label": "Nếp nấu ăn",
-          "control": "choice",
-          "weight": 1,
-          "hint": "Bếp Việt chiên xào nhiều mùi thì không nên mở thông phòng khách, dù phong cách đang chuộng.",
-          "options": [
-            {
-              "value": "nau_nhieu_chien_xao",
-              "label": "Nấu nhiều, chiên xào",
-              "note": "Bếp phải kín hoặc có bếp phụ"
-            },
-            {
-              "value": "nau_hang_ngay_don_gian",
-              "label": "Nấu hằng ngày, đơn giản"
-            },
-            {
-              "value": "it_nau",
-              "label": "Ít nấu",
-              "note": "Bếp mở là hợp lý"
-            }
-          ]
-        },
-        {
-          "path": "lifestyle.second_kitchen",
-          "label": "Cần bếp phụ tách riêng",
-          "control": "tristate",
-          "weight": 0,
-          "optional": true,
-          "hint": "Bếp Việt tách khỏi bếp đẹp.",
-          "options": [
-            {
-              "value": "true",
-              "label": "Có"
-            },
-            {
-              "value": "false",
-              "label": "Không"
-            }
-          ]
-        },
-        {
           "path": "lifestyle.dining_place",
           "label": "Cả nhà ăn ở đâu",
           "control": "choice",
@@ -1319,82 +1216,6 @@
           ]
         },
         {
-          "path": "lifestyle.guests",
-          "label": "Tần suất tiếp khách",
-          "control": "choice",
-          "weight": 0,
-          "optional": true,
-          "hint": "Tiếp khách thường xuyên kéo theo phòng khách rộng hơn và một khu vệ sinh khách ở tầng trệt.",
-          "options": [
-            {
-              "value": "thuong_xuyen",
-              "label": "Thường xuyên"
-            },
-            {
-              "value": "thinh_thoang",
-              "label": "Thỉnh thoảng"
-            },
-            {
-              "value": "it",
-              "label": "Ít"
-            }
-          ]
-        },
-        {
-          "path": "lifestyle.overnight_guests",
-          "label": "Có khách ở lại qua đêm",
-          "control": "tristate",
-          "weight": 0,
-          "optional": true,
-          "hint": "Có thì cần một phòng ngủ khách thật, không phải sofa phòng khách.",
-          "options": [
-            {
-              "value": "true",
-              "label": "Có"
-            },
-            {
-              "value": "false",
-              "label": "Không"
-            }
-          ]
-        },
-        {
-          "path": "lifestyle.work_from_home",
-          "label": "Có người làm việc tại nhà",
-          "control": "tristate",
-          "weight": 0,
-          "optional": true,
-          "hint": "Kéo theo phòng làm việc yên tĩnh, tách khỏi khu sinh hoạt chung.",
-          "options": [
-            {
-              "value": "true",
-              "label": "Có"
-            },
-            {
-              "value": "false",
-              "label": "Không"
-            }
-          ]
-        },
-        {
-          "path": "lifestyle.night_shift",
-          "label": "Có người làm ca đêm, ngủ ban ngày",
-          "control": "tristate",
-          "weight": 0,
-          "optional": true,
-          "hint": "Phòng ngủ phải tránh mặt ồn và tránh nằm cạnh bếp hay phòng khách.",
-          "options": [
-            {
-              "value": "true",
-              "label": "Có"
-            },
-            {
-              "value": "false",
-              "label": "Không"
-            }
-          ]
-        },
-        {
           "path": "lifestyle.reduced_mobility",
           "label": "Có người đi lại khó khăn",
           "control": "tristate",
@@ -1430,36 +1251,6 @@
             {
               "value": "ca_hai",
               "label": "Cả hai"
-            }
-          ]
-        },
-        {
-          "path": "lifestyle.pets",
-          "label": "Thú nuôi trong nhà",
-          "control": "choice",
-          "weight": 0,
-          "optional": true,
-          "hint": "Kéo theo chỗ tắm và chỗ ở cho thú, cửa sân, và vật liệu sàn.",
-          "options": [
-            {
-              "value": "khong",
-              "label": "Không"
-            },
-            {
-              "value": "cho",
-              "label": "Chó"
-            },
-            {
-              "value": "meo",
-              "label": "Mèo"
-            },
-            {
-              "value": "cho_va_meo",
-              "label": "Chó và mèo"
-            },
-            {
-              "value": "khac",
-              "label": "Khác"
             }
           ]
         },
@@ -1674,56 +1465,6 @@
             {
               "value": "nhieu",
               "label": "Nhiều"
-            }
-          ]
-        },
-        {
-          "path": "storage.items",
-          "label": "Những thứ cần chỗ cất",
-          "control": "multi",
-          "weight": 0,
-          "optional": true,
-          "hint": "Khai ra từng loại thì chỗ chứa đặt đúng chỗ: đồ theo mùa cất trên cao, thực phẩm kề bếp, dụng cụ kề chỗ để xe.",
-          "options": [
-            {
-              "value": "kho_chung",
-              "label": "Kho chung"
-            },
-            {
-              "value": "kho_thuc_pham",
-              "label": "Kho thực phẩm"
-            },
-            {
-              "value": "tu_am_tuong",
-              "label": "Tủ âm tường"
-            },
-            {
-              "value": "do_theo_mua",
-              "label": "Đồ theo mùa"
-            },
-            {
-              "value": "hanh_ly",
-              "label": "Hành lý, vali"
-            },
-            {
-              "value": "tai_lieu",
-              "label": "Tài liệu, sách"
-            },
-            {
-              "value": "dung_cu_sua_chua",
-              "label": "Dụng cụ sửa chữa"
-            },
-            {
-              "value": "do_the_thao",
-              "label": "Đồ thể thao"
-            },
-            {
-              "value": "ham_ruou",
-              "label": "Hầm rượu"
-            },
-            {
-              "value": "do_tho_cung",
-              "label": "Đồ thờ cúng"
             }
           ]
         },

@@ -21,7 +21,7 @@ import { Skeleton } from '@/components/ui/states';
 import { useAiFacadeImage, useDrawAiFacadeImage } from '@/hooks/use-ai-design';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { stampWatermark } from '@/lib/watermark';
-import { Chip, Panel } from '../tk-ui';
+import { Panel } from '../tk-ui';
 import { AiModePicker, useAiChoice } from './ai-model-picker';
 import { AiUsageLine } from './ai-usage';
 import { sheetWidthStyle, useSheetSize } from './sheet-size';
@@ -80,14 +80,7 @@ export function FacadeImagePanel({
   const busy = draw.isPending;
 
   return (
-    <Panel
-      title="Ảnh mặt đứng có vật liệu"
-      aside={<Chip tone="mute">Ảnh trình khách — không thay tờ vẽ</Chip>}
-    >
-      <p className="mb-3 text-fg-subtle">
-        Mô hình ảnh vẽ lại chính tờ mặt đứng ở trên với vật liệu, màu, mái và cổng của ý tưởng đã
-        lưu. Tờ vector ở trên vẫn là bản dùng để đo và để xuất DXF.
-      </p>
+    <Panel title="Ảnh mặt đứng có vật liệu">
       {stale && (
         <p className="mb-3 text-tk-am-fg">
           Mặt đứng đang dựng theo phương án mặt bằng cũ — dựng lại ý tưởng mặt đứng trước khi vẽ
@@ -122,9 +115,7 @@ export function FacadeImagePanel({
       {(busy || shown.loading) && <Skeleton className="h-96 w-full" />}
       {!busy && shown.error && <p className="mb-3 text-status-overdue">{shown.error}</p>}
       {!busy && !shown.loading && !shown.error && !shown.url && (
-        <p className="text-fg-subtle">
-          Chưa có ảnh mặt đứng. Chọn model rồi bấm vẽ — mỗi tấm là một lượt gọi tính tiền.
-        </p>
+        <p className="text-fg-subtle">Chưa có ảnh mặt đứng.</p>
       )}
 
       {!busy && stamped && (
@@ -136,7 +127,6 @@ export function FacadeImagePanel({
             className="w-full rounded-md border border-tk-line bg-white"
           />
           {/* Lớp nhãn thứ hai, bằng CHỮ — ở lại cả khi canvas hỏng. */}
-          <p className="mt-3 text-status-overdue">{AI_DISCLAIMERS.aiFacadeImage}</p>
           {!stamped.stamped && (
             <p className="mt-1 text-status-overdue">
               Trình duyệt không in được nhãn lên ảnh. Tấm này chưa có dấu — đừng gửi đi khi chưa ghi

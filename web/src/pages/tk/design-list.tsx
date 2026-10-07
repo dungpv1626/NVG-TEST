@@ -10,7 +10,32 @@ import { PageHeader } from '@/components/layout/app-shell';
 import { EntityTable, useCreateActions, type EntityRow } from '@/components/entity/entity-table';
 import { useDesignProjects } from '@/hooks/use-design-projects';
 import { useCan } from '@/lib/auth';
+import { useEffect, useState } from 'react';
+import { SegmentedControl } from '@/components/ui/segmented-control';
+import { AiDesignCards } from './ai-design-cards';
 import { TkNav } from './tk-nav';
+
+type ViewMode = 'the' | 'bang';
+const VIEW_KEY = 'nvg.tk.ai-design.view';
+
+/** Cách xem danh sách AI Design — sở thích theo máy, mặc định THẺ (07/10/2026). */
+function useViewMode(): [ViewMode, (mode: ViewMode) => void] {
+  const [mode, setMode] = useState<ViewMode>(() => {
+    try {
+      return window.localStorage.getItem(VIEW_KEY) === 'bang' ? 'bang' : 'the';
+    } catch {
+      return 'the';
+    }
+  });
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(VIEW_KEY, mode);
+    } catch {
+      // Không lưu được thì chỉ nhớ trong phiên này.
+    }
+  }, [mode]);
+  return [mode, setMode];
+}
 
 interface DesignRow extends EntityRow {
   stageLabel: string;
@@ -33,6 +58,7 @@ export function AiDesignListPage() {
 function DesignProjectList({ mode }: { mode: 'project' | 'ai' }) {
   const canCreate = useCan('TK', 'create') && mode === 'project';
   const { data, isLoading, error, refetch } = useDesignProjects();
+  const [view, setView] = useViewMode();
 
   const rows: DesignRow[] = (data ?? []).map((p) => ({
     id: p.id,
@@ -68,44 +94,70 @@ function DesignProjectList({ mode }: { mode: 'project' | 'ai' }) {
         actions={headerAction}
       />
       {mode === 'ai' && (
-        <p className="mb-4 text-fg-subtle">
-          Chọn một hồ sơ để làm đầu bài, mặt bằng, mặt đứng và phối cảnh bằng AI. Kết quả là bản
-          phác tham khảo cho phòng thiết kế, không đi vào hồ sơ phát hành.
-        </p>
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <p className="mr-auto text-fg-subtle">
+            Chọn một hồ sơ để làm đầu bài, mặt bằng, mặt đứng và phối cảnh bằng AI. Kết quả là bản
+            phác tham khảo cho phòng thiết kế, không đi vào hồ sơ phát hành.
+          </p>
+          <SegmentedControl
+            options={['the', 'bang'] as const}
+            value={view}
+            onChange={setView}
+            getLabel={(option) => (option === 'the' ? 'Thẻ' : 'Bảng')}
+          />
+        </div>
       )}
 
-      <EntityTable<DesignRow>
-        rows={rows}
-        isLoading={isLoading}
-        error={error}
-        onRetry={() => void refetch()}
-        detailPath={(row) => (mode === 'ai' ? `/tk/ai-design/${row.id}` : `/tk/du-an/${row.id}`)}
-        searchPlaceholder="Tìm theo tên, mã hoặc người chịu trách nhiệm…"
-        emptyMessage={
-          canCreate
-            ? 'Chưa có dự án thiết kế nào. Tạo hồ sơ khi nhận đầu bài từ Kinh doanh hoặc trực tiếp từ khách hàng.'
-            : 'Chưa có dự án thiết kế nào. Vai trò hiện tại không có quyền tạo hồ sơ thiết kế.'
-        }
-        emptyAction={emptyAction}
-        columns={[
-          { key: 'stage', header: 'Bước', render: (r) => r.stageLabel },
-          {
-            key: 'customer',
-            header: 'Khách hàng',
-            render: (r) => r.customerName ?? <span className="text-fg-subtle">—</span>,
-          },
-          {
-            key: 'handover',
-            header: 'Bàn giao thi công',
-            render: (r) =>
-              r.handedOverAt ? (
-                formatDate(r.handedOverAt)
-              ) : (
-                <span className="text-fg-subtle">Chưa bàn giao</span>
-              ),
-          },
-        ]}
-      />
+      {mode === 'ai' && view === 'the' ? (
+        <AiDesignCards
+          rows={rows.map((row) => ({
+            id: row.id,
+            code: row.code,
+            title: row.title,
+            responsiblePerson: row.responsiblePerson,
+            status: row.status,
+            deadline: row.deadline,
+            companyId: row.companyId,
+            customerName: row.customerName,
+          }))}
+          isLoading={isLoading}
+          error={error}
+          onRetry={() => void refetch()}
+        />
+      ) : (
+        <EntityTable<DesignRow>
+          rows={rows}
+          isLoading={isLoading}
+          error={error}
+          onRetry={() => void refetch()}
+          detailPath={(row) => (mode === 'ai' ? `/tk/ai-design/${row.id}` : `/tk/du-an/${row.id}`)}
+          searchPlaceholder="Tìm theo tên, mã hoặc người chịu trách nhiệm…"
+          emptyMessage={
+            canCreate
+              ? 'Chưa có dự án thiết kế nào. Tạo hồ sơ khi nhận đầu bài từ Kinh doanh hoặc trực tiếp từ khách hàng.'
+              : 'Chưa có dự án thiết kế nào. Vai trò hiện tại không có quyền tạo hồ sơ thiết kế.'
+          }
+          emptyAction={emptyAction}
+          columns={[
+            { key: 'stage', header: 'Bước', render: (r) => r.stageLabel },
+            {
+              key: 'customer',
+              header: 'Khách hàng',
+              render: (r) => r.customerName ?? <span className="text-fg-subtle">—</span>,
+            },
+            {
+              key: 'handover',
+              header: 'Bàn giao thi công',
+              render: (r) =>
+                r.handedOverAt ? (
+                  formatDate(r.handedOverAt)
+                ) : (
+                  <span className="text-fg-subtle">Chưa bàn giao</span>
+                ),
+            },
+          ]}
+        />
+      )}
     </>
   );
 }

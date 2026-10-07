@@ -19,7 +19,15 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCircle2, ChevronLeft, ChevronRight, FileDown, History, Ruler } from 'lucide-react';
+import {
+  Check,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  FileDown,
+  History,
+  Ruler,
+} from 'lucide-react';
 import { formatDateTime } from '@nvg/shared';
 import {
   checkBriefConsistency,
@@ -29,6 +37,7 @@ import {
   setAtPath,
   syncBedroomRows,
   withDerivedSiteDimensions,
+  isAnswered,
   valueAtPath,
   visibleFields,
   type DesignBriefDraft,
@@ -49,6 +58,7 @@ import { toUserMessage } from '@/hooks/use-error-message';
 import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard';
 import { cn } from '@/lib/utils';
 import { BriefField } from './brief-field';
+import { IssueBody, issueTone } from './brief-issue';
 import { describeField } from './brief-describe';
 import { printBrief } from './brief-print';
 import { SitePlanPreview } from './site-plan-preview';
@@ -382,8 +392,12 @@ export function BriefPanel({
     // Bản đã xác nhận thì KHÔNG có khái niệm "lưu nháp" — mọi lần ghi đều lập phiên bản mới.
     const saveLabel = needsNewVersion ? 'Lưu đầu bài' : 'Lưu nháp';
 
-    const issuesFor = (path: string) =>
-      issues.filter((i) => i.paths.includes(path)).map((i) => i.message);
+    const issuesFor = (path: string) => issues.filter((i) => i.paths.includes(path));
+
+    // Mục chứa một ô — để câu soát ở khung bên phải bấm vào là sang đúng bước và cuộn tới ô
+    // (Haan, 07/10/2026). Câu chỉ vào nhiều ô thì tới ô đầu tiên đang hiện trong biểu mẫu.
+    const sectionOfPath = (path: string) =>
+      steps.find((s) => s.fields.some(({ field }) => field.path === path))?.section.id;
 
     // Bước = MỤC đang có ít nhất một ô hiện ra. Không khai riêng danh sách bước trong cấu
     // hình: khai hai lần thì thêm một mục mà quên thêm bước sẽ làm mục đó biến mất khỏi biểu
@@ -438,31 +452,36 @@ export function BriefPanel({
       setStepId(sectionId);
       if (!path) return;
       // Đợi bước mới vẽ xong rồi mới cuộn — ô cần tới chưa tồn tại trong DOM ở lượt này.
-      requestAnimationFrame(() => {
-        document.getElementById(`brief-${path.replace(/\./g, '-')}`)?.scrollIntoView({
-          block: 'center',
-        });
-      });
+      requestAnimationFrame(() => flashTo(`brief-${path.replace(/\./g, '-')}`));
     };
 
+    // Hai cột (07/10/2026): ô ngắn đứng cạnh nhau, ô lớn trải cả hàng — một bước ngắn đi gần nửa.
     const fieldsOf = (list: typeof step.fields) =>
       list.map(({ field }) => (
-        <BriefField
-          key={field.path}
-          field={field}
-          value={
-            field.path.startsWith('legacy.')
-              ? (legacy[LEGACY_COLUMNS[field.path]!] ?? undefined)
-              : valueAtPath(draft, field.path)
-          }
-          onChange={(value) => setField(field.path, value)}
-          issues={issuesFor(field.path)}
-          projectId={projectId}
-          floors={draft.floors ?? 1}
-          family={draft.family}
-          areaBudget={field.path === 'required_spaces' ? areaBudget : undefined}
-        />
+        <div key={field.path} className={cn('min-w-0', isWide(field) && 'md:col-span-2')}>
+          <BriefField
+            field={field}
+            value={
+              field.path.startsWith('legacy.')
+                ? (legacy[LEGACY_COLUMNS[field.path]!] ?? undefined)
+                : valueAtPath(draft, field.path)
+            }
+            onChange={(value) => setField(field.path, value)}
+            issues={issuesFor(field.path)}
+            projectId={projectId}
+            floors={draft.floors ?? 1}
+            family={draft.family}
+            areaBudget={field.path === 'required_spaces' ? areaBudget : undefined}
+          />
+        </div>
       ));
+    const answered = step.fields.filter(({ field }) =>
+      isAnswered(
+        field.path.startsWith('legacy.')
+          ? legacy[LEGACY_COLUMNS[field.path]!]
+          : valueAtPath(draft, field.path),
+      ),
+    ).length;
 
     const last = index === steps.length - 1;
 
@@ -480,13 +499,21 @@ export function BriefPanel({
           <section
             key={step.section.id}
             id={`brief-section-${step.section.id}`}
-            className="rounded-lg border border-border bg-surface p-4 shadow-card"
+            className="rounded-lg border border-border bg-surface p-4 shadow-card lg:p-6"
           >
-            <p className="text-xs font-medium text-fg-subtle">
-              {form.parts.find((p) => p.id === step.section.part)?.title}
-            </p>
-            <h3 className="font-semibold">{step.section.title}</h3>
-            {step.section.hint && <p className="mt-0.5 text-fg-subtle">{step.section.hint}</p>}
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-3">
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-brand">
+                  {form.parts.find((p) => p.id === step.section.part)?.title} · Bước {index + 1}/
+                  {steps.length}
+                </p>
+                <h3 className="mt-0.5 text-lg font-semibold">{step.section.title}</h3>
+                {step.section.hint && <p className="mt-0.5 text-fg-subtle">{step.section.hint}</p>}
+              </div>
+              <span className="shrink-0 rounded-full bg-surface-sunken px-2.5 py-1 text-xs text-fg-subtle">
+                Đã trả lời {answered}/{step.fields.length} câu
+              </span>
+            </div>
             {/*
               Bản vẽ thửa đất và nút chép số đo đi theo TRƯỜNG kích thước lô, không theo MÃ
               MỤC. Gộp mục hay đổi tên mục là việc của `brief-form.json`, và nó không được
@@ -494,14 +521,18 @@ export function BriefPanel({
               suýt hỏng.
             */}
             {step.fields.some((v) => v.field.path === 'site.width_m') ? (
-              <div className="mt-3 grid gap-4 md:grid-cols-[minmax(0,1fr)_16rem]">
-                <div className="space-y-4">{fieldsOf(step.fields)}</div>
+              <div className="mt-4 grid gap-6 md:grid-cols-[minmax(0,1fr)_16rem]">
+                <div className="grid content-start gap-x-6 gap-y-5 lg:grid-cols-2">
+                  {fieldsOf(step.fields)}
+                </div>
                 <div className="md:sticky md:top-4 md:self-start">
                   <SitePlanPreview site={draft.site} />
                 </div>
               </div>
             ) : (
-              <div className="mt-3 space-y-4">{fieldsOf(step.fields)}</div>
+              <div className="mt-4 grid gap-x-6 gap-y-5 md:grid-cols-2">
+                {fieldsOf(step.fields)}
+              </div>
             )}
 
             {step.fields.some((v) => v.field.path === 'site.width_m') && survey && (
@@ -538,7 +569,9 @@ export function BriefPanel({
               «Tiếp», tới bước cuối mới là «Lưu». «Lưu nháp» vẫn có ở mọi bước — bỏ dở giữa
               chừng là chuyện thường, và bắt đi hết sáu bước mới được lưu là cách chắc chắn
               để mất dữ liệu đã gõ. */}
-          <div className="flex flex-wrap items-center gap-2">
+          {/* Dính đáy vùng cuộn (07/10/2026): nút «Tiếp / Lưu» luôn trong tầm mắt, không phải cuộn hết
+              một bước dài mới bấm được. */}
+          <div className="sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface/95 p-3 shadow-card backdrop-blur">
             {index > 0 && (
               <Button variant="secondary" onClick={() => goTo(steps[index - 1]!.section.id)}>
                 <ChevronLeft className="size-4" />
@@ -614,6 +647,12 @@ export function BriefPanel({
           issues={issues}
           threshold={threshold}
           onJump={(sectionId, path) => goTo(sectionId, path)}
+          onJumpPath={(paths) => {
+            for (const path of paths) {
+              const sectionId = sectionOfPath(path);
+              if (sectionId) return goTo(sectionId, path);
+            }
+          }}
         />
       </div>
     );
@@ -713,6 +752,7 @@ export function BriefPanel({
                 .map((field) => (
                   <ReadOnlyField
                     key={field.path}
+                    id={viewAnchor(field.path)}
                     label={field.label}
                     value={describeField(
                       field,
@@ -763,9 +803,32 @@ export function BriefPanel({
         issues={issues}
         threshold={threshold}
         artifactId={current.artifact_id}
+        onJumpPath={(paths) => {
+          for (const path of paths) if (flashTo(viewAnchor(path))) return;
+        }}
       />
     </div>
   );
+}
+
+/**
+ * Ô trải cả hàng trong lưới hai cột: ô viết dài, chọn nhiều, bốn mặt, bảng (thành viên, phòng), khoảng
+ * ngân sách, khu đất, và hàng nút chọn có nhiều lựa chọn (xếp hai cột thì nút xuống dòng lổn nhổn).
+ */
+const WIDE_CONTROLS = new Set([
+  'textarea',
+  'multi',
+  'sides',
+  'polygon',
+  'money_range',
+  'family',
+  'space_floor',
+  'facade',
+]);
+
+function isWide(field: { control: string; options?: unknown[] }): boolean {
+  if (WIDE_CONTROLS.has(field.control)) return true;
+  return field.control === 'choice' && (field.options?.length ?? 0) > 3;
 }
 
 /**
@@ -804,7 +867,7 @@ function StepBar({
       aria-label="Các bước của đầu bài"
       className="rounded-lg border border-border bg-surface p-3 shadow-card"
     >
-      <div className="space-y-2">
+      <div className="flex flex-wrap gap-x-6 gap-y-2">
         {parts.map((part) => {
           const inPart = steps
             .map((step, i) => ({ step, i }))
@@ -824,18 +887,24 @@ function StepBar({
                         aria-current={current ? 'step' : undefined}
                         onClick={() => onGo(step.section.id)}
                         className={cn(
-                          'flex min-h-10 items-center gap-2 rounded px-2.5 text-left',
-                          current ? 'bg-brand-subtle font-semibold text-brand' : 'text-fg-subtle',
+                          'flex min-h-10 items-center gap-2 rounded-full border px-3 text-left transition-colors',
+                          current
+                            ? 'border-brand bg-brand-subtle font-semibold text-brand'
+                            : 'border-transparent text-fg-subtle hover:bg-surface-hover hover:text-fg',
                         )}
                       >
                         <span
                           aria-hidden
                           className={cn(
                             'inline-flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
-                            current ? 'bg-brand text-white' : 'bg-surface-sunken',
+                            current
+                              ? 'bg-brand text-fg-inverse'
+                              : missing === 0
+                                ? 'bg-status-completed-bg text-status-completed'
+                                : 'bg-surface-sunken',
                           )}
                         >
-                          {i + 1}
+                          {missing === 0 && !current ? <Check className="size-3" /> : i + 1}
                         </span>
                         {step.section.title}
                         {/* Chữ, không phải chỉ một chấm màu: màu không bao giờ là cách truyền đạt
@@ -874,6 +943,7 @@ function CompletenessPanel({
   threshold,
   artifactId,
   onJump,
+  onJumpPath,
 }: {
   score: ReturnType<typeof scoreBrief>;
   issues: ReturnType<typeof checkBriefConsistency>;
@@ -885,6 +955,8 @@ function CompletenessPanel({
    * đúng kiểu hỏng im lặng. Vắng mặt ở chế độ chỉ xem, nơi mọi ô cùng nằm trên một trang.
    */
   onJump?: (sectionId: string, path: string) => void;
+  /** Nhảy tới ô đầu tiên trong số các ô một câu soát chỉ vào. Vắng ở chế độ chỉ xem. */
+  onJumpPath?: (paths: string[]) => void;
 }) {
   const percent = Math.round(score.score * 100);
   // Đủ điểm mà còn mâu thuẫn NGHIÊM TRỌNG thì chưa dựng được: nhánh AI và Lớp 2 đều chặn ở
@@ -955,13 +1027,29 @@ function CompletenessPanel({
           <p className="font-medium">Chỗ chưa nhất quán ({issues.length})</p>
           <ul className="mt-2 space-y-2">
             {issues.map((issue) => (
-              <li
-                key={issue.code}
-                className={
-                  issue.severity === 'nghiem_trong' ? 'text-status-overdue' : 'text-status-pending'
-                }
-              >
-                {issue.message}
+              <li key={issue.code}>
+                {onJumpPath ? (
+                  <button
+                    type="button"
+                    onClick={() => onJumpPath(issue.paths)}
+                    title="Tới ô cần sửa"
+                    className={cn(
+                      'flex w-full gap-2 rounded-sm border px-3 py-2 text-left text-sm transition-opacity hover:opacity-80',
+                      issueTone(issue.severity),
+                    )}
+                  >
+                    <IssueBody severity={issue.severity} message={issue.message} />
+                  </button>
+                ) : (
+                  <p
+                    className={cn(
+                      'flex gap-2 rounded-sm border px-3 py-2 text-sm',
+                      issueTone(issue.severity),
+                    )}
+                  >
+                    <IssueBody severity={issue.severity} message={issue.message} />
+                  </p>
+                )}
               </li>
             ))}
           </ul>
@@ -1001,17 +1089,39 @@ function SurveyMismatch({
   );
 }
 
+/** Neo của một ô ở chế độ xem — khác neo của ô nhập để hai chế độ không trùng `id`. */
+function viewAnchor(path: string): string {
+  return `brief-view-${path.replace(/\./g, '-')}`;
+}
+
+/**
+ * Cuộn tới phần tử rồi tô viền một lúc, để mắt bắt được ô vừa nhảy tới giữa cả trang câu hỏi.
+ * Trả `false` khi không có phần tử ấy (ô đang ẩn theo loại hình) — nơi gọi thử ô kế tiếp.
+ */
+function flashTo(id: string): boolean {
+  const el = document.getElementById(id);
+  if (!el) return false;
+  el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  const ring = ['ring-2', 'ring-status-pending', 'ring-offset-4', 'ring-offset-surface'];
+  el.classList.add(...ring);
+  window.setTimeout(() => el.classList.remove(...ring), 2400);
+  return true;
+}
+
 function ReadOnlyField({
+  id,
   label,
   value,
   wide,
 }: {
+  /** Neo để câu soát ở khung bên phải cuộn tới được. */
+  id?: string;
   label: string;
   value: string | null;
   wide?: boolean;
 }) {
   return (
-    <div className={wide ? 'sm:col-span-2' : undefined}>
+    <div id={id} className={cn('scroll-mt-24 rounded-sm', wide && 'sm:col-span-2')}>
       <dt className="text-fg-subtle">{label}</dt>
       <dd className="whitespace-pre-wrap">{value ?? EM_DASH}</dd>
     </div>

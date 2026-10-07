@@ -150,7 +150,7 @@ routes:
   # mã nguồn đi (structured output có lược đồ). Tiền lệ 29/08/2026 lặp lại y hệt: `gemini-2.5-pro`
   # trả 404 "no longer available to new users" với khoá mới lập, phải đổi sang bản 3.1.
   # Số đo lượt gọi rỗng (giây · token vào/ra): gpt-5 2,3 s · 13/76 — claude-opus-5 2,5 s · 231/19
-  # — gemini-3.1-pro-preview 7,8 s · 7/103. Model ảnh xác nhận tồn tại qua GET model, chưa dựng
+  # — gemini-3.1-pro-preview 7,8 s · 7/103. (claude-opus-5 nay thay bằng claude-opus-5-5, 07/10/2026.) Model ảnh xác nhận tồn tại qua GET model, chưa dựng
   # ảnh thật (Đợt 4 mới đo giây và USD mỗi ảnh).
   #
   # Địa chỉ HTTP khai tường minh vì mỗi nhà cung cấp một gốc và mỗi việc một đường
@@ -345,18 +345,28 @@ routes:
   # `site_boundary_extract` — đường số hoá hồ sơ cũ, không nằm trong ô chọn model — nên `gemini`
   # còn nguyên trong `billing.free_providers` để nhật ký tính đúng tiền thật bằng 0 cho chúng.
 
+  # ── Anthropic: cập nhật 07/10/2026 (Haan: «cập nhật các model mới nhất») ─────────────────
+  # Mã model và đơn giá theo bảng model hiện hành của Anthropic (skill claude-api, bản đệm
+  # 25/09/2026): Opus 5.5 (4 / 20), Sonnet 5.5 (2 / 10), Fable 5.1 (10 / 50). Thay Opus 5 (5 / 25)
+  # và Sonnet 5 (2 / 10). Ba model này BÁO LỖI 400 nếu gửi `thinking: disabled`, `budget_tokens`,
+  # `temperature` khác mặc định hoặc `tool_choice` ép buộc — `llm/anthropic.ts` không gửi thứ nào
+  # trong số đó (chỉ `thinking: adaptive` + `output_config.effort`), nên không phải sửa mã.
+  # CHƯA có lời gọi nào chạy thật với ba mã này (chưa được phép gọi API trả phí).
+  # Cùng ngày Haan yêu cầu giữ thêm các bản khác để chọn: Opus 5, Opus 4.7, Sonnet 5. KHÔNG thêm Haiku
+  # 4.5 — model ấy không nhận `thinking: {type: adaptive}` mà bộ gọi luôn gửi (cần `budget_tokens`),
+  # nên mọi lượt sẽ hỏng 400.
   ai_text_anthropic:
     provider: anthropic
-    model: claude-opus-5
-    label: Claude Opus 5 (Anthropic) — chất lượng cao
-    short: 'Claude Opus 5'
+    model: claude-opus-5-5
+    label: Claude Opus 5.5 (Anthropic) — chất lượng cao
+    short: 'Claude Opus 5.5'
     tag: 'Chất lượng cao'
-    blurb: 'Bậc cao nhất của Anthropic, và đắt nhất trong danh sách. Bám yêu cầu dài, nhiều điều kiện.'
+    blurb: 'Bậc Opus mới nhất của Anthropic, rẻ hơn Opus 5. Bám yêu cầu dài, nhiều điều kiện.'
     endpoint: https://api.anthropic.com/v1/messages
     max_data_class: 2
     enabled: true
     purpose: Nhánh AI — chương trình không gian và mặt bằng đề xuất (văn bản có lược đồ).
-    pricing: { input_per_1m_usd: 5, output_per_1m_usd: 25 }
+    pricing: { input_per_1m_usd: 4, output_per_1m_usd: 20 }
     # ⚠️ TẠM ĐO 13/09/2026 — Haan: «tạm thời bỏ trần giới hạn token để test… bỏ trần giới hạn thời
     # gian». `0` = không đặt hạn chờ; với Claude, `max_output_tokens: 0` = mức tối đa của model
     # (128.000) khi truyền luồng — Claude bắt buộc có trần (`llm/anthropic.ts`). Trần 32.000 đặt
@@ -364,17 +374,52 @@ routes:
     # Mức suy nghĩ MẶC ĐỊNH của tuyến khi màn hình để «Mặc định của model» (17/09/2026, Haan duyệt). Claude 5
     # tự để `high` nếu không gửi gì: lượt Sonnet 5 xếp mặt bằng ra 117.278 token (97% là nghĩ, câu trả
     # lời ~7 KB), mức `medium` cùng đầu bài ra 58.668. Chọn mức khác trên màn hình vẫn thắng dòng này.
+    # Opus 5.5 tự mặc định `medium` (không phải `high`); vẫn khai tường minh cho khỏi phụ thuộc.
+    reasoning_effort: medium
+    max_output_tokens: 0
+    request_timeout_s: 0
+
+  ai_text_anthropic_opus5:
+    provider: anthropic
+    model: claude-opus-5
+    label: Claude Opus 5 (Anthropic) — thế hệ trước
+    short: 'Claude Opus 5'
+    tag: 'Thế hệ trước'
+    blurb: 'Opus thế hệ trước, đắt hơn Opus 5.5. Giữ để so sánh với các lượt đã chạy.'
+    endpoint: https://api.anthropic.com/v1/messages
+    max_data_class: 2
+    enabled: true
+    purpose: Nhánh AI — so sánh giữa các thế hệ Claude (Haan, 07/10/2026).
+    pricing: { input_per_1m_usd: 5, output_per_1m_usd: 25 }
+    # Tuyến chính tới 07/10/2026 — đã có lượt chạy thật với mã này.
+    reasoning_effort: medium
+    max_output_tokens: 0
+    request_timeout_s: 0
+
+  ai_text_anthropic_opus47:
+    provider: anthropic
+    model: claude-opus-4-7
+    label: Claude Opus 4.7 (Anthropic) — thế hệ 4
+    short: 'Claude Opus 4.7'
+    tag: 'Thế hệ 4'
+    blurb: 'Opus thế hệ 4, cùng giá Opus 5. Để đối chiếu với thế hệ mới.'
+    endpoint: https://api.anthropic.com/v1/messages
+    max_data_class: 2
+    enabled: true
+    purpose: Nhánh AI — so sánh giữa các thế hệ Claude (Haan, 07/10/2026).
+    pricing: { input_per_1m_usd: 5, output_per_1m_usd: 25 }
+    # Opus 4.7 bỏ qua suy nghĩ nếu không gửi `thinking`; `llm/anthropic.ts` luôn gửi `adaptive` nên vẫn nghĩ. CHƯA chạy thật.
     reasoning_effort: medium
     max_output_tokens: 0
     request_timeout_s: 0
 
   ai_text_anthropic_fast:
     provider: anthropic
-    model: claude-sonnet-5
-    label: Claude Sonnet 5 (Anthropic) — nhanh, rẻ hơn
-    short: 'Claude Sonnet 5'
+    model: claude-sonnet-5-5
+    label: Claude Sonnet 5.5 (Anthropic) — nhanh, rẻ hơn
+    short: 'Claude Sonnet 5.5'
     tag: 'Nhanh, rẻ hơn'
-    blurb: 'Bậc tiết kiệm của Anthropic. Giá bằng khoảng hai phần năm Opus.'
+    blurb: 'Bậc tiết kiệm mới nhất của Anthropic. Giá bằng một nửa Opus 5.5.'
     endpoint: https://api.anthropic.com/v1/messages
     max_data_class: 2
     enabled: true
@@ -387,6 +432,42 @@ routes:
     # Mức suy nghĩ MẶC ĐỊNH của tuyến khi màn hình để «Mặc định của model» (17/09/2026, Haan duyệt). Claude 5
     # tự để `high` nếu không gửi gì: lượt Sonnet 5 xếp mặt bằng ra 117.278 token (97% là nghĩ, câu trả
     # lời ~7 KB), mức `medium` cùng đầu bài ra 58.668. Chọn mức khác trên màn hình vẫn thắng dòng này.
+    reasoning_effort: medium
+    max_output_tokens: 0
+    request_timeout_s: 0
+
+  ai_text_anthropic_sonnet5:
+    provider: anthropic
+    model: claude-sonnet-5
+    label: Claude Sonnet 5 (Anthropic) — thế hệ trước
+    short: 'Claude Sonnet 5'
+    tag: 'Thế hệ trước'
+    blurb: 'Sonnet thế hệ trước, cùng giá Sonnet 5.5. Giữ để so sánh.'
+    endpoint: https://api.anthropic.com/v1/messages
+    max_data_class: 2
+    enabled: true
+    purpose: Nhánh AI — so sánh giữa các thế hệ Claude (Haan, 07/10/2026).
+    pricing: { input_per_1m_usd: 2, output_per_1m_usd: 10 }
+    # Tuyến tiết kiệm tới 07/10/2026 — đã có lượt chạy thật với mã này.
+    reasoning_effort: medium
+    max_output_tokens: 0
+    request_timeout_s: 0
+
+  ai_text_anthropic_top:
+    provider: anthropic
+    model: claude-fable-5-1
+    label: Claude Fable 5.1 (Anthropic) — bậc cao nhất
+    short: 'Claude Fable 5.1'
+    tag: 'Bậc cao nhất'
+    blurb: 'Model mạnh nhất của Anthropic. Đắt ngang GPT-6 Astra, gấp hai rưỡi Opus 5.5; một lượt có thể chạy lâu.'
+    endpoint: https://api.anthropic.com/v1/messages
+    max_data_class: 2
+    enabled: true
+    purpose: Nhánh AI — lượt chốt phương án, khi đã chấp nhận trả gấp hai rưỡi Opus 5.5 cho một lượt gọi.
+    pricing: { input_per_1m_usd: 10, output_per_1m_usd: 50 }
+    # Fable 5.1 luôn nghĩ (không tắt được); độ sâu chỉnh bằng `effort`. Khai `medium` như hai tuyến
+    # trên — mức mặc định `high` ở model này dễ ra lượt dài và đắt. Cần lưu dữ liệu 30 ngày phía
+    # Anthropic (không chạy dưới chế độ không lưu dữ liệu) — hạng 2 của dự án vẫn đúng.
     reasoning_effort: medium
     max_output_tokens: 0
     request_timeout_s: 0
@@ -498,6 +579,22 @@ routes:
     purpose: Nhánh AI — tờ trình khách cần chữ và số trên hình ít sai nhất.
     # 120,00 USD/1M token ra; hãng quy ra 0,134 USD cho ảnh 1K/2K và 0,24 cho 4K. CHƯA đo lượt thật.
     pricing: { image_usd: 0.134 }
+
+  # Thêm 07/10/2026 (Haan: «cập nhật các model mới nhất cho Google»). Mô hình ảnh MỚI NHẤT trong bảng
+  # giá chính thức ai.google.dev/gemini-api/docs/pricing ngày 07/10/2026: 0,0336 USD ảnh 1K (bằng Flash
+  # Lite Image), 0,0504 ảnh 2K, 0,113 ảnh 4K. Tên mã lấy từ bảng giá; CHƯA kiểm bằng `ListModels` của
+  # khoá và CHƯA có lời gọi thật — lỗi 404 ở lượt đầu nghĩa là khoá chưa được mở model này.
+  ai_image_gemini_nano:
+    provider: gemini_paid
+    model: gemini-nano-banana-2.1
+    label: Gemini Nano Banana 2.1 (Google) — mới nhất
+    short: 'Nano Banana 2.1'
+    tag: 'Mới nhất'
+    blurb: 'Mô hình ảnh mới nhất của Google, giá ngang bậc rẻ nhất.'
+    max_data_class: 2
+    enabled: true
+    purpose: Nhánh AI — mặt bằng có nội thất, phối cảnh, mặt đứng.
+    pricing: { image_usd: 0.034 }
 
   ai_image_gemini_fast:
     provider: gemini_paid

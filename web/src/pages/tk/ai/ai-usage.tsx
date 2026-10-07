@@ -188,21 +188,46 @@ export function AiRunUsage({
   /** Rỗng khi lượt chạy chưa xong. */
   endedAt: string | null;
 }): React.ReactElement | null {
-  // Trần RIÊNG, cao hơn trần của nhật ký: dòng này cộng tiền của MỘT lượt chạy, mà một lượt xếp
-  // mặt bằng ba phương án nhà năm tầng đã quá 25 lượt gọi. Cắt ở 25 thì con số tiền thiếu mà không
-  // có gì báo — đúng loại sai lặng lẽ mà một dòng tổng không được phép mắc.
+  const { rows, free } = useRunCalls(projectId, purposePrefix, startedAt, endedAt);
+  if (rows.length === 0) return null;
+  return <AiUsageLine usage={rows.map((r) => usageFromRow(r, free))} />;
+}
+
+/**
+ * Lượt gọi của MỘT lượt chạy nền, lọc từ nhật ký theo mục đích và khoảng thời gian — cũ trước — kèm
+ * tổng tiền thật (gói miễn phí tính 0). `cost` là `null` khi có lượt chưa có giá niêm yết.
+ */
+export function useRunCalls(
+  projectId: string,
+  purposePrefix: string,
+  startedAt: string,
+  endedAt: string | null,
+): { rows: AiCallLogRow[]; free: Set<string>; cost: number | null } {
+  // Trần RIÊNG, cao hơn trần của nhật ký: một lượt xếp mặt bằng ba phương án nhà năm tầng đã quá
+  // 25 lượt gọi. Cắt ở 25 thì con số tiền thiếu mà không có gì báo.
   const log = useAiCallLog(projectId, { live: endedAt === null, limit: 200 });
   const models = useAiModels();
   const free = new Set(models.data?.freeProviders ?? []);
   const from = Date.parse(startedAt);
   // Dòng cuối có thể ghi sau mốc cập nhật trạng thái vài giây.
   const to = endedAt ? Date.parse(endedAt) + 60_000 : Number.POSITIVE_INFINITY;
-  const rows = (log.data ?? []).filter((r) => {
-    const t = Date.parse(r.created_at);
-    return r.purpose.startsWith(purposePrefix) && t >= from && t <= to;
-  });
-  if (rows.length === 0) return null;
-  return <AiUsageLine usage={rows.map((r) => usageFromRow(r, free))} />;
+  const rows = (log.data ?? [])
+    .filter((r) => {
+      const t = Date.parse(r.created_at);
+      return r.purpose.startsWith(purposePrefix) && t >= from && t <= to;
+    })
+    .reverse();
+  // Lượt gọi LỖI không trả token nào thì không có giá — nhưng cũng không tốn tiền: tính 0, đừng để
+  // một lượt hỏng vì hết tín dụng làm cả dòng chi phí thành «chưa có giá» (lượt 07/10/2026).
+  const costs = rows.map((r) =>
+    r.status === 'failed' && r.cost_usd === null && !r.input_tokens && !r.output_tokens
+      ? 0
+      : rowCost(r, free).cost,
+  );
+  const cost = costs.some((c) => c === null)
+    ? null
+    : costs.reduce<number>((a, c) => a + (c ?? 0), 0);
+  return { rows, free, cost };
 }
 
 /**

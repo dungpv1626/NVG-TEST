@@ -12,18 +12,16 @@ import { recentActivity } from '../overview/activity';
 const EMPTY: StepInput = {
   brief: null,
   surveyCount: 0,
-  aiPlanCount: 0,
-  aiPlanChosen: false,
   disciplinePercents: [],
   hasEstimate: false,
   customerApproved: false,
 };
 
-describe('Dải sáu bước của quy trình thiết kế', () => {
-  it('hồ sơ trống: bước đầu đang chạy, năm bước sau chưa mở', () => {
+describe('Dải năm bước của quy trình thiết kế', () => {
+  it('hồ sơ trống: bước đầu đang chạy, bốn bước sau chưa mở', () => {
     const steps = designSteps(EMPTY);
-    expect(steps).toHaveLength(6);
-    expect(steps.map((s) => s.state)).toEqual(['run', 'todo', 'todo', 'todo', 'todo', 'todo']);
+    expect(steps).toHaveLength(5);
+    expect(steps.map((s) => s.state)).toEqual(['run', 'todo', 'todo', 'todo', 'todo']);
   });
 
   it('bước chưa mở KHÔNG mang con số của chính nó', () => {
@@ -34,12 +32,12 @@ describe('Dải sáu bước của quy trình thiết kế', () => {
   });
 
   it('không có bước "xong" nào nằm sau một bước "chưa mở"', () => {
-    // Dự án nhảy cóc: đã có dự toán nhưng chưa chọn phương án mặt bằng AI.
+    // Dự án nhảy cóc: đã có dự toán nhưng hồ sơ kỹ thuật chưa xong.
     const steps = designSteps({
       ...EMPTY,
       brief: { confirmed: true, completeness: 0.95 },
       surveyCount: 3,
-      aiPlanCount: 3,
+      disciplinePercents: [40],
       hasEstimate: true,
     });
     const order = steps.map((s) => s.state);
@@ -56,12 +54,10 @@ describe('Dải sáu bước của quy trình thiết kế', () => {
     expect(designSteps(EMPTY)[0]!.note).toBe('');
   });
 
-  it('đủ cả sáu thì không bước nào đang chạy', () => {
+  it('đủ cả năm thì không bước nào đang chạy', () => {
     const steps = designSteps({
       brief: { confirmed: true, completeness: 1 },
       surveyCount: 1,
-      aiPlanCount: 3,
-      aiPlanChosen: true,
       disciplinePercents: [100, 100, 100],
       hasEstimate: true,
       customerApproved: true,
@@ -71,21 +67,26 @@ describe('Dải sáu bước của quy trình thiết kế', () => {
 
   it('mỗi bước trỏ tới một màn hình con có thật', () => {
     const tabs = designSteps(EMPTY).map((s) => s.tab);
-    expect(tabs).toEqual([
-      'dau-bai',
-      'khao-sat',
-      'thiet-ke-ai',
-      'ho-so-ky-thuat',
-      'du-toan',
-      'phien-ban',
-    ]);
+    expect(tabs).toEqual(['dau-bai', 'khao-sat', 'ho-so-ky-thuat', 'du-toan', 'phien-ban']);
+  });
+});
+
+describe('AI Design không là một bước của quy trình (Haan, 07/10/2026)', () => {
+  it('dải không có bước AI Design, và chưa dùng AI không khoá Hồ sơ kỹ thuật', () => {
+    const steps = designSteps({
+      ...EMPTY,
+      brief: { confirmed: true, completeness: 1 },
+      surveyCount: 1,
+    });
+    expect(steps.map((s) => s.label)).not.toContain('AI Design');
+    expect(steps.find((s) => s.id === 'ho-so-ky-thuat')!.state).toBe('run');
   });
 });
 
 describe('Hoạt động gần đây', () => {
   const when = (v: string) => v.slice(0, 10);
 
-  it('trộn bốn nguồn rồi xếp mới nhất lên đầu', () => {
+  it('trộn ba nguồn rồi xếp mới nhất lên đầu — bản phác AI Design không vào đây', () => {
     const items = recentActivity(
       {
         briefs: [
@@ -96,7 +97,6 @@ describe('Hoạt động gần đây', () => {
             author: { full_name: 'Đỗ Văn K' },
           },
         ],
-        aiPlans: [{ artifactId: 'sha256:p1', createdAt: '2026-09-04T10:00:00Z' }],
         versions: [
           {
             id: 'v1',
@@ -117,7 +117,7 @@ describe('Hoạt động gần đây', () => {
       },
       when,
     );
-    expect(items.map((i) => i.tone)).toEqual(['version', 'plan', 'change', 'brief']);
+    expect(items.map((i) => i.tone)).toEqual(['version', 'change', 'brief']);
     expect(items[0]!.meta).toBe('Nguyễn Lâm · 2026-09-05');
   });
 
@@ -125,7 +125,6 @@ describe('Hoạt động gần đây', () => {
     const items = recentActivity(
       {
         briefs: [],
-        aiPlans: [],
         versions: [{ id: 'v1', title: 'Nháp', published_at: null, publisher: null }],
         changes: [],
       },
@@ -138,7 +137,6 @@ describe('Hoạt động gần đây', () => {
     const items = recentActivity(
       {
         briefs: [{ id: 'b1', version: 1, created_at: '2026-09-01T00:00:00Z', author: null }],
-        aiPlans: [],
         versions: [],
         changes: [],
       },

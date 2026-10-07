@@ -1,7 +1,7 @@
 /**
  * Chi tiết Dự án thiết kế — "Hồ sơ 360°" (Webapp Flow 4.3), hành trình 3.3: Đầu bài → Khảo
- * sát → AI Design → Hồ sơ kỹ thuật → Phiên bản bản vẽ → Dự toán → Yêu cầu thay đổi, và nút
- * Bàn giao thi công ở header.
+ * sát → Hồ sơ kỹ thuật → Phiên bản bản vẽ → Dự toán → Yêu cầu thay đổi, và nút Bàn giao thi
+ * công ở header. AI Design là module riêng, KHÔNG nằm trong hành trình này (07/10/2026).
  *
  * Các tab là những KHÍA CẠNH của cùng một hồ sơ, không phải các trang riêng — nên chúng dùng
  * chung một đường dẫn và tab hiện tại nằm ở `?tab=`. Điều đó KHÔNG đổi khi đổi giao diện.
@@ -13,7 +13,7 @@
  */
 
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
   DESIGN_DISCIPLINES,
   DESIGN_STAGE_META,
@@ -281,25 +281,9 @@ export function DesignDetailPage() {
               />
             ),
           },
-          {
-            id: 'thiet-ke-ai',
-            label: 'AI Design',
-            subtitle:
-              'Mặt bằng từng tầng → mặt đứng → phối cảnh, do AI đề xuất. Kết quả là bản phác tham khảo, không đi vào hồ sơ phát hành.',
-            // T114: AI Design có trang riêng (đầu bài, khảo sát và ba bước AI ở một chỗ). Tab này chỉ
-            // dẫn sang đó — hai nơi chạy cùng một công cụ thì người dùng không biết kết quả nằm đâu.
-            content: (
-              <div className="rounded-lg border border-border bg-surface p-4">
-                <p className="text-fg-subtle">
-                  AI Design có màn hình riêng: đầu bài và khảo sát, mặt bằng, mặt đứng, phối cảnh
-                  nằm cùng một chỗ.
-                </p>
-                <Button asChild variant="primary" className="mt-3">
-                  <Link to={`/tk/ai-design/${project.id}`}>Mở AI Design</Link>
-                </Button>
-              </div>
-            ),
-          },
+          // «AI Design» KHÔNG còn là màn hình con của hồ sơ (Haan, 07/10/2026): nó là module độc
+          // lập hỗ trợ phòng thiết kế, không phải một bước giữa Khảo sát và Hồ sơ kỹ thuật. Lối
+          // sang nằm ở khối «Công cụ hỗ trợ» của Tổng quan và ở thanh «AI Design» của module.
           {
             id: 'ho-so-ky-thuat',
             label: 'Hồ sơ kỹ thuật',

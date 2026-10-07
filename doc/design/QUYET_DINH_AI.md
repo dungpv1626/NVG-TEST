@@ -2703,3 +2703,122 @@ cao nhà thì sẽ có trong bản vẽ mặt đứng (ảnh phối cảnh khôn
 
 **Đã chạy thật trên máy:** tải ảnh mặt đứng mẫu ở bước Mặt đứng (khung dọc 1024×1536) → bước Phối cảnh tự chọn bản tải
 lên, hiện đúng bản, nút dựng sẵn sàng. **Chưa bấm dựng** (năm lượt gọi ảnh trả phí) — chờ Haan cho phép.
+
+### T117 — Giao diện AI Design làm lại; gỡ ô «Yêu cầu sửa» khỏi giao diện (07/10/2026)
+
+Haan, trước khi viết tài liệu hướng dẫn module: giao diện phải gọn và dễ thao tác (tham khảo BỐ CỤC các công cụ
+thiết kế AI hai cột, không tham khảo nội dung).
+
+- **Hai cột**: trái = thiết lập (mô hình, mức suy nghĩ, số phương án, gói quy tắc, một dòng chi phí) và MỘT nút
+  chính; phải = dải chọn phương án + tờ vẽ. Phần giải thích cách chạy thu vào «Cách AI xếp mặt bằng». Ảnh từ bản
+  vẽ kỹ sư là thẻ cuối cột trái.
+- **Tên «Phương án 1, 2, 3…»** theo thứ tự tạo (`ai/variant-name.ts`), chỉ ở giao diện — artifact bất biến, không
+  đổi dữ liệu. Mã `AI-A` chỉ còn trong nhật ký chi tiết.
+- **Tiến độ thu gọn**: một dòng tóm tắt + «Xem chi tiết». Danh sách bước, câu lỗi của bộ xếp, theo dõi lượt gọi,
+  chi phí lượt chạy và «Phương án chưa xếp được» chỉ hiện khi bung.
+- **Gỡ khung «Yêu cầu sửa» khỏi giao diện** (T53 mục e). Hợp đồng `ai-plan-edit`, `POST /design/ai/plan/edit`,
+  `ai/edit/` và hook `useEditAiPlan` GIỮ NGUYÊN — chỉ không còn đường vào từ màn hình. Điểm và ngưỡng chuyển lên
+  đầu tờ vẽ; bản sửa cũ vẫn hiện nguyên văn yêu cầu trong «Về phương án này».
+- **«Nhật ký gọi AI» của hồ sơ tạm ẩn** (`AiCallLedger` còn mã, sẽ xoá).
+- Mục chi tiết dưới tờ vẽ (ý định, lỗi, đối chiếu) thành mục gấp; lỗi chặn tự mở; panel điểm vẫn đứng SAU lỗi (T24).
+- Sáng / Tối / Theo hệ thống cho TOÀN ứng dụng (`web/src/lib/theme.tsx`, DESIGN_SYSTEM §6, §7.2).
+
+**T117 (tiếp, cùng ngày).** Haan: ẩn mục «Điểm chất lượng» (`PlanScorePanel` còn mã; điểm tổng và ngưỡng vẫn ở
+chip đầu tờ vẽ). Thêm: trang `/tk/ai-design` dạng THẺ mặc định (`pages/tk/ai-design-cards.tsx` — ảnh tầng 1 của
+phương án hiệu lực, bốn bước bằng chữ, ô tìm; dữ liệu AI chỉ tải khi thẻ lọt vào màn hình; còn chế độ Bảng); ảnh
+thu nhỏ tầng 1 trên thẻ chọn phương án; «Xem toàn màn hình» cho tờ mặt bằng và mặt đứng (`ai/sheet-zoom.tsx`, lớp
+phủ tự dựng — KHÔNG dùng Fullscreen API vì trình duyệt tự chèn dòng nhắc tiếng Anh). Soát ở 390px: hết tràn ngang
+(lưới `grid-cols-1`, ô «Tầng vẽ» cuộn trong khung).
+
+### T118 — AI Design tách hẳn khỏi quy trình Dự án thiết kế (07/10/2026)
+
+Haan: «AI Design là một module độc lập nhằm hỗ trợ phòng thiết kế, chứ không nằm trong quy trình, pipeline thiết
+kế. Cần tách bạch tránh gây hiểu lầm và tạo những ràng buộc không đúng.» T114 đã tách trang, nhưng màn hình Dự án
+thiết kế vẫn nối AI vào quy trình ở bốn chỗ — đều ở giao diện, CSDL và Worker không có ràng buộc nào:
+
+1. **Dải tiến trình** có bước «AI Design» thứ ba, điều kiện xong là «đã chọn phương án AI» — chưa chạy AI thì Hồ sơ
+   kỹ thuật, Dự toán, Trình khách đều «chưa mở». Gỡ: dải còn NĂM bước (`overview/steps.ts`).
+2. **Màn hình con `?tab=thiet-ke-ai`** khiến nút bước trước/sau đi Khảo sát → AI Design → Hồ sơ kỹ thuật. Gỡ khỏi
+   `design-detail.tsx`.
+3. **Thẻ AI Design** nằm trong lưới bước quy trình, câu «chưa chọn phương án» đọc như việc hồ sơ còn nợ. Chuyển
+   thành khối «Công cụ hỗ trợ» cuối cột phải (`AiDesignSupportPanel`), chỉ nói số bản phác và lối mở module.
+4. **«Hoạt động gần đây»** của hồ sơ ghi lượt lưu phương án AI. Gỡ — bản phác AI không phải hoạt động của hồ sơ.
+
+Trên trang AI Design: đầu trang bỏ trạng thái, bước quy trình và hạn bàn giao của hồ sơ (thay bằng «Công cụ hỗ trợ —
+không thuộc quy trình thiết kế của hồ sơ» và nút «Mở hồ sơ thiết kế»); «Chọn phương án này / Đang hiệu lực» đổi
+thành «Dùng để dựng mặt đứng / Dùng cho mặt đứng» — việc chọn chỉ có nghĩa BÊN TRONG AI Design.
+
+**Đầu bài và khảo sát: CHỈ XEM trên trang AI Design** (Haan chốt cùng ngày: «chuyển thành chỉ xem, nếu muốn sửa
+thì phải quay lại đầu bài để sửa»). AI Design vẫn đọc đầu bài đã xác nhận và khảo sát của hồ sơ (một nguồn dữ liệu),
+nhưng không sửa, không xác nhận: bước «Đầu bài và khảo sát» dựng `BriefPanel`/`SurveyPanel` với `readOnly`, kèm nút
+«Sửa đầu bài» / «Sửa khảo sát» dẫn về hồ sơ thiết kế. Phiếu «Yêu cầu mặt đứng» ở bước Mặt đứng (lưu thành phiên bản
+đầu bài mới — T114) cũng chỉ xem; lối «Sửa ở đầu bài của hồ sơ» do trang ngoài chèn vào (`briefLink`) vì `tk/ai/`
+không nhập router. Quyền và artifact vẫn theo hồ sơ.
+
+**T117 (tiếp 2) — bỏ đoạn chú thích trên giao diện AI Design** (Haan, 07/10/2026). Gỡ khỏi màn hình: dòng mô tả
+«Công cụ hỗ trợ — không thuộc quy trình…» ở đầu trang; «Giá niêm yết…» và câu riêng tư dưới ô chọn model; «Nghĩ càng
+nhiều…»; câu chi phí «mỗi phương án / mỗi góc / mỗi tấm là một lượt gọi tính tiền»; câu «ảnh AI không đo được»
+(`AI_DISCLAIMERS.aiSheetImage/aiFacadeImage/aiImageSet`) dưới ảnh; chip «Ảnh trình khách — không thay tờ vẽ»; câu
+«tờ vẽ dựng từ toạ độ… đo được»; câu gợi ý từng bước; lời dẫn phiếu mặt đứng; ghi chú «Dừng thì huỷ…», «Bản hiệu lực
+là…», «Số xe lấy theo đầu bài…». Giữ: dấu in TRÊN ảnh (watermark — đi theo ảnh khi tải về), câu `noCodeCheck` trong
+mục gấp «Đối chiếu thói quen thiết kế» (CLAUDE.md 8.3), câu báo lỗi, trạng thái rỗng (rút gọn), các mục gấp «Cách AI…»,
+giá trên từng thẻ model khi mở bộ chọn.
+
+**T117 (tiếp 3) — một khung «Ảnh mặt bằng có nội thất», hai nguồn** (Haan, 07/10/2026: «gộp làm một, vì cùng vẽ
+mặt bằng nội thất, chỉ khác input»). Khung T57 (vẽ từ tờ vector của phương án) và khung T114 Đợt 4 (vẽ từ bản vẽ kỹ
+sư tải lên, trước ở cột trái) gộp thành `ai/ai-plan-image.tsx` dưới tờ mặt bằng, ô chọn «Vẽ từ: Mặt bằng của phương
+án AI / Bản vẽ kỹ sư tải lên». Hai khối cũ nhận cờ `bare` để nhúng không khung. Chưa có phương án AI thì khung vẫn
+hiện, mở sẵn nguồn bản vẽ kỹ sư. Khung cũ ẩn ở tờ Mái nay luôn hiện — ô «Tầng vẽ» của nó tự chọn tầng. Bước Mặt
+đứng chưa gộp (cùng kiểu trùng: ảnh mặt đứng có vật liệu / ảnh mặt đứng từ bản vẽ kỹ sư).
+
+**T117 (tiếp 4) — tiến độ chỉ còn số tiền; quá trình chạy vào báo cáo `.md`** (Haan, 07/10/2026: «toàn bộ phần thông
+tin… không cần thiết, chỉ cần hiện số tiền tiêu tốn; quá trình chạy: prompt, lỗi, sửa, nên có một nút xuất file
+report dạng md để dev tải về»). Khối tiến độ (`ai/ai-run-progress.tsx`, dùng chung Mặt bằng / Mặt đứng / Phối
+cảnh) chỉ còn: trạng thái (kèm «n/m bước» khi đang chạy), «Chi phí: ≈ … USD» (`useRunCalls` trong `ai-usage.tsx`,
+gói miễn phí tính 0), nút «Dừng lượt chạy» / «Chạy lại» / «Tải báo cáo (.md)». Gỡ khỏi màn hình: danh sách bước,
+câu lỗi của bộ xếp, «Theo dõi lượt gọi AI» (`AiPlanLive` không còn nơi dùng), dòng token, «Phương án chưa xếp được»,
+«Ý tưởng chưa dùng được». Báo cáo (`ai/run-report.ts`, hàm thuần): thông tin lượt chạy, chi phí, lỗi, bảng các
+bước, phần riêng của bước (`failedVariantsMarkdown`), bảng lượt gọi, NGUYÊN VĂN lời gọi từng lượt (tải tuần tự qua
+`fetchAiCallPrompt`), kết quả thô JSON. Dựng trong trình duyệt, không thêm tuyến Worker. Nút Dừng riêng của bước
+Phối cảnh gộp vào khối chung.
+
+**T117 (tiếp 5) — ô chọn model dạng viên + bảng nổi; thêm các bản Claude; lỗi nhà cung cấp hiện ra** (Haan,
+07/10/2026). (a) `ModelChooser` (`ai/ai-model-cards.tsx`): thu gọn là một nút dạng viên — biểu tượng nhà cung cấp
+(biểu tượng chung, không logo), tên model, mũi tên; bấm mở BẢNG NỔI (không đẩy bố cục): tiêu đề «Chọn model AI và nhà
+cung cấp», thẻ nhà cung cấp có biểu tượng, danh sách thẻ model (nhãn, mô tả, mã model · giá), đóng khi chọn / Esc / bấm
+ra ngoài. Tên model thật chuyển vào `title` của nút. (b) `config/models.yaml`: Anthropic có sáu tuyến — Opus 5.5, Opus
+5, Opus 4.7, Sonnet 5.5, Sonnet 5, Fable 5.1; không thêm Haiku 4.5 (không nhận `thinking: adaptive` mà
+`llm/anthropic.ts` luôn gửi → 400). (c) Lượt Gemini 3.1 Pro lúc 22:32 hỏng vì tài khoản Google HẾT TÍN DỤNG, mà khối
+tiến độ T117 (tiếp 4) chỉ nói «Chưa xếp được» và «có lượt chưa có giá»: nay khi MỌI lượt gọi đều lỗi (hỏng ở nhà cung
+cấp) thì câu lỗi hiện ra; lượt gọi lỗi không token tính 0 USD. Lỗi của bộ xếp vẫn chỉ ở báo cáo.
+
+**T119 — đầu bài thiết kế: gỡ 10 câu, làm lại giao diện biểu mẫu** (Haan, 07/10/2026: «tinh chỉnh UX–UI mục đầu bài
+sao cho việc khảo sát thuận tiện, giao diện đẹp hơn»). (a) Gỡ khỏi `brief-form.json`: phong thuỷ + yêu cầu phong thuỷ
+cụ thể, nếp nấu ăn, bếp phụ, tần suất tiếp khách, làm việc tại nhà, ca đêm, thú nuôi, quan hệ của người quyết định,
+những thứ cần chỗ cất. Trường VẪN trong hợp đồng `design-brief` (đầu bài cũ hợp lệ); `brief/narrative.ts`,
+`ai/brief-demands.ts` đọc chúng theo kiểu chỉ suy từ câu đã trả lời, nên đầu bài mới chỉ thiếu các ý ấy, không lỗi.
+Gỡ quy tắc nhất quán «không xem phong thuỷ mà ưu tiên phong thuỷ»; kiểm hướng bàn thờ / bếp nay đọc «Điều kiêng kỵ
+khác». (b) Giao diện (`brief-panel.tsx`): ô xếp HAI cột (ô viết dài, chọn nhiều, bốn mặt, bảng, khoảng ngân sách và
+hàng chọn hơn ba lựa chọn trải cả hàng); đầu bước có tên phần · «Bước n/7», tên bước lớn hơn, «Đã trả lời a/b câu»;
+thanh bước dạng viên, bước đủ câu bắt buộc mang dấu tích; thanh «Quay lại / Tiếp / Lưu» dính đáy màn hình.
+
+**T117 (tiếp 6) — chi phí theo thời gian thực khi đang chạy** (Haan, 07/10/2026). Nhật ký `design_ai_call` chỉ có
+dòng khi lượt gọi XONG, nên trong lúc mô hình nghĩ / viết (vài phút) con số đứng yên. `ai/live-cost.ts`
+(`estimateLiveCost`, hàm thuần) ước từ `run.progress.partial.live` mà Worker ghi sẵn (`LivePlanBoard`): tiền thật
+của lượt đã xong + lượt đang chạy (ký tự đã sinh ÷ 3,5 × giá token ra, cộng token vào trung bình các lượt trước × giá
+token vào; giá lấy theo tuyến từ danh mục model). Màn hình ghi «≈ … USD · ước tính khi đang chạy», không bao giờ thấp
+hơn tiền thật đã ghi nhật ký; xong lượt thì thay bằng tiền thật. Ước tính thường THẤP hơn thật: phần suy nghĩ ẩn của
+mô hình không trả ký tự về. Có ở Mặt bằng và Mặt đứng (luồng `ai-design.ts`); Phối cảnh không có dữ liệu trực tiếp
+nên tăng theo từng ảnh xong.
+
+### T117 (tiếp 7) — Biểu mẫu đầu bài: khung ô thống nhất, câu soát theo mức (07/10/2026, Haan)
+
+- Mọi ô nhập / ô chọn / ô nhiều dòng tự dựng dùng chung `FIELD_BOX` / `TEXTAREA_BOX`
+  (`web/src/components/ui/field-box.ts`): bo 9px, viền đậm, cao 40px — trước đó `<select>` bo 4px còn `Input` bo 9px.
+  Bề rộng theo nội dung: ô số ~7rem, ô bốn phía ~6rem / ô chọn bốn phía 11rem, phiếu mặt đứng xếp cột 14–18rem.
+- Câu soát nhất quán tô theo mức: `canh_bao` vàng («Cảnh báo»), `nghiem_trong` đỏ («Lỗi»), luôn kèm chữ và biểu
+  tượng (`brief-issue.tsx`). Dưới từng ô trước đó mọi câu đều đỏ.
+- Câu soát ở khung bên phải bấm được: chế độ sửa sang đúng bước rồi cuộn tới ô đầu tiên trong `paths`; chế độ xem
+  cuộn tới dòng tương ứng; ô đích được viền sáng một lúc.
+- Gỡ thêm câu «Có khách ở lại qua đêm» (`lifestyle.overnight_guests`) khỏi biểu mẫu; trường giữ trong hợp đồng,
+  `brief-demands` vẫn đọc theo kiểu «chỉ suy từ câu đã trả lời» cho đầu bài cũ.

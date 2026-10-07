@@ -70,6 +70,11 @@ vi.mock('@/hooks/use-ai-design', () => ({
   // T57 — ảnh mặt bằng có nội thất. `useAiPlanSheetImage` trả rỗng: tầng CHƯA vẽ là trạng thái
   // mặc định, và phép thử dưới đây nói về cái nút chứ không về một tấm ảnh đã có.
   useAiPlanSheetImage: () => ({ url: null, loading: false, error: null }),
+  // Khung gộp «Ảnh mặt bằng có nội thất» (07/10/2026): nguồn «bản vẽ kỹ sư tải lên».
+  useUploadedDrawings: () => ({ isLoading: false, error: null, data: { items: [] } }),
+  useUploadDrawing: () => ({ mutateAsync: vi.fn(), isPending: false, isError: false }),
+  useDrawFromUpload: () => ({ mutateAsync: vi.fn(), isPending: false, isError: false }),
+  useDesignImage: () => ({ url: null, loading: false, error: null }),
   useDrawAiPlanSheetImage: () => ({
     mutateAsync: state.drawSheetImage,
     data: undefined,
@@ -112,7 +117,8 @@ const textRoute = () => ({
   imageUsd: null,
 });
 
-const { AiPlanStep } = await import('../ai-plan-step');
+const { AiPlanStep, failedVariantsMarkdown } = await import('../ai-plan-step');
+const { buildRunReport } = await import('../run-report');
 
 function review(over: Record<string, unknown> = {}) {
   return {
@@ -225,7 +231,7 @@ describe('Tờ mặt bằng — tờ SVG tất định là tờ CHÍNH (T22, 12/
   it('nút tải là SVG, không phải PNG', () => {
     state.review = review();
     show();
-    const link = screen.getByRole('link', { name: /Tải tờ mặt bằng tầng 1/ });
+    const link = screen.getByRole('link', { name: /Tải SVG tầng 1/ });
     expect(link).toHaveAttribute('href', 'blob:vector');
     expect(link).toHaveAttribute('download', expect.stringContaining('.svg'));
   });
@@ -247,8 +253,9 @@ describe('Tờ mặt bằng — tờ SVG tất định là tờ CHÍNH (T22, 12/
     state.review = review();
     show();
     expect(screen.getAllByLabelText(/^Model$/)).toHaveLength(2);
-    // Câu này mô tả đúng ẢNH NEO — tờ gửi đi là phần hình, không có khung tên (dữ liệu hạng 1).
-    expect(screen.getByText(/Ảnh gửi đi không mang khung tên/)).toBeInTheDocument();
+    // 07/10/2026 Haan: bỏ các đoạn chú thích (giá, chi phí, riêng tư, «ảnh AI không đo được»)
+    // khỏi màn hình. Dấu in TRÊN ảnh vẫn giữ.
+    expect(screen.queryByText(/Ảnh gửi đi không mang khung tên/)).toBeNull();
   });
 
   it('ô chọn model ghi rõ TÊN MÔ HÌNH, không chỉ nhãn của tuyến (19/09/2026)', () => {
@@ -257,9 +264,11 @@ describe('Tờ mặt bằng — tờ SVG tất định là tờ CHÍNH (T22, 12/
     // hiện tên ấy thì không đối chiếu được tấm ảnh trên màn hình với dòng tiền trong nhật ký.
     state.review = review();
     show();
-    // Từ 20/09/2026 ô chọn là thẻ chứ không còn `<select>`: tên model phải đọc được NGAY ở hàng
-    // tóm tắt, không phải mở danh sách ra mới thấy.
-    expect(screen.getAllByText(/gpt-image-x/).length).toBeGreaterThan(0);
+    // Từ 07/10/2026 nút thu gọn chỉ còn tên ngắn (Haan, theo mẫu); tên model THẬT nằm ở `title`
+    // của nút để vẫn đối chiếu được với nhật ký chi phí.
+    expect(
+      screen.getAllByRole('button', { name: /Đổi model/ }).some((b) => /gpt-image-x/.test(b.title)),
+    ).toBe(true);
   });
 
   it('vẽ được ảnh cho TẦNG KHÁC tầng đang xem, tờ vector không rời chỗ (19/09/2026)', async () => {
@@ -294,28 +303,18 @@ describe('Tờ mặt bằng — tờ SVG tất định là tờ CHÍNH (T22, 12/
     );
   });
 
-  it('hiện giá mỗi ảnh TRƯỚC khi bấm — mỗi lần bấm là tiền thật', () => {
+  it('không còn dòng «Giá niêm yết» dưới ô chọn model (07/10/2026)', () => {
     state.review = review();
     show();
-    expect(screen.getByText(/USD mỗi ảnh/)).toBeInTheDocument();
+    expect(screen.queryByText(/Giá niêm yết/)).toBeNull();
   });
 
-  it('tấm ảnh KHÔNG thay tờ vector: nó ở panel riêng và nói rõ mình không đo được', () => {
-    // Đây là chỗ T22 còn sống trong giao diện. Tờ vector vẫn là tờ mặc định ở trên, còn panel ảnh
-    // đứng dưới và tự khai mình là ảnh trình khách.
+  it('tấm ảnh KHÔNG thay tờ vector: nó ở panel riêng, dưới tờ vector (T22)', () => {
     state.review = review();
     show();
-    expect(screen.getByText('Ảnh mặt bằng có nội thất')).toBeInTheDocument();
-    expect(screen.getByText(/Ảnh trình khách — không thay tờ vẽ/)).toBeInTheDocument();
-    expect(
-      screen.getByText(/Tờ vector ở trên vẫn là bản dùng để đo và để xuất DXF/),
-    ).toBeInTheDocument();
-  });
-
-  it('nói rõ kích thước trên tờ ĐO ĐƯỢC — đó là điều đổi lại khi bỏ tờ ảnh', () => {
-    state.review = review();
-    show();
-    expect(screen.getByText(/mọi kích thước trên đây đo được/)).toBeInTheDocument();
+    const sheet = screen.getByRole('img', { name: /Tờ mặt bằng Tầng 1/ });
+    const panel = screen.getByRole('heading', { name: 'Ảnh mặt bằng có nội thất' });
+    expect(sheet.compareDocumentPosition(panel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('nói AI xếp phòng và chương trình dựng tường (T23) — không còn câu của lượt cứu hộ', () => {
@@ -348,24 +347,51 @@ describe('Tờ mặt bằng — tờ SVG tất định là tờ CHÍNH (T22, 12/
   });
 });
 
-describe('Panel điểm nằm SAU danh sách lỗi chặn (T24)', () => {
-  it('phương án có điểm thì panel điểm hiện, và hiện dưới lỗi chặn', () => {
-    // Thứ tự là một khẳng định thật, không phải chuyện trình bày: cổng dữ liệu và điểm là hai tầng
-    // kết luận khác nhau, và một phương án tự mâu thuẫn thì điểm của nó không nói gì. Đặt con số
-    // lên trên danh sách lỗi làm nó đọc như lời phán cuối cùng.
-    state.review = review({ score: scoreOf() });
+describe('Mục «Điểm chất lượng» tạm ẩn (Haan, 07/10/2026)', () => {
+  it('không hiện panel điểm chi tiết, điểm tổng vẫn ở chip đầu tờ vẽ', () => {
+    state.review = review({ score: scoreOf(), acceptPercent: 60 });
     show();
-
-    const gate = screen.getByRole('heading', { name: 'Lỗi bộ kiểm máy còn lại' });
-    const score = screen.getByRole('heading', { name: 'Điểm chất lượng' });
-    expect(gate.compareDocumentPosition(score) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Điểm chất lượng' })).toBeNull();
+    expect(screen.getByText(/Điểm 89%/)).toBeInTheDocument();
   });
+});
 
-  it('phương án đúc trước khi có thước thì panel nói «Chưa chấm», không hiện 0 điểm', () => {
+describe('Một khung «Ảnh mặt bằng có nội thất», hai nguồn (07/10/2026)', () => {
+  it('có phương án: mặc định vẽ từ mặt bằng AI, chuyển được sang bản vẽ kỹ sư tải lên', async () => {
+    state.run = null;
     state.review = review();
     show();
-    expect(screen.getByText('Chưa chấm')).toBeInTheDocument();
-    expect(screen.queryByText(/^điểm trên/)).toBeNull();
+    expect(screen.getAllByRole('heading', { name: 'Ảnh mặt bằng có nội thất' })).toHaveLength(1);
+    expect(screen.getByRole('button', { name: /Vẽ ảnh nội thất tầng 1/i })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Bản vẽ kỹ sư tải lên' }));
+    expect(screen.getByText(/Tải mặt bằng một tầng/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Vẽ ảnh nội thất tầng 1/i })).toBeNull();
+  });
+
+  it('chưa có phương án AI: khung vẫn hiện, mở sẵn nguồn bản vẽ kỹ sư', () => {
+    state.run = null;
+    state.review = null;
+    renderWithApp(
+      <AiPlanStep
+        projectId="p1"
+        readOnly={false}
+        state={{ ...designState, plans: [], planHeadArtifactId: null } as never}
+      />,
+    );
+    expect(screen.getByRole('heading', { name: 'Ảnh mặt bằng có nội thất' })).toBeInTheDocument();
+    expect(screen.getByText(/Tải mặt bằng một tầng/)).toBeInTheDocument();
+  });
+});
+
+describe('Xem toàn màn hình', () => {
+  it('mở hộp xem tờ vẽ, đóng bằng Esc — không dùng chế độ toàn màn hình của trình duyệt', async () => {
+    state.run = null;
+    state.review = review();
+    show();
+    await userEvent.click(screen.getByRole('button', { name: 'Xem toàn màn hình' }));
+    expect(screen.getByRole('dialog', { name: /Phương án 1 · Tầng 1/ })).toBeInTheDocument();
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 });
 
@@ -404,7 +430,7 @@ describe('Mỗi tầng một lượt, cổng hỏng thì không vẽ (T38, T39)'
     };
   }
 
-  it('phương án chưa xếp được nêu LÝ DO THEO TẦNG, và không có tờ vẽ nào cho nó', () => {
+  it('chưa xếp được: màn hình chỉ một dòng, số tiền và nút tải báo cáo — không bày lý do (07/10/2026)', () => {
     state.review = null;
     state.run = failedRun();
     renderWithApp(
@@ -414,15 +440,26 @@ describe('Mỗi tầng một lượt, cổng hỏng thì không vẽ (T38, T39)'
         state={{ ...designState, plans: [], planHeadArtifactId: null } as never}
       />,
     );
-    expect(screen.getByRole('heading', { name: 'Phương án chưa xếp được' })).toBeInTheDocument();
-    expect(screen.getByText('Tầng 2')).toBeInTheDocument();
-    expect(screen.getByText(/không có cửa hay ô thông nào mở vào/)).toBeInTheDocument();
+    const progress = within(screen.getByRole('region', { name: 'Tiến độ' }));
+    expect(progress.getByText('Chưa xếp được mặt bằng')).toBeInTheDocument();
+    expect(progress.getByText(/Chi phí:/)).toBeInTheDocument();
+    expect(progress.getByRole('button', { name: 'Tải báo cáo (.md)' })).toBeInTheDocument();
+    expect(progress.getByRole('button', { name: 'Chạy lại' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Phương án chưa xếp được' })).toBeNull();
+    expect(screen.queryByText(/không có cửa hay ô thông nào mở vào/)).toBeNull();
+    expect(screen.queryByText('Xếp lại tầng 2 · AI-A')).toBeNull();
     expect(screen.queryByRole('img', { name: /Tờ mặt bằng/ })).toBeNull();
     state.run = null;
   });
 
-  it('tầng đã gọi lần hai: hiện lỗi của CẢ HAI lượt, cách gọi lần hai, và chỗ chương trình tự sửa', () => {
-    state.review = null;
+  it('báo cáo: lý do THEO TẦNG của phương án chưa xếp được', () => {
+    const md = failedVariantsMarkdown(failedRun().result.failed as never);
+    expect(md).toContain('## Phương án chưa xếp được');
+    expect(md).toContain('#### Tầng 2');
+    expect(md).toMatch(/không có cửa hay ô thông nào mở vào/);
+  });
+
+  it('báo cáo: tầng gọi lần hai có lỗi của CẢ HAI lượt, cách gọi lần hai và chỗ chương trình tự sửa', () => {
     const run = failedRun();
     run.result.failed[0]!.reasons = [
       {
@@ -430,42 +467,55 @@ describe('Mỗi tầng một lượt, cổng hỏng thì không vẽ (T38, T39)'
         firstMessages: ['Phòng "storage_1" ở tầng 1 không có cửa.'],
         retry: 'revise',
         messages: [
-          'Phòng "bedroom_2" ở tầng 1 không có cửa, và không giáp phòng giao thông hay sinh hoạt chung nào để mở cửa vào (đang giáp: closet_1, storage_1, wc_2).',
+          'Phòng "bedroom_2" ở tầng 1 không có cửa (đang giáp: closet_1, storage_1, wc_2).',
         ],
         notes: ['Bỏ cửa "circulation_1–bedroom_2" ở tầng 1: hai phòng không chung bức vách nào.'],
       },
     ] as never;
-    state.run = run;
-    renderWithApp(
-      <AiPlanStep
-        projectId="p1"
-        readOnly={false}
-        state={{ ...designState, plans: [], planHeadArtifactId: null } as never}
-      />,
-    );
-    expect(screen.getByText('Lượt đầu — 1 lỗi:')).toBeInTheDocument();
-    expect(screen.getByText(/"storage_1" ở tầng 1 không có cửa/)).toBeInTheDocument();
-    expect(
-      screen.getByText(/Lượt cuối — AI sửa ý định \(gửi kèm ý định lượt trước\) — 1 lỗi:/),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/đang giáp: closet_1, storage_1, wc_2/)).toBeInTheDocument();
-    expect(screen.getByText('Chương trình đã tự sửa:')).toBeInTheDocument();
-    expect(screen.getByText(/Bỏ cửa "circulation_1–bedroom_2"/)).toBeInTheDocument();
-    state.run = null;
+    const md = failedVariantsMarkdown(run.result.failed as never);
+    expect(md).toContain('Lượt đầu — 1 lỗi:');
+    expect(md).toMatch(/"storage_1" ở tầng 1 không có cửa/);
+    expect(md).toMatch(/Lượt cuối — AI sửa ý định \(gửi kèm ý định lượt trước\) — 1 lỗi:/);
+    expect(md).toContain('đang giáp: closet_1, storage_1, wc_2');
+    expect(md).toContain('Chương trình đã tự sửa:');
+    expect(md).toContain('Bỏ cửa "circulation_1–bedroom_2"');
   });
 
-  it('nhãn bước lấy mẫu lại theo tầng hiện đúng như Worker đặt', () => {
-    state.review = null;
-    state.run = failedRun();
-    renderWithApp(
-      <AiPlanStep
-        projectId="p1"
-        readOnly={false}
-        state={{ ...designState, plans: [], planHeadArtifactId: null } as never}
-      />,
-    );
-    expect(screen.getByText('Xếp lại tầng 2 · AI-A')).toBeInTheDocument();
-    state.run = null;
+  it('báo cáo: đủ các bước như Worker đặt, lỗi lượt chạy, lượt gọi kèm nguyên văn lời gọi', () => {
+    const run = failedRun();
+    const md = buildRunReport({
+      title: 'Báo cáo lượt xếp mặt bằng',
+      projectId: 'p1',
+      run: run as never,
+      calls: [
+        {
+          id: 'c1',
+          created_at: '2026-09-13T00:01:00Z',
+          route: 'r',
+          provider: 'openai',
+          model: 'gpt-x',
+          purpose: 'plan_house',
+          input_tokens: 1200,
+          output_tokens: 800,
+          image_count: 0,
+          latency_ms: 31000,
+          status: 'ok',
+          error_code: null,
+          cost_usd: 0.05,
+        },
+      ],
+      prompts: new Map([['c1', 'LỜI GỌI | có ``` bên trong']]),
+      totalUsd: 0.05,
+      extra: failedVariantsMarkdown(run.result.failed as never),
+    });
+    expect(md).toContain('| 2 | Xếp lại tầng 2 · AI-A | Xong |');
+    expect(md).toContain('## Lỗi của lượt chạy');
+    expect(md).toContain('Chưa xếp được tầng 2.');
+    expect(md).toContain('gpt-x');
+    // Nguyên văn lời gọi nằm trong rào mã dài hơn mọi chuỗi ``` bên trong — không vỡ khối.
+    expect(md).toContain('````\nLỜI GỌI | có ``` bên trong\n````');
+    expect(md).toContain('#### Tầng 2');
+    expect(md).toContain('0.050 USD');
   });
 
   it('chip nói tầng nào đã phải xếp lại — không dùng chữ «sửa» của lượt vá cũ', () => {
@@ -487,9 +537,8 @@ describe('Mỗi tầng một lượt, cổng hỏng thì không vẽ (T38, T39)'
   it('lời giới thiệu nói luồng một lượt cho cả nhà, đầu vào chỉ là đầu bài, và trần ba lần sửa (T45)', () => {
     state.review = review();
     show();
-    expect(screen.getByText(/một lượt gọi mô hình cho cả nhà/)).toBeInTheDocument();
-    expect(screen.getByText(/không dùng chương trình không gian/)).toBeInTheDocument();
-    expect(screen.getByText(/tối đa bốn lần/)).toBeInTheDocument();
+    expect(screen.getByText(/chỉ dựa trên đầu bài và khảo sát/)).toBeInTheDocument();
+    expect(screen.getByText(/sau bốn lần/)).toBeInTheDocument();
     expect(screen.getByText(/diện tích tối\s+thiểu thì phải đạt/)).toBeInTheDocument();
   });
 
@@ -506,8 +555,7 @@ describe('Mỗi tầng một lượt, cổng hỏng thì không vẽ (T38, T39)'
     expect(screen.queryByRole('button', { name: 'Xếp mặt bằng' })).toBeNull();
   });
 
-  it('tầng không gọi lại vì lỗi hình học: nói thẳng là không gọi lại và làm gì tiếp', () => {
-    state.review = null;
+  it('báo cáo: tầng không gọi lại vì lỗi hình học nói thẳng là không gọi lại và làm gì tiếp', () => {
     const run = failedRun();
     run.result.failed[0]!.reasons = [
       {
@@ -518,19 +566,11 @@ describe('Mỗi tầng một lượt, cổng hỏng thì không vẽ (T38, T39)'
         ],
       },
     ] as never;
-    state.run = run;
-    renderWithApp(
-      <AiPlanStep
-        projectId="p1"
-        readOnly={false}
-        state={{ ...designState, plans: [], planHeadArtifactId: null } as never}
-      />,
-    );
-    expect(screen.getByText(/dài hơn 4 lần bề ngang/)).toBeInTheDocument();
-    expect(screen.getByText(/Không gọi lại mô hình: lỗi nằm ở hình học/)).toBeInTheDocument();
-    expect(screen.getByText(/Chạy lại để AI khai một ý định khác/)).toBeInTheDocument();
-    expect(screen.queryByText(/Lượt đầu —/)).toBeNull();
-    state.run = null;
+    const md = failedVariantsMarkdown(run.result.failed as never);
+    expect(md).toContain('dài hơn 4 lần bề ngang');
+    expect(md).toMatch(/Không gọi lại mô hình: lỗi còn lại không nằm ở thứ AI khai/);
+    expect(md).toContain('Chạy lại để AI khai một ý định khác');
+    expect(md).not.toContain('Lượt đầu —');
   });
 });
 
@@ -584,8 +624,6 @@ describe('Ý định bố cục của AI (T43, 14/09/2026)', () => {
     expect(
       screen.getByText(/AI khai ý định bố cục, chương trình xếp phòng và dựng tường/),
     ).toBeInTheDocument();
-    expect(screen.getByText(/toạ độ chương trình xếp/)).toBeInTheDocument();
-    expect(screen.queryByText(/toạ độ mô hình khai/)).toBeNull();
   });
 
   it('panel ý định: vùng bằng chữ tiếng Việt, cửa chính, quan hệ, số cách xếp và độ khớp ý đồ', () => {
@@ -622,72 +660,31 @@ describe('Ý định bố cục của AI (T43, 14/09/2026)', () => {
   });
 });
 
-describe('Ô yêu cầu sửa và ngưỡng 65 điểm (T53, 16/09/2026)', () => {
+describe('Điểm, ngưỡng và bản sửa — sau khi gỡ ô yêu cầu sửa (07/10/2026)', () => {
   const scored = (points: number) => ({ ...scoreOf(), points, scoredWeight: 100 });
 
-  it('điểm từ 65 trở lên: chip «Đạt ngưỡng 65»; dưới 65: «Dưới ngưỡng 65» kèm lời khuyên sửa', () => {
+  it('điểm từ 65 trở lên: «Đạt ngưỡng 65»; dưới 65: «Dưới ngưỡng 65» — ở đầu tờ vẽ', () => {
     state.run = null;
     state.review = review({ score: scored(70), acceptPercent: 65, editable: true });
     const first = renderWithApp(
       <AiPlanStep projectId="p1" readOnly={false} state={designState as never} />,
     );
-    expect(screen.getByText('Đạt ngưỡng 65')).toBeInTheDocument();
+    expect(screen.getByText(/Đạt ngưỡng 65/)).toBeInTheDocument();
     first.unmount();
     state.review = review({ score: scored(60), acceptPercent: 65, editable: true });
     show();
-    expect(screen.getByText('Dưới ngưỡng 65')).toBeInTheDocument();
-    expect(screen.getByText(/nên sửa tiếp bằng ô dưới/)).toBeInTheDocument();
+    expect(screen.getByText(/Dưới ngưỡng 65/)).toBeInTheDocument();
   });
 
-  it('gõ yêu cầu rồi bấm «Sửa lại»: gửi đúng phương án đang xem, nguyên văn yêu cầu, model đang chọn', async () => {
+  it('không còn ô yêu cầu sửa trên giao diện (Haan, 07/10/2026)', () => {
     state.run = null;
-    state.edit.mockClear();
-    state.review = review({
-      editable: true,
-      levels: [
-        {
-          level: 1,
-          name: 'Tầng 1',
-          scale: 60,
-          orientation: 'portrait',
-          notes: [],
-          rooms: 2,
-          roomList: [
-            { id: 'bedroom_1', type: 'bedroom', area_m2: 26.2 },
-            { id: 'circulation_1', type: 'circulation', area_m2: 21.3 },
-          ],
-        },
-      ],
-      roomLabels: { bedroom: 'Phòng ngủ', circulation: 'Giao thông' },
-    });
-    show();
-    // Mã phòng hiện cạnh ô để kỹ sư gọi đúng phòng — tờ vẽ không in mã.
-    expect(screen.getByText(/bedroom_1 \(Phòng ngủ 26,2 m²\)/)).toBeInTheDocument();
-    const button = screen.getByRole('button', { name: 'Sửa lại' });
-    expect(button).toBeDisabled();
-    await userEvent.type(
-      screen.getByLabelText(/Nội dung cần sửa/),
-      'Cửa bedroom_1 chuyển về cuối vách hành lang',
-    );
-    await userEvent.click(button);
-    expect(state.edit).toHaveBeenCalledWith(
-      expect.objectContaining({
-        projectId: 'p1',
-        artifactId: REF,
-        instruction: 'Cửa bedroom_1 chuyển về cuối vách hành lang',
-      }),
-    );
-  });
-
-  it('phương án cũ không có cây chia: không có ô gõ, nói rõ phải xếp lại', () => {
-    state.run = null;
-    state.review = review({ editable: false });
+    state.review = review({ editable: true });
     show();
     expect(screen.queryByLabelText(/Nội dung cần sửa/)).toBeNull();
-    expect(screen.getByText(/không sửa trực tiếp được/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Sửa lại' })).toBeNull();
   });
 
-  it('bản sửa: hiện nguyên văn yêu cầu đã dùng để đúc nó', () => {
+  it('bản sửa cũ: vẫn hiện nguyên văn yêu cầu đã dùng để đúc nó', () => {
     state.run = null;
     state.review = review({
       editable: true,
@@ -700,6 +697,33 @@ describe('Ô yêu cầu sửa và ngưỡng 65 điểm (T53, 16/09/2026)', () =>
     });
     show();
     expect(screen.getByText('bỏ vách gara')).toBeInTheDocument();
+  });
+});
+
+describe('Tên phương án «Phương án N» theo thứ tự tạo (07/10/2026)', () => {
+  it('đánh số cũ trước, không hiện mã AI-A', () => {
+    state.run = null;
+    state.review = review();
+    const second = `sha256:${'b'.repeat(64)}`;
+    renderWithApp(
+      <AiPlanStep
+        projectId="p1"
+        readOnly={false}
+        state={
+          {
+            ...designState,
+            plans: [
+              { artifactId: second, createdAt: '2026-09-11T00:00:00Z' },
+              { artifactId: REF, createdAt: '2026-09-10T00:00:00Z' },
+            ],
+          } as never
+        }
+      />,
+    );
+    const group = screen.getByRole('group', { name: 'Phương án' });
+    expect(group.textContent).toMatch(/Phương án 1.*Phương án 2/);
+    expect(screen.getByRole('heading', { name: 'Phương án 1' })).toBeInTheDocument();
+    expect(screen.queryByText('AI-A')).toBeNull();
   });
 });
 

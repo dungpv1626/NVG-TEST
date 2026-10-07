@@ -18,7 +18,6 @@ import { load as parseYaml } from 'js-yaml';
 import { describe, expect, it } from 'vitest';
 import {
   BRIEF_FORM,
-  DECISION_RELATIONSHIPS,
   briefFormConfigSchema,
   briefAreaBudget,
   checkBriefConsistency,
@@ -170,13 +169,21 @@ describe('Cấu hình biểu mẫu Đầu bài', () => {
     ]);
   });
 
-  it('lựa chọn «Quan hệ của người quyết định» khớp DECISION_RELATIONSHIPS — một nguồn nhãn', () => {
-    // Ghi chú trong cấu hình nói nhãn "lấy từ DECISION_RELATIONSHIPS", nhưng tới 08/09/2026
-    // không nơi nào import hằng đó — hai bản chép tay chờ ngày lệch nhau. Bài này biến lời
-    // hứa thành phép kiểm.
-    const field = allFields.find((f) => f.path === 'decision_maker.relationship')!;
-    const pick = (o: { value: string; label: string }) => ({ value: o.value, label: o.label });
-    expect((field.options ?? []).map(pick)).toEqual(DECISION_RELATIONSHIPS.map(pick));
+  it('11 câu Haan gỡ 07/10/2026 không còn trong biểu mẫu', () => {
+    const gone = [
+      'household.feng_shui',
+      'household.feng_shui_notes',
+      'lifestyle.cooking',
+      'lifestyle.second_kitchen',
+      'lifestyle.guests',
+      'lifestyle.work_from_home',
+      'lifestyle.night_shift',
+      'lifestyle.pets',
+      'decision_maker.relationship',
+      'storage.items',
+      'lifestyle.overnight_guests',
+    ];
+    expect(allFields.filter((f) => gone.includes(f.path))).toEqual([]);
   });
 
   it('không hard-code ngưỡng độ đầy đủ ở bất kỳ đâu trong shared/design', () => {
@@ -788,15 +795,16 @@ describe('Diện tích TỐI THIỂU so với sàn xây được (13/09/2026)', 
 });
 
 describe('Hướng bàn thờ / bếp khai lệch nhau (28/09/2026)', () => {
-  // Haan: báo ngay ở đầu bài để người nhập quyết. Đầu bài demo: «bàn thờ hướng đông» ở ghi chú phong
-  // thuỷ, «hướng đông nam» ở dòng phòng thờ — mô hình đọc cả hai và tự chọn một.
+  // Haan: báo ngay ở đầu bài để người nhập quyết. Đầu bài demo: «bàn thờ hướng đông» ở ô ghi chú,
+  // «hướng đông nam» ở dòng phòng thờ — mô hình đọc cả hai và tự chọn một. Ô ghi chú phong thuỷ gỡ
+  // 07/10/2026 cùng câu phong thuỷ; nguồn chữ tự do còn lại là «Điều kiêng kỵ khác».
   const draft = (
     notes: string | null,
     rows: { type: string; amenities: string | null }[],
     taboos: string | null = null,
   ) =>
     ({
-      household: { feng_shui: 'co_xem', feng_shui_notes: notes, taboos },
+      household: { taboos: [notes, taboos].filter(Boolean).join('; ') || null },
       required_spaces: rows.map((row) => ({ ...row, floor: null, area_m2: null, ensuite: null })),
     }) as unknown as DesignBriefDraft;
   const conflicts = (d: DesignBriefDraft) =>
@@ -809,9 +817,9 @@ describe('Hướng bàn thờ / bếp khai lệch nhau (28/09/2026)', () => {
     expect(found).toHaveLength(1);
     expect(found[0]!.severity).toBe('canh_bao');
     expect(found[0]!.message).toMatch(/bàn thờ/);
-    expect(found[0]!.message).toMatch(/«đông» ở «Yêu cầu phong thuỷ cụ thể»/);
+    expect(found[0]!.message).toMatch(/«đông» ở «Điều kiêng kỵ khác»/);
     expect(found[0]!.message).toMatch(/«đông nam» ở dòng «Phòng thờ/);
-    expect(found[0]!.paths).toEqual(['household.feng_shui_notes', 'required_spaces']);
+    expect(found[0]!.paths).toEqual(['household.taboos', 'required_spaces']);
   });
 
   it('cùng một hướng ở hai chỗ, viết hoa khác nhau: không cảnh báo', () => {
@@ -849,14 +857,8 @@ describe('Hướng bàn thờ / bếp khai lệch nhau (28/09/2026)', () => {
       ]),
     );
     expect(found).toHaveLength(1);
-    expect(found[0]!.message).toMatch(/«tây» ở «Yêu cầu phong thuỷ cụ thể»/);
+    expect(found[0]!.message).toMatch(/«tây» ở «Điều kiêng kỵ khác»/);
     expect(found[0]!.message).not.toMatch(/«nam»/);
-  });
-
-  it('không xem phong thuỷ thì ô ghi chú phong thuỷ ẩn — chữ cũ còn lại không sinh cảnh báo', () => {
-    const d = draft('bàn thờ hướng đông', [{ type: 'altar_room', amenities: 'hướng tây' }]);
-    (d.household as { feng_shui: string }).feng_shui = 'khong_xem';
-    expect(conflicts(d)).toEqual([]);
   });
 
   it('chữ Unicode tổ hợp (NFD, gõ từ máy Mac) vẫn đọc ra đúng hướng', () => {
@@ -963,21 +965,6 @@ describe('Hai câu trả lời ở hai mục khác nhau nói ngược nhau (28/0
       has(
         { household: { ...ownRoom, altar_floor: 2 }, required_spaces: [row('altar_room')] },
         'tang_tho_lech_dong_phong_tho',
-      ),
-    ).toBe(false);
-  });
-
-  it('không xem phong thuỷ mà xếp phong thuỷ vào ưu tiên', () => {
-    expect(
-      has(
-        { household: { feng_shui: 'khong_xem' }, priorities: ['feng_shui'] },
-        'khong_xem_phong_thuy_ma_uu_tien',
-      ),
-    ).toBe(true);
-    expect(
-      has(
-        { household: { feng_shui: 'co_xem' }, priorities: ['feng_shui'] },
-        'khong_xem_phong_thuy_ma_uu_tien',
       ),
     ).toBe(false);
   });

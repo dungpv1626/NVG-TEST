@@ -76,7 +76,6 @@ describe('Nguồn mặt đứng của bộ ảnh phối cảnh', () => {
     state.uploads = [UPLOAD];
     renderWithApp(<AiPerspectiveStep projectId="p1" readOnly={false} state={designState()} />);
     expect(screen.queryByText(/Chưa có ý tưởng mặt đứng/)).toBeNull();
-    expect(screen.getByText(/chiều cao mô hình đọc trên bản vẽ/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: /Dựng bộ ảnh/ }));
     expect(state.start).toHaveBeenCalledWith({
       projectId: 'p1',

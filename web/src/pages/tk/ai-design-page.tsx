@@ -5,13 +5,17 @@
  * Mọi bước của công cụ ở MỘT chỗ: đầu bài và khảo sát hiện trạng → mặt bằng → mặt đứng → phối cảnh.
  * Vẫn gắn hồ sơ thiết kế (`design_projects`): quyền (RLS) và artifact đi theo hồ sơ.
  *
+ * Đầu trang KHÔNG mang trạng thái, bước quy trình hay hạn bàn giao của hồ sơ (Haan, 07/10/2026): AI
+ * Design không thuộc quy trình thiết kế, bày những thứ ấy ở đây là ngầm nói kết quả AI đẩy hồ sơ đi
+ * tiếp. Chỉ còn mã hồ sơ, một câu nói rõ ranh giới, và lối về hồ sơ thiết kế.
+ *
  * Trang này nằm ở `tk/`, KHÔNG ở `tk/ai/`: nó nạp hồ sơ, đầu bài và khảo sát qua hook dùng chung của
  * Module TK, mà thư mục `tk/ai/` bị cấm nhập hook ấy (`ai-independence.test.ts`). Bước đầu bài đưa
  * vào `AiDesignTab` qua vùng chèn `inputs` — phần AI không biết đầu bài được sửa bằng gì.
  */
 
-import { designDisplayStatus, DESIGN_STAGE_META, formatDate } from '@nvg/shared';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 import { RecordNotFound } from '@/components/entity/entity-detail';
 import { CardGridSkeleton, ErrorState } from '@/components/ui/states';
 import { useDesignProject } from '@/hooks/use-design-projects';
@@ -42,8 +46,27 @@ export function AiDesignPage() {
   // Cùng điều kiện với trang hồ sơ: bàn giao rồi thì đóng băng.
   const readOnly = !canEdit || project.handed_over_at !== null;
 
+  // Đầu bài và khảo sát là của HỒ SƠ, ở đây CHỈ XEM (Haan, 07/10/2026): AI Design là công cụ hỗ
+  // trợ, không được sửa đầu vào chính thức của quy trình. Muốn sửa thì quay về hồ sơ thiết kế.
+  const editPath = `/tk/du-an/${project.id}`;
   const inputs = (
     <div className="space-y-6">
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface-subtle p-3">
+        <p className="mr-auto text-fg-subtle">
+          Đầu bài và khảo sát của hồ sơ thiết kế — chỉ xem ở đây. Sửa hoặc xác nhận ở hồ sơ thiết
+          kế; AI Design đọc bản đầu bài đã xác nhận mới nhất.
+        </p>
+        {!readOnly && (
+          <>
+            <Button asChild variant="secondary">
+              <Link to={`${editPath}?tab=dau-bai`}>Sửa đầu bài</Link>
+            </Button>
+            <Button asChild variant="secondary">
+              <Link to={`${editPath}?tab=khao-sat`}>Sửa khảo sát</Link>
+            </Button>
+          </>
+        )}
+      </div>
       <section>
         <h2 className="mb-2 font-semibold">Đầu bài thiết kế</h2>
         <BriefPanel
@@ -51,7 +74,7 @@ export function AiDesignPage() {
           companyId={project.company_id}
           projectName={project.name}
           projectCode={project.code}
-          readOnly={readOnly}
+          readOnly
         />
       </section>
       <section>
@@ -60,7 +83,7 @@ export function AiDesignPage() {
           projectId={project.id}
           companyId={project.company_id}
           projectName={project.name}
-          readOnly={readOnly}
+          readOnly
         />
       </section>
     </div>
@@ -75,18 +98,30 @@ export function AiDesignPage() {
       ]}
       title={project.name}
       code={project.code}
-      status={designDisplayStatus(project.stage, project.handover_deadline)}
-      deadline={project.handover_deadline}
-      meta={[
-        DESIGN_STAGE_META[project.stage].label,
-        project.handover_deadline ? `Hạn bàn giao ${formatDate(project.handover_deadline)}` : null,
-      ]}
+      meta={[]}
+      actions={
+        <Button asChild variant="secondary">
+          <Link to={`/tk/du-an/${project.id}`}>Mở hồ sơ thiết kế</Link>
+        </Button>
+      }
+      compact
       primaryTabIds={['thiet-ke-ai']}
       tabs={[
         {
           id: 'thiet-ke-ai',
           label: 'AI Design',
-          content: <AiDesignTab projectId={project.id} readOnly={readOnly} inputs={inputs} />,
+          content: (
+            <AiDesignTab
+              projectId={project.id}
+              readOnly={readOnly}
+              inputs={inputs}
+              briefLink={
+                <Link className="underline" to={`${editPath}?tab=dau-bai`}>
+                  Sửa ở đầu bài của hồ sơ
+                </Link>
+              }
+            />
+          ),
         },
       ]}
     />

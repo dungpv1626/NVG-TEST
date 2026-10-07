@@ -16,6 +16,7 @@ import { formatDateTime, formatNumber } from '@nvg/shared';
 import { STYLE_LABEL, STYLES, type AiFacadeBrief } from '@nvg/shared/design';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { FIELD_BOX, TEXTAREA_BOX } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/states';
 import {
@@ -27,6 +28,7 @@ import {
   type FacadeVocabularyView,
 } from '@/hooks/use-ai-design';
 import { DesignApiError } from '@/lib/design-api';
+import { cn } from '@/lib/utils';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard';
 import { Chip, Panel } from '../tk-ui';
@@ -197,10 +199,6 @@ export function FacadeBriefForm({
         )
       }
     >
-      <p className="text-fg-subtle">
-        Mục nào đã chọn thì AI và chương trình phải theo đúng. Mục để «{AI_PICKS}» thì AI chọn cho
-        hợp phong cách. Khung nhà, vị trí và bề rộng cửa lấy từ phương án mặt bằng đang chọn.
-      </p>
       {staleBrief && (
         <p className="mt-2 text-tk-am-fg">
           Phiếu này lưu khi đang chọn một phương án mặt bằng khác. Xem lại chiều cao cửa trước khi
@@ -278,7 +276,9 @@ export function FacadeBriefFields({
     onChange(next);
   };
   return (
-    <>
+    // `@container`: các nhóm chia hai cột theo bề ngang CHỖ ĐẶT (cột trái hẹp của bước mặt
+    // đứng, hay cả bề ngang trong đầu bài), không theo bề ngang màn hình.
+    <div className="@container space-y-2">
       <Group title="Chung" open>
         {withStyle && (
           <Select
@@ -463,7 +463,7 @@ export function FacadeBriefFields({
           ẩn theo điều kiện, nhưng nó NÓI ra lý do; chỗ này thì không. */}
       <Group title="Lan can ban công">
         {plan !== null && plan.balconies === 0 && (
-          <p className="text-fg-subtle sm:col-span-2">
+          <p className="col-span-full text-fg-subtle">
             Phương án mặt bằng đang chọn chưa có ban công nào ra mặt trước, nên mặt đứng chưa có lan
             can để vẽ. Điền sẵn ở đây vẫn được — các ô này áp dụng ngay khi mặt bằng có ban công.
           </p>
@@ -569,7 +569,7 @@ export function FacadeBriefFields({
       )}
 
       <Group title="Chi tiết trang trí mong muốn">
-        <fieldset className="sm:col-span-2">
+        <fieldset className="col-span-full">
           <legend className="text-fg-subtle">
             Chọn những chi tiết phải có. Không chọn gì thì AI đề xuất.
           </legend>
@@ -598,10 +598,10 @@ export function FacadeBriefFields({
       </Group>
 
       <Group title="Ghi chú" open>
-        <label className="block sm:col-span-2">
+        <label className="col-span-full block max-w-2xl">
           <span className="block text-fg-subtle">Yêu cầu khác của kỹ sư</span>
           <textarea
-            className="mt-1 min-h-20 w-full rounded border border-border bg-surface p-2"
+            className={cn(TEXTAREA_BOX, 'mt-1 min-h-20')}
             maxLength={1000}
             value={draft.notes ?? ''}
             onChange={(event) => set((b) => (b.notes = event.target.value || null))}
@@ -612,7 +612,7 @@ export function FacadeBriefFields({
           </span>
         </label>
       </Group>
-    </>
+    </div>
   );
 }
 
@@ -629,7 +629,11 @@ function Group({
   return (
     <details open={open} className="rounded-md border border-tk-line p-3">
       <summary className="cursor-pointer font-medium">{title}</summary>
-      <div className="mt-2 grid gap-3 sm:grid-cols-2">{children}</div>
+      {/* Cột bề rộng cố định (14–18rem), không chia đôi cả khung: ô chọn chỉ chứa vài chữ, kéo
+          rộng nửa trang là thừa (Haan, 07/10/2026). Khung rộng thì xếp được ba, bốn ô một hàng. */}
+      <div className="mt-2 grid gap-3 @md:grid-cols-[repeat(auto-fill,minmax(14rem,18rem))]">
+        {children}
+      </div>
     </details>
   );
 }
@@ -649,7 +653,7 @@ function Select({
     <label className="block">
       <span className="block text-fg-subtle">{label}</span>
       <select
-        className="mt-1 min-h-10 w-full rounded border border-border bg-surface px-2"
+        className={cn(FIELD_BOX, 'mt-1 w-full')}
         value={value ?? ''}
         onChange={(event) => onChange(event.target.value || null)}
       >
@@ -682,7 +686,7 @@ function ColourSelect({
       <span className="block text-fg-subtle">{label}</span>
       <span className="mt-1 flex items-center gap-2">
         <select
-          className="min-h-10 w-full rounded border border-border bg-surface px-2"
+          className={cn(FIELD_BOX, 'w-full')}
           value={value ?? ''}
           onChange={(event) => onChange(event.target.value || null)}
         >
@@ -725,7 +729,7 @@ function NumberField({
     <label className="block">
       <span className="block text-fg-subtle">{label}</span>
       <Input
-        className="mt-1"
+        className="mt-1 h-10"
         inputMode="numeric"
         value={text}
         placeholder={fallback === null ? AI_PICKS : `${AI_PICKS} (mặc định ${fallback})`}

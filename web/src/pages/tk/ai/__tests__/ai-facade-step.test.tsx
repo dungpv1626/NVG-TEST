@@ -199,6 +199,23 @@ describe('Bước mặt đứng', () => {
     );
   });
 
+  it('phiếu yêu cầu mặt đứng CHỈ XEM — sửa ở đầu bài của hồ sơ (Haan, 07/10/2026)', async () => {
+    renderWithApp(
+      <AiFacadeStep
+        projectId="p1"
+        readOnly={false}
+        state={designState()}
+        briefLink={<a href="/tk/du-an/p1?tab=dau-bai">Sửa ở đầu bài của hồ sơ</a>}
+      />,
+    );
+    expect(await screen.findByText(/chỉ xem ở đây/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Lưu yêu cầu' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Sửa ở đầu bài của hồ sơ' })).toHaveAttribute(
+      'href',
+      '/tk/du-an/p1?tab=dau-bai',
+    );
+  });
+
   it('hiện bảng vật liệu, và màu luôn kèm mã hex bằng chữ', () => {
     renderWithApp(<AiFacadeStep projectId="p1" readOnly={false} state={designState()} />);
     expect(screen.getByText('Sơn nước ngoại thất, trắng kem')).toBeInTheDocument();
@@ -267,7 +284,7 @@ describe('Bước mặt đứng', () => {
     expect(within(panel).getByText('Đang hiệu lực')).toBeInTheDocument();
     expect(within(panel).queryByRole('button', { name: /Chọn bản này/ })).toBeNull();
 
-    await userEvent.click(within(panel).getByRole('button', { name: /^Bản 1/ }));
+    await userEvent.click(within(panel).getByRole('button', { name: /^Mặt đứng 1/ }));
     const choose = within(panel).getByRole('button', { name: /Chọn bản này/ });
     await userEvent.click(choose);
     expect(state.chooseFacade).toHaveBeenCalledWith({ projectId: 'p1', artifactId: FACADE_OLD });
@@ -280,7 +297,9 @@ describe('Bước mặt đứng', () => {
     const panel = screen
       .getByRole('heading', { name: 'Các bản mặt đứng đã dựng' })
       .closest('section')!;
-    await userEvent.click(within(panel).getByRole('button', { name: /Xoá Bản 1 khỏi danh sách/ }));
+    await userEvent.click(
+      within(panel).getByRole('button', { name: /Xoá Mặt đứng 1 khỏi danh sách/ }),
+    );
     expect(state.hideFacade).not.toHaveBeenCalled();
     expect(screen.getByText(/Dữ liệu vẫn còn trong hồ sơ/)).toBeInTheDocument();
 
@@ -297,7 +316,7 @@ describe('Bước mặt đứng', () => {
     expect(within(panel).queryByRole('button', { name: /Chọn bản này/ })).toBeNull();
   });
 
-  it('lượt chạy hỏng vì ý tưởng không qua kiểm: liệt kê lý do nguyên văn', () => {
+  it('lượt chạy hỏng: màn hình chỉ trạng thái, số tiền, nút báo cáo — lý do không bày ra', () => {
     state.run = {
       id: 'r1',
       stage: 'facade',
@@ -315,8 +334,10 @@ describe('Bước mặt đứng', () => {
         state={designState({ facadeArtifactId: null, runs: { facade: state.run } })}
       />,
     );
-    expect(screen.getByText('Ý tưởng chưa dùng được')).toBeInTheDocument();
-    expect(screen.getByText('Mảng ốp (elements[0]) đè lên lỗ mở tầng 1.')).toBeInTheDocument();
+    // Lý do nằm trong báo cáo .md tải về (07/10/2026), không trên màn hình.
+    expect(screen.getByText('Chưa dựng được mặt đứng')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tải báo cáo (.md)' })).toBeInTheDocument();
+    expect(screen.queryByText('Mảng ốp (elements[0]) đè lên lỗ mở tầng 1.')).toBeNull();
     state.run = null;
   });
 });

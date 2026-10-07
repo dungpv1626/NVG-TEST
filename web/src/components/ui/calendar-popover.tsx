@@ -175,7 +175,7 @@ export function CalendarPopover({
                 'hover:bg-surface-hover',
                 'focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none',
                 'disabled:pointer-events-none disabled:opacity-40',
-                isSelected && 'bg-brand text-white hover:bg-brand',
+                isSelected && 'bg-brand text-fg-inverse hover:bg-brand',
                 // Hôm nay chỉ viền, không tô nền — nền là dấu hiệu của ngày ĐANG CHỌN.
                 !isSelected && isToday && 'ring-1 ring-border-strong ring-inset',
               )}

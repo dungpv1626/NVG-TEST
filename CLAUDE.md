@@ -399,6 +399,11 @@ Nghiệm thu đo bằng **người thật dùng, dữ liệu đúng, báo cáo �
 
 Hàng rào riêng của module; nơi nào mục này im lặng thì áp mục 1–7.
 
+> **AI Design là module ĐỘC LẬP hỗ trợ phòng thiết kế, KHÔNG thuộc quy trình Dự án thiết kế** (Haan, T114 + T118).
+> Không đặt nó thành bước của dải tiến trình, màn hình con của hồ sơ, điều kiện mở bước khác, việc cần làm hay
+> hoạt động của hồ sơ. Lối sang duy nhất từ hồ sơ là khối «Công cụ hỗ trợ». Nó ĐỌC đầu bài đã xác nhận và khảo sát
+> của hồ sơ, CHỈ XEM — sửa phải về hồ sơ thiết kế. Chiều từ AI sang quy trình không có.
+
 ### 8.1 Tài liệu
 
 - Đặc tả: **`doc/design/`** — nguồn sự thật cho TK-10→TK-17, thắng các bản `.docx`. **Đọc
@@ -461,7 +466,7 @@ hồ sơ phát hành. Hiện trạng:
   hình sinh là nội dung không tin được: thoát ký tự khi dựng SVG, hiển thị qua `<img>`.
 - **Xuất DXF bằng TypeScript trong Worker** (T47, `ai/dxf/`), đổi từ chính tờ SVG. Một chiều.
 - **Ảnh mặt bằng có nội thất** (T57): mô hình ảnh vẽ từ **ảnh neo** (`ai/draw/anchor.ts`, không khung tên),
-  panel riêng dưới tờ vector — **tờ vector vẫn là tờ chính**. Nhãn hai lớp: in lên pixel + chữ trong trang.
+  panel riêng dưới tờ vector — **tờ vector vẫn là tờ chính**. Nhãn in lên pixel (T117: bỏ câu chú thích trong trang).
   Phép thử canh `images` có đúng một phần tử.
 - **Mặt đứng mặt tiền** (T59): khung, lỗ mở, ban công suy từ phương án mặt bằng đã chọn và KHOÁ; mô
   hình chỉ chọn mái, vật liệu, màu, cổng, rào, trang trí trong `kb/facade_vocabulary.yaml`. Phiếu yêu cầu
@@ -479,7 +484,9 @@ hồ sơ phát hành. Hiện trạng:
   theo loại hình: nhóm tổ chức khối nhà ẩn theo TỪNG TRƯỜNG, không ẩn cả mục.
   Trường mới gần hết mang **trọng số 0** — `completeness_score` là cổng chặn Lớp 2, chỉ đo thứ
   thiếu thì không dựng nổi mặt bằng. Phong thuỷ vào đầu bài dưới dạng **câu ràng buộc người đã
-  quyết**, không phải ngày sinh để máy luận (PRD 2.3).
+  quyết**, không phải ngày sinh để máy luận (PRD 2.3) — từ 07/10/2026 qua ô «Điều kiêng kỵ khác»: Haan gỡ
+  11 câu (phong thuỷ, nếp nấu ăn, bếp phụ, tiếp khách, làm việc tại nhà, ca đêm, thú nuôi, quan hệ người quyết
+  định, chỗ cất đồ, khách ở lại qua đêm); trường vẫn trong hợp đồng để đầu bài cũ đọc được.
 - **Quản trị viên sửa được mục khảo sát** (T63): lớp phủ lên `brief-form.json`, lưu ở
   `design_setting.brief_form_overlay`, ghi qua `POST /design/brief/form`. Sửa nhãn/gợi ý/trọng
   số/thứ tự, ẩn, và thêm câu hỏi ở ô mở `custom.*`. **Không** sửa được kiểu điều khiển, đơn vị,
@@ -553,7 +560,9 @@ gọi qua Durable Object binding (`getContainer(env.DESIGN_COMPUTE, id)`), có h
   trả `layers_unmapped`, tách bạch với lớp cố ý bỏ qua (`ignore`).
 - Container **không** quy chuẩn hoá nhãn phòng (`"PN2"` → `bedroom` là việc của Worker).
 - Không tạo lại thứ đã có: `design_projects`, `customers`, `users`, `documents` + `document_versions`.
-- Nhãn cảnh báo do mã chèn, không tắt được từ giao diện (`AI_DISCLAIMERS` trong `@nvg/shared/design`).
+- Nhãn cảnh báo do mã chèn, không tắt được từ giao diện (`AI_DISCLAIMERS` trong `@nvg/shared/design`). Từ T117
+  (Haan) màn hình KHÔNG bày câu chú thích giá / chi phí / riêng tư / «ảnh AI không đo được»; dấu in trên ảnh và
+  câu `noCodeCheck` (mục «Đối chiếu thói quen thiết kế») vẫn giữ.
 - **Stub RPC nhận từ binding Workflow (`PIPELINE.create()`, `workflow.get()`) phải huỷ** qua
   `workflows/rpc-stub.ts` (`instanceIdOf`, `disposeStub`). Bỏ rơi cho bộ dọn rác thì `wrangler dev`
   tự huỷ ngẫu nhiên giữa lượt AI (T84, ba lần 25/09/2026, backtrace gdb). Kết quả `step.do` cũng là kết quả RPC — `run()` bọc `step` bằng `disposingStep` (T85). Phép thử quét mã canh.

@@ -1099,7 +1099,8 @@ describe('Đơn vị và thứ hạng — hai chỗ màn hình nói khác dữ l
 
     // `getByLabelText` khớp CẢ câu gợi ý nằm trong `<label>`, nên dùng khớp một phần.
     expect(screen.getByLabelText(/^Người quyết định/)).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Hai vợ chồng cùng quyết' })).toBeTruthy();
+    // «Quan hệ của người quyết định» gỡ 07/10/2026 (Haan) — còn tên người quyết định.
+    expect(screen.queryByRole('button', { name: 'Hai vợ chồng cùng quyết' })).toBeNull();
   });
 });
 
