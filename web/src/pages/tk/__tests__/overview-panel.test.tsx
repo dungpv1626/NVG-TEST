@@ -106,10 +106,10 @@ describe('Tab Tổng quan của dự án thiết kế', () => {
     expect(container.textContent).not.toMatch(/(^|[^\d])0($|[^\d%])/);
   });
 
-  it('dải tiến trình có đủ năm bước và bước nào cũng mở được', () => {
+  it('dải tiến trình có đủ sáu bước và bước nào cũng mở được', () => {
     panel();
     const track = screen.getByRole('list', { name: 'Các bước của quy trình thiết kế' });
-    expect(within(track).getAllByRole('link')).toHaveLength(5);
+    expect(within(track).getAllByRole('link')).toHaveLength(6);
   });
 
   it('thông tin dự án lấy từ hồ sơ thật, khách hàng bấm được', () => {

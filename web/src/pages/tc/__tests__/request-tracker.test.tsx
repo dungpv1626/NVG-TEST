@@ -94,8 +94,33 @@ describe('Theo dõi đề nghị từ công trường — TC-10', () => {
   it('bấm «Thúc» gửi đúng đề nghị và báo lại', async () => {
     renderList();
     await userEvent.click(screen.getByRole('button', { name: /Thúc/ }));
-    expect(nudge).toHaveBeenCalledWith({ entityId: 'pr-1' });
+    expect(nudge).toHaveBeenCalledWith({ entityId: 'pr-1', entityType: 'purchase_requests' });
     expect(await screen.findByRole('status')).toHaveTextContent('Đã thúc');
+  });
+
+  it('yêu cầu làm rõ (0154): dẫn sang trang RFI, ngày là «Hạn trả lời», thúc đúng loại', async () => {
+    state.rows = [
+      row({
+        entity_type: 'rfis',
+        entity_id: 'rfi-1',
+        code: 'NVC-RFI-2026-0001',
+        title: 'Cao độ dầm D3',
+        stage: 'cho_tra_loi',
+        holder_kind: 'answerer',
+        holder_label: 'Phòng Thiết kế',
+        holder_names: ['Phạm Thị D'],
+        needed_date: '2099-10-10',
+      }),
+    ];
+    renderList();
+    expect(screen.getByRole('link', { name: 'NVC-RFI-2026-0001' })).toHaveAttribute(
+      'href',
+      '/lam-ro/rfi-1',
+    );
+    expect(screen.getByText('Yêu cầu làm rõ — Chờ trả lời')).toBeInTheDocument();
+    expect(screen.getByText('Hạn trả lời:')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /Thúc/ }));
+    expect(nudge).toHaveBeenCalledWith({ entityId: 'rfi-1', entityType: 'rfis' });
   });
 
   it('đề nghị còn nháp — không có ai ở văn phòng giữ — thì không có nút «Thúc»', () => {

@@ -35,7 +35,6 @@ import { toUserMessage } from '@/hooks/use-error-message';
 import { Chip, Panel } from '../tk-ui';
 import { AiModePicker, ReasoningEffortPicker, useAiChoice } from './ai-model-picker';
 import { AiRunProgress } from './ai-run-progress';
-import { FacadeBriefForm, useFacadeBriefController } from './ai-facade-brief-form';
 import { FacadeImagePanel } from './ai-facade-image';
 import { FacadeScorePanel } from './ai-facade-score';
 import { SheetSizeControl, sheetWidthStyle, useSheetSize } from './sheet-size';
@@ -70,7 +69,6 @@ export function AiFacadeStep({
   const [runId, setRunId] = useState<string | null>(state.runs.facade?.id ?? null);
   const start = useStartAiRun('facade');
   // Phiếu yêu cầu của kỹ sư (Đợt F2) — trạng thái ở đây vì nút chạy phải lưu phiếu trước khi chạy.
-  const brief = useFacadeBriefController(projectId);
   const run = useAiRun(runId, 2000);
   // Bản đang MỞ để xem — mặc định là bản hiệu lực. Tách khỏi mốc để kỹ sư mở lại bản cũ mà so mà
   // không phải đổi mốc: đổi mốc là đổi thứ bước Phối cảnh và ảnh mặt đứng đọc.
@@ -101,9 +99,6 @@ export function AiFacadeStep({
 
   const onRun = async () => {
     if (!ai.choice.route) return;
-    // Phiếu còn thay đổi chưa lưu: lưu trước — lượt chạy đọc bản ĐÃ LƯU, không đọc nháp trong trình
-    // duyệt. Lưu hỏng thì dừng: chạy với phiếu cũ là trả tiền cho một yêu cầu kỹ sư không còn muốn.
-    if (brief.dirty && !(await brief.save())) return;
     void start
       .mutateAsync({
         projectId,
@@ -159,6 +154,11 @@ export function AiFacadeStep({
                     disabled={running || start.isPending}
                   />
                 </div>
+                {/* Yêu cầu mặt đứng là phần «Mặt đứng» của ĐẦU BÀI: AI Design chỉ thừa hưởng, không
+                    bày lại phiếu ở đây (Haan, 08/10/2026 — mọi khảo sát nằm ở đầu bài). */}
+                <p className="text-fg-subtle">
+                  Dựng theo phần Mặt đứng của đầu bài đã xác nhận. {briefLink}
+                </p>
                 <details className="text-fg-subtle">
                   <summary className="cursor-pointer select-none hover:text-fg">
                     Cách AI dựng mặt đứng
@@ -175,7 +175,7 @@ export function AiFacadeStep({
                   variant="primary"
                   className="w-full"
                   onClick={() => void onRun()}
-                  disabled={running || start.isPending || brief.saving || !ai.choice.route}
+                  disabled={running || start.isPending || !ai.choice.route}
                 >
                   {start.isPending
                     ? 'Đang gửi…'
@@ -210,15 +210,6 @@ export function AiFacadeStep({
             readOnly={readOnly}
           />
         )}
-        {/* Phiếu yêu cầu mặt đứng là một phần của ĐẦU BÀI hồ sơ — ở đây chỉ xem (Haan, 07/10/2026).
-            Sửa ở đầu bài của hồ sơ thiết kế, mục «Mặt đứng». Đứng SAU khung «Dựng mặt đứng»: phiếu
-            dài vài màn hình, đặt trước thì nút chính bị đẩy xuống tận đáy cột. */}
-        <FacadeBriefForm controller={brief} readOnly />
-        {!readOnly && (
-          <p className="text-fg-subtle">
-            Yêu cầu mặt đứng là một phần của đầu bài, chỉ xem ở đây. {briefLink}
-          </p>
-        )}
       </div>
 
       <div className="min-w-0 space-y-4">
@@ -234,7 +225,7 @@ export function AiFacadeStep({
                   ? 'Tờ mặt đứng hiện ở đây ngay khi dựng xong.'
                   : blocked
                     ? 'Chọn một phương án mặt bằng ở bước trước, rồi quay lại đây.'
-                    : 'Xem lại yêu cầu mặt đứng ở cột bên trái (sửa ở đầu bài), rồi bấm «Dựng ý tưởng mặt đứng».'}
+                    : 'Bấm «Dựng ý tưởng mặt đứng» ở cột bên trái. AI dựng theo phần Mặt đứng của đầu bài.'}
               </p>
             </div>
           </div>
@@ -502,7 +493,7 @@ function FacadeIdea({ view }: { view: AiFacadeView }): React.ReactElement {
               {/* Nguồn của từng dòng luôn ghi bằng chữ — người đọc phải biết đâu là quyết định của
                   kỹ sư, đâu là đề xuất của máy (PRD 2.3). */}
               <span className="text-xs text-fg-subtle">
-                {row.fromBrief ? '· theo yêu cầu kỹ sư' : '· AI đề xuất'}
+                {row.fromBrief ? '· theo đầu bài' : '· AI đề xuất'}
               </span>
             </dd>
           </div>

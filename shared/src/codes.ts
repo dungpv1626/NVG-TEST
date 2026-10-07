@@ -47,6 +47,7 @@ export const RECORD_TYPES = {
   LSX: 'Lệnh sản xuất',
   HDT: 'Hợp đồng cho thuê',
   BBTH: 'Biên bản thu hồi giàn giáo',
+  RFI: 'Yêu cầu làm rõ',
 } as const;
 
 export type RecordType = keyof typeof RECORD_TYPES;

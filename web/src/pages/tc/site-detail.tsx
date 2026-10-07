@@ -35,6 +35,8 @@ import { useCan } from '@/lib/auth';
 import { AcceptancePanel } from './acceptance-panel';
 import { BudgetPanel } from './budget-panel';
 import { SiteDocumentPanel } from './document-panel';
+import { SiteDesignDrawings } from './design-drawings';
+import { SiteRfiPanel } from './rfi-panel';
 import { SiteLogPanel } from './site-log-panel';
 import { SitePurchaseRequestPanel } from './purchase-request-panel';
 import { SiteCheckInPanel } from './site-check-in-panel';
@@ -185,7 +187,26 @@ export function SiteDetailPage() {
             id: 'ho-so',
             label: 'Hồ sơ – Bản vẽ',
             content: (
-              <SiteDocumentPanel siteId={site.id} companyId={site.company_id} readOnly={readOnly} />
+              <>
+                {site.design_project_id && <SiteDesignDrawings siteId={site.id} />}
+                <SiteDocumentPanel
+                  siteId={site.id}
+                  companyId={site.company_id}
+                  readOnly={readOnly}
+                />
+              </>
+            ),
+          },
+          {
+            // TC-15 / TK-08: hỏi bản vẽ có người nhận và hạn trả lời, ngay cạnh tab bản vẽ.
+            id: 'lam-ro',
+            label: 'Yêu cầu làm rõ',
+            content: (
+              <SiteRfiPanel
+                siteId={site.id}
+                hasDesignProject={site.design_project_id !== null}
+                readOnly={readOnly}
+              />
             ),
           },
           {

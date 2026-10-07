@@ -152,6 +152,14 @@ chung, sinh ngân sách thi công (DA-09).
 hồ sơ cha, CHECK đúng một) — dự toán ở `components/estimate/` dùng chung.
 
 - ⏳ TK-09 thư viện thiết kế — lùi được. TK-10→TK-17 ở Phase 5.
+- ✅ **Rà luồng phòng thiết kế 08/10/2026 (migration 0154):** dải tiến trình hồ sơ sáu bước đúng thứ tự
+  (Trình khách TRƯỚC Hồ sơ kỹ thuật, thêm Bàn giao); phát hành bản vẽ báo cả người ở công trình gắn hồ
+  sơ (CHT, Mẫu E) và công trường thấy bản vẽ thiết kế đang hiệu lực / hết hiệu lực
+  (`site_design_drawings`, TK-05 ↔ TC-03); sau bàn giao ra được **bản điều chỉnh gắn yêu cầu thay đổi đã
+  chấp thuận** (TK-08); **RFI** `rfis` (TK-08 / TC-15) — người nhận theo tuyến, hạn trả lời, ảnh, nối Theo
+  dõi đề nghị và «Thúc». Câu hỏi chờ Haan: `VAN_DE_CON_MO.md` #38.
+- ⏳ Còn hở: người phụ trách bộ môn chỉ chọn được người dùng nội bộ (kỹ sư kết cấu thuê ngoài); kiểm xung
+  đột giữa bộ môn là ô ghi chú tự do; tệp bản vẽ vẫn chỉ ghi đường dẫn, chưa tải lên Storage.
 - ⚠️ **Hai chỗ cố ý lệch BSD 4.4, chờ Haan cập nhật tài liệu:** `design_briefs` là bảng có phiên bản
   (BSD ghi một trường); `design_versions` trỏ sang `documents` (BSD ghi `file_url`). Thêm `design_surveys`,
   `design_reviews` mà BSD không liệt kê nhưng PRD yêu cầu.
@@ -196,7 +204,7 @@ trường ký nhận hàng giao thẳng (chỉ đề nghị gắn công trình, 
   và **tải tệp thật lên Storage** (hiện chỉ ghi đường dẫn).
 - ⏳ Xác nhận khối lượng tổ đội: **khối lượng × đơn giá hợp đồng**; chưa nghiệm thu / chưa đủ hồ sơ thì
   **chưa tính thanh toán** (ràng buộc). Mở khoá BC-03 phần 4.
-- ⏳ Punch list · RFI · hồ sơ an toàn lao động (sự cố, suýt tai nạn).
+- ⏳ Punch list · hồ sơ an toàn lao động (sự cố, suýt tai nạn). (RFI: ✅ 0154.)
 - ⏳ Kế hoạch tiến độ chi tiết (câu hỏi 10) · lịch sử đánh giá tổ đội · ảnh hiện trường (có cột
   `photo_urls`, chưa có màn hình; ảnh phải tự ghi thời gian, vị trí, hạng mục).
 - ⚠️ Ba con số suy luận chưa ai xác nhận: 24 giờ · 90% · thang 1–5 (câu hỏi 9, đã là tham số — 0112).
@@ -565,7 +573,7 @@ số sai trông như đã duyệt.
 
 - **TC-13** 🔒 nghiệm thu bằng **checklist điện tử** kèm ảnh — `acceptance_checklists`, `acceptance_checklist_results`
 - TC-14 punch list — `site_issues`
-- **TC-15** RFI có định tuyến và thời hạn — `rfis`
+- ✅ **TC-15** RFI có định tuyến và thời hạn — `rfis` (0154)
 - **TC-16** thay đổi/phát sinh, **chụp ảnh TRƯỚC KHI bị che khuất** — `site_variations`
 - TC-17 khối lượng tổ đội: **chặn khối lượng chưa nghiệm thu khỏi bảng thanh toán** — `subcontractor_quantities`
 - **TC-18** an toàn lao động, sự cố, suýt tai nạn — `safety_records`, `safety_incidents`

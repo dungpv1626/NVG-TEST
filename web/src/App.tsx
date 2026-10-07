@@ -140,6 +140,7 @@ const SiteListPage = lazy(() =>
 const SiteDetailPage = lazy(() =>
   import('@/pages/tc/site-detail').then((m) => ({ default: m.SiteDetailPage })),
 );
+const RfiPage = lazy(() => import('@/pages/tc/rfi-page').then((m) => ({ default: m.RfiPage })));
 const SiteRequestsPage = lazy(() =>
   import('@/pages/tc/site-requests-page').then((m) => ({ default: m.SiteRequestsPage })),
 );
@@ -442,6 +443,9 @@ const router = createBrowserRouter(
                   `ModuleGuard`: nó gom hồ sơ từ mọi phân hệ, và mỗi dòng đã tự lọc theo
                   hạn mức phê duyệt của vai trò (Mẫu RLS C). */}
         <Route path="viec-can-lam" element={<ApprovalInboxPage />} />
+        {/* Yêu cầu làm rõ (TC-15): không bọc ModuleGuard — bên trả lời (Thiết kế, Dự án) không xem
+            được Module TC; RLS của bảng `rfis` quyết ai đọc được. */}
+        <Route path="lam-ro/:id" element={<RfiPage />} />
 
         {/* NEN — Quản trị hệ thống. Mọi giá trị cấu hình của NEN-02, NEN-07 và NEN-12 phải
                   sửa được TẠI ĐÂY: tài liệu nhiều chỗ hứa "quản trị viên sửa sau", mà lời hứa đó

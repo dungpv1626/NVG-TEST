@@ -199,7 +199,7 @@ describe('Bước mặt đứng', () => {
     );
   });
 
-  it('phiếu yêu cầu mặt đứng CHỈ XEM — sửa ở đầu bài của hồ sơ (Haan, 07/10/2026)', async () => {
+  it('KHÔNG bày phiếu yêu cầu mặt đứng — chỉ thừa hưởng từ đầu bài, sửa ở hồ sơ (Haan, 08/10/2026)', async () => {
     renderWithApp(
       <AiFacadeStep
         projectId="p1"
@@ -208,7 +208,10 @@ describe('Bước mặt đứng', () => {
         briefLink={<a href="/tk/du-an/p1?tab=dau-bai">Sửa ở đầu bài của hồ sơ</a>}
       />,
     );
-    expect(await screen.findByText(/chỉ xem ở đây/)).toBeInTheDocument();
+    // Mọi khảo sát nằm ở đầu bài; AI Design không hiện lại phiếu (kể cả dạng chỉ xem).
+    expect(await screen.findByText(/Dựng theo phần Mặt đứng của đầu bài/)).toBeInTheDocument();
+    expect(screen.queryByText('Yêu cầu mặt đứng của kỹ sư')).toBeNull();
+    expect(screen.queryByRole('combobox', { name: /Loại mái|Phong cách/ })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Lưu yêu cầu' })).toBeNull();
     expect(screen.getByRole('link', { name: 'Sửa ở đầu bài của hồ sơ' })).toHaveAttribute(
       'href',

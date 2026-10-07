@@ -104,6 +104,14 @@
   → Phiếu ghi "Hồ sơ gốc bắt buộc phải ký, đóng dấu hoặc lưu bản giấy vẫn phải được quản lý theo quy định; phần mềm lưu bản điện tử để tra cứu". Cần danh sách cụ thể để biết chỗ nào ký điện tử được, chỗ nào chỉ đính kèm bản chụp (liên quan PRD 2.3 "không bắt nhập liệu hai lần"). **Chặn thiết kế màn hình** nghiệm thu và nhật ký TC
 - **#33 — Phương thức ghi nhận công tại công trường** (TC-08, NS-04)
   → Chưa chốt; phương án đang cân nhắc là **chụp ảnh có gắn thời gian và vị trí**. Cần quyết định trước khi xây phần chấm công khối công trường. Thực chất chỉ cần khoanh 1 trong 4 lựa chọn đang để trống ở phiếu khảo sát công trường (bảng giấy / Excel / Zalo / máy chấm công)
+- **#38 — Yêu cầu làm rõ (RFI) và bản vẽ điều chỉnh sau bàn giao** (TK-05, TK-08, TC-15 — migration 0154, 08/10/2026)
+  → Đội triển khai tự đặt bốn điểm, chờ Haan xác nhận: (1) **hạn trả lời do người gửi chọn**, bắt buộc —
+  chưa có SLA cho RFI (#30); (2) tuyến **Thiết kế** về người chịu trách nhiệm hồ sơ thiết kế (không có thì
+  mọi vai trò TKE của pháp nhân), tuyến **Dự án** về vai trò DA_DT, tuyến **Chủ đầu tư** do công trường
+  chuyển và ghi lại lời đáp; (3) sau bàn giao chỉ phát hành được **bản điều chỉnh kiến trúc / kết cấu /
+  điện nước gắn một yêu cầu thay đổi đã «Chấp thuận»**, phát hành xong yêu cầu thành «Đã thực hiện»; (4)
+  phía công trường nhận thông báo là **người được phân công công trình** gắn hồ sơ (Mẫu E), không phải mọi
+  CHT của pháp nhân. Chưa có: ai được «chấp thuận» yêu cầu thay đổi (hiện mọi người sửa được Module TK).
 - **#30 — Thời hạn cam kết phản hồi của từng phòng ban** (PRD v1.4 Mục 10)
   → Cần BGĐ quyết. **Không có tham số này thì cơ chế cảnh báo quá hạn TC-10 không có căn cứ để chạy** — nguyên văn PRD. Bảng `sla_definitions` đã dựng và **cố ý để RỖNG**: nạp sẵn một con số sẽ tạo đồng hồ đếm ngược trông như đã cam kết, và người duyệt bị gắn nhãn quá hạn theo thời hạn chưa ai ký
 

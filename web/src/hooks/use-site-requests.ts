@@ -8,10 +8,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 
-export type RequestHolderKind = 'requester' | 'approver' | 'purchasing';
+/**
+ * `answerer` = bên được hỏi của một yêu cầu làm rõ (Thiết kế / Dự án); `external` = chủ đầu tư —
+ * người ngoài hệ thống, không thúc được (0154).
+ */
+export type RequestHolderKind = 'requester' | 'approver' | 'purchasing' | 'answerer' | 'external';
 
 export interface SiteRequestRow {
-  entity_type: 'purchase_requests';
+  /** Đề nghị mua (0134) hoặc yêu cầu làm rõ (0154). */
+  entity_type: 'purchase_requests' | 'rfis';
   entity_id: string;
   code: string | null;
   title: string;
@@ -85,10 +90,14 @@ export function useRequestReminders(entityId: string | undefined) {
 
 export function useNudgeRequest() {
   const queryClient = useQueryClient();
-  return useMutation<string, Error, { entityId: string; note?: string }>({
-    mutationFn: async ({ entityId, note }) => {
+  return useMutation<
+    string,
+    Error,
+    { entityId: string; entityType?: SiteRequestRow['entity_type']; note?: string }
+  >({
+    mutationFn: async ({ entityId, entityType = 'purchase_requests', note }) => {
       const { data, error } = await supabase.rpc('nudge_request', {
-        p_entity_type: 'purchase_requests',
+        p_entity_type: entityType,
         p_entity_id: entityId,
         p_note: note ?? null,
       });

@@ -52,9 +52,10 @@ export function OverviewPanel({
             {[
               <BriefCard key="dau-bai" projectId={project.id} basePath={basePath} />,
               <SurveyCard key="khao-sat" projectId={project.id} basePath={basePath} />,
+              // Cùng thứ tự với dải tiến trình: khách duyệt phương án TRƯỚC hồ sơ kỹ thuật.
+              <PresentCard key="trinh-khach" projectId={project.id} basePath={basePath} />,
               <ExportCard key="ho-so" projectId={project.id} basePath={basePath} />,
               <EstimateCard key="du-toan" projectId={project.id} basePath={basePath} />,
-              <PresentCard key="trinh-khach" projectId={project.id} basePath={basePath} />,
             ].map((card) => (
               <div
                 key={card.key}
@@ -96,9 +97,16 @@ function useDesignStepStates(project: DesignProjectDetailRecord) {
         }
       : null,
     surveyCount: surveys.data?.length ?? 0,
-    disciplinePercents: (tasks.data ?? []).map((t) => t.progress_percent),
+    // Bộ môn «phương án» thuộc bước Trình khách, không tính vào tiến độ hồ sơ kỹ thuật.
+    disciplinePercents: (tasks.data ?? [])
+      .filter((t) => t.discipline !== 'phuong_an')
+      .map((t) => t.progress_percent),
     // Hai bước cuối đọc từ CHÍNH nguồn mà màn hình con của chúng dùng, không đoán theo `stage`.
     hasEstimate: (estimates.data ?? []).length > 0,
     customerApproved: (versions.data ?? []).some((v) => v.customer_approved_at !== null),
+    publishedOptions: (versions.data ?? []).filter(
+      (v) => v.discipline === 'phuong_an' && v.published_at !== null,
+    ).length,
+    handedOver: project.handed_over_at !== null,
   });
 }

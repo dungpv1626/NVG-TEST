@@ -783,6 +783,25 @@
           </thead>
           <tbody>
             <tr>
+              <td class="num">08/10</td>
+              <td>
+                Rà luồng phòng thiết kế (ngoài AI Design), migration 0154: dải tiến trình hồ sơ sáu
+                bước đúng thứ tự (Trình khách trước Hồ sơ kỹ thuật, thêm Bàn giao); phát hành bản vẽ
+                báo cả người ở công trình; công trường thấy bản vẽ thiết kế đang / hết hiệu lực; bản
+                điều chỉnh sau bàn giao gắn yêu cầu thay đổi đã chấp thuận; yêu cầu làm rõ (RFI) có
+                người nhận, hạn, ảnh, thúc
+              </td>
+              <td>db 202 + web bài kiểm xanh; câu hỏi chờ Haan VAN_DE_CON_MO #38; chưa commit</td>
+            </tr>
+            <tr>
+              <td class="num">08/10</td>
+              <td>
+                T118 tiếp — bước Mặt đứng của AI Design bỏ hẳn phiếu «Yêu cầu mặt đứng của kỹ sư»:
+                AI Design chỉ thừa hưởng phần Mặt đứng của đầu bài; nhãn nguồn «theo đầu bài»
+              </td>
+              <td>web tk 258 bài kiểm xanh; soát Chrome; chưa commit</td>
+            </tr>
+            <tr>
               <td class="num">07/10</td>
               <td>
                 T119 — đầu bài: gỡ 10 câu (phong thuỷ, nấu ăn, bếp phụ, tiếp khách, làm việc tại
@@ -1382,6 +1401,33 @@
 
       <!-- ============ 5. VƯỚNG MẮC ============ -->
       <h2>5. Vướng mắc đang mở</h2>
+      <div class="flag block">
+        <h3>
+          V-40 · Tỷ lệ lỗi mặt bằng quá cao — phương án «sơ đồ trước, phòng sau» chờ duyệt —
+          08/10/2026
+        </h3>
+        <p class="kv">
+          <b>Gặp ở đâu:</b> khoảng 55 lượt thật hợp lệ, khoảng 6 lượt ra mặt bằng, từ 01/10 chưa
+          lượt nào qua ngưỡng 60; v6 10 lượt, 1 mặt bằng 55,9 điểm; nhà phố / nhà vườn / cấp 4 / lô
+          góc chưa có dữ liệu.
+        </p>
+        <p class="kv">
+          <b>Đã thử gì:</b> lưới, khung xương T102, v5 hình chữ nhật, v6 xếp dải. 67 % vòng hỏng là
+          lối vào / hành lang / thang; 7/10 lượt v6 hỏng vì lỗi chương trình; bản vẽ thật MR Dương
+          bị cổng bác 3/5 tầng.
+        </p>
+        <p class="kv">
+          <b>Đang chặn gì:</b> không có lưới an toàn (chương trình không tự dựng được phương án),
+          không có bộ ca chuẩn đa loại nhà, bộ giải chỉ biểu diễn được một khối chữ nhật, dải ngang
+          một hướng đường.
+        </p>
+        <p class="kv">
+          <b>Cần gì để gỡ — câu hỏi cho Haan:</b> duyệt
+          <code>doc/design/PHUONG_AN_CAI_TIEN_MAT_BANG.md</code> mục 8: (1) phân vai mới — chương
+          trình dựng lõi + giao thông theo thư viện 12 sơ đồ, mô hình chọn sơ đồ và xếp vùng (chạm
+          ranh giới T58); (2) danh sách 12 sơ đồ và ai duyệt; (3) cách kiểm kê luật cứng.
+        </p>
+      </div>
       <div class="flag block">
         <h3>V-33 · Kích thước giếng thang máy chưa có số đo từ hồ sơ NVG — 22/09/2026</h3>
         <p class="kv">

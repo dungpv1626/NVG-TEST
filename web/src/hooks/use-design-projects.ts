@@ -499,12 +499,14 @@ export interface DesignVersionRecord {
   created_at: string;
   document_id: string | null;
   document_version_id: string | null;
+  /** Bản vẽ điều chỉnh gắn với yêu cầu thay đổi nào (TK-06; bắt buộc với bản ra sau bàn giao — 0154). */
+  change_request_id: string | null;
   publisher: { full_name: string } | null;
 }
 
 const VERSION_SELECT =
   'id, discipline, version, is_current_version, title, change_reason, published_at, ' +
-  'customer_approved_at, created_at, document_id, document_version_id, ' +
+  'customer_approved_at, created_at, document_id, document_version_id, change_request_id, ' +
   'publisher:users!design_versions_published_by_users_id_fk(full_name)';
 
 export function useDesignVersions(projectId: string | undefined) {
@@ -534,6 +536,8 @@ export interface NewDesignVersionInput {
   fileName: string;
   changeReason: string | null;
   notes: string | null;
+  /** Yêu cầu thay đổi đã chấp thuận mà bản này thực hiện — bắt buộc khi hồ sơ đã bàn giao (0154). */
+  changeRequestId?: string | null;
 }
 
 /**
@@ -598,6 +602,7 @@ export function useCreateDesignVersion() {
           document_version_id: documentVersionId,
           change_reason: input.changeReason,
           notes: input.notes,
+          change_request_id: input.changeRequestId ?? null,
         })
         .select('id')
         .single();
@@ -630,6 +635,8 @@ export function usePublishDesignVersion() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['design_versions'] });
       void queryClient.invalidateQueries({ queryKey: ['design_sync'] });
+      // Bản điều chỉnh sau bàn giao khép yêu cầu thay đổi thành «Đã thực hiện» (0154).
+      void queryClient.invalidateQueries({ queryKey: ['change_requests'] });
     },
   });
 }
