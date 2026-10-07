@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nvg.vn/contracts/ai-house-layout-delta.schema.json",
+  "title": "AiHouseLayoutDelta",
+  "$comment": "Vòng sửa của lược đồ hình chữ nhật (bàn giao v5 mục 6): mô hình CHỈ trả phần thay đổi so với `<plan>` mới nhất chương trình gửi. Chương trình gộp (`mergeLayoutDelta`) rồi kiểm lại. `rooms_upsert` = phòng thêm hoặc dời (đủ id, level, rect); ban công đua có `depth` 0 trong `cantilevers_upsert` là gỡ nó.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "rooms_upsert",
+    "rooms_delete",
+    "doors_add",
+    "doors_remove",
+    "cantilevers_upsert",
+    "notes"
+  ],
+  "properties": {
+    "rooms_upsert": {
+      "type": "array",
+      "maxItems": 90,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "level", "rect"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$",
+            "maxLength": 32
+          },
+          "level": {
+            "type": "string",
+            "maxLength": 8
+          },
+          "rect": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    "rooms_delete": {
+      "type": "array",
+      "maxItems": 40,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9_]+$",
+        "maxLength": 32
+      }
+    },
+    "doors_add": {
+      "type": "array",
+      "maxItems": 60,
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]+$",
+          "maxLength": 32
+        }
+      }
+    },
+    "doors_remove": {
+      "type": "array",
+      "maxItems": 60,
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]+$",
+          "maxLength": 32
+        }
+      }
+    },
+    "cantilevers_upsert": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "from_room", "face", "depth"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$",
+            "maxLength": 32
+          },
+          "from_room": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$",
+            "maxLength": 32
+          },
+          "face": {
+            "type": "string",
+            "enum": ["front", "left", "back", "right"]
+          },
+          "depth": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "string",
+        "maxLength": 300
+      }
+    }
+  }
+}

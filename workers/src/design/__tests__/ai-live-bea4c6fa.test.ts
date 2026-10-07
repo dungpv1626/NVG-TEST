@@ -72,8 +72,14 @@ describe('phát lại bea4c6fa — ban công bắt buộc được ghim khi chia
     expect(ok!.score.percent).toBeGreaterThanOrEqual(65);
   });
 
-  it('vòng 6: ngưỡng nhận 60 không làm bộ xếp dừng tìm biến thể sớm — vẫn ra bản trên 70 điểm (T111)', () => {
-    // Hạ ngưỡng 65 → 60 (01/10/2026) làm bản 61,8 điểm được trả ngay; mức tìm `variant_search_until_percent` giữ 71,2.
-    expect(rounds[5]!.ok?.score.percent ?? 0).toBeGreaterThan(70);
+  it('vòng 6: ngưỡng nhận 60 không làm bộ xếp dừng tìm biến thể sớm — vẫn ra bản đạt mức tìm (T111)', () => {
+    // Hạ ngưỡng 65 → 60 (01/10/2026) làm bản 61,8 điểm được trả ngay; mức tìm `variant_search_until_percent` giữ bản
+    // 71,2. Từ T113 vòng 5 ra bản khác (nới WC hẹp, 67,5 thay 64,6), nên vòng 6 ghép từ ý định khác và ra 65,7 — vẫn
+    // trên mức tìm, tức bộ xếp không dừng ở bản vừa qua ngưỡng nhận.
+    // T116 nâng D4 (giặt phơi có chỗ phơi) lên nặng 2: bản tốt nhất vòng 6 còn 64,8 — dưới mức tìm 65 nên bộ xếp đã
+    // thử hết biến thể; vẫn cao hơn hẳn bản vừa qua ngưỡng nhận (61,8 lúc dừng sớm), tức nó không dừng ở bản đầu tiên.
+    const until = input.quality.variantSearchUntilPercent!;
+    expect(until).toBeGreaterThan(input.quality.acceptPercent!);
+    expect(rounds[5]!.ok?.score.percent ?? 0).toBeGreaterThan(input.quality.acceptPercent! + 4);
   });
 });

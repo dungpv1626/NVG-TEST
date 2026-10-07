@@ -96,20 +96,24 @@ describe('scrubIdentity', () => {
 
 describe('anonymiseForAi', () => {
   it('câu trả lời của ô ĐANG ẨN không đi tới mô hình (rà soát 29/09/2026)', () => {
-    // Nhà phố từng tạm khai là biệt thự: khoảng lùi hai bên và mật độ còn nằm lại trong dữ liệu nhưng ô
-    // đã ẩn — trước đây chúng đi thẳng vào khối xây dựng được mà không ai nhìn thấy.
+    // Nhà phố từng tạm khai là biệt thự: sân và mật độ còn nằm lại trong dữ liệu nhưng ô đã ẩn — trước đây
+    // chúng đi thẳng vào khối xây dựng được mà không ai nhìn thấy.
     const stale = brief({
       building_type: 'nha_pho',
       site: {
         ...brief().site,
-        setback_required_m: { left: 2, right: 2 },
+        setback_required_m: { back: 1.5 },
         max_density: 0.6,
         rear_width_m: 9,
       },
+      massing: { yard_depth_m: { left: 2, right: 2 } },
     });
     const digest = anonymiseForAi({ brief: stale });
-    expect(digest.site.setback_required_m ?? {}).toEqual({});
-    expect(digest.site.max_density ?? null).toBeNull();
+    expect(digest.massing?.yard_depth_m ?? {}).toEqual({});
+    // Mật độ hiện với mọi loại hình (T116) — nhà phố khai thì đi tiếp.
+    expect(digest.site.max_density).toBe(0.6);
+    // Khoảng lùi hiện với mọi loại hình (Haan 04/10/2026: chủ nhà quyết trong đầu bài) — nhà phố lùi sau đi tiếp.
+    expect(digest.site.setback_required_m).toEqual({ back: 1.5 });
     // Mặt hậu chỉ hiện với thửa hình thang — thửa chữ nhật không mang mặt hậu cũ.
     expect(digest.site.rear_width_m ?? null).toBeNull();
   });

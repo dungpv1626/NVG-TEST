@@ -229,3 +229,25 @@ export function stairLayout(
     }
   }
 }
+
+/**
+ * Chiều dài phần gầm dùng được ở ĐẦU CAO của thang thẳng (cm, tính từ đầu cao lùi vào): phần sàn mà mặt bậc phía trên
+ * cao từ `useHeightCm` trở lên (WC gầm thang, T116 — Haan: «với nhà ống có thể tận dụng gầm cầu thang làm nhà vệ sinh
+ * nhỏ»). Đường dốc đi qua mũi bậc: vế 1 lên `riser` mỗi `going`, chiếu nghỉ giữa phẳng, vế 2 lên tiếp. Loại khác → 0.
+ */
+export function underStairCm(p: StairParams, storeyCm: number, useHeightCm: number): number {
+  if (p.shape !== 'thang_thang' || p.risers <= 0) return 0;
+  const [f0 = 0] = stairSplit(p.shape, p.risers);
+  const riser = storeyCm / p.risers;
+  const along = stairNeed(p).along;
+  const heightAt = (d: number) => {
+    const first = f0 * p.going;
+    if (d <= first) return (d / p.going) * riser;
+    if (d <= first + p.landing) return f0 * riser;
+    return f0 * riser + ((d - first - p.landing) / p.going) * riser;
+  };
+  for (let d = 0; d <= along; d += 1) {
+    if (heightAt(d) >= useHeightCm) return Math.floor((along - d) / 10) * 10;
+  }
+  return 0;
+}

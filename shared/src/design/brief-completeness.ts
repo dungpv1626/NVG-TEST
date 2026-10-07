@@ -1120,13 +1120,16 @@ function checkCrossAnswers(draft: DesignBriefDraft, config: BriefFormConfig): Br
           Partial<Record<string, number>> | undefined
       )?.[side];
       if ((setback ?? 0) > 0 || (yard ?? 0) > 0) continue;
-      // Nhà phố không có ô khoảng lùi / sân: đừng bảo người nhập khai thứ họ không nhập được.
-      const canDeclare =
-        shown('site.setback_required_m', true) || shown('massing.yard_depth_m', true);
+      // Chỉ nhắc ô người nhập THẤY: nhà phố có ô khoảng lùi (Haan 04/10/2026) nhưng không có ô sân.
+      const declarable = [
+        shown('site.setback_required_m', true) ? 'khoảng lùi' : null,
+        shown('massing.yard_depth_m', true) ? 'sân' : null,
+      ].filter((word): word is string => word !== null);
+      const canDeclare = declarable.length > 0;
       out.push({
         code: 'ban_cong_mat_giap_nha_xom',
         severity: 'nghiem_trong',
-        message: `Ban công bắt buộc ở ${SIDE_NAME[side]}, nhưng ${SIDE_NAME[side]} giáp nhà hàng xóm${canDeclare ? ' và đầu bài không khai khoảng lùi hay sân ở mặt ấy' : ''} — không có chỗ cho ban công. Bỏ mặt ấy khỏi danh sách${canDeclare ? `, hoặc khai khoảng lùi / sân ${SIDE_NAME[side]}` : ''}.`,
+        message: `Ban công bắt buộc ở ${SIDE_NAME[side]}, nhưng ${SIDE_NAME[side]} giáp nhà hàng xóm${canDeclare ? ` và đầu bài không khai ${declarable.join(' hay ')} ở mặt ấy` : ''} — không có chỗ cho ban công. Bỏ mặt ấy khỏi danh sách${canDeclare ? `, hoặc khai ${declarable.join(' / ')} ${SIDE_NAME[side]}` : ''}.`,
         paths: ['balconies.required_sides', 'site.adjacent'],
       });
     }

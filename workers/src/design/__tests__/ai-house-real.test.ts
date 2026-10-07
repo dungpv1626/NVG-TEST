@@ -16,13 +16,7 @@ import type { AiBriefDigest } from '@nvg/shared/design';
 import { describe, expect, it } from 'vitest';
 import { parseAreaNorms } from '../kb/space-norms';
 import { parsePlanQuality } from '../ai/plan-quality';
-import {
-  evaluateHouse,
-  planContext,
-  programGenerator,
-  retryPlan,
-  type PlanContextInput,
-} from '../ai/plan';
+import { evaluateHouse, planContext, programGenerator, type PlanContextInput } from '../ai/plan';
 import { parseAiPrompts } from '../ai/prompts';
 import { NO_RULE_PACKS, selectedRulePack } from '../ai/rule-packs';
 import { parseBriefFidelity } from '../kb/brief-fidelity';
@@ -205,25 +199,18 @@ describe('phát lại lượt đo 4a521f52 — lõi thang khai riêng cạnh tha
   }
 
   // T74 (Haan 25/09/2026): ô thang chỉ mở cửa sang giao thông, khu chung, sân thượng, thang máy. Vòng 2 và 3
-  // của lượt này xếp được tầng 2 CHỈ nhờ giặt phơi / WC lấy cửa từ ô thang — nay bác, và vì chỗ sai là
-  // bố cục nên GỬI LẠI mô hình (`door_from_stair`), không dừng.
-  const LOST_TO_T74: Record<string, RegExp> = {
-    // Sau T106 bộ xếp chọn cây khác — phòng bị báo nay có thể là WC, cùng cơ chế.
-    round2: /"(laundry_1|wc_4)" ở tầng 2 chỉ giáp ô thang "stair_2"/,
-    round3: /"wc_4" ở tầng 2 chỉ giáp ô thang "stair_2"/,
-  };
-  for (const [key, why] of Object.entries(LOST_TO_T74)) {
-    it(`${key}: T74 bác tầng 2 vì phòng chỉ giáp ô thang, và gửi lại mô hình`, () => {
+  // của lượt này xếp được tầng 2 CHỈ nhờ giặt phơi / WC lấy cửa từ ô thang — T74 bác. Từ T113 bộ xếp quay lui tầng 1
+  // (thử bản tầng 1 xếp hạng kế tiếp khi tầng trên hỏng) và tìm được bản cho tầng 2 xếp HỢP LỆ — cổng T74 vẫn chặn
+  // như cũ (mặt bằng qua cổng nghĩa là không phòng nào chỉ giáp ô thang), chỉ không còn phải gửi lại mô hình.
+  const RESCUED_FROM_T74 = ['round2', 'round3'];
+  for (const key of RESCUED_FROM_T74) {
+    it(`${key}: trước T113 T74 bác tầng 2 (phòng chỉ giáp ô thang); quay lui tầng 1 → xếp được hợp lệ`, () => {
       const evaluation = evaluate(key, run4a52);
-      expect(evaluation.rejections.map((rejection) => rejection.level)).toEqual([2]);
-      expect(evaluation.rejections[0]!.messages.join(' ')).toMatch(why);
-      expect(retryPlan({ intent: run4a52.intents[key]!, issues: [] }, evaluation).kind).toBe(
-        'revise',
-      );
+      expect(evaluation.rejections).toEqual([]);
+      expect(evaluation.ok?.levels).toHaveLength(2);
     });
   }
-
-  for (const key of Object.keys(run4a52.intents).filter((key) => !(key in LOST_TO_T74))) {
+  for (const key of Object.keys(run4a52.intents).filter((key) => !RESCUED_FROM_T74.includes(key))) {
     it(`${key}: xếp được trọn hai tầng — trước sửa: ô thang hẹp, rồi tầng 2 dồn phòng vào vùng không chứa nổi sàn đầu bài hoặc quá sâu cho phòng nhỏ`, () => {
       const evaluation = evaluate(key, run4a52);
       expect(evaluation.rejections.flatMap((rejection) => rejection.messages)).toEqual([]);

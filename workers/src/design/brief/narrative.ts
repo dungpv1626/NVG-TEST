@@ -103,7 +103,9 @@ export function briefNarrative(full: AiBriefDigest, options: NarrativeOptions): 
       ? `Ranh đất là đa giác ${site.boundary_m.length} đỉnh (toạ độ trong phần dữ liệu máy).`
       : null,
     site.orientation ? `Nhà hướng ${label('site.orientation', site.orientation)}.` : null,
-    site.access_sides?.length ? `Tiếp cận từ: ${site.access_sides.map(face).join(', ')}.` : null,
+    site.access_sides?.length
+      ? `Mặt giáp lối đi công cộng, mở cổng được: ${site.access_sides.map(face).join(', ')}.`
+      : null,
     adjacent.length ? `Hiện trạng xung quanh: ${adjacent.join('; ')}.` : null,
     setbacks.length ? `Khoảng lùi bắt buộc: ${setbacks.join(', ')}.` : null,
     typeof site.max_density === 'number'
@@ -194,10 +196,10 @@ export function briefNarrative(full: AiBriefDigest, options: NarrativeOptions): 
       ? `Hình khối mong muốn: ${label('massing.footprint_shape', massing.footprint_shape).toLowerCase()}.`
       : null,
     typeof massing?.wings_preferred === 'number'
-      ? `${label('massing.wings_preferred', massing.wings_preferred)}.`
+      ? `Số cánh nhà: ${label('massing.wings_preferred', massing.wings_preferred).toLowerCase()}${massing.wings_preferred === 1 ? ' (một khối nhà liền)' : ''}.`
       : null,
     typeof massing?.cores_preferred === 'number'
-      ? `${label('massing.cores_preferred', massing.cores_preferred)}.`
+      ? `Số lõi thang (trục thang bộ đi suốt các tầng): ${label('massing.cores_preferred', massing.cores_preferred).toLowerCase()}.`
       : null,
     massing?.service_core ? 'Muốn khối phụ trợ gom một chỗ.' : null,
     massing?.yards?.length
@@ -341,6 +343,11 @@ export function briefNarrative(full: AiBriefDigest, options: NarrativeOptions): 
       : view.required.length === 1
         ? 'Ban công ở mặt bắt buộc phải chạy dọc mặt ấy (cạnh dài nằm trên mặt ấy).'
         : null,
+    // T113 (Haan chấm lượt 182665ea, chốt 03/10/2026): hai ban công cùng thuộc phòng ngủ chính, ôm góc chữ L, dải
+    // mặt trái chạy quá cạnh phòng — «làm cho có để tuân thủ đề bài». Cùng ý với tiêu chí D5 của thước chấm.
+    view.required.length || view.optional.length
+      ? 'Mỗi ban công thuộc một phòng, ưu tiên phòng ngủ, rồi phòng giặt phơi, rồi phòng làm việc; mỗi phòng nhiều nhất một ban công. Ban công chạy dọc tường ngoài của chính phòng ấy và không dài hơn cạnh phòng; không ôm góc nhà thành chữ L, hai ban công không gặp nhau ở góc.'
+      : null,
     faces(view.optional)
       ? `Mặt CÓ THỂ có ban công (có hay không đều được): ${faces(view.optional)}.`
       : null,

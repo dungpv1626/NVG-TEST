@@ -16,6 +16,20 @@ export const aiBriefDigestSchema = z
   .object({
     schema_version: aiBriefDigestSemverSchema,
     building_type: z.enum(['nha_pho', 'biet_thu', 'nha_vuon']),
+    /** KTS ghi đè loại nhà (T116, Haan 04/10/2026). Vắng / null = chương trình tự suy từ khối xây: nhà ống khi bề rộng khối xây ≤ 6 m, sâu ≥ 2 lần bề rộng và giáp nhà hoặc ranh ở ít nhất một mặt bên (`shared/src/design/house-profile.ts`). Loại «kinh doanh» không ghi đè ở đây — suy từ `household.home_business.mode`. */
+    house_profile_override: z
+      .union([
+        z.literal('ong'),
+        z.literal('pho'),
+        z.literal('bt'),
+        z.literal('vuon'),
+        z.literal(null),
+      ])
+      .nullable()
+      .describe(
+        'KTS ghi đè loại nhà (T116, Haan 04/10/2026). Vắng / null = chương trình tự suy từ khối xây: nhà ống khi bề rộng khối xây ≤ 6 m, sâu ≥ 2 lần bề rộng và giáp nhà hoặc ranh ở ít nhất một mặt bên (`shared/src/design/house-profile.ts`). Loại «kinh doanh» không ghi đè ở đây — suy từ `household.home_business.mode`.',
+      )
+      .optional(),
     locality: z.string(),
     floors: z.number().int().gte(1),
     site: z

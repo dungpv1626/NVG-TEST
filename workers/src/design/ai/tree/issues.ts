@@ -27,6 +27,7 @@ export const TREE_ISSUE_CODES = [
   'leaf_unknown',
   'leaf_duplicate',
   'room_missing_on_level',
+  'cantilever_dropped',
   'merge_unknown_room',
   'merge_room_not_leaf',
   'merge_target_is_leaf',

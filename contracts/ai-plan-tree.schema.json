@@ -69,6 +69,10 @@
           "type": "string",
           "enum": ["+x", "-x", "+y", "-y"],
           "description": "Chiều đi LÊN của vế đầu tiên."
+        },
+        "over": {
+          "type": ["string", "null"],
+          "description": "Phòng dưới gầm phần CAO của vế (WC gầm thang, chỉ tầng thấp nhất, thang thẳng — T116). Ô thang và ô ấy cùng là thang khi vẽ, kiểm chiều dài và làm mốc tầng trên; vắng/null = không."
         }
       },
       "description": "Thang của tầng. null khi tầng không có thang."

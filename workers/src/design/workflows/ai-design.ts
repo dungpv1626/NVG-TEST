@@ -15,6 +15,8 @@
  */
 
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from 'cloudflare:workers';
+import { roofPlanSpec } from '../kb/roof-plan-data';
+import { furnitureSpec, houseProgramSpec } from '../kb/house-program-data';
 import { disposingStep } from './rpc-stub';
 import { NonRetryableError } from 'cloudflare:workflows';
 import { userFacing } from '../llm/provider-faults';
@@ -75,7 +77,8 @@ import {
 import {
   AiPlanRejected,
   finalRejections,
-  HOUSE_REVISIONS_MAX,
+  houseRevisionsMax,
+  stuckAfter,
   problemKey,
   STALLED_AFTER,
   stuckRepeating,
@@ -186,6 +189,9 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
     const deps: PlanStepDeps = {
       client,
       prompts: aiPrompts(),
+      roofPlan: roofPlanSpec(),
+      houseProgram: houseProgramSpec(),
+      furniture: furnitureSpec(),
       labels: roomLabels(),
       construction: constructionNorms(),
       siteContext: siteContextTable(),
@@ -219,6 +225,7 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
       provider: router.providerOf(params.textRoute) ?? 'unknown',
       model: publicRoute?.model ?? 'unknown',
       promptStore: createArtifactStore(this.env),
+      ...reviseOf(router, params.textRoute),
     };
 
     if (params.stage === 'facade') {
@@ -682,7 +689,7 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
           failedLevels: [...failedLevels],
         });
         // Đạt ngưỡng, hết lượt sửa, hoặc không có dòng nào để gửi mô hình → ghi bản tốt nhất.
-        if (arranged.retry === 'none' || round > HOUSE_REVISIONS_MAX) {
+        if (arranged.retry === 'none' || round > houseRevisionsMax(params.pipeline)) {
           return this.writeBest(step, deps, params, variant, best, calls.length);
         }
         previous = arranged;
@@ -698,7 +705,7 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
       // Chỉ còn lỗi hình học (`retry: 'none'`): bộ dựng hình đã thử hết cách, mô hình không sửa được.
       // Mô hình trả lại y nguyên phần đang hỏng (`'unchanged'`): gọi nữa là cùng lời dẫn, cùng kết quả.
       if (
-        round > HOUSE_REVISIONS_MAX ||
+        round > houseRevisionsMax(params.pipeline) ||
         arranged.retry === 'none' ||
         arranged.retry === 'unchanged'
       ) {
@@ -708,7 +715,7 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
           finalRejections(arranged.rejections, first, arranged.retry, calls.length),
         );
       }
-      if (stuckRepeating(history)) {
+      if (stuckRepeating(history, stuckAfter(params.pipeline))) {
         if (best) return this.writeBest(step, deps, params, variant, best, calls.length);
         throw new AiPlanRejected(
           finalRejections(arranged.rejections, first, 'stuck', calls.length),
@@ -819,4 +826,21 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
     });
     return written.written;
   }
+}
+
+/** Tuyến vòng sửa mặt bằng của tuyến đã chọn (`revise_route`), kèm giá và model — vắng khi tuyến không khai. */
+function reviseOf(
+  router: ReturnType<typeof modelRouter>,
+  route: string,
+): { revise?: NonNullable<PlanStepDeps['revise']> } {
+  const revise = router.reviseRouteOf(route);
+  if (revise === route) return {};
+  const info = router.publicRoutes().find((r) => r.route === revise);
+  return {
+    revise: {
+      route: revise,
+      model: info?.model ?? 'unknown',
+      ...(info?.pricing ? { pricing: info.pricing } : {}),
+    },
+  };
 }

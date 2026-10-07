@@ -5,6 +5,7 @@
  * với `render/render.ts` + `render/prompts-data.ts`.
  */
 
+import type { LayoutRule } from './layout-prompt';
 export interface AiPrompts {
   version: string;
   program: {
@@ -45,7 +46,35 @@ export interface AiPrompts {
      * là việc chỉnh lời dẫn, không phải việc triển khai lại.
      */
     strategies: PlanStrategy[];
+    /**
+     * Có mặt khi lời dẫn chạy ở chế độ hình chữ nhật (`layoutPrompts`): cỡ một ô bản phác theo mm mỗi trục —
+     * `hintsFor` đổi tham số ô / hàng / cột của lỗi sang mm, vì mô hình không thấy lưới.
+     */
+    gridMm?: { x: number; y: number; ox?: number; oy?: number };
+    /** Chế độ hình chữ nhật: mã lỗi → số luật mô hình thấy ở `<rules>` — câu nhắc mang «R<số>» (tài liệu v5 mục 6). */
+    ruleOf?: Record<string, number>;
   };
+  /**
+   * Lời dẫn khi mô hình khai hình chữ nhật mm (`contracts/ai-house-layout`, bàn giao v5 cách A). Vắng = tệp
+   * dữ liệu chưa có khối `house_layout`, cờ v5 không bật được. `hints` / `scoreHints` ghi đè dòng cùng mã.
+   */
+  houseLayout?: {
+    system: string;
+    resample: string;
+    revise: string;
+    /** Catalog luật có điều kiện (tài liệu v5 mục 3) — `ai/layout-prompt.ts` lọc và đánh số. */
+    rules: LayoutRule[];
+    /** Mục văn xuôi đầu bài giữ trong `<brief>`. */
+    briefSections: string[];
+    hints: Record<string, string>;
+    scoreHints: Record<string, string>;
+  };
+  /**
+   * Lời dẫn đường v6 — mô hình xếp DẢI, bộ giải tính kích thước (`contracts/ai-house-bands`, T116). Cùng cấu trúc
+   * `houseLayout` (tráo vào chỗ ấy khi chạy v6, `promptsFor`), thêm mẫu dải theo loại nhà (`ong`, `pho`, `bt`, `vuon`,
+   * `kd`) — chỉ chèn mẫu của loại đang thiết kế.
+   */
+  houseBands?: NonNullable<AiPrompts['houseLayout']> & { patterns: Record<string, string> };
   /**
    * Lượt SỬA theo yêu cầu kỹ sư trên một bản vẽ đã lưu (T53). `user` có `{plan}` và `{request}`; `retry`
    * có `{issues}` — nối vào khi thao tác lượt trước không qua cổng.
@@ -297,6 +326,18 @@ export function parseAiPrompts(raw: unknown): AiPrompts {
     );
   }
   const strategies = parseStrategies(floorLevel.strategies);
+  const houseLayout = parseHouseLayout((doc as { house_layout?: unknown }).house_layout);
+  const bandsRaw = (doc as { house_bands?: unknown }).house_bands;
+  const bandsBlock = parseHouseLayout(bandsRaw, 'house_bands');
+  const houseBands = bandsBlock
+    ? {
+        ...bandsBlock,
+        patterns: stringMap(
+          (bandsRaw as { patterns?: unknown }).patterns ?? {},
+          'house_bands.patterns',
+        ),
+      }
+    : null;
   return {
     version: doc.version,
     program: { system: program.system, repair: program.repair },
@@ -309,6 +350,8 @@ export function parseAiPrompts(raw: unknown): AiPrompts {
       scoreHints: scoreHints as Record<string, string>,
       strategies,
     },
+    ...(houseLayout ? { houseLayout } : {}),
+    ...(houseBands ? { houseBands } : {}),
     planEdit: { system: planEdit.system, user: planEdit.user, retry: planEdit.retry },
     sheetImage,
     facade: {
@@ -320,6 +363,94 @@ export function parseAiPrompts(raw: unknown): AiPrompts {
     facadeImage: parseFacadeImage((doc as { facade_image?: unknown }).facade_image),
     uploadImage: parseUploadImage((doc as { upload_image?: unknown }).upload_image),
     perspective: parsePerspective((doc as { perspective?: unknown }).perspective),
+  };
+}
+
+function stringMap(value: unknown, where: string): Record<string, string> {
+  if (
+    value === undefined ||
+    value === null ||
+    typeof value !== 'object' ||
+    Array.isArray(value) ||
+    Object.values(value).some((line) => typeof line !== 'string')
+  ) {
+    throw new AiPromptsError(`\`${where}\` phải là bảng mã → một dòng chữ.`);
+  }
+  return value as Record<string, string>;
+}
+
+/** Khối `house_layout` (bàn giao v5) — tuỳ chọn; có thì phải đủ chỗ điền như `floor_level`. */
+function parseHouseLayout(raw: unknown, name = 'house_layout'): AiPrompts['houseLayout'] | null {
+  if (raw === undefined) return null;
+  const block = raw as Record<string, unknown> | null;
+  if (
+    !block ||
+    typeof block.system !== 'string' ||
+    typeof block.resample !== 'string' ||
+    typeof block.revise !== 'string' ||
+    !block.resample.includes('{avoid}') ||
+    !block.revise.includes('{avoid}') ||
+    !block.revise.includes('{intent}')
+  ) {
+    throw new AiPromptsError(
+      `\`${name}\` cần \`system\`, \`resample\` (có \`{avoid}\`) và \`revise\` (có \`{avoid}\`, \`{intent}\`).`,
+    );
+  }
+  if (!Array.isArray(block.rules) || !Array.isArray(block.brief_sections)) {
+    throw new AiPromptsError(`\`${name}\` cần \`rules\` (danh sách) và \`brief_sections\`.`);
+  }
+  const rules = block.rules.map((raw, i): LayoutRule => {
+    const r = raw as Record<string, unknown>;
+    if (typeof r.id !== 'string' || typeof r.when !== 'string' || typeof r.text !== 'string') {
+      throw new AiPromptsError(`\`${name}.rules[${i}]\` cần \`id\`, \`when\`, \`text\`.`);
+    }
+    return {
+      id: r.id,
+      when: r.when,
+      text: r.text,
+      codes: Array.isArray(r.codes) ? r.codes.map(String) : [],
+      ...(r.soft === true ? { soft: true } : {}),
+    };
+  });
+  return {
+    system: block.system,
+    resample: block.resample,
+    revise: block.revise,
+    rules,
+    briefSections: block.brief_sections.map(String),
+    hints: stringMap(block.hints ?? {}, `${name}.hints`),
+    scoreHints: stringMap(block.score_hints ?? {}, `${name}.score_hints`),
+  };
+}
+
+/**
+ * Lời dẫn cho lượt chạy hình chữ nhật: khối `floor_level` với lời dẫn hệ thống, lấy mẫu lại, sửa và các câu
+ * nhắc của `house_layout` thay vào; `gridMm` để câu nhắc nói mm thay cho ô. Mọi chỗ dùng `floorLevel` phía sau
+ * (bộ xếp, cổng, câu nhắc điểm) chạy nguyên.
+ */
+export function layoutPrompts(
+  prompts: AiPrompts,
+  gridMm: { x: number; y: number; ox?: number; oy?: number },
+  ruleOf: Record<string, number> = {},
+): AiPrompts {
+  const layout = prompts.houseLayout;
+  if (!layout) {
+    throw new AiPromptsError(
+      'kb/ai_design_prompts.yaml chưa có khối `house_layout` — không chạy được lược đồ hình chữ nhật.',
+    );
+  }
+  return {
+    ...prompts,
+    floorLevel: {
+      ...prompts.floorLevel,
+      system: layout.system,
+      resample: layout.resample,
+      revise: layout.revise,
+      hints: { ...prompts.floorLevel.hints, ...layout.hints },
+      scoreHints: { ...prompts.floorLevel.scoreHints, ...layout.scoreHints },
+      gridMm,
+      ruleOf,
+    },
   };
 }
 

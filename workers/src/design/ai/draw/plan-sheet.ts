@@ -30,6 +30,7 @@ import { CLS, polylinePath, tag } from './svg';
 import type { Orientation, SheetStyle } from './style';
 import { chooseLayout, paperFor, type Paper } from './units';
 import { prepareWalls, renderWalls } from './walls';
+import { roofDrawingLevel } from '../roof';
 
 export class PlanSheetError extends Error {
   readonly retryable = false;
@@ -71,7 +72,8 @@ export function renderPlanSheet(
   levelNumber: number,
   options: PlanSheetOptions,
 ): PlanSheetResult {
-  const level = plan.levels.find((item) => item.level === levelNumber);
+  const storey = plan.levels.find((item) => item.level === levelNumber);
+  const level = storey ?? roofLevelOf(plan, levelNumber);
   if (!level) {
     throw new PlanSheetError(`Phương án này không có tầng ${levelNumber}.`);
   }
@@ -91,7 +93,10 @@ export function renderPlanSheet(
   const body = [
     renderFrame(area),
     renderTitleBlock(area, style, { levelName: level.name, scale }),
-    renderSheetTitle(area, style, level.name),
+    // Tờ mái: «Mặt bằng — Mái», không phải «mặt bằng công năng» — mái không có công năng phòng ở.
+    storey
+      ? renderSheetTitle(area, style, level.name)
+      : renderSheetTitle(area, style, level.name, 'Mặt bằng'),
     // MỘT dòng ghi chú: dải tiêu đề chỉ đủ chỗ cho hai dòng trước khi chạm tên tờ vẽ (đo trên lượt
     // fd3b0b86 — dòng thứ ba đè lên «Mặt bằng công năng — Tầng 1»).
     renderFooter(area, style, sheetNotes(plan, level)),
@@ -110,6 +115,26 @@ export function renderPlanSheet(
   ].join('');
 
   return { svg: svgDocument(style, orientation, body), scale, orientation, notes: notes.list() };
+}
+
+/**
+ * Tờ «Mặt bằng mái» (Haan chốt 04/10/2026): mái không phải một tầng của `levels`, nên dựng một tầng TỔNG HỢP chỉ để
+ * vẽ (`roofDrawingLevel`). Bề dày tường và cửa lấy từ chính tầng trên cùng của phương án — không đặt số mới.
+ */
+export function roofLevelOf(plan: AiFloorPlan, levelNumber: number): AiFloorPlanLevel | null {
+  const roof = plan.roof;
+  if (!roof || roof.level !== levelNumber) return null;
+  const top = plan.levels.find((item) => item.level === levelNumber - 1);
+  const walls = top?.walls ?? [];
+  const thickest = (kind: string) =>
+    Math.max(0, ...walls.filter((wall) => wall.k === kind).map((wall) => wall.t));
+  const exteriorCm = thickest('e') || thickest('p');
+  const parapetCm = thickest('p') || exteriorCm;
+  const widest = (doors: NonNullable<AiFloorPlanLevel['doors']>) =>
+    Math.max(0, ...doors.map((door) => door.w));
+  const doors = top?.doors ?? [];
+  const doorCm = widest(doors.filter((door) => door.kind === 'single')) || widest(doors);
+  return roofDrawingLevel(roof, { exteriorCm, parapetCm, doorCm });
 }
 
 /**
@@ -134,8 +159,32 @@ export function renderPlanBody(
   const ownStairs = level.stairs ?? [];
   const arriving = ownStairs.length === 0 ? stairsArrivingAt(plan, level) : [];
   const stairs = ownStairs.length ? ownStairs : arriving;
+  // Tờ mái: ranh các khu (sân thượng, cục nóng, bồn nước…) bằng nét đứt — khu mái không có tường.
+  const zoneLines =
+    plan.roof && plan.roof.level === level.level
+      ? plan.roof.zones
+          .map((zone) => {
+            const r = toRect(zone.rect);
+            const corners: Pt[] = [
+              [r.x0, r.y0],
+              [r.x1, r.y0],
+              [r.x1, r.y1],
+              [r.x0, r.y1],
+            ];
+            return tag('path', {
+              class: CLS.softDivider,
+              d: polylinePath(
+                corners.map((pt) => paper.p(pt)),
+                true,
+              ),
+              fill: 'none',
+            });
+          })
+          .join('')
+      : '';
   return [
     renderVoids(level.voids ?? [], paper),
+    zoneLines,
     renderWalls(walls, openings.holes, paper),
     openings.svg,
     renderStairs(stairs, paper, style, ownStairs.length === 0),
@@ -158,7 +207,11 @@ function stairsArrivingAt(
   plan: AiFloorPlan,
   level: AiFloorPlanLevel,
 ): NonNullable<AiFloorPlanLevel['stairs']> {
-  const below = plan.levels.find((item) => item.level === level.level - 1);
+  // Tầng ngay dưới; không có ô thang khai riêng (tầng trên cùng chỉ có «vế tới» — tờ mái) thì lùi xuống tầng gần
+  // nhất có thang: các ô thang chồng khít nhau nên vẫn đúng chỗ.
+  const below = [...plan.levels]
+    .filter((item) => item.level < level.level && (item.stairs?.length ?? 0) > 0)
+    .sort((a, b) => b.level - a.level)[0];
   if (!below?.stairs?.length) return [];
   const bounds = bboxOfPoints(level.outline.map(toPt));
   return below.stairs.filter((stair) => {

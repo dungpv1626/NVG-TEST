@@ -108,6 +108,7 @@ export const aiFloorPlanTreeSchema = z
       .object({
         room: aiFloorPlanTreeIdSchema,
         up: z.enum(['+x', '-x', '+y', '-y']),
+        over: z.string().nullable().optional(),
       })
       .strict()
       .nullable(),
@@ -733,6 +734,66 @@ export const aiFloorPlanSchema = z
       .nullable()
       .describe(
         'Ý định cả nhà mô hình khai (ai-house-intent, đã đánh mã type_n, có `sketches`) mà phương án này xếp từ đó (T53). Lượt sửa bố cục theo yêu cầu kỹ sư gửi lại nó làm `<previous_intent>`. Vắng = artifact đúc trước T53.',
+      )
+      .optional(),
+    /** Mặt bằng mái (Haan chốt 04/10/2026: luôn vẽ tầng mái; `kb/roof_plan.yaml`, `ai/roof.ts`). KHÔNG phải một tầng của `levels`: không cửa sổ, không chấm điểm, không vào mặt đứng như một tầng. Toạ độ cm cùng gốc với các tầng. Vắng = artifact đúc trước khi có mái. */
+    roof: z
+      .object({
+        /** Số thứ tự của mái — tầng trên cùng + 1, chỉ để gọi tên tờ vẽ. */
+        level: z
+          .number()
+          .int()
+          .gte(2)
+          .describe('Số thứ tự của mái — tầng trên cùng + 1, chỉ để gọi tên tờ vẽ.'),
+        /** Đường bao sàn mái — đường bao tầng trên cùng. */
+        outline: z
+          .array(aiFloorPlanPointSchema)
+          .min(4)
+          .max(24)
+          .describe('Đường bao sàn mái — đường bao tầng trên cùng.'),
+        /** Tum thang: ô thang tầng trên cùng chạy lên mái cộng chiếu tới trước cửa. Vắng ở nhà một tầng. */
+        stair_head: z
+          .object({
+            rect: aiFloorPlanRectSchema,
+            /** Ô thang bên trong tum — đúng ô thang tầng dưới. */
+            stair: aiFloorPlanRectSchema.describe(
+              'Ô thang bên trong tum — đúng ô thang tầng dưới.',
+            ),
+            /** Cạnh tum mở cửa ra sân thượng. */
+            door_side: z.enum(['+x', '-x', '+y', '-y']).describe('Cạnh tum mở cửa ra sân thượng.'),
+          })
+          .strict()
+          .nullable()
+          .describe(
+            'Tum thang: ô thang tầng trên cùng chạy lên mái cộng chiếu tới trước cửa. Vắng ở nhà một tầng.',
+          )
+          .optional(),
+        zones: z
+          .array(
+            z
+              .object({
+                id: aiFloorPlanElemIdSchema,
+                /** Mã khu trong `kb/roof_plan.yaml`. */
+                type: z
+                  .string()
+                  .regex(/^[a-z_]+$/)
+                  .describe('Mã khu trong `kb/roof_plan.yaml`.'),
+                name: z.string().max(80),
+                rect: aiFloorPlanRectSchema,
+                /** `program` = mô hình không vẽ khu đầu bài đòi, chương trình tự đặt. */
+                placed_by: z
+                  .enum(['model', 'program'])
+                  .describe('`program` = mô hình không vẽ khu đầu bài đòi, chương trình tự đặt.'),
+              })
+              .strict(),
+          )
+          .max(16),
+        notes: z.array(z.string().max(300)).max(16).optional(),
+      })
+      .strict()
+      .nullable()
+      .describe(
+        'Mặt bằng mái (Haan chốt 04/10/2026: luôn vẽ tầng mái; `kb/roof_plan.yaml`, `ai/roof.ts`). KHÔNG phải một tầng của `levels`: không cửa sổ, không chấm điểm, không vào mặt đứng như một tầng. Toạ độ cm cùng gốc với các tầng. Vắng = artifact đúc trước khi có mái.',
       )
       .optional(),
   })

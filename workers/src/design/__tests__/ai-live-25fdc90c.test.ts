@@ -13,7 +13,13 @@
 import { describe, expect, it } from 'vitest';
 import type { HouseIntent } from '../ai/house';
 import { parseMandatoryRules } from '../ai/mandatory';
-import { evaluateHouseBest, mergeRevision, planContext, programGenerator } from '../ai/plan';
+import {
+  evaluateHouseBest,
+  mergeRevision,
+  planContext,
+  programGenerator,
+  type HouseModelKnowledge,
+} from '../ai/plan';
 import { FAKE_CALL, loadRun, prompts, read, realContextInput } from './ai-real-context';
 
 const mandatory = parseMandatoryRules(read('rules/nvg-mandatory.yaml'));
@@ -82,10 +88,12 @@ describe('phát lại 5584bf0d — khung xương thang giữa nhà (T105), ban c
 
   // T106: mọi tầng xếp được (tầng 2 bằng khung xương), nhưng hai ban công đầu bài đòi (trước, sau) đều là khối ở góc
   // nhà — không còn tính cho mặt trước / mặt sau, nên kiểm cả nhà bác.
-  it('vòng 2: mọi tầng xếp được, cả nhà bị bác vì ban công trước / sau đều là khối ở góc', () => {
+  // T116 (Haan 04/10/2026): ban công không có cạnh nào ra mặt thoáng thì CHẶN (trước chỉ lưu ý khi gần vuông) —
+  // `balcony_2` tầng 2 kín bốn phía nên tầng 2 bác trước khi tới phần kiểm ban công góc của cả nhà.
+  it('vòng 2: tầng 2 bác vì ban công không có cạnh nào ra mặt thoáng (T116)', () => {
     expect(round2.ok).toBeNull();
-    expect(round2.rejections.map((rejection) => rejection.level)).toEqual([0]);
-    expect(round2.rejections[0]!.messages.join(' ')).toMatch(/ban công ở mặt trước/);
+    expect(round2.rejections.map((rejection) => rejection.level)).toEqual([2]);
+    expect(round2.rejections[0]!.codes).toContain('balcony_off_open_face');
   });
 });
 
@@ -122,7 +130,7 @@ describe('phát lại 2c522a90 — số ô ô thang gửi mô hình ngay lời g
   it('thang U chiếu nghỉ rộng: `stair_min_m.cells` = 3 × 5 ô, kèm tên loại', () => {
     const run4 = loadRun('2c522a90');
     const input = { ...realContextInput(run4.digest, { stairShape: true }), mandatory };
-    const stair = planContext(input).modelKnowledge.stair_min_m!;
+    const stair = (planContext(input).modelKnowledge as HouseModelKnowledge).stair_min_m!;
     expect(stair.shape).toBe('Thang chữ U chiếu nghỉ rộng');
     expect(stair.cells).toEqual([3, 5]);
   });

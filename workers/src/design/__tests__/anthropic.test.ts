@@ -124,6 +124,49 @@ describe('Client Anthropic', () => {
   });
 });
 
+describe('Client Anthropic — bộ nhớ đệm (bàn giao v5 T7, 04/10/2026)', () => {
+  it('có khoá thì điểm ngắt ở cuối khối prompt, phần nối là khối sau; «vào» gồm cả phần đọc / ghi đệm', async () => {
+    const fetchMock = respond({
+      content: [{ type: 'text', text: '{"a":"x"}' }],
+      stop_reason: 'end_turn',
+      usage: {
+        input_tokens: 100,
+        output_tokens: 10,
+        cache_read_input_tokens: 4000,
+        cache_creation_input_tokens: 0,
+      },
+    });
+    const out = await client().complete('ai_text_anthropic', 2, {
+      system: 'S',
+      prompt: 'Đầu bài.',
+      promptTail: 'Sửa chỗ này.',
+      cacheKey: 'nvg-house-1',
+      schema: SCHEMA,
+    });
+    const body = JSON.parse(
+      (fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body as string,
+    );
+    expect(body.messages[0].content).toEqual([
+      { type: 'text', text: 'Đầu bài.', cache_control: { type: 'ephemeral' } },
+      { type: 'text', text: 'Sửa chỗ này.' },
+    ]);
+    expect(out.usage).toEqual({ inputTokens: 4100, outputTokens: 10, cachedInputTokens: 4000 });
+  });
+
+  it('không khoá thì không xin đệm (ghi đệm đắt hơn đọc thường)', async () => {
+    const fetchMock = respond({
+      content: [{ type: 'text', text: '{"a":"x"}' }],
+      stop_reason: 'end_turn',
+      usage: { input_tokens: 50, output_tokens: 10 },
+    });
+    await client().complete('ai_text_anthropic', 2, { system: 'S', prompt: 'P', schema: SCHEMA });
+    const body = JSON.parse(
+      (fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body as string,
+    );
+    expect(body.messages[0].content).toEqual([{ type: 'text', text: 'P' }]);
+  });
+});
+
 describe('Client Anthropic — mức suy nghĩ và theo dõi trực tiếp (13/09/2026)', () => {
   function sse(events: object[]): Response {
     const text = events

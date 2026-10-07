@@ -492,6 +492,8 @@ export interface AiPlanLevelView {
   roomList?: { id: string; type: string; area_m2: number }[];
   /** Phòng là một KHÔNG GIAN MỞ đã chia khu (T48). Rỗng ở artifact trước 16/09/2026. */
   openSpaces: { id: string; parts: { type: string; area_m2: number }[] }[];
+  /** Mục này là tờ mặt bằng mái (Haan chốt 04/10/2026), không phải một tầng. Vắng ở Worker cũ. */
+  roof?: boolean;
   /** Ý định bố cục mô hình khai, ĐÃ chuẩn hoá (T43). `null` ở artifact dựng theo cây (trước 14/09/2026). */
   intent: AiPlanIntentView | null;
   /** Tóm tắt bộ giải xếp phòng (T43). `null` ở artifact dựng theo cây. */

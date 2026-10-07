@@ -245,8 +245,18 @@ routes:
     purpose: Nhánh AI — đầu bài nhiều ràng buộc chồng nhau, khi bậc cân bằng đã bị bác nhiều lượt.
     pricing: { input_per_1m_usd: 4, output_per_1m_usd: 20 }
     # ✔ Lời gọi rỗng 20/09/2026: 1.712 ms · vào 50 / ra 15 · nghĩ 0 · `{"ok":true}` · 0,00050 USD.
-    max_output_tokens: 0
+    #
+    # ── Deep CHỈ lời gọi đầu (handoff v6 sửa lỗi đợt 3 mục 4.1, Haan chọn 07/10/2026) ──────────────
+    # Vòng sửa mặt bằng — sửa một bộ dải đã có — chạy Terra (`revise_route`), không trả giá Sol.
+    # Handoff đề nghị trần ~4.000 token NGHĨ. Số đo thật lời gọi đầu ở mức mặc định: f0c97c06 nghĩ 5.696 /
+    # ra 6.533, affaf12b nghĩ 8.235 / ra 9.122 (phần trả lời ~850 token). OpenAI không có trần riêng cho
+    # token nghĩ — `max_output_tokens` tính chung nghĩ + trả lời — nên trần 4.000 cắt ngang cả hai lượt ấy:
+    # tốn tiền, không ra câu trả lời. Thay bằng mức nghĩ `medium` (giảm phần nghĩ, không cắt) và trần an
+    # toàn 12.000 token ra (≤ 0,24 USD phần ra một lời gọi). Đo lại ở lượt thật kế tiếp rồi mới hạ trần.
+    reasoning_effort: medium
+    max_output_tokens: 12000
     request_timeout_s: 0
+    revise_route: ai_text_openai
 
   # Thêm 24/09/2026 theo yêu cầu Haan («thêm option chạy với model gpt 6 Sol, loại này rẻ hơn gpt 5.6
   # sol»). Mã `gpt-6-sol` kiểm bằng `GET /v1/models` cùng ngày (không tốn token): có trong danh sách

@@ -24,6 +24,23 @@ export interface OpeningNorm {
   share_of_wall?: number;
 }
 
+/** Số đo đè theo loại nhà (`by_house_profile.<loại>`), m. Mục vắng = giữ số chung. */
+export interface HouseProfileNorms {
+  door_width_m?: number;
+  wc_door_width_m?: number;
+  door_margin_m?: number;
+  corridor_clear_m?: number;
+  /** Cạnh ngắn dùng được theo loại phòng, m — đè `usable.min_side_m` (vd ban công nhà ống theo lộ giới). */
+  min_side_m?: Record<string, number>;
+  /** Tỉ lệ dài / rộng lọt lòng tối đa theo loại phòng — đè `usable.max_aspect` (vd WC nhà ống, T116). */
+  max_aspect?: Record<string, number>;
+  /**
+   * Khối nhà sâu hơn ngần này mà phương án không có giếng trời / sân trong → ghi LƯU Ý «nên có giếng trời» (T116; giữ
+   * T96: không tự vẽ, không trừ điểm, không chặn).
+   */
+  light_well_advice_depth_m?: number;
+}
+
 /** Phần của `openings` không phải một quy cách ô cửa — cách chọn quy cách (T40). */
 export interface OpeningRules {
   /** `kind` của cửa → tên quy cách trong `openings`. */
@@ -81,6 +98,11 @@ export interface ConstructionNorms {
     two_flights_min_width_m: number;
     /** Bề sâu mặt bậc nhỏ nhất — điều kiện dựng ô thang của bộ giải ý định; vắng = không kiểm. */
     going_m?: number;
+    /**
+     * Gầm thang dùng được (WC gầm thang, T116): phần sàn mà mặt dưới vế cao từ mức này trở lên, m (đã gồm bản thang).
+     * Vắng = không cho dùng gầm thang.
+     */
+    under_use_height_m?: number;
     /** Thông số từng loại thang (T105). Vắng = thang cũ (vế thẳng song song theo `two_flights_min_width_m`). */
     shapes?: Partial<Record<StairShape, StairShapeSpec>>;
     /**
@@ -101,6 +123,8 @@ export interface ConstructionNorms {
     corridor_clear_m: number;
     /** Lọt lòng tối thiểu của hành lang, m (T104). */
     corridor_min_clear_m?: number;
+    /** Lọt lòng tối thiểu của chỗ nối hai ô hành lang (ô thông, không cửa), m — handoff đợt 3 mục 1. */
+    corridor_pass_clear_m?: number;
     /** Lọt lòng TỐI ĐA theo loại nhà (`default` cho loại không khai), m — rộng hơn thì thu hẹp (T104). */
     corridor_max_clear_m?: Record<string, number>;
   };
@@ -115,6 +139,11 @@ export interface ConstructionNorms {
    * Cạnh ngắn DÙNG ĐƯỢC theo loại phòng, lọt lòng — điều kiện dựng của bộ giải ý định, KHÔNG phải số
    * kinh nghiệm (V-28). Vắng thì không có điều kiện nào.
    */
+  /**
+   * Số đo cửa / hành lang THEO LOẠI NHÀ (T116, handoff v6 mục 3.3 ⚑) — đè lên `openings`, `openingRules`,
+   * `circulation` qua `withHouseProfile`. Vắng = một bộ số cho mọi loại (hành vi trước T116).
+   */
+  by_house_profile?: Record<string, HouseProfileNorms>;
   usable?: {
     min_side_m: Record<string, number>;
     garage_with_car_m?: number;
@@ -201,7 +230,53 @@ export function parseConstructionNorms(yamlText: string): ConstructionNorms {
     ...(raw.usable ? { usable: parseUsable(raw.usable) } : {}),
     ...(raw.entry_steps ? { entry_steps: parseEntrySteps(raw.entry_steps) } : {}),
     ...(raw.sketch ? { sketch: parseSketch(raw.sketch) } : {}),
+    ...(raw.by_house_profile ? { by_house_profile: parseHouseProfiles(raw.by_house_profile) } : {}),
   };
+}
+
+const HOUSE_PROFILE_KEYS: readonly (keyof HouseProfileNorms)[] = [
+  'door_width_m',
+  'wc_door_width_m',
+  'door_margin_m',
+  'corridor_clear_m',
+  'light_well_advice_depth_m',
+];
+
+function parseHouseProfiles(raw: unknown): Record<string, HouseProfileNorms> {
+  if (!raw || typeof raw !== 'object') {
+    throw new ConstructionNormsError('"by_house_profile" phải là bảng theo loại nhà');
+  }
+  const out: Record<string, HouseProfileNorms> = {};
+  for (const [profile, section] of Object.entries(raw as Record<string, unknown>)) {
+    const norms: HouseProfileNorms = {};
+    for (const [key, value] of Object.entries((section ?? {}) as Record<string, unknown>)) {
+      if (key === 'min_side_m' || key === 'max_aspect') {
+        const table: Record<string, number> = {};
+        const least = key === 'max_aspect' ? 1 : 0;
+        for (const [type, m] of Object.entries((value ?? {}) as Record<string, unknown>)) {
+          if (typeof m !== 'number' || !(m > least)) {
+            throw new ConstructionNormsError(
+              `"by_house_profile.${profile}.${key}.${type}" phải là số lớn hơn ${least}`,
+            );
+          }
+          table[type] = m;
+        }
+        norms[key] = table;
+        continue;
+      }
+      if (!(HOUSE_PROFILE_KEYS as readonly string[]).includes(key)) {
+        throw new ConstructionNormsError(`"by_house_profile.${profile}" có khoá lạ "${key}"`);
+      }
+      if (typeof value !== 'number' || !(value >= 0)) {
+        throw new ConstructionNormsError(
+          `"by_house_profile.${profile}.${key}" phải là số không âm`,
+        );
+      }
+      (norms as Record<string, unknown>)[key] = value;
+    }
+    out[profile] = norms;
+  }
+  return out;
 }
 
 function parseSketch(raw: unknown): SketchNorms {
@@ -285,6 +360,12 @@ function parseUsable(raw: unknown): NonNullable<ConstructionNorms['usable']> {
 }
 
 function parseStairs(raw: ConstructionNorms['stairs']): ConstructionNorms['stairs'] {
+  if (
+    raw.under_use_height_m !== undefined &&
+    !(typeof raw.under_use_height_m === 'number' && raw.under_use_height_m > 1.8)
+  ) {
+    throw new ConstructionNormsError('"stairs.under_use_height_m" phải là số lớn hơn 1,8');
+  }
   const shapes = raw.shapes;
   if (shapes === undefined) return raw;
   for (const [key, spec] of Object.entries(shapes)) {

@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nvg.vn/contracts/ai-house-bands.schema.json",
+  "title": "AiHouseBands",
+  "$comment": "Handoff v6 (T116, Haan 04/10/2026): «LLM xếp dải, chương trình tính kích thước». Mỗi tầng là các DẢI từ mặt đường vào sâu; mỗi dải là các Ô từ trái sang phải nhìn từ đường; một ô có thể là một chồng ô con chia theo chiều sâu (`stack`, thêm so với handoff — oracle MR Dương tầng 3 có cột tủ đồ / WC / tiền sảnh cạnh phòng ngủ chính sâu suốt dải). Kích thước 0 = chương trình (`ai/bands/solve.ts`) tính. `THANG` = ô thang: tầng 1 mô hình chọn dải, tầng trên chương trình ép đúng toạ độ tầng 1. Loại phòng, phòng mẹ, diện tích tối thiểu lấy từ danh mục chương trình cấp, như `ai-house-layout`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "variant_label",
+    "parti",
+    "rationale",
+    "design_notes",
+    "assumptions",
+    "storeys",
+    "doors_prefer",
+    "cantilevers",
+    "entry_room",
+    "garage_room"
+  ],
+  "properties": {
+    "variant_label": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "parti": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Sơ đồ tổ chức chọn, một câu."
+    },
+    "rationale": {
+      "type": "string",
+      "maxLength": 1500
+    },
+    "design_notes": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "string",
+        "maxLength": 300
+      }
+    },
+    "assumptions": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {
+        "type": "string",
+        "maxLength": 200
+      }
+    },
+    "storeys": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["level", "bands"],
+        "properties": {
+          "level": {
+            "type": "string",
+            "pattern": "^([1-9][0-9]?|roof)$"
+          },
+          "bands": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 10,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["depth", "cells"],
+              "properties": {
+                "depth": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Chiều sâu mm; 0 = chương trình tính."
+                },
+                "cells": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 8,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["id", "w", "stack"],
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9_.]+$|^THANG$|^LW$|^$",
+                        "maxLength": 32,
+                        "description": "Mã phòng của danh mục (`knowledge.program`) hay mã tự thêm có tiền tố `knowledge.model_added`; `THANG` = ô thang; `.` = sân / phần không xây (chỉ ở mép khối). Rỗng \"\" khi ô là một chồng (`stack`)."
+                      },
+                      "w": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "description": "Bề rộng mm theo mặt tiền. 0 = chương trình tính; > 0 chỉ khi cần cố định (hành lang, ô thang)."
+                      },
+                      "stack": {
+                        "type": "array",
+                        "maxItems": 6,
+                        "description": "Ô chia tiếp theo chiều sâu, từ phía đường vào; rỗng = ô một phòng.",
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": ["id", "d"],
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "pattern": "^[a-z0-9_.]+$|^THANG$|^LW$|^$",
+                              "maxLength": 32
+                            },
+                            "d": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "description": "Chiều sâu mm; 0 = chương trình tính. Ô con cuối nhận phần dư."
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "description": "Ô từ trái sang phải nhìn từ đường."
+                }
+              }
+            },
+            "description": "Dải từ mặt đường vào sâu."
+          }
+        }
+      }
+    },
+    "doors_prefer": {
+      "type": "array",
+      "maxItems": 24,
+      "items": {
+        "type": "array",
+        "minItems": 2,
+        "maxItems": 2,
+        "items": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]+$",
+          "maxLength": 32
+        }
+      },
+      "description": "Cặp phòng nên có cửa khi có nhiều chỗ mở — chương trình đặt cửa."
+    },
+    "cantilevers": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "from_room", "face", "depth"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$",
+            "maxLength": 32
+          },
+          "from_room": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$",
+            "maxLength": 32
+          },
+          "face": {
+            "type": "string",
+            "enum": ["front", "left", "back", "right"]
+          },
+          "depth": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "entry_room": {
+      "type": "string",
+      "maxLength": 32
+    },
+    "garage_room": {
+      "type": "string",
+      "maxLength": 32,
+      "description": "\"\" khi không có chỗ đỗ ô tô."
+    }
+  }
+}

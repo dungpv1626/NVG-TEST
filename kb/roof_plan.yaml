@@ -1,0 +1,55 @@
+# Mặt bằng mái của nhánh AI — DỮ LIỆU, không viết trong mã.
+#
+# Haan chốt 04/10/2026: «luôn vẽ tầng mái» (bàn giao v5, mục 0: tum thang, khu cục nóng điều hoà, bồn nước và
+# năng lượng mặt trời, sân phơi, sân thượng). Mái KHÔNG phải một tầng của phương án: không cửa sổ, không chấm
+# điểm, không vào mặt đứng như một tầng — nó là phần `roof` riêng của artifact `ai_floor_plan`, vẽ thành tờ
+# «Mặt bằng mái» (`ai/roof.ts`, `ai/draw/roof-sheet.ts`).
+#
+# Danh mục ở đây tách khỏi `room_vocabulary.yaml` có chủ đích: từ vựng phòng còn là bảng ánh xạ nhãn của bộ số hoá
+# hồ sơ CAD (`ROOF`, `MAI`, `TUM` → sân thượng), thêm mã mái vào đó là đổi kết quả số hoá hồ sơ cũ.
+#
+# ⚠️ Mọi con số dưới đây là số THAM KHẢO để vẽ được một bản phác, chưa qua kiến trúc sư NVG duyệt. Chúng chỉ quyết
+# định hình trên tờ mái, không loại phương án nào (T52).
+version: '1.0.0'
+
+# Tum thang: luôn có khi nhà từ hai tầng — ô thang tầng trên cùng chạy lên mái, cộng một chiếu tới trước cửa ra
+# sân thượng. Nhà một tầng không có tum.
+stair_head:
+  vi: Tum thang
+  # Chiều sâu chiếu tới trước cửa tum, m — thêm vào cạnh ô thang quay ra sân thượng.
+  landing_m: 1.2
+
+# Phần mái còn lại (không thuộc khu nào) — vẽ làm nền.
+roof_slab_vi: Mái bằng
+
+# Mỗi khu: mã, tên, cạnh ngắn và diện tích tối thiểu, và KHI NÀO đầu bài đòi nó. `when: always` = luôn có; `any_of`
+# = một trong các câu đã trả lời khớp; `all_of` = mọi câu khớp. Câu chưa trả lời KHÔNG khớp (CLAUDE.md 8.3: «chưa
+# hỏi» khác «trả lời không»). `over_wet: true` = chương trình tự đặt thì đặt trên khu ướt tầng dưới (bàn giao v5 T8:
+# bồn nước và năng lượng mặt trời trên khu ướt hoặc đường cột).
+zones:
+  - code: terrace
+    vi: Sân thượng
+    min_side_m: 2.0
+    min_m2: 6
+    when: always
+  - code: ac_yard
+    vi: Cục nóng điều hoà
+    min_side_m: 1.2
+    min_m2: 3
+    any_of:
+      - { path: systems.aircon_outdoor, equals: san_thuong }
+  - code: tank_solar
+    vi: Bồn nước, NLMT
+    min_side_m: 1.5
+    min_m2: 4
+    over_wet: true
+    any_of:
+      - { path: systems.water_storage, includes: bon_mai }
+      - { path: systems.solar_water, equals: true }
+  - code: drying_yard
+    vi: Sân phơi
+    min_side_m: 1.5
+    min_m2: 4
+    all_of:
+      - { path: lifestyle.drying, in: [phoi_nang_ngoai_troi, ca_hai] }
+      - { path: balconies.drying_balcony, equals: false }

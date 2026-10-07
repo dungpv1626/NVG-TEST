@@ -11,7 +11,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { parseMandatoryRules } from '../ai/mandatory';
-import type { StructuredCallOptions } from '../llm/text-client';
+import { fullPrompt, type StructuredCallOptions } from '../llm/text-client';
 import {
   AiPlanRejected,
   evaluateHouse,
@@ -53,7 +53,9 @@ describe('phát lại lượt chạy thật 5cd78ef7', () => {
     expect(picked.next.plan.previous).toBe(round3.plan.previous);
     // T105: lượt 4 nay 14 lỗi (luật ô thang báo thêm) — con số không phải thứ bài này canh.
     expect(picked.next.hints[0]).toMatch(/Your last revision was worse .*\d+ problems against 1/);
-    expect(picked.next.hints.slice(1)).toEqual(round3.hints);
+    // T116 (lượt thật 03718834): dòng thứ hai nói lỗi chính của lượt bị gạt, để mô hình không lặp lại cách sửa ấy.
+    expect(picked.next.hints[1]).toMatch(/^- That set-aside revision failed on: /);
+    expect(picked.next.hints.slice(2)).toEqual(round3.hints);
   });
 
   it('lượt mới tốt hơn hoặc bằng → sửa từ lượt mới, không thêm dòng nào', () => {
@@ -78,41 +80,48 @@ describe('phát lại lượt chạy thật 5cd78ef7', () => {
 });
 
 describe('vòng sửa đồng bộ (`generateAiPlan`) đi tiếp từ lượt nhẹ nhất', () => {
-  it('lượt 3 → lượt 4 tệ hơn: lời gọi thứ ba gửi lại bản lượt 3, không phải lượt 4', async () => {
-    const options: StructuredCallOptions[] = [];
-    const answers = [
-      run.intents.round3,
-      run.intents.round4,
-      run.intents.round4,
-      run.intents.round4,
-    ];
-    const client = {
-      async complete(_route: string, _dataClass: unknown, callOptions: StructuredCallOptions) {
-        options.push(callOptions);
-        return {
-          json: answers[options.length - 1],
-          provider: 'fake',
-          model: 'fake-1',
-          usage: { inputTokens: 1, outputTokens: 1 },
-          latencyMs: 1,
-        };
-      },
-    };
-    await expect(
-      generateAiPlan({
-        ...input,
-        briefRef: 'sha256:' + '0'.repeat(64),
-        route: 'ai_text_fake',
-        client,
-        prompts,
-        // Canh cơ chế vòng sửa trên câu trả lời ghi sẵn — không để biến thể T94 đổi kết quả từng vòng.
-        planVariants: false,
-      }),
-    ).rejects.toBeInstanceOf(AiPlanRejected);
-    const sentFrom = (call: StructuredCallOptions) =>
-      call.prompt.slice(call.prompt.indexOf('<previous_intent>'));
-    expect(options[2]!.prompt).toMatch(/Your last revision was worse/);
-    // Lượt gọi thứ ba sửa từ đúng bản lượt gọi thứ hai đã sửa (bản lượt 3).
-    expect(sentFrom(options[2]!)).toBe(sentFrom(options[1]!));
-  });
+  // Trần riêng (T113): quay lui tầng 1 thử thêm hai bản tầng 1 cho mỗi vòng hỏng ở tầng trên — đo 5cd78ef7 một mình:
+  // 8,3 s → 22,5 s. Hạn chung 30 s của nhóm `logic` không còn đủ khi máy bận.
+  it(
+    'lượt 3 → lượt 4 tệ hơn: lời gọi thứ ba gửi lại bản lượt 3, không phải lượt 4',
+    { timeout: 120_000 },
+    async () => {
+      const options: StructuredCallOptions[] = [];
+      const answers = [
+        run.intents.round3,
+        run.intents.round4,
+        run.intents.round4,
+        run.intents.round4,
+      ];
+      const client = {
+        async complete(_route: string, _dataClass: unknown, callOptions: StructuredCallOptions) {
+          // Phần riêng của vòng sửa nằm ở `promptTail` (T115) — canh trên thân lời gọi đầy đủ.
+          options.push({ ...callOptions, prompt: fullPrompt(callOptions) });
+          return {
+            json: answers[options.length - 1],
+            provider: 'fake',
+            model: 'fake-1',
+            usage: { inputTokens: 1, outputTokens: 1 },
+            latencyMs: 1,
+          };
+        },
+      };
+      await expect(
+        generateAiPlan({
+          ...input,
+          briefRef: 'sha256:' + '0'.repeat(64),
+          route: 'ai_text_fake',
+          client,
+          prompts,
+          // Canh cơ chế vòng sửa trên câu trả lời ghi sẵn — không để biến thể T94 đổi kết quả từng vòng.
+          planVariants: false,
+        }),
+      ).rejects.toBeInstanceOf(AiPlanRejected);
+      const sentFrom = (call: StructuredCallOptions) =>
+        call.prompt.slice(call.prompt.indexOf('<previous_intent>'));
+      expect(options[2]!.prompt).toMatch(/Your last revision was worse/);
+      // Lượt gọi thứ ba sửa từ đúng bản lượt gọi thứ hai đã sửa (bản lượt 3).
+      expect(sentFrom(options[2]!)).toBe(sentFrom(options[1]!));
+    },
+  );
 });

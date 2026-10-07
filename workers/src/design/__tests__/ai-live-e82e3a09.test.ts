@@ -39,7 +39,9 @@ describe('phát lại lượt chạy thật e82e3a09 — hai vòng rồi runtime
     expect(Date.now() - started).toBeLessThan(30_000);
     // Trước T96: tầng 2 bác vì WC chung nằm trên bếp tầng 1 (luật T71) và lối vào. Từ T96 cổng chia lại
     // khu bếp của không gian mở tầng 1 theo WC của chính ứng viên (khu bếp dời khỏi chỗ WC đè), nên tầng
-    // 2 xếp được; chỉ còn lỗi kiểm cả nhà.
-    expect(round2.rejections.map((r) => r.level)).toEqual([0]);
+    // 2 xếp được; chỉ còn lỗi kiểm cả nhà. T116 (Haan 04/10/2026): ban công không có cạnh nào ra mặt thoáng thì CHẶN
+    // (trước chỉ lưu ý khi gần vuông) — tầng 2 bác vì ban công kín ấy, trước khi tới phần kiểm cả nhà.
+    expect(round2.rejections.map((r) => r.level)).toEqual([2]);
+    expect(round2.rejections[0]!.codes).toContain('balcony_off_open_face');
   });
 });

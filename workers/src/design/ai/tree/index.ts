@@ -26,13 +26,14 @@ import { DrawNotes, type DrawNote } from '../draw/notes';
 import { outlineFaces } from '../outline-faces';
 import { checkPlan, OVERLAP_TOLERANCE_CM2, restateRoomFacts, type PlanIssue } from '../plan-check';
 import { levelFromRooms } from '../plan-geometry';
-import { walkTree, type Cell } from './cells';
+import { MIN_CELL_CM, walkTree, type Cell } from './cells';
 import { innerRects } from './insets';
 import { treeIssue } from './issues';
 import { placeOpenings } from './openings';
 import { outlineOf } from './outline';
 import { projectBalconyCells } from './balcony-projection';
 import type { BalconyDemand, Side } from '../brief-demands';
+import type { HouseCantilever } from '../house';
 import { resizeTree } from './sizing';
 import { snapToAnchors, type SnapTarget } from './snap';
 import { shapeFlights } from '../stair-geometry';
@@ -47,6 +48,56 @@ export { MIN_CELL_CM } from './cells';
  * nên đây là một TÊN trong hợp đồng chứ không phải một danh sách mã phòng viết cứng.
  */
 const LIGHT_WELL = 'light_well';
+
+/**
+ * Ô ban công đua ngoài hình bao, áp cạnh ngoài của phòng chủ ở mặt khai; chỗ đã có ô nhô ra (ban công đua khác, phần
+ * đua của ban công trong nhà) thì cắt bớt dọc cạnh. Trả câu lý do khi không dựng được.
+ */
+function attachCantilever(
+  cells: readonly Cell[],
+  c: HouseCantilever,
+  footprint: Rect,
+): Cell | string {
+  const host = cells.find((cell) => cell.kind === 'room' && cell.id === c.from);
+  if (!host) return `không có phòng "${c.from}" trên tầng này.`;
+  const r = host.rect;
+  const flush =
+    c.face === 'front'
+      ? Math.abs(r.y0 - footprint.y0) <= 1
+      : c.face === 'back'
+        ? Math.abs(r.y1 - footprint.y1) <= 1
+        : c.face === 'left'
+          ? Math.abs(r.x0 - footprint.x0) <= 1
+          : Math.abs(r.x1 - footprint.x1) <= 1;
+  if (!flush) return `phòng "${c.from}" không chạm ${SIDE_WORDS[c.face]} của khối nhà.`;
+  const d = c.depth_cm;
+  let rect: Rect =
+    c.face === 'front'
+      ? { x0: r.x0, x1: r.x1, y0: r.y0 - d, y1: r.y0 }
+      : c.face === 'back'
+        ? { x0: r.x0, x1: r.x1, y0: r.y1, y1: r.y1 + d }
+        : c.face === 'left'
+          ? { x0: r.x0 - d, x1: r.x0, y0: r.y0, y1: r.y1 }
+          : { x0: r.x1, x1: r.x1 + d, y0: r.y0, y1: r.y1 };
+  const alongX = c.face === 'front' || c.face === 'back';
+  for (const other of cells) {
+    const o = other.rect;
+    const ox = Math.min(rect.x1, o.x1) - Math.max(rect.x0, o.x0);
+    const oy = Math.min(rect.y1, o.y1) - Math.max(rect.y0, o.y0);
+    if (ox <= 0 || oy <= 0) continue;
+    // Cắt dọc cạnh: giữ phần dài hơn.
+    rect = alongX
+      ? o.x0 - rect.x0 >= rect.x1 - o.x1
+        ? { ...rect, x1: o.x0 }
+        : { ...rect, x0: o.x1 }
+      : o.y0 - rect.y0 >= rect.y1 - o.y1
+        ? { ...rect, y1: o.y0 }
+        : { ...rect, y0: o.y1 };
+  }
+  if (rect.x1 - rect.x0 < MIN_CELL_CM || rect.y1 - rect.y0 < 1)
+    return 'không còn chỗ dọc cạnh phòng.';
+  return { id: c.id, kind: 'room', rect, from: { x0: null, x1: null, y0: null, y1: null } };
+}
 
 /** Tên mặt để viết ghi chú — bản gọn của `sideWord`, chỉ dùng trong tệp này. */
 const SIDE_WORDS: Record<Side, string> = {
@@ -139,6 +190,12 @@ export interface LevelLayoutInput {
    * mặt bằng khi đã ghép đủ tầng, không ở đây.
    */
   balcony?: BalconyDemand | null;
+  /**
+   * Ban công đua KHÔNG chiếm sàn (chế độ hình chữ nhật, bàn giao v5 `cantilevers`): mỗi cái thành một ô ban công mới
+   * ngoài hình bao, áp đúng cạnh ngoài của phòng chủ ở mặt khai, sâu `depth_cm`. Gắn ở cùng chỗ với phần đua ra ngoài
+   * ranh nên hình bao, lan can, lỗ mở tự khớp.
+   */
+  cantilevers?: readonly HouseCantilever[];
   /**
    * Cạnh ngắn tối thiểu lọt lòng theo loại phòng, m (gói kinh nghiệm, `min_dimension`). Có mặt thì
    * chương trình thử CĂN LẠI vị trí vách theo diện tích yêu cầu (`sizing.ts`); vắng thì giữ nguyên
@@ -313,6 +370,12 @@ function layoutOnce(input: LevelLayoutInput): LevelLayout {
   const typeOfSpace = new Map(spaces.map((space) => [space.id, space.type]));
   const levelOf = new Map(input.program.spaces.map((space) => [space.id, space.level]));
   const roomIds = new Set(spaces.map((space) => space.id));
+  // Ban công đua (chế độ hình chữ nhật) không nằm trong danh mục đưa bộ xếp — loại của nó là ban công.
+  for (const c of input.cantilevers ?? []) {
+    typeOfSpace.set(c.id, input.balcony?.type ?? 'balcony');
+    levelOf.set(c.id, level);
+    roomIds.add(c.id);
+  }
 
   const footprint = toRect(tree.footprint);
   if (!rectContainsRect(input.buildableCm, footprint, 1)) {
@@ -415,8 +478,10 @@ function layoutOnce(input: LevelLayoutInput): LevelLayout {
       alsoOf.set(merge.room, [...(alsoOf.get(merge.room) ?? []), other]);
     }
   }
+  const cantileverIds = new Set((input.cantilevers ?? []).map((c) => c.id));
   for (const space of spaces) {
-    if (!hostOf.has(space.id)) {
+    // Ban công đua gắn SAU bước chia (dưới) — không có ô trên cây là đúng.
+    if (!hostOf.has(space.id) && !cantileverIds.has(space.id)) {
       issues.push(
         treeIssue(
           'room_missing_on_level',
@@ -533,6 +598,24 @@ function layoutOnce(input: LevelLayoutInput): LevelLayout {
       `Ban công "${jut.id}" ${where} đua ra ngoài ranh nhà ${jut.cm} cm ở ${SIDE_WORDS[jut.side]}, theo đúng mức đầu bài khai.`,
     );
   }
+  for (const c of input.cantilevers ?? []) {
+    const attached = attachCantilever(cells, c, footprint);
+    if (typeof attached === 'string') {
+      return fail([
+        treeIssue(
+          'cantilever_dropped',
+          `Ban công đua "${c.id}" ${where} không dựng được: ${attached}`,
+          { room: c.id, from: c.from, face: c.face, why: attached },
+          c.id,
+        ),
+      ]);
+    }
+    cells = [...cells, attached];
+    notes.add(
+      'cantilever_built',
+      `Ban công "${c.id}" ${where} đua ${c.depth_cm} cm ra ${SIDE_WORDS[c.face]} theo cạnh phòng "${c.from}", không chiếm sàn.`,
+    );
+  }
 
   // ── Lọt lòng, hình bao, lỗ mở ──────────────────────────────────────────────────────────
   const outdoor = (id: string) => input.groups.outdoor.has(typeOfSpace.get(id) ?? '');
@@ -578,7 +661,10 @@ function layoutOnce(input: LevelLayoutInput): LevelLayout {
   );
   const stairs = [];
   if (input.tree.stair) {
-    const rect = inset.inner.get(input.tree.stair.room)!;
+    // WC gầm thang (T116): vế thang chạy suốt ô thang và ô dưới gầm — vẽ và kiểm chiều dài trên ô gộp.
+    const own = inset.inner.get(input.tree.stair.room)!;
+    const under = input.tree.stair.over ? inset.inner.get(input.tree.stair.over) : undefined;
+    const rect = under ? unionRect(own, under) : own;
     const across = input.tree.stair.up.endsWith('y') ? rect.x1 - rect.x0 : rect.y1 - rect.y0;
     const treads = stairTreads(construction, h);
     // Loại thang của lượt (T105): tờ vẽ đọc loại và thông số vế từ chính artifact, không từ kho lúc vẽ.
@@ -646,7 +732,7 @@ function layoutOnce(input: LevelLayoutInput): LevelLayout {
     issues: [],
     notes: notes.list(),
     anchors: {
-      stair: stairRoom ? (cells.find((c) => c.id === stairRoom)?.rect ?? null) : null,
+      stair: stairRoom ? stairAnchorOf(cells, stairRoom, input.tree.stair?.over ?? null) : null,
       lightWells: cells.filter((c) => typeOfSpace.get(c.id) === LIGHT_WELL).map((c) => c.rect),
       elevators: cells.filter((c) => typeOfSpace.get(c.id) === ELEVATOR).map((c) => c.rect),
       wetRooms: cells
@@ -737,4 +823,26 @@ function nearest(rect: Rect, anchors: readonly Rect[]): Rect | null {
 
 function rectArray(rect: Rect): [number, number, number, number] {
   return [rect.x0, rect.y0, rect.x1, rect.y1];
+}
+
+/** Hình bao của hai chữ nhật. */
+function unionRect(a: Rect, b: Rect): Rect {
+  return {
+    x0: Math.min(a.x0, b.x0),
+    y0: Math.min(a.y0, b.y0),
+    x1: Math.max(a.x1, b.x1),
+    y1: Math.max(a.y1, b.y1),
+  };
+}
+
+/** Mốc ô thang cho tầng trên: ô thang, gộp ô WC gầm thang nếu có (T116) — thang tầng trên chồng trọn cả hai. */
+export function stairAnchorOf(
+  cells: readonly { id: string; rect: Rect }[],
+  stairRoom: string,
+  over: string | null,
+): Rect | null {
+  const own = cells.find((c) => c.id === stairRoom)?.rect;
+  if (!own) return null;
+  const under = over ? cells.find((c) => c.id === over)?.rect : undefined;
+  return under ? unionRect(own, under) : own;
 }

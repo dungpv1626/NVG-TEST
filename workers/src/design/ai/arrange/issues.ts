@@ -17,6 +17,8 @@ import { MANDATORY_CODES } from '../mandatory';
 import type { PlanIssue } from '../plan-check';
 
 export const ARRANGE_ISSUE_CODES = [
+  // Đường dải (v6): tầng không có cây của bộ giải — KHÔNG rơi về bộ xếp cũ (handoff v6 sửa lỗi đợt 1, P0-3).
+  'band_level_missing',
   'arrange_zone_overfull',
   'altar_door_behind',
   'stair_entry_long_side',
@@ -95,6 +97,8 @@ export function arrangeIssue(
  * Mặc định là HÌNH HỌC: một mã mới quên xếp loại thì không tốn tiền, chỉ mất một lượt sửa có thể có ích.
  */
 export const REVISABLE_CODES: ReadonlySet<string> = new Set([
+  // Ban công đua không gắn được vào cạnh phòng chủ (chế độ hình chữ nhật, T115) — mô hình chọn phòng / mặt khác.
+  'cantilever_dropped',
   // Vùng: dồn quá nhiều phòng vào một vùng.
   'arrange_zone_overfull',
   // Diện tích: tổng m² mục tiêu của tầng vượt khối xây.
@@ -154,6 +158,20 @@ export const REVISABLE_CODES: ReadonlySet<string> = new Set([
   // Luật bố trí BẮT BUỘC của Haan (T71): bếp / phòng thờ dưới WC, phòng thờ giáp / đối diện WC, ban
   // công quay lưng vào nhà bên — chỗ đặt phòng là bố cục mô hình vẽ, nên mô hình sửa được.
   ...MANDATORY_CODES,
+]);
+
+/**
+ * Đường dải (v6, T116): cây chia ô dựng THẲNG từ bộ dải của mô hình, bộ xếp không thử cây khác — nên lỗi cửa, lối đi,
+ * phòng hẹp là chỗ mô hình xếp, mô hình sửa được (câu nhắc ở `house_bands.hints`). Lượt thật 619f0438: WC tầng 2 không
+ * giáp hành lang, mã `room_without_door` không nằm trong `REVISABLE_CODES` nên lượt dừng sau một câu trả lời đọc được.
+ */
+export const BAND_REVISABLE_CODES: ReadonlySet<string> = new Set([
+  'band_level_missing',
+  'room_without_door',
+  'room_unreachable_on_level',
+  'door_wall_too_short',
+  'room_through_private',
+  'arrange_room_too_narrow',
 ]);
 
 /** Lỗi này mô hình sửa được bằng cách đổi ý định không. */

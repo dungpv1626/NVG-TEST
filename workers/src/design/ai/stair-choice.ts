@@ -11,7 +11,7 @@
  * Kết quả gắn vào `construction.stairs.shape` (`withStairShape`) — mọi chỗ tính ô thang và bộ vẽ đọc từ đó.
  */
 
-import type { AiBriefDigest } from '@nvg/shared/design';
+import { houseProfile, type AiBriefDigest } from '@nvg/shared/design';
 import { STAIR_SHAPES, type ConstructionNorms, type StairShape } from '../kb/construction';
 import { buildableFromDigest } from './buildable';
 import { stairNeed } from './stair-geometry';
@@ -21,6 +21,8 @@ import { stairParamsOf, stairTreads } from './tree/stair-fit';
 const ELDERLY_AGE = 65;
 /** Khối xây hẹp hơn thì thang thẳng — tài liệu: nhà ống mặt tiền hẹp; U cần ô 2,4 m và còn lối đi bên cạnh. */
 const NARROW_CM = 400;
+/** Nhà ống: bề ngang tối thiểu chừa cạnh thang (lối đi 0,9 m + vách) để loại thang được coi là vừa khối. */
+const ONG_BESIDE_CM = 100;
 
 export interface StairChoice {
   shape: StairShape;
@@ -45,21 +47,46 @@ export function chooseStairShape(
   const elderly =
     digest.lifestyle?.reduced_mobility === true ||
     (digest.family ?? []).some((member) => (member.ages ?? []).some((age) => age >= ELDERLY_AGE));
-  const fitsAcross = (shape: StairShape) => {
+  const needOf = (shape: StairShape) => {
     const treads = stairTreads(construction, Math.round(construction.levels.storey_height_m * 100));
     const params = stairParamsOf(
       { ...construction, stairs: { ...construction.stairs, shape } },
       treads,
     );
-    if (!params) return false;
-    const need = stairNeed(params);
-    return Math.min(need.along, need.across) <= widthCm / 2;
+    return params ? stairNeed(params) : null;
+  };
+  const fitsAcross = (shape: StairShape) => {
+    const need = needOf(shape);
+    return need !== null && Math.min(need.along, need.across) <= widthCm / 2;
   };
   if (elderly && has('chu_u_rong') && fitsAcross('chu_u_rong')) {
     return {
       shape: 'chu_u_rong',
       reason: 'nhà có người già / đi lại khó khăn — chiếu nghỉ sâu 1,5 m nghỉ chân, xoay đồ dễ',
     };
+  }
+  // Nhà ống (Haan chấm lượt a68c50bb, T116: «diện tích cầu thang tối thiểu nhất có thể»): loại chiếm ít diện tích nhất
+  // trong các loại vừa bề ngang (chừa ít nhất `ONG_BESIDE_CM` cạnh thang cho lối đi / phòng). Chữ L và ba vế vẫn chỉ khi
+  // gia chủ chọn.
+  if (houseProfile(digest).profile === 'ong') {
+    const smallest = (['thang_thang', 'chu_u'] as const)
+      .filter((shape) => has(shape))
+      .map((shape) => ({ shape, need: needOf(shape) }))
+      .filter(
+        (
+          item,
+        ): item is { shape: 'thang_thang' | 'chu_u'; need: { along: number; across: number } } =>
+          item.need !== null &&
+          Math.min(item.need.along, item.need.across) + ONG_BESIDE_CM <= widthCm,
+      )
+      .sort((a, b) => a.need.along * a.need.across - b.need.along * b.need.across)[0];
+    if (smallest) {
+      const m2 = (smallest.need.along * smallest.need.across) / 1e4;
+      return {
+        shape: smallest.shape,
+        reason: `nhà ống — loại thang chiếm ít diện tích nhất vừa khối (${m2.toFixed(1)} m²)`,
+      };
+    }
   }
   if (widthCm < NARROW_CM && has('thang_thang')) {
     return {

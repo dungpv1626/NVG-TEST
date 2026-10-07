@@ -230,7 +230,8 @@ export interface LivePlan {
 
 const DONE_LABEL: Record<LivePlan['done'][number]['status'], string> = {
   ok: 'trả về đúng hợp đồng',
-  rejected: 'trả về sai hợp đồng',
+  // `rejected` = câu trả lời không dựng được ý định: sai hợp đồng HOẶC bộ giải dải không dựng nổi (handoff sửa lỗi đợt 2 mục 3.5).
+  rejected: 'chưa dựng được mặt bằng',
   failed: 'lỗi khi gọi',
 };
 

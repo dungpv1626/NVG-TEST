@@ -281,7 +281,17 @@ export function placeOpenings(input: OpeningsInput): OpeningsResult {
     const { a, b } = declared;
     const isOutside = b === OUTSIDE;
     const gap = freeGap(slot, alsoKey);
-    const room = gap ? gap.to - gap.from - 2 * margin : 0;
+    // Ô thông giữa hai ô hành lang: không khung cửa nên không chừa má
+    // (lượt thật affaf12b, f0c97c06: hành lang 0,9 m nối hành lang, vách chung 87 cm vì một đầu giáp sân thượng — đòi
+    // đủ 90 cm như cửa đi thì cả tầng 4 không đi tới được).
+    // Chỉ hành lang – hành lang: nới cả hành lang – thang thì bộ xếp đời cũ (đường lưới) chọn cách xếp khác, phát lại
+    // 58688ead / 4198d692 tệ đi.
+    const passageOpening =
+      !isOutside &&
+      declared.kind === 'opening' &&
+      input.typeOf.get(a) === 'circulation' &&
+      input.typeOf.get(b) === 'circulation';
+    const room = gap ? gap.to - gap.from - (passageOpening ? 0 : 2 * margin) : 0;
     const desired = fullWall ? slot.to - slot.from : desiredWidth(norm, slot.to - slot.from);
     const w = Math.min(desired, room);
     if (!gap || w < minWidth) {
@@ -774,7 +784,13 @@ function normaliseDoors(
       );
       continue;
     }
-    const pair = isOutside ? `${a}|${OUTSIDE}` : [a, b].sort().join('|');
+    // Cửa ra ngoài: cửa XE và cửa NGƯỜI của cùng một phòng là hai cửa (Haan 04/10/2026, nhà ống: gara mặt tiền
+    // mang lối vào chính — cửa cuốn kèm cửa đi). Khoá chung một cặp thì cửa đi bị bỏ âm thầm và cổng báo
+    // «không có cửa ra ngoài nào (trừ cửa xe)».
+    const vehicular = declared.kind === 'garage' || declared.kind === 'gate';
+    const pair = isOutside
+      ? `${a}|${OUTSIDE}|${vehicular ? 'xe' : 'nguoi'}`
+      : [a, b].sort().join('|');
     if (a === b || seen.has(pair)) continue;
     if (!isOutside && !adjacent(a, b)) {
       notes.add(

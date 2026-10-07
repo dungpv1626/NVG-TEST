@@ -45,6 +45,8 @@ export interface CriterionSpec extends ScoreScale {
   rooms?: string;
   /** Tham số riêng của tiêu chí, vẫn là dữ liệu: `khoang_cach_m`, `lech_m`. */
   params: Record<string, number>;
+  /** Chỉ chấm cho loại nhà này (`houseProfile`, T116) — loại khác «không chấm». Vắng = mọi loại. */
+  onlyProfile?: string;
   /** Số mẫu đã đo. `0` nghĩa là ngưỡng hoàn toàn là suy luận (T31). */
   n: number;
   /**
@@ -88,6 +90,8 @@ export interface PlanQuality {
    * đúng cách sáu mặt bằng đầu tiên lọt qua 65 điểm với D1 = 0, E2 = 0, C7 = 0,24. `null` = không sàn.
    */
   acceptGroupFloorPercent: number | null;
+  /** Sàn riêng từng nhóm (`accept_group_floor_by_group`), đè sàn chung — vắng = mọi nhóm dùng sàn chung. */
+  acceptGroupFloors: Readonly<Record<string, number>>;
   /**
    * Bộ xếp còn thử biến thể ý định (chia lại diện tích, chèn hành lang) tới khi điểm đạt mức này, dù đã qua
    * `acceptPercent`. `null` = dừng ngay khi qua ngưỡng nhận.
@@ -145,6 +149,7 @@ const STRUCTURAL = new Set([
   'weight',
   'enforced_by_gate',
   'by_building_type',
+  'only_profile',
 ]);
 
 const KINDS: ReadonlySet<string> = new Set<ScoreKind>([
@@ -213,6 +218,14 @@ export function parsePlanQuality(yamlText: string): PlanQuality {
     acceptGroupFloorPercent: acceptPercentOf(
       raw.accept_group_floor_percent,
       'accept_group_floor_percent',
+    ),
+    acceptGroupFloors: Object.fromEntries(
+      Object.entries((raw.accept_group_floor_by_group ?? {}) as Record<string, unknown>).map(
+        ([group, value]) => [
+          group,
+          acceptPercentOf(value, `accept_group_floor_by_group.${group}`) as number,
+        ],
+      ),
     ),
     variantSearchUntilPercent: acceptPercentOf(
       raw.variant_search_until_percent,
@@ -289,6 +302,7 @@ function criterion(
     weight: weightOf(raw.weight, code),
     label: String(raw.label ?? ''),
     ...(raw.enforced_by_gate ? { enforcedByGate: String(raw.enforced_by_gate) } : {}),
+    ...(raw.only_profile ? { onlyProfile: String(raw.only_profile) } : {}),
     byBuildingType: {},
   };
 
@@ -333,6 +347,7 @@ function numbers(raw: Record<string, unknown>, where: string): Partial<Criterion
   pick('high', 'high');
   pick('hard_low', 'hardLow');
   pick('hard_high', 'hardHigh');
+  if (raw.weight !== undefined) out.weight = weightOf(raw.weight, where);
   return out;
 }
 
@@ -351,8 +366,18 @@ function requireThresholds(spec: CriterionSpec): void {
   else if (spec.kind !== 'boolean') need(['pass', 'zero']);
 }
 
-/** Mốc và tập phòng áp dụng cho MỘT loại hình công trình — ghi đè chỉ những khoá được khai. */
-export function criterionFor(spec: CriterionSpec, buildingType: string): CriterionSpec {
+/**
+ * Mốc và tập phòng áp dụng cho MỘT loại hình công trình — ghi đè chỉ những khoá được khai. Loại nhà (T116: `ong` /
+ * `pho` / `bt` / `vuon`, `shared/src/design/house-profile.ts`) khai cùng bảng `by_building_type` và chồng LÊN loại hình
+ * đầu bài: nhà ống là nhà phố hẹp, nên khoá nào nhà ống không khai thì giữ số của nhà phố.
+ */
+export function criterionFor(
+  spec: CriterionSpec,
+  buildingType: string,
+  houseProfile?: string | null,
+): CriterionSpec {
   const over = spec.byBuildingType[buildingType];
-  return over ? { ...spec, ...over } : spec;
+  const profile = houseProfile ? spec.byBuildingType[houseProfile] : undefined;
+  if (!over && !profile) return spec;
+  return { ...spec, ...over, ...profile };
 }

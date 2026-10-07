@@ -49,6 +49,7 @@ export interface RoomVocabulary {
     open_flow?: string[];
     open_face_first?: string[];
     windowless_ok?: string[];
+    entry_room_by_building_type?: Record<string, string[]>;
   };
   /** Vùng mặc định khi ý định bố cục bỏ sót một phòng (T43). */
   zone_defaults?: {
@@ -125,6 +126,8 @@ export interface PassageRules {
   openFaceFirst: ReadonlySet<string>;
   /** Phòng không cần mặt thoáng (kỹ thuật, kho) — nhường mép ngoài cho `openFaceFirst` (T103). */
   windowlessOk: ReadonlySet<string>;
+  /** Loại phòng được mang lối vào chính thêm vào phòng khách / hành lang, theo loại hình (nhà phố: gara). */
+  entryRoomByBuildingType: ReadonlyMap<string, ReadonlySet<string>>;
 }
 
 /**
@@ -150,6 +153,13 @@ export function passageRules(vocabulary: RoomVocabulary): PassageRules | null {
     checked([type], 'served_from');
     servedFrom.set(type, checked(from, `served_from.${type}`));
   }
+  const entryRoomByBuildingType = new Map<string, ReadonlySet<string>>();
+  for (const [building, types] of Object.entries(raw.entry_room_by_building_type ?? {})) {
+    entryRoomByBuildingType.set(
+      building,
+      checked(types, `entry_room_by_building_type.${building}`),
+    );
+  }
   return {
     through: checked(raw.through, 'through'),
     entryThrough: checked(raw.entry_through, 'entry_through'),
@@ -165,6 +175,7 @@ export function passageRules(vocabulary: RoomVocabulary): PassageRules | null {
     openFlow: checked(raw.open_flow, 'open_flow'),
     openFaceFirst: checked(raw.open_face_first, 'open_face_first'),
     windowlessOk: checked(raw.windowless_ok, 'windowless_ok'),
+    entryRoomByBuildingType,
   };
 }
 

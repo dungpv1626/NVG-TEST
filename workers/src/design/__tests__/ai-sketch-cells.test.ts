@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { briefMinCells, planContext } from '../ai/plan';
+import { briefMinCells, planContext, type HouseModelKnowledge } from '../ai/plan';
 import {
   clearAreaM2,
   corridorMinCells,
@@ -52,7 +52,7 @@ describe('quy đổi diện tích ↔ số ô', () => {
 
 describe('tri thức gửi mô hình', () => {
   it('mỗi phòng đầu bài khai diện tích có một dòng số ô tối thiểu, kể cả chỗ để xe', () => {
-    const rows = planContext(input).modelKnowledge.min_cells;
+    const rows = (planContext(input).modelKnowledge as HouseModelKnowledge).min_cells;
     expect(rows).toContainEqual({
       type: 'living',
       floor: 1,
@@ -114,7 +114,7 @@ describe('tri thức gửi mô hình', () => {
     // 1,2 lọt lòng + 0,22 tường ngoài + 0,055 nửa tường ngăn = 1,475 m.
     expect(corridorMinCells(input.construction, 1)).toBe(2);
     expect(corridorMinCells(input.construction, 1.5)).toBe(1);
-    expect(planContext(input).modelKnowledge.corridor_min_cells).toBe(2);
+    expect((planContext(input).modelKnowledge as HouseModelKnowledge).corridor_min_cells).toBe(2);
     // Lời dẫn không còn cho phép «one or two cells».
     expect(prompts.floorLevel.system).not.toMatch(/one or\s+two cells/);
     expect(prompts.floorLevel.system).toContain('knowledge.corridor_min_cells');
@@ -128,7 +128,8 @@ describe('tri thức gửi mô hình', () => {
 
 describe('lượt chạy thật 0c86c0b1 (24/09/2026, lời dẫn 8.20.0) — mô hình vẽ đủ số ô', () => {
   const live = loadRun('0c86c0b1');
-  const rows = planContext(realContextInput(live.digest)).modelKnowledge.min_cells;
+  const rows = (planContext(realContextInput(live.digest)).modelKnowledge as HouseModelKnowledge)
+    .min_cells;
 
   it('mọi phòng khớp một dòng `min_cells` được vẽ đủ ô, và không bỏ trống ô nào', () => {
     // Trước T73 (011b4adc): phòng khách 28 ô cho 45 m², 40 ô bỏ trống làm sân.

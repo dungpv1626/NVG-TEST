@@ -13,15 +13,19 @@
 # Không một ngưỡng quy chuẩn nào nằm ở đây: mọi con số (tối thiểu, sàn xây được, số phòng ngủ)
 # do Worker tiêm vào từ rule pack, kb/space_norms.yaml và đầu bài lúc gọi — xem `ai/program.ts`.
 
+# 9.9.0 (04/10/2026, T115 theo `prompt-mat-bang-v5.md`): khối `house_layout` viết lại theo tài liệu — lời dẫn hệ thống mục 2 (gốc GÓC LÔ, 6 bước + `design_notes`), catalog luật có `when` đánh số lại theo ca (mục 3), thân lời gọi `<rules><knowledge><brief>`; danh mục phòng chương trình cấp có mã (`kb/house_program.yaml`), đồ đạc / khoảng trống (`kb/furniture.yaml`), ban công đua `cantilevers` không chiếm sàn, vòng sửa trả delta (mục 6). Khối `floor_level` (bản phác lưới) không đổi.
+# 9.8.0 (04/10/2026, bàn giao v5 bước 1): tri thức không còn tên / dải diện tích / `served_from` của loại chỉ-khi-hỏi mà đầu bài không hỏi (thang máy, cửa hàng, giếng trời, sân trong); đầu bài viết rõ «Mặt giáp lối đi công cộng, mở cổng được», «Số cánh nhà», «Số lõi thang» thay ba câu mơ hồ; vòng sửa gửi phần riêng ở khối sau + khoá đệm (OpenAI `prompt_cache_key`, Anthropic `cache_control`). Chữ các khối lời dẫn không đổi.
 # 9.7.0 (03/10/2026, T114 Đợt 4): khối `upload_image` — ảnh mặt bằng có nội thất và ảnh mặt đứng có vật liệu vẽ từ bản vẽ kỹ sư tải lên. Các khối khác không đổi.
 # 9.6.0 (03/10/2026, T114): đầu bài cắt theo nhãn `for` của biểu mẫu (`brief/slice.ts`) — lời dẫn mặt bằng / chương trình không còn phong cách và ghi chú phong cách; lời dẫn mặt đứng nhận mọi câu gắn `facade` (thay sáu trường nhặt tay); phối cảnh đọc digest đã cắt. Chữ của các khối lời dẫn không đổi.
+# 9.5.0 (03/10/2026, T113): câu nhắc C12 (hành lang rộng quá mức) và D5 (ban công bố trí lệch); đầu bài nói mỗi ban công thuộc một phòng theo thứ tự ưu tiên phòng ngủ → giặt phơi → làm việc, bám cạnh phòng, không ôm góc chữ L (lượt thật 182665ea).
 # 9.4.1 (02/10/2026, T112): câu nhắc balcony_side_missing_corner (ban công chỉ chạm mặt ở góc); đầu bài nói mỗi mặt bắt buộc một ban công riêng chạy dọc mặt ấy (lượt thật 8eaaee7b kẹt vòng 4–5).
 # 9.4.0 (02/10/2026, T112): review lời dẫn — câu thang máy / sân thượng / ông bà chưa ghim tầng chỉ có khi đúng (`[[cờ|…]]`); WC khép kín chỉ mở từ phòng mẹ; bếp và WC cùng khu kỹ thuật nhưng không chung tường, cửa không đối diện (thay «kitchen and wc grouped», ngược `wc_separate_from_kitchen`); tối thiểu phòng ngủ đã gồm phần `inside`; `knowledge.faces` (mặt mù / nắng gắt / gió mát); assumptions xếp theo tác động, được đề xuất loại `only_when_asked` mà không vẽ.
 # 9.3.1 (01/10/2026, T111): lượt sửa giữ đúng khổ lưới bản phác (lượt thật 46d6eff3 nới 16 → 20 hàng); câu nhắc mới sketch_room_crooked: phòng không chữ nhật trên bản phác của một tầng hỏng (fdd486b1).
 # 9.3.0 (30/09/2026, T108–T109): giặt phơi cạnh ban công / sân thượng / sân / cửa sổ thoáng trong lời dẫn và câu nhắc D4; balcony_side_corner (lời khuyên ban công góc); danh mục sai vẫn soát bản phác. Hai lượt thật bea4c6fa, f1a88ac1 chạy bằng 9.2.0 TRƯỚC các đổi này.
 # 9.2.0 (30/09/2026, T107): hành lang là các dải chữ nhật, hết mâu thuẫn «spine, L, T» với «mỗi phòng một chữ nhật»; bước tự kiểm lối vào trước khi trả lời; lượt sửa gửi tầng chưa khoá với mã ngắn; sketch_pinwheel_at và sketch_room_no_access chỉ chỗ bằng hàng/cột, bỏ đoạn giảng luật lặp.
 # 9.1.0 (30/09/2026, T105): thêm câu nhắc D2 (phòng ngủ tối hẳn) stair_entry_long_side (lối lên thang ở cạnh dài) và C11 (gara vào phòng khách) — lượt 25fdc90c; stair_cells (ô thang tầng trên nói ngay từ lượt sửa đầu) — lượt 1330ce12; loại thang gửi trong dữ liệu `stair_min_m.shape`, không thêm chữ vào lời dẫn (trần T46); altar_door_behind (T106).
-version: '9.7.0'
+# 9.9.1 (04/10/2026, T115 — Haan chọn (a)): luật R_entry_garage (`when: entry_via_garage`) — nhà phố có gara cùng mặt cửa chính thì gara được làm entry_room, người vào cạnh xe; không đẩy phòng khách ra trước gara (lượt thật e34f8f58).
+version: '9.9.1'
 
 program:
   system: |
@@ -294,6 +298,7 @@ floor_level:
   # Phép thử đòi mọi mã của `ARRANGE_ISSUE_CODES` và `REVISABLE_CODES` có một dòng ở đây.
   hint_default: '- A check ({code}) failed on {ref}; change the zoning of that room.'
   hints:
+    cantilever_dropped: '- Cantilevered balcony "{room}" could not be attached: "{from}" does not keep its outer wall on the {face} face.'
     arrange_zone_overfull: '- Too many rooms were crowded in the {zone} part of the block ({rooms}); spread them out in the sketch.'
     arrange_no_hub_wall: '- Room "{room}" ({zone} part) ended up touching no corridor or shared room it may open off (it touched: {hubs}); draw it against one and add an adjacent relationship.'
     arrange_program_exceeds_footprint: '- The rooms of this storey need {need_m2} m² but the block has {have_m2} m²; reduce the target areas on this storey or move a room to another storey.'
@@ -341,8 +346,14 @@ floor_level:
     altar_beside_wc: '- The altar room "{room}" on storey {level} shares a wall with the wc "{wc}"; put another room or the corridor between them.'
     altar_facing_wc: '- The door of the altar room "{room}" faces the door of the wc "{wc}" across "{via}"; the altar room must not face a wc — move one of them along the corridor or to another side.'
     revision_kept: '- Storey {levels} passed every check and is kept exactly as it is; do not return it.'
+    band_level_missing: '- Storey {level} has no bands in your answer; give its full list of bands.'
+    stair_end_blocked: '- Storey {level}: the {end} end of THANG (where the flight from below arrives or the next flight starts) touches no corridor, landing or living space; put one across that end — every storey uses the same stair position and direction.'
+    light_well_not_stacked: '- The light well "{rooms}" of storey {level} is covered on storey {above}; repeat it at the same place and size on every storey above, open to the sky.'
     revision_stalled: '- Your last two corrections did not reduce the problems, so this revision starts from your latest answer instead of the earlier one.'
     revision_setback: '- Your last revision was worse than the intent below ({worse} problems against {better}) and has been set aside. Start again from this intent: fix only the problems listed here, and do not redraw the rest of the storey.'
+    # Lượt thật 03718834 (05/10/2026): lượt sửa bị gạt mà câu nhắc không nói vì sao — mô hình trả lại đúng cách sửa
+    # vừa bị gạt, lượt dừng vì lặp. Dòng này nói lỗi chính của lượt bị gạt.
+    revision_setback_why: '- That set-aside revision failed on: {why} Do not repeat that fix; solve the problem below another way.'
     balcony_side_missing: '- The client wants a balcony on the {side} side, but none of the balconies touches that side of the storey; draw one with its long side along the {side} edge.'
     # T112: có ban công chạm mặt ấy nhưng chỉ ở góc (8eaaee7b vòng 4–5 kẹt vì câu trên nói «không cái nào chạm»).
     balcony_side_missing_corner: '- The client wants a balcony on the {side} side. "{room}" touches that side only at a corner and its long side is not on it, so it does not count there — one corner balcony never covers two sides. Draw a separate balcony with its long side along the {side} edge.'
@@ -382,16 +393,638 @@ floor_level:
     D1: '- {rooms} get no window on an open side; draw them touching `knowledge.open_faces`.'
     D2: '- Bedroom {rooms} has no window and no balcony door at all; move it to touch `knowledge.open_faces`, or swap it with a room that needs no daylight.'
     D4: '- Laundry {rooms} has nowhere to dry clothes; put it beside a balcony or terrace (sharing a wall or a door), or on `knowledge.open_faces` with a window, or next to a drying yard if the brief has one.'
+    D5: "- Balconies {rooms} are placed off: give each required side its own balcony on a different room (bedroom first, then laundry, then study), run it along that room's outer wall and no longer than it, and do not wrap a balcony round a corner or join two at a corner."
     E2: '- The upper wc {rooms} is not above a wc or shaft of the storey below; keep wet rooms on one vertical stack.'
     C9: '- From the front door you cross {rooms} before reaching the living room; the front door must open into the living room or a hall.'
     C10: '- Corridor {rooms} leads to a single room; merge it into that room or make it serve several rooms.'
     C11: '- From the garage you reach the living room only through {rooms} or by going outside; put the garage beside the living room or hall, or on a corridor that leads straight to it.'
+    C12: '- Corridor {rooms} is much wider than a corridor needs; draw it one cell wide and give the rest to the rooms beside it.'
     E5: '- The wet rooms {rooms} sit above a living, dining, sleeping or altar room of the storey below; move them over a wet room or a service room.'
 
 # Lượt SỬA theo yêu cầu kỹ sư trên bản vẽ đã lưu (T53, 16/09/2026 — Haan: «giai đoạn tiếp theo là sửa
 # trên bản vẽ hiện tại»). Mô hình KHÔNG vẽ lại: nó dịch câu chat thành thao tác trong một tập đóng
 # (`contracts/ai-plan-edit`), chương trình áp lên cây đã lưu và cho qua cổng. Không gửi đầu bài, không
 # gửi ảnh — bảng phòng/cửa đủ để hiểu câu chat, và rẻ hơn nhiều.
+house_bands:
+  # Đường v6 (T116, handoff v6 tổng hợp, Haan 04/10/2026): «LLM xếp dải, chương trình tính kích thước». Mô hình chỉ
+  # quyết tổ chức (dải, thứ tự, ai chạm ai); bộ giải `ai/bands/solve.ts` tính mọi kích thước, ép thang tầng trên đúng
+  # tầng 1, chọn cửa — nên luật bộ giải bảo đảm (lát kín, không chồng, chữ nhật, chong chóng, thang trùng tầng, vách
+  # cửa, bội số 100) KHÔNG gửi mô hình. Cùng `knowledge`, `brief` với v5; thêm `<patterns>` của đúng loại nhà.
+  system: |
+    You are a senior Vietnamese residential architect. Lay out the house as BANDS: each storey is
+    a list of bands from the street inward; each band is a list of cells from left to right as
+    seen from the street. A program turns your bands into exact dimensions (it sizes every band
+    and cell to meet the minimum areas, aligns the stair on every storey, and places the doors),
+    then checks the plan. So you decide the organisation, not the numbers: which rooms share a
+    band, their order, what touches what. Give a depth or width only when it matters — a corridor
+    width, a fixed stair; depth 0 / no width means "let the program size it". Every mm you write
+    is CLEAR (inside the walls), like every knowledge number; the program adds the walls.
+
+    A cell is a string: a room id; "." for an unbuilt yard on the footprint edge; ids joined by "/"
+    for a stack — rooms one behind the other inside that cell, street side first
+    ("wc_1/light_well_1"), for a column of small rooms beside a deep one. In a stack only the
+    FIRST room touches the band in front and only the LAST touches the band behind. A fixed clear
+    width follows ":" ("gt_1:900", "THANG:2500").
+
+    Write "THANG" where the stair is: on storey 1 you choose its band; on every upper storey put
+    "THANG" in the band at the same depth from the street and on the same side. Every room must
+    touch, along a shared wall, a room it can be entered from (knowledge.walk_through for this
+    house type: corridors gt_, the stair, living, dining, kitchen, and the garage when listed), or
+    its parent for en-suite rooms. A corridor cell keeps the same width in every band it runs
+    through; split a long corridor into gt_ cells, one per band.
+
+    <rules> must hold. <patterns> shows how this office organises this house type; adapt one.
+    <knowledge> numbers are final. knowledge.priorities are the client's priorities, first is
+    highest. Work in this order: parti → storey 1 bands → stair and wet stack → upper storeys band
+    by band → check each room has a way in and a window face. If wishes conflict or the program
+    does not fit, keep the rules, follow the priorities, and put each conflict as a question in
+    assumptions (≤5, highest impact first). Vietnamese, short: variant_label; parti one sentence;
+    rationale ≤2 sentences; design_notes ≤5 lines of ≤20 words. garage_room is "" without parking.
+    The program lays out the roof (stair head, water tank, AC units, drying yard, terrace) from
+    your top storey: do not return a "roof" level.
+
+  resample: |
+    Your previous answer could not be used. You are not shown it: produce FRESH bands for the whole
+    house that avoid these problems.
+
+    {avoid}
+
+  revise: |
+    REVISION. Your bands are below as <plan>. The program reports (storey, room, what is wrong):
+    <errors>
+    {avoid}
+    </errors>
+    Return ONLY the storeys you change, each with its FULL new list of bands (the delta schema);
+    storeys you leave out stay as they are; a storey a line says passed is locked. doors_prefer adds
+    preferred door pairs; cantilevers_upsert adds or moves balconies (depth 0 removes one); notes =
+    one short Vietnamese line per fix.
+    <plan>{intent}</plan>
+
+  rules:
+    - id: B_program
+      when: always
+      text: >-
+        Use exactly the rooms of knowledge.program (ids as given; level "" = your choice of storey) plus
+        ids with a prefix of knowledge.model_added (gt_ corridor, sanh porch, bc_ balcony; wc_, kho_,
+        hkt_ only when needed). Each program room on its level; the program sizes it to min_m2.
+      codes:
+        [program_brief, band_unknown_room, band_room_twice, layout_unknown_id, layout_bad_level]
+    - id: B_fit
+      when: always
+      text: >-
+        Bands of a storey must fit the footprint depth; cells of a band must fit its width. Few rooms
+        side by side in a narrow house: a room needs about its short side (knowledge.min_side_mm) across.
+      codes:
+        [
+          band_too_deep,
+          band_too_wide,
+          band_cell_too_narrow,
+          band_before_stair_too_deep,
+          band_stair_clash,
+        ]
+    - id: B_access
+      when: always
+      text: >-
+        Every room touches a walk-through room (knowledge.walk_through) or its parent along a wall at
+        least knowledge.door_wall_mm long. Only corridors, the stair landing, living, dining and kitchen
+        open off the stair. Nobody crosses a bedroom to reach another room.
+      codes:
+        [
+          room_without_door,
+          room_unreachable_on_level,
+          arrange_no_hub_wall,
+          door_from_stair,
+          room_through_private,
+          route_through_service,
+          level_no_entrance,
+        ]
+    - id: B_stair
+      when: storeys>=2
+      text: >-
+        One THANG on every storey, in the band at the same depth and side as storey 1; its band is
+        about knowledge.stair.rect_min_mm deep; not in line with the front door. The first step is at a
+        SHORT end of THANG: put a corridor, landing or the living/hall space across that end.
+      codes:
+        [
+          band_stair_missing,
+          stair_missing_on_level,
+          stair_not_at_anchor,
+          arrange_stair_too_short,
+          stair_entry_long_side,
+          stair_end_blocked,
+        ]
+    # Handoff sửa lỗi đợt 3 mục 3.1: luật «must» ở đây thì cổng bác; luật cổng chỉ trừ điểm mang `soft: true` (in sau dòng
+    # «Scored, not rejected»). Phòng ở không mặt thoáng: CHẶN khi gia chủ xếp «lấy sáng» trong hai ưu tiên đầu (Haan chọn).
+    - id: B_open
+      when: always
+      text: A balcony needs at least one side on a face marked open in knowledge.site.faces.
+      codes: [balcony_off_open_face]
+    - id: B_window
+      when: light_first
+      text: >-
+        Every bedroom, study and altar room has a window: on a face marked open in knowledge.site.faces,
+        onto the light well, a terrace or a balcony. A room in a middle band between blind walls has none.
+      codes: [habitable_no_window]
+    - id: B_window_soft
+      when: not_light_first
+      soft: true
+      text: >-
+        Bedrooms, study, altar and living rooms get a window on an open face, the light well, a terrace
+        or a balcony.
+      codes: [habitable_no_window]
+    # Haan chấm lượt a68c50bb: giếng trời chỉ ở tầng 1, tầng trên không có — «quá tệ về mặt logic». Haan chọn CHẶN.
+    - id: B_lightwell
+      when: has:light_well
+      text: >-
+        Place the light well on the lowest storey that has it; the program repeats it at the same
+        place on every storey above. There write "LW" in its column, or just the room beside it.
+      codes: [light_well_not_stacked]
+    # Haan chấm lượt a68c50bb (T116): bếp liền phòng ăn; giặt phơi gần sân thượng / ban công.
+    - id: B_kitchen
+      soft: true
+      when: has:dining
+      text: >-
+        The dining room shares a wall with the kitchen (same band side by side, or touching bands).
+      codes: [C13]
+    - id: B_laundry
+      soft: true
+      when: has:laundry
+      text: >-
+        The laundry touches a terrace, roof terrace or balcony on its storey, to hang the washing out.
+      codes: [D4]
+    - id: B_cantil
+      when: has_cantilever
+      text: >-
+        Cantilevered balconies only on faces in knowledge.balcony.cantilever_faces, depth ≤ its value,
+        from a room in the band on that face; list them in cantilevers, not in bands.
+      codes: [cantilever_bad, cantilever_dropped]
+    - id: B_balcony
+      when: has_balcony
+      text: >-
+        Every face in knowledge.balcony.required_faces gets its own balcony along that face; none on
+        faces outside required_faces and optional_faces; each balcony belongs to one room (bedroom
+        first, then laundry, then study).
+      codes:
+        [balcony_side_missing, balcony_side_corner, balcony_level_missing, balcony_forbidden_side]
+    # Nhà ống (Haan chọn CHẶN, đợt 3 mục 3.2): WC / giặt tầng trên chỉ trên gara, WC, kho, thang, hộp kỹ thuật, sân.
+    - id: B_wet
+      when: profile:ong
+      text: >-
+        No wc or laundry over a kitchen, altar room, living, dining or bedroom one storey down: put each
+        upper wc over the garage, a wc, a store, the stair or a shaft (the front bedroom's wc stays within
+        the garage depth).
+      codes: [wc_over_kitchen, wc_over_altar, wet_over_living]
+    - id: B_wet_other
+      when: not_profile:ong
+      text: No wc over a kitchen or altar room one storey down.
+      codes: [wc_over_kitchen, wc_over_altar]
+    - id: B_wet_soft
+      when: storeys>=2
+      soft: true
+      text: >-
+        Avoid a wc or laundry over a living, dining or bedroom below; keep wet rooms in the same band and
+        side on every storey.
+      codes: [wet_over_living, E2]
+    - id: B_parent
+      when: has_parent
+      text: A room with a parent in knowledge.program sits next to that parent (same band or a stack beside it).
+      codes: [ensuite_door_wrong]
+    # Handoff v6 sửa lỗi đợt 1, mục 3: hai luật lối vào chồng nhau ở nhà có gara là lối vào — mỗi ca chỉ một câu.
+    - id: B_entry
+      when: not_entry_via_garage
+      text: >-
+        entry_room is the storey-1 room with the front door, in the street band on the
+        knowledge.site.entries.main side: living, a hall or a porch, never kitchen or dining.
+      codes:
+        [entrance_wrong_side, entry_room_boxed_in, door_no_outside_edge, door_outside_on_boundary]
+    - id: B_entry_garage
+      when: entry_via_garage
+      text: >-
+        entry_room = garage_1 when the garage is on the front-door side: people walk in beside the car, then
+        into the living space in the next band.
+      codes:
+        [entrance_wrong_side, entry_room_boxed_in, door_no_outside_edge, door_outside_on_boundary]
+    - id: B_altar
+      when: has:altar_room
+      text: >-
+        Altar room on the storey the brief gives, opened from a corridor or hall; not next to a wc; no
+        door or passage on the wall behind the altar.
+      codes: [altar_beside_wc, altar_faces_wc, altar_door_behind]
+    - id: B_garage
+      when: has:garage
+      text: Garage in the street band on the car entry side; garage_room = its id.
+      codes: [vehicle_door_wrong_side]
+    - id: B_elder
+      when: has_for:ong_ba
+      soft: true
+      text: Elders' bedroom on its storey, quiet side, next to its en-suite wc.
+      codes: []
+    - id: B_open_pair
+      when: has_open_pairs
+      text: Only pairs in knowledge.open_pairs may be one open space (put them side by side in one band).
+      codes: []
+    - id: B_circ
+      when: always
+      soft: true
+      text: >-
+        Corridor cells (gt_) knowledge.corridor_min_mm wide (give w); no wider than needed.
+      codes: [C12, C4, C2]
+
+  # T3 (handoff v6 sửa lỗi đợt 1): chỉ giữ lời gia chủ và phần khảo sát chưa mã hoá — «Công trình», «Chỗ để xe…», «Thang,
+  # lối vào…» đã có trong knowledge (site, parking, stair, levels_mm).
+  brief_sections:
+    - Gia chủ và tín ngưỡng
+    - Kinh doanh tại nhà
+    - Nếp sinh hoạt
+    - Nhu cầu lưu trữ
+    - Khảo sát hiện trạng
+    - Lời gia chủ (nguyên văn)
+
+  hints:
+    band_unknown_room: '- "{rooms}" is not an id of knowledge.program and has no prefix of knowledge.model_added; use the program ids as given.'
+    band_room_twice: '- Storey {level}: "{rooms}" appears twice; each room appears once per storey.'
+    band_too_deep: '- Storey {level}: the bands need {short_mm} mm more depth than the footprint has; merge or shrink rooms, or move one to another storey.{bands_mm}'
+    band_too_wide: '- Storey {level}: the fixed cells of one band are wider than the house; use fewer or narrower fixed cells.'
+    band_cell_too_narrow: '- Storey {level}: "{rooms}" lacks {short_mm} mm of width; put fewer rooms side by side in that band, or stack them.'
+    # Lượt thật 03718834 (05/10/2026): câu cũ «need X mm more than storey 1 leaves before its stair» nói về tầng 1 với
+    # chính tầng 1 — mô hình không hiểu, trả lại y nguyên. Thang mọi tầng chung MỘT vị trí, nên câu nói về tổng chiều sâu.
+    band_before_stair_too_deep: '- Storey {level}: the bands in front of THANG + THANG + the bands behind it are {short_mm} mm deeper than the house (every storey shares one stair position). Make the bands shallower: move a room to another storey, or place rooms side by side instead of one behind another.{bands_mm}'
+    band_stair_clash: '- Every storey shares one stair position: {front_storey} has {front_mm} mm of bands in front of THANG, {back_storey} has THANG + {back_mm} mm of bands behind it — together {short_mm} mm deeper than the house. The storey out of line is {fix_storey}: {fix_how}, or move a room to another storey.{bands_mm}'
+    band_no_access: '- Storey {level}: "{room}" has no way in — it touches only {neighbours}, none it can be entered from. Put a gt_ corridor (or its parent room) against it. In a stack only the FIRST room touches the band in front and only the LAST touches the band behind.'
+    wet_over_living: '- Storey {level}: "{room}" sits over "{below}" one storey down; put this wc / laundry over the garage, a wc, a store, the stair or a shaft — e.g. keep the front bedroom''s wc within the garage depth.'
+    habitable_no_window: '- Storey {level}: "{room}" has no window — it touches no open face, light well, terrace or balcony; move it to the street or back face, or against the light well.'
+    band_level_missing: '- Storey {level} has no bands in your answer; give its full list of bands.'
+    stair_end_blocked: '- Storey {level}: the {end} end of THANG (where the flight from below arrives or the next flight starts) touches no corridor, landing or living space; put one across that end — every storey uses the same stair position and direction.'
+    light_well_not_stacked: '- The light well "{rooms}" of storey {level} is covered on storey {above}; repeat it at the same place and size on every storey above, open to the sky.'
+    band_stair_missing: '- Storey {level} has no THANG; put it in the band at the same depth and side as storey 1.'
+    # Câu nhắc của cổng `ai/tree/` cho đường dải — NGẮN, mô tả hiện trạng, không ra lệnh vẽ lại (handoff B5); thay câu
+    # của bản phác lưới (nói «hàng / cột ô») khi khối này tráo vào chỗ `house_layout`.
+    room_without_door: '- "{room}" has no way in: it touches only {neighbours}, none walk-through. Put it next to a gt_ corridor or the living/dining space, or beside its parent.'
+    room_unreachable_on_level: '- "{room}" cannot be reached from {from}; link it through a walk-through room.'
+    door_from_stair: '- "{room}" opens only onto the stair; put a gt_ corridor or landing cell between them.'
+    door_wall_too_short: '- "{a}" and "{b}" share too short a wall for a door ({cm} cm needed); make them share a longer wall.'
+    route_through_service: '- "{room}" is reached only through "{via}"; give it a way from the living space or a corridor.'
+    room_through_private: '- "{room}" is reached only through the private room "{via}"; add a corridor cell.'
+    arrange_room_below_brief_area: '- "{room}" got {area_m2} m², the client needs {min_m2} m²; give it more of its band (fewer rooms beside it) or move it.'
+    arrange_room_too_narrow: '- "{room}" is too narrow for its use: put fewer rooms side by side in its band, or, if it is a long thin strip down a deep band, stack it with another room in its cell (stack) instead of running the full band depth.'
+
+  # Mẫu dải theo loại nhà (handoff v6 mục 5) — chỉ chèn mẫu của loại đang thiết kế. Số trong ngoặc là mm gợi ý.
+  patterns:
+    # T4 (handoff v6 sửa lỗi đợt 1): nhà ống chèn MỘT mẫu — B khi đầu bài hỏi giếng trời (danh mục có `light_well`),
+    # không thì A (`bandPatterns`, `plan.ts`). Không ghi số bề rộng THANG: số ấy là knowledge.stair.rect_min_mm (P0-1 —
+    # mẫu từng ghi 2.400 / 2.700 trong khi rect_min 2.500). Số hành lang = mức thông thuỷ nhà ống (900), phép thử
+    # `ai-v6-prompt-consistency.test.ts` canh mọi số `gt (N)` / `hub (N)` ≥ knowledge.corridor_min_mm.
+    # T116 (Haan chấm lượt a68c50bb): mọi mẫu có sảnh / hành lang chạy NGANG đầu ngắn ô thang ở mọi tầng (bậc 1 và chỗ
+    # bước ra giáp lối đi — không đi vào thang từ cạnh dài), bếp liền phòng ăn, WC xếp chồng cạnh thang (không thành dải
+    # dài suốt dải), giếng trời giữ nguyên chỗ ở mọi tầng trên (light_well hay «.»), giặt phơi giáp sân thượng / ban công.
+    # Mẫu ong_b là bộ dải viết tay đã qua cổng (`ai-v6-pipeline.test.ts` NHAONG_BANDS).
+    # Handoff sửa lỗi đợt 2 (06/10/2026): bảng cạnh KTS (WC 1,1 · giếng trời 1,2 · ngủ 2,4 lọt lòng) — nhà 5 m với thang U
+    # 2,5 m không còn chỗ cho [hành lang | THANG | ô bên]: dải thang chỉ [THANG | một ô xếp chồng], hành lang chạy dọc ở
+    # các dải trước thang và một sảnh NGANG trước đầu ngắn ô thang. Mẫu ong_b là bộ dải viết tay đã qua cổng (65,2 điểm,
+    # `ai-v6-pipeline.test.ts` NHAONG_BANDS). Mẫu tầng trên của handoff ([giếng trời | THANG | hành lang]) không vừa 5 m.
+    ong_a: |
+      Tube house, frontage 4–5.5 m — stair at the BACK:
+        Storey 1: B1 [garage_1 (full width)] entry_room = garage_1; B2 [living_1]; B3 [kitchen | dining];
+                  B4 [THANG | stack(wc_1, store)] — THANG's front end opens onto the kitchen/dining band.
+        Upper:    B1 [gt (900) | stack(master bedroom, its wc)] (+ front cantilever balcony);
+                  B2 [gt (900) | bedroom]; B3 [gt (full)] — landing across THANG's front end;
+                  B4 [THANG | stack(wc, store)].
+      Why: a 900 mm corridor along one side reaches every room in front of the stair; the landing in front of THANG
+      is where the flight from below arrives and the next one starts.
+    ong_b: |
+      Tube house, frontage 4–5.5 m — stair at the BACK with a light well beside it:
+        Storey 1: B1 [garage_1 (full)] entry_room = garage_1; B2 [living_1 (full)];
+                  B3 [kitchen | dining] — kitchen and dining always side by side;
+                  B4 [THANG | stack(wc_1, light_well_1)] — THANG's front end opens onto the dining band.
+        Upper:    B1 [gt (900) | stack(front bedroom, its wc)]; B2 [gt (900) | back bedroom or study];
+                  B3 [gt (full)] — landing across THANG's front end;
+                  B4 [THANG | wc or store/LW] — LW = the storey-1 light well, kept in place by the program.
+        Top:      B1 [terrace (full)]; B2 [gt (900) | laundry] — the laundry touches the terrace; B3 [gt (900) | altar room];
+                  B4 [gt (900) | bedroom]; B5 [gt (full)] landing; B6 [THANG | wc/LW].
+      Why: a U stair (2500) in a 5 m house leaves one column beside it — no corridor fits there next to a wc or a
+      light well (knowledge.min_side_mm), so the corridor runs in front and the landing crosses THANG's front end.
+      Straight stair (knowledge.stair.under_mm given): on storey 1 a small wc can sit UNDER the stair's high end —
+      cell stack(THANG, wc_1), THANG first (the first step at the front); the wc is about under_mm long and opens
+      onto the room beside the stair, never onto THANG.
+    pho: |
+      Town house, frontage 6–10 m, stair bay in the middle:
+        Storey 1: B1 [garage_1 | sanh]; B2 [living_1 | THANG | kitchen_dining] — sanh in front of THANG's front end;
+                  B3 [bedroom | wc strip].
+        Upper:    B1 [bedroom | balcony]; B2 [hub (full width)] — landing across THANG's front end;
+                  B3 [bedroom | THANG | wc]; B4 [bedroom | bedroom].
+      Why: the stair bay splits the house into two wings; every door opens onto the hub at the stair head.
+    bt: |
+      Compact villa, two storeys, ≥ 10 m wide:
+        Storey 1: B1 [garage | sanh | living]; B2 [store | gt | THANG | dining+kitchen] — sanh / living in front of
+                  THANG's front end; B3 [elders' bedroom + wc | helper's room | wc_1].
+        Storey 2: B1 [master bedroom + balcony | altar (front) | guest room]; B2 [wc_master | hub (landing in front of
+                  THANG) | study]; B3 [child 1 | wc_2 | THANG | child 2] (+ laundry by the back balcony).
+    vuon: |
+      Garden house, one storey with a side corridor (rooms in a row along the blind side, corridor on
+      the open side, ≥ 1.1 m, windows onto a side strip ≥ 1.2 m), or three bays
+      [side bay | middle bay (living + altar) | side bay] behind a veranda ≥ 1.5 m deep.
+    kd: |
+      Shop on storey 1: B1 [shop (full width)]; B2 [shop_wc | shop store | THANG | residential lobby];
+      B3 [kitchen_dining …]. If the shop may be rented, the residential lobby has its own street door
+      and the stair is reached without crossing the shop.
+
+house_layout:
+  # Lời dẫn theo `prompt-mat-bang-v5.md` (Haan gửi 04/10/2026): mục 2 (lời dẫn hệ thống tĩnh), mục 3 (`rules` — catalog
+  # có `when`, chương trình lọc theo ca và đánh số lại, `ai/layout-prompt.ts`), mục 6 (vòng sửa trả delta). Gốc toạ
+  # độ là GÓC LÔ. Không viết «mặt thành thoáng khi lùi ≥ 2 m» của tài liệu: mặt thoáng còn cố định theo khảo sát.
+  system: |
+    You are a senior Vietnamese residential architect. From <brief> and <knowledge>, lay out
+    the house: every room as an axis-aligned rectangle in mm, the doors, the open pairs and the
+    cantilevered balconies. The program draws walls, windows and furniture and checks everything
+    you return.
+
+    Coordinates: mm, multiples of 100. Origin = the lot corner on the street, at the left as
+    seen from the street; x runs along the street to the right, y runs away from the street.
+    rect = [x, y, w, h], drawn on wall centrelines. Rooms on a storey tile its footprint with no
+    overlap and no gap (an unbuilt part is simply outside the footprint, along its edge). One
+    rectangle per room. Clear area ≈ (w − 200) × (h − 200): the program deducts the walls.
+
+    <rules> must all hold. <knowledge> numbers are final: never use remembered values.
+    <brief> holds the client's words; knowledge.priorities are the client's priorities, first
+    is highest.
+
+    Work in this order and write one short line per step in design_notes:
+    1 site: decide the footprint and what stays unbuilt (yards, garden), on which faces;
+    2 core: stair rectangle (same on every storey), wet rooms stacked;
+    3 circulation: a hub at the stair head; a corridor only if needed;
+    4 entries: porch, steps, car access;
+    5 rooms: public front, private deep or upstairs; size each room by the furniture it must
+      hold (knowledge.furniture, knowledge.clearances);
+    6 check every rule, every minimum area and short side, every room reachable from the
+      entry through doors; fix, then answer.
+    Follow knowledge.strategy when it is given.
+
+    If wishes conflict or the program does not fit, keep the rules, follow the client's
+    priorities, and put each conflict as a question in assumptions (≤5, highest impact first).
+    Vietnamese for variant_label, rationale (≤3 sentences), design_notes, assumptions.
+    garage_room is "" without parking.
+
+  resample: |
+    Your previous answer could not be used. You are not shown it: produce a FRESH layout for the whole
+    house that avoids these problems.
+
+    {avoid}
+
+  revise: |
+    REVISION. Your plan is below as <plan>. It broke these checks (rule number, room, measured vs
+    required):
+    <errors>
+    {avoid}
+    </errors>
+    Return ONLY the changes (the delta schema): rooms_upsert (full room objects you add or move),
+    rooms_delete (ids), doors_add, doors_remove, cantilevers_upsert (depth 0 removes one), notes (one
+    Vietnamese line per fix). Do not repeat unchanged rooms. Keep each storey tiling its footprint and
+    every balcony the brief asks for. A storey a line says passed stays as it is.
+    <plan>{intent}</plan>
+
+  # Mục 3 của tài liệu, viết theo dữ liệu thật của kho. `codes` = mã lỗi cổng thuộc luật — câu nhắc vòng sửa mang số
+  # luật. Thứ tự là thứ tự mô hình thấy.
+  rules:
+    - id: R_program
+      when: always
+      text: >-
+        Use exactly the rooms of knowledge.program (ids as given; level "" = your choice of storey) plus
+        ids you add with a prefix of knowledge.model_added (gt_ corridor, thang stair, sanh porch, bc_
+        balcony; wc_, kho_, hkt_ only when needed). Each program room on its level, clear area ≥ min_m2,
+        short side ≥ knowledge.min_side_mm of its type.
+      codes:
+        [
+          program_brief,
+          layout_unknown_id,
+          layout_bad_level,
+          arrange_room_below_brief_area,
+          sketch_room_missing,
+          arrange_room_too_narrow,
+        ]
+    - id: R_envelope
+      when: always
+      text: >-
+        Every rect inside knowledge.site.envelope_mm; the storey-1 footprint ≤ knowledge.site.max_footprint_m2
+        when given.
+      codes: [rect_outside_block]
+    - id: R_tile
+      when: always
+      text: >-
+        On each storey the rects never overlap and leave no hole inside the footprint; rooms side by side
+        share one wall line, so the storey splits into bands by straight wall-to-wall lines (no
+        pinwheel). An en-suite room, store or wc is a strip along one side of its room, never inside it.
+      codes:
+        [
+          rect_overlap,
+          rect_gap,
+          rect_too_small,
+          rect_shape,
+          sketch_not_rectangular,
+          sketch_room_crooked,
+          sketch_pinwheel,
+          sketch_pinwheel_at,
+          sketch_island_room,
+          arrange_no_parti,
+        ]
+    - id: R_open
+      when: always
+      text: >-
+        Habitable rooms on faces marked open in knowledge.site.faces; windows and balcony doors only on
+        open faces.
+      codes: [balcony_off_open_face]
+    - id: R_cantil
+      when: has_cantilever
+      text: >-
+        Cantilevered balconies only on faces in knowledge.balcony.cantilever_faces, depth ≤ its value,
+        from a room whose outer wall is on that face; they take no floor area: list them in
+        cantilevers, not in rooms. A balcony on a face without projection is a room rect inside the
+        footprint.
+      codes: [cantilever_bad, cantilever_dropped]
+    - id: R_balcony
+      when: has_balcony
+      text: >-
+        Every face in knowledge.balcony.required_faces gets its own balcony running along that face; no
+        balcony on faces outside required_faces and optional_faces. Each balcony belongs to one room —
+        bedroom first, then laundry, then study — at most one per room, along that room's outer wall,
+        not longer than it, never wrapping a corner.
+      codes:
+        [balcony_side_missing, balcony_side_corner, balcony_level_missing, balcony_forbidden_side]
+    - id: R_stair
+      when: storeys>=2
+      text: >-
+        One stair rect ≥ knowledge.stair.rect_min_mm, same x/y on every storey; not in line with the
+        front door.
+      codes:
+        [
+          arrange_anchor_conflict,
+          stair_cells,
+          sketch_core_overlap,
+          arrange_stair_too_short,
+          stair_not_aligned,
+        ]
+    - id: R_wet
+      when: storeys>=2
+      text: >-
+        No wc over a kitchen or altar room one storey down; no wc or laundry over a living, dining or
+        bedroom below; stack wet rooms.
+      codes: [wc_over_kitchen, wc_over_altar, wet_over_living]
+    - id: R_parent
+      when: has_parent
+      text: A room with a parent in knowledge.program opens only from that parent.
+      codes: [ensuite_door_wrong]
+    - id: R_doors
+      when: always
+      text: >-
+        Every room has a door (a pair in doors) or an open pair to a corridor, the stair hub, living,
+        dining or kitchen, or to its parent; the two rooms of a door share at least
+        knowledge.door_wall_mm of straight wall. Only corridors, living/dining[[terrace|, the roof terrace]][[elevator|, the elevator]] open off
+        the stair. Nobody crosses the garage or porch, or steps outside, to reach a wc, the kitchen or
+        the stair.
+      codes:
+        [
+          sketch_room_no_access,
+          sketch_stair_isolated,
+          sketch_stair_only,
+          room_without_door,
+          room_through_private,
+          room_unreachable_on_level,
+          arrange_unreachable,
+          arrange_no_hub_wall,
+          door_from_stair,
+          route_through_service,
+        ]
+    - id: R_entry
+      when: always
+      text: >-
+        entry_room is the storey-1 room with the front door, on the knowledge.site.entries.main side:
+        living or a hall reached from the porch, never kitchen or dining.
+      codes:
+        [
+          entrance_wrong_side,
+          entry_room_boxed_in,
+          door_no_outside_edge,
+          door_outside_on_boundary,
+          arrange_entrance_side,
+        ]
+    - id: R_entry_garage
+      when: entry_via_garage
+      text: >-
+        Town house with the garage on the front-door side: the garage may be the entry_room — people walk in
+        beside the car through a door next to the garage door, then straight into the living space behind
+        it. Prefer this to putting the living room in front of the garage; never make the car pass through a
+        room.
+      codes: []
+    - id: R_altar
+      when: has:altar_room
+      text: >-
+        Altar room on the storey and facing the brief gives, opened from a corridor or hall; no shared
+        wall with a wc, no wc door facing it.
+      codes: [altar_beside_wc, altar_faces_wc, altar_door_back]
+    - id: R_kitchen
+      when: has:kitchen
+      text: >-
+        Kitchen on an open face with a window; kitchen and wcs in one service zone but never sharing a
+        wall, doors not facing.
+      codes: []
+    - id: R_garage
+      when: has:garage
+      text: >-
+        Garage on the car entry side (knowledge.site.entries.car), area ≥ its min_m2; garage_room = its
+        id; a garage → store → kitchen/hall service route is preferred.
+      codes: [vehicle_door_wrong_side]
+    - id: R_elder
+      when: has_for:ong_ba
+      text: Elders' bedroom on its storey, quiet side, by its en-suite wc.
+      codes: []
+    - id: R_open_pair
+      when: has_open_pairs
+      text: Only pairs in knowledge.open_pairs may be one open space (open).
+      codes: []
+    - id: R_lift
+      when: has:elevator
+      text: >-
+        The elevator rect is the same on every storey, beside the stair, opening onto the same corridor.
+      codes:
+        [
+          elevator_missing,
+          elevator_too_small,
+          elevator_too_narrow,
+          elevator_oversized,
+          elevator_not_aligned,
+          elevator_not_beside_stair,
+        ]
+    - id: R_roof
+      when: has_roof
+      text: >-
+        Lay out the roof (level "roof"): the program puts the stair head over the stair with its door to
+        the terrace. Place every roof id of knowledge.program inside the top storey's rooms (not over its
+        balconies): water tank and solar over the wet stack, AC units away from the stair-head door,
+        drying on the sunny open side; the rest is flat roof.
+      codes: []
+    - id: R_circ
+      when: always
+      text: >-
+        Corridors (gt_) at least knowledge.corridor_min_mm wide and no wider than needed; a turn is a
+        second rect meeting the first along its full width; circulation within
+        knowledge.circulation_share of each storey when given.
+      codes: [C12, C4, C2]
+
+  # Mục của văn xuôi đầu bài giữ trong `<brief>` — phần còn lại đã thành `<knowledge>` (tài liệu mục 4: «brief rút gọn còn
+  # lời gia chủ và các mong muốn chưa mã hoá»).
+  brief_sections:
+    - Công trình
+    - Gia chủ và tín ngưỡng
+    - Kinh doanh tại nhà
+    - Nếp sinh hoạt
+    - Nhu cầu lưu trữ
+    - Chỗ để xe, khối nhà và sân
+    - Thang, lối vào và cao độ nền
+    - Khảo sát hiện trạng
+    - Lời gia chủ (nguyên văn)
+
+  hints:
+    layout_unknown_id: '- "{room}" is neither an id of knowledge.program nor an id with a prefix of knowledge.model_added ({prefixes}); use the program ids as given.'
+    layout_bad_level: '- "{room}" has level "{level}", which the house does not have; use "1", "2"… or "roof".'
+    cantilever_bad: '- Cantilevered balcony "{room}" from "{from}" on the {face} face could not be built: {why}'
+    cantilever_dropped: '- Cantilevered balcony "{room}" could not be attached: "{from}" does not keep its outer wall on the {face} face in the plan. Put that room against the {face} edge, or hang the balcony from a room that is there.'
+    rect_shape: '- Room "{room}" has no usable rect: give it exactly [x, y, width, depth] in mm, width and depth above 0.'
+    rect_outside_block: '- Room "{room}" at {rect} runs {out_mm} mm outside knowledge.site.envelope_mm {block}; keep every rect inside it — cantilevered balconies go in cantilevers.'
+    rect_overlap: '- "{a}" {rect_a} and "{b}" {rect_b} overlap by {area_m2} m²; move the wall between them so they only touch.'
+    rect_gap: '- The area {rect} belongs to no room (a hole inside the storey, next to {rooms}); give it to a neighbour or make a corridor of it.'
+    rect_too_small: '- Room "{room}" at {rect} is too thin to draw; make both sides at least 600 mm.'
+    arrange_zone_overfull: '- Too many rooms were crowded in the {zone} part of the block ({rooms}); spread them over the storey.'
+    arrange_no_hub_wall: '- Room "{room}" ({zone} part) ended up touching no corridor or shared room it may open off (it touched: {hubs}); place it against one and give it a `door` relationship with it.'
+    arrange_room_below_brief_area: '- Room "{room}" came out at {area_m2} m² but the client requires at least {min_m2} m²; make its rect bigger.'
+    arrange_room_below_brief_area_tight: '- Room "{room}" came out at {area_m2} m² but the client requires at least {min_m2} m²; its rect needs about {need_m2} m², and no single neighbour ({tight}) can give that much without dropping below its own minimum — the stair, lift and corridors give none. Rearrange the bands of this storey so the area comes from the rooms with spare area: {spare}; rooms the client gave no minimum may also shrink. Keep the stair and lift where they are.'
+    arrange_room_below_brief_area_cells: '- Room "{room}" came out at {area_m2} m² but the client requires at least {min_m2} m²; its rect needs about {need_m2} m² — take it from a neighbour that has spare area.'
+    arrange_anchor_conflict: '- The stair "{room}" must sit exactly over the stair below; give it the same rect as the storey below.'
+    arrange_no_parti: '- No arrangement could be built from this storey; lay its rects out in clear bands of rooms.'
+    sketch_room_missing: '- This storey leaves out {rooms}; give every room of the storey a rect.'
+    sketch_not_rectangular: '- {rooms} overlap other rooms so they are no longer one rectangle; make the rects only touch.'
+    sketch_room_crooked: '- {rooms} overlap other rooms so they are no longer one rectangle; make the rects only touch.'
+    sketch_pinwheel: '- This storey is a pinwheel with no wall-to-wall dividing line; lay it out as bands of rooms.'
+    sketch_pinwheel_at: '- This storey has no wall-to-wall dividing line in {area}: the nearest line, {line}, is cut by {rooms}. Make each of those rooms stay on one side of that line (a corridor is one straight band, not a T), so the area splits into bands.'
+    sketch_rooms_too_small: '- This storey puts too many rooms side by side in one band; spread them over more bands.'
+    sketch_island_room: '- {rooms} sit completely inside another room, so they have no way out; place them touching a corridor or an outside wall.'
+    sketch_stair_isolated: '- The stair "{stair}" touches no corridor or shared room — it only touches {touching}, so nobody can step off it on this storey. Put the corridor (or the living space) against the stair along at least {door_mm} mm. A lift beside the stair opens onto that same corridor; it never sits between the stair and the corridor.{also}'
+    sketch_replaced: '- Your layout of storey {level} failed the checks below, so the program partitioned that storey itself and moved rooms away from where you placed them — the problems after these lines may come from that. Fix storey {level} first so the program can keep your layout.'
+    sketch_below_replaced: '- Your layout of storey {level} failed the checks below, so the program partitioned that storey itself and fitted storey {above} to that partition, not to your layout. Fix storey {level} too.'
+    sketch_core_overlap: '- "{core}" must sit exactly at {rect}, where the one on the storey below was built; {rooms} is placed there and vanishes — move it off, keeping its size.'
+    stair_cells: '- "{core}" is fixed at {rect}, where the stair of the storey below was built: give it exactly that rect, and lay the corridor along it, so every room is reached without crossing the stair.'
+    sketch_stair_only: '- {rooms} can only be entered from the stair; only corridors, the living/dining space, the roof terrace and the elevator open off the stair — give each at least {door_mm} mm of wall on a corridor or shared room.'
+    sketch_room_no_access: '- {rooms} have no way in. {detail} Each needs at least {door_mm} mm of straight shared wall with a corridor or shared room that leads to the stair (see Access), and a `door` relationship with it; run the corridor to it, or move the room onto the corridor. Keep the way in of: {keep}.{also}'
+    door_outside_on_boundary: '- "{room}" needs a door to the outside but only touches a neighbour''s side; place it touching the street edge (y = 0) or another open side, with no other room between it and that side.'
+    balcony_side_corner: '- The only balcony on the {side} side, "{room}", is a {along_mm} × {across_mm} mm block in the corner; the plan will not count it for the {side} side. Run a balcony along the {side} edge, its long side on that edge.'
+    elevator_missing: '- Storey {level} has no elevator shaft; give it the same elevator rect on every storey, stacked exactly over the one below.'
+    elevator_oversized: '- The elevator shaft "{room}" on storey {level} came out {short_cm} × {long_cm} cm, a strip; the client''s shaft is {width_m} × {depth_m} m — give it one compact rect of the `min_rooms` size for `elevator`, on every storey.'
+    elevator_not_aligned: '- The elevator shaft "{room}" on storey {level} is not stacked over the one on storey {below}; give it exactly the same rect.'
+    elevator_not_beside_stair: '- The client wants the lift next to the stair (one core), but on storey {level} "{room}" shares no wall with "{stair}"; place the lift rect against the stair rect, on every storey.'
+  score_hints:
+    A1: '- Rooms are far from their target areas ({rooms}); size each rect to the clear area the room needs.'
+    A5: '- {rooms} are below the usual minimum area for their type; make their rects bigger.'
+    A6: '- {rooms} are above the usual maximum area for their type; make their rects smaller.'
+    C12: '- Corridor {rooms} is much wider than a corridor needs; make it `knowledge.corridor_min_mm` wide and give the rest to the rooms beside it.'
+
 plan_edit:
   system: |
     You edit an existing house floor plan for a Vietnamese architect. <plan> lists every storey:

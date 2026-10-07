@@ -16,7 +16,7 @@ import { fileURLToPath, URL } from 'node:url';
 import type { AiFloorPlan, AiSpaceProgram } from '@nvg/shared/design';
 import { describe, expect, it } from 'vitest';
 import { parseAreaNorms } from '../kb/space-norms';
-import { parsePlanQuality } from '../ai/plan-quality';
+import { criterionFor, parsePlanQuality } from '../ai/plan-quality';
 import {
   groupsBelowFloor,
   scoreForArtifact,
@@ -109,9 +109,15 @@ describe('hình dạng kết quả', () => {
     // T105 thêm C11 (gara vào phòng khách) vào nhóm C và D2 (phòng ngủ tối) vào nhóm D — nhà phố không chấm D2,
     // nên nửa trọng số nhóm D không chấm được càng lớn.
     // T107 thêm D4 (giặt phơi có chỗ phơi) — nhà phố mẫu có `laundry_3` nên D4 chấm được, thêm 3 phần.
-    expect(result.scoredWeight).toBe(85.84);
-    // Nhóm C nay 13 phần (thêm C11), C5 = 30/13.
-    expect(of(result, 'C5').weight).toBeCloseTo(30 / 13, 6);
+    // T113 thêm C12 (hành lang rộng quá mức, nặng 1,5) vào nhóm C và D5 (ban công bố trí lệch, nặng 2) vào nhóm D —
+    // nhà phố mẫu không có hành lang dạng DẢI nên C12 không chấm, phần không chấm của nhóm C lớn thêm.
+    // T116 nâng D3 lên nặng 2,5 (ban công dài quay cạnh ngắn ra mặt thoáng thôi chặn, trừ điểm nặng): nhóm D 8,5 phần,
+    // nhà phố mẫu không chấm D3 nên phần không chấm của nhóm D lớn thêm.
+    // T116 (Haan chấm lượt a68c50bb) thêm C13 (phòng ăn liền bếp, nặng 2) vào nhóm C và nâng D4 (giặt phơi có chỗ phơi)
+    // lên nặng 2 — nhà phố mẫu không có phòng ăn riêng nên C13 không chấm, phần không chấm của nhóm C lớn thêm.
+    expect(result.scoredWeight).toBe(81.86);
+    // Nhóm C nay 16,5 phần (thêm C12 nặng 1,5, C13 nặng 2), C5 = 30/16,5.
+    expect(of(result, 'C5').weight).toBeCloseTo(30 / 16.5, 6);
     expect(of(result, 'C5').score).toBeNull();
     expect(of(result, 'E4').weight).toBeCloseTo(10 / 3.5, 2);
     expect(of(result, 'C1').weight).toBeCloseTo(2 * of(result, 'C2').weight, 6);
@@ -135,7 +141,9 @@ describe('hình dạng kết quả', () => {
     // T96 thêm C9, C10, E5 — cả ba cũng là suy luận nghề (n = 0).
     // T105 thêm C11 — suy luận nghề (n = 0); D2 không chấm ở nhà phố.
     // T107 thêm D4 — suy luận nghề (n = 0), 15 / 5 phần nhóm D = 3.
-    expect(result.suyLuanWeight).toBeCloseTo(34.8, 2);
+    // T113 thêm D5 (n = 0) — nhà phố mẫu có ban công nên D5 chấm được; C12 không chấm (không hành lang dạng dải).
+    // T116: D4 nặng 2 (phần nhóm D của nó tăng), C13 không chấm ở nhà phố mẫu (phần các tiêu chí nhóm C khác giảm).
+    expect(result.suyLuanWeight).toBeCloseTo(34.69, 2);
     const guessed = result.criteria.filter((entry) => entry.n === 0 && entry.score !== null);
     expect(guessed.map((entry) => entry.code)).toEqual([
       'A1',
@@ -148,6 +156,7 @@ describe('hình dạng kết quả', () => {
       'C11',
       'C10',
       'D4',
+      'D5',
       'E5',
     ]);
   });
@@ -536,6 +545,18 @@ describe('tiêu chí T96 — cửa chính đón vào đâu, hành lang phục v�
     );
   });
 
+  it('sàn riêng từng nhóm đè sàn chung (handoff đợt 3 mục 3.4: D ≥ 60 %, E theo sàn chung 40 %)', () => {
+    const groups = {
+      groups: [
+        { code: 'D', points: 5.5, scoredWeight: 10 },
+        { code: 'E', points: 4.5, scoredWeight: 10 },
+      ],
+    };
+    expect(groupsBelowFloor(groups, 40)).toEqual([]);
+    expect(groupsBelowFloor(groups, 40, { D: 60 })).toEqual(['D']);
+    expect(groupsBelowFloor(groups, null, { E: 50 })).toEqual(['E']);
+  });
+
   it('trọng số trong nhóm phải dương — 0 là «không chấm», việc của enforced_by_gate', () => {
     const text = read('../../../../kb/plan_quality.yaml').replace(
       /- code: C9\n {4}group: C/,
@@ -635,5 +656,22 @@ describe('tiêu chí T105 — phòng ngủ tối hẳn (D2), gara vào phòng kh
     expect(c11.value).toBe(9);
     expect(c11.score).toBe(0);
     expect(c11.refs).toEqual(['garage_1']);
+  });
+});
+
+describe('thước chấm theo loại nhà (T116, handoff v6 mục 3.5 ⚑)', () => {
+  const spec = (code: string) => quality.criteria.find((c) => c.code === code)!;
+
+  it('nhà ống chồng lên nhà phố: khoá nhà ống khai thì thắng, khoá không khai giữ số nhà phố', () => {
+    expect(criterionFor(spec('C2'), 'nha_pho', 'ong')).toMatchObject({ low: 0.15, high: 0.3 });
+    expect(criterionFor(spec('C2'), 'nha_pho', 'ong').hardHigh).toBe(spec('C2').hardHigh);
+    expect(criterionFor(spec('C4'), 'nha_pho', 'ong')).toMatchObject({ pass: 0.9, zero: 0.8 });
+    expect(criterionFor(spec('D1'), 'nha_pho', 'ong').rooms).toBe('living_and_master');
+  });
+
+  it('trọng số E2 nặng lên ở nhà ống, loại khác giữ nguyên', () => {
+    expect(criterionFor(spec('E2'), 'nha_pho', 'ong').weight).toBe(2.5);
+    expect(criterionFor(spec('E2'), 'nha_pho', 'pho').weight).toBe(spec('E2').weight);
+    expect(criterionFor(spec('E2'), 'nha_pho').weight).toBe(spec('E2').weight);
   });
 });

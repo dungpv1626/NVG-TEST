@@ -48,6 +48,34 @@
           "note": "Nhà xưởng công nghiệp nằm ngoài phạm vi engine thiết kế (01-overview 1.1)."
         },
         {
+          "path": "house_profile_override",
+          "label": "Loại nhà (kiến trúc sư chọn)",
+          "control": "choice",
+          "weight": 0,
+          "optional": true,
+          "for": ["plan"],
+          "hint": "Để trống: chương trình tự suy từ khối xây — nhà ống khi khối xây rộng không quá 6 m, sâu từ 2 lần bề rộng và giáp nhà hoặc ranh ở ít nhất một mặt bên. Loại nhà quyết định luật và thông số (hành lang, vách đặt cửa, lối vào qua gara).",
+          "options": [
+            {
+              "value": "ong",
+              "label": "Áp luật nhà ống"
+            },
+            {
+              "value": "pho",
+              "label": "Áp luật nhà phố, liền kề"
+            },
+            {
+              "value": "bt",
+              "label": "Áp luật biệt thự"
+            },
+            {
+              "value": "vuon",
+              "label": "Áp luật nhà vườn"
+            }
+          ],
+          "note": "T116 (Haan 04/10/2026): thêm ô cho KTS ghi đè loại nhà. Trọng số 0 — trống là trả lời hợp lệ (tự suy). Kinh doanh không ghi đè ở đây: suy từ household.home_business.mode."
+        },
+        {
           "path": "locality",
           "label": "Địa phương",
           "control": "select",
@@ -626,11 +654,7 @@
           "for": ["plan", "perspective"],
           "optional": true,
           "hint": "Bộ giải KHÔNG tự áp khoảng lùi theo quy chuẩn — số điền ở đây là số duy nhất nó dùng. Để trống một mặt = xây sát ranh mặt đó.",
-          "when": {
-            "field": "building_type",
-            "in": ["biet_thu", "nha_vuon"]
-          },
-          "note": "Ẩn với nhà phố: theo mô hình của engine, nhà phố là trường hợp một cánh nhà với khoảng lùi hai bên bằng không (04-layer3-floorplan)."
+          "note": "Hiện với mọi loại hình (Haan 04/10/2026: «do chủ nhà quyết trong đầu bài»). Trước đó ẩn với nhà phố, nên nhà phố lùi sau theo quy hoạch không khai được và ban công đua bị cảnh báo đòi một ô không thấy."
         },
         {
           "path": "site.max_density",
@@ -644,11 +668,7 @@
           "max": 100,
           "value_scale": 0.01,
           "hint": "Phần trăm diện tích thửa được phép phủ kín — ghi 60, không ghi 0,6. Bộ giải KHÔNG tự áp mật độ theo quy chuẩn; để trống = không giới hạn mật độ.",
-          "note": "Hợp đồng lưu TỈ LỆ 0–1, biểu mẫu hỏi PHẦN TRĂM; `value_scale` lo phần quy đổi. Trước 07/09/2026 không có bước đó, và hệ quả là chưa đầu bài nào lưu nổi ô này: mọi giá trị người ta thật sự gõ đều lớn hơn 1 nên trượt kiểm tra lúc đúc artifact.",
-          "when": {
-            "field": "building_type",
-            "in": ["biet_thu", "nha_vuon"]
-          }
+          "note": "Hợp đồng lưu TỈ LỆ 0–1, biểu mẫu hỏi PHẦN TRĂM; `value_scale` lo phần quy đổi. Trước 07/09/2026 không có bước đó, và hệ quả là chưa đầu bài nào lưu nổi ô này: mọi giá trị người ta thật sự gõ đều lớn hơn 1 nên trượt kiểm tra lúc đúc artifact. Hiện với mọi loại hình (T116, Haan 04/10/2026: mở cho nhà phố, không bắt buộc — trống = không giới hạn ngoài khoảng lùi và vùng xây; có số thì theo chủ nhà khai)."
         },
         {
           "path": "site.legal_docs_available",

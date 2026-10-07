@@ -38,6 +38,7 @@ import type { RulePack } from '../../rules/rule-pack';
 import type { Rect } from '../draw/geometry';
 import type { DrawNote } from '../draw/notes';
 import { outlineFaces } from '../outline-faces';
+import type { HouseCantilever } from '../house';
 import type { BalconyDemand } from '../brief-demands';
 import type { PlanIssue } from '../plan-check';
 import { levelFromRooms } from '../plan-geometry';
@@ -78,6 +79,7 @@ import {
 } from './pack';
 import { emitNodes, leaves, pinLeaf, type Axis, type Placed, type Side } from './placed';
 import { trimCorridors } from './corridor-trim';
+import { widenRooms } from './room-widen';
 import { swapTowardOpenFace } from './open-face';
 import { skeletonCandidates } from './skeleton';
 import {
@@ -104,7 +106,13 @@ import {
   type MandatorySetup,
 } from '../mandatory';
 
-export { ARRANGE_ISSUE_CODES, INTENT_NOTE_CODES, isRevisable, REVISABLE_CODES } from './issues';
+export {
+  ARRANGE_ISSUE_CODES,
+  BAND_REVISABLE_CODES,
+  INTENT_NOTE_CODES,
+  isRevisable,
+  REVISABLE_CODES,
+} from './issues';
 export { effectiveZoneOfRect, ZONES, type Zone } from './grid';
 export type { LevelIntent } from './intent';
 
@@ -137,6 +145,13 @@ export interface ArrangeInput {
    * `evaluateHouseBest` — cửa của cả tầng suy lại theo hình học mới, nên cái lợi phải đo trên cả nhà.
    */
   trimCorridors?: boolean;
+  /**
+   * Nới phòng hẹp hơn mức nghề (T113, `arrange/room-widen.ts`) — cùng cách bật với `trimCorridors`: chỉ trong
+   * biến thể cả nhà của `evaluateHouseBest`, giữ khi qua cổng và điểm không thấp hơn.
+   */
+  widenRooms?: boolean;
+  /** Lấy ứng viên xếp hạng thứ n (0 = tốt nhất; quá số ứng viên thì lấy cái cuối) — bước quay lui tầng 1 (T113). */
+  rankSkip?: number;
   openFaces: readonly Face[];
   accessFaces: readonly Face[];
   entrances: { main: Face | null; vehicle: Face | null };
@@ -170,6 +185,8 @@ export interface ArrangeInput {
   precheckOnly?: boolean;
   /** Yêu cầu ban công của đầu bài (T65) — dùng cho phần đua ra ngoài ranh. */
   balcony?: BalconyDemand | null;
+  /** Ban công đua không chiếm sàn của tầng này (chế độ hình chữ nhật) — bộ dựng ô gắn ngoài khối. */
+  cantilevers?: readonly HouseCantilever[];
   zoneDefaults: ZoneDefaults;
   /** Loại phòng giao thông đứng có thang (`kb/brief_fidelity.yaml` mục `stair_types`). */
   stairTypes: readonly string[];
@@ -197,12 +214,22 @@ export interface ArrangeInput {
    * hoặc rỗng: xếp từ vùng như T43.
    */
   sketch?: readonly string[] | null;
+  /**
+   * Loại hình cho gara mang lối vào chính (`passage.entry_room_by_building_type`; nhà phố, Haan 04/10/2026):
+   * gara là `entry_room` thì có cả cửa cuốn lẫn cửa đi. Vắng / false = như trước — chỉ cửa cuốn.
+   */
+  garageEntry?: boolean;
+  /** Đường v6 (T116): cây chia ô bộ giải dải đã dựng cho tầng này — có thì bỏ qua bộ xếp, chỉ chạy cổng. */
+  bandTree?: AiPlanTree;
+  /** Đường dải: tầng không có `bandTree` thì báo `band_level_missing`, không chạy bộ xếp cũ. */
+  bandsOnly?: boolean;
   /** Chấm để xếp hạng ứng viên. Vắng thì xếp theo hàm phạt và độ khớp ý định. */
   scoring?: {
     quality: PlanQuality;
     rules: RulePack;
     roomGroups: Record<string, string[]>;
     buildingType: string;
+    houseProfile?: string | null;
   };
   /**
    * Luật bố trí BẮT BUỘC (T71): cổng loại ứng viên vi phạm, và WC chung thẳng trục xếp trước. Vắng =
@@ -282,6 +309,8 @@ const FACE_SIDE: Record<Face, Side> = { front: 'y0', back: 'y1', left: 'x0', rig
  * khi mô hình đã vẽ đè lên nó). Lớp gọi đưa vị trí vào câu nhắc của mọi lượt sửa tầng này.
  */
 export function arrangeLevel(input: ArrangeInput): ArrangeResult {
+  if (input.bandTree) return bandLevel(input, input.bandTree);
+  if (input.bandsOnly) return missingBandLevel(input);
   const result = retryWithBalconyPins(input, arrangeLevelCore(input));
   const cells = stairCellsOf(input);
   return cells ? { ...result, stairCells: cells } : result;
@@ -410,6 +439,54 @@ export function crookedSketchRooms(rows: readonly string[], known: ReadonlySet<s
     .filter(([, box]) => (box.r1 - box.r0 + 1) * (box.c1 - box.c0 + 1) !== box.n)
     .map(([id]) => id)
     .sort();
+}
+
+/**
+ * Đường v6 (T116): cây do BỘ GIẢI DẢI dựng (`ai/bands/`) — không bản phác, không khung xương, không vòng khung. Cây đi
+ * thẳng qua cùng cổng mọi ứng viên của bộ xếp đi qua (`gate`: cửa, lối đi, phòng hẹp, thang ngắn, sàn đầu bài, luật bắt
+ * buộc), nên một luật vẫn chỉ kiểm ở một chỗ cho cả ba đường.
+ */
+/**
+ * Đường dải mà tầng không có cây của bộ giải (mô hình không trả dải cho tầng ấy): báo lỗi, KHÔNG xếp bằng bộ xếp cũ theo
+ * «vùng mặc định» (handoff v6 sửa lỗi đợt 1, P0-3).
+ */
+function missingBandLevel(input: ArrangeInput): ArrangeResult {
+  const spaces = input.program.spaces.filter((space) => space.level === input.level);
+  const footprint = input.anchors?.footprint ?? input.buildableCm;
+  return {
+    layout: null,
+    intent: intentFor(input, input.intent, spaces, footprint, false),
+    summary: null,
+    issues: [
+      arrangeIssue(
+        'band_level_missing',
+        `Tầng ${input.level} không có dải nào trong câu trả lời — chương trình không tự xếp tầng này.`,
+        { level: input.level },
+      ),
+    ],
+    notes: [],
+    revisable: true,
+  };
+}
+
+function bandLevel(input: ArrangeInput, tree: AiPlanTree): ArrangeResult {
+  const spaces = input.program.spaces.filter((space) => space.level === input.level);
+  const footprint = input.anchors?.footprint ?? input.buildableCm;
+  const intent = intentFor(input, input.intent, spaces, footprint, false);
+  const layout = gate(input, tree, false);
+  return {
+    layout: layout.level ? layout : null,
+    intent,
+    // Một ứng viên duy nhất — cây của bộ giải dải; `arrangedLevel` cần tóm tắt này để nhận tầng.
+    summary: layout.level
+      ? { candidates: 1, passed: 1, intentFit: 1, parti: 'band', relaxed: 0 }
+      : null,
+    issues: layout.level ? [] : layout.issues,
+    // Ghi chú vùng của `intentFor` («Ý định tầng 2 bỏ sót … vùng mặc định») là của bộ xếp cũ — cây dải không dùng vùng,
+    // ghi ra chỉ làm người đọc tưởng dải bị bỏ (handoff v6 sửa lỗi đợt 1, P0-2).
+    notes: layout.notes,
+    revisable: true,
+  };
 }
 
 function arrangeLevelCore(input: ArrangeInput): ArrangeResult {
@@ -1275,9 +1352,12 @@ function intentFor(
 ): LevelIntent {
   const cols = footprint.x1 - footprint.x0 >= SPLIT_MIN_CM;
   const rows = footprint.y1 - footprint.y0 >= SPLIT_MIN_CM;
+  // Ban công đua (chế độ hình chữ nhật) không phải lá của cây chia — bộ dựng ô gắn nó ngoài khối. Để nó trong danh
+  // sách thì bước «ý định bỏ sót phòng» đặt bù nó vào trong nhà.
+  const jut = new Set((input.cantilevers ?? []).map((c) => c.id));
   return normaliseIntent(raw, {
     level: input.level,
-    spaces,
+    spaces: jut.size ? spaces.filter((space) => !jut.has(space.id)) : spaces,
     groups: input.groups,
     mergeAllowed: input.mergeAllowed,
     openForbidden: input.openForbidden ?? null,
@@ -1384,13 +1464,14 @@ function runRings(
       if (passed.length > 0) break;
     }
     if (passed.length === 0) continue;
-    return { winner: best(passed), ring, passed: passed.length, built };
+    return { winner: best(passed, input.rankSkip), ring, passed: passed.length, built };
   }
   return { winner: null, ring: LAST_RING, passed: 0, built };
 }
 
-function best(passed: Ranked[]): Ranked {
-  return [...passed].sort(compareRanked)[0]!;
+function best(passed: Ranked[], skip = 0): Ranked {
+  const sorted = [...passed].sort(compareRanked);
+  return sorted[Math.min(skip, sorted.length - 1)]!;
 }
 
 /**
@@ -1626,7 +1707,7 @@ function skeletonStage(
   );
   const passed = gateCandidates(input, intent, built, remember, failedGeometry);
   return {
-    winner: passed.length ? best(passed) : null,
+    winner: passed.length ? best(passed, input.rankSkip) : null,
     passed: passed.length,
     built: built.length,
   };
@@ -1799,7 +1880,7 @@ function sketchStage(
     },
     failedGeometry,
   );
-  const winner = passed.length ? best(passed) : null;
+  const winner = passed.length ? best(passed, input.rankSkip) : null;
   if (winner && stackedKeys.has(winner.candidate.key)) {
     notes.push({
       code: 'sketch_wet_stacked',
@@ -2156,6 +2237,29 @@ function emitCandidate(
       pinned = { ...pinned, placed: trimmed.placed };
     }
   }
+  // Phòng hẹp hơn mức nghề thì nới, phần thiếu lấy từ cụm kề không chứa ô cố định (T113).
+  if (input.widenRooms && input.scoring) {
+    const scoring = input.scoring;
+    const partition = Math.round(input.construction.walls.partition_m * 100);
+    const typesOf = (id: string) => frameEnv.leafById.get(id)?.types ?? [];
+    const widened = widenRooms(pinned.placed, {
+      minCentre: (id) => {
+        const limits = typesOf(id)
+          .map((type) => scoring.rules.minDimension(scoring.buildingType, type))
+          .filter((m): m is number => m !== null);
+        return limits.length ? Math.round(Math.max(...limits) * 100) + partition : null;
+      },
+      isFixed: (id) =>
+        stairIds.has(id) ||
+        typesOf(id).some((type) => type === 'elevator' || type === 'light_well'),
+    });
+    if (widened.widened.length) {
+      input.trace?.(
+        `  ⇔ ${frame.key}: ${widened.widened.map((t) => `${t.id} ${t.from}→${t.to}`).join(', ')}`,
+      );
+      pinned = { ...pinned, placed: widened.placed };
+    }
+  }
   const cells = leaves(pinned.placed);
   const unusable =
     unusableCell(input, cells, frameEnv) ??
@@ -2177,6 +2281,7 @@ function emitCandidate(
     doorHosts: input.groups.doorHosts ?? [],
     doorShared: frameEnv.doorShared,
     mainEntranceDeclared: input.entrances.main !== null,
+    garageEntry: input.garageEntry === true,
     stairUp: input.anchors?.stairUp ?? null,
     stairIds,
     circulation: input.groups.vertical,
@@ -3028,6 +3133,7 @@ function gate(input: ArrangeInput, tree: AiPlanTree, resize: boolean): LevelLayo
     anchors: input.anchors,
     entrances: input.entrances,
     balcony: input.balcony ?? null,
+    ...(input.cantilevers?.length ? { cantilevers: input.cantilevers } : {}),
     ...(resize && minSideM ? { minSideM } : {}),
   });
   if (!layout.level) return layout;
@@ -3294,6 +3400,7 @@ function rank(
         spaces: input.program.spaces.filter((space) => space.level === input.level),
       },
       buildingType: input.scoring.buildingType,
+      houseProfile: input.scoring.houseProfile ?? null,
       quality: input.scoring.quality,
       rules: input.scoring.rules,
       groups: input.scoring.roomGroups,
