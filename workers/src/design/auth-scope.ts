@@ -64,19 +64,23 @@ export function roomLabels(): Record<string, string> {
  * bản trong CSDL (CLAUDE.md 3.4).
  */
 export async function projectScope(db: UserDb, projectId: string): Promise<ProjectScope | null> {
-  const project = await db
-    .from('design_projects')
-    .select('id, company_id')
-    .eq('id', projectId)
-    .is('deleted_at', null)
-    .maybeSingle();
+  // `auth_user_id` không phụ thuộc dự án — hỏi song song, bớt một khứ hồi Supabase ở MỌI tuyến
+  // của module (08/10/2026: tuyến `state` đi chín lượt nối tiếp, 1,8 s trung vị trên bản demo).
+  const [project, actor] = await Promise.all([
+    db
+      .from('design_projects')
+      .select('id, company_id')
+      .eq('id', projectId)
+      .is('deleted_at', null)
+      .maybeSingle(),
+    db.rpc('auth_user_id'),
+  ]);
   if (project.error || !project.data) return null;
 
   const companyId = project.data.company_id as string;
   const company = await db.from('companies').select('tenant_id').eq('id', companyId).single();
   if (company.error) return null;
 
-  const actor = await db.rpc('auth_user_id');
   return {
     companyId,
     tenantId: company.data.tenant_id as string,

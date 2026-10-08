@@ -1,7 +1,8 @@
 /**
  * Danh sách hồ sơ AI Design dạng THẺ (07/10/2026, Haan: giao diện gọn, dễ dùng).
  *
- * Mỗi thẻ là một hồ sơ: ảnh thu nhỏ tầng 1 của phương án ĐANG HIỆU LỰC, trạng thái bốn bước (đầu
+ * Mỗi thẻ là một hồ sơ: ảnh bìa theo thứ tự phối cảnh → mặt bằng tầng 1 có nội thất → tờ mặt bằng
+ * tầng 1 của phương án ĐANG HIỆU LỰC (Haan, 08/10/2026), trạng thái bốn bước (đầu
  * bài · mặt bằng · mặt đứng · phối cảnh) bằng chữ, và các cột cố định của mẫu Danh sách — mã/tên,
  * người chịu trách nhiệm, trạng thái, thời hạn (AFD 4.2). Chế độ Bảng vẫn còn cho ai quen đọc dòng.
  *
@@ -16,7 +17,12 @@ import { formatDate, type StatusGroup } from '@nvg/shared';
 import { Input } from '@/components/ui/input';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
 import { CardGridSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
-import { useAiDesignState, useAiPlanSheet, type AiDesignState } from '@/hooks/use-ai-design';
+import {
+  useAiCoverImage,
+  useAiDesignState,
+  type AiCoverKind,
+  type AiDesignState,
+} from '@/hooks/use-ai-design';
 import { useCompanyLookup } from '@/hooks/use-companies';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useCompanyScope } from '@/lib/company-scope';
@@ -102,6 +108,12 @@ export function AiDesignCards({
   );
 }
 
+const COVER_ALT: Record<AiCoverKind, string> = {
+  perspective: 'Ảnh phối cảnh',
+  furnished_plan: 'Mặt bằng tầng 1 có nội thất',
+  plan: 'Mặt bằng tầng 1',
+};
+
 /** Thẻ chỉ tải dữ liệu AI khi đã lọt vào màn hình. */
 function useInView<T extends Element>(): [React.RefObject<T>, boolean] {
   const ref = useRef<T>(null);
@@ -133,8 +145,7 @@ function ProjectCard({
 }): React.ReactElement {
   const [ref, seen] = useInView<HTMLAnchorElement>();
   const state = useAiDesignState(row.id, seen);
-  const head = state.data?.planHeadArtifactId ?? state.data?.plans.at(-1)?.artifactId ?? null;
-  const sheet = useAiPlanSheet(row.id, seen ? head : null, 1);
+  const cover = useAiCoverImage(row.id, state.data, seen);
 
   return (
     <Link
@@ -143,18 +154,21 @@ function ProjectCard({
       className="group flex h-full flex-col overflow-hidden rounded-lg border border-tk-line bg-tk-panel transition-colors hover:border-tk-bl-line"
     >
       <div className="relative grid h-44 place-items-center overflow-hidden border-b border-tk-line bg-tk-card">
-        {sheet.url ? (
+        {cover.url && cover.kind ? (
           // `<img>` chứ không nhúng SVG: chữ trên tờ có phần do mô hình sinh (CLAUDE.md 8.3).
           <img
-            src={sheet.url}
-            alt={`Mặt bằng tầng 1 của ${row.title}`}
-            className="h-full w-full bg-white object-cover object-top"
+            src={cover.url}
+            alt={`${COVER_ALT[cover.kind]} của ${row.title}`}
+            className={cn(
+              'h-full w-full bg-white object-cover',
+              cover.kind === 'perspective' ? 'object-center' : 'object-top',
+            )}
           />
         ) : (
           <div className="text-center text-fg-subtle">
             <LayoutGrid className="mx-auto size-8 text-tk-t3" aria-hidden />
             <p className="mt-2 text-xs">
-              {state.isLoading || sheet.loading ? 'Đang tải…' : 'Chưa có mặt bằng'}
+              {state.isLoading || cover.loading ? 'Đang tải…' : 'Chưa có mặt bằng'}
             </p>
           </div>
         )}
