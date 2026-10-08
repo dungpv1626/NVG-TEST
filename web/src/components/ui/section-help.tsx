@@ -143,10 +143,13 @@ export function SectionHelp({
             // Nút có chữ nằm ở hàng nút góc phải màn hình máy tính; neo bảng bên trái thì nó tràn
             // khỏi mép phải cửa sổ. Trên điện thoại cùng nút đó lại nằm sát mép TRÁI, nên neo phải
             // làm bảng tràn khỏi mép trái (ảnh chụp hướng dẫn 30/09/2026) — ở đó bảng thành một
-            // tấm ngang màn hình, cách hai mép 16px, không phụ thuộc vị trí nút.
+            // tấm ngang màn hình, cách hai mép 16px, không phụ thuộc vị trí nút. Nút chỉ có biểu
+            // tượng cũng vậy: nằm cạnh tiêu đề bên phải thì bảng 320px neo trái đẩy cả trang cuộn
+            // ngang (bước Đầu bài / Khảo sát ở khổ 375px, 08/10/2026).
+            'fixed inset-x-4 top-20',
             triggerLabel
-              ? 'fixed inset-x-4 top-20 sm:absolute sm:inset-x-auto sm:right-0 sm:top-12 sm:w-80'
-              : 'absolute left-0 top-8 w-80 max-w-[calc(100vw-2rem)]',
+              ? 'sm:absolute sm:inset-x-auto sm:right-0 sm:top-12 sm:w-80'
+              : 'sm:absolute sm:inset-x-auto sm:left-0 sm:top-8 sm:w-80 sm:max-w-[calc(100vw-2rem)]',
             'border-border bg-surface p-3 shadow-overlay',
           )}
         >

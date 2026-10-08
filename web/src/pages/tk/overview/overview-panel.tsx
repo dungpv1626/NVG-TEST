@@ -37,7 +37,10 @@ export function OverviewPanel({
   const steps = useDesignStepStates(project);
 
   return (
-    <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
+    // `grid-cols-1` (= minmax(0,1fr)) chứ không để cột ngầm: cột ngầm là `auto`, giãn theo nội dung
+    // rộng nhất («Dự án gần đây» ~435px) nên trên điện thoại cả trang cuộn ngang, header dính đứng
+    // yên còn thân trượt sang (Haan chụp trên iPhone 08/10/2026).
+    <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
       <div className="grid min-w-0 gap-4">
         <ProgressTrack steps={steps} basePath={basePath} />
 
@@ -72,7 +75,7 @@ export function OverviewPanel({
 
       <ContextColumn project={project} />
 
-      <div className="xl:col-span-2">
+      <div className="min-w-0 xl:col-span-2">
         <RecentProjects currentId={project.id} />
       </div>
     </div>

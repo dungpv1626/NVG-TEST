@@ -212,10 +212,10 @@ function WorkspaceBody({
             )}
           >
             <div className={cn('min-w-0', compact && 'flex flex-wrap items-baseline gap-x-4')}>
-              <div className="flex flex-wrap items-end gap-x-5 gap-y-2">
+              <div className="flex max-w-full min-w-0 flex-wrap items-end gap-x-5 gap-y-2">
                 <h1
                   className={cn(
-                    'truncate font-semibold tracking-tight',
+                    'max-w-full min-w-0 truncate font-semibold tracking-tight',
                     compact ? 'text-lg' : 'text-page-title',
                   )}
                 >

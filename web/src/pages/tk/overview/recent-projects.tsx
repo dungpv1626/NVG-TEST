@@ -35,7 +35,7 @@ export function RecentProjects({ currentId }: { currentId: string }): React.Reac
           <NotYet>Chưa có dự án thiết kế nào khác.</NotYet>
         </p>
       ) : (
-        <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {others.map((p) => (
             <li key={p.id}>
               <RecentCard project={p} />
