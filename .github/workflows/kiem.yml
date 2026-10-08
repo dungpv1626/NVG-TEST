@@ -56,8 +56,13 @@ jobs:
       - name: Định dạng
         run: npx prettier --check .
 
+      # Luật có kiểu (`projectService`) nạp chương trình TypeScript của cả kho: đo 08/10/2026 cần
+      # ~3,1 GB, còn heap mặc định của Node trên máy CI ~2 GB → «JavaScript heap out of memory», mã
+      # 134 (tái hiện ở máy bằng --max-old-space-size=2048). Máy chạy CI có 7 GB.
       - name: Luật mã nguồn
         run: npm run lint
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
 
       - name: Kiểu
         run: npm run typecheck

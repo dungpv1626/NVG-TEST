@@ -28,7 +28,9 @@ export function SegmentedControl<T extends string>({
   return (
     <div
       className={cn(
-        'inline-flex gap-1.5 rounded-md border border-border bg-surface p-1',
+        // `max-w-full flex-wrap`: năm sáu lựa chọn không vừa bề ngang điện thoại thì xuống dòng,
+        // không đẩy cả trang cuộn ngang (08/10/2026, Thuê giàn giáo ở khổ 375px).
+        'inline-flex max-w-full flex-wrap gap-1.5 rounded-md border border-border bg-surface p-1',
         className,
       )}
     >
