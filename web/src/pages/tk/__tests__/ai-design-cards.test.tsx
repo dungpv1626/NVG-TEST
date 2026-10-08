@@ -24,8 +24,9 @@ vi.mock('@/hooks/use-ai-design', () => ({
           }
         : undefined,
   }),
-  useAiPlanSheet: (_p: string, artifactId: string | null) => ({
-    url: artifactId ? 'blob:sheet' : null,
+  useAiCoverImage: (_p: string, state: { planHeadArtifactId?: string } | undefined) => ({
+    url: state?.planHeadArtifactId ? 'blob:sheet' : null,
+    kind: state?.planHeadArtifactId ? 'plan' : null,
     loading: false,
   }),
 }));

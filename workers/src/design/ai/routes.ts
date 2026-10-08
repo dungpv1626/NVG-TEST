@@ -181,53 +181,56 @@ aiApp.get('/state/:projectId', async (c) => {
   if (denied) return c.json({ error: denied.error }, denied.status);
 
   const repo = new ArtifactRepository(c.env);
-  const [brief, program, facade, images, plans, facades, imageSets] = await Promise.all([
-    repo.head(projectId, DISCIPLINE, 'design_brief'),
-    repo.head(projectId, DISCIPLINE, 'ai_space_program'),
-    repo.head(projectId, DISCIPLINE, 'ai_facade_concept'),
-    repo.head(projectId, DISCIPLINE, 'ai_image_set'),
-    // Lấy dư rồi mới bỏ phần đã ẩn: xoá một phương án khỏi danh sách không được làm mất chỗ của
-    // những phương án cũ hơn còn dùng.
-    repo.listKind(projectId, DISCIPLINE, 'ai_floor_plan', 30),
-    // Mọi ý tưởng mặt đứng đã đúc (20/09/2026, Haan: «tạo bản vẽ mới thì không lưu lại bản cũ để so
-    // sánh → chưa tốt»). Artifact vốn đã bất biến nên bản cũ CHƯA BAO GIỜ mất — thiếu là ở đây: tuyến
-    // này chỉ trả mốc hiệu lực, nên màn hình không có cách nào mở lại bản trước.
-    repo.listKind(projectId, DISCIPLINE, 'ai_facade_concept', 30),
-    // Mọi bộ ảnh phối cảnh đã đúc (T67 Đợt C) — cùng lý do với dải mặt đứng ở trên: artifact vốn
-    // bất biến nên bộ cũ chưa bao giờ mất, thiếu là ở chỗ tuyến này chỉ trả mốc hiệu lực.
-    repo.listKind(projectId, DISCIPLINE, 'ai_image_set', 30),
-  ]);
+  // MỘT lượt song song cho mọi lần đọc không phụ thuộc nhau. Bản trước đọc ẩn / mốc / lượt chạy
+  // nối đuôi SAU lượt song song: CPU ~14 ms mà thời gian tường trung vị 1,8 s, p90 4,1 s trên bản
+  // demo (08/10/2026) — gần hết là chờ khứ hồi Supabase, và thẻ AI Design phải chờ tuyến này xong
+  // mới gọi được ảnh bìa.
+  const [brief, program, facade, images, plans, facades, imageSets, hiddenRows, planHead, runs] =
+    await Promise.all([
+      repo.head(projectId, DISCIPLINE, 'design_brief'),
+      repo.head(projectId, DISCIPLINE, 'ai_space_program'),
+      repo.head(projectId, DISCIPLINE, 'ai_facade_concept'),
+      repo.head(projectId, DISCIPLINE, 'ai_image_set'),
+      // Lấy dư rồi mới bỏ phần đã ẩn: xoá một phương án khỏi danh sách không được làm mất chỗ của
+      // những phương án cũ hơn còn dùng.
+      repo.listKind(projectId, DISCIPLINE, 'ai_floor_plan', 30),
+      // Mọi ý tưởng mặt đứng đã đúc (20/09/2026, Haan: «tạo bản vẽ mới thì không lưu lại bản cũ để so
+      // sánh → chưa tốt»). Artifact vốn đã bất biến nên bản cũ CHƯA BAO GIỜ mất — thiếu là ở đây: tuyến
+      // này chỉ trả mốc hiệu lực, nên màn hình không có cách nào mở lại bản trước.
+      repo.listKind(projectId, DISCIPLINE, 'ai_facade_concept', 30),
+      // Mọi bộ ảnh phối cảnh đã đúc (T67 Đợt C) — cùng lý do với dải mặt đứng ở trên: artifact vốn
+      // bất biến nên bộ cũ chưa bao giờ mất, thiếu là ở chỗ tuyến này chỉ trả mốc hiệu lực.
+      repo.listKind(projectId, DISCIPLINE, 'ai_image_set', 30),
+      // Phương án kỹ sư đã xoá khỏi danh sách (`design_artifact_hidden`). Đọc dưới phiên người
+      // gọi: cùng ba chiều quyền với mọi bảng của module.
+      db
+        .from('design_artifact_hidden')
+        .select('artifact_id')
+        .eq('project_id', projectId)
+        .eq('discipline', DISCIPLINE),
+      // Phương án mặt bằng ĐANG HIỆU LỰC. Đọc thẳng `design_head` thay vì `repo.head`: ở đây chỉ
+      // cần mã, còn `repo.head` kéo cả payload từ kho về để rồi bỏ đi.
+      db
+        .from('design_head')
+        .select('artifact_id')
+        .eq('project_id', projectId)
+        .eq('discipline', DISCIPLINE)
+        .eq('kind', 'ai_floor_plan')
+        .maybeSingle(),
+      // Lượt chạy MỚI NHẤT của từng giai đoạn. Đọc dưới phiên người gọi: bảng `design_ai_run` chỉ
+      // mở SELECT qua `rls_design_readable`, ghi thì chỉ Worker làm được.
+      db
+        .from('design_ai_run')
+        .select('id, stage, status, progress, result, error, created_at, updated_at')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false })
+        .limit(24),
+    ]);
 
-  // Phương án kỹ sư đã xoá khỏi danh sách (`design_artifact_hidden`). Đọc dưới phiên người gọi:
-  // cùng ba chiều quyền với mọi bảng của module.
-  const hiddenRows = await db
-    .from('design_artifact_hidden')
-    .select('artifact_id')
-    .eq('project_id', projectId)
-    .eq('discipline', DISCIPLINE);
   const hidden = new Set((hiddenRows.data ?? []).map((row) => row.artifact_id as string));
   const visiblePlans = plans.filter((p) => !hidden.has(p.id)).slice(0, 12);
   const visibleFacades = facades.filter((f) => !hidden.has(f.id)).slice(0, 12);
   const visibleImageSets = imageSets.filter((s) => !hidden.has(s.id)).slice(0, 12);
-
-  // Phương án mặt bằng ĐANG HIỆU LỰC. Đọc thẳng `design_head` thay vì `repo.head`: ở đây chỉ
-  // cần mã, còn `repo.head` kéo cả payload từ kho về để rồi bỏ đi.
-  const planHead = await db
-    .from('design_head')
-    .select('artifact_id')
-    .eq('project_id', projectId)
-    .eq('discipline', DISCIPLINE)
-    .eq('kind', 'ai_floor_plan')
-    .maybeSingle();
-
-  // Lượt chạy MỚI NHẤT của từng giai đoạn. Đọc dưới phiên người gọi: bảng `design_ai_run` chỉ
-  // mở SELECT qua `rls_design_readable`, ghi thì chỉ Worker làm được.
-  const runs = await db
-    .from('design_ai_run')
-    .select('id, stage, status, progress, result, error, created_at, updated_at')
-    .eq('project_id', projectId)
-    .order('created_at', { ascending: false })
-    .limit(24);
 
   const headId = (planHead.data?.artifact_id as string | undefined) ?? null;
 

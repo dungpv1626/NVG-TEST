@@ -30,7 +30,16 @@ export interface StampedImage {
 /** Quá hạn này mà không có sự kiện nào về thì trả ảnh gốc — không để lời hứa treo mãi. */
 const DECODE_TIMEOUT_MS = 1500;
 
-export async function stampWatermark(dataUrl: string, text: string): Promise<StampedImage> {
+/**
+ * `maxWidth`: thu nhỏ ảnh về bề ngang này TRƯỚC khi in dấu — cho ảnh bìa của thẻ. In dấu rồi mã hoá
+ * PNG một tấm phối cảnh cỡ gốc tốn hàng trăm mili giây và cho ra một chuỗi vài MB, chỉ để hiện
+ * trong khung cao 176px.
+ */
+export async function stampWatermark(
+  dataUrl: string,
+  text: string,
+  maxWidth?: number,
+): Promise<StampedImage> {
   return new Promise((resolve) => {
     const img = new Image();
     const guard = window.setTimeout(
@@ -40,14 +49,15 @@ export async function stampWatermark(dataUrl: string, text: string): Promise<Sta
     img.onload = () => {
       window.clearTimeout(guard);
       const canvas = document.createElement('canvas');
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
+      const ratio = maxWidth && img.naturalWidth > maxWidth ? maxWidth / img.naturalWidth : 1;
+      canvas.width = Math.round(img.naturalWidth * ratio);
+      canvas.height = Math.round(img.naturalHeight * ratio);
       const ctx = canvas.getContext('2d');
       if (!ctx) {
         resolve({ url: dataUrl, stamped: false });
         return;
       }
-      ctx.drawImage(img, 0, 0);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       const size = Math.max(14, Math.round(canvas.width / 48));
       ctx.font = `600 ${size}px "Be Vietnam Pro", Inter, Arial, sans-serif`;
       const pad = Math.round(size * 0.6);

@@ -10,11 +10,12 @@
  */
 
 import { useEffect, useState } from 'react';
-import type { AiFacadeBrief } from '@nvg/shared/design';
+import { AI_DISCLAIMERS, type AiFacadeBrief } from '@nvg/shared/design';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DesignApiError, designApi, designApiFile } from '@/lib/design-api';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { svgUrlToPngBase64 } from '@/lib/rasterise';
+import { stampWatermark } from '@/lib/watermark';
 import { supabase } from '@/lib/supabase';
 
 // ---------------------------------------------------------------------------
@@ -1280,6 +1281,150 @@ export function useAiImageSetView(
   }, [projectId, artifactId, view]);
 
   return state;
+}
+
+export type AiCoverKind = 'perspective' | 'furnished_plan' | 'plan';
+
+export interface AiCoverImage {
+  url: string | null;
+  kind: AiCoverKind | null;
+  loading: boolean;
+}
+
+/** Góc phối cảnh làm ảnh bìa: tấm gốc của bộ — luôn có khi bộ ảnh có (bốn góc kia dựng theo nó). */
+const AI_COVER_PERSPECTIVE_VIEW = 'front_day';
+/** Bề ngang ảnh bìa sau khi thu nhỏ — khung thẻ cao 176px, rộng tới ~420px; gấp đôi cho màn hình mật độ cao. */
+const AI_COVER_WIDTH = 840;
+/** Số ảnh bìa nhớ trong phiên — đủ cho một danh sách, không giữ mãi trong bộ nhớ. */
+const AI_COVER_CACHE_MAX = 48;
+
+/**
+ * Ảnh bìa đã dựng, nhớ TRONG BỘ NHỚ của phiên (không ghi xuống máy — CLAUDE.md 6.5 mục 3: dữ liệu
+ * theo quyền từng người không nằm lại trên máy sau đăng xuất). Khoá là mã artifact — băm nội dung,
+ * bất biến — nên một ảnh đã dựng không bao giờ cũ: quay lại danh sách là ảnh hiện ngay.
+ */
+const coverCache = new Map<string, { url: string; kind: AiCoverKind }>();
+
+function rememberCover(key: string, value: { url: string; kind: AiCoverKind }): void {
+  coverCache.set(key, value);
+  while (coverCache.size > AI_COVER_CACHE_MAX) {
+    const oldest = coverCache.keys().next().value as string;
+    const evicted = coverCache.get(oldest);
+    coverCache.delete(oldest);
+    if (evicted?.url.startsWith('blob:')) URL.revokeObjectURL(evicted.url);
+  }
+}
+
+/**
+ * Ảnh bìa của thẻ hồ sơ AI Design (Haan, 08/10/2026): ảnh phối cảnh → mặt bằng tầng 1 có nội thất
+ * → tờ mặt bằng tầng 1 (vector). Lấy tấm có thứ hạng cao nhất trong số tấm có.
+ *
+ * Ba tấm tải SONG SONG, không lần lượt: trên bản demo mỗi tuyến ảnh mất ~0,5–0,8 s trung vị, và
+ * «chưa vẽ» (404) cũng tốn đúng chừng ấy — hỏi lần lượt thì hồ sơ chỉ có mặt bằng thô phải chờ hai
+ * lượt hỏng rồi mới tới lượt mình. Ảnh hiện khi mọi tấm XẾP TRÊN nó đã trả lời, không chờ tấm dưới.
+ * Tấm nào hỏng (404 hay lỗi khác — đây là ảnh minh hoạ, không phải chỗ báo lỗi) thì coi như không có.
+ *
+ * Hai tấm đầu do mô hình ảnh vẽ nên PHẢI đóng dấu lên pixel như ở màn hình chi tiết; canvas không
+ * in được dấu thì bỏ tấm ấy, không hiện ảnh AI trần — thẻ không có chỗ cho dòng nhãn thay thế. Dấu
+ * in trên bản đã thu nhỏ: nhanh hơn và nhẹ hơn hẳn bản cỡ gốc.
+ */
+export function useAiCoverImage(
+  projectId: string,
+  state: AiDesignState | undefined,
+  enabled: boolean,
+): AiCoverImage {
+  const imageSet = state?.imageSetArtifactId ?? state?.imageSets?.[0]?.artifactId ?? null;
+  const plan = state?.planHeadArtifactId ?? state?.plans.at(-1)?.artifactId ?? null;
+  const cacheKey = `${projectId}|${imageSet ?? ''}|${plan ?? ''}`;
+  const [cover, setCover] = useState<AiCoverImage>(() => {
+    const hit = coverCache.get(cacheKey);
+    return hit ? { ...hit, loading: false } : { url: null, kind: null, loading: false };
+  });
+
+  useEffect(() => {
+    const hit = coverCache.get(cacheKey);
+    if (hit) {
+      setCover({ ...hit, loading: false });
+      return;
+    }
+    if (!enabled || !projectId || (!imageSet && !plan)) {
+      setCover({ url: null, kind: null, loading: false });
+      return;
+    }
+    let cancelled = false;
+    // Blob gốc chỉ sống tới khi đóng dấu xong (dấu cho ra data URL mới); blob của tờ vector thì
+    // chính là ảnh bìa — giữ lại nếu được chọn, thu hồi nếu không.
+    const blobs: string[] = [];
+    let kept: string | null = null;
+    setCover({ url: null, kind: null, loading: true });
+
+    const fetchBlob = async (path: string): Promise<string | null> => {
+      try {
+        const response = await designApiFile(path);
+        const url = URL.createObjectURL(await response.blob());
+        blobs.push(url);
+        return url;
+      } catch {
+        return null;
+      }
+    };
+    const stamped = async (url: string | null, text: string): Promise<string | null> => {
+      if (!url) return null;
+      const result = await stampWatermark(url, text, AI_COVER_WIDTH);
+      return result.stamped ? result.url : null;
+    };
+
+    const ref = plan ? encodeURIComponent(plan) : null;
+    const candidates: Array<{ kind: AiCoverKind; load: Promise<string | null> }> = [];
+    if (imageSet) {
+      candidates.push({
+        kind: 'perspective',
+        load: fetchBlob(
+          `/design/ai/perspective/${projectId}/view/${AI_COVER_PERSPECTIVE_VIEW}?artifactId=${encodeURIComponent(imageSet)}`,
+        ).then((url) => stamped(url, AI_DISCLAIMERS.aiImageSetStamp)),
+      });
+    }
+    if (ref) {
+      candidates.push(
+        {
+          kind: 'furnished_plan',
+          load: fetchBlob(
+            `/design/ai/plan/${projectId}/sheet-image?artifactId=${ref}&level=1`,
+          ).then((url) => stamped(url, AI_DISCLAIMERS.aiSheetImageStamp)),
+        },
+        {
+          kind: 'plan',
+          load: fetchBlob(`/design/ai/plan/${projectId}/sheet?artifactId=${ref}&level=1`),
+        },
+      );
+    }
+
+    void (async () => {
+      // Duyệt theo thứ hạng; `await` từng tấm nhưng cả ba đã chạy từ trước nên tổng thời gian là
+      // của tấm chậm nhất trong số tấm phải chờ, không phải tổng cộng.
+      for (const candidate of candidates) {
+        const url = await candidate.load;
+        if (cancelled) return;
+        if (url) {
+          kept = url;
+          rememberCover(cacheKey, { url, kind: candidate.kind });
+          setCover({ url, kind: candidate.kind, loading: false });
+          return;
+        }
+      }
+      setCover({ url: null, kind: null, loading: false });
+    })();
+
+    return () => {
+      cancelled = true;
+      // Đợi các tấm còn đang tải xong rồi mới thu hồi — tấm về muộn vẫn tạo blob.
+      void Promise.allSettled(candidates.map((c) => c.load)).then(() => {
+        for (const url of blobs) if (url !== kept) URL.revokeObjectURL(url);
+      });
+    };
+  }, [projectId, imageSet, plan, enabled, cacheKey]);
+
+  return cover;
 }
 
 /**
