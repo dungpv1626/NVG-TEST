@@ -352,7 +352,7 @@ function WorkspaceBody({
             >
               <div className="min-w-0">{sub.content}</div>
               {filledRelated.length > 0 && (
-                <aside className="grid gap-3" aria-label="Hồ sơ liên quan">
+                <aside className="grid min-w-0 gap-3" aria-label="Hồ sơ liên quan">
                   <RelatedGroups related={filledRelated} from={fromForRelated} />
                 </aside>
               )}

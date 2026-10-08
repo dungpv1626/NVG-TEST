@@ -11,6 +11,7 @@
 
 import { createConnection } from '../client';
 import { NVC_OPPORTUNITY } from './scenario-nvc';
+import { NVO_CUSTOMER } from './scenario-nvo';
 import { DEMO_CASH_FLOW_PERIOD } from './scenario-cash-flow';
 import { NS_DEMO_ASSETS, NS_DEMO_EMPLOYEES, NS_DEMO_POSITION } from './scenario-ns';
 import { DEMO_LOT_MATERIALS, NVS_FIRST_RENTAL_CUSTOMER, demoLotCode } from './scenario-nvs';
@@ -19,6 +20,7 @@ export const DEMO_CUSTOMERS = [
   'Công ty TNHH Cơ khí Chính xác Hưng Thịnh',
   NVS_FIRST_RENTAL_CUSTOMER,
   'Công ty TNHH Đầu tư Xây dựng Thành An',
+  NVO_CUSTOMER,
 ];
 export const DEMO_SUPPLIERS = [
   'Công ty CP Thép Nam Việt',
@@ -67,9 +69,16 @@ export async function removeDemoData(): Promise<Record<string, number>> {
         SELECT id FROM contracts
         WHERE (source_type = 'bidding_projects' AND source_id IN (SELECT id FROM g_bids))
            OR customer_id IN (SELECT id FROM g_customers)`;
+      // Hồ sơ thiết kế NVO (kịch bản nvo) — mọc từ cơ hội / khách hàng của trình nạp.
+      await tx`CREATE TEMP TABLE g_designs ON COMMIT DROP AS
+        SELECT id FROM design_projects WHERE opportunity_id IN (SELECT id FROM g_opps)
+           OR customer_id IN (SELECT id FROM g_customers)`;
       await tx`CREATE TEMP TABLE g_sites ON COMMIT DROP AS
         SELECT id FROM construction_sites WHERE contract_id IN (SELECT id FROM g_contracts)
-           OR bidding_project_id IN (SELECT id FROM g_bids)`;
+           OR bidding_project_id IN (SELECT id FROM g_bids)
+           OR design_project_id IN (SELECT id FROM g_designs)`;
+      await tx`CREATE TEMP TABLE g_rfis ON COMMIT DROP AS
+        SELECT id FROM rfis WHERE construction_site_id IN (SELECT id FROM g_sites)`;
       await tx`CREATE TEMP TABLE g_prs ON COMMIT DROP AS
         SELECT id FROM purchase_requests WHERE construction_site_id IN (SELECT id FROM g_sites)`;
       await tx`CREATE TEMP TABLE g_pos ON COMMIT DROP AS
@@ -87,7 +96,8 @@ export async function removeDemoData(): Promise<Record<string, number>> {
       await tx`CREATE TEMP TABLE g_rentals ON COMMIT DROP AS
         SELECT id FROM rental_agreements WHERE customer_id IN (SELECT id FROM g_customers)`;
       await tx`CREATE TEMP TABLE g_estimates ON COMMIT DROP AS
-        SELECT id FROM estimates WHERE bidding_project_id IN (SELECT id FROM g_bids)`;
+        SELECT id FROM estimates WHERE bidding_project_id IN (SELECT id FROM g_bids)
+           OR design_project_id IN (SELECT id FROM g_designs)`;
       await tx`CREATE TEMP TABLE g_warehouses ON COMMIT DROP AS
         SELECT id FROM warehouses WHERE code = ANY(${DEMO_WAREHOUSES})
            OR construction_site_id IN (SELECT id FROM g_sites)`;
@@ -100,7 +110,8 @@ export async function removeDemoData(): Promise<Record<string, number>> {
         UNION SELECT id FROM g_sites UNION SELECT id FROM g_prs UNION SELECT id FROM g_pos
         UNION SELECT id FROM g_pays UNION SELECT id FROM g_recv UNION SELECT id FROM g_rentals
         UNION SELECT id FROM g_estimates UNION SELECT id FROM g_accepts
-        UNION SELECT id FROM g_deliveries`;
+        UNION SELECT id FROM g_deliveries UNION SELECT id FROM g_designs
+        UNION SELECT id FROM g_rfis`;
 
       // --- Xoá, con trước cha --------------------------------------------------------------
       await del(
@@ -119,6 +130,13 @@ export async function removeDemoData(): Promise<Record<string, number>> {
       await del(
         'đề nghị chi',
         tx`DELETE FROM payment_requests WHERE id IN (SELECT id FROM g_pays)`,
+      );
+      // Biên bản thu hồi đã ký bất biến với UPDATE (0117): xoá công nợ đặt NULL `receivable_id` của
+      // nó — bị chặn. Gỡ biên bản thu hồi của hợp đồng thuê demo trước (DELETE không bị chặn).
+      await del(
+        'biên bản thu hồi',
+        tx`DELETE FROM rental_returns WHERE rental_agreement_id IN (SELECT id FROM g_rentals)
+            OR receivable_id IN (SELECT id FROM g_recv)`,
       );
       await del(
         'công nợ',
@@ -149,12 +167,46 @@ export async function removeDemoData(): Promise<Record<string, number>> {
         tx`DELETE FROM site_check_ins WHERE construction_site_id IN (SELECT id FROM g_sites)`,
       );
       await tx`SET LOCAL session_replication_role = origin`;
+      // Yêu cầu làm rõ khoá xoá công trình (ON DELETE RESTRICT, 0154).
+      await del(
+        'lịch sử thúc yêu cầu làm rõ',
+        tx`DELETE FROM request_reminders WHERE entity_type = 'rfis' AND entity_id IN (SELECT id FROM g_rfis)`,
+      );
+      await del('yêu cầu làm rõ', tx`DELETE FROM rfis WHERE id IN (SELECT id FROM g_rfis)`);
+      // Biên bản nghiệm thu đã ký bất biến với UPDATE (0117). Xoá công trình kéo theo xoá tổ đội, và
+      // khoá ngoại `subcontractor_id` ON DELETE SET NULL là một lượt UPDATE lên biên bản đã ký — bị
+      // chặn, cả lệnh gỡ quay lui. Xoá thẳng biên bản trước (DELETE không bị trigger ấy chặn).
+      await del(
+        'biên bản nghiệm thu',
+        tx`DELETE FROM acceptance_records WHERE id IN (SELECT id FROM g_accepts)`,
+      );
       await del(
         'công trình',
         tx`DELETE FROM construction_sites WHERE id IN (SELECT id FROM g_sites)`,
       );
       await del('hợp đồng', tx`DELETE FROM contracts WHERE id IN (SELECT id FROM g_contracts)`);
       await del('gói thầu', tx`DELETE FROM bidding_projects WHERE id IN (SELECT id FROM g_bids)`);
+      // Hồ sơ thiết kế kéo theo đầu bài, khảo sát, phiên bản, bộ môn, yêu cầu thay đổi, dự toán và
+      // artifact (CASCADE). `design_head` hạ trước: khoá tới artifact là RESTRICT.
+      await tx`DELETE FROM design_head WHERE project_id IN (SELECT id FROM g_designs)`;
+      await del(
+        'hồ sơ thiết kế',
+        tx`DELETE FROM design_projects WHERE id IN (SELECT id FROM g_designs)`,
+      );
+      await del(
+        'tài liệu bản vẽ',
+        tx`DELETE FROM documents WHERE related_entity_type = 'design_projects'
+            AND related_entity_id IN (SELECT id FROM g_designs)`,
+      );
+      // Dòng điều động chỉ huy trưởng sang NVO do kịch bản nvo thêm (không phải vai trò chính).
+      await del(
+        'điều động chỉ huy trưởng',
+        tx`DELETE FROM user_companies
+            WHERE NOT is_primary
+              AND user_id IN (SELECT id FROM users WHERE email = 'chihuytruong.nvc@nhavietgroup.test')
+              AND company_id IN (SELECT id FROM companies WHERE code = 'NVO')
+              AND role_id IN (SELECT id FROM roles WHERE code = 'CHT')`,
+      );
       await del('cơ hội', tx`DELETE FROM opportunities WHERE id IN (SELECT id FROM g_opps)`);
       await del(
         'sự kiện giàn giáo',

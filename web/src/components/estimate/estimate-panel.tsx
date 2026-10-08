@@ -57,11 +57,14 @@ export function EstimatePanel({
   companyId,
   companyCode,
   readOnly,
+  readOnlyReason,
 }: {
   parent: EstimateParent;
   companyId: string;
   companyCode: string;
   readOnly: boolean;
+  /** Vì sao chỉ xem, khi KHÔNG phải do vai trò — ví dụ hồ sơ thiết kế đã bàn giao (08/10/2026). */
+  readOnlyReason?: string;
 }) {
   const { profile } = useAuth();
   const { data: estimates } = useEstimates(parent);
@@ -118,7 +121,9 @@ export function EstimatePanel({
         message={
           // Xem chú thích cùng nội dung ở `boq-panel.tsx`.
           readOnly
-            ? 'Chưa có bản dự toán nào. Vai trò hiện tại chỉ xem, việc lập dự toán do Dự toán hoặc Thiết kế thực hiện.'
+            ? readOnlyReason
+              ? `Chưa có bản dự toán nào. ${readOnlyReason}`
+              : 'Chưa có bản dự toán nào. Vai trò hiện tại chỉ xem, việc lập dự toán do Dự toán hoặc Thiết kế thực hiện.'
             : 'Chưa có bản dự toán nào. Lập bản đầu tiên sau khi bóc tách xong khối lượng.'
         }
         action={

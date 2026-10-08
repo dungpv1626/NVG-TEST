@@ -247,7 +247,9 @@ export function RelatedGroups({
       {related.map((group) => (
         <div
           key={group.title}
-          className="rounded-lg border border-border bg-surface p-3 shadow-card"
+          // `min-w-0`: tên hồ sơ dài dùng `truncate` (không xuống dòng); thiếu nó thì ô lưới cột phải
+          // giãn theo chữ và cả trang có thanh cuộn ngang (08/10/2026, tên cơ hội NVO dài 70 ký tự).
+          className="min-w-0 rounded-lg border border-border bg-surface p-3 shadow-card"
         >
           <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-subtle">
             {group.title}
@@ -256,7 +258,7 @@ export function RelatedGroups({
             {group.records.map((r) => (
               <div key={r.label}>
                 <dt className="text-xs text-fg-subtle">{r.label}</dt>
-                <dd className="flex items-center gap-2">
+                <dd className="flex min-w-0 items-center gap-2">
                   {/* Mọi tham chiếu tới hồ sơ khác là liên kết bấm được,
                       không phải chữ tĩnh (Webapp Flow 5.2). `state.from` để trang đích hiện
                       breadcrumb đúng đường đi thực tế (đã tới từ ĐÂY), không phải mắt xích

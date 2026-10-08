@@ -22,7 +22,7 @@ export interface ActivityItem {
   /** Ai làm và lúc nào. Không rõ người thì bỏ vế đó, không ghi "Không rõ". */
   meta: string;
   at: string;
-  tone: 'brief' | 'version' | 'change';
+  tone: 'brief' | 'version' | 'change' | 'review' | 'rfi' | 'milestone';
 }
 
 export interface ActivityInput {
@@ -45,6 +45,26 @@ export interface ActivityInput {
     requester_name: string | null;
     requester: { full_name: string } | null;
   }[];
+  /** Góp ý / duyệt của khách và nội bộ trên bản vẽ (TK-03). Chỉ tab Lịch sử truyền vào. */
+  reviews?: {
+    id: string;
+    decisionLabel: string;
+    versionTitle: string;
+    reviewer: string | null;
+    reviewed_at: string;
+  }[];
+  /** Yêu cầu làm rõ của công trường: lúc gửi và lúc trả lời (TK-08, 0154). */
+  rfis?: {
+    id: string;
+    code: string;
+    title: string;
+    created_at: string;
+    requester: string | null;
+    answered_at: string | null;
+    answerer: string | null;
+  }[];
+  /** Mốc của chính hồ sơ: tạo, bàn giao. */
+  milestones?: { id: string; text: string; at: string }[];
 }
 
 function stamp(who: string | null, at: string, format: (v: string) => string): string {
@@ -84,6 +104,43 @@ export function recentActivity(
       meta: stamp(c.requester_name ?? c.requester?.full_name ?? null, c.requested_at, formatWhen),
       at: c.requested_at,
       tone: 'change',
+    });
+  }
+
+  for (const v of input.reviews ?? []) {
+    items.push({
+      id: `review-${v.id}`,
+      text: `${v.decisionLabel}: ${v.versionTitle}`,
+      meta: stamp(v.reviewer, v.reviewed_at, formatWhen),
+      at: v.reviewed_at,
+      tone: 'review',
+    });
+  }
+  for (const q of input.rfis ?? []) {
+    items.push({
+      id: `rfi-${q.id}`,
+      text: `Công trường gửi yêu cầu làm rõ ${q.code}: ${q.title}`,
+      meta: stamp(q.requester, q.created_at, formatWhen),
+      at: q.created_at,
+      tone: 'rfi',
+    });
+    if (q.answered_at) {
+      items.push({
+        id: `rfi-answer-${q.id}`,
+        text: `Trả lời yêu cầu làm rõ ${q.code}`,
+        meta: stamp(q.answerer, q.answered_at, formatWhen),
+        at: q.answered_at,
+        tone: 'rfi',
+      });
+    }
+  }
+  for (const m of input.milestones ?? []) {
+    items.push({
+      id: `milestone-${m.id}`,
+      text: m.text,
+      meta: formatWhen(m.at),
+      at: m.at,
+      tone: 'milestone',
     });
   }
 

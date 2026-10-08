@@ -23,10 +23,13 @@ export function BoqPanel({
   parent,
   companyId,
   readOnly,
+  readOnlyReason,
 }: {
   parent: EstimateParent;
   companyId: string;
   readOnly: boolean;
+  /** Vì sao chỉ xem, khi KHÔNG phải do vai trò — ví dụ hồ sơ thiết kế đã bàn giao (08/10/2026). */
+  readOnlyReason?: string;
 }) {
   const { data: items } = useBoqItems(parent);
   const createItem = useCreateBoqItem();
@@ -94,7 +97,9 @@ export function BoqPanel({
              * làm được và không hiểu vì sao.
              */
             readOnly
-              ? 'Chưa bóc tách hạng mục nào. Vai trò hiện tại chỉ xem, việc bóc tách do Dự toán hoặc Thiết kế thực hiện.'
+              ? readOnlyReason
+                ? `Chưa bóc tách hạng mục nào. ${readOnlyReason}`
+                : 'Chưa bóc tách hạng mục nào. Vai trò hiện tại chỉ xem, việc bóc tách do Dự toán hoặc Thiết kế thực hiện.'
               : 'Chưa bóc tách hạng mục nào. Nhập bảng khối lượng theo hồ sơ mời thầu và bản vẽ đang hiệu lực.'
           }
         />

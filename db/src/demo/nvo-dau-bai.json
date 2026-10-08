@@ -1,0 +1,327 @@
+{
+  "site": {
+    "shape": "chu_nhat",
+    "area_m2": 90,
+    "depth_m": 18,
+    "width_m": 5,
+    "adjacent": {
+      "back": "nha_hang_xom",
+      "left": "nha_hang_xom",
+      "front": "duong_lon",
+      "right": "nha_hang_xom"
+    },
+    "flood_risk": "khong",
+    "max_density": 0.9,
+    "orientation": "DN",
+    "access_sides": ["front"],
+    "land_level_m": 0.15,
+    "road_level_m": 0,
+    "road_width_m": 6,
+    "boundary_walls": {
+      "back": "rieng",
+      "left": "rieng",
+      "right": "rieng"
+    },
+    "cool_wind_sides": ["front"],
+    "harsh_sun_sides": ["front"],
+    "neighbour_floors": {
+      "back": 2,
+      "left": 4,
+      "right": 3
+    },
+    "existing_structure": "nha_cu_pha_do",
+    "main_entrance_side": "front",
+    "setback_required_m": {
+      "back": 1.5,
+      "left": 0,
+      "front": 0,
+      "right": 0
+    },
+    "legal_docs_available": true,
+    "vehicle_entrance_side": "front"
+  },
+  "style": "hien_dai",
+  "facade": {
+    "gate": {
+      "h_cm": null,
+      "type": null,
+      "colour": null,
+      "wanted": null,
+      "material": null
+    },
+    "roof": {
+      "type": "flat",
+      "colour": null,
+      "material": "btct_chong_tham",
+      "pitch_deg": null,
+      "parapet_cm": 110
+    },
+    "fence": {
+      "h_cm": null,
+      "type": null,
+      "colour": null,
+      "material": null
+    },
+    "notes": null,
+    "window": {
+      "glass": null,
+      "colour": null,
+      "material": null
+    },
+    "balcony": {
+      "h_cm": null,
+      "colour": null,
+      "railing": null,
+      "material": null
+    },
+    "palette": {
+      "accent": null,
+      "primary": null,
+      "secondary": null
+    },
+    "surfaces": {
+      "base": {
+        "colour": null,
+        "material": null
+      },
+      "body": {
+        "colour": null,
+        "material": null
+      },
+      "trim": {
+        "colour": null,
+        "material": null
+      },
+      "accent": {
+        "colour": null,
+        "material": null
+      }
+    },
+    "main_door": {
+      "h_cm": null,
+      "type": null,
+      "colour": null,
+      "material": null
+    },
+    "side_door": {
+      "h_cm": null,
+      "type": null,
+      "colour": null,
+      "material": null
+    },
+    "decorations": [],
+    "garage_door": {
+      "type": null,
+      "colour": null,
+      "material": null
+    },
+    "ground_raise_cm": null
+  },
+  "family": [
+    {
+      "role": "ong_ba",
+      "count": 1,
+      "floor": 2,
+      "needs": ["bedroom"],
+      "ensuite": true,
+      "floor_pref": null
+    },
+    {
+      "role": "vo_chong",
+      "count": 2,
+      "floor": 3,
+      "needs": ["balcony", "closet"],
+      "ensuite": true,
+      "floor_pref": null
+    },
+    {
+      "role": "con",
+      "count": 1,
+      "floor": 3,
+      "needs": ["bedroom", "study_area"],
+      "floor_pref": null
+    },
+    {
+      "role": "con",
+      "count": 1,
+      "floor": 4,
+      "needs": ["bedroom", "study_area"],
+      "floor_pref": null
+    }
+  ],
+  "floors": 4,
+  "future": {
+    "phasing": false,
+    "expansion": "khong"
+  },
+  "massing": {
+    "yards": ["san_sau"],
+    "service_core": false,
+    "yard_depth_m": {
+      "back": 1.5,
+      "left": 0,
+      "front": 0,
+      "right": 0
+    },
+    "indoor_outdoor": "can_bang",
+    "cores_preferred": 1,
+    "footprint_shape": "chu_nhat",
+    "wings_preferred": 1
+  },
+  "parking": {
+    "cars": 1,
+    "car_size": "gam_thap",
+    "motorbikes": 2,
+    "ev_charging": false
+  },
+  "storage": {
+    "items": ["kho_chung", "do_theo_mua"],
+    "level": "it"
+  },
+  "systems": {
+    "solar_water": true,
+    "water_storage": ["bon_mai", "may_bom_tang_ap"],
+    "aircon_outdoor": "san_thuong"
+  },
+  "entrance": {
+    "step_count": 1,
+    "vehicle_ramp": true,
+    "steps_from_yard": false,
+    "floor_above_road_m": 0.15
+  },
+  "locality": "ha_noi",
+  "vertical": {
+    "elevator": "khong",
+    "stair_type": "thang_ho",
+    "stair_shape": "chu_u"
+  },
+  "balconies": {
+    "scope": "chi_mat_tien",
+    "sides": ["front"],
+    "projection_m": 0.9,
+    "drying_balcony": false,
+    "required_sides": ["front"],
+    "projection_by_side": {
+      "front": 0.9
+    },
+    "projection_over_boundary": true
+  },
+  "household": {
+    "religion": "tho_cung_to_tien",
+    "feng_shui": "khong_xem",
+    "occupation": "nhân viên văn phòng",
+    "altar_floor": 4,
+    "home_business": {
+      "mode": "khong"
+    },
+    "altar_arrangement": "phong_tho_rieng"
+  },
+  "lifestyle": {
+    "pets": "khong",
+    "drying": "phoi_nang_ngoai_troi",
+    "guests": "thinh_thoang",
+    "cooking": "nau_hang_ngay_don_gian",
+    "night_shift": false,
+    "dining_place": "ban_an_rieng",
+    "second_kitchen": false,
+    "work_from_home": true,
+    "overnight_guests": false,
+    "reduced_mobility": false,
+    "living_dining_kitchen": "an_bep_lien_khach_rieng"
+  },
+  "priorities": ["natural_light", "natural_ventilation", "area_efficiency", "easy_maintenance"],
+  "building_type": "nha_pho",
+  "decision_maker": {
+    "name": "Anh Nguyễn Văn Tâm",
+    "relationship": "vo_chong_chu_nha"
+  },
+  "schema_version": "1.6.0",
+  "finishing_level": "kha",
+  "required_spaces": [
+    {
+      "type": "garage",
+      "floor": 1,
+      "amenities": "1 ô tô 5 chỗ, 2 xe máy"
+    },
+    {
+      "type": "living",
+      "floor": 1,
+      "area_m2": 16
+    },
+    {
+      "type": "kitchen",
+      "floor": 1
+    },
+    {
+      "type": "dining",
+      "floor": 1
+    },
+    {
+      "type": "wc",
+      "floor": 1
+    },
+    {
+      "type": "light_well",
+      "floor": 1,
+      "amenities": "giếng trời giữa nhà, thông suốt lên mái"
+    },
+    {
+      "type": "bedroom",
+      "floor": 2,
+      "area_m2": 15,
+      "ensuite": true,
+      "amenities": "phòng bà nội 70 tuổi"
+    },
+    {
+      "type": "master_bedroom",
+      "floor": 3,
+      "area_m2": 16,
+      "ensuite": true
+    },
+    {
+      "type": "bedroom",
+      "floor": 3,
+      "area_m2": 10,
+      "ensuite": false
+    },
+    {
+      "type": "bedroom",
+      "floor": 4,
+      "area_m2": 10,
+      "ensuite": false
+    },
+    {
+      "type": "study",
+      "floor": 2,
+      "area_m2": 10
+    },
+    {
+      "type": "wc",
+      "floor": 2
+    },
+    {
+      "type": "balcony",
+      "floor": 3
+    },
+    {
+      "type": "altar_room",
+      "floor": 4,
+      "area_m2": 9
+    },
+    {
+      "type": "laundry",
+      "floor": 4,
+      "amenities": "máy giặt, phơi đồ"
+    },
+    {
+      "type": "wc",
+      "floor": 4
+    },
+    {
+      "type": "terrace",
+      "floor": 4,
+      "amenities": "sân thượng phía sau, trồng cây"
+    }
+  ],
+  "budget_range_vnd": [2200000000, 2800000000]
+}

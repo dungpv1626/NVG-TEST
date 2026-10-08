@@ -165,6 +165,45 @@ describe('Hoạt động gần đây', () => {
     expect(items).toEqual([]);
   });
 
+  it('tab Lịch sử: kể cả góp ý của khách, yêu cầu làm rõ (gửi và trả lời) và mốc bàn giao (08/10/2026)', () => {
+    const items = recentActivity(
+      {
+        briefs: [],
+        versions: [],
+        changes: [],
+        reviews: [
+          {
+            id: 'r1',
+            decisionLabel: 'Khách hàng duyệt',
+            versionTitle: 'Phương án bản 2',
+            reviewer: 'Anh Tâm',
+            reviewed_at: '2026-10-02T00:00:00Z',
+          },
+        ],
+        rfis: [
+          {
+            id: 'q1',
+            code: 'NVO-RFI-2026-0001',
+            title: 'Cốt sàn tầng 1',
+            created_at: '2026-10-04T00:00:00Z',
+            requester: 'Đỗ Văn K',
+            answered_at: '2026-10-05T00:00:00Z',
+            answerer: 'Phạm Thị D',
+          },
+        ],
+        milestones: [{ id: 'bg', text: 'Bàn giao hồ sơ thi công', at: '2026-10-03T00:00:00Z' }],
+      },
+      when,
+      Number.POSITIVE_INFINITY,
+    );
+    expect(items.map((i) => i.text)).toEqual([
+      'Trả lời yêu cầu làm rõ NVO-RFI-2026-0001',
+      'Công trường gửi yêu cầu làm rõ NVO-RFI-2026-0001: Cốt sàn tầng 1',
+      'Bàn giao hồ sơ thi công',
+      'Khách hàng duyệt: Phương án bản 2',
+    ]);
+  });
+
   it('không biết ai làm thì bỏ vế người, không ghi "Không rõ"', () => {
     const items = recentActivity(
       {
