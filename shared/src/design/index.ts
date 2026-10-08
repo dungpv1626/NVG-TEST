@@ -214,6 +214,13 @@ export function publishCapability(discipline: ArtifactDiscipline): DesignCapabil
 // Nhãn cảnh báo bắt buộc — do MÃ NGUỒN chèn (01-overview 1.4, CLAUDE.md 8.7)
 // ---------------------------------------------------------------------------
 
+/**
+ * Bề ngang bản xem trước của ảnh do mô hình vẽ (ảnh bìa thẻ AI Design, 08/10/2026). Worker chỉ thu
+ * nhỏ về đúng số này (`workers/src/design/ai/image-preview.ts`) — mỗi độ rộng là một biến đổi Images
+ * tính phí cho mỗi ảnh, nên không nhận số tuỳ ý từ trình duyệt.
+ */
+export const AI_PREVIEW_WIDTH = 1024;
+
 export const AI_DISCLAIMERS = {
   render: 'Ảnh tham khảo ý tưởng — chưa phải phương án thi công',
   schedules: 'Khối lượng sơ bộ — không dùng làm căn cứ ký hợp đồng',

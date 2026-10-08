@@ -33,6 +33,14 @@
   "observability": { "enabled": true },
 
   /**
+   * Images binding — thu nhỏ ảnh phối cảnh / mặt bằng nội thất thành bản xem trước WebP cho ảnh bìa
+   * thẻ AI Design (`src/design/ai/image-preview.ts`, Haan chọn 08/10/2026). Tính phí theo biến đổi
+   * DUY NHẤT mỗi tháng; `wrangler dev` dùng bản giả lập ngoại tuyến (width, format), không tính phí.
+   * KHÔNG bật Workers Cache cho nó: ảnh đi sau kiểm quyền từng người, không được nằm ở bộ đệm chung.
+   */
+  "images": { "binding": "IMAGES" },
+
+  /**
    * Trần mỗi lần chạy — CẦN gói Workers Paid (02/10/2026). Gói Free cắt cứng 50 lời gọi ra ngoài và
    * 10 ms CPU mỗi bước Workflow, không nâng được: «AI Design» trên cloud chết ở bước đầu với «Too many
    * subrequests» (vòng theo dõi trực tiếp hỏi CSDL mỗi 2 giây trong lúc chờ mô hình), và bước xếp

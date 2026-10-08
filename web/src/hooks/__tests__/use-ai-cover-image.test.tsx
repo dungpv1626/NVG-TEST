@@ -66,14 +66,23 @@ describe('Ảnh bìa thẻ AI Design', () => {
     await waitFor(() => expect(result.current.kind).toBe('perspective'));
     expect(result.current.url).toMatch(/#dau$/);
     expect(designApiFile.mock.calls[0]![0]).toContain(`/view/front_day?artifactId=`);
+    // Bản xem trước thu nhỏ ở máy chủ, không phải PNG cỡ gốc ~2,7 MB.
+    expect(designApiFile.mock.calls[0]![0]).toMatch(/&w=1024$/);
     expect(stampWidths.every((w) => typeof w === 'number' && w > 0)).toBe(true);
   });
 
-  it('ba tấm tải SONG SONG — tấm thô không phải chờ hai lượt «chưa vẽ»', async () => {
+  it('có phối cảnh thì CHỈ tải tấm phối cảnh — tấm nội thất ~2 MB không giành băng thông', async () => {
+    available = ['/perspective/', '/sheet-image', '/sheet?'];
+    const { result } = cover();
+    await waitFor(() => expect(result.current.kind).toBe('perspective'));
+    expect(designApiFile).toHaveBeenCalledTimes(1);
+  });
+
+  it('không có phối cảnh thì hai tấm mặt bằng tải SONG SONG — tấm thô không chờ lượt 404', () => {
     available = ['/sheet?'];
-    cover();
-    // Ngay sau lượt dựng đầu tiên, cả ba lời gọi đã đi — trước khi lời gọi nào trả về.
-    expect(designApiFile).toHaveBeenCalledTimes(3);
+    cover({ ...STATE, imageSetArtifactId: null });
+    // Ngay sau lượt dựng đầu tiên, cả hai lời gọi đã đi — trước khi lời gọi nào trả về.
+    expect(designApiFile).toHaveBeenCalledTimes(2);
   });
 
   it('quay lại cùng hồ sơ thì ảnh hiện ngay, không tải lại', async () => {

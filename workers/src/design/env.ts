@@ -80,4 +80,10 @@ export interface DesignEnv {
    * giữa chừng không làm một lượt chạy nửa nọ nửa kia.
    */
   AI_PROMPT_PIPELINE?: string;
+
+  /**
+   * Images binding của Cloudflare — thu nhỏ ảnh do mô hình vẽ thành bản xem trước WebP cho ảnh bìa
+   * thẻ (`ai/image-preview.ts`, 08/10/2026). Vắng thì tuyến ảnh trả ảnh gốc.
+   */
+  IMAGES?: ImagesBinding;
 }

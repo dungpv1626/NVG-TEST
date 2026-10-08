@@ -153,7 +153,9 @@ function ProjectCard({
       to={`/tk/ai-design/${row.id}`}
       className="group flex h-full flex-col overflow-hidden rounded-lg border border-tk-line bg-tk-panel transition-colors hover:border-tk-bl-line"
     >
-      <div className="relative grid h-44 place-items-center overflow-hidden border-b border-tk-line bg-tk-card">
+      {/* Khung 3:2 theo bề ngang thẻ (Haan, 08/10/2026: «kéo dài thẻ để hiện ảnh rõ hơn») — khớp tỷ lệ
+          ảnh phối cảnh nên gần như không cắt, và giữ được dải nhãn in ở mép dưới ảnh. */}
+      <div className="relative grid aspect-[3/2] place-items-center overflow-hidden border-b border-tk-line bg-tk-card">
         {cover.url && cover.kind ? (
           // `<img>` chứ không nhúng SVG: chữ trên tờ có phần do mô hình sinh (CLAUDE.md 8.3).
           <img
