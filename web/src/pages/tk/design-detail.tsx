@@ -45,6 +45,7 @@ import { OverviewPanel } from './overview/overview-panel';
 import { BriefPanel } from './brief-panel';
 import { ChangeRequestPanel } from './change-request-panel';
 import { DesignRfiPanel } from './rfi-panel';
+import { HistoryTimeline } from './overview/history-timeline';
 import { DisciplinePanel } from './discipline-panel';
 import { SurveyPanel } from './survey-panel';
 import { VersionPanel } from './version-panel';
@@ -81,6 +82,11 @@ export function DesignDetailPage() {
   const project = data;
   // Bàn giao rồi thì hồ sơ đóng băng — bộ trên hệ thống phải khớp bộ công trường đang cầm.
   const readOnly = !canEdit || project.handed_over_at !== null;
+  // Chỉ xem vì đã bàn giao chứ không vì vai trò — trạng thái rỗng phải nói đúng lý do.
+  const readOnlyReason =
+    canEdit && project.handed_over_at !== null
+      ? 'Hồ sơ đã bàn giao thi công nên chỉ xem.'
+      : undefined;
   const blockingCount = (findings ?? []).filter((f) => f.blocking).length;
 
   async function run(action: () => Promise<unknown>, onDone?: (result: unknown) => void) {
@@ -219,7 +225,12 @@ export function DesignDetailPage() {
         title={project.name}
         code={project.code}
         status={designDisplayStatus(project.stage, project.handover_deadline)}
-        deadline={project.handover_deadline}
+        // Đã bàn giao hay đã dừng thì không còn «Còn N ngày» (08/10/2026 — hồ sơ «Hoàn thành» vẫn đếm ngày).
+        deadline={
+          project.handed_over_at || project.stage === 'dung_thiet_ke'
+            ? null
+            : project.handover_deadline
+        }
         meta={[
           DESIGN_STAGE_META[project.stage].label,
           <>
@@ -234,7 +245,10 @@ export function DesignDetailPage() {
           ) : null,
         ]}
         actions={actions}
-        primaryTabIds={['tong-quan', 'phien-ban', 'thay-doi', 'lam-ro']}
+        // «Phiên bản bản vẽ» là một BƯỚC (trình khách), không phải tab cấp một (08/10/2026): thanh chuyển
+        // bước đi đúng thứ tự Đầu bài → Khảo sát → Phiên bản bản vẽ → Hồ sơ kỹ thuật → Dự toán, khớp
+        // dải tiến trình trên Tổng quan.
+        primaryTabIds={['tong-quan', 'thay-doi', 'lam-ro']}
         tabs={[
           {
             id: 'tong-quan',
@@ -286,20 +300,10 @@ export function DesignDetailPage() {
           // lập hỗ trợ phòng thiết kế, không phải một bước giữa Khảo sát và Hồ sơ kỹ thuật. Lối
           // sang nằm ở khối «Công cụ hỗ trợ» của Tổng quan và ở thanh «AI Design» của module.
           {
-            id: 'ho-so-ky-thuat',
-            label: 'Hồ sơ kỹ thuật',
-            subtitle: 'Tiến độ ba bộ môn và các hạng mục còn chặn bàn giao thi công.',
-            content: (
-              <DisciplinePanel
-                projectId={project.id}
-                companyId={project.company_id}
-                readOnly={readOnly}
-              />
-            ),
-          },
-          {
             id: 'phien-ban',
             label: 'Phiên bản bản vẽ',
+            subtitle:
+              'Phương án trình khách và bản vẽ các bộ môn — phát hành, ghi góp ý, khách duyệt.',
             content: (
               <VersionPanel
                 projectId={project.id}
@@ -314,6 +318,18 @@ export function DesignDetailPage() {
             ),
           },
           {
+            id: 'ho-so-ky-thuat',
+            label: 'Hồ sơ kỹ thuật',
+            subtitle: 'Tiến độ ba bộ môn và các hạng mục còn chặn bàn giao thi công.',
+            content: (
+              <DisciplinePanel
+                projectId={project.id}
+                companyId={project.company_id}
+                readOnly={readOnly}
+              />
+            ),
+          },
+          {
             id: 'du-toan',
             label: 'Dự toán',
             subtitle: 'Khối lượng và dự toán lập trên phương án đã chọn.',
@@ -323,12 +339,14 @@ export function DesignDetailPage() {
                   parent={{ kind: 'design', id: project.id }}
                   companyId={project.company_id}
                   readOnly={readOnly}
+                  readOnlyReason={readOnlyReason}
                 />
                 <EstimatePanel
                   parent={{ kind: 'design', id: project.id }}
                   companyId={project.company_id}
                   companyCode={companyCodeOf(profile, project.company_id) ?? 'NVO'}
                   readOnly={readOnly}
+                  readOnlyReason={readOnlyReason}
                 />
               </div>
             ),
@@ -352,16 +370,19 @@ export function DesignDetailPage() {
           },
         ]}
         historyContent={
-          <DetailFields
-            fields={[
-              { label: 'Tạo lúc', value: formatDateTime(project.created_at) },
-              { label: 'Cập nhật gần nhất', value: formatDateTime(project.updated_at) },
-              {
-                label: 'Bàn giao thi công',
-                value: project.handed_over_at ? formatDateTime(project.handed_over_at) : EM_DASH,
-              },
-            ]}
-          />
+          <>
+            <DetailFields
+              fields={[
+                { label: 'Tạo lúc', value: formatDateTime(project.created_at) },
+                { label: 'Cập nhật gần nhất', value: formatDateTime(project.updated_at) },
+                {
+                  label: 'Bàn giao thi công',
+                  value: project.handed_over_at ? formatDateTime(project.handed_over_at) : EM_DASH,
+                },
+              ]}
+            />
+            <HistoryTimeline project={project} />
+          </>
         }
         related={[
           {

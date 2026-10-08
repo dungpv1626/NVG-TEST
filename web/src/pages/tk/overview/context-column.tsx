@@ -44,7 +44,7 @@ export function ContextColumn({
   project: DesignProjectDetailRecord;
 }): React.ReactElement {
   return (
-    <div className="grid content-start gap-3">
+    <div className="grid min-w-0 content-start gap-3">
       {/* Đầu cột cho dễ thấy (Haan, 07/10/2026). Khối riêng, màu riêng, tách khỏi các khối của
           hồ sơ: AI Design là công cụ hỗ trợ, không thuộc quy trình. */}
       <AiDesignSupportPanel projectId={project.id} />
@@ -207,6 +207,31 @@ function DuePanel({ project }: { project: DesignProjectDetailRecord }) {
   const findings = useDesignSync(project.id);
   const blocking = (findings.data ?? []).filter((f) => f.blocking);
 
+  // Dừng thiết kế thì không còn việc gì phải làm trước hạn.
+  if (project.stage === 'dung_thiet_ke') return null;
+
+  // Đã bàn giao (08/10/2026): hạn bàn giao không còn nghĩa; việc còn lại là trả lời công trường và
+  // ra bản điều chỉnh. Trước đó panel vẫn nhắc «chọn phương án trình khách» cho hồ sơ đã xong.
+  if (project.handed_over_at) {
+    return (
+      <section className="rounded-lg border border-tk-gr-line bg-tk-gr-bg p-4">
+        <h3 className="text-xs font-semibold text-tk-gr-fg">
+          Đã bàn giao thi công {formatDate(project.handed_over_at)}
+        </h3>
+        <p className="mt-1.5 text-xs leading-relaxed text-tk-t2">
+          Câu hỏi bản vẽ của công trường nằm ở Yêu cầu làm rõ. Cần đổi bản vẽ thì ghi yêu cầu thay
+          đổi, chấp thuận, rồi phát hành bản điều chỉnh gắn với yêu cầu đó.
+        </p>
+        <Link
+          to={`/tk/du-an/${project.id}?tab=lam-ro`}
+          className="mt-2 inline-flex h-10 items-center text-xs text-tk-gr-fg underline-offset-2 hover:underline"
+        >
+          Mở yêu cầu làm rõ
+        </Link>
+      </section>
+    );
+  }
+
   // Không hạn và cũng không vướng gì thì panel này không có nội dung — bỏ hẳn còn hơn bày một
   // hộp rỗng ở chỗ trang trọng nhất của cột phải.
   if (!project.handover_deadline && blocking.length === 0) return null;
@@ -220,7 +245,7 @@ function DuePanel({ project }: { project: DesignProjectDetailRecord }) {
       </h3>
       {blocking.length === 0 ? (
         <p className="mt-1.5 text-xs leading-relaxed text-tk-am-fg2">
-          Không còn hạng mục nào chặn bàn giao. Chọn phương án trình khách và phát hành bộ bản vẽ.
+          Không còn hạng mục nào chặn bàn giao — bàn giao thi công được bằng nút ở đầu trang.
         </p>
       ) : (
         <ul className="mt-1.5 grid gap-1.5 text-xs leading-relaxed text-tk-am-fg2">
