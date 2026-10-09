@@ -670,7 +670,7 @@ describe('Bám đầu bài — sáng tạo nhưng không mâu thuẫn đầu bà
     const bad = faithful();
     bad.spaces = bad.spaces.filter((s) => s.id !== 'w');
     expect(issuesOf(bad).join(' ')).toMatch(
-      /Thiếu Khu vệ sinh chung — đầu bài khai đây là không gian phải có; khu vệ sinh khép kín của phòng ngủ không tính/,
+      /Thiếu WC chung — đầu bài khai đây là không gian phải có; khu vệ sinh khép kín của phòng ngủ không tính/,
     );
   });
 

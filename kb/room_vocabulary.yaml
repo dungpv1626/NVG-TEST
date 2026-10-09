@@ -80,8 +80,13 @@ types:
     aliases:
       ['PN MASTER', 'MASTER', 'MASTER BEDROOM', 'PHONG NGU MASTER', 'PN CHINH', 'PHONG NGU CHINH']
 
+  # «WC» = vệ sinh và tắm chung một phòng: bồn cầu bệt, lavabo, vòi + bát sen (Haan, 09/10/2026).
+  # `vi_before`: tên cũ, CHỈ để vẽ lại phương án đã lưu trước khi đổi — Haan: «bản vẽ hiện có không
+  # cần đổi, tên mới cho bản vẽ từ giờ trở đi». Phương án mới mang sẵn nhãn mới trong `rooms[].label`
+  # (`ai/room-labels.ts`), nên đổi tên lần sau cũng không hồi tố.
   - code: wc
-    vi: Khu vệ sinh
+    vi: WC
+    vi_before: Khu vệ sinh
     aliases: ['WC', 'VS', 'NHA VE SINH', 'PHONG VE SINH', 'P.VS', 'TOILET', 'BATHROOM', 'TAM']
 
   - code: stair

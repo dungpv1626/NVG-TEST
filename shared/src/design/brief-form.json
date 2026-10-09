@@ -1016,7 +1016,7 @@
           "weight": 0,
           "optional": true,
           "hint": "Kiêng kỵ hay yêu cầu về hướng, vị trí bàn thờ, bếp, cửa chính… mà gia đình đã quyết. Ghi đúng lời gia chủ.",
-          "placeholder": "Ví dụ: khu vệ sinh không nằm trên bàn thờ; không phòng nào mở cửa thẳng ra cầu thang"
+          "placeholder": "Ví dụ: WC không nằm trên bàn thờ; không phòng nào mở cửa thẳng ra cầu thang"
         },
         {
           "path": "household.home_business.mode",
@@ -1111,7 +1111,7 @@
         },
         {
           "path": "household.home_business.customer_wc",
-          "label": "Khu vệ sinh riêng cho khách",
+          "label": "WC riêng cho khách",
           "control": "tristate",
           "weight": 0,
           "optional": true,
@@ -1240,7 +1240,7 @@
           "label": "Có người đi lại khó khăn",
           "control": "tristate",
           "weight": 1,
-          "hint": "Người dùng gậy hoặc xe lăn. Trả lời «Có» là ràng buộc cứng: một phòng ngủ và một khu vệ sinh ở tầng trệt, hạn chế bậc, cửa và hành lang đủ rộng.",
+          "hint": "Người dùng gậy hoặc xe lăn. Trả lời «Có» là ràng buộc cứng: một phòng ngủ và một WC ở tầng trệt, hạn chế bậc, cửa và hành lang đủ rộng.",
           "options": [
             {
               "value": "true",
@@ -1329,8 +1329,9 @@
             },
             {
               "value": "wc",
-              "label": "Khu vệ sinh",
-              "placeholder": "bồn tắm nằm, vòi sen đứng"
+              "label": "WC",
+              "placeholder": "bồn cầu bệt, lavabo, vòi + bát sen; bồn tắm nằm",
+              "note": "WC = vệ sinh và tắm chung một phòng: bồn cầu bệt, lavabo, vòi + bát sen (Haan, 09/10/2026). Nhãn trên bản vẽ vẫn lấy từ kb/room_vocabulary.yaml."
             },
             {
               "value": "altar_room",

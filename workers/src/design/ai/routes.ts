@@ -22,6 +22,7 @@ import {
   denyUnlessWritable,
   projectScope,
   PROJECT_NOT_VISIBLE,
+  planDrawingLabels,
   roomLabels,
 } from '../auth-scope';
 import { AI_DIGEST_DATA_CLASS, anonymiseForAi } from '../brief/anonymise';
@@ -929,7 +930,8 @@ aiApp.post('/plan/:projectId/sheet-image', async (c) => {
       plan,
       level,
       prompts,
-      labels: roomLabels(),
+      // Cùng nhãn với tờ vector của chính phương án ấy — phương án cũ giữ tên cũ.
+      labels: planDrawingLabels(),
       scale: anchor.scale,
       styleCode,
     });

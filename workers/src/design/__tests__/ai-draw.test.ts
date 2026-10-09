@@ -21,7 +21,7 @@ import type { AiFloorPlan } from '@nvg/shared/design';
 import { describe, expect, it } from 'vitest';
 import { parseSheetStyle, SheetStyleError } from '../ai/draw/style';
 import { renderPlanSheet, PlanSheetError } from '../ai/draw/plan-sheet';
-import { parseVocabulary } from '../kb/vocabulary';
+import { drawingLabelsOf, parseVocabulary } from '../kb/vocabulary';
 import { TOWNHOUSE_PLAN, VILLA_PLAN } from './ai-plan-fixtures';
 
 const read = (relative: string): string =>
@@ -29,9 +29,9 @@ const read = (relative: string): string =>
 
 const style = parseSheetStyle(read('../../../../kb/sheet_style.yaml'));
 const vocabulary = parseVocabulary(read('../../../../kb/room_vocabulary.yaml'));
-const labels: Record<string, string> = Object.fromEntries(
-  vocabulary.types.map((type) => [type.code, type.vi]),
-);
+// Đúng bảng nhãn bộ vẽ thật dùng (`planDrawingLabels`). Các tờ vàng là phương án lưu trước khi
+// «Khu vệ sinh» đổi thành «WC» (09/10/2026) — chúng KHÔNG được đổi chữ theo.
+const labels = drawingLabelsOf(vocabulary);
 
 const sheet = (plan: AiFloorPlan, level: number) => renderPlanSheet(plan, level, { style, labels });
 

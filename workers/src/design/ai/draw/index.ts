@@ -11,7 +11,7 @@
  */
 
 import type { AiFloorPlan } from '@nvg/shared/design';
-import { roomLabels } from '../../auth-scope';
+import { planDrawingLabels } from '../../auth-scope';
 import { renderPlanAnchor, type PlanAnchorResult } from './anchor';
 import { renderPlanSheet, type PlanSheetResult } from './plan-sheet';
 import { sheetStyle } from './style-data';
@@ -36,7 +36,7 @@ export { sheetStyle } from './style-data';
  * `renderPlanSheet` vẫn thuần và kiểm thử được bằng dữ liệu tự dựng.
  */
 export function planSheet(plan: AiFloorPlan, level: number): PlanSheetResult {
-  return renderPlanSheet(plan, level, { style: sheetStyle(), labels: roomLabels() });
+  return renderPlanSheet(plan, level, { style: sheetStyle(), labels: planDrawingLabels() });
 }
 
 /**
@@ -46,5 +46,5 @@ export function planSheet(plan: AiFloorPlan, level: number): PlanSheetResult {
  * trên màn hình (có hay không có khung tên) nên chúng phải đọc được cạnh nhau ở cùng một chỗ.
  */
 export function planAnchor(plan: AiFloorPlan, level: number): PlanAnchorResult {
-  return renderPlanAnchor(plan, level, { style: sheetStyle(), labels: roomLabels() });
+  return renderPlanAnchor(plan, level, { style: sheetStyle(), labels: planDrawingLabels() });
 }

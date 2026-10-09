@@ -36,7 +36,7 @@ describe('phát lại bea4c6fa — danh mục sai vẫn soát bản phác (T107)
   it('vòng 1: bác ở danh mục (thiếu WC chung) VÀ nêu luôn lỗi lối vào tầng 2 mà lượt thật chỉ lộ ở vòng 2', () => {
     expect(round1.ok).toBeNull();
     const hints = round1.hints.join('\n');
-    expect(hints).toMatch(/Thiếu Khu vệ sinh chung ở tầng 1/);
+    expect(hints).toMatch(/Thiếu WC chung ở tầng 1/);
     expect(hints).toMatch(/Storey 2: In the sketch, .*"master_bedroom_1".* have no way in/);
     // Câu nhắc bản phác nói bằng mã đã đánh — ý định gửi kèm phải là bản đã đánh mã ấy.
     expect(round1.renamed?.rooms.some((room) => room.id === 'master_bedroom_1')).toBe(true);

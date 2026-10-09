@@ -160,7 +160,7 @@ describe('đường v6 — nhà ống demo', () => {
     }).catch(() => null);
     const tail = options[1]?.promptTail ?? '';
     expect(tail).toMatch(/Storey 4: /);
-    expect(tail).toMatch(/Thiếu Khu vệ sinh chung ở tầng 2/);
+    expect(tail).toMatch(/Thiếu WC chung ở tầng 2/);
   });
 
   it('luật chặn T116 trên bộ dải mẫu: bỏ sảnh trước ô thang → chương trình chèn lại; lợp giếng trời ở tầng 3 → giếng bị che', () => {
