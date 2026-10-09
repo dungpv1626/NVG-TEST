@@ -311,7 +311,8 @@ export function AiPlanStep({
                     aria-pressed={isOpen}
                     onClick={() => setSelected(entry.artifactId)}
                     className={cn(
-                      'flex min-h-10 items-center gap-2 rounded-l-md border py-1.5 pr-3 pl-1.5 text-left',
+                      'group flex min-h-10 items-center gap-2 rounded-l-md border py-1.5 pr-3 pl-1.5 text-left',
+                      'transition-colors duration-(--motion-fast) ease-(--ease-out)',
                       readOnly && 'rounded-r-md',
                       isOpen
                         ? 'border-tk-bl-line bg-tk-bl-bg font-medium'
@@ -797,7 +798,7 @@ function PlanThumb({
     <img
       src={sheet.url}
       alt=""
-      className="h-12 w-10 shrink-0 rounded-sm border border-tk-line bg-white object-cover object-left-top"
+      className="h-12 w-10 shrink-0 rounded-sm border border-tk-line bg-white object-cover object-left-top transition-[scale] duration-(--motion-base) ease-(--ease-out) motion-safe:group-hover:scale-105"
     />
   ) : (
     <span className="h-12 w-10 shrink-0 rounded-sm bg-tk-chip-mute" aria-hidden />

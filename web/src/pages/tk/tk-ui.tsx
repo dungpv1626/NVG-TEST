@@ -145,7 +145,7 @@ export function ToolCard({
         // `h-full`: nơi đặt thẻ quyết định chiều cao (lưới năm thẻ bằng nhau ở Tổng quan).
         'relative flex h-full flex-col gap-3 rounded-lg border p-4',
         FAMILY[family].card,
-        'transition-[transform,box-shadow,filter] duration-(--motion-base) ease-(--ease-out)',
+        'transition-[translate,box-shadow,filter] duration-(--motion-base) ease-(--ease-out)',
         // `shadow-tk-card` chứ không phải `shadow-overlay`: bộ bóng chung tính cho nền sáng
         // (đen 6–14%) nên trên nền tối không tách được lớp nào — xem index.css.
         'hover:-translate-y-[3px] hover:brightness-[1.06] hover:shadow-tk-card',

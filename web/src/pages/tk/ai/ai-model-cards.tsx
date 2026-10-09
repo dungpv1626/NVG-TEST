@@ -109,6 +109,32 @@ function ProviderIcon({
   return <Icon className={className} aria-hidden />;
 }
 
+/**
+ * Bảng nổi đóng khi bấm ra ngoài hoặc nhấn Esc — như mọi menu thả xuống. Dùng chung cho ô chọn
+ * model và ô mức suy nghĩ (`ai-model-picker.tsx`).
+ */
+export function usePopoverDismiss(
+  rootRef: React.RefObject<HTMLElement | null>,
+  open: boolean,
+  close: () => void,
+): void {
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (event: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) close();
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') close();
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [rootRef, open, close]);
+}
+
 export function ModelChooser({
   options,
   value,
@@ -134,22 +160,7 @@ export function ModelChooser({
     if (selected) setProvider(selected.provider);
   }, [selected]);
 
-  // Bảng nổi đóng khi bấm ra ngoài hoặc nhấn Esc — như mọi menu thả xuống.
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (event: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false);
-    };
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('mousedown', onDown);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDown);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
+  usePopoverDismiss(rootRef, open, () => setOpen(false));
 
   const shown = groups.find((g) => g.provider === provider) ?? groups[0] ?? null;
   const usable = options.filter((o) => o.enabled);
@@ -287,9 +298,11 @@ function ModelCard({
       onClick={onPick}
       className={cn(
         'block w-full rounded-md border p-3 text-left',
-        'transition-colors duration-(--motion-fast) ease-(--ease-out)',
+        'transition-[translate,border-color,box-shadow] duration-(--motion-fast) ease-(--ease-out)',
         checked ? 'border-tk-pu-solid bg-tk-pu-bg' : 'border-tk-line bg-tk-card',
-        option.enabled ? 'cursor-pointer hover:border-tk-line2' : 'cursor-not-allowed opacity-60',
+        option.enabled
+          ? 'cursor-pointer hover:border-tk-pu-solid hover:shadow-sm motion-safe:hover:-translate-y-px'
+          : 'cursor-not-allowed opacity-60',
       )}
     >
       <span className="flex items-start justify-between gap-2">

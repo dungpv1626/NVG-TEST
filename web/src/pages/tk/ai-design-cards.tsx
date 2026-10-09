@@ -151,7 +151,14 @@ function ProjectCard({
     <Link
       ref={ref}
       to={`/tk/ai-design/${row.id}`}
-      className="group flex h-full flex-col overflow-hidden rounded-lg border border-tk-line bg-tk-panel transition-colors hover:border-tk-bl-line"
+      // Di chuột (Haan, 09/10/2026): thẻ nhấc lên 3px kèm bóng, ảnh bìa phóng nhẹ — cùng khuôn với thẻ
+      // ở Tổng quan (`tk-ui.tsx`). `motion-safe:` để người tắt chuyển động không thấy thẻ nhảy.
+      className={cn(
+        'group flex h-full flex-col overflow-hidden rounded-lg border border-tk-line bg-tk-panel',
+        'transition-[translate,box-shadow,border-color] duration-(--motion-base) ease-(--ease-out)',
+        'hover:border-tk-bl-line hover:shadow-tk-panel motion-safe:hover:-translate-y-[3px]',
+        'focus-visible:border-tk-bl-line focus-visible:shadow-tk-panel',
+      )}
     >
       {/* Khung 3:2 theo bề ngang thẻ (Haan, 08/10/2026: «kéo dài thẻ để hiện ảnh rõ hơn») — khớp tỷ lệ
           ảnh phối cảnh nên gần như không cắt, và giữ được dải nhãn in ở mép dưới ảnh. */}
@@ -163,12 +170,16 @@ function ProjectCard({
             alt={`${COVER_ALT[cover.kind]} của ${row.title}`}
             className={cn(
               'h-full w-full bg-white object-cover',
+              'transition-[scale] duration-(--motion-slow) ease-(--ease-out) motion-safe:group-hover:scale-[1.03]',
               cover.kind === 'perspective' ? 'object-center' : 'object-top',
             )}
           />
         ) : (
           <div className="text-center text-fg-subtle">
-            <LayoutGrid className="mx-auto size-8 text-tk-t3" aria-hidden />
+            <LayoutGrid
+              className="mx-auto size-8 text-tk-t3 transition-[scale,color] duration-(--motion-base) ease-(--ease-out) group-hover:text-tk-bl-fg motion-safe:group-hover:scale-110"
+              aria-hidden
+            />
             <p className="mt-2 text-xs">
               {state.isLoading || cover.loading ? 'Đang tải…' : 'Chưa có mặt bằng'}
             </p>

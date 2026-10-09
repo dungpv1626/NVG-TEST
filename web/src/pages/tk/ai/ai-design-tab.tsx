@@ -191,8 +191,11 @@ export function AiDesignTab({
                   aria-current={isOpen ? 'step' : undefined}
                   onClick={() => setOpen(step.id)}
                   className={cn(
-                    'flex w-full items-start gap-2.5 rounded-md px-2.5 py-2 text-left transition-colors',
-                    isOpen ? 'bg-tk-bl-bg ring-1 ring-tk-bl-line' : 'hover:bg-tk-hover',
+                    'group flex w-full items-start gap-2.5 rounded-md px-2.5 py-2 text-left',
+                    'transition-[translate,background-color] duration-(--motion-fast) ease-(--ease-out)',
+                    isOpen
+                      ? 'bg-tk-bl-bg ring-1 ring-tk-bl-line'
+                      : 'hover:bg-tk-hover motion-safe:hover:-translate-y-px',
                     s.blocked && !isOpen && 'opacity-70',
                   )}
                 >
