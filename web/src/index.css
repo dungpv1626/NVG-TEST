@@ -368,6 +368,15 @@
       min-width: 40px;
     }
 
+    /* Liên kết đứng trong hàng flex thành hộp khối cao 40px, chữ thì nằm sát mép TRÊN hộp —
+       hàng `items-center` căn giữa cái hộp, nên chữ của liên kết bị đẩy lên cao hơn chữ bên cạnh
+       12px (breadcrumb «Thiết kế › Dự án thiết kế › …» trên iPhone, 10/10/2026). Nút không bị vì
+       trình duyệt tự căn giữa nội dung nút. Liên kết nằm giữa đoạn văn không đổi: `min-height`
+       và `align-content` đều không áp lên hộp inline. */
+    a[href] {
+      align-content: center;
+    }
+
     /* Ô nhập cũng là vùng bấm: cao 36px trên máy tính là vừa với con trỏ chuột, nhưng trên
        màn hình cảm ứng thì bấm trượt sang ô bên cạnh. Đặt ở đây thay vì sửa từng ô của từng
        biểu mẫu — sửa lẻ thì biểu mẫu viết sau lại quên. */

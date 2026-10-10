@@ -167,4 +167,12 @@ describe('Vỏ Trang dự án thiết kế', () => {
     expect(screen.getByText('Đang xử lý')).toBeInTheDocument();
     expect(screen.getByText(/Còn \d+ ngày/)).toBeInTheDocument();
   });
+
+  it('header chỉ dính trên máy tính — trên điện thoại nó chiếm gần 2/3 màn hình', () => {
+    // jsdom không tính bố cục, nên canh bằng lớp: `sticky` trần là dính ở MỌI khổ màn hình.
+    const { container } = shell();
+    const classes = container.querySelector('header')!.className.split(/\s+/);
+    expect(classes).toContain('lg:sticky');
+    expect(classes).not.toContain('sticky');
+  });
 });

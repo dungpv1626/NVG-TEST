@@ -186,7 +186,12 @@ function WorkspaceBody({
       >
         {/* ── Header ─────────────────────────────────────────────────────────── */}
         {/*
-          `-top-4 lg:-top-6` bù ĐÚNG phần đệm của `<main>` — không phải một con số canh mắt.
+          Header CHỈ dính trên máy tính (`lg:`), cùng quy tắc với `EntityDetail`. Trên điện thoại
+          breadcrumb, tên, dòng thông tin, ba nút và thanh tab dính lại chiếm gần 2/3 màn hình,
+          chỉ còn 1/3 dưới để cuộn (ảnh iPhone của Haan, 10/10/2026); ở đó header cuộn đi cùng
+          nội dung — màn hình con vẫn có nút «← Tổng quan» ngay trong thân.
+
+          `lg:-top-6` bù ĐÚNG phần đệm của `<main>` — không phải một con số canh mắt.
 
           Vùng cuộn là `<main>`, và nó có `p-4 lg:p-6`. Chrome tính mốc dính của `sticky` theo
           HỘP NỘI DUNG của vùng cuộn, tức là thấp hơn mép nhìn thấy đúng bằng phần đệm ấy. Nên
@@ -195,11 +200,11 @@ function WorkspaceBody({
           NẰM ĐÈ dòng mã hồ sơ của header (Haan bắt được 07/09/2026).
 
           Bọc ngoài đã có `-m-4 lg:-m-6` để nền tràn kín; đây là vế còn lại của cùng phép bù đó.
-          Sửa đệm của `<main>` thì phải sửa cả ba chỗ — có test canh trong `tk-chrome.test.tsx`.
+          Sửa đệm của `<main>` thì phải sửa cả hai chỗ.
         */}
         <header
           className={cn(
-            'sticky -top-4 z-10 border-b border-tk-line bg-tk-bg px-4 pt-4 lg:-top-6 lg:px-6',
+            'z-10 border-b border-tk-line bg-tk-bg px-4 pt-4 lg:sticky lg:-top-6 lg:px-6',
             compact ? 'pb-3 lg:pt-5' : 'lg:pt-6',
           )}
         >
