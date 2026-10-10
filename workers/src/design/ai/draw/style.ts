@@ -62,6 +62,13 @@ export type LineKey =
   | 'floor_line'
   | 'level_mark'
   | 'element'
+  | 'detail'
+  | 'glass'
+  | 'hatch'
+  | 'axis'
+  | 'level_line'
+  | 'axis_bubble'
+  | 'leader'
   | 'roof_block'
   | 'roof_edge'
   | 'roof_below'
@@ -78,7 +85,9 @@ export type TextKey =
   | 'dim'
   | 'stair_number'
   | 'north'
-  | 'footer';
+  | 'footer'
+  | 'note'
+  | 'axis_label';
 
 export type ColourKey =
   'ink' | 'hairline' | 'dim' | 'wall_fill' | 'void_fill' | 'element_fill' | 'paper';
@@ -104,6 +113,13 @@ const LINE_KEYS: LineKey[] = [
   'floor_line',
   'level_mark',
   'element',
+  'detail',
+  'glass',
+  'hatch',
+  'axis',
+  'level_line',
+  'axis_bubble',
+  'leader',
   'roof_block',
   'roof_edge',
   'roof_below',
@@ -123,6 +139,8 @@ const TEXT_KEYS: TextKey[] = [
   'stair_number',
   'north',
   'footer',
+  'note',
+  'axis_label',
 ];
 
 const COLOUR_KEYS: ColourKey[] = [

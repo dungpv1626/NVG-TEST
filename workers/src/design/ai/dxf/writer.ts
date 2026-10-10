@@ -20,20 +20,43 @@ export interface DxfLayer {
   color: number;
 }
 
-export type DxfLinetype = 'CONTINUOUS' | 'DASHED';
+export type DxfLinetype = 'CONTINUOUS' | 'DASHED' | 'CENTER';
+
+/** Căn chữ: ngang trái / giữa / phải, dọc theo đường chân chữ hoặc giữa. */
+export type DxfTextAlign = 'center' | 'left' | 'right';
 
 type Pt = readonly [number, number];
 
 type Entity =
   | { kind: 'line'; layer: string; a: Pt; b: Pt; linetype: DxfLinetype }
-  | { kind: 'polyline'; layer: string; points: readonly Pt[]; closed: boolean }
+  | {
+      kind: 'polyline';
+      layer: string;
+      points: readonly Pt[];
+      closed: boolean;
+      linetype: DxfLinetype;
+    }
+  | { kind: 'solid'; layer: string; points: readonly Pt[] }
   | { kind: 'arc'; layer: string; centre: Pt; r: number; start: number; end: number }
   | { kind: 'circle'; layer: string; centre: Pt; r: number }
-  | { kind: 'text'; layer: string; at: Pt; height: number; rotation: number; text: string };
+  | {
+      kind: 'text';
+      layer: string;
+      at: Pt;
+      height: number;
+      rotation: number;
+      text: string;
+      align: DxfTextAlign;
+    };
 
 /** Nét đứt tính theo mm mô hình ở tỷ lệ 1:100 — 5 mm giấy nét, 2,5 mm giấy hở. */
 const DASH_MM = 500;
 const GAP_MM = 250;
+/**
+ * Nét chấm gạch của đường trục và đường cốt, mm mô hình ở 1:100 — cùng mẫu `CENTER_DASH_MM` của tờ
+ * SVG (`draw/svg.ts`), như `CENTERX2` của hồ sơ M5.
+ */
+const CENTER_PATTERN_MM = [600, -120, 100, -120];
 
 export class DxfDocument {
   private readonly layers = new Map<string, DxfLayer>();
@@ -48,9 +71,23 @@ export class DxfDocument {
     this.entities.push({ kind: 'line', layer, a, b, linetype });
   }
 
-  polyline(layer: string, points: readonly Pt[], closed: boolean): void {
+  polyline(
+    layer: string,
+    points: readonly Pt[],
+    closed: boolean,
+    linetype: DxfLinetype = 'CONTINUOUS',
+  ): void {
     if (points.length < 2) return;
-    this.entities.push({ kind: 'polyline', layer, points, closed });
+    this.entities.push({ kind: 'polyline', layer, points, closed, linetype });
+  }
+
+  /**
+   * Mảng tô đặc — thực thể SOLID của R12 (R12 không có HATCH). Ba hoặc bốn đỉnh theo thứ tự vòng
+   * quanh; đa giác lớn hơn thì nơi gọi chia quạt.
+   */
+  solid(layer: string, points: readonly Pt[]): void {
+    if (points.length < 3 || points.length > 4) return;
+    this.entities.push({ kind: 'solid', layer, points });
   }
 
   /** Cung NGƯỢC chiều kim đồng hồ từ `start` tới `end`, độ. */
@@ -65,10 +102,17 @@ export class DxfDocument {
   }
 
   /** Chữ căn GIỮA theo cả hai chiều quanh `at`; `rotation` độ, ngược chiều kim đồng hồ. */
-  text(layer: string, at: Pt, height: number, text: string, rotation = 0): void {
+  text(
+    layer: string,
+    at: Pt,
+    height: number,
+    text: string,
+    rotation = 0,
+    align: DxfTextAlign = 'center',
+  ): void {
     const clean = sanitiseText(text);
     if (!clean || !(height > 0)) return;
-    this.entities.push({ kind: 'text', layer, at, height, rotation, text: clean });
+    this.entities.push({ kind: 'text', layer, at, height, rotation, text: clean, align });
   }
 
   get size(): number {
@@ -108,7 +152,7 @@ export class DxfDocument {
     g(2, 'TABLES');
     g(0, 'TABLE');
     g(2, 'LTYPE');
-    g(70, 2);
+    g(70, 3);
     g(0, 'LTYPE');
     g(2, 'CONTINUOUS');
     g(70, 0);
@@ -125,6 +169,17 @@ export class DxfDocument {
     g(40, DASH_MM + GAP_MM);
     g(49, DASH_MM);
     g(49, -GAP_MM);
+    g(0, 'LTYPE');
+    g(2, 'CENTER');
+    g(70, 0);
+    g(3, 'Center ____ _ ____ _');
+    g(72, 65);
+    g(73, CENTER_PATTERN_MM.length);
+    g(
+      40,
+      CENTER_PATTERN_MM.reduce((sum, v) => sum + Math.abs(v), 0),
+    );
+    for (const v of CENTER_PATTERN_MM) g(49, v);
     g(0, 'ENDTAB');
     g(0, 'TABLE');
     g(2, 'LAYER');
@@ -172,6 +227,7 @@ export class DxfDocument {
         case 'polyline':
           g(0, 'POLYLINE');
           g(8, e.layer);
+          if (e.linetype !== 'CONTINUOUS') g(6, e.linetype);
           g(66, 1);
           g(10, 0);
           g(20, 0);
@@ -187,6 +243,26 @@ export class DxfDocument {
           g(0, 'SEQEND');
           g(8, e.layer);
           break;
+        case 'solid': {
+          // Thứ tự đỉnh của SOLID là 1-2-4-3 («nơ» nếu ghi theo vòng): đỉnh thứ ba của vòng đi vào mã
+          // 13, đỉnh thứ tư vào mã 12. Tam giác thì đỉnh thứ tư trùng thứ ba.
+          const [a, b, c, d = c] = e.points as [Pt, Pt, Pt, Pt?];
+          g(0, 'SOLID');
+          g(8, e.layer);
+          g(10, a[0]);
+          g(20, a[1]);
+          g(30, 0);
+          g(11, b[0]);
+          g(21, b[1]);
+          g(31, 0);
+          g(12, d[0]);
+          g(22, d[1]);
+          g(32, 0);
+          g(13, c[0]);
+          g(23, c[1]);
+          g(33, 0);
+          break;
+        }
         case 'arc':
           g(0, 'ARC');
           g(8, e.layer);
@@ -215,11 +291,19 @@ export class DxfDocument {
           g(1, e.text);
           if (e.rotation) g(50, e.rotation);
           g(7, 'STANDARD');
-          g(72, 1);
-          g(11, e.at[0]);
-          g(21, e.at[1]);
-          g(31, 0);
-          g(73, 2);
+          if (e.align === 'center') {
+            g(72, 1);
+            g(11, e.at[0]);
+            g(21, e.at[1]);
+            g(31, 0);
+            g(73, 2);
+          } else if (e.align === 'right') {
+            // Căn phải theo đường chân chữ — chữ ghi chú cột trái của tờ mặt đứng.
+            g(72, 2);
+            g(11, e.at[0]);
+            g(21, e.at[1]);
+            g(31, 0);
+          }
           break;
       }
     }
@@ -239,7 +323,7 @@ export class DxfDocument {
       if (e.kind === 'line') {
         add(e.a);
         add(e.b);
-      } else if (e.kind === 'polyline') e.points.forEach((p) => add(p));
+      } else if (e.kind === 'polyline' || e.kind === 'solid') e.points.forEach((p) => add(p));
       else if (e.kind === 'text') add(e.at, e.height);
       else add(e.centre, e.r);
     }

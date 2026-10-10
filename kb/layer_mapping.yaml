@@ -227,4 +227,7 @@ export:
   grid: { layer: 'NV-Truc', color: 1 }
   dimension: { layer: 'NV-Dim', color: 8 }
   annotation: { layer: 'NV-KyHieu', color: 7 }
+  # Chi tiết mảnh của mặt đứng: khung cánh, nẹp, nan lan can, dải phào (T147) — lớp «!NOITHAT» 0,13
+  # của hồ sơ M5. Lớp riêng để người vẽ tắt được cả lớp chi tiết khi chỉ cần khối.
+  detail: { layer: 'NV-ChiTiet', color: 8 }
   title_block: { layer: 'NV-KhungTen', color: 7 }

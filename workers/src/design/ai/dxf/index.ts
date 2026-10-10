@@ -6,6 +6,7 @@
 
 import type { AiFloorPlan } from '@nvg/shared/design';
 import { planDrawingLabels } from '../../auth-scope';
+import { facadeDetail } from '../../kb/facade-detail-data';
 import { sheetStyle } from '../draw/style-data';
 import { layerExport } from './layers-data';
 import { renderPlanDxf, type PlanDxfResult } from './plan-dxf';
@@ -17,5 +18,6 @@ export function planDxf(plan: AiFloorPlan): PlanDxfResult {
     style: sheetStyle(),
     labels: planDrawingLabels(),
     layers: layerExport(),
+    detail: facadeDetail(),
   });
 }

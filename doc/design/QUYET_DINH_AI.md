@@ -3561,3 +3561,62 @@ Gỡ hẳn phiếu «Yêu cầu mặt đứng của kỹ sư» (bản chỉ xem 
 dòng nguồn «Dựng theo phần Mặt đứng của đầu bài đã xác nhận» kèm liên kết sửa ở đầu bài. Nhãn nguồn trong bảng ý
 tưởng đổi «theo yêu cầu kỹ sư» → «theo đầu bài». Lượt chạy vốn đọc phần `facade` của đầu bài đã xác nhận phía
 Worker, nên không đổi gì ngoài giao diện.
+
+### T147 — Tờ mặt đứng chi tiết như hồ sơ thật; lưới trục cho mặt bằng và mặt đứng (10/10/2026, Haan)
+
+Haan đưa tờ KT07-08 «MẶT ĐỨNG» của hồ sơ Mạnh – An Bình (M5) cạnh tờ mặt đứng của một nhà thử, và đề nghị
+«lên phương án để bản vẽ mặt đứng được chi tiết như bản vẽ thật». Đo tờ thật bằng ezdxf: 1/60, A3; trục nét chấm
+gạch (`CENTERX2`) có bóng tròn; cao độ ở cả hai bên; mỗi bên ba hàng kích thước (chi tiết 450 / 3200 / 400 / 100 /
+3100 / 400 / 100 / 750 / 50, rồi tầng, rồi tổng); chuỗi lỗ mở đặt trong hình; dải dầm 400 cộng phào 100×50 đua 50
+ở mỗi sàn; tường chắn mái tô xám, phào đỉnh 50×20; chân nhà ốp đá (AR-CONC); cửa vẽ khung, nẹp cắt góc 45°, kính
+xiên, tay nắm, phào bo cửa 100; lan can trụ 20, nan 20 bước 120; 24 ghi chú dẫn chữ 2 mm.
+
+Haan chốt bốn điểm:
+
+1. **Kết hợp.** Bộ chi tiết NVG nằm trong **`kb/facade_detail.yaml`** và luôn được vẽ. Mảng trang trí mô hình đã
+   chọn được vẽ thành chi tiết thật thay cho hình chữ nhật tô nhạt: phào có gờ, ron là dãy rãnh ngang, lam là dãy
+   nan, cột có đầu và chân, ô văng có nét đáy, chóp có thân tam giác. Mô hình vẫn chỉ khai khung bao (T15). Phào mô
+   hình đặt trùng dải phào mặc định thì **thay** dải ấy.
+2. **Tô vật liệu như bản vẽ thật.** Điểm này thay phần «vật liệu chỉ ghi bằng chữ» của T59.
+   - Sơn tối hơn ngưỡng `paint_solid_below` thì tô xám, độ xám suy từ mã màu và kẹp trong `tone_range`.
+   - Đá, gạch, gỗ, chấm, ngói vẽ bằng nét ký hiệu (`material_hatch`).
+   - Tên vật liệu vẫn ghi, nay bằng ghi chú dẫn.
+   - Tờ vẫn là bản vẽ đen trắng.
+3. **Lưới trục ở cả hai tờ, cùng một hàm.** `draw/axes.ts › deriveAxes` suy trục từ tim tường vì mặt bằng không
+   có cột.
+   - Hai tường bao luôn là trục. Tường trong là trục khi ở một tầng nào đó tổng chiều dài đạt `min_span_share`
+     chiều sâu. Trục cách nhau dưới `merge_mm` thì gộp.
+   - Trục dọc đánh số từ trái, trục ngang đánh chữ từ mặt tiền.
+   - Toạ độ trục là tim tường thật, không làm tròn, để hàng trục cộng khớp hàng chi tiết.
+   - Tờ mặt bằng (và DXF mặt bằng) có ba hàng kích thước: chi tiết, trục, tổng. Ảnh neo mặt bằng không có trục.
+4. **Đợt này chỉ làm mặt tiền.** Mặt bên và mặt sau cần đổi hợp đồng (`face`) và suy lỗ mở theo từng mặt.
+
+**Không đổi hợp đồng, không gọi AI.** Tờ được dựng lúc xem từ `ai_facade_concept`, nên mọi ý tưởng đã lưu tự hiện
+chi tiết mới. Tuyến `/facade/:id/sheet` và `/dxf` đọc thêm mặt bằng (`concept.plan_ref`) để có trục và bậc tam cấp;
+mặt bằng mất thì tờ vẫn vẽ, chỉ không có trục.
+
+**Ảnh neo mặt đứng bỏ lớp chú thích** (trục, cao độ, kích thước, ghi chú) và không đọc mặt bằng. Máy chủ dựng lại
+ảnh neo để so cỡ khung với tệp trình duyệt gửi lên, nên ảnh neo không được phụ thuộc một thứ mà nơi gọi này có còn
+nơi kia không.
+
+**DXF**:
+- Thêm vai trò lớp `grid` (đã có `NV-Truc` trong kb) và `detail` (`NV-ChiTiet`).
+- Thêm linetype `CENTER`.
+- Mảng tô thành thực thể `SOLID`, vì R12 không có HATCH.
+- Chữ ghi chú giữ căn trái hoặc phải.
+- Sửa lỗi cũ: nét đứt khai bằng CSS (vạch sàn, hàng rào, ranh mềm, bậc trên mặt cắt) ra DXF thành nét liền. Nay
+  linetype lấy theo lớp CSS.
+
+**Tệp**:
+- `kb/facade_detail.yaml`, `kb/facade-detail.ts`
+- `draw/axes.ts`, `draw/hatch.ts`, `draw/leaders.ts`, `draw/elevation-parts.ts`
+- `draw/dims.ts`: `chainRows` cho N hàng hai phía, `inFieldChain`, đoạn ngắn liền nhau đưa chữ sang phía kia
+- `draw/units.ts`: `DrawInsets`
+- Mẫu đối chứng `MANH_FACADE` (số chép từ KT08) có ảnh vàng `mat-dung-manh.svg` để so với tờ thật
+
+**Còn lại / chờ Haan**:
+- Ghi chú dẫn in hoa theo M5 (`notes.uppercase`, cùng lý do với `room_label.uppercase`).
+- Bảng mẫu vật liệu dạng ô ký hiệu chưa làm: khung tên vẫn liệt kê vật liệu bằng chữ, ghi chú dẫn gọi tên tại chỗ.
+- Ron đứng hai bên cửa sổ của M5 không có trong danh mục phần tử, nên chưa vẽ.
+- Mặt bên và mặt sau.
+- Ảnh vật liệu dựng lại từ ảnh neo mới chưa chạy thử (lượt trả phí).

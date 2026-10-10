@@ -83,7 +83,10 @@ type Ctx = Context<{ Bindings: DesignEnv }>;
  */
 async function readFacade(
   c: Ctx,
-): Promise<{ concept: AiFacadeConcept; artifactId: string; createdAt: string } | Response> {
+): Promise<
+  | { concept: AiFacadeConcept; artifactId: string; createdAt: string; plan: AiFloorPlan | null }
+  | Response
+> {
   const token = bearer(c.req.header('Authorization'));
   if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
   const projectId = c.req.param('projectId') ?? '';
@@ -96,13 +99,30 @@ async function readFacade(
   const denied = await denyUnlessReadable(db, scope.tenantId, projectId);
   if (denied) return c.json({ error: denied.error }, denied.status);
 
-  const artifact = await new ArtifactRepository(c.env).get(artifactId, projectId);
+  const repo = new ArtifactRepository(c.env);
+  const artifact = await repo.get(artifactId, projectId);
   if (!artifact || artifact.kind !== 'ai_facade_concept') return c.json({ error: NOT_FOUND }, 404);
+  const concept = artifact.payload as AiFacadeConcept;
   return {
-    concept: artifact.payload as AiFacadeConcept,
+    concept,
     artifactId: artifact.id,
     createdAt: artifact.createdAt,
+    plan: await planOfConcept(repo, concept, projectId),
   };
+}
+
+/**
+ * Mặt bằng mà ý tưởng dựng trên — nguồn lưới trục và bậc tam cấp của tờ mặt đứng (T147). Mất (đã
+ * xoá, khác hồ sơ) thì `null`: tờ vẫn vẽ, chỉ không có trục.
+ */
+async function planOfConcept(
+  repo: ArtifactRepository,
+  concept: AiFacadeConcept,
+  projectId: string,
+): Promise<AiFloorPlan | null> {
+  if (!concept.plan_ref) return null;
+  const artifact = await repo.get(concept.plan_ref, projectId);
+  return artifact?.kind === 'ai_floor_plan' ? (artifact.payload as AiFloorPlan) : null;
 }
 
 /** Mã phương án mặt bằng đang hiệu lực — đọc dưới phiên người gọi, bỏ mốc trỏ vào phương án đã ẩn. */
@@ -525,7 +545,7 @@ facadeApp.get('/:projectId/sheet', async (c) => {
   const read = await readFacade(c);
   if (read instanceof Response) return read;
   try {
-    const sheet = facadeSheet(read.concept);
+    const sheet = facadeSheet(read.concept, read.plan);
     return new Response(sheet.svg, {
       headers: {
         'Content-Type': 'image/svg+xml; charset=utf-8',
@@ -545,7 +565,7 @@ facadeApp.get('/:projectId/dxf', async (c) => {
   const read = await readFacade(c);
   if (read instanceof Response) return read;
   const short = read.artifactId.replace(/^sha256:/, '').slice(0, 8);
-  return new Response(facadeDxf(read.concept), {
+  return new Response(facadeDxf(read.concept, read.plan), {
     headers: {
       'Content-Type': 'application/dxf',
       'Content-Disposition': `attachment; filename="mat-dung-ai-${short}.dxf"`,

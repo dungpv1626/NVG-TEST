@@ -90,6 +90,14 @@ line_mm:
   floor_line: 0.13 # vạch sàn từng tầng trên mặt đứng
   level_mark: 0.18 # ký hiệu cao độ ±0.000
   element: 0.13 # viền mảng trang trí (ốp, ô văng, lam, cột)
+  # ── Chi tiết và chú thích mặt đứng như hồ sơ thật (T147, M5 KT07-08) ──
+  detail: 0.13 # khung cánh, nẹp, nan lan can, dải phào — nét «!NOITHAT» 0,13 của M5
+  glass: 0.09 # nét xiên phản chiếu trên kính
+  hatch: 0.09 # nét ký hiệu vật liệu (đá, gạch, gỗ, ngói)
+  axis: 0.13 # đường trục — chấm gạch, như lớp «!TRUC» của M5
+  level_line: 0.09 # đường cốt chạy ngang tờ — chấm gạch
+  axis_bubble: 0.18 # vòng tròn bóng trục
+  leader: 0.13 # nét dẫn của ghi chú
   # ── Tờ mặt bằng mái, ảnh neo của bước Phối cảnh (T67) ──
   # Thứ hạng ở đây NGƯỢC với tờ mặt bằng: khối nhà là thứ phải đọc ra trước, mái là lớp phủ lên
   # nó, còn tầng dưới chỉ để thấy chỗ lùi vào. Mượn nét của tờ khác thì thứ hạng đảo ngược mà
@@ -118,6 +126,8 @@ text_mm:
   stair_number: 1.6
   north: 3.0
   footer: 1.8 # ghi chú chân tờ
+  note: 2.0 # ghi chú dẫn trên mặt đứng — M5 in 120 ở 1/60 = 2 mm
+  axis_label: 3.0 # tên trục trong bóng tròn — M5: 180 ở 1/60
 
 # Chữ co lại khi phòng hẹp, nhưng không nhỏ hơn ngưỡng này — dưới đó thì bỏ hẳn chữ, vì một
 # dòng chữ không đọc được vẫn che mất nét vẽ.

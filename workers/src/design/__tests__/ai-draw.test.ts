@@ -20,7 +20,9 @@ import { fileURLToPath, URL } from 'node:url';
 import type { AiFloorPlan } from '@nvg/shared/design';
 import { describe, expect, it } from 'vitest';
 import { parseSheetStyle, SheetStyleError } from '../ai/draw/style';
+import { deriveAxes } from '../ai/draw/axes';
 import { renderPlanSheet, PlanSheetError } from '../ai/draw/plan-sheet';
+import { parseFacadeDetail } from '../kb/facade-detail';
 import { drawingLabelsOf, parseVocabulary } from '../kb/vocabulary';
 import { TOWNHOUSE_PLAN, VILLA_PLAN } from './ai-plan-fixtures';
 
@@ -33,7 +35,13 @@ const vocabulary = parseVocabulary(read('../../../../kb/room_vocabulary.yaml'));
 // «Khu vệ sinh» đổi thành «WC» (09/10/2026) — chúng KHÔNG được đổi chữ theo.
 const labels = drawingLabelsOf(vocabulary);
 
-const sheet = (plan: AiFloorPlan, level: number) => renderPlanSheet(plan, level, { style, labels });
+const detail = parseFacadeDetail(read('../../../../kb/facade_detail.yaml'));
+// Như `planSheet` của bản chạy thật: có quy ước chi tiết nên tờ vẽ lưới trục (T147).
+const sheet = (plan: AiFloorPlan, level: number) =>
+  renderPlanSheet(plan, level, { style, labels, detail });
+/** Tờ không lưới trục — hai hàng kích thước như ảnh neo; dùng cho phép thử chuỗi và chọn tỷ lệ. */
+const plainSheet = (plan: AiFloorPlan, level: number) =>
+  renderPlanSheet(plan, level, { style, labels });
 
 /** Mọi chữ nằm trong một lớp cho trước, theo thứ tự xuất hiện. */
 function textsOfClass(svg: string, cls: string): string[] {
@@ -130,7 +138,7 @@ describe('bộ vẽ mặt bằng — hình học', () => {
   it('chuỗi kích thước chi tiết cộng đúng bằng chuỗi tổng, cả hai phương', () => {
     for (const plan of [TOWNHOUSE_PLAN, VILLA_PLAN]) {
       for (const level of plan.levels) {
-        const numbers = textsOfClass(sheet(plan, level.level).svg, 'td').map(Number);
+        const numbers = textsOfClass(plainSheet(plan, level.level).svg, 'td').map(Number);
         const rows = closedChains(numbers);
         // Đúng hai hàng — ngang và dọc — và mỗi hàng chỉ "đóng" được khi con số cuối bằng đúng
         // tổng các đoạn trước nó. Đó là toàn bộ điều cần chứng minh: tổng không thể lệch, vì
@@ -180,17 +188,17 @@ describe('bộ vẽ mặt bằng — hình học', () => {
     // Biệt thự 10 × 14 m ra tờ A3 DỌC. Tỷ lệ do bộ vẽ TÍNH rồi làm tròn lên mức chuẩn gần
     // nhất, không chọn trong ba mức cố định như bản trước — nên con số ở đây phải là một mức có
     // thật trong `scale_steps`, và phải là mức nhỏ nhất còn vừa.
-    const villa = sheet(VILLA_PLAN, 1);
+    const villa = plainSheet(VILLA_PLAN, 1);
     expect(style.scale_steps).toContain(villa.scale);
     expect(villa.orientation).toBe('portrait');
 
     // Gấp đôi kích thước thì tỷ lệ phải NHẢY LÊN đúng một bậc trở lên, không đứng yên.
-    const twice = sheet(scalePlan(VILLA_PLAN, 2), 1);
+    const twice = plainSheet(scalePlan(VILLA_PLAN, 2), 1);
     expect(twice.scale).toBeGreaterThan(villa.scale);
     expect(style.scale_steps).toContain(twice.scale);
 
     // Gấp bốn thì lớn hơn nữa và vẫn ra tờ, không ném.
-    const huge = sheet(scalePlan(VILLA_PLAN, 4), 1);
+    const huge = plainSheet(scalePlan(VILLA_PLAN, 4), 1);
     expect(huge.scale).toBeGreaterThan(twice.scale);
     expect(huge.notes).toEqual([]);
   });
@@ -298,5 +306,53 @@ describe('không gian mở chia khu (T48)', () => {
     expect(sheet(planWithParts(), 1).svg).toContain('ranh mềm giữa các khu');
     // Tờ không có ô gộp thì không in câu ấy — nói thừa cũng là nói sai.
     expect(sheet(VILLA_PLAN, 1).svg).not.toContain('ranh mềm giữa các khu');
+  });
+});
+
+describe('lưới trục (T147)', () => {
+  it('hai tường bao luôn là trục; vách trong chạy suốt chiều sâu cũng là trục', () => {
+    const axes = deriveAxes(VILLA_PLAN, detail);
+    const xs = axes.x.map((a) => a.at);
+    // Biệt thự: tường bao trái 11 / phải 989, hai vách dọc chạy suốt 483,5 và 705,5 — đúng tim tường,
+    // không làm tròn, để hàng trục cộng khớp hàng chi tiết.
+    expect(xs[0]).toBe(11);
+    expect(xs[xs.length - 1]).toBe(989);
+    expect(xs).toEqual(expect.arrayContaining([483.5, 705.5]));
+    expect(axes.x.map((a) => a.label)).toEqual(xs.map((_, i) => String(i + 1)));
+    expect(axes.y[0]?.label).toBe('A');
+  });
+
+  it('vách ngắn không thành trục; hai trục sát nhau gộp làm một, giữ tường bao', () => {
+    const level = VILLA_PLAN.levels[0]!;
+    const plan: AiFloorPlan = {
+      ...VILLA_PLAN,
+      levels: [
+        {
+          ...level,
+          walls: [
+            ...level.walls,
+            // Vách ngắn 1 m — dưới `min_span_share` của chiều sâu 14 m.
+            { id: 'short', a: [300, 11], b: [300, 111], t: 11, k: 'p' },
+            // Vách dài sát tường bao trái 40 cm — dưới `merge_mm`.
+            { id: 'near', a: [51, 11], b: [51, 1389], t: 11, k: 'p' },
+          ],
+        },
+      ],
+    };
+    const xs = deriveAxes(plan, detail).x.map((a) => a.at);
+    expect(xs).not.toContain(300);
+    expect(xs).not.toContain(51);
+    expect(xs[0]).toBe(11);
+  });
+
+  it('tờ mặt bằng có bóng trục, và hàng trục cộng đúng bằng tổng', () => {
+    const svg = sheet(VILLA_PLAN, 1).svg;
+    const labels = textsOfClass(svg, 'tax');
+    expect(labels).toEqual(expect.arrayContaining(['1', '2', 'A']));
+    const axes = deriveAxes(VILLA_PLAN, detail).x.map((a) => a.at);
+    const row = [11, ...axes.slice(1, -1), 989];
+    const segments = row.slice(1).map((v, i) => Math.round((v - row[i]!) * 10));
+    const numbers = textsOfClass(svg, 'td').map(Number);
+    for (const value of segments) expect(numbers).toContain(value);
   });
 });

@@ -16,7 +16,7 @@
 import type { SheetStyle } from '../draw/style';
 import { CLS } from '../draw/svg';
 import type { DxfRole } from './layers';
-import type { DxfDocument } from './writer';
+import type { DxfDocument, DxfLinetype, DxfTextAlign } from './writer';
 
 type Pt = [number, number];
 
@@ -64,6 +64,43 @@ const ROLE_OF_CLASS: Record<string, DxfRole | null> = {
   [CLS.floorLine]: 'annotation',
   [CLS.levelMark]: 'annotation',
   [CLS.textLevelMark]: 'annotation',
+  // Chi tiết và chú thích mặt đứng (T147). Ô che màu giấy không xuất — nó chỉ để tờ SVG che nét.
+  [CLS.detail]: 'detail',
+  [CLS.glass]: 'window',
+  [CLS.hatchLine]: 'hatch',
+  [CLS.hatchDot]: 'hatch',
+  [CLS.fillTone]: 'hatch',
+  [CLS.mask]: null,
+  [CLS.axis]: 'grid',
+  [CLS.levelLine]: 'grid',
+  [CLS.axisBubble]: 'grid',
+  [CLS.textAxis]: 'grid',
+  [CLS.leader]: 'annotation',
+  [CLS.textNoteDraw]: 'annotation',
+  [CLS.textNoteDrawEnd]: 'annotation',
+};
+
+/**
+ * Lớp CSS khai nét đứt / chấm gạch TRONG `sheetCss` → linetype DXF. Trước T147 bộ đổi chỉ đọc
+ * `stroke-dasharray` ghi ngay trên thẻ, nên mọi nét đứt khai bằng CSS (vạch sàn, hàng rào, ranh mềm,
+ * bậc trên mặt cắt) ra tệp CAD thành nét liền.
+ */
+const LINETYPE_OF_CLASS: Record<string, DxfLinetype> = {
+  [CLS.softDivider]: 'DASHED',
+  [CLS.stairAbove]: 'DASHED',
+  [CLS.stairArrowAbove]: 'DASHED',
+  [CLS.floorLine]: 'DASHED',
+  [CLS.frontFence]: 'DASHED',
+  [CLS.roofLot]: 'DASHED',
+  [CLS.axis]: 'CENTER',
+  [CLS.levelLine]: 'CENTER',
+};
+
+/** Lớp chữ căn trái / phải trong CSS — DXF mặc định căn giữa. */
+const ALIGN_OF_CLASS: Record<string, DxfTextAlign> = {
+  [CLS.textNoteDraw]: 'left',
+  [CLS.textNoteDrawEnd]: 'right',
+  [CLS.textLevelMark]: 'left',
 };
 
 /** Cỡ chữ mặc định theo lớp CSS — cùng bảng `sheetCss` dùng. */
@@ -78,6 +115,11 @@ function textSize(style: SheetStyle, cls: string): number {
       return t.north;
     case CLS.textStairNumber:
       return t.stair_number;
+    case CLS.textNoteDraw:
+    case CLS.textNoteDrawEnd:
+      return t.note;
+    case CLS.textAxis:
+      return t.axis_label;
     default:
       return t.dim;
   }
@@ -99,9 +141,17 @@ export function svgToDxf(svg: string, options: SvgToDxfOptions): void {
     const rotate = rotation(attrs.transform);
     const place = (p: Pt): Pt => model(rotate ? rotateAbout(p, rotate) : p);
 
+    const cls = attrs.class ?? '';
+    const linetype: DxfLinetype =
+      LINETYPE_OF_CLASS[cls] ?? (attrs['stroke-dasharray'] !== undefined ? 'DASHED' : 'CONTINUOUS');
+
     switch (name) {
       case 'path':
-        pathToDxf(attrs.d ?? '', layer, place, scale, doc, attrs['stroke-dasharray'] !== undefined);
+        if (cls === CLS.fillTone) {
+          solidFromPath(attrs.d ?? '', layer, place, doc);
+          break;
+        }
+        pathToDxf(attrs.d ?? '', layer, place, scale, doc, linetype);
         break;
       case 'rect': {
         const x = num(attrs.x);
@@ -114,7 +164,8 @@ export function svgToDxf(svg: string, options: SvgToDxfOptions): void {
           [x + w, y + h],
           [x, y + h],
         ];
-        doc.polyline(layer, corners.map(place), true);
+        if (cls === CLS.fillTone) doc.solid(layer, corners.map(place));
+        else doc.polyline(layer, corners.map(place), true, linetype);
         break;
       }
       case 'line':
@@ -122,6 +173,7 @@ export function svgToDxf(svg: string, options: SvgToDxfOptions): void {
           layer,
           place([num(attrs.x1), num(attrs.y1)]),
           place([num(attrs.x2), num(attrs.y2)]),
+          linetype,
         );
         break;
       case 'circle':
@@ -138,6 +190,7 @@ export function svgToDxf(svg: string, options: SvgToDxfOptions): void {
           // `rotate(-90)` trên giấy y-xuống là quay NGƯỢC chiều kim đồng hồ khi nhìn — DXF đo góc
           // ngược chiều kim đồng hồ, nên đổi dấu.
           rotate ? -rotate.deg : 0,
+          ALIGN_OF_CLASS[cls] ?? 'center',
         );
         break;
       }
@@ -175,7 +228,7 @@ function pathToDxf(
   place: (p: Pt) => Pt,
   scale: number,
   doc: DxfDocument,
-  dashed: boolean,
+  linetype: DxfLinetype,
 ): void {
   const tokens = d.match(/[MLAZ]|-?\d*\.?\d+(?:e-?\d+)?/gi) ?? [];
   let i = 0;
@@ -189,7 +242,7 @@ function pathToDxf(
       start = current;
     } else if (command === 'L' && current) {
       const to: Pt = [next(), next()];
-      doc.line(layer, place(current), place(to), dashed ? 'DASHED' : 'CONTINUOUS');
+      doc.line(layer, place(current), place(to), linetype);
       current = to;
     } else if (command === 'A' && current) {
       const r = next();
@@ -201,12 +254,30 @@ function pathToDxf(
       arcToDxf(current, to, r, sweep, layer, place, scale, doc);
       current = to;
     } else if (command === 'Z' && current && start) {
-      doc.line(layer, place(current), place(start));
+      doc.line(layer, place(current), place(start), linetype);
       current = start;
     } else {
       // Số lẻ không đi sau lệnh nào, hoặc lệnh không hỗ trợ — dừng đường này, không đoán.
       break;
     }
+  }
+}
+
+/**
+ * Mảng tô `M … L … Z` → các SOLID chia quạt từ đỉnh đầu. Đúng cho đa giác lồi — mọi mảng tô của bộ
+ * vẽ mặt đứng là hình chữ nhật, hoặc đường mái tam giác / hình thang.
+ */
+function solidFromPath(d: string, layer: string, place: (p: Pt) => Pt, doc: DxfDocument): void {
+  const numbers = (d.match(/-?\d*\.?\d+(?:e-?\d+)?/gi) ?? []).map(Number);
+  const points: Pt[] = [];
+  for (let i = 0; i + 1 < numbers.length; i += 2)
+    points.push(place([numbers[i]!, numbers[i + 1]!]));
+  if (points.length === 4) {
+    doc.solid(layer, points);
+    return;
+  }
+  for (let i = 1; i + 1 < points.length; i += 1) {
+    doc.solid(layer, [points[0]!, points[i]!, points[i + 1]!]);
   }
 }
 

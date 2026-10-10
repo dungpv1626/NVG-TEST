@@ -16,6 +16,8 @@
 #  ⚠️ CHƯA MÃ NÀO ĐỌC TỆP NÀY. Nó là nguồn để Haan duyệt rồi chép số sang nơi mã đọc:
 #     `kb/facade_vocabulary.yaml` (`roof_defaults`, danh mục) và
 #     `kb/construction_norms.yaml` (`facade`). Xem mục `doi_chieu_so_moi` cuối tệp.
+#     T147 (10/10/2026): số phào, ron, khung cửa, lan can của mục `trang_tri` và hồ sơ M5 đã chép
+#     sang `kb/facade_detail.yaml` — tệp bộ vẽ mặt đứng đọc. Sửa thói quen vẽ thì sửa ở đó.
 #
 #  Cách đo: ezdxf đọc kích thước (DIMENSION), cao độ (chữ ±0.000, +3.600…), ghi chú
 #  vật liệu; dựng ảnh từng tờ để đọc bố cục. Độ dốc mái đo thêm bằng góc của các nét

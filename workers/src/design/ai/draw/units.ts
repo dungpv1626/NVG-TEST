@@ -60,7 +60,23 @@ export function paperSize(
     : { width: style.paper.short_mm, height: style.paper.long_mm };
 }
 
-export function drawArea(style: SheetStyle, orientation: Orientation): DrawArea {
+/**
+ * Dải dành cho chú thích quanh HÌNH, mm giấy, ở từng cạnh. Vắng cạnh nào thì theo mặc định: một
+ * chuỗi kích thước hai hàng bên trái và phía dưới, khoảng hở `FREE_EDGE_PAD_MM` ở hai cạnh kia.
+ * Tờ mặt đứng (T147) ghi kích thước cả hai bên, có cột ghi chú và bóng trục — nên tự khai.
+ */
+export interface DrawInsets {
+  left?: number;
+  right?: number;
+  top?: number;
+  bottom?: number;
+}
+
+export function drawArea(
+  style: SheetStyle,
+  orientation: Orientation,
+  insets: DrawInsets = {},
+): DrawArea {
   const size = paperSize(style, orientation);
   const frame: Rect = {
     x0: style.margin_mm.left,
@@ -90,10 +106,10 @@ export function drawArea(style: SheetStyle, orientation: Orientation): DrawArea 
   const dimBand =
     style.dim.first_offset_mm + style.dim.row_gap_mm + style.text_mm.dim + style.dim.text_gap_mm;
   const plan: Rect = {
-    x0: content.x0 + dimBand,
-    y0: content.y0 + FREE_EDGE_PAD_MM,
-    x1: content.x1 - FREE_EDGE_PAD_MM,
-    y1: titleBand.y0 - dimBand,
+    x0: content.x0 + (insets.left ?? dimBand),
+    y0: content.y0 + (insets.top ?? FREE_EDGE_PAD_MM),
+    x1: content.x1 - (insets.right ?? FREE_EDGE_PAD_MM),
+    y1: titleBand.y0 - (insets.bottom ?? dimBand),
   };
   return { frame, block, content, plan, titleBand };
 }
@@ -120,13 +136,13 @@ export interface SheetLayout {
   fits: boolean;
 }
 
-export function chooseLayout(bbox: Rect, style: SheetStyle): SheetLayout {
+export function chooseLayout(bbox: Rect, style: SheetStyle, insets: DrawInsets = {}): SheetLayout {
   const w = bbox.x1 - bbox.x0;
   const h = bbox.y1 - bbox.y0;
 
   let best: SheetLayout | null = null;
   for (const orientation of style.orientations) {
-    const area = drawArea(style, orientation);
+    const area = drawArea(style, orientation, insets);
     const availW = area.plan.x1 - area.plan.x0;
     const availH = area.plan.y1 - area.plan.y0;
     if (availW <= 0 || availH <= 0 || w <= 0 || h <= 0) continue;
@@ -145,7 +161,7 @@ export function chooseLayout(bbox: Rect, style: SheetStyle): SheetLayout {
   return {
     orientation,
     scale: style.scale_steps[style.scale_steps.length - 1] ?? 100,
-    area: drawArea(style, orientation),
+    area: drawArea(style, orientation, insets),
     fits: false,
   };
 }

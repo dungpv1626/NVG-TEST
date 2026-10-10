@@ -12,6 +12,7 @@
 
 import type { AiFloorPlan } from '@nvg/shared/design';
 import { planDrawingLabels } from '../../auth-scope';
+import { facadeDetail } from '../../kb/facade-detail-data';
 import { renderPlanAnchor, type PlanAnchorResult } from './anchor';
 import { renderPlanSheet, type PlanSheetResult } from './plan-sheet';
 import { sheetStyle } from './style-data';
@@ -36,7 +37,11 @@ export { sheetStyle } from './style-data';
  * `renderPlanSheet` vẫn thuần và kiểm thử được bằng dữ liệu tự dựng.
  */
 export function planSheet(plan: AiFloorPlan, level: number): PlanSheetResult {
-  return renderPlanSheet(plan, level, { style: sheetStyle(), labels: planDrawingLabels() });
+  return renderPlanSheet(plan, level, {
+    style: sheetStyle(),
+    labels: planDrawingLabels(),
+    detail: facadeDetail(),
+  });
 }
 
 /**
