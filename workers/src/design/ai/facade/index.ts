@@ -3,8 +3,9 @@
  * endpoint không phải tự đi lấy quy ước trình bày, quy ước cấu tạo, danh mục và bảng lớp CAD.
  */
 
-import type { AiFacadeConcept } from '@nvg/shared/design';
+import type { AiFacadeConcept, AiFloorPlan } from '@nvg/shared/design';
 import { constructionNorms } from '../../kb/construction-data';
+import { facadeDetail } from '../../kb/facade-detail-data';
 import { facadeVocabulary } from '../../kb/facade-vocabulary-data';
 import {
   renderElevationAnchor,
@@ -30,12 +31,19 @@ export function railingCmOf(concept: AiFacadeConcept): number {
   );
 }
 
-function options(concept: AiFacadeConcept): ElevationOptions {
+/**
+ * `plan` là mặt bằng mà ý tưởng dựng trên (`concept.plan_ref`) — nguồn lưới trục và bậc tam cấp
+ * (T147). Vắng thì tờ vẫn vẽ, chỉ không có trục và bậc.
+ */
+function options(concept: AiFacadeConcept, plan?: AiFloorPlan | null): ElevationOptions {
   const vocab = facadeVocabulary();
   const leaves = (code: string | null | undefined) =>
     code ? (vocab.doorTypes[code]?.leaves ?? null) : null;
   return {
     style: sheetStyle(),
+    detail: facadeDetail(),
+    vocab,
+    plan: plan ?? null,
     railingHeightCm: railingCmOf(concept),
     legend: facadeLegend(concept, vocab),
     openingStyles: {
@@ -46,15 +54,21 @@ function options(concept: AiFacadeConcept): ElevationOptions {
   };
 }
 
-export function facadeSheet(concept: AiFacadeConcept): ElevationSheetResult {
-  return renderElevationSheet(concept, options(concept));
+export function facadeSheet(
+  concept: AiFacadeConcept,
+  plan?: AiFloorPlan | null,
+): ElevationSheetResult {
+  return renderElevationSheet(concept, options(concept, plan));
 }
 
 /** Ảnh neo — không khung tên. Đứng cạnh `facadeSheet` vì hai thứ chỉ khác nhau ở điểm ấy. */
-export function facadeAnchor(concept: AiFacadeConcept): ElevationAnchorResult {
-  return renderElevationAnchor(concept, options(concept));
+export function facadeAnchor(
+  concept: AiFacadeConcept,
+  plan?: AiFloorPlan | null,
+): ElevationAnchorResult {
+  return renderElevationAnchor(concept, options(concept, plan));
 }
 
-export function facadeDxf(concept: AiFacadeConcept): string {
-  return renderFacadeDxf(concept, { ...options(concept), layers: layerExport() });
+export function facadeDxf(concept: AiFacadeConcept, plan?: AiFloorPlan | null): string {
+  return renderFacadeDxf(concept, { ...options(concept, plan), layers: layerExport() });
 }

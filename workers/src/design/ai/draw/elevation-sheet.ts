@@ -9,21 +9,57 @@
  * tầng 1). Bộ đổi toạ độ `Paper` vốn lật trục thứ hai cho mặt bằng — ở đây đúng là thứ cần: `z`
  * tăng thì lên phía trên tờ giấy. Nên `paper.p([x, z])` dùng thẳng, không cần bộ đổi riêng.
  *
+ * ── Chi tiết như hồ sơ thật (T147, 10/10/2026) ─────────────────────────────────────────
+ * Đối chiếu tờ KT07-08 của M5, tờ vẽ có thêm: dải dầm + phào ở mỗi sàn, tường chắn mái có phào
+ * đỉnh, chân nhà và mảng ốp mang ký hiệu vật liệu, cửa vẽ đủ khung–cánh–kính xiên–tay nắm, lan can
+ * trụ–nan, bậc tam cấp; và lớp chú thích: lưới trục (suy từ tường của mặt bằng), đường cốt chấm
+ * gạch với ký hiệu cao độ HAI bên, ba hàng kích thước mỗi bên, chuỗi lỗ mở và chuỗi bậu/cửa trong
+ * hình, ghi chú dẫn. Số cấu tạo đọc từ `kb/facade_detail.yaml`; chi tiết ở `elevation-parts.ts`.
+ *
+ * Vật liệu: T59 ghi vật liệu chỉ bằng chữ. T147 (Haan chọn) tô như bản vẽ thật — sơn tối tô xám,
+ * đá/gạch/gỗ/ngói bằng nét ký hiệu — và vẫn ghi tên vật liệu bằng ghi chú dẫn. Tờ vẫn đen trắng.
+ *
  * ── Thứ tự chồng lớp ───────────────────────────────────────────────────────────────────
- * đường cốt đất → khối nhà → vạch sàn → lỗ mở → mảng trang trí → lan can → mái → cổng, rào →
- * ký hiệu cao độ → chuỗi kích thước. Mảng trang trí tô nền nhạt nên phải vẽ SAU lỗ mở: chỉ ô văng,
- * lam, vòm đầu cửa và mái sảnh được phép đè lên cửa (`ai/facade/check.ts`), và lam đè lên cửa sổ là
- * đúng hình thật.
+ * đường cốt đất → mảng tô thân nhà → chân nhà → khối nhà → dải sàn → lỗ mở → phào bo cửa → phào sàn
+ * → mảng trang trí → lan can → tường chắn mái, mái → bậc → cổng, rào → [chú thích: trục, đường cốt,
+ * kích thước, ghi chú]. Lỗ mở che màu giấy (`CLS.mask`) nên đè được mảng tô; phào sàn vẽ SAU lỗ mở
+ * để mép sàn đè lên chân cửa ban công như nhìn thật; lam đè lên cửa sổ là đúng hình thật.
  * Cổng và rào vẽ NÉT ĐỨT, không tô — chúng đứng trước nhà: tô đặc thì che mất tầng 1, còn nét liền
  * thì đọc thành một vạch ngang cắt qua cửa chính (thấy trên lượt chạy thật đầu tiên, 19/09/2026).
  *
- * Vật liệu và màu KHÔNG vẽ lên tờ này: tờ là bản vẽ đơn sắc đo được, còn vật liệu ghi bằng chữ ở
- * dải ghi chú và bảng ý tưởng trên màn hình. Ảnh có vật liệu là việc của mô hình ảnh (Đợt E).
+ * Ảnh neo (`renderElevationAnchor`) KHÔNG mang lớp chú thích: nó rời hệ thống tới mô hình ảnh, và
+ * mô hình ảnh không viết chữ (T59 Đợt E) — trục, số đo, ghi chú chỉ làm nhiễu.
  */
 
-import type { AiFacadeConcept } from '@nvg/shared/design';
-import { chain } from './dims';
+import type { AiFacadeConcept, AiFloorPlan } from '@nvg/shared/design';
+import type { FacadeDetail } from '../../kb/facade-detail';
+import type { FacadeVocabulary } from '../../kb/facade-vocabulary';
+import { anchorPaper, anchorSvg } from './anchor';
+import { bubbleBandMm, deriveAxes, renderAxisBubble } from './axes';
+import { chainBandMm, chainRows, inFieldChain } from './dims';
+import {
+  cornice,
+  doorShape,
+  doorSurround,
+  elementMaterial,
+  elementShape,
+  entryStepsShape,
+  floorBand,
+  garageShape,
+  lookOf,
+  materialFor,
+  parapetShape,
+  penFor,
+  railingShape,
+  surface,
+  windowShape,
+  type DoorLeaves,
+  type FacadeMaterial,
+  type Opening,
+  type Pen,
+} from './elevation-parts';
 import { bboxOfPoints, type Pt, type Rect } from './geometry';
+import { dedupeNotes, notesBandMm, renderLeaders, splitSides, type LeaderNote } from './leaders';
 import { DrawNotes, type DrawNote } from './notes';
 import {
   renderFooter,
@@ -33,13 +69,18 @@ import {
   svgDocument,
 } from './sheet';
 import { mainDoorOf } from '../facade/frame';
-import { anchorPaper, anchorSvg } from './anchor';
-import { arcPath, CLS, polylinePath, tag, textEl } from './svg';
+import { CLS, polylinePath, tag, textEl } from './svg';
 import type { Orientation, SheetStyle } from './style';
-import { chooseLayout, mmPerCm, paperFor, type Paper } from './units';
+import { chooseLayout, paperFor, type DrawInsets, type Paper } from './units';
+
+export type { DoorLeaves } from './elevation-parts';
 
 export interface ElevationOptions {
   style: SheetStyle;
+  /** Chi tiết cấu tạo — `kb/facade_detail.yaml` (T147). */
+  detail: FacadeDetail;
+  /** Danh mục mặt đứng — nhãn vật liệu, màu, lan can cho ghi chú dẫn. */
+  vocab: FacadeVocabulary;
   /** Chiều cao lan can, cm — `kb/construction_norms.yaml` mục `outdoor`. */
   railingHeightCm: number;
   /**
@@ -52,6 +93,11 @@ export interface ElevationOptions {
    * Vắng thì theo quy tắc bề rộng.
    */
   openingStyles?: OpeningStyles;
+  /**
+   * Mặt bằng mà ý tưởng dựng trên (`concept.plan_ref`) — nguồn của lưới trục và bậc tam cấp. Vắng
+   * (mặt bằng đã xoá, phép thử cũ) thì tờ không có trục, không có bậc; không lỗi.
+   */
+  plan?: AiFloorPlan | null;
 }
 
 export interface ElevationSheetResult {
@@ -75,20 +121,14 @@ const ELEVATION_CATEGORY = 'Kiến trúc — mặt đứng ý tưởng';
 
 /** Hai trạm kích thước sát nhau hơn mức này thì gộp — chuỗi không đọc nổi, cm. */
 const MIN_STATION_GAP_CM = 5;
-
-// Ký hiệu trên tờ, không phải cấu tạo: chỉ quyết định nét vẽ trông thế nào.
-/** Cửa sổ từ bề rộng này vẽ hai cánh (một đố đứng giữa), cm. */
-const WINDOW_TWO_LEAF_CM = 100;
-/** Cửa đi từ bề rộng này vẽ hai cánh, cm. */
-const DOOR_TWO_LEAF_CM = 120;
-/** Đố ngang cửa sổ đặt ở phần tư dưới — ô cố định bên dưới, cánh mở bên trên. */
-const WINDOW_TRANSOM_SHARE = 0.25;
-/** Số khoang nan của cửa cuốn — cố định để tờ nào cũng đọc ra cùng một ký hiệu. */
-const SHUTTER_BAYS = 6;
 /** Đường cốt đất chạy quá khối nhà mỗi bên, phần của bề rộng hình. */
 const GROUND_OVERRUN_SHARE = 0.04;
+/** Số hàng kích thước mỗi bên: chi tiết, tầng, tổng — như hồ sơ M5. */
+const HEIGHT_ROWS = 3;
+/** Hai hàng kích thước dưới chân: trục (hoặc lỗ mở tầng 1 khi không có trục), tổng. */
+const WIDTH_ROWS = 2;
 
-type Opening = AiFacadeConcept['openings_front'][number];
+type Level = AiFacadeConcept['elevation']['levels'][number];
 
 export function renderElevationSheet(
   concept: AiFacadeConcept,
@@ -97,19 +137,16 @@ export function renderElevationSheet(
   const { style } = options;
   const notes = new DrawNotes();
   const bbox = elevationBounds(concept, options);
+  const insets = annotationInsets(concept, options, bbox);
 
-  // Hai lượt chọn tỷ lệ: ký hiệu cao độ đứng BÊN PHẢI hình, bề rộng của nó tính bằng mm giấy, nên
-  // đổi ra cm phải biết tỷ lệ trước. Lượt hai lấy tỷ lệ của lượt một để chừa chỗ.
-  const first = chooseLayout(bbox, style);
-  const widened = { ...bbox, x1: bbox.x1 + levelMarkWidthMm(style) / mmPerCm(first.scale) };
-  const { orientation, scale, area, fits } = chooseLayout(widened, style);
+  const { orientation, scale, area, fits } = chooseLayout(bbox, style, insets);
   if (!fits) {
     notes.add(
       'scale_overflow',
       `Mặt đứng rộng hoặc cao hơn khổ giấy A3 ở mọi tỷ lệ đã khai — đã vẽ ở tỷ lệ 1:${scale} và hình có thể chạm mép khung.`,
     );
   }
-  const paper = paperFor(widened, area, scale);
+  const paper = paperFor(bbox, area, scale);
 
   const body = [
     renderFrame(area),
@@ -127,50 +164,105 @@ export function renderElevationSheet(
   return { svg: svgDocument(style, orientation, body), scale, orientation, notes: notes.list() };
 }
 
+/** Bối cảnh chung của một lượt vẽ — tính một lần, các bước vẽ và chú thích cùng đọc. */
+interface Ctx {
+  concept: AiFacadeConcept;
+  options: ElevationOptions;
+  detail: FacadeDetail;
+  levels: Level[];
+  first: Level;
+  top: Level;
+  roofZ: number;
+  levelZ: Map<number, number>;
+  flatRoof: boolean;
+  parapet: number;
+  /** Khung bao khối nhà (không kể phào đua), cm. */
+  xMin: number;
+  xMax: number;
+}
+
+function contextOf(concept: AiFacadeConcept, options: ElevationOptions): Ctx {
+  const levels = [...concept.elevation.levels].sort((a, b) => a.level - b.level);
+  const first = levels[0];
+  if (!first) throw new ElevationSheetError('Mặt đứng không có tầng nào.');
+  const top = levels[levels.length - 1] ?? first;
+  const outline = concept.elevation.roof_outline ?? [];
+  return {
+    concept,
+    options,
+    detail: options.detail,
+    levels,
+    first,
+    top,
+    roofZ: top.z + top.h,
+    levelZ: new Map(levels.map((l) => [l.level, l.z])),
+    flatRoof: outline.length < 2,
+    parapet: concept.elevation.parapet ?? 0,
+    xMin: Math.min(...levels.map((l) => l.x0)),
+    xMax: Math.max(...levels.map((l) => l.x1)),
+  };
+}
+
+/** Phào mặc định ở cao độ `z` bị THAY khi mô hình đã đặt phào riêng chạm dải ấy. */
+function modelCorniceAt(ctx: Ctx, z: number): boolean {
+  const h = ctx.detail.floorBand.corniceHCm;
+  return (ctx.concept.elevation.elements ?? []).some((e) => {
+    const [, z0 = 0, , z1 = 0] = e.rect;
+    return e.kind === 'cornice' && z1 >= z - h && z0 <= z + h * 2;
+  });
+}
+
+/** Cao độ các sàn có dải dầm + phào: mọi sàn trên tầng 1, và sàn mái. */
+function slabLevels(ctx: Ctx): Array<{ z: number; x0: number; x1: number; cornice: boolean }> {
+  if (!ctx.detail.floorBand.enabled) return [];
+  const out: Array<{ z: number; x0: number; x1: number; cornice: boolean }> = [];
+  for (let i = 1; i < ctx.levels.length; i += 1) {
+    const below = ctx.levels[i - 1]!;
+    const level = ctx.levels[i]!;
+    out.push({
+      z: level.z,
+      x0: below.x0,
+      x1: below.x1,
+      cornice: !modelCorniceAt(ctx, level.z),
+    });
+  }
+  // Sàn mái: mái dốc thì mép mái đua đã là đường ngang ấy — không thêm phào.
+  out.push({
+    z: ctx.roofZ,
+    x0: ctx.top.x0,
+    x1: ctx.top.x1,
+    cornice: ctx.flatRoof && !modelCorniceAt(ctx, ctx.roofZ),
+  });
+  return out;
+}
+
+/** Cao độ đáy của lỗ mở trong hệ cao độ chung. */
+function baseOf(ctx: Ctx, o: Opening): number {
+  return (ctx.levelZ.get(o.level) ?? 0) + o.sill;
+}
+
 /**
  * Phần HÌNH của mặt đứng — không khung, không khung tên. Tờ SVG, ảnh neo và tệp DXF cùng gọi hàm
- * này với ba bộ đổi toạ độ khác nhau: một nguồn hình học (CLAUDE.md 8.2 điểm 5).
+ * này với ba bộ đổi toạ độ khác nhau: một nguồn hình học (CLAUDE.md 8.2 điểm 5). `annotate = false`
+ * bỏ lớp chú thích (ảnh neo).
  */
 export function renderElevationBody(
   concept: AiFacadeConcept,
   paper: Paper,
   options: ElevationOptions,
+  annotate = true,
 ): string {
-  const { style } = options;
+  const ctx = contextOf(concept, options);
+  const { detail, vocab } = options;
   const elevation = concept.elevation;
-  const levels = [...elevation.levels].sort((a, b) => a.level - b.level);
-  const first = levels[0];
-  if (!first) throw new ElevationSheetError('Mặt đứng không có tầng nào.');
-  const top = levels[levels.length - 1] ?? first;
-  const roofZ = top.z + top.h;
+  const pen = penFor(paper);
   const bbox = elevationBounds(concept, options);
-  const levelZ = new Map(levels.map((l) => [l.level, l.z]));
-
-  const rect = (x0: number, z0: number, x1: number, z1: number, cls: string): string => {
-    const [ax, ay] = paper.p([Math.min(x0, x1), Math.max(z0, z1)]);
-    return tag('rect', {
-      x: ax,
-      y: ay,
-      width: paper.len(Math.abs(x1 - x0)),
-      height: paper.len(Math.abs(z1 - z0)),
-      class: cls,
-    });
-  };
-  const path = (points: Pt[], cls: string, close = false): string =>
-    tag('path', {
-      class: cls,
-      d: polylinePath(
-        points.map((p) => paper.p(p)),
-        close,
-      ),
-    });
-
   const parts: string[] = [];
 
   // Đường cốt đất — chạy quá khối nhà hai bên, như hồ sơ giấy.
   const groundOverrun = (bbox.x1 - bbox.x0) * GROUND_OVERRUN_SHARE;
   parts.push(
-    path(
+    pen.path(
       [
         [bbox.x0 - groundOverrun, elevation.ground_z],
         [bbox.x1 + groundOverrun, elevation.ground_z],
@@ -179,86 +271,424 @@ export function renderElevationBody(
     ),
   );
 
-  // Khối nhà: phần đế từ cốt đất lên ±0.000, rồi từng tầng.
-  parts.push(rect(first.x0, elevation.ground_z, first.x1, 0, CLS.elevationOutline));
-  for (const level of levels) {
-    parts.push(rect(level.x0, level.z, level.x1, level.z + level.h, CLS.elevationOutline));
+  // Thân nhà sơn tối thì tô cả mảng tường; lỗ mở che lại bằng màu giấy.
+  const bodyLook = lookOf(materialFor(concept, ['body']), detail, vocab);
+  if (bodyLook.grey) {
+    for (const level of ctx.levels) {
+      parts.push(
+        surface(rectPoly(level.x0, level.z, level.x1, level.z + level.h), bodyLook, pen, detail),
+      );
+    }
   }
-  for (const level of levels.slice(1)) {
-    parts.push(
-      path(
-        [
-          [level.x0, level.z],
-          [level.x1, level.z],
-        ],
-        CLS.floorLine,
-      ),
-    );
+
+  // Chân nhà: cốt đất → ±0.000, ký hiệu theo vật liệu phần đế.
+  const plinthLook = lookOf(materialFor(concept, detail.plinth.materialFrom), detail, vocab);
+  parts.push(
+    surface(rectPoly(ctx.first.x0, elevation.ground_z, ctx.first.x1, 0), plinthLook, pen, detail),
+  );
+
+  // Khối nhà: phần đế rồi từng tầng.
+  parts.push(pen.rect(ctx.first.x0, elevation.ground_z, ctx.first.x1, 0, CLS.elevationOutline));
+  for (const level of ctx.levels) {
+    parts.push(pen.rect(level.x0, level.z, level.x1, level.z + level.h, CLS.elevationOutline));
+  }
+
+  // Dải dầm dưới mỗi sàn (phào vẽ sau lỗ mở).
+  const trimLook = lookOf(materialFor(concept, ['trim']), detail, vocab);
+  const slabs = slabLevels(ctx);
+  const tops = concept.openings_front.map((o) => ({
+    x: o.x,
+    w: o.w,
+    base: baseOf(ctx, o),
+    top: baseOf(ctx, o) + o.h,
+  }));
+  for (const slab of slabs) {
+    parts.push(floorBand(slab.z, slab.x0, slab.x1, tops, false, trimLook, pen, detail));
   }
 
   // Lỗ mở — KHOÁ, chép từ mặt bằng.
   const mainDoor = mainDoorOf(concept.openings_front);
+  const doorLook = (zone: string) => {
+    const m = materialFor(concept, [zone]);
+    return m && detail.door.solidMaterials.includes(m.material)
+      ? lookOf({ material: m.material, colour: m.colour }, detail, vocab)
+      : null;
+  };
   for (const opening of concept.openings_front) {
-    const base = (levelZ.get(opening.level) ?? 0) + opening.sill;
-    const leaves =
-      opening.kind !== 'door'
-        ? null
-        : opening === mainDoor
-          ? (options.openingStyles?.main ?? null)
-          : (options.openingStyles?.side ?? null);
-    parts.push(
-      ...openingShape(opening, base, rect, path, leaves, options.openingStyles?.garage ?? null),
-    );
+    const base = baseOf(ctx, opening);
+    if (opening.kind === 'window') parts.push(windowShape(opening, base, pen, detail));
+    else if (opening.kind === 'garage') {
+      parts.push(garageShape(opening, base, options.openingStyles?.garage ?? null, pen, detail));
+    } else {
+      const isMain = opening === mainDoor;
+      const leaves =
+        opening.kind !== 'door'
+          ? null
+          : isMain
+            ? (options.openingStyles?.main ?? null)
+            : (options.openingStyles?.side ?? null);
+      parts.push(
+        doorShape(opening, base, leaves, doorLook(isMain ? 'main_door' : 'side_door'), pen, detail),
+      );
+      if (isMain && detail.door.surroundMainDoor) {
+        parts.push(doorSurround(opening, base, pen, detail));
+      }
+    }
   }
 
-  // Mảng trang trí. Hầu hết là chữ nhật; ba loại có hình riêng (`elementShape`).
-  for (const element of elevation.elements ?? []) {
-    parts.push(...elementShape(element, rect, path, paper));
-  }
-
-  // Lan can ban công: khung + tay vịn giữa. Kiểu lan can ghi bằng chữ, không vẽ hoa văn.
-  for (const balcony of concept.balconies ?? []) {
-    const z = levelZ.get(balcony.level) ?? 0;
-    const h = options.railingHeightCm;
-    parts.push(rect(balcony.x0, z, balcony.x1, z + h, CLS.railing));
+  // Phào sàn — đè lên chân cửa ban công như nhìn thật.
+  for (const slab of slabs) {
+    if (!slab.cornice) continue;
+    const fb = detail.floorBand;
     parts.push(
-      path(
-        [
-          [balcony.x0, z + h / 2],
-          [balcony.x1, z + h / 2],
-        ],
-        CLS.railing,
+      cornice(
+        slab.z,
+        slab.z + fb.corniceHCm,
+        slab.x0,
+        slab.x1,
+        fb.corniceProjectionCm,
+        trimLook,
+        pen,
+        detail,
       ),
     );
   }
 
-  // Mái: tường chắn mái (mái bằng) và/hoặc đường bao mái dốc.
-  const parapet = elevation.parapet ?? 0;
-  if (parapet > 0) parts.push(rect(top.x0, roofZ, top.x1, roofZ + parapet, CLS.elevationOutline));
+  // Mảng trang trí — vẽ thành chi tiết theo loại.
+  for (const element of elevation.elements ?? []) {
+    parts.push(
+      elementShape(element, lookOf(elementMaterial(concept, element), detail, vocab), pen, detail),
+    );
+  }
+
+  // Lan can ban công.
+  for (const balcony of concept.balconies ?? []) {
+    const z = ctx.levelZ.get(balcony.level) ?? 0;
+    parts.push(railingShape(balcony, z, options.railingHeightCm, pen, detail));
+  }
+
+  // Mái: tường chắn mái (mái bằng) và/hoặc đường bao mái dốc có ký hiệu ngói.
+  const parapetZ0 = ctx.roofZ + (slabs.at(-1)?.cornice ? detail.floorBand.corniceHCm : 0);
+  if (ctx.parapet > 0 && ctx.roofZ + ctx.parapet > parapetZ0) {
+    const look = lookOf(materialFor(concept, detail.parapet.materialFrom), detail, vocab);
+    parts.push(
+      parapetShape(ctx.top.x0, ctx.top.x1, parapetZ0, ctx.roofZ + ctx.parapet, look, pen, detail),
+    );
+  }
   const outline = (elevation.roof_outline ?? []).map(([x = 0, z = 0]) => [x, z] as Pt);
-  if (outline.length >= 2) parts.push(path(outline, CLS.elevationOutline, true));
+  if (outline.length >= 3) {
+    const roofLook = lookOf(
+      { material: concept.roof.material, colour: concept.roof.colour },
+      detail,
+      vocab,
+    );
+    parts.push(surface(outline, roofLook, pen, detail));
+  }
+  if (outline.length >= 2) parts.push(pen.path(outline, CLS.elevationOutline, true));
+
+  // Bậc tam cấp ngoài cửa chính — chỉ khi mặt bằng có (T70).
+  for (const step of options.plan?.levels.find((l) => l.level === ctx.first.level)?.entry_steps ??
+    []) {
+    parts.push(entryStepsShape(step, elevation.ground_z, pen));
+  }
 
   // Cổng và tường rào — đứng trước nhà, vẽ nét không tô.
-  parts.push(...gateAndFence(concept, first, rect));
+  parts.push(...gateAndFence(concept, ctx.first, pen.rect));
 
-  // Ký hiệu cao độ bên phải hình.
-  const marks = [...new Set([elevation.ground_z, ...levels.map((l) => l.z), roofZ, bbox.y1])];
-  parts.push(...marks.map((z) => levelMark(z, bbox.x1, paper, style)));
-
-  // Chuỗi kích thước: dọc bên trái theo cao độ, ngang dưới chân theo lỗ mở tầng 1.
-  parts.push(chain(stations(marks), 'y', bbox, paper, style));
-  const groundOpenings = concept.openings_front.filter((o) => o.level === first.level);
-  parts.push(
-    chain(
-      stations([first.x0, first.x1, ...groundOpenings.flatMap((o) => [o.x, o.x + o.w])]),
-      'x',
-      bbox,
-      paper,
-      style,
-    ),
-  );
-
+  if (annotate) parts.push(annotations(ctx, paper, bbox));
   return parts.join('');
+}
+
+const rectPoly = (x0: number, z0: number, x1: number, z1: number): Pt[] => [
+  [x0, z0],
+  [x1, z0],
+  [x1, z1],
+  [x0, z1],
+];
+
+// ── Chú thích ──────────────────────────────────────────────────────────────────────────
+
+/** Đỉnh hình: đỉnh tường chắn mái hoặc nóc mái. */
+function topZ(ctx: Ctx, bbox: Rect): number {
+  return Math.max(ctx.roofZ + ctx.parapet, bbox.y1);
+}
+
+/** Ba hàng kích thước đứng: chi tiết (dải, phào, tường chắn), tầng, tổng. */
+function heightRows(ctx: Ctx, bbox: Rect): number[][] {
+  const g = ctx.concept.elevation.ground_z;
+  const fb = ctx.detail.floorBand;
+  const top = topZ(ctx, bbox);
+  const fine: number[] = [g, 0];
+  for (const slab of slabLevels(ctx)) {
+    fine.push(slab.z - fb.bandCm, slab.z);
+    if (slab.cornice) fine.push(slab.z + fb.corniceHCm);
+  }
+  if (!fb.enabled) fine.push(...ctx.levels.map((l) => l.z), ctx.roofZ);
+  if (ctx.parapet > 0) fine.push(ctx.roofZ + ctx.parapet - ctx.detail.parapet.copingHCm);
+  fine.push(top);
+  return [stations(fine), stations([g, ...ctx.levels.map((l) => l.z), ctx.roofZ, top]), [g, top]];
+}
+
+/** Ghi chú dẫn — sinh tất định từ kb và vật liệu đã chọn. */
+function leaderNotes(ctx: Ctx): LeaderNote[] {
+  const { concept, detail, options } = ctx;
+  const vocab = options.vocab;
+  const fb = detail.floorBand;
+  // «màu trắng kem»; nhãn đã mở đầu bằng «màu» («Màu tự nhiên của vật liệu») thì không thêm lần nữa.
+  const colour = (code: string) => {
+    const label = (vocab.colours[code]?.label_vi ?? code).toLocaleLowerCase('vi-VN');
+    return label.startsWith('màu ') ? label : `màu ${label}`;
+  };
+  const materialText = (m: Pick<FacadeMaterial, 'material' | 'colour'>) =>
+    `${vocab.materials[m.material]?.label_vi ?? vocab.roofMaterials[m.material]?.label_vi ?? m.material} ${colour(m.colour)}`;
+  const notes: LeaderNote[] = [];
+
+  // Phào sàn, mang màu của vùng `trim` nếu có.
+  const firstCornice = slabLevels(ctx).find((s) => s.cornice);
+  if (firstCornice) {
+    const trim = materialFor(concept, ['trim']);
+    notes.push({
+      text: trim ? `${fb.corniceNote} ${colour(trim.colour)}` : fb.corniceNote,
+      anchor: [firstCornice.x1 + fb.corniceProjectionCm / 2, firstCornice.z + fb.corniceHCm / 2],
+    });
+  }
+  // Tường chắn mái và phào đỉnh.
+  if (ctx.parapet > 0) {
+    const top = ctx.roofZ + ctx.parapet;
+    notes.push({
+      text: detail.parapet.copingNote,
+      anchor: [ctx.top.x1, top - detail.parapet.copingHCm / 2],
+    });
+    const m = materialFor(concept, detail.parapet.materialFrom);
+    if (m)
+      notes.push({
+        text: materialText(m),
+        anchor: [ctx.top.x0 + (ctx.top.x1 - ctx.top.x0) * 0.1, ctx.roofZ + ctx.parapet / 2],
+      });
+  }
+  // Thân nhà: chỉ vào khoảng tường trống rộng nhất của tầng cao nhất còn tường trống.
+  const body = materialFor(concept, ['body']);
+  if (body) {
+    const spot = wallSpot(ctx);
+    if (spot) notes.push({ text: materialText(body), anchor: spot });
+  }
+  // Phần đế.
+  const base = materialFor(concept, detail.plinth.materialFrom);
+  if (base) {
+    notes.push({
+      text: materialText(base),
+      anchor: [ctx.first.x0 + (ctx.first.x1 - ctx.first.x0) * 0.1, concept.elevation.ground_z / 2],
+    });
+  }
+  // Phào bo cửa chính.
+  const main = mainDoorOf(concept.openings_front);
+  if (main && detail.door.surroundMainDoor) {
+    notes.push({
+      text: detail.door.surroundNote,
+      anchor: [main.x + main.w + detail.door.surroundCm / 2, baseOf(ctx, main) + main.h / 2],
+    });
+  }
+  // Mảng trang trí.
+  for (const element of concept.elevation.elements ?? []) {
+    const [x0 = 0, z0 = 0, x1 = 0, z1 = 0] = element.rect;
+    const label = vocab.elements[element.kind] ?? element.kind;
+    const anchor: Pt = [(x0 + x1) / 2, (z0 + z1) / 2];
+    if (element.kind === 'reveal') {
+      notes.push({ text: detail.elements.reveal.note, anchor });
+      continue;
+    }
+    const ref = element.material_ref;
+    const m = ref !== null && ref !== undefined ? concept.materials[ref] : undefined;
+    notes.push({ text: m ? `${label}: ${materialText(m)}` : label, anchor });
+  }
+  // Lan can — một ghi chú mỗi kiểu.
+  for (const balcony of concept.balconies ?? []) {
+    const z = ctx.levelZ.get(balcony.level) ?? 0;
+    const label = balcony.railing ? vocab.railings[balcony.railing]?.label_vi : undefined;
+    notes.push({
+      text: label ?? 'Lan can',
+      anchor: [balcony.x0 + (balcony.x1 - balcony.x0) * 0.2, z + options.railingHeightCm / 2],
+    });
+  }
+  // Mái dốc.
+  const outline = concept.elevation.roof_outline ?? [];
+  if (outline.length >= 3) {
+    const xs = outline.map((p) => p[0] ?? 0);
+    const zs = outline.map((p) => p[1] ?? 0);
+    notes.push({
+      text: materialText({ material: concept.roof.material, colour: concept.roof.colour }),
+      anchor: [(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...zs) + Math.max(...zs)) / 2],
+    });
+  }
+  return dedupeNotes(notes);
+}
+
+/** Một điểm trên mảng tường trống: khe rộng nhất giữa các lỗ mở, tầng cao nhất có khe đủ rộng. */
+function wallSpot(ctx: Ctx): Pt | null {
+  for (const level of [...ctx.levels].reverse()) {
+    // Khe phải đủ rộng để nét dẫn chỉ rõ vào tường chứ không vào mép cửa.
+    const minGap = (level.x1 - level.x0) / 12;
+    const holes = [
+      ...ctx.concept.openings_front
+        .filter((o) => o.level === level.level)
+        .map((o) => [o.x, o.x + o.w]),
+      ...(ctx.concept.elevation.elements ?? [])
+        .filter((e) => (e.rect[1] ?? 0) < level.z + level.h && (e.rect[3] ?? 0) > level.z)
+        .map((e) => [e.rect[0] ?? 0, e.rect[2] ?? 0]),
+    ].sort((a, b) => (a[0] ?? 0) - (b[0] ?? 0));
+    let best: [number, number] | null = null;
+    let from = level.x0;
+    for (const [a = 0, b = 0] of [...holes, [level.x1, level.x1]]) {
+      if (a - from > (best ? best[1] - best[0] : minGap)) best = [from, a];
+      from = Math.max(from, b);
+    }
+    if (best) return [(best[0] + best[1]) / 2, level.z + level.h * 0.55];
+  }
+  return null;
+}
+
+/** Bề rộng ký hiệu cao độ (tam giác, vạch, «+10.800»), mm giấy. */
+function levelMarkWidthMm(style: SheetStyle): number {
+  return style.dim.first_offset_mm + style.text_mm.dim * 5;
+}
+
+/** Dải chú thích quanh hình, mm giấy — để `chooseLayout` chừa đúng chỗ. */
+function annotationInsets(
+  concept: AiFacadeConcept,
+  options: ElevationOptions,
+  bbox: Rect,
+): DrawInsets {
+  const ctx = contextOf(concept, options);
+  const { style, detail } = options;
+  const sides = splitSides(leaderNotes(ctx), bbox);
+  const rows = chainBandMm(HEIGHT_ROWS, style);
+  const mark = levelMarkWidthMm(style);
+  const hasAxes = axesOf(ctx).length >= 2;
+  return {
+    left: notesBandMm(sides.left.length, detail) + rows + mark,
+    right: notesBandMm(sides.right.length, detail) + rows + mark,
+    bottom:
+      chainBandMm(WIDTH_ROWS, style) + style.text_mm.dim + (hasAxes ? bubbleBandMm(detail) : 0),
+  };
+}
+
+function axesOf(ctx: Ctx): Array<{ label: string; at: number }> {
+  const plan = ctx.options.plan;
+  if (!plan) return [];
+  return deriveAxes(plan, ctx.detail).x.filter((a) => a.at >= ctx.xMin - 1 && a.at <= ctx.xMax + 1);
+}
+
+function annotations(ctx: Ctx, paper: Paper, bbox: Rect): string {
+  const { concept, options, detail } = ctx;
+  const { style } = options;
+  const out: string[] = [];
+  const ground = concept.elevation.ground_z;
+  const top = topZ(ctx, bbox);
+  const notes = leaderNotes(ctx);
+  const sides = splitSides(notes, bbox);
+  const leftBand = notesBandMm(sides.left.length, detail);
+  const rightBand = notesBandMm(sides.right.length, detail);
+  const rows = chainBandMm(HEIGHT_ROWS, style);
+
+  // Đường cốt chấm gạch kéo ngang tờ, ký hiệu cao độ hai bên.
+  const leftMarkX = paper.x(bbox.x0) - leftBand - rows;
+  const rightMarkX = paper.x(bbox.x1) + rightBand + rows;
+  const marks = [...new Set([ground, ...ctx.levels.map((l) => l.z), ctx.roofZ, top])];
+  const levelLines = marks.map((z) => {
+    const y = paper.y(z);
+    return polylinePath(
+      [
+        [leftMarkX - levelMarkWidthMm(style) + style.dim.first_offset_mm / 2, y],
+        [rightMarkX + levelMarkWidthMm(style) - style.dim.first_offset_mm / 2, y],
+      ],
+      false,
+    );
+  });
+  out.push(tag('path', { class: CLS.levelLine, d: levelLines.join(' ') }));
+  for (const z of marks) {
+    out.push(levelMark(z, leftMarkX, 'left', paper, style));
+    out.push(levelMark(z, rightMarkX, 'right', paper, style));
+  }
+
+  // Lưới trục: nét chấm gạch từ trên đỉnh xuống bóng tròn dưới chân.
+  const axes = axesOf(ctx);
+  const widthRowsBand = chainBandMm(WIDTH_ROWS, style);
+  if (axes.length >= 2) {
+    const bubbleY =
+      paper.y(ground) +
+      widthRowsBand +
+      style.text_mm.dim +
+      detail.annotation.bubbleGap +
+      detail.annotation.bubbleD / 2;
+    const lines = axes.map((a) =>
+      polylinePath(
+        [
+          [paper.x(a.at), paper.y(top) - detail.annotation.axisOverrun],
+          [paper.x(a.at), bubbleY - detail.annotation.bubbleD / 2],
+        ],
+        false,
+      ),
+    );
+    out.push(tag('path', { class: CLS.axis, d: lines.join(' ') }));
+    for (const a of axes) out.push(renderAxisBubble(paper.x(a.at), bubbleY, a.label, detail));
+  }
+
+  // Kích thước đứng hai bên, ba hàng — chừa cột ghi chú giữa hình và hàng đầu.
+  const hRows = heightRows(ctx, bbox);
+  out.push(chainRows(hRows, 'y', bbox, paper, style, { extraOffsetMm: leftBand }));
+  out.push(chainRows(hRows, 'y', bbox, paper, style, { side: 'high', extraOffsetMm: rightBand }));
+
+  // Kích thước ngang dưới chân: trục (hoặc lỗ mở tầng 1), tổng.
+  const firstRow =
+    axes.length >= 2
+      ? stations([ctx.xMin, ...axes.map((a) => a.at), ctx.xMax])
+      : stations([
+          ctx.first.x0,
+          ctx.first.x1,
+          ...concept.openings_front
+            .filter((o) => o.level === ctx.first.level)
+            .flatMap((o) => [o.x, o.x + o.w]),
+        ]);
+  out.push(chainRows([firstRow, [ctx.xMin, ctx.xMax]], 'x', { ...bbox, y0: ground }, paper, style));
+
+  // Trong hình: chuỗi lỗ mở từng tầng, chuỗi bậu/cửa ở cửa sổ đầu tiên mỗi tầng.
+  const fb = detail.floorBand;
+  for (const [index, level] of ctx.levels.entries()) {
+    const own = concept.openings_front.filter((o) => o.level === level.level);
+    if (own.length === 0) continue;
+    const stops = stations([level.x0, level.x1, ...own.flatMap((o) => [o.x, o.x + o.w])]);
+    // Tầng có ban công: chuỗi đặt TRÊN đỉnh lỗ mở (M5 tầng 2: +2.823 trên sàn) — đặt thấp thì số
+    // đè lên nan lan can. Tầng khác: thấp, dưới bậu cửa sổ (M5 tầng 1: +548).
+    const balcony = (concept.balconies ?? []).some((b) => b.level === level.level);
+    const head = Math.max(...own.map((o) => o.sill + o.h));
+    const chainZ = balcony
+      ? level.z + Math.min(head + detail.annotation.openingChainZCm / 3, level.h - fb.bandCm)
+      : level.z + detail.annotation.openingChainZCm;
+    out.push(inFieldChain(stops, 'x', chainZ, paper, style, -1));
+    const window = own.filter((o) => o.kind === 'window').sort((a, b) => a.x - b.x)[0];
+    if (window) {
+      const next = ctx.levels[index + 1]?.z ?? ctx.roofZ;
+      const ceiling = fb.enabled ? next - fb.bandCm : next;
+      const base = baseOf(ctx, window);
+      out.push(
+        inFieldChain(
+          stations([level.z, base, base + window.h, ceiling]),
+          'y',
+          window.x,
+          paper,
+          style,
+          -1,
+          -detail.annotation.windowChainOffset,
+        ),
+      );
+    }
+  }
+
+  // Ghi chú dẫn, hai cột.
+  const yRange: [number, number] = [paper.y(top), paper.y(ground)];
+  out.push(renderLeaders(sides.left, 'left', paper.x(bbox.x0), yRange, paper, style, detail));
+  out.push(renderLeaders(sides.right, 'right', paper.x(bbox.x1), yRange, paper, style, detail));
+  return out.join('');
 }
 
 export interface ElevationAnchorResult {
@@ -269,22 +699,23 @@ export interface ElevationAnchorResult {
 }
 
 /**
- * Ảnh neo mặt đứng — phần hình, KHÔNG khung tên (cùng lý do với ảnh neo mặt bằng, T57): bảo đảm
- * bằng cấu trúc, hàm này không gọi `renderTitleBlock`. Đầu vào của ảnh có vật liệu (Đợt E) và về
- * sau là ảnh neo của bước Phối cảnh (T16).
+ * Ảnh neo mặt đứng — phần hình, KHÔNG khung tên (cùng lý do với ảnh neo mặt bằng, T57) và không lớp
+ * chú thích (T147): bảo đảm bằng cấu trúc, hàm này không gọi `renderTitleBlock` và gọi thân hình
+ * với `annotate = false`. Đầu vào của ảnh có vật liệu (Đợt E) và ảnh neo của bước Phối cảnh (T16).
  */
 export function renderElevationAnchor(
   concept: AiFacadeConcept,
   options: ElevationOptions,
 ): ElevationAnchorResult {
-  const base = elevationBounds(concept, options);
-  const first = chooseLayout(base, options.style);
-  // Chừa chỗ ký hiệu cao độ bên phải, như tờ A3.
-  const bbox = { ...base, x1: base.x1 + levelMarkWidthMm(options.style) / mmPerCm(first.scale) };
+  // Không đọc mặt bằng: máy chủ dựng LẠI ảnh neo để đối chiếu cỡ khung với tệp trình duyệt gửi lên
+  // (`facade-routes.ts`, `perspective-routes.ts`) — một nơi có mặt bằng, một nơi không thì hai
+  // khung lệch nhau và lượt ảnh bị từ chối. Bậc tam cấp là chi tiết nhỏ, ảnh neo bỏ được.
+  const own: ElevationOptions = { ...options, plan: null };
+  const bbox = elevationBounds(concept, own);
   const { scale } = chooseLayout(bbox, options.style);
   const anchor = anchorPaper(bbox, scale, options.style);
   return {
-    svg: anchorSvg(anchor, options.style, renderElevationBody(concept, anchor.paper, options)),
+    svg: anchorSvg(anchor, options.style, renderElevationBody(concept, anchor.paper, own, false)),
     widthPx: anchor.frame.widthPx,
     heightPx: anchor.frame.heightPx,
     scale,
@@ -292,14 +723,19 @@ export function renderElevationAnchor(
 }
 
 /**
- * Khung bao mặt đứng, cm: khối nhà, mái, mảng trang trí, và cốt đất. Lấy dư còn hơn thiếu — thiếu
- * vài centimet thì đỉnh mái chạm khung mà không có lỗi nào nổ ra.
+ * Khung bao mặt đứng, cm: khối nhà, phào đua, mái, mảng trang trí, bậc, và cốt đất. Lấy dư còn hơn
+ * thiếu — thiếu vài centimet thì đỉnh mái chạm khung mà không có lỗi nào nổ ra.
  */
 export function elevationBounds(concept: AiFacadeConcept, options: ElevationOptions): Rect {
   const e = concept.elevation;
+  const fb = options.detail.floorBand;
+  const projection = Math.max(
+    fb.enabled ? fb.corniceProjectionCm : 0,
+    (e.parapet ?? 0) > 0 ? options.detail.parapet.copingProjectionCm : 0,
+  );
   const points: Pt[] = [];
   for (const level of e.levels) {
-    points.push([level.x0, level.z], [level.x1, level.z + level.h]);
+    points.push([level.x0 - projection, level.z], [level.x1 + projection, level.z + level.h]);
   }
   const top = [...e.levels].sort((a, b) => a.level - b.level).at(-1);
   if (top) points.push([top.x0, top.z + top.h + (e.parapet ?? 0)]);
@@ -312,13 +748,13 @@ export function elevationBounds(concept: AiFacadeConcept, options: ElevationOpti
     const z = e.levels.find((l) => l.level === balcony.level)?.z ?? 0;
     points.push([balcony.x0, z + options.railingHeightCm]);
   }
+  const first = [...e.levels].sort((a, b) => a.level - b.level)[0];
+  for (const step of options.plan?.levels.find((l) => l.level === first?.level)?.entry_steps ??
+    []) {
+    points.push([step.rect[0] ?? 0, e.ground_z], [step.rect[2] ?? 0, 0]);
+  }
   points.push([points[0]?.[0] ?? 0, e.ground_z]);
   return bboxOfPoints(points);
-}
-
-/** Bề rộng dành cho ký hiệu cao độ bên phải hình, mm giấy — tam giác, gạch ngang và «+10.800». */
-function levelMarkWidthMm(style: SheetStyle): number {
-  return style.dim.first_offset_mm + style.text_mm.dim * 5;
 }
 
 /** Cao độ ghi bằng mét, ba chữ số thập phân, dấu chấm — đúng cách hồ sơ NVG ghi: ±0.000, +3.600. */
@@ -328,31 +764,41 @@ export function levelLabel(zCm: number): string {
   return `${zCm > 0 ? '+' : '-'}${metres.toFixed(3)}`;
 }
 
-function levelMark(z: number, x: number, paper: Paper, style: SheetStyle): string {
-  const [px, py] = paper.p([x, z]);
+/**
+ * Ký hiệu cao độ ở toạ độ giấy `x` (mép trong của ký hiệu): vạch ngang đi RA XA hình, tam giác đỉnh
+ * chạm vạch, số cao độ trên vạch. Bên trái là ảnh gương của bên phải — hồ sơ M5 đặt cả hai bên.
+ */
+function levelMark(
+  z: number,
+  x: number,
+  side: 'left' | 'right',
+  paper: Paper,
+  style: SheetStyle,
+): string {
+  const py = paper.y(z);
+  const s = side === 'right' ? 1 : -1;
   const gap = style.dim.first_offset_mm / 2;
   const t = style.dim.tick_mm;
-  const x0 = px + gap;
+  const x0 = x + s * gap;
   const tick = polylinePath(
     [
       [x0, py],
-      [x0 + t * 5, py],
+      [x0 + s * t * 5, py],
     ],
     false,
   );
-  // Tam giác đỉnh chạm vạch cao độ — ký hiệu cao độ của bản vẽ xây dựng.
   const triangle = polylinePath(
     [
-      [x0 + t, py],
-      [x0 + t * 0.4, py - t],
-      [x0 + t * 1.6, py - t],
+      [x0 + s * t, py],
+      [x0 + s * t * 0.4, py - t],
+      [x0 + s * t * 1.6, py - t],
     ],
     true,
   );
   return [
     tag('path', { class: CLS.levelMark, d: `${tick} ${triangle}` }),
     textEl(levelLabel(z), {
-      x: x0 + t * 2,
+      x: side === 'right' ? x0 + t * 2 : x0 - t * 5,
       y: py - t - style.text_mm.dim * 0.6,
       class: CLS.textLevelMark,
     }),
@@ -375,76 +821,6 @@ function stations(values: readonly number[]): number[] {
   return out;
 }
 
-type RectFn = (x0: number, z0: number, x1: number, z1: number, cls: string) => string;
-type PathFn = (points: Pt[], cls: string, close?: boolean) => string;
-
-type FacadeElement = NonNullable<AiFacadeConcept['elevation']['elements']>[number];
-
-/**
- * Một mảng trang trí. Phần lớn là chữ nhật, nhưng hồ sơ thật của NVG có ba hình KHÔNG chữ nhật mà
- * bộ vẽ trước đây không dựng nổi (T63, 20/09/2026): vòm đầu cửa (M6), ô tròn trang trí R700 (M3),
- * sảnh trước mái dốc (M2, M4). Chúng nằm trong `chua_cham_duoc` của thước chấm đúng vì lý do ấy —
- * chấm một thứ bộ vẽ không vẽ được thì điểm không bao giờ lên được.
- *
- * Mô hình vẫn chỉ khai KHUNG BAO; cung, đường tròn và đường nóc do hàm này tính (T15). Nhờ vậy tờ
- * SVG, ảnh neo và tệp DXF ra cùng một hình — cả ba đi qua `renderElevationBody`, và bộ đổi DXF đã
- * biết đọc cung `A` lẫn thẻ `circle` (`dxf/from-svg.ts`).
- */
-function elementShape(element: FacadeElement, rect: RectFn, path: PathFn, paper: Paper): string[] {
-  const [x0 = 0, z0 = 0, x1 = 0, z1 = 0] = element.rect;
-  const w = x1 - x0;
-  const rise = z1 - z0;
-  // Khung bao lép thì không có hình nào để vẽ. Cổng dữ liệu đã bắt `x1 > x0 && z1 > z0`, nhưng bộ
-  // vẽ không được phép tin vào đó: một artifact cũ vẫn đọc lại qua đây.
-  if (w <= 0 || rise <= 0) return [];
-
-  switch (element.kind) {
-    case 'arch': {
-      /*
-       * Vòm đầu cửa: cung đi từ hai chân ở z0 lên đỉnh giữa ở z1. Bán kính suy từ dây cung `w` và
-       * độ vồng `rise` — độ vồng đúng nửa bề rộng cho vòm nửa tròn, nhỏ hơn cho vòm cung, nên một
-       * công thức lo cả hai kiểu của hồ sơ. Tâm nằm THẤP hơn đỉnh đúng `r`.
-       */
-      const r = (w * w) / 4 / (2 * rise) + rise / 2;
-      return [
-        tag('path', {
-          class: CLS.element,
-          d: arcPath(
-            paper.p([x0, z0]),
-            paper.p([x1, z0]),
-            paper.p([x0 + w / 2, z1 - r]),
-            paper.len(r),
-          ),
-        }),
-      ];
-    }
-    case 'oculus': {
-      // Đường tròn LỚN NHẤT nằm trong khung bao — khung bao không vuông thì cạnh ngắn quyết định,
-      // chứ không kéo méo thành hình bầu dục.
-      const [cx, cy] = paper.p([(x0 + x1) / 2, (z0 + z1) / 2]);
-      return [tag('circle', { cx, cy, r: paper.len(Math.min(w, rise) / 2), class: CLS.element })];
-    }
-    case 'porch_roof':
-      // Sảnh mái dốc nhìn từ đường: tam giác, nóc ở giữa mép trên, đáy là đường mái đua. Cột sảnh
-      // là mảng `column` riêng — mô hình đặt, vì vị trí cột là lựa chọn thiết kế.
-      return [
-        path(
-          [
-            [x0, z0],
-            [x0 + w / 2, z1],
-            [x1, z0],
-          ],
-          CLS.element,
-          true,
-        ),
-      ];
-    default:
-      return [rect(x0, z0, x1, z1, CLS.element)];
-  }
-}
-
-/** Kiểu chia cánh của cửa đi: số cánh, xếp nhiều cánh hẹp, hoặc lùa (hai cánh chồng mép). */
-export type DoorLeaves = number | 'folding' | 'sliding';
 /** Kiểu cửa để xe theo danh mục — quyết định nét bên trong ô cửa. */
 export type GarageStyle = 'cuon' | 'xep' | 'mo_quay' | 'truot';
 
@@ -454,75 +830,6 @@ export interface OpeningStyles {
   garage: string | null;
 }
 
-/** Số cánh của cửa xếp trên tờ vẽ — ký hiệu, không phải số cánh thật. */
-const FOLDING_PANELS = 6;
-/** Cửa lùa: hai cánh chồng mép, nét chia đặt lệch khỏi giữa để đọc ra là chồng chứ không phải khe. */
-const SLIDING_SPLIT_SHARE = 0.55;
-
-/**
- * Một lỗ mở: khung, rồi nét đặc trưng — đố cửa sổ, chia cánh cửa đi, nan cửa để xe.
- *
- * Kiểu cửa lấy từ phiếu yêu cầu (`openings_style`, T59 Đợt F2); chưa chọn thì theo quy tắc bề rộng như
- * trước: cửa đi từ `DOOR_TWO_LEAF_CM` vẽ hai cánh, cửa để xe vẽ nan cửa cuốn.
- */
-function openingShape(
-  opening: Opening,
-  base: number,
-  rect: RectFn,
-  path: PathFn,
-  leaves: DoorLeaves | null,
-  garage: string | null,
-): string[] {
-  const { x, w, h } = opening;
-  const out = [rect(x, base, x + w, base + h, CLS.opening)];
-  const vertical = (at: number, cls: string) =>
-    path(
-      [
-        [at, base],
-        [at, base + h],
-      ],
-      cls,
-    );
-  const horizontal = (z: number, cls: string) =>
-    path(
-      [
-        [x, z],
-        [x + w, z],
-      ],
-      cls,
-    );
-
-  if (opening.kind === 'window') {
-    // Cửa sổ rộng hai cánh: một đố đứng giữa. Hẹp thì một cánh.
-    if (w >= WINDOW_TWO_LEAF_CM) out.push(vertical(x + w / 2, CLS.window));
-    out.push(horizontal(base + h * WINDOW_TRANSOM_SHARE, CLS.window));
-  } else if (opening.kind === 'garage') {
-    if (garage === 'xep') {
-      for (let i = 1; i < FOLDING_PANELS; i += 1) {
-        out.push(vertical(x + (w * i) / FOLDING_PANELS, CLS.doorLeaf));
-      }
-    } else if (garage === 'mo_quay' || garage === 'truot') {
-      out.push(vertical(x + w / 2, CLS.doorLeaf));
-    } else {
-      // Cửa cuốn (mặc định): nan ngang đều, số nan cố định để tờ nào cũng đọc ra cùng một ký hiệu.
-      for (let i = 1; i < SHUTTER_BAYS; i += 1) {
-        out.push(horizontal(base + (h * i) / SHUTTER_BAYS, CLS.doorLeaf));
-      }
-    }
-  } else if (opening.kind === 'door') {
-    const style: DoorLeaves = leaves ?? (w >= DOOR_TWO_LEAF_CM ? 2 : 1);
-    if (style === 'sliding') {
-      out.push(vertical(x + w * SLIDING_SPLIT_SHARE, CLS.doorLeaf));
-    } else {
-      const panels = style === 'folding' ? FOLDING_PANELS : style;
-      for (let i = 1; i < panels; i += 1) {
-        out.push(vertical(x + (w * i) / panels, CLS.doorLeaf));
-      }
-    }
-  }
-  return out;
-}
-
 /**
  * Cổng và tường rào ở mép cốt đất, trải theo bề rộng khối nhà tầng 1. Cổng canh giữa cửa để xe
  * (không có thì cửa đi rộng nhất tầng 1, không có nữa thì giữa nhà) — cổng mở cho lối vào thật.
@@ -530,7 +837,7 @@ function openingShape(
 function gateAndFence(
   concept: AiFacadeConcept,
   first: AiFacadeConcept['elevation']['levels'][number],
-  rect: RectFn,
+  rect: Pen['rect'],
 ): string[] {
   const out: string[] = [];
   const ground = concept.elevation.ground_z;

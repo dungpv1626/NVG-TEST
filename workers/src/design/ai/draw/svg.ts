@@ -166,7 +166,37 @@ export const CLS = {
   /** Vạch lối vào trên mặt tiền — TÔ ĐẶC, vì nét viền cùng bề dày với tường thì không thấy gì. */
   roofEntrance: 'rn',
   textLevelMark: 'tlm',
+  // Chi tiết và chú thích mặt đứng như hồ sơ thật (T147).
+  /** Khung cánh, nẹp, nan lan can, dải phào — nét mảnh. */
+  detail: 'dtl',
+  /** Nét xiên phản chiếu trên kính. */
+  glass: 'gls',
+  /** Nét ký hiệu vật liệu: đá, gạch, gỗ, ngói. */
+  hatchLine: 'hl',
+  /** Chấm của ký hiệu vật liệu (đá rửa, bê tông). */
+  hatchDot: 'hd',
+  /** Mảng tô đặc của lớp sơn tối — màu đặt ngay trên thẻ (`fill`), mỗi màu sơn một độ xám. */
+  fillTone: 'tfl',
+  /** Ô che màu giấy: lỗ mở đè lên mảng tô. Không xuất DXF. */
+  mask: 'msk',
+  /** Đường trục — chấm gạch. */
+  axis: 'ax',
+  /** Đường cốt chạy ngang tờ mặt đứng — chấm gạch. */
+  levelLine: 'lvl',
+  axisBubble: 'ab',
+  textAxis: 'tax',
+  leader: 'ldr',
+  /** Chữ ghi chú dẫn, căn trái (cột bên phải hình). */
+  textNoteDraw: 'tno',
+  /** Chữ ghi chú dẫn, căn phải (cột bên trái hình). */
+  textNoteDrawEnd: 'tne',
 } as const;
+
+/**
+ * Nét chấm gạch của đường trục và đường cốt, mm giấy — `CENTERX2` của hồ sơ M5. Cùng mẫu dùng cho
+ * DXF (`dxf/writer.ts`), nên khai một chỗ.
+ */
+export const CENTER_DASH_MM = [6, 1.2, 1, 1.2] as const;
 
 /** Khối `<style>` của tờ vẽ, sinh từ `kb/sheet_style.yaml`. */
 export function sheetCss(style: SheetStyle): string {
@@ -240,5 +270,19 @@ export function sheetCss(style: SheetStyle): string {
     // đứt — bộ kiểm không bắt được vì ảnh chụp vàng vẫn khớp về hình, chỉ khác CSS.
     stroke(CLS.roofLot, c.hairline, w.roof_lot, 'stroke-dasharray:6 3;'),
     `.${CLS.roofEntrance}{fill:${c.ink};stroke:none}`,
+    // Chi tiết và chú thích mặt đứng (T147).
+    stroke(CLS.detail, c.hairline, w.detail),
+    stroke(CLS.glass, c.hairline, w.glass),
+    stroke(CLS.hatchLine, c.hairline, w.hatch),
+    `.${CLS.hatchDot}{fill:${c.hairline};stroke:none}`,
+    `.${CLS.fillTone}{stroke:none}`,
+    `.${CLS.mask}{fill:${c.paper};stroke:none}`,
+    stroke(CLS.axis, c.dim, w.axis, `stroke-dasharray:${CENTER_DASH_MM.join(' ')};`),
+    stroke(CLS.levelLine, c.dim, w.level_line, `stroke-dasharray:${CENTER_DASH_MM.join(' ')};`),
+    `.${CLS.axisBubble}{fill:${c.paper};stroke:${c.ink};stroke-width:${num(w.axis_bubble)}}`,
+    text(CLS.textAxis, t.axis_label, c.ink, 'font-weight:600;'),
+    stroke(CLS.leader, c.hairline, w.leader),
+    text(CLS.textNoteDraw, t.note, c.ink, 'text-anchor:start;dominant-baseline:auto;'),
+    text(CLS.textNoteDrawEnd, t.note, c.ink, 'text-anchor:end;dominant-baseline:auto;'),
   ].join('');
 }

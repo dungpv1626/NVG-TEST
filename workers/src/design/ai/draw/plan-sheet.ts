@@ -16,7 +16,9 @@ import { bboxOfPoints, toPt, toRect, type Pt, type Rect } from './geometry';
 import { DrawNotes, type DrawNote } from './notes';
 import { doorSwingZones, renderOpenings } from './openings';
 import { renderRoomLabels } from './rooms';
-import { renderDimensions } from './dims';
+import type { FacadeDetail } from '../../kb/facade-detail';
+import { bubbleBandMm, deriveAxes, renderAxisBubble, type GridAxes } from './axes';
+import { chainBandMm, renderDimensions } from './dims';
 import {
   renderFooter,
   renderFrame,
@@ -45,6 +47,12 @@ export interface PlanSheetOptions {
   style: SheetStyle;
   /** Nhãn tiếng Việt của mã phòng — `roomLabels()` từ `kb/room_vocabulary.yaml`. */
   labels: Record<string, string>;
+  /**
+   * Quy ước chi tiết (`kb/facade_detail.yaml`) — có thì tờ vẽ LƯỚI TRỤC suy từ tường, cùng hàm và
+   * cùng tên trục với tờ mặt đứng (T147). Ảnh neo không truyền: trục và bóng tròn là chú thích,
+   * mô hình ảnh không cần.
+   */
+  detail?: FacadeDetail;
 }
 
 export interface PlanSheetResult {
@@ -81,7 +89,15 @@ export function renderPlanSheet(
   const { style } = options;
   const notes = new DrawNotes();
   const bbox = levelBounds(level);
-  const { orientation, scale, area, fits } = chooseLayout(bbox, style);
+  // Có lưới trục: ba hàng kích thước và bóng trục ở cạnh trái và cạnh dưới.
+  const axisBand = options.detail
+    ? chainBandMm(3, style) + style.text_mm.dim + bubbleBandMm(options.detail)
+    : undefined;
+  const { orientation, scale, area, fits } = chooseLayout(
+    bbox,
+    style,
+    axisBand ? { left: axisBand, bottom: axisBand } : {},
+  );
   if (!fits) {
     notes.add(
       'scale_overflow',
@@ -153,6 +169,7 @@ export function renderPlanBody(
   notes: DrawNotes,
 ): string {
   const { style, labels } = options;
+  const axes = options.detail ? deriveAxes(plan, options.detail) : null;
   const walls = prepareWalls(level.walls);
   const bbox = levelBounds(level);
   const openings = renderOpenings(level, walls, paper, notes);
@@ -193,7 +210,14 @@ export function renderPlanBody(
       ...doorSwingZones(level, walls),
       ...stairTreadZones(stairs),
     ]),
-    renderDimensions(walls, bbox, paper, style),
+    ...(axes ? [renderAxes(axes, bbox, paper, style, options.detail!)] : []),
+    renderDimensions(
+      walls,
+      bbox,
+      paper,
+      style,
+      axes ? { x: axes.x.map((a) => a.at), y: axes.y.map((a) => a.at) } : undefined,
+    ),
   ].join('');
 }
 
@@ -294,4 +318,50 @@ function renderVoids(voids: NonNullable<AiFloorPlanLevel['voids']>, paper: Paper
     );
   }
   return parts.join('');
+}
+
+/**
+ * Lưới trục trên tờ mặt bằng: nét chấm gạch xuyên hình, bóng tròn ngoài hàng kích thước ngoài cùng —
+ * trục số ở cạnh dưới (mặt tiền), trục chữ ở cạnh trái. Chỉ vẽ trục nằm trong hình bao tầng này.
+ */
+function renderAxes(
+  axes: GridAxes,
+  bbox: Rect,
+  paper: Paper,
+  style: SheetStyle,
+  detail: FacadeDetail,
+): string {
+  const a = detail.annotation;
+  const reach = chainBandMm(3, style) + style.text_mm.dim + a.bubbleGap;
+  const lines: string[] = [];
+  const bubbles: string[] = [];
+  const bottom = paper.y(bbox.y0) + reach + a.bubbleD / 2;
+  const left = paper.x(bbox.x0) - reach - a.bubbleD / 2;
+  for (const axis of axes.x.filter((v) => v.at >= bbox.x0 - 1 && v.at <= bbox.x1 + 1)) {
+    const x = paper.x(axis.at);
+    lines.push(
+      polylinePath(
+        [
+          [x, paper.y(bbox.y1) - a.axisOverrun],
+          [x, bottom - a.bubbleD / 2],
+        ],
+        false,
+      ),
+    );
+    bubbles.push(renderAxisBubble(x, bottom, axis.label, detail));
+  }
+  for (const axis of axes.y.filter((v) => v.at >= bbox.y0 - 1 && v.at <= bbox.y1 + 1)) {
+    const y = paper.y(axis.at);
+    lines.push(
+      polylinePath(
+        [
+          [paper.x(bbox.x1) + a.axisOverrun, y],
+          [left + a.bubbleD / 2, y],
+        ],
+        false,
+      ),
+    );
+    bubbles.push(renderAxisBubble(left, y, axis.label, detail));
+  }
+  return [tag('path', { class: CLS.axis, d: lines.join(' ') }), ...bubbles].join('');
 }

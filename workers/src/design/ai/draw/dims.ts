@@ -23,6 +23,9 @@ import type { WallGeom } from './walls';
 /** Hai trục tường cách nhau dưới mức này thì gộp làm một — chuỗi kích thước không đọc nổi. */
 const MIN_STATION_GAP_CM = 5;
 
+/** Bề rộng ước của một chữ số trên cỡ chữ — để biết đoạn nào quá ngắn cho số của nó. */
+const SHORT_TEXT_SHARE = 0.6;
+
 /** Sai lệch cho phép khi hỏi "bức tường này có nằm dọc trục không", cm. */
 const AXIS_TOLERANCE_CM = 1;
 
@@ -31,6 +34,11 @@ export function renderDimensions(
   bbox: Rect,
   paper: Paper,
   style: SheetStyle,
+  /**
+   * Tim trục (cm) theo hai phương — có thì chuỗi thành BA hàng như hồ sơ thật: chi tiết, trục, tổng
+   * (T147). Vắng (ảnh neo) thì hai hàng như trước.
+   */
+  axes?: { x: readonly number[]; y: readonly number[] },
 ): string {
   const parts: string[] = [];
 
@@ -49,8 +57,20 @@ export function renderDimensions(
     bbox.y1,
   );
 
-  parts.push(chain(xStations, 'x', bbox, paper, style));
-  parts.push(chain(yStations, 'y', bbox, paper, style));
+  const withAxes = (detail: number[], at: readonly number[], min: number, max: number) => {
+    const inside = at.filter((v) => v > min + AXIS_TOLERANCE_CM && v < max - AXIS_TOLERANCE_CM);
+    return [detail, [min, ...inside, max], [min, max]];
+  };
+  if (axes && axes.x.length >= 2) {
+    parts.push(chainRows(withAxes(xStations, axes.x, bbox.x0, bbox.x1), 'x', bbox, paper, style));
+  } else {
+    parts.push(chain(xStations, 'x', bbox, paper, style));
+  }
+  if (axes && axes.y.length >= 2) {
+    parts.push(chainRows(withAxes(yStations, axes.y, bbox.y0, bbox.y1), 'y', bbox, paper, style));
+  } else {
+    parts.push(chain(yStations, 'y', bbox, paper, style));
+  }
   return parts.join('');
 }
 
@@ -95,27 +115,60 @@ export function chain(
   style: SheetStyle,
 ): string {
   if (values.length < 2) return '';
+  const first = values[0] ?? 0;
+  const last = values[values.length - 1] ?? 0;
+  return chainRows(
+    values.length > 2 ? [values, [first, last]] : [values],
+    axis,
+    bbox,
+    paper,
+    style,
+  );
+}
+
+export interface ChainOptions {
+  /**
+   * Phía đặt chuỗi. `low` = dưới hình (hàng ngang) / trái hình (hàng dọc) — mặc định, như mọi tờ
+   * trước T147. `high` = trên / phải: tờ mặt đứng ghi kích thước cả hai bên như hồ sơ M5.
+   */
+  side?: 'low' | 'high';
+  /** Khoảng hở thêm giữa mép hình và hàng thứ nhất, mm giấy — chỗ cho cột ghi chú dẫn. */
+  extraOffsetMm?: number;
+}
+
+/**
+ * Nhiều hàng chuỗi, hàng 0 gần hình nhất. Đường gióng chỉ vẽ ở hàng NGOÀI CÙNG và chạy từ mép
+ * hình ra — vẽ ở mọi hàng thì rối mà không thêm thông tin. Hàng ít hơn hai trạm thì bỏ, nhưng vẫn
+ * giữ chỗ để hàng sau không trượt vào trong.
+ */
+export function chainRows(
+  rowsIn: ReadonlyArray<readonly number[]>,
+  axis: 'x' | 'y',
+  bbox: Rect,
+  paper: Paper,
+  style: SheetStyle,
+  options: ChainOptions = {},
+): string {
+  const rows = rowsIn.map((stops, row) => ({ stops, row })).filter((r) => r.stops.length >= 2);
+  if (rows.length === 0) return '';
 
   const lines: string[] = [];
   const ticks: string[] = [];
   const texts: string[] = [];
 
-  // Toạ độ giấy của đường kích thước, và của mép hình mà đường gióng xuất phát.
-  const edgePaper = axis === 'x' ? paper.y(bbox.y0) : paper.x(bbox.x0);
-  const direction = axis === 'x' ? 1 : -1; // xuống dưới với hàng ngang, sang trái với hàng dọc
+  const high = options.side === 'high';
+  // Toạ độ giấy của mép hình mà đường gióng xuất phát, và chiều đi ra xa hình.
+  const edgePaper =
+    axis === 'x' ? paper.y(high ? bbox.y1 : bbox.y0) : paper.x(high ? bbox.x1 : bbox.x0);
+  // Giấy y hướng xuống: hàng ngang phía dưới đi +1, phía trên đi −1; hàng dọc trái −1, phải +1.
+  const direction = axis === 'x' ? (high ? -1 : 1) : high ? 1 : -1;
   const rowAt = (index: number): number =>
-    edgePaper + direction * (style.dim.first_offset_mm + index * style.dim.row_gap_mm);
+    edgePaper +
+    direction *
+      ((options.extraOffsetMm ?? 0) + style.dim.first_offset_mm + index * style.dim.row_gap_mm);
+  const outer = Math.max(...rows.map((r) => r.row));
 
   const paperOf = (value: number): number => (axis === 'x' ? paper.x(value) : paper.y(value));
-  const first = values[0] ?? 0;
-  const last = values[values.length - 1] ?? 0;
-  const rows: Array<{ stops: readonly number[]; row: number }> =
-    values.length > 2
-      ? [
-          { stops: values, row: 0 },
-          { stops: [first, last], row: 1 },
-        ]
-      : [{ stops: values, row: 0 }];
 
   for (const { stops, row } of rows) {
     const at = rowAt(row);
@@ -129,34 +182,12 @@ export function chain(
     for (const stop of stops) {
       const position = paperOf(stop);
       ticks.push(tickMark(axis, at, position, style));
-      // Đường gióng chỉ vẽ ở hàng ngoài cùng — vẽ ở mọi hàng thì rối mà không thêm thông tin.
-      if (row === rows.length - 1) {
-        const from = edgePaper;
+      if (row === outer) {
         const to = at + direction * style.dim.ext_overshoot_mm;
-        lines.push(polylinePath(pointsOn(axis, from, [position, position], to), false));
+        lines.push(polylinePath(pointsOn(axis, edgePaper, [position, position], to), false));
       }
     }
-
-    for (let i = 0; i + 1 < stops.length; i += 1) {
-      const from = stops[i] ?? 0;
-      const to = stops[i + 1] ?? 0;
-      const midValue = (from + to) / 2;
-      const millimetres = Math.round((to - from) * 10);
-      if (millimetres <= 0) continue;
-      const mid = paperOf(midValue);
-      const textAt = at - direction * style.dim.text_gap_mm;
-      const x = axis === 'x' ? mid : textAt;
-      const y = axis === 'x' ? textAt : mid;
-      texts.push(
-        textEl(String(millimetres), {
-          x,
-          y,
-          class: CLS.textDim,
-          // Hàng dọc: chữ quay đứng để đọc từ mép phải tờ giấy — quy ước của bản vẽ kỹ thuật.
-          transform: axis === 'y' ? `rotate(-90 ${num(x)} ${num(y)})` : null,
-        }),
-      );
-    }
+    texts.push(...rowTexts(stops, axis, at, -direction, paperOf, style));
   }
 
   return [
@@ -164,6 +195,91 @@ export function chain(
     tag('path', { class: CLS.dimTick, d: ticks.join(' ') }),
     ...texts,
   ].join('');
+}
+
+/**
+ * Một chuỗi ĐẶT TRONG HÌNH ở toạ độ thật `crossAt` (cm) — chuỗi lỗ mở từng tầng, chuỗi bậu/cửa sổ
+ * của hồ sơ M5. Không đường gióng: gạch chéo nằm ngay trên mép vật được đo. Chữ ở phía `textSide`
+ * (giấy: −1 = trên / trái, 1 = dưới / phải).
+ */
+export function inFieldChain(
+  stopsIn: readonly number[],
+  axis: 'x' | 'y',
+  crossAt: number,
+  paper: Paper,
+  style: SheetStyle,
+  textSide: -1 | 1 = -1,
+  crossOffsetMm = 0,
+): string {
+  const stops = [...stopsIn].sort((a, b) => a - b);
+  if (stops.length < 2) return '';
+  const at = (axis === 'x' ? paper.y(crossAt) : paper.x(crossAt)) + crossOffsetMm;
+  const paperOf = (value: number): number => (axis === 'x' ? paper.x(value) : paper.y(value));
+  const line = polylinePath(
+    pointsOn(axis, at, [paperOf(stops[0] ?? 0), paperOf(stops[stops.length - 1] ?? 0)]),
+    false,
+  );
+  const ticks = stops.map((stop) => tickMark(axis, at, paperOf(stop), style));
+  return [
+    tag('path', { class: CLS.dimLine, d: line }),
+    tag('path', { class: CLS.dimTick, d: ticks.join(' ') }),
+    ...rowTexts(stops, axis, at, textSide, paperOf, style),
+  ].join('');
+}
+
+/** Chữ số mm giữa từng cặp trạm liền nhau của một hàng. */
+function rowTexts(
+  stops: readonly number[],
+  axis: 'x' | 'y',
+  at: number,
+  side: number,
+  paperOf: (value: number) => number,
+  style: SheetStyle,
+): string[] {
+  const texts: string[] = [];
+  // Chữ của hai đoạn ngắn liền nhau («400 / 100» của dải dầm + phào) đè lên nhau. Như người vẽ CAD:
+  // chữ nào sẽ chồng lên chữ vừa đặt thì đưa sang PHÍA BÊN KIA đường kích thước; bên kia cũng chồng
+  // thì giữ chỗ cũ (hiếm — ba đoạn cực ngắn liền nhau).
+  const placed: Record<'near' | 'far', Array<[number, number]>> = { near: [], far: [] };
+  const overlaps = (list: Array<[number, number]>, span: [number, number]) =>
+    list.some(([a, b]) => span[0] < b && span[1] > a);
+  for (let i = 0; i + 1 < stops.length; i += 1) {
+    const from = stops[i] ?? 0;
+    const to = stops[i + 1] ?? 0;
+    const millimetres = Math.round((to - from) * 10);
+    if (millimetres <= 0) continue;
+    const mid = paperOf((from + to) / 2);
+    const half = (String(millimetres).length * style.text_mm.dim * SHORT_TEXT_SHARE) / 2;
+    const span: [number, number] = [mid - half, mid + half];
+    const flip = overlaps(placed.near, span) && !overlaps(placed.far, span);
+    placed[flip ? 'far' : 'near'].push(span);
+    const textAt = flip
+      ? at - side * (style.dim.text_gap_mm + style.text_mm.dim * 0.6)
+      : at + side * style.dim.text_gap_mm;
+    const x = axis === 'x' ? mid : textAt;
+    const y = axis === 'x' ? textAt : mid;
+    texts.push(
+      textEl(String(millimetres), {
+        x,
+        y,
+        class: CLS.textDim,
+        // Hàng dọc: chữ quay đứng để đọc từ mép phải tờ giấy — quy ước của bản vẽ kỹ thuật.
+        transform: axis === 'y' ? `rotate(-90 ${num(x)} ${num(y)})` : null,
+      }),
+    );
+  }
+  return texts;
+}
+
+/** Bề dày dải `rows` hàng kích thước (kể cả chữ của hàng ngoài cùng), mm giấy. */
+export function chainBandMm(rows: number, style: SheetStyle): number {
+  if (rows <= 0) return 0;
+  return (
+    style.dim.first_offset_mm +
+    (rows - 1) * style.dim.row_gap_mm +
+    style.dim.ext_overshoot_mm +
+    style.dim.text_gap_mm
+  );
 }
 
 /**

@@ -29,6 +29,7 @@ import { briefKeys, facadeLegend } from '../ai/facade/describe';
 import { facadeFrame, mainDoorOf } from '../ai/facade/frame';
 import { mergeFacade } from '../ai/facade/merge';
 import {
+  facadeDetailKb,
   facadeVocab,
   norms,
   outdoor,
@@ -426,8 +427,14 @@ describe('Bộ vẽ theo kiểu cửa của phiếu', () => {
     facadeVocab,
     { planRef: PLAN_REF, generator: GENERATOR },
   );
-  const leafLines = (svg: string) => (svg.match(/class="dl"/g) ?? []).length;
-  const base = { style, railingHeightCm: 110 };
+  // T147: mỗi cánh cửa đi có ô kính riêng mang nét xiên (`gls`); cửa để xe chia bằng nét `dl`.
+  const leafLines = (svg: string) => (svg.match(/class="gls"/g) ?? []).length;
+  const garageLines = (svg: string) =>
+    [...svg.matchAll(/<path class="dl" d="([^"]*)"/g)].reduce(
+      (n, m) => n + (m[1]!.match(/M /g) ?? []).length,
+      0,
+    );
+  const base = { style, railingHeightCm: 110, detail: facadeDetailKb, vocab: facadeVocab };
 
   it('cửa chính 4 cánh vẽ ba nét chia, thay vì một nét của cửa hai cánh mặc định', () => {
     const plain = renderElevationSheet(concept, base).svg;
@@ -444,8 +451,9 @@ describe('Bộ vẽ theo kiểu cửa của phiếu', () => {
       ...base,
       openingStyles: { main: null, side: null, garage: 'mo_quay' },
     }).svg;
-    // Cửa cuốn mặc định: 5 nan; mở quay: 1 nét.
-    expect(leafLines(plain) - leafLines(swing)).toBe(4);
+    // Cửa cuốn mặc định: nan ngang theo bước `garage.shutter_slat_mm`; mở quay: đúng một nét giữa.
+    expect(garageLines(swing)).toBe(1);
+    expect(garageLines(plain)).toBeGreaterThan(1);
   });
 });
 
@@ -511,12 +519,18 @@ describe('Lan can: vật liệu và chiều cao lấy từ phiếu', () => {
     const railingHeight = (h: number) => {
       const svg = renderElevationSheet(concept, {
         style: parseSheetStyle(read('kb/sheet_style.yaml')),
+        detail: facadeDetailKb,
+        vocab: facadeVocab,
         railingHeightCm: h,
       }).svg;
-      const m = /<rect x="[\d.]+" y="[\d.]+" width="[\d.]+" height="([\d.]+)"[^>]*class="rl"/.exec(
-        svg,
-      );
-      return m ? Number(m[1]) : null;
+      // Lan can trụ–nan (T147): tay vịn là một dải mỏng, trụ chạy từ sàn lên tay vịn — trụ cao nhất
+      // đo chiều cao lan can.
+      const heights = [
+        ...svg.matchAll(
+          /<rect x="[\d.]+" y="[\d.]+" width="[\d.]+" height="([\d.]+)"[^>]*class="rl"/g,
+        ),
+      ].map((m) => Number(m[1]));
+      return heights.length ? Math.max(...heights) : null;
     };
     const low = railingHeight(90);
     const high = railingHeight(110);

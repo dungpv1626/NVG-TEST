@@ -21,6 +21,9 @@ export const DXF_ROLES = [
   'void',
   'dimension',
   'annotation',
+  // Tờ mặt đứng chi tiết (T147): lưới trục và đường cốt, chi tiết mảnh.
+  'grid',
+  'detail',
 ] as const;
 
 export type DxfRole = (typeof DXF_ROLES)[number];

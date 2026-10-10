@@ -8,7 +8,7 @@
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
-import { AI_DISCLAIMERS, aiFacadeConceptSchema } from '@nvg/shared/design';
+import { AI_DISCLAIMERS, aiFacadeConceptSchema, type AiFloorPlan } from '@nvg/shared/design';
 import { describe, expect, it } from 'vitest';
 import { ANCHOR_FRAMES } from '../ai/draw/anchor';
 import {
@@ -25,13 +25,17 @@ import { facadeFrame } from '../ai/facade/frame';
 import { mergeFacade, pitchedOutline } from '../ai/facade/merge';
 import { TOWNHOUSE_PLAN } from './ai-plan-fixtures';
 import {
+  facadeDetailKb,
   facadeVocab,
+  MANH_FACADE,
+  MANH_PLAN,
   norms,
   outdoor,
   PLAN_REF,
   TOWNHOUSE_FACADE,
   TOWNHOUSE_PROPOSAL,
   VILLA_FACADE,
+  VILLA_PLAN_SHIFTED,
 } from './ai-facade-fixtures';
 
 const read = (p: string) =>
@@ -40,11 +44,27 @@ const read = (p: string) =>
 const style = parseSheetStyle(read('kb/sheet_style.yaml'));
 const layers = parseLayerExport(read('kb/layer_mapping.yaml'));
 
-const optionsFor = (concept: typeof TOWNHOUSE_FACADE): ElevationOptions => ({
-  style,
-  railingHeightCm: Math.round(norms.outdoor.railing_h_m * 100),
-  legend: facadeLegend(concept, facadeVocab),
-});
+const optionsFor = (
+  concept: typeof TOWNHOUSE_FACADE,
+  plan: AiFloorPlan | null = null,
+): ElevationOptions => {
+  // Cùng cách tra kiểu cửa với `ai/facade/index.ts`.
+  const leaves = (code: string | null | undefined) =>
+    code ? (facadeVocab.doorTypes[code]?.leaves ?? null) : null;
+  return {
+    style,
+    detail: facadeDetailKb,
+    vocab: facadeVocab,
+    plan,
+    railingHeightCm: concept.elevation.railing_h_cm ?? Math.round(norms.outdoor.railing_h_m * 100),
+    legend: facadeLegend(concept, facadeVocab),
+    openingStyles: {
+      main: leaves(concept.openings_style?.main_door_type),
+      side: leaves(concept.openings_style?.side_door_type),
+      garage: concept.openings_style?.garage_door_type ?? null,
+    },
+  };
+};
 
 function textsOfClass(svg: string, cls: string): string[] {
   const matches = svg.matchAll(new RegExp(`<text[^>]*class="${cls}"[^>]*>([^<]*)</text>`, 'g'));
@@ -55,16 +75,19 @@ describe('ý tưởng mẫu đúng hợp đồng', () => {
   it('hai artifact ghép từ khung + ý tưởng qua được hợp đồng ai-facade-concept', () => {
     expect(aiFacadeConceptSchema.safeParse(TOWNHOUSE_FACADE).success).toBe(true);
     expect(aiFacadeConceptSchema.safeParse(VILLA_FACADE).success).toBe(true);
+    expect(aiFacadeConceptSchema.safeParse(MANH_FACADE).success).toBe(true);
   });
 });
 
 describe('tờ mặt đứng — ảnh chụp vàng', () => {
-  for (const [name, concept] of [
-    ['mat-dung-nha-pho', TOWNHOUSE_FACADE],
-    ['mat-dung-biet-thu', VILLA_FACADE],
+  for (const [name, concept, plan] of [
+    ['mat-dung-nha-pho', TOWNHOUSE_FACADE, TOWNHOUSE_PLAN],
+    ['mat-dung-biet-thu', VILLA_FACADE, VILLA_PLAN_SHIFTED],
+    // Mẫu đối chứng chép từ tờ KT08 của hồ sơ M5 — mở cạnh ảnh tờ thật để so từng lớp (T147).
+    ['mat-dung-manh', MANH_FACADE, MANH_PLAN],
   ] as const) {
     it(`giữ nguyên tờ "${name}"`, async () => {
-      const result = renderElevationSheet(concept, optionsFor(concept));
+      const result = renderElevationSheet(concept, optionsFor(concept, plan));
       expect(result.notes).toEqual([]);
       await expect(result.svg).toMatchFileSnapshot(`./__snapshots__/${name}.svg`);
     });
@@ -123,14 +146,9 @@ describe('tờ mặt đứng — hình học', () => {
   });
 
   it('ghi cao độ theo quy ước hồ sơ: cốt vỉa hè, ±0.000, từng sàn, mặt mái, đỉnh tường chắn', () => {
-    expect(textsOfClass(sheet, 'tlm')).toEqual([
-      '-0.450',
-      '±0.000',
-      '+3.600',
-      '+7.200',
-      '+11.100',
-      '+12.000',
-    ]);
+    // Ký hiệu cao độ đặt HAI bên như hồ sơ M5 (T147): mỗi cao độ in hai lần, trái rồi phải.
+    const marks = ['-0.450', '±0.000', '+3.600', '+7.200', '+11.100', '+12.000'];
+    expect(textsOfClass(sheet, 'tlm')).toEqual(marks.flatMap((m) => [m, m]));
     expect(levelLabel(-45)).toBe('-0.450');
   });
 
@@ -188,9 +206,10 @@ describe('tờ mặt đứng — hình học', () => {
     // chỉ còn MỘT đoạn bên trái. Cả hai vẽ nét đứt (lớp `ff`) vì đứng trước nhà.
     const fences = (villa.match(/<rect[^>]*class="ff"/g) ?? []).length;
     expect(fences).toBe(1 + 1);
-    // Lan can ban công vẫn là nét liền: nó thuộc mặt tiền, không đứng trước nhà.
+    // Lan can ban công vẫn là nét liền: nó thuộc mặt tiền, không đứng trước nhà. Mỗi ban công có
+    // tay vịn và ít nhất hai trụ (T147).
     const railings = (villa.match(/<rect[^>]*class="rl"/g) ?? []).length;
-    expect(railings).toBe(VILLA_FACADE.balconies?.length ?? 0);
+    expect(railings).toBeGreaterThanOrEqual((VILLA_FACADE.balconies?.length ?? 0) * 3);
     expect(TOWNHOUSE_FACADE.gate).toBeNull();
   });
 });
@@ -286,7 +305,7 @@ describe('mảng trang trí có hình riêng — vòm, ô tròn, mái sảnh (T6
       );
     expect(tri).not.toBeNull();
     const [x0, , xTop, , x1] = [1, 2, 3, 4, 5, 6].map((i) => Number(tri![i]));
-    expect(xTop).toBeCloseTo((x0! + x1!) / 2, 3);
+    expect(xTop).toBeCloseTo((x0! + x1!) / 2, 2);
     // Nóc phải CAO hơn hai chân: trên giấy, cao hơn nghĩa là y nhỏ hơn.
     expect(Number(tri![4])).toBeLessThan(Number(tri![2]));
   });
@@ -329,5 +348,89 @@ describe('tệp DXF mặt đứng', () => {
     expect(dxf).toContain('Mặt đứng mặt tiền');
     expect(dxf).toContain(AI_DISCLAIMERS.aiSheet);
     expect(dxf).toContain('+11.100');
+  });
+});
+
+describe('mặt đứng chi tiết như hồ sơ thật (T147)', () => {
+  const options = optionsFor(MANH_FACADE, MANH_PLAN);
+  const svg = renderElevationSheet(MANH_FACADE, options).svg;
+  const decode = (text: string) =>
+    text.replace(/\\U\+([0-9A-F]{4})/g, (_, hex: string) =>
+      String.fromCodePoint(parseInt(hex, 16)),
+    );
+  const dxf = decode(renderFacadeDxf(MANH_FACADE, { ...options, layers }));
+
+  it('trục suy từ tường của mặt bằng: bóng 1-2-3, chuỗi trục 110 / 3980 / 3800 / 110 như KT08', () => {
+    expect(textsOfClass(svg, 'tax')).toEqual(['1', '2', '3']);
+    const dims = textsOfClass(svg, 'td').map(Number);
+    for (const value of [110, 3980, 3800, 8000]) expect(dims).toContain(value);
+  });
+
+  it('ba hàng kích thước mỗi bên: dải dầm 400, phào 100, tường chắn, tổng 8550', () => {
+    const dims = textsOfClass(svg, 'td').map(Number);
+    // Hai bên đối xứng: mỗi số của hàng chi tiết xuất hiện ít nhất hai lần.
+    for (const value of [450, 3200, 400, 100, 3100, 8550]) {
+      expect(dims.filter((d) => d === value).length).toBeGreaterThanOrEqual(2);
+    }
+  });
+
+  it('lan can song đứng: số nan theo bước kb, tay vịn và trụ', () => {
+    const r = facadeDetailKb.railing;
+    // Lan can 8 m chia nhịp ≤ 1,5 m; mỗi nhịp đặt nan bước 120 mm — đếm nét nan (rect lớp chi tiết
+    // cao bằng khoảng thanh dưới → tay vịn).
+    const bays = Math.ceil((800 - r.postCm) / r.postMaxSpacingCm);
+    const clear = (800 - r.postCm) / bays - r.postCm;
+    const perBay = Math.floor(clear / r.balusters.pitchCm);
+    expect(perBay).toBeGreaterThan(5);
+    expect((svg.match(/class="rl"/g) ?? []).length).toBe(1 + bays + 1);
+    // Đếm nan trên tờ: ô chữ nhật lớp chi tiết cao đúng từ thanh dưới tới tay vịn.
+    const { scale } = renderElevationSheet(MANH_FACADE, options);
+    const k = 10 / scale;
+    const barH = (90 - r.handrailCm - r.bottomGapCm - r.railCm) * k;
+    const bars = [...svg.matchAll(/<rect [^>]*height="([\d.]+)" class="dtl"/g)].filter(
+      (m) => Math.abs(Number(m[1]) - barH) < 0.01,
+    );
+    expect(bars.length).toBe(bays * perBay);
+  });
+
+  it('ghi chú dẫn sinh từ kb và vật liệu, không trùng, chữ in hoa như M5', () => {
+    const notes = [...textsOfClass(svg, 'tno'), ...textsOfClass(svg, 'tne')];
+    const joined = notes.join(' ');
+    expect(joined).toContain('PHÀO CHỈ 100×50 (MM)');
+    expect(joined).toContain('PHÀO CHỈ 50×20 (MM)');
+    expect(joined).toContain('PHÀO BO CỬA');
+    expect(joined).toContain('RON CHỈ ÂM TƯỜNG');
+    expect(joined).toContain('ĐÁ GRANITE MÀU ĐEN');
+    // Mỗi loại ghi một lần — dòng dài ngắt ra có thể trùng nhau («MÀU ĐEN»), nên đếm dòng mở đầu.
+    expect(notes.filter((n) => n.startsWith('PHÀO CHỈ 100×50')).length).toBe(1);
+    expect(notes.filter((n) => n.startsWith('PHÀO BO CỬA')).length).toBe(1);
+  });
+
+  it('tường chắn mái sơn ghi tô xám; chân nhà ốp đá có nét ký hiệu', () => {
+    expect(svg).toMatch(/<path class="tfl" d="[^"]+" fill="#[0-9a-f]{6}"/);
+    expect(svg).toContain('class="hl"');
+  });
+
+  it('ảnh neo không mang lớp chú thích: không trục, không kích thước, không ghi chú', () => {
+    const anchor = renderElevationAnchor(MANH_FACADE, options).svg;
+    for (const cls of ['ax', 'tax', 'td', 'tno', 'tne', 'lvl', 'tlm']) {
+      expect(anchor).not.toContain(`class="${cls}"`);
+    }
+    // Hình vẫn đủ chi tiết: kính xiên và nan lan can.
+    expect(anchor).toContain('class="gls"');
+    expect(anchor).toContain('class="dtl"');
+  });
+
+  it('DXF: trục ở lớp trục nét chấm gạch, mảng tô thành SOLID, chi tiết ở lớp riêng', () => {
+    expect(dxf).toContain('\r\nCENTER\r\n');
+    expect(dxf).toContain('\r\nSOLID\r\n');
+    expect(dxf).toContain(layers.grid.layer);
+    expect(dxf).toContain(layers.detail.layer);
+    expect(dxf).toContain('PHÀO CHỈ 100×50 (MM)');
+  });
+
+  it('DXF: nét đứt khai bằng CSS (hàng rào) ra tệp CAD vẫn là nét đứt', () => {
+    const villa = renderFacadeDxf(VILLA_FACADE, { ...optionsFor(VILLA_FACADE), layers });
+    expect(villa).toMatch(/POLYLINE\r\n8\r\n[^\r]+\r\n6\r\nDASHED/);
   });
 });

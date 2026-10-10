@@ -1649,6 +1649,23 @@ const MUTATIONS: Mutation[] = [
     find: '      if (shared(a, b) < (zone ? (input.corridorPassCm ?? input.doorWallCm) : input.doorWallCm))',
     replace: '      if (shared(a, b) < input.doorWallCm)',
   },
+  // ── Bản vẽ: mặt đứng chi tiết và lưới trục (T147) ────────────────────────────────────
+  {
+    id: 'M197',
+    axis: 'số đo bản vẽ',
+    file: 'workers/src/design/ai/draw/axes.ts',
+    bug: 'Trục làm tròn về cm nguyên — tim tường 483,5 thành trục 484, hàng trục ghi 4730 cạnh hàng chi tiết 4725 trên cùng một tờ',
+    find: '      const exact = (a + b) / 2;',
+    replace: '      const exact = Math.round((a + b) / 2);',
+  },
+  {
+    id: 'M198',
+    axis: 'số đo bản vẽ',
+    file: 'workers/src/design/ai/draw/elevation-parts.ts',
+    bug: 'Nan lan can rải theo nửa bước kb — tờ vẽ dày gấp đôi số nan thật (M5: nan 20 bước 120)',
+    find: '    const count = Math.floor((c - a) / spec.pitchCm);',
+    replace: '    const count = Math.floor((c - a) / (spec.pitchCm / 2));',
+  },
 ];
 
 /** Thư mục mã nguồn được băm trước và sau khi chạy. `db/` không đụng tới nên không băm. */
