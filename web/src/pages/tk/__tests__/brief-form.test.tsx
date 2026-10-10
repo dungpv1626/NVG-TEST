@@ -1016,9 +1016,10 @@ describe('Phòng ngủ tự sinh từ Thành viên gia đình', () => {
       'placeholder',
       'chỗ sạc xe điện, vòi rửa xe',
     );
-    expect(screen.getByLabelText('Tiện ích bổ sung — Khu vệ sinh')).toHaveAttribute(
+    // «WC» = vệ sinh và tắm chung một phòng (Haan, 09/10/2026).
+    expect(screen.getByLabelText('Tiện ích bổ sung — WC')).toHaveAttribute(
       'placeholder',
-      'bồn tắm nằm, vòi sen đứng',
+      'bồn cầu bệt, lavabo, vòi + bát sen; bồn tắm nằm',
     );
   });
 

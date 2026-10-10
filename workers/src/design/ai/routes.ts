@@ -22,6 +22,7 @@ import {
   denyUnlessWritable,
   projectScope,
   PROJECT_NOT_VISIBLE,
+  planDrawingLabels,
   roomLabels,
 } from '../auth-scope';
 import { AI_DIGEST_DATA_CLASS, anonymiseForAi } from '../brief/anonymise';
@@ -89,6 +90,7 @@ import type {
   DesignBrief,
 } from '@nvg/shared/design';
 import { disposeStub, instanceIdOf } from '../workflows/rpc-stub';
+import { imageResponse, previewEtag, readPreviewWidth } from './image-preview';
 
 export const aiApp = new Hono<{ Bindings: DesignEnv }>();
 
@@ -928,7 +930,8 @@ aiApp.post('/plan/:projectId/sheet-image', async (c) => {
       plan,
       level,
       prompts,
-      labels: roomLabels(),
+      // Cùng nhãn với tờ vector của chính phương án ấy — phương án cũ giữ tên cũ.
+      labels: planDrawingLabels(),
       scale: anchor.scale,
       styleCode,
     });
@@ -1079,6 +1082,9 @@ aiApp.post('/plan/:projectId/sheet-image', async (c) => {
 aiApp.get('/plan/:projectId/sheet-image', async (c) => {
   const token = bearer(c.req.header('Authorization'));
   if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+  // `?w=1024`: bản xem trước WebP thu nhỏ cho ảnh bìa thẻ (`image-preview.ts`).
+  const width = readPreviewWidth(c.req.query('w'));
+  if (width === 'invalid') return c.json({ error: 'Độ rộng ảnh xem trước không hợp lệ.' }, 400);
 
   const projectId = c.req.param('projectId');
   const artifactId = c.req.query('artifactId');
@@ -1103,10 +1109,11 @@ aiApp.get('/plan/:projectId/sheet-image', async (c) => {
   // So `ETag` Ở ĐÂY, bằng tay. Workers KHÔNG tự trả 304 cho một `Response` do mã dựng ra — bản
   // trước đặt `ETag` rồi tin là nền tảng lo nốt, nên mỗi lần mở lại trang là một lần tải lại cả
   // tấm ảnh (đo được: 2,48 MB). Mã artifact là băm nội dung nên so bằng chuỗi là đủ.
-  if ((c.req.header('If-None-Match') ?? '') === `"${found.id}"`) {
+  const etag = previewEtag(found.id, width);
+  if ((c.req.header('If-None-Match') ?? '') === etag) {
     return new Response(null, {
       status: 304,
-      headers: { 'Cache-Control': 'private, no-cache', ETag: `"${found.id}"` },
+      headers: { 'Cache-Control': 'private, no-cache', ETag: etag },
     });
   }
 
@@ -1118,13 +1125,7 @@ aiApp.get('/plan/:projectId/sheet-image', async (c) => {
     if (error instanceof RenderStoreError) return c.json({ error: error.message }, 502);
     throw error;
   }
-  return new Response(image.bytes as unknown as BodyInit, {
-    headers: {
-      'Content-Type': found.payload.mime,
-      'Cache-Control': 'private, no-cache',
-      ETag: `"${found.id}"`,
-    },
-  });
+  return imageResponse(c.env.IMAGES, image.bytes, found.payload.mime, found.id, width);
 });
 
 /** Băm nội dung một mảng byte thành 64 ký tự hex — cùng phép băm `renderKey` dùng cho khoá kho. */

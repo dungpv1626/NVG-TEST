@@ -54,7 +54,7 @@ function RecentCard({ project }: { project: DesignProjectRecord }): React.ReactE
   return (
     <Link
       to={`/tk/du-an/${project.id}`}
-      className="flex gap-3 rounded-lg border border-tk-line bg-tk-card p-3 transition-[transform,background-color,border-color] duration-(--motion-base) ease-(--ease-out) hover:-translate-y-[3px] hover:border-tk-line2 hover:bg-tk-hover"
+      className="flex gap-3 rounded-lg border border-tk-line bg-tk-card p-3 transition-[translate,background-color,border-color] duration-(--motion-base) ease-(--ease-out) hover:-translate-y-[3px] hover:border-tk-line2 hover:bg-tk-hover"
     >
       <span
         aria-hidden

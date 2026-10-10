@@ -12,6 +12,11 @@ import { load as parseYaml } from 'js-yaml';
 export interface RoomTypeEntry {
   code: string;
   vi: string;
+  /**
+   * Tên trước lần đổi gần nhất — bộ vẽ dùng cho phòng CHƯA mang nhãn (phương án lưu trước khi đổi
+   * tên). Phương án mới ghi nhãn hiện hành vào `rooms[].label` lúc lưu (`ai/room-labels.ts`).
+   */
+  vi_before?: string;
   aliases?: string[];
 }
 
@@ -200,6 +205,13 @@ export function mergeAllowed(vocabulary: RoomVocabulary): Set<string> {
     }
     out.add(mergeKey(a, b));
   }
+  return out;
+}
+
+/** Nhãn dự phòng khi vẽ phương án đã lưu: tên trước lần đổi nếu có — xem `planDrawingLabels`. */
+export function drawingLabelsOf(vocabulary: RoomVocabulary): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const type of vocabulary.types) out[type.code] = type.vi_before ?? type.vi;
   return out;
 }
 

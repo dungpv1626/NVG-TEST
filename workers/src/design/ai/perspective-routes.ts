@@ -55,6 +55,7 @@ import {
 } from './perspective/views';
 import { aiPrompts } from './prompts-data';
 import { anchorMime, pngSize } from './sheet-image';
+import { imageResponse, previewEtag, readPreviewWidth } from './image-preview';
 import { activeRun, attachWorkflow, createRun, finishRun } from './runs';
 import { instanceIdOf } from '../workflows/rpc-stub';
 
@@ -494,15 +495,20 @@ perspectiveApp.get('/:projectId', async (c) => {
   });
 });
 
-/** Byte của MỘT góc — chưa đóng dấu; `ETag` là mã artifact cộng tên góc. */
+/**
+ * Byte của MỘT góc — chưa đóng dấu; `ETag` là mã artifact cộng tên góc. `?w=1024` trả bản xem trước
+ * WebP thu nhỏ (ảnh bìa thẻ — `image-preview.ts`).
+ */
 perspectiveApp.get('/:projectId/view/:view', async (c) => {
+  const width = readPreviewWidth(c.req.query('w'));
+  if (width === 'invalid') return c.json({ error: 'Độ rộng ảnh xem trước không hợp lệ.' }, 400);
   const read = await readSet(c);
   if (read instanceof Response) return read;
   const view = c.req.param('view') as AiImageSetView;
   const image = read.set.images.find((item) => item.view === view);
   if (!image) return c.json({ error: 'Bộ ảnh này không có góc đó.' }, 404);
 
-  const etag = `"${read.artifactId}:${view}"`;
+  const etag = previewEtag(`${read.artifactId}:${view}`, width);
   if ((c.req.header('If-None-Match') ?? '') === etag) {
     return new Response(null, {
       status: 304,
@@ -516,13 +522,7 @@ perspectiveApp.get('/:projectId/view/:view', async (c) => {
     if (error instanceof RenderStoreError) return c.json({ error: error.message }, 502);
     throw error;
   }
-  return new Response(bytes as unknown as BodyInit, {
-    headers: {
-      'Content-Type': image.mime,
-      'Cache-Control': 'private, no-cache',
-      ETag: etag,
-    },
-  });
+  return imageResponse(c.env.IMAGES, bytes, image.mime, `${read.artifactId}:${view}`, width);
 });
 
 /**

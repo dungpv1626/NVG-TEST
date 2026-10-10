@@ -29,6 +29,7 @@ import type {
   AiSpaceProgram,
 } from '@nvg/shared/design';
 import { applyPlanEdits } from '../ai/edit/apply';
+import { stampRenamedRoomLabels } from '../ai/room-labels';
 import { callEditModel } from '../ai/edit/prompt';
 import { AI_DIGEST_DATA_CLASS } from '../brief/anonymise';
 import type { ArtifactRepository } from '../artifacts';
@@ -647,7 +648,8 @@ export async function writePlan(
   const artifact = await deps.repo.write({
     scope: scopeOf(params),
     kind: 'ai_floor_plan',
-    payload: final.payload,
+    // Tên phòng hiện hành nằm sẵn trong artifact — bản vẽ cũ giữ tên cũ (`ai/room-labels.ts`).
+    payload: stampRenamedRoomLabels(final.payload, deps.vocabulary.vocabulary.types),
     inputs: [program.id],
     step: 'ai_plan_propose',
     params: {
@@ -1027,7 +1029,7 @@ export async function applyEditStep(
   const artifact = await deps.repo.write({
     scope,
     kind: 'ai_floor_plan',
-    payload,
+    payload: stampRenamedRoomLabels(payload, deps.vocabulary.vocabulary.types),
     inputs: [base.id, programId],
     step: 'ai_plan_propose',
     params: {

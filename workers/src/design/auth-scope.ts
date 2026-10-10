@@ -16,6 +16,7 @@ import type { DesignBrief } from '@nvg/shared/design';
 import type { AnonymiseInput } from './brief/anonymise';
 import { readEffectiveBriefForm } from './brief/form-config';
 import { roomVocabulary } from './kb/vocabulary-data';
+import { drawingLabelsOf } from './kb/vocabulary';
 import type { DesignEnv } from './env';
 
 /** Phiên Supabase chạy dưới quyền người gọi — kiểu dùng lại ở mọi hàm bên dưới. */
@@ -54,6 +55,15 @@ export function roomLabels(): Record<string, string> {
   const out: Record<string, string> = {};
   for (const type of roomVocabulary().vocabulary.types) out[type.code] = type.vi;
   return out;
+}
+
+/**
+ * Nhãn dự phòng khi VẼ một phương án đã lưu: phòng không mang `label` thì lấy tên TRƯỚC lần đổi
+ * (`vi_before`) nếu có. Phòng không mang nhãn chỉ còn ở phương án lưu trước khi đổi tên — phương án
+ * mới được ghi nhãn hiện hành lúc lưu (`ai/room-labels.ts`) — nên bản vẽ cũ giữ nguyên chữ cũ.
+ */
+export function planDrawingLabels(): Record<string, string> {
+  return drawingLabelsOf(roomVocabulary().vocabulary);
 }
 
 /**

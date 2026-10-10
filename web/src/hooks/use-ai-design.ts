@@ -10,7 +10,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { AI_DISCLAIMERS, type AiFacadeBrief } from '@nvg/shared/design';
+import { AI_DISCLAIMERS, AI_PREVIEW_WIDTH, type AiFacadeBrief } from '@nvg/shared/design';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DesignApiError, designApi, designApiFile } from '@/lib/design-api';
 import { toUserMessage } from '@/hooks/use-error-message';
@@ -1293,8 +1293,12 @@ export interface AiCoverImage {
 
 /** Góc phối cảnh làm ảnh bìa: tấm gốc của bộ — luôn có khi bộ ảnh có (bốn góc kia dựng theo nó). */
 const AI_COVER_PERSPECTIVE_VIEW = 'front_day';
-/** Bề ngang ảnh bìa sau khi thu nhỏ — khung thẻ cao 176px, rộng tới ~420px; gấp đôi cho màn hình mật độ cao. */
-const AI_COVER_WIDTH = 840;
+/**
+ * Bề ngang ảnh bìa — khung thẻ 3:2 rộng tới ~600px; đủ nét trên màn hình mật độ cao. Máy chủ thu nhỏ
+ * về đúng số này (`?w=`, WebP — `workers/src/design/ai/image-preview.ts`, chỉ nhận số trong
+ * `PREVIEW_WIDTHS`): ảnh gốc 1,3–3 MB PNG còn vài chục KB. Một hằng số chung cho hai bên.
+ */
+const AI_COVER_WIDTH = AI_PREVIEW_WIDTH;
 /** Số ảnh bìa nhớ trong phiên — đủ cho một danh sách, không giữ mãi trong bộ nhớ. */
 const AI_COVER_CACHE_MAX = 48;
 
@@ -1319,9 +1323,12 @@ function rememberCover(key: string, value: { url: string; kind: AiCoverKind }): 
  * Ảnh bìa của thẻ hồ sơ AI Design (Haan, 08/10/2026): ảnh phối cảnh → mặt bằng tầng 1 có nội thất
  * → tờ mặt bằng tầng 1 (vector). Lấy tấm có thứ hạng cao nhất trong số tấm có.
  *
- * Ba tấm tải SONG SONG, không lần lượt: trên bản demo mỗi tuyến ảnh mất ~0,5–0,8 s trung vị, và
- * «chưa vẽ» (404) cũng tốn đúng chừng ấy — hỏi lần lượt thì hồ sơ chỉ có mặt bằng thô phải chờ hai
- * lượt hỏng rồi mới tới lượt mình. Ảnh hiện khi mọi tấm XẾP TRÊN nó đã trả lời, không chờ tấm dưới.
+ * Thứ tự tải theo cái `state` ĐÃ biết. Có bộ ảnh phối cảnh thì CHỈ tải tấm phối cảnh, hỏng mới lùi:
+ * tấm ấy là PNG cỡ gốc ~2,7 MB, và tấm mặt bằng nội thất (1,3–2,4 MB) tải song song bên cạnh chỉ
+ * giành băng thông với nó để rồi bị bỏ (đo trên bản demo 08/10/2026 — Worker trả trong 0,4 s, phần
+ * còn lại của ~4 s là đường tải về). Không có phối cảnh thì hai tấm mặt bằng tải SONG SONG: `state`
+ * không nói đã vẽ tấm nội thất chưa, và hỏi lần lượt thì hồ sơ chỉ có mặt bằng thô phải chờ một
+ * lượt 404 (~0,8 s) rồi mới tới lượt mình. Ảnh hiện khi mọi tấm XẾP TRÊN nó đã trả lời.
  * Tấm nào hỏng (404 hay lỗi khác — đây là ảnh minh hoạ, không phải chỗ báo lỗi) thì coi như không có.
  *
  * Hai tấm đầu do mô hình ảnh vẽ nên PHẢI đóng dấu lên pixel như ở màn hình chi tiết; canvas không
@@ -1375,35 +1382,49 @@ export function useAiCoverImage(
     };
 
     const ref = plan ? encodeURIComponent(plan) : null;
-    const candidates: Array<{ kind: AiCoverKind; load: Promise<string | null> }> = [];
+    // Mỗi tấm một hàm tải, gọi khi tới lượt; `started` giữ lời hứa để không tải một tấm hai lần.
+    const candidates: Array<{ kind: AiCoverKind; load: () => Promise<string | null> }> = [];
     if (imageSet) {
       candidates.push({
         kind: 'perspective',
-        load: fetchBlob(
-          `/design/ai/perspective/${projectId}/view/${AI_COVER_PERSPECTIVE_VIEW}?artifactId=${encodeURIComponent(imageSet)}`,
-        ).then((url) => stamped(url, AI_DISCLAIMERS.aiImageSetStamp)),
+        load: () =>
+          fetchBlob(
+            `/design/ai/perspective/${projectId}/view/${AI_COVER_PERSPECTIVE_VIEW}?artifactId=${encodeURIComponent(imageSet)}&w=${AI_COVER_WIDTH}`,
+          ).then((url) => stamped(url, AI_DISCLAIMERS.aiImageSetStamp)),
       });
     }
     if (ref) {
       candidates.push(
         {
           kind: 'furnished_plan',
-          load: fetchBlob(
-            `/design/ai/plan/${projectId}/sheet-image?artifactId=${ref}&level=1`,
-          ).then((url) => stamped(url, AI_DISCLAIMERS.aiSheetImageStamp)),
+          load: () =>
+            fetchBlob(
+              `/design/ai/plan/${projectId}/sheet-image?artifactId=${ref}&level=1&w=${AI_COVER_WIDTH}`,
+            ).then((url) => stamped(url, AI_DISCLAIMERS.aiSheetImageStamp)),
         },
         {
           kind: 'plan',
-          load: fetchBlob(`/design/ai/plan/${projectId}/sheet?artifactId=${ref}&level=1`),
+          load: () => fetchBlob(`/design/ai/plan/${projectId}/sheet?artifactId=${ref}&level=1`),
         },
       );
     }
+    const started = new Map<AiCoverKind, Promise<string | null>>();
+    const start = (candidate: (typeof candidates)[number]): Promise<string | null> => {
+      let pending = started.get(candidate.kind);
+      if (!pending) {
+        pending = candidate.load();
+        started.set(candidate.kind, pending);
+      }
+      return pending;
+    };
 
     void (async () => {
-      // Duyệt theo thứ hạng; `await` từng tấm nhưng cả ba đã chạy từ trước nên tổng thời gian là
-      // của tấm chậm nhất trong số tấm phải chờ, không phải tổng cộng.
-      for (const candidate of candidates) {
-        const url = await candidate.load;
+      for (const [index, candidate] of candidates.entries()) {
+        // Tấm phối cảnh tải MỘT MÌNH; tới hai tấm mặt bằng thì khởi động cả hai cùng lúc.
+        if (candidate.kind !== 'perspective') {
+          for (const rest of candidates.slice(index)) void start(rest);
+        }
+        const url = await start(candidate);
         if (cancelled) return;
         if (url) {
           kept = url;
@@ -1418,7 +1439,7 @@ export function useAiCoverImage(
     return () => {
       cancelled = true;
       // Đợi các tấm còn đang tải xong rồi mới thu hồi — tấm về muộn vẫn tạo blob.
-      void Promise.allSettled(candidates.map((c) => c.load)).then(() => {
+      void Promise.allSettled(started.values()).then(() => {
         for (const url of blobs) if (url !== kept) URL.revokeObjectURL(url);
       });
     };

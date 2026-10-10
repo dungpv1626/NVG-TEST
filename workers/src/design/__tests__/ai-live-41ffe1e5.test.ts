@@ -108,7 +108,7 @@ describe('phát lại 41ffe1e5 — GPT-5.6 Terra, đường v6', () => {
     const { options } = await replay();
     const errors = errorsOf(options[1]!.promptTail ?? '');
     expect(errors).toMatch(/Storey 1: the bands .* 840 mm deeper than the house/);
-    expect(errors).toMatch(/Thiếu Khu vệ sinh chung ở tầng 2/);
+    expect(errors).toMatch(/Thiếu WC chung ở tầng 2/);
     expect(errors).not.toMatch(/The storey out of line is/);
   });
 
@@ -130,7 +130,7 @@ describe('phát lại 41ffe1e5 — GPT-5.6 Terra, đường v6', () => {
       ...rescued!.attempt.issues,
       ...(rescued!.evaluation?.rejections.flatMap((r) => r.messages) ?? []),
     ].join('\n');
-    expect(problems).toMatch(/Thiếu Khu vệ sinh chung ở tầng 2/);
+    expect(problems).toMatch(/Thiếu WC chung ở tầng 2/);
     expect(rescued!.evaluation?.rejections.some((r) => r.level === 1) ?? false).toBe(false);
     expect(problems).not.toMatch(/roof/);
   });

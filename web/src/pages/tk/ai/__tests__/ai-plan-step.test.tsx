@@ -580,7 +580,8 @@ describe('Mặc định MỘT phương án, và mức suy nghĩ đi kèm lượt
     state.run = null;
     state.start.mockClear();
     show();
-    await userEvent.selectOptions(await screen.findByLabelText('Mức suy nghĩ'), 'high');
+    await userEvent.click(await screen.findByRole('button', { name: /Đổi mức suy nghĩ/ }));
+    await userEvent.click(screen.getByRole('radio', { name: /^Cao/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Xếp mặt bằng' }));
     expect(state.start).toHaveBeenCalledWith(
       expect.objectContaining({

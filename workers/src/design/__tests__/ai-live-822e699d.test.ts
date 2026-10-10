@@ -72,7 +72,7 @@ const replay = async () => {
 };
 
 const errorsOf = (tail: string) => tail.slice(tail.indexOf('<errors>'), tail.indexOf('</errors>'));
-const WC = /Thiếu Khu vệ sinh chung ở tầng 2/;
+const WC = /Thiếu WC chung ở tầng 2/;
 
 describe('phát lại 822e699d — GPT-5.6 Terra, đường v6', () => {
   it('lời gọi 1: vòng sau có ĐỦ lỗi ngay — chiều sâu, thiếu WC chung tầng 2; giếng trời tầng trên do chương trình đặt', async () => {
