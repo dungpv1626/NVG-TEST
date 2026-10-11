@@ -1,9 +1,10 @@
 # Video hướng dẫn sử dụng
 
-Chín video ngắn (khoảng 1 đến 2 phút), 1080p, có **phụ đề và vùng nhấn mạnh**, **chưa có giọng đọc**.
+Mười video ngắn (khoảng 1 đến 2 phút), 1080p, có **phụ đề và vùng nhấn mạnh**, **chưa có giọng đọc**.
 
 | Tệp | Nội dung |
 | --- | --- |
+| `00a_GIOI_THIEU_HE_THONG.mp4` | Hệ thống là gì, vì sao NVG cần, giúp được gì, không làm gì (xem trước) |
 | `00_BAT_DAU_DANG_NHAP.mp4` | Đăng nhập, trang đầu, chọn pháp nhân, tìm kiếm, thông báo — mọi vai trò |
 | `01_CHI_HUY_TRUONG.mp4` | Một ngày ở công trường (điện thoại): điểm danh, nhật ký, đề nghị vật tư, thúc, nghiệm thu |
 | `02_BAN_GIAM_DOC.mp4` | Dashboard, phê duyệt, lãi/lỗ, hạn mức, thời hạn xử lý |

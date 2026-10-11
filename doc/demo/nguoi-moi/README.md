@@ -1,10 +1,11 @@
 # Bộ tài liệu cho người mới
 
 Bộ này trả lời câu hỏi: **một người mới đọc hướng dẫn thì có biết phải làm gì không?**
-Đọc theo thứ tự 01 → 06. Tệp `BO_TAI_LIEU_NGUOI_MOI.pdf` là bản gộp tất cả.
+Đọc theo thứ tự 00 → 06. Tệp `BO_TAI_LIEU_NGUOI_MOI.pdf` là bản gộp tất cả.
 
 | Tệp | Dùng để |
 | --- | --- |
+| `00_GIOI_THIEU_HE_THONG.pdf` | **Đọc đầu tiên:** hệ thống là gì, vì sao NVG cần, giúp được gì, không làm gì, doanh nghiệp cần làm gì để hệ thống có hiệu quả |
 | `01_BAT_DAU_TU_DAY.pdf` | Ngày đầu tiên và một trang cho mỗi vai trò: năm việc đầu tiên, cách biết đã làm đúng, việc đừng làm |
 | `02_BAN_DO_QUY_TRINH.pdf` | Năm bản đồ quy trình xuyên phòng: ai làm trước, ai nhận việc sau |
 | `03_THUAT_NGU_VA_VIEC_KHONG_SUA_DUOC.pdf` | Thuật ngữ, bảng việc không sửa được (ghi nhầm thì làm gì), cách đọc con số |
