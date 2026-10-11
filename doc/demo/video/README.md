@@ -1,6 +1,6 @@
 # Video hướng dẫn sử dụng
 
-Mười video ngắn (khoảng 1 đến 2 phút), 1080p, có **phụ đề và vùng nhấn mạnh**, **chưa có giọng đọc**.
+Mười video, 1080p, có **phụ đề, vùng nhấn mạnh và giọng đọc** (trừ video 00: chưa có giọng đọc). Giọng đọc do bạn tạo bằng ElevenLabs; các điểm chuyển bước được căn theo giọng đọc.
 
 | Tệp | Nội dung |
 | --- | --- |
@@ -15,10 +15,11 @@ Mười video ngắn (khoảng 1 đến 2 phút), 1080p, có **phụ đề và v
 | `07_KINH_DOANH_DAU_THAU_HOP_DONG.mp4` | Phễu cơ hội, gói thầu, dự toán, hợp đồng |
 | `08_THIET_KE_AI_DESIGN.mp4` | Đầu bài, phiên bản bản vẽ, hồ sơ kỹ thuật, AI Design |
 
-`KICH_BAN_LONG_TIENG.md` có lời đọc từng bước để thu giọng hoặc làm phụ đề rời.
+`KICH_BAN_LONG_TIENG.md` có lời đọc từng bước. Thư mục `audio/` có giọng đọc đã cắt riêng cho từng video (mã 00a, 01 đến 08).
 
 ## Cần biết
 
+- Video **00_BAT_DAU_DANG_NHAP** chưa có giọng đọc (chưa có tệp âm thanh tương ứng); phần lời cho video này nằm trong đoạn đầu của kịch bản đã gửi.
 - Video ghép từ **ảnh chụp thật** của bản demo (đã có trong `doc/demo/huong-dan/anh/` và trong các hướng dẫn PDF), **không phải quay màn hình thao tác trực tiếp**.
 - **Chưa có** video cho Hành chính – Nhân sự, Trưởng phòng Thi công, Quản trị hệ thống (phần lớn chưa có ảnh chụp). Cần chụp ảnh các màn hình theo danh sách trong `doc/demo/nguoi-moi/`.
 - Một số ảnh là bản của đợt trước; nếu giao diện đã đổi, video có thể lệch. Chạy lại bộ ảnh rồi dựng lại.
