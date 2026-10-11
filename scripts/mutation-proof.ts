@@ -1666,6 +1666,40 @@ const MUTATIONS: Mutation[] = [
     find: '    const count = Math.floor((c - a) / spec.pitchCm);',
     replace: '    const count = Math.floor((c - a) / (spec.pitchCm / 2));',
   },
+  // ── Bộ xếp mặt bằng: lượt hỏng 75ba5793 (T153) ───────────────────────────────────────
+  // Số M203+: nhánh `ai-design-duong-so-do` (chưa merge) đã dùng M199–M202.
+  {
+    id: 'M203',
+    axis: 'số đo bản vẽ',
+    file: 'workers/src/design/ai/arrange/index.ts',
+    bug: 'Bộ xếp chừa ô thang theo VÁCH NGĂN — ô thang giáp giếng trời / mặt ngoài hụt 1,5 cm lọt lòng, chính bộ kiểm bác tầng 1 (lượt 75ba5793, 0,5 USD)',
+    find: '  const wallCm = Math.round(construction.walls.exterior_m * 100);',
+    replace: '  const wallCm = Math.round(construction.walls.partition_m * 100);',
+  },
+  {
+    id: 'M204',
+    axis: 'tiền gọi mô hình',
+    file: 'workers/src/design/ai/stranded.ts',
+    bug: 'Ô kho 2 m² kẹt góc làm cả tầng 1 đúng bị gửi lại mô hình — bốn vòng sửa tệ dần (lượt 75ba5793)',
+    find: '      if (reachable) continue;',
+    replace: '      if (reachable || room.target_area_m2 > 0) continue;',
+  },
+  {
+    id: 'M205',
+    axis: 'tiền gọi mô hình',
+    file: 'workers/src/design/ai/plan.ts',
+    bug: 'Khoá câu trả lời bỏ bản phác — hai câu trả lời khác hình bị coi là trùng, vòng sửa dừng oan (hoặc ngược lại, trùng mà không nhận ra)',
+    find: '    sketches: (intent.sketches ?? []).map((k) => [',
+    replace: '    sketches: ([] as NonNullable<HouseIntent["sketches"]>).map((k) => [',
+  },
+  {
+    id: 'M206',
+    axis: 'bộ xếp',
+    file: 'workers/src/design/ai/plan.ts',
+    bug: 'Đổi phòng mang cửa chính vẫn hỏng mà không ghi lỗi của cách thử ấy — báo cáo chỉ nói «phòng khách không có cửa», giấu lỗi thật (ô thang ngắn, lượt 75ba5793)',
+    find: '    if (!arrangedLevel(groundResult) && nearest) {',
+    replace: '    if (!arrangedLevel(groundResult) && nearest && false) {',
+  },
 ];
 
 /** Thư mục mã nguồn được băm trước và sau khi chạy. `db/` không đụng tới nên không băm. */

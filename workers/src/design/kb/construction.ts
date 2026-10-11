@@ -59,6 +59,10 @@ export interface SketchNorms {
   grow_tries: number;
   /** Dung sai đo ở cổng sau khi dựng cho sàn đầu bài khai, tỉ lệ — 0 = so thẳng (T82, Haan chọn 3 %). */
   floor_tolerance_ratio: number;
+  /**
+   * Phòng phụ nhỏ không lối vào trên bản phác — chương trình nhập vào phòng bên cạnh (T153). Vắng = tắt.
+   */
+  absorb_stranded?: { types: string[]; max_area_m2: number };
 }
 
 export interface EntryStepNorms {
@@ -292,7 +296,28 @@ function parseSketch(raw: unknown): SketchNorms {
   if (typeof tolerance !== 'number' || !(tolerance >= 0 && tolerance < 1)) {
     throw new ConstructionNormsError('"sketch.floor_tolerance_ratio" phải là số trong [0, 1)');
   }
-  return { area_slack_ratio: ratio, grow_tries: tries, floor_tolerance_ratio: tolerance };
+  const absorbRaw = (raw as Record<string, unknown>).absorb_stranded as
+    Record<string, unknown> | undefined;
+  let absorb: SketchNorms['absorb_stranded'];
+  if (absorbRaw !== undefined) {
+    const types = absorbRaw?.types;
+    const max = absorbRaw?.max_area_m2;
+    if (!Array.isArray(types) || types.some((t) => typeof t !== 'string')) {
+      throw new ConstructionNormsError(
+        '"sketch.absorb_stranded.types" phải là danh sách mã loại phòng',
+      );
+    }
+    if (typeof max !== 'number' || !(max > 0)) {
+      throw new ConstructionNormsError('"sketch.absorb_stranded.max_area_m2" phải là số dương');
+    }
+    absorb = { types: types.slice() as string[], max_area_m2: max };
+  }
+  return {
+    area_slack_ratio: ratio,
+    grow_tries: tries,
+    floor_tolerance_ratio: tolerance,
+    ...(absorb ? { absorb_stranded: absorb } : {}),
+  };
 }
 
 function parseEntrySteps(raw: unknown): EntryStepNorms {

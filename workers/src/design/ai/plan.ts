@@ -106,6 +106,7 @@ import {
 } from './arrange';
 import { SPLIT_MIN_CM } from './arrange/grid';
 import { equalizeByType, hallVariants, retargetIntent } from './plan-variants';
+import { absorbStranded, type StrandedNote } from './stranded';
 import { absorbUnknown, partitionRows, splitMerged } from './arrange/sketch';
 import {
   buildableFromDigest,
@@ -3764,7 +3765,20 @@ export function evaluateHouseBest(
   generator: AiSpaceProgram['generator'],
   prompts: AiPrompts,
 ): HouseEvaluation {
-  const evaluation = evaluateHouseVariants(input, context, intent, generator, prompts);
+  // Phòng phụ nhỏ kẹt trên bản phác: nhập vào phòng kề trước khi xếp (T153) — ý định đã nhập cũng là ý định gửi lại
+  // mô hình ở lượt sửa (`renamed`), nên mô hình không vẽ lại ô kho ấy.
+  const stranded = absorbStrandedFor(input, intent);
+  const evaluation = evaluateHouseVariants(input, context, stranded.intent, generator, prompts);
+  for (const note of stranded.notes) {
+    const arranged = evaluation.ok?.levels.find((item) => item.level.level === note.level);
+    if (arranged) arranged.notes.push({ code: 'stranded_absorbed', message: note.message });
+    // Tầng ấy đã qua mà nhà vẫn hỏng ở tầng khác: ghi vào lỗi tầng thấp nhất để kỹ sư vẫn thấy chương trình đã
+    // nhập gì (ý định gửi lượt sửa đã mang sẵn bản nhập).
+    const rejected =
+      evaluation.rejections.find((item) => item.level === note.level) ??
+      [...evaluation.rejections].sort((a, b) => a.level - b.level)[0];
+    if (rejected) rejected.notes = [...(rejected.notes ?? []), note.message];
+  }
   // Lưu ý giếng trời theo loại nhà (T116) — chỉ ghi chú, không đổi điểm hay cổng.
   const advice = evaluation.ok
     ? lightWellAdvice(
@@ -3775,6 +3789,33 @@ export function evaluateHouseBest(
     : null;
   if (advice && evaluation.ok) evaluation.ok.levels[0]?.notes.push(advice);
   return evaluation;
+}
+
+/** Quy tắc nhập phòng phụ kẹt (T153) từ kb — tắt khi `sketch.absorb_stranded` vắng hoặc thiếu nhóm lối đi. */
+function absorbStrandedFor(
+  input: PlanContextInput,
+  intent: HouseIntent,
+): { intent: HouseIntent; notes: StrandedNote[] } {
+  const absorb = input.construction.sketch?.absorb_stranded;
+  const passage = input.groups.passage;
+  if (!absorb || !passage) return { intent, notes: [] };
+  const required = input.digest.required_spaces ?? [];
+  return absorbStranded(intent, {
+    types: new Set(absorb.types),
+    maxAreaM2: absorb.max_area_m2,
+    through: passage.through,
+    servedFrom: passage.servedFrom,
+    // Không nhập vào thang, thang máy, gara, hiên: đổi cỡ thứ đã có mốc, hoặc đặt kho lên đường xe.
+    noHost: new Set([
+      ...input.fidelity.stairTypes,
+      ...passage.entryThrough,
+      ...input.groups.vertical,
+    ]),
+    // Đầu bài khai loại phòng này ở tầng này (hoặc không nói tầng) thì giữ — đó là lời gia chủ.
+    required: (type, level) =>
+      required.some((space) => space.type === type && (space.floor ?? level) === level),
+    label: (type) => input.labels[type] ?? type,
+  });
 }
 
 function evaluateHouseVariants(
@@ -4258,6 +4299,9 @@ export function evaluateHouse(
     (groundResult.issues.some((issue) => ENTRY_SIDE_CODES.has(issue.code)) ||
       (groundIntent.entry_room && entryBoxedIssue(groundResult.issues, groundIntent.entry_room)))
   ) {
+    // Cách thử hỏng mà ÍT lỗi chặn nhất (T153) — lượt 75ba5793: lối vào qua gara chỉ vướng một lỗi ô thang,
+    // nhưng báo cáo chỉ nói «phòng khách không có cửa ra mặt tiền».
+    let nearest: { entry: string; result: typeof groundResult } | null = null;
     for (const entry of entryAlternatives(
       groundIntent,
       current,
@@ -4274,7 +4318,12 @@ export function evaluateHouse(
         minimums,
         sketches.get(ground!),
       );
-      if (!arrangedLevel(retry)) continue;
+      if (!arrangedLevel(retry)) {
+        if (!nearest || blockingCount(retry.issues) < blockingCount(nearest.result.issues)) {
+          nearest = { entry, result: retry };
+        }
+        continue;
+      }
       groundIntentUsed = { ...groundIntent, entry_room: entry };
       groundResult = {
         ...retry,
@@ -4287,6 +4336,26 @@ export function evaluateHouse(
         ],
       };
       break;
+    }
+    if (!arrangedLevel(groundResult) && nearest) {
+      // Câu gửi MÔ HÌNH giữ nguyên lỗi của phòng mô hình chọn: câu lỗi tả một bố cục mô hình không vẽ thì mô
+      // hình sửa nhầm chỗ (bẫy T103; phát lại fdd486b1). Lỗi của cách thử gần qua nhất chỉ vào ghi chú cho KỸ
+      // SƯ — lượt 75ba5793 khi ấy sẽ hiện ngay «ô thang 3,59 m» thay vì chỉ «phòng khách không có cửa».
+      const original = groundIntent.entry_room ?? 'phòng mô hình chọn';
+      const blocking = nearest.result.issues.filter((issue) => issue.level === 'blocking');
+      groundResult = {
+        ...groundResult,
+        notes: [
+          ...groundResult.notes,
+          {
+            code: 'entry_room_tried',
+            message: `Chương trình đã thử đặt cửa chính vào "${nearest.entry}" thay cho "${original}" — vẫn vướng: ${blocking
+              .slice(0, 3)
+              .map((issue) => issue.message)
+              .join(' · ')}`,
+          },
+        ],
+      };
     }
   }
   const groundDone = arrangedLevel(groundResult);
@@ -4618,6 +4687,11 @@ export function entryBoxedIssue(issues: readonly PlanIssue[], entry: string): Pl
 }
 
 /** Tối đa bấy nhiêu phòng thay thế — mỗi lần thử là một lượt xếp trọn tầng. */
+/** Số lỗi CHẶN của một lượt xếp — để so hai cách thử hỏng cách nào gần qua hơn. */
+function blockingCount(issues: readonly PlanIssue[]): number {
+  return issues.filter((issue) => issue.level === 'blocking').length;
+}
+
 const ENTRY_ALTERNATIVES_MAX = 3;
 
 /**
@@ -4959,6 +5033,28 @@ export function problemKey(
  * tiếp chỉ tốn tiền (lượt thật 6bf43039: ba lượt sửa cuối nhận nguyên văn «chong chóng» + «ban công mặt
  * trước», 0,33 USD).
  */
+/**
+ * Khoá của MỘT câu trả lời đã chấm — bản phác, danh mục phòng, quan hệ, lối vào; bỏ lời văn tự do (`rationale`,
+ * `assumptions`) vì hai câu trả lời cùng hình khác chữ vẫn ra cùng kết quả xếp (T153).
+ *
+ * `unchanged` (`retryPlan`) chỉ so với ý định VỪA gửi; nhưng lượt sửa có thể gửi lại lượt hỏng nhẹ nhất cũ hơn
+ * (T73 i), và mô hình trả lại đúng một câu trả lời đã chấm trước đó — lượt 75ba5793 vòng 3 y hệt vòng 2. Kết quả
+ * của câu ấy đã biết; gọi tiếp là mua lại nó.
+ */
+export function houseAnswerKey(intent: HouseIntent): string {
+  return JSON.stringify({
+    rooms: intent.rooms.map((r) => [r.id, r.type, r.level, r.target_area_m2, r.ensuite_of ?? null]),
+    relationships: intent.relationships.map((r) => [r.a, r.b, r.kind]),
+    sketches: (intent.sketches ?? []).map((k) => [
+      k.level,
+      k.rows.map((row) => row.trim().split(/\s+/).join(' ')),
+    ]),
+    entry: intent.entry_room ?? null,
+    garage: intent.garage_room ?? null,
+    bands: intent.band_trees ?? null,
+  });
+}
+
 export function stuckRepeating(history: readonly string[], after = STUCK_AFTER): boolean {
   if (history.length < after) return false;
   const tail = history.slice(-after);
@@ -5047,6 +5143,8 @@ export async function generateAiPlan(input: AiPlanInput): Promise<AiPlanResult> 
   // Số lần liền nhau đã gửi lại bản tốt nhất thay vì bản mới (xem `revisionBase`, `stalled`).
   let resent = 0;
   const history: string[] = [];
+  /** Câu trả lời đã chấm trong lượt này (`houseAnswerKey`) — gặp lại thì dừng (T153). */
+  const seenAnswers = new Set<string>();
 
   for (let round = 0; ; round += 1) {
     let attempt = await callHouseModel({
@@ -5133,12 +5231,19 @@ export async function generateAiPlan(input: AiPlanInput): Promise<AiPlanResult> 
     first ??= rejections;
     history.push(problemKey(rejections));
     const plan = retryPlan(attempt, evaluation, next?.previous ?? null);
+    const answered = evaluation?.renamed ?? attempt.intent;
+    const answerKey = answered ? houseAnswerKey(answered) : null;
+    const repeated = answerKey !== null && seenAnswers.has(answerKey);
+    if (answerKey) seenAnswers.add(answerKey);
     if (
       round >= houseRevisionsMax(input.pipeline) ||
       plan.kind === 'none' ||
-      plan.kind === 'unchanged'
+      plan.kind === 'unchanged' ||
+      repeated
     ) {
-      throw new AiPlanRejected(finalRejections(rejections, first, plan.kind, round + 1));
+      throw new AiPlanRejected(
+        finalRejections(rejections, first, repeated ? 'unchanged' : plan.kind, round + 1),
+      );
     }
     if (stuckRepeating(history, stuckAfter(input.pipeline))) {
       throw new AiPlanRejected(finalRejections(rejections, first, 'stuck', round + 1));

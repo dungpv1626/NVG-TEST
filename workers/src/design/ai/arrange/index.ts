@@ -1941,7 +1941,11 @@ function sketchMinExtent(
   const base = Math.max(MIN_CELL_CM, leaf?.techMin ?? 0);
   if (!leaf?.stair || input.isTop) return base;
   const construction = input.construction;
-  const wallCm = Math.round(construction.walls.partition_m * 100);
+  // Bộ kiểm (`shortStairs`) đo ô thang LỌT LÒNG — tim tường trừ nửa bề dày mỗi đầu. Đầu ô thang giáp
+  // giếng trời, sân trong hay mặt ngoài là TƯỜNG BAO, nên chừa theo tường bao chứ không theo vách ngăn.
+  // Lượt 75ba5793 (10/10/2026): chừa 11 cm (vách) cho ô thang giáp giếng trời → ô 375 cm, lọt lòng
+  // 375 − 11 − 5,5 = 358,5 cm, bộ kiểm đòi 360 → tầng 1 bị bác vì 1,5 cm do chính bộ xếp đặt.
+  const wallCm = Math.round(construction.walls.exterior_m * 100);
   // Ô thang HAI VẾ, mức hẹp nhất dựng được: rộng theo `two_flights_min_width_m`, dài theo số bậc. Đo
   // theo đúng bề rộng mô hình vẽ thì thang 2 m thành một vế và đòi 5 m dài — bản phác nào cũng hỏng,
   // trong khi bộ xếp vẫn dựng được thang hai vế 2,4 × 3,3 m ở chính chỗ ấy (lượt 58d9ff66).

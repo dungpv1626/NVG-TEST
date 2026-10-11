@@ -60,6 +60,7 @@ import {
   bandsLightWellHints,
   bandsProgramIssues,
   briefInfeasible,
+  houseAnswerKey,
   houseCallEffort,
   programGenerator,
   rescueFirstStorey,
@@ -387,6 +388,11 @@ export interface ArrangeOutcome {
   retry: RetryKind;
   /** Điểm khi xếp được (T53) — `null` khi không xếp được. */
   score: HouseScoreSummary | null;
+  /**
+   * Khoá câu trả lời hỏng (`houseAnswerKey`, T153) — vòng lặp gặp lại thì dừng. Vắng ở kết quả Workflow ghi trước
+   * T153 và khi câu trả lời không đọc được.
+   */
+  answerKey?: string;
 }
 
 /** Kiểm danh mục + xếp mọi tầng + kiểm liên tầng. Hàm thuần, không tốn gì — chạy lại vô hại. */
@@ -517,6 +523,9 @@ export function arrangeHouseStep(
     ...(plan.kind === 'revise' && plan.keep.length ? { keep: plan.keep } : {}),
     retry: plan.kind,
     score: null,
+    ...((evaluation?.renamed ?? intent)
+      ? { answerKey: houseAnswerKey((evaluation?.renamed ?? intent)!) }
+      : {}),
   };
 }
 
