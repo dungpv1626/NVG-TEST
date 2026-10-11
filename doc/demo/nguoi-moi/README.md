@@ -22,3 +22,11 @@ Bộ này trả lời câu hỏi: **một người mới đọc hướng dẫn t
 - Ảnh chụp là ảnh thật lấy từ bộ hướng dẫn có sẵn. Các màn hình Nhân sự, Quản trị, một phần Thi công **chưa có ảnh**; mỗi hướng dẫn có danh sách ảnh cần chụp.
 - Nơi hướng dẫn cũ và phần mềm khác nhau, bộ này theo **phần mềm** và ghi rõ trong tài liệu 06.
 - Các hạn mức tiền trong bản demo là **mức tạm**.
+
+## Hướng dẫn riêng cho từng công ty (`3-cong-ty/`)
+
+Kể theo kiểu chạy tiếp sức, mỗi trạm một trang: Ai làm · Làm gì trên máy · Xong thì ai nhận tiếp · Coi chừng.
+
+- `NVC_HUONG_DAN_TUNG_BUOC.pdf` — nhà xưởng, 12 trạm, ví dụ Hưng Thịnh
+- `NVO_HUONG_DAN_TUNG_BUOC.pdf` — nhà ở thiết kế + thi công, 10 trạm, Phòng Thiết kế ở trạm 2–8, kèm trang AI Design
+- `NVS_HUONG_DAN_TUNG_BUOC.pdf` — cho thuê giàn giáo, 7 trạm, ví dụ Đông Đô, kèm danh sách việc chưa có
