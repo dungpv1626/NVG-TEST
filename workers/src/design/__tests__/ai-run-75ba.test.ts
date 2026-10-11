@@ -46,12 +46,14 @@ describe('lượt 75ba5793 — nhà ống 5 m gara mặt tiền (T153)', () => {
     expect(notes).toMatch(/kho "sg1" không chạm lối đi nào — chương trình nhập vào "wc1"/);
   });
 
-  it('vòng 1 + vòng 2 (mô hình sửa tầng 3, tầng 1 đã khoá) ra phương án qua ngưỡng nhận', () => {
+  it('vòng 1 + vòng 2 (mô hình sửa tầng 3, tầng 1 đã khoá) qua cổng — điểm dưới ngưỡng từ T157', () => {
     const merged = mergeRevision(first.renamed!, round(2), first.settled ?? []);
     const second = evaluate(merged);
     expect(second.rejections).toEqual([]);
     expect(second.ok).not.toBeNull();
-    expect(second.ok!.score.percent ?? 0).toBeGreaterThanOrEqual(input.quality.acceptPercent ?? 0);
+    // T157 (11/10/2026): phương án 66,9 điểm trước đó mở ô thang tầng 2 và 3 ở cạnh dài, giữa vế bậc. Phương án đi được
+    // tốt nhất chỉ được 58,4 < 60 — lượt chạy thật gọi mô hình sửa tiếp, không nhận thang không bước ra được.
+    expect(second.ok!.score.percent ?? 100).toBeLessThan(input.quality.acceptPercent ?? 0);
     // Ô thang tầng 1 không còn bị bác vì thiếu chiều dài do chính bộ xếp chừa thiếu tường bao.
     const ground = second.ok!.levels.find((l) => l.level.level === 1)!;
     expect(ground.level.stairs?.length ?? 0).toBeGreaterThan(0);

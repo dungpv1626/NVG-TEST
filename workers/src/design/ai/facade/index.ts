@@ -18,6 +18,7 @@ import { sheetStyle } from '../draw/style-data';
 import { renderFacadeDxf } from '../dxf/facade-dxf';
 import { layerExport } from '../dxf/layers-data';
 import { facadeLegend } from './describe';
+import { withEnclosedLevels } from './frame';
 
 /**
  * Chiều cao lan can dùng để VẼ và để CHẤM: phiếu yêu cầu của kỹ sư thắng, rồi tới quy ước cấu tạo.
@@ -58,7 +59,7 @@ export function facadeSheet(
   concept: AiFacadeConcept,
   plan?: AiFloorPlan | null,
 ): ElevationSheetResult {
-  return renderElevationSheet(concept, options(concept, plan));
+  return renderElevationSheet(withEnclosedLevels(concept, plan), options(concept, plan));
 }
 
 /** Ảnh neo — không khung tên. Đứng cạnh `facadeSheet` vì hai thứ chỉ khác nhau ở điểm ấy. */
@@ -66,9 +67,12 @@ export function facadeAnchor(
   concept: AiFacadeConcept,
   plan?: AiFloorPlan | null,
 ): ElevationAnchorResult {
-  return renderElevationAnchor(concept, options(concept, plan));
+  return renderElevationAnchor(withEnclosedLevels(concept, plan), options(concept, plan));
 }
 
 export function facadeDxf(concept: AiFacadeConcept, plan?: AiFloorPlan | null): string {
-  return renderFacadeDxf(concept, { ...options(concept, plan), layers: layerExport() });
+  return renderFacadeDxf(withEnclosedLevels(concept, plan), {
+    ...options(concept, plan),
+    layers: layerExport(),
+  });
 }

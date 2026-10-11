@@ -505,8 +505,96 @@ export function balconyMovedByRepartition(
   replaced: ReadonlySet<number>,
   longRatio: number | null = null,
 ): boolean {
+  const onSketch = sketchBalconies(plan, balconyType, sketches, replaced);
+  const onPlan = (id: string, side: Side) => {
+    for (const level of plan.levels) {
+      const room = level.rooms.find((item) => item.id === id);
+      if (room) return touchesSide(level, toRect(room.rect), side);
+    }
+    return false;
+  };
+  const side = issue.params?.side as Side | undefined;
+  if (issue.code === 'balcony_side_missing' && side) {
+    // Chỉ khi ban công bị DỜI khỏi mặt ấy. Ban công bị nắn thành khối góc mà vẫn ở mặt ấy thì vẫn báo: coi đó là hệ
+    // quả (bản phác đạt, mặt bằng không) làm phát lại 14 → 12 (T107) — T106 cố ý gửi lỗi ban công góc cho mô hình.
+    return [...onSketch].some(
+      ([id, drawn]) => sketchMeetsSide(drawn, side, longRatio) && !onPlan(id, side),
+    );
+  }
+  if (issue.code === 'balcony_side_not_wanted' && side) {
+    const id = String(issue.params?.room ?? '');
+    const drawn = onSketch.get(id);
+    return (
+      drawn !== undefined &&
+      !(drawn.sides.has(side) && !shortEndOnly(drawn.cells, side, longRatio)) &&
+      onPlan(id, side)
+    );
+  }
+  if (issue.code === 'balcony_level_missing') {
+    return [...onSketch.values()].some((drawn) => drawn.level === Number(issue.params?.level));
+  }
+  return false;
+}
+
+/**
+ * Tầng có bản phác ĐẠT mặt mà lỗi `balcony_side_missing` khối góc (`params.corner`) nói là thiếu: ban công
+ * `params.room` trên bản phác chạy dọc mặt ấy, chỉ mặt bằng mới nắn nó thành khối góc. `null` = bản phác cũng sai
+ * (hay lỗi khác) — câu khối góc đúng sự thật, gửi như cũ. Lượt thật 79669685 (T155): `bc1` 8 × 1 ô suốt mép trước,
+ * mô hình nhận câu «chỉ chạm mặt trước ở góc», trả lại y nguyên tới hết lượt sửa.
+ */
+export function balconyCornerOnlyOnPlan(
+  issue: { code: string; params?: Record<string, string | number> },
+  plan: AiFloorPlan,
+  balconyType: string,
+  sketches: ReadonlyMap<number, readonly string[] | null>,
+  longRatio: number | null = null,
+): number | null {
+  const side = issue.params?.side as Side | undefined;
+  if (issue.code !== 'balcony_side_missing' || !side || issue.params?.corner === undefined) {
+    return null;
+  }
+  const drawn = sketchBalconies(plan, balconyType, sketches, new Set(sketches.keys())).get(
+    String(issue.params?.room ?? ''),
+  );
+  return drawn && sketchMeetsSide(drawn, side, longRatio) ? drawn.level : null;
+}
+
+/**
+ * Lỗi sẽ gửi mô hình, bỏ câu ban công khối góc sai sự thật (T155): bản phác ĐÃ có ban công chạy dọc mặt ấy
+ * (`balconyCornerOnlyOnPlan`). Tầng ấy bị chương trình chia lại (`replaced`) → gắn `reshaped` = tầng, câu nhắc nói khối
+ * góc là do chia lại; không bị chia lại → gắn `fitted`: khớp vào tường nó thành khối góc, quá ngắn dọc mặt ấy — vẽ dài
+ * hơn, tránh góc. Không bỏ câu: bỏ thì câu nhắc có thể rỗng và lượt chạy dừng, kể cả khi tầng khác còn lỗi bản phác cần
+ * sửa (rà soát 11/10/2026). Lỗi khác giữ nguyên. Chỉ đổi câu nhắc — cổng vẫn bác cả nhà; coi khối góc là hệ quả thì
+ * phát lại 14 → 12 (T107).
+ */
+export function truthfulBalconyIssues<
+  T extends { code: string; params?: Record<string, string | number> },
+>(
+  issues: readonly T[],
+  plan: AiFloorPlan,
+  balconyType: string | null,
+  sketches: ReadonlyMap<number, readonly string[] | null>,
+  replaced: ReadonlySet<number>,
+  longRatio: number | null = null,
+): T[] {
+  if (balconyType === null) return [...issues];
+  return issues.flatMap((issue) => {
+    const level = balconyCornerOnlyOnPlan(issue, plan, balconyType, sketches, longRatio);
+    if (level === null) return [issue];
+    if (!replaced.has(level)) return [{ ...issue, params: { ...issue.params, fitted: level } }];
+    return [{ ...issue, params: { ...issue.params, reshaped: level } }];
+  });
+}
+
+/** Ban công trên bản phác các tầng `levels`: mặt khối tầng nó chạm và khung ô. Loại phòng đọc từ mặt bằng. */
+function sketchBalconies(
+  plan: AiFloorPlan,
+  balconyType: string,
+  sketches: ReadonlyMap<number, readonly string[] | null>,
+  levels: ReadonlySet<number>,
+): Map<string, { level: number; sides: Set<Side>; cells: Rect }> {
   const onSketch = new Map<string, { level: number; sides: Set<Side>; cells: Rect }>();
-  for (const level of replaced) {
+  for (const level of levels) {
     const rows = sketches.get(level);
     if (!rows) continue;
     const grid = rows.map((row) => row.trim().split(/\s+/));
@@ -536,45 +624,27 @@ export function balconyMovedByRepartition(
       });
     }
   }
-  // Bản phác ĐẠT mặt `side`: chạm mặt ấy, không bằng đầu ngắn (Q-57), không phải khối góc ngắn dọc mặt
-  // ấy (T106) — cùng các luật cổng mặt bằng áp, đo bằng ô.
-  const sketchMeets = (drawn: { sides: Set<Side>; cells: Rect }, side: Side) => {
-    if (!drawn.sides.has(side) || shortEndOnly(drawn.cells, side, longRatio)) return false;
-    if (longRatio === null) return true;
-    const alongX = side === 'front' || side === 'back';
-    const corner = (alongX ? ['left', 'right'] : ['front', 'back']).some((other) =>
-      drawn.sides.has(other as Side),
-    );
-    const along = alongX ? drawn.cells.x1 - drawn.cells.x0 : drawn.cells.y1 - drawn.cells.y0;
-    const across = alongX ? drawn.cells.y1 - drawn.cells.y0 : drawn.cells.x1 - drawn.cells.x0;
-    return !corner || along >= longRatio * across;
-  };
-  const onPlan = (id: string, side: Side) => {
-    for (const level of plan.levels) {
-      const room = level.rooms.find((item) => item.id === id);
-      if (room) return touchesSide(level, toRect(room.rect), side);
-    }
-    return false;
-  };
-  const side = issue.params?.side as Side | undefined;
-  if (issue.code === 'balcony_side_missing' && side) {
-    // Chỉ khi ban công bị DỜI khỏi mặt ấy. Ban công bị nắn thành khối góc mà vẫn ở mặt ấy thì vẫn báo: coi đó là hệ
-    // quả (bản phác đạt, mặt bằng không) làm phát lại 14 → 12 (T107) — T106 cố ý gửi lỗi ban công góc cho mô hình.
-    return [...onSketch].some(([id, drawn]) => sketchMeets(drawn, side) && !onPlan(id, side));
-  }
-  if (issue.code === 'balcony_side_not_wanted' && side) {
-    const id = String(issue.params?.room ?? '');
-    const drawn = onSketch.get(id);
-    return (
-      drawn !== undefined &&
-      !(drawn.sides.has(side) && !shortEndOnly(drawn.cells, side, longRatio)) &&
-      onPlan(id, side)
-    );
-  }
-  if (issue.code === 'balcony_level_missing') {
-    return [...onSketch.values()].some((drawn) => drawn.level === Number(issue.params?.level));
-  }
-  return false;
+  return onSketch;
+}
+
+/**
+ * Bản phác ĐẠT mặt `side`: chạm mặt ấy, không bằng đầu ngắn (Q-57), không phải khối góc ngắn dọc mặt ấy (T106) — cùng
+ * các luật cổng mặt bằng áp, đo bằng ô.
+ */
+function sketchMeetsSide(
+  drawn: { sides: Set<Side>; cells: Rect },
+  side: Side,
+  longRatio: number | null,
+): boolean {
+  if (!drawn.sides.has(side) || shortEndOnly(drawn.cells, side, longRatio)) return false;
+  if (longRatio === null) return true;
+  const alongX = side === 'front' || side === 'back';
+  const corner = (alongX ? ['left', 'right'] : ['front', 'back']).some((other) =>
+    drawn.sides.has(other as Side),
+  );
+  const along = alongX ? drawn.cells.x1 - drawn.cells.x0 : drawn.cells.y1 - drawn.cells.y0;
+  const across = alongX ? drawn.cells.y1 - drawn.cells.y0 : drawn.cells.x1 - drawn.cells.x0;
+  return !corner || along >= longRatio * across;
 }
 
 /** Khung ô (dòng, cột) bao một nhóm ô bản phác. */

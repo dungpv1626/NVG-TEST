@@ -65,21 +65,17 @@ describe('phát lại bea4c6fa — ban công bắt buộc được ghim khi chia
     return out;
   })();
 
-  it('vòng 5: phòng thờ hụt sàn làm tầng 2 phải chia lại, nhưng ban công mặt trước giữ đúng ô → ra mặt bằng qua ngưỡng', () => {
-    // Lượt thật (trước T109): chia lại dời `balcony_2` từ mặt trước sang mặt phải cấm, cả nhà bị bác.
-    const ok = rounds[4]!.ok;
-    expect(ok).not.toBeNull();
-    expect(ok!.score.percent).toBeGreaterThanOrEqual(65);
-  });
-
-  it('vòng 6: ngưỡng nhận 60 không làm bộ xếp dừng tìm biến thể sớm — vẫn ra bản đạt mức tìm (T111)', () => {
-    // Hạ ngưỡng 65 → 60 (01/10/2026) làm bản 61,8 điểm được trả ngay; mức tìm `variant_search_until_percent` giữ bản
-    // 71,2. Từ T113 vòng 5 ra bản khác (nới WC hẹp, 67,5 thay 64,6), nên vòng 6 ghép từ ý định khác và ra 65,7 — vẫn
-    // trên mức tìm, tức bộ xếp không dừng ở bản vừa qua ngưỡng nhận.
-    // T116 nâng D4 (giặt phơi có chỗ phơi) lên nặng 2: bản tốt nhất vòng 6 còn 64,8 — dưới mức tìm 65 nên bộ xếp đã
-    // thử hết biến thể; vẫn cao hơn hẳn bản vừa qua ngưỡng nhận (61,8 lúc dừng sớm), tức nó không dừng ở bản đầu tiên.
-    const until = input.quality.variantSearchUntilPercent!;
-    expect(until).toBeGreaterThan(input.quality.acceptPercent!);
-    expect(rounds[5]!.ok?.score.percent ?? 0).toBeGreaterThan(input.quality.acceptPercent! + 4);
+  /*
+   * T157 (11/10/2026): hai mặt bằng vòng 5 (67,3) và vòng 6 (64,8) mà hai ca dưới từng canh đều mở ô thang tầng 2 bằng
+   * ô thông 2,69 m ở CẠNH DÀI (thang U lên `-y`, người bước ra ở đầu `y1`) — lối ra giữa vế bậc, đúng lỗi Haan chỉ. Từ
+   * T157 cổng bác chúng. Hệ quả: T109 (ban công được ghim khi chia lại) và T111 (không dừng tìm biến thể ở ngưỡng nhận)
+   * KHÔNG còn ca canh trên lượt ghi này — đã thử bốn lượt ghi khác còn ra mặt bằng, biến thể đầu đều đã vượt mức tìm.
+   * Ghi ở «còn mở» của T157.
+   */
+  it('vòng 5, 6: mặt bằng từng qua mở thang giữa vế bậc — nay bị bác (T157)', () => {
+    expect(rounds[4]!.ok).toBeNull();
+    expect(rounds[5]!.ok).toBeNull();
+    // Ngưỡng tìm vẫn phải trên ngưỡng nhận (cấu hình T111), dù không còn ca phát lại nào đo hành vi.
+    expect(input.quality.variantSearchUntilPercent!).toBeGreaterThan(input.quality.acceptPercent!);
   });
 });

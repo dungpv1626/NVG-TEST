@@ -12,6 +12,7 @@ import { AI_DISCLAIMERS, aiFacadeConceptSchema, type AiFloorPlan } from '@nvg/sh
 import { describe, expect, it } from 'vitest';
 import { ANCHOR_FRAMES } from '../ai/draw/anchor';
 import {
+  elevationBounds,
   levelLabel,
   renderElevationAnchor,
   renderElevationSheet,
@@ -432,5 +433,24 @@ describe('mặt đứng chi tiết như hồ sơ thật (T147)', () => {
   it('DXF: nét đứt khai bằng CSS (hàng rào) ra tệp CAD vẫn là nét đứt', () => {
     const villa = renderFacadeDxf(VILLA_FACADE, { ...optionsFor(VILLA_FACADE), layers });
     expect(villa).toMatch(/POLYLINE\r\n8\r\n[^\r]+\r\n6\r\nDASHED/);
+  });
+});
+
+describe('khung bao mặt đứng — ban công đua ra ngoài thân tầng (T156)', () => {
+  it('ban công đua bên PHẢI nằm trọn trong khung, không bị cắt', () => {
+    const top = VILLA_FACADE.elevation.levels.at(-1)!;
+    // Thân tầng trên thu về 1 m so với mép phải; ban công tầng ấy đua ra tới mép cũ.
+    const concept = {
+      ...VILLA_FACADE,
+      elevation: {
+        ...VILLA_FACADE.elevation,
+        levels: VILLA_FACADE.elevation.levels.map((l) =>
+          l === top ? { ...l, x1: l.x1 - 100 } : l,
+        ),
+      },
+      balconies: [{ level: top.level, x0: top.x1 - 100, x1: top.x1, depth: 0, railing: null }],
+    };
+    const box = elevationBounds(concept, optionsFor(concept));
+    expect(box.x1).toBeGreaterThanOrEqual(top.x1);
   });
 });

@@ -9,7 +9,11 @@ import { describe, expect, it } from 'vitest';
 import { fromRevisionIds, revisionView, splitClashingIds } from '../ai/plan';
 import { crookedSketchRooms } from '../ai/arrange';
 import type { HouseIntent } from '../ai/house';
-import { balconyMovedByRepartition, sketchBalconyCornerAdvice } from '../ai/plan-demands';
+import {
+  balconyMovedByRepartition,
+  sketchBalconyCornerAdvice,
+  truthfulBalconyIssues,
+} from '../ai/plan-demands';
 
 const room = (id: string, type: string, level: number, ensuite_of: string | null = null) => ({
   id,
@@ -166,6 +170,55 @@ describe('balconyMovedByRepartition — lỗi ban công hệ quả của việc 
         new Set(),
       ),
     ).toBe(false);
+  });
+});
+
+describe('truthfulBalconyIssues — câu ban công khối góc chỉ gửi khi bản phác cũng sai (T155)', () => {
+  // Mặt bằng: ban công bị nắn thành khối gần vuông ở góc trước – trái.
+  const plan = {
+    levels: [
+      {
+        level: 2,
+        outline: [
+          [0, 0],
+          [1000, 0],
+          [1000, 1500],
+          [0, 1500],
+        ],
+        rooms: [{ id: 'balcony_1', type: 'balcony', rect: [0, 0, 300, 300] }],
+      },
+    ],
+  } as unknown as AiFloorPlan;
+  const corner = {
+    code: 'balcony_side_missing',
+    params: { side: 'front', room: 'balcony_1', corner: 1 },
+  };
+  const other = { code: 'room_without_door', params: { room: 'laundry_1' } };
+  // Bản phác: ban công 4 × 1 ô chạy dọc mép trước — đạt mặt trước.
+  const along = new Map([
+    [2, ['balcony_1 balcony_1 balcony_1 balcony_1', 'bedroom_2 bedroom_2 bedroom_2 bedroom_2']],
+  ]);
+
+  it('tầng bị chia lại → giữ lỗi, gắn `reshaped` = tầng để câu nhắc nói đúng nguyên nhân', () => {
+    expect(
+      truthfulBalconyIssues([corner, other], plan, 'balcony', along, new Set([2]), 1.5),
+    ).toEqual([{ ...corner, params: { ...corner.params, reshaped: 2 } }, other]);
+  });
+
+  it('tầng không bị chia lại → giữ lỗi, gắn `fitted` (vẽ dài hơn, tránh góc) — không bỏ, câu nhắc không được rỗng', () => {
+    expect(truthfulBalconyIssues([corner, other], plan, 'balcony', along, new Set(), 1.5)).toEqual([
+      { ...corner, params: { ...corner.params, fitted: 2 } },
+      other,
+    ]);
+  });
+
+  it('bản phác cũng chỉ là khối góc → câu khối góc đúng sự thật, gửi nguyên', () => {
+    const block = new Map([
+      [2, ['balcony_1 balcony_1 bedroom_2 bedroom_2', 'balcony_1 balcony_1 bedroom_2 bedroom_2']],
+    ]);
+    expect(truthfulBalconyIssues([corner], plan, 'balcony', block, new Set([2]), 1.5)).toEqual([
+      corner,
+    ]);
   });
 });
 

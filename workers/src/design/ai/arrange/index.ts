@@ -67,7 +67,7 @@ import {
   type Zone,
 } from './grid';
 import { normaliseIntent, type IntentLeaf, type LevelIntent } from './intent';
-import { arrangeIssue, REVISABLE_CODES } from './issues';
+import { arrangeIssue, REVISABLE_CODES, SKETCH_FAILURE_CODES } from './issues';
 import {
   DEFAULT_WEIGHTS,
   evaluate,
@@ -543,6 +543,9 @@ function arrangeLevelCore(input: ArrangeInput): ArrangeResult {
   // ứng viên vòng khung hỏng vì lỗi hình học «thắng» và lượt chạy dừng, dù bản phác chỉ cần vẽ lại
   // (lượt chạy thật fad0c0fa, 23/09/2026: báo thang máy lệch, im lặng về master vẽ quá nhỏ).
   let bestRevisable: { issues: PlanIssue[]; weight: number } | null = null;
+  // Cùng cách chọn, theo `SKETCH_FAILURE_CODES` (T155): lỗi bản phác như phòng không cửa, phòng hẹp — đi vào
+  // `sketchFailure` khi tầng rồi phải chia lại; `bestRevisable` lọc mất chúng.
+  let bestSketchFailure: { issues: PlanIssue[]; weight: number } | null = null;
   // Lý do nào nói cho mô hình biết: của ứng viên hỏng ÍT nhất. Lọc trước cổng (`filtered`) xếp sau mọi
   // ứng viên đã tới cổng — nó chỉ nên lên tiếng khi không cây nào đi được tới đó.
   const remember = (issues: PlanIssue[], filtered = false) => {
@@ -559,6 +562,10 @@ function arrangeLevelCore(input: ArrangeInput): ArrangeResult {
     const revisable = issues.filter((issue) => REVISABLE_CODES.has(issue.code));
     if (revisable.length && (!bestRevisable || weight < bestRevisable.weight)) {
       bestRevisable = { issues: revisable, weight };
+    }
+    const drawnFault = issues.filter((issue) => SKETCH_FAILURE_CODES.has(issue.code));
+    if (drawnFault.length && (!bestSketchFailure || weight < bestSketchFailure.weight)) {
+      bestSketchFailure = { issues: drawnFault, weight };
     }
   };
   // Cây đã hỏng cổng ở vòng trước thì hỏng lại y như vậy: cổng không đọc vòng nới. Không tiêu suất cổng
@@ -624,7 +631,7 @@ function arrangeLevelCore(input: ArrangeInput): ArrangeResult {
         const moved = result.layout?.level ? movedCores(input, result.layout.level.rooms) : [];
         return {
           ...result,
-          sketchFailure: issues.filter((issue) => REVISABLE_CODES.has(issue.code)),
+          sketchFailure: issues.filter((issue) => SKETCH_FAILURE_CODES.has(issue.code)),
           ...(moved.length ? { coresMoved: moved } : {}),
         };
       }
@@ -746,8 +753,9 @@ function arrangeLevelCore(input: ArrangeInput): ArrangeResult {
     sketchFailure = dedupeIssues([
       ...drawn.issues,
       ...((bestRevisable as { issues: PlanIssue[] } | null)?.issues ?? []),
+      ...((bestSketchFailure as { issues: PlanIssue[] } | null)?.issues ?? []),
     ])
-      .filter((issue) => REVISABLE_CODES.has(issue.code))
+      .filter((issue) => SKETCH_FAILURE_CODES.has(issue.code))
       .map((issue) => adviseShort(input, intent, withSketchCells(issue, sketch!), sketch!));
     notes.push({
       code: 'sketch_fallback',
@@ -1020,9 +1028,18 @@ function sketchNoAccess(
       if (!joined(leaf, other)) return false;
       if (other.id === leaf.ensuiteOf) return true;
       if (walk(other)) return linked.has(other.id);
-      return leaf.types.some((type) =>
-        other.types.some((host) => passage.servedFrom.get(type)?.has(host)),
-      );
+      if (
+        !leaf.types.some((type) =>
+          other.types.some((host) => passage.servedFrom.get(type)?.has(host)),
+        )
+      ) {
+        return false;
+      }
+      // Phòng phục vụ không được là phòng con (`ensuite_of`) — đúng như bộ đặt cửa (`doors.ts`: chủ cửa không có
+      // `parent`). Lượt thật 79669685: giặt phơi chỉ giáp ban công RIÊNG của phòng ngủ — trước đây qua ở đây, hỏng ở
+      // cổng mặt bằng với mã không gửi mô hình. Không đòi thêm phòng phục vụ tự giáp hành lang: bộ đặt cửa nhận cả chuỗi
+      // giặt ← ban công ← phòng làm việc (46d6eff3 vòng 1 qua cổng 73 điểm), đòi thế là bác oan.
+      return !other.ensuiteOf;
     });
     if (!hosts.length) cut.push(leaf.id);
     else if (
@@ -2004,6 +2021,12 @@ function sameRect(a: Rect, b: Rect): boolean {
   return a.x0 === b.x0 && a.y0 === b.y0 && a.x1 === b.x1 && a.y1 === b.y1;
 }
 
+/**
+ * Lý do của bộ đặt cửa mà cổng phải BÁC, không chỉ xếp sau (T157): tầng trên mà đầu người từ dưới bước ra của ô thang
+ * không giáp lối đi — không đi được, luật cứng (T49).
+ */
+const GATE_REASON_CODES: ReadonlySet<string> = new Set(['stair_arrival_blocked']);
+
 /** Đưa ứng viên rẻ phạt nhất qua cổng, trả những cây đã qua kèm điểm xếp hạng. */
 function gateCandidates(
   input: ArrangeInput,
@@ -2014,9 +2037,24 @@ function gateCandidates(
 ): Ranked[] {
   const passed: Ranked[] = [];
   const gated = input.budget?.gated ?? GATED_PER_ROUND * 2;
-  for (let i = 0; i < Math.min(candidates.length, gated); i += 1) {
+  // Lý do CHẶN của bộ đặt cửa (T157): loại hẳn, không chỉ xếp sau — ứng viên ít tệ nhất vẫn là thang không bước ra được.
+  // Loại TRƯỚC khi tính suất qua cổng: cây bị chặn rẻ phạt hơn không được đẩy cây đi được ra khỏi suất.
+  const open: Built[] = [];
+  for (const candidate of candidates) {
+    const blocking = candidate.reasons.filter((reason) => GATE_REASON_CODES.has(reason.code));
+    if (!blocking.length) {
+      open.push(candidate);
+      continue;
+    }
+    input.trace?.(
+      `  ✗ ${candidate.key} phạt ${candidate.penalty.toFixed(1)}: ${blocking.map((issue) => issue.code).join(', ')} ## ${blocking.map((issue) => issue.message).join(' | ')}`,
+    );
+    remember(blocking);
+    failedGeometry.add(geometrySignature(candidate.tree));
+  }
+  for (let i = 0; i < Math.min(open.length, gated); i += 1) {
     if (i >= GATED_PER_ROUND && passed.length > 0) break;
-    const candidate = candidates[i]!;
+    const candidate = open[i]!;
     const scoped = inputFor(input, candidate);
     const layout = gate(scoped, candidate.tree, false);
     if (!layout.level) {

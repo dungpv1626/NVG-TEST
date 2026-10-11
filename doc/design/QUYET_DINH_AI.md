@@ -3696,3 +3696,143 @@ làm hỏng nó theo bốn đường.
 **Đánh số:** quyết định này là T153, phần chọn nền mặt đứng / phối cảnh là T152. Nhánh `ai-design-duong-so-do`
 (chưa merge) đã dùng T147–T151. T147 «tờ mặt đứng chi tiết» (PR #22) trùng số với T147 «sửa tay» của nhánh ấy —
 phải đổi một trong hai khi merge.
+
+### T155 — Lượt hỏng 79669685: ban công đúng trên bản phác, lỗi gốc không tới mô hình (11/10/2026, Haan: «làm cả 3»)
+
+Lượt xếp mặt bằng trên máy, biệt thự nhà vườn 15 × 20 m, 2 tầng, ba thế hệ; ban công BẮT BUỘC ở mặt trước và bên
+trái, đua 1 m. Năm lượt gọi gpt-6-sol (0,406 USD), không ra phương án. Câu lỗi cuối: «ban công "balcony_1" chỉ chạm mặt
+trước ở góc». Phát lại ở máy (không gọi mô hình) cho thấy bản phác vòng 4 có `bc1` 8 × 1 ô chạy suốt mép trước — ban
+công đúng. Chuỗi thật:
+
+1. Để kéo ban công dọc mặt trước, mô hình dời giặt phơi xuống góc sau – trái. Ở đó nó chỉ giáp `bc2` (ban công RIÊNG
+   của phòng ngủ `bd4`) và một phòng ngủ.
+2. Phép kiểm lối vào trên bản phác (`sketchNoAccess`) cho qua: `served_from.laundry` có `balcony`. Bộ đặt cửa thì
+   không nhận (`doors.ts`: chủ cửa phải đã tới được và không là phòng con) → cổng bác bản phác, mã `room_without_door`.
+3. Mã ấy không nằm trong `REVISABLE_CODES`, nên bị lọc khỏi `sketchFailure`. Không có câu mở «Your sketch of storey 2
+   failed…», hàng rào T90 / T107 (`balconyMovedByRepartition`) không bật.
+4. Chương trình tự chia lại tầng 2 và nắn `balcony_1` thành khối góc ~11–12 m²; cổng mặt bằng báo «chỉ chạm ở góc».
+5. Mô hình nhận một câu sai về chính bản phác của nó, trả lại y nguyên; chốt «lượt sửa trả về đúng bố cục» dừng ở vòng 5.
+
+Vòng 2–3 cùng kiểu: bản phác tầng 2 hỏng vì `bedroom_5` 2,75 × 7,37 m (`arrange_room_too_narrow`, cũng ngoài
+`REVISABLE_CODES`). Phản chứng: bỏ riêng giặt phơi khỏi bản phác vòng 4 thì lỗi ban công biến mất.
+
+**Ba sửa:**
+
+1. **Lỗi bản phác không rơi khi tầng phải chia lại** — `SKETCH_FAILURE_CODES` = `REVISABLE_CODES` ∪
+   `BAND_REVISABLE_CODES` (`arrange/issues.ts`), cùng lẽ với đường dải T116: phòng không cửa, phòng hẹp là chỗ mô hình
+   vẽ. Bộ xếp giữ thêm `bestSketchFailure` bên cạnh `bestRevisable` (cái sau lọc mất các mã ấy). Chỉ đổi
+   `sketchFailure` (câu nhắc, giữ tầng); lượt chạy dừng hay gọi lại vẫn theo `REVISABLE_CODES`.
+2. **Phòng phục vụ không là phòng con** (`sketchNoAccess`): một phòng `served_from` chỉ là chỗ mở cửa khi nó không
+   mang `ensuite_of` — đúng như bộ đặt cửa (`doors.ts`, chủ cửa không có `parent`). Lời dẫn 9.9.2 thêm câu «serves no
+   other room: no laundry off a bedroom's own balcony». Bản đầu đòi thêm phòng phục vụ tự giáp hành lang — phát lại
+   bác oan 46d6eff3 vòng 1 (qua cổng 73 điểm: giặt ← ban công tự do ← phòng làm việc, bộ đặt cửa nhận chuỗi ấy) → GỠ;
+   phép kiểm bản phác chỉ bắt chỗ CHẮC CHẮN sai.
+3. **Câu ban công khối góc nói đúng sự thật** (`truthfulBalconyIssues`, `plan-demands.ts`): bản phác ĐÃ có ban công
+   chạy dọc mặt ấy mà mặt bằng thành khối góc → tầng bị chia lại thì câu nhắc nói khối góc là do chia lại
+   (`balcony_side_missing_reshaped`, đứng sau dòng lỗi bản phác; khối `house_layout` có bản «Your layout…» vì chế độ hình
+   chữ nhật cấm chữ «sketch»); không bị chia lại thì câu `fitted` (khớp vào tường
+   nó thành khối góc — vẽ dài hơn, tránh góc; bản đầu bỏ hẳn câu, rà soát chỉ ra câu nhắc có thể rỗng — xem T157). Cổng vẫn bác cả nhà như cũ — KHÔNG lặp «bản nới» T107 (coi khối góc là hệ quả,
+   phát lại 14 → 12).
+
+**Phát lại lượt 79669685 với mã mới:** vòng 4 bị bác ngay ở bản phác tầng 2 với câu «"ld1" has no way in… touches
+"bc2", "bd5"», tầng 1 khoá. Vòng 2 nhận đủ: câu mở «sketch of storey 2 failed», `study_1` hụt diện tích, `bedroom_5`
+thành dải, rồi «Your sketch already runs "bc1" along the front edge; it became a corner block only because the program
+had to partition storey 2 itself».
+
+**Đo phát lại toàn kho** (213 vòng / 50 lượt ghi, đối chứng = cùng mã với cả ba sửa tắt; 20 mặt bằng qua):
+- Sửa 1: 20 → **21**, 2 vòng tiến, 0 lùi. f1a88ac1 vòng 5 nay ra mặt bằng 72 điểm (vòng trước đó hỏng ở tầng 2 trong cả hai
+  cấu hình; khác nhau ở tầng nào được khoá khi ghép lượt sửa); f1a88ac1 vòng 3 từ lỗi tầng 2 tiến tới lỗi cả nhà.
+  Câu mở «sketch of storey N failed» xuất hiện ở 31 vòng thay vì 29.
+- Sửa 2, bản đầu (đòi ban công tự giáp hành lang): 20 → 19, lùi 46d6eff3 vòng 1 — đã gỡ phần ấy, xem trên.
+- Sửa 3: 20 = 20, 0 tiến, 0 lùi — chỉ đổi câu nhắc: 7 vòng nhận câu `reshaped` thay câu khối góc sai sự thật; không vòng
+  nào bị bỏ hết câu nhắc (không có lượt nào bị dừng thêm).
+- Sửa 2 bản hẹp (chỉ cấm phòng con): 20 = 20, 0 tiến, 0 lùi — 46d6eff3 vòng 1 qua lại như đối chứng.
+- **Cả ba cùng bật: 20 → 21, 2 vòng tiến, 0 lùi**; 12 vòng nhận câu `reshaped`, 33 vòng có câu mở «sketch of storey N
+  failed» (đối chứng 29); không vòng nào bị bỏ hết câu nhắc. Lượt 79669685 (4 vòng, không có trong đối chứng): vòng 1 và
+  4 bác ngay ở bản phác vì giặt phơi, vòng 2–3 nhận lỗi bản phác + câu ban công `reshaped`.
+
+**Hàng rào:** `__tests__/ai-run-79669685.test.ts` với `fixtures/ai-run-79669685.json` (vòng 1 ghép tầng 2 của lời gọi
+2 với tầng 1 đã khoá của lời gọi 3); ba ca `truthfulBalconyIssues` trong `ai-revision-view.test.ts`. `mutation-proof` 4/4 bị bắt — đột biến M207
+(bỏ mã đường dải khỏi `SKETCH_FAILURE_CODES`), M208 (ban công riêng phục vụ được), M209 (không gắn `fitted` khi tầng
+không bị chia lại), M210 (không gắn `reshaped`). Bộ phát lại ở `.sao-luu/t155/`,
+`.sao-luu/79669685/`.
+
+Từ T157 vòng 2 lượt 79669685 dừng sớm hơn (bản phác chắn đầu thang), nên M207 chuyển sang canh trên vòng 1 lượt
+458d9a91 (`ai-live-458d9a91.test.ts`): tầng 1 chia lại vì `wc_1` không có cửa — câu nhắc nói đúng lỗi ấy sau câu «sketch
+of storey 1 failed».
+
+**Đánh số:** T155 và M207+ vì nhánh `ai-design-duong-so-do` đã tới T153 / M206.
+
+### T156 — Mặt đứng: thân tầng là khối kín, không gồm ban công đua (11/10/2026, Haan)
+
+Haan (lượt mặt đứng 6e155ce6 trên bản demo, biệt thự 15 × 20 m): «tầng 2 ở mặt bên trái chỉ có ban công thò ra thôi,
+nhưng mặt đứng lại vẽ cả tường thẳng lên + mái ở phần ban công thò ra».
+
+**Gốc:** khung mặt đứng (`facade/frame.ts`) lấy bề ngang mỗi tầng từ HÌNH BAO tầng. Hình bao tầng 2 gồm cả ban công trái
+đua 1 m ra ngoài (T91, `tree/balcony-projection.ts`): x 150–1500, trong khi khối kín là 250–1500. Bộ vẽ dựng thân tường,
+phào sàn và tường chắn mái theo bề ngang ấy. Mô hình cũng nhận «storey 2: x 150 to 1500» nên đặt phào và diềm mái từ
+x 150.
+
+**Sửa:**
+- `enclosedSpan(level)`: bề ngang khối kín = mép ngoài các tường bao (`k: 'e'`); ban công không có tường bao, mép ngoài
+  của nó là lan can (`k: 'r'`). Kẹp trong hình bao — mặt bằng mẫu đặt trục tường bao ngay trên hình bao.
+- Khung dùng nó cho thân từng tầng; bề ngang cả khung vẫn là hợp hình bao (lan can trái vẽ ngoài thân tường).
+- Ý tưởng mặt đứng là artifact bất biến, nên ý tưởng đã lưu được nắn LÚC VẼ khi có mặt bằng (`withEnclosedLevels`, gọi ở
+  tờ SVG, ảnh neo, DXF): thu thân tầng về khối kín, cắt phào / diềm mái / ron theo thân tầng chứa chúng (dải trên mái theo
+  tầng trên cùng). Chỉ thu hẹp; không có mặt bằng thì giữ nguyên. Không phải dựng lại mặt đứng (không tốn lượt gọi).
+
+**Hàng rào:** hai ca trong `ai-facade-frame.test.ts` trên `fixtures/facade-6e155ce6.json` (mặt bằng + ý tưởng thật của
+lượt ấy); đột biến M211 (thân tầng theo hình bao), M212 (không nắn lúc vẽ), M213 (không cắt dải) — 3/3 bị bắt. Bộ thử
+mặt đứng 134/134 xanh, ảnh chụp vàng không đổi (mặt bằng mẫu không có ban công đua).
+
+Còn mở: phần nối `withEnclosedLevels` vào `facade/index.ts` không có phép thử riêng — vitest không nạp được
+`facade/index.ts` (kb nạp dạng văn bản của Worker).
+
+### T157 — Thang tầng trên: lối ra ở đầu người bước ra, không ở cạnh dài giữa vế bậc (11/10/2026, Haan)
+
+Haan (phương án 6 hồ sơ c815a6e6, mặt bằng 08/10/2026 trên bản demo): «thang bộ lên tầng 2, vách quây kín 3 góc, một góc
+mở thì không thể đi lại qua đó vì nằm ở giữa thang».
+
+**Gốc:** đường bản phác lưới (đường đang chạy trên bản thật — `AI_PROMPT_PIPELINE` không đặt). Ở tầng trên, bộ đặt cửa
+(`arrange/doors.ts`) mở đúng MỘT lối ra từ ô thang, chọn theo `stairExitRank`: đầu người từ tầng dưới bước ra
+(`stairArrival` — thang U: cùng đầu với bậc 1 tầng dưới) đứng đầu, rồi đầu ngắn kia, rồi cạnh dài. Đó chỉ là ƯU TIÊN: đầu
+bước ra không giáp lối đi thì lặng lẽ mở cạnh dài. Phương án 6: tầng 1 vào thang từ phòng khách ở đầu phía mặt tiền, tầng
+2 bản phác đặt phòng ngủ chắn đầu ấy, hành lang chạy dọc cạnh dài → ô thông 2,52 m giữa vế bậc. Đường dải (v6) đã chặn ca
+này từ trước (`stair_end_blocked`); đường lưới thì chưa.
+
+**Sửa:**
+- `deriveDoors`: tầng trên, khi có thông số loại thang, lối ra không nằm ở cạnh bước ra (`arrivalSide`) → lý do
+  `stair_arrival_blocked`. Không có thông số là mô hình thang cũ (lượt ghi trước T105, thang U vào theo cạnh dài) — bỏ qua;
+  bản chạy thật luôn có (`chooseStairShape` lùi về chữ U).
+- `gateCandidates`: lý do ấy LOẠI ứng viên (`GATE_REASON_CODES`), không chỉ xếp sau — trước đó mọi ứng viên vướng thì cây
+  ít tệ nhất vẫn qua. Loại trước khi tính suất qua cổng, để cây bị chặn rẻ phạt hơn không đẩy cây đi được ra khỏi suất.
+- `stair_arrival_blocked` vào `REVISABLE_CODES`: chỗ sai là bản phác đặt phòng chắn đầu thang; câu nhắc nói đầu nào và
+  đang giáp gì, «put the corridor or the living space along that whole side». Luật cứng vì «không đi được» (T49).
+
+**Phương án 6 phát lại:** bộ xếp dựng lại tầng 2 — ô thang kín ba phía, đầu có bậc 20 / «XUỐNG» mở suốt ra một hành
+lang ngang 14,3 m²; qua 76,8 điểm. Phương án đã lưu trên demo không tự đổi (mặt bằng đã lưu giữ cửa) — phải xếp lại.
+
+**Đo phát lại toàn kho** (217 vòng / 52 lượt ghi, đối chứng = cùng mã tắt phép chặn): 21 → 19 mặt bằng qua, 0 tiến,
+3 «lùi», cả ba của bea4c6fa: vòng 5 (67,3) và vòng 6 (64,8) có lối ra thang tầng 2 là ô thông 2,69 m ở cạnh dài — đúng
+lỗi Haan chỉ, chặn đúng; vòng 4 chỉ đổi từ lỗi cả nhà sang lỗi tầng 2. Thêm: 75ba5793 vòng 2 (T153: «qua với 64,5»; mã
+hiện tại 66,9) mở thang ở cạnh dài tầng 2 và 3 — phương án đi được tốt nhất còn 58,4 < 60, lượt chạy thật sẽ gọi mô hình
+sửa tiếp. Lượt 79669685 vòng 2–3: bản phác tầng 2 đặt phòng làm việc chắn đầu bước ra — nay bác theo tầng với câu nhắc
+đúng chỗ, trước khi tới phần ban công T155.
+
+**Rà soát mã (11/10/2026, 10 phát hiện):** sửa — câu ban công khối góc không bỏ mà gửi câu `fitted` (bỏ có thể làm câu
+nhắc rỗng, lượt dừng); khung bao tờ mặt đứng thêm mép phải ban công (T156 làm thân tầng hẹp lại); ứng viên bị chặn không
+chiếm suất cổng; câu nhắc dùng «side» cho đúng cả thang L. Bác — v6 không chạy bản thật và đã có `stair_end_blocked`;
+`sketchFailure` lúc tính chỉ có ứng viên từ bản phác; đổi việc giữ tầng là có chủ ý (T155, đã đo); mã mới thay vì dùng lại
+`stair_end_blocked` vì câu của mã ấy nói bằng chữ «THANG» của đường dải. Đề xuất «không có thông số thì mặc định đầu bậc 1»
+đã thử và gỡ: bác oan 5aba737d, 2ddf782a (mô hình thang cũ vào theo cạnh dài).
+
+**Hàng rào:** `ai-run-1f3acd9f.test.ts` + `fixtures/ai-run-1f3acd9f.json` (ý định đã lưu của phương án 6); cập nhật
+`ai-run-79669685`, `ai-run-75ba`, `ai-live-bea4c6fa` theo sự thật mới. Đột biến M214 (bỏ phép kiểm), M215 (lý do chặn
+chỉ xếp sau).
+
+**Còn mở:**
+- T109 (ban công ghim khi chia lại) và T111 (không dừng tìm biến thể ở ngưỡng nhận) mất ca canh: hai ca của bea4c6fa dựa
+  trên mặt bằng có thang không bước ra được. Đã thử bốn lượt ghi khác còn ra mặt bằng — biến thể đầu đều vượt mức tìm.
+- Tầng trên cùng nhà ống 75ba5793: ô thang có thêm cửa trượt ra sân thượng ở cạnh dài — phép kiểm chỉ đòi CÓ lối ra ở đầu
+  bước ra, chưa cấm lối thứ hai ở cạnh dài.
+- Tầng giữa nhà nhiều tầng với thang thẳng (đầu bước ra khác đầu bậc 1) chưa đòi cả hai đầu như đường dải.

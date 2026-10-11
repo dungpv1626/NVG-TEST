@@ -137,6 +137,7 @@ import {
   checkSketchBalconyDemand,
   labelReservedShaft,
   sketchBalconyCornerAdvice,
+  truthfulBalconyIssues,
 } from './plan-demands';
 import type { Rect } from './draw/geometry';
 import type { DrawNote } from './draw/notes';
@@ -3349,6 +3350,13 @@ export function hintsFor(issues: readonly PlanIssue[], prompts: AiPrompts, prefi
       (issue.params?.need_cells !== undefined
         ? prompts.floorLevel.hints[`${issue.code}_cells`]
         : undefined) ??
+      // Bản phác có ban công dọc mặt ấy, mặt bằng chia lại nắn thành khối góc (T155) — đứng trước câu khối góc.
+      (issue.params?.reshaped !== undefined
+        ? prompts.floorLevel.hints[`${issue.code}_reshaped`]
+        : undefined) ??
+      (issue.params?.fitted !== undefined
+        ? prompts.floorLevel.hints[`${issue.code}_fitted`]
+        : undefined) ??
       // Ban công chỉ chạm mặt ấy ở góc (T112) — câu riêng, câu chung nói «không cái nào chạm» là sai.
       (issue.params?.corner !== undefined
         ? prompts.floorLevel.hints[`${issue.code}_corner`]
@@ -4604,10 +4612,18 @@ export function evaluateHouse(
         settled: kept,
       };
     }
-    const ownHints = hintsFor(
-      real.filter((issue) => revisableFor(issue.code)),
-      prompts,
+    // Câu «ban công chỉ chạm mặt ấy ở góc» cho một bản phác có ban công chạy suốt mặt ấy là sai với chính bản vẽ mô
+    // hình thấy (T155, lượt thật 79669685: mô hình trả lại y nguyên tới hết lượt sửa).
+    const revisableReal = real.filter((issue) => revisableFor(issue.code));
+    const hinted = truthfulBalconyIssues(
+      revisableReal,
+      final.payload,
+      context.demands.balcony?.type ?? null,
+      sketches,
+      replacedLevels,
+      context.mandatory?.rules.balconyOnOpenFace?.longRatio ?? null,
     );
+    const ownHints = hintsFor(hinted, prompts);
     return {
       ok: null,
       rejections: [

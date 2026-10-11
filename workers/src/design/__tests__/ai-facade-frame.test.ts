@@ -11,7 +11,14 @@ import { parseConstructionNorms } from '../kb/construction';
 import { parseFacadeVocabulary } from '../kb/facade-vocabulary';
 import { parseVocabulary, roomGroups } from '../kb/vocabulary';
 import { emptyFacadeBrief } from '../ai/facade/brief';
-import { facadeFrame, FacadeFrameError, mainDoorOf } from '../ai/facade/frame';
+import type { AiFacadeConcept, AiFloorPlan } from '@nvg/shared/design';
+import {
+  enclosedSpan,
+  facadeFrame,
+  FacadeFrameError,
+  mainDoorOf,
+  withEnclosedLevels,
+} from '../ai/facade/frame';
 import { TOWNHOUSE_PLAN, VILLA_PLAN } from './ai-plan-fixtures';
 import { read } from './ai-real-context';
 
@@ -165,5 +172,45 @@ describe('Danh mục mặt đứng (kb/facade_vocabulary.yaml)', () => {
     expect(Object.keys(vocab.gateTypes).sort()).toEqual(
       enumOf(props.gate.properties.type).filter((code: string) => code !== 'none'),
     );
+  });
+});
+
+/*
+ * Haan, 11/10/2026 (lượt 6e155ce6, T156): «tầng 2 ở mặt bên trái chỉ có ban công thò ra thôi, nhưng mặt đứng lại vẽ cả
+ * tường thẳng lên + mái ở phần ban công thò ra». Hình bao tầng gồm cả ban công đua; thân tầng phải là khối kín.
+ */
+describe('Khung mặt đứng — ban công đua ra ngoài khối kín (lượt 6e155ce6)', () => {
+  const recorded = JSON.parse(
+    read('workers/src/design/__tests__/fixtures/facade-6e155ce6.json'),
+  ) as {
+    plan: AiFloorPlan;
+    concept: AiFacadeConcept;
+  };
+  const upper = recorded.plan.levels.find((l) => l.level === 2)!;
+
+  it('thân tầng 2 là khối kín theo tường bao, không gồm phần ban công đua', () => {
+    expect(enclosedSpan(upper)).toEqual({ x0: 250, x1: 1500 });
+    const frame = facadeFrame(recorded.plan, norms, outdoor);
+    expect(frame.levels.map((l) => [l.level, l.x0, l.x1])).toEqual([
+      [1, 250, 1500],
+      [2, 250, 1500],
+    ]);
+    // Khung vẫn rộng tới mép ban công: lan can trái vẽ ngoài thân tường.
+    expect([frame.x0, frame.x1]).toEqual([150, 1500]);
+    expect(frame.balconies.some((b) => b.level === 2 && b.x0 < 250)).toBe(true);
+  });
+
+  it('ý tưởng đã lưu (bất biến) được nắn lúc vẽ: thân tầng 2 và phào, diềm mái dừng ở mép tường', () => {
+    const { concept } = recorded;
+    expect(concept.elevation.levels.find((l) => l.level === 2)!.x0).toBe(150);
+    const drawn = withEnclosedLevels(concept, recorded.plan);
+    expect(drawn.elevation.levels.find((l) => l.level === 2)!.x0).toBe(250);
+    const bands = (drawn.elevation.elements ?? []).filter((e) =>
+      ['cornice', 'eaves_band'].includes(e.kind),
+    );
+    expect(bands.length).toBeGreaterThan(0);
+    for (const band of bands) expect(band.rect[0]).toBe(250);
+    // Không có mặt bằng thì không đoán: giữ nguyên.
+    expect(withEnclosedLevels(concept, null)).toBe(concept);
   });
 });
