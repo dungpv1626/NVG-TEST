@@ -342,7 +342,13 @@ describe('bước kiểm và xếp cả nhà', () => {
     expect(step.arrangedJson).not.toBeNull();
     const house = JSON.parse(step.arrangedJson!) as { program: AiSpaceProgram; levels: unknown[] };
     expect(house.levels).toHaveLength(2);
-    expect(house.program.spaces.length).toBe(VILLA_HOUSE.rooms.length);
+    // Mọi phòng của ý định đều có; phần thêm chỉ là sảnh đầu thang chương trình khoét (T158 — bản phác mẫu để gara chắn
+    // đầu bậc 1 tầng 1 và phòng chắn đầu bước ra tầng 2).
+    const added = house.program.spaces.filter(
+      (space) => !VILLA_HOUSE.rooms.some((room) => room.id === space.id),
+    );
+    expect(house.program.spaces.length - added.length).toBe(VILLA_HOUSE.rooms.length);
+    expect(added.every((space) => space.type === 'circulation')).toBe(true);
     // Loại thang của lượt gắn ở ngữ cảnh workflow (T105): đầu bài chưa chọn, nhà không người già → chữ U.
     expect(JSON.stringify(house.levels)).toContain('"shape":"chu_u"');
     // Không có ngưỡng điểm thì xếp được là xong.

@@ -33,7 +33,7 @@
  * phán cuối cùng.
  */
 
-import { formatNumber } from '@nvg/shared';
+import { formatDateTime, formatNumber } from '@nvg/shared';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
@@ -320,7 +320,12 @@ export function AiPlanStep({
                     )}
                   >
                     <PlanThumb projectId={projectId} artifactId={entry.artifactId} />
-                    {name}
+                    <span>
+                      <span className="block">{name}</span>
+                      <span className="block text-xs font-normal text-tk-t3">
+                        {formatDateTime(entry.createdAt)}
+                      </span>
+                    </span>
                     {isHead && <Chip tone="gr">Dùng cho mặt đứng</Chip>}
                   </button>
                   {!readOnly && (

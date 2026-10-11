@@ -79,6 +79,7 @@ export function AiPerspectiveStep({
   const running = run.data?.status === 'queued' || run.data?.status === 'running';
 
   const versions = state.imageSets ?? [];
+  const versionNames = numberedNames(versions, 'Bộ ảnh');
   const shown =
     (open && versions.some((v) => v.artifactId === open) ? open : null) ?? state.imageSetArtifactId;
   const shownIsHead = shown === state.imageSetArtifactId;
@@ -397,10 +398,10 @@ export function AiPerspectiveStep({
         {versions.length > 1 && (
           <Panel title="Các bộ ảnh đã dựng">
             <ul className="flex flex-wrap gap-2">
-              {versions.map((version, index) => {
+              {versions.map((version) => {
                 const isOpen = version.artifactId === shown;
                 const isHead = version.artifactId === state.imageSetArtifactId;
-                const name = `Bộ ảnh ${versions.length - index}`;
+                const name = versionNames.get(version.artifactId)!;
                 return (
                   <li key={version.artifactId} className="flex items-stretch">
                     <button
@@ -416,6 +417,7 @@ export function AiPerspectiveStep({
                       <span className="block font-medium">{name}</span>
                       <span className="block text-xs text-tk-t3">
                         {formatDateTime(version.createdAt)}
+                        {version.facadeLabel && ` · theo Mặt đứng ${version.facadeLabel}`}
                       </span>
                       {isHead && <Chip tone="gr">Đang hiệu lực</Chip>}
                     </button>

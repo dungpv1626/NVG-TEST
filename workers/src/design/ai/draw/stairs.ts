@@ -375,7 +375,9 @@ function renderShaped(
     dot[1] + radius * Math.sin((i * Math.PI) / 4),
   ]);
   out.dots.push(polylinePath(ring, true));
-  const label = paper.p(first);
+  // Tầng trên: «XUỐNG» ở bậc CUỐI — chỗ người đứng bắt đầu đi xuống. Bậc 1 là chân thang ở tầng dưới; ở tầng trên chỗ ấy
+  // là khoảng thông tầng (T158, lượt e1c432f4: nhãn cạnh bậc 1 chỉ vào đúng phía không bước ra được).
+  const label = paper.p(arriving ? (tip ?? first) : first);
   out.labels.push(
     textEl(arriving ? DOWN_LABEL : UP_LABEL, {
       x: label[0],

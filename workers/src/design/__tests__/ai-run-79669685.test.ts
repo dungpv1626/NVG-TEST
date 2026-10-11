@@ -74,17 +74,24 @@ describe('lượt 79669685 — ban công đúng trên bản phác, lỗi gốc k
     expect(result.hints.join('\n')).toMatch(/"laundry_1" have no way in/);
   });
 
-  it('vòng 2: bản phác tầng 2 đặt phòng làm việc chắn đầu bước ra của thang (T157) — bác theo tầng, nói đúng đầu thang', () => {
-    const second = evaluate(round(2));
-    expect(second.ok).toBeNull();
-    expect(second.rejections.map((r) => r.level)).toEqual([2]);
-    expect(second.rejections[0]!.codes).toContain('stair_arrival_blocked');
-    const hints = second.hints.join('\n');
-    expect(hints).toMatch(
-      /The stair "stair_2": people from the storey below step off on its street side, but that side touches only study_1/,
-    );
-    // Không còn câu ban công khối góc sai sự thật — lỗi thật của bản phác được nói trước.
-    expect(hints).not.toMatch(/touches that side only at a corner/);
-    expect(second.settled).toContain(1);
-  });
+  // Một mình ~15 giây; cả nhóm chạy song song thì vượt hạn 30 giây mặc định (đo 11/10/2026: 30,9 giây).
+  it(
+    'vòng 2: bản phác tầng 2 đặt phòng làm việc chắn đầu bước ra của thang (T157) — câu nhắc nói đúng đầu thang',
+    { timeout: 120_000 },
+    () => {
+      const second = evaluate(round(2));
+      expect(second.ok).toBeNull();
+      // T158: chương trình tự chia lại tầng 2 và khoét sảnh đầu thang, nên tầng 2 qua; lỗi chặn còn lại là ban công của cả
+      // nhà. Bản phác của mô hình vẫn chặn đầu thang — câu nhắc vẫn nói, để mô hình sửa đúng bản phác.
+      expect(second.rejections.map((r) => r.level)).toEqual([0]);
+      const hints = second.hints.join('\n');
+      expect(hints).toMatch(
+        /The stair "stair_2": people from the storey below step off on its street side, but that side touches only study_1/,
+      );
+      // Không còn câu ban công khối góc sai sự thật: bản phác đã vẽ ban công dọc mặt trước, chỉ chương trình chia lại
+      // mới nắn thành khối góc (T155).
+      expect(hints).not.toMatch(/touches that side only at a corner/);
+      expect(hints).toMatch(/already runs "balcony_1" along the front edge/);
+    },
+  );
 });

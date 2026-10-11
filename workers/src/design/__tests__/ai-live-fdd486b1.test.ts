@@ -51,6 +51,9 @@ describe('phát lại fdd486b1 — phòng không chữ nhật tới được mô
     expect(hints).toMatch(
       /Storey 1: In the sketch, these rooms are not one rectangle of cells: dining_1\./,
     );
-    expect(hints.indexOf('dining_1. Redraw')).toBeLessThan(hints.indexOf('crossing "garage_1"'));
+    // Lỗi của cách chia lại: từ T158 cổng bác cây có lối vào thang chỉ ở cạnh dài trước khi tới lỗi đi xuyên gara.
+    const regrid = hints.indexOf('can only be entered from its long side');
+    expect(regrid).toBeGreaterThan(-1);
+    expect(hints.indexOf('dining_1. Redraw')).toBeLessThan(regrid);
   });
 });

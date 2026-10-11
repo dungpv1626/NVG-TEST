@@ -66,16 +66,34 @@ describe('phát lại bea4c6fa — ban công bắt buộc được ghim khi chia
   })();
 
   /*
-   * T157 (11/10/2026): hai mặt bằng vòng 5 (67,3) và vòng 6 (64,8) mà hai ca dưới từng canh đều mở ô thang tầng 2 bằng
-   * ô thông 2,69 m ở CẠNH DÀI (thang U lên `-y`, người bước ra ở đầu `y1`) — lối ra giữa vế bậc, đúng lỗi Haan chỉ. Từ
-   * T157 cổng bác chúng. Hệ quả: T109 (ban công được ghim khi chia lại) và T111 (không dừng tìm biến thể ở ngưỡng nhận)
-   * KHÔNG còn ca canh trên lượt ghi này — đã thử bốn lượt ghi khác còn ra mặt bằng, biến thể đầu đều đã vượt mức tìm.
-   * Ghi ở «còn mở» của T157.
+   * T157 (11/10/2026): hai mặt bằng vòng 5 (67,3) và vòng 6 (64,8) mở ô thang tầng 2 bằng ô thông 2,69 m ở CẠNH DÀI
+   * (thang U lên `-y`, người bước ra ở đầu `y1`) — lối ra giữa vế bậc, đúng lỗi Haan chỉ; T157 bác cả hai.
+   * T158 (11/10/2026): bộ xếp khoét sảnh đầu thang từ phòng đang chắn đầu bước ra, giữ cây — vòng 6 ra mặt bằng lại,
+   * lần này lối ra ở đúng đầu `y1`; vòng 5 thì phòng chắn không nhường nổi. T109 / T111 vẫn chưa có ca canh riêng (xem «còn mở» của T157).
    */
-  it('vòng 5, 6: mặt bằng từng qua mở thang giữa vế bậc — nay bị bác (T157)', () => {
+  it('vòng 6 ra mặt bằng nhờ sảnh đầu thang — lối ra tầng 2 ở đầu bước ra; vòng 5 vẫn bị bác (T158)', () => {
+    // Vòng 5: phòng chắn đầu bước ra không nhường nổi một dải sảnh mà còn đủ cạnh — vẫn bác, câu nhắc gửi mô hình.
     expect(rounds[4]!.ok).toBeNull();
-    expect(rounds[5]!.ok).toBeNull();
-    // Ngưỡng tìm vẫn phải trên ngưỡng nhận (cấu hình T111), dù không còn ca phát lại nào đo hành vi.
+    expect(rounds[4]!.rejections.flatMap((r) => r.codes ?? [])).toContain('stair_arrival_blocked');
+    for (const result of [rounds[5]!]) {
+      expect(result.ok).not.toBeNull();
+      const upper = result.ok!.levels.find((l) => l.level.level === 2)!.level;
+      const ground = result.ok!.levels.find((l) => l.level.level === 1)!.level;
+      expect(ground.stairs?.[0]?.up).toBe('-y');
+      const stair = upper.rooms.find((room) => room.type === 'stair')!;
+      // Sảnh chương trình khoét nằm ngay đầu `y1` của ô thang.
+      const [x0, , x1, y1] = stair.rect as number[];
+      const landing = upper.rooms.find((room) => {
+        const [rx0, ry0, rx1] = room.rect as number[];
+        return (
+          room.type === 'circulation' &&
+          Math.abs(ry0! - y1!) <= 25 &&
+          Math.min(rx1!, x1!) - Math.max(rx0!, x0!) > 0
+        );
+      });
+      expect(landing).toBeDefined();
+    }
+    // Ngưỡng tìm vẫn phải trên ngưỡng nhận (cấu hình T111).
     expect(input.quality.variantSearchUntilPercent!).toBeGreaterThan(input.quality.acceptPercent!);
   });
 });

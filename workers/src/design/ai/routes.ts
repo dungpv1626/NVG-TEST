@@ -91,6 +91,7 @@ import type {
 } from '@nvg/shared/design';
 import { disposeStub, instanceIdOf } from '../workflows/rpc-stub';
 import { imageResponse, previewEtag, readPreviewWidth } from './image-preview';
+import { lineageMaps, stableLabels } from './variant-labels';
 
 export const aiApp = new Hono<{ Bindings: DesignEnv }>();
 
@@ -101,6 +102,8 @@ aiApp.route('/uploads', uploadApp);
 
 /** Bộ môn duy nhất nhánh AI sinh ra ở giai đoạn 1 — kiến trúc. */
 const DISCIPLINE = 'kien_truc' as const;
+/** Số bản tối đa mỗi loại `/state` đọc để đánh nhãn cố định — chỉ mã + ngày, không payload. */
+const LABEL_HISTORY = 500;
 
 function bearer(header: string | undefined): string | null {
   return header?.replace(/^Bearer\s+/i, '') || null;
@@ -195,14 +198,16 @@ aiApp.get('/state/:projectId', async (c) => {
       repo.head(projectId, DISCIPLINE, 'ai_image_set'),
       // Lấy dư rồi mới bỏ phần đã ẩn: xoá một phương án khỏi danh sách không được làm mất chỗ của
       // những phương án cũ hơn còn dùng.
-      repo.listKind(projectId, DISCIPLINE, 'ai_floor_plan', 30),
+      // Lấy HẾT (chỉ mã + ngày, không payload): nhãn cố định đánh số theo thứ tự tạo trong cả hồ sơ, tính cả bản
+      // đã xoá khỏi danh sách (`variant-labels.ts`).
+      repo.listKind(projectId, DISCIPLINE, 'ai_floor_plan', LABEL_HISTORY),
       // Mọi ý tưởng mặt đứng đã đúc (20/09/2026, Haan: «tạo bản vẽ mới thì không lưu lại bản cũ để so
       // sánh → chưa tốt»). Artifact vốn đã bất biến nên bản cũ CHƯA BAO GIỜ mất — thiếu là ở đây: tuyến
       // này chỉ trả mốc hiệu lực, nên màn hình không có cách nào mở lại bản trước.
-      repo.listKind(projectId, DISCIPLINE, 'ai_facade_concept', 30),
+      repo.listKind(projectId, DISCIPLINE, 'ai_facade_concept', LABEL_HISTORY),
       // Mọi bộ ảnh phối cảnh đã đúc (T67 Đợt C) — cùng lý do với dải mặt đứng ở trên: artifact vốn
       // bất biến nên bộ cũ chưa bao giờ mất, thiếu là ở chỗ tuyến này chỉ trả mốc hiệu lực.
-      repo.listKind(projectId, DISCIPLINE, 'ai_image_set', 30),
+      repo.listKind(projectId, DISCIPLINE, 'ai_image_set', LABEL_HISTORY),
       // Phương án kỹ sư đã xoá khỏi danh sách (`design_artifact_hidden`). Đọc dưới phiên người
       // gọi: cùng ba chiều quyền với mọi bảng của module.
       db
@@ -236,10 +241,20 @@ aiApp.get('/state/:projectId', async (c) => {
   // Mỗi bản mặt đứng dựng trên phương án nào — để bước Mặt đứng và Phối cảnh cho chọn «dựng trên
   // mặt bằng / mặt đứng» (Haan, 10/10/2026). Đọc CẠNH lineage, một truy vấn, không tải payload; chỉ
   // giữ input là phương án đang hiện — phương án đã ẩn thì bản mặt đứng ấy không gắn phương án nào.
-  const facadePlans = await repo.inputsAmong(
-    visibleFacades.map((f) => f.id),
-    new Set(visiblePlans.map((p) => p.id)),
-  );
+  // Cạnh lineage đi vào mọi bản của ba loại — MỘT lượt (chia lô), không tải payload. Từ đó: bản sửa từ bản nào (nhãn
+  // 3.1), mặt đứng dựng theo phương án nào, bộ ảnh dựng theo mặt đứng nào.
+  const edges = await repo.edgesInto([...plans, ...facades, ...imageSets].map((a) => a.id));
+  const planIds = new Set(plans.map((p) => p.id));
+  const facadeIds = new Set(facades.map((f) => f.id));
+  const planLineage = lineageMaps(edges, planIds, new Set());
+  const facadeLineage = lineageMaps(edges, facadeIds, planIds);
+  const setLineage = lineageMaps(edges, new Set(imageSets.map((s) => s.id)), facadeIds);
+  const planLabels = stableLabels(plans, planLineage.parentOf);
+  const facadeLabels = stableLabels(facades, facadeLineage.parentOf);
+  const setLabels = stableLabels(imageSets, setLineage.parentOf);
+  const visiblePlanIds = new Set(visiblePlans.map((p) => p.id));
+  const labelOf = (labels: Map<string, string>, id: string | undefined) =>
+    (id && labels.get(id)) || null;
 
   const headId = (planHead.data?.artifact_id as string | undefined) ?? null;
 
@@ -263,7 +278,12 @@ aiApp.get('/state/:projectId', async (c) => {
     // Đầu bài là điều kiện vào của cả nhánh: chưa xác nhận thì không bước nào chạy được.
     briefArtifactId: brief?.id ?? null,
     program: program ? { artifactId: program.id, payload: program.payload } : null,
-    plans: visiblePlans.map((p) => ({ artifactId: p.id, createdAt: p.createdAt })),
+    // `label`: nhãn cố định («3», «3.1») — màn hình ghép thành «Phương án 3.1».
+    plans: visiblePlans.map((p) => ({
+      artifactId: p.id,
+      createdAt: p.createdAt,
+      label: labelOf(planLabels, p.id),
+    })),
     // Phương án người dùng đã CHỌN. Ba phương án được đúc với `setHead: false`, nên khoá này
     // rỗng cho tới khi có người chọn — và bước mặt đứng chỉ mở khi nó có giá trị.
     // Mốc trỏ vào phương án đã ẩn thì coi như chưa chọn: tuyến ẩn đã gỡ mốc, đây là lưới an toàn
@@ -271,17 +291,29 @@ aiApp.get('/state/:projectId', async (c) => {
     planHeadArtifactId: headId && !hidden.has(headId) ? headId : null,
     facadeArtifactId: facade?.id ?? null,
     // Các bản mặt đứng còn hiện, mới nhất trước — để kỹ sư mở lại bản cũ mà so.
-    facades: visibleFacades.map((f) => ({
-      artifactId: f.id,
-      createdAt: f.createdAt,
-      planRef: facadePlans.get(f.id) ?? null,
-    })),
+    // `planRef` chỉ khi phương án ấy còn hiện (ô chọn nguồn dùng); `planLabel` thì có cả khi phương án đã xoá khỏi
+    // danh sách — «theo Phương án 2» vẫn đúng sự thật.
+    facades: visibleFacades.map((f) => {
+      const plan = facadeLineage.basisOf.get(f.id);
+      return {
+        artifactId: f.id,
+        createdAt: f.createdAt,
+        planRef: plan && visiblePlanIds.has(plan) ? plan : null,
+        label: labelOf(facadeLabels, f.id),
+        planLabel: labelOf(planLabels, plan),
+      };
+    }),
     // Mặt bằng mà mặt đứng hiện hành dựng theo (T59). Khác `planHeadArtifactId` nghĩa là kỹ sư đã đổi
     // phương án sau khi dựng mặt đứng — màn hình gắn nhãn «dựng theo phương án cũ».
     facadePlanRef: (facade?.payload as { plan_ref?: string } | undefined)?.plan_ref ?? null,
     imageSetArtifactId: images?.id ?? null,
     // Các bộ ảnh còn hiện, mới nhất trước — để kỹ sư mở lại bộ cũ mà so.
-    imageSets: visibleImageSets.map((s) => ({ artifactId: s.id, createdAt: s.createdAt })),
+    imageSets: visibleImageSets.map((s) => ({
+      artifactId: s.id,
+      createdAt: s.createdAt,
+      label: labelOf(setLabels, s.id),
+      facadeLabel: labelOf(facadeLabels, setLineage.basisOf.get(s.id)),
+    })),
     // Mặt đứng mà bộ ảnh hiện hành dựng theo. Khác `facadeArtifactId` nghĩa là kỹ sư đã dựng lại
     // mặt đứng sau khi có bộ ảnh — màn hình gắn nhãn «dựng theo mặt đứng cũ».
     imageSetFacadeRef: (images?.payload as { facade_ref?: string } | undefined)?.facade_ref ?? null,

@@ -55,7 +55,8 @@ import {
   stairShortfall,
   stairTreads,
 } from '../tree/stair-fit';
-import { deriveDoors } from './doors';
+import { deriveDoors, stairSideOf, stairSidesNeeded } from './doors';
+import { carveStairLanding } from './stair-landing';
 import { intentFit, type IntentFit } from './fit';
 import { enumerateCarved, enumerateFrames, type FrameCandidate } from './frames';
 import {
@@ -1547,6 +1548,14 @@ function finish(
       } để xếp được.`,
     });
   }
+  const landing = winner.candidate.landing;
+  if (landing) {
+    const others = landing.moved.filter((id) => id !== landing.from);
+    notes.push({
+      code: 'stair_landing_carved',
+      message: `Tầng ${input.level}: "${landing.from}" nằm chắn đầu lên / xuống của ô thang — chương trình tách một dải sảnh "${landing.hall}" từ phòng ấy${others.length ? ` và dời vách ${others.map((id) => `"${id}"`).join(', ')} để bù diện tích` : ''}, giữ nguyên bố cục và hướng thang mô hình vẽ.`,
+    });
+  }
   const finalProgram = winner.candidate.program ?? program;
   return {
     layout,
@@ -2022,10 +2031,14 @@ function sameRect(a: Rect, b: Rect): boolean {
 }
 
 /**
- * Lý do của bộ đặt cửa mà cổng phải BÁC, không chỉ xếp sau (T157): tầng trên mà đầu người từ dưới bước ra của ô thang
- * không giáp lối đi — không đi được, luật cứng (T49).
+ * Lý do của bộ đặt cửa mà cổng phải BÁC, không chỉ xếp sau — không đi được, luật cứng (T49): tầng trên mà đầu người từ
+ * dưới bước ra của ô thang không giáp lối đi (T157); tầng 1 mà lối vào thang chỉ mở được ở cạnh dài, ngang vế đang lên
+ * (T158, lượt e1c432f4: kho chắn đầu bậc 1).
  */
-const GATE_REASON_CODES: ReadonlySet<string> = new Set(['stair_arrival_blocked']);
+const GATE_REASON_CODES: ReadonlySet<string> = new Set([
+  'stair_arrival_blocked',
+  'stair_entry_long_side',
+]);
 
 /** Đưa ứng viên rẻ phạt nhất qua cổng, trả những cây đã qua kèm điểm xếp hạng. */
 function gateCandidates(
@@ -2039,9 +2052,15 @@ function gateCandidates(
   const gated = input.budget?.gated ?? GATED_PER_ROUND * 2;
   // Lý do CHẶN của bộ đặt cửa (T157): loại hẳn, không chỉ xếp sau — ứng viên ít tệ nhất vẫn là thang không bước ra được.
   // Loại TRƯỚC khi tính suất qua cổng: cây bị chặn rẻ phạt hơn không được đẩy cây đi được ra khỏi suất.
+  // Lối vào cạnh dài chỉ chặn khi biết loại thang: mô hình thang CŨ (lượt ghi trước T105, thang U vào theo cạnh dài) mà
+  // chặn thì phát lại mất oan hai mặt bằng vào đúng đầu bậc 1 (7c6de305 vòng 3, b1543b8c vòng 6). Bản chạy thật luôn có.
+  const shaped = input.construction.stairs.shape != null;
   const open: Built[] = [];
   for (const candidate of candidates) {
-    const blocking = candidate.reasons.filter((reason) => GATE_REASON_CODES.has(reason.code));
+    const blocking = candidate.reasons.filter(
+      (reason) =>
+        GATE_REASON_CODES.has(reason.code) && (reason.code !== 'stair_entry_long_side' || shaped),
+    );
     if (!blocking.length) {
       open.push(candidate);
       continue;
@@ -2090,6 +2109,8 @@ interface Built {
   reasons: PlanIssue[];
   /** Chương trình đã thêm nhánh hành lang khi cây này dùng hành lang chữ T/L (V-29). */
   program?: AiSpaceProgram;
+  /** Sảnh đầu thang chương trình khoét từ phòng đang chắn đầu ấy (T158). */
+  landing?: { hall: string; from: string; moved: string[] };
 }
 
 /**
@@ -2314,36 +2335,80 @@ function emitCandidate(
     input.trace?.(`  ⊘ ${frame.key}: ${unusable.message}`);
     return { issues: [unusable], filtered: true };
   }
-  const doors = deriveDoors({
-    level: input.level,
-    isTop: input.isTop,
-    cells,
-    leafById: frameEnv.leafById,
-    intent,
-    doorHosts: input.groups.doorHosts ?? [],
-    doorShared: frameEnv.doorShared,
-    mainEntranceDeclared: input.entrances.main !== null,
-    garageEntry: input.garageEntry === true,
-    stairUp: input.anchors?.stairUp ?? null,
-    stairIds,
-    circulation: input.groups.vertical,
-    openFlow: input.groups.passage?.openFlow ?? null,
-    openForbidden: input.openForbidden ?? null,
-    altarBackSide: input.altarBackSide ?? null,
-    stairOpensTo: input.groups.passage?.stairOpensTo ?? null,
-    stairParams: stairParamsOf(
-      input.construction,
-      stairTreads(input.construction, Math.round(input.construction.levels.storey_height_m * 100)),
-    ),
-    mainSide:
-      input.level === 1 && input.entrances.main
-        ? { footprint, side: FACE_SIDE[input.entrances.main] }
-        : null,
-  });
+  const stairParams = stairParamsOf(
+    input.construction,
+    stairTreads(input.construction, Math.round(input.construction.levels.storey_height_m * 100)),
+  );
+  const doorsFor = (
+    at: ReturnType<typeof leaves>,
+    leafById: ReadonlyMap<string, PackLeaf>,
+  ): ReturnType<typeof deriveDoors> =>
+    deriveDoors({
+      level: input.level,
+      isTop: input.isTop,
+      cells: at,
+      leafById,
+      intent,
+      doorHosts: input.groups.doorHosts ?? [],
+      doorShared: frameEnv.doorShared,
+      mainEntranceDeclared: input.entrances.main !== null,
+      garageEntry: input.garageEntry === true,
+      stairUp: input.anchors?.stairUp ?? null,
+      stairIds,
+      circulation: input.groups.vertical,
+      openFlow: input.groups.passage?.openFlow ?? null,
+      openForbidden: input.openForbidden ?? null,
+      altarBackSide: input.altarBackSide ?? null,
+      stairOpensTo: input.groups.passage?.stairOpensTo ?? null,
+      stairParams,
+      mainSide:
+        input.level === 1 && input.entrances.main
+          ? { footprint, side: FACE_SIDE[input.entrances.main] }
+          : null,
+    });
+  let doors = doorsFor(cells, frameEnv.leafById);
+  let key = frame.key;
+  let landing: Built['landing'];
+  // Đầu thang bị phòng chắn: giữ cây, khoét sảnh từ phòng ấy trước khi để cổng bác cả cây (T158).
+  const blocked = (reasons: readonly PlanIssue[]) =>
+    reasons.some(
+      (reason) =>
+        reason.code === 'stair_arrival_blocked' ||
+        (reason.code === 'stair_entry_long_side' && stairParams !== null),
+    );
+  if (blocked(doors.reasons)) {
+    const landed = landStairEnd(input, pinned.placed, frameEnv, stairIds, program, (at, byId) => {
+      const env2: PackEnv = { ...frameEnv, leafById: byId };
+      const bad =
+        unusableCell(input, at, env2) ??
+        shortStairCell(input, at, stairIds) ??
+        belowFloorCell(input, at, env2);
+      if (bad) {
+        input.trace?.(`    ⌐ ô hỏng sau khi khoét: ${bad.message}`);
+        return null;
+      }
+      const next = doorsFor(at, byId);
+      if (blocked(next.reasons)) {
+        input.trace?.(
+          `    ⌐ thang vẫn chặn sau khi khoét: ${next.reasons.map((reason) => reason.message).join(' | ')}`,
+        );
+        return null;
+      }
+      return next;
+    });
+    if (landed) {
+      input.trace?.(`  ⌐ ${frame.key}: sảnh đầu thang ${landed.hallId} khoét từ ${landed.from}`);
+      pinned = { ...pinned, placed: landed.placed };
+      doors = landed.doors;
+      program = landed.program;
+      landing = { hall: landed.hallId, from: landed.from, moved: landed.moved };
+      key = `${frame.key}|sanh-${landed.from}`;
+    }
+  }
   const nodes = emitNodes(pinned.placed);
   if (nodes.length === 0 || doors.doors.length === 0) return null;
   return {
-    key: `${footprintKey(footprint, input.buildableCm)}|${frame.key}`,
+    key: `${footprintKey(footprint, input.buildableCm)}|${key}`,
     tree: {
       variant_label: input.level === 1 ? intent.variantLabel : null,
       rationale: intent.rationale,
@@ -2358,7 +2423,165 @@ function emitCandidate(
     footprint,
     reasons: doors.reasons,
     ...(program ? { program } : {}),
+    ...(landing ? { landing } : {}),
   };
+}
+
+/**
+ * Sảnh đầu thang (T158): đầu thang cần mở mà phòng nằm chắn → khoét một dải hành lang từ phòng ấy, giữ nguyên cây và
+ * hướng thang (`stair-landing.ts`). Tầng trên: đầu người bước ra (và đầu đi lên tiếp — thang thẳng) theo chiều tầng 1.
+ * Tầng 1: một trong hai đầu ngắn — bộ đặt cửa chọn chiều lên theo đầu có lối đi. `check` dựng lại cửa trên cây mới và
+ * trả `null` khi vẫn chặn; dải không nối được về lối đi cũng tính là chặn.
+ */
+function landStairEnd(
+  input: ArrangeInput,
+  placed: Placed,
+  env: PackEnv,
+  stairIds: ReadonlySet<string>,
+  program: AiSpaceProgram | undefined,
+  check: (
+    cells: ReturnType<typeof leaves>,
+    leafById: ReadonlyMap<string, PackLeaf>,
+  ) => ReturnType<typeof deriveDoors> | null,
+): {
+  placed: Placed;
+  doors: ReturnType<typeof deriveDoors>;
+  program: AiSpaceProgram;
+  hallId: string;
+  from: string;
+  moved: string[];
+} | null {
+  const cells = leaves(placed);
+  const stair = cells.find((cell) => stairIds.has(cell.id));
+  if (!stair) return null;
+  const corridorType = [...input.groups.vertical]
+    .filter((type) => !input.stairTypes.includes(type) && type !== 'elevator')
+    .sort()[0];
+  if (!corridorType) return null;
+  const clear = Math.round(
+    (input.construction.circulation?.corridor_clear_m ??
+      input.construction.openings.door?.width_m ??
+      0.9) * 100,
+  );
+  const partition = Math.round(input.construction.walls.partition_m * 100);
+  const params = stairParamsOf(
+    input.construction,
+    stairTreads(input.construction, Math.round(input.construction.levels.storey_height_m * 100)),
+  );
+  const r = stair.rect;
+  const alongY = r.y1 - r.y0 >= r.x1 - r.x0;
+  const up = input.anchors?.stairUp ?? null;
+  const sides: Side[] =
+    input.level > 1 && up && params
+      ? stairSidesNeeded(up, params)
+      : alongY
+        ? ['y0', 'y1']
+        : ['x0', 'x1'];
+  const base = program ?? input.program;
+  const template = [...env.leafById.values()].find(
+    (leaf) => leaf.role === 'hub' && !leaf.stair && leaf.types.includes(corridorType),
+  );
+  // Sâu bằng một hành lang, và đủ dài ở hai đầu dải để mở lối sang hành lang sẵn có (`doorShared`).
+  const depth = ceil5(
+    Math.max(clear + partition, template ? env.doorShared(template, template) : 0),
+  );
+  const mayGive = (id: string) => {
+    const leaf = env.leafById.get(id);
+    return (
+      !!leaf &&
+      !leaf.stair &&
+      leaf.role !== 'open' &&
+      !leaf.types.some((type) => type === 'elevator' || type === 'light_well')
+    );
+  };
+  // Chiều dài tối thiểu phòng bị dời vách phải còn: cạnh kỹ thuật, và diện tích tối thiểu đầu bài khai (lọt lòng — trừ
+  // một bề dày tường mỗi chiều như `floorWallCm`).
+  const minLength = (id: string, across: number) => {
+    const leaf = env.leafById.get(id);
+    if (!leaf) return Infinity;
+    const wall = env.floorWallCm;
+    const byArea = leaf.areaFloor
+      ? Math.ceil((leaf.areaFloor * 10_000) / Math.max(1, across - wall) + wall)
+      : 0;
+    return ceil5(Math.max(leaf.techMin, byArea));
+  };
+  const footprint = input.anchors?.footprint ?? env.footprint;
+  // Tầng trên cần cả hai đầu (thang thẳng): khoét lần lượt; tầng 1 thử từng đầu.
+  const attempts: Side[][] = input.level > 1 ? [sides] : sides.map((side) => [side]);
+  for (const attempt of attempts) {
+    let tree = placed;
+    let next = base;
+    const byId = new Map(env.leafById);
+    let hallId = '';
+    let from = '';
+    const moved: string[] = [];
+    let ok = true;
+    for (const side of attempt) {
+      const id = nextSpaceId(next, corridorType);
+      const carved = carveStairLanding(tree, stair.id, side, depth, mayGive, minLength, id);
+      if (!carved) {
+        // Đầu ấy đã có lối đi thì không cần khoét; còn lại là không khoét được.
+        const already = leaves(tree).some(
+          (cell) =>
+            cell.id !== stair.id &&
+            stairSideOf(r, cell.rect) === side &&
+            env.leafById.get(cell.id)?.role === 'hub',
+        );
+        if (already) continue;
+        input.trace?.(
+          `    ⌐ ${side}: không khoét được (phòng chắn không phủ trọn cạnh, không nhường được, hay hụt cạnh)`,
+        );
+        ok = false;
+        break;
+      }
+      const area = round1(
+        ((carved.hall.x1 - carved.hall.x0) * (carved.hall.y1 - carved.hall.y0)) / 10_000,
+      );
+      byId.set(id, {
+        ...(template ?? {
+          types: [corridorType],
+          techMin: depth,
+          pref: null,
+          aspectMax: 99,
+          aspectHard: null,
+          street: false,
+          role: 'hub' as const,
+          needsOpenFace: false,
+          noStairDoor: false,
+          parent: null,
+          stair: false,
+          wet: false,
+          zoneWeight: 0,
+          hostTypes: null,
+        }),
+        id,
+        target: area,
+        areaFloor: null,
+        zone: zoneOfRect(footprint, carved.hall),
+      });
+      next = {
+        ...next,
+        spaces: [
+          ...next.spaces,
+          { id, type: corridorType, level: input.level, target_area_m2: area, ensuite_of: null },
+        ],
+      };
+      tree = carved.placed;
+      hallId = id;
+      from = carved.from;
+      moved.push(...carved.moved);
+    }
+    if (!ok || !hallId) continue;
+    const doors = check(leaves(tree), byId);
+    if (!doors || doors.reasons.some((reason) => reason.ref === hallId)) {
+      input.trace?.(
+        `    ⌐ ${attempt.join('+')}: khoét từ ${from} vẫn hỏng — ${doors ? doors.reasons.map((reason) => reason.code).join(', ') : 'thang vẫn chặn hoặc ô hỏng'}`,
+      );
+      continue;
+    }
+    return { placed: tree, doors, program: next, hallId, from, moved };
+  }
+  return null;
 }
 
 /**

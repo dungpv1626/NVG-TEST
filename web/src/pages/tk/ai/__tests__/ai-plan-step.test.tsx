@@ -728,6 +728,33 @@ describe('Tên phương án «Phương án N» theo thứ tự tạo (07/10/2026
   });
 });
 
+describe('Nhãn phương án cố định từ máy chủ (11/10/2026)', () => {
+  it('hiện «Phương án 3.1» theo nhãn máy chủ, kèm ngày giờ tạo — xoá bản khác không đổi tên', () => {
+    state.run = null;
+    state.review = review();
+    const second = `sha256:${'b'.repeat(64)}`;
+    renderWithApp(
+      <AiPlanStep
+        projectId="p1"
+        readOnly={false}
+        state={
+          {
+            ...designState,
+            plans: [
+              { artifactId: second, createdAt: '2026-09-11T03:20:00Z', label: '3.1' },
+              { artifactId: REF, createdAt: '2026-09-10T00:00:00Z', label: '1' },
+            ],
+          } as never
+        }
+      />,
+    );
+    const group = screen.getByRole('group', { name: 'Phương án' });
+    expect(group.textContent).toMatch(/Phương án 1.*Phương án 3\.1/);
+    expect(group.textContent).not.toMatch(/Phương án 2/);
+    expect(group.textContent).toMatch(/11\/09\/2026/);
+  });
+});
+
 /**
  * Xoá một phương án khỏi dải chọn (18/09/2026, Haan: «phần danh sách phương án đang bị dài»).
  *
