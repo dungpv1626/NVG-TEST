@@ -635,6 +635,8 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
     let resent = 0;
     // Tập lỗi từng lượt hỏng — thôi gọi khi `STUCK_AFTER` lượt liền y hệt (`stuckRepeating`).
     const history: string[] = [];
+    // Câu trả lời hỏng đã chấm (`houseAnswerKey`) — mô hình trả lại một câu đã biết kết quả thì dừng (T153).
+    const seenAnswers = new Set<string>();
     // Đầu bài vượt sàn xây được: không gọi mô hình (T112). Lượt sửa theo yêu cầu kỹ sư đã có mặt bằng.
     const infeasible = seed ? null : infeasibleBrief(deps, params, variant);
     if (infeasible) throw new AiPlanRejected([{ level: 0, messages: [infeasible] }]);
@@ -702,17 +704,26 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
       }
       first ??= arranged.rejections;
       history.push(problemKey(arranged.rejections));
+      const repeated = !!arranged.answerKey && seenAnswers.has(arranged.answerKey);
+      if (arranged.answerKey) seenAnswers.add(arranged.answerKey);
       // Chỉ còn lỗi hình học (`retry: 'none'`): bộ dựng hình đã thử hết cách, mô hình không sửa được.
-      // Mô hình trả lại y nguyên phần đang hỏng (`'unchanged'`): gọi nữa là cùng lời dẫn, cùng kết quả.
+      // Mô hình trả lại y nguyên phần đang hỏng (`'unchanged'`), hoặc trả lại một câu đã chấm ở vòng trước
+      // (`repeated`): gọi nữa là cùng lời dẫn, cùng kết quả.
       if (
         round > houseRevisionsMax(params.pipeline) ||
         arranged.retry === 'none' ||
-        arranged.retry === 'unchanged'
+        arranged.retry === 'unchanged' ||
+        repeated
       ) {
         // Một lượt TRƯỚC đã xếp được (dưới ngưỡng), lượt sửa vì điểm thì hỏng: lưu bản đã có.
         if (best) return this.writeBest(step, deps, params, variant, best, calls.length);
         throw new AiPlanRejected(
-          finalRejections(arranged.rejections, first, arranged.retry, calls.length),
+          finalRejections(
+            arranged.rejections,
+            first,
+            repeated ? 'unchanged' : arranged.retry,
+            calls.length,
+          ),
         );
       }
       if (stuckRepeating(history, stuckAfter(params.pipeline))) {

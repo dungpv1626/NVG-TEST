@@ -5,24 +5,30 @@
  * đã chọn; mô hình chọn mái, vật liệu, màu, cổng, rào và các mảng trang trí. Màn hình phải nói ra ba
  * điều, cả ba đều là ràng buộc:
  *
- *  · **Mặt đứng dựng theo phương án nào.** Kỹ sư đổi phương án mặt bằng sau khi dựng thì mặt đứng cũ
- *    vẫn giữ (Haan chốt 19/09/2026) nhưng phải gắn nhãn «dựng theo phương án cũ» — cửa trên tờ ấy là
- *    cửa của một ngôi nhà khác.
+ *  · **Mặt đứng dựng theo phương án nào.** Kỹ sư chọn ngay ở ô «Dựng trên mặt bằng» của bước này
+ *    (Haan, 10/10/2026: «khi dựng mặt đứng cần có mục chọn mặt bằng để base trên đó»). Ô ấy đặt
+ *    CHÍNH mốc «Dùng cho mặt đứng» của bước Mặt bằng — một mốc, hai chỗ đổi — nên phần đầu bài lấy
+ *    bề rộng cửa, cảnh báo «theo phương án cũ» và bước Phối cảnh vẫn nói về cùng một phương án. Đổi
+ *    phương án sau khi dựng thì mặt đứng cũ vẫn giữ (Haan chốt 19/09/2026) nhưng gắn nhãn «dựng theo
+ *    phương án cũ» — cửa trên tờ ấy là cửa của một ngôi nhà khác.
  *  · **Tờ vẽ qua `<img>`**, không nhúng SVG: chữ trên tờ có phần do mô hình sinh (CLAUDE.md 8.3).
  *  · **Màu luôn kèm chữ** (CGD 6.8): ô màu kèm mã hex và tên vật liệu, không chỉ một ô tô màu.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useId, useState } from 'react';
 import { AlertTriangle, Building2, Maximize2, Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Skeleton } from '@/components/ui/states';
 import { formatDateTime } from '@nvg/shared';
+import { FIELD_BOX } from '@/components/ui/field-box';
+import { cn } from '@/lib/utils';
 import {
   useAiFacade,
   useAiFacadeSheet,
   useAiRun,
   useChooseAiFacade,
+  useChooseAiPlan,
   useDownloadAiFacadeDxf,
   useHideAiFacade,
   useInvalidateAiDesign,
@@ -39,6 +45,7 @@ import { FacadeImagePanel } from './ai-facade-image';
 import { FacadeScorePanel } from './ai-facade-score';
 import { SheetSizeControl, sheetWidthStyle, useSheetSize } from './sheet-size';
 import { SheetViewer } from './sheet-zoom';
+import { numberedNames } from './variant-name';
 
 /** Mặt đứng hiện hành dựng theo một phương án mặt bằng KHÁC bản đang hiệu lực. */
 export function facadeIsStale(state: AiDesignState): boolean {
@@ -74,6 +81,7 @@ export function AiFacadeStep({
   // không phải đổi mốc: đổi mốc là đổi thứ bước Phối cảnh và ảnh mặt đứng đọc.
   const [open, setOpen] = useState<string | null>(null);
   const choose = useChooseAiFacade();
+  const choosePlan = useChooseAiPlan();
   const hide = useHideAiFacade();
   /** Bản đang chờ xác nhận xoá khỏi dải — `null` = không hỏi gì. */
   const [askHide, setAskHide] = useState<{ artifactId: string; name: string } | null>(null);
@@ -85,6 +93,11 @@ export function AiFacadeStep({
     if (run.data?.status === 'done' || run.data?.status === 'failed') invalidate(projectId);
   }, [run.data?.status, projectId, invalidate]);
 
+  const plans = state.plans ?? [];
+  const planNames = numberedNames(plans, 'Phương án');
+  /** Chưa xếp phương án mặt bằng nào — bước này chưa có gì để dựng trên. */
+  const noPlans = plans.length === 0;
+  /** Có phương án nhưng chưa chọn cái nào — nút dựng chờ ô chọn. */
   const blocked = !state.planHeadArtifactId;
   const stale = facadeIsStale(state);
   const versions = state.facades ?? [];
@@ -103,7 +116,11 @@ export function AiFacadeStep({
       .mutateAsync({
         projectId,
         route: ai.choice.route,
-        options: { reasoningEffort: ai.selected?.supportsEffort === false ? null : effort },
+        options: {
+          reasoningEffort: ai.selected?.supportsEffort === false ? null : effort,
+          // Worker đối chiếu với mốc: mốc vừa đổi ở nơi khác thì từ chối thay vì dựng nhầm nhà.
+          planArtifactId: state.planHeadArtifactId,
+        },
       })
       .then((out) => setRunId(out.runId))
       .catch(() => undefined);
@@ -128,63 +145,80 @@ export function AiFacadeStep({
             )
           }
         >
-          {blocked ? (
+          {noPlans ? (
             <p className="text-fg-subtle">
-              Chưa chọn phương án mặt bằng. Mở bước «Mặt bằng từng tầng», chọn một phương án rồi
-              quay lại đây.
+              Chưa có phương án mặt bằng. Mở bước «Mặt bằng từng tầng» và xếp mặt bằng trước — mặt
+              đứng dựng trên một phương án đã xếp.
             </p>
           ) : (
-            !readOnly && (
-              <div className="space-y-4">
-                {/* Model và mức suy nghĩ cùng một hàng, hai ô dạng viên (07/10/2026). */}
-                <div className="flex items-end gap-2 *:first:min-w-0 *:last:shrink-0">
-                  <AiModePicker
-                    kind="text"
-                    choice={ai.choice}
-                    options={ai.options}
-                    onMode={ai.pickMode}
-                    onRoute={ai.pickRoute}
-                    allowSolver={false}
-                    disabled={running || start.isPending}
-                  />
-                  <ReasoningEffortPicker
-                    value={effort}
-                    onChange={setEffort}
-                    option={ai.selected}
-                    disabled={running || start.isPending}
-                  />
-                </div>
-                {/* Yêu cầu mặt đứng là phần «Mặt đứng» của ĐẦU BÀI: AI Design chỉ thừa hưởng, không
-                    bày lại phiếu ở đây (Haan, 08/10/2026 — mọi khảo sát nằm ở đầu bài). */}
-                <p className="text-fg-subtle">
-                  Dựng theo phần Mặt đứng của đầu bài đã xác nhận. {briefLink}
-                </p>
-                <details className="text-fg-subtle">
-                  <summary className="cursor-pointer select-none hover:text-fg">
-                    Cách AI dựng mặt đứng
-                  </summary>
-                  <p className="mt-2">
-                    Khung nhà, cao độ các tầng, cửa, cửa sổ và ban công lấy nguyên từ phương án mặt
-                    bằng đang chọn — AI không được dời hay thêm bớt. AI chọn mái, vật liệu, màu,
-                    cổng, tường rào và các mảng trang trí; chương trình kiểm và dựng tờ mặt đứng. Ý
-                    tưởng không dùng được thì AI được gọi lại một lần kèm lý do — lượt ấy cũng tính
-                    tiền.
-                  </p>
-                </details>
-                <Button
-                  variant="primary"
-                  className="w-full"
-                  onClick={() => void onRun()}
-                  disabled={running || start.isPending || !ai.choice.route}
-                >
-                  {start.isPending
-                    ? 'Đang gửi…'
-                    : state.facadeArtifactId
-                      ? 'Dựng lại ý tưởng mặt đứng'
-                      : 'Dựng ý tưởng mặt đứng'}
-                </Button>
+            <div className="space-y-4">
+              <PlanSourcePicker
+                plans={plans}
+                names={planNames}
+                value={state.planHeadArtifactId}
+                facadePlanRef={state.facadeArtifactId ? (state.facadePlanRef ?? null) : null}
+                readOnly={readOnly}
+                disabled={running || start.isPending || choosePlan.isPending}
+                onChange={(artifactId) =>
+                  choosePlan.mutate({ projectId, artifactId }, { onError: () => undefined })
+                }
+              />
+              {choosePlan.isError && (
+                <p className="text-status-overdue">{toUserMessage(choosePlan.error)}</p>
+              )}
+            </div>
+          )}
+          {!noPlans && !readOnly && (
+            <div className="mt-4 space-y-4">
+              {/* Model và mức suy nghĩ cùng một hàng, hai ô dạng viên (07/10/2026). */}
+              <div className="flex items-end gap-2 *:first:min-w-0 *:last:shrink-0">
+                <AiModePicker
+                  kind="text"
+                  choice={ai.choice}
+                  options={ai.options}
+                  onMode={ai.pickMode}
+                  onRoute={ai.pickRoute}
+                  allowSolver={false}
+                  disabled={running || start.isPending}
+                />
+                <ReasoningEffortPicker
+                  value={effort}
+                  onChange={setEffort}
+                  option={ai.selected}
+                  disabled={running || start.isPending}
+                />
               </div>
-            )
+              {/* Yêu cầu mặt đứng là phần «Mặt đứng» của ĐẦU BÀI: AI Design chỉ thừa hưởng, không
+                    bày lại phiếu ở đây (Haan, 08/10/2026 — mọi khảo sát nằm ở đầu bài). */}
+              <p className="text-fg-subtle">
+                Dựng theo phần Mặt đứng của đầu bài đã xác nhận. {briefLink}
+              </p>
+              <details className="text-fg-subtle">
+                <summary className="cursor-pointer select-none hover:text-fg">
+                  Cách AI dựng mặt đứng
+                </summary>
+                <p className="mt-2">
+                  Khung nhà, cao độ các tầng, cửa, cửa sổ và ban công lấy nguyên từ phương án mặt
+                  bằng đang chọn — AI không được dời hay thêm bớt. AI chọn mái, vật liệu, màu, cổng,
+                  tường rào và các mảng trang trí; chương trình kiểm và dựng tờ mặt đứng. Ý tưởng
+                  không dùng được thì AI được gọi lại một lần kèm lý do — lượt ấy cũng tính tiền.
+                </p>
+              </details>
+              <Button
+                variant="primary"
+                className="w-full"
+                onClick={() => void onRun()}
+                disabled={
+                  running || start.isPending || choosePlan.isPending || blocked || !ai.choice.route
+                }
+              >
+                {start.isPending
+                  ? 'Đang gửi…'
+                  : state.facadeArtifactId
+                    ? 'Dựng lại ý tưởng mặt đứng'
+                    : 'Dựng ý tưởng mặt đứng'}
+              </Button>
+            </div>
           )}
           {start.isError && (
             <p className="mt-3 text-status-overdue">{toUserMessage(start.error)}</p>
@@ -203,7 +237,7 @@ export function AiFacadeStep({
                 : undefined
             }
             onRetry={readOnly ? undefined : () => void onRun()}
-            retryDisabled={start.isPending || !ai.choice.route}
+            retryDisabled={start.isPending || blocked || !ai.choice.route}
             runningLabel="Đang dựng mặt đứng"
             doneLabel={failedIssues.length > 0 ? 'Ý tưởng chưa dùng được' : 'Đã dựng xong'}
             failedLabel="Chưa dựng được mặt đứng"
@@ -223,9 +257,11 @@ export function AiFacadeStep({
               <p className="mt-1 text-fg-subtle">
                 {running
                   ? 'Tờ mặt đứng hiện ở đây ngay khi dựng xong.'
-                  : blocked
-                    ? 'Chọn một phương án mặt bằng ở bước trước, rồi quay lại đây.'
-                    : 'Bấm «Dựng ý tưởng mặt đứng» ở cột bên trái. AI dựng theo phần Mặt đứng của đầu bài.'}
+                  : noPlans
+                    ? 'Xếp mặt bằng ở bước trước, rồi quay lại đây.'
+                    : blocked
+                      ? 'Chọn phương án mặt bằng ở ô «Dựng trên mặt bằng» bên trái, rồi bấm «Dựng ý tưởng mặt đứng».'
+                      : 'Bấm «Dựng ý tưởng mặt đứng» ở cột bên trái. AI dựng trên phương án đã chọn và phần Mặt đứng của đầu bài.'}
               </p>
             </div>
           </div>
@@ -330,6 +366,7 @@ export function AiFacadeStep({
              riêng bản ấy. Bản cũ mở ra để so thì không khẳng định gì về chuyện đó. */
             stale={shownIsHead && stale}
             readOnly={readOnly}
+            planNames={planNames}
           />
         )}
       </div>
@@ -342,11 +379,14 @@ function FacadeDetail({
   artifactId,
   stale,
   readOnly,
+  planNames,
 }: {
   projectId: string;
   artifactId: string;
   stale: boolean;
   readOnly: boolean;
+  /** Tên hiển thị của các phương án mặt bằng — để nói bản mặt đứng này dựng trên phương án nào. */
+  planNames: Map<string, string>;
 }): React.ReactElement {
   const facade = useAiFacade(projectId, artifactId);
   const sheet = useAiFacadeSheet(projectId, artifactId);
@@ -386,11 +426,18 @@ function FacadeDetail({
       <Panel
         title="Tờ mặt đứng"
         aside={
-          sheet.scale ? (
-            <Chip tone="mute">
-              Tỷ lệ 1:{sheet.scale} · {sheet.orientation === 'portrait' ? 'tờ dọc' : 'tờ ngang'}
-            </Chip>
-          ) : undefined
+          <span className="flex flex-wrap justify-end gap-1.5">
+            {facade.data?.planRef && (
+              <Chip tone="mute">
+                Dựng trên {planNames.get(facade.data.planRef) ?? 'phương án đã xoá khỏi danh sách'}
+              </Chip>
+            )}
+            {sheet.scale && (
+              <Chip tone="mute">
+                Tỷ lệ 1:{sheet.scale} · {sheet.orientation === 'portrait' ? 'tờ dọc' : 'tờ ngang'}
+              </Chip>
+            )}
+          </span>
         }
       >
         {!readOnly && (
@@ -552,5 +599,88 @@ function FacadeIdea({ view }: { view: AiFacadeView }): React.ReactElement {
         </ul>
       </div>
     </Panel>
+  );
+}
+
+/**
+ * Ô «Dựng trên mặt bằng» — chọn phương án mặt bằng mà mặt đứng dựng trên (Haan, 10/10/2026).
+ *
+ * Ô chọn đặt mốc «Dùng cho mặt đứng» (`/plan/choose`), không giữ lựa chọn riêng: một ngôi nhà chỉ có
+ * MỘT phương án làm nền cho mặt đứng, và mọi nơi đọc nó (đầu bài, cảnh báo phương án cũ, Phối cảnh)
+ * phải thấy cùng một cái. Người chỉ xem thì thấy chữ, không thấy ô chọn — ẩn chứ không báo lỗi
+ * (CLAUDE.md 5.4).
+ */
+function PlanSourcePicker({
+  plans,
+  names,
+  value,
+  facadePlanRef,
+  readOnly,
+  disabled,
+  onChange,
+}: {
+  plans: ReadonlyArray<{ artifactId: string; createdAt: string }>;
+  names: Map<string, string>;
+  value: string | null;
+  /** Phương án của bản mặt đứng hiện hành — để nói ra khi ô chọn đang trỏ sang phương án khác. */
+  facadePlanRef: string | null;
+  readOnly: boolean;
+  disabled: boolean;
+  onChange: (artifactId: string) => void;
+}): React.ReactElement {
+  const id = useId();
+  // Thứ tự theo tên (Phương án 1, 2, 3…) — cùng thứ tự với dải phương án ở bước Mặt bằng.
+  const ordered = [...plans].sort((a, b) =>
+    (names.get(a.artifactId) ?? '').localeCompare(names.get(b.artifactId) ?? '', 'vi', {
+      numeric: true,
+    }),
+  );
+  const label = (artifactId: string) => names.get(artifactId) ?? 'Phương án';
+  const current = value && names.has(value) ? value : null;
+
+  if (readOnly) {
+    return (
+      <p>
+        <span className="text-fg-subtle">Dựng trên mặt bằng: </span>
+        <b>{current ? label(current) : 'chưa chọn phương án'}</b>
+      </p>
+    );
+  }
+  return (
+    <div>
+      <label htmlFor={id} className="mb-1 block text-xs font-medium text-fg-subtle">
+        Dựng trên mặt bằng
+      </label>
+      <select
+        id={id}
+        className={cn(FIELD_BOX, 'w-full')}
+        value={current ?? ''}
+        disabled={disabled}
+        onChange={(event) => {
+          if (event.target.value) onChange(event.target.value);
+        }}
+      >
+        {!current && (
+          <option value="" disabled>
+            Chọn một phương án mặt bằng
+          </option>
+        )}
+        {ordered.map((plan) => (
+          <option key={plan.artifactId} value={plan.artifactId}>
+            {label(plan.artifactId)} — {formatDateTime(plan.createdAt)}
+          </option>
+        ))}
+      </select>
+      <p className="mt-1 text-xs text-fg-subtle">
+        Khung nhà, cao độ, cửa và ban công lấy từ phương án này. Đổi ở đây cũng đổi phương án «Dùng
+        cho mặt đứng» ở bước Mặt bằng.
+      </p>
+      {current && facadePlanRef && facadePlanRef !== current && (
+        <p className="mt-1 text-xs text-tk-am-fg">
+          Mặt đứng hiện có dựng trên {label(facadePlanRef)}. Bấm «Dựng lại ý tưởng mặt đứng» để dựng
+          trên {label(current)}.
+        </p>
+      )}
+    </div>
   );
 }

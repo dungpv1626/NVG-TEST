@@ -5,7 +5,8 @@
  *  · mặt đứng dựng theo phương án mặt bằng CŨ phải nói ra — cửa trên tờ ấy là của nhà khác;
  *  · màu luôn kèm chữ (mã hex), không chỉ một ô tô màu (CGD 6.8);
  *  · tờ vẽ đi qua `<img>`, không nhúng SVG;
- *  · nút chạy gửi TÊN TUYẾN, và chưa chọn mặt bằng thì không có nút.
+ *  · nút chạy gửi TÊN TUYẾN và mã phương án đang chọn; chưa chọn mặt bằng thì nút chờ;
+ *  · ô «Dựng trên mặt bằng» đặt mốc mặt bằng (`/plan/choose`), không giữ lựa chọn riêng.
  */
 
 import { describe, expect, it, vi } from 'vitest';
@@ -23,6 +24,7 @@ const state = vi.hoisted(() => ({
   dxf: vi.fn((_input: unknown) => undefined),
   chooseFacade: vi.fn((_input: unknown) => Promise.resolve({ artifactId: '' })),
   hideFacade: vi.fn((_input: unknown) => undefined),
+  choosePlan: vi.fn((_input: unknown, _options?: unknown) => undefined),
 }));
 
 vi.mock('@/hooks/use-ai-design', () => ({
@@ -117,6 +119,12 @@ vi.mock('@/hooks/use-ai-design', () => ({
     isError: false,
     error: null,
   }),
+  useChooseAiPlan: () => ({
+    mutate: state.choosePlan,
+    isPending: false,
+    isError: false,
+    error: null,
+  }),
   useHideAiFacade: () => ({
     mutate: state.hideFacade,
     isPending: false,
@@ -173,16 +181,95 @@ function designState(over: Record<string, unknown> = {}) {
 }
 
 describe('Bước mặt đứng', () => {
-  it('chưa chọn phương án mặt bằng thì nói phải làm gì, không có nút chạy', () => {
+  it('chưa xếp phương án mặt bằng nào thì nói phải làm gì, không có ô chọn hay nút chạy', () => {
     renderWithApp(
       <AiFacadeStep
         projectId="p1"
         readOnly={false}
-        state={designState({ planHeadArtifactId: null, facadeArtifactId: null })}
+        state={designState({ plans: [], planHeadArtifactId: null, facadeArtifactId: null })}
       />,
     );
-    expect(screen.getByText(/Chưa chọn phương án mặt bằng/)).toBeInTheDocument();
+    expect(screen.getByText(/Chưa có phương án mặt bằng/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Dựng trên mặt bằng')).toBeNull();
     expect(screen.queryByRole('button', { name: /Dựng ý tưởng mặt đứng/ })).toBeNull();
+  });
+
+  it('có phương án mà chưa chọn: ô chọn mời chọn, nút dựng chờ', () => {
+    renderWithApp(
+      <AiFacadeStep
+        projectId="p1"
+        readOnly={false}
+        state={designState({
+          plans: [{ artifactId: PLAN_A, createdAt: '2026-10-01T00:00:00Z' }],
+          planHeadArtifactId: null,
+          facadeArtifactId: null,
+        })}
+      />,
+    );
+    expect(screen.getByLabelText('Dựng trên mặt bằng')).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Dựng ý tưởng mặt đứng' })).toBeDisabled();
+  });
+
+  it('ô «Dựng trên mặt bằng» liệt kê phương án theo tên và đổi MỐC mặt bằng khi chọn', async () => {
+    state.choosePlan.mockClear();
+    renderWithApp(
+      <AiFacadeStep
+        projectId="p1"
+        readOnly={false}
+        state={designState({
+          // Danh sách từ máy chủ mới nhất trước; tên đếm theo thứ tự tạo.
+          plans: [
+            { artifactId: PLAN_B, createdAt: '2026-10-02T00:00:00Z' },
+            { artifactId: PLAN_A, createdAt: '2026-10-01T00:00:00Z' },
+          ],
+          planHeadArtifactId: PLAN_A,
+        })}
+      />,
+    );
+    const select = screen.getByLabelText('Dựng trên mặt bằng');
+    expect(select).toHaveValue(PLAN_A);
+    const names = within(select)
+      .getAllByRole('option')
+      .map((o) => o.textContent ?? '');
+    expect(names[0]).toMatch(/^Phương án 1/);
+    expect(names[1]).toMatch(/^Phương án 2/);
+    await userEvent.selectOptions(select, PLAN_B);
+    expect(state.choosePlan).toHaveBeenCalledWith(
+      { projectId: 'p1', artifactId: PLAN_B },
+      expect.anything(),
+    );
+  });
+
+  it('mốc đã đổi sang phương án khác bản mặt đứng hiện có thì nói ra ngay dưới ô chọn', () => {
+    renderWithApp(
+      <AiFacadeStep
+        projectId="p1"
+        readOnly={false}
+        state={designState({
+          plans: [
+            { artifactId: PLAN_A, createdAt: '2026-10-01T00:00:00Z' },
+            { artifactId: PLAN_B, createdAt: '2026-10-02T00:00:00Z' },
+          ],
+          planHeadArtifactId: PLAN_B,
+          facadePlanRef: PLAN_A,
+        })}
+      />,
+    );
+    expect(screen.getByText(/Mặt đứng hiện có dựng trên Phương án 1/)).toBeInTheDocument();
+  });
+
+  it('người chỉ xem thấy chữ phương án làm nền, không thấy ô chọn', () => {
+    renderWithApp(
+      <AiFacadeStep
+        projectId="p1"
+        readOnly
+        state={designState({
+          plans: [{ artifactId: PLAN_A, createdAt: '2026-10-01T00:00:00Z' }],
+        })}
+      />,
+    );
+    expect(screen.queryByLabelText('Dựng trên mặt bằng')).toBeNull();
+    expect(screen.getByText('Phương án 1')).toBeInTheDocument();
   });
 
   it('bấm chạy gửi TÊN TUYẾN của model đã chọn', async () => {
@@ -195,7 +282,12 @@ describe('Bước mặt đứng', () => {
     );
     await userEvent.click(await screen.findByRole('button', { name: 'Dựng ý tưởng mặt đứng' }));
     expect(state.start).toHaveBeenCalledWith(
-      expect.objectContaining({ projectId: 'p1', route: 'ai_text_openai' }),
+      expect.objectContaining({
+        projectId: 'p1',
+        route: 'ai_text_openai',
+        // Mã phương án đang chọn — Worker đối chiếu với mốc trước khi dựng.
+        options: expect.objectContaining({ planArtifactId: PLAN_A }),
+      }),
     );
   });
 

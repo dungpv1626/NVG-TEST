@@ -3620,3 +3620,79 @@ nơi kia không.
 - Ron đứng hai bên cửa sổ của M5 không có trong danh mục phần tử, nên chưa vẽ.
 - Mặt bên và mặt sau.
 - Ảnh vật liệu dựng lại từ ảnh neo mới chưa chạy thử (lượt trả phí).
+
+### T152 — Chọn nền ngay trong bước: mặt đứng chọn mặt bằng; phối cảnh chọn mặt bằng + mặt đứng (10/10/2026, Haan)
+
+Haan: «khi dựng mặt đứng cần có mục chọn mặt bằng để base trên đó… mặt đứng sẽ chọn 1 phương án để xây dựng
+dựa trên đó + thông tin đầu bài», rồi «tương tự, ảnh phối cảnh cũng cần lựa chọn bản mặt bằng và mặt đứng».
+
+Trước đó bước Mặt đứng luôn dựng trên mốc «Dùng cho mặt đứng», và mốc ấy chỉ đặt được ở bước Mặt bằng. Bước Phối
+cảnh luôn dựng trên bản mặt đứng hiệu lực. Không bước nào có chỗ chọn.
+
+**Thiết kế: ô chọn đặt chính MỐC hiệu lực, không giữ lựa chọn riêng.** Mọi nơi đọc «phương án làm nền» đều nói về
+cùng một cái: đầu bài lấy bề rộng cửa, nhãn «theo phương án cũ / mặt đứng cũ», và lối sang Phối cảnh.
+- **Bước Mặt đứng:** ô «Dựng trên mặt bằng» → `/plan/choose`.
+  - Lượt dựng gửi kèm `planArtifactId`. Worker từ chối 409 khi mã này khác mốc, tức mốc vừa bị đổi ở tab khác hoặc
+    bởi người khác. Như vậy không dựng nhầm trên một ngôi nhà người bấm không chọn.
+  - Dải bước chỉ chặn khi chưa có phương án nào («Cần xếp mặt bằng trước»). Có phương án mà chưa chọn thì nút
+    dựng chờ ô chọn.
+  - Tờ mặt đứng mang nhãn «Dựng trên Phương án N».
+- **Bước Phối cảnh** (nguồn «Ý tưởng mặt đứng của AI»): hai ô «Dựng trên mặt bằng» và «Dựng trên mặt đứng».
+  - Ô mặt đứng chỉ liệt kê bản dựng trên phương án đã chọn, vì chọn chéo là trộn hai ngôi nhà. Phương án chưa có
+    mặt đứng thì ghi rõ và không cho dựng.
+  - Đổi phương án: đặt mốc mặt bằng, rồi mốc mặt đứng sang bản đang hiệu lực nếu nó thuộc phương án ấy, không thì
+    bản mới nhất của phương án ấy.
+  - Nguồn «Bản vẽ kỹ sư tải lên» giữ nguyên.
+- **`/state`** trả `planRef` cho từng bản mặt đứng, đọc từ cạnh lineage bằng MỘT truy vấn
+  (`ArtifactRepository.inputsAmong`), không tải payload từng bản.
+  - Phương án đã ẩn thì `planRef` rỗng.
+  - Giao diện vẫn chạy với máy chủ cũ chưa trả trường này: bản hiệu lực dùng `facadePlanRef`, và chỉ chặn khi
+    biết chắc.
+
+### T153 — Lượt hỏng 75ba5793: ba lỗi của chương trình làm hỏng một bố cục đúng (11/10/2026, Haan: «làm cả 4»)
+
+Lượt xếp mặt bằng trên máy, nhà ống 5 × 18 m 4 tầng, gara mặt tiền («Nhà ống Hoàng Mai (demo)»), tốn năm lượt
+gọi (0,499 USD) mà không ra phương án. Phát lại ở máy, không gọi mô hình, cho thấy vòng 1 tầng 1 đã đúng bố cục:
+gara → khách → ăn + bếp → thang + hành lang + WC → giếng trời, vào nhà qua gara như Haan duyệt 04/10. Chương trình
+làm hỏng nó theo bốn đường.
+
+1. **Ô thang giáp giếng trời hụt 1,5 cm, mà chính bộ xếp gán con số ấy.**
+   - `sketchMinExtent` chừa thêm một bề dày VÁCH NGĂN (11 cm) khi đòi chiều dài ô thang. Bộ kiểm
+     (`shortStairs`) lại đo LỌT LÒNG: đầu giáp giếng trời là tường bao, nên lọt lòng = 375 − 11 − 5,5 = 358,5 cm,
+     trong khi bộ kiểm đòi 360 cm.
+   - Sửa: chừa theo TƯỜNG BAO (`walls.exterior_m`), trường hợp xấu nhất.
+   - Phát lại 209 vòng ghi: 19 = 19 mặt bằng qua, 0 tiến, 0 lùi. Bộ ghi cũ gần như toàn biệt thự 15 × 20 m,
+     không có ô thang giáp giếng trời.
+2. **Lỗi bị che.** Lối vào qua gara (T51) đã được thử nhưng hỏng vì đúng lỗi thang ở mục 1. Lỗi báo lại là của
+   phương án đầu, «phòng khách không có cửa ra mặt tiền», nên mô hình sửa sai chỗ bốn vòng liền và vòng 4 dời
+   gara ra sau nhà.
+   - Sửa: đã thử nhiều phòng mang cửa chính mà không cách nào qua thì báo lỗi của cách thử ÍT lỗi chặn nhất, kèm
+     ghi chú `entry_room_tried`.
+3. **Ô kho 2 m² kẹt góc làm cả tầng 1 bị gửi lại mô hình.**
+   - Sửa: `ai/stranded.ts` nhập phòng phụ nhỏ không chạm lối đi nào vào phòng kề chung nhiều cạnh nhất, trước khi
+     xếp. Ý định đã nhập cũng là ý định gửi lượt sửa.
+   - Phạm vi đặt ở kb: `kb/construction_norms.yaml` `sketch.absorb_stranded` (kho, tủ đồ, ≤ 4 m²).
+   - Ba ngoại lệ: không đụng phòng đầu bài yêu cầu ở tầng ấy; không nhập vào thang, thang máy, gara, hiên; có
+     ghi chú cho kỹ sư.
+   - Phát lại 213 vòng: 19 = 19, 0 lùi; chỉ lượt 75ba5793 đổi (tầng 1 vòng 1 qua).
+4. **Vòng sửa không nhận ra câu trả lời lặp.** Chốt `unchanged` chỉ so với ý định VỪA gửi, nhưng lượt sửa gửi lại
+   lượt hỏng nhẹ nhất cũ hơn (T73 i), nên vòng 3 y hệt vòng 2 vẫn lọt.
+   - Sửa: `houseAnswerKey` gồm bản phác, danh mục, quan hệ, lối vào; bỏ lời văn tự do. Vòng lặp (Workflow và
+     đường đồng bộ) nhớ mọi câu trả lời đã chấm; gặp lại thì dừng như `unchanged`.
+
+**Kết quả phát lại lượt 75ba5793 với mã mới:**
+- Vòng 1: chỉ còn lỗi tầng 3, lỗi thật của mô hình.
+- Vòng 2: **qua với 64,5 điểm**, ngưỡng nhận 60.
+- Lượt chạy lẽ ra xong sau 2 lượt gọi (khoảng 0,32 USD).
+
+**Hàng rào:**
+- `__tests__/ai-run-75ba.test.ts` với tệp lượt ghi `fixtures/ai-run-75ba5793.json`. Từ nay lượt này cũng vào bộ
+  phát lại.
+- `__tests__/ai-stranded.test.ts`.
+- Đột biến M203 (chừa theo vách ngăn), M204 (tắt nhập kho), M205 (khoá bỏ bản phác). Số M203+ vì nhánh
+  `ai-design-duong-so-do` đã dùng M199–M202.
+- Bộ phát lại lưu ở `.sao-luu/75ba5793/`.
+
+**Đánh số:** quyết định này là T153, phần chọn nền mặt đứng / phối cảnh là T152. Nhánh `ai-design-duong-so-do`
+(chưa merge) đã dùng T147–T151. T147 «tờ mặt đứng chi tiết» (PR #22) trùng số với T147 «sửa tay» của nhánh ấy —
+phải đổi một trong hai khi merge.

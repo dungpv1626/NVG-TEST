@@ -408,3 +408,10 @@ sketch:
   # tha phần lẻ do căn vách làm tròn. Lượt thật 4198d692: `bedroom_3` 14,92 / 15 m² làm mất ba lượt sửa.
   # Bản phác vẫn dùng `area_slack_ratio` riêng ở trên.
   floor_tolerance_ratio: 0.03
+  # Phòng PHỤ nhỏ trên bản phác không chạm lối đi nào (kho, tủ đồ kẹt ở góc): chương trình nhập ô của nó
+  # vào phòng bên cạnh thay vì gửi cả tầng về mô hình (T153). Lượt 75ba5793 (10/10/2026): kho 2 m² kẹt
+  # giữa giếng trời và WC làm cả tầng 1 — vốn đúng — bị gửi lại, bốn vòng sửa sau làm tầng 1 tệ dần.
+  # Phòng đầu bài yêu cầu ở tầng ấy thì KHÔNG nhập — vẫn báo về mô hình. Bỏ mục này là tắt.
+  absorb_stranded:
+    types: [storage, closet]
+    max_area_m2: 4
