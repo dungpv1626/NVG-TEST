@@ -9,6 +9,7 @@ Bộ này trả lời câu hỏi: **một người mới đọc hướng dẫn t
 | `01_BAT_DAU_TU_DAY.pdf` | Ngày đầu tiên và một trang cho mỗi vai trò: năm việc đầu tiên, cách biết đã làm đúng, việc đừng làm |
 | `02_BAN_DO_QUY_TRINH.pdf` | Năm bản đồ quy trình xuyên phòng: ai làm trước, ai nhận việc sau |
 | `03_THUAT_NGU_VA_VIEC_KHONG_SUA_DUOC.pdf` | Thuật ngữ, bảng việc không sửa được (ghi nhầm thì làm gì), cách đọc con số |
+| `04_HANH_TRINH_MOT_DU_AN.pdf` | **Đường đi của một dự án** từ lần liên hệ đầu tới thu tiền: mười hai giai đoạn của NVC, nhánh thiết kế của NVO, thuê giàn giáo của NVS; ai làm, ở màn hình nào, ai duyệt, bàn giao cho ai, con số nào đổi, cổng kiểm từng bước |
 | `08_HANH_CHINH_NHAN_SU_DAY_DU.pdf` | Hướng dẫn đầy đủ Nhân sự (trước đây chỉ có thẻ một trang) |
 | `09_TRUONG_PHONG_THI_CONG_DAY_DU.pdf` | Hướng dẫn đầy đủ Trưởng phòng Thi công |
 | `10_QUAN_TRI_HE_THONG.pdf` | Hướng dẫn Quản trị hệ thống và vận hành (thẻ cũ trỏ tới tệp này nhưng chưa có) |
