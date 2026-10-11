@@ -233,6 +233,13 @@ aiApp.get('/state/:projectId', async (c) => {
   const visiblePlans = plans.filter((p) => !hidden.has(p.id)).slice(0, 12);
   const visibleFacades = facades.filter((f) => !hidden.has(f.id)).slice(0, 12);
   const visibleImageSets = imageSets.filter((s) => !hidden.has(s.id)).slice(0, 12);
+  // Mỗi bản mặt đứng dựng trên phương án nào — để bước Mặt đứng và Phối cảnh cho chọn «dựng trên
+  // mặt bằng / mặt đứng» (Haan, 10/10/2026). Đọc CẠNH lineage, một truy vấn, không tải payload; chỉ
+  // giữ input là phương án đang hiện — phương án đã ẩn thì bản mặt đứng ấy không gắn phương án nào.
+  const facadePlans = await repo.inputsAmong(
+    visibleFacades.map((f) => f.id),
+    new Set(visiblePlans.map((p) => p.id)),
+  );
 
   const headId = (planHead.data?.artifact_id as string | undefined) ?? null;
 
@@ -264,7 +271,11 @@ aiApp.get('/state/:projectId', async (c) => {
     planHeadArtifactId: headId && !hidden.has(headId) ? headId : null,
     facadeArtifactId: facade?.id ?? null,
     // Các bản mặt đứng còn hiện, mới nhất trước — để kỹ sư mở lại bản cũ mà so.
-    facades: visibleFacades.map((f) => ({ artifactId: f.id, createdAt: f.createdAt })),
+    facades: visibleFacades.map((f) => ({
+      artifactId: f.id,
+      createdAt: f.createdAt,
+      planRef: facadePlans.get(f.id) ?? null,
+    })),
     // Mặt bằng mà mặt đứng hiện hành dựng theo (T59). Khác `planHeadArtifactId` nghĩa là kỹ sư đã đổi
     // phương án sau khi dựng mặt đứng — màn hình gắn nhãn «dựng theo phương án cũ».
     facadePlanRef: (facade?.payload as { plan_ref?: string } | undefined)?.plan_ref ?? null,

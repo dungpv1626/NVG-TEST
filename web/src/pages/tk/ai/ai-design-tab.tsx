@@ -90,9 +90,9 @@ function statusOf(
         // Mặt đứng dựng theo phương án cũ (T59) chưa tính là xong: cửa trên tờ ấy của nhà khác.
         done: Boolean(state.facadeArtifactId) && !facadeIsStale(state),
         running: run('facade'),
-        // Có phương án là chưa đủ: phải có phương án được CHỌN. Mặt đứng dựng theo đúng một mặt
-        // bằng, và chọn bản nào là quyết định của người (PRD 2.3).
-        blocked: state.planHeadArtifactId ? null : 'Cần chọn một phương án mặt bằng trước.',
+        // Chỉ chặn khi chưa có phương án nào. Chọn phương án làm nền là việc NGAY TRONG bước này (ô
+        // «Dựng trên mặt bằng», 10/10/2026) — vẫn là người chọn (PRD 2.3), nút dựng chờ ô chọn.
+        blocked: state.plans.length > 0 ? null : 'Cần xếp mặt bằng trước.',
         count: 0,
       };
     case 'phoi-canh':

@@ -300,7 +300,11 @@ export interface AiDesignState {
    * Mọi bản mặt đứng còn hiện, mới nhất trước (20/09/2026). Vắng ở máy chủ cũ — khi ấy màn hình chỉ
    * có bản hiệu lực, đúng như trước.
    */
-  facades?: Array<{ artifactId: string; createdAt: string }>;
+  /**
+   * `planRef` — phương án mặt bằng bản ấy dựng trên (cạnh lineage, 10/10/2026); rỗng khi phương án
+   * ấy đã ẩn hoặc máy chủ cũ chưa trả trường này.
+   */
+  facades?: Array<{ artifactId: string; createdAt: string; planRef?: string | null }>;
   /**
    * Mặt bằng mà mặt đứng hiện hành dựng theo (T59). Khác `planHeadArtifactId` = kỹ sư đã đổi phương án
    * sau khi dựng mặt đứng; mặt đứng cũ vẫn giữ, gắn nhãn «dựng theo phương án cũ».
