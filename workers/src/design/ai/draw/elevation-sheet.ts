@@ -746,7 +746,8 @@ export function elevationBounds(concept: AiFacadeConcept, options: ElevationOpti
   }
   for (const balcony of concept.balconies ?? []) {
     const z = e.levels.find((l) => l.level === balcony.level)?.z ?? 0;
-    points.push([balcony.x0, z + options.railingHeightCm]);
+    // Cả hai mép: từ T156 thân tầng là khối kín, ban công đua bên phải nằm ngoài thân — thiếu mép phải thì lan can bị cắt.
+    points.push([balcony.x0, z + options.railingHeightCm], [balcony.x1, z]);
   }
   const first = [...e.levels].sort((a, b) => a.level - b.level)[0];
   for (const step of options.plan?.levels.find((l) => l.level === first?.level)?.entry_steps ??

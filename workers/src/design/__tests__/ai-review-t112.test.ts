@@ -262,7 +262,9 @@ describe('lời dẫn 9.4.0 ghép theo đầu bài', () => {
     const text = system(context.promptFlags);
     expect(text).not.toMatch(/kitchen and\s+wc grouped/);
     expect(text).toMatch(/not sharing a wall, doors not facing/);
-    expect(text).toContain('A room with `ensuite_of` opens only from its parent bedroom.');
+    expect(text).toContain('A room with `ensuite_of` opens only from its parent bedroom');
+    // T155 (lượt 79669685): phòng con không phục vụ phòng khác — giặt phơi không mở qua ban công riêng của phòng ngủ.
+    expect(text).toMatch(/serves no other room: no\s+laundry off a bedroom's own balcony\./);
   });
 
   it('cờ lạ trong tệp dữ liệu là lỗi, không gửi chữ thô', () => {

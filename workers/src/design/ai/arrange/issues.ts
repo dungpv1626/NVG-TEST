@@ -22,6 +22,7 @@ export const ARRANGE_ISSUE_CODES = [
   'arrange_zone_overfull',
   'altar_door_behind',
   'stair_entry_long_side',
+  'stair_arrival_blocked',
   'arrange_no_hub_wall',
   'arrange_program_exceeds_footprint',
   'arrange_room_too_narrow',
@@ -117,6 +118,9 @@ export const REVISABLE_CODES: ReadonlySet<string> = new Set([
   // Lối lên thang chỉ mở được ở cạnh dài (T105, Haan chấm lượt 25fdc90c: «bậc 1 giáp tường kho, không biết đi
   // lên thế nào»): đầu ngắn chỗ bậc 1 phải giáp hành lang / khu chung — bản phác đặt phòng quanh thang.
   'stair_entry_long_side',
+  // Tầng trên: đầu người từ dưới bước ra không giáp lối đi (T157) — bản phác đặt phòng chắn đầu thang; mô hình kê hành
+  // lang ngang đầu ấy. Mở cạnh dài thay thế là lối ra giữa vế bậc.
+  'stair_arrival_blocked',
   // Cửa phòng thờ chỉ mở được sau lưng bàn thờ theo hướng gia chủ khai (T106): bản phác đặt phòng thờ sai phía hành lang.
   'altar_door_behind',
   // Bản phác lưới (T48): chính hình mô hình vẽ — thiếu phòng, phòng không chữ nhật, chong chóng, quá
@@ -172,6 +176,19 @@ export const BAND_REVISABLE_CODES: ReadonlySet<string> = new Set([
   'door_wall_too_short',
   'room_through_private',
   'arrange_room_too_narrow',
+]);
+
+/**
+ * Lỗi của BẢN PHÁC đi theo tầng mà chương trình đã chia lại được (`ArrangeResult.sketchFailure`). Rộng hơn
+ * `REVISABLE_CODES`: bản phác trượt cổng vì phòng không cửa, phòng hẹp… là chỗ mô hình vẽ, cùng lẽ với đường dải. Lọc
+ * bằng `REVISABLE_CODES` thì lỗi gốc rơi mất — lượt thật 79669685 (11/10/2026): giặt phơi tầng 2 chỉ giáp ban công
+ * riêng của phòng ngủ, cổng bác bản phác, chương trình chia lại và nắn ban công trước thành khối góc; mô hình chỉ nhận
+ * câu «ban công chỉ chạm mặt trước ở góc» trong khi bản phác của nó có ban công chạy suốt mặt trước, nên trả lại y
+ * nguyên tới hết lượt sửa. Chỉ đổi câu nhắc và việc giữ tầng; lượt chạy dừng hay gọi lại vẫn theo `REVISABLE_CODES`.
+ */
+export const SKETCH_FAILURE_CODES: ReadonlySet<string> = new Set([
+  ...REVISABLE_CODES,
+  ...BAND_REVISABLE_CODES,
 ]);
 
 /** Lỗi này mô hình sửa được bằng cách đổi ý định không. */

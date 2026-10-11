@@ -103,25 +103,31 @@ export function facadeFrame(
   const openings: FacadeOpening[] = [];
   const balconies: FacadeBalcony[] = [];
   let minFrontY = Infinity;
+  // Khung = hợp hình bao các tầng, gồm cả ban công đua ra ngoài khối kín (lan can vẽ ngoài thân tường).
+  let outlineX0 = Infinity;
+  let outlineX1 = -Infinity;
 
   for (const level of levels) {
     const outline = level.outline.map(toPt);
     const xs = outline.map(([x]) => x);
+    const body = enclosedSpan(level);
     frameLevels.push({
       level: level.level,
       z: half(z),
       h: level.h,
-      x0: half(Math.min(...xs)),
-      x1: half(Math.max(...xs)),
+      x0: body?.x0 ?? half(Math.min(...xs)),
+      x1: body?.x1 ?? half(Math.max(...xs)),
     });
+    outlineX0 = Math.min(outlineX0, half(Math.min(...xs)));
+    outlineX1 = Math.max(outlineX1, half(Math.max(...xs)));
     for (const [, y] of outline) minFrontY = Math.min(minFrontY, y);
     openings.push(...levelOpenings(level, outline, norms, outdoor));
     balconies.push(...levelBalconies(level, outline, outdoor));
     z += level.h;
   }
 
-  const x0 = Math.min(...frameLevels.map((l) => l.x0));
-  const x1 = Math.max(...frameLevels.map((l) => l.x1));
+  const x0 = outlineX0;
+  const x1 = outlineX1;
   const sorted = openings.sort((a, b) => a.level - b.level || a.x - b.x);
   const main = mainDoorOf(sorted);
   const heighted = sorted.map((o) => {
@@ -147,6 +153,73 @@ export function facadeFrame(
     balconies,
     frontYard: minFrontY > 0,
   };
+}
+
+/**
+ * Bề ngang khối KÍN của một tầng: mép ngoài các tường bao (`k: 'e'`), cm. `null` khi tầng không có tường bao nào.
+ *
+ * Hình bao tầng gồm cả ban công đua ra ngoài ranh — lấy bề ngang tầng từ hình bao thì mặt đứng dựng tường và mái
+ * lên trên phần ban công (lượt 6e155ce6, 11/10/2026, Haan: «tầng 2 ở mặt bên trái chỉ có ban công thò ra thôi», T156).
+ * Ban công không có tường bao: mép ngoài của nó là lan can (`k: 'r'`). Kết quả luôn nằm trong hình bao.
+ */
+export function enclosedSpan(level: Level): { x0: number; x1: number } | null {
+  const xs = level.outline.map((point) => toPt(point)[0]);
+  if (!xs.length) return null;
+  let x0 = Infinity;
+  let x1 = -Infinity;
+  for (const wall of level.walls) {
+    if (wall.k !== 'e') continue;
+    for (const end of [wall.a, wall.b]) {
+      const [x] = toPt(end);
+      x0 = Math.min(x0, x - wall.t / 2);
+      x1 = Math.max(x1, x + wall.t / 2);
+    }
+  }
+  if (x0 > x1) return null;
+  // Kẹp vào hình bao: có mặt bằng đặt trục tường bao ngay trên hình bao (nửa bề dày tường lòi ra ngoài).
+  return { x0: half(Math.max(x0, Math.min(...xs))), x1: half(Math.min(x1, Math.max(...xs))) };
+}
+
+/** Chi tiết chạy dọc thân tường — cắt theo thân tầng chứa nó, không được thò ra trên ban công đua. */
+const WALL_BANDS: ReadonlySet<string> = new Set(['cornice', 'eaves_band', 'reveal']);
+
+/**
+ * Thu thân từng tầng về khối kín (`enclosedSpan`) và cắt các dải chạy dọc tường (phào, diềm mái, ron) theo thân tầng
+ * chứa chúng — dải trên mái theo tầng trên cùng. Chỉ thu hẹp, không nới; không có mặt bằng thì giữ nguyên.
+ *
+ * Gọi lúc VẼ (tờ, ảnh neo, DXF): ý tưởng mặt đứng là artifact bất biến, và mọi ý tưởng lưu trước T156 lấy bề ngang tầng
+ * từ hình bao gồm cả ban công đua; mô hình cũng đặt dải trang trí theo bề ngang ấy (lượt 6e155ce6: phào và diềm mái
+ * x 150–1500 trong khi thân tầng 2 là 250–1500).
+ */
+export function withEnclosedLevels(
+  concept: AiFacadeConcept,
+  plan: AiFloorPlan | null | undefined,
+): AiFacadeConcept {
+  if (!plan) return concept;
+  const levels = concept.elevation.levels.map((level) => {
+    const own = plan.levels.find((item) => item.level === level.level);
+    const body = own ? enclosedSpan(own) : null;
+    if (!body) return level;
+    const x0 = Math.max(level.x0, body.x0);
+    const x1 = Math.min(level.x1, body.x1);
+    return x0 < x1 ? { ...level, x0, x1 } : level;
+  });
+  const top = [...levels].sort((a, b) => b.z - a.z)[0];
+  const bodyAt = (z: number) =>
+    levels.find((level) => z >= level.z && z < level.z + level.h) ??
+    (top && z >= top.z + top.h ? top : undefined);
+  const elements = (concept.elevation.elements ?? []).map((element) => {
+    if (!WALL_BANDS.has(element.kind)) return element;
+    const [x0 = 0, z0 = 0, x1 = 0, z1 = 0] = element.rect;
+    const body = bodyAt((z0 + z1) / 2);
+    if (!body) return element;
+    const cx0 = Math.max(x0, body.x0);
+    const cx1 = Math.min(x1, body.x1);
+    return cx0 < cx1 && (cx0 !== x0 || cx1 !== x1)
+      ? { ...element, rect: [cx0, z0, cx1, z1] }
+      : element;
+  });
+  return { ...concept, elevation: { ...concept.elevation, levels, elements } };
 }
 
 /**

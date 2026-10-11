@@ -18,6 +18,7 @@ import { parseMandatoryRules } from '../ai/mandatory';
 import {
   entryBoxedIssue,
   evaluateHouse,
+  evaluateHouseBest,
   planContext,
   programGenerator,
   retryPlan,
@@ -115,5 +116,26 @@ describe('entryBoxedIssue', () => {
 
   it('có dòng gợi ý tiếng Anh trong lời dẫn', () => {
     expect(prompts.floorLevel.hints.entry_room_boxed_in).toContain('{room}');
+  });
+});
+
+/*
+ * T155: bản phác một tầng trượt cổng vì lỗi mô hình sửa được nhưng ngoài `REVISABLE_CODES` (phòng không cửa…), tầng ấy
+ * chương trình chia lại được — lỗi gốc phải đi cùng câu «Your sketch of storey N failed», không rơi mất
+ * (`SKETCH_FAILURE_CODES`). Vòng 1 lượt này: tầng 1 chia lại vì `wc_1` không có cửa trên bản phác.
+ */
+describe('phát lại 458d9a91 vòng 1 — lỗi bản phác ngoài REVISABLE_CODES vẫn tới mô hình (T155)', () => {
+  it('câu «sketch of storey 1 failed» kèm đúng lỗi gốc: wc_1 không có cửa', () => {
+    const input = { ...realContextInput(run.digest), mandatory };
+    const result = evaluateHouseBest(
+      input,
+      planContext(input),
+      run.intents.round1!,
+      generator,
+      prompts,
+    );
+    const hints = result.hints.join('\n');
+    expect(hints).toMatch(/Your sketch of storey 1 failed the checks below/);
+    expect(hints).toMatch(/Storey 1: Room "wc_1" had no door/);
   });
 });

@@ -25,7 +25,8 @@
 # 9.2.0 (30/09/2026, T107): hành lang là các dải chữ nhật, hết mâu thuẫn «spine, L, T» với «mỗi phòng một chữ nhật»; bước tự kiểm lối vào trước khi trả lời; lượt sửa gửi tầng chưa khoá với mã ngắn; sketch_pinwheel_at và sketch_room_no_access chỉ chỗ bằng hàng/cột, bỏ đoạn giảng luật lặp.
 # 9.1.0 (30/09/2026, T105): thêm câu nhắc D2 (phòng ngủ tối hẳn) stair_entry_long_side (lối lên thang ở cạnh dài) và C11 (gara vào phòng khách) — lượt 25fdc90c; stair_cells (ô thang tầng trên nói ngay từ lượt sửa đầu) — lượt 1330ce12; loại thang gửi trong dữ liệu `stair_min_m.shape`, không thêm chữ vào lời dẫn (trần T46); altar_door_behind (T106).
 # 9.9.1 (04/10/2026, T115 — Haan chọn (a)): luật R_entry_garage (`when: entry_via_garage`) — nhà phố có gara cùng mặt cửa chính thì gara được làm entry_room, người vào cạnh xe; không đẩy phòng khách ra trước gara (lượt thật e34f8f58).
-version: '9.9.1'
+# 9.9.2 (11/10/2026, T155 — lượt thật 79669685; T157): khối `floor_level` nói phòng khép kín / ban công riêng không phục vụ phòng khác (giặt phơi không mở qua ban công riêng của phòng ngủ); câu nhắc balcony_side_missing_reshaped (bản phác ĐÃ có ban công dọc mặt ấy, chương trình chia lại tầng mới nắn thành khối góc); câu nhắc stair_arrival_blocked (tầng trên: đầu người từ dưới bước ra không giáp lối đi, T157).
+version: '9.9.2'
 
 program:
   system: |
@@ -220,7 +221,8 @@ floor_level:
     - People walk through only `knowledge.walk_through`, and through `knowledge.entry_through` only
       from outside. Every other room shares a wall with a walk-through room or a type listed for it
       in `knowledge.served_from`, stated as an `adjacent` relationship.
-    - A room with `ensuite_of` opens only from its parent bedroom.
+    - A room with `ensuite_of` opens only from its parent bedroom and serves no other room: no
+      laundry off a bedroom's own balcony.
     - Else, after the stair, BEFORE rooms, draw the corridor: `circulation` rectangles
       `knowledge.corridor_min_cells` cells wide; a turn is a second rectangle meeting the first
       along its full width, never a T or L in one id. It runs along the stair and every room
@@ -339,6 +341,7 @@ floor_level:
     door_outside_on_boundary: '- "{room}" needs a door to the outside but only touches a neighbour''s side; draw it touching the street row or another open side, with no other room between it and that side.'
     ensuite_door_wrong: '- "{room}" is en-suite to "{parent}" but ended up away from it; draw it against "{parent}".'
     door_from_stair: '- Room "{room}" could only be entered from the stair "{stair}"; only corridors, the living/dining space, the roof terrace and the elevator open off the stair; every other room (wc, kitchen and storage included) opens off a corridor — draw a corridor between them.'
+    stair_arrival_blocked: '- The stair "{stair}": people from the storey below step off on its {end} side, but that side touches only {touching}. Put the corridor or the living space along that whole {end} side of "{stair}", where the flight arrives; an opening anywhere else on the stair is beside a flight and nobody can step out there.'
     stair_entry_long_side: '- The stair "{stair}" can only be entered from its long side (from "{host}"), beside the rising flight; put a corridor or the living/hall space across one of its SHORT ends, where the first step starts.'
     altar_door_behind: '- The altar room "{room}" can only be entered through its wall behind the altar (the altar faces the direction the client gave); put a corridor or shared room on another side of it and open the door there.'
     wc_over_kitchen: '- The wc "{room}" on storey {level} sits over the kitchen "{below}" of the storey below; a kitchen must never be under a wc — move the wc onto the wc stack below, or move the kitchen.'
@@ -357,6 +360,8 @@ floor_level:
     balcony_side_missing: '- The client wants a balcony on the {side} side, but none of the balconies touches that side of the storey; draw one with its long side along the {side} edge.'
     # T112: có ban công chạm mặt ấy nhưng chỉ ở góc (8eaaee7b vòng 4–5 kẹt vì câu trên nói «không cái nào chạm»).
     balcony_side_missing_corner: '- The client wants a balcony on the {side} side. "{room}" touches that side only at a corner and its long side is not on it, so it does not count there — one corner balcony never covers two sides. Draw a separate balcony with its long side along the {side} edge.'
+    balcony_side_missing_reshaped: '- Your sketch already runs "{room}" along the {side} edge; it became a corner block only because the program had to partition storey {reshaped} itself (problems above). Fix those and keep "{room}" as drawn.'
+    balcony_side_missing_fitted: '- You drew "{room}" along the {side} edge, but fitted to the walls it came out as a block in the corner, too short along that edge; make it longer along the {side} edge and keep it clear of the corner.'
     balcony_side_corner: '- On the sketch the only balcony on the {side} side, "{room}", is a {along} × {across}-cell block in the corner; the plan will not count it for the {side} side. Run a balcony along the {side} edge, its long side on that edge.'
     balcony_side_not_wanted: '- The client allows balconies only on the sides listed in the brief, but "{room}" on storey {level} is on the {side} side; move it to an allowed side or drop it.'
     balcony_level_missing: '- The client wants a balcony on every upper storey, but storey {level} has none; draw one on an open face.'
@@ -1014,6 +1019,7 @@ house_layout:
     sketch_stair_only: '- {rooms} can only be entered from the stair; only corridors, the living/dining space, the roof terrace and the elevator open off the stair — give each at least {door_mm} mm of wall on a corridor or shared room.'
     sketch_room_no_access: '- {rooms} have no way in. {detail} Each needs at least {door_mm} mm of straight shared wall with a corridor or shared room that leads to the stair (see Access), and a `door` relationship with it; run the corridor to it, or move the room onto the corridor. Keep the way in of: {keep}.{also}'
     door_outside_on_boundary: '- "{room}" needs a door to the outside but only touches a neighbour''s side; place it touching the street edge (y = 0) or another open side, with no other room between it and that side.'
+    balcony_side_missing_reshaped: '- Your layout already runs "{room}" along the {side} edge; it became a corner block only because the program had to partition storey {reshaped} itself (problems above). Fix those and keep "{room}" as placed.'
     balcony_side_corner: '- The only balcony on the {side} side, "{room}", is a {along_mm} × {across_mm} mm block in the corner; the plan will not count it for the {side} side. Run a balcony along the {side} edge, its long side on that edge.'
     elevator_missing: '- Storey {level} has no elevator shaft; give it the same elevator rect on every storey, stacked exactly over the one below.'
     elevator_oversized: '- The elevator shaft "{room}" on storey {level} came out {short_cm} × {long_cm} cm, a strip; the client''s shaft is {width_m} × {depth_m} m — give it one compact rect of the `min_rooms` size for `elevator`, on every storey.'

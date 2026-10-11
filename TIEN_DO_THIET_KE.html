@@ -785,6 +785,42 @@
             <tr>
               <td class="num">11/10</td>
               <td>
+                T157 — thang tầng trên mở ra giữa vế bậc (phương án 6 c815a6e6): lối ra phải ở đầu
+                người bước ra (<code>stair_arrival_blocked</code>), cổng loại ứng viên vi phạm; rà
+                soát mã 10 phát hiện, sửa 5
+              </td>
+              <td>
+                Phát lại 217 vòng: 21 → 19, 3 «lùi» đều là thang mở giữa vế bậc; T109/T111 mất ca
+                canh. Chưa commit
+              </td>
+            </tr>
+            <tr>
+              <td class="num">11/10</td>
+              <td>
+                T156 — mặt đứng dựng tường và mái lên trên ban công đua (lượt 6e155ce6): thân tầng
+                lấy theo tường bao (<code>enclosedSpan</code>), ý tưởng đã lưu được nắn lúc vẽ, phào
+                / diềm mái cắt theo thân tầng
+              </td>
+              <td>134 phép thử mặt đứng xanh; M211–M213 bị bắt 3/3. Chưa commit, chưa phát hành</td>
+            </tr>
+            <tr>
+              <td class="num">11/10</td>
+              <td>
+                T155 — lượt hỏng 79669685 (biệt thự 15 × 20 m, 5 lượt 0,41 USD): ban công đúng trên
+                bản phác mà mô hình nhận câu «chỉ chạm ở góc». Lỗi bản phác ngoài
+                <code>REVISABLE_CODES</code> nay đi theo tầng chia lại
+                (<code>SKETCH_FAILURE_CODES</code>); phòng <code>served_from</code> phải tự tới được
+                (giặt phơi không mở qua ban công riêng của phòng ngủ), lời dẫn 9.9.2; câu ban công
+                khối góc nói đúng khi khối góc do chương trình (<code>truthfulBalconyIssues</code>)
+              </td>
+              <td>
+                Phát lại 213 vòng: 20 → 21 mặt bằng qua, 0 lùi; đột biến M207–M210 bị bắt 4/4; 1.144
+                phép thử ai-* xanh. Chưa commit
+              </td>
+            </tr>
+            <tr>
+              <td class="num">11/10</td>
+              <td>
                 T153 — lượt hỏng 75ba5793 (nhà ống 5 m gara mặt tiền, 5 lượt 0,5 USD không ra phương
                 án): ô thang chừa theo tường bao (hụt 1,5 cm do chính bộ xếp); báo lỗi của cách đặt
                 cửa chính gần qua nhất; nhập phòng phụ nhỏ kẹt (<code>ai/stranded.ts</code>,

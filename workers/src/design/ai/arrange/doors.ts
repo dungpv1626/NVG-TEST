@@ -416,10 +416,48 @@ export function deriveDoors(input: DoorsInput): DoorsResult {
   }
   const stair = stairId && up ? { room: stairId, up } : null;
 
+  // Tầng trên: lối ra của ô thang phải ở ĐẦU người từ tầng dưới bước ra (`stairArrival`). Mở ở cạnh dài là mở ngang vế
+  // bậc — lối ra nằm giữa thang, không bước ra được (T157, Haan 11/10/2026, phương án 6 hồ sơ c815a6e6: «vách quây kín
+  // 3 góc, một góc mở thì ko thể đi lại qua đó vì nằm ở giữa thang»). Trước đó `stairExitRank` chỉ ƯU TIÊN đầu ấy,
+  // không có thì lặng lẽ mở cạnh dài.
+  // Chỉ khi có thông số loại thang: bản chạy thật luôn có (`chooseStairShape` lùi về chữ U). Vắng là mô hình thang CŨ
+  // (lượt ghi trước T105 — thang U vào theo cạnh dài), áp đầu bước ra thì bác oan (5aba737d, 2ddf782a — rà soát 11/10).
+  if (stairId && input.level > 1 && input.stairUp && input.stairParams) {
+    const r = rect.get(stairId);
+    const need = arrivalSide(input.stairUp, stairArrival(input.stairParams.shape));
+    const exits = doors
+      .filter((door) => door.a === stairId || door.b === stairId)
+      .map((door) => (door.a === stairId ? door.b : door.a))
+      .filter((other) => other !== 'outside' && rect.has(other));
+    if (r && !exits.some((other) => sideOf(r, rect.get(other)!) === need)) {
+      const touching = neighbours(stairId).filter((id) => {
+        const other = rect.get(id);
+        return !!other && sideOf(r, other) === need;
+      });
+      reasons.push(
+        arrangeIssue(
+          'stair_arrival_blocked',
+          `Ô thang "${stairId}" ở ${where}: đầu người từ tầng dưới bước ra (${SIDE_VI[need]}) không giáp hành lang hay khu chung nào${touching.length ? ` — chỉ giáp ${touching.join(', ')}` : ''}; mở ở cạnh dài là mở ngang vế bậc, không bước ra được.`,
+          { stair: stairId, end: SIDE_EN[need], touching: touching.join(', ') || 'nothing' },
+          stairId,
+        ),
+      );
+    }
+  }
+
   return { doors, also, stair, reasons };
 }
 
 export type StairSide = 'x0' | 'x1' | 'y0' | 'y1';
+
+/** Tên cạnh ô thang trong câu báo (tiếng Việt) và câu nhắc (tiếng Anh, theo hướng nhìn từ đường). */
+const SIDE_VI: Record<StairSide, string> = {
+  y0: 'đầu phía mặt tiền',
+  y1: 'đầu phía sau nhà',
+  x0: 'cạnh bên trái',
+  x1: 'cạnh bên phải',
+};
+const SIDE_EN: Record<StairSide, string> = { y0: 'street', y1: 'back', x0: 'left', x1: 'right' };
 
 /** Phía của ô thang mà phòng `other` nằm ngay bên kia; `null` khi không chung cạnh. */
 function sideOf(r: Rect, other: Rect): StairSide | null {
