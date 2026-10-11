@@ -707,6 +707,12 @@ facadeApp.post('/runs', async (c) => {
     projectId?: string;
     route?: string;
     reasoningEffort?: string;
+    /**
+     * Phương án mặt bằng người bấm ĐANG THẤY ở ô «Dựng trên mặt bằng» (10/10/2026). Ô ấy đặt mốc
+     * mặt bằng (`/plan/choose`) nên bình thường trùng mốc; khác nhau nghĩa là mốc vừa đổi ở nơi khác
+     * (người khác, tab khác) — dừng lại thay vì dựng trên một ngôi nhà người bấm không chọn.
+     */
+    planArtifactId?: string;
   };
   if (!body.projectId) return c.json({ error: 'Thiếu mã hồ sơ thiết kế.' }, 400);
   if (!body.route) return c.json({ error: 'Chưa chọn model AI.' }, 400);
@@ -752,6 +758,15 @@ facadeApp.post('/runs', async (c) => {
   const planRef = await planHeadOf(db, body.projectId);
   if (!planRef) {
     return c.json({ error: 'Cần chọn một phương án mặt bằng trước khi dựng mặt đứng.' }, 409);
+  }
+  if (body.planArtifactId && body.planArtifactId !== planRef) {
+    return c.json(
+      {
+        error:
+          'Phương án mặt bằng dùng cho mặt đứng vừa được đổi ở nơi khác. Tải lại trang, kiểm ô «Dựng trên mặt bằng» rồi bấm dựng lại.',
+      },
+      409,
+    );
   }
   // Yêu cầu mặt đứng — chốt mã ở đây, sửa giữa chừng không đổi lượt này. Từ T114 nằm trong đầu bài
   // (phần `facade`); đầu bài chưa có phần ấy thì dùng phiếu riêng kỹ sư lưu trước T114, nếu có.

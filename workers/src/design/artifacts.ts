@@ -326,6 +326,29 @@ export class ArtifactRepository {
     return (data ?? []).map((r) => r.to_id as string);
   }
 
+  /**
+   * Input trực tiếp của nhiều artifact một lúc, chỉ giữ input nằm trong `candidates` — MỘT truy vấn
+   * cạnh, không nạp payload. Dùng để biết bản mặt đứng nào dựng trên phương án mặt bằng nào mà
+   * không phải tải từng ý tưởng từ kho (`plan_ref` nằm trong payload).
+   */
+  async inputsAmong(
+    toIds: readonly string[],
+    candidates: ReadonlySet<string>,
+  ): Promise<Map<string, string>> {
+    const out = new Map<string, string>();
+    if (toIds.length === 0 || candidates.size === 0) return out;
+    const { data, error } = await this.db
+      .from('design_artifact_edge')
+      .select('from_id, to_id')
+      .in('to_id', [...toIds]);
+    if (error) throw new Error(error.message);
+    for (const row of data ?? []) {
+      const from = row.from_id as string;
+      if (candidates.has(from) && !out.has(row.to_id as string)) out.set(row.to_id as string, from);
+    }
+    return out;
+  }
+
   /** Đường đi ngược từ một artifact về mọi input trực tiếp — nền của "vì sao ra bản này". */
   async lineage(id: string): Promise<Array<{ fromId: string; step: string; paramsHash: string }>> {
     const { data, error } = await this.db

@@ -13,6 +13,12 @@
  *    cấm ấy có tác dụng.
  *  · **Ảnh không đo được.** Không chấm điểm bộ ảnh như mặt bằng và mặt đứng — không có thước nào
  *    đo được một tấm ảnh, và bịa ra một con số là tệ hơn không có.
+ *
+ * Nguồn của bộ ảnh chọn NGAY ở bước này (Haan, 10/10/2026): «Dựng trên mặt bằng» và «Dựng trên mặt
+ * đứng». Ô mặt đứng chỉ liệt kê các bản dựng trên phương án đã chọn — mặt đứng mang cửa, ban công
+ * của đúng một mặt bằng, chọn chéo là trộn hai ngôi nhà. Hai ô đặt chính MỐC hiệu lực (`/plan/choose`,
+ * `/facade/choose`) như ô ở bước Mặt đứng, nên nhãn «theo phương án cũ / mặt đứng cũ» của cả ba
+ * bước vẫn nói đúng một điều.
  */
 
 import { useEffect, useState } from 'react';
@@ -28,7 +34,9 @@ import {
   useAiImageSet,
   useAiImageSetView,
   useAiRun,
+  useChooseAiFacade,
   useChooseAiImageSet,
+  useChooseAiPlan,
   useHideAiImageSet,
   useInvalidateAiDesign,
   useRedrawPerspectiveView,
@@ -41,7 +49,8 @@ import { stampWatermark } from '@/lib/watermark';
 import { Chip, Panel } from '../tk-ui';
 import { AiModePicker, useAiChoice } from './ai-model-picker';
 import { AiRunProgress } from './ai-run-progress';
-import { facadeIsStale, STALE_FACADE } from './ai-facade-step';
+import { facadeIsStale } from './ai-facade-step';
+import { numberedNames } from './variant-name';
 
 /** Tấm gốc của bộ — bốn góc còn lại dựng theo nó, nên nó không vẽ lại lẻ được. */
 const ANCHOR_VIEW = 'front_day';
@@ -65,6 +74,8 @@ export function AiPerspectiveStep({
   const choose = useChooseAiImageSet();
   const hide = useHideAiImageSet();
   const redraw = useRedrawPerspectiveView();
+  const choosePlan = useChooseAiPlan();
+  const chooseFacade = useChooseAiFacade();
   /** Bộ đang MỞ để xem — tách khỏi bộ HIỆU LỰC, cùng lý do với bước Mặt đứng (T64). */
   const [open, setOpen] = useState<string | null>(null);
   const [askHide, setAskHide] = useState<{ artifactId: string; name: string } | null>(null);
@@ -82,6 +93,44 @@ export function AiPerspectiveStep({
   }, [run.data?.status, projectId, invalidate]);
 
   const stale = facadeIsStale(state);
+  // Nguồn ý tưởng AI: phương án mặt bằng → các bản mặt đứng dựng trên nó.
+  const plans = state.plans ?? [];
+  const planNames = numberedNames(plans, 'Phương án');
+  const facades = (state.facades ?? []).map((f) => ({
+    ...f,
+    // Máy chủ cũ chưa trả `planRef` từng bản — bản hiệu lực thì vẫn biết qua `facadePlanRef`.
+    planRef:
+      f.planRef ?? (f.artifactId === state.facadeArtifactId ? (state.facadePlanRef ?? null) : null),
+  }));
+  const facadeNames = numberedNames(facades, 'Mặt đứng');
+  const basePlan = state.planHeadArtifactId;
+  const facadesOfPlan = facades.filter((f) => basePlan && f.planRef === basePlan);
+  const baseFacade =
+    state.facadeArtifactId && facadesOfPlan.some((f) => f.artifactId === state.facadeArtifactId)
+      ? state.facadeArtifactId
+      : null;
+  const switching = choosePlan.isPending || chooseFacade.isPending;
+  const sourceError = choosePlan.error ?? chooseFacade.error;
+
+  /** Đổi phương án làm nền: đặt mốc mặt bằng, rồi mốc mặt đứng sang bản mới nhất của phương án ấy. */
+  const pickPlan = (planId: string) => {
+    const ofPlan = facades
+      .filter((f) => f.planRef === planId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const keep = ofPlan.find((f) => f.artifactId === state.facadeArtifactId);
+    const next = keep ?? ofPlan[0];
+    void choosePlan
+      .mutateAsync({ projectId, artifactId: planId })
+      .then(() =>
+        next && next.artifactId !== state.facadeArtifactId
+          ? chooseFacade.mutateAsync({ projectId, artifactId: next.artifactId })
+          : undefined,
+      )
+      .catch(() => undefined);
+  };
+  const pickFacade = (facadeId: string) => {
+    void chooseFacade.mutateAsync({ projectId, artifactId: facadeId }).catch(() => undefined);
+  };
   // Bộ ảnh dựng theo một mặt đứng KHÁC bản đang hiệu lực: kỹ sư đã dựng lại mặt đứng sau đó.
   const setIsOld = Boolean(
     state.imageSetFacadeRef &&
@@ -106,9 +155,13 @@ export function AiPerspectiveStep({
         : 'Chưa có bản vẽ mặt đứng nào được tải lên. Tải ở cuối bước «Mặt đứng» rồi quay lại đây.'
       : !state.facadeArtifactId
         ? 'Chưa có ý tưởng mặt đứng. Mở bước «Mặt đứng», dựng một ý tưởng (hoặc tải bản vẽ của kỹ sư) rồi quay lại đây.'
-        : stale
-          ? `${STALE_FACADE} Dựng lại mặt đứng theo phương án đang chọn trước khi vẽ phối cảnh.`
-          : null;
+        : // Chỉ chặn khi BIẾT CHẮC: máy chủ cũ không nói bản nào dựng trên phương án nào, khi ấy
+          // bản hiệu lực vẫn dựng được — máy chủ tự lấy mặt bằng từ chính bản ấy.
+          basePlan && facadesOfPlan.length === 0 && facades.some((f) => f.planRef)
+          ? `${planNames.get(basePlan) ?? 'Phương án này'} chưa có mặt đứng. Chọn phương án khác, hoặc dựng mặt đứng cho phương án này ở bước «Mặt đứng».`
+          : stale
+            ? `Chọn một bản mặt đứng của ${planNames.get(basePlan ?? '') ?? 'phương án đã chọn'}.`
+            : null;
 
   const onRun = () => {
     if (!image.choice.route) return;
@@ -142,40 +195,111 @@ export function AiPerspectiveStep({
             )
           }
         >
-          {!readOnly && (state.facadeArtifactId || uploadItems.length > 0) && (
-            <div className="mb-3 flex flex-wrap items-end gap-3">
-              <div>
-                <p className="mb-1 text-xs font-medium text-fg-subtle">Dựng từ mặt đứng</p>
-                <SegmentedControl
-                  options={['ai', 'upload']}
-                  value={activeSource}
-                  onChange={(value) => setSource(value as 'ai' | 'upload')}
-                  getLabel={(value) =>
-                    value === 'ai' ? 'Ý tưởng mặt đứng của AI' : 'Bản vẽ kỹ sư tải lên'
-                  }
-                  disabled={running}
-                />
-              </div>
-              {activeSource === 'upload' && uploadItems.length > 0 && (
-                <label className="block">
-                  <span className="mb-1 block text-xs font-medium text-fg-subtle">Bản vẽ</span>
-                  <select
-                    value={pickedUpload?.uploadId ?? ''}
-                    onChange={(event) => setUploadId(event.target.value)}
+          {!readOnly &&
+            (state.facadeArtifactId || facades.length > 0 || uploadItems.length > 0) && (
+              <div className="mb-3 flex flex-wrap items-end gap-3">
+                <div>
+                  <p className="mb-1 text-xs font-medium text-fg-subtle">Dựng từ mặt đứng</p>
+                  <SegmentedControl
+                    options={['ai', 'upload']}
+                    value={activeSource}
+                    onChange={(value) => setSource(value as 'ai' | 'upload')}
+                    getLabel={(value) =>
+                      value === 'ai' ? 'Ý tưởng mặt đứng của AI' : 'Bản vẽ kỹ sư tải lên'
+                    }
                     disabled={running}
-                    className={FIELD_BOX}
-                  >
-                    {uploadItems.map((item) => (
-                      <option key={item.uploadId} value={item.uploadId}>
-                        {`Tải lên ${formatDateTime(item.createdAt)}${item.note ? ` · ${item.note}` : ''}`}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
-            </div>
-          )}
+                  />
+                </div>
+                {activeSource === 'ai' && facades.length > 0 && (
+                  <>
+                    <label className="block min-w-0">
+                      <span className="mb-1 block text-xs font-medium text-fg-subtle">
+                        Dựng trên mặt bằng
+                      </span>
+                      <select
+                        value={basePlan ?? ''}
+                        onChange={(event) => event.target.value && pickPlan(event.target.value)}
+                        disabled={running || switching}
+                        className={FIELD_BOX}
+                      >
+                        {!basePlan && (
+                          <option value="" disabled>
+                            Chọn một phương án
+                          </option>
+                        )}
+                        {[...plans]
+                          .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+                          .map((plan) => (
+                            <option key={plan.artifactId} value={plan.artifactId}>
+                              {planNames.get(plan.artifactId)}
+                              {facades.some((f) => f.planRef === plan.artifactId)
+                                ? ''
+                                : ' — chưa có mặt đứng'}
+                            </option>
+                          ))}
+                      </select>
+                    </label>
+                    {facadesOfPlan.length > 0 && (
+                      <label className="block min-w-0">
+                        <span className="mb-1 block text-xs font-medium text-fg-subtle">
+                          Dựng trên mặt đứng
+                        </span>
+                        <select
+                          value={baseFacade ?? ''}
+                          onChange={(event) => event.target.value && pickFacade(event.target.value)}
+                          disabled={running || switching}
+                          className={FIELD_BOX}
+                        >
+                          {!baseFacade && (
+                            <option value="" disabled>
+                              Chọn một bản mặt đứng
+                            </option>
+                          )}
+                          {[...facadesOfPlan]
+                            .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+                            .map((facade) => (
+                              <option key={facade.artifactId} value={facade.artifactId}>
+                                {`${facadeNames.get(facade.artifactId) ?? 'Mặt đứng'} — ${formatDateTime(facade.createdAt)}`}
+                              </option>
+                            ))}
+                        </select>
+                      </label>
+                    )}
+                  </>
+                )}
+                {activeSource === 'upload' && uploadItems.length > 0 && (
+                  <label className="block">
+                    <span className="mb-1 block text-xs font-medium text-fg-subtle">Bản vẽ</span>
+                    <select
+                      value={pickedUpload?.uploadId ?? ''}
+                      onChange={(event) => setUploadId(event.target.value)}
+                      disabled={running}
+                      className={FIELD_BOX}
+                    >
+                      {uploadItems.map((item) => (
+                        <option key={item.uploadId} value={item.uploadId}>
+                          {`Tải lên ${formatDateTime(item.createdAt)}${item.note ? ` · ${item.note}` : ''}`}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+              </div>
+            )}
 
+          {readOnly && activeSource === 'ai' && basePlan && (
+            <p className="mb-3">
+              <span className="text-fg-subtle">Dựng trên: </span>
+              <b>{planNames.get(basePlan) ?? 'phương án đã chọn'}</b>
+              {baseFacade && (
+                <>
+                  {' · '}
+                  <b>{facadeNames.get(baseFacade)}</b>
+                </>
+              )}
+            </p>
+          )}
+          {sourceError && <p className="mb-3 text-status-overdue">{toUserMessage(sourceError)}</p>}
           {blocked ? (
             <p className="text-fg-subtle">{blocked}</p>
           ) : (
@@ -217,7 +341,7 @@ export function AiPerspectiveStep({
                   variant="primary"
                   className="w-full"
                   onClick={() => (state.imageSetArtifactId ? setAsking(true) : onRun())}
-                  disabled={running || start.isPending || !image.choice.route}
+                  disabled={running || start.isPending || switching || !image.choice.route}
                 >
                   <Images className="size-4" aria-hidden />
                   {running || start.isPending

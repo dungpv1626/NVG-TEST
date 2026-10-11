@@ -105,7 +105,8 @@ describe('Dải bước của tab AI Design', () => {
     expect(await screen.findByRole('button', { name: /^Mặt bằng từng tầng/ })).toBeInTheDocument();
     // Mặt bằng đọc đầu bài + khảo sát, không chờ chương trình không gian (T45, 15/09/2026).
     expect(screen.queryByText('Cần chương trình không gian trước.')).toBeNull();
-    expect(screen.getByText('Cần chọn một phương án mặt bằng trước.')).toBeInTheDocument();
+    // Chọn phương án làm nền nay ở NGAY bước Mặt đứng — chỉ chặn khi chưa xếp phương án nào.
+    expect(screen.getByText('Cần xếp mặt bằng trước.')).toBeInTheDocument();
   });
 
   it('chưa xác nhận đầu bài thì bước mặt bằng chờ đầu bài', async () => {
