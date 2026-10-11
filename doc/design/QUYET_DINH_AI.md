@@ -3697,6 +3697,27 @@ làm hỏng nó theo bốn đường.
 (chưa merge) đã dùng T147–T151. T147 «tờ mặt đứng chi tiết» (PR #22) trùng số với T147 «sửa tay» của nhánh ấy —
 phải đổi một trong hai khi merge.
 
+### T154 — Bỏ dấu in trên ảnh do mô hình ảnh vẽ (11/10/2026, Haan)
+
+Haan gửi ảnh chụp dải chữ «Ảnh minh hoạ do AI vẽ — không đo được trên hình» in đè góc dưới ảnh, và bảo: «bỏ dòng
+chữ này khi gen ảnh bằng model image». T117 đã bỏ các câu chú thích trong trang nhưng còn giữ dấu in lên pixel; nay
+bỏ nốt dấu ấy, ở MỌI ảnh mô hình ảnh vẽ, cho nhất quán:
+- mặt bằng có nội thất;
+- ảnh mặt đứng có vật liệu;
+- bộ phối cảnh;
+- ảnh vẽ từ bản vẽ kỹ sư tải lên;
+- ảnh bìa thẻ AI Design.
+
+**Thay đổi trong mã:**
+- Ảnh hiện và tải về đúng như mô hình trả. Nút «Tải ảnh có nhãn» đổi thành «Tải ảnh».
+- Bỏ câu dự phòng «trình duyệt không in được nhãn».
+- Xoá `web/src/lib/watermark.ts`. Ảnh bìa đã dùng bản xem trước thu nhỏ ở máy chủ (`&w=`), nên không cần canvas.
+
+**Giữ nguyên:**
+- Hợp đồng `watermark_applied: false`: byte trong kho vốn chưa bao giờ đóng dấu.
+- Các câu `AI_DISCLAIMERS.*Stamp` mà máy chủ còn trả ở trường `watermark`.
+- Tờ vector vẫn là tờ chính, ảnh vẫn đứng ở panel riêng bên dưới.
+
 ### T155 — Lượt hỏng 79669685: ban công đúng trên bản phác, lỗi gốc không tới mô hình (11/10/2026, Haan: «làm cả 3»)
 
 Lượt xếp mặt bằng trên máy, biệt thự nhà vườn 15 × 20 m, 2 tầng, ba thế hệ; ban công BẮT BUỘC ở mặt trước và bên

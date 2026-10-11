@@ -37,20 +37,18 @@ import {
   pdfPageCount,
   type CropPercent,
 } from '@/lib/drawing-upload';
-import { stampWatermark } from '@/lib/watermark';
 import { Panel } from '../tk-ui';
 import { AiModePicker, useAiChoice } from './ai-model-picker';
 import { AiUsageLine } from './ai-usage';
 
 const TEXT: Record<
   UploadedDrawingKind,
-  { title: string; lead: string; draw: string; stamp: string; disclaimer: string; file: string }
+  { title: string; lead: string; draw: string; disclaimer: string; file: string }
 > = {
   plan: {
     title: 'Ảnh nội thất từ bản vẽ của kỹ sư',
     lead: 'Tải mặt bằng một tầng (PNG, JPG hoặc PDF) để AI vẽ thành ảnh nội thất.',
     draw: 'Vẽ ảnh nội thất từ bản này',
-    stamp: AI_DISCLAIMERS.aiSheetImageStamp,
     disclaimer: AI_DISCLAIMERS.aiSheetImage,
     file: 'mat-bang-noi-that',
   },
@@ -58,7 +56,6 @@ const TEXT: Record<
     title: 'Ảnh mặt đứng từ bản vẽ của kỹ sư',
     lead: 'Tải mặt đứng mặt tiền (PNG, JPG hoặc PDF) để AI vẽ thành ảnh có vật liệu và màu.',
     draw: 'Vẽ ảnh mặt đứng từ bản này',
-    stamp: AI_DISCLAIMERS.aiFacadeImageStamp,
     disclaimer: AI_DISCLAIMERS.aiFacadeImage,
     file: 'mat-dung-vat-lieu',
   },
@@ -415,20 +412,6 @@ function UploadedItem({
       ? `/design/ai/uploads/${projectId}/${item.uploadId}/image?v=${item.imageArtifactId}`
       : null,
   );
-  const [stamped, setStamped] = useState<{ url: string; stamped: boolean } | null>(null);
-  useEffect(() => {
-    if (!drawn.url) {
-      setStamped(null);
-      return;
-    }
-    let cancelled = false;
-    void stampWatermark(drawn.url, text.stamp).then((result) => {
-      if (!cancelled) setStamped(result);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [drawn.url, text.stamp]);
 
   const label = [
     item.drawing === 'plan' ? `Tầng ${item.level ?? 1}` : 'Mặt đứng mặt tiền',
@@ -461,25 +444,19 @@ function UploadedItem({
           {!busy && !drawn.loading && !item.imageArtifactId && (
             <p className="text-fg-subtle">Chưa có ảnh.</p>
           )}
-          {!busy && stamped && (
+          {!busy && drawn.url && (
             <>
               <img
-                src={stamped.url}
+                src={drawn.url}
                 alt={`Ảnh do AI vẽ — ${label}`}
                 className="w-full rounded-md border border-tk-line bg-white"
               />
-              {!stamped.stamped && (
-                <p className="mt-1 text-status-overdue">
-                  Trình duyệt không in được nhãn lên ảnh. Tấm này chưa có dấu — đừng gửi đi khi chưa
-                  ghi rõ đây là ảnh minh hoạ.
-                </p>
-              )}
               <a
-                href={stamped.url}
+                href={drawn.url}
                 download={`${text.file}-${item.uploadId.slice(7, 15)}.png`}
                 className="mt-2 inline-block underline"
               >
-                Tải ảnh có nhãn
+                Tải ảnh
               </a>
             </>
           )}

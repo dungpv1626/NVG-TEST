@@ -11,9 +11,8 @@
  * — chính tờ vector, rasterise ở trình duyệt. T21 chỉ gửi chữ, nên mô hình vẽ một ngôi nhà khác.
  *
  * ── Ba thứ màn hình BẮT BUỘC phải nói ra ──────────────────────────────────────────────
- *  · **Nhãn hai lớp.** `stampWatermark` in lên pixel, VÀ một dòng chữ trong trang. Canvas hỏng
- *    được (trình duyệt không giải mã nổi ảnh, không lấy được ngữ cảnh 2d) và khi ấy cờ `stamped`
- *    là `false` — tấm ảnh không nhãn trông y hệt tấm có nhãn. Dòng chữ là lớp không hỏng được.
+ *  · **Không in dấu lên ảnh** (Haan, 11/10/2026 — gỡ dấu «Ảnh minh hoạ do AI vẽ — không đo được» mà T117 còn
+ *    giữ). Ảnh hiện và tải về đúng như mô hình trả; panel vẫn đứng dưới tờ vector, đúng vai tấm trình khách.
  *  · **Không đo được.** Tờ này in số mét vuông và chuỗi kích thước do MÔ HÌNH viết, nên nó trông
  *    như bản vẽ kỹ thuật mà không phải. Số đúng ở panel trên.
  *  · **Giá trước khi bấm.** Mỗi lần bấm là một lần tiêu tiền thật, và không gì chặn bấm mười lần.
@@ -25,7 +24,6 @@
 
 import { useEffect, useState } from 'react';
 import { Image as ImageIcon } from 'lucide-react';
-import { AI_DISCLAIMERS } from '@nvg/shared/design';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { SegmentedControl } from '@/components/ui/segmented-control';
@@ -36,7 +34,6 @@ import {
   type AiPlanReview,
 } from '@/hooks/use-ai-design';
 import { toUserMessage } from '@/hooks/use-error-message';
-import { stampWatermark } from '@/lib/watermark';
 import { Panel } from '../tk-ui';
 import { AiModePicker, useAiChoice } from './ai-model-picker';
 import { AiUsageLine } from './ai-usage';
@@ -94,28 +91,10 @@ export function PlanSheetImagePanel({
 
   const sheet = useAiPlanSheetImage(projectId, review.artifactId, drawLevel, reloadKey);
 
-  // Nhãn in LÊN PIXEL. `stamped === false` nghĩa là canvas không làm được — khi ấy dòng chữ dưới
-  // ảnh là lớp bảo vệ duy nhất, nên nó phải nói mạnh hơn.
-  const [stamped, setStamped] = useState<{ url: string; stamped: boolean } | null>(null);
+  // Ảnh do mô hình ảnh vẽ hiện NGUYÊN BẢN, không in dấu lên pixel (Haan, 11/10/2026 — gỡ dấu T117 giữ lại).
   useEffect(() => {
-    if (!sheet.url) {
-      setStamped(null);
-      setNatural(null);
-      return;
-    }
-    let cancelled = false;
-    // Câu đóng dấu: bản máy chủ trả về sau lượt vẽ, hoặc bản trong `shared` khi đang xem lại một
-    // tờ vẽ từ phiên trước — trường hợp THƯỜNG GẶP hơn. Không ngã về `AI_DISCLAIMERS.render`: câu
-    // ấy nói «chưa phải phương án thi công», không nói «không đo được», mà vế thứ hai mới là lý do
-    // tờ này phải mang nhãn.
-    const stamp = draw.data?.watermark ?? AI_DISCLAIMERS.aiSheetImageStamp;
-    void stampWatermark(sheet.url, stamp).then((result) => {
-      if (!cancelled) setStamped(result);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [sheet.url, draw.data?.watermark]);
+    if (!sheet.url) setNatural(null);
+  }, [sheet.url]);
 
   const run = () => {
     if (!image.choice.route) return;
@@ -198,10 +177,10 @@ export function PlanSheetImagePanel({
         <p className="text-fg-subtle">{levelName} chưa có ảnh nội thất.</p>
       )}
 
-      {!busy && stamped && (
+      {!busy && sheet.url && (
         <>
           <img
-            src={stamped.url}
+            src={sheet.url}
             alt={`Ảnh mặt bằng có nội thất — ${levelName}`}
             style={{ maxWidth }}
             onLoad={(event) =>
@@ -212,20 +191,12 @@ export function PlanSheetImagePanel({
             }
             className="w-full rounded-md border border-tk-line bg-white"
           />
-          {/* Lớp nhãn thứ hai, bằng CHỮ. Nó ở lại kể cả khi canvas hỏng, và nó nói điều mà một
-              dòng đóng dấu ngắn không nói đủ: tờ này KHÔNG ĐO ĐƯỢC. */}
-          {!stamped.stamped && (
-            <p className="mt-1 text-status-overdue">
-              Trình duyệt không in được nhãn lên ảnh. Tấm này chưa có dấu — đừng gửi đi khi chưa ghi
-              rõ đây là ảnh minh hoạ.
-            </p>
-          )}
           <a
-            href={stamped.url}
+            href={sheet.url}
             download={`mat-bang-noi-that-tang-${drawLevel}.png`}
             className="mt-3 inline-block underline"
           >
-            Tải ảnh có nhãn
+            Tải ảnh
           </a>
         </>
       )}

@@ -10,12 +10,11 @@
  */
 
 import { useEffect, useState } from 'react';
-import { AI_DISCLAIMERS, AI_PREVIEW_WIDTH, type AiFacadeBrief } from '@nvg/shared/design';
+import { AI_PREVIEW_WIDTH, type AiFacadeBrief } from '@nvg/shared/design';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DesignApiError, designApi, designApiFile } from '@/lib/design-api';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { svgUrlToPngBase64 } from '@/lib/rasterise';
-import { stampWatermark } from '@/lib/watermark';
 import { supabase } from '@/lib/supabase';
 
 // ---------------------------------------------------------------------------
@@ -1379,11 +1378,6 @@ export function useAiCoverImage(
         return null;
       }
     };
-    const stamped = async (url: string | null, text: string): Promise<string | null> => {
-      if (!url) return null;
-      const result = await stampWatermark(url, text, AI_COVER_WIDTH);
-      return result.stamped ? result.url : null;
-    };
 
     const ref = plan ? encodeURIComponent(plan) : null;
     // Mỗi tấm một hàm tải, gọi khi tới lượt; `started` giữ lời hứa để không tải một tấm hai lần.
@@ -1394,7 +1388,7 @@ export function useAiCoverImage(
         load: () =>
           fetchBlob(
             `/design/ai/perspective/${projectId}/view/${AI_COVER_PERSPECTIVE_VIEW}?artifactId=${encodeURIComponent(imageSet)}&w=${AI_COVER_WIDTH}`,
-          ).then((url) => stamped(url, AI_DISCLAIMERS.aiImageSetStamp)),
+          ),
       });
     }
     if (ref) {
@@ -1404,7 +1398,7 @@ export function useAiCoverImage(
           load: () =>
             fetchBlob(
               `/design/ai/plan/${projectId}/sheet-image?artifactId=${ref}&level=1&w=${AI_COVER_WIDTH}`,
-            ).then((url) => stamped(url, AI_DISCLAIMERS.aiSheetImageStamp)),
+            ),
         },
         {
           kind: 'plan',
