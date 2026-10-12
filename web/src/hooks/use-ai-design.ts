@@ -10,12 +10,11 @@
  */
 
 import { useEffect, useState } from 'react';
-import { AI_DISCLAIMERS, AI_PREVIEW_WIDTH, type AiFacadeBrief } from '@nvg/shared/design';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { AI_PREVIEW_WIDTH, type AiFacadeBrief } from '@nvg/shared/design';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { DesignApiError, designApi, designApiFile } from '@/lib/design-api';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { svgUrlToPngBase64 } from '@/lib/rasterise';
-import { stampWatermark } from '@/lib/watermark';
 import { supabase } from '@/lib/supabase';
 
 // ---------------------------------------------------------------------------
@@ -292,7 +291,11 @@ export interface AiSpaceProgramView {
 export interface AiDesignState {
   briefArtifactId: string | null;
   program: { artifactId: string; payload: AiSpaceProgramView } | null;
-  plans: Array<{ artifactId: string; createdAt: string }>;
+  /**
+   * `label` — nhãn CỐ ĐỊNH do máy chủ đánh («3», «3.1»): số theo thứ tự tạo trong cả hồ sơ, bản sửa mang số gốc + lần
+   * sửa (11/10/2026). Vắng = máy chủ cũ; màn hình lùi về đánh số theo vị trí.
+   */
+  plans: Array<{ artifactId: string; createdAt: string; label?: string | null }>;
   /** Phương án đã CHỌN. Rỗng khi đã có phương án nhưng chưa ai chọn — bước mặt đứng chờ cái này. */
   planHeadArtifactId: string | null;
   facadeArtifactId: string | null;
@@ -304,7 +307,14 @@ export interface AiDesignState {
    * `planRef` — phương án mặt bằng bản ấy dựng trên (cạnh lineage, 10/10/2026); rỗng khi phương án
    * ấy đã ẩn hoặc máy chủ cũ chưa trả trường này.
    */
-  facades?: Array<{ artifactId: string; createdAt: string; planRef?: string | null }>;
+  facades?: Array<{
+    artifactId: string;
+    createdAt: string;
+    planRef?: string | null;
+    /** Nhãn cố định của bản mặt đứng, và của phương án nó dựng theo (có cả khi phương án ấy đã xoá khỏi dải). */
+    label?: string | null;
+    planLabel?: string | null;
+  }>;
   /**
    * Mặt bằng mà mặt đứng hiện hành dựng theo (T59). Khác `planHeadArtifactId` = kỹ sư đã đổi phương án
    * sau khi dựng mặt đứng; mặt đứng cũ vẫn giữ, gắn nhãn «dựng theo phương án cũ».
@@ -312,7 +322,13 @@ export interface AiDesignState {
   facadePlanRef?: string | null;
   imageSetArtifactId: string | null;
   /** Các bộ ảnh phối cảnh còn hiện, mới nhất trước (T67 Đợt C). */
-  imageSets?: Array<{ artifactId: string; createdAt: string }>;
+  imageSets?: Array<{
+    artifactId: string;
+    createdAt: string;
+    /** Nhãn cố định của bộ ảnh, và của bản mặt đứng nó dựng theo. */
+    label?: string | null;
+    facadeLabel?: string | null;
+  }>;
   /** Mặt đứng mà bộ ảnh hiện hành dựng theo — khác bản hiệu lực thì bộ ảnh đã cũ. */
   imageSetFacadeRef?: string | null;
   runs: Partial<Record<AiStage, AiRunView>>;
@@ -1164,6 +1180,29 @@ export function useSaveFacadeReview() {
   });
 }
 
+/**
+ * Thôi hiện một artifact trong dải chọn: bỏ NGAY khỏi `/state` đang giữ, rồi mới nạp lại. Haan 11/10/2026: «sau khi
+ * xoá 1 phương án thì phải re-load lại web thì phương án đó mới biến mất» — hộp thoại đóng lúc lệnh xoá xong, còn
+ * `/state` trên bản demo mất 1,8 giây trung vị, 4,1 giây p90 (xem tuyến `/state`), nên phương án đã xoá nằm trên dải
+ * suốt quãng ấy. Đưa trở lại (`hidden: false`) thì không đoán chỗ — chờ nạp lại.
+ */
+function hideFromState(
+  queryClient: QueryClient,
+  variables: { projectId: string; artifactId: string; hidden?: boolean },
+  list: 'plans' | 'facades' | 'imageSets',
+): void {
+  const key = ['ai_design_state', variables.projectId];
+  if (variables.hidden !== false) {
+    queryClient.setQueryData<AiDesignState>(key, (state) => {
+      if (!state) return state;
+      const items = state[list] as Array<{ artifactId: string }> | undefined;
+      if (!items) return state;
+      return { ...state, [list]: items.filter((item) => item.artifactId !== variables.artifactId) };
+    });
+  }
+  void queryClient.invalidateQueries({ queryKey: key });
+}
+
 /** Xoá một bản mặt đứng khỏi dải chọn — THÔI HIỆN, cùng khuôn với `useHideAiPlan`. */
 export function useHideAiFacade() {
   const queryClient = useQueryClient();
@@ -1174,10 +1213,7 @@ export function useHideAiFacade() {
   >({
     mutationFn: (body) =>
       designApi<{ artifactId: string; hidden: boolean }>('/design/ai/facade/hide', body),
-    onSuccess: (_data, variables) =>
-      void queryClient.invalidateQueries({
-        queryKey: ['ai_design_state', variables.projectId],
-      }),
+    onSuccess: (_data, variables) => hideFromState(queryClient, variables, 'facades'),
   });
 }
 
@@ -1196,10 +1232,7 @@ export function useHideAiPlan() {
   >({
     mutationFn: (body) =>
       designApi<{ artifactId: string; hidden: boolean }>('/design/ai/plan/hide', body),
-    onSuccess: (_data, variables) =>
-      void queryClient.invalidateQueries({
-        queryKey: ['ai_design_state', variables.projectId],
-      }),
+    onSuccess: (_data, variables) => hideFromState(queryClient, variables, 'plans'),
   });
 }
 
@@ -1379,11 +1412,6 @@ export function useAiCoverImage(
         return null;
       }
     };
-    const stamped = async (url: string | null, text: string): Promise<string | null> => {
-      if (!url) return null;
-      const result = await stampWatermark(url, text, AI_COVER_WIDTH);
-      return result.stamped ? result.url : null;
-    };
 
     const ref = plan ? encodeURIComponent(plan) : null;
     // Mỗi tấm một hàm tải, gọi khi tới lượt; `started` giữ lời hứa để không tải một tấm hai lần.
@@ -1394,7 +1422,7 @@ export function useAiCoverImage(
         load: () =>
           fetchBlob(
             `/design/ai/perspective/${projectId}/view/${AI_COVER_PERSPECTIVE_VIEW}?artifactId=${encodeURIComponent(imageSet)}&w=${AI_COVER_WIDTH}`,
-          ).then((url) => stamped(url, AI_DISCLAIMERS.aiImageSetStamp)),
+          ),
       });
     }
     if (ref) {
@@ -1404,7 +1432,7 @@ export function useAiCoverImage(
           load: () =>
             fetchBlob(
               `/design/ai/plan/${projectId}/sheet-image?artifactId=${ref}&level=1&w=${AI_COVER_WIDTH}`,
-            ).then((url) => stamped(url, AI_DISCLAIMERS.aiSheetImageStamp)),
+            ),
         },
         {
           kind: 'plan',
@@ -1548,8 +1576,7 @@ export function useHideAiImageSet() {
   >({
     mutationFn: (body) =>
       designApi<{ artifactId: string; hidden: boolean }>('/design/ai/perspective/hide', body),
-    onSuccess: (_data, variables) =>
-      void queryClient.invalidateQueries({ queryKey: ['ai_design_state', variables.projectId] }),
+    onSuccess: (_data, variables) => hideFromState(queryClient, variables, 'imageSets'),
   });
 }
 

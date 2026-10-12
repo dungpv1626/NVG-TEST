@@ -1,6 +1,6 @@
 /**
  * Ảnh bìa thẻ AI Design (Haan, 08/10/2026): phối cảnh → mặt bằng có nội thất → tờ mặt bằng thô.
- * Canh: đúng thứ hạng dù ba tấm tải song song, ảnh AI phải có dấu in lên pixel (trên bản thu nhỏ),
+ * Canh: đúng thứ hạng dù ba tấm tải song song, ảnh AI hiện nguyên bản (Haan 11/10/2026: bỏ dấu in lên ảnh),
  * và ảnh đã dựng được nhớ trong phiên — quay lại danh sách không tải lại.
  */
 
@@ -13,7 +13,6 @@ const SET = `sha256:${'b'.repeat(64)}`;
 
 /** Đường nào «đã có ảnh» — còn lại trả 404 như máy chủ thật. */
 let available: string[] = [];
-let stampWorks = true;
 const designApiFile = vi.fn(async (path: string) => {
   if (!available.some((part) => path.includes(part))) throw new Error('404');
   return { blob: async () => new Blob([path]) } as unknown as Response;
@@ -23,13 +22,6 @@ vi.mock('@/lib/design-api', () => ({
   designApiFile: (path: string) => designApiFile(path),
   designApi: vi.fn(),
   DesignApiError: class extends Error {},
-}));
-const stampWidths: Array<number | undefined> = [];
-vi.mock('@/lib/watermark', () => ({
-  stampWatermark: async (url: string, _text: string, maxWidth?: number) => {
-    stampWidths.push(maxWidth);
-    return { url: `${url}#dau`, stamped: stampWorks };
-  },
 }));
 vi.mock('@/lib/supabase', () => ({ supabase: {} }));
 
@@ -55,20 +47,17 @@ function cover(state: AiDesignState = STATE, id = `p${++project}`) {
 
 beforeEach(() => {
   designApiFile.mockClear();
-  stampWorks = true;
 });
 
 describe('Ảnh bìa thẻ AI Design', () => {
-  it('có phối cảnh thì lấy phối cảnh, đóng dấu trên bản thu nhỏ', async () => {
+  it('có phối cảnh thì lấy phối cảnh — bản xem trước nguyên bản, không đóng dấu', async () => {
     available = ['/perspective/', '/sheet-image', '/sheet?'];
-    stampWidths.length = 0;
     const { result } = cover();
     await waitFor(() => expect(result.current.kind).toBe('perspective'));
-    expect(result.current.url).toMatch(/#dau$/);
+    expect(result.current.url).not.toMatch(/#dau$/);
     expect(designApiFile.mock.calls[0]![0]).toContain(`/view/front_day?artifactId=`);
     // Bản xem trước thu nhỏ ở máy chủ, không phải PNG cỡ gốc ~2,7 MB.
     expect(designApiFile.mock.calls[0]![0]).toMatch(/&w=1024$/);
-    expect(stampWidths.every((w) => typeof w === 'number' && w > 0)).toBe(true);
   });
 
   it('có phối cảnh thì CHỈ tải tấm phối cảnh — tấm nội thất ~2 MB không giành băng thông', async () => {
@@ -100,7 +89,7 @@ describe('Ảnh bìa thẻ AI Design', () => {
     available = ['/sheet-image', '/sheet?'];
     const { result } = cover();
     await waitFor(() => expect(result.current.kind).toBe('furnished_plan'));
-    expect(result.current.url).toMatch(/#dau$/);
+    expect(result.current.url).toMatch(/^blob:/);
   });
 
   it('chỉ có tờ mặt bằng thì lấy tờ ấy', async () => {
@@ -116,14 +105,6 @@ describe('Ảnh bìa thẻ AI Design', () => {
     await waitFor(() => expect(result.current.kind).toBe('furnished_plan'));
     expect(designApiFile).toHaveBeenCalledTimes(2);
     expect(designApiFile.mock.calls.some(([path]) => path.includes('/perspective/'))).toBe(false);
-  });
-
-  it('không in được dấu thì bỏ ảnh AI, không hiện ảnh AI trần', async () => {
-    available = ['/perspective/', '/sheet-image', '/sheet?'];
-    stampWorks = false;
-    const { result } = cover();
-    await waitFor(() => expect(result.current.kind).toBe('plan'));
-    expect(result.current.url).not.toMatch(/#dau$/);
   });
 
   it('chưa có gì thì không có ảnh', async () => {

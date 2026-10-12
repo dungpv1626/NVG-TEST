@@ -402,6 +402,28 @@ describe('Bước mặt đứng', () => {
     expect(state.hideFacade).toHaveBeenCalledWith({ projectId: 'p1', artifactId: FACADE_OLD });
   });
 
+  it('nhãn cố định từ máy chủ: tên không đánh lại theo vị trí, và nói bản dựng theo phương án nào (11/10/2026)', () => {
+    renderWithApp(
+      <AiFacadeStep
+        projectId="p1"
+        readOnly={false}
+        state={designState({
+          facades: [
+            { ...twoVersions.facades[0]!, label: '3.1', planLabel: '2' },
+            { ...twoVersions.facades[1]!, label: '1', planLabel: '2' },
+          ],
+        })}
+      />,
+    );
+    const panel = screen
+      .getByRole('heading', { name: 'Các bản mặt đứng đã dựng' })
+      .closest('section')!;
+    // Mặt đứng 2 đã xoá khỏi dải: bản còn lại vẫn là «Mặt đứng 3.1», không thành «Mặt đứng 2».
+    expect(within(panel).getByRole('button', { name: /^Mặt đứng 3\.1/ })).toBeInTheDocument();
+    expect(within(panel).queryByRole('button', { name: /^Mặt đứng 2/ })).toBeNull();
+    expect(within(panel).getAllByText(/theo Phương án 2$/)).toHaveLength(2);
+  });
+
   it('chỉ xem: không có nút xoá, không có nút chọn lại', () => {
     renderWithApp(<AiFacadeStep projectId="p1" readOnly state={designState(twoVersions)} />);
     const panel = screen

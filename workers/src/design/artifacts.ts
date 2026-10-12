@@ -327,26 +327,25 @@ export class ArtifactRepository {
   }
 
   /**
-   * Input trực tiếp của nhiều artifact một lúc, chỉ giữ input nằm trong `candidates` — MỘT truy vấn
-   * cạnh, không nạp payload. Dùng để biết bản mặt đứng nào dựng trên phương án mặt bằng nào mà
-   * không phải tải từng ý tưởng từ kho (`plan_ref` nằm trong payload).
+   * Mọi cạnh lineage ĐI VÀO một tập artifact — không nạp payload. Chia lô: mã băm dài 71 ký tự, cả trăm mã trong
+   * một câu `in` thì địa chỉ GET tới PostgREST dài quá giới hạn của cổng phía trước.
    */
-  async inputsAmong(
-    toIds: readonly string[],
-    candidates: ReadonlySet<string>,
-  ): Promise<Map<string, string>> {
-    const out = new Map<string, string>();
-    if (toIds.length === 0 || candidates.size === 0) return out;
-    const { data, error } = await this.db
-      .from('design_artifact_edge')
-      .select('from_id, to_id')
-      .in('to_id', [...toIds]);
-    if (error) throw new Error(error.message);
-    for (const row of data ?? []) {
-      const from = row.from_id as string;
-      if (candidates.has(from) && !out.has(row.to_id as string)) out.set(row.to_id as string, from);
-    }
-    return out;
+  async edgesInto(toIds: readonly string[]): Promise<Array<{ from: string; to: string }>> {
+    const CHUNK = 60;
+    const chunks: string[][] = [];
+    for (let i = 0; i < toIds.length; i += CHUNK) chunks.push(toIds.slice(i, i + CHUNK));
+    const parts = await Promise.all(
+      chunks.map(async (ids) => {
+        const { data, error } = await this.db
+          .from('design_artifact_edge')
+          .select('from_id, to_id, created_at')
+          .in('to_id', ids)
+          .order('created_at', { ascending: true });
+        if (error) throw new Error(error.message);
+        return (data ?? []).map((r) => ({ from: r.from_id as string, to: r.to_id as string }));
+      }),
+    );
+    return parts.flat();
   }
 
   /** Đường đi ngược từ một artifact về mọi input trực tiếp — nền của "vì sao ra bản này". */

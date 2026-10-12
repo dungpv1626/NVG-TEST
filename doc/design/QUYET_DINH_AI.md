@@ -3697,6 +3697,27 @@ làm hỏng nó theo bốn đường.
 (chưa merge) đã dùng T147–T151. T147 «tờ mặt đứng chi tiết» (PR #22) trùng số với T147 «sửa tay» của nhánh ấy —
 phải đổi một trong hai khi merge.
 
+### T154 — Bỏ dấu in trên ảnh do mô hình ảnh vẽ (11/10/2026, Haan)
+
+Haan gửi ảnh chụp dải chữ «Ảnh minh hoạ do AI vẽ — không đo được trên hình» in đè góc dưới ảnh, và bảo: «bỏ dòng
+chữ này khi gen ảnh bằng model image». T117 đã bỏ các câu chú thích trong trang nhưng còn giữ dấu in lên pixel; nay
+bỏ nốt dấu ấy, ở MỌI ảnh mô hình ảnh vẽ, cho nhất quán:
+- mặt bằng có nội thất;
+- ảnh mặt đứng có vật liệu;
+- bộ phối cảnh;
+- ảnh vẽ từ bản vẽ kỹ sư tải lên;
+- ảnh bìa thẻ AI Design.
+
+**Thay đổi trong mã:**
+- Ảnh hiện và tải về đúng như mô hình trả. Nút «Tải ảnh có nhãn» đổi thành «Tải ảnh».
+- Bỏ câu dự phòng «trình duyệt không in được nhãn».
+- Xoá `web/src/lib/watermark.ts`. Ảnh bìa đã dùng bản xem trước thu nhỏ ở máy chủ (`&w=`), nên không cần canvas.
+
+**Giữ nguyên:**
+- Hợp đồng `watermark_applied: false`: byte trong kho vốn chưa bao giờ đóng dấu.
+- Các câu `AI_DISCLAIMERS.*Stamp` mà máy chủ còn trả ở trường `watermark`.
+- Tờ vector vẫn là tờ chính, ảnh vẫn đứng ở panel riêng bên dưới.
+
 ### T155 — Lượt hỏng 79669685: ban công đúng trên bản phác, lỗi gốc không tới mô hình (11/10/2026, Haan: «làm cả 3»)
 
 Lượt xếp mặt bằng trên máy, biệt thự nhà vườn 15 × 20 m, 2 tầng, ba thế hệ; ban công BẮT BUỘC ở mặt trước và bên
@@ -3836,3 +3857,98 @@ chỉ xếp sau).
 - Tầng trên cùng nhà ống 75ba5793: ô thang có thêm cửa trượt ra sân thượng ở cạnh dài — phép kiểm chỉ đòi CÓ lối ra ở đầu
   bước ra, chưa cấm lối thứ hai ở cạnh dài.
 - Tầng giữa nhà nhiều tầng với thang thẳng (đầu bước ra khác đầu bậc 1) chưa đòi cả hai đầu như đường dải.
+
+### T158 — Tầng 1: lối vào thang ở đầu bậc 1 là luật cứng; mọi tầng một tỷ lệ bản vẽ (11/10/2026, Haan)
+
+Haan (lượt e1c432f4 hồ sơ c815a6e6, claude-opus-5-5, bản demo): «đã dùng đến model cao cấp opus 5.5 mà phần thang bộ
+vẫn bị lỗi vách ngăn bao đường lên/xuống». Rồi: «tầng 2 kích thước đang để tràn khung, nhưng vẫn hiện nhỏ so với mặt
+bằng tầng 1».
+
+**Gốc — không phải mô hình.** Mô hình chỉ vẽ bản phác; cửa và vách do chương trình đặt.
+- Tầng 2: WC chắn đầu bước ra, lối ra mở ở cạnh dài — đúng lỗi T157. Bản demo phát hành 11:50, T157 commit 16:37:
+  lượt chạy 18:10 dùng mã cũ. Phát lại với mã hiện tại: tầng 2 có sảnh ngang đầu thang, bước ra đúng đầu.
+- Tầng 1: bản phác đặt kho chắn đầu bậc 1, hành lang dọc cạnh dài. `shapedStairEntry` không tìm được đầu ngắn giáp lối
+  đi → giữ cửa ở cạnh dài, báo `stair_entry_long_side` (T105 đã gọi tên đúng ca này: «bậc 1 giáp tường kho»). Nhưng mã
+  ấy chỉ XẾP ứng viên sau; mọi ứng viên vướng thì cây ít tệ nhất vẫn qua.
+- Bản vẽ: `renderPlanSheet` chọn tỷ lệ và hướng giấy theo khung RIÊNG từng tầng. Tầng 2 có ban công đua 1 m hai mặt
+  (13,72 m so với 12,72 m) → 1:100 khổ ngang; tầng 1 → 1:80 khổ đứng. Đặt cạnh nhau, tầng trên trông nhỏ hẳn.
+
+**Sửa:**
+- `stair_entry_long_side` vào `GATE_REASON_CODES` (`arrange/index.ts`): loại ứng viên, như `stair_arrival_blocked`.
+  Chỉ khi biết loại thang (`construction.stairs.shape`) — bản chạy thật luôn có. Câu nhắc mô hình đã có từ T105.
+- `houseBounds` (`draw/plan-sheet.ts`): tỷ lệ, hướng giấy và chỗ đặt hình theo khung chung mọi tầng (+ tầng đang vẽ,
+  cho tờ mái đua). Mọi tờ cùng tỷ lệ; trục và tường thẳng hàng giữa các tờ. Lượt e1c432f4: hai tầng 1:100 khổ ngang.
+
+**Đo phát lại** (219 vòng / 53 lượt ghi, đối chứng = cùng mã tắt chốt):
+- Lần đầu chặn cả khi không có thông số loại thang: 20 → 18. Ba vòng mất đều là mô hình thang CŨ (trước T105);
+  b1543b8c vòng 2 đúng là thang vào cạnh dài, còn 7c6de305 vòng 3 và b1543b8c vòng 6 vào đúng đầu bậc 1 mà vẫn mất vì
+  quỹ đạo tìm đổi. Như T157: chỉ chặn khi có thông số.
+- Lần hai: **20 = 20, 0 tiến, 0 mất mặt bằng**. Đổi: e1c432f4 vào thang đúng đầu (74,4 → 69,9 — giá của lối vào đi
+  được); fdd486b1 vòng 2–5 và 75ba5793 vòng 4 nay báo lỗi thang tầng 1 thay vì lỗi của cách chia lại; bea4c6fa vòng
+  4–6 đổi sang lỗi đầu bước ra tầng 2 (cmp tính vòng 6 là «lùi» giai đoạn, không mất mặt bằng).
+
+**Hàng rào:** `ai-run-e1c432f4.test.ts` + `fixtures/ai-run-e1c432f4.json` (ý định đã lưu); `ai-draw.test.ts` «mọi tầng
+cùng tỷ lệ». Đột biến M216 (bỏ mã khỏi cổng), M217 (khung riêng từng tầng). Phép thử cập nhật theo sự thật mới:
+`VILLA_CRAMMED` có sảnh giữa gara và đầu bậc 1 (bản phác mẫu để gara chắn đầu ngắn — ca T91 đo diện tích, không đo
+thang); 75ba5793 cắt hàng đầu ô thang thay hàng cuối để vẫn tới cách thử đổi phòng mang cửa chính; fdd486b1 vòng 2 lỗi
+cách chia lại nay là lối vào thang; 79669685 vòng 2 hạn 120 giây (cả nhóm chạy song song vượt 30 giây).
+
+**Còn mở:** phương án đã lưu trên demo không tự đổi — phải phát hành `nvg-api` rồi xếp lại. Tầng giữa nhà nhiều tầng
+thang thẳng vẫn như T157.
+
+**Bổ sung (11/10/2026, Haan xem phát lại e1c432f4):** đo lỗ mở trên dữ liệu bản vẽ thì tầng 2 mở 2,57 m GIỮA cạnh ô
+4,67 m (y 1616→1873) — vế tới chỉ trùng ~1 m, phần còn lại mở ra khe giữa và vế đầu (ở tầng trên là khoảng thông xuống
+chân thang). Tầng 1 căn theo vế đầu (`shapedStairEntry`), tầng trên chưa căn gì. Sửa: `deriveDoors`, thang `chu_u` /
+`chu_u_rong` tầng trên → lỗ mở ra sát phía vế tới (`firstFlightAtLowEnd`, dùng chung với tầng 1); e1c432f4 nay mở
+y 1711→1968, phủ trọn vế tới. Nhãn «XUỐNG» ở tầng trên chuyển từ bậc 1 sang bậc cuối (`draw/stairs.ts`) — bậc 1 ở tầng
+trên là khoảng thông tầng. Thang ba vế, chữ L, thẳng: chưa căn. Bản vẽ phát lại xuất ở
+`~/Documents/Doc/NVG/test/mat-bang-e1c432f4-phat-lai-tang-{1,2}.{svg,png}` và ảnh so sánh `thang-e1c432f4-so-sanh-tang-*.png`.
+Hàng rào: phép thử e1c432f4 đo khoảng lỗ mở và vị trí nhãn; đột biến M221, M222.
+
+**Bổ sung 2 — giữ bố cục, khoét sảnh đầu thang (11/10/2026, Haan xem phát lại):** «thang thì oke rồi, nhưng bếp và
+phòng ăn sắp lại không hợp lý. Ở bản vẽ chính thức có thể giữ lại hướng thang, chỉ cần điều chỉnh vách và không gian
+hành lang ở điểm lên xuống thang». Gốc: chốt cổng bác cả cây, bộ xếp tìm cây khác hẳn (quay thang, xáo bếp + phòng ăn).
+- `emitCandidate`: bộ đặt cửa báo thang bị chặn (`stair_entry_long_side` khi biết loại thang, `stair_arrival_blocked`)
+  → `landStairEnd` thử GIỮ cây: `arrange/stair-landing.ts` lấy dãy ô cùng cột với ô thang theo trục dọc thang (chuỗi
+  nhát cắt cùng trục), chèn dải sảnh sâu max(hành lang thông thuỷ + vách, `doorShared`) giữa ô thang và phòng chắn, rồi
+  chia lại vách các phòng liền nhau phía ấy — phòng chắn nhường dải, hụt cạnh kỹ thuật / diện tích đầu bài khai thì
+  phòng kế tiếp nhường bù. Ô thang và khối không phải phòng đơn giữ nguyên chỗ. Dải là lá giao thông mới (chương trình
+  thêm một space). Tầng 1 thử từng đầu ngắn; tầng trên dùng `stairSidesNeeded`. Nhận khi dựng lại cửa hết chặn và dải
+  nối được về lối đi; không thì cổng bác như trước. Ghi chú `stair_landing_carved` nói phòng nào nhường, vách nào dời.
+- e1c432f4: tầng 1 giữ nguyên bố cục mô hình vẽ và thang `+y`; sảnh 4,6 m² giữa kho và thang, vách kho | gara lùi lên
+  (kho 8,9 m² ≥ 8 đầu bài khai, gara 24 m²); tầng 2 sảnh từ WC phòng ngủ chính. Lỗ mở tầng 1 trên vế đầu, tầng 2 trên
+  vế tới (đo trên dữ liệu bản vẽ).
+- Phát lại 219 vòng (đối chứng = cùng mã tắt bước khoét): **20 → 21 mặt bằng, 5 tiến, 0 lùi** — bea4c6fa vòng 6 ra mặt
+  bằng (lối ra tầng 2 ở đầu `y1`), 6bf43039 vòng 3, 5 và 79669685 vòng 2, 3 qua được tầng 2, dừng ở kiểm cả nhà. Xem
+  bằng mắt: 75ba5793 vòng 2 (nhà ống 5 m) sảnh 4,7 m² ngay đầu bậc 1, bea4c6fa vòng 6 sảnh 8 m² ở đầu bước ra.
+- Phép thử cập nhật theo sự thật mới: `VILLA_HOUSE` thêm sảnh hai tầng (chỉ thêm loại giao thông); bea4c6fa vòng 6 qua,
+  vòng 5 vẫn bác; 75ba5793 vòng 1+2 lên 63,8 ≥ 60; 79669685 vòng 2 hỏng ở ban công cả nhà, câu nhắc vẫn nói hai đầu thang
+  của bản phác. e1c432f4: hướng thang như bản đã lưu, mọi phòng tầng 1 trùng ≥ 60 % chỗ cũ, thêm đúng một sảnh. Đột
+  biến M223 (bỏ bước khoét), M224 (không dời vách bù).
+
+### T159 — Tên phương án / mặt đứng / bộ ảnh: số cố định, bản sửa mang số gốc + lần sửa (11/10/2026, Haan)
+
+Haan: «sau khi xoá 1 phương án thì phải re-load lại web thì phương án đó mới biến mất». Hai gốc:
+1. Hộp thoại đóng lúc lệnh xoá xong, còn `/state` trên demo mất 1,8–4 giây → mục đã xoá nằm trên dải suốt quãng ấy.
+   Sửa: `hideFromState` (`web/src/hooks/use-ai-design.ts`) bỏ mục khỏi `/state` đang giữ ngay, rồi nạp lại.
+2. Tên đánh theo VỊ TRÍ trong danh sách đang hiện (T 07/10/2026): xoá «Phương án 2» thì bản thứ ba thành «Phương án 2»;
+   dải chỉ hiện 12 bản nên bản thứ 13 trồi lên lấy chỗ — nhìn như không xoá được.
+
+Haan chọn (trong ba hướng đề xuất: số cố định + lần sửa + ngày giờ; thêm tên kỹ sư tự đặt; «theo …» cho mặt đứng và
+phối cảnh): **số cố định + lần sửa + ngày giờ, và «theo …»**; không ghi tên model; chưa làm tên tự đặt.
+
+- Máy chủ đánh nhãn (`ai/variant-labels.ts`, gọi ở `/state`): bản gốc số theo thứ tự tạo trong CẢ hồ sơ, tính cả bản
+  đã xoá khỏi dải — số không đổi; bản sửa (cạnh lineage từ bản cùng loại: ô yêu cầu, sửa tay, sửa mặt đứng) mang số gốc
+  + lần sửa trong cả nhánh gốc ấy (3.1, 3.2 — sửa tiếp từ 3.1 là 3.2, không 3.1.1). `/state` đọc mã + ngày của mọi bản
+  (tối đa 500 mỗi loại, không payload) và cạnh lineage chia lô 60 mã (địa chỉ GET dài).
+- Mặt đứng mang `planLabel` (phương án dựng theo — có cả khi phương án ấy đã xoá khỏi dải), bộ ảnh mang `facadeLabel`;
+  bản sửa không có cạnh sang loại kia thừa hưởng của bản gốc. `planRef` giữ nghĩa cũ (chỉ khi phương án còn hiện).
+- Giao diện: «Phương án 3.1», «Mặt đứng 2 · theo Phương án 3.1», «Bộ ảnh 1 · theo Mặt đứng 2», dòng ngày giờ dưới tên.
+  Máy chủ cũ không trả nhãn thì lùi về đếm theo vị trí.
+
+**Hệ quả Haan sẽ thấy ngay:** hồ sơ c815a6e6 trên demo đã tạo 19 phương án, 13 bản cũ đã xoá → 6 phương án đang hiện
+đổi tên từ 1–6 thành 14–19; mặt đứng 2–5 ghi «theo Phương án 11» (phương án đã xoá mà chúng thật sự dựng theo).
+
+**Hàng rào:** `ai-variant-labels.test.ts`, `use-ai-hide.test.tsx`, phép thử nhãn ở bước Mặt bằng / Mặt đứng. Đột biến
+M218 (xoá chỉ nạp lại), M219 (giao diện bỏ nhãn máy chủ), M220 (bản sửa đánh số như bản mới). Gỡ
+`ArtifactRepository.inputsAmong` (thay bằng `edgesInto`).

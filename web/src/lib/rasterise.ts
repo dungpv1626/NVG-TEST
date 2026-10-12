@@ -4,7 +4,7 @@
  * ── Vì sao việc này nằm ở trình duyệt chứ không ở máy chủ ──────────────────────────────
  * Worker không có canvas, và repo không có `resvg`/`sharp`/`satori`. Thêm một bộ rasterise dạng
  * WebAssembly vào Worker là một thay đổi hạ tầng riêng; trong khi trình duyệt thì đã có sẵn tờ
- * SVG dưới dạng blob và đã dựng canvas ở `watermark.ts`.
+ * SVG dưới dạng blob và dựng được canvas.
  *
  * ⚠️ Cái giá của lựa chọn ấy phải nói ra: byte gửi lên máy chủ là byte KHÔNG TIN ĐƯỢC. Máy chủ
  * không có cách chứng minh tấm PNG nhận về đúng là tờ nó vừa phát ra ở `/anchor`. Ba thứ giảm
@@ -20,7 +20,7 @@
  *    đừng tưởng là lỗi.
  */
 
-/** Quá hạn này mà ảnh chưa giải mã xong thì bỏ — không để lời hứa treo mãi, cùng `watermark.ts`. */
+/** Quá hạn này mà ảnh chưa giải mã xong thì bỏ — không để lời hứa treo mãi. */
 const DECODE_TIMEOUT_MS = 8000;
 
 export class RasteriseError extends Error {}

@@ -445,7 +445,44 @@ export function deriveDoors(input: DoorsInput): DoorsResult {
     }
   }
 
+  // Thang chữ U, tầng trên: lỗ mở ra ở đầu bước ra phải nằm trên VẾ TỚI, không giữa cạnh. Vế đầu cùng đầu ấy, ở tầng
+  // trên là khoảng thông xuống chân thang — lỗ giữa cạnh (2,57 m trên ô 4,67 m) chỉ trùng vế tới ~1 m, phần còn lại mở
+  // ra khoảng trống (T158, lượt e1c432f4). Tầng 1 đã căn theo vế đầu (`shapedStairEntry`); ở đây căn phía ngược lại.
+  if (
+    stairId &&
+    input.level > 1 &&
+    input.stairUp &&
+    input.stairParams &&
+    U_SHAPES.has(input.stairParams.shape)
+  ) {
+    const r = rect.get(stairId);
+    const need = arrivalSide(input.stairUp, stairArrival(input.stairParams.shape));
+    const index = doors.findIndex((door) => {
+      const other = door.a === stairId ? door.b : door.b === stairId ? door.a : null;
+      return !!other && !!r && rect.has(other) && sideOf(r, rect.get(other)!) === need;
+    });
+    if (index >= 0) {
+      doors[index] = {
+        ...doors[index]!,
+        place: firstFlightAtLowEnd(input.stairUp) ? 'end' : 'start',
+      };
+    }
+  }
+
   return { doors, also, stair, reasons };
+}
+
+/** Thang hai vế song song: vế tới ở tầng trên nằm cạnh vế đầu, cùng đầu ngắn. */
+const U_SHAPES: ReadonlySet<string> = new Set(['chu_u', 'chu_u_rong']);
+
+/**
+ * Vế đầu nằm ở đầu có toạ độ NHỎ của cạnh ngắn (theo trục ngang vế) — tờ vẽ cho vế đầu xuất phát ở góc cố định theo
+ * `up`, đi ngang theo `across = [−up.y, up.x]`. `place: 'start'` của cửa là đầu toạ độ nhỏ của vách.
+ */
+function firstFlightAtLowEnd(up: StairUp): boolean {
+  const alongX = up.endsWith('x');
+  const across: [number, number] = alongX ? [0, up === '+x' ? 1 : -1] : [up === '+y' ? -1 : 1, 0];
+  return alongX ? across[1] > 0 : across[0] > 0;
 }
 
 export type StairSide = 'x0' | 'x1' | 'y0' | 'y1';
@@ -560,10 +597,7 @@ function shapedStairEntry(
     const across = alongX ? r.y1 - r.y0 : r.x1 - r.x0;
     if (!stairFits(params, along, across)) continue;
     // Gốc vế đầu: đi theo `across = [−up.y, up.x]` từ gốc vẫn ở trong ô, nên gốc nằm ở cạnh ngược chiều across.
-    const acrossVec: [number, number] = alongX
-      ? [0, up === '+x' ? 1 : -1]
-      : [up === '+y' ? -1 : 1, 0];
-    const lowEnd = alongX ? acrossVec[1] > 0 : acrossVec[0] > 0;
+    const lowEnd = firstFlightAtLowEnd(up);
     doors[index] = { a: candidate, b: id, kind: current.kind, place: lowEnd ? 'start' : 'end' };
     return { up, longSide: null };
   }

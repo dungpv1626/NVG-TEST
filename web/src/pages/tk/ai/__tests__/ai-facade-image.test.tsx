@@ -26,10 +26,6 @@ const state = vi.hoisted(() => ({
   ),
 }));
 
-vi.mock('@/lib/watermark', () => ({
-  stampWatermark: (url: string) => Promise.resolve({ url, stamped: true }),
-}));
-
 vi.mock('@/hooks/use-ai-design', () => ({
   useAiFacadeImage: () => ({ url: state.url, loading: false, error: null }),
   useDrawAiFacadeImage: () => ({
@@ -88,16 +84,20 @@ describe('Ảnh mặt đứng có vật liệu', () => {
     expect(screen.getByText(/dựng lại ý tưởng mặt đứng trước khi vẽ ảnh/)).toBeInTheDocument();
   });
 
-  it('tấm đã vẽ: tải về là bản có nhãn in trên ảnh, không còn câu chú thích trong trang', async () => {
+  it('tấm đã vẽ: hiện và tải về NGUYÊN BẢN, không in dấu, không câu chú thích trong trang', async () => {
     state.url = 'blob:facade-image';
     renderWithApp(
       <FacadeImagePanel projectId="p1" artifactId={FACADE} readOnly={false} stale={false} />,
     );
     expect(await screen.findByAltText('Ảnh mặt đứng có vật liệu')).toBeInTheDocument();
-    // 07/10/2026 Haan: bỏ các đoạn chú thích (giá, chi phí, riêng tư, «ảnh AI không đo được»)
-    // khỏi màn hình. Dấu in TRÊN ảnh vẫn giữ.
+    // 07/10/2026 Haan: bỏ các đoạn chú thích (giá, chi phí, riêng tư, «ảnh AI không đo được») khỏi màn
+    // hình; 11/10/2026: bỏ luôn dấu in TRÊN ảnh — ảnh hiện đúng như mô hình trả.
     expect(screen.queryByText(AI_DISCLAIMERS.aiFacadeImage)).toBeNull();
-    expect(screen.getByRole('link', { name: 'Tải ảnh có nhãn' })).toHaveAttribute(
+    expect(screen.getByAltText('Ảnh mặt đứng có vật liệu')).toHaveAttribute(
+      'src',
+      'blob:facade-image',
+    );
+    expect(screen.getByRole('link', { name: 'Tải ảnh' })).toHaveAttribute(
       'href',
       'blob:facade-image',
     );

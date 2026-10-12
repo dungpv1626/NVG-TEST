@@ -101,6 +101,7 @@ export function AiFacadeStep({
   const blocked = !state.planHeadArtifactId;
   const stale = facadeIsStale(state);
   const versions = state.facades ?? [];
+  const versionNames = numberedNames(versions, 'Mặt đứng');
   // Mốc thắng khi chưa ai bấm chọn bản nào, và cũng khi bản đang mở vừa bị xoá khỏi dải.
   const shown =
     (open && versions.some((v) => v.artifactId === open) ? open : null) ?? state.facadeArtifactId;
@@ -272,10 +273,10 @@ export function AiFacadeStep({
         {versions.length > 1 && (
           <Panel title="Các bản mặt đứng đã dựng">
             <ul className="flex flex-wrap gap-2">
-              {versions.map((version, index) => {
+              {versions.map((version) => {
                 const isOpen = version.artifactId === shown;
                 const isHead = version.artifactId === state.facadeArtifactId;
-                const name = `Mặt đứng ${versions.length - index}`;
+                const name = versionNames.get(version.artifactId)!;
                 return (
                   <li key={version.artifactId} className="flex items-stretch">
                     <button
@@ -291,6 +292,7 @@ export function AiFacadeStep({
                       <span className="block font-medium">{name}</span>
                       <span className="block text-xs text-tk-t3">
                         {formatDateTime(version.createdAt)}
+                        {version.planLabel && ` · theo Phương án ${version.planLabel}`}
                       </span>
                       {isHead && <Chip tone="gr">Đang hiệu lực</Chip>}
                     </button>
@@ -367,6 +369,7 @@ export function AiFacadeStep({
             stale={shownIsHead && stale}
             readOnly={readOnly}
             planNames={planNames}
+            shownPlanLabel={versions.find((v) => v.artifactId === shown)?.planLabel ?? null}
           />
         )}
       </div>
@@ -380,6 +383,7 @@ function FacadeDetail({
   stale,
   readOnly,
   planNames,
+  shownPlanLabel,
 }: {
   projectId: string;
   artifactId: string;
@@ -387,6 +391,8 @@ function FacadeDetail({
   readOnly: boolean;
   /** Tên hiển thị của các phương án mặt bằng — để nói bản mặt đứng này dựng trên phương án nào. */
   planNames: Map<string, string>;
+  /** Nhãn cố định của phương án bản này dựng theo — có cả khi phương án ấy đã xoá khỏi dải. */
+  shownPlanLabel: string | null;
 }): React.ReactElement {
   const facade = useAiFacade(projectId, artifactId);
   const sheet = useAiFacadeSheet(projectId, artifactId);
@@ -429,7 +435,11 @@ function FacadeDetail({
           <span className="flex flex-wrap justify-end gap-1.5">
             {facade.data?.planRef && (
               <Chip tone="mute">
-                Dựng trên {planNames.get(facade.data.planRef) ?? 'phương án đã xoá khỏi danh sách'}
+                Dựng trên{' '}
+                {planNames.get(facade.data.planRef) ??
+                  (shownPlanLabel
+                    ? `Phương án ${shownPlanLabel}`
+                    : 'phương án đã xoá khỏi danh sách')}
               </Chip>
             )}
             {sheet.scale && (

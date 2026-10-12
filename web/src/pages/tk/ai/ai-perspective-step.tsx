@@ -3,8 +3,7 @@
  *
  * Năm điều màn hình BẮT BUỘC nói ra, cả năm đều là ràng buộc chứ không phải trang trí:
  *
- *  · **Nhãn hai lớp** — in lên pixel (`stampWatermark`) VÀ một dòng chữ trong trang. Canvas hỏng
- *    thì dòng chữ là lớp còn lại; đây là ảnh đi ra khỏi công ty tới tay khách.
+ *  · **Không in dấu lên ảnh** (Haan, 11/10/2026 — gỡ dấu T117 còn giữ): ảnh hiện và tải về đúng như mô hình trả.
  *  · **Giá trước khi bấm, và bấm một lần là NHIỀU lượt gọi.** Hai bước trước mỗi lần bấm là một
  *    lượt; ở đây một lần bấm dựng cả bộ, nên không được để người dùng suy ra từ thói quen cũ.
  *  · **Vẽ lại MỘT góc chỉ tốn một lượt** — và `front_day` không đi đường ấy được, vì bốn góc kia
@@ -23,7 +22,6 @@
 
 import { useEffect, useState } from 'react';
 import { Images, X } from 'lucide-react';
-import { AI_DISCLAIMERS } from '@nvg/shared/design';
 import { formatDateTime } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -45,7 +43,6 @@ import {
   type AiDesignState,
 } from '@/hooks/use-ai-design';
 import { toUserMessage } from '@/hooks/use-error-message';
-import { stampWatermark } from '@/lib/watermark';
 import { Chip, Panel } from '../tk-ui';
 import { AiModePicker, useAiChoice } from './ai-model-picker';
 import { AiRunProgress } from './ai-run-progress';
@@ -82,6 +79,7 @@ export function AiPerspectiveStep({
   const running = run.data?.status === 'queued' || run.data?.status === 'running';
 
   const versions = state.imageSets ?? [];
+  const versionNames = numberedNames(versions, 'Bộ ảnh');
   const shown =
     (open && versions.some((v) => v.artifactId === open) ? open : null) ?? state.imageSetArtifactId;
   const shownIsHead = shown === state.imageSetArtifactId;
@@ -400,10 +398,10 @@ export function AiPerspectiveStep({
         {versions.length > 1 && (
           <Panel title="Các bộ ảnh đã dựng">
             <ul className="flex flex-wrap gap-2">
-              {versions.map((version, index) => {
+              {versions.map((version) => {
                 const isOpen = version.artifactId === shown;
                 const isHead = version.artifactId === state.imageSetArtifactId;
-                const name = `Bộ ảnh ${versions.length - index}`;
+                const name = versionNames.get(version.artifactId)!;
                 return (
                   <li key={version.artifactId} className="flex items-stretch">
                     <button
@@ -419,6 +417,7 @@ export function AiPerspectiveStep({
                       <span className="block font-medium">{name}</span>
                       <span className="block text-xs text-tk-t3">
                         {formatDateTime(version.createdAt)}
+                        {version.facadeLabel && ` · theo Mặt đứng ${version.facadeLabel}`}
                       </span>
                       {isHead && <Chip tone="gr">Đang hiệu lực</Chip>}
                     </button>
@@ -568,7 +567,6 @@ function ImageSetPanel({
             artifactId={set.artifactId}
             view={image.view}
             label={image.label}
-            watermark={set.watermark}
             readOnly={readOnly}
             canRedraw={Boolean(route) && redrawing === null}
             redrawing={redrawing === image.view}
@@ -598,7 +596,6 @@ function PerspectiveImage({
   artifactId,
   view,
   label,
-  watermark,
   readOnly,
   canRedraw,
   redrawing,
@@ -608,28 +605,12 @@ function PerspectiveImage({
   artifactId: string;
   view: string;
   label: string;
-  watermark: string;
   readOnly: boolean;
   canRedraw: boolean;
   redrawing: boolean;
   onRedraw: () => void;
 }): React.ReactElement {
   const shown = useAiImageSetView(projectId, artifactId, view);
-  const [stamped, setStamped] = useState<{ url: string; stamped: boolean } | null>(null);
-
-  useEffect(() => {
-    if (!shown.url) {
-      setStamped(null);
-      return;
-    }
-    let cancelled = false;
-    void stampWatermark(shown.url, watermark || AI_DISCLAIMERS.aiImageSetStamp).then((result) => {
-      if (!cancelled) setStamped(result);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [shown.url, watermark]);
 
   return (
     <figure className="space-y-2">
@@ -639,22 +620,16 @@ function PerspectiveImage({
       </figcaption>
       {(shown.loading || redrawing) && <Skeleton className="h-56 w-full" />}
       {shown.error && <p className="text-status-overdue">{shown.error}</p>}
-      {!redrawing && stamped && (
+      {!redrawing && shown.url && (
         <>
           <img
-            src={stamped.url}
+            src={shown.url}
             alt={`Ảnh phối cảnh — ${label}`}
             className="w-full rounded-md border border-tk-line bg-white"
           />
-          {!stamped.stamped && (
-            <p className="text-status-overdue">
-              Trình duyệt không in được nhãn lên ảnh. Tấm này chưa có dấu — đừng gửi đi khi chưa ghi
-              rõ đây là ảnh minh hoạ.
-            </p>
-          )}
           <div className="flex flex-wrap items-center gap-3">
-            <a href={stamped.url} download={`phoi-canh-${view}.png`} className="underline">
-              Tải ảnh có nhãn
+            <a href={shown.url} download={`phoi-canh-${view}.png`} className="underline">
+              Tải ảnh
             </a>
             {!readOnly &&
               // Tấm gốc KHÔNG vẽ lại lẻ được — bốn góc kia dựng theo nó. Nói lý do thay vì ẩn nút

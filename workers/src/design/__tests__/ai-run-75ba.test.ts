@@ -46,14 +46,20 @@ describe('lượt 75ba5793 — nhà ống 5 m gara mặt tiền (T153)', () => {
     expect(notes).toMatch(/kho "sg1" không chạm lối đi nào — chương trình nhập vào "wc1"/);
   });
 
-  it('vòng 1 + vòng 2 (mô hình sửa tầng 3, tầng 1 đã khoá) qua cổng — điểm dưới ngưỡng từ T157', () => {
+  it('vòng 1 + vòng 2 (mô hình sửa tầng 3, tầng 1 đã khoá) qua cổng — trên ngưỡng nhờ sảnh đầu thang (T158)', () => {
     const merged = mergeRevision(first.renamed!, round(2), first.settled ?? []);
     const second = evaluate(merged);
     expect(second.rejections).toEqual([]);
     expect(second.ok).not.toBeNull();
-    // T157 (11/10/2026): phương án 66,9 điểm trước đó mở ô thang tầng 2 và 3 ở cạnh dài, giữa vế bậc. Phương án đi được
-    // tốt nhất chỉ được 58,4 < 60 — lượt chạy thật gọi mô hình sửa tiếp, không nhận thang không bước ra được.
-    expect(second.ok!.score.percent ?? 100).toBeLessThan(input.quality.acceptPercent ?? 0);
+    // T157: phương án 66,9 điểm trước đó mở ô thang tầng 2 và 3 ở cạnh dài, giữa vế bậc — bị bác, phương án đi được
+    // tốt nhất chỉ 58,4 < 60. T158: giữ cây, khoét sảnh đầu thang từ phòng chắn → 63,8, qua ngưỡng với thang đi được.
+    expect(second.ok!.score.percent ?? 0).toBeGreaterThanOrEqual(
+      input.quality.acceptPercent ?? 100,
+    );
+    const upper = second.ok!.levels.filter((l) => l.level.level > 1);
+    expect(
+      upper.some((l) => (l.notes ?? []).some((note) => note.code === 'stair_landing_carved')),
+    ).toBe(true);
     // Ô thang tầng 1 không còn bị bác vì thiếu chiều dài do chính bộ xếp chừa thiếu tường bao.
     const ground = second.ok!.levels.find((l) => l.level.level === 1)!;
     expect(ground.level.stairs?.length ?? 0).toBeGreaterThan(0);
@@ -62,10 +68,12 @@ describe('lượt 75ba5793 — nhà ống 5 m gara mặt tiền (T153)', () => {
   it('đổi phòng mang cửa chính vẫn hỏng thì GHI CHÚ cho kỹ sư lỗi của cách thử ấy; câu gửi mô hình không đổi', () => {
     // Ô thang tầng 1 cắt còn 3 hàng: lối vào qua gara (cách T51 thử) vướng đúng lỗi ô thang ngắn — tình huống của
     // lượt thật trước khi sửa chừa tường (mục 1), khi báo cáo chỉ nói «phòng khách không có cửa ra mặt tiền».
+    // Cắt hàng ĐẦU ô thang (hàng 12) cho phòng ăn: cắt hàng cuối thì phòng ăn ôm lấy đầu bậc 1, lối vào thang chỉ còn ở
+    // cạnh dài — từ T158 cổng bác ngay vì lỗi ấy, không tới được cách thử đổi phòng mang cửa chính.
     const r1 = round(1);
     const sketches = r1.sketches!.map((k) =>
       k.level === 1
-        ? { ...k, rows: k.rows.map((row, i) => (i === 15 ? row.replace(/st1/g, 'dn1') : row)) }
+        ? { ...k, rows: k.rows.map((row, i) => (i === 12 ? row.replace(/st1/g, 'dn1') : row)) }
         : k,
     );
     const short = evaluate({ ...r1, sketches });

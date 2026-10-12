@@ -6,21 +6,18 @@
  * đúng tờ vector ấy (ảnh neo) với vật liệu và màu của ý tưởng đã lưu.
  *
  * Ba thứ màn hình BẮT BUỘC nói ra:
- *  · **Nhãn hai lớp** — in lên pixel (`stampWatermark`) VÀ một dòng chữ trong trang; canvas hỏng thì
- *    dòng chữ là lớp còn lại.
+ *  · **Không in dấu lên ảnh** (Haan, 11/10/2026): ảnh hiện và tải về đúng như mô hình trả.
  *  · **Màu và vật liệu là hình dung**, không phải mẫu thật; kích thước không đo được trên ảnh.
  *  · **Giá trước khi bấm**, và hỏi lại khi vẽ lại nhiều lần.
  */
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Image as ImageIcon } from 'lucide-react';
-import { AI_DISCLAIMERS } from '@nvg/shared/design';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Skeleton } from '@/components/ui/states';
 import { useAiFacadeImage, useDrawAiFacadeImage } from '@/hooks/use-ai-design';
 import { toUserMessage } from '@/hooks/use-error-message';
-import { stampWatermark } from '@/lib/watermark';
 import { Panel } from '../tk-ui';
 import { AiModePicker, useAiChoice } from './ai-model-picker';
 import { AiUsageLine } from './ai-usage';
@@ -50,22 +47,6 @@ export function FacadeImagePanel({
   const shown = useAiFacadeImage(projectId, artifactId, reloadKey);
   // Đi theo cỡ xem chọn ở tờ vector ngay trên, không có bộ chọn riêng: hai tấm nằm cùng màn hình.
   const sheetSize = useSheetSize();
-
-  const [stamped, setStamped] = useState<{ url: string; stamped: boolean } | null>(null);
-  useEffect(() => {
-    if (!shown.url) {
-      setStamped(null);
-      return;
-    }
-    let cancelled = false;
-    const stamp = draw.data?.watermark ?? AI_DISCLAIMERS.aiFacadeImageStamp;
-    void stampWatermark(shown.url, stamp).then((result) => {
-      if (!cancelled) setStamped(result);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [shown.url, draw.data?.watermark]);
 
   const run = () => {
     if (!image.choice.route) return;
@@ -118,27 +99,21 @@ export function FacadeImagePanel({
         <p className="text-fg-subtle">Chưa có ảnh mặt đứng.</p>
       )}
 
-      {!busy && stamped && (
+      {!busy && shown.url && (
         <>
           <img
-            src={stamped.url}
+            src={shown.url}
             alt="Ảnh mặt đứng có vật liệu"
             style={sheetWidthStyle(sheetSize)}
             className="w-full rounded-md border border-tk-line bg-white"
           />
           {/* Lớp nhãn thứ hai, bằng CHỮ — ở lại cả khi canvas hỏng. */}
-          {!stamped.stamped && (
-            <p className="mt-1 text-status-overdue">
-              Trình duyệt không in được nhãn lên ảnh. Tấm này chưa có dấu — đừng gửi đi khi chưa ghi
-              rõ đây là ảnh minh hoạ.
-            </p>
-          )}
           <a
-            href={stamped.url}
+            href={shown.url}
             download="mat-dung-vat-lieu.png"
             className="mt-3 inline-block underline"
           >
-            Tải ảnh có nhãn
+            Tải ảnh
           </a>
         </>
       )}

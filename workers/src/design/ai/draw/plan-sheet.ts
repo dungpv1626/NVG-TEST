@@ -88,7 +88,11 @@ export function renderPlanSheet(
 
   const { style } = options;
   const notes = new DrawNotes();
-  const bbox = levelBounds(level);
+  // Tỷ lệ, hướng giấy và chỗ đặt hình chọn theo khung CHUNG của mọi tầng, không theo riêng tầng này (T158, Haan
+  // 11/10/2026: «tầng 2 … vẫn hiện nhỏ so với mặt bằng tầng 1»). Tầng 2 có ban công đua ra ngoài ranh rộng hơn tầng 1
+  // một mét, tự chọn thì nhảy sang 1:100 khổ ngang trong khi tầng 1 được 1:80 khổ đứng — đặt cạnh nhau, cùng một ngôi
+  // nhà mà tầng trên trông nhỏ hẳn. Chung khung thì mọi tờ cùng tỷ lệ, và trục, tường thẳng hàng giữa các tờ.
+  const bbox = houseBounds(plan, level);
   // Có lưới trục: ba hàng kích thước và bóng trục ở cạnh trái và cạnh dưới.
   const axisBand = options.detail
     ? chainBandMm(3, style) + style.text_mm.dim + bubbleBandMm(options.detail)
@@ -253,6 +257,16 @@ function stairsArrivingAt(
  * thỉnh thoảng khai ban công vượt ra ngoài `outline`. Thiếu vài centimet ở đây thì tờ vẽ mất
  * một mảng tường ngoài rìa mà không có lỗi nào nổ ra.
  */
+/** Khung chung của mọi tầng có phòng và của tầng đang vẽ (tờ mái có thể rộng hơn vì mái đua). */
+export function houseBounds(plan: AiFloorPlan, level: AiFloorPlanLevel): Rect {
+  return [...plan.levels, level].map(levelBounds).reduce((a, b) => ({
+    x0: Math.min(a.x0, b.x0),
+    y0: Math.min(a.y0, b.y0),
+    x1: Math.max(a.x1, b.x1),
+    y1: Math.max(a.y1, b.y1),
+  }));
+}
+
 export function levelBounds(level: AiFloorPlanLevel): Rect {
   const points: Pt[] = [];
   for (const point of level.outline) points.push(toPt(point));

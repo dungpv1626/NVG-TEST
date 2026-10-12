@@ -203,6 +203,43 @@ describe('bộ vẽ mặt bằng — hình học', () => {
     expect(huge.notes).toEqual([]);
   });
 
+  it('mọi tầng cùng tỷ lệ, cùng hướng giấy — kể cả khi một tầng có ban công đua rộng hơn (T158)', () => {
+    // Lượt e1c432f4: tầng 2 ban công đua 1 m ra ngoài ranh, tự chọn thì 1:100 khổ ngang, tầng 1 thì 1:80 khổ đứng —
+    // Haan: «tầng 2 … vẫn hiện nhỏ so với mặt bằng tầng 1».
+    const upper = VILLA_PLAN.levels.find((l) => l.level === 2)!;
+    const [x0, y0, , y1] = upper.rooms[0]!.rect as number[];
+    const projected: AiFloorPlan = {
+      ...VILLA_PLAN,
+      levels: VILLA_PLAN.levels.map((l) =>
+        l === upper
+          ? {
+              ...l,
+              rooms: [
+                ...l.rooms,
+                {
+                  ...l.rooms[0]!,
+                  id: 'balcony_t158',
+                  type: 'balcony',
+                  rect: [x0! - 400, y0!, x0!, y1!],
+                },
+              ],
+            }
+          : l,
+      ),
+    };
+    const only = (level: number) =>
+      plainSheet(
+        { ...projected, levels: projected.levels.filter((l) => l.level === level) },
+        level,
+      );
+    // Ca thử phải thật sự là ca hai tầng tự chọn khác nhau, không thì phép thử không chứng minh gì.
+    expect([only(2).scale, only(2).orientation]).not.toEqual([only(1).scale, only(1).orientation]);
+    const ground = plainSheet(projected, 1);
+    const first = plainSheet(projected, 2);
+    expect(first.scale).toBe(ground.scale);
+    expect(first.orientation).toBe(ground.orientation);
+  });
+
   it('lỗ mở lòi ra ngoài đầu tường bị kẹp lại và được ghi rõ', () => {
     const level = TOWNHOUSE_PLAN.levels[0]!;
     const broken: AiFloorPlan = {

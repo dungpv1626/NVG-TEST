@@ -100,7 +100,7 @@ export const VILLA_HOUSE: AiHouseIntent = sketched(VILLA_ZONED, VILLA_SKETCHES);
 const CRAMMED_TARGETS: Record<string, number> = {
   living_1: 110,
   kitchen_1: 100,
-  garage_1: 8,
+  garage_1: 6,
   circulation_1: 4,
   bedroom_1: 8,
   stair_1: 4,
@@ -108,10 +108,34 @@ const CRAMMED_TARGETS: Record<string, number> = {
   dining_1: 2,
 };
 
+// T158: bản phác mẫu để gara chắn đầu ngắn ô thang tầng 1 — thang chỉ vào được từ cạnh dài, cổng nay bác. Ca này
+// đo cảnh báo diện tích, không đo thang: chèn một sảnh hai hàng ô (hành lang tối thiểu hai ô) giữa gara và đầu bậc 1,
+// lấy 2 m² của gara để tổng danh mục vẫn dưới sàn xây được.
+const CRAMMED_HALL = 'circulation_3';
+
 export const VILLA_CRAMMED: AiHouseIntent = {
   ...VILLA_HOUSE,
-  rooms: VILLA_HOUSE.rooms.map((room) =>
-    CRAMMED_TARGETS[room.id] ? { ...room, target_area_m2: CRAMMED_TARGETS[room.id]! } : room,
+  rooms: [
+    ...VILLA_HOUSE.rooms.map((room) =>
+      CRAMMED_TARGETS[room.id] ? { ...room, target_area_m2: CRAMMED_TARGETS[room.id]! } : room,
+    ),
+    {
+      id: CRAMMED_HALL,
+      type: 'circulation',
+      level: 1,
+      target_area_m2: 2,
+      ensuite_of: null,
+    },
+  ],
+  sketches: VILLA_HOUSE.sketches!.map((sketch) =>
+    sketch.level === 1
+      ? {
+          ...sketch,
+          rows: sketch.rows.map((row, i) =>
+            i === 5 || i === 6 ? row.replace(/garage_1/g, CRAMMED_HALL) : row,
+          ),
+        }
+      : sketch,
   ),
 };
 
@@ -257,7 +281,7 @@ export const TUBE_ZONED: HouseIntent = {
       id: 'dining_1',
       type: 'dining',
       level: 1,
-      target_area_m2: 4,
+      target_area_m2: 2,
       ensuite_of: null,
       zone: 'center',
       street_facing: false,
