@@ -336,6 +336,8 @@ export function anonymiseForAi(input: AnonymiseInput): AiBriefDigest {
           projection_over_boundary: brief.balconies.projection_over_boundary ?? null,
           projection_m: brief.balconies.projection_m ?? null,
           drying_balcony: brief.balconies.drying_balcony ?? null,
+          main_front_access: brief.balconies.main_front_access ?? null,
+          main_front_depth_m: brief.balconies.main_front_depth_m ?? null,
           note: scrubOrNull(brief.balconies.note, identities),
         }
       : null,

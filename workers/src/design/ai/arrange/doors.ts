@@ -69,6 +69,11 @@ export interface DoorsInput {
    * thang ấy, và ở tầng trên lối ra là phía thang «tới» (`stairArrival`). Vắng = cách cũ (thang U theo cạnh dài).
    */
   stairParams?: StairParams | null;
+  /**
+   * Tầng 1: cạnh ô thang KHÔNG nên làm lối vào (T161) — bước quay lui của `evaluateHouse` khi tầng trên bị chặn đầu
+   * bước ra. Cạnh ấy xếp cuối danh sách thử, không bị cấm: không cạnh nào khác hợp thì vẫn dùng nó.
+   */
+  stairEntryAvoid?: StairSide | null;
   /** Cạnh phòng thờ bàn thờ dựa lưng (T106) — không mở cửa phòng thờ ở cạnh ấy. Vắng = không ràng buộc. */
   altarBackSide?: StairSide | null;
 }
@@ -398,7 +403,16 @@ export function deriveDoors(input: DoorsInput): DoorsResult {
     if (input.stairUp) up = input.stairUp;
     else {
       const entry = input.stairParams
-        ? shapedStairEntry(stairId, rect, doors, reached, isHub, shared, input.stairParams)
+        ? shapedStairEntry(
+            stairId,
+            rect,
+            doors,
+            reached,
+            isHub,
+            shared,
+            input.stairParams,
+            input.stairEntryAvoid ?? null,
+          )
         : stairEntry(stairId, rect, doors, reached, isHub, shared);
       up = entry ? entry.up : stairDirection(stairId, rect, doors);
       // Không đầu ngắn nào giáp lối đi: bước ngang vào vế đang lên — bộ xếp bỏ cây này (T105).
@@ -509,6 +523,11 @@ function sideOf(r: Rect, other: Rect): StairSide | null {
 /** Đầu ngắn chứa bậc 1 theo chiều lên (góc xuất phát của `draw/stairs.ts`) — thang hai vế tới cùng đầu ấy. */
 const START_SIDE: Record<StairUp, StairSide> = { '+x': 'x0', '-x': 'x1', '+y': 'y0', '-y': 'y1' };
 
+/** Cạnh lối vào ô thang ở tầng 1 theo chiều lên — cạnh chứa bậc 1 (T161, bước quay lui của `evaluateHouse`). */
+export function stairEntrySide(up: StairUp): StairSide {
+  return START_SIDE[up];
+}
+
 /** Chiều đi lên của vế đầu khi lối vào ở cạnh `side`: vế đầu đi thẳng vào ô, xa cạnh ấy. */
 const UP_FROM_SIDE: Record<StairSide, StairUp> = { x0: '+x', x1: '-x', y0: '+y', y1: '-y' };
 
@@ -576,6 +595,7 @@ function shapedStairEntry(
   isHub: (id: string) => boolean,
   shared: (a: string, b: string) => boolean,
   params: StairParams,
+  avoid: StairSide | null = null,
 ): { up: StairUp; longSide: string | null } | null {
   const r = rect.get(id)!;
   const index = doors.findIndex((door) => door.a === id || door.b === id);
@@ -587,7 +607,12 @@ function shapedStairEntry(
     .sort(
       (p, q) => sharedEdge(rect.get(q)!, r) - sharedEdge(rect.get(p)!, r) || p.localeCompare(q),
     );
-  for (const candidate of [host, ...others]) {
+  const avoided = (candidate: string) => {
+    const other = rect.get(candidate);
+    return avoid !== null && !!other && sideOf(r, other) === avoid;
+  };
+  const order = [host, ...others];
+  for (const candidate of [...order.filter((c) => !avoided(c)), ...order.filter(avoided)]) {
     const other = rect.get(candidate);
     const side = other ? sideOf(r, other) : null;
     if (!side) continue;

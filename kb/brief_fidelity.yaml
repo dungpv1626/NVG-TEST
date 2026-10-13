@@ -127,6 +127,13 @@ demands:
     from_level: 2
     # Loại không gian ngoài trời tính là chỗ phơi nắng được.
     drying_types: [balcony, terrace]
+    # Ban công chính mặt tiền được nông hơn độ sâu gia chủ khai (`balconies.main_front_depth_m`) chừng này, mét (T161).
+    # Ô ban công đo theo tim tường, còn gia chủ đo từ mặt tường tới mép lan can: chừng 0,3 m là tường bao + lan can.
+    # Thiếu hơn thì bác — đây là lời gia chủ, không phải suy đoán nghề (CLAUDE.md 8.3).
+    main_depth_tolerance_m: 0.3
+    # Gia chủ chọn ban công chính mặt tiền mở từ «phòng ngủ chính» (T161): loại phòng ấy. «Sảnh, hành lang, sinh hoạt
+    # chung» là nhóm `shared_access` của `kb/room_vocabulary.yaml` — cùng nhóm tiêu chí D6 đọc, không chép ở đây.
+    main_master_types: [master_bedroom]
     # Bề sâu tối thiểu KHÔNG khai ở đây — đã có `usable.min_side_m.balcony` của
     # `kb/construction_norms.yaml`, và hai chỗ cùng một con số là hai chỗ sẽ lệch nhau.
     #

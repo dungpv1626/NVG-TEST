@@ -783,6 +783,23 @@
           </thead>
           <tbody>
             <tr>
+              <td class="num">14/10</td>
+              <td>
+                T161 — đầu bài và lời dẫn cho bản phác chuẩn hơn (Haan hỏi lỗi gốc ở mô hình hay
+                dựng hình): lời dẫn 9.10.0 gỡ các câu tự mâu thuẫn (C12, D5, «ưu tiên phòng ngủ» cho
+                mọi ban công), hành lang đúng <code>corridor_min_cells</code> ô và không vẽ sảnh;
+                tri thức <code>stair_min_m.arrival</code> ngay lượt đầu; tầng trên bị chắn đầu bước
+                ra thì tầng 1 thử vào thang từ cạnh kia; đầu bài thêm «Ban công chính mặt tiền mở ra
+                từ» và «Độ sâu ban công chính», đã trả lời thì cổng bác
+                (<code>balcony_main_access</code>, <code>balcony_main_depth</code>)
+              </td>
+              <td>
+                Phát lại 220 vòng: 21 → 22, 1 tiến (d084a46e vòng 1 — ý định gốc của mô hình nay
+                qua, 67 điểm), 0 lùi. Logic 2.058 + web 607 xanh. Đột biến M233–M237. Chưa commit,
+                chưa phát hành; đo lời dẫn mới cần lượt thật (chờ Haan cho phép)
+              </td>
+            </tr>
+            <tr>
               <td class="num">13/10</td>
               <td>
                 T160 — kích thước chi tiết (Haan chấm d084a46e): phát hành <code>nvg-api</code> từ
@@ -796,114 +813,8 @@
                 d084a46e: hành lang tầng 2 2,14 → 1,50 m, tầng 1 1,84 → 1,54 m, WC tầng 1 2,7 m + tủ
                 đồ 4,5 m². Phát lại 220 vòng: 22 = 22, 0 tiến, 0 lùi; hành lang hẹp lại ở 5 lượt.
                 Đột biến M225–M232. Nhánh
-                <code>t160-mat-bang-kich-thuoc</code>, chưa commit, chưa phát hành
-              </td>
-            </tr>
-            <tr>
-              <td class="num">11/10</td>
-              <td>
-                T158 bổ sung — thang bị phòng chắn đầu thì giữ cây, khoét sảnh từ phòng chắn và dời
-                vách bù (<code>arrange/stair-landing.ts</code>); lỗ mở tầng trên thang U trên vế
-                tới; «XUỐNG» ở bậc cuối
-              </td>
-              <td>
-                Phát lại 219 vòng: 20 → 21, 5 tiến, 0 lùi. e1c432f4 giữ bố cục mô hình vẽ. Đột biến
-                M221–M224 bị bắt. Chưa phát hành
-              </td>
-            </tr>
-            <tr>
-              <td class="num">11/10</td>
-              <td>
-                T159 — tên cố định: «Phương án 3.1» (số theo thứ tự tạo cả hồ sơ, bản sửa = số gốc +
-                lần sửa), «Mặt đứng 2 · theo Phương án 3.1», «Bộ ảnh 1 · theo Mặt đứng 2», dòng ngày
-                giờ; máy chủ đánh nhãn ở <code>/state</code>
-              </td>
-              <td>
-                Đột biến M219, M220 bị bắt. Hồ sơ demo c815a6e6: 6 phương án đang hiện sẽ thành
-                14–19. Chưa phát hành
-              </td>
-            </tr>
-            <tr>
-              <td class="num">11/10</td>
-              <td>
-                Xoá phương án / mặt đứng / bộ ảnh khỏi dải chọn: mục rời dải ngay khi lệnh xoá xong
-                (<code>hideFromState</code>), không chờ <code>/state</code> nạp lại — trên demo
-                <code>/state</code> mất 1,8–4 giây nên Haan tưởng phải tải lại trang
-              </td>
-              <td>
-                Phép thử <code>use-ai-hide</code>, đột biến M218 bị bắt; 605 phép thử web xanh
-              </td>
-            </tr>
-            <tr>
-              <td class="num">11/10</td>
-              <td>
-                T158 — lượt e1c432f4 (opus 5.5, bản demo trước T157): tầng 1 kho chắn đầu bậc 1, lối
-                vào thang mở ở cạnh dài — cổng nay loại <code>stair_entry_long_side</code> khi biết
-                loại thang; tờ mặt bằng mọi tầng cùng tỷ lệ, hướng giấy (tầng 2 ban công đua từng ra
-                1:100 ngang, tầng 1 1:80 đứng)
-              </td>
-              <td>
-                Phát lại 219 vòng: 20 = 20 mặt bằng, 0 mất; e1c432f4 vào thang đúng đầu bậc 1 (74,4
-                → 69,9). Đột biến M216, M217 bị bắt; 1.618 phép thử xanh. Chưa phát hành
-              </td>
-            </tr>
-            <tr>
-              <td class="num">11/10</td>
-              <td>
-                T157 — thang tầng trên mở ra giữa vế bậc (phương án 6 c815a6e6): lối ra phải ở đầu
-                người bước ra (<code>stair_arrival_blocked</code>), cổng loại ứng viên vi phạm; rà
-                soát mã 10 phát hiện, sửa 5
-              </td>
-              <td>
-                Phát lại 217 vòng: 21 → 19, 3 «lùi» đều là thang mở giữa vế bậc; T109/T111 mất ca
-                canh. Chưa commit
-              </td>
-            </tr>
-            <tr>
-              <td class="num">11/10</td>
-              <td>
-                T156 — mặt đứng dựng tường và mái lên trên ban công đua (lượt 6e155ce6): thân tầng
-                lấy theo tường bao (<code>enclosedSpan</code>), ý tưởng đã lưu được nắn lúc vẽ, phào
-                / diềm mái cắt theo thân tầng
-              </td>
-              <td>134 phép thử mặt đứng xanh; M211–M213 bị bắt 3/3. Chưa phát hành</td>
-            </tr>
-            <tr>
-              <td class="num">11/10</td>
-              <td>
-                T155 — lượt hỏng 79669685 (biệt thự 15 × 20 m, 5 lượt 0,41 USD): ban công đúng trên
-                bản phác mà mô hình nhận câu «chỉ chạm ở góc». Lỗi bản phác ngoài
-                <code>REVISABLE_CODES</code> nay đi theo tầng chia lại
-                (<code>SKETCH_FAILURE_CODES</code>); phòng <code>served_from</code> phải tự tới được
-                (giặt phơi không mở qua ban công riêng của phòng ngủ), lời dẫn 9.9.2; câu ban công
-                khối góc nói đúng khi khối góc do chương trình (<code>truthfulBalconyIssues</code>)
-              </td>
-              <td>
-                Phát lại 213 vòng: 20 → 21 mặt bằng qua, 0 lùi; đột biến M207–M210 bị bắt 4/4; 1.144
-                phép thử ai-* xanh. Chưa commit
-              </td>
-            </tr>
-            <tr>
-              <td class="num">11/10</td>
-              <td>
-                T154 — bỏ dấu «Ảnh minh hoạ do AI vẽ — không đo được…» in đè lên mọi ảnh do mô hình
-                ảnh vẽ (nội thất, mặt đứng vật liệu, phối cảnh, ảnh từ bản tải lên, ảnh bìa); xoá
-                <code>web/src/lib/watermark.ts</code>
-              </td>
-              <td>602 phép thử giao diện xanh; kiểu, luật sạch. Chưa phát hành</td>
-            </tr>
-            <tr>
-              <td class="num">11/10</td>
-              <td>
-                T153 — lượt hỏng 75ba5793 (nhà ống 5 m gara mặt tiền, 5 lượt 0,5 USD không ra phương
-                án): ô thang chừa theo tường bao (hụt 1,5 cm do chính bộ xếp); báo lỗi của cách đặt
-                cửa chính gần qua nhất; nhập phòng phụ nhỏ kẹt (<code>ai/stranded.ts</code>,
-                <code>sketch.absorb_stranded</code>); dừng khi mô hình trả lại câu đã chấm
-                (<code>houseAnswerKey</code>)
-              </td>
-              <td>
-                Phát lại 209 / 213 vòng ghi: 19 = 19 mặt bằng, 0 lùi; lượt 75ba5793 phát lại qua ở
-                vòng 2 (64,5 điểm). Lượt ghi + phép thử hồi quy + M203–M205. Chưa commit
+                <code>t160-mat-bang-kich-thuoc</code>, commit 1249b7a đã đẩy (14/10), chưa PR, chưa
+                phát hành
               </td>
             </tr>
           </tbody>

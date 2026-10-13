@@ -20,6 +20,7 @@ import {
 import { planGraph } from '../ai/plan-check';
 import { stairLayout } from '../ai/stair-geometry';
 import { FAKE_CALL, loadRun, prompts, read, realContextInput } from './ai-real-context';
+import type { HouseModelKnowledge } from '../ai/plan';
 
 const run = loadRun('d084a46e');
 const generator = programGenerator(FAKE_CALL, 'ai_text_fake', prompts.version, false);
@@ -37,19 +38,117 @@ const rectOf = (plan: AiFloorPlan, level: number, id: string): Rect => {
 };
 
 describe('phương án d084a46e c815a6e6 — kích thước chi tiết (T160)', () => {
-  it('ý định đã lưu: mã hiện hành bác tầng 2 vì phòng ngủ chính chắn đầu bước ra của thang (T157)', () => {
-    const input = inputOf(run.digest);
-    const context = planContext(input);
-    const result = evaluateHouseBest(
-      input,
-      context,
-      run.intents.round1 as HouseIntent,
-      generator,
-      promptsFor(context, prompts),
-    );
-    expect(result.ok).toBeNull();
-    const level2 = result.rejections.find((r) => r.level === 2);
-    expect(level2?.codes).toContain('stair_arrival_blocked');
+  it(
+    'ý định đã lưu: tầng 2 bị phòng ngủ chính chắn đầu bước ra (T157) — tầng 1 vào thang từ đầu sau thì cả nhà qua (T161)',
+    { timeout: 180_000 },
+    () => {
+      // Bản phác của mô hình: thang tầng 1 giáp phòng khách ở đầu trước, hành lang ở đầu sau; tầng 2 phòng ngủ chính ở
+      // đầu trước, hành lang ở đầu sau. Bộ xếp tầng 1 chọn đầu trước (cửa sẵn có) nên thang U bước ra tầng 2 vào phòng
+      // ngủ — cổng bác. Bước quay lui T161 cho tầng 1 vào từ đầu sau: tầng 2 bước ra đúng hành lang.
+      const input = inputOf(run.digest);
+      const context = planContext(input);
+      const result = evaluateHouseBest(
+        input,
+        context,
+        run.intents.round1 as HouseIntent,
+        generator,
+        promptsFor(context, prompts),
+      );
+      expect(result.ok, JSON.stringify(result.rejections).slice(0, 400)).not.toBeNull();
+      const [ground, upper] = result.ok!.levels.map((l) => l.level);
+      const stair = ground!.stairs![0]!;
+      expect(stair.up).toBe('-y');
+      const stairUpper = upper!.rooms.find((r) => r.type === 'stair')!.rect as Rect;
+      const hall = upper!.rooms.find((r) => r.id === 'circulation_6')!.rect as Rect;
+      // Hành lang tầng 2 giáp trọn đầu sau (y1) của ô thang.
+      expect(hall[1] - stairUpper[3]).toBeLessThan(15);
+      expect(hall[0]).toBeLessThanOrEqual(stairUpper[0]);
+      expect(hall[2]).toBeGreaterThanOrEqual(stairUpper[2]);
+    },
+  );
+
+  it(
+    'gia chủ chọn ban công chính mở từ giao thông chung: ban công riêng của phòng ngủ chính bị bác; chọn phòng ngủ chính thì qua (T161)',
+    { timeout: 180_000 },
+    () => {
+      const withAccess = (access: string) => {
+        const digest = {
+          ...run.digest,
+          balconies: { ...run.digest.balconies!, main_front_access: access },
+        } as typeof run.digest;
+        const input = inputOf(digest);
+        const context = planContext(input);
+        return evaluateHouseBest(
+          input,
+          context,
+          run.intents.round1 as HouseIntent,
+          generator,
+          promptsFor(context, prompts),
+        );
+      };
+      // Mô hình khai `balcony_1` là ban công riêng (`ensuite_of`) của phòng ngủ chính — cửa mở từ phòng ngủ.
+      const shared = withAccess('chung');
+      expect(shared.ok).toBeNull();
+      expect(shared.rejections.flatMap((r) => r.messages).join(' ')).toContain(
+        'ban công chính mặt tiền mở từ sảnh',
+      );
+      // Lỗi đi vào lượt sửa kèm câu nhắc (mã nằm trong REVISABLE_CODES).
+      expect(shared.hints.join(' ')).toContain('main front balcony to open from');
+      const master = withAccess('phong_ngu_chinh');
+      expect(master.ok, JSON.stringify(master.rejections).slice(0, 400)).not.toBeNull();
+    },
+  );
+
+  it(
+    'gia chủ khai độ sâu ban công chính: nông hơn quá dung sai thì bị bác, đủ sâu thì qua (T161)',
+    { timeout: 180_000 },
+    () => {
+      const withDepth = (depth: number) => {
+        // Độ sâu chỉ đòi khi mặt trước không khai độ đua — bỏ độ đua mặt trước của đầu bài thật.
+        const balconies = run.digest.balconies!;
+        const digest = {
+          ...run.digest,
+          balconies: {
+            ...balconies,
+            projection_by_side: { ...balconies.projection_by_side, front: 0 },
+            main_front_depth_m: depth,
+          },
+        } as typeof run.digest;
+        const input = inputOf(digest);
+        const context = planContext(input);
+        return evaluateHouseBest(
+          input,
+          context,
+          run.intents.round1 as HouseIntent,
+          generator,
+          promptsFor(context, prompts),
+        );
+      };
+      const deep = withDepth(3);
+      expect(deep.rejections.flatMap((r) => r.messages).join(' ')).toContain('chỉ sâu');
+      expect(deep.hints.join(' ')).toContain('main front balcony at least 3 m deep');
+      const shallow = withDepth(1.2);
+      expect(shallow.ok, JSON.stringify(shallow.rejections).slice(0, 400)).not.toBeNull();
+    },
+  );
+
+  it('lượt đầu đã biết chỗ người lên / xuống ô thang theo loại thang (T161)', () => {
+    // Trước T161 mô hình chỉ biết loại và cỡ ô thang, nên vẽ phòng ngủ chính chắn đầu bước ra (tầng 2 của d084a46e).
+    const expected = {
+      chu_u: 'one_short_end',
+      chu_u_rong: 'one_short_end',
+      ba_ve: 'one_short_end',
+      thang_thang: 'both_short_ends',
+      chu_l: 'short_end_and_long_side',
+    } as const;
+    for (const [shape, arrival] of Object.entries(expected)) {
+      const digest = {
+        ...run.digest,
+        vertical: { ...run.digest.vertical!, stair_shape: shape },
+      } as typeof run.digest;
+      const knowledge = planContext(inputOf(digest)).modelKnowledge as HouseModelKnowledge;
+      expect(knowledge.stair_min_m?.arrival, shape).toBe(arrival);
+    }
   });
 
   it(

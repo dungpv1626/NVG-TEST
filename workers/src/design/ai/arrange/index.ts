@@ -61,7 +61,7 @@ import {
   stairShortfall,
   stairTreads,
 } from '../tree/stair-fit';
-import { deriveDoors, stairSideOf, stairSidesNeeded } from './doors';
+import { deriveDoors, stairSideOf, stairSidesNeeded, type StairSide } from './doors';
 import { carveStairLanding } from './stair-landing';
 import { intentFit, type IntentFit } from './fit';
 import { enumerateCarved, enumerateFrames, type FrameCandidate } from './frames';
@@ -162,6 +162,8 @@ export interface ArrangeInput {
   splitClosets?: boolean;
   /** Lấy ứng viên xếp hạng thứ n (0 = tốt nhất; quá số ứng viên thì lấy cái cuối) — bước quay lui tầng 1 (T113). */
   rankSkip?: number;
+  /** Tầng 1: cạnh ô thang xếp cuối khi chọn lối vào (T161, `DoorsInput.stairEntryAvoid`). */
+  stairEntryAvoid?: StairSide;
   openFaces: readonly Face[];
   accessFaces: readonly Face[];
   entrances: { main: Face | null; vehicle: Face | null };
@@ -2387,6 +2389,7 @@ function emitCandidate(
       altarBackSide: input.altarBackSide ?? null,
       stairOpensTo: input.groups.passage?.stairOpensTo ?? null,
       stairParams,
+      stairEntryAvoid: input.stairEntryAvoid ?? null,
       mainSide:
         input.level === 1 && input.entrances.main
           ? { footprint, side: FACE_SIDE[input.entrances.main] }
@@ -3783,6 +3786,7 @@ function rank(
       },
       buildingType: input.scoring.buildingType,
       houseProfile: input.scoring.houseProfile ?? null,
+      mainBalconyAccess: input.balcony?.mainAccess ?? null,
       quality: input.scoring.quality,
       rules: input.scoring.rules,
       groups: input.scoring.roomGroups,

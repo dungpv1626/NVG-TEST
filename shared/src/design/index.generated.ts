@@ -40,4 +40,4 @@ export * from './kb.generated';
  * hai phiên bản hợp đồng dữ liệu khác nhau — nói thẳng điều đó còn hơn để người dùng đọc một
  * câu lỗi kiểm kiểu không dẫn tới đâu.
  */
-export const CONTRACTS_FINGERPRINT = '5e6bfa324d9e';
+export const CONTRACTS_FINGERPRINT = 'd416db3a97d1';

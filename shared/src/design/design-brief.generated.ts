@@ -1232,6 +1232,29 @@ export const designBriefSchema = z
           .nullable()
           .describe('Ghi chú thêm về ban công: lan can kính hay xây, trồng cây, che mưa, làm lam.')
           .optional(),
+        /** Ban công chính mặt tiền mở ra từ đâu (T161, Haan 14/10/2026): `chung` — sảnh, hành lang hoặc phòng sinh hoạt chung; `phong_ngu_chinh` — phòng ngủ chính; `chua_quyet` hay trống — chưa quyết, chương trình chỉ chấm điểm (D6). Đã chọn thì là đòi hỏi của gia chủ: phương án làm khác bị bác. */
+        main_front_access: z
+          .union([
+            z.literal('chung'),
+            z.literal('phong_ngu_chinh'),
+            z.literal('chua_quyet'),
+            z.literal(null),
+          ])
+          .nullable()
+          .describe(
+            'Ban công chính mặt tiền mở ra từ đâu (T161, Haan 14/10/2026): `chung` — sảnh, hành lang hoặc phòng sinh hoạt chung; `phong_ngu_chinh` — phòng ngủ chính; `chua_quyet` hay trống — chưa quyết, chương trình chỉ chấm điểm (D6). Đã chọn thì là đòi hỏi của gia chủ: phương án làm khác bị bác.',
+          )
+          .optional(),
+        /** Độ sâu mong muốn của ban công chính mặt tiền, mét, tính từ mặt tường tới mép lan can (T161). Chỉ hỏi khi mặt trước không khai độ đua — khai độ đua rồi thì độ đua là độ sâu. Trống = chưa trả lời: chương trình không tự đặt số. */
+        main_front_depth_m: z
+          .number()
+          .gte(0.6)
+          .lte(3)
+          .nullable()
+          .describe(
+            'Độ sâu mong muốn của ban công chính mặt tiền, mét, tính từ mặt tường tới mép lan can (T161). Chỉ hỏi khi mặt trước không khai độ đua — khai độ đua rồi thì độ đua là độ sâu. Trống = chưa trả lời: chương trình không tự đặt số.',
+          )
+          .optional(),
       })
       .strict()
       .nullable()

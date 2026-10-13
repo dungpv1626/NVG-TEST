@@ -119,6 +119,11 @@ export interface PlanScoreInput {
   /** Loại nhà (T116, `houseProfile`) — lớp ghi đè thứ hai của thước chấm, chồng lên `buildingType`. */
   houseProfile?: string | null;
   /**
+   * Gia chủ đã chọn ban công chính mặt tiền mở từ đâu (T161, `BalconyDemand.mainAccess`). Có thì D6 không chấm: cổng
+   * (`balcony_main_access`) đã đòi đúng lời gia chủ, và chấm theo kinh nghiệm nghề thì trừ điểm chính điều gia chủ chọn.
+   */
+  mainBalconyAccess?: 'chung' | 'phong_ngu_chinh' | null;
+  /**
    * Cạnh tối thiểu theo loại nhà (`by_house_profile.<loại>` của `kb/construction_norms.yaml`) — B1 đọc trước ngưỡng của
    * `rules/`. Nhà ống: bảng KTS (hành lang 0,9 m, ban công 0,5 m…) mà bộ giải và cổng đã dùng; thiếu thì B1 trừ điểm
    * đúng thứ cổng cho qua (T116 tiếp 17).
@@ -345,6 +350,7 @@ interface ScoreContext {
   plan: AiFloorPlan;
   buildingType: string;
   houseProfile: string | null;
+  mainBalconyAccess: 'chung' | 'phong_ngu_chinh' | null;
   profileMinSide: ((type: string) => number | null) | null;
   rules: RulePack;
   groups: Record<string, string[]>;
@@ -395,6 +401,7 @@ function context(input: PlanScoreInput): ScoreContext {
     plan: input.plan,
     buildingType: input.buildingType,
     houseProfile: input.houseProfile ?? null,
+    mainBalconyAccess: input.mainBalconyAccess ?? null,
     profileMinSide: input.profileMinSide ?? null,
     rules: input.rules,
     groups: input.groups,
@@ -1052,6 +1059,13 @@ const MEASURES: Record<string, MeasureFn> = {
       return {
         value: null,
         khongCham: 'Nhà ống không chấm: ban công mặt tiền mở từ phòng ngủ trước là bố cục thường.',
+      };
+    }
+    if (ctx.mainBalconyAccess) {
+      return {
+        value: null,
+        khongCham:
+          'Gia chủ đã chọn ban công chính mặt tiền mở từ đâu — cổng kiểm đúng lời gia chủ, không chấm.',
       };
     }
     const tol = (spec.params.edge_tolerance_m ?? 0.3) * 100;

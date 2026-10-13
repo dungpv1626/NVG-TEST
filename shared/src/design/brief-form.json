@@ -2095,6 +2095,68 @@
           }
         },
         {
+          "path": "balconies.main_front_access",
+          "label": "Ban công chính mặt tiền mở ra từ",
+          "control": "choice",
+          "weight": 0,
+          "optional": true,
+          "hint": "Chỉ trả lời khi có ban công mặt trước. Đã chọn thì phương án phải làm đúng như vậy; chưa quyết thì kiến trúc sư đề xuất (thường mở từ sảnh hoặc phòng sinh hoạt chung).",
+          "note": "T161 (Haan 14/10/2026, sau khi chấm phương án d084a46e: «ban công chính mặt trước nên đi được từ giao thông chung và có kích thước lớn»).",
+          "options": [
+            {
+              "value": "chung",
+              "label": "Sảnh, hành lang hoặc sinh hoạt chung"
+            },
+            {
+              "value": "phong_ngu_chinh",
+              "label": "Phòng ngủ chính"
+            },
+            {
+              "value": "chua_quyet",
+              "label": "Chưa quyết"
+            }
+          ],
+          "when": {
+            "all": [
+              {
+                "field": "balconies.scope",
+                "filled": true
+              },
+              {
+                "not": {
+                  "field": "balconies.scope",
+                  "equals": "khong_co"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "path": "balconies.main_front_depth_m",
+          "label": "Độ sâu ban công chính mặt tiền",
+          "control": "number",
+          "unit": "m",
+          "weight": 0,
+          "optional": true,
+          "min": 0.6,
+          "max": 3,
+          "hint": "Tính từ mặt tường tới mép lan can. Bỏ trống nếu đã khai độ đua mặt trước — khi đó độ đua là độ sâu.",
+          "when": {
+            "all": [
+              {
+                "field": "balconies.scope",
+                "filled": true
+              },
+              {
+                "not": {
+                  "field": "balconies.scope",
+                  "equals": "khong_co"
+                }
+              }
+            ]
+          }
+        },
+        {
           "path": "balconies.note",
           "label": "Ghi chú thêm về ban công",
           "control": "textarea",

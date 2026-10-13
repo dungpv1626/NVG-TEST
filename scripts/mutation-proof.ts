@@ -1908,6 +1908,48 @@ const MUTATIONS: Mutation[] = [
     find: '      for (const balcony of side) if (balcony.areaM2 > main.areaM2 + 0.05) refs.push(balcony.id);',
     replace: '      void side;',
   },
+  {
+    id: 'M233',
+    axis: 'bản vẽ',
+    file: 'workers/src/design/ai/plan-check.ts',
+    bug: 'Gia chủ chọn ban công chính mở từ giao thông chung mà ban công riêng của phòng ngủ chính vẫn qua cổng (T161)',
+    find: "      if (present && !openers.some((id) => from.has(graph.rooms.get(id)?.type ?? ''))) {",
+    replace: '      if (present && openers.length < 0) {',
+  },
+  {
+    id: 'M234',
+    axis: 'bản vẽ',
+    file: 'workers/src/design/ai/brief-demands.ts',
+    bug: '«Chưa quyết» ban công chính mở từ đâu vẫn thành đòi hỏi — bịa lời gia chủ (T161)',
+    find: "  const mainAccess = front && (access === 'chung' || access === 'phong_ngu_chinh') ? access : null;",
+    replace:
+      "  const mainAccess = front && access ? (access === 'phong_ngu_chinh' ? access : 'chung') : null;",
+  },
+  {
+    id: 'M235',
+    axis: 'bản vẽ',
+    file: 'workers/src/design/ai/plan-check.ts',
+    bug: 'Ban công chính nông hơn độ sâu gia chủ khai vẫn qua cổng (T161)',
+    find: '      if (depthM + balcony.mainDepthToleranceM < balcony.mainDepthM - 1e-6) {',
+    replace: '      if (depthM + balcony.mainDepthToleranceM < balcony.mainDepthM - 10) {',
+  },
+  {
+    id: 'M236',
+    axis: 'bản vẽ',
+    file: 'workers/src/design/ai/plan.ts',
+    bug: 'Thang thẳng báo mô hình chỉ một đầu ngắn cần lối đi — tầng trên bước ra ở đầu kia bị chắn (T161)',
+    find: "  end: 'both_short_ends',",
+    replace: "  end: 'one_short_end',",
+  },
+  {
+    id: 'M237',
+    axis: 'bản vẽ',
+    file: 'workers/src/design/ai/plan.ts',
+    bug: 'Tầng trên bị chắn đầu bước ra mà tầng 1 không thử vào thang từ cạnh kia — ý định gốc d084a46e bị bác (T161)',
+    find: '  if (upperRun.failed && upper.length && groundUp && input.construction.stairs.shape) {',
+    replace:
+      '  if (upperRun.failed && upper.length && groundUp && !input.construction.stairs.shape) {',
+  },
 ];
 
 /** Thư mục mã nguồn được băm trước và sau khi chạy. `db/` không đụng tới nên không băm. */

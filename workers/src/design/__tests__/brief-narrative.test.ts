@@ -131,3 +131,27 @@ describe('khách – ăn – bếp (T104)', () => {
     expect(narrate(digestOf(VILLA))).not.toContain('Phòng khách, phòng ăn, bếp');
   });
 });
+
+// T161 (Haan 14/10/2026): hai câu mới về ban công chính mặt tiền đi vào đầu bài gửi mô hình; «chưa quyết» thì không.
+describe('ban công chính mặt tiền (T161)', () => {
+  const withBalcony = (extra: Record<string, unknown>) =>
+    narrate(
+      digestOf({
+        ...TOWNHOUSE,
+        balconies: { scope: 'theo_tung_phong', required_sides: ['front'], ...extra },
+      } as typeof TOWNHOUSE),
+    );
+
+  it('đã trả lời thì đầu bài nói ra; câu chung không còn «ưu tiên phòng ngủ» cho ban công chính', () => {
+    const text = withBalcony({ main_front_access: 'chung', main_front_depth_m: 1.5 });
+    expect(text).toContain(
+      'Ban công chính mặt tiền mở ra từ: sảnh, hành lang hoặc sinh hoạt chung.',
+    );
+    expect(text).toContain('Độ sâu ban công chính mặt tiền: 1,5 m.');
+    expect(text).toContain('Ban công chính mặt tiền là ban công lớn nhất');
+  });
+
+  it('«chưa quyết» không thành câu', () => {
+    expect(withBalcony({ main_front_access: 'chua_quyet' })).not.toContain('mở ra từ:');
+  });
+});

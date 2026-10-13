@@ -104,6 +104,7 @@ import {
   type ArrangeSummary,
   type LevelIntent,
 } from './arrange';
+import { stairEntrySide, type StairSide } from './arrange/doors';
 import { SPLIT_MIN_CM } from './arrange/grid';
 import { equalizeByType, hallVariants, retargetIntent } from './plan-variants';
 import { absorbStranded, type StrandedNote } from './stranded';
@@ -182,7 +183,7 @@ import { clampText, normaliseHouseIds } from './tree/ids';
 import { OUTSIDE } from './tree/openings';
 import { corridorMinCells, minSketchCells, minSketchSideCells } from './sketch-cells';
 import { stairMinCm, stairParamsOf, stairRunNeedCm, stairTreads } from './tree/stair-fit';
-import { underStairCm, type StairParams } from './stair-geometry';
+import { stairArrival, underStairCm, type StairParams } from './stair-geometry';
 import type { LevelAnchors, LevelLayout, RoomGroups } from './tree';
 
 const SCHEMA_VERSION = '1.0.0';
@@ -321,6 +322,8 @@ export interface PlanContextInput {
   splitClosets?: boolean;
   /** Lấy ứng viên xếp hạng thứ `rankSkip` (0 = tốt nhất) — chỉ cho bước quay lui tầng 1 của `evaluateHouse` (T113). */
   rankSkip?: number;
+  /** Tầng 1: cạnh ô thang xếp cuối khi chọn lối vào — bước quay lui của `evaluateHouse` (T161). */
+  stairEntryAvoid?: StairSide;
   /**
    * Cỡ ô bản phác, m. Vắng = `sketchGridOf` (ô ~1 m cho mô hình đếm). Lược đồ hình chữ nhật (bàn giao v5,
    * cách A) đổi rect của mô hình ra lưới mịn hơn để không làm tròn mất WC 1,5 m hay hành lang 1,3 m.
@@ -520,9 +523,29 @@ export interface HouseKnowledge extends ProgramKnowledge {
      * Loại thang của lượt (T105) và ô thang nhỏ nhất theo tài liệu thang bộ, m (lọt lòng, cạnh ngắn × cạnh dài) —
      * vắng khi lượt không mang loại thang.
      */
-    shape?: { vi: string; short_m: number; long_m: number; cells: [number, number] };
+    shape?: {
+      vi: string;
+      short_m: number;
+      long_m: number;
+      cells: [number, number];
+      /** Chỗ người lên / xuống ô thang ở các tầng (T161) — `STAIR_ARRIVAL_SENT` theo `stairArrival`. */
+      arrival: StairArrivalSent;
+    };
   };
 }
+
+/**
+ * Chỗ người bước lên / ra khỏi ô thang, gửi cho mô hình NGAY lượt đầu (T161, Haan 14/10/2026). Trước đó mô hình chỉ
+ * biết loại thang và cỡ ô, nên vẽ phòng ngủ chắn đầu bước ra (phương án d084a46e tầng 2) — tới khi cổng T157 bác mới
+ * biết, mất một vòng sửa. Thang U / ba vế: lên và ra cùng một đầu ngắn ở mọi tầng; thẳng: tầng trên cần cả hai đầu
+ * (bước ra ở đầu kia, vế kế tiếp lại lên từ đầu cũ); chữ L: đầu ngắn và một cạnh dài.
+ */
+const STAIR_ARRIVAL_SENT = {
+  start: 'one_short_end',
+  end: 'both_short_ends',
+  across: 'short_end_and_long_side',
+} as const;
+type StairArrivalSent = (typeof STAIR_ARRIVAL_SENT)[keyof typeof STAIR_ARRIVAL_SENT];
 
 /**
  * Phần tri thức GỬI cho mô hình (T46, 15/09/2026 — Haan: «tối giản lời dẫn, ưu tiên giữ đầu bài, khảo
@@ -581,7 +604,13 @@ export interface HouseModelKnowledge {
    * `cells`: số ô bản phác ô thang phải chiếm, [cạnh ngắn, cạnh dài], mỗi cạnh cộng bề dày tường rồi làm tròn lên — như
    * giếng thang máy (T106, lượt 2c522a90: thang U chiếu nghỉ rộng cần 3 ô ngang, mô hình vẽ cột tầng 2 rộng 2 ô).
    */
-  stair_min_m?: { width: number; length: number; shape?: string; cells?: [number, number] };
+  stair_min_m?: {
+    width: number;
+    length: number;
+    shape?: string;
+    cells?: [number, number];
+    arrival?: StairArrivalSent;
+  };
   garage_min_m2?: number;
   ensuite: { child: string[]; parent: string[] };
   walk_through: string[];
@@ -901,6 +930,7 @@ export function modelKnowledgeOf(k: HouseKnowledge): HouseModelKnowledge {
             length: stair.shape.long_m,
             shape: stair.shape.vi,
             cells: stair.shape.cells,
+            arrival: stair.shape.arrival,
           },
         }
       : k.floors > 1 && stairLength !== null
@@ -1082,13 +1112,31 @@ export function houseSystem(template: string, flags: HousePromptFlags): string {
   });
 }
 
+/**
+ * Loại phòng được mở cửa ra ban công chính mặt tiền theo lời gia chủ (T161): «sảnh, hành lang, sinh hoạt chung» là nhóm
+ * `shared_access` của `kb/room_vocabulary.yaml` (cùng nhóm tiêu chí D6 đọc), «phòng ngủ chính» là
+ * `demands.balcony.main_master_types` của `kb/brief_fidelity.yaml`. Ngữ cảnh dựng tay không có nhóm phòng thì không kiểm.
+ */
+function withMainBalconyFrom(demands: BriefDemands, input: PlanContextInput): BriefDemands {
+  const balcony = demands.balcony;
+  if (!balcony?.mainAccess) return demands;
+  const from =
+    balcony.mainAccess === 'chung'
+      ? (input.roomGroups?.shared_access ?? null)
+      : input.fidelity.demands.balcony.mainMasterTypes;
+  return from?.length ? { ...demands, balcony: { ...balcony, mainFrom: from } } : demands;
+}
+
 export function planContext(input: PlanContextInput): PlanContext {
   const buildable = buildableFromDigest(input.digest);
   const faces = siteFaces(input.digest.site, input.siteContext, setbacksFromDigest(input.digest));
-  const demands = withClosedBalconyFaces(
-    briefDemands(input.digest, input.fidelity),
-    faces.open,
-    input.digest.balconies?.drying_balcony === true,
+  const demands = withMainBalconyFrom(
+    withClosedBalconyFaces(
+      briefDemands(input.digest, input.fidelity),
+      faces.open,
+      input.digest.balconies?.drying_balcony === true,
+    ),
+    input,
   );
   // Khách – ăn – bếp gia chủ không muốn liền thì không gộp (T103) — cả lời dẫn lẫn bộ xếp đọc tập này.
   const openForbidden = demands.openPlan?.forbidden ?? null;
@@ -1259,7 +1307,7 @@ function stairGeometry(
     one_flight_length_m: one === null ? null : round1(one / 100),
     two_flights_length_m: two === null ? null : round1(two / 100),
     two_flights_min_width_m: width,
-    ...(spec && min
+    ...(shape && spec && min
       ? {
           shape: {
             vi: spec.vi,
@@ -1270,6 +1318,7 @@ function stairGeometry(
               Math.ceil((min.short / 100 + construction.walls.exterior_m) / cellM - 1e-9),
               Math.ceil((min.long / 100 + construction.walls.exterior_m) / cellM - 1e-9),
             ],
+            arrival: STAIR_ARRIVAL_SENT[stairArrival(shape)],
           },
         }
       : {}),
@@ -3356,6 +3405,7 @@ export function arrangeFor(
     ...(input.widenRooms ? { widenRooms: true } : {}),
     ...(input.splitClosets ? { splitClosets: true } : {}),
     ...(input.rankSkip ? { rankSkip: input.rankSkip } : {}),
+    ...(input.stairEntryAvoid ? { stairEntryAvoid: input.stairEntryAvoid } : {}),
     openFaces: context.openFaces,
     accessFaces: context.accessFaces,
     entrances: context.entrances,
@@ -3663,6 +3713,7 @@ export function finalisePlan(input: PlanAssembleInput): PlanFinal {
     ...(input.houseProfile
       ? { profileMinSide: profileMinSide(input.construction, input.houseProfile) }
       : {}),
+    mainBalconyAccess: input.context.demands.balcony?.mainAccess ?? null,
     quality: input.quality,
     rules: input.scoreRules,
     groups: input.roomGroups,
@@ -4567,6 +4618,36 @@ export function evaluateHouse(
   // Quay lui MỘT bước (T113): tầng trên hỏng thì thử bản tầng 1 xếp hạng kế tiếp. Tầng 1 được chọn theo điểm của
   // RIÊNG nó; điểm đổi (thêm C12) là tầng 1 đổi bản và tầng trên — ép theo mốc thang, WC của tầng 1 — có thể không
   // còn cách xếp nào (phát lại: 182665ea vòng 3 và 46d6eff3 vòng 1 mất mặt bằng chỉ vì vậy).
+  // Tầng trên hỏng mà thang tầng 1 còn cạnh khác vào được: thử vào thang từ cạnh ấy TRƯỚC khi lùi sang bản xếp hạng
+  // sau (T161). Thang U / ba vế bước ra ở tầng trên đúng đầu bậc 1, nên cạnh vào ở tầng 1 quyết đầu nào mọi tầng trên
+  // phải giáp lối đi — d084a46e: tầng 1 vào từ phòng khách (đầu trước), tầng 2 phòng ngủ chính chắn đúng đầu ấy, còn
+  // đầu sau giáp hành lang ở cả hai tầng. Bộ xếp tầng 1 không nhìn tầng trên; đường dải có bước tương tự
+  // (`bands/layout.ts`, `preferredSide`).
+  const groundUp = groundResult.layout?.anchors?.stairUp ?? null;
+  if (upperRun.failed && upper.length && groundUp && input.construction.stairs.shape) {
+    const alt = arrangeFor(
+      { ...input, stairEntryAvoid: stairEntrySide(groundUp) },
+      context,
+      programBeforeGround,
+      ground!,
+      groundIntentUsed,
+      null,
+      minimums,
+      sketches.get(ground!),
+    );
+    const altDone = arrangedLevel(alt);
+    const altUp = alt.layout?.anchors?.stairUp ?? null;
+    if (altDone && altUp && altUp !== groundUp) {
+      const altRun = upperFrom(alt, altDone);
+      input.trace?.(
+        `▷ thang tầng 1 vào từ cạnh khác (${groundUp} → ${altUp}): tầng trên ${altRun.failed ? 'vẫn hỏng' : 'qua'}`,
+      );
+      if (!altRun.failed) {
+        chosenGround = { result: alt, done: altDone };
+        upperRun = altRun;
+      }
+    }
+  }
   if (upperRun.failed && upper.length) {
     const seen = new Set([JSON.stringify(groundDone.level.rooms)]);
     for (let skip = 1; skip <= GROUND_BACKTRACK; skip += 1) {

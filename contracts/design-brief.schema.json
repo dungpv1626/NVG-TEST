@@ -844,6 +844,17 @@
           "type": ["string", "null"],
           "maxLength": 1000,
           "description": "Ghi chú thêm về ban công: lan can kính hay xây, trồng cây, che mưa, làm lam."
+        },
+        "main_front_access": {
+          "type": ["string", "null"],
+          "enum": ["chung", "phong_ngu_chinh", "chua_quyet", null],
+          "description": "Ban công chính mặt tiền mở ra từ đâu (T161, Haan 14/10/2026): `chung` — sảnh, hành lang hoặc phòng sinh hoạt chung; `phong_ngu_chinh` — phòng ngủ chính; `chua_quyet` hay trống — chưa quyết, chương trình chỉ chấm điểm (D6). Đã chọn thì là đòi hỏi của gia chủ: phương án làm khác bị bác."
+        },
+        "main_front_depth_m": {
+          "type": ["number", "null"],
+          "minimum": 0.6,
+          "maximum": 3,
+          "description": "Độ sâu mong muốn của ban công chính mặt tiền, mét, tính từ mặt tường tới mép lan can (T161). Chỉ hỏi khi mặt trước không khai độ đua — khai độ đua rồi thì độ đua là độ sâu. Trống = chưa trả lời: chương trình không tự đặt số."
         }
       }
     },

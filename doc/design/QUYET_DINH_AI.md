@@ -4030,3 +4030,59 @@ dụng ở d084a46e là `capA`; còn so điểm không tính A1 thì phát lại
 - Tủ đồ là phòng chương trình tự thêm: không có trong `level.intent`, lượt sửa bằng ô yêu cầu xếp lại từ ý định thì tủ
   đồ chỉ quay lại nếu biến thể tách lại thắng.
 - D6 / D7 / C14 là suy luận nghề (n = 0) — chờ Haan / KTS chấm.
+
+### T161 — Đầu bài và lời dẫn cho bản phác chuẩn hơn: hành lang, đầu lên / xuống thang, ban công chính (14/10/2026, Haan)
+
+**Gốc.** Haan hỏi lỗi của phương án d084a46e (T160) xuất phát từ đầu ra mô hình hay phần dựng hình. Đối chiếu bản phác
+và diện tích mục tiêu mô hình khai: một nửa là dựng hình (T160 đã sửa), nửa kia là mô hình — và phần của mô hình phần lớn
+do **chính lời dẫn / đầu bài kéo nó vẽ sai**:
+- Hành lang: lời dẫn bắt `corridor_min_cells` ô (biệt thự 1,2 m lọt lòng + tường = 1,475 m → 2 ô lưới 1 m), câu nhắc
+  C12 lại bảo «one cell wide» (gỡ ở T160).
+- Thang: tri thức gửi mô hình có loại và cỡ ô thang, không có chỗ người lên / xuống. Mô hình đặt phòng ngủ chính ở đầu
+  bước ra tầng 2 (thang U bước ra cùng đầu với bậc 1); bộ xếp tầng 1 chọn đầu vào thang không nhìn tầng trên (đầu trước
+  — cửa sẵn có từ phòng khách), nên cổng T157 bác cả nhà dù đầu sau giáp hành lang ở cả hai tầng.
+- Ban công: `B_balcony`, `R_balcony`, câu nhắc D5 và câu văn đầu bài dạy «mỗi ban công thuộc một phòng, ưu tiên phòng
+  ngủ» — mô hình gắn ban công mặt tiền cho phòng ngủ chính (`ensuite_of`), trái D6. Đầu bài không hỏi ban công chính mở
+  từ đâu, sâu bao nhiêu.
+
+**Haan chọn** (14/10/2026): hỏi gia chủ «ban công chính mặt tiền mở ra từ đâu», đã trả lời thì là **bắt buộc**; thêm câu
+**độ sâu ban công chính**; **giữ lưới 1 m**, sửa lời dẫn (chương trình thu hẹp hành lang — T160).
+
+**Sửa.**
+- Lời dẫn 9.10.0, khối `floor_level.system` (đường đang chạy): luật 6 thêm «hành lang hoặc khu sinh hoạt chạy dọc trọn
+  `arrival` của ô thang ở mọi tầng»; hành lang «đúng `corridor_min_cells` ô; sàn rộng hơn là phòng, không phải sảnh»; luật
+  10 thêm «ban công chính mặt tiền lớn nhất, mở từ hành lang / khu chung; ban công khác nhỏ». Vừa trần T46 (5.500 ký tự)
+  bằng cách rút câu cũ trùng ý (câu mở đầu kể lại lược đồ, «Relationships…» đã có trong lược đồ, «habitable rooms on
+  open_faces» trùng `knowledge.faces`, «the stair where it is on storey 1» trùng luật 6) — không nới trần. `B_balcony`,
+  `R_balcony` (v5 / v6) và câu văn đầu bài sửa cùng ý.
+- Tri thức `stair_min_m.arrival` (`plan.ts`, `STAIR_ARRIVAL_SENT` theo `stairArrival`): `one_short_end` (U, U chiếu nghỉ
+  rộng, ba vế), `both_short_ends` (thẳng — tầng trên bước ra đầu kia, vế kế tiếp lên từ đầu cũ), `short_end_and_long_side`
+  (chữ L). Gửi ngay lượt đầu, không chờ cổng bác.
+- Dựng hình: tầng trên hỏng mà thang tầng 1 còn cạnh khác vào được → thử tầng 1 với `stairEntryAvoid` (cạnh đang dùng
+  xếp cuối trong `shapedStairEntry`, không cấm) TRƯỚC bước quay lui xếp hạng (T113). Chỉ khi lượt mang loại thang.
+- Đầu bài: `balconies.main_front_access` (`chung` / `phong_ngu_chinh` / `chua_quyet`) và `balconies.main_front_depth_m`
+  (0,6–3 m, chỉ khi mặt trước không khai độ đua). Hai hợp đồng, `anonymise`, `brief-form.json` (trọng số 0, cùng điều kiện
+  hiện với các câu ban công khác), câu văn `<brief>`, `BalconyDemand.mainAccess / mainDepthM`, dòng `brief_demands`.
+  Chỉ suy từ câu đã trả lời và chỉ khi mặt trước có ban công; «chưa quyết» không đòi gì.
+- Cổng (`plan-check.ts` `checkMainBalcony`): ban công chính mặt tiền (lớn nhất chạm mặt trước, khối góc không tính —
+  `mainFrontBalconies`) phải có cửa sang loại gia chủ chọn — nhóm `shared_access` (cùng nhóm D6 đọc) hoặc
+  `demands.balcony.main_master_types` — mã `balcony_main_access`; không nông hơn độ sâu đã khai quá
+  `main_depth_tolerance_m` (0,3 m, tường bao + lan can) — `balcony_main_depth`. Cả hai trong `REVISABLE_CODES`, có câu
+  nhắc. Gia chủ đã chọn thì D6 không chấm (chấm thì trừ điểm chính điều gia chủ chọn «phòng ngủ chính»).
+- Không đổi cách đặt cửa ban công: ban công không khai `ensuite_of` đã mở từ hành lang trước (thứ tự `door_hosts`), lỗi
+  nằm ở `ensuite_of` của mô hình — cổng + câu nhắc báo đúng chỗ ấy.
+
+**Đo.** Phát lại 220 vòng (đối chứng cùng mã, tắt bước thử cạnh vào thang): **21 → 22, 1 tiến, 0 lùi, 1 khác** — tiến là
+d084a46e vòng 1: ý định gốc của mô hình nay qua cả nhà, 67 điểm (tầng 1 vào thang từ hành lang sau, tầng 2 bước ra
+`circulation_6` sâu 1,54 m; WC tầng 2 giữ 3,2 m², giặt phơi 7,7 m² — không cần bản phác sửa tay của T160). Thay đổi lời
+dẫn và đầu bài **không phát lại được** (phát lại dùng đầu ra đã ghi) — cần lượt thật, xin phép riêng.
+
+**Hàng rào.** `ai-run-d084a46e.test.ts` (ý định gốc qua; `chung` bị bác kèm câu nhắc, `phong_ngu_chinh` qua; độ sâu 3 m bị
+bác, 1,2 m qua; `arrival` đúng năm loại thang), `ai-brief-demands.test.ts`, `brief-narrative.test.ts`. Đột biến M233–M237.
+
+**Còn mở:**
+- Bộ xếp chưa căn ban công theo độ sâu đã khai — mới có cổng và câu cho mô hình. Lượt thật hay bị bác `balcony_main_depth`
+  thì làm bước nắn trong `tree/sizing.ts` như bề rộng hành lang.
+- Ban công hông bị chương trình nới (d084a46e: khai 4 m², ra ~12 m² sau khi đua) — mới chỉ trừ điểm (D7).
+- `knowledge.balcony_main_depth_cells` trong kế hoạch chưa làm: độ sâu đã tới mô hình qua `brief_demands` và `<brief>`,
+  thêm khoá là tốn trần tri thức cho cùng một ý.

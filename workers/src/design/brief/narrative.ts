@@ -345,8 +345,10 @@ export function briefNarrative(full: AiBriefDigest, options: NarrativeOptions): 
         : null,
     // T113 (Haan chấm lượt 182665ea, chốt 03/10/2026): hai ban công cùng thuộc phòng ngủ chính, ôm góc chữ L, dải
     // mặt trái chạy quá cạnh phòng — «làm cho có để tuân thủ đề bài». Cùng ý với tiêu chí D5 của thước chấm.
+    // T161 (Haan 14/10/2026): ban công chính mặt tiền lớn nhất, mở từ giao thông chung (D6) — câu cũ «ưu tiên phòng
+    // ngủ» áp cho mọi ban công, mô hình gắn ban công mặt tiền cho phòng ngủ chính (d084a46e).
     view.required.length || view.optional.length
-      ? 'Mỗi ban công thuộc một phòng, ưu tiên phòng ngủ, rồi phòng giặt phơi, rồi phòng làm việc; mỗi phòng nhiều nhất một ban công. Ban công chạy dọc tường ngoài của chính phòng ấy và không dài hơn cạnh phòng; không ôm góc nhà thành chữ L, hai ban công không gặp nhau ở góc.'
+      ? 'Ban công chính mặt tiền là ban công lớn nhất, mở từ sảnh, hành lang hoặc phòng sinh hoạt chung — trừ khi gia chủ chọn khác ở dưới. Ban công khác thuộc một phòng, ưu tiên phòng ngủ, rồi phòng giặt phơi, rồi phòng làm việc, và nhỏ hơn ban công chính; mỗi phòng nhiều nhất một ban công. Ban công chạy dọc tường ngoài của chính phòng ấy và không dài hơn cạnh phòng; không ôm góc nhà thành chữ L, hai ban công không gặp nhau ở góc.'
       : null,
     faces(view.optional)
       ? `Mặt CÓ THỂ có ban công (có hay không đều được): ${faces(view.optional)}.`
@@ -365,6 +367,12 @@ export function briefNarrative(full: AiBriefDigest, options: NarrativeOptions): 
     }),
     yesNo(balconies?.drying_balcony)
       ? `Ban công phơi riêng phía sau: ${yesNo(balconies?.drying_balcony)}.`
+      : null,
+    balconies?.main_front_access && balconies.main_front_access !== 'chua_quyet'
+      ? `Ban công chính mặt tiền mở ra từ: ${label('balconies.main_front_access', balconies.main_front_access).toLowerCase()}.`
+      : null,
+    typeof balconies?.main_front_depth_m === 'number'
+      ? `Độ sâu ban công chính mặt tiền: ${metres(balconies.main_front_depth_m)}.`
       : null,
     balconies?.note ? `Ghi chú: ${balconies.note}` : null,
   ]);
