@@ -26,7 +26,8 @@
 # 9.1.0 (30/09/2026, T105): thêm câu nhắc D2 (phòng ngủ tối hẳn) stair_entry_long_side (lối lên thang ở cạnh dài) và C11 (gara vào phòng khách) — lượt 25fdc90c; stair_cells (ô thang tầng trên nói ngay từ lượt sửa đầu) — lượt 1330ce12; loại thang gửi trong dữ liệu `stair_min_m.shape`, không thêm chữ vào lời dẫn (trần T46); altar_door_behind (T106).
 # 9.9.1 (04/10/2026, T115 — Haan chọn (a)): luật R_entry_garage (`when: entry_via_garage`) — nhà phố có gara cùng mặt cửa chính thì gara được làm entry_room, người vào cạnh xe; không đẩy phòng khách ra trước gara (lượt thật e34f8f58).
 # 9.9.2 (11/10/2026, T155 — lượt thật 79669685; T157): khối `floor_level` nói phòng khép kín / ban công riêng không phục vụ phòng khác (giặt phơi không mở qua ban công riêng của phòng ngủ); câu nhắc balcony_side_missing_reshaped (bản phác ĐÃ có ban công dọc mặt ấy, chương trình chia lại tầng mới nắn thành khối góc); câu nhắc stair_arrival_blocked (tầng trên: đầu người từ dưới bước ra không giáp lối đi, T157).
-version: '9.9.2'
+# 9.9.3 (13/10/2026, T160 — Haan chấm phương án d084a46e): câu nhắc C14 (ô giao thông to như một phòng), D6 (ban công chính mặt tiền mở từ giao thông chung), D7 (ban công mặt hông nhỏ hơn mặt tiền). Chỉ gửi khi phương án dưới ngưỡng. Gỡ hai câu tự mâu thuẫn: C12 bản phác «draw it one cell wide» (trái `corridor_min_cells` = 2 ô của biệt thự) nay theo `corridor_min_cells`; D5 bỏ thứ tự «bedroom first» (trái D6).
+version: '9.9.3'
 
 program:
   system: |
@@ -398,12 +399,15 @@ floor_level:
     D1: '- {rooms} get no window on an open side; draw them touching `knowledge.open_faces`.'
     D2: '- Bedroom {rooms} has no window and no balcony door at all; move it to touch `knowledge.open_faces`, or swap it with a room that needs no daylight.'
     D4: '- Laundry {rooms} has nowhere to dry clothes; put it beside a balcony or terrace (sharing a wall or a door), or on `knowledge.open_faces` with a window, or next to a drying yard if the brief has one.'
-    D5: "- Balconies {rooms} are placed off: give each required side its own balcony on a different room (bedroom first, then laundry, then study), run it along that room's outer wall and no longer than it, and do not wrap a balcony round a corner or join two at a corner."
+    D5: "- Balconies {rooms} are placed off: give each required side its own balcony, run it along one room's outer wall and no longer than that room, and do not wrap a balcony round a corner or join two at a corner."
     E2: '- The upper wc {rooms} is not above a wc or shaft of the storey below; keep wet rooms on one vertical stack.'
     C9: '- From the front door you cross {rooms} before reaching the living room; the front door must open into the living room or a hall.'
     C10: '- Corridor {rooms} leads to a single room; merge it into that room or make it serve several rooms.'
     C11: '- From the garage you reach the living room only through {rooms} or by going outside; put the garage beside the living room or hall, or on a corridor that leads straight to it.'
-    C12: '- Corridor {rooms} is much wider than a corridor needs; draw it one cell wide and give the rest to the rooms beside it.'
+    C12: '- Corridor {rooms} is much wider than a corridor needs; draw it `knowledge.corridor_min_cells` cells wide, never wider, and give the rest to the rooms beside it.'
+    C14: '- Circulation {rooms} is as large as a room; a corridor is a band `knowledge.corridor_min_cells` cells wide — give the rest to the kitchen, storage, wc or another room beside it.'
+    D6: '- The main front balcony {rooms} opens only from a private room; open it from a corridor or the shared living space, and make it the largest balcony of that storey.'
+    D7: '- The side balcony {rooms} is larger than the front balcony; keep side balconies small and give the space to the front one.'
     E5: '- The wet rooms {rooms} sit above a living, dining, sleeping or altar room of the storey below; move them over a wet room or a service room.'
 
 # Lượt SỬA theo yêu cầu kỹ sư trên bản vẽ đã lưu (T53, 16/09/2026 — Haan: «giai đoạn tiếp theo là sửa
@@ -1030,6 +1034,9 @@ house_layout:
     A5: '- {rooms} are below the usual minimum area for their type; make their rects bigger.'
     A6: '- {rooms} are above the usual maximum area for their type; make their rects smaller.'
     C12: '- Corridor {rooms} is much wider than a corridor needs; make it `knowledge.corridor_min_mm` wide and give the rest to the rooms beside it.'
+    C14: '- Circulation {rooms} is as large as a room; a corridor is a band `knowledge.corridor_min_mm` wide — give the rest to the kitchen, storage, wc or another room beside it.'
+    D6: '- The main front balcony {rooms} opens only from a private room; open it from a corridor or the shared living space, and make it the largest balcony of that storey.'
+    D7: '- The side balcony {rooms} is larger than the front balcony; keep side balconies small and give the space to the front one.'
 
 plan_edit:
   system: |

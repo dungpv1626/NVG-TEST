@@ -212,6 +212,15 @@ circulation:
     default: 1.2
     biet_thu: 1.5
 
+# ── WC khép kín dài quá (T160, Haan 13/10/2026) ─────────────────────────────────────────
+# Haan chấm phương án d084a46e: «WC trong phòng ngủ đang dài quá (5m6)» — mô hình vẽ WC kéo suốt bề ngang phòng ngủ
+# (5,47 × 1,38 m). Phòng chỉ dựng được hình chữ nhật nên phần dư không trả về phòng ngủ được; Haan chọn: WC giữ tối đa
+# `wc_max_length_m` (theo tim tường), phần còn lại của dải thành «Tủ đồ» mở từ phòng ngủ (`arrange/ensuite-closet.ts`).
+# Phần dư ngắn hơn `closet_min_length_m` thì để nguyên WC. SUY LUẬN (n = 0): WC khép kín NVG thường 1,5 × 2,4 m.
+ensuite:
+  wc_max_length_m: 2.7
+  closet_min_length_m: 0.9
+
 # ── Cạnh ngắn DÙNG ĐƯỢC — điều kiện dựng của bộ giải ý định (V-28, 14/09/2026) ───────────
 #
 # Khác HẲN cạnh tối thiểu kinh nghiệm ở `rules/nvg-*.yaml`. Số kinh nghiệm là cách NVG quen làm và

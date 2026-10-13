@@ -114,9 +114,15 @@ export function stairArrival(shape: StairShapeCode): StairLayout['arrival'] {
   return 'start';
 }
 
+/** Phần ô thang dư so với vế + chiếu nghỉ, cm — 0 khi ô vừa khít hay ngắn hơn. */
+function floorSpare(length: number, need: number): number {
+  return Math.max(0, Math.floor(length - need));
+}
+
 /**
  * Bố cục vẽ của một ô thang `rect` (x0, y0, x1, y1 — lọt lòng, cm) với vế đầu đi theo `up`. Phần ô dư so với mức tối
- * thiểu dồn vào chiếu nghỉ (thang U, L, ba vế) hoặc chiếu nghỉ giữa (thang thẳng), như tài liệu vẽ.
+ * thiểu: thang U và ba vế dồn về đầu bậc 1 thành sàn (T160 — vào và ra cùng đầu ấy); thang L dồn vào chiếu nghỉ, thang
+ * thẳng vào chiếu nghỉ giữa, như tài liệu vẽ.
  */
 export function stairLayout(
   p: StairParams,
@@ -173,15 +179,19 @@ export function stairLayout(
     case 'chu_u':
     case 'chu_u_rong': {
       const lane = Math.max(1, (C - p.gap) / 2);
-      const top = f[0]! * b;
-      for (let k = 0; k < f[0]!; k += 1) step(k * b, (k + 1) * b, 0, lane);
+      // Ô dư dồn về đầu bậc 1 thành sàn đứng trước thang / sàn bước ra (T160, Haan chấm d084a46e: «chiếu nghỉ thì quá
+      // rộng»): ô 4,89 m cho thang cần 4,1 m vẽ chiếu nghỉ 2,26 m. Thang U vào và ra cùng đầu ấy, nên phần sàn ấy là chỗ
+      // người đứng, không phải chiếu nghỉ.
+      const spare = floorSpare(A, f[0]! * b + p.landing);
+      const top = spare + f[0]! * b;
+      for (let k = 0; k < f[0]!; k += 1) step(spare + k * b, spare + (k + 1) * b, 0, lane);
       step(top, A, 0, C, true);
       for (let k = 0; k < f[1]!; k += 1) step(top - (k + 1) * b, top - k * b, C - lane, C);
       const low = top - f[1]! * b;
       const turn = (top + A) / 2;
       return {
         pieces,
-        well: C - 2 * lane > 1 ? box(Math.min(0, low), top, lane, C - lane) : null,
+        well: C - 2 * lane > 1 ? box(Math.min(spare, low), top, lane, C - lane) : null,
         path: [
           at(b / 2, lane / 2),
           at(turn, lane / 2),
@@ -207,8 +217,10 @@ export function stairLayout(
     }
     case 'ba_ve': {
       const lane = Math.max(1, (C - f[1]! * b) / 2);
-      const top = f[0]! * b;
-      for (let k = 0; k < f[0]!; k += 1) step(k * b, (k + 1) * b, 0, lane);
+      // Như thang U: vào và ra cùng đầu, ô dư thành sàn ở đầu ấy (T160).
+      const spare = floorSpare(A, f[0]! * b + p.landing);
+      const top = spare + f[0]! * b;
+      for (let k = 0; k < f[0]!; k += 1) step(spare + k * b, spare + (k + 1) * b, 0, lane);
       step(top, A, 0, lane, true);
       for (let k = 0; k < f[1]!; k += 1) step(top, A, lane + k * b, lane + (k + 1) * b);
       step(top, A, C - lane, C, true);
@@ -217,7 +229,7 @@ export function stairLayout(
       const low = top - f[2]! * b;
       return {
         pieces,
-        well: box(Math.max(0, low), top, lane, C - lane),
+        well: box(Math.max(spare, low), top, lane, C - lane),
         path: [
           at(b / 2, lane / 2),
           at(turn, lane / 2),

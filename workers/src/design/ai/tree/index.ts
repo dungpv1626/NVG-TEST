@@ -202,6 +202,13 @@ export interface LevelLayoutInput {
    * mọi con số mô hình khai.
    */
   minSideM?: (roomType: string) => number | null;
+  /** Mức bề rộng hành lang dải khi căn vách (T160, `sizing.ts` `corridorMax`). Vắng = không chặn. */
+  corridorMax?: {
+    types: ReadonlySet<string>;
+    maxCentre: number;
+    stripRatio: number;
+    noGrowTypes: ReadonlySet<string>;
+  } | null;
 }
 
 export interface LevelLayout {
@@ -259,23 +266,30 @@ export function layoutLevel(input: LevelLayoutInput): LevelLayout {
   const before = first.level ? fit(first) : null;
   let best: { layout: LevelLayout; fit: AreaFit } | null = null;
   const tried = new Set<string>();
-  for (const strength of SIZING_STRENGTHS) {
-    const nodes = resizeTree({
-      tree: base,
-      spaces,
-      minSideM: input.minSideM,
-      pinnedLeaves: pinned,
-      noShrinkTypes: input.groups.vertical,
-      strength,
-    });
-    if (!nodes) continue;
-    const key = nodes.map((node) => node.at).join(',');
-    if (tried.has(key)) continue;
-    tried.add(key);
-    const attempt = layoutOnce({ ...input, tree: { ...base, nodes } });
-    if (!attempt.level) continue;
-    const score = fit(attempt);
-    if (!best || score.score < best.fit.score) best = { layout: attempt, fit: score };
+  // Có chốt bề rộng hành lang (T160) thì thử căn có chốt trước; không lần nào qua cổng thì căn như cũ — phát lại
+  // b1543b8c vòng 6: mọi lần căn có chốt hỏng cổng tầng 2, bỏ chốt thì vẫn ra mặt bằng.
+  const caps = input.corridorMax ? [input.corridorMax, null] : [null];
+  for (const [index, cap] of caps.entries()) {
+    if (index > 0 && best) break;
+    for (const strength of SIZING_STRENGTHS) {
+      const nodes = resizeTree({
+        tree: base,
+        spaces,
+        minSideM: input.minSideM,
+        pinnedLeaves: pinned,
+        noShrinkTypes: input.groups.vertical,
+        ...(cap ? { corridorMax: cap } : {}),
+        strength,
+      });
+      if (!nodes) continue;
+      const key = nodes.map((node) => node.at).join(',');
+      if (tried.has(key)) continue;
+      tried.add(key);
+      const attempt = layoutOnce({ ...input, tree: { ...base, nodes } });
+      if (!attempt.level) continue;
+      const score = fit(attempt);
+      if (!best || score.score < best.fit.score) best = { layout: attempt, fit: score };
+    }
   }
   if (!best) return first;
   if (before && best.fit.score >= before.score - FIT_MIN_GAIN) return first;

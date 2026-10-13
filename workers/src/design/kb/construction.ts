@@ -132,6 +132,8 @@ export interface ConstructionNorms {
     /** Lọt lòng TỐI ĐA theo loại nhà (`default` cho loại không khai), m — rộng hơn thì thu hẹp (T104). */
     corridor_max_clear_m?: Record<string, number>;
   };
+  /** WC khép kín dài quá thì tách phần dư thành tủ đồ (T160, `arrange/ensuite-closet.ts`). Vắng = không tách. */
+  ensuite?: { wc_max_length_m: number; closet_min_length_m: number };
   /**
    * Bậc ở lối vào (bậc tam cấp, T70) — đo trên HS-04/05/06. Vắng thì mặt bằng không vẽ bậc lối vào,
    * đúng hành vi trước T70.
@@ -231,6 +233,7 @@ export function parseConstructionNorms(yamlText: string): ConstructionNorms {
     outdoor: raw.outdoor!,
     ...(raw.facade ? { facade: parseFacade(raw.facade) } : {}),
     ...(raw.circulation ? { circulation: raw.circulation } : {}),
+    ...(raw.ensuite ? { ensuite: raw.ensuite } : {}),
     ...(raw.usable ? { usable: parseUsable(raw.usable) } : {}),
     ...(raw.entry_steps ? { entry_steps: parseEntrySteps(raw.entry_steps) } : {}),
     ...(raw.sketch ? { sketch: parseSketch(raw.sketch) } : {}),

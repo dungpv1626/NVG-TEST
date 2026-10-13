@@ -426,6 +426,18 @@ criteria:
     label: 'CHUNG mức 0; trừ hết ở 1 phòng ăn'
     weight: 2
 
+  - code: C14
+    group: C
+    vi: 'Diện tích lớn nhất của một ô giao thông rộng hơn hành lang, m²'
+    giai_thich: 'T160 (Haan chấm phương án d084a46e: «không nên để khu vực giao thông rộng 16.9m2» — ô giao thông 4,5 × 3,7 m sau thang chỉ để vào kho và WC). Xét ô giao thông (không gồm thang, lõi, thang máy) có cạnh ngắn lọt lòng quá `wide_m` — rộng hơn mọi hành lang, tức là một sảnh; giá trị là diện tích sảnh lớn nhất. Sảnh vào nhà hay sảnh thang cỡ 2 × 3 m dưới mức đạt. Haan chọn: trừ điểm, không chặn.'
+    kind: lower_better
+    pass: 6
+    zero: 14
+    wide_m: 1.6
+    n: 0
+    label: 'CHUNG 6 m²; trừ hết ở 14 m²'
+    weight: 2
+
   # ── D. Mặt thoáng ───────────────────────────────────────────────────────────
   - code: D1
     group: D
@@ -508,6 +520,32 @@ criteria:
     n: 0
     label: 'CHUNG mức 0; trừ hết ở 2 ban công'
     weight: 2
+
+  - code: D6
+    group: D
+    vi: 'Số tầng có ban công chính mặt tiền không mở từ giao thông chung'
+    giai_thich: 'T160 (Haan chấm phương án d084a46e: «ban công chính mặt trước nên đi được từ giao thông chung và có kích thước lớn»). Ban công chính = ban công mặt tiền lớn nhất của tầng; đạt khi nó có cửa từ một phòng nhóm `door_hosts` của từ vựng (giao thông, sinh hoạt chung). Thứ tự phòng chủ T113 (D5) vẫn áp cho ban công khác. Haan chọn: trừ điểm, không chặn.'
+    kind: count
+    pass: 0
+    zero: 1
+    edge_tolerance_m: 0.3
+    # Nhà ống 4–6 m: phòng ngủ trước chiếm trọn bề ngang, không hành lang nào ra tới mặt tiền — không chấm.
+    except_profile: ong
+    n: 0
+    label: 'CHUNG mức 0; trừ hết ở 1 tầng'
+    weight: 2
+
+  - code: D7
+    group: D
+    vi: 'Số ban công mặt hông lớn hơn ban công chính mặt tiền cùng tầng'
+    giai_thich: 'T160 (Haan, cùng phương án: «ban công bên hông có thể để nhỏ hơn (về mặt thẩm mỹ là chưa tốt)» — ban công hông 12,7 m² so với ban công mặt tiền 5,3 m²). Ban công mặt hông = chạm mép trái / phải ngoài cùng của tầng, cạnh dài dọc mặt ấy. Tầng không có ban công mặt tiền thì không xét. Trừ điểm, không chặn.'
+    kind: count
+    pass: 0
+    zero: 1
+    edge_tolerance_m: 0.3
+    n: 0
+    label: 'CHUNG mức 0; trừ hết ở 1 ban công'
+    weight: 1.5
 
   # ── E. Dựng được ────────────────────────────────────────────────────────────
   - code: E2

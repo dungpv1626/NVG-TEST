@@ -62,6 +62,22 @@ export interface SizingInput {
    * chung 28 cm với phòng ngủ nó phải mở vào), nên `index.ts` thử nhiều mức.
    */
   strength?: number;
+  /**
+   * Hành lang dạng dải không được căn RỘNG hơn mức nghề (T160, Haan chấm phương án d084a46e: «giao thông để rộng quá
+   * (2150) — sao không thu lại còn khoảng 1.5m, phần diện tích còn lại bù vào phòng giặt phơi và WC»). Thiếu chốt này
+   * thì bước thu hẹp T104 vô hiệu: hành lang thuộc `noShrinkTypes`, nhận trọng số theo diện tích mô hình khai, và căn
+   * theo tỉ lệ lại nới nó về đúng bề rộng vừa thu. Chỉ xét lá dài từ `stripRatio` lần mức ấy — sảnh gần vuông không đụng.
+   */
+  corridorMax?: {
+    types: ReadonlySet<string>;
+    maxCentre: number;
+    stripRatio: number;
+    /**
+     * Loại không nhận phần dư (thang, lõi, thang máy, giếng trời): phía bên kia chứa chúng thì không chốt. Phát lại
+     * b1543b8c vòng 6: phần hành lang dồn sang ô thang tầng 1 (5,15 → 5,74 m), mốc thang đổi, tầng 2 hỏng.
+     */
+    noGrowTypes: ReadonlySet<string>;
+  };
 }
 
 type Axis = 'x' | 'y';
@@ -156,6 +172,36 @@ export function resizeTree(input: SizingInput): AiPlanTree['nodes'] | null {
     return Math.max(MIN_CELL_CM, base);
   };
 
+  /** Chiều dài TỐI ĐA theo trục của một cây con — chỉ hành lang dạng dải có mức; còn lại vô hạn. */
+  const maxLength = (id: string, axis: Axis): number => {
+    const cap = input.corridorMax;
+    if (!cap) return Infinity;
+    const node = nodes.get(id);
+    const other: Axis = axis === 'x' ? 'y' : 'x';
+    const strip = () =>
+      length(original.get(id)!, other) >= cap.stripRatio * cap.maxCentre ? cap.maxCentre : Infinity;
+    if (node) {
+      // Chồng ô hành lang nối tiếp dọc chiều dài là MỘT dải (cùng cách `corridor-trim.ts` đọc).
+      if (node.cut === other && allCorridor(id)) return strip();
+      const a = maxLength(node.a, axis);
+      const b = maxLength(node.b, axis);
+      return node.cut === axis ? a + b : Math.min(a, b);
+    }
+    return allCorridor(id) ? strip() : Infinity;
+  };
+  const growsFreely = (id: string): boolean => {
+    const node = nodes.get(id);
+    if (node) return growsFreely(node.a) && growsFreely(node.b);
+    const type = input.spaces.get(id)?.type;
+    return !type || !input.corridorMax?.noGrowTypes.has(type);
+  };
+  const allCorridor = (id: string): boolean => {
+    const node = nodes.get(id);
+    if (node) return allCorridor(node.a) && allCorridor(node.b);
+    const type = input.spaces.get(id)?.type;
+    return !!type && !!input.corridorMax?.types.has(type) && !alsoOf.has(id);
+  };
+
   const out = new Map<string, number>();
   let feasible = true;
   // Vị trí đã đặt theo trục, và vị trí đã đặt cho từng NHÓM nhát cắt mô hình khai trùng một toạ độ:
@@ -192,8 +238,13 @@ export function resizeTree(input: SizingInput): AiPlanTree['nodes'] | null {
       const proportional = lo + ((hi - lo) * weight(node.a)) / (weight(node.a) + weight(node.b));
       const modelled = lo + ((hi - lo) * (node.at - beforeLo)) / (beforeHi - beforeLo);
       const ideal = modelled + (input.strength ?? 1) * (proportional - modelled);
-      const floor = lo + (minA + minB <= hi - lo ? minA : MIN_CELL_CM);
-      const ceil = hi - (minA + minB <= hi - lo ? minB : MIN_CELL_CM);
+      let floor = lo + (minA + minB <= hi - lo ? minA : MIN_CELL_CM);
+      let ceil = hi - (minA + minB <= hi - lo ? minB : MIN_CELL_CM);
+      // Hành lang dải ở một bên: không cho căn rộng quá mức nghề, miễn còn chỗ cho bên kia.
+      const capA = growsFreely(node.b) ? lo + maxLength(node.a, axis) : Infinity;
+      const capB = growsFreely(node.a) ? hi - maxLength(node.b, axis) : -Infinity;
+      if (capA >= floor && capA < ceil) ceil = capA;
+      if (capB <= ceil && capB > floor) floor = capB;
       const rounded = Math.round(ideal / MODULE_CM) * MODULE_CM;
       at = Math.min(ceil, Math.max(floor, rounded));
       if (at % 1 !== 0) at = Math.round(at);

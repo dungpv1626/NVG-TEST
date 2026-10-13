@@ -45,7 +45,13 @@ import { levelFromRooms } from '../plan-geometry';
 import type { PlanQuality } from '../plan-quality';
 import { scorePlan } from '../plan-score';
 import { clearAreaM2 } from '../sketch-cells';
-import { layoutLevel, type LevelAnchors, type LevelLayout, type RoomGroups } from '../tree';
+import {
+  layoutLevel,
+  type LevelAnchors,
+  type LevelLayout,
+  type LevelLayoutInput,
+  type RoomGroups,
+} from '../tree';
 import { MIN_CELL_CM } from '../tree/cells';
 import {
   stairFitsEither,
@@ -79,7 +85,8 @@ import {
   type PenaltyWeights,
 } from './pack';
 import { emitNodes, leaves, pinLeaf, type Axis, type Placed, type Side } from './placed';
-import { trimCorridors } from './corridor-trim';
+import { CORRIDOR_STRIP_RATIO, trimCorridors } from './corridor-trim';
+import { splitLongEnsuiteWcs, type EnsuiteClosetSplit } from './ensuite-closet';
 import { widenRooms } from './room-widen';
 import { swapTowardOpenFace } from './open-face';
 import { skeletonCandidates } from './skeleton';
@@ -151,6 +158,8 @@ export interface ArrangeInput {
    * biến thể cả nhà của `evaluateHouseBest`, giữ khi qua cổng và điểm không thấp hơn.
    */
   widenRooms?: boolean;
+  /** Tách WC khép kín dài thành WC + tủ đồ (T160, `ensuite-closet.ts`) — biến thể cả nhà của `evaluateHouseBest`. */
+  splitClosets?: boolean;
   /** Lấy ứng viên xếp hạng thứ n (0 = tốt nhất; quá số ứng viên thì lấy cái cuối) — bước quay lui tầng 1 (T113). */
   rankSkip?: number;
   openFaces: readonly Face[];
@@ -2287,6 +2296,12 @@ function emitCandidate(
         stairIds.has(id) ||
         typesOf(id).some((type) => type === 'elevator' || type === 'light_well'),
       maxCentre,
+      maxAreaM2: (id) => {
+        const maxima = typesOf(id)
+          .map((type) => input.areaNorms?.get(type)?.max)
+          .filter((value): value is number => typeof value === 'number');
+        return maxima.length ? maxima.reduce((sum, value) => sum + value, 0) : null;
+      },
       doorContact: (a, b) => {
         const la = frameEnv.leafById.get(a);
         const lb = frameEnv.leafById.get(b);
@@ -2323,11 +2338,22 @@ function emitCandidate(
       pinned = { ...pinned, placed: widened.placed };
     }
   }
+  // WC khép kín dài quá → WC gọn + tủ đồ (T160). Trước khi đặt cửa: tủ đồ cần cửa từ phòng ngủ.
+  let env = frameEnv;
+  const closets = splitClosets(input, pinned.placed, env, footprint, program ?? input.program);
+  if (closets) {
+    input.trace?.(
+      `  ▭ ${frame.key}: ${closets.splits.map((s) => `${s.wc}→${s.closet}`).join(', ')}`,
+    );
+    pinned = { ...pinned, placed: closets.placed };
+    env = closets.env;
+    program = closets.program;
+  }
   const cells = leaves(pinned.placed);
   const unusable =
-    unusableCell(input, cells, frameEnv) ??
+    unusableCell(input, cells, env) ??
     shortStairCell(input, cells, stairIds) ??
-    belowFloorCell(input, cells, frameEnv);
+    belowFloorCell(input, cells, env);
   if (unusable) {
     // Lọc TRƯỚC cổng: cây có ô chắc chắn hỏng điều kiện dùng được không được tiêu ngân sách qua cổng
     // (V-28 — lọc ở cổng thì 24 cây rẻ phạt nhất đều hỏng và tầng không ra cây nào). Lý do vẫn đi ra:
@@ -2350,7 +2376,7 @@ function emitCandidate(
       leafById,
       intent,
       doorHosts: input.groups.doorHosts ?? [],
-      doorShared: frameEnv.doorShared,
+      doorShared: env.doorShared,
       mainEntranceDeclared: input.entrances.main !== null,
       garageEntry: input.garageEntry === true,
       stairUp: input.anchors?.stairUp ?? null,
@@ -2366,7 +2392,7 @@ function emitCandidate(
           ? { footprint, side: FACE_SIDE[input.entrances.main] }
           : null,
     });
-  let doors = doorsFor(cells, frameEnv.leafById);
+  let doors = doorsFor(cells, env.leafById);
   let key = frame.key;
   let landing: Built['landing'];
   // Đầu thang bị phòng chắn: giữ cây, khoét sảnh từ phòng ấy trước khi để cổng bác cả cây (T158).
@@ -2377,8 +2403,8 @@ function emitCandidate(
         (reason.code === 'stair_entry_long_side' && stairParams !== null),
     );
   if (blocked(doors.reasons)) {
-    const landed = landStairEnd(input, pinned.placed, frameEnv, stairIds, program, (at, byId) => {
-      const env2: PackEnv = { ...frameEnv, leafById: byId };
+    const landed = landStairEnd(input, pinned.placed, env, stairIds, program, (at, byId) => {
+      const env2: PackEnv = { ...env, leafById: byId };
       const bad =
         unusableCell(input, at, env2) ??
         shortStairCell(input, at, stairIds) ??
@@ -2424,6 +2450,72 @@ function emitCandidate(
     reasons: doors.reasons,
     ...(program ? { program } : {}),
     ...(landing ? { landing } : {}),
+  };
+}
+
+/** Tách WC khép kín dài quá (T160, `ensuite-closet.ts`) — `null` khi không tách gì hay kb không khai mức. */
+function splitClosets(
+  input: ArrangeInput,
+  placed: Placed,
+  env: PackEnv,
+  footprint: Rect,
+  base: AiSpaceProgram,
+): { placed: Placed; env: PackEnv; program: AiSpaceProgram; splits: EnsuiteClosetSplit[] } | null {
+  const norms = input.construction.ensuite;
+  if (!norms || !input.splitClosets) return null;
+  let next = base;
+  const ids: string[] = [];
+  const result = splitLongEnsuiteWcs(placed, {
+    isEnsuiteWc: (id) => {
+      const leaf = env.leafById.get(id);
+      return !!leaf && leaf.parent !== null && leaf.types.length === 1 && leaf.types[0] === 'wc';
+    },
+    maxLength: Math.round(norms.wc_max_length_m * 100),
+    minCloset: Math.round(norms.closet_min_length_m * 100),
+    footprint,
+    newId: () => {
+      const id = nextSpaceId(next, 'closet');
+      next = {
+        ...next,
+        spaces: [
+          ...next.spaces,
+          { id, type: 'closet', level: input.level, target_area_m2: 0, ensuite_of: null },
+        ],
+      };
+      ids.push(id);
+      return id;
+    },
+  });
+  if (!result.splits.length) return null;
+  const byId = new Map(env.leafById);
+  const area = (r: Rect) => round1(((r.x1 - r.x0) * (r.y1 - r.y0)) / 10_000);
+  for (const split of result.splits) {
+    const wc = env.leafById.get(split.wc)!;
+    byId.set(split.closet, {
+      ...wc,
+      id: split.closet,
+      types: ['closet'],
+      wet: false,
+      target: area(split.rect),
+      areaFloor: null,
+    });
+  }
+  const parentSpace = (wcId: string) =>
+    next.spaces.find((space) => space.id === wcId)?.ensuite_of ?? null;
+  next = {
+    ...next,
+    spaces: next.spaces.map((space) => {
+      const split = result.splits.find((s) => s.closet === space.id);
+      return split
+        ? { ...space, target_area_m2: area(split.rect), ensuite_of: parentSpace(split.wc) }
+        : space;
+    }),
+  };
+  return {
+    placed: result.placed,
+    env: { ...env, leafById: byId },
+    program: next,
+    splits: result.splits,
   };
 }
 
@@ -3324,6 +3416,30 @@ function corridorMaxCentre(input: ArrangeInput): number | null {
   return Math.round(clear * 100) + Math.round(input.construction.walls.partition_m * 100);
 }
 
+/**
+ * Mức bề rộng hành lang cho bước căn vách (T160) — cùng điều kiện bật với bước thu hẹp T104 (`trimCorridors`): bước ấy
+ * thu hẹp, bước căn vách không được nới lại.
+ */
+function corridorCap(input: ArrangeInput): LevelLayoutInput['corridorMax'] {
+  const maxCentre = input.trimCorridors ? corridorMaxCentre(input) : null;
+  if (maxCentre === null) return null;
+  return {
+    types: corridorTypesOf(input),
+    maxCentre,
+    stripRatio: CORRIDOR_STRIP_RATIO,
+    noGrowTypes: new Set([...input.stairTypes, 'elevator', 'light_well']),
+  };
+}
+
+/** Loại hành lang: nhóm giao thông trừ thang và thang máy. */
+function corridorTypesOf(input: ArrangeInput): ReadonlySet<string> {
+  return new Set(
+    [...input.groups.vertical].filter(
+      (type) => !input.stairTypes.includes(type) && type !== 'elevator',
+    ),
+  );
+}
+
 function packWeight(leaf: PackLeaf): number {
   return leaf.areaFloor === null
     ? leaf.target
@@ -3400,6 +3516,7 @@ function gate(input: ArrangeInput, tree: AiPlanTree, resize: boolean): LevelLayo
     balcony: input.balcony ?? null,
     ...(input.cantilevers?.length ? { cantilevers: input.cantilevers } : {}),
     ...(resize && minSideM ? { minSideM } : {}),
+    ...(resize ? { corridorMax: corridorCap(input) } : {}),
   });
   if (!layout.level) return layout;
   const blocked = [

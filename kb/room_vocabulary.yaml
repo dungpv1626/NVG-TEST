@@ -486,6 +486,10 @@ group_targets:
   # phòng giao thông và sinh hoạt chung — không bao giờ mở lối đi xuyên qua phòng ngủ, WC hay kho
   # của người khác. Phòng chỉ giáp những loại ngoài danh sách thì vẫn là lỗi cổng: đó là lỗi bố cục,
   # thêm cửa không sửa được.
+  shared_access:
+    # T160 (D6): ban công chính mặt tiền phải mở từ một trong các loại này.
+    vi: Giao thông chung (hành lang, sảnh, sinh hoạt chung)
+    members: [circulation, core, living, dining]
   door_hosts:
     vi: Được mở thêm cửa vào để nối phòng (giao thông, sinh hoạt chung)
     members: [circulation, core, stair, living, dining, kitchen, garage, laundry]

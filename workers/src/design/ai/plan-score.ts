@@ -433,6 +433,34 @@ function outlineBox(level: AiFloorPlanLevel): Rect | null {
 /** Mã loại ban công của từ vựng — cùng mã `mandatory.ts` dùng. */
 const BALCONY_TYPE = 'balcony';
 
+/** Mã loại hành lang của từ vựng (không gồm thang, lõi, thang máy). */
+const CIRCULATION_TYPE = 'circulation';
+
+/**
+ * Ban công của một tầng theo mặt (T160): mặt HÔNG = chạm mép trái / phải ngoài cùng và cạnh dài dọc mặt ấy; mặt TIỀN =
+ * chạm mép trước (`y0`, như `plan-demands.ts`) mà không phải mặt hông. `front` xếp lớn trước.
+ */
+function balconiesByFace(
+  ctx: ScoreContext,
+  level: AiFloorPlanLevel,
+  tol: number,
+): { front: RoomRef[]; side: RoomRef[] } {
+  const box = outlineBox(level);
+  const front: RoomRef[] = [];
+  const side: RoomRef[] = [];
+  if (!box) return { front, side };
+  for (const room of ctx.byLevel.get(level.level) ?? []) {
+    if (room.type !== BALCONY_TYPE) continue;
+    const r = room.rect;
+    const alongY = r.y1 - r.y0 >= r.x1 - r.x0;
+    const onSide = alongY && (r.x0 - box.x0 <= tol || box.x1 - r.x1 <= tol);
+    if (onSide) side.push(room);
+    else if (r.y0 - box.y0 <= tol) front.push(room);
+  }
+  front.sort((a, b) => b.areaM2 - a.areaM2);
+  return { front, side };
+}
+
 /**
  * Đường đi hằng ngày xa nhất: từ chỗ sinh hoạt chung tới một WC CHUNG, không đi xuyên gara hay sảnh
  * ngoài (T48). Trả phòng xa nhất kèm số cửa và số mét, hoặc lý do không chấm được.
@@ -503,6 +531,9 @@ function outsideNorm(ctx: ScoreContext, side: 'min' | 'max'): Measure {
       .map((type) => norms.get(type))
       .filter((norm): norm is { min: number; target: number; max: number } => norm !== undefined);
     if (bounds.length === 0) continue;
+    // Ô hành lang nhỏ hơn mức «phòng» giao thông không phải lỗi (T160): mô hình hay vẽ một hành lang thành nhiều ô nối
+    // nhau, và bề rộng tối thiểu đã có C4 đo. Thu hẹp hành lang về mức nghề làm một mẩu 1,5 × 1,9 m «hụt định mức».
+    if (side === 'min' && room.type === CIRCULATION_TYPE) continue;
     const limit = bounds.reduce((sum, norm) => sum + norm[side], 0);
     const below = side === 'min' && room.areaM2 + 0.05 < limit;
     const above = side === 'max' && room.areaM2 > limit + 0.05;
@@ -995,6 +1026,68 @@ const MEASURES: Record<string, MeasureFn> = {
     }
     if (total === 0) return { value: null, khongCham: 'Không có ban công nào.' };
     return { value: bad.size, refs: [...bad] };
+  },
+
+  /**
+   * Sảnh thừa (T160): ô hành lang có cạnh ngắn lọt lòng quá `wide_m` — rộng hơn mọi hành lang. Giá trị là diện tích ô
+   * lớn nhất như thế; ô 4,5 × 3,7 m sau thang của d084a46e (16,9 m², chỉ để vào kho và WC) trừ hết.
+   */
+  C14: (ctx, spec) => {
+    const wide = (spec.params.wide_m ?? 1.6) * 100;
+    let worst = 0;
+    const refs: string[] = [];
+    for (const room of ctx.rooms) {
+      if (room.type !== CIRCULATION_TYPE) continue;
+      const r = room.rect;
+      if (Math.min(r.x1 - r.x0, r.y1 - r.y0) <= wide) continue;
+      refs.push(room.id);
+      worst = Math.max(worst, room.areaM2);
+    }
+    return { value: Math.round(worst * 10) / 10, refs };
+  },
+
+  /** Ban công chính mặt tiền (lớn nhất chạm mép trước) mở từ giao thông chung (T160). */
+  D6: (ctx, spec) => {
+    if (spec.exceptProfile && ctx.houseProfile === spec.exceptProfile) {
+      return {
+        value: null,
+        khongCham: 'Nhà ống không chấm: ban công mặt tiền mở từ phòng ngủ trước là bố cục thường.',
+      };
+    }
+    const tol = (spec.params.edge_tolerance_m ?? 0.3) * 100;
+    let levels = 0;
+    const refs: string[] = [];
+    for (const level of ctx.levels) {
+      const { front } = balconiesByFace(ctx, level, tol);
+      const main = front[0];
+      if (!main) continue;
+      levels += 1;
+      const openers = ctx.graph.doors
+        .filter((door) => !door.toOutside && door.rooms.includes(main.id))
+        .flatMap((door) => door.rooms.filter((id) => id !== main.id))
+        .map((id) => ctx.graph.rooms.get(id)?.type ?? '');
+      if (!openers.some((type) => ctx.inGroup('shared_access', type))) refs.push(main.id);
+    }
+    if (levels === 0) return { value: null, khongCham: 'Không có ban công mặt tiền nào.' };
+    return { value: refs.length, refs };
+  },
+
+  /** Ban công mặt hông lớn hơn ban công chính mặt tiền cùng tầng (T160). */
+  D7: (ctx, spec) => {
+    const tol = (spec.params.edge_tolerance_m ?? 0.3) * 100;
+    let levels = 0;
+    const refs: string[] = [];
+    for (const level of ctx.levels) {
+      const { front, side } = balconiesByFace(ctx, level, tol);
+      const main = front[0];
+      if (!main || !side.length) continue;
+      levels += 1;
+      for (const balcony of side) if (balcony.areaM2 > main.areaM2 + 0.05) refs.push(balcony.id);
+    }
+    if (levels === 0) {
+      return { value: null, khongCham: 'Không tầng nào có cả ban công mặt tiền lẫn mặt hông.' };
+    }
+    return { value: refs.length, refs };
   },
 
   /**

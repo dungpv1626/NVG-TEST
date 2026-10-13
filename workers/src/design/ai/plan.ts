@@ -317,6 +317,8 @@ export interface PlanContextInput {
   trimCorridors?: boolean;
   /** Nới phòng hẹp hơn mức nghề khi xếp (T113) — `evaluateHouseBest` tự bật cho biến thể của nó. */
   widenRooms?: boolean;
+  /** Tách WC khép kín dài thành WC + tủ đồ khi xếp (T160) — `evaluateHouseBest` tự bật cho biến thể của nó. */
+  splitClosets?: boolean;
   /** Lấy ứng viên xếp hạng thứ `rankSkip` (0 = tốt nhất) — chỉ cho bước quay lui tầng 1 của `evaluateHouse` (T113). */
   rankSkip?: number;
   /**
@@ -2978,12 +2980,74 @@ export function replaceKeptSketches(
     const known = new Set(own.map((room) => room.id));
     const target = (id: string) => own.find((room) => room.id === id)?.target_area_m2 ?? 0;
     const rows = absorbUnknown(
-      partitionRows(splitMerged(done.level.rooms, target), block, cols, tokens.length),
+      partitionRows(
+        splitMerged(foldClosets(done.level.rooms, known), target),
+        block,
+        cols,
+        tokens.length,
+      ),
       known,
     );
     return verify(sketch.level, rows) ? { ...sketch, rows } : sketch;
   });
   return { ...intent, sketches };
+}
+
+/** Bản đã xếp có WC khép kín dài quá mức tách tủ đồ không (T160) — không có thì khỏi tốn một lượt xếp cả nhà. */
+function longEnsuiteWc(evaluation: HouseEvaluation, construction: ConstructionNorms): boolean {
+  const norms = construction.ensuite;
+  if (!norms || !evaluation.ok) return false;
+  const ensuite = new Set(
+    evaluation.ok.program.spaces.filter((space) => space.ensuite_of).map((space) => space.id),
+  );
+  // Ô lưu theo LỌT LÒNG; mức khai theo tim — một vách ngăn chênh.
+  const limit =
+    (norms.wc_max_length_m + norms.closet_min_length_m - construction.walls.partition_m) * 100;
+  return evaluation.ok.levels.some(({ level }) =>
+    level.rooms.some((room) => {
+      if (room.type !== 'wc' || !ensuite.has(room.id)) return false;
+      const [x0, y0, x1, y1] = room.rect as number[];
+      return Math.max(x1! - x0!, y1! - y0!) > limit;
+    }),
+  );
+}
+
+/**
+ * Tủ đồ chương trình tách từ WC khép kín dài (T160, `arrange/ensuite-closet.ts`) không có trong ý định mô hình: vẽ lại
+ * bản phác thì trả nó về WC mà nó tách ra (hai chữ nhật chung trọn một cạnh), không để `absorbUnknown` nhập vào phòng
+ * ngủ bên cạnh — phòng ngủ lồi vào dải WC làm hỏng các vòng sau (phát lại b1543b8c vòng 5–6).
+ */
+function foldClosets(
+  rooms: AiPlanRoomsLevel['rooms'],
+  known: ReadonlySet<string>,
+): AiPlanRoomsLevel['rooms'] {
+  const closets = rooms.filter((room) => room.type === 'closet' && !known.has(room.id));
+  if (!closets.length) return rooms;
+  const out = rooms.filter((room) => !closets.includes(room));
+  for (const closet of closets) {
+    const [cx0, cy0, cx1, cy1] = closet.rect as number[];
+    const index = out.findIndex((room) => {
+      if (room.type !== 'wc') return false;
+      const [x0, y0, x1, y1] = room.rect as number[];
+      const sameRow = Math.abs(y0! - cy0!) <= 1 && Math.abs(y1! - cy1!) <= 1;
+      const sameCol = Math.abs(x0! - cx0!) <= 1 && Math.abs(x1! - cx1!) <= 1;
+      const gapX = Math.min(Math.abs(cx0! - x1!), Math.abs(x0! - cx1!));
+      const gapY = Math.min(Math.abs(cy0! - y1!), Math.abs(y0! - cy1!));
+      return (sameRow && gapX <= 30) || (sameCol && gapY <= 30);
+    });
+    if (index < 0) {
+      out.push(closet);
+      continue;
+    }
+    const wc = out[index]!;
+    const [x0, y0, x1, y1] = wc.rect as number[];
+    out[index] = {
+      ...wc,
+      rect: [Math.min(x0!, cx0!), Math.min(y0!, cy0!), Math.max(x1!, cx1!), Math.max(y1!, cy1!)],
+      area_m2: wc.area_m2 + closet.area_m2,
+    };
+  }
+  return out;
 }
 
 /**
@@ -3290,6 +3354,7 @@ export function arrangeFor(
     altarBackSide: altarBackSide(input.digest),
     ...(input.trimCorridors ? { trimCorridors: true } : {}),
     ...(input.widenRooms ? { widenRooms: true } : {}),
+    ...(input.splitClosets ? { splitClosets: true } : {}),
     ...(input.rankSkip ? { rankSkip: input.rankSkip } : {}),
     openFaces: context.openFaces,
     accessFaces: context.accessFaces,
@@ -3683,6 +3748,11 @@ export interface HouseScoreSummary {
   acceptPercent: number | null;
   /** Dòng gửi mô hình cho các tiêu chí mất điểm nhiều nhất — rỗng khi đạt ngưỡng. */
   hints: string[];
+  /**
+   * % như `percent` nhưng bỏ A1 (lệch diện tích so với chương trình) — thước để xét biến thể thu hẹp hành lang (T160):
+   * phép thu hẹp CỐ Ý lệch khỏi con số mô hình đoán cho hành lang và trả phần dư cho phòng kề. Vắng = như `percent`.
+   */
+  percentWithoutAreaFit?: number | null;
 }
 
 /** Gửi mô hình bấy nhiêu tiêu chí mất điểm nhất khi dưới ngưỡng — nhiều hơn thì nó sửa lan man. */
@@ -3704,13 +3774,23 @@ export function scoreSummary(
   groupFloors: Readonly<Record<string, number>> = {},
 ): HouseScoreSummary {
   const percent = scorePercent(score);
+  const areaFit = score.criteria.find((criterion) => criterion.code === 'A1');
+  const percentWithoutAreaFit =
+    areaFit && areaFit.score !== null
+      ? scorePercent({
+          points: score.points - areaFit.weight * areaFit.score,
+          scoredWeight: score.scoredWeight - areaFit.weight,
+        })
+      : percent;
   // Dưới ngưỡng tổng, hoặc một nhóm dưới sàn nhóm (T96) — cả hai đều đáng một lượt sửa; khi chỉ nhóm
   // hụt sàn thì câu nhắc lấy từ đúng nhóm ấy, không lấy tiêu chí nặng nhất của cả thước.
   const weak = new Set(
     acceptPercent === null ? [] : groupsBelowFloor(score, groupFloorPercent, groupFloors),
   );
   const belowTotal = acceptPercent !== null && percent !== null && percent < acceptPercent;
-  if (!belowTotal && weak.size === 0) return { percent, acceptPercent, hints: [] };
+  if (!belowTotal && weak.size === 0) {
+    return { percent, acceptPercent, hints: [], percentWithoutAreaFit };
+  }
   const hints = score.criteria
     .filter(
       (criterion) =>
@@ -3728,7 +3808,7 @@ export function scoreSummary(
         criterion.refs.slice(0, 6).join(', ') || 'several rooms',
       ),
     );
-  return { percent, acceptPercent, hints };
+  return { percent, acceptPercent, hints, percentWithoutAreaFit };
 }
 
 export interface HouseEvaluation {
@@ -3850,7 +3930,7 @@ function evaluateHouseVariants(
   // Hành lang rộng quá khung nghề (T104, Haan chọn hướng (a) ngày 30/09/2026): xếp lại cả nhà với hành lang thu
   // hẹp, phần dư cho cụm phòng không chứa ô thang; giữ bản ấy khi qua cổng và điểm KHÔNG thấp hơn. Cửa của cả tầng
   // suy lại theo hình học mới nên không áp thẳng vào mọi ứng viên — phát lại 30/09/2026 mất hai mặt bằng khi làm thế.
-  if (input.trimCorridors || input.widenRooms) return chosen.evaluation;
+  if (input.trimCorridors || input.widenRooms || input.splitClosets) return chosen.evaluation;
   const roomsOf = (e: HouseEvaluation) =>
     e.ok ? JSON.stringify(e.ok.levels.map((lv) => lv.level.rooms)) : null;
   const percentOf = (e: HouseEvaluation) => e.ok?.score.percent ?? 0;
@@ -3868,7 +3948,17 @@ function evaluateHouseVariants(
   // hẹp, phần dư cho cụm phòng không chứa ô thang. Cửa của cả tầng suy lại theo hình học mới nên không áp thẳng vào
   // mọi ứng viên — phát lại 30/09/2026 mất hai mặt bằng khi làm thế.
   const trimmed = variant({ trimCorridors: true });
-  if (beats(trimmed, held)) {
+  // Thu hẹp hành lang cố ý lệch khỏi diện tích mô hình đoán (T160) — so điểm không tính A1, các tiêu chí khác phải
+  // không thấp hơn. Phương án d084a46e: hành lang tầng 2 2,14 → 1,50 m, WC + giặt phơi nhận phần dư, A1 lại trừ điểm.
+  const withoutAreaFit = (e: HouseEvaluation) => e.ok?.score.percentWithoutAreaFit ?? percentOf(e);
+  const trimBeats =
+    !!trimmed.ok &&
+    roomsOf(trimmed) !== roomsOf(held) &&
+    (!held.ok || withoutAreaFit(trimmed) >= withoutAreaFit(held));
+  input.trace?.(
+    `▷ thu hẹp hành lang: ${trimmed.ok ? withoutAreaFit(trimmed) : 'hỏng'} so với ${withoutAreaFit(held)} (không tính A1)`,
+  );
+  if (trimBeats) {
     held = trimmed;
     notes.push({
       code: 'corridor_trimmed',
@@ -3886,6 +3976,29 @@ function evaluateHouseVariants(
     notes.push({
       code: 'rooms_widened',
       message: 'Phòng hẹp hơn mức nghề được nới; phần thiếu lấy từ phòng kề còn dư bề ngang.',
+    });
+  }
+  // WC khép kín dài quá → WC gọn + tủ đồ (T160), chồng lên bản đang giữ. Là biến thể cả nhà chứ không áp vào mọi ứng
+  // viên: áp thẳng thì thứ hạng ứng viên đổi — phát lại e1c432f4 vòng 1 mất mặt bằng vì ban công tầng 2 ôm góc. So điểm
+  // không tính A1: tủ đồ không có trong chương trình, WC nhỏ hơn số mô hình đoán.
+  const closeted = longEnsuiteWc(held, input.construction)
+    ? variant({
+        ...(held === trimmed || (held === widened && trimBeats) ? { trimCorridors: true } : {}),
+        ...(held === widened ? { widenRooms: true } : {}),
+        splitClosets: true,
+      })
+    : held;
+  if (
+    closeted !== held &&
+    closeted.ok &&
+    roomsOf(closeted) !== roomsOf(held) &&
+    (!held.ok || withoutAreaFit(closeted) >= withoutAreaFit(held))
+  ) {
+    held = closeted;
+    notes.push({
+      code: 'ensuite_closet_split',
+      message:
+        'WC khép kín dài quá được thu về chiều dài thường dùng; phần còn lại của dải thành tủ đồ mở từ phòng ngủ.',
     });
   }
   if (held !== chosen.evaluation && held.ok) {
