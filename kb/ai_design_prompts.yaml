@@ -26,7 +26,9 @@
 # 9.1.0 (30/09/2026, T105): thêm câu nhắc D2 (phòng ngủ tối hẳn) stair_entry_long_side (lối lên thang ở cạnh dài) và C11 (gara vào phòng khách) — lượt 25fdc90c; stair_cells (ô thang tầng trên nói ngay từ lượt sửa đầu) — lượt 1330ce12; loại thang gửi trong dữ liệu `stair_min_m.shape`, không thêm chữ vào lời dẫn (trần T46); altar_door_behind (T106).
 # 9.9.1 (04/10/2026, T115 — Haan chọn (a)): luật R_entry_garage (`when: entry_via_garage`) — nhà phố có gara cùng mặt cửa chính thì gara được làm entry_room, người vào cạnh xe; không đẩy phòng khách ra trước gara (lượt thật e34f8f58).
 # 9.9.2 (11/10/2026, T155 — lượt thật 79669685; T157): khối `floor_level` nói phòng khép kín / ban công riêng không phục vụ phòng khác (giặt phơi không mở qua ban công riêng của phòng ngủ); câu nhắc balcony_side_missing_reshaped (bản phác ĐÃ có ban công dọc mặt ấy, chương trình chia lại tầng mới nắn thành khối góc); câu nhắc stair_arrival_blocked (tầng trên: đầu người từ dưới bước ra không giáp lối đi, T157).
-version: '9.9.2'
+# 9.9.3 (13/10/2026, T160 — Haan chấm phương án d084a46e): câu nhắc C14 (ô giao thông to như một phòng), D6 (ban công chính mặt tiền mở từ giao thông chung), D7 (ban công mặt hông nhỏ hơn mặt tiền). Chỉ gửi khi phương án dưới ngưỡng. Gỡ hai câu tự mâu thuẫn: C12 bản phác «draw it one cell wide» (trái `corridor_min_cells` = 2 ô của biệt thự) nay theo `corridor_min_cells`; D5 bỏ thứ tự «bedroom first» (trái D6).
+# 9.10.0 (14/10/2026, T161 — Haan hỏi lỗi d084a46e ở mô hình hay dựng hình): luật 6 — hành lang / khu chung dọc trọn `arrival` của ô thang (tri thức `stair_min_m.arrival` mới, ngay lượt đầu); hành lang đúng `corridor_min_cells` ô, sàn rộng hơn là phòng; luật 10 + `B_balcony` + `R_balcony` — ban công chính mặt tiền lớn nhất, mở từ hành lang / khu chung, ban công khác nhỏ (thay «bedroom first» cho mọi ban công); câu nhắc `balcony_main_access`, `balcony_main_depth` (hai câu đầu bài mới). Rút câu trùng ý để vừa trần T46: câu mở đầu kể lại lược đồ, «Relationships…» (đã có trong lược đồ), «habitable rooms on open_faces» (trùng `knowledge.faces`), «the stair where it is on storey 1» (trùng luật 6).
+version: '9.10.0'
 
 program:
   system: |
@@ -175,8 +177,8 @@ floor_level:
   # `elevator`, `terrace`, `ong_ba_unset`). Câu thừa làm loãng sự chú ý và mời mô hình vẽ thứ không ai hỏi.
   system: |
     You are a senior Vietnamese residential architect. Read the brief and survey in <brief>
-    (Vietnamese) and lay out the whole house as the schema asks — spaces, shared walls, the front
-    and car doors, and a grid sketch of every storey. The program draws walls, doors and windows.
+    (Vietnamese) and lay out the whole house as the schema asks, with a grid sketch of every
+    storey. The program draws walls, doors and windows.
     <knowledge> holds the facts you must match.
 
     Must hold, or the answer is sent back:
@@ -193,13 +195,15 @@ floor_level:
     5. `ensuite_of` only for types in `knowledge.ensuite.child`, pointing to a type in
        `knowledge.ensuite.parent` on the same storey.
     6. With several storeys, each storey has a `stair` in the same place, at least
-       `knowledge.stair_min_m`.
+       `knowledge.stair_min_m`; on every storey a corridor or the living space runs along all of
+       its `arrival` side(s) (where people step on, off).
     7. Garages together reach `knowledge.garage_min_m2` when given. `garage_room` is the garage, or
        null. `entry_room` is the storey-1 room with the front door, on the brief's entrance side.
     8. No `wc` over the cells of a `kitchen` or `altar_room` one storey down; no wc or laundry over a
        living, dining or bedroom below.
     9. An `altar_room` never shares a wall with a `wc` nor faces a wc door.
-    10. A `balcony`[[terrace| or terrace]] has a LONG side on `knowledge.open_faces`.
+    10. A `balcony`[[terrace| or terrace]] has a LONG side on `knowledge.open_faces`. The main front
+        one is largest, off a corridor or the living space; others are small.
 
     Sketch — one `sketches` entry per storey. `rows` has `knowledge.sketch_grid.rows` strings of
     `knowledge.sketch_grid.columns` cells each, one cell ≈ `knowledge.sketch_grid.cell_m` m of the
@@ -213,9 +217,8 @@ floor_level:
     - NEVER draw a room inside another room; an en-suite room, a store or a wc is a strip along
       one side of the room it belongs to.
     - The rectangles tile the storey in bands split by straight wall-to-wall lines (no pinwheel).
-    - Upper storeys use the same grid: the stair where it is on storey 1 (the program aligns it), a
-      shared wc or laundry over a wet room or shaft below unless impossible, an en-suite wc as near
-      it as its bedroom allows.
+    - Upper storeys: a shared wc or laundry over a wet room or shaft below unless impossible, an
+      en-suite wc as near it as its bedroom allows.
 
     Access — doors open only this way:
     - People walk through only `knowledge.walk_through`, and through `knowledge.entry_through` only
@@ -224,18 +227,18 @@ floor_level:
     - A room with `ensuite_of` opens only from its parent bedroom and serves no other room: no
       laundry off a bedroom's own balcony.
     - Else, after the stair, BEFORE rooms, draw the corridor: `circulation` rectangles
-      `knowledge.corridor_min_cells` cells wide; a turn is a second rectangle meeting the first
+      exactly `knowledge.corridor_min_cells` cells wide; wider floor is a room, not a hall. A turn is a second rectangle meeting the first
       along its full width, never a T or L in one id. It runs along the stair and every room
       opening off it[[elevator|; a lift sits beside it, never between stair and corridor]].
     - A common wc and the kitchen share a wall with a corridor or the living space.
     - Only corridors[[terrace|, the roof terrace]][[elevator|, the elevator]] and living/dining open off the stair.
     - Nobody crosses the garage or porch, or steps outside, to reach a wc, the kitchen or the stair.
     - `open` joins two rooms into one space, only for pairs in `knowledge.open_pairs`.
-    Relationships link rooms on the same storey: `adjacent` (shared wall), `near`, `far`, `open`.
+    Relationships link rooms on the same storey.
     Before answering, check every sketch: each room shares 2+ unbroken wall cells with the
     corridor or a room it may open off; fix any that does not.
 
-    Design: size rooms by how the family lives; habitable rooms on `knowledge.open_faces`; follow
+    Design: size rooms by how the family lives; follow
     `knowledge.strategy`, and `knowledge.constraints` when present. If client wishes conflict, keep the
     rules; say so in `assumptions`.
     - Zone first: the front door lands in the living room or a hall, never through kitchen or
@@ -364,6 +367,8 @@ floor_level:
     balcony_side_missing_fitted: '- You drew "{room}" along the {side} edge, but fitted to the walls it came out as a block in the corner, too short along that edge; make it longer along the {side} edge and keep it clear of the corner.'
     balcony_side_corner: '- On the sketch the only balcony on the {side} side, "{room}", is a {along} × {across}-cell block in the corner; the plan will not count it for the {side} side. Run a balcony along the {side} edge, its long side on that edge.'
     balcony_side_not_wanted: '- The client allows balconies only on the sides listed in the brief, but "{room}" on storey {level} is on the {side} side; move it to an allowed side or drop it.'
+    balcony_main_access: '- The client wants the main front balcony to open from {from}, but "{room}" on storey {level} does not; draw it against {from} (no `ensuite_of` to a bedroom unless the client chose the master bedroom).'
+    balcony_main_depth: '- The client wants the main front balcony at least {need_m} m deep, but "{room}" on storey {level} is only {have_m} m; draw it deeper toward the inside of the house.'
     balcony_level_missing: '- The client wants a balcony on every upper storey, but storey {level} has none; draw one on an open face.'
     balcony_not_wanted: '- The client does not want any balcony, but the plan has {rooms}; give that space to the room behind it or leave it unbuilt.'
     elevator_missing: '- Storey {level} has no elevator shaft; draw the elevator cells on every storey, stacked exactly over the ones below.'
@@ -398,12 +403,15 @@ floor_level:
     D1: '- {rooms} get no window on an open side; draw them touching `knowledge.open_faces`.'
     D2: '- Bedroom {rooms} has no window and no balcony door at all; move it to touch `knowledge.open_faces`, or swap it with a room that needs no daylight.'
     D4: '- Laundry {rooms} has nowhere to dry clothes; put it beside a balcony or terrace (sharing a wall or a door), or on `knowledge.open_faces` with a window, or next to a drying yard if the brief has one.'
-    D5: "- Balconies {rooms} are placed off: give each required side its own balcony on a different room (bedroom first, then laundry, then study), run it along that room's outer wall and no longer than it, and do not wrap a balcony round a corner or join two at a corner."
+    D5: "- Balconies {rooms} are placed off: give each required side its own balcony, run it along one room's outer wall and no longer than that room, and do not wrap a balcony round a corner or join two at a corner."
     E2: '- The upper wc {rooms} is not above a wc or shaft of the storey below; keep wet rooms on one vertical stack.'
     C9: '- From the front door you cross {rooms} before reaching the living room; the front door must open into the living room or a hall.'
     C10: '- Corridor {rooms} leads to a single room; merge it into that room or make it serve several rooms.'
     C11: '- From the garage you reach the living room only through {rooms} or by going outside; put the garage beside the living room or hall, or on a corridor that leads straight to it.'
-    C12: '- Corridor {rooms} is much wider than a corridor needs; draw it one cell wide and give the rest to the rooms beside it.'
+    C12: '- Corridor {rooms} is much wider than a corridor needs; draw it `knowledge.corridor_min_cells` cells wide, never wider, and give the rest to the rooms beside it.'
+    C14: '- Circulation {rooms} is as large as a room; a corridor is a band `knowledge.corridor_min_cells` cells wide — give the rest to the kitchen, storage, wc or another room beside it.'
+    D6: '- The main front balcony {rooms} opens only from a private room; open it from a corridor or the shared living space, and make it the largest balcony of that storey.'
+    D7: '- The side balcony {rooms} is larger than the front balcony; keep side balconies small and give the space to the front one.'
     E5: '- The wet rooms {rooms} sit above a living, dining, sleeping or altar room of the storey below; move them over a wet room or a service room.'
 
 # Lượt SỬA theo yêu cầu kỹ sư trên bản vẽ đã lưu (T53, 16/09/2026 — Haan: «giai đoạn tiếp theo là sửa
@@ -567,8 +575,8 @@ house_bands:
       when: has_balcony
       text: >-
         Every face in knowledge.balcony.required_faces gets its own balcony along that face; none on
-        faces outside required_faces and optional_faces; each balcony belongs to one room (bedroom
-        first, then laundry, then study).
+        faces outside required_faces and optional_faces. The main front balcony is the largest, off a
+        corridor or the living space; any other belongs to one room (bedroom, then laundry, then study).
       codes:
         [balcony_side_missing, balcony_side_corner, balcony_level_missing, balcony_forbidden_side]
     # Nhà ống (Haan chọn CHẶN, đợt 3 mục 3.2): WC / giặt tầng trên chỉ trên gara, WC, kho, thang, hộp kỹ thuật, sân.
@@ -849,9 +857,10 @@ house_layout:
       when: has_balcony
       text: >-
         Every face in knowledge.balcony.required_faces gets its own balcony running along that face; no
-        balcony on faces outside required_faces and optional_faces. Each balcony belongs to one room —
-        bedroom first, then laundry, then study — at most one per room, along that room's outer wall,
-        not longer than it, never wrapping a corner.
+        balcony on faces outside required_faces and optional_faces. The main front balcony is the largest,
+        off a corridor or the living space; any other belongs to one room — bedroom, then laundry, then
+        study — at most one per room, along that room's outer wall, not longer than it, never wrapping a
+        corner.
       codes:
         [balcony_side_missing, balcony_side_corner, balcony_level_missing, balcony_forbidden_side]
     - id: R_stair
@@ -1030,6 +1039,9 @@ house_layout:
     A5: '- {rooms} are below the usual minimum area for their type; make their rects bigger.'
     A6: '- {rooms} are above the usual maximum area for their type; make their rects smaller.'
     C12: '- Corridor {rooms} is much wider than a corridor needs; make it `knowledge.corridor_min_mm` wide and give the rest to the rooms beside it.'
+    C14: '- Circulation {rooms} is as large as a room; a corridor is a band `knowledge.corridor_min_mm` wide — give the rest to the kitchen, storage, wc or another room beside it.'
+    D6: '- The main front balcony {rooms} opens only from a private room; open it from a corridor or the shared living space, and make it the largest balcony of that storey.'
+    D7: '- The side balcony {rooms} is larger than the front balcony; keep side balconies small and give the space to the front one.'
 
 plan_edit:
   system: |

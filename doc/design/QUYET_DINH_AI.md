@@ -3952,3 +3952,137 @@ phối cảnh): **số cố định + lần sửa + ngày giờ, và «theo …�
 **Hàng rào:** `ai-variant-labels.test.ts`, `use-ai-hide.test.tsx`, phép thử nhãn ở bước Mặt bằng / Mặt đứng. Đột biến
 M218 (xoá chỉ nạp lại), M219 (giao diện bỏ nhãn máy chủ), M220 (bản sửa đánh số như bản mới). Gỡ
 `ArtifactRepository.inputsAmong` (thay bằng `edgesInto`).
+
+### T160 — Kích thước chi tiết: hành lang, WC khép kín, chiếu nghỉ; chấm sảnh thừa và ban công (13/10/2026, Haan)
+
+Haan (phương án d084a46e hồ sơ c815a6e6, 12/10/2026, gpt-6-sol, bản demo): «về bố trí phòng là khá tốt, nhưng về kích
+thước chi tiết + thang bộ + công năng + thẩm mỹ là chưa tốt». Sáu điểm: tầng 1 ô giao thông 16,9 m²; WC trong phòng ngủ
+dài 5,6 m; tầng 2 hành lang rộng 2,15 m — «thu lại còn khoảng 1.5m, phần diện tích còn lại bù vào phòng giặt phơi và
+WC»; thang tầng 2 không có lối ra (bậc 20 giáp vách phòng ngủ) và chiếu nghỉ quá rộng (12,8 m²); ban công mặt tiền nên
+mở từ giao thông chung và lớn, ban công hông nhỏ hơn; hai tầng hiện lệch cỡ ở cùng lựa chọn «Tràn khung».
+
+**Hai điểm đã có bản sửa nhưng chưa phát hành.** `nvg-api` trên demo là bản 11/10 11:50, trước T157 (lối ra thang tầng
+trên) và T158 (mọi tầng một tỷ lệ). Phát lại ý định đã lưu bằng main: cổng bác tầng 2 (`stair_arrival_blocked`), bước
+khoét sảnh không khoét được (phòng ngủ chính không phủ trọn cạnh dãy) — lượt thật sẽ gọi mô hình sửa. Tờ vẽ dựng lúc
+xem, nên phương án đã lưu hiện cùng 1:100 ngay khi API mới chạy. Haan chọn phát hành ngay: `nvg-api` da25c2d5 (13/10),
+hợp đồng `5e6bfa324d9e`.
+
+**Gốc của bốn điểm còn lại — chương trình theo sát bản phác.** Mô hình khai `circulation_2` 17 m², vẽ WC khép kín sáu ô
+suốt bề ngang phòng ngủ, và khai hành lang 9 m² cho dải 5,4 m. Thu hẹp hành lang T104 CÓ chạy (2,00 → 1,65 m theo tim)
+nhưng vô hiệu vì ba chỗ:
+1. `tree/sizing.ts` căn vách theo tỉ lệ diện tích chương trình; hành lang thuộc `noShrinkTypes` mang trọng số = max(số
+   mô hình khai, hiện có) → nới lại về 2,1 m.
+2. Biến thể thu hẹp chỉ nhận khi điểm không thấp hơn, mà A1 (lệch diện tích so với chương trình) và A5 (ô dưới định mức)
+   phạt chính việc thu hẹp: hành lang nhỏ hơn số mô hình đoán, WC / giặt phơi lớn hơn số mô hình đoán (đầu bài không khai
+   diện tích hai phòng ấy), mẩu hành lang 2,9 m² «dưới 3 m²».
+3. Mô hình vẽ hành lang tầng 1 thành HAI ô nối nhau (`circulation_4` + `circulation_1`) — từng ô không phải dải.
+
+**Sửa:**
+- `resizeTree` nhận `corridorMax`: hành lang dải (lá hoặc chồng lá hành lang) không căn rộng quá mức nghề (biệt thự 1,5 m
+  lọt lòng). Bật cùng điều kiện với T104 (`trimCorridors`).
+- `trimCorridors` coi chồng ô hành lang nối tiếp là một dải. Cả hai bên nhận được thì chọn bên mà vách bị dời ít nối
+  thẳng hàng với vách ngoài khối, trừ khi phòng nhận vượt diện tích tối đa của nghề (`space_norms`).
+- Biến thể thu hẹp so điểm KHÔNG tính A1 (`percentWithoutAreaFit`); A5 không tính ô hành lang (bề rộng đã có C4).
+- WC khép kín dài quá `ensuite.wc_max_length_m` (2,7 m theo tim, `kb/construction_norms.yaml`) → WC ở đầu chạm mép khối
+  + «Tủ đồ» (`closet`, phòng khép kín của cùng phòng ngủ) phần còn lại (`arrange/ensuite-closet.ts`, Haan chọn). Vẽ lại
+  bản phác tầng giữ cho lượt sửa thì tủ đồ trả về WC (`foldClosets`) — không thì `absorbUnknown` nhập nó vào phòng ngủ,
+  phòng ngủ lồi vào dải WC (phát lại b1543b8c vòng 5).
+- Thang U và ba vế: phần ô dư dồn về đầu bậc 1 thành sàn đứng / sàn bước ra, chiếu nghỉ vẽ đúng `landing` (1,5 m) —
+  trước đó dồn hết vào chiếu nghỉ (d084a46e: 2,26 m).
+- Thước chấm (Haan chọn: chỉ trừ điểm): C14 diện tích lớn nhất của ô giao thông có cạnh ngắn lọt lòng > 1,6 m (sảnh
+  thừa); D6 ban công chính mặt tiền (lớn nhất chạm `y0`) phải có cửa từ nhóm `shared_access` (hành lang, sảnh, khách,
+  ăn) — nhà ống không chấm; D7 ban công hông lớn hơn ban công chính mặt tiền. Câu nhắc ba mã trong lời dẫn 9.9.3.
+- Lời dẫn tự mâu thuẫn (rà 14/10/2026, Haan hỏi lỗi gốc ở mô hình hay dựng hình): bản phác bắt hành lang
+  `corridor_min_cells` ô (biệt thự 1,475 m → 2 ô lưới 1 m) mà câu nhắc C12 bảo «one cell wide» — C12 nay theo
+  `corridor_min_cells`; D5 dạy «bedroom first» cho mọi ban công, trái D6 — bỏ thứ tự khỏi D5 (thứ tự ban công sẽ nằm ở
+  câu luật, T161); câu nhắc C14 viết sai nghĩa («leads to no room») — sửa thành «as large as a room».
+
+**Phương án d084a46e phát lại** (bản phác tầng 2 sửa tay để có hành lang trước thang, `hand_level2`): hành lang tầng 2
+2,14 → 1,50 m, WC + giặt phơi nhận phần dư; hành lang tầng 1 1,84 → 1,54 m; WC khép kín tầng 1 2,7 m + tủ đồ 4,5 m²;
+chiếu nghỉ 1,5 m; C14 = 16,9 m², D6 = `balcony_1`, D7 = `balcony_2`.
+
+**Đo phát lại toàn kho** (220 vòng / 54 lượt ghi, đối chứng = cùng mã tắt mọi thay đổi T160): **22 = 22 mặt bằng, 0
+tiến, 0 lùi**, 25 vòng khác chi tiết. Hành lang hẹp lại ở 182665ea vòng 3 (2,40 → 1,59 m), 5aba737d vòng 1–3, e1c432f4
+vòng 1 (1,74 → 1,50–1,54 m), bea4c6fa vòng 6, d084a46e. Điểm đổi phần lớn do ba tiêu chí mới (nhóm C, D có thêm phần).
+Hai lần đo trước đó dẫn tới hai chỉnh:
+- Tách tủ đồ áp thẳng vào MỌI ứng viên: 22 → 23 nhưng mất e1c432f4 vòng 1 (thứ hạng ứng viên tầng 2 đổi, ban công mặt
+  trái ôm góc) → chuyển thành biến thể cả nhà sau T104 / T113, chỉ thử khi bản đang giữ có WC khép kín dài quá mức
+  (`longEnsuiteWc`, khỏi tốn một lượt xếp cả nhà). Thử tính tủ đồ vào mốc khu ướt tầng dưới: cứu b1543b8c vòng 6 nhưng
+  WC tầng 2 nằm trên tủ đồ (E2 trừ) — gỡ, không cần nữa khi tách là biến thể.
+- Chốt bề rộng trong bước căn vách làm phần dư dồn sang ô thang tầng 1 (b1543b8c vòng 6: 5,15 → 5,74 m, tầng 2 hỏng) →
+  chốt chỉ áp khi phía nhận không chứa thang / lõi / thang máy / giếng (`noGrowTypes`), và căn có chốt không qua cổng
+  lần nào thì căn như cũ.
+
+**Hàng rào:** `ai-run-d084a46e.test.ts` + `fixtures/ai-run-d084a46e.json` (`round1` = ý định đã lưu; `hand_level2`
+không phải lượt thật — không mang tên `roundN` để bộ phát lại toàn kho bỏ qua); `plan-score.test.ts` (C14, D6 chấm
+được ở nhà phố mẫu); `ai-plan.test.ts`, `ai-design-steps.test.ts` nhận phòng chương trình tự thêm là tủ đồ. Đột biến
+M225–M232 đều bị bắt; M94 cập nhật `find`. Lượt đầu M225 (cài vào nửa chốt `capB`) và M227 sống sót: nửa chốt có tác
+dụng ở d084a46e là `capA`; còn so điểm không tính A1 thì phát lại toàn kho khi gỡ nó cho thấy đúng hai vòng đổi
+(1f3acd9f vòng 1: 1,84 → 1,89 m; d084a46e vòng 1 mô hình thang cũ: 1,49 → 1,58 m) — thêm ca canh thứ ba vào
+`ai-run-d084a46e.test.ts` (ý định đã lưu, không thông số loại thang: phải có ghi chú `corridor_trimmed`).
+
+**Còn mở:**
+- Ô 16,9 m² sau thang tầng 1 của d084a46e vẫn nguyên — Haan chọn chỉ trừ điểm (C14); phương án vẫn 62,4 ≥ 60 nên không
+  gọi mô hình sửa.
+- Phần dư hành lang tầng 1 d084a46e trả cho cột phòng ngủ (vách lệch 30 cm so với vách gara / phòng ngủ phía trước) vì
+  trả cho kho thì kho vượt 10 m² định mức. Muốn thẳng hàng thì phải dời cả dãy vách — chưa làm.
+- WC tầng 2 d084a46e còn 2,6 m² (cột 1,13 m chồng đúng trục WC tầng 1), giặt phơi nhận gần hết phần dư (8,5 m²).
+- Tủ đồ là phòng chương trình tự thêm: không có trong `level.intent`, lượt sửa bằng ô yêu cầu xếp lại từ ý định thì tủ
+  đồ chỉ quay lại nếu biến thể tách lại thắng.
+- D6 / D7 / C14 là suy luận nghề (n = 0) — chờ Haan / KTS chấm.
+
+### T161 — Đầu bài và lời dẫn cho bản phác chuẩn hơn: hành lang, đầu lên / xuống thang, ban công chính (14/10/2026, Haan)
+
+**Gốc.** Haan hỏi lỗi của phương án d084a46e (T160) xuất phát từ đầu ra mô hình hay phần dựng hình. Đối chiếu bản phác
+và diện tích mục tiêu mô hình khai: một nửa là dựng hình (T160 đã sửa), nửa kia là mô hình — và phần của mô hình phần lớn
+do **chính lời dẫn / đầu bài kéo nó vẽ sai**:
+- Hành lang: lời dẫn bắt `corridor_min_cells` ô (biệt thự 1,2 m lọt lòng + tường = 1,475 m → 2 ô lưới 1 m), câu nhắc
+  C12 lại bảo «one cell wide» (gỡ ở T160).
+- Thang: tri thức gửi mô hình có loại và cỡ ô thang, không có chỗ người lên / xuống. Mô hình đặt phòng ngủ chính ở đầu
+  bước ra tầng 2 (thang U bước ra cùng đầu với bậc 1); bộ xếp tầng 1 chọn đầu vào thang không nhìn tầng trên (đầu trước
+  — cửa sẵn có từ phòng khách), nên cổng T157 bác cả nhà dù đầu sau giáp hành lang ở cả hai tầng.
+- Ban công: `B_balcony`, `R_balcony`, câu nhắc D5 và câu văn đầu bài dạy «mỗi ban công thuộc một phòng, ưu tiên phòng
+  ngủ» — mô hình gắn ban công mặt tiền cho phòng ngủ chính (`ensuite_of`), trái D6. Đầu bài không hỏi ban công chính mở
+  từ đâu, sâu bao nhiêu.
+
+**Haan chọn** (14/10/2026): hỏi gia chủ «ban công chính mặt tiền mở ra từ đâu», đã trả lời thì là **bắt buộc**; thêm câu
+**độ sâu ban công chính**; **giữ lưới 1 m**, sửa lời dẫn (chương trình thu hẹp hành lang — T160).
+
+**Sửa.**
+- Lời dẫn 9.10.0, khối `floor_level.system` (đường đang chạy): luật 6 thêm «hành lang hoặc khu sinh hoạt chạy dọc trọn
+  `arrival` của ô thang ở mọi tầng»; hành lang «đúng `corridor_min_cells` ô; sàn rộng hơn là phòng, không phải sảnh»; luật
+  10 thêm «ban công chính mặt tiền lớn nhất, mở từ hành lang / khu chung; ban công khác nhỏ». Vừa trần T46 (5.500 ký tự)
+  bằng cách rút câu cũ trùng ý (câu mở đầu kể lại lược đồ, «Relationships…» đã có trong lược đồ, «habitable rooms on
+  open_faces» trùng `knowledge.faces`, «the stair where it is on storey 1» trùng luật 6) — không nới trần. `B_balcony`,
+  `R_balcony` (v5 / v6) và câu văn đầu bài sửa cùng ý.
+- Tri thức `stair_min_m.arrival` (`plan.ts`, `STAIR_ARRIVAL_SENT` theo `stairArrival`): `one_short_end` (U, U chiếu nghỉ
+  rộng, ba vế), `both_short_ends` (thẳng — tầng trên bước ra đầu kia, vế kế tiếp lên từ đầu cũ), `short_end_and_long_side`
+  (chữ L). Gửi ngay lượt đầu, không chờ cổng bác.
+- Dựng hình: tầng trên hỏng mà thang tầng 1 còn cạnh khác vào được → thử tầng 1 với `stairEntryAvoid` (cạnh đang dùng
+  xếp cuối trong `shapedStairEntry`, không cấm) TRƯỚC bước quay lui xếp hạng (T113). Chỉ khi lượt mang loại thang.
+- Đầu bài: `balconies.main_front_access` (`chung` / `phong_ngu_chinh` / `chua_quyet`) và `balconies.main_front_depth_m`
+  (0,6–3 m, chỉ khi mặt trước không khai độ đua). Hai hợp đồng, `anonymise`, `brief-form.json` (trọng số 0, cùng điều kiện
+  hiện với các câu ban công khác), câu văn `<brief>`, `BalconyDemand.mainAccess / mainDepthM`, dòng `brief_demands`.
+  Chỉ suy từ câu đã trả lời và chỉ khi mặt trước có ban công; «chưa quyết» không đòi gì.
+- Cổng (`plan-check.ts` `checkMainBalcony`): ban công chính mặt tiền (lớn nhất chạm mặt trước, khối góc không tính —
+  `mainFrontBalconies`) phải có cửa sang loại gia chủ chọn — nhóm `shared_access` (cùng nhóm D6 đọc) hoặc
+  `demands.balcony.main_master_types` — mã `balcony_main_access`; không nông hơn độ sâu đã khai quá
+  `main_depth_tolerance_m` (0,3 m, tường bao + lan can) — `balcony_main_depth`. Cả hai trong `REVISABLE_CODES`, có câu
+  nhắc. Gia chủ đã chọn thì D6 không chấm (chấm thì trừ điểm chính điều gia chủ chọn «phòng ngủ chính»).
+- Không đổi cách đặt cửa ban công: ban công không khai `ensuite_of` đã mở từ hành lang trước (thứ tự `door_hosts`), lỗi
+  nằm ở `ensuite_of` của mô hình — cổng + câu nhắc báo đúng chỗ ấy.
+
+**Đo.** Phát lại 220 vòng (đối chứng cùng mã, tắt bước thử cạnh vào thang): **21 → 22, 1 tiến, 0 lùi, 1 khác** — tiến là
+d084a46e vòng 1: ý định gốc của mô hình nay qua cả nhà, 67 điểm (tầng 1 vào thang từ hành lang sau, tầng 2 bước ra
+`circulation_6` sâu 1,54 m; WC tầng 2 giữ 3,2 m², giặt phơi 7,7 m² — không cần bản phác sửa tay của T160). Thay đổi lời
+dẫn và đầu bài **không phát lại được** (phát lại dùng đầu ra đã ghi) — cần lượt thật, xin phép riêng.
+
+**Hàng rào.** `ai-run-d084a46e.test.ts` (ý định gốc qua; `chung` bị bác kèm câu nhắc, `phong_ngu_chinh` qua; độ sâu 3 m bị
+bác, 1,2 m qua; `arrival` đúng năm loại thang), `ai-brief-demands.test.ts`, `brief-narrative.test.ts`. Đột biến M233–M237.
+
+**Còn mở:**
+- Bộ xếp chưa căn ban công theo độ sâu đã khai — mới có cổng và câu cho mô hình. Lượt thật hay bị bác `balcony_main_depth`
+  thì làm bước nắn trong `tree/sizing.ts` như bề rộng hành lang.
+- Ban công hông bị chương trình nới (d084a46e: khai 4 m², ra ~12 m² sau khi đua) — mới chỉ trừ điểm (D7).
+- `knowledge.balcony_main_depth_cells` trong kế hoạch chưa làm: độ sâu đã tới mô hình qua `brief_demands` và `<brief>`,
+  thêm khoá là tốn trần tri thức cho cùng một ý.

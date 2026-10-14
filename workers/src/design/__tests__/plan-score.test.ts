@@ -115,9 +115,12 @@ describe('hình dạng kết quả', () => {
     // nhà phố mẫu không chấm D3 nên phần không chấm của nhóm D lớn thêm.
     // T116 (Haan chấm lượt a68c50bb) thêm C13 (phòng ăn liền bếp, nặng 2) vào nhóm C và nâng D4 (giặt phơi có chỗ phơi)
     // lên nặng 2 — nhà phố mẫu không có phòng ăn riêng nên C13 không chấm, phần không chấm của nhóm C lớn thêm.
-    expect(result.scoredWeight).toBe(81.86);
-    // Nhóm C nay 16,5 phần (thêm C12 nặng 1,5, C13 nặng 2), C5 = 30/16,5.
-    expect(of(result, 'C5').weight).toBeCloseTo(30 / 16.5, 6);
+    // T160 thêm C14 (ô giao thông rộng hơn hành lang, nặng 2) vào nhóm C, D6 (ban công chính mặt tiền mở từ giao thông
+    // chung, nặng 2) và D7 (ban công hông lớn hơn mặt tiền, nặng 1,5) vào nhóm D — nhà phố mẫu chấm được C14 và D6, D7
+    // không chấm (không có ban công hông), nên phần chấm được nhích lên.
+    expect(result.scoredWeight).toBe(82.92);
+    // Nhóm C nay 18,5 phần (thêm C12 nặng 1,5, C13 nặng 2, C14 nặng 2), C5 = 30/18,5.
+    expect(of(result, 'C5').weight).toBeCloseTo(30 / 18.5, 6);
     expect(of(result, 'C5').score).toBeNull();
     expect(of(result, 'E4').weight).toBeCloseTo(10 / 3.5, 2);
     expect(of(result, 'C1').weight).toBeCloseTo(2 * of(result, 'C2').weight, 6);
@@ -143,7 +146,8 @@ describe('hình dạng kết quả', () => {
     // T107 thêm D4 — suy luận nghề (n = 0), 15 / 5 phần nhóm D = 3.
     // T113 thêm D5 (n = 0) — nhà phố mẫu có ban công nên D5 chấm được; C12 không chấm (không hành lang dạng dải).
     // T116: D4 nặng 2 (phần nhóm D của nó tăng), C13 không chấm ở nhà phố mẫu (phần các tiêu chí nhóm C khác giảm).
-    expect(result.suyLuanWeight).toBeCloseTo(34.69, 2);
+    // T160: C14 và D6 (n = 0) chấm được ở nhà phố mẫu.
+    expect(result.suyLuanWeight).toBeCloseTo(37.17, 2);
     const guessed = result.criteria.filter((entry) => entry.n === 0 && entry.score !== null);
     expect(guessed.map((entry) => entry.code)).toEqual([
       'A1',
@@ -155,8 +159,10 @@ describe('hình dạng kết quả', () => {
       'C9',
       'C11',
       'C10',
+      'C14',
       'D4',
       'D5',
+      'D6',
       'E5',
     ]);
   });

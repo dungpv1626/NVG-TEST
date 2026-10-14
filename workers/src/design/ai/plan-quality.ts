@@ -47,6 +47,8 @@ export interface CriterionSpec extends ScoreScale {
   params: Record<string, number>;
   /** Chỉ chấm cho loại nhà này (`houseProfile`, T116) — loại khác «không chấm». Vắng = mọi loại. */
   onlyProfile?: string;
+  /** Loại nhà KHÔNG chấm tiêu chí này (T160: D6 bỏ nhà ống — ban công mặt tiền mở từ phòng ngủ trước là thường). */
+  exceptProfile?: string;
   /** Số mẫu đã đo. `0` nghĩa là ngưỡng hoàn toàn là suy luận (T31). */
   n: number;
   /**
@@ -303,6 +305,7 @@ function criterion(
     label: String(raw.label ?? ''),
     ...(raw.enforced_by_gate ? { enforcedByGate: String(raw.enforced_by_gate) } : {}),
     ...(raw.only_profile ? { onlyProfile: String(raw.only_profile) } : {}),
+    ...(raw.except_profile ? { exceptProfile: String(raw.except_profile) } : {}),
     byBuildingType: {},
   };
 

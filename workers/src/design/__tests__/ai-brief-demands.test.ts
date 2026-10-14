@@ -406,6 +406,50 @@ describe('ban công', () => {
   });
 });
 
+// T161 (Haan 14/10/2026): ban công chính mặt tiền mở từ đâu, sâu bao nhiêu — hai câu mới của đầu bài.
+describe('ban công chính mặt tiền (T161)', () => {
+  const front = { required_sides: ['front'], scope: 'theo_tung_phong' };
+
+  it('đã chọn mở từ giao thông chung → đòi hỏi, kèm một dòng cho mô hình', () => {
+    const d = demandsOf({ balconies: { ...front, main_front_access: 'chung' } });
+    expect(d.balcony?.mainAccess).toBe('chung');
+    expect(d.lines.some((line) => line.includes('Ban công chính mặt tiền mở ra từ sảnh'))).toBe(
+      true,
+    );
+  });
+
+  it('«chưa quyết» và chưa trả lời khác «đã chọn»: không đòi gì', () => {
+    for (const access of ['chua_quyet', null, undefined]) {
+      const d = demandsOf({ balconies: { ...front, main_front_access: access } });
+      expect(d.balcony?.mainAccess, String(access)).toBeNull();
+    }
+  });
+
+  it('mặt trước không có ban công thì câu trả lời không thành đòi hỏi', () => {
+    const d = demandsOf({
+      balconies: {
+        scope: 'theo_tung_phong',
+        required_sides: ['back'],
+        main_front_access: 'chung',
+        main_front_depth_m: 1.5,
+      },
+    });
+    expect(d.balcony?.mainAccess).toBeNull();
+    expect(d.balcony?.mainDepthM).toBeNull();
+  });
+
+  it('độ sâu chỉ đòi khi mặt trước không khai độ đua — khai đua thì độ đua là độ sâu', () => {
+    expect(
+      demandsOf({ balconies: { ...front, main_front_depth_m: 1.5 } }).balcony?.mainDepthM,
+    ).toBe(1.5);
+    expect(
+      demandsOf({
+        balconies: { ...front, main_front_depth_m: 1.5, projection_by_side: { front: 1 } },
+      }).balcony?.mainDepthM,
+    ).toBeNull();
+  });
+});
+
 // T105 (Q-57, Haan chọn A): ban công DÀI «ở» mặt mà cạnh dài mở ra. Lượt thật 894b350d: ban công phơi 3,9 × 1 m
 // mặt sau, đầu ngắn chạm mép phải (nhà hàng xóm, mặt cấm) — cả sáu vòng bị bác chỉ vì thế.
 describe('ban công chạm mặt cấm bằng đầu ngắn', () => {

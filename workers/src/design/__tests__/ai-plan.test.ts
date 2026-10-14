@@ -393,8 +393,11 @@ describe('Một lượt cho cả nhà khi ý định xếp được', () => {
       expect(level.outline_faces).toHaveLength(level.outline.length);
       expect(level.tree!.nodes.length).toBeGreaterThan(0);
       expect(level.arrange!.passed).toBeGreaterThan(0);
+      // Phòng chương trình tự thêm (T160: tủ đồ tách từ WC khép kín dài) không có trong ý định mô hình.
       expect(level.intent!.rooms.map((room) => room.id)).toEqual(
-        program.spaces.filter((space) => space.level === i + 1).map((space) => space.id),
+        program.spaces
+          .filter((space) => space.level === i + 1 && space.type !== 'closet')
+          .map((space) => space.id),
       );
     }
     // Bản phác mô hình vẽ đi thẳng qua cổng ở mọi tầng (T48): cây dựng từ bản phác, không từ khung vùng.

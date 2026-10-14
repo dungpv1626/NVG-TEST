@@ -330,6 +330,30 @@ export function checkBalconyDemand(
 }
 
 /**
+ * Ban công chính mặt tiền của từng tầng (T161): ban công lớn nhất chạm mặt trước mà cạnh dài nằm trên mặt ấy — khối góc
+ * không dài dọc mặt trước (T106) không tính, như `checkBalconyDemand`.
+ */
+export function mainFrontBalconies(
+  plan: AiFloorPlan,
+  balcony: BalconyDemand,
+  longRatio: number | null,
+): { level: AiFloorPlanLevel; room: AiFloorPlanLevel['rooms'][number]; rect: Rect }[] {
+  return plan.levels.flatMap((level) => {
+    if (level.level < balcony.fromLevel) return [];
+    const front = level.rooms
+      .filter((room) => room.type === balcony.type)
+      .map((room) => ({ level, room, rect: toRect(room.rect) }))
+      .filter(
+        (entry) =>
+          touchesSide(level, entry.rect, 'front') &&
+          !cornerNotAlong(level, entry.rect, 'front', longRatio),
+      )
+      .sort((a, b) => rectArea(b.rect) - rectArea(a.rect));
+    return front.length ? [front[0]!] : [];
+  });
+}
+
+/**
  * Ban công đầu bài khai, đo ngay trên BẢN PHÁC (T73 h) — cùng ba phép kiểm như `checkBalconyDemand`,
  * cùng mã và tham số, nên cùng dòng gợi ý.
  *

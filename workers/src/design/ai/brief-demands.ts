@@ -138,6 +138,24 @@ export interface BalconyDemand {
    * Mặt bằng giữ ban công trong ranh, và chỗ này thành một câu nhắc.
    */
   projectionDistanceMissing: boolean;
+  /**
+   * Ban công chính mặt tiền mở ra từ đâu — câu trả lời của gia chủ (T161, `balconies.main_front_access`): `chung` sảnh /
+   * hành lang / sinh hoạt chung, `phong_ngu_chinh` phòng ngủ chính. `null` = chưa trả lời, «chưa quyết», hoặc mặt trước
+   * không có ban công: không đòi gì — tiêu chí D6 chỉ chấm điểm.
+   */
+  mainAccess: 'chung' | 'phong_ngu_chinh' | null;
+  /**
+   * Loại phòng được mở cửa ra ban công chính mặt tiền — `planContext` điền từ `mainAccess` và nhóm phòng
+   * (`shared_access` của `kb/room_vocabulary.yaml`). Vắng = không kiểm (ngữ cảnh dựng tay không có nhóm phòng).
+   */
+  mainFrom?: readonly string[] | null;
+  /**
+   * Độ sâu gia chủ khai cho ban công chính mặt tiền, m (T161, `balconies.main_front_depth_m`). `null` = không khai, hoặc
+   * mặt trước đã khai độ đua — khi đó độ đua là độ sâu.
+   */
+  mainDepthM: number | null;
+  /** Ban công chính được nông hơn độ sâu đã khai chừng này, m (`demands.balcony.main_depth_tolerance_m`). */
+  mainDepthToleranceM: number;
 }
 
 /**
@@ -355,6 +373,9 @@ function balconyDemand(
       levels: [],
       projection: null,
       projectionDistanceMissing: false,
+      mainAccess: null,
+      mainDepthM: null,
+      mainDepthToleranceM: spec.balcony.mainDepthToleranceM,
     };
   }
 
@@ -414,6 +435,27 @@ function balconyDemand(
       lines.push(`Ban công ${sideWord(side)} KHÔNG đua — nằm trong diện tích sàn.`);
     }
   }
+  // Ban công chính mặt tiền (T161): chỉ suy từ câu ĐÃ trả lời, và chỉ khi mặt trước có ban công.
+  const front = sides.includes('front') || optionalSides.includes('front');
+  const access = b.main_front_access;
+  const mainAccess = front && (access === 'chung' || access === 'phong_ngu_chinh') ? access : null;
+  if (mainAccess === 'chung') {
+    lines.push(
+      'Ban công chính mặt tiền mở ra từ sảnh, hành lang hoặc phòng sinh hoạt chung — không từ phòng ngủ.',
+    );
+  } else if (mainAccess === 'phong_ngu_chinh') {
+    lines.push('Ban công chính mặt tiền mở ra từ phòng ngủ chính.');
+  }
+  const mainDepthM =
+    front && typeof b.main_front_depth_m === 'number' && projectionBySide.front === undefined
+      ? b.main_front_depth_m
+      : null;
+  if (mainDepthM !== null) {
+    lines.push(
+      `Ban công chính mặt tiền sâu ít nhất ${mainDepthM} m (từ mặt tường tới mép lan can).`,
+    );
+  }
+
   if (projectionDistanceMissing) {
     warnings.push(
       'Đầu bài khai ban công đua ra ngoài ranh nhà nhưng chưa khai đua bao nhiêu mét — mặt bằng giữ ban công trong ranh cho tới khi có số.',
@@ -430,6 +472,9 @@ function balconyDemand(
     levels,
     projection,
     projectionDistanceMissing,
+    mainAccess,
+    mainDepthM,
+    mainDepthToleranceM: spec.balcony.mainDepthToleranceM,
   };
 }
 

@@ -56,6 +56,10 @@ export interface BriefDemandSpec {
     fromLevel: number;
     /** Loại không gian tính là chỗ phơi nắng được. */
     dryingTypes: string[];
+    /** Ban công chính mặt tiền được nông hơn độ sâu gia chủ khai chừng này, m (T161). */
+    mainDepthToleranceM: number;
+    /** Loại phòng là «phòng ngủ chính» khi gia chủ chọn ban công chính mở từ đó (T161). */
+    mainMasterTypes: string[];
   };
   /** Diện tích một chỗ đỗ ô tô theo CỠ xe đầu bài khai; vắng cỡ thì dùng `parking.carM2`. */
   carM2BySize: Record<string, number>;
@@ -165,7 +169,13 @@ function parseDemands(raw: unknown): BriefDemandSpec {
       shaftMaxAspect: 0,
       shaftMaxAreaRatio: 0,
     },
-    balcony: { spaceType: 'balcony', fromLevel: 2, dryingTypes: [] },
+    balcony: {
+      spaceType: 'balcony',
+      fromLevel: 2,
+      dryingTypes: [],
+      mainDepthToleranceM: 0,
+      mainMasterTypes: [],
+    },
     carM2BySize: {},
     spaces: [],
     warnings: {},
@@ -279,6 +289,9 @@ function parseDemands(raw: unknown): BriefDemandSpec {
       spaceType: typeof balcony.space_type === 'string' ? balcony.space_type : 'balcony',
       fromLevel: typeof balcony.from_level === 'number' ? balcony.from_level : 2,
       dryingTypes: codes(balcony.drying_types, 'demands.balcony.drying_types'),
+      mainDepthToleranceM:
+        typeof balcony.main_depth_tolerance_m === 'number' ? balcony.main_depth_tolerance_m : 0,
+      mainMasterTypes: codes(balcony.main_master_types, 'demands.balcony.main_master_types'),
     },
     carM2BySize: numberMap(d.car_m2_by_size, 'demands.car_m2_by_size'),
     spaces,

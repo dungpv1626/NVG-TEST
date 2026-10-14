@@ -146,6 +146,9 @@ export const REVISABLE_CODES: ReadonlySet<string> = new Set([
   'balcony_side_missing',
   'balcony_side_not_wanted',
   'balcony_level_missing',
+  // Ban công chính mặt tiền gia chủ khai mở từ đâu / sâu bao nhiêu (T161) — mô hình đổi phòng mở ra, vẽ sâu hơn.
+  'balcony_main_access',
+  'balcony_main_depth',
   // Gia chủ khai KHÔNG làm ban công mà bản vẽ vẫn có, và bốn lỗi giếng thang máy (thiếu tầng, nhỏ, hẹp,
   // lệch trục): chỗ đặt các ô ấy là bản phác mô hình vẽ — sửa được, không dừng (Haan 25/09/2026).
   'balcony_not_wanted',

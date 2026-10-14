@@ -20,10 +20,13 @@ export interface CorridorTrimInput {
   maxCentre: number;
   /** Đoạn vách chung tối thiểu để mở cửa giữa hành lang và một phòng, cm. */
   doorContact: (hallId: string, otherId: string) => number;
+  /** Diện tích tối đa của nghề cho một lá, m² — bên nhận phần dư không được vượt (T160). Vắng = không xét. */
+  maxAreaM2?: (id: string) => number | null;
 }
 
 /** Hành lang chỉ thu hẹp khi là một DẢI: dài ít nhất chừng này lần bề rộng mới (mẩu sảnh thì không đụng). */
-const STRIP_RATIO = 3;
+export const CORRIDOR_STRIP_RATIO = 3;
+const STRIP_RATIO = CORRIDOR_STRIP_RATIO;
 
 const lo = (r: Rect, axis: Axis) => (axis === 'x' ? r.x0 : r.y0);
 const hi = (r: Rect, axis: Axis) => (axis === 'x' ? r.x1 : r.y1);
@@ -70,16 +73,27 @@ export function trimCorridors(
   const all = leaves(placed);
   const overlap = (a0: number, a1: number, b0: number, b1: number) =>
     Math.max(0, Math.min(a1, b1) - Math.max(a0, b0));
+  /**
+   * Một hành lang: một lá hành lang, hoặc (T160) một chồng lá hành lang nối tiếp nhau dọc chiều dài — cắt theo trục kia.
+   * Phương án d084a46e tầng 1: mô hình vẽ hành lang 1,84 m thành hai ô `circulation_4` + `circulation_1` nên bước thu
+   * hẹp không nhận ra dải.
+   */
+  const isHall = (node: Placed, axis: Axis): boolean =>
+    node.kind === 'leaf'
+      ? input.isCorridor(node.id)
+      : node.axis !== axis && leaves(node).every((cell) => input.isCorridor(cell.id));
+  const hallIds = (node: Placed) => new Set(leaves(node).map((cell) => cell.id));
+  const hallName = (node: Placed) =>
+    leaves(node)
+      .map((cell) => cell.id)
+      .join('+');
   /** Phòng chạm ĐẦU NGẮN của hành lang còn đủ chỗ mở cửa sau khi hành lang còn [n0, n1] theo trục. */
-  const endsKept = (
-    hall: Extract<Placed, { kind: 'leaf' }>,
-    axis: Axis,
-    n0: number,
-    n1: number,
-  ) => {
+  const endsKept = (hall: Placed, axis: Axis, n0: number, n1: number) => {
     const r = hall.rect;
+    const own = hallIds(hall);
+    const first = leaves(hall)[0]!.id;
     return all.every((cell) => {
-      if (cell.id === hall.id) return true;
+      if (own.has(cell.id)) return true;
       const o = cell.rect;
       const atEnd =
         axis === 'x'
@@ -87,10 +101,35 @@ export function trimCorridors(
           : Math.abs(o.x1 - r.x0) <= 1 || Math.abs(o.x0 - r.x1) <= 1;
       if (!atEnd) return true;
       const [c0, c1] = axis === 'x' ? [o.x0, o.x1] : [o.y0, o.y1];
-      const need = input.doorContact(hall.id, cell.id);
+      const need = input.doorContact(first, cell.id);
       const before = overlap(lo(r, axis), hi(r, axis), c0, c1);
       return before < need || overlap(n0, n1, c0, c1) >= need;
     });
+  };
+
+  /** Tổng chiều dài cạnh của các ô NGOÀI khối `box` nằm trên đường `coord` (trục `axis`) và chạm khối — vách nối dài. */
+  const continued = (box: Rect, axis: Axis, coord: number): number => {
+    let total = 0;
+    for (const cell of all) {
+      const o = cell.rect;
+      const inside =
+        o.x0 >= box.x0 - 1 && o.x1 <= box.x1 + 1 && o.y0 >= box.y0 - 1 && o.y1 <= box.y1 + 1;
+      if (inside) continue;
+      const onLine = Math.abs(lo(o, axis) - coord) <= 15 || Math.abs(hi(o, axis) - coord) <= 15;
+      const touches =
+        axis === 'x'
+          ? Math.abs(o.y1 - box.y0) <= 15 || Math.abs(o.y0 - box.y1) <= 15
+          : Math.abs(o.x1 - box.x0) <= 15 || Math.abs(o.x0 - box.x1) <= 15;
+      if (onLine && touches) total += across(o, axis);
+    }
+    return total;
+  };
+
+  const overflows = (neighbour: Placed, axis: Axis, delta: number): boolean => {
+    if (neighbour.kind !== 'leaf') return false;
+    const max = input.maxAreaM2?.(neighbour.id) ?? null;
+    if (max === null) return false;
+    return ((along(neighbour.rect, axis) + delta) * across(neighbour.rect, axis)) / 10_000 > max;
   };
 
   const walk = (node: Placed): Placed => {
@@ -101,7 +140,7 @@ export function trimCorridors(
     let changed = parts.some((part, i) => part !== original[i]);
     for (let i = 0; i < parts.length; i += 1) {
       const hall = parts[i]!;
-      if (hall.kind !== 'leaf' || !input.isCorridor(hall.id)) continue;
+      if (!isHall(hall, axis)) continue;
       const width = along(hall.rect, axis);
       // Hành lang chạy NGANG trục chuỗi (cạnh dài theo trục kia) và rộng quá mức.
       if (width <= input.maxCentre || width >= across(hall.rect, axis)) continue;
@@ -115,7 +154,18 @@ export function trimCorridors(
         i + 1 < parts.length && free(parts[i + 1]!) && endsKept(hall, axis, h0, h1 - delta)
           ? i + 1
           : -1;
-      const pick = before >= 0 ? before : after;
+      // Cả hai bên nhận được: chọn bên mà vách bị dời ít nối thẳng hàng với vách ngoài khối nhất (T160 — d084a46e tầng 1:
+      // trả cho cột phòng ngủ làm vách lệch 30 cm so với vách gara / phòng ngủ phía trước, trả cho kho thì không).
+      // Phòng nhận mà vượt diện tích tối đa của nghề thì thôi (kho 8,75 → 10,2 m² > 10).
+      const fits = (k: number) => !overflows(parts[k]!, axis, delta);
+      const pick =
+        before >= 0 && after >= 0
+          ? continued(node.rect, axis, h1) < continued(node.rect, axis, h0) && fits(after)
+            ? after
+            : before
+          : before >= 0
+            ? before
+            : after;
       if (pick < 0) continue;
       const neighbour = parts[pick]!;
       const r = neighbour.rect;
@@ -128,13 +178,7 @@ export function trimCorridors(
           lo(r, axis),
           hi(r, axis) + delta,
         );
-        parts[i] = {
-          ...hall,
-          rect:
-            axis === 'x'
-              ? { ...hall.rect, x0: hall.rect.x0 + delta }
-              : { ...hall.rect, y0: hall.rect.y0 + delta },
-        };
+        parts[i] = stretch(hall, axis, h0, h1, h0 + delta, h1);
       } else {
         parts[pick] = stretch(
           neighbour,
@@ -144,15 +188,9 @@ export function trimCorridors(
           lo(r, axis) - delta,
           hi(r, axis),
         );
-        parts[i] = {
-          ...hall,
-          rect:
-            axis === 'x'
-              ? { ...hall.rect, x1: hall.rect.x1 - delta }
-              : { ...hall.rect, y1: hall.rect.y1 - delta },
-        };
+        parts[i] = stretch(hall, axis, h0, h1, h0, h1 - delta);
       }
-      trimmed.push({ id: hall.id, from: width, to: width - delta });
+      trimmed.push({ id: hallName(hall), from: width, to: width - delta });
       changed = true;
     }
     return changed ? chain(node.rect, axis, parts) : node;

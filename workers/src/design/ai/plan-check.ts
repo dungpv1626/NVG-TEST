@@ -55,6 +55,7 @@ import {
   checkElevatorLayout,
   checkElevatorStack,
   checkSoftDemands,
+  mainFrontBalconies,
 } from './plan-demands';
 
 /** Sai lệch cho phép khi hỏi "mặt tường này có trùng cạnh phòng không". */
@@ -192,6 +193,12 @@ export function checkPlan(input: PlanCheckInput): PlanCheckResult {
       add,
       input.mandatory?.rules.balconyOnOpenFace?.longRatio ?? null,
     );
+    checkMainBalcony(
+      input.plan,
+      input.demands?.balcony ?? null,
+      add,
+      input.mandatory?.rules.balconyOnOpenFace?.longRatio ?? null,
+    );
     checkSoftDemands(input.plan, input.demands?.spaces ?? [], add);
     checkReachability(input, add);
     if (input.mandatory) {
@@ -210,6 +217,76 @@ export function checkPlan(input: PlanCheckInput): PlanCheckResult {
 }
 
 type Add = (level: IssueLevel, code: string, message: string, ref?: string) => void;
+
+/**
+ * Ban công chính mặt tiền theo lời gia chủ (T161, Haan 14/10/2026 sau phương án d084a46e: «ban công chính mặt trước nên
+ * đi được từ giao thông chung và có kích thước lớn»): mở ra từ đúng loại phòng gia chủ chọn, và không nông hơn độ sâu đã
+ * khai quá `mainDepthToleranceM`. Gia chủ chưa trả lời thì không kiểm — tiêu chí D6 chỉ chấm điểm. Tầng không có ban
+ * công mặt tiền không xét ở đây (thiếu ban công ở mặt bắt buộc là `balcony_side_missing`).
+ */
+function checkMainBalcony(
+  plan: AiFloorPlan,
+  balcony: BalconyDemand | null,
+  add: (
+    level: IssueLevel,
+    code: string,
+    message: string,
+    ref?: string,
+    params?: Record<string, string | number>,
+  ) => void,
+  longRatio: number | null,
+): void {
+  if (!balcony || balcony.forbidden) return;
+  const from = balcony.mainFrom?.length ? new Set(balcony.mainFrom) : null;
+  if (!from && balcony.mainDepthM === null) return;
+  const mains = mainFrontBalconies(plan, balcony, longRatio);
+  if (!mains.length) return;
+  const graph = from ? planGraph(plan) : null;
+  for (const { level, room, rect } of mains) {
+    if (from && graph) {
+      const openers = graph.doors
+        .filter((door) => !door.toOutside && door.rooms.includes(room.id))
+        .flatMap((door) => door.rooms.filter((id) => id !== room.id));
+      // Gia chủ chọn phòng ngủ chính mà tầng này không có phòng ấy: không bịa đòi hỏi cho tầng ấy.
+      const present = level.rooms.some((other) => from.has(other.type));
+      if (present && !openers.some((id) => from.has(graph.rooms.get(id)?.type ?? ''))) {
+        add(
+          'blocking',
+          'balcony_main_access',
+          balcony.mainAccess === 'phong_ngu_chinh'
+            ? `Gia chủ khai ban công chính mặt tiền mở từ phòng ngủ chính; "${room.id}" ở tầng ${level.level} mở từ ${openers.join(', ') || 'không phòng nào'}.`
+            : `Gia chủ khai ban công chính mặt tiền mở từ sảnh, hành lang hoặc sinh hoạt chung; "${room.id}" ở tầng ${level.level} mở từ ${openers.join(', ') || 'không phòng nào'}.`,
+          room.id,
+          {
+            room: room.id,
+            level: level.level,
+            from:
+              balcony.mainAccess === 'phong_ngu_chinh'
+                ? 'the master bedroom'
+                : 'a corridor or the living space',
+          },
+        );
+      }
+    }
+    if (balcony.mainDepthM !== null) {
+      const depthM = (rect.y1 - rect.y0) / 100;
+      if (depthM + balcony.mainDepthToleranceM < balcony.mainDepthM - 1e-6) {
+        add(
+          'blocking',
+          'balcony_main_depth',
+          `Gia chủ khai ban công chính mặt tiền sâu ${balcony.mainDepthM} m; "${room.id}" ở tầng ${level.level} chỉ sâu ${depthM.toFixed(2)} m.`,
+          room.id,
+          {
+            room: room.id,
+            level: level.level,
+            have_m: depthM.toFixed(1),
+            need_m: balcony.mainDepthM,
+          },
+        );
+      }
+    }
+  }
+}
 
 /**
  * (2) Mặt bằng phải xếp ĐÚNG danh sách phòng của chương trình, đúng tầng, không thừa không thiếu.
