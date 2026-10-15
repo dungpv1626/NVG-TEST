@@ -9,6 +9,7 @@
  */
 
 import './env';
+import { fileURLToPath } from 'node:url';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { createConnection } from './client';
 
@@ -18,7 +19,9 @@ async function main() {
 
   const { sql, db } = createConnection();
   try {
-    await migrate(db, { migrationsFolder: new URL('../migrations', import.meta.url).pathname });
+    await migrate(db, {
+      migrationsFolder: fileURLToPath(new URL('../migrations', import.meta.url)),
+    });
     console.log('Hoàn tất: tất cả migration đã được áp dụng.');
   } finally {
     await sql.end();
