@@ -79,15 +79,18 @@ describeDb(
       const opportunityId = (opportunity as { id: string }).id;
 
       // Đi qua phễu bán hàng đúng thứ tự PRD CRM-02 thay vì nhảy thẳng — mỗi bước ghi một dòng
-      // lịch sử, và chính chuỗi đó là căn cứ tính tỷ lệ chuyển đổi ở BC-03.
-      for (const stage of ['xac_minh', 'khao_sat', 'bao_gia', 'dam_phan']) {
+      // lịch sử, và chính chuỗi đó là căn cứ tính tỷ lệ chuyển đổi ở BC-03. Từ 0155 mỗi bước có
+      // điều kiện: «Báo giá» cần gói thầu liên kết, «Đàm phán» cần gói thầu đã nộp.
+      const moveOpportunity = async (stage: string) => {
         const { error } = await kinhDoanh.rpc('move_opportunity_stage', {
           p_opportunity_id: opportunityId,
           p_to_stage: stage,
           p_note: null,
         });
         check(`chuyển cơ hội sang ${stage}`, error);
-      }
+      };
+      await moveOpportunity('xac_minh');
+      await moveOpportunity('khao_sat');
 
       // --- Bước 2. Đấu thầu lập gói thầu, LIÊN KẾT về cơ hội (DA-01) ----------------------
       const { data: project, error: projectError } = await dauThau
@@ -105,6 +108,7 @@ describeDb(
         .single();
       check('tạo gói thầu', projectError);
       const projectId = (project as { id: string }).id;
+      await moveOpportunity('bao_gia');
 
       // --- Bước 3. Bóc khối lượng (DA-04) ------------------------------------------------
       const { error: boqError } = await dauThau.from('boq_items').insert([
@@ -228,6 +232,7 @@ describeDb(
         'nộp thầu',
         (await dauThau.rpc('submit_bid', { p_bidding_project_id: projectId })).error,
       );
+      await moveOpportunity('dam_phan');
       check(
         'ghi kết quả trúng thầu',
         (
@@ -297,16 +302,38 @@ describeDb(
           })
         ).error,
       );
+      // Người soạn (Đấu thầu) không tự ghi nhận đã ký — việc của Ban Giám đốc (0157).
+      const { error: drafterSigns } = await dauThau.rpc('sign_contract', {
+        p_contract_id: contractId,
+        p_contract_number: `HĐ-GP1-${stamp}`,
+        p_signed_date: '2026-09-20',
+      });
+      expect(drafterSigns?.message).toContain('Ban Giám đốc');
       check(
         'ghi nhận đã ký',
         (
-          await dauThau.rpc('sign_contract', {
+          await tgd.rpc('sign_contract', {
             p_contract_id: contractId,
             p_contract_number: `HĐ-GP1-${stamp}`,
             p_signed_date: '2026-09-20',
           })
         ).error,
       );
+
+      // Hợp đồng đã ký thì cơ hội gốc TỰ sang «Ký hợp đồng» — không ai phải nhớ quay lại CRM
+      // cập nhật (0158). Trước đây cơ hội đứng mãi ở «Đàm phán», Dashboard báo tỷ lệ chốt 0%.
+      const { data: wonOpportunity } = await kinhDoanh
+        .from('opportunities')
+        .select('stage')
+        .eq('id', opportunityId)
+        .single();
+      expect(wonOpportunity?.stage).toBe('ky_hop_dong');
+      const { error: manualWin } = await kinhDoanh.rpc('move_opportunity_stage', {
+        p_opportunity_id: opportunityId,
+        p_to_stage: 'mat_co_hoi',
+        p_lost_reason: 'thử đổi sau khi đã ký',
+      });
+      expect(manualWin, 'đã ký hợp đồng thì cơ hội đóng lại').toBeTruthy();
 
       // --- Bước 9. Ngân sách thi công sinh từ dự toán đã duyệt (DA-09) --------------------
       const { data: budgetRows, error: budgetError } = await dauThau.rpc(
@@ -327,7 +354,15 @@ describeDb(
       expect(before.error).toBeNull();
       expect(before.data).toBe(false);
 
-      const { data: siteId, error: siteError } = await dauThau.rpc('open_site_from_contract', {
+      // Mở công trình là việc của Thi công (hoặc Ban Giám đốc), không phải của người soạn hợp
+      // đồng (0157).
+      const { error: drafterOpens } = await dauThau.rpc('open_site_from_contract', {
+        p_contract_id: contractId,
+        p_site_address: 'KCN Long Hậu, Long An',
+      });
+      expect(drafterOpens, 'người soạn hợp đồng không tự mở công trình').toBeTruthy();
+      const thiCong = await signInAs(ACCOUNTS.congTruongNvc);
+      const { data: siteId, error: siteError } = await thiCong.rpc('open_site_from_contract', {
         p_contract_id: contractId,
         p_site_address: 'KCN Long Hậu, Long An',
       });
@@ -738,10 +773,11 @@ describeDb(
         expect(d.note, 'căn cứ phê duyệt để trống thì không truy được lý do (DA-07)').toBeTruthy();
       }
 
-      // Lịch sử giai đoạn cơ hội còn nguyên — phễu bán hàng dựng lại được (CRM-09).
+      // Lịch sử giai đoạn cơ hội còn nguyên — phễu bán hàng dựng lại được (CRM-09). Bước cuối
+      // «Ký hợp đồng» do hợp đồng đã ký đẩy sang, ghi chú nói rõ hợp đồng nào (0158).
       const { data: history } = await tgd
         .from('opportunity_stage_history')
-        .select('to_stage')
+        .select('to_stage, note')
         .eq('opportunity_id', opportunityId)
         .order('changed_at');
       expect(history!.map((h) => h.to_stage)).toEqual([
@@ -750,7 +786,9 @@ describeDb(
         'khao_sat',
         'bao_gia',
         'dam_phan',
+        'ky_hop_dong',
       ]);
+      expect(history!.at(-1)?.note).toContain('đã ký');
     }, 120_000);
   },
 );
@@ -848,6 +886,16 @@ describeDb(
       }
 
       // --- Bước 3. Phương án kiến trúc và khách hàng duyệt (TK-03) ------------------------
+      // Đầu bài → Phương án: hồ sơ thiết kế đi từng bước (0158).
+      check(
+        'bắt đầu dựng phương án',
+        (
+          await thietKe.rpc('move_design_stage', {
+            p_design_project_id: projectId,
+            p_stage: 'phuong_an',
+          })
+        ).error,
+      );
       const conceptId = await publishDrawing('phuong_an');
 
       // Gửi khách xem là một BƯỚC có thật, không phải hệ quả của việc phát hành: hồ sơ phải

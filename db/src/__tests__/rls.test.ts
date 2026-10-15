@@ -509,8 +509,8 @@ describeDb('CRM — pipeline cơ hội kinh doanh', () => {
 
     const { error } = await kd.rpc('move_opportunity_stage', {
       p_opportunity_id: id,
-      p_to_stage: 'khao_sat',
-      p_note: 'Khách đồng ý cho khảo sát',
+      p_to_stage: 'xac_minh',
+      p_note: 'Khách có nhu cầu thực',
       p_lost_reason: null,
     });
     expect(error).toBeNull();
@@ -524,8 +524,8 @@ describeDb('CRM — pipeline cơ hội kinh doanh', () => {
     expect(data).toHaveLength(2);
     expect(data![1]).toMatchObject({
       from_stage: 'tiep_nhan',
-      to_stage: 'khao_sat',
-      note: 'Khách đồng ý cho khảo sát',
+      to_stage: 'xac_minh',
+      note: 'Khách có nhu cầu thực',
     });
   });
 
@@ -2442,6 +2442,8 @@ describeDb('TK — dự án thiết kế, phiên bản bản vẽ và bàn giao'
   it('khách duyệt phương án thì tự mở khoá bước hồ sơ kỹ thuật (TK-03)', async () => {
     const tk = await signInAs(ACCOUNTS.thietKeNvo);
     const project = await createDesignProject(tk);
+    // Đi từng bước (0158): Đầu bài → Phương án → Chờ khách duyệt.
+    await tk.rpc('move_design_stage', { p_design_project_id: project.id, p_stage: 'phuong_an' });
 
     // Chưa phát hành phương án thì chưa gửi khách xem được.
     const { error: tooEarly } = await tk.rpc('move_design_stage', {
@@ -2932,7 +2934,25 @@ describeDb('HD — hợp đồng, điều khoản và phát sinh', () => {
       .select('id')
       .single();
     if (error) throw new Error(error.message);
-    return { id: (data as { id: string }).id, companyId: company!.id };
+    const id = (data as { id: string }).id;
+
+    // Soạn hợp đồng từ cơ hội cần cơ hội đã tới Báo giá (0157), và Báo giá cần đã lập báo giá
+    // (0155) — đi đúng thứ tự như người dùng thật.
+    const step = async (stage: string) => {
+      const { error: moveError } = await client.rpc('move_opportunity_stage', {
+        p_opportunity_id: id,
+        p_to_stage: stage,
+        p_note: null,
+      });
+      if (moveError) throw new Error(moveError.message);
+    };
+    await step('xac_minh');
+    const { error: quoteError } = await client
+      .from('quotes')
+      .insert({ company_id: company!.id, opportunity_id: id, total_value: 900_000_000 });
+    if (quoteError) throw new Error(quoteError.message);
+    await step('bao_gia');
+    return { id, companyId: company!.id };
   }
 
   async function createContract(
@@ -3208,14 +3228,22 @@ describeDb('HD — hợp đồng, điều khoản và phát sinh', () => {
     });
     await tgd.rpc('decide_approval', { p_approval_id: approvalId, p_decision: 'approved' });
 
-    const { error: noNumber } = await kd.rpc('sign_contract', {
+    // Người soạn KHÔNG tự ghi nhận đã ký — đó là việc của người có quyền phê duyệt (0157).
+    const { error: drafterSigns } = await kd.rpc('sign_contract', {
+      p_contract_id: contract.id,
+      p_contract_number: 'HD-01/2026',
+      p_signed_date: '2026-09-01',
+    });
+    expect(drafterSigns!.message).toContain('Ban Giám đốc');
+
+    const { error: noNumber } = await tgd.rpc('sign_contract', {
       p_contract_id: contract.id,
       p_contract_number: '  ',
       p_signed_date: '2026-09-01',
     });
     expect(noNumber!.message).toContain('số hợp đồng');
 
-    const { error } = await kd.rpc('sign_contract', {
+    const { error } = await tgd.rpc('sign_contract', {
       p_contract_id: contract.id,
       p_contract_number: 'HD-01/2026',
       p_signed_date: '2026-09-01',
@@ -3424,7 +3452,7 @@ describeDb('HD — hợp đồng, điều khoản và phát sinh', () => {
       p_contract_id: contract.id,
     });
     await tgd.rpc('decide_approval', { p_approval_id: approvalId, p_decision: 'approved' });
-    await kd.rpc('sign_contract', {
+    await tgd.rpc('sign_contract', {
       p_contract_id: contract.id,
       p_contract_number: 'HD-02/2026',
       p_signed_date: '2026-09-01',
@@ -3432,7 +3460,7 @@ describeDb('HD — hợp đồng, điều khoản và phát sinh', () => {
 
     const amendmentId = await createAmendment(kd, contract);
 
-    const { error: blocked } = await kd.rpc('close_contract', {
+    const { error: blocked } = await tgd.rpc('close_contract', {
       p_contract_id: contract.id,
       p_stage: 'hoan_thanh',
     });
@@ -3451,7 +3479,7 @@ describeDb('HD — hợp đồng, điều khoản và phát sinh', () => {
       p_note: 'Khách không đồng ý phạm vi phát sinh.',
     });
 
-    const { error } = await kd.rpc('close_contract', {
+    const { error } = await tgd.rpc('close_contract', {
       p_contract_id: contract.id,
       p_stage: 'hoan_thanh',
     });

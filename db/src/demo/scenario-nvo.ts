@@ -388,13 +388,58 @@ export async function loadNvo(): Promise<'created' | 'skipped'> {
       p_note: clean('Duyệt theo suất đầu tư đã thống nhất với khách.'),
     }),
   );
-  check(
+  const contractId = check(
     'soạn hợp đồng',
     await thietKe.rpc('create_contract_from_source', {
       p_source_type: 'design_projects',
       p_source_id: project.id,
       p_type: 'thiet_ke',
       p_title: clean('Hợp đồng thiết kế và thi công trọn gói nhà phố Tân Mai'),
+    }),
+  ) as string;
+
+  // Ký hợp đồng TRƯỚC khi bàn giao thi công: bàn giao gắn công trình vào hợp đồng đã ký (0158);
+  // chưa ký thì công trình chạy không hợp đồng và báo cáo lãi/lỗ không đối soát được.
+  const nvoId = (await one(
+    'tìm pháp nhân NVO',
+    thietKe.from('design_projects').select('company_id').eq('id', project.id).single(),
+  )) as { company_id: string };
+  for (const [termType, description] of [
+    ['pham_vi', 'Thiết kế kiến trúc, kết cấu, điện nước và thi công trọn gói nhà phố 4 tầng'],
+    ['gia_tri', 'Giá trị theo dự toán đã duyệt, chưa gồm thuế giá trị gia tăng'],
+    [
+      'tien_do_thanh_toan',
+      'Tạm ứng 30%; thanh toán theo từng đợt nghiệm thu phần thô và hoàn thiện',
+    ],
+  ] as const) {
+    check(
+      `điều khoản ${termType}`,
+      await thietKe.from('contract_terms').insert({
+        company_id: nvoId.company_id,
+        contract_id: contractId,
+        term_type: termType,
+        description: clean(description),
+      }),
+    );
+  }
+  const contractApproval = check(
+    'trình ký hợp đồng',
+    await thietKe.rpc('submit_contract_approval', { p_contract_id: contractId }),
+  ) as string;
+  check(
+    'Tổng Giám đốc duyệt hợp đồng',
+    await tgd.rpc('decide_approval', {
+      p_approval_id: contractApproval,
+      p_decision: 'approved',
+      p_note: clean('Đồng ý ký.'),
+    }),
+  );
+  check(
+    'ghi nhận đã ký',
+    await tgd.rpc('sign_contract', {
+      p_contract_id: contractId,
+      p_contract_number: '15/2026/HĐTK-TC/NVO',
+      p_signed_date: day(-2),
     }),
   );
 

@@ -160,6 +160,13 @@ async function stageOf(id: string): Promise<string> {
   }
 }
 
+/**
+ * Người xác nhận bước «đơn vị» — Chỉ huy trưởng (có quyền phê duyệt Thi công). Đề nghị chi do
+ * Ban công trường lập thì người lập KHÔNG tự xác nhận bước của mình (0156), nên bước này do một
+ * người khác cùng đơn vị làm.
+ */
+const unitHead = () => signInAs(ACCOUNTS.chiHuyTruongNvc);
+
 interface DraftOptions {
   client: SupabaseClient;
   fixture: Fixture;
@@ -410,10 +417,12 @@ describeDb('KT — luồng duyệt chi bốn bước (KT-01, KT-02)', () => {
   });
 
   it('đi hết ba bước kiểm thì hồ sơ vào Hộp thư Phê duyệt theo hạn mức (KT-01)', async () => {
-    const id = await draftRequest({ client: ketoan, fixture, amount: 50_000_000n });
-    await ketoan.rpc('submit_payment_request', { p_request_id: id });
+    const id = await draftRequest({ client: chiHuy, fixture, amount: 50_000_000n });
+    await chiHuy.rpc('submit_payment_request', { p_request_id: id });
 
-    await chiHuy.rpc('advance_payment_step', { p_request_id: id, p_decision: 'approved' });
+    await (
+      await unitHead()
+    ).rpc('advance_payment_step', { p_request_id: id, p_decision: 'approved' });
     expect(await stageOf(id)).toBe('cho_ke_toan');
 
     await ketoan.rpc('advance_payment_step', { p_request_id: id, p_decision: 'approved' });
@@ -460,8 +469,10 @@ describeDb('KT — chi tiền, ngân sách và hạch toán (KT-01, KT-05)', () 
 
   /** Đưa một đề nghị đi hết ba bước kiểm và được phê duyệt. */
   async function approve(id: string): Promise<void> {
-    await ketoan.rpc('submit_payment_request', { p_request_id: id });
-    await chiHuy.rpc('advance_payment_step', { p_request_id: id, p_decision: 'approved' });
+    await chiHuy.rpc('submit_payment_request', { p_request_id: id });
+    await (
+      await unitHead()
+    ).rpc('advance_payment_step', { p_request_id: id, p_decision: 'approved' });
     await ketoan.rpc('advance_payment_step', { p_request_id: id, p_decision: 'approved' });
     await cfo.rpc('advance_payment_step', { p_request_id: id, p_decision: 'approved' });
 
@@ -482,7 +493,7 @@ describeDb('KT — chi tiền, ngân sách và hạch toán (KT-01, KT-05)', () 
   }
 
   it('phê duyệt xong mới ghi nhận chi được, và chi phí vào đúng mã công trình (KT-05)', async () => {
-    const id = await draftRequest({ client: ketoan, fixture, amount: 30_000_000n });
+    const id = await draftRequest({ client: chiHuy, fixture, amount: 30_000_000n });
 
     // Chưa duyệt thì không chi được, dù người gọi là Kế toán.
     const { error: tooEarly } = await ketoan.rpc('record_payment', {
@@ -549,7 +560,7 @@ describeDb('KT — chi tiền, ngân sách và hạch toán (KT-01, KT-05)', () 
       await sql.end();
     }
 
-    const id = await draftRequest({ client: ketoan, fixture, amount: 25_000_000n });
+    const id = await draftRequest({ client: chiHuy, fixture, amount: 25_000_000n });
     // Gắn mã đơn bằng CHÍNH tài khoản Kế toán, như biểu mẫu «Lập đề nghị thanh toán» từ đơn
     // hàng làm — RLS phải cho phép, nếu không giao diện gắn không được và chi phí bị cộng hai lần.
     const linked = await ketoan
@@ -654,20 +665,22 @@ describeDb('KT — tạm ứng (KT-03)', () => {
 
   it('tạm ứng đã chi sinh ra khoản nợ, và KHÔNG tính là chi phí công trình', async () => {
     const id = await draftRequest({
-      client: ketoan,
+      client: chiHuy,
       fixture,
       amount: 6_000_000n,
       requestType: 'tam_ung',
       advanceUserId: fixture.congTruongUserId,
       advanceDueDate: new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10),
     });
-    await ketoan
+    await chiHuy
       .from('payment_requests')
       .update({ advance_override_reason: 'Ứng trước cho đợt đổ bê tông cuối tuần.' })
       .eq('id', id);
 
-    await ketoan.rpc('submit_payment_request', { p_request_id: id });
-    await chiHuy.rpc('advance_payment_step', { p_request_id: id, p_decision: 'approved' });
+    await chiHuy.rpc('submit_payment_request', { p_request_id: id });
+    await (
+      await unitHead()
+    ).rpc('advance_payment_step', { p_request_id: id, p_decision: 'approved' });
     await ketoan.rpc('advance_payment_step', { p_request_id: id, p_decision: 'approved' });
     await cfo.rpc('advance_payment_step', { p_request_id: id, p_decision: 'approved' });
 
@@ -707,19 +720,21 @@ describeDb('KT — tạm ứng (KT-03)', () => {
   it('hai đề nghị hoàn ứng gửi cùng lúc không được cùng ghi nhận đã chi vượt số còn nợ (0078)', async () => {
     // Dựng khoản tạm ứng còn nợ 10 triệu, đúng khuôn bài test trên.
     const advanceId = await draftRequest({
-      client: ketoan,
+      client: chiHuy,
       fixture,
       amount: 10_000_000n,
       requestType: 'tam_ung',
       advanceUserId: fixture.congTruongUserId,
       advanceDueDate: new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10),
     });
-    await ketoan
+    await chiHuy
       .from('payment_requests')
       .update({ advance_override_reason: 'Ứng trước cho vật tư gấp.' })
       .eq('id', advanceId);
-    await ketoan.rpc('submit_payment_request', { p_request_id: advanceId });
-    await chiHuy.rpc('advance_payment_step', { p_request_id: advanceId, p_decision: 'approved' });
+    await chiHuy.rpc('submit_payment_request', { p_request_id: advanceId });
+    await (
+      await unitHead()
+    ).rpc('advance_payment_step', { p_request_id: advanceId, p_decision: 'approved' });
     await ketoan.rpc('advance_payment_step', { p_request_id: advanceId, p_decision: 'approved' });
     await cfo.rpc('advance_payment_step', { p_request_id: advanceId, p_decision: 'approved' });
     const { data: advApproval } = await cfo
@@ -749,17 +764,19 @@ describeDb('KT — tạm ứng (KT-03)', () => {
     // cả hai đều gửi lúc settled_amount vẫn là 0 nên submit_payment_request không chặn được.
     async function approveHoanUng(amount: bigint): Promise<string> {
       const id = await draftRequest({
-        client: ketoan,
+        client: chiHuy,
         fixture,
         amount,
         requestType: 'hoan_ung',
         settlesAdvanceId,
       });
-      const { error: submitError } = await ketoan.rpc('submit_payment_request', {
+      const { error: submitError } = await chiHuy.rpc('submit_payment_request', {
         p_request_id: id,
       });
       expect(submitError, 'settled_amount vẫn 0 lúc gửi — cả hai đều qua được').toBeNull();
-      await chiHuy.rpc('advance_payment_step', { p_request_id: id, p_decision: 'approved' });
+      await (
+        await unitHead()
+      ).rpc('advance_payment_step', { p_request_id: id, p_decision: 'approved' });
       await ketoan.rpc('advance_payment_step', { p_request_id: id, p_decision: 'approved' });
       await cfo.rpc('advance_payment_step', { p_request_id: id, p_decision: 'approved' });
       const { data: approval } = await cfo
@@ -1088,9 +1105,11 @@ describeDb('KT — kỳ kế toán (KT-09)', () => {
     });
     expect(closeError).toBeNull();
 
-    const id = await draftRequest({ client: ketoan, fixture, amount: 9_000_000n });
-    await ketoan.rpc('submit_payment_request', { p_request_id: id });
-    await chiHuy.rpc('advance_payment_step', { p_request_id: id, p_decision: 'approved' });
+    const id = await draftRequest({ client: chiHuy, fixture, amount: 9_000_000n });
+    await chiHuy.rpc('submit_payment_request', { p_request_id: id });
+    await (
+      await unitHead()
+    ).rpc('advance_payment_step', { p_request_id: id, p_decision: 'approved' });
     await ketoan.rpc('advance_payment_step', { p_request_id: id, p_decision: 'approved' });
     await cfo.rpc('advance_payment_step', { p_request_id: id, p_decision: 'approved' });
 

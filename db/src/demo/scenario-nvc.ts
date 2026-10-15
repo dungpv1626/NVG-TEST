@@ -159,7 +159,9 @@ export async function loadNvc(): Promise<'created' | 'skipped'> {
       .single(),
   )) as { id: string };
 
-  for (const stage of ['xac_minh', 'khao_sat', 'bao_gia', 'dam_phan']) {
+  // Cơ hội đi đúng thứ tự (0155): «Báo giá» cần gói thầu liên kết, «Đàm phán» cần gói thầu đã
+  // nộp, «Ký hợp đồng» tự chuyển khi hợp đồng được ký (0158).
+  async function moveOpportunity(stage: string) {
     check(
       `chuyển cơ hội sang ${stage}`,
       await kinhDoanh.rpc('move_opportunity_stage', {
@@ -169,6 +171,7 @@ export async function loadNvc(): Promise<'created' | 'skipped'> {
       }),
     );
   }
+  for (const stage of ['xac_minh', 'khao_sat']) await moveOpportunity(stage);
 
   // --- Gói thầu, bóc khối lượng, dự toán, duyệt giá (DA) ------------------------------------
   const project = (await one(
@@ -187,6 +190,8 @@ export async function loadNvc(): Promise<'created' | 'skipped'> {
       .select('id')
       .single(),
   )) as { id: string };
+
+  await moveOpportunity('bao_gia');
 
   check(
     'bóc khối lượng',
@@ -292,6 +297,7 @@ export async function loadNvc(): Promise<'created' | 'skipped'> {
     }),
   );
   check('nộp thầu', await dauThau.rpc('submit_bid', { p_bidding_project_id: project.id }));
+  await moveOpportunity('dam_phan');
   check(
     'ghi trúng thầu',
     await dauThau.rpc('record_bid_result', { p_bidding_project_id: project.id, p_won: true }),
@@ -336,7 +342,7 @@ export async function loadNvc(): Promise<'created' | 'skipped'> {
   await approveBy(tgd, contractApproval, 'Đồng ý ký.', 'duyệt hợp đồng');
   check(
     'ghi nhận đã ký',
-    await dauThau.rpc('sign_contract', {
+    await tgd.rpc('sign_contract', {
       p_contract_id: contractId,
       p_contract_number: '27/2026/HĐTC/NVC-HT',
       p_signed_date: day(-26),
@@ -350,7 +356,7 @@ export async function loadNvc(): Promise<'created' | 'skipped'> {
   );
   const siteId = check(
     'mở công trình',
-    await dauThau.rpc('open_site_from_contract', {
+    await truongPhong.rpc('open_site_from_contract', {
       p_contract_id: contractId,
       p_name: clean('Nhà xưởng Hưng Thịnh — KCN Phố Nối A'),
       p_site_address: SITE_ADDRESS,
@@ -700,10 +706,12 @@ export async function loadNvc(): Promise<'created' | 'skipped'> {
       .single(),
   )) as { id: string };
 
+  // Khoản chi nhân công phát sinh ở công trường: Chỉ huy trưởng lập và gửi, Trưởng phòng Thi
+  // công xác nhận bước đơn vị — không ai tự xác nhận đề nghị do chính mình lập (0156).
   async function draftPayment(title: string, amount: number): Promise<string> {
     const row = (await one(
       `lập đề nghị chi «${title}»`,
-      ketoan
+      chiHuy
         .from('payment_requests')
         .insert({
           company_id: nvc,
@@ -720,7 +728,7 @@ export async function loadNvc(): Promise<'created' | 'skipped'> {
     )) as { id: string };
     check(
       'phân bổ chi phí',
-      await ketoan.from('payment_request_allocations').insert({
+      await chiHuy.from('payment_request_allocations').insert({
         payment_request_id: row.id,
         construction_site_id: siteId,
         cost_code: nhanCong!.cost_code,
@@ -728,10 +736,13 @@ export async function loadNvc(): Promise<'created' | 'skipped'> {
         amount: String(amount),
       }),
     );
-    check('gửi đề nghị chi', await ketoan.rpc('submit_payment_request', { p_request_id: row.id }));
+    check('gửi đề nghị chi', await chiHuy.rpc('submit_payment_request', { p_request_id: row.id }));
     check(
-      'công trường xác nhận khối lượng',
-      await chiHuy.rpc('advance_payment_step', { p_request_id: row.id, p_decision: 'approved' }),
+      'trưởng phòng thi công xác nhận khối lượng',
+      await truongPhong.rpc('advance_payment_step', {
+        p_request_id: row.id,
+        p_decision: 'approved',
+      }),
     );
     check(
       'kế toán kiểm chứng từ',

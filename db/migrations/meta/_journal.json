@@ -1086,6 +1086,34 @@
       "when": 1790990000000,
       "tag": "0154_tk_tc_lam_ro_ban_ve_dieu_chinh",
       "breakpoints": true
+    },
+    {
+      "idx": 155,
+      "version": "7",
+      "when": 1791000000000,
+      "tag": "0155_buoc_co_hoi_theo_thu_tu",
+      "breakpoints": true
+    },
+    {
+      "idx": 156,
+      "version": "7",
+      "when": 1791010000000,
+      "tag": "0156_chan_tu_duyet",
+      "breakpoints": true
+    },
+    {
+      "idx": 157,
+      "version": "7",
+      "when": 1791020000000,
+      "tag": "0157_quyen_hop_dong",
+      "breakpoints": true
+    },
+    {
+      "idx": 158,
+      "version": "7",
+      "when": 1791030000000,
+      "tag": "0158_dong_bo_lien_module",
+      "breakpoints": true
     }
   ]
 }
