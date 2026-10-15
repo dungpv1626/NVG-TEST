@@ -13,6 +13,7 @@ import {
   BUTTONS,
   EMPTY_STATES,
   OPPORTUNITY_CLASSIFICATION_LABELS,
+  OPPORTUNITY_FLOW,
   OPPORTUNITY_STAGES,
   OPPORTUNITY_STAGE_META,
   formatCurrency,
@@ -71,6 +72,22 @@ export function OpportunityPipelinePage() {
   async function handleMove(card: KanbanCard, toColumnId: string) {
     setMoveError(null);
     const toStage = toColumnId as OpportunityStage;
+    const fromStage = card.columnId as OpportunityStage;
+
+    // Lùi bước phải nêu lý do (0155) — hỏi ngay tại chỗ.
+    let note: string | undefined;
+    if (
+      toStage !== 'mat_co_hoi' &&
+      OPPORTUNITY_STAGES.indexOf(toStage) < OPPORTUNITY_STAGES.indexOf(fromStage)
+    ) {
+      const input = await promptDialog.ask({
+        title: `Đưa cơ hội về ${OPPORTUNITY_STAGE_META[toStage].label}?`,
+        label: 'Lý do đưa về giai đoạn trước',
+        confirmLabel: 'Đưa về',
+      });
+      if (input === null) return false;
+      note = input;
+    }
 
     let lostReason: string | undefined;
     if (toStage === 'mat_co_hoi') {
@@ -84,7 +101,7 @@ export function OpportunityPipelinePage() {
     }
 
     try {
-      await moveStage.mutateAsync({ opportunityId: card.id, toStage, lostReason });
+      await moveStage.mutateAsync({ opportunityId: card.id, toStage, note, lostReason });
       return true;
     } catch (e) {
       setMoveError(toUserMessage(e, 'edit'));
@@ -178,6 +195,7 @@ export function OpportunityPipelinePage() {
           onRetry={() => void refetch()}
           onMove={handleMove}
           canMove={canEdit}
+          allowedDrop={opportunityDrop}
           emptyMessage={
             canCreate
               ? EMPTY_STATES.list('cơ hội kinh doanh', createLabel)
@@ -256,4 +274,19 @@ function ViewButton({
       <span className="hidden sm:inline">{label}</span>
     </Button>
   );
+}
+
+/**
+ * Thả thẻ cơ hội vào cột nào được (0155, `OPPORTUNITY_FLOW`): đi tới chỉ sang bước kế tiếp; lùi
+ * về bước đang mở trước đó (hỏi lý do); Mất cơ hội từ mọi bước đang mở; Ký hợp đồng không kéo tay.
+ * Điều kiện của bước (đã có báo giá…) vẫn do CSDL kiểm khi thả — chi tiết hiện ở trang cơ hội.
+ */
+export function opportunityDrop(card: KanbanCard, toColumnId: string): true | string {
+  const from = card.columnId as OpportunityStage;
+  const to = toColumnId as OpportunityStage;
+  if (to === 'ky_hop_dong') return 'Tự chuyển khi hợp đồng được ký';
+  if (to === 'mat_co_hoi') return true;
+  if (OPPORTUNITY_STAGES.indexOf(to) < OPPORTUNITY_STAGES.indexOf(from)) return true;
+  if (OPPORTUNITY_FLOW.steps[from].next.includes(to)) return true;
+  return 'Cần đi qua từng giai đoạn';
 }

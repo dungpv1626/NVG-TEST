@@ -50,6 +50,11 @@ export interface KanbanBoardProps {
   onMove: (card: KanbanCard, toColumnId: string) => Promise<boolean | void>;
   /** `false` khi người dùng không có quyền sửa — thẻ vẫn xem được nhưng không kéo được. */
   canMove?: boolean;
+  /**
+   * Thả thẻ vào cột này được không. Trả `true` nếu được, hoặc CÂU LÝ DO nếu không — cột hiện mờ
+   * kèm lý do ngay lúc kéo, thay vì để người dùng thả rồi mới nhận lỗi từ CSDL (review UX, vấn đề 3).
+   */
+  allowedDrop?: (card: KanbanCard, toColumnId: string) => true | string;
   emptyMessage: string;
   emptyAction?: ReactNode;
 }
@@ -62,6 +67,7 @@ export function KanbanBoard({
   onRetry,
   onMove,
   canMove = true,
+  allowedDrop,
   emptyMessage,
   emptyAction,
 }: KanbanBoardProps) {
@@ -110,6 +116,7 @@ export function KanbanBoard({
     const card = list.find((c) => c.id === cardId);
     setDraggingId(null);
     if (!card || card.columnId === columnId) return;
+    if (allowedDrop && allowedDrop(card, columnId) !== true) return;
 
     setMoving(true);
     try {
@@ -125,6 +132,12 @@ export function KanbanBoard({
     >
       {columns.map((column) => {
         const columnCards = list.filter((c) => c.columnId === column.id);
+        const dragging = draggingId ? list.find((c) => c.id === draggingId) : undefined;
+        const verdict =
+          dragging && allowedDrop && dragging.columnId !== column.id
+            ? allowedDrop(dragging, column.id)
+            : true;
+        const blockedReason = verdict === true ? null : verdict;
         const total = columnCards.reduce(
           (sum, c) => sum + (c.amount ? BigInt(String(c.amount).split('.')[0] ?? '0') : 0n),
           0n,
@@ -134,7 +147,7 @@ export function KanbanBoard({
           <div
             key={column.id}
             onDragOver={(e) => {
-              if (!canMove) return;
+              if (!canMove || blockedReason) return;
               e.preventDefault();
               setDropTarget(column.id);
             }}
@@ -146,8 +159,14 @@ export function KanbanBoard({
               dropTarget === column.id
                 ? 'border-brand border-dashed bg-brand-subtle'
                 : 'border-border bg-surface-sunken',
+              blockedReason && 'opacity-50',
             )}
           >
+            {blockedReason && (
+              <p className="mb-2 rounded-sm bg-surface px-2 py-1 text-xs text-fg-subtle">
+                {blockedReason}
+              </p>
+            )}
             <div className="mb-2 px-1">
               <div className="flex items-center justify-between gap-2">
                 <h2 className="truncate text-md font-semibold" title={column.description}>

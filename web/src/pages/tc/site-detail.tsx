@@ -13,6 +13,7 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   SITE_STAGE_META,
+  SITE_FLOW,
   SITE_STAGE_TRANSITIONS,
   formatDate,
   formatDateTime,
@@ -41,6 +42,8 @@ import { SiteLogPanel } from './site-log-panel';
 import { SitePurchaseRequestPanel } from './purchase-request-panel';
 import { SiteCheckInPanel } from './site-check-in-panel';
 import { SiteQuickActions } from './site-quick-actions';
+import { RecordChain } from '@/components/entity/record-chain';
+import { StepTrack } from '@/components/entity/step-track';
 import { SubcontractorPanel } from './subcontractor-panel';
 import { WarrantyPanel } from './warranty-panel';
 
@@ -107,7 +110,9 @@ export function SiteDetailPage() {
     <>
       {next && (
         <Button
-          variant="primary"
+          // Đang thi công thì việc hằng ngày là ghi nhật ký, không phải đổi giai đoạn — nút này
+          // lùi xuống nút phụ để không thành thứ to nhất trên màn hình (review UX, vấn đề 2).
+          variant={site.stage === 'dang_thi_cong' ? 'secondary' : 'primary'}
           disabled={moveStage.isPending}
           onClick={() =>
             void run(() => moveStage.mutateAsync({ siteId: site.id, stage: next.stage }))
@@ -158,6 +163,16 @@ export function SiteDetailPage() {
         status={siteDisplayStatus(site.stage, site.planned_end_date)}
         responsiblePerson={site.responsible?.full_name ?? null}
         deadline={site.planned_end_date}
+        progress={
+          <>
+            <RecordChain kind="site" id={site.id} />
+            <StepTrack
+              flow={SITE_FLOW}
+              current={site.stage}
+              holder={site.responsible?.full_name ?? null}
+            />
+          </>
+        }
         actions={actions}
         tabs={[
           {

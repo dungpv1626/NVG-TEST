@@ -12,7 +12,7 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   OPPORTUNITY_CLASSIFICATION_LABELS,
-  OPPORTUNITY_STAGES,
+  OPPORTUNITY_FLOW,
   OPPORTUNITY_STAGE_META,
   formatCurrency,
   formatDate,
@@ -23,6 +23,10 @@ import {
 } from '@nvg/shared';
 import { DraftContractButton } from '@/components/contract/draft-contract-button';
 import { DetailFields, EntityDetail, RecordNotFound } from '@/components/entity/entity-detail';
+import { RecordChain } from '@/components/entity/record-chain';
+import { StepTrack } from '@/components/entity/step-track';
+import { useOpportunityHasContract } from '@/hooks/use-record-chain';
+import { useStageReadiness } from '@/hooks/use-stage-readiness';
 import { Button } from '@/components/ui/button';
 import { usePromptDialog } from '@/components/ui/prompt-dialog';
 import { CardGridSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
@@ -57,6 +61,10 @@ export function OpportunityDetailPage() {
   const { data, isLoading, error } = useOpportunity(id);
 
   const { data: contractId } = useContractForSource('opportunities', id);
+  const { data: readiness = [] } = useStageReadiness('opportunity', id);
+  // Hợp đồng có thể sinh từ gói thầu / hồ sơ thiết kế của cơ hội này — khi đó KHÔNG mời soạn
+  // bản thứ hai (0159; CSDL cũng chặn).
+  const { data: hasContract } = useOpportunityHasContract(id);
   const { data: history } = useOpportunityStageHistory(id);
   const moveStage = useMoveStage();
   const isResponsible = useIsResponsible(data?.owner_id);
@@ -106,12 +114,16 @@ export function OpportunityDetailPage() {
     }
   }
 
-  /** Giai đoạn kế tiếp theo đúng thứ tự pipeline (CRM-02). */
-  const currentIndex = OPPORTUNITY_STAGES.indexOf(data.stage);
-  const nextStage =
-    stageMeta.isTerminal || currentIndex < 0
-      ? null
-      : (OPPORTUNITY_STAGES[currentIndex + 1] ?? null);
+  /**
+   * Bước đi tới được phép (CRM-02, 0155) — cùng định nghĩa với hàm chặn ở CSDL. «Ký hợp đồng»
+   * không có ở đây: hợp đồng đã ký tự đẩy sang. Bước chưa đủ điều kiện thì nút mờ và nói vì sao.
+   */
+  const forwardStages = OPPORTUNITY_FLOW.steps[data.stage].next;
+  const missingFor = (stage: OpportunityStage) =>
+    readiness.filter((r) => r.for_stage === stage && !r.met).map((r) => r.label);
+  const nextRequirements = (forwardStages[0] ? readiness : [])
+    .filter((r) => r.for_stage === forwardStages[0])
+    .map((r) => ({ label: r.label, met: r.met }));
 
   return (
     <>
@@ -136,18 +148,34 @@ export function OpportunityDetailPage() {
         status={stageMeta.statusGroup}
         responsiblePerson={data.owner?.full_name ?? null}
         deadline={data.due_date}
+        progress={
+          <>
+            <RecordChain kind="opportunity" id={data.id} />
+            <StepTrack
+              flow={OPPORTUNITY_FLOW}
+              current={data.stage}
+              nextRequirements={nextRequirements}
+              holder={data.owner?.full_name ?? null}
+            />
+          </>
+        }
         actions={
           canEdit && !isHandedOver ? (
             <div className="flex items-center gap-2">
-              {nextStage && nextStage !== 'mat_co_hoi' && (
-                <Button
-                  variant="primary"
-                  disabled={moveStage.isPending}
-                  onClick={() => void changeStage(nextStage)}
-                >
-                  Chuyển sang {OPPORTUNITY_STAGE_META[nextStage].label}
-                </Button>
-              )}
+              {forwardStages.map((stage, i) => {
+                const missing = missingFor(stage);
+                return (
+                  <Button
+                    key={stage}
+                    variant={i === 0 ? 'primary' : 'secondary'}
+                    disabled={moveStage.isPending || missing.length > 0}
+                    title={missing.length > 0 ? `Cần: ${missing.join('; ')}` : undefined}
+                    onClick={() => void changeStage(stage)}
+                  >
+                    Chuyển sang {OPPORTUNITY_STAGE_META[stage].label}
+                  </Button>
+                );
+              })}
               {!stageMeta.isTerminal && (
                 <Button
                   variant="secondary"
@@ -159,14 +187,15 @@ export function OpportunityDetailPage() {
               )}
               {/* Webapp Flow 3.1 bước 5: khách đồng ý ở bước Đàm phán thì soạn hợp đồng
                   ngay tại chỗ, lấy sẵn khách hàng và giá đã duyệt (HD-01). */}
-              {(data.stage === 'dam_phan' || data.stage === 'ky_hop_dong') && (
-                <DraftContractButton
-                  sourceType="opportunities"
-                  sourceId={data.id}
-                  defaultType="thi_cong"
-                  existingContractId={contractId}
-                />
-              )}
+              {(data.stage === 'bao_gia' || data.stage === 'dam_phan') &&
+                (contractId || hasContract === false) && (
+                  <DraftContractButton
+                    sourceType="opportunities"
+                    sourceId={data.id}
+                    defaultType="thi_cong"
+                    existingContractId={contractId}
+                  />
+                )}
             </div>
           ) : isHandedOver ? (
             // CRM-06: sau khi bàn giao, cơ hội chuyển chế độ chỉ xem.
@@ -222,11 +251,6 @@ export function OpportunityDetailPage() {
                       : []),
                   ]}
                 />
-
-                <div className="rounded-lg border border-border bg-surface-sunken p-3">
-                  <p className="mb-1 font-medium">Giai đoạn hiện tại: {stageMeta.label}</p>
-                  <p className="text-fg-subtle">{stageMeta.description}</p>
-                </div>
               </div>
             ),
           },

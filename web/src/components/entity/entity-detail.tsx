@@ -82,6 +82,12 @@ export interface EntityDetailProps {
 
   /** Hồ sơ liên quan ở module khác — panel ngữ cảnh bên phải (Webapp Flow 5.1). */
   related?: RelatedGroup[];
+
+  /**
+   * Dải tiến trình (`StepTrack`) — đang ở đâu, ai giữ, bước tiếp theo, bước cuối. Đặt ngay dưới
+   * header, KHÔNG dính khi cuộn: header dính đã đủ cao (review UX, vấn đề 4).
+   */
+  progress?: ReactNode;
 }
 
 export function EntityDetail({
@@ -95,6 +101,7 @@ export function EntityDetail({
   tabs,
   historyContent,
   related = [],
+  progress,
 }: EntityDetailProps) {
   const location = useLocation();
 
@@ -201,6 +208,8 @@ export function EntityDetail({
             })}
           </nav>
         </div>
+
+        {progress}
 
         <div
           role="tabpanel"

@@ -12,6 +12,7 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
+  CONTRACT_FLOW,
   CONTRACT_SOURCE_LABELS,
   CONTRACT_SOURCE_ROUTES,
   CONTRACT_STAGE_META,
@@ -42,7 +43,9 @@ import {
   useSitesOfContract,
 } from '@/hooks/use-construction-sites';
 import { toUserMessage } from '@/hooks/use-error-message';
-import { useCan } from '@/lib/auth';
+import { useCan, useIsResponsible } from '@/lib/auth';
+import { RecordChain } from '@/components/entity/record-chain';
+import { StepTrack } from '@/components/entity/step-track';
 import { AmendmentPanel } from './amendment-panel';
 import { TermsPanel } from './terms-panel';
 
@@ -52,8 +55,14 @@ export function ContractDetailPage() {
   const promptDialog = usePromptDialog();
   const { id } = useParams<{ id: string }>();
   const canEdit = useCan('HD', 'edit');
+  // Tách vai (0157): người chịu trách nhiệm soạn và gửi; người có quyền PHÊ DUYỆT hợp đồng
+  // (Ban Giám đốc) ghi nhận ký, quyết toán, hủy sau duyệt; Thi công hoặc BGĐ mở công trình.
+  // Nút ẩn hẳn khi không có quyền — không hiện rồi báo lỗi (CLAUDE.md 5.4).
+  const canApprove = useCan('HD', 'approve');
+  const canApproveSite = useCan('TC', 'approve');
 
   const { data, isLoading, error } = useContract(id);
+  const isResponsible = useIsResponsible(data?.responsible_user_id);
   const { data: amendments } = useContractAmendments(id);
   const { data: sites } = useSitesOfContract(id);
   const { data: hasSite } = useContractHasSite(id);
@@ -79,7 +88,10 @@ export function ContractDetailPage() {
   const contract = data;
   const isDraft = contract.stage === 'nhap';
   const isClosed = contract.stage === 'hoan_thanh' || contract.stage === 'huy';
-  const readOnly = !canEdit || isClosed;
+  const canDraft = canEdit && isResponsible;
+  const readOnly = !canDraft || isClosed;
+  const beforeApproval = contract.stage === 'nhap' || contract.stage === 'cho_duyet';
+  const canCancel = !isClosed && (canApprove || (beforeApproval && canDraft));
 
   /**
    * Mở công trình sau khi ký (TC-01).
@@ -90,7 +102,10 @@ export function ContractDetailPage() {
   // `hasSite === false` chứ không `!hasSite`: chưa tải xong hoặc ngoài phạm vi (null) thì KHÔNG
   // mời mở — nút chính hiện nhầm trên hợp đồng đã có công trình là lỗi đã gặp (0144).
   const canOpenSite =
-    contract.stage === 'da_ky' && contract.type !== 'khoan_thau_phu' && hasSite === false;
+    (canApprove || canApproveSite) &&
+    contract.stage === 'da_ky' &&
+    contract.type !== 'khoan_thau_phu' &&
+    hasSite === false;
 
   // Chỉ cộng phát sinh ĐÃ PHÊ DUYỆT vào giá trị hiện hành: phát sinh đang đề xuất chưa phải
   // là cam kết, cộng sớm thì báo cáo doanh thu chạy trước thực tế (HD-03).
@@ -148,9 +163,16 @@ export function ContractDetailPage() {
     void run(() => closeContract.mutateAsync({ contractId: contract.id, stage: 'huy', reason }));
   }
 
-  const actions = readOnly ? undefined : (
+  const hasAnyAction =
+    (isDraft && canDraft) ||
+    (contract.stage === 'da_duyet' && canApprove) ||
+    canOpenSite ||
+    (contract.stage === 'da_ky' && canApprove) ||
+    canCancel;
+
+  const actions = !hasAnyAction ? undefined : (
     <>
-      {isDraft && (
+      {isDraft && canDraft && (
         <Button
           variant="primary"
           disabled={submitApproval.isPending}
@@ -159,7 +181,7 @@ export function ContractDetailPage() {
           Gửi phê duyệt
         </Button>
       )}
-      {contract.stage === 'da_duyet' && (
+      {contract.stage === 'da_duyet' && canApprove && (
         <Button variant="primary" onClick={sign}>
           Ghi nhận đã ký
         </Button>
@@ -173,7 +195,7 @@ export function ContractDetailPage() {
           Mở công trình
         </Button>
       )}
-      {contract.stage === 'da_ky' && (
+      {contract.stage === 'da_ky' && canApprove && (
         // Chỉ MỘT nút chính mỗi màn hình (Content Guidelines 6.3): còn phải mở công trình
         // thì đó mới là việc tiếp theo, quyết toán lùi xuống nút phụ.
         <Button
@@ -187,9 +209,11 @@ export function ContractDetailPage() {
           Quyết toán hợp đồng
         </Button>
       )}
-      <Button variant="secondary" onClick={cancel}>
-        Hủy hợp đồng
-      </Button>
+      {canCancel && (
+        <Button variant="secondary" onClick={cancel}>
+          Hủy hợp đồng
+        </Button>
+      )}
     </>
   );
 
@@ -212,6 +236,16 @@ export function ContractDetailPage() {
         status={contractDisplayStatus(contract.stage, contract.end_date)}
         responsiblePerson={contract.responsible?.full_name ?? null}
         deadline={contract.end_date}
+        progress={
+          <>
+            <RecordChain kind="contract" id={contract.id} />
+            <StepTrack
+              flow={CONTRACT_FLOW}
+              current={contract.stage}
+              holder={contract.stage === 'nhap' ? (contract.responsible?.full_name ?? null) : null}
+            />
+          </>
+        }
         actions={actions}
         tabs={[
           {

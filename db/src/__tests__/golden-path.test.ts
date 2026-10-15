@@ -377,6 +377,35 @@ describeDb(
         .eq('contract_id', contractId);
       expect(visibleSites ?? [], 'Đấu thầu không đọc bảng công trình — lý do cần 0144').toEqual([]);
 
+      // Chuỗi hồ sơ (0159): mỗi người chỉ thấy mắt xích mình được xem. Ban Giám đốc thấy cả
+      // chuỗi; Kinh doanh không xem Đấu thầu / Thi công nên hai mắt xích đó biến mất, không mờ.
+      const kinds = async (client: typeof tgd) => {
+        const { data, error } = await client.rpc('record_chain', {
+          p_entity_type: 'opportunity',
+          p_id: opportunityId,
+        });
+        check('đọc chuỗi hồ sơ', error);
+        return (data as { kind: string }[]).map((r) => r.kind);
+      };
+      expect(await kinds(tgd)).toEqual(['opportunity', 'bidding', 'contract', 'site']);
+      expect(await kinds(kinhDoanh)).toEqual(['opportunity', 'contract']);
+
+      // Kinh doanh không xem được hợp đồng sinh từ gói thầu qua DA, nhưng vẫn biết cơ hội đã có
+      // hợp đồng — và CSDL chặn soạn bản thứ hai từ chính cơ hội (đếm doanh thu hai lần).
+      const { data: hasContract } = await kinhDoanh.rpc('opportunity_has_contract', {
+        p_opportunity_id: opportunityId,
+      });
+      expect(hasContract).toBe(true);
+      const { error: second } = await kinhDoanh.rpc('create_contract_from_source', {
+        p_source_type: 'opportunities',
+        p_source_id: opportunityId,
+        p_type: 'thi_cong',
+        p_title: `${TEST_PREFIX} Hợp đồng trùng`,
+      });
+      expect(second?.message, 'cơ hội đã có hợp đồng thì không soạn bản thứ hai').toContain(
+        'đã có hợp đồng',
+      );
+
       // Ngân sách đã duyệt đi theo công trình, không phải lập lại một bảng Excel ở công trường
       // (vướng mắc khảo sát #7 — "số liệu giữa các bộ phận không khớp nhau").
       const { data: budgetLines } = await tgd
