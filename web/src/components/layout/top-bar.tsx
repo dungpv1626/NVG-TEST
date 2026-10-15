@@ -103,6 +103,9 @@ function GlobalSearchBox({ tk }: { tk: boolean }) {
   }
 
   const showPanel = isOpen && rawQuery.trim().length >= SEARCH_MIN_LENGTH;
+  // Ô tìm kiếm trên điện thoại chỉ còn ~100px — câu gợi ý dài bị cắt thành «Tìm hổ» (review UX).
+  const narrow = useNarrowScreen();
+  const hint = tk ? 'Tìm dự án, khách hàng, bản vẽ…' : 'Tìm hồ sơ, khách hàng, vật tư…';
 
   return (
     <div
@@ -116,7 +119,8 @@ function GlobalSearchBox({ tk }: { tk: boolean }) {
         role="combobox"
         aria-expanded={showPanel}
         aria-controls="global-search-results"
-        placeholder={tk ? 'Tìm dự án, khách hàng, bản vẽ…' : 'Tìm hồ sơ, khách hàng, vật tư…'}
+        placeholder={narrow ? 'Tìm kiếm…' : hint}
+        aria-label={hint}
         value={rawQuery}
         onChange={(e) => {
           setRawQuery(e.target.value);
@@ -396,4 +400,28 @@ export function TopBar() {
       {changingPassword && <ChangePasswordDialog onClose={() => setChangingPassword(false)} />}
     </header>
   );
+}
+
+/** Màn hình hẹp hơn mốc `sm` (640px) — đổi theo khi xoay máy. */
+function useNarrowScreen(): boolean {
+  const query = '(max-width: 639px)';
+  const [narrow, setNarrow] = useState(() => {
+    try {
+      return window.matchMedia(query).matches;
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    let media: MediaQueryList;
+    try {
+      media = window.matchMedia(query);
+    } catch {
+      return;
+    }
+    const onChange = (e: MediaQueryListEvent) => setNarrow(e.matches);
+    media.addEventListener?.('change', onChange);
+    return () => media.removeEventListener?.('change', onChange);
+  }, []);
+  return narrow;
 }

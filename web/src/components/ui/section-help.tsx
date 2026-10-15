@@ -12,15 +12,13 @@
  * Không dùng `title` của trình duyệt: chữ đó chỉ hiện khi rê chuột (điện thoại không có), hiện
  * chậm, và không xuống dòng được.
  *
- * ## Tự mở lần đầu (`autoOpenKey`)
+ * ## Báo «có hướng dẫn mới» (`autoOpenKey`)
  *
- * Khai `autoOpenKey` thì bảng TỰ mở ngay khi phần đó hiện ra, không chờ ai bấm dấu hỏi — người
- * chưa dùng bao giờ không biết có hướng dẫn để mà tìm. Chỉ tự mở MỘT lần cho mỗi phần trên mỗi
- * trình duyệt (ghi vào `localStorage`); lần sau bấm dấu hỏi để mở lại. Bật lên mỗi lần vào tab
- * là thành thứ người dùng bấm bỏ theo phản xạ, và khi đó nó không còn được đọc nữa.
- *
- * Chỉ khai ở phần lấp đầy MỘT tab. Bốn khối con của tab Phương án cùng hiện một lúc, tự mở cả
- * bốn là bốn bảng đè lên nhau.
+ * Trước đây khai `autoOpenKey` thì bảng TỰ MỞ lần đầu vào phần đó. Review UX (doc/MOC_CAI_TIEN_UX.md,
+ * vấn đề 2) thấy bảng tự mở che đúng cột Trạng thái / Thời hạn ở 16 danh sách và chặn cả thao tác
+ * bấm. Nay bảng KHÔNG tự mở nữa: nút mang một chấm nhỏ «có hướng dẫn mới» cho tới lần đầu người
+ * dùng tự mở — vẫn tìm thấy được, nhưng không đè lên dữ liệu. Khoá ghi nhớ giữ nguyên tên cũ, nên
+ * người đã đọc rồi không thấy chấm.
  */
 
 import { HelpCircle } from 'lucide-react';
@@ -85,14 +83,17 @@ export function SectionHelp({
   className,
 }: SectionHelpProps) {
   const [open, setOpen] = useState(false);
+  const [fresh, setFresh] = useState(() => Boolean(autoOpenKey) && !alreadySeen(autoOpenKey!));
   const wrapRef = useRef<HTMLSpanElement>(null);
   const panelId = useId();
 
-  useEffect(() => {
-    if (!autoOpenKey || alreadySeen(autoOpenKey)) return;
-    rememberSeen(autoOpenKey);
-    setOpen(true);
-  }, [autoOpenKey]);
+  function toggle() {
+    if (fresh && autoOpenKey) {
+      rememberSeen(autoOpenKey);
+      setFresh(false);
+    }
+    setOpen((v) => !v);
+  }
 
   useEffect(() => {
     if (!open) return undefined;
@@ -118,10 +119,10 @@ export function SectionHelp({
         type="button"
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
-        aria-label={`Hướng dẫn: ${title}`}
-        onClick={() => setOpen((v) => !v)}
+        aria-label={`Hướng dẫn: ${title}${fresh ? ' (có hướng dẫn mới)' : ''}`}
+        onClick={toggle}
         className={cn(
-          'inline-flex items-center justify-center text-fg-subtle',
+          'relative inline-flex items-center justify-center text-fg-subtle',
           'hover:bg-surface-sunken hover:text-fg focus-visible:outline-none',
           'focus-visible:ring-2 focus-visible:ring-brand',
           triggerLabel
@@ -132,6 +133,13 @@ export function SectionHelp({
       >
         <HelpCircle className="size-4" aria-hidden />
         {triggerLabel}
+        {fresh && (
+          <span
+            data-testid="huong-dan-moi"
+            aria-hidden
+            className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-brand"
+          />
+        )}
       </button>
       {open && (
         <div
@@ -159,7 +167,7 @@ export function SectionHelp({
               <li key={step}>{step}</li>
             ))}
           </ol>
-          {note && <p className="mt-2 text-status-pending">{note}</p>}
+          {note && <p className="mt-2 font-medium text-fg">{note}</p>}
           <button
             type="button"
             onClick={() => setOpen(false)}

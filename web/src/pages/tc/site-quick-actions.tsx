@@ -5,14 +5,17 @@
  * của chỉ huy trưởng dưới 10–20 phút. Bốn việc làm nhiều nhất nằm sẵn dưới ngón tay cái, không
  * phải cuộn qua tám tab để tìm.
  *
- * Dính đáy vùng nội dung, ngay trên thanh điều hướng phân hệ. Máy tính không cần: thanh tab đã
- * hiện đủ.
+ * Trên điện thoại, bốn nút này THAY thanh điều hướng phân hệ (kèm nút «Phân hệ» mở bảng đầy đủ)
+ * thay vì dính chồng lên nó — trước đây hai thanh chiếm ~150px và che ô nhập nhật ký (review UX,
+ * doc/MOC_CAI_TIEN_UX.md vấn đề 2). Nút Điểm danh (chụp ảnh) luôn nằm trên thanh (AFD 4.8). Máy
+ * tính không cần: thanh tab đã hiện đủ.
  */
 
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Camera, ClipboardList, NotebookPen, PackagePlus } from 'lucide-react';
 import { useCan } from '@/lib/auth';
-import { cn } from '@/lib/utils';
+import { useBottomBarActions } from '@/components/layout/bottom-bar-slot';
 
 const ITEM =
   'flex min-h-12 flex-1 flex-col items-center justify-center gap-0.5 rounded-md px-2 py-1.5 ' +
@@ -21,14 +24,25 @@ const ITEM =
 export function SiteQuickActions({ siteId, readOnly }: { siteId: string; readOnly: boolean }) {
   const canRequest = useCan('MH', 'create');
 
+  const actions = useMemo(
+    () => <QuickActionItems siteId={siteId} readOnly={readOnly} canRequest={canRequest} />,
+    [siteId, readOnly, canRequest],
+  );
+  useBottomBarActions(actions);
+  return null;
+}
+
+function QuickActionItems({
+  siteId,
+  readOnly,
+  canRequest,
+}: {
+  siteId: string;
+  readOnly: boolean;
+  canRequest: boolean;
+}) {
   return (
-    <nav
-      aria-label="Thao tác nhanh tại công trường"
-      className={cn(
-        'sticky bottom-0 z-10 -mx-4 mt-4 flex gap-1 border-t border-border bg-surface p-1',
-        'lg:hidden',
-      )}
-    >
+    <>
       {!readOnly && (
         <Link to="?tab=diem-danh" className={ITEM}>
           <Camera className="size-5" aria-hidden />
@@ -51,6 +65,6 @@ export function SiteQuickActions({ siteId, readOnly }: { siteId: string; readOnl
         <ClipboardList className="size-5" aria-hidden />
         Theo dõi đề nghị
       </Link>
-    </nav>
+    </>
   );
 }

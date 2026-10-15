@@ -40,17 +40,22 @@ describe('SectionHelp', () => {
     expect(screen.queryByText('Chọn tầng.')).not.toBeInTheDocument();
   });
 
-  it('tự mở lần ĐẦU vào phần đó, lần sau thì không', async () => {
-    // Người chưa dùng bao giờ không biết có hướng dẫn để mà đi tìm dấu hỏi.
+  it('KHÔNG tự mở đè lên dữ liệu — chỉ báo «có hướng dẫn mới» tới lần đầu mở', async () => {
+    // Bảng tự mở từng che cột Trạng thái / Thời hạn ở 16 danh sách (review UX, vấn đề 2).
     window.localStorage.clear();
+    const user = userEvent.setup();
     const guide = { title: 'Đầu bài thiết kế', steps: ['Điền các mục còn trống.'] };
 
     const first = render(<SectionHelp {...guide} autoOpenKey="tk.dau-bai" />);
-    expect(await screen.findByText('Điền các mục còn trống.')).toBeInTheDocument();
+    expect(screen.queryByText('Điền các mục còn trống.')).not.toBeInTheDocument();
+    expect(screen.getByTestId('huong-dan-moi')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Hướng dẫn: Đầu bài thiết kế/ }));
+    expect(screen.getByText('Điền các mục còn trống.')).toBeInTheDocument();
+    expect(screen.queryByTestId('huong-dan-moi')).not.toBeInTheDocument();
     first.unmount();
 
     render(<SectionHelp {...guide} autoOpenKey="tk.dau-bai" />);
-    expect(screen.queryByText('Điền các mục còn trống.')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('huong-dan-moi')).not.toBeInTheDocument();
   });
 
   it('không khai autoOpenKey thì im lặng — bốn khối con không bật cùng lúc', () => {
@@ -59,7 +64,7 @@ describe('SectionHelp', () => {
     expect(screen.queryByText('Kéo chuột để xoay.')).not.toBeInTheDocument();
   });
 
-  it('nút Đã hiểu đóng bảng vừa tự mở', async () => {
+  it('nút Đã hiểu đóng bảng', async () => {
     window.localStorage.clear();
     const user = userEvent.setup();
     render(
@@ -69,7 +74,8 @@ describe('SectionHelp', () => {
         autoOpenKey="tk.phuong-an"
       />,
     );
-    expect(await screen.findByText('So sánh các phương án.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Hướng dẫn: Phương án kiến trúc/ }));
+    expect(screen.getByText('So sánh các phương án.')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Đã hiểu' }));
     expect(screen.queryByText('So sánh các phương án.')).not.toBeInTheDocument();
@@ -83,6 +89,7 @@ describe('SectionHelp', () => {
     const setSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('bị chặn');
     });
+    const user = userEvent.setup();
     render(
       <SectionHelp
         title="Khảo sát hiện trạng"
@@ -90,7 +97,8 @@ describe('SectionHelp', () => {
         autoOpenKey="tk.khao-sat"
       />,
     );
-    expect(await screen.findByText('Nhập kích thước.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Hướng dẫn: Khảo sát hiện trạng/ }));
+    expect(screen.getByText('Nhập kích thước.')).toBeInTheDocument();
     spy.mockRestore();
     setSpy.mockRestore();
   });

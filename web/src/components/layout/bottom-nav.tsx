@@ -20,6 +20,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { MODULES, type ModuleCode } from '@nvg/shared';
 import { cn } from '@/lib/utils';
+import { useBottomBarSlot } from './bottom-bar-slot';
 import {
   MODULE_ICONS,
   splitBottomNav,
@@ -52,6 +53,41 @@ export function BottomNav() {
   }, [sheetOpen]);
 
   const { primary, rest } = splitBottomNav(visible);
+  // Màn hình đang khai thao tác riêng (trang công trường) thì thanh này nhường chỗ: vẽ thao tác
+  // của màn hình + MỘT nút «Phân hệ» mở bảng đầy đủ — một thanh, không hai (bottom-bar-slot.ts).
+  const screenActions = useBottomBarSlot((s) => s.actions);
+
+  if (screenActions) {
+    return (
+      <>
+        {sheetOpen && (
+          <MoreSheet
+            rest={visible}
+            activeModule={activeModule}
+            onClose={() => setSheetOpen(false)}
+          />
+        )}
+        <nav
+          aria-label="Thao tác của màn hình"
+          className={cn(
+            'flex shrink-0 gap-1 border-t border-border bg-surface p-1 lg:hidden',
+            'pb-[calc(0.25rem+env(safe-area-inset-bottom))]',
+          )}
+        >
+          {screenActions}
+          <button
+            type="button"
+            onClick={() => setSheetOpen(true)}
+            aria-expanded={sheetOpen}
+            className={cn(ITEM_CLASS, 'rounded-md text-fg-subtle hover:bg-surface-hover')}
+          >
+            <LayoutGrid className="size-5 shrink-0" />
+            <span>Phân hệ</span>
+          </button>
+        </nav>
+      </>
+    );
+  }
 
   return (
     <>
