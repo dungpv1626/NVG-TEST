@@ -86,3 +86,53 @@ Ghi sau mỗi giai đoạn: tóm tắt thay đổi và danh sách commit.
 ### Giai đoạn 0
 - `992fd93`: `db:migrate` chạy được trên Windows, đường dẫn thư mục migration lấy qua `fileURLToPath`.
 - Thêm tệp này và dòng `backup/` vào `.gitignore`.
+
+### Giai đoạn 1 — luồng, quyền, đồng bộ, tiến trình, giao diện
+
+Commit: `d3331c6` · `bafc3aa` · `3dfb721` · `098ca01` (và commit ghi mục này).
+
+**Đã làm**
+
+- **Thứ tự bước cơ hội (0155).** Đi tới chỉ sang bước kế tiếp khi đủ điều kiện (`stage_readiness` —
+  một nguồn cho CSDL và giao diện); lùi phải nêu lý do; «Ký hợp đồng» không chuyển tay. Định giá chấp
+  nhận báo giá CRM, gói thầu hoặc hồ sơ thiết kế (NVC định giá qua DA).
+- **Không tự duyệt (0156).** Người gửi không tự ĐỒNG Ý hồ sơ của mình ở mọi loại phê duyệt và các bước
+  đề nghị chi; tự hủy vẫn được; đơn nghỉ nhập hộ xét theo nhân viên trong đơn; hộp thư bỏ hồ sơ của mình.
+- **Tách vai hợp đồng (0157).** Sửa/gửi = người chịu trách nhiệm; ghi ký, quyết toán, hủy sau duyệt =
+  quyền phê duyệt HD (Ban Giám đốc — trước đây BGĐ lại KHÔNG ghi ký được); quyết toán khi công trình đã
+  bàn giao; mở công trình = phê duyệt HD hoặc TC; soạn hợp đồng khi nguồn đã sẵn sàng.
+- **Đồng bộ liên module (0158).** Hợp đồng đã ký đẩy cơ hội gốc sang «Ký hợp đồng»; hủy / trượt thầu báo
+  người phụ trách cơ hội; chuyển bước thiết kế bằng tay không nhảy cóc; bàn giao thiết kế gắn hợp đồng đã
+  ký, chưa có thì chặn hoặc cảnh báo theo tham số `tk.handover_requires_signed_contract`.
+- **Chuỗi hồ sơ (0159).** `record_chain` — Cơ hội → Gói thầu/Thiết kế → Hợp đồng → Công trình, chỉ gồm
+  hồ sơ người xem có quyền; chặn hợp đồng thứ hai cho cùng cơ hội.
+- **Dải tiến trình** (`StepTrack`, `shared/src/flow.ts`) trên chi tiết cơ hội, hợp đồng, công trình: đang
+  ở bước mấy, ai làm gì, tiếp theo cần gì, sau đó, bước cuối. Dải «Chuỗi hồ sơ» bấm được từng mắt xích.
+- **Nút theo vai.** Hợp đồng: Kinh doanh chỉ thấy nút soạn/gửi. Cơ hội: nút chuyển bước theo luồng, mờ
+  kèm lý do; ẩn «Soạn hợp đồng» khi đã có hợp đồng. Kanban: cột không thả được hiện mờ kèm lý do.
+- **Giao diện.** Gỡ hẳn chế độ tối; sửa 95 lớp màu trỏ vào token không tồn tại (chữ phụ có lại phân cấp);
+  hộp hướng dẫn thôi tự mở che dữ liệu; trang công trình trên điện thoại chỉ còn MỘT thanh dưới; ô tìm
+  kiếm không cụt chữ.
+- **Demo và test đi đúng vai:** TGĐ ký hợp đồng, Trưởng phòng Thi công mở công trình, Chỉ huy trưởng lập
+  đề nghị chi. Test mới: `flow-guard.test.ts`, `flow.test.ts`, chuỗi hồ sơ trong `golden-path.test.ts`,
+  hàng rào token màu và «không còn chế độ tối» trong `design-rules.test.ts`; đột biến M238–M240.
+
+**Chưa làm trong giai đoạn này (đẩy sau)**
+
+- Bảng lịch sử bước chung `stage_transitions` cho hợp đồng / gói thầu / công trình (cơ hội đã có lịch sử).
+- Dải tiến trình cho gói thầu và đề nghị chi (đề nghị chi đã có dải bước riêng); hồ sơ thiết kế giữ dải
+  6 bước của module.
+- Thanh lưu dính đáy của biểu mẫu đầu bài, lớp thẻ PWA trên hộp thoại, `ConfirmDialog` qua portal.
+
+**Kiểm chứng tại máy:** test CSDL xanh trừ `env-guard` (lỗi `spawnSync('npx')` trên Windows, có từ
+trước); test web không phát sinh lỗi mới so với mốc (~20 test vốn đỏ trên máy này vì quá thời gian);
+`npm run mutation-proof` không chạy được trên máy này vì bộ web chưa xanh — ba đột biến mới đã đo tay,
+cả ba bị bắt.
+
+**Câu hỏi cho Haan** (mặc định đang dùng ghi sau mỗi câu)
+
+1. NVO có được thi công trước khi ký hợp đồng? — đang: cảnh báo, chặn được bằng tham số.
+2. TGĐ gửi hồ sơ thì ai duyệt? — đang: người khác có hạn mức; chưa có ngoại lệ cho TGĐ.
+3. Yêu cầu tuyển dụng do Nhân sự lập và Nhân sự duyệt — có cần người khác duyệt? — đang: cho phép.
+4. Trượt thầu có tự đánh dấu Mất cơ hội? — đang: chỉ báo người phụ trách.
+5. Mở công trình từ hợp đồng: Ban Giám đốc hoặc Trưởng phòng Thi công / Chỉ huy trưởng — đúng chưa?

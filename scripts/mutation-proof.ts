@@ -35,7 +35,14 @@ import { join } from 'node:path';
  */
 
 type Axis =
-  'phân quyền' | 'riêng tư' | 'tiền' | 'tiền gọi mô hình' | 'bản vẽ' | 'số đo' | 'phát hành';
+  | 'phân quyền'
+  | 'riêng tư'
+  | 'tiền'
+  | 'tiền gọi mô hình'
+  | 'bản vẽ'
+  | 'số đo'
+  | 'phát hành'
+  | 'giao diện';
 
 type Mutation = {
   id: string;
@@ -1949,6 +1956,32 @@ const MUTATIONS: Mutation[] = [
     find: '  if (upperRun.failed && upper.length && groundUp && input.construction.stairs.shape) {',
     replace:
       '  if (upperRun.failed && upper.length && groundUp && !input.construction.stairs.shape) {',
+  },
+
+  // ── Luồng hồ sơ và giao diện (doc/MOC_CAI_TIEN_UX.md) ──────────────────────────────────
+  {
+    id: 'M238',
+    axis: 'phân quyền',
+    file: 'shared/src/flow.ts',
+    bug: 'Dải tiến trình mời bỏ qua Khảo sát và Báo giá — sang thẳng Đàm phán, trong khi CSDL (0155) từ chối',
+    find: "      next: ['khao_sat', 'bao_gia'],",
+    replace: "      next: ['khao_sat', 'bao_gia', 'dam_phan'],",
+  },
+  {
+    id: 'M239',
+    axis: 'giao diện',
+    file: 'web/src/pages/kho/inventory-list.tsx',
+    bug: 'Lớp màu trỏ vào token không tồn tại — Tailwind bỏ qua im lặng, chữ phụ mang màu chữ chính',
+    find: '<p className="mb-2 text-fg-subtle">',
+    replace: '<p className="mb-2 text-fg-muted">',
+  },
+  {
+    id: 'M240',
+    axis: 'giao diện',
+    file: 'web/src/components/ui/section-help.tsx',
+    bug: 'Hộp hướng dẫn tự mở lại, che cột Trạng thái / Thời hạn của danh sách',
+    find: '  const [open, setOpen] = useState(false);',
+    replace: '  const [open, setOpen] = useState(Boolean(autoOpenKey));',
   },
 ];
 
