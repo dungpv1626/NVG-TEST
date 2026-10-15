@@ -66,3 +66,6 @@ __pycache__/
 
 # Bản sao lưu CSDL demo trước khi ghi (pg_dump) — có dữ liệu thật của bản công khai.
 /.sao-luu/
+
+# Mốc sao lưu tại máy (CSDL dev, ảnh trước/sau) — không commit dữ liệu
+backup/
