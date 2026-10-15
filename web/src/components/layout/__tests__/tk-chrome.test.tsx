@@ -1,13 +1,8 @@
 /**
- * Vỏ riêng của Module Thiết kế — thanh trái tối, thanh trên 60px, nền tối.
+ * Vỏ riêng của Module Thiết kế — thanh trái tối, thanh trên 60px.
  *
- * Haan chốt 06/09/2026: vỏ này (thanh 60px, không khe hở) **chỉ hiện trong `/tk/*`**. Riêng
- * chế độ sáng/tối thì 07/10/2026 mở ra TOÀN ứng dụng, ba lựa chọn Sáng · Tối · Theo hệ thống,
- * mặc định theo hệ thống (`lib/theme.tsx`).
- *
- * Khẳng định trên `data-tk-theme` chứ không trên tên lớp: đó là thứ DUY NHẤT quyết định bảng
- * màu (`tk-theme.css` đè token theo đúng thuộc tính này). Nút đổi nhãn mà thuộc tính không đổi
- * thì màn hình giữ nguyên màu và không có gì báo.
+ * Haan chốt 06/09/2026: vỏ này (thanh 60px, không khe hở) **chỉ hiện trong `/tk/*`**. Chế độ
+ * sáng/tối đã gỡ khỏi toàn ứng dụng (doc/MOC_CAI_TIEN_UX.md, vấn đề 2) — chỉ còn một bảng màu.
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -54,37 +49,15 @@ function shell(route: string) {
   return renderWithApp(<AppShell />, { route });
 }
 
-function scope(container: HTMLElement) {
-  return container.querySelector('[data-tk-theme]');
-}
-
 describe('Vỏ riêng của Module Thiết kế', () => {
   beforeEach(() => window.localStorage.clear());
 
-  it('mặc định theo hệ thống: hệ điều hành sáng thì bảng màu sáng, ở mọi module', () => {
-    const { container } = shell('/crm/khach-hang');
-    expect(scope(container)).toHaveAttribute('data-tk-theme', 'sang');
-    expect(screen.getByRole('radio', { name: 'Theo hệ thống' })).toHaveAttribute(
-      'aria-checked',
-      'true',
-    );
-  });
-
-  it('nút ba ô đổi THẬT thuộc tính điều khiển bảng màu, cả trên <html>', async () => {
-    const { container } = shell('/tk/du-an/p1');
-    await userEvent.click(screen.getByRole('radio', { name: 'Tối' }));
-    expect(scope(container)).toHaveAttribute('data-tk-theme', 'toi');
-    // Hộp thoại và menu thả xuống dựng ở `document.body`, ngoài khung — chúng đọc từ `<html>`.
-    expect(document.documentElement).toHaveAttribute('data-tk-theme', 'toi');
-    await userEvent.click(screen.getByRole('radio', { name: 'Sáng' }));
-    expect(scope(container)).toHaveAttribute('data-tk-theme', 'sang');
-    expect(window.localStorage.getItem('nvg.tk.theme')).toBe('sang');
-  });
-
-  it('lựa chọn cũ hai trạng thái vẫn đọc được', () => {
+  it('không còn nút sáng/tối, kể cả khi máy còn lưu lựa chọn tối cũ', () => {
     window.localStorage.setItem('nvg.tk.theme', 'toi');
-    const { container } = shell('/crm/khach-hang');
-    expect(scope(container)).toHaveAttribute('data-tk-theme', 'toi');
+    const { container } = shell('/tk/du-an/p1');
+    expect(screen.queryByRole('radiogroup', { name: 'Chế độ hiển thị' })).not.toBeInTheDocument();
+    expect(container.querySelector('[data-tk-theme]')).toBeNull();
+    expect(document.documentElement).not.toHaveAttribute('data-tk-theme');
   });
 
   it('chip nhắc phím tắt chỉ hiện trong Thiết kế, nhưng Ctrl+K chạy ở mọi nơi', async () => {

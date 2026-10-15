@@ -153,15 +153,6 @@ describe('Vỏ Trang dự án thiết kế', () => {
     expect(grid.className).toContain('grid-cols');
   });
 
-  it('tự mang bảng màu riêng kể cả khi dựng ngoài khung ứng dụng', () => {
-    // Nút chuyển sáng/tối nằm ở thanh trên của khung (`app-shell`), không ở đây — kiểm ở
-    // `layout/__tests__/tk-chrome.test.tsx`. Nhưng vỏ này vẫn phải tự đặt `data-tk-theme` cho
-    // chính nó: đó là thứ DUY NHẤT quyết định bảng màu. Ngoài khung không có bộ cung cấp, nên
-    // nó nhận giá trị mặc định của ngữ cảnh — sáng.
-    const { container } = shell();
-    expect(container.querySelector('[data-tk-theme]')).toHaveAttribute('data-tk-theme', 'sang');
-  });
-
   it('trạng thái và hạn hiện bằng CHỮ, không chỉ bằng màu (CGD 6.8)', () => {
     shell();
     expect(screen.getByText('Đang xử lý')).toBeInTheDocument();

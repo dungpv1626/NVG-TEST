@@ -259,7 +259,7 @@ export function TimesheetGrid({
           : 'Kỳ đã gửi xác nhận nên bảng công không sửa được nữa.'}
       </p>
 
-      {message && <p className="rounded border border-border bg-bg-subtle p-2">{message}</p>}
+      {message && <p className="rounded border border-border bg-surface-sunken p-2">{message}</p>}
 
       {selected && (
         <div className="space-y-3 rounded border border-border bg-surface p-3">

@@ -142,7 +142,7 @@ export function DeliveryPanel({
         <p className="font-medium">
           Đã nhận đủ {progress.completeLines} / {progress.lines} mặt hàng
         </p>
-        <p className="mt-1 text-fg-muted">
+        <p className="mt-1 text-fg-subtle">
           Đếm theo mặt hàng chứ không cộng số lượng lại: một đơn có cả thép tính bằng kg lẫn bulông
           tính bằng cái thì phép cộng đó không có nghĩa. Số lượng còn thiếu của từng mặt hàng xem ở
           cột "Còn lại". Chỉ phần ĐẠT được tính vào chi phí thực tế của công trình — hàng thiếu, sai
@@ -152,7 +152,7 @@ export function DeliveryPanel({
 
       <div className="overflow-x-auto">
         <table className="w-full min-w-[44rem] text-left">
-          <thead className="border-b border-border text-fg-muted">
+          <thead className="border-b border-border text-fg-subtle">
             <tr>
               <th scope="col" className="py-2 pr-4 font-medium">
                 Mặt hàng
@@ -220,7 +220,7 @@ export function DeliveryPanel({
                       {issueTotal > 0 && ` · Không đạt ${formatNumber(issueTotal)}`}
                     </p>
                   </div>
-                  <p className="mt-1 text-fg-muted">
+                  <p className="mt-1 text-fg-subtle">
                     Người nhận: {delivery.receiver?.full_name ?? EM_DASH}
                     {delivery.delivered_by_name
                       ? ` · Người giao: ${delivery.delivered_by_name}`
@@ -232,7 +232,7 @@ export function DeliveryPanel({
                     {delivery.has_quality_certificate ? ' · Có CO/CQ' : ''}
                   </p>
                   {stockedCode(delivery) !== null ? (
-                    <p className="mt-2 text-fg-muted">
+                    <p className="mt-2 text-fg-subtle">
                       Đã nhập kho theo phiếu {stockedCode(delivery) || EM_DASH}.
                     </p>
                   ) : (

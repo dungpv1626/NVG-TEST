@@ -12,6 +12,14 @@ if (!container) throw new Error('Không tìm thấy phần tử #root trong inde
 // giữa một màn hình tiếng Việt. Gắn ở đây để phủ cả những ô không đi qua `Input`.
 installVietnameseValidation();
 
+// Chế độ tối đã gỡ (doc/MOC_CAI_TIEN_UX.md, vấn đề 2) — dọn lựa chọn cũ còn nằm trong máy.
+// Trình duyệt chặn lưu trữ (cửa sổ riêng tư) thì ném lỗi; bỏ qua, không có gì để dọn.
+try {
+  window.localStorage.removeItem('nvg.tk.theme');
+} catch {
+  // không làm gì
+}
+
 createRoot(container).render(
   <StrictMode>
     <App />

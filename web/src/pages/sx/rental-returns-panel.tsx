@@ -142,7 +142,7 @@ function SignForm({
           />
         </Field>
       )}
-      <p className="rounded-sm bg-surface-sunken px-3 py-2 text-fg-muted">
+      <p className="rounded-sm bg-surface-sunken px-3 py-2 text-fg-subtle">
         Ký xong, biên bản bị khoá và không sửa được nữa.
         {total > 0
           ? ` Kế toán nhận khoản phải thu ${formatCurrency(total)} của đợt này.`
@@ -305,7 +305,7 @@ function ReturnCard({
           <p className="font-medium">
             Biên bản <span className="font-mono">{rentalReturn.code}</span>
           </p>
-          <p className="text-fg-muted">
+          <p className="text-fg-subtle">
             Ngày trả {formatDate(rentalReturn.return_date)} · Ghi nhận bởi{' '}
             {rentalReturn.creator?.full_name ?? '—'}
           </p>

@@ -132,7 +132,7 @@ export function AiRunProgress({
           {failed ? (
             <AlertTriangle className="size-4 text-status-overdue" aria-hidden />
           ) : run.status === 'done' ? (
-            <Check className="size-4 text-status-done" aria-hidden />
+            <Check className="size-4 text-status-completed" aria-hidden />
           ) : (
             <Loader2 className="size-4 animate-spin text-status-progress" aria-hidden />
           )}

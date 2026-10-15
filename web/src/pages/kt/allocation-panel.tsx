@@ -108,7 +108,7 @@ export function AllocationPanel({
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[44rem] text-left">
-            <thead className="border-b border-border text-fg-muted">
+            <thead className="border-b border-border text-fg-subtle">
               <tr>
                 <th scope="col" className="py-2 pr-4 font-medium">
                   Công trình
@@ -139,8 +139,8 @@ export function AllocationPanel({
                     {row.site ? `${row.site.code} — ${row.site.name}` : 'Chi phí văn phòng'}
                   </td>
                   <td className="py-2 pr-4">{row.cost_code ?? EM_DASH}</td>
-                  <td className="py-2 pr-4 text-fg-muted">{COST_GROUP_LABELS[row.cost_group]}</td>
-                  <td className="py-2 pr-4 text-fg-muted">{row.basis ?? EM_DASH}</td>
+                  <td className="py-2 pr-4 text-fg-subtle">{COST_GROUP_LABELS[row.cost_group]}</td>
+                  <td className="py-2 pr-4 text-fg-subtle">{row.basis ?? EM_DASH}</td>
                   <td className="py-2 text-right tabular-nums">{formatCurrency(row.amount)}</td>
                   {!readOnly && (
                     <td className="py-2 pl-4">

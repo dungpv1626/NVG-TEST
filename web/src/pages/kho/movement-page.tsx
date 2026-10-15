@@ -355,15 +355,15 @@ export function StockMovementPage() {
                 <p className="font-medium">
                   {STOCK_MOVEMENT_TYPE_LABELS[m.movement_type]} · {m.code ?? EM_DASH}
                 </p>
-                <p className="text-fg-muted">{formatDate(m.movement_date)}</p>
+                <p className="text-fg-subtle">{formatDate(m.movement_date)}</p>
               </div>
-              <p className="text-fg-muted">
+              <p className="text-fg-subtle">
                 {m.warehouse?.name ?? EM_DASH}
                 {m.target ? ` → ${m.target.name}` : ''}
                 {m.issue_reason ? ` · ${STOCK_ISSUE_REASON_LABELS[m.issue_reason]}` : ''}
                 {m.performer ? ` · ${m.performer.full_name}` : ''}
               </p>
-              <ul className="mt-1 text-fg-muted">
+              <ul className="mt-1 text-fg-subtle">
                 {m.items.map((item) => (
                   <li key={item.id}>
                     {item.material?.name ?? EM_DASH}:{' '}

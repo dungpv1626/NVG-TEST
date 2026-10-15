@@ -62,7 +62,7 @@ export function PlanScorePanel({ score }: { score: AiPlanScoreView | null }): Re
 
       {missing > 0.001 && (
         <p className="mt-2 flex items-start gap-2">
-          <Info className="mt-0.5 size-4 shrink-0 text-fg-muted" aria-hidden />
+          <Info className="mt-0.5 size-4 shrink-0 text-fg-subtle" aria-hidden />
           <span>
             {formatNumber(missing, 2)} phần trọng số không chấm được trên phương án này, và{' '}
             <b>không chia lại</b> cho tiêu chí khác. Hai phương án có phần trọng số chấm được khác

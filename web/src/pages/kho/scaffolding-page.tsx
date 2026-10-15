@@ -50,13 +50,13 @@ function EventPanel({ assetId }: { assetId: string }) {
   const events = data ?? [];
 
   if (events.length === 0) {
-    return <p className="text-fg-muted">Lô này chưa có biên bản nào.</p>;
+    return <p className="text-fg-subtle">Lô này chưa có biên bản nào.</p>;
   }
 
   return (
     <ul className="space-y-1">
       {events.map((e) => (
-        <li key={e.id} className="text-fg-muted">
+        <li key={e.id} className="text-fg-subtle">
           <span className="font-medium text-fg">{SCAFFOLDING_EVENT_LABELS[e.event_type]}</span>{' '}
           {formatDate(e.event_date)} · {formatNumber(Number(e.quantity))}
           {e.result_condition ? ` → ${SCAFFOLDING_CONDITION_LABELS[e.result_condition]}` : ''}
@@ -91,7 +91,7 @@ function LedgerAsOf({ rows }: { rows: ScaffoldingLedgerRow[] }) {
                 {row.material_name ?? EM_DASH}
                 <span className="ml-2 font-mono text-xs text-fg-subtle">{row.asset_code}</span>
               </p>
-              <p className="text-fg-muted">
+              <p className="text-fg-subtle">
                 <span className={usable ? '' : 'font-semibold text-status-overdue'}>
                   {SCAFFOLDING_CONDITION_LABELS[row.condition]}
                 </span>{' '}
@@ -223,7 +223,7 @@ export function ScaffoldingPage() {
       </div>
 
       {isPast && (
-        <p className="mb-3 rounded-sm bg-surface-sunken px-3 py-2 text-fg-muted">
+        <p className="mb-3 rounded-sm bg-surface-sunken px-3 py-2 text-fg-subtle">
           Sổ tại cuối ngày {formatDate(asOfDate)} — chỉ xem. Số lấy theo ngày của từng chứng từ
           (ngày giao, ngày trả, ngày biên bản), kể cả chứng từ ghi nhận muộn.
         </p>
@@ -276,7 +276,7 @@ export function ScaffoldingPage() {
                         {asset.asset_code}
                       </span>
                     </p>
-                    <p className="text-fg-muted">
+                    <p className="text-fg-subtle">
                       <span className={usable ? '' : 'font-semibold text-status-overdue'}>
                         {SCAFFOLDING_CONDITION_LABELS[asset.condition]}
                       </span>{' '}

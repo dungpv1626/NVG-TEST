@@ -356,7 +356,7 @@ export function PaymentRequestDetailPage() {
                     {PAYMENT_CHECK_STEP_LABELS[step.step]} ·{' '}
                     {step.decision === 'approved' ? 'Đã xác nhận' : 'Trả lại'}
                   </p>
-                  <p className="text-fg-muted">
+                  <p className="text-fg-subtle">
                     {step.decided_by_user?.full_name ?? 'Không rõ'} ·{' '}
                     {formatDateTime(step.decided_at)}
                     {step.entered_at ? ` · nhận hồ sơ lúc ${formatDateTime(step.entered_at)}` : ''}
@@ -469,7 +469,7 @@ export function PaymentRequestDetailPage() {
                       >
                         <div>
                           <p className="font-medium">{record.label}</p>
-                          <p className="text-fg-muted">{record.value}</p>
+                          <p className="text-fg-subtle">{record.value}</p>
                         </div>
                         {record.to && (
                           <Button variant="secondary" asChild>

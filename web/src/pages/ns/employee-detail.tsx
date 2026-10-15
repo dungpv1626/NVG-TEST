@@ -181,7 +181,7 @@ export function EmployeeDetailPage() {
       <Row label="Điện thoại" value={employee.phone} />
       <Row label="Hình thức trả lương" value={SALARY_TYPE_LABELS[employee.salary_type]} />
 
-      <div className="mt-4 rounded border border-border bg-bg-subtle p-4">
+      <div className="mt-4 rounded border border-border bg-surface-sunken p-4">
         <h3 className="font-semibold">Mức lương</h3>
         <p className="mt-1 text-fg-subtle">
           Dữ liệu hạn chế. Mỗi lượt xem được ghi lại kèm tên người xem và thời điểm.
@@ -428,7 +428,7 @@ export function EmployeeDetailPage() {
       ))}
 
       {canEdit && (
-        <section className="space-y-3 rounded border border-border bg-bg-subtle p-4">
+        <section className="space-y-3 rounded border border-border bg-surface-sunken p-4">
           <h3 className="font-semibold">Thao tác</h3>
 
           {!(checklists ?? []).some((c) => c.kind === 'tiep_nhan') && (

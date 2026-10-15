@@ -228,7 +228,7 @@ export function PurchaseRequestDetailPage() {
                     >
                       <div>
                         <p className="font-medium">{o.code ?? 'Đơn đặt hàng'}</p>
-                        <p className="text-fg-muted">
+                        <p className="text-fg-subtle">
                           {o.supplier?.name ?? EM_DASH} · {PURCHASE_ORDER_STAGE_META[o.stage].label}
                           {o.promised_date ? ` · Hẹn giao ${formatDate(o.promised_date)}` : ''}
                         </p>

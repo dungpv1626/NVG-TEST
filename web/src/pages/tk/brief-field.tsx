@@ -231,7 +231,7 @@ function Chip({
               cây trợ năng, và câu đầy đủ đi kèm ở `sr-only`. */}
           <span
             aria-hidden
-            className="grid size-5 shrink-0 place-items-center rounded-full bg-brand text-xs text-on-brand"
+            className="grid size-5 shrink-0 place-items-center rounded-full bg-brand text-xs text-fg-inverse"
           >
             {rank}
           </span>

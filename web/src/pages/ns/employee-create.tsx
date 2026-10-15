@@ -123,7 +123,7 @@ export function EmployeeCreatePage() {
           >
             <select
               id="block"
-              className="h-9 w-full rounded border border-border bg-bg px-2"
+              className="h-9 w-full rounded border border-border bg-surface px-2"
               value={block}
               onChange={(e) => setBlock(e.target.value as WorkBlock)}
             >
@@ -139,7 +139,7 @@ export function EmployeeCreatePage() {
             <Field label="Công trường">
               <select
                 id="site"
-                className="h-9 w-full rounded border border-border bg-bg px-2"
+                className="h-9 w-full rounded border border-border bg-surface px-2"
                 value={siteId}
                 onChange={(e) => setSiteId(e.target.value)}
               >
@@ -181,7 +181,7 @@ export function EmployeeCreatePage() {
           </Field>
         </section>
 
-        <section className="space-y-4 rounded border border-border bg-bg-subtle p-4">
+        <section className="space-y-4 rounded border border-border bg-surface-sunken p-4">
           <div>
             <h2 className="font-semibold">Thông tin hạn chế</h2>
             <p className="mt-1 text-fg-subtle">
@@ -203,7 +203,7 @@ export function EmployeeCreatePage() {
             <Field label="Hình thức trả lương">
               <select
                 id="salary_type"
-                className="h-9 w-full rounded border border-border bg-bg px-2"
+                className="h-9 w-full rounded border border-border bg-surface px-2"
                 value={salaryType}
                 onChange={(e) => setSalaryType(e.target.value as SalaryType)}
               >

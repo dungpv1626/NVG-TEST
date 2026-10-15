@@ -197,7 +197,7 @@ export function CashFlowPage() {
                   { label: 'Đã duyệt chưa chi', value: row.approved_payments },
                 ].map((cell) => (
                   <div key={cell.label}>
-                    <dt className="text-fg-muted">{cell.label}</dt>
+                    <dt className="text-fg-subtle">{cell.label}</dt>
                     <dd className="tabular-nums font-medium">{formatCurrency(cell.value)}</dd>
                   </div>
                 ))}
@@ -231,7 +231,7 @@ export function CashFlowPage() {
                   {plan.period_end}
                   {plan.balance_note ? ` · ${plan.balance_note}` : ''}
                 </span>
-                <span className="tabular-nums text-fg-muted">
+                <span className="tabular-nums text-fg-subtle">
                   Đầu kỳ {formatCurrency(plan.opening_balance)} · Thu{' '}
                   {formatCurrency(plan.planned_in)} · Chi {formatCurrency(plan.planned_out)}
                 </span>

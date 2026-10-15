@@ -154,7 +154,10 @@ chuyển động để giải thích thứ vừa đổi, không để gây chú 
 
 ## 6. Không đổi so với CGD
 
-- Chế độ tối: **toàn ứng dụng** từ 07/10/2026 (Haan) — nút ba ô Sáng · Tối · Theo hệ thống ở thanh trên, mặc định theo hệ thống. Bảng màu tối là bảng của Module Thiết kế — Mục 7.2.
+- **Không có chế độ tối.** Chủ dự án gỡ hẳn (doc/MOC_CAI_TIEN_UX.md, vấn đề 2): một bảng màu duy nhất,
+  không nút sáng/tối. Test `design-rules.test.ts` canh nó không quay lại nửa vời.
+- **Lớp màu chỉ trỏ vào token đã khai** — Tailwind v4 lặng lẽ bỏ qua lớp trỏ vào token không tồn tại
+  (`text-fg-muted` từng làm mất phân cấp chữ ở ~30 màn hình). Có test canh cùng tệp.
 - Lưới bội số 8px · biểu tượng nét đơn sắc Lucide · vùng bấm di động ≥ 40×40px.
 - Trạng thái luôn kèm chữ, không dùng màu làm cách duy nhất truyền đạt (CGD 6.8).
 
@@ -168,12 +171,12 @@ Module Thiết kế theo bộ bàn giao thiết kế riêng (`Giao diện chỉn
 
 ### 7.1 Hai bộ token song song
 
-- Bộ Thiết kế: `--color-tk-*` (71 token), bản SÁNG ở `@theme` trong `web/src/index.css`, bản TỐI ở
-  `web/src/pages/tk/tk-theme.css` dưới `[data-tk-theme='toi']`. Giá trị chép nguyên văn từ bản mẫu.
-- Test canh: mọi token có đủ cặp sáng–tối (thiếu là một mảng chữ vô hình, không lỗi); bản tối không khai
-  token ngoài danh sách `@theme`.
+- Bộ Thiết kế: `--color-tk-*` (71 token) ở `@theme` trong `web/src/index.css`, giá trị chép nguyên văn
+  bản SÁNG của bản mẫu. Bản tối đã gỡ cùng chế độ tối.
 
-### 7.2 Chế độ tối ánh xạ lại token dùng chung
+### 7.2 (Đã gỡ) Chế độ tối
+
+Mục này mô tả chế độ tối trước khi gỡ — giữ lại làm lịch sử, KHÔNG còn áp dụng:
 
 `[data-tk-theme='toi']` ánh xạ `--color-surface`, `--color-fg`, `--color-fg-subtle`, `--color-border`…
 sang bảng tối, vì màn hình trong module dùng lại `Button`, `EntityTable`, `EmptyState`… **Workspace tối
@@ -204,12 +207,10 @@ nền tối). Chữ trên nền `brand` dùng `text-fg-inverse`, không `text-wh
 ### 7.4 Khung sườn Thiết kế
 
 - Ba vùng sát nhau phân cách bằng một đường viền (vỏ chung: panel nổi, khe 12px, bo 16px).
-- **Thanh trái tối ở CẢ hai chế độ** (chủ ý của bản mẫu) → dùng bộ `--color-navdark-*` một giá trị,
+- **Thanh trái tối** (chủ ý của bản mẫu) → dùng bộ `--color-navdark-*` một giá trị,
   không dùng `--color-tk-*`.
-- Thanh trên cao 60px, ô tìm kiếm 420px kèm chip `Ctrl K`, nút sáng/tối. Phím `Ctrl K` chạy ở **mọi
-  module**; chỉ chip nhắc là riêng Thiết kế.
-- ⚠️ **`text-fg` phải khai trên chính phần tử mang `data-tk-theme`** — `body` nằm ngoài phạm vi nên màu
-  chữ kế thừa là màu chế độ sáng, biến mất trên nền tối.
+- Thanh trên cao 60px, ô tìm kiếm 420px kèm chip `Ctrl K`. Phím `Ctrl K` chạy ở **mọi module**; chỉ
+  chip nhắc là riêng Thiết kế.
 
 ### 7.5 Năm họ màu phân loại thẻ
 

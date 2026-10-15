@@ -206,7 +206,9 @@ export function TimesheetPage() {
       )}
 
       {pageError && <ErrorState message={pageError} />}
-      {notice && <p className="mb-4 rounded border border-border bg-bg-subtle p-3">{notice}</p>}
+      {notice && (
+        <p className="mb-4 rounded border border-border bg-surface-sunken p-3">{notice}</p>
+      )}
 
       {isLoading ? (
         <CardGridSkeleton count={3} />
@@ -303,7 +305,7 @@ export function TimesheetPage() {
                 </div>
 
                 {entryBlock === block && period?.status === 'dang_ghi' && (
-                  <div className="mt-3 space-y-2 rounded border border-border bg-bg-subtle p-3">
+                  <div className="mt-3 space-y-2 rounded border border-border bg-surface-sunken p-3">
                     <Field
                       label="Ngày công"
                       hint="Ghi cho toàn bộ nhân sự đang làm việc của khối; sửa lại dòng của người nghỉ sau."
@@ -348,7 +350,7 @@ export function TimesheetPage() {
 
       {canViewNs && (
         <>
-          <section className="mt-6 rounded border border-border bg-bg-subtle p-4">
+          <section className="mt-6 rounded border border-border bg-surface-sunken p-4">
             <h2 className="font-semibold">Chốt kỳ và chuyển Kế toán</h2>
             {allClosed ? (
               <p className="mt-1 text-fg-subtle">

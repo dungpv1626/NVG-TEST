@@ -137,19 +137,21 @@ export function RecruitmentPage() {
       />
 
       {pageError && <ErrorState message={pageError} />}
-      {notice && <p className="mb-4 rounded border border-border bg-bg-subtle p-3">{notice}</p>}
+      {notice && (
+        <p className="mb-4 rounded border border-border bg-surface-sunken p-3">{notice}</p>
+      )}
 
       {canEdit && (
         <form
           onSubmit={addPosition}
-          className="mb-6 grid gap-4 rounded border border-border bg-bg-subtle p-4 sm:grid-cols-2 lg:grid-cols-4"
+          className="mb-6 grid gap-4 rounded border border-border bg-surface-sunken p-4 sm:grid-cols-2 lg:grid-cols-4"
         >
           <Field label="Vị trí cần tuyển" required>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} required />
           </Field>
           <Field label="Khối làm việc">
             <select
-              className="h-9 w-full rounded border border-border bg-bg px-2"
+              className="h-9 w-full rounded border border-border bg-surface px-2"
               value={block}
               onChange={(e) => setBlock(e.target.value as WorkBlock)}
             >
@@ -279,7 +281,7 @@ export function RecruitmentPage() {
           />
 
           {canEdit && (
-            <div className="mt-4 rounded border border-border bg-bg-subtle p-4">
+            <div className="mt-4 rounded border border-border bg-surface-sunken p-4">
               <h3 className="font-semibold">Nhận việc</h3>
               <p className="mt-1 text-fg-subtle">
                 Ứng viên đã gửi thư mời chuyển thành hồ sơ nhân sự, kèm checklist tiếp nhận. Tên và

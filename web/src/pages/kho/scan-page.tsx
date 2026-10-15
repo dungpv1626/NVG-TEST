@@ -92,8 +92,8 @@ export function StockScanPage() {
           <section className="rounded-lg border border-border bg-surface p-4">
             <p className="font-mono text-fg-subtle">{material.material_code}</p>
             <p className="text-lg font-semibold">{material.name}</p>
-            {material.specification && <p className="text-fg-muted">{material.specification}</p>}
-            <p className="mt-1 text-fg-muted">
+            {material.specification && <p className="text-fg-subtle">{material.specification}</p>}
+            <p className="mt-1 text-fg-subtle">
               Đơn vị tính: {material.unit}
               {material.is_scaffolding && ' · Quản lý theo vòng đời giàn giáo'}
             </p>

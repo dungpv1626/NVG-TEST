@@ -181,18 +181,18 @@ export function AccountingPeriodPage() {
                   {label}
                   <StatusLozenge status={meta.statusGroup} />
                 </p>
-                <p className="text-fg-muted">
+                <p className="text-fg-subtle">
                   {formatDate(period.period_start)} → {formatDate(period.period_end)} ·{' '}
                   {meta.description}
                 </p>
                 {period.closed_at && (
-                  <p className="text-fg-muted">
+                  <p className="text-fg-subtle">
                     Khóa lúc {formatDateTime(period.closed_at)}
                     {period.closer ? ` bởi ${period.closer.full_name}` : ''}
                   </p>
                 )}
                 {period.reopen_reason && (
-                  <p className="text-fg-muted">
+                  <p className="text-fg-subtle">
                     Mở lại: {period.reopen_reason}
                     {period.reopener ? ` — ${period.reopener.full_name}` : ''}
                   </p>
@@ -225,7 +225,7 @@ export function AccountingPeriodPage() {
         })}
       </ul>
 
-      <p className="mt-3 text-fg-muted">
+      <p className="mt-3 text-fg-subtle">
         Không khóa được kỳ khi trong kỳ còn khoản đã chi mà chưa hạch toán — khóa lúc đó là chốt sổ
         trên một kỳ còn dở, và những khoản đó sẽ mắc kẹt cho tới khi có người mở lại.
       </p>

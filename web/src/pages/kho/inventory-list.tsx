@@ -151,7 +151,7 @@ export function InventoryListPage() {
         <EmptyState message="Chưa có dòng tồn nào khớp điều kiện. Tồn kho hình thành từ phiếu nhập — không nhập số tồn ban đầu bằng tay." />
       ) : (
         <>
-          <p className="mb-2 text-fg-muted">
+          <p className="mb-2 text-fg-subtle">
             {rows.length} dòng tồn
             {seesInventoryValue && ` · Giá trị ước tính ${formatCurrency(totalValue)}`}
             <span className="block text-xs text-fg-subtle">
@@ -163,7 +163,7 @@ export function InventoryListPage() {
 
           <div className="overflow-x-auto rounded-lg border border-border bg-surface">
             <table className="w-full min-w-[52rem] text-left">
-              <thead className="border-b border-border text-fg-muted">
+              <thead className="border-b border-border text-fg-subtle">
                 <tr>
                   <th scope="col" className="px-4 py-2 font-medium">
                     Mã vật tư

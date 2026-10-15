@@ -25,7 +25,6 @@
 
 /* Bảng màu riêng của Module Thiết kế — bản TỐI. Chỉ đè `--color-tk-*` khai trong @theme dưới
    đây; xem chú thích đầu tệp đó. Đặt SAU @theme khi biên dịch nên độ ưu tiên đúng. */
-@import './pages/tk/tk-theme.css';
 
 /**
  * Token thiết kế — Content Guidelines Mục 6.3 đến 6.5.
@@ -194,15 +193,14 @@
   /* --- Bảng màu riêng của Module Thiết kế (`--color-tk-*`) --------------------
      Module Thiết kế có ngôn ngữ thị giác riêng, dựng theo bộ bàn giao thiết kế
      "Trang thiết kế dự án" (Haan cung cấp 06/09/2026). Giá trị dưới đây chép NGUYÊN VĂN từ
-     hằng `LIGHT` của bản mẫu; bản tối nằm ở `pages/tk/tk-theme.css` và chỉ ĐÈ chính những
-     token này — Tailwind biên dịch utility thành `var(--color-tk-…)` nên đặt giá trị mới trên
-     một tổ tiên là cả nhánh đổi theo, không cần lớp phủ nào khác.
+     hằng `LIGHT` của bản mẫu. Bản tối đã gỡ cùng chế độ tối của toàn ứng dụng
+     (doc/MOC_CAI_TIEN_UX.md, vấn đề 2) — chỉ còn một bảng màu.
 
      Vì sao một bộ token thứ hai thay vì mở rộng bộ chung:
       · Bộ chung (`--color-surface`, `--color-fg`, `--color-brand`…) dùng cho 11 module còn
         lại và có test đo tương phản trên đúng những hex đó. Đổi chúng để hợp bản mẫu là đổi
         cả 11 module — Haan đã chốt KHÔNG (quyết định 1, 06/09/2026).
-      · Bộ này chỉ sống trong phạm vi `[data-tk-theme]`, tức chỉ các trang `/tk/*`.
+      · Bộ này chỉ dùng ở các trang `/tk/*`.
 
      ⚠️ Năm họ màu chức năng `bl`/`gr`/`am`/`pu`/`rd` là màu PHÂN LOẠI THẺ, không phải màu
      trạng thái. Chúng chỉ được làm nền, viền và ô icon BÊN TRONG thẻ công cụ. Cấm dùng làm

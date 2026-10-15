@@ -131,7 +131,7 @@ export function RequestItemPanel({
           </ul>
           <div className="hidden overflow-x-auto sm:block">
             <table className="w-full min-w-[48rem] text-left">
-              <thead className="border-b border-border text-fg-muted">
+              <thead className="border-b border-border text-fg-subtle">
                 <tr>
                   <th scope="col" className="py-2 pr-4 font-medium">
                     Mã vật tư
@@ -166,7 +166,7 @@ export function RequestItemPanel({
                   <tr key={item.id} className="border-b border-border last:border-0">
                     <td className="py-2 pr-4">{item.item_code ?? EM_DASH}</td>
                     <td className="py-2 pr-4">{item.name}</td>
-                    <td className="py-2 pr-4 text-fg-muted">{item.specification ?? EM_DASH}</td>
+                    <td className="py-2 pr-4 text-fg-subtle">{item.specification ?? EM_DASH}</td>
                     <td className="py-2 pr-4 text-right tabular-nums">
                       {formatNumber(Number(item.quantity))}
                     </td>

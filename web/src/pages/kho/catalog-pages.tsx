@@ -210,7 +210,7 @@ export function MaterialListPage() {
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border bg-surface">
           <table className="w-full min-w-[44rem] text-left">
-            <thead className="border-b border-border text-fg-muted">
+            <thead className="border-b border-border text-fg-subtle">
               <tr>
                 <th scope="col" className="px-4 py-2 font-medium">
                   Mã
@@ -243,7 +243,7 @@ export function MaterialListPage() {
                       <span className="ml-2 text-xs text-fg-subtle">Giàn giáo</span>
                     )}
                   </td>
-                  <td className="px-4 py-2 text-fg-muted">{m.specification ?? EM_DASH}</td>
+                  <td className="px-4 py-2 text-fg-subtle">{m.specification ?? EM_DASH}</td>
                   <td className="px-4 py-2">{m.unit}</td>
                   <td className="px-4 py-2 font-mono text-xs">{m.barcode ?? EM_DASH}</td>
                 </tr>
@@ -385,7 +385,7 @@ export function WarehouseListPage() {
               <p className="font-medium">
                 {w.name} <span className="font-mono text-xs text-fg-subtle">{w.code}</span>
               </p>
-              <p className="text-fg-muted">
+              <p className="text-fg-subtle">
                 {WAREHOUSE_TYPE_LABELS[w.warehouse_type]}
                 {w.address ? ` · ${w.address}` : ''}
                 {w.manager ? ` · Thủ kho ${w.manager.full_name}` : ''}

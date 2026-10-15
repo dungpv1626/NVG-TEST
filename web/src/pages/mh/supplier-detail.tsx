@@ -193,7 +193,7 @@ export function SupplierDetailPage() {
             label: 'Đánh giá',
             content: (
               <form onSubmit={(e) => void saveRatings(e)} className="space-y-4">
-                <p className="text-fg-muted">
+                <p className="text-fg-subtle">
                   Tám tiêu chí chấm từ {SUPPLIER_RATING_SCALE.min} đến {SUPPLIER_RATING_SCALE.max}.
                   Để trống nghĩa là chưa đánh giá tiêu chí đó.
                 </p>
@@ -244,7 +244,7 @@ export function SupplierDetailPage() {
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[42rem] text-left">
-                    <thead className="border-b border-border text-fg-muted">
+                    <thead className="border-b border-border text-fg-subtle">
                       <tr>
                         <th scope="col" className="py-2 pr-4 font-medium">
                           Mã đơn hàng

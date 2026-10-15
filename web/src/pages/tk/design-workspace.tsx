@@ -39,7 +39,6 @@ import { Breadcrumb, type Crumb } from '@/components/layout/breadcrumb';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
 import { useDesignVersionSkew, VERSION_SKEW_MESSAGE } from '@/lib/design-version';
 import { cn } from '@/lib/utils';
-import { useTheme } from '@/lib/theme';
 
 export interface WorkspaceTab {
   /** Định danh trong URL (`?tab=dau-bai`) — tiếng Việt không dấu. */
@@ -78,11 +77,6 @@ export interface DesignWorkspaceProps {
   compact?: boolean;
 }
 
-/**
- * Provider của chế độ sáng/tối nằm ở KHUNG ứng dụng (`app-shell.tsx`), không ở đây: thanh
- * trái và thanh trên cũng đổi màu theo nó. Ở đây chỉ ĐỌC, và vẫn tự đặt `data-tk-theme` cho
- * chính mình để component đứng một mình vẫn ra đúng màu (kiểm thử dựng thẳng nó, không qua khung).
- */
 export function DesignWorkspace(props: DesignWorkspaceProps): React.ReactElement {
   return <WorkspaceBody {...props} />;
 }
@@ -102,7 +96,6 @@ function WorkspaceBody({
   compact = false,
 }: DesignWorkspaceProps): React.ReactElement {
   const location = useLocation();
-  const { theme } = useTheme();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const allTabs = useMemo<WorkspaceTab[]>(
@@ -181,7 +174,6 @@ function WorkspaceBody({
           sẽ hiện ra Ở TRÊN nó thay vì trượt xuống dưới (thấy tận mắt 06/09/2026). */}
       <div
         ref={scrollRef}
-        data-tk-theme={theme}
         className={cn('min-h-full bg-tk-bg text-tk-tx', 'tabular-nums', '-m-4 lg:-m-6')}
       >
         {/* ── Header ─────────────────────────────────────────────────────────── */}

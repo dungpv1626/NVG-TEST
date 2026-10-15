@@ -114,12 +114,14 @@ export function AssetPage() {
       />
 
       {pageError && <ErrorState message={pageError} />}
-      {notice && <p className="mb-4 rounded border border-border bg-bg-subtle p-3">{notice}</p>}
+      {notice && (
+        <p className="mb-4 rounded border border-border bg-surface-sunken p-3">{notice}</p>
+      )}
 
       {canEdit && (
         <form
           onSubmit={addAsset}
-          className="mb-6 grid gap-4 rounded border border-border bg-bg-subtle p-4 sm:grid-cols-2 lg:grid-cols-4"
+          className="mb-6 grid gap-4 rounded border border-border bg-surface-sunken p-4 sm:grid-cols-2 lg:grid-cols-4"
         >
           <Field label="Tên tài sản" required hint="Mã tài sản do hệ thống cấp khi lưu.">
             <Input value={name} onChange={(e) => setName(e.target.value)} required />
@@ -192,7 +194,7 @@ export function AssetPage() {
             <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Field label="Loại biên bản">
                 <select
-                  className="h-9 w-full rounded border border-border bg-bg px-2"
+                  className="h-9 w-full rounded border border-border bg-surface px-2"
                   value={eventType}
                   onChange={(e) => setEventType(e.target.value as AssetEventType)}
                 >
@@ -207,7 +209,7 @@ export function AssetPage() {
               {needsReceiver && (
                 <Field label="Người nhận" required>
                   <select
-                    className="h-9 w-full rounded border border-border bg-bg px-2"
+                    className="h-9 w-full rounded border border-border bg-surface px-2"
                     value={toEmployee}
                     onChange={(e) => setToEmployee(e.target.value)}
                   >

@@ -166,7 +166,7 @@ Thực thể tham chiếu xuyên module — **liên kết, KHÔNG sao chép**: `
   màu trạng thái mới; màu thương hiệu KHÔNG dùng ở nhãn trạng thái.
 - Chữ chính không dùng đen `#000000`. Body ~14px. Lưới 8px. Bo góc 4–8px (Lozenge bo tròn).
 - **Một hành động chính mỗi màn hình.** Phân cấp bằng độ đậm + kích thước, không bằng màu.
-- Dark mode không bắt buộc cho demo.
+- **Không có chế độ tối** — đã gỡ hẳn (doc/MOC_CAI_TIEN_UX.md). Lớp màu chỉ trỏ vào token đã khai (test canh).
 
 ### 4.4 Văn phong (CGD 2, 4)
 

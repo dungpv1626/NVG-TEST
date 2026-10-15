@@ -175,7 +175,7 @@ export function QuotationPanel({
         // Không phải lỗi kỹ thuật: đây là ranh giới NEN-07 đang làm đúng việc của nó.
         <div className="rounded-lg border border-border bg-surface-sunken p-4">
           <p className="font-medium">Bảng so sánh báo giá không mở cho vai trò hiện tại</p>
-          <p className="mt-1 text-fg-muted">
+          <p className="mt-1 text-fg-subtle">
             Báo giá của các nhà cung cấp không được chọn là nội dung thương thảo, chỉ Ban Giám đốc,
             Tài chính, Dự án – Đấu thầu, Thiết kế và Mua hàng đọc được. Báo giá đã chọn vẫn hiển thị
             trong tab Đơn hàng.
@@ -414,7 +414,7 @@ function QuotationComparisonTable({
                       {QUOTATION_STATUS_LABELS.duoc_chon}
                     </span>
                   ) : (
-                    <span className="text-fg-muted">{QUOTATION_STATUS_LABELS[r.status]}</span>
+                    <span className="text-fg-subtle">{QUOTATION_STATUS_LABELS[r.status]}</span>
                   )}
                 </span>
               </th>
@@ -427,7 +427,7 @@ function QuotationComparisonTable({
               key={line.label}
               className={`border-b border-border last:border-0 ${line.strong ? 'bg-surface-sunken' : ''}`}
             >
-              <th scope="row" className="px-4 py-2 font-normal text-fg-muted">
+              <th scope="row" className="px-4 py-2 font-normal text-fg-subtle">
                 {line.label}
               </th>
               {rows.map((r) => (
@@ -444,7 +444,7 @@ function QuotationComparisonTable({
           ))}
           {canChoose && (
             <tr>
-              <th scope="row" className="px-4 py-3 font-normal text-fg-muted">
+              <th scope="row" className="px-4 py-3 font-normal text-fg-subtle">
                 <span className="sr-only">Thao tác</span>
               </th>
               {rows.map((r) => (

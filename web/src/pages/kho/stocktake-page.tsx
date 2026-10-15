@@ -142,14 +142,14 @@ function StocktakeDetail({
   return (
     <div className="space-y-3">
       {promptDialog.dialog}
-      <p className="text-fg-muted">
+      <p className="text-fg-subtle">
         Đã đếm {summary.countedLines}/{summary.totalLines} vật tư · {summary.varianceLines} dòng
         lệch
       </p>
 
       <div className="overflow-x-auto">
         <table className="w-full min-w-[40rem] text-left">
-          <thead className="border-b border-border text-fg-muted">
+          <thead className="border-b border-border text-fg-subtle">
             <tr>
               <th scope="col" className="py-2 pr-4 font-medium">
                 Vật tư
@@ -244,7 +244,7 @@ function StocktakeDetail({
       )}
 
       {isCounting && summary.isComplete && summary.varianceLines === 0 && (
-        <p className="text-fg-muted">
+        <p className="text-fg-subtle">
           Đếm khớp sổ kho ở mọi vật tư — không có gì để điều chỉnh. Đóng đợt kiểm kê để mở lại nhập
           xuất; sổ kho giữ nguyên.
         </p>
@@ -375,14 +375,14 @@ export function StocktakePage() {
                     <p className="font-medium">
                       {st.code ?? EM_DASH} · {st.warehouse?.name ?? EM_DASH}
                     </p>
-                    <p className="text-fg-muted">
+                    <p className="text-fg-subtle">
                       Mở lúc {formatDateTime(st.started_at)}
                       {st.performer ? ` · ${st.performer.full_name}` : ''}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <StatusLozenge status={meta.statusGroup} />
-                    <span className="text-fg-muted">{meta.label}</span>
+                    <span className="text-fg-subtle">{meta.label}</span>
                     <Button variant="secondary" onClick={() => setOpenId(isOpen ? null : st.id)}>
                       {isOpen ? 'Thu gọn' : 'Mở'}
                     </Button>
@@ -395,10 +395,10 @@ export function StocktakePage() {
                 </div>
 
                 {st.variance_reason && (
-                  <p className="mt-1 text-fg-muted">Nguyên nhân: {st.variance_reason}</p>
+                  <p className="mt-1 text-fg-subtle">Nguyên nhân: {st.variance_reason}</p>
                 )}
                 {st.closed_reason && (
-                  <p className="mt-1 text-fg-muted">Lý do hủy: {st.closed_reason}</p>
+                  <p className="mt-1 text-fg-subtle">Lý do hủy: {st.closed_reason}</p>
                 )}
 
                 {isOpen && (

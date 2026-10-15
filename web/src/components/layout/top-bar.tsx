@@ -17,7 +17,6 @@ import { usePendingApprovals } from '@/hooks/use-approvals';
 import { SEARCH_MIN_LENGTH, useGlobalSearch, type GlobalSearchResult } from '@/hooks/use-search';
 import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
-import { ThemeSwitch } from '@/lib/theme';
 import { ChangePasswordDialog } from './change-password-dialog';
 import { CompanySwitcher } from './company-switcher';
 import { NotificationBell } from './notification-bell';
@@ -297,11 +296,6 @@ export function TopBar() {
           <CheckSquare className="size-4" />
         </IconButton>
         <NotificationBell />
-        {/* Sáng / Tối / Theo hệ thống cho toàn ứng dụng (Haan, 07/10/2026). Ẩn dưới `sm` để
-            thanh trên điện thoại không tràn — ở đó lựa chọn mặc định là theo hệ thống. */}
-        <div className="mx-1 hidden sm:block">
-          <ThemeSwitch />
-        </div>
 
         <DropdownMenu.Root>
           <DropdownMenu.Trigger

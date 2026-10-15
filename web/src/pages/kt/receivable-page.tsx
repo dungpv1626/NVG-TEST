@@ -194,7 +194,7 @@ export function ReceivablePage() {
       <div className="mb-4 grid gap-2 sm:grid-cols-3 lg:grid-cols-5">
         {aging.rows.map((row) => (
           <div key={row.code} className="rounded-lg border border-border bg-surface px-3 py-2">
-            <p className="text-fg-muted">{row.label}</p>
+            <p className="text-fg-subtle">{row.label}</p>
             <p className="tabular-nums font-semibold">{formatCurrency(row.total)}</p>
             <p className="text-fg-subtle">
               {row.entries === 0 ? 'Không có khoản nào' : `${row.entries} khoản`}
@@ -336,7 +336,7 @@ export function ReceivablePage() {
         ]}
       />
 
-      <p className="mt-3 text-fg-muted">
+      <p className="mt-3 text-fg-subtle">
         Ngày đến hạn hôm nay vẫn tính là chưa quá hạn: bên trả còn cả ngày để chuyển tiền. Số
         &quot;đã thu&quot; của hợp đồng chỉ đổi qua chứng từ ghi ở đây, không sửa tay được. Các mốc
         chia nhóm quá hạn (30 / 60 / 90 ngày) là giá trị khởi tạo, Quản trị hệ thống sửa lại được

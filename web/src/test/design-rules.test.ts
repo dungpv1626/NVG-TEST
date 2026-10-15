@@ -38,28 +38,6 @@ describe('Ranh giới màu thương hiệu (rừng & bạc hà) với màu trạ
 });
 
 describe('Bảng màu riêng của Module Thiết kế', () => {
-  const theme = source('index.css');
-  const dark = source('pages/tk/tk-theme.css');
-  const declared = (css: string) =>
-    new Set([...css.matchAll(/(--color-tk-[a-z0-9-]+)\s*:/g)].map((m) => m[1]!));
-
-  /**
-   * Token nào khai ở `@theme` mà thiếu bản đè ở khối tối thì ở chế độ tối nó giữ nguyên giá
-   * trị SÁNG — chữ gần trắng trên nền gần trắng, hoặc chữ đen trên nền đen. Không lỗi, không
-   * cảnh báo, không ai thấy cho tới khi mở đúng màn hình đó ở đúng chế độ đó.
-   */
-  it('mọi token `--color-tk-*` có đủ cả bản sáng lẫn bản tối', () => {
-    const light = declared(theme);
-    expect(light.size).toBeGreaterThan(50);
-    expect([...light].filter((t) => !declared(dark).has(t))).toEqual([]);
-  });
-
-  /** Chiều ngược lại: đè một token chưa khai thì Tailwind không sinh utility, đè cũng vô ích. */
-  it('khối tối KHÔNG khai token nào ngoài danh sách của `@theme`', () => {
-    const light = declared(theme);
-    expect([...declared(dark)].filter((t) => !light.has(t))).toEqual([]);
-  });
-
   /**
    * Năm họ màu phân loại thẻ (`tk-am`, `tk-pu`, `tk-rd`…) nằm rất gần ba màu trạng thái Chờ
    * duyệt, Tranh chấp và Quá hạn. Để chúng lọt vào nhãn trạng thái là bắt người dùng phân
@@ -67,6 +45,62 @@ describe('Bảng màu riêng của Module Thiết kế', () => {
    */
   it('status-lozenge.tsx KHÔNG dùng token của Module Thiết kế', () => {
     expect(source('components/ui/status-lozenge.tsx')).not.toMatch(/\btk-/);
+  });
+});
+
+/** Mọi tệp `.tsx` của giao diện, trừ phép thử. */
+function uiSources(): { path: string; text: string }[] {
+  const root = resolve(process.cwd(), 'web/src');
+  return (readdirSync(root, { recursive: true }) as string[])
+    .filter((f) => f.endsWith('.tsx') && !/__tests__|\.test\./.test(f))
+    .map((f) => ({ path: f.replace(/\\/g, '/'), text: readFileSync(resolve(root, f), 'utf8') }));
+}
+
+describe('Chỉ một bảng màu — chế độ tối đã gỡ', () => {
+  /**
+   * Chủ dự án bỏ hẳn chế độ tối (doc/MOC_CAI_TIEN_UX.md, vấn đề 2). Hàng rào này ngăn nó quay lại
+   * nửa vời: một bảng màu thứ hai không ai duy trì là nơi sinh ra chữ đen trên nền đen.
+   */
+  it('không còn nút sáng/tối, thuộc tính đổi bảng màu hay khối màu tối', () => {
+    const offenders = uiSources()
+      .filter(({ text }) => /data-tk-theme|ThemeSwitch|prefers-color-scheme/.test(text))
+      .map(({ path }) => path);
+    expect(offenders).toEqual([]);
+    expect(source('index.css')).not.toMatch(/data-tk-theme|prefers-color-scheme:\s*dark/);
+  });
+});
+
+describe('Lớp màu chỉ trỏ vào token đã khai', () => {
+  /**
+   * Tailwind v4 KHÔNG sinh CSS cho lớp trỏ vào token không tồn tại — không lỗi, không cảnh báo,
+   * lớp chỉ lặng lẽ không có tác dụng. Review UX tìm thấy `text-fg-muted` ở 21 tệp (chữ phụ và
+   * đầu bảng của cả Kho, Kế toán, Mua hàng mang cùng màu chữ chính — mất phân cấp) và
+   * `bg-bg`/`bg-bg-subtle` ở mọi trang Nhân sự.
+   *
+   * Chỉ xét lớp thuộc HỌ token của dự án (họ = đoạn đầu tên token đã khai, cộng `bg` và `on` là
+   * hai họ đã từng bị gõ nhầm), nên `text-sm`, `border-t`, `bg-transparent`… không bị bắt nhầm.
+   */
+  it('mọi lớp text-/bg-/border-/… thuộc họ token của dự án đều có `--color-*` tương ứng', () => {
+    const declared = new Set(
+      [...source('index.css').matchAll(/--color-([a-z0-9-]+)\s*:/g)].map((m) => m[1]!),
+    );
+    const families = new Set([...declared].map((t) => t.split('-')[0]!));
+    families.add('bg');
+    families.add('on');
+
+    const utility =
+      /(?<![\w-])(?:[a-z0-9]+:)*(?:text|bg|border|border-[trblxy]|ring|ring-offset|fill|stroke|divide|outline|from|to|via|placeholder|decoration|accent|caret)-([a-z][a-z0-9-]*[a-z0-9])(?:\/\d+)?(?![\w-])/g;
+    // Tên kết thúc bằng «-» là tiền tố của chuỗi ghép (`bg-status-${nhóm}`), không phải lớp
+    // hoàn chỉnh — không xét được ở đây.
+    const offenders: string[] = [];
+    for (const { path, text } of uiSources()) {
+      for (const m of text.matchAll(utility)) {
+        const name = m[1]!;
+        if (!families.has(name.split('-')[0]!)) continue;
+        if (!declared.has(name)) offenders.push(`${path}: ${m[0]}`);
+      }
+    }
+    expect([...new Set(offenders)]).toEqual([]);
   });
 });
 

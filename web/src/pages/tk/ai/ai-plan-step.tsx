@@ -695,7 +695,7 @@ function PlanDetail({
         )}
         {review.wallsDerived && (
           <p className="mt-3 flex items-start gap-2">
-            <Info className="mt-0.5 size-4 shrink-0 text-fg-muted" aria-hidden />
+            <Info className="mt-0.5 size-4 shrink-0 text-fg-subtle" aria-hidden />
             {/* T23 — câu này phải có mặt ở CẢ tờ vẽ và màn hình. Tờ vẽ đi ra ngoài (in, gửi
                 khách) còn màn hình thì không, nên một chỗ là không đủ.
 

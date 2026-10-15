@@ -174,21 +174,21 @@ export function PurchaseOrderDetailPage() {
             label: 'Chứng từ',
             content: (
               <div className="space-y-4">
-                <p className="text-fg-muted">
+                <p className="text-fg-subtle">
                   Bộ chứng từ để Kế toán lập đề nghị thanh toán. Kế toán mở thẳng từ đây, không nhập
                   lại số liệu đã có.
                 </p>
                 <ul className="space-y-2">
                   <li className="rounded-lg border border-border bg-surface px-4 py-3">
                     <p className="font-medium">Đơn đặt hàng {order.code ?? EM_DASH}</p>
-                    <p className="text-fg-muted">
+                    <p className="text-fg-subtle">
                       Giá trị {formatCurrency(order.total_value)}
                       {order.contract_number ? ` · Hợp đồng mua bán ${order.contract_number}` : ''}
                     </p>
                   </li>
                   <li className="rounded-lg border border-border bg-surface px-4 py-3">
                     <p className="font-medium">Báo giá đã chọn</p>
-                    <p className="text-fg-muted">
+                    <p className="text-fg-subtle">
                       {order.quotation_id ? (
                         <Link
                           className="text-brand underline-offset-4 hover:underline"
@@ -210,7 +210,7 @@ export function PurchaseOrderDetailPage() {
                         Phiếu giao nhận {delivery.code ?? EM_DASH} ·{' '}
                         {formatDate(delivery.delivered_date)}
                       </p>
-                      <p className="text-fg-muted">
+                      <p className="text-fg-subtle">
                         {delivery.delivery_note_number
                           ? `Phiếu giao hàng ${delivery.delivery_note_number}`
                           : 'Chưa ghi số phiếu giao hàng'}
@@ -229,7 +229,7 @@ export function PurchaseOrderDetailPage() {
                   <div className="space-y-2">
                     <h3 className="font-medium">Đề nghị thanh toán cho đơn này</h3>
                     {(payments ?? []).length === 0 ? (
-                      <p className="text-fg-muted">Chưa lập đề nghị thanh toán nào.</p>
+                      <p className="text-fg-subtle">Chưa lập đề nghị thanh toán nào.</p>
                     ) : (
                       <ul className="space-y-2">
                         {(payments ?? []).map((p) => (
@@ -239,7 +239,7 @@ export function PurchaseOrderDetailPage() {
                           >
                             <div>
                               <p className="font-medium">{p.code ?? 'Đề nghị chi'}</p>
-                              <p className="text-fg-muted">
+                              <p className="text-fg-subtle">
                                 {PAYMENT_REQUEST_STAGE_META[p.stage].label} ·{' '}
                                 {formatCurrency(p.amount)}
                               </p>

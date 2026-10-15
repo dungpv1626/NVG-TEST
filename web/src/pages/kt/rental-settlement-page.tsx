@@ -101,7 +101,7 @@ function SettlementCard({
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="font-medium">{row.customer?.name ?? '—'}</p>
-          <p className="text-fg-muted">
+          <p className="text-fg-subtle">
             <span className="font-mono">{row.code}</span> · thuê từ {formatDate(row.start_date)}
             {row.actual_return_date ? ` · trả hết ${formatDate(row.actual_return_date)}` : ''}
           </p>
@@ -128,7 +128,7 @@ function SettlementCard({
       )}
 
       {row.settled_at && (
-        <p className="mt-2 text-fg-muted">
+        <p className="mt-2 text-fg-subtle">
           Tất toán ngày {formatDate(row.settled_at)}: cấn trừ{' '}
           {formatCurrency(row.settlement_deposit_offset ?? 0)} tiền cọc
           {Number(row.settlement_refund ?? 0) > 0

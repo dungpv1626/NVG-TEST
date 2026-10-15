@@ -185,14 +185,14 @@ export function BriefFormAdminPage() {
       />
 
       {broken && (
-        <p className="mb-4 rounded border border-status-overdue-border bg-status-overdue-bg p-3 text-status-overdue-fg">
+        <p className="mb-4 rounded border border-status-overdue bg-status-overdue-bg p-3 text-status-overdue">
           Cấu hình đang lưu không đọc được nên biểu mẫu đang chạy theo bản gốc. Sửa lại bên dưới rồi
           lưu, hoặc bấm «Trả về bản gốc».
         </p>
       )}
 
       {preview.error && (
-        <p className="mb-4 rounded border border-status-overdue-border bg-status-overdue-bg p-3 text-status-overdue-fg">
+        <p className="mb-4 rounded border border-status-overdue bg-status-overdue-bg p-3 text-status-overdue">
           {preview.error}
         </p>
       )}
@@ -200,7 +200,7 @@ export function BriefFormAdminPage() {
       {error && <ErrorState message={error} />}
 
       {saved && !dirty && (
-        <p className="mb-4 rounded border border-status-done-border bg-status-done-bg p-3 text-status-done-fg">
+        <p className="mb-4 rounded border border-status-completed bg-status-completed-bg p-3 text-status-completed">
           Đã lưu biểu mẫu đầu bài.
         </p>
       )}
@@ -572,7 +572,7 @@ function AddQuestion({
           </Field>
         )}
       </div>
-      {problem && <p className="mt-2 text-status-overdue-fg">{problem}</p>}
+      {problem && <p className="mt-2 text-status-overdue">{problem}</p>}
       <div className="mt-2 flex gap-2">
         <Button onClick={add}>Thêm vào mục</Button>
         <Button variant="subtle" onClick={() => setOpen(false)}>

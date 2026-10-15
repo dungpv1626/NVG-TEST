@@ -102,11 +102,11 @@ export function HrDocumentPage() {
       {canEdit && (
         <form
           onSubmit={addDocument}
-          className="mb-6 grid gap-4 rounded border border-border bg-bg-subtle p-4 sm:grid-cols-2 lg:grid-cols-4"
+          className="mb-6 grid gap-4 rounded border border-border bg-surface-sunken p-4 sm:grid-cols-2 lg:grid-cols-4"
         >
           <Field label="Nhân sự" required>
             <select
-              className="h-9 w-full rounded border border-border bg-bg px-2"
+              className="h-9 w-full rounded border border-border bg-surface px-2"
               value={employeeId}
               onChange={(e) => setEmployeeId(e.target.value)}
               required
@@ -124,7 +124,7 @@ export function HrDocumentPage() {
 
           <Field label="Loại giấy tờ" required>
             <select
-              className="h-9 w-full rounded border border-border bg-bg px-2"
+              className="h-9 w-full rounded border border-border bg-surface px-2"
               value={type}
               onChange={(e) => setType(e.target.value as HrDocumentType)}
             >
