@@ -386,6 +386,25 @@ describeDb('Báo giá → Đàm phán: biết chờ ai, giá tới tay khách th
     expect(w.user_names.length).toBeGreaterThan(0);
     expect(w.user_names).not.toContain(myself!.full_name);
 
+    // «Thúc» (0165): chỉ người gửi; người giữ nhận thông báo; không thúc liên tiếp được.
+    const { error: notMine } = await tgd.rpc('nudge_approval', { p_approval_id: approval!.id });
+    expect(notMine?.message).toContain('người gửi');
+    const { error: nudged } = await kd.rpc('nudge_approval', { p_approval_id: approval!.id });
+    expect(nudged).toBeNull();
+    const { error: again } = await kd.rpc('nudge_approval', { p_approval_id: approval!.id });
+    expect(again?.message).toContain('thúc lại');
+    const { data: nudgeNotes } = await tgd
+      .from('notifications')
+      .select('id')
+      .eq('related_entity_id', approval!.id)
+      .eq('type', 'approval_nudge');
+    expect(nudgeNotes!.length).toBe(1);
+    const { data: reminders } = await kd
+      .from('approval_reminders')
+      .select('id')
+      .eq('approval_id', approval!.id);
+    expect(reminders).toHaveLength(1);
+
     const { error: decided } = await tgd.rpc('decide_approval', {
       p_approval_id: approval!.id,
       p_decision: 'approved',

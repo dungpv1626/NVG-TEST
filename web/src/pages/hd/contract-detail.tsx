@@ -297,7 +297,7 @@ export function ContractDetailPage() {
             />
             {pendingApproval && (
               <div className="-mt-2 mb-4 rounded-md border border-border bg-surface px-3 py-2 lg:-mt-4 lg:mb-6">
-                <WaitingOn approvalId={pendingApproval.id} />
+                <WaitingOn approvalId={pendingApproval.id} canNudge={canDraft} />
               </div>
             )}
           </>

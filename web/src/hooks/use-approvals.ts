@@ -98,6 +98,10 @@ export interface ApprovalWaitingOn {
   role_labels: string[];
   user_names: string[];
   waiting_since: string;
+  last_nudged_at: string | null;
+  nudge_count: number;
+  /** Lúc được thúc lại (giãn cách theo tham số); null = thúc được ngay. */
+  next_nudge_at: string | null;
 }
 
 /**
@@ -178,5 +182,19 @@ export function useApprovalHistory(entityType: string, entityIds: string[]) {
       return byEntity;
     },
     enabled: ids.length > 0,
+  });
+}
+
+/** Người gửi «Thúc» một phê duyệt đang chờ (`nudge_approval`, 0165). */
+export function useNudgeApproval() {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: async (approvalId) => {
+      const { error } = await supabase.rpc('nudge_approval', { p_approval_id: approvalId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['approvals', 'waiting-on'] });
+    },
   });
 }

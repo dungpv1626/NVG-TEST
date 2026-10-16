@@ -442,7 +442,17 @@ export function SiteDetailPage() {
                       to: `/hd/hop-dong/${site.contract.id}`,
                     },
                   ]
-                : []),
+                : site.contract_id
+                  ? // Có hợp đồng nhưng vai trò này không xem được Module Hợp đồng (chủ dự án
+                    // giữ nguyên quyền): nói rõ là CÓ và ai quản lý, không ghi «Chưa có hồ sơ
+                    // liên quan» — sai sự thật. Không lộ số, giá trị, không có liên kết.
+                    [
+                      {
+                        label: 'Hợp đồng',
+                        value: 'Đã có hợp đồng — Kinh doanh và Ban Giám đốc quản lý nội dung',
+                      },
+                    ]
+                  : []),
               ...(site.bidding_project_id
                 ? [
                     {

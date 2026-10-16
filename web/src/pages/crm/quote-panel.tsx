@@ -283,7 +283,9 @@ function QuoteVersionCard({
                 <span className="text-fg-subtle">{APPROVAL_SUBJECT_LABELS[approval.subject]}</span>
                 {approval.final_decision === null && <StatusLozenge status="pending_approval" />}
               </div>
-              {approval.final_decision === null && <WaitingOn approvalId={approval.id} />}
+              {approval.final_decision === null && (
+                <WaitingOn approvalId={approval.id} canNudge={editable} />
+              )}
               {approval.decisions.map((d) => (
                 <div key={d.id} className="mt-1 flex gap-2">
                   {d.decision === 'approved' ? (
