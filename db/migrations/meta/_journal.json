@@ -1191,6 +1191,13 @@
       "when": 1791140000000,
       "tag": "0169_tong_quan_dieu_hanh",
       "breakpoints": true
+    },
+    {
+      "idx": 170,
+      "version": "7",
+      "when": 1791150000000,
+      "tag": "0170_dieu_hanh_theo_cong_ty",
+      "breakpoints": true
     }
   ]
 }

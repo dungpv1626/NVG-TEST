@@ -197,6 +197,12 @@ cả ba bị bắt.
 sai lý do vì dữ liệu thử vi phạm ràng buộc khác — đã sửa). Ảnh chụp: KSNB, TGĐ vào `/tong-quan`; Kinh doanh vào
 trang cơ hội, gõ `/tong-quan` bị đưa về Dashboard.
 
+**Bổ sung — ba công ty cạnh nhau (0170).** Chủ dự án: «Tổng giám đốc phải nắm cả 3 công ty». Bản đầu gộp số, không
+nói công ty nào có vấn đề. Nay một trang bốn tầng: việc chờ quyết định; bảng cảnh báo (hàng = vấn đề, cột = NVC /
+NVS / NVO, bấm ô mở đúng danh sách của công ty đó, mảng ổn gom một dòng); hoạt động từng công ty; tài chính tháng
+này theo công ty. Đã chụp 1440 px và 390 px. Hạn chế: cột «Cả tập đoàn» chưa loại giao dịch nội bộ (chưa có dữ
+liệu đánh dấu, QĐ-6).
+
 **Câu hỏi cho Haan:** KSNB có được xem lương / hồ sơ cá nhân? (đang: không). Mốc «hợp đồng sắp hết hạn» bao nhiêu
 ngày? (đang: chưa có ô này). Mốc «phê duyệt chờ lâu» 3 ngày (giả định cũ của Dashboard) — giữ hay đặt SLA theo loại?
 

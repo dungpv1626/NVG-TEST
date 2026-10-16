@@ -170,4 +170,31 @@ describeDb('Kiểm soát nội bộ — chỉ xem (0168)', () => {
     const { error: denied } = await kd.rpc('exec_overview', args);
     expect(denied?.message).toContain('Ban Giám đốc và Kiểm soát nội bộ');
   });
+
+  it('tách theo từng công ty: đủ ba pháp nhân giao dịch, không có mã tổng hợp NVG (0170)', async () => {
+    const tgd = await signInAs(ACCOUNTS.tgd);
+    const { data, error } = await tgd.rpc('exec_overview_by_company', {
+      p_stale_days: 3,
+      p_hr_notice_days: 30,
+    });
+    expect(error).toBeNull();
+    const rows = data as { company_code: string; key: string; total: number | null }[];
+    expect([...new Set(rows.map((r) => r.company_code))].sort()).toEqual(['NVC', 'NVO', 'NVS']);
+
+    // Cộng các công ty = số gộp: cùng một quy tắc, không lệch giữa ô gộp và ô từng công ty.
+    const { data: all } = await tgd.rpc('exec_overview', { p_stale_days: 3, p_hr_notice_days: 30 });
+    for (const key of ['approvals_stale', 'sites_late', 'contracts_overdue']) {
+      const sum = rows.filter((r) => r.key === key).reduce((s, r) => s + (r.total ?? 0), 0);
+      const total = (all as { key: string; total: number }[]).find((r) => r.key === key)!.total;
+      expect(sum, key).toBe(total);
+    }
+
+    const { data: pulse, error: pulseError } = await ksnb.rpc('exec_company_pulse');
+    expect(pulseError).toBeNull();
+    expect((pulse as { company_code: string }[]).every((r) => r.company_code !== 'NVG')).toBe(true);
+
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    expect((await kd.rpc('exec_overview_by_company', {})).error).toBeTruthy();
+    expect((await kd.rpc('exec_company_pulse')).error).toBeTruthy();
+  });
 });

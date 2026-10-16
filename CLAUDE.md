@@ -683,7 +683,13 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
   nợ phải thu / phải trả quá hạn, hợp đồng quá hạn, công trình trễ / vượt ngân sách, giàn giáo quá hạn trả, giấy tờ
   nhân sự, báo giá không qua khảo sát), xếp theo mức, mỗi ô tối đa 5 hồ sơ. Quy tắc quá hạn chép đúng `*DisplayStatus`
   của `shared/`; mốc «chờ lâu» = SLA nếu có, không thì `PENDING_APPROVAL_AGING_DAYS` do trang truyền vào.
-- Hàng rào: `ksnb.test.ts` (đo bằng cách nới chính sách — phép thử phải đỏ), `tong-quan.test.tsx`.
+- Bố cục ba công ty cạnh nhau (0170, chủ dự án chọn sau bản đầu gộp số): việc chờ quyết định → bảng cảnh báo hàng =
+  vấn đề × cột = NVC / NVS / NVO (`exec_overview_by_company`; bấm ô = chọn pháp nhân đó + mở danh sách lọc; mảng ổn ở
+  cả ba công ty gom một dòng) → hồ sơ cần chú ý gắn mã công ty → hoạt động từng công ty (`exec_company_pulse`, chỉ hiện
+  chỉ số có hoạt động, không gán cứng mảng cho mã công ty) → tài chính tháng này theo công ty (`finance_daily`).
+  Cột «Cả tập đoàn» CHƯA loại giao dịch nội bộ (QĐ-6) — chưa có dữ liệu đánh dấu; trang nói rõ.
+- Hàng rào: `ksnb.test.ts` (đo bằng cách nới chính sách — phép thử phải đỏ; cộng các công ty = số gộp),
+  `tong-quan.test.tsx`.
 
 **GĐ1 còn thiếu:** bảng lịch sử bước chung `stage_transitions` (hợp đồng / gói thầu / công trình); dải tiến
 trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ PWA trên hộp thoại, `ConfirmDialog` qua portal.
@@ -694,7 +700,7 @@ trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ P
 2. Khi Haan đồng ý: đẩy nhánh, `npm run db:migrate:demo` rồi `npm run deploy` (API trước, web sau).
 3. GĐ2 đã làm (0167–0169) — xem «GĐ2 đã có trong mã» bên dưới. Chưa làm: ô «hợp đồng sắp hết hạn» (cần tham số số
    ngày, chưa có — để trống thay vì tự đặt), lối vào trang điều hành trên thanh dưới của điện thoại.
-4. Sau đó GĐ3 → 3b → 4 → 5 theo kế hoạch trong `doc/MOC_CAI_TIEN_UX.md`. Migration đánh số nối tiếp từ 0170.
+4. Sau đó GĐ3 → 3b → 4 → 5 theo kế hoạch trong `doc/MOC_CAI_TIEN_UX.md`. Migration đánh số nối tiếp từ 0171.
 
 ### 9.4 Quyết định đã chốt và lý do
 
