@@ -131,6 +131,12 @@ buộc trước Báo giá, được bỏ qua kèm lý do (lưu trên cơ hội, 
 - Test: nhóm «Việc của từng bước cơ hội» trong `flow-guard.test.ts`; demo NVC có phân loại và biên bản
   khảo sát.
 
+**Bổ sung lần hai (0161)** — chạy thử thấy khảo sát xong không sang được Báo giá: lưu biên bản không làm mới
+điều kiện bước; «Đã khảo sát lúc» ghi được ngày chưa tới; và 0155 đòi có báo giá để VÀO bước Báo giá (ngược
+thứ tự). Sửa: vào Báo giá chỉ cần phân loại + khảo sát, Đàm phán mới cần báo giá đã gửi; CSDL từ chối
+«đã khảo sát» ở tương lai; lưu phân loại M2–M4 / biên bản đã khảo sát thì tự sang bước kế và mở tab;
+«Soạn hợp đồng» chỉ hiện khi giá đã gửi khách.
+
 **Chưa làm trong giai đoạn này (đẩy sau)**
 
 - Bảng lịch sử bước chung `stage_transitions` cho hợp đồng / gói thầu / công trình (cơ hội đã có lịch sử).

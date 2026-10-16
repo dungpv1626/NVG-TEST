@@ -100,33 +100,47 @@ describeDb('Luồng cơ hội — đi đúng thứ tự, có điều kiện (015
     expect(error).toBeNull();
   });
 
-  it('Báo giá cần đã lập báo giá — CSDL và màn hình đọc CÙNG một điều kiện', async () => {
+  it('Báo giá cần khảo sát; báo giá được lập TRONG bước Báo giá, Đàm phán mới cần báo giá đã gửi', async () => {
     const id = await newOpportunity();
     await move(id, 'xac_minh');
 
-    await surveyed(id);
-
-    const pricing = async () =>
-      (await readiness(id, 'bao_gia')).find((r) => r.requirement === 'pricing_started')!;
-    const before = await pricing();
+    const survey = async () =>
+      (await readiness(id, 'bao_gia')).find((r) => r.requirement === 'survey_done')!;
+    const before = await survey();
     expect(before.met).toBe(false);
 
     const { error: blocked } = await move(id, 'bao_gia');
     expect(blocked?.message).toContain('Cần:');
     expect(blocked?.message).toContain(before.label);
 
-    const { error: quoteError } = await kd
-      .from('quotes')
-      .insert({ company_id: companyId, opportunity_id: id, total_value: 280_000_000 });
-    expect(quoteError).toBeNull();
-
-    expect((await pricing()).met).toBe(true);
+    // Khảo sát xong là đủ — chưa cần có báo giá (0161: đòi báo giá để VÀO bước Báo giá là ngược).
+    await surveyed(id);
+    expect((await survey()).met).toBe(true);
     const { error } = await move(id, 'bao_gia');
     expect(error).toBeNull();
 
     // Báo giá còn nháp, chưa gửi khách → chưa sang Đàm phán được.
+    const { error: quoteError } = await kd
+      .from('quotes')
+      .insert({ company_id: companyId, opportunity_id: id, total_value: 280_000_000 });
+    expect(quoteError).toBeNull();
     const { error: notSent } = await move(id, 'dam_phan');
     expect(notSent?.message).toContain('Cần:');
+  });
+
+  it('không ghi được «đã khảo sát» vào một ngày chưa tới (0161)', async () => {
+    const id = await newOpportunity();
+    const future = new Date(Date.now() + 14 * 24 * 3600 * 1000).toISOString();
+    const { error } = await kd
+      .from('site_surveys')
+      .insert({ opportunity_id: id, surveyed_at: future, needs: 'Ghi trước' });
+    expect(error?.message).toContain('tương lai');
+
+    // Lịch hẹn ở tương lai thì vẫn bình thường.
+    const { error: scheduled } = await kd
+      .from('site_surveys')
+      .insert({ opportunity_id: id, scheduled_at: future });
+    expect(scheduled).toBeNull();
   });
 
   it('lùi bước phải nêu lý do', async () => {

@@ -101,12 +101,15 @@ export function SurveyPanel({
   isHandedOver,
   draft,
   onDraftChange,
+  onSurveyed,
 }: {
   opportunityId: string;
   canEdit: boolean;
   isHandedOver: boolean;
   draft: SurveyDraft;
   onDraftChange: (draft: SurveyDraft) => void;
+  /** Lưu một biên bản ĐÃ khảo sát — trang cơ hội dùng để tự sang bước Báo giá. */
+  onSurveyed?: () => Promise<void>;
 }) {
   const { profile } = useAuth();
   const { data: surveys, isLoading, error, refetch } = useSiteSurveys(opportunityId);
@@ -151,6 +154,13 @@ export function SurveyPanel({
       setActionError('Vui lòng nhập lịch hẹn khảo sát hoặc thời điểm đã khảo sát.');
       return;
     }
+    const surveyedAt = fromNvgInput(form.surveyedAt);
+    if (surveyedAt && new Date(surveyedAt).getTime() > Date.now() + 10 * 60 * 1000) {
+      setActionError(
+        'Thời điểm đã khảo sát không được ở tương lai. Buổi khảo sát chưa diễn ra thì ghi vào ô Lịch hẹn.',
+      );
+      return;
+    }
     try {
       if (editingId) {
         await update.mutateAsync({ id: editingId, ...toPayload(form) });
@@ -158,6 +168,7 @@ export function SurveyPanel({
         await schedule.mutateAsync({ opportunityId, ...toPayload(form) });
       }
       onDraftChange(EMPTY_SURVEY_DRAFT);
+      if (surveyedAt) await onSurveyed?.();
     } catch (e) {
       setActionError(toUserMessage(e, editingId ? 'edit' : 'create'));
     }
@@ -237,7 +248,8 @@ function SurveyCard({
 }) {
   // Đã khảo sát thì là BIÊN BẢN; chưa thì mới chỉ là LỊCH HẸN — hai thứ khác nhau về giá trị
   // nghiệp vụ, nên nói rõ ngay ở dòng đầu thay vì để người đọc tự suy.
-  const done = survey.surveyed_at !== null;
+  // Biên bản cũ lỡ ghi «đã khảo sát» vào ngày chưa tới (trước 0161) không tính là đã khảo sát.
+  const done = survey.surveyed_at !== null && new Date(survey.surveyed_at).getTime() <= Date.now();
 
   const content = [
     { label: 'Nhu cầu', value: survey.needs },

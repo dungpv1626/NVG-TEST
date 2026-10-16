@@ -55,7 +55,7 @@ export const OPPORTUNITY_FLOW: Flow<OpportunityStage> = {
     },
     bao_gia: {
       label: OPPORTUNITY_STAGE_META.bao_gia.label,
-      owner: 'Báo giá được phê duyệt rồi gửi khách (hoặc gói thầu được nộp)',
+      owner: 'Kinh doanh lập báo giá, gửi phê duyệt rồi gửi khách (hoặc gói thầu được nộp)',
       next: ['dam_phan'],
     },
     dam_phan: {

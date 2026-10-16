@@ -96,6 +96,9 @@ export function useScheduleSurvey() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['site_surveys'] });
+      // Điều kiện bước của cơ hội («Đã khảo sát») nằm dưới khoá `opportunities` — thiếu dòng
+      // này thì lưu biên bản xong dải tiến trình vẫn báo «Cần» (phản hồi chủ dự án).
+      void queryClient.invalidateQueries({ queryKey: ['opportunities'] });
     },
   });
 }
@@ -123,6 +126,9 @@ export function useUpdateSurvey() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['site_surveys'] });
+      // Điều kiện bước của cơ hội («Đã khảo sát») nằm dưới khoá `opportunities` — thiếu dòng
+      // này thì lưu biên bản xong dải tiến trình vẫn báo «Cần» (phản hồi chủ dự án).
+      void queryClient.invalidateQueries({ queryKey: ['opportunities'] });
     },
   });
 }

@@ -63,7 +63,6 @@ const STAGE_TAB: Record<OpportunityStage, string> = {
 const REQUIREMENT_TAB: Record<string, { tab: string; anchor?: string; label: string }> = {
   classified: { tab: 'tong-quan', anchor: CLASSIFICATION_ANCHOR, label: 'Phân loại' },
   survey_done: { tab: 'khao-sat', label: 'Mở Khảo sát' },
-  pricing_started: { tab: 'bao-gia', label: 'Lập báo giá' },
   offer_sent: { tab: 'bao-gia', label: 'Mở Báo giá' },
 };
 
@@ -159,6 +158,21 @@ export function OpportunityDetailPage() {
     } catch (e) {
       setMoveError(toUserMessage(e, 'edit'));
       return 'Đã lưu phân loại, nhưng chưa chuyển được sang Khảo sát.';
+    }
+  }
+
+  /**
+   * Ghi biên bản đã khảo sát xong thì đi tiếp luôn sang Báo giá và mở tab Báo giá — cùng cách
+   * với lưu phân loại. Không đi được (vd thiếu phân loại) thì nói lý do, không im lặng.
+   */
+  async function afterSurveyed(): Promise<void> {
+    if (data!.stage !== 'khao_sat') return;
+    setMoveError(null);
+    try {
+      await moveStage.mutateAsync({ opportunityId: data!.id, toStage: 'bao_gia' });
+      openTab(STAGE_TAB.bao_gia);
+    } catch (e) {
+      setMoveError(toUserMessage(e, 'edit'));
     }
   }
 
@@ -290,7 +304,11 @@ export function OpportunityDetailPage() {
               )}
               {/* Webapp Flow 3.1 bước 5: khách đồng ý ở bước Đàm phán thì soạn hợp đồng
                   ngay tại chỗ, lấy sẵn khách hàng và giá đã duyệt (HD-01). */}
-              {(data.stage === 'bao_gia' || data.stage === 'dam_phan') &&
+              {/* Ở Báo giá chỉ mời soạn khi giá đã chốt với khách (báo giá đã gửi / gói thầu đã nộp)
+                  — chưa có báo giá mà hiện «Soạn hợp đồng» là mời làm bước sau trước bước trước. */}
+              {(data.stage === 'dam_phan' ||
+                (data.stage === 'bao_gia' &&
+                  readiness.some((r) => r.requirement === 'offer_sent' && r.met))) &&
                 (contractId || hasContract === false) && (
                   <DraftContractButton
                     sourceType="opportunities"
@@ -372,6 +390,7 @@ export function OpportunityDetailPage() {
                 isHandedOver={isHandedOver}
                 draft={surveyDraft}
                 onDraftChange={setSurveyDraft}
+                onSurveyed={afterSurveyed}
               />
             ),
           },
