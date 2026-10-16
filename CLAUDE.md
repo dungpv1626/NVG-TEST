@@ -614,6 +614,10 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
 - **Mốc:** tag `moc-truoc-cai-tien-ux` (= `ef2eb13`, PR #27 của `anhoangha/NVG`). Xem thay đổi:
   `git diff --stat moc-truoc-cai-tien-ux..cai-tien-ux`. Sao lưu CSDL máy + ảnh trước/sau ở `backup/` (không commit).
 - `main` giữ nguyên. **Chưa đẩy nhánh/tag lên GitHub, chưa `db:migrate:demo`, chưa deploy** — cần Haan đồng ý.
+  Mọi thay đổi chỉ chạy trên máy (`http://localhost:5173`); bản demo `nvg.tests99.workers.dev` vẫn là bản cũ.
+- Cách làm đã chứng minh hiệu quả: **chạy thử bằng đúng tài khoản từng vai trên trình duyệt** (Playwright, chụp ảnh)
+  sau mỗi thay đổi — phần lớn lỗi của đợt này (nút hiện rồi báo lỗi, tự gán sai người, bỏ qua được bước) chỉ lộ ra
+  khi đi trọn luồng như người dùng thật, không lộ ở phép thử đơn vị.
 
 ### 9.2 Trạng thái từng giai đoạn
 
@@ -621,13 +625,13 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
 | --- | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
 | 0   | Lưu mốc                                                                                                                    | **Xong**                            |
 | 1   | Quyền + thứ tự bước, đồng bộ liên module, dải tiến trình + chuỗi hồ sơ, gỡ chế độ tối, sửa lớp đè / token màu (vấn đề 2–4) | **Xong phần chính** — chờ Haan kiểm |
-| 2   | Trang «Tổng quan điều hành» + vai trò Kiểm soát nội bộ (KSNB) (vấn đề 1)                                                   | **Xong phần chính** — chờ Haan kiểm |
+| 2   | «Tổng quan điều hành» + Dashboard lãnh đạo theo khung từng công ty + vai trò Kiểm soát nội bộ (vấn đề 1)                   | **Xong phần chính** — chờ Haan kiểm |
 | 3   | Khảo sát chốt bằng máy (CRM + TK), đính kèm dùng chung, ghi âm → Whisper → Gemini tóm tắt (vấn đề 6, 8)                    | Chưa làm                            |
 | 3b  | Điểm danh theo tổ, kiểm bán kính GPS (chỉ cảnh báo), báo cáo có mặt, đề xuất chấm công                                     | Chưa làm                            |
 | 4   | Mẫu hợp đồng `.docx` có chỗ trống, tự điền, xem trước, xuất (vấn đề 5)                                                     | Chưa làm                            |
 | 5   | AI Design thành 4 bước: Đầu vào → Mặt bằng → Mặt ngoài → Bộ kết quả (vấn đề 7)                                             | Chưa làm                            |
 
-**GĐ1 đã có trong mã** (migration 0155–0159):
+**GĐ1 đã có trong mã** (migration 0155–0166; 0160–0166 là vòng rà chuỗi bước bằng đúng vai sau phản hồi chủ dự án):
 
 - 0155 `move_opportunity_stage`: chỉ đi tới bước kế tiếp khi đủ điều kiện (`stage_readiness` — một nguồn cho
   CSDL và giao diện); lùi phải có lý do; «Ký hợp đồng» không chuyển tay. `_sync_opportunity_stage` nội bộ.
@@ -668,52 +672,51 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
 - Hàng rào: `flow-guard.test.ts`, `flow.test.ts` (khớp SQL 0155), chuỗi hồ sơ trong `golden-path.test.ts`,
   `design-rules.test.ts` (lớp màu chỉ trỏ token đã khai; không còn chế độ tối); đột biến M238–M240.
 
-**GĐ2 đã có trong mã** (0167–0169):
+**GĐ2 đã có trong mã** (0167–0170) — trạng thái HIỆN TẠI:
 
-- Vai trò `KSNB` «Kiểm soát nội bộ» (0167 chỉ thêm enum; dòng vai trò + quyền do `db:seed` tạo — chạy seed SAU migrate,
-  kể cả trên demo). Xem mọi pháp nhân / phân hệ; không tạo, sửa, phê duyệt; xem giá vốn, lợi nhuận, tài chính,
-  nhật ký kiểm toán; KHÔNG xem lương, hồ sơ cá nhân. Tài khoản thử `ksnb@nhavietgroup.test`.
-- `auth_is_read_only()`, `auth_manages_all_companies()`: «xem mọi pháp nhân» không còn đồng nghĩa «quản lý mọi pháp
-  nhân». Hai bảng trước cho ghi chỉ vì `sees_all_companies` (danh mục kiểm tra nghiệm thu, phân công công trình) đã
-  đổi. **Viết điều kiện GHI mới thì dùng `auth_manages_all_companies()`, đừng dùng `auth_sees_all_companies()`.**
+- **Vai trò `KSNB` «Kiểm soát nội bộ»** (0167 chỉ thêm enum; dòng vai trò + quyền do `db:seed` tạo — **chạy seed SAU
+  migrate, kể cả trên demo**). Xem mọi pháp nhân / phân hệ; không tạo, sửa, phê duyệt; xem giá vốn, lợi nhuận, tài
+  chính, nhật ký kiểm toán; KHÔNG xem lương, hồ sơ cá nhân. Tài khoản thử `ksnb@nhavietgroup.test`.
+- `auth_is_read_only()`, `auth_manages_all_companies()` (0168): «xem mọi pháp nhân» không còn đồng nghĩa «quản lý mọi
+  pháp nhân». **Viết điều kiện GHI mới thì dùng `auth_manages_all_companies()`, đừng dùng `auth_sees_all_companies()`.**
   Chữ 'KSNB' trong SQL so dạng `text` (giá trị enum mới chưa commit khi các migration chạy chung một giao dịch).
-- Web: `useIsResponsible` dựa vào `ORG_MANAGER_ROLES` (gương `rls_owner_can_write`), không còn dựa `seesAllCompanies`.
-  Đăng nhập / `/` đi tới `roles.default_route` (`useDefaultRoute`); TGĐ, CFO, BGĐ, KSNB → `/tong-quan`.
-- `exec_overview()` (0169) + trang `pages/dieu-hanh/tong-quan.tsx`: 10 ô (phê duyệt đang chờ, đề nghị chi kẹt, công
-  nợ phải thu / phải trả quá hạn, hợp đồng quá hạn, công trình trễ / vượt ngân sách, giàn giáo quá hạn trả, giấy tờ
-  nhân sự, báo giá không qua khảo sát), xếp theo mức, mỗi ô tối đa 5 hồ sơ. Quy tắc quá hạn chép đúng `*DisplayStatus`
-  của `shared/`; mốc «chờ lâu» = SLA nếu có, không thì `PENDING_APPROVAL_AGING_DAYS` do trang truyền vào.
-- **Mỗi công ty một khung (chủ dự án chốt sau ba vòng sửa):** Dashboard của lãnh đạo = chọn kỳ + `CompanyBoards`
-  (`pages/dieu-hanh/company-boards.tsx`): ba khung NVC / NVS / NVO, mỗi khung đủ tình trạng (vấn đề, bấm mở đúng danh
-  sách của công ty đó), chờ duyệt, tiền trong kỳ, đang chạy — cùng thứ tự ở ba khung. KHÔNG chia trang theo chủ đề
-  (khối tài chính, lưới thẻ phân hệ), KHÔNG theo bộ chọn pháp nhân. Tổng quan điều hành dùng lại cùng khối, cộng hai
-  cách so sánh (bản đồ cảnh báo mảng × công ty, biểu đồ quy mô). Đã gỡ khối «Tiêu điểm» và tài chính tách công ty
-  (hai vòng trước) — nội dung nằm trong khung.
-- **Vai trò ba trang (chủ dự án chốt):** Tổng quan điều hành = lãnh đạo, «vấn đề ở đâu, công ty nào» (cảnh báo tính ở
-  CSDL, tách theo công ty). Dashboard = trang làm việc theo kỳ của từng người, trong phạm vi quyền của họ — với lãnh
-  đạo KHÔNG còn ô «Quá hạn» (thay bằng ô / liên kết sang `/tong-quan`), giữ khối tài chính vì đó là xu hướng theo
-  kỳ. Báo cáo `/bc/...` = xem sâu, xuất báo cáo; hai trang kia chỉ dẫn liên kết, không dựng lại báo cáo.
-- Trang vẽ bằng HÌNH (chủ dự án: «nhiều chữ quá»): dải chờ quyết định; 3 thẻ sức khoẻ có vòng tròn theo mức + biểu
-  tượng hoạt động; bản đồ cảnh báo (ô màu kèm số / ✓, rê để xem hồ sơ, nhãn ngắn + biểu tượng — tên đầy đủ đọc được
-  qua `aria-label`); 2 biểu đồ cột theo công ty (tài chính tháng, quy mô cơ hội / hợp đồng). Dữ liệu như dưới.
-- Bố cục ba công ty cạnh nhau (0170, chủ dự án chọn sau bản đầu gộp số): việc chờ quyết định → bảng cảnh báo hàng =
-  vấn đề × cột = NVC / NVS / NVO (`exec_overview_by_company`; bấm ô = chọn pháp nhân đó + mở danh sách lọc; mảng ổn ở
-  cả ba công ty gom một dòng) → hồ sơ cần chú ý gắn mã công ty → hoạt động từng công ty (`exec_company_pulse`, chỉ hiện
-  chỉ số có hoạt động, không gán cứng mảng cho mã công ty) → tài chính tháng này theo công ty (`finance_daily`).
-  Cột «Cả tập đoàn» CHƯA loại giao dịch nội bộ (QĐ-6) — chưa có dữ liệu đánh dấu; trang nói rõ.
+- Web: `useIsResponsible` dựa vào `ORG_MANAGER_ROLES` (gương `rls_owner_can_write`), không dựa `seesAllCompanies`.
+  Đăng nhập / `/` đi tới `roles.default_route` (`useDefaultRoute`; trang đăng nhập chờ hồ sơ tải xong, tối đa 5 giây);
+  TGĐ, CFO, BGĐ, KSNB → `/tong-quan`. Mục «Tổng quan điều hành» đầu menu chỉ hiện cho các vai trò đó.
+- CSDL: `exec_overview()` (0169, 10 mảng cảnh báo, quy tắc quá hạn chép đúng `*DisplayStatus` của `shared/`, mốc «chờ
+  lâu» = SLA nếu có, không thì `PENDING_APPROVAL_AGING_DAYS` trang truyền vào); `exec_overview_by_company`,
+  `exec_company_pulse` (0170). Cửa vào: TGĐ / CFO / BGĐ / ADMIN / KSNB.
+- **Khung từng công ty `CompanyBoards`** (`pages/dieu-hanh/company-boards.tsx`) — khối chính của lãnh đạo: ba khung NVC /
+  NVS / NVO, mỗi khung đủ tình trạng (vấn đề, bấm = chọn pháp nhân đó + mở danh sách lọc), chờ duyệt, tiền trong kỳ,
+  đang chạy — cùng thứ tự ở ba khung; khung có việc cần xử lý viền đỏ. Nhãn / biểu tượng mảng: `exec-meta.ts`.
+- **Dashboard của lãnh đạo** (`dashboard.tsx`, nhánh `ExecDashboard`): chỉ còn chọn kỳ + `CompanyBoards` + liên kết sang
+  Tổng quan điều hành và Báo cáo. Vai trò khác giữ Dashboard cũ (lưới thẻ phân hệ theo bộ chọn pháp nhân).
+- **Tổng quan điều hành** (`/tong-quan`): `CompanyBoards` (tháng này) + bản đồ cảnh báo mảng × công ty (chỉ hiện mảng có
+  vấn đề, mảng ổn gom một dòng ✓, rê ô để xem hồ sơ) + biểu đồ quy mô (cơ hội / hợp đồng theo công ty).
+- `/kt/cong-no?chieu=phai-tra` mở thẳng tab Phải trả.
 - Hàng rào: `ksnb.test.ts` (đo bằng cách nới chính sách — phép thử phải đỏ; cộng các công ty = số gộp),
-  `tong-quan.test.tsx`.
+  `tong-quan.test.tsx`, `company-boards.test.tsx` (số công ty này không lọt sang khung công ty kia), ca lãnh đạo
+  trong `dashboard.test.tsx`.
+- **Đã thử rồi bỏ** (đừng dựng lại): gộp số cả tập đoàn thành một con số; bảng chữ «cảnh báo theo công ty»; thẻ sức
+  khoẻ vòng tròn; khối «Tiêu điểm» trên lưới thẻ; khối tài chính chia theo chủ đề tách công ty. Lý do ở 9.4.
+- Hạn chế: số «cả tập đoàn» CHƯA loại giao dịch nội bộ (QĐ-6 chưa làm — không có cột đánh dấu); trang ghi rõ.
 
 **GĐ1 còn thiếu:** bảng lịch sử bước chung `stage_transitions` (hợp đồng / gói thầu / công trình); dải tiến
 trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ PWA trên hộp thoại, `ConfirmDialog` qua portal.
 
 ### 9.3 Bước tiếp theo
 
-1. Haan kiểm GĐ1 trên máy (`http://localhost:5173`) và trả lời các câu hỏi ở 9.5.
-2. Khi Haan đồng ý: đẩy nhánh, `npm run db:migrate:demo` rồi `npm run deploy` (API trước, web sau).
-3. GĐ2 đã làm (0167–0169) — xem «GĐ2 đã có trong mã» bên dưới. Chưa làm: ô «hợp đồng sắp hết hạn» (cần tham số số
-   ngày, chưa có — để trống thay vì tự đặt), lối vào trang điều hành trên thanh dưới của điện thoại.
-4. Sau đó GĐ3 → 3b → 4 → 5 theo kế hoạch trong `doc/MOC_CAI_TIEN_UX.md`. Migration đánh số nối tiếp từ 0171.
+1. **Haan kiểm GĐ1 + GĐ2 trên máy** (`http://localhost:5173`, mật khẩu `NhaViet2026`) bằng đúng vai: Kinh doanh
+   `kinhdoanh.nvc@…` đi cơ hội → báo giá → hợp đồng; TGĐ `tgd@…` duyệt, ký, mở công trình, xem Dashboard / Tổng quan
+   điều hành; Thi công `congtruong.nvc@…` phân công, khởi công; Chỉ huy trưởng `chihuytruong.nvc@…` nghiệm thu, bảo
+   hành; KSNB `ksnb@…` chỉ xem. Trả lời các câu hỏi ở 9.5.
+2. Khi Haan đồng ý phát hành: đẩy nhánh → `npm run db:migrate:demo` → **`db:seed` trên demo** (vai trò KSNB, trang mặc
+   định mới) → `npm run deploy` (API trước, web sau).
+3. Việc nhỏ còn treo: thẻ phân hệ trên Dashboard vai trò khác chưa tách theo công ty (nếu chủ dự án muốn); ô «hợp đồng
+   sắp hết hạn» (cần tham số số ngày); lối vào Tổng quan điều hành trên thanh dưới điện thoại; đánh dấu giao dịch nội
+   bộ (QĐ-6) để số tập đoàn loại được; GĐ1 còn thiếu ở trên; nạp thêm dữ liệu demo có hồ sơ quá hạn ở cả ba công ty để
+   trang điều hành có gì để xem.
+4. Sau đó GĐ3 → 3b → 4 → 5 theo kế hoạch trong `doc/MOC_CAI_TIEN_UX.md`. **Migration tiếp theo: 0171.**
 
 ### 9.4 Quyết định đã chốt và lý do
 
@@ -735,6 +738,16 @@ trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ P
 | Rời Xác minh cần Phân loại M2–M4 + Loại công trình; khảo sát bắt buộc trước Báo giá, bỏ qua phải ghi lý do   | Chủ dự án chọn; trước đó không có chỗ nhập phân loại và khảo sát bỏ qua được không để lại dấu vết. M1 «Lưu trữ» = chưa có nhu cầu thực                         |
 | Khảo sát: đổi luồng cho CẢ CRM lẫn TK                                                                        | Chủ dự án chọn; hai nơi đang ghi thời điểm kết thúc sai theo hai kiểu khác nhau                                                                                |
 | Dashboard điều hành là trang riêng + vai trò KSNB chỉ xem                                                    | Chủ dự án chọn; Dashboard chung không cho lãnh đạo thấy ngay vấn đề toàn hệ thống                                                                              |
+| Báo giá lập TRONG bước Báo giá; vào Báo giá chỉ cần phân loại + khảo sát                                     | Đòi có báo giá để VÀO bước Báo giá là ngược thứ tự — người dùng kẹt ở Khảo sát (thấy khi chạy thử)                                                             |
+| Làm xong việc của bước thì tự sang bước kế + mở đúng tab (lưu phân loại, biên bản khảo sát, gửi báo giá…)    | Chủ dự án: «phải tự mò»; bước có điều kiện rõ thì hệ thống đi tiếp, người dùng chỉ làm việc                                                                    |
+| Mọi phê duyệt hiện «Đang chờ: ai · bao lâu» + nút «Thúc» (chỉ người gửi, có giãn cách)                       | AFD 4.7; trước đó người gửi chỉ thấy «Chờ duyệt», phải gọi điện hỏi                                                                                            |
+| Thi công KHÔNG xem Module Hợp đồng                                                                           | Chủ dự án giữ nguyên quyền; panel công trình chỉ nói «đã có hợp đồng», không lộ số / giá trị                                                                   |
+| Chỉ huy trưởng phải là người có quyền sửa TC; ô chọn chỉ liệt kê người đó                                    | Mở công trình từng tự lấy người Kinh doanh phụ trách hợp đồng làm chỉ huy (thấy khi chạy thử)                                                                  |
+| Kết thúc công trình chỉ khi hết bảo hành, không còn yêu cầu bảo hành mở                                      | Trước đó bấm được ngay hôm bàn giao — công trình biến khỏi theo dõi khi khách còn quyền gọi bảo hành                                                           |
+| KSNB: xem giá vốn / lợi nhuận / tài chính / nhật ký; không xem lương, hồ sơ cá nhân                          | Kiểm soát cần số để đối chiếu; lương / cá nhân là mặc định an toàn chờ Haan                                                                                    |
+| Lãnh đạo: MỖI CÔNG TY MỘT KHUNG đủ tình hình; không chia trang theo chủ đề, không theo bộ chọn pháp nhân     | Chủ dự án qua bốn vòng: gộp số → không biết công ty nào; tách theo chủ đề → phải gom bằng mắt, nhớ không hết; chốt «nhìn một nơi nắm một công ty»              |
+| Lãnh đạo nhìn ít mà ra vấn đề: chỉ vấn đề mới to / đứng trên, mảng ổn gom một dòng, không xếp thẻ ngang hàng | Chủ dự án: «nhìn quá nhiều thứ cùng cấp bậc nên bị loạn»                                                                                                       |
+| Lãnh đạo dùng hình thay chữ khi có thể (biểu tượng, ô màu kèm số / ✓); mức luôn có chữ hoặc nhãn đọc được    | Chủ dự án: «nhiều chữ quá»; CGD 6.8 cấm dùng màu làm cách duy nhất                                                                                             |
 
 ### 9.5 Câu hỏi chờ Haan (đang chạy theo mặc định trong ngoặc)
 
@@ -744,11 +757,21 @@ trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ P
 4. Trượt thầu có tự đánh dấu Mất cơ hội? (chỉ báo người phụ trách)
 5. Ai mở công trình từ hợp đồng? (Ban Giám đốc hoặc Trưởng phòng Thi công / Chỉ huy trưởng)
 6. Cho GĐ3b: cách tính công từ điểm danh, công lao động thời vụ ghi vào đâu, bán kính GPS bao nhiêu mét.
+7. KSNB có được xem lương / hồ sơ cá nhân? (không)
+8. Hợp đồng còn bao nhiêu ngày thì tính «sắp hết hạn»? (chưa có ô này)
+9. Mốc «phê duyệt chờ lâu» 3 ngày (giả định cũ của Dashboard) — giữ, hay đặt SLA theo loại hồ sơ? (3 ngày)
+10. Khảo sát có bắt buộc với cả ba pháp nhân? (bắt buộc, bỏ qua phải ghi lý do — lý do hiện trên trang điều hành)
 
 ### 9.6 Ghi chú máy phát triển Windows
 
-- Sau khi khởi động lại máy, Windows có thể giữ dải cổng 55317–55416 nên Supabase không mở được cổng 553xx:
-  chạy PowerShell quyền Administrator `net stop winnat; net start winnat`, rồi `npm run db:start`.
+- Sau khi khởi động lại máy: mở Docker Desktop → `npm run db:start` → `npm run dev:workers` → `npm run dev`. Nếu Windows
+  giữ dải cổng 55317–55416 (Supabase không mở được cổng 553xx): PowerShell quyền Administrator
+  `net stop winnat; net start winnat`. Hàm mới vừa tạo mà REST báo không thấy: `NOTIFY pgrst, 'reload schema'`.
+- Sửa một migration CHƯA phát hành sau khi đã áp trên máy: sửa tệp rồi chạy lại nguyên tệp bằng
+  `docker exec -i supabase_db_nvg psql -U postgres -v ON_ERROR_STOP=1 < db/migrations/<tệp>.sql` (viết tệp chạy lại
+  được: `CREATE OR REPLACE`, `DROP … IF EXISTS`). Bẫy plpgsql đã gặp hai lần: bí danh bảng trùng tên biến `record`
+  («record "s" is not assigned yet»); cột của `RETURNS TABLE` trùng cột bảng → thêm `#variable_conflict use_column`.
+- Đoạn văn dài nhiều dấu nháy truyền qua heredoc của Bash tool hay vỡ — ghi script vào scratchpad rồi chạy tệp.
 - Migration viết tay phải thêm mục vào `db/migrations/meta/_journal.json` (idx +1, `when` +10000000).
 - Git Bash đổi `/duong-dan` thành đường dẫn Windows khi truyền cho node — đặt `MSYS_NO_PATHCONV=1`.
   Playwright cần `executablePath` trỏ `%LOCALAPPDATA%/ms-playwright/chromium-1243/chrome-win64/chrome.exe`.
