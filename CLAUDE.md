@@ -595,3 +595,109 @@ hết, và tốn **~115.000 token** mỗi lần một phiên phải đọc nó).
 giữ **hai ngày gần nhất**, cũ hơn đẩy sang **`TIEN_DO_THIET_KE_LUU.html`**; vướng mắc đã gỡ chuyển sang
 tờ lưu trữ ngay; phần nói về thứ **đã bị xoá khỏi mã** thì **xoá hẳn** — `doc/design/QUYET_DINH_AI.md`
 và lịch sử git đã giữ. Cập nhật hai tờ này bằng lệnh chèn ở shell, **đừng `Read` cả tệp**.
+
+---
+
+## 9. Đợt cải tiến UX và luồng (nhánh `cai-tien-ux`) — trạng thái
+
+Chi tiết đầy đủ, hiện trạng tại mốc và danh sách commit: **`doc/MOC_CAI_TIEN_UX.md`**. Mục này là bản tóm
+tắt để phiên sau bắt đầu ngay; tệp mốc thắng khi hai nơi lệch.
+
+### 9.1 Nguồn gốc
+
+Review UX toàn dự án (4 nhóm: điều hướng, giao diện, luồng nghiệp vụ, AI Design; ~150 ảnh chụp) và 8 vấn đề
+chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề ngay · (2) giao diện đè nhau, bỏ chế độ tối ·
+(3) chuyển bước sai quyền, không đồng bộ · (4) không biết tiến độ / bước tiếp theo / bước cuối · (5) mẫu hợp
+đồng Word tự điền · (6) giọng nói → chữ → AI tổng hợp, tải tệp mọi nơi · (7) AI Design chưa công thái học ·
+(8) khảo sát: máy tự ghi kết thúc sau khi chốt.
+
+- **Mốc:** tag `moc-truoc-cai-tien-ux` (= `ef2eb13`, PR #27 của `anhoangha/NVG`). Xem thay đổi:
+  `git diff --stat moc-truoc-cai-tien-ux..cai-tien-ux`. Sao lưu CSDL máy + ảnh trước/sau ở `backup/` (không commit).
+- `main` giữ nguyên. **Chưa đẩy nhánh/tag lên GitHub, chưa `db:migrate:demo`, chưa deploy** — cần Haan đồng ý.
+
+### 9.2 Trạng thái từng giai đoạn
+
+| GĐ  | Nội dung                                                                                                                   | Trạng thái                          |
+| --- | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| 0   | Lưu mốc                                                                                                                    | **Xong**                            |
+| 1   | Quyền + thứ tự bước, đồng bộ liên module, dải tiến trình + chuỗi hồ sơ, gỡ chế độ tối, sửa lớp đè / token màu (vấn đề 2–4) | **Xong phần chính** — chờ Haan kiểm |
+| 2   | Trang «Tổng quan điều hành» + vai trò Kiểm soát nội bộ (KSNB) (vấn đề 1)                                                   | Chưa làm                            |
+| 3   | Khảo sát chốt bằng máy (CRM + TK), đính kèm dùng chung, ghi âm → Whisper → Gemini tóm tắt (vấn đề 6, 8)                    | Chưa làm                            |
+| 3b  | Điểm danh theo tổ, kiểm bán kính GPS (chỉ cảnh báo), báo cáo có mặt, đề xuất chấm công                                     | Chưa làm                            |
+| 4   | Mẫu hợp đồng `.docx` có chỗ trống, tự điền, xem trước, xuất (vấn đề 5)                                                     | Chưa làm                            |
+| 5   | AI Design thành 4 bước: Đầu vào → Mặt bằng → Mặt ngoài → Bộ kết quả (vấn đề 7)                                             | Chưa làm                            |
+
+**GĐ1 đã có trong mã** (migration 0155–0159):
+
+- 0155 `move_opportunity_stage`: chỉ đi tới bước kế tiếp khi đủ điều kiện (`stage_readiness` — một nguồn cho
+  CSDL và giao diện); lùi phải có lý do; «Ký hợp đồng» không chuyển tay. `_sync_opportunity_stage` nội bộ.
+- 0156: trigger chặn người gửi tự ĐỒNG Ý hồ sơ của mình (`approval_decisions`, `payment_request_steps`);
+  `my_pending_approvals` bỏ hồ sơ của mình.
+- 0157: `auth_can_approve_module`; trigger `contracts_stage_permissions`, `contracts_source_ready`,
+  `construction_sites_open_permission`; `rls_contract_writable` thêm điều kiện người chịu trách nhiệm.
+- 0158: hợp đồng đã ký → cơ hội «Ký hợp đồng»; hủy / trượt thầu → báo người phụ trách cơ hội;
+  `move_design_stage` không nhảy cóc bằng tay; bàn giao thiết kế gắn hợp đồng đã ký (tham số
+  `tk.handover_requires_signed_contract`).
+- 0159: `record_chain`, `opportunity_has_contract`, trigger một cơ hội một hợp đồng.
+- Giao diện: `shared/src/flow.ts` (`OPPORTUNITY_FLOW`, `CONTRACT_FLOW`, `SITE_FLOW`, `stepWindow`), `StepTrack`,
+  `RecordChain`, slot `progress` của `EntityDetail`, `allowedDrop` của Kanban, `bottom-bar-slot.ts`; đã gỡ
+  `lib/theme.tsx` và `tk-theme.css`.
+- Hàng rào: `flow-guard.test.ts`, `flow.test.ts` (khớp SQL 0155), chuỗi hồ sơ trong `golden-path.test.ts`,
+  `design-rules.test.ts` (lớp màu chỉ trỏ token đã khai; không còn chế độ tối); đột biến M238–M240.
+
+**GĐ1 còn thiếu:** bảng lịch sử bước chung `stage_transitions` (hợp đồng / gói thầu / công trình); dải tiến
+trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ PWA trên hộp thoại, `ConfirmDialog` qua portal.
+
+### 9.3 Bước tiếp theo
+
+1. Haan kiểm GĐ1 trên máy (`http://localhost:5173`) và trả lời các câu hỏi ở 9.5.
+2. Khi Haan đồng ý: đẩy nhánh, `npm run db:migrate:demo` rồi `npm run deploy` (API trước, web sau).
+3. GĐ2 — migration `0160` thêm `KSNB` vào enum role (riêng một migration), `0161` quyền chỉ xem toàn bộ,
+   `0162` `exec_overview()` + các view cảnh báo (phê duyệt kẹt toàn công ty, giàn giáo quá hạn trả, công nợ phải
+   trả quá hạn, đề nghị chi kẹt bước, hợp đồng sắp hết hạn, hồ sơ nhân sự sắp hết hạn); trang
+   `pages/dieu-hanh/tong-quan.tsx`; đăng nhập đi tới `defaultRoute` của vai trò (đang bị bỏ qua ở `login.tsx`,
+   `App.tsx`). **Trước KSNB phải sửa `useIsResponsible`** (`web/src/lib/auth.tsx`) — nó dựa vào
+   `seesAllCompanies` nên KSNB sẽ thấy nút sửa ở mọi hồ sơ.
+4. Sau đó GĐ3 → 3b → 4 → 5 theo kế hoạch trong `doc/MOC_CAI_TIEN_UX.md`. Migration đánh số nối tiếp từ 0160.
+
+### 9.4 Quyết định đã chốt và lý do
+
+| Quyết định                                                                                                   | Lý do                                                                                                                                                          |
+| ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Kinh doanh chỉ soạn, sửa, gửi hợp đồng mình chịu trách nhiệm; Ban Giám đốc ghi ký, quyết toán, hủy sau duyệt | Chủ dự án chọn; tách người thực hiện với người phê duyệt (PRD 2.3). BGĐ có `approve` HD nhưng không có `edit`, nên trước đây lại không ghi ký được             |
+| Cấm tự ĐỒNG Ý hồ sơ của mình, đặt ở TRIGGER chứ không sửa từng hàm duyệt                                     | Một chỗ phủ mọi loại phê duyệt; không chép lại `decide_approval` ~300 dòng (bài học 0086). Tự hủy (`rejected`) vẫn được. Đơn nghỉ xét theo nhân viên trong đơn |
+| Quy tắc hợp đồng đặt ở trigger trên bảng, không ở thân hàm                                                   | Mọi đường đổi bước (kể cả `decide_approval`) đều đi qua; không chép lại hàm dài                                                                                |
+| Điều kiện «Báo giá / Đàm phán» chấp nhận báo giá CRM, gói thầu HOẶC hồ sơ thiết kế                           | NVC định giá qua gói thầu (DA), NVO qua thiết kế — đòi riêng báo giá CRM là chặn nhầm luồng nhà xưởng                                                          |
+| Không tự sang Đàm phán khi khách trả lời báo giá                                                             | `quotes.customer_response` là chữ tự do, không có cờ chấp nhận; điều kiện thay bằng «đã duyệt và đã gửi khách»                                                 |
+| Không nhảy cóc hồ sơ thiết kế chỉ ở `move_design_stage`, không ở trigger bảng                                | `record_design_review` đẩy Phương án → Hồ sơ kỹ thuật khi khách duyệt — trigger sẽ chặn nhầm thao tác thật                                                     |
+| Không tự đẩy công trình sang Nghiệm thu khi có biên bản khách hàng                                           | Biên bản có thể chỉ cho một đợt (`stage_name`)                                                                                                                 |
+| `stage_readiness` và `record_chain` là SECURITY DEFINER nhưng chỉ trả cờ / hồ sơ người gọi được xem          | Kinh doanh không xem DA vẫn phải biết đủ điều kiện và đã có hợp đồng; hồ sơ ngoài quyền bị bỏ hẳn (5.4)                                                        |
+| Gỡ hẳn chế độ tối                                                                                            | Chủ dự án yêu cầu; bảng màu thứ hai không ai duy trì là nơi sinh chữ đen trên nền đen                                                                          |
+| Hộp hướng dẫn không tự mở, chỉ chấm «có hướng dẫn mới»                                                       | Bảng tự mở che cột Trạng thái / Thời hạn ở 16 danh sách và chặn cú bấm                                                                                         |
+| Trên điện thoại, thao tác công trường THAY thanh điều hướng (kèm nút «Phân hệ»)                              | Hai thanh chồng nhau ~150px che ô nhập nhật ký; AFD 4.8 cho 4–5 mục, nút chụp ảnh luôn hiện                                                                    |
+| STT: Cloudflare Workers AI Whisper; tóm tắt: Gemini Flash trả phí, tắt mặc định                              | Chủ dự án muốn miễn phí / rẻ; Gemini miễn phí có thể huấn luyện trên dữ liệu khách nên bị loại                                                                 |
+| Mẫu hợp đồng: `.docx` có chỗ trống, điền tất định; AI chỉ gợi ý câu chữ                                      | Giữ đúng định dạng mẫu Word của NVG; dữ liệu hợp đồng là hạng 1, không gửi AI                                                                                  |
+| Khảo sát: đổi luồng cho CẢ CRM lẫn TK                                                                        | Chủ dự án chọn; hai nơi đang ghi thời điểm kết thúc sai theo hai kiểu khác nhau                                                                                |
+| Dashboard điều hành là trang riêng + vai trò KSNB chỉ xem                                                    | Chủ dự án chọn; Dashboard chung không cho lãnh đạo thấy ngay vấn đề toàn hệ thống                                                                              |
+
+### 9.5 Câu hỏi chờ Haan (đang chạy theo mặc định trong ngoặc)
+
+1. NVO có được thi công trước khi ký hợp đồng? (cảnh báo; đặt `tk.handover_requires_signed_contract = true` để chặn)
+2. TGĐ gửi hồ sơ thì ai duyệt? (người khác có hạn mức; chưa có ngoại lệ)
+3. Tuyển dụng do Nhân sự lập rồi Nhân sự duyệt có được không? (cho phép)
+4. Trượt thầu có tự đánh dấu Mất cơ hội? (chỉ báo người phụ trách)
+5. Ai mở công trình từ hợp đồng? (Ban Giám đốc hoặc Trưởng phòng Thi công / Chỉ huy trưởng)
+6. Cho GĐ3b: cách tính công từ điểm danh, công lao động thời vụ ghi vào đâu, bán kính GPS bao nhiêu mét.
+
+### 9.6 Ghi chú máy phát triển Windows
+
+- Sau khi khởi động lại máy, Windows có thể giữ dải cổng 55317–55416 nên Supabase không mở được cổng 553xx:
+  chạy PowerShell quyền Administrator `net stop winnat; net start winnat`, rồi `npm run db:start`.
+- Migration viết tay phải thêm mục vào `db/migrations/meta/_journal.json` (idx +1, `when` +10000000).
+- Git Bash đổi `/duong-dan` thành đường dẫn Windows khi truyền cho node — đặt `MSYS_NO_PATHCONV=1`.
+  Playwright cần `executablePath` trỏ `%LOCALAPPDATA%/ms-playwright/chromium-1243/chrome-win64/chrome.exe`.
+- `core.autocrlf=true` làm `prettier --check` báo cả tệp chưa đổi (CRLF); chỉ kiểm tệp mình sửa.
+- Đỏ sẵn trên máy này, không do thay đổi: `env-guard.test.ts` (`spawnSync('npx')` không chạy trên Windows),
+  ~20 test web quá thời gian 5 giây, `kb-room-area-stats` lúc đỏ lúc xanh. Vì bộ web chưa xanh nên
+  `npm run mutation-proof` không chạy trọn ở đây — đột biến mới đo tay.
+- `npm run lint` cần `NODE_OPTIONS=--max-old-space-size=8192` (mặc định hết bộ nhớ), như CI.
