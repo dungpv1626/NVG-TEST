@@ -4,7 +4,8 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { DOCUMENT_REMINDER_DAYS, PENDING_APPROVAL_AGING_DAYS } from '@nvg/shared';
+import { DOCUMENT_REMINDER_DAYS, PENDING_APPROVAL_AGING_DAYS, toNvgDateInput } from '@nvg/shared';
+import type { FinanceDay } from '@nvg/shared/bc-series';
 import { useCompanyScope } from '@/lib/company-scope';
 import { supabase } from '@/lib/supabase';
 
@@ -92,46 +93,23 @@ export function useCompanyPulse() {
   });
 }
 
-export interface FinanceByCompany {
-  revenue: bigint;
-  signed: bigint;
-  collected: bigint;
-  paidOut: bigint;
-}
-
 /**
- * Tài chính tháng này theo từng công ty — dùng lại `finance_daily` (cùng nguồn với Dashboard và
- * báo cáo tài chính), gộp theo `company_id` ở đây. Khoá `null` = cả tập đoàn.
+ * Mọi ngày có phát sinh tài chính của MỌI pháp nhân (`finance_daily`, không lọc công ty) — trang
+ * điều hành tự tách theo `company_id` rồi cộng bằng `sumFinance` (cùng cách với báo cáo).
  */
-export function useFinanceThisMonthByCompany() {
-  return useQuery<Map<string | null, FinanceByCompany>, Error>({
-    queryKey: ['exec-overview', 'finance-month'],
+export function useAllCompanyFinanceDays(enabled = true) {
+  const today = toNvgDateInput(new Date());
+  return useQuery<FinanceDay[], Error>({
+    queryKey: ['exec-overview', 'finance-days-all', today],
     queryFn: async () => {
-      const now = new Date();
-      const pad = (n: number) => String(n).padStart(2, '0');
-      const from = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
-      const to = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
       const { data, error } = await supabase.rpc('finance_daily', {
-        p_from: from,
-        p_to: to,
+        p_from: '2000-01-01',
+        p_to: today,
         p_company_id: null,
       });
       if (error) throw new Error(error.message);
-      const out = new Map<string | null, FinanceByCompany>();
-      const add = (k: string | null, r: Record<string, unknown>) => {
-        const cur = out.get(k) ?? { revenue: 0n, signed: 0n, collected: 0n, paidOut: 0n };
-        const big = (v: unknown) => BigInt(String(v ?? 0).split('.')[0] || '0');
-        cur.revenue += big(r.revenue_accepted) + big(r.rental_revenue);
-        cur.signed += big(r.contracts_signed);
-        cur.collected += big(r.collected);
-        cur.paidOut += big(r.paid_out);
-        out.set(k, cur);
-      };
-      for (const r of (data ?? []) as Record<string, unknown>[]) {
-        add(String(r.company_id), r);
-        add(null, r);
-      }
-      return out;
+      return (data ?? []) as FinanceDay[];
     },
+    enabled,
   });
 }

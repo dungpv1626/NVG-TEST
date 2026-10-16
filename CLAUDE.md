@@ -683,13 +683,12 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
   nợ phải thu / phải trả quá hạn, hợp đồng quá hạn, công trình trễ / vượt ngân sách, giàn giáo quá hạn trả, giấy tờ
   nhân sự, báo giá không qua khảo sát), xếp theo mức, mỗi ô tối đa 5 hồ sơ. Quy tắc quá hạn chép đúng `*DisplayStatus`
   của `shared/`; mốc «chờ lâu» = SLA nếu có, không thì `PENDING_APPROVAL_AGING_DAYS` do trang truyền vào.
-- **Phân cấp, không xếp ngang hàng (chủ dự án: «TGĐ nhìn ít nhưng ra vấn đề ngay»):** Dashboard của lãnh đạo mở đầu
-  bằng khối «Tiêu điểm» (`pages/dieu-hanh/exec-focus.tsx`): một câu kết luận cỡ lớn, tối đa 5 dòng vấn đề (công ty ·
-  mảng · số), hai số phụ; mọi thẻ / biểu đồ theo kỳ gập trong «Số liệu chi tiết theo kỳ». Bản đồ cảnh báo chỉ hiện
-  mảng có vấn đề, mảng ổn gom một dòng ✓. Thêm khối mới cho lãnh đạo: hỏi «nó có đáng đứng ngang hàng vấn đề không?».
-- **Lãnh đạo không phải đổi bộ chọn pháp nhân để so công ty:** tài chính theo kỳ trên Dashboard của lãnh đạo là
-  `FinanceByCompanySection` (`pages/dieu-hanh/finance-by-company.tsx`) — số tập đoàn + số từng công ty + biểu đồ
-  tháng một cột mỗi công ty, KHÔNG theo bộ chọn. Thẻ phân hệ vẫn theo bộ chọn nên ghi rõ «Đang xem: …».
+- **Mỗi công ty một khung (chủ dự án chốt sau ba vòng sửa):** Dashboard của lãnh đạo = chọn kỳ + `CompanyBoards`
+  (`pages/dieu-hanh/company-boards.tsx`): ba khung NVC / NVS / NVO, mỗi khung đủ tình trạng (vấn đề, bấm mở đúng danh
+  sách của công ty đó), chờ duyệt, tiền trong kỳ, đang chạy — cùng thứ tự ở ba khung. KHÔNG chia trang theo chủ đề
+  (khối tài chính, lưới thẻ phân hệ), KHÔNG theo bộ chọn pháp nhân. Tổng quan điều hành dùng lại cùng khối, cộng hai
+  cách so sánh (bản đồ cảnh báo mảng × công ty, biểu đồ quy mô). Đã gỡ khối «Tiêu điểm» và tài chính tách công ty
+  (hai vòng trước) — nội dung nằm trong khung.
 - **Vai trò ba trang (chủ dự án chốt):** Tổng quan điều hành = lãnh đạo, «vấn đề ở đâu, công ty nào» (cảnh báo tính ở
   CSDL, tách theo công ty). Dashboard = trang làm việc theo kỳ của từng người, trong phạm vi quyền của họ — với lãnh
   đạo KHÔNG còn ô «Quá hạn» (thay bằng ô / liên kết sang `/tong-quan`), giữ khối tài chính vì đó là xu hướng theo

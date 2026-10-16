@@ -19,46 +19,24 @@
 
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import {
-  ArrowDownLeft,
-  ArrowRight,
-  ArrowUpRight,
-  Check,
-  Clock,
-  FileText,
-  Handshake,
-  HardHat,
-  IdCard,
-  Inbox,
-  Layers,
-  MapPinOff,
-  PenTool,
-  Stamp,
-  TrendingUp,
-  Wallet,
-  type LucideIcon,
-} from 'lucide-react';
-import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts';
+import { Check, FileText } from 'lucide-react';
 import { formatMoneyCompact } from '@nvg/shared/bc-series';
 import { MoneyChart, type ChartSeries } from '@/components/charts/money-chart';
-import { CHART_COLORS, usePrefersReducedMotion } from '@/components/charts/chart-theme';
+import { CHART_COLORS } from '@/components/charts/chart-theme';
 import { PageHeader } from '@/components/layout/app-shell';
 import { CardGridSkeleton, ErrorState } from '@/components/ui/states';
-import { usePendingApprovals } from '@/hooks/use-approvals';
 import { toUserMessage } from '@/hooks/use-error-message';
 import {
   useCompanyPulse,
   useExecOverviewByCompany,
-  useFinanceThisMonthByCompany,
-  type CompanyPulseRow,
   type ExecCompanyTile,
   type ExecLevel,
 } from '@/hooks/use-exec-overview';
 import { useAuth } from '@/lib/auth';
 import { useCompanyStore } from '@/lib/company-store';
+import { CompanyBoards } from './company-boards';
+import { AREA } from './exec-meta';
 import { cn } from '@/lib/utils';
-
-type Icon = LucideIcon;
 
 const LEVEL: Record<ExecLevel, { text: string; cell: string; color: string; order: number }> = {
   red: {
@@ -85,33 +63,6 @@ const LEVEL: Record<ExecLevel, { text: string; cell: string; color: string; orde
     color: 'var(--color-border)',
     order: 3,
   },
-};
-
-/** Nhãn NGẮN + biểu tượng cho từng mảng — tên đầy đủ nằm ở chú thích khi rê chuột. */
-const AREA: Record<string, { short: string; icon: Icon }> = {
-  approvals_stale: { short: 'Phê duyệt', icon: Stamp },
-  payments_stuck: { short: 'Đề nghị chi', icon: Wallet },
-  receivables_overdue: { short: 'Phải thu', icon: ArrowDownLeft },
-  payables_overdue: { short: 'Phải trả', icon: ArrowUpRight },
-  contracts_overdue: { short: 'Hợp đồng', icon: FileText },
-  sites_late: { short: 'Tiến độ', icon: Clock },
-  sites_over_budget: { short: 'Ngân sách', icon: TrendingUp },
-  rentals_overdue: { short: 'Giàn giáo', icon: Layers },
-  hr_documents: { short: 'Giấy tờ NS', icon: IdCard },
-  survey_waived: { short: 'Bỏ khảo sát', icon: MapPinOff },
-};
-
-/** Biểu tượng cho chỉ số hoạt động của từng công ty. */
-const PULSE: Record<string, { short: string; icon: Icon }> = {
-  opportunities_open: { short: 'Cơ hội', icon: Handshake },
-  contracts_active: { short: 'Hợp đồng', icon: FileText },
-  contracts_pending: { short: 'HĐ chờ ký', icon: Stamp },
-  sites_active: { short: 'Công trình', icon: HardHat },
-  sites_warranty: { short: 'Bảo hành', icon: Check },
-  designs_active: { short: 'Thiết kế', icon: PenTool },
-  designs_waiting_customer: { short: 'Chờ khách', icon: Clock },
-  rentals_active: { short: 'Cho thuê', icon: Layers },
-  production_running: { short: 'Sản xuất', icon: HardHat },
 };
 
 interface Company {
@@ -160,150 +111,14 @@ export function ExecOverviewPage() {
         <CardGridSkeleton count={3} />
       ) : (
         <div className="space-y-6">
-          {!readOnly && <PendingStrip companies={companies} />}
-          <HealthCards tiles={tiles} companies={companies} />
+          {/* Mỗi công ty một khung đủ tình hình (cùng khối với Dashboard của lãnh đạo); dưới là
+              hai cách SO SÁNH ba công ty: theo mảng cảnh báo và theo quy mô. */}
+          <CompanyBoards period="thang-nay" showPending={!readOnly} />
           <Heatmap tiles={tiles} companies={companies} />
-          <div className="grid gap-6 xl:grid-cols-2">
-            <FinanceChart companies={companies} />
-            <ScaleChart companies={companies} />
-          </div>
+          <ScaleChart companies={companies} />
         </div>
       )}
     </>
-  );
-}
-
-// --- 1. Chờ quyết định: một dải, số theo công ty ----------------------------------------------
-function PendingStrip({ companies }: { companies: Company[] }) {
-  const { data } = usePendingApprovals();
-  const list = data ?? [];
-  return (
-    <section
-      aria-label="Việc chờ quyết định"
-      className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-md border border-border bg-surface px-4 py-3"
-    >
-      <span className="flex items-center gap-2 font-semibold">
-        <Inbox className="size-5 text-brand" aria-hidden />
-        Chờ quyết định
-        <span className="text-2xl font-bold tabular-nums">{list.length}</span>
-      </span>
-      <ul className="flex flex-wrap gap-2 text-sm">
-        {companies.map((c) => {
-          const n = list.filter((a) => a.company_code === c.code).length;
-          return (
-            <li
-              key={c.id}
-              className={cn(
-                'rounded-full px-2.5 py-0.5',
-                n > 0
-                  ? 'bg-brand-subtle font-semibold text-brand-forest'
-                  : 'bg-surface-sunken text-fg-subtle',
-              )}
-            >
-              {c.code} {n}
-            </li>
-          );
-        })}
-      </ul>
-      {list.length > 0 && (
-        <Link
-          to="/viec-can-lam"
-          className="ml-auto inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline"
-        >
-          Mở Hộp thư <ArrowRight className="size-4" aria-hidden />
-        </Link>
-      )}
-    </section>
-  );
-}
-
-// --- 2. Ba thẻ sức khoẻ ------------------------------------------------------------------------
-function HealthCards({ tiles, companies }: { tiles: ExecCompanyTile[]; companies: Company[] }) {
-  const pulse = useCompanyPulse().data ?? [];
-  const reduced = usePrefersReducedMotion();
-  return (
-    <section aria-label="Sức khoẻ từng công ty" className="grid gap-4 md:grid-cols-3">
-      {companies.map((c) => {
-        const own = tiles.filter((t) => t.company_id === c.id);
-        const count = (l: ExecLevel) => own.filter((t) => t.level === l).length;
-        const slices = (['red', 'amber', 'ok', 'no_data'] as const)
-          .map((l) => ({ level: l, value: count(l) }))
-          .filter((s) => s.value > 0);
-        const red = count('red');
-        const summary = `${c.name}: ${red} mảng cần xử lý, ${count('amber')} cần chú ý, ${count('ok')} ổn`;
-        const metrics = pulse.filter((p) => p.company_id === c.id);
-        return (
-          <article key={c.id} className="rounded-md border border-border bg-surface p-4">
-            <h2 className="font-semibold">{c.name}</h2>
-            <div className="mt-2 flex items-center gap-4">
-              <div role="img" aria-label={summary} className="relative size-24 shrink-0">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={slices}
-                      dataKey="value"
-                      nameKey="level"
-                      innerRadius="68%"
-                      outerRadius="100%"
-                      paddingAngle={slices.length > 1 ? 3 : 0}
-                      stroke="none"
-                      isAnimationActive={!reduced}
-                    >
-                      {slices.map((s) => (
-                        <Cell key={s.level} fill={LEVEL[s.level].color} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-                <span className="absolute inset-0 grid place-items-center text-center leading-none">
-                  {red > 0 ? (
-                    <span className="text-status-overdue">
-                      <span className="block text-2xl font-bold">{red}</span>
-                      <span className="text-2xs">cần xử lý</span>
-                    </span>
-                  ) : (
-                    <Check className="size-8 text-status-completed" aria-hidden />
-                  )}
-                </span>
-              </div>
-              <ul className="space-y-0.5 text-xs" aria-hidden>
-                {(['red', 'amber', 'ok'] as const).map((l) => (
-                  <li key={l} className="flex items-center gap-1.5">
-                    <span className="size-2.5 rounded-sm" style={{ background: LEVEL[l].color }} />
-                    <span className="font-semibold tabular-nums">{count(l)}</span>
-                    <span className="text-fg-subtle">{LEVEL[l].text.toLowerCase()}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            {metrics.length > 0 && <PulseIcons metrics={metrics} />}
-          </article>
-        );
-      })}
-    </section>
-  );
-}
-
-function PulseIcons({ metrics }: { metrics: CompanyPulseRow[] }) {
-  return (
-    <ul className="mt-3 flex flex-wrap gap-2 border-t border-border pt-3">
-      {metrics.map((m) => {
-        const meta = PULSE[m.metric];
-        const Icon = meta?.icon ?? FileText;
-        const value = m.amount && Number(m.amount) > 0 ? ` — ${formatMoneyCompact(m.amount)}` : '';
-        return (
-          <li
-            key={m.metric}
-            title={`${m.label}: ${m.total}${value}`}
-            className="flex items-center gap-1.5 rounded-md bg-surface-sunken px-2 py-1 text-xs"
-          >
-            <Icon className="size-3.5 text-fg-subtle" aria-hidden />
-            <span className="font-semibold tabular-nums">{m.total}</span>
-            <span className="text-fg-subtle">{meta?.short ?? m.label}</span>
-          </li>
-        );
-      })}
-    </ul>
   );
 }
 
@@ -500,62 +315,7 @@ function FocusDetail({ tile, onClose }: { tile: ExecCompanyTile; onClose: () => 
   );
 }
 
-// --- 4. Biểu đồ theo công ty --------------------------------------------------------------------
-const FINANCE_SERIES: ChartSeries[] = [
-  { key: 'revenue', name: 'Doanh thu', color: CHART_COLORS.primary },
-  { key: 'collected', name: 'Đã thu', color: CHART_COLORS.pair },
-  { key: 'paidOut', name: 'Đã chi', color: CHART_COLORS.neutral },
-];
-
-function FinanceChart({ companies }: { companies: Company[] }) {
-  const { data, isLoading, error } = useFinanceThisMonthByCompany();
-  if (isLoading || error) return null;
-  const rows = companies.map((c) => {
-    const f = data?.get(c.id);
-    return {
-      label: c.code,
-      revenue: Number(f?.revenue ?? 0n),
-      collected: Number(f?.collected ?? 0n),
-      paidOut: Number(f?.paidOut ?? 0n),
-    };
-  });
-  const all = data?.get(null);
-  const summary = `Tài chính tháng này theo công ty: ${rows
-    .map(
-      (r) =>
-        `${r.label} doanh thu ${formatMoneyCompact(r.revenue)}, đã thu ${formatMoneyCompact(r.collected)}, đã chi ${formatMoneyCompact(r.paidOut)}`,
-    )
-    .join('; ')}`;
-  return (
-    <section
-      aria-label="Tài chính tháng này"
-      className="rounded-md border border-border bg-surface p-4"
-    >
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="font-semibold">Tài chính tháng này</h2>
-        <Link to="/bc/tong-quan" className="text-sm font-medium text-brand hover:underline">
-          Chi tiết
-        </Link>
-      </div>
-      {all && (
-        <p className="mt-1 text-sm text-fg-subtle">
-          Cả tập đoàn: thu {formatMoneyCompact(all.collected)} · chi{' '}
-          {formatMoneyCompact(all.paidOut)} · ròng{' '}
-          <span className="font-semibold text-fg">
-            {formatMoneyCompact(all.collected - all.paidOut)}
-          </span>
-        </p>
-      )}
-      <div className="mt-3">
-        <MoneyChart data={rows} series={FINANCE_SERIES} height={220} summary={summary} />
-      </div>
-      <p className="mt-2 text-2xs text-fg-subtle">
-        Số cả tập đoàn chưa loại giao dịch nội bộ giữa các pháp nhân.
-      </p>
-    </section>
-  );
-}
-
+// --- Quy mô theo công ty (so sánh) ---------------------------------------------------------
 const SCALE_SERIES: ChartSeries[] = [
   { key: 'pipeline', name: 'Cơ hội đang theo đuổi', color: CHART_COLORS.pair },
   { key: 'contracts', name: 'Hợp đồng đang thực hiện', color: CHART_COLORS.primary },

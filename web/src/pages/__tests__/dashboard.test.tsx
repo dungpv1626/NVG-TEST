@@ -105,11 +105,8 @@ vi.mock('@/hooks/use-reports', () => ({
   useProfitLossReport: () => ({ data: [], isLoading: false }),
 }));
 
-vi.mock('@/pages/dieu-hanh/finance-by-company', () => ({
-  FinanceByCompanySection: () => <section data-testid="tai-chinh-ba-cong-ty" />,
-}));
-vi.mock('@/pages/dieu-hanh/exec-focus', () => ({
-  ExecFocus: () => <section data-testid="tieu-diem" />,
+vi.mock('@/pages/dieu-hanh/company-boards', () => ({
+  CompanyBoards: () => <section data-testid="khung-cong-ty" />,
 }));
 
 const { DashboardPage } = await import('../dashboard');
@@ -193,22 +190,19 @@ describe('Dashboard — mỗi con số dẫn tới danh sách đã lọc SẴN �
     );
   });
 
-  it('lãnh đạo: khối Tiêu điểm ở trên, số liệu theo kỳ thu gọn, không có ô «Quá hạn» thứ hai', () => {
+  it('lãnh đạo: mỗi công ty một khung, không còn lưới thẻ phân hệ chia theo chủ đề', () => {
     grantView('CRM');
     state.exec = true;
-    state.opportunities = [
-      { stage: 'mat_co_hoi', estimated_value: null, created_at: `${THIS_YEAR}-03-01` },
-    ];
     renderWithApp(<DashboardPage />, { route: '/dashboard' });
 
-    expect(screen.getByTestId('tieu-diem')).toBeInTheDocument();
-    // Tài chính theo kỳ của lãnh đạo: cả ba công ty, không theo bộ chọn pháp nhân.
-    expect(screen.getByTestId('tai-chinh-ba-cong-ty')).toBeInTheDocument();
+    expect(screen.getByTestId('khung-cong-ty')).toBeInTheDocument();
+    // Không còn thẻ phân hệ theo bộ chọn pháp nhân, không còn ô «Quá hạn» thứ hai.
+    expect(screen.queryByText('Cơ hội kinh doanh')).not.toBeInTheDocument();
     expect(screen.queryByText('Quá hạn')).not.toBeInTheDocument();
-    // Phần chi tiết vẫn còn, nhưng nằm trong khối gập — không ngang hàng với Tiêu điểm.
-    const fold = screen.getByText('Số liệu chi tiết theo kỳ').closest('details');
-    expect(fold).not.toBeNull();
-    expect(fold).not.toHaveAttribute('open');
+    expect(screen.getByRole('link', { name: /Tổng quan điều hành/ })).toHaveAttribute(
+      'href',
+      '/tong-quan',
+    );
   });
 
   it('đổi kỳ báo cáo thì lưu trên thanh địa chỉ để quay lại không mất', async () => {

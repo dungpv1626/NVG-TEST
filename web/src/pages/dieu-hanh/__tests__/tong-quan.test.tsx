@@ -80,7 +80,6 @@ vi.mock('@/hooks/use-exec-overview', () => ({
       },
     ],
   }),
-  useFinanceThisMonthByCompany: () => ({ isLoading: false, error: null, data: new Map() }),
 }));
 vi.mock('@/hooks/use-approvals', () => ({
   usePendingApprovals: () => ({ isLoading: false, data: [] }),
@@ -91,6 +90,10 @@ vi.mock('@/lib/auth', () => ({
 vi.mock('@/lib/company-store', () => ({
   useCompanyStore: (pick: (s: { setSelectedCompany: typeof setSelectedCompany }) => unknown) =>
     pick({ setSelectedCompany }),
+}));
+
+vi.mock('../company-boards', () => ({
+  CompanyBoards: () => <section data-testid="khung-cong-ty" />,
 }));
 
 const { ExecOverviewPage } = await import('../tong-quan');
@@ -104,8 +107,8 @@ vi.mock('@/components/charts/money-chart', () => ({
   MoneyChart: ({ summary }: { summary: string }) => <div role="img" aria-label={summary} />,
 }));
 
-describe('Tổng quan điều hành — ba công ty bằng hình', () => {
-  it('thẻ sức khoẻ, bản đồ cảnh báo mảng × công ty, biểu đồ theo công ty', () => {
+describe('Tổng quan điều hành — khung từng công ty và so sánh', () => {
+  it('khung từng công ty, bản đồ cảnh báo mảng × công ty, biểu đồ quy mô', () => {
     render(
       <MemoryRouter>
         <ExecOverviewPage />
@@ -114,12 +117,8 @@ describe('Tổng quan điều hành — ba công ty bằng hình', () => {
 
     expect(screen.getByText(/NVO đang có việc cần xử lý/)).toBeTruthy();
 
-    // Thẻ sức khoẻ: vòng tròn có câu tóm tắt đọc được, không chỉ màu.
-    const health = screen.getByRole('region', { name: 'Sức khoẻ từng công ty' });
-    expect(
-      within(health).getByRole('img', { name: /Nhà Việt One: 1 mảng cần xử lý/ }),
-    ).toBeTruthy();
-    expect(within(health).getByText('Cho thuê')).toBeTruthy();
+    // Mỗi công ty một khung (khối dùng chung với Dashboard, có phép thử riêng).
+    expect(screen.getByTestId('khung-cong-ty')).toBeTruthy();
 
     // Bản đồ: hàng nặng nhất lên đầu; ô có vấn đề là nút có số, ô ổn có nhãn «ổn».
     const map = screen.getByRole('table', { name: 'Cảnh báo theo mảng và công ty' });
@@ -134,8 +133,8 @@ describe('Tổng quan điều hành — ba công ty bằng hình', () => {
       within(map).getByRole('img', { name: /Nhà Việt Cons — Giàn giáo quá hạn trả: ổn/ }),
     ).toBeTruthy();
 
-    // Biểu đồ theo công ty có câu tóm tắt.
-    expect(screen.getByRole('img', { name: /Tài chính tháng này theo công ty/ })).toBeTruthy();
+    // Biểu đồ so sánh quy mô có câu tóm tắt.
+    expect(screen.getByRole('img', { name: /Quy mô theo công ty/ })).toBeTruthy();
   });
 
   it('bấm ô của một công ty: chọn đúng pháp nhân đó rồi mở danh sách đã lọc', () => {

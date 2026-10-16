@@ -221,6 +221,11 @@ công ty nào, phải chuyển bộ chọn từng công ty, TGĐ không nhớ h�
 công ty (số tập đoàn, thanh chia và số từng công ty, biểu đồ tháng theo công ty); thẻ phân hệ ghi rõ đang xem công
 ty nào.
 
+**Bổ sung — mỗi công ty một khung.** Chủ dự án: vấn đề không phải xem đủ ba công ty mà là nhìn MỘT nơi nắm tình
+hình MỘT công ty — trang không cần chia theo chủ đề. Dashboard của lãnh đạo nay chỉ còn chọn kỳ + ba khung công ty
+(tình trạng, chờ duyệt, tiền trong kỳ, đang chạy); bỏ lưới thẻ phân hệ, khối Tiêu điểm, khối tài chính tách công ty.
+Tổng quan điều hành dùng cùng khung, giữ bản đồ cảnh báo và biểu đồ quy mô để so sánh.
+
 **Câu hỏi cho Haan:** KSNB có được xem lương / hồ sơ cá nhân? (đang: không). Mốc «hợp đồng sắp hết hạn» bao nhiêu
 ngày? (đang: chưa có ô này). Mốc «phê duyệt chờ lâu» 3 ngày (giả định cũ của Dashboard) — giữ hay đặt SLA theo loại?
 
