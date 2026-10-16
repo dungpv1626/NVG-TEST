@@ -639,6 +639,9 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
   `move_design_stage` không nhảy cóc bằng tay; bàn giao thiết kế gắn hợp đồng đã ký (tham số
   `tk.handover_requires_signed_contract`).
 - 0159: `record_chain`, `opportunity_has_contract`, trigger một cơ hội một hợp đồng.
+- 0160 (sau phản hồi chủ dự án): rời «Xác minh» cần Phân loại M2–M4 + Loại công trình (M1 đứng lại); «Báo giá»
+  cần khảo sát đã làm hoặc lý do bỏ qua (`waive_opportunity_survey`, cột `survey_waived_reason`). Giao diện có
+  ô Phân loại, tự mở tab nơi làm việc của bước, liên kết «làm ngay» cạnh từng dòng «Cần».
 - Giao diện: `shared/src/flow.ts` (`OPPORTUNITY_FLOW`, `CONTRACT_FLOW`, `SITE_FLOW`, `stepWindow`), `StepTrack`,
   `RecordChain`, slot `progress` của `EntityDetail`, `allowedDrop` của Kanban, `bottom-bar-slot.ts`; đã gỡ
   `lib/theme.tsx` và `tk-theme.css`.
@@ -652,13 +655,13 @@ trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ P
 
 1. Haan kiểm GĐ1 trên máy (`http://localhost:5173`) và trả lời các câu hỏi ở 9.5.
 2. Khi Haan đồng ý: đẩy nhánh, `npm run db:migrate:demo` rồi `npm run deploy` (API trước, web sau).
-3. GĐ2 — migration `0160` thêm `KSNB` vào enum role (riêng một migration), `0161` quyền chỉ xem toàn bộ,
-   `0162` `exec_overview()` + các view cảnh báo (phê duyệt kẹt toàn công ty, giàn giáo quá hạn trả, công nợ phải
+3. GĐ2 — migration `0161` thêm `KSNB` vào enum role (riêng một migration), `0162` quyền chỉ xem toàn bộ,
+   `0163` `exec_overview()` + các view cảnh báo (phê duyệt kẹt toàn công ty, giàn giáo quá hạn trả, công nợ phải
    trả quá hạn, đề nghị chi kẹt bước, hợp đồng sắp hết hạn, hồ sơ nhân sự sắp hết hạn); trang
    `pages/dieu-hanh/tong-quan.tsx`; đăng nhập đi tới `defaultRoute` của vai trò (đang bị bỏ qua ở `login.tsx`,
    `App.tsx`). **Trước KSNB phải sửa `useIsResponsible`** (`web/src/lib/auth.tsx`) — nó dựa vào
    `seesAllCompanies` nên KSNB sẽ thấy nút sửa ở mọi hồ sơ.
-4. Sau đó GĐ3 → 3b → 4 → 5 theo kế hoạch trong `doc/MOC_CAI_TIEN_UX.md`. Migration đánh số nối tiếp từ 0160.
+4. Sau đó GĐ3 → 3b → 4 → 5 theo kế hoạch trong `doc/MOC_CAI_TIEN_UX.md`. Migration đánh số nối tiếp từ 0161.
 
 ### 9.4 Quyết định đã chốt và lý do
 
@@ -677,6 +680,7 @@ trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ P
 | Trên điện thoại, thao tác công trường THAY thanh điều hướng (kèm nút «Phân hệ»)                              | Hai thanh chồng nhau ~150px che ô nhập nhật ký; AFD 4.8 cho 4–5 mục, nút chụp ảnh luôn hiện                                                                    |
 | STT: Cloudflare Workers AI Whisper; tóm tắt: Gemini Flash trả phí, tắt mặc định                              | Chủ dự án muốn miễn phí / rẻ; Gemini miễn phí có thể huấn luyện trên dữ liệu khách nên bị loại                                                                 |
 | Mẫu hợp đồng: `.docx` có chỗ trống, điền tất định; AI chỉ gợi ý câu chữ                                      | Giữ đúng định dạng mẫu Word của NVG; dữ liệu hợp đồng là hạng 1, không gửi AI                                                                                  |
+| Rời Xác minh cần Phân loại M2–M4 + Loại công trình; khảo sát bắt buộc trước Báo giá, bỏ qua phải ghi lý do   | Chủ dự án chọn; trước đó không có chỗ nhập phân loại và khảo sát bỏ qua được không để lại dấu vết. M1 «Lưu trữ» = chưa có nhu cầu thực                         |
 | Khảo sát: đổi luồng cho CẢ CRM lẫn TK                                                                        | Chủ dự án chọn; hai nơi đang ghi thời điểm kết thúc sai theo hai kiểu khác nhau                                                                                |
 | Dashboard điều hành là trang riêng + vai trò KSNB chỉ xem                                                    | Chủ dự án chọn; Dashboard chung không cho lãnh đạo thấy ngay vấn đề toàn hệ thống                                                                              |
 

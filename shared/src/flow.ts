@@ -44,12 +44,13 @@ export const OPPORTUNITY_FLOW: Flow<OpportunityStage> = {
     },
     xac_minh: {
       label: OPPORTUNITY_STAGE_META.xac_minh.label,
-      owner: 'Kinh doanh đặt lịch khảo sát, hoặc lập báo giá ngay nếu không cần khảo sát',
+      owner: 'Kinh doanh xác minh nhu cầu, phân loại M1–M4 và loại công trình',
       next: ['khao_sat', 'bao_gia'],
     },
     khao_sat: {
       label: OPPORTUNITY_STAGE_META.khao_sat.label,
-      owner: 'Kinh doanh khảo sát hiện trạng, rồi lập báo giá hoặc chuyển Đấu thầu / Thiết kế',
+      owner:
+        'Kinh doanh khảo sát hiện trạng (hoặc ghi lý do không khảo sát), rồi lập báo giá hoặc chuyển Đấu thầu / Thiết kế',
       next: ['bao_gia'],
     },
     bao_gia: {

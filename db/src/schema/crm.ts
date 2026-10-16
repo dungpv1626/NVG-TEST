@@ -130,6 +130,11 @@ export const opportunities = pgTable(
     /** Lý do mất cơ hội — CRM-09 yêu cầu báo cáo "nguyên nhân mất cơ hội". */
     lostReason: text('lost_reason'),
 
+    /** Báo giá không qua khảo sát — lý do, lúc, người ghi (0160, chỉ qua `waive_opportunity_survey`). */
+    surveyWaivedReason: text('survey_waived_reason'),
+    surveyWaivedAt: timestamp('survey_waived_at', { withTimezone: true }),
+    surveyWaivedBy: uuid('survey_waived_by').references(() => users.id, { onDelete: 'set null' }),
+
     /**
      * Đã bàn giao sang DA/TK chưa (CRM-06). Sau khi bàn giao, cơ hội chuyển chế độ chỉ xem.
      */

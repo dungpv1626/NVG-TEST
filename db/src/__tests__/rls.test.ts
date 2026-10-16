@@ -2930,6 +2930,8 @@ describeDb('HD — hợp đồng, điều khoản và phát sinh', () => {
         name: `${TEST_PREFIX} Nhà xưởng HD ${Date.now()}`,
         owner_id: me,
         estimated_value: 900_000_000,
+        classification: 'M3',
+        project_type: 'Nhà xưởng công nghiệp',
       })
       .select('id')
       .single();
@@ -2951,6 +2953,13 @@ describeDb('HD — hợp đồng, điều khoản và phát sinh', () => {
       .from('quotes')
       .insert({ company_id: company!.id, opportunity_id: id, total_value: 900_000_000 });
     if (quoteError) throw new Error(quoteError.message);
+    // Báo giá cần khảo sát hiện trạng (0160).
+    const { error: surveyError } = await client.from('site_surveys').insert({
+      opportunity_id: id,
+      surveyed_at: new Date().toISOString(),
+      needs: 'Nhà xưởng 900 m²',
+    });
+    if (surveyError) throw new Error(surveyError.message);
     await step('bao_gia');
     return { id, companyId: company!.id };
   }

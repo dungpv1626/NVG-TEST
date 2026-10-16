@@ -63,6 +63,8 @@ export interface OpportunityDetailRecord extends OpportunityRecord {
   lost_reason: string | null;
   expected_start_date: string | null;
   updated_at: string;
+  /** Báo giá không qua khảo sát — lý do do người chịu trách nhiệm ghi (0160). */
+  survey_waived_reason: string | null;
 }
 
 export function useOpportunity(id: string | undefined) {
@@ -72,7 +74,7 @@ export function useOpportunity(id: string | undefined) {
       const { data, error } = await supabase
         .from('opportunities')
         .select(
-          `${OPPORTUNITY_SELECT}, notes, lost_reason, expected_start_date, updated_at, ` +
+          `${OPPORTUNITY_SELECT}, notes, lost_reason, expected_start_date, updated_at, survey_waived_reason, ` +
             'customer_full:customers!opportunities_customer_id_customers_id_fk(id, name, contact_person, phone, email)',
         )
         .eq('id', id!)
@@ -133,6 +135,47 @@ export function useMoveStage() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['opportunities'] });
       void queryClient.invalidateQueries({ queryKey: ['opportunity_stage_history'] });
+    },
+  });
+}
+
+/**
+ * Phân loại M1–M4 và loại công trình — việc của bước «Xác minh / Phân loại» (0160). Ghi thẳng
+ * Supabase: hai cột thường, RLS `opportunities_update` đã giới hạn người chịu trách nhiệm.
+ */
+export function useClassifyOpportunity() {
+  const queryClient = useQueryClient();
+  return useMutation<
+    void,
+    Error,
+    { opportunityId: string; classification: string | null; projectType: string | null }
+  >({
+    mutationFn: async ({ opportunityId, classification, projectType }) => {
+      const { error } = await supabase
+        .from('opportunities')
+        .update({ classification, project_type: projectType })
+        .eq('id', opportunityId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['opportunities'] });
+    },
+  });
+}
+
+/** Ghi lý do báo giá không qua khảo sát (`waive_opportunity_survey`, 0160). */
+export function useWaiveSurvey() {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, { opportunityId: string; reason: string }>({
+    mutationFn: async ({ opportunityId, reason }) => {
+      const { error } = await supabase.rpc('waive_opportunity_survey', {
+        p_opportunity_id: opportunityId,
+        p_reason: reason,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['opportunities'] });
     },
   });
 }

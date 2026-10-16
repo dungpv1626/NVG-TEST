@@ -14,6 +14,8 @@ export interface StageRequirement {
   requirement: string;
   met: boolean;
   label: string;
+  /** Miễn được bằng lý do (0160 — bỏ qua khảo sát). */
+  waivable: boolean;
 }
 
 const ROOT_KEY: Record<string, string> = {

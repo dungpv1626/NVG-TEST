@@ -25,10 +25,14 @@ export interface DetailTabsApi<T extends TabLike> {
   onTabKeyDown: (event: ReactKeyboardEvent<HTMLButtonElement>) => void;
 }
 
-export function useDetailTabs<T extends TabLike>(tabs: T[]): DetailTabsApi<T> {
+/**
+ * `defaultId`: tab mở khi URL chưa có `?tab=` — hồ sơ có luồng bước truyền tab nơi làm việc của
+ * bước hiện tại, để người dùng không phải tự mò (phản hồi chủ dự án sau GĐ1).
+ */
+export function useDetailTabs<T extends TabLike>(tabs: T[], defaultId?: string): DetailTabsApi<T> {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const activeId = searchParams.get('tab') ?? tabs[0]?.id ?? '';
+  const activeId = searchParams.get('tab') ?? defaultId ?? tabs[0]?.id ?? '';
   const active = useMemo(() => tabs.find((t) => t.id === activeId) ?? tabs[0], [tabs, activeId]);
 
   function selectTab(id: string) {

@@ -94,6 +94,30 @@ export const OPPORTUNITY_CLASSIFICATION_LABELS: Readonly<
   M4: 'M4 — Chốt / Đàm phán',
 };
 
+/** Giải thích từng mức — hiện dưới ô chọn để người phân loại không phải nhớ. Nguồn: hồ sơ khảo sát Phòng Kinh doanh. */
+export const OPPORTUNITY_CLASSIFICATION_HINTS: Readonly<Record<OpportunityClassification, string>> =
+  {
+    M1: 'Chưa có nhu cầu hoặc nhu cầu chưa rõ — lưu để chăm sóc sau, chưa đi tiếp.',
+    M2: 'Khách thật sự định xây — cần khảo sát để hiểu yêu cầu.',
+    M3: 'Đã rõ yêu cầu, khách đang chờ báo giá.',
+    M4: 'Khách sắp chốt, đang thương lượng điều khoản.',
+  };
+
+/** Loại công trình gợi ý theo ba mảng của NVG (PRD Mục 1.1). */
+export const OPPORTUNITY_PROJECT_TYPES = [
+  'Nhà xưởng công nghiệp',
+  'Cải tạo nhà máy',
+  'Nhà cao tầng',
+  'Nhà phố',
+  'Biệt thự',
+  'Nhà ở nông thôn',
+  'Cải tạo nhà ở',
+  'Giàn giáo — bán',
+  'Giàn giáo — cho thuê',
+  'Kết cấu thép',
+  'Khác',
+] as const;
+
 /** Nguồn khách hàng — PRD CRM-01. */
 export const CUSTOMER_SOURCES = [
   'Giới thiệu',

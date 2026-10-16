@@ -154,6 +154,9 @@ export async function loadNvc(): Promise<'created' | 'skipped'> {
         name: NVC_OPPORTUNITY,
         owner_id: await userId(kinhDoanh),
         estimated_value: 6_800_000_000,
+        // Rời «Xác minh» cần phân loại M2–M4 và loại công trình (0160).
+        classification: 'M2',
+        project_type: 'Nhà xưởng công nghiệp',
       })
       .select('id')
       .single(),
@@ -172,6 +175,19 @@ export async function loadNvc(): Promise<'created' | 'skipped'> {
     );
   }
   for (const stage of ['xac_minh', 'khao_sat']) await moveOpportunity(stage);
+
+  // «Báo giá» cần khảo sát hiện trạng đã làm (0160).
+  check(
+    'khảo sát hiện trạng',
+    await kinhDoanh.from('site_surveys').insert({
+      opportunity_id: opportunity.id,
+      scheduled_at: '2026-09-02T08:30:00+07:00',
+      surveyed_at: '2026-09-02T10:00:00+07:00',
+      surveyed_by: await userId(kinhDoanh),
+      needs: clean('Nhà xưởng 2.400 m², khẩu độ 30 m, cầu trục 5 tấn, nền chịu tải 3 tấn/m²'),
+      decision_maker: clean('Ông Phạm Quốc Hưng — Giám đốc'),
+    }),
+  );
 
   // --- Gói thầu, bóc khối lượng, dự toán, duyệt giá (DA) ------------------------------------
   const project = (await one(

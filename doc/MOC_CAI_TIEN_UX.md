@@ -117,6 +117,20 @@ Commit: `d3331c6` · `bafc3aa` · `3dfb721` · `098ca01` (và commit ghi mục n
   đề nghị chi. Test mới: `flow-guard.test.ts`, `flow.test.ts`, chuỗi hồ sơ trong `golden-path.test.ts`,
   hàng rào token màu và «không còn chế độ tối» trong `design-rules.test.ts`; đột biến M238–M240.
 
+**Bổ sung sau phản hồi chủ dự án (0160)** — «chuyển sang Phân loại mà tab không nhảy tới chỗ làm; phân
+loại, khảo sát vẫn dễ bị bỏ qua». Kiểm lại thấy trường Phân loại (M1–M4) không có chỗ nhập ở đâu cả.
+Chủ dự án chốt: rời Xác minh cần Phân loại M2–M4 + Loại công trình, M1 «Lưu trữ» đứng lại; khảo sát bắt
+buộc trước Báo giá, được bỏ qua kèm lý do (lưu trên cơ hội, `survey_waived_reason`).
+
+- `0160_viec_tung_buoc_co_hoi.sql`: `stage_readiness` thêm điều kiện `classified`, `survey_done` và cột
+  `waivable`; `waive_opportunity_survey`; ba cột miễn khảo sát chỉ đổi qua hàm.
+- Giao diện: ô «Phân loại» trên tab Tổng quan (`classification-card.tsx`, có giải thích M1–M4); mở hồ sơ
+  hay vừa chuyển bước thì tự sang tab nơi làm việc của bước (`defaultTab` của `EntityDetail`); dòng «Cần»
+  có liên kết «Phân loại» / «Mở Khảo sát» / «Lập báo giá»; chuyển sang Báo giá khi chưa khảo sát thì hỏi
+  lý do bỏ qua.
+- Test: nhóm «Việc của từng bước cơ hội» trong `flow-guard.test.ts`; demo NVC có phân loại và biên bản
+  khảo sát.
+
 **Chưa làm trong giai đoạn này (đẩy sau)**
 
 - Bảng lịch sử bước chung `stage_transitions` cho hợp đồng / gói thầu / công trình (cơ hội đã có lịch sử).

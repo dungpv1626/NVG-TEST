@@ -72,6 +72,8 @@ describeDb(
           name: `${TEST_PREFIX} GP1 Nhà xưởng Long An ${stamp}`,
           owner_id: await currentUser(kinhDoanh),
           estimated_value: 4_500_000_000,
+          classification: 'M2',
+          project_type: 'Nhà xưởng công nghiệp',
         })
         .select('id')
         .single();
@@ -91,6 +93,17 @@ describeDb(
       };
       await moveOpportunity('xac_minh');
       await moveOpportunity('khao_sat');
+      // «Báo giá» cần khảo sát hiện trạng đã làm (0160).
+      check(
+        'khảo sát hiện trạng',
+        (
+          await kinhDoanh.from('site_surveys').insert({
+            opportunity_id: opportunityId,
+            surveyed_at: new Date().toISOString(),
+            needs: 'Nhà xưởng 1.800 m², cầu trục 3 tấn',
+          })
+        ).error,
+      );
 
       // --- Bước 2. Đấu thầu lập gói thầu, LIÊN KẾT về cơ hội (DA-01) ----------------------
       const { data: project, error: projectError } = await dauThau

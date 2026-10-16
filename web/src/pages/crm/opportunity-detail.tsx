@@ -9,16 +9,14 @@
  */
 
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import {
-  OPPORTUNITY_CLASSIFICATION_LABELS,
   OPPORTUNITY_FLOW,
   OPPORTUNITY_STAGE_META,
   formatCurrency,
   formatDate,
   formatDateTime,
   formatPhone,
-  type OpportunityClassification,
   type OpportunityStage,
 } from '@nvg/shared';
 import { DraftContractButton } from '@/components/contract/draft-contract-button';
@@ -37,13 +35,37 @@ import {
   useMoveStage,
   useOpportunity,
   useOpportunityStageHistory,
+  useWaiveSurvey,
 } from '@/hooks/use-opportunities';
 import { useCan, useIsResponsible } from '@/lib/auth';
+import { CLASSIFICATION_ANCHOR, ClassificationCard } from './classification-card';
 import { QuotePanel } from './quote-panel';
 import { EMPTY_SURVEY_DRAFT, SurveyPanel, type SurveyDraft } from './survey-panel';
 import { cn } from '@/lib/utils';
 
 const EM_DASH = '—';
+
+/**
+ * Tab nơi làm việc của từng bước — mở hồ sơ hay vừa chuyển bước thì nhảy thẳng tới đó, người
+ * dùng không phải tự mò (phản hồi chủ dự án sau GĐ1).
+ */
+const STAGE_TAB: Record<OpportunityStage, string> = {
+  tiep_nhan: 'tong-quan',
+  xac_minh: 'tong-quan',
+  khao_sat: 'khao-sat',
+  bao_gia: 'bao-gia',
+  dam_phan: 'bao-gia',
+  ky_hop_dong: 'tong-quan',
+  mat_co_hoi: 'tong-quan',
+};
+
+/** Điều kiện nào làm ở tab nào — nút «Làm ngay» cạnh dòng «Cần». */
+const REQUIREMENT_TAB: Record<string, { tab: string; anchor?: string; label: string }> = {
+  classified: { tab: 'tong-quan', anchor: CLASSIFICATION_ANCHOR, label: 'Phân loại' },
+  survey_done: { tab: 'khao-sat', label: 'Mở Khảo sát' },
+  pricing_started: { tab: 'bao-gia', label: 'Lập báo giá' },
+  offer_sent: { tab: 'bao-gia', label: 'Mở Báo giá' },
+};
 
 interface CustomerFull {
   id: string;
@@ -67,6 +89,8 @@ export function OpportunityDetailPage() {
   const { data: hasContract } = useOpportunityHasContract(id);
   const { data: history } = useOpportunityStageHistory(id);
   const moveStage = useMoveStage();
+  const waiveSurvey = useWaiveSurvey();
+  const [searchParams, setSearchParams] = useSearchParams();
   const isResponsible = useIsResponsible(data?.owner_id);
   const [moveError, setMoveError] = useState<string | null>(null);
 
@@ -95,8 +119,38 @@ export function OpportunityDetailPage() {
   const customer = (data as unknown as { customer_full: CustomerFull | null }).customer_full;
   const isHandedOver = data.handed_over_at !== null;
 
+  function openTab(tab: string, anchor?: string) {
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', tab);
+    setSearchParams(next, { replace: true });
+    if (anchor) {
+      // Đợi tab dựng xong rồi mới cuộn tới ô cần làm.
+      window.setTimeout(() => {
+        const el = document.getElementById(anchor);
+        el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        el?.querySelector<HTMLElement>('select, input, textarea')?.focus({ preventScroll: true });
+      }, 50);
+    }
+  }
+
   async function changeStage(toStage: OpportunityStage) {
     setMoveError(null);
+    // Điều kiện chưa đạt nhưng miễn được (khảo sát) — hỏi lý do, ghi lại rồi mới chuyển.
+    const waivable = readiness.filter((r) => r.for_stage === toStage && !r.met && r.waivable);
+    if (waivable.some((r) => r.requirement === 'survey_done')) {
+      const reason = await promptDialog.ask({
+        title: 'Báo giá mà không khảo sát hiện trạng?',
+        label: 'Lý do không khảo sát (ghi vào hồ sơ, lãnh đạo xem được)',
+        confirmLabel: 'Ghi lý do và chuyển bước',
+      });
+      if (reason === null) return;
+      try {
+        await waiveSurvey.mutateAsync({ opportunityId: data!.id, reason });
+      } catch (e) {
+        setMoveError(toUserMessage(e, 'edit'));
+        return;
+      }
+    }
     let lostReason: string | undefined;
     if (toStage === 'mat_co_hoi') {
       const input = await promptDialog.ask({
@@ -109,6 +163,7 @@ export function OpportunityDetailPage() {
     }
     try {
       await moveStage.mutateAsync({ opportunityId: data!.id, toStage, lostReason });
+      openTab(STAGE_TAB[toStage]);
     } catch (e) {
       setMoveError(toUserMessage(e, 'edit'));
     }
@@ -119,11 +174,29 @@ export function OpportunityDetailPage() {
    * không có ở đây: hợp đồng đã ký tự đẩy sang. Bước chưa đủ điều kiện thì nút mờ và nói vì sao.
    */
   const forwardStages = OPPORTUNITY_FLOW.steps[data.stage].next;
+  // Điều kiện miễn được bằng lý do không khoá nút — bấm thì hỏi lý do (changeStage).
   const missingFor = (stage: OpportunityStage) =>
-    readiness.filter((r) => r.for_stage === stage && !r.met).map((r) => r.label);
+    readiness.filter((r) => r.for_stage === stage && !r.met && !r.waivable).map((r) => r.label);
   const nextRequirements = (forwardStages[0] ? readiness : [])
     .filter((r) => r.for_stage === forwardStages[0])
-    .map((r) => ({ label: r.label, met: r.met }));
+    .map((r) => {
+      const go = REQUIREMENT_TAB[r.requirement];
+      return {
+        label:
+          r.waivable && !r.met ? `${r.label} — hoặc ghi lý do bỏ qua khi chuyển bước` : r.label,
+        met: r.met,
+        action:
+          go && canEdit && !isHandedOver ? (
+            <button
+              type="button"
+              className="font-medium text-brand underline-offset-2 hover:underline"
+              onClick={() => openTab(go.tab, go.anchor)}
+            >
+              {go.label}
+            </button>
+          ) : undefined,
+      };
+    });
 
   return (
     <>
@@ -148,6 +221,7 @@ export function OpportunityDetailPage() {
         status={stageMeta.statusGroup}
         responsiblePerson={data.owner?.full_name ?? null}
         deadline={data.due_date}
+        defaultTab={STAGE_TAB[data.stage]}
         progress={
           <>
             <RecordChain kind="opportunity" id={data.id} />
@@ -210,6 +284,16 @@ export function OpportunityDetailPage() {
             label: 'Tổng quan',
             content: (
               <div className="space-y-6">
+                <ClassificationCard
+                  opportunityId={data.id}
+                  classification={data.classification}
+                  projectType={data.project_type}
+                  canEdit={canEdit && !isHandedOver && !stageMeta.isTerminal}
+                  highlight={
+                    (data.stage === 'tiep_nhan' || data.stage === 'xac_minh') &&
+                    !readiness.find((r) => r.requirement === 'classified')?.met
+                  }
+                />
                 <DetailFields
                   fields={[
                     {
@@ -228,7 +312,6 @@ export function OpportunityDetailPage() {
                     { label: 'Người liên hệ', value: customer?.contact_person ?? EM_DASH },
                     { label: 'Điện thoại', value: formatPhone(customer?.phone) || EM_DASH },
                     { label: 'Email', value: customer?.email ?? EM_DASH },
-                    { label: 'Loại công trình', value: data.project_type ?? EM_DASH },
                     {
                       label: 'Giá trị dự kiến',
                       value: data.estimated_value ? formatCurrency(data.estimated_value) : EM_DASH,
@@ -237,15 +320,10 @@ export function OpportunityDetailPage() {
                       label: 'Tiến độ mong muốn',
                       value: formatDate(data.expected_start_date) || EM_DASH,
                     },
-                    {
-                      label: 'Phân loại',
-                      value: data.classification
-                        ? OPPORTUNITY_CLASSIFICATION_LABELS[
-                            data.classification as OpportunityClassification
-                          ]
-                        : EM_DASH,
-                    },
                     { label: 'Ghi chú', value: data.notes ?? EM_DASH },
+                    ...(data.survey_waived_reason
+                      ? [{ label: 'Lý do không khảo sát', value: data.survey_waived_reason }]
+                      : []),
                     ...(data.lost_reason
                       ? [{ label: 'Nguyên nhân mất cơ hội', value: data.lost_reason }]
                       : []),

@@ -17,6 +17,8 @@ import { cn } from '@/lib/utils';
 export interface StepRequirement {
   label: string;
   met: boolean;
+  /** Lối tới đúng chỗ làm việc này (mở tab, mở ô nhập) — hiện cạnh điều kiện CHƯA đạt. */
+  action?: React.ReactNode;
 }
 
 export interface StepTrackProps<S extends string> {
@@ -114,7 +116,10 @@ export function StepTrack<S extends string>({
                       >
                         {r.met ? 'Đạt' : 'Cần'}
                       </span>
-                      <span className={cn(r.met && 'text-fg-subtle')}>{r.label}</span>
+                      <span className={cn(r.met && 'text-fg-subtle')}>
+                        {r.label}
+                        {!r.met && r.action && <> {r.action}</>}
+                      </span>
                     </li>
                   ))}
                 </ul>

@@ -11,7 +11,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { BUTTONS, ERRORS, formatCurrency } from '@nvg/shared';
+import { BUTTONS, ERRORS, OPPORTUNITY_PROJECT_TYPES, formatCurrency } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { DateInput } from '@/components/ui/date-input';
@@ -30,21 +30,6 @@ interface CustomerOption {
   code: string;
   name: string;
 }
-
-/** Loại công trình gợi ý theo ba mảng của NVG (PRD Mục 1.1). */
-const PROJECT_TYPES = [
-  'Nhà xưởng công nghiệp',
-  'Cải tạo nhà máy',
-  'Nhà cao tầng',
-  'Nhà phố',
-  'Biệt thự',
-  'Nhà ở nông thôn',
-  'Cải tạo nhà ở',
-  'Giàn giáo — bán',
-  'Giàn giáo — cho thuê',
-  'Kết cấu thép',
-  'Khác',
-];
 
 export function OpportunityCreatePage() {
   const navigate = useNavigate();
@@ -239,7 +224,7 @@ export function OpportunityCreatePage() {
                 className="h-9 w-full rounded-sm border border-border bg-surface px-3"
               >
                 <option value="">Chưa xác định</option>
-                {PROJECT_TYPES.map((t) => (
+                {OPPORTUNITY_PROJECT_TYPES.map((t) => (
                   <option key={t} value={t}>
                     {t}
                   </option>

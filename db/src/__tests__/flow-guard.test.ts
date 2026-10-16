@@ -19,6 +19,7 @@ interface Readiness {
   requirement: string;
   met: boolean;
   label: string;
+  waivable: boolean;
 }
 
 describeDb('Luồng cơ hội — đi đúng thứ tự, có điều kiện (0155)', () => {
@@ -34,7 +35,13 @@ describeDb('Luồng cơ hội — đi đúng thứ tự, có điều kiện (015
     customerId = customer!.id as string;
   });
 
-  async function newOpportunity(): Promise<string> {
+  /** Mặc định đã phân loại M2 + loại công trình — điều kiện rời «Xác minh» (0160). */
+  async function newOpportunity(
+    fields: Record<string, unknown> = {
+      classification: 'M2',
+      project_type: 'Nhà xưởng công nghiệp',
+    },
+  ): Promise<string> {
     const { data: me } = await kd.rpc('auth_user_id');
     const { data: code } = await kd.rpc('next_record_code', {
       p_company_code: 'NVC',
@@ -49,6 +56,7 @@ describeDb('Luồng cơ hội — đi đúng thứ tự, có điều kiện (015
         name: `${TEST_PREFIX} Luồng cơ hội ${Date.now()}`,
         owner_id: me,
         estimated_value: 300_000_000,
+        ...fields,
       })
       .select('id')
       .single();
@@ -62,6 +70,15 @@ describeDb('Luồng cơ hội — đi đúng thứ tự, có điều kiện (015
       p_to_stage: stage,
       p_note: note,
     });
+  }
+
+  async function surveyed(id: string) {
+    const { error } = await kd.from('site_surveys').insert({
+      opportunity_id: id,
+      surveyed_at: new Date().toISOString(),
+      needs: 'Khảo sát hiện trạng',
+    });
+    if (error) throw new Error(error.message);
   }
 
   async function readiness(id: string, stage: string): Promise<Readiness[]> {
@@ -87,21 +104,23 @@ describeDb('Luồng cơ hội — đi đúng thứ tự, có điều kiện (015
     const id = await newOpportunity();
     await move(id, 'xac_minh');
 
-    const before = await readiness(id, 'bao_gia');
-    expect(before).toHaveLength(1);
-    expect(before[0]!.met).toBe(false);
+    await surveyed(id);
+
+    const pricing = async () =>
+      (await readiness(id, 'bao_gia')).find((r) => r.requirement === 'pricing_started')!;
+    const before = await pricing();
+    expect(before.met).toBe(false);
 
     const { error: blocked } = await move(id, 'bao_gia');
     expect(blocked?.message).toContain('Cần:');
-    expect(blocked?.message).toContain(before[0]!.label);
+    expect(blocked?.message).toContain(before.label);
 
     const { error: quoteError } = await kd
       .from('quotes')
       .insert({ company_id: companyId, opportunity_id: id, total_value: 280_000_000 });
     expect(quoteError).toBeNull();
 
-    const after = await readiness(id, 'bao_gia');
-    expect(after[0]!.met).toBe(true);
+    expect((await pricing()).met).toBe(true);
     const { error } = await move(id, 'bao_gia');
     expect(error).toBeNull();
 
@@ -149,6 +168,147 @@ describeDb('Luồng cơ hội — đi đúng thứ tự, có điều kiện (015
 
     const { data } = await kd.from('opportunities').select('stage').eq('id', id).single();
     expect(data!.stage).toBe('tiep_nhan');
+  });
+});
+
+describeDb('Việc của từng bước cơ hội — phân loại, khảo sát (0160)', () => {
+  let kd: SupabaseClient;
+  let companyId: string;
+  let customerId: string;
+
+  beforeAll(async () => {
+    kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const { data: company } = await kd.from('companies').select('id').eq('code', 'NVC').single();
+    const { data: customer } = await kd.from('customers').select('id').limit(1).single();
+    companyId = company!.id as string;
+    customerId = customer!.id as string;
+  });
+
+  function move(id: string, stage: string) {
+    return kd.rpc('move_opportunity_stage', { p_opportunity_id: id, p_to_stage: stage });
+  }
+
+  /** Cơ hội mới, đã sang «Xác minh». */
+  async function newOpportunity(fields: Record<string, unknown> = {}): Promise<string> {
+    const { data: me } = await kd.rpc('auth_user_id');
+    const { data: code } = await kd.rpc('next_record_code', {
+      p_company_code: 'NVC',
+      p_record_type: 'CH',
+    });
+    const { data, error } = await kd
+      .from('opportunities')
+      .insert({
+        code,
+        company_id: companyId,
+        customer_id: customerId,
+        name: `${TEST_PREFIX} Việc từng bước ${Date.now()}`,
+        owner_id: me,
+        ...fields,
+      })
+      .select('id')
+      .single();
+    if (error) throw new Error(error.message);
+    const id = (data as { id: string }).id;
+    const { error: moveError } = await move(id, 'xac_minh');
+    if (moveError) throw new Error(moveError.message);
+    return id;
+  }
+
+  async function addQuote(id: string) {
+    const { error } = await kd
+      .from('quotes')
+      .insert({ company_id: companyId, opportunity_id: id, total_value: 150_000_000 });
+    if (error) throw new Error(error.message);
+  }
+
+  it('chưa phân loại thì không rời Xác minh; M1 — Lưu trữ đứng lại', async () => {
+    const id = await newOpportunity();
+    const { error: none } = await move(id, 'khao_sat');
+    expect(none?.message).toContain('phân loại');
+
+    // Có phân loại mà thiếu loại công trình vẫn chưa đủ.
+    await kd.from('opportunities').update({ classification: 'M2' }).eq('id', id);
+    const { error: noType } = await move(id, 'khao_sat');
+    expect(noType?.message).toContain('Cần:');
+
+    await kd
+      .from('opportunities')
+      .update({ classification: 'M1', project_type: 'Nhà phố' })
+      .eq('id', id);
+    const { error: m1 } = await move(id, 'khao_sat');
+    expect(m1?.message).toContain('M1');
+
+    await kd.from('opportunities').update({ classification: 'M2' }).eq('id', id);
+    const { error } = await move(id, 'khao_sat');
+    expect(error).toBeNull();
+  });
+
+  it('chưa khảo sát thì không sang Báo giá — kể cả khi đã đi qua bước Khảo sát', async () => {
+    const id = await newOpportunity({ classification: 'M3', project_type: 'Nhà phố' });
+    await move(id, 'khao_sat');
+    await addQuote(id);
+
+    const { error: blocked } = await move(id, 'bao_gia');
+    expect(blocked?.message).toContain('khảo sát');
+
+    // Biên bản chỉ có lịch hẹn, chưa khảo sát thật — vẫn chưa đạt.
+    await kd.from('site_surveys').insert({
+      opportunity_id: id,
+      scheduled_at: new Date().toISOString(),
+    });
+    const { error: onlyScheduled } = await move(id, 'bao_gia');
+    expect(onlyScheduled?.message).toContain('khảo sát');
+
+    await kd.from('site_surveys').insert({
+      opportunity_id: id,
+      surveyed_at: new Date().toISOString(),
+      needs: 'Nhà phố 4 tầng',
+    });
+    const { error } = await move(id, 'bao_gia');
+    expect(error).toBeNull();
+  });
+
+  it('bỏ qua khảo sát phải có lý do; lý do lưu trên cơ hội, không sửa thẳng được', async () => {
+    const id = await newOpportunity({ classification: 'M3', project_type: 'Nhà phố' });
+    await addQuote(id);
+
+    const { error: noReason } = await kd.rpc('waive_opportunity_survey', {
+      p_opportunity_id: id,
+      p_reason: '  ',
+    });
+    expect(noReason?.message).toContain('lý do');
+
+    // Trình duyệt không tự ghi cột miễn khảo sát.
+    const { error: direct } = await kd
+      .from('opportunities')
+      .update({ survey_waived_reason: 'tự ghi' })
+      .eq('id', id);
+    expect(direct?.message).toContain('Không đổi trực tiếp');
+
+    // Người không phụ trách cơ hội không miễn được.
+    const other = await signInAs(ACCOUNTS.kinhDoanhNvo);
+    const { error: notOwner } = await other.rpc('waive_opportunity_survey', {
+      p_opportunity_id: id,
+      p_reason: 'Không phải hồ sơ của mình',
+    });
+    expect(notOwner).toBeTruthy();
+
+    const { error: waived } = await kd.rpc('waive_opportunity_survey', {
+      p_opportunity_id: id,
+      p_reason: 'Khách gửi hồ sơ thiết kế và hiện trạng đầy đủ',
+    });
+    expect(waived).toBeNull();
+
+    const { error } = await move(id, 'bao_gia');
+    expect(error).toBeNull();
+
+    const { data } = await kd
+      .from('opportunities')
+      .select('survey_waived_reason, survey_waived_at')
+      .eq('id', id)
+      .single();
+    expect(data!.survey_waived_reason).toBe('Khách gửi hồ sơ thiết kế và hiện trạng đầy đủ');
+    expect(data!.survey_waived_at).toBeTruthy();
   });
 });
 

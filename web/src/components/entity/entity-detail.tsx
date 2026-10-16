@@ -88,6 +88,9 @@ export interface EntityDetailProps {
    * header, KHÔNG dính khi cuộn: header dính đã đủ cao (review UX, vấn đề 4).
    */
   progress?: ReactNode;
+
+  /** Tab mở khi URL chưa chọn tab — thường là tab nơi làm việc của bước hiện tại. */
+  defaultTab?: string;
 }
 
 export function EntityDetail({
@@ -102,6 +105,7 @@ export function EntityDetail({
   historyContent,
   related = [],
   progress,
+  defaultTab,
 }: EntityDetailProps) {
   const location = useLocation();
 
@@ -119,7 +123,7 @@ export function EntityDetail({
     [tabs, historyContent],
   );
 
-  const { active, selectTab, onTabKeyDown } = useDetailTabs(allTabs);
+  const { active, selectTab, onTabKeyDown } = useDetailTabs(allTabs, defaultTab);
 
   return (
     // Có gì đứng TRƯỚC khung này (dải bước duyệt, thông báo lỗi, «Đề nghị bị từ chối…») thì
