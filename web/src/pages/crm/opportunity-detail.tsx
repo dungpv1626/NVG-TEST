@@ -133,6 +133,35 @@ export function OpportunityDetailPage() {
     }
   }
 
+  /**
+   * Lưu phân loại xong thì đi tiếp luôn: đủ điều kiện (M2–M4 + loại công trình) mà cơ hội còn ở
+   * Tiếp nhận / Xác minh → chuyển sang Khảo sát và mở tab Khảo sát. M1 thì nói rõ vì sao đứng lại.
+   */
+  async function afterClassified(
+    classification: string | null,
+    projectType: string | null,
+  ): Promise<string | null> {
+    if (data!.stage !== 'tiep_nhan' && data!.stage !== 'xac_minh') return null;
+    if (classification === 'M1') {
+      return 'Đã lưu. Khách M1 — Lưu trữ đứng lại ở Xác minh; đổi phân loại khi khách có nhu cầu thực.';
+    }
+    if (!classification || !projectType) {
+      return 'Đã lưu. Cần chọn đủ phân loại và loại công trình để sang Khảo sát.';
+    }
+    setMoveError(null);
+    try {
+      if (data!.stage === 'tiep_nhan') {
+        await moveStage.mutateAsync({ opportunityId: data!.id, toStage: 'xac_minh' });
+      }
+      await moveStage.mutateAsync({ opportunityId: data!.id, toStage: 'khao_sat' });
+      openTab(STAGE_TAB.khao_sat);
+      return null;
+    } catch (e) {
+      setMoveError(toUserMessage(e, 'edit'));
+      return 'Đã lưu phân loại, nhưng chưa chuyển được sang Khảo sát.';
+    }
+  }
+
   async function changeStage(toStage: OpportunityStage) {
     setMoveError(null);
     // Điều kiện chưa đạt nhưng miễn được (khảo sát) — hỏi lý do, ghi lại rồi mới chuyển.
@@ -293,6 +322,7 @@ export function OpportunityDetailPage() {
                     (data.stage === 'tiep_nhan' || data.stage === 'xac_minh') &&
                     !readiness.find((r) => r.requirement === 'classified')?.met
                   }
+                  onSaved={afterClassified}
                 />
                 <DetailFields
                   fields={[

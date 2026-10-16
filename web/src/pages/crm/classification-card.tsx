@@ -34,6 +34,7 @@ export function ClassificationCard({
   projectType,
   canEdit,
   highlight,
+  onSaved,
 }: {
   opportunityId: string;
   classification: string | null;
@@ -41,12 +42,17 @@ export function ClassificationCard({
   canEdit: boolean;
   /** Đang là việc của bước hiện tại — viền nhấn để mắt tìm thấy ngay. */
   highlight: boolean;
+  /**
+   * Gọi sau khi lưu xong — trang cơ hội dùng để tự chuyển sang bước kế tiếp khi phân loại đã đủ,
+   * người dùng không phải tự tìm nút (phản hồi chủ dự án). Trả câu báo kết quả để hiện tại chỗ.
+   */
+  onSaved?: (classification: string | null, projectType: string | null) => Promise<string | null>;
 }) {
   const classify = useClassifyOpportunity();
   const [value, setValue] = useState(classification ?? '');
   const [type, setType] = useState(projectType ?? '');
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
+  const [saved, setSaved] = useState<string | null>(null);
 
   useEffect(() => setValue(classification ?? ''), [classification]);
   useEffect(() => setType(projectType ?? ''), [projectType]);
@@ -58,14 +64,14 @@ export function ClassificationCard({
 
   async function save() {
     setError(null);
-    setSaved(false);
+    setSaved(null);
     try {
       await classify.mutateAsync({
         opportunityId,
         classification: value || null,
         projectType: type || null,
       });
-      setSaved(true);
+      setSaved((await onSaved?.(value || null, type || null)) ?? 'Đã lưu.');
     } catch (e) {
       setError(toUserMessage(e, 'edit'));
     }
@@ -133,7 +139,11 @@ export function ClassificationCard({
           >
             Lưu phân loại
           </Button>
-          {saved && !dirty && <span className="text-sm text-fg-subtle">Đã lưu.</span>}
+          {saved && !dirty && (
+            <span role="status" className="text-sm">
+              {saved}
+            </span>
+          )}
           {error && (
             <span role="alert" className="text-sm text-status-overdue">
               {error}
