@@ -27,11 +27,18 @@
  */
 
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { Gauge } from 'lucide-react';
 import { MODULES } from '@nvg/shared';
 import { cn } from '@/lib/utils';
 import { CompanySwitcher } from './company-switcher';
-import { MODULE_ICONS, useActiveModule, useModuleRoutes, useVisibleModules } from './module-nav';
+import {
+  MODULE_ICONS,
+  useActiveModule,
+  useModuleRoutes,
+  useShowExecOverview,
+  useVisibleModules,
+} from './module-nav';
 import { useTkScope } from './tk-chrome';
 import { useSidebarCollapsed } from './use-sidebar-collapsed';
 
@@ -40,6 +47,8 @@ export function Sidebar() {
   const moduleRoutes = useModuleRoutes();
   const activeModule = useActiveModule();
   const { collapsed, toggle } = useSidebarCollapsed();
+  const canSeeExec = useShowExecOverview();
+  const { pathname } = useLocation();
   // Trong Module Thiết kế, thanh này mặc bảng màu tối CỐ ĐỊNH của bản mẫu (§4.3) — tối ở cả
   // chế độ sáng lẫn tối, đúng như bản mẫu ghi là chủ ý. Nên nó KHÔNG dùng `--color-tk-*`
   // (bộ đó đổi theo chế độ) mà dùng bộ `--color-navdark-*` chỉ có một giá trị.
@@ -102,6 +111,37 @@ export function Sidebar() {
         aria-label="Điều hướng chính"
       >
         <ul className="space-y-0.5">
+          {/* Tổng quan điều hành (0169) — không phải phân hệ nên không nằm trong `MODULES`;
+              chỉ lãnh đạo và Kiểm soát nội bộ thấy (ẩn hẳn với vai trò khác, CLAUDE.md 5.4). */}
+          {canSeeExec && (
+            <li>
+              <Link
+                to="/tong-quan"
+                aria-current={pathname === '/tong-quan' ? 'page' : undefined}
+                aria-label={collapsed ? 'Tổng quan điều hành' : undefined}
+                title={collapsed ? 'Tổng quan điều hành' : 'Cảnh báo toàn hệ thống cho lãnh đạo'}
+                className={cn(
+                  'flex rounded-md',
+                  'transition-colors duration-(--motion-fast) ease-(--ease-out)',
+                  tk
+                    ? 'text-navdark-fg hover:bg-navdark-hover hover:text-navdark-fg-strong'
+                    : 'text-fg-subtle hover:bg-surface-hover hover:text-brand-forest',
+                  collapsed
+                    ? 'flex-col items-center gap-1 px-1 py-2 text-center'
+                    : 'items-center gap-2 py-2 pr-2 pl-3',
+                  pathname === '/tong-quan' &&
+                    (tk
+                      ? 'bg-navdark-sel font-semibold text-navdark-sel-fg hover:bg-navdark-sel hover:text-navdark-sel-fg'
+                      : 'bg-brand-subtle font-bold text-brand-forest hover:bg-brand-subtle'),
+                )}
+              >
+                <Gauge className="size-5 shrink-0" aria-hidden />
+                <span className={cn(collapsed ? 'w-full text-2xs' : 'truncate')}>
+                  {collapsed ? 'Điều hành' : 'Tổng quan điều hành'}
+                </span>
+              </Link>
+            </li>
+          )}
           {visible.map((code) => {
             const Icon = MODULE_ICONS[code];
             const meta = MODULES[code];

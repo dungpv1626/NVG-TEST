@@ -12,7 +12,13 @@
 
 import type { Session } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { CompanyCode, ModuleCode, RoleCode } from '@nvg/shared';
+import {
+  EXEC_OVERVIEW_ROLES,
+  ORG_MANAGER_ROLES,
+  type CompanyCode,
+  type ModuleCode,
+  type RoleCode,
+} from '@nvg/shared';
 import { useCompanyStore } from './company-store';
 import { supabase } from './supabase';
 
@@ -436,7 +442,24 @@ export function useCan(moduleCode: ModuleCode, action: PermissionAction = 'view'
 export function useIsResponsible(...responsibleUserIds: (string | null | undefined)[]): boolean {
   const { profile } = useAuth();
   if (!profile) return false;
-  // Vai trò cấp tập đoàn quản lý mọi hồ sơ — khớp đúng `rls_owner_can_write` trong CSDL.
-  if (profile.seesAllCompanies) return true;
+  // Vai trò quản lý mọi hồ sơ — khớp đúng `rls_owner_can_write` trong CSDL. Không dùng
+  // `seesAllCompanies`: Kiểm soát nội bộ xem mọi pháp nhân nhưng không sửa gì (0168).
+  if (profile.assignments.some((a) => ORG_MANAGER_ROLES.includes(a.roleCode))) return true;
   return responsibleUserIds.some((id) => id != null && id === profile.id);
+}
+
+/** Xem được «Tổng quan điều hành» — lãnh đạo và Kiểm soát nội bộ (0169). */
+export function useCanSeeExecOverview(): boolean {
+  const { profile } = useAuth();
+  return Boolean(profile?.assignments.some((a) => EXEC_OVERVIEW_ROLES.includes(a.roleCode)));
+}
+
+/**
+ * Trang mặc định của người dùng — `roles.default_route` của vai trò CHÍNH (Webapp Flow 2.3).
+ * Trước GĐ2 cột này được nạp mà không ai đọc: mọi người đăng nhập xong đều về `/dashboard`.
+ */
+export function useDefaultRoute(): string {
+  const { profile } = useAuth();
+  const primary = profile?.assignments.find((a) => a.isPrimary) ?? profile?.assignments[0];
+  return primary?.defaultRoute ?? '/dashboard';
 }

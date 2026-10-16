@@ -22,7 +22,7 @@ import {
   TimesheetGuard,
 } from '@/components/layout/module-guard';
 import { ProtectedRoute } from '@/components/layout/protected-route';
-import { AuthProvider } from '@/lib/auth';
+import { AuthProvider, useAuth, useCanSeeExecOverview, useDefaultRoute } from '@/lib/auth';
 import { LoginPage } from '@/pages/login';
 
 /**
@@ -34,6 +34,9 @@ import { LoginPage } from '@/pages/login';
  *
  * Đăng nhập KHÔNG tách: đó luôn là màn hình đầu tiên, tách ra chỉ thêm một vòng chờ mạng.
  */
+const ExecOverviewPage = lazy(() =>
+  import('@/pages/dieu-hanh/tong-quan').then((m) => ({ default: m.ExecOverviewPage })),
+);
 const DashboardPage = lazy(() =>
   import('@/pages/dashboard').then((m) => ({ default: m.DashboardPage })),
 );
@@ -295,6 +298,9 @@ const router = createBrowserRouter(
         {/* Dashboard KHÔNG bọc `ModuleGuard`: đây là nơi màn hình bị chặn đưa người
                   dùng quay về, nên nó phải là điểm đến chắc chắn vào được của mọi vai trò. */}
         <Route path="/dashboard" element={<DashboardPage />} />
+        {/* Tổng quan điều hành — chỉ lãnh đạo và Kiểm soát nội bộ (0169); không phải phân hệ nên
+            không dùng ModuleGuard, vai trò khác về Dashboard. */}
+        <Route path="/tong-quan" element={<ExecGuard />} />
 
         <Route element={<ModuleGuard module="BC" />}>
           {/* BC-02 — báo cáo lãi/lỗ. Quyền XEM số liệu thật (Mẫu D `profit`) được CSDL chặn
@@ -471,8 +477,8 @@ const router = createBrowserRouter(
         </Route>
       </Route>
 
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<HomeRedirect />} />
+      <Route path="*" element={<HomeRedirect />} />
     </Route>,
   ),
 );
@@ -487,4 +493,19 @@ export default function App() {
       </AuthProvider>
     </QueryClientProvider>
   );
+}
+
+/** Về trang mặc định của vai trò chính (`roles.default_route`) — trước GĐ2 luôn là /dashboard. */
+function HomeRedirect() {
+  const { session, profile, loading } = useAuth();
+  const to = useDefaultRoute();
+  // Đang khôi phục phiên / tải hồ sơ: chưa biết vai trò thì chưa chuyển — chuyển sớm là đưa
+  // lãnh đạo về /dashboard thay vì Tổng quan điều hành.
+  if (loading || (session && !profile)) return null;
+  return <Navigate to={to} replace />;
+}
+
+function ExecGuard() {
+  const allowed = useCanSeeExecOverview();
+  return allowed ? <ExecOverviewPage /> : <Navigate to="/dashboard" replace />;
 }

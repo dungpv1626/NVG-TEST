@@ -28,6 +28,7 @@ export const ROLE_CODES = [
   // bằng `ALTER TYPE ... ADD VALUE`, chèn giữa sẽ làm lệch thứ tự giữa các môi trường.
   'SX',
   'CHT',
+  'KSNB',
 ] as const;
 
 export type RoleCode = (typeof ROLE_CODES)[number];
@@ -53,19 +54,19 @@ export const ROLES: Readonly<Record<RoleCode, RoleMeta>> = {
   TGD: {
     code: 'TGD',
     label: 'Tổng Giám đốc',
-    defaultRoute: '/dashboard',
+    defaultRoute: '/tong-quan',
     seesAllCompanies: true,
   },
   CFO: {
     code: 'CFO',
     label: 'Giám đốc Tài chính',
-    defaultRoute: '/dashboard',
+    defaultRoute: '/tong-quan',
     seesAllCompanies: true,
   },
   BGD: {
     code: 'BGD',
     label: 'Ban Giám đốc',
-    defaultRoute: '/dashboard',
+    defaultRoute: '/tong-quan',
     seesAllCompanies: true,
   },
   KD: {
@@ -168,7 +169,29 @@ export const ROLES: Readonly<Record<RoleCode, RoleMeta>> = {
     seesAllCompanies: false,
     siteScoped: true,
   },
+  /*
+   * Kiểm soát nội bộ — chỉ xem mọi pháp nhân, mọi phân hệ (migration 0167, 0168). Không tạo,
+   * sửa, phê duyệt; không xem lương / hồ sơ cá nhân.
+   */
+  KSNB: {
+    code: 'KSNB',
+    label: 'Kiểm soát nội bộ',
+    defaultRoute: '/tong-quan',
+    seesAllCompanies: true,
+  },
 } as const;
+
+/**
+ * Vai trò QUẢN LÝ mọi hồ sơ — sửa được hồ sơ không phải của mình. Gương của
+ * `rls_owner_can_write` trong CSDL (0001). KHÔNG suy từ `seesAllCompanies`: Kiểm soát nội bộ
+ * xem mọi pháp nhân nhưng không sửa gì.
+ */
+export const ORG_MANAGER_ROLES: readonly RoleCode[] = ['TGD', 'CFO', 'BGD', 'ADMIN'];
+
+/**
+ * Vai trò xem «Tổng quan điều hành» (`/tong-quan`). Gương của cửa vào hàm `exec_overview` (0169).
+ */
+export const EXEC_OVERVIEW_ROLES: readonly RoleCode[] = ['TGD', 'CFO', 'BGD', 'ADMIN', 'KSNB'];
 
 /** Loại nghiệp vụ có luồng phê duyệt theo hạn mức. */
 export const APPROVAL_SUBJECTS = [

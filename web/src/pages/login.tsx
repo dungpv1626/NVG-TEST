@@ -9,23 +9,37 @@
  * không lộ mã lỗi kỹ thuật.
  */
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
 import { OfflineBar } from '@/components/layout/pwa-status';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useAuth } from '@/lib/auth';
+import { useAuth, useDefaultRoute } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 
+const PROFILE_WAIT_MS = 5000;
+
 export function LoginPage() {
-  const { session, loading, signIn, requestPasswordReset } = useAuth();
+  const { session, profile, loading, signIn, requestPasswordReset } = useAuth();
+  const defaultRoute = useDefaultRoute();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  if (!loading && session) return <Navigate to="/dashboard" replace />;
+  // Đăng nhập xong về trang mặc định của vai trò (Webapp Flow 2.3). Ngay sau khi đăng nhập, phiên
+  // có trước, hồ sơ (vai trò) tải sau — chuyển ngay là đưa lãnh đạo về /dashboard. Chờ hồ sơ, tối
+  // đa PROFILE_WAIT_MS; hồ sơ không tải được thì vẫn về Dashboard như trước, không kẹt ở đây.
+  const [waitedTooLong, setWaitedTooLong] = useState(false);
+  useEffect(() => {
+    if (!session || profile) return;
+    const t = window.setTimeout(() => setWaitedTooLong(true), PROFILE_WAIT_MS);
+    return () => window.clearTimeout(t);
+  }, [session, profile]);
+
+  if (!loading && session && profile) return <Navigate to={defaultRoute} replace />;
+  if (!loading && session && waitedTooLong) return <Navigate to="/dashboard" replace />;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();

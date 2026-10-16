@@ -179,3 +179,24 @@ cả ba bị bắt.
 3. Yêu cầu tuyển dụng do Nhân sự lập và Nhân sự duyệt — có cần người khác duyệt? — đang: cho phép.
 4. Trượt thầu có tự đánh dấu Mất cơ hội? — đang: chỉ báo người phụ trách.
 5. Mở công trình từ hợp đồng: Ban Giám đốc hoặc Trưởng phòng Thi công / Chỉ huy trưởng — đúng chưa?
+
+### Giai đoạn 2 — Tổng quan điều hành và Kiểm soát nội bộ
+
+**Đã làm** (0167–0169)
+
+- Vai trò Kiểm soát nội bộ (KSNB) chỉ xem toàn hệ thống; không xem lương / hồ sơ cá nhân (mặc định, chờ Haan). Rà
+  mọi chỗ dùng `sees_all_companies`: hai bảng cho ghi chỉ vì cờ đó — đã chặn bằng `auth_manages_all_companies()`.
+- `useIsResponsible` không còn coi «xem mọi pháp nhân» là «quản lý mọi hồ sơ».
+- Đăng nhập đi tới trang mặc định của vai trò (cột `default_route` trước đây bị bỏ qua); lãnh đạo và KSNB vào
+  `/tong-quan`.
+- Trang «Tổng quan điều hành»: 10 ô cảnh báo tính ở CSDL xuyên pháp nhân, xếp theo mức (có vấn đề → cần chú ý →
+  ổn), mỗi ô kể tối đa 5 hồ sơ, kèm khối tài chính của Dashboard.
+- Kèm theo: `/kt/cong-no?chieu=phai-tra` mở thẳng tab Phải trả.
+
+**Kiểm chứng:** `ksnb.test.ts` 6/6 — đo lại bằng cách nới chính sách danh mục kiểm tra: phép thử ĐỎ (lần đầu nó xanh
+sai lý do vì dữ liệu thử vi phạm ràng buộc khác — đã sửa). Ảnh chụp: KSNB, TGĐ vào `/tong-quan`; Kinh doanh vào
+trang cơ hội, gõ `/tong-quan` bị đưa về Dashboard.
+
+**Câu hỏi cho Haan:** KSNB có được xem lương / hồ sơ cá nhân? (đang: không). Mốc «hợp đồng sắp hết hạn» bao nhiêu
+ngày? (đang: chưa có ô này). Mốc «phê duyệt chờ lâu» 3 ngày (giả định cũ của Dashboard) — giữ hay đặt SLA theo loại?
+

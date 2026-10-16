@@ -621,7 +621,7 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
 | --- | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
 | 0   | Lưu mốc                                                                                                                    | **Xong**                            |
 | 1   | Quyền + thứ tự bước, đồng bộ liên module, dải tiến trình + chuỗi hồ sơ, gỡ chế độ tối, sửa lớp đè / token màu (vấn đề 2–4) | **Xong phần chính** — chờ Haan kiểm |
-| 2   | Trang «Tổng quan điều hành» + vai trò Kiểm soát nội bộ (KSNB) (vấn đề 1)                                                   | Chưa làm                            |
+| 2   | Trang «Tổng quan điều hành» + vai trò Kiểm soát nội bộ (KSNB) (vấn đề 1)                                                   | **Xong phần chính** — chờ Haan kiểm |
 | 3   | Khảo sát chốt bằng máy (CRM + TK), đính kèm dùng chung, ghi âm → Whisper → Gemini tóm tắt (vấn đề 6, 8)                    | Chưa làm                            |
 | 3b  | Điểm danh theo tổ, kiểm bán kính GPS (chỉ cảnh báo), báo cáo có mặt, đề xuất chấm công                                     | Chưa làm                            |
 | 4   | Mẫu hợp đồng `.docx` có chỗ trống, tự điền, xem trước, xuất (vấn đề 5)                                                     | Chưa làm                            |
@@ -668,6 +668,23 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
 - Hàng rào: `flow-guard.test.ts`, `flow.test.ts` (khớp SQL 0155), chuỗi hồ sơ trong `golden-path.test.ts`,
   `design-rules.test.ts` (lớp màu chỉ trỏ token đã khai; không còn chế độ tối); đột biến M238–M240.
 
+**GĐ2 đã có trong mã** (0167–0169):
+
+- Vai trò `KSNB` «Kiểm soát nội bộ» (0167 chỉ thêm enum; dòng vai trò + quyền do `db:seed` tạo — chạy seed SAU migrate,
+  kể cả trên demo). Xem mọi pháp nhân / phân hệ; không tạo, sửa, phê duyệt; xem giá vốn, lợi nhuận, tài chính,
+  nhật ký kiểm toán; KHÔNG xem lương, hồ sơ cá nhân. Tài khoản thử `ksnb@nhavietgroup.test`.
+- `auth_is_read_only()`, `auth_manages_all_companies()`: «xem mọi pháp nhân» không còn đồng nghĩa «quản lý mọi pháp
+  nhân». Hai bảng trước cho ghi chỉ vì `sees_all_companies` (danh mục kiểm tra nghiệm thu, phân công công trình) đã
+  đổi. **Viết điều kiện GHI mới thì dùng `auth_manages_all_companies()`, đừng dùng `auth_sees_all_companies()`.**
+  Chữ 'KSNB' trong SQL so dạng `text` (giá trị enum mới chưa commit khi các migration chạy chung một giao dịch).
+- Web: `useIsResponsible` dựa vào `ORG_MANAGER_ROLES` (gương `rls_owner_can_write`), không còn dựa `seesAllCompanies`.
+  Đăng nhập / `/` đi tới `roles.default_route` (`useDefaultRoute`); TGĐ, CFO, BGĐ, KSNB → `/tong-quan`.
+- `exec_overview()` (0169) + trang `pages/dieu-hanh/tong-quan.tsx`: 10 ô (phê duyệt đang chờ, đề nghị chi kẹt, công
+  nợ phải thu / phải trả quá hạn, hợp đồng quá hạn, công trình trễ / vượt ngân sách, giàn giáo quá hạn trả, giấy tờ
+  nhân sự, báo giá không qua khảo sát), xếp theo mức, mỗi ô tối đa 5 hồ sơ. Quy tắc quá hạn chép đúng `*DisplayStatus`
+  của `shared/`; mốc «chờ lâu» = SLA nếu có, không thì `PENDING_APPROVAL_AGING_DAYS` do trang truyền vào.
+- Hàng rào: `ksnb.test.ts` (đo bằng cách nới chính sách — phép thử phải đỏ), `tong-quan.test.tsx`.
+
 **GĐ1 còn thiếu:** bảng lịch sử bước chung `stage_transitions` (hợp đồng / gói thầu / công trình); dải tiến
 trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ PWA trên hộp thoại, `ConfirmDialog` qua portal.
 
@@ -675,13 +692,9 @@ trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ P
 
 1. Haan kiểm GĐ1 trên máy (`http://localhost:5173`) và trả lời các câu hỏi ở 9.5.
 2. Khi Haan đồng ý: đẩy nhánh, `npm run db:migrate:demo` rồi `npm run deploy` (API trước, web sau).
-3. GĐ2 — migration `0167` thêm `KSNB` vào enum role (riêng một migration), `0168` quyền chỉ xem toàn bộ,
-   `0169` `exec_overview()` + các view cảnh báo (phê duyệt kẹt toàn công ty, giàn giáo quá hạn trả, công nợ phải
-   trả quá hạn, đề nghị chi kẹt bước, hợp đồng sắp hết hạn, hồ sơ nhân sự sắp hết hạn); trang
-   `pages/dieu-hanh/tong-quan.tsx`; đăng nhập đi tới `defaultRoute` của vai trò (đang bị bỏ qua ở `login.tsx`,
-   `App.tsx`). **Trước KSNB phải sửa `useIsResponsible`** (`web/src/lib/auth.tsx`) — nó dựa vào
-   `seesAllCompanies` nên KSNB sẽ thấy nút sửa ở mọi hồ sơ.
-4. Sau đó GĐ3 → 3b → 4 → 5 theo kế hoạch trong `doc/MOC_CAI_TIEN_UX.md`. Migration đánh số nối tiếp từ 0167.
+3. GĐ2 đã làm (0167–0169) — xem «GĐ2 đã có trong mã» bên dưới. Chưa làm: ô «hợp đồng sắp hết hạn» (cần tham số số
+   ngày, chưa có — để trống thay vì tự đặt), lối vào trang điều hành trên thanh dưới của điện thoại.
+4. Sau đó GĐ3 → 3b → 4 → 5 theo kế hoạch trong `doc/MOC_CAI_TIEN_UX.md`. Migration đánh số nối tiếp từ 0170.
 
 ### 9.4 Quyết định đã chốt và lý do
 

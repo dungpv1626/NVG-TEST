@@ -154,7 +154,7 @@ export const ROLE_SEED: RoleSeed[] = [
     label: 'Tổng Giám đốc',
     description: 'Chủ trì triển khai, phê duyệt cấp cao nhất, không giới hạn hạn mức.',
     seesAllCompanies: true,
-    defaultRoute: '/dashboard',
+    defaultRoute: '/tong-quan',
     permissions: BGD_PERMISSIONS,
   },
   {
@@ -162,7 +162,7 @@ export const ROLE_SEED: RoleSeed[] = [
     label: 'Giám đốc Tài chính',
     description: 'Kiểm soát dòng tiền, công nợ, phê duyệt chi theo hạn mức.',
     seesAllCompanies: true,
-    defaultRoute: '/dashboard',
+    defaultRoute: '/tong-quan',
     permissions: { ...BGD_PERMISSIONS, KT: ALL },
   },
   {
@@ -170,7 +170,7 @@ export const ROLE_SEED: RoleSeed[] = [
     label: 'Ban Giám đốc',
     description: 'Giám sát toàn hệ thống, xem và phê duyệt.',
     seesAllCompanies: true,
-    defaultRoute: '/dashboard',
+    defaultRoute: '/tong-quan',
     permissions: BGD_PERMISSIONS,
   },
   {
@@ -310,6 +310,32 @@ export const ROLE_SEED: RoleSeed[] = [
       KT: ALL,
       NS: ALL,
       SX: ALL,
+    },
+  },
+  {
+    /*
+     * Kiểm soát nội bộ — Giai đoạn 2 đợt cải tiến (doc/MOC_CAI_TIEN_UX.md, vấn đề 1). Xem mọi
+     * pháp nhân, mọi phân hệ; KHÔNG tạo, sửa, phê duyệt. Giá vốn, lợi nhuận, tài chính và nhật
+     * ký kiểm toán xem được; lương và hồ sơ cá nhân không (0168, chờ Haan). Không có hạn mức
+     * phê duyệt nên không vào Hộp thư Phê duyệt.
+     */
+    code: 'KSNB',
+    label: 'Kiểm soát nội bộ',
+    description: 'Giám sát, đối chiếu toàn hệ thống ở chế độ chỉ xem; không tạo, sửa, phê duyệt.',
+    seesAllCompanies: true,
+    defaultRoute: '/tong-quan',
+    permissions: {
+      BC: VIEW,
+      CRM: VIEW,
+      DA: VIEW,
+      TK: VIEW,
+      HD: VIEW,
+      TC: VIEW,
+      MH: VIEW,
+      KHO: VIEW,
+      KT: VIEW,
+      NS: VIEW,
+      SX: VIEW,
     },
   },
 ];
@@ -546,6 +572,14 @@ export const USER_SEED: UserSeed[] = [
       { company: 'NVS', role: 'NS' },
       { company: 'NVO', role: 'NS' },
     ],
+  },
+  {
+    email: 'ksnb@nhavietgroup.test',
+    fullName: 'Đinh Thị Kiểm',
+    jobTitle: 'Chuyên viên Kiểm soát nội bộ',
+    department: 'Ban Kiểm soát nội bộ',
+    fromDocs: false,
+    assignments: [{ company: 'NVG', role: 'KSNB', isPrimary: true }],
   },
 ];
 

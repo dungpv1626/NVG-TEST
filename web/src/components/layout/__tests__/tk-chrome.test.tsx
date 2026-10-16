@@ -21,6 +21,7 @@ vi.mock('@/components/layout/module-nav', async (original) => {
     useVisibleModules: () => ['BC', 'TK'],
     useModuleRoutes: () => MODULE_ROUTES_FOR_TEST,
     useActiveModule: () => 'TK',
+    useShowExecOverview: () => false,
   };
 });
 // Thanh trạng thái kết nối gọi `virtual:pwa-register/react` — module ảo của Vite, không có

@@ -70,6 +70,8 @@ export const ACCOUNTS = {
   xuongNvs: 'sanxuat.nvs@nhavietgroup.test',
   ketoan: 'ketoan@nhavietgroup.test',
   nhanSu: 'nhansu@nhavietgroup.test',
+  /** Vai trò `KSNB` — Kiểm soát nội bộ, chỉ xem mọi pháp nhân (0167, 0168). */
+  ksnb: 'ksnb@nhavietgroup.test',
 } as const;
 
 /**

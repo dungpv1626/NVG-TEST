@@ -12,6 +12,7 @@
  */
 
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   PARTY_TYPE_LABELS,
   PAYMENT_METHOD_LABELS,
@@ -54,7 +55,12 @@ interface ReceivableRow extends EntityRow {
 export function ReceivablePage() {
   const canEdit = useCan('KT', 'edit');
   const scope = useCompanyScope();
-  const [direction, setDirection] = useState<ReceivableDirection>('phai_thu');
+  // `?chieu=phai-tra` mở thẳng tab Phải trả — ô «Công nợ phải trả quá hạn» của Tổng quan điều
+  // hành dẫn tới đây (0169); thiếu tham số thì liên kết rơi vào tab Phải thu.
+  const [searchParams] = useSearchParams();
+  const [direction, setDirection] = useState<ReceivableDirection>(
+    searchParams.get('chieu') === 'phai-tra' ? 'phai_tra' : 'phai_thu',
+  );
   const [isFormOpen, setFormOpen] = useState(false);
   const [amount, setAmount] = useState('');
   const [settleFor, setSettleFor] = useState<string | null>(null);

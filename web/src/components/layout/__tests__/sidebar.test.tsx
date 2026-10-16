@@ -26,6 +26,7 @@ vi.mock('@/components/layout/module-nav', async (original) => {
     useVisibleModules: () => ['BC', 'CRM', 'TK'],
     useModuleRoutes: () => MODULE_ROUTES_FOR_TEST,
     useActiveModule: () => 'TK',
+    useShowExecOverview: () => false,
   };
 });
 

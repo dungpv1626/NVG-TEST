@@ -24,7 +24,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { MODULE_CODES, ROLES, type ModuleCode, type RoleCode } from '@nvg/shared';
-import { useAuth, useCan } from '@/lib/auth';
+import { useAuth, useCan, useCanSeeExecOverview } from '@/lib/auth';
 
 /** Một khái niệm luôn dùng đúng một icon xuyên suốt hệ thống (Content Guidelines 6.6). */
 export const MODULE_ICONS: Record<ModuleCode, LucideIcon> = {
@@ -176,4 +176,9 @@ export function splitBottomNav(visible: ModuleCode[]): {
     primary: visible.slice(0, BOTTOM_NAV_LIMIT - 1),
     rest: visible.slice(BOTTOM_NAV_LIMIT - 1),
   };
+}
+
+/** Mục «Tổng quan điều hành» trên thanh điều hướng — lãnh đạo và Kiểm soát nội bộ (0169). */
+export function useShowExecOverview(): boolean {
+  return useCanSeeExecOverview();
 }
