@@ -88,7 +88,33 @@ export function useDecideApproval() {
       void queryClient.invalidateQueries({ queryKey: ['quotes'] });
       void queryClient.invalidateQueries({ queryKey: ['estimates'] });
       void queryClient.invalidateQueries({ queryKey: ['bidding_projects'] });
+      void queryClient.invalidateQueries({ queryKey: ['opportunities'] });
+      void queryClient.invalidateQueries({ queryKey: ['contracts'] });
     },
+  });
+}
+
+export interface ApprovalWaitingOn {
+  role_labels: string[];
+  user_names: string[];
+  waiting_since: string;
+}
+
+/**
+ * Phê duyệt đang chờ ai, từ bao giờ (`approval_waiting_on`, 0162) — người GỬI cần biết hồ sơ
+ * đang nằm ở đâu thay vì chỉ thấy chữ «Chờ duyệt» (AFD 4.7).
+ */
+export function useApprovalWaitingOn(approvalId: string | undefined) {
+  return useQuery<ApprovalWaitingOn | null, Error>({
+    queryKey: ['approvals', 'waiting-on', approvalId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('approval_waiting_on', {
+        p_approval_id: approvalId!,
+      });
+      if (error) throw new Error(error.message);
+      return ((data ?? []) as ApprovalWaitingOn[])[0] ?? null;
+    },
+    enabled: Boolean(approvalId),
   });
 }
 

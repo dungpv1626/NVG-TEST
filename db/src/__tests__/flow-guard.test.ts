@@ -326,6 +326,157 @@ describeDb('Việc của từng bước cơ hội — phân loại, khảo sát 
   });
 });
 
+describeDb('Báo giá → Đàm phán: biết chờ ai, giá tới tay khách thì tự sang Đàm phán (0162)', () => {
+  it('gửi duyệt → biết đang chờ ai → duyệt thì báo người phụ trách → gửi khách thì sang Đàm phán', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const tgd = await signInAs(ACCOUNTS.tgd);
+    const { data: company } = await kd.from('companies').select('id').eq('code', 'NVC').single();
+    const { data: customer } = await kd.from('customers').select('id').limit(1).single();
+    const { data: me } = await kd.rpc('auth_user_id');
+    const { data: myself } = await kd.from('users').select('full_name').eq('id', me).single();
+    const { data: code } = await kd.rpc('next_record_code', {
+      p_company_code: 'NVC',
+      p_record_type: 'CH',
+    });
+    const { data: opp } = await kd
+      .from('opportunities')
+      .insert({
+        code,
+        company_id: company!.id,
+        customer_id: customer!.id,
+        name: `${TEST_PREFIX} Báo giá sang Đàm phán ${Date.now()}`,
+        owner_id: me,
+        classification: 'M3',
+        project_type: 'Nhà phố',
+      })
+      .select('id')
+      .single();
+    const id = opp!.id as string;
+    const move = (stage: string) =>
+      kd.rpc('move_opportunity_stage', { p_opportunity_id: id, p_to_stage: stage });
+    await move('xac_minh');
+    await kd.from('site_surveys').insert({
+      opportunity_id: id,
+      surveyed_at: new Date().toISOString(),
+      needs: 'Nhà phố 4 tầng',
+    });
+    expect((await move('bao_gia')).error).toBeNull();
+
+    const { data: quote } = await kd
+      .from('quotes')
+      .insert({ company_id: company!.id, opportunity_id: id, total_value: 120_000_000 })
+      .select('id')
+      .single();
+    expect((await kd.rpc('request_quote_approval', { p_quote_id: quote!.id })).error).toBeNull();
+
+    const { data: approval } = await kd
+      .from('approvals')
+      .select('id')
+      .eq('entity_type', 'quotes')
+      .eq('entity_id', quote!.id)
+      .eq('status', 'pending_approval')
+      .single();
+
+    // Người gửi thấy hồ sơ đang chờ ai — và không có chính mình trong đó.
+    const { data: waiting, error: waitingError } = await kd.rpc('approval_waiting_on', {
+      p_approval_id: approval!.id,
+    });
+    expect(waitingError).toBeNull();
+    const w = (waiting as { role_labels: string[]; user_names: string[] }[])[0]!;
+    expect(w.user_names.length).toBeGreaterThan(0);
+    expect(w.user_names).not.toContain(myself!.full_name);
+
+    const { error: decided } = await tgd.rpc('decide_approval', {
+      p_approval_id: approval!.id,
+      p_decision: 'approved',
+    });
+    expect(decided).toBeNull();
+
+    // Người phụ trách được báo để gửi khách.
+    const { data: notes } = await kd
+      .from('notifications')
+      .select('type, action_url')
+      .eq('related_entity_id', id)
+      .eq('type', 'quote_approved');
+    expect(notes!.length).toBe(1);
+    expect(notes![0]!.action_url).toContain('tab=bao-gia');
+
+    // Gửi khách → cơ hội tự sang Đàm phán, lịch sử ghi vì sao.
+    expect((await kd.rpc('send_quote_to_customer', { p_quote_id: quote!.id })).error).toBeNull();
+    const { data: after } = await kd.from('opportunities').select('stage').eq('id', id).single();
+    expect(after!.stage).toBe('dam_phan');
+    const { data: history } = await kd
+      .from('opportunity_stage_history')
+      .select('to_stage, note')
+      .eq('opportunity_id', id)
+      .order('changed_at');
+    expect(history!.at(-1)!.to_stage).toBe('dam_phan');
+    expect(history!.at(-1)!.note).toContain('đã gửi khách');
+  });
+
+  it('lập phiên bản mới thì phê duyệt đang chờ của bản cũ đóng lại, rời Hộp thư người duyệt', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const tgd = await signInAs(ACCOUNTS.tgd);
+    const { data: company } = await kd.from('companies').select('id').eq('code', 'NVC').single();
+    const { data: customer } = await kd.from('customers').select('id').limit(1).single();
+    const { data: me } = await kd.rpc('auth_user_id');
+    const { data: code } = await kd.rpc('next_record_code', {
+      p_company_code: 'NVC',
+      p_record_type: 'CH',
+    });
+    const { data: opp } = await kd
+      .from('opportunities')
+      .insert({
+        code,
+        company_id: company!.id,
+        customer_id: customer!.id,
+        name: `${TEST_PREFIX} Phiên bản thay thế ${Date.now()}`,
+        owner_id: me,
+      })
+      .select('id')
+      .single();
+    const newQuote = async (value: number) =>
+      (
+        await kd
+          .from('quotes')
+          .insert({ company_id: company!.id, opportunity_id: opp!.id, total_value: value })
+          .select('id')
+          .single()
+      ).data!.id as string;
+
+    const v1 = await newQuote(700_000_000);
+    expect((await kd.rpc('request_quote_approval', { p_quote_id: v1 })).error).toBeNull();
+    const { data: a1 } = await kd
+      .from('approvals')
+      .select('id')
+      .eq('entity_type', 'quotes')
+      .eq('entity_id', v1)
+      .single();
+
+    await newQuote(650_000_000);
+
+    const { data: closed } = await kd
+      .from('approvals')
+      .select('status, final_decision')
+      .eq('id', a1!.id)
+      .single();
+    expect(closed).toMatchObject({ status: 'completed', final_decision: 'rejected' });
+    const { data: old } = await kd.from('quotes').select('status').eq('id', v1).single();
+    expect(old!.status).toBe('draft');
+
+    const { data: inbox } = await tgd.rpc('my_pending_approvals');
+    expect((inbox ?? []).some((r: { id: string }) => r.id === a1!.id)).toBe(false);
+
+    // Không báo «bị từ chối» cho một bản chẳng ai từ chối.
+    const { data: notes } = await kd
+      .from('notifications')
+      .select('id')
+      .eq('related_entity_id', opp!.id)
+      .eq('type', 'quote_rejected');
+    expect(notes).toHaveLength(0);
+  });
+});
+
 describeDb('Không tự phê duyệt hồ sơ của chính mình (0156)', () => {
   it('Kinh doanh gửi báo giá thì không tự duyệt được, dù trong hạn mức của mình', async () => {
     const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);

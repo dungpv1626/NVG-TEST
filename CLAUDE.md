@@ -644,6 +644,9 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
   ô Phân loại, tự mở tab nơi làm việc của bước, liên kết «làm ngay» cạnh từng dòng «Cần».
 - 0161: báo giá lập TRONG bước Báo giá (vào Báo giá chỉ cần phân loại + khảo sát; Đàm phán mới cần báo giá đã gửi);
   «đã khảo sát» không được ở tương lai. Lưu phân loại / biên bản đã khảo sát thì tự sang bước kế và mở tab của bước.
+- 0162: `approval_waiting_on` (phê duyệt đang chờ ai, bao lâu — dùng chung mọi loại phê duyệt); báo giá gửi khách /
+  gói thầu nộp / phương án thiết kế gửi khách duyệt → cơ hội ở Báo giá tự sang Đàm phán; báo kết quả duyệt báo giá
+  cho người phụ trách; lập phiên bản báo giá mới thì đóng phê duyệt đang chờ của bản cũ.
 - Giao diện: `shared/src/flow.ts` (`OPPORTUNITY_FLOW`, `CONTRACT_FLOW`, `SITE_FLOW`, `stepWindow`), `StepTrack`,
   `RecordChain`, slot `progress` của `EntityDetail`, `allowedDrop` của Kanban, `bottom-bar-slot.ts`; đã gỡ
   `lib/theme.tsx` và `tk-theme.css`.
@@ -657,13 +660,13 @@ trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ P
 
 1. Haan kiểm GĐ1 trên máy (`http://localhost:5173`) và trả lời các câu hỏi ở 9.5.
 2. Khi Haan đồng ý: đẩy nhánh, `npm run db:migrate:demo` rồi `npm run deploy` (API trước, web sau).
-3. GĐ2 — migration `0162` thêm `KSNB` vào enum role (riêng một migration), `0163` quyền chỉ xem toàn bộ,
-   `0164` `exec_overview()` + các view cảnh báo (phê duyệt kẹt toàn công ty, giàn giáo quá hạn trả, công nợ phải
+3. GĐ2 — migration `0163` thêm `KSNB` vào enum role (riêng một migration), `0164` quyền chỉ xem toàn bộ,
+   `0165` `exec_overview()` + các view cảnh báo (phê duyệt kẹt toàn công ty, giàn giáo quá hạn trả, công nợ phải
    trả quá hạn, đề nghị chi kẹt bước, hợp đồng sắp hết hạn, hồ sơ nhân sự sắp hết hạn); trang
    `pages/dieu-hanh/tong-quan.tsx`; đăng nhập đi tới `defaultRoute` của vai trò (đang bị bỏ qua ở `login.tsx`,
    `App.tsx`). **Trước KSNB phải sửa `useIsResponsible`** (`web/src/lib/auth.tsx`) — nó dựa vào
    `seesAllCompanies` nên KSNB sẽ thấy nút sửa ở mọi hồ sơ.
-4. Sau đó GĐ3 → 3b → 4 → 5 theo kế hoạch trong `doc/MOC_CAI_TIEN_UX.md`. Migration đánh số nối tiếp từ 0162.
+4. Sau đó GĐ3 → 3b → 4 → 5 theo kế hoạch trong `doc/MOC_CAI_TIEN_UX.md`. Migration đánh số nối tiếp từ 0163.
 
 ### 9.4 Quyết định đã chốt và lý do
 
@@ -704,6 +707,7 @@ trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ P
   Playwright cần `executablePath` trỏ `%LOCALAPPDATA%/ms-playwright/chromium-1243/chrome-win64/chrome.exe`.
 - `core.autocrlf=true` làm `prettier --check` báo cả tệp chưa đổi (CRLF); chỉ kiểm tệp mình sửa.
 - Đỏ sẵn trên máy này, không do thay đổi: `env-guard.test.ts` (`spawnSync('npx')` không chạy trên Windows),
-  ~20 test web quá thời gian 5 giây, `kb-room-area-stats` lúc đỏ lúc xanh. Vì bộ web chưa xanh nên
+  ~20 test web quá thời gian 5 giây, `kb-room-area-stats` và `bc.test.ts` lúc đỏ lúc xanh khi chạy cả bộ
+  (chạy riêng thì xanh). Vì bộ web chưa xanh nên
   `npm run mutation-proof` không chạy trọn ở đây — đột biến mới đo tay.
 - `npm run lint` cần `NODE_OPTIONS=--max-old-space-size=8192` (mặc định hết bộ nhớ), như CI.

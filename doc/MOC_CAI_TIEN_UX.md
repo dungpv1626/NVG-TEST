@@ -137,6 +137,12 @@ thứ tự). Sửa: vào Báo giá chỉ cần phân loại + khảo sát, Đàm
 «đã khảo sát» ở tương lai; lưu phân loại M2–M4 / biên bản đã khảo sát thì tự sang bước kế và mở tab;
 «Soạn hợp đồng» chỉ hiện khi giá đã gửi khách.
 
+**Rà chuỗi bước — chặng Báo giá → Đàm phán (0162).** Chạy thử bằng đúng vai: thẻ báo giá chỉ ghi «Chờ duyệt»
+mà không nói ai giữ; duyệt xong người Kinh doanh không được báo; gửi khách xong vẫn phải tự tìm nút sang Đàm
+phán; lập phiên bản mới thì bản cũ kẹt «Chờ duyệt» trong Hộp thư TGĐ. Sửa: `approval_waiting_on` + dòng «Đang
+chờ: vai trò — tên · bao lâu»; thông báo `quote_approved` / `quote_rejected`; trigger đồng bộ sang Đàm phán
+(báo giá gửi khách, gói thầu nộp, thiết kế gửi khách duyệt — chỉ từ Báo giá); đóng phê duyệt của bản bị thay.
+
 **Chưa làm trong giai đoạn này (đẩy sau)**
 
 - Bảng lịch sử bước chung `stage_transitions` cho hợp đồng / gói thầu / công trình (cơ hội đã có lịch sử).

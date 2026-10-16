@@ -12,11 +12,21 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle2, XCircle } from 'lucide-react';
-import { APPROVAL_SUBJECT_LABELS, formatCurrency, formatDate, formatDateTime } from '@nvg/shared';
+import {
+  APPROVAL_SUBJECT_LABELS,
+  formatCurrency,
+  formatDate,
+  formatDateTime,
+  formatWaiting,
+} from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
-import { useApprovalHistory, type ApprovalHistoryEntry } from '@/hooks/use-approvals';
+import {
+  useApprovalHistory,
+  useApprovalWaitingOn,
+  type ApprovalHistoryEntry,
+} from '@/hooks/use-approvals';
 import { toUserMessage } from '@/hooks/use-error-message';
 import {
   useQuotes,
@@ -282,6 +292,7 @@ function QuoteVersionCard({
                 <span className="text-fg-subtle">{APPROVAL_SUBJECT_LABELS[approval.subject]}</span>
                 {approval.final_decision === null && <StatusLozenge status="pending_approval" />}
               </div>
+              {approval.final_decision === null && <WaitingOn approvalId={approval.id} />}
               {approval.decisions.map((d) => (
                 <div key={d.id} className="mt-1 flex gap-2">
                   {d.decision === 'approved' ? (
@@ -339,6 +350,27 @@ function QuoteVersionCard({
         )
       )}
     </li>
+  );
+}
+
+/** Phê duyệt đang chờ ai, bao lâu — người gửi không phải đi hỏi (AFD 4.7). */
+function WaitingOn({ approvalId }: { approvalId: string }) {
+  const { data } = useApprovalWaitingOn(approvalId);
+  if (!data) return null;
+  if (data.user_names.length === 0) {
+    return (
+      <p className="mt-1 text-sm text-status-overdue">
+        Chưa có ai đủ hạn mức phê duyệt khoản này. Báo Quản trị hệ thống cấu hình hạn mức phê duyệt.
+      </p>
+    );
+  }
+  return (
+    <p className="mt-1 text-sm">
+      <span className="text-fg-subtle">Đang chờ: </span>
+      <span className="font-medium">{data.role_labels.join(', ')}</span>
+      <span className="text-fg-subtle"> — {data.user_names.join(', ')}</span>
+      <span className="text-fg-subtle"> · {formatWaiting(data.waiting_since)}</span>
+    </p>
   );
 }
 

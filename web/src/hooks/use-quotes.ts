@@ -106,6 +106,9 @@ function useQuoteFlowInvalidation() {
   return () => {
     void queryClient.invalidateQueries({ queryKey: ['quotes'] });
     void queryClient.invalidateQueries({ queryKey: ['approvals'] });
+    // Điều kiện bước và giai đoạn của cơ hội đổi theo báo giá (gửi khách → Đàm phán, 0162).
+    void queryClient.invalidateQueries({ queryKey: ['opportunities'] });
+    void queryClient.invalidateQueries({ queryKey: ['opportunity_stage_history'] });
   };
 }
 
