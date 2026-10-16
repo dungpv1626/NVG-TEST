@@ -591,6 +591,42 @@ describeDb('TC — thứ tự các bước của công trình', () => {
     expect(data!.handed_over_at).not.toBeNull();
     expect(data!.actual_end_date).not.toBeNull();
   });
+
+  it('kết thúc công trình chỉ khi đã khai bảo hành và mọi hạng mục đã hết hạn (0166)', async () => {
+    const end = () =>
+      chiHuy.rpc('move_site_stage', { p_site_id: fixture.nvcSiteId, p_stage: 'hoan_thanh' });
+
+    // Vừa bàn giao, chưa khai bảo hành — không kết thúc được.
+    const { error: noWarranty } = await end();
+    expect(noWarranty?.message).toContain('hạng mục bảo hành');
+
+    const companyId = await companyOf(chiHuy, fixture.nvcSiteId);
+    const { data: running } = await chiHuy
+      .from('warranties')
+      .insert({
+        company_id: companyId,
+        construction_site_id: fixture.nvcSiteId,
+        item: `${TEST_PREFIX} Kết cấu chính`,
+        start_date: new Date().toISOString().slice(0, 10),
+        duration_months: 24,
+      })
+      .select('id')
+      .single();
+    const { error: stillRunning } = await end();
+    expect(stillRunning?.message).toContain('hết hạn bảo hành');
+
+    // Hạng mục còn hạn được thay bằng hạng mục đã hết hạn — thì kết thúc được.
+    const { data: updated, error: updateError } = await chiHuy
+      .from('warranties')
+      .update({ start_date: '2020-01-01', duration_months: 12 })
+      .eq('id', running!.id)
+      .select('warranty_until')
+      .single();
+    expect(updateError).toBeNull();
+    expect(updated!.warranty_until).toBe('2021-01-01');
+    const { error } = await end();
+    expect(error?.message ?? null).toBeNull();
+  });
 });
 
 describeDb('TC — bảo hành theo từng hạng mục (TC-07)', () => {

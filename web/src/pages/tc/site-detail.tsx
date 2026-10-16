@@ -112,7 +112,16 @@ export function SiteDetailPage() {
       }, 50);
     }
   }
-  // Điều kiện bước kế tiếp (0164) — cùng điều kiện CSDL chặn.
+  // Điều kiện nào làm ở đâu — nút «làm ngay» cạnh dòng «Cần».
+  const SITE_REQUIREMENT_ACTION: Record<string, { tab: string; anchor?: string; label: string }> = {
+    commander_assigned: { tab: 'tong-quan', anchor: SITE_PREP_ANCHOR, label: 'Phân công' },
+    planned_dates: { tab: 'tong-quan', anchor: SITE_PREP_ANCHOR, label: 'Ghi ngày' },
+    customer_acceptance: { tab: 'nghiem-thu', label: 'Lập biên bản nghiệm thu' },
+    warranties_declared: { tab: 'bao-hanh', label: 'Khai hạng mục bảo hành' },
+    warranties_expired: { tab: 'bao-hanh', label: 'Xem bảo hành' },
+    claims_closed: { tab: 'bao-hanh', label: 'Xem yêu cầu bảo hành' },
+  };
+  // Điều kiện bước kế tiếp (0164, 0166) — cùng điều kiện CSDL chặn.
   const missing = next
     ? readiness.filter((r) => r.for_stage === next.stage && !r.met).map((r) => r.label)
     : [];
@@ -122,23 +131,20 @@ export function SiteDetailPage() {
         .map((r) => ({
           label: r.label,
           met: r.met,
-          action: readOnly ? undefined : r.requirement === 'customer_acceptance' ? (
-            <button
-              type="button"
-              className="font-medium text-brand underline-offset-2 hover:underline"
-              onClick={() => openTab('nghiem-thu')}
-            >
-              Lập biên bản nghiệm thu
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="font-medium text-brand underline-offset-2 hover:underline"
-              onClick={() => openTab('tong-quan', SITE_PREP_ANCHOR)}
-            >
-              Phân công
-            </button>
-          ),
+          action: readOnly
+            ? undefined
+            : (() => {
+                const go = SITE_REQUIREMENT_ACTION[r.requirement];
+                return go ? (
+                  <button
+                    type="button"
+                    className="font-medium text-brand underline-offset-2 hover:underline"
+                    onClick={() => openTab(go.tab, go.anchor)}
+                  >
+                    {go.label}
+                  </button>
+                ) : undefined;
+              })(),
         }))
     : [];
 

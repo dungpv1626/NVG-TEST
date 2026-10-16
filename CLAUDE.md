@@ -659,6 +659,9 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
   ra; giãn cách `request_nudge_min_interval_hours`), lịch sử `approval_reminders`. Nút nằm trong `WaitingOn`.
   Thi công KHÔNG xem Module Hợp đồng (chủ dự án giữ nguyên): panel công trình ghi «Đã có hợp đồng — Kinh doanh và Ban
   Giám đốc quản lý nội dung», không lộ số / giá trị.
+- 0166: kết thúc công trình cần đã khai hạng mục bảo hành, mọi hạng mục đã hết hạn, không còn yêu cầu bảo hành đang
+  mở (áp cả đường tắt Nghiệm thu → Kết thúc); `warranties_fill_dates` tính lại ngày hết hạn khi sửa ngày bắt đầu /
+  thời hạn (trước giữ ngày cũ).
 - Giao diện: `shared/src/flow.ts` (`OPPORTUNITY_FLOW`, `CONTRACT_FLOW`, `SITE_FLOW`, `stepWindow`), `StepTrack`,
   `RecordChain`, slot `progress` của `EntityDetail`, `allowedDrop` của Kanban, `bottom-bar-slot.ts`; đã gỡ
   `lib/theme.tsx` và `tk-theme.css`.
@@ -672,13 +675,13 @@ trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ P
 
 1. Haan kiểm GĐ1 trên máy (`http://localhost:5173`) và trả lời các câu hỏi ở 9.5.
 2. Khi Haan đồng ý: đẩy nhánh, `npm run db:migrate:demo` rồi `npm run deploy` (API trước, web sau).
-3. GĐ2 — migration `0166` thêm `KSNB` vào enum role (riêng một migration), `0167` quyền chỉ xem toàn bộ,
-   `0168` `exec_overview()` + các view cảnh báo (phê duyệt kẹt toàn công ty, giàn giáo quá hạn trả, công nợ phải
+3. GĐ2 — migration `0167` thêm `KSNB` vào enum role (riêng một migration), `0168` quyền chỉ xem toàn bộ,
+   `0169` `exec_overview()` + các view cảnh báo (phê duyệt kẹt toàn công ty, giàn giáo quá hạn trả, công nợ phải
    trả quá hạn, đề nghị chi kẹt bước, hợp đồng sắp hết hạn, hồ sơ nhân sự sắp hết hạn); trang
    `pages/dieu-hanh/tong-quan.tsx`; đăng nhập đi tới `defaultRoute` của vai trò (đang bị bỏ qua ở `login.tsx`,
    `App.tsx`). **Trước KSNB phải sửa `useIsResponsible`** (`web/src/lib/auth.tsx`) — nó dựa vào
    `seesAllCompanies` nên KSNB sẽ thấy nút sửa ở mọi hồ sơ.
-4. Sau đó GĐ3 → 3b → 4 → 5 theo kế hoạch trong `doc/MOC_CAI_TIEN_UX.md`. Migration đánh số nối tiếp từ 0166.
+4. Sau đó GĐ3 → 3b → 4 → 5 theo kế hoạch trong `doc/MOC_CAI_TIEN_UX.md`. Migration đánh số nối tiếp từ 0167.
 
 ### 9.4 Quyết định đã chốt và lý do
 

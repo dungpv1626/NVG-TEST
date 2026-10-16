@@ -154,6 +154,12 @@ mở từ hợp đồng thì người Kinh doanh thành chỉ huy công trình. 
 bị khởi công» chỉ cho chọn người Thi công, Ban Giám đốc mở được công trình, chỉ huy trưởng được báo, mở xong
 sang thẳng công trình, mỗi bước mở đúng tab (Nhật ký / Nghiệm thu / Bảo hành).
 
+**Rà chuỗi bước — Nghiệm thu → Bảo hành → Kết thúc, «Thúc», quyền xem hợp đồng (0165, 0166).** Thêm nút
+«Thúc» cho mọi phê duyệt đang chờ (`nudge_approval`). Chủ dự án giữ nguyên: Thi công không xem Module Hợp
+đồng — panel công trình nói rõ đã có hợp đồng. Chạy thử chặng cuối: vừa bàn giao đã «Kết thúc công trình»
+được ngay — nay cần khai bảo hành, hết hạn mọi hạng mục, không còn yêu cầu bảo hành mở. Sửa kèm lỗi có sẵn:
+sửa ngày bắt đầu bảo hành không tính lại ngày hết hạn.
+
 **Chưa làm trong giai đoạn này (đẩy sau)**
 
 - Bảng lịch sử bước chung `stage_transitions` cho hợp đồng / gói thầu / công trình (cơ hội đã có lịch sử).
