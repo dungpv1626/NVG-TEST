@@ -683,6 +683,9 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
   nợ phải thu / phải trả quá hạn, hợp đồng quá hạn, công trình trễ / vượt ngân sách, giàn giáo quá hạn trả, giấy tờ
   nhân sự, báo giá không qua khảo sát), xếp theo mức, mỗi ô tối đa 5 hồ sơ. Quy tắc quá hạn chép đúng `*DisplayStatus`
   của `shared/`; mốc «chờ lâu» = SLA nếu có, không thì `PENDING_APPROVAL_AGING_DAYS` do trang truyền vào.
+- Trang vẽ bằng HÌNH (chủ dự án: «nhiều chữ quá»): dải chờ quyết định; 3 thẻ sức khoẻ có vòng tròn theo mức + biểu
+  tượng hoạt động; bản đồ cảnh báo (ô màu kèm số / ✓, rê để xem hồ sơ, nhãn ngắn + biểu tượng — tên đầy đủ đọc được
+  qua `aria-label`); 2 biểu đồ cột theo công ty (tài chính tháng, quy mô cơ hội / hợp đồng). Dữ liệu như dưới.
 - Bố cục ba công ty cạnh nhau (0170, chủ dự án chọn sau bản đầu gộp số): việc chờ quyết định → bảng cảnh báo hàng =
   vấn đề × cột = NVC / NVS / NVO (`exec_overview_by_company`; bấm ô = chọn pháp nhân đó + mở danh sách lọc; mảng ổn ở
   cả ba công ty gom một dòng) → hồ sơ cần chú ý gắn mã công ty → hoạt động từng công ty (`exec_company_pulse`, chỉ hiện

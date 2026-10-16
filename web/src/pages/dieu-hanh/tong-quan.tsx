@@ -1,25 +1,47 @@
 /**
- * «Tổng quan điều hành» — Ban Giám đốc và Kiểm soát nội bộ nắm CẢ BA công ty trên một trang
- * (Giai đoạn 2, doc/MOC_CAI_TIEN_UX.md vấn đề 1; bố cục chủ dự án chọn sau bản đầu).
+ * «Tổng quan điều hành» — Ban Giám đốc và Kiểm soát nội bộ nắm CẢ BA công ty bằng HÌNH, không
+ * phải bằng chữ (Giai đoạn 2, doc/MOC_CAI_TIEN_UX.md vấn đề 1; chủ dự án: «còn nhiều chữ quá,
+ * tối ưu thành các sơ đồ»).
  *
- * Bản đầu (0169) gộp mọi pháp nhân thành một con số: «2 hồ sơ chờ duyệt» không nói của NVC hay
- * NVO, muốn biết phải đổi bộ chọn pháp nhân rồi tự so. Trang này trả lời bốn câu, theo thứ tự
- * Tổng giám đốc cần:
- *   1. Việc nào đang chờ chính mình quyết?                      → `my_pending_approvals`
- *   2. Công ty nào đang có vấn đề, vấn đề gì?                    → bảng cảnh báo hàng × công ty
- *   3. Mỗi công ty đang chạy những gì?                           → `exec_company_pulse`
- *   4. Tiền tháng này của từng công ty và cả tập đoàn?           → `finance_daily`
+ * Bốn tầng, đọc từ trên xuống trong vài giây:
+ *   1. Dải «chờ quyết định» — số việc theo từng công ty, một nút sang Hộp thư.
+ *   2. Ba thẻ sức khoẻ — vòng tròn chia theo mức của 10 mảng cảnh báo, số mảng cần xử lý ở giữa,
+ *      vài biểu tượng hoạt động đang chạy.
+ *   3. Bản đồ cảnh báo — hàng = mảng (nhãn ngắn + biểu tượng), cột = công ty; mỗi ô một ô màu kèm
+ *      SỐ hoặc dấu ✓. Rê / chọn ô: hồ sơ cụ thể. Bấm: chọn đúng pháp nhân rồi mở danh sách lọc.
+ *   4. Hai biểu đồ cột theo công ty — tài chính tháng này; quy mô hoạt động (cơ hội, hợp đồng).
  *
- * Mọi ô cảnh báo tính ở CSDL theo đúng quy tắc «quá hạn» của danh sách (`exec_overview_by_company`).
- * Bấm một ô: đặt pháp nhân của ô đó vào bộ chọn rồi mở danh sách đã lọc — tới đúng hồ sơ của
- * công ty đó, không phải danh sách gộp. Mức luôn nói bằng CHỮ, màu chỉ là phụ (CGD 6.8).
+ * Dữ liệu: `exec_overview_by_company`, `exec_company_pulse` (0170), `finance_daily`,
+ * `my_pending_approvals`. Màu trạng thái chỉ dùng cho MỨC; chuỗi biểu đồ dùng màu biểu đồ
+ * (DESIGN_SYSTEM §2.1). Mức không bao giờ chỉ nói bằng màu: ô có số / dấu ✓, tên đọc được đầy
+ * đủ cho trình đọc màn hình (CGD 6.8).
  */
 
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
-import { EMPTY_STATES, formatCurrency, formatWaiting } from '@nvg/shared';
+import {
+  ArrowDownLeft,
+  ArrowRight,
+  ArrowUpRight,
+  Check,
+  Clock,
+  FileText,
+  Handshake,
+  HardHat,
+  IdCard,
+  Inbox,
+  Layers,
+  MapPinOff,
+  PenTool,
+  Stamp,
+  TrendingUp,
+  Wallet,
+  type LucideIcon,
+} from 'lucide-react';
+import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts';
 import { formatMoneyCompact } from '@nvg/shared/bc-series';
+import { MoneyChart, type ChartSeries } from '@/components/charts/money-chart';
+import { CHART_COLORS, usePrefersReducedMotion } from '@/components/charts/chart-theme';
 import { PageHeader } from '@/components/layout/app-shell';
 import { CardGridSkeleton, ErrorState } from '@/components/ui/states';
 import { usePendingApprovals } from '@/hooks/use-approvals';
@@ -28,6 +50,7 @@ import {
   useCompanyPulse,
   useExecOverviewByCompany,
   useFinanceThisMonthByCompany,
+  type CompanyPulseRow,
   type ExecCompanyTile,
   type ExecLevel,
 } from '@/hooks/use-exec-overview';
@@ -35,11 +58,60 @@ import { useAuth } from '@/lib/auth';
 import { useCompanyStore } from '@/lib/company-store';
 import { cn } from '@/lib/utils';
 
-const LEVEL: Record<ExecLevel, { text: string; className: string; order: number }> = {
-  red: { text: 'cần xử lý', className: 'bg-status-overdue-bg text-status-overdue', order: 0 },
-  amber: { text: 'cần chú ý', className: 'bg-status-pending-bg text-status-pending', order: 1 },
-  ok: { text: 'ổn', className: 'text-fg-subtle', order: 2 },
-  no_data: { text: 'chưa đủ dữ liệu', className: 'text-fg-subtle', order: 3 },
+type Icon = LucideIcon;
+
+const LEVEL: Record<ExecLevel, { text: string; cell: string; color: string; order: number }> = {
+  red: {
+    text: 'Cần xử lý',
+    cell: 'bg-status-overdue text-fg-inverse',
+    color: 'var(--color-status-overdue)',
+    order: 0,
+  },
+  amber: {
+    text: 'Cần chú ý',
+    cell: 'bg-status-pending-bg text-status-pending ring-1 ring-status-pending',
+    color: 'var(--color-status-pending)',
+    order: 1,
+  },
+  ok: {
+    text: 'Ổn',
+    cell: 'bg-status-completed-bg text-status-completed',
+    color: 'var(--color-status-completed-bg)',
+    order: 2,
+  },
+  no_data: {
+    text: 'Chưa đủ dữ liệu',
+    cell: 'bg-surface-sunken text-fg-subtle',
+    color: 'var(--color-border)',
+    order: 3,
+  },
+};
+
+/** Nhãn NGẮN + biểu tượng cho từng mảng — tên đầy đủ nằm ở chú thích khi rê chuột. */
+const AREA: Record<string, { short: string; icon: Icon }> = {
+  approvals_stale: { short: 'Phê duyệt', icon: Stamp },
+  payments_stuck: { short: 'Đề nghị chi', icon: Wallet },
+  receivables_overdue: { short: 'Phải thu', icon: ArrowDownLeft },
+  payables_overdue: { short: 'Phải trả', icon: ArrowUpRight },
+  contracts_overdue: { short: 'Hợp đồng', icon: FileText },
+  sites_late: { short: 'Tiến độ', icon: Clock },
+  sites_over_budget: { short: 'Ngân sách', icon: TrendingUp },
+  rentals_overdue: { short: 'Giàn giáo', icon: Layers },
+  hr_documents: { short: 'Giấy tờ NS', icon: IdCard },
+  survey_waived: { short: 'Bỏ khảo sát', icon: MapPinOff },
+};
+
+/** Biểu tượng cho chỉ số hoạt động của từng công ty. */
+const PULSE: Record<string, { short: string; icon: Icon }> = {
+  opportunities_open: { short: 'Cơ hội', icon: Handshake },
+  contracts_active: { short: 'Hợp đồng', icon: FileText },
+  contracts_pending: { short: 'HĐ chờ ký', icon: Stamp },
+  sites_active: { short: 'Công trình', icon: HardHat },
+  sites_warranty: { short: 'Bảo hành', icon: Check },
+  designs_active: { short: 'Thiết kế', icon: PenTool },
+  designs_waiting_customer: { short: 'Chờ khách', icon: Clock },
+  rentals_active: { short: 'Cho thuê', icon: Layers },
+  production_running: { short: 'Sản xuất', icon: HardHat },
 };
 
 interface Company {
@@ -53,7 +125,7 @@ export function ExecOverviewPage() {
   const overview = useExecOverviewByCompany();
   const tiles = overview.data ?? [];
 
-  // Thứ tự công ty theo CSDL (display_order) — lấy từ chính dữ liệu, không viết cứng mã.
+  // Thứ tự công ty theo CSDL (display_order) — lấy từ dữ liệu, không viết cứng mã.
   const companies: Company[] = [];
   for (const t of tiles) {
     if (!companies.some((c) => c.id === t.company_id)) {
@@ -63,8 +135,7 @@ export function ExecOverviewPage() {
   const troubled = companies.filter((c) =>
     tiles.some((t) => t.company_id === c.id && t.level === 'red'),
   );
-
-  // Kiểm soát nội bộ không phê duyệt — không có khối «việc chờ quyết».
+  // Kiểm soát nội bộ không phê duyệt — không có dải «chờ quyết định».
   const readOnly = Boolean(profile?.assignments.every((a) => a.roleCode === 'KSNB'));
 
   return (
@@ -72,106 +143,185 @@ export function ExecOverviewPage() {
       <PageHeader
         title="Tổng quan điều hành"
         description={
-          profile
-            ? `Chào ${profile.fullName}, ${
-                overview.isLoading
-                  ? 'đang tổng hợp tình hình ba công ty.'
-                  : troubled.length > 0
-                    ? `${troubled.map((c) => c.name).join(', ')} đang có việc cần xử lý.`
-                    : 'chưa công ty nào có việc quá hạn.'
-              }`
+          profile && !overview.isLoading
+            ? troubled.length > 0
+              ? `Chào ${profile.fullName}, ${troubled.map((c) => c.code).join(', ')} đang có việc cần xử lý.`
+              : `Chào ${profile.fullName}, chưa công ty nào có việc quá hạn.`
             : undefined
         }
       />
 
-      <div className="space-y-6">
-        {!readOnly && <PendingDecisions />}
-
-        {overview.error ? (
-          <ErrorState
-            message={toUserMessage(overview.error)}
-            onRetry={() => void overview.refetch()}
-          />
-        ) : overview.isLoading ? (
-          <CardGridSkeleton count={3} />
-        ) : (
-          <>
-            <AlertMatrix tiles={tiles} companies={companies} />
-            <AttentionList tiles={tiles} />
-          </>
-        )}
-
-        <CompanyPulse />
-        <FinanceByCompanyTable companies={companies} />
-      </div>
+      {overview.error ? (
+        <ErrorState
+          message={toUserMessage(overview.error)}
+          onRetry={() => void overview.refetch()}
+        />
+      ) : overview.isLoading ? (
+        <CardGridSkeleton count={3} />
+      ) : (
+        <div className="space-y-6">
+          {!readOnly && <PendingStrip companies={companies} />}
+          <HealthCards tiles={tiles} companies={companies} />
+          <Heatmap tiles={tiles} companies={companies} />
+          <div className="grid gap-6 xl:grid-cols-2">
+            <FinanceChart companies={companies} />
+            <ScaleChart companies={companies} />
+          </div>
+        </div>
+      )}
     </>
   );
 }
 
-// --- 1. Việc chờ quyết ------------------------------------------------------------------------
-function PendingDecisions() {
-  const { data, isLoading } = usePendingApprovals();
+// --- 1. Chờ quyết định: một dải, số theo công ty ----------------------------------------------
+function PendingStrip({ companies }: { companies: Company[] }) {
+  const { data } = usePendingApprovals();
   const list = data ?? [];
   return (
     <section
       aria-label="Việc chờ quyết định"
-      className="rounded-md border border-border bg-surface p-4"
+      className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-md border border-border bg-surface px-4 py-3"
     >
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="font-semibold">
-          Việc chờ quyết định{' '}
-          {list.length > 0 && <span className="text-fg-subtle">({list.length})</span>}
-        </h2>
-        {list.length > 0 && (
-          <Link to="/viec-can-lam" className="text-sm font-medium text-brand hover:underline">
-            Mở Hộp thư Phê duyệt
-          </Link>
-        )}
-      </div>
-      {isLoading ? null : list.length === 0 ? (
-        <p className="mt-1 text-sm text-fg-subtle">Không có hồ sơ nào đang chờ phê duyệt.</p>
-      ) : (
-        <ul className="mt-2 divide-y divide-border text-sm">
-          {list.slice(0, 5).map((a) => (
-            <li key={a.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 py-1.5">
-              {a.company_code && <CompanyChip code={a.company_code} />}
-              <Link to="/viec-can-lam" className="line-clamp-2 min-w-0 flex-1 hover:underline">
-                {a.title}
-              </Link>
-              {/* Điện thoại: số tiền và thời gian chờ xuống dòng dưới, tên hồ sơ giữ trọn bề ngang. */}
-              <span className="flex items-baseline gap-3 max-sm:w-full max-sm:pl-11">
-                {a.amount !== null && (
-                  <span className="font-medium">{formatCurrency(a.amount)}</span>
-                )}
-                <span className="text-xs text-fg-subtle">{formatWaiting(a.requested_at)}</span>
-              </span>
+      <span className="flex items-center gap-2 font-semibold">
+        <Inbox className="size-5 text-brand" aria-hidden />
+        Chờ quyết định
+        <span className="text-2xl font-bold tabular-nums">{list.length}</span>
+      </span>
+      <ul className="flex flex-wrap gap-2 text-sm">
+        {companies.map((c) => {
+          const n = list.filter((a) => a.company_code === c.code).length;
+          return (
+            <li
+              key={c.id}
+              className={cn(
+                'rounded-full px-2.5 py-0.5',
+                n > 0
+                  ? 'bg-brand-subtle font-semibold text-brand-forest'
+                  : 'bg-surface-sunken text-fg-subtle',
+              )}
+            >
+              {c.code} {n}
             </li>
-          ))}
-        </ul>
+          );
+        })}
+      </ul>
+      {list.length > 0 && (
+        <Link
+          to="/viec-can-lam"
+          className="ml-auto inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline"
+        >
+          Mở Hộp thư <ArrowRight className="size-4" aria-hidden />
+        </Link>
       )}
     </section>
   );
 }
 
-// --- 2. Bảng cảnh báo: hàng = vấn đề, cột = công ty ---------------------------------------------
-function AlertMatrix({ tiles, companies }: { tiles: ExecCompanyTile[]; companies: Company[] }) {
+// --- 2. Ba thẻ sức khoẻ ------------------------------------------------------------------------
+function HealthCards({ tiles, companies }: { tiles: ExecCompanyTile[]; companies: Company[] }) {
+  const pulse = useCompanyPulse().data ?? [];
+  const reduced = usePrefersReducedMotion();
+  return (
+    <section aria-label="Sức khoẻ từng công ty" className="grid gap-4 md:grid-cols-3">
+      {companies.map((c) => {
+        const own = tiles.filter((t) => t.company_id === c.id);
+        const count = (l: ExecLevel) => own.filter((t) => t.level === l).length;
+        const slices = (['red', 'amber', 'ok', 'no_data'] as const)
+          .map((l) => ({ level: l, value: count(l) }))
+          .filter((s) => s.value > 0);
+        const red = count('red');
+        const summary = `${c.name}: ${red} mảng cần xử lý, ${count('amber')} cần chú ý, ${count('ok')} ổn`;
+        const metrics = pulse.filter((p) => p.company_id === c.id);
+        return (
+          <article key={c.id} className="rounded-md border border-border bg-surface p-4">
+            <h2 className="font-semibold">{c.name}</h2>
+            <div className="mt-2 flex items-center gap-4">
+              <div role="img" aria-label={summary} className="relative size-24 shrink-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={slices}
+                      dataKey="value"
+                      nameKey="level"
+                      innerRadius="68%"
+                      outerRadius="100%"
+                      paddingAngle={slices.length > 1 ? 3 : 0}
+                      stroke="none"
+                      isAnimationActive={!reduced}
+                    >
+                      {slices.map((s) => (
+                        <Cell key={s.level} fill={LEVEL[s.level].color} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <span className="absolute inset-0 grid place-items-center text-center leading-none">
+                  {red > 0 ? (
+                    <span className="text-status-overdue">
+                      <span className="block text-2xl font-bold">{red}</span>
+                      <span className="text-2xs">cần xử lý</span>
+                    </span>
+                  ) : (
+                    <Check className="size-8 text-status-completed" aria-hidden />
+                  )}
+                </span>
+              </div>
+              <ul className="space-y-0.5 text-xs" aria-hidden>
+                {(['red', 'amber', 'ok'] as const).map((l) => (
+                  <li key={l} className="flex items-center gap-1.5">
+                    <span className="size-2.5 rounded-sm" style={{ background: LEVEL[l].color }} />
+                    <span className="font-semibold tabular-nums">{count(l)}</span>
+                    <span className="text-fg-subtle">{LEVEL[l].text.toLowerCase()}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            {metrics.length > 0 && <PulseIcons metrics={metrics} />}
+          </article>
+        );
+      })}
+    </section>
+  );
+}
+
+function PulseIcons({ metrics }: { metrics: CompanyPulseRow[] }) {
+  return (
+    <ul className="mt-3 flex flex-wrap gap-2 border-t border-border pt-3">
+      {metrics.map((m) => {
+        const meta = PULSE[m.metric];
+        const Icon = meta?.icon ?? FileText;
+        const value = m.amount && Number(m.amount) > 0 ? ` — ${formatMoneyCompact(m.amount)}` : '';
+        return (
+          <li
+            key={m.metric}
+            title={`${m.label}: ${m.total}${value}`}
+            className="flex items-center gap-1.5 rounded-md bg-surface-sunken px-2 py-1 text-xs"
+          >
+            <Icon className="size-3.5 text-fg-subtle" aria-hidden />
+            <span className="font-semibold tabular-nums">{m.total}</span>
+            <span className="text-fg-subtle">{meta?.short ?? m.label}</span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+// --- 3. Bản đồ cảnh báo: mảng × công ty --------------------------------------------------------
+function Heatmap({ tiles, companies }: { tiles: ExecCompanyTile[]; companies: Company[] }) {
   const navigate = useNavigate();
   const setCompany = useCompanyStore((s) => s.setSelectedCompany);
+  const [focus, setFocus] = useState<ExecCompanyTile | null>(null);
 
-  const keys: { key: string; label: string; area: string; worst: number }[] = [];
+  const keys: { key: string; label: string; worst: number; i: number }[] = [];
   for (const t of tiles) {
     const k = keys.find((x) => x.key === t.key);
     const w = LEVEL[t.level].order;
-    if (!k) keys.push({ key: t.key, label: t.label, area: t.area, worst: w });
+    if (!k) keys.push({ key: t.key, label: t.label, worst: w, i: keys.length });
     else k.worst = Math.min(k.worst, w);
   }
-  // Vấn đề nặng nhất lên đầu; giữ thứ tự gốc trong cùng một mức.
-  const rows = keys.map((k, i) => ({ ...k, i })).sort((a, b) => a.worst - b.worst || a.i - b.i);
-  // Mảng ổn ở cả ba công ty gom vào một dòng mở ra được — bảng chỉ dài bằng số vấn đề thật.
-  const [showCalm, setShowCalm] = useState(false);
-  const issueRows = rows.filter((r) => r.worst <= LEVEL.amber.order);
-  const calmRows = rows.filter((r) => r.worst > LEVEL.amber.order);
-  const visibleRows = showCalm ? rows : issueRows;
+  // Mảng nặng nhất lên đầu.
+  const rows = keys.sort((a, b) => a.worst - b.worst || a.i - b.i);
 
   function open(t: ExecCompanyTile) {
     if (!t.link) return;
@@ -181,287 +331,244 @@ function AlertMatrix({ tiles, companies }: { tiles: ExecCompanyTile[]; companies
 
   return (
     <section
-      aria-label="Cảnh báo theo công ty"
-      className="rounded-md border border-border bg-surface"
-    >
-      <h2 className="border-b border-border px-4 py-3 font-semibold">Cảnh báo theo công ty</h2>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm sm:min-w-[560px]">
-          <thead>
-            <tr className="text-left text-xs text-fg-subtle">
-              <th scope="col" className="px-4 py-2 font-medium">
-                Vấn đề
-              </th>
-              {companies.map((c) => (
-                <th key={c.id} scope="col" className="px-3 py-2 text-center font-medium">
-                  {/* Điện thoại: mã ngắn để ba cột vừa màn hình; tên đầy đủ vẫn đọc được. */}
-                  <span className="sm:hidden" aria-hidden>
-                    {c.code}
-                  </span>
-                  <span className="max-sm:sr-only">{c.name}</span>
-                </th>
-              ))}
-              <th scope="col" className="px-3 py-2 text-center font-medium">
-                <span className="sm:hidden" aria-hidden>
-                  Tổng
-                </span>
-                <span className="max-sm:sr-only">Cả tập đoàn</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {visibleRows.map((r) => {
-              const cells = companies.map((c) =>
-                tiles.find((t) => t.key === r.key && t.company_id === c.id),
-              );
-              const sum = cells.reduce((s, t) => s + (t?.total ?? 0), 0);
-              const allNoData = cells.every((t) => !t || t.level === 'no_data');
-              return (
-                <tr key={r.key} className="border-t border-border">
-                  <th scope="row" className="px-4 py-2 text-left font-normal">
-                    <span className="block text-xs text-fg-subtle">{r.area}</span>
-                    {r.label}
-                  </th>
-                  {cells.map((t, i) => (
-                    <td key={companies[i]!.id} className="px-2 py-1.5 text-center">
-                      {t ? <Cell tile={t} onOpen={() => open(t)} /> : null}
-                    </td>
-                  ))}
-                  <td className="px-3 py-2 text-center font-semibold">{allNoData ? '—' : sum}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      {calmRows.length > 0 && (
-        // Nằm NGOÀI bảng: bảng cuộn ngang trên điện thoại, câu dài trong bảng bị cắt mất.
-        <div className="border-t border-border px-4 py-2">
-          <button
-            type="button"
-            aria-expanded={showCalm}
-            onClick={() => setShowCalm((v) => !v)}
-            className="text-left text-sm text-fg-subtle hover:text-fg hover:underline"
-          >
-            {showCalm
-              ? 'Thu gọn các mảng đang ổn'
-              : `${calmRows.length} mảng đang ổn ở cả ${companies.length} công ty: ${calmRows
-                  .map((r) => r.label.toLowerCase())
-                  .join(', ')} — xem chi tiết`}
-          </button>
-        </div>
-      )}
-      {tiles.some((t) => t.level === 'no_data') && (
-        <p className="border-t border-border px-4 py-2 text-xs text-fg-subtle">
-          «Chưa đủ dữ liệu»: {EMPTY_STATES.notEnoughData}
-        </p>
-      )}
-    </section>
-  );
-}
-
-function Cell({ tile, onOpen }: { tile: ExecCompanyTile; onOpen: () => void }) {
-  const level = LEVEL[tile.level];
-  if (tile.level === 'no_data') return <span className="text-xs text-fg-subtle">{level.text}</span>;
-  if (tile.level === 'ok' && !tile.total) return <span className="text-xs text-fg-subtle">Ổn</span>;
-  const body = (
-    <>
-      <span className="font-semibold">{tile.total}</span>{' '}
-      <span className="text-xs">{level.text}</span>
-      {tile.amount !== null && Number(tile.amount) > 0 && (
-        <span className="block text-xs">{formatMoneyCompact(tile.amount)}</span>
-      )}
-    </>
-  );
-  const box = cn('inline-block min-w-20 rounded-sm px-2 py-1', level.className);
-  return tile.link ? (
-    <button
-      type="button"
-      onClick={onOpen}
-      title={`${tile.company_name}: ${tile.label}${tile.note ? ` — ${tile.note}` : ''}`}
-      className={cn(box, 'hover:underline')}
-    >
-      {body}
-    </button>
-  ) : (
-    <span className={box} title={tile.note ?? undefined}>
-      {body}
-    </span>
-  );
-}
-
-// --- Hồ sơ cụ thể của các ô có vấn đề --------------------------------------------------------
-function AttentionList({ tiles }: { tiles: ExecCompanyTile[] }) {
-  const items = tiles
-    .filter((t) => t.level === 'red' || t.level === 'amber')
-    .sort((a, b) => LEVEL[a.level].order - LEVEL[b.level].order)
-    .flatMap((t) => t.items.map((it) => ({ ...it, company: t.company_code, label: t.label })))
-    .slice(0, 10);
-  if (items.length === 0) return null;
-  return (
-    <section
-      aria-label="Hồ sơ cần chú ý"
+      aria-label="Bản đồ cảnh báo"
       className="rounded-md border border-border bg-surface p-4"
     >
-      <h2 className="font-semibold">Hồ sơ cần chú ý</h2>
-      <ul className="mt-2 divide-y divide-border text-sm">
-        {items.map((it, i) => {
-          const body = (
-            <>
-              <CompanyChip code={it.company} />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate">
-                  <span className="font-mono text-xs text-fg-subtle">{it.code}</span> {it.title}
-                </span>
-                <span className="block text-xs text-fg-subtle">
-                  {it.label}
-                  {it.detail ? ` · ${it.detail}` : ''}
-                </span>
-              </span>
-            </>
-          );
-          return (
-            <li key={`${it.code}-${i}`}>
-              {it.link ? (
-                <Link to={it.link} className="flex items-start gap-3 py-1.5 hover:bg-surface-hover">
-                  {body}
-                </Link>
-              ) : (
-                <div className="flex items-start gap-3 py-1.5">{body}</div>
-              )}
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="font-semibold">Bản đồ cảnh báo</h2>
+        <ul className="flex flex-wrap gap-3 text-xs text-fg-subtle" aria-hidden>
+          {(['red', 'amber', 'ok'] as const).map((l) => (
+            <li key={l} className="flex items-center gap-1.5">
+              <span className={cn('size-3 rounded-sm', LEVEL[l].cell)} />
+              {LEVEL[l].text}
             </li>
+          ))}
+        </ul>
+      </div>
+
+      <div
+        className="mt-3 grid items-center gap-1.5"
+        style={{
+          gridTemplateColumns: `minmax(6.5rem, 11rem) repeat(${companies.length}, minmax(0, 1fr))`,
+        }}
+        role="table"
+        aria-label="Cảnh báo theo mảng và công ty"
+      >
+        <div role="row" className="contents">
+          {/* Ô thật trong lưới (chữ ẩn bên trong): ô `sr-only` không chiếm chỗ, cả lưới trượt một cột. */}
+          <span role="columnheader">
+            <span className="sr-only">Mảng</span>
+          </span>
+          {companies.map((c) => (
+            <span
+              key={c.id}
+              role="columnheader"
+              title={c.name}
+              className="text-center text-xs font-semibold text-fg-subtle"
+            >
+              {c.code}
+            </span>
+          ))}
+        </div>
+        {rows.map((r) => {
+          const meta = AREA[r.key];
+          const Icon = meta?.icon ?? FileText;
+          return (
+            <div key={r.key} role="row" className="contents">
+              <span
+                role="rowheader"
+                title={r.label}
+                className="flex min-w-0 items-center gap-2 text-sm"
+              >
+                <Icon className="size-4 shrink-0 text-fg-subtle" aria-hidden />
+                <span className="truncate">{meta?.short ?? r.label}</span>
+              </span>
+              {companies.map((c) => {
+                const t = tiles.find((x) => x.key === r.key && x.company_id === c.id);
+                return (
+                  <span key={c.id} role="cell" className="flex justify-center">
+                    {t && <HeatCell tile={t} onOpen={() => open(t)} onFocus={setFocus} />}
+                  </span>
+                );
+              })}
+            </div>
           );
         })}
-      </ul>
+      </div>
+
+      {focus && (focus.level === 'red' || focus.level === 'amber') && (
+        <FocusDetail tile={focus} onClose={() => setFocus(null)} />
+      )}
     </section>
   );
 }
 
-// --- 3. Hoạt động từng công ty ------------------------------------------------------------------
-function CompanyPulse() {
-  const { data, isLoading } = useCompanyPulse();
-  if (isLoading) return <CardGridSkeleton count={3} />;
-  const rows = data ?? [];
-  const companies: Company[] = [];
-  for (const r of rows) {
-    if (!companies.some((c) => c.id === r.company_id)) {
-      companies.push({ id: r.company_id, code: r.company_code, name: r.company_name });
-    }
+function HeatCell({
+  tile,
+  onOpen,
+  onFocus,
+}: {
+  tile: ExecCompanyTile;
+  onOpen: () => void;
+  onFocus: (t: ExecCompanyTile) => void;
+}) {
+  const level = LEVEL[tile.level];
+  const problem = tile.level === 'red' || tile.level === 'amber';
+  const label = `${tile.company_name} — ${tile.label}: ${
+    problem ? `${tile.total} hồ sơ, ${level.text.toLowerCase()}` : level.text.toLowerCase()
+  }${tile.note ? `. ${tile.note}` : ''}`;
+  const content = problem ? (
+    <span className="text-sm font-bold tabular-nums">{tile.total}</span>
+  ) : tile.level === 'ok' ? (
+    <Check className="size-4" aria-hidden />
+  ) : (
+    <span className="text-xs">—</span>
+  );
+  const cls = cn('grid h-8 w-full max-w-20 place-items-center rounded-md', level.cell);
+  if (!problem || !tile.link) {
+    return (
+      <span className={cls} title={label} role="img" aria-label={label}>
+        {content}
+      </span>
+    );
   }
   return (
-    <section aria-label="Hoạt động từng công ty">
-      <h2 className="mb-2 font-semibold">Hoạt động từng công ty</h2>
-      <div className="grid gap-4 md:grid-cols-3">
-        {companies.map((c) => (
-          <article key={c.id} className="rounded-md border border-border bg-surface p-4">
-            <h3 className="font-semibold">{c.name}</h3>
-            <dl className="mt-2 space-y-1.5 text-sm">
-              {rows
-                .filter((r) => r.company_id === c.id)
-                .map((r) => (
-                  <div key={r.metric} className="flex items-baseline justify-between gap-3">
-                    <dt className="text-fg-subtle">{r.label}</dt>
-                    <dd className="shrink-0 text-right">
-                      <span className="font-semibold">{r.total}</span>
-                      {r.amount !== null && Number(r.amount) > 0 && (
-                        <span className="text-fg-subtle"> · {formatMoneyCompact(r.amount)}</span>
-                      )}
-                    </dd>
-                  </div>
-                ))}
-            </dl>
-          </article>
-        ))}
-        {companies.length === 0 && (
-          <p className="text-sm text-fg-subtle">Chưa có hoạt động nào trên hệ thống.</p>
-        )}
-      </div>
-    </section>
+    <button
+      type="button"
+      className={cn(cls, 'transition-transform hover:scale-105 focus-visible:scale-105')}
+      title={label}
+      aria-label={`${label}. Mở danh sách`}
+      onMouseEnter={() => onFocus(tile)}
+      onFocus={() => onFocus(tile)}
+      onClick={onOpen}
+    >
+      {content}
+    </button>
   );
 }
 
-// --- 4. Tài chính tháng này theo công ty --------------------------------------------------------
-function FinanceByCompanyTable({ companies }: { companies: Company[] }) {
+/** Hồ sơ cụ thể của ô đang rê / chọn — chữ chỉ hiện khi người xem muốn biết thêm. */
+function FocusDetail({ tile, onClose }: { tile: ExecCompanyTile; onClose: () => void }) {
+  return (
+    <div className="mt-3 rounded-md bg-surface-sunken p-3 text-sm" aria-live="polite">
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="font-semibold">
+          {tile.company_code} · {tile.label}
+          {tile.note && <span className="font-normal text-fg-subtle"> — {tile.note}</span>}
+        </p>
+        <button type="button" onClick={onClose} className="text-xs text-fg-subtle hover:underline">
+          Đóng
+        </button>
+      </div>
+      {tile.items.length > 0 && (
+        <ul className="mt-1.5 space-y-1">
+          {tile.items.map((it, i) => (
+            <li key={`${it.code}-${i}`} className="flex gap-2">
+              <span className="shrink-0 font-mono text-xs text-fg-subtle">{it.code}</span>
+              {it.link ? (
+                <Link to={it.link} className="truncate hover:underline">
+                  {it.title}
+                </Link>
+              ) : (
+                <span className="truncate">{it.title}</span>
+              )}
+              {it.detail && <span className="shrink-0 text-xs text-fg-subtle">{it.detail}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// --- 4. Biểu đồ theo công ty --------------------------------------------------------------------
+const FINANCE_SERIES: ChartSeries[] = [
+  { key: 'revenue', name: 'Doanh thu', color: CHART_COLORS.primary },
+  { key: 'collected', name: 'Đã thu', color: CHART_COLORS.pair },
+  { key: 'paidOut', name: 'Đã chi', color: CHART_COLORS.neutral },
+];
+
+function FinanceChart({ companies }: { companies: Company[] }) {
   const { data, isLoading, error } = useFinanceThisMonthByCompany();
-  if (isLoading || error || companies.length === 0) return null;
-  const cols: { id: string | null; name: string; short: string }[] = [
-    ...companies.map((c) => ({ id: c.id, name: c.name, short: c.code })),
-    { id: null, name: 'Cả tập đoàn', short: 'Tổng' },
-  ];
-  const get = (id: string | null) =>
-    data?.get(id) ?? { revenue: 0n, signed: 0n, collected: 0n, paidOut: 0n };
-  const rows: { label: string; pick: (f: ReturnType<typeof get>) => bigint }[] = [
-    { label: 'Doanh thu (nghiệm thu + cho thuê)', pick: (f) => f.revenue },
-    { label: 'Hợp đồng ký mới', pick: (f) => f.signed },
-    { label: 'Đã thu', pick: (f) => f.collected },
-    { label: 'Đã chi', pick: (f) => f.paidOut },
-    { label: 'Dòng tiền ròng (thu – chi)', pick: (f) => f.collected - f.paidOut },
-  ];
+  if (isLoading || error) return null;
+  const rows = companies.map((c) => {
+    const f = data?.get(c.id);
+    return {
+      label: c.code,
+      revenue: Number(f?.revenue ?? 0n),
+      collected: Number(f?.collected ?? 0n),
+      paidOut: Number(f?.paidOut ?? 0n),
+    };
+  });
+  const all = data?.get(null);
+  const summary = `Tài chính tháng này theo công ty: ${rows
+    .map(
+      (r) =>
+        `${r.label} doanh thu ${formatMoneyCompact(r.revenue)}, đã thu ${formatMoneyCompact(r.collected)}, đã chi ${formatMoneyCompact(r.paidOut)}`,
+    )
+    .join('; ')}`;
   return (
     <section
       aria-label="Tài chính tháng này"
-      className="rounded-md border border-border bg-surface"
+      className="rounded-md border border-border bg-surface p-4"
     >
-      <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border px-4 py-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="font-semibold">Tài chính tháng này</h2>
-        <Link
-          to="/bc/tong-quan"
-          className="inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline"
-        >
-          Báo cáo tài chính đầy đủ <ArrowRight className="size-4" aria-hidden />
+        <Link to="/bc/tong-quan" className="text-sm font-medium text-brand hover:underline">
+          Chi tiết
         </Link>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[560px] text-sm">
-          <thead>
-            <tr className="text-left text-xs text-fg-subtle">
-              <th scope="col" className="px-4 py-2 font-medium">
-                Chỉ số
-              </th>
-              {cols.map((c) => (
-                <th key={c.id ?? 'all'} scope="col" className="px-3 py-2 text-right font-medium">
-                  <span className="sm:hidden" aria-hidden>
-                    {c.short}
-                  </span>
-                  <span className="max-sm:sr-only">{c.name}</span>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.label} className="border-t border-border">
-                <th scope="row" className="px-4 py-2 text-left font-normal">
-                  {r.label}
-                </th>
-                {cols.map((c) => (
-                  <td
-                    key={c.id ?? 'all'}
-                    className={cn(
-                      'px-3 py-2 text-right tabular-nums',
-                      c.id === null && 'font-semibold',
-                    )}
-                  >
-                    {formatMoneyCompact(r.pick(get(c.id)))}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {all && (
+        <p className="mt-1 text-sm text-fg-subtle">
+          Cả tập đoàn: thu {formatMoneyCompact(all.collected)} · chi{' '}
+          {formatMoneyCompact(all.paidOut)} · ròng{' '}
+          <span className="font-semibold text-fg">
+            {formatMoneyCompact(all.collected - all.paidOut)}
+          </span>
+        </p>
+      )}
+      <div className="mt-3">
+        <MoneyChart data={rows} series={FINANCE_SERIES} height={220} summary={summary} />
       </div>
-      <p className="border-t border-border px-4 py-2 text-xs text-fg-subtle">
-        Cột «Cả tập đoàn» chưa loại giao dịch nội bộ giữa các pháp nhân (ví dụ NVC thuê giàn giáo
-        của NVS) — hệ thống chưa đánh dấu được giao dịch nội bộ.
+      <p className="mt-2 text-2xs text-fg-subtle">
+        Số cả tập đoàn chưa loại giao dịch nội bộ giữa các pháp nhân.
       </p>
     </section>
   );
 }
 
-function CompanyChip({ code }: { code: string }) {
+const SCALE_SERIES: ChartSeries[] = [
+  { key: 'pipeline', name: 'Cơ hội đang theo đuổi', color: CHART_COLORS.pair },
+  { key: 'contracts', name: 'Hợp đồng đang thực hiện', color: CHART_COLORS.primary },
+];
+
+function ScaleChart({ companies }: { companies: Company[] }) {
+  const { data, isLoading } = useCompanyPulse();
+  if (isLoading) return null;
+  const pulse = data ?? [];
+  const amountOf = (cid: string, metric: string) =>
+    Number(pulse.find((p) => p.company_id === cid && p.metric === metric)?.amount ?? 0);
+  const rows = companies.map((c) => ({
+    label: c.code,
+    pipeline: amountOf(c.id, 'opportunities_open'),
+    contracts: amountOf(c.id, 'contracts_active'),
+  }));
+  const summary = `Quy mô theo công ty: ${rows
+    .map(
+      (r) =>
+        `${r.label} cơ hội ${formatMoneyCompact(r.pipeline)}, hợp đồng đang thực hiện ${formatMoneyCompact(r.contracts)}`,
+    )
+    .join('; ')}`;
   return (
-    <span className="shrink-0 rounded-sm bg-surface-sunken px-1.5 py-0.5 font-mono text-xs text-fg-subtle">
-      {code}
-    </span>
+    <section
+      aria-label="Quy mô hoạt động"
+      className="rounded-md border border-border bg-surface p-4"
+    >
+      <h2 className="font-semibold">Quy mô hoạt động</h2>
+      <p className="mt-1 text-sm text-fg-subtle">Giá trị cơ hội và hợp đồng đang chạy</p>
+      <div className="mt-3">
+        <MoneyChart data={rows} series={SCALE_SERIES} height={220} summary={summary} />
+      </div>
+    </section>
   );
 }

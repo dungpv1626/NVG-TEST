@@ -31,14 +31,14 @@ const [nvc, nvs, nvo] = COMPANIES as [
 
 const tiles: ExecCompanyTile[] = [
   // Mảng ổn ở cả ba công ty — gom xuống một dòng.
-  tile(nvc, { key: 'rentals', level: 'ok', label: 'Giàn giáo quá hạn trả' }),
-  tile(nvs, { key: 'rentals', level: 'ok', label: 'Giàn giáo quá hạn trả' }),
-  tile(nvo, { key: 'rentals', level: 'ok', label: 'Giàn giáo quá hạn trả' }),
+  tile(nvc, { key: 'rentals_overdue', level: 'ok', label: 'Giàn giáo quá hạn trả' }),
+  tile(nvs, { key: 'rentals_overdue', level: 'ok', label: 'Giàn giáo quá hạn trả' }),
+  tile(nvo, { key: 'rentals_overdue', level: 'ok', label: 'Giàn giáo quá hạn trả' }),
   // Chỉ NVO có vấn đề.
-  tile(nvc, { key: 'sites', level: 'ok', label: 'Công trình trễ tiến độ' }),
-  tile(nvs, { key: 'sites', level: 'ok', label: 'Công trình trễ tiến độ' }),
+  tile(nvc, { key: 'sites_late', level: 'ok', label: 'Công trình trễ tiến độ' }),
+  tile(nvs, { key: 'sites_late', level: 'ok', label: 'Công trình trễ tiến độ' }),
   tile(nvo, {
-    key: 'sites',
+    key: 'sites_late',
     level: 'red',
     label: 'Công trình trễ tiến độ',
     total: 2,
@@ -95,34 +95,44 @@ vi.mock('@/lib/company-store', () => ({
 
 const { ExecOverviewPage } = await import('../tong-quan');
 
-describe('Tổng quan điều hành — ba công ty cạnh nhau', () => {
-  it('nói công ty nào có vấn đề, cột theo công ty, mảng ổn gom một dòng', () => {
+vi.mock('recharts', async (original) => ({
+  ...(await original<typeof import('recharts')>()),
+  // jsdom không đo được kích thước — biểu đồ vẽ rỗng; chỉ cần khung có nhãn đọc được.
+  ResponsiveContainer: ({ children }: { children: unknown }) => children,
+}));
+vi.mock('@/components/charts/money-chart', () => ({
+  MoneyChart: ({ summary }: { summary: string }) => <div role="img" aria-label={summary} />,
+}));
+
+describe('Tổng quan điều hành — ba công ty bằng hình', () => {
+  it('thẻ sức khoẻ, bản đồ cảnh báo mảng × công ty, biểu đồ theo công ty', () => {
     render(
       <MemoryRouter>
         <ExecOverviewPage />
       </MemoryRouter>,
     );
 
-    expect(screen.getByText(/Nhà Việt One đang có việc cần xử lý/)).toBeTruthy();
+    expect(screen.getByText(/NVO đang có việc cần xử lý/)).toBeTruthy();
 
-    const matrix = screen.getByRole('region', { name: 'Cảnh báo theo công ty' });
-    const headers = within(matrix)
-      .getAllByRole('columnheader')
+    // Thẻ sức khoẻ: vòng tròn có câu tóm tắt đọc được, không chỉ màu.
+    const health = screen.getByRole('region', { name: 'Sức khoẻ từng công ty' });
+    expect(
+      within(health).getByRole('img', { name: /Nhà Việt One: 1 mảng cần xử lý/ }),
+    ).toBeTruthy();
+    expect(within(health).getByText('Cho thuê')).toBeTruthy();
+
+    // Bản đồ: hàng nặng nhất lên đầu; ô có vấn đề là nút có số, ô ổn có nhãn «ổn».
+    const map = screen.getByRole('table', { name: 'Cảnh báo theo mảng và công ty' });
+    const rowHeaders = within(map)
+      .getAllByRole('rowheader')
       .map((h) => h.textContent);
-    expect(headers.join(' ')).toContain('Nhà Việt Cons');
-    expect(headers.join(' ')).toContain('Nhà Việt One');
+    expect(rowHeaders[0]).toBe('Tiến độ');
+    expect(
+      within(map).getByRole('img', { name: /Nhà Việt Cons — Giàn giáo quá hạn trả: ổn/ }),
+    ).toBeTruthy();
 
-    // Chỉ hàng có vấn đề hiện trong bảng; mảng ổn nằm ở dòng gom.
-    expect(within(matrix).getAllByRole('row')).toHaveLength(2);
-    expect(within(matrix).getByText(/1 mảng đang ổn ở cả 3 công ty/)).toBeTruthy();
-    expect(within(matrix).getByText('cần xử lý')).toBeTruthy();
-
-    // Hoạt động từng công ty hiện đúng chỉ số của công ty đó.
-    const pulse = screen.getByRole('region', { name: 'Hoạt động từng công ty' });
-    expect(within(pulse).getByText('Hợp đồng thuê giàn giáo đang chạy')).toBeTruthy();
-
-    const attention = screen.getByRole('region', { name: 'Hồ sơ cần chú ý' });
-    expect(within(attention).getByText('NVO')).toBeTruthy();
+    // Biểu đồ theo công ty có câu tóm tắt.
+    expect(screen.getByRole('img', { name: /Tài chính tháng này theo công ty/ })).toBeTruthy();
   });
 
   it('bấm ô của một công ty: chọn đúng pháp nhân đó rồi mở danh sách đã lọc', () => {
@@ -131,7 +141,15 @@ describe('Tổng quan điều hành — ba công ty cạnh nhau', () => {
         <ExecOverviewPage />
       </MemoryRouter>,
     );
-    fireEvent.click(screen.getByRole('button', { name: /2 cần xử lý/ }));
+    const cell = screen.getByRole('button', {
+      name: /Nhà Việt One — Công trình trễ tiến độ: 2 hồ sơ/,
+    });
+    fireEvent.mouseEnter(cell);
+    // Rê vào ô: hồ sơ cụ thể hiện ra.
+    expect(screen.getByRole('link', { name: 'Nhà phố Q7' }).getAttribute('href')).toBe(
+      '/tc/cong-trinh/9',
+    );
+    fireEvent.click(cell);
     expect(setSelectedCompany).toHaveBeenCalledWith('c3');
     expect(navigate).toHaveBeenCalledWith('/tc/cong-trinh?trang-thai=overdue');
   });

@@ -203,6 +203,10 @@ NVS / NVO, bấm ô mở đúng danh sách của công ty đó, mảng ổn gom 
 này theo công ty. Đã chụp 1440 px và 390 px. Hạn chế: cột «Cả tập đoàn» chưa loại giao dịch nội bộ (chưa có dữ
 liệu đánh dấu, QĐ-6).
 
+**Bổ sung — vẽ bằng hình.** Chủ dự án: «còn nhiều chữ quá». Bảng chữ đổi thành: thẻ sức khoẻ có vòng tròn theo
+mức, bản đồ cảnh báo ô màu kèm số / ✓ (rê để xem hồ sơ cụ thể), biểu đồ cột tài chính và quy mô theo công ty.
+Mức vẫn đọc được bằng chữ qua nhãn trợ năng (CGD 6.8).
+
 **Câu hỏi cho Haan:** KSNB có được xem lương / hồ sơ cá nhân? (đang: không). Mốc «hợp đồng sắp hết hạn» bao nhiêu
 ngày? (đang: chưa có ô này). Mốc «phê duyệt chờ lâu» 3 ngày (giả định cũ của Dashboard) — giữ hay đặt SLA theo loại?
 
