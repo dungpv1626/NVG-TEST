@@ -16,6 +16,7 @@ import userEvent from '@testing-library/user-event';
 import { renderWithApp } from '@/test/render';
 
 const state = vi.hoisted(() => ({
+  exec: false,
   can: {} as Record<string, Record<string, boolean>>,
   opportunities: [] as unknown[],
   contracts: [] as unknown[],
@@ -49,6 +50,7 @@ vi.mock('@/lib/auth', () => ({
       permissions: Object.entries(state.can).map(([moduleCode, p]) => ({ moduleCode, ...p })),
     },
   }),
+  useCanSeeExecOverview: () => state.exec,
   useCan: (moduleCode: string, action = 'view') =>
     Boolean(state.can[moduleCode]?.[action === 'view' ? 'canView' : 'canCreate']),
 }));
@@ -108,6 +110,7 @@ const { DashboardPage } = await import('../dashboard');
 const THIS_YEAR = new Date().getFullYear();
 
 beforeEach(() => {
+  state.exec = false;
   state.can = {};
   state.access = { profit: true, finance: true };
   state.financeDays = [];
@@ -180,6 +183,21 @@ describe('Dashboard — mỗi con số dẫn tới danh sách đã lọc SẴN �
     expect(screen.getByRole('link', { name: /Cơ hội kinh doanh: 1/ })).toHaveAttribute(
       'href',
       '/crm/co-hoi?trang-thai=overdue&ky=nam-nay',
+    );
+  });
+
+  it('lãnh đạo: không dựng ô «Quá hạn» thứ hai — dẫn sang Tổng quan điều hành', () => {
+    grantView('CRM');
+    state.exec = true;
+    state.opportunities = [
+      { stage: 'mat_co_hoi', estimated_value: null, created_at: `${THIS_YEAR}-03-01` },
+    ];
+    renderWithApp(<DashboardPage />, { route: '/dashboard' });
+
+    expect(screen.queryByText('Quá hạn')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Mở Tổng quan điều hành/ })).toHaveAttribute(
+      'href',
+      '/tong-quan',
     );
   });
 

@@ -92,7 +92,7 @@ import { useOpportunities } from '@/hooks/use-opportunities';
 import { useConstructionSites } from '@/hooks/use-construction-sites';
 import { useSitesBudgetStatus } from '@/hooks/use-reports';
 import { useRentalAgreements } from '@/hooks/use-sx';
-import { useAuth, useCan } from '@/lib/auth';
+import { useAuth, useCan, useCanSeeExecOverview } from '@/lib/auth';
 import { useCompanyScope } from '@/lib/company-scope';
 import { cn } from '@/lib/utils';
 import { APP_HELP } from '@/lib/help-texts';
@@ -125,6 +125,7 @@ const MODULE_KPI_ICON: Record<string, { icon: LucideIcon; well: string }> = {
 };
 
 export function DashboardPage() {
+  const showExecLink = useCanSeeExecOverview();
   const { profile } = useAuth();
   const scope = useCompanyScope();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -471,6 +472,12 @@ export function DashboardPage() {
           onChange={setPeriod}
           getLabel={(p) => DASHBOARD_PERIOD_LABELS[p]}
         />
+        {showExecLink && (
+          // Lãnh đạo: Dashboard là số liệu theo kỳ; cảnh báo theo từng công ty nằm ở trang riêng.
+          <Link to="/tong-quan" className="text-sm font-medium text-brand hover:underline">
+            Cảnh báo theo công ty → Tổng quan điều hành
+          </Link>
+        )}
         {scope.isAggregate && (
           // Dấu hiệu chế độ gộp — thông tin về PHẠM VI đang xem, không phải tình trạng của hồ
           // sơ nào, nên tái dùng tông "Chờ duyệt" (chú ý, chưa khẩn cấp) thay vì màu thương hiệu.
@@ -518,32 +525,48 @@ export function DashboardPage() {
           )}
         </KpiCard>
 
-        <KpiCard
-          title="Quá hạn"
-          hint="Hồ sơ vượt thời hạn xử lý, công nợ quá hạn thu và phê duyệt bị để lâu — gộp mọi phân hệ"
-          icon={AlertTriangle}
-          iconWellClassName="bg-status-overdue-bg text-status-overdue"
-        >
-          {overdueTotal === 0 ? (
-            <KpiEmptyBlock label="Không có rủi ro nào đang quá hạn." />
-          ) : (
-            <div className="mt-auto">
-              <div className="flex items-baseline gap-2">
-                <span className={cn(KPI_VALUE_CLASS, 'text-status-overdue')}>{overdueTotal}</span>
-                <StatusLozenge status="overdue" />
+        {/* Lãnh đạo: cảnh báo toàn tập đoàn nằm ở Tổng quan điều hành (tính ở CSDL, tách theo
+            công ty) — không dựng lại một ô «Quá hạn» thứ hai đếm khác cách ở đây. Vai trò
+            khác giữ ô này: đó là quá hạn TRONG PHẠM VI của họ. */}
+        {showExecLink ? (
+          <KpiCard
+            title="Cảnh báo toàn tập đoàn"
+            hint="Quá hạn, kẹt duyệt, vượt ngân sách, giấy tờ hết hạn — tách theo từng công ty"
+            icon={AlertTriangle}
+            iconWellClassName="bg-status-overdue-bg text-status-overdue"
+          >
+            <Link to="/tong-quan" className="mt-auto block font-medium text-brand hover:underline">
+              Mở Tổng quan điều hành →
+            </Link>
+          </KpiCard>
+        ) : (
+          <KpiCard
+            title="Quá hạn"
+            hint="Hồ sơ vượt thời hạn xử lý, công nợ quá hạn thu và phê duyệt bị để lâu — gộp mọi phân hệ"
+            icon={AlertTriangle}
+            iconWellClassName="bg-status-overdue-bg text-status-overdue"
+          >
+            {overdueTotal === 0 ? (
+              <KpiEmptyBlock label="Không có rủi ro nào đang quá hạn." />
+            ) : (
+              <div className="mt-auto">
+                <div className="flex items-baseline gap-2">
+                  <span className={cn(KPI_VALUE_CLASS, 'text-status-overdue')}>{overdueTotal}</span>
+                  <StatusLozenge status="overdue" />
+                </div>
+                <ul className="mt-2 space-y-1 text-xs">
+                  {overdueRisks.map((m) => (
+                    <li key={m.key}>
+                      <Link to={m.to} className="font-medium text-brand hover:underline">
+                        {m.title}: {m.count}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <ul className="mt-2 space-y-1 text-xs">
-                {overdueRisks.map((m) => (
-                  <li key={m.key}>
-                    <Link to={m.to} className="font-medium text-brand hover:underline">
-                      {m.title}: {m.count}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </KpiCard>
+            )}
+          </KpiCard>
+        )}
 
         {canSeeProfit && (
           <KpiCard

@@ -33,6 +33,7 @@ vi.mock('@/lib/auth', () => ({
   useAuth: () => ({
     profile: { id: 'u1', fullName: 'Ngô Thị I', assignments: [], permissions: [] },
   }),
+  useCanSeeExecOverview: () => false,
   useCan: () => true,
 }));
 

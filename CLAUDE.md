@@ -683,6 +683,10 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
   nợ phải thu / phải trả quá hạn, hợp đồng quá hạn, công trình trễ / vượt ngân sách, giàn giáo quá hạn trả, giấy tờ
   nhân sự, báo giá không qua khảo sát), xếp theo mức, mỗi ô tối đa 5 hồ sơ. Quy tắc quá hạn chép đúng `*DisplayStatus`
   của `shared/`; mốc «chờ lâu» = SLA nếu có, không thì `PENDING_APPROVAL_AGING_DAYS` do trang truyền vào.
+- **Vai trò ba trang (chủ dự án chốt):** Tổng quan điều hành = lãnh đạo, «vấn đề ở đâu, công ty nào» (cảnh báo tính ở
+  CSDL, tách theo công ty). Dashboard = trang làm việc theo kỳ của từng người, trong phạm vi quyền của họ — với lãnh
+  đạo KHÔNG còn ô «Quá hạn» (thay bằng ô / liên kết sang `/tong-quan`), giữ khối tài chính vì đó là xu hướng theo
+  kỳ. Báo cáo `/bc/...` = xem sâu, xuất báo cáo; hai trang kia chỉ dẫn liên kết, không dựng lại báo cáo.
 - Trang vẽ bằng HÌNH (chủ dự án: «nhiều chữ quá»): dải chờ quyết định; 3 thẻ sức khoẻ có vòng tròn theo mức + biểu
   tượng hoạt động; bản đồ cảnh báo (ô màu kèm số / ✓, rê để xem hồ sơ, nhãn ngắn + biểu tượng — tên đầy đủ đọc được
   qua `aria-label`); 2 biểu đồ cột theo công ty (tài chính tháng, quy mô cơ hội / hợp đồng). Dữ liệu như dưới.

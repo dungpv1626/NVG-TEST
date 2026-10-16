@@ -207,6 +207,11 @@ liệu đánh dấu, QĐ-6).
 mức, bản đồ cảnh báo ô màu kèm số / ✓ (rê để xem hồ sơ cụ thể), biểu đồ cột tài chính và quy mô theo công ty.
 Mức vẫn đọc được bằng chữ qua nhãn trợ năng (CGD 6.8).
 
+**Bổ sung — làm rõ vai trò Tổng quan điều hành / Dashboard / Báo cáo.** Hai trang trùng ô «Quá hạn» và khối tài
+chính. Chủ dự án chọn làm rõ vai trò: Dashboard của lãnh đạo bỏ ô «Quá hạn» (thay bằng ô và liên kết sang Tổng quan
+điều hành); khối tài chính giữ ở Dashboard vì là xu hướng theo kỳ, còn trang điều hành so sánh ba công ty trong
+tháng; báo cáo sâu ở `/bc/...`.
+
 **Câu hỏi cho Haan:** KSNB có được xem lương / hồ sơ cá nhân? (đang: không). Mốc «hợp đồng sắp hết hạn» bao nhiêu
 ngày? (đang: chưa có ô này). Mốc «phê duyệt chờ lâu» 3 ngày (giả định cũ của Dashboard) — giữ hay đặt SLA theo loại?
 
