@@ -628,7 +628,7 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
 | 2   | «Tổng quan điều hành» + Dashboard lãnh đạo theo khung từng công ty + vai trò Kiểm soát nội bộ (vấn đề 1)                   | **Xong phần chính** — chờ Haan kiểm |
 | 3   | Khảo sát chốt bằng máy (CRM + TK), đính kèm dùng chung, ghi âm → Whisper → Gemini tóm tắt (vấn đề 6, 8)                    | Chưa làm                            |
 | 3b  | Điểm danh theo tổ, kiểm bán kính GPS (chỉ cảnh báo), báo cáo có mặt, đề xuất chấm công                                     | Chưa làm                            |
-| 4   | Mẫu hợp đồng `.docx` có chỗ trống, tự điền, xem trước, xuất (vấn đề 5)                                                     | Chưa làm                            |
+| 4   | Mẫu hợp đồng `.docx` có chỗ trống, tự điền, xem trước, xuất (vấn đề 5)                                                     | **Xong vòng đầu** — chờ Haan kiểm   |
 | 5   | AI Design thành 4 bước: Đầu vào → Mặt bằng → Mặt ngoài → Bộ kết quả (vấn đề 7)                                             | Chưa làm                            |
 
 **GĐ1 đã có trong mã** (migration 0155–0166; 0160–0166 là vòng rà chuỗi bước bằng đúng vai sau phản hồi chủ dự án):
@@ -701,6 +701,30 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
   khoẻ vòng tròn; khối «Tiêu điểm» trên lưới thẻ; khối tài chính chia theo chủ đề tách công ty. Lý do ở 9.4.
 - Hạn chế: số «cả tập đoàn» CHƯA loại giao dịch nội bộ (QĐ-6 chưa làm — không có cột đánh dấu); trang ghi rõ.
 
+**GĐ4 vòng đầu đã có trong mã** (0171 — làm TRƯỚC GĐ3 theo chủ dự án; phạm vi gọn: `.docx`, không PDF, không AI):
+
+- Căn cứ pháp lý mới: Luật Xây dựng 2025 (135/2025/QH15) và Nghị định 210/2026/NĐ-CP, hiệu lực 01/07/2026, thay
+  Nghị định 37/2015 + 50/2021. Cột mới `contracts.price_form` (9 hình thức giá, Điều 82 khoản 2), `vat_rate` (giá trị
+  ĐÃ GỒM thuế; rỗng = không tách), `project_location`; `companies.representative_title`, `bank_account_number`,
+  `bank_name` (tài khoản CỦA PHÁP NHÂN); `customers.representative_name`, `representative_title`. Không lưu CCCD.
+- `contract_templates` (pháp nhân × loại hợp đồng × hình thức giá tuỳ chọn; không xoá, «Ngừng dùng»; tệp và chỗ trống
+  không sửa được) — quản lý: `auth_can_manage_contract_templates` = phê duyệt HD hoặc ADMIN, không KSNB.
+  `contract_documents` — văn bản đã điền, đánh số bản, bản sau phải có lý do, BẤT BIẾN, lưu `filled_values`; khoá khi
+  hợp đồng đã ký. Hai bucket `contract-templates` / `contract-documents`, quyền tệp theo thư mục đầu. KHÔNG dùng
+  `documents` (Mẫu A — Thi công sẽ thấy văn bản hợp đồng).
+- `shared/src/hd-template.ts`: danh mục chỗ trống (`TEMPLATE_FIELDS`, bảng lặp `TEMPLATE_LOOPS`), đọc số thành chữ
+  (chia theo khối tỷ), tách thuế bằng `bigint`, bên A / B tự đổi theo loại hợp đồng, ô thiếu = `null` → dải chấm.
+  `web/src/lib/docx-template.ts`: docxtemplater 3.71.0 + pizzip 3.3.0 (điền trên trình duyệt), docx-preview 0.4.1
+  (xem trước, nạp khi cần), mẫu ví dụ dựng bằng mã. ⚠️ `docxtemplater/js/inspect-module` cần `lodash` mà gói không
+  khai — dùng `TagCollector` tự viết. ⚠️ PostgREST trả cột `numeric` dạng SỐ, không phải chuỗi.
+- Giao diện: `/hd/mau-hop-dong` (tải mẫu lên — kiểm cú pháp + chỗ trống lạ NGAY khi chọn tệp, sai thì không lưu; tải
+  mẫu ví dụ; cách viết chỗ trống; thông tin pháp nhân, Quản trị sửa); tab «Văn bản» của hợp đồng (thông tin in lên
+  văn bản — sửa khi Nháp; chọn mẫu → điền và xem trước → liệt kê ô thiếu → lưu phiên bản và tải về; các bản đã lưu);
+  thanh `HdNav`; ô người đại diện ký ở biểu mẫu khách hàng.
+- Hàng rào: `db/src/__tests__/hd-template.test.ts` (10, đã nới hàm quyền để thấy đỏ), `shared/.../hd-template.test.ts`
+  (26), `web/src/lib/__tests__/docx-template.test.ts` (3). Chạy thử trình duyệt: TGĐ tải mẫu, Kinh doanh điền + lưu
+  bản 1 trên hợp đồng nháp `NVC-HD-2026-MAU1` (tạo tay trên máy), Thi công bị chặn.
+
 **GĐ1 còn thiếu:** bảng lịch sử bước chung `stage_transitions` (hợp đồng / gói thầu / công trình); dải tiến
 trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ PWA trên hộp thoại, `ConfirmDialog` qua portal.
 
@@ -716,7 +740,8 @@ trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ P
    sắp hết hạn» (cần tham số số ngày); lối vào Tổng quan điều hành trên thanh dưới điện thoại; đánh dấu giao dịch nội
    bộ (QĐ-6) để số tập đoàn loại được; GĐ1 còn thiếu ở trên; nạp thêm dữ liệu demo có hồ sơ quá hạn ở cả ba công ty để
    trang điều hành có gì để xem.
-4. Sau đó GĐ3 → 3b → 4 → 5 theo kế hoạch trong `doc/MOC_CAI_TIEN_UX.md`. **Migration tiếp theo: 0171.**
+4. GĐ4 còn: mẫu Word THẬT của NVG (chủ dự án gửi), PDF chuẩn (cần máy chủ LibreOffice), AI gợi ý câu chữ (trả phí,
+   tắt mặc định). Sau đó GĐ3 → 3b → 5 theo kế hoạch trong `doc/MOC_CAI_TIEN_UX.md`. **Migration tiếp theo: 0172.**
 
 ### 9.4 Quyết định đã chốt và lý do
 
@@ -747,6 +772,10 @@ trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ P
 | KSNB: xem giá vốn / lợi nhuận / tài chính / nhật ký; không xem lương, hồ sơ cá nhân                          | Kiểm soát cần số để đối chiếu; lương / cá nhân là mặc định an toàn chờ Haan                                                                                    |
 | Lãnh đạo: MỖI CÔNG TY MỘT KHUNG đủ tình hình; không chia trang theo chủ đề, không theo bộ chọn pháp nhân     | Chủ dự án qua bốn vòng: gộp số → không biết công ty nào; tách theo chủ đề → phải gom bằng mắt, nhớ không hết; chốt «nhìn một nơi nắm một công ty»              |
 | Lãnh đạo nhìn ít mà ra vấn đề: chỉ vấn đề mới to / đứng trên, mảng ổn gom một dòng, không xếp thẻ ngang hàng | Chủ dự án: «nhìn quá nhiều thứ cùng cấp bậc nên bị loạn»                                                                                                       |
+| Mẫu hợp đồng làm TRƯỚC GĐ3; vòng đầu chỉ `.docx` (không PDF, không AI)                                       | Chủ dự án chọn; PDF đúng định dạng cần máy chủ LibreOffice, AI tốn phí — tách ra vòng sau                                                                      |
+| Văn bản hợp đồng ở bảng riêng `contract_documents`, không ở `documents`                                      | `documents` theo Mẫu A — cả pháp nhân xem được, trong khi Thi công không xem Module HD                                                                         |
+| Ô chưa có dữ liệu in dải chấm và được liệt kê trước khi lưu; mẫu có chỗ trống lạ thì không cho lưu mẫu       | Không bịa số (5.2); lỗi mẫu phải lộ lúc soạn mẫu, không lộ lúc Kinh doanh cần văn bản                                                                          |
+| Hợp đồng đã ký thì khoá văn bản; sửa câu chữ = sửa trong Word rồi lập bản mới có lý do (trước khi ký)        | Hệ thống không đọc ngược tệp Word; số liệu sửa trên hệ thống để tệp và CSDL không lệch                                                                         |
 | Lãnh đạo dùng hình thay chữ khi có thể (biểu tượng, ô màu kèm số / ✓); mức luôn có chữ hoặc nhãn đọc được    | Chủ dự án: «nhiều chữ quá»; CGD 6.8 cấm dùng màu làm cách duy nhất                                                                                             |
 
 ### 9.5 Câu hỏi chờ Haan (đang chạy theo mặc định trong ngoặc)
@@ -761,6 +790,10 @@ trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ P
 8. Hợp đồng còn bao nhiêu ngày thì tính «sắp hết hạn»? (chưa có ô này)
 9. Mốc «phê duyệt chờ lâu» 3 ngày (giả định cũ của Dashboard) — giữ, hay đặt SLA theo loại hồ sơ? (3 ngày)
 10. Khảo sát có bắt buộc với cả ba pháp nhân? (bắt buộc, bỏ qua phải ghi lý do — lý do hiện trên trang điều hành)
+11. Mẫu hợp đồng: ai tải lên, mẫu riêng từng pháp nhân hay dùng chung? (Ban Giám đốc / Quản trị; riêng từng pháp nhân)
+    Gửi 1–2 mẫu Word thật (thi công NVC, thiết kế NVO) để thay mẫu ví dụ.
+12. Có lưu CCCD của khách cá nhân (NVO) để in lên hợp đồng? (không — mẫu để dải chấm điền tay)
+13. Tách «thi công» thành thi công / thiết kế + thi công / EPC theo Luật Xây dựng 2025? (chưa tách; hình thức giá đã có)
 
 ### 9.6 Ghi chú máy phát triển Windows
 

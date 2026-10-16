@@ -20,6 +20,7 @@ import { EntityTable, type EntityRow } from '@/components/entity/entity-table';
 import { useContracts } from '@/hooks/use-contracts';
 import type { MoneyValue } from '@nvg/shared';
 import { APP_HELP } from '@/lib/help-texts';
+import { HdNav } from './hd-nav';
 
 interface ContractRow extends EntityRow {
   stageLabel: string;
@@ -54,6 +55,7 @@ export function ContractListPage() {
         title="Hợp đồng"
         breadcrumbs={[{ label: 'Hợp đồng' }]}
       />
+      <HdNav />
 
       <EntityTable<ContractRow>
         rows={rows}

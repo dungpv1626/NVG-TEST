@@ -134,6 +134,38 @@ export const CONTRACT_STAGE_META: Readonly<Record<ContractStage, ContractStageMe
  * Dùng làm checklist: nhìn là biết hợp đồng còn thiếu nhóm điều khoản nào chưa ghi — đúng
  * chỗ hay bị bỏ sót vì "để sau đọc lại bản Word".
  */
+/**
+ * Hình thức giá hợp đồng — Luật Xây dựng 2025 (135/2025/QH15) Điều 82 khoản 2, Nghị định
+ * 210/2026/NĐ-CP Điều 6. Quyết định điều khoản điều chỉnh giá và cách thanh toán trong văn bản
+ * hợp đồng (trọn gói thanh toán theo đợt, đơn giá theo khối lượng nghiệm thu), nên mẫu hợp
+ * đồng chọn theo cặp loại hợp đồng × hình thức giá. Để trống được: hợp đồng cũ chưa khai.
+ */
+export const CONTRACT_PRICE_FORMS = [
+  'tron_goi',
+  'don_gia_co_dinh',
+  'don_gia_dieu_chinh',
+  'theo_thoi_gian',
+  'chi_phi_cong_phi',
+  'theo_ket_qua_dau_ra',
+  'theo_ty_le_phan_tram',
+  'hon_hop',
+  'khac',
+] as const;
+
+export type ContractPriceForm = (typeof CONTRACT_PRICE_FORMS)[number];
+
+export const CONTRACT_PRICE_FORM_LABELS: Readonly<Record<ContractPriceForm, string>> = {
+  tron_goi: 'Trọn gói',
+  don_gia_co_dinh: 'Theo đơn giá cố định',
+  don_gia_dieu_chinh: 'Theo đơn giá điều chỉnh',
+  theo_thoi_gian: 'Theo thời gian',
+  chi_phi_cong_phi: 'Theo chi phí cộng phí',
+  theo_ket_qua_dau_ra: 'Theo kết quả đầu ra',
+  theo_ty_le_phan_tram: 'Theo tỷ lệ phần trăm',
+  hon_hop: 'Hỗn hợp',
+  khac: 'Hình thức khác',
+};
+
 export const CONTRACT_TERM_TYPES = [
   'pham_vi',
   'gia_tri',

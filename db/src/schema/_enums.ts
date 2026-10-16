@@ -59,6 +59,7 @@ import {
   CHANGE_REQUEST_STATUSES,
   CONTRACT_SOURCE_TYPES,
   CONTRACT_STAGES,
+  CONTRACT_PRICE_FORMS,
   CONTRACT_TERM_TYPES,
   CONTRACT_TYPES,
   COST_GROUPS,
@@ -169,6 +170,9 @@ export const contractStageEnum = pgEnum('contract_stage', CONTRACT_STAGES);
 
 /** Hồ sơ nguồn sinh ra hợp đồng — Backend Schema 4.5 (`source_type`). */
 export const contractSourceTypeEnum = pgEnum('contract_source_type', CONTRACT_SOURCE_TYPES);
+
+/** Hình thức giá hợp đồng — Luật Xây dựng 2025 Điều 82 khoản 2 (0171). */
+export const contractPriceFormEnum = pgEnum('contract_price_form', CONTRACT_PRICE_FORMS);
 
 /** Tám nhóm điều khoản phải theo dõi — PRD HD-02. */
 export const contractTermTypeEnum = pgEnum('contract_term_type', CONTRACT_TERM_TYPES);

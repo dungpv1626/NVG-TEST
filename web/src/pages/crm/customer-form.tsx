@@ -25,6 +25,9 @@ const SOURCES = [
 export interface CustomerFormValues {
   name: string;
   contactPerson: string;
+  /** Người đại diện KÝ hợp đồng — in lên văn bản hợp đồng (0171). */
+  representativeName: string;
+  representativeTitle: string;
   phone: string;
   email: string;
   source: string;
@@ -39,6 +42,8 @@ export interface CustomerFormValues {
 export const EMPTY_CUSTOMER_FORM: CustomerFormValues = {
   name: '',
   contactPerson: '',
+  representativeName: '',
+  representativeTitle: '',
   phone: '',
   email: '',
   source: '',
@@ -62,6 +67,8 @@ export function customerPayload(form: CustomerFormValues) {
   return {
     name: form.name.trim(),
     contact_person: orNull(form.contactPerson),
+    representative_name: orNull(form.representativeName),
+    representative_title: orNull(form.representativeTitle),
     phone: orNull(form.phone),
     email: orNull(form.email),
     source: form.source || null,
@@ -99,6 +106,23 @@ export function CustomerFields({
         <Input
           value={value.contactPerson}
           onChange={(e) => onChange('contactPerson', e.target.value)}
+        />
+      </Field>
+
+      <Field
+        label="Người đại diện ký hợp đồng"
+        hint="Doanh nghiệp: người ký, có thể khác người liên hệ."
+      >
+        <Input
+          value={value.representativeName}
+          onChange={(e) => onChange('representativeName', e.target.value)}
+        />
+      </Field>
+
+      <Field label="Chức vụ người đại diện">
+        <Input
+          value={value.representativeTitle}
+          onChange={(e) => onChange('representativeTitle', e.target.value)}
         />
       </Field>
 

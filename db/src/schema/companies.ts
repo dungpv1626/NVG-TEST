@@ -45,6 +45,11 @@ export const companies = pgTable('companies', {
 
   /** Người đại diện pháp luật — in trên hợp đồng. */
   legalRepresentative: varchar('legal_representative', { length: 128 }),
+  /** Chức vụ người đại diện — in trên hợp đồng (0171). */
+  representativeTitle: varchar('representative_title', { length: 128 }),
+  /** Tài khoản ngân hàng CỦA PHÁP NHÂN — in trên hợp đồng (0171). Không phải tài khoản cá nhân. */
+  bankAccountNumber: varchar('bank_account_number', { length: 32 }),
+  bankName: text('bank_name'),
 
   /**
    * `false` với NVG — mã tổng hợp không phát sinh giao dịch.

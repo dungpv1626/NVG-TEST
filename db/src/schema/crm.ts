@@ -56,6 +56,9 @@ export const customers = pgTable(
     email: varchar('email', { length: 255 }),
     address: text('address'),
     taxCode: varchar('tax_code', { length: 20 }),
+    /** Người đại diện KÝ hợp đồng (doanh nghiệp) — khác người liên hệ (0171). */
+    representativeName: varchar('representative_name', { length: 128 }),
+    representativeTitle: varchar('representative_title', { length: 128 }),
 
     /** Loại công trình, quy mô, nhu cầu — mô tả tự do ở bước này. */
     needs: text('needs'),

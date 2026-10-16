@@ -36,6 +36,8 @@ interface CustomerDetail {
   name: string;
   source: string | null;
   contact_person: string | null;
+  representative_name: string | null;
+  representative_title: string | null;
   phone: string | null;
   email: string | null;
   address: string | null;
@@ -64,7 +66,7 @@ export function CustomerDetailPage() {
     table: 'customers',
     id,
     select:
-      'id, code, name, source, contact_person, phone, email, address, tax_code, needs, notes, responsible_user_id, created_at, updated_at, responsible:users!customers_responsible_user_id_users_id_fk(full_name)',
+      'id, code, name, source, contact_person, representative_name, representative_title, phone, email, address, tax_code, needs, notes, responsible_user_id, created_at, updated_at, responsible:users!customers_responsible_user_id_users_id_fk(full_name)',
   });
 
   // Hồ sơ chưa có người chịu trách nhiệm thì ai sửa được module CRM cũng nhận được —
@@ -112,6 +114,12 @@ export function CustomerDetailPage() {
             <DetailFields
               fields={[
                 { label: 'Người liên hệ', value: data.contact_person ?? EM_DASH },
+                {
+                  label: 'Người đại diện ký hợp đồng',
+                  value: data.representative_name
+                    ? `${data.representative_name}${data.representative_title ? ` — ${data.representative_title}` : ''}`
+                    : EM_DASH,
+                },
                 { label: 'Điện thoại', value: formatPhone(data.phone) || EM_DASH },
                 { label: 'Email', value: data.email ?? EM_DASH },
                 { label: 'Nguồn khách', value: data.source ?? EM_DASH },

@@ -31,6 +31,8 @@ interface EditableCustomer {
   name: string;
   source: string | null;
   contact_person: string | null;
+  representative_name: string | null;
+  representative_title: string | null;
   phone: string | null;
   email: string | null;
   address: string | null;
@@ -41,7 +43,7 @@ interface EditableCustomer {
 }
 
 const SELECT =
-  'id, code, name, source, contact_person, phone, email, address, tax_code, needs, notes, responsible_user_id';
+  'id, code, name, source, contact_person, representative_name, representative_title, phone, email, address, tax_code, needs, notes, responsible_user_id';
 
 export function CustomerEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -80,6 +82,8 @@ export function CustomerEditPage() {
     setForm({
       name: data.name,
       contactPerson: data.contact_person ?? '',
+      representativeName: data.representative_name ?? '',
+      representativeTitle: data.representative_title ?? '',
       phone: data.phone ?? '',
       email: data.email ?? '',
       source: data.source ?? '',

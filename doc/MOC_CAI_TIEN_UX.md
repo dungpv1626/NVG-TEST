@@ -229,3 +229,17 @@ Tổng quan điều hành dùng cùng khung, giữ bản đồ cảnh báo và b
 **Câu hỏi cho Haan:** KSNB có được xem lương / hồ sơ cá nhân? (đang: không). Mốc «hợp đồng sắp hết hạn» bao nhiêu
 ngày? (đang: chưa có ô này). Mốc «phê duyệt chờ lâu» 3 ngày (giả định cũ của Dashboard) — giữ hay đặt SLA theo loại?
 
+### Giai đoạn 4 (vòng đầu) — mẫu hợp đồng Word tự điền
+
+Làm trước GĐ3 theo chủ dự án, phạm vi gọn: `.docx`, không PDF, không AI. Migration 0171.
+
+- Tra cứu pháp lý: Luật Xây dựng 2025 (135/2025/QH15) + Nghị định 210/2026/NĐ-CP (hiệu lực 01/07/2026) — 9 loại hợp
+  đồng theo tính chất công việc, 9 hình thức giá. Hợp đồng thêm hình thức giá, thuế suất GTGT, địa điểm; pháp nhân thêm
+  chức vụ người đại diện và tài khoản ngân hàng của pháp nhân; khách hàng thêm người đại diện ký.
+- Mẫu theo pháp nhân × loại hợp đồng; tải lên kiểm chỗ trống ngay; văn bản đã điền đánh số bản, bất biến, khoá khi
+  đã ký; ô thiếu in dải chấm và được liệt kê trước khi lưu. Điền ngay trên trình duyệt.
+- Chạy thử: TGĐ tải mẫu ví dụ lên NVC; Kinh doanh NVC khai hình thức giá / thuế 8% / địa điểm, điền, xem trước, lưu
+  bản 1 (giá trị bằng chữ, tách thuế, ba đợt thanh toán thành ba hàng bảng đều đúng); Thi công không vào được.
+
+**Câu hỏi cho Haan:** ai tải mẫu và mẫu riêng từng pháp nhân? (đang: BGĐ / Quản trị, riêng từng pháp nhân). Gửi mẫu
+Word thật. Có lưu CCCD khách cá nhân? (đang: không). Tách «thi công» thành thi công / thiết kế + thi công / EPC?

@@ -50,6 +50,7 @@ import { WaitingOn } from '@/components/entity/waiting-on';
 import { useApprovalHistory } from '@/hooks/use-approvals';
 import { useStageReadiness } from '@/hooks/use-stage-readiness';
 import { AmendmentPanel } from './amendment-panel';
+import { DocumentPanel } from './document-panel';
 import { TermsPanel } from './terms-panel';
 
 const EM_DASH = '—';
@@ -415,6 +416,11 @@ export function ContractDetailPage() {
                 readOnly={readOnly}
               />
             ),
+          },
+          {
+            id: 'van-ban',
+            label: 'Văn bản',
+            content: <DocumentPanel contract={contract} canDraft={canDraft && !isClosed} />,
           },
           {
             id: 'phat-sinh',

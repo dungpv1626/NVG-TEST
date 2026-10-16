@@ -10,6 +10,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   AmendmentStage,
+  ContractPriceForm,
   ContractSourceType,
   ContractStage,
   ContractTermType,
@@ -72,7 +73,12 @@ export interface ContractDetailRecord extends ContractRecord {
   source_id: string | null;
   estimate_id: string | null;
   partner_name: string | null;
+  customer_id: string | null;
   start_date: string | null;
+  price_form: ContractPriceForm | null;
+  /** PostgREST trả cột `numeric` dạng số. */
+  vat_rate: number | string | null;
+  project_location: string | null;
   approved_at: string | null;
   signed_at: string | null;
   settled_at: string | null;
@@ -89,7 +95,8 @@ export function useContract(id: string | undefined) {
       const { data, error } = await supabase
         .from('contracts')
         .select(
-          `${CONTRACT_SELECT}, source_type, source_id, estimate_id, partner_name, start_date, ` +
+          `${CONTRACT_SELECT}, source_type, source_id, estimate_id, partner_name, customer_id, ` +
+            'start_date, price_form, vat_rate, project_location, ' +
             'approved_at, signed_at, settled_at, cancel_reason, notes, updated_at, ' +
             'estimate:estimates!contracts_estimate_id_estimates_id_fk(id, code, version)',
         )
@@ -159,6 +166,9 @@ export function useUpdateContract() {
         start_date: string | null;
         end_date: string | null;
         notes: string | null;
+        price_form: ContractPriceForm | null;
+        vat_rate: string | null;
+        project_location: string | null;
       }>;
     }
   >({

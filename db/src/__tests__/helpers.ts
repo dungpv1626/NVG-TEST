@@ -227,6 +227,8 @@ export async function cleanupTestData(): Promise<void> {
     await sql`DELETE FROM construction_sites WHERE name LIKE ${'%' + TEST_PREFIX + '%'}`;
     // Xoá hợp đồng kéo theo điều khoản và phát sinh (khoá ngoại CASCADE).
     await sql`DELETE FROM contracts WHERE title LIKE ${TEST_PREFIX + '%'}`;
+    // Mẫu hợp đồng (0171) — sau hợp đồng: văn bản đã điền trỏ tới mẫu (ON DELETE SET NULL).
+    await sql`DELETE FROM contract_templates WHERE title LIKE ${TEST_PREFIX + '%'}`;
     // Xoá gói thầu kéo theo khối lượng, dự toán, hồ sơ thầu và ngân sách (khoá ngoại CASCADE).
     await sql`DELETE FROM bidding_projects WHERE name LIKE ${TEST_PREFIX + '%'}`;
     // Module Thiết kế AI: `design_head.artifact_id` cố ý là ON DELETE RESTRICT (không xoá

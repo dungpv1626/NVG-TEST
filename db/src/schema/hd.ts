@@ -19,6 +19,9 @@ import {
   boolean,
   date,
   index,
+  integer,
+  jsonb,
+  numeric,
   pgTable,
   text,
   timestamp,
@@ -31,6 +34,7 @@ import {
   amendmentStageEnum,
   contractSourceTypeEnum,
   contractStageEnum,
+  contractPriceFormEnum,
   contractTermTypeEnum,
   contractTypeEnum,
 } from './_enums';
@@ -62,6 +66,8 @@ export const contracts = pgTable(
     title: text('title').notNull(),
 
     type: contractTypeEnum('type').notNull(),
+    /** Hình thức giá (0171) — chọn mẫu văn bản và điều khoản điều chỉnh giá. */
+    priceForm: contractPriceFormEnum('price_form'),
     stage: contractStageEnum('stage').notNull().default('nhap'),
 
     sourceType: contractSourceTypeEnum('source_type'),
@@ -93,6 +99,11 @@ export const contracts = pgTable(
     collectedAmount: money('collected_amount')
       .notNull()
       .default(sql`0`),
+
+    /** Thuế suất GTGT (%) mà `value` đã gồm (0171). Rỗng = chưa khai, văn bản không tự tách thuế. */
+    vatRate: numeric('vat_rate', { precision: 5, scale: 2 }),
+    /** Địa điểm thực hiện, in lên văn bản hợp đồng (0171). */
+    projectLocation: text('project_location'),
 
     signedDate: date('signed_date'),
     startDate: date('start_date'),
@@ -229,6 +240,64 @@ export const contractAmendments = pgTable(
     uniqueIndex('contract_amendments_code')
       .on(t.code)
       .where(sql`${t.code} IS NOT NULL AND ${t.deletedAt} IS NULL`),
+  ],
+);
+
+/**
+ * Mẫu hợp đồng Word (0171) — theo pháp nhân × loại hợp đồng × (tuỳ) hình thức giá. Không xoá;
+ * thay mẫu = tải bản mới rồi ngừng dùng bản cũ. Tệp và chỗ trống của một mẫu không sửa được.
+ */
+export const contractTemplates = pgTable(
+  'contract_templates',
+  {
+    id: primaryId(),
+    companyId: uuid('company_id').notNull(),
+    title: text('title').notNull(),
+    contractType: contractTypeEnum('contract_type').notNull(),
+    priceForm: contractPriceFormEnum('price_form'),
+    storagePath: text('storage_path').notNull(),
+    fileName: text('file_name').notNull(),
+    tags: jsonb('tags').notNull().default({}),
+    isActive: boolean('is_active').notNull().default(true),
+    notes: text('notes'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    updatedBy: uuid('updated_by').references(() => users.id, { onDelete: 'set null' }),
+  },
+  (t) => [index('contract_templates_lookup_idx').on(t.companyId, t.contractType, t.isActive)],
+);
+
+/**
+ * Văn bản hợp đồng đã điền (0171) — bất biến, đánh số phiên bản, lưu kèm giá trị đã điền.
+ * Khoá khi hợp đồng đã ký (trigger `contract_documents_before_insert`).
+ */
+export const contractDocuments = pgTable(
+  'contract_documents',
+  {
+    id: primaryId(),
+    companyId: uuid('company_id').notNull(),
+    contractId: uuid('contract_id')
+      .notNull()
+      .references(() => contracts.id, { onDelete: 'cascade' }),
+    templateId: uuid('template_id').references(() => contractTemplates.id, {
+      onDelete: 'set null',
+    }),
+    version: integer('version').notNull(),
+    storagePath: text('storage_path').notNull(),
+    fileName: text('file_name').notNull(),
+    filledValues: jsonb('filled_values').notNull().default({}),
+    missingFields: text('missing_fields')
+      .array()
+      .notNull()
+      .default(sql`'{}'`),
+    changeReason: text('change_reason'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+  },
+  (t) => [
+    uniqueIndex('contract_documents_version_unique').on(t.contractId, t.version),
+    index('contract_documents_contract_idx').on(t.contractId, t.version),
   ],
 );
 

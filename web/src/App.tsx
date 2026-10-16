@@ -137,6 +137,9 @@ const ContractListPage = lazy(() =>
 const ContractDetailPage = lazy(() =>
   import('@/pages/hd/contract-detail').then((m) => ({ default: m.ContractDetailPage })),
 );
+const ContractTemplatePage = lazy(() =>
+  import('@/pages/hd/template-list').then((m) => ({ default: m.ContractTemplatePage })),
+);
 const SiteListPage = lazy(() =>
   import('@/pages/tc/site-list').then((m) => ({ default: m.SiteListPage })),
 );
@@ -365,6 +368,7 @@ const router = createBrowserRouter(
         <Route element={<ModuleGuard module="HD" />}>
           <Route path="hd/hop-dong" element={<ContractListPage />} />
           <Route path="hd/hop-dong/:id" element={<ContractDetailPage />} />
+          <Route path="hd/mau-hop-dong" element={<ContractTemplatePage />} />
         </Route>
 
         {/* TC — Thi công và ngân sách công trình (TC-01 → TC-08). Không có màn hình
