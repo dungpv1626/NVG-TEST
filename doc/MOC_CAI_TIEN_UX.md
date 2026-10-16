@@ -216,6 +216,11 @@ tháng; báo cáo sâu ở `/bc/...`.
 nhưng ra vấn đề ngay». Dashboard của lãnh đạo: khối Tiêu điểm (một câu kết luận, ≤ 5 dòng vấn đề, hai số phụ), mọi
 số liệu theo kỳ gập lại. Bản đồ cảnh báo chỉ hiện mảng có vấn đề.
 
+**Bổ sung — số liệu theo kỳ không phải chuyển từng công ty.** Chủ dự án: phần chi tiết theo kỳ không thấy rõ là của
+công ty nào, phải chuyển bộ chọn từng công ty, TGĐ không nhớ hết. Tài chính theo kỳ của lãnh đạo nay luôn hiện cả ba
+công ty (số tập đoàn, thanh chia và số từng công ty, biểu đồ tháng theo công ty); thẻ phân hệ ghi rõ đang xem công
+ty nào.
+
 **Câu hỏi cho Haan:** KSNB có được xem lương / hồ sơ cá nhân? (đang: không). Mốc «hợp đồng sắp hết hạn» bao nhiêu
 ngày? (đang: chưa có ô này). Mốc «phê duyệt chờ lâu» 3 ngày (giả định cũ của Dashboard) — giữ hay đặt SLA theo loại?
 

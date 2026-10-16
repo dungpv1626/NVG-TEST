@@ -99,6 +99,7 @@ import { cn } from '@/lib/utils';
 import { APP_HELP } from '@/lib/help-texts';
 import { FinanceOverviewSection } from '@/pages/bc/finance-overview';
 import { ExecFocus } from '@/pages/dieu-hanh/exec-focus';
+import { FinanceByCompanySection } from '@/pages/dieu-hanh/finance-by-company';
 import { useSensitiveAccess } from '@/hooks/use-sensitive-access';
 
 /** Mốc xa nhất khi kỳ đang chọn là "Tất cả" — dòng tiền cần một mốc bắt đầu thật, không phải null. */
@@ -477,7 +478,7 @@ export function DashboardPage() {
             onChange={setPeriod}
             getLabel={(p) => DASHBOARD_PERIOD_LABELS[p]}
           />
-          {scope.isAggregate && (
+          {scope.isAggregate && !showExecLink && (
             // Dấu hiệu chế độ gộp — thông tin về PHẠM VI đang xem, không phải tình trạng của hồ
             // sơ nào, nên tái dùng tông "Chờ duyệt" (chú ý, chưa khẩn cấp) thay vì màu thương hiệu.
             <span
@@ -493,12 +494,30 @@ export function DashboardPage() {
           )}
         </div>
 
-        {canSeeFinance && (
-          // Tổng quan tài chính bằng biểu đồ (Haan 30/09/2026) — chỉ vai trò xem được tài chính;
-          // vai trò khác giữ Dashboard vận hành bên dưới.
-          <FinanceOverviewSection period={period} canSeeProfit={canSeeProfit} className="mb-6" />
+        {showExecLink ? (
+          // Lãnh đạo: tài chính theo kỳ của CẢ BA công ty cạnh nhau, không theo bộ chọn pháp nhân —
+          // chuyển từng công ty rồi nhớ số là thứ chủ dự án chỉ ra Tổng giám đốc không làm được.
+          <FinanceByCompanySection period={period} />
+        ) : (
+          canSeeFinance && (
+            // Tổng quan tài chính bằng biểu đồ (Haan 30/09/2026) — chỉ vai trò xem được tài chính;
+            // vai trò khác giữ Dashboard vận hành bên dưới.
+            <FinanceOverviewSection period={period} canSeeProfit={canSeeProfit} className="mb-6" />
+          )
         )}
 
+        {showExecLink && (
+          // Các thẻ phân hệ VẪN theo bộ chọn pháp nhân — nói rõ đang là công ty nào, đừng để
+          // người xem tưởng đó là số cả tập đoàn (chủ dự án: «không thấy rõ là của công ty nào»).
+          <p className="mb-3 flex flex-wrap items-center gap-2 text-sm">
+            <span className="font-semibold">Công việc theo phân hệ</span>
+            <span className="rounded-full bg-brand-subtle px-2.5 py-0.5 text-xs font-semibold text-brand-forest">
+              Đang xem:{' '}
+              {scope.isAggregate ? 'cả ba công ty (gộp)' : (currentCompany?.companyShortName ?? '')}
+            </span>
+            <span className="text-xs text-fg-subtle">đổi ở bộ chọn pháp nhân góc trái</span>
+          </p>
+        )}
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <KpiCard
             title="Chờ phê duyệt"

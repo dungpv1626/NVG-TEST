@@ -687,6 +687,9 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
   bằng khối «Tiêu điểm» (`pages/dieu-hanh/exec-focus.tsx`): một câu kết luận cỡ lớn, tối đa 5 dòng vấn đề (công ty ·
   mảng · số), hai số phụ; mọi thẻ / biểu đồ theo kỳ gập trong «Số liệu chi tiết theo kỳ». Bản đồ cảnh báo chỉ hiện
   mảng có vấn đề, mảng ổn gom một dòng ✓. Thêm khối mới cho lãnh đạo: hỏi «nó có đáng đứng ngang hàng vấn đề không?».
+- **Lãnh đạo không phải đổi bộ chọn pháp nhân để so công ty:** tài chính theo kỳ trên Dashboard của lãnh đạo là
+  `FinanceByCompanySection` (`pages/dieu-hanh/finance-by-company.tsx`) — số tập đoàn + số từng công ty + biểu đồ
+  tháng một cột mỗi công ty, KHÔNG theo bộ chọn. Thẻ phân hệ vẫn theo bộ chọn nên ghi rõ «Đang xem: …».
 - **Vai trò ba trang (chủ dự án chốt):** Tổng quan điều hành = lãnh đạo, «vấn đề ở đâu, công ty nào» (cảnh báo tính ở
   CSDL, tách theo công ty). Dashboard = trang làm việc theo kỳ của từng người, trong phạm vi quyền của họ — với lãnh
   đạo KHÔNG còn ô «Quá hạn» (thay bằng ô / liên kết sang `/tong-quan`), giữ khối tài chính vì đó là xu hướng theo

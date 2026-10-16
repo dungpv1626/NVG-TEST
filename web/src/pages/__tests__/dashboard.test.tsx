@@ -105,6 +105,9 @@ vi.mock('@/hooks/use-reports', () => ({
   useProfitLossReport: () => ({ data: [], isLoading: false }),
 }));
 
+vi.mock('@/pages/dieu-hanh/finance-by-company', () => ({
+  FinanceByCompanySection: () => <section data-testid="tai-chinh-ba-cong-ty" />,
+}));
 vi.mock('@/pages/dieu-hanh/exec-focus', () => ({
   ExecFocus: () => <section data-testid="tieu-diem" />,
 }));
@@ -199,6 +202,8 @@ describe('Dashboard — mỗi con số dẫn tới danh sách đã lọc SẴN �
     renderWithApp(<DashboardPage />, { route: '/dashboard' });
 
     expect(screen.getByTestId('tieu-diem')).toBeInTheDocument();
+    // Tài chính theo kỳ của lãnh đạo: cả ba công ty, không theo bộ chọn pháp nhân.
+    expect(screen.getByTestId('tai-chinh-ba-cong-ty')).toBeInTheDocument();
     expect(screen.queryByText('Quá hạn')).not.toBeInTheDocument();
     // Phần chi tiết vẫn còn, nhưng nằm trong khối gập — không ngang hàng với Tiêu điểm.
     const fold = screen.getByText('Số liệu chi tiết theo kỳ').closest('details');
