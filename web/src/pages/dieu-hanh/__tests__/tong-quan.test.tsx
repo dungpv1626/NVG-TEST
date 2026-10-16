@@ -127,6 +127,9 @@ describe('Tổng quan điều hành — ba công ty bằng hình', () => {
       .getAllByRole('rowheader')
       .map((h) => h.textContent);
     expect(rowHeaders[0]).toBe('Tiến độ');
+    // Mảng ổn ở cả ba công ty không chiếm chỗ — gom một dòng ✓, bấm mới mở.
+    expect(within(map).queryByRole('img', { name: /Giàn giáo quá hạn trả: ổn/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /1 mảng đang ổn ở cả 3 công ty/ }));
     expect(
       within(map).getByRole('img', { name: /Nhà Việt Cons — Giàn giáo quá hạn trả: ổn/ }),
     ).toBeTruthy();

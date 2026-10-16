@@ -25,6 +25,7 @@
  * SegmentedControl là component dùng chung, sẽ tái dùng dần ở các module khác.
  */
 
+import type { ReactNode } from 'react';
 import {
   AlertTriangle,
   Boxes,
@@ -97,6 +98,7 @@ import { useCompanyScope } from '@/lib/company-scope';
 import { cn } from '@/lib/utils';
 import { APP_HELP } from '@/lib/help-texts';
 import { FinanceOverviewSection } from '@/pages/bc/finance-overview';
+import { ExecFocus } from '@/pages/dieu-hanh/exec-focus';
 import { useSensitiveAccess } from '@/hooks/use-sensitive-access';
 
 /** Mốc xa nhất khi kỳ đang chọn là "Tất cả" — dòng tiền cần một mốc bắt đầu thật, không phải null. */
@@ -463,243 +465,258 @@ export function DashboardPage() {
         actions={<QuickActions />}
       />
 
-      {/* Bộ lọc nhanh theo khoảng thời gian — Webapp Flow 4.1. */}
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <span className="text-xs font-bold tracking-wide text-fg-subtle">KỲ BÁO CÁO</span>
-        <SegmentedControl
-          options={DASHBOARD_PERIODS}
-          value={period}
-          onChange={setPeriod}
-          getLabel={(p) => DASHBOARD_PERIOD_LABELS[p]}
-        />
-        {showExecLink && (
-          // Lãnh đạo: Dashboard là số liệu theo kỳ; cảnh báo theo từng công ty nằm ở trang riêng.
-          <Link to="/tong-quan" className="text-sm font-medium text-brand hover:underline">
-            Cảnh báo theo công ty → Tổng quan điều hành
-          </Link>
-        )}
-        {scope.isAggregate && (
-          // Dấu hiệu chế độ gộp — thông tin về PHẠM VI đang xem, không phải tình trạng của hồ
-          // sơ nào, nên tái dùng tông "Chờ duyệt" (chú ý, chưa khẩn cấp) thay vì màu thương hiệu.
-          <span
-            className={cn(
-              'flex items-center gap-1.5 rounded-md border border-status-pending-bg',
-              'bg-status-pending-bg px-3 py-1.5 text-xs font-medium text-status-pending',
-            )}
-          >
-            <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-status-pending" />
-            Đang gộp số liệu mọi pháp nhân. Chọn một pháp nhân ở bộ chọn góc trên bên trái để xem
-            riêng.
-          </span>
-        )}
-      </div>
+      {showExecLink && <ExecFocus showPending={canApproveAnything} />}
 
-      {canSeeFinance && (
-        // Tổng quan tài chính bằng biểu đồ (Haan 30/09/2026) — chỉ vai trò xem được tài chính;
-        // vai trò khác giữ Dashboard vận hành bên dưới.
-        <FinanceOverviewSection period={period} canSeeProfit={canSeeProfit} className="mb-6" />
-      )}
-
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <KpiCard
-          title="Chờ phê duyệt"
-          hint="Hồ sơ nằm trong hạn mức phê duyệt của vai trò hiện tại"
-          icon={Clock}
-        >
-          {!canApproveAnything ? (
-            <KpiEmptyBlock label="Vai trò hiện tại không có quyền phê duyệt." />
-          ) : pendingCount === 0 ? (
-            <KpiEmptyBlock label="Không có hồ sơ nào đang chờ phê duyệt." />
-          ) : (
-            <Link to="/viec-can-lam" className="mt-auto block hover:underline">
-              <span className="flex items-baseline gap-2">
-                <span className={KPI_VALUE_CLASS}>{pendingCount}</span>
-                <StatusLozenge status="pending_approval" />
-              </span>
-              {pendingValue > 0n && (
-                <span className="mt-1 block text-xs text-fg-subtle">
-                  Tổng giá trị {formatCurrency(pendingValue)}
-                </span>
+      <DetailFold folded={showExecLink}>
+        {/* Bộ lọc nhanh theo khoảng thời gian — Webapp Flow 4.1. */}
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <span className="text-xs font-bold tracking-wide text-fg-subtle">KỲ BÁO CÁO</span>
+          <SegmentedControl
+            options={DASHBOARD_PERIODS}
+            value={period}
+            onChange={setPeriod}
+            getLabel={(p) => DASHBOARD_PERIOD_LABELS[p]}
+          />
+          {scope.isAggregate && (
+            // Dấu hiệu chế độ gộp — thông tin về PHẠM VI đang xem, không phải tình trạng của hồ
+            // sơ nào, nên tái dùng tông "Chờ duyệt" (chú ý, chưa khẩn cấp) thay vì màu thương hiệu.
+            <span
+              className={cn(
+                'flex items-center gap-1.5 rounded-md border border-status-pending-bg',
+                'bg-status-pending-bg px-3 py-1.5 text-xs font-medium text-status-pending',
               )}
-            </Link>
-          )}
-        </KpiCard>
-
-        {/* Lãnh đạo: cảnh báo toàn tập đoàn nằm ở Tổng quan điều hành (tính ở CSDL, tách theo
-            công ty) — không dựng lại một ô «Quá hạn» thứ hai đếm khác cách ở đây. Vai trò
-            khác giữ ô này: đó là quá hạn TRONG PHẠM VI của họ. */}
-        {showExecLink ? (
-          <KpiCard
-            title="Cảnh báo toàn tập đoàn"
-            hint="Quá hạn, kẹt duyệt, vượt ngân sách, giấy tờ hết hạn — tách theo từng công ty"
-            icon={AlertTriangle}
-            iconWellClassName="bg-status-overdue-bg text-status-overdue"
-          >
-            <Link to="/tong-quan" className="mt-auto block font-medium text-brand hover:underline">
-              Mở Tổng quan điều hành →
-            </Link>
-          </KpiCard>
-        ) : (
-          <KpiCard
-            title="Quá hạn"
-            hint="Hồ sơ vượt thời hạn xử lý, công nợ quá hạn thu và phê duyệt bị để lâu — gộp mọi phân hệ"
-            icon={AlertTriangle}
-            iconWellClassName="bg-status-overdue-bg text-status-overdue"
-          >
-            {overdueTotal === 0 ? (
-              <KpiEmptyBlock label="Không có rủi ro nào đang quá hạn." />
-            ) : (
-              <div className="mt-auto">
-                <div className="flex items-baseline gap-2">
-                  <span className={cn(KPI_VALUE_CLASS, 'text-status-overdue')}>{overdueTotal}</span>
-                  <StatusLozenge status="overdue" />
-                </div>
-                <ul className="mt-2 space-y-1 text-xs">
-                  {overdueRisks.map((m) => (
-                    <li key={m.key}>
-                      <Link to={m.to} className="font-medium text-brand hover:underline">
-                        {m.title}: {m.count}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </KpiCard>
-        )}
-
-        {canSeeProfit && (
-          <KpiCard
-            title="Lãi/lỗ theo công trình"
-            hint="Giá trị đã nghiệm thu so với chi phí đã phát sinh, truy ngược tới chứng từ gốc"
-            icon={Scale}
-            iconWellClassName="bg-tint-teal-bg text-tint-teal"
-          >
-            <Link to="/bc/lai-lo" className="mt-auto block font-medium text-brand hover:underline">
-              Xem báo cáo lãi/lỗ →
-            </Link>
-          </KpiCard>
-        )}
-
-        {canViewBc && (
-          <KpiCard
-            title="Hiệu quả kinh doanh"
-            hint="Nguồn khách, phễu bán hàng, tỷ lệ trúng thầu và nguyên nhân trượt thầu"
-            icon={Percent}
-            iconWellClassName="bg-tint-amber-bg text-tint-amber"
-          >
-            <Link
-              to="/bc/hieu-qua-kinh-doanh"
-              className="mt-auto block font-medium text-brand hover:underline"
             >
-              Xem báo cáo hiệu quả kinh doanh →
-            </Link>
-          </KpiCard>
-        )}
+              <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-status-pending" />
+              Đang gộp số liệu mọi pháp nhân. Chọn một pháp nhân ở bộ chọn góc trên bên trái để xem
+              riêng.
+            </span>
+          )}
+        </div>
 
         {canSeeFinance && (
+          // Tổng quan tài chính bằng biểu đồ (Haan 30/09/2026) — chỉ vai trò xem được tài chính;
+          // vai trò khác giữ Dashboard vận hành bên dưới.
+          <FinanceOverviewSection period={period} canSeeProfit={canSeeProfit} className="mb-6" />
+        )}
+
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <KpiCard
-            title="Dòng tiền"
-            hint="Số dư cuối kỳ dự kiến, cộng cả khoản đã duyệt chưa chi — từ đầu kỳ báo cáo tới hôm nay"
-            icon={Wallet}
-            iconWellClassName="bg-tint-amber-bg text-tint-amber"
+            title="Chờ phê duyệt"
+            hint="Hồ sơ nằm trong hạn mức phê duyệt của vai trò hiện tại"
+            icon={Clock}
           >
-            {cashFlow.isLoading ? (
-              <div className="h-8 w-24 animate-pulse rounded-sm bg-surface-hover" />
-            ) : cashFlowRows.length === 0 || !cashFlowHasPlan ? (
-              <KpiEmptyBlock label="Chưa đủ dữ liệu — Kế toán chưa lập kế hoạch dòng tiền cho kỳ này." />
+            {!canApproveAnything ? (
+              <KpiEmptyBlock label="Vai trò hiện tại không có quyền phê duyệt." />
+            ) : pendingCount === 0 ? (
+              <KpiEmptyBlock label="Không có hồ sơ nào đang chờ phê duyệt." />
             ) : (
-              <Link to="/kt/dong-tien" className="mt-auto block hover:underline">
-                <span className={cn(KPI_VALUE_CLASS, cashFlowTotal < 0n && 'text-status-overdue')}>
-                  {formatCurrency(cashFlowTotal)}
+              <Link to="/viec-can-lam" className="mt-auto block hover:underline">
+                <span className="flex items-baseline gap-2">
+                  <span className={KPI_VALUE_CLASS}>{pendingCount}</span>
+                  <StatusLozenge status="pending_approval" />
                 </span>
-                {cashFlowShortfallCount > 0 && (
-                  <span className="mt-1 block text-xs text-status-overdue">
-                    {cashFlowShortfallCount} pháp nhân dự kiến thiếu hụt
+                {pendingValue > 0n && (
+                  <span className="mt-1 block text-xs text-fg-subtle">
+                    Tổng giá trị {formatCurrency(pendingValue)}
                   </span>
                 )}
               </Link>
             )}
           </KpiCard>
-        )}
 
-        {canSeeFinance && (
-          <KpiCard
-            title="Công nợ phải thu"
-            hint="Phần CÒN LẠI của các khoản khách hàng chưa trả hết, không tính giá trị gốc"
-            icon={Receipt}
-            iconWellClassName="bg-tint-teal-bg text-tint-teal"
-          >
-            {receivables.isLoading ? (
-              <div className="h-8 w-24 animate-pulse rounded-sm bg-surface-hover" />
-            ) : outstandingReceivables.length === 0 ? (
-              <KpiEmptyBlock label="Không còn khoản nào phải thu." />
-            ) : (
-              <Link to="/kt/cong-no" className="mt-auto block hover:underline">
-                <span className={KPI_VALUE_CLASS}>{formatCurrency(receivableRemainingTotal)}</span>
-                {receivableOverdueCount > 0 && (
-                  <span className="mt-1 flex items-center gap-1.5 text-xs text-status-overdue">
-                    {receivableOverdueCount} khoản đã quá hạn
+          {/* Lãnh đạo: vấn đề đã nằm ở khối Tiêu điểm phía trên (cùng nguồn với Tổng quan điều
+            hành) — không dựng ô «Quá hạn» thứ hai đếm khác cách. Vai trò khác giữ ô này: đó là
+            quá hạn TRONG PHẠM VI của họ. */}
+          {!showExecLink && (
+            <KpiCard
+              title="Quá hạn"
+              hint="Hồ sơ vượt thời hạn xử lý, công nợ quá hạn thu và phê duyệt bị để lâu — gộp mọi phân hệ"
+              icon={AlertTriangle}
+              iconWellClassName="bg-status-overdue-bg text-status-overdue"
+            >
+              {overdueTotal === 0 ? (
+                <KpiEmptyBlock label="Không có rủi ro nào đang quá hạn." />
+              ) : (
+                <div className="mt-auto">
+                  <div className="flex items-baseline gap-2">
+                    <span className={cn(KPI_VALUE_CLASS, 'text-status-overdue')}>
+                      {overdueTotal}
+                    </span>
+                    <StatusLozenge status="overdue" />
+                  </div>
+                  <ul className="mt-2 space-y-1 text-xs">
+                    {overdueRisks.map((m) => (
+                      <li key={m.key}>
+                        <Link to={m.to} className="font-medium text-brand hover:underline">
+                          {m.title}: {m.count}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </KpiCard>
+          )}
+
+          {canSeeProfit && (
+            <KpiCard
+              title="Lãi/lỗ theo công trình"
+              hint="Giá trị đã nghiệm thu so với chi phí đã phát sinh, truy ngược tới chứng từ gốc"
+              icon={Scale}
+              iconWellClassName="bg-tint-teal-bg text-tint-teal"
+            >
+              <Link
+                to="/bc/lai-lo"
+                className="mt-auto block font-medium text-brand hover:underline"
+              >
+                Xem báo cáo lãi/lỗ →
+              </Link>
+            </KpiCard>
+          )}
+
+          {canViewBc && (
+            <KpiCard
+              title="Hiệu quả kinh doanh"
+              hint="Nguồn khách, phễu bán hàng, tỷ lệ trúng thầu và nguyên nhân trượt thầu"
+              icon={Percent}
+              iconWellClassName="bg-tint-amber-bg text-tint-amber"
+            >
+              <Link
+                to="/bc/hieu-qua-kinh-doanh"
+                className="mt-auto block font-medium text-brand hover:underline"
+              >
+                Xem báo cáo hiệu quả kinh doanh →
+              </Link>
+            </KpiCard>
+          )}
+
+          {canSeeFinance && (
+            <KpiCard
+              title="Dòng tiền"
+              hint="Số dư cuối kỳ dự kiến, cộng cả khoản đã duyệt chưa chi — từ đầu kỳ báo cáo tới hôm nay"
+              icon={Wallet}
+              iconWellClassName="bg-tint-amber-bg text-tint-amber"
+            >
+              {cashFlow.isLoading ? (
+                <div className="h-8 w-24 animate-pulse rounded-sm bg-surface-hover" />
+              ) : cashFlowRows.length === 0 || !cashFlowHasPlan ? (
+                <KpiEmptyBlock label="Chưa đủ dữ liệu — Kế toán chưa lập kế hoạch dòng tiền cho kỳ này." />
+              ) : (
+                <Link to="/kt/dong-tien" className="mt-auto block hover:underline">
+                  <span
+                    className={cn(KPI_VALUE_CLASS, cashFlowTotal < 0n && 'text-status-overdue')}
+                  >
+                    {formatCurrency(cashFlowTotal)}
                   </span>
-                )}
-              </Link>
-            )}
-          </KpiCard>
-        )}
+                  {cashFlowShortfallCount > 0 && (
+                    <span className="mt-1 block text-xs text-status-overdue">
+                      {cashFlowShortfallCount} pháp nhân dự kiến thiếu hụt
+                    </span>
+                  )}
+                </Link>
+              )}
+            </KpiCard>
+          )}
 
-        {canViewSx && (
-          <KpiCard
-            title="Giàn giáo đang cho thuê"
-            hint="Hợp đồng cho thuê chưa thu hồi"
-            icon={Boxes}
-            iconWellClassName="bg-tint-forest-bg text-brand"
-          >
-            {rentalAgreements.isLoading ? (
-              <div className="h-8 w-24 animate-pulse rounded-sm bg-surface-hover" />
-            ) : activeRentals.length === 0 ? (
-              <KpiEmptyBlock label="Không có hợp đồng cho thuê nào đang mở." />
-            ) : (
-              <Link
-                to="/sx/tai-san-cho-thue"
-                className="mt-auto flex items-baseline gap-2 hover:underline"
-              >
-                <span className={KPI_VALUE_CLASS}>{activeRentals.length}</span>
-                <span className="text-xs font-medium text-fg-subtle">hợp đồng</span>
-              </Link>
-            )}
-          </KpiCard>
-        )}
+          {canSeeFinance && (
+            <KpiCard
+              title="Công nợ phải thu"
+              hint="Phần CÒN LẠI của các khoản khách hàng chưa trả hết, không tính giá trị gốc"
+              icon={Receipt}
+              iconWellClassName="bg-tint-teal-bg text-tint-teal"
+            >
+              {receivables.isLoading ? (
+                <div className="h-8 w-24 animate-pulse rounded-sm bg-surface-hover" />
+              ) : outstandingReceivables.length === 0 ? (
+                <KpiEmptyBlock label="Không còn khoản nào phải thu." />
+              ) : (
+                <Link to="/kt/cong-no" className="mt-auto block hover:underline">
+                  <span className={KPI_VALUE_CLASS}>
+                    {formatCurrency(receivableRemainingTotal)}
+                  </span>
+                  {receivableOverdueCount > 0 && (
+                    <span className="mt-1 flex items-center gap-1.5 text-xs text-status-overdue">
+                      {receivableOverdueCount} khoản đã quá hạn
+                    </span>
+                  )}
+                </Link>
+              )}
+            </KpiCard>
+          )}
 
-        {canViewNs && (
-          <KpiCard
-            title="Chấm công đã chốt"
-            hint={`Bảng công tháng ${timesheetMonthLabel} đã chuyển sang Kế toán`}
-            icon={Users}
-            iconWellClassName="bg-brand-subtle text-brand-hover"
-          >
-            {timesheets.isLoading ? (
-              <div className="h-8 w-24 animate-pulse rounded-sm bg-surface-hover" />
-            ) : closedTimesheetCount === 0 ? (
-              <KpiEmptyBlock label={`Tháng ${timesheetMonthLabel} chưa chốt bảng công nào.`} />
-            ) : (
-              <Link
-                to="/ns/cham-cong"
-                className="mt-auto flex items-baseline gap-2 hover:underline"
-              >
-                <span className={KPI_VALUE_CLASS}>{closedTimesheetCount}</span>
-                <span className="text-xs font-medium text-fg-subtle">nhân sự</span>
-              </Link>
-            )}
-          </KpiCard>
-        )}
+          {canViewSx && (
+            <KpiCard
+              title="Giàn giáo đang cho thuê"
+              hint="Hợp đồng cho thuê chưa thu hồi"
+              icon={Boxes}
+              iconWellClassName="bg-tint-forest-bg text-brand"
+            >
+              {rentalAgreements.isLoading ? (
+                <div className="h-8 w-24 animate-pulse rounded-sm bg-surface-hover" />
+              ) : activeRentals.length === 0 ? (
+                <KpiEmptyBlock label="Không có hợp đồng cho thuê nào đang mở." />
+              ) : (
+                <Link
+                  to="/sx/tai-san-cho-thue"
+                  className="mt-auto flex items-baseline gap-2 hover:underline"
+                >
+                  <span className={KPI_VALUE_CLASS}>{activeRentals.length}</span>
+                  <span className="text-xs font-medium text-fg-subtle">hợp đồng</span>
+                </Link>
+              )}
+            </KpiCard>
+          )}
 
-        {modules.map((m) => (
-          <ModuleCard key={m.key} metric={m} period={period} />
-        ))}
-      </section>
+          {canViewNs && (
+            <KpiCard
+              title="Chấm công đã chốt"
+              hint={`Bảng công tháng ${timesheetMonthLabel} đã chuyển sang Kế toán`}
+              icon={Users}
+              iconWellClassName="bg-brand-subtle text-brand-hover"
+            >
+              {timesheets.isLoading ? (
+                <div className="h-8 w-24 animate-pulse rounded-sm bg-surface-hover" />
+              ) : closedTimesheetCount === 0 ? (
+                <KpiEmptyBlock label={`Tháng ${timesheetMonthLabel} chưa chốt bảng công nào.`} />
+              ) : (
+                <Link
+                  to="/ns/cham-cong"
+                  className="mt-auto flex items-baseline gap-2 hover:underline"
+                >
+                  <span className={KPI_VALUE_CLASS}>{closedTimesheetCount}</span>
+                  <span className="text-xs font-medium text-fg-subtle">nhân sự</span>
+                </Link>
+              )}
+            </KpiCard>
+          )}
 
-      <DataCompletenessNote />
+          {modules.map((m) => (
+            <ModuleCard key={m.key} metric={m} period={period} />
+          ))}
+        </section>
+
+        <DataCompletenessNote />
+      </DetailFold>
     </>
+  );
+}
+
+/**
+ * Lãnh đạo: mọi số liệu theo kỳ (tài chính, thẻ phân hệ) thu gọn dưới khối Tiêu điểm — chủ dự án:
+ * «nhìn quá nhiều thứ cùng cấp bậc nên bị loạn». Vai trò khác: Dashboard như cũ, không gập.
+ */
+function DetailFold({ folded, children }: { folded: boolean; children: ReactNode }) {
+  if (!folded) return <>{children}</>;
+  return (
+    <details className="group rounded-lg border border-border bg-surface">
+      <summary className="cursor-pointer select-none px-5 py-3 font-semibold marker:text-fg-subtle">
+        Số liệu chi tiết theo kỳ
+        <span className="ml-2 text-sm font-normal text-fg-subtle">
+          tài chính, phê duyệt, từng phân hệ
+        </span>
+      </summary>
+      <div className="border-t border-border p-5">{children}</div>
+    </details>
   );
 }
 

@@ -322,6 +322,11 @@ function Heatmap({ tiles, companies }: { tiles: ExecCompanyTile[]; companies: Co
   }
   // Mảng nặng nhất lên đầu.
   const rows = keys.sort((a, b) => a.worst - b.worst || a.i - b.i);
+  // Chỉ mảng có vấn đề mới chiếm chỗ — mảng ổn ở mọi công ty gom một dòng ✓ (chủ dự án: «nhìn
+  // ít mà ra vấn đề ngay»; 26/30 ô dấu ✓ cùng cỡ với ô đỏ là nhiễu).
+  const [showCalm, setShowCalm] = useState(false);
+  const calmRows = rows.filter((r) => r.worst > LEVEL.amber.order);
+  const shownRows = showCalm ? rows : rows.filter((r) => r.worst <= LEVEL.amber.order);
 
   function open(t: ExecCompanyTile) {
     if (!t.link) return;
@@ -370,7 +375,7 @@ function Heatmap({ tiles, companies }: { tiles: ExecCompanyTile[]; companies: Co
             </span>
           ))}
         </div>
-        {rows.map((r) => {
+        {shownRows.map((r) => {
           const meta = AREA[r.key];
           const Icon = meta?.icon ?? FileText;
           return (
@@ -395,6 +400,20 @@ function Heatmap({ tiles, companies }: { tiles: ExecCompanyTile[]; companies: Co
           );
         })}
       </div>
+
+      {calmRows.length > 0 && (
+        <button
+          type="button"
+          aria-expanded={showCalm}
+          onClick={() => setShowCalm((v) => !v)}
+          className="mt-3 flex items-center gap-2 text-sm text-status-completed hover:underline"
+        >
+          <Check className="size-4" aria-hidden />
+          {showCalm
+            ? 'Thu gọn các mảng đang ổn'
+            : `${calmRows.length} mảng đang ổn ở cả ${companies.length} công ty`}
+        </button>
+      )}
 
       {focus && (focus.level === 'red' || focus.level === 'amber') && (
         <FocusDetail tile={focus} onClose={() => setFocus(null)} />

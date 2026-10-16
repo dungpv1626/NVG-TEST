@@ -105,6 +105,10 @@ vi.mock('@/hooks/use-reports', () => ({
   useProfitLossReport: () => ({ data: [], isLoading: false }),
 }));
 
+vi.mock('@/pages/dieu-hanh/exec-focus', () => ({
+  ExecFocus: () => <section data-testid="tieu-diem" />,
+}));
+
 const { DashboardPage } = await import('../dashboard');
 
 const THIS_YEAR = new Date().getFullYear();
@@ -186,7 +190,7 @@ describe('Dashboard — mỗi con số dẫn tới danh sách đã lọc SẴN �
     );
   });
 
-  it('lãnh đạo: không dựng ô «Quá hạn» thứ hai — dẫn sang Tổng quan điều hành', () => {
+  it('lãnh đạo: khối Tiêu điểm ở trên, số liệu theo kỳ thu gọn, không có ô «Quá hạn» thứ hai', () => {
     grantView('CRM');
     state.exec = true;
     state.opportunities = [
@@ -194,11 +198,12 @@ describe('Dashboard — mỗi con số dẫn tới danh sách đã lọc SẴN �
     ];
     renderWithApp(<DashboardPage />, { route: '/dashboard' });
 
+    expect(screen.getByTestId('tieu-diem')).toBeInTheDocument();
     expect(screen.queryByText('Quá hạn')).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Mở Tổng quan điều hành/ })).toHaveAttribute(
-      'href',
-      '/tong-quan',
-    );
+    // Phần chi tiết vẫn còn, nhưng nằm trong khối gập — không ngang hàng với Tiêu điểm.
+    const fold = screen.getByText('Số liệu chi tiết theo kỳ').closest('details');
+    expect(fold).not.toBeNull();
+    expect(fold).not.toHaveAttribute('open');
   });
 
   it('đổi kỳ báo cáo thì lưu trên thanh địa chỉ để quay lại không mất', async () => {

@@ -212,6 +212,10 @@ chính. Chủ dự án chọn làm rõ vai trò: Dashboard của lãnh đạo b�
 điều hành); khối tài chính giữ ở Dashboard vì là xu hướng theo kỳ, còn trang điều hành so sánh ba công ty trong
 tháng; báo cáo sâu ở `/bc/...`.
 
+**Bổ sung — phân cấp thông tin.** Chủ dự án: Dashboard «nhìn quá nhiều thứ cùng cấp bậc nên bị loạn — TGĐ nhìn ít
+nhưng ra vấn đề ngay». Dashboard của lãnh đạo: khối Tiêu điểm (một câu kết luận, ≤ 5 dòng vấn đề, hai số phụ), mọi
+số liệu theo kỳ gập lại. Bản đồ cảnh báo chỉ hiện mảng có vấn đề.
+
 **Câu hỏi cho Haan:** KSNB có được xem lương / hồ sơ cá nhân? (đang: không). Mốc «hợp đồng sắp hết hạn» bao nhiêu
 ngày? (đang: chưa có ô này). Mốc «phê duyệt chờ lâu» 3 ngày (giả định cũ của Dashboard) — giữ hay đặt SLA theo loại?
 
