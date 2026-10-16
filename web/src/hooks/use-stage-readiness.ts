@@ -18,11 +18,14 @@ export interface StageRequirement {
   waivable: boolean;
 }
 
-const ROOT_KEY: Record<string, string> = {
+const ROOT_KEY: Record<StageEntity, string> = {
   opportunity: 'opportunities',
+  contract: 'contracts',
 };
 
-export function useStageReadiness(entityType: 'opportunity', id: string | undefined) {
+export type StageEntity = 'opportunity' | 'contract';
+
+export function useStageReadiness(entityType: StageEntity, id: string | undefined) {
   return useQuery<StageRequirement[], Error>({
     queryKey: [ROOT_KEY[entityType], 'readiness', id],
     queryFn: async () => {

@@ -308,6 +308,8 @@ export function useSaveContractTerm() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['contract_terms'] });
+      // Điều kiện gửi phê duyệt (đủ điều khoản bắt buộc) nằm dưới khoá `contracts` (0163).
+      void queryClient.invalidateQueries({ queryKey: ['contracts', 'readiness'] });
     },
   });
 }

@@ -647,6 +647,9 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
 - 0162: `approval_waiting_on` (phê duyệt đang chờ ai, bao lâu — dùng chung mọi loại phê duyệt); báo giá gửi khách /
   gói thầu nộp / phương án thiết kế gửi khách duyệt → cơ hội ở Báo giá tự sang Đàm phán; báo kết quả duyệt báo giá
   cho người phụ trách; lập phiên bản báo giá mới thì đóng phê duyệt đang chờ của bản cũ.
+- 0163: `stage_readiness('contract')` (giá trị, ba nhóm điều khoản bắt buộc; quyết toán cần công trình đã bàn giao);
+  báo người chịu trách nhiệm khi hợp đồng được duyệt / bị từ chối. Trang hợp đồng mở tab Điều khoản khi còn Nháp,
+  khoá «Gửi phê duyệt» kèm lý do, hiện «Đang chờ: …» khi chờ duyệt (`components/entity/waiting-on.tsx`).
 - Giao diện: `shared/src/flow.ts` (`OPPORTUNITY_FLOW`, `CONTRACT_FLOW`, `SITE_FLOW`, `stepWindow`), `StepTrack`,
   `RecordChain`, slot `progress` của `EntityDetail`, `allowedDrop` của Kanban, `bottom-bar-slot.ts`; đã gỡ
   `lib/theme.tsx` và `tk-theme.css`.
@@ -660,13 +663,13 @@ trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ P
 
 1. Haan kiểm GĐ1 trên máy (`http://localhost:5173`) và trả lời các câu hỏi ở 9.5.
 2. Khi Haan đồng ý: đẩy nhánh, `npm run db:migrate:demo` rồi `npm run deploy` (API trước, web sau).
-3. GĐ2 — migration `0163` thêm `KSNB` vào enum role (riêng một migration), `0164` quyền chỉ xem toàn bộ,
-   `0165` `exec_overview()` + các view cảnh báo (phê duyệt kẹt toàn công ty, giàn giáo quá hạn trả, công nợ phải
+3. GĐ2 — migration `0164` thêm `KSNB` vào enum role (riêng một migration), `0165` quyền chỉ xem toàn bộ,
+   `0166` `exec_overview()` + các view cảnh báo (phê duyệt kẹt toàn công ty, giàn giáo quá hạn trả, công nợ phải
    trả quá hạn, đề nghị chi kẹt bước, hợp đồng sắp hết hạn, hồ sơ nhân sự sắp hết hạn); trang
    `pages/dieu-hanh/tong-quan.tsx`; đăng nhập đi tới `defaultRoute` của vai trò (đang bị bỏ qua ở `login.tsx`,
    `App.tsx`). **Trước KSNB phải sửa `useIsResponsible`** (`web/src/lib/auth.tsx`) — nó dựa vào
    `seesAllCompanies` nên KSNB sẽ thấy nút sửa ở mọi hồ sơ.
-4. Sau đó GĐ3 → 3b → 4 → 5 theo kế hoạch trong `doc/MOC_CAI_TIEN_UX.md`. Migration đánh số nối tiếp từ 0163.
+4. Sau đó GĐ3 → 3b → 4 → 5 theo kế hoạch trong `doc/MOC_CAI_TIEN_UX.md`. Migration đánh số nối tiếp từ 0164.
 
 ### 9.4 Quyết định đã chốt và lý do
 

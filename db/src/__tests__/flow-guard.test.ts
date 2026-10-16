@@ -477,6 +477,122 @@ describeDb('Báo giá → Đàm phán: biết chờ ai, giá tới tay khách th
   });
 });
 
+describeDb(
+  'Đàm phán → Hợp đồng: biết còn thiếu gì trước khi gửi duyệt, người soạn được báo (0163)',
+  () => {
+    it('điều kiện gửi phê duyệt khớp hàm chặn; duyệt xong báo người chịu trách nhiệm', async () => {
+      const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+      const tgd = await signInAs(ACCOUNTS.tgd);
+      const { data: company } = await kd.from('companies').select('id').eq('code', 'NVC').single();
+      const { data: customer } = await kd.from('customers').select('id').limit(1).single();
+      const { data: me } = await kd.rpc('auth_user_id');
+      const { data: code } = await kd.rpc('next_record_code', {
+        p_company_code: 'NVC',
+        p_record_type: 'CH',
+      });
+      const { data: opp } = await kd
+        .from('opportunities')
+        .insert({
+          code,
+          company_id: company!.id,
+          customer_id: customer!.id,
+          name: `${TEST_PREFIX} Hợp đồng còn thiếu gì ${Date.now()}`,
+          owner_id: me,
+          classification: 'M4',
+          project_type: 'Nhà xưởng công nghiệp',
+        })
+        .select('id')
+        .single();
+      const oppId = opp!.id as string;
+      await kd.rpc('move_opportunity_stage', { p_opportunity_id: oppId, p_to_stage: 'xac_minh' });
+      await kd.from('site_surveys').insert({
+        opportunity_id: oppId,
+        surveyed_at: new Date().toISOString(),
+        needs: 'Nhà xưởng 1.200 m²',
+      });
+      await kd.rpc('move_opportunity_stage', { p_opportunity_id: oppId, p_to_stage: 'bao_gia' });
+      const { data: quote } = await kd
+        .from('quotes')
+        .insert({ company_id: company!.id, opportunity_id: oppId, total_value: 1_200_000_000 })
+        .select('id')
+        .single();
+      await kd.rpc('request_quote_approval', { p_quote_id: quote!.id });
+      const { data: qa } = await kd
+        .from('approvals')
+        .select('id')
+        .eq('entity_type', 'quotes')
+        .eq('entity_id', quote!.id)
+        .single();
+      expect(
+        (await tgd.rpc('decide_approval', { p_approval_id: qa!.id, p_decision: 'approved' })).error,
+      ).toBeNull();
+      expect((await kd.rpc('send_quote_to_customer', { p_quote_id: quote!.id })).error).toBeNull();
+
+      const { data: contractId, error: draftError } = await kd.rpc('create_contract_from_source', {
+        p_source_type: 'opportunities',
+        p_source_id: oppId,
+        p_type: 'thi_cong',
+        p_title: null,
+      });
+      expect(draftError).toBeNull();
+
+      const readiness = async () => {
+        const { data } = await kd.rpc('stage_readiness', {
+          p_entity_type: 'contract',
+          p_id: contractId,
+        });
+        return (
+          data as { for_stage: string; requirement: string; met: boolean; label: string }[]
+        ).filter((r) => r.for_stage === 'cho_duyet');
+      };
+      const before = await readiness();
+      const terms = before.find((r) => r.requirement === 'terms_complete')!;
+      expect(terms.met).toBe(false);
+      expect(terms.label).toContain('phạm vi công việc');
+
+      // Màn hình nói «chưa đủ» thì CSDL cũng chặn — cùng một điều kiện.
+      const { error: blocked } = await kd.rpc('submit_contract_approval', {
+        p_contract_id: contractId,
+      });
+      expect(blocked?.message).toContain('điều khoản');
+
+      for (const t of ['pham_vi', 'gia_tri', 'tien_do_thanh_toan']) {
+        const { error } = await kd.from('contract_terms').insert({
+          contract_id: contractId,
+          company_id: company!.id,
+          term_type: t,
+          description: `Điều khoản ${t}`,
+        });
+        expect(error).toBeNull();
+      }
+      expect((await readiness()).every((r) => r.met)).toBe(true);
+      expect(
+        (await kd.rpc('submit_contract_approval', { p_contract_id: contractId })).error,
+      ).toBeNull();
+
+      const { data: ca } = await kd
+        .from('approvals')
+        .select('id')
+        .eq('entity_type', 'contracts')
+        .eq('entity_id', contractId)
+        .eq('status', 'pending_approval')
+        .single();
+      const { data: waiting } = await kd.rpc('approval_waiting_on', { p_approval_id: ca!.id });
+      expect((waiting as { user_names: string[] }[])[0]!.user_names.length).toBeGreaterThan(0);
+
+      expect(
+        (await tgd.rpc('decide_approval', { p_approval_id: ca!.id, p_decision: 'approved' })).error,
+      ).toBeNull();
+      const { data: notes } = await kd
+        .from('notifications')
+        .select('type')
+        .eq('related_entity_id', contractId)
+        .eq('type', 'contract_approved');
+      expect(notes).toHaveLength(1);
+    });
+  },
+);
+
 describeDb('Không tự phê duyệt hồ sơ của chính mình (0156)', () => {
   it('Kinh doanh gửi báo giá thì không tự duyệt được, dù trong hạn mức của mình', async () => {
     const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);

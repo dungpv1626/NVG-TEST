@@ -143,6 +143,11 @@ phán; lập phiên bản mới thì bản cũ kẹt «Chờ duyệt» trong H�
 chờ: vai trò — tên · bao lâu»; thông báo `quote_approved` / `quote_rejected`; trigger đồng bộ sang Đàm phán
 (báo giá gửi khách, gói thầu nộp, thiết kế gửi khách duyệt — chỉ từ Báo giá); đóng phê duyệt của bản bị thay.
 
+**Rà chuỗi bước — chặng Đàm phán → Hợp đồng (0163).** «Gửi phê duyệt» hợp đồng không cho biết trước còn thiếu
+gì; chờ duyệt không biết ai giữ; duyệt xong người soạn không được báo. Sửa: điều kiện bước của hợp đồng đọc từ
+`stage_readiness`, liên kết «Ghi điều khoản», mở thẳng tab Điều khoản khi còn Nháp, dòng «Đang chờ», thông
+báo `contract_approved` / `contract_rejected`.
+
 **Chưa làm trong giai đoạn này (đẩy sau)**
 
 - Bảng lịch sử bước chung `stage_transitions` cho hợp đồng / gói thầu / công trình (cơ hội đã có lịch sử).

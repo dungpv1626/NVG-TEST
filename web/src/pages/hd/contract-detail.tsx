@@ -10,7 +10,7 @@
  */
 
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import {
   CONTRACT_FLOW,
   CONTRACT_SOURCE_LABELS,
@@ -46,6 +46,9 @@ import { toUserMessage } from '@/hooks/use-error-message';
 import { useCan, useIsResponsible } from '@/lib/auth';
 import { RecordChain } from '@/components/entity/record-chain';
 import { StepTrack } from '@/components/entity/step-track';
+import { WaitingOn } from '@/components/entity/waiting-on';
+import { useApprovalHistory } from '@/hooks/use-approvals';
+import { useStageReadiness } from '@/hooks/use-stage-readiness';
 import { AmendmentPanel } from './amendment-panel';
 import { TermsPanel } from './terms-panel';
 
@@ -72,6 +75,9 @@ export function ContractDetailPage() {
   const signContract = useSignContract();
   const closeContract = useCloseContract();
   const [actionError, setActionError] = useState<string | null>(null);
+  const { data: readiness = [] } = useStageReadiness('contract', id);
+  const approvals = useApprovalHistory('contracts', id ? [id] : []);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   if (isLoading) return <CardGridSkeleton count={3} />;
   if (error) return <ErrorState message={toUserMessage(error)} />;
@@ -117,6 +123,39 @@ export function ContractDetailPage() {
     contract.value,
     approvedAmendments,
     contract.collected_amount,
+  );
+
+  // Tab nơi làm việc của từng bước — mở hồ sơ là tới đúng chỗ (phản hồi chủ dự án).
+  const stageTab = contract.stage === 'nhap' ? 'dieu-khoan' : 'tong-quan';
+  function openTab(tab: string) {
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', tab);
+    setSearchParams(next, { replace: true });
+  }
+
+  // Điều kiện bước kế tiếp (0163) — cùng điều kiện với hàm CSDL chặn, nên nút không thể nói
+  // «được» khi CSDL nói «không».
+  const nextStage =
+    contract.stage === 'nhap' ? 'cho_duyet' : contract.stage === 'da_ky' ? 'hoan_thanh' : null;
+  const missing = readiness.filter((r) => r.for_stage === nextStage && !r.met);
+  const nextRequirements = readiness
+    .filter((r) => r.for_stage === nextStage)
+    .map((r) => ({
+      label: r.label,
+      met: r.met,
+      action:
+        r.requirement === 'terms_complete' && canDraft ? (
+          <button
+            type="button"
+            className="font-medium text-brand underline-offset-2 hover:underline"
+            onClick={() => openTab('dieu-khoan')}
+          >
+            Ghi điều khoản
+          </button>
+        ) : undefined,
+    }));
+  const pendingApproval = (approvals.data?.get(contract.id) ?? []).find(
+    (a) => a.final_decision === null,
   );
 
   async function run(action: () => Promise<unknown>) {
@@ -175,7 +214,8 @@ export function ContractDetailPage() {
       {isDraft && canDraft && (
         <Button
           variant="primary"
-          disabled={submitApproval.isPending}
+          disabled={submitApproval.isPending || missing.length > 0}
+          title={missing.length > 0 ? `Cần: ${missing.map((m) => m.label).join('; ')}` : undefined}
           onClick={() => void run(() => submitApproval.mutateAsync({ contractId: contract.id }))}
         >
           Gửi phê duyệt
@@ -200,6 +240,8 @@ export function ContractDetailPage() {
         // thì đó mới là việc tiếp theo, quyết toán lùi xuống nút phụ.
         <Button
           variant={canOpenSite ? 'secondary' : 'primary'}
+          disabled={missing.length > 0}
+          title={missing.length > 0 ? `Cần: ${missing.map((m) => m.label).join('; ')}` : undefined}
           onClick={() =>
             void run(() =>
               closeContract.mutateAsync({ contractId: contract.id, stage: 'hoan_thanh' }),
@@ -242,11 +284,18 @@ export function ContractDetailPage() {
             <StepTrack
               flow={CONTRACT_FLOW}
               current={contract.stage}
+              nextRequirements={nextRequirements}
               holder={contract.stage === 'nhap' ? (contract.responsible?.full_name ?? null) : null}
             />
+            {pendingApproval && (
+              <div className="-mt-2 mb-4 rounded-md border border-border bg-surface px-3 py-2 lg:-mt-4 lg:mb-6">
+                <WaitingOn approvalId={pendingApproval.id} />
+              </div>
+            )}
           </>
         }
         actions={actions}
+        defaultTab={stageTab}
         tabs={[
           {
             id: 'tong-quan',
