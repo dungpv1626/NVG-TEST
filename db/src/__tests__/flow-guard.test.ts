@@ -478,7 +478,7 @@ describeDb('Báo giá → Đàm phán: biết chờ ai, giá tới tay khách th
 });
 
 describeDb(
-  'Đàm phán → Hợp đồng: biết còn thiếu gì trước khi gửi duyệt, người soạn được báo (0163)',
+  'Đàm phán → Hợp đồng → Công trình: biết còn thiếu gì, ai giữ, ai được báo (0163, 0164)',
   () => {
     it('điều kiện gửi phê duyệt khớp hàm chặn; duyệt xong báo người chịu trách nhiệm', async () => {
       const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
@@ -589,6 +589,65 @@ describeDb(
         .eq('related_entity_id', contractId)
         .eq('type', 'contract_approved');
       expect(notes).toHaveLength(1);
+
+      // --- Ký → mở công trình (0164) --------------------------------------------------------
+      expect(
+        (
+          await tgd.rpc('sign_contract', {
+            p_contract_id: contractId,
+            p_contract_number: `${Date.now()}/HĐ-THU`,
+            p_signed_date: '2026-10-16',
+          })
+        ).error,
+      ).toBeNull();
+      // Ban Giám đốc mở được công trình (trước 0164 hàm đòi quyền SỬA nên TGĐ bị từ chối).
+      const { data: siteId, error: openError } = await tgd.rpc('open_site_from_contract', {
+        p_contract_id: contractId,
+      });
+      expect(openError).toBeNull();
+
+      // Không tự lấy người Kinh doanh phụ trách hợp đồng làm chỉ huy công trình.
+      const thiCong = await signInAs(ACCOUNTS.congTruongNvc);
+      const { data: site } = await thiCong
+        .from('construction_sites')
+        .select('responsible_user_id')
+        .eq('id', siteId)
+        .single();
+      expect(site!.responsible_user_id).toBeNull();
+
+      const { error: notReady } = await thiCong.rpc('move_site_stage', {
+        p_site_id: siteId,
+        p_stage: 'dang_thi_cong',
+      });
+      expect(notReady?.message).toContain('chỉ huy trưởng');
+
+      // Gán người Kinh doanh vẫn không tính là đã có chỉ huy trưởng; ô chọn cũng không có họ.
+      await thiCong
+        .from('construction_sites')
+        .update({
+          responsible_user_id: me,
+          planned_start_date: '2026-10-20',
+          planned_end_date: '2027-04-30',
+        })
+        .eq('id', siteId);
+      const { data: candidates } = await thiCong.rpc('site_commander_candidates', {
+        p_company_id: company!.id,
+      });
+      const ids = (candidates as { id: string }[]).map((c) => c.id);
+      expect(ids).not.toContain(me);
+      expect(
+        (await thiCong.rpc('move_site_stage', { p_site_id: siteId, p_stage: 'dang_thi_cong' }))
+          .error?.message,
+      ).toContain('chỉ huy trưởng');
+
+      await thiCong
+        .from('construction_sites')
+        .update({ responsible_user_id: ids[0] })
+        .eq('id', siteId);
+      expect(
+        (await thiCong.rpc('move_site_stage', { p_site_id: siteId, p_stage: 'dang_thi_cong' }))
+          .error,
+      ).toBeNull();
     });
   },
 );

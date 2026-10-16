@@ -10,7 +10,7 @@
  */
 
 import { useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   CONTRACT_FLOW,
   CONTRACT_SOURCE_LABELS,
@@ -78,6 +78,7 @@ export function ContractDetailPage() {
   const { data: readiness = [] } = useStageReadiness('contract', id);
   const approvals = useApprovalHistory('contracts', id ? [id] : []);
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   if (isLoading) return <CardGridSkeleton count={3} />;
   if (error) return <ErrorState message={toUserMessage(error)} />;
@@ -230,7 +231,14 @@ export function ContractDetailPage() {
         <Button
           variant="primary"
           disabled={openSite.isPending}
-          onClick={() => void run(() => openSite.mutateAsync({ contractId: contract.id }))}
+          onClick={() =>
+            // Mở xong thì sang thẳng công trình — việc kế tiếp (phân công chỉ huy trưởng, ngày
+            // khởi công) nằm ở đó, không ở hợp đồng.
+            void run(async () => {
+              const siteId = await openSite.mutateAsync({ contractId: contract.id });
+              void navigate(`/tc/cong-trinh/${siteId}`);
+            })
+          }
         >
           Mở công trình
         </Button>

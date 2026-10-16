@@ -18,16 +18,22 @@ export interface StageRequirement {
   waivable: boolean;
 }
 
-const ROOT_KEY: Record<StageEntity, string> = {
-  opportunity: 'opportunities',
-  contract: 'contracts',
-};
+export type StageEntity = 'opportunity' | 'contract' | 'site';
 
-export type StageEntity = 'opportunity' | 'contract';
+/**
+ * Khoá nằm DƯỚI khoá của hồ sơ để mọi lần làm mới hồ sơ (kể cả từ bảng con: biên bản nghiệm thu
+ * làm mới `['construction-sites', siteId]`) làm mới luôn điều kiện bước.
+ */
+const keyFor = (entity: StageEntity, id: string | undefined): unknown[] =>
+  entity === 'opportunity'
+    ? ['opportunities', 'readiness', id]
+    : entity === 'contract'
+      ? ['contracts', 'readiness', id]
+      : ['construction-sites', id, 'readiness'];
 
 export function useStageReadiness(entityType: StageEntity, id: string | undefined) {
   return useQuery<StageRequirement[], Error>({
-    queryKey: [ROOT_KEY[entityType], 'readiness', id],
+    queryKey: keyFor(entityType, id),
     queryFn: async () => {
       const { data, error } = await supabase.rpc('stage_readiness', {
         p_entity_type: entityType,

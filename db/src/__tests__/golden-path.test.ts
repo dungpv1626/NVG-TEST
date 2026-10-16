@@ -375,9 +375,13 @@ describeDb(
       });
       expect(drafterOpens, 'người soạn hợp đồng không tự mở công trình').toBeTruthy();
       const thiCong = await signInAs(ACCOUNTS.congTruongNvc);
+      // Khởi công cần chỉ huy trưởng và ngày dự kiến (0164) — ghi ngay lúc mở.
       const { data: siteId, error: siteError } = await thiCong.rpc('open_site_from_contract', {
         p_contract_id: contractId,
         p_site_address: 'KCN Long Hậu, Long An',
+        p_responsible_user_id: await currentUser(thiCong),
+        p_planned_start_date: '2026-10-01',
+        p_planned_end_date: '2027-03-31',
       });
       check('mở công trình', siteError);
       expect(siteId).toBeTruthy();

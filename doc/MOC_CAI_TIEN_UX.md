@@ -148,6 +148,12 @@ gì; chờ duyệt không biết ai giữ; duyệt xong người soạn không �
 `stage_readiness`, liên kết «Ghi điều khoản», mở thẳng tab Điều khoản khi còn Nháp, dòng «Đang chờ», thông
 báo `contract_approved` / `contract_rejected`.
 
+**Rà chuỗi bước — chặng Ký → Công trình (0164).** Bước Chuẩn bị không có chỗ phân công chỉ huy trưởng / ghi
+ngày khởi công, «Bắt đầu thi công» đi thẳng; TGĐ thấy nút «Mở công trình» nhưng hàm từ chối (đòi quyền sửa);
+mở từ hợp đồng thì người Kinh doanh thành chỉ huy công trình. Sửa: điều kiện bước của công trình, khối «Chuẩn
+bị khởi công» chỉ cho chọn người Thi công, Ban Giám đốc mở được công trình, chỉ huy trưởng được báo, mở xong
+sang thẳng công trình, mỗi bước mở đúng tab (Nhật ký / Nghiệm thu / Bảo hành).
+
 **Chưa làm trong giai đoạn này (đẩy sau)**
 
 - Bảng lịch sử bước chung `stage_transitions` cho hợp đồng / gói thầu / công trình (cơ hội đã có lịch sử).

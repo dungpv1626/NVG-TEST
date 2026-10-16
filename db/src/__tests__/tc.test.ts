@@ -542,6 +542,22 @@ describeDb('TC — thứ tự các bước của công trình', () => {
     const step = async (stage: string) =>
       chiHuy.rpc('move_site_stage', { p_site_id: fixture.nvcSiteId, p_stage: stage });
 
+    // Khởi công cần chỉ huy trưởng và ngày dự kiến (0164) — chưa có thì nói thiếu gì.
+    const { error: notReady } = await step('dang_thi_cong');
+    expect(notReady?.message).toContain('chỉ huy trưởng');
+    const { data: me } = await chiHuy.rpc('auth_user_id');
+    const { error: prepError } = await chiHuy
+      .from('construction_sites')
+      .update({
+        responsible_user_id: me,
+        planned_start_date: '2026-10-01',
+        planned_end_date: '2027-03-31',
+      })
+      .eq('id', fixture.nvcSiteId)
+      .select('id')
+      .single();
+    expect(prepError).toBeNull();
+
     expect((await step('dang_thi_cong')).error).toBeNull();
     expect((await step('nghiem_thu')).error).toBeNull();
 

@@ -650,6 +650,11 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
 - 0163: `stage_readiness('contract')` (giá trị, ba nhóm điều khoản bắt buộc; quyết toán cần công trình đã bàn giao);
   báo người chịu trách nhiệm khi hợp đồng được duyệt / bị từ chối. Trang hợp đồng mở tab Điều khoản khi còn Nháp,
   khoá «Gửi phê duyệt» kèm lý do, hiện «Đang chờ: …» khi chờ duyệt (`components/entity/waiting-on.tsx`).
+- 0164: `stage_readiness('site')` — khởi công cần chỉ huy trưởng THUỘC Thi công (quyền sửa TC) + ngày khởi công /
+  hoàn thành dự kiến (trigger chặn); bàn giao cần biên bản nghiệm thu chủ đầu tư. `open_site_from_contract`: Ban
+  Giám đốc mở được (trước đòi quyền SỬA nên TGĐ bị từ chối dù thấy nút), không tự lấy người Kinh doanh làm chỉ huy.
+  Khối «Chuẩn bị khởi công» (`tc/site-prep-card.tsx`, ô chọn từ `site_commander_candidates`); chỉ huy trưởng được
+  báo khi được phân công; mở công trình xong sang thẳng trang công trình; mỗi bước mở đúng tab.
 - Giao diện: `shared/src/flow.ts` (`OPPORTUNITY_FLOW`, `CONTRACT_FLOW`, `SITE_FLOW`, `stepWindow`), `StepTrack`,
   `RecordChain`, slot `progress` của `EntityDetail`, `allowedDrop` của Kanban, `bottom-bar-slot.ts`; đã gỡ
   `lib/theme.tsx` và `tk-theme.css`.
@@ -663,13 +668,13 @@ trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ P
 
 1. Haan kiểm GĐ1 trên máy (`http://localhost:5173`) và trả lời các câu hỏi ở 9.5.
 2. Khi Haan đồng ý: đẩy nhánh, `npm run db:migrate:demo` rồi `npm run deploy` (API trước, web sau).
-3. GĐ2 — migration `0164` thêm `KSNB` vào enum role (riêng một migration), `0165` quyền chỉ xem toàn bộ,
-   `0166` `exec_overview()` + các view cảnh báo (phê duyệt kẹt toàn công ty, giàn giáo quá hạn trả, công nợ phải
+3. GĐ2 — migration `0165` thêm `KSNB` vào enum role (riêng một migration), `0166` quyền chỉ xem toàn bộ,
+   `0167` `exec_overview()` + các view cảnh báo (phê duyệt kẹt toàn công ty, giàn giáo quá hạn trả, công nợ phải
    trả quá hạn, đề nghị chi kẹt bước, hợp đồng sắp hết hạn, hồ sơ nhân sự sắp hết hạn); trang
    `pages/dieu-hanh/tong-quan.tsx`; đăng nhập đi tới `defaultRoute` của vai trò (đang bị bỏ qua ở `login.tsx`,
    `App.tsx`). **Trước KSNB phải sửa `useIsResponsible`** (`web/src/lib/auth.tsx`) — nó dựa vào
    `seesAllCompanies` nên KSNB sẽ thấy nút sửa ở mọi hồ sơ.
-4. Sau đó GĐ3 → 3b → 4 → 5 theo kế hoạch trong `doc/MOC_CAI_TIEN_UX.md`. Migration đánh số nối tiếp từ 0164.
+4. Sau đó GĐ3 → 3b → 4 → 5 theo kế hoạch trong `doc/MOC_CAI_TIEN_UX.md`. Migration đánh số nối tiếp từ 0165.
 
 ### 9.4 Quyết định đã chốt và lý do
 

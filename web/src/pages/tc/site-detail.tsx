@@ -10,7 +10,7 @@
  */
 
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import {
   SITE_STAGE_META,
   SITE_FLOW,
@@ -44,6 +44,8 @@ import { SiteCheckInPanel } from './site-check-in-panel';
 import { SiteQuickActions } from './site-quick-actions';
 import { RecordChain } from '@/components/entity/record-chain';
 import { StepTrack } from '@/components/entity/step-track';
+import { useStageReadiness } from '@/hooks/use-stage-readiness';
+import { SITE_PREP_ANCHOR, SitePrepCard } from './site-prep-card';
 import { SubcontractorPanel } from './subcontractor-panel';
 import { WarrantyPanel } from './warranty-panel';
 
@@ -68,6 +70,8 @@ export function SiteDetailPage() {
   const moveStage = useMoveSiteStage();
   const updateSite = useUpdateConstructionSite();
   const [actionError, setActionError] = useState<string | null>(null);
+  const { data: readiness = [] } = useStageReadiness('site', id);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   if (isLoading) return <CardGridSkeleton count={3} />;
   if (error) return <ErrorState message={toUserMessage(error)} />;
@@ -86,6 +90,57 @@ export function SiteDetailPage() {
   const readOnly = !canEdit || isClosed;
   const next = NEXT_STAGE[site.stage];
   const canPause = SITE_STAGE_TRANSITIONS[site.stage].includes('tam_dung');
+
+  // Tab nơi làm việc của từng bước — mở công trình là tới đúng chỗ (phản hồi chủ dự án).
+  const STAGE_TAB: Record<SiteStage, string> = {
+    chuan_bi: 'tong-quan',
+    dang_thi_cong: 'nhat-ky',
+    nghiem_thu: 'nghiem-thu',
+    bao_hanh: 'bao-hanh',
+    hoan_thanh: 'tong-quan',
+    tam_dung: 'tong-quan',
+  };
+  function openTab(tab: string, anchor?: string) {
+    const params = new URLSearchParams(searchParams);
+    params.set('tab', tab);
+    setSearchParams(params, { replace: true });
+    if (anchor) {
+      window.setTimeout(() => {
+        const el = document.getElementById(anchor);
+        el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        el?.querySelector<HTMLElement>('select, input')?.focus({ preventScroll: true });
+      }, 50);
+    }
+  }
+  // Điều kiện bước kế tiếp (0164) — cùng điều kiện CSDL chặn.
+  const missing = next
+    ? readiness.filter((r) => r.for_stage === next.stage && !r.met).map((r) => r.label)
+    : [];
+  const nextRequirements = next
+    ? readiness
+        .filter((r) => r.for_stage === next.stage)
+        .map((r) => ({
+          label: r.label,
+          met: r.met,
+          action: readOnly ? undefined : r.requirement === 'customer_acceptance' ? (
+            <button
+              type="button"
+              className="font-medium text-brand underline-offset-2 hover:underline"
+              onClick={() => openTab('nghiem-thu')}
+            >
+              Lập biên bản nghiệm thu
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="font-medium text-brand underline-offset-2 hover:underline"
+              onClick={() => openTab('tong-quan', SITE_PREP_ANCHOR)}
+            >
+              Phân công
+            </button>
+          ),
+        }))
+    : [];
 
   async function run(action: () => Promise<unknown>) {
     setActionError(null);
@@ -113,7 +168,8 @@ export function SiteDetailPage() {
           // Đang thi công thì việc hằng ngày là ghi nhật ký, không phải đổi giai đoạn — nút này
           // lùi xuống nút phụ để không thành thứ to nhất trên màn hình (review UX, vấn đề 2).
           variant={site.stage === 'dang_thi_cong' ? 'secondary' : 'primary'}
-          disabled={moveStage.isPending}
+          disabled={moveStage.isPending || missing.length > 0}
+          title={missing.length > 0 ? `Cần: ${missing.join('; ')}` : undefined}
           onClick={() =>
             void run(() => moveStage.mutateAsync({ siteId: site.id, stage: next.stage }))
           }
@@ -169,11 +225,13 @@ export function SiteDetailPage() {
             <StepTrack
               flow={SITE_FLOW}
               current={site.stage}
+              nextRequirements={nextRequirements}
               holder={site.responsible?.full_name ?? null}
             />
           </>
         }
         actions={actions}
+        defaultTab={STAGE_TAB[site.stage]}
         tabs={[
           {
             id: 'nhat-ky',
@@ -269,6 +327,13 @@ export function SiteDetailPage() {
             label: 'Tổng quan',
             content: (
               <>
+                {(site.stage === 'chuan_bi' || !site.responsible_user_id) && (
+                  <SitePrepCard
+                    site={site}
+                    canEdit={!readOnly}
+                    highlight={site.stage === 'chuan_bi' && missing.length > 0}
+                  />
+                )}
                 <DetailFields
                   fields={[
                     { label: 'Bước hiện tại', value: SITE_STAGE_META[site.stage].label },
