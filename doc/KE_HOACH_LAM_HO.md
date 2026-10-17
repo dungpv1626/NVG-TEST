@@ -64,7 +64,7 @@ không (mặc định: không, người nhập là người phụ trách).
 
 | Việc | Nội dung | Phụ thuộc |
 | --- | --- | --- |
-| 2A. 7 mốc thi công NVO | Định vị → móng → kết cấu → xây, trát, điện nước âm → chống thấm → hoàn thiện → kiểm tra chất lượng (Quy chuẩn Nhà Việt One). Mỗi mốc có danh sách kiểm tra mẫu + ảnh bắt buộc; đạt mới sang mốc sau; hạng mục quan trọng thêm phụ trách kỹ thuật kiểm | Danh sách kiểm tra (đã có nền), K2 |
+| 2A. 7 mốc thi công NVO | Định vị → móng → kết cấu → xây, trát, điện nước âm → chống thấm → hoàn thiện → kiểm tra chất lượng (Quy chuẩn Nhà Việt One). Mỗi mốc có danh sách kiểm tra mẫu + ảnh bắt buộc; đạt mới sang mốc sau; hạng mục quan trọng thêm phụ trách kỹ thuật kiểm. NVC dùng cùng cơ chế với bộ mốc nhà xưởng riêng khi NVG chốt (9.5 câu 15) | Danh sách kiểm tra (đã có nền), K2 |
 | 2B. Nhật ký bằng giọng nói | Nói 1–2 phút → máy xếp mục (việc làm, nhân lực, vật tư, vướng mắc, thời tiết) + ảnh; mục tiêu 5–10 phút / ngày (PRD 6) | K1 |
 | 2C. Điểm danh theo tổ | Một ảnh cả tổ, chọn tên từ danh sách lao động của công trình, GPS chỉ cảnh báo; đề xuất bảng công cho Nhân sự | Điểm danh ảnh (0139) |
 | 2D. Biên bản nghiệm thu tự sinh | Tích danh sách → điền mẫu biên bản → hai bên ký trên điện thoại → chuyển Kế toán | K3, ký điện thoại (đã có ở thu hồi giàn giáo) |
@@ -109,7 +109,7 @@ trước khi công trường hỏi.
 | 5A. Thiết kế: khảo sát ghi âm + vòng ý kiến khách | Dùng K1 cho bộ câu hỏi đầu bài; ý kiến khách theo từng vòng, phiên bản tự đánh số | — |
 | 5B. AI Design 4 bước | Đầu vào → Mặt bằng (giá ước tính trên nút, so phương án, 3 lý do trừ điểm, sửa bằng ô yêu cầu) → Mặt ngoài (mặt đứng + phối cảnh) → Bộ kết quả (tải cả gói, tên theo mã hồ sơ) | Tránh sửa `contracts/`; nếu sửa thì `contracts:gen` + phát hành API và web cùng lúc |
 | 5C. Đấu thầu NVC | Bước «phương án kỹ thuật, biện pháp thi công»; danh mục hồ sơ thầu theo loại gói; nhắc hạn nộp; so đơn giá với gói cũ (chỉ cảnh báo) | NVC có tự thiết kế không (9.5 câu 14) |
-| 5D. NVS cho thuê | Màn hình báo giá thuê tự kiểm tồn, tự tính tiền (PRD CRM-11); nhắc hết hạn thuê; bảng giá bồi thường chính thức; sổ giàn giáo lệch thì cảnh báo | Bảng giá bồi thường của NVG |
+| 5D. NVS cho thuê | Màn hình báo giá thuê tự kiểm tồn, tự tính tiền (PRD CRM-11); phiếu giao khách ký nhận trên điện thoại (dùng lại cách ký của biên bản thu hồi); nhắc hết hạn thuê; bảng giá bồi thường chính thức; sổ giàn giáo lệch thì cảnh báo | Bảng giá bồi thường của NVG |
 | 5E. Nhân sự | Bảng công dựng từ điểm danh (nếu chưa xong ở 2C); nhắc hợp đồng lao động | Cách tính công |
 | 5F. Hành chính | Nhắc giấy phép, bảo hiểm, đăng kiểm; văn bản mẫu tự điền (K3); tài sản ký nhận | — |
 
