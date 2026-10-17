@@ -45,7 +45,7 @@ const SURVEY_FIELDS = [
 ] as const;
 type SurveyDraft = Record<(typeof SURVEY_FIELDS)[number], string>;
 
-export const aiApp = new Hono<{ Bindings: AiEnv }>();
+export const assistantApp = new Hono<{ Bindings: AiEnv }>();
 
 function bearer(c: Context<{ Bindings: AiEnv }>): string | null {
   const header = c.req.header('Authorization') ?? '';
@@ -106,7 +106,7 @@ async function actorId(db: UserDb): Promise<string | null> {
 const OFF_MESSAGE =
   'Chức năng AI chưa bật — người khảo sát tự gõ nội dung. Quản trị bật ở Tham số hệ thống khi chủ dự án duyệt chi phí.';
 
-aiApp.get('/status', async (c) => {
+assistantApp.get('/status', async (c) => {
   if (!bearer(c)) return c.json({ error: 'Chưa đăng nhập.' }, 401);
   return c.json(await modes(c.env));
 });
@@ -114,7 +114,7 @@ aiApp.get('/status', async (c) => {
 // ---------------------------------------------------------------------------------------------
 // Ghi âm → chữ
 // ---------------------------------------------------------------------------------------------
-aiApp.post('/transcribe', async (c) => {
+assistantApp.post('/transcribe', async (c) => {
   const token = bearer(c);
   if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
   const body = (await c.req.json().catch(() => ({}))) as { recording_id?: string };
@@ -209,7 +209,7 @@ aiApp.post('/transcribe', async (c) => {
 // ---------------------------------------------------------------------------------------------
 // Chữ → nháp báo cáo khảo sát
 // ---------------------------------------------------------------------------------------------
-aiApp.post('/survey-summary', async (c) => {
+assistantApp.post('/survey-summary', async (c) => {
   const token = bearer(c);
   if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
   const body = (await c.req.json().catch(() => ({}))) as { survey_id?: string };

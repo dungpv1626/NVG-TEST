@@ -92,6 +92,18 @@ const OpportunityDetailPage = lazy(() =>
 const QuoteCreatePage = lazy(() =>
   import('@/pages/crm/quote-create').then((m) => ({ default: m.QuoteCreatePage })),
 );
+const ShowcaseLibraryPage = lazy(() =>
+  import('@/pages/showcase/showcase-library').then((m) => ({ default: m.ShowcaseLibraryPage })),
+);
+const ShowcaseDetailPage = lazy(() =>
+  import('@/pages/showcase/showcase-detail').then((m) => ({ default: m.ShowcaseDetailPage })),
+);
+const ShowcaseFormPage = lazy(() =>
+  import('@/pages/showcase/showcase-form').then((m) => ({ default: m.ShowcaseFormPage })),
+);
+const PublicShowcasePage = lazy(() =>
+  import('@/pages/showcase/public-showcase').then((m) => ({ default: m.PublicShowcasePage })),
+);
 const OldCustomerListPage = lazy(() =>
   import('@/pages/crm/old-customer-list').then((m) => ({ default: m.OldCustomerListPage })),
 );
@@ -305,6 +317,9 @@ const router = createBrowserRouter(
   createRoutesFromElements(
     <Route>
       <Route path="/dang-nhap" element={<LoginPage />} />
+      {/* Trang khách xem bộ mẫu công trình — KHÔNG cần đăng nhập (Đợt 1 — 1H). Dữ liệu chỉ qua
+          Worker `/public/showcase/:token` → hàm CSDL `showcase_public`. */}
+      <Route path="/xem-mau/:token" element={<PublicShowcasePage />} />
 
       <Route
         element={
@@ -319,6 +334,12 @@ const router = createBrowserRouter(
         {/* Tổng quan điều hành — chỉ lãnh đạo và Kiểm soát nội bộ (0169); không phải phân hệ nên
             không dùng ModuleGuard, vai trò khác về Dashboard. */}
         <Route path="/tong-quan" element={<ExecGuard />} />
+        {/* Thư viện công trình mẫu (Đợt 1 — 1H): CẢ CÔNG TY xem nên không bọc ModuleGuard;
+            sửa / xoá do RLS (Thiết kế, Giám đốc) quyết. */}
+        <Route path="/mau-cong-trinh" element={<ShowcaseLibraryPage />} />
+        <Route path="/mau-cong-trinh/tao-moi" element={<ShowcaseFormPage />} />
+        <Route path="/mau-cong-trinh/:id" element={<ShowcaseDetailPage />} />
+        <Route path="/mau-cong-trinh/:id/sua" element={<ShowcaseFormPage />} />
 
         <Route element={<ModuleGuard module="BC" />}>
           {/* BC-02 — báo cáo lãi/lỗ. Quyền XEM số liệu thật (Mẫu D `profit`) được CSDL chặn

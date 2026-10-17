@@ -10,7 +10,8 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { createClient } from '@supabase/supabase-js';
 import { adminApp } from './admin';
-import { aiApp } from './ai';
+import { assistantApp } from './ai';
+import { publicApp } from './public-showcase';
 import { designApp } from './design';
 import type { DesignEnv } from './design/env';
 
@@ -87,7 +88,9 @@ app.get('/', (c) => c.json({ ok: true, service: 'nvg-api' }));
 app.route('/design', designApp);
 app.route('/admin', adminApp);
 // Khối nền K1 — ghi âm → chữ → nháp AI cho các bộ phận (Đợt 1). Mặc định tắt / giả lập.
-app.route('/ai', aiApp);
+app.route('/ai', assistantApp);
+// Trang xem mẫu công trình gửi khách — công khai, chỉ qua hàm CSDL `showcase_public` (1H, 0179).
+app.route('/public', publicApp);
 
 function serviceClient(env: Env) {
   // service_role vượt RLS — CHỈ dùng ở đây, không bao giờ trong web/ (CLAUDE.md 5.5).

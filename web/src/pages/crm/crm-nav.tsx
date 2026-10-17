@@ -16,6 +16,8 @@ const ITEMS = [
   { to: '/crm/khach-hang', label: 'Khách hàng' },
   { to: '/crm/khach-cu', label: 'Khách cũ' },
   { to: '/crm/khieu-nai', label: 'Khiếu nại' },
+  // Thư viện dùng chung cả công ty (1H) — Kinh doanh chào khách từ đây.
+  { to: '/mau-cong-trinh', label: 'Mẫu công trình' },
 ];
 
 export function CrmNav() {

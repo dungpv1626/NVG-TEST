@@ -282,3 +282,62 @@ export const SURVEY_REPORT_FIELDS = [
   { key: 'notes', label: 'Hiện trạng và ghi chú khác' },
 ] as const;
 export type SurveyReportFieldKey = (typeof SURVEY_REPORT_FIELDS)[number]['key'];
+
+/**
+ * Thư viện công trình mẫu (Đợt 1 — 1H, migration 0179) — loại hình, khớp CHECK của
+ * `showcase_items.kind`.
+ */
+export const SHOWCASE_KINDS = [
+  'nha_pho',
+  'biet_thu',
+  'nha_nong_thon',
+  'nha_xuong',
+  'cai_tao',
+  'san_pham_nvs',
+  'khac',
+] as const;
+export type ShowcaseKind = (typeof SHOWCASE_KINDS)[number];
+
+export const SHOWCASE_KIND_LABELS: Readonly<Record<ShowcaseKind, string>> = {
+  nha_pho: 'Nhà phố',
+  biet_thu: 'Biệt thự',
+  nha_nong_thon: 'Nhà ở nông thôn',
+  nha_xuong: 'Nhà xưởng',
+  cai_tao: 'Cải tạo',
+  san_pham_nvs: 'Sản phẩm thép / giàn giáo',
+  khac: 'Khác',
+};
+
+/** Loại công trình của cơ hội / đầu mối → loại mẫu gợi ý (lọc «mẫu tương tự»). */
+export function showcaseKindForProjectType(
+  projectType: string | null | undefined,
+): ShowcaseKind | null {
+  switch (projectType) {
+    case 'Nhà phố':
+      return 'nha_pho';
+    case 'Biệt thự':
+      return 'biet_thu';
+    case 'Nhà ở nông thôn':
+      return 'nha_nong_thon';
+    case 'Nhà xưởng công nghiệp':
+      return 'nha_xuong';
+    case 'Cải tạo nhà máy':
+    case 'Cải tạo nhà ở':
+      return 'cai_tao';
+    case 'Giàn giáo — bán':
+    case 'Giàn giáo — cho thuê':
+    case 'Kết cấu thép':
+      return 'san_pham_nvs';
+    default:
+      return null;
+  }
+}
+
+export const SHOWCASE_MEDIA_KINDS = ['anh_thuc_te', 'phoi_canh', 'mat_bang', 'khac'] as const;
+export type ShowcaseMediaKind = (typeof SHOWCASE_MEDIA_KINDS)[number];
+export const SHOWCASE_MEDIA_KIND_LABELS: Readonly<Record<ShowcaseMediaKind, string>> = {
+  anh_thuc_te: 'Ảnh thực tế',
+  phoi_canh: 'Phối cảnh',
+  mat_bang: 'Mặt bằng',
+  khac: 'Khác',
+};

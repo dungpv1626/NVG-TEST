@@ -209,6 +209,7 @@ export const APPROVAL_SUBJECTS = [
   'quote_price',
   'recruitment_position',
   'survey_report',
+  'showcase_delete',
 ] as const;
 
 export type ApprovalSubject = (typeof APPROVAL_SUBJECTS)[number];
@@ -226,6 +227,7 @@ export const APPROVAL_SUBJECT_LABELS: Readonly<Record<ApprovalSubject, string>> 
   quote_price: 'Báo giá gửi khách hàng',
   recruitment_position: 'Yêu cầu tuyển dụng',
   survey_report: 'Báo cáo khảo sát',
+  showcase_delete: 'Xoá mẫu công trình',
 };
 
 export interface ApprovalLimitSeed {
@@ -309,4 +311,8 @@ export const DEFAULT_APPROVAL_LIMITS: readonly ApprovalLimitSeed[] = [
   // ĐÃ CHỐT (chủ dự án, 17/10/2026): Ban Giám đốc duyệt; chưa duyệt thì chặn Báo giá.
   { role: 'BGD', subject: 'survey_report', maxAmount: null, step: 1 },
   { role: 'TGD', subject: 'survey_report', maxAmount: null, step: 1 },
+
+  // Xoá mẫu công trình (Đợt 1 — 1H, 0179): Thiết kế đề nghị, Giám đốc đồng ý (chủ dự án chốt).
+  { role: 'BGD', subject: 'showcase_delete', maxAmount: null, step: 1 },
+  { role: 'TGD', subject: 'showcase_delete', maxAmount: null, step: 1 },
 ] as const;

@@ -9,6 +9,8 @@ const ITEMS = [
   { to: '/tk/du-an', label: 'Dự án thiết kế' },
   { to: '/tk/ai-design', label: 'AI Design' },
   { to: '/tk/ho-so-cu', label: 'Hồ sơ cũ đã số hoá' },
+  // Phòng Thiết kế đưa công trình đã làm vào thư viện chào khách (1H).
+  { to: '/mau-cong-trinh', label: 'Mẫu công trình' },
 ];
 
 export function TkNav() {
