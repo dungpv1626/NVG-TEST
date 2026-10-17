@@ -79,6 +79,9 @@ export interface ContractDetailRecord extends ContractRecord {
   /** PostgREST trả cột `numeric` dạng số. */
   vat_rate: number | string | null;
   project_location: string | null;
+  /** Văn bản đang gửi duyệt / đã duyệt — trigger ghi (0176). */
+  submitted_document_id: string | null;
+  approved_document_id: string | null;
   approved_at: string | null;
   signed_at: string | null;
   settled_at: string | null;
@@ -97,6 +100,7 @@ export function useContract(id: string | undefined) {
         .select(
           `${CONTRACT_SELECT}, source_type, source_id, estimate_id, partner_name, customer_id, ` +
             'start_date, price_form, vat_rate, project_location, ' +
+            'submitted_document_id, approved_document_id, ' +
             'approved_at, signed_at, settled_at, cancel_reason, notes, updated_at, ' +
             'estimate:estimates!contracts_estimate_id_estimates_id_fk(id, code, version)',
         )

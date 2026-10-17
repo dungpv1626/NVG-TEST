@@ -154,6 +154,15 @@ export function ContractDetailPage() {
           >
             Ghi điều khoản
           </button>
+        ) : r.requirement === 'document_ready' && canDraft ? (
+          // 0176: pháp nhân có mẫu Word thì gửi duyệt phải kèm văn bản.
+          <button
+            type="button"
+            className="font-medium text-brand underline-offset-2 hover:underline"
+            onClick={() => openTab('van-ban')}
+          >
+            Lập văn bản
+          </button>
         ) : undefined,
     }));
   const pendingApproval = (approvals.data?.get(contract.id) ?? []).find(

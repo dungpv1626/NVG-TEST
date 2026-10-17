@@ -1233,6 +1233,13 @@
       "when": 1791200000000,
       "tag": "0175_bao_cao_khao_sat",
       "breakpoints": true
+    },
+    {
+      "idx": 176,
+      "version": "7",
+      "when": 1791210000000,
+      "tag": "0176_hop_dong_kem_van_ban",
+      "breakpoints": true
     }
   ]
 }

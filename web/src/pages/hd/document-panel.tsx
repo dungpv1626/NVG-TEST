@@ -50,8 +50,11 @@ import { toUserMessage } from '@/hooks/use-error-message';
 import { fillTemplate, inspectTemplate, safeFileName, saveBlob } from '@/lib/docx-template';
 import { cn } from '@/lib/utils';
 
-/** Bước còn lập văn bản được — khớp trigger `contract_documents_before_insert` (0171). */
-const DRAFTABLE_STAGES = ['nhap', 'cho_duyet', 'da_duyet'] as const;
+/**
+ * Bước còn lập văn bản được — khớp trigger `contract_documents_before_insert`: chỉ khi Nháp (0176).
+ * Đang chờ duyệt mà đổi văn bản thì người duyệt duyệt một bản, ký một bản khác.
+ */
+const DRAFTABLE_STAGES = ['nhap'] as const;
 
 export function DocumentPanel({
   contract,
@@ -68,13 +71,18 @@ export function DocumentPanel({
       {locked ? (
         <p className="flex items-center gap-2 rounded-md border border-border bg-surface-sunken px-3 py-2">
           <Lock className="size-4 text-fg-subtle" aria-hidden />
-          Hợp đồng đã ký — văn bản đã khoá, không lập thêm bản điền mới. Thay đổi sau ký đi qua tab
-          Phát sinh.
+          {contract.stage === 'cho_duyet' || contract.stage === 'da_duyet'
+            ? 'Hợp đồng đang chờ duyệt hoặc đã duyệt — văn bản giữ đúng bản đã gửi. Bị trả về thì lập bản mới.'
+            : 'Hợp đồng đã ký — văn bản đã khoá, không lập thêm bản điền mới. Thay đổi sau ký đi qua tab Phát sinh.'}
         </p>
       ) : (
         <FillSection contract={contract} canSave={canDraft} />
       )}
-      <VersionsSection contractId={contract.id} />
+      <VersionsSection
+        contractId={contract.id}
+        submittedId={contract.submitted_document_id}
+        approvedId={contract.approved_document_id}
+      />
     </div>
   );
 }
@@ -453,7 +461,15 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
 // 3. Phiên bản đã lưu
 // ---------------------------------------------------------------------------------------------
 
-function VersionsSection({ contractId }: { contractId: string }) {
+function VersionsSection({
+  contractId,
+  submittedId,
+  approvedId,
+}: {
+  contractId: string;
+  submittedId: string | null;
+  approvedId: string | null;
+}) {
   const { data: versions } = useContractDocuments(contractId);
   const [error, setError] = useState<string | null>(null);
 
@@ -482,6 +498,17 @@ function VersionsSection({ contractId }: { contractId: string }) {
             <li key={v.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2">
               <FileText className="size-4 text-fg-subtle" aria-hidden />
               <span className="font-semibold">Bản {v.version}</span>
+              {v.id === approvedId ? (
+                <span className="rounded-full bg-status-completed-bg px-2 py-0.5 text-xs font-semibold text-status-completed">
+                  Bản đã duyệt
+                </span>
+              ) : (
+                v.id === submittedId && (
+                  <span className="rounded-full bg-status-pending-bg px-2 py-0.5 text-xs font-semibold text-status-pending">
+                    Bản gửi duyệt
+                  </span>
+                )
+              )}
               <span className="text-fg-subtle">
                 {formatDateTime(v.created_at)} · {v.creator?.full_name ?? 'Không rõ người lập'}
                 {v.template ? ` · mẫu «${v.template.title}»` : ''}

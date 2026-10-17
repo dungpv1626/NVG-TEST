@@ -244,3 +244,115 @@ describeDb('Mẫu hợp đồng và văn bản đã điền (0171)', () => {
     });
   });
 });
+
+describeDb('Hợp đồng gửi phê duyệt kèm văn bản (0176)', () => {
+  let kd: SupabaseClient;
+  let tgd: SupabaseClient;
+  let nvcId: string;
+  let contractId: string;
+
+  beforeAll(async () => {
+    [kd, tgd] = await Promise.all([signInAs(ACCOUNTS.kinhDoanhNvc), signInAs(ACCOUNTS.tgd)]);
+    const { createConnection } = await import('../client');
+    const { sql } = createConnection();
+    try {
+      const stamp = String(Date.now());
+      const [nvc] = await sql<{ id: string }[]>`SELECT id FROM companies WHERE code = 'NVC'`;
+      nvcId = nvc!.id;
+      const [owner] = await sql<{ id: string }[]>`
+        SELECT id FROM users WHERE email = ${ACCOUNTS.kinhDoanhNvc}`;
+      // Hình thức giá riêng của phép thử: mẫu và hợp đồng khớp nhau, không đụng mẫu thật trên máy.
+      const [c] = await sql<{ id: string }[]>`
+        INSERT INTO contracts (company_id, code, title, type, stage, value, price_form, responsible_user_id)
+        VALUES (${nvcId}, ${'NVC-HD-VB-' + stamp}, ${TEST_PREFIX + ' Kèm văn bản ' + stamp},
+                'thi_cong', 'nhap', 2000000000, 'theo_ket_qua_dau_ra', ${owner!.id})
+        RETURNING id`;
+      contractId = c!.id;
+      for (const t of ['pham_vi', 'gia_tri', 'tien_do_thanh_toan']) {
+        await sql`INSERT INTO contract_terms (company_id, contract_id, term_type, description)
+                  VALUES (${nvcId}, ${contractId}, ${t}::contract_term_type, ${TEST_PREFIX + ' ' + t})`;
+      }
+    } finally {
+      await sql.end();
+    }
+    const path = `${nvcId}/${crypto.randomUUID()}.docx`;
+    await uploadTo(tgd, 'contract-templates', path);
+    const tpl = await tgd.from('contract_templates').insert({
+      company_id: nvcId,
+      title: `${TEST_PREFIX} Mẫu theo kết quả đầu ra`,
+      contract_type: 'thi_cong',
+      price_form: 'theo_ket_qua_dau_ra',
+      storage_path: path,
+      file_name: 'mau.docx',
+      tags: {},
+    });
+    expect(tpl.error).toBeNull();
+  });
+
+  async function saveDoc(reason: string | null = null) {
+    const path = `${contractId}/${crypto.randomUUID()}.docx`;
+    await uploadTo(kd, 'contract-documents', path);
+    return kd
+      .from('contract_documents')
+      .insert({
+        contract_id: contractId,
+        storage_path: path,
+        file_name: 'hop-dong.docx',
+        filled_values: {},
+        change_reason: reason,
+      })
+      .select('id, version')
+      .single();
+  }
+
+  it('có mẫu thì chưa lập văn bản không gửi được; điều kiện hiện trước khi bấm', async () => {
+    const { data: ready } = await kd.rpc('stage_readiness', {
+      p_entity_type: 'contract',
+      p_id: contractId,
+    });
+    const doc = (ready as { requirement: string; met: boolean }[]).find(
+      (r) => r.requirement === 'document_ready',
+    );
+    expect(doc).toMatchObject({ met: false });
+    const blocked = await kd.rpc('submit_contract_approval', { p_contract_id: contractId });
+    expect(blocked.error?.message).toMatch(/Lập văn bản/);
+  });
+
+  it('lập văn bản rồi gửi: ghi bản đang gửi, khoá lập bản mới; duyệt thì thành bản đã duyệt', async () => {
+    const first = await saveDoc();
+    expect(first.error).toBeNull();
+    const sent = await kd.rpc('submit_contract_approval', { p_contract_id: contractId });
+    expect(sent.error).toBeNull();
+
+    const { data: c1 } = await kd
+      .from('contracts')
+      .select('stage, submitted_document_id, approved_document_id')
+      .eq('id', contractId)
+      .single();
+    expect(c1).toMatchObject({
+      stage: 'cho_duyet',
+      submitted_document_id: first.data!.id,
+      approved_document_id: null,
+    });
+
+    const locked = await saveDoc('Sửa giá');
+    expect(locked.error?.message).toMatch(/chờ duyệt/);
+
+    // Không tự khai được bản đã duyệt.
+    await kd
+      .from('contracts')
+      .update({ approved_document_id: first.data!.id })
+      .eq('id', contractId);
+
+    await tgd.rpc('decide_approval', {
+      p_approval_id: sent.data as string,
+      p_decision: 'approved',
+    });
+    const { data: c2 } = await kd
+      .from('contracts')
+      .select('stage, approved_document_id')
+      .eq('id', contractId)
+      .single();
+    expect(c2).toMatchObject({ stage: 'da_duyet', approved_document_id: first.data!.id });
+  });
+});

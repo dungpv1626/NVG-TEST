@@ -11,6 +11,7 @@
  */
 
 import { TodayFollowups } from '@/components/crm/today-followups';
+import { ContractDocumentPreview } from './contract-document-preview';
 import { SurveyReportPreview } from './survey-report-preview';
 import { PageHeader } from '@/components/layout/app-shell';
 import { ApprovalInbox, type ApprovalItem } from '@/components/entity/approval-inbox';
@@ -154,6 +155,7 @@ function ApprovalPreview({ row }: { row: PendingApproval }) {
         </div>
       </div>
 
+      {row.entity_type === 'contracts' && <ContractDocumentPreview contractId={row.entity_id} />}
       {row.entity_type === 'site_surveys' ? (
         <SurveyReportPreview surveyId={row.entity_id} />
       ) : (
