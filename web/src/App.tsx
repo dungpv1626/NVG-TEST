@@ -52,6 +52,9 @@ const BriefFormAdminPage = lazy(() =>
 const ParameterPage = lazy(() =>
   import('@/pages/nen/parameter-page').then((m) => ({ default: m.ParameterPage })),
 );
+const AiAdminPage = lazy(() =>
+  import('@/pages/nen/ai-admin-page').then((m) => ({ default: m.AiAdminPage })),
+);
 const ApprovalLimitPage = lazy(() =>
   import('@/pages/nen/approval-limit-page').then((m) => ({ default: m.ApprovalLimitPage })),
 );
@@ -491,6 +494,7 @@ const router = createBrowserRouter(
         <Route element={<ModuleGuard module="NEN" />}>
           <Route path="nen/quan-tri" element={<UserAdminPage />} />
           <Route path="nen/tham-so" element={<ParameterPage />} />
+          <Route path="nen/tro-ly-ai" element={<AiAdminPage />} />
           <Route path="nen/bieu-mau-dau-bai" element={<BriefFormAdminPage />} />
           <Route path="nen/nhat-ky" element={<AuditLogPage />} />
           <Route path="nen/giao-dien" element={<DesignShowcasePage />} />

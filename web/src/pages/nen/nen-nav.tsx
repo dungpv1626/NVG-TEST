@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 const ITEMS = [
   { to: '/nen/quan-tri', label: 'Người dùng' },
   { to: '/nen/tham-so', label: 'Tham số hệ thống' },
+  { to: '/nen/tro-ly-ai', label: 'Trợ lý AI' },
   { to: '/nen/han-muc', label: 'Hạn mức phê duyệt' },
   { to: '/nen/thoi-han', label: 'Thời hạn xử lý' },
   { to: '/nen/bieu-mau-dau-bai', label: 'Biểu mẫu đầu bài' },
