@@ -621,15 +621,15 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
 
 ### 9.2 Trạng thái từng giai đoạn
 
-| GĐ  | Nội dung                                                                                                                   | Trạng thái                          |
-| --- | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| 0   | Lưu mốc                                                                                                                    | **Xong**                            |
-| 1   | Quyền + thứ tự bước, đồng bộ liên module, dải tiến trình + chuỗi hồ sơ, gỡ chế độ tối, sửa lớp đè / token màu (vấn đề 2–4) | **Xong phần chính** — chờ Haan kiểm |
-| 2   | «Tổng quan điều hành» + Dashboard lãnh đạo theo khung từng công ty + vai trò Kiểm soát nội bộ (vấn đề 1)                   | **Xong phần chính** — chờ Haan kiểm |
-| 3   | Khảo sát chốt bằng máy (CRM + TK), đính kèm dùng chung, ghi âm → Whisper → Gemini tóm tắt (vấn đề 6, 8)                    | Chưa làm                            |
-| 3b  | Điểm danh theo tổ, kiểm bán kính GPS (chỉ cảnh báo), báo cáo có mặt, đề xuất chấm công                                     | Chưa làm                            |
-| 4   | Mẫu hợp đồng `.docx` có chỗ trống, tự điền, xem trước, xuất (vấn đề 5)                                                     | **Xong vòng đầu** — chờ Haan kiểm   |
-| 5   | AI Design thành 4 bước: Đầu vào → Mặt bằng → Mặt ngoài → Bộ kết quả (vấn đề 7)                                             | Chưa làm                            |
+| GĐ  | Nội dung                                                                                                                   | Trạng thái                                     |
+| --- | -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| 0   | Lưu mốc                                                                                                                    | **Xong**                                       |
+| 1   | Quyền + thứ tự bước, đồng bộ liên module, dải tiến trình + chuỗi hồ sơ, gỡ chế độ tối, sửa lớp đè / token màu (vấn đề 2–4) | **Xong phần chính** — chờ Haan kiểm            |
+| 2   | «Tổng quan điều hành» + Dashboard lãnh đạo theo khung từng công ty + vai trò Kiểm soát nội bộ (vấn đề 1)                   | **Xong phần chính** — chờ Haan kiểm            |
+| 3   | Khảo sát chốt bằng máy (CRM + TK), đính kèm dùng chung, ghi âm → Whisper → Gemini tóm tắt (vấn đề 6, 8)                    | Chưa làm — nay là Đợt 1 / 5 của kế hoạch tổng  |
+| 3b  | Điểm danh theo tổ, kiểm bán kính GPS (chỉ cảnh báo), báo cáo có mặt, đề xuất chấm công                                     | Chưa làm — nay là Đợt 2 (2C) của kế hoạch tổng |
+| 4   | Mẫu hợp đồng `.docx` có chỗ trống, tự điền, xem trước, xuất (vấn đề 5)                                                     | **Xong vòng đầu** — chờ Haan kiểm              |
+| 5   | AI Design thành 4 bước: Đầu vào → Mặt bằng → Mặt ngoài → Bộ kết quả (vấn đề 7)                                             | Chưa làm — nay là Đợt 5 (5B) của kế hoạch tổng |
 
 **GĐ1 đã có trong mã** (migration 0155–0166; 0160–0166 là vòng rà chuỗi bước bằng đúng vai sau phản hồi chủ dự án):
 
@@ -725,75 +725,103 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
   (26), `web/src/lib/__tests__/docx-template.test.ts` (3). Chạy thử trình duyệt: TGĐ tải mẫu, Kinh doanh điền + lưu
   bản 1 trên hợp đồng nháp `NVC-HD-2026-MAU1` (tạo tay trên máy), Thi công bị chặn.
 
+**Sau GĐ4 — định hướng «làm hộ» cho từng bộ phận (chỉ LẬP KẾ HOẠCH, chưa viết mã):**
+
+- Chủ dự án nhận xét hệ thống mới chủ yếu ghi nhận cho TGĐ xem + AI Design; muốn hệ thống LÀM HỘ việc lặp lại của từng
+  phòng ban (ví dụ Kinh doanh: hẹn khảo sát → ghi âm → chữ → máy viết báo cáo → sếp duyệt / trả về; hợp đồng tự lập
+  từ mẫu và gửi duyệt trong hệ thống).
+- **Kế hoạch tổng: `doc/KE_HOACH_LAM_HO.md`** — Bước 0 (chốt + phát hành phần đã làm), khối nền K1–K5 (ghi âm → chữ
+  → nháp AI; hộp duyệt xem nội dung; sinh văn bản Word; việc cần làm hôm nay; quản trị AI), Đợt 1 Kinh doanh (kèm CRM
+  theo dõi khách từ lúc tiếp cận) → Đợt 2 Thi công (7 mốc NVO) → Đợt 3 Tài chính; Đợt 4 Mua hàng – Kho và Đợt 5 các
+  bộ phận còn lại song song sau Đợt 1. Mỗi đợt có phụ thuộc, câu hỏi chặn, tiêu chí xong.
+- **Tài liệu cho chủ dự án / NVG (Claude Docs, không nằm trong repo):** «Hệ thống Quản trị NVG — Tổng quan trước và sau
+  thay đổi», https://claude.ai/code/artifact/bf449c59-31e6-4dca-955a-a29b7053fc4b — mục 1 tổng quan; mục 2 hiện tại (ba
+  pipeline NVC / NVO / NVS đặt cạnh nhau theo giai đoạn + Back Office 4 dòng); mục 3 sau thay đổi (cùng bố cục, ô xanh
+  lá = máy làm hộ; 3.3 bảy mốc thi công NVO; 3.4 vòng đời khách hàng CRM); mục 4 bảng so sánh + 4.0 công cụ dùng chung
+  - 4.1–4.16 chi tiết từng bộ phận (bước làm, công cụ); mục 5 đã làm; mục 6 lộ trình. Sửa tài liệu bằng công cụ Claude
+    Docs, đừng tạo tài liệu mới.
+- Tệp PDF «Vai trò và nhiệm vụ» 15 vai trò: `backup/Vai_tro_nhiem_vu_NVG.pdf` (không commit; dựng từ HTML bằng
+  `backup/to-pdf.cjs`).
+- **Bộ hồ sơ «HoSoTapHop Gui Sep»** (thư mục gốc repo, không commit, dữ liệu khách hạng 1): 7 hồ sơ nhà ở NVO (.rar) +
+  `QUY CHUẨN NHÀ VIỆT ONE.docx`. Các hồ sơ ĐÃ được giải nén và đo ở `doc/design/13-ho-so-thuc-te.md` (Dương, Mạnh
+  trùng từng byte với đợt 1) — không cần giải nén lại. Quy chuẩn là quy trình / chất lượng (15 quy tắc, 10 chuẩn, công
+  thức 18 bước, «nghiệm thu trước khi che khuất», ảnh trước–trong–sau, 3 lớp kiểm soát), không có kích thước hình
+  học. Không bộ nào là nhà xưởng NVC.
+- Sự thật đã kiểm khi vẽ sơ đồ: NVS đã có tạm tính tiền thuê + bồi thường (`rentalSettlementPreview`) và biên bản thu hồi
+  ký hai bên; CHƯA có màn hình báo giá thuê (PRD CRM-11). Phân hệ Đấu thầu không có bước thiết kế; Thiết kế ghi «NVO,
+  hỗ trợ NVC khi cần». CRM chưa có đầu mối trước cơ hội, nhật ký liên hệ (CRM-01), chăm sóc khách cũ (CRM-07); đã có
+  báo cáo phễu (`bc/sales-effectiveness.tsx`) và bàn giao khách khi nghỉ việc (CRM-10).
+
 **GĐ1 còn thiếu:** bảng lịch sử bước chung `stage_transitions` (hợp đồng / gói thầu / công trình); dải tiến
 trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ PWA trên hộp thoại, `ConfirmDialog` qua portal.
 
 ### 9.3 Bước tiếp theo
 
-**Kế hoạch tổng của mọi thay đổi «làm hộ» cho từng bộ phận (Đợt 1–5, khối nền K1–K5, phụ thuộc, câu hỏi chặn,
-tiêu chí xong): `doc/KE_HOACH_LAM_HO.md` — đọc tệp đó trước khi bắt đầu đợt nào.** Các mục dưới là tóm tắt.
+**Đọc `doc/KE_HOACH_LAM_HO.md` trước khi bắt đầu đợt nào** — thứ tự, phụ thuộc, câu hỏi chặn, tiêu chí xong ở đó.
 
-1. **Haan kiểm GĐ1 + GĐ2 trên máy** (`http://localhost:5173`, mật khẩu `NhaViet2026`) bằng đúng vai: Kinh doanh
-   `kinhdoanh.nvc@…` đi cơ hội → báo giá → hợp đồng; TGĐ `tgd@…` duyệt, ký, mở công trình, xem Dashboard / Tổng quan
-   điều hành; Thi công `congtruong.nvc@…` phân công, khởi công; Chỉ huy trưởng `chihuytruong.nvc@…` nghiệm thu, bảo
-   hành; KSNB `ksnb@…` chỉ xem. Trả lời các câu hỏi ở 9.5.
+1. **Bước 0 — chốt phần đã làm.** Haan kiểm GĐ1 + GĐ2 + GĐ4 trên máy (`http://localhost:5173`, mật khẩu `NhaViet2026`)
+   bằng đúng vai: Kinh doanh `kinhdoanh.nvc@…` đi cơ hội → báo giá → hợp đồng (tab «Văn bản»); TGĐ `tgd@…` duyệt, ký, mở
+   công trình, xem Dashboard / Tổng quan điều hành, tải mẫu hợp đồng; Thi công `congtruong.nvc@…`; Chỉ huy trưởng
+   `chihuytruong.nvc@…`; KSNB `ksnb@…`. Trả lời câu hỏi 9.5; NVG gửi mẫu Word hợp đồng thật.
 2. Khi Haan đồng ý phát hành: đẩy nhánh → `npm run db:migrate:demo` → **`db:seed` trên demo** (vai trò KSNB, trang mặc
    định mới) → `npm run deploy` (API trước, web sau).
-3. Việc nhỏ còn treo: thẻ phân hệ trên Dashboard vai trò khác chưa tách theo công ty (nếu chủ dự án muốn); ô «hợp đồng
-   sắp hết hạn» (cần tham số số ngày); lối vào Tổng quan điều hành trên thanh dưới điện thoại; đánh dấu giao dịch nội
-   bộ (QĐ-6) để số tập đoàn loại được; GĐ1 còn thiếu ở trên; nạp thêm dữ liệu demo có hồ sơ quá hạn ở cả ba công ty để
-   trang điều hành có gì để xem.
-4. **CRM theo dõi khách từ lúc tiếp cận (chủ dự án yêu cầu, làm cùng đợt Kinh doanh):** CRM hiện bắt đầu từ cơ hội;
-   thiếu (a) danh sách ĐẦU MỐI trước cơ hội — nhập nhanh / Excel, lọc trùng theo số điện thoại, trạng thái Mới → Đã
-   liên hệ → Có nhu cầu (tạo cơ hội) / M1 Lưu trữ / Không phù hợp (bắt buộc lý do); (b) NHẬT KÝ CHĂM SÓC (PRD CRM-01
-   «lịch sử liên hệ») — mỗi lần gọi / Zalo / gặp một dòng + bắt buộc bước tiếp theo và ngày hẹn; (c) «việc cần làm hôm
-   nay» của Kinh doanh (hẹn đến hạn, đầu mối chưa liên hệ, khảo sát / báo giá chưa phản hồi quá N ngày, M1 tới hạn
-   nhắc lại, khách cũ tới lịch chăm sóc); (d) KHÁCH CŨ sau bàn giao (CRM-07: hài lòng, bảo trì, giới thiệu → đầu mối
-   mới); (e) phễu từ đầu mối theo nguồn / người (mở rộng `bc/sales-effectiveness.tsx`). Không thay Zalo; nối Zalo OA /
-   form quảng cáo làm sau. Căn cứ: phiếu khảo sát Kinh doanh xếp «thông tin chỉ nằm trong Zalo rồi trôi mất» là vướng
-   mắc số 1. Số ngày nhắc NVG đặt (bảng tham số, để trống = chưa nhắc).
-5. **Đợt Thi công (chủ dự án đồng ý):** NVO chia thi công thành 7 mốc theo `QUY CHUẨN NHÀ VIỆT ONE.docx` (bộ
-   «HoSoTapHop Gui Sep») — định vị / mốc / cao độ → móng → kết cấu → xây, trát, điện nước âm → chống thấm → hoàn
-   thiện → kiểm tra chất lượng. Mỗi mốc phải nghiệm thu + ảnh trước–trong–sau TRƯỚC KHI bị che khuất mới sang mốc
-   sau; hạng mục quan trọng (móng, kết cấu, điện nước âm, chống thấm, hoàn thiện) thêm phụ trách kỹ thuật kiểm (chuẩn
-   05 «3 lớp kiểm soát»). Đợt thu tiền có thể gắn vào mốc. NVC (nhà xưởng) có trình tự khác — chờ NVG xác nhận mốc.
-6. GĐ4 còn: mẫu Word THẬT của NVG (chủ dự án gửi), PDF chuẩn (cần máy chủ LibreOffice), AI gợi ý câu chữ (trả phí,
-   tắt mặc định). Sau đó GĐ3 → 3b → 5 theo kế hoạch trong `doc/MOC_CAI_TIEN_UX.md`. **Migration tiếp theo: 0172.**
+3. **Đợt 1 — Kinh doanh** (chủ dự án đã chốt: báo cáo khảo sát do Ban Giám đốc duyệt, chưa duyệt thì chặn Báo giá; hợp
+   đồng gửi duyệt kèm văn bản; AI chạy giả lập trước): xây khối nền K1–K5; CRM đầu mối + nhật ký chăm sóc + việc hôm nay
+   - khách cũ + phễu; khảo sát ghi âm → báo cáo → BGĐ; hợp đồng kèm văn bản (`contracts.approved_document_id`, chỉ lập
+     văn bản khi Nháp); quản trị AI. Loại phê duyệt mới `survey_report` (thêm enum ở migration riêng; `decide_approval`
+     chép nguyên bản 0088 rồi thêm nhánh; `stage_readiness` chép bản 0166).
+4. Rồi Đợt 2 Thi công (7 mốc NVO, nhật ký giọng nói, điểm danh tổ, biên bản tự sinh, màn hình Trưởng phòng, phiếu bảo
+   hành) → Đợt 3 Tài chính; Đợt 4 Mua hàng – Kho và Đợt 5 (Thiết kế + AI Design 4 bước, Đấu thầu, NVS, Nhân sự, Hành
+   chính) song song sau Đợt 1.
+5. Việc treo, làm xen: lịch sử bước chung `stage_transitions`; dải tiến trình gói thầu; QĐ-6 giao dịch nội bộ; ô «hợp
+   đồng sắp hết hạn»; lối vào Tổng quan điều hành trên thanh dưới điện thoại; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
+   đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email; thêm dữ liệu demo quá hạn ở cả ba công ty.
+
+**Migration tiếp theo: 0172.**
 
 ### 9.4 Quyết định đã chốt và lý do
 
-| Quyết định                                                                                                   | Lý do                                                                                                                                                          |
-| ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Kinh doanh chỉ soạn, sửa, gửi hợp đồng mình chịu trách nhiệm; Ban Giám đốc ghi ký, quyết toán, hủy sau duyệt | Chủ dự án chọn; tách người thực hiện với người phê duyệt (PRD 2.3). BGĐ có `approve` HD nhưng không có `edit`, nên trước đây lại không ghi ký được             |
-| Cấm tự ĐỒNG Ý hồ sơ của mình, đặt ở TRIGGER chứ không sửa từng hàm duyệt                                     | Một chỗ phủ mọi loại phê duyệt; không chép lại `decide_approval` ~300 dòng (bài học 0086). Tự hủy (`rejected`) vẫn được. Đơn nghỉ xét theo nhân viên trong đơn |
-| Quy tắc hợp đồng đặt ở trigger trên bảng, không ở thân hàm                                                   | Mọi đường đổi bước (kể cả `decide_approval`) đều đi qua; không chép lại hàm dài                                                                                |
-| Điều kiện «Báo giá / Đàm phán» chấp nhận báo giá CRM, gói thầu HOẶC hồ sơ thiết kế                           | NVC định giá qua gói thầu (DA), NVO qua thiết kế — đòi riêng báo giá CRM là chặn nhầm luồng nhà xưởng                                                          |
-| Không tự sang Đàm phán khi khách trả lời báo giá                                                             | `quotes.customer_response` là chữ tự do, không có cờ chấp nhận; điều kiện thay bằng «đã duyệt và đã gửi khách»                                                 |
-| Không nhảy cóc hồ sơ thiết kế chỉ ở `move_design_stage`, không ở trigger bảng                                | `record_design_review` đẩy Phương án → Hồ sơ kỹ thuật khi khách duyệt — trigger sẽ chặn nhầm thao tác thật                                                     |
-| Không tự đẩy công trình sang Nghiệm thu khi có biên bản khách hàng                                           | Biên bản có thể chỉ cho một đợt (`stage_name`)                                                                                                                 |
-| `stage_readiness` và `record_chain` là SECURITY DEFINER nhưng chỉ trả cờ / hồ sơ người gọi được xem          | Kinh doanh không xem DA vẫn phải biết đủ điều kiện và đã có hợp đồng; hồ sơ ngoài quyền bị bỏ hẳn (5.4)                                                        |
-| Gỡ hẳn chế độ tối                                                                                            | Chủ dự án yêu cầu; bảng màu thứ hai không ai duy trì là nơi sinh chữ đen trên nền đen                                                                          |
-| Hộp hướng dẫn không tự mở, chỉ chấm «có hướng dẫn mới»                                                       | Bảng tự mở che cột Trạng thái / Thời hạn ở 16 danh sách và chặn cú bấm                                                                                         |
-| Trên điện thoại, thao tác công trường THAY thanh điều hướng (kèm nút «Phân hệ»)                              | Hai thanh chồng nhau ~150px che ô nhập nhật ký; AFD 4.8 cho 4–5 mục, nút chụp ảnh luôn hiện                                                                    |
-| STT: Cloudflare Workers AI Whisper; tóm tắt: Gemini Flash trả phí, tắt mặc định                              | Chủ dự án muốn miễn phí / rẻ; Gemini miễn phí có thể huấn luyện trên dữ liệu khách nên bị loại                                                                 |
-| Mẫu hợp đồng: `.docx` có chỗ trống, điền tất định; AI chỉ gợi ý câu chữ                                      | Giữ đúng định dạng mẫu Word của NVG; dữ liệu hợp đồng là hạng 1, không gửi AI                                                                                  |
-| Rời Xác minh cần Phân loại M2–M4 + Loại công trình; khảo sát bắt buộc trước Báo giá, bỏ qua phải ghi lý do   | Chủ dự án chọn; trước đó không có chỗ nhập phân loại và khảo sát bỏ qua được không để lại dấu vết. M1 «Lưu trữ» = chưa có nhu cầu thực                         |
-| Khảo sát: đổi luồng cho CẢ CRM lẫn TK                                                                        | Chủ dự án chọn; hai nơi đang ghi thời điểm kết thúc sai theo hai kiểu khác nhau                                                                                |
-| Dashboard điều hành là trang riêng + vai trò KSNB chỉ xem                                                    | Chủ dự án chọn; Dashboard chung không cho lãnh đạo thấy ngay vấn đề toàn hệ thống                                                                              |
-| Báo giá lập TRONG bước Báo giá; vào Báo giá chỉ cần phân loại + khảo sát                                     | Đòi có báo giá để VÀO bước Báo giá là ngược thứ tự — người dùng kẹt ở Khảo sát (thấy khi chạy thử)                                                             |
-| Làm xong việc của bước thì tự sang bước kế + mở đúng tab (lưu phân loại, biên bản khảo sát, gửi báo giá…)    | Chủ dự án: «phải tự mò»; bước có điều kiện rõ thì hệ thống đi tiếp, người dùng chỉ làm việc                                                                    |
-| Mọi phê duyệt hiện «Đang chờ: ai · bao lâu» + nút «Thúc» (chỉ người gửi, có giãn cách)                       | AFD 4.7; trước đó người gửi chỉ thấy «Chờ duyệt», phải gọi điện hỏi                                                                                            |
-| Thi công KHÔNG xem Module Hợp đồng                                                                           | Chủ dự án giữ nguyên quyền; panel công trình chỉ nói «đã có hợp đồng», không lộ số / giá trị                                                                   |
-| Chỉ huy trưởng phải là người có quyền sửa TC; ô chọn chỉ liệt kê người đó                                    | Mở công trình từng tự lấy người Kinh doanh phụ trách hợp đồng làm chỉ huy (thấy khi chạy thử)                                                                  |
-| Kết thúc công trình chỉ khi hết bảo hành, không còn yêu cầu bảo hành mở                                      | Trước đó bấm được ngay hôm bàn giao — công trình biến khỏi theo dõi khi khách còn quyền gọi bảo hành                                                           |
-| KSNB: xem giá vốn / lợi nhuận / tài chính / nhật ký; không xem lương, hồ sơ cá nhân                          | Kiểm soát cần số để đối chiếu; lương / cá nhân là mặc định an toàn chờ Haan                                                                                    |
-| Lãnh đạo: MỖI CÔNG TY MỘT KHUNG đủ tình hình; không chia trang theo chủ đề, không theo bộ chọn pháp nhân     | Chủ dự án qua bốn vòng: gộp số → không biết công ty nào; tách theo chủ đề → phải gom bằng mắt, nhớ không hết; chốt «nhìn một nơi nắm một công ty»              |
-| Lãnh đạo nhìn ít mà ra vấn đề: chỉ vấn đề mới to / đứng trên, mảng ổn gom một dòng, không xếp thẻ ngang hàng | Chủ dự án: «nhìn quá nhiều thứ cùng cấp bậc nên bị loạn»                                                                                                       |
-| Mẫu hợp đồng làm TRƯỚC GĐ3; vòng đầu chỉ `.docx` (không PDF, không AI)                                       | Chủ dự án chọn; PDF đúng định dạng cần máy chủ LibreOffice, AI tốn phí — tách ra vòng sau                                                                      |
-| Văn bản hợp đồng ở bảng riêng `contract_documents`, không ở `documents`                                      | `documents` theo Mẫu A — cả pháp nhân xem được, trong khi Thi công không xem Module HD                                                                         |
-| Ô chưa có dữ liệu in dải chấm và được liệt kê trước khi lưu; mẫu có chỗ trống lạ thì không cho lưu mẫu       | Không bịa số (5.2); lỗi mẫu phải lộ lúc soạn mẫu, không lộ lúc Kinh doanh cần văn bản                                                                          |
-| Hợp đồng đã ký thì khoá văn bản; sửa câu chữ = sửa trong Word rồi lập bản mới có lý do (trước khi ký)        | Hệ thống không đọc ngược tệp Word; số liệu sửa trên hệ thống để tệp và CSDL không lệch                                                                         |
-| Lãnh đạo dùng hình thay chữ khi có thể (biểu tượng, ô màu kèm số / ✓); mức luôn có chữ hoặc nhãn đọc được    | Chủ dự án: «nhiều chữ quá»; CGD 6.8 cấm dùng màu làm cách duy nhất                                                                                             |
+| Quyết định                                                                                                     | Lý do                                                                                                                                                               |
+| -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Kinh doanh chỉ soạn, sửa, gửi hợp đồng mình chịu trách nhiệm; Ban Giám đốc ghi ký, quyết toán, hủy sau duyệt   | Chủ dự án chọn; tách người thực hiện với người phê duyệt (PRD 2.3). BGĐ có `approve` HD nhưng không có `edit`, nên trước đây lại không ghi ký được                  |
+| Cấm tự ĐỒNG Ý hồ sơ của mình, đặt ở TRIGGER chứ không sửa từng hàm duyệt                                       | Một chỗ phủ mọi loại phê duyệt; không chép lại `decide_approval` ~300 dòng (bài học 0086). Tự hủy (`rejected`) vẫn được. Đơn nghỉ xét theo nhân viên trong đơn      |
+| Quy tắc hợp đồng đặt ở trigger trên bảng, không ở thân hàm                                                     | Mọi đường đổi bước (kể cả `decide_approval`) đều đi qua; không chép lại hàm dài                                                                                     |
+| Điều kiện «Báo giá / Đàm phán» chấp nhận báo giá CRM, gói thầu HOẶC hồ sơ thiết kế                             | NVC định giá qua gói thầu (DA), NVO qua thiết kế — đòi riêng báo giá CRM là chặn nhầm luồng nhà xưởng                                                               |
+| Không tự sang Đàm phán khi khách trả lời báo giá                                                               | `quotes.customer_response` là chữ tự do, không có cờ chấp nhận; điều kiện thay bằng «đã duyệt và đã gửi khách»                                                      |
+| Không nhảy cóc hồ sơ thiết kế chỉ ở `move_design_stage`, không ở trigger bảng                                  | `record_design_review` đẩy Phương án → Hồ sơ kỹ thuật khi khách duyệt — trigger sẽ chặn nhầm thao tác thật                                                          |
+| Không tự đẩy công trình sang Nghiệm thu khi có biên bản khách hàng                                             | Biên bản có thể chỉ cho một đợt (`stage_name`)                                                                                                                      |
+| `stage_readiness` và `record_chain` là SECURITY DEFINER nhưng chỉ trả cờ / hồ sơ người gọi được xem            | Kinh doanh không xem DA vẫn phải biết đủ điều kiện và đã có hợp đồng; hồ sơ ngoài quyền bị bỏ hẳn (5.4)                                                             |
+| Gỡ hẳn chế độ tối                                                                                              | Chủ dự án yêu cầu; bảng màu thứ hai không ai duy trì là nơi sinh chữ đen trên nền đen                                                                               |
+| Hộp hướng dẫn không tự mở, chỉ chấm «có hướng dẫn mới»                                                         | Bảng tự mở che cột Trạng thái / Thời hạn ở 16 danh sách và chặn cú bấm                                                                                              |
+| Trên điện thoại, thao tác công trường THAY thanh điều hướng (kèm nút «Phân hệ»)                                | Hai thanh chồng nhau ~150px che ô nhập nhật ký; AFD 4.8 cho 4–5 mục, nút chụp ảnh luôn hiện                                                                         |
+| STT: Cloudflare Workers AI Whisper; tóm tắt: Gemini Flash trả phí, tắt mặc định                                | Chủ dự án muốn miễn phí / rẻ; Gemini miễn phí có thể huấn luyện trên dữ liệu khách nên bị loại                                                                      |
+| Mẫu hợp đồng: `.docx` có chỗ trống, điền tất định; AI chỉ gợi ý câu chữ                                        | Giữ đúng định dạng mẫu Word của NVG; dữ liệu hợp đồng là hạng 1, không gửi AI                                                                                       |
+| Rời Xác minh cần Phân loại M2–M4 + Loại công trình; khảo sát bắt buộc trước Báo giá, bỏ qua phải ghi lý do     | Chủ dự án chọn; trước đó không có chỗ nhập phân loại và khảo sát bỏ qua được không để lại dấu vết. M1 «Lưu trữ» = chưa có nhu cầu thực                              |
+| Khảo sát: đổi luồng cho CẢ CRM lẫn TK                                                                          | Chủ dự án chọn; hai nơi đang ghi thời điểm kết thúc sai theo hai kiểu khác nhau                                                                                     |
+| Dashboard điều hành là trang riêng + vai trò KSNB chỉ xem                                                      | Chủ dự án chọn; Dashboard chung không cho lãnh đạo thấy ngay vấn đề toàn hệ thống                                                                                   |
+| Báo giá lập TRONG bước Báo giá; vào Báo giá chỉ cần phân loại + khảo sát                                       | Đòi có báo giá để VÀO bước Báo giá là ngược thứ tự — người dùng kẹt ở Khảo sát (thấy khi chạy thử)                                                                  |
+| Làm xong việc của bước thì tự sang bước kế + mở đúng tab (lưu phân loại, biên bản khảo sát, gửi báo giá…)      | Chủ dự án: «phải tự mò»; bước có điều kiện rõ thì hệ thống đi tiếp, người dùng chỉ làm việc                                                                         |
+| Mọi phê duyệt hiện «Đang chờ: ai · bao lâu» + nút «Thúc» (chỉ người gửi, có giãn cách)                         | AFD 4.7; trước đó người gửi chỉ thấy «Chờ duyệt», phải gọi điện hỏi                                                                                                 |
+| Thi công KHÔNG xem Module Hợp đồng                                                                             | Chủ dự án giữ nguyên quyền; panel công trình chỉ nói «đã có hợp đồng», không lộ số / giá trị                                                                        |
+| Chỉ huy trưởng phải là người có quyền sửa TC; ô chọn chỉ liệt kê người đó                                      | Mở công trình từng tự lấy người Kinh doanh phụ trách hợp đồng làm chỉ huy (thấy khi chạy thử)                                                                       |
+| Kết thúc công trình chỉ khi hết bảo hành, không còn yêu cầu bảo hành mở                                        | Trước đó bấm được ngay hôm bàn giao — công trình biến khỏi theo dõi khi khách còn quyền gọi bảo hành                                                                |
+| KSNB: xem giá vốn / lợi nhuận / tài chính / nhật ký; không xem lương, hồ sơ cá nhân                            | Kiểm soát cần số để đối chiếu; lương / cá nhân là mặc định an toàn chờ Haan                                                                                         |
+| Lãnh đạo: MỖI CÔNG TY MỘT KHUNG đủ tình hình; không chia trang theo chủ đề, không theo bộ chọn pháp nhân       | Chủ dự án qua bốn vòng: gộp số → không biết công ty nào; tách theo chủ đề → phải gom bằng mắt, nhớ không hết; chốt «nhìn một nơi nắm một công ty»                   |
+| Lãnh đạo nhìn ít mà ra vấn đề: chỉ vấn đề mới to / đứng trên, mảng ổn gom một dòng, không xếp thẻ ngang hàng   | Chủ dự án: «nhìn quá nhiều thứ cùng cấp bậc nên bị loạn»                                                                                                            |
+| Mẫu hợp đồng làm TRƯỚC GĐ3; vòng đầu chỉ `.docx` (không PDF, không AI)                                         | Chủ dự án chọn; PDF đúng định dạng cần máy chủ LibreOffice, AI tốn phí — tách ra vòng sau                                                                           |
+| Văn bản hợp đồng ở bảng riêng `contract_documents`, không ở `documents`                                        | `documents` theo Mẫu A — cả pháp nhân xem được, trong khi Thi công không xem Module HD                                                                              |
+| Ô chưa có dữ liệu in dải chấm và được liệt kê trước khi lưu; mẫu có chỗ trống lạ thì không cho lưu mẫu         | Không bịa số (5.2); lỗi mẫu phải lộ lúc soạn mẫu, không lộ lúc Kinh doanh cần văn bản                                                                               |
+| Hợp đồng đã ký thì khoá văn bản; sửa câu chữ = sửa trong Word rồi lập bản mới có lý do (trước khi ký)          | Hệ thống không đọc ngược tệp Word; số liệu sửa trên hệ thống để tệp và CSDL không lệch                                                                              |
+| Lãnh đạo dùng hình thay chữ khi có thể (biểu tượng, ô màu kèm số / ✓); mức luôn có chữ hoặc nhãn đọc được      | Chủ dự án: «nhiều chữ quá»; CGD 6.8 cấm dùng màu làm cách duy nhất                                                                                                  |
+| Hướng tiếp theo: hệ thống LÀM HỘ từng bộ phận — máy làm nháp, người kiểm và gửi, sếp duyệt / trả về kèm ý kiến | Chủ dự án: hệ thống đang chủ yếu ghi nhận cho TGĐ; phòng ban vẫn gõ lại, gọi điện, Zalo. Máy chỉ nháp (PRD 2.3)                                                     |
+| Thứ tự: Bước 0 → Kinh doanh → Thi công → Tài chính; Mua hàng – Kho và bộ phận còn lại song song sau Đợt 1      | Đợt Kinh doanh xây khối nền dùng chung (ghi âm → nháp AI, hộp duyệt xem nội dung, văn bản Word, việc hôm nay); Tài chính lấy dữ liệu từ mốc / biên bản của Thi công |
+| Báo cáo khảo sát do Ban Giám đốc duyệt (không thêm vai trò Trưởng phòng KD); chưa duyệt thì chặn Báo giá       | Chủ dự án chọn                                                                                                                                                      |
+| «Gửi hợp đồng trong hệ thống» = gửi phê duyệt kèm văn bản Word; gửi khách / email làm sau                      | Chủ dự án chọn; chưa có dịch vụ email                                                                                                                               |
+| AI làm bằng giả lập trước; gọi thật chỉ khi duyệt số lượt + chi phí                                            | Chủ dự án chọn; CLAUDE.md 6.4                                                                                                                                       |
+| CRM bổ sung đầu mối + nhật ký chăm sóc (bắt buộc bước tiếp + ngày hẹn) + khách cũ; KHÔNG thay Zalo             | Chủ dự án chỉ ra; phiếu khảo sát Kinh doanh: «thông tin chỉ nằm trong Zalo rồi trôi mất» là vướng mắc số 1; PRD CRM-01, CRM-07 chưa có                              |
+| Thi công NVO chia 7 mốc, nghiệm thu + ảnh trước khi che khuất; NVC chờ NVG xác nhận mốc riêng                  | Quy chuẩn Nhà Việt One (18 bước, chuẩn 05, 06); một trạng thái «đang thi công» không chặn được đổ bê tông khi chưa nghiệm thu thép                                  |
+| Sơ đồ ba pipeline đặt cạnh nhau, cùng hàng = cùng giai đoạn; bản «sau» cùng bố cục bản «hiện tại»              | Chủ dự án: tách 3 công ty, nhìn được toàn bộ pipeline, so được từng ô                                                                                               |
+| NVC: ghi bước «phương án kỹ thuật, biện pháp thi công»; việc tự thiết kế để câu hỏi mở                         | Hai nguồn trong hồ sơ khảo sát nói khác nhau (Ban Giám đốc: có thiết kế; chính phòng Dự án: theo bản vẽ chủ đầu tư) — không tự chọn                                 |
 
 ### 9.5 Câu hỏi chờ Haan (đang chạy theo mặc định trong ngoặc)
 
@@ -815,6 +843,10 @@ tiêu chí xong): `doc/KE_HOACH_LAM_HO.md` — đọc tệp đó trước khi b�
     nhưng phiếu khảo sát của chính phòng chỉ ghi «phương án kỹ thuật sơ bộ, biện pháp thi công» và làm theo bản vẽ / BOQ
     của chủ đầu tư. (Sơ đồ đang ghi: có bước phương án kỹ thuật; thiết kế chỉ khi gói thiết kế – thi công — chờ xác nhận)
 15. Thi công nhà xưởng NVC chia mốc nghiệm thu thế nào? (chưa có; 7 mốc hiện chỉ áp cho NVO)
+16. CRM: số ngày nhắc gọi lại / chưa phản hồi / liên hệ lại khách M1 / chăm sóc khách cũ? Ai nhập data Marketing, có tự
+    chia đầu mối cho Kinh doanh không? (để trống = chưa nhắc; người nhập là người phụ trách)
+17. Ngưỡng cảnh báo cho Kiểm soát nội bộ (duyệt sát hạn mức bao nhiêu %), mức tồn tối thiểu từng vật tư, bảng giá bồi
+    thường giàn giáo chính thức? (để trống)
 
 ### 9.6 Ghi chú máy phát triển Windows
 
