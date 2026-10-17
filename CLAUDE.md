@@ -861,10 +861,9 @@ trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ P
 20. Bộ nhận diện: ĐÃ QUYẾT (chủ dự án giao Claude Code, 17/10/2026) — dùng logo PNG + mã đo trên ảnh, giữ Be Vietnam Pro, nền
     xám trung tính, Module Thiết kế chỉ đổi màu nhấn; chi tiết và lý do ở mục 1b kế hoạch. NVG gửi vector / mã chuẩn thì thay.
 21. Pháp nhân (lấy từ website 17/10/2026, đã điền vào seed — chỉ điền ô trống): mã số thuế NVO 1001222166 + địa chỉ đăng ký;
-    địa chỉ NVS. Chờ xác nhận trước khi in lên hợp đồng thật. Còn thiếu: tên đầy đủ + mã số thuế NVC (site gọi «Nhà Việt
-    Construction», app gọi «Nhà Việt Cons»); ảnh trên nhavietsteel.vn ghi «Công ty TNHH TM & SX Bảo Liên» là gì; người đại
-    diện pháp luật NVS (site ghi Giám đốc Lương Vân, seed ghi Bùi Văn Thi); logo đối tác trên nhavietgroup.vn (Cotecons, Hòa
-    Bình, CBRE…) có dùng làm kinh nghiệm trong hồ sơ thầu được không.
+    địa chỉ NVS. ĐÃ CHỐT: người đại diện NVS là **Lương Vân**; **được dùng logo đối tác** trên nhavietgroup.vn (Cotecons, Hòa
+    Bình, CBRE…) làm kinh nghiệm / đối tác trong hồ sơ thầu. Còn thiếu: tên đầy đủ + mã số thuế NVC (site gọi «Nhà Việt
+    Construction», app gọi «Nhà Việt Cons»); ảnh trên nhavietsteel.vn ghi «Công ty TNHH TM & SX Bảo Liên» là gì.
 
 ### 9.6 Ghi chú máy phát triển Windows
 

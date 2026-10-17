@@ -89,6 +89,11 @@ async function main() {
             // Chỉ điền khi đang trống: Quản trị có thể đã sửa trên giao diện (mẫu hợp đồng, 0171).
             taxCode: sqlOp`coalesce(${companies.taxCode}, excluded.tax_code)`,
             address: sqlOp`coalesce(${companies.address}, excluded.address)`,
+            // «Bùi Văn Thi» từng là giá trị GIẢ ĐỊNH cho cả ba pháp nhân — chỉ thay khi ô còn trống hoặc còn
+            // đúng giá trị giả định đó; người Quản trị đã sửa trên giao diện thì giữ.
+            legalRepresentative: sqlOp`case when ${companies.legalRepresentative} is null
+              or ${companies.legalRepresentative} = 'Bùi Văn Thi'
+              then excluded.legal_representative else ${companies.legalRepresentative} end`,
             isTransactional: c.isTransactional,
             displayOrder: c.displayOrder,
             updatedAt: sqlOp`now()`,

@@ -213,7 +213,7 @@ Thứ tự làm — **kho hồ sơ năng lực trước**, vì mọi việc sau 
 
 | Việc | Nội dung | Phụ thuộc |
 | --- | --- | --- |
-| 5C-1. Kho hồ sơ năng lực | Pháp lý (đăng ký kinh doanh, chứng chỉ năng lực), báo cáo tài chính theo năm, nhân sự chủ chốt + chứng chỉ hành nghề (đọc từ Nhân sự, không chép), thiết bị + kiểm định, kinh nghiệm (hợp đồng đã ký + thư viện mẫu 1H). Mỗi giấy tờ có ngày hết hạn; gắn vào gói bằng một bấm; báo đỏ nếu hết hạn trước ngày nộp | 1H, NS |
+| 5C-1. Kho hồ sơ năng lực | Pháp lý (đăng ký kinh doanh, chứng chỉ năng lực), báo cáo tài chính theo năm, nhân sự chủ chốt + chứng chỉ hành nghề (đọc từ Nhân sự, không chép), thiết bị + kiểm định, kinh nghiệm (hợp đồng đã ký + thư viện mẫu 1H) + logo đối tác trên nhavietgroup.vn (Cotecons, Hòa Bình, CBRE… — chủ dự án cho dùng 17/10/2026). Mỗi giấy tờ có ngày hết hạn; gắn vào gói bằng một bấm; báo đỏ nếu hết hạn trước ngày nộp | 1H, NS |
 | 5C-2. Quyết định tham gia | Bàn tóm tắt gói (quy mô, hạn, năng lực đáp ứng, gói đang chạy, dòng tiền); Ban Giám đốc bấm Tham gia / Bỏ qua + lý do | K2 |
 | 5C-3. Danh mục mẫu theo loại gói | Xây mới / cải tạo / bảo trì…: tạo gói là có sẵn danh mục; mỗi mục xếp loại **máy sinh / gắn từ kho / người viết** | 5C-1 |
 | 5C-4. Giao phần việc nội bộ | Cung ứng lấy báo giá, Thi công góp ý biện pháp, Kế toán xem bảo lãnh và dòng tiền — người, hạn, nút «Thúc» | K4, `nudge_approval` / Request Tracker |

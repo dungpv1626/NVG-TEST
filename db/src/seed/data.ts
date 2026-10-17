@@ -47,7 +47,8 @@ export const COMPANY_SEED: CompanySeed[] = [
     // nhavietsteel.vn (phần liên hệ). ⚠️ Một ảnh trên site ghi tên «Bảo Liên» — chờ NVG xác nhận.
     address:
       'Đường vành đai phía nam đi cầu Vũ Đông, tổ dân phố Tam Lạc 2, phường Trần Lãm, tỉnh Hưng Yên',
-    legalRepresentative: 'Bùi Văn Thi',
+    // Chủ dự án xác nhận 17/10/2026 (website ghi Giám đốc Lương Vân).
+    legalRepresentative: 'Lương Vân',
     isTransactional: true,
     displayOrder: 2,
   },
