@@ -13,7 +13,13 @@
 
 import { describe, expect, it } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { ACCOUNTS, hasCredentials, signInAs, TEST_PREFIX } from './helpers';
+import {
+  ACCOUNTS,
+  hasCredentials,
+  signInAs,
+  TEST_PREFIX,
+  markSurveyReportApproved,
+} from './helpers';
 
 const describeDb = hasCredentials ? describe : describe.skip;
 
@@ -104,6 +110,8 @@ describeDb(
           })
         ).error,
       );
+      // Báo cáo khảo sát được Ban Giám đốc duyệt (0175) — kiểm riêng ở survey-report.test.ts.
+      await markSurveyReportApproved(opportunityId);
 
       // --- Bước 2. Đấu thầu lập gói thầu, LIÊN KẾT về cơ hội (DA-01) ----------------------
       const { data: project, error: projectError } = await dauThau

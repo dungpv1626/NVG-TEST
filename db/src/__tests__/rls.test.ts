@@ -21,6 +21,7 @@ import {
   PROTECTED_TABLES,
   signInAs,
   TEST_PREFIX,
+  markSurveyReportApproved,
 } from './helpers';
 
 // Không có thông tin kết nối thì bỏ qua thay vì làm hỏng cả bộ test (ví dụ trên CI chưa cấu hình).
@@ -2960,6 +2961,7 @@ describeDb('HD — hợp đồng, điều khoản và phát sinh', () => {
       needs: 'Nhà xưởng 900 m²',
     });
     if (surveyError) throw new Error(surveyError.message);
+    await markSurveyReportApproved(id);
     await step('bao_gia');
     return { id, companyId: company!.id };
   }

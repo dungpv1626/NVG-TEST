@@ -1219,6 +1219,20 @@
       "when": 1791180000000,
       "tag": "0173_viec_hom_nay_cham_soc",
       "breakpoints": true
+    },
+    {
+      "idx": 174,
+      "version": "7",
+      "when": 1791190000000,
+      "tag": "0174_loai_duyet_bao_cao_khao_sat",
+      "breakpoints": true
+    },
+    {
+      "idx": 175,
+      "version": "7",
+      "when": 1791200000000,
+      "tag": "0175_bao_cao_khao_sat",
+      "breakpoints": true
     }
   ]
 }

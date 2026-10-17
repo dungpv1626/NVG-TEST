@@ -208,6 +208,7 @@ export const APPROVAL_SUBJECTS = [
   // bằng `ALTER TYPE ... ADD VALUE`, chèn giữa sẽ làm lệch thứ tự giữa các môi trường.
   'quote_price',
   'recruitment_position',
+  'survey_report',
 ] as const;
 
 export type ApprovalSubject = (typeof APPROVAL_SUBJECTS)[number];
@@ -224,6 +225,7 @@ export const APPROVAL_SUBJECT_LABELS: Readonly<Record<ApprovalSubject, string>> 
   leave_request: 'Nghỉ phép',
   quote_price: 'Báo giá gửi khách hàng',
   recruitment_position: 'Yêu cầu tuyển dụng',
+  survey_report: 'Báo cáo khảo sát',
 };
 
 export interface ApprovalLimitSeed {
@@ -302,4 +304,9 @@ export const DEFAULT_APPROVAL_LIMITS: readonly ApprovalLimitSeed[] = [
   // nên nếu chính HCNS là người gửi thì HCNS duyệt được. Muốn Tổng Giám đốc giữ bước cuối thì
   // thêm một dòng bước 2 trong Quản trị hệ thống — KHÔNG sửa file này.
   { role: 'NS', subject: 'recruitment_position', maxAmount: null, step: 1 },
+
+  // Báo cáo khảo sát (Đợt 1 — 1D, migration 0175) — không gắn giá trị tiền.
+  // ĐÃ CHỐT (chủ dự án, 17/10/2026): Ban Giám đốc duyệt; chưa duyệt thì chặn Báo giá.
+  { role: 'BGD', subject: 'survey_report', maxAmount: null, step: 1 },
+  { role: 'TGD', subject: 'survey_report', maxAmount: null, step: 1 },
 ] as const;

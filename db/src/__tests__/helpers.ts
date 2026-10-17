@@ -108,6 +108,23 @@ export const PROTECTED_TABLES = [
 /** Mã lỗi Postgres cho "insufficient_privilege" — RLS chặn thành công. */
 export const PG_INSUFFICIENT_PRIVILEGE = '42501';
 
+/**
+ * Đánh dấu báo cáo khảo sát của một cơ hội là ĐÃ DUYỆT, chạy thẳng trên CSDL (không phiên đăng
+ * nhập). Từ 0175, sang Báo giá cần báo cáo khảo sát được Ban Giám đốc duyệt; phép thử của các
+ * luồng phía sau không kiểm lại bước duyệt đó — `survey-report.test.ts` kiểm riêng.
+ */
+export async function markSurveyReportApproved(opportunityId: string): Promise<void> {
+  const { createConnection } = await import('../client');
+  const { sql } = createConnection();
+  try {
+    await sql`
+      UPDATE site_surveys SET report_status = 'da_duyet', report_decided_at = now()
+      WHERE opportunity_id = ${opportunityId} AND deleted_at IS NULL AND surveyed_at IS NOT NULL`;
+  } finally {
+    await sql.end();
+  }
+}
+
 /** Tiền tố đặt cho mọi bản ghi do test tạo ra, để dọn sạch được sau khi chạy. */
 export const TEST_PREFIX = '[TEST]';
 

@@ -7,9 +7,12 @@
  */
 
 import {
+  bigint,
   boolean,
   date,
   index,
+  integer,
+  jsonb,
   pgTable,
   text,
   timestamp,
@@ -23,6 +26,7 @@ import {
   complaintSeverityEnum,
   contactChannelEnum,
   leadStatusEnum,
+  surveyReportStatusEnum,
   opportunityClassificationEnum,
   opportunityStageEnum,
   statusGroupEnum,
@@ -204,10 +208,46 @@ export const siteSurveys = pgTable(
     commercialTerms: text('commercial_terms'),
     notes: text('notes'),
 
+    /** Máy ghi khi bấm Bắt đầu / Kết thúc khảo sát (0175) — không gõ tay. */
+    startedAt: timestamp('started_at', { withTimezone: true }),
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
+    /** Báo cáo khảo sát — Ban Giám đốc duyệt (0175). Chỉ hàm hệ thống đổi. */
+    reportStatus: surveyReportStatusEnum('report_status').notNull().default('nhap'),
+    reportFeedback: text('report_feedback'),
+    reportSubmittedAt: timestamp('report_submitted_at', { withTimezone: true }),
+    reportDecidedAt: timestamp('report_decided_at', { withTimezone: true }),
+    reportApprovalId: uuid('report_approval_id'),
+    /** Nháp máy viết từ ghi âm — người khảo sát sửa rồi mới lưu vào sáu ô thật. */
+    aiDraft: jsonb('ai_draft'),
+    aiDraftAt: timestamp('ai_draft_at', { withTimezone: true }),
+
     ...auditColumns(),
     ...softDelete(),
   },
   (t) => [index('site_surveys_opportunity_idx').on(t.opportunityId)],
+);
+
+/** Đoạn ghi âm buổi khảo sát + bản chép chữ (0175). Tệp ở kho `survey-audio/{survey_id}/…`. */
+export const siteSurveyRecordings = pgTable(
+  'site_survey_recordings',
+  {
+    id: primaryId(),
+    surveyId: uuid('survey_id')
+      .notNull()
+      .references(() => siteSurveys.id, { onDelete: 'cascade' }),
+    ...companyScoped(),
+    storagePath: text('storage_path').notNull(),
+    mimeType: varchar('mime_type', { length: 64 }).notNull(),
+    durationSeconds: integer('duration_seconds'),
+    sizeBytes: bigint('size_bytes', { mode: 'number' }),
+    transcript: text('transcript'),
+    /** chua · xong · loi */
+    transcriptStatus: varchar('transcript_status', { length: 16 }).notNull().default('chua'),
+    transcriptNote: text('transcript_note'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+  },
+  (t) => [index('site_survey_recordings_survey_idx').on(t.surveyId, t.createdAt)],
 );
 
 /**

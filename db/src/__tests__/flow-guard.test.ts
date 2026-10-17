@@ -10,7 +10,13 @@
  */
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { ACCOUNTS, hasCredentials, signInAs, TEST_PREFIX } from './helpers';
+import {
+  ACCOUNTS,
+  hasCredentials,
+  signInAs,
+  TEST_PREFIX,
+  markSurveyReportApproved,
+} from './helpers';
 
 const describeDb = hasCredentials ? describe : describe.skip;
 
@@ -79,6 +85,8 @@ describeDb('Luồng cơ hội — đi đúng thứ tự, có điều kiện (015
       needs: 'Khảo sát hiện trạng',
     });
     if (error) throw new Error(error.message);
+    // Từ 0175: sang Báo giá cần báo cáo khảo sát được Ban Giám đốc duyệt.
+    await markSurveyReportApproved(id);
   }
 
   async function readiness(id: string, stage: string): Promise<Readiness[]> {
@@ -278,6 +286,10 @@ describeDb('Việc của từng bước cơ hội — phân loại, khảo sát 
       surveyed_at: new Date().toISOString(),
       needs: 'Nhà phố 4 tầng',
     });
+    // Đã khảo sát nhưng báo cáo chưa được Ban Giám đốc duyệt — vẫn chưa sang Báo giá (0175).
+    const { error: notApproved } = await move(id, 'bao_gia');
+    expect(notApproved?.message).toContain('Ban Giám đốc');
+    await markSurveyReportApproved(id);
     const { error } = await move(id, 'bao_gia');
     expect(error).toBeNull();
   });
@@ -360,6 +372,7 @@ describeDb('Báo giá → Đàm phán: biết chờ ai, giá tới tay khách th
       surveyed_at: new Date().toISOString(),
       needs: 'Nhà phố 4 tầng',
     });
+    await markSurveyReportApproved(id);
     expect((await move('bao_gia')).error).toBeNull();
 
     const { data: quote } = await kd
@@ -529,6 +542,7 @@ describeDb(
         surveyed_at: new Date().toISOString(),
         needs: 'Nhà xưởng 1.200 m²',
       });
+      await markSurveyReportApproved(oppId);
       await kd.rpc('move_opportunity_stage', { p_opportunity_id: oppId, p_to_stage: 'bao_gia' });
       const { data: quote } = await kd
         .from('quotes')

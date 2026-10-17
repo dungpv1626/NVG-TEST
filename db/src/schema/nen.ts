@@ -14,6 +14,7 @@ import {
   index,
   integer,
   jsonb,
+  numeric,
   pgEnum,
   pgTable,
   text,
@@ -27,6 +28,7 @@ import { auditColumns } from './_audit';
 import { primaryId, softDelete } from './_helpers';
 import { optionalCompanyScoped } from './_scoped';
 import { constructionSites } from './tc';
+import { companies } from './companies';
 import { roles } from './roles';
 import { users } from './users';
 
@@ -186,3 +188,32 @@ export const userSiteAssignments = pgTable(
 export type SystemParameter = typeof systemParameters.$inferSelect;
 export type SlaDefinition = typeof slaDefinitions.$inferSelect;
 export type UserSiteAssignment = typeof userSiteAssignments.$inferSelect;
+
+/**
+ * Nhật ký gọi AI của các bộ phận (0175, khối nền K1 / K5) — giả lập hay thật, số lượng, chi phí.
+ * Chỉ Worker ghi bằng khoá service; TGĐ / CFO / Quản trị xem. AI Design có bảng riêng.
+ */
+export const aiCalls = pgTable(
+  'ai_calls',
+  {
+    id: primaryId(),
+    companyId: uuid('company_id').references(() => companies.id, { onDelete: 'set null' }),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+    feature: varchar('feature', { length: 32 }).notNull(),
+    provider: varchar('provider', { length: 32 }).notNull(),
+    model: varchar('model', { length: 96 }),
+    isFake: boolean('is_fake').notNull().default(false),
+    inputUnits: integer('input_units'),
+    outputUnits: integer('output_units'),
+    costUsd: numeric('cost_usd', { precision: 12, scale: 6 }),
+    ok: boolean('ok').notNull(),
+    error: text('error'),
+    entityType: varchar('entity_type', { length: 64 }),
+    entityId: uuid('entity_id'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('ai_calls_created_idx').on(t.createdAt),
+    index('ai_calls_feature_idx').on(t.feature, t.createdAt),
+  ],
+);

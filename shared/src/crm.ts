@@ -254,3 +254,30 @@ export function complaintDisplayStatus(
   const remaining = daysUntil(responseDueDate, now);
   return remaining !== null && remaining < 0 ? 'overdue' : status;
 }
+
+/**
+ * Trạng thái báo cáo khảo sát (Đợt 1 — 1D, migration 0175) — khớp enum `survey_report_status`.
+ * Ban Giám đốc duyệt; chưa duyệt thì chưa sang Báo giá.
+ */
+export const SURVEY_REPORT_STATUSES = ['nhap', 'cho_duyet', 'da_duyet', 'tra_ve'] as const;
+export type SurveyReportStatus = (typeof SURVEY_REPORT_STATUSES)[number];
+
+export const SURVEY_REPORT_STATUS_META: Readonly<
+  Record<SurveyReportStatus, { label: string; statusGroup: StatusGroup }>
+> = {
+  nhap: { label: 'Báo cáo nháp', statusGroup: 'draft' },
+  cho_duyet: { label: 'Chờ Ban Giám đốc duyệt', statusGroup: 'pending_approval' },
+  da_duyet: { label: 'Báo cáo đã duyệt', statusGroup: 'completed' },
+  tra_ve: { label: 'Bị trả về', statusGroup: 'disputed' },
+};
+
+/** Sáu ô của báo cáo khảo sát (CRM-03) — máy viết nháp đúng các ô này từ bản ghi âm. */
+export const SURVEY_REPORT_FIELDS = [
+  { key: 'needs', label: 'Nhu cầu của khách' },
+  { key: 'decision_maker', label: 'Người quyết định' },
+  { key: 'budget_note', label: 'Ngân sách' },
+  { key: 'schedule_note', label: 'Tiến độ mong muốn' },
+  { key: 'commercial_terms', label: 'Điều kiện thương mại' },
+  { key: 'notes', label: 'Hiện trạng và ghi chú khác' },
+] as const;
+export type SurveyReportFieldKey = (typeof SURVEY_REPORT_FIELDS)[number]['key'];

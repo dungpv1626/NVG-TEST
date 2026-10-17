@@ -10,6 +10,7 @@ import { pgEnum } from 'drizzle-orm/pg-core';
 import {
   CONTACT_CHANNELS,
   LEAD_STATUSES,
+  SURVEY_REPORT_STATUSES,
   ACCOUNTING_PERIOD_STATUSES,
   ASSET_CONDITIONS,
   ASSET_EVENT_TYPES,
@@ -133,6 +134,9 @@ export const leadStatusEnum = pgEnum('lead_status', LEAD_STATUSES);
 
 /** Kênh liên hệ của nhật ký chăm sóc (Đợt 1 — 1B, migration 0172). */
 export const contactChannelEnum = pgEnum('contact_channel', CONTACT_CHANNELS);
+
+/** Trạng thái báo cáo khảo sát (Đợt 1 — 1D, migration 0175). */
+export const surveyReportStatusEnum = pgEnum('survey_report_status', SURVEY_REPORT_STATUSES);
 
 /** Bước của một gói thầu — PRD DA-01, Webapp Flow 3.2. */
 export const biddingStageEnum = pgEnum('bidding_stage', BIDDING_STAGES);
