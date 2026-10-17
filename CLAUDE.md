@@ -858,8 +858,8 @@ trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ P
     của link (không giới hạn).
 19. Đấu thầu (5C): 1–2 bộ hồ sơ dự thầu NVC đã nộp + hồ sơ mời thầu; mẫu đơn dự thầu / thư chào giá; loại gói và giấy tờ
     từng loại; ai theo dõi bảo lãnh dự thầu; có ghi đối thủ không. (chưa có — chặn 5C-3, 5C-6, 5C-9)
-20. Bộ nhận diện: logo vector (SVG / AI / PDF), mã màu và phông chính thức; Module Thiết kế có đổi theo không; nền trung tính
-    giữ ám xanh hay chuyển xám. (dùng mã đo trên ảnh PNG; giữ Be Vietnam Pro; chưa đổi `/tk/*`)
+20. Bộ nhận diện: ĐÃ QUYẾT (chủ dự án giao Claude Code, 17/10/2026) — dùng logo PNG + mã đo trên ảnh, giữ Be Vietnam Pro, nền
+    xám trung tính, Module Thiết kế chỉ đổi màu nhấn; chi tiết và lý do ở mục 1b kế hoạch. NVG gửi vector / mã chuẩn thì thay.
 
 ### 9.6 Ghi chú máy phát triển Windows
 

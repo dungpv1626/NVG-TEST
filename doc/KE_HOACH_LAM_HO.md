@@ -52,14 +52,25 @@ Việc cần làm:
 3. **Giữ nguyên sáu màu trạng thái** (DESIGN_SYSTEM 2.1 — hàng rào cứng). Xanh lá logo gần «Hoàn thành», xanh dương gần
    «Đang xử lý», cam gần «Chờ duyệt»: thêm phép thử canh màu thương hiệu không được trùng / quá gần màu trạng thái, và
    `StatusLozenge` vẫn cấm token brand.
-4. Nền trung tính hiện ám xanh lá nhạt — giữ hay chuyển xám trung tính cho hợp ba màu: quyết khi xem ảnh chụp.
-5. Bảng màu riêng Module Thiết kế (`--color-tk-*`, `/tk/*`) — đổi theo hay giữ: hỏi chủ dự án.
+4. Nền trung tính: **chuyển sang xám trung tính** (bỏ ám xanh lá) — xem bảng quyết định dưới.
+5. Module Thiết kế (`--color-tk-*`): **chỉ đổi màu nhấn chính sang xanh lá NVG**, giữ nguyên phần còn lại.
 6. Cập nhật `DESIGN_SYSTEM.md` mục 1, 2.4, 2.5; trang trưng bày `/nen/giao-dien`; CLAUDE.md 4.3.
 7. Kiểm: phép thử tương phản (mọi cặp chữ / nền ≥ 4.5:1, viền ô nhập ≥ 3:1), `design-rules.test.ts`; chụp trước / sau
    các màn chính bằng đúng vai, 1440 px + 390 px, đưa chủ dự án duyệt trước khi phát hành.
 
-**Cần từ NVG:** logo dạng vector (SVG / AI / PDF) và mã màu chính thức (bộ nhận diện thương hiệu nếu có) — mã ở bảng trên
-chỉ đo trên ảnh; phông chữ chính thức (nếu không có, giữ Be Vietnam Pro).
+**Quyết định (chủ dự án giao Claude Code quyết, 17/10/2026):**
+
+| Điểm | Chọn | Lý do |
+| --- | --- | --- |
+| Logo | Dùng ảnh PNG 2048 px đã có (cắt, thu nhỏ cho thanh bên / đăng nhập; favicon và biểu tượng PWA dựng từ ba ô màu). Không tự vẽ lại chữ trong logo | Ảnh đủ nét cho mọi cỡ trên màn hình; vẽ lại chữ dễ lệch nhận diện. NVG gửi bản vector thì thay tệp, không đổi mã |
+| Mã màu | Dùng mã đo trên ảnh làm mã chính thức | Đo tại vùng phẳng của từng ô, sai lệch không nhìn thấy được; NVG có mã chuẩn thì sửa một chỗ (token) |
+| Màu dẫn xuất (điểm xuất phát, chốt khi chạy phép thử tương phản) | brand `#057B47` · hover `#04613A` · subtle `#E3F2EA` · forest (chữ nav đang chọn, khối logo) `#0A3F28` · nhấn cam `#F39122` (chỉ với chữ `#1C1C1A`) · xanh dương `#1C6AB2` | Giữ đúng sắc logo; hover / forest đậm dần để chữ trắng và chữ trên nền nhạt đạt ≥ 4.5:1 |
+| Phông | Giữ **Be Vietnam Pro** | Không xin được phông gốc; Be Vietnam Pro là sans hình học gần chữ «NHÀ VIỆT GROUP», hỗ trợ đủ dấu tiếng Việt, đang dùng sẵn |
+| Nền trung tính | **Xám trung tính** (nền trang ~`#F5F6F7`, viền ~`#E4E6E9`, viền ô nhập giữ ≥ 3:1) | Ba màu logo (xanh lá, cam, xanh dương) đứng cạnh nền ám xanh lá thì cam và xanh dương bị bẩn; nền xám để logo và màu trạng thái đọc rõ |
+| Module Thiết kế | Chỉ đổi màu nhấn chính sang xanh lá NVG | Bảng 71 token của «AI Design» đã được chỉnh tương phản riêng; đổi toàn bộ là rủi ro lớn cho màn hình đang chạy ổn, đổi màu nhấn là đủ nhất quán thương hiệu |
+| Biểu đồ | Xanh lá → xanh lá nhạt → xanh dương → xám; cam chỉ cho một chuỗi cần nhấn | Không dùng cam / đỏ cho chuỗi thường để khỏi đọc như cảnh báo |
+
+Nếu NVG sau này gửi logo vector, mã màu hay phông chính thức thì thay vào token / tệp, không phải làm lại.
 
 ## 2. Khối nền dùng chung — xây trong Đợt 1, các đợt sau dùng lại
 
