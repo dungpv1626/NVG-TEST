@@ -740,7 +740,12 @@ trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ P
    sắp hết hạn» (cần tham số số ngày); lối vào Tổng quan điều hành trên thanh dưới điện thoại; đánh dấu giao dịch nội
    bộ (QĐ-6) để số tập đoàn loại được; GĐ1 còn thiếu ở trên; nạp thêm dữ liệu demo có hồ sơ quá hạn ở cả ba công ty để
    trang điều hành có gì để xem.
-4. GĐ4 còn: mẫu Word THẬT của NVG (chủ dự án gửi), PDF chuẩn (cần máy chủ LibreOffice), AI gợi ý câu chữ (trả phí,
+4. **Đợt Thi công (chủ dự án đồng ý):** NVO chia thi công thành 7 mốc theo `QUY CHUẨN NHÀ VIỆT ONE.docx` (bộ
+   «HoSoTapHop Gui Sep») — định vị / mốc / cao độ → móng → kết cấu → xây, trát, điện nước âm → chống thấm → hoàn
+   thiện → kiểm tra chất lượng. Mỗi mốc phải nghiệm thu + ảnh trước–trong–sau TRƯỚC KHI bị che khuất mới sang mốc
+   sau; hạng mục quan trọng (móng, kết cấu, điện nước âm, chống thấm, hoàn thiện) thêm phụ trách kỹ thuật kiểm (chuẩn
+   05 «3 lớp kiểm soát»). Đợt thu tiền có thể gắn vào mốc. NVC (nhà xưởng) có trình tự khác — chờ NVG xác nhận mốc.
+5. GĐ4 còn: mẫu Word THẬT của NVG (chủ dự án gửi), PDF chuẩn (cần máy chủ LibreOffice), AI gợi ý câu chữ (trả phí,
    tắt mặc định). Sau đó GĐ3 → 3b → 5 theo kế hoạch trong `doc/MOC_CAI_TIEN_UX.md`. **Migration tiếp theo: 0172.**
 
 ### 9.4 Quyết định đã chốt và lý do
@@ -794,6 +799,10 @@ trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ P
     Gửi 1–2 mẫu Word thật (thi công NVC, thiết kế NVO) để thay mẫu ví dụ.
 12. Có lưu CCCD của khách cá nhân (NVO) để in lên hợp đồng? (không — mẫu để dải chấm điền tay)
 13. Tách «thi công» thành thi công / thiết kế + thi công / EPC theo Luật Xây dựng 2025? (chưa tách; hình thức giá đã có)
+14. NVC có tự thiết kế công trình không? Bảng tổ chức của Ban Giám đốc ghi Phòng Dự án – Đấu thầu NVC làm «thiết kế»,
+    nhưng phiếu khảo sát của chính phòng chỉ ghi «phương án kỹ thuật sơ bộ, biện pháp thi công» và làm theo bản vẽ / BOQ
+    của chủ đầu tư. (Sơ đồ đang ghi: có bước phương án kỹ thuật; thiết kế chỉ khi gói thiết kế – thi công — chờ xác nhận)
+15. Thi công nhà xưởng NVC chia mốc nghiệm thu thế nào? (chưa có; 7 mốc hiện chỉ áp cho NVO)
 
 ### 9.6 Ghi chú máy phát triển Windows
 

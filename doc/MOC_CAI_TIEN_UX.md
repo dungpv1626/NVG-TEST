@@ -243,3 +243,10 @@ Làm trước GĐ3 theo chủ dự án, phạm vi gọn: `.docx`, không PDF, kh
 
 **Câu hỏi cho Haan:** ai tải mẫu và mẫu riêng từng pháp nhân? (đang: BGĐ / Quản trị, riêng từng pháp nhân). Gửi mẫu
 Word thật. Có lưu CCCD khách cá nhân? (đang: không). Tách «thi công» thành thi công / thiết kế + thi công / EPC?
+
+### Kế hoạch đợt Thi công — 7 mốc nghiệm thu cho NVO
+
+Chủ dự án đồng ý sau khi đọc `QUY CHUẨN NHÀ VIỆT ONE.docx` (bộ «HoSoTapHop Gui Sep»): hệ thống đang gộp cả quá trình
+xây nhà vào một trạng thái «đang thi công». Đợt Thi công sẽ chia NVO thành 7 mốc (định vị → móng → kết cấu → xây,
+trát, điện nước âm → chống thấm → hoàn thiện → kiểm tra chất lượng); mỗi mốc nghiệm thu + ảnh trước khi bị che khuất
+mới sang mốc sau; hạng mục quan trọng thêm phụ trách kỹ thuật kiểm. NVC chờ NVG xác nhận mốc riêng.
