@@ -31,6 +31,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Gauge } from 'lucide-react';
 import { MODULES } from '@nvg/shared';
 import { cn } from '@/lib/utils';
+import { BrandLogo } from './brand-logo';
 import { CompanySwitcher } from './company-switcher';
 import {
   MODULE_ICONS,
@@ -70,6 +71,23 @@ export function Sidebar() {
         collapsed ? 'w-20' : 'w-60',
       )}
     >
+      {/* Logo Nhà Việt Group (Bước 0b). Nền tối của Module Thiết kế và khi thu gọn chỉ còn ba ô
+          màu: bản có chữ đen nằm trên nền trắng, đặt lên nền tối thì chữ biến mất. */}
+      <Link
+        to="/"
+        aria-label="Nhà Việt Group — về trang đầu"
+        className={cn(
+          'flex shrink-0 items-center border-b',
+          tk ? 'border-navdark-line' : 'border-border',
+          collapsed ? 'justify-center px-2 py-3' : 'px-4 py-3',
+        )}
+      >
+        {collapsed || tk ? (
+          <BrandLogo variant="mark" className={collapsed ? 'w-14' : 'w-20'} />
+        ) : (
+          <BrandLogo variant="compact" className="w-32" />
+        )}
+      </Link>
       <div
         className={cn(
           'flex items-center gap-1 border-b p-2',

@@ -198,12 +198,13 @@ export function DesignShowcasePage() {
 
       <Section
         title="Màu"
-        note="Rừng/bạc hà là thương hiệu — dùng cho hành động chính, liên kết, logo, nav active. Nhãn trạng thái là một hệ màu ĐÓNG, độc lập với thương hiệu (không dùng brand/mint/forest) — xem design-rules.test.ts."
+        note="Màu logo Nhà Việt Group: xanh lá cho hành động chính, liên kết, nav active; cam chỉ làm điểm nhấn với chữ tối; xanh dương chỉ trong logo. Nhãn trạng thái là một hệ màu ĐÓNG, độc lập với thương hiệu (không dùng brand/mint/forest) — xem design-rules.test.ts."
       >
         <div className="flex flex-wrap items-center gap-4">
           <Swatch name="Hành động chính" className="bg-brand" />
-          <Swatch name="Rừng — logo/nav active" className="bg-brand-forest" />
-          <Swatch name="Bạc hà — pill nhấn" className="bg-brand-mint" />
+          <Swatch name="Xanh lá đậm — avatar/nav active" className="bg-brand-forest" />
+          <Swatch name="Xanh lá nhạt — pill nhấn" className="bg-brand-mint" />
+          <Swatch name="Cam logo — điểm nhấn" className="bg-brand-accent" />
           <Swatch name="Nền trang" className="border border-border bg-surface-sunken" />
           <Swatch name="Viền" className="bg-border-strong" />
           <Swatch name="Chữ chính" className="bg-fg" />

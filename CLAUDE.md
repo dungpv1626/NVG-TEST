@@ -159,7 +159,7 @@ Thực thể tham chiếu xuyên module — **liên kết, KHÔNG sao chép**: `
 
 ### 4.3 Giao diện — xem `DESIGN_SYSTEM.md`
 
-`DESIGN_SYSTEM.md` mở rộng và ở vài chỗ THAY THẾ CGD Mục 6 (màu thương hiệu rừng & bạc hà, font
+`DESIGN_SYSTEM.md` mở rộng và ở vài chỗ THAY THẾ CGD Mục 6 (màu thương hiệu theo logo NVG — xanh lá / cam / xanh dương, Bước 0b; font
 **Be Vietnam Pro**, dải trung tính, độ nổi, chuyển động). Trang trưng bày thành phần: **`/nen/giao-dien`**.
 
 - **6 màu trạng thái** (Nháp · Chờ duyệt · Đang xử lý · Hoàn thành · Quá hạn · Tranh chấp) — KHÔNG tạo
@@ -765,7 +765,7 @@ trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ P
    `chihuytruong.nvc@…`; KSNB `ksnb@…`. Trả lời câu hỏi 9.5; NVG gửi mẫu Word hợp đồng thật.
 2. Khi Haan đồng ý phát hành: đẩy nhánh → `npm run db:migrate:demo` → **`db:seed` trên demo** (vai trò KSNB, trang mặc
    định mới) → `npm run deploy` (API trước, web sau).
-3. **Bước 0b — bộ nhận diện NVG** (mục 1b của kế hoạch): token màu theo logo, logo thật ở thanh bên / đăng nhập / favicon /
+3. **Bước 0b — bộ nhận diện NVG** — XONG vòng đầu trên máy, chờ chủ dự án duyệt ảnh `backup/brand-truoc|sau/` (mục 1b của kế hoạch): token màu theo logo, logo thật ở thanh bên / đăng nhập / favicon /
    PWA; giữ 6 màu trạng thái; chụp trước / sau cho chủ dự án duyệt. Logo PNG ở `backup/nvg-logo-2048.png`.
 4. **Đợt 1 — Kinh doanh** (chủ dự án đã chốt: báo cáo khảo sát do Ban Giám đốc duyệt, chưa duyệt thì chặn Báo giá; hợp
    đồng gửi duyệt kèm văn bản; AI chạy giả lập trước): xây khối nền K1–K5; CRM đầu mối + nhật ký chăm sóc + việc hôm nay

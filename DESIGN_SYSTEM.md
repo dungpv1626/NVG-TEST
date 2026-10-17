@@ -8,7 +8,15 @@
 ## 1. Bản sắc
 
 Tinh thần giữ nguyên CGD 6.1: sạch, phẳng, hạn chế trang trí, mật độ thông tin cao. Bản sắc thương
-hiệu là cặp **rừng (forest) & bạc hà (mint)** (Haan chốt, thay Brand Blue `#0C66E4` + cam an toàn `#EA580C`).
+hiệu theo **logo Nhà Việt Group** (Bước 0b, chủ dự án yêu cầu 17/10/2026; thay cặp rừng & bạc hà, trước
+đó là Brand Blue `#0C66E4` + cam an toàn `#EA580C`): ba ô **N xanh lá `#057B47` · V cam `#F39122` · G xanh
+dương `#1C6AB2`** — mã đo trên ảnh logo, NVG gửi mã chuẩn thì sửa token.
+
+- Logo cắt nguyên từ ảnh gốc, KHÔNG vẽ lại chữ: `web/public/brand/` (`nvg-logo.png` đủ khẩu hiệu — trang
+  đăng nhập; `nvg-logo-compact.png` — thanh bên mở rộng; `nvg-mark.png` ba ô — thanh bên thu gọn, nền tối
+  Module Thiết kế, thanh trên máy tính bảng). Dùng qua `BrandLogo`. Biểu tượng tab là ô N; biểu tượng
+  ứng dụng là ba ô trên nền trắng. Dưới 640px thanh trên không có logo (ô tìm kiếm cụt).
+- Phông giữ Be Vietnam Pro (§3) — gần chữ «NHÀ VIỆT GROUP», đủ dấu tiếng Việt.
 
 ---
 
@@ -35,18 +43,19 @@ hiệu là cặp **rừng (forest) & bạc hà (mint)** (Haan chốt, thay Brand
 
 > Mục 2.3 cũ (sửa tương phản nhãn trạng thái) nay gộp vào 2.1.
 
-### 2.2 Trung tính — ám sắc xanh lá nhạt (thay CGD 6.3)
+### 2.2 Trung tính — xám trung tính (thay CGD 6.3)
 
-| Token                    | Mã        | Dùng cho                             |
-| ------------------------ | --------- | ------------------------------------ |
-| `--color-surface`        | `#FFFFFF` | nền thẻ, nền bảng                    |
-| `--color-surface-sunken` | `#F2F7F2` | nền trang, vùng trũng                |
-| `--color-surface-hover`  | `#F4F8F4` | dòng đang trỏ                        |
-| `--color-border`         | `#E7EDE7` | viền mảnh                            |
-| `--color-border-strong`  | `#9A9485` | đầu bảng, ô nhập (≥3:1, WCAG 1.4.11) |
-| `--color-fg`             | `#1C1C1A` | chữ chính (không dùng `#000000`)     |
-| `--color-fg-subtle`      | `#5A574F` | chữ phụ (6.65:1 trên nền trang)      |
+| Token                    | Mã        | Dùng cho                               |
+| ------------------------ | --------- | -------------------------------------- |
+| `--color-surface`        | `#FFFFFF` | nền thẻ, nền bảng                      |
+| `--color-surface-sunken` | `#F4F5F7` | nền trang, vùng trũng                  |
+| `--color-surface-hover`  | `#F1F2F4` | dòng đang trỏ                          |
+| `--color-border`         | `#E4E6E9` | viền mảnh                              |
+| `--color-border-strong`  | `#8A9097` | đầu bảng, ô nhập (3.22:1, WCAG 1.4.11) |
+| `--color-fg`             | `#1C1C1A` | chữ chính (không dùng `#000000`)       |
+| `--color-fg-subtle`      | `#555A61` | chữ phụ (6.37:1 trên nền trang)        |
 
+- Bỏ ám xanh lá cũ (Bước 0b): cam và xanh dương của logo đứng cạnh nền ám xanh thì trông bẩn.
 - `fg`/`fg-subtle`/`border-strong` cố ý KHÔNG chép giá trị của bản demo tham chiếu — các giá trị đó
   không đạt tương phản. `border-strong` là thứ duy nhất cho biết đâu là ô nhập, phải nhìn thấy được.
 - Token hẹp dùng cục bộ: `--color-surface-muted` (search box, nút icon topbar) · `-surface-subtle`
@@ -54,16 +63,24 @@ hiệu là cặp **rừng (forest) & bạc hà (mint)** (Haan chốt, thay Brand
   / `-chart-positive` (dot PillBadge Dashboard — cố ý lệch hex với màu trạng thái) · `--color-tint-*`
   (ô icon thẻ KPI).
 
-### 2.4 Rừng & bạc hà — màu thương hiệu = màu hành động chính
+### 2.4 Màu logo — xanh lá N là màu hành động chính
 
-| Token                    | Mã        | Vai trò                                                        |
-| ------------------------ | --------- | -------------------------------------------------------------- |
-| `--color-brand`          | `#2C6E4B` | hành động chính, liên kết, focus ring (chữ trắng 6.11:1)       |
-| `--color-brand-hover`    | `#1B5138` | hover/active hành động chính                                   |
-| `--color-brand-subtle`   | `#D9F2D4` | nền nhạt: badge, hover menu, ô chọn, nav active                |
-| `--color-brand-forest`   | `#17352A` | khối logo, nền avatar, chữ nav active                          |
-| `--color-brand-mint`     | `#A8E6A1` | nền pill kỳ báo cáo đang chọn — **không làm nền nút** (1.45:1) |
-| `--color-brand-mint-ink` | `#123024` | chữ trên nền mint                                              |
+| Token                    | Mã        | Vai trò                                                                 |
+| ------------------------ | --------- | ----------------------------------------------------------------------- |
+| `--color-brand`          | `#057B47` | hành động chính, liên kết, focus ring (chữ trắng 5.34:1)                |
+| `--color-brand-hover`    | `#04613A` | hover/active hành động chính                                            |
+| `--color-brand-subtle`   | `#E3F2EA` | nền nhạt: badge, hover menu, ô chọn, nav active                         |
+| `--color-brand-forest`   | `#0A3F28` | nền avatar, chữ nav active (tên giữ từ bộ cũ)                           |
+| `--color-brand-mint`     | `#BFE5CF` | nền pill kỳ báo cáo đang chọn — **không làm nền nút**                   |
+| `--color-brand-mint-ink` | `#0A3F28` | chữ trên nền mint                                                       |
+| `--color-brand-accent`   | `#F39122` | cam logo — điểm nhấn, **chỉ với chữ tối** (chữ trắng 2.36:1 — test cấm) |
+| `--color-brand-blue`     | `#1C6AB2` | xanh dương logo — **chỉ trong ảnh logo**, cấm dùng làm màu giao diện    |
+
+- Xanh dương logo cùng sắc «Đang xử lý»: làm liên kết / chuỗi biểu đồ là người dùng đọc thành trạng
+  thái. Test `design-rules.test.ts` canh: không lớp nào dùng `brand-blue`, không lớp nào ghép nền cam
+  với chữ trắng, đo tương phản mọi cặp chữ / nền của bộ màu này.
+- Module Thiết kế chỉ đổi màu nhấn (`--color-tk-acc`, `--color-tk-btn`) sang xanh lá logo, còn lại
+  giữ bản mẫu.
 
 **Vẫn DUY NHẤT một hành động chính mỗi màn hình.**
 
@@ -74,13 +91,13 @@ Dashboard của Ban Giám đốc và tab «Tổng quan tài chính» (Haan, 30/0
 
 | Token             | Mã        | Dùng cho                                |
 | ----------------- | --------- | --------------------------------------- |
-| `--color-chart-1` | `#2C6E4B` | chuỗi chính (doanh thu)                 |
-| `--color-chart-2` | `#86C9A4` | chuỗi đi cặp (tiền đã thu)              |
+| `--color-chart-1` | `#057B47` | chuỗi chính (doanh thu)                 |
+| `--color-chart-2` | `#8FCBA9` | chuỗi đi cặp (tiền đã thu)              |
 | `--color-chart-3` | `#2E7C72` | chuỗi thứ ba, đường dòng tiền ròng      |
-| `--color-chart-4` | `#8A9A91` | khoản chi, chuỗi so sánh, công trình lỗ |
-| `--color-chart-5` | `#D5E0D8` | nền thanh, kỳ trước                     |
+| `--color-chart-4` | `#8E959C` | khoản chi, chuỗi so sánh, công trình lỗ |
+| `--color-chart-5` | `#DDE1E5` | nền thanh, kỳ trước                     |
 
-- **Không tô chuỗi biểu đồ bằng 6 màu trạng thái** (§2.1): cột đỏ đọc như «quá hạn». Lỗ, nợ quá hạn
+- **Không tô chuỗi biểu đồ bằng 6 màu trạng thái** (§2.1), kể cả cam và xanh dương của logo: cột đỏ đọc như «quá hạn». Lỗ, nợ quá hạn
   phân biệt bằng CHỮ («Lỗ 120 triệu», «Quá hạn 31 – 60 ngày»), màu chỉ phụ.
 - So kỳ trước dùng mũi tên + chữ («Tăng 23% so với kỳ trước») bằng mực trung tính: tăng tốt hay xấu
   tuỳ chỉ số (chi tiền tăng là xấu).

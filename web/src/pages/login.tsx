@@ -11,6 +11,7 @@
 
 import { useEffect, useState, type FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
+import { BrandLogo } from '@/components/layout/brand-logo';
 import { OfflineBar } from '@/components/layout/pwa-status';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -81,6 +82,7 @@ export function LoginPage() {
           )}
         >
           <div className="mb-6">
+            <BrandLogo variant="full" className="mx-auto mb-6 w-56" />
             <h1 className="text-lg font-semibold">Hệ thống Quản trị NVG</h1>
             <p className="mt-1 text-fg-subtle">Đăng nhập để tiếp tục.</p>
           </div>

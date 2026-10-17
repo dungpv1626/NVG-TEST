@@ -46,7 +46,12 @@ export default defineConfig(({ command, mode }) => {
         registerType: 'prompt',
         injectRegister: null,
 
-        includeAssets: ['favicon.svg', 'favicon-32.png', 'icons/apple-touch-icon-180.png'],
+        includeAssets: [
+          'favicon.svg',
+          'favicon-32.png',
+          'icons/apple-touch-icon-180.png',
+          'brand/*.png',
+        ],
 
         manifest: {
           id: '/',
@@ -63,7 +68,7 @@ export default defineConfig(({ command, mode }) => {
           // Trình duyệt nào không hỗ trợ 'standalone' thì lùi dần, không rơi thẳng về tab.
           display_override: ['standalone', 'minimal-ui'],
           orientation: 'any',
-          theme_color: '#0C66E4',
+          theme_color: '#057B47',
           background_color: '#FFFFFF',
           categories: ['business', 'productivity'],
           icons: [

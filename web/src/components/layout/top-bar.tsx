@@ -17,6 +17,7 @@ import { usePendingApprovals } from '@/hooks/use-approvals';
 import { SEARCH_MIN_LENGTH, useGlobalSearch, type GlobalSearchResult } from '@/hooks/use-search';
 import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
+import { BrandLogo } from './brand-logo';
 import { ChangePasswordDialog } from './change-password-dialog';
 import { CompanySwitcher } from './company-switcher';
 import { NotificationBell } from './notification-bell';
@@ -280,6 +281,17 @@ export function TopBar() {
       {/* Pháp nhân đang chọn — trên máy tính nằm ở sidebar, ở điện thoại sidebar ẩn nên
           phải có mặt tại đây. Không nhìn thấy pháp nhân đang làm việc là nguồn gốc của
           việc nhập nhầm dữ liệu sang công ty khác (NEN-01). */}
+      {/* Logo (Bước 0b): dưới lg thanh bên ẩn nên logo phải có mặt ở đây — chỉ ba ô màu cho vừa
+          thanh cao 48px. Dưới sm (điện thoại 390px) thì bỏ: logo chiếm chỗ làm ô tìm kiếm cụt còn
+          «Tìn» (đo bằng ảnh chụp); trên điện thoại thương hiệu đã có ở trang đăng nhập và biểu
+          tượng ứng dụng. */}
+      <Link
+        to="/"
+        aria-label="Nhà Việt Group — về trang đầu"
+        className="hidden shrink-0 sm:block lg:hidden"
+      >
+        <BrandLogo variant="mark" className="w-12" />
+      </Link>
       <div className="shrink-0 lg:hidden">
         <CompanySwitcher compact />
       </div>

@@ -216,6 +216,41 @@ describe('Tương phản màu đạt WCAG AA', () => {
     expect(contrast(token('fg-inverse'), token('brand'))).toBeGreaterThanOrEqual(4.5);
   });
 
+  /** Bộ màu theo logo NVG (Bước 0b) — mọi cặp chữ / nền mà giao diện thật dùng. */
+  it.each([
+    ['chữ trắng trên nút khi rê chuột', 'fg-inverse', 'brand-hover'],
+    ['liên kết trên nền trũng', 'brand', 'surface-sunken'],
+    ['liên kết trên nền nhạt của thương hiệu', 'brand', 'brand-subtle'],
+    ['chữ mục điều hướng đang chọn', 'brand-forest', 'brand-subtle'],
+    ['chữ trên pill mint', 'brand-mint-ink', 'brand-mint'],
+    ['chữ mint trên avatar', 'brand-mint', 'brand-forest'],
+    ['chữ chính trên nền cam nhấn', 'fg', 'brand-accent'],
+  ])('%s đạt ≥ 4.5:1', (_label, fg, bg) => {
+    expect(contrast(token(fg), token(bg))).toBeGreaterThanOrEqual(4.5);
+  });
+
+  /** Chữ trắng trên cam logo chỉ 2.36:1 — cam chỉ được đi với chữ tối. */
+  it('cam logo không đạt với chữ trắng, nên không lớp nào ghép nền cam với chữ trắng', () => {
+    expect(contrast(token('fg-inverse'), token('brand-accent'))).toBeLessThan(4.5);
+    for (const { path, text } of uiSources()) {
+      for (const cls of text.match(/className=(["'`])[^"'`]*\1/g) ?? []) {
+        if (/\bbg-brand-accent\b/.test(cls)) {
+          expect(cls, path).not.toMatch(/\btext-(white|fg-inverse)\b/);
+        }
+      }
+    }
+  });
+
+  /**
+   * Xanh dương logo cùng sắc với «Đang xử lý»: chỉ được nằm trong logo (ảnh), không lớp giao
+   * diện nào được tô bằng nó — dùng làm liên kết / nhãn là bắt người dùng đọc nó như trạng thái.
+   */
+  it('xanh dương logo không được dùng làm màu giao diện', () => {
+    for (const { path, text } of uiSources()) {
+      expect(text, path).not.toMatch(/brand-blue/);
+    }
+  });
+
   /**
    * WCAG 1.4.11: viền của ô nhập cần ≥3:1. Viền là thứ DUY NHẤT cho biết đâu là chỗ gõ được —
    * viền mờ quá thì ô nhập trông như một dòng chữ thường.

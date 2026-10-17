@@ -31,6 +31,8 @@ Không ghi mốc thời gian (QĐ-1) — chỉ thứ tự và tiêu chí hoàn t
 
 ## 1b. Bước 0b — đổi bộ nhận diện theo logo Nhà Việt Group
 
+**Trạng thái: XONG vòng đầu trên máy (17/10/2026), chờ chủ dự án xem ảnh trước / sau (`backup/brand-truoc/`, `backup/brand-sau/`), chưa phát hành.**
+
 Chủ dự án yêu cầu (17/10/2026): màu sắc của app theo đúng logo NVG. Làm sau khi phát hành Bước 0, **trước Đợt 1** — để mọi
 màn hình mới dựng thẳng trên token mới, không phải sửa hai lần. Không phụ thuộc đợt nào.
 
@@ -68,7 +70,7 @@ Việc cần làm:
 | Phông | Giữ **Be Vietnam Pro** | Không xin được phông gốc; Be Vietnam Pro là sans hình học gần chữ «NHÀ VIỆT GROUP», hỗ trợ đủ dấu tiếng Việt, đang dùng sẵn |
 | Nền trung tính | **Xám trung tính** (nền trang ~`#F5F6F7`, viền ~`#E4E6E9`, viền ô nhập giữ ≥ 3:1) | Ba màu logo (xanh lá, cam, xanh dương) đứng cạnh nền ám xanh lá thì cam và xanh dương bị bẩn; nền xám để logo và màu trạng thái đọc rõ |
 | Module Thiết kế | Chỉ đổi màu nhấn chính sang xanh lá NVG | Bảng 71 token của «AI Design» đã được chỉnh tương phản riêng; đổi toàn bộ là rủi ro lớn cho màn hình đang chạy ổn, đổi màu nhấn là đủ nhất quán thương hiệu |
-| Biểu đồ | Xanh lá → xanh lá nhạt → xanh dương → xám; cam chỉ cho một chuỗi cần nhấn | Không dùng cam / đỏ cho chuỗi thường để khỏi đọc như cảnh báo |
+| Biểu đồ | Xanh lá logo → xanh lá nhạt → teal → xám; **không dùng cam, xanh dương của logo** (sửa lúc làm: xanh dương cùng sắc «Đang xử lý», quy tắc biểu đồ cấm sắc trạng thái) | Cột tô cam / xanh dương đọc như cảnh báo / trạng thái |
 
 Nếu NVG sau này gửi logo vector, mã màu hay phông chính thức thì thay vào token / tệp, không phải làm lại.
 

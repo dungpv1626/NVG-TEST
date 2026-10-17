@@ -1983,6 +1983,22 @@ const MUTATIONS: Mutation[] = [
     find: '  const [open, setOpen] = useState(false);',
     replace: '  const [open, setOpen] = useState(Boolean(autoOpenKey));',
   },
+  {
+    id: 'M241',
+    axis: 'giao diện',
+    file: 'web/src/components/layout/top-bar.tsx',
+    bug: 'Xanh dương logo dùng làm màu giao diện — đọc nhầm thành trạng thái «Đang xử lý»',
+    find: "'bg-brand-forest text-xs font-semibold text-brand-mint'",
+    replace: "'bg-brand-blue text-xs font-semibold text-brand-mint'",
+  },
+  {
+    id: 'M242',
+    axis: 'giao diện',
+    file: 'web/src/index.css',
+    bug: 'Nút hành động chính lấy cam logo — chữ trắng trên cam chỉ 2.36:1',
+    find: '  --color-brand: #057b47;',
+    replace: '  --color-brand: #f39122;',
+  },
 ];
 
 /** Thư mục mã nguồn được băm trước và sau khi chạy. `db/` không đụng tới nên không băm. */
