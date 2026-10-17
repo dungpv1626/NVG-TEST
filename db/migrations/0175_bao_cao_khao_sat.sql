@@ -874,6 +874,7 @@ DECLARE
   v_classified boolean;
   v_class_lbl  text;
   v_surveyed   boolean;
+  v_any_surveyed boolean;
 BEGIN
   IF p_entity_type = 'opportunity' THEN
     SELECT id, company_id, stage, classification, project_type, survey_waived_reason, deleted_at
@@ -897,6 +898,11 @@ BEGIN
                            WHERE s.opportunity_id = p_id AND s.deleted_at IS NULL
                              AND s.surveyed_at IS NOT NULL AND s.surveyed_at <= now()
                              AND s.report_status = 'da_duyet');
+    -- Đã có buổi khảo sát thật thì KHÔNG còn lối «bỏ qua khảo sát»: lối đó dành cho cơ hội không
+    -- khảo sát, dùng ở đây là vượt qua Ban Giám đốc (thấy khi chạy thử 17/10/2026).
+    v_any_surveyed := EXISTS (SELECT 1 FROM public.site_surveys s
+                               WHERE s.opportunity_id = p_id AND s.deleted_at IS NULL
+                                 AND s.surveyed_at IS NOT NULL AND s.surveyed_at <= now());
 
     RETURN QUERY SELECT 'khao_sat'::text, 'classified'::text, v_classified, v_class_lbl, false;
 
@@ -904,11 +910,13 @@ BEGIN
 
     RETURN QUERY
     SELECT 'bao_gia'::text, 'survey_done'::text,
-           v_surveyed OR o.survey_waived_reason IS NOT NULL,
-           CASE WHEN NOT v_surveyed AND o.survey_waived_reason IS NOT NULL
+           v_surveyed OR (o.survey_waived_reason IS NOT NULL AND NOT v_any_surveyed),
+           CASE WHEN NOT v_any_surveyed AND o.survey_waived_reason IS NOT NULL
                 THEN 'Bỏ qua khảo sát: ' || o.survey_waived_reason
+                WHEN v_any_surveyed AND NOT v_surveyed
+                THEN 'Báo cáo khảo sát đã được Ban Giám đốc duyệt (đã khảo sát — gửi báo cáo, chờ duyệt)'
                 ELSE 'Báo cáo khảo sát đã được Ban Giám đốc duyệt' END,
-           true;
+           NOT v_any_surveyed;
 
     RETURN QUERY
     SELECT 'dam_phan'::text, 'offer_sent'::text,

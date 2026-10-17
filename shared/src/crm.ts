@@ -268,7 +268,8 @@ export const SURVEY_REPORT_STATUS_META: Readonly<
   nhap: { label: 'Báo cáo nháp', statusGroup: 'draft' },
   cho_duyet: { label: 'Chờ Ban Giám đốc duyệt', statusGroup: 'pending_approval' },
   da_duyet: { label: 'Báo cáo đã duyệt', statusGroup: 'completed' },
-  tra_ve: { label: 'Bị trả về', statusGroup: 'disputed' },
+  // Trả về = quay lại nháp để sửa; ý kiến Ban Giám đốc hiện ngay dưới nhãn.
+  tra_ve: { label: 'Bị trả về — cần sửa', statusGroup: 'draft' },
 };
 
 /** Sáu ô của báo cáo khảo sát (CRM-03) — máy viết nháp đúng các ô này từ bản ghi âm. */

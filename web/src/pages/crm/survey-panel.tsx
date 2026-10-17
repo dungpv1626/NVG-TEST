@@ -29,7 +29,9 @@ import {
   type SiteSurveyRecord,
   type SurveyInput,
 } from '@/hooks/use-site-surveys';
+import type { SurveyAiDraft } from '@/lib/ai-api';
 import { useAuth } from '@/lib/auth';
+import { SurveyReportSection } from './survey-report-section';
 
 const EM_DASH = '—';
 
@@ -129,7 +131,8 @@ export function SurveyPanel({
     onDraftChange({ editingId: '', form: { ...EMPTY_FORM, surveyedBy: profile?.id ?? '' } });
   }
 
-  function openEdit(survey: SiteSurveyRecord) {
+  /** Mở biên bản để sửa; có `ai` thì sáu ô báo cáo lấy nháp máy viết (người dùng sửa rồi mới lưu). */
+  function openEdit(survey: SiteSurveyRecord, ai?: SurveyAiDraft) {
     setActionError(null);
     onDraftChange({
       editingId: survey.id,
@@ -138,12 +141,12 @@ export function SurveyPanel({
         surveyedAt: toLocalInput(survey.surveyed_at),
         // Dùng id, KHÔNG tra ngược từ tên: hai nhân sự trùng tên sẽ gán nhầm người.
         surveyedBy: survey.surveyed_by ?? '',
-        needs: survey.needs ?? '',
-        decisionMaker: survey.decision_maker ?? '',
-        budgetNote: survey.budget_note ?? '',
-        scheduleNote: survey.schedule_note ?? '',
-        commercialTerms: survey.commercial_terms ?? '',
-        notes: survey.notes ?? '',
+        needs: ai?.needs ?? survey.needs ?? '',
+        decisionMaker: ai?.decision_maker ?? survey.decision_maker ?? '',
+        budgetNote: ai?.budget_note ?? survey.budget_note ?? '',
+        scheduleNote: ai?.schedule_note ?? survey.schedule_note ?? '',
+        commercialTerms: ai?.commercial_terms ?? survey.commercial_terms ?? '',
+        notes: ai?.notes ?? survey.notes ?? '',
       },
     });
   }
@@ -211,6 +214,8 @@ export function SurveyPanel({
           users={users ?? []}
           busy={busy}
           isEditing={editingId !== ''}
+          // Máy đã ghi giờ (Bắt đầu / Kết thúc) thì không gõ tay thời điểm khảo sát nữa.
+          clockManaged={list.some((sv) => sv.id === editingId && sv.started_at !== null)}
           onChange={(field, value) =>
             onDraftChange({ editingId, form: { ...form, [field]: value } })
           }
@@ -228,7 +233,9 @@ export function SurveyPanel({
               key={survey.id}
               survey={survey}
               editable={editable && editingId === null}
+              canEdit={editable}
               onEdit={() => openEdit(survey)}
+              onUseDraft={(ai) => openEdit(survey, ai)}
             />
           ))}
         </ol>
@@ -240,12 +247,18 @@ export function SurveyPanel({
 function SurveyCard({
   survey,
   editable,
+  canEdit,
   onEdit,
+  onUseDraft,
 }: {
   survey: SiteSurveyRecord;
   editable: boolean;
+  canEdit: boolean;
   onEdit: () => void;
+  onUseDraft: (draft: SurveyAiDraft) => void;
 }) {
+  // Báo cáo đang chờ / đã duyệt thì khoá sửa (CSDL cũng chặn — 0175).
+  const locked = survey.report_status === 'cho_duyet' || survey.report_status === 'da_duyet';
   // Đã khảo sát thì là BIÊN BẢN; chưa thì mới chỉ là LỊCH HẸN — hai thứ khác nhau về giá trị
   // nghiệp vụ, nên nói rõ ngay ở dòng đầu thay vì để người đọc tự suy.
   // Biên bản cũ lỡ ghi «đã khảo sát» vào ngày chưa tới (trước 0161) không tính là đã khảo sát.
@@ -281,7 +294,7 @@ function SurveyCard({
           </div>
         </div>
 
-        {editable && (
+        {editable && !locked && (
           <Button variant="subtle" size="sm" onClick={onEdit}>
             {done ? BUTTONS.edit : 'Ghi biên bản'}
           </Button>
@@ -299,10 +312,12 @@ function SurveyCard({
         </dl>
       ) : (
         <p className="mt-3 text-fg-subtle">
-          Chưa ghi nội dung khảo sát. Ghi biên bản sau buổi khảo sát để Phòng Dự án và Thiết kế
-          không phải hỏi lại khách hàng.
+          Chưa ghi nội dung khảo sát. Ghi âm khi khảo sát để máy viết nháp, hoặc ghi biên bản tay —
+          Phòng Dự án và Thiết kế không phải hỏi lại khách hàng.
         </p>
       )}
+
+      <SurveyReportSection survey={survey} canEdit={canEdit} onUseDraft={onUseDraft} />
     </li>
   );
 }
@@ -312,6 +327,7 @@ function SurveyForm({
   users,
   busy,
   isEditing,
+  clockManaged,
   onChange,
   onSave,
   onCancel,
@@ -320,6 +336,7 @@ function SurveyForm({
   users: ActiveUser[];
   busy: boolean;
   isEditing: boolean;
+  clockManaged: boolean;
   onChange: (field: keyof SurveyForm, value: string) => void;
   onSave: () => void;
   onCancel: () => void;
@@ -336,6 +353,11 @@ function SurveyForm({
       <h3 className="mb-3 font-semibold">
         {isEditing ? 'Biên bản khảo sát' : 'Đặt lịch khảo sát'}
       </h3>
+      {isEditing && (
+        <p className="mb-3 text-xs text-fg-subtle">
+          Sáu ô dưới là báo cáo gửi Ban Giám đốc. Máy viết nháp thì đọc lại, sửa chỗ sai rồi lưu.
+        </p>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Lịch hẹn khảo sát">
@@ -361,17 +383,19 @@ function SurveyForm({
           </select>
         </Field>
 
-        <Field
-          label="Đã khảo sát lúc"
-          hint="Điền sau buổi khảo sát. Bỏ trống nghĩa là mới đặt lịch, chưa đi."
-          className="sm:col-span-2"
-        >
-          <Input
-            type="datetime-local"
-            value={form.surveyedAt}
-            onChange={(e) => onChange('surveyedAt', e.target.value)}
-          />
-        </Field>
+        {!clockManaged && (
+          <Field
+            label="Đã khảo sát lúc"
+            hint="Nên bấm «Bắt đầu / Kết thúc khảo sát» trên thẻ để máy ghi giờ. Chỉ gõ tay khi quên bấm."
+            className="sm:col-span-2"
+          >
+            <Input
+              type="datetime-local"
+              value={form.surveyedAt}
+              onChange={(e) => onChange('surveyedAt', e.target.value)}
+            />
+          </Field>
+        )}
 
         <Field label="Nhu cầu" className="sm:col-span-2">
           <textarea

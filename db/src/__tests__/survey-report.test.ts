@@ -191,6 +191,17 @@ describeDb('Báo cáo khảo sát — Ban Giám đốc duyệt (0175)', () => {
       p_to_stage: 'bao_gia',
     });
     expect(move.error).not.toBeNull();
+
+    // Lối «bỏ qua khảo sát, ghi lý do» không vượt được Ban Giám đốc khi đã khảo sát thật.
+    await kd.rpc('waive_opportunity_survey', {
+      p_opportunity_id: opportunityId,
+      p_reason: 'Khách gấp, báo giá luôn',
+    });
+    const bypass = await kd.rpc('move_opportunity_stage', {
+      p_opportunity_id: opportunityId,
+      p_to_stage: 'bao_gia',
+    });
+    expect(bypass.error).not.toBeNull();
   });
 
   it('Kinh doanh không duyệt được; TGĐ trả về phải có ý kiến; trả về thì sửa và gửi lại được', async () => {

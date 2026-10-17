@@ -10,10 +10,11 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { createClient } from '@supabase/supabase-js';
 import { adminApp } from './admin';
+import { aiApp } from './ai';
 import { designApp } from './design';
 import type { DesignEnv } from './design/env';
 
-type Env = DesignEnv;
+type Env = DesignEnv & { AI_FAKE?: string };
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -85,6 +86,8 @@ app.get('/', (c) => c.json({ ok: true, service: 'nvg-api' }));
  */
 app.route('/design', designApp);
 app.route('/admin', adminApp);
+// Khối nền K1 — ghi âm → chữ → nháp AI cho các bộ phận (Đợt 1). Mặc định tắt / giả lập.
+app.route('/ai', aiApp);
 
 function serviceClient(env: Env) {
   // service_role vượt RLS — CHỈ dùng ở đây, không bao giờ trong web/ (CLAUDE.md 5.5).

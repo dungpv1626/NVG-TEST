@@ -11,6 +11,7 @@
  */
 
 import { TodayFollowups } from '@/components/crm/today-followups';
+import { SurveyReportPreview } from './survey-report-preview';
 import { PageHeader } from '@/components/layout/app-shell';
 import { ApprovalInbox, type ApprovalItem } from '@/components/entity/approval-inbox';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
@@ -59,6 +60,9 @@ function fullRecordPath(item: PendingApproval): string {
       return '/ns/nghi-phep';
     case 'recruitment_positions':
       return '/ns/tuyen-dung';
+    case 'site_surveys':
+      // Báo cáo khảo sát nằm ở tab Khảo sát của Chi tiết Cơ hội (Đợt 1 — 1D).
+      return item.parent_id ? `/crm/co-hoi/${item.parent_id}?tab=khao-sat` : '/crm/co-hoi';
     case 'stocktakes':
       // Kiểm kê không có trang theo id — màn hình Kiểm kê liệt kê các đợt đang mở.
       return '/kho/kiem-ke';
@@ -83,6 +87,7 @@ export function ApprovalInboxPage() {
     amount: row.amount,
     fullRecordPath: fullRecordPath(row),
     preview: <ApprovalPreview row={row} />,
+    rejectLabel: row.entity_type === 'site_surveys' ? 'Trả về kèm ý kiến' : undefined,
   }));
 
   return (
@@ -149,13 +154,17 @@ function ApprovalPreview({ row }: { row: PendingApproval }) {
         </div>
       </div>
 
-      {row.reason && (
-        <div className="rounded-sm bg-surface-sunken px-3 py-2">
-          <dt className="text-xs text-fg-subtle">
-            {row.subject === 'special_discount' ? 'Lý do giảm giá' : 'Lý do đề nghị'}
-          </dt>
-          <dd className="mt-0.5">{row.reason}</dd>
-        </div>
+      {row.entity_type === 'site_surveys' ? (
+        <SurveyReportPreview surveyId={row.entity_id} />
+      ) : (
+        row.reason && (
+          <div className="rounded-sm bg-surface-sunken px-3 py-2">
+            <dt className="text-xs text-fg-subtle">
+              {row.subject === 'special_discount' ? 'Lý do giảm giá' : 'Lý do đề nghị'}
+            </dt>
+            <dd className="mt-0.5">{row.reason}</dd>
+          </div>
+        )
       )}
     </dl>
   );

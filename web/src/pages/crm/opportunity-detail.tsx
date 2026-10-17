@@ -165,20 +165,8 @@ export function OpportunityDetailPage() {
     }
   }
 
-  /**
-   * Ghi biên bản đã khảo sát xong thì đi tiếp luôn sang Báo giá và mở tab Báo giá — cùng cách
-   * với lưu phân loại. Không đi được (vd thiếu phân loại) thì nói lý do, không im lặng.
-   */
-  async function afterSurveyed(): Promise<void> {
-    if (data!.stage !== 'khao_sat') return;
-    setMoveError(null);
-    try {
-      await moveStage.mutateAsync({ opportunityId: data!.id, toStage: 'bao_gia' });
-      openTab(STAGE_TAB.bao_gia);
-    } catch (e) {
-      setMoveError(toUserMessage(e, 'edit'));
-    }
-  }
+  // Từ 0175 KHÔNG tự sang Báo giá khi ghi biên bản đã khảo sát: báo cáo phải được Ban Giám đốc
+  // duyệt trước — duyệt xong CSDL tự chuyển (decide_approval → _sync_opportunity_stage).
 
   async function changeStage(toStage: OpportunityStage) {
     setMoveError(null);
@@ -394,7 +382,6 @@ export function OpportunityDetailPage() {
                 isHandedOver={isHandedOver}
                 draft={surveyDraft}
                 onDraftChange={setSurveyDraft}
-                onSurveyed={afterSurveyed}
               />
             ),
           },

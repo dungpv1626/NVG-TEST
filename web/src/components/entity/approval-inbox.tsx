@@ -59,6 +59,11 @@ export interface ApprovalItem {
   fullRecordPath: string;
   /** Nội dung xem nhanh — đủ để quyết định mà không rời Hộp thư. */
   preview: ReactNode;
+  /**
+   * Nhãn nút không đồng ý, khi «Từ chối» sai nghĩa — báo cáo khảo sát bị TRẢ VỀ để sửa rồi gửi
+   * lại, không bị bác hẳn (Đợt 1 — 1D). Bỏ trống = «Từ chối».
+   */
+  rejectLabel?: string;
 }
 
 /**
@@ -285,7 +290,7 @@ export function ApprovalInbox({
                 disabled={submitting}
                 onClick={() => void decide('rejected')}
               >
-                {BUTTONS.reject}
+                {selected.rejectLabel ?? BUTTONS.reject}
               </Button>
               <span className="ml-auto text-xs text-fg-subtle">
                 Còn {list.length} hồ sơ chờ xử lý
