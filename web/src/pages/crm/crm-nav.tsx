@@ -10,6 +10,8 @@ import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 const ITEMS = [
+  // Đầu mối đứng trước Cơ hội: đúng thứ tự một khách đi qua (Đợt 1 — 1A).
+  { to: '/crm/dau-moi', label: 'Đầu mối' },
   { to: '/crm/co-hoi', label: 'Cơ hội kinh doanh' },
   { to: '/crm/khach-hang', label: 'Khách hàng' },
   { to: '/crm/khieu-nai', label: 'Khiếu nại' },

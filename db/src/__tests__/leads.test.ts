@@ -287,9 +287,12 @@ describeDb('Đầu mối và nhật ký chăm sóc (0172)', () => {
 
     const { data: logs } = await kd
       .from('contact_logs')
-      .select('customer_id')
+      .select('customer_id, opportunity_id')
       .eq('lead_id', lead!.id);
-    expect(logs!.every((l) => l.customer_id === opp!.customer_id)).toBe(true);
+    expect(logs!.length).toBeGreaterThan(0);
+    expect(
+      logs!.every((l) => l.customer_id === opp!.customer_id && l.opportunity_id === oppId),
+    ).toBe(true);
 
     // Đã thành cơ hội thì đầu mối chỉ xem.
     const locked = await kd.from('leads').update({ need: 'Đổi' }).eq('id', lead!.id).select('id');

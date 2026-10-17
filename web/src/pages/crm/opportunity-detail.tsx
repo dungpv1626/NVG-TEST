@@ -37,7 +37,8 @@ import {
   useOpportunityStageHistory,
   useWaiveSurvey,
 } from '@/hooks/use-opportunities';
-import { useCan, useIsResponsible } from '@/lib/auth';
+import { ContactLogPanel } from '@/components/crm/contact-log-panel';
+import { useCan, useIsOrgManager, useIsResponsible } from '@/lib/auth';
 import { CLASSIFICATION_ANCHOR, ClassificationCard } from './classification-card';
 import { QuotePanel } from './quote-panel';
 import { EMPTY_SURVEY_DRAFT, SurveyPanel, type SurveyDraft } from './survey-panel';
@@ -91,6 +92,9 @@ export function OpportunityDetailPage() {
   const waiveSurvey = useWaiveSurvey();
   const [searchParams, setSearchParams] = useSearchParams();
   const isResponsible = useIsResponsible(data?.owner_id);
+  // Ghi liên hệ: người phụ trách / lãnh đạo — trùng policy `contact_logs_insert` (0172).
+  const canCreateCrm = useCan('CRM', 'create');
+  const isLeader = useIsOrgManager();
   const [moveError, setMoveError] = useState<string | null>(null);
 
   // Bản nháp biên bản khảo sát giữ Ở ĐÂY, không giữ trong tab: `EntityDetail` chỉ dựng nội
@@ -399,6 +403,16 @@ export function OpportunityDetailPage() {
             label: 'Báo giá',
             content: (
               <QuotePanel opportunityId={data.id} canEdit={canEdit} isHandedOver={isHandedOver} />
+            ),
+          },
+          {
+            id: 'cham-soc',
+            label: 'Nhật ký chăm sóc',
+            content: (
+              <ContactLogPanel
+                subject={{ opportunityId: data.id }}
+                canWrite={isResponsible && (canCreateCrm || isLeader)}
+              />
             ),
           },
         ]}

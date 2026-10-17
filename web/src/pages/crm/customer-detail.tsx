@@ -28,7 +28,9 @@ import { useComplaints } from '@/hooks/use-complaints';
 import { useEntityDetail } from '@/hooks/use-entity';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useOpportunities } from '@/hooks/use-opportunities';
-import { useCan, useIsResponsible } from '@/lib/auth';
+import { ContactLogPanel } from '@/components/crm/contact-log-panel';
+import { useCan, useIsOrgManager, useIsResponsible } from '@/lib/auth';
+import { useCompanyScope } from '@/lib/company-scope';
 
 interface CustomerDetail {
   id: string;
@@ -72,6 +74,11 @@ export function CustomerDetailPage() {
   // Hồ sơ chưa có người chịu trách nhiệm thì ai sửa được module CRM cũng nhận được —
   // giống `customers_update`, để hồ sơ vô chủ không nằm đó không ai đụng vào được.
   const isResponsible = useIsResponsible(data?.responsible_user_id);
+  // Nhật ký chăm sóc khách (khách cũ, CRM-07): khách hàng dùng chung nên dòng nhật ký phải gắn
+  // pháp nhân đang chọn — chế độ «Toàn NVG» chỉ xem.
+  const scope = useCompanyScope();
+  const canCreateCrm = useCan('CRM', 'create');
+  const isLeader = useIsOrgManager();
 
   if (isLoading) return <CardGridSkeleton count={3} />;
   if (error) return <ErrorState message={toUserMessage(error)} />;
@@ -210,6 +217,19 @@ export function CustomerDetailPage() {
                 ))}
               </ul>
             ),
+        },
+        {
+          id: 'cham-soc',
+          label: 'Nhật ký chăm sóc',
+          content: (
+            <ContactLogPanel
+              subject={{ customerId: data.id, companyId: scope.companyId }}
+              canWrite={
+                (canCreateCrm || isLeader) && !scope.isAggregate && Boolean(scope.companyId)
+              }
+              emptyHint="Chưa có lần liên hệ nào với khách này — kể cả từ thời còn là đầu mối. Ghi ngay sau mỗi lần chăm sóc, bảo trì, xin giới thiệu."
+            />
+          ),
         },
       ]}
       historyContent={

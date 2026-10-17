@@ -394,9 +394,12 @@ BEGIN
   SET status = 'co_nhu_cau', customer_id = v_customer, opportunity_id = v_opportunity,
       converted_at = now(), next_action = NULL, next_action_at = NULL
   WHERE id = p_lead_id;
-  -- Nhật ký trước đó đi theo khách hàng: hồ sơ khách hiện đủ lịch sử từ lần đầu liên hệ.
-  UPDATE public.contact_logs SET customer_id = v_customer
-  WHERE lead_id = p_lead_id AND customer_id IS NULL;
+  -- Nhật ký trước đó đi theo khách hàng VÀ cơ hội: hồ sơ khách và cơ hội hiện đủ lịch sử từ lần
+  -- đầu liên hệ (CRM-06 «bàn giao kèm toàn bộ lịch sử trao đổi»).
+  UPDATE public.contact_logs
+  SET customer_id = COALESCE(customer_id, v_customer),
+      opportunity_id = COALESCE(opportunity_id, v_opportunity)
+  WHERE lead_id = p_lead_id;
   PERFORM set_config('nvg.lead_convert', 'off', true);
 
   RETURN v_opportunity;
@@ -449,3 +452,9 @@ REVOKE ALL ON FUNCTION public.contact_duplicates(text, uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.contact_duplicates(text, uuid) TO authenticated;
 COMMENT ON FUNCTION public.contact_duplicates(text, uuid) IS
   'Đầu mối / khách hàng có cùng số điện thoại mà người gọi được xem — để không gọi trùng khách của đồng nghiệp.';
+
+-- Nhật ký của đầu mối đã chuyển trước khi `convert_lead` gắn cơ hội cho nhật ký (chạy lại được).
+UPDATE public.contact_logs cl
+SET opportunity_id = l.opportunity_id
+FROM public.leads l
+WHERE cl.lead_id = l.id AND l.opportunity_id IS NOT NULL AND cl.opportunity_id IS NULL;

@@ -89,6 +89,15 @@ const OpportunityDetailPage = lazy(() =>
 const QuoteCreatePage = lazy(() =>
   import('@/pages/crm/quote-create').then((m) => ({ default: m.QuoteCreatePage })),
 );
+const LeadListPage = lazy(() =>
+  import('@/pages/crm/lead-list').then((m) => ({ default: m.LeadListPage })),
+);
+const LeadCreatePage = lazy(() =>
+  import('@/pages/crm/lead-create').then((m) => ({ default: m.LeadCreatePage })),
+);
+const LeadDetailPage = lazy(() =>
+  import('@/pages/crm/lead-detail').then((m) => ({ default: m.LeadDetailPage })),
+);
 const ComplaintListPage = lazy(() =>
   import('@/pages/crm/complaint-list').then((m) => ({ default: m.ComplaintListPage })),
 );
@@ -337,6 +346,9 @@ const router = createBrowserRouter(
           <Route path="crm/co-hoi/:id/bao-gia/lap-moi" element={<QuoteCreatePage />} />
 
           {/* CRM — Khiếu nại khách hàng (CRM-08). */}
+          <Route path="crm/dau-moi" element={<LeadListPage />} />
+          <Route path="crm/dau-moi/tao-moi" element={<LeadCreatePage />} />
+          <Route path="crm/dau-moi/:id" element={<LeadDetailPage />} />
           <Route path="crm/khieu-nai" element={<ComplaintListPage />} />
           <Route path="crm/khieu-nai/tao-moi" element={<ComplaintCreatePage />} />
           <Route path="crm/khieu-nai/:id" element={<ComplaintDetailPage />} />

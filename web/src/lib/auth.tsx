@@ -448,6 +448,16 @@ export function useIsResponsible(...responsibleUserIds: (string | null | undefin
   return responsibleUserIds.some((id) => id != null && id === profile.id);
 }
 
+/**
+ * Lãnh đạo quản lý mọi pháp nhân (TGĐ, CFO, BGĐ, Quản trị) — gương `auth_manages_all_companies`
+ * trong CSDL. Dùng cho thao tác lãnh đạo được làm dù vai trò không có quyền «tạo» của module
+ * (vd tạo đầu mối, ghi liên hệ — 0172). Kiểm soát nội bộ không thuộc nhóm này.
+ */
+export function useIsOrgManager(): boolean {
+  const { profile } = useAuth();
+  return Boolean(profile?.assignments.some((a) => ORG_MANAGER_ROLES.includes(a.roleCode)));
+}
+
 /** Xem được «Tổng quan điều hành» — lãnh đạo và Kiểm soát nội bộ (0169). */
 export function useCanSeeExecOverview(): boolean {
   const { profile } = useAuth();
