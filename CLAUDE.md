@@ -740,12 +740,21 @@ trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ P
    sắp hết hạn» (cần tham số số ngày); lối vào Tổng quan điều hành trên thanh dưới điện thoại; đánh dấu giao dịch nội
    bộ (QĐ-6) để số tập đoàn loại được; GĐ1 còn thiếu ở trên; nạp thêm dữ liệu demo có hồ sơ quá hạn ở cả ba công ty để
    trang điều hành có gì để xem.
-4. **Đợt Thi công (chủ dự án đồng ý):** NVO chia thi công thành 7 mốc theo `QUY CHUẨN NHÀ VIỆT ONE.docx` (bộ
+4. **CRM theo dõi khách từ lúc tiếp cận (chủ dự án yêu cầu, làm cùng đợt Kinh doanh):** CRM hiện bắt đầu từ cơ hội;
+   thiếu (a) danh sách ĐẦU MỐI trước cơ hội — nhập nhanh / Excel, lọc trùng theo số điện thoại, trạng thái Mới → Đã
+   liên hệ → Có nhu cầu (tạo cơ hội) / M1 Lưu trữ / Không phù hợp (bắt buộc lý do); (b) NHẬT KÝ CHĂM SÓC (PRD CRM-01
+   «lịch sử liên hệ») — mỗi lần gọi / Zalo / gặp một dòng + bắt buộc bước tiếp theo và ngày hẹn; (c) «việc cần làm hôm
+   nay» của Kinh doanh (hẹn đến hạn, đầu mối chưa liên hệ, khảo sát / báo giá chưa phản hồi quá N ngày, M1 tới hạn
+   nhắc lại, khách cũ tới lịch chăm sóc); (d) KHÁCH CŨ sau bàn giao (CRM-07: hài lòng, bảo trì, giới thiệu → đầu mối
+   mới); (e) phễu từ đầu mối theo nguồn / người (mở rộng `bc/sales-effectiveness.tsx`). Không thay Zalo; nối Zalo OA /
+   form quảng cáo làm sau. Căn cứ: phiếu khảo sát Kinh doanh xếp «thông tin chỉ nằm trong Zalo rồi trôi mất» là vướng
+   mắc số 1. Số ngày nhắc NVG đặt (bảng tham số, để trống = chưa nhắc).
+5. **Đợt Thi công (chủ dự án đồng ý):** NVO chia thi công thành 7 mốc theo `QUY CHUẨN NHÀ VIỆT ONE.docx` (bộ
    «HoSoTapHop Gui Sep») — định vị / mốc / cao độ → móng → kết cấu → xây, trát, điện nước âm → chống thấm → hoàn
    thiện → kiểm tra chất lượng. Mỗi mốc phải nghiệm thu + ảnh trước–trong–sau TRƯỚC KHI bị che khuất mới sang mốc
    sau; hạng mục quan trọng (móng, kết cấu, điện nước âm, chống thấm, hoàn thiện) thêm phụ trách kỹ thuật kiểm (chuẩn
    05 «3 lớp kiểm soát»). Đợt thu tiền có thể gắn vào mốc. NVC (nhà xưởng) có trình tự khác — chờ NVG xác nhận mốc.
-5. GĐ4 còn: mẫu Word THẬT của NVG (chủ dự án gửi), PDF chuẩn (cần máy chủ LibreOffice), AI gợi ý câu chữ (trả phí,
+6. GĐ4 còn: mẫu Word THẬT của NVG (chủ dự án gửi), PDF chuẩn (cần máy chủ LibreOffice), AI gợi ý câu chữ (trả phí,
    tắt mặc định). Sau đó GĐ3 → 3b → 5 theo kế hoạch trong `doc/MOC_CAI_TIEN_UX.md`. **Migration tiếp theo: 0172.**
 
 ### 9.4 Quyết định đã chốt và lý do

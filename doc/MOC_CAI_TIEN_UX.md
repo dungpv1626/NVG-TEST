@@ -250,3 +250,10 @@ Chủ dự án đồng ý sau khi đọc `QUY CHUẨN NHÀ VIỆT ONE.docx` (b�
 xây nhà vào một trạng thái «đang thi công». Đợt Thi công sẽ chia NVO thành 7 mốc (định vị → móng → kết cấu → xây,
 trát, điện nước âm → chống thấm → hoàn thiện → kiểm tra chất lượng); mỗi mốc nghiệm thu + ảnh trước khi bị che khuất
 mới sang mốc sau; hạng mục quan trọng thêm phụ trách kỹ thuật kiểm. NVC chờ NVG xác nhận mốc riêng.
+
+### Kế hoạch bổ sung — CRM theo dõi khách từ lúc tiếp cận
+
+Chủ dự án chỉ ra CRM còn thiếu phần tracking / phân loại khách từ lúc tiếp cận tới khi có nhu cầu. Đối chiếu: CRM hiện
+bắt đầu từ cơ hội; PRD CRM-01 đòi «lịch sử liên hệ», CRM-07 chăm sóc sau bán — chưa có. Bổ sung vào đợt Kinh doanh:
+danh sách đầu mối (lọc trùng), nhật ký chăm sóc có bắt buộc bước tiếp theo + ngày hẹn, việc cần làm hôm nay, khách cũ,
+phễu từ đầu mối. Chi tiết: CLAUDE.md 9.3 mục 4.
