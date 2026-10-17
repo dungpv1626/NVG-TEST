@@ -69,8 +69,8 @@ hình ảnh công trình — hiện rải trên Drive / Zalo), CRM-07 (lấy hì
 | Chủ đề | Chủ dự án chốt |
 | --- | --- |
 | Dùng nhà khách đã làm làm mẫu | **Được** |
-| Cách gửi khách | **Link xem trực tuyến** (không cần đăng nhập) |
-| Ai đưa mẫu vào | **Phòng Thiết kế** đẩy vào kho; không cần duyệt trước khi dùng |
+| Cách gửi khách | **Link xem trực tuyến** (không cần đăng nhập); **Kinh doanh đặt thời hạn thu hồi** khi tạo link và thu hồi sớm được |
+| Ai đưa mẫu vào | **Phòng Thiết kế** đẩy vào kho — cả mẫu nhà ở NVO, nhà xưởng NVC và sản phẩm NVS; không cần duyệt trước khi dùng |
 | Ai xem | **Mọi người trong công ty** (cả ba pháp nhân, mọi vai trò) |
 | Ai sửa | Chỉ **Giám đốc** (TGĐ, Ban Giám đốc) và **Phòng Thiết kế** |
 | Xoá | Thiết kế đề nghị → **Giám đốc đồng ý** mới xoá (Giám đốc tự xoá được). Xoá mềm, giữ lịch sử |
@@ -96,8 +96,8 @@ Thiết kế kỹ thuật (để làm, chưa viết mã):
 - Phép thử bắt buộc: người ngoài Thiết kế / Giám đốc không sửa, không xoá được; Thiết kế không tự xoá; link hết hạn /
   bị thu hồi trả 404; trang công khai không lộ cột cấm (nới quyền để thấy đỏ).
 
-Câu hỏi còn mở: mẫu nhà xưởng NVC và sản phẩm NVS ai đưa vào (mặc định: cũng Phòng Thiết kế, Giám đốc sửa được); link
-mặc định hết hạn sau bao lâu (để trống = không hết hạn, thu hồi bằng tay).
+Hạn link: người gửi chọn khi tạo (ô bắt buộc); hết hạn hoặc bị thu hồi thì trang trả «link đã hết hạn», không lộ
+gì thêm. Có nên đặt hạn tối đa (vd 90 ngày) không — chờ chủ dự án, để trống = không giới hạn.
 
 ### Đợt 2 — Thi công (Trưởng phòng + Chỉ huy trưởng)
 

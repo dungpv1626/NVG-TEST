@@ -849,8 +849,9 @@ trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ P
     chia đầu mối cho Kinh doanh không? (để trống = chưa nhắc; người nhập là người phụ trách)
 17. Ngưỡng cảnh báo cho Kiểm soát nội bộ (duyệt sát hạn mức bao nhiêu %), mức tồn tối thiểu từng vật tư, bảng giá bồi
     thường giàn giáo chính thức? (để trống)
-18. Thư viện mẫu: tư liệu ban đầu (hồ sơ năng lực, brochure, ảnh công trình, Catalogue NVS mới) — chủ dự án gửi sau;
-    mẫu NVC / NVS ai đưa vào (Phòng Thiết kế); link gửi khách hết hạn sau bao lâu (không hết hạn, thu hồi bằng tay).
+18. Thư viện mẫu: tư liệu ban đầu (hồ sơ năng lực, brochure, ảnh công trình, Catalogue NVS mới) — chủ dự án gửi sau.
+    ĐÃ CHỐT: mẫu NVC / NVS cũng do Phòng Thiết kế đưa vào; Kinh doanh tự đặt thời hạn thu hồi link. Còn mở: hạn tối đa
+    của link (không giới hạn).
 
 ### 9.6 Ghi chú máy phát triển Windows
 
