@@ -29,6 +29,38 @@ Không ghi mốc thời gian (QĐ-1) — chỉ thứ tự và tiêu chí hoàn t
 | Gửi 1–2 mẫu hợp đồng Word thật | NVG | Mẫu tải lên được, không chỗ trống lạ |
 | Phát hành GĐ1 + GĐ2 + GĐ4 lên demo | Claude Code, khi được đồng ý | Bản demo chạy đúng như máy |
 
+## 1b. Bước 0b — đổi bộ nhận diện theo logo Nhà Việt Group
+
+Chủ dự án yêu cầu (17/10/2026): màu sắc của app theo đúng logo NVG. Làm sau khi phát hành Bước 0, **trước Đợt 1** — để mọi
+màn hình mới dựng thẳng trên token mới, không phải sửa hai lần. Không phụ thuộc đợt nào.
+
+Logo (ảnh PNG 2048 px, bản sao ở `backup/nvg-logo-2048.png`, không commit): ba ô N – V – G + chữ «NHÀ VIỆT GROUP» đen +
+khẩu hiệu «Kiến tạo bền vững – Dẫn lối tương lai». Màu đo trên ảnh (gần đúng, chờ mã chính thức):
+
+| Màu logo | Mã đo được | Chữ trắng trên nền | Chữ chính `#1C1C1A` trên nền | Dùng làm |
+| --- | --- | --- | --- | --- |
+| Xanh lá (N) | `#057B47` | 5,34:1 — đạt | 3,19:1 | **Màu thương hiệu chính** = màu hành động chính (nút, liên kết, focus), thay rừng `#2C6E4B` |
+| Cam (V) | `#F39122` | 2,36:1 — **không đạt** | 7,22:1 | Điểm nhấn: dấu logo, viền / chấm nhấn, ô nổi bật — chỉ đi với chữ tối, **không làm nền nút chữ trắng** |
+| Xanh dương (G) | `#1C6AB2` | 5,59:1 — đạt | 3,05:1 | Hạn chế: logo, chuỗi biểu đồ phụ — **không làm liên kết / nút** vì gần màu trạng thái «Đang xử lý» `#0C66E4` |
+
+Việc cần làm:
+
+1. Đổi token `--color-brand*` trong `web/src/index.css` (brand, hover, subtle, forest → xanh đậm từ logo, mint → nền nhạt
+   từ xanh logo); thêm `--color-brand-accent` (cam) và `--color-brand-blue`; dải biểu đồ §2.5 dựng lại từ ba màu logo.
+2. Logo thật thay khối logo ở thanh bên, trang đăng nhập (kèm khẩu hiệu), favicon, biểu tượng PWA (`manifest`), mẫu hợp
+   đồng / văn bản xuất ra nếu cần.
+3. **Giữ nguyên sáu màu trạng thái** (DESIGN_SYSTEM 2.1 — hàng rào cứng). Xanh lá logo gần «Hoàn thành», xanh dương gần
+   «Đang xử lý», cam gần «Chờ duyệt»: thêm phép thử canh màu thương hiệu không được trùng / quá gần màu trạng thái, và
+   `StatusLozenge` vẫn cấm token brand.
+4. Nền trung tính hiện ám xanh lá nhạt — giữ hay chuyển xám trung tính cho hợp ba màu: quyết khi xem ảnh chụp.
+5. Bảng màu riêng Module Thiết kế (`--color-tk-*`, `/tk/*`) — đổi theo hay giữ: hỏi chủ dự án.
+6. Cập nhật `DESIGN_SYSTEM.md` mục 1, 2.4, 2.5; trang trưng bày `/nen/giao-dien`; CLAUDE.md 4.3.
+7. Kiểm: phép thử tương phản (mọi cặp chữ / nền ≥ 4.5:1, viền ô nhập ≥ 3:1), `design-rules.test.ts`; chụp trước / sau
+   các màn chính bằng đúng vai, 1440 px + 390 px, đưa chủ dự án duyệt trước khi phát hành.
+
+**Cần từ NVG:** logo dạng vector (SVG / AI / PDF) và mã màu chính thức (bộ nhận diện thương hiệu nếu có) — mã ở bảng trên
+chỉ đo trên ảnh; phông chữ chính thức (nếu không có, giữ Be Vietnam Pro).
+
 ## 2. Khối nền dùng chung — xây trong Đợt 1, các đợt sau dùng lại
 
 | Khối | Gồm | Ghi chú kỹ thuật |
@@ -204,7 +236,7 @@ toán hay phòng Dự án theo dõi; có ghi thông tin đối thủ không.
 ## 5. Phụ thuộc — đọc nhanh
 
 ```
-Bước 0 (kiểm + phát hành) ──► Đợt 1 ──► Đợt 2 ──► Đợt 3
+Bước 0 (kiểm + phát hành) ──► Bước 0b (bộ nhận diện) ──► Đợt 1 ──► Đợt 2 ──► Đợt 3
                                │  K1–K5   │  2A, 2D  ▲
                                │          └──────────┘ (đợt thu gắn mốc, đề nghị thu từ biên bản)
                                └──► Đợt 4, Đợt 5 dùng lại K1, K3, K4
