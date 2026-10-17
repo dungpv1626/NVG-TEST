@@ -3,7 +3,10 @@
  *
  * ⚠️ TRẠNG THÁI DỮ LIỆU
  *  - `companies`: mã và mảng hoạt động lấy từ PRD Mục 1.1 (chính xác).
- *    Tên pháp lý đầy đủ theo PRD; mã số thuế / địa chỉ / người đại diện là GIẢ ĐỊNH.
+ *    Tên pháp lý đầy đủ theo PRD; người đại diện là GIẢ ĐỊNH. Mã số thuế / địa chỉ NVO, NVS lấy từ
+ *    website công ty (nhavietone.vn, nhavietsteel.vn — 17/10/2026), CHỜ Haan xác nhận trước khi in
+ *    lên hợp đồng thật; NVC chưa có nguồn nên để trống. Seed chỉ điền khi ô đang trống, không đè
+ *    giá trị Quản trị đã sửa trên giao diện.
  *  - `roles` + `permissions`: suy ra từ Webapp Flow 2.3 (menu theo vai trò) và PRD Mục 3.
  *  - `users`: bốn người có tên thật trong PRD Mục 3 và Phụ lục C; còn lại là GIẢ ĐỊNH
  *    để đủ mỗi vai trò một người dùng thử.
@@ -41,7 +44,9 @@ export const COMPANY_SEED: CompanySeed[] = [
     legalName: 'Công ty TNHH Sản xuất và Thương mại Kết cấu thép Nhà Việt',
     shortName: 'Nhà Việt Steel',
     taxCode: null,
-    address: null,
+    // nhavietsteel.vn (phần liên hệ). ⚠️ Một ảnh trên site ghi tên «Bảo Liên» — chờ NVG xác nhận.
+    address:
+      'Đường vành đai phía nam đi cầu Vũ Đông, tổ dân phố Tam Lạc 2, phường Trần Lãm, tỉnh Hưng Yên',
     legalRepresentative: 'Bùi Văn Thi',
     isTransactional: true,
     displayOrder: 2,
@@ -50,8 +55,9 @@ export const COMPANY_SEED: CompanySeed[] = [
     code: 'NVO',
     legalName: 'Công ty TNHH Tư vấn và Xây dựng Nhà Việt One',
     shortName: 'Nhà Việt One',
-    taxCode: null,
-    address: null,
+    // nhavietone.vn: Giấy phép ĐKKD 1001222166 (mã số doanh nghiệp = mã số thuế).
+    taxCode: '1001222166',
+    address: 'Thôn Tây Hạ, phường Vũ Phúc, tỉnh Hưng Yên',
     legalRepresentative: 'Bùi Văn Thi',
     isTransactional: true,
     displayOrder: 3,

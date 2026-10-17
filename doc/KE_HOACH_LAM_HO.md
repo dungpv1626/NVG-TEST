@@ -90,7 +90,7 @@ Nếu NVG sau này gửi logo vector, mã màu hay phông chính thức thì tha
 
 | Việc | Nội dung | Phụ thuộc |
 | --- | --- | --- |
-| 1A. CRM đầu mối | Danh sách đầu mối trước cơ hội: nhập nhanh / Excel, lọc trùng theo số điện thoại, trạng thái Mới → Đã liên hệ → Có nhu cầu (tạo cơ hội) / M1 Lưu trữ / Không phù hợp (bắt buộc lý do) | — |
+| 1A. CRM đầu mối | Danh sách đầu mối trước cơ hội (nguồn có sẵn: hotline website, Zalo, Messenger, Facebook, YouTube, giới thiệu — ba website NVG chưa có ô để lại thông tin): nhập nhanh / Excel, lọc trùng theo số điện thoại, trạng thái Mới → Đã liên hệ → Có nhu cầu (tạo cơ hội) / M1 Lưu trữ / Không phù hợp (bắt buộc lý do) | — |
 | 1B. Nhật ký chăm sóc | Mỗi lần gọi / Zalo / gặp một dòng (kênh, nội dung, kết quả) + bắt buộc bước tiếp theo và ngày hẹn; dòng thời gian trên hồ sơ khách (PRD CRM-01) | K1 (nói thay gõ — tuỳ chọn) |
 | 1C. Việc cần làm hôm nay của Kinh doanh | Hẹn đến hạn, đầu mối chưa liên hệ, khảo sát / báo giá chưa phản hồi quá N ngày, M1 tới hạn nhắc lại | K4 |
 | 1D. Khảo sát → báo cáo → BGĐ duyệt | Bắt đầu / kết thúc khảo sát (máy ghi giờ), ghi âm nhiều đoạn, máy điền 6 ô báo cáo, gửi Ban Giám đốc; duyệt → cơ hội sang Báo giá; trả về → sửa, gửi lại. Báo cáo chưa duyệt thì chặn Báo giá | K1, K2 |
@@ -120,7 +120,7 @@ hình ảnh công trình — hiện rải trên Drive / Zalo), CRM-07 (lấy hì
 | Ai sửa | Chỉ **Giám đốc** (TGĐ, Ban Giám đốc) và **Phòng Thiết kế** |
 | Xoá | Thiết kế đề nghị → **Giám đốc đồng ý** mới xoá (Giám đốc tự xoá được). Xoá mềm, giữ lịch sử |
 | Giá | **Không hiện khoảng giá** trên mẫu |
-| Tư liệu ban đầu | Chủ dự án gửi sau (hồ sơ năng lực, brochure, ảnh công trình, Catalogue NVS mới) |
+| Tư liệu ban đầu | Chủ dự án gửi sau (hồ sơ năng lực, brochure, ảnh công trình, Catalogue NVS mới). **Bộ đầu tiên: 8 mẫu NVO trên nhavietone.vn** (NV0101 → NV0303: nông thôn / nhà phố / biệt thự) — Thiết kế nhập, giữ mã NVxxxx, bổ sung thông số website không ghi (diện tích, mặt tiền × sâu, số phòng) vì bộ lọc mẫu tương tự cần |
 
 Thiết kế kỹ thuật (để làm, chưa viết mã):
 
@@ -194,7 +194,7 @@ trước khi công trường hỏi.
 | 5A. Thiết kế: khảo sát ghi âm + vòng ý kiến khách | Dùng K1 cho bộ câu hỏi đầu bài; ý kiến khách theo từng vòng, phiên bản tự đánh số | — |
 | 5B. AI Design 4 bước | Đầu vào → Mặt bằng (giá ước tính trên nút, so phương án, 3 lý do trừ điểm, sửa bằng ô yêu cầu) → Mặt ngoài (mặt đứng + phối cảnh) → Bộ kết quả (tải cả gói, tên theo mã hồ sơ) | Tránh sửa `contracts/`; nếu sửa thì `contracts:gen` + phát hành API và web cùng lúc |
 | 5C. Đấu thầu NVC — soạn hồ sơ dự thầu | Kho hồ sơ năng lực → 8 việc hỗ trợ + soạn bộ hồ sơ dự thầu từ số liệu có sẵn; chi tiết ở mục 3.2 | NVC có tự thiết kế không (9.5 câu 14); câu hỏi 3.2 |
-| 5D. NVS cho thuê | Màn hình báo giá thuê tự kiểm tồn, tự tính tiền (PRD CRM-11); phiếu giao khách ký nhận trên điện thoại (dùng lại cách ký của biên bản thu hồi); nhắc hết hạn thuê; bảng giá bồi thường chính thức; sổ giàn giáo lệch thì cảnh báo | Bảng giá bồi thường của NVG |
+| 5D. NVS cho thuê | Đối chiếu danh mục sản phẩm (SX-01, đang theo Catalogue 2022) với nhavietsteel.vn — có mã SKU (vd TP031) và quy cách, thêm nhóm coppha thép / nhựa, thép hộp, container, máy phát điện; NVS xác nhận hàng nào bán / thuê. Màn hình báo giá thuê tự kiểm tồn, tự tính tiền (PRD CRM-11); phiếu giao khách ký nhận trên điện thoại (dùng lại cách ký của biên bản thu hồi); nhắc hết hạn thuê; bảng giá bồi thường chính thức; sổ giàn giáo lệch thì cảnh báo | Bảng giá bồi thường của NVG |
 | 5E. Nhân sự | Bảng công dựng từ điểm danh (nếu chưa xong ở 2C); nhắc hợp đồng lao động | Cách tính công |
 | 5F. Hành chính | Nhắc giấy phép, bảo hiểm, đăng kiểm; văn bản mẫu tự điền (K3); tài sản ký nhận | — |
 
