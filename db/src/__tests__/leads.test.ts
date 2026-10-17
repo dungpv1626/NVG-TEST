@@ -438,3 +438,118 @@ describeDb('Việc chăm sóc khách hôm nay (0173)', () => {
     expect(scan.error).not.toBeNull();
   });
 });
+
+describeDb('Khách cũ và phễu từ đầu mối (0177)', () => {
+  let nvcId: string;
+  let kd: SupabaseClient;
+  let kdNvo: SupabaseClient;
+  let customerId: string;
+
+  beforeAll(async () => {
+    [kd, kdNvo] = await Promise.all([
+      signInAs(ACCOUNTS.kinhDoanhNvc),
+      signInAs(ACCOUNTS.kinhDoanhNvo),
+    ]);
+    const { createConnection } = await import('../client');
+    const { sql } = createConnection();
+    try {
+      const stamp = String(Date.now());
+      const [c] = await sql<{ id: string }[]>`SELECT id FROM companies WHERE code = 'NVC'`;
+      nvcId = c!.id;
+      const [k] = await sql<{ id: string }[]>`
+        INSERT INTO customers (code, name, phone)
+        VALUES (${'KH-KC' + stamp}, ${TEST_PREFIX + ' Khách cũ ' + stamp}, ${phone()})
+        RETURNING id`;
+      customerId = k!.id;
+      await sql`
+        INSERT INTO contracts (company_id, code, title, type, stage, value, customer_id, signed_at)
+        VALUES (${nvcId}, ${'NVC-HD-KC-' + stamp}, ${TEST_PREFIX + ' Hợp đồng khách cũ ' + stamp},
+                'thi_cong', 'da_ky', 500000000, ${customerId}, now() - interval '200 days')`;
+    } finally {
+      await sql.end();
+    }
+  });
+
+  it('khách đã ký hiện ở danh sách khách cũ của đúng pháp nhân, kèm hẹn chăm sóc và số giới thiệu', async () => {
+    const before = (await kd.rpc('old_customers', { p_company_id: nvcId })).data as {
+      customer_id: string;
+      next_care_at: string | null;
+      referral_count: number;
+    }[];
+    const row = before.find((r) => r.customer_id === customerId);
+    expect(row).toMatchObject({ next_care_at: null, referral_count: 0 });
+
+    const other = (await kdNvo.rpc('old_customers', { p_company_id: null })).data as {
+      customer_id: string;
+    }[];
+    expect(other.some((r) => r.customer_id === customerId)).toBe(false);
+
+    await kd.from('contact_logs').insert({
+      customer_id: customerId,
+      company_id: nvcId,
+      channel: 'goi_dien',
+      content: 'Hỏi thăm sau 6 tháng bàn giao, khách nhắc cần bảo trì mái',
+      next_action: 'Hẹn kiểm tra mái',
+      next_action_at: today(10),
+    });
+    await kd.from('leads').insert({
+      company_id: nvcId,
+      full_name: `${TEST_PREFIX} Người được giới thiệu ${Date.now()}`,
+      phone: phone(),
+      source: 'Khách cũ giới thiệu',
+      referred_by_customer_id: customerId,
+    });
+    const after = (await kd.rpc('old_customers', { p_company_id: nvcId })).data as {
+      customer_id: string;
+      next_care_at: string | null;
+      next_care_action: string | null;
+      referral_count: number;
+      last_contact_at: string | null;
+    }[];
+    expect(after.find((r) => r.customer_id === customerId)).toMatchObject({
+      next_care_at: today(10),
+      next_care_action: 'Hẹn kiểm tra mái',
+      referral_count: 1,
+    });
+  });
+
+  it('phễu đầu mối đếm đúng: đầu mối → đã liên hệ → thành cơ hội', async () => {
+    const source = `${TEST_PREFIX} nguồn ${Date.now()}`.slice(0, 32);
+    const mk = async () =>
+      (
+        await kd
+          .from('leads')
+          .insert({
+            company_id: nvcId,
+            full_name: `${TEST_PREFIX} Phễu ${Math.random()}`,
+            phone: phone(),
+            source,
+          })
+          .select('id')
+          .single()
+      ).data!.id as string;
+    const [a, b, c] = [await mk(), await mk(), await mk()];
+    void a;
+    for (const id of [b, c]) {
+      await kd.from('contact_logs').insert({
+        lead_id: id,
+        channel: 'zalo',
+        content: 'Đã liên hệ',
+        next_action: 'Gọi lại',
+        next_action_at: today(1),
+      });
+    }
+    await kd.rpc('convert_lead', {
+      p_lead_id: c,
+      p_opportunity_name: `${TEST_PREFIX} Cơ hội từ phễu`,
+    });
+    const { data } = await kd.rpc('lead_funnel_by_source', { p_company_id: nvcId });
+    const row = (data as { source: string }[]).find((r) => r.source === source);
+    expect(row).toMatchObject({
+      lead_count: 3,
+      contacted_count: 2,
+      converted_count: 1,
+      signed_count: 0,
+    });
+  });
+});

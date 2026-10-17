@@ -1240,6 +1240,13 @@
       "when": 1791210000000,
       "tag": "0176_hop_dong_kem_van_ban",
       "breakpoints": true
+    },
+    {
+      "idx": 177,
+      "version": "7",
+      "when": 1791220000000,
+      "tag": "0177_khach_cu_pheu_dau_moi",
+      "breakpoints": true
     }
   ]
 }

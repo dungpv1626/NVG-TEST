@@ -277,6 +277,7 @@ function LeadInfo({ lead }: { lead: LeadRecord }) {
         { label: 'Khu vực', value: lead.area ?? EM_DASH },
         { label: 'Nguồn', value: lead.source },
         { label: 'Chi tiết nguồn', value: lead.source_detail ?? EM_DASH },
+        { label: 'Khách đã giới thiệu', value: lead.referrer?.name ?? EM_DASH },
         { label: 'Loại công trình', value: lead.project_type ?? EM_DASH },
         { label: 'Nhu cầu ban đầu', value: lead.need ?? EM_DASH },
         { label: 'Ghi chú', value: lead.notes ?? EM_DASH },

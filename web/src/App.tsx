@@ -89,6 +89,9 @@ const OpportunityDetailPage = lazy(() =>
 const QuoteCreatePage = lazy(() =>
   import('@/pages/crm/quote-create').then((m) => ({ default: m.QuoteCreatePage })),
 );
+const OldCustomerListPage = lazy(() =>
+  import('@/pages/crm/old-customer-list').then((m) => ({ default: m.OldCustomerListPage })),
+);
 const LeadListPage = lazy(() =>
   import('@/pages/crm/lead-list').then((m) => ({ default: m.LeadListPage })),
 );
@@ -346,6 +349,7 @@ const router = createBrowserRouter(
           <Route path="crm/co-hoi/:id/bao-gia/lap-moi" element={<QuoteCreatePage />} />
 
           {/* CRM — Khiếu nại khách hàng (CRM-08). */}
+          <Route path="crm/khach-cu" element={<OldCustomerListPage />} />
           <Route path="crm/dau-moi" element={<LeadListPage />} />
           <Route path="crm/dau-moi/tao-moi" element={<LeadCreatePage />} />
           <Route path="crm/dau-moi/:id" element={<LeadDetailPage />} />

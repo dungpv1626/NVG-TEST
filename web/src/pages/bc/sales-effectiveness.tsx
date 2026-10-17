@@ -51,6 +51,7 @@ import { Button } from '@/components/ui/button';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
 import { type CompanyRecord, useCompanies } from '@/hooks/use-companies';
 import { toUserMessage } from '@/hooks/use-error-message';
+import { useLeadFunnel, type LeadFunnelRow } from '@/hooks/use-leads';
 import { useBiddingOutcomes, useOpportunityFunnelBySource } from '@/hooks/use-reports';
 import { useCompanyScope } from '@/lib/company-scope';
 import { escapeHtml, openPrintReport } from '@/lib/print-report';
@@ -289,6 +290,80 @@ function SourceSection({ rows }: { rows: ReturnType<typeof summarizeOpportunitie
   );
 }
 
+/**
+ * Phễu từ ĐẦU MỐI theo nguồn (Đợt 1 — 1F, `lead_funnel_by_source` 0177): đầu mối → đã liên hệ →
+ * thành cơ hội → ký hợp đồng. Bắt đầu SỚM hơn bảng nguồn khách bên dưới (vốn tính từ cơ hội), nên
+ * thấy được nguồn nào đem nhiều người gọi tới nhưng ít ai thành khách.
+ */
+function LeadFunnelSection({ rows }: { rows: LeadFunnelRow[] }) {
+  const bySource = new Map<string, LeadFunnelRow>();
+  for (const r of rows) {
+    const cur = bySource.get(r.source);
+    bySource.set(
+      r.source,
+      cur
+        ? {
+            ...cur,
+            lead_count: cur.lead_count + r.lead_count,
+            contacted_count: cur.contacted_count + r.contacted_count,
+            converted_count: cur.converted_count + r.converted_count,
+            signed_count: cur.signed_count + r.signed_count,
+          }
+        : { ...r },
+    );
+  }
+  const list = [...bySource.values()].sort((a, b) => b.lead_count - a.lead_count);
+  if (list.length === 0) return null;
+  return (
+    <section className="overflow-x-auto rounded-lg border border-border bg-surface shadow-card">
+      <h2 className="px-3 pt-3 font-semibold">Phễu từ đầu mối</h2>
+      <table className="w-full min-w-[40rem] border-collapse">
+        <caption className="sr-only">
+          Đầu mối theo nguồn: đã liên hệ, thành cơ hội, ký hợp đồng
+        </caption>
+        <thead>
+          <tr className="border-b border-border text-left text-xs text-fg-subtle">
+            <th scope="col" className="px-3 py-2 font-medium">
+              Nguồn
+            </th>
+            <th scope="col" className="px-3 py-2 text-right font-medium">
+              Đầu mối
+            </th>
+            <th scope="col" className="px-3 py-2 text-right font-medium">
+              Đã liên hệ
+            </th>
+            <th scope="col" className="px-3 py-2 text-right font-medium">
+              Thành cơ hội
+            </th>
+            <th scope="col" className="px-3 py-2 text-right font-medium">
+              Ký hợp đồng
+            </th>
+            <th scope="col" className="px-3 py-2 text-right font-medium">
+              Tỷ lệ thành cơ hội
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {list.map((r) => (
+            <tr key={r.source} className="border-b border-border last:border-0">
+              <th scope="row" className="px-3 py-2 text-left font-normal">
+                {r.source}
+              </th>
+              <td className="px-3 py-2 text-right tabular-nums">{r.lead_count}</td>
+              <td className="px-3 py-2 text-right tabular-nums">{r.contacted_count}</td>
+              <td className="px-3 py-2 text-right tabular-nums">{r.converted_count}</td>
+              <td className="px-3 py-2 text-right tabular-nums">{r.signed_count}</td>
+              <td className="px-3 py-2 text-right tabular-nums">
+                <RatePill value={conversionRate(r.converted_count, r.lead_count)} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
 function FunnelSection({ rows }: { rows: ReturnType<typeof summarizeOpportunityFunnel> }) {
   const max = Math.max(1, ...rows.map((r) => r.count));
   return (
@@ -451,11 +526,15 @@ export function SalesEffectivenessPage() {
   const scope = useCompanyScope();
   const funnel = useOpportunityFunnelBySource();
   const outcomes = useBiddingOutcomes();
+  const leadFunnel = useLeadFunnel();
   const companies = useCompanies(scope.isAggregate);
 
   const isLoading = funnel.isLoading || outcomes.isLoading;
   const error = funnel.error ?? outcomes.error;
-  const hasAnyData = (funnel.data?.length ?? 0) > 0 || (outcomes.data?.length ?? 0) > 0;
+  const hasAnyData =
+    (funnel.data?.length ?? 0) > 0 ||
+    (outcomes.data?.length ?? 0) > 0 ||
+    (leadFunnel.data?.length ?? 0) > 0;
   const byCompany = scope.isAggregate
     ? summarizeByCompany(companies.data ?? [], funnel.data ?? [], outcomes.data ?? [])
     : [];
@@ -530,6 +609,7 @@ export function SalesEffectivenessPage() {
             </ReportIncompleteNote>
           </div>
           {scope.isAggregate && <CompanyBreakdownSection rows={byCompany} />}
+          <LeadFunnelSection rows={leadFunnel.data ?? []} />
           <SourceSection rows={summarizeOpportunitiesBySource(funnel.data ?? [])} />
           <FunnelSection rows={summarizeOpportunityFunnel(funnel.data ?? [])} />
           <BiddingSection summary={summarizeBiddingOutcomes(outcomes.data ?? [])} />

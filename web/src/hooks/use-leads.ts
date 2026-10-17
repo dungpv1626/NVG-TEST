@@ -33,10 +33,12 @@ export interface LeadRecord {
   customer_id: string | null;
   opportunity_id: string | null;
   converted_at: string | null;
+  referred_by_customer_id: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
   owner: { full_name: string } | null;
+  referrer: { id: string; name: string } | null;
   opportunity: { id: string; code: string; name: string } | null;
 }
 
@@ -44,6 +46,7 @@ const LEAD_SELECT =
   'id, company_id, code, full_name, phone, email, area, source, source_detail, need, ' +
   'project_type, status, owner_id, next_action, next_action_at, last_contacted_at, ' +
   'recontact_at, closed_reason, customer_id, opportunity_id, converted_at, notes, ' +
+  'referred_by_customer_id, referrer:customers!leads_referred_by_customer_id_fkey(id, name), ' +
   'created_at, updated_at, owner:users!leads_owner_id_fkey(full_name), ' +
   'opportunity:opportunities!leads_opportunity_id_fkey(id, code, name)';
 
@@ -96,6 +99,8 @@ export interface NewLeadInput {
   need: string | null;
   projectType: string | null;
   notes: string | null;
+  /** Khách cũ giới thiệu (CRM-07, 0177). */
+  referredByCustomerId: string | null;
 }
 
 export function useCreateLead() {
@@ -116,6 +121,7 @@ export function useCreateLead() {
           need: input.need,
           project_type: input.projectType,
           notes: input.notes,
+          referred_by_customer_id: input.referredByCustomerId,
         })
         .select('id')
         .single();
@@ -349,5 +355,65 @@ export function useMyFollowups(horizonDays = 7, enabled = true) {
     },
     enabled,
     staleTime: 60_000,
+  });
+}
+
+export interface OldCustomerRow {
+  customer_id: string;
+  customer_code: string;
+  customer_name: string;
+  phone: string | null;
+  company_id: string;
+  company_code: string;
+  contract_count: number;
+  last_contract_code: string | null;
+  last_signed_at: string | null;
+  last_contact_at: string | null;
+  next_care_at: string | null;
+  next_care_action: string | null;
+  referral_count: number;
+  responsible_name: string | null;
+}
+
+/** Khách đã ký hợp đồng — chăm sóc sau bán, xin giới thiệu (CRM-07, `old_customers` 0177). */
+export function useOldCustomers() {
+  const scope = useCompanyScope();
+  return useQuery<OldCustomerRow[], Error>({
+    queryKey: ['old-customers', scope.companyId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('old_customers', {
+        p_company_id: scope.isAggregate ? null : (scope.companyId ?? null),
+      });
+      if (error) throw new Error(error.message);
+      return (data ?? []) as OldCustomerRow[];
+    },
+    enabled: scope.isReady,
+  });
+}
+
+export interface LeadFunnelRow {
+  company_id: string;
+  source: string;
+  lead_count: number;
+  contacted_count: number;
+  converted_count: number;
+  signed_count: number;
+  archived_count: number;
+  rejected_count: number;
+}
+
+/** Phễu từ đầu mối theo nguồn (`lead_funnel_by_source`, 0177). */
+export function useLeadFunnel() {
+  const scope = useCompanyScope();
+  return useQuery<LeadFunnelRow[], Error>({
+    queryKey: ['reports', 'lead-funnel', scope.companyId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('lead_funnel_by_source', {
+        p_company_id: scope.isAggregate ? null : (scope.companyId ?? null),
+      });
+      if (error) throw new Error(error.message);
+      return (data ?? []) as LeadFunnelRow[];
+    },
+    enabled: scope.isReady,
   });
 }

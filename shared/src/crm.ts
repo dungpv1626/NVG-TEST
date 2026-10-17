@@ -132,7 +132,7 @@ export const CUSTOMER_SOURCES = [
   'YouTube',
   'BNI',
   'Website',
-  'Khách cũ',
+  'Khách cũ giới thiệu',
   'Môi giới bất động sản công nghiệp',
   'Mời thầu',
   'Khác',

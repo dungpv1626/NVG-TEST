@@ -406,6 +406,10 @@ export const leads = pgTable(
       onDelete: 'set null',
     }),
     convertedAt: timestamp('converted_at', { withTimezone: true }),
+    /** Khách cũ đã giới thiệu đầu mối này (CRM-07, 0177). */
+    referredByCustomerId: uuid('referred_by_customer_id').references(() => customers.id, {
+      onDelete: 'set null',
+    }),
     notes: text('notes'),
     ...auditColumns(),
     ...softDelete(),

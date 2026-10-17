@@ -15,6 +15,7 @@ import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { BlockedNotice } from '@/components/ui/states';
 import { toUserMessage } from '@/hooks/use-error-message';
+import { useEntityList } from '@/hooks/use-entity';
 import { useContactDuplicates, useCreateLead } from '@/hooks/use-leads';
 import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard';
 import { useCan, useIsOrgManager } from '@/lib/auth';
@@ -47,6 +48,15 @@ export function LeadCreatePage() {
     need: '',
     projectType: '',
     notes: '',
+    referredBy: '',
+  });
+  // Khách giới thiệu khách (CRM-07): chỉ hỏi khi nguồn là giới thiệu / khách cũ.
+  const askReferrer = form.source === 'Giới thiệu' || form.source === 'Khách cũ giới thiệu';
+  const { data: customers } = useEntityList<{ id: string; code: string; name: string }>({
+    table: 'customers',
+    scopedByCompany: false,
+    select: 'id, code, name',
+    orderBy: { column: 'name', ascending: true },
   });
   const [error, setError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -83,6 +93,7 @@ export function LeadCreatePage() {
         need: form.need.trim() || null,
         projectType: form.projectType || null,
         notes: form.notes.trim() || null,
+        referredByCustomerId: askReferrer ? form.referredBy || null : null,
       });
       setDirty(false);
       releaseUnsavedGuard();
@@ -210,6 +221,28 @@ export function LeadCreatePage() {
               onChange={(e) => update('sourceDetail', e.target.value)}
             />
           </Field>
+
+          {askReferrer && (
+            <Field
+              label="Khách đã giới thiệu"
+              optional
+              hint="Khách cũ nào giới thiệu — để biết khách nào mang lại khách mới"
+              className="sm:col-span-2"
+            >
+              <select
+                value={form.referredBy}
+                onChange={(e) => update('referredBy', e.target.value)}
+                className={SELECT_CLASS}
+              >
+                <option value="">Không chọn</option>
+                {(customers ?? []).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.code})
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
 
           <Field label="Khu vực" optional>
             <Input value={form.area} onChange={(e) => update('area', e.target.value)} />
