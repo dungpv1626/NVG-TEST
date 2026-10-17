@@ -730,6 +730,9 @@ trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ P
 
 ### 9.3 Bước tiếp theo
 
+**Kế hoạch tổng của mọi thay đổi «làm hộ» cho từng bộ phận (Đợt 1–5, khối nền K1–K5, phụ thuộc, câu hỏi chặn,
+tiêu chí xong): `doc/KE_HOACH_LAM_HO.md` — đọc tệp đó trước khi bắt đầu đợt nào.** Các mục dưới là tóm tắt.
+
 1. **Haan kiểm GĐ1 + GĐ2 trên máy** (`http://localhost:5173`, mật khẩu `NhaViet2026`) bằng đúng vai: Kinh doanh
    `kinhdoanh.nvc@…` đi cơ hội → báo giá → hợp đồng; TGĐ `tgd@…` duyệt, ký, mở công trình, xem Dashboard / Tổng quan
    điều hành; Thi công `congtruong.nvc@…` phân công, khởi công; Chỉ huy trưởng `chihuytruong.nvc@…` nghiệm thu, bảo
