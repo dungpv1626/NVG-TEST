@@ -88,6 +88,10 @@ Nếu NVG sau này gửi logo vector, mã màu hay phông chính thức thì tha
 
 ### Đợt 1 — Kinh doanh (CRM + khảo sát + hợp đồng)
 
+**Trạng thái: XONG vòng đầu trên máy (17/10/2026) — 1A→1H, migration 0172–0179, AI chạy giả lập (`AI_FAKE=1`).
+Chờ chủ dự án chạy thử bằng đúng vai; chưa phát hành. Chưa làm: nút «Gửi mẫu» ngay trên đầu mối / cơ hội (hiện gửi
+từ thư viện, chọn đối tượng qua tham số đường dẫn); nhập đầu mối từ Excel.**
+
 | Việc | Nội dung | Phụ thuộc |
 | --- | --- | --- |
 | 1A. CRM đầu mối | Danh sách đầu mối trước cơ hội (nguồn có sẵn: hotline website, Zalo, Messenger, Facebook, YouTube, giới thiệu — ba website NVG chưa có ô để lại thông tin): nhập nhanh / Excel, lọc trùng theo số điện thoại, trạng thái Mới → Đã liên hệ → Có nhu cầu (tạo cơ hội) / M1 Lưu trữ / Không phù hợp (bắt buộc lý do) | — |

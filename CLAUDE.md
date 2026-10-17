@@ -780,7 +780,16 @@ trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ P
    đồng sắp hết hạn»; lối vào Tổng quan điều hành trên thanh dưới điện thoại; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email; thêm dữ liệu demo quá hạn ở cả ba công ty.
 
-**Migration tiếp theo: 0172.**
+**Đợt 1 — Kinh doanh: XONG vòng đầu trên máy** (0172–0179, commit 8139a22 → 16d3413): đầu mối + nhật ký chăm sóc
+(`leads`, `contact_logs`, `convert_lead`), việc hôm nay (`my_crm_followups`, quét nhắc), khảo sát ghi âm → nháp AI → Ban
+Giám đốc duyệt (`site_surveys.report_status`, phê duyệt `survey_report`, chưa duyệt chặn Báo giá), hợp đồng gửi duyệt kèm
+văn bản (`contracts_document_gate`), khách cũ + phễu theo nguồn, trang «Trợ lý AI» (`/nen/tro-ly-ai`, bảng `ai_calls`),
+thư viện công trình mẫu + link gửi khách (`/mau-cong-trinh`, trang công khai `/xem-mau/:token` qua Worker
+`/public/showcase/:token`, phê duyệt xoá `showcase_delete`). Bản mới nhất của hàm chép-dài: `decide_approval` ở 0179,
+`stage_readiness` ở 0176, `my_pending_approvals` ở 0175. Hạn mức của loại phê duyệt mới nằm ở seed (`DEFAULT_APPROVAL_LIMITS`)
+— chạy `db:seed` sau migrate. Ảnh chạy thử: `backup/dot1-1a/` → `backup/dot1-1h/`.
+
+**Migration tiếp theo: 0180.**
 
 ### 9.4 Quyết định đã chốt và lý do
 
@@ -883,4 +892,9 @@ trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ P
   ~20 test web quá thời gian 5 giây, `kb-room-area-stats` và `bc.test.ts` lúc đỏ lúc xanh khi chạy cả bộ
   (chạy riêng thì xanh). Vì bộ web chưa xanh nên
   `npm run mutation-proof` không chạy trọn ở đây — đột biến mới đo tay.
+- Node 24 trên máy này: các phép thử web có điều hướng của react-router (`use-unsaved-changes-guard`, `top-bar`,
+  `entity-detail`, `dashboard`) đỏ với «RequestInit: Expected signal … AbortSignal» — lệch jsdom / undici, có sẵn
+  trước Đợt 1, không do mã.
+- Ổ C: gần đầy làm máy ảo WSL của Docker treo IO (17/10/2026); gỡ bằng `wsl --shutdown` quyền Administrator rồi mở lại
+  Docker Desktop. Giữ ổ C: trống ≥ 20 GB.
 - `npm run lint` cần `NODE_OPTIONS=--max-old-space-size=8192` (mặc định hết bộ nhớ), như CI.
