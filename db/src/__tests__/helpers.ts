@@ -246,6 +246,8 @@ export async function cleanupTestData(): Promise<void> {
     await sql`DELETE FROM kb_record WHERE project_code LIKE ${TEST_PREFIX + '%'}`;
     await sql`DELETE FROM design_projects WHERE name LIKE ${TEST_PREFIX + '%'}`;
     await sql`DELETE FROM unit_prices WHERE name LIKE ${TEST_PREFIX + '%'}`;
+    // Đầu mối trước cơ hội / khách hàng: nhật ký chăm sóc đi theo (CASCADE) từ cả ba phía.
+    await sql`DELETE FROM leads WHERE full_name LIKE ${TEST_PREFIX + '%'}`;
     await sql`DELETE FROM opportunities WHERE name LIKE ${TEST_PREFIX + '%'}`;
     await sql`DELETE FROM documents WHERE title LIKE ${TEST_PREFIX + '%'}`;
     await sql`DELETE FROM customers WHERE name LIKE ${TEST_PREFIX + '%'}`;

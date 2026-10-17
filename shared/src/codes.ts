@@ -22,6 +22,7 @@ import type { CompanyCode } from './modules';
  * Phải khớp đúng những loại CSDL đang cấp; phép thử canh hai bên.
  */
 export const RECORD_TYPES = {
+  DM: 'Đầu mối khách hàng',
   CH: 'Cơ hội kinh doanh',
   BG: 'Báo giá',
   KN: 'Khiếu nại',

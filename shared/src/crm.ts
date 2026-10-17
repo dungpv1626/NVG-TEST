@@ -118,16 +118,106 @@ export const OPPORTUNITY_PROJECT_TYPES = [
   'Khác',
 ] as const;
 
-/** Nguồn khách hàng — PRD CRM-01. */
+/**
+ * Nguồn khách hàng — PRD CRM-01. Thêm các kênh ba website NVG đang mở (hotline, Zalo,
+ * Messenger, YouTube — website chưa có ô để lại thông tin) và khách cũ quay lại (Đợt 1 — 1A).
+ * Lưu NGUYÊN CHỮ vào `customers.source` / `leads.source`, nên đổi chữ ở đây không đổi dữ liệu cũ.
+ */
 export const CUSTOMER_SOURCES = [
   'Giới thiệu',
-  'BNI',
+  'Hotline website',
+  'Zalo',
+  'Messenger',
   'Facebook',
+  'YouTube',
+  'BNI',
   'Website',
+  'Khách cũ',
   'Môi giới bất động sản công nghiệp',
   'Mời thầu',
   'Khác',
 ] as const;
+
+/**
+ * Đầu mối (Đợt 1 — 1A): người / doanh nghiệp đã tiếp cận nhưng chưa thành cơ hội.
+ * Khớp enum `lead_status` (migration 0172).
+ */
+export const LEAD_STATUSES = [
+  'moi',
+  'da_lien_he',
+  'co_nhu_cau',
+  'luu_tru',
+  'khong_phu_hop',
+] as const;
+export type LeadStatus = (typeof LEAD_STATUSES)[number];
+
+export const LEAD_STATUS_META: Readonly<
+  Record<LeadStatus, { label: string; statusGroup: StatusGroup; hint: string }>
+> = {
+  moi: { label: 'Mới', statusGroup: 'draft', hint: 'Chưa liên hệ lần nào.' },
+  da_lien_he: {
+    label: 'Đã liên hệ',
+    statusGroup: 'in_progress',
+    hint: 'Đang trao đổi, chưa rõ nhu cầu.',
+  },
+  co_nhu_cau: {
+    label: 'Đã thành cơ hội',
+    statusGroup: 'completed',
+    hint: 'Có nhu cầu thật — việc chăm sóc tiếp tục trên cơ hội.',
+  },
+  luu_tru: {
+    label: 'M1 Lưu trữ',
+    statusGroup: 'draft',
+    hint: 'Chưa có nhu cầu — hệ thống nhắc liên hệ lại vào ngày đã hẹn.',
+  },
+  khong_phu_hop: {
+    label: 'Không phù hợp',
+    statusGroup: 'completed',
+    hint: 'Đã đóng, kèm lý do — giữ lại để không gọi trùng.',
+  },
+};
+
+/** Đầu mối còn đang theo dõi (chưa thành cơ hội, chưa đóng). */
+export function isLeadOpen(status: LeadStatus): boolean {
+  return status === 'moi' || status === 'da_lien_he' || status === 'luu_tru';
+}
+
+/**
+ * Trạng thái hiển thị của đầu mối: quá ngày hẹn (hoặc quá ngày liên hệ lại với M1) thì Quá hạn.
+ * Suy lúc hiển thị như khiếu nại — không cần tác vụ nền.
+ */
+export function leadDisplayStatus(
+  lead: {
+    status: LeadStatus;
+    next_action_at: string | null | undefined;
+    recontact_at: string | null | undefined;
+  },
+  now: Date = new Date(),
+): StatusGroup {
+  const meta = LEAD_STATUS_META[lead.status];
+  if (!isLeadOpen(lead.status)) return meta.statusGroup;
+  const due = lead.status === 'luu_tru' ? lead.recontact_at : lead.next_action_at;
+  if (!due) return meta.statusGroup;
+  const remaining = daysUntil(due, now);
+  return remaining !== null && remaining < 0 ? 'overdue' : meta.statusGroup;
+}
+
+/** Kênh liên hệ của nhật ký chăm sóc (1B) — khớp enum `contact_channel`. */
+export const CONTACT_CHANNELS = ['goi_dien', 'zalo', 'gap_mat', 'email', 'khac'] as const;
+export type ContactChannel = (typeof CONTACT_CHANNELS)[number];
+
+export const CONTACT_CHANNEL_LABELS: Readonly<Record<ContactChannel, string>> = {
+  goi_dien: 'Gọi điện',
+  zalo: 'Zalo',
+  gap_mat: 'Gặp trực tiếp',
+  email: 'Email',
+  khac: 'Khác',
+};
+
+/** Chỉ giữ chữ số — cùng quy tắc với cột sinh `leads.phone_digits`. */
+export function phoneDigits(phone: string | null | undefined): string {
+  return (phone ?? '').replace(/\D/g, '');
+}
 
 /** Mức độ nghiêm trọng của khiếu nại — PRD CRM-08. */
 export const COMPLAINT_SEVERITIES = ['thap', 'trung_binh', 'cao'] as const;

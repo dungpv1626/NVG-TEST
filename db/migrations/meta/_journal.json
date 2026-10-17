@@ -1205,6 +1205,13 @@
       "when": 1791160000000,
       "tag": "0171_mau_hop_dong",
       "breakpoints": true
+    },
+    {
+      "idx": 172,
+      "version": "7",
+      "when": 1791170000000,
+      "tag": "0172_dau_moi_nhat_ky_cham_soc",
+      "breakpoints": true
     }
   ]
 }

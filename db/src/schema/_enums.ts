@@ -8,6 +8,8 @@
 
 import { pgEnum } from 'drizzle-orm/pg-core';
 import {
+  CONTACT_CHANNELS,
+  LEAD_STATUSES,
   ACCOUNTING_PERIOD_STATUSES,
   ASSET_CONDITIONS,
   ASSET_EVENT_TYPES,
@@ -125,6 +127,12 @@ export const opportunityClassificationEnum = pgEnum('opportunity_classification'
 
 /** Mức độ nghiêm trọng của khiếu nại — PRD CRM-08. */
 export const complaintSeverityEnum = pgEnum('complaint_severity', ['thap', 'trung_binh', 'cao']);
+
+/** Trạng thái đầu mối (Đợt 1 — 1A, migration 0172). */
+export const leadStatusEnum = pgEnum('lead_status', LEAD_STATUSES);
+
+/** Kênh liên hệ của nhật ký chăm sóc (Đợt 1 — 1B, migration 0172). */
+export const contactChannelEnum = pgEnum('contact_channel', CONTACT_CHANNELS);
 
 /** Bước của một gói thầu — PRD DA-01, Webapp Flow 3.2. */
 export const biddingStageEnum = pgEnum('bidding_stage', BIDDING_STAGES);

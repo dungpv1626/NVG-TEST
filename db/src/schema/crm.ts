@@ -7,6 +7,7 @@
  */
 
 import {
+  boolean,
   date,
   index,
   pgTable,
@@ -20,6 +21,8 @@ import { sql } from 'drizzle-orm';
 import { auditColumns } from './_audit';
 import {
   complaintSeverityEnum,
+  contactChannelEnum,
+  leadStatusEnum,
   opportunityClassificationEnum,
   opportunityStageEnum,
   statusGroupEnum,
@@ -326,6 +329,91 @@ export const complaints = pgTable(
   ],
 );
 
+/**
+ * Đầu mối — trước cơ hội (Đợt 1 — 1A, migration 0172). Bảng GIAO DỊCH: mỗi đầu mối thuộc một
+ * pháp nhân. Mã `{PN}-DM-{NĂM}-{4 số}`, phụ trách mặc định là người tạo — đều do trigger đặt.
+ * `status = co_nhu_cau`, `customer_id`, `opportunity_id`, `converted_at` chỉ `convert_lead` ghi.
+ */
+export const leads = pgTable(
+  'leads',
+  {
+    id: primaryId(),
+    ...companyScoped(),
+    code: varchar('code', { length: 40 }).notNull().unique(),
+    fullName: text('full_name').notNull(),
+    phone: varchar('phone', { length: 20 }),
+    /** Cột sinh — chỉ chữ số, để so trùng. */
+    phoneDigits: varchar('phone_digits', { length: 20 }).generatedAlwaysAs(
+      sql`NULLIF(regexp_replace(COALESCE(phone, ''), '\D', '', 'g'), '')`,
+    ),
+    email: varchar('email', { length: 255 }),
+    area: text('area'),
+    source: varchar('source', { length: 32 }).notNull(),
+    sourceDetail: text('source_detail'),
+    need: text('need'),
+    projectType: varchar('project_type', { length: 64 }),
+    status: leadStatusEnum('status').notNull().default('moi'),
+    ownerId: uuid('owner_id').references(() => users.id, { onDelete: 'set null' }),
+    nextAction: text('next_action'),
+    nextActionAt: date('next_action_at'),
+    lastContactedAt: timestamp('last_contacted_at', { withTimezone: true }),
+    /** M1 Lưu trữ — ngày liên hệ lại (bắt buộc khi lưu trữ). */
+    recontactAt: date('recontact_at'),
+    /** Lý do «Không phù hợp» (bắt buộc). */
+    closedReason: text('closed_reason'),
+    customerId: uuid('customer_id').references(() => customers.id, { onDelete: 'set null' }),
+    opportunityId: uuid('opportunity_id').references(() => opportunities.id, {
+      onDelete: 'set null',
+    }),
+    convertedAt: timestamp('converted_at', { withTimezone: true }),
+    notes: text('notes'),
+    ...auditColumns(),
+    ...softDelete(),
+  },
+  (t) => [
+    uniqueIndex('leads_company_phone_unique')
+      .on(t.companyId, t.phoneDigits)
+      .where(sql`${t.deletedAt} IS NULL AND ${t.phoneDigits} IS NOT NULL`),
+    index('leads_company_status_idx').on(t.companyId, t.status),
+    index('leads_owner_next_idx').on(t.ownerId, t.nextActionAt),
+  ],
+);
+
+/**
+ * Nhật ký chăm sóc (Đợt 1 — 1B, migration 0172): mỗi lần liên hệ một dòng, BẤT BIẾN, bắt buộc
+ * bước tiếp theo + ngày hẹn trừ khi `closes_followup`. Gắn đầu mối, cơ hội hoặc khách hàng;
+ * pháp nhân suy từ hồ sơ cha.
+ */
+export const contactLogs = pgTable(
+  'contact_logs',
+  {
+    id: primaryId(),
+    ...companyScoped(),
+    leadId: uuid('lead_id').references(() => leads.id, { onDelete: 'cascade' }),
+    customerId: uuid('customer_id').references(() => customers.id, { onDelete: 'cascade' }),
+    opportunityId: uuid('opportunity_id').references(() => opportunities.id, {
+      onDelete: 'cascade',
+    }),
+    channel: contactChannelEnum('channel').notNull(),
+    contactedAt: timestamp('contacted_at', { withTimezone: true }).notNull().defaultNow(),
+    content: text('content').notNull(),
+    result: text('result'),
+    nextAction: text('next_action'),
+    nextActionAt: date('next_action_at'),
+    closesFollowup: boolean('closes_followup').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+  },
+  (t) => [
+    index('contact_logs_lead_idx').on(t.leadId, t.contactedAt),
+    index('contact_logs_customer_idx').on(t.customerId, t.contactedAt),
+    index('contact_logs_opportunity_idx').on(t.opportunityId, t.contactedAt),
+    index('contact_logs_next_idx').on(t.createdBy, t.nextActionAt),
+  ],
+);
+
+export type Lead = typeof leads.$inferSelect;
+export type ContactLog = typeof contactLogs.$inferSelect;
 export type Opportunity = typeof opportunities.$inferSelect;
 export type OpportunityStageHistory = typeof opportunityStageHistory.$inferSelect;
 export type SiteSurvey = typeof siteSurveys.$inferSelect;
