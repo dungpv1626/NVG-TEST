@@ -1212,6 +1212,13 @@
       "when": 1791170000000,
       "tag": "0172_dau_moi_nhat_ky_cham_soc",
       "breakpoints": true
+    },
+    {
+      "idx": 173,
+      "version": "7",
+      "when": 1791180000000,
+      "tag": "0173_viec_hom_nay_cham_soc",
+      "breakpoints": true
     }
   ]
 }

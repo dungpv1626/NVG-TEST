@@ -14,6 +14,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MODULES } from '@nvg/shared';
 import { usePendingApprovals } from '@/hooks/use-approvals';
+import { useMyFollowups } from '@/hooks/use-leads';
 import { SEARCH_MIN_LENGTH, useGlobalSearch, type GlobalSearchResult } from '@/hooks/use-search';
 import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
@@ -260,7 +261,11 @@ export function TopBar() {
   // Dùng CHUNG truy vấn với Hộp thư Phê duyệt: nếu đếm bằng một truy vấn riêng,
   // hai con số sẽ lệch nhau ngay khi điều kiện lọc đổi ở một bên.
   const { data: pending } = usePendingApprovals();
-  const pendingCount = pending?.length ?? 0;
+  // Việc chăm sóc khách đến hạn / quá hạn hôm nay (Đợt 1 — 1C) cộng vào cùng một số: «Việc cần
+  // làm» là mọi thứ chờ chính người này thao tác.
+  // Hàm CSDL tự trả rỗng cho người không xem được CRM — không cần kiểm quyền thêm ở đây.
+  const { data: followups } = useMyFollowups(0);
+  const pendingCount = (pending?.length ?? 0) + (followups?.length ?? 0);
   const [changingPassword, setChangingPassword] = useState(false);
 
   return (
@@ -305,7 +310,7 @@ export function TopBar() {
         {/* Thông báo và Việc cần làm tách thành hai danh sách riêng (Webapp Flow 5.4),
             tránh nhầm giữa "biết để đó" và "phải xử lý". */}
         <IconButton
-          label={pendingCount ? `Việc cần làm — ${pendingCount} hồ sơ chờ xử lý` : 'Việc cần làm'}
+          label={pendingCount ? `Việc cần làm — ${pendingCount} việc chờ xử lý` : 'Việc cần làm'}
           count={pendingCount}
           to="/viec-can-lam"
         >

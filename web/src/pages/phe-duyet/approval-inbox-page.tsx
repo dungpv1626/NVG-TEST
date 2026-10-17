@@ -10,6 +10,7 @@
  * Danh sách hiển thị đã được RLS Mẫu C lọc theo hạn mức, không lọc lại ở đây.
  */
 
+import { TodayFollowups } from '@/components/crm/today-followups';
 import { PageHeader } from '@/components/layout/app-shell';
 import { ApprovalInbox, type ApprovalItem } from '@/components/entity/approval-inbox';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
@@ -24,6 +25,7 @@ import {
   formatDateTime,
   formatDeadline,
 } from '@nvg/shared';
+import { useCan } from '@/lib/auth';
 import { APP_HELP } from '@/lib/help-texts';
 
 /**
@@ -68,6 +70,7 @@ function fullRecordPath(item: PendingApproval): string {
 export function ApprovalInboxPage() {
   const { data, isLoading, error, refetch } = usePendingApprovals();
   const decide = useDecideApproval();
+  const canSeeCrm = useCan('CRM');
 
   const items: ApprovalItem[] | undefined = data?.map((row) => ({
     id: row.id,
@@ -87,9 +90,17 @@ export function ApprovalInboxPage() {
       <PageHeader
         help={APP_HELP.approvalInbox}
         title="Việc cần làm"
-        description="Mọi hồ sơ đang chờ phê duyệt, gộp chung từ tất cả module."
+        description={
+          canSeeCrm
+            ? 'Khách cần liên hệ và hồ sơ đang chờ phê duyệt, gộp chung từ tất cả module.'
+            : 'Mọi hồ sơ đang chờ phê duyệt, gộp chung từ tất cả module.'
+        }
         breadcrumbs={[{ label: 'Việc cần làm' }]}
       />
+
+      {/* Đợt 1 — 1C: người xem được CRM thấy việc chăm sóc khách của mình trước. */}
+      {canSeeCrm && <TodayFollowups />}
+      {canSeeCrm && <h2 className="mb-2 text-lg font-semibold">Chờ phê duyệt</h2>}
 
       <ApprovalInbox
         items={items}

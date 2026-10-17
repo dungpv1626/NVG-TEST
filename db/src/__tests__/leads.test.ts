@@ -313,3 +313,128 @@ describeDb('Đầu mối và nhật ký chăm sóc (0172)', () => {
     }
   });
 });
+
+describeDb('Việc chăm sóc khách hôm nay (0173)', () => {
+  let nvcId: string;
+  let kd: SupabaseClient;
+  let kdNvo: SupabaseClient;
+
+  beforeAll(async () => {
+    const { createConnection } = await import('../client');
+    const { sql } = createConnection();
+    try {
+      const [c] = await sql<{ id: string }[]>`SELECT id FROM companies WHERE code = 'NVC'`;
+      nvcId = c!.id;
+    } finally {
+      await sql.end();
+    }
+    [kd, kdNvo] = await Promise.all([
+      signInAs(ACCOUNTS.kinhDoanhNvc),
+      signInAs(ACCOUNTS.kinhDoanhNvo),
+    ]);
+  });
+
+  async function followups(client: SupabaseClient, horizon: number) {
+    const { data, error } = await client.rpc('my_crm_followups', { p_horizon_days: horizon });
+    expect(error).toBeNull();
+    return (data ?? []) as { kind: string; entity_id: string; due_date: string; action: string }[];
+  }
+
+  it('đầu mối mới → liên hệ lần đầu; ghi liên hệ → theo ngày hẹn; chỉ người phụ trách thấy', async () => {
+    const { data: lead } = await kd
+      .from('leads')
+      .insert({
+        company_id: nvcId,
+        full_name: `${TEST_PREFIX} Việc hôm nay ${Date.now()}`,
+        phone: phone(),
+        source: 'Zalo',
+      })
+      .select('id')
+      .single();
+
+    const first = (await followups(kd, 0)).find((f) => f.entity_id === lead!.id);
+    expect(first).toMatchObject({ kind: 'lead_first_contact', due_date: today() });
+    expect((await followups(kdNvo, 7)).some((f) => f.entity_id === lead!.id)).toBe(false);
+
+    await kd.from('contact_logs').insert({
+      lead_id: lead!.id,
+      channel: 'goi_dien',
+      content: 'Đã gọi',
+      next_action: 'Gửi báo giá sơ bộ',
+      next_action_at: today(2),
+    });
+    expect((await followups(kd, 0)).some((f) => f.entity_id === lead!.id)).toBe(false);
+    const later = (await followups(kd, 7)).find((f) => f.entity_id === lead!.id);
+    expect(later).toMatchObject({
+      kind: 'lead_followup',
+      due_date: today(2),
+      action: 'Gửi báo giá sơ bộ',
+    });
+  });
+
+  it('cơ hội: dòng nhật ký mới nhất quyết định; kết thúc theo dõi thì hết việc', async () => {
+    const { data: lead } = await kd
+      .from('leads')
+      .insert({
+        company_id: nvcId,
+        full_name: `${TEST_PREFIX} Cơ hội việc ${Date.now()}`,
+        phone: phone(),
+        source: 'Giới thiệu',
+      })
+      .select('id')
+      .single();
+    const { data: oppId } = await kd.rpc('convert_lead', {
+      p_lead_id: lead!.id,
+      p_opportunity_name: `${TEST_PREFIX} Cơ hội việc hôm nay`,
+    });
+    await kd.from('contact_logs').insert({
+      opportunity_id: oppId,
+      channel: 'gap_mat',
+      content: 'Gặp khách',
+      next_action: 'Hẹn khảo sát',
+      next_action_at: today(),
+    });
+    const item = (await followups(kd, 0)).find((f) => f.entity_id === oppId);
+    expect(item).toMatchObject({ kind: 'opportunity_followup', action: 'Hẹn khảo sát' });
+
+    await kd.from('contact_logs').insert({
+      opportunity_id: oppId,
+      channel: 'goi_dien',
+      content: 'Khách hoãn vô thời hạn',
+      closes_followup: true,
+    });
+    expect((await followups(kd, 30)).some((f) => f.entity_id === oppId)).toBe(false);
+  });
+
+  it('cron đêm: một thông báo tóm tắt mỗi người mỗi ngày', async () => {
+    const { createConnection } = await import('../client');
+    const { sql } = createConnection();
+    try {
+      const [u] = await sql<{ id: string }[]>`
+        SELECT id FROM users WHERE email = ${ACCOUNTS.kinhDoanhNvc}`;
+      await sql`DELETE FROM notifications WHERE user_id = ${u!.id} AND type = 'crm_followup'`;
+      await sql`SELECT public.scan_crm_followup_reminders()`;
+      const [first] = await sql<{ n: number }[]>`
+        SELECT count(*)::int AS n FROM notifications
+        WHERE user_id = ${u!.id} AND type = 'crm_followup'`;
+      expect(first!.n).toBe(1);
+      await sql`SELECT public.scan_crm_followup_reminders()`;
+      const [second] = await sql<{ n: number }[]>`
+        SELECT count(*)::int AS n FROM notifications
+        WHERE user_id = ${u!.id} AND type = 'crm_followup'`;
+      expect(second!.n).toBe(1);
+    } finally {
+      await sql.end();
+    }
+  });
+
+  it('trình duyệt không gọi được hàm nội bộ và lượt quét', async () => {
+    const internal = await kd.rpc('crm_followups_for', {
+      p_user: '00000000-0000-0000-0000-000000000000',
+      p_until: today(30),
+    });
+    expect(internal.error).not.toBeNull();
+    const scan = await kd.rpc('scan_crm_followup_reminders');
+    expect(scan.error).not.toBeNull();
+  });
+});

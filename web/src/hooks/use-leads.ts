@@ -316,3 +316,38 @@ export function useAddContactLog(subject: ContactSubject) {
     },
   });
 }
+
+export interface FollowupItem {
+  kind:
+    | 'lead_first_contact'
+    | 'lead_followup'
+    | 'lead_recontact'
+    | 'opportunity_followup'
+    | 'customer_followup';
+  entity_id: string;
+  code: string;
+  title: string;
+  action: string | null;
+  due_date: string;
+  company_code: string;
+  path: string;
+}
+
+/**
+ * Việc chăm sóc khách của người đang đăng nhập — quá hạn, hôm nay và `horizonDays` ngày tới
+ * (`my_crm_followups`, 0173). Chỉ chạy khi xem được CRM.
+ */
+export function useMyFollowups(horizonDays = 7, enabled = true) {
+  return useQuery<FollowupItem[], Error>({
+    queryKey: ['today-tasks', horizonDays],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('my_crm_followups', {
+        p_horizon_days: horizonDays,
+      });
+      if (error) throw new Error(error.message);
+      return (data ?? []) as FollowupItem[];
+    },
+    enabled,
+    staleTime: 60_000,
+  });
+}
