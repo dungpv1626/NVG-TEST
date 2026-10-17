@@ -52,6 +52,7 @@ Không ghi mốc thời gian (QĐ-1) — chỉ thứ tự và tiêu chí hoàn t
 | 1E. Hợp đồng gửi duyệt kèm văn bản | Khi pháp nhân có mẫu: phải lập văn bản trước khi gửi; người duyệt xem văn bản trong hộp; ghi bản đã duyệt (`contracts.approved_document_id`); chỉ lập văn bản khi hợp đồng Nháp | K2, K3 |
 | 1F. Khách cũ + phễu | Sau bàn giao: lịch chăm sóc, bảo trì, xin giới thiệu → đầu mối mới (CRM-07); báo cáo phễu từ đầu mối theo nguồn / người (mở rộng `bc/sales-effectiveness.tsx`) | 1A, K4 |
 | 1G. Quản trị AI | K5 | K1 |
+| 1H. Thư viện công trình mẫu (chào khách) | Kho mẫu dùng chung + lọc «mẫu tương tự» theo ô của cơ hội / đầu bài + gom bộ mẫu → link xem trực tuyến gửi khách + ghi vào nhật ký chăm sóc mẫu đã gửi / khách thích. Quy tắc chủ dự án đã chốt ở mục 3.1 dưới đây | 1B (nhật ký), K2 (duyệt xoá) |
 
 **Tiêu chí xong:** Kinh doanh NVC đi trọn từ đầu mối → liên hệ (có nhật ký, hẹn) → cơ hội → khảo sát ghi âm → báo
 cáo → TGĐ trả về → sửa → duyệt → báo giá → hợp đồng có văn bản → TGĐ xem văn bản, duyệt; khách bị bỏ quên hiện trong
@@ -59,6 +60,44 @@ việc hôm nay. AI chạy giả lập; một vài lượt thật chỉ khi đư
 
 **Câu hỏi chặn:** số ngày nhắc (gọi lại, chưa phản hồi, M1); ai nhập data Marketing; có tự chia đầu mối cho Kinh doanh
 không (mặc định: không, người nhập là người phụ trách).
+
+#### 3.1 Thư viện công trình mẫu (1H) — quy tắc đã chốt
+
+Nguồn: PRD TK-09 (thư viện thiết kế, đang lùi), phiếu khảo sát Kinh doanh (hồ sơ chào khách: hồ sơ năng lực, brochure,
+hình ảnh công trình — hiện rải trên Drive / Zalo), CRM-07 (lấy hình ảnh công trình sau bàn giao). Hệ thống chưa có gì.
+
+| Chủ đề | Chủ dự án chốt |
+| --- | --- |
+| Dùng nhà khách đã làm làm mẫu | **Được** |
+| Cách gửi khách | **Link xem trực tuyến** (không cần đăng nhập) |
+| Ai đưa mẫu vào | **Phòng Thiết kế** đẩy vào kho; không cần duyệt trước khi dùng |
+| Ai xem | **Mọi người trong công ty** (cả ba pháp nhân, mọi vai trò) |
+| Ai sửa | Chỉ **Giám đốc** (TGĐ, Ban Giám đốc) và **Phòng Thiết kế** |
+| Xoá | Thiết kế đề nghị → **Giám đốc đồng ý** mới xoá (Giám đốc tự xoá được). Xoá mềm, giữ lịch sử |
+| Giá | **Không hiện khoảng giá** trên mẫu |
+| Tư liệu ban đầu | Chủ dự án gửi sau (hồ sơ năng lực, brochure, ảnh công trình, Catalogue NVS mới) |
+
+Thiết kế kỹ thuật (để làm, chưa viết mã):
+
+- Bảng `showcase_items` (loại hình, pháp nhân, diện tích đất, mặt tiền × sâu, số tầng, phong cách, khẩu độ / diện tích
+  nhà xưởng, mô tả, liên kết tuỳ chọn tới `design_projects` / `construction_sites`, `deleted_at`) + `showcase_media`
+  (ảnh, phối cảnh, mặt bằng; bucket riêng `showcase`, ảnh nén). **Không có cột giá.** Đây là ngoại lệ có chủ đích với
+  Mẫu A: đọc = mọi người đã đăng nhập; ghi = TK hoặc TGĐ / BGĐ (dùng `auth_manages_all_companies()` cho phía Giám đốc).
+- Xoá: loại phê duyệt mới `showcase_delete` (enum ở migration riêng); `decide_approval` chép bản mới nhất rồi thêm nhánh;
+  không có policy DELETE — đồng ý thì đặt `deleted_at`.
+- Link khách: `showcase_shares` (bộ mẫu, người gửi, cơ hội / khách, mã ngẫu nhiên, hạn dùng, thu hồi được) +
+  `showcase_share_views` (lượt mở). Trang công khai đi qua **Worker** (`/public/showcase/:token`) — trang đầu tiên của hệ
+  thống mở ra ngoài: chỉ trả mẫu trong bộ, chưa xoá, ảnh qua URL ký ngắn hạn; không bao giờ trả tên chủ nhà, địa chỉ chi
+  tiết (chỉ quận / tỉnh), khung tên bản vẽ, giá. Gửi link thì ghi một dòng nhật ký chăm sóc (1B); khách thích mẫu nào →
+  «tham khảo» trong đầu bài thiết kế.
+- Lọc mẫu tương tự: lọc thường theo ô đã có trong cơ hội / đầu bài, không dùng AI.
+- Về sau: Đợt 2 tự tạo hồ sơ mẫu nháp từ ảnh mốc hoàn thiện / bàn giao và phối cảnh khách đã duyệt — Thiết kế xác
+  nhận rồi mới vào kho; Đợt 5 (5C) lấy danh sách «công trình tương tự» cho hồ sơ thầu NVC (DA-08) từ kho này.
+- Phép thử bắt buộc: người ngoài Thiết kế / Giám đốc không sửa, không xoá được; Thiết kế không tự xoá; link hết hạn /
+  bị thu hồi trả 404; trang công khai không lộ cột cấm (nới quyền để thấy đỏ).
+
+Câu hỏi còn mở: mẫu nhà xưởng NVC và sản phẩm NVS ai đưa vào (mặc định: cũng Phòng Thiết kế, Giám đốc sửa được); link
+mặc định hết hạn sau bao lâu (để trống = không hết hạn, thu hồi bằng tay).
 
 ### Đợt 2 — Thi công (Trưởng phòng + Chỉ huy trưởng)
 
@@ -70,6 +109,7 @@ không (mặc định: không, người nhập là người phụ trách).
 | 2D. Biên bản nghiệm thu tự sinh | Tích danh sách → điền mẫu biên bản → hai bên ký trên điện thoại → chuyển Kế toán | K3, ký điện thoại (đã có ở thu hồi giàn giáo) |
 | 2E. Màn hình Trưởng phòng Thi công | Mỗi công trình một dòng: mốc hiện tại, nhật ký hôm nay, việc đang chờ, mốc chờ nghiệm thu | 2A |
 | 2F. Phiếu bảo hành | Khách báo → ghi âm / gõ nhanh thành phiếu → tự giao người phụ trách, có hạn xử lý → ảnh xác nhận | K1, K4, bảo hành (0166) |
+| 2G. Công trình xong → mẫu nháp | Bàn giao xong: gom ảnh mốc hoàn thiện + phối cảnh khách đã duyệt thành hồ sơ mẫu nháp, thông số tự điền; Thiết kế xác nhận mới vào kho | 1H, 2A |
 
 **Tiêu chí xong:** chỉ huy trưởng NVO cập nhật một ngày ≤ 10 phút trên điện thoại; không sang mốc sau khi mốc trước
 chưa đạt; biên bản ký xong xuất hiện ở Kế toán; Trưởng phòng thấy công trình nào chậm không cần gọi.
@@ -108,7 +148,7 @@ trước khi công trường hỏi.
 | --- | --- | --- |
 | 5A. Thiết kế: khảo sát ghi âm + vòng ý kiến khách | Dùng K1 cho bộ câu hỏi đầu bài; ý kiến khách theo từng vòng, phiên bản tự đánh số | — |
 | 5B. AI Design 4 bước | Đầu vào → Mặt bằng (giá ước tính trên nút, so phương án, 3 lý do trừ điểm, sửa bằng ô yêu cầu) → Mặt ngoài (mặt đứng + phối cảnh) → Bộ kết quả (tải cả gói, tên theo mã hồ sơ) | Tránh sửa `contracts/`; nếu sửa thì `contracts:gen` + phát hành API và web cùng lúc |
-| 5C. Đấu thầu NVC | Bước «phương án kỹ thuật, biện pháp thi công»; danh mục hồ sơ thầu theo loại gói; nhắc hạn nộp; so đơn giá với gói cũ (chỉ cảnh báo) | NVC có tự thiết kế không (9.5 câu 14) |
+| 5C. Đấu thầu NVC | Bước «phương án kỹ thuật, biện pháp thi công»; danh mục hồ sơ thầu theo loại gói; «công trình tương tự» lấy từ thư viện mẫu (1H); nhắc hạn nộp; so đơn giá với gói cũ (chỉ cảnh báo) | NVC có tự thiết kế không (9.5 câu 14) |
 | 5D. NVS cho thuê | Màn hình báo giá thuê tự kiểm tồn, tự tính tiền (PRD CRM-11); phiếu giao khách ký nhận trên điện thoại (dùng lại cách ký của biên bản thu hồi); nhắc hết hạn thuê; bảng giá bồi thường chính thức; sổ giàn giáo lệch thì cảnh báo | Bảng giá bồi thường của NVG |
 | 5E. Nhân sự | Bảng công dựng từ điểm danh (nếu chưa xong ở 2C); nhắc hợp đồng lao động | Cách tính công |
 | 5F. Hành chính | Nhắc giấy phép, bảo hiểm, đăng kiểm; văn bản mẫu tự điền (K3); tài sản ký nhận | — |
