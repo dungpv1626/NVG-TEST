@@ -148,10 +148,49 @@ trước khi công trường hỏi.
 | --- | --- | --- |
 | 5A. Thiết kế: khảo sát ghi âm + vòng ý kiến khách | Dùng K1 cho bộ câu hỏi đầu bài; ý kiến khách theo từng vòng, phiên bản tự đánh số | — |
 | 5B. AI Design 4 bước | Đầu vào → Mặt bằng (giá ước tính trên nút, so phương án, 3 lý do trừ điểm, sửa bằng ô yêu cầu) → Mặt ngoài (mặt đứng + phối cảnh) → Bộ kết quả (tải cả gói, tên theo mã hồ sơ) | Tránh sửa `contracts/`; nếu sửa thì `contracts:gen` + phát hành API và web cùng lúc |
-| 5C. Đấu thầu NVC | Bước «phương án kỹ thuật, biện pháp thi công»; danh mục hồ sơ thầu theo loại gói; «công trình tương tự» lấy từ thư viện mẫu (1H); nhắc hạn nộp; so đơn giá với gói cũ (chỉ cảnh báo) | NVC có tự thiết kế không (9.5 câu 14) |
+| 5C. Đấu thầu NVC — soạn hồ sơ dự thầu | Kho hồ sơ năng lực → 8 việc hỗ trợ + soạn bộ hồ sơ dự thầu từ số liệu có sẵn; chi tiết ở mục 3.2 | NVC có tự thiết kế không (9.5 câu 14); câu hỏi 3.2 |
 | 5D. NVS cho thuê | Màn hình báo giá thuê tự kiểm tồn, tự tính tiền (PRD CRM-11); phiếu giao khách ký nhận trên điện thoại (dùng lại cách ký của biên bản thu hồi); nhắc hết hạn thuê; bảng giá bồi thường chính thức; sổ giàn giáo lệch thì cảnh báo | Bảng giá bồi thường của NVG |
 | 5E. Nhân sự | Bảng công dựng từ điểm danh (nếu chưa xong ở 2C); nhắc hợp đồng lao động | Cách tính công |
 | 5F. Hành chính | Nhắc giấy phép, bảo hiểm, đăng kiểm; văn bản mẫu tự điền (K3); tài sản ký nhận | — |
+
+#### 3.2 Đấu thầu NVC — soạn hồ sơ dự thầu từ số liệu có sẵn (5C)
+
+Chủ dự án đồng ý gộp (17/10/2026). Mục tiêu: không soạn lại cái đã có, không trễ hạn, gói sau làm nhanh hơn gói trước.
+Phòng Dự án NVC thiếu người, dữ liệu thầu phân tán (phiếu khảo sát).
+
+**Đã có trong mã** (0020, 0021, 0022): gói thầu 9 bước; khối lượng theo phiên bản bản vẽ; dự toán nhiều phiên bản, giá
+vốn / lợi nhuận Mẫu D; `bid_documents` 9 nhóm, `submit_bid` chặn khi thiếu mục bắt buộc hoặc chưa có dự toán duyệt; duyệt
+giá theo hạn mức; trượt thầu bắt buộc lý do; trúng thầu sinh ngân sách thi công. **Chưa có:** danh mục mẫu (đang gõ tay),
+kho hồ sơ năng lực, nhắc hạn, vòng làm rõ (chỉ một ô chữ `clarification_notes`), văn bản thầu tự điền, so giá với gói cũ,
+lý do trúng / đối thủ.
+
+Thứ tự làm — **kho hồ sơ năng lực trước**, vì mọi việc sau dùng nó:
+
+| Việc | Nội dung | Phụ thuộc |
+| --- | --- | --- |
+| 5C-1. Kho hồ sơ năng lực | Pháp lý (đăng ký kinh doanh, chứng chỉ năng lực), báo cáo tài chính theo năm, nhân sự chủ chốt + chứng chỉ hành nghề (đọc từ Nhân sự, không chép), thiết bị + kiểm định, kinh nghiệm (hợp đồng đã ký + thư viện mẫu 1H). Mỗi giấy tờ có ngày hết hạn; gắn vào gói bằng một bấm; báo đỏ nếu hết hạn trước ngày nộp | 1H, NS |
+| 5C-2. Quyết định tham gia | Bàn tóm tắt gói (quy mô, hạn, năng lực đáp ứng, gói đang chạy, dòng tiền); Ban Giám đốc bấm Tham gia / Bỏ qua + lý do | K2 |
+| 5C-3. Danh mục mẫu theo loại gói | Xây mới / cải tạo / bảo trì…: tạo gói là có sẵn danh mục; mỗi mục xếp loại **máy sinh / gắn từ kho / người viết** | 5C-1 |
+| 5C-4. Giao phần việc nội bộ | Cung ứng lấy báo giá, Thi công góp ý biện pháp, Kế toán xem bảo lãnh và dòng tiền — người, hạn, nút «Thúc» | K4, `nudge_approval` / Request Tracker |
+| 5C-5. Nhắc hạn + vòng làm rõ | Nhắc trước hạn nộp / hạn làm rõ (số ngày NVG đặt) cho người phụ trách + BGĐ; bảng vòng làm rõ (câu hỏi, trả lời, hạn) và lịch sử gia hạn thay ô chữ | K4 |
+| 5C-6. Văn bản thầu tự điền | Đơn dự thầu, giấy uỷ quyền, thư chào giá, bảng kê kinh nghiệm / nhân sự / thiết bị, bảng tổng hợp giá (giá bằng chữ) từ mẫu Word; gói nào chủ đầu tư bắt biểu mẫu riêng thì tải mẫu đó lên | K3, 5C-1 |
+| 5C-7. So đơn giá | Đơn giá dự toán cạnh giá các lần dự thầu trước và giá mua thực tế (MH-05); lệch quá ngưỡng (NVG đặt) chỉ cảnh báo | `unit_prices`, `estimate_items` |
+| 5C-8. Soạn và xuất bộ hồ sơ | Màn hình «Soạn bộ hồ sơ»: từng mục của danh mục → tự sinh / gắn từ kho / tải bản người viết (biện pháp, tiến độ có bản nháp ghép từ gói tương tự); kiểm thiếu; sau khi giá được duyệt xuất **một tệp .zip** thư mục đánh số theo danh mục hồ sơ mời thầu + mục lục (vòng đầu `.docx` / `.xlsx`, PDF khi có máy chủ chuyển đổi) | 5C-1, 5C-3, 5C-6 |
+| 5C-9. Bảo lãnh + rút kinh nghiệm | Bảo lãnh dự thầu (số tiền, ngân hàng, hạn, đã thu hồi chưa); kết quả kèm đơn vị trúng, giá trúng, lý do trúng / trượt; báo cáo tỷ lệ trúng theo loại gói | — |
+| 5C-10. Bước «phương án kỹ thuật, biện pháp thi công» | Như kế hoạch cũ; thư viện biện pháp từ các gói đã làm làm nguồn nháp | 9.5 câu 14 |
+| (sau) AI đọc hồ sơ mời thầu | Đọc PDF → nháp danh mục yêu cầu + các mốc hạn để người kiểm. Trả phí, mặc định tắt | K1, chủ dự án duyệt chi phí |
+
+**Ranh giới:** máy không ký, không đóng dấu, không nộp lên hệ thống đấu thầu điện tử, không quyết giá dự thầu hay có tham
+gia không, không phát hành biện pháp / giải pháp kỹ thuật thay kỹ sư (PRD 2.3). Không thay phần mềm dự toán (GXD, F1… —
+chỉ nhập Excel). Giá dự thầu và báo cáo tài chính chỉ người có quyền mới xuất được; không gửi hồ sơ lên AI khi chưa duyệt.
+
+**Tiêu chí xong:** với một gói NVC mẫu, phần hành chính – pháp lý, năng lực – kinh nghiệm và tài chính xuất ra không
+phải gõ tay; giấy tờ hết hạn bị báo trước ngày nộp; thiếu mục thì không xuất được bản cuối; người không có quyền không
+xuất được bảng giá / báo cáo tài chính (phép thử nới quyền để thấy đỏ).
+
+**Cần từ NVG:** 1–2 bộ hồ sơ dự thầu NVC đã nộp + hồ sơ mời thầu tương ứng (chỉ đọc trên máy, không commit, không gửi
+AI); mẫu Word đơn dự thầu / thư chào giá đang dùng; các loại gói thường gặp và giấy tờ từng loại; bảo lãnh dự thầu do Kế
+toán hay phòng Dự án theo dõi; có ghi thông tin đối thủ không.
 
 ## 4. Việc còn treo từ trước (làm xen khi rảnh, không chặn đợt nào)
 

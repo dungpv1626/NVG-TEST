@@ -772,7 +772,7 @@ trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ P
      hoạch — trang công khai đầu tiên, đi qua Worker). Loại phê duyệt mới `survey_report` (thêm enum ở migration riêng; `decide_approval`
      chép nguyên bản 0088 rồi thêm nhánh; `stage_readiness` chép bản 0166).
 4. Rồi Đợt 2 Thi công (7 mốc NVO, nhật ký giọng nói, điểm danh tổ, biên bản tự sinh, màn hình Trưởng phòng, phiếu bảo
-   hành) → Đợt 3 Tài chính; Đợt 4 Mua hàng – Kho và Đợt 5 (Thiết kế + AI Design 4 bước, Đấu thầu, NVS, Nhân sự, Hành
+   hành) → Đợt 3 Tài chính; Đợt 4 Mua hàng – Kho và Đợt 5 (Thiết kế + AI Design 4 bước, Đấu thầu — soạn hồ sơ dự thầu, mục 3.2 của kế hoạch —, NVS, Nhân sự, Hành
    chính) song song sau Đợt 1.
 5. Việc treo, làm xen: lịch sử bước chung `stage_transitions`; dải tiến trình gói thầu; QĐ-6 giao dịch nội bộ; ô «hợp
    đồng sắp hết hạn»; lối vào Tổng quan điều hành trên thanh dưới điện thoại; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
@@ -824,6 +824,7 @@ trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ P
 | Sơ đồ ba pipeline đặt cạnh nhau, cùng hàng = cùng giai đoạn; bản «sau» cùng bố cục bản «hiện tại»                                                                    | Chủ dự án: tách 3 công ty, nhìn được toàn bộ pipeline, so được từng ô                                                                                                            |
 | NVC: ghi bước «phương án kỹ thuật, biện pháp thi công»; việc tự thiết kế để câu hỏi mở                                                                               | Hai nguồn trong hồ sơ khảo sát nói khác nhau (Ban Giám đốc: có thiết kế; chính phòng Dự án: theo bản vẽ chủ đầu tư) — không tự chọn                                              |
 | Thư viện công trình mẫu (1H): Thiết kế đẩy vào, cả công ty xem, chỉ Thiết kế + Giám đốc sửa, xoá cần Giám đốc đồng ý; gửi khách bằng link trực tuyến; không hiện giá | Chủ dự án chốt (17/10/2026). Kinh doanh / TGĐ đang chào khách bằng ảnh rải trên Drive, Zalo; nhà khách đã làm được dùng làm mẫu. Ngoại lệ có chủ đích với Mẫu A (cả công ty đọc) |
+| Đấu thầu NVC (5C) mở rộng: kho hồ sơ năng lực trước, rồi soạn bộ hồ sơ dự thầu từ số liệu có sẵn (hành chính, năng lực, tài chính máy sinh; kỹ thuật chỉ nháp)       | Chủ dự án đồng ý gộp (17/10/2026). Phòng Dự án NVC thiếu người, dữ liệu thầu phân tán; máy không ký, không nộp, không quyết giá (PRD 2.3)                                        |
 
 ### 9.5 Câu hỏi chờ Haan (đang chạy theo mặc định trong ngoặc)
 
@@ -852,6 +853,8 @@ trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ P
 18. Thư viện mẫu: tư liệu ban đầu (hồ sơ năng lực, brochure, ảnh công trình, Catalogue NVS mới) — chủ dự án gửi sau.
     ĐÃ CHỐT: mẫu NVC / NVS cũng do Phòng Thiết kế đưa vào; Kinh doanh tự đặt thời hạn thu hồi link. Còn mở: hạn tối đa
     của link (không giới hạn).
+19. Đấu thầu (5C): 1–2 bộ hồ sơ dự thầu NVC đã nộp + hồ sơ mời thầu; mẫu đơn dự thầu / thư chào giá; loại gói và giấy tờ
+    từng loại; ai theo dõi bảo lãnh dự thầu; có ghi đối thủ không. (chưa có — chặn 5C-3, 5C-6, 5C-9)
 
 ### 9.6 Ghi chú máy phát triển Windows
 
