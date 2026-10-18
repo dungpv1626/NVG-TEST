@@ -22,7 +22,7 @@ import { config } from 'dotenv';
 import { fileURLToPath } from 'node:url';
 
 /** Mã project cloud của bản chạy thử / demo. Không phải bí mật — nằm sẵn trong địa chỉ công khai. */
-export const DEMO_PROJECT_REF = 'awaiwegmuykhctnysvou';
+export const DEMO_PROJECT_REF = 'fvfmtbdcvcniakigfpdm';
 
 export const DB_TARGET: 'dev' | 'demo' = process.env.NVG_DB_TARGET === 'demo' ? 'demo' : 'dev';
 

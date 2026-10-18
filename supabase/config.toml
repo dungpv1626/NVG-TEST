@@ -1,6 +1,6 @@
 # Supabase CHẠY TẠI MÁY — môi trường PHÁT TRIỂN của NVG (tách môi trường, C-1, 30/09/2026).
 #
-# Project cloud `awaiwegmuykhctnysvou` là bản CHẠY THỬ / DEMO sau `nvg.tests99.workers.dev`;
+# Project cloud `fvfmtbdcvcniakigfpdm` là bản CHẠY THỬ / DEMO sau `nvg.automkt.workers.dev` (trước 18/10/2026: `awaiwegmuykhctnysvou`, `nvg.tests99`);
 # máy phát triển và bộ test `db/` KHÔNG còn chạm vào nó. Xem CLAUDE.md 6.3.
 #
 # Cổng dời sang dải 553xx vì dải mặc định 543xx đang thuộc stack của dự án khác trên máy.

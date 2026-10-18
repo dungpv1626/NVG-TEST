@@ -33,7 +33,7 @@ const KET_CAU = 'ketcau.nvo@nhavietgroup.test';
 function designApiUrl(): string {
   return (
     process.env.DESIGN_API_URL ??
-    (DB_TARGET === 'demo' ? 'https://nvg-api.tests99.workers.dev' : 'http://localhost:8788')
+    (DB_TARGET === 'demo' ? 'https://nvg-api.automkt.workers.dev' : 'http://localhost:8788')
   );
 }
 

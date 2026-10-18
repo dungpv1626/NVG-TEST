@@ -312,11 +312,11 @@ Nghiệm thu đo bằng **người thật dùng, dữ liệu đúng, báo cáo �
 
 > **Hai môi trường CSDL, tách 30/09/2026 (C-1)** — trước đó máy phát triển ghi thẳng vào CSDL của bản công khai.
 >
-> | Môi trường          | CSDL                                      | Ai dùng                                     | Cấu hình                                                                |
-> | ------------------- | ----------------------------------------- | ------------------------------------------- | ----------------------------------------------------------------------- |
-> | **Phát triển**      | Supabase **tại máy** (Docker, cổng 553xx) | máy, `wrangler dev`, **mọi test `db/`**     | `.env`, `workers/.dev.vars`, `supabase/config.toml`                     |
-> | **Chạy thử / demo** | project cloud `awaiwegmuykhctnysvou`      | `nvg.tests99.workers.dev`, Worker `nvg-api` | `.env.demo` (không commit), `.env.production`, `workers/wrangler.jsonc` |
-> | **Vận hành**        | chưa có — tạo lúc go-live, **gói Pro**    | —                                           | —                                                                       |
+> | Môi trường          | CSDL                                      | Ai dùng                                                   | Cấu hình                                                                |
+> | ------------------- | ----------------------------------------- | --------------------------------------------------------- | ----------------------------------------------------------------------- |
+> | **Phát triển**      | Supabase **tại máy** (Docker, cổng 553xx) | máy, `wrangler dev`, **mọi test `db/`**                   | `.env`, `workers/.dev.vars`, `supabase/config.toml`                     |
+> | **Chạy thử / demo** | project cloud `fvfmtbdcvcniakigfpdm`      | `nvg.automkt.workers.dev` (CHƯA deploy), Worker `nvg-api` | `.env.demo` (không commit), `.env.production`, `workers/wrangler.jsonc` |
+> | **Vận hành**        | chưa có — tạo lúc go-live, **gói Pro**    | —                                                         | —                                                                       |
 >
 > - Bật / tắt CSDL máy: `npm run db:start` / `npm run db:stop`. Dựng lại từ đầu: `npx supabase db reset` rồi `npm run db:migrate && npm run db:seed`.
 > - **Migration lên bản demo chỉ bằng `npm run db:migrate:demo`**, lúc phát hành, TRƯỚC `npm run deploy`. `db:migrate` thường
@@ -345,7 +345,7 @@ Nghiệm thu đo bằng **người thật dùng, dữ liệu đúng, báo cáo �
     Design» đỏ với câu lỗi kiểm kiểu, nút «Thử lại» vô nghĩa vì chỗ hỏng nằm ở lượt đọc.
     Hàng rào: cả hai bên nhúng `CONTRACTS_FINGERPRINT` (băm `contracts/`, sinh cùng `contracts:gen`),
     Worker trả ở header `X-NVG-Contracts`, giao diện đối chiếu và hiện dải báo. Kiểm sau khi deploy:
-    `curl -s https://nvg-api.tests99.workers.dev/design/health` — trường `contracts` phải khớp
+    `curl -s https://nvg-api.automkt.workers.dev/design/health` — trường `contracts` phải khớp
     `CONTRACTS_FINGERPRINT` trong `shared/src/design/index.generated.ts`.
 
 ### 6.4 Phân vai Claude Code ↔ Haan (IPD 4)
@@ -615,6 +615,15 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
   `git diff --stat moc-truoc-cai-tien-ux..cai-tien-ux`. Sao lưu CSDL máy + ảnh trước/sau ở `backup/` (không commit).
 - `main` giữ nguyên. **Chưa đẩy nhánh/tag lên GitHub, chưa `db:migrate:demo`, chưa deploy** — cần Haan đồng ý.
   Mọi thay đổi chỉ chạy trên máy (`http://localhost:5173`); bản demo `nvg.tests99.workers.dev` vẫn là bản cũ.
+- **Demo mới (18/10/2026, chủ máy là anh Dũng):** bản cũ `tests99` + Supabase `awaiwegmuykhctnysvou` nằm ở tài khoản
+  khác, máy này không vào được. Đã dựng sẵn Supabase demo MỚI `fvfmtbdcvcniakigfpdm` (đã migrate 0001→0181, seed,
+  nạp 5/6 kịch bản demo — thiếu NVO vì cần Worker mới chạy) và trỏ cấu hình sang Cloudflare tài khoản wewear
+  (`automkt.workers.dev`). **Chưa deploy — anh Dũng quyết: chạy local tới khi làm xong mọi tính năng rồi mới
+  phát hành.** Lúc phát hành: tài khoản wewear đang gói Free, mà `limits.cpu_ms` trong `workers/wrangler.jsonc`
+  chỉ có ở Workers Paid → nâng gói (AI Design, Whisper cần) hoặc tách giới hạn CPU; rồi `db:migrate:demo` (Windows:
+  `NVG_DB_TARGET=demo npm run migrate --workspace=db`), `npx tsx db/src/demo/index.ts --confirm=fvfmtbdcvcniakigfpdm
+--only=nvo`, `deploy:workers`, đặt secret (service_role, Gemini trả phí, khoá AI Design — anh Dũng đã cho chép),
+  `deploy:web`, bật hai công tắc AI. Supabase gói Free tự tạm dừng sau 7 ngày không dùng — khôi phục trên Dashboard.
 - Cách làm đã chứng minh hiệu quả: **chạy thử bằng đúng tài khoản từng vai trên trình duyệt** (Playwright, chụp ảnh)
   sau mỗi thay đổi — phần lớn lỗi của đợt này (nút hiện rồi báo lỗi, tự gán sai người, bỏ qua được bước) chỉ lộ ra
   khi đi trọn luồng như người dùng thật, không lộ ở phép thử đơn vị.

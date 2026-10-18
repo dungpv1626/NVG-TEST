@@ -7,7 +7,7 @@ config({ path: new URL('../.env', import.meta.url).pathname });
 // Cùng chốt chặn với `src/env.ts`, viết lại tại chỗ vì drizzle-kit nạp tệp cấu hình bằng bộ nạp
 // riêng. Drizzle Kit (`push`, `studio`, `generate`) KHÔNG BAO GIỜ được chạm bản demo: `push` bỏ
 // qua migration và sửa thẳng cấu trúc bảng. Bản demo chỉ nhận migration qua `npm run db:migrate:demo`.
-const DEMO_PROJECT_REF = 'awaiwegmuykhctnysvou';
+const DEMO_PROJECT_REF = 'fvfmtbdcvcniakigfpdm';
 if (process.env.DATABASE_URL?.includes(DEMO_PROJECT_REF)) {
   throw new Error(
     '`.env` đang trỏ vào bản chạy thử / demo trên cloud. Drizzle Kit chỉ chạy trên Supabase tại máy; ' +

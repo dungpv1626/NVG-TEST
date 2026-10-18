@@ -120,7 +120,7 @@
    */
 
   "vars": {
-    "SUPABASE_URL": "https://awaiwegmuykhctnysvou.supabase.co",
+    "SUPABASE_URL": "https://fvfmtbdcvcniakigfpdm.supabase.co",
 
     /**
      * Kho artifact: `supabase` (gói Free) hoặc `r2` (sau khi bật thanh toán và mở
@@ -135,7 +135,7 @@
      * Để trống thì chỉ cho phép `localhost:5173` — mặc định hẹp nhất. Thêm tên miền chính
      * thức của NVG vào đây khi có (CLAUDE.md 6.6, vấn đề còn mở).
      */
-    "ALLOWED_ORIGINS": "https://nvg.tests99.workers.dev,http://localhost:5173",
+    "ALLOWED_ORIGINS": "https://nvg.automkt.workers.dev,https://nvg.tests99.workers.dev,http://localhost:5173",
   },
 
   /**

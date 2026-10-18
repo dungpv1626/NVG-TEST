@@ -176,17 +176,39 @@ export async function loadNvc(): Promise<'created' | 'skipped'> {
   }
   for (const stage of ['xac_minh', 'khao_sat']) await moveOpportunity(stage);
 
-  // «Báo giá» cần khảo sát hiện trạng đã làm (0160).
-  check(
+  // «Báo giá» cần khảo sát hiện trạng đã làm (0160) VÀ báo cáo khảo sát được Ban Giám đốc duyệt
+  // (0175) — duyệt xong cơ hội tự sang Báo giá, như người dùng thật.
+  const survey = (await one(
     'khảo sát hiện trạng',
-    await kinhDoanh.from('site_surveys').insert({
-      opportunity_id: opportunity.id,
-      scheduled_at: '2026-09-02T08:30:00+07:00',
-      surveyed_at: '2026-09-02T10:00:00+07:00',
-      surveyed_by: await userId(kinhDoanh),
-      needs: clean('Nhà xưởng 2.400 m², khẩu độ 30 m, cầu trục 5 tấn, nền chịu tải 3 tấn/m²'),
-      decision_maker: clean('Ông Phạm Quốc Hưng — Giám đốc'),
-    }),
+    kinhDoanh
+      .from('site_surveys')
+      .insert({
+        opportunity_id: opportunity.id,
+        scheduled_at: '2026-09-02T08:30:00+07:00',
+        surveyed_at: '2026-09-02T10:00:00+07:00',
+        surveyed_by: await userId(kinhDoanh),
+        needs: clean('Nhà xưởng 2.400 m², khẩu độ 30 m, cầu trục 5 tấn, nền chịu tải 3 tấn/m²'),
+        decision_maker: clean('Ông Phạm Quốc Hưng — Giám đốc'),
+        // Phiếu riêng NVC (0181).
+        site_details: {
+          area: '2.400 m² xây dựng',
+          frame: 'Khẩu độ 30 m, bước cột 6 m, cao 9 m',
+          crane: 'Cầu trục 5 tấn',
+          ground: 'Nền chịu tải 3 tấn/m²',
+        },
+      })
+      .select('id')
+      .single(),
+  )) as { id: string };
+  check(
+    'gửi báo cáo khảo sát',
+    await kinhDoanh.rpc('submit_survey_report', { p_survey_id: survey.id }),
+  );
+  await approveBy(
+    tgd,
+    await pendingApproval(tgd, 'site_surveys', survey.id),
+    'Đồng ý, lập báo giá.',
+    'duyệt báo cáo khảo sát',
   );
 
   // --- Gói thầu, bóc khối lượng, dự toán, duyệt giá (DA) ------------------------------------
@@ -207,7 +229,13 @@ export async function loadNvc(): Promise<'created' | 'skipped'> {
       .single(),
   )) as { id: string };
 
-  await moveOpportunity('bao_gia');
+  // Báo cáo khảo sát đã duyệt thì cơ hội đã tự sang Báo giá (0175) — chỉ chuyển tay khi chưa.
+  const { data: stageNow } = await kinhDoanh
+    .from('opportunities')
+    .select('stage')
+    .eq('id', opportunity.id)
+    .single();
+  if ((stageNow as { stage: string } | null)?.stage !== 'bao_gia') await moveOpportunity('bao_gia');
 
   check(
     'bóc khối lượng',
