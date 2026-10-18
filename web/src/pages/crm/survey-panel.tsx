@@ -18,6 +18,7 @@ import { CalendarClock, ClipboardCheck } from 'lucide-react';
 import { BUTTONS, formatDateTime, fromNvgInput, toNvgDateInput, toNvgTimeInput } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import { DateTimeInput } from '@/components/ui/date-time-input';
 import { Input } from '@/components/ui/input';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
 import { useActiveUsers, type ActiveUser } from '@/hooks/use-active-users';
@@ -361,11 +362,7 @@ function SurveyForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Lịch hẹn khảo sát">
-          <Input
-            type="datetime-local"
-            value={form.scheduledAt}
-            onChange={(e) => onChange('scheduledAt', e.target.value)}
-          />
+          <DateTimeInput value={form.scheduledAt} onChange={(v) => onChange('scheduledAt', v)} />
         </Field>
 
         <Field label="Người khảo sát">
@@ -389,11 +386,7 @@ function SurveyForm({
             hint="Nên bấm «Bắt đầu / Kết thúc khảo sát» trên thẻ để máy ghi giờ. Chỉ gõ tay khi quên bấm."
             className="sm:col-span-2"
           >
-            <Input
-              type="datetime-local"
-              value={form.surveyedAt}
-              onChange={(e) => onChange('surveyedAt', e.target.value)}
-            />
+            <DateTimeInput value={form.surveyedAt} onChange={(v) => onChange('surveyedAt', v)} />
           </Field>
         )}
 

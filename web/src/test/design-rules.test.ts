@@ -369,9 +369,11 @@ describe('Không để trình duyệt tự sinh chữ tiếng Anh', () => {
   }
   const dir = (d: string) => d;
 
-  it('không màn hình nào dùng `<input type="date">` — phải dùng `DateInput`', () => {
+  it('không màn hình nào dùng ô ngày / giờ gốc — phải dùng `DateInput` / `DateTimeInput`', () => {
+    // `datetime-local` hiện `10/18/2026 09:32 AM` trên Chrome tiếng Anh — lọt tới 18/10/2026 vì
+    // phép thử cũ chỉ tìm `type="date"`.
     const offenders = allPageSources()
-      .filter(({ code }) => /type="date"/.test(code))
+      .filter(({ code }) => /type="(date|datetime-local|time|month|week)"/.test(code))
       .map(({ file }) => file);
     expect(offenders).toEqual([]);
   });
