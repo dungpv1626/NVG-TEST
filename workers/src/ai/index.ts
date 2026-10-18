@@ -18,6 +18,7 @@ import { Hono, type Context } from 'hono';
 import { createClient } from '@supabase/supabase-js';
 import { asUser, type UserDb } from '../design/auth-scope';
 import type { DesignEnv } from '../design/env';
+import { stripWhisperHallucinations } from './whisper-hallucination';
 
 export interface AiEnv extends DesignEnv {
   /**
@@ -169,7 +170,8 @@ assistantApp.post('/transcribe', async (c) => {
       })) as {
         text?: string;
       };
-      transcript = (out.text ?? '').trim();
+      // Câu kết video Whisper tự bịa khi không nghe ra lời → gỡ (`whisper-hallucination.ts`).
+      transcript = stripWhisperHallucinations((out.text ?? '').trim());
       const minutes = Math.max(1, Math.ceil(((rec.duration_seconds as number | null) ?? 60) / 60));
       await logCall(c.env, {
         ...base,
@@ -204,11 +206,12 @@ assistantApp.post('/transcribe', async (c) => {
     }
   }
 
-  // `vad_filter` bỏ đoạn không có tiếng người — đoạn ghi quá nhỏ / xa micro ra chữ RỖNG thay vì
-  // câu Whisper tự bịa («Hãy subscribe cho kênh…», gặp thật 18/10/2026 với đoạn ghi −35 dB).
-  // Rỗng thì nói thẳng là không nghe rõ, không để ô trống trông như đã chép xong.
+  // `vad_filter` bỏ đoạn không có tiếng người, bộ lọc câu bịa bỏ câu kết video Whisper tự nghĩ
+  // ra khi chỉ nghe tiếng ồn (gặp thật 18/10/2026). Còn rỗng thì nói thẳng là không nghe rõ —
+  // không lưu câu bịa làm bản chép, không để ô trống trông như đã chép xong.
   if (mode !== 'fake' && !transcript) {
-    const note = 'Không nghe rõ lời nói — ghi lại, để máy gần người nói hơn, hoặc gõ tay.';
+    const note =
+      'Không nghe rõ lời nói — bấm «Nghe» để kiểm micro có thu được giọng không, ghi lại gần máy hơn, hoặc gõ tay.';
     await db
       .from('site_survey_recordings')
       .update({ transcript_status: 'loi', transcript_note: note })
