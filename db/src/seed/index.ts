@@ -13,7 +13,7 @@
 import '../env';
 import { createClient } from '@supabase/supabase-js';
 import { eq, sql as sqlOp } from 'drizzle-orm';
-import { DEFAULT_AGING_BUCKETS, DEFAULT_APPROVAL_LIMITS } from '@nvg/shared';
+import { DEFAULT_AGING_BUCKETS, DEFAULT_APPROVAL_LIMITS, MILESTONE_SET_SEEDS } from '@nvg/shared';
 import { createConnection } from '../client';
 import {
   agingBuckets,
@@ -285,6 +285,36 @@ async function main() {
       customerCreated++;
     }
     console.log(`Khách hàng mẫu: ${SAMPLE_CUSTOMER_SEED.length} (tạo mới ${customerCreated})`);
+
+    // --- Bộ mốc thi công (Đợt 2 — 2A, 0182) ------------------------------------
+    // Danh mục kiểm tra từng mốc + bộ mốc mặc định của pháp nhân. Chạy lại thì cập nhật nội dung;
+    // công trình đã áp mốc giữ nhãn đã chụp, biên bản đã ký không đổi (0136).
+    for (const set of MILESTONE_SET_SEEDS) {
+      const companyId = companyByCode.get(set.company);
+      if (!companyId) continue;
+      const steps = [];
+      for (const step of set.steps) {
+        const rows = await db.execute<{ id: string }>(sqlOp`
+          INSERT INTO public.acceptance_checklists (company_id, name, acceptance_type, items)
+          VALUES (${companyId}, ${step.checklistName}, 'noi_bo', ${JSON.stringify(step.items)}::jsonb)
+          ON CONFLICT (company_id, name)
+          DO UPDATE SET items = EXCLUDED.items, acceptance_type = 'noi_bo', is_active = true,
+                        deleted_at = NULL
+          RETURNING id`);
+        steps.push({
+          key: step.key,
+          label: step.label,
+          checklist_id: rows[0]!.id,
+          requires_technical_check: step.requiresTechnicalCheck,
+        });
+      }
+      await db.execute(sqlOp`
+        INSERT INTO public.milestone_templates (company_id, name, is_default, steps)
+        VALUES (${companyId}, ${set.name}, true, ${JSON.stringify(steps)}::jsonb)
+        ON CONFLICT (company_id, name)
+        DO UPDATE SET steps = EXCLUDED.steps, is_default = true, is_active = true, deleted_at = NULL`);
+    }
+    console.log(`Bộ mốc thi công: ${MILESTONE_SET_SEEDS.length}`);
     console.log(`\nMật khẩu đăng nhập thử: ${SEED_PASSWORD}`);
   } finally {
     await sql.end();

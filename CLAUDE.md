@@ -640,6 +640,7 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
 | 4   | Mẫu hợp đồng `.docx` có chỗ trống, tự điền, xem trước, xuất (vấn đề 5)                                                     | **Xong vòng đầu** — chờ Haan kiểm              |
 | 5   | AI Design thành 4 bước: Đầu vào → Mặt bằng → Mặt ngoài → Bộ kết quả (vấn đề 7)                                             | Chưa làm — nay là Đợt 5 (5B) của kế hoạch tổng |
 | Đ1  | Đợt 1 Kinh doanh (kế hoạch tổng): 1A–1H + bổ sung 18/10 (AI thật, đính kèm, in, phiếu riêng)                               | **Xong trên máy** — chờ anh Dũng chạy thử      |
+| Đ2  | Đợt 2 Thi công (NVO trước): 2A mốc thi công                                                                                | **Đang làm** — 2A xong trên máy                |
 | 0b  | Bộ nhận diện theo logo NVG                                                                                                 | **Xong vòng đầu** — chờ duyệt ảnh              |
 | PH  | Phát hành bản demo mới                                                                                                     | **Chuẩn bị xong, CỐ Ý CHƯA deploy** (xem 9.3)  |
 
@@ -788,7 +789,19 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
     đính kèm khảo sát (kho `survey-files`); in biên bản + in phiếu khảo sát trống (`pages/crm/survey-print.ts`); 0181 phiếu
     khảo sát RIÊNG từng pháp nhân (`shared/src/survey-forms.ts`, cột `site_surveys.site_details`); bộ ghi âm có thanh mức
     âm, chọn micro, nhắc khi micro không nghe thấy; Worker lọc câu Whisper tự bịa (`whisper-hallucination.ts`).
-- Hàm chép-dài bản mới nhất: `decide_approval` ở 0179, `stage_readiness` ở 0176, `my_pending_approvals` ở 0175, hàm canh
+- **Đợt 2 — Thi công, đang làm** (bắt đầu 18/10/2026, phần NVO trước):
+  - 2A xong (0182): `milestone_templates` (bộ mốc của pháp nhân, dữ liệu) → `site_milestones` (chụp lại khi áp; công
+    trình mới của pháp nhân có bộ mặc định tự có mốc) + lịch sử `site_milestone_events`. Bộ 7 mốc NVO + 7 danh mục kiểm
+    tra rút từ Quy chuẩn Nhà Việt One nằm ở `shared/src/tc-milestones.ts`, `db:seed` nạp — ĐỀ XUẤT, chờ Trưởng phòng
+    Thi công NVO duyệt. Nghiệm thu mốc = biên bản nội bộ kèm danh mục (`record_milestone_acceptance` gọi
+    `record_acceptance_with_checklist`); mốc sau chưa mở khi mốc trước chưa đạt; mốc cần lớp 3 thì Trưởng phòng Thi công /
+    Ban Giám đốc kiểm (`review_milestone_technical`, không phải người lập, trả lại phải có ý kiến); chưa đạt đủ mốc thì không
+    sang «Nghiệm thu bàn giao» (`stage_readiness` + trigger `construction_sites_milestones_gate`). Tab «Mốc thi công» trên
+    trang công trình. Tài khoản thử mới: `congtruong.nvo@…` (TC), `chihuytruong.nvo@…` (CHT). Công trình thử trên máy:
+    `NVO-CT-2026-0901`. Ảnh: `backup/dot2-2a/`.
+  - Còn: 2B nhật ký giọng nói, 2D biên bản tự sinh + ký điện thoại, 2E màn hình Trưởng phòng, 2F phiếu bảo hành, 2G
+    công trình xong → mẫu nháp; 2C điểm danh tổ chờ câu 6.
+- Hàm chép-dài bản mới nhất: `decide_approval` ở 0179, `stage_readiness` ở 0182, `my_pending_approvals` ở 0175, hàm canh
   `site_surveys_report_guard` ở 0181. Hạn mức loại phê duyệt mới nằm ở seed (`DEFAULT_APPROVAL_LIMITS`) — `db:seed` sau migrate.
 - Ảnh chạy thử từng phần: `backup/dot1-1a/` → `backup/dot1-1h/`, `backup/dot1-dinh-kem/`, `backup/dot1-phieu-rieng/`,
   `backup/dot1-micro/` (không commit).
@@ -828,7 +841,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    đồng sắp hết hạn»; lối vào Tổng quan điều hành trên thanh dưới điện thoại; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email; thêm dữ liệu demo quá hạn ở cả ba công ty.
 
-**Migration tiếp theo: 0182.**
+**Migration tiếp theo: 0183.**
 
 ### 9.4 Quyết định đã chốt và lý do
 

@@ -35,6 +35,7 @@ import { toUserMessage } from '@/hooks/use-error-message';
 import { useCan } from '@/lib/auth';
 import { AcceptancePanel } from './acceptance-panel';
 import { BudgetPanel } from './budget-panel';
+import { MilestonePanel } from './milestone-panel';
 import { SiteDocumentPanel } from './document-panel';
 import { SiteDesignDrawings } from './design-drawings';
 import { SiteRfiPanel } from './rfi-panel';
@@ -45,6 +46,7 @@ import { SiteQuickActions } from './site-quick-actions';
 import { RecordChain } from '@/components/entity/record-chain';
 import { StepTrack } from '@/components/entity/step-track';
 import { useStageReadiness } from '@/hooks/use-stage-readiness';
+import { useSiteMilestones } from '@/hooks/use-site-milestones';
 import { SITE_PREP_ANCHOR, SitePrepCard } from './site-prep-card';
 import { SubcontractorPanel } from './subcontractor-panel';
 import { WarrantyPanel } from './warranty-panel';
@@ -71,6 +73,7 @@ export function SiteDetailPage() {
   const updateSite = useUpdateConstructionSite();
   const [actionError, setActionError] = useState<string | null>(null);
   const { data: readiness = [] } = useStageReadiness('site', id);
+  const { data: milestones } = useSiteMilestones(id);
   const [searchParams, setSearchParams] = useSearchParams();
 
   if (isLoading) return <CardGridSkeleton count={3} />;
@@ -116,6 +119,7 @@ export function SiteDetailPage() {
   const SITE_REQUIREMENT_ACTION: Record<string, { tab: string; anchor?: string; label: string }> = {
     commander_assigned: { tab: 'tong-quan', anchor: SITE_PREP_ANCHOR, label: 'Phân công' },
     planned_dates: { tab: 'tong-quan', anchor: SITE_PREP_ANCHOR, label: 'Ghi ngày' },
+    milestones_passed: { tab: 'moc', label: 'Xem mốc' },
     customer_acceptance: { tab: 'nghiem-thu', label: 'Lập biên bản nghiệm thu' },
     warranties_declared: { tab: 'bao-hanh', label: 'Khai hạng mục bảo hành' },
     warranties_expired: { tab: 'bao-hanh', label: 'Xem bảo hành' },
@@ -245,6 +249,21 @@ export function SiteDetailPage() {
             badge: logs?.length || undefined,
             content: (
               <SiteLogPanel siteId={site.id} companyId={site.company_id} readOnly={readOnly} />
+            ),
+          },
+          {
+            // Đợt 2 — 2A: nghiệm thu từng mốc trước khi che khuất (Quy chuẩn Nhà Việt One).
+            id: 'moc',
+            label: 'Mốc thi công',
+            // Số mốc chờ phụ trách kỹ thuật kiểm — việc đang treo của Trưởng phòng.
+            badge: milestones?.filter((m) => m.status === 'cho_ky_thuat').length || undefined,
+            content: (
+              <MilestonePanel
+                siteId={site.id}
+                companyId={site.company_id}
+                stage={site.stage}
+                readOnly={readOnly}
+              />
             ),
           },
           {

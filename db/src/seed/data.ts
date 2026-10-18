@@ -533,6 +533,23 @@ export const USER_SEED: UserSeed[] = [
     assignments: [{ company: 'NVC', role: 'CHT', isPrimary: true }],
   },
   {
+    // Đợt 2 (2A): Thi công NVO — chạy thử bảy mốc nhà ở bằng đúng vai.
+    email: 'congtruong.nvo@nhavietgroup.test',
+    fullName: 'Phan Văn T',
+    jobTitle: 'Trưởng phòng Thi công',
+    department: 'NVO — Phòng Thi công',
+    fromDocs: false,
+    assignments: [{ company: 'NVO', role: 'TC', isPrimary: true }],
+  },
+  {
+    email: 'chihuytruong.nvo@nhavietgroup.test',
+    fullName: 'Vũ Văn H',
+    jobTitle: 'Chỉ huy trưởng công trình',
+    department: 'NVO — Ban công trường',
+    fromDocs: false,
+    assignments: [{ company: 'NVO', role: 'CHT', isPrimary: true }],
+  },
+  {
     email: 'muahang@nhavietgroup.test',
     fullName: 'Vũ Thị F',
     jobTitle: 'Trưởng phòng Mua hàng – Vật tư',

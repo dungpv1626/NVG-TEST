@@ -53,7 +53,7 @@ import {
 import { PhotoStrip } from './site-photo-picker';
 
 /** Kết quả từng mục của một biên bản đã ký — chỉ đọc. */
-function ChecklistResults({ acceptanceId }: { acceptanceId: string }) {
+export function ChecklistResults({ acceptanceId }: { acceptanceId: string }) {
   const { data } = useChecklistResults(acceptanceId);
   if (!data || data.length === 0) return null;
   return (

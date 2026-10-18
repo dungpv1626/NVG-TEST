@@ -150,6 +150,9 @@ gì thêm. Có nên đặt hạn tối đa (vd 90 ngày) không — chờ chủ 
 
 ### Đợt 2 — Thi công (Trưởng phòng + Chỉ huy trưởng)
 
+**Trạng thái (18/10/2026):** 2A xong trên máy (migration 0182, tab «Mốc thi công») — bộ 7 mốc và danh mục kiểm tra
+là đề xuất rút từ Quy chuẩn, chờ Trưởng phòng Thi công NVO duyệt. Các việc còn lại đang làm theo thứ tự 2B → 2E → 2D → 2F → 2G.
+
 | Việc | Nội dung | Phụ thuộc |
 | --- | --- | --- |
 | 2A. 7 mốc thi công NVO | Định vị → móng → kết cấu → xây, trát, điện nước âm → chống thấm → hoàn thiện → kiểm tra chất lượng (Quy chuẩn Nhà Việt One). Mỗi mốc có danh sách kiểm tra mẫu + ảnh bắt buộc; đạt mới sang mốc sau; hạng mục quan trọng thêm phụ trách kỹ thuật kiểm. NVC dùng cùng cơ chế với bộ mốc nhà xưởng riêng khi NVG chốt (9.5 câu 15) | Danh sách kiểm tra (đã có nền), K2 |

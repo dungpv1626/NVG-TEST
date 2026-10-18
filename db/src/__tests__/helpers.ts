@@ -62,6 +62,9 @@ export const ACCOUNTS = {
   congTruongNvc: 'congtruong.nvc@nhavietgroup.test',
   /** Vai trò `CHT` — chỉ huy trưởng, chỉ thấy công trình được phân công (mẫu RLS E, 0115). */
   chiHuyTruongNvc: 'chihuytruong.nvc@nhavietgroup.test',
+  /** Đợt 2 (2A): Thi công NVO — Trưởng phòng (`TC`) và chỉ huy trưởng (`CHT`). */
+  congTruongNvo: 'congtruong.nvo@nhavietgroup.test',
+  chiHuyTruongNvo: 'chihuytruong.nvo@nhavietgroup.test',
   thietKeNvo: 'thietke.nvo@nhavietgroup.test',
   ketCauNvo: 'ketcau.nvo@nhavietgroup.test',
   muaHang: 'muahang@nhavietgroup.test',
