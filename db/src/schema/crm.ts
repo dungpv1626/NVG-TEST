@@ -220,6 +220,8 @@ export const siteSurveys = pgTable(
     /** Nháp máy viết từ ghi âm — người khảo sát sửa rồi mới lưu vào sáu ô thật. */
     aiDraft: jsonb('ai_draft'),
     aiDraftAt: timestamp('ai_draft_at', { withTimezone: true }),
+    /** Thông tin hiện trường theo phiếu riêng của pháp nhân (0181, `SURVEY_SITE_FORMS`). */
+    siteDetails: jsonb('site_details').$type<Record<string, string>>().notNull().default({}),
 
     ...auditColumns(),
     ...softDelete(),

@@ -34,13 +34,15 @@ export interface SiteSurveyRecord {
   report_approval_id: string | null;
   ai_draft: (SurveyAiDraft & { fake?: boolean }) | null;
   ai_draft_at: string | null;
+  /** Thông tin hiện trường theo phiếu riêng của pháp nhân (0181). */
+  site_details: Record<string, string>;
   surveyor: { full_name: string } | null;
 }
 
 const SURVEY_SELECT =
   'id, scheduled_at, surveyed_at, surveyed_by, needs, decision_maker, budget_note, schedule_note, ' +
   'commercial_terms, notes, created_at, started_at, finished_at, report_status, report_feedback, ' +
-  'report_submitted_at, report_decided_at, report_approval_id, ai_draft, ai_draft_at, ' +
+  'report_submitted_at, report_decided_at, report_approval_id, ai_draft, ai_draft_at, site_details, ' +
   'surveyor:users!site_surveys_surveyed_by_users_id_fk(full_name)';
 
 /**
@@ -78,6 +80,7 @@ export interface SurveyInput {
   scheduleNote: string | null;
   commercialTerms: string | null;
   notes: string | null;
+  siteDetails: Record<string, string>;
 }
 
 /** Chuyển dữ liệu biểu mẫu sang đúng tên cột — một chỗ duy nhất cho cả tạo và sửa. */
@@ -92,6 +95,7 @@ function toRow(input: SurveyInput) {
     schedule_note: input.scheduleNote,
     commercial_terms: input.commercialTerms,
     notes: input.notes,
+    site_details: input.siteDetails,
   };
 }
 

@@ -8,7 +8,12 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { SURVEY_REPORT_FIELDS, formatDateTime } from '@nvg/shared';
+import {
+  SURVEY_REPORT_FIELDS,
+  filledSiteDetails,
+  formatDateTime,
+  surveySiteForm,
+} from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/states';
 import { recordingUrl, useSurveyRecordings } from '@/hooks/use-site-surveys';
@@ -25,7 +30,9 @@ interface SurveyRow {
   schedule_note: string | null;
   commercial_terms: string | null;
   notes: string | null;
+  site_details: Record<string, string> | null;
   surveyor: { full_name: string } | null;
+  opportunity: { company: { code: string } | null } | null;
 }
 
 export function SurveyReportPreview({ surveyId }: { surveyId: string }) {
@@ -36,7 +43,8 @@ export function SurveyReportPreview({ surveyId }: { surveyId: string }) {
         .from('site_surveys')
         .select(
           'id, started_at, finished_at, surveyed_at, needs, decision_maker, budget_note, ' +
-            'schedule_note, commercial_terms, notes, ' +
+            'schedule_note, commercial_terms, notes, site_details, ' +
+            'opportunity:opportunities(company:companies(code)), ' +
             'surveyor:users!site_surveys_surveyed_by_users_id_fk(full_name)',
         )
         .eq('id', surveyId)
@@ -49,6 +57,8 @@ export function SurveyReportPreview({ surveyId }: { surveyId: string }) {
 
   if (isLoading) return <Skeleton className="h-32" />;
   if (!survey) return null;
+  const companyCode = survey.opportunity?.company?.code ?? null;
+  const siteDetails = filledSiteDetails(companyCode, survey.site_details);
 
   return (
     <div className="space-y-3">
@@ -68,6 +78,21 @@ export function SurveyReportPreview({ surveyId }: { surveyId: string }) {
           </div>
         ))}
       </dl>
+      {siteDetails.length > 0 && (
+        <div>
+          <p className="mb-1 text-xs font-semibold text-fg-subtle">
+            {surveySiteForm(companyCode)?.title ?? 'Thông tin hiện trường'}
+          </p>
+          <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
+            {siteDetails.map((d) => (
+              <div key={d.key}>
+                <dt className="text-xs text-fg-subtle">{d.label}</dt>
+                <dd className="whitespace-pre-wrap">{d.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      )}
       {(recordings ?? []).length > 0 && (
         <div>
           <p className="mb-1 text-xs text-fg-subtle">Ghi âm buổi khảo sát</p>

@@ -108,11 +108,26 @@ describeDb('Đính kèm biên bản khảo sát (0180)', () => {
     expect(exe.error).not.toBeNull();
   });
 
-  it('báo cáo đã gửi duyệt thì không thêm, không gỡ đính kèm', async () => {
+  it('báo cáo đã gửi duyệt thì không thêm, không gỡ đính kèm, không sửa thông tin hiện trường', async () => {
     expect((await kd.rpc('start_site_survey', { p_survey_id: surveyId })).error).toBeNull();
     expect((await kd.rpc('finish_site_survey', { p_survey_id: surveyId })).error).toBeNull();
-    await kd.from('site_surveys').update({ needs: 'Nhà xưởng 1.500 m²' }).eq('id', surveyId);
+    // Phiếu riêng NVC (0181): thông tin hiện trường lưu được khi còn Nháp…
+    const details = await kd
+      .from('site_surveys')
+      .update({ needs: 'Nhà xưởng 1.500 m²', site_details: { crane: 'Cầu trục 10 tấn' } })
+      .eq('id', surveyId)
+      .select('site_details')
+      .single();
+    expect(details.data!.site_details).toEqual({ crane: 'Cầu trục 10 tấn' });
     expect((await kd.rpc('submit_survey_report', { p_survey_id: surveyId })).error).toBeNull();
+
+    // …và khoá cùng sáu mục khi đã gửi duyệt.
+    const lockDetails = await kd
+      .from('site_surveys')
+      .update({ site_details: { crane: 'Sửa lén' } })
+      .eq('id', surveyId)
+      .select('id');
+    expect(lockDetails.error).not.toBeNull();
 
     const add = await kd.storage
       .from('survey-files')

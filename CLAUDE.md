@@ -791,9 +791,11 @@ thư viện công trình mẫu + link gửi khách (`/mau-cong-trinh`, trang cô
 Bổ sung 18/10/2026: ô ngày giờ khảo sát dùng `DateTimeInput` (không `datetime-local`); chép giọng nói THẬT bằng
 Workers AI Whisper (binding `AI`, `vad_filter`, công tắc `ai.transcribe_enabled`; máy dev `AI_FAKE=summary`); 0180
 đính kèm khảo sát (`site_survey_attachments`, kho `survey-files`: ảnh / video / phiếu giấy / tài liệu), in biên bản
-và phiếu khảo sát trống (`pages/crm/survey-print.ts`).
+và phiếu khảo sát trống (`pages/crm/survey-print.ts`). 0181 phiếu khảo sát RIÊNG từng pháp nhân: sáu mục chung + nhóm
+«Thông tin hiện trường» (`shared/src/survey-forms.ts` — NVO nhà ở, NVC nhà xưởng, NVS giàn giáo), lưu
+`site_surveys.site_details` jsonb, khoá cùng sáu mục khi gửi duyệt. Đổi ô = sửa tệp dữ liệu đó, không cần migration.
 
-**Migration tiếp theo: 0181.**
+**Migration tiếp theo: 0182.**
 
 ### 9.4 Quyết định đã chốt và lý do
 
@@ -877,6 +879,8 @@ và phiếu khảo sát trống (`pages/crm/survey-print.ts`).
     địa chỉ NVS. ĐÃ CHỐT: người đại diện NVS là **Lương Vân**; **được dùng logo đối tác** trên nhavietgroup.vn (Cotecons, Hòa
     Bình, CBRE…) làm kinh nghiệm / đối tác trong hồ sơ thầu. Còn thiếu: tên đầy đủ + mã số thuế NVC (site gọi «Nhà Việt
     Construction», app gọi «Nhà Việt Cons»); ảnh trên nhavietsteel.vn ghi «Công ty TNHH TM & SX Bảo Liên» là gì.
+22. Phiếu khảo sát riêng (0181): danh sách ô NVO / NVC rút từ hồ sơ khảo sát; ô NVS là ĐỀ XUẤT (hồ sơ chưa mô tả khảo sát
+    cho thuê giàn giáo) — Kinh doanh từng công ty xem và sửa `shared/src/survey-forms.ts`.
 
 ### 9.6 Ghi chú máy phát triển Windows
 

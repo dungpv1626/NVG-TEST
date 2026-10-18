@@ -30,6 +30,7 @@ import { usePromptDialog } from '@/components/ui/prompt-dialog';
 import { CardGridSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
 import { useContractForSource } from '@/hooks/use-contracts';
+import { useCompanies } from '@/hooks/use-companies';
 import { toUserMessage } from '@/hooks/use-error-message';
 import {
   useMoveStage,
@@ -101,6 +102,7 @@ export function OpportunityDetailPage() {
   // dung của tab đang mở, nên chuyển sang tab Báo giá rồi quay lại sẽ mất sạch phần đang gõ
   // nếu state nằm trong chính tab đó (Webapp Flow 6.3).
   const [surveyDraft, setSurveyDraft] = useState<SurveyDraft>(EMPTY_SURVEY_DRAFT);
+  const { data: companies } = useCompanies();
 
   if (isLoading) return <CardGridSkeleton count={3} />;
   if (error) return <ErrorState message={toUserMessage(error)} />;
@@ -120,6 +122,8 @@ export function OpportunityDetailPage() {
 
   const stageMeta = OPPORTUNITY_STAGE_META[data.stage];
   const customer = (data as unknown as { customer_full: CustomerFull | null }).customer_full;
+  // Pháp nhân của cơ hội — chọn phiếu khảo sát riêng (NVC / NVO / NVS) và in tên lên phiếu.
+  const company = companies?.find((c) => c.id === data.company_id) ?? null;
   const isHandedOver = data.handed_over_at !== null;
 
   function openTab(tab: string, anchor?: string) {
@@ -388,8 +392,9 @@ export function OpportunityDetailPage() {
                   customerName: customer?.name ?? null,
                   contactPerson: customer?.contact_person ?? null,
                   phone: customer?.phone ? formatPhone(customer.phone) : null,
-                  companyName: null,
+                  companyName: company?.short_name ?? null,
                 }}
+                companyCode={company?.code ?? null}
               />
             ),
           },

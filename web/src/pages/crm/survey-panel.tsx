@@ -15,7 +15,15 @@
 
 import { useState } from 'react';
 import { CalendarClock, ClipboardCheck, Printer } from 'lucide-react';
-import { BUTTONS, formatDateTime, fromNvgInput, toNvgDateInput, toNvgTimeInput } from '@nvg/shared';
+import {
+  BUTTONS,
+  filledSiteDetails,
+  formatDateTime,
+  fromNvgInput,
+  surveySiteForm,
+  toNvgDateInput,
+  toNvgTimeInput,
+} from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { DateTimeInput } from '@/components/ui/date-time-input';
@@ -50,6 +58,8 @@ const EMPTY_FORM = {
   scheduleNote: '',
   commercialTerms: '',
   notes: '',
+  /** Thông tin hiện trường theo phiếu riêng của pháp nhân (0181) — khoá = `SURVEY_SITE_FORMS`. */
+  siteDetails: {} as Record<string, string>,
 };
 
 type SurveyForm = typeof EMPTY_FORM;
@@ -81,6 +91,12 @@ function toPayload(form: SurveyForm): SurveyInput {
     scheduleNote: trimmed(form.scheduleNote),
     commercialTerms: trimmed(form.commercialTerms),
     notes: trimmed(form.notes),
+    // Ô bỏ trống thì không lưu khoá — «chưa ghi» khác «ghi chuỗi rỗng».
+    siteDetails: Object.fromEntries(
+      Object.entries(form.siteDetails)
+        .map(([k, v]) => [k, v.trim()] as const)
+        .filter(([, v]) => v !== ''),
+    ),
   };
 }
 
@@ -109,8 +125,11 @@ export function SurveyPanel({
   onDraftChange,
   onSurveyed,
   printInfo = null,
+  companyCode = null,
 }: {
   opportunityId: string;
+  /** Mã pháp nhân của cơ hội — chọn phiếu riêng (NVC / NVO / NVS, `SURVEY_SITE_FORMS`). */
+  companyCode?: string | null;
   /** Thông tin cơ hội / khách in lên đầu phiếu và biên bản. */
   printInfo?: SurveyPrintInfo | null;
   canEdit: boolean;
@@ -154,6 +173,7 @@ export function SurveyPanel({
         scheduleNote: ai?.schedule_note ?? survey.schedule_note ?? '',
         commercialTerms: ai?.commercial_terms ?? survey.commercial_terms ?? '',
         notes: ai?.notes ?? survey.notes ?? '',
+        siteDetails: { ...(survey.site_details ?? {}) },
       },
     });
   }
@@ -209,7 +229,7 @@ export function SurveyPanel({
       {editingId === null && (
         <div className="flex flex-wrap justify-end gap-2">
           {/* Phiếu trống để mang ra công trường khi không tiện dùng điện thoại (18/10/2026). */}
-          <Button variant="subtle" onClick={() => printBlankSurveyForm(printInfo)}>
+          <Button variant="subtle" onClick={() => printBlankSurveyForm(printInfo, companyCode)}>
             <Printer />
             In phiếu khảo sát trống
           </Button>
@@ -230,8 +250,15 @@ export function SurveyPanel({
           isEditing={editingId !== ''}
           // Máy đã ghi giờ (Bắt đầu / Kết thúc) thì không gõ tay thời điểm khảo sát nữa.
           clockManaged={list.some((sv) => sv.id === editingId && sv.started_at !== null)}
+          companyCode={companyCode}
           onChange={(field, value) =>
             onDraftChange({ editingId, form: { ...form, [field]: value } })
+          }
+          onDetailChange={(key, value) =>
+            onDraftChange({
+              editingId,
+              form: { ...form, siteDetails: { ...form.siteDetails, [key]: value } },
+            })
           }
           onSave={() => void save()}
           onCancel={() => onDraftChange(EMPTY_SURVEY_DRAFT)}
@@ -249,6 +276,7 @@ export function SurveyPanel({
               editable={editable && editingId === null}
               canEdit={editable}
               printInfo={printInfo}
+              companyCode={companyCode}
               onEdit={() => openEdit(survey)}
               onUseDraft={(ai) => openEdit(survey, ai)}
             />
@@ -264,6 +292,7 @@ function SurveyCard({
   editable,
   canEdit,
   printInfo,
+  companyCode,
   onEdit,
   onUseDraft,
 }: {
@@ -271,6 +300,7 @@ function SurveyCard({
   editable: boolean;
   canEdit: boolean;
   printInfo: SurveyPrintInfo | null;
+  companyCode: string | null;
   onEdit: () => void;
   onUseDraft: (draft: SurveyAiDraft) => void;
 }) {
@@ -290,6 +320,8 @@ function SurveyCard({
     { label: 'Điều kiện thương mại', value: survey.commercial_terms },
     { label: 'Ghi chú', value: survey.notes },
   ].filter((f) => f.value);
+  const siteDetails = filledSiteDetails(companyCode, survey.site_details);
+  const siteForm = surveySiteForm(companyCode);
 
   return (
     <li className="rounded-lg border border-border bg-surface p-4">
@@ -317,7 +349,9 @@ function SurveyCard({
             <Button
               variant="subtle"
               size="sm"
-              onClick={() => printSurveyReport(survey, printInfo, attachments.data ?? [])}
+              onClick={() =>
+                printSurveyReport(survey, printInfo, attachments.data ?? [], companyCode)
+              }
             >
               <Printer />
               In biên bản
@@ -347,6 +381,22 @@ function SurveyCard({
         </p>
       )}
 
+      {siteDetails.length > 0 && (
+        <div className="mt-3">
+          <p className="text-xs font-semibold text-fg-subtle">
+            {siteForm?.title ?? 'Thông tin hiện trường'}
+          </p>
+          <dl className="mt-1 grid gap-x-6 gap-y-2 sm:grid-cols-2">
+            {siteDetails.map((f) => (
+              <div key={f.key}>
+                <dt className="text-xs text-fg-subtle">{f.label}</dt>
+                <dd className="whitespace-pre-wrap">{f.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      )}
+
       <SurveyAttachmentsSection surveyId={survey.id} canEdit={canEdit && !locked} />
 
       <SurveyReportSection survey={survey} canEdit={canEdit} onUseDraft={onUseDraft} />
@@ -360,7 +410,9 @@ function SurveyForm({
   busy,
   isEditing,
   clockManaged,
+  companyCode,
   onChange,
+  onDetailChange,
   onSave,
   onCancel,
 }: {
@@ -369,10 +421,13 @@ function SurveyForm({
   busy: boolean;
   isEditing: boolean;
   clockManaged: boolean;
-  onChange: (field: keyof SurveyForm, value: string) => void;
+  companyCode: string | null;
+  onChange: (field: Exclude<keyof SurveyForm, 'siteDetails'>, value: string) => void;
+  onDetailChange: (key: string, value: string) => void;
   onSave: () => void;
   onCancel: () => void;
 }) {
+  const siteForm = surveySiteForm(companyCode);
   return (
     <form
       onSubmit={(e) => {
@@ -473,6 +528,38 @@ function SurveyForm({
           />
         </Field>
       </div>
+
+      {isEditing && siteForm && (
+        <fieldset className="mt-5 border-t border-border pt-4">
+          <legend className="mb-3 font-semibold">{siteForm.title}</legend>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {siteForm.fields.map((f) => (
+              <Field
+                key={f.key}
+                label={f.label}
+                optional
+                className={f.lines && f.lines > 1 ? 'sm:col-span-2' : undefined}
+              >
+                {f.lines && f.lines > 1 ? (
+                  <textarea
+                    value={form.siteDetails[f.key] ?? ''}
+                    onChange={(e) => onDetailChange(f.key, e.target.value)}
+                    rows={f.lines}
+                    placeholder={f.hint}
+                    className="w-full rounded-sm border border-border bg-surface px-3 py-2 placeholder:text-fg-subtle"
+                  />
+                ) : (
+                  <Input
+                    value={form.siteDetails[f.key] ?? ''}
+                    onChange={(e) => onDetailChange(f.key, e.target.value)}
+                    placeholder={f.hint}
+                  />
+                )}
+              </Field>
+            ))}
+          </div>
+        </fieldset>
+      )}
 
       <div className="mt-4 flex items-center gap-2">
         <Button type="submit" variant="secondary" disabled={busy}>

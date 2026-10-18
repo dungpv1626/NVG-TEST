@@ -6,14 +6,18 @@
  *
  * Phiếu trống có ĐÚNG sáu mục của báo cáo (`SURVEY_REPORT_FIELDS`), cùng thứ tự với sáu ô trên
  * màn hình: về văn phòng chụp phiếu tải lên (loại «Phiếu khảo sát giấy») rồi gõ lại từng ô theo
- * thứ tự, không phải dò. Mọi chữ động đi qua `escapeHtml`.
+ * thứ tự, không phải dò. Sau sáu mục là nhóm «Thông tin hiện trường» RIÊNG của pháp nhân
+ * (`SURVEY_SITE_FORMS` — NVO nhà ở, NVC nhà xưởng, NVS giàn giáo), cũng cùng thứ tự với màn hình.
+ * Mọi chữ động đi qua `escapeHtml`.
  */
 
 import {
+  filledSiteDetails,
   formatDateTime,
   SURVEY_ATTACHMENT_KIND_LABELS,
   SURVEY_REPORT_FIELDS,
   SURVEY_REPORT_STATUS_META,
+  surveySiteForm,
 } from '@nvg/shared';
 import type { SiteSurveyRecord } from '@/hooks/use-site-surveys';
 import { isPreviewableImage, type SurveyAttachment } from '@/hooks/use-survey-attachments';
@@ -59,6 +63,9 @@ const FORM_STYLE = `<style>
   .sign { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px; text-align: center; }
   .sign p { margin: 0 0 64px; font-weight: 600; }
   .files { margin: 0; padding-left: 18px; }
+  .site td { height: 30px; }
+  .site td.k { width: 34%; }
+  .site .hint { margin: 0; }
 </style>`;
 
 function value(v: string | null | undefined): string {
@@ -81,7 +88,35 @@ function headTable(info: SurveyPrintInfo | null, rows: [string, string][]): stri
 }
 
 /** Phiếu khảo sát trống — in ra mang theo khi không tiện dùng điện thoại. */
-export function printBlankSurveyForm(info: SurveyPrintInfo | null): void {
+export function printBlankSurveyForm(
+  info: SurveyPrintInfo | null,
+  companyCode: string | null = null,
+): void {
+  const siteForm = surveySiteForm(companyCode);
+  // Ô ngắn: một hàng bảng (nhãn | chỗ viết); ô dài: dòng kẻ như sáu mục trên.
+  const siteSection = siteForm
+    ? `<h2>${escapeHtml(siteForm.title)}</h2>
+      <table class="site">${siteForm.fields
+        .filter((f) => !f.lines || f.lines <= 1)
+        .map(
+          (f) =>
+            `<tr><td class="k"><strong>${escapeHtml(f.label)}</strong>${
+              f.hint ? `<p class="hint">${escapeHtml(f.hint)}</p>` : ''
+            }</td><td></td></tr>`,
+        )
+        .join('')}</table>
+      ${siteForm.fields
+        .filter((f) => f.lines && f.lines > 1)
+        .map(
+          (f) => `<div class="field">
+            <h2>${escapeHtml(f.label)}</h2>
+            ${f.hint ? `<p class="hint">${escapeHtml(f.hint)}</p>` : ''}
+            ${'<div class="line"></div>'.repeat(f.lines ?? 2)}
+          </div>`,
+        )
+        .join('')}`
+    : '';
+
   const fields = SURVEY_REPORT_FIELDS.map(
     (f) => `<div class="field">
       <h2>${escapeHtml(f.label)}</h2>
@@ -97,6 +132,7 @@ export function printBlankSurveyForm(info: SurveyPrintInfo | null): void {
       ['Kết thúc lúc', '……… giờ ……… ngày ……… / ……… / …………'],
     ])}
     ${fields}
+    ${siteSection}
     <div class="field">
       <h2>Sơ đồ hiện trạng</h2>
       <p class="hint">Vẽ phác mặt bằng, hướng, lối vào, kích thước đo được</p>
@@ -107,9 +143,11 @@ export function printBlankSurveyForm(info: SurveyPrintInfo | null): void {
       <div><p>Đại diện khách hàng</p><span class="hint">(ký, ghi rõ họ tên — nếu có)</span></div>
     </div>
     <p class="hint">Về văn phòng: chụp phiếu này tải lên biên bản khảo sát (loại «Phiếu khảo sát giấy»)
-      rồi gõ sáu mục vào hệ thống theo đúng thứ tự trên.</p>`;
+      rồi gõ các mục vào hệ thống theo đúng thứ tự trên.</p>`;
 
-  const title = info?.companyName ? `Phiếu khảo sát — ${info.companyName}` : 'Phiếu khảo sát';
+  const title = info?.companyName
+    ? `Phiếu khảo sát — ${info.companyName}`
+    : `Phiếu khảo sát${companyCode ? ` — ${companyCode}` : ''}`;
   openPrintReport(title, body);
 }
 
@@ -118,7 +156,18 @@ export function printSurveyReport(
   survey: SiteSurveyRecord,
   info: SurveyPrintInfo | null,
   attachments: SurveyAttachment[],
+  companyCode: string | null = null,
 ): void {
+  const siteForm = surveySiteForm(companyCode);
+  const siteDetails = filledSiteDetails(companyCode, survey.site_details);
+  const siteSection = siteDetails.length
+    ? `<h2>${escapeHtml(siteForm?.title ?? 'Thông tin hiện trường')}</h2>${siteDetails
+        .map(
+          (d) =>
+            `<div class="block"><strong>${escapeHtml(d.label)}</strong><p>${escapeHtml(d.value)}</p></div>`,
+        )
+        .join('')}`
+    : '';
   const images = attachments.filter((a) => a.url && isPreviewableImage(a.mime_type));
   const others = attachments.filter((a) => !images.includes(a));
   const missing = attachments.filter((a) => !a.url).length;
@@ -148,6 +197,7 @@ export function printSurveyReport(
       ],
     ])}
     ${fields}
+    ${siteSection}
     ${
       images.length
         ? `<h2>Ảnh (${images.length})</h2><div class="photos">${images

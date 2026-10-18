@@ -16,6 +16,7 @@ export * from './content';
 export * from './codes';
 export * from './roles';
 export * from './crm';
+export * from './survey-forms';
 export * from './da';
 export * from './tk';
 export * from './hd';
