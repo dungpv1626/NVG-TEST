@@ -635,10 +635,13 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
 | 0   | Lưu mốc                                                                                                                    | **Xong**                                       |
 | 1   | Quyền + thứ tự bước, đồng bộ liên module, dải tiến trình + chuỗi hồ sơ, gỡ chế độ tối, sửa lớp đè / token màu (vấn đề 2–4) | **Xong phần chính** — chờ Haan kiểm            |
 | 2   | «Tổng quan điều hành» + Dashboard lãnh đạo theo khung từng công ty + vai trò Kiểm soát nội bộ (vấn đề 1)                   | **Xong phần chính** — chờ Haan kiểm            |
-| 3   | Khảo sát chốt bằng máy (CRM + TK), đính kèm dùng chung, ghi âm → Whisper → Gemini tóm tắt (vấn đề 6, 8)                    | Chưa làm — nay là Đợt 1 / 5 của kế hoạch tổng  |
+| 3   | Khảo sát chốt bằng máy (CRM + TK), đính kèm dùng chung, ghi âm → Whisper → Gemini tóm tắt (vấn đề 6, 8)                    | **Phần CRM xong trong Đợt 1**; phần TK ở Đợt 5 |
 | 3b  | Điểm danh theo tổ, kiểm bán kính GPS (chỉ cảnh báo), báo cáo có mặt, đề xuất chấm công                                     | Chưa làm — nay là Đợt 2 (2C) của kế hoạch tổng |
 | 4   | Mẫu hợp đồng `.docx` có chỗ trống, tự điền, xem trước, xuất (vấn đề 5)                                                     | **Xong vòng đầu** — chờ Haan kiểm              |
 | 5   | AI Design thành 4 bước: Đầu vào → Mặt bằng → Mặt ngoài → Bộ kết quả (vấn đề 7)                                             | Chưa làm — nay là Đợt 5 (5B) của kế hoạch tổng |
+| Đ1  | Đợt 1 Kinh doanh (kế hoạch tổng): 1A–1H + bổ sung 18/10 (AI thật, đính kèm, in, phiếu riêng)                               | **Xong trên máy** — chờ anh Dũng chạy thử      |
+| 0b  | Bộ nhận diện theo logo NVG                                                                                                 | **Xong vòng đầu** — chờ duyệt ảnh              |
+| PH  | Phát hành bản demo mới                                                                                                     | **Chuẩn bị xong, CỐ Ý CHƯA deploy** (xem 9.3)  |
 
 **GĐ1 đã có trong mã** (migration 0155–0166; 0160–0166 là vòng rà chuỗi bước bằng đúng vai sau phản hồi chủ dự án):
 
@@ -764,45 +767,66 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
 **GĐ1 còn thiếu:** bảng lịch sử bước chung `stage_transitions` (hợp đồng / gói thầu / công trình); dải tiến
 trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ PWA trên hộp thoại, `ConfirmDialog` qua portal.
 
-### 9.3 Bước tiếp theo
+### 9.3 Trạng thái hiện tại và bước tiếp theo
 
 **Đọc `doc/KE_HOACH_LAM_HO.md` trước khi bắt đầu đợt nào** — thứ tự, phụ thuộc, câu hỏi chặn, tiêu chí xong ở đó.
+Người đang làm việc với Claude Code trên máy này là **anh Dũng** (`dungpv1626`); «Haan» trong tài liệu là vai chủ dự án.
 
-1. **Bước 0 — chốt phần đã làm.** Haan kiểm GĐ1 + GĐ2 + GĐ4 trên máy (`http://localhost:5173`, mật khẩu `NhaViet2026`)
-   bằng đúng vai: Kinh doanh `kinhdoanh.nvc@…` đi cơ hội → báo giá → hợp đồng (tab «Văn bản»); TGĐ `tgd@…` duyệt, ký, mở
-   công trình, xem Dashboard / Tổng quan điều hành, tải mẫu hợp đồng; Thi công `congtruong.nvc@…`; Chỉ huy trưởng
-   `chihuytruong.nvc@…`; KSNB `ksnb@…`. Trả lời câu hỏi 9.5; NVG gửi mẫu Word hợp đồng thật.
-2. Khi Haan đồng ý phát hành: đẩy nhánh → `npm run db:migrate:demo` → **`db:seed` trên demo** (vai trò KSNB, trang mặc
-   định mới) → `npm run deploy` (API trước, web sau).
-3. **Bước 0b — bộ nhận diện NVG** — XONG vòng đầu trên máy, chờ chủ dự án duyệt ảnh `backup/brand-truoc|sau/` (mục 1b của kế hoạch): token màu theo logo, logo thật ở thanh bên / đăng nhập / favicon /
-   PWA; giữ 6 màu trạng thái; chụp trước / sau cho chủ dự án duyệt. Logo PNG ở `backup/nvg-logo-2048.png`.
-4. **Đợt 1 — Kinh doanh** (chủ dự án đã chốt: báo cáo khảo sát do Ban Giám đốc duyệt, chưa duyệt thì chặn Báo giá; hợp
-   đồng gửi duyệt kèm văn bản; AI chạy giả lập trước): xây khối nền K1–K5; CRM đầu mối + nhật ký chăm sóc + việc hôm nay
-   - khách cũ + phễu; khảo sát ghi âm → báo cáo → BGĐ; hợp đồng kèm văn bản (`contracts.approved_document_id`, chỉ lập
-     văn bản khi Nháp); quản trị AI; thư viện công trình mẫu + link xem trực tuyến cho khách (1H, quy tắc ở mục 3.1 của kế
-     hoạch — trang công khai đầu tiên, đi qua Worker). Loại phê duyệt mới `survey_report` (thêm enum ở migration riêng; `decide_approval`
-     chép nguyên bản 0088 rồi thêm nhánh; `stage_readiness` chép bản 0166).
-5. Rồi Đợt 2 Thi công (7 mốc NVO, nhật ký giọng nói, điểm danh tổ, biên bản tự sinh, màn hình Trưởng phòng, phiếu bảo
-   hành) → Đợt 3 Tài chính; Đợt 4 Mua hàng – Kho và Đợt 5 (Thiết kế + AI Design 4 bước, Đấu thầu — soạn hồ sơ dự thầu, mục 3.2 của kế hoạch —, NVS, Nhân sự, Hành
-   chính) song song sau Đợt 1.
-6. Việc treo, làm xen: lịch sử bước chung `stage_transitions`; dải tiến trình gói thầu; QĐ-6 giao dịch nội bộ; ô «hợp
+#### Đã hoàn thành (nhánh `cai-tien-ux`, đẩy lên `dungpv1626/NVG-TEST`)
+
+- GĐ1, GĐ2, GĐ4 (0155–0171) và Bước 0b bộ nhận diện — chi tiết ở 9.2.
+- **Đợt 1 — Kinh doanh** (0172–0181, commit 8139a22 → 2bc209b):
+  - 1A/1B đầu mối + nhật ký chăm sóc (`leads`, `contact_logs`, `convert_lead`, báo trùng số điện thoại);
+    1C việc hôm nay (`my_crm_followups`, quét nhắc đêm); 1F khách cũ + phễu theo nguồn.
+  - 1D khảo sát: Bắt đầu / Kết thúc do máy ghi giờ, ghi âm, báo cáo 6 ô → Ban Giám đốc duyệt / trả về
+    (`site_surveys.report_status`, phê duyệt `survey_report`); chưa duyệt thì chặn Báo giá.
+  - 1E hợp đồng gửi duyệt kèm văn bản Word (`contracts_document_gate`, xem văn bản ngay trong hộp duyệt).
+  - 1G trang «Trợ lý AI» (`/nen/tro-ly-ai`): công tắc từng chức năng, sổ chi phí `ai_calls`.
+  - 1H thư viện công trình mẫu `/mau-cong-trinh` + link gửi khách có hạn, thu hồi được (`/xem-mau/:token` qua Worker
+    `/public/showcase/:token`, hàm `showcase_public` chỉ service_role); xoá mẫu cần Giám đốc duyệt (`showcase_delete`).
+  - Bổ sung 18/10/2026: ô ngày giờ `DateTimeInput` (bỏ `datetime-local`); 0180 ảnh / video / phiếu giấy / tài liệu
+    đính kèm khảo sát (kho `survey-files`); in biên bản + in phiếu khảo sát trống (`pages/crm/survey-print.ts`); 0181 phiếu
+    khảo sát RIÊNG từng pháp nhân (`shared/src/survey-forms.ts`, cột `site_surveys.site_details`); bộ ghi âm có thanh mức
+    âm, chọn micro, nhắc khi micro không nghe thấy; Worker lọc câu Whisper tự bịa (`whisper-hallucination.ts`).
+- Hàm chép-dài bản mới nhất: `decide_approval` ở 0179, `stage_readiness` ở 0176, `my_pending_approvals` ở 0175, hàm canh
+  `site_surveys_report_guard` ở 0181. Hạn mức loại phê duyệt mới nằm ở seed (`DEFAULT_APPROVAL_LIMITS`) — `db:seed` sau migrate.
+- Ảnh chạy thử từng phần: `backup/dot1-1a/` → `backup/dot1-1h/`, `backup/dot1-dinh-kem/`, `backup/dot1-phieu-rieng/`,
+  `backup/dot1-micro/` (không commit).
+
+#### Trạng thái từng phần
+
+| Phần                                  | Trạng thái                                                                                                                                                                                                                       |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mã Đợt 1                              | Xong; phép thử CSDL có đột biến; `tsc`, `lint` (trừ `backup/`) sạch                                                                                                                                                              |
+| AI trên máy                           | **Chạy THẬT**: Whisper (Workers AI) + Gemini 2.5 Flash trả phí — `workers/.dev.vars` `AI_FAKE=` rỗng, công tắc `ai.transcribe_enabled` / `ai.survey_summary_enabled` = 1 ở CSDL máy. Muốn quay về giả lập: `AI_FAKE=1`           |
+| Bản demo cũ `nvg.tests99.workers.dev` | Vẫn chạy bản trước GĐ1, CSDL `awaiwegmuykhctnysvou` — ở tài khoản khác, máy này KHÔNG vào được                                                                                                                                   |
+| Bản demo mới                          | Supabase `fvfmtbdcvcniakigfpdm` đã migrate 0001→0181 + seed + 5/6 kịch bản demo (thiếu NVO). Cloudflare tài khoản wewear (`automkt.workers.dev`) — **chưa deploy**; lần thử đầu bị từ chối vì gói Free không cho `limits.cpu_ms` |
+| Repo                                  | Chỉ đẩy lên `dungpv1626/NVG-TEST` (remote `dungpv`); remote `origin` (anhoangha) đã khoá đẩy                                                                                                                                     |
+
+#### Bước tiếp theo
+
+1. **Anh Dũng chạy thử Đợt 1 trên máy** (`http://localhost:5173`, mật khẩu `NhaViet2026`): `kinhdoanh.nvc@…` đầu mối →
+   cơ hội → khảo sát (ghi âm, nhìn thanh mức âm, «Máy viết báo cáo», ảnh, in phiếu) → gửi duyệt; `tgd@…` duyệt / trả về,
+   duyệt hợp đồng kèm văn bản; `thietke.nvo@…` thêm mẫu công trình. Sau khi khởi động lại máy: Docker → `npm run db:start`
+   → `npm run dev:workers` → `npm run dev`. Cổng 8788 có nhiều tiến trình `workerd` cũ thì tắt hết rồi chạy lại một bản.
+2. **Đợt 2 — Thi công** (đề xuất bắt đầu bằng phần NVO): 7 mốc NVO + nghiệm thu trước khi che khuất, nhật ký giọng nói
+   (dùng lại `VoiceRecorder` + Whisper), biên bản tự sinh, màn hình Trưởng phòng Thi công, phiếu bảo hành. Điểm danh tổ
+   (2C) và mốc NVC chờ câu hỏi 6, 15. Rồi Đợt 3 Tài chính; Đợt 4 Mua hàng – Kho và Đợt 5 song song.
+3. **Phát hành — CHỈ sau khi xong mọi tính năng** (anh Dũng quyết 18/10/2026). Trình tự đã chuẩn bị:
+   (a) chọn gói Cloudflare: Workers Paid 5 USD/tháng (đủ AI Design + Whisper), hoặc Free và tách `limits.cpu_ms` khỏi
+   `workers/wrangler.jsonc` (AI Design hỏng, Whisper đoạn dài dễ hỏng); (b) khôi phục Supabase nếu đã tạm dừng; tạo lại mật
+   khẩu CSDL + service_role (đã lộ trong chat) rồi cập nhật `.env.demo`; (c) `NVG_DB_TARGET=demo npm run migrate
+--workspace=db` (Windows: không dùng `npm run db:migrate:demo` — cmd không hiểu cú pháp đặt biến) rồi seed cùng cách;
+   (d) `npm run deploy:workers`; đặt secret `SUPABASE_SERVICE_ROLE_KEY`, `GEMINI_PAID_API_KEY` và các khoá AI Design
+   (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `POLLINATIONS_API_KEY` — anh Dũng đã cho chép từ
+   `.dev.vars`); (e) `NVG_DB_TARGET=demo npx tsx db/src/demo/index.ts --confirm=fvfmtbdcvcniakigfpdm --only=nvo`;
+   (f) `npm run deploy:web`; kiểm `curl https://nvg-api.automkt.workers.dev/design/health`; (g) bật hai công tắc AI ở trang
+   Trợ lý AI của bản demo; chạy thử bằng đúng vai.
+4. Việc nhỏ treo của Đợt 1: AI điền luôn các ô «Thông tin hiện trường» riêng từng công ty; nút «Gửi mẫu» trên đầu mối /
+   cơ hội; nhập đầu mối từ Excel; Kinh doanh NVS sửa ô phiếu khảo sát (câu 22).
+5. Việc treo cũ, làm xen: lịch sử bước chung `stage_transitions`; dải tiến trình gói thầu; QĐ-6 giao dịch nội bộ; ô «hợp
    đồng sắp hết hạn»; lối vào Tổng quan điều hành trên thanh dưới điện thoại; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email; thêm dữ liệu demo quá hạn ở cả ba công ty.
-
-**Đợt 1 — Kinh doanh: XONG vòng đầu trên máy** (0172–0179, commit 8139a22 → 16d3413): đầu mối + nhật ký chăm sóc
-(`leads`, `contact_logs`, `convert_lead`), việc hôm nay (`my_crm_followups`, quét nhắc), khảo sát ghi âm → nháp AI → Ban
-Giám đốc duyệt (`site_surveys.report_status`, phê duyệt `survey_report`, chưa duyệt chặn Báo giá), hợp đồng gửi duyệt kèm
-văn bản (`contracts_document_gate`), khách cũ + phễu theo nguồn, trang «Trợ lý AI» (`/nen/tro-ly-ai`, bảng `ai_calls`),
-thư viện công trình mẫu + link gửi khách (`/mau-cong-trinh`, trang công khai `/xem-mau/:token` qua Worker
-`/public/showcase/:token`, phê duyệt xoá `showcase_delete`). Bản mới nhất của hàm chép-dài: `decide_approval` ở 0179,
-`stage_readiness` ở 0176, `my_pending_approvals` ở 0175. Hạn mức của loại phê duyệt mới nằm ở seed (`DEFAULT_APPROVAL_LIMITS`)
-— chạy `db:seed` sau migrate. Ảnh chạy thử: `backup/dot1-1a/` → `backup/dot1-1h/`.
-Bổ sung 18/10/2026: ô ngày giờ khảo sát dùng `DateTimeInput` (không `datetime-local`); chép giọng nói THẬT bằng
-Workers AI Whisper (binding `AI`, `vad_filter`, công tắc `ai.transcribe_enabled`; máy dev `AI_FAKE=summary`); 0180
-đính kèm khảo sát (`site_survey_attachments`, kho `survey-files`: ảnh / video / phiếu giấy / tài liệu), in biên bản
-và phiếu khảo sát trống (`pages/crm/survey-print.ts`). 0181 phiếu khảo sát RIÊNG từng pháp nhân: sáu mục chung + nhóm
-«Thông tin hiện trường» (`shared/src/survey-forms.ts` — NVO nhà ở, NVC nhà xưởng, NVS giàn giáo), lưu
-`site_surveys.site_details` jsonb, khoá cùng sáu mục khi gửi duyệt. Đổi ô = sửa tệp dữ liệu đó, không cần migration.
 
 **Migration tiếp theo: 0182.**
 
@@ -852,6 +876,15 @@ và phiếu khảo sát trống (`pages/crm/survey-print.ts`). 0181 phiếu kh�
 | Thư viện công trình mẫu (1H): Thiết kế đẩy vào, cả công ty xem, chỉ Thiết kế + Giám đốc sửa, xoá cần Giám đốc đồng ý; gửi khách bằng link trực tuyến; không hiện giá        | Chủ dự án chốt (17/10/2026). Kinh doanh / TGĐ đang chào khách bằng ảnh rải trên Drive, Zalo; nhà khách đã làm được dùng làm mẫu. Ngoại lệ có chủ đích với Mẫu A (cả công ty đọc) |
 | Đấu thầu NVC (5C) mở rộng: kho hồ sơ năng lực trước, rồi soạn bộ hồ sơ dự thầu từ số liệu có sẵn (hành chính, năng lực, tài chính máy sinh; kỹ thuật chỉ nháp)              | Chủ dự án đồng ý gộp (17/10/2026). Phòng Dự án NVC thiếu người, dữ liệu thầu phân tán; máy không ký, không nộp, không quyết giá (PRD 2.3)                                        |
 | Bước 0b: đổi bộ nhận diện theo logo NVG (xanh lá N = màu hành động chính; cam V chỉ điểm nhấn, chữ tối; xanh dương G hạn chế), giữ nguyên 6 màu trạng thái; làm trước Đợt 1 | Chủ dự án yêu cầu (17/10/2026). Cam trên chữ trắng chỉ 2,36:1; xanh dương gần «Đang xử lý» — dùng làm liên kết sẽ đọc như trạng thái                                             |
+| Đính kèm khảo sát ở bảng riêng `site_survey_attachments`, quyền dùng lại `rls_survey_readable/_writable`; gửi duyệt thì khoá                                                | Ảnh nhà khách là dữ liệu khách hàng (Thi công cùng pháp nhân không xem); Ban Giám đốc phải duyệt đúng bộ ảnh lúc gửi                                                             |
+| Phiếu khảo sát riêng từng pháp nhân = 6 mục chung + nhóm ô riêng; danh sách ô là DỮ LIỆU (`survey-forms.ts`), giá trị ở jsonb                                               | Anh Dũng yêu cầu (18/10/2026). Ô còn chờ Kinh doanh từng công ty sửa — đổi ô không được kéo theo migration. Ô NVO / NVC rút từ hồ sơ khảo sát; NVS là đề xuất                    |
+| Phiếu giấy in cùng thứ tự ô với màn hình; về văn phòng chụp phiếu tải lên rồi gõ lại; chưa cho AI đọc chữ viết tay                                                          | Không bắt dò khi gõ lại; đọc chữ viết tay là AI tốn phí — để sau                                                                                                                 |
+| Bật AI THẬT trên máy: Whisper (Workers AI) + Gemini 2.5 Flash gói trả phí; khoá AI Design được chép lên demo khi phát hành                                                  | Anh Dũng cho phép từng phần (18/10/2026), xác nhận khoá Gemini đã bật thanh toán (gói miễn phí có thể huấn luyện trên dữ liệu khách). Một báo cáo ≈ 0,0005 USD                   |
+| `vad_filter` + lọc câu Whisper tự bịa; chép ra rỗng thì báo «Không nghe rõ», KHÔNG lưu câu bịa                                                                              | Gặp thật: micro chỉ thu tiếng ồn ra «Hãy subscribe cho kênh Ghiền Mì Gõ…». Đo cho thấy đường chép chữ đúng (giọng đọc rõ chép chuẩn), lỗi ở micro                                |
+| Bộ ghi âm hiện thanh mức âm, tên micro, cho chọn micro, nhắc sau 4 giây nếu đỉnh dưới −30 dB                                                                                | Người ghi phải biết micro hỏng NGAY tại hiện trường, không phải sau khi chép chữ                                                                                                 |
+| Chỉ đẩy lên `dungpv1626/NVG-TEST`, KHÔNG BAO GIỜ lên `anhoangha/NVG`; remote `origin` khoá đẩy bằng địa chỉ vô hiệu                                                         | Anh Dũng yêu cầu (18/10/2026)                                                                                                                                                    |
+| Dựng bản demo MỚI (Supabase `fvfmtbdcvcniakigfpdm` + Cloudflare `automkt`) thay vì cập nhật `tests99`                                                                       | Bản cũ ở tài khoản Cloudflare / Supabase máy này không vào được; anh Dũng chọn «tạo mới»                                                                                         |
+| Chạy local tới khi xong mọi tính năng rồi mới deploy                                                                                                                        | Anh Dũng quyết (18/10/2026): một lần phát hành, không deploy lặp; còn phải chọn gói Cloudflare (Free không cho giới hạn CPU mà AI Design cần)                                    |
 
 ### 9.5 Câu hỏi chờ Haan (đang chạy theo mặc định trong ngoặc)
 
