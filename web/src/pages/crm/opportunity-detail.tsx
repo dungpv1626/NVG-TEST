@@ -382,6 +382,14 @@ export function OpportunityDetailPage() {
                 isHandedOver={isHandedOver}
                 draft={surveyDraft}
                 onDraftChange={setSurveyDraft}
+                printInfo={{
+                  code: data.code,
+                  name: data.name,
+                  customerName: customer?.name ?? null,
+                  contactPerson: customer?.contact_person ?? null,
+                  phone: customer?.phone ? formatPhone(customer.phone) : null,
+                  companyName: null,
+                }}
               />
             ),
           },

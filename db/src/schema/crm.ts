@@ -251,6 +251,31 @@ export const siteSurveyRecordings = pgTable(
 );
 
 /**
+ * Ảnh / video hiện trạng, ảnh phiếu giấy, tài liệu đính kèm biên bản khảo sát (0180).
+ * Tệp ở kho `survey-files/{survey_id}/…`; quyền như ghi âm (`rls_survey_readable` / `_writable`).
+ */
+export const siteSurveyAttachments = pgTable(
+  'site_survey_attachments',
+  {
+    id: primaryId(),
+    surveyId: uuid('survey_id')
+      .notNull()
+      .references(() => siteSurveys.id, { onDelete: 'cascade' }),
+    ...companyScoped(),
+    storagePath: text('storage_path').notNull(),
+    /** anh · video · phieu · tai_lieu */
+    kind: varchar('kind', { length: 16 }).notNull(),
+    fileName: varchar('file_name', { length: 255 }).notNull(),
+    mimeType: varchar('mime_type', { length: 128 }).notNull(),
+    sizeBytes: bigint('size_bytes', { mode: 'number' }),
+    caption: text('caption'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+  },
+  (t) => [index('site_survey_attachments_survey_idx').on(t.surveyId, t.createdAt)],
+);
+
+/**
  * Báo giá gửi khách hàng, có phiên bản (CRM-04).
  *
  * PRD CRM-04: "báo giá phải qua phê duyệt nội bộ TRƯỚC KHI GỬI" — nên bảng này có luồng

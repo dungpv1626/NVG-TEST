@@ -283,6 +283,17 @@ export const SURVEY_REPORT_FIELDS = [
 ] as const;
 export type SurveyReportFieldKey = (typeof SURVEY_REPORT_FIELDS)[number]['key'];
 
+/** Đính kèm biên bản khảo sát (0180) — khớp CHECK của `site_survey_attachments.kind`. */
+export const SURVEY_ATTACHMENT_KINDS = ['anh', 'video', 'phieu', 'tai_lieu'] as const;
+export type SurveyAttachmentKind = (typeof SURVEY_ATTACHMENT_KINDS)[number];
+
+export const SURVEY_ATTACHMENT_KIND_LABELS: Readonly<Record<SurveyAttachmentKind, string>> = {
+  anh: 'Ảnh hiện trạng',
+  video: 'Video',
+  phieu: 'Phiếu khảo sát giấy',
+  tai_lieu: 'Tài liệu',
+};
+
 /**
  * Thư viện công trình mẫu (Đợt 1 — 1H, migration 0179) — loại hình, khớp CHECK của
  * `showcase_items.kind`.

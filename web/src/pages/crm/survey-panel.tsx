@@ -14,7 +14,7 @@
  */
 
 import { useState } from 'react';
-import { CalendarClock, ClipboardCheck } from 'lucide-react';
+import { CalendarClock, ClipboardCheck, Printer } from 'lucide-react';
 import { BUTTONS, formatDateTime, fromNvgInput, toNvgDateInput, toNvgTimeInput } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
@@ -32,6 +32,9 @@ import {
 } from '@/hooks/use-site-surveys';
 import type { SurveyAiDraft } from '@/lib/ai-api';
 import { useAuth } from '@/lib/auth';
+import { useSurveyAttachments } from '@/hooks/use-survey-attachments';
+import { SurveyAttachmentsSection } from './survey-attachments-section';
+import { printBlankSurveyForm, printSurveyReport, type SurveyPrintInfo } from './survey-print';
 import { SurveyReportSection } from './survey-report-section';
 
 const EM_DASH = '—';
@@ -105,8 +108,11 @@ export function SurveyPanel({
   draft,
   onDraftChange,
   onSurveyed,
+  printInfo = null,
 }: {
   opportunityId: string;
+  /** Thông tin cơ hội / khách in lên đầu phiếu và biên bản. */
+  printInfo?: SurveyPrintInfo | null;
   canEdit: boolean;
   isHandedOver: boolean;
   draft: SurveyDraft;
@@ -200,12 +206,19 @@ export function SurveyPanel({
         </p>
       )}
 
-      {editable && editingId === null && (
-        <div className="flex justify-end">
-          <Button variant="secondary" onClick={openCreate}>
-            <CalendarClock />
-            {list.length === 0 ? 'Đặt lịch khảo sát' : 'Đặt lịch khảo sát tiếp theo'}
+      {editingId === null && (
+        <div className="flex flex-wrap justify-end gap-2">
+          {/* Phiếu trống để mang ra công trường khi không tiện dùng điện thoại (18/10/2026). */}
+          <Button variant="subtle" onClick={() => printBlankSurveyForm(printInfo)}>
+            <Printer />
+            In phiếu khảo sát trống
           </Button>
+          {editable && (
+            <Button variant="secondary" onClick={openCreate}>
+              <CalendarClock />
+              {list.length === 0 ? 'Đặt lịch khảo sát' : 'Đặt lịch khảo sát tiếp theo'}
+            </Button>
+          )}
         </div>
       )}
 
@@ -235,6 +248,7 @@ export function SurveyPanel({
               survey={survey}
               editable={editable && editingId === null}
               canEdit={editable}
+              printInfo={printInfo}
               onEdit={() => openEdit(survey)}
               onUseDraft={(ai) => openEdit(survey, ai)}
             />
@@ -249,12 +263,14 @@ function SurveyCard({
   survey,
   editable,
   canEdit,
+  printInfo,
   onEdit,
   onUseDraft,
 }: {
   survey: SiteSurveyRecord;
   editable: boolean;
   canEdit: boolean;
+  printInfo: SurveyPrintInfo | null;
   onEdit: () => void;
   onUseDraft: (draft: SurveyAiDraft) => void;
 }) {
@@ -264,6 +280,7 @@ function SurveyCard({
   // nghiệp vụ, nên nói rõ ngay ở dòng đầu thay vì để người đọc tự suy.
   // Biên bản cũ lỡ ghi «đã khảo sát» vào ngày chưa tới (trước 0161) không tính là đã khảo sát.
   const done = survey.surveyed_at !== null && new Date(survey.surveyed_at).getTime() <= Date.now();
+  const attachments = useSurveyAttachments(survey.id);
 
   const content = [
     { label: 'Nhu cầu', value: survey.needs },
@@ -295,11 +312,23 @@ function SurveyCard({
           </div>
         </div>
 
-        {editable && !locked && (
-          <Button variant="subtle" size="sm" onClick={onEdit}>
-            {done ? BUTTONS.edit : 'Ghi biên bản'}
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {done && (
+            <Button
+              variant="subtle"
+              size="sm"
+              onClick={() => printSurveyReport(survey, printInfo, attachments.data ?? [])}
+            >
+              <Printer />
+              In biên bản
+            </Button>
+          )}
+          {editable && !locked && (
+            <Button variant="subtle" size="sm" onClick={onEdit}>
+              {done ? BUTTONS.edit : 'Ghi biên bản'}
+            </Button>
+          )}
+        </div>
       </div>
 
       {content.length > 0 ? (
@@ -317,6 +346,8 @@ function SurveyCard({
           Phòng Dự án và Thiết kế không phải hỏi lại khách hàng.
         </p>
       )}
+
+      <SurveyAttachmentsSection surveyId={survey.id} canEdit={canEdit && !locked} />
 
       <SurveyReportSection survey={survey} canEdit={canEdit} onUseDraft={onUseDraft} />
     </li>

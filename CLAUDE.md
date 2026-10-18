@@ -788,8 +788,12 @@ thư viện công trình mẫu + link gửi khách (`/mau-cong-trinh`, trang cô
 `/public/showcase/:token`, phê duyệt xoá `showcase_delete`). Bản mới nhất của hàm chép-dài: `decide_approval` ở 0179,
 `stage_readiness` ở 0176, `my_pending_approvals` ở 0175. Hạn mức của loại phê duyệt mới nằm ở seed (`DEFAULT_APPROVAL_LIMITS`)
 — chạy `db:seed` sau migrate. Ảnh chạy thử: `backup/dot1-1a/` → `backup/dot1-1h/`.
+Bổ sung 18/10/2026: ô ngày giờ khảo sát dùng `DateTimeInput` (không `datetime-local`); chép giọng nói THẬT bằng
+Workers AI Whisper (binding `AI`, `vad_filter`, công tắc `ai.transcribe_enabled`; máy dev `AI_FAKE=summary`); 0180
+đính kèm khảo sát (`site_survey_attachments`, kho `survey-files`: ảnh / video / phiếu giấy / tài liệu), in biên bản
+và phiếu khảo sát trống (`pages/crm/survey-print.ts`).
 
-**Migration tiếp theo: 0180.**
+**Migration tiếp theo: 0181.**
 
 ### 9.4 Quyết định đã chốt và lý do
 
