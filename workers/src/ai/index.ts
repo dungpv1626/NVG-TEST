@@ -20,9 +20,13 @@ import { asUser, type UserDb } from '../design/auth-scope';
 import type { DesignEnv } from '../design/env';
 
 export interface AiEnv extends DesignEnv {
-  /** `1` = giả lập mọi chức năng AI (máy phát triển). KHÔNG đặt trên bản demo / vận hành. */
+  /**
+   * Giả lập AI trên máy phát triển — KHÔNG đặt trên bản demo / vận hành. `1` = giả lập mọi chức
+   * năng; hoặc danh sách cách nhau bởi dấu phẩy (`summary`, `transcribe`) = chỉ giả lập những
+   * chức năng đó, chức năng còn lại đi theo công tắc như bình thường.
+   */
   AI_FAKE?: string;
-  /** Binding Workers AI — chưa khai trong `wrangler.jsonc`; khai khi chủ dự án duyệt chi phí. */
+  /** Binding Workers AI (`wrangler.jsonc` → `ai`), bật 18/10/2026 cho chép giọng nói. */
   AI?: { run(model: string, input: Record<string, unknown>): Promise<unknown> };
 }
 
@@ -64,14 +68,19 @@ async function switchOn(env: AiEnv, key: string): Promise<boolean> {
 }
 
 async function modes(env: AiEnv): Promise<{ transcribe: Mode; summary: Mode }> {
-  if (env.AI_FAKE === '1') return { transcribe: 'fake', summary: 'fake' };
+  const fake = (name: string) =>
+    env.AI_FAKE === '1' ||
+    (env.AI_FAKE ?? '')
+      .split(',')
+      .map((v) => v.trim())
+      .includes(name);
   const [t, s] = await Promise.all([
     switchOn(env, 'ai.transcribe_enabled'),
     switchOn(env, 'ai.survey_summary_enabled'),
   ]);
   return {
-    transcribe: t && env.AI ? 'on' : 'off',
-    summary: s && env.GEMINI_PAID_API_KEY ? 'on' : 'off',
+    transcribe: fake('transcribe') ? 'fake' : t && env.AI ? 'on' : 'off',
+    summary: fake('summary') ? 'fake' : s && env.GEMINI_PAID_API_KEY ? 'on' : 'off',
   };
 }
 
@@ -153,7 +162,11 @@ assistantApp.post('/transcribe', async (c) => {
           String.fromCharCode(b),
         ).join(''),
       );
-      const out = (await c.env.AI!.run(WHISPER_MODEL, { audio, language: 'vi' })) as {
+      const out = (await c.env.AI!.run(WHISPER_MODEL, {
+        audio,
+        language: 'vi',
+        vad_filter: true,
+      })) as {
         text?: string;
       };
       transcript = (out.text ?? '').trim();
@@ -189,6 +202,18 @@ assistantApp.post('/transcribe', async (c) => {
         502,
       );
     }
+  }
+
+  // `vad_filter` bỏ đoạn không có tiếng người — đoạn ghi quá nhỏ / xa micro ra chữ RỖNG thay vì
+  // câu Whisper tự bịa («Hãy subscribe cho kênh…», gặp thật 18/10/2026 với đoạn ghi −35 dB).
+  // Rỗng thì nói thẳng là không nghe rõ, không để ô trống trông như đã chép xong.
+  if (mode !== 'fake' && !transcript) {
+    const note = 'Không nghe rõ lời nói — ghi lại, để máy gần người nói hơn, hoặc gõ tay.';
+    await db
+      .from('site_survey_recordings')
+      .update({ transcript_status: 'loi', transcript_note: note })
+      .eq('id', rec.id);
+    return c.json({ error: note }, 422);
   }
 
   const { error: saveError } = await db

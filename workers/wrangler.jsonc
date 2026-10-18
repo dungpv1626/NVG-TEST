@@ -33,6 +33,14 @@
   "observability": { "enabled": true },
 
   /**
+   * Workers AI — chép giọng nói khảo sát thành chữ (Whisper, `src/ai/index.ts`). Chủ dự án bật
+   * 18/10/2026 để thử. Có binding chưa đủ để gọi: còn phải bật công tắc `ai.transcribe_enabled`
+   * trong trang «Trợ lý AI». `wrangler dev` gọi lên Cloudflare THẬT (không có bản giả lập ngoại
+   * tuyến), tính vào hạn mức miễn phí theo ngày của tài khoản.
+   */
+  "ai": { "binding": "AI" },
+
+  /**
    * Images binding — thu nhỏ ảnh phối cảnh / mặt bằng nội thất thành bản xem trước WebP cho ảnh bìa
    * thẻ AI Design (`src/design/ai/image-preview.ts`, Haan chọn 08/10/2026). Tính phí theo biến đổi
    * DUY NHẤT mỗi tháng; `wrangler dev` dùng bản giả lập ngoại tuyến (width, format), không tính phí.
