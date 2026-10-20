@@ -23,17 +23,25 @@ export interface DateTimeInputProps {
 
 const TIME = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
-/** Gõ `930` → `09:30`, `1415` → `14:15`; tự chèn dấu `:`. */
-function maskTime(raw: string): string {
-  const digits = raw.replace(/\D/g, '').slice(0, 4);
-  if (raw.includes(':')) {
-    const [h = '', m = ''] = raw.split(':');
-    const hh = h.replace(/\D/g, '').slice(0, 2);
-    return `${hh}:${m.replace(/\D/g, '').slice(0, 2)}`;
-  }
+/**
+ * Chỉ cần gõ số, máy tự chèn dấu `:` — `1430` → `14:30`, `930` → `09:30`.
+ *
+ * Lỗi thật 20/10/2026: bản trước đệm số 0 ngay khi có ba chữ số, nên gõ `1430` ra `01:43`.
+ * Nay chỉ đệm khi chữ số đầu không thể là hàng chục của giờ (3–9), hoặc khi rời ô mà mới có ba
+ * chữ số (`130` → `01:30`).
+ */
+export function maskTime(raw: string): string {
+  let digits = raw.replace(/\D/g, '');
+  if (digits.length > 0 && digits[0]! > '2') digits = `0${digits}`;
+  digits = digits.slice(0, 4);
   if (digits.length <= 2) return digits;
-  if (digits.length === 3) return `0${digits[0]}:${digits.slice(1)}`;
   return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+}
+
+/** Rời ô với ba chữ số: `13:0` hiểu là `01:30`. */
+export function finishTime(time: string): string {
+  const digits = time.replace(/\D/g, '');
+  return digits.length === 3 ? `0${digits[0]}:${digits.slice(1)}` : time;
 }
 
 export function DateTimeInput({ value, onChange, disabled }: DateTimeInputProps) {
@@ -60,7 +68,7 @@ export function DateTimeInput({ value, onChange, disabled }: DateTimeInputProps)
           type="text"
           inputMode="numeric"
           autoComplete="off"
-          placeholder="hh:mm"
+          placeholder="hhmm"
           maxLength={5}
           aria-label="Giờ"
           className="w-24"
@@ -72,11 +80,17 @@ export function DateTimeInput({ value, onChange, disabled }: DateTimeInputProps)
             setTime(t);
             emit(date, t);
           }}
+          onBlur={() => {
+            const t = finishTime(time);
+            if (t === time) return;
+            setTime(t);
+            emit(date, t);
+          }}
         />
       </div>
       {date && !timeOk && (
         <span className="block text-xs text-status-overdue">
-          {time ? 'Giờ chưa đúng (hh:mm, ví dụ 14:30).' : 'Nhập giờ (hh:mm, ví dụ 14:30).'}
+          {time ? 'Giờ chưa đúng (hh:mm, ví dụ 14:30).' : 'Nhập giờ — gõ 1430 cho 14:30.'}
         </span>
       )}
     </div>

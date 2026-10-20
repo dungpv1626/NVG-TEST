@@ -180,6 +180,10 @@ export function SurveyPanel({
 
   async function save() {
     setActionError(null);
+    if (!editingId && !form.scheduledAt) {
+      setActionError('Vui lòng nhập ngày giờ hẹn khảo sát.');
+      return;
+    }
     if (!form.scheduledAt && !form.surveyedAt) {
       setActionError('Vui lòng nhập lịch hẹn khảo sát hoặc thời điểm đã khảo sát.');
       return;
@@ -250,6 +254,7 @@ export function SurveyPanel({
           isEditing={editingId !== ''}
           // Máy đã ghi giờ (Bắt đầu / Kết thúc) thì không gõ tay thời điểm khảo sát nữa.
           clockManaged={list.some((sv) => sv.id === editingId && sv.started_at !== null)}
+          surveyed={list.some((sv) => sv.id === editingId && sv.surveyed_at !== null)}
           companyCode={companyCode}
           onChange={(field, value) =>
             onDraftChange({ editingId, form: { ...form, [field]: value } })
@@ -410,6 +415,7 @@ function SurveyForm({
   busy,
   isEditing,
   clockManaged,
+  surveyed,
   companyCode,
   onChange,
   onDetailChange,
@@ -421,6 +427,8 @@ function SurveyForm({
   busy: boolean;
   isEditing: boolean;
   clockManaged: boolean;
+  /** Biên bản đã có giờ khảo sát — không còn đổi lịch hẹn. */
+  surveyed: boolean;
   companyCode: string | null;
   onChange: (field: Exclude<keyof SurveyForm, 'siteDetails'>, value: string) => void;
   onDetailChange: (key: string, value: string) => void;
@@ -428,6 +436,67 @@ function SurveyForm({
   onCancel: () => void;
 }) {
   const siteForm = surveySiteForm(companyCode);
+  // Gõ tay giờ khảo sát chỉ là lối dự phòng khi quên bấm Bắt đầu / Kết thúc — giấu sau một nút.
+  const [manualTime, setManualTime] = useState(Boolean(form.surveyedAt));
+
+  // Đặt lịch: chỉ ngày giờ hẹn, người đi, ghi chú. Hẹn 10 ngày nữa mới khảo sát thì chưa có gì
+  // để ghi vào biên bản — không bày ô «Đã khảo sát lúc» và sáu ô báo cáo ở bước này (anh Dũng
+  // 20/10/2026: lịch hẹn và hoàn thành khảo sát không nên nằm chung một chỗ).
+  if (!isEditing) {
+    return (
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSave();
+        }}
+        noValidate
+        className="rounded-lg border border-brand bg-surface p-4 shadow-card"
+      >
+        <h3 className="mb-1 font-semibold">Đặt lịch khảo sát</h3>
+        <p className="mb-3 text-xs text-fg-subtle">
+          Đến ngày khảo sát, bấm «Bắt đầu khảo sát» trên thẻ lịch hẹn — máy ghi giờ, rồi ghi âm và
+          viết biên bản ở đó.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Ngày giờ hẹn khảo sát" required>
+            <DateTimeInput value={form.scheduledAt} onChange={(v) => onChange('scheduledAt', v)} />
+          </Field>
+          <Field label="Người đi khảo sát">
+            <select
+              value={form.surveyedBy}
+              onChange={(e) => onChange('surveyedBy', e.target.value)}
+              className="h-9 w-full rounded-sm border border-border bg-surface px-3"
+            >
+              <option value="">Chưa phân công</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.full_name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Ghi chú cho buổi hẹn" optional className="sm:col-span-2">
+            <textarea
+              value={form.notes}
+              onChange={(e) => onChange('notes', e.target.value)}
+              rows={2}
+              placeholder="Địa điểm, người đón, giấy tờ cần mang"
+              className="w-full rounded-sm border border-border bg-surface px-3 py-2 placeholder:text-fg-subtle"
+            />
+          </Field>
+        </div>
+        <div className="mt-4 flex items-center gap-2">
+          <Button type="submit" variant="primary" disabled={busy}>
+            {busy ? 'Đang lưu…' : 'Đặt lịch'}
+          </Button>
+          <Button type="button" variant="subtle" onClick={onCancel}>
+            {BUTTONS.cancel}
+          </Button>
+        </div>
+      </form>
+    );
+  }
+
   return (
     <form
       onSubmit={(e) => {
@@ -447,9 +516,11 @@ function SurveyForm({
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Lịch hẹn khảo sát">
-          <DateTimeInput value={form.scheduledAt} onChange={(v) => onChange('scheduledAt', v)} />
-        </Field>
+        {!surveyed && (
+          <Field label="Lịch hẹn khảo sát" hint="Đổi lịch thì sửa ở đây.">
+            <DateTimeInput value={form.scheduledAt} onChange={(v) => onChange('scheduledAt', v)} />
+          </Field>
+        )}
 
         <Field label="Người khảo sát">
           <select
@@ -466,15 +537,27 @@ function SurveyForm({
           </select>
         </Field>
 
-        {!clockManaged && (
-          <Field
-            label="Đã khảo sát lúc"
-            hint="Nên bấm «Bắt đầu / Kết thúc khảo sát» trên thẻ để máy ghi giờ. Chỉ gõ tay khi quên bấm."
-            className="sm:col-span-2"
-          >
-            <DateTimeInput value={form.surveyedAt} onChange={(v) => onChange('surveyedAt', v)} />
-          </Field>
-        )}
+        {!clockManaged &&
+          (manualTime ? (
+            <Field
+              label="Đã khảo sát lúc"
+              hint="Chỉ gõ tay khi quên bấm «Bắt đầu / Kết thúc khảo sát» trên thẻ."
+              className="sm:col-span-2"
+            >
+              <DateTimeInput value={form.surveyedAt} onChange={(v) => onChange('surveyedAt', v)} />
+            </Field>
+          ) : (
+            <p className="text-sm text-fg-subtle sm:col-span-2">
+              Giờ khảo sát do máy ghi khi bấm «Bắt đầu / Kết thúc khảo sát» trên thẻ.{' '}
+              <button
+                type="button"
+                className="font-medium text-brand underline-offset-2 hover:underline"
+                onClick={() => setManualTime(true)}
+              >
+                Đã khảo sát mà quên bấm? Ghi giờ tay
+              </button>
+            </p>
+          ))}
 
         <Field label="Nhu cầu" className="sm:col-span-2">
           <textarea

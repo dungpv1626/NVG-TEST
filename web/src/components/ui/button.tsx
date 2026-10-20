@@ -20,7 +20,9 @@ const buttonVariants = cva(
     'font-medium whitespace-nowrap [&_svg]:size-4 [&_svg]:shrink-0 ' +
     'transition-[background-color,border-color,color,box-shadow,transform] ' +
     'duration-(--motion-fast) ease-(--ease-out) active:scale-[0.98] ' +
-    'disabled:pointer-events-none disabled:opacity-50 disabled:active:scale-100',
+    // Nút khoá chuyển hẳn sang xám: nút chính mờ mà vẫn xanh trông như bấm được (anh Dũng chạy
+    // thử 20/10/2026 tưởng «Chuyển sang Báo giá» đang mở).
+    'disabled:pointer-events-none disabled:border-border disabled:bg-surface-sunken disabled:text-fg-subtle disabled:shadow-none disabled:active:scale-100',
   {
     variants: {
       variant: {
