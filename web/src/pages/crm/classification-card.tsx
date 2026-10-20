@@ -130,6 +130,18 @@ export function ClassificationCard({
           </select>
         </Field>
       </div>
+      {/* Khách M1 đứng lại có chủ đích — nói rõ ngay tại đây, kể cả sau khi tải lại trang (chủ
+          dự án chạy thử 20/10/2026 tưởng là lỗi vì nút «Chuyển sang Khảo sát» chỉ bị mờ). */}
+      {classification === 'M1' && !dirty && (
+        <p
+          role="status"
+          className="mt-3 rounded-sm border border-status-pending bg-status-pending-bg px-3 py-2 text-sm"
+        >
+          Cơ hội đang ở <strong>M1 — Lưu trữ</strong> nên dừng ở bước Xác minh, chưa sang Khảo sát
+          được. Máy sẽ nhắc liên hệ lại. Khi khách có nhu cầu thực, đổi phân loại sang M2–M4 và lưu
+          — hệ thống tự chuyển sang Khảo sát.
+        </p>
+      )}
       {canEdit && (
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <Button

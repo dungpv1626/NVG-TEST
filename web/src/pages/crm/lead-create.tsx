@@ -7,8 +7,8 @@
  */
 
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { CUSTOMER_SOURCES, ERRORS, LEAD_STATUS_META, OPPORTUNITY_PROJECT_TYPES } from '@nvg/shared';
+import { useNavigate } from 'react-router-dom';
+import { CUSTOMER_SOURCES, ERRORS, OPPORTUNITY_PROJECT_TYPES } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
@@ -18,6 +18,7 @@ import { toUserMessage } from '@/hooks/use-error-message';
 import { useEntityList } from '@/hooks/use-entity';
 import { useContactDuplicates, useCreateLead } from '@/hooks/use-leads';
 import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard';
+import { ContactDuplicatesNotice } from './contact-duplicates-notice';
 import { useCan, useIsOrgManager } from '@/lib/auth';
 import { useCompanyScope } from '@/lib/company-scope';
 
@@ -164,38 +165,14 @@ export function LeadCreatePage() {
             />
           </Field>
 
-          {(duplicates.data ?? []).length > 0 && (
-            <div
-              role="status"
-              className="rounded-sm border border-status-pending bg-status-pending-bg px-3 py-2 sm:col-span-2"
-            >
-              <p className="font-medium text-status-pending">Số này đã có trong hệ thống</p>
-              <ul className="mt-1 space-y-0.5">
-                {duplicates.data!.map((d) => (
-                  <li key={d.id}>
-                    <Link
-                      to={d.kind === 'lead' ? `/crm/dau-moi/${d.id}` : `/crm/khach-hang/${d.id}`}
-                      className="text-brand hover:underline"
-                    >
-                      {d.kind === 'lead' ? 'Đầu mối' : 'Khách hàng'} {d.code} — {d.name}
-                    </Link>
-                    {d.company_code && <span className="text-fg-subtle"> · {d.company_code}</span>}
-                    {d.owner_name && (
-                      <span className="text-fg-subtle"> · phụ trách: {d.owner_name}</span>
-                    )}
-                    {d.status && (
-                      <span className="text-fg-subtle"> · {LEAD_STATUS_META[d.status].label}</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              {sameCompanyLead && (
-                <p className="mt-1 text-fg-subtle">
-                  Cùng pháp nhân thì không tạo trùng được — mở đầu mối trên và ghi tiếp nhật ký.
-                </p>
-              )}
-            </div>
-          )}
+          <ContactDuplicatesNotice
+            hits={duplicates.data ?? []}
+            footer={
+              sameCompanyLead
+                ? 'Cùng pháp nhân thì không tạo trùng được — mở đầu mối trên và ghi tiếp nhật ký.'
+                : null
+            }
+          />
 
           <Field label="Nguồn" required>
             <select

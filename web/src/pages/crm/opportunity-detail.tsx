@@ -274,45 +274,55 @@ export function OpportunityDetailPage() {
         }
         actions={
           canEdit && !isHandedOver ? (
-            <div className="flex items-center gap-2">
-              {forwardStages.map((stage, i) => {
-                const missing = missingFor(stage);
-                return (
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                {forwardStages.map((stage, i) => {
+                  const missing = missingFor(stage);
+                  return (
+                    <Button
+                      key={stage}
+                      variant={i === 0 ? 'primary' : 'secondary'}
+                      disabled={moveStage.isPending || missing.length > 0}
+                      title={missing.length > 0 ? `Cần: ${missing.join('; ')}` : undefined}
+                      onClick={() => void changeStage(stage)}
+                    >
+                      Chuyển sang {OPPORTUNITY_STAGE_META[stage].label}
+                    </Button>
+                  );
+                })}
+                {!stageMeta.isTerminal && (
                   <Button
-                    key={stage}
-                    variant={i === 0 ? 'primary' : 'secondary'}
-                    disabled={moveStage.isPending || missing.length > 0}
-                    title={missing.length > 0 ? `Cần: ${missing.join('; ')}` : undefined}
-                    onClick={() => void changeStage(stage)}
+                    variant="secondary"
+                    disabled={moveStage.isPending}
+                    onClick={() => void changeStage('mat_co_hoi')}
                   >
-                    Chuyển sang {OPPORTUNITY_STAGE_META[stage].label}
+                    Đánh dấu mất cơ hội
                   </Button>
-                );
-              })}
-              {!stageMeta.isTerminal && (
-                <Button
-                  variant="secondary"
-                  disabled={moveStage.isPending}
-                  onClick={() => void changeStage('mat_co_hoi')}
-                >
-                  Đánh dấu mất cơ hội
-                </Button>
-              )}
-              {/* Webapp Flow 3.1 bước 5: khách đồng ý ở bước Đàm phán thì soạn hợp đồng
-                  ngay tại chỗ, lấy sẵn khách hàng và giá đã duyệt (HD-01). */}
-              {/* Ở Báo giá chỉ mời soạn khi giá đã chốt với khách (báo giá đã gửi / gói thầu đã nộp)
-                  — chưa có báo giá mà hiện «Soạn hợp đồng» là mời làm bước sau trước bước trước. */}
-              {(data.stage === 'dam_phan' ||
-                (data.stage === 'bao_gia' &&
-                  readiness.some((r) => r.requirement === 'offer_sent' && r.met))) &&
-                (contractId || hasContract === false) && (
-                  <DraftContractButton
-                    sourceType="opportunities"
-                    sourceId={data.id}
-                    defaultType="thi_cong"
-                    existingContractId={contractId}
-                  />
                 )}
+                {/* Webapp Flow 3.1 bước 5: khách đồng ý ở bước Đàm phán thì soạn hợp đồng
+                  ngay tại chỗ, lấy sẵn khách hàng và giá đã duyệt (HD-01). */}
+                {/* Ở Báo giá chỉ mời soạn khi giá đã chốt với khách (báo giá đã gửi / gói thầu đã nộp)
+                  — chưa có báo giá mà hiện «Soạn hợp đồng» là mời làm bước sau trước bước trước. */}
+                {(data.stage === 'dam_phan' ||
+                  (data.stage === 'bao_gia' &&
+                    readiness.some((r) => r.requirement === 'offer_sent' && r.met))) &&
+                  (contractId || hasContract === false) && (
+                    <DraftContractButton
+                      sourceType="opportunities"
+                      sourceId={data.id}
+                      defaultType="thi_cong"
+                      existingContractId={contractId}
+                    />
+                  )}
+              </div>
+              {/* Nút bước kế tiếp bị khoá thì nói lý do NGAY dưới nút — chỉ để trong chú thích khi rê
+                chuột thì trên điện thoại không ai thấy, và người dùng tưởng hệ thống lỗi. */}
+              {forwardStages[0] && missingFor(forwardStages[0]).length > 0 && (
+                <p className="text-sm text-fg-subtle">
+                  Chưa chuyển sang {OPPORTUNITY_STAGE_META[forwardStages[0]].label} được — cần:{' '}
+                  {missingFor(forwardStages[0]).join('; ')}.
+                </p>
+              )}
             </div>
           ) : isHandedOver ? (
             // CRM-06: sau khi bàn giao, cơ hội chuyển chế độ chỉ xem.

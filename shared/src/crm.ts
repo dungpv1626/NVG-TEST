@@ -97,7 +97,7 @@ export const OPPORTUNITY_CLASSIFICATION_LABELS: Readonly<
 /** Giải thích từng mức — hiện dưới ô chọn để người phân loại không phải nhớ. Nguồn: hồ sơ khảo sát Phòng Kinh doanh. */
 export const OPPORTUNITY_CLASSIFICATION_HINTS: Readonly<Record<OpportunityClassification, string>> =
   {
-    M1: 'Chưa có nhu cầu hoặc nhu cầu chưa rõ — lưu để chăm sóc sau, chưa đi tiếp.',
+    M1: 'Chưa có nhu cầu hoặc nhu cầu chưa rõ — dừng ở bước Xác minh để chăm sóc sau, không sang Khảo sát.',
     M2: 'Khách thật sự định xây — cần khảo sát để hiểu yêu cầu.',
     M3: 'Đã rõ yêu cầu, khách đang chờ báo giá.',
     M4: 'Khách sắp chốt, đang thương lượng điều khoản.',

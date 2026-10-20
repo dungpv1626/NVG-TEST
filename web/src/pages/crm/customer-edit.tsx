@@ -203,6 +203,7 @@ export function CustomerEditPage() {
           value={form}
           onChange={update}
           responsibleOptions={users ?? []}
+          customerId={id}
           responsibleHint={
             handingOver
               ? 'Sau khi lưu, chỉ người chịu trách nhiệm mới và quản lý trực tiếp sửa được hồ sơ này.'

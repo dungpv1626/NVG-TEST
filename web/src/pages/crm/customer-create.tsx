@@ -15,6 +15,7 @@ import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { BlockedNotice } from '@/components/ui/states';
 import { useCreateEntity } from '@/hooks/use-entity';
+import { useContactDuplicates } from '@/hooks/use-leads';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard';
 import { useAuth, useCan } from '@/lib/auth';
@@ -51,6 +52,11 @@ export function CustomerCreatePage() {
     scopedByCompany: false,
   });
 
+  // Khách hàng là bảng dùng chung ba pháp nhân: cùng số với một khách hàng đã có thì không tạo
+  // thêm hồ sơ — hai hồ sơ một người là hai lịch sử, không ai thấy đủ (1A).
+  const duplicates = useContactDuplicates(form.phone);
+  const existingCustomer = (duplicates.data ?? []).find((d) => d.kind === 'customer');
+
   function update(field: keyof CustomerFormValues, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
     setDirty(true);
@@ -62,6 +68,12 @@ export function CustomerCreatePage() {
 
     if (!form.name.trim()) {
       setError(ERRORS.requiredField('tên khách hàng'));
+      return;
+    }
+    if (existingCustomer) {
+      setError(
+        `Không tạo được: số điện thoại này đã thuộc khách hàng ${existingCustomer.code} — ${existingCustomer.name}. Mở khách hàng đó để làm tiếp.`,
+      );
       return;
     }
 

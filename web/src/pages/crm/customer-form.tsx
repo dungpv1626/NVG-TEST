@@ -10,6 +10,8 @@
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import type { ActiveUser } from '@/hooks/use-active-users';
+import { useContactDuplicates } from '@/hooks/use-leads';
+import { ContactDuplicatesNotice } from './contact-duplicates-notice';
 
 /** Nguồn khách theo PRD CRM-01. */
 const SOURCES = [
@@ -90,12 +92,20 @@ export function CustomerFields({
    */
   responsibleOptions,
   responsibleHint,
+  customerId,
 }: {
   value: CustomerFormValues;
   onChange: (field: keyof CustomerFormValues, next: string) => void;
   responsibleOptions?: ActiveUser[];
   responsibleHint?: string;
+  /** Màn hình Sửa: bỏ chính hồ sơ này khỏi danh sách trùng. */
+  customerId?: string;
 }) {
+  // Kiểm trùng số điện thoại với đầu mối và khách hàng đã có (1A) — cùng hàm với biểu mẫu Đầu mối.
+  const duplicates = useContactDuplicates(value.phone);
+  const hits = (duplicates.data ?? []).filter(
+    (d) => !(d.kind === 'customer' && d.id === customerId),
+  );
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <Field label="Tên khách hàng" required className="sm:col-span-2">
@@ -133,6 +143,17 @@ export function CustomerFields({
           inputMode="tel"
         />
       </Field>
+
+      <ContactDuplicatesNotice
+        hits={hits}
+        footer={
+          hits.some((d) => d.kind === 'customer')
+            ? 'Khách hàng là hồ sơ dùng chung cả ba pháp nhân — mở khách hàng trên thay vì tạo thêm một hồ sơ.'
+            : hits.length > 0
+              ? 'Số này đang là đầu mối — chuyển đầu mối đó thành cơ hội để giữ nhật ký chăm sóc.'
+              : null
+        }
+      />
 
       <Field label="Email">
         <Input
