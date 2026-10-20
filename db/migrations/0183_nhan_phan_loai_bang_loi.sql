@@ -2,7 +2,8 @@
 -- Nhãn phân loại khách bằng lời (anh Dũng 20/10/2026: «M1–M4 khó nhìn vì phải nhớ ký hiệu»).
 --
 -- Chỉ đổi CÂU CHỮ trả ra màn hình; điều kiện không đổi. Hai hàm chép nguyên bản mới nhất:
---   · stage_readiness — bản 0182 (dòng điều kiện «classified»).
+--   · stage_readiness — bản 0182 (dòng điều kiện «classified», và «survey_done» nói đúng
+--     tình trạng báo cáo: chưa gửi / đang chờ duyệt / bị trả về).
 --   · my_crm_followups — bản 0173 (việc «liên hệ lại» của đầu mối lưu trữ).
 -- ============================================================================
 
@@ -61,8 +62,19 @@ BEGIN
            v_surveyed OR (o.survey_waived_reason IS NOT NULL AND NOT v_any_surveyed),
            CASE WHEN NOT v_any_surveyed AND o.survey_waived_reason IS NOT NULL
                 THEN 'Bỏ qua khảo sát: ' || o.survey_waived_reason
+                -- 0183: nói đúng tình trạng báo cáo — «gửi báo cáo, chờ duyệt» đọc như ĐÃ gửi rồi,
+                -- trong khi báo cáo còn nháp (anh Dũng chạy thử 20/10/2026).
                 WHEN v_any_surveyed AND NOT v_surveyed
-                THEN 'Báo cáo khảo sát đã được Ban Giám đốc duyệt (đã khảo sát — gửi báo cáo, chờ duyệt)'
+                THEN CASE (SELECT s.report_status::text FROM public.site_surveys s
+                            WHERE s.opportunity_id = p_id AND s.deleted_at IS NULL
+                              AND s.surveyed_at IS NOT NULL AND s.surveyed_at <= now()
+                            ORDER BY s.surveyed_at DESC LIMIT 1)
+                       WHEN 'cho_duyet'
+                       THEN 'Báo cáo khảo sát đang chờ Ban Giám đốc duyệt — duyệt xong tự sang Báo giá'
+                       WHEN 'tra_ve'
+                       THEN 'Báo cáo khảo sát bị Ban Giám đốc trả về — sửa theo ý kiến rồi gửi lại'
+                       ELSE 'Đã khảo sát nhưng chưa gửi báo cáo — bấm «Gửi Ban Giám đốc duyệt» ở tab Khảo sát'
+                     END
                 ELSE 'Báo cáo khảo sát đã được Ban Giám đốc duyệt' END,
            NOT v_any_surveyed;
 
@@ -278,3 +290,23 @@ AS $$
   WHERE t.due_date IS NOT NULL AND t.due_date <= p_until
   ORDER BY t.due_date, t.title
 $$;
+
+-- Báo cáo khảo sát được duyệt thì cơ hội đã sang Báo giá — thông báo «lập báo giá» phải mở tab Báo
+-- giá, không phải tab Khảo sát (anh Dũng chạy thử 20/10/2026). Sửa đường dẫn ở trigger thay vì chép
+-- lại `decide_approval` (~300 dòng, bản 0179).
+CREATE OR REPLACE FUNCTION public.notifications_survey_approved_tab()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+BEGIN
+  NEW.action_url := replace(NEW.action_url, '?tab=khao-sat', '?tab=bao-gia');
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS notifications_survey_approved_tab ON public.notifications;
+CREATE TRIGGER notifications_survey_approved_tab
+  BEFORE INSERT ON public.notifications
+  FOR EACH ROW WHEN (NEW.type = 'survey_report_approved')
+  EXECUTE FUNCTION public.notifications_survey_approved_tab();

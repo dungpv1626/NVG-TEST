@@ -70,6 +70,9 @@ export interface OpportunityDetailRecord extends OpportunityRecord {
 export function useOpportunity(id: string | undefined) {
   return useQuery<OpportunityDetailRecord | null, Error>({
     queryKey: ['opportunities', 'detail', id],
+    // Bước của cơ hội đổi được do người khác (Ban Giám đốc duyệt báo cáo khảo sát → tự sang Báo
+    // giá): quay lại cửa sổ thì tải lại để trang theo kịp, kể cả mở đúng tab của bước mới.
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('opportunities')

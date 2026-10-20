@@ -8,7 +8,7 @@
  * cách duy nhất để thực hiện một thao tác (Content Guidelines 6.8).
  */
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import {
   OPPORTUNITY_FLOW,
@@ -102,6 +102,25 @@ export function OpportunityDetailPage() {
   // dung của tab đang mở, nên chuyển sang tab Báo giá rồi quay lại sẽ mất sạch phần đang gõ
   // nếu state nằm trong chính tab đó (Webapp Flow 6.3).
   const [surveyDraft, setSurveyDraft] = useState<SurveyDraft>(EMPTY_SURVEY_DRAFT);
+  // Cơ hội đổi bước trong lúc trang đang mở — kể cả do người khác (Ban Giám đốc duyệt báo cáo
+  // khảo sát thì CSDL tự sang Báo giá) — thì mở luôn tab của bước mới. Trước đây đường dẫn giữ
+  // `?tab=khao-sat` nên vẫn đứng ở tab cũ (anh Dũng chạy thử 20/10/2026).
+  const seenStage = useRef<OpportunityStage | null>(null);
+  const currentStage = data?.stage ?? null;
+  useEffect(() => {
+    if (!currentStage) return;
+    const previous = seenStage.current;
+    seenStage.current = currentStage;
+    if (previous === null || previous === currentStage) return;
+    setSearchParams(
+      (params) => {
+        const next = new URLSearchParams(params);
+        next.set('tab', STAGE_TAB[currentStage]);
+        return next;
+      },
+      { replace: true },
+    );
+  }, [currentStage, setSearchParams]);
   const { data: companies } = useCompanies();
 
   if (isLoading) return <CardGridSkeleton count={3} />;
