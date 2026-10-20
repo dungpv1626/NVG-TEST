@@ -46,7 +46,7 @@ export const OPPORTUNITY_STAGE_META: Readonly<Record<OpportunityStage, StageMeta
   xac_minh: {
     label: 'Xác minh / Phân loại',
     statusGroup: 'in_progress',
-    description: 'Phân loại M1 Lưu trữ · M2 Có nhu cầu thực · M3 Cần báo giá · M4 Chốt–Đàm phán.',
+    description: 'Phân loại khách: chưa có nhu cầu · có nhu cầu thật · chờ báo giá · sắp chốt.',
     isTerminal: false,
   },
   khao_sat: {
@@ -88,10 +88,11 @@ export type OpportunityClassification = (typeof OPPORTUNITY_CLASSIFICATIONS)[num
 export const OPPORTUNITY_CLASSIFICATION_LABELS: Readonly<
   Record<OpportunityClassification, string>
 > = {
-  M1: 'M1 — Lưu trữ',
-  M2: 'M2 — Có nhu cầu thực',
-  M3: 'M3 — Cần báo giá',
-  M4: 'M4 — Chốt / Đàm phán',
+  // Lời trước, ký hiệu sau (anh Dũng 20/10/2026: «M1–M4 khó nhìn vì phải nhớ ký hiệu»).
+  M1: 'Chưa có nhu cầu — lưu để chăm sóc sau (M1)',
+  M2: 'Có nhu cầu thật — cần khảo sát (M2)',
+  M3: 'Đã rõ yêu cầu — chờ báo giá (M3)',
+  M4: 'Sắp chốt — đang đàm phán (M4)',
 };
 
 /** Giải thích từng mức — hiện dưới ô chọn để người phân loại không phải nhớ. Nguồn: hồ sơ khảo sát Phòng Kinh doanh. */
@@ -166,7 +167,7 @@ export const LEAD_STATUS_META: Readonly<
     hint: 'Có nhu cầu thật — việc chăm sóc tiếp tục trên cơ hội.',
   },
   luu_tru: {
-    label: 'M1 Lưu trữ',
+    label: 'Lưu trữ — chưa có nhu cầu',
     statusGroup: 'draft',
     hint: 'Chưa có nhu cầu — hệ thống nhắc liên hệ lại vào ngày đã hẹn.',
   },

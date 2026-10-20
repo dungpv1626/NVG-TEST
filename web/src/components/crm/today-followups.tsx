@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 const KIND_LABEL: Record<FollowupItem['kind'], string> = {
   lead_first_contact: 'Đầu mối mới',
   lead_followup: 'Đầu mối',
-  lead_recontact: 'Đầu mối M1',
+  lead_recontact: 'Đầu mối chưa có nhu cầu',
   opportunity_followup: 'Cơ hội',
   customer_followup: 'Khách cũ',
 };

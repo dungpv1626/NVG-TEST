@@ -89,13 +89,13 @@ export function ClassificationCard({
       <h2 className="font-semibold">Phân loại</h2>
       {highlight && (
         <p className="mt-0.5 text-sm">
-          Việc của bước này: chọn mức phân loại và loại công trình. Khách M1 — Lưu trữ đứng lại ở
-          bước Xác minh để chăm sóc sau.
+          Việc của bước này: chọn khách thuộc loại nào và loại công trình. Khách chưa có nhu cầu
+          đứng lại ở bước Xác minh để chăm sóc sau.
         </p>
       )}
       <div className="mt-3 grid gap-4 sm:grid-cols-2">
         <Field
-          label="Phân loại"
+          label="Khách thuộc loại nào"
           hint={
             value ? OPPORTUNITY_CLASSIFICATION_HINTS[value as OpportunityClassification] : undefined
           }
@@ -137,9 +137,9 @@ export function ClassificationCard({
           role="status"
           className="mt-3 rounded-sm border border-status-pending bg-status-pending-bg px-3 py-2 text-sm"
         >
-          Cơ hội đang ở <strong>M1 — Lưu trữ</strong> nên dừng ở bước Xác minh, chưa sang Khảo sát
-          được. Máy sẽ nhắc liên hệ lại. Khi khách có nhu cầu thực, đổi phân loại sang M2–M4 và lưu
-          — hệ thống tự chuyển sang Khảo sát.
+          Khách đang ở mức <strong>chưa có nhu cầu — lưu để chăm sóc sau</strong> nên dừng ở bước
+          Xác minh, chưa sang Khảo sát được. Máy sẽ nhắc liên hệ lại. Khi khách có nhu cầu thật, đổi
+          phân loại sang «Có nhu cầu thật — cần khảo sát» và lưu — hệ thống tự chuyển sang Khảo sát.
         </p>
       )}
       {canEdit && (

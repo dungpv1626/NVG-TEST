@@ -62,7 +62,7 @@ export function LeadListPage() {
       source: l.source,
       nextAction:
         l.status === 'luu_tru'
-          ? 'Liên hệ lại (M1)'
+          ? 'Liên hệ lại'
           : l.status === 'moi' && !l.next_action
             ? 'Liên hệ lần đầu'
             : (l.next_action ?? '—'),

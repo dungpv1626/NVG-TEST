@@ -44,7 +44,7 @@ export const OPPORTUNITY_FLOW: Flow<OpportunityStage> = {
     },
     xac_minh: {
       label: OPPORTUNITY_STAGE_META.xac_minh.label,
-      owner: 'Kinh doanh xác minh nhu cầu, phân loại M1–M4 và loại công trình',
+      owner: 'Kinh doanh xác minh khách có nhu cầu thật hay chưa và loại công trình',
       next: ['khao_sat', 'bao_gia'],
     },
     khao_sat: {

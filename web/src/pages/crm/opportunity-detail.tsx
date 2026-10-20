@@ -150,7 +150,7 @@ export function OpportunityDetailPage() {
   ): Promise<string | null> {
     if (data!.stage !== 'tiep_nhan' && data!.stage !== 'xac_minh') return null;
     if (classification === 'M1') {
-      return 'Đã lưu. Khách M1 — Lưu trữ đứng lại ở Xác minh; đổi phân loại khi khách có nhu cầu thực.';
+      return 'Đã lưu. Khách chưa có nhu cầu nên đứng lại ở Xác minh; đổi phân loại khi khách có nhu cầu thật.';
     }
     if (!classification || !projectType) {
       return 'Đã lưu. Cần chọn đủ phân loại và loại công trình để sang Khảo sát.';

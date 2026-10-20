@@ -79,7 +79,7 @@ export function LeadDetailPage() {
 
   async function archive() {
     const date = await prompt.ask({
-      title: 'Lưu trữ M1 — chưa có nhu cầu',
+      title: 'Lưu trữ — khách chưa có nhu cầu',
       label: 'Ngày liên hệ lại',
       type: 'date',
       detail: 'Đầu mối rời danh sách cần gọi; tới ngày này hệ thống nhắc liên hệ lại.',
@@ -140,7 +140,7 @@ export function LeadDetailPage() {
                   disabled={update.isPending}
                   onClick={() => void archive()}
                 >
-                  Lưu trữ M1
+                  Lưu trữ — chưa có nhu cầu
                 </Button>
               )}
               {open && (
@@ -259,7 +259,7 @@ function StatusNote({ lead }: { lead: LeadRecord }) {
   const meta = LEAD_STATUS_META[lead.status];
   let text: string = meta.hint;
   if (lead.status === 'luu_tru')
-    text = `M1 Lưu trữ — liên hệ lại ngày ${formatDate(lead.recontact_at)}.`;
+    text = `Lưu trữ, khách chưa có nhu cầu — liên hệ lại ngày ${formatDate(lead.recontact_at)}.`;
   if (lead.status === 'khong_phu_hop') text = `Không phù hợp: ${lead.closed_reason ?? ''}`;
   if (lead.status === 'moi') text = 'Chưa liên hệ lần nào — ghi lần liên hệ đầu tiên bên dưới.';
   if (lead.status === 'da_lien_he' && lead.next_action) {
