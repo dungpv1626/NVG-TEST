@@ -15,6 +15,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { FileSignature } from 'lucide-react';
 import {
   CONTRACT_TYPES,
+  isPayableContract,
   CONTRACT_TYPE_LABELS,
   type ContractSourceType,
   type ContractType,
@@ -87,7 +88,9 @@ export function DraftContractButton({
           onChange={(e) => setType(e.target.value as ContractType)}
           className="h-10 rounded-sm border border-border bg-surface px-3 sm:h-9"
         >
-          {CONTRACT_TYPES.map((t) => (
+          {/* Hồ sơ nguồn (cơ hội, gói thầu, thiết kế) là việc KHÁCH trả tiền cho NVG — loại NVG đi
+              mua / thuê / khoán ở đây sẽ in NVG sai bên trên văn bản (0185). */}
+          {CONTRACT_TYPES.filter((t) => !isPayableContract(t)).map((t) => (
             <option key={t} value={t}>
               {CONTRACT_TYPE_LABELS[t]}
             </option>
