@@ -26,6 +26,10 @@ export interface ContractTemplateRecord {
   tags: TemplateTags;
   /** Các đợt thanh toán mẫu đề xuất (0185) — `ty_le` là số %, hoặc null khi mẫu để trống. */
   payment_milestones: { noi_dung: string; ty_le: string | null; ty_le_mau?: string }[];
+  /** Chỗ trống tự do của mẫu (0186) — rỗng với mẫu tự tải lên. */
+  free_fields: TemplateFreeField[];
+  /** Nhóm «☐ Phương án» (0186). */
+  options: TemplateOptionGroup[];
   is_active: boolean;
   notes: string | null;
   created_at: string;
@@ -35,7 +39,7 @@ export interface ContractTemplateRecord {
 
 const TEMPLATE_SELECT =
   'id, company_id, title, contract_type, price_form, storage_path, file_name, tags, ' +
-  'payment_milestones, is_active, ' +
+  'payment_milestones, free_fields, options, is_active, ' +
   'notes, created_at, company:companies(code, short_name), ' +
   'creator:users!contract_templates_created_by_fkey(full_name)';
 
@@ -317,6 +321,69 @@ export function useContractDocuments(contractId: string | undefined) {
       return (data ?? []) as unknown as ContractDocumentRecord[];
     },
     enabled: Boolean(contractId),
+  });
+}
+
+/** Một dải chấm (`o_N`) hoặc lựa chọn trong ngoặc vuông (`c_N`) của mẫu — xem convert.py. */
+export interface TemplateFreeField {
+  key: string;
+  /** Thứ tự xuất hiện trong văn bản. */
+  seq?: number;
+  article: string;
+  before: string;
+  after: string;
+  default: string | null;
+  choices?: string[];
+  /** Khối phương án chứa chỗ trống (`pa_3_b`), null khi nằm ngoài mọi phương án. */
+  option: string | null;
+}
+
+export interface TemplateOptionGroup {
+  id: string;
+  article: string;
+  label: string;
+  options: { key: string; letter: string; text: string }[];
+}
+
+/**
+ * Giá trị người soạn đã điền cho văn bản của một hợp đồng (0186) — lưu dần khi gõ, mở lại không
+ * mất. Khoá: chỗ trống chuẩn (`so_hop_dong`) dùng chung mọi mẫu; chỗ trống tự do gắn mẫu
+ * (`<template_id>:o_12`, `<template_id>:pa_3` = chữ phương án đã chọn).
+ */
+export function useContractDocumentInputs(contractId: string) {
+  return useQuery<Record<string, string>, Error>({
+    queryKey: ['contract-document-inputs', contractId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('contract_document_inputs')
+        .select('values')
+        .eq('contract_id', contractId)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return ((data as { values?: Record<string, string> } | null)?.values ?? {}) as Record<
+        string,
+        string
+      >;
+    },
+    // Giá trị đang gõ giữ ở trang; tải lại nền giữa chừng sẽ đè chữ người dùng vừa gõ.
+    staleTime: Infinity,
+  });
+}
+
+export function useSaveContractDocumentInputs() {
+  return useMutation<
+    void,
+    Error,
+    { contractId: string; companyId: string; values: Record<string, string> }
+  >({
+    mutationFn: async ({ contractId, companyId, values }) => {
+      const { error } = await supabase.from('contract_document_inputs').upsert(
+        // Pháp nhân do CSDL đặt lại theo hợp đồng (trigger); gửi kèm vì cột NOT NULL.
+        { contract_id: contractId, company_id: companyId, values },
+        { onConflict: 'contract_id' },
+      );
+      if (error) throw new Error(error.message);
+    },
   });
 }
 

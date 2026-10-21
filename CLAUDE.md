@@ -834,6 +834,12 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
     đề xuất ở `contract_templates.payment_milestones` → nút «Dùng các đợt này». Phụ lục, biên bản nghiệm thu / thanh
     lý, hợp đồng lao động, bộ biểu mẫu dự thầu CHƯA nạp (thuộc phân hệ khác). Hợp đồng thử trên máy:
     `NVO-HD-2026-THU1`.
+  - **0186 — văn bản hoàn chỉnh:** convert.py đánh số MỌI dải chấm còn lại (`{o_N}`, câu văn trước / sau, Điều,
+    mức «mặc định»), lựa chọn trong ngoặc vuông (`{c_N}`), khối «☐ Phương án» (`{#pa_N_x}` + ô `{pa_N_x_o}`) →
+    `contract_templates.free_fields` / `options`. Cột trái tab Soạn hợp đồng có «Nội dung riêng của văn bản» chia
+    theo Điều, nút điền mức mặc định; giá trị lưu dần ở `contract_document_inputs` (một dòng một hợp đồng; khoá chuẩn
+    `so_hop_dong`, khoá tự do `<template_id>:o_N`, `<template_id>:pa_N` = chữ phương án). Xem trước tô màu: xanh lá
+    hồ sơ, xanh dương điền tay, vàng còn thiếu; nút «Lưu và gửi phê duyệt».
 - Hàm chép-dài bản mới nhất: `decide_approval` ở 0179, `stage_readiness` ở 0183, `crm_followups_for` ở 0183, `my_pending_approvals` ở 0175, hàm canh
   `site_surveys_report_guard` ở 0181. Hạn mức loại phê duyệt mới nằm ở seed (`DEFAULT_APPROVAL_LIMITS`) — `db:seed` sau migrate.
 - Ảnh chạy thử từng phần: `backup/dot1-1a/` → `backup/dot1-1h/`, `backup/dot1-dinh-kem/`, `backup/dot1-phieu-rieng/`,
@@ -878,7 +884,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    đồng sắp hết hạn»; lối vào Tổng quan điều hành trên thanh dưới điện thoại; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email; thêm dữ liệu demo quá hạn ở cả ba công ty.
 
-**Migration tiếp theo: 0186.**
+**Migration tiếp theo: 0187.**
 
 ### 9.4 Quyết định đã chốt và lý do
 

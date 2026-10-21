@@ -51,6 +51,8 @@ interface ContractTemplateAsset {
   contract_type: string;
   tags: Record<string, unknown>;
   payment_milestones: unknown[];
+  free_fields: unknown[];
+  options: unknown[];
   sha: string;
 }
 
@@ -364,7 +366,9 @@ async function main() {
         if (same) {
           await db.execute(sqlOp`
             UPDATE public.contract_templates
-            SET payment_milestones = ${JSON.stringify(m.payment_milestones)}::jsonb
+            SET payment_milestones = ${JSON.stringify(m.payment_milestones)}::jsonb,
+                free_fields = ${JSON.stringify(m.free_fields)}::jsonb,
+                options = ${JSON.stringify(m.options)}::jsonb
             WHERE id = ${same.id}`);
           templateCount++;
           continue;
@@ -381,10 +385,12 @@ async function main() {
           WHERE company_id = ${companyId} AND title = ${m.title} AND is_active`);
         await db.execute(sqlOp`
           INSERT INTO public.contract_templates
-            (company_id, title, contract_type, storage_path, file_name, tags, payment_milestones, notes)
+            (company_id, title, contract_type, storage_path, file_name, tags, payment_milestones,
+             free_fields, options, notes)
           VALUES (${companyId}, ${m.title}, ${m.contract_type}::public.contract_type, ${path},
                   ${m.file}, ${JSON.stringify(m.tags)}::jsonb,
                   ${JSON.stringify(m.payment_milestones)}::jsonb,
+                  ${JSON.stringify(m.free_fields)}::jsonb, ${JSON.stringify(m.options)}::jsonb,
                   ${'Bộ mẫu dự thảo NVG (21/10/2026) — dùng như chính thức, chờ pháp chế rà soát.'})`);
         templateCount++;
       }

@@ -38,6 +38,7 @@ import {
   TEMPLATE_BUCKET,
   downloadFile,
   rankTemplates,
+  type ContractTemplateRecord,
   useCompanyContractInfo,
   useContractDocuments,
   usePartnerContractInfo,
@@ -52,6 +53,13 @@ import {
 } from '@/hooks/use-contracts';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { fillTemplate, inspectTemplate, safeFileName, saveBlob } from '@/lib/docx-template';
+import {
+  DocInputsSection,
+  freeFieldStatus,
+  templateInputData,
+  useDocumentInputsState,
+  type DocumentInputs,
+} from './document-inputs';
 import { cn } from '@/lib/utils';
 
 /**
@@ -77,6 +85,14 @@ export function DocumentPanel({
   termsPanel: ReactNode;
 }) {
   const locked = !(DRAFTABLE_STAGES as readonly string[]).includes(contract.stage);
+  const editable = canDraft && !locked;
+  // Mẫu đang chọn và giá trị đã điền dùng chung hai cột: cột trái điền nội dung riêng của văn
+  // bản, cột phải điền và xem trước.
+  const templates = useTemplatesForContract(contract.company_id, contract.type);
+  const candidates = rankTemplates(templates.data ?? [], contract.price_form);
+  const [templateId, setTemplateId] = useState<string>('');
+  const chosen = candidates.find((t) => t.id === templateId) ?? candidates[0] ?? null;
+  const inputs = useDocumentInputsState(contract, editable);
   return (
     <div className="space-y-4">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start">
@@ -85,6 +101,16 @@ export function DocumentPanel({
           <div id="dieu-khoan" className="scroll-mt-48">
             {termsPanel}
           </div>
+          {!locked && chosen && (
+            <DocInputsSection
+              template={chosen}
+              values={inputs.values}
+              setValue={inputs.setValue}
+              setMany={inputs.setMany}
+              status={inputs.status}
+              editable={editable}
+            />
+          )}
         </div>
         <div className="min-w-0 lg:sticky lg:top-[var(--detail-sticky-top,12rem)] lg:max-h-[var(--detail-sticky-avail,70vh)] lg:overflow-y-auto">
           {locked ? (
@@ -95,7 +121,17 @@ export function DocumentPanel({
                 : 'Hợp đồng đã ký — văn bản đã khoá, không lập thêm bản điền mới. Thay đổi sau ký đi qua tab Phát sinh.'}
             </p>
           ) : (
-            <FillSection contract={contract} canSave={canDraft} />
+            <FillSection
+              contract={contract}
+              canSave={canDraft}
+              templatesLoading={templates.isLoading}
+              candidates={candidates}
+              chosen={chosen}
+              onChooseTemplate={setTemplateId}
+              values={inputs.values}
+              valuesReady={inputs.ready}
+              setValue={inputs.setValue}
+            />
           )}
         </div>
       </div>
@@ -252,30 +288,50 @@ interface Filled {
   at: Date;
 }
 
-function FillSection({ contract, canSave }: { contract: ContractDetailRecord; canSave: boolean }) {
+function FillSection({
+  contract,
+  canSave,
+  templatesLoading,
+  candidates,
+  chosen,
+  onChooseTemplate,
+  values,
+  valuesReady,
+  setValue,
+}: {
+  contract: ContractDetailRecord;
+  canSave: boolean;
+  templatesLoading: boolean;
+  candidates: ContractTemplateRecord[];
+  chosen: ContractTemplateRecord | null;
+  onChooseTemplate: (id: string) => void;
+  /** Giá trị người soạn đã điền (0186) — lưu theo hợp đồng. */
+  values: DocumentInputs;
+  valuesReady: boolean;
+  setValue: (key: string, value: string) => void;
+}) {
   const promptDialog = usePromptDialog();
-  const templates = useTemplatesForContract(contract.company_id, contract.type);
   const company = useCompanyContractInfo(contract.company_id);
   const partner = usePartnerContractInfo(contract.customer_id ?? undefined);
   const { data: terms } = useContractTerms(contract.id);
   const { data: versions } = useContractDocuments(contract.id);
   const save = useSaveContractDocument();
 
-  const candidates = rankTemplates(templates.data ?? [], contract.price_form);
-  const [templateId, setTemplateId] = useState<string>('');
-  const chosen = candidates.find((t) => t.id === templateId) ?? candidates[0] ?? null;
-
   const [filled, setFilled] = useState<Filled | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
   const submitApproval = useSubmitContractApproval();
-  // Ô điền tay cho riêng văn bản này (đè lên dữ liệu hồ sơ, lưu trong `filled_values`).
-  // Trước đây «Điền lại» chỉ đọc lại hồ sơ nên ô thiếu vẫn thiếu (anh Dũng 21/10/2026).
-  const [manual, setManual] = useState<Record<string, string>>({});
+  // Ô điền tay chỗ trống chuẩn (số hợp đồng, ngày ký, tài khoản…) — khoá không có «:»; chỗ
+  // trống tự do của mẫu (khoá «<mẫu>:o_N») điền ở cột trái. Cả hai lưu theo hợp đồng (0186).
+  const manual = Object.fromEntries(
+    Object.entries(values).filter(([k, v]) => !k.includes(':') && v.trim()),
+  );
   const previewRef = useRef<HTMLDivElement>(null);
 
-  const ready = Boolean(company.data && terms && (!contract.customer_id || partner.data));
+  const ready = Boolean(
+    valuesReady && company.data && terms && (!contract.customer_id || partner.data),
+  );
 
   // Xem trước LUÔN hiện và tự cập nhật: mở tab, đổi mẫu, sửa thông tin / điều khoản, gõ ô điền
   // tay → điền lại sau một nhịp. Trước đây phải bấm «Điền và xem trước» mới biết thiếu ô nào
@@ -287,7 +343,7 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
     setStale(true);
     const t = setTimeout(() => void fillRef.current(), 400);
     return () => clearTimeout(t);
-  }, [ready, contract, terms, chosen, manual, company.data, partner.data]);
+  }, [ready, contract, terms, chosen, values, company.data, partner.data]);
 
   useEffect(() => {
     const el = previewRef.current;
@@ -315,8 +371,7 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
     };
   }, [filled]);
 
-  if (templates.isLoading)
-    return <div className="h-24 animate-pulse rounded-lg bg-surface-hover" />;
+  if (templatesLoading) return <div className="h-24 animate-pulse rounded-lg bg-surface-hover" />;
 
   if (candidates.length === 0) {
     return (
@@ -370,15 +425,15 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
         today: toNvgDateInput(new Date()),
       });
       const missingFromRecord = missingTemplateFieldsBySource(inspected.tags, data, contract.type);
-      for (const [key, value] of Object.entries(manual)) {
-        if (value.trim()) data[key] = value.trim();
-      }
+      for (const [key, value] of Object.entries(manual)) data[key] = value.trim();
+      const free = templateInputData(chosen, values);
+      Object.assign(data, free.data);
       setFilled({
         templateId: chosen.id,
         blob: fillTemplate(buffer, data),
         previewBlob: fillTemplate(
           buffer,
-          wrapForPreview(data, new Set(Object.keys(manual).filter((k) => manual[k]!.trim()))),
+          wrapForPreview(data, new Set([...Object.keys(manual), ...free.filledKeys])),
         ),
         data,
         missing: missingTemplateFieldsBySource(inspected.tags, data, contract.type),
@@ -455,7 +510,7 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
         <Field label="Mẫu" className="min-w-64 flex-1">
           <select
             value={chosen?.id ?? ''}
-            onChange={(e) => setTemplateId(e.target.value)}
+            onChange={(e) => onChooseTemplate(e.target.value)}
             className={cn(FIELD_BOX, 'w-full')}
           >
             {candidates.map((t) => (
@@ -507,8 +562,9 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
             contract={contract}
             editable={canSave}
             manual={manual}
-            onManualChange={(key, value) => setManual((m) => ({ ...m, [key]: value }))}
+            onManualChange={setValue}
             updating={stale || busy}
+            free={freeFieldStatus(chosen, values)}
           />
           <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-fg-subtle">
             <span>
@@ -641,6 +697,7 @@ function MissingBox({
   manual,
   onManualChange,
   updating,
+  free,
 }: {
   filled: Filled;
   contract: ContractDetailRecord;
@@ -648,8 +705,11 @@ function MissingBox({
   manual: Record<string, string>;
   onManualChange: (key: string, value: string) => void;
   updating: boolean;
+  /** Chỗ trống tự do của mẫu (cột trái «Nội dung riêng của văn bản»). */
+  free: { missing: number; unchosen: number };
 }) {
-  const count = filled.missing.reduce((n, g) => n + g.labels.length, 0);
+  const count =
+    filled.missing.reduce((n, g) => n + g.labels.length, 0) + free.missing + free.unchosen;
   const manualCount = Object.values(manual).filter((v) => v.trim()).length;
   // Còn ít ô thì mở sẵn để điền luôn; nhiều thì gọn lại cho bản xem trước khỏi bị đẩy xuống.
   const [open, setOpen] = useState(count > 0 && count <= 8);
@@ -659,7 +719,8 @@ function MissingBox({
     ...filled.missingFromRecord.filter((g) => !g.source.startsWith('dieu_khoan')),
     ...filled.missing.filter((g) => g.source.startsWith('dieu_khoan')),
   ];
-  if (groups.length === 0) {
+  const freeLeft = free.missing + free.unchosen;
+  if (groups.length === 0 && freeLeft === 0) {
     return <p className="mt-3 text-status-completed">Mọi chỗ trống của mẫu đã có dữ liệu.</p>;
   }
   const done = count === 0;
@@ -747,6 +808,25 @@ function MissingBox({
           </div>
         );
       })}
+      {freeLeft > 0 && (
+        <p className="mt-3 text-sm">
+          <span className="font-medium">Nội dung riêng của văn bản (cột bên trái)</span>
+          {' · '}
+          {free.missing > 0 && `còn ${free.missing} chỗ trống`}
+          {free.missing > 0 && free.unchosen > 0 && ', '}
+          {free.unchosen > 0 && `${free.unchosen} nhóm phương án chưa chọn`}
+          {' · '}
+          <button
+            type="button"
+            className="text-brand underline-offset-2 hover:underline"
+            onClick={() =>
+              document.getElementById('noi-dung-van-ban')?.scrollIntoView({ behavior: 'smooth' })
+            }
+          >
+            Tới phần Nội dung
+          </button>
+        </p>
+      )}
       {editable && (
         <p className="mt-2 text-xs text-fg-subtle">
           Ô điền tay chỉ áp cho văn bản này. Thông tin dùng lâu dài (pháp nhân, khách hàng) nên sửa
@@ -779,7 +859,8 @@ function wrapForPreview(
       .join('\n');
   const out: Record<string, TemplateValue> = {};
   for (const [key, value] of Object.entries(data)) {
-    if (typeof value === 'string') out[key] = wrap(value, manualKeys.has(key));
+    if (typeof value === 'string')
+      out[key] = /^pa_\d+_[a-z]_o$/.test(key) ? value : wrap(value, manualKeys.has(key));
     else if (Array.isArray(value))
       out[key] = value.map((row) =>
         Object.fromEntries(

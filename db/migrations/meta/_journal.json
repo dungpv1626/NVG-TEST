@@ -1303,6 +1303,13 @@
       "when": 1791300000000,
       "tag": "0185_bo_mau_hop_dong",
       "breakpoints": true
+    },
+    {
+      "idx": 186,
+      "version": "7",
+      "when": 1791310000000,
+      "tag": "0186_cho_trong_tu_do_mau_hop_dong",
+      "breakpoints": true
     }
   ]
 }

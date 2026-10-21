@@ -410,3 +410,53 @@ describeDb('Bộ mẫu hợp đồng ba pháp nhân và loại hợp đồng m�
     }
   });
 });
+
+describeDb('Nội dung riêng của văn bản hợp đồng (0186)', () => {
+  it('người soạn lưu được; pháp nhân do CSDL đặt; người pháp nhân khác không đọc, không ghi', async () => {
+    const fx = await seedFixture();
+    const [kd, kdNvo] = await Promise.all([
+      signInAs(ACCOUNTS.kinhDoanhNvc),
+      signInAs(ACCOUNTS.kinhDoanhNvo),
+    ]);
+    const save = (client: SupabaseClient, values: Record<string, string>) =>
+      client
+        .from('contract_document_inputs')
+        .upsert(
+          { contract_id: fx.draftId, company_id: fx.nvoId, values },
+          { onConflict: 'contract_id' },
+        )
+        .select('company_id, values')
+        .maybeSingle();
+
+    const first = await save(kd, { so_hop_dong: '01/2026', 'tpl:o_1': 'Hà Nội' });
+    expect(first.error).toBeNull();
+    // Gửi nhầm pháp nhân NVO — CSDL đặt lại theo hợp đồng NVC.
+    expect(first.data!.company_id).toBe(fx.nvcId);
+    expect((await save(kd, { 'tpl:o_1': 'Hưng Yên' })).data!.values).toEqual({
+      'tpl:o_1': 'Hưng Yên',
+    });
+
+    const { data: seen } = await kdNvo
+      .from('contract_document_inputs')
+      .select('values')
+      .eq('contract_id', fx.draftId);
+    expect(seen ?? []).toEqual([]);
+    expect((await save(kdNvo, { 'tpl:o_1': 'chen' })).error).not.toBeNull();
+  });
+
+  it('hợp đồng đã quyết toán thì không ghi nội dung văn bản nữa', async () => {
+    const fx = await seedFixture();
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const { createConnection } = await import('../client');
+    const { sql } = createConnection();
+    try {
+      await sql`UPDATE contracts SET stage = 'hoan_thanh' WHERE id = ${fx.signedId}`;
+    } finally {
+      await sql.end();
+    }
+    const { error } = await kd
+      .from('contract_document_inputs')
+      .insert({ contract_id: fx.signedId, company_id: fx.nvcId, values: {} });
+    expect(error).not.toBeNull();
+  });
+});

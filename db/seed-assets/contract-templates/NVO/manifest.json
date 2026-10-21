@@ -29,9 +29,11 @@
     "payment_milestones": [],
     "tags": {
       "so_hop_dong": {},
+      "o_1": {},
       "ngay_ky_ngay": {},
       "ngay_ky_thang": {},
       "ngay_ky_nam": {},
+      "o_2": {},
       "nvg_ten": {},
       "nvg_dia_chi": {},
       "nvg_ma_so_thue": {},
@@ -39,6 +41,10 @@
       "nvg_email": {},
       "nvg_dai_dien": {},
       "nvg_chuc_vu": {},
+      "o_3": {},
+      "o_4": {},
+      "o_5": {},
+      "o_6": {},
       "nvg_so_tai_khoan": {},
       "nvg_ngan_hang": {},
       "doi_tac_ten": {},
@@ -47,10 +53,543 @@
       "doi_tac_dien_thoai": {},
       "doi_tac_dai_dien": {},
       "doi_tac_chuc_vu": {},
+      "o_7": {},
+      "o_8": {},
       "doi_tac_so_tai_khoan": {},
-      "doi_tac_ngan_hang": {}
+      "doi_tac_ngan_hang": {},
+      "o_9": {},
+      "c_1": {},
+      "pa_1_a": {
+        "pa_1_a_o": {}
+      },
+      "pa_1_b": {
+        "pa_1_b_o": {},
+        "o_10": {}
+      },
+      "pa_1_c": {
+        "pa_1_c_o": {},
+        "o_11": {},
+        "o_12": {}
+      },
+      "o_13": {},
+      "o_14": {},
+      "o_15": {},
+      "pa_2_a": {
+        "pa_2_a_o": {},
+        "o_16": {}
+      },
+      "pa_2_b": {
+        "pa_2_b_o": {},
+        "o_17": {}
+      },
+      "o_18": {},
+      "o_19": {},
+      "o_20": {},
+      "o_21": {},
+      "o_22": {},
+      "o_23": {},
+      "o_24": {},
+      "o_25": {},
+      "o_26": {},
+      "o_27": {},
+      "o_28": {},
+      "pa_3_a": {
+        "pa_3_a_o": {}
+      },
+      "pa_3_b": {
+        "pa_3_b_o": {}
+      },
+      "c_2": {},
+      "o_29": {},
+      "o_30": {},
+      "o_31": {},
+      "o_32": {},
+      "o_33": {},
+      "o_34": {},
+      "o_35": {},
+      "o_36": {},
+      "o_37": {},
+      "o_38": {},
+      "o_39": {},
+      "o_40": {},
+      "o_41": {},
+      "o_42": {},
+      "o_43": {}
     },
-    "sha": "fffad1df9f6236d3",
+    "options": [
+      {
+        "id": "pa_1",
+        "article": "Điều 2. Giá cả và điều chỉnh giá",
+        "label": "2.2. Điều chỉnh giá:",
+        "options": [
+          {
+            "key": "pa_1_a",
+            "letter": "A",
+            "text": "Phương án A: Giá cố định trong suốt thời hạn hợp đồng."
+          },
+          {
+            "key": "pa_1_b",
+            "letter": "B",
+            "text": "Phương án B: Giá cố định cho từng Đơn đặt hàng đã xác nhận. Khi giá thị trường biến động, Bên B gửi thông báo giá mới trước ít nhất …… (mặc định: 07) ngày; giá "
+          },
+          {
+            "key": "pa_1_c",
+            "letter": "C",
+            "text": "Phương án C: Giá điều chỉnh theo giá niêm yết của nhà sản xuất ……… tại ngày giao hàng, chiết khấu …… %."
+          }
+        ]
+      },
+      {
+        "id": "pa_2",
+        "article": "Điều 5. Thanh toán và công nợ",
+        "label": "5.1. Phương thức: chuyển khoản. Thời hạn:",
+        "options": [
+          {
+            "key": "pa_2_a",
+            "letter": "A",
+            "text": "Phương án A: Thanh toán trong vòng …… (mặc định: 30) ngày kể từ ngày nhận hàng và hóa đơn hợp lệ."
+          },
+          {
+            "key": "pa_2_b",
+            "letter": "B",
+            "text": "Phương án B: Đối chiếu công nợ hằng tháng; thanh toán toàn bộ công nợ của tháng trước trước ngày …… của tháng sau."
+          }
+        ]
+      },
+      {
+        "id": "pa_3",
+        "article": "Điều 10. Giải quyết tranh chấp",
+        "label": "10.2. Trường hợp thương lượng không thành trong vòng 30 (ba mươi) ngày kể từ ngày một bên gửi yêu cầu, tranh chấp được g",
+        "options": [
+          {
+            "key": "pa_3_a",
+            "letter": "A",
+            "text": "Phương án A: Tòa án nhân dân có thẩm quyền theo quy định của pháp luật tố tụng dân sự giải quyết theo quy định của pháp luật Việt Nam."
+          },
+          {
+            "key": "pa_3_b",
+            "letter": "B",
+            "text": "Phương án B: Trung tâm Trọng tài Quốc tế Việt Nam (VIAC) giải quyết theo Quy tắc tố tụng trọng tài của Trung tâm này; phán quyết trọng tài là chung thẩm. Số trọ"
+          }
+        ]
+      }
+    ],
+    "free_fields": [
+      {
+        "key": "o_1",
+        "seq": 1,
+        "article": "Phần đầu văn bản",
+        "before": "",
+        "after": ", ngày … tháng … năm …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_2",
+        "seq": 2,
+        "article": "Phần đầu văn bản",
+        "before": "Hôm nay, ngày … tháng … năm …, tại ",
+        "after": ", chúng tôi gồm:",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_3",
+        "seq": 3,
+        "article": "Phần đầu văn bản",
+        "before": "(Hoặc người được ủy quyền: ",
+        "after": " – Chức vụ: … – theo Giấy ủy quyền số … ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_4",
+        "seq": 4,
+        "article": "Phần đầu văn bản",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ",
+        "after": " – theo Giấy ủy quyền số … ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_5",
+        "seq": 5,
+        "article": "Phần đầu văn bản",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ……………… – theo Giấy ủy quyền số ",
+        "after": " ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_6",
+        "seq": 6,
+        "article": "Phần đầu văn bản",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ……………… – theo Giấy ủy quyền số ……… ngày ",
+        "after": ")",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_7",
+        "seq": 7,
+        "article": "Phần đầu văn bản",
+        "before": "(Theo Giấy ủy quyền số ",
+        "after": " ngày … – nếu người ký không phải đại diện theo ph",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_8",
+        "seq": 8,
+        "article": "Phần đầu văn bản",
+        "before": "(Theo Giấy ủy quyền số ……… ngày ",
+        "after": " – nếu người ký không phải đại diện theo pháp luật",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_9",
+        "seq": 9,
+        "article": "Điều 1. Đối tượng và phạm vi",
+        "before": ") do người có thẩm quyền của Bên A ký và gửi qua email/văn bản; Bên B xác nhận trong vòng ",
+        "after": "  giờ làm việc. Đơn đặt hàng đã xác nhận là bộ phậ",
+        "default": "04",
+        "option": null
+      },
+      {
+        "key": "c_1",
+        "seq": 10,
+        "article": "Điều 2. Giá cả và điều chỉnh giá",
+        "before": "2.1. Đơn giá áp dụng theo Phụ lục 01, ",
+        "after": " thuế GTGT, [đã bao gồm] chi phí vận chuyển và bốc",
+        "default": null,
+        "option": null,
+        "choices": [
+          "đã bao gồm",
+          "chưa bao gồm"
+        ]
+      },
+      {
+        "key": "o_10",
+        "seq": 11,
+        "article": "Điều 2. Giá cả và điều chỉnh giá",
+        "before": "hàng đã xác nhận. Khi giá thị trường biến động, Bên B gửi thông báo giá mới trước ít nhất ",
+        "after": "  ngày; giá mới chỉ áp dụng cho Đơn đặt hàng gửi s",
+        "default": "07",
+        "option": "pa_1_b"
+      },
+      {
+        "key": "o_11",
+        "seq": 12,
+        "article": "Điều 2. Giá cả và điều chỉnh giá",
+        "before": "… Phương án C: Giá điều chỉnh theo giá niêm yết của nhà sản xuất ",
+        "after": " tại ngày giao hàng, chiết khấu … %.",
+        "default": null,
+        "option": "pa_1_c"
+      },
+      {
+        "key": "o_12",
+        "seq": 13,
+        "article": "Điều 2. Giá cả và điều chỉnh giá",
+        "before": "n C: Giá điều chỉnh theo giá niêm yết của nhà sản xuất ……… tại ngày giao hàng, chiết khấu ",
+        "after": " %.",
+        "default": null,
+        "option": "pa_1_c"
+      },
+      {
+        "key": "o_13",
+        "seq": 14,
+        "article": "Điều 3. Giao hàng",
+        "before": "3.3. Giao chậm quá ",
+        "after": " giờ/ngày so với Đơn đặt hàng mà không được Bên A",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_14",
+        "seq": 15,
+        "article": "Điều 4. Kiểm tra, nghiệm thu chất lượng",
+        "before": "àng không đạt chất lượng, sai quy cách: Bên A có quyền trả lại; Bên B đổi hàng trong vòng ",
+        "after": " ngày và chịu chi phí vận chuyển. Khuyết tật ẩn ph",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_15",
+        "seq": 16,
+        "article": "Điều 4. Kiểm tra, nghiệm thu chất lượng",
+        "before": "ổi hàng trong vòng …… ngày và chịu chi phí vận chuyển. Khuyết tật ẩn phát hiện trong vòng ",
+        "after": " tháng kể từ ngày giao vẫn thuộc trách nhiệm của B",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_16",
+        "seq": 17,
+        "article": "Điều 5. Thanh toán và công nợ",
+        "before": "… Phương án A: Thanh toán trong vòng ",
+        "after": "  ngày kể từ ngày nhận hàng và hóa đơn hợp lệ.",
+        "default": "30",
+        "option": "pa_2_a"
+      },
+      {
+        "key": "o_17",
+        "seq": 18,
+        "article": "Điều 5. Thanh toán và công nợ",
+        "before": "án B: Đối chiếu công nợ hằng tháng; thanh toán toàn bộ công nợ của tháng trước trước ngày ",
+        "after": " của tháng sau.",
+        "default": null,
+        "option": "pa_2_b"
+      },
+      {
+        "key": "o_18",
+        "seq": 19,
+        "article": "Điều 5. Thanh toán và công nợ",
+        "before": "5.2. Hạn mức công nợ Bên B dành cho Bên A: ",
+        "after": " đồng.",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_19",
+        "seq": 20,
+        "article": "Điều 5. Thanh toán và công nợ",
+        "before": "5.3. Trước ngày ",
+        "after": " hằng tháng, hai bên ký biên bản đối chiếu công nợ",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_20",
+        "seq": 21,
+        "article": "Điều 5. Thanh toán và công nợ",
+        "before": "5.3. Trước ngày …… hằng tháng, hai bên ký biên bản đối chiếu công nợ. Quá ",
+        "after": " ngày kể từ ngày nhận mà Bên A không có ý kiến thì",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_21",
+        "seq": 22,
+        "article": "Điều 6. Phạt vi phạm và bồi thường",
+        "before": "6.1. Bên vi phạm nghĩa vụ chịu phạt ",
+        "after": " % giá trị phần nghĩa vụ bị vi phạm (tối đa 8% the",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_22",
+        "seq": 23,
+        "article": "Điều 6. Phạt vi phạm và bồi thường",
+        "before": "6.2. Bên A chậm thanh toán chịu lãi chậm trả ",
+        "after": " %/năm trên số tiền chậm trả.",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_23",
+        "seq": 24,
+        "article": "Điều 7. Liêm chính trong giao dịch",
+        "before": "oa hồng hoặc lợi ích khác cho nhân viên của Bên A (mua hàng, thủ kho, chỉ huy công trường ",
+        "after": ") nhằm được chọn mua hàng, nhận hàng không đạt hoặ",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_24",
+        "seq": 25,
+        "article": "Điều 7. Liêm chính trong giao dịch",
+        "before": "hiệt hại. Bên B báo cáo hành vi gợi ý, đòi hỏi lợi ích của nhân viên Bên A tới đường dây: ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_25",
+        "seq": 26,
+        "article": "Điều 8. Thời hạn và chấm dứt",
+        "before": "từ ngày ký; tự động gia hạn thêm từng 12 tháng nếu không bên nào thông báo chấm dứt trước ",
+        "after": " ngày.",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_26",
+        "seq": 27,
+        "article": "Điều 8. Thời hạn và chấm dứt",
+        "before": "8.2. Mỗi bên có quyền chấm dứt Hợp đồng bằng thông báo trước ",
+        "after": " ngày; các Đơn đặt hàng đã xác nhận vẫn phải thực",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_27",
+        "seq": 28,
+        "article": "Điều 9. Sự kiện bất khả kháng và hoàn cảnh thay đổi cơ bản",
+        "before": "9.4. Nếu sự kiện bất khả kháng kéo dài quá ",
+        "after": "  ngày liên tục, mỗi bên có quyền chấm dứt hợp đồn",
+        "default": "60",
+        "option": null
+      },
+      {
+        "key": "o_28",
+        "seq": 29,
+        "article": "Điều 9. Sự kiện bất khả kháng và hoàn cảnh thay đổi cơ bản",
+        "before": "bản theo Điều 420 Bộ luật Dân sự (ví dụ: giá vật liệu chính biến động bất thường vượt quá ",
+        "after": " % so với thời điểm ký), bên bị ảnh hưởng có quyền",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "c_2",
+        "seq": 30,
+        "article": "Điều 11. Hiệu lực và điều khoản thi hành",
+        "before": "11.1. Hợp đồng có hiệu lực kể từ ",
+        "after": ".",
+        "default": null,
+        "option": null,
+        "choices": [
+          "ngày ký",
+          "ngày bên có quyền nhận được bảo đảm thực hiện hợp đồng/tiền tạm ứng"
+        ]
+      },
+      {
+        "key": "o_29",
+        "seq": 31,
+        "article": "PHỤ LỤC 01 – DANH MỤC HÀNG HÓA VÀ BẢNG GIÁ ÁP DỤNG",
+        "before": "Hiệu lực từ ngày ",
+        "after": "/20…",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_30",
+        "seq": 32,
+        "article": "PHỤ LỤC 01 – DANH MỤC HÀNG HÓA VÀ BẢNG GIÁ ÁP DỤNG",
+        "before": "Hiệu lực từ ngày ……/……/20",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_31",
+        "seq": 33,
+        "article": "PHỤ LỤC 01 – DANH MỤC HÀNG HÓA VÀ BẢNG GIÁ ÁP DỤNG",
+        "before": "Bê tông thương phẩm M",
+        "after": ", độ sụt …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_32",
+        "seq": 34,
+        "article": "PHỤ LỤC 01 – DANH MỤC HÀNG HÓA VÀ BẢNG GIÁ ÁP DỤNG",
+        "before": "Bê tông thương phẩm M……, độ sụt ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_33",
+        "seq": 35,
+        "article": "PHỤ LỤC 01 – DANH MỤC HÀNG HÓA VÀ BẢNG GIÁ ÁP DỤNG",
+        "before": "Gạch ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_34",
+        "seq": 36,
+        "article": "PHỤ LỤC 02 – MẪU ĐƠN ĐẶT HÀNG",
+        "before": "Số: ",
+        "after": "/ĐĐH-NVO – Ngày …/20… – Theo Hợp đồng nguyên tắc s",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_35",
+        "seq": 37,
+        "article": "PHỤ LỤC 02 – MẪU ĐƠN ĐẶT HÀNG",
+        "before": "Số: ………/ĐĐH-NVO – Ngày ",
+        "after": "/20… – Theo Hợp đồng nguyên tắc số …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_36",
+        "seq": 38,
+        "article": "PHỤ LỤC 02 – MẪU ĐƠN ĐẶT HÀNG",
+        "before": "Số: ………/ĐĐH-NVO – Ngày ……/……/20",
+        "after": " – Theo Hợp đồng nguyên tắc số …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_37",
+        "seq": 39,
+        "article": "PHỤ LỤC 02 – MẪU ĐƠN ĐẶT HÀNG",
+        "before": "Số: ………/ĐĐH-NVO – Ngày ……/……/20…… – Theo Hợp đồng nguyên tắc số ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_38",
+        "seq": 40,
+        "article": "PHỤ LỤC 02 – MẪU ĐƠN ĐẶT HÀNG",
+        "before": "Bên mua: CÔNG TY TNHH TƯ VẤN VÀ XÂY DỰNG NHÀ VIỆT ONE. Người đặt hàng: ",
+        "after": " – ĐT: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_39",
+        "seq": 41,
+        "article": "PHỤ LỤC 02 – MẪU ĐƠN ĐẶT HÀNG",
+        "before": "Bên mua: CÔNG TY TNHH TƯ VẤN VÀ XÂY DỰNG NHÀ VIỆT ONE. Người đặt hàng: ……………………… – ĐT: ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_40",
+        "seq": 42,
+        "article": "PHỤ LỤC 02 – MẪU ĐƠN ĐẶT HÀNG",
+        "before": "Bên bán: ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_41",
+        "seq": 43,
+        "article": "PHỤ LỤC 02 – MẪU ĐƠN ĐẶT HÀNG",
+        "before": "Công trình/mã dự án: ",
+        "after": " – Địa chỉ giao hàng: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_42",
+        "seq": 44,
+        "article": "PHỤ LỤC 02 – MẪU ĐƠN ĐẶT HÀNG",
+        "before": "Công trình/mã dự án: …………………… – Địa chỉ giao hàng: ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_43",
+        "seq": 45,
+        "article": "PHỤ LỤC 02 – MẪU ĐƠN ĐẶT HÀNG",
+        "before": "Yêu cầu kèm theo: CO/CQ; phiếu cân; phiếu giao bê tông; ",
+        "after": "",
+        "default": null,
+        "option": null
+      }
+    ],
+    "sha": "1196e051357b8d40",
     "notes_removed": 3
   },
   {
@@ -105,12 +644,21 @@
     ],
     "tags": {
       "so_hop_dong": {},
+      "o_1": {},
       "ngay_ky_ngay": {},
       "ngay_ky_thang": {},
       "ngay_ky_nam": {},
       "ten_hop_dong": {},
+      "o_2": {},
+      "o_3": {},
       "dia_diem": {},
+      "o_4": {},
       "doi_tac_ten": {},
+      "o_5": {},
+      "o_6": {},
+      "o_7": {},
+      "o_8": {},
+      "o_9": {},
       "doi_tac_dia_chi": {},
       "doi_tac_dien_thoai": {},
       "doi_tac_email": {},
@@ -123,18 +671,669 @@
       "nvg_email": {},
       "nvg_dai_dien": {},
       "nvg_chuc_vu": {},
+      "o_10": {},
+      "o_11": {},
+      "o_12": {},
+      "o_13": {},
       "nvg_so_tai_khoan": {},
       "nvg_ngan_hang": {},
+      "o_14": {},
+      "o_15": {},
+      "pa_1_a": {
+        "pa_1_a_o": {}
+      },
+      "pa_1_b": {
+        "pa_1_b_o": {}
+      },
+      "o_16": {},
+      "o_17": {},
+      "o_18": {},
+      "o_19": {},
+      "o_20": {},
+      "o_21": {},
+      "o_22": {},
+      "o_23": {},
+      "o_24": {},
+      "pa_2_a": {
+        "pa_2_a_o": {},
+        "o_25": {}
+      },
+      "pa_2_b": {
+        "pa_2_b_o": {},
+        "o_26": {}
+      },
+      "o_27": {},
+      "o_28": {},
       "gia_tri": {},
       "gia_tri_bang_chu": {},
+      "c_1": {},
+      "o_29": {},
+      "pa_3_a": {
+        "pa_3_a_o": {},
+        "o_30": {},
+        "o_31": {}
+      },
+      "pa_3_b": {
+        "pa_3_b_o": {}
+      },
       "dot_thanh_toan": {
         "stt": {},
         "noi_dung": {},
         "ty_le": {},
         "so_tien": {}
-      }
+      },
+      "o_32": {},
+      "pa_4_a": {
+        "pa_4_a_o": {},
+        "o_33": {},
+        "o_34": {}
+      },
+      "pa_4_b": {
+        "pa_4_b_o": {}
+      },
+      "o_35": {},
+      "pa_5_a": {
+        "pa_5_a_o": {}
+      },
+      "pa_5_b": {
+        "pa_5_b_o": {}
+      },
+      "o_36": {},
+      "o_37": {},
+      "o_38": {},
+      "o_39": {},
+      "o_40": {},
+      "o_41": {},
+      "pa_6_a": {
+        "pa_6_a_o": {}
+      },
+      "pa_6_b": {
+        "pa_6_b_o": {}
+      },
+      "o_42": {},
+      "o_43": {},
+      "o_44": {},
+      "o_45": {},
+      "o_46": {},
+      "o_47": {},
+      "o_48": {},
+      "o_49": {},
+      "c_2": {}
     },
-    "sha": "20dfcebc13f44528",
+    "options": [
+      {
+        "id": "pa_1",
+        "article": "Điều 1. Nội dung công việc",
+        "label": "",
+        "options": [
+          {
+            "key": "pa_1_a",
+            "letter": "A",
+            "text": "Phương án A: Thiết kế kiến trúc, kết cấu, điện nước (không gồm nội thất)."
+          },
+          {
+            "key": "pa_1_b",
+            "letter": "B",
+            "text": "Phương án B: Thiết kế trọn gói kiến trúc, kết cấu, điện nước và nội thất."
+          }
+        ]
+      },
+      {
+        "id": "pa_2",
+        "article": "Điều 2. Chỉnh sửa thiết kế",
+        "label": "2.2. Sau khi Bên A ký chốt phương án mặt bằng (giai đoạn 2) hoặc chốt phối cảnh (giai đoạn 3), mọi yêu cầu thay đổi làm ",
+        "options": [
+          {
+            "key": "pa_2_a",
+            "letter": "A",
+            "text": "Phương án A: …… % đơn giá thiết kế tính trên diện tích sàn bị ảnh hưởng."
+          },
+          {
+            "key": "pa_2_b",
+            "letter": "B",
+            "text": "Phương án B: Theo giờ công: ……… đồng/giờ thiết kế, báo trước khi thực hiện."
+          }
+        ]
+      },
+      {
+        "id": "pa_3",
+        "article": "Điều 3. Giá hợp đồng",
+        "label": "3.5. Khấu trừ phí thiết kế khi Bên A ký hợp đồng thi công với Bên B:",
+        "options": [
+          {
+            "key": "pa_3_a",
+            "letter": "A",
+            "text": "Phương án A: Khấu trừ …… % (mặc định: 50%) phí thiết kế kiến trúc – kết cấu vào giá trị hợp đồng thi công, nếu hợp đồng thi công được ký trong vòng …… tháng kể "
+          },
+          {
+            "key": "pa_3_b",
+            "letter": "B",
+            "text": "Phương án B: Không khấu trừ."
+          }
+        ]
+      },
+      {
+        "id": "pa_4",
+        "article": "Điều 6. Quyền và nghĩa vụ của Bên B",
+        "label": "6.3. Giám sát tác giả, giải đáp thắc mắc của đơn vị thi công trong quá trình thi công:",
+        "options": [
+          {
+            "key": "pa_4_a",
+            "letter": "A",
+            "text": "Phương án A: Bao gồm …… lần đến công trình miễn phí; các lần tiếp theo tính ……… đồng/lần."
+          },
+          {
+            "key": "pa_4_b",
+            "letter": "B",
+            "text": "Phương án B: Không bao gồm giám sát tác giả; chỉ giải đáp qua điện thoại, thư điện tử."
+          }
+        ]
+      },
+      {
+        "id": "pa_5",
+        "article": "Điều 7. Quyền tác giả và quyền sử dụng hồ sơ",
+        "label": "7.3. Bên B được sử dụng hình ảnh phối cảnh và hình ảnh công trình hoàn thành cho mục đích giới thiệu năng lực, không côn",
+        "options": [
+          {
+            "key": "pa_5_a",
+            "letter": "A",
+            "text": "Phương án A: Bên A đồng ý cho Bên B sử dụng hình ảnh công trình."
+          },
+          {
+            "key": "pa_5_b",
+            "letter": "B",
+            "text": "Phương án B: Bên A không đồng ý; Bên B chỉ sử dụng nội bộ."
+          }
+        ]
+      },
+      {
+        "id": "pa_6",
+        "article": "Điều 10. Giải quyết tranh chấp",
+        "label": "10.2. Trường hợp thương lượng không thành trong vòng 30 (ba mươi) ngày kể từ ngày một bên gửi yêu cầu, tranh chấp được g",
+        "options": [
+          {
+            "key": "pa_6_a",
+            "letter": "A",
+            "text": "Phương án A: Tòa án nhân dân có thẩm quyền theo quy định của pháp luật tố tụng dân sự giải quyết theo quy định của pháp luật Việt Nam."
+          },
+          {
+            "key": "pa_6_b",
+            "letter": "B",
+            "text": "Phương án B: Trung tâm Trọng tài Quốc tế Việt Nam (VIAC) giải quyết theo Quy tắc tố tụng trọng tài của Trung tâm này; phán quyết trọng tài là chung thẩm. Số trọ"
+          }
+        ]
+      }
+    ],
+    "free_fields": [
+      {
+        "key": "o_1",
+        "seq": 1,
+        "article": "Phần đầu văn bản",
+        "before": "",
+        "after": ", ngày … tháng … năm …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_2",
+        "seq": 2,
+        "article": "Phần đầu văn bản",
+        "before": "Công trình: … – Quy mô: ",
+        "after": " tầng, diện tích đất … m²",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_3",
+        "seq": 3,
+        "article": "Phần đầu văn bản",
+        "before": "Công trình: … – Quy mô: …… tầng, diện tích đất ",
+        "after": " m²",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_4",
+        "seq": 4,
+        "article": "Phần đầu văn bản",
+        "before": "Hôm nay, ngày … tháng … năm …, tại ",
+        "after": ", chúng tôi gồm:",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_5",
+        "seq": 5,
+        "article": "Phần đầu văn bản",
+        "before": "Ông/Bà: ",
+        "after": "  Ngày sinh: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_6",
+        "seq": 6,
+        "article": "Phần đầu văn bản",
+        "before": "Ông/Bà: …………………………………  Ngày sinh: ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_7",
+        "seq": 7,
+        "article": "Phần đầu văn bản",
+        "before": "Số định danh cá nhân/CCCD: ",
+        "after": " cấp ngày … tại …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_8",
+        "seq": 8,
+        "article": "Phần đầu văn bản",
+        "before": "Số định danh cá nhân/CCCD: ……………………… cấp ngày ",
+        "after": " tại …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_9",
+        "seq": 9,
+        "article": "Phần đầu văn bản",
+        "before": "Số định danh cá nhân/CCCD: ……………………… cấp ngày ……/……/……… tại ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_10",
+        "seq": 10,
+        "article": "Phần đầu văn bản",
+        "before": "(Hoặc người được ủy quyền: ",
+        "after": " – Chức vụ: … – theo Giấy ủy quyền số … ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_11",
+        "seq": 11,
+        "article": "Phần đầu văn bản",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ",
+        "after": " – theo Giấy ủy quyền số … ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_12",
+        "seq": 12,
+        "article": "Phần đầu văn bản",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ……………… – theo Giấy ủy quyền số ",
+        "after": " ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_13",
+        "seq": 13,
+        "article": "Phần đầu văn bản",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ……………… – theo Giấy ủy quyền số ……… ngày ",
+        "after": ")",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_14",
+        "seq": 14,
+        "article": "Điều 1. Nội dung công việc",
+        "before": "",
+        "after": " góc",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_15",
+        "seq": 15,
+        "article": "Điều 1. Nội dung công việc",
+        "before": "Các phòng: ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_16",
+        "seq": 16,
+        "article": "Điều 1. Nội dung công việc",
+        "before": "",
+        "after": " ngày",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_17",
+        "seq": 17,
+        "article": "Điều 1. Nội dung công việc",
+        "before": "Mặt bằng các tầng (",
+        "after": " phương án)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_18",
+        "seq": 18,
+        "article": "Điều 1. Nội dung công việc",
+        "before": "",
+        "after": " ngày",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_19",
+        "seq": 19,
+        "article": "Điều 1. Nội dung công việc",
+        "before": "",
+        "after": " ngày",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_20",
+        "seq": 20,
+        "article": "Điều 1. Nội dung công việc",
+        "before": "Bản vẽ kiến trúc, kết cấu, điện nước (bản in ",
+        "after": " bộ + file PDF)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_21",
+        "seq": 21,
+        "article": "Điều 1. Nội dung công việc",
+        "before": "",
+        "after": " ngày",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_22",
+        "seq": 22,
+        "article": "Điều 1. Nội dung công việc",
+        "before": "",
+        "after": " ngày",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_23",
+        "seq": 23,
+        "article": "Điều 1. Nội dung công việc",
+        "before": "rên không bao gồm thời gian Bên A xem xét, góp ý. Bên A phản hồi mỗi giai đoạn trong vòng ",
+        "after": "  ngày; quá thời hạn mà không có ý kiến, sản phẩm",
+        "default": "07",
+        "option": null
+      },
+      {
+        "key": "o_24",
+        "seq": 24,
+        "article": "Điều 2. Chỉnh sửa thiết kế",
+        "before": "2.1. Mỗi giai đoạn 2 và 3, Bên A được yêu cầu chỉnh sửa miễn phí tối đa ",
+        "after": "  lần, trong phạm vi phương án đã chọn.",
+        "default": "03",
+        "option": null
+      },
+      {
+        "key": "o_25",
+        "seq": 25,
+        "article": "Điều 2. Chỉnh sửa thiết kế",
+        "before": "… Phương án A: ",
+        "after": " % đơn giá thiết kế tính trên diện tích sàn bị ảnh",
+        "default": null,
+        "option": "pa_2_a"
+      },
+      {
+        "key": "o_26",
+        "seq": 26,
+        "article": "Điều 2. Chỉnh sửa thiết kế",
+        "before": "… Phương án B: Theo giờ công: ",
+        "after": " đồng/giờ thiết kế, báo trước khi thực hiện.",
+        "default": null,
+        "option": "pa_2_b"
+      },
+      {
+        "key": "o_27",
+        "seq": 27,
+        "article": "Điều 3. Giá hợp đồng",
+        "before": "3.1. Đơn giá thiết kế: ",
+        "after": " đồng/m² sàn xây dựng. Diện tích sàn tính phí (tạm",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_28",
+        "seq": 28,
+        "article": "Điều 3. Giá hợp đồng",
+        "before": "3.1. Đơn giá thiết kế: ……… đồng/m² sàn xây dựng. Diện tích sàn tính phí (tạm tính): ",
+        "after": " m², tính theo cách tính diện tích tại Phụ lục 01.",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "c_1",
+        "seq": 29,
+        "article": "Điều 3. Giá hợp đồng",
+        "before": "3.2. Giá hợp đồng tạm tính: … (Bằng chữ: …). Giá trên ",
+        "after": " thuế giá trị gia tăng.",
+        "default": null,
+        "option": null,
+        "choices": [
+          "đã bao gồm",
+          "chưa bao gồm"
+        ]
+      },
+      {
+        "key": "o_29",
+        "seq": 30,
+        "article": "Điều 3. Giá hợp đồng",
+        "before": "gồm: lệ phí cấp phép; chi phí khảo sát địa chất, thí nghiệm; chi phí đi lại ngoài phạm vi ",
+        "after": " km (nếu có); in thêm hồ sơ ngoài số bộ đã thỏa th",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_30",
+        "seq": 31,
+        "article": "Điều 3. Giá hợp đồng",
+        "before": "… Phương án A: Khấu trừ ",
+        "after": " % phí thiết kế kiến trúc – kết cấu vào giá trị hợ",
+        "default": "50",
+        "option": "pa_3_a"
+      },
+      {
+        "key": "o_31",
+        "seq": 32,
+        "article": "Điều 3. Giá hợp đồng",
+        "before": "ến trúc – kết cấu vào giá trị hợp đồng thi công, nếu hợp đồng thi công được ký trong vòng ",
+        "after": " tháng kể từ ngày giao hồ sơ.",
+        "default": null,
+        "option": "pa_3_a"
+      },
+      {
+        "key": "o_32",
+        "seq": 33,
+        "article": "Điều 4. Tạm ứng và thanh toán",
+        "before": "4.1. Thanh toán bằng chuyển khoản vào tài khoản Bên B trong vòng ",
+        "after": "  ngày làm việc kể từ ngày đến mốc thanh toán. Bên",
+        "default": "05",
+        "option": null
+      },
+      {
+        "key": "o_33",
+        "seq": 34,
+        "article": "Điều 6. Quyền và nghĩa vụ của Bên B",
+        "before": "… Phương án A: Bao gồm ",
+        "after": " lần đến công trình miễn phí; các lần tiếp theo tí",
+        "default": null,
+        "option": "pa_4_a"
+      },
+      {
+        "key": "o_34",
+        "seq": 35,
+        "article": "Điều 6. Quyền và nghĩa vụ của Bên B",
+        "before": "… Phương án A: Bao gồm …… lần đến công trình miễn phí; các lần tiếp theo tính ",
+        "after": " đồng/lần.",
+        "default": null,
+        "option": "pa_4_a"
+      },
+      {
+        "key": "o_35",
+        "seq": 36,
+        "article": "Điều 6. Quyền và nghĩa vụ của Bên B",
+        "before": "6.4. Bồi thường thiệt hại phát sinh do lỗi thiết kế của Bên B, tối đa bằng ",
+        "after": " lần (mặc định: 01 lần) giá hợp đồng thiết kế.",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_36",
+        "seq": 37,
+        "article": "Điều 8. Phạt vi phạm và chấm dứt hợp đồng",
+        "before": "8.1. Bên B giao sản phẩm chậm so với tiến độ do lỗi của mình bị phạt ",
+        "after": " % giá hợp đồng cho mỗi ngày chậm; tổng mức phạt k",
+        "default": "0,1",
+        "option": null
+      },
+      {
+        "key": "o_37",
+        "seq": 38,
+        "article": "Điều 8. Phạt vi phạm và chấm dứt hợp đồng",
+        "before": "ị phạt …… % (mặc định: 0,1%) giá hợp đồng cho mỗi ngày chậm; tổng mức phạt không vượt quá ",
+        "after": " % giá trị phần hợp đồng bị vi phạm.",
+        "default": "12",
+        "option": null
+      },
+      {
+        "key": "o_38",
+        "seq": 39,
+        "article": "Điều 8. Phạt vi phạm và chấm dứt hợp đồng",
+        "before": "8.2. Bên A chậm thanh toán quá ",
+        "after": " ngày, Bên B được tạm dừng công việc; thời gian tạ",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_39",
+        "seq": 40,
+        "article": "Điều 8. Phạt vi phạm và chấm dứt hợp đồng",
+        "before": "a Bên A: Bên B hoàn trả các khoản đã nhận tương ứng phần việc chưa thực hiện và chịu phạt ",
+        "after": " % giá hợp đồng.",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_40",
+        "seq": 41,
+        "article": "Điều 9. Sự kiện bất khả kháng và hoàn cảnh thay đổi cơ bản",
+        "before": "9.4. Nếu sự kiện bất khả kháng kéo dài quá ",
+        "after": "  ngày liên tục, mỗi bên có quyền chấm dứt hợp đồn",
+        "default": "60",
+        "option": null
+      },
+      {
+        "key": "o_41",
+        "seq": 42,
+        "article": "Điều 9. Sự kiện bất khả kháng và hoàn cảnh thay đổi cơ bản",
+        "before": "bản theo Điều 420 Bộ luật Dân sự (ví dụ: giá vật liệu chính biến động bất thường vượt quá ",
+        "after": " % so với thời điểm ký), bên bị ảnh hưởng có quyền",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_42",
+        "seq": 43,
+        "article": "Điều 11. Bảo mật",
+        "before": "11.2. Nghĩa vụ bảo mật có hiệu lực trong thời gian thực hiện hợp đồng và ",
+        "after": "  năm sau khi hợp đồng chấm dứt.",
+        "default": "02",
+        "option": null
+      },
+      {
+        "key": "o_43",
+        "seq": 44,
+        "article": "Điều 12. Thông báo và đại diện liên lạc",
+        "before": "12.2. Đại diện liên lạc: Bên A: ",
+        "after": " – ĐT: … – Email: …; Bên B: … – ĐT: … – Email: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_44",
+        "seq": 45,
+        "article": "Điều 12. Thông báo và đại diện liên lạc",
+        "before": "12.2. Đại diện liên lạc: Bên A: ………………… – ĐT: ",
+        "after": " – Email: …; Bên B: … – ĐT: … – Email: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_45",
+        "seq": 46,
+        "article": "Điều 12. Thông báo và đại diện liên lạc",
+        "before": "12.2. Đại diện liên lạc: Bên A: ………………… – ĐT: ………… – Email: ",
+        "after": "; Bên B: … – ĐT: … – Email: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_46",
+        "seq": 47,
+        "article": "Điều 12. Thông báo và đại diện liên lạc",
+        "before": "12.2. Đại diện liên lạc: Bên A: ………………… – ĐT: ………… – Email: …………; Bên B: ",
+        "after": " – ĐT: … – Email: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_47",
+        "seq": 48,
+        "article": "Điều 12. Thông báo và đại diện liên lạc",
+        "before": "12.2. Đại diện liên lạc: Bên A: ………………… – ĐT: ………… – Email: …………; Bên B: ………………… – ĐT: ",
+        "after": " – Email: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_48",
+        "seq": 49,
+        "article": "Điều 12. Thông báo và đại diện liên lạc",
+        "before": "iện liên lạc: Bên A: ………………… – ĐT: ………… – Email: …………; Bên B: ………………… – ĐT: ………… – Email: ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_49",
+        "seq": 50,
+        "article": "Điều 12. Thông báo và đại diện liên lạc",
+        "before": "12.3. Tin nhắn qua ứng dụng (Zalo, ",
+        "after": ") chỉ dùng để trao đổi điều hành, không thay thế v",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "c_2",
+        "seq": 51,
+        "article": "Điều 13. Hiệu lực và điều khoản thi hành",
+        "before": "13.1. Hợp đồng có hiệu lực kể từ ",
+        "after": ".",
+        "default": null,
+        "option": null,
+        "choices": [
+          "ngày ký",
+          "ngày bên có quyền nhận được bảo đảm thực hiện hợp đồng/tiền tạm ứng"
+        ]
+      }
+    ],
+    "sha": "045c8ab79ec94327",
     "notes_removed": 4
   },
   {
@@ -213,11 +1412,21 @@
     ],
     "tags": {
       "so_hop_dong": {},
+      "o_1": {},
       "ngay_ky_ngay": {},
       "ngay_ky_thang": {},
       "ngay_ky_nam": {},
+      "o_2": {},
+      "o_3": {},
+      "o_4": {},
       "dia_diem": {},
+      "o_5": {},
       "doi_tac_ten": {},
+      "o_6": {},
+      "o_7": {},
+      "o_8": {},
+      "o_9": {},
+      "o_10": {},
       "doi_tac_dia_chi": {},
       "doi_tac_dien_thoai": {},
       "doi_tac_email": {},
@@ -230,17 +1439,1305 @@
       "nvg_email": {},
       "nvg_dai_dien": {},
       "nvg_chuc_vu": {},
+      "o_11": {},
+      "o_12": {},
+      "o_13": {},
+      "o_14": {},
       "nvg_so_tai_khoan": {},
       "nvg_ngan_hang": {},
+      "o_15": {},
+      "pa_1_a": {
+        "pa_1_a_o": {}
+      },
+      "pa_1_b": {
+        "pa_1_b_o": {}
+      },
+      "pa_1_c": {
+        "pa_1_c_o": {}
+      },
+      "o_16": {},
+      "pa_2_a": {
+        "pa_2_a_o": {}
+      },
+      "pa_2_b": {
+        "pa_2_b_o": {}
+      },
       "gia_tri": {},
       "gia_tri_bang_chu": {},
+      "o_17": {},
+      "o_18": {},
+      "o_19": {},
+      "c_1": {},
       "dot_thanh_toan": {
         "stt": {},
         "noi_dung": {},
         "ty_le": {}
-      }
+      },
+      "o_20": {},
+      "o_21": {},
+      "o_22": {},
+      "o_23": {},
+      "o_24": {},
+      "pa_3_a": {
+        "pa_3_a_o": {}
+      },
+      "pa_3_b": {
+        "pa_3_b_o": {}
+      },
+      "o_25": {},
+      "o_26": {},
+      "o_27": {},
+      "o_28": {},
+      "o_29": {},
+      "o_30": {},
+      "o_31": {},
+      "o_32": {},
+      "o_33": {},
+      "o_34": {},
+      "o_35": {},
+      "pa_4_a": {
+        "pa_4_a_o": {}
+      },
+      "pa_4_b": {
+        "pa_4_b_o": {}
+      },
+      "o_36": {},
+      "o_37": {},
+      "o_38": {},
+      "o_39": {},
+      "o_40": {},
+      "o_41": {},
+      "pa_5_a": {
+        "pa_5_a_o": {}
+      },
+      "pa_5_b": {
+        "pa_5_b_o": {}
+      },
+      "o_42": {},
+      "o_43": {},
+      "o_44": {},
+      "o_45": {},
+      "o_46": {},
+      "o_47": {},
+      "o_48": {},
+      "o_49": {},
+      "pa_6_a": {
+        "pa_6_a_o": {}
+      },
+      "pa_6_b": {
+        "pa_6_b_o": {}
+      },
+      "o_50": {},
+      "o_51": {},
+      "o_52": {},
+      "o_53": {},
+      "o_54": {},
+      "o_55": {},
+      "o_56": {},
+      "o_57": {},
+      "c_2": {},
+      "o_58": {},
+      "o_59": {},
+      "o_60": {},
+      "o_61": {},
+      "o_62": {},
+      "o_63": {},
+      "o_64": {},
+      "o_65": {},
+      "o_66": {},
+      "o_67": {},
+      "o_68": {},
+      "o_69": {},
+      "o_70": {},
+      "o_71": {},
+      "o_72": {},
+      "o_73": {},
+      "o_74": {},
+      "o_75": {},
+      "o_76": {},
+      "o_77": {},
+      "o_78": {},
+      "o_79": {},
+      "o_80": {},
+      "o_81": {},
+      "o_82": {},
+      "o_83": {},
+      "o_84": {},
+      "o_85": {},
+      "o_86": {},
+      "o_87": {},
+      "o_88": {},
+      "o_89": {},
+      "o_90": {},
+      "o_91": {},
+      "o_92": {},
+      "o_93": {},
+      "o_94": {},
+      "o_95": {},
+      "o_96": {},
+      "o_97": {},
+      "o_98": {},
+      "o_99": {},
+      "o_100": {},
+      "o_101": {},
+      "o_102": {},
+      "o_103": {},
+      "o_104": {},
+      "o_105": {},
+      "o_106": {},
+      "o_107": {},
+      "o_108": {},
+      "o_109": {},
+      "o_110": {},
+      "o_111": {},
+      "o_112": {}
     },
-    "sha": "5c405d081b646edc",
+    "options": [
+      {
+        "id": "pa_1",
+        "article": "Điều 2. Phạm vi công việc",
+        "label": "2.5. Hồ sơ xin phép xây dựng:",
+        "options": [
+          {
+            "key": "pa_1_a",
+            "letter": "A",
+            "text": "Phương án A: Bên B lập hồ sơ và thay mặt Bên A nộp xin phép (Bên A ký giấy ủy quyền, chịu lệ phí); thời gian chờ cấp phép không tính vào tiến độ."
+          },
+          {
+            "key": "pa_1_b",
+            "letter": "B",
+            "text": "Phương án B: Bên B chỉ lập bản vẽ xin phép; Bên A tự nộp và nhận giấy phép."
+          },
+          {
+            "key": "pa_1_c",
+            "letter": "C",
+            "text": "Phương án C: Công trình thuộc diện miễn giấy phép; Bên A chịu trách nhiệm xác nhận với chính quyền địa phương."
+          }
+        ]
+      },
+      {
+        "id": "pa_2",
+        "article": "Điều 3. Gói vật tư và cơ chế chênh lệch",
+        "label": "3.3. Khi Bên A chọn vật tư khác chủng loại hoặc giá cao/thấp hơn đơn giá tạm tính:",
+        "options": [
+          {
+            "key": "pa_2_a",
+            "letter": "A",
+            "text": "Phương án A: Chênh lệch = (đơn giá thực tế – đơn giá tạm tính) × khối lượng thực tế; phần tăng Bên A thanh toán thêm, phần giảm được trừ vào giá hợp đồng."
+          },
+          {
+            "key": "pa_2_b",
+            "letter": "B",
+            "text": "Phương án B: Như Phương án A, nhưng chỉ tính phần tăng; phần giảm không trừ (Bên B chịu thêm chi phí thi công/hao hụt)."
+          }
+        ]
+      },
+      {
+        "id": "pa_3",
+        "article": "Điều 5. Tạm ứng và thanh toán",
+        "label": "5.3. Tiền bảo hành 5% giá trị quyết toán được giữ lại và hoàn trả trong vòng …… ngày sau khi hết thời hạn bảo hành phần ",
+        "options": [
+          {
+            "key": "pa_3_a",
+            "letter": "A",
+            "text": "Phương án A: Giữ lại 5% tiền mặt như trên (áp dụng cho chủ nhà cá nhân)."
+          },
+          {
+            "key": "pa_3_b",
+            "letter": "B",
+            "text": "Phương án B: Bên B nộp bảo lãnh bảo hành của ngân hàng giá trị 5%; Bên A thanh toán 100% khi bàn giao (áp dụng khi Bên A là doanh nghiệp)."
+          }
+        ]
+      },
+      {
+        "id": "pa_4",
+        "article": "Điều 10. Điện, nước, mặt bằng thi công",
+        "label": "10.1. Bên A cung cấp điểm đấu nối điện, nước thi công tại công trình.",
+        "options": [
+          {
+            "key": "pa_4_a",
+            "letter": "A",
+            "text": "Phương án A: Bên A chịu chi phí tiền điện, nước thi công."
+          },
+          {
+            "key": "pa_4_b",
+            "letter": "B",
+            "text": "Phương án B: Bên B chịu chi phí tiền điện, nước thi công (đã bao gồm trong giá)."
+          }
+        ]
+      },
+      {
+        "id": "pa_5",
+        "article": "Điều 11. Bảo hành",
+        "label": "11.2. Bảo hành kết cấu:",
+        "options": [
+          {
+            "key": "pa_5_a",
+            "letter": "A",
+            "text": "Phương án A: 05 năm."
+          },
+          {
+            "key": "pa_5_b",
+            "letter": "B",
+            "text": "Phương án B: 10 năm (áp dụng gói khá/cao cấp hoặc theo thỏa thuận)."
+          }
+        ]
+      },
+      {
+        "id": "pa_6",
+        "article": "Điều 14. Giải quyết tranh chấp",
+        "label": "14.2. Trường hợp thương lượng không thành trong vòng 30 (ba mươi) ngày kể từ ngày một bên gửi yêu cầu, tranh chấp được g",
+        "options": [
+          {
+            "key": "pa_6_a",
+            "letter": "A",
+            "text": "Phương án A: Tòa án nhân dân có thẩm quyền theo quy định của pháp luật tố tụng dân sự giải quyết theo quy định của pháp luật Việt Nam."
+          },
+          {
+            "key": "pa_6_b",
+            "letter": "B",
+            "text": "Phương án B: Trung tâm Trọng tài Quốc tế Việt Nam (VIAC) giải quyết theo Quy tắc tố tụng trọng tài của Trung tâm này; phán quyết trọng tài là chung thẩm. Số trọ"
+          }
+        ]
+      }
+    ],
+    "free_fields": [
+      {
+        "key": "o_1",
+        "seq": 1,
+        "article": "Phần đầu văn bản",
+        "before": "",
+        "after": ", ngày … tháng … năm …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_2",
+        "seq": 2,
+        "article": "Phần đầu văn bản",
+        "before": "Công trình: Nhà ở ",
+        "after": " tầng – Diện tích sàn xây dựng: … m² – Gói vật tư:",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_3",
+        "seq": 3,
+        "article": "Phần đầu văn bản",
+        "before": "Công trình: Nhà ở …… tầng – Diện tích sàn xây dựng: ",
+        "after": " m² – Gói vật tư: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_4",
+        "seq": 4,
+        "article": "Phần đầu văn bản",
+        "before": "Công trình: Nhà ở …… tầng – Diện tích sàn xây dựng: …… m² – Gói vật tư: ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_5",
+        "seq": 5,
+        "article": "Phần đầu văn bản",
+        "before": "Hôm nay, ngày … tháng … năm …, tại ",
+        "after": ", chúng tôi gồm:",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_6",
+        "seq": 6,
+        "article": "Phần đầu văn bản",
+        "before": "Ông/Bà: ",
+        "after": "  Ngày sinh: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_7",
+        "seq": 7,
+        "article": "Phần đầu văn bản",
+        "before": "Ông/Bà: …………………………………  Ngày sinh: ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_8",
+        "seq": 8,
+        "article": "Phần đầu văn bản",
+        "before": "Số định danh cá nhân/CCCD: ",
+        "after": " cấp ngày … tại …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_9",
+        "seq": 9,
+        "article": "Phần đầu văn bản",
+        "before": "Số định danh cá nhân/CCCD: ……………………… cấp ngày ",
+        "after": " tại …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_10",
+        "seq": 10,
+        "article": "Phần đầu văn bản",
+        "before": "Số định danh cá nhân/CCCD: ……………………… cấp ngày ……/……/……… tại ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_11",
+        "seq": 11,
+        "article": "Phần đầu văn bản",
+        "before": "(Hoặc người được ủy quyền: ",
+        "after": " – Chức vụ: … – theo Giấy ủy quyền số … ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_12",
+        "seq": 12,
+        "article": "Phần đầu văn bản",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ",
+        "after": " – theo Giấy ủy quyền số … ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_13",
+        "seq": 13,
+        "article": "Phần đầu văn bản",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ……………… – theo Giấy ủy quyền số ",
+        "after": " ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_14",
+        "seq": 14,
+        "article": "Phần đầu văn bản",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ……………… – theo Giấy ủy quyền số ……… ngày ",
+        "after": ")",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_15",
+        "seq": 15,
+        "article": "Điều 2. Phạm vi công việc",
+        "before": ", sơn bả, trần thạch cao, cửa, thiết bị vệ sinh, thiết bị điện, lan can cầu thang, đá ốp, ",
+        "after": " theo Phụ lục 01.",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_16",
+        "seq": 16,
+        "article": "Điều 3. Gói vật tư và cơ chế chênh lệch",
+        "before": "iới thiệu và ký xác nhận \"Phiếu chọn vật tư\" trước thời điểm thi công hạng mục đó ít nhất ",
+        "after": "  ngày.",
+        "default": "10",
+        "option": null
+      },
+      {
+        "key": "o_17",
+        "seq": 17,
+        "article": "Điều 4. Giá hợp đồng",
+        "before": "4.1. Giá hợp đồng trọn gói: … (Bằng chữ: …), được xác định theo: đơn giá trọn gói ",
+        "after": " đồng/m² × diện tích sàn xây dựng … m² (cách tính",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_18",
+        "seq": 18,
+        "article": "Điều 4. Giá hợp đồng",
+        "before": "(Bằng chữ: …), được xác định theo: đơn giá trọn gói ……… đồng/m² × diện tích sàn xây dựng ",
+        "after": " m² (cách tính diện tích tại Phụ lục 02) + chi phí",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_19",
+        "seq": 19,
+        "article": "Điều 4. Giá hợp đồng",
+        "before": "m² × diện tích sàn xây dựng …… m² (cách tính diện tích tại Phụ lục 02) + chi phí thiết kế ",
+        "after": " đồng + các hạng mục tính riêng (nếu có).",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "c_1",
+        "seq": 20,
+        "article": "Điều 4. Giá hợp đồng",
+        "before": "4.2. Giá trên ",
+        "after": " thuế giá trị gia tăng.",
+        "default": null,
+        "option": null,
+        "choices": [
+          "đã bao gồm",
+          "chưa bao gồm"
+        ]
+      },
+      {
+        "key": "o_20",
+        "seq": 21,
+        "article": "Điều 5. Tạm ứng và thanh toán",
+        "before": "5.1. Bên A thanh toán trong vòng ",
+        "after": "  ngày làm việc kể từ ngày ký biên bản nghiệm thu",
+        "default": "05",
+        "option": null
+      },
+      {
+        "key": "o_21",
+        "seq": 22,
+        "article": "Điều 5. Tạm ứng và thanh toán",
+        "before": "ngày ký biên bản nghiệm thu mốc tương ứng. Bên A không ký biên bản nghiệm thu trong vòng ",
+        "after": " ngày kể từ khi Bên B thông báo hoàn thành và khôn",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_22",
+        "seq": 23,
+        "article": "Điều 5. Tạm ứng và thanh toán",
+        "before": "5.2. Bên A chậm thanh toán quá ",
+        "after": "  ngày, Bên B được tạm dừng thi công; thời gian tạ",
+        "default": "10",
+        "option": null
+      },
+      {
+        "key": "o_23",
+        "seq": 24,
+        "article": "Điều 5. Tạm ứng và thanh toán",
+        "before": "ên B được tạm dừng thi công; thời gian tạm dừng cộng vào tiến độ; Bên A chịu lãi chậm trả ",
+        "after": " %/tháng trên số tiền chậm trả.",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_24",
+        "seq": 25,
+        "article": "Điều 5. Tạm ứng và thanh toán",
+        "before": "5.3. Tiền bảo hành 5% giá trị quyết toán được giữ lại và hoàn trả trong vòng ",
+        "after": " ngày sau khi hết thời hạn bảo hành phần hoàn thiệ",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_25",
+        "seq": 26,
+        "article": "Điều 6. Tiến độ thi công",
+        "before": "6.1. Thời gian thiết kế: ",
+        "after": " ngày kể từ ngày nhận tạm ứng, không kể thời gian",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_26",
+        "seq": 27,
+        "article": "Điều 6. Tiến độ thi công",
+        "before": "6.2. Thời gian thi công: ",
+        "after": " ngày kể từ ngày khởi công, theo tiến độ tại Phụ l",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_27",
+        "seq": 28,
+        "article": "Điều 6. Tiến độ thi công",
+        "before": "công: …… ngày kể từ ngày khởi công, theo tiến độ tại Phụ lục 03. Ngày khởi công dự kiến: ",
+        "after": " /20…, do hai bên thống nhất theo ngày đẹp của Bên",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_28",
+        "seq": 29,
+        "article": "Điều 6. Tiến độ thi công",
+        "before": "ngày kể từ ngày khởi công, theo tiến độ tại Phụ lục 03. Ngày khởi công dự kiến: …… /…… /20",
+        "after": ", do hai bên thống nhất theo ngày đẹp của Bên A (n",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_29",
+        "seq": 30,
+        "article": "Điều 6. Tiến độ thi công",
+        "before": "i hàng xóm hoặc cơ quan nhà nước yêu cầu dừng không do lỗi của Bên B; nghỉ Tết Nguyên đán ",
+        "after": " ngày; sự kiện bất khả kháng.",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_30",
+        "seq": 31,
+        "article": "Điều 7. Chất lượng, giám sát và nghiệm thu",
+        "before": "ẩn kỹ thuật và chủng loại vật tư tại Phụ lục 01; bố trí kỹ sư giám sát công trình: Ông/Bà ",
+        "after": " – ĐT: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_31",
+        "seq": 32,
+        "article": "Điều 7. Chất lượng, giám sát và nghiệm thu",
+        "before": "à chủng loại vật tư tại Phụ lục 01; bố trí kỹ sư giám sát công trình: Ông/Bà ……………… – ĐT: ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_32",
+        "seq": 33,
+        "article": "Điều 7. Chất lượng, giám sát và nghiệm thu",
+        "before": "7.4. Bên B chụp ảnh, ghi nhật ký tiến độ hằng ngày và cập nhật cho Bên A ít nhất ",
+        "after": " lần/tuần.",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_33",
+        "seq": 34,
+        "article": "Điều 8. Thay đổi thiết kế và phát sinh",
+        "before": "đã ký chốt phải lập \"Phiếu yêu cầu thay đổi\". Bên B báo giá, ảnh hưởng tiến độ trong vòng ",
+        "after": "  ngày; hai bên ký phụ lục trước khi thi công.",
+        "default": "03",
+        "option": null
+      },
+      {
+        "key": "o_34",
+        "seq": 35,
+        "article": "Điều 8. Thay đổi thiết kế và phát sinh",
+        "before": "8.3. Phát sinh có giá trị dưới ",
+        "after": " đồng/lần có thể được thống nhất bằng tin nhắn kèm",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_35",
+        "seq": 36,
+        "article": "Điều 9. An toàn, nhà liền kề và quan hệ với hàng xóm",
+        "before": "ông hợp tác thì lập biên bản có xác nhận của tổ dân phố/thôn hoặc lập vi bằng (chi phí do ",
+        "after": " chịu).",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_36",
+        "seq": 37,
+        "article": "Điều 10. Điện, nước, mặt bằng thi công",
+        "before": "(đã phá dỡ nhà cũ, di dời đồ đạc) trước ngày khởi công. Nếu Bên B phá dỡ nhà cũ: chi phí ",
+        "after": " đồng, phế liệu thu hồi thuộc về …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_37",
+        "seq": 38,
+        "article": "Điều 10. Điện, nước, mặt bằng thi công",
+        "before": "rước ngày khởi công. Nếu Bên B phá dỡ nhà cũ: chi phí ……… đồng, phế liệu thu hồi thuộc về ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_38",
+        "seq": 39,
+        "article": "Điều 11. Bảo hành",
+        "before": "",
+        "after": " năm (mặc định: 05)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_39",
+        "seq": 40,
+        "article": "Điều 11. Bảo hành",
+        "before": "",
+        "after": " tháng (mặc định: 12)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_40",
+        "seq": 41,
+        "article": "Điều 11. Bảo hành",
+        "before": "",
+        "after": " tháng (mặc định: 24)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_41",
+        "seq": 42,
+        "article": "Điều 11. Bảo hành",
+        "before": "Thiết bị (vệ sinh, điện, bơm ",
+        "after": ")",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_42",
+        "seq": 43,
+        "article": "Điều 11. Bảo hành",
+        "before": "11.3. Bên B có mặt kiểm tra trong vòng ",
+        "after": "  giờ kể từ khi nhận thông báo, khắc phục trong th",
+        "default": "48",
+        "option": null
+      },
+      {
+        "key": "o_43",
+        "seq": 44,
+        "article": "Điều 12. Phạt vi phạm và chấm dứt hợp đồng",
+        "before": "12.1. Bên B chậm bàn giao do lỗi của mình bị phạt ",
+        "after": " % giá hợp đồng/ngày chậm; tổng mức phạt không quá",
+        "default": "0,05",
+        "option": null
+      },
+      {
+        "key": "o_44",
+        "seq": 45,
+        "article": "Điều 12. Phạt vi phạm và chấm dứt hợp đồng",
+        "before": "i của mình bị phạt …… % (mặc định: 0,05%) giá hợp đồng/ngày chậm; tổng mức phạt không quá ",
+        "after": " % giá trị phần hợp đồng bị vi phạm.",
+        "default": "12",
+        "option": null
+      },
+      {
+        "key": "o_45",
+        "seq": 46,
+        "article": "Điều 12. Phạt vi phạm và chấm dứt hợp đồng",
+        "before": "lượng đã thực hiện, vật tư đã đặt hàng/đưa về công trình, chi phí thiết kế và bồi thường ",
+        "after": " % giá trị phần hợp đồng còn lại.",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_46",
+        "seq": 47,
+        "article": "Điều 12. Phạt vi phạm và chấm dứt hợp đồng",
+        "before": "12.4. Bên B đơn phương chấm dứt hợp đồng không do lỗi của Bên A hoặc bỏ dở công trình quá ",
+        "after": " ngày: hoàn trả phần tiền đã nhận vượt giá trị khố",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_47",
+        "seq": 48,
+        "article": "Điều 12. Phạt vi phạm và chấm dứt hợp đồng",
+        "before": "uá …… ngày: hoàn trả phần tiền đã nhận vượt giá trị khối lượng đã thực hiện và bồi thường ",
+        "after": " % giá trị phần hợp đồng còn lại.",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_48",
+        "seq": 49,
+        "article": "Điều 13. Sự kiện bất khả kháng và hoàn cảnh thay đổi cơ bản",
+        "before": "13.4. Nếu sự kiện bất khả kháng kéo dài quá ",
+        "after": "  ngày liên tục, mỗi bên có quyền chấm dứt hợp đồn",
+        "default": "60",
+        "option": null
+      },
+      {
+        "key": "o_49",
+        "seq": 50,
+        "article": "Điều 13. Sự kiện bất khả kháng và hoàn cảnh thay đổi cơ bản",
+        "before": "bản theo Điều 420 Bộ luật Dân sự (ví dụ: giá vật liệu chính biến động bất thường vượt quá ",
+        "after": " % so với thời điểm ký), bên bị ảnh hưởng có quyền",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_50",
+        "seq": 51,
+        "article": "Điều 15. Thông báo và đại diện liên lạc",
+        "before": "15.2. Đại diện liên lạc: Bên A: ",
+        "after": " – ĐT: … – Email: …; Bên B: … – ĐT: … – Email: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_51",
+        "seq": 52,
+        "article": "Điều 15. Thông báo và đại diện liên lạc",
+        "before": "15.2. Đại diện liên lạc: Bên A: ………………… – ĐT: ",
+        "after": " – Email: …; Bên B: … – ĐT: … – Email: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_52",
+        "seq": 53,
+        "article": "Điều 15. Thông báo và đại diện liên lạc",
+        "before": "15.2. Đại diện liên lạc: Bên A: ………………… – ĐT: ………… – Email: ",
+        "after": "; Bên B: … – ĐT: … – Email: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_53",
+        "seq": 54,
+        "article": "Điều 15. Thông báo và đại diện liên lạc",
+        "before": "15.2. Đại diện liên lạc: Bên A: ………………… – ĐT: ………… – Email: …………; Bên B: ",
+        "after": " – ĐT: … – Email: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_54",
+        "seq": 55,
+        "article": "Điều 15. Thông báo và đại diện liên lạc",
+        "before": "15.2. Đại diện liên lạc: Bên A: ………………… – ĐT: ………… – Email: …………; Bên B: ………………… – ĐT: ",
+        "after": " – Email: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_55",
+        "seq": 56,
+        "article": "Điều 15. Thông báo và đại diện liên lạc",
+        "before": "iện liên lạc: Bên A: ………………… – ĐT: ………… – Email: …………; Bên B: ………………… – ĐT: ………… – Email: ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_56",
+        "seq": 57,
+        "article": "Điều 15. Thông báo và đại diện liên lạc",
+        "before": "15.3. Tin nhắn qua ứng dụng (Zalo, ",
+        "after": ") chỉ dùng để trao đổi điều hành, không thay thế v",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_57",
+        "seq": 58,
+        "article": "Điều 16. Bàn giao, quyết toán và thanh lý",
+        "before": "16.3. Trong vòng ",
+        "after": " ngày kể từ ngày bàn giao, hai bên lập bảng quyết",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "c_2",
+        "seq": 59,
+        "article": "Điều 17. Hiệu lực và điều khoản thi hành",
+        "before": "17.1. Hợp đồng có hiệu lực kể từ ",
+        "after": ".",
+        "default": null,
+        "option": null,
+        "choices": [
+          "ngày ký",
+          "ngày bên có quyền nhận được bảo đảm thực hiện hợp đồng/tiền tạm ứng"
+        ]
+      },
+      {
+        "key": "o_58",
+        "seq": 60,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": " (VD: Hòa Phát/Việt Nhật)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_59",
+        "seq": 61,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_60",
+        "seq": 62,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_61",
+        "seq": 63,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_62",
+        "seq": 64,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_63",
+        "seq": 65,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_64",
+        "seq": 66,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "Thương phẩm mác ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_65",
+        "seq": 67,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "Thương phẩm mác ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_66",
+        "seq": 68,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "Thương phẩm mác ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_67",
+        "seq": 69,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_68",
+        "seq": 70,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_69",
+        "seq": 71,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_70",
+        "seq": 72,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_71",
+        "seq": 73,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_72",
+        "seq": 74,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_73",
+        "seq": 75,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_74",
+        "seq": 76,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_75",
+        "seq": 77,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_76",
+        "seq": 78,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": " đ/m²",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_77",
+        "seq": 79,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": " đ/m²",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_78",
+        "seq": 80,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": " đ/m²",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_79",
+        "seq": 81,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": " đ/m²",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_80",
+        "seq": 82,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": " đ/m²",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_81",
+        "seq": 83,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": " đ/m²",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_82",
+        "seq": 84,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_83",
+        "seq": 85,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_84",
+        "seq": 86,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_85",
+        "seq": 87,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": " đ/m²",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_86",
+        "seq": 88,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": " đ/m²",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_87",
+        "seq": 89,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": " đ/m²",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_88",
+        "seq": 90,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": " đ/bộ",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_89",
+        "seq": 91,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": " đ/bộ",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_90",
+        "seq": 92,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": " đ/bộ",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_91",
+        "seq": 93,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": " đ/m²",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_92",
+        "seq": 94,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": " đ/m²",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_93",
+        "seq": 95,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": " đ/m²",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_94",
+        "seq": 96,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": " đ/bộ",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_95",
+        "seq": 97,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": " đ/bộ",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_96",
+        "seq": 98,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": " đ/bộ",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_97",
+        "seq": 99,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_98",
+        "seq": 100,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_99",
+        "seq": 101,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_100",
+        "seq": 102,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": " đ/m²",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_101",
+        "seq": 103,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": " đ/m²",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_102",
+        "seq": 104,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": " đ/m²",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_103",
+        "seq": 105,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": " đ/md",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_104",
+        "seq": 106,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": " đ/md",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_105",
+        "seq": 107,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": " đ/md",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_106",
+        "seq": 108,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": " đ",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_107",
+        "seq": 109,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": " đ",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_108",
+        "seq": 110,
+        "article": "PHỤ LỤC 01 – BẢNG CHỦNG LOẠI VẬT TƯ THEO GÓI (MẪU)",
+        "before": "",
+        "after": " đ",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_109",
+        "seq": 111,
+        "article": "PHỤ LỤC 02 – BẢNG TÍNH DIỆN TÍCH VÀ GIÁ TRỊ HỢP ĐỒNG",
+        "before": "",
+        "after": "%",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_110",
+        "seq": 112,
+        "article": "PHỤ LỤC 02 – BẢNG TÍNH DIỆN TÍCH VÀ GIÁ TRỊ HỢP ĐỒNG",
+        "before": "Tầng 2 ",
+        "after": " tầng n",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_111",
+        "seq": 113,
+        "article": "PHỤ LỤC 02 – BẢNG TÍNH DIỆN TÍCH VÀ GIÁ TRỊ HỢP ĐỒNG",
+        "before": "",
+        "after": "%",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_112",
+        "seq": 114,
+        "article": "PHỤ LỤC 02 – BẢNG TÍNH DIỆN TÍCH VÀ GIÁ TRỊ HỢP ĐỒNG",
+        "before": "",
+        "after": "%",
+        "default": null,
+        "option": null
+      }
+    ],
+    "sha": "bca55d257b0ba157",
     "notes_removed": 4
   },
   {
@@ -309,11 +2806,19 @@
     ],
     "tags": {
       "so_hop_dong": {},
+      "o_1": {},
       "ngay_ky_ngay": {},
       "ngay_ky_thang": {},
       "ngay_ky_nam": {},
+      "o_2": {},
       "dia_diem": {},
+      "o_3": {},
       "doi_tac_ten": {},
+      "o_4": {},
+      "o_5": {},
+      "o_6": {},
+      "o_7": {},
+      "o_8": {},
       "doi_tac_dia_chi": {},
       "doi_tac_dien_thoai": {},
       "doi_tac_email": {},
@@ -326,18 +2831,616 @@
       "nvg_email": {},
       "nvg_dai_dien": {},
       "nvg_chuc_vu": {},
+      "o_9": {},
+      "o_10": {},
+      "o_11": {},
+      "o_12": {},
       "nvg_so_tai_khoan": {},
       "nvg_ngan_hang": {},
+      "o_13": {},
+      "pa_1_a": {
+        "pa_1_a_o": {}
+      },
+      "pa_1_b": {
+        "pa_1_b_o": {},
+        "o_14": {}
+      },
+      "pa_1_c": {
+        "pa_1_c_o": {}
+      },
+      "o_15": {},
+      "o_16": {},
+      "o_17": {},
+      "o_18": {},
+      "o_19": {},
+      "o_20": {},
+      "o_21": {},
+      "o_22": {},
+      "o_23": {},
+      "o_24": {},
+      "o_25": {},
       "gia_tri": {},
       "gia_tri_bang_chu": {},
-      "dot_thanh_toan": {
-        "stt": {},
-        "noi_dung": {},
-        "ty_le": {},
-        "so_tien": {}
-      }
+      "c_1": {},
+      "o_26": {},
+      "pa_2_a": {
+        "pa_2_a_o": {},
+        "dot_thanh_toan": {
+          "stt": {},
+          "noi_dung": {},
+          "ty_le": {},
+          "so_tien": {}
+        }
+      },
+      "pa_3_b": {
+        "pa_3_b_o": {}
+      },
+      "o_27": {},
+      "o_28": {},
+      "o_29": {},
+      "o_30": {},
+      "o_31": {},
+      "o_32": {},
+      "o_33": {},
+      "o_34": {},
+      "o_35": {},
+      "o_36": {},
+      "o_37": {},
+      "o_38": {},
+      "o_39": {},
+      "o_40": {},
+      "o_41": {},
+      "o_42": {},
+      "pa_4_a": {
+        "pa_4_a_o": {}
+      },
+      "pa_4_b": {
+        "pa_4_b_o": {}
+      },
+      "o_43": {},
+      "o_44": {},
+      "o_45": {},
+      "o_46": {},
+      "o_47": {},
+      "o_48": {},
+      "o_49": {},
+      "c_2": {}
     },
-    "sha": "c7ef63b3d43a85ef",
+    "options": [
+      {
+        "id": "pa_1",
+        "article": "Điều 1. Phạm vi công việc",
+        "label": "1.1. Bên B thi công công trình theo hồ sơ thiết kế do [Bên A cung cấp/Bên B lập theo hợp đồng thiết kế số ……], với phạm ",
+        "options": [
+          {
+            "key": "pa_1_a",
+            "letter": "A",
+            "text": "Phương án A: Phần thô và nhân công phần thô. Bên B cung cấp vật tư thô (thép, xi măng, cát, đá, gạch, bê tông, ống và dây điện nước âm, chống thấm) và nhân công"
+          },
+          {
+            "key": "pa_1_b",
+            "letter": "B",
+            "text": "Phương án B: Chỉ phần hoàn thiện. Trên phần thô đã có, Bên B cung cấp vật tư và nhân công hoàn thiện theo danh mục tại Phụ lục 01: ốp lát, sơn bả, trần, cửa, lắ"
+          },
+          {
+            "key": "pa_1_c",
+            "letter": "C",
+            "text": "Phương án C: Phần thô và nhân công hoàn thiện. Bên B thực hiện toàn bộ phần thô như Phương án A, và nhân công thi công hoàn thiện; Bên A cung cấp vật tư hoàn th"
+          }
+        ]
+      },
+      {
+        "id": "pa_2",
+        "article": "Điều 4. Tạm ứng và thanh toán",
+        "label": "Điều 4. Tạm ứng và thanh toán",
+        "options": [
+          {
+            "key": "pa_2_a",
+            "letter": "A",
+            "text": "Phương án A: Phần thô (Phương án A, C):"
+          }
+        ]
+      },
+      {
+        "id": "pa_3",
+        "article": "Điều 4. Tạm ứng và thanh toán",
+        "label": "",
+        "options": [
+          {
+            "key": "pa_3_b",
+            "letter": "B",
+            "text": "Phương án B: Hoàn thiện (Phương án B): 30% khi ký hợp đồng; 30% khi hoàn thành ốp lát, trần; 35% khi bàn giao; 5% giữ lại bảo hành."
+          }
+        ]
+      },
+      {
+        "id": "pa_4",
+        "article": "Điều 11. Giải quyết tranh chấp",
+        "label": "11.2. Trường hợp thương lượng không thành trong vòng 30 (ba mươi) ngày kể từ ngày một bên gửi yêu cầu, tranh chấp được g",
+        "options": [
+          {
+            "key": "pa_4_a",
+            "letter": "A",
+            "text": "Phương án A: Tòa án nhân dân có thẩm quyền theo quy định của pháp luật tố tụng dân sự giải quyết theo quy định của pháp luật Việt Nam."
+          },
+          {
+            "key": "pa_4_b",
+            "letter": "B",
+            "text": "Phương án B: Trung tâm Trọng tài Quốc tế Việt Nam (VIAC) giải quyết theo Quy tắc tố tụng trọng tài của Trung tâm này; phán quyết trọng tài là chung thẩm. Số trọ"
+          }
+        ]
+      }
+    ],
+    "free_fields": [
+      {
+        "key": "o_1",
+        "seq": 1,
+        "article": "Phần đầu văn bản",
+        "before": "",
+        "after": ", ngày … tháng … năm …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_2",
+        "seq": 2,
+        "article": "Phần đầu văn bản",
+        "before": "Công trình: Nhà ở ",
+        "after": " tầng – Địa điểm: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_3",
+        "seq": 3,
+        "article": "Phần đầu văn bản",
+        "before": "Hôm nay, ngày … tháng … năm …, tại ",
+        "after": ", chúng tôi gồm:",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_4",
+        "seq": 4,
+        "article": "Phần đầu văn bản",
+        "before": "Ông/Bà: ",
+        "after": "  Ngày sinh: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_5",
+        "seq": 5,
+        "article": "Phần đầu văn bản",
+        "before": "Ông/Bà: …………………………………  Ngày sinh: ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_6",
+        "seq": 6,
+        "article": "Phần đầu văn bản",
+        "before": "Số định danh cá nhân/CCCD: ",
+        "after": " cấp ngày … tại …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_7",
+        "seq": 7,
+        "article": "Phần đầu văn bản",
+        "before": "Số định danh cá nhân/CCCD: ……………………… cấp ngày ",
+        "after": " tại …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_8",
+        "seq": 8,
+        "article": "Phần đầu văn bản",
+        "before": "Số định danh cá nhân/CCCD: ……………………… cấp ngày ……/……/……… tại ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_9",
+        "seq": 9,
+        "article": "Phần đầu văn bản",
+        "before": "(Hoặc người được ủy quyền: ",
+        "after": " – Chức vụ: … – theo Giấy ủy quyền số … ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_10",
+        "seq": 10,
+        "article": "Phần đầu văn bản",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ",
+        "after": " – theo Giấy ủy quyền số … ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_11",
+        "seq": 11,
+        "article": "Phần đầu văn bản",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ……………… – theo Giấy ủy quyền số ",
+        "after": " ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_12",
+        "seq": 12,
+        "article": "Phần đầu văn bản",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ……………… – theo Giấy ủy quyền số ……… ngày ",
+        "after": ")",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_13",
+        "seq": 13,
+        "article": "Điều 1. Phạm vi công việc",
+        "before": "ông công trình theo hồ sơ thiết kế do [Bên A cung cấp/Bên B lập theo hợp đồng thiết kế số ",
+        "after": "], với phạm vi (chọn một):",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_14",
+        "seq": 14,
+        "article": "Điều 1. Phạm vi công việc",
+        "before": "theo danh mục tại Phụ lục 01: ốp lát, sơn bả, trần, cửa, lắp thiết bị điện nước, lan can ",
+        "after": "",
+        "default": null,
+        "option": "pa_1_b"
+      },
+      {
+        "key": "o_15",
+        "seq": 15,
+        "article": "Điều 1. Phạm vi công việc",
+        "before": "1.2. Không bao gồm: ",
+        "after": " (nội thất rời, thiết bị bếp, điều hòa, cổng rào,",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_16",
+        "seq": 16,
+        "article": "Điều 1. Phạm vi công việc",
+        "before": "Không bao gồm: ……………………………………… (nội thất rời, thiết bị bếp, điều hòa, cổng rào, sân vườn ",
+        "after": ").",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_17",
+        "seq": 17,
+        "article": "Điều 2. Vật tư",
+        "before": "Bên B lập bảng nhu cầu vật tư hoàn thiện kèm khối lượng và thời điểm cần có trước ",
+        "after": "  ngày;",
+        "default": "07",
+        "option": null
+      },
+      {
+        "key": "o_18",
+        "seq": 18,
+        "article": "Điều 2. Vật tư",
+        "before": "Định mức hao hụt cho phép: gạch ốp lát ",
+        "after": " %, sơn … %; vượt định mức do lỗi thi công thì Bên",
+        "default": "5",
+        "option": null
+      },
+      {
+        "key": "o_19",
+        "seq": 19,
+        "article": "Điều 2. Vật tư",
+        "before": "Định mức hao hụt cho phép: gạch ốp lát …… % (mặc định: 5%), sơn ",
+        "after": " %; vượt định mức do lỗi thi công thì Bên B bồi th",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_20",
+        "seq": 20,
+        "article": "Điều 2. Vật tư",
+        "before": "giao vật tư chậm hoặc sai chủng loại thì tiến độ được gia hạn tương ứng; thợ phải chờ quá ",
+        "after": " ngày thì Bên A chịu chi phí chờ việc … đồng/ngày",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_21",
+        "seq": 21,
+        "article": "Điều 2. Vật tư",
+        "before": "tiến độ được gia hạn tương ứng; thợ phải chờ quá …… ngày thì Bên A chịu chi phí chờ việc ",
+        "after": " đồng/ngày công.",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_22",
+        "seq": 22,
+        "article": "Điều 3. Cách tính diện tích và giá hợp đồng",
+        "before": "",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_23",
+        "seq": 23,
+        "article": "Điều 3. Cách tính diện tích và giá hợp đồng",
+        "before": "",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_24",
+        "seq": 24,
+        "article": "Điều 3. Cách tính diện tích và giá hợp đồng",
+        "before": "",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_25",
+        "seq": 25,
+        "article": "Điều 3. Cách tính diện tích và giá hợp đồng",
+        "before": "Tầng 2 ",
+        "after": " tầng n",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "c_1",
+        "seq": 26,
+        "article": "Điều 3. Cách tính diện tích và giá hợp đồng",
+        "before": "3.5. Giá hợp đồng: … (Bằng chữ: …), ",
+        "after": " thuế GTGT. Diện tích thực tế thi công khác so với",
+        "default": null,
+        "option": null,
+        "choices": [
+          "đã bao gồm",
+          "chưa bao gồm"
+        ]
+      },
+      {
+        "key": "o_26",
+        "seq": 27,
+        "article": "Điều 3. Cách tính diện tích và giá hợp đồng",
+        "before": "[đã bao gồm/chưa bao gồm] thuế GTGT. Diện tích thực tế thi công khác so với bảng trên quá ",
+        "after": " % thì quyết toán theo diện tích thực tế.",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_27",
+        "seq": 28,
+        "article": "Điều 4. Tạm ứng và thanh toán",
+        "before": "4.1. Thời hạn thanh toán: trong vòng ",
+        "after": "  ngày làm việc kể từ ngày nghiệm thu mốc. Chậm th",
+        "default": "05",
+        "option": null
+      },
+      {
+        "key": "o_28",
+        "seq": 29,
+        "article": "Điều 4. Tạm ứng và thanh toán",
+        "before": "trong vòng …… (mặc định: 05) ngày làm việc kể từ ngày nghiệm thu mốc. Chậm thanh toán quá ",
+        "after": " ngày, Bên B được tạm dừng thi công và tiến độ đượ",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_29",
+        "seq": 30,
+        "article": "Điều 5. Tiến độ",
+        "before": "5.1. Ngày khởi công: ",
+        "after": " /20…. Thời gian thi công: … ngày (Phương án A/C)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_30",
+        "seq": 31,
+        "article": "Điều 5. Tiến độ",
+        "before": "5.1. Ngày khởi công: …… /…… /20",
+        "after": ". Thời gian thi công: … ngày (Phương án A/C) hoặc",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_31",
+        "seq": 32,
+        "article": "Điều 5. Tiến độ",
+        "before": "5.1. Ngày khởi công: …… /…… /20……. Thời gian thi công: ",
+        "after": " ngày (Phương án A/C) hoặc … ngày (Phương án B), t",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_32",
+        "seq": 33,
+        "article": "Điều 5. Tiến độ",
+        "before": "5.1. Ngày khởi công: …… /…… /20……. Thời gian thi công: …… ngày (Phương án A/C) hoặc ",
+        "after": " ngày (Phương án B), theo tiến độ đính kèm.",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_33",
+        "seq": 34,
+        "article": "Điều 8. Bảo hành",
+        "before": "8.1. Thời hạn bảo hành tính từ ngày bàn giao: kết cấu ",
+        "after": " năm (mặc định: 05 năm, Phương án A/C); chống thấm",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_34",
+        "seq": 35,
+        "article": "Điều 8. Bảo hành",
+        "before": "hành tính từ ngày bàn giao: kết cấu …… năm (mặc định: 05 năm, Phương án A/C); chống thấm ",
+        "after": " năm; phần hoàn thiện do Bên B thi công … tháng (m",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_35",
+        "seq": 36,
+        "article": "Điều 8. Bảo hành",
+        "before": "m (mặc định: 05 năm, Phương án A/C); chống thấm …… năm; phần hoàn thiện do Bên B thi công ",
+        "after": " tháng (mặc định: 12).",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_36",
+        "seq": 37,
+        "article": "Điều 8. Bảo hành",
+        "before": "8.2. Tiền bảo hành: giữ lại 5% giá trị quyết toán, hoàn trả trong vòng ",
+        "after": " ngày sau khi hết thời hạn bảo hành hoàn thiện.",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_37",
+        "seq": 38,
+        "article": "Điều 9. Phạt vi phạm",
+        "before": "9.1. Bên B chậm tiến độ do lỗi của mình bị phạt ",
+        "after": " % giá hợp đồng cho mỗi ngày chậm; tổng mức phạt k",
+        "default": "0,05",
+        "option": null
+      },
+      {
+        "key": "o_38",
+        "seq": 39,
+        "article": "Điều 9. Phạt vi phạm",
+        "before": "phạt …… % (mặc định: 0,05%) giá hợp đồng cho mỗi ngày chậm; tổng mức phạt không vượt quá ",
+        "after": " % giá trị phần hợp đồng bị vi phạm.",
+        "default": "12",
+        "option": null
+      },
+      {
+        "key": "o_39",
+        "seq": 40,
+        "article": "Điều 9. Phạt vi phạm",
+        "before": "9.2. Bên A chậm thanh toán chịu lãi chậm trả ",
+        "after": " %/tháng trên số tiền chậm trả.",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_40",
+        "seq": 41,
+        "article": "Điều 9. Phạt vi phạm",
+        "before": "m dứt hợp đồng trái thỏa thuận phải bồi thường thiệt hại thực tế cho bên kia và chịu phạt ",
+        "after": " % giá trị phần hợp đồng còn lại.",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_41",
+        "seq": 42,
+        "article": "Điều 10. Sự kiện bất khả kháng và hoàn cảnh thay đổi cơ bản",
+        "before": "10.4. Nếu sự kiện bất khả kháng kéo dài quá ",
+        "after": "  ngày liên tục, mỗi bên có quyền chấm dứt hợp đồn",
+        "default": "60",
+        "option": null
+      },
+      {
+        "key": "o_42",
+        "seq": 43,
+        "article": "Điều 10. Sự kiện bất khả kháng và hoàn cảnh thay đổi cơ bản",
+        "before": "bản theo Điều 420 Bộ luật Dân sự (ví dụ: giá vật liệu chính biến động bất thường vượt quá ",
+        "after": " % so với thời điểm ký), bên bị ảnh hưởng có quyền",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_43",
+        "seq": 44,
+        "article": "Điều 12. Thông báo và đại diện liên lạc",
+        "before": "12.2. Đại diện liên lạc: Bên A: ",
+        "after": " – ĐT: … – Email: …; Bên B: … – ĐT: … – Email: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_44",
+        "seq": 45,
+        "article": "Điều 12. Thông báo và đại diện liên lạc",
+        "before": "12.2. Đại diện liên lạc: Bên A: ………………… – ĐT: ",
+        "after": " – Email: …; Bên B: … – ĐT: … – Email: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_45",
+        "seq": 46,
+        "article": "Điều 12. Thông báo và đại diện liên lạc",
+        "before": "12.2. Đại diện liên lạc: Bên A: ………………… – ĐT: ………… – Email: ",
+        "after": "; Bên B: … – ĐT: … – Email: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_46",
+        "seq": 47,
+        "article": "Điều 12. Thông báo và đại diện liên lạc",
+        "before": "12.2. Đại diện liên lạc: Bên A: ………………… – ĐT: ………… – Email: …………; Bên B: ",
+        "after": " – ĐT: … – Email: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_47",
+        "seq": 48,
+        "article": "Điều 12. Thông báo và đại diện liên lạc",
+        "before": "12.2. Đại diện liên lạc: Bên A: ………………… – ĐT: ………… – Email: …………; Bên B: ………………… – ĐT: ",
+        "after": " – Email: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_48",
+        "seq": 49,
+        "article": "Điều 12. Thông báo và đại diện liên lạc",
+        "before": "iện liên lạc: Bên A: ………………… – ĐT: ………… – Email: …………; Bên B: ………………… – ĐT: ………… – Email: ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_49",
+        "seq": 50,
+        "article": "Điều 12. Thông báo và đại diện liên lạc",
+        "before": "12.3. Tin nhắn qua ứng dụng (Zalo, ",
+        "after": ") chỉ dùng để trao đổi điều hành, không thay thế v",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "c_2",
+        "seq": 51,
+        "article": "Điều 13. Hiệu lực và điều khoản thi hành",
+        "before": "13.1. Hợp đồng có hiệu lực kể từ ",
+        "after": ".",
+        "default": null,
+        "option": null,
+        "choices": [
+          "ngày ký",
+          "ngày bên có quyền nhận được bảo đảm thực hiện hợp đồng/tiền tạm ứng"
+        ]
+      }
+    ],
+    "sha": "e6ffff1c2407ca82",
     "notes_removed": 3
   },
   {
@@ -370,11 +3473,19 @@
     "payment_milestones": [],
     "tags": {
       "so_hop_dong": {},
+      "o_1": {},
       "ngay_ky_ngay": {},
       "ngay_ky_thang": {},
       "ngay_ky_nam": {},
       "ten_hop_dong": {},
+      "o_2": {},
+      "o_3": {},
       "doi_tac_ten": {},
+      "o_4": {},
+      "o_5": {},
+      "o_6": {},
+      "o_7": {},
+      "o_8": {},
       "doi_tac_dia_chi": {},
       "doi_tac_dien_thoai": {},
       "doi_tac_email": {},
@@ -387,12 +3498,478 @@
       "nvg_email": {},
       "nvg_dai_dien": {},
       "nvg_chuc_vu": {},
+      "o_9": {},
+      "o_10": {},
+      "o_11": {},
+      "o_12": {},
       "nvg_so_tai_khoan": {},
       "nvg_ngan_hang": {},
+      "pa_1_a": {
+        "pa_1_a_o": {},
+        "o_13": {},
+        "o_14": {}
+      },
+      "pa_1_b": {
+        "pa_1_b_o": {}
+      },
+      "o_15": {},
+      "o_16": {},
+      "o_17": {},
+      "o_18": {},
+      "o_19": {},
       "gia_tri": {},
-      "gia_tri_bang_chu": {}
+      "gia_tri_bang_chu": {},
+      "c_1": {},
+      "o_20": {},
+      "pa_2_a": {
+        "pa_2_a_o": {},
+        "o_21": {}
+      },
+      "pa_2_b": {
+        "pa_2_b_o": {}
+      },
+      "o_22": {},
+      "o_23": {},
+      "o_24": {},
+      "o_25": {},
+      "o_26": {},
+      "o_27": {},
+      "o_28": {},
+      "o_29": {},
+      "o_30": {},
+      "pa_3_a": {
+        "pa_3_a_o": {}
+      },
+      "pa_3_b": {
+        "pa_3_b_o": {}
+      },
+      "o_31": {},
+      "o_32": {},
+      "o_33": {},
+      "o_34": {},
+      "pa_4_a": {
+        "pa_4_a_o": {}
+      },
+      "pa_4_b": {
+        "pa_4_b_o": {}
+      },
+      "c_2": {},
+      "o_35": {}
     },
-    "sha": "0ecf60cdc6a350ae",
+    "options": [
+      {
+        "id": "pa_1",
+        "article": "Điều 1. Nội dung công việc",
+        "label": "1.2. Phạm vi:",
+        "options": [
+          {
+            "key": "pa_1_a",
+            "letter": "A",
+            "text": "Phương án A: Thiết kế 3D + sản xuất + lắp đặt (phí thiết kế ……… đồng, được khấu trừ …… % nếu Bên A ký sản xuất)."
+          },
+          {
+            "key": "pa_1_b",
+            "letter": "B",
+            "text": "Phương án B: Chỉ sản xuất và lắp đặt theo bản vẽ do Bên A cung cấp."
+          }
+        ]
+      },
+      {
+        "id": "pa_2",
+        "article": "Điều 4. Thanh toán",
+        "label": "Điều 4. Thanh toán",
+        "options": [
+          {
+            "key": "pa_2_a",
+            "letter": "A",
+            "text": "Phương án A: 50 – 40 – 10: 50% khi ký hợp đồng và duyệt shop drawing; 40% khi giao hàng đến công trình (trước khi lắp đặt); 10% trong vòng …… ngày kể từ ngày ng"
+          },
+          {
+            "key": "pa_2_b",
+            "letter": "B",
+            "text": "Phương án B: 40 – 30 – 25 – 5: 40% khi ký; 30% khi duyệt shop drawing/bắt đầu sản xuất; 25% khi lắp đặt xong, nghiệm thu; 5% giữ lại đến hết thời hạn bảo hành."
+          }
+        ]
+      },
+      {
+        "id": "pa_3",
+        "article": "Điều 8. Bảo hành",
+        "label": "8.1. Thời hạn bảo hành:",
+        "options": [
+          {
+            "key": "pa_3_a",
+            "letter": "A",
+            "text": "Phương án A: 12 tháng đối với toàn bộ sản phẩm."
+          },
+          {
+            "key": "pa_3_b",
+            "letter": "B",
+            "text": "Phương án B: 24 tháng đối với thùng, cánh, khung; 12 tháng đối với phụ kiện (bản lề, ray, tay nâng) hoặc theo bảo hành của nhà sản xuất phụ kiện."
+          }
+        ]
+      },
+      {
+        "id": "pa_4",
+        "article": "Điều 11. Giải quyết tranh chấp",
+        "label": "11.2. Trường hợp thương lượng không thành trong vòng 30 (ba mươi) ngày kể từ ngày một bên gửi yêu cầu, tranh chấp được g",
+        "options": [
+          {
+            "key": "pa_4_a",
+            "letter": "A",
+            "text": "Phương án A: Tòa án nhân dân có thẩm quyền theo quy định của pháp luật tố tụng dân sự giải quyết theo quy định của pháp luật Việt Nam."
+          },
+          {
+            "key": "pa_4_b",
+            "letter": "B",
+            "text": "Phương án B: Trung tâm Trọng tài Quốc tế Việt Nam (VIAC) giải quyết theo Quy tắc tố tụng trọng tài của Trung tâm này; phán quyết trọng tài là chung thẩm. Số trọ"
+          }
+        ]
+      }
+    ],
+    "free_fields": [
+      {
+        "key": "o_1",
+        "seq": 1,
+        "article": "Phần đầu văn bản",
+        "before": "",
+        "after": ", ngày … tháng … năm …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_2",
+        "seq": 2,
+        "article": "Phần đầu văn bản",
+        "before": "Công trình: … – Địa chỉ: ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_3",
+        "seq": 3,
+        "article": "Phần đầu văn bản",
+        "before": "Hôm nay, ngày … tháng … năm …, tại ",
+        "after": ", chúng tôi gồm:",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_4",
+        "seq": 4,
+        "article": "Phần đầu văn bản",
+        "before": "Ông/Bà: ",
+        "after": "  Ngày sinh: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_5",
+        "seq": 5,
+        "article": "Phần đầu văn bản",
+        "before": "Ông/Bà: …………………………………  Ngày sinh: ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_6",
+        "seq": 6,
+        "article": "Phần đầu văn bản",
+        "before": "Số định danh cá nhân/CCCD: ",
+        "after": " cấp ngày … tại …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_7",
+        "seq": 7,
+        "article": "Phần đầu văn bản",
+        "before": "Số định danh cá nhân/CCCD: ……………………… cấp ngày ",
+        "after": " tại …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_8",
+        "seq": 8,
+        "article": "Phần đầu văn bản",
+        "before": "Số định danh cá nhân/CCCD: ……………………… cấp ngày ……/……/……… tại ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_9",
+        "seq": 9,
+        "article": "Phần đầu văn bản",
+        "before": "(Hoặc người được ủy quyền: ",
+        "after": " – Chức vụ: … – theo Giấy ủy quyền số … ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_10",
+        "seq": 10,
+        "article": "Phần đầu văn bản",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ",
+        "after": " – theo Giấy ủy quyền số … ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_11",
+        "seq": 11,
+        "article": "Phần đầu văn bản",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ……………… – theo Giấy ủy quyền số ",
+        "after": " ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_12",
+        "seq": 12,
+        "article": "Phần đầu văn bản",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ……………… – theo Giấy ủy quyền số ……… ngày ",
+        "after": ")",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_13",
+        "seq": 13,
+        "article": "Điều 1. Nội dung công việc",
+        "before": "… Phương án A: Thiết kế 3D + sản xuất + lắp đặt (phí thiết kế ",
+        "after": " đồng, được khấu trừ … % nếu Bên A ký sản xuất).",
+        "default": null,
+        "option": "pa_1_a"
+      },
+      {
+        "key": "o_14",
+        "seq": 14,
+        "article": "Điều 1. Nội dung công việc",
+        "before": "… Phương án A: Thiết kế 3D + sản xuất + lắp đặt (phí thiết kế ……… đồng, được khấu trừ ",
+        "after": " % nếu Bên A ký sản xuất).",
+        "default": null,
+        "option": "pa_1_a"
+      },
+      {
+        "key": "o_15",
+        "seq": 15,
+        "article": "Điều 1. Nội dung công việc",
+        "before": "1.3. Không bao gồm: thiết bị điện tử, thiết bị bếp (bếp, hút mùi, lò",
+        "after": "), đá ốp, kính, rèm, đèn trang trí và đấu nối điện",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_16",
+        "seq": 16,
+        "article": "Điều 2. Đo đạc, bản vẽ và mẫu vật liệu",
+        "before": "2.4. Vật liệu chính: ",
+        "after": " (VD: MDF lõi xanh chống ẩm phủ melamine/acrylic/l",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_17",
+        "seq": 17,
+        "article": "Điều 2. Đo đạc, bản vẽ và mẫu vật liệu",
+        "before": "liệu chính: ………………… (VD: MDF lõi xanh chống ẩm phủ melamine/acrylic/laminate; gỗ tự nhiên ",
+        "after": "; phụ kiện bản lề, ray … thương hiệu …).",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_18",
+        "seq": 18,
+        "article": "Điều 2. Đo đạc, bản vẽ và mẫu vật liệu",
+        "before": "MDF lõi xanh chống ẩm phủ melamine/acrylic/laminate; gỗ tự nhiên ……; phụ kiện bản lề, ray ",
+        "after": " thương hiệu …).",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_19",
+        "seq": 19,
+        "article": "Điều 2. Đo đạc, bản vẽ và mẫu vật liệu",
+        "before": "ống ẩm phủ melamine/acrylic/laminate; gỗ tự nhiên ……; phụ kiện bản lề, ray …… thương hiệu ",
+        "after": ").",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "c_1",
+        "seq": 20,
+        "article": "Điều 3. Giá hợp đồng",
+        "before": "3.1. Giá hợp đồng: … (Bằng chữ: …), ",
+        "after": " thuế GTGT, bao gồm chi phí vật liệu, sản xuất, vậ",
+        "default": null,
+        "option": null,
+        "choices": [
+          "đã bao gồm",
+          "chưa bao gồm"
+        ]
+      },
+      {
+        "key": "o_20",
+        "seq": 21,
+        "article": "Điều 3. Giá hợp đồng",
+        "before": "g trình không có thang máy, phải vận chuyển thủ công lên tầng cao hoặc đường vào hạn chế: ",
+        "after": " đồng (nếu có).",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_21",
+        "seq": 22,
+        "article": "Điều 4. Thanh toán",
+        "before": "duyệt shop drawing; 40% khi giao hàng đến công trình (trước khi lắp đặt); 10% trong vòng ",
+        "after": " ngày kể từ ngày nghiệm thu bàn giao.",
+        "default": null,
+        "option": "pa_2_a"
+      },
+      {
+        "key": "o_22",
+        "seq": 23,
+        "article": "Điều 4. Thanh toán",
+        "before": "toán đợt giao hàng thì Bên B có quyền tạm hoãn giao, lắp đặt; Bên A chịu chi phí lưu kho ",
+        "after": " đồng/ngày sau … ngày.",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_23",
+        "seq": 24,
+        "article": "Điều 4. Thanh toán",
+        "before": "g thì Bên B có quyền tạm hoãn giao, lắp đặt; Bên A chịu chi phí lưu kho ……… đồng/ngày sau ",
+        "after": " ngày.",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_24",
+        "seq": 25,
+        "article": "Điều 5. Tiến độ",
+        "before": "5.1. Thời gian sản xuất: ",
+        "after": " ngày làm việc kể từ ngày Bên A ký duyệt shop draw",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_25",
+        "seq": 26,
+        "article": "Điều 5. Tiến độ",
+        "before": "5.2. Thời gian lắp đặt: ",
+        "after": " ngày kể từ ngày giao hàng, với điều kiện mặt bằng",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_26",
+        "seq": 27,
+        "article": "Điều 6. Hàng đặt riêng – hủy đơn và thay đổi",
+        "before": "ợp đồng: (a) trước khi duyệt shop drawing – Bên B được giữ phí thiết kế và chi phí đo đạc ",
+        "after": " đồng; (b) sau khi duyệt shop drawing – Bên A than",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_27",
+        "seq": 28,
+        "article": "Điều 6. Hàng đặt riêng – hủy đơn và thay đổi",
+        "before": "ên A thanh toán toàn bộ chi phí vật liệu đã mua, phần sản xuất đã thực hiện và bồi thường ",
+        "after": " % giá trị phần hợp đồng còn lại; Bên B giao sản p",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_28",
+        "seq": 29,
+        "article": "Điều 7. Giao hàng, lắp đặt và nghiệm thu",
+        "before": "7.1. Bên B thông báo lịch giao hàng trước ",
+        "after": " ngày. Bên A bố trí người nhận hàng, chỗ tập kết;",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_29",
+        "seq": 30,
+        "article": "Điều 7. Giao hàng, lắp đặt và nghiệm thu",
+        "before": "kéo, phụ kiện. Lỗi nhỏ không ảnh hưởng công năng được ghi vào biên bản để khắc phục trong ",
+        "after": " ngày, không là lý do từ chối nghiệm thu.",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_30",
+        "seq": 31,
+        "article": "Điều 7. Giao hàng, lắp đặt và nghiệm thu",
+        "before": "7.3. Bên A không ký nghiệm thu trong vòng ",
+        "after": " ngày kể từ khi Bên B thông báo hoàn thành và khôn",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_31",
+        "seq": 32,
+        "article": "Điều 8. Bảo hành",
+        "before": "8.2. Bên B khắc phục lỗi do vật liệu, sản xuất, lắp đặt trong vòng ",
+        "after": "  ngày kể từ khi nhận thông báo.",
+        "default": "07",
+        "option": null
+      },
+      {
+        "key": "o_32",
+        "seq": 33,
+        "article": "Điều 9. Phạt vi phạm",
+        "before": "9.1. Bên B giao, lắp đặt chậm do lỗi của mình bị phạt ",
+        "after": " % giá trị phần hợp đồng chậm thực hiện cho mỗi ng",
+        "default": "0,1",
+        "option": null
+      },
+      {
+        "key": "o_33",
+        "seq": 34,
+        "article": "Điều 10. Sự kiện bất khả kháng và hoàn cảnh thay đổi cơ bản",
+        "before": "10.4. Nếu sự kiện bất khả kháng kéo dài quá ",
+        "after": "  ngày liên tục, mỗi bên có quyền chấm dứt hợp đồn",
+        "default": "60",
+        "option": null
+      },
+      {
+        "key": "o_34",
+        "seq": 35,
+        "article": "Điều 10. Sự kiện bất khả kháng và hoàn cảnh thay đổi cơ bản",
+        "before": "bản theo Điều 420 Bộ luật Dân sự (ví dụ: giá vật liệu chính biến động bất thường vượt quá ",
+        "after": " % so với thời điểm ký), bên bị ảnh hưởng có quyền",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "c_2",
+        "seq": 36,
+        "article": "Điều 12. Hiệu lực và điều khoản thi hành",
+        "before": "12.1. Hợp đồng có hiệu lực kể từ ",
+        "after": ".",
+        "default": null,
+        "option": null,
+        "choices": [
+          "ngày ký",
+          "ngày bên có quyền nhận được bảo đảm thực hiện hợp đồng/tiền tạm ứng"
+        ]
+      },
+      {
+        "key": "o_35",
+        "seq": 37,
+        "article": "PHỤ LỤC 01 – BẢNG DANH MỤC, QUY CÁCH, VẬT LIỆU VÀ ĐƠN GIÁ",
+        "before": "",
+        "after": "",
+        "default": null,
+        "option": null
+      }
+    ],
+    "sha": "0bba526cc68e36df",
     "notes_removed": 3
   },
   {
@@ -425,11 +4002,16 @@
     "payment_milestones": [],
     "tags": {
       "so_hop_dong": {},
+      "o_1": {},
       "ngay_ky_ngay": {},
       "ngay_ky_thang": {},
       "ngay_ky_nam": {},
       "ten_hop_dong": {},
       "dia_diem": {},
+      "o_2": {},
+      "o_3": {},
+      "o_4": {},
+      "o_5": {},
       "nvg_ten": {},
       "nvg_dia_chi": {},
       "nvg_ma_so_thue": {},
@@ -437,16 +4019,448 @@
       "nvg_email": {},
       "nvg_dai_dien": {},
       "nvg_chuc_vu": {},
+      "o_6": {},
+      "o_7": {},
+      "o_8": {},
+      "o_9": {},
       "nvg_so_tai_khoan": {},
       "nvg_ngan_hang": {},
       "doi_tac_ten": {},
+      "o_10": {},
+      "o_11": {},
+      "o_12": {},
+      "o_13": {},
+      "o_14": {},
       "doi_tac_dia_chi": {},
       "doi_tac_dien_thoai": {},
       "doi_tac_email": {},
       "doi_tac_so_tai_khoan": {},
-      "doi_tac_ngan_hang": {}
+      "doi_tac_ngan_hang": {},
+      "o_15": {},
+      "pa_1_a": {
+        "pa_1_a_o": {},
+        "o_16": {}
+      },
+      "pa_1_b": {
+        "pa_1_b_o": {}
+      },
+      "o_17": {},
+      "o_18": {},
+      "o_19": {},
+      "o_20": {},
+      "o_21": {},
+      "o_22": {},
+      "o_23": {},
+      "o_24": {},
+      "o_25": {},
+      "o_26": {},
+      "o_27": {},
+      "o_28": {},
+      "pa_2_a": {
+        "pa_2_a_o": {}
+      },
+      "pa_2_b": {
+        "pa_2_b_o": {}
+      },
+      "pa_3_a": {
+        "pa_3_a_o": {}
+      },
+      "pa_3_b": {
+        "pa_3_b_o": {}
+      },
+      "o_29": {},
+      "o_30": {},
+      "o_31": {},
+      "o_32": {},
+      "o_33": {},
+      "o_34": {},
+      "o_35": {},
+      "c_1": {}
     },
-    "sha": "681f5f96a0e0622a",
+    "options": [
+      {
+        "id": "pa_1",
+        "article": "Điều 2. Nội dung và khối lượng khoán",
+        "label": "",
+        "options": [
+          {
+            "key": "pa_1_a",
+            "letter": "A",
+            "text": "Phương án A: Khoán theo m² sàn xây dựng cho toàn bộ phần thô: ……… đồng/m², diện tích tính theo cách tính của hợp đồng thi công với chủ nhà."
+          },
+          {
+            "key": "pa_1_b",
+            "letter": "B",
+            "text": "Phương án B: Khoán theo từng hạng mục với đơn giá như bảng trên; thanh toán theo khối lượng thực tế nghiệm thu."
+          }
+        ]
+      },
+      {
+        "id": "pa_2",
+        "article": "Điều 5. Thanh toán và thuế",
+        "label": "5.4. Thuế thu nhập cá nhân:",
+        "options": [
+          {
+            "key": "pa_2_a",
+            "letter": "A",
+            "text": "Phương án A: Bên A khấu trừ 10% thuế thu nhập cá nhân trên mỗi lần chi trả từ 2.000.000 đồng trở lên cho cá nhân, nộp thay vào ngân sách và cấp chứng từ khấu tr"
+          },
+          {
+            "key": "pa_2_b",
+            "letter": "B",
+            "text": "Phương án B: Bên B là hộ kinh doanh/doanh nghiệp, tự kê khai nộp thuế và xuất hóa đơn cho Bên A."
+          }
+        ]
+      },
+      {
+        "id": "pa_3",
+        "article": "Điều 6. An toàn lao động và kỷ luật công trường",
+        "label": "6.3. Bảo hiểm tai nạn cho thành viên tổ đội:",
+        "options": [
+          {
+            "key": "pa_3_a",
+            "letter": "A",
+            "text": "Phương án A: Bên B tự mua và nộp bản sao cho Bên A trước khi vào công trình."
+          },
+          {
+            "key": "pa_3_b",
+            "letter": "B",
+            "text": "Phương án B: Bên A mua theo danh sách thợ và trừ phí bảo hiểm vào tiền khoán."
+          }
+        ]
+      }
+    ],
+    "free_fields": [
+      {
+        "key": "o_1",
+        "seq": 1,
+        "article": "Phần đầu văn bản",
+        "before": "",
+        "after": ", ngày … tháng … năm …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_2",
+        "seq": 2,
+        "article": "Phần đầu văn bản",
+        "before": "Hạng mục khoán: ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_3",
+        "seq": 3,
+        "article": "Phần đầu văn bản",
+        "before": "Hợp đồng thi công số ",
+        "after": " ký với chủ đầu tư … (nếu có);",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_4",
+        "seq": 4,
+        "article": "Phần đầu văn bản",
+        "before": "Hợp đồng thi công số ……… ký với chủ đầu tư ",
+        "after": " (nếu có);",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_5",
+        "seq": 5,
+        "article": "Phần đầu văn bản",
+        "before": "Hôm nay, ngày … tháng … năm …, tại ",
+        "after": ", chúng tôi gồm:",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_6",
+        "seq": 6,
+        "article": "Phần đầu văn bản",
+        "before": "(Hoặc người được ủy quyền: ",
+        "after": " – Chức vụ: … – theo Giấy ủy quyền số … ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_7",
+        "seq": 7,
+        "article": "Phần đầu văn bản",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ",
+        "after": " – theo Giấy ủy quyền số … ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_8",
+        "seq": 8,
+        "article": "Phần đầu văn bản",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ……………… – theo Giấy ủy quyền số ",
+        "after": " ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_9",
+        "seq": 9,
+        "article": "Phần đầu văn bản",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ……………… – theo Giấy ủy quyền số ……… ngày ",
+        "after": ")",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_10",
+        "seq": 10,
+        "article": "Phần đầu văn bản",
+        "before": "Ông/Bà: ",
+        "after": "  Ngày sinh: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_11",
+        "seq": 11,
+        "article": "Phần đầu văn bản",
+        "before": "Ông/Bà: …………………………………  Ngày sinh: ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_12",
+        "seq": 12,
+        "article": "Phần đầu văn bản",
+        "before": "Số định danh cá nhân/CCCD: ",
+        "after": " cấp ngày … tại …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_13",
+        "seq": 13,
+        "article": "Phần đầu văn bản",
+        "before": "Số định danh cá nhân/CCCD: ……………………… cấp ngày ",
+        "after": " tại …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_14",
+        "seq": 14,
+        "article": "Phần đầu văn bản",
+        "before": "Số định danh cá nhân/CCCD: ……………………… cấp ngày ……/……/……… tại ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_15",
+        "seq": 15,
+        "article": "Điều 2. Nội dung và khối lượng khoán",
+        "before": "",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_16",
+        "seq": 16,
+        "article": "Điều 2. Nội dung và khối lượng khoán",
+        "before": "… Phương án A: Khoán theo m² sàn xây dựng cho toàn bộ phần thô: ",
+        "after": " đồng/m², diện tích tính theo cách tính của hợp đồ",
+        "default": null,
+        "option": "pa_1_a"
+      },
+      {
+        "key": "o_17",
+        "seq": 17,
+        "article": "Điều 2. Nội dung và khối lượng khoán",
+        "before": "của tổ đội. Không bao gồm: vật tư, máy móc chính (máy trộn, vận thăng, giàn giáo, cốp pha",
+        "after": ") do Bên A cung cấp, trừ khi ghi khác: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_18",
+        "seq": 18,
+        "article": "Điều 2. Nội dung và khối lượng khoán",
+        "before": "móc chính (máy trộn, vận thăng, giàn giáo, cốp pha…) do Bên A cung cấp, trừ khi ghi khác: ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_19",
+        "seq": 19,
+        "article": "Điều 3. Tiến độ và nhân lực",
+        "before": "3.1. Thời gian thực hiện: từ ngày ",
+        "after": " /20… đến ngày … /20…, theo tiến độ do Bên A lập.",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_20",
+        "seq": 20,
+        "article": "Điều 3. Tiến độ và nhân lực",
+        "before": "3.1. Thời gian thực hiện: từ ngày …… /…… /20",
+        "after": " đến ngày … /20…, theo tiến độ do Bên A lập. Bên B",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_21",
+        "seq": 21,
+        "article": "Điều 3. Tiến độ và nhân lực",
+        "before": "3.1. Thời gian thực hiện: từ ngày …… /…… /20…… đến ngày ",
+        "after": " /20…, theo tiến độ do Bên A lập. Bên B bố trí tối",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_22",
+        "seq": 22,
+        "article": "Điều 3. Tiến độ và nhân lực",
+        "before": "3.1. Thời gian thực hiện: từ ngày …… /…… /20…… đến ngày …… /…… /20",
+        "after": ", theo tiến độ do Bên A lập. Bên B bố trí tối thiể",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_23",
+        "seq": 23,
+        "article": "Điều 3. Tiến độ và nhân lực",
+        "before": "gày …… /…… /20…… đến ngày …… /…… /20……, theo tiến độ do Bên A lập. Bên B bố trí tối thiểu ",
+        "after": " thợ chính và … thợ phụ thường xuyên tại công trìn",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_24",
+        "seq": 24,
+        "article": "Điều 3. Tiến độ và nhân lực",
+        "before": "đến ngày …… /…… /20……, theo tiến độ do Bên A lập. Bên B bố trí tối thiểu …… thợ chính và ",
+        "after": " thợ phụ thường xuyên tại công trình.",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_25",
+        "seq": 25,
+        "article": "Điều 4. Chất lượng, nghiệm thu, vật tư",
+        "before": "4.3. Vật tư Bên A cấp được giao nhận có biên bản; định mức hao hụt cho phép: ",
+        "after": " (theo định mức của Bên A). Hao hụt vượt định mức,",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_26",
+        "seq": 26,
+        "article": "Điều 5. Thanh toán và thuế",
+        "before": "5.1. Tạm ứng theo tuần (hoặc nửa tháng): tối đa ",
+        "after": " % giá trị khối lượng đã nghiệm thu trong kỳ, than",
+        "default": "80",
+        "option": null
+      },
+      {
+        "key": "o_27",
+        "seq": 27,
+        "article": "Điều 5. Thanh toán và thuế",
+        "before": "ối đa …… % (mặc định: 80%) giá trị khối lượng đã nghiệm thu trong kỳ, thanh toán vào ngày ",
+        "after": " hằng tuần.",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_28",
+        "seq": 28,
+        "article": "Điều 5. Thanh toán và thuế",
+        "before": "5.3. Giữ lại bảo hành: ",
+        "after": " % tổng giá trị khoán, trả cho Bên B sau khi hết t",
+        "default": "5%, tối đa 10",
+        "option": null
+      },
+      {
+        "key": "o_29",
+        "seq": 29,
+        "article": "Điều 7. Bảo hành tay nghề",
+        "before": "Trong thời hạn bảo hành của công trình (",
+        "after": " tháng), Bên B có trách nhiệm cử thợ sửa chữa lỗi",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_30",
+        "seq": 30,
+        "article": "Điều 7. Bảo hành tay nghề",
+        "before": "ủa công trình (…… tháng), Bên B có trách nhiệm cử thợ sửa chữa lỗi do tay nghề trong vòng ",
+        "after": " ngày kể từ khi được thông báo. Bên B không thực h",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_31",
+        "seq": 31,
+        "article": "Điều 8. Phạt vi phạm và chấm dứt",
+        "before": "8.1. Chậm tiến độ do lỗi của Bên B: trừ ",
+        "after": " đồng/ngày (hoặc … % giá trị khoán/ngày), tổng khô",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_32",
+        "seq": 32,
+        "article": "Điều 8. Phạt vi phạm và chấm dứt",
+        "before": "8.1. Chậm tiến độ do lỗi của Bên B: trừ …… đồng/ngày (hoặc ",
+        "after": " % giá trị khoán/ngày), tổng không quá … % giá trị",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_33",
+        "seq": 33,
+        "article": "Điều 8. Phạt vi phạm và chấm dứt",
+        "before": "tiến độ do lỗi của Bên B: trừ …… đồng/ngày (hoặc …… % giá trị khoán/ngày), tổng không quá ",
+        "after": " % giá trị khoán.",
+        "default": "10",
+        "option": null
+      },
+      {
+        "key": "o_34",
+        "seq": 34,
+        "article": "Điều 8. Phạt vi phạm và chấm dứt",
+        "before": "8.2. Bên A được chấm dứt hợp đồng khi Bên B: bỏ công trình quá ",
+        "after": " ngày; thi công sai kỹ thuật nhiều lần đã được nhắ",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_35",
+        "seq": 35,
+        "article": "Điều 8. Phạt vi phạm và chấm dứt",
+        "before": "8.3. Bên B được chấm dứt hợp đồng khi Bên A chậm thanh toán quá ",
+        "after": " ngày sau ngày tạm ứng đã thỏa thuận.",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "c_1",
+        "seq": 36,
+        "article": "Điều 10. Hiệu lực và điều khoản thi hành",
+        "before": "10.1. Hợp đồng có hiệu lực kể từ ",
+        "after": ".",
+        "default": null,
+        "option": null,
+        "choices": [
+          "ngày ký",
+          "ngày bên có quyền nhận được bảo đảm thực hiện hợp đồng/tiền tạm ứng"
+        ]
+      }
+    ],
+    "sha": "908001cc88a17452",
     "notes_removed": 1
   },
   {
@@ -481,9 +4495,13 @@
     "tags": {
       "doi_tac_ten": {},
       "so_hop_dong": {},
+      "o_1": {},
       "ngay_ky_ngay": {},
       "ngay_ky_thang": {},
       "ngay_ky_nam": {},
+      "o_2": {},
+      "o_3": {},
+      "o_4": {},
       "nvg_ten": {},
       "nvg_dia_chi": {},
       "nvg_ma_so_thue": {},
@@ -491,6 +4509,10 @@
       "nvg_email": {},
       "nvg_dai_dien": {},
       "nvg_chuc_vu": {},
+      "o_5": {},
+      "o_6": {},
+      "o_7": {},
+      "o_8": {},
       "nvg_so_tai_khoan": {},
       "nvg_ngan_hang": {},
       "doi_tac_dia_chi": {},
@@ -498,12 +4520,509 @@
       "doi_tac_dien_thoai": {},
       "doi_tac_dai_dien": {},
       "doi_tac_chuc_vu": {},
+      "o_9": {},
+      "o_10": {},
       "doi_tac_so_tai_khoan": {},
       "doi_tac_ngan_hang": {},
+      "o_11": {},
       "gia_tri": {},
-      "gia_tri_bang_chu": {}
+      "gia_tri_bang_chu": {},
+      "o_12": {},
+      "o_13": {},
+      "pa_1_a": {
+        "pa_1_a_o": {}
+      },
+      "pa_1_b": {
+        "pa_1_b_o": {},
+        "o_14": {},
+        "o_15": {},
+        "o_16": {},
+        "o_17": {}
+      },
+      "o_18": {},
+      "o_19": {},
+      "o_20": {},
+      "o_21": {},
+      "o_22": {},
+      "o_23": {},
+      "o_24": {},
+      "o_25": {},
+      "pa_2_a": {
+        "pa_2_a_o": {},
+        "o_26": {}
+      },
+      "pa_2_b": {
+        "pa_2_b_o": {},
+        "o_27": {}
+      },
+      "pa_2_c": {
+        "pa_2_c_o": {},
+        "o_28": {}
+      },
+      "o_29": {},
+      "o_30": {},
+      "o_31": {},
+      "o_32": {},
+      "o_33": {},
+      "o_34": {},
+      "pa_3_a": {
+        "pa_3_a_o": {}
+      },
+      "pa_3_b": {
+        "pa_3_b_o": {}
+      },
+      "o_35": {},
+      "o_36": {},
+      "o_37": {},
+      "o_38": {},
+      "o_39": {},
+      "o_40": {},
+      "o_41": {},
+      "c_1": {}
     },
-    "sha": "f78576473ad01b7a",
+    "options": [
+      {
+        "id": "pa_1",
+        "article": "Điều 1. Hàng hóa, số lượng, đơn giá",
+        "label": "1.3. Đơn giá:",
+        "options": [
+          {
+            "key": "pa_1_a",
+            "letter": "A",
+            "text": "Phương án A: Cố định trong suốt thời gian thực hiện hợp đồng."
+          },
+          {
+            "key": "pa_1_b",
+            "letter": "B",
+            "text": "Phương án B: Cố định đến ngày …… /…… /20……; sau thời điểm này, Bên B được điều chỉnh khi giá thị trường biến động quá …… % và phải thông báo bằng văn bản trước "
+          }
+        ]
+      },
+      {
+        "id": "pa_2",
+        "article": "Điều 5. Thanh toán",
+        "label": "Điều 5. Thanh toán",
+        "options": [
+          {
+            "key": "pa_2_a",
+            "letter": "A",
+            "text": "Phương án A: Công nợ: Bên A thanh toán trong vòng …… (mặc định: 30) ngày kể từ ngày đối chiếu công nợ hằng tháng và nhận hóa đơn GTGT hợp lệ."
+          },
+          {
+            "key": "pa_2_b",
+            "letter": "B",
+            "text": "Phương án B: Theo đợt giao: Bên A thanh toán 100% giá trị mỗi đợt trong vòng …… ngày sau khi nhận hàng và hóa đơn."
+          },
+          {
+            "key": "pa_2_c",
+            "letter": "C",
+            "text": "Phương án C: Tạm ứng: Bên A tạm ứng …… % (tối đa 30%) khi ký hợp đồng; phần còn lại theo Phương án A hoặc B. Tạm ứng được khấu trừ dần vào các đợt thanh toán."
+          }
+        ]
+      },
+      {
+        "id": "pa_3",
+        "article": "Điều 9. Giải quyết tranh chấp",
+        "label": "9.2. Trường hợp thương lượng không thành trong vòng 30 (ba mươi) ngày kể từ ngày một bên gửi yêu cầu, tranh chấp được gi",
+        "options": [
+          {
+            "key": "pa_3_a",
+            "letter": "A",
+            "text": "Phương án A: Tòa án nhân dân có thẩm quyền theo quy định của pháp luật tố tụng dân sự giải quyết theo quy định của pháp luật Việt Nam."
+          },
+          {
+            "key": "pa_3_b",
+            "letter": "B",
+            "text": "Phương án B: Trung tâm Trọng tài Quốc tế Việt Nam (VIAC) giải quyết theo Quy tắc tố tụng trọng tài của Trung tâm này; phán quyết trọng tài là chung thẩm. Số trọ"
+          }
+        ]
+      }
+    ],
+    "free_fields": [
+      {
+        "key": "o_1",
+        "seq": 1,
+        "article": "Phần đầu văn bản",
+        "before": "",
+        "after": ", ngày … tháng … năm …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_2",
+        "seq": 2,
+        "article": "Phần đầu văn bản",
+        "before": "Cung cấp cho công trình: ",
+        "after": " – Địa điểm giao hàng: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_3",
+        "seq": 3,
+        "article": "Phần đầu văn bản",
+        "before": "Cung cấp cho công trình: ……………………………… – Địa điểm giao hàng: ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_4",
+        "seq": 4,
+        "article": "Phần đầu văn bản",
+        "before": "Hôm nay, ngày … tháng … năm …, tại ",
+        "after": ", chúng tôi gồm:",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_5",
+        "seq": 5,
+        "article": "Phần đầu văn bản",
+        "before": "(Hoặc người được ủy quyền: ",
+        "after": " – Chức vụ: … – theo Giấy ủy quyền số … ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_6",
+        "seq": 6,
+        "article": "Phần đầu văn bản",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ",
+        "after": " – theo Giấy ủy quyền số … ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_7",
+        "seq": 7,
+        "article": "Phần đầu văn bản",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ……………… – theo Giấy ủy quyền số ",
+        "after": " ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_8",
+        "seq": 8,
+        "article": "Phần đầu văn bản",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ……………… – theo Giấy ủy quyền số ……… ngày ",
+        "after": ")",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_9",
+        "seq": 9,
+        "article": "Phần đầu văn bản",
+        "before": "(Theo Giấy ủy quyền số ",
+        "after": " ngày … – nếu người ký không phải đại diện theo ph",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_10",
+        "seq": 10,
+        "article": "Phần đầu văn bản",
+        "before": "(Theo Giấy ủy quyền số ……… ngày ",
+        "after": " – nếu người ký không phải đại diện theo pháp luật",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_11",
+        "seq": 11,
+        "article": "Điều 1. Hàng hóa, số lượng, đơn giá",
+        "before": "Thuế GTGT ",
+        "after": "%",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_12",
+        "seq": 12,
+        "article": "Điều 1. Hàng hóa, số lượng, đơn giá",
+        "before": "ố lượng trên là tạm tính; số lượng thanh toán theo thực tế giao nhận, dung sai cho phép ± ",
+        "after": " %. Đơn giá đã bao gồm chi phí vận chuyển, bốc xếp",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_13",
+        "seq": 13,
+        "article": "Điều 1. Hàng hóa, số lượng, đơn giá",
+        "before": "ép ± …… %. Đơn giá đã bao gồm chi phí vận chuyển, bốc xếp [xuống chân công trình/lên tầng ",
+        "after": "].",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_14",
+        "seq": 14,
+        "article": "Điều 1. Hàng hóa, số lượng, đơn giá",
+        "before": "… Phương án B: Cố định đến ngày ",
+        "after": " /20…; sau thời điểm này, Bên B được điều chỉnh kh",
+        "default": null,
+        "option": "pa_1_b"
+      },
+      {
+        "key": "o_15",
+        "seq": 15,
+        "article": "Điều 1. Hàng hóa, số lượng, đơn giá",
+        "before": "… Phương án B: Cố định đến ngày …… /…… /20",
+        "after": "; sau thời điểm này, Bên B được điều chỉnh khi giá",
+        "default": null,
+        "option": "pa_1_b"
+      },
+      {
+        "key": "o_16",
+        "seq": 16,
+        "article": "Điều 1. Hàng hóa, số lượng, đơn giá",
+        "before": "y …… /…… /20……; sau thời điểm này, Bên B được điều chỉnh khi giá thị trường biến động quá ",
+        "after": " % và phải thông báo bằng văn bản trước … ngày; Bê",
+        "default": null,
+        "option": "pa_1_b"
+      },
+      {
+        "key": "o_17",
+        "seq": 17,
+        "article": "Điều 1. Hàng hóa, số lượng, đơn giá",
+        "before": "ược điều chỉnh khi giá thị trường biến động quá …… % và phải thông báo bằng văn bản trước ",
+        "after": " ngày; Bên A có quyền chấp nhận hoặc dừng đặt hàng",
+        "default": null,
+        "option": "pa_1_b"
+      },
+      {
+        "key": "o_18",
+        "seq": 18,
+        "article": "Điều 2. Chất lượng và chứng từ",
+        "before": "y của nhà sản xuất cho đúng lô hàng; phiếu kết quả thí nghiệm (với thép, xi măng, bê tông ",
+        "after": " khi Bên A yêu cầu).",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_19",
+        "seq": 19,
+        "article": "Điều 2. Chất lượng và chứng từ",
+        "before": "t quả không đạt thì Bên B chịu chi phí thí nghiệm, thu hồi và thay thế lô hàng trong vòng ",
+        "after": " ngày.",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_20",
+        "seq": 20,
+        "article": "Điều 3. Giao hàng",
+        "before": "3.1. Địa điểm giao: tại công trình ",
+        "after": " (hoặc kho của Bên A tại …).",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_21",
+        "seq": 21,
+        "article": "Điều 3. Giao hàng",
+        "before": "3.1. Địa điểm giao: tại công trình ……………………………… (hoặc kho của Bên A tại ",
+        "after": ").",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_22",
+        "seq": 22,
+        "article": "Điều 3. Giao hàng",
+        "before": "hàng của Bên A gửi qua thư điện tử/tin nhắn từ đầu mối liên lạc đã đăng ký, trước ít nhất ",
+        "after": "  giờ. Đơn đặt hàng ghi rõ chủng loại, số lượng, t",
+        "default": "24",
+        "option": null
+      },
+      {
+        "key": "o_23",
+        "seq": 23,
+        "article": "Điều 4. Nghiệm thu, giao nhận",
+        "before": "ủng loại, kém chất lượng, hư hỏng: Bên A có quyền từ chối nhận; Bên B thay thế trong vòng ",
+        "after": "  giờ đối với vật tư phục vụ đổ bê tông và … ngày",
+        "default": "24",
+        "option": null
+      },
+      {
+        "key": "o_24",
+        "seq": 24,
+        "article": "Điều 4. Nghiệm thu, giao nhận",
+        "before": "hận; Bên B thay thế trong vòng …… (mặc định: 24) giờ đối với vật tư phục vụ đổ bê tông và ",
+        "after": " ngày đối với vật tư khác.",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_25",
+        "seq": 25,
+        "article": "Điều 4. Nghiệm thu, giao nhận",
+        "before": "4.3. Thời hạn khiếu nại về chất lượng: ",
+        "after": " ngày kể từ ngày giao hàng đối với khuyết tật nhìn",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_26",
+        "seq": 26,
+        "article": "Điều 5. Thanh toán",
+        "before": "… Phương án A: Công nợ: Bên A thanh toán trong vòng ",
+        "after": "  ngày kể từ ngày đối chiếu công nợ hằng tháng và",
+        "default": "30",
+        "option": "pa_2_a"
+      },
+      {
+        "key": "o_27",
+        "seq": 27,
+        "article": "Điều 5. Thanh toán",
+        "before": "… Phương án B: Theo đợt giao: Bên A thanh toán 100% giá trị mỗi đợt trong vòng ",
+        "after": " ngày sau khi nhận hàng và hóa đơn.",
+        "default": null,
+        "option": "pa_2_b"
+      },
+      {
+        "key": "o_28",
+        "seq": 28,
+        "article": "Điều 5. Thanh toán",
+        "before": "… Phương án C: Tạm ứng: Bên A tạm ứng ",
+        "after": " % (tối đa 30%) khi ký hợp đồng; phần còn lại theo",
+        "default": null,
+        "option": "pa_2_c"
+      },
+      {
+        "key": "o_29",
+        "seq": 29,
+        "article": "Điều 5. Thanh toán",
+        "before": "5.1. Hằng tháng, trước ngày ",
+        "after": " , hai bên đối chiếu, xác nhận công nợ bằng văn bả",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_30",
+        "seq": 30,
+        "article": "Điều 6. Bảo hành",
+        "before": "Bên B bảo hành hàng hóa theo chính sách của nhà sản xuất, tối thiểu ",
+        "after": " tháng kể từ ngày giao hàng; chịu trách nhiệm đổi",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_31",
+        "seq": 31,
+        "article": "Điều 7. Phạt vi phạm và bồi thường",
+        "before": "7.1. Bên B giao hàng chậm, giao thiếu, sai chủng loại: phạt ",
+        "after": " % giá trị phần hàng giao chậm cho mỗi ngày chậm.",
+        "default": "0,5",
+        "option": null
+      },
+      {
+        "key": "o_32",
+        "seq": 32,
+        "article": "Điều 7. Phạt vi phạm và bồi thường",
+        "before": "7.4. Bên B giao hàng chậm quá ",
+        "after": " ngày, Bên A có quyền mua hàng của bên khác và yêu",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_33",
+        "seq": 33,
+        "article": "Điều 8. Sự kiện bất khả kháng và hoàn cảnh thay đổi cơ bản",
+        "before": "8.4. Nếu sự kiện bất khả kháng kéo dài quá ",
+        "after": "  ngày liên tục, mỗi bên có quyền chấm dứt hợp đồn",
+        "default": "60",
+        "option": null
+      },
+      {
+        "key": "o_34",
+        "seq": 34,
+        "article": "Điều 8. Sự kiện bất khả kháng và hoàn cảnh thay đổi cơ bản",
+        "before": "bản theo Điều 420 Bộ luật Dân sự (ví dụ: giá vật liệu chính biến động bất thường vượt quá ",
+        "after": " % so với thời điểm ký), bên bị ảnh hưởng có quyền",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_35",
+        "seq": 35,
+        "article": "Điều 10. Thông báo và đại diện liên lạc",
+        "before": "10.2. Đại diện liên lạc: Bên A: ",
+        "after": " – ĐT: … – Email: …; Bên B: … – ĐT: … – Email: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_36",
+        "seq": 36,
+        "article": "Điều 10. Thông báo và đại diện liên lạc",
+        "before": "10.2. Đại diện liên lạc: Bên A: ………………… – ĐT: ",
+        "after": " – Email: …; Bên B: … – ĐT: … – Email: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_37",
+        "seq": 37,
+        "article": "Điều 10. Thông báo và đại diện liên lạc",
+        "before": "10.2. Đại diện liên lạc: Bên A: ………………… – ĐT: ………… – Email: ",
+        "after": "; Bên B: … – ĐT: … – Email: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_38",
+        "seq": 38,
+        "article": "Điều 10. Thông báo và đại diện liên lạc",
+        "before": "10.2. Đại diện liên lạc: Bên A: ………………… – ĐT: ………… – Email: …………; Bên B: ",
+        "after": " – ĐT: … – Email: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_39",
+        "seq": 39,
+        "article": "Điều 10. Thông báo và đại diện liên lạc",
+        "before": "10.2. Đại diện liên lạc: Bên A: ………………… – ĐT: ………… – Email: …………; Bên B: ………………… – ĐT: ",
+        "after": " – Email: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_40",
+        "seq": 40,
+        "article": "Điều 10. Thông báo và đại diện liên lạc",
+        "before": "iện liên lạc: Bên A: ………………… – ĐT: ………… – Email: …………; Bên B: ………………… – ĐT: ………… – Email: ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_41",
+        "seq": 41,
+        "article": "Điều 10. Thông báo và đại diện liên lạc",
+        "before": "10.3. Tin nhắn qua ứng dụng (Zalo, ",
+        "after": ") chỉ dùng để trao đổi điều hành, không thay thế v",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "c_1",
+        "seq": 42,
+        "article": "Điều 11. Hiệu lực và điều khoản thi hành",
+        "before": "11.1. Hợp đồng có hiệu lực kể từ ",
+        "after": ".",
+        "default": null,
+        "option": null,
+        "choices": [
+          "ngày ký",
+          "ngày bên có quyền nhận được bảo đảm thực hiện hợp đồng/tiền tạm ứng"
+        ]
+      }
+    ],
+    "sha": "36fef2c569b48ef4",
     "notes_removed": 2
   }
 ]

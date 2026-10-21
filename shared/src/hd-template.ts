@@ -254,9 +254,17 @@ const LOOP_COLUMN_KEYS: ReadonlySet<string> = new Set(TEMPLATE_LOOP_COLUMNS.map(
  * Chỗ trống nào trong mẫu hệ thống không biết. `tags` là cây tag của bộ điền: tag thường →
  * `{}`, bảng lặp → `{ cột: {} }`. Trả về tên đọc được (`dot_thanh_toan.so_tienn`).
  */
+/**
+ * Chỗ trống TỰ DO của bộ mẫu chuyển từ bản dự thảo (0186, convert.py): `o_N` (dải chấm),
+ * `c_N` (lựa chọn trong ngoặc vuông), `pa_N_x` (khối phương án) và `pa_N_x_o` (ô đánh dấu của
+ * phương án). Nhãn / câu văn quanh nó nằm ở `contract_templates.free_fields` / `options`.
+ */
+export const FREE_TEMPLATE_TAG = /^(?:[oc]_\d+|pa_\d+_[a-z](?:_o)?)$/;
+
 export function unknownTemplateTags(tags: Readonly<Record<string, unknown>>): string[] {
   const unknown: string[] = [];
   for (const [key, inner] of Object.entries(tags)) {
+    if (FREE_TEMPLATE_TAG.test(key)) continue;
     const field = TEMPLATE_FIELDS.find((f) => f.key === key);
     if (!field) {
       unknown.push(key);
@@ -345,7 +353,8 @@ export interface TemplateLoopRow {
   han: string | null;
 }
 
-export type TemplateValue = string | null | TemplateLoopRow[];
+/** `boolean` cho khối «☐ Phương án» (0186): đúng = in phương án, sai = bỏ. */
+export type TemplateValue = string | null | boolean | TemplateLoopRow[];
 
 /** Chuỗi rỗng / khoảng trắng → `null`. Nhận cả số: PostgREST trả cột `numeric` dạng số. */
 const blank = (s: string | number | null | undefined): string | null => {
