@@ -19,7 +19,9 @@ import {
   CONTRACT_TYPE_LABELS,
   buildTemplateData,
   formatDateTime,
-  missingTemplateFields,
+  MISSING_FIELD_SOURCE_LABELS,
+  missingTemplateFieldsBySource,
+  type MissingFieldSource,
   toNvgDateInput,
   type ContractPriceForm,
   type TemplateValue,
@@ -221,7 +223,7 @@ interface Filled {
   templateId: string;
   blob: Blob;
   data: Record<string, TemplateValue>;
-  missing: string[];
+  missing: { source: MissingFieldSource; labels: string[] }[];
 }
 
 /** Mẫu khớp hình thức giá đứng trước, mẫu dùng chung (không ghi hình thức giá) sau. */
@@ -334,7 +336,7 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
         templateId: chosen.id,
         blob: fillTemplate(buffer, data),
         data,
-        missing: missingTemplateFields(inspected.tags, data),
+        missing: missingTemplateFieldsBySource(inspected.tags, data, contract.type),
       });
     } catch (e) {
       setError(toUserMessage(e));
@@ -365,7 +367,7 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
         blob: filled.blob,
         fileName,
         filledValues: filled.data,
-        missingFields: filled.missing,
+        missingFields: filled.missing.flatMap((g) => g.labels),
         changeReason: reason,
       });
       setSavedVersion(version);
@@ -429,15 +431,37 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
             <div className="mt-3 rounded-md border border-status-pending bg-status-pending-bg px-3 py-2">
               <p className="flex items-center gap-2 font-medium text-status-pending">
                 <AlertTriangle className="size-4" aria-hidden />
-                {filled.missing.length} ô chưa có dữ liệu — văn bản in dải chấm để điền tay
+                {filled.missing.reduce((n, g) => n + g.labels.length, 0)} ô chưa có dữ liệu — văn
+                bản in dải chấm để điền tay
               </p>
-              <ul className="mt-1.5 flex flex-wrap gap-1.5 text-sm">
-                {filled.missing.map((m) => (
-                  <li key={m} className="rounded-sm bg-surface px-2 py-0.5">
-                    {m}
-                  </li>
-                ))}
-              </ul>
+              {filled.missing.map((g) => {
+                const link = missingSourceLink(g.source, contract);
+                return (
+                  <div key={g.source} className="mt-2">
+                    <p className="text-sm font-medium">
+                      {MISSING_FIELD_SOURCE_LABELS[g.source]}
+                      {link && (
+                        <>
+                          {' · '}
+                          <Link
+                            to={link.to}
+                            className="text-brand underline-offset-2 hover:underline"
+                          >
+                            {link.label}
+                          </Link>
+                        </>
+                      )}
+                    </p>
+                    <ul className="mt-1 flex flex-wrap gap-1.5 text-sm">
+                      {g.labels.map((m) => (
+                        <li key={m} className="rounded-sm bg-surface px-2 py-0.5">
+                          {m}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <p className="mt-3 text-status-completed">Mọi chỗ trống của mẫu đã có dữ liệu.</p>
@@ -530,4 +554,23 @@ function VersionsSection({
       )}
     </section>
   );
+}
+
+/** Lối sửa của từng nhóm ô thiếu — ẩn khi không có nơi sửa trên hệ thống. */
+function missingSourceLink(
+  source: MissingFieldSource,
+  contract: ContractDetailRecord,
+): { to: string; label: string } | null {
+  switch (source) {
+    case 'dieu_khoan':
+      return { to: `/hd/hop-dong/${contract.id}?tab=dieu-khoan`, label: 'Mở Điều khoản' };
+    case 'phap_nhan':
+      return { to: '/hd/mau-hop-dong', label: 'Mở Mẫu hợp đồng' };
+    case 'khach_hang':
+      return contract.customer_id
+        ? { to: `/crm/khach-hang/${contract.customer_id}/chinh-sua`, label: 'Sửa hồ sơ khách hàng' }
+        : null;
+    default:
+      return null;
+  }
 }

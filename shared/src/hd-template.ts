@@ -450,7 +450,62 @@ export function missingTemplateFields(
   tags: Readonly<Record<string, unknown>>,
   data: Readonly<Record<string, TemplateValue>>,
 ): string[] {
-  const missing: string[] = [];
+  return collectMissing(tags, data).map((m) => m.label);
+}
+
+/** Nơi sửa một ô còn thiếu — để người soạn biết đi đâu, không phải đoán (anh Dũng 21/10/2026). */
+export type MissingFieldSource =
+  'ky' | 'thong_tin' | 'dieu_khoan' | 'phap_nhan' | 'khach_hang' | 'dien_tay';
+
+export const MISSING_FIELD_SOURCE_LABELS: Record<MissingFieldSource, string> = {
+  ky: 'Điền lúc ký — để dải chấm là bình thường',
+  thong_tin: 'Thông tin in lên văn bản (khối phía trên)',
+  dieu_khoan: 'Tab Điều khoản',
+  phap_nhan: 'Thông tin pháp nhân NVG — Ban Giám đốc / Quản trị sửa ở màn hình Mẫu hợp đồng',
+  khach_hang: 'Hồ sơ khách hàng',
+  dien_tay: 'Luôn điền tay — hệ thống không lưu tài khoản ngân hàng của khách',
+};
+
+const SIGNING_KEYS: ReadonlySet<string> = new Set([
+  'so_hop_dong',
+  'ngay_ky',
+  'ngay_ky_ngay',
+  'ngay_ky_thang',
+  'ngay_ky_nam',
+]);
+
+/** Như `missingTemplateFields`, chia theo nơi phải sửa, theo thứ tự `MISSING_FIELD_SOURCE_LABELS`. */
+export function missingTemplateFieldsBySource(
+  tags: Readonly<Record<string, unknown>>,
+  data: Readonly<Record<string, TemplateValue>>,
+  contractType: ContractType,
+): { source: MissingFieldSource; labels: string[] }[] {
+  const nvgSide = isPayableContract(contractType) ? 'ben_a' : 'ben_b';
+  const groups = new Map<MissingFieldSource, string[]>();
+  for (const m of collectMissing(tags, data)) {
+    const f = m.field;
+    let source: MissingFieldSource;
+    if (f.kind === 'loop') source = 'dieu_khoan';
+    else if (SIGNING_KEYS.has(f.key)) source = 'ky';
+    else if (f.group === 'hop_dong' || f.group === 'gia_tri') source = 'thong_tin';
+    else {
+      const isNvg = f.group === 'nvg' || f.group === nvgSide;
+      if (isNvg) source = 'phap_nhan';
+      else if (/_(so_tai_khoan|ngan_hang)$/.test(f.key)) source = 'dien_tay';
+      else source = 'khach_hang';
+    }
+    groups.set(source, [...(groups.get(source) ?? []), m.label]);
+  }
+  return (Object.keys(MISSING_FIELD_SOURCE_LABELS) as MissingFieldSource[])
+    .filter((s) => groups.has(s))
+    .map((source) => ({ source, labels: groups.get(source)! }));
+}
+
+function collectMissing(
+  tags: Readonly<Record<string, unknown>>,
+  data: Readonly<Record<string, TemplateValue>>,
+): { field: TemplateField; label: string }[] {
+  const missing: { field: TemplateField; label: string }[] = [];
   for (const [key, inner] of Object.entries(tags)) {
     const field = TEMPLATE_FIELDS.find((f) => f.key === key);
     if (!field) continue;
@@ -458,19 +513,19 @@ export function missingTemplateFields(
     if (field.kind === 'loop') {
       const rows = Array.isArray(value) ? value : [];
       if (rows.length === 0) {
-        missing.push(`${field.label} — chưa có điều khoản nào`);
+        missing.push({ field, label: `${field.label} — chưa có điều khoản nào` });
         continue;
       }
       for (const col of Object.keys((inner as Record<string, unknown>) ?? {})) {
         const colKey = col as keyof TemplateLoopRow;
         if (rows.every((r) => r[colKey] === null || r[colKey] === undefined)) {
           const colLabel = TEMPLATE_LOOP_COLUMNS.find(([k]) => k === col)?.[1] ?? col;
-          missing.push(`${field.label} — ${colLabel.toLowerCase()}`);
+          missing.push({ field, label: `${field.label} — ${colLabel.toLowerCase()}` });
         }
       }
     } else if (value === null || value === undefined) {
       const party = PARTY_SHORT[field.group];
-      missing.push(party ? `${field.label} (${party})` : field.label);
+      missing.push({ field, label: party ? `${field.label} (${party})` : field.label });
     }
   }
   return missing;

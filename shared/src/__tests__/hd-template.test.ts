@@ -8,6 +8,7 @@ import {
   splitVat,
   unknownTemplateTags,
   type TemplateSource,
+  missingTemplateFieldsBySource,
 } from '../hd-template';
 
 describe('đọc số thành chữ', () => {
@@ -188,5 +189,41 @@ describe('dữ liệu điền mẫu', () => {
   it('mọi khoá dữ liệu đều có trong danh mục, và ngược lại', () => {
     const keys = Object.keys(buildTemplateData(source()));
     expect(new Set(keys)).toEqual(TEMPLATE_FIELD_KEYS);
+  });
+});
+
+describe('missingTemplateFieldsBySource — ô thiếu chia theo nơi sửa', () => {
+  const tags = {
+    so_hop_dong: {},
+    ben_a_dai_dien: {},
+    ben_a_so_tai_khoan: {},
+    ben_b_dia_chi: {},
+    dot_thanh_toan: { ty_le: {} },
+  };
+  const data = {
+    so_hop_dong: null,
+    ben_a_dai_dien: null,
+    ben_a_so_tai_khoan: null,
+    ben_b_dia_chi: null,
+    dot_thanh_toan: [],
+  };
+
+  it('hợp đồng thi công: NVG là bên B, khách là bên A', () => {
+    const groups = Object.fromEntries(
+      missingTemplateFieldsBySource(tags, data, 'thi_cong').map((g) => [g.source, g.labels]),
+    );
+    expect(groups.ky).toEqual(['Số hợp đồng']);
+    expect(groups.khach_hang).toEqual(['Người đại diện (bên A)']);
+    expect(groups.dien_tay).toEqual(['Số tài khoản (bên A)']);
+    expect(groups.phap_nhan).toEqual(['Địa chỉ (bên B)']);
+    expect(groups.dieu_khoan).toEqual(['Các đợt thanh toán — chưa có điều khoản nào']);
+  });
+
+  it('khoán thầu phụ: NVG là bên A', () => {
+    const groups = Object.fromEntries(
+      missingTemplateFieldsBySource(tags, data, 'khoan_thau_phu').map((g) => [g.source, g.labels]),
+    );
+    expect(groups.phap_nhan).toEqual(['Người đại diện (bên A)', 'Số tài khoản (bên A)']);
+    expect(groups.khach_hang).toEqual(['Địa chỉ (bên B)']);
   });
 });
