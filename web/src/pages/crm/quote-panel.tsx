@@ -12,7 +12,13 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle2, XCircle } from 'lucide-react';
-import { APPROVAL_SUBJECT_LABELS, formatCurrency, formatDate, formatDateTime } from '@nvg/shared';
+import {
+  APPROVAL_SUBJECT_LABELS,
+  formatCurrency,
+  formatDate,
+  formatDateTime,
+  QUOTE_STAGES,
+} from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
@@ -34,10 +40,16 @@ export function QuotePanel({
   opportunityId,
   canEdit,
   isHandedOver,
+  stage,
+  missingForQuote = [],
 }: {
   opportunityId: string;
   canEdit: boolean;
   isHandedOver: boolean;
+  /** Bước hiện tại của cơ hội — chỉ Báo giá / Đàm phán mới lập báo giá (0184). */
+  stage: string;
+  /** Điều kiện còn thiếu để sang Báo giá — nói ngay tại chỗ thay vì để bấm rồi báo lỗi. */
+  missingForQuote?: string[];
 }) {
   const { data: quotes, isLoading, error, refetch } = useQuotes(opportunityId);
   const approvals = useApprovalHistory(
@@ -87,7 +99,17 @@ export function QuotePanel({
         </p>
       )}
 
-      {editable && (
+      {editable && !QUOTE_STAGES.includes(stage) && (
+        <p
+          role="status"
+          className="rounded-sm border border-status-pending bg-status-pending-bg px-3 py-2"
+        >
+          Chưa lập báo giá được — cơ hội chưa sang bước Báo giá.
+          {missingForQuote.length > 0 && ` Cần: ${missingForQuote.join('; ')}.`}
+        </p>
+      )}
+
+      {editable && QUOTE_STAGES.includes(stage) && (
         <div className="flex justify-end">
           <Button variant="secondary" asChild>
             <Link to={`/crm/co-hoi/${opportunityId}/bao-gia/lap-moi`}>

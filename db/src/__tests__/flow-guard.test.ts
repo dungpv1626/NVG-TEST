@@ -268,7 +268,11 @@ describeDb('Việc của từng bước cơ hội — phân loại, khảo sát 
   it('chưa khảo sát thì không sang Báo giá — kể cả khi đã đi qua bước Khảo sát', async () => {
     const id = await newOpportunity({ classification: 'M3', project_type: 'Nhà phố' });
     await move(id, 'khao_sat');
-    await addQuote(id);
+    // 0184: chưa sang Báo giá thì không lập được báo giá — kể cả lập trước cho «đủ điều kiện».
+    const { error: early } = await kd
+      .from('quotes')
+      .insert({ company_id: companyId, opportunity_id: id, total_value: 150_000_000 });
+    expect(early?.message).toContain('chưa sang bước Báo giá');
 
     const { error: blocked } = await move(id, 'bao_gia');
     expect(blocked?.message).toContain('khảo sát');
@@ -292,11 +296,12 @@ describeDb('Việc của từng bước cơ hội — phân loại, khảo sát 
     await markSurveyReportApproved(id);
     const { error } = await move(id, 'bao_gia');
     expect(error).toBeNull();
+    // Sang Báo giá rồi thì lập được.
+    await addQuote(id);
   });
 
   it('bỏ qua khảo sát phải có lý do; lý do lưu trên cơ hội, không sửa thẳng được', async () => {
     const id = await newOpportunity({ classification: 'M3', project_type: 'Nhà phố' });
-    await addQuote(id);
 
     const { error: noReason } = await kd.rpc('waive_opportunity_survey', {
       p_opportunity_id: id,
@@ -464,6 +469,8 @@ describeDb('Báo giá → Đàm phán: biết chờ ai, giá tới tay khách th
         customer_id: customer!.id,
         name: `${TEST_PREFIX} Phiên bản thay thế ${Date.now()}`,
         owner_id: me,
+        // 0184: chỉ lập báo giá ở bước Báo giá / Đàm phán.
+        stage: 'bao_gia',
       })
       .select('id')
       .single();
@@ -704,6 +711,8 @@ describeDb('Không tự phê duyệt hồ sơ của chính mình (0156)', () => 
         customer_id: customer!.id,
         name: `${TEST_PREFIX} Tự duyệt ${Date.now()}`,
         owner_id: me,
+        // 0184: chỉ lập báo giá ở bước Báo giá / Đàm phán.
+        stage: 'bao_gia',
         estimated_value: 100_000_000,
       })
       .select('id')

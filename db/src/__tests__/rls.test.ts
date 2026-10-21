@@ -2950,11 +2950,7 @@ describeDb('HD — hợp đồng, điều khoản và phát sinh', () => {
       if (moveError) throw new Error(moveError.message);
     };
     await step('xac_minh');
-    const { error: quoteError } = await client
-      .from('quotes')
-      .insert({ company_id: company!.id, opportunity_id: id, total_value: 900_000_000 });
-    if (quoteError) throw new Error(quoteError.message);
-    // Báo giá cần khảo sát hiện trạng (0160).
+    // Báo giá cần khảo sát hiện trạng đã được duyệt (0160, 0175).
     const { error: surveyError } = await client.from('site_surveys').insert({
       opportunity_id: id,
       surveyed_at: new Date().toISOString(),
@@ -2963,6 +2959,11 @@ describeDb('HD — hợp đồng, điều khoản và phát sinh', () => {
     if (surveyError) throw new Error(surveyError.message);
     await markSurveyReportApproved(id);
     await step('bao_gia');
+    // 0184: báo giá lập TRONG bước Báo giá — lập trước đó bị chặn.
+    const { error: quoteError } = await client
+      .from('quotes')
+      .insert({ company_id: company!.id, opportunity_id: id, total_value: 900_000_000 });
+    if (quoteError) throw new Error(quoteError.message);
     return { id, companyId: company!.id };
   }
 

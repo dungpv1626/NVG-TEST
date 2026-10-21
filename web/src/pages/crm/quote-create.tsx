@@ -10,7 +10,7 @@
 
 import { useMemo, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { BUTTONS, ERRORS, formatCurrency } from '@nvg/shared';
+import { BUTTONS, ERRORS, formatCurrency, QUOTE_STAGES } from '@nvg/shared';
 import { RecordNotFound } from '@/components/entity/entity-detail';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
@@ -132,7 +132,9 @@ export function QuoteCreatePage() {
     ? 'Vai trò hiện tại không có quyền lập báo giá.'
     : opportunity.handed_over_at
       ? 'Cơ hội đã bàn giao nên không lập thêm báo giá được.'
-      : null;
+      : !QUOTE_STAGES.includes(opportunity.stage)
+        ? 'Cơ hội chưa sang bước Báo giá nên chưa lập báo giá được — báo cáo khảo sát phải được Ban Giám đốc duyệt trước (hoặc ghi lý do bỏ qua khảo sát).'
+        : null;
 
   if (blockedReason) {
     return (

@@ -431,7 +431,15 @@ export function OpportunityDetailPage() {
             id: 'bao-gia',
             label: 'Báo giá',
             content: (
-              <QuotePanel opportunityId={data.id} canEdit={canEdit} isHandedOver={isHandedOver} />
+              <QuotePanel
+                opportunityId={data.id}
+                canEdit={canEdit}
+                isHandedOver={isHandedOver}
+                stage={data.stage}
+                missingForQuote={readiness
+                  .filter((r) => r.for_stage === 'bao_gia' && !r.met)
+                  .map((r) => r.label)}
+              />
             ),
           },
           {

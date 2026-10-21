@@ -81,6 +81,13 @@ export const OPPORTUNITY_STAGE_META: Readonly<Record<OpportunityStage, StageMeta
   },
 } as const;
 
+/**
+ * Bước được lập báo giá (0184): chỉ Báo giá và Đàm phán — cùng điều kiện trigger
+ * `quotes_require_quote_stage`. Trước đó báo giá lập được ở mọi bước, kể cả khi Ban Giám đốc chưa
+ * duyệt báo cáo khảo sát (anh Dũng chạy thử 20/10/2026).
+ */
+export const QUOTE_STAGES: readonly string[] = ['bao_gia', 'dam_phan'];
+
 /** Phân loại ở bước Xác minh — PRD CRM-02. */
 export const OPPORTUNITY_CLASSIFICATIONS = ['M1', 'M2', 'M3', 'M4'] as const;
 export type OpportunityClassification = (typeof OPPORTUNITY_CLASSIFICATIONS)[number];

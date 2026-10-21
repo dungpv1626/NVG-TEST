@@ -1289,6 +1289,13 @@
       "when": 1791280000000,
       "tag": "0183_nhan_phan_loai_bang_loi",
       "breakpoints": true
+    },
+    {
+      "idx": 184,
+      "version": "7",
+      "when": 1791290000000,
+      "tag": "0184_chan_lap_bao_gia_truoc_buoc",
+      "breakpoints": true
     }
   ]
 }
