@@ -28,7 +28,7 @@ import { useDetailTabs } from '@/components/entity/use-detail-tabs';
 import { Breadcrumb, type Crumb } from '@/components/layout/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/states';
-import { StatusLozenge } from '@/components/ui/status-lozenge';
+import { StatusLozenge, StatusWithLabel } from '@/components/ui/status-lozenge';
 import { cn } from '@/lib/utils';
 
 export interface DetailTab {
@@ -66,6 +66,8 @@ export interface EntityDetailProps {
   title: string;
   code: string;
   status: StatusGroup;
+  /** Nhãn riêng của bước (vd «Báo giá») hiện cạnh nhóm trạng thái chuẩn. */
+  statusLabel?: string;
   responsiblePerson: string | null;
   deadline?: string | null;
 
@@ -98,6 +100,7 @@ export function EntityDetail({
   title,
   code,
   status,
+  statusLabel,
   responsiblePerson,
   deadline,
   actions,
@@ -150,7 +153,11 @@ export function EntityDetail({
               <h1 className="truncate text-xl font-semibold">{title}</h1>
               <div className="mt-1 flex flex-wrap items-center gap-3 text-fg-subtle">
                 <span className="font-mono text-xs">{code}</span>
-                <StatusLozenge status={status} />
+                {statusLabel ? (
+                  <StatusWithLabel status={status} label={statusLabel} />
+                ) : (
+                  <StatusLozenge status={status} />
+                )}
                 <span>
                   Người chịu trách nhiệm:{' '}
                   <span className="text-fg">{responsiblePerson ?? 'Chưa phân công'}</span>

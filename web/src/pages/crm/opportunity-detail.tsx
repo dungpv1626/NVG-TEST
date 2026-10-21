@@ -277,6 +277,7 @@ export function OpportunityDetailPage() {
         title={data.name}
         code={data.code}
         status={stageMeta.statusGroup}
+        statusLabel={`Bước: ${stageMeta.label}`}
         responsiblePerson={data.owner?.full_name ?? null}
         deadline={data.due_date}
         defaultTab={STAGE_TAB[data.stage]}

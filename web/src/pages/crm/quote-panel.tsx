@@ -21,7 +21,7 @@ import {
 } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
-import { StatusLozenge } from '@/components/ui/status-lozenge';
+import { StatusLozenge, StatusWithLabel } from '@/components/ui/status-lozenge';
 import { WaitingOn } from '@/components/entity/waiting-on';
 import { useApprovalHistory, type ApprovalHistoryEntry } from '@/hooks/use-approvals';
 import { toUserMessage } from '@/hooks/use-error-message';
@@ -221,14 +221,33 @@ function QuoteVersionCard({
       return { label: 'Gửi phê duyệt', onClick: onRequestApproval };
     }
     if (quote.status === 'completed' && !sent) {
-      return { label: 'Gửi cho khách hàng', onClick: onSend };
+      return { label: 'Gửi cho khách hàng', onClick: onSend, primary: true };
     }
     if (sent && !isResponding) {
       return {
         label: quote.customer_response ? 'Cập nhật phản hồi' : 'Ghi nhận phản hồi',
         onClick: onStartResponse,
+        primary: false,
       };
     }
+    return null;
+  })();
+
+  // Bản đang soạn nói thẳng nó đang ở đâu và bước tiếp là gì — trước đây thẻ chỉ có «Hoàn
+  // thành» + «Bản đang soạn», người dùng không biết phải gửi khách thì cơ hội mới sang Đàm phán
+  // (anh Dũng chạy thử 21/10/2026).
+  const nextStep = (() => {
+    if (!quote.is_current_version) return null;
+    if (quote.status === 'draft')
+      return 'Bước tiếp: bấm «Gửi phê duyệt». Ban Giám đốc duyệt xong mới gửi khách được.';
+    if (quote.status === 'pending_approval')
+      return 'Đang chờ phê duyệt — duyệt xong sẽ gửi khách được.';
+    if (quote.status === 'completed' && !sent)
+      return 'Đã duyệt. Bước tiếp: bấm «Gửi cho khách hàng» — gửi xong cơ hội tự sang bước Đàm phán.';
+    if (sent && !quote.customer_response)
+      return 'Đã gửi khách. Khách trả lời thì bấm «Ghi nhận phản hồi»; giá cần đổi thì lập phiên bản mới.';
+    if (sent)
+      return 'Khách đã phản hồi. Khách đồng ý thì bấm «Soạn hợp đồng» ở đầu trang; giá cần đổi thì lập phiên bản mới.';
     return null;
   })();
 
@@ -244,7 +263,11 @@ function QuoteVersionCard({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-semibold">Phiên bản {quote.version}</span>
-            <StatusLozenge status={quote.status} />
+            {quote.status === 'completed' ? (
+              <StatusWithLabel status={quote.status} label="Đã duyệt" />
+            ) : (
+              <StatusLozenge status={quote.status} />
+            )}
             {isEffective && (
               <span className="rounded-sm bg-brand-subtle px-1.5 py-0.5 text-xs font-medium text-brand">
                 Đang hiệu lực
@@ -255,7 +278,7 @@ function QuoteVersionCard({
                 thái hồ sơ, và bảng màu trạng thái chỉ có đúng 5 màu (Content Guidelines 6.3). */}
             {quote.is_current_version && !isEffective && (
               <span className="rounded-sm bg-surface-sunken px-1.5 py-0.5 text-xs font-medium text-fg-subtle">
-                Bản đang soạn
+                {quote.status === 'completed' ? 'Chưa gửi khách' : 'Bản đang soạn'}
               </span>
             )}
             {sent && (
@@ -268,11 +291,25 @@ function QuoteVersionCard({
         </div>
 
         {action && (
-          <Button variant="secondary" size="sm" disabled={busy} onClick={action.onClick}>
+          <Button
+            variant={action.primary ? 'primary' : 'secondary'}
+            size="sm"
+            disabled={busy}
+            onClick={action.onClick}
+          >
             {busy ? 'Đang xử lý…' : action.label}
           </Button>
         )}
       </div>
+
+      {editable && nextStep && (
+        <p
+          role="status"
+          className="mt-3 rounded-sm border border-status-progress bg-status-progress-bg px-3 py-2"
+        >
+          {nextStep}
+        </p>
+      )}
 
       <dl className="mt-3 grid gap-x-6 gap-y-2 sm:grid-cols-3">
         <Cell

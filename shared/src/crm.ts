@@ -57,7 +57,9 @@ export const OPPORTUNITY_STAGE_META: Readonly<Record<OpportunityStage, StageMeta
   },
   bao_gia: {
     label: 'Báo giá',
-    statusGroup: 'pending_approval',
+    // Không phải «Chờ duyệt»: cả bước là Kinh doanh đang làm (lập, gửi duyệt, gửi khách). Nhãn
+    // «Chờ duyệt» trên đầu trang khiến người dùng tưởng đang đợi ai đó (anh Dũng 21/10/2026).
+    statusGroup: 'in_progress',
     description: 'Lập báo giá, phê duyệt nội bộ rồi gửi khách hàng.',
     isTerminal: false,
   },
