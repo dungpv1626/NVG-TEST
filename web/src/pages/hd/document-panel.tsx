@@ -55,6 +55,9 @@ import { toUserMessage } from '@/hooks/use-error-message';
 import { fillTemplate, inspectTemplate, safeFileName, saveBlob } from '@/lib/docx-template';
 import {
   DocInputsSection,
+  emptyFreeKeys,
+  focusTemplateField,
+  missingByArticle,
   freeFieldStatus,
   templateInputData,
   useDocumentInputsState,
@@ -431,10 +434,19 @@ function FillSection({
       setFilled({
         templateId: chosen.id,
         blob: fillTemplate(buffer, data),
-        previewBlob: fillTemplate(
-          buffer,
-          wrapForPreview(data, new Set([...Object.keys(manual), ...free.filledKeys])),
-        ),
+        previewBlob: fillTemplate(buffer, {
+          ...wrapForPreview(data, new Set([...Object.keys(manual), ...free.filledKeys])),
+          // Chỗ trống chưa điền mang khoá trong bản xem trước — bấm chỗ vàng là tới ô điền.
+          ...Object.fromEntries(
+            [
+              ...emptyFreeKeys(chosen, values),
+              ...missingFromRecord
+                .filter((g) => !g.source.startsWith('dieu_khoan'))
+                .flatMap((g) => g.keys)
+                .filter((k) => !manual[k]),
+            ].map((k) => [k, BLANK_OPEN + k + BLANK_CLOSE]),
+          ),
+        }),
         data,
         missing: missingTemplateFieldsBySource(inspected.tags, data, contract.type),
         missingFromRecord,
@@ -565,6 +577,7 @@ function FillSection({
             onManualChange={setValue}
             updating={stale || busy}
             free={freeFieldStatus(chosen, values)}
+            freeArticles={missingByArticle(chosen, values)}
           />
           <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-fg-subtle">
             <span>
@@ -580,6 +593,11 @@ function FillSection({
           <div
             ref={previewRef}
             aria-label="Xem trước văn bản hợp đồng"
+            onClick={(e) => {
+              const key = (e.target as HTMLElement).closest<HTMLElement>('mark[data-key]')?.dataset
+                .key;
+              if (key) focusTemplateField(key);
+            }}
             className="mt-2 overflow-x-hidden rounded-md border border-border"
           />
         </>
@@ -698,6 +716,7 @@ function MissingBox({
   onManualChange,
   updating,
   free,
+  freeArticles,
 }: {
   filled: Filled;
   contract: ContractDetailRecord;
@@ -707,12 +726,14 @@ function MissingBox({
   updating: boolean;
   /** Chỗ trống tự do của mẫu (cột trái «Nội dung riêng của văn bản»). */
   free: { missing: number; unchosen: number };
+  freeArticles: { article: string; missing: number; firstKey: string }[];
 }) {
   const count =
     filled.missing.reduce((n, g) => n + g.labels.length, 0) + free.missing + free.unchosen;
   const manualCount = Object.values(manual).filter((v) => v.trim()).length;
-  // Còn ít ô thì mở sẵn để điền luôn; nhiều thì gọn lại cho bản xem trước khỏi bị đẩy xuống.
-  const [open, setOpen] = useState(count > 0 && count <= 8);
+  // Còn thiếu thì mở sẵn — để đóng thì chỉ thấy «82 ô chưa có dữ liệu» mà không thấy là ô nào
+  // (anh Dũng 21/10/2026). Danh sách Điều còn thiếu đứng đầu, gọn một dòng.
+  const [open, setOpen] = useState(count > 0);
   const stillMissing = new Set(filled.missing.flatMap((g) => g.labels));
   // Nhóm điền tay lấy từ ô thiếu CỦA HỒ SƠ, để ô đã gõ vẫn còn đó mà sửa.
   const groups: MissingGroup[] = [
@@ -749,8 +770,54 @@ function MissingBox({
         )}
         {done
           ? `Đã đủ dữ liệu${manualCount ? ` — ${manualCount} ô điền tay` : ''}`
-          : `${count} ô chưa có dữ liệu${editable ? ' — điền ngay bên dưới' : ''}`}
+          : `Còn ${count} chỗ chưa có dữ liệu`}
       </summary>
+      {freeLeft > 0 && (
+        <div className="mt-3">
+          <p className="text-sm font-medium">
+            Nội dung riêng của văn bản (cột bên trái) —{' '}
+            {[
+              free.missing > 0 && `${free.missing} chỗ trống`,
+              free.unchosen > 0 && `${free.unchosen} nhóm phương án chưa chọn`,
+            ]
+              .filter(Boolean)
+              .join(', ')}
+          </p>
+          <p className="text-xs text-fg-subtle">
+            Bấm một mục để tới đúng ô; hoặc bấm chỗ vàng trong văn bản.
+          </p>
+          <ul className="mt-1 flex flex-wrap gap-1.5 text-sm">
+            {freeArticles.map((a) => (
+              <li key={a.article}>
+                <button
+                  type="button"
+                  className="rounded-sm bg-surface px-2 py-0.5 text-left hover:bg-surface-hover"
+                  title={`${a.article} — còn ${a.missing} chỗ`}
+                  onClick={() => focusTemplateField(a.firstKey)}
+                >
+                  {shortArticle(a.article)}{' '}
+                  <span className="text-status-pending">· {a.missing}</span>
+                </button>
+              </li>
+            ))}
+            {free.unchosen > 0 && (
+              <li>
+                <button
+                  type="button"
+                  className="rounded-sm bg-surface px-2 py-0.5 hover:bg-surface-hover"
+                  onClick={() =>
+                    document
+                      .getElementById('noi-dung-van-ban')
+                      ?.scrollIntoView({ behavior: 'smooth' })
+                  }
+                >
+                  Chọn phương án <span className="text-status-pending">· {free.unchosen}</span>
+                </button>
+              </li>
+            )}
+          </ul>
+        </div>
+      )}
       {groups.map((g) => {
         const link = missingSourceLink(g.source, contract);
         const manualGroup = editable && !g.source.startsWith('dieu_khoan');
@@ -786,6 +853,7 @@ function MissingBox({
                 {g.keys.map((key, i) => (
                   <Field key={key} label={g.labels[i]!}>
                     <Input
+                      id={`manual-${key}`}
                       value={manual[key] ?? ''}
                       onChange={(e) => onManualChange(key, e.target.value)}
                       placeholder="Để trống thì in dải chấm"
@@ -808,25 +876,6 @@ function MissingBox({
           </div>
         );
       })}
-      {freeLeft > 0 && (
-        <p className="mt-3 text-sm">
-          <span className="font-medium">Nội dung riêng của văn bản (cột bên trái)</span>
-          {' · '}
-          {free.missing > 0 && `còn ${free.missing} chỗ trống`}
-          {free.missing > 0 && free.unchosen > 0 && ', '}
-          {free.unchosen > 0 && `${free.unchosen} nhóm phương án chưa chọn`}
-          {' · '}
-          <button
-            type="button"
-            className="text-brand underline-offset-2 hover:underline"
-            onClick={() =>
-              document.getElementById('noi-dung-van-ban')?.scrollIntoView({ behavior: 'smooth' })
-            }
-          >
-            Tới phần Nội dung
-          </button>
-        </p>
-      )}
       {editable && (
         <p className="mt-2 text-xs text-fg-subtle">
           Ô điền tay chỉ áp cho văn bản này. Thông tin dùng lâu dài (pháp nhân, khách hàng) nên sửa
@@ -839,11 +888,13 @@ function MissingBox({
 }
 
 // Dấu ẩn (vùng ký tự riêng của Unicode) bọc giá trị trong tệp XEM TRƯỚC để tô màu theo nguồn.
-const REC_OPEN = '';
-const REC_CLOSE = '';
-const MAN_OPEN = '';
-const MAN_CLOSE = '';
-const HIDDEN_MARKS = /[-]/g;
+const REC_OPEN = '\uE000';
+const REC_CLOSE = '\uE001';
+const MAN_OPEN = '\uE002';
+const MAN_CLOSE = '\uE003';
+const BLANK_OPEN = '\uE004';
+const BLANK_CLOSE = '\uE005';
+const HIDDEN_MARKS = /[\uE000-\uE005]/g;
 
 /** Bọc từng giá trị bằng dấu ẩn — mỗi dòng một cặp, vì xuống dòng tách thành nhiều nút chữ. */
 function wrapForPreview(
@@ -878,14 +929,14 @@ function wrapForPreview(
  */
 function markPreview(root: HTMLElement) {
   const token = new RegExp(
-    `${REC_OPEN}([^${REC_CLOSE}]*)${REC_CLOSE}|${MAN_OPEN}([^${MAN_CLOSE}]*)${MAN_CLOSE}|${TEMPLATE_BLANK}`,
+    `${REC_OPEN}([^${REC_CLOSE}]*)${REC_CLOSE}|${MAN_OPEN}([^${MAN_CLOSE}]*)${MAN_CLOSE}|${BLANK_OPEN}([a-z0-9_]+)${BLANK_CLOSE}|${TEMPLATE_BLANK}`,
     'g',
   );
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   const hits: Text[] = [];
   for (let n = walker.nextNode(); n; n = walker.nextNode()) {
     const v = n.nodeValue ?? '';
-    if (v.includes(TEMPLATE_BLANK) || /[-]/.test(v)) hits.push(n as Text);
+    if (v.includes(TEMPLATE_BLANK) || /[\uE000-\uE005]/.test(v)) hits.push(n as Text);
   }
   for (const node of hits) {
     const text = node.nodeValue!;
@@ -900,6 +951,13 @@ function markPreview(root: HTMLElement) {
       } else if (m[2] !== undefined) {
         mark.textContent = m[2];
         mark.className = 'bg-status-progress-bg text-fg';
+      } else if (m[3] !== undefined) {
+        // Chỗ trống điền được trên màn hình — bấm là tới ô điền (xem `focusTemplateField`).
+        mark.textContent = TEMPLATE_BLANK;
+        mark.dataset.key = m[3];
+        mark.title = 'Bấm để điền';
+        mark.className =
+          'cursor-pointer bg-status-pending-bg text-fg hover:outline hover:outline-1';
       } else {
         mark.textContent = TEMPLATE_BLANK;
         mark.className = 'bg-status-pending-bg text-fg';
@@ -922,4 +980,11 @@ function fitPreview(root: HTMLElement) {
   wrapper.style.zoom = '1';
   const ratio = root.clientWidth / wrapper.scrollWidth;
   wrapper.style.zoom = ratio < 1 ? String(ratio) : '1';
+}
+
+/** «Điều 7. Thanh toán» → «Điều 7»; «PHỤ LỤC 01 – …» → «Phụ lục 01» — nhãn gọn cho danh sách. */
+function shortArticle(article: string): string {
+  const m = /^(Điều \d+|PHỤ LỤC \d+|BIÊN BẢN [^–(]{0,30})/i.exec(article);
+  if (!m) return article;
+  return m[1]!.replace(/^PHỤ LỤC/i, 'Phụ lục').trim();
 }

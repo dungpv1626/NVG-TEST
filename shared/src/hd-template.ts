@@ -216,6 +216,7 @@ export const TEMPLATE_FIELDS: readonly TemplateField[] = [
   { key: 'loai_hop_dong', label: 'Loại hợp đồng', group: 'hop_dong', kind: 'text' },
   { key: 'hinh_thuc_gia', label: 'Hình thức giá', group: 'hop_dong', kind: 'text' },
   { key: 'dia_diem', label: 'Địa điểm thực hiện', group: 'hop_dong', kind: 'text' },
+  { key: 'noi_ky', label: 'Nơi ký (tỉnh / thành phố)', group: 'hop_dong', kind: 'text' },
   { key: 'ngay_ky', label: 'Ngày ký (dd/mm/yyyy)', group: 'hop_dong', kind: 'text' },
   { key: 'ngay_ky_ngay', label: 'Ngày ký — ngày', group: 'hop_dong', kind: 'text' },
   { key: 'ngay_ky_thang', label: 'Ngày ký — tháng', group: 'hop_dong', kind: 'text' },
@@ -393,6 +394,8 @@ export function buildTemplateData(src: TemplateSource): Record<string, TemplateV
   data.loai_hop_dong = CONTRACT_TYPE_LABELS[c.type];
   data.hinh_thuc_gia = c.price_form ? CONTRACT_PRICE_FORM_LABELS[c.price_form] : null;
   data.dia_diem = blank(c.project_location);
+  // Nơi ký không có trên hồ sơ — người soạn điền (mặc định dải chấm).
+  data.noi_ky = null;
   data.ngay_ky = c.signed_date ? formatDate(c.signed_date) : null;
   const signed = dateParts(c.signed_date);
   data.ngay_ky_ngay = signed?.d ?? null;
@@ -509,6 +512,7 @@ export const MISSING_FIELD_SOURCE_LABELS: Record<MissingFieldSource, string> = {
 
 const SIGNING_KEYS: ReadonlySet<string> = new Set([
   'so_hop_dong',
+  'noi_ky',
   'ngay_ky',
   'ngay_ky_ngay',
   'ngay_ky_thang',

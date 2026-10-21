@@ -336,6 +336,10 @@ export interface TemplateFreeField {
   choices?: string[];
   /** Khối phương án chứa chỗ trống (`pa_3_b`), null khi nằm ngoài mọi phương án. */
   option: string | null;
+  /** «Bên A» / «Bên B» khi nằm ở phần thông tin hai bên. */
+  party?: string;
+  /** «<hàng> — <cột>» khi nằm trong ô bảng (ô bảng không có câu văn quanh nó). */
+  cell?: string;
 }
 
 export interface TemplateOptionGroup {

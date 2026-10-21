@@ -241,6 +241,8 @@ VALUE_RX = re.compile(
     r'(?:Giá hợp đồng|Tổng giá trị hợp đồng|Giá trị hợp đồng)[^:]{0,24}: (…+ đồng) \(Bằng chữ: (…+)\)'
 )
 NOTE_PREFIX = 'Ghi chú soạn thảo'
+PLACE_SIGN_HEAD_RX = re.compile(r'^(…+), ngày ')
+PLACE_SIGN_TODAY_RX = re.compile(r', tại (…+), chúng tôi')
 
 
 def convert(src: Path, code: str):
@@ -299,6 +301,12 @@ def convert(src: Path, code: str):
         if DATE_RX.search(t) and (t.startswith(DOTS) or t.startswith('Hôm nay')):
             replace_regex_groups(p, DATE_RX, ['ngay_ky_ngay', 'ngay_ky_thang', 'ngay_ky_nam'])
             report['replaced'].append('ngay_ky')
+            # Nơi ký xuất hiện hai lần (đầu văn bản, «Hôm nay … tại …») — một chỗ trống chuẩn,
+            # điền một lần (anh Dũng 21/10/2026: «có những phần lặp đi lặp lại»).
+            if replace_regex_groups(p, PLACE_SIGN_HEAD_RX, ['noi_ky']) or replace_regex_groups(
+                p, PLACE_SIGN_TODAY_RX, ['noi_ky']
+            ):
+                report['replaced'].append('noi_ky')
         m = TOP_PARTY_RX.match(t)
         if m and i <= 3:
             label = m.group(1)
@@ -434,6 +442,29 @@ def wrap_options(body):
     return [g for g, _ in plan]
 
 
+def cell_label(p):
+    """Chỗ trống trong ô bảng → «<hàng> — <cột>» (ô bảng thường không có câu văn quanh nó)."""
+    tc = p.getparent()
+    while tc is not None and tc.tag != W + 'tc':
+        tc = tc.getparent()
+    if tc is None:
+        return None
+    tr = tc.getparent()
+    tbl = tr.getparent()
+    cells = tr.findall(W + 'tc')
+    idx = cells.index(tc)
+    clean = lambda t: re.sub(r'\{[#/]?[a-z0-9_]+\}|…+', '', t).strip(' –-:')
+    rows = tbl.findall(W + 'tr')
+    header = clean(ptext_cell(rows[0].findall(W + 'tc')[idx])) if idx < len(rows[0].findall(W + 'tc')) else ''
+    texts_ = [clean(ptext_cell(c)) for c in cells if c is not tc]
+    # Bỏ ô số thứ tự («1», «2») — tên hàng là ô có chữ đầu tiên.
+    row = next((t for t in texts_ if t and not re.fullmatch(r'[\d.\s]+', t)), '')
+    if tr is rows[0]:
+        header = ''
+    label = ' — '.join(x for x in (row[:60], header[:40]) if x)
+    return label or None
+
+
 def free_blanks(body, options):
     """Đánh số mọi dải chấm còn lại ({o_N}) và lựa chọn trong ngoặc vuông ({c_N}); ghi câu văn
     quanh nó, Điều chứa nó, khối phương án chứa nó, mức mặc định / các lựa chọn."""
@@ -442,11 +473,18 @@ def free_blanks(body, options):
     open_opts = []
     n_blank = n_choice = 0
     strip_tags = lambda t: re.sub(r'\{[#/]?[a-z0-9_]+\}', '…', t)
+    party = None
     for p in body.iter(W + 'p'):
         text = ptext(p)
         am = ARTICLE_RX.match(text)
         if am and p.getparent() is body:
             article = am.group(1).strip()
+            party = None
+        hm = PARTY_HEADER.match(text)
+        if hm and article == 'Phần đầu văn bản':
+            party = f"Bên {hm.group('side')}"
+        elif text.startswith('Hai bên'):
+            party = None
         for tag in re.findall(r'\{([#/])(pa_\d+_[a-z])\}', text):
             if tag[0] == '#':
                 open_opts.append(tag[1])
@@ -479,6 +517,11 @@ def free_blanks(body, options):
                 'default': None,
                 'option': open_opts[-1] if open_opts else None,
             }
+            if party:
+                field['party'] = party
+            cell = cell_label(p)
+            if cell:
+                field['cell'] = cell
             if kind == 'c':
                 inner = re.sub(r'\s*[–-]\s*chọn một\s*$', '', m.group(1)).strip()
                 sep = ' / ' if ' / ' in inner else '/'

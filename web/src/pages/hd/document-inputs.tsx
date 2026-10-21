@@ -42,6 +42,43 @@ function isVisible(
   return !chosen || chosen === letterOf(field.option);
 }
 
+/**
+ * Đưa người dùng tới ô cần điền: mở các khối `<details>` chứa nó, cuộn tới giữa màn hình, đặt
+ * con trỏ. Dùng khi bấm chỗ vàng trong bản xem trước, hoặc một Điều trong khung ô thiếu.
+ */
+export function focusTemplateField(key: string): boolean {
+  const el = document.getElementById(`free-${key}`) ?? document.getElementById(`manual-${key}`);
+  if (!el) return false;
+  for (let d = el.closest('details'); d; d = d.parentElement?.closest('details') ?? null) {
+    d.open = true;
+  }
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  (el as HTMLInputElement).focus({ preventScroll: true });
+  return true;
+}
+
+/** Chỗ trống tự do còn trống theo từng Điều — thứ tự văn bản; khoá đầu tiên để nhảy tới. */
+export function missingByArticle(template: ContractTemplateRecord | null, values: DocumentInputs) {
+  if (!template) return [];
+  const out = new Map<string, { article: string; missing: number; firstKey: string }>();
+  const order = [...(template.free_fields ?? [])].sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0));
+  for (const f of order) {
+    if (!isVisible(f, template, values) || values[freeKey(template.id, f.key)]?.trim()) continue;
+    const row = out.get(f.article) ?? { article: f.article, missing: 0, firstKey: f.key };
+    row.missing++;
+    out.set(f.article, row);
+  }
+  return [...out.values()];
+}
+
+/** Chỗ trống tự do đang hiện mà chưa điền — bản xem trước gắn khoá vào chỗ vàng để bấm tới. */
+export function emptyFreeKeys(template: ContractTemplateRecord | null, values: DocumentInputs) {
+  if (!template) return [];
+  return (template.free_fields ?? [])
+    .filter((f) => isVisible(f, template, values) && !values[freeKey(template.id, f.key)]?.trim())
+    .map((f) => f.key);
+}
+
 export function freeFieldStatus(template: ContractTemplateRecord | null, values: DocumentInputs) {
   if (!template) return { total: 0, missing: 0, unchosen: 0, defaults: 0 };
   const visible = (template.free_fields ?? []).filter((f) => isVisible(f, template, values));
@@ -323,11 +360,21 @@ function FreeFieldInput({
   return (
     <div>
       <label htmlFor={id} className="block text-sm">
-        <span className="text-fg-subtle">{field.before ? `…${field.before}` : ''}</span>
+        {(field.party || field.cell) && (
+          <span className="mr-1 font-medium">
+            {[field.party, field.cell].filter(Boolean).join(' · ')}
+            {field.cell ? '' : ':'}
+          </span>
+        )}
+        <span className="text-fg-subtle">
+          {field.cell ? '' : field.before ? `…${field.before}` : ''}
+        </span>
         <span className="mx-1 rounded-sm bg-status-pending-bg px-1 font-medium">
           {field.option ? `(phương án ${letterOf(field.option)}) ` : ''}___
         </span>
-        <span className="text-fg-subtle">{field.after ? `${field.after}…` : ''}</span>
+        <span className="text-fg-subtle">
+          {field.cell ? '' : field.after ? `${field.after}…` : ''}
+        </span>
       </label>
       {field.choices?.length ? (
         <select
