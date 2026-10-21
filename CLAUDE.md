@@ -986,7 +986,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 23. Pháp nhân ĐÃ CHỐT (anh Dũng 21/10/2026): địa chỉ chung ba công ty «Số nhà 587 đường Lê Quý Đôn, Phường Trần Lãm,
     Tỉnh Hưng Yên»; người đại diện NVS «Lương Thị Vân» (thay «Lương Vân» ở câu 21), NVC / NVO «Bùi Văn Thi»; chức vụ
     «Giám đốc» (tạm); tài khoản ngân hàng là số DEMO `9999 0000 000x` — thay số thật ở Mẫu hợp đồng → Thông tin pháp
-    nhân. Mã số thuế NVC 1001004344, NVS 1001185820 lấy từ bộ mẫu. Còn mở: tên NVO «&» hay «và»; bảng hỏi mục 6 của
+    nhân. Mã số thuế NVC 1001004344, NVS 1001185820 lấy từ bộ mẫu. Tên NVO «Tư vấn và Xây dựng» (không «&»). Còn mở: bảng hỏi mục 6 của
     từng bộ mẫu chờ NVG trả lời.
 
 ### 9.6 Ghi chú máy phát triển Windows
