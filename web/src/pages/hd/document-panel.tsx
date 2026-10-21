@@ -85,7 +85,7 @@ export function DocumentPanel({
             {termsPanel}
           </div>
         </div>
-        <div className="min-w-0 lg:sticky lg:top-[16.5rem] lg:max-h-[calc(100vh-18rem)] lg:overflow-y-auto">
+        <div className="min-w-0 lg:sticky lg:top-[var(--detail-sticky-top,12rem)] lg:max-h-[var(--detail-sticky-avail,70vh)] lg:overflow-y-auto">
           {locked ? (
             <p className="flex items-center gap-2 rounded-md border border-border bg-surface-sunken px-3 py-2">
               <Lock className="size-4 text-fg-subtle" aria-hidden />
@@ -308,11 +308,12 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
         fitPreview(el);
       });
     });
-    const observer = new ResizeObserver(() => fitPreview(el));
-    observer.observe(el);
+    const observer =
+      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => fitPreview(el));
+    observer?.observe(el);
     return () => {
       cancelled = true;
-      observer.disconnect();
+      observer?.disconnect();
     };
   }, [filled]);
 
@@ -528,7 +529,7 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
           <p className="mt-2 text-xs text-fg-subtle">
             {stale || busy
               ? 'Đang cập nhật bản xem trước…'
-              : `Bản xem trước cập nhật lúc ${formatDateTime(filled.at)} từ hồ sơ${Object.values(manual).some((v) => v.trim()) ? ' và các ô điền tay' : ''}. Chỗ tô vàng là ô còn thiếu.`}
+              : `Cập nhật ${formatDateTime(filled.at)}${Object.values(manual).some((v) => v.trim()) ? ' (có ô điền tay)' : ''} · tô vàng = ô còn thiếu · xem trước có thể lệch đôi chút so với Word, tệp tải về giữ đúng định dạng mẫu.`}
           </p>
           {canSave && filled.missingFromRecord.some((g) => g.source !== 'dieu_khoan') && (
             <ManualFields
@@ -537,10 +538,6 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
               onChange={(key, value) => setManual((m) => ({ ...m, [key]: value }))}
             />
           )}
-          <p className="mt-3 text-xs text-fg-subtle">
-            Bản xem trước có thể lệch đôi chút so với Word (đầu / chân trang, hộp chữ). Tệp tải về
-            giữ nguyên định dạng của mẫu.
-          </p>
           <div
             ref={previewRef}
             aria-label="Xem trước văn bản hợp đồng"

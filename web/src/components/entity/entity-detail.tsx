@@ -21,7 +21,7 @@
  */
 
 import { History } from 'lucide-react';
-import { useMemo, type ReactNode } from 'react';
+import { useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { formatDeadline, type StatusGroup } from '@nvg/shared';
 import { useDetailTabs } from '@/components/entity/use-detail-tabs';
@@ -128,10 +128,47 @@ export function EntityDetail({
 
   const { active, selectTab, onTabKeyDown } = useDetailTabs(allTabs, defaultTab);
 
+  // Cột dính bên dưới header (vd bản xem trước hợp đồng) cần biết header cao bao nhiêu — chiều
+  // cao đổi theo bề rộng, mức thu phóng, số dòng tiêu đề. Đặt cứng một con số thì lệch trên máy
+  // khác (anh Dũng 21/10/2026). Hai biến CSS: `--detail-sticky-top` (mốc `top` trong <main>) và
+  // `--detail-sticky-avail` (chiều cao còn lại của màn hình dưới header).
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const wrap = wrapRef.current;
+    const header = headerRef.current;
+    if (!wrap || !header) return;
+    const measure = () => {
+      const offset = parseFloat(getComputedStyle(header).top) || 0;
+      const top = header.offsetHeight + offset + 16;
+      const scroller = header.closest('main');
+      const scrollerTop = scroller
+        ? scroller.getBoundingClientRect().top + parseFloat(getComputedStyle(scroller).paddingTop)
+        : 0;
+      wrap.style.setProperty('--detail-sticky-top', `${top}px`);
+      wrap.style.setProperty(
+        '--detail-sticky-avail',
+        `${Math.max(240, window.innerHeight - Math.max(0, scrollerTop) - top - 16)}px`,
+      );
+    };
+    measure();
+    // jsdom (phép thử) không có ResizeObserver.
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    observer?.observe(header);
+    window.addEventListener('resize', measure);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, []);
+
   return (
     // Có gì đứng TRƯỚC khung này (dải bước duyệt, thông báo lỗi, «Đề nghị bị từ chối…») thì
     // bù đúng phần margin âm của header — nếu không header kéo lên đè mất nửa dưới thứ đó.
-    <div className="flex gap-6 [&:not(:first-child)]:pt-4 lg:[&:not(:first-child)]:pt-6">
+    <div
+      ref={wrapRef}
+      className="flex gap-6 [&:not(:first-child)]:pt-4 lg:[&:not(:first-child)]:pt-6"
+    >
       <div className="min-w-0 flex-1">
         {/* Header cố định khi cuộn (Webapp Flow 4.3) — CHỈ trên máy tính. Trên điện thoại, tên,
             nút và thanh tab dính lại chiếm gần nửa màn hình (ảnh chụp hướng dẫn 30/09/2026), chỗ
@@ -141,6 +178,7 @@ export function EntityDetail({
             trên: `sticky` tính mốc từ mép TRONG phần đệm của <main>, nên `top-0` để hở 24px phía
             trên và nội dung cuộn qua lộ ra ở khe đó (ảnh chụp hướng dẫn 30/09/2026). */}
         <div
+          ref={headerRef}
           className={cn(
             'z-10 mb-4 bg-surface lg:sticky lg:-top-6',
             '-mx-4 -mt-4 px-4 pt-4',
