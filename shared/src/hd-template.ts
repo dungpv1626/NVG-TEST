@@ -479,9 +479,9 @@ export function missingTemplateFieldsBySource(
   tags: Readonly<Record<string, unknown>>,
   data: Readonly<Record<string, TemplateValue>>,
   contractType: ContractType,
-): { source: MissingFieldSource; labels: string[] }[] {
+): { source: MissingFieldSource; labels: string[]; keys: string[] }[] {
   const nvgSide = isPayableContract(contractType) ? 'ben_a' : 'ben_b';
-  const groups = new Map<MissingFieldSource, string[]>();
+  const groups = new Map<MissingFieldSource, { labels: string[]; keys: string[] }>();
   for (const m of collectMissing(tags, data)) {
     const f = m.field;
     let source: MissingFieldSource;
@@ -494,11 +494,14 @@ export function missingTemplateFieldsBySource(
       else if (/_(so_tai_khoan|ngan_hang)$/.test(f.key)) source = 'dien_tay';
       else source = 'khach_hang';
     }
-    groups.set(source, [...(groups.get(source) ?? []), m.label]);
+    const g = groups.get(source) ?? { labels: [], keys: [] };
+    g.labels.push(m.label);
+    g.keys.push(f.key);
+    groups.set(source, g);
   }
   return (Object.keys(MISSING_FIELD_SOURCE_LABELS) as MissingFieldSource[])
     .filter((s) => groups.has(s))
-    .map((source) => ({ source, labels: groups.get(source)! }));
+    .map((source) => ({ source, ...groups.get(source)! }));
 }
 
 function collectMissing(

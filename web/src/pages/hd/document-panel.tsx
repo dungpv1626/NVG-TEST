@@ -223,7 +223,11 @@ interface Filled {
   templateId: string;
   blob: Blob;
   data: Record<string, TemplateValue>;
-  missing: { source: MissingFieldSource; labels: string[] }[];
+  missing: { source: MissingFieldSource; labels: string[]; keys: string[] }[];
+  /** Ô thiếu của riêng hồ sơ (trước khi áp ô điền tay) — danh sách ô cho phần điền tay. */
+  missingFromRecord: { source: MissingFieldSource; labels: string[]; keys: string[] }[];
+  /** Giờ điền — để người dùng thấy «Điền lại» đã chạy dù hồ sơ chưa đổi. */
+  at: Date;
 }
 
 /** Mẫu khớp hình thức giá đứng trước, mẫu dùng chung (không ghi hình thức giá) sau. */
@@ -250,6 +254,9 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedVersion, setSavedVersion] = useState<number | null>(null);
+  // Ô điền tay cho riêng văn bản này (đè lên dữ liệu hồ sơ, lưu trong `filled_values`).
+  // Trước đây «Điền lại» chỉ đọc lại hồ sơ nên ô thiếu vẫn thiếu (anh Dũng 21/10/2026).
+  const [manual, setManual] = useState<Record<string, string>>({});
   const previewRef = useRef<HTMLDivElement>(null);
 
   // Hồ sơ đổi (thông tin, điều khoản) thì bản xem trước cũ không còn đúng.
@@ -332,11 +339,17 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
         terms,
         today: toNvgDateInput(new Date()),
       });
+      const missingFromRecord = missingTemplateFieldsBySource(inspected.tags, data, contract.type);
+      for (const [key, value] of Object.entries(manual)) {
+        if (value.trim()) data[key] = value.trim();
+      }
       setFilled({
         templateId: chosen.id,
         blob: fillTemplate(buffer, data),
         data,
         missing: missingTemplateFieldsBySource(inspected.tags, data, contract.type),
+        missingFromRecord,
+        at: new Date(),
       });
     } catch (e) {
       setError(toUserMessage(e));
@@ -466,6 +479,19 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
           ) : (
             <p className="mt-3 text-status-completed">Mọi chỗ trống của mẫu đã có dữ liệu.</p>
           )}
+          <p className="mt-2 text-xs text-fg-subtle">
+            Đã điền lúc {formatDateTime(filled.at)} từ hồ sơ
+            {Object.values(manual).some((v) => v.trim()) ? ' và các ô điền tay' : ''}.
+          </p>
+          {canSave && filled.missingFromRecord.some((g) => g.source !== 'dieu_khoan') && (
+            <ManualFields
+              groups={filled.missingFromRecord.filter((g) => g.source !== 'dieu_khoan')}
+              values={manual}
+              onChange={(key, value) => setManual((m) => ({ ...m, [key]: value }))}
+              onApply={() => void fill()}
+              busy={busy}
+            />
+          )}
           <p className="mt-3 text-xs text-fg-subtle">
             Bản xem trước có thể lệch đôi chút so với Word (đầu / chân trang, hộp chữ). Tệp tải về
             giữ nguyên định dạng của mẫu.
@@ -573,4 +599,46 @@ function missingSourceLink(
     default:
       return null;
   }
+}
+
+/**
+ * Điền tay các ô còn thiếu cho RIÊNG văn bản này. Không ghi ngược vào hồ sơ pháp nhân / khách
+ * hàng — muốn dùng lâu dài thì sửa ở hồ sơ (lối sửa nằm trong khung vàng phía trên).
+ */
+function ManualFields({
+  groups,
+  values,
+  onChange,
+  onApply,
+  busy,
+}: {
+  groups: { source: MissingFieldSource; labels: string[]; keys: string[] }[];
+  values: Record<string, string>;
+  onChange: (key: string, value: string) => void;
+  onApply: () => void;
+  busy: boolean;
+}) {
+  return (
+    <details className="mt-3 rounded-md border border-border px-3 py-2">
+      <summary className="cursor-pointer font-medium">
+        Điền tay các ô còn thiếu cho văn bản này
+      </summary>
+      <p className="mt-1 text-sm text-fg-subtle">
+        Chỉ áp cho văn bản này. Thông tin dùng lâu dài (pháp nhân, khách hàng) nên sửa ở hồ sơ để
+        lần sau máy tự điền. Ô để trống thì văn bản in dải chấm.
+      </p>
+      <div className="mt-2 grid gap-3 sm:grid-cols-2">
+        {groups.flatMap((g) =>
+          g.keys.map((key, i) => (
+            <Field key={key} label={g.labels[i]!}>
+              <Input value={values[key] ?? ''} onChange={(e) => onChange(key, e.target.value)} />
+            </Field>
+          )),
+        )}
+      </div>
+      <Button variant="secondary" className="mt-3" disabled={busy} onClick={onApply}>
+        Điền lại với các ô này
+      </Button>
+    </details>
+  );
 }
