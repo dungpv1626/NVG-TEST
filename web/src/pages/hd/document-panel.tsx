@@ -12,7 +12,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, Download, FileText, Lock } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Download, FileText, Lock, Send } from 'lucide-react';
 import {
   CONTRACT_PRICE_FORMS,
   CONTRACT_PRICE_FORM_LABELS,
@@ -46,6 +46,7 @@ import {
 } from '@/hooks/use-contract-templates';
 import {
   useContractTerms,
+  useSubmitContractApproval,
   useUpdateContract,
   type ContractDetailRecord,
 } from '@/hooks/use-contracts';
@@ -239,7 +240,10 @@ function InfoSection({
 
 interface Filled {
   templateId: string;
+  /** Tệp sạch — lưu và tải về. */
   blob: Blob;
+  /** Tệp cho bản xem trước: giá trị bọc dấu ẩn để tô màu (`markPreview`), không bao giờ lưu. */
+  previewBlob: Blob;
   data: Record<string, TemplateValue>;
   missing: { source: MissingFieldSource; labels: string[]; keys: string[] }[];
   /** Ô thiếu của riêng hồ sơ (trước khi áp ô điền tay) — danh sách ô cho phần điền tay. */
@@ -264,7 +268,8 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
   const [filled, setFilled] = useState<Filled | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [savedVersion, setSavedVersion] = useState<number | null>(null);
+  const [savedMessage, setSavedMessage] = useState<string | null>(null);
+  const submitApproval = useSubmitContractApproval();
   // Ô điền tay cho riêng văn bản này (đè lên dữ liệu hồ sơ, lưu trong `filled_values`).
   // Trước đây «Điền lại» chỉ đọc lại hồ sơ nên ô thiếu vẫn thiếu (anh Dũng 21/10/2026).
   const [manual, setManual] = useState<Record<string, string>>({});
@@ -291,13 +296,13 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
     el.replaceChildren();
     void import('docx-preview').then(({ renderAsync }) => {
       if (cancelled) return;
-      void renderAsync(filled.blob, el, undefined, {
+      void renderAsync(filled.previewBlob, el, undefined, {
         inWrapper: true,
         ignoreLastRenderedPageBreak: true,
         breakPages: true,
       }).then(() => {
         if (cancelled) return;
-        markBlanks(el);
+        markPreview(el);
         fitPreview(el);
       });
     });
@@ -371,6 +376,10 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
       setFilled({
         templateId: chosen.id,
         blob: fillTemplate(buffer, data),
+        previewBlob: fillTemplate(
+          buffer,
+          wrapForPreview(data, new Set(Object.keys(manual).filter((k) => manual[k]!.trim()))),
+        ),
         data,
         missing: missingTemplateFieldsBySource(inspected.tags, data, contract.type),
         missingFromRecord,
@@ -386,18 +395,20 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
 
   fillRef.current = fill;
 
-  async function saveAndDownload() {
-    if (!filled) return;
+  /** Lưu phiên bản văn bản; trả số bản, hoặc null khi người dùng huỷ / lỗi. */
+  async function saveVersion(download: boolean): Promise<number | null> {
+    if (!filled) return null;
     setError(null);
+    setSavedMessage(null);
     const next = (versions?.[0]?.version ?? 0) + 1;
     let reason: string | null = null;
     if (next > 1) {
       reason = await promptDialog.ask({
         title: `Lưu bản ${next}`,
         label: 'Nguyên nhân lập lại văn bản',
-        confirmLabel: 'Lưu và tải về',
+        confirmLabel: download ? 'Lưu và tải về' : 'Lưu',
       });
-      if (reason === null) return;
+      if (reason === null) return null;
     }
     const fileName = safeFileName(`${contract.code} - ${contract.title} - bản ${next}.docx`);
     try {
@@ -411,10 +422,28 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
         missingFields: filled.missing.flatMap((g) => g.labels),
         changeReason: reason,
       });
-      setSavedVersion(version);
-      saveBlob(filled.blob, fileName);
+      if (download) {
+        saveBlob(filled.blob, fileName);
+        setSavedMessage(`Đã lưu bản ${version} và tải về máy.`);
+      }
+      return version;
     } catch (e) {
       setError(toUserMessage(e, 'create'));
+      return null;
+    }
+  }
+
+  // Lưu văn bản rồi gửi phê duyệt ngay — trước phải lưu ở cột phải, rồi kéo lên đầu trang bấm
+  // «Gửi phê duyệt» (anh Dũng 21/10/2026). Điều kiện gửi vẫn do CSDL kiểm (`submit_contract_approval`).
+  async function saveAndSubmit() {
+    const version = await saveVersion(false);
+    if (version === null) return;
+    try {
+      await submitApproval.mutateAsync({ contractId: contract.id });
+      setSavedMessage(`Đã lưu bản ${version} và gửi phê duyệt.`);
+    } catch (e) {
+      setSavedMessage(`Đã lưu bản ${version}.`);
+      setError(`Chưa gửi phê duyệt được: ${toUserMessage(e, 'edit')}`);
     }
   }
 
@@ -441,9 +470,18 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
           <Button
             variant="secondary"
             disabled={save.isPending || stale || busy}
-            onClick={() => void saveAndDownload()}
+            onClick={() => void saveVersion(true)}
           >
             <Download className="size-4" aria-hidden /> Lưu phiên bản và tải về
+          </Button>
+        )}
+        {filled && canSave && contract.stage === 'nhap' && (
+          <Button
+            variant="primary"
+            disabled={save.isPending || submitApproval.isPending || stale || busy}
+            onClick={() => void saveAndSubmit()}
+          >
+            <Send className="size-4" aria-hidden /> Lưu và gửi phê duyệt
           </Button>
         )}
       </div>
@@ -456,81 +494,33 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
           {error}
         </p>
       )}
-      {savedVersion !== null && (
+      {savedMessage && (
         <p role="status" className="mt-3 text-status-completed">
-          Đã lưu bản {savedVersion} và tải về máy.
+          {savedMessage}
         </p>
       )}
 
       {filled && (
         <>
-          {filled.missing.length > 0 ? (
-            // Thu gọn mặc định: chỗ thiếu đã tô vàng ngay trong bản xem trước; danh sách đầy đủ
-            // mở ra khi cần biết sửa ở đâu — để mở sẵn thì nó đẩy bản xem trước khỏi màn hình.
-            <details className="mt-3 rounded-md border border-status-pending bg-status-pending-bg px-3 py-2">
-              <summary className="flex cursor-pointer items-center gap-2 font-medium text-status-pending">
-                <AlertTriangle className="size-4" aria-hidden />
-                {filled.missing.reduce((n, g) => n + g.labels.length, 0)} ô chưa có dữ liệu (tô vàng
-                trong văn bản) — xem sửa ở đâu
-              </summary>
-              {filled.missing.map((g) => {
-                const link = missingSourceLink(g.source, contract);
-                return (
-                  <div key={g.source} className="mt-2">
-                    <p className="text-sm font-medium">
-                      {MISSING_FIELD_SOURCE_LABELS[g.source]}
-                      {link && (
-                        <>
-                          {' · '}
-                          {link.scrollTo ? (
-                            <button
-                              type="button"
-                              className="text-brand underline-offset-2 hover:underline"
-                              onClick={() =>
-                                document
-                                  .getElementById(link.scrollTo!)
-                                  ?.scrollIntoView({ behavior: 'smooth' })
-                              }
-                            >
-                              {link.label}
-                            </button>
-                          ) : (
-                            <Link
-                              to={link.to!}
-                              className="text-brand underline-offset-2 hover:underline"
-                            >
-                              {link.label}
-                            </Link>
-                          )}
-                        </>
-                      )}
-                    </p>
-                    <ul className="mt-1 flex flex-wrap gap-1.5 text-sm">
-                      {g.labels.map((m) => (
-                        <li key={m} className="rounded-sm bg-surface px-2 py-0.5">
-                          {m}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })}
-            </details>
-          ) : (
-            <p className="mt-3 text-status-completed">Mọi chỗ trống của mẫu đã có dữ liệu.</p>
-          )}
-          <p className="mt-2 text-xs text-fg-subtle">
-            {stale || busy
-              ? 'Đang cập nhật bản xem trước…'
-              : `Cập nhật ${formatDateTime(filled.at)}${Object.values(manual).some((v) => v.trim()) ? ' (có ô điền tay)' : ''} · tô vàng = ô còn thiếu · xem trước có thể lệch đôi chút so với Word, tệp tải về giữ đúng định dạng mẫu.`}
+          <MissingBox
+            filled={filled}
+            contract={contract}
+            editable={canSave}
+            manual={manual}
+            onManualChange={(key, value) => setManual((m) => ({ ...m, [key]: value }))}
+            updating={stale || busy}
+          />
+          <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-fg-subtle">
+            <span>
+              {stale || busy ? 'Đang cập nhật…' : `Cập nhật ${formatDateTime(filled.at)}`}
+            </span>
+            <span className="rounded-sm bg-status-completed-bg px-1.5 text-fg">Lấy từ hồ sơ</span>
+            <span className="rounded-sm bg-status-progress-bg px-1.5 text-fg">Điền tay</span>
+            <span className="rounded-sm bg-status-pending-bg px-1.5 text-fg">Còn thiếu</span>
+            <span>
+              Xem trước có thể lệch đôi chút so với Word; tệp tải về giữ đúng định dạng mẫu.
+            </span>
           </p>
-          {canSave && filled.missingFromRecord.some((g) => !g.source.startsWith('dieu_khoan')) && (
-            <ManualFields
-              groups={filled.missingFromRecord.filter((g) => !g.source.startsWith('dieu_khoan'))}
-              values={manual}
-              onChange={(key, value) => setManual((m) => ({ ...m, [key]: value }))}
-            />
-          )}
           <div
             ref={previewRef}
             aria-label="Xem trước văn bản hợp đồng"
@@ -637,61 +627,206 @@ function missingSourceLink(
   }
 }
 
+type MissingGroup = { source: MissingFieldSource; labels: string[]; keys: string[] };
+
 /**
- * Điền tay các ô còn thiếu cho RIÊNG văn bản này. Không ghi ngược vào hồ sơ pháp nhân / khách
- * hàng — muốn dùng lâu dài thì sửa ở hồ sơ (lối sửa nằm trong khung vàng phía trên).
+ * Khung ô còn thiếu + ô điền tay NGAY tại chỗ (anh Dũng 21/10/2026: «còn 6 ô, muốn điền luôn thì
+ * sao?»). Nhóm điều khoản chỉ dẫn sang cột trái — dữ liệu của hợp đồng; nhóm khác điền tay cho
+ * RIÊNG văn bản này, không ghi ngược vào hồ sơ pháp nhân / khách hàng.
  */
-function ManualFields({
-  groups,
-  values,
-  onChange,
+function MissingBox({
+  filled,
+  contract,
+  editable,
+  manual,
+  onManualChange,
+  updating,
 }: {
-  groups: { source: MissingFieldSource; labels: string[]; keys: string[] }[];
-  values: Record<string, string>;
-  onChange: (key: string, value: string) => void;
+  filled: Filled;
+  contract: ContractDetailRecord;
+  editable: boolean;
+  manual: Record<string, string>;
+  onManualChange: (key: string, value: string) => void;
+  updating: boolean;
 }) {
+  const count = filled.missing.reduce((n, g) => n + g.labels.length, 0);
+  const manualCount = Object.values(manual).filter((v) => v.trim()).length;
+  // Còn ít ô thì mở sẵn để điền luôn; nhiều thì gọn lại cho bản xem trước khỏi bị đẩy xuống.
+  const [open, setOpen] = useState(count > 0 && count <= 8);
+  const stillMissing = new Set(filled.missing.flatMap((g) => g.labels));
+  // Nhóm điền tay lấy từ ô thiếu CỦA HỒ SƠ, để ô đã gõ vẫn còn đó mà sửa.
+  const groups: MissingGroup[] = [
+    ...filled.missingFromRecord.filter((g) => !g.source.startsWith('dieu_khoan')),
+    ...filled.missing.filter((g) => g.source.startsWith('dieu_khoan')),
+  ];
+  if (groups.length === 0) {
+    return <p className="mt-3 text-status-completed">Mọi chỗ trống của mẫu đã có dữ liệu.</p>;
+  }
+  const done = count === 0;
+
   return (
-    <details className="mt-3 rounded-md border border-border px-3 py-2">
-      <summary className="cursor-pointer font-medium">
-        Điền tay các ô còn thiếu cho văn bản này
-      </summary>
-      <p className="mt-1 text-sm text-fg-subtle">
-        Chỉ áp cho văn bản này. Thông tin dùng lâu dài (pháp nhân, khách hàng) nên sửa ở hồ sơ để
-        lần sau máy tự điền. Gõ tới đâu bản xem trước cập nhật tới đó; ô để trống thì văn bản in dải
-        chấm.
-      </p>
-      <div className="mt-2 grid gap-3 sm:grid-cols-2">
-        {groups.flatMap((g) =>
-          g.keys.map((key, i) => (
-            <Field key={key} label={g.labels[i]!}>
-              <Input value={values[key] ?? ''} onChange={(e) => onChange(key, e.target.value)} />
-            </Field>
-          )),
+    <details
+      open={open}
+      onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}
+      className={cn(
+        'mt-3 rounded-md border px-3 py-2',
+        done
+          ? 'border-status-completed bg-status-completed-bg'
+          : 'border-status-pending bg-status-pending-bg',
+      )}
+    >
+      <summary
+        className={cn(
+          'flex cursor-pointer items-center gap-2 font-medium',
+          done ? 'text-status-completed' : 'text-status-pending',
         )}
-      </div>
+      >
+        {done ? (
+          <CheckCircle2 className="size-4" aria-hidden />
+        ) : (
+          <AlertTriangle className="size-4" aria-hidden />
+        )}
+        {done
+          ? `Đã đủ dữ liệu${manualCount ? ` — ${manualCount} ô điền tay` : ''}`
+          : `${count} ô chưa có dữ liệu${editable ? ' — điền ngay bên dưới' : ''}`}
+      </summary>
+      {groups.map((g) => {
+        const link = missingSourceLink(g.source, contract);
+        const manualGroup = editable && !g.source.startsWith('dieu_khoan');
+        return (
+          <div key={g.source} className="mt-3">
+            <p className="text-sm font-medium">
+              {MISSING_FIELD_SOURCE_LABELS[g.source]}
+              {link && (
+                <>
+                  {' · '}
+                  {link.scrollTo ? (
+                    <button
+                      type="button"
+                      className="text-brand underline-offset-2 hover:underline"
+                      onClick={() =>
+                        document
+                          .getElementById(link.scrollTo!)
+                          ?.scrollIntoView({ behavior: 'smooth' })
+                      }
+                    >
+                      {link.label}
+                    </button>
+                  ) : (
+                    <Link to={link.to!} className="text-brand underline-offset-2 hover:underline">
+                      {link.label}
+                    </Link>
+                  )}
+                </>
+              )}
+            </p>
+            {manualGroup ? (
+              <div className="mt-1 grid gap-2 sm:grid-cols-2">
+                {g.keys.map((key, i) => (
+                  <Field key={key} label={g.labels[i]!}>
+                    <Input
+                      value={manual[key] ?? ''}
+                      onChange={(e) => onManualChange(key, e.target.value)}
+                      placeholder="Để trống thì in dải chấm"
+                      className={cn(manual[key]?.trim() && 'border-status-progress')}
+                    />
+                  </Field>
+                ))}
+              </div>
+            ) : (
+              <ul className="mt-1 flex flex-wrap gap-1.5 text-sm">
+                {g.labels
+                  .filter((m) => stillMissing.has(m))
+                  .map((m) => (
+                    <li key={m} className="rounded-sm bg-surface px-2 py-0.5">
+                      {m}
+                    </li>
+                  ))}
+              </ul>
+            )}
+          </div>
+        );
+      })}
+      {editable && (
+        <p className="mt-2 text-xs text-fg-subtle">
+          Ô điền tay chỉ áp cho văn bản này. Thông tin dùng lâu dài (pháp nhân, khách hàng) nên sửa
+          ở hồ sơ để lần sau máy tự điền.
+          {updating ? ' Đang cập nhật bản xem trước…' : ''}
+        </p>
+      )}
     </details>
   );
 }
 
-/** Tô vàng dải chấm (ô còn thiếu) trong bản xem trước — nhìn là thấy chỗ nào chưa có dữ liệu. */
-function markBlanks(root: HTMLElement) {
+// Dấu ẩn (vùng ký tự riêng của Unicode) bọc giá trị trong tệp XEM TRƯỚC để tô màu theo nguồn.
+const REC_OPEN = '';
+const REC_CLOSE = '';
+const MAN_OPEN = '';
+const MAN_CLOSE = '';
+const HIDDEN_MARKS = /[-]/g;
+
+/** Bọc từng giá trị bằng dấu ẩn — mỗi dòng một cặp, vì xuống dòng tách thành nhiều nút chữ. */
+function wrapForPreview(
+  data: Record<string, TemplateValue>,
+  manualKeys: ReadonlySet<string>,
+): Record<string, TemplateValue> {
+  const wrap = (v: string, manual: boolean) =>
+    v
+      .split('\n')
+      .map((line) =>
+        line ? (manual ? MAN_OPEN + line + MAN_CLOSE : REC_OPEN + line + REC_CLOSE) : line,
+      )
+      .join('\n');
+  const out: Record<string, TemplateValue> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (typeof value === 'string') out[key] = wrap(value, manualKeys.has(key));
+    else if (Array.isArray(value))
+      out[key] = value.map((row) =>
+        Object.fromEntries(
+          Object.entries(row).map(([k, v]) => [k, typeof v === 'string' ? wrap(v, false) : v]),
+        ),
+      ) as TemplateValue;
+    else out[key] = value;
+  }
+  return out;
+}
+
+/**
+ * Tô màu bản xem trước: xanh lá = lấy từ hồ sơ, xanh dương = điền tay, vàng = dải chấm còn thiếu
+ * (anh Dũng 21/10/2026: «đổi thành xanh hay màu khác để dễ phân biệt»). Dấu ẩn bị gỡ khỏi chữ.
+ */
+function markPreview(root: HTMLElement) {
+  const token = new RegExp(
+    `${REC_OPEN}([^${REC_CLOSE}]*)${REC_CLOSE}|${MAN_OPEN}([^${MAN_CLOSE}]*)${MAN_CLOSE}|${TEMPLATE_BLANK}`,
+    'g',
+  );
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   const hits: Text[] = [];
   for (let n = walker.nextNode(); n; n = walker.nextNode()) {
-    if (n.nodeValue?.includes(TEMPLATE_BLANK)) hits.push(n as Text);
+    const v = n.nodeValue ?? '';
+    if (v.includes(TEMPLATE_BLANK) || /[-]/.test(v)) hits.push(n as Text);
   }
   for (const node of hits) {
-    const parts = node.nodeValue!.split(TEMPLATE_BLANK);
+    const text = node.nodeValue!;
     const frag = document.createDocumentFragment();
-    parts.forEach((part, i) => {
-      if (part) frag.append(part);
-      if (i < parts.length - 1) {
-        const mark = document.createElement('mark');
+    let last = 0;
+    for (const m of text.matchAll(token)) {
+      if (m.index > last) frag.append(text.slice(last, m.index).replace(HIDDEN_MARKS, ''));
+      const mark = document.createElement('mark');
+      if (m[1] !== undefined) {
+        mark.textContent = m[1];
+        mark.className = 'bg-status-completed-bg text-fg';
+      } else if (m[2] !== undefined) {
+        mark.textContent = m[2];
+        mark.className = 'bg-status-progress-bg text-fg';
+      } else {
         mark.textContent = TEMPLATE_BLANK;
         mark.className = 'bg-status-pending-bg text-fg';
-        frag.append(mark);
       }
-    });
+      frag.append(mark);
+      last = m.index + m[0].length;
+    }
+    if (last < text.length) frag.append(text.slice(last).replace(HIDDEN_MARKS, ''));
     node.replaceWith(frag);
   }
 }
