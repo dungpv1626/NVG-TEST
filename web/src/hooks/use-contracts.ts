@@ -328,6 +328,27 @@ export function useSaveContractTerm() {
   });
 }
 
+/**
+ * Xoá mềm một dòng điều khoản ghi nhầm. Không `select` lại sau khi ghi: chính sách đọc bỏ dòng
+ * đã xoá, nên đọc lại sẽ báo «không thấy» dù xoá đã thành công.
+ */
+export function useDeleteContractTerm() {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: async (id) => {
+      const { error } = await supabase
+        .from('contract_terms')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['contract_terms'] });
+      void queryClient.invalidateQueries({ queryKey: ['contracts', 'readiness'] });
+    },
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Phát sinh ngoài hợp đồng (HD-04)
 // ---------------------------------------------------------------------------

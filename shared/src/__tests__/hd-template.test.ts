@@ -176,7 +176,7 @@ describe('dữ liệu điền mẫu', () => {
       'Số hợp đồng',
       'Tiền thuế GTGT',
       'Số tài khoản (pháp nhân NVG)',
-      'Bảo hành — chưa có điều khoản nào',
+      'Bảo hành — chưa có dòng nào',
     ]);
   });
 
@@ -216,7 +216,7 @@ describe('missingTemplateFieldsBySource — ô thiếu chia theo nơi sửa', ()
     expect(groups.khach_hang).toEqual(['Người đại diện (bên A)']);
     expect(groups.dien_tay).toEqual(['Số tài khoản (bên A)']);
     expect(groups.phap_nhan).toEqual(['Địa chỉ (bên B)']);
-    expect(groups.dieu_khoan).toEqual(['Các đợt thanh toán — chưa có điều khoản nào']);
+    expect(groups.dieu_khoan).toEqual(['Tiến độ thanh toán — chưa có dòng nào']);
   });
 
   it('khoán thầu phụ: NVG là bên A', () => {

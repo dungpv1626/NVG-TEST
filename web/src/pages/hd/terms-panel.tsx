@@ -1,5 +1,5 @@
 /**
- * Tab Điều khoản của Chi tiết Hợp đồng (HD-02).
+ * Khối Điều khoản của tab «Soạn hợp đồng» (HD-02).
  *
  * Bố cục theo TÁM NHÓM mà HD-02 liệt kê, kể cả nhóm chưa có dòng nào — nhìn là biết còn
  * thiếu gì. Danh sách phẳng thì nhóm bị bỏ quên trông giống hệt nhóm không cần dùng, và
@@ -7,18 +7,24 @@
  *
  * Ba nhóm phạm vi / giá trị / tiến độ thanh toán được đánh dấu bắt buộc vì CSDL chặn trình
  * ký khi thiếu chúng — báo trước ở đây để người dùng không gõ xong mới biết.
+ *
+ * Mỗi nhóm chỉ hỏi đúng ô nó dùng (`TERM_FORMS`): trước đây nhóm nào cũng có Giá trị / Tỷ lệ /
+ * Ngày đến hạn, người dùng ghi 30% vào Phạm vi công việc và số đó in luôn vào văn bản (anh Dũng
+ * chạy thử 21/10/2026). Dòng ghi nhầm sửa / xoá được khi hợp đồng còn Nháp.
  */
 
 import { useState, type FormEvent } from 'react';
 import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import {
   BUTTONS,
+  CONTRACT_REQUIRED_TERM_TYPES,
   CONTRACT_TERM_TYPES,
   CONTRACT_TERM_TYPE_LABELS,
   formatCurrency,
   formatDate,
   suggestContractTerms,
   type ContractTermType,
+  type MoneyValue,
   type TermSuggestion,
 } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
@@ -28,24 +34,95 @@ import { Input } from '@/components/ui/input';
 import { MoneyInput } from '@/components/ui/money-input';
 import {
   useContractTerms,
+  useDeleteContractTerm,
   useSaveContractTerm,
   type ContractTermRecord,
 } from '@/hooks/use-contracts';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useContractTermSources } from '@/hooks/use-quotes';
 
-/** Ba nhóm mà `submit_contract_approval` chặn trình ký nếu thiếu. */
-const REQUIRED_TYPES: readonly ContractTermType[] = ['pham_vi', 'gia_tri', 'tien_do_thanh_toan'];
+interface TermForm {
+  /** Ô số tiền (đồng). */
+  amount?: string;
+  /** Ô tỷ lệ % — có ô số tiền thì máy tính sẵn số tiền theo giá trị hợp đồng. */
+  percent?: string;
+  /** Ô ngày — nhãn riêng từng nhóm. */
+  due?: string;
+  placeholder: string;
+  hint: string;
+}
+
+const TERM_FORMS: Record<ContractTermType, TermForm> = {
+  pham_vi: {
+    placeholder: 'Thi công phần thô và hoàn thiện nhà 3 tầng theo bản vẽ thiết kế đã duyệt',
+    hint: 'Mỗi hạng mục một dòng. In vào điều «Phạm vi công việc».',
+  },
+  gia_tri: {
+    amount: 'Số tiền',
+    placeholder: 'Giá trị hợp đồng trọn gói, đã gồm thuế GTGT',
+    hint: 'Thường một dòng. Số tiền là giá trị đã gồm thuế như ở «Thông tin in lên văn bản».',
+  },
+  tien_do_thanh_toan: {
+    percent: 'Tỷ lệ (%)',
+    amount: 'Số tiền',
+    due: 'Hạn thanh toán',
+    placeholder: 'Đợt 1 — tạm ứng khi ký hợp đồng',
+    hint: 'Mỗi đợt một dòng. Ghi tỷ lệ thì máy tự tính số tiền theo giá trị hợp đồng; hạn là nguồn của nhắc khoản sắp đến hạn.',
+  },
+  tam_ung: {
+    percent: 'Tỷ lệ (%)',
+    amount: 'Số tiền',
+    due: 'Hạn tạm ứng',
+    placeholder: 'Tạm ứng 30% giá trị hợp đồng trong 5 ngày kể từ ngày ký',
+    hint: 'Không bắt buộc.',
+  },
+  bao_lanh: {
+    percent: 'Tỷ lệ (%)',
+    amount: 'Số tiền',
+    due: 'Hết hiệu lực',
+    placeholder: 'Bảo lãnh thực hiện hợp đồng 5% giá trị hợp đồng',
+    hint: 'Không bắt buộc. Mỗi loại bảo lãnh (thực hiện hợp đồng, tạm ứng, bảo hành) một dòng.',
+  },
+  phat: {
+    percent: 'Mức phạt (%)',
+    placeholder: 'Chậm tiến độ: phạt 0,1% giá trị phần việc chậm cho mỗi ngày',
+    hint: 'Không bắt buộc.',
+  },
+  bao_hanh: {
+    percent: 'Giữ lại (%)',
+    amount: 'Số tiền giữ lại',
+    placeholder: 'Bảo hành kết cấu 5 năm, hoàn thiện 12 tháng kể từ ngày bàn giao',
+    hint: 'Không bắt buộc. Tỷ lệ / số tiền là phần giữ lại bảo hành, nếu có.',
+  },
+  quyet_toan: {
+    placeholder: 'Quyết toán theo khối lượng thực tế nghiệm thu, trong 30 ngày kể từ ngày bàn giao',
+    hint: 'Không bắt buộc.',
+  },
+};
+
+const EMPTY_FORM = { description: '', amount: '', percentValue: '', dueDate: '', notes: '' };
+
+/** Số tiền = tỷ lệ × giá trị hợp đồng, làm tròn tới đồng; `null` khi chưa đủ số để tính. */
+function amountFromPercent(percent: string, contractValue: MoneyValue | null): string | null {
+  const p = Number(percent.replace(',', '.'));
+  if (!contractValue || !Number.isFinite(p) || p <= 0) return null;
+  // Nhân trên bigint với tỷ lệ phần vạn để không mất số lẻ của giá trị lớn.
+  const basisPoints = BigInt(Math.round(p * 100));
+  return ((BigInt(contractValue) * basisPoints + 5000n) / 10000n).toString();
+}
 
 export function TermsPanel({
   contractId,
   companyId,
   readOnly,
+  contractValue = null,
   opportunityId = null,
 }: {
   contractId: string;
   companyId: string;
   readOnly: boolean;
+  /** Giá trị hợp đồng — để tính số tiền từ tỷ lệ. */
+  contractValue?: MoneyValue | null;
   /** Cơ hội nguồn — có thì máy gợi ý Phạm vi / Giá trị từ báo giá và khảo sát. */
   opportunityId?: string | null;
 }) {
@@ -55,16 +132,17 @@ export function TermsPanel({
     ? suggestContractTerms(sources.data.quote, sources.data.survey)
     : {};
   const saveTerm = useSaveContractTerm();
+  const deleteTerm = useDeleteContractTerm();
 
-  const [addingTo, setAddingTo] = useState<ContractTermType | null>(null);
+  /** Nhóm đang mở biểu mẫu, và dòng đang sửa (null = thêm mới). */
+  const [editing, setEditing] = useState<{ type: ContractTermType; id: string | null } | null>(
+    null,
+  );
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    description: '',
-    amount: '',
-    percentValue: '',
-    dueDate: '',
-    notes: '',
-  });
+  const [form, setForm] = useState(EMPTY_FORM);
+  // Người dùng đã tự gõ số tiền thì đổi tỷ lệ không đè lên nữa.
+  const [amountTouched, setAmountTouched] = useState(false);
 
   const byType = new Map<ContractTermType, ContractTermRecord[]>();
   for (const term of terms ?? []) {
@@ -73,42 +151,70 @@ export function TermsPanel({
     byType.set(term.term_type, list);
   }
 
-  function startAdding(type: ContractTermType, from?: TermSuggestion) {
+  function open(type: ContractTermType, from?: TermSuggestion | ContractTermRecord) {
+    const isRecord = from !== undefined && 'id' in from;
     setForm({
       description: from?.description ?? '',
-      amount: from?.amount ?? '',
-      percentValue: '',
-      dueDate: '',
+      amount: from?.amount != null ? String(from.amount) : '',
+      percentValue: isRecord ? (from.percent_value ?? '') : '',
+      dueDate: isRecord ? (from.due_date ?? '') : '',
       notes: from?.notes ?? '',
     });
+    setAmountTouched(isRecord && from.amount != null);
     setError(null);
-    setAddingTo(type);
+    setConfirmDelete(null);
+    setEditing({ type, id: isRecord ? from.id : null });
+  }
+
+  function setPercent(value: string) {
+    const percentValue = value.replace(/[^\d.,]/g, '');
+    setForm((f) => {
+      const auto =
+        editing && TERM_FORMS[editing.type].amount && !amountTouched
+          ? amountFromPercent(percentValue, contractValue)
+          : null;
+      return { ...f, percentValue, amount: auto ?? (amountTouched ? f.amount : '') };
+    });
   }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (!editing) return;
     setError(null);
     if (!form.description.trim()) {
       setError('Vui lòng nhập nội dung điều khoản.');
       return;
     }
+    const spec = TERM_FORMS[editing.type];
     try {
       await saveTerm.mutateAsync({
+        id: editing.id ?? undefined,
         contractId,
         companyId,
         values: {
-          term_type: addingTo,
+          ...(editing.id ? {} : { term_type: editing.type }),
           description: form.description.trim(),
-          amount: form.amount.trim() || null,
-          percent_value: form.percentValue.trim() || null,
-          due_date: form.dueDate || null,
+          // Ô nhóm này không hỏi thì ghi rỗng — không giữ số ghi nhầm từ trước.
+          amount: spec.amount ? form.amount.trim() || null : null,
+          percent_value: spec.percent ? form.percentValue.replace(',', '.').trim() || null : null,
+          due_date: spec.due ? form.dueDate || null : null,
           notes: form.notes.trim() || null,
-          position: String((byType.get(addingTo!)?.length ?? 0) + 1),
+          ...(editing.id ? {} : { position: String((byType.get(editing.type)?.length ?? 0) + 1) }),
         },
       });
-      setAddingTo(null);
+      setEditing(null);
     } catch (e) {
-      setError(toUserMessage(e, 'create'));
+      setError(toUserMessage(e, editing.id ? 'edit' : 'create'));
+    }
+  }
+
+  async function remove(id: string) {
+    setError(null);
+    try {
+      await deleteTerm.mutateAsync(id);
+      setConfirmDelete(null);
+    } catch (e) {
+      setError(toUserMessage(e, 'edit'));
     }
   }
 
@@ -135,9 +241,11 @@ export function TermsPanel({
       )}
 
       {CONTRACT_TERM_TYPES.map((type) => {
+        const spec = TERM_FORMS[type];
         const rows = byType.get(type) ?? [];
-        const isMissingRequired = REQUIRED_TYPES.includes(type) && rows.length === 0;
+        const required = CONTRACT_REQUIRED_TERM_TYPES.includes(type);
         const suggestion = rows.length === 0 && !readOnly ? suggestions[type] : null;
+        const formOpen = editing?.type === type;
 
         return (
           <section
@@ -146,22 +254,23 @@ export function TermsPanel({
           >
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <p className="font-medium">{CONTRACT_TERM_TYPE_LABELS[type]}</p>
-              {isMissingRequired && (
+              {required && rows.length === 0 && (
                 <span className="inline-flex items-center gap-1 text-status-overdue">
                   <AlertTriangle className="size-4" />
                   Bắt buộc trước khi trình ký
                 </span>
               )}
-              {!readOnly && (
+              {!required && <span className="text-xs text-fg-subtle">Không bắt buộc</span>}
+              {!readOnly && !formOpen && (
                 <span className="ml-auto">
-                  <Button variant="secondary" onClick={() => startAdding(type)}>
-                    Thêm điều khoản
+                  <Button variant="secondary" size="sm" onClick={() => open(type)}>
+                    {rows.length === 0 ? 'Thêm điều khoản' : 'Thêm dòng'}
                   </Button>
                 </span>
               )}
             </div>
 
-            {suggestion && addingTo !== type && (
+            {suggestion && !formOpen && (
               <div className="mb-3 rounded-sm border border-status-progress bg-status-progress-bg px-3 py-2">
                 <p className="text-xs text-fg-subtle">Máy soạn sẵn — {suggestion.source}</p>
                 <p className="mt-1 whitespace-pre-wrap">{suggestion.description}</p>
@@ -170,7 +279,7 @@ export function TermsPanel({
                   variant="secondary"
                   size="sm"
                   className="mt-2"
-                  onClick={() => startAdding(type, suggestion)}
+                  onClick={() => open(type, suggestion)}
                 >
                   Dùng bản soạn sẵn
                 </Button>
@@ -178,88 +287,149 @@ export function TermsPanel({
             )}
 
             {rows.length === 0 ? (
-              <p className="text-fg-subtle">Chưa ghi nhận điều khoản nhóm này.</p>
+              !formOpen && <p className="text-fg-subtle">Chưa có dòng nào.</p>
             ) : (
-              <ul className="space-y-2">
-                {rows.map((term) => (
+              <ol className="space-y-2">
+                {rows.map((term, i) => (
                   <li key={term.id} className="border-l-2 border-border pl-3">
-                    <p className="whitespace-pre-wrap">{term.description}</p>
-                    <p className="text-fg-subtle">
-                      {term.amount != null && <span>{formatCurrency(term.amount)} · </span>}
-                      {term.percent_value && <span>{term.percent_value}% · </span>}
-                      {term.due_date ? `Đến hạn ${formatDate(term.due_date)}` : 'Không có mốc hạn'}
+                    <p className="whitespace-pre-wrap">
+                      {rows.length > 1 && <span className="font-medium">{i + 1}. </span>}
+                      {term.description}
                     </p>
-                    {term.completed_at ? (
-                      <p className="inline-flex items-center gap-1 text-status-completed">
-                        <CheckCircle2 className="size-4" />
-                        Đã hoàn thành {formatDate(term.completed_at)}
-                        {!readOnly && (
-                          <button
-                            type="button"
-                            className="ml-2 underline"
-                            onClick={() => void toggleCompleted(term)}
-                          >
-                            Bỏ đánh dấu
-                          </button>
-                        )}
-                      </p>
-                    ) : (
-                      !readOnly && (
+                    <TermFigures term={term} spec={spec} />
+                    {term.notes && <p className="text-sm text-fg-subtle">{term.notes}</p>}
+                    {!readOnly && (
+                      <div className="mt-1 flex flex-wrap items-center gap-3 text-sm">
                         <button
                           type="button"
-                          className="text-brand underline"
-                          onClick={() => void toggleCompleted(term)}
+                          className="text-brand underline-offset-2 hover:underline"
+                          onClick={() => open(type, term)}
                         >
-                          Đánh dấu đã hoàn thành
+                          Sửa
                         </button>
-                      )
+                        {confirmDelete === term.id ? (
+                          <span className="inline-flex items-center gap-2">
+                            Xoá dòng này?
+                            <button
+                              type="button"
+                              className="font-medium text-status-overdue underline-offset-2 hover:underline"
+                              disabled={deleteTerm.isPending}
+                              onClick={() => void remove(term.id)}
+                            >
+                              Xoá
+                            </button>
+                            <button
+                              type="button"
+                              className="text-fg-subtle underline-offset-2 hover:underline"
+                              onClick={() => setConfirmDelete(null)}
+                            >
+                              Không
+                            </button>
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            className="text-fg-subtle underline-offset-2 hover:underline"
+                            onClick={() => setConfirmDelete(term.id)}
+                          >
+                            Xoá
+                          </button>
+                        )}
+                        {spec.due &&
+                          (term.completed_at ? (
+                            <span className="inline-flex items-center gap-1 text-status-completed">
+                              <CheckCircle2 className="size-4" />
+                              Đã hoàn thành {formatDate(term.completed_at)}
+                              <button
+                                type="button"
+                                className="ml-1 underline"
+                                onClick={() => void toggleCompleted(term)}
+                              >
+                                Bỏ đánh dấu
+                              </button>
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              className="text-brand underline-offset-2 hover:underline"
+                              onClick={() => void toggleCompleted(term)}
+                            >
+                              Đánh dấu đã hoàn thành
+                            </button>
+                          ))}
+                      </div>
                     )}
                   </li>
                 ))}
-              </ul>
+              </ol>
             )}
 
-            {addingTo === type && (
-              <form onSubmit={submit} noValidate className="mt-3 border-t border-border pt-3">
+            {formOpen && (
+              <form
+                onSubmit={submit}
+                noValidate
+                className={rows.length > 0 ? 'mt-3 border-t border-border pt-3' : ''}
+              >
+                <p className="mb-2 text-sm font-medium">
+                  {editing.id ? 'Sửa dòng' : 'Dòng mới'} — {CONTRACT_TERM_TYPE_LABELS[type]}
+                </p>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Nội dung điều khoản" required className="sm:col-span-2">
+                  <Field
+                    label="Nội dung điều khoản"
+                    required
+                    hint={spec.hint}
+                    className="sm:col-span-2"
+                  >
                     <textarea
                       value={form.description}
                       onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                      rows={2}
-                      className="w-full rounded-sm border border-border bg-surface px-3 py-2"
+                      rows={3}
+                      placeholder={spec.placeholder}
+                      className="w-full rounded-sm border border-border bg-surface px-3 py-2 placeholder:text-fg-subtle"
                       autoFocus
                     />
                   </Field>
 
-                  <Field label="Giá trị" hint="Đơn vị đồng.">
-                    <MoneyInput
-                      value={form.amount}
-                      onChange={(v) => setForm((f) => ({ ...f, amount: v }))}
-                    />
-                  </Field>
+                  {spec.percent && (
+                    <Field label={spec.percent}>
+                      <Input
+                        value={form.percentValue}
+                        onChange={(e) => setPercent(e.target.value)}
+                        inputMode="decimal"
+                        placeholder="30"
+                      />
+                    </Field>
+                  )}
 
-                  <Field label="Tỷ lệ phần trăm">
-                    <Input
-                      value={form.percentValue}
-                      onChange={(e) =>
-                        setForm((f) => ({
-                          ...f,
-                          percentValue: e.target.value.replace(/[^\d.]/g, ''),
-                        }))
+                  {spec.amount && (
+                    <Field
+                      label={spec.amount}
+                      hint={
+                        spec.percent && contractValue && !amountTouched
+                          ? 'Máy tính từ tỷ lệ × giá trị hợp đồng; sửa được.'
+                          : 'Đơn vị đồng.'
                       }
-                      inputMode="decimal"
-                    />
-                  </Field>
+                    >
+                      <MoneyInput
+                        value={form.amount}
+                        onChange={(v) => {
+                          setAmountTouched(true);
+                          setForm((f) => ({ ...f, amount: v }));
+                        }}
+                      />
+                    </Field>
+                  )}
 
-                  <Field label="Ngày đến hạn" hint="Nguồn của cảnh báo khoản sắp đến hạn.">
-                    <DateInput
-                      value={form.dueDate}
-                      onChange={(v) => setForm((f) => ({ ...f, dueDate: v }))}
-                    />
-                  </Field>
+                  {spec.due && (
+                    <Field label={spec.due}>
+                      <DateInput
+                        value={form.dueDate}
+                        onChange={(v) => setForm((f) => ({ ...f, dueDate: v }))}
+                      />
+                    </Field>
+                  )}
 
-                  <Field label="Ghi chú">
+                  <Field label="Ghi chú nội bộ" hint="Không in lên văn bản.">
                     <Input
                       value={form.notes}
                       onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
@@ -271,7 +441,7 @@ export function TermsPanel({
                   <Button type="submit" variant="primary" disabled={saveTerm.isPending}>
                     {BUTTONS.save}
                   </Button>
-                  <Button type="button" variant="secondary" onClick={() => setAddingTo(null)}>
+                  <Button type="button" variant="secondary" onClick={() => setEditing(null)}>
                     {BUTTONS.cancel}
                   </Button>
                 </div>
@@ -282,4 +452,15 @@ export function TermsPanel({
       })}
     </div>
   );
+}
+
+/** Số tiền / tỷ lệ / hạn — chỉ những ô nhóm này dùng. */
+function TermFigures({ term, spec }: { term: ContractTermRecord; spec: TermForm }) {
+  const parts: string[] = [];
+  if (spec.percent && term.percent_value) parts.push(`${term.percent_value}%`);
+  if (spec.amount && term.amount != null) parts.push(formatCurrency(term.amount));
+  if (spec.due)
+    parts.push(term.due_date ? `${spec.due}: ${formatDate(term.due_date)}` : 'Chưa ghi hạn');
+  if (parts.length === 0) return null;
+  return <p className="text-fg-subtle">{parts.join(' · ')}</p>;
 }

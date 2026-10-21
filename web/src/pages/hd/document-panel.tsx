@@ -531,9 +531,9 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
               ? 'Đang cập nhật bản xem trước…'
               : `Cập nhật ${formatDateTime(filled.at)}${Object.values(manual).some((v) => v.trim()) ? ' (có ô điền tay)' : ''} · tô vàng = ô còn thiếu · xem trước có thể lệch đôi chút so với Word, tệp tải về giữ đúng định dạng mẫu.`}
           </p>
-          {canSave && filled.missingFromRecord.some((g) => g.source !== 'dieu_khoan') && (
+          {canSave && filled.missingFromRecord.some((g) => !g.source.startsWith('dieu_khoan')) && (
             <ManualFields
-              groups={filled.missingFromRecord.filter((g) => g.source !== 'dieu_khoan')}
+              groups={filled.missingFromRecord.filter((g) => !g.source.startsWith('dieu_khoan'))}
               values={manual}
               onChange={(key, value) => setManual((m) => ({ ...m, [key]: value }))}
             />
@@ -631,6 +631,7 @@ function missingSourceLink(
 ): { to?: string; scrollTo?: string; label: string } | null {
   switch (source) {
     case 'dieu_khoan':
+    case 'dieu_khoan_tuy_chon':
       return { scrollTo: 'dieu-khoan', label: 'Tới phần Điều khoản' };
     case 'phap_nhan':
       return { to: '/hd/mau-hop-dong', label: 'Mở Mẫu hợp đồng' };

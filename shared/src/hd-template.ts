@@ -16,6 +16,7 @@
 import { formatCurrency, formatDate, toMoney, type MoneyValue } from './format';
 import {
   CONTRACT_PRICE_FORM_LABELS,
+  CONTRACT_TERM_TYPE_LABELS,
   CONTRACT_TYPE_LABELS,
   isPayableContract,
   type ContractPriceForm,
@@ -176,14 +177,36 @@ export const TEMPLATE_LOOP_COLUMNS = [
 ] as const;
 
 /** Bảng lặp ↔ nhóm điều khoản của hợp đồng (HD-02). */
+// Nhãn = đúng tên nhóm điều khoản ở cột sửa — trước ghi «Các đợt thanh toán» trong khi cột sửa
+// ghi «Tiến độ thanh toán», người dùng không biết là một (anh Dũng 21/10/2026).
 export const TEMPLATE_LOOPS: Readonly<Record<string, { term: ContractTermType; label: string }>> = {
-  pham_vi: { term: 'pham_vi', label: 'Phạm vi công việc' },
-  dot_thanh_toan: { term: 'tien_do_thanh_toan', label: 'Các đợt thanh toán' },
-  tam_ung: { term: 'tam_ung', label: 'Tạm ứng' },
-  bao_lanh: { term: 'bao_lanh', label: 'Bảo lãnh' },
-  phat: { term: 'phat', label: 'Phạt vi phạm' },
-  bao_hanh: { term: 'bao_hanh', label: 'Bảo hành' },
-  quyet_toan: { term: 'quyet_toan', label: 'Điều kiện quyết toán' },
+  pham_vi: { term: 'pham_vi', label: CONTRACT_TERM_TYPE_LABELS.pham_vi },
+  dot_thanh_toan: {
+    term: 'tien_do_thanh_toan',
+    label: CONTRACT_TERM_TYPE_LABELS.tien_do_thanh_toan,
+  },
+  tam_ung: { term: 'tam_ung', label: CONTRACT_TERM_TYPE_LABELS.tam_ung },
+  bao_lanh: { term: 'bao_lanh', label: CONTRACT_TERM_TYPE_LABELS.bao_lanh },
+  phat: { term: 'phat', label: CONTRACT_TERM_TYPE_LABELS.phat },
+  bao_hanh: { term: 'bao_hanh', label: CONTRACT_TERM_TYPE_LABELS.bao_hanh },
+  quyet_toan: { term: 'quyet_toan', label: CONTRACT_TERM_TYPE_LABELS.quyet_toan },
+};
+
+/** Ba nhóm mà `submit_contract_approval` chặn trình ký nếu thiếu. */
+export const CONTRACT_REQUIRED_TERM_TYPES: readonly ContractTermType[] = [
+  'pham_vi',
+  'gia_tri',
+  'tien_do_thanh_toan',
+];
+
+/** Tên ngắn của cột bảng lặp trong câu báo thiếu. */
+const LOOP_COLUMN_SHORT: Record<string, string> = {
+  stt: 'số thứ tự',
+  noi_dung: 'nội dung',
+  ty_le: 'tỷ lệ %',
+  so_tien: 'số tiền',
+  so_tien_bang_chu: 'số tiền bằng chữ',
+  han: 'hạn',
 };
 
 export const TEMPLATE_FIELDS: readonly TemplateField[] = [
@@ -455,15 +478,24 @@ export function missingTemplateFields(
 
 /** Nơi sửa một ô còn thiếu — để người soạn biết đi đâu, không phải đoán (anh Dũng 21/10/2026). */
 export type MissingFieldSource =
-  'ky' | 'thong_tin' | 'dieu_khoan' | 'phap_nhan' | 'khach_hang' | 'dien_tay';
+  | 'ky'
+  | 'thong_tin'
+  | 'dieu_khoan'
+  | 'dieu_khoan_tuy_chon'
+  | 'phap_nhan'
+  | 'khach_hang'
+  | 'dien_tay';
 
+// Thứ tự = thứ tự hiện: việc phải làm trước, chỗ để dải chấm là bình thường xuống cuối.
 export const MISSING_FIELD_SOURCE_LABELS: Record<MissingFieldSource, string> = {
-  ky: 'Điền lúc ký — để dải chấm là bình thường',
-  thong_tin: 'Thông tin in lên văn bản (khối phía trên)',
-  dieu_khoan: 'Phần Điều khoản (cột bên trái)',
-  phap_nhan: 'Thông tin pháp nhân NVG — Ban Giám đốc / Quản trị sửa ở màn hình Mẫu hợp đồng',
+  dieu_khoan: 'Điều khoản bắt buộc (cột bên trái)',
+  thong_tin: 'Thông tin in lên văn bản (cột bên trái, trên cùng)',
   khach_hang: 'Hồ sơ khách hàng',
+  phap_nhan: 'Thông tin pháp nhân NVG — Ban Giám đốc / Quản trị sửa ở màn hình Mẫu hợp đồng',
+  dieu_khoan_tuy_chon:
+    'Điều khoản không bắt buộc — mẫu có chỗ cho mục này, không ghi thì in dải chấm',
   dien_tay: 'Luôn điền tay — hệ thống không lưu tài khoản ngân hàng của khách',
+  ky: 'Điền lúc ký — để dải chấm là bình thường',
 };
 
 const SIGNING_KEYS: ReadonlySet<string> = new Set([
@@ -485,8 +517,11 @@ export function missingTemplateFieldsBySource(
   for (const m of collectMissing(tags, data)) {
     const f = m.field;
     let source: MissingFieldSource;
-    if (f.kind === 'loop') source = 'dieu_khoan';
-    else if (SIGNING_KEYS.has(f.key)) source = 'ky';
+    if (f.kind === 'loop') {
+      const term = TEMPLATE_LOOPS[f.key]?.term;
+      source =
+        term && CONTRACT_REQUIRED_TERM_TYPES.includes(term) ? 'dieu_khoan' : 'dieu_khoan_tuy_chon';
+    } else if (SIGNING_KEYS.has(f.key)) source = 'ky';
     else if (f.group === 'hop_dong' || f.group === 'gia_tri') source = 'thong_tin';
     else {
       const isNvg = f.group === 'nvg' || f.group === nvgSide;
@@ -516,14 +551,16 @@ function collectMissing(
     if (field.kind === 'loop') {
       const rows = Array.isArray(value) ? value : [];
       if (rows.length === 0) {
-        missing.push({ field, label: `${field.label} — chưa có điều khoản nào` });
+        missing.push({ field, label: `${field.label} — chưa có dòng nào` });
         continue;
       }
       for (const col of Object.keys((inner as Record<string, unknown>) ?? {})) {
         const colKey = col as keyof TemplateLoopRow;
         if (rows.every((r) => r[colKey] === null || r[colKey] === undefined)) {
-          const colLabel = TEMPLATE_LOOP_COLUMNS.find(([k]) => k === col)?.[1] ?? col;
-          missing.push({ field, label: `${field.label} — ${colLabel.toLowerCase()}` });
+          missing.push({
+            field,
+            label: `${field.label} — chưa ghi ${LOOP_COLUMN_SHORT[col] ?? col}`,
+          });
         }
       }
     } else if (value === null || value === undefined) {

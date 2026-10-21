@@ -446,6 +446,7 @@ export function ContractDetailPage() {
                     contractId={contract.id}
                     companyId={contract.company_id}
                     readOnly={readOnly}
+                    contractValue={contract.value}
                     opportunityId={
                       contract.source_type === 'opportunities' ? contract.source_id : null
                     }
