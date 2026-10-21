@@ -20,6 +20,7 @@ import {
   buildTemplateData,
   formatDateTime,
   MISSING_FIELD_SOURCE_LABELS,
+  TEMPLATE_BLANK,
   missingTemplateFieldsBySource,
   type MissingFieldSource,
   toNvgDateInput,
@@ -226,7 +227,7 @@ interface Filled {
   missing: { source: MissingFieldSource; labels: string[]; keys: string[] }[];
   /** Ô thiếu của riêng hồ sơ (trước khi áp ô điền tay) — danh sách ô cho phần điền tay. */
   missingFromRecord: { source: MissingFieldSource; labels: string[]; keys: string[] }[];
-  /** Giờ điền — để người dùng thấy «Điền lại» đã chạy dù hồ sơ chưa đổi. */
+  /** Giờ điền — bản xem trước tự cập nhật, người dùng cần biết nó mới tới đâu. */
   at: Date;
 }
 
@@ -259,10 +260,19 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
   const [manual, setManual] = useState<Record<string, string>>({});
   const previewRef = useRef<HTMLDivElement>(null);
 
-  // Hồ sơ đổi (thông tin, điều khoản) thì bản xem trước cũ không còn đúng.
+  const ready = Boolean(company.data && terms && (!contract.customer_id || partner.data));
+
+  // Xem trước LUÔN hiện và tự cập nhật: mở tab, đổi mẫu, sửa thông tin / điều khoản, gõ ô điền
+  // tay → điền lại sau một nhịp. Trước đây phải bấm «Điền và xem trước» mới biết thiếu ô nào
+  // (anh Dũng 21/10/2026). Trong lúc chờ điền lại thì khoá «Lưu phiên bản» để không lưu bản cũ.
+  const fillRef = useRef<() => Promise<void>>(async () => {});
+  const [stale, setStale] = useState(true);
   useEffect(() => {
-    setFilled(null);
-  }, [contract, terms, chosen?.id]);
+    if (!ready || !chosen) return;
+    setStale(true);
+    const t = setTimeout(() => void fillRef.current(), 400);
+    return () => clearTimeout(t);
+  }, [ready, contract, terms, chosen, manual, company.data, partner.data]);
 
   useEffect(() => {
     const el = previewRef.current;
@@ -275,6 +285,8 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
         inWrapper: true,
         ignoreLastRenderedPageBreak: true,
         breakPages: true,
+      }).then(() => {
+        if (!cancelled) markBlanks(el);
       });
     });
     return () => {
@@ -305,12 +317,9 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
     );
   }
 
-  const ready = Boolean(company.data && terms && (!contract.customer_id || partner.data));
-
   async function fill() {
     if (!chosen || !company.data || !terms) return;
     setError(null);
-    setSavedVersion(null);
     setBusy(true);
     try {
       const buffer = await (await downloadFile(TEMPLATE_BUCKET, chosen.storage_path)).arrayBuffer();
@@ -355,8 +364,11 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
       setError(toUserMessage(e));
     } finally {
       setBusy(false);
+      setStale(false);
     }
   }
+
+  fillRef.current = fill;
 
   async function saveAndDownload() {
     if (!filled) return;
@@ -409,14 +421,10 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
             ))}
           </select>
         </Field>
-        {/* Nút phụ: nút chính của màn hình là bước hợp đồng ở đầu trang (CGD 6.3). */}
-        <Button variant="secondary" disabled={!ready || busy} onClick={() => void fill()}>
-          {filled ? 'Điền lại' : 'Điền và xem trước'}
-        </Button>
         {filled && canSave && (
           <Button
             variant="secondary"
-            disabled={save.isPending}
+            disabled={save.isPending || stale || busy}
             onClick={() => void saveAndDownload()}
           >
             <Download className="size-4" aria-hidden /> Lưu phiên bản và tải về
@@ -480,16 +488,15 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
             <p className="mt-3 text-status-completed">Mọi chỗ trống của mẫu đã có dữ liệu.</p>
           )}
           <p className="mt-2 text-xs text-fg-subtle">
-            Đã điền lúc {formatDateTime(filled.at)} từ hồ sơ
-            {Object.values(manual).some((v) => v.trim()) ? ' và các ô điền tay' : ''}.
+            {stale || busy
+              ? 'Đang cập nhật bản xem trước…'
+              : `Bản xem trước cập nhật lúc ${formatDateTime(filled.at)} từ hồ sơ${Object.values(manual).some((v) => v.trim()) ? ' và các ô điền tay' : ''}. Chỗ tô vàng là ô còn thiếu.`}
           </p>
           {canSave && filled.missingFromRecord.some((g) => g.source !== 'dieu_khoan') && (
             <ManualFields
               groups={filled.missingFromRecord.filter((g) => g.source !== 'dieu_khoan')}
               values={manual}
               onChange={(key, value) => setManual((m) => ({ ...m, [key]: value }))}
-              onApply={() => void fill()}
-              busy={busy}
             />
           )}
           <p className="mt-3 text-xs text-fg-subtle">
@@ -609,14 +616,10 @@ function ManualFields({
   groups,
   values,
   onChange,
-  onApply,
-  busy,
 }: {
   groups: { source: MissingFieldSource; labels: string[]; keys: string[] }[];
   values: Record<string, string>;
   onChange: (key: string, value: string) => void;
-  onApply: () => void;
-  busy: boolean;
 }) {
   return (
     <details className="mt-3 rounded-md border border-border px-3 py-2">
@@ -625,7 +628,8 @@ function ManualFields({
       </summary>
       <p className="mt-1 text-sm text-fg-subtle">
         Chỉ áp cho văn bản này. Thông tin dùng lâu dài (pháp nhân, khách hàng) nên sửa ở hồ sơ để
-        lần sau máy tự điền. Ô để trống thì văn bản in dải chấm.
+        lần sau máy tự điền. Gõ tới đâu bản xem trước cập nhật tới đó; ô để trống thì văn bản in dải
+        chấm.
       </p>
       <div className="mt-2 grid gap-3 sm:grid-cols-2">
         {groups.flatMap((g) =>
@@ -636,9 +640,29 @@ function ManualFields({
           )),
         )}
       </div>
-      <Button variant="secondary" className="mt-3" disabled={busy} onClick={onApply}>
-        Điền lại với các ô này
-      </Button>
     </details>
   );
+}
+
+/** Tô vàng dải chấm (ô còn thiếu) trong bản xem trước — nhìn là thấy chỗ nào chưa có dữ liệu. */
+function markBlanks(root: HTMLElement) {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const hits: Text[] = [];
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    if (n.nodeValue?.includes(TEMPLATE_BLANK)) hits.push(n as Text);
+  }
+  for (const node of hits) {
+    const parts = node.nodeValue!.split(TEMPLATE_BLANK);
+    const frag = document.createDocumentFragment();
+    parts.forEach((part, i) => {
+      if (part) frag.append(part);
+      if (i < parts.length - 1) {
+        const mark = document.createElement('mark');
+        mark.textContent = TEMPLATE_BLANK;
+        mark.className = 'bg-status-pending-bg text-fg';
+        frag.append(mark);
+      }
+    });
+    node.replaceWith(frag);
+  }
 }
