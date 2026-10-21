@@ -21,6 +21,7 @@ export * from './da';
 export * from './tk';
 export * from './hd';
 export * from './hd-template';
+export * from './hd-term-suggest';
 export * from './bc';
 export * from './tc';
 export * from './tc-milestones';

@@ -17,7 +17,9 @@ import {
   CONTRACT_TERM_TYPE_LABELS,
   formatCurrency,
   formatDate,
+  suggestContractTerms,
   type ContractTermType,
+  type TermSuggestion,
 } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { DateInput } from '@/components/ui/date-input';
@@ -30,6 +32,7 @@ import {
   type ContractTermRecord,
 } from '@/hooks/use-contracts';
 import { toUserMessage } from '@/hooks/use-error-message';
+import { useContractTermSources } from '@/hooks/use-quotes';
 
 /** Ba nhóm mà `submit_contract_approval` chặn trình ký nếu thiếu. */
 const REQUIRED_TYPES: readonly ContractTermType[] = ['pham_vi', 'gia_tri', 'tien_do_thanh_toan'];
@@ -38,12 +41,19 @@ export function TermsPanel({
   contractId,
   companyId,
   readOnly,
+  opportunityId = null,
 }: {
   contractId: string;
   companyId: string;
   readOnly: boolean;
+  /** Cơ hội nguồn — có thì máy gợi ý Phạm vi / Giá trị từ báo giá và khảo sát. */
+  opportunityId?: string | null;
 }) {
   const { data: terms } = useContractTerms(contractId);
+  const sources = useContractTermSources(readOnly ? null : opportunityId);
+  const suggestions: Partial<Record<ContractTermType, TermSuggestion | null>> = sources.data
+    ? suggestContractTerms(sources.data.quote, sources.data.survey)
+    : {};
   const saveTerm = useSaveContractTerm();
 
   const [addingTo, setAddingTo] = useState<ContractTermType | null>(null);
@@ -63,8 +73,14 @@ export function TermsPanel({
     byType.set(term.term_type, list);
   }
 
-  function startAdding(type: ContractTermType) {
-    setForm({ description: '', amount: '', percentValue: '', dueDate: '', notes: '' });
+  function startAdding(type: ContractTermType, from?: TermSuggestion) {
+    setForm({
+      description: from?.description ?? '',
+      amount: from?.amount ?? '',
+      percentValue: '',
+      dueDate: '',
+      notes: from?.notes ?? '',
+    });
     setError(null);
     setAddingTo(type);
   }
@@ -121,6 +137,7 @@ export function TermsPanel({
       {CONTRACT_TERM_TYPES.map((type) => {
         const rows = byType.get(type) ?? [];
         const isMissingRequired = REQUIRED_TYPES.includes(type) && rows.length === 0;
+        const suggestion = rows.length === 0 && !readOnly ? suggestions[type] : null;
 
         return (
           <section
@@ -143,6 +160,22 @@ export function TermsPanel({
                 </span>
               )}
             </div>
+
+            {suggestion && addingTo !== type && (
+              <div className="mb-3 rounded-sm border border-status-progress bg-status-progress-bg px-3 py-2">
+                <p className="text-xs text-fg-subtle">Máy soạn sẵn — {suggestion.source}</p>
+                <p className="mt-1 whitespace-pre-wrap">{suggestion.description}</p>
+                {suggestion.notes && <p className="text-fg-subtle">{suggestion.notes}</p>}
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => startAdding(type, suggestion)}
+                >
+                  Dùng bản soạn sẵn
+                </Button>
+              </div>
+            )}
 
             {rows.length === 0 ? (
               <p className="text-fg-subtle">Chưa ghi nhận điều khoản nhóm này.</p>

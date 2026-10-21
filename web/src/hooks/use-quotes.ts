@@ -153,3 +153,42 @@ export function useRecordQuoteResponse() {
     onSuccess: invalidate,
   });
 }
+
+/**
+ * Nguồn gợi ý điều khoản hợp đồng (`suggestContractTerms`): báo giá đang hiệu lực với khách
+ * (bản mới nhất đã gửi; chưa gửi thì bản đã duyệt mới nhất) và báo cáo khảo sát đã duyệt mới nhất.
+ */
+export function useContractTermSources(opportunityId: string | null) {
+  return useQuery({
+    queryKey: ['quotes', 'term-sources', opportunityId],
+    enabled: Boolean(opportunityId),
+    queryFn: async () => {
+      const [quotes, surveys] = await Promise.all([
+        supabase
+          .from('quotes')
+          .select(
+            'code, version, status, total_value, discount_amount, discount_reason, notes, sent_to_customer_at',
+          )
+          .eq('opportunity_id', opportunityId!)
+          .is('deleted_at', null)
+          .order('version', { ascending: false }),
+        supabase
+          .from('site_surveys')
+          .select('surveyed_at, needs, schedule_note')
+          .eq('opportunity_id', opportunityId!)
+          .eq('report_status', 'da_duyet')
+          .is('deleted_at', null)
+          .order('surveyed_at', { ascending: false })
+          .limit(1),
+      ]);
+      if (quotes.error) throw new Error(quotes.error.message);
+      if (surveys.error) throw new Error(surveys.error.message);
+      const list = quotes.data ?? [];
+      const quote =
+        list.find((q) => q.sent_to_customer_at !== null) ??
+        list.find((q) => q.status === 'completed') ??
+        null;
+      return { quote, survey: surveys.data?.[0] ?? null };
+    },
+  });
+}
