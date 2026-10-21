@@ -330,7 +330,13 @@ def convert(src: Path, code: str):
             report['milestones'] = milestones
             break
 
-    # 5) Bỏ ghi chú soạn thảo.
+    # 5) Tên pháp nhân viết đúng đăng ký: «Tư vấn và Xây dựng» (anh Dũng chốt 21/10/2026; bộ mẫu
+    #    ghi «&» ở chỗ in sẵn tên NVO — hợp đồng nội bộ, hợp đồng nguyên tắc nhà cung cấp).
+    for p in body.iter(W + 'p'):
+        while (k := ptext(p).find('TƯ VẤN & XÂY DỰNG')) >= 0:
+            replace_range(p, k, k + len('TƯ VẤN & XÂY DỰNG'), 'TƯ VẤN VÀ XÂY DỰNG')
+
+    # 6) Bỏ ghi chú soạn thảo.
     for p in list(body.iter(W + 'p')):
         if ptext(p).startswith(NOTE_PREFIX):
             remove_paragraph(p)
