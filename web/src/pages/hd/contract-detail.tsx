@@ -9,7 +9,7 @@
  * Nháp → Trình ký · Đã duyệt → Ghi nhận đã ký · Đã ký → Quyết toán.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   CONTRACT_FLOW,
@@ -79,6 +79,19 @@ export function ContractDetailPage() {
   const { data: readiness = [] } = useStageReadiness('contract', id);
   const approvals = useApprovalHistory('contracts', id ? [id] : []);
   const [searchParams, setSearchParams] = useSearchParams();
+  // Điều khoản + Văn bản gộp thành «Soạn hợp đồng» (21/10/2026) — đường dẫn cũ vẫn mở đúng chỗ.
+  const legacyTab = searchParams.get('tab');
+  useEffect(() => {
+    if (legacyTab !== 'dieu-khoan' && legacyTab !== 'van-ban') return;
+    setSearchParams(
+      (params) => {
+        const next = new URLSearchParams(params);
+        next.set('tab', 'soan-thao');
+        return next;
+      },
+      { replace: true },
+    );
+  }, [legacyTab, setSearchParams]);
   const navigate = useNavigate();
 
   if (isLoading) return <CardGridSkeleton count={3} />;
@@ -128,11 +141,16 @@ export function ContractDetailPage() {
   );
 
   // Tab nơi làm việc của từng bước — mở hồ sơ là tới đúng chỗ (phản hồi chủ dự án).
-  const stageTab = contract.stage === 'nhap' ? 'dieu-khoan' : 'tong-quan';
-  function openTab(tab: string) {
+  const stageTab = contract.stage === 'nhap' ? 'soan-thao' : 'tong-quan';
+  function openTab(tab: string, anchor?: string) {
     const next = new URLSearchParams(searchParams);
     next.set('tab', tab);
     setSearchParams(next, { replace: true });
+    if (anchor) {
+      requestAnimationFrame(() =>
+        document.getElementById(anchor)?.scrollIntoView({ behavior: 'smooth' }),
+      );
+    }
   }
 
   // Điều kiện bước kế tiếp (0163) — cùng điều kiện với hàm CSDL chặn, nên nút không thể nói
@@ -143,14 +161,15 @@ export function ContractDetailPage() {
   const nextRequirements = readiness
     .filter((r) => r.for_stage === nextStage)
     .map((r) => ({
-      label: r.label,
+      // Câu của CSDL (0176) còn gọi «tab Văn bản» — tab đã gộp vào «Soạn hợp đồng».
+      label: r.label.replace('(tab Văn bản)', '(tab Soạn hợp đồng)'),
       met: r.met,
       action:
         r.requirement === 'terms_complete' && canDraft ? (
           <button
             type="button"
             className="font-medium text-brand underline-offset-2 hover:underline"
-            onClick={() => openTab('dieu-khoan')}
+            onClick={() => openTab('soan-thao', 'dieu-khoan')}
           >
             Ghi điều khoản
           </button>
@@ -159,7 +178,7 @@ export function ContractDetailPage() {
           <button
             type="button"
             className="font-medium text-brand underline-offset-2 hover:underline"
-            onClick={() => openTab('van-ban')}
+            onClick={() => openTab('soan-thao')}
           >
             Lập văn bản
           </button>
@@ -416,21 +435,24 @@ export function ContractDetailPage() {
             ),
           },
           {
-            id: 'dieu-khoan',
-            label: 'Điều khoản',
+            id: 'soan-thao',
+            label: 'Soạn hợp đồng',
             content: (
-              <TermsPanel
-                contractId={contract.id}
-                companyId={contract.company_id}
-                readOnly={readOnly}
-                opportunityId={contract.source_type === 'opportunities' ? contract.source_id : null}
+              <DocumentPanel
+                contract={contract}
+                canDraft={canDraft && !isClosed}
+                termsPanel={
+                  <TermsPanel
+                    contractId={contract.id}
+                    companyId={contract.company_id}
+                    readOnly={readOnly}
+                    opportunityId={
+                      contract.source_type === 'opportunities' ? contract.source_id : null
+                    }
+                  />
+                }
               />
             ),
-          },
-          {
-            id: 'van-ban',
-            label: 'Văn bản',
-            content: <DocumentPanel contract={contract} canDraft={canDraft && !isClosed} />,
           },
           {
             id: 'phat-sinh',

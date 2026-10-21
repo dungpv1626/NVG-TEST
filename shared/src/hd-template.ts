@@ -460,7 +460,7 @@ export type MissingFieldSource =
 export const MISSING_FIELD_SOURCE_LABELS: Record<MissingFieldSource, string> = {
   ky: 'Điền lúc ký — để dải chấm là bình thường',
   thong_tin: 'Thông tin in lên văn bản (khối phía trên)',
-  dieu_khoan: 'Tab Điều khoản',
+  dieu_khoan: 'Phần Điều khoản (cột bên trái)',
   phap_nhan: 'Thông tin pháp nhân NVG — Ban Giám đốc / Quản trị sửa ở màn hình Mẫu hợp đồng',
   khach_hang: 'Hồ sơ khách hàng',
   dien_tay: 'Luôn điền tay — hệ thống không lưu tài khoản ngân hàng của khách',

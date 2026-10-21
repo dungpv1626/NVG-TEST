@@ -10,7 +10,7 @@
  * Điền chạy trên trình duyệt (`lib/docx-template.ts`); chỉ tệp đã lưu mới lên kho.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, Download, FileText, Lock } from 'lucide-react';
 import {
@@ -59,28 +59,45 @@ import { cn } from '@/lib/utils';
  */
 const DRAFTABLE_STAGES = ['nhap'] as const;
 
+/**
+ * Tab «Soạn hợp đồng»: bên trái sửa (thông tin in lên văn bản + điều khoản), bên phải bản xem
+ * trước đứng yên khi cuộn. Trước đây Điều khoản và Văn bản là hai tab — sửa một dòng phải đổi
+ * tab rồi kéo xuống tận cuối mới thấy văn bản (anh Dũng 21/10/2026).
+ */
 export function DocumentPanel({
   contract,
   canDraft,
+  termsPanel,
 }: {
   contract: ContractDetailRecord;
   /** Người chịu trách nhiệm có quyền sửa HD — đúng điều kiện `rls_contract_writable`. */
   canDraft: boolean;
+  /** Khối điều khoản (HD-02) — đặt ở cột sửa, cạnh bản xem trước. */
+  termsPanel: ReactNode;
 }) {
   const locked = !(DRAFTABLE_STAGES as readonly string[]).includes(contract.stage);
   return (
     <div className="space-y-4">
-      <InfoSection contract={contract} editable={canDraft && contract.stage === 'nhap'} />
-      {locked ? (
-        <p className="flex items-center gap-2 rounded-md border border-border bg-surface-sunken px-3 py-2">
-          <Lock className="size-4 text-fg-subtle" aria-hidden />
-          {contract.stage === 'cho_duyet' || contract.stage === 'da_duyet'
-            ? 'Hợp đồng đang chờ duyệt hoặc đã duyệt — văn bản giữ đúng bản đã gửi. Bị trả về thì lập bản mới.'
-            : 'Hợp đồng đã ký — văn bản đã khoá, không lập thêm bản điền mới. Thay đổi sau ký đi qua tab Phát sinh.'}
-        </p>
-      ) : (
-        <FillSection contract={contract} canSave={canDraft} />
-      )}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start">
+        <div className="min-w-0 space-y-4">
+          <InfoSection contract={contract} editable={canDraft && contract.stage === 'nhap'} />
+          <div id="dieu-khoan" className="scroll-mt-48">
+            {termsPanel}
+          </div>
+        </div>
+        <div className="min-w-0 lg:sticky lg:top-[16.5rem] lg:max-h-[calc(100vh-18rem)] lg:overflow-y-auto">
+          {locked ? (
+            <p className="flex items-center gap-2 rounded-md border border-border bg-surface-sunken px-3 py-2">
+              <Lock className="size-4 text-fg-subtle" aria-hidden />
+              {contract.stage === 'cho_duyet' || contract.stage === 'da_duyet'
+                ? 'Hợp đồng đang chờ duyệt hoặc đã duyệt — văn bản giữ đúng bản đã gửi. Bị trả về thì lập bản mới.'
+                : 'Hợp đồng đã ký — văn bản đã khoá, không lập thêm bản điền mới. Thay đổi sau ký đi qua tab Phát sinh.'}
+            </p>
+          ) : (
+            <FillSection contract={contract} canSave={canDraft} />
+          )}
+        </div>
+      </div>
       <VersionsSection
         contractId={contract.id}
         submittedId={contract.submitted_document_id}
@@ -146,7 +163,7 @@ function InfoSection({
         Giá trị, đối tác và điều khoản lấy từ hồ sơ. Các ô dưới đây hồ sơ chưa có.
         {!editable && ' Chỉ sửa được khi hợp đồng còn Nháp, bởi người chịu trách nhiệm.'}
       </p>
-      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <Field label="Hình thức giá" hint="Luật Xây dựng 2025, Điều 82 khoản 2.">
           <select
             value={form.priceForm}
@@ -286,11 +303,16 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
         ignoreLastRenderedPageBreak: true,
         breakPages: true,
       }).then(() => {
-        if (!cancelled) markBlanks(el);
+        if (cancelled) return;
+        markBlanks(el);
+        fitPreview(el);
       });
     });
+    const observer = new ResizeObserver(() => fitPreview(el));
+    observer.observe(el);
     return () => {
       cancelled = true;
+      observer.disconnect();
     };
   }, [filled]);
 
@@ -449,12 +471,14 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
       {filled && (
         <>
           {filled.missing.length > 0 ? (
-            <div className="mt-3 rounded-md border border-status-pending bg-status-pending-bg px-3 py-2">
-              <p className="flex items-center gap-2 font-medium text-status-pending">
+            // Thu gọn mặc định: chỗ thiếu đã tô vàng ngay trong bản xem trước; danh sách đầy đủ
+            // mở ra khi cần biết sửa ở đâu — để mở sẵn thì nó đẩy bản xem trước khỏi màn hình.
+            <details className="mt-3 rounded-md border border-status-pending bg-status-pending-bg px-3 py-2">
+              <summary className="flex cursor-pointer items-center gap-2 font-medium text-status-pending">
                 <AlertTriangle className="size-4" aria-hidden />
-                {filled.missing.reduce((n, g) => n + g.labels.length, 0)} ô chưa có dữ liệu — văn
-                bản in dải chấm để điền tay
-              </p>
+                {filled.missing.reduce((n, g) => n + g.labels.length, 0)} ô chưa có dữ liệu (tô vàng
+                trong văn bản) — xem sửa ở đâu
+              </summary>
               {filled.missing.map((g) => {
                 const link = missingSourceLink(g.source, contract);
                 return (
@@ -464,12 +488,26 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
                       {link && (
                         <>
                           {' · '}
-                          <Link
-                            to={link.to}
-                            className="text-brand underline-offset-2 hover:underline"
-                          >
-                            {link.label}
-                          </Link>
+                          {link.scrollTo ? (
+                            <button
+                              type="button"
+                              className="text-brand underline-offset-2 hover:underline"
+                              onClick={() =>
+                                document
+                                  .getElementById(link.scrollTo!)
+                                  ?.scrollIntoView({ behavior: 'smooth' })
+                              }
+                            >
+                              {link.label}
+                            </button>
+                          ) : (
+                            <Link
+                              to={link.to!}
+                              className="text-brand underline-offset-2 hover:underline"
+                            >
+                              {link.label}
+                            </Link>
+                          )}
                         </>
                       )}
                     </p>
@@ -483,7 +521,7 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
                   </div>
                 );
               })}
-            </div>
+            </details>
           ) : (
             <p className="mt-3 text-status-completed">Mọi chỗ trống của mẫu đã có dữ liệu.</p>
           )}
@@ -506,7 +544,7 @@ function FillSection({ contract, canSave }: { contract: ContractDetailRecord; ca
           <div
             ref={previewRef}
             aria-label="Xem trước văn bản hợp đồng"
-            className="mt-2 max-h-[70vh] overflow-auto rounded-md border border-border"
+            className="mt-2 overflow-x-hidden rounded-md border border-border"
           />
         </>
       )}
@@ -593,10 +631,10 @@ function VersionsSection({
 function missingSourceLink(
   source: MissingFieldSource,
   contract: ContractDetailRecord,
-): { to: string; label: string } | null {
+): { to?: string; scrollTo?: string; label: string } | null {
   switch (source) {
     case 'dieu_khoan':
-      return { to: `/hd/hop-dong/${contract.id}?tab=dieu-khoan`, label: 'Mở Điều khoản' };
+      return { scrollTo: 'dieu-khoan', label: 'Tới phần Điều khoản' };
     case 'phap_nhan':
       return { to: '/hd/mau-hop-dong', label: 'Mở Mẫu hợp đồng' };
     case 'khach_hang':
@@ -665,4 +703,16 @@ function markBlanks(root: HTMLElement) {
     });
     node.replaceWith(frag);
   }
+}
+
+/**
+ * Thu nhỏ trang A4 vừa bề rộng cột xem trước — cột hẹp hơn khổ giấy, để nguyên thì phải cuộn
+ * ngang mới đọc hết dòng.
+ */
+function fitPreview(root: HTMLElement) {
+  const wrapper = root.querySelector<HTMLElement>('.docx-wrapper');
+  if (!wrapper) return;
+  wrapper.style.zoom = '1';
+  const ratio = root.clientWidth / wrapper.scrollWidth;
+  wrapper.style.zoom = ratio < 1 ? String(ratio) : '1';
 }
