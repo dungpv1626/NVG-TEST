@@ -14,6 +14,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
+  attachContractDocument,
   ACCOUNTS,
   anonClient,
   hasCredentials,
@@ -3000,6 +3001,7 @@ describeDb('HD — hợp đồng, điều khoản và phát sinh', () => {
         description: `${TEST_PREFIX} điều khoản ${termType}`,
       });
     }
+    await attachContractDocument(client, contract.id, contract.companyId);
   }
 
   async function createAmendment(

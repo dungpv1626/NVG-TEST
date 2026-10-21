@@ -24,6 +24,8 @@ export interface ContractTemplateRecord {
   storage_path: string;
   file_name: string;
   tags: TemplateTags;
+  /** Các đợt thanh toán mẫu đề xuất (0185) — `ty_le` là số %, hoặc null khi mẫu để trống. */
+  payment_milestones: { noi_dung: string; ty_le: string | null; ty_le_mau?: string }[];
   is_active: boolean;
   notes: string | null;
   created_at: string;
@@ -32,7 +34,8 @@ export interface ContractTemplateRecord {
 }
 
 const TEMPLATE_SELECT =
-  'id, company_id, title, contract_type, price_form, storage_path, file_name, tags, is_active, ' +
+  'id, company_id, title, contract_type, price_form, storage_path, file_name, tags, ' +
+  'payment_milestones, is_active, ' +
   'notes, created_at, company:companies(code, short_name), ' +
   'creator:users!contract_templates_created_by_fkey(full_name)';
 
@@ -69,12 +72,23 @@ export function useTemplatesForContract(
         .eq('company_id', companyId!)
         .eq('contract_type', type!)
         .eq('is_active', true)
-        .order('created_at', { ascending: false });
+        // Xếp theo tên — tên bộ mẫu mở đầu bằng mã (NVC-HĐ-01 trước NVC-HĐ-02).
+        .order('title', { ascending: true });
       if (error) throw new Error(error.message);
       return (data ?? []) as unknown as ContractTemplateRecord[];
     },
     enabled: Boolean(companyId && type),
   });
+}
+
+/** Mẫu khớp hình thức giá đứng trước, mẫu dùng chung (không ghi hình thức giá) sau. */
+export function rankTemplates(
+  list: ContractTemplateRecord[],
+  priceForm: ContractPriceForm | null,
+): ContractTemplateRecord[] {
+  return list
+    .filter((t) => t.price_form === null || t.price_form === priceForm)
+    .sort((a, b) => Number(b.price_form === priceForm) - Number(a.price_form === priceForm));
 }
 
 export function useUploadContractTemplate() {

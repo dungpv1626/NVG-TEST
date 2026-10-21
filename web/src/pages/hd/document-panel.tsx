@@ -37,12 +37,12 @@ import {
   DOCUMENT_BUCKET,
   TEMPLATE_BUCKET,
   downloadFile,
+  rankTemplates,
   useCompanyContractInfo,
   useContractDocuments,
   usePartnerContractInfo,
   useSaveContractDocument,
   useTemplatesForContract,
-  type ContractTemplateRecord,
 } from '@/hooks/use-contract-templates';
 import {
   useContractTerms,
@@ -246,13 +246,6 @@ interface Filled {
   missingFromRecord: { source: MissingFieldSource; labels: string[]; keys: string[] }[];
   /** Giờ điền — bản xem trước tự cập nhật, người dùng cần biết nó mới tới đâu. */
   at: Date;
-}
-
-/** Mẫu khớp hình thức giá đứng trước, mẫu dùng chung (không ghi hình thức giá) sau. */
-function rankTemplates(list: ContractTemplateRecord[], priceForm: ContractPriceForm | null) {
-  return list
-    .filter((t) => t.price_form === null || t.price_form === priceForm)
-    .sort((a, b) => Number(b.price_form === priceForm) - Number(a.price_form === priceForm));
 }
 
 function FillSection({ contract, canSave }: { contract: ContractDetailRecord; canSave: boolean }) {

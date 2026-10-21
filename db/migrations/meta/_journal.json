@@ -1296,6 +1296,13 @@
       "when": 1791290000000,
       "tag": "0184_chan_lap_bao_gia_truoc_buoc",
       "breakpoints": true
+    },
+    {
+      "idx": 185,
+      "version": "7",
+      "when": 1791300000000,
+      "tag": "0185_bo_mau_hop_dong",
+      "breakpoints": true
     }
   ]
 }

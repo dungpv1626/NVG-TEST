@@ -23,7 +23,9 @@ import {
   formatCurrency,
   formatDate,
   suggestContractTerms,
+  type ContractPriceForm,
   type ContractTermType,
+  type ContractType,
   type MoneyValue,
   type TermSuggestion,
 } from '@nvg/shared';
@@ -38,6 +40,7 @@ import {
   useSaveContractTerm,
   type ContractTermRecord,
 } from '@/hooks/use-contracts';
+import { rankTemplates, useTemplatesForContract } from '@/hooks/use-contract-templates';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useContractTermSources } from '@/hooks/use-quotes';
 
@@ -116,11 +119,16 @@ export function TermsPanel({
   companyId,
   readOnly,
   contractValue = null,
+  contractType,
+  priceForm = null,
   opportunityId = null,
 }: {
   contractId: string;
   companyId: string;
   readOnly: boolean;
+  /** Loại + hình thức giá — chọn mẫu Word giống cột bên phải để gợi ý các đợt thanh toán. */
+  contractType?: ContractType;
+  priceForm?: ContractPriceForm | null;
   /** Giá trị hợp đồng — để tính số tiền từ tỷ lệ. */
   contractValue?: MoneyValue | null;
   /** Cơ hội nguồn — có thì máy gợi ý Phạm vi / Giá trị từ báo giá và khảo sát. */
@@ -133,6 +141,12 @@ export function TermsPanel({
     : {};
   const saveTerm = useSaveContractTerm();
   const deleteTerm = useDeleteContractTerm();
+  const templates = useTemplatesForContract(readOnly ? undefined : companyId, contractType);
+  // Mẫu Word có bảng các đợt → gợi ý «Tiến độ thanh toán» theo đúng mốc mẫu đề xuất (0185).
+  const milestoneTemplate =
+    rankTemplates(templates.data ?? [], priceForm).find((t) => t.payment_milestones?.length) ??
+    null;
+  const [applying, setApplying] = useState(false);
 
   /** Nhóm đang mở biểu mẫu, và dòng đang sửa (null = thêm mới). */
   const [editing, setEditing] = useState<{ type: ContractTermType; id: string | null } | null>(
@@ -205,6 +219,31 @@ export function TermsPanel({
       setEditing(null);
     } catch (e) {
       setError(toUserMessage(e, editing.id ? 'edit' : 'create'));
+    }
+  }
+
+  async function applyMilestones() {
+    if (!milestoneTemplate) return;
+    setError(null);
+    setApplying(true);
+    try {
+      for (const [i, m] of milestoneTemplate.payment_milestones.entries()) {
+        await saveTerm.mutateAsync({
+          contractId,
+          companyId,
+          values: {
+            term_type: 'tien_do_thanh_toan',
+            description: m.noi_dung,
+            percent_value: m.ty_le,
+            amount: m.ty_le ? amountFromPercent(m.ty_le, contractValue) : null,
+            position: String(i + 1),
+          },
+        });
+      }
+    } catch (e) {
+      setError(toUserMessage(e, 'create'));
+    } finally {
+      setApplying(false);
     }
   }
 
@@ -285,6 +324,44 @@ export function TermsPanel({
                 </Button>
               </div>
             )}
+
+            {type === 'tien_do_thanh_toan' &&
+              rows.length === 0 &&
+              !readOnly &&
+              !formOpen &&
+              milestoneTemplate && (
+                <div className="mb-3 rounded-sm border border-status-progress bg-status-progress-bg px-3 py-2">
+                  <p className="text-xs text-fg-subtle">
+                    Mẫu «{milestoneTemplate.title}» đề xuất{' '}
+                    {milestoneTemplate.payment_milestones.length} đợt
+                  </p>
+                  <ol className="mt-1 list-decimal space-y-0.5 pl-5">
+                    {milestoneTemplate.payment_milestones.map((m, i) => (
+                      <li key={i}>
+                        {m.noi_dung}
+                        <span className="text-fg-subtle">
+                          {' — '}
+                          {m.ty_le ? `${m.ty_le}%` : 'tỷ lệ chưa ghi'}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                  <p className="mt-1 text-xs text-fg-subtle">
+                    Thêm xong sửa tỷ lệ, hạn từng đợt; đợt nào không dùng thì xoá.
+                  </p>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="mt-2"
+                    disabled={applying}
+                    onClick={() => void applyMilestones()}
+                  >
+                    {applying ? 'Đang thêm…' : 'Dùng các đợt này'}
+                  </Button>
+                </div>
+              )}
+
+            {type === 'tien_do_thanh_toan' && rows.length > 0 && <PercentTotal rows={rows} />}
 
             {rows.length === 0 ? (
               !formOpen && <p className="text-fg-subtle">Chưa có dòng nào.</p>
@@ -451,6 +528,26 @@ export function TermsPanel({
         );
       })}
     </div>
+  );
+}
+
+/** Tổng tỷ lệ các đợt — thiếu / thừa 100% thì nói ngay, trước khi trình ký. */
+function PercentTotal({ rows }: { rows: ContractTermRecord[] }) {
+  const values = rows.map((r) => Number((r.percent_value ?? '').replace(',', '.')));
+  if (values.every((v) => !Number.isFinite(v) || v === 0)) return null;
+  const missing = values.filter((v) => !Number.isFinite(v) || v === 0).length;
+  const total = Math.round(values.filter(Number.isFinite).reduce((a, b) => a + b, 0) * 100) / 100;
+  const ok = total === 100 && missing === 0;
+  return (
+    <p className={ok ? 'mb-2 text-sm text-status-completed' : 'mb-2 text-sm text-status-pending'}>
+      Tổng tỷ lệ: {String(total).replace('.', ',')}%
+      {!ok &&
+        (missing > 0
+          ? ` — còn ${missing} đợt chưa ghi tỷ lệ`
+          : total < 100
+            ? ` — còn thiếu ${String(Math.round((100 - total) * 100) / 100).replace('.', ',')}%`
+            : ' — vượt 100%')}
+    </p>
   );
 }
 

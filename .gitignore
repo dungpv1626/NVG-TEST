@@ -69,3 +69,7 @@ __pycache__/
 
 # Mốc sao lưu tại máy (CSDL dev, ảnh trước/sau) — không commit dữ liệu
 backup/
+
+# Bộ mẫu hợp đồng gốc anh Dũng gửi (21/10/2026) — bản đã chuyển nằm ở db/seed-assets/contract-templates/
+Bo_hop_dong_*/
+Bo_hop_dong_*.zip

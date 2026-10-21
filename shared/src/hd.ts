@@ -12,26 +12,51 @@ import { toMoney } from './format';
 import type { StatusGroup } from './status';
 
 /**
- * Bốn loại hợp đồng — lấy nguyên văn PRD HD-01: "thiết kế, thi công, mua bán, khoán tổ
- * đội/thầu phụ".
+ * Loại hợp đồng — PRD HD-01 ("thiết kế, thi công, mua bán, khoán tổ đội/thầu phụ") cộng ba loại
+ * bộ mẫu hợp đồng của NVG có mà PRD chưa tách (0185, 21/10/2026): NVG mua vật tư, NVG thuê máy
+ * móc thiết bị, NVS cho thuê giàn giáo.
  *
- * `khoan_thau_phu` là hợp đồng NVG đi THUÊ (chi ra), ba loại còn lại là hợp đồng NVG NHẬN
- * (thu vào). Phân biệt được thì công nợ phải thu và phải trả ở Module KT không lẫn nhau.
+ * Hướng tiền quyết định công nợ phải thu / phải trả ở Module KT không lẫn nhau:
+ *   · NVG NHẬN tiền: thiết kế, thi công, mua bán (NVG bán), cho thuê;
+ *   · NVG CHI tiền: khoán tổ đội / thầu phụ, mua vật tư, thuê thiết bị.
  */
-export const CONTRACT_TYPES = ['thiet_ke', 'thi_cong', 'mua_ban', 'khoan_thau_phu'] as const;
+export const CONTRACT_TYPES = [
+  'thiet_ke',
+  'thi_cong',
+  'mua_ban',
+  'cho_thue',
+  'khoan_thau_phu',
+  'mua_vat_tu',
+  'thue_thiet_bi',
+] as const;
 
 export type ContractType = (typeof CONTRACT_TYPES)[number];
 
 export const CONTRACT_TYPE_LABELS: Readonly<Record<ContractType, string>> = {
   thiet_ke: 'Hợp đồng thiết kế',
   thi_cong: 'Hợp đồng thi công',
-  mua_ban: 'Hợp đồng mua bán',
+  mua_ban: 'Hợp đồng mua bán (NVG bán)',
+  cho_thue: 'Hợp đồng cho thuê (giàn giáo)',
   khoan_thau_phu: 'Hợp đồng khoán tổ đội / thầu phụ',
+  mua_vat_tu: 'Hợp đồng mua vật tư (NVG mua)',
+  thue_thiet_bi: 'Hợp đồng thuê máy móc thiết bị',
 };
 
-/** Hợp đồng NVG đi thuê thì tiền chảy RA, không phải doanh thu phải thu. */
+/** Loại hợp đồng NVG CHI tiền ra — văn bản đặt NVG làm bên A, công nợ là phải trả. */
+const PAYABLE_TYPES: ReadonlySet<ContractType> = new Set([
+  'khoan_thau_phu',
+  'mua_vat_tu',
+  'thue_thiet_bi',
+]);
+
+/** Hợp đồng NVG đi thuê / đi mua thì tiền chảy RA, không phải doanh thu phải thu. */
 export function isPayableContract(type: ContractType): boolean {
-  return type === 'khoan_thau_phu';
+  return PAYABLE_TYPES.has(type);
+}
+
+/** Loại hợp đồng mở ra công trình mới (`open_site_from_contract` + trigger 0185). */
+export function contractOpensSite(type: ContractType): boolean {
+  return type === 'thiet_ke' || type === 'thi_cong' || type === 'mua_ban';
 }
 
 /**

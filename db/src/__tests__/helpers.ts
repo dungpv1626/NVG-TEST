@@ -128,6 +128,31 @@ export async function markSurveyReportApproved(opportunityId: string): Promise<v
   }
 }
 
+/**
+ * Lập một văn bản hợp đồng (0176): pháp nhân có mẫu Word đang dùng — từ 0185 cả ba pháp nhân đều
+ * có bộ mẫu — thì gửi phê duyệt phải kèm văn bản. Tệp chỉ là đầu ZIP; nội dung không được kiểm.
+ */
+export async function attachContractDocument(
+  client: SupabaseClient,
+  contractId: string,
+  companyId: string,
+): Promise<void> {
+  const type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  const path = `${contractId}/${crypto.randomUUID()}.docx`;
+  const up = await client.storage
+    .from('contract-documents')
+    .upload(path, new Blob([new Uint8Array([80, 75, 3, 4])], { type }), { contentType: type });
+  if (up.error) throw new Error(`Không tải được văn bản hợp đồng: ${up.error.message}`);
+  const { error } = await client.from('contract_documents').insert({
+    contract_id: contractId,
+    company_id: companyId,
+    storage_path: path,
+    file_name: 'hop-dong.docx',
+    filled_values: {},
+  });
+  if (error) throw new Error(`Không lưu được văn bản hợp đồng: ${error.message}`);
+}
+
 /** Tiền tố đặt cho mọi bản ghi do test tạo ra, để dọn sạch được sau khi chạy. */
 export const TEST_PREFIX = '[TEST]';
 

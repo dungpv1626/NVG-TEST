@@ -11,6 +11,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
+  attachContractDocument,
   ACCOUNTS,
   hasCredentials,
   signInAs,
@@ -605,6 +606,8 @@ describeDb(
         });
         expect(error).toBeNull();
       }
+      // Pháp nhân có mẫu Word (bộ mẫu 0185) thì gửi duyệt phải kèm văn bản đã lập (0176).
+      await attachContractDocument(kd, contractId as string, company!.id as string);
       expect((await readiness()).every((r) => r.met)).toBe(true);
       expect(
         (await kd.rpc('submit_contract_approval', { p_contract_id: contractId })).error,

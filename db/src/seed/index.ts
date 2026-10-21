@@ -11,6 +11,7 @@
  */
 
 import '../env';
+import { readFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 import { eq, sql as sqlOp } from 'drizzle-orm';
 import { DEFAULT_AGING_BUCKETS, DEFAULT_APPROVAL_LIMITS, MILESTONE_SET_SEEDS } from '@nvg/shared';
@@ -40,6 +41,17 @@ function requireEnv(name: string): string {
   const v = process.env[name];
   if (!v) throw new Error(`Thiếu biến môi trường ${name}.`);
   return v;
+}
+
+/** Một dòng `manifest.json` do convert.py sinh. */
+interface ContractTemplateAsset {
+  file: string;
+  code: string;
+  title: string;
+  contract_type: string;
+  tags: Record<string, unknown>;
+  payment_milestones: unknown[];
+  sha: string;
 }
 
 async function main() {
@@ -77,6 +89,8 @@ async function main() {
           shortName: c.shortName,
           taxCode: c.taxCode,
           address: c.address,
+          phone: c.phone ?? null,
+          email: c.email ?? null,
           legalRepresentative: c.legalRepresentative,
           isTransactional: c.isTransactional,
           displayOrder: c.displayOrder,
@@ -89,6 +103,8 @@ async function main() {
             // Chỉ điền khi đang trống: Quản trị có thể đã sửa trên giao diện (mẫu hợp đồng, 0171).
             taxCode: sqlOp`coalesce(${companies.taxCode}, excluded.tax_code)`,
             address: sqlOp`coalesce(${companies.address}, excluded.address)`,
+            phone: sqlOp`coalesce(${companies.phone}, excluded.phone)`,
+            email: sqlOp`coalesce(${companies.email}, excluded.email)`,
             // «Bùi Văn Thi» từng là giá trị GIẢ ĐỊNH cho cả ba pháp nhân — chỉ thay khi ô còn trống hoặc còn
             // đúng giá trị giả định đó; người Quản trị đã sửa trên giao diện thì giữ.
             legalRepresentative: sqlOp`case when ${companies.legalRepresentative} is null
@@ -315,6 +331,54 @@ async function main() {
         DO UPDATE SET steps = EXCLUDED.steps, is_default = true, is_active = true, deleted_at = NULL`);
     }
     console.log(`Bộ mốc thi công: ${MILESTONE_SET_SEEDS.length}`);
+
+    // --- Bộ mẫu hợp đồng ba pháp nhân (0185) -------------------------------------
+    // Tệp sinh bằng db/seed-assets/contract-templates/convert.py từ bộ dự thảo anh Dũng gửi
+    // 21/10/2026. Tên tệp lưu theo băm nội dung: chạy lại với cùng tệp thì chỉ cập nhật các đợt
+    // gợi ý; tệp đổi thì ngừng dùng bản cũ, nạp bản mới (tệp + chỗ trống của mẫu bất biến, 0171).
+    let templateCount = 0;
+    for (const code of ['NVC', 'NVO', 'NVS']) {
+      const companyId = companyByCode.get(code);
+      if (!companyId) continue;
+      const dir = new URL(`../../seed-assets/contract-templates/${code}/`, import.meta.url);
+      const manifest = JSON.parse(
+        readFileSync(new URL('manifest.json', dir), 'utf8'),
+      ) as ContractTemplateAsset[];
+      for (const m of manifest) {
+        const path = `${companyId}/bo-mau-${m.sha}.docx`;
+        const active = await db.execute<{ id: string; storage_path: string }>(sqlOp`
+          SELECT id, storage_path FROM public.contract_templates
+          WHERE company_id = ${companyId} AND title = ${m.title} AND is_active`);
+        const same = active.find((r) => r.storage_path === path);
+        if (same) {
+          await db.execute(sqlOp`
+            UPDATE public.contract_templates
+            SET payment_milestones = ${JSON.stringify(m.payment_milestones)}::jsonb
+            WHERE id = ${same.id}`);
+          templateCount++;
+          continue;
+        }
+        const upload = await admin.storage
+          .from('contract-templates')
+          .upload(path, readFileSync(new URL(m.file, dir)), {
+            contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            upsert: true,
+          });
+        if (upload.error) throw new Error(`Không tải được mẫu ${m.code}: ${upload.error.message}`);
+        await db.execute(sqlOp`
+          UPDATE public.contract_templates SET is_active = false
+          WHERE company_id = ${companyId} AND title = ${m.title} AND is_active`);
+        await db.execute(sqlOp`
+          INSERT INTO public.contract_templates
+            (company_id, title, contract_type, storage_path, file_name, tags, payment_milestones, notes)
+          VALUES (${companyId}, ${m.title}, ${m.contract_type}::public.contract_type, ${path},
+                  ${m.file}, ${JSON.stringify(m.tags)}::jsonb,
+                  ${JSON.stringify(m.payment_milestones)}::jsonb,
+                  ${'Bộ mẫu dự thảo NVG (21/10/2026) — dùng như chính thức, chờ pháp chế rà soát.'})`);
+        templateCount++;
+      }
+    }
+    console.log(`Mẫu hợp đồng: ${templateCount}`);
     console.log(`\nMật khẩu đăng nhập thử: ${SEED_PASSWORD}`);
   } finally {
     await sql.end();

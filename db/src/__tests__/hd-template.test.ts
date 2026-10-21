@@ -356,3 +356,57 @@ describeDb('Hợp đồng gửi phê duyệt kèm văn bản (0176)', () => {
     expect(c2).toMatchObject({ stage: 'da_duyet', approved_document_id: first.data!.id });
   });
 });
+
+describeDb('Bộ mẫu hợp đồng ba pháp nhân và loại hợp đồng mới (0185)', () => {
+  it('seed nạp bộ mẫu cho từng pháp nhân, có cây chỗ trống và các đợt gợi ý', async () => {
+    const { createConnection } = await import('../client');
+    const { sql } = createConnection();
+    try {
+      const rows = await sql<{ code: string; n: number }[]>`
+        SELECT c.code, count(*)::int AS n FROM contract_templates t
+        JOIN companies c ON c.id = t.company_id
+        WHERE t.is_active AND t.notes LIKE 'Bộ mẫu dự thảo NVG%'
+        GROUP BY c.code ORDER BY c.code`;
+      expect(Object.fromEntries(rows.map((r) => [r.code, r.n]))).toEqual({
+        NVC: 8,
+        NVO: 7,
+        NVS: 6,
+      });
+      const [nvo] = await sql<{ tags: Record<string, unknown>; payment_milestones: unknown[] }[]>`
+        SELECT tags, payment_milestones FROM contract_templates
+        WHERE is_active AND title LIKE 'NVO-HĐ-02%'`;
+      expect(nvo!.tags).toHaveProperty('nvg_ten');
+      expect(nvo!.tags).toHaveProperty('dot_thanh_toan');
+      expect(nvo!.payment_milestones.length).toBeGreaterThan(3);
+    } finally {
+      await sql.end();
+    }
+  });
+
+  it('hợp đồng mua vật tư / thuê thiết bị / cho thuê không mở công trình', async () => {
+    const { createConnection } = await import('../client');
+    const { sql } = createConnection();
+    const stamp = String(Date.now());
+    const created: string[] = [];
+    try {
+      const [nvc] = await sql<{ id: string }[]>`SELECT id FROM companies WHERE code = 'NVC'`;
+      for (const type of ['mua_vat_tu', 'thue_thiet_bi', 'cho_thue', 'thi_cong']) {
+        const [c] = await sql<{ id: string }[]>`
+          INSERT INTO contracts (company_id, code, title, type, stage, value)
+          VALUES (${nvc!.id}, ${`NVC-HD-LOAI-${type}-${stamp}`}, ${`${TEST_PREFIX} ${type} ${stamp}`},
+                  ${type}::contract_type, 'da_ky', 100000000)
+          RETURNING id`;
+        created.push(c!.id);
+        const insert = sql`
+          INSERT INTO construction_sites (company_id, code, name, contract_id)
+          VALUES (${nvc!.id}, ${`NVC-CT-LOAI-${type}-${stamp}`}, ${`${TEST_PREFIX} ${type}`}, ${c!.id})`;
+        if (type === 'thi_cong') await expect(insert).resolves.toBeDefined();
+        else await expect(insert).rejects.toThrow(/không mở/);
+      }
+    } finally {
+      await sql`DELETE FROM construction_sites WHERE contract_id = ANY(${created})`;
+      await sql`DELETE FROM contracts WHERE id = ANY(${created})`;
+      await sql.end();
+    }
+  });
+});

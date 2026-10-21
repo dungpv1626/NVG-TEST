@@ -19,6 +19,7 @@ import {
   CONTRACT_TYPE_LABELS,
   SITE_STAGE_META,
   contractDisplayStatus,
+  contractOpensSite,
   formatCurrency,
   formatDate,
   formatDateTime,
@@ -125,7 +126,7 @@ export function ContractDetailPage() {
   const canOpenSite =
     (canApprove || canApproveSite) &&
     contract.stage === 'da_ky' &&
-    contract.type !== 'khoan_thau_phu' &&
+    contractOpensSite(contract.type) &&
     hasSite === false;
 
   // Chỉ cộng phát sinh ĐÃ PHÊ DUYỆT vào giá trị hiện hành: phát sinh đang đề xuất chưa phải
@@ -447,6 +448,8 @@ export function ContractDetailPage() {
                     companyId={contract.company_id}
                     readOnly={readOnly}
                     contractValue={contract.value}
+                    contractType={contract.type}
+                    priceForm={contract.price_form}
                     opportunityId={
                       contract.source_type === 'opportunities' ? contract.source_id : null
                     }

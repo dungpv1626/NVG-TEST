@@ -819,6 +819,21 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
     `QUOTE_STAGES`); tab Báo giá thay nút bằng lý do, trang lập báo giá chặn khi vào thẳng. Trước đây BGĐ chưa duyệt
     khảo sát mà Kinh doanh vẫn lập, gửi duyệt, gửi khách được báo giá. Phép thử đổi theo thứ tự thật (duyệt khảo sát →
     sang Báo giá → lập báo giá), đột biến gỡ trigger đã đo đỏ.
+- **Hợp đồng — soạn bằng máy (21/10/2026, commit 44cc2f9 → nay):** thẻ báo giá ghi bước tiếp theo (gửi khách xong
+  cơ hội tự sang Đàm phán); Điều khoản + Văn bản gộp thành tab «Soạn hợp đồng» hai cột (trái sửa, phải bản xem trước
+  luôn hiện, tự cập nhật, ô thiếu tô vàng, cột dính đo chiều cao header thật — `--detail-sticky-top`); máy soạn sẵn
+  Phạm vi / Giá trị từ báo giá + khảo sát đã duyệt (`shared/src/hd-term-suggest.ts`); mỗi nhóm điều khoản chỉ hỏi ô
+  nó dùng, tỷ lệ × giá trị → số tiền, sửa / xoá dòng; ô thiếu chia theo nơi sửa (`missingTemplateFieldsBySource`),
+  điền tay riêng cho một văn bản.
+  - **0185 + bộ mẫu ba pháp nhân:** anh Dũng gửi bộ dự thảo (NVC 15, NVO 13, NVS 12 tệp — gốc ở `Bo_hop_dong_*`,
+    không commit). 21 mẫu hợp đồng chính chuyển bằng `db/seed-assets/contract-templates/convert.py` (dải chấm →
+    chỗ trống ở đầu văn bản, khối hai bên `nvg_*` / `doi_tac_*`, giá + bằng chữ, bảng đợt thanh toán → bảng lặp;
+    bỏ «Ghi chú soạn thảo»; ô Phương án giữ để chọn trong Word). `db:seed` tải lên kho `contract-templates`, tên tệp
+    theo băm nội dung (đổi mẫu = ngừng bản cũ). Ba loại hợp đồng mới: `mua_vat_tu`, `thue_thiet_bi` (NVG chi ra),
+    `cho_thue` (NVS) — không mở công trình (trigger `construction_sites_contract_type_guard`). Các đợt thanh toán mẫu
+    đề xuất ở `contract_templates.payment_milestones` → nút «Dùng các đợt này». Phụ lục, biên bản nghiệm thu / thanh
+    lý, hợp đồng lao động, bộ biểu mẫu dự thầu CHƯA nạp (thuộc phân hệ khác). Hợp đồng thử trên máy:
+    `NVO-HD-2026-THU1`.
 - Hàm chép-dài bản mới nhất: `decide_approval` ở 0179, `stage_readiness` ở 0183, `crm_followups_for` ở 0183, `my_pending_approvals` ở 0175, hàm canh
   `site_surveys_report_guard` ở 0181. Hạn mức loại phê duyệt mới nằm ở seed (`DEFAULT_APPROVAL_LIMITS`) — `db:seed` sau migrate.
 - Ảnh chạy thử từng phần: `backup/dot1-1a/` → `backup/dot1-1h/`, `backup/dot1-dinh-kem/`, `backup/dot1-phieu-rieng/`,
@@ -863,7 +878,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    đồng sắp hết hạn»; lối vào Tổng quan điều hành trên thanh dưới điện thoại; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email; thêm dữ liệu demo quá hạn ở cả ba công ty.
 
-**Migration tiếp theo: 0185.**
+**Migration tiếp theo: 0186.**
 
 ### 9.4 Quyết định đã chốt và lý do
 
@@ -926,6 +941,9 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 | Ghi loại khách bằng lời, ký hiệu M1–M4 trong ngoặc                                                                                                                             | Anh Dũng: «M1–M4 khó nhìn vì phải nhớ ký hiệu»; giữ ký hiệu cho người đã quen                                                                                                    |
 | Đặt lịch khảo sát tách khỏi biên bản; giờ khảo sát do máy ghi, gõ tay là lối dự phòng                                                                                          | Anh Dũng: hẹn 10 ngày nữa mới khảo sát thì lịch và hoàn thành không nên chung một ô; gõ tay một giờ đã thành «đã khảo sát» (thấy khi chạy thử)                                   |
 | Chỉ lập báo giá ở bước Báo giá / Đàm phán, chặn bằng trigger                                                                                                                   | Anh Dũng hỏi «sếp chưa duyệt khảo sát mà vẫn lập báo giá thì sao» — thật sự lập được; chặn ở CSDL để mọi đường ghi đều qua                                                       |
+| Bộ mẫu hợp đồng của NVG nạp như chính thức dù là bản dự thảo; chỗ trống bên NVG / đối tác theo `nvg_*` / `doi_tac_*`, không theo bên A / B                                     | Anh Dũng: «làm như chính thức». Bên A / B mỗi mẫu một khác (NVG là A khi đi mua / thuê / khoán) — gắn theo bên thì đổi loại hợp đồng là in sai bên                               |
+| Thêm loại hợp đồng `mua_vat_tu`, `thue_thiet_bi`, `cho_thue` thay vì dồn vào `mua_ban` / `khoan_thau_phu`                                                                      | Hướng tiền khác nhau (phải thu / phải trả ở KT); `mua_ban` cũ nghĩa là NVG bán                                                                                                   |
+| Bảng các đợt thanh toán trong mẫu thành bảng lặp; các đợt mẫu đề xuất giữ làm gợi ý, không tự thêm                                                                             | Văn bản phải in đúng các đợt đã ghi trên hệ thống; mốc / tỷ lệ mặc định là đề xuất của NVG, người soạn bấm mới dùng                                                              |
 | Sửa câu chữ / đường dẫn của hàm dài bằng bản chép nguyên văn hoặc trigger nhỏ, không viết lại logic                                                                            | `decide_approval` ~300 dòng: đổi đường dẫn thông báo bằng trigger trên `notifications` thay vì chép cả hàm (bài học 0086)                                                        |
 
 ### 9.5 Câu hỏi chờ Haan (đang chạy theo mặc định trong ngoặc)
@@ -963,7 +981,11 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
     địa chỉ NVS. ĐÃ CHỐT: người đại diện NVS là **Lương Vân**; **được dùng logo đối tác** trên nhavietgroup.vn (Cotecons, Hòa
     Bình, CBRE…) làm kinh nghiệm / đối tác trong hồ sơ thầu. Còn thiếu: tên đầy đủ + mã số thuế NVC (site gọi «Nhà Việt
     Construction», app gọi «Nhà Việt Cons»); ảnh trên nhavietsteel.vn ghi «Công ty TNHH TM & SX Bảo Liên» là gì.
-22. Phiếu khảo sát riêng (0181): danh sách ô NVO / NVC rút từ hồ sơ khảo sát; ô NVS là ĐỀ XUẤT (hồ sơ chưa mô tả khảo sát
+22. Bộ mẫu hợp đồng (21/10/2026) ghi khác dữ liệu đang có — seed chỉ điền ô trống, giữ ô cũ: địa chỉ NVS («Thửa số
+    372, Đồng vùng Cửa Ngạc…» / đang có «Đường vành đai phía nam…»), người đại diện NVS («Lương Thị Vân» / «Lương Vân»),
+    địa chỉ NVO (bộ mẫu ghi trùng địa chỉ NVC «Số 587 Lê Quý Đôn» / đang có «Thôn Tây Hạ…»), tên NVO («&» / «và»).
+    Còn thiếu: chức vụ người đại diện, số tài khoản cả ba công ty; bảng hỏi mục 6 của từng bộ mẫu chờ NVG trả lời.
+23. Phiếu khảo sát riêng (0181): danh sách ô NVO / NVC rút từ hồ sơ khảo sát; ô NVS là ĐỀ XUẤT (hồ sơ chưa mô tả khảo sát
     cho thuê giàn giáo) — Kinh doanh từng công ty xem và sửa `shared/src/survey-forms.ts`.
 
 ### 9.6 Ghi chú máy phát triển Windows

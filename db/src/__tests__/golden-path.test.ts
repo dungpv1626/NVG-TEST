@@ -14,6 +14,7 @@
 import { describe, expect, it } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
+  attachContractDocument,
   ACCOUNTS,
   hasCredentials,
   signInAs,
@@ -308,6 +309,7 @@ describeDb(
           .error,
       );
 
+      await attachContractDocument(dauThau, contractId, nvc);
       const { data: contractApprovalId, error: submitError } = await dauThau.rpc(
         'submit_contract_approval',
         { p_contract_id: contractId },

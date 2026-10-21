@@ -258,6 +258,8 @@ export const contractTemplates = pgTable(
     storagePath: text('storage_path').notNull(),
     fileName: text('file_name').notNull(),
     tags: jsonb('tags').notNull().default({}),
+    /** Các đợt thanh toán mẫu đề xuất (0185) — gợi ý cho «Tiến độ thanh toán». */
+    paymentMilestones: jsonb('payment_milestones').notNull().default([]),
     isActive: boolean('is_active').notNull().default(true),
     notes: text('notes'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

@@ -23,6 +23,8 @@ export interface CompanySeed {
   shortName: string;
   taxCode: string | null;
   address: string | null;
+  phone?: string | null;
+  email?: string | null;
   legalRepresentative: string | null;
   isTransactional: boolean;
   displayOrder: number;
@@ -33,8 +35,12 @@ export const COMPANY_SEED: CompanySeed[] = [
     code: 'NVC',
     legalName: 'Công ty TNHH Tư vấn xây dựng và Phát triển Nhà Việt',
     shortName: 'Nhà Việt Cons',
-    taxCode: null,
-    address: null,
+    // Bộ mẫu hợp đồng NVC (21/10/2026), mục 1A — tra từ dữ liệu đăng ký thuế công khai; chờ
+    // NVC đối chiếu Giấy chứng nhận đăng ký doanh nghiệp. Seed chỉ điền ô còn trống.
+    taxCode: '1001004344',
+    address: 'Số nhà 587 đường Lê Quý Đôn, Phường Trần Lãm, Tỉnh Hưng Yên, Việt Nam',
+    phone: '0912 942 202',
+    email: 'nhavietgroup.tb@gmail.com',
     legalRepresentative: 'Bùi Văn Thi',
     isTransactional: true,
     displayOrder: 1,
@@ -43,7 +49,11 @@ export const COMPANY_SEED: CompanySeed[] = [
     code: 'NVS',
     legalName: 'Công ty TNHH Sản xuất và Thương mại Kết cấu thép Nhà Việt',
     shortName: 'Nhà Việt Steel',
-    taxCode: null,
+    // Bộ mẫu hợp đồng NVS (21/10/2026), mục 1A. Bộ mẫu ghi địa chỉ «Thửa số 372, Đồng vùng Cửa
+    // Ngạc…» và người đại diện «Lương Thị Vân» — khác hai ô dưới; giữ ô đã có, chờ NVS xác nhận.
+    taxCode: '1001185820',
+    phone: '0844 143 888',
+    email: 'thepnhaviet.tb@gmail.com',
     // nhavietsteel.vn (phần liên hệ). ⚠️ Một ảnh trên site ghi tên «Bảo Liên» — chờ NVG xác nhận.
     address:
       'Đường vành đai phía nam đi cầu Vũ Đông, tổ dân phố Tam Lạc 2, phường Trần Lãm, tỉnh Hưng Yên',
@@ -59,6 +69,8 @@ export const COMPANY_SEED: CompanySeed[] = [
     // nhavietone.vn: Giấy phép ĐKKD 1001222166 (mã số doanh nghiệp = mã số thuế).
     taxCode: '1001222166',
     address: 'Thôn Tây Hạ, phường Vũ Phúc, tỉnh Hưng Yên',
+    // Bộ mẫu hợp đồng NVO (21/10/2026), mục 1A.
+    phone: '0896 404 888',
     legalRepresentative: 'Bùi Văn Thi',
     isTransactional: true,
     displayOrder: 3,
