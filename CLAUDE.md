@@ -981,12 +981,13 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
     địa chỉ NVS. ĐÃ CHỐT: người đại diện NVS là **Lương Vân**; **được dùng logo đối tác** trên nhavietgroup.vn (Cotecons, Hòa
     Bình, CBRE…) làm kinh nghiệm / đối tác trong hồ sơ thầu. Còn thiếu: tên đầy đủ + mã số thuế NVC (site gọi «Nhà Việt
     Construction», app gọi «Nhà Việt Cons»); ảnh trên nhavietsteel.vn ghi «Công ty TNHH TM & SX Bảo Liên» là gì.
-22. Bộ mẫu hợp đồng (21/10/2026) ghi khác dữ liệu đang có — seed chỉ điền ô trống, giữ ô cũ: địa chỉ NVS («Thửa số
-    372, Đồng vùng Cửa Ngạc…» / đang có «Đường vành đai phía nam…»), người đại diện NVS («Lương Thị Vân» / «Lương Vân»),
-    địa chỉ NVO (bộ mẫu ghi trùng địa chỉ NVC «Số 587 Lê Quý Đôn» / đang có «Thôn Tây Hạ…»), tên NVO («&» / «và»).
-    Còn thiếu: chức vụ người đại diện, số tài khoản cả ba công ty; bảng hỏi mục 6 của từng bộ mẫu chờ NVG trả lời.
-23. Phiếu khảo sát riêng (0181): danh sách ô NVO / NVC rút từ hồ sơ khảo sát; ô NVS là ĐỀ XUẤT (hồ sơ chưa mô tả khảo sát
+22. Phiếu khảo sát riêng (0181): danh sách ô NVO / NVC rút từ hồ sơ khảo sát; ô NVS là ĐỀ XUẤT (hồ sơ chưa mô tả khảo sát
     cho thuê giàn giáo) — Kinh doanh từng công ty xem và sửa `shared/src/survey-forms.ts`.
+23. Pháp nhân ĐÃ CHỐT (anh Dũng 21/10/2026): địa chỉ chung ba công ty «Số nhà 587 đường Lê Quý Đôn, Phường Trần Lãm,
+    Tỉnh Hưng Yên»; người đại diện NVS «Lương Thị Vân» (thay «Lương Vân» ở câu 21), NVC / NVO «Bùi Văn Thi»; chức vụ
+    «Giám đốc» (tạm); tài khoản ngân hàng là số DEMO `9999 0000 000x` — thay số thật ở Mẫu hợp đồng → Thông tin pháp
+    nhân. Mã số thuế NVC 1001004344, NVS 1001185820 lấy từ bộ mẫu. Còn mở: tên NVO «&» hay «và»; bảng hỏi mục 6 của
+    từng bộ mẫu chờ NVG trả lời.
 
 ### 9.6 Ghi chú máy phát triển Windows
 
