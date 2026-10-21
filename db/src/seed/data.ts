@@ -26,8 +26,29 @@ export interface CompanySeed {
   phone?: string | null;
   email?: string | null;
   legalRepresentative: string | null;
+  representativeTitle?: string | null;
+  bankAccountNumber?: string | null;
+  bankName?: string | null;
   isTransactional: boolean;
   displayOrder: number;
+}
+
+/**
+ * Địa chỉ trụ sở dùng chung ba công ty (anh Dũng chốt 21/10/2026) — đúng địa chỉ bộ mẫu hợp đồng
+ * ghi cho NVC / NVO. Trước đó NVO ghi «Thôn Tây Hạ, phường Vũ Phúc», NVS ghi «Đường vành đai phía
+ * nam đi cầu Vũ Đông…» (website).
+ */
+const COMMON_ADDRESS = 'Số nhà 587 đường Lê Quý Đôn, Phường Trần Lãm, Tỉnh Hưng Yên, Việt Nam';
+
+/**
+ * Tài khoản ngân hàng DEMO (anh Dũng 21/10/2026: «tạo tài khoản demo») — ghi rõ chữ demo vì
+ * số này in lên văn bản hợp đồng. Thay bằng số thật trên màn hình Mẫu hợp đồng → Thông tin pháp nhân.
+ */
+function demoBank(suffix: string): { bankAccountNumber: string; bankName: string } {
+  return {
+    bankAccountNumber: `9999 0000 ${suffix}`,
+    bankName: 'DEMO (tài khoản thử — thay khi có số thật)',
+  };
 }
 
 export const COMPANY_SEED: CompanySeed[] = [
@@ -38,9 +59,11 @@ export const COMPANY_SEED: CompanySeed[] = [
     // Bộ mẫu hợp đồng NVC (21/10/2026), mục 1A — tra từ dữ liệu đăng ký thuế công khai; chờ
     // NVC đối chiếu Giấy chứng nhận đăng ký doanh nghiệp. Seed chỉ điền ô còn trống.
     taxCode: '1001004344',
-    address: 'Số nhà 587 đường Lê Quý Đôn, Phường Trần Lãm, Tỉnh Hưng Yên, Việt Nam',
+    address: COMMON_ADDRESS,
     phone: '0912 942 202',
     email: 'nhavietgroup.tb@gmail.com',
+    representativeTitle: 'Giám đốc',
+    ...demoBank('0001'),
     legalRepresentative: 'Bùi Văn Thi',
     isTransactional: true,
     displayOrder: 1,
@@ -49,16 +72,16 @@ export const COMPANY_SEED: CompanySeed[] = [
     code: 'NVS',
     legalName: 'Công ty TNHH Sản xuất và Thương mại Kết cấu thép Nhà Việt',
     shortName: 'Nhà Việt Steel',
-    // Bộ mẫu hợp đồng NVS (21/10/2026), mục 1A. Bộ mẫu ghi địa chỉ «Thửa số 372, Đồng vùng Cửa
-    // Ngạc…» và người đại diện «Lương Thị Vân» — khác hai ô dưới; giữ ô đã có, chờ NVS xác nhận.
+    // Bộ mẫu hợp đồng NVS (21/10/2026), mục 1A.
     taxCode: '1001185820',
     phone: '0844 143 888',
     email: 'thepnhaviet.tb@gmail.com',
-    // nhavietsteel.vn (phần liên hệ). ⚠️ Một ảnh trên site ghi tên «Bảo Liên» — chờ NVG xác nhận.
-    address:
-      'Đường vành đai phía nam đi cầu Vũ Đông, tổ dân phố Tam Lạc 2, phường Trần Lãm, tỉnh Hưng Yên',
-    // Chủ dự án xác nhận 17/10/2026 (website ghi Giám đốc Lương Vân).
-    legalRepresentative: 'Lương Vân',
+    // Anh Dũng chốt 21/10/2026: địa chỉ Phường Trần Lãm dùng chung ba công ty; người đại diện
+    // theo đăng ký thuế «Lương Thị Vân» (17/10 ghi «Lương Vân» theo website).
+    address: COMMON_ADDRESS,
+    legalRepresentative: 'Lương Thị Vân',
+    representativeTitle: 'Giám đốc',
+    ...demoBank('0002'),
     isTransactional: true,
     displayOrder: 2,
   },
@@ -68,9 +91,11 @@ export const COMPANY_SEED: CompanySeed[] = [
     shortName: 'Nhà Việt One',
     // nhavietone.vn: Giấy phép ĐKKD 1001222166 (mã số doanh nghiệp = mã số thuế).
     taxCode: '1001222166',
-    address: 'Thôn Tây Hạ, phường Vũ Phúc, tỉnh Hưng Yên',
+    address: COMMON_ADDRESS,
     // Bộ mẫu hợp đồng NVO (21/10/2026), mục 1A.
     phone: '0896 404 888',
+    representativeTitle: 'Giám đốc',
+    ...demoBank('0003'),
     legalRepresentative: 'Bùi Văn Thi',
     isTransactional: true,
     displayOrder: 3,

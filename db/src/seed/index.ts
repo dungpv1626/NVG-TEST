@@ -92,6 +92,9 @@ async function main() {
           phone: c.phone ?? null,
           email: c.email ?? null,
           legalRepresentative: c.legalRepresentative,
+          representativeTitle: c.representativeTitle ?? null,
+          bankAccountNumber: c.bankAccountNumber ?? null,
+          bankName: c.bankName ?? null,
           isTransactional: c.isTransactional,
           displayOrder: c.displayOrder,
         })
@@ -102,13 +105,21 @@ async function main() {
             shortName: c.shortName,
             // Chỉ điền khi đang trống: Quản trị có thể đã sửa trên giao diện (mẫu hợp đồng, 0171).
             taxCode: sqlOp`coalesce(${companies.taxCode}, excluded.tax_code)`,
-            address: sqlOp`coalesce(${companies.address}, excluded.address)`,
+            // Địa chỉ: thay cả giá trị seed CŨ (website) đã được anh Dũng thay bằng địa chỉ chung
+            // 21/10/2026; địa chỉ Quản trị tự sửa thì giữ.
+            address: sqlOp`case when ${companies.address} is null or ${companies.address} in (
+              'Thôn Tây Hạ, phường Vũ Phúc, tỉnh Hưng Yên',
+              'Đường vành đai phía nam đi cầu Vũ Đông, tổ dân phố Tam Lạc 2, phường Trần Lãm, tỉnh Hưng Yên')
+              then excluded.address else ${companies.address} end`,
+            representativeTitle: sqlOp`coalesce(${companies.representativeTitle}, excluded.representative_title)`,
+            bankAccountNumber: sqlOp`coalesce(${companies.bankAccountNumber}, excluded.bank_account_number)`,
+            bankName: sqlOp`coalesce(${companies.bankName}, excluded.bank_name)`,
             phone: sqlOp`coalesce(${companies.phone}, excluded.phone)`,
             email: sqlOp`coalesce(${companies.email}, excluded.email)`,
             // «Bùi Văn Thi» từng là giá trị GIẢ ĐỊNH cho cả ba pháp nhân — chỉ thay khi ô còn trống hoặc còn
             // đúng giá trị giả định đó; người Quản trị đã sửa trên giao diện thì giữ.
             legalRepresentative: sqlOp`case when ${companies.legalRepresentative} is null
-              or ${companies.legalRepresentative} = 'Bùi Văn Thi'
+              or ${companies.legalRepresentative} in ('Bùi Văn Thi', 'Lương Vân')
               then excluded.legal_representative else ${companies.legalRepresentative} end`,
             isTransactional: c.isTransactional,
             displayOrder: c.displayOrder,
