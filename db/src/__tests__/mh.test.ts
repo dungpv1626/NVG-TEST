@@ -711,14 +711,19 @@ describeDb('MH — đơn đặt hàng và ngân sách công trình (MH-06, TC-05
       companyId: fixture.nvcCompanyId,
       siteId: fixture.nvcSiteId,
     });
-    // Báo giá chỉ nhập được sau khi duyệt, nên ở đây chặn ngay từ bước nhập báo giá.
-    const { error } = await muaHang.from('quotations').insert({
-      company_id: fixture.nvcCompanyId,
-      purchase_request_id: id,
-      supplier_id: fixture.supplierA,
-      status: 'da_nhan',
+    // Từ 0200 (Đợt 4) báo giá nhận được khi đề nghị còn Nháp — để người duyệt thấy bảng so giá.
+    // Hỏi giá không phải mua: đơn đặt hàng vẫn bị chặn tới khi đề nghị được duyệt.
+    const quote = await addQuotation(muaHang, fixture.nvcCompanyId, id, {
+      supplierId: fixture.supplierA,
+      unitPrice: 20_000,
     });
-    expect(error).toBeTruthy();
+    const { error: selectError } = await muaHang.rpc('select_quotation', {
+      p_quotation_id: quote,
+      p_reason: null,
+    });
+    expect(selectError).toBeNull();
+    const { error } = await muaHang.rpc('create_purchase_order', { p_quotation_id: quote });
+    expect(error?.message).toMatch(/sau khi đề nghị mua được phê duyệt/);
   });
 
   it('không INSERT thẳng được vào đơn đặt hàng', async () => {

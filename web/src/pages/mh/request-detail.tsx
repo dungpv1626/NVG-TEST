@@ -76,7 +76,8 @@ export function PurchaseRequestDetailPage() {
 
   const request = data;
   const isDraft = request.stage === 'nhap' || request.stage === 'tu_choi';
-  const isOpenForQuotes = request.stage === 'da_duyet' || request.stage === 'dang_mua';
+  // Từ Đợt 4 (0200) báo giá nhận được cả khi còn Nháp / Chờ duyệt: người duyệt thấy bảng so giá.
+  const isOpenForQuotes = !['hoan_thanh', 'huy'].includes(request.stage);
   const isClosed = request.stage === 'hoan_thanh' || request.stage === 'huy';
   const selectedQuote = (quotations ?? []).find((q) => q.status === 'duoc_chon');
   const activeOrder = (orders ?? []).find((o) => o.stage !== 'huy');
@@ -206,7 +207,6 @@ export function PurchaseRequestDetailPage() {
             content: (
               <QuotationPanel
                 requestId={request.id}
-                companyId={request.company_id}
                 canWork={canWork}
                 isOpenForQuotes={isOpenForQuotes}
               />

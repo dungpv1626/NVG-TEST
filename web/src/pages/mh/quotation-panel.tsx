@@ -1,151 +1,102 @@
 /**
- * Tab Báo giá của Chi tiết Đề nghị mua — bảng so sánh chuẩn hóa (MH-04).
+ * Tab Báo giá của Chi tiết Đề nghị mua — bảng so giá nhà cung cấp (MH-04, Đợt 4 — 4B).
  *
- * PRD MH-04 nguyên văn: "lập bảng so sánh đã chuẩn hóa (đơn giá, thuế, vận chuyển, hao hụt,
- * thời hạn giao, điều kiện thanh toán, bảo hành) — KHÔNG CHỈ so sánh giá thấp nhất mà so
- * sánh tổng chi phí và rủi ro".
+ * PRD MH-04: «không chỉ so sánh giá thấp nhất mà so sánh tổng chi phí và rủi ro». Bảng đặt các
+ * báo giá cạnh nhau (`QuotationBoardTable`): tổng chi phí xếp hạng, giao, vận chuyển, hoá đơn VAT,
+ * điều kiện, đơn giá từng mặt hàng cạnh giá lần mua trước. Người mua chọn; chọn không rẻ nhất thì
+ * CSDL bắt nêu căn cứ (`select_quotation`). Máy không có dòng «nên chọn».
  *
- * Bảng dưới đây làm đúng hai vế đó và dừng lại ở đó:
- *  - Bốn cột tiền được quy về một mặt bằng, xếp hạng theo TỔNG CHI PHÍ.
- *  - Ba cột rủi ro (giao, thanh toán, bảo hành) để nguyên, KHÔNG quy thành tiền — quy đổi
- *    được thì phần mềm đã ngầm chọn hộ, đúng thứ "Ranh giới KHÔNG làm" của PRD cấm.
- * Không có dòng nào ghi "nên chọn nhà cung cấp này". Người mua chọn, và nếu chọn không phải
- * báo giá rẻ nhất thì CSDL bắt nêu căn cứ.
+ * Từ Đợt 4 báo giá nhập được ngay khi đề nghị còn Nháp / Chờ duyệt — người duyệt thấy bảng này
+ * trong Hộp thư Phê duyệt. Đơn hàng vẫn chỉ lập sau khi đề nghị được duyệt.
  *
- * Bảng này chứa báo giá của các nhà cung cấp KHÔNG được chọn — nội dung thương thảo (NEN-07).
- * Vai trò không được xem giá vốn sẽ nhận lỗi từ CSDL, và màn hình hiện lời giải thích thay
- * cho bảng chứ không tự đoán trước bằng vai trò ở trình duyệt.
+ * Bảng chứa báo giá không được chọn — nội dung thương thảo (NEN-07). Vai trò không xem giá vốn nhận
+ * lỗi từ CSDL; màn hình hiện lời giải thích thay cho bảng.
  */
 
 import { useState } from 'react';
-import { Check, Truck, ShieldCheck } from 'lucide-react';
-import {
-  QUOTATION_STATUS_LABELS,
-  SUPPLIER_CLASS_LABELS,
-  formatCurrency,
-  formatDate,
-  type MoneyValue,
-} from '@nvg/shared';
+import { ScanLine, Upload } from 'lucide-react';
+import { formatNumber, toNvgDateInput } from '@nvg/shared';
+import { DocumentScanner } from '@/components/scan/document-scanner';
 import { Button } from '@/components/ui/button';
 import { usePromptDialog } from '@/components/ui/prompt-dialog';
 import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { MoneyInput } from '@/components/ui/money-input';
-import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
+import { EmptyState, TableSkeleton } from '@/components/ui/states';
+import { useSelectQuotation, useSuppliers } from '@/hooks/use-purchasing';
 import {
-  usePurchaseRequestItems,
-  useQuotationComparison,
-  useQuotations,
-  useSaveQuotation,
-  useSelectQuotation,
-  useSuppliers,
-} from '@/hooks/use-purchasing';
+  useQuotationBoard,
+  useSaveQuotationBoard,
+  type BoardQuotation,
+  type QuotationBoard,
+} from '@/hooks/use-purchase-pool';
 import { toUserMessage } from '@/hooks/use-error-message';
+import { QuotationBoardTable } from './quotation-board';
 
-const EM_DASH = '—';
-
-/** Phần trăm → điểm cơ bản. 10% ở ô nhập thành 1000 khi lưu. */
-function toBasisPoints(percent: unknown): number {
-  const value = Number(percent ?? 0);
+/** Phần trăm gõ tay (`10`, `8,5`) → điểm cơ bản. */
+function toBasisPoints(text: string): number {
+  const value = Number(text.replace(',', '.'));
   return Number.isFinite(value) ? Math.round(value * 100) : 0;
+}
+
+function intOrNull(text: string): number | null {
+  const digits = text.replace(/\D/g, '');
+  return digits ? Number(digits) : null;
 }
 
 export function QuotationPanel({
   requestId,
-  companyId,
   canWork,
   isOpenForQuotes,
 }: {
   requestId: string;
-  companyId: string;
   /** Có quyền sửa phân hệ Mua hàng — Ban công trường chỉ xem. */
   canWork: boolean;
-  /** Đề nghị đang ở bước nhận báo giá (đã duyệt / đang mua). */
+  /** Đề nghị còn nhận báo giá (Nháp → Đang mua). */
   isOpenForQuotes: boolean;
 }) {
   const promptDialog = usePromptDialog();
-  const { data: quotations, isLoading, error } = useQuotations(requestId);
-  const { data: requestItems } = usePurchaseRequestItems(requestId);
-  const { data: suppliers } = useSuppliers();
-  const comparison = useQuotationComparison(requestId, (quotations?.length ?? 0) > 0);
-  const saveQuotation = useSaveQuotation();
+  const { data: board, isLoading, error } = useQuotationBoard(requestId);
   const selectQuotation = useSelectQuotation();
-
   const [isFormOpen, setFormOpen] = useState(false);
   const [panelError, setPanelError] = useState<string | null>(null);
 
-  if (isLoading) return <TableSkeleton rows={3} columns={6} />;
-  if (error) return <ErrorState message={toUserMessage(error)} />;
-
-  const rows = quotations ?? [];
-  const selected = rows.find((q) => q.status === 'duoc_chon');
-  const canAddQuote = canWork && isOpenForQuotes && !selected;
-
-  async function submit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setPanelError(null);
-    const form = event.currentTarget;
-    const values = new FormData(form);
-
-    const items = (requestItems ?? [])
-      .map((item) => ({
-        purchaseRequestItemId: item.id,
-        itemCode: item.item_code,
-        name: item.name,
-        specification: item.specification,
-        unit: item.unit,
-        quantity: Number(item.quantity),
-        unitPrice: Number(values.get(`price_${item.id}`) ?? 0),
-      }))
-      .filter((item) => item.unitPrice > 0);
-
-    if (items.length === 0) {
-      setPanelError(
-        'Chưa nhập đơn giá cho mặt hàng nào. Báo giá không có dòng hàng thì không so sánh được.',
-      );
-      return;
-    }
-
-    try {
-      await saveQuotation.mutateAsync({
-        requestId,
-        companyId,
-        supplierId: String(values.get('supplier_id') ?? ''),
-        quotedDate: String(values.get('quoted_date') ?? '') || null,
-        validUntil: String(values.get('valid_until') ?? '') || null,
-        taxRateBp: toBasisPoints(values.get('tax_rate')),
-        wastageRateBp: toBasisPoints(values.get('wastage_rate')),
-        shippingFee: Number(values.get('shipping_fee') ?? 0),
-        deliveryDays: Number(values.get('delivery_days') ?? 0) || null,
-        paymentTermDays: Number(values.get('payment_term_days') ?? 0) || null,
-        warrantyMonths: Number(values.get('warranty_months') ?? 0) || null,
-        items,
-      });
-      form.reset();
-      setFormOpen(false);
-    } catch (e) {
-      setPanelError(toUserMessage(e, 'create'));
-    }
+  if (isLoading) return <TableSkeleton rows={4} columns={5} />;
+  if (error) {
+    // Không phải lỗi kỹ thuật: ranh giới NEN-07 đang làm đúng việc của nó.
+    return (
+      <div className="rounded-lg border border-border bg-surface-sunken p-4">
+        <p className="font-medium">Bảng so giá không mở cho vai trò hiện tại</p>
+        <p className="mt-1 text-fg-subtle">
+          Báo giá của các nhà cung cấp là nội dung thương thảo, chỉ Ban Giám đốc, Tài chính, Dự án –
+          Đấu thầu, Thiết kế và Mua hàng đọc được. Báo giá đã chọn hiển thị trong tab Đơn hàng.
+        </p>
+      </div>
+    );
   }
 
-  async function choose(quotationId: string, isLowest: boolean) {
+  const quotes = board?.quotations ?? [];
+  const selected = quotes.find((q) => q.status === 'duoc_chon');
+  const canEdit = canWork && isOpenForQuotes && !selected;
+
+  async function choose(q: BoardQuotation) {
     setPanelError(null);
     let reason: string | null = null;
-    if (!isLowest) {
+    if (q.cost_rank !== 1) {
       reason = await promptDialog.ask({
         title: 'Chọn báo giá không rẻ nhất?',
         label: 'Căn cứ chọn',
         detail:
-          'Báo giá này không phải báo giá có tổng chi phí thấp nhất. Căn cứ được lưu cùng hồ sơ để người duyệt và Kế toán đọc lại.',
-        placeholder: 'Tiến độ giao, bảo hành, điều kiện thanh toán, chất lượng đã kiểm chứng…',
+          'Báo giá này không có tổng chi phí thấp nhất. Căn cứ được lưu cùng hồ sơ để người duyệt và Kế toán đọc lại.',
+        placeholder: 'Tiến độ giao, hoá đơn VAT, bảo hành, chất lượng đã kiểm chứng…',
         confirmLabel: 'Chọn nhà cung cấp này',
       });
       if (reason === null) return;
     }
     try {
       await selectQuotation.mutateAsync({
-        quotationId,
+        quotationId: q.quotation_id,
         requestId,
         reason: reason ?? undefined,
       });
@@ -163,132 +114,30 @@ export function QuotationPanel({
         </p>
       )}
 
-      {rows.length === 0 ? (
+      {quotes.length === 0 ? (
         <EmptyState
           message={
             isOpenForQuotes
-              ? 'Chưa có báo giá nào. Gửi yêu cầu báo giá tới ít nhất hai nhà cung cấp để có cơ sở so sánh.'
-              : 'Chưa nhận báo giá. Đề nghị mua phải được phê duyệt trước khi hỏi giá nhà cung cấp.'
+              ? 'Chưa có báo giá nào. Hỏi giá ít nhất hai nhà cung cấp để có cơ sở so sánh — có thể nhập ngay khi đề nghị còn chờ duyệt.'
+              : 'Đề nghị đã đóng, không nhận báo giá.'
           }
         />
-      ) : comparison.error ? (
-        // Không phải lỗi kỹ thuật: đây là ranh giới NEN-07 đang làm đúng việc của nó.
-        <div className="rounded-lg border border-border bg-surface-sunken p-4">
-          <p className="font-medium">Bảng so sánh báo giá không mở cho vai trò hiện tại</p>
-          <p className="mt-1 text-fg-subtle">
-            Báo giá của các nhà cung cấp không được chọn là nội dung thương thảo, chỉ Ban Giám đốc,
-            Tài chính, Dự án – Đấu thầu, Thiết kế và Mua hàng đọc được. Báo giá đã chọn vẫn hiển thị
-            trong tab Đơn hàng.
-          </p>
-        </div>
-      ) : comparison.isLoading ? (
-        <TableSkeleton rows={3} columns={8} />
       ) : (
-        <QuotationComparisonTable
-          rows={comparison.data ?? []}
-          canChoose={canWork && isOpenForQuotes && !selected}
+        <QuotationBoardTable
+          board={board!}
+          canChoose={canEdit}
           choosing={selectQuotation.isPending}
-          onChoose={(id, isLowest) => void choose(id, isLowest)}
+          onChoose={(q) => void choose(q)}
         />
       )}
 
-      {selected?.selection_reason && (
-        <p className="rounded-lg border border-border bg-surface-sunken px-4 py-3">
-          <span className="font-medium">Căn cứ chọn {selected.supplier?.name}: </span>
-          {selected.selection_reason}
-        </p>
-      )}
-
-      {canAddQuote && (
+      {canEdit && (
         <>
-          <Button variant="secondary" onClick={() => setFormOpen((open) => !open)}>
-            {isFormOpen ? 'Đóng biểu mẫu' : 'Nhập báo giá nhận được'}
+          <Button onClick={() => setFormOpen((open) => !open)}>
+            {isFormOpen ? 'Đóng biểu mẫu' : 'Nhập / sửa báo giá nhà cung cấp'}
           </Button>
-
-          {isFormOpen && (
-            <form
-              onSubmit={(e) => void submit(e)}
-              className="space-y-4 rounded-lg border border-border bg-surface-sunken p-4"
-            >
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <Field label="Nhà cung cấp" required className="lg:col-span-2">
-                  <select
-                    name="supplier_id"
-                    required
-                    className="h-9 w-full rounded-sm border border-border-strong bg-surface px-3"
-                  >
-                    <option value="">Chọn nhà cung cấp</option>
-                    {(suppliers ?? [])
-                      .filter((s) => s.supplier_class !== 'ngung_giao_dich')
-                      .map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}
-                        </option>
-                      ))}
-                  </select>
-                </Field>
-                <Field label="Ngày báo giá">
-                  <DateInput name="quoted_date" />
-                </Field>
-                <Field label="Hiệu lực đến">
-                  <DateInput name="valid_until" />
-                </Field>
-                <Field label="Thuế suất (%)">
-                  <Input
-                    name="tax_rate"
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    defaultValue={10}
-                  />
-                </Field>
-                <Field label="Hao hụt dự kiến (%)" hint="Phần phải mua bù, tính vào tổng chi phí.">
-                  <Input
-                    name="wastage_rate"
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    defaultValue={0}
-                  />
-                </Field>
-                <Field label="Phí vận chuyển (đồng)">
-                  <MoneyInput name="shipping_fee" defaultValue="0" />
-                </Field>
-                <Field label="Thời hạn giao (ngày)">
-                  <Input name="delivery_days" type="number" min="0" step="1" />
-                </Field>
-                <Field label="Được nợ (ngày)">
-                  <Input name="payment_term_days" type="number" min="0" step="1" />
-                </Field>
-                <Field label="Bảo hành (tháng)">
-                  <Input name="warranty_months" type="number" min="0" step="1" />
-                </Field>
-              </div>
-
-              <div>
-                <p className="mb-2 font-medium">Đơn giá từng mặt hàng</p>
-                <div className="space-y-3">
-                  {(requestItems ?? []).map((item) => (
-                    <Field
-                      key={item.id}
-                      label={`${item.name}${item.specification ? ` — ${item.specification}` : ''}`}
-                      hint={`Số lượng cần: ${Number(item.quantity)} ${item.unit}`}
-                    >
-                      <MoneyInput
-                        name={`price_${item.id}`}
-                        placeholder="Đơn giá nhà cung cấp báo (đồng)"
-                      />
-                    </Field>
-                  ))}
-                </div>
-              </div>
-
-              <Button type="submit" variant="primary" disabled={saveQuotation.isPending}>
-                Lưu báo giá
-              </Button>
-            </form>
+          {isFormOpen && board && (
+            <QuotationForm requestId={requestId} board={board} onSaved={() => setFormOpen(false)} />
           )}
         </>
       )}
@@ -296,172 +145,254 @@ export function QuotationPanel({
   );
 }
 
-type ComparisonRow = NonNullable<ReturnType<typeof useQuotationComparison>['data']>[number];
-
-/**
- * Bảng so sánh XOAY NGANG: mỗi nhà cung cấp một cột, mỗi tiêu chí một dòng — đúng cách bảng so
- * sánh báo giá được lập trên Excel ở phòng Mua hàng, và vừa khổ màn hình với 2–4 báo giá. Bảng
- * cũ (mỗi báo giá một dòng, 12 cột) phải cuộn ngang ở khổ 1440, cột Trạng thái và nút chọn
- * nằm khuất bên phải — đúng hai thứ người mua cần nhìn.
- *
- * Nhóm tiền quy về một mặt bằng và xếp hạng theo TỔNG CHI PHÍ; nhóm rủi ro (giao, được nợ, bảo
- * hành) để nguyên, không quy thành tiền — quy đổi được thì phần mềm đã ngầm chọn hộ (PRD MH-04).
- */
-function QuotationComparisonTable({
-  rows,
-  canChoose,
-  choosing,
-  onChoose,
+function QuotationForm({
+  requestId,
+  board,
+  onSaved,
 }: {
-  rows: readonly ComparisonRow[];
-  canChoose: boolean;
-  choosing: boolean;
-  onChoose: (quotationId: string, isLowest: boolean) => void;
+  requestId: string;
+  board: QuotationBoard;
+  onSaved: () => void;
 }) {
-  const money = (label: string, pick: (r: ComparisonRow) => MoneyValue) => ({
-    label,
-    render: (r: ComparisonRow) => formatCurrency(pick(r)),
-    numeric: true,
-  });
-  const lines: {
-    label: string;
-    render: (r: ComparisonRow) => React.ReactNode;
-    numeric?: boolean;
-    strong?: boolean;
-  }[] = [
-    money('Tiền hàng', (r) => r.goods_subtotal),
-    money('Hao hụt', (r) => r.wastage_amount),
-    money('Thuế', (r) => r.tax_amount),
-    money('Vận chuyển', (r) => r.shipping_fee),
-    {
-      label: 'Tổng chi phí',
-      numeric: true,
-      strong: true,
-      render: (r) => (
-        <>
-          {formatCurrency(r.landed_total)}
-          {r.cost_rank === 1 && (
-            <span className="block text-xs font-normal text-fg-subtle">Tổng chi phí thấp nhất</span>
-          )}
-        </>
-      ),
-    },
-    {
-      label: 'Chênh lệch so với thấp nhất',
-      numeric: true,
-      render: (r) => (r.cost_rank === 1 ? EM_DASH : `+${formatCurrency(r.cost_gap_vs_lowest)}`),
-    },
-    {
-      label: 'Thời hạn giao',
-      render: (r) =>
-        r.delivery_days != null ? (
-          <span className="inline-flex items-center gap-1">
-            <Truck className="size-4 shrink-0 text-fg-subtle" aria-hidden />
-            {r.delivery_days} ngày
-          </span>
-        ) : (
-          EM_DASH
-        ),
-    },
-    {
-      label: 'Được nợ',
-      render: (r) => (r.payment_term_days != null ? `${r.payment_term_days} ngày` : EM_DASH),
-    },
-    {
-      label: 'Bảo hành',
-      render: (r) =>
-        r.warranty_months != null ? (
-          <span className="inline-flex items-center gap-1">
-            <ShieldCheck className="size-4 shrink-0 text-fg-subtle" aria-hidden />
-            {r.warranty_months} tháng
-          </span>
-        ) : (
-          EM_DASH
-        ),
-    },
-  ];
-  const chosenCell = (r: ComparisonRow) => (r.status === 'duoc_chon' ? 'bg-brand-subtle/60' : '');
+  const { data: suppliers } = useSuppliers();
+  const [supplierId, setSupplierId] = useState('');
+  const existing = board.quotations.find((q) => q.supplier_id === supplierId);
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-      <table
-        className="w-full border-collapse text-left"
-        style={{ minWidth: `${12 + rows.length * 12}rem` }}
-      >
-        <caption className="sr-only">
-          Bảng so sánh báo giá đã chuẩn hóa theo tổng chi phí và điều kiện giao hàng
-        </caption>
-        <thead>
-          <tr className="border-b border-border align-top">
-            <th scope="col" className="w-48 px-4 py-3 text-xs font-medium text-fg-subtle">
-              Tiêu chí
-            </th>
-            {rows.map((r) => (
-              <th
-                key={r.quotation_id}
-                scope="col"
-                className={`px-4 py-3 text-right font-normal ${chosenCell(r)}`}
-              >
-                <span className="block font-semibold">{r.supplier_name}</span>
-                <span className="block text-xs text-fg-subtle">
-                  {SUPPLIER_CLASS_LABELS[r.supplier_class]}
-                  {r.quoted_date ? ` · Báo giá ${formatDate(r.quoted_date)}` : ''}
-                </span>
-                <span className="mt-1 block text-sm">
-                  {r.status === 'duoc_chon' ? (
-                    <span className="inline-flex items-center gap-1 font-semibold text-status-completed">
-                      <Check className="size-4 shrink-0" aria-hidden />
-                      {QUOTATION_STATUS_LABELS.duoc_chon}
-                    </span>
-                  ) : (
-                    <span className="text-fg-subtle">{QUOTATION_STATUS_LABELS[r.status]}</span>
-                  )}
-                </span>
-              </th>
+    <div className="space-y-4 rounded-lg border border-border bg-surface-sunken p-4">
+      <Field label="Nhà cung cấp" required>
+        <select
+          value={supplierId}
+          onChange={(e) => setSupplierId(e.target.value)}
+          className="h-10 w-full rounded-sm border border-border-strong bg-surface px-3 sm:max-w-md"
+        >
+          <option value="">Chọn nhà cung cấp</option>
+          {(suppliers ?? [])
+            .filter((s) => s.supplier_class !== 'ngung_giao_dich')
+            .map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+                {board.quotations.some((q) => q.supplier_id === s.id) ? ' (đã có báo giá)' : ''}
+              </option>
             ))}
-          </tr>
-        </thead>
-        <tbody>
-          {lines.map((line) => (
-            <tr
-              key={line.label}
-              className={`border-b border-border last:border-0 ${line.strong ? 'bg-surface-sunken' : ''}`}
-            >
-              <th scope="row" className="px-4 py-2 font-normal text-fg-subtle">
-                {line.label}
-              </th>
-              {rows.map((r) => (
-                <td
-                  key={r.quotation_id}
-                  className={`px-4 py-2 text-right tabular-nums whitespace-nowrap ${
-                    line.strong ? 'font-semibold' : ''
-                  } ${chosenCell(r)}`}
-                >
-                  {line.render(r)}
-                </td>
-              ))}
-            </tr>
-          ))}
-          {canChoose && (
-            <tr>
-              <th scope="row" className="px-4 py-3 font-normal text-fg-subtle">
-                <span className="sr-only">Thao tác</span>
-              </th>
-              {rows.map((r) => (
-                <td key={r.quotation_id} className="px-4 py-3 text-right">
-                  <Button
-                    variant="secondary"
-                    disabled={choosing}
-                    onClick={() => onChoose(r.quotation_id, r.cost_rank === 1)}
-                  >
-                    Chọn nhà cung cấp này
-                  </Button>
-                </td>
-              ))}
-            </tr>
-          )}
-        </tbody>
-      </table>
+        </select>
+      </Field>
+      {supplierId && (
+        <QuotationFields
+          // Đổi nhà cung cấp thì dựng lại ô với giá trị của báo giá đó (nếu có).
+          key={supplierId}
+          requestId={requestId}
+          supplierId={supplierId}
+          board={board}
+          existing={existing}
+          onSaved={onSaved}
+        />
+      )}
     </div>
+  );
+}
+
+function QuotationFields({
+  requestId,
+  supplierId,
+  board,
+  existing,
+  onSaved,
+}: {
+  requestId: string;
+  supplierId: string;
+  board: QuotationBoard;
+  existing: BoardQuotation | undefined;
+  onSaved: () => void;
+}) {
+  const save = useSaveQuotationBoard();
+  const [quotedDate, setQuotedDate] = useState(existing?.quoted_date ?? toNvgDateInput(new Date()));
+  const [validUntil, setValidUntil] = useState(existing?.valid_until ?? '');
+  const [tax, setTax] = useState(existing ? formatNumber(existing.tax_rate_bp / 100) : '10');
+  const [wastage, setWastage] = useState(
+    existing ? formatNumber(existing.wastage_rate_bp / 100) : '0',
+  );
+  const [shipping, setShipping] = useState(existing ? String(existing.shipping_fee) : '0');
+  const [deliveryDays, setDeliveryDays] = useState(existing?.delivery_days?.toString() ?? '');
+  const [paymentDays, setPaymentDays] = useState(existing?.payment_term_days?.toString() ?? '');
+  const [warranty, setWarranty] = useState(existing?.warranty_months?.toString() ?? '');
+  const [vat, setVat] = useState(
+    existing?.has_vat_invoice == null ? '' : existing.has_vat_invoice ? 'co' : 'khong',
+  );
+  const [notes, setNotes] = useState(existing?.notes ?? '');
+  const [prices, setPrices] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      board.lines.map((l) => [
+        l.request_item_id,
+        existing && l.prices[existing.quotation_id] != null
+          ? String(l.prices[existing.quotation_id])
+          : '',
+      ]),
+    ),
+  );
+  const [file, setFile] = useState<File | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    setError(null);
+    if (!Object.values(prices).some((p) => p && p !== '0')) {
+      setError('Chưa nhập đơn giá cho mặt hàng nào. Báo giá không có dòng hàng thì không so được.');
+      return;
+    }
+    try {
+      await save.mutateAsync({
+        requestId,
+        supplierId,
+        header: {
+          quoted_date: quotedDate || null,
+          valid_until: validUntil || null,
+          tax_rate_bp: toBasisPoints(tax),
+          wastage_rate_bp: toBasisPoints(wastage),
+          shipping_fee: shipping || '0',
+          delivery_days: intOrNull(deliveryDays),
+          payment_term_days: intOrNull(paymentDays),
+          warranty_months: intOrNull(warranty),
+          has_vat_invoice: vat === '' ? null : vat === 'co',
+          notes: notes.trim() || null,
+        },
+        prices,
+        file,
+      });
+      onSaved();
+    } catch (e) {
+      setError(toUserMessage(e, existing ? 'edit' : 'create'));
+    }
+  }
+
+  return (
+    <form onSubmit={(e) => void submit(e)} className="space-y-4">
+      {scanning && (
+        <DocumentScanner
+          title="Quét báo giá giấy của nhà cung cấp"
+          fileName="bao-gia"
+          onDone={(f) => {
+            setFile(f);
+            setScanning(false);
+          }}
+          onCancel={() => setScanning(false)}
+        />
+      )}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Field label="Ngày báo giá">
+          <DateInput value={quotedDate} onChange={setQuotedDate} />
+        </Field>
+        <Field label="Hiệu lực đến">
+          <DateInput value={validUntil} onChange={setValidUntil} />
+        </Field>
+        <Field label="Thuế suất (%)">
+          <Input inputMode="decimal" value={tax} onChange={(e) => setTax(e.target.value)} />
+        </Field>
+        <Field label="Hao hụt dự kiến (%)" hint="Phần phải mua bù, tính vào tổng chi phí.">
+          <Input inputMode="decimal" value={wastage} onChange={(e) => setWastage(e.target.value)} />
+        </Field>
+        <Field label="Phí vận chuyển (đồng)">
+          <MoneyInput value={shipping} onChange={setShipping} />
+        </Field>
+        <Field label="Thời hạn giao (ngày)">
+          <Input
+            inputMode="numeric"
+            value={deliveryDays}
+            onChange={(e) => setDeliveryDays(e.target.value)}
+          />
+        </Field>
+        <Field label="Có hoá đơn VAT">
+          <select
+            value={vat}
+            onChange={(e) => setVat(e.target.value)}
+            className="h-10 w-full rounded-sm border border-border-strong bg-surface px-3"
+          >
+            <option value="">Chưa hỏi</option>
+            <option value="co">Có</option>
+            <option value="khong">Không</option>
+          </select>
+        </Field>
+        <Field label="Được nợ (ngày)">
+          <Input
+            inputMode="numeric"
+            value={paymentDays}
+            onChange={(e) => setPaymentDays(e.target.value)}
+          />
+        </Field>
+        <Field label="Bảo hành (tháng)">
+          <Input
+            inputMode="numeric"
+            value={warranty}
+            onChange={(e) => setWarranty(e.target.value)}
+          />
+        </Field>
+        <Field label="Ghi chú" className="sm:col-span-2 lg:col-span-3">
+          <Input
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Điều kiện giao, chất lượng, mẫu đã xem…"
+          />
+        </Field>
+      </div>
+
+      <div>
+        <p className="mb-2 font-medium">Đơn giá từng mặt hàng</p>
+        <p className="mb-2 text-xs text-fg-subtle">
+          Để trống mặt hàng nhà cung cấp không báo. Báo giá thiếu mặt hàng không chọn được.
+        </p>
+        <div className="space-y-3">
+          {board.lines.map((line) => (
+            <Field
+              key={line.request_item_id}
+              label={`${line.name}${line.specification ? ` — ${line.specification}` : ''}`}
+              hint={`Số lượng cần: ${formatNumber(Number(line.quantity))} ${line.unit}`}
+            >
+              <MoneyInput
+                value={prices[line.request_item_id] ?? ''}
+                onChange={(v) => setPrices((p) => ({ ...p, [line.request_item_id]: v }))}
+                placeholder={`Đơn giá (đồng / ${line.unit})`}
+              />
+            </Field>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <p className="font-medium">Tệp báo giá</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="button" onClick={() => setScanning(true)}>
+            <ScanLine className="size-4" aria-hidden />
+            Quét báo giá giấy
+          </Button>
+          <label className="inline-flex h-8 cursor-pointer items-center gap-2 rounded-sm border border-border-strong bg-surface px-3 hover:bg-surface-hover">
+            <Upload className="size-4" aria-hidden />
+            Chọn tệp (PDF, ảnh)
+            <input
+              type="file"
+              accept="application/pdf,image/*"
+              className="sr-only"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            />
+          </label>
+          <span className="text-fg-subtle">
+            {file
+              ? `Sẽ lưu: ${file.name}`
+              : existing?.document_path
+                ? 'Đã có tệp — chọn tệp mới để thay'
+                : 'Chưa có tệp'}
+          </span>
+        </div>
+      </div>
+
+      {error && (
+        <p role="alert" className="rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
+          {error}
+        </p>
+      )}
+      <Button type="submit" variant="primary" disabled={save.isPending}>
+        Lưu báo giá
+      </Button>
+    </form>
   );
 }
