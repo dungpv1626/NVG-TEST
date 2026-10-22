@@ -75,8 +75,11 @@ $$;
 -- ----------------------------------------------------------------------------
 -- 3. Danh sách gom — mỗi nhóm một dòng, kèm các nguồn
 --
--- SECURITY INVOKER: RLS của `purchase_requests` quyết phạm vi — Mẫu A theo pháp nhân, Mẫu E cho
--- chỉ huy trưởng (0134). Hàm không tự kiểm quyền thêm nên không thể thấy nhiều hơn bảng gốc.
+-- Phạm vi = ĐÚNG điều kiện của chính sách `purchase_requests_select` (0134): Mẫu A theo pháp nhân
+-- + quyền xem MH, Mẫu E cho chỉ huy trưởng. Viết tường minh trong hàm SECURITY DEFINER thay vì để
+-- RLS tự áp: để RLS áp trên năm bảng nối (đề nghị, công trình, người dùng, đơn hàng…) thì mỗi dòng
+-- gọi hàm quyền hàng chục lần — đo được quá thời gian câu lệnh (8 giây) khi CSDL có vài chục đề
+-- nghị. Đổi chính sách đọc đề nghị mua thì đổi cả ở đây (phép thử Mẫu E trong mh-dot4-gom canh).
 --
 -- Đề nghị trong danh sách: Chờ duyệt và Đã duyệt mà chưa có đơn hàng đang hiệu lực — đúng phần
 -- việc đang nằm ở Mua hàng (Chờ duyệt: hỏi giá song song trong lúc chờ người duyệt).
@@ -102,10 +105,19 @@ RETURNS TABLE (
 )
 LANGUAGE sql
 STABLE
-SECURITY INVOKER
+SECURITY DEFINER
 SET search_path = public
 AS $$
-  WITH src AS (
+  WITH visible AS MATERIALIZED (
+    SELECT pr.*
+      FROM public.purchase_requests pr
+     WHERE pr.deleted_at IS NULL
+       AND pr.stage IN ('cho_duyet', 'da_duyet')
+       AND public.auth_can_view_module('MH')
+       AND public.rls_company_access(pr.company_id)
+       AND (pr.construction_site_id IS NULL OR public.rls_site_in_scope(pr.construction_site_id))
+  ),
+  src AS (
     SELECT
       public.purchase_item_group_key(pr.company_id, pri.item_code, pri.name, pri.specification, pri.unit) AS gkey,
       pr.company_id, c.code::text AS company_code,
@@ -114,13 +126,11 @@ AS $$
       pr.delivery_location, s.id AS site_id, s.code AS site_code, s.name AS site_name,
       u.full_name AS requester_name
     FROM public.purchase_request_items pri
-    JOIN public.purchase_requests pr ON pr.id = pri.purchase_request_id
+    JOIN visible pr ON pr.id = pri.purchase_request_id
     JOIN public.companies c ON c.id = pr.company_id
     LEFT JOIN public.construction_sites s ON s.id = pr.construction_site_id
     LEFT JOIN public.users u ON u.id = pr.requested_by
-    WHERE pr.deleted_at IS NULL
-      AND pr.stage IN ('cho_duyet', 'da_duyet')
-      AND NOT EXISTS (
+    WHERE NOT EXISTS (
         SELECT 1 FROM public.purchase_orders po
          WHERE po.purchase_request_id = pr.id AND po.deleted_at IS NULL AND po.stage <> 'huy'
       )

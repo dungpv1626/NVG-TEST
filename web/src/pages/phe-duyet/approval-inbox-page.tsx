@@ -12,6 +12,7 @@
 
 import { TodayFollowups } from '@/components/crm/today-followups';
 import { ContractDocumentPreview } from './contract-document-preview';
+import { PurchaseQuotationPreview } from './purchase-quotation-preview';
 import { SurveyReportPreview } from './survey-report-preview';
 import { PageHeader } from '@/components/layout/app-shell';
 import { ApprovalInbox, type ApprovalItem } from '@/components/entity/approval-inbox';
@@ -156,6 +157,10 @@ function ApprovalPreview({ row }: { row: PendingApproval }) {
       </div>
 
       {row.entity_type === 'contracts' && <ContractDocumentPreview contractId={row.entity_id} />}
+      {/* Đợt 4 — 4B: đề nghị mua kèm bảng so giá nhà cung cấp. */}
+      {row.entity_type === 'purchase_requests' && (
+        <PurchaseQuotationPreview requestId={row.entity_id} />
+      )}
       {row.entity_type === 'site_surveys' ? (
         <SurveyReportPreview surveyId={row.entity_id} />
       ) : (
