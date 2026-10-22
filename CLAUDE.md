@@ -638,7 +638,7 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
 | 3   | Khảo sát chốt bằng máy (CRM + TK), đính kèm dùng chung, ghi âm → Whisper → Gemini tóm tắt (vấn đề 6, 8)                                              | **Phần CRM xong trong Đợt 1**; phần TK ở Đợt 5               |
 | 3b  | Điểm danh theo tổ, kiểm bán kính GPS (chỉ cảnh báo), báo cáo có mặt, đề xuất chấm công                                                               | Chưa làm — nay là Đợt 2 (2C) của kế hoạch tổng               |
 | 4   | Mẫu hợp đồng `.docx` có chỗ trống, tự điền, xem trước, xuất (vấn đề 5)                                                                               | **Xong vòng đầu** — chờ Haan kiểm                            |
-| 5   | AI Design thành 4 bước: Đầu vào → Mặt bằng → Mặt ngoài → Bộ kết quả (vấn đề 7)                                                                       | Chưa làm — nay là Đợt 5 (5B) của kế hoạch tổng               |
+| 5   | AI Design thành 4 bước: Đầu vào → Mặt bằng → Mặt ngoài → Bộ kết quả (vấn đề 7)                                                                       | **Xong trên máy (5B, T162)** — chờ anh Dũng chạy thử         |
 | Đ1  | Đợt 1 Kinh doanh (kế hoạch tổng): 1A–1H + bổ sung 18/10 (AI thật, đính kèm, in, phiếu riêng)                                                         | **Xong trên máy** — chờ anh Dũng chạy thử                    |
 | Đ2  | Đợt 2 Thi công (NVO trước): 2A mốc, 2B nhật ký giọng nói, 2D biên bản ký hai bên, 2E bảng theo dõi, 2F phiếu bảo hành, 2G mẫu nháp (0182, 0190–0194) | **Xong trên máy** trừ 2C (chờ câu 6) và mốc NVC (chờ câu 15) |
 | HĐ  | Soạn hợp đồng bằng máy + bộ mẫu ba pháp nhân + ký không cần sếp vào app + bộ quét bản đã ký (0185–0189)                                              | **Xong trên máy** — anh Dũng đã chạy thử trọn tới bản quét   |
@@ -919,6 +919,12 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
     Worker `GET /public/signed/:token` (`contract_scan_public`, chỉ service_role, không giá trị / điều khoản) → trang
     `/xem-ban-ky/:token` (vẽ trang PDF bằng pdf.js — điện thoại không hiện PDF trong khung). «Chia sẻ»
     (`lib/share-file.ts`): máy cảm ứng mở bảng chia sẻ, máy tính tải tệp về.
+- **5B AI Design bốn bước (22/10/2026, T162, chỉ `web/src/pages/tk/ai/`):** dải Đầu vào → Mặt bằng → Mặt ngoài (mặt đứng +
+  phối cảnh) → Bộ kết quả; `?buoc=` mở thẳng bước. Chi phí ước tính trên nút «Xếp mặt bằng» / «Sửa lại» = trung bình tiền
+  THẬT các lượt trước cùng tuyến mô hình (`design_ai_run` + `design_ai_call`), chưa có lượt thì «Chưa đủ dữ liệu». So phương
+  án cạnh nhau; ba lý do trừ điểm lớn nhất từ thước chấm đã lưu; ô «Yêu cầu sửa» đặt lại (đảo một phần T117 — chờ quyết);
+  Bộ kết quả `.zip` dựng trên trình duyệt bằng pizzip, tên theo mã hồ sơ. Chưa chụp được ba bước sau bằng artifact thật
+  (CSDL máy không có lượt AI nào). Ảnh: `.claude/worktrees/agent-a899d8044512cd3c6/backup/dot5b-shots/`.
 - Hàm chép-dài bản mới nhất: `decide_approval` ở 0179, `stage_readiness` ở 0183, `crm_followups_for` ở 0183, `my_pending_approvals` ở 0175, hàm canh
   `site_surveys_report_guard` ở 0181. Hạn mức loại phê duyệt mới nằm ở seed (`DEFAULT_APPROVAL_LIMITS`) — `db:seed` sau migrate.
 - Ảnh chạy thử từng phần: `backup/dot1-1a/` → `backup/dot1-1h/`, `backup/dot1-dinh-kem/`, `backup/dot1-phieu-rieng/`,
