@@ -85,6 +85,9 @@ function adaptiveThreshold(g: Uint8ClampedArray, w: number, h: number, t = 0.15)
  * Xoá bóng, giữ màu: nền giấy ước bằng trung bình xám vùng rộng (mực thưa nên kéo nền xuống ít);
  * mỗi kênh màu nhân 255 / nền, rồi kéo nhẹ cho nền thật trắng và mực đậm lên.
  */
+/** Độ sáng nền thấp nhất còn coi là giấy (giấy trong bóng tay vẫn sáng hơn mức này). */
+const BG_FLOOR = 100;
+
 function whitenBackground(img: ImageData, g: Uint8ClampedArray) {
   const { width: w, height: h, data: d } = img;
   const integral = integralOf(g, w, h);
@@ -93,7 +96,9 @@ function whitenBackground(img: ImageData, g: Uint8ClampedArray) {
   const HI = 235;
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
-      const k = 255 / Math.max(16, localMean(integral, w, h, x, y, half));
+      // Nền tối hơn BG_FLOOR không phải giấy (mặt bàn còn sót trong khung): không kéo sáng quá
+      // mức — trước đây chỗ đó bị nhân 3–5 lần thành vệt vàng loang ở viền trang.
+      const k = 255 / Math.max(BG_FLOOR, localMean(integral, w, h, x, y, half));
       const p = (y * w + x) * 4;
       for (let c = 0; c < 3; c++) {
         d[p + c] = ((d[p + c]! * k - LO) * 255) / (HI - LO);

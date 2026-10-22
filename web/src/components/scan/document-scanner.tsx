@@ -13,10 +13,20 @@
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, ArrowRight, Camera, FileText, ImagePlus, RotateCw, Trash2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Camera,
+  FileText,
+  ImagePlus,
+  RotateCw,
+  ScanSearch,
+  Trash2,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { buildPdf, type ScanPage } from '@/lib/scan/build-pdf';
+import { detectPaperQuad } from '@/lib/scan/detect';
 import { enhance, SCAN_MODE_LABELS, type ScanMode } from '@/lib/scan/enhance';
 import {
   defaultQuad,
@@ -30,6 +40,20 @@ import { cn } from '@/lib/utils';
 /** Ảnh nguồn thu về cạnh dài này trước khi kéo góc — đủ cho trang 2.000 px, nhẹ cho điện thoại. */
 const SOURCE_MAX_SIDE = 2600;
 const THUMB_SIDE = 320;
+/** Tìm mép trên ảnh thu nhỏ — đủ chính xác cho gợi ý góc, nhanh trên điện thoại. */
+const DETECT_SIDE = 480;
+
+type QuadSource = 'auto' | 'default' | 'manual';
+
+/** Gợi ý 4 góc tờ giấy theo toạ độ ảnh nguồn, hoặc `null` khi máy không chắc. */
+function autoQuad(source: HTMLCanvasElement): Quad | null {
+  const k = Math.min(1, DETECT_SIDE / Math.max(source.width, source.height));
+  const c = canvasOf(Math.round(source.width * k), Math.round(source.height * k));
+  const ctx = c.getContext('2d')!;
+  ctx.drawImage(source, 0, 0, c.width, c.height);
+  const q = detectPaperQuad(ctx.getImageData(0, 0, c.width, c.height));
+  return q ? (q.map((p) => ({ x: p.x / k, y: p.y / k })) as Quad) : null;
+}
 
 type Page =
   | {
@@ -40,6 +64,8 @@ type Page =
       quad: Quad;
       mode: ScanMode;
       thumbUrl: string | null;
+      /** 4 góc từ đâu: máy tự tìm, mặc định (không tìm được), hay người dùng đã kéo. */
+      quadSource: QuadSource;
     }
   | { id: string; kind: 'pdf'; name: string; bytes: Uint8Array; pageCount: number };
 
@@ -169,7 +195,15 @@ export function DocumentScanner({
             kind: 'image',
             source,
             sourceUrl: source.toDataURL('image/jpeg', 0.8),
-            quad: defaultQuad(source.width, source.height),
+            ...(() => {
+              const q = autoQuad(source);
+              return q
+                ? { quad: q, quadSource: 'auto' as const }
+                : {
+                    quad: defaultQuad(source.width, source.height),
+                    quadSource: 'default' as const,
+                  };
+            })(),
             mode: 'document',
             thumbUrl: null,
           });
@@ -335,7 +369,15 @@ export function DocumentScanner({
         ) : (
           <PageEditor
             page={current}
-            onQuad={(quad) => update(current.id, () => ({ quad }))}
+            onQuad={(quad) => update(current.id, () => ({ quad, quadSource: 'manual' }))}
+            onDetect={() =>
+              update(current.id, (p) => {
+                const q = autoQuad(p.source);
+                return q
+                  ? { quad: q, quadSource: 'auto' }
+                  : { quad: defaultQuad(p.source.width, p.source.height), quadSource: 'default' };
+              })
+            }
             onMode={(mode) => update(current.id, () => ({ mode }))}
             onRotate={() => rotate(current.id)}
           />
@@ -418,9 +460,11 @@ function PageEditor({
   onQuad,
   onMode,
   onRotate,
+  onDetect,
 }: {
   page: Extract<Page, { kind: 'image' }>;
   onQuad: (quad: Quad) => void;
+  onDetect: () => void;
   onMode: (mode: ScanMode) => void;
   onRotate: () => void;
 }) {
@@ -455,8 +499,23 @@ function PageEditor({
         <Button variant="secondary" size="sm" onClick={onRotate}>
           <RotateCw className="size-4" aria-hidden /> Xoay
         </Button>
+        <Button variant="secondary" size="sm" onClick={onDetect}>
+          <ScanSearch className="size-4" aria-hidden /> Tự tìm mép
+        </Button>
       </div>
-      <p className="text-sm text-fg-subtle">Kéo 4 chấm tròn cho khớp 4 góc tờ giấy.</p>
+      <p
+        role="status"
+        className={cn(
+          'max-w-xl text-center text-sm',
+          page.quadSource === 'default' ? 'text-status-pending' : 'text-fg-subtle',
+        )}
+      >
+        {page.quadSource === 'auto'
+          ? 'Máy đã tự tìm mép giấy — kiểm lại 4 chấm tròn, lệch thì kéo cho khớp góc giấy.'
+          : page.quadSource === 'default'
+            ? 'Không tự tìm được mép giấy — kéo 4 chấm tròn vào đúng 4 góc tờ giấy. Lần sau đặt giấy trên nền tối hơn (bàn gỗ, bìa sẫm) để máy tự tìm.'
+            : 'Kéo 4 chấm tròn cho khớp 4 góc tờ giấy.'}
+      </p>
       <div
         ref={boxRef}
         className="relative max-h-[60vh] max-w-full touch-none select-none"

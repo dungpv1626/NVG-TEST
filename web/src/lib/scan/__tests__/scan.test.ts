@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { PDFDocument } from 'pdf-lib';
 import { A4_POINTS, buildPdf } from '../build-pdf';
+import { detectPaperQuad } from '../detect';
 import { enhance } from '../enhance';
 import {
   applyHomography,
@@ -157,5 +158,58 @@ describe('ghép PDF', () => {
     expect(p1!.getSize()).toEqual({ width: A4_POINTS.short, height: A4_POINTS.long });
     expect(p2!.getSize()).toEqual({ width: 200, height: 300 });
     expect(p3!.getSize()).toEqual({ width: A4_POINTS.long, height: A4_POINTS.short });
+  });
+});
+
+describe('tự tìm mép giấy', () => {
+  /** Ảnh w×h: nền `bg`, tờ giấy tứ giác `paper` màu `fg`, nửa phải bị bóng, có vài dòng chữ. */
+  function photo(w: number, h: number, paper: Quad, fg: number, bg: number) {
+    const img = createImageData(w, h);
+    const inside = (x: number, y: number) => {
+      let sign = 0;
+      for (let i = 0; i < 4; i++) {
+        const a = paper[i]!;
+        const b = paper[(i + 1) % 4]!;
+        const s = Math.sign((b.x - a.x) * (y - a.y) - (b.y - a.y) * (x - a.x));
+        if (s === 0) continue;
+        if (sign === 0) sign = s;
+        else if (s !== sign) return false;
+      }
+      return true;
+    };
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) {
+        const shade = x > w / 2 ? 0.7 : 1;
+        const text = y % 20 < 3 && x % 7 < 5;
+        const v = inside(x + 0.5, y + 0.5) ? (text ? 40 : fg) * shade : bg * shade;
+        const i = (y * w + x) * 4;
+        img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+        img.data[i + 3] = 255;
+      }
+    return img;
+  }
+
+  it('tờ giấy nghiêng, có chữ, nửa bị bóng trên bàn tối → ra đúng 4 góc (sai ≤ 3 % cạnh ảnh)', () => {
+    const paper: Quad = [
+      { x: 90, y: 50 },
+      { x: 330, y: 80 },
+      { x: 300, y: 420 },
+      { x: 50, y: 380 },
+    ];
+    const q = detectPaperQuad(photo(400, 480, paper, 235, 70));
+    expect(q).not.toBeNull();
+    q!.forEach((p, i) => {
+      expect(Math.hypot(p.x - paper[i]!.x, p.y - paper[i]!.y)).toBeLessThan(0.03 * 480);
+    });
+  });
+
+  it('giấy trắng trên bàn trắng (không tách được) → không đoán bừa', () => {
+    const paper: Quad = [
+      { x: 90, y: 50 },
+      { x: 330, y: 80 },
+      { x: 300, y: 420 },
+      { x: 50, y: 380 },
+    ];
+    expect(detectPaperQuad(photo(400, 480, paper, 235, 235))).toBeNull();
   });
 });
