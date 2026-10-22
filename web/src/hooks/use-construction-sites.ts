@@ -254,6 +254,9 @@ export interface SiteLogRecord {
   workforce_count: number | null;
   weather: string | null;
   photo_urls: string[] | null;
+  voice_path: string | null;
+  voice_transcript: string | null;
+  ai_drafted: boolean;
   logged_by: string | null;
   created_at: string;
   author: { full_name: string } | null;
@@ -266,7 +269,8 @@ export function useSiteLogs(siteId: string | undefined) {
       const { data, error } = await supabase
         .from('site_logs')
         .select(
-          'id, log_date, log_type, content, workforce_count, weather, photo_urls, logged_by, created_at, ' +
+          'id, log_date, log_type, content, workforce_count, weather, photo_urls, voice_path, ' +
+            'voice_transcript, ai_drafted, logged_by, created_at, ' +
             'author:users!site_logs_logged_by_users_id_fk(full_name)',
         )
         .eq('construction_site_id', siteId!)
@@ -302,6 +306,10 @@ export function useCreateSiteLog() {
         weather: string | null;
         /** Đường dẫn ảnh trong bucket `construction-photos` — đã tải lên trước. */
         photo_urls?: string[];
+        /** Nhật ký nói thay gõ (2B): đoạn ghi âm trong `site-log-audio` + bản máy chép. */
+        voice_path?: string | null;
+        voice_transcript?: string | null;
+        ai_drafted?: boolean;
       };
     }
   >({

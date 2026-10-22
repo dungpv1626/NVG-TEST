@@ -640,7 +640,7 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
 | 4   | Mẫu hợp đồng `.docx` có chỗ trống, tự điền, xem trước, xuất (vấn đề 5)                                                     | **Xong vòng đầu** — chờ Haan kiểm                          |
 | 5   | AI Design thành 4 bước: Đầu vào → Mặt bằng → Mặt ngoài → Bộ kết quả (vấn đề 7)                                             | Chưa làm — nay là Đợt 5 (5B) của kế hoạch tổng             |
 | Đ1  | Đợt 1 Kinh doanh (kế hoạch tổng): 1A–1H + bổ sung 18/10 (AI thật, đính kèm, in, phiếu riêng)                               | **Xong trên máy** — chờ anh Dũng chạy thử                  |
-| Đ2  | Đợt 2 Thi công (NVO trước): 2A mốc thi công                                                                                | **Đang làm** — 2A xong; tạm dừng để sửa lỗi chạy thử Đợt 1 |
+| Đ2  | Đợt 2 Thi công (NVO trước): 2A mốc thi công, 2B nhật ký giọng nói (0182, 0190)                                             | **Đang làm** — 2A, 2B xong; tiếp 2E                        |
 | HĐ  | Soạn hợp đồng bằng máy + bộ mẫu ba pháp nhân + ký không cần sếp vào app + bộ quét bản đã ký (0185–0189)                    | **Xong trên máy** — anh Dũng đã chạy thử trọn tới bản quét |
 | 0b  | Bộ nhận diện theo logo NVG                                                                                                 | **Xong vòng đầu** — chờ duyệt ảnh                          |
 | PH  | Phát hành bản demo mới                                                                                                     | **Chuẩn bị xong, CỐ Ý CHƯA deploy** (xem 9.3)              |
@@ -800,8 +800,16 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
     sang «Nghiệm thu bàn giao» (`stage_readiness` + trigger `construction_sites_milestones_gate`). Tab «Mốc thi công» trên
     trang công trình. Tài khoản thử mới: `congtruong.nvo@…` (TC), `chihuytruong.nvo@…` (CHT). Công trình thử trên máy:
     `NVO-CT-2026-0901`. Ảnh: `backup/dot2-2a/`.
-  - Còn: 2B nhật ký giọng nói, 2D biên bản tự sinh + ký điện thoại, 2E màn hình Trưởng phòng, 2F phiếu bảo hành, 2G
-    công trình xong → mẫu nháp; 2C điểm danh tổ chờ câu 6.
+  - 2B xong (0190, 22/10/2026): tab Nhật ký có khối «Nói nhật ký thay gõ» (dùng lại `VoiceRecorder`) → tệp vào kho
+    `site-log-audio` (thư mục đầu = công trình, quyền `rls_site_readable/_writable`, không xoá) → Worker
+    `POST /ai/site-log-draft` chép chữ (Whisper) + xếp mục (Gemini, công tắc RIÊNG `ai.site_log_enabled`, trống = tắt →
+    đưa nguyên bản chép chữ vào ô Nội dung) → máy điền Nội dung (Việc đã làm / Vật tư / Vướng mắc / An toàn — ghép ở
+    `shared/src/site-log-voice.ts`), Quân số, Thời tiết; đã gõ sẵn thì nối thêm. Người ghi sửa rồi Lưu; mục lưu kèm
+    `voice_path`, `voice_transcript`, `ai_drafted` (trigger bắt tệp đúng công trình), danh sách có «Nghe đoạn ghi âm» +
+    «Lời đã nói». Phép thử `db/src/__tests__/tc-voice-log.test.ts` (6, đột biến gỡ trigger / nới quyền kho đã đo đỏ),
+    `shared/.../site-log-voice.test.ts`. Ảnh: `backup/dot2-2b/` (kịch bản `backup/dot2-2b-voice.cjs`, chạy với
+    `AI_FAKE=transcribe,site_log`).
+  - Còn: 2D biên bản tự sinh + ký điện thoại, 2E màn hình Trưởng phòng, 2F phiếu bảo hành, 2G
 - **Sửa sau khi anh Dũng chạy thử Đợt 1 (20–21/10/2026, commit fc2e118 → 23a14aa):**
   - Biểu mẫu Khách hàng (tạo / sửa) kiểm trùng số điện thoại với đầu mối + khách hàng (`contact-duplicates-notice.tsx`,
     cùng hàm `contact_duplicates`); trùng khách hàng có sẵn thì không tạo thêm hồ sơ. Trước chỉ biểu mẫu Đầu mối kiểm.
@@ -885,6 +893,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 | Hợp đồng (0185–0187)                  | Xong trên máy: 21 mẫu NVC / NVO / NVS nạp bằng seed, mọi chỗ trống điền được và lưu theo hợp đồng, Kinh doanh ghi nhận ký kèm bản đã ký, ký xong tự mở công trình. Cả bộ phép thử `db` xanh trừ hai nhóm đỏ sẵn (9.6)            |
 | Cập nhật tức thời (0188)              | Xong: thông báo + phê duyệt đẩy về trình duyệt ~1 giây (đo bằng Playwright), không cần F5                                                                                                                                        |
 | Bộ quét + bản đã ký (0189)            | Xong trên máy, anh Dũng chạy thử bằng ảnh thật tới bản đạt (lần quét «sss» trên AB). `scan.test.ts` + `hd-template.test.ts` (22) xanh, đột biến chính sách kho đã đo đỏ. Chưa thử trên điện thoại thật                           |
+| Nhật ký giọng nói (0190)              | Xong trên máy, chạy thử bằng `chihuytruong.nvo@…` ở khung điện thoại với AI giả lập. Máy xếp mục (`ai.site_log_enabled`) để TẮT — chưa duyệt chi phí; tắt thì vẫn chép chữ thật và đưa nguyên lời vào ô Nội dung                 |
 | Bộ mẫu hợp đồng                       | Bản DỰ THẢO (anh Dũng gửi, dùng như chính thức) — chờ pháp chế NVG rà; bảng hỏi mục 6 trong tệp «00_Huong_dan» từng bộ chờ NVG trả lời. Tài khoản ngân hàng ba công ty là số DEMO                                                |
 | AI trên máy                           | **Chạy THẬT**: Whisper (Workers AI) + Gemini 2.5 Flash trả phí — `workers/.dev.vars` `AI_FAKE=` rỗng, công tắc `ai.transcribe_enabled` / `ai.survey_summary_enabled` = 1 ở CSDL máy. Muốn quay về giả lập: `AI_FAKE=1`           |
 | Bản demo cũ `nvg.tests99.workers.dev` | Vẫn chạy bản trước GĐ1, CSDL `awaiwegmuykhctnysvou` — ở tài khoản khác, máy này KHÔNG vào được                                                                                                                                   |
@@ -911,7 +920,8 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    (cần cho Vite / Worker nghe mạng nhà và tạm đổi `.env` sang IP máy `192.168.1.12` — chưa làm, anh Dũng chưa yêu cầu);
    (c) gắn `DocumentScanner` vào biên bản nghiệm thu, đề nghị thanh toán khi làm Đợt 2 / Đợt 3; (d) ảnh đã qua Zalo /
    chỉnh sửa có thể mang thời điểm gửi chứ không phải lúc chụp → thứ tự lệch, dùng «Đảo thứ tự trang».
-2. **Đợt 2 — Thi công** (2A xong; làm tiếp 2B nhật ký giọng nói → 2E màn hình Trưởng phòng → 2D → 2F → 2G): 7 mốc NVO + nghiệm thu trước khi che khuất, nhật ký giọng nói
+2. **Đợt 2 — Thi công** (2A, 2B xong; làm tiếp 2E màn hình Trưởng phòng → 2D → 2F → 2G; bật thật máy xếp mục nhật ký
+   `ai.site_log_enabled` chờ anh Dũng duyệt chi phí): 7 mốc NVO + nghiệm thu trước khi che khuất, nhật ký giọng nói
    (dùng lại `VoiceRecorder` + Whisper), biên bản tự sinh, màn hình Trưởng phòng Thi công, phiếu bảo hành. Điểm danh tổ
    (2C) và mốc NVC chờ câu hỏi 6, 15. Rồi Đợt 3 Tài chính; Đợt 4 Mua hàng – Kho và Đợt 5 song song.
 3. **Phát hành — CHỈ sau khi xong mọi tính năng** (anh Dũng quyết 18/10/2026). Trình tự đã chuẩn bị:
@@ -930,7 +940,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    đồng sắp hết hạn»; lối vào Tổng quan điều hành trên thanh dưới điện thoại; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email; thêm dữ liệu demo quá hạn ở cả ba công ty.
 
-**Migration tiếp theo: 0190.**
+**Migration tiếp theo: 0191.**
 
 ### 9.4 Quyết định đã chốt và lý do
 
@@ -1016,6 +1026,10 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 | Quyền kho cho tệp bản đã ký tách riêng (`da-ky-*`, `rls_contract_scan_uploader`), không nới quyền sửa hợp đồng                                                                         | BGĐ chỉ có quyền phê duyệt nên bị chặn tải bản quét; nới `rls_contract_writable` sẽ mở cả văn bản hợp đồng đã khoá                                                                                     |
 | «Chia sẻ» chỉ mở bảng chia sẻ của hệ điều hành trên máy cảm ứng; máy tính tải tệp về                                                                                                   | Chrome trên Windows cũng có Web Share — người dùng máy tính chờ một tệp để đính kèm, không phải bảng chia sẻ Windows                                                                                   |
 | Nhiều ảnh một lần xếp theo thời điểm chụp (trùng thì theo tên, số tự nhiên)                                                                                                            | Hộp chọn tệp trả theo thứ tự riêng của máy — ảnh chụp đầu bị xếp xuống cuối                                                                                                                            |
+| Mẫu hợp đồng in sẵn «Ông/Bà» trước tên khách thì điền `doi_tac_ho_ten` (tên bỏ danh xưng); dòng «Ông/Bà: …» lặp ngay dưới chỉ giữ ngày sinh                                            | Tên khách trên hệ thống thường đã có danh xưng («Ông Nguyễn Văn Thử») → văn bản in «Ông/Bà Ông …» và bắt gõ lại tên một lần nữa                                                                        |
+| Nhật ký giọng nói: máy điền NHÁP lên biểu mẫu nhật ký có sẵn, người ghi sửa rồi tự Lưu; không bảng nhật ký thứ hai                                                                     | Giữ nguyên quy tắc 24 giờ và chữ ký người ghi (TC-08); máy chỉ nháp (PRD 2.3)                                                                                                                          |
+| Lưu đoạn ghi âm + bản máy chép cạnh nội dung đã sửa; kho ghi âm không cho xoá                                                                                                          | Lời nói gốc là bằng chứng khi tranh chấp tiến độ / khối lượng — nội dung là của người ghi, bản chép là thứ máy nghe được                                                                               |
+| Máy xếp mục nhật ký có công tắc RIÊNG, tắt thì vẫn chép chữ và dán nguyên văn                                                                                                          | Chi phí Gemini duyệt theo từng chức năng (6.4); chép chữ đã được duyệt, xếp mục chưa — luồng không bị chặn                                                                                             |
 | Sửa câu chữ / đường dẫn của hàm dài bằng bản chép nguyên văn hoặc trigger nhỏ, không viết lại logic                                                                                    | `decide_approval` ~300 dòng: đổi đường dẫn thông báo bằng trigger trên `notifications` thay vì chép cả hàm (bài học 0086)                                                                              |
 
 ### 9.5 Câu hỏi chờ Haan (đang chạy theo mặc định trong ngoặc)

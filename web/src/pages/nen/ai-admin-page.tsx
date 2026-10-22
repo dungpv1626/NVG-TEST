@@ -29,7 +29,7 @@ const FEATURES = [
     key: 'transcribe' as const,
     param: 'ai.transcribe_enabled',
     label: 'Chuyển giọng nói thành chữ',
-    detail: 'Ghi âm khảo sát (sau này: nhật ký công trường, phiếu bảo hành) → chữ.',
+    detail: 'Ghi âm khảo sát, nhật ký công trường (sau này: phiếu bảo hành) → chữ.',
     provider: 'Cloudflare Workers AI — Whisper',
   },
   {
@@ -39,11 +39,20 @@ const FEATURES = [
     detail: 'Từ chữ của các đoạn ghi âm → nháp sáu ô báo cáo; người khảo sát sửa rồi gửi.',
     provider: 'Google Gemini Flash — gói trả phí (không dùng dữ liệu để huấn luyện)',
   },
+  {
+    key: 'siteLog' as const,
+    param: 'ai.site_log_enabled',
+    label: 'Máy xếp mục nhật ký công trường',
+    detail:
+      'Chỉ huy trưởng nói nhật ký → máy xếp việc đã làm, vật tư, vướng mắc, an toàn, quân số, thời tiết; tắt thì đưa nguyên lời đã chép vào ô Nội dung.',
+    provider: 'Google Gemini Flash — gói trả phí (không dùng dữ liệu để huấn luyện)',
+  },
 ];
 
 const FEATURE_LABEL: Record<string, string> = {
   transcribe: 'Chuyển giọng nói',
   survey_summary: 'Viết báo cáo khảo sát',
+  site_log_draft: 'Xếp mục nhật ký công trường',
 };
 
 const MODE_TEXT: Record<AiMode, string> = {

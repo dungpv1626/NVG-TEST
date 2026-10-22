@@ -7,6 +7,7 @@
  * đi tiếp khi hàm này ném lỗi (CLAUDE.md 5.1).
  */
 
+import type { SiteLogVoiceDraft } from '@nvg/shared';
 import { supabase } from './supabase';
 
 const BASE = (import.meta.env.VITE_DESIGN_API_URL ?? '').replace(/\/+$/, '');
@@ -50,7 +51,7 @@ async function call<T>(
   return json;
 }
 
-export function aiStatus(): Promise<{ transcribe: AiMode; summary: AiMode }> {
+export function aiStatus(): Promise<{ transcribe: AiMode; summary: AiMode; siteLog: AiMode }> {
   return call('/status');
 }
 
@@ -73,4 +74,24 @@ export function summarizeSurvey(
   surveyId: string,
 ): Promise<{ draft: SurveyAiDraft; fake: boolean }> {
   return call('/survey-summary', { method: 'POST', body: { survey_id: surveyId } });
+}
+
+/**
+ * Đoạn ghi âm nhật ký công trường (đã tải lên kho `site-log-audio`) → chữ + nháp các mục (2B).
+ * `draft` = `null` khi công tắc xếp mục tắt hoặc máy xếp hỏng — dùng nguyên `transcript`.
+ */
+export function draftSiteLog(input: {
+  siteId: string;
+  audioPath: string;
+  seconds: number | null;
+}): Promise<{
+  transcript: string;
+  draft: SiteLogVoiceDraft | null;
+  fake: boolean;
+  warning?: string;
+}> {
+  return call('/site-log-draft', {
+    method: 'POST',
+    body: { site_id: input.siteId, audio_path: input.audioPath, seconds: input.seconds },
+  });
 }

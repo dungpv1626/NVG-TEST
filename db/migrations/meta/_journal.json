@@ -1331,6 +1331,13 @@
       "when": 1791340000000,
       "tag": "0189_quet_ban_da_ky",
       "breakpoints": true
+    },
+    {
+      "idx": 190,
+      "version": "7",
+      "when": 1791350000000,
+      "tag": "0190_nhat_ky_giong_noi",
+      "breakpoints": true
     }
   ]
 }
