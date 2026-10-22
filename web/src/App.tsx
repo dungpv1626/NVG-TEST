@@ -258,6 +258,9 @@ const CollectionRequestDetailPage = lazy(() =>
 const RentalSettlementPage = lazy(() =>
   import('@/pages/kt/rental-settlement-page').then((m) => ({ default: m.RentalSettlementPage })),
 );
+const CashForecastPage = lazy(() =>
+  import('@/pages/kt/cash-forecast-page').then((m) => ({ default: m.CashForecastPage })),
+);
 const CashFlowPage = lazy(() =>
   import('@/pages/kt/cash-flow-page').then((m) => ({ default: m.CashFlowPage })),
 );
@@ -488,6 +491,7 @@ const router = createBrowserRouter(
           <Route path="kt/de-nghi-thu/:id" element={<CollectionRequestDetailPage />} />
           <Route path="kt/bien-ban-nghiem-thu" element={<AcceptanceBillingPage />} />
           <Route path="kt/dong-tien" element={<CashFlowPage />} />
+          <Route path="kt/dong-tien-theo-tuan" element={<CashForecastPage />} />
           <Route path="kt/ky-ke-toan" element={<AccountingPeriodPage />} />
         </Route>
 

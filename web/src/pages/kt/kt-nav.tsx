@@ -18,6 +18,7 @@ const ITEMS = [
   { to: '/kt/cong-no', label: 'Công nợ' },
   { to: '/kt/thue-gian-giao', label: 'Thuê giàn giáo' },
   { to: '/kt/dong-tien', label: 'Dòng tiền' },
+  { to: '/kt/dong-tien-theo-tuan', label: 'Dòng tiền theo tuần' },
   { to: '/kt/ky-ke-toan', label: 'Kỳ kế toán' },
 ];
 

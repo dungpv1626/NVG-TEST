@@ -29,6 +29,7 @@ export * from './site-log-voice';
 export * from './mh';
 export * from './kho';
 export * from './kt';
+export * from './kt-cash-forecast';
 export * from './ns';
 export * from './sx';
 export * from './nen';
