@@ -1324,6 +1324,13 @@
       "when": 1791330000000,
       "tag": "0188_cap_nhat_tuc_thoi",
       "breakpoints": true
+    },
+    {
+      "idx": 189,
+      "version": "7",
+      "when": 1791340000000,
+      "tag": "0189_quet_ban_da_ky",
+      "breakpoints": true
     }
   ]
 }

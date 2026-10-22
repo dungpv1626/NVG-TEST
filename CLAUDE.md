@@ -854,6 +854,17 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
     `approvals` vào publication `supabase_realtime`; `hooks/use-live-updates.ts` (gắn ở chuông thông báo) nghe
     sự kiện rồi `invalidateQueries()` — không cần F5 khi được giao việc / được duyệt. Realtime kiểm RLS SELECT
     của người nhận. Bảng mới cần đẩy tức thời thì thêm vào publication bằng migration, ĐỪNG đọc nội dung sự kiện.
+  - **Bộ quét dùng chung + 0189 (22/10/2026):** `components/scan/document-scanner.tsx` — chụp / chọn ảnh từng
+    trang (kèm PDF có sẵn), kéo 4 góc, xoay, ba chế độ (Màu gốc / Tài liệu = xoá bóng GIỮ MÀU dấu đỏ / Đen trắng =
+    ngưỡng Bradley), ghép một PDF A4 (`lib/scan/` — toán thuần có phép thử; pdf-lib 1.17.1 nạp khi cần). Trả
+    `File`, nơi gọi tự tải lên. Đang gắn ở: «Ghi nhận đã ký» (`sign-contract-dialog.tsx`), khối «Bản hợp đồng đã
+    ký» trên Tổng quan (`signed-scan-panel.tsx`), «Quét phiếu giấy» của khảo sát. **0189:** trigger
+    `contracts_signed_scan_guard` (cột bản đã ký chỉ đổi lúc ký hoặc qua `attach_signed_scan` — bổ sung khi chưa
+    có; thay bản đã có chỉ BGĐ + lý do + `audit_logs`); `contract_scan_shares` + `contract_scan_share_views` (link
+    khách có hạn ≤ 1 năm, thu hồi được; mẫu 0179) → Worker `GET /public/signed/:token` (`contract_scan_public`,
+    chỉ service_role, không giá trị / điều khoản) → trang `/xem-ban-ky/:token` (vẽ trang PDF bằng pdf.js để xem
+    trên điện thoại). «Chia sẻ»: máy cảm ứng mở bảng chia sẻ (Zalo…), máy tính tải tệp về (`lib/share-file.ts`).
+    Gắn tiếp: biên bản nghiệm thu, đề nghị thanh toán — chỉ cần gọi `DocumentScanner`.
 - Hàm chép-dài bản mới nhất: `decide_approval` ở 0179, `stage_readiness` ở 0183, `crm_followups_for` ở 0183, `my_pending_approvals` ở 0175, hàm canh
   `site_surveys_report_guard` ở 0181. Hạn mức loại phê duyệt mới nằm ở seed (`DEFAULT_APPROVAL_LIMITS`) — `db:seed` sau migrate.
 - Ảnh chạy thử từng phần: `backup/dot1-1a/` → `backup/dot1-1h/`, `backup/dot1-dinh-kem/`, `backup/dot1-phieu-rieng/`,
@@ -906,7 +917,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    đồng sắp hết hạn»; lối vào Tổng quan điều hành trên thanh dưới điện thoại; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email; thêm dữ liệu demo quá hạn ở cả ba công ty.
 
-**Migration tiếp theo: 0189.**
+**Migration tiếp theo: 0190.**
 
 ### 9.4 Quyết định đã chốt và lý do
 
@@ -981,6 +992,8 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 | Thêm loại hợp đồng `mua_vat_tu`, `thue_thiet_bi`, `cho_thue` thay vì dồn vào `mua_ban` / `khoan_thau_phu`                                                                              | Hướng tiền khác nhau (phải thu / phải trả ở KT); `mua_ban` cũ nghĩa là NVG bán                                                                                                                         |
 | Bảng các đợt thanh toán trong mẫu thành bảng lặp; các đợt mẫu đề xuất giữ làm gợi ý, không tự thêm                                                                                     | Văn bản phải in đúng các đợt đã ghi trên hệ thống; mốc / tỷ lệ mặc định là đề xuất của NVG, người soạn bấm mới dùng                                                                                    |
 | Cập nhật tức thời bằng Supabase Realtime trên `notifications` + `approvals`; sự kiện chỉ là tín hiệu, tải lại mọi truy vấn đang hiện (0188)                                            | Anh Dũng: nhận việc / được duyệt phải tải lại trang. Hai bảng này phủ gần hết việc đến tay một người; tải lại qua đường thường nên vẫn qua RLS. `refetchInterval` 60 giây giữ làm dự phòng             |
+| Bộ quét tài liệu: kéo 4 góc bằng tay, xử lý ảnh trên máy người dùng, không OCR / AI                                                                                                    | Anh Dũng chọn (22/10/2026): thư viện tự nhận mép ~8 MB chậm trên máy yếu; ảnh hợp đồng đã ký là dữ liệu khách hạng 1 — không rời máy cho tới khi vào kho của hợp đồng                                  |
+| Link xem bản đã ký cho khách = bảng riêng theo mẫu link thư viện mẫu, trang công khai chỉ qua hàm service_role                                                                         | Bản đã ký là của chính khách nên được gửi; nhưng link phải có hạn, thu hồi được, đếm lượt xem và không lộ giá trị / điều khoản trên hệ thống                                                           |
 | Sửa câu chữ / đường dẫn của hàm dài bằng bản chép nguyên văn hoặc trigger nhỏ, không viết lại logic                                                                                    | `decide_approval` ~300 dòng: đổi đường dẫn thông báo bằng trigger trên `notifications` thay vì chép cả hàm (bài học 0086)                                                                              |
 
 ### 9.5 Câu hỏi chờ Haan (đang chạy theo mặc định trong ngoặc)

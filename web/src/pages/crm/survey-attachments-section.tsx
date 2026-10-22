@@ -5,6 +5,9 @@
  * Nút «Chụp ảnh» mở thẳng máy ảnh trên điện thoại (`capture`), luôn hiện cạnh nút tải tệp
  * (AFD 4.8: nút chụp ảnh không ẩn sau menu). Báo cáo đã gửi duyệt thì khoá thêm / xoá — Ban Giám
  * đốc duyệt đúng bộ ảnh đang thấy (CSDL cũng chặn, `rls_survey_writable`).
+ *
+ * Phiếu giấy đi qua bộ quét dùng chung (0189): chụp từng trang, kéo góc, ghép thành một PDF —
+ * đọc lại để gõ vào biên bản dễ hơn nhiều ảnh lệch rời rạc.
  */
 
 import { useRef, useState } from 'react';
@@ -14,6 +17,7 @@ import {
   SURVEY_ATTACHMENT_KIND_LABELS,
   type SurveyAttachmentKind,
 } from '@nvg/shared';
+import { DocumentScanner } from '@/components/scan/document-scanner';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { toUserMessage } from '@/hooks/use-error-message';
@@ -46,7 +50,7 @@ export function SurveyAttachmentsSection({
   const remove = useDeleteSurveyAttachment();
   const cameraRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const paperRef = useRef<HTMLInputElement>(null);
+  const [scanning, setScanning] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<SurveyAttachment | null>(null);
@@ -57,6 +61,10 @@ export function SurveyAttachmentsSection({
   async function onFiles(input: HTMLInputElement, kind?: SurveyAttachmentKind) {
     const files = [...(input.files ?? [])];
     input.value = '';
+    await uploadFiles(files, kind);
+  }
+
+  async function uploadFiles(files: File[], kind?: SurveyAttachmentKind) {
     if (files.length === 0) return;
     setError(null);
     setMessage(null);
@@ -76,6 +84,17 @@ export function SurveyAttachmentsSection({
 
   return (
     <section className="mt-4 border-t border-border pt-3" aria-label="Ảnh và tài liệu">
+      {scanning && (
+        <DocumentScanner
+          title="Quét phiếu khảo sát giấy"
+          fileName="Phieu-khao-sat"
+          onDone={(file) => {
+            setScanning(false);
+            void uploadFiles([file], 'phieu');
+          }}
+          onCancel={() => setScanning(false)}
+        />
+      )}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h4 className="font-semibold">Ảnh và tài liệu{items.length > 0 && ` (${items.length})`}</h4>
         {canEdit && (
@@ -102,10 +121,10 @@ export function SurveyAttachmentsSection({
               variant="subtle"
               size="sm"
               disabled={upload.isPending}
-              onClick={() => paperRef.current?.click()}
+              onClick={() => setScanning(true)}
             >
               <ScrollText />
-              Tải phiếu giấy
+              Quét phiếu giấy
             </Button>
             <input
               ref={cameraRef}
@@ -123,21 +142,13 @@ export function SurveyAttachmentsSection({
               className="hidden"
               onChange={(e) => void onFiles(e.target)}
             />
-            <input
-              ref={paperRef}
-              type="file"
-              multiple
-              accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.pdf"
-              className="hidden"
-              onChange={(e) => void onFiles(e.target, 'phieu')}
-            />
           </div>
         )}
       </div>
 
       {canEdit && items.length === 0 && (
         <p className="mt-1 text-sm text-fg-subtle">
-          Chụp ảnh hiện trạng, tải tài liệu khách gửi (PDF, Word, Excel, bản vẽ), hoặc ảnh phiếu
+          Chụp ảnh hiện trạng, tải tài liệu khách gửi (PDF, Word, Excel, bản vẽ), hoặc quét phiếu
           khảo sát giấy đã điền tay.
         </p>
       )}

@@ -89,7 +89,8 @@ app.route('/design', designApp);
 app.route('/admin', adminApp);
 // Khối nền K1 — ghi âm → chữ → nháp AI cho các bộ phận (Đợt 1). Mặc định tắt / giả lập.
 app.route('/ai', assistantApp);
-// Trang xem mẫu công trình gửi khách — công khai, chỉ qua hàm CSDL `showcase_public` (1H, 0179).
+// Trang công khai gửi khách: mẫu công trình (`showcase_public`, 0179) và bản hợp đồng đã ký
+// (`contract_scan_public`, 0189) — chỉ qua hàm CSDL.
 app.route('/public', publicApp);
 
 function serviceClient(env: Env) {

@@ -49,6 +49,7 @@ export function AfterSignCard({
   isResponsible,
   canApprove,
   onOpenAmendments,
+  hasScan,
 }: {
   contractId: string;
   customer: { id: string; name: string } | null;
@@ -59,6 +60,8 @@ export function AfterSignCard({
   isResponsible: boolean;
   canApprove: boolean;
   onOpenAmendments: () => void;
+  /** Đã có bản hợp đồng đã ký trên hệ thống (0187 / 0189). */
+  hasScan: boolean;
 }) {
   const { data: terms = [] } = useContractTerms(contractId);
   const rounds = terms
@@ -67,6 +70,21 @@ export function AfterSignCard({
   const nextRound = rounds.find((t) => !t.completed_at);
 
   const steps: { title: string; body: ReactNode; done?: boolean }[] = [];
+  steps.push({
+    title: hasScan ? 'Lưu bản hợp đồng đã ký — đã xong' : 'Lưu bản hợp đồng đã ký',
+    done: hasScan,
+    body: hasScan ? (
+      'Bản quét nằm ở mục «Bản hợp đồng đã ký» bên dưới — chia sẻ hoặc tạo link gửi khách từ đó.'
+    ) : (
+      <span>
+        Quét bản giấy đã ký, đóng dấu ở mục{' '}
+        <a href="#ban-da-ky" className="font-medium text-brand hover:underline">
+          «Bản hợp đồng đã ký»
+        </a>{' '}
+        bên dưới để lưu hồ sơ và gửi khách.
+      </span>
+    ),
+  });
   if (opensSite) {
     steps.push({
       title: hasSite

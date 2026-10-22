@@ -8,17 +8,17 @@
  */
 
 import { useRef, useState } from 'react';
-import { Camera, Paperclip } from 'lucide-react';
+import { Paperclip, ScanLine } from 'lucide-react';
 import { toNvgDateInput } from '@nvg/shared';
+import { DocumentScanner } from '@/components/scan/document-scanner';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { DOCUMENT_BUCKET } from '@/hooks/use-contract-templates';
+import { uploadSignedScan } from '@/hooks/use-contract-scan';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useSignContract } from '@/hooks/use-contracts';
-import { supabase } from '@/lib/supabase';
 
 const ACCEPT = 'application/pdf,image/jpeg,image/png,image/webp,image/heic';
 
@@ -41,7 +41,7 @@ export function SignContractDialog({
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const cameraRef = useRef<HTMLInputElement>(null);
+  const [scanning, setScanning] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function confirm() {
@@ -52,15 +52,7 @@ export function SignContractDialog({
       return setError('Tải lên bản hợp đồng đã ký (ảnh chụp hoặc PDF) làm căn cứ.');
     setBusy(true);
     try {
-      let path: string | null = null;
-      if (file) {
-        const ext = (file.name.split('.').pop() ?? 'pdf').toLowerCase().replace(/[^a-z0-9]/g, '');
-        path = `${contractId}/da-ky-${crypto.randomUUID()}.${ext || 'pdf'}`;
-        const up = await supabase.storage
-          .from(DOCUMENT_BUCKET)
-          .upload(path, file, { contentType: file.type || 'application/pdf' });
-        if (up.error) throw up.error;
-      }
+      const path = file ? await uploadSignedScan(contractId, file) : null;
       await sign.mutateAsync({
         contractId,
         contractNumber: number.trim(),
@@ -84,6 +76,17 @@ export function SignContractDialog({
       onCancel={() => onClose(false)}
       onConfirm={() => void confirm()}
     >
+      {scanning && (
+        <DocumentScanner
+          title="Quét bản hợp đồng đã ký"
+          fileName={`Hop-dong-${number.trim().replace(/[^\w-]+/g, '-') || 'da-ky'}`}
+          onDone={(f) => {
+            setFile(f);
+            setScanning(false);
+          }}
+          onCancel={() => setScanning(false)}
+        />
+      )}
       <p className="mb-3 text-sm text-fg-subtle">
         Ghi theo văn bản hai bên đã ký.
         {opensSite
@@ -107,18 +110,10 @@ export function SignContractDialog({
           label="Bản hợp đồng đã ký (ảnh chụp hoặc PDF)"
           required={!isApprover}
           optional={isApprover}
-          hint="Chụp trang có chữ ký và dấu của hai bên, hoặc tệp quét."
+          hint="Quét bằng điện thoại: chụp từng trang, kéo 4 góc cho khớp mép giấy — các trang ghép thành một PDF. Đã có tệp PDF thì chọn tệp."
         >
           {/* Ô chọn tệp gốc của trình duyệt tự sinh chữ theo ngôn ngữ máy («Choose file») — ẩn
               đi, dùng nút tiếng Việt (CLAUDE.md 4.1), như phần đính kèm khảo sát. */}
-          <input
-            ref={cameraRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            className="hidden"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          />
           <input
             ref={fileRef}
             type="file"
@@ -127,13 +122,8 @@ export function SignContractDialog({
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           />
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => cameraRef.current?.click()}
-            >
-              <Camera className="size-4" aria-hidden /> Chụp ảnh
+            <Button type="button" variant="secondary" size="sm" onClick={() => setScanning(true)}>
+              <ScanLine className="size-4" aria-hidden /> Quét bản đã ký
             </Button>
             <Button
               type="button"

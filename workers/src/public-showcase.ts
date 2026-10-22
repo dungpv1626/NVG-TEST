@@ -68,3 +68,38 @@ publicApp.get('/showcase/:token', async (c) => {
     })),
   });
 });
+
+/**
+ * Bản hợp đồng đã ký gửi khách (0189):
+ *
+ *   GET /public/signed/:token
+ *
+ * Cùng một cửa như trang mẫu: hàm `contract_scan_public` kiểm link còn hạn / chưa thu hồi, chỉ trả
+ * tên, số, ngày ký và tệp (không giá trị, không điều khoản), ghi một lượt xem. Tệp trả về bằng
+ * đường dẫn ký 1 giờ — đường dẫn trong kho không ra ngoài.
+ */
+publicApp.get('/signed/:token', async (c) => {
+  const token = c.req.param('token');
+  if (!/^[0-9a-f]{36}$/.test(token)) {
+    return c.json({ status: 'not_found' }, 404);
+  }
+  const db = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data, error } = await db.rpc('contract_scan_public', { p_token: token });
+  if (error) return c.json({ status: 'error' }, 500);
+
+  const { path, ...body } = data as { status: string; path?: string } & Record<string, unknown>;
+  if (body.status !== 'ok' || !path) {
+    return c.json(
+      { status: body.status === 'ok' ? 'not_found' : body.status },
+      body.status === 'expired' ? 410 : 404,
+    );
+  }
+  const { data: signed } = await db.storage
+    .from('contract-documents')
+    .createSignedUrl(path, 3600, { download: false });
+
+  c.header('Cache-Control', 'no-store');
+  return c.json({ ...body, url: signed?.signedUrl ?? null });
+});

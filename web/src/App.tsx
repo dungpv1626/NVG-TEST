@@ -104,6 +104,9 @@ const ShowcaseFormPage = lazy(() =>
 const PublicShowcasePage = lazy(() =>
   import('@/pages/showcase/public-showcase').then((m) => ({ default: m.PublicShowcasePage })),
 );
+const PublicSignedScanPage = lazy(() =>
+  import('@/pages/hd/public-signed-scan').then((m) => ({ default: m.PublicSignedScanPage })),
+);
 const OldCustomerListPage = lazy(() =>
   import('@/pages/crm/old-customer-list').then((m) => ({ default: m.OldCustomerListPage })),
 );
@@ -320,6 +323,8 @@ const router = createBrowserRouter(
       {/* Trang khách xem bộ mẫu công trình — KHÔNG cần đăng nhập (Đợt 1 — 1H). Dữ liệu chỉ qua
           Worker `/public/showcase/:token` → hàm CSDL `showcase_public`. */}
       <Route path="/xem-mau/:token" element={<PublicShowcasePage />} />
+      {/* Khách xem bản hợp đồng đã ký (0189) — chỉ qua Worker `/public/signed/:token`. */}
+      <Route path="/xem-ban-ky/:token" element={<PublicSignedScanPage />} />
 
       <Route
         element={

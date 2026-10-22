@@ -54,6 +54,7 @@ import { DocumentPanel } from './document-panel';
 import { TermsPanel } from './terms-panel';
 import { SignContractDialog } from './sign-contract-dialog';
 import { SignedScanLink } from './signed-scan-link';
+import { SignedScanPanel } from './signed-scan-panel';
 
 const EM_DASH = '—';
 
@@ -410,6 +411,14 @@ export function ContractDetailPage() {
                     isResponsible={isResponsible}
                     canApprove={canApprove}
                     onOpenAmendments={() => openTab('phat-sinh')}
+                    hasScan={Boolean(contract.signed_scan_path)}
+                  />
+                )}
+                {(contract.stage === 'da_ky' || contract.stage === 'hoan_thanh') && (
+                  <SignedScanPanel
+                    contract={contract}
+                    canManage={canApprove || (canEdit && isResponsible)}
+                    isApprover={canApprove}
                   />
                 )}
                 <DetailFields

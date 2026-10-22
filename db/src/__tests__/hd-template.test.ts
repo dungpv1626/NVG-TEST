@@ -552,3 +552,189 @@ describeDb('Quyết toán hợp đồng thi công cần đã có công trình (0
     }
   });
 });
+
+describeDb('Bản đã ký: bổ sung sau khi ký, link xem có hạn cho khách (0189)', () => {
+  const pdf = () => new Blob([new Uint8Array([37, 80, 68, 70])], { type: 'application/pdf' });
+
+  it('chỉ thêm qua hàm: Kinh doanh thêm khi chưa có, không thay được, không ghi thẳng cột; Thi công bị chặn', async () => {
+    const { createConnection } = await import('../client');
+    const { sql } = createConnection();
+    const stamp = String(Date.now());
+    let contractId = '';
+    try {
+      const [nvc] = await sql<{ id: string }[]>`SELECT id FROM companies WHERE code = 'NVC'`;
+      const [kdUser] = await sql<{ id: string }[]>`
+        SELECT id FROM users WHERE email = ${ACCOUNTS.kinhDoanhNvc}`;
+      const [c] = await sql<{ id: string }[]>`
+        INSERT INTO contracts (company_id, code, title, type, stage, value, responsible_user_id,
+                               contract_number, signed_date)
+        VALUES (${nvc!.id}, ${'NVC-HD-QUET-' + stamp}, ${TEST_PREFIX + ' Quét bổ sung ' + stamp},
+                'mua_ban', 'da_ky', 300000000, ${kdUser!.id}, ${'Q-' + stamp}, '2026-10-22')
+        RETURNING id`;
+      contractId = c!.id;
+      const [kd, tgd, thiCong] = await Promise.all([
+        signInAs(ACCOUNTS.kinhDoanhNvc),
+        signInAs(ACCOUNTS.tgd),
+        signInAs(ACCOUNTS.congTruongNvc),
+      ]);
+      const path = `${contractId}/da-ky-${crypto.randomUUID()}.pdf`;
+      expect(
+        (
+          await kd.storage
+            .from('contract-documents')
+            .upload(path, pdf(), { contentType: 'application/pdf' })
+        ).error,
+      ).toBeNull();
+
+      // Ghi thẳng cột qua REST không được (RLS chỉ cho sửa khi Nháp + trigger 0189).
+      await kd.from('contracts').update({ signed_scan_path: path }).eq('id', contractId);
+      const [direct] = await sql<{ signed_scan_path: string | null }[]>`
+        SELECT signed_scan_path FROM contracts WHERE id = ${contractId}`;
+      expect(direct!.signed_scan_path).toBeNull();
+
+      const fake = await kd.rpc('attach_signed_scan', {
+        p_contract_id: contractId,
+        p_path: `${contractId}/khong-co.pdf`,
+      });
+      expect(fake.error?.message).toContain('Không thấy bản đã ký');
+
+      const tc = await thiCong.rpc('attach_signed_scan', {
+        p_contract_id: contractId,
+        p_path: path,
+      });
+      expect(tc.error).not.toBeNull();
+
+      expect(
+        (await kd.rpc('attach_signed_scan', { p_contract_id: contractId, p_path: path })).error,
+      ).toBeNull();
+      const [after] = await sql<{ signed_scan_path: string }[]>`
+        SELECT signed_scan_path FROM contracts WHERE id = ${contractId}`;
+      expect(after!.signed_scan_path).toBe(path);
+      const [note] = await sql<{ n: number }[]>`
+        SELECT count(*)::int AS n FROM notifications n JOIN users u ON u.id = n.user_id
+        WHERE u.email = ${ACCOUNTS.tgd} AND n.type = 'contract_signed_recorded'
+          AND n.related_entity_id = ${contractId}`;
+      expect(note!.n).toBe(1);
+
+      // Đã có bản: Kinh doanh không thay được; Ban Giám đốc thay phải kèm lý do, có nhật ký.
+      const again = await kd.rpc('attach_signed_scan', { p_contract_id: contractId, p_path: path });
+      expect(again.error?.message).toContain('Ban Giám đốc');
+      const noReason = await tgd.rpc('attach_signed_scan', {
+        p_contract_id: contractId,
+        p_path: path,
+      });
+      expect(noReason.error?.message).toContain('lý do');
+      expect(
+        (
+          await tgd.rpc('attach_signed_scan', {
+            p_contract_id: contractId,
+            p_path: path,
+            p_reason: 'Bản quét rõ hơn',
+          })
+        ).error,
+      ).toBeNull();
+      const [log] = await sql<{ n: number }[]>`
+        SELECT count(*)::int AS n FROM audit_logs
+        WHERE entity_id = ${contractId} AND action = 'replace_signed_scan'`;
+      expect(log!.n).toBe(1);
+    } finally {
+      if (contractId) {
+        await sql`DELETE FROM audit_logs WHERE entity_id = ${contractId}`;
+        await sql`DELETE FROM contracts WHERE id = ${contractId}`;
+      }
+      await sql.end();
+    }
+  });
+
+  it('hợp đồng Nháp: người chịu trách nhiệm không tự gõ được đường dẫn bản đã ký', async () => {
+    const { createConnection } = await import('../client');
+    const { sql } = createConnection();
+    const stamp = String(Date.now());
+    let contractId = '';
+    try {
+      const [nvc] = await sql<{ id: string }[]>`SELECT id FROM companies WHERE code = 'NVC'`;
+      const [kdUser] = await sql<{ id: string }[]>`
+        SELECT id FROM users WHERE email = ${ACCOUNTS.kinhDoanhNvc}`;
+      const [c] = await sql<{ id: string }[]>`
+        INSERT INTO contracts (company_id, code, title, type, stage, value, responsible_user_id)
+        VALUES (${nvc!.id}, ${'NVC-HD-NHAP-' + stamp}, ${TEST_PREFIX + ' Nháp gõ bản ký ' + stamp},
+                'mua_ban', 'nhap', 100000000, ${kdUser!.id})
+        RETURNING id`;
+      contractId = c!.id;
+      const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+      const { error } = await kd
+        .from('contracts')
+        .update({ signed_scan_path: `${contractId}/tu-go.pdf` })
+        .eq('id', contractId);
+      expect(error?.message).toContain('Bản hợp đồng đã ký chỉ thêm');
+    } finally {
+      if (contractId) await sql`DELETE FROM contracts WHERE id = ${contractId}`;
+      await sql.end();
+    }
+  });
+
+  it('link cho khách: người chịu trách nhiệm tạo; còn hạn thì trang công khai thấy, thu hồi / hết hạn thì không; chỉ khoá service gọi được', async () => {
+    const { createConnection } = await import('../client');
+    const { sql } = createConnection();
+    const stamp = String(Date.now());
+    let contractId = '';
+    try {
+      const [nvc] = await sql<{ id: string }[]>`SELECT id FROM companies WHERE code = 'NVC'`;
+      const [kdUser] = await sql<{ id: string }[]>`
+        SELECT id FROM users WHERE email = ${ACCOUNTS.kinhDoanhNvc}`;
+      const [c] = await sql<{ id: string }[]>`
+        INSERT INTO contracts (company_id, code, title, type, stage, value, responsible_user_id,
+                               contract_number, signed_scan_path)
+        VALUES (${nvc!.id}, ${'NVC-HD-LINK-' + stamp}, ${TEST_PREFIX + ' Link bản ký ' + stamp},
+                'mua_ban', 'da_ky', 300000000, ${kdUser!.id}, ${'L-' + stamp}, 'x/da-ky.pdf')
+        RETURNING id`;
+      contractId = c!.id;
+      const [kd, ksnb, thiCong] = await Promise.all([
+        signInAs(ACCOUNTS.kinhDoanhNvc),
+        signInAs(ACCOUNTS.ksnb),
+        signInAs(ACCOUNTS.congTruongNvc),
+      ]);
+      const expiresAt = new Date(Date.now() + 7 * 86_400_000).toISOString();
+      const row = { contract_id: contractId, company_id: nvc!.id, expires_at: expiresAt };
+
+      expect((await ksnb.from('contract_scan_shares').insert(row)).error).not.toBeNull();
+      expect((await thiCong.from('contract_scan_shares').insert(row)).error).not.toBeNull();
+      const { data: share, error } = await kd
+        .from('contract_scan_shares')
+        .insert({ ...row, token: 'tu-dat' })
+        .select('id, token')
+        .single();
+      expect(error).toBeNull();
+      expect(share!.token).toMatch(/^[0-9a-f]{36}$/);
+
+      const denied = await kd.rpc('contract_scan_public', { p_token: share!.token });
+      expect(denied.error).not.toBeNull();
+
+      const [ok] = await sql<{ r: { status: string; path?: string; value?: unknown } }[]>`
+        SELECT contract_scan_public(${share!.token}) AS r`;
+      expect(ok!.r.status).toBe('ok');
+      expect(ok!.r.path).toBe('x/da-ky.pdf');
+      expect(ok!.r.value).toBeUndefined();
+      const [views] = await sql<{ n: number }[]>`
+        SELECT count(*)::int AS n FROM contract_scan_share_views WHERE share_id = ${share!.id}`;
+      expect(views!.n).toBe(1);
+
+      expect(
+        (
+          await kd
+            .from('contract_scan_shares')
+            .update({ revoked_at: new Date().toISOString() })
+            .eq('id', share!.id)
+            .select('id')
+            .single()
+        ).error,
+      ).toBeNull();
+      const [revoked] = await sql<{ r: { status: string } }[]>`
+        SELECT contract_scan_public(${share!.token}) AS r`;
+      expect(revoked!.r.status).toBe('expired');
+    } finally {
+      if (contractId) await sql`DELETE FROM contracts WHERE id = ${contractId}`;
+      await sql.end();
+    }
+  });
+});
