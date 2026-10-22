@@ -116,6 +116,8 @@ const SCAN_FUNCTIONS = [
   'scan_pending_approval_reminders',
   // Việc chăm sóc khách đến hạn — mỗi người một thông báo tóm tắt mỗi ngày (Đợt 1 — 1C, 0173).
   'scan_crm_followup_reminders',
+  // Đợt thu sắp tới hạn — chỉ khi NVG đã đặt `kt.collection_remind_days_before` (Đợt 3 — 3A, 0195).
+  'scan_collection_reminders',
 ] as const;
 
 export async function runScheduledScans(env: Env): Promise<Record<string, number | string>> {

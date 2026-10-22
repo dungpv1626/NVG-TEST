@@ -12,10 +12,13 @@ import { cn } from '@/lib/utils';
 const ITEMS = [
   { to: '/kt/de-nghi-thanh-toan', label: 'Đề nghị chi' },
   { to: '/kt/tam-ung', label: 'Tạm ứng' },
+  { to: '/kt/dot-thu', label: 'Đợt thu' },
+  { to: '/kt/de-nghi-thu', label: 'Đề nghị thu' },
   { to: '/kt/bien-ban-nghiem-thu', label: 'Biên bản nghiệm thu' },
   { to: '/kt/cong-no', label: 'Công nợ' },
   { to: '/kt/thue-gian-giao', label: 'Thuê giàn giáo' },
   { to: '/kt/dong-tien', label: 'Dòng tiền' },
+  { to: '/kt/dong-tien-theo-tuan', label: 'Dòng tiền theo tuần' },
   { to: '/kt/ky-ke-toan', label: 'Kỳ kế toán' },
 ];
 

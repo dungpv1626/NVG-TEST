@@ -284,6 +284,11 @@ export interface ContractTermRecord {
   completed_at: string | null;
   position: string;
   notes: string | null;
+  /** Căn cứ thu (3A, 0195): mốc thi công HOẶC biên bản nghiệm thu với chủ đầu tư. */
+  site_milestone_id?: string | null;
+  acceptance_record_id?: string | null;
+  /** Máy ghi lúc căn cứ đạt — đợt «đến hạn thu». */
+  collection_due_at?: string | null;
 }
 
 export function useContractTerms(contractId: string | undefined) {
@@ -293,7 +298,8 @@ export function useContractTerms(contractId: string | undefined) {
       const { data, error } = await supabase
         .from('contract_terms')
         .select(
-          'id, term_type, description, amount, percent_value, due_date, completed_at, position, notes',
+          'id, term_type, description, amount, percent_value, due_date, completed_at, position, notes, ' +
+            'site_milestone_id, acceptance_record_id, collection_due_at',
         )
         .eq('contract_id', contractId!)
         .is('deleted_at', null)

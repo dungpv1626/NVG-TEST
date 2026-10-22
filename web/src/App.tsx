@@ -34,6 +34,9 @@ import { LoginPage } from '@/pages/login';
  *
  * Đăng nhập KHÔNG tách: đó luôn là màn hình đầu tiên, tách ra chỉ thêm một vòng chờ mạng.
  */
+const AnomaliesPage = lazy(() =>
+  import('@/pages/dieu-hanh/anomalies-page').then((m) => ({ default: m.AnomaliesPage })),
+);
 const ExecOverviewPage = lazy(() =>
   import('@/pages/dieu-hanh/tong-quan').then((m) => ({ default: m.ExecOverviewPage })),
 );
@@ -240,8 +243,29 @@ const ReceivablePage = lazy(() =>
 const AcceptanceBillingPage = lazy(() =>
   import('@/pages/kt/acceptance-billing-page').then((m) => ({ default: m.AcceptanceBillingPage })),
 );
+const CollectionSchedulePage = lazy(() =>
+  import('@/pages/kt/collection-schedule-page').then((m) => ({
+    default: m.CollectionSchedulePage,
+  })),
+);
+const CollectionRequestListPage = lazy(() =>
+  import('@/pages/kt/collection-request-pages').then((m) => ({
+    default: m.CollectionRequestListPage,
+  })),
+);
+const CollectionRequestDetailPage = lazy(() =>
+  import('@/pages/kt/collection-request-pages').then((m) => ({
+    default: m.CollectionRequestDetailPage,
+  })),
+);
 const RentalSettlementPage = lazy(() =>
   import('@/pages/kt/rental-settlement-page').then((m) => ({ default: m.RentalSettlementPage })),
+);
+const CashForecastPage = lazy(() =>
+  import('@/pages/kt/cash-forecast-page').then((m) => ({ default: m.CashForecastPage })),
+);
+const SiteProfitPage = lazy(() =>
+  import('@/pages/bc/site-profit-page').then((m) => ({ default: m.SiteProfitPage })),
 );
 const CashFlowPage = lazy(() =>
   import('@/pages/kt/cash-flow-page').then((m) => ({ default: m.CashFlowPage })),
@@ -345,6 +369,8 @@ const router = createBrowserRouter(
         {/* Tổng quan điều hành — chỉ lãnh đạo và Kiểm soát nội bộ (0169); không phải phân hệ nên
             không dùng ModuleGuard, vai trò khác về Dashboard. */}
         <Route path="/tong-quan" element={<ExecGuard />} />
+        {/* Danh sách bất thường (Đợt 3 — 3E): cùng nhóm vai với Tổng quan điều hành. */}
+        <Route path="/tong-quan/bat-thuong" element={<ExecGuard page="bat-thuong" />} />
         {/* Thư viện công trình mẫu (Đợt 1 — 1H): CẢ CÔNG TY xem nên không bọc ModuleGuard;
             sửa / xoá do RLS (Thiết kế, Giám đốc) quyết. */}
         <Route path="/mau-cong-trinh" element={<ShowcaseLibraryPage />} />
@@ -360,6 +386,7 @@ const router = createBrowserRouter(
                     trang và trong hàm `finance_daily` (0140). */}
           <Route path="bc/tong-quan" element={<FinanceOverviewPage />} />
           <Route path="bc/lai-lo" element={<ProfitLossReportPage />} />
+          <Route path="bc/lai-lo-quan-tri" element={<SiteProfitPage />} />
           {/* BC-03 — hiệu quả kinh doanh. KHÔNG phải Mẫu D: nguồn khách/giai đoạn
                     pipeline/kết quả đấu thầu không phải giá vốn/lương/lợi nhuận. */}
           <Route path="bc/hieu-qua-kinh-doanh" element={<SalesEffectivenessPage />} />
@@ -468,8 +495,12 @@ const router = createBrowserRouter(
           <Route path="kt/tam-ung" element={<AdvanceListPage />} />
           <Route path="kt/cong-no" element={<ReceivablePage />} />
           <Route path="kt/thue-gian-giao" element={<RentalSettlementPage />} />
+          <Route path="kt/dot-thu" element={<CollectionSchedulePage />} />
+          <Route path="kt/de-nghi-thu" element={<CollectionRequestListPage />} />
+          <Route path="kt/de-nghi-thu/:id" element={<CollectionRequestDetailPage />} />
           <Route path="kt/bien-ban-nghiem-thu" element={<AcceptanceBillingPage />} />
           <Route path="kt/dong-tien" element={<CashFlowPage />} />
+          <Route path="kt/dong-tien-theo-tuan" element={<CashForecastPage />} />
           <Route path="kt/ky-ke-toan" element={<AccountingPeriodPage />} />
         </Route>
 
@@ -563,7 +594,8 @@ function HomeRedirect() {
   return <Navigate to={to} replace />;
 }
 
-function ExecGuard() {
+function ExecGuard({ page }: { page?: 'bat-thuong' }) {
   const allowed = useCanSeeExecOverview();
-  return allowed ? <ExecOverviewPage /> : <Navigate to="/dashboard" replace />;
+  if (!allowed) return <Navigate to="/dashboard" replace />;
+  return page === 'bat-thuong' ? <AnomaliesPage /> : <ExecOverviewPage />;
 }

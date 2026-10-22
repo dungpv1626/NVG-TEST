@@ -24,6 +24,7 @@ import {
 } from '@/hooks/use-acceptance-sign';
 import { useCan } from '@/lib/auth';
 import { printAcceptance } from '@/pages/tc/acceptance-sign';
+import { useOpenCollectionRequest } from './collection-request-pages';
 import { KtNav } from './kt-nav';
 
 type Filter = 'cho' | 'da';
@@ -44,6 +45,7 @@ export function AcceptanceBillingPage() {
   const mark = useMarkAcceptanceBilled();
   const canEdit = useCan('KT', 'edit');
   const promptDialog = usePromptDialog();
+  const collection = useOpenCollectionRequest();
   const [filter, setFilter] = useState<Filter>('cho');
   const [message, setMessage] = useState<string | null>(null);
 
@@ -147,9 +149,27 @@ export function AcceptanceBillingPage() {
                 >
                   Xem biên bản
                 </Button>
+                {canEdit && !r.billing_recorded_at && r.acceptance_type === 'khach_hang' && (
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    disabled={collection.isPending}
+                    onClick={() =>
+                      void collection
+                        .open({ acceptanceId: r.id })
+                        .catch((e: unknown) => setMessage(toUserMessage(e, 'create')))
+                    }
+                  >
+                    Lập đề nghị thu
+                  </Button>
+                )}
                 {canEdit && !r.billing_recorded_at && (
                   <>
-                    <Button size="sm" variant="primary" onClick={() => void record(r)}>
+                    <Button
+                      size="sm"
+                      variant={r.acceptance_type === 'khach_hang' ? 'secondary' : 'primary'}
+                      onClick={() => void record(r)}
+                    >
                       Đã ghi nhận
                     </Button>
                     <Link
