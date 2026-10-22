@@ -10,7 +10,7 @@
  * (`receivable_settlements`, 0043) — một nguồn dữ liệu (CLAUDE.md 5.2).
  */
 
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import {
   CONTRACT_TERM_TYPE_LABELS,
@@ -23,6 +23,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
 import { useContractTerms, type ContractTermRecord } from '@/hooks/use-contracts';
+import {
+  useContractCollectionTargets,
+  useLinkCollectionTerm,
+  type CollectionTarget,
+} from '@/hooks/use-collections';
+import { toUserMessage } from '@/hooks/use-error-message';
+import { useCan } from '@/lib/auth';
 
 /** Đợt sắp tới trong ngần này ngày thì nhắc «sắp đến hạn». */
 const SOON_DAYS = 7;
@@ -31,12 +38,86 @@ const SOON_DAYS = 7;
 function roundStatus(term: ContractTermRecord): { group: StatusGroup | null; text: string } {
   if (term.completed_at)
     return { group: 'completed', text: `Đã hoàn thành ${formatDate(term.completed_at)}` };
+  if (term.collection_due_at) return { group: 'in_progress', text: 'Đến hạn thu' };
   if (!term.due_date) return { group: null, text: 'Chưa ghi hạn' };
   const days = daysUntil(term.due_date);
   if (days !== null && days < 0) return { group: 'overdue', text: formatDeadline(term.due_date) };
   if (days !== null && days <= SOON_DAYS)
     return { group: 'in_progress', text: formatDeadline(term.due_date) };
   return { group: null, text: `Hạn ${formatDate(term.due_date)}` };
+}
+
+/**
+ * Căn cứ thu của một đợt (3A, 0195): mốc thi công hoặc biên bản nghiệm thu với chủ đầu tư. Mốc
+ * đạt / biên bản ký hai bên thì đợt đến hạn thu và Kế toán được báo. Người chịu trách nhiệm hợp
+ * đồng và Kế toán chọn được; người khác chỉ đọc.
+ */
+function CollectionBasis({
+  term,
+  contractId,
+  targets,
+  canLink,
+}: {
+  term: ContractTermRecord;
+  contractId: string;
+  targets: CollectionTarget[];
+  canLink: boolean;
+}) {
+  const link = useLinkCollectionTerm();
+  const [error, setError] = useState<string | null>(null);
+  const currentId = term.site_milestone_id ?? term.acceptance_record_id ?? '';
+  const current = targets.find((t) => t.id === currentId);
+  const describe = (t: CollectionTarget) =>
+    `${t.kind === 'moc' ? 'Mốc' : 'Biên bản'} «${t.label}» — ${
+      t.reached
+        ? t.kind === 'moc'
+          ? 'đã đạt'
+          : 'đã ký'
+        : t.kind === 'moc'
+          ? 'chưa đạt'
+          : 'chưa ký'
+    }`;
+
+  if (!canLink || term.completed_at) {
+    return (
+      <span className="block text-xs text-fg-subtle">
+        Căn cứ thu: {current ? describe(current) : 'chưa gắn mốc / biên bản'}
+      </span>
+    );
+  }
+  return (
+    <label className="mt-1 block text-xs text-fg-subtle">
+      Căn cứ thu{' '}
+      <select
+        value={currentId}
+        disabled={link.isPending}
+        onChange={(e) => {
+          const target = targets.find((t) => t.id === e.target.value) ?? null;
+          setError(null);
+          link.mutate(
+            { termId: term.id, contractId, target },
+            { onError: (err) => setError(toUserMessage(err, 'edit')) },
+          );
+        }}
+        className="ms-1 h-8 max-w-full rounded-sm border border-border-strong bg-surface px-2 text-sm text-fg"
+      >
+        <option value="">Không gắn — theo ngày hạn</option>
+        {targets.map((t) => (
+          <option key={t.id} value={t.id}>
+            {t.site_code} · {describe(t)}
+          </option>
+        ))}
+      </select>
+      {targets.length === 0 && (
+        <span className="ms-2">Công trình chưa có mốc / biên bản nghiệm thu để gắn.</span>
+      )}
+      {error && (
+        <span role="alert" className="block text-status-overdue">
+          {error}
+        </span>
+      )}
+    </label>
+  );
 }
 
 export function AfterSignCard({
@@ -68,6 +149,9 @@ export function AfterSignCard({
     .filter((t) => t.term_type === 'tam_ung' || t.term_type === 'tien_do_thanh_toan')
     .sort((a, b) => (a.due_date ?? '9999').localeCompare(b.due_date ?? '9999'));
   const nextRound = rounds.find((t) => !t.completed_at);
+  const canLinkAsKt = useCan('KT', 'edit');
+  const canLink = isResponsible || canLinkAsKt;
+  const { data: targets = [] } = useContractCollectionTargets(contractId, rounds.length > 0);
 
   const steps: { title: string; body: ReactNode; done?: boolean }[] = [];
   steps.push({
@@ -126,6 +210,12 @@ export function AfterSignCard({
                       {CONTRACT_TERM_TYPE_LABELS[t.term_type]}
                     </span>
                     <span className="block">{t.description}</span>
+                    <CollectionBasis
+                      term={t}
+                      contractId={contractId}
+                      targets={targets}
+                      canLink={canLink}
+                    />
                   </span>
                   {t.amount !== null && (
                     <span className="font-medium tabular-nums">{formatCurrency(t.amount)}</span>

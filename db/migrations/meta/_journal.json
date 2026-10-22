@@ -1366,6 +1366,13 @@
       "when": 1791390000000,
       "tag": "0194_cong_trinh_xong_thanh_mau_nhap",
       "breakpoints": true
+    },
+    {
+      "idx": 195,
+      "version": "7",
+      "when": 1791400000000,
+      "tag": "0195_dot_thu_gan_moc",
+      "breakpoints": true
     }
   ]
 }
