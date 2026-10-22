@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { PDFDocument } from 'pdf-lib';
 import { A4_POINTS, buildPdf } from '../build-pdf';
 import { detectPaper, detectPaperQuad } from '../detect';
+import { deskewAngle, rotateImage } from '../deskew';
 import { enhance } from '../enhance';
 import {
   applyHomography,
@@ -246,5 +247,40 @@ describe('tờ giấy tràn khung (ảnh thật anh Dũng 22/10/2026)', () => {
     expect(outside(295, 220)).toBe(0); // dấu đỏ giữ
     expect(outside(150, 101)).toBe(0); // chữ giữ
     expect(outside(150, 300)).toBe(0); // giấy
+  });
+});
+
+describe('xoay thẳng theo dòng chữ', () => {
+  function tiltedLines(deg: number) {
+    const w = 600;
+    const h = 800;
+    const img = createImageData(w, h);
+    img.data.fill(255);
+    const t = Math.tan((deg * Math.PI) / 180);
+    for (let y = 0; y < h; y++)
+      for (let x = 60; x < w - 60; x++) {
+        // Dòng chữ cách nhau 40 px, dày 6 px, có khoảng trống giữa các «chữ».
+        const yy = y - (x - w / 2) * t;
+        if (((yy % 40) + 40) % 40 < 6 && x % 23 < 17) {
+          const i = (y * w + x) * 4;
+          img.data[i] = img.data[i + 1] = img.data[i + 2] = 20;
+        }
+      }
+    return img;
+  }
+
+  it('đo đúng góc nghiêng và xoay xong thì chữ nằm ngang', () => {
+    const img = tiltedLines(3);
+    const angle = deskewAngle(img);
+    expect(Math.abs(Math.abs(angle) - 3)).toBeLessThan(0.5);
+    const fixed = rotateImage(img, -angle, createImageData);
+    expect(Math.abs(deskewAngle(fixed))).toBeLessThan(0.5);
+  });
+
+  it('chữ đã thẳng / trang trắng thì không xoay', () => {
+    expect(deskewAngle(tiltedLines(0))).toBe(0);
+    const blank = createImageData(300, 400);
+    blank.data.fill(255);
+    expect(deskewAngle(blank)).toBe(0);
   });
 });

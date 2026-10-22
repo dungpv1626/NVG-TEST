@@ -26,9 +26,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { buildPdf, type ScanPage } from '@/lib/scan/build-pdf';
+import { deskewAngle, rotateImage } from '@/lib/scan/deskew';
 import { detectPaper } from '@/lib/scan/detect';
 import { enhance, SCAN_MODE_LABELS, type ScanMode } from '@/lib/scan/enhance';
 import {
+  createImageData,
   defaultQuad,
   pageSize,
   rotateQuadClockwise,
@@ -151,7 +153,10 @@ function renderPage(page: Extract<Page, { kind: 'image' }>, maxSide: number): HT
         return !o.mask[my * o.width + mx];
       }
     : undefined;
-  const out = enhance(warpQuad(src, page.quad, width, height, keep), page.mode);
+  const enhanced = enhance(warpQuad(src, page.quad, width, height, keep), page.mode);
+  // Tờ giấy tràn khung thì 4 góc không nắn được hết độ nghiêng — xoay thẳng theo dòng chữ.
+  const angle = deskewAngle(enhanced);
+  const out = angle ? rotateImage(enhanced, -angle, createImageData) : enhanced;
   const c = canvasOf(width, height);
   c.getContext('2d')!.putImageData(out, 0, 0);
   return c;

@@ -190,11 +190,34 @@ function whitenBackground(img: ImageData) {
   }
 }
 
+/**
+ * Làm sắc nét (unsharp mask 3×3): nét chữ đậm, rõ mép như bản scan thay vì mềm như ảnh chụp.
+ * Giấy trắng (255 cả ba kênh) giữ nguyên — không sinh hạt lấm tấm trên nền.
+ */
+function sharpen(img: ImageData, amount = 0.8) {
+  const { width: w, height: h, data: d } = img;
+  const src = d.slice();
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      const p = (y * w + x) * 4;
+      if (src[p] === 255 && src[p + 1] === 255 && src[p + 2] === 255) continue;
+      for (let c = 0; c < 3; c++) {
+        let sum = 0;
+        for (let dy = -1; dy <= 1; dy++)
+          for (let dx = -1; dx <= 1; dx++) sum += src[((y + dy) * w + x + dx) * 4 + c]!;
+        const v = src[p + c]!;
+        d[p + c] = v + amount * (v - sum / 9);
+      }
+    }
+  }
+}
+
 /** Áp chế độ lên trang (sửa tại chỗ) và trả lại chính nó. */
 export function enhance(img: ImageData, mode: ScanMode): ImageData {
   if (mode === 'color') return img;
   if (mode === 'document') {
     whitenBackground(img);
+    sharpen(img);
     return img;
   }
   writeGray(img, adaptiveThreshold(toGray(img), img.width, img.height));
