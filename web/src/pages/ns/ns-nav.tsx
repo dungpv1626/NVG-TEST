@@ -14,6 +14,7 @@ const ITEMS = [
   { to: '/ns/cham-cong', label: 'Chấm công' },
   { to: '/ns/nhan-su', label: 'Hồ sơ nhân sự' },
   { to: '/ns/giay-to', label: 'Giấy tờ' },
+  { to: '/ns/giay-to-phap-nhan', label: 'Giấy tờ pháp nhân' },
   { to: '/ns/tai-san', label: 'Tài sản' },
   { to: '/ns/nghi-phep', label: 'Nghỉ phép' },
   { to: '/ns/tuyen-dung', label: 'Tuyển dụng' },

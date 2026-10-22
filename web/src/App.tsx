@@ -276,6 +276,9 @@ const AssetPage = lazy(() =>
 const HrDocumentPage = lazy(() =>
   import('@/pages/ns/document-page').then((m) => ({ default: m.HrDocumentPage })),
 );
+const CompanyDocumentPage = lazy(() =>
+  import('@/pages/ns/company-document-page').then((m) => ({ default: m.CompanyDocumentPage })),
+);
 const RecruitmentPage = lazy(() =>
   import('@/pages/ns/recruitment-page').then((m) => ({ default: m.RecruitmentPage })),
 );
@@ -485,6 +488,7 @@ const router = createBrowserRouter(
           <Route path="ns/nhan-su/tao-moi" element={<EmployeeCreatePage />} />
           <Route path="ns/nhan-su/:id" element={<EmployeeDetailPage />} />
           <Route path="ns/giay-to" element={<HrDocumentPage />} />
+          <Route path="ns/giay-to-phap-nhan" element={<CompanyDocumentPage />} />
           <Route path="ns/tai-san" element={<AssetPage />} />
           <Route path="ns/nghi-phep" element={<LeavePage />} />
           <Route path="ns/tuyen-dung" element={<RecruitmentPage />} />

@@ -962,6 +962,10 @@ export interface AssetEventRecord {
   notes: string | null;
   from_employee: { full_name: string } | null;
   to_employee: { full_name: string } | null;
+  /** Ký nhận trên điện thoại (5F, 0206). */
+  receiver_signer_name: string | null;
+  receiver_signature_path: string | null;
+  signed_at: string | null;
 }
 
 export function useAssetEvents(assetId: string | undefined) {
@@ -972,6 +976,7 @@ export function useAssetEvents(assetId: string | undefined) {
         .from('asset_events')
         .select(
           'id, asset_id, type, event_date, condition, amount, notes, ' +
+            'receiver_signer_name, receiver_signature_path, signed_at, ' +
             'from_employee:employees!asset_events_from_employee_id_employees_id_fk(full_name), ' +
             'to_employee:employees!asset_events_to_employee_id_employees_id_fk(full_name)',
         )
