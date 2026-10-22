@@ -101,6 +101,18 @@ export function ExecOverviewPage() {
             : undefined
         }
       />
+      {/* Công cụ kiểm soát của Đợt 3 — chỉ liên kết, mọi vai xem được trang này đều mở được. */}
+      <nav aria-label="Công cụ kiểm soát" className="mb-4 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+        <Link to="/tong-quan/bat-thuong" className="text-brand hover:underline">
+          Danh sách bất thường
+        </Link>
+        <Link to="/kt/dong-tien-theo-tuan" className="text-brand hover:underline">
+          Dòng tiền theo tuần
+        </Link>
+        <Link to="/bc/lai-lo-quan-tri" className="text-brand hover:underline">
+          Lãi / lỗ quản trị từng công trình
+        </Link>
+      </nav>
 
       {overview.error ? (
         <ErrorState
