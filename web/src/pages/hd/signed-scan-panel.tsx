@@ -23,6 +23,7 @@ import {
   useContractScanShares,
   useCreateScanShare,
   useRevokeScanShare,
+  useSignedScanHistory,
 } from '@/hooks/use-contract-scan';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { safeFileName, shareOrDownload } from '@/lib/share-file';
@@ -52,6 +53,7 @@ export function SignedScanPanel({
   const prompt = usePromptDialog();
   const attach = useAttachSignedScan();
   const { data: shares = [] } = useContractScanShares(contract.id);
+  const { data: versions = [] } = useSignedScanHistory(contract.id);
   const revoke = useRevokeScanShare();
   const [scanning, setScanning] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -170,6 +172,37 @@ export function SignedScanPanel({
         >
           {error}
         </p>
+      )}
+
+      {versions.length > 0 && (
+        <div className="mt-4">
+          <p className="text-sm font-medium">Các lần quét ({versions.length})</p>
+          <ul className="mt-2 divide-y divide-border rounded-md border border-border">
+            {versions.map((v) => {
+              const current = v.path === contract.signed_scan_path;
+              return (
+                <li
+                  key={v.id}
+                  className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-sm"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="font-medium">{formatDateTime(v.created_at)}</span>
+                    {v.creator && <span className="text-fg-subtle"> · {v.creator.full_name}</span>}
+                    {current && (
+                      <span className="ml-2 rounded-full bg-status-completed-bg px-2 py-0.5 text-xs font-semibold text-status-completed">
+                        Đang dùng
+                      </span>
+                    )}
+                    {v.reason && (
+                      <span className="block text-fg-subtle">Lý do thay: {v.reason}</span>
+                    )}
+                  </span>
+                  <SignedScanLink path={v.path} label="Xem" />
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       )}
 
       {shares.length > 0 && (

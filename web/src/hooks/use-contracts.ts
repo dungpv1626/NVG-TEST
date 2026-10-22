@@ -242,6 +242,7 @@ export function useSignContract() {
       // Ký xong có thể tự mở công trình (0187) — chuỗi hồ sơ / panel liên quan phải tải lại.
       void queryClient.invalidateQueries({ queryKey: ['record-chain'] });
       void queryClient.invalidateQueries({ queryKey: ['construction-sites'] });
+      void queryClient.invalidateQueries({ queryKey: ['contract-signed-scans'] });
     },
   });
 }

@@ -618,16 +618,24 @@ describeDb('Bản đã ký: bổ sung sau khi ký, link xem có hạn cho khách
 
       // Đã có bản: thay (quét lại cho rõ) phải ghi lý do; người chịu trách nhiệm tự thay được,
       // Ban Giám đốc được báo, có nhật ký.
+      const path2 = `${contractId}/da-ky-${crypto.randomUUID()}.pdf`;
+      expect(
+        (
+          await kd.storage
+            .from('contract-documents')
+            .upload(path2, pdf(), { contentType: 'application/pdf' })
+        ).error,
+      ).toBeNull();
       const noReason = await kd.rpc('attach_signed_scan', {
         p_contract_id: contractId,
-        p_path: path,
+        p_path: path2,
       });
       expect(noReason.error?.message).toContain('lý do');
       expect(
         (
           await kd.rpc('attach_signed_scan', {
             p_contract_id: contractId,
-            p_path: path,
+            p_path: path2,
             p_reason: 'Bản quét rõ hơn',
           })
         ).error,
@@ -637,6 +645,17 @@ describeDb('Bản đã ký: bổ sung sau khi ký, link xem có hạn cho khách
         WHERE u.email = ${ACCOUNTS.tgd} AND n.type = 'contract_signed_recorded'
           AND n.related_entity_id = ${contractId} AND n.message LIKE '%đã thay%'`;
       expect(replaced!.n).toBe(1);
+      // Lịch sử các lần quét: Kinh doanh xem được, có lý do lần thay.
+      const { data: history } = await kd
+        .from('contract_signed_scans')
+        .select('path, reason')
+        .eq('contract_id', contractId)
+        .order('created_at');
+      expect(history?.map((h) => h.reason)).toEqual([null, 'Bản quét rõ hơn']);
+      expect(
+        (await thiCong.from('contract_signed_scans').select('id').eq('contract_id', contractId))
+          .data,
+      ).toEqual([]);
       void tgd;
       const [log] = await sql<{ n: number }[]>`
         SELECT count(*)::int AS n FROM audit_logs

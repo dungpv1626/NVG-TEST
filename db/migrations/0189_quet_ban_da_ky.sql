@@ -94,11 +94,14 @@ BEGIN
   END IF;
 
   PERFORM set_config('nvg.attach_signed_scan', c.id::text, true);
+  -- Lý do đi kèm sang trigger lịch sử `contracts_signed_scan_history` (mục 5).
+  PERFORM set_config('nvg.signed_scan_reason', COALESCE(btrim(p_reason), ''), true);
   UPDATE public.contracts
      SET signed_scan_path = p_path,
          updated_at = now(), updated_by = v_user
    WHERE id = c.id;
   PERFORM set_config('nvg.attach_signed_scan', '', true);
+  PERFORM set_config('nvg.signed_scan_reason', '', true);
 
   INSERT INTO public.audit_logs (user_id, company_id, action, entity_type, entity_id, before, after, reason)
   VALUES (v_user, c.company_id,
@@ -340,3 +343,68 @@ CREATE POLICY contract_documents_files_insert ON storage.objects
       )
     )
   );
+
+-- ----------------------------------------------------------------------------
+-- 5. Lịch sử các lần quét bản đã ký
+-- ----------------------------------------------------------------------------
+-- Thay bản quét mà trang chỉ hiện bản đang dùng thì người dùng không biết đã thay được chưa,
+-- lý do đã ghi cũng không thấy ở đâu (anh Dũng 22/10/2026). `audit_logs` chỉ lãnh đạo đọc, nên
+-- lịch sử để ở bảng riêng theo quyền xem hợp đồng. Mỗi lần cột `signed_scan_path` đổi sang một
+-- tệp (lúc ký hoặc qua `attach_signed_scan`) thì trigger ghi một dòng. Tệp cũ vẫn trong kho.
+CREATE TABLE IF NOT EXISTS public.contract_signed_scans (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id  uuid NOT NULL REFERENCES public.companies(id),
+  contract_id uuid NOT NULL REFERENCES public.contracts(id) ON DELETE CASCADE,
+  path        text NOT NULL,
+  reason      text,
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  created_by  uuid REFERENCES public.users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS contract_signed_scans_contract_idx
+  ON public.contract_signed_scans (contract_id, created_at DESC);
+
+ALTER TABLE public.contract_signed_scans ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.contract_signed_scans FROM anon;
+DROP POLICY IF EXISTS contract_signed_scans_select ON public.contract_signed_scans;
+CREATE POLICY contract_signed_scans_select ON public.contract_signed_scans
+  FOR SELECT TO authenticated
+  USING (public.rls_contract_readable(contract_id));
+-- Không policy ghi: chỉ trigger (SECURITY DEFINER) ghi.
+GRANT SELECT ON public.contract_signed_scans TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.contracts_signed_scan_history()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NEW.signed_scan_path IS NOT NULL
+     AND NEW.signed_scan_path IS DISTINCT FROM OLD.signed_scan_path THEN
+    INSERT INTO public.contract_signed_scans (company_id, contract_id, path, reason, created_by)
+    VALUES (NEW.company_id, NEW.id, NEW.signed_scan_path,
+            NULLIF(current_setting('nvg.signed_scan_reason', true), ''),
+            public.auth_user_id());
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS contracts_signed_scan_history ON public.contracts;
+CREATE TRIGGER contracts_signed_scan_history
+  AFTER UPDATE OF signed_scan_path ON public.contracts
+  FOR EACH ROW EXECUTE FUNCTION public.contracts_signed_scan_history();
+
+-- Dữ liệu cũ (trên máy): lấy lại các lần đã ghi trong nhật ký kiểm toán.
+INSERT INTO public.contract_signed_scans (company_id, contract_id, path, reason, created_at, created_by)
+SELECT c.company_id, c.id, a.after ->> 'signed_scan_path', a.reason, a.created_at, a.user_id
+  FROM public.audit_logs a
+  JOIN public.contracts c ON c.id = a.entity_id
+ WHERE a.entity_type = 'contracts'
+   AND a.action IN ('attach_signed_scan', 'replace_signed_scan')
+   AND a.after ->> 'signed_scan_path' IS NOT NULL
+   AND NOT EXISTS (
+     SELECT 1 FROM public.contract_signed_scans s
+      WHERE s.contract_id = c.id AND s.path = a.after ->> 'signed_scan_path'
+   );

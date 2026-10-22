@@ -4,7 +4,13 @@ import { useState } from 'react';
 import { DOCUMENT_BUCKET } from '@/hooks/use-contract-templates';
 import { supabase } from '@/lib/supabase';
 
-export function SignedScanLink({ path }: { path: string }) {
+export function SignedScanLink({
+  path,
+  label = 'Xem bản đã ký',
+}: {
+  path: string;
+  label?: string;
+}) {
   const [error, setError] = useState(false);
   async function open() {
     setError(false);
@@ -21,7 +27,7 @@ export function SignedScanLink({ path }: { path: string }) {
         className="font-medium text-brand underline-offset-2 hover:underline"
         onClick={() => void open()}
       >
-        Xem bản đã ký
+        {label}
       </button>
       {error && <span className="ml-2 text-status-overdue">Chưa mở được tệp — thử lại.</span>}
     </span>

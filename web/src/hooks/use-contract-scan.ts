@@ -39,7 +39,37 @@ export function useAttachSignedScan() {
       });
       if (error) throw error;
     },
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['contracts'] }),
+    onSuccess: (_, v) => {
+      void queryClient.invalidateQueries({ queryKey: ['contracts'] });
+      void queryClient.invalidateQueries({ queryKey: ['contract-signed-scans', v.contractId] });
+    },
+  });
+}
+
+export interface SignedScanVersion {
+  id: string;
+  path: string;
+  reason: string | null;
+  created_at: string;
+  creator: { full_name: string } | null;
+}
+
+/** Các lần quét bản đã ký, mới nhất trước (0189 mục 5) — tệp cũ vẫn xem được. */
+export function useSignedScanHistory(contractId: string | undefined) {
+  return useQuery<SignedScanVersion[], Error>({
+    queryKey: ['contract-signed-scans', contractId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('contract_signed_scans')
+        .select(
+          'id, path, reason, created_at, creator:users!contract_signed_scans_created_by_fkey(full_name)',
+        )
+        .eq('contract_id', contractId!)
+        .order('created_at', { ascending: false });
+      if (error) throw new Error(error.message);
+      return (data ?? []) as unknown as SignedScanVersion[];
+    },
+    enabled: Boolean(contractId),
   });
 }
 
