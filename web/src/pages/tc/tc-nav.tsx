@@ -21,6 +21,7 @@ export function TcNav() {
 
   const items = [
     { to: '/tc/cong-trinh', label: 'Công trình', show: true },
+    { to: '/tc/bang-theo-doi', label: 'Bảng theo dõi', show: true },
     { to: '/tc/de-nghi', label: 'Theo dõi đề nghị', show: true },
     { to: '/nen/phan-cong', label: 'Phân công', show: managesSites || canViewNen },
     { to: '/ns/cham-cong', label: 'Chấm công công trường', show: confirmsTimesheets },

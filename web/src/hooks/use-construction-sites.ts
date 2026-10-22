@@ -778,3 +778,44 @@ export function usePublishSiteDocumentVersion() {
     },
   });
 }
+
+// ---------------------------------------------------------------------------
+// Bảng theo dõi công trình của Trưởng phòng Thi công (Đợt 2 — 2E, 0191)
+// ---------------------------------------------------------------------------
+
+export interface SiteBoardRow {
+  site_id: string;
+  company_id: string;
+  code: string;
+  name: string;
+  stage: SiteStage;
+  responsible_user_id: string | null;
+  responsible_name: string | null;
+  planned_end_date: string | null;
+  site_overdue: boolean;
+  milestones_total: number;
+  milestones_passed: number;
+  current_milestone_label: string | null;
+  current_milestone_status: 'cho_lam' | 'dang_lam' | 'cho_ky_thuat' | 'dat' | null;
+  current_milestone_due: string | null;
+  current_milestone_overdue: boolean;
+  milestones_waiting_check: number;
+  last_log_date: string | null;
+  logged_today: boolean;
+  open_requests: number;
+  overdue_requests: number;
+}
+
+/** Mỗi công trình đang chạy một dòng; phạm vi do RLS quyết (hàm SECURITY INVOKER). */
+export function useSiteBoard() {
+  const scope = useCompanyScope();
+  return useQuery<SiteBoardRow[], Error>({
+    queryKey: ['construction-sites', 'board', scope.companyId],
+    queryFn: async () => {
+      const { data, error } = await withCompanyScope(supabase.rpc('tc_site_board'), scope);
+      if (error) throw new Error(error.message);
+      return (data ?? []) as SiteBoardRow[];
+    },
+    enabled: scope.isReady,
+  });
+}

@@ -640,7 +640,7 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
 | 4   | Mẫu hợp đồng `.docx` có chỗ trống, tự điền, xem trước, xuất (vấn đề 5)                                                     | **Xong vòng đầu** — chờ Haan kiểm                          |
 | 5   | AI Design thành 4 bước: Đầu vào → Mặt bằng → Mặt ngoài → Bộ kết quả (vấn đề 7)                                             | Chưa làm — nay là Đợt 5 (5B) của kế hoạch tổng             |
 | Đ1  | Đợt 1 Kinh doanh (kế hoạch tổng): 1A–1H + bổ sung 18/10 (AI thật, đính kèm, in, phiếu riêng)                               | **Xong trên máy** — chờ anh Dũng chạy thử                  |
-| Đ2  | Đợt 2 Thi công (NVO trước): 2A mốc thi công, 2B nhật ký giọng nói (0182, 0190)                                             | **Đang làm** — 2A, 2B xong; tiếp 2E                        |
+| Đ2  | Đợt 2 Thi công (NVO trước): 2A mốc, 2B nhật ký giọng nói, 2E bảng theo dõi (0182, 0190, 0191)                              | **Đang làm** — 2A, 2B, 2E xong; tiếp 2D                    |
 | HĐ  | Soạn hợp đồng bằng máy + bộ mẫu ba pháp nhân + ký không cần sếp vào app + bộ quét bản đã ký (0185–0189)                    | **Xong trên máy** — anh Dũng đã chạy thử trọn tới bản quét |
 | 0b  | Bộ nhận diện theo logo NVG                                                                                                 | **Xong vòng đầu** — chờ duyệt ảnh                          |
 | PH  | Phát hành bản demo mới                                                                                                     | **Chuẩn bị xong, CỐ Ý CHƯA deploy** (xem 9.3)              |
@@ -809,7 +809,14 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
     «Lời đã nói». Phép thử `db/src/__tests__/tc-voice-log.test.ts` (6, đột biến gỡ trigger / nới quyền kho đã đo đỏ),
     `shared/.../site-log-voice.test.ts`. Ảnh: `backup/dot2-2b/` (kịch bản `backup/dot2-2b-voice.cjs`, chạy với
     `AI_FAKE=transcribe,site_log`).
-  - Còn: 2D biên bản tự sinh + ký điện thoại, 2E màn hình Trưởng phòng, 2F phiếu bảo hành, 2G
+  - 2E xong (0191, 22/10/2026): `/tc/bang-theo-doi` «Bảng theo dõi công trình» (mục thứ hai của thanh Thi công) — mỗi
+    công trình đang chạy một dòng từ hàm `tc_site_board()` (SECURITY INVOKER — RLS quyết phạm vi, chỉ huy trưởng chỉ thấy
+    công trình được giao): mốc hiện tại + đạt n/tổng + hạn, nhật ký (đã ghi hôm nay / lần cuối), mốc chờ kiểm, đề nghị
+    đang mở (`site_request_tracker`). Cột «Cần chú ý» chỉ từ NGÀY ĐÃ KHAI (quá hạn công trình, mốc quá hạn, đề nghị quá
+    ngày cần) + mốc chờ kiểm; chưa ghi nhật ký KHÔNG tính là vấn đề (NVG chưa quyết ngưỡng). Dòng có vấn đề đứng trên,
+    lọc «Chỉ công trình cần chú ý» (`?can-chu-y=1`). Phép thử `db/src/__tests__/tc-site-board.test.ts` (3, đột biến
+    SECURITY DEFINER đã đo đỏ). Ảnh: `backup/dot2-2e/`, `backup/dot2-2e-cht/` (kịch bản `backup/dot2-2e-board.cjs`).
+  - Còn: 2D biên bản tự sinh + ký điện thoại, 2F phiếu bảo hành, 2G
 - **Sửa sau khi anh Dũng chạy thử Đợt 1 (20–21/10/2026, commit fc2e118 → 23a14aa):**
   - Biểu mẫu Khách hàng (tạo / sửa) kiểm trùng số điện thoại với đầu mối + khách hàng (`contact-duplicates-notice.tsx`,
     cùng hàm `contact_duplicates`); trùng khách hàng có sẵn thì không tạo thêm hồ sơ. Trước chỉ biểu mẫu Đầu mối kiểm.
@@ -920,7 +927,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    (cần cho Vite / Worker nghe mạng nhà và tạm đổi `.env` sang IP máy `192.168.1.12` — chưa làm, anh Dũng chưa yêu cầu);
    (c) gắn `DocumentScanner` vào biên bản nghiệm thu, đề nghị thanh toán khi làm Đợt 2 / Đợt 3; (d) ảnh đã qua Zalo /
    chỉnh sửa có thể mang thời điểm gửi chứ không phải lúc chụp → thứ tự lệch, dùng «Đảo thứ tự trang».
-2. **Đợt 2 — Thi công** (2A, 2B xong; làm tiếp 2E màn hình Trưởng phòng → 2D → 2F → 2G; bật thật máy xếp mục nhật ký
+2. **Đợt 2 — Thi công** (2A, 2B, 2E xong; làm tiếp 2D → 2F → 2G; bật thật máy xếp mục nhật ký
    `ai.site_log_enabled` chờ anh Dũng duyệt chi phí): 7 mốc NVO + nghiệm thu trước khi che khuất, nhật ký giọng nói
    (dùng lại `VoiceRecorder` + Whisper), biên bản tự sinh, màn hình Trưởng phòng Thi công, phiếu bảo hành. Điểm danh tổ
    (2C) và mốc NVC chờ câu hỏi 6, 15. Rồi Đợt 3 Tài chính; Đợt 4 Mua hàng – Kho và Đợt 5 song song.
@@ -940,7 +947,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    đồng sắp hết hạn»; lối vào Tổng quan điều hành trên thanh dưới điện thoại; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email; thêm dữ liệu demo quá hạn ở cả ba công ty.
 
-**Migration tiếp theo: 0191.**
+**Migration tiếp theo: 0192.**
 
 ### 9.4 Quyết định đã chốt và lý do
 
@@ -1030,6 +1037,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 | Nhật ký giọng nói: máy điền NHÁP lên biểu mẫu nhật ký có sẵn, người ghi sửa rồi tự Lưu; không bảng nhật ký thứ hai                                                                     | Giữ nguyên quy tắc 24 giờ và chữ ký người ghi (TC-08); máy chỉ nháp (PRD 2.3)                                                                                                                          |
 | Lưu đoạn ghi âm + bản máy chép cạnh nội dung đã sửa; kho ghi âm không cho xoá                                                                                                          | Lời nói gốc là bằng chứng khi tranh chấp tiến độ / khối lượng — nội dung là của người ghi, bản chép là thứ máy nghe được                                                                               |
 | Máy xếp mục nhật ký có công tắc RIÊNG, tắt thì vẫn chép chữ và dán nguyên văn                                                                                                          | Chi phí Gemini duyệt theo từng chức năng (6.4); chép chữ đã được duyệt, xếp mục chưa — luồng không bị chặn                                                                                             |
+| Bảng theo dõi của Trưởng phòng: «cần chú ý» chỉ tính từ ngày đã khai + mốc chờ kiểm; nhật ký chỉ hiện «lần cuối», không tự đặt ngưỡng ngày                                             | Tiêu chí Đợt 2 «thấy công trình nào chậm không cần gọi»; số ngày không ghi nhật ký là có vấn đề NVG chưa quyết — không bịa ngưỡng (5.2)                                                                |
 | Sửa câu chữ / đường dẫn của hàm dài bằng bản chép nguyên văn hoặc trigger nhỏ, không viết lại logic                                                                                    | `decide_approval` ~300 dòng: đổi đường dẫn thông báo bằng trigger trên `notifications` thay vì chép cả hàm (bài học 0086)                                                                              |
 
 ### 9.5 Câu hỏi chờ Haan (đang chạy theo mặc định trong ngoặc)
