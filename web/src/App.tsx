@@ -192,6 +192,9 @@ const PurchaseRequestCreatePage = lazy(() =>
 const PurchaseRequestDetailPage = lazy(() =>
   import('@/pages/mh/request-detail').then((m) => ({ default: m.PurchaseRequestDetailPage })),
 );
+const PurchasePoolPage = lazy(() =>
+  import('@/pages/mh/purchase-pool-page').then((m) => ({ default: m.PurchasePoolPage })),
+);
 const PurchaseOrderListPage = lazy(() =>
   import('@/pages/mh/order-list').then((m) => ({ default: m.PurchaseOrderListPage })),
 );
@@ -439,6 +442,7 @@ const router = createBrowserRouter(
           <Route path="mh/de-nghi-mua" element={<PurchaseRequestListPage />} />
           <Route path="mh/de-nghi-mua/tao-moi" element={<PurchaseRequestCreatePage />} />
           <Route path="mh/de-nghi-mua/:id" element={<PurchaseRequestDetailPage />} />
+          <Route path="mh/gom-de-nghi" element={<PurchasePoolPage />} />
           <Route path="mh/don-hang" element={<PurchaseOrderListPage />} />
           <Route path="mh/don-hang/:id" element={<PurchaseOrderDetailPage />} />
           <Route path="mh/nha-cung-cap" element={<SupplierListPage />} />

@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 
 const ITEMS = [
   { to: '/mh/de-nghi-mua', label: 'Đề nghị mua' },
+  { to: '/mh/gom-de-nghi', label: 'Gom đề nghị' },
   { to: '/mh/don-hang', label: 'Đơn đặt hàng' },
   { to: '/mh/nha-cung-cap', label: 'Nhà cung cấp' },
 ];
