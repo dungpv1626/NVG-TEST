@@ -9,6 +9,7 @@ import {
   unknownTemplateTags,
   type TemplateSource,
   missingTemplateFieldsBySource,
+  withoutHonorific,
 } from '../hd-template';
 
 describe('đọc số thành chữ', () => {
@@ -184,6 +185,16 @@ describe('dữ liệu điền mẫu', () => {
     expect(
       unknownTemplateTags({ ten_hop_dong: {}, ten_khach: {}, dot_thanh_toan: { so_tienn: {} } }),
     ).toEqual(['ten_khach', 'dot_thanh_toan.so_tienn']);
+  });
+
+  it('họ tên bỏ danh xưng cho mẫu in sẵn «Ông/Bà» — không ra «Ông/Bà Ông …»', () => {
+    expect(withoutHonorific('Ông Nguyễn Văn Thử')).toBe('Nguyễn Văn Thử');
+    expect(withoutHonorific('anh Trần Văn Hùng')).toBe('Trần Văn Hùng');
+    expect(withoutHonorific('Ông/Bà Lê C')).toBe('Lê C');
+    expect(withoutHonorific('Công ty TNHH Khách')).toBe('Công ty TNHH Khách');
+    expect(withoutHonorific('Bàng Văn D')).toBe('Bàng Văn D');
+    expect(withoutHonorific(null)).toBeNull();
+    expect(buildTemplateData(source()).doi_tac_ho_ten).toBe('Công ty TNHH Khách');
   });
 
   it('mọi khoá dữ liệu đều có trong danh mục, và ngược lại', () => {

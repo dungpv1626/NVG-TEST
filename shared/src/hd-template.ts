@@ -154,6 +154,7 @@ export interface TemplateField {
 
 const PARTY_FIELDS = [
   ['ten', 'Tên'],
+  ['ho_ten', 'Họ tên (không danh xưng)'],
   ['ma_so_thue', 'Mã số thuế'],
   ['dia_chi', 'Địa chỉ'],
   ['dien_thoai', 'Điện thoại'],
@@ -284,8 +285,19 @@ export function unknownTemplateTags(tags: Readonly<Record<string, unknown>>): st
 // Dữ liệu điền
 // ---------------------------------------------------------------------------------------------
 
+const HONORIFIC_RX = /^(ông\/bà|ông|bà|anh|chị|cô|chú|bác)\s+/iu;
+
+/** Bỏ danh xưng ở đầu tên người; tên công ty giữ nguyên. */
+export function withoutHonorific(name: string | null): string | null {
+  if (name === null) return null;
+  const stripped = name.replace(HONORIFIC_RX, '').trim();
+  return stripped || name;
+}
+
 export interface TemplateParty {
   ten: string | null;
+  /** Tên bỏ danh xưng đầu («Ông Nguyễn Văn A» → «Nguyễn Văn A») — cho mẫu đã in sẵn «Ông/Bà». */
+  ho_ten: string | null;
   ma_so_thue: string | null;
   dia_chi: string | null;
   dien_thoai: string | null;
@@ -415,6 +427,7 @@ export function buildTemplateData(src: TemplateSource): Record<string, TemplateV
 
   const nvg: TemplateParty = {
     ten: src.company.legal_name,
+    ho_ten: src.company.legal_name,
     ma_so_thue: blank(src.company.tax_code),
     dia_chi: blank(src.company.address),
     dien_thoai: blank(src.company.phone),
@@ -427,6 +440,7 @@ export function buildTemplateData(src: TemplateSource): Record<string, TemplateV
   const p = src.partner;
   const partner: TemplateParty = {
     ten: p ? p.name : blank(src.partner_name),
+    ho_ten: withoutHonorific(p ? p.name : blank(src.partner_name)),
     ma_so_thue: blank(p?.tax_code),
     dia_chi: blank(p?.address),
     dien_thoai: blank(p?.phone),

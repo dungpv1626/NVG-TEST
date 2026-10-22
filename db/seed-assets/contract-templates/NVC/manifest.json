@@ -3580,13 +3580,12 @@
       "o_7": {},
       "nvg_so_tai_khoan": {},
       "nvg_ngan_hang": {},
-      "doi_tac_ten": {},
+      "doi_tac_ho_ten": {},
       "o_8": {},
       "o_9": {},
       "o_10": {},
       "o_11": {},
       "o_12": {},
-      "o_13": {},
       "doi_tac_dia_chi": {},
       "doi_tac_dien_thoai": {},
       "doi_tac_email": {},
@@ -3598,19 +3597,20 @@
       "pa_1_b": {
         "pa_1_b_o": {}
       },
+      "o_13": {},
       "o_14": {},
       "o_15": {},
-      "o_16": {},
       "pa_2_a": {
         "pa_2_a_o": {},
-        "o_17": {}
+        "o_16": {}
       },
       "pa_2_b": {
         "pa_2_b_o": {},
-        "o_18": {},
-        "o_19": {}
+        "o_17": {},
+        "o_18": {}
       },
       "c_1": {},
+      "o_19": {},
       "o_20": {},
       "o_21": {},
       "o_22": {},
@@ -3624,7 +3624,6 @@
       "o_30": {},
       "o_31": {},
       "o_32": {},
-      "o_33": {},
       "pa_3_a": {
         "pa_3_a_o": {}
       },
@@ -3637,11 +3636,11 @@
       "pa_4_b": {
         "pa_4_b_o": {}
       },
+      "o_33": {},
       "o_34": {},
       "o_35": {},
       "o_36": {},
-      "o_37": {},
-      "o_38": {}
+      "o_37": {}
     },
     "options": [
       {
@@ -3795,8 +3794,8 @@
         "key": "o_9",
         "seq": 9,
         "article": "Phần đầu văn bản",
-        "before": "Ông/Bà: ",
-        "after": "  Ngày sinh: …",
+        "before": "Ngày sinh: ",
+        "after": "",
         "default": null,
         "option": null,
         "party": "Bên B"
@@ -3805,8 +3804,8 @@
         "key": "o_10",
         "seq": 10,
         "article": "Phần đầu văn bản",
-        "before": "Ông/Bà: …………………………………  Ngày sinh: ",
-        "after": "",
+        "before": "Số định danh cá nhân/CCCD: ",
+        "after": " cấp ngày … tại …",
         "default": null,
         "option": null,
         "party": "Bên B"
@@ -3815,8 +3814,8 @@
         "key": "o_11",
         "seq": 11,
         "article": "Phần đầu văn bản",
-        "before": "Số định danh cá nhân/CCCD: ",
-        "after": " cấp ngày … tại …",
+        "before": "Số định danh cá nhân/CCCD: ……………………… cấp ngày ",
+        "after": " tại …",
         "default": null,
         "option": null,
         "party": "Bên B"
@@ -3825,16 +3824,6 @@
         "key": "o_12",
         "seq": 12,
         "article": "Phần đầu văn bản",
-        "before": "Số định danh cá nhân/CCCD: ……………………… cấp ngày ",
-        "after": " tại …",
-        "default": null,
-        "option": null,
-        "party": "Bên B"
-      },
-      {
-        "key": "o_13",
-        "seq": 13,
-        "article": "Phần đầu văn bản",
         "before": "Số định danh cá nhân/CCCD: ……………………… cấp ngày ……/……/……… tại ",
         "after": "",
         "default": null,
@@ -3842,8 +3831,8 @@
         "party": "Bên B"
       },
       {
-        "key": "o_14",
-        "seq": 14,
+        "key": "o_13",
+        "seq": 13,
         "article": "Điều 1. Nội dung công việc khoán",
         "before": "bê tông ☐ xây trát ☐ lắp dựng kết cấu thép ☐ lợp mái, bao che ☐ lắp đặt điện nước ☐ khác: ",
         "after": ", theo bản vẽ thi công và chỉ dẫn của cán bộ kỹ th",
@@ -3851,8 +3840,8 @@
         "option": null
       },
       {
-        "key": "o_15",
-        "seq": 15,
+        "key": "o_14",
+        "seq": 14,
         "article": "Điều 1. Nội dung công việc khoán",
         "before": "1.2. Vật tư chính, máy móc lớn (cẩu, máy hàn, giàn giáo ",
         "after": ") do Bên A cung cấp. Dụng cụ cầm tay, đồ nghề, bảo",
@@ -3860,8 +3849,8 @@
         "option": null
       },
       {
-        "key": "o_16",
-        "seq": 16,
+        "key": "o_15",
+        "seq": 15,
         "article": "Điều 2. Đơn giá và giá trị khoán",
         "before": "2.1. Giá trị khoán tạm tính: ",
         "after": " đồng.",
@@ -3869,8 +3858,8 @@
         "option": null
       },
       {
-        "key": "o_17",
-        "seq": 17,
+        "key": "o_16",
+        "seq": 16,
         "article": "Điều 2. Đơn giá và giá trị khoán",
         "before": "… Phương án A: Khoán theo đơn giá khối lượng (đồng/m³, đồng/m², đồng/tấn kết cấu ",
         "after": "); thanh toán theo khối lượng thực tế được Bên A n",
@@ -3878,8 +3867,8 @@
         "option": "pa_2_a"
       },
       {
-        "key": "o_18",
-        "seq": 18,
+        "key": "o_17",
+        "seq": 17,
         "article": "Điều 2. Đơn giá và giá trị khoán",
         "before": "… Phương án B: Khoán gọn hạng mục: ",
         "after": " đồng cho toàn bộ hạng mục …",
@@ -3887,8 +3876,8 @@
         "option": "pa_2_b"
       },
       {
-        "key": "o_19",
-        "seq": 19,
+        "key": "o_18",
+        "seq": 18,
         "article": "Điều 2. Đơn giá và giá trị khoán",
         "before": "… Phương án B: Khoán gọn hạng mục: ……………… đồng cho toàn bộ hạng mục ",
         "after": "",
@@ -3897,7 +3886,7 @@
       },
       {
         "key": "c_1",
-        "seq": 20,
+        "seq": 19,
         "article": "Điều 2. Đơn giá và giá trị khoán",
         "before": ", ăn ở, đi lại, dụng cụ cầm tay, bảo hiểm tai nạn của thợ, chi phí quản lý của tổ trưởng; ",
         "after": " thuế.",
@@ -3909,8 +3898,8 @@
         ]
       },
       {
-        "key": "o_20",
-        "seq": 21,
+        "key": "o_19",
+        "seq": 20,
         "article": "Điều 2. Đơn giá và giá trị khoán",
         "before": "sinh ngoài khối lượng khoán chỉ được tính khi có phiếu yêu cầu của chỉ huy trưởng Bên A: ",
         "after": " đồng/công thợ chính; … đồng/công thợ phụ.",
@@ -3918,8 +3907,8 @@
         "option": null
       },
       {
-        "key": "o_21",
-        "seq": 22,
+        "key": "o_20",
+        "seq": 21,
         "article": "Điều 2. Đơn giá và giá trị khoán",
         "before": "án chỉ được tính khi có phiếu yêu cầu của chỉ huy trưởng Bên A: ………… đồng/công thợ chính; ",
         "after": " đồng/công thợ phụ.",
@@ -3927,8 +3916,8 @@
         "option": null
       },
       {
-        "key": "o_22",
-        "seq": 23,
+        "key": "o_21",
+        "seq": 22,
         "article": "Điều 3. Tiến độ",
         "before": "3.1. Thời gian: từ ngày ",
         "after": "/20… đến ngày …/20…; số người tối thiểu thường xuy",
@@ -3936,8 +3925,8 @@
         "option": null
       },
       {
-        "key": "o_23",
-        "seq": 24,
+        "key": "o_22",
+        "seq": 23,
         "article": "Điều 3. Tiến độ",
         "before": "3.1. Thời gian: từ ngày ……/……/20",
         "after": " đến ngày …/20…; số người tối thiểu thường xuyên t",
@@ -3945,8 +3934,8 @@
         "option": null
       },
       {
-        "key": "o_24",
-        "seq": 25,
+        "key": "o_23",
+        "seq": 24,
         "article": "Điều 3. Tiến độ",
         "before": "3.1. Thời gian: từ ngày ……/……/20…… đến ngày ",
         "after": "/20…; số người tối thiểu thường xuyên trên công tr",
@@ -3954,8 +3943,8 @@
         "option": null
       },
       {
-        "key": "o_25",
-        "seq": 26,
+        "key": "o_24",
+        "seq": 25,
         "article": "Điều 3. Tiến độ",
         "before": "3.1. Thời gian: từ ngày ……/……/20…… đến ngày ……/……/20",
         "after": "; số người tối thiểu thường xuyên trên công trường",
@@ -3963,8 +3952,8 @@
         "option": null
       },
       {
-        "key": "o_26",
-        "seq": 27,
+        "key": "o_25",
+        "seq": 26,
         "article": "Điều 3. Tiến độ",
         "before": "từ ngày ……/……/20…… đến ngày ……/……/20……; số người tối thiểu thường xuyên trên công trường: ",
         "after": " người.",
@@ -3972,8 +3961,8 @@
         "option": null
       },
       {
-        "key": "o_27",
-        "seq": 28,
+        "key": "o_26",
+        "seq": 27,
         "article": "Điều 4. Chất lượng và nghiệm thu",
         "before": "4.3. Định mức hao hụt vật tư cho phép: thép ",
         "after": " %, bê tông … %, gạch … %. Vượt định mức do lỗi Bê",
@@ -3981,8 +3970,8 @@
         "option": null
       },
       {
-        "key": "o_28",
-        "seq": 29,
+        "key": "o_27",
+        "seq": 28,
         "article": "Điều 4. Chất lượng và nghiệm thu",
         "before": "4.3. Định mức hao hụt vật tư cho phép: thép …… %, bê tông ",
         "after": " %, gạch … %. Vượt định mức do lỗi Bên B thì khấu",
@@ -3990,8 +3979,8 @@
         "option": null
       },
       {
-        "key": "o_29",
-        "seq": 30,
+        "key": "o_28",
+        "seq": 29,
         "article": "Điều 4. Chất lượng và nghiệm thu",
         "before": "4.3. Định mức hao hụt vật tư cho phép: thép …… %, bê tông …… %, gạch ",
         "after": " %. Vượt định mức do lỗi Bên B thì khấu trừ theo g",
@@ -3999,8 +3988,8 @@
         "option": null
       },
       {
-        "key": "o_30",
-        "seq": 31,
+        "key": "o_29",
+        "seq": 30,
         "article": "Điều 5. Tạm ứng và thanh toán",
         "before": "5.1. Tạm ứng theo tuần/nửa tháng tối đa ",
         "after": " % giá trị khối lượng đã thực hiện được cán bộ kỹ",
@@ -4008,8 +3997,8 @@
         "option": null
       },
       {
-        "key": "o_31",
-        "seq": 32,
+        "key": "o_30",
+        "seq": 31,
         "article": "Điều 5. Tạm ứng và thanh toán",
         "before": "5.2. Thanh toán hằng tháng: ",
         "after": " % giá trị khối lượng nghiệm thu trong tháng sau k",
@@ -4017,8 +4006,8 @@
         "option": null
       },
       {
-        "key": "o_32",
-        "seq": 33,
+        "key": "o_31",
+        "seq": 32,
         "article": "Điều 5. Tạm ứng và thanh toán",
         "before": "n hằng tháng: …… % giá trị khối lượng nghiệm thu trong tháng sau khi trừ tạm ứng; giữ lại ",
         "after": " % để bảo đảm chất lượng.",
@@ -4026,8 +4015,8 @@
         "option": null
       },
       {
-        "key": "o_33",
-        "seq": 34,
+        "key": "o_32",
+        "seq": 33,
         "article": "Điều 5. Tạm ứng và thanh toán",
         "before": "5.3. Hoàn trả tiền giữ lại: ☐ khi Chủ đầu tư nghiệm thu hoàn thành hạng mục ☐ sau ",
         "after": " tháng bảo hành.",
@@ -4035,8 +4024,8 @@
         "option": null
       },
       {
-        "key": "o_34",
-        "seq": 35,
+        "key": "o_33",
+        "seq": 34,
         "article": "Điều 6. An toàn lao động",
         "before": "6.5. Vi phạm an toàn bị phạt theo Quy định an toàn công trường: ",
         "after": " đồng/lượt; tái phạm lần ba, Bên A có quyền đình c",
@@ -4044,8 +4033,8 @@
         "option": null
       },
       {
-        "key": "o_35",
-        "seq": 36,
+        "key": "o_34",
+        "seq": 35,
         "article": "Điều 8. Phạt vi phạm và chấm dứt",
         "before": "8.1. Chậm tiến độ do lỗi Bên B: phạt ",
         "after": " % giá trị phần việc chậm/ngày, tối đa … %.",
@@ -4053,8 +4042,8 @@
         "option": null
       },
       {
-        "key": "o_36",
-        "seq": 37,
+        "key": "o_35",
+        "seq": 36,
         "article": "Điều 8. Phạt vi phạm và chấm dứt",
         "before": "8.1. Chậm tiến độ do lỗi Bên B: phạt …… % giá trị phần việc chậm/ngày, tối đa ",
         "after": " %.",
@@ -4062,8 +4051,8 @@
         "option": null
       },
       {
-        "key": "o_37",
-        "seq": 38,
+        "key": "o_36",
+        "seq": 37,
         "article": "Điều 8. Phạt vi phạm và chấm dứt",
         "before": "n phần đã nghiệm thu sau khi trừ các khoản phạt, bồi thường, nếu Bên B: bỏ công trình quá ",
         "after": " ngày; chất lượng không đạt lặp lại; vi phạm an to",
@@ -4071,8 +4060,8 @@
         "option": null
       },
       {
-        "key": "o_38",
-        "seq": 39,
+        "key": "o_37",
+        "seq": 38,
         "article": "Điều 8. Phạt vi phạm và chấm dứt",
         "before": "8.3. Bên B có quyền chấm dứt hợp đồng nếu Bên A chậm thanh toán quá ",
         "after": " ngày.",
@@ -4080,7 +4069,7 @@
         "option": null
       }
     ],
-    "sha": "74acc651b41e98a6",
+    "sha": "319c4e0562ade172",
     "notes_removed": 1
   },
   {

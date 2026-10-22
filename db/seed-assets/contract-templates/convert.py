@@ -263,6 +263,7 @@ def convert(src: Path, code: str):
     # 1) Khối thông tin hai bên.
     side_prefix = {}
     current = None
+    person = False
     for i, p in enumerate(paras[:head_end]):
         t = ptext(p)
         m = PARTY_HEADER.match(t)
@@ -280,9 +281,18 @@ def convert(src: Path, code: str):
                     replace_range(p, label_end, end, '{nvg_ten}')
                 else:
                     dm = re.search(r'…+', rest)
+                    # «BÊN A: Ông/Bà ……» — tên khách trên hệ thống thường đã có danh xưng
+                    # («Ông Nguyễn Văn A»), in nguyên tên thì ra «Ông/Bà Ông …» (anh Dũng 22/10/2026).
+                    person = bool(dm) and rest[: dm.start()].rstrip().endswith('Ông/Bà')
                     if dm:
-                        replace_range(p, label_end + dm.start(), label_end + dm.end(), '{doi_tac_ten}')
+                        tag = '{doi_tac_ho_ten}' if person else '{doi_tac_ten}'
+                        replace_range(p, label_end + dm.start(), label_end + dm.end(), tag)
                 report['replaced'].append(f'{current}_ten')
+            continue
+        # Dòng «Ông/Bà: ……  Ngày sinh: …» ngay dưới tiêu đề đã có tên — bỏ ô tên lặp, giữ ngày sinh.
+        pm = re.match(r'^Ông/Bà:\s*…+\s*', t)
+        if current == 'doi_tac' and person and pm and pm.end() < len(t):
+            replace_range(p, 0, pm.end(), '')
             continue
         if current is None or t.startswith('(') or t.startswith(NOTE_PREFIX):
             continue
