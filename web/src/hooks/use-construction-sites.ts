@@ -605,6 +605,16 @@ export interface WarrantyClaimRecord {
   cost: MoneyValue | null;
   resolved_at: string | null;
   assignee: { full_name: string } | null;
+  /** Phiếu bảo hành (2F, 0193). */
+  code: string | null;
+  due_date: string | null;
+  voice_path: string | null;
+  voice_transcript: string | null;
+  before_photo_paths: string[] | null;
+  after_photo_paths: string[] | null;
+  started_at: string | null;
+  customer_confirmed_by: string | null;
+  resolver: { full_name: string } | null;
 }
 
 /** Phản ánh của MỌI hạng mục trong công trình — một truy vấn, gom nhóm ở màn hình. */
@@ -618,8 +628,11 @@ export function useWarrantyClaims(warrantyIds: readonly string[]) {
         .from('warranty_claims')
         .select(
           'id, warranty_id, status, description, reported_date, reported_by, assigned_user_id, ' +
-            'root_cause, resolution, cost, resolved_at, ' +
-            'assignee:users!warranty_claims_assigned_user_id_users_id_fk(full_name)',
+            'root_cause, resolution, cost, resolved_at, code, due_date, voice_path, ' +
+            'voice_transcript, before_photo_paths, after_photo_paths, started_at, ' +
+            'customer_confirmed_by, ' +
+            'assignee:users!warranty_claims_assigned_user_id_users_id_fk(full_name), ' +
+            'resolver:users!warranty_claims_resolved_by_fkey(full_name)',
         )
         .in('warranty_id', warrantyIds as string[])
         .is('deleted_at', null)
@@ -808,6 +821,9 @@ export interface SiteBoardRow {
   logged_today: boolean;
   open_requests: number;
   overdue_requests: number;
+  /** Phiếu bảo hành đang mở / quá hạn (2F, 0193). */
+  open_warranty_claims: number;
+  overdue_warranty_claims: number;
 }
 
 /** Mỗi công trình đang chạy một dòng; phạm vi do RLS quyết (hàm SECURITY INVOKER). */

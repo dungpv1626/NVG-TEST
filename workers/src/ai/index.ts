@@ -5,7 +5,8 @@
  *   GET  /ai/status          — chức năng nào đang tắt / giả lập / chạy thật (giao diện ẩn nút)
  *   POST /ai/transcribe      — một đoạn ghi âm khảo sát → chữ (Cloudflare Workers AI Whisper)
  *   POST /ai/survey-summary  — chữ của các đoạn ghi âm → nháp 6 ô báo cáo (Gemini Flash trả phí)
- *   POST /ai/site-log-draft  — một đoạn ghi âm nhật ký công trường → chữ → nháp các mục (Đợt 2 — 2B)
+ *   POST /ai/site-log-draft  — một đoạn ghi âm nhật ký công trường → chữ → nháp các mục (Đợt 2 — 2B);
+ *                              `purpose: 'transcript'` chỉ chép chữ (lời khách báo bảo hành — 2F)
  *
  * Hàng rào chi phí (CLAUDE.md 6.4, chủ dự án chốt «AI làm bằng giả lập trước»):
  *   · `AI_FAKE=1` (chỉ đặt trong `workers/.dev.vars`) → trả kết quả MẪU, không gọi ai cả.
@@ -334,6 +335,8 @@ assistantApp.post('/site-log-draft', async (c) => {
     site_id?: string;
     audio_path?: string;
     seconds?: number | null;
+    /** `transcript` = chỉ chép chữ, không xếp mục (phiếu bảo hành — 2F). */
+    purpose?: 'site_log' | 'transcript';
   };
   if (!body.site_id || !body.audio_path) return c.json({ error: 'Thiếu đoạn ghi âm.' }, 400);
   if (!body.audio_path.startsWith(`${body.site_id}/`)) {
@@ -363,7 +366,10 @@ assistantApp.post('/site-log-draft', async (c) => {
   // 1) Chép chữ.
   let transcript: string;
   if (m.transcribe === 'fake') {
-    transcript = fakeSiteLogTranscript(body.seconds ?? null);
+    transcript =
+      body.purpose === 'transcript'
+        ? `[Giả lập${body.seconds ? ` (${body.seconds} giây ghi âm)` : ''}] Chủ nhà báo trần phòng ngủ tầng ba bị thấm một vệt khoảng nửa mét sau trận mưa tối qua, gần góc cửa sổ, nhờ bên mình qua xem trong tuần này.`
+        : fakeSiteLogTranscript(body.seconds ?? null);
     await logCall(c.env, {
       ...base,
       feature: 'transcribe',
@@ -412,9 +418,11 @@ assistantApp.post('/site-log-draft', async (c) => {
     }
   }
 
-  // 2) Xếp mục. Tắt / hỏng thì trả bản chép chữ, không chặn người ghi.
+  // 2) Xếp mục. Tắt / hỏng / chỉ cần chữ thì trả bản chép chữ, không chặn người ghi.
   const transcriptFake = m.transcribe === 'fake';
-  if (m.siteLog === 'off') return c.json({ transcript, draft: null, fake: transcriptFake });
+  if (m.siteLog === 'off' || body.purpose === 'transcript') {
+    return c.json({ transcript, draft: null, fake: transcriptFake });
+  }
   let draft: SiteLogVoiceDraft;
   if (m.siteLog === 'fake') {
     draft = fakeSiteLogDraft(transcript);

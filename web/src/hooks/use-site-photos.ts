@@ -14,7 +14,7 @@ export const CONSTRUCTION_PHOTO_BUCKET = 'construction-photos';
 /** Khớp `allowed_mime_types` của bucket — sai loại thì Storage từ chối, ở đây chỉ chặn sớm. */
 export const CONSTRUCTION_PHOTO_ACCEPT = 'image/jpeg,image/png,image/webp,image/heic,image/heif';
 
-export type ConstructionPhotoKind = 'nhat-ky' | 'nghiem-thu' | 'diem-danh' | 'lam-ro';
+export type ConstructionPhotoKind = 'nhat-ky' | 'nghiem-thu' | 'diem-danh' | 'lam-ro' | 'bao-hanh';
 
 /** URL ký sống một giờ — đủ cho một phiên xem. */
 const SIGNED_URL_SECONDS = 3600;

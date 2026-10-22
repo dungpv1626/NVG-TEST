@@ -691,7 +691,8 @@ describeDb('TC — bảo hành theo từng hạng mục (TC-07)', () => {
         root_cause: 'Lớp chống thấm thi công thiếu lớp lót ở góc.',
         resolution: 'Bóc lại 12 m2 và thi công đủ lớp.',
         cost: 6_500_000,
-        resolved_at: new Date().toISOString(),
+        // 0193: hoàn tất phải có ảnh xác nhận sau khi sửa (giờ hoàn tất do máy ghi).
+        after_photo_paths: [`${fixture.nvcSiteId}/bao-hanh/${crypto.randomUUID()}.jpg`],
       })
       .eq('id', (claim as { id: string }).id);
     expect(error).toBeNull();

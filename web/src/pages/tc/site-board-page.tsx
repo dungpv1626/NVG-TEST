@@ -32,6 +32,8 @@ function problemsOf(r: SiteBoardRow): string[] {
   if (r.site_overdue) out.push('Quá hạn hoàn thành');
   if (r.current_milestone_overdue) out.push('Mốc quá hạn');
   if (r.overdue_requests > 0) out.push(`${r.overdue_requests} đề nghị quá ngày cần`);
+  if (r.overdue_warranty_claims > 0)
+    out.push(`${r.overdue_warranty_claims} phiếu bảo hành quá hạn`);
   if (r.milestones_waiting_check > 0) out.push(`${r.milestones_waiting_check} mốc chờ kiểm`);
   return out;
 }
@@ -88,7 +90,7 @@ export function SiteBoardPage() {
           { label: 'Công trình', to: '/tc/cong-trinh' },
           { label: 'Bảng theo dõi' },
         ]}
-        description="Mỗi công trình đang chạy một dòng: mốc hiện tại, nhật ký hôm nay, mốc chờ kiểm, đề nghị đang mở. Công trình có vấn đề đứng trên."
+        description="Mỗi công trình đang chạy (và công trình bảo hành còn phiếu mở) một dòng: mốc hiện tại, nhật ký hôm nay, mốc chờ kiểm, phiếu bảo hành, đề nghị đang mở. Công trình có vấn đề đứng trên."
       />
 
       {!isLoading && !error && (
@@ -166,6 +168,17 @@ export function SiteBoardPage() {
             key: 'log',
             header: 'Nhật ký',
             render: (r) => <LogCell r={r.board} />,
+          },
+          {
+            key: 'warranty',
+            header: 'Phiếu bảo hành mở',
+            numeric: true,
+            render: (r) =>
+              r.board.open_warranty_claims === 0 ? (
+                <span className="text-fg-subtle">—</span>
+              ) : (
+                r.board.open_warranty_claims
+              ),
           },
           {
             key: 'requests',

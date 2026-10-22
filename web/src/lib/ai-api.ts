@@ -84,6 +84,8 @@ export function draftSiteLog(input: {
   siteId: string;
   audioPath: string;
   seconds: number | null;
+  /** `transcript` = chỉ chép chữ, không xếp mục nhật ký. */
+  purpose?: 'site_log' | 'transcript';
 }): Promise<{
   transcript: string;
   draft: SiteLogVoiceDraft | null;
@@ -92,6 +94,11 @@ export function draftSiteLog(input: {
 }> {
   return call('/site-log-draft', {
     method: 'POST',
-    body: { site_id: input.siteId, audio_path: input.audioPath, seconds: input.seconds },
+    body: {
+      site_id: input.siteId,
+      audio_path: input.audioPath,
+      seconds: input.seconds,
+      purpose: input.purpose ?? 'site_log',
+    },
   });
 }

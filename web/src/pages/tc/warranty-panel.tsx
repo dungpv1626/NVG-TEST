@@ -7,35 +7,21 @@
  *
  * Ngày hết hạn do CSDL tính từ ngày bàn giao + thời hạn hợp đồng, nên hai màn hình không bao
  * giờ ra hai ngày khác nhau.
+ *
+ * Phiếu bảo hành của từng hạng mục (lập, giao, hạn, ảnh, đóng phiếu) ở `warranty-claims.tsx` (2F).
  */
 
 import { useState, type FormEvent } from 'react';
-import {
-  BUTTONS,
-  WARRANTY_CLAIM_STATUSES,
-  WARRANTY_CLAIM_STATUS_META,
-  WARRANTY_STATUS_META,
-  formatCurrency,
-  formatDate,
-  warrantyDaysLeft,
-  type WarrantyClaimStatus,
-  toNvgDateInput,
-} from '@nvg/shared';
+import { BUTTONS, WARRANTY_STATUS_META, formatDate, warrantyDaysLeft } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/states';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
-import {
-  useSaveWarranty,
-  useSaveWarrantyClaim,
-  useWarranties,
-  useWarrantyClaims,
-} from '@/hooks/use-construction-sites';
+import { useSaveWarranty, useWarranties, useWarrantyClaims } from '@/hooks/use-construction-sites';
 import { toUserMessage } from '@/hooks/use-error-message';
-
-const TODAY = () => toNvgDateInput(new Date());
+import { WarrantyClaimForm, WarrantyClaimItem, claimOverdue } from './warranty-claims';
 
 export function WarrantyPanel({
   siteId,
@@ -52,17 +38,16 @@ export function WarrantyPanel({
   const warrantyIds = (warranties ?? []).map((w) => w.id);
   const { data: claims } = useWarrantyClaims(warrantyIds);
   const saveWarranty = useSaveWarranty();
-  const saveClaim = useSaveWarrantyClaim();
+
+  const openClaims = (claims ?? []).filter(
+    (c) => c.status === 'tiep_nhan' || c.status === 'dang_xu_ly',
+  ).length;
+  const overdueClaims = (claims ?? []).filter(claimOverdue).length;
 
   const [addingItem, setAddingItem] = useState(false);
   const [claimFor, setClaimFor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [itemForm, setItemForm] = useState({ item: '', durationMonths: '', startDate: '' });
-  const [claimForm, setClaimForm] = useState({
-    description: '',
-    reportedDate: TODAY(),
-    reportedBy: '',
-  });
 
   async function addItem(e: FormEvent) {
     e.preventDefault();
@@ -88,45 +73,24 @@ export function WarrantyPanel({
     }
   }
 
-  async function addClaim(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
-    if (!claimForm.description.trim()) {
-      setError('Vui lòng ghi nội dung khách hàng phản ánh.');
-      return;
-    }
-    try {
-      await saveClaim.mutateAsync({
-        siteId,
-        companyId,
-        values: {
-          warranty_id: claimFor,
-          description: claimForm.description.trim(),
-          reported_date: claimForm.reportedDate,
-          reported_by: claimForm.reportedBy.trim() || null,
-        },
-      });
-      setClaimForm({ description: '', reportedDate: TODAY(), reportedBy: '' });
-      setClaimFor(null);
-    } catch (e) {
-      setError(toUserMessage(e, 'create'));
-    }
-  }
-
-  async function updateClaim(id: string, values: Record<string, unknown>) {
-    setError(null);
-    try {
-      await saveClaim.mutateAsync({ id, siteId, companyId, values });
-    } catch (e) {
-      setError(toUserMessage(e, 'edit'));
-    }
-  }
-
   return (
     <div className="space-y-4">
       {error && (
         <p role="alert" className="rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
           {error}
+        </p>
+      )}
+
+      {openClaims > 0 && (
+        <p
+          className={
+            overdueClaims > 0
+              ? 'rounded-sm bg-status-overdue-bg px-3 py-2 font-medium text-status-overdue'
+              : 'rounded-sm bg-surface-sunken px-3 py-2'
+          }
+        >
+          {openClaims} phiếu bảo hành đang mở
+          {overdueClaims > 0 && ` — ${overdueClaims} phiếu quá hạn xử lý`}
         </p>
       )}
 
@@ -222,113 +186,36 @@ export function WarrantyPanel({
                 </p>
 
                 {itemClaims.length > 0 && (
-                  <ul className="mt-3 space-y-2">
+                  <ul className="mt-3 space-y-3">
                     {itemClaims.map((c) => (
-                      <li key={c.id} className="border-l-2 border-border pl-3">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <StatusLozenge
-                            status={WARRANTY_CLAIM_STATUS_META[c.status].statusGroup}
-                          />
-                          <span className="text-xs text-fg-subtle">
-                            {WARRANTY_CLAIM_STATUS_META[c.status].label} ·{' '}
-                            {formatDate(c.reported_date)}
-                            {c.reported_by && ` · ${c.reported_by} phản ánh`}
-                          </span>
-                        </div>
-                        <p className="mt-1 whitespace-pre-wrap">{c.description}</p>
-                        {c.root_cause && (
-                          <p className="mt-1 text-fg-subtle">Nguyên nhân: {c.root_cause}</p>
-                        )}
-                        {c.resolution && (
-                          <p className="text-fg-subtle">
-                            Kết quả: {c.resolution}
-                            {c.cost != null && ` · chi phí ${formatCurrency(c.cost)}`}
-                          </p>
-                        )}
-
-                        {!readOnly && (
-                          <Field label="Trạng thái xử lý" className="mt-2 w-56">
-                            <select
-                              value={c.status}
-                              onChange={(e) => {
-                                const status = e.target.value as WarrantyClaimStatus;
-                                void updateClaim(c.id, {
-                                  status,
-                                  resolved_at:
-                                    status === 'da_xu_ly' || status === 'tu_choi'
-                                      ? new Date().toISOString()
-                                      : null,
-                                });
-                              }}
-                              className="h-10 w-full rounded-sm border border-border bg-surface px-3"
-                            >
-                              {WARRANTY_CLAIM_STATUSES.map((s) => (
-                                <option key={s} value={s}>
-                                  {WARRANTY_CLAIM_STATUS_META[s].label}
-                                </option>
-                              ))}
-                            </select>
-                          </Field>
-                        )}
-                      </li>
+                      <WarrantyClaimItem
+                        key={c.id}
+                        claim={c}
+                        siteId={siteId}
+                        companyId={companyId}
+                        readOnly={readOnly}
+                      />
                     ))}
                   </ul>
                 )}
 
                 {!readOnly &&
                   (claimFor === w.id ? (
-                    <form
-                      onSubmit={addClaim}
-                      noValidate
-                      className="mt-3 border-t border-border pt-3"
-                    >
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <Field label="Khách hàng phản ánh" required className="sm:col-span-2">
-                          <textarea
-                            value={claimForm.description}
-                            onChange={(e) =>
-                              setClaimForm((f) => ({ ...f, description: e.target.value }))
-                            }
-                            rows={2}
-                            className="w-full rounded-sm border border-border bg-surface px-3 py-2"
-                            autoFocus
-                          />
-                        </Field>
-
-                        <Field label="Ngày tiếp nhận">
-                          <DateInput
-                            value={claimForm.reportedDate}
-                            onChange={(v) => setClaimForm((f) => ({ ...f, reportedDate: v }))}
-                          />
-                        </Field>
-
-                        <Field label="Người phản ánh">
-                          <Input
-                            value={claimForm.reportedBy}
-                            onChange={(e) =>
-                              setClaimForm((f) => ({ ...f, reportedBy: e.target.value }))
-                            }
-                          />
-                        </Field>
-                      </div>
-
-                      <div className="mt-3 flex gap-2">
-                        <Button type="submit" variant="primary" disabled={saveClaim.isPending}>
-                          Ghi nhận phản ánh
-                        </Button>
-                        <Button type="button" variant="secondary" onClick={() => setClaimFor(null)}>
-                          {BUTTONS.cancel}
-                        </Button>
-                      </div>
-                    </form>
+                    <WarrantyClaimForm
+                      siteId={siteId}
+                      companyId={companyId}
+                      warrantyId={w.id}
+                      onDone={() => setClaimFor(null)}
+                    />
                   ) : (
-                    <button
-                      type="button"
-                      className="mt-2 text-brand underline"
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="mt-3"
                       onClick={() => setClaimFor(w.id)}
                     >
-                      Ghi nhận phản ánh bảo hành
-                    </button>
+                      Lập phiếu bảo hành
+                    </Button>
                   ))}
               </li>
             );

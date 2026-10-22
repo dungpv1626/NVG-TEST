@@ -18,7 +18,7 @@ import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 
 /** Người làm thi công của pháp nhân — cùng điều kiện «Đã phân công chỉ huy trưởng» (0164). */
-function useCommanderCandidates(companyId: string) {
+export function useCommanderCandidates(companyId: string) {
   return useQuery<{ id: string; full_name: string }[], Error>({
     queryKey: ['users', 'site-commanders', companyId],
     queryFn: async () => {
