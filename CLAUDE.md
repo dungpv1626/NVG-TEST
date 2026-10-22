@@ -864,6 +864,9 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
     `QUOTE_STAGES`); tab Báo giá thay nút bằng lý do, trang lập báo giá chặn khi vào thẳng. Trước đây BGĐ chưa duyệt
     khảo sát mà Kinh doanh vẫn lập, gửi duyệt, gửi khách được báo giá. Phép thử đổi theo thứ tự thật (duyệt khảo sát →
     sang Báo giá → lập báo giá), đột biến gỡ trigger đã đo đỏ.
+- **Sửa 22/10/2026:** mẫu hợp đồng khách cá nhân hết in «Ông/Bà Ông …» (tiêu đề bên khách dùng `{doi_tac_ho_ten}` —
+  tên bỏ danh xưng, `withoutHonorific`), dòng «Ông/Bà: …» lặp bên dưới chỉ còn ngày sinh (`convert.py`, NVO-HĐ-01→04,
+  NVC-HĐ-05; commit 3f1077f). Ô đã điền của `NVO-HD-2026-THU1` chuyển sang mẫu mới.
 - **Hợp đồng — soạn bằng máy (21/10/2026, commit 44cc2f9 → nay):** thẻ báo giá ghi bước tiếp theo (gửi khách xong
   cơ hội tự sang Đàm phán); Điều khoản + Văn bản gộp thành tab «Soạn hợp đồng» hai cột (trái sửa, phải bản xem trước
   luôn hiện, tự cập nhật, ô thiếu tô vàng, cột dính đo chiều cao header thật — `--detail-sticky-top`); máy soạn sẵn
@@ -923,46 +926,62 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 
 #### Trạng thái từng phần
 
-| Phần                                  | Trạng thái                                                                                                                                                                                                                                                                                                    |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Mã Đợt 1                              | Xong; phép thử CSDL có đột biến; `tsc`, `lint` (trừ `backup/`) sạch                                                                                                                                                                                                                                           |
-| Hợp đồng (0185–0187)                  | Xong trên máy: 21 mẫu NVC / NVO / NVS nạp bằng seed, mọi chỗ trống điền được và lưu theo hợp đồng, Kinh doanh ghi nhận ký kèm bản đã ký, ký xong tự mở công trình. Cả bộ phép thử `db` xanh trừ hai nhóm đỏ sẵn (9.6)                                                                                         |
-| Cập nhật tức thời (0188)              | Xong: thông báo + phê duyệt đẩy về trình duyệt ~1 giây (đo bằng Playwright), không cần F5                                                                                                                                                                                                                     |
-| Bộ quét + bản đã ký (0189)            | Xong trên máy, anh Dũng chạy thử bằng ảnh thật tới bản đạt (lần quét «sss» trên AB). `scan.test.ts` + `hd-template.test.ts` (22) xanh, đột biến chính sách kho đã đo đỏ. Chưa thử trên điện thoại thật                                                                                                        |
-| Nhật ký giọng nói (0190)              | Xong trên máy, chạy thử bằng `chihuytruong.nvo@…` ở khung điện thoại với AI giả lập. Máy xếp mục (`ai.site_log_enabled`) để TẮT — chưa duyệt chi phí; tắt thì vẫn chép chữ thật và đưa nguyên lời vào ô Nội dung                                                                                              |
-| Đợt 2 Thi công (0190–0194)            | Xong trên máy: nhật ký giọng nói, bảng theo dõi Trưởng phòng, biên bản ký hai bên → Kế toán, phiếu bảo hành, mẫu nháp khi bàn giao. Mỗi phần có phép thử CSDL + đột biến đã đo đỏ và chạy thử bằng đúng vai trên trình duyệt. Cả bộ `db` 644/649 (5 đỏ sẵn: `env-guard`, `kb-room-area-stats` khi chạy chung) |
-| Bộ mẫu hợp đồng                       | Bản DỰ THẢO (anh Dũng gửi, dùng như chính thức) — chờ pháp chế NVG rà; bảng hỏi mục 6 trong tệp «00_Huong_dan» từng bộ chờ NVG trả lời. Tài khoản ngân hàng ba công ty là số DEMO                                                                                                                             |
-| AI trên máy                           | **Chạy THẬT**: Whisper (Workers AI) + Gemini 2.5 Flash trả phí — `workers/.dev.vars` `AI_FAKE=` rỗng, công tắc `ai.transcribe_enabled` / `ai.survey_summary_enabled` = 1 ở CSDL máy. Muốn quay về giả lập: `AI_FAKE=1`                                                                                        |
-| Bản demo cũ `nvg.tests99.workers.dev` | Vẫn chạy bản trước GĐ1, CSDL `awaiwegmuykhctnysvou` — ở tài khoản khác, máy này KHÔNG vào được                                                                                                                                                                                                                |
-| Bản demo mới                          | Supabase `fvfmtbdcvcniakigfpdm` đã migrate 0001→0181 + seed + 5/6 kịch bản demo (thiếu NVO). Cloudflare tài khoản wewear (`automkt.workers.dev`) — **chưa deploy**; lần thử đầu bị từ chối vì gói Free không cho `limits.cpu_ms`                                                                              |
-| Repo                                  | Chỉ đẩy lên `dungpv1626/NVG-TEST` (remote `dungpv`); remote `origin` (anhoangha) đã khoá đẩy                                                                                                                                                                                                                  |
+| Phần                                  | Trạng thái                                                                                                                                                                                                                                                                                                                                                                      |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mã Đợt 1                              | Xong; phép thử CSDL có đột biến; `tsc`, `lint` (trừ `backup/`) sạch                                                                                                                                                                                                                                                                                                             |
+| Hợp đồng (0185–0187)                  | Xong trên máy: 21 mẫu NVC / NVO / NVS nạp bằng seed, mọi chỗ trống điền được và lưu theo hợp đồng, Kinh doanh ghi nhận ký kèm bản đã ký, ký xong tự mở công trình. Cả bộ phép thử `db` xanh trừ hai nhóm đỏ sẵn (9.6)                                                                                                                                                           |
+| Cập nhật tức thời (0188)              | Xong: thông báo + phê duyệt đẩy về trình duyệt ~1 giây (đo bằng Playwright), không cần F5                                                                                                                                                                                                                                                                                       |
+| Bộ quét + bản đã ký (0189)            | Xong trên máy, anh Dũng chạy thử bằng ảnh thật tới bản đạt (lần quét «sss» trên AB). `scan.test.ts` + `hd-template.test.ts` (22) xanh, đột biến chính sách kho đã đo đỏ. Chưa thử trên điện thoại thật                                                                                                                                                                          |
+| Nhật ký giọng nói (0190)              | Xong trên máy, chạy thử bằng `chihuytruong.nvo@…` ở khung điện thoại với AI giả lập. Máy xếp mục (`ai.site_log_enabled`) để TẮT — chưa duyệt chi phí; tắt thì vẫn chép chữ thật và đưa nguyên lời vào ô Nội dung                                                                                                                                                                |
+| Đợt 2 Thi công (0190–0194)            | Xong trên máy, anh Dũng CHƯA chạy thử (dữ liệu thử `NVO-CT-2026-0901`, `-0902`): nhật ký giọng nói, bảng theo dõi Trưởng phòng, biên bản ký hai bên → Kế toán, phiếu bảo hành, mẫu nháp khi bàn giao. Mỗi phần có phép thử CSDL + đột biến đã đo đỏ và chạy thử bằng đúng vai trên trình duyệt. Cả bộ `db` 644/649 (5 đỏ sẵn: `env-guard`, `kb-room-area-stats` khi chạy chung) |
+| Bộ mẫu hợp đồng                       | Bản DỰ THẢO (anh Dũng gửi, dùng như chính thức) — chờ pháp chế NVG rà; bảng hỏi mục 6 trong tệp «00_Huong_dan» từng bộ chờ NVG trả lời. Tài khoản ngân hàng ba công ty là số DEMO                                                                                                                                                                                               |
+| AI trên máy                           | **Chạy THẬT**: Whisper (Workers AI) + Gemini 2.5 Flash trả phí — `workers/.dev.vars` `AI_FAKE=` rỗng, công tắc `ai.transcribe_enabled` / `ai.survey_summary_enabled` = 1 ở CSDL máy. Muốn quay về giả lập: `AI_FAKE=1`                                                                                                                                                          |
+| Bản demo cũ `nvg.tests99.workers.dev` | Vẫn chạy bản trước GĐ1, CSDL `awaiwegmuykhctnysvou` — ở tài khoản khác, máy này KHÔNG vào được                                                                                                                                                                                                                                                                                  |
+| Bản demo mới                          | Supabase `fvfmtbdcvcniakigfpdm` đã migrate 0001→0181 + seed + 5/6 kịch bản demo (thiếu NVO). Cloudflare tài khoản wewear (`automkt.workers.dev`) — **chưa deploy**; lần thử đầu bị từ chối vì gói Free không cho `limits.cpu_ms`                                                                                                                                                |
+| Repo                                  | Chỉ đẩy lên `dungpv1626/NVG-TEST` (remote `dungpv`); remote `origin` (anhoangha) đã khoá đẩy                                                                                                                                                                                                                                                                                    |
 
 #### Bước tiếp theo
 
 1. **Anh Dũng đang chạy thử trên máy** — đã đi trọn: đầu mối → phân loại → khảo sát → duyệt → báo giá → gửi khách →
    Đàm phán → soạn hợp đồng (bộ mẫu NVC-HĐ-01) → duyệt → ký → công trình đã mở → quét bản đã ký. Hợp đồng «AB»
-   `NVC-HD-2026-0501` (`ce44609b-3977-474c-887d-a747255bbd3a`) có công trình `NVC-CT-2026-0105`, bản đã ký đang dùng là lần
-   quét «sss» (6 lần quét trong lịch sử, các link khách đều đã thu hồi). Còn thử: hợp đồng NVO `NVO-HD-2026-THU1`
+   `NVC-HD-2026-0501` (`ce44609b-3977-474c-887d-a747255bbd3a`, Đã ký, người chịu trách nhiệm Nguyễn Văn A — Kinh doanh
+   NVC) có công trình `NVC-CT-2026-0105` (`9c2f0f6e-b475-41e0-b457-74bf292c254b`) ở bước **Chuẩn bị, CHƯA có chỉ huy
+   trưởng** — việc đang ở Trưởng phòng Thi công NVC Hoàng Văn E (`congtruong.nvc@…`): chọn chỉ huy trưởng (vd Đỗ Văn K
+   `chihuytruong.nvc@…`) và sửa ngày dự kiến (đang là ngày thử 21–22/10/2026, sẽ hiện «Quá hạn») rồi sang «Đang thi
+   công». Tiến độ thanh toán của AB chỉ có dòng thử («Test» 30%) — sửa bằng phụ lục. Bản đã ký đang dùng là lần quét
+   «sss» (6 lần quét trong lịch sử, các link khách đều đã thu hồi). Còn thử: hợp đồng NVO `NVO-HD-2026-THU1`
    (`26581784-c23e-4a4a-aabc-0e19f2589e34`, 9 đợt thanh toán mẫu NVO-HĐ-02); khảo sát mới trên «Ok» `NVC-CH-2026-1648`;
    việc hôm nay, khách cũ, thư viện mẫu, Trợ lý AI. Lỗi anh gặp → sửa ngay, kiểm bằng đúng vai (`backup/*.cjs`).
    Tài khoản (`http://localhost:5173`, mật khẩu `NhaViet2026`): `kinhdoanh.nvc@…`, `kinhdoanh.nvo@…`, `tgd@…`,
    `congtruong.nvc@…`, `thietke.nvo@…`. Sau khi khởi động lại máy: Docker → `npm run db:start` → `npm run dev:workers` →
    `npm run dev`. Cổng 8788 có nhiều tiến trình `workerd` cũ thì tắt hết rồi chạy lại một bản.
-   Việc treo của phần hợp đồng: khách cá nhân (mẫu NVO) in «Ông/Bà Ông …» lặp chữ + ô «Ông/Bà: ___» trùng tên khách;
+   Việc treo của phần hợp đồng (lỗi «Ông/Bà Ông …» đã sửa 22/10, commit 3f1077f):
    phụ lục / biên bản nghiệm thu / thanh lý / hợp đồng lao động / bộ biểu mẫu dự thầu trong bộ gửi CHƯA nạp (thuộc
    phân hệ khác — nạp khi làm phần đó, dùng lại `convert.py`); chưa có chỗ tạo hợp đồng mua vật tư / thuê máy / giao
    khoán với nhà cung cấp, tổ đội (thuộc Mua hàng, Thi công).
    Việc treo của bộ quét: (a) **giấy cong** — đề xuất thêm điểm giữa mỗi cạnh để uốn theo mép (máy tự đặt khi thấy mép),
    chờ anh Dũng quyết; tờ giấy tràn khung thì chỉ nắn được theo dòng chữ (khó hơn nhiều); (b) thử trên **điện thoại thật**
    (cần cho Vite / Worker nghe mạng nhà và tạm đổi `.env` sang IP máy `192.168.1.12` — chưa làm, anh Dũng chưa yêu cầu);
-   (c) gắn `DocumentScanner` vào biên bản nghiệm thu, đề nghị thanh toán khi làm Đợt 2 / Đợt 3; (d) ảnh đã qua Zalo /
+   (c) đã gắn vào ký biên bản nghiệm thu (2D); còn đề nghị thanh toán ở Đợt 3; (d) ảnh đã qua Zalo /
    chỉnh sửa có thể mang thời điểm gửi chứ không phải lúc chụp → thứ tự lệch, dùng «Đảo thứ tự trang».
-2. **Đợt 2 — Thi công: xong trên máy** (2A, 2B, 2D, 2E, 2F, 2G). Còn: 2C điểm danh tổ (chờ câu 6), mốc nhà xưởng NVC
-   (chờ câu 15); bật thật máy xếp mục nhật ký `ai.site_log_enabled` và đặt `tc.warranty_response_days` — chờ anh Dũng.
-   Anh Dũng nên chạy thử trọn Đợt 2 bằng `congtruong.nvo@…`, `chihuytruong.nvo@…`, `ketoan@…`, `thietke.nvo@…` trên
-   `NVO-CT-2026-0901`. Tiếp theo: **Đợt 3 Tài chính** (đọc `doc/KE_HOACH_LAM_HO.md` trước). Phần gốc của mục này:: 7 mốc NVO + nghiệm thu trước khi che khuất, nhật ký giọng nói
-   (dùng lại `VoiceRecorder` + Whisper), biên bản tự sinh, màn hình Trưởng phòng Thi công, phiếu bảo hành. Điểm danh tổ
-   (2C) và mốc NVC chờ câu hỏi 6, 15. Rồi Đợt 3 Tài chính; Đợt 4 Mua hàng – Kho và Đợt 5 song song.
+2. **Đợt 2 — Thi công: xong trên máy, anh Dũng CHƯA chạy thử.** Hướng dẫn chạy thử đã gửi anh Dũng (22/10) theo
+   thứ tự: 2B nhật ký nói (chỉ huy trưởng, 0901) → 2A mốc (0901) → 2E bảng theo dõi → 2D biên bản ký hai bên → Kế toán
+   (0902) → bàn giao 0902 → 2G mẫu nháp (Thiết kế) → 2F phiếu bảo hành (0902). Dữ liệu thử NVO:
+   `NVO-CT-2026-0901` (`a705ba2b-…`, đang thi công, mốc 3/7, không gắn hồ sơ thiết kế) và `NVO-CT-2026-0902`
+   (`a7790cd0-c40b-41be-8b51-98069157345e`, dựng 22/10: đạt đủ 7 mốc, đang «Nghiệm thu», gắn hồ sơ thiết kế có đầu bài
+   đã xác nhận, 4 ảnh nhật ký, 3 hạng mục bảo hành — chỉ thiếu biên bản nghiệm thu chủ đầu tư đã ký để sang «Bảo hành»).
+   Còn của Đợt 2: 2C điểm danh tổ (câu 6), mốc nhà xưởng NVC (câu 15); chờ anh Dũng: bật `ai.site_log_enabled` (Gemini
+   ~0,001 USD / lượt nói), đặt `tc.warranty_response_days`.
+   **Các đợt còn lại** (`doc/KE_HOACH_LAM_HO.md` mục 3 — đọc trước khi bắt đầu):
+   - **Đợt 3 Tài chính và kiểm soát — làm tiếp theo** (dùng mốc + biên bản của Đợt 2): 3A đợt thu gắn mốc / biên bản,
+     nhắc thu; 3B đề nghị thu tiền tự điền từ biên bản đã ký (gắn bộ quét); 3C dòng tiền 4–8 tuần; 3D lãi / lỗ từng
+     công trình; 3E danh sách bất thường cho KSNB (ngưỡng — câu 17). Xong khi: một bấm từ biên bản ra đề nghị thu
+     đúng số; CFO thấy tuần thiếu tiền trước khi tới.
+   - **Đợt 4 Mua hàng – Kho**: 4A gom đề nghị mua, 4B bảng so giá nhà cung cấp, 4C nhắc đơn sắp trễ, 4D tồn tối
+     thiểu (mức — câu 17).
+   - **Đợt 5 các bộ phận còn lại**: 5A Thiết kế khảo sát ghi âm + vòng ý kiến, 5B AI Design 4 bước, 5C hồ sơ dự thầu
+     NVC (câu 14, 19), 5D NVS cho thuê (giá bồi thường — câu 17), 5E Nhân sự bảng công (câu 6), 5F Hành chính.
+   - Đợt 4, 5 không phụ thuộc Đợt 3 — đổi thứ tự được nếu anh Dũng cần bộ phận nào trước.
 3. **Phát hành — CHỈ sau khi xong mọi tính năng** (anh Dũng quyết 18/10/2026). Trình tự đã chuẩn bị:
    (a) chọn gói Cloudflare: Workers Paid 5 USD/tháng (đủ AI Design + Whisper), hoặc Free và tách `limits.cpu_ms` khỏi
    `workers/wrangler.jsonc` (AI Design hỏng, Whisper đoạn dài dễ hỏng); (b) khôi phục Supabase nếu đã tạm dừng; tạo lại mật
@@ -1160,6 +1179,11 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 - Không xoá được tệp trong kho bằng SQL (`storage.protect_delete`) — dùng Storage API với khoá service đọc từ `.env`
   (đừng in khoá). Thử bộ quét: dùng ảnh thật của anh Dũng trong scratchpad (dữ liệu khách — KHÔNG commit), chạy thẳng
   mã `lib/scan/*.ts` trên trình duyệt bằng `page.evaluate(() => import('/src/lib/scan/…'))` qua Vite dev.
+- Thử AI không tốn tiền: `workers/.dev.vars` đặt `AI_FAKE=transcribe` (hoặc `transcribe,site_log`), tắt hết
+  `wrangler`/`workerd` rồi `npm run dev:workers`; thử xong trả về `AI_FAKE=` (rỗng = AI thật). Đừng sửa tệp này bằng
+  `Set-Content` của PowerShell 5.1 — nó thêm BOM và CRLF; dùng `sed -i`.
+- Dữ liệu thử Đợt 2 (công trình, biên bản, phiếu, mẫu) dọn bằng xoá mềm `deleted_at` (biên bản: `status = 'huy'`) +
+  xoá thông báo theo `related_entity_id`. Mã công trình thử `NVO-CT-2026-09xx` đặt tay — dãy số NVO CT đang ở 78.
 - Thử nhanh trên máy: «AB» `bd36f4d6-857f-49ff-a94d-f69c3cbf499c`, «Ok» `ad60f61f-6b09-47d4-9823-a92366659fb2`,
   công trình NVO `NVO-CT-2026-0901` (`a705ba2b-885f-4b9f-a971-b12364e7e4fd`). Khách thử «Dũng đen» trùng số với đầu mối
   NVC-DM-2026-0043 — để lại có chủ đích (chưa xoá).
