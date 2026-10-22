@@ -245,6 +245,16 @@ const CollectionSchedulePage = lazy(() =>
     default: m.CollectionSchedulePage,
   })),
 );
+const CollectionRequestListPage = lazy(() =>
+  import('@/pages/kt/collection-request-pages').then((m) => ({
+    default: m.CollectionRequestListPage,
+  })),
+);
+const CollectionRequestDetailPage = lazy(() =>
+  import('@/pages/kt/collection-request-pages').then((m) => ({
+    default: m.CollectionRequestDetailPage,
+  })),
+);
 const RentalSettlementPage = lazy(() =>
   import('@/pages/kt/rental-settlement-page').then((m) => ({ default: m.RentalSettlementPage })),
 );
@@ -474,6 +484,8 @@ const router = createBrowserRouter(
           <Route path="kt/cong-no" element={<ReceivablePage />} />
           <Route path="kt/thue-gian-giao" element={<RentalSettlementPage />} />
           <Route path="kt/dot-thu" element={<CollectionSchedulePage />} />
+          <Route path="kt/de-nghi-thu" element={<CollectionRequestListPage />} />
+          <Route path="kt/de-nghi-thu/:id" element={<CollectionRequestDetailPage />} />
           <Route path="kt/bien-ban-nghiem-thu" element={<AcceptanceBillingPage />} />
           <Route path="kt/dong-tien" element={<CashFlowPage />} />
           <Route path="kt/ky-ke-toan" element={<AccountingPeriodPage />} />

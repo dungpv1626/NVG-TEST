@@ -16,6 +16,7 @@ import {
   formatCurrency,
   formatDate,
   formatDeadline,
+  toNvgDateInput,
   type ContractTermType,
 } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
@@ -30,6 +31,9 @@ import {
 } from '@/hooks/use-collections';
 import { useParameterNumber } from '@/hooks/use-parameter-number';
 import { useCompanyScope } from '@/lib/company-scope';
+import { Button } from '@/components/ui/button';
+import { useCan } from '@/lib/auth';
+import { useOpenCollectionRequest } from './collection-request-pages';
 import { KtNav } from './kt-nav';
 
 type Filter = 'den_han' | 'chua_den' | 'da_xong';
@@ -51,7 +55,7 @@ function stateLabel(row: CollectionScheduleRow) {
       <StatusWithLabel status="completed" label={`Hoàn thành ${formatDate(row.completed_at)}`} />
     );
   if (row.state === 'den_han') {
-    const late = row.due_date !== null && row.due_date < new Date().toISOString().slice(0, 10);
+    const late = row.due_date !== null && row.due_date < toNvgDateInput(new Date());
     return late ? (
       <StatusWithLabel status="overdue" label={formatDeadline(row.due_date)} />
     ) : (
@@ -86,6 +90,9 @@ export function CollectionSchedulePage() {
   const { data, isLoading, error, refetch } = useCollectionSchedule();
   const { data: remindDays } = useParameterNumber('kt.collection_remind_days_before');
   const [filter, setFilter] = useState<Filter>('den_han');
+  const canEdit = useCan('KT', 'edit');
+  const collection = useOpenCollectionRequest();
+  const [message, setMessage] = useState<string | null>(null);
 
   const all = data ?? [];
   const rows = all.filter((r) => inFilter(r.state, filter));
@@ -111,6 +118,14 @@ export function CollectionSchedulePage() {
           ? 'Nhắc trước hạn: chưa cấu hình số ngày — hệ thống chỉ báo khi mốc đạt / biên bản ký hoặc khi đã tới ngày hạn.'
           : `Nhắc trước hạn ${remindDays} ngày.`}
       </p>
+      {message && (
+        <p
+          role="alert"
+          className="mb-3 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
+        >
+          {message}
+        </p>
+      )}
       {isLoading ? (
         <TableSkeleton />
       ) : error ? (
@@ -159,6 +174,21 @@ export function CollectionSchedulePage() {
                 )}
               </p>
               <p className="mt-1 text-sm">Căn cứ: {basisText(r)}</p>
+              {canEdit && r.state === 'den_han' && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="mt-3"
+                  disabled={collection.isPending}
+                  onClick={() =>
+                    void collection
+                      .open({ termId: r.term_id })
+                      .catch((e: unknown) => setMessage(toUserMessage(e, 'create')))
+                  }
+                >
+                  Lập đề nghị thu
+                </Button>
+              )}
             </li>
           ))}
         </ul>
