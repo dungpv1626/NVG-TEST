@@ -4086,3 +4086,47 @@ bác, 1,2 m qua; `arrival` đúng năm loại thang), `ai-brief-demands.test.ts`
 - Ban công hông bị chương trình nới (d084a46e: khai 4 m², ra ~12 m² sau khi đua) — mới chỉ trừ điểm (D7).
 - `knowledge.balcony_main_depth_cells` trong kế hoạch chưa làm: độ sâu đã tới mô hình qua `brief_demands` và `<brief>`,
   thêm khoá là tốn trần tri thức cho cùng một ý.
+
+### T162 — «AI Design» thành bốn bước: Đầu vào → Mặt bằng → Mặt ngoài → Bộ kết quả (22/10/2026, Đợt 5B)
+
+Vấn đề 7 của chủ dự án («AI Design chưa gọn và chưa công thái học», `doc/MOC_CAI_TIEN_UX.md`) và dòng 5B của
+`doc/KE_HOACH_LAM_HO.md`: có giá ước tính trước khi chạy, so được phương án, dùng được trên hồ sơ đã bàn giao. Chỉ sắp
+xếp lại giao diện và luồng — không đổi `contracts/`, `workers/`, `kb/`, `rules/`, không migration.
+
+- **Dải bốn bước** (`ai/ai-design-tab.tsx`): Đầu vào (đầu bài + khảo sát của hồ sơ, chỉ xem — T118) · Mặt bằng ·
+  **Mặt ngoài** = mặt đứng + phối cảnh (hai phần chọn bằng một ô phân đoạn; phối cảnh chưa dựng được thì nói lý do
+  ngay cạnh) · **Bộ kết quả**. `?buoc=` / `?phan=` của địa chỉ mở thẳng bước (trang ngoài đọc rồi đưa vào
+  `initialStep` — thư mục `tk/ai/` không nhập router, `ai-independence.test.ts`); bấm đổi bước không điều hướng.
+- **Chi phí ước tính trên nút** «Xếp mặt bằng» và «Sửa lại» (`ai/run-cost-estimate.ts`, `ai/ai-cost-estimate.tsx`):
+  trung bình TIỀN ĐÃ TRẢ THẬT của các lượt chạy trước cùng tuyến mô hình — một lượt (`design_ai_run`, xong / hỏng) gom
+  các dòng `design_ai_call` cùng hồ sơ, cùng nhóm mục đích, trong khoảng thời gian của lượt (đúng cách `useRunCalls`
+  cộng tiền), tuyến = tuyến của lượt gọi ĐẦU (vòng sửa chạy `revise_route` vẫn cộng vào), chia số phương án đã yêu
+  cầu, nhân số phương án đang chọn. Lượt có dòng chưa có giá niêm yết thì bỏ. Chưa có lượt nào → «Chưa đủ dữ liệu».
+  **Không** nhân giá token với một số token tự đặt: token của một lượt xếp phụ thuộc số tầng, số lượt sửa và phần
+  suy nghĩ ẩn — con số ấy là bịa (CLAUDE.md 5.2). Đọc qua RLS của hai bảng nhật ký, không gọi mô hình.
+- **So phương án cạnh nhau** (`ai/ai-plan-compare.tsx`): «Xem một phương án» / «So sánh N phương án»; mỗi cột cùng một
+  tầng, điểm + ngưỡng, số tầng / phòng / tổng diện tích phòng, lỗi chặn, ba lý do trừ điểm, «Xem chi tiết», «Dùng để
+  dựng mặt đứng».
+- **Ba lý do trừ điểm lớn nhất** (`ai/plan-deductions.ts`): đọc thước chấm ĐÃ LƯU (`score.criteria`); điểm mất =
+  (1 − điểm tiêu chí) × trọng số tuyệt đối; tiêu chí không chấm được (cổng / thiếu đầu vào) không phải lý do trừ. Hiện
+  dưới tờ vẽ (khối riêng, không gấp) và trong cột so sánh. Panel điểm chi tiết vẫn ẩn (T117).
+- **Đặt lại ô «Yêu cầu sửa»** (T53 mục e) — **đảo một phần T117**: kế hoạch 5B ghi «sửa bằng ô yêu cầu» ở bước Mặt
+  bằng. `ai/ai-plan-edit.tsx` lấy lại từ git, bỏ chip điểm (đã ở đầu tờ vẽ) và câu nguyên văn yêu cầu (đã ở «Về
+  phương án này»), thêm chi phí ước tính. Hồ sơ chỉ xem / đã bàn giao không có ô này. Haan muốn giữ T117 thì gỡ
+  `editPanel` ở `ai-plan-step.tsx`.
+- **Bộ kết quả** (`ai/ai-result-bundle.tsx`, `ai/result-bundle.ts`): chọn phương án (mặc định bản dùng cho mặt
+  đứng) → một tệp `<MÃ HỒ SƠ>_AI-Design_<phuong-an-N>.zip`: tờ mặt bằng SVG từng tầng + mái, DXF cả nhà, ảnh mặt bằng
+  có nội thất (nếu đã vẽ), mặt đứng dựng TRÊN phương án ấy (SVG, DXF, ảnh vật liệu nếu có), bộ ảnh phối cảnh dựng
+  trên mặt đứng ấy (nếu có), `DOC-TRUOC.txt` (bản phác tham khảo, `noCodeCheck`, điểm, ba lý do, danh sách tệp, tệp
+  chưa có). Mọi tệp mang tiền tố mã hồ sơ. Byte tải qua đúng các tuyến đọc có kiểm quyền; ảnh 404 = «chưa vẽ», bỏ
+  qua và ghi vào «Đọc trước»; lỗi khác thì báo và KHÔNG tải gói thiếu. Gói dựng trên trình duyệt bằng `pizzip` 3.3.0
+  (đã có trong kho cho mẫu hợp đồng, nạp khi bấm) — không thêm thư viện. Dùng được trên hồ sơ đã bàn giao.
+
+**Hàng rào.** `ai-design-tab.test.tsx` (bốn bước, mở thẳng bộ kết quả, Mặt ngoài gồm hai phần), `ai-plan-step.test.tsx`
+(chi phí «Chưa đủ dữ liệu» / con số × số phương án, ba lý do theo thứ tự, so sánh, ô yêu cầu gửi đúng phương án),
+`ai-result-bundle.test.ts` (ước tính, lý do trừ, tên tệp), `ai-result-bundle-ui.test.tsx` (zip thật bằng `pizzip`:
+đúng tên, đúng tệp, ảnh chưa vẽ bỏ qua, lỗi 502 không tải). Đột biến đo tay: bỏ điều kiện «lượt chưa có giá thì bỏ» →
+đỏ; nuốt mọi lỗi tải tệp như 404 → đỏ.
+
+**Còn mở:** chưa có ước tính cho mặt đứng / ảnh (các nút ấy đã có giá ảnh niêm yết trên thẻ mô hình); số lượt mẫu tối
+thiểu cho ước tính để ở 1 (ghi rõ «trung bình n lượt trước») — chưa có tham số NVG.
