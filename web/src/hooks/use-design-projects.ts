@@ -652,6 +652,10 @@ export interface DesignReviewRecord {
   reviewer_name: string | null;
   comments: string;
   reviewed_at: string;
+  /** Vòng ý kiến khách thứ mấy (5A, 0205); góp ý nội bộ: null. */
+  round_no: number | null;
+  voice_path: string | null;
+  voice_transcript: string | null;
   recorder: { full_name: string } | null;
 }
 
@@ -665,6 +669,7 @@ export function useDesignReviews(versionIds: string[]) {
         .from('design_reviews')
         .select(
           'id, design_version_id, reviewer_type, decision, reviewer_name, comments, reviewed_at, ' +
+            'round_no, voice_path, voice_transcript, ' +
             'recorder:users!design_reviews_recorded_by_users_id_fk(full_name)',
         )
         .in('design_version_id', versionIds)

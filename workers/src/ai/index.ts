@@ -7,6 +7,7 @@
  *   POST /ai/survey-summary  — chữ của các đoạn ghi âm → nháp 6 ô báo cáo (Gemini Flash trả phí)
  *   POST /ai/site-log-draft  — một đoạn ghi âm nhật ký công trường → chữ → nháp các mục (Đợt 2 — 2B);
  *                              `purpose: 'transcript'` chỉ chép chữ (lời khách báo bảo hành — 2F)
+ *   POST /ai/design-transcribe — một đoạn ghi âm của Thiết kế (khảo sát, ý kiến khách) → chữ (5A)
  *
  * Hàng rào chi phí (CLAUDE.md 6.4, chủ dự án chốt «AI làm bằng giả lập trước»):
  *   · `AI_FAKE=1` (chỉ đặt trong `workers/.dev.vars`) → trả kết quả MẪU, không gọi ai cả.
@@ -471,6 +472,103 @@ assistantApp.post('/site-log-draft', async (c) => {
     }
   }
   return c.json({ transcript, draft, fake: transcriptFake || m.siteLog === 'fake' });
+});
+
+// ---------------------------------------------------------------------------------------------
+// Ghi âm của Thiết kế → chữ (Đợt 5 — 5A): lời chủ nhà lúc khảo sát, ý kiến khách từng vòng
+// ---------------------------------------------------------------------------------------------
+/**
+ * Chỉ chép chữ, không tóm tắt. Tệp ở kho `design-audio`, thư mục đầu = dự án thiết kế; người gọi
+ * phải sửa được hồ sơ thiết kế đó. Không ghi gì vào CSDL — giao diện đặt chữ vào ô để người ghi
+ * đọc lại rồi tự lưu (ghi âm khảo sát: `design_survey_recordings.transcript`; ý kiến: ô Nội dung).
+ */
+assistantApp.post('/design-transcribe', async (c) => {
+  const token = bearer(c);
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+  const body = (await c.req.json().catch(() => ({}))) as {
+    project_id?: string;
+    audio_path?: string;
+    seconds?: number | null;
+  };
+  if (!body.project_id || !body.audio_path) return c.json({ error: 'Thiếu đoạn ghi âm.' }, 400);
+  if (!body.audio_path.startsWith(`${body.project_id}/`)) {
+    return c.json({ error: 'Đoạn ghi âm không thuộc hồ sơ thiết kế này.' }, 400);
+  }
+  const db = await asUser(c.env, token);
+  const { data: writable } = await db.rpc('rls_design_project_writable', {
+    p_project_id: body.project_id,
+  });
+  if (!writable) {
+    return c.json({ error: 'Chỉ Phòng Thiết kế phụ trách hồ sơ này ghi âm được.' }, 403);
+  }
+  const { data: project } = await db
+    .from('design_projects')
+    .select('company_id')
+    .eq('id', body.project_id)
+    .single();
+  const m = await modes(c.env);
+  if (m.transcribe === 'off') return c.json({ error: OFF_MESSAGE }, 409);
+  const base = {
+    company_id: (project?.company_id as string | undefined) ?? null,
+    user_id: await actorId(db),
+    entity_type: 'design_projects',
+    entity_id: body.project_id,
+  };
+
+  if (m.transcribe === 'fake') {
+    await logCall(c.env, {
+      ...base,
+      feature: 'transcribe',
+      provider: 'gia_lap',
+      model: null,
+      is_fake: true,
+      ok: true,
+    });
+    return c.json({
+      transcript: `[Giả lập${body.seconds ? ` (${body.seconds} giây ghi âm)` : ''}] Chủ nhà muốn phòng thờ ở tầng trên cùng, phòng ngủ ông bà ở tầng một gần nhà vệ sinh; cầu thang dời ra phía sau để mặt tiền rộng hơn.`,
+      fake: true,
+    });
+  }
+
+  let transcript: string;
+  try {
+    transcript = await whisper(c.env, db, 'design-audio', body.audio_path);
+    const minutes = Math.max(1, Math.ceil((body.seconds ?? 60) / 60));
+    await logCall(c.env, {
+      ...base,
+      feature: 'transcribe',
+      provider: 'cloudflare',
+      model: WHISPER_MODEL,
+      is_fake: false,
+      input_units: minutes,
+      cost_usd: minutes * WHISPER_USD_PER_MINUTE,
+      ok: true,
+    });
+  } catch (e) {
+    await logCall(c.env, {
+      ...base,
+      feature: 'transcribe',
+      provider: 'cloudflare',
+      model: WHISPER_MODEL,
+      is_fake: false,
+      ok: false,
+      error: e instanceof Error ? e.message : String(e),
+    });
+    return c.json(
+      { error: 'Chuyển giọng nói thành chữ không thành. Gõ tay nội dung thay thế.' },
+      502,
+    );
+  }
+  if (!transcript) {
+    return c.json(
+      {
+        error:
+          'Không nghe rõ lời nói — nói gần máy hơn rồi ghi lại, hoặc gõ tay. Đoạn ghi âm vẫn được giữ.',
+      },
+      422,
+    );
+  }
+  return c.json({ transcript, fake: false });
 });
 
 // ---------------------------------------------------------------------------------------------

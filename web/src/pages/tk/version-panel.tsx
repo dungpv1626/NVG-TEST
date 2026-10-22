@@ -14,7 +14,7 @@
  */
 
 import { useState, type FormEvent } from 'react';
-import { CheckCircle2, Send } from 'lucide-react';
+import { CheckCircle2, FilePlus2, Send } from 'lucide-react';
 import {
   BUTTONS,
   DESIGN_DISCIPLINE_LABELS,
@@ -25,6 +25,7 @@ import {
   type DesignReviewDecision,
   type DesignReviewerType,
 } from '@nvg/shared';
+import { VoiceRecorder } from '@/components/media/voice-recorder';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -39,9 +40,17 @@ import {
   useDesignVersions,
   usePublishDesignVersion,
   useRecordDesignReview,
+  type DesignReviewRecord,
   type DesignVersionRecord,
 } from '@/hooks/use-design-projects';
+import {
+  designAudioUrl,
+  uploadDesignAudio,
+  useRecordDesignFeedback,
+} from '@/hooks/use-design-voice';
 import { toUserMessage } from '@/hooks/use-error-message';
+import { useAiStatus } from '@/hooks/use-site-surveys';
+import { transcribeDesignAudio } from '@/lib/ai-api';
 
 export function VersionPanel({
   projectId,
@@ -90,6 +99,18 @@ export function VersionPanel({
 
   const hasPrevious = (discipline: DesignDiscipline) =>
     versions.some((v) => v.discipline === discipline);
+
+  /** 5A: khách yêu cầu sửa ở vòng n → mở biểu mẫu bản mới, nguyên nhân điều chỉnh ghi sẵn. */
+  function reviseFrom(discipline: DesignDiscipline, round: DesignReviewRecord) {
+    setError(null);
+    setNotice(null);
+    setForm((f) => ({
+      ...f,
+      discipline,
+      changeReason: `Theo ý kiến khách vòng ${round.round_no}: ${round.comments}`,
+    }));
+    setAdding(true);
+  }
 
   async function addVersion(e: FormEvent) {
     e.preventDefault();
@@ -296,7 +317,12 @@ export function VersionPanel({
           {versions.map((version) => (
             <VersionCard
               key={version.id}
+              projectId={projectId}
               version={version}
+              isLatest={
+                versions.find((v) => v.discipline === version.discipline)?.id === version.id
+              }
+              onRevise={canAdd && !revisionOnly ? reviseFrom : undefined}
               reviews={reviewsByVersion?.[version.id] ?? []}
               // Sau bàn giao vẫn phát hành được bản nháp điều chỉnh gắn yêu cầu thay đổi (0154).
               readOnly={readOnly && !(revisionOnly && version.change_request_id !== null)}
@@ -311,27 +337,32 @@ export function VersionPanel({
 }
 
 function VersionCard({
+  projectId,
   version,
+  isLatest,
+  onRevise,
   reviews,
   readOnly,
   onPublish,
   publishing,
 }: {
+  projectId: string;
   version: DesignVersionRecord;
-  reviews: {
-    id: string;
-    reviewer_type: DesignReviewerType;
-    decision: DesignReviewDecision;
-    reviewer_name: string | null;
-    comments: string;
-    reviewed_at: string;
-    recorder: { full_name: string } | null;
-  }[];
+  /** Bản mới nhất của bộ môn này — chỉ ở đây mới mời lập bản tiếp theo. */
+  isLatest: boolean;
+  onRevise?: (discipline: DesignDiscipline, round: DesignReviewRecord) => void;
+  reviews: DesignReviewRecord[];
   readOnly: boolean;
   onPublish: () => void;
   publishing: boolean;
 }) {
   const recordReview = useRecordDesignReview();
+  const recordFeedback = useRecordDesignFeedback();
+  const { data: ai } = useAiStatus();
+  const canSpeak = ai !== undefined && ai.transcribe !== 'off';
+  const [voice, setVoice] = useState<{ path: string; transcript: string | null } | null>(null);
+  const [voiceBusy, setVoiceBusy] = useState(false);
+  const latestCustomer = reviews.find((r) => r.reviewer_type === 'khach_hang');
   const [reviewing, setReviewing] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [review, setReview] = useState({
@@ -342,6 +373,37 @@ function VersionCard({
   });
 
   const published = version.published_at !== null;
+
+  async function onSpoken(blob: Blob, seconds: number | null) {
+    setReviewError(null);
+    setVoiceBusy(true);
+    try {
+      const path = await uploadDesignAudio(`${projectId}/y-kien`, blob);
+      setVoice({ path, transcript: null });
+      try {
+        const res = await transcribeDesignAudio({ projectId, audioPath: path, seconds });
+        setVoice({ path, transcript: res.transcript });
+        setReview((r) => ({
+          ...r,
+          comments: r.comments.trim() ? `${r.comments.trim()}\n${res.transcript}` : res.transcript,
+        }));
+      } catch (e) {
+        setReviewError(
+          `${toUserMessage(e, 'create')} Đoạn ghi âm vẫn được lưu kèm ý kiến — gõ tóm tắt vào ô Nội dung.`,
+        );
+      }
+    } finally {
+      setVoiceBusy(false);
+    }
+  }
+
+  async function listen(path: string) {
+    try {
+      window.open(await designAudioUrl(path), '_blank', 'noopener');
+    } catch (e) {
+      setReviewError(toUserMessage(e, 'view'));
+    }
+  }
 
   async function submitReview(e: FormEvent) {
     e.preventDefault();
@@ -355,14 +417,27 @@ function VersionCard({
       return;
     }
     try {
-      await recordReview.mutateAsync({
-        versionId: version.id,
-        reviewerType: review.reviewerType,
-        decision: review.decision,
-        comments: review.comments.trim(),
-        reviewerName: review.reviewerName.trim() || undefined,
-      });
+      if (review.reviewerType === 'khach_hang') {
+        // 5A: ý kiến khách là một VÒNG — máy đánh số, kèm đoạn ghi âm nếu đã nói.
+        await recordFeedback.mutateAsync({
+          versionId: version.id,
+          decision: review.decision,
+          comments: review.comments.trim(),
+          reviewerName: review.reviewerName.trim(),
+          voicePath: voice?.path ?? null,
+          voiceTranscript: voice?.transcript ?? null,
+        });
+      } else {
+        await recordReview.mutateAsync({
+          versionId: version.id,
+          reviewerType: review.reviewerType,
+          decision: review.decision,
+          comments: review.comments.trim(),
+          reviewerName: review.reviewerName.trim() || undefined,
+        });
+      }
       setReview((r) => ({ ...r, comments: '', reviewerName: '' }));
+      setVoice(null);
       setReviewing(false);
     } catch (e) {
       setReviewError(toUserMessage(e, 'create'));
@@ -410,6 +485,18 @@ function VersionCard({
               Ghi nhận góp ý
             </Button>
           )}
+          {isLatest &&
+            onRevise &&
+            latestCustomer?.decision === 'yeu_cau_sua' &&
+            latestCustomer.round_no !== null && (
+              <Button
+                variant="secondary"
+                onClick={() => onRevise(version.discipline as DesignDiscipline, latestCustomer)}
+              >
+                <FilePlus2 className="mr-1 size-4" />
+                Lập phiên bản {version.version + 1} theo ý kiến vòng {latestCustomer.round_no}
+              </Button>
+            )}
         </div>
       )}
 
@@ -462,6 +549,21 @@ function VersionCard({
               </Field>
             )}
 
+            {review.reviewerType === 'khach_hang' && canSpeak && (
+              <div className="rounded-sm bg-surface-sunken p-3 sm:col-span-2">
+                <p className="mb-2 text-sm">
+                  <span className="font-medium">Nói ý kiến của khách</span>
+                  <span className="text-fg-subtle"> — máy chép vào ô Nội dung để đọc lại.</span>
+                </p>
+                <VoiceRecorder disabled={voiceBusy} onRecorded={onSpoken} />
+                {voiceBusy && (
+                  <p role="status" className="mt-2 text-sm text-fg-subtle">
+                    Máy đang chép lời…
+                  </p>
+                )}
+              </div>
+            )}
+
             <Field label="Nội dung" required className="sm:col-span-2">
               <textarea
                 value={review.comments}
@@ -479,7 +581,11 @@ function VersionCard({
           )}
 
           <div className="flex gap-2">
-            <Button type="submit" variant="primary" disabled={recordReview.isPending}>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={recordReview.isPending || recordFeedback.isPending || voiceBusy}
+            >
               {BUTTONS.save}
             </Button>
             <Button type="button" variant="secondary" onClick={() => setReviewing(false)}>
@@ -494,6 +600,7 @@ function VersionCard({
           {reviews.map((r) => (
             <li key={r.id} className="border-l-2 border-border pl-3">
               <p className="font-medium">
+                {r.round_no !== null ? `Vòng ${r.round_no} — ` : ''}
                 {DESIGN_REVIEW_DECISION_LABELS[r.decision]}
                 <span className="ml-2 font-normal text-fg-subtle">
                   {r.reviewer_name ?? DESIGN_REVIEWER_TYPE_LABELS[r.reviewer_type]} —{' '}
@@ -501,6 +608,11 @@ function VersionCard({
                 </span>
               </p>
               <p className="whitespace-pre-wrap">{r.comments}</p>
+              {r.voice_path && (
+                <Button variant="subtle" onClick={() => void listen(r.voice_path!)}>
+                  Nghe lời khách nói
+                </Button>
+              )}
             </li>
           ))}
         </ul>

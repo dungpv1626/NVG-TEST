@@ -33,7 +33,9 @@ import {
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useSurveyPhotos, type SurveyPhotoRecord } from '@/hooks/use-survey-photos';
 import { useAuth } from '@/lib/auth';
+import { useDesignSurveyRecordings } from '@/hooks/use-design-voice';
 import { SurveyPhotos } from './survey-photos';
+import { StartSurveyButton, SurveyClockLine, SurveyRecordings } from './survey-voice';
 import { SectionHelp } from '@/components/ui/section-help';
 import { DESIGN_HELP } from './help-texts';
 
@@ -90,6 +92,7 @@ export function SurveyPanel({
   const { profile } = useAuth();
   const { data: surveys } = useDesignSurveys(projectId);
   const { data: photos } = useSurveyPhotos(projectId);
+  const { data: recordings } = useDesignSurveyRecordings(projectId);
   const { data: briefs } = useDesignBriefs(projectId);
   const createSurvey = useCreateDesignSurvey();
   const updateSurvey = useUpdateDesignSurvey();
@@ -144,6 +147,27 @@ export function SurveyPanel({
     }
   }
 
+  /** Chép bản chép chữ ghi âm vào ô «Nhu cầu sử dụng» của biên bản (nối thêm, không ghi đè). */
+  async function copyToUsage(s: DesignSurveyRecord, text: string) {
+    setError(null);
+    const v = toFormValues(s);
+    try {
+      await updateSurvey.mutateAsync({
+        surveyId: s.id,
+        landWidth: v.landWidth || null,
+        landDepth: v.landDepth || null,
+        landArea: s.land_area,
+        orientation: v.orientation || null,
+        measurementNotes: v.measurementNotes || null,
+        surroundingNotes: v.surroundingNotes || null,
+        usageNotes: v.usageNotes.trim() ? `${v.usageNotes.trim()}\n${text}` : text,
+        notes: v.notes || null,
+      });
+    } catch (e) {
+      setError(toUserMessage(e, 'edit'));
+    }
+  }
+
   async function remove(surveyId: string) {
     setError(null);
     try {
@@ -178,9 +202,18 @@ export function SurveyPanel({
       )}
 
       {!readOnly && mode.kind === 'closed' && (
-        <Button variant="secondary" onClick={() => setMode({ kind: 'create' })}>
-          Ghi nhận biên bản khảo sát
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          {/*
+            5A: tới nơi thì bấm «Bắt đầu khảo sát» — máy ghi giờ, như khảo sát của Kinh doanh.
+            Đang có buổi chưa kết thúc của chính mình thì không mở thêm buổi thứ hai.
+          */}
+          {!(surveys ?? []).some(
+            (s) => s.started_at && !s.finished_at && s.surveyed_by === profile?.id,
+          ) && <StartSurveyButton projectId={projectId} onError={setError} />}
+          <Button variant="subtle" onClick={() => setMode({ kind: 'create' })}>
+            Đã khảo sát mà quên bấm? Ghi biên bản tay
+          </Button>
+        </div>
       )}
 
       {(surveys ?? []).length === 0 ? (
@@ -270,6 +303,10 @@ export function SurveyPanel({
                   />
                 )}
 
+                <div className="mt-1">
+                  <SurveyClockLine survey={s} canEdit={!readOnly} onError={setError} />
+                </div>
+
                 <dl className="mt-2 grid gap-x-6 gap-y-1 sm:grid-cols-4">
                   <SurveyField
                     label="Kích thước"
@@ -292,6 +329,15 @@ export function SurveyPanel({
                   <SurveyBlock label="Nhu cầu sử dụng" value={s.usage_notes} />
                   <SurveyBlock label="Ghi chú khác" value={s.notes} />
                 </div>
+
+                <SurveyRecordings
+                  projectId={projectId}
+                  companyId={companyId}
+                  surveyId={s.id}
+                  recordings={(recordings ?? []).filter((r) => r.design_survey_id === s.id)}
+                  canEdit={!readOnly}
+                  onCopy={(text) => void copyToUsage(s, text)}
+                />
 
                 <SurveyPhotos
                   projectId={projectId}

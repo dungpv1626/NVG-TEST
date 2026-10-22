@@ -80,6 +80,21 @@ export function summarizeSurvey(
  * Đoạn ghi âm nhật ký công trường (đã tải lên kho `site-log-audio`) → chữ + nháp các mục (2B).
  * `draft` = `null` khi công tắc xếp mục tắt hoặc máy xếp hỏng — dùng nguyên `transcript`.
  */
+/**
+ * Đoạn ghi âm của Thiết kế (kho `design-audio`, thư mục đầu = dự án) → chữ (5A): lời chủ nhà lúc
+ * khảo sát, ý kiến khách từng vòng. Chỉ chép chữ; người ghi đọc lại rồi tự lưu.
+ */
+export function transcribeDesignAudio(input: {
+  projectId: string;
+  audioPath: string;
+  seconds: number | null;
+}): Promise<{ transcript: string; fake: boolean }> {
+  return call('/design-transcribe', {
+    method: 'POST',
+    body: { project_id: input.projectId, audio_path: input.audioPath, seconds: input.seconds },
+  });
+}
+
 export function draftSiteLog(input: {
   siteId: string;
   audioPath: string;
