@@ -856,7 +856,8 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
     của người nhận. Bảng mới cần đẩy tức thời thì thêm vào publication bằng migration, ĐỪNG đọc nội dung sự kiện.
   - **Bộ quét dùng chung + 0189 (22/10/2026):** `components/scan/document-scanner.tsx` — chụp / chọn ảnh từng
     trang (kèm PDF có sẵn), máy TỰ TÌM MÉP giấy (`lib/scan/detect.ts`: Otsu + vùng sáng lớn nhất + điểm cực hai đường
-    chéo; không chắc thì trả `null`, ví dụ giấy trắng trên bàn trắng — người dùng kéo tay), kéo 4 góc, xoay, ba chế độ (Màu gốc / Tài liệu = xoá bóng GIỮ MÀU dấu đỏ / Đen trắng =
+    chéo; không chắc thì trả `null`, ví dụ giấy trắng trên bàn trắng — người dùng kéo tay), kéo 4 góc, xoay, tô trắng mặt bàn khi giấy tràn khung, tự xoay thẳng theo dòng chữ
+    (`deskew.ts`, nắn + xoay trong MỘT lần lấy mẫu), trang 3.000 px, báo «Ảnh mờ — chụp lại» (`quality.ts`), ba chế độ (Màu gốc / Tài liệu = xoá bóng GIỮ MÀU dấu đỏ / Đen trắng =
     ngưỡng Bradley), ghép một PDF A4 (`lib/scan/` — toán thuần có phép thử; pdf-lib 1.17.1 nạp khi cần). Trả
     `File`, nơi gọi tự tải lên. Đang gắn ở: «Ghi nhận đã ký» (`sign-contract-dialog.tsx`), khối «Bản hợp đồng đã
     ký» trên Tổng quan (`signed-scan-panel.tsx`), «Quét phiếu giấy» của khảo sát. **0189:** trigger

@@ -4,6 +4,7 @@ import { A4_POINTS, buildPdf } from '../build-pdf';
 import { detectPaper, detectPaperQuad } from '../detect';
 import { deskewAngle, rotateImage } from '../deskew';
 import { enhance } from '../enhance';
+import { isBlurry, sharpnessOfImage } from '../quality';
 import {
   applyHomography,
   createImageData,
@@ -284,5 +285,60 @@ describe('xoay thẳng theo dòng chữ', () => {
     const blank = createImageData(300, 400);
     blank.data.fill(255);
     expect(deskewAngle(blank)).toBe(0);
+  });
+});
+
+describe('dọn mép trang và báo ảnh mờ', () => {
+  it('mảng bàn sát đáy (cách mép một hàng trắng) bị dọn, chữ giữ nguyên', () => {
+    const w = 400;
+    const h = 560;
+    const img = createImageData(w, h);
+    img.data.fill(255);
+    const paint = (x: number, y: number, v: [number, number, number]) => {
+      const i = (y * w + x) * 4;
+      [img.data[i], img.data[i + 1], img.data[i + 2]] = v;
+    };
+    // Mảng bàn xám xanh ở đáy, cách mép dưới 2 hàng trắng (bước tô mặt bàn đã làm trắng hàng sát mép).
+    for (let y = h - 9; y < h - 2; y++) for (let x = 0; x < 160; x++) paint(x, y, [120, 130, 160]);
+    // Một dòng chữ có lề.
+    for (let y = 100; y < 108; y++)
+      for (let x = 60; x < 340; x++) if (x % 9 < 6) paint(x, y, [30, 30, 30]);
+    enhance(img, 'bw');
+    const lum = (x: number, y: number) => img.data[(y * w + x) * 4]!;
+    expect(lum(50, h - 5)).toBe(255);
+    expect(lum(63, 104)).toBe(0);
+  });
+
+  it('ảnh chữ nét không bị báo mờ; cùng ảnh làm nhòe thì bị báo', () => {
+    const w = 600;
+    const h = 800;
+    const sharp = createImageData(w, h);
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) {
+        const v = y % 30 < 8 && x % 11 < 6 && x > 40 && x < w - 40 ? 50 : 200;
+        const i = (y * w + x) * 4;
+        sharp.data[i] = sharp.data[i + 1] = sharp.data[i + 2] = v;
+        sharp.data[i + 3] = 255;
+      }
+    // Nhòe kiểu rung tay: trung bình 9 điểm theo phương ngang, rồi 9 điểm theo phương dọc.
+    const blurred = createImageData(w, h);
+    const tmp = new Float32Array(w * h);
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) {
+        let s = 0;
+        for (let k = -4; k <= 4; k++)
+          s += sharp.data[(y * w + Math.min(w - 1, Math.max(0, x + k))) * 4]!;
+        tmp[y * w + x] = s / 9;
+      }
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) {
+        let s = 0;
+        for (let k = -4; k <= 4; k++) s += tmp[Math.min(h - 1, Math.max(0, y + k)) * w + x]!;
+        const i = (y * w + x) * 4;
+        blurred.data[i] = blurred.data[i + 1] = blurred.data[i + 2] = s / 9;
+        blurred.data[i + 3] = 255;
+      }
+    expect(isBlurry(sharpnessOfImage(sharp))).toBe(false);
+    expect(isBlurry(sharpnessOfImage(blurred))).toBe(true);
   });
 });

@@ -239,13 +239,15 @@ function cleanBorder(img: ImageData) {
       stack[top++] = i;
     }
   };
-  for (let x = 0; x < w; x++) {
-    seed(x);
-    seed((h - 1) * w + x);
-  }
+  // Gieo từ cả một DẢI sát mép (~2 %), không chỉ hàng ngoài cùng: bước tô mặt bàn đã làm trắng
+  // hàng sát mép thì mảng bàn còn sót ngay trên đó không còn chạm mép (dải đen đáy trang — ảnh
+  // thật anh Dũng 22/10/2026). Chữ luôn có lề rộng hơn dải này.
+  const band = Math.max(2, Math.round(Math.max(w, h) * BORDER_BAND));
   for (let y = 0; y < h; y++) {
-    seed(y * w);
-    seed(y * w + w - 1);
+    const edgeRow = y < band || y >= h - band;
+    for (let x = 0; x < w; x++) {
+      if (edgeRow || x < band || x >= w - band) seed(y * w + x);
+    }
   }
   while (top > 0) {
     const i = stack[--top]!;
@@ -259,6 +261,9 @@ function cleanBorder(img: ImageData) {
     if (mark[i]) d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = 255;
   }
 }
+
+/** Bề rộng dải sát mép trang (tỉ lệ cạnh dài) mà vệt tối trong đó coi là mặt bàn còn sót. */
+const BORDER_BAND = 0.02;
 
 /** Áp chế độ lên trang (sửa tại chỗ) và trả lại chính nó. */
 export function enhance(img: ImageData, mode: ScanMode): ImageData {

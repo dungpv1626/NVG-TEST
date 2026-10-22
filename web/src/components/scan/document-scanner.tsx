@@ -28,6 +28,7 @@ import { SegmentedControl } from '@/components/ui/segmented-control';
 import { buildPdf, type ScanPage } from '@/lib/scan/build-pdf';
 import { deskewAngle } from '@/lib/scan/deskew';
 import { detectPaper } from '@/lib/scan/detect';
+import { isBlurry, SHARPNESS_SIDE, sharpnessOfImage } from '@/lib/scan/quality';
 import { enhance, SCAN_MODE_LABELS, type ScanMode } from '@/lib/scan/enhance';
 import {
   defaultQuad,
@@ -83,6 +84,16 @@ function detectedFields(source: HTMLCanvasElement) {
       };
 }
 
+/** Đo độ nét trên bản thu về cạnh dài cố định (ngưỡng không đổi theo máy ảnh). */
+function blurryPhoto(source: HTMLCanvasElement): boolean {
+  const k = Math.min(1, SHARPNESS_SIDE / Math.max(source.width, source.height));
+  const c = canvasOf(Math.round(source.width * k), Math.round(source.height * k));
+  const ctx = c.getContext('2d')!;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(source, 0, 0, c.width, c.height);
+  return isBlurry(sharpnessOfImage(ctx.getImageData(0, 0, c.width, c.height)));
+}
+
 /** Xoay vùng mặt bàn 90° chiều kim đồng hồ cùng ảnh. */
 function rotateMask(m: OutsideMask): OutsideMask {
   const { width: w, height: h } = m;
@@ -106,6 +117,8 @@ type Page =
       quadSource: QuadSource;
       /** Vùng mặt bàn máy tìm được — tô trắng khi nắn (tờ giấy tràn khung). */
       outside: OutsideMask | null;
+      /** Ảnh chụp bị mờ (rung tay, lệch nét) — báo chụp lại ngay tại chỗ. */
+      blurry: boolean;
     }
   | { id: string; kind: 'pdf'; name: string; bytes: Uint8Array; pageCount: number };
 
@@ -255,6 +268,7 @@ export function DocumentScanner({
             source,
             sourceUrl: source.toDataURL('image/jpeg', 0.8),
             ...detectedFields(source),
+            blurry: blurryPhoto(source),
             mode: 'document',
             thumbUrl: null,
           });
@@ -441,10 +455,15 @@ export function DocumentScanner({
             >
               <button
                 type="button"
-                className="flex h-24 items-center justify-center overflow-hidden rounded-sm bg-surface-sunken"
+                className="relative flex h-24 items-center justify-center overflow-hidden rounded-sm bg-surface-sunken"
                 aria-label={`Trang ${i + 1}`}
                 onClick={() => setSelected(i)}
               >
+                {p.kind === 'image' && p.blurry && (
+                  <span className="absolute left-1 top-1 rounded-sm bg-status-overdue-bg px-1 text-[10px] font-semibold text-status-overdue">
+                    Mờ
+                  </span>
+                )}
                 {p.kind === 'pdf' ? (
                   <span className="text-xs">PDF · {p.pageCount} trang</span>
                 ) : p.thumbUrl ? (
@@ -561,6 +580,16 @@ function PageEditor({
             ? 'Không tự tìm được mép giấy — kéo 4 chấm tròn vào đúng 4 góc tờ giấy. Lần sau đặt giấy trên nền tối hơn (bàn gỗ, bìa sẫm) để máy tự tìm.'
             : 'Kéo 4 chấm tròn cho khớp 4 góc tờ giấy.'}
       </p>
+      {page.blurry && (
+        <p
+          role="alert"
+          className="max-w-xl rounded-sm bg-status-overdue-bg px-3 py-2 text-center text-sm text-status-overdue"
+        >
+          Ảnh này bị mờ (rung tay hoặc máy chưa lấy nét) — chữ trên bản quét sẽ không rõ. Nên xoá
+          trang này và chụp lại: tì khuỷu tay lên bàn, chạm vào tờ giấy trên màn hình để máy lấy
+          nét, chờ một nhịp rồi mới bấm chụp.
+        </p>
+      )}
       <div
         ref={boxRef}
         className="relative max-h-[60vh] max-w-full touch-none select-none"
