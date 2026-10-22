@@ -299,3 +299,44 @@ REVOKE ALL ON FUNCTION public.contract_scan_public(text) FROM PUBLIC, anon, auth
 GRANT EXECUTE ON FUNCTION public.contract_scan_public(text) TO service_role;
 COMMENT ON FUNCTION public.contract_scan_public(text) IS
   'Trang xem bản hợp đồng đã ký (Worker gọi bằng khoá service): link hợp lệ thì trả tên / số / ngày ký + đường dẫn tệp, ghi một lượt xem (0189).';
+
+-- ----------------------------------------------------------------------------
+-- 4. Ai tải được TỆP bản đã ký lên kho
+-- ----------------------------------------------------------------------------
+-- Kho `contract-documents` theo `rls_contract_writable` (quyền SỬA hợp đồng, trước khi ký).
+-- Ban Giám đốc chỉ có quyền PHÊ DUYỆT hợp đồng nên bị chặn ngay bước tải bản quét — «quét xong
+-- lưu thì báo lỗi» (anh Dũng, tài khoản TGĐ, 22/10/2026); người chịu trách nhiệm cũng không tải
+-- được sau khi hợp đồng quyết toán. Riêng tệp `da-ky-*` (bản đã ký): người chịu trách nhiệm hoặc
+-- Ban Giám đốc, hợp đồng đã duyệt / đã ký / đã quyết toán. Văn bản khác giữ nguyên quyền cũ.
+CREATE OR REPLACE FUNCTION public.rls_contract_scan_uploader(p_contract_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.contracts c
+     WHERE c.id = p_contract_id AND c.deleted_at IS NULL
+       AND c.stage::text IN ('da_duyet', 'da_ky', 'hoan_thanh')
+       AND public.rls_company_access(c.company_id)
+       AND NOT public.auth_is_read_only()
+       AND (public.auth_can_approve_module('HD')
+            OR (public.auth_can_edit_module('HD')
+                AND public.rls_owner_can_write(c.company_id, c.responsible_user_id)))
+  );
+$$;
+
+DROP POLICY IF EXISTS contract_documents_files_insert ON storage.objects;
+CREATE POLICY contract_documents_files_insert ON storage.objects
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    bucket_id = 'contract-documents'
+    AND (
+      public.rls_contract_writable(public.try_uuid((storage.foldername(name))[1]))
+      OR (
+        storage.filename(name) LIKE 'da-ky-%'
+        AND public.rls_contract_scan_uploader(public.try_uuid((storage.foldername(name))[1]))
+      )
+    )
+  );

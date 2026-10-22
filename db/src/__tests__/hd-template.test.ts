@@ -651,6 +651,50 @@ describeDb('Bản đã ký: bổ sung sau khi ký, link xem có hạn cho khách
     }
   });
 
+  it('Ban Giám đốc tải được TỆP bản đã ký (chỉ có quyền phê duyệt); Thi công không; tệp khác vẫn theo quyền sửa', async () => {
+    const { createConnection } = await import('../client');
+    const { sql } = createConnection();
+    const stamp = String(Date.now());
+    let contractId = '';
+    try {
+      const [nvc] = await sql<{ id: string }[]>`SELECT id FROM companies WHERE code = 'NVC'`;
+      const [kdUser] = await sql<{ id: string }[]>`
+        SELECT id FROM users WHERE email = ${ACCOUNTS.kinhDoanhNvc}`;
+      const [c] = await sql<{ id: string }[]>`
+        INSERT INTO contracts (company_id, code, title, type, stage, value, responsible_user_id)
+        VALUES (${nvc!.id}, ${'NVC-HD-TGDQ-' + stamp}, ${TEST_PREFIX + ' TGĐ quét ' + stamp},
+                'mua_ban', 'da_ky', 100000000, ${kdUser!.id})
+        RETURNING id`;
+      contractId = c!.id;
+      const [tgd, thiCong] = await Promise.all([
+        signInAs(ACCOUNTS.tgd),
+        signInAs(ACCOUNTS.congTruongNvc),
+      ]);
+      const up = (client: SupabaseClient, name: string) =>
+        client.storage
+          .from('contract-documents')
+          .upload(`${contractId}/${name}`, pdf(), { contentType: 'application/pdf' });
+      const path = `da-ky-${crypto.randomUUID()}.pdf`;
+      expect((await up(tgd, path)).error).toBeNull();
+      expect(
+        (
+          await tgd.rpc('attach_signed_scan', {
+            p_contract_id: contractId,
+            p_path: `${contractId}/${path}`,
+          })
+        ).error,
+      ).toBeNull();
+      expect((await up(thiCong, `da-ky-${crypto.randomUUID()}.pdf`)).error).not.toBeNull();
+      expect((await up(tgd, `van-ban-${crypto.randomUUID()}.pdf`)).error).not.toBeNull();
+    } finally {
+      if (contractId) {
+        await sql`DELETE FROM audit_logs WHERE entity_id = ${contractId}`;
+        await sql`DELETE FROM contracts WHERE id = ${contractId}`;
+      }
+      await sql.end();
+    }
+  });
+
   it('hợp đồng Nháp: người chịu trách nhiệm không tự gõ được đường dẫn bản đã ký', async () => {
     const { createConnection } = await import('../client');
     const { sql } = createConnection();
