@@ -137,6 +137,9 @@ const BiddingCreatePage = lazy(() =>
 const BiddingDetailPage = lazy(() =>
   import('@/pages/da/bidding-detail').then((m) => ({ default: m.BiddingDetailPage })),
 );
+const CapabilityPage = lazy(() =>
+  import('@/pages/da/capability-page').then((m) => ({ default: m.CapabilityPage })),
+);
 const UnitPriceListPage = lazy(() =>
   import('@/pages/da/unit-price-list').then((m) => ({ default: m.UnitPriceListPage })),
 );
@@ -401,6 +404,7 @@ const router = createBrowserRouter(
           <Route path="da/goi-thau" element={<BiddingListPage />} />
           <Route path="da/goi-thau/tao-moi" element={<BiddingCreatePage />} />
           <Route path="da/goi-thau/:id" element={<BiddingDetailPage />} />
+          <Route path="da/ho-so-nang-luc" element={<CapabilityPage />} />
           <Route path="da/don-gia" element={<UnitPriceListPage />} />
         </Route>
 

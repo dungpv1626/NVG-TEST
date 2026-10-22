@@ -178,3 +178,25 @@ export function expiryState(
   if (remindDays !== null && days <= remindDays) return { kind: 'soon', days };
   return { kind: 'ok', days };
 }
+
+/** Người dùng mở được tệp báo cáo tài chính (Mẫu D — 0208) hay không. */
+export function useSeesFinancialStatements() {
+  return useQuery<boolean, Error>({
+    queryKey: ['rls_sees_financial_statements'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('rls_sees_financial_statements');
+      if (error) throw new Error(error.message);
+      return Boolean(data);
+    },
+    staleTime: 300_000,
+  });
+}
+
+/** Mở tệp báo cáo tài chính: hàm kiểm quyền + ghi nhật ký truy cập, rồi mới ký đường dẫn. */
+export async function openFinancialStatementUrl(documentId: string): Promise<string> {
+  const { data, error } = await supabase.rpc('open_financial_statement', {
+    p_document_id: documentId,
+  });
+  if (error) throw error;
+  return companyDocumentUrl(data as string);
+}

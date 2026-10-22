@@ -19,10 +19,12 @@ import { useActiveUsers } from '@/hooks/use-active-users';
 import {
   companyDocumentUrl,
   expiryState,
+  openFinancialStatementUrl,
   useCompanyDocuments,
   useCreateCompanyDocument,
   useParameterNumber,
   useRenewCompanyDocument,
+  useSeesFinancialStatements,
   type CompanyDocumentRecord,
 } from '@/hooks/use-company-documents';
 import { toUserMessage } from '@/hooks/use-error-message';
@@ -68,14 +70,20 @@ export function CompanyDocumentsPanel({
   const scope = useCompanyScope();
   const { data, isLoading, error, refetch } = useCompanyDocuments(categories.map((c) => c.value));
   const { data: remindDays } = useParameterNumber(remindParamKey);
+  const { data: seesFinance } = useSeesFinancialStatements();
   const [adding, setAdding] = useState(false);
   const [renewing, setRenewing] = useState<string | null>(null);
   const [pageError, setPageError] = useState<string | null>(null);
   const labelOf = (v: string) => categories.find((c) => c.value === v)?.label ?? v;
 
-  async function openFile(path: string) {
+  async function openFile(d: CompanyDocumentRecord) {
     try {
-      window.open(await companyDocumentUrl(path), '_blank', 'noopener');
+      // Báo cáo tài chính (Mẫu D) mở qua hàm kiểm quyền + ghi nhật ký truy cập.
+      const url =
+        d.category === 'bao_cao_tai_chinh'
+          ? await openFinancialStatementUrl(d.id)
+          : await companyDocumentUrl(d.file_path!);
+      window.open(url, '_blank', 'noopener');
     } catch (e) {
       setPageError(toUserMessage(e, 'view'));
     }
@@ -154,8 +162,12 @@ export function CompanyDocumentsPanel({
                 <span className="text-fg-subtle">
                   Người phụ trách: {d.responsible?.full_name ?? 'Chưa giao'}
                 </span>
-                {d.file_path ? (
-                  <Button variant="subtle" onClick={() => void openFile(d.file_path!)}>
+                {d.file_path && d.category === 'bao_cao_tai_chinh' && !seesFinance ? (
+                  <span className="text-fg-subtle">
+                    · Đã có bản chụp — chỉ Ban Giám đốc, Tài chính, Kế toán mở được
+                  </span>
+                ) : d.file_path ? (
+                  <Button variant="subtle" onClick={() => void openFile(d)}>
                     <FileText className="size-4" aria-hidden />
                     Xem bản chụp
                   </Button>
