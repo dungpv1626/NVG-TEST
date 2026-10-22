@@ -32,6 +32,8 @@ import {
   type ExecCompanyTile,
   type ExecLevel,
 } from '@/hooks/use-exec-overview';
+import { daysLeftLabel, useExpiringContracts } from '@/hooks/use-expiring-contracts';
+import { formatDate } from '@nvg/shared';
 import { useAuth } from '@/lib/auth';
 import { useCompanyStore } from '@/lib/company-store';
 import { CompanyBoards } from './company-boards';
@@ -115,6 +117,7 @@ export function ExecOverviewPage() {
               hai cách SO SÁNH ba công ty: theo mảng cảnh báo và theo quy mô. */}
           <CompanyBoards period="thang-nay" showPending={!readOnly} />
           <Heatmap tiles={tiles} companies={companies} />
+          <ExpiringContracts />
           <ScaleChart companies={companies} />
         </div>
       )}
@@ -320,6 +323,49 @@ const SCALE_SERIES: ChartSeries[] = [
   { key: 'pipeline', name: 'Cơ hội đang theo đuổi', color: CHART_COLORS.pair },
   { key: 'contracts', name: 'Hợp đồng đang thực hiện', color: CHART_COLORS.primary },
 ];
+
+// --- Hợp đồng sắp hết hạn (0218, câu 8: còn ≤ 90 ngày) ----------------------------------------
+// Chỉ hợp đồng đã ký; đã qua ngày kết thúc là «Quá hạn» ở danh sách hợp đồng, không nằm ở đây.
+function ExpiringContracts() {
+  const { data, isLoading } = useExpiringContracts();
+  if (isLoading) return null;
+  const rows = data ?? [];
+  return (
+    <section
+      aria-label="Hợp đồng sắp hết hạn"
+      className="rounded-md border border-border bg-surface p-4"
+    >
+      <h2 className="font-semibold">Hợp đồng sắp hết hạn</h2>
+      {rows.length === 0 ? (
+        <p className="mt-1 flex items-center gap-1.5 text-sm text-fg-subtle">
+          <Check className="h-4 w-4" aria-hidden />
+          Không có hợp đồng đã ký nào hết hạn trong 90 ngày tới.
+        </p>
+      ) : (
+        <ul className="mt-3 divide-y divide-border">
+          {rows.map((c) => (
+            <li key={c.id}>
+              <Link
+                to={`/hd/hop-dong/${c.id}`}
+                className="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2 hover:bg-surface-hover"
+              >
+                <span className="w-12 shrink-0 text-xs font-semibold text-fg-subtle">
+                  {c.company_code}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="font-medium">{c.contract_number ?? c.code}</span>{' '}
+                  <span className="text-fg-subtle">{c.title}</span>
+                </span>
+                <span className="text-sm text-fg-subtle">{formatDate(c.end_date)}</span>
+                <span className="text-sm font-semibold">{daysLeftLabel(c.days_left)}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
 
 function ScaleChart({ companies }: { companies: Company[] }) {
   const { data, isLoading } = useCompanyPulse();

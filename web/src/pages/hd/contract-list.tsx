@@ -18,6 +18,7 @@ import {
 import { PageHeader } from '@/components/layout/app-shell';
 import { EntityTable, type EntityRow } from '@/components/entity/entity-table';
 import { useContracts } from '@/hooks/use-contracts';
+import { daysLeftLabel, useExpiringContracts } from '@/hooks/use-expiring-contracts';
 import type { MoneyValue } from '@nvg/shared';
 import { APP_HELP } from '@/lib/help-texts';
 import { HdNav } from './hd-nav';
@@ -27,10 +28,14 @@ interface ContractRow extends EntityRow {
   typeLabel: string;
   partnerName: string | null;
   value: MoneyValue | null;
+  daysLeft: number | null;
 }
 
 export function ContractListPage() {
   const { data, isLoading, error, refetch } = useContracts();
+  // 0218: hợp đồng đã ký còn ≤ 90 ngày (tham số `hd.expiring_soon_days`) tới ngày kết thúc.
+  const expiring = useExpiringContracts();
+  const daysLeftOf = new Map((expiring.data ?? []).map((c) => [c.id, c.days_left]));
 
   const rows: ContractRow[] = (data ?? []).map((c) => ({
     id: c.id,
@@ -46,6 +51,7 @@ export function ContractListPage() {
     typeLabel: CONTRACT_TYPE_LABELS[c.type],
     partnerName: c.customer?.name ?? null,
     value: c.value,
+    daysLeft: daysLeftOf.get(c.id) ?? null,
   }));
 
   return (
@@ -79,6 +85,16 @@ export function ContractListPage() {
             numeric: true,
             render: (r) =>
               r.value ? formatCurrency(r.value) : <span className="text-fg-subtle">—</span>,
+          },
+          {
+            key: 'expiring',
+            header: 'Hết hạn',
+            render: (r) =>
+              r.daysLeft === null ? (
+                <span className="text-fg-subtle">—</span>
+              ) : (
+                <span className="font-semibold">{daysLeftLabel(r.daysLeft)}</span>
+              ),
           },
         ]}
       />

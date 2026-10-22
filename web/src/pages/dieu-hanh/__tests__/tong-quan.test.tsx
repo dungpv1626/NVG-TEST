@@ -81,6 +81,25 @@ vi.mock('@/hooks/use-exec-overview', () => ({
     ],
   }),
 }));
+vi.mock('@/hooks/use-expiring-contracts', async (original) => ({
+  ...(await original<typeof import('@/hooks/use-expiring-contracts')>()),
+  useExpiringContracts: () => ({
+    isLoading: false,
+    data: [
+      {
+        id: 'hd-1',
+        company_id: 'c-nvc',
+        company_code: 'NVC',
+        code: 'NVC-HD-2026-0001',
+        contract_number: null,
+        title: 'Nhà xưởng Bắc Ninh',
+        end_date: '2026-12-01',
+        days_left: 40,
+        responsible: null,
+      },
+    ],
+  }),
+}));
 vi.mock('@/hooks/use-approvals', () => ({
   usePendingApprovals: () => ({ isLoading: false, data: [] }),
 }));
@@ -135,6 +154,11 @@ describe('Tổng quan điều hành — khung từng công ty và so sánh', () 
 
     // Biểu đồ so sánh quy mô có câu tóm tắt.
     expect(screen.getByRole('img', { name: /Quy mô theo công ty/ })).toBeTruthy();
+
+    // 0218: hợp đồng đã ký còn ≤ 90 ngày, bấm mở hợp đồng.
+    const expiring = screen.getByRole('region', { name: 'Hợp đồng sắp hết hạn' });
+    expect(within(expiring).getByText('Còn 40 ngày')).toBeTruthy();
+    expect(within(expiring).getByRole('link').getAttribute('href')).toBe('/hd/hop-dong/hd-1');
   });
 
   it('bấm ô của một công ty: chọn đúng pháp nhân đó rồi mở danh sách đã lọc', () => {

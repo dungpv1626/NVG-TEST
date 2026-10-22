@@ -765,4 +765,73 @@ describeDb('Không tự phê duyệt hồ sơ của chính mình (0156)', () => 
     });
     expect(error).toBeNull();
   });
+
+  it('hồ sơ do Tổng Giám đốc gửi: tự duyệt được và có trong hộp thư của mình (0218)', async () => {
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+    const tgd = await signInAs(ACCOUNTS.tgd);
+    const { data: company } = await kd.from('companies').select('id').eq('code', 'NVC').single();
+    const { data: customer } = await kd.from('customers').select('id').limit(1).single();
+    const { data: kdId } = await kd.rpc('auth_user_id');
+    const { data: me } = await tgd.rpc('auth_user_id');
+    const { data: code } = await kd.rpc('next_record_code', {
+      p_company_code: 'NVC',
+      p_record_type: 'CH',
+    });
+    const { data: opp } = await kd
+      .from('opportunities')
+      .insert({
+        code,
+        company_id: company!.id,
+        customer_id: customer!.id,
+        name: `${TEST_PREFIX} TGĐ tự duyệt ${Date.now()}`,
+        owner_id: kdId,
+        stage: 'bao_gia',
+        estimated_value: 100_000_000,
+      })
+      .select('id')
+      .single();
+    const { data: quote } = await kd
+      .from('quotes')
+      .insert({ company_id: company!.id, opportunity_id: opp!.id, total_value: 100_000_000 })
+      .select('id')
+      .single();
+    expect((await kd.rpc('request_quote_approval', { p_quote_id: quote!.id })).error).toBeNull();
+
+    const { data: approval } = await kd
+      .from('approvals')
+      .select('id')
+      .eq('entity_type', 'quotes')
+      .eq('entity_id', quote!.id)
+      .eq('status', 'pending_approval')
+      .single();
+
+    // Tổng Giám đốc không lập báo giá CRM; quy tắc cần thử là «người gửi = người duyệt», nên đặt
+    // người gửi là Tổng Giám đốc thẳng trong CSDL.
+    const { createConnection } = await import('../client');
+    const { sql } = createConnection();
+    try {
+      await sql`UPDATE approvals SET requested_by = ${me as string} WHERE id = ${approval!.id}`;
+    } finally {
+      await sql.end();
+    }
+
+    const { data: inbox } = await tgd.rpc('my_pending_approvals');
+    expect(
+      (inbox ?? []).some((r: { id: string }) => r.id === approval!.id),
+      'hồ sơ Tổng Giám đốc tự gửi phải nằm trong hộp thư của chính Tổng Giám đốc',
+    ).toBe(true);
+
+    const { data: waiting } = await tgd.rpc('approval_waiting_on', {
+      p_approval_id: approval!.id,
+    });
+    const ids = (waiting as Array<{ user_ids: string[] }> | null)?.[0]?.user_ids ?? [];
+    expect(ids, '«Đang chờ» phải kể cả chính Tổng Giám đốc').toContain(me);
+
+    const { error } = await tgd.rpc('decide_approval', {
+      p_approval_id: approval!.id,
+      p_decision: 'approved',
+      p_note: 'Tự duyệt.',
+    });
+    expect(error).toBeNull();
+  });
 });
