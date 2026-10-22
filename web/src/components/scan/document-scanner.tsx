@@ -15,6 +15,7 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import { createPortal } from 'react-dom';
 import {
   ArrowLeft,
+  ArrowLeftRight,
   ArrowRight,
   Camera,
   FileText,
@@ -92,6 +93,14 @@ function blurryPhoto(source: HTMLCanvasElement): boolean {
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(source, 0, 0, c.width, c.height);
   return isBlurry(sharpnessOfImage(ctx.getImageData(0, 0, c.width, c.height)));
+}
+
+/** Thứ tự trang = thứ tự chụp (`lastModified`), cùng thời điểm thì theo tên tệp. */
+export function sortByCapture(files: File[]): File[] {
+  return [...files].sort(
+    (a, b) =>
+      a.lastModified - b.lastModified || a.name.localeCompare(b.name, undefined, { numeric: true }),
+  );
 }
 
 /** Xoay vùng mặt bàn 90° chiều kim đồng hồ cùng ảnh. */
@@ -252,7 +261,9 @@ export function DocumentScanner({
     if (!list?.length) return;
     setError(null);
     const added: Page[] = [];
-    for (const file of Array.from(list)) {
+    // Hộp chọn tệp trả nhiều tệp theo thứ tự riêng của máy (theo tên, hoặc đảo ngược) — ảnh chụp
+    // đầu tiên bị xếp xuống cuối (anh Dũng 22/10/2026). Xếp theo thời điểm chụp, trùng thì theo tên.
+    for (const file of sortByCapture(Array.from(list))) {
       const id = crypto.randomUUID();
       try {
         if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
@@ -511,6 +522,17 @@ export function DocumentScanner({
             <Button variant="secondary" onClick={() => fileRef.current?.click()}>
               <ImagePlus className="size-4" aria-hidden /> Thêm ảnh / PDF
             </Button>
+            {pages.length > 1 && (
+              <Button
+                variant="subtle"
+                onClick={() => {
+                  setPages((all) => [...all].reverse());
+                  setSelected((s) => pages.length - 1 - s);
+                }}
+              >
+                <ArrowLeftRight className="size-4" aria-hidden /> Đảo thứ tự trang
+              </Button>
+            )}
           </div>
         </div>
       </footer>
