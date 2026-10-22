@@ -237,3 +237,41 @@ export function useSetGroupQuotationPrice() {
     onSuccess: () => invalidatePurchasing(queryClient),
   });
 }
+
+/* -------------------------------------------------------------------------- *
+ * 4C — đơn đặt hàng sắp trễ / trễ hẹn
+ * -------------------------------------------------------------------------- */
+
+export type OrderDueState = 'qua_han' | 'hom_nay' | 'sap_toi';
+
+export interface OrderDueRow {
+  order_id: string;
+  order_code: string | null;
+  company_id: string;
+  company_code: string;
+  stage: import('@nvg/shared').PurchaseOrderStage;
+  supplier_name: string;
+  request_id: string;
+  request_code: string | null;
+  request_title: string;
+  site_id: string | null;
+  site_code: string | null;
+  site_name: string | null;
+  promised_date: string;
+  days_left: number;
+  due_state: OrderDueState;
+  total_value: number;
+  /** Tham số `mh.order_due_soon_days`; `null` = NVG chưa đặt, chỉ báo quá hẹn / hôm nay. */
+  soon_days_setting: number | null;
+}
+
+export function useOrderDueList() {
+  return useQuery<OrderDueRow[], Error>({
+    queryKey: ['purchase-order-due'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('purchase_order_due_list');
+      if (error) throw new Error(error.message);
+      return (data ?? []) as OrderDueRow[];
+    },
+  });
+}

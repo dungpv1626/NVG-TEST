@@ -14,6 +14,7 @@ import { PageHeader } from '@/components/layout/app-shell';
 import { EntityTable, type EntityRow } from '@/components/entity/entity-table';
 import { usePurchaseOrders } from '@/hooks/use-purchasing';
 import { MhNav } from './mh-nav';
+import { OrderDuePanel } from './order-due-panel';
 
 interface OrderRow extends EntityRow {
   stageLabel: string;
@@ -63,6 +64,9 @@ export function PurchaseOrderListPage() {
         breadcrumbs={[{ label: 'Mua hàng – Vật tư' }, { label: 'Đơn đặt hàng' }]}
         description="Đơn hàng được lập từ đề nghị mua đã duyệt và báo giá đã chọn — không lập trực tiếp ở đây."
       />
+
+      {/* Đợt 4 — 4C: đơn quá hẹn / đến hạn giao đứng trên cùng. */}
+      <OrderDuePanel />
 
       <EntityTable<OrderRow>
         rows={rows}
